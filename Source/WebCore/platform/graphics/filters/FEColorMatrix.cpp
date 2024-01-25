@@ -114,7 +114,7 @@ Vector<float> FEColorMatrix::normalizedFloats(const Vector<float>& values)
 
 bool FEColorMatrix::resultIsAlphaImage(const FilterImageVector&) const
 {
-    return m_type == FECOLORMATRIX_TYPE_LUMINANCETOALPHA;
+    return m_type == ColorMatrixType::FECOLORMATRIX_TYPE_LUMINANCETOALPHA;
 }
 
 OptionSet<FilterRenderingMode> FEColorMatrix::supportedFilterRenderingModes() const
@@ -124,9 +124,8 @@ OptionSet<FilterRenderingMode> FEColorMatrix::supportedFilterRenderingModes() co
     if (FEColorMatrixCoreImageApplier::supportsCoreImageRendering(*this))
         modes.add(FilterRenderingMode::Accelerated);
 #endif
-    // FIXME: Ensure the correctness of the CG ColorMatrix filter (http://webkit.org/b/243816).
-#if 0 && HAVE(CGSTYLE_COLORMATRIX_BLUR)
-    if (m_type == FECOLORMATRIX_TYPE_MATRIX)
+#if HAVE(CGSTYLE_COLORMATRIX_BLUR)
+    if (m_type == ColorMatrixType::FECOLORMATRIX_TYPE_MATRIX)
         modes.add(FilterRenderingMode::GraphicsContext);
 #endif
     return modes;
@@ -156,19 +155,19 @@ std::optional<GraphicsStyle> FEColorMatrix::createGraphicsStyle(const Filter&) c
 static TextStream& operator<<(TextStream& ts, const ColorMatrixType& type)
 {
     switch (type) {
-    case FECOLORMATRIX_TYPE_UNKNOWN:
+    case ColorMatrixType::FECOLORMATRIX_TYPE_UNKNOWN:
         ts << "UNKNOWN";
         break;
-    case FECOLORMATRIX_TYPE_MATRIX:
+    case ColorMatrixType::FECOLORMATRIX_TYPE_MATRIX:
         ts << "MATRIX";
         break;
-    case FECOLORMATRIX_TYPE_SATURATE:
+    case ColorMatrixType::FECOLORMATRIX_TYPE_SATURATE:
         ts << "SATURATE";
         break;
-    case FECOLORMATRIX_TYPE_HUEROTATE:
+    case ColorMatrixType::FECOLORMATRIX_TYPE_HUEROTATE:
         ts << "HUEROTATE";
         break;
-    case FECOLORMATRIX_TYPE_LUMINANCETOALPHA:
+    case ColorMatrixType::FECOLORMATRIX_TYPE_LUMINANCETOALPHA:
         ts << "LUMINANCETOALPHA";
         break;
     }

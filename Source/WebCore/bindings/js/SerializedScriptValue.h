@@ -37,6 +37,10 @@
 #include <wtf/Gigacage.h>
 #include <wtf/text/WTFString.h>
 
+#if ENABLE(MEDIA_STREAM)
+#include "MediaStreamTrackDataHolder.h"
+#endif
+
 #if ENABLE(WEB_CODECS)
 #include "WebCodecsAudioData.h"
 #include "WebCodecsAudioInternalData.h"
@@ -63,7 +67,7 @@ class OffscreenCanvas;
 #endif
 class IDBValue;
 class MessagePort;
-class ImageBitmapBacking;
+class DetachedImageBitmap;
 class FragmentedSharedBuffer;
 enum class SerializationReturnCode;
 
@@ -131,9 +135,12 @@ private:
         , Vector<RefPtr<WebCodecsEncodedAudioChunkStorage>>&& = { }
         , Vector<WebCodecsAudioInternalData>&& = { }
 #endif
+#if ENABLE(MEDIA_STREAM)
+        , Vector<std::unique_ptr<MediaStreamTrackDataHolder>>&& = { }
+#endif
         );
 
-    SerializedScriptValue(Vector<unsigned char>&&, Vector<URLKeepingBlobAlive>&& blobHandles, std::unique_ptr<ArrayBufferContentsArray>, std::unique_ptr<ArrayBufferContentsArray> sharedBuffers, Vector<std::optional<ImageBitmapBacking>>&& backingStores
+    SerializedScriptValue(Vector<unsigned char>&&, Vector<URLKeepingBlobAlive>&& blobHandles, std::unique_ptr<ArrayBufferContentsArray>, std::unique_ptr<ArrayBufferContentsArray> sharedBuffers, Vector<std::optional<DetachedImageBitmap>>&&
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
         , Vector<std::unique_ptr<DetachedOffscreenCanvas>>&& = { }
         , Vector<RefPtr<OffscreenCanvas>>&& = { }
@@ -152,6 +159,9 @@ private:
         , Vector<RefPtr<WebCodecsEncodedAudioChunkStorage>>&& = { }
         , Vector<WebCodecsAudioInternalData>&& = { }
 #endif
+#if ENABLE(MEDIA_STREAM)
+        , Vector<std::unique_ptr<MediaStreamTrackDataHolder>>&& = { }
+#endif
         );
 
     size_t computeMemoryCost() const;
@@ -168,8 +178,11 @@ private:
         Vector<WebCodecsVideoFrameData> serializedVideoFrames { };
         Vector<WebCodecsAudioInternalData> serializedAudioData { };
 #endif
+#if ENABLE(MEDIA_STREAM)
+        Vector<std::unique_ptr<MediaStreamTrackDataHolder>> serializedMediaStreamTracks { };
+#endif
         std::unique_ptr<ArrayBufferContentsArray> sharedBufferContentsArray { };
-        Vector<std::optional<ImageBitmapBacking>> backingStores { };
+        Vector<std::optional<DetachedImageBitmap>> detachedImageBitmaps { };
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
         Vector<std::unique_ptr<DetachedOffscreenCanvas>> detachedOffscreenCanvases { };
         Vector<RefPtr<OffscreenCanvas>> inMemoryOffscreenCanvases { };

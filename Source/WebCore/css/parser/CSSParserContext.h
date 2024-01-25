@@ -92,6 +92,7 @@ struct CSSParserContext {
     bool cssNestingEnabled : 1 { false };
     bool cssPaintingAPIEnabled : 1 { false };
     bool cssScopeAtRuleEnabled : 1 { false };
+    bool cssStartingStyleAtRuleEnabled : 1 { false };
     bool cssTextUnderlinePositionLeftRightEnabled : 1 { false };
     bool cssWordBreakAutoPhraseEnabled : 1 { false };
     bool popoverAttributeEnabled : 1 { false };
@@ -101,6 +102,10 @@ struct CSSParserContext {
     bool grammarAndSpellingPseudoElementsEnabled : 1 { false };
     bool customStateSetEnabled : 1 { false };
     bool thumbAndTrackPseudoElementsEnabled : 1 { false };
+#if ENABLE(SERVICE_CONTROLS)
+    bool imageControlsEnabled : 1 { false };
+#endif
+    bool lightDarkEnabled : 1 { false };
 
     // Settings, those affecting properties.
     CSSPropertySettings propertySettings;

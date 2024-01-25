@@ -489,18 +489,17 @@ void RenderTable::layout()
         bool collapsing = collapseBorders();
 
         for (auto& child : childrenOfType<RenderElement>(*this)) {
-            if (is<RenderTableSection>(child)) {
-                RenderTableSection& section = downcast<RenderTableSection>(child);
+            if (CheckedPtr section = dynamicDowncast<RenderTableSection>(child)) {
                 if (m_columnLogicalWidthChanged)
-                    section.setChildNeedsLayout(MarkOnlyThis);
-                section.layoutIfNeeded();
-                totalSectionLogicalHeight += section.calcRowLogicalHeight();
+                    section->setChildNeedsLayout(MarkOnlyThis);
+                section->layoutIfNeeded();
+                totalSectionLogicalHeight += section->calcRowLogicalHeight();
                 if (collapsing)
-                    section.recalcOuterBorder();
-                ASSERT(!section.needsLayout());
-            } else if (is<RenderTableCol>(child)) {
-                downcast<RenderTableCol>(child).layoutIfNeeded();
-                ASSERT(!child.needsLayout());
+                    section->recalcOuterBorder();
+                ASSERT(!section->needsLayout());
+            } else if (CheckedPtr column = dynamicDowncast<RenderTableCol>(child)) {
+                column->layoutIfNeeded();
+                ASSERT(!column->needsLayout());
             }
         }
 
@@ -704,12 +703,14 @@ void RenderTable::addOverflowFromChildren()
     }
 
     // Add overflow from our caption.
-    for (unsigned i = 0; i < m_captions.size(); i++) 
-        addOverflowFromChild(m_captions[i].get());
+    for (unsigned i = 0; i < m_captions.size(); ++i) {
+        if (auto* caption = m_captions[i].get())
+            addOverflowFromChild(*caption);
+    }
 
     // Add overflow from our sections.
-    for (RenderTableSection* section = topSection(); section; section = sectionBelow(section))
-        addOverflowFromChild(section);
+    for (auto* section = topSection(); section; section = sectionBelow(section))
+        addOverflowFromChild(*section);
 }
 
 void RenderTable::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
@@ -742,6 +743,9 @@ void RenderTable::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOffs
         paintMask(paintInfo, paintOffset);
         return;
     }
+
+    if (paintPhase == PaintPhase::Accessibility)
+        paintInfo.accessibilityRegionContext()->takeBounds(*this, paintOffset);
 
     // We're done.  We don't bother painting any children.
     if (paintPhase == PaintPhase::BlockBackground)
@@ -967,8 +971,8 @@ void RenderTable::appendColumn(unsigned span)
 RenderTableCol* RenderTable::firstColumn() const
 {
     for (auto& child : childrenOfType<RenderObject>(*this)) {
-        if (is<RenderTableCol>(child))
-            return &const_cast<RenderTableCol&>(downcast<RenderTableCol>(child));
+        if (auto* column = dynamicDowncast<RenderTableCol>(child))
+            return const_cast<RenderTableCol*>(column);
     }
     return nullptr;
 }
@@ -987,7 +991,7 @@ void RenderTable::updateColumnCache() const
         m_columnRenderers.append(columnRenderer);
         // FIXME: We should look to compute the effective column index successively from previous values instead of
         // calling colToEffCol(), which is in O(numEffCols()). Although it's unlikely that this is a hot function.
-        m_effectiveColumnIndexMap.add(columnRenderer, colToEffCol(columnIndex));
+        m_effectiveColumnIndexMap.add(*columnRenderer, colToEffCol(columnIndex));
         columnIndex += columnRenderer->span();
     }
     m_columnRenderersValid = true;
@@ -1119,31 +1123,28 @@ void RenderTable::recalcSections() const
             m_hasColElements = true;
             break;
         case DisplayType::TableHeaderGroup:
-            if (is<RenderTableSection>(*child)) {
-                RenderTableSection& section = downcast<RenderTableSection>(*child);
+            if (CheckedPtr section = dynamicDowncast<RenderTableSection>(*child)) {
                 if (!m_head)
-                    m_head = section;
+                    m_head = *section;
                 else if (!m_firstBody)
-                    m_firstBody = section;
-                section.recalcCellsIfNeeded();
+                    m_firstBody = *section;
+                section->recalcCellsIfNeeded();
             }
             break;
         case DisplayType::TableFooterGroup:
-            if (is<RenderTableSection>(*child)) {
-                RenderTableSection& section = downcast<RenderTableSection>(*child);
+            if (CheckedPtr section = dynamicDowncast<RenderTableSection>(*child)) {
                 if (!m_foot)
-                    m_foot = section;
+                    m_foot = *section;
                 else if (!m_firstBody)
-                    m_firstBody = section;
-                section.recalcCellsIfNeeded();
+                    m_firstBody = *section;
+                section->recalcCellsIfNeeded();
             }
             break;
         case DisplayType::TableRowGroup:
-            if (is<RenderTableSection>(*child)) {
-                RenderTableSection& section = downcast<RenderTableSection>(*child);
+            if (CheckedPtr section = dynamicDowncast<RenderTableSection>(*child)) {
                 if (!m_firstBody)
-                    m_firstBody = section;
-                section.recalcCellsIfNeeded();
+                    m_firstBody = *section;
+                section->recalcCellsIfNeeded();
             }
             break;
         default:
@@ -1410,13 +1411,14 @@ RenderTableSection* RenderTable::sectionAbove(const RenderTableSection* section,
 
     RenderObject* prevSection = section == m_foot ? lastChild() : section->previousSibling();
     while (prevSection) {
-        if (is<RenderTableSection>(*prevSection) && prevSection != m_head && prevSection != m_foot && (skipEmptySections == DoNotSkipEmptySections || downcast<RenderTableSection>(*prevSection).numRows()))
-            break;
+        auto* tableSection = dynamicDowncast<RenderTableSection>(*prevSection);
+        if (tableSection && prevSection != m_head && prevSection != m_foot && (skipEmptySections == DoNotSkipEmptySections || downcast<RenderTableSection>(*prevSection).numRows()))
+            return tableSection;
         prevSection = prevSection->previousSibling();
     }
     if (!prevSection && m_head && (skipEmptySections == DoNotSkipEmptySections || m_head->numRows()))
-        prevSection = m_head.get();
-    return downcast<RenderTableSection>(prevSection);
+        return m_head.get();
+    return nullptr;
 }
 
 RenderTableSection* RenderTable::sectionBelow(const RenderTableSection* section, SkipEmptySectionsValue skipEmptySections) const
@@ -1428,13 +1430,14 @@ RenderTableSection* RenderTable::sectionBelow(const RenderTableSection* section,
 
     RenderObject* nextSection = section == m_head ? firstChild() : section->nextSibling();
     while (nextSection) {
-        if (is<RenderTableSection>(*nextSection) && nextSection != m_head && nextSection != m_foot && (skipEmptySections  == DoNotSkipEmptySections || downcast<RenderTableSection>(*nextSection).numRows()))
-            break;
+        auto* tableSection = dynamicDowncast<RenderTableSection>(*nextSection);
+        if (tableSection && nextSection != m_head && nextSection != m_foot && (skipEmptySections  == DoNotSkipEmptySections || downcast<RenderTableSection>(*nextSection).numRows()))
+            return tableSection;
         nextSection = nextSection->nextSibling();
     }
     if (!nextSection && m_foot && (skipEmptySections == DoNotSkipEmptySections || m_foot->numRows()))
-        nextSection = m_foot.get();
-    return downcast<RenderTableSection>(nextSection);
+        return m_foot.get();
+    return nullptr;
 }
 
 RenderTableSection* RenderTable::bottomSection() const
@@ -1443,8 +1446,8 @@ RenderTableSection* RenderTable::bottomSection() const
     if (m_foot)
         return m_foot.get();
     for (RenderObject* child = lastChild(); child; child = child->previousSibling()) {
-        if (is<RenderTableSection>(*child))
-            return downcast<RenderTableSection>(child);
+        if (auto* tableSection = dynamicDowncast<RenderTableSection>(*child))
+            return tableSection;
     }
     return nullptr;
 }
@@ -1617,9 +1620,10 @@ bool RenderTable::nodeAtPoint(const HitTestRequest& request, HitTestResult& resu
     // Check kids first.
     if (!hasNonVisibleOverflow() || locationInContainer.intersects(overflowClipRect(adjustedLocation, nullptr))) {
         for (RenderObject* child = lastChild(); child; child = child->previousSibling()) {
-            if (is<RenderBox>(*child) && !downcast<RenderBox>(*child).hasSelfPaintingLayer() && (child->isRenderTableSection() || child->isRenderTableCaption())) {
-                LayoutPoint childPoint = flipForWritingModeForChild(*downcast<RenderBox>(child), adjustedLocation);
-                if (child->nodeAtPoint(request, result, locationInContainer, childPoint, action)) {
+            CheckedPtr box = dynamicDowncast<RenderBox>(*child);
+            if (box && !box->hasSelfPaintingLayer() && (box->isRenderTableSection() || box->isRenderTableCaption())) {
+                LayoutPoint childPoint = flipForWritingModeForChild(*box, adjustedLocation);
+                if (box->nodeAtPoint(request, result, locationInContainer, childPoint, action)) {
                     updateHitTestResult(result, toLayoutPoint(locationInContainer.point() - childPoint));
                     return true;
                 }

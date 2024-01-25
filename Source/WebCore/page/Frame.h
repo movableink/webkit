@@ -38,6 +38,7 @@ namespace WebCore {
 
 class DOMWindow;
 class FrameView;
+class FrameLoaderClient;
 class FrameLoadRequest;
 class HTMLFrameOwnerElement;
 class NavigationScheduler;
@@ -86,10 +87,12 @@ public:
     virtual void didFinishLoadInAnotherProcess() = 0;
 
     virtual FrameView* virtualView() const = 0;
+    RefPtr<FrameView> protectedVirtualView() const;
     virtual void disconnectView() = 0;
     virtual void setOpener(Frame*) = 0;
     virtual const Frame* opener() const = 0;
     virtual Frame* opener() = 0;
+    virtual FrameLoaderClient& loaderClient() = 0;
 
     WEBCORE_EXPORT RenderWidget* ownerRenderer() const; // Renderer for the element that contains this frame.
 

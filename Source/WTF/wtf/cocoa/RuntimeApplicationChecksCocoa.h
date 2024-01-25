@@ -55,6 +55,7 @@ enum class SDKAlignedBehavior {
     ExpiredOnlyReloadBehavior,
     ForbidsDotPrefixedFonts,
     FullySuspendsBackgroundContent,
+    FullySuspendsBackgroundContentImmediately,
     HasUIContextMenuInteraction,
     HTMLDocumentSupportedPropertyNames,
     InitializeWebKit2MainThreadAssertion,
@@ -114,6 +115,8 @@ enum class SDKAlignedBehavior {
     ResettingTransitionCancelsRunningTransitionQuirk,
     OnlyLoadWellKnownAboutURLs,
     AsyncFragmentNavigationPolicyDecision,
+    DoNotLoadStyleSheetIfHTTPStatusIsNotOK,
+    ScrollViewSubclassImplementsAddGestureRecognizer,
 
     NumberOfBehaviors
 };

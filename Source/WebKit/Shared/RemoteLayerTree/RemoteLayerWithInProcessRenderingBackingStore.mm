@@ -30,9 +30,12 @@
 #import "ImageBufferShareableBitmapBackend.h"
 #import "ImageBufferShareableMappedIOSurfaceBackend.h"
 #import "Logging.h"
+#import "PlatformCALayerRemote.h"
+#import "RemoteImageBufferSetProxy.h"
 #import "RemoteLayerBackingStoreCollection.h"
 #import "RemoteLayerTreeContext.h"
 #import "SwapBuffersDisplayRequirement.h"
+#import <WebCore/GraphicsContext.h>
 #import <WebCore/IOSurfacePool.h>
 #import <WebCore/PlatformCALayerClient.h>
 #import <wtf/Scope.h>
@@ -71,7 +74,7 @@ static std::optional<ImageBufferBackendHandle> handleFromBuffer(ImageBuffer& buf
 {
     auto* sharing = buffer.toBackendSharing();
     if (is<ImageBufferBackendHandleSharing>(sharing))
-        return downcast<ImageBufferBackendHandleSharing>(*sharing).takeBackendHandle();
+        return downcast<ImageBufferBackendHandleSharing>(*sharing).takeBackendHandle(SharedMemory::Protection::ReadOnly);
 
     return std::nullopt;
 }
@@ -99,26 +102,6 @@ void RemoteLayerWithInProcessRenderingBackingStore::createContextAndPaintContent
         return;
     }
 
-    auto markFrontBufferNotCleared = makeScopeExit([&]() {
-        m_frontBuffer.isCleared = false;
-    });
-
-    auto clipAndDrawInContext = [&](GraphicsContext& context) {
-        if (m_paintingRects.size() == 1)
-            context.clip(m_paintingRects[0]);
-        else {
-            Path clipPath;
-            for (auto rect : m_paintingRects)
-                clipPath.addRect(rect);
-            context.clipPath(clipPath);
-        }
-
-        if (drawingRequiresClearedPixels() && !m_frontBuffer.isCleared)
-            context.clearRect(layerBounds());
-
-        drawInContext(context);
-    };
-
     GraphicsContext& context = m_frontBuffer.imageBuffer->context();
 
     // We never need to copy forward when using display list drawing, since we don't do partial repaint.
@@ -135,19 +118,50 @@ void RemoteLayerWithInProcessRenderingBackingStore::createContextAndPaintContent
         }
     }
 
-    clipAndDrawInContext(context);
+    if (m_paintingRects.size() == 1)
+        context.clip(m_paintingRects[0]);
+    else {
+        Path clipPath;
+        for (auto rect : m_paintingRects)
+            clipPath.addRect(rect);
+        context.clipPath(clipPath);
+    }
+
+    if (drawingRequiresClearedPixels() && !m_frontBuffer.isCleared)
+        context.clearRect(layerBounds());
+
+    drawInContext(context);
+
+    m_frontBuffer.isCleared = false;
 }
 
-Vector<std::unique_ptr<WebCore::ThreadSafeImageBufferFlusher>> RemoteLayerWithInProcessRenderingBackingStore::createFlushers()
+class ImageBufferBackingStoreFlusher final : public ThreadSafeImageBufferSetFlusher {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(ImageBufferBackingStoreFlusher);
+public:
+    static std::unique_ptr<ImageBufferBackingStoreFlusher> create(std::unique_ptr<WebCore::ThreadSafeImageBufferFlusher> imageBufferFlusher)
+    {
+        return std::unique_ptr<ImageBufferBackingStoreFlusher> { new ImageBufferBackingStoreFlusher(WTFMove(imageBufferFlusher)) };
+    }
+
+    void flushAndCollectHandles(HashMap<RemoteImageBufferSetIdentifier, std::unique_ptr<BufferSetBackendHandle>>&) final
+    {
+        m_imageBufferFlusher->flush();
+    }
+
+private:
+    ImageBufferBackingStoreFlusher(std::unique_ptr<WebCore::ThreadSafeImageBufferFlusher> imageBufferFlusher)
+        : m_imageBufferFlusher(WTFMove(imageBufferFlusher))
+    {
+    }
+    std::unique_ptr<WebCore::ThreadSafeImageBufferFlusher> m_imageBufferFlusher;
+};
+
+std::unique_ptr<ThreadSafeImageBufferSetFlusher> RemoteLayerWithInProcessRenderingBackingStore::createFlusher()
 {
-    Vector<std::unique_ptr<WebCore::ThreadSafeImageBufferFlusher>> flushers;
-
     m_frontBuffer.imageBuffer->flushDrawingContextAsync();
-    flushers.append(m_frontBuffer.imageBuffer->createFlusher());
-
-    return flushers;
+    return ImageBufferBackingStoreFlusher::create(m_frontBuffer.imageBuffer->createFlusher());
 }
-
 
 SwapBuffersDisplayRequirement RemoteLayerWithInProcessRenderingBackingStore::prepareBuffers()
 {
@@ -175,11 +189,15 @@ SwapBuffersDisplayRequirement RemoteLayerWithInProcessRenderingBackingStore::pre
     return displayRequirement;
 }
 
-bool RemoteLayerWithInProcessRenderingBackingStore::setBufferVolatile(Buffer& buffer)
+bool RemoteLayerWithInProcessRenderingBackingStore::setBufferVolatile(Buffer& buffer, bool forcePurge)
 {
-    if (!buffer.imageBuffer || buffer.imageBuffer->volatilityState() == VolatilityState::Volatile)
+    if (!buffer.imageBuffer || (buffer.imageBuffer->volatilityState() == VolatilityState::Volatile && !forcePurge))
         return true;
 
+    if (forcePurge) {
+        buffer.imageBuffer->setVolatileAndPurgeForTesting();
+        return true;
+    }
     buffer.imageBuffer->releaseGraphicsContext();
     return buffer.imageBuffer->setVolatile();
 }
@@ -195,20 +213,20 @@ SetNonVolatileResult RemoteLayerWithInProcessRenderingBackingStore::setBufferNon
     return buffer.imageBuffer->setNonVolatile();
 }
 
-bool RemoteLayerWithInProcessRenderingBackingStore::setBufferVolatile(BufferType bufferType)
+bool RemoteLayerWithInProcessRenderingBackingStore::setBufferVolatile(BufferType bufferType, bool forcePurge)
 {
     if (m_parameters.type != Type::IOSurface)
         return true;
 
     switch (bufferType) {
     case BufferType::Front:
-        return setBufferVolatile(m_frontBuffer);
+        return setBufferVolatile(m_frontBuffer, forcePurge);
 
     case BufferType::Back:
-        return setBufferVolatile(m_backBuffer);
+        return setBufferVolatile(m_backBuffer, forcePurge);
 
     case BufferType::SecondaryBack:
-        return setBufferVolatile(m_secondaryBackBuffer);
+        return setBufferVolatile(m_secondaryBackBuffer, forcePurge);
     }
 
     return true;
@@ -240,8 +258,11 @@ RefPtr<WebCore::ImageBuffer> RemoteLayerWithInProcessRenderingBackingStore::allo
     creationContext.surfacePool = &WebCore::IOSurfacePool::sharedPool();
 
 #if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
-    if (m_parameters.includeDisplayList == IncludeDisplayList::Yes)
+    if (m_parameters.includeDisplayList == IncludeDisplayList::Yes) {
+        if (auto* context = m_layer->context())
+            creationContext.dynamicContentScalingResourceCache = context->ensureDynamicContentScalingResourceCache();
         return allocateBufferInternal<DynamicContentScalingBifurcatedImageBuffer>(type(), size(), purpose, scale(), colorSpace(), pixelFormat(), creationContext);
+    }
 #endif
 
     return allocateBufferInternal<ImageBuffer>(type(), size(), purpose, scale(), colorSpace(), pixelFormat(), creationContext);

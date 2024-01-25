@@ -33,6 +33,10 @@
 #import <WebCore/ElementContext.h>
 #import <wtf/cocoa/VectorCocoa.h>
 
+#if USE(APPLE_INTERNAL_SDK)
+#import <WebKitAdditions/ServiceExtensionsAdditions.h>
+#endif
+
 namespace WebKit {
 
 static inline NSRange toNSRange(DocumentEditingContext::Range range)
@@ -102,13 +106,14 @@ WKSETextDocumentContext *DocumentEditingContext::toPlatformContext(OptionSet<Doc
             contextAfter:contextAfter.nsAttributedString().get()
             markedText:markedText.nsAttributedString().get()
             selectedRangeInMarkedText:toNSRange(selectedRangeInMarkedText)]);
-    } else {
+    } else if (options.contains(DocumentEditingContextRequest::Options::Text)) {
         platformContext = adoptNS([[WKSETextDocumentContext alloc] initWithSelectedText:[selectedText.nsAttributedString() string]
             contextBefore:[contextBefore.nsAttributedString() string]
             contextAfter:[contextAfter.nsAttributedString() string]
             markedText:[markedText.nsAttributedString() string]
             selectedRangeInMarkedText:toNSRange(selectedRangeInMarkedText)]);
-    }
+    } else
+        ASSERT_NOT_REACHED_WITH_MESSAGE("%s expected at least Options::AttributedText or Options::Text", __PRETTY_FUNCTION__);
     setOptionalEditingContextProperties(*this, platformContext.get(), options);
     return platformContext.autorelease();
 #else

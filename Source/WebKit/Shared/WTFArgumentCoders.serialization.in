@@ -98,7 +98,6 @@ template: enum class WebKit::RemoteMediaResourceIdentifierType
 template: enum class WebKit::RemoteMediaSourceIdentifierType
 template: enum class WebKit::RemoteRemoteCommandListenerIdentifierType
 template: enum class WebKit::RemoteSourceBufferIdentifierType
-template: enum class WebKit::RenderingBackendIdentifierType
 template: enum class WebKit::RetrieveRecordResponseBodyCallbackIdentifierType
 template: enum class WebKit::SampleBufferDisplayLayerIdentifierType
 template: enum class WebKit::ShapeDetectionIdentifierType
@@ -121,7 +120,6 @@ template: struct WebCore::MediaSessionIdentifierType
 template: struct WebCore::PageIdentifierType
 template: struct WebCore::PlatformLayerIdentifierType
 template: struct WebCore::PlaybackTargetClientContextIdentifierType
-template: struct WebCore::PolicyCheckIdentifierType
 template: struct WebCore::SharedWorkerObjectIdentifierType
 template: struct WebCore::SleepDisablerIdentifierType
 template: struct WebCore::UserMediaRequestIdentifierType
@@ -183,6 +181,7 @@ template: enum class WebKit::LegacyCustomProtocolIDType
 template: enum class WebKit::LibWebRTCResolverIdentifierType
 template: enum class WebKit::QuotaIncreaseRequestIdentifierType
 template: enum class WebKit::RemoteVideoFrameIdentifierType
+template: enum class WebKit::RenderingBackendIdentifierType
 template: enum class WebKit::VideoDecoderIdentifierType
 template: enum class WebKit::VideoEncoderIdentifierType
 template: enum class WebKit::WCContentBufferIdentifierType

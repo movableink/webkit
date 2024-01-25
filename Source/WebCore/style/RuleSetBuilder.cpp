@@ -36,6 +36,7 @@
 #include "CSSSelectorParser.h"
 #include "CustomPropertyRegistry.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "MediaQueryEvaluator.h"
 #include "StyleResolver.h"
 #include "StyleRuleImport.h"
@@ -110,16 +111,16 @@ void RuleSetBuilder::addChildRule(Ref<StyleRuleBase> rule)
     switch (rule->type()) {
     case StyleRuleType::StyleWithNesting:
         if (m_ruleSet)
-            addStyleRule(downcast<StyleRuleWithNesting>(rule));
+            addStyleRule(uncheckedDowncast<StyleRuleWithNesting>(rule));
         return;
 
     case StyleRuleType::Style:
         if (m_ruleSet)
-            addStyleRule(downcast<StyleRule>(rule));
+            addStyleRule(uncheckedDowncast<StyleRule>(rule));
         return;
 
     case StyleRuleType::Scope: {
-        auto scopeRule = downcast<StyleRuleScope>(WTFMove(rule));
+        auto scopeRule = uncheckedDowncast<StyleRuleScope>(WTFMove(rule));
         auto previousScopeIdentifier = m_currentScopeIdentifier;
         if (m_ruleSet) {
             m_ruleSet->m_scopeRules.append({ scopeRule.copyRef(), previousScopeIdentifier });
@@ -139,9 +140,14 @@ void RuleSetBuilder::addChildRule(Ref<StyleRuleBase> rule)
                 scopeRule->setScopeEnd(CSSSelectorParser::resolveNestingParent(scopeRule->originalScopeEnd(), &scopeRule->scopeStart()));
         }
 
-        m_selectorListStack.append(&scopeRule->scopeStart());
+        const auto& scopeStart = scopeRule->scopeStart();
+        // If <scope-start> is empty, it doesn't create a nesting context (the nesting selector might eventually be replaced by :scope)
+        if (!scopeStart.isEmpty())
+            m_selectorListStack.append(&scopeStart);
         addChildRules(scopeRule->childRules());
-        m_selectorListStack.removeLast();
+        if (!scopeStart.isEmpty())
+            m_selectorListStack.removeLast();
+
         if (m_ruleSet)
             m_currentScopeIdentifier = previousScopeIdentifier;
         return;
@@ -149,11 +155,11 @@ void RuleSetBuilder::addChildRule(Ref<StyleRuleBase> rule)
 
     case StyleRuleType::Page:
         if (m_ruleSet)
-            m_ruleSet->addPageRule(downcast<StyleRulePage>(rule));
+            m_ruleSet->addPageRule(uncheckedDowncast<StyleRulePage>(rule));
         return;
 
     case StyleRuleType::Media: {
-        auto mediaRule = downcast<StyleRuleMedia>(WTFMove(rule));
+        auto mediaRule = uncheckedDowncast<StyleRuleMedia>(WTFMove(rule));
         if (m_mediaQueryCollector.pushAndEvaluate(mediaRule->mediaQueries()))
             addChildRules(mediaRule->childRules());
         m_mediaQueryCollector.pop(mediaRule->mediaQueries());
@@ -161,7 +167,7 @@ void RuleSetBuilder::addChildRule(Ref<StyleRuleBase> rule)
     }
 
     case StyleRuleType::Container: {
-        auto containerRule = downcast<StyleRuleContainer>(WTFMove(rule));
+        auto containerRule = uncheckedDowncast<StyleRuleContainer>(WTFMove(rule));
         auto previousContainerQueryIdentifier = m_currentContainerQueryIdentifier;
         if (m_ruleSet) {
             m_ruleSet->m_containerQueries.append({ containerRule.copyRef(), previousContainerQueryIdentifier });
@@ -177,7 +183,7 @@ void RuleSetBuilder::addChildRule(Ref<StyleRuleBase> rule)
     case StyleRuleType::LayerStatement: {
         disallowDynamicMediaQueryEvaluationIfNeeded();
 
-        auto layerRule = downcast<StyleRuleLayer>(WTFMove(rule));
+        auto layerRule = uncheckedDowncast<StyleRuleLayer>(WTFMove(rule));
         if (layerRule->isStatement()) {
             // Statement syntax just registers the layers.
             registerLayers(layerRule->nameList());
@@ -189,6 +195,14 @@ void RuleSetBuilder::addChildRule(Ref<StyleRuleBase> rule)
         popCascadeLayer(layerRule->name());
         return;
     }
+
+    case StyleRuleType::StartingStyle: {
+        SetForScope startingStyleScope { m_isStartingStyle, IsStartingStyle::Yes };
+        auto startingStyleRule = uncheckedDowncast<StyleRuleStartingStyle>(WTFMove(rule));
+        addChildRules(startingStyleRule->childRules());
+        return;
+    }
+
     case StyleRuleType::CounterStyle:
     case StyleRuleType::FontFace:
     case StyleRuleType::FontPaletteValues:
@@ -201,7 +215,7 @@ void RuleSetBuilder::addChildRule(Ref<StyleRuleBase> rule)
         return;
 
     case StyleRuleType::Supports: {
-        auto supportsRule = downcast<StyleRuleSupports>(WTFMove(rule));
+        auto supportsRule = uncheckedDowncast<StyleRuleSupports>(WTFMove(rule));
         if (supportsRule->conditionIsSupported())
             addChildRules(supportsRule->childRules());
         return;
@@ -266,7 +280,7 @@ void RuleSetBuilder::addStyleRuleWithSelectorList(const CSSSelectorList& selecto
     if (!selectorList.isEmpty()) {
         unsigned selectorListIndex = 0;
         for (size_t selectorIndex = 0; selectorIndex != notFound; selectorIndex = selectorList.indexOfNextSelectorAfter(selectorIndex)) {
-            RuleData ruleData(rule, selectorIndex, selectorListIndex, m_ruleSet->ruleCount());
+            RuleData ruleData(rule, selectorIndex, selectorListIndex, m_ruleSet->ruleCount(), m_isStartingStyle);
             m_mediaQueryCollector.addRuleIfNeeded(ruleData);
             m_ruleSet->addRule(WTFMove(ruleData), m_currentCascadeLayerIdentifier, m_currentContainerQueryIdentifier, m_currentScopeIdentifier);
             ++selectorListIndex;
@@ -423,39 +437,39 @@ void RuleSetBuilder::addMutatingRulesToResolver()
             m_ruleSet->m_resolverMutatingRulesInLayers.append(collectedRule);
 
         auto& rule = collectedRule.rule;
-        if (is<StyleRuleFontFace>(rule)) {
-            m_resolver->document().fontSelector().addFontFaceRule(downcast<StyleRuleFontFace>(rule.get()), false);
+        if (auto* styleRuleFontFace = dynamicDowncast<StyleRuleFontFace>(rule.get())) {
+            m_resolver->document().fontSelector().addFontFaceRule(*styleRuleFontFace, false);
             m_resolver->invalidateMatchedDeclarationsCache();
             continue;
         }
-        if (is<StyleRuleFontPaletteValues>(rule)) {
-            m_resolver->document().fontSelector().addFontPaletteValuesRule(downcast<StyleRuleFontPaletteValues>(rule.get()));
+        if (auto* styleRuleFontPaletteValues = dynamicDowncast<StyleRuleFontPaletteValues>(rule.get())) {
+            m_resolver->document().fontSelector().addFontPaletteValuesRule(*styleRuleFontPaletteValues);
             m_resolver->invalidateMatchedDeclarationsCache();
             continue;
         }
-        if (is<StyleRuleFontFeatureValues>(rule)) {
-            m_resolver->document().fontSelector().addFontFeatureValuesRule(downcast<StyleRuleFontFeatureValues>(rule.get()));
+        if (auto* styleRuleFontFeatureValues = dynamicDowncast<StyleRuleFontFeatureValues>(rule.get())) {
+            m_resolver->document().fontSelector().addFontFeatureValuesRule(*styleRuleFontFeatureValues);
             m_resolver->invalidateMatchedDeclarationsCache();
             continue;
         }
-        if (is<StyleRuleKeyframes>(rule)) {
-            m_resolver->addKeyframeStyle(downcast<StyleRuleKeyframes>(rule.get()));
+        if (auto* styleRuleKeyframes = dynamicDowncast<StyleRuleKeyframes>(rule.get())) {
+            m_resolver->addKeyframeStyle(*styleRuleKeyframes);
             continue;
         }
-        if (is<StyleRuleCounterStyle>(rule)) {
+        if (auto* styleRuleCounterStyle = dynamicDowncast<StyleRuleCounterStyle>(rule.get())) {
             if (m_resolver->scopeType() == Resolver::ScopeType::ShadowTree)
                 continue;
             auto& registry = m_resolver->document().styleScope().counterStyleRegistry();
-            registry.addCounterStyle(downcast<StyleRuleCounterStyle>(rule.get()).descriptors());
+            registry.addCounterStyle(styleRuleCounterStyle->descriptors());
             continue;
         }
-        if (is<StyleRuleProperty>(rule)) {
+        if (auto* styleRuleProperty = dynamicDowncast<StyleRuleProperty>(rule.get())) {
             // "A @property is invalid if it occurs in a stylesheet inside of a shadow tree, and must be ignored."
             // https://drafts.css-houdini.org/css-properties-values-api/#at-property-rule
             if (m_resolver->scopeType() == Resolver::ScopeType::ShadowTree)
                 continue;
             auto& registry = m_resolver->document().styleScope().customPropertyRegistry();
-            registry.registerFromStylesheet(downcast<StyleRuleProperty>(rule.get()).descriptor());
+            registry.registerFromStylesheet(styleRuleProperty->descriptor());
             continue;
         }
     }

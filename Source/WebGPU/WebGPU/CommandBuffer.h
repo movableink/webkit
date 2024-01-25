@@ -28,6 +28,7 @@
 #import <wtf/FastMalloc.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
+#import <wtf/WeakPtr.h>
 
 struct WGPUCommandBufferImpl {
 };
@@ -37,7 +38,7 @@ namespace WebGPU {
 class Device;
 
 // https://gpuweb.github.io/gpuweb/#gpucommandbuffer
-class CommandBuffer : public WGPUCommandBufferImpl, public RefCounted<CommandBuffer> {
+class CommandBuffer : public WGPUCommandBufferImpl, public RefCounted<CommandBuffer>, public CanMakeWeakPtr<CommandBuffer> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     static Ref<CommandBuffer> create(id<MTLCommandBuffer> commandBuffer, Device& device)
@@ -59,12 +60,15 @@ public:
 
     Device& device() const { return m_device; }
     void makeInvalid();
+    void setBufferMapCount(int);
+    int bufferMapCount() const;
 
 private:
     CommandBuffer(id<MTLCommandBuffer>, Device&);
     CommandBuffer(Device&);
 
     id<MTLCommandBuffer> m_commandBuffer { nil };
+    int m_bufferMapCount { 0 };
 
     const Ref<Device> m_device;
 };

@@ -149,7 +149,7 @@ public:
 
     std::optional<unsigned> transformFunctionListPrefix() const override;
 
-    void computeDeclarativeAnimationBlendingKeyframes(const RenderStyle* oldStyle, const RenderStyle& newStyle, const Style::ResolutionContext&);
+    void computeStyleOriginatedAnimationBlendingKeyframes(const RenderStyle* oldStyle, const RenderStyle& newStyle, const Style::ResolutionContext&);
     const BlendingKeyframes& blendingKeyframes() const { return m_blendingKeyframes; }
     const HashSet<AnimatableCSSProperty>& animatedProperties();
     bool animatesProperty(const AnimatableCSSProperty&) const;
@@ -229,7 +229,6 @@ private:
     void checkForMatchingTransformFunctionLists();
     void computeHasImplicitKeyframeForAcceleratedProperty();
     void computeHasKeyframeComposingAcceleratedProperty();
-    void computeHasExplicitlyInheritedKeyframeProperty();
     void computeHasAcceleratedPropertyOverriddenByCascadeProperty();
     void computeHasReferenceFilter();
     void computeHasSizeDependentTransform();
@@ -300,11 +299,8 @@ private:
     bool m_someKeyframesUseStepsTimingFunction { false };
     bool m_hasImplicitKeyframeForAcceleratedProperty { false };
     bool m_hasKeyframeComposingAcceleratedProperty { false };
-    bool m_hasExplicitlyInheritedKeyframeProperty { false };
     bool m_hasAcceleratedPropertyOverriddenByCascadeProperty { false };
     bool m_hasReferenceFilter { false };
-    bool m_hasWidthDependentTransform { false };
-    bool m_hasHeightDependentTransform { false };
     bool m_animatesSizeAndSizeDependentTransform { false };
 };
 

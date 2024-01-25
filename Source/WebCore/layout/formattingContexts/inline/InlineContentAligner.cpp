@@ -26,6 +26,7 @@
 #include "config.h"
 #include "InlineContentAligner.h"
 
+#include "InlineFormattingContext.h"
 #include "TextUtil.h"
 
 namespace WebCore {
@@ -37,23 +38,21 @@ static inline void shiftDisplayBox(InlineDisplay::Box& displayBox, InlineLayoutU
         return;
     auto isHorizontalWritingMode = inlineFormattingContext.root().style().isHorizontalWritingMode();
     isHorizontalWritingMode ? displayBox.moveHorizontally(offset) : displayBox.moveVertically(offset);
-    if (!displayBox.isTextOrSoftLineBreak() && !displayBox.isRootInlineBox()) {
-        auto& boxGeometry = inlineFormattingContext.geometryForBox(displayBox.layoutBox());
-        isHorizontalWritingMode ? boxGeometry.moveHorizontally(LayoutUnit { offset }) : boxGeometry.moveVertically(LayoutUnit { offset });
-    }
+    if (!displayBox.isTextOrSoftLineBreak() && !displayBox.isRootInlineBox())
+        inlineFormattingContext.geometryForBox(displayBox.layoutBox()).moveHorizontally(LayoutUnit { offset });
 }
 
 static inline void expandInlineBox(InlineLayoutUnit expansion, InlineDisplay::Box& displayBox, InlineFormattingContext& inlineFormattingContext)
 {
-    ASSERT(displayBox.isInlineBox());
+    if (!displayBox.isInlineBox()) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
     if (!expansion)
         return;
-    auto isHorizontalWritingMode = inlineFormattingContext.root().style().isHorizontalWritingMode();
-    isHorizontalWritingMode ? displayBox.expandHorizontally(expansion) : displayBox.expandVertically(expansion);
-    if (!displayBox.isTextOrSoftLineBreak() && !displayBox.isRootInlineBox()) {
-        auto& boxGeometry = inlineFormattingContext.geometryForBox(displayBox.layoutBox());
-        isHorizontalWritingMode ? boxGeometry.setContentBoxWidth(boxGeometry.contentBoxWidth() + LayoutUnit { expansion }) : boxGeometry.setContentBoxHeight(boxGeometry.contentBoxHeight() + LayoutUnit { expansion });
-    }
+    inlineFormattingContext.root().style().isHorizontalWritingMode() ? displayBox.expandHorizontally(expansion) : displayBox.expandVertically(expansion);
+    auto& boxGeometry = inlineFormattingContext.geometryForBox(displayBox.layoutBox());
+    boxGeometry.setContentBoxWidth(boxGeometry.contentBoxWidth() + LayoutUnit { expansion });
 }
 
 static inline InlineLayoutUnit alignmentOffset(auto& latyoutBox, auto& alignmentOffsetList)

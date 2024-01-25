@@ -31,6 +31,7 @@
 #include "WebPageProxyMessages.h"
 #include <WebCore/FrameLoadRequest.h>
 #include <WebCore/FrameTree.h>
+#include <WebCore/HitTestResult.h>
 #include <WebCore/PolicyChecker.h>
 #include <WebCore/RemoteFrame.h>
 
@@ -73,12 +74,10 @@ void WebRemoteFrameClient::postMessageToRemote(WebCore::FrameIdentifier source, 
 void WebRemoteFrameClient::changeLocation(WebCore::FrameLoadRequest&& request)
 {
     // FIXME: FrameLoadRequest and NavigationAction can probably be refactored to share more. <rdar://116202911>
-    WebCore::NavigationAction action(request.requester(), request.resourceRequest(), request.initiatedByMainFrame());
+    WebCore::NavigationAction action(request.requester(), request.resourceRequest(), request.initiatedByMainFrame(), request.isRequestFromClientOrUserInput());
     // FIXME: action.request and request are probably duplicate information. <rdar://116203126>
-    // FIXME: PolicyCheckIdentifier should probably be pushed to another layer. <rdar://116203008>
     // FIXME: Get more parameters correct and add tests for each one. <rdar://116203354>
-    dispatchDecidePolicyForNavigationAction(action, action.originalRequest(), WebCore::ResourceResponse(), nullptr, WebCore::PolicyDecisionMode::Asynchronous, WebCore::PolicyCheckIdentifier::generate(), [protectedFrame = Ref { m_frame }, request = WTFMove(request)] (WebCore::PolicyAction policyAction, WebCore::PolicyCheckIdentifier responseIdentifier) mutable {
-        // FIXME: Check responseIdentifier. <rdar://116203008>
+    dispatchDecidePolicyForNavigationAction(action, action.originalRequest(), WebCore::ResourceResponse(), nullptr, { }, { }, { }, { }, { }, WebCore::PolicyDecisionMode::Asynchronous, [protectedFrame = Ref { m_frame }, request = WTFMove(request)] (WebCore::PolicyAction policyAction) mutable {
         // WebPage::loadRequest will make this load happen if needed.
         // FIXME: What if PolicyAction::Ignore is sent. Is everything in the right state? We probably need to make sure the load event still happens on the parent frame. <rdar://116203453>
     });
@@ -112,6 +111,12 @@ void WebRemoteFrameClient::focus()
 {
     if (auto* page = m_frame->page())
         page->send(Messages::WebPageProxy::FocusRemoteFrame(m_frame->frameID()));
+}
+
+void WebRemoteFrameClient::dispatchDecidePolicyForNavigationAction(const NavigationAction& navigationAction, const ResourceRequest& request, const ResourceResponse& redirectResponse,
+    FormState* formState, const String& clientRedirectSourceForHistory, uint64_t navigationID, std::optional<WebCore::HitTestResult>&& hitTestResult, bool hasOpener, WebCore::SandboxFlags sandboxFlags, PolicyDecisionMode policyDecisionMode, FramePolicyFunction&& function)
+{
+    WebFrameLoaderClient::dispatchDecidePolicyForNavigationAction(navigationAction, request, redirectResponse, formState, clientRedirectSourceForHistory, navigationID, WTFMove(hitTestResult), hasOpener, sandboxFlags, policyDecisionMode, WTFMove(function));
 }
 
 }

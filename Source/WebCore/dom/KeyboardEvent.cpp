@@ -2,7 +2,7 @@
  * Copyright (C) 2001 Peter Kelly (pmk@post.com)
  * Copyright (C) 2001 Tobias Anton (anton@stud.fbi.fh-darmstadt.de)
  * Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
- * Copyright (C) 2003-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2024 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -134,7 +134,7 @@ inline KeyboardEvent::KeyboardEvent(const AtomString& eventType, const Init& ini
     , m_key(initializer.key)
     , m_code(initializer.code)
     , m_keyIdentifier(initializer.keyIdentifier)
-    , m_location(initializer.keyLocation ? *initializer.keyLocation : initializer.location)
+    , m_location(initializer.location)
     , m_repeat(initializer.repeat)
     , m_isComposing(initializer.isComposing)
     , m_charCode(initializer.charCode)
@@ -161,7 +161,7 @@ Ref<KeyboardEvent> KeyboardEvent::create(const AtomString& type, const Init& ini
 }
 
 void KeyboardEvent::initKeyboardEvent(const AtomString& type, bool canBubble, bool cancelable, RefPtr<WindowProxy>&& view,
-    const AtomString& keyIdentifier, unsigned location, bool ctrlKey, bool altKey, bool shiftKey, bool metaKey, bool altGraphKey)
+    const AtomString& keyIdentifier, unsigned location, bool ctrlKey, bool altKey, bool shiftKey, bool metaKey)
 {
     if (isBeingDispatched())
         return;
@@ -171,7 +171,7 @@ void KeyboardEvent::initKeyboardEvent(const AtomString& type, bool canBubble, bo
     m_keyIdentifier = keyIdentifier;
     m_location = location;
 
-    setModifierKeys(ctrlKey, altKey, shiftKey, metaKey, altGraphKey);
+    setModifierKeys(ctrlKey, altKey, shiftKey, metaKey);
 
     m_charCode = std::nullopt;
     m_isComposing = false;

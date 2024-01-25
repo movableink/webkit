@@ -54,9 +54,10 @@ CSSParserContext::CSSParserContext(CSSParserMode mode, const URL& baseURL)
     , mode(mode)
 {
     // FIXME: We should turn all of the features on from their WebCore Settings defaults.
-    if (mode == UASheetMode) {
+    if (isUASheetBehavior(mode)) {
         colorMixEnabled = true;
         focusVisibleEnabled = true;
+        lightDarkEnabled = true;
         popoverAttributeEnabled = true;
         propertySettings.cssContainmentEnabled = true;
         propertySettings.cssInputSecurityEnabled = true;
@@ -100,6 +101,7 @@ CSSParserContext::CSSParserContext(const Document& document, const URL& sheetBas
     , cssPaintingAPIEnabled { document.settings().cssPaintingAPIEnabled() }
 #endif
     , cssScopeAtRuleEnabled { document.settings().cssScopeAtRuleEnabled() }
+    , cssStartingStyleAtRuleEnabled { document.settings().cssStartingStyleAtRuleEnabled() }
     , cssTextUnderlinePositionLeftRightEnabled { document.settings().cssTextUnderlinePositionLeftRightEnabled() }
     , cssWordBreakAutoPhraseEnabled { document.settings().cssWordBreakAutoPhraseEnabled() }
     , popoverAttributeEnabled { document.settings().popoverAttributeEnabled() }
@@ -109,6 +111,10 @@ CSSParserContext::CSSParserContext(const Document& document, const URL& sheetBas
     , grammarAndSpellingPseudoElementsEnabled { document.settings().grammarAndSpellingPseudoElementsEnabled() }
     , customStateSetEnabled { document.settings().customStateSetEnabled() }
     , thumbAndTrackPseudoElementsEnabled { document.settings().thumbAndTrackPseudoElementsEnabled() }
+#if ENABLE(SERVICE_CONTROLS)
+    , imageControlsEnabled { document.settings().imageControlsEnabled() }
+#endif
+    , lightDarkEnabled { document.settings().cssLightDarkEnabled() }
     , propertySettings { CSSPropertySettings { document.settings() } }
 {
 }
@@ -147,7 +153,11 @@ void add(Hasher& hasher, const CSSParserContext& context)
         | context.grammarAndSpellingPseudoElementsEnabled   << 27
         | context.customStateSetEnabled                     << 28
         | context.thumbAndTrackPseudoElementsEnabled        << 29
-        | (uint64_t)context.mode                            << 30; // This is multiple bits, so keep it last.
+#if ENABLE(SERVICE_CONTROLS)
+        | context.imageControlsEnabled                      << 30
+#endif
+        | context.lightDarkEnabled                          << 31
+        | (uint64_t)context.mode                            << 32; // This is multiple bits, so keep it last.
     add(hasher, context.baseURL, context.charset, context.propertySettings, bits);
 }
 

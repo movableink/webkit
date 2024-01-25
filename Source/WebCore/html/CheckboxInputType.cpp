@@ -32,9 +32,11 @@
 #include "config.h"
 #include "CheckboxInputType.h"
 
+#include "Chrome.h"
 #include "ChromeClient.h"
 #include "EventHandler.h"
 #include "EventNames.h"
+#include "HTMLDivElement.h"
 #include "HTMLInputElement.h"
 #include "InputTypeNames.h"
 #include "KeyboardEvent.h"
@@ -48,8 +50,7 @@
 #include "ScopedEventQueue.h"
 #include "ScriptDisallowedScope.h"
 #include "ShadowRoot.h"
-#include "SwitchThumbElement.h"
-#include "SwitchTrackElement.h"
+#include "UserAgentParts.h"
 
 #if ENABLE(IOS_TOUCH_EVENTS)
 #include "TouchEvent.h"
@@ -84,8 +85,12 @@ void CheckboxInputType::createShadowSubtree()
     ScriptDisallowedScope::EventAllowedScope eventAllowedScope { *element()->userAgentShadowRoot() };
 
     Ref document = element()->document();
-    element()->userAgentShadowRoot()->appendChild(ContainerNode::ChildChange::Source::Parser, SwitchTrackElement::create(document));
-    element()->userAgentShadowRoot()->appendChild(ContainerNode::ChildChange::Source::Parser, SwitchThumbElement::create(document));
+    auto track = HTMLDivElement::create(document);
+    track->setUserAgentPart(UserAgentParts::track());
+    element()->userAgentShadowRoot()->appendChild(ContainerNode::ChildChange::Source::Parser, track);
+    auto thumb = HTMLDivElement::create(document);
+    thumb->setUserAgentPart(UserAgentParts::thumb());
+    element()->userAgentShadowRoot()->appendChild(ContainerNode::ChildChange::Source::Parser, thumb);
 }
 
 void CheckboxInputType::handleKeyupEvent(KeyboardEvent& event)
@@ -155,7 +160,7 @@ void CheckboxInputType::handleTouchEvent(TouchEvent& event)
             return;
         RefPtr<Touch> touch = targetTouches->item(0);
 
-        startSwitchPointerTracking(IntPoint(touch->pageX(), touch->pageY()), touch->identifier());
+        startSwitchPointerTracking({ touch->pageX(), touch->pageY() }, touch->identifier());
         performSwitchAnimation(SwitchAnimationType::Pressed);
         event.setDefaultHandled();
     } else if (eventType == eventNames.touchmoveEvent) {
@@ -170,8 +175,7 @@ void CheckboxInputType::handleTouchEvent(TouchEvent& event)
         if (!touch)
             return;
 
-        auto absoluteLocation = IntPoint(touch->pageX(), touch->pageY());
-        updateIsSwitchVisuallyOnFromAbsoluteLocation(absoluteLocation);
+        updateIsSwitchVisuallyOnFromAbsoluteLocation({ touch->pageX(), touch->pageY() });
         event.setDefaultHandled();
     } else if (eventType == eventNames.touchendEvent || eventType == eventNames.touchcancelEvent) {
         if (!m_switchPointerTrackingTouchIdentifier || !isSwitchPointerTracking())
@@ -231,6 +235,13 @@ void CheckboxInputType::didDispatchClick(Event& event, const InputElementClickSt
     event.setDefaultHandled();
 }
 
+static int switchPointerTrackingLogicalLeftPosition(Element& element, LayoutPoint absoluteLocation)
+{
+    auto isVertical = !element.renderer()->style().isHorizontalWritingMode();
+    auto localLocation = element.renderer()->absoluteToLocal(absoluteLocation, UseTransforms);
+    return isVertical ? localLocation.y() : localLocation.x();
+}
+
 void CheckboxInputType::startSwitchPointerTracking(LayoutPoint absoluteLocation, std::optional<unsigned> touchIdentifier)
 {
     ASSERT(element());
@@ -238,7 +249,7 @@ void CheckboxInputType::startSwitchPointerTracking(LayoutPoint absoluteLocation,
     if (RefPtr frame = element()->document().frame()) {
         frame->eventHandler().setCapturingMouseEventsElement(element());
         m_isSwitchVisuallyOn = element()->checked();
-        m_switchPointerTrackingXPositionStart = element()->renderer()->absoluteToLocal(absoluteLocation, UseTransforms).x();
+        m_switchPointerTrackingLogicalLeftPositionStart = switchPointerTrackingLogicalLeftPosition(*element(), absoluteLocation);
         m_switchPointerTrackingTouchIdentifier = touchIdentifier;
     }
 }
@@ -252,13 +263,13 @@ void CheckboxInputType::stopSwitchPointerTracking()
     if (RefPtr frame = element()->document().frame())
         frame->eventHandler().setCapturingMouseEventsElement(nullptr);
     m_hasSwitchVisuallyOnChanged = false;
-    m_switchPointerTrackingXPositionStart = std::nullopt;
+    m_switchPointerTrackingLogicalLeftPositionStart = std::nullopt;
     m_switchPointerTrackingTouchIdentifier = std::nullopt;
 }
 
 bool CheckboxInputType::isSwitchPointerTracking() const
 {
-    return !!m_switchPointerTrackingXPositionStart;
+    return !!m_switchPointerTrackingLogicalLeftPositionStart;
 }
 
 bool CheckboxInputType::matchesIndeterminatePseudoClass() const
@@ -327,9 +338,7 @@ void CheckboxInputType::performSwitchAnimation(SwitchAnimationType type)
 {
     ASSERT(isSwitch());
     ASSERT(element());
-    ASSERT(element()->renderer());
-
-    if (!element()->renderer()->style().hasEffectiveAppearance())
+    if (!element()->renderer() || !element()->renderer()->style().hasEffectiveAppearance())
         return;
 
     auto updateInterval = switchAnimationUpdateInterval(element());
@@ -392,10 +401,10 @@ bool CheckboxInputType::isSwitchVisuallyOn() const
 
 void CheckboxInputType::updateIsSwitchVisuallyOnFromAbsoluteLocation(LayoutPoint absoluteLocation)
 {
-    auto xPosition = element()->renderer()->absoluteToLocal(absoluteLocation, UseTransforms).x();
+    auto logicalLeftPosition = switchPointerTrackingLogicalLeftPosition(*element(), absoluteLocation);
     auto isSwitchVisuallyOn = m_isSwitchVisuallyOn;
     auto isRTL = element()->computedStyle()->direction() == TextDirection::RTL;
-    auto switchThumbIsLeft = (!isRTL && !isSwitchVisuallyOn) || (isRTL && isSwitchVisuallyOn);
+    auto switchThumbIsLogicallyLeft = (!isRTL && !isSwitchVisuallyOn) || (isRTL && isSwitchVisuallyOn);
     auto switchTrackRect = element()->renderer()->absoluteBoundingBoxRect();
     auto switchThumbLength = switchTrackRect.height();
     auto switchTrackWidth = switchTrackRect.width();
@@ -404,14 +413,14 @@ void CheckboxInputType::updateIsSwitchVisuallyOnFromAbsoluteLocation(LayoutPoint
     if (!m_hasSwitchVisuallyOnChanged) {
         auto switchTrackNoThumbWidth = switchTrackWidth - switchThumbLength;
         auto changeOffset = switchTrackWidth * RenderTheme::singleton().switchPointerTrackingMagnitudeProportion();
-        if (switchThumbIsLeft && *m_switchPointerTrackingXPositionStart > switchTrackNoThumbWidth)
-            changePosition = *m_switchPointerTrackingXPositionStart + changeOffset;
-        else if (!switchThumbIsLeft && *m_switchPointerTrackingXPositionStart < switchTrackNoThumbWidth)
-            changePosition = *m_switchPointerTrackingXPositionStart - changeOffset;
+        if (switchThumbIsLogicallyLeft && *m_switchPointerTrackingLogicalLeftPositionStart > switchTrackNoThumbWidth)
+            changePosition = *m_switchPointerTrackingLogicalLeftPositionStart + changeOffset;
+        else if (!switchThumbIsLogicallyLeft && *m_switchPointerTrackingLogicalLeftPositionStart < switchTrackNoThumbWidth)
+            changePosition = *m_switchPointerTrackingLogicalLeftPositionStart - changeOffset;
     }
 
-    auto switchThumbIsLeftNow = xPosition < changePosition;
-    if (switchThumbIsLeftNow != switchThumbIsLeft) {
+    auto switchThumbIsLogicallyLeftNow = logicalLeftPosition < changePosition;
+    if (switchThumbIsLogicallyLeftNow != switchThumbIsLogicallyLeft) {
         m_hasSwitchVisuallyOnChanged = true;
         m_isSwitchVisuallyOn = !m_isSwitchVisuallyOn;
         performSwitchAnimation(SwitchAnimationType::VisuallyOn);

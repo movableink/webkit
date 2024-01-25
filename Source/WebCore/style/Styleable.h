@@ -51,8 +51,8 @@ struct Styleable {
 
     static const Styleable fromElement(Element& element)
     {
-        if (is<PseudoElement>(element))
-            return Styleable(*downcast<PseudoElement>(element).hostElement(), element.pseudoId());
+        if (auto* pseudoElement = dynamicDowncast<PseudoElement>(element))
+            return Styleable(*pseudoElement->hostElement(), element.pseudoId());
         return Styleable(element, element.pseudoId());
     }
 
@@ -175,12 +175,12 @@ struct Styleable {
     void elementWasRemoved() const;
 
     void willChangeRenderer() const;
-    void cancelDeclarativeAnimations() const;
+    void cancelStyleOriginatedAnimations() const;
 
     void animationWasAdded(WebAnimation&) const;
     void animationWasRemoved(WebAnimation&) const;
 
-    void removeDeclarativeAnimationFromListsForOwningElement(WebAnimation&) const;
+    void removeStyleOriginatedAnimationFromListsForOwningElement(WebAnimation&) const;
 
     void updateCSSAnimations(const RenderStyle* currentStyle, const RenderStyle& afterChangeStyle, const Style::ResolutionContext&) const;
     void updateCSSTransitions(const RenderStyle& currentStyle, const RenderStyle& newStyle) const;

@@ -691,14 +691,13 @@ static NSString *webProcessLoaderAccessibilityBundlePath()
     return [path stringByAppendingPathComponent:@"System/Library/AccessibilityBundles/WebProcessLoader.axbundle"];
 }
 
+#if !PLATFORM(MACCATALYST)
 static NSString *webProcessAccessibilityBundlePath()
 {
     NSString *path = (__bridge NSString *)GSSystemRootDirectory();
-#if PLATFORM(MACCATALYST)
-    path = [path stringByAppendingPathComponent:@"System/iOSSupport"];
-#endif
     return [path stringByAppendingPathComponent:@"System/Library/AccessibilityBundles/WebProcess.axbundle"];
 }
+#endif // !PLATFORM(MACCATALYST)
 #endif
 
 static void registerWithAccessibility()
@@ -945,26 +944,13 @@ void WebProcess::initializeSandbox(const AuxiliaryProcessInitializationParameter
 
 static NSURL *origin(WebPage& page)
 {
-    Ref mainFrame = page.mainWebFrame();
-
-    URL mainFrameURL = mainFrame->url();
-    Ref<SecurityOrigin> mainFrameOrigin = SecurityOrigin::create(mainFrameURL);
-    String mainFrameOriginString;
-    if (!mainFrameOrigin->isOpaque())
-        mainFrameOriginString = mainFrameOrigin->toRawString();
-    else
-        mainFrameOriginString = makeString(mainFrameURL.protocol(), ':'); // toRawString() is not supposed to work with opaque origins, and would just return "://".
-
+    auto rootFrameOriginString = page.rootFrameOriginString();
     // +[NSURL URLWithString:] returns nil when its argument is malformed. It's unclear when we would have a malformed URL here,
     // but it happens in practice according to <rdar://problem/14173389>. Leaving an assertion in to catch a reproducible case.
-    ASSERT([NSURL URLWithString:mainFrameOriginString]);
-
-    return [NSURL URLWithString:mainFrameOriginString];
+    ASSERT([NSURL URLWithString:rootFrameOriginString]);
+    return [NSURL URLWithString:rootFrameOriginString];
 }
 
-#endif
-
-#if PLATFORM(MAC)
 static Vector<String> activePagesOrigins(const HashMap<PageIdentifier, RefPtr<WebPage>>& pageMap)
 {
     Vector<String> origins;

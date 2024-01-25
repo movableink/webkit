@@ -300,6 +300,7 @@ namespace WebCore {
     macro(MediaStreamAudioDestinationNode) \
     macro(MediaStreamAudioSourceNode) \
     macro(MediaStreamTrack) \
+    macro(MediaStreamTrackProcessor) \
     macro(MerchantValidationEvent) \
     macro(MockRTCRtpTransform) \
     macro(NavigateEvent) \
@@ -507,6 +508,7 @@ namespace WebCore {
     macro(XRViewerPose) \
     macro(XRViewport) \
     macro(XRWebGLLayer) \
+    macro(VideoTrackGenerator) \
     macro(abortAlgorithm) \
     macro(abortSteps) \
     macro(addAbortAlgorithmToSignal) \

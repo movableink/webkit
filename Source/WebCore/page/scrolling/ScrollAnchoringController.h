@@ -48,16 +48,15 @@ public:
     ~ScrollAnchoringController();
     void invalidateAnchorElement();
     void adjustScrollPositionForAnchoring();
-    void selectAnchorElement();
     void chooseAnchorElement(Document&);
+    CandidateExaminationResult examineAnchorCandidate(Element&);
     void updateAnchorElement();
     void notifyChildHadSuppressingStyleChange();
     bool isInScrollAnchoringAncestorChain(const RenderObject&);
-    Element* anchorElement() const { return m_anchorElement.get(); }
 
+    Element* anchorElement() const { return m_anchorElement.get(); }
 private:
     Element* findAnchorElementRecursive(Element*);
-    CandidateExaminationResult examineAnchorCandidate(Element&);
     bool didFindPriorityCandidate(Document&);
     FloatPoint computeOffsetFromOwningScroller(RenderObject& candidate);
     LocalFrameView& frameView();
@@ -67,7 +66,7 @@ private:
     FloatPoint m_lastOffsetForAnchorElement;
     bool m_midUpdatingScrollPositionForAnchorElement { false };
     bool m_isQueuedForScrollPositionUpdate { false };
-    bool m_shouldSupressScrollPositionUpdate { false };
+    bool m_shouldSuppressScrollPositionUpdate { false };
 };
 
 } // namespace WebCore

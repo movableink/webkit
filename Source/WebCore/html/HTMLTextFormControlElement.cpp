@@ -188,7 +188,7 @@ void HTMLTextFormControlElement::updatePlaceholderVisibility()
     if (m_isPlaceholderVisible == newIsPlaceholderVisible)
         return;
 
-    Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClassType::PlaceholderShown, newIsPlaceholderVisible);
+    Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClass::PlaceholderShown, newIsPlaceholderVisible);
     m_isPlaceholderVisible = newIsPlaceholderVisible;
 
     if (RefPtr placeholder = placeholderElement())
@@ -310,12 +310,13 @@ bool HTMLTextFormControlElement::setSelectionRange(unsigned start, unsigned end,
     if (!isTextField())
         return false;
 
+    auto innerText = innerTextElementCreatingShadowSubtreeIfNeeded();
+
     // Clamps to the current value length.
     unsigned innerTextValueLength = innerTextValue().length();
     end = std::min(end, innerTextValueLength);
     start = std::min(start, end);
 
-    auto innerText = innerTextElementCreatingShadowSubtreeIfNeeded();
     bool hasFocus = document().focusedElement() == this;
 
     RefPtr frame = document().frame();
@@ -661,7 +662,7 @@ void HTMLTextFormControlElement::setInnerTextValue(String&& value)
     String previousValue = innerTextValueFrom(*innerText);
     bool textIsChanged = value != previousValue;
     if (textIsChanged || !innerText->hasChildNodes()) {
-#if ENABLE(ACCESSIBILITY) && !PLATFORM(COCOA)
+#if !PLATFORM(COCOA)
         if (textIsChanged && renderer()) {
 #if USE(ATSPI)
             if (auto* input = dynamicDowncast<HTMLInputElement>(*this); input && input->isPasswordField()) {
@@ -689,7 +690,7 @@ void HTMLTextFormControlElement::setInnerTextValue(String&& value)
                 innerText->appendChild(HTMLBRElement::create(document()));
         }
 
-#if ENABLE(ACCESSIBILITY) && (PLATFORM(COCOA) || USE(ATSPI))
+#if PLATFORM(COCOA) || USE(ATSPI)
         if (textIsChanged && renderer()) {
             if (AXObjectCache* cache = document().existingAXObjectCache())
                 cache->deferTextReplacementNotificationForTextControl(*this, previousValue);

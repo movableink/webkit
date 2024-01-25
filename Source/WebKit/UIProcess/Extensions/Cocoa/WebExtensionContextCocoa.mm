@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,6 +39,8 @@
 #import "ContextMenuContextData.h"
 #import "InjectUserScriptImmediately.h"
 #import "Logging.h"
+#import "PageLoadStateObserver.h"
+#import "ResourceLoadInfo.h"
 #import "WKNavigationActionPrivate.h"
 #import "WKNavigationDelegatePrivate.h"
 #import "WKPreferencesPrivate.h"
@@ -47,6 +49,7 @@
 #import "WKWebViewInternal.h"
 #import "WKWebpagePreferencesPrivate.h"
 #import "WKWebsiteDataStorePrivate.h"
+#import "WebCoreArgumentCoders.h"
 #import "WebExtensionAction.h"
 #import "WebExtensionContextProxyMessages.h"
 #import "WebExtensionDynamicScripts.h"
@@ -55,6 +58,7 @@
 #import "WebExtensionURLSchemeHandler.h"
 #import "WebExtensionWindow.h"
 #import "WebPageProxy.h"
+#import "WebPageProxyIdentifier.h"
 #import "WebScriptMessageHandler.h"
 #import "WebUserContentControllerProxy.h"
 #import "_WKWebExtensionContextInternal.h"
@@ -84,6 +88,8 @@ static NSString * const backgroundContentEventListenersVersionKey = @"Background
 static NSString * const lastSeenBaseURLStateKey = @"LastSeenBaseURL";
 static NSString * const lastSeenVersionStateKey = @"LastSeenVersion";
 static NSString * const lastLoadedDeclarativeNetRequestHashStateKey = @"LastLoadedDeclarativeNetRequestHash";
+
+static NSString * const sessionStorageAllowedInContentScriptsKey = @"SessionStorageAllowedInContentScripts";
 
 // Update this value when any changes are made to the WebExtensionEventListenerType enum.
 static constexpr NSInteger currentBackgroundContentListenerStateVersion = 3;
@@ -229,6 +235,8 @@ bool WebExtensionContext::load(WebExtensionController& controller, String storag
 
     auto lastSeenBaseURL = URL { objectForKey<NSString>(m_state, lastSeenBaseURLStateKey) };
     [m_state setObject:(NSString *)m_baseURL.string() forKey:lastSeenBaseURLStateKey];
+
+    m_isSessionStorageAllowedInContentScripts = boolForKey(m_state.get(), sessionStorageAllowedInContentScriptsKey, false);
 
     writeStateToStorage();
 
@@ -382,9 +390,28 @@ void WebExtensionContext::setBaseURL(URL&& url)
     m_baseURL = URL { makeString(url.protocol(), "://", url.host(), '/') };
 }
 
-bool WebExtensionContext::isURLForThisExtension(const URL& url)
+bool WebExtensionContext::isURLForThisExtension(const URL& url) const
 {
     return protocolHostAndPortAreEqual(baseURL(), url);
+}
+
+bool WebExtensionContext::extensionCanAccessWebPage(WebPageProxyIdentifier webPageProxyIdentifier)
+{
+    RefPtr page = WebProcessProxy::webPage(webPageProxyIdentifier);
+    if (page && isURLForThisExtension(URL { page->pageLoadState().activeURL() }))
+        return true;
+
+    RefPtr tab = getTab(webPageProxyIdentifier);
+    if (!tab) {
+        // FIXME: <https://webkit.org/b/268030> Tab isn't found in the list of opened tabs.
+        return true;
+    }
+
+    if (tab->extensionHasPermission())
+        return true;
+
+    RELEASE_LOG_ERROR(Extensions, "Access to this tab is not allowed for this extension");
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 void WebExtensionContext::setUniqueIdentifier(String&& uniqueIdentifier)
@@ -979,7 +1006,7 @@ WebExtensionContext::PermissionState WebExtensionContext::permissionState(const 
 {
     ASSERT(!permission.isEmpty());
 
-    if (tab && hasActiveUserGesture(*tab)) {
+    if (tab && hasPermission(_WKWebExtensionPermissionActiveTab) && hasActiveUserGesture(*tab)) {
         // An active user gesture grants the "tabs" permission.
         if (permission == String(_WKWebExtensionPermissionTabs))
             return PermissionState::GrantedExplicitly;
@@ -1852,6 +1879,97 @@ void WebExtensionContext::didFailLoadForFrame(WebPageProxyIdentifier pageID, Web
     }
 }
 
+// MARK: webRequest
+
+bool WebExtensionContext::hasPermissionToSendWebRequestEvent(WebExtensionTab* tab, const URL& resourceURL, const ResourceLoadInfo& loadInfo)
+{
+    if (!tab)
+        return false;
+
+    if (!hasPermission(_WKWebExtensionPermissionWebRequest, tab))
+        return false;
+
+    if (!tab->extensionHasPermission())
+        return false;
+
+    if (resourceURL.isValid() && !hasPermission(resourceURL, tab))
+        return false;
+
+    const URL& resourceLoadURL = loadInfo.originalURL;
+    if (resourceLoadURL.isValid() && !hasPermission(resourceLoadURL, tab))
+        return false;
+
+    return true;
+}
+
+void WebExtensionContext::resourceLoadDidSendRequest(WebPageProxyIdentifier pageID, const ResourceLoadInfo& loadInfo, const WebCore::ResourceRequest& request)
+{
+    auto tab = getTab(pageID);
+    if (!hasPermissionToSendWebRequestEvent(tab.get(), request.url(), loadInfo))
+        return;
+
+    auto eventTypes = { WebExtensionEventListenerType::WebRequestOnBeforeRequest, WebExtensionEventListenerType::WebRequestOnBeforeSendHeaders, WebExtensionEventListenerType::WebRequestOnSendHeaders };
+    wakeUpBackgroundContentIfNecessaryToFireEvents(eventTypes, [&] {
+        auto windowIdentifier = tab->window() ? tab->window()->identifier() : WebExtensionWindowConstants::NoneIdentifier;
+        sendToProcessesForEvents(eventTypes, Messages::WebExtensionContextProxy::ResourceLoadDidSendRequest(tab->identifier(), windowIdentifier, request, loadInfo));
+    });
+}
+
+void WebExtensionContext::resourceLoadDidPerformHTTPRedirection(WebPageProxyIdentifier pageID, const ResourceLoadInfo& loadInfo, const WebCore::ResourceResponse& response, const WebCore::ResourceRequest& request)
+{
+    auto tab = getTab(pageID);
+    if (!hasPermissionToSendWebRequestEvent(tab.get(), request.url(), loadInfo))
+        return;
+
+    auto eventTypes = { WebExtensionEventListenerType::WebRequestOnHeadersReceived, WebExtensionEventListenerType::WebRequestOnBeforeRedirect };
+    wakeUpBackgroundContentIfNecessaryToFireEvents(eventTypes, [&] {
+        auto windowIdentifier = tab->window() ? tab->window()->identifier() : WebExtensionWindowConstants::NoneIdentifier;
+        sendToProcessesForEvents(eventTypes, Messages::WebExtensionContextProxy::ResourceLoadDidPerformHTTPRedirection(tab->identifier(), windowIdentifier, response, loadInfo, request));
+    });
+
+    // After dispatching the redirect events, also dispatch the `didSendRequest` events for the redirection.
+    resourceLoadDidSendRequest(pageID, loadInfo, request);
+}
+
+void WebExtensionContext::resourceLoadDidReceiveChallenge(WebPageProxyIdentifier pageID, const ResourceLoadInfo& loadInfo, const WebCore::AuthenticationChallenge& challenge)
+{
+    auto tab = getTab(pageID);
+    if (!hasPermissionToSendWebRequestEvent(tab.get(), URL { }, loadInfo))
+        return;
+
+    auto eventTypes = { WebExtensionEventListenerType::WebRequestOnAuthRequired };
+    wakeUpBackgroundContentIfNecessaryToFireEvents(eventTypes, [&] {
+        auto windowIdentifier = tab->window() ? tab->window()->identifier() : WebExtensionWindowConstants::NoneIdentifier;
+        sendToProcessesForEvents(eventTypes, Messages::WebExtensionContextProxy::ResourceLoadDidReceiveChallenge(tab->identifier(), windowIdentifier, challenge, loadInfo));
+    });
+}
+
+void WebExtensionContext::resourceLoadDidReceiveResponse(WebPageProxyIdentifier pageID, const ResourceLoadInfo& loadInfo, const WebCore::ResourceResponse& response)
+{
+    auto tab = getTab(pageID);
+    if (!hasPermissionToSendWebRequestEvent(tab.get(), response.url(), loadInfo))
+        return;
+
+    auto eventTypes = { WebExtensionEventListenerType::WebRequestOnHeadersReceived, WebExtensionEventListenerType::WebRequestOnResponseStarted };
+    wakeUpBackgroundContentIfNecessaryToFireEvents(eventTypes, [&] {
+        auto windowIdentifier = tab->window() ? tab->window()->identifier() : WebExtensionWindowConstants::NoneIdentifier;
+        sendToProcessesForEvents(eventTypes, Messages::WebExtensionContextProxy::ResourceLoadDidReceiveResponse(tab->identifier(), windowIdentifier, response, loadInfo));
+    });
+}
+
+void WebExtensionContext::resourceLoadDidCompleteWithError(WebPageProxyIdentifier pageID, const ResourceLoadInfo& loadInfo, const WebCore::ResourceResponse& response, const WebCore::ResourceError& error)
+{
+    auto tab = getTab(pageID);
+    if (!hasPermissionToSendWebRequestEvent(tab.get(), response.url(), loadInfo))
+        return;
+
+    auto eventTypes = { WebExtensionEventListenerType::WebRequestOnErrorOccurred, WebExtensionEventListenerType::WebRequestOnCompleted };
+    wakeUpBackgroundContentIfNecessaryToFireEvents(eventTypes, [&] {
+        auto windowIdentifier = tab->window() ? tab->window()->identifier() : WebExtensionWindowConstants::NoneIdentifier;
+        sendToProcessesForEvents(eventTypes, Messages::WebExtensionContextProxy::ResourceLoadDidCompleteWithError(tab->identifier(), windowIdentifier, response, error, loadInfo));
+    });
+}
+
 WebExtensionAction& WebExtensionContext::defaultAction()
 {
     if (!m_defaultAction)
@@ -2344,6 +2462,21 @@ WKWebViewConfiguration *WebExtensionContext::webViewConfiguration(WebViewPurpose
     }
 
     return configuration;
+}
+
+WebsiteDataStore* WebExtensionContext::websiteDataStore(std::optional<PAL::SessionID> sessionID) const
+{
+    RefPtr result = extensionController()->websiteDataStore(sessionID);
+    if (result && !result->isPersistent() && !hasAccessInPrivateBrowsing())
+        return nullptr;
+    return result.get();
+}
+
+void WebExtensionContext::cookiesDidChange(API::HTTPCookieStore&)
+{
+    // FIXME: <https://webkit.org/b/267514> Add support for changeInfo.
+
+    fireCookiesChangedEventIfNeeded();
 }
 
 URL WebExtensionContext::backgroundContentURL()
@@ -3175,6 +3308,20 @@ RetainPtr<_WKWebExtensionRegisteredScriptsSQLiteStore> WebExtensionContext::regi
     if (!m_registeredContentScriptsStorage)
         m_registeredContentScriptsStorage = [[_WKWebExtensionRegisteredScriptsSQLiteStore alloc] initWithUniqueIdentifier:m_uniqueIdentifier directory:storageDirectory() usesInMemoryDatabase:!storageIsPersistent()];
     return m_registeredContentScriptsStorage;
+}
+
+void WebExtensionContext::setSessionStorageAllowedInContentScripts(bool allowed)
+{
+    m_isSessionStorageAllowedInContentScripts = allowed;
+
+    [m_state setObject:@(allowed) forKey:sessionStorageAllowedInContentScriptsKey];
+
+    writeStateToStorage();
+
+    if (!isLoaded())
+        return;
+
+    extensionController()->sendToAllProcesses(Messages::WebExtensionContextProxy::SetStorageAccessLevel(allowed), identifier());
 }
 
 } // namespace WebKit

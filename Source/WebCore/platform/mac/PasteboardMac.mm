@@ -670,7 +670,7 @@ void Pasteboard::addHTMLClipboardTypesForCocoaType(ListHashSet<String>& resultTy
 
     // UTI may not do these right, so make sure we get the right, predictable result
     if (cocoaType == String(legacyStringPasteboardType()) || cocoaType == String(NSPasteboardTypeString)) {
-        resultTypes.add("text/plain"_s);
+        resultTypes.add(textPlainContentTypeAtom());
         return;
     }
     if (cocoaType == String(legacyURLPasteboardType())) {
@@ -836,6 +836,44 @@ void Pasteboard::setDragImage(DragImage image, const IntPoint& location)
 bool Pasteboard::canWriteTrustworthyWebURLsPboardType()
 {
     return true;
+}
+
+RefPtr<WebCore::SharedBuffer> Pasteboard::bufferConvertedToPasteboardType(const PasteboardBuffer& pasteboardBuffer, const String& pasteboardType)
+{
+    if (pasteboardBuffer.type == pasteboardType)
+        return pasteboardBuffer.data;
+
+    if (pasteboardType != String(legacyTIFFPasteboardType()))
+        return pasteboardBuffer.data;
+
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+    if (pasteboardBuffer.type == String(kUTTypeTIFF))
+        return pasteboardBuffer.data;
+ALLOW_DEPRECATED_DECLARATIONS_END
+
+    auto sourceData = pasteboardBuffer.data->createCFData();
+    auto sourceType = pasteboardBuffer.type.createCFString();
+
+    const void* key = kCGImageSourceTypeIdentifierHint;
+    const void* value = sourceType.get();
+    auto options = adoptCF(CFDictionaryCreate(kCFAllocatorDefault, &key, &value, 1, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
+
+    auto source = adoptCF(CGImageSourceCreateWithData(sourceData.get(), options.get()));
+    if (!source)
+        return nullptr;
+
+    auto data = adoptCF(CFDataCreateMutable(0, 0));
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+    auto destination = adoptCF(CGImageDestinationCreateWithData(data.get(), kUTTypeTIFF, 1, NULL));
+ALLOW_DEPRECATED_DECLARATIONS_END
+    if (!destination)
+        return nullptr;
+
+    CGImageDestinationAddImageFromSource(destination.get(), source.get(), 0, NULL);
+    if (!CGImageDestinationFinalize(destination.get()))
+        return nullptr;
+
+    return SharedBuffer::create(data.get());
 }
 
 }

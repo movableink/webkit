@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(WEB_CRYPTO) || ENABLE(WEB_RTC)
-
 #include "ExceptionOr.h"
 #include <CommonCrypto/CommonCryptoError.h>
 #include <wtf/Vector.h>
@@ -49,5 +47,3 @@ Vector<uint8_t> calculateHMACSignature(CCHmacAlgorithm, const Vector<uint8_t>& k
 Vector<uint8_t> calculateSHA256Signature(const Vector<uint8_t>& key, const uint8_t* data, size_t);
 
 } // namespace WebCore
-
-#endif // ENABLE(WEB_CRYPTO) || ENABLE(WEB_RTC)

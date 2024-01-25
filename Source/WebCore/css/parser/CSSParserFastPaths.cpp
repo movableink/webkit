@@ -524,7 +524,7 @@ static RefPtr<CSSValue> parseColor(StringView string, const CSSParserContext& co
     ASSERT(!string.isEmpty());
     auto valueID = cssValueKeywordID(string);
     if (StyleColor::isColorKeyword(valueID)) {
-        if (!isValueAllowedInMode(valueID, context.mode))
+        if (!isColorKeywordAllowedInMode(valueID, context.mode))
             return nullptr;
         return CSSPrimitiveValue::create(valueID);
     }
@@ -802,7 +802,7 @@ static RefPtr<CSSFunctionValue> parseSimpleTransformValue(CharType*& pos, CharTy
             return nullptr;
 
         pos += argumentStart;
-        auto angle = parseTransformAngleArgument(pos, end);
+        RefPtr angle = parseTransformAngleArgument(pos, end);
         if (!angle)
             return nullptr;
         return CSSFunctionValue::create(transformType, angle.releaseNonNull());

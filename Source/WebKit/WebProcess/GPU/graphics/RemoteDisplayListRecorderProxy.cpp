@@ -241,9 +241,9 @@ void RemoteDisplayListRecorderProxy::recordDrawImageBuffer(ImageBuffer& imageBuf
     send(Messages::RemoteDisplayListRecorder::DrawImageBuffer(imageBuffer.renderingResourceIdentifier(), destRect, srcRect, options));
 }
 
-void RemoteDisplayListRecorderProxy::recordDrawNativeImage(RenderingResourceIdentifier imageIdentifier, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
+void RemoteDisplayListRecorderProxy::recordDrawNativeImage(RenderingResourceIdentifier imageIdentifier, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
 {
-    send(Messages::RemoteDisplayListRecorder::DrawNativeImage(imageIdentifier, imageSize, destRect, srcRect, options));
+    send(Messages::RemoteDisplayListRecorder::DrawNativeImage(imageIdentifier, destRect, srcRect, options));
 }
 
 void RemoteDisplayListRecorderProxy::recordDrawSystemImage(SystemImage& systemImage, const FloatRect& destinationRect)
@@ -321,6 +321,11 @@ void RemoteDisplayListRecorderProxy::recordFillRectWithGradient(const FloatRect&
     send(Messages::RemoteDisplayListRecorder::FillRectWithGradient(DisplayList::FillRectWithGradient { rect, gradient }));
 }
 
+void RemoteDisplayListRecorderProxy::recordFillRectWithGradientAndSpaceTransform(const FloatRect& rect, Gradient& gradient, const AffineTransform& gradientSpaceTransform)
+{
+    send(Messages::RemoteDisplayListRecorder::FillRectWithGradientAndSpaceTransform(DisplayList::FillRectWithGradientAndSpaceTransform { rect, gradient, gradientSpaceTransform }));
+}
+
 void RemoteDisplayListRecorderProxy::recordFillCompositedRect(const FloatRect& rect, const Color& color, CompositeOperator op, BlendMode mode)
 {
     send(Messages::RemoteDisplayListRecorder::FillCompositedRect(rect, color, op, mode));
@@ -384,7 +389,11 @@ void RemoteDisplayListRecorderProxy::recordPaintFrameForMedia(MediaPlayer& playe
 void RemoteDisplayListRecorderProxy::recordPaintVideoFrame(VideoFrame& frame, const FloatRect& destination, bool shouldDiscardAlpha)
 {
 #if PLATFORM(COCOA)
-    auto sharedVideoFrame = ensureSharedVideoFrameWriter().write(frame, [&](auto& semaphore) {
+    Locker locker { m_sharedVideoFrameWriterLock };
+    if (!m_sharedVideoFrameWriter)
+        m_sharedVideoFrameWriter = makeUnique<SharedVideoFrameWriter>();
+
+    auto sharedVideoFrame = m_sharedVideoFrameWriter->write(frame, [&](auto& semaphore) {
         send(Messages::RemoteDisplayListRecorder::SetSharedVideoFrameSemaphore { semaphore });
     }, [&](SharedMemory::Handle&& handle) {
         send(Messages::RemoteDisplayListRecorder::SetSharedVideoFrameMemory { WTFMove(handle) });
@@ -589,20 +598,11 @@ void RemoteDisplayListRecorderProxy::disconnect()
 {
     m_renderingBackend = nullptr;
 #if PLATFORM(COCOA) && ENABLE(VIDEO)
+    Locker locker { m_sharedVideoFrameWriterLock };
     if (m_sharedVideoFrameWriter)
         m_sharedVideoFrameWriter->disable();
 #endif
 }
-
-#if PLATFORM(COCOA) && ENABLE(VIDEO)
-SharedVideoFrameWriter& RemoteDisplayListRecorderProxy::ensureSharedVideoFrameWriter()
-{
-    if (!m_sharedVideoFrameWriter)
-        m_sharedVideoFrameWriter = makeUnique<SharedVideoFrameWriter>();
-
-    return *m_sharedVideoFrameWriter;
-}
-#endif
 
 } // namespace WebCore
 

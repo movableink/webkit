@@ -28,8 +28,22 @@
 
 namespace WebCore {
 
+NativeImageBackend::~NativeImageBackend() = default;
+
+PlatformImageNativeImageBackend::~PlatformImageNativeImageBackend() = default;
+
+const PlatformImagePtr& PlatformImageNativeImageBackend::platformImage() const
+{
+    return m_platformImage;
+}
+
+PlatformImageNativeImageBackend::PlatformImageNativeImageBackend(PlatformImagePtr platformImage)
+    : m_platformImage(WTFMove(platformImage))
+{
+}
+
 #if !USE(CG)
-RefPtr<NativeImage> NativeImage::create(PlatformImagePtr&& platformImage, RenderingResourceIdentifier renderingResourceIdentifier)
+RefPtr<NativeImage> NativeImage::create(PlatformImagePtr&& platformImage, RenderingResourceIdentifier identifier)
 {
 #if PLATFORM(QT)
     if (platformImage.isNull())
@@ -37,8 +51,8 @@ RefPtr<NativeImage> NativeImage::create(PlatformImagePtr&& platformImage, Render
     if (!platformImage)
 #endif
         return nullptr;
-
-    return adoptRef(*new NativeImage(WTFMove(platformImage), renderingResourceIdentifier));
+    UniqueRef<PlatformImageNativeImageBackend> backend { *new PlatformImageNativeImageBackend(WTFMove(platformImage)) };
+    return adoptRef(*new NativeImage(WTFMove(backend), identifier));
 }
 
 RefPtr<NativeImage> NativeImage::createTransient(PlatformImagePtr&& image, RenderingResourceIdentifier identifier)
@@ -47,7 +61,7 @@ RefPtr<NativeImage> NativeImage::createTransient(PlatformImagePtr&& image, Rende
 }
 #endif
 
-NativeImage::NativeImage(PlatformImagePtr&& platformImage, RenderingResourceIdentifier renderingResourceIdentifier)
+NativeImage::NativeImage(UniqueRef<NativeImageBackend> backend, RenderingResourceIdentifier renderingResourceIdentifier)
     : RenderingResource(renderingResourceIdentifier)
 #if PLATFORM(QT)
     , m_platformImage(platformImage)
@@ -55,21 +69,36 @@ NativeImage::NativeImage(PlatformImagePtr&& platformImage, RenderingResourceIden
     , m_platformImage(WTFMove(platformImage))
 #endif
 {
-#if PLATFORM(QT)
-    ASSERT(!m_platformImage.isNull());
-#else
-    ASSERT(m_platformImage);
-#endif
 }
-    
-void NativeImage::setPlatformImage(PlatformImagePtr&& platformImage)
+
+const PlatformImagePtr& NativeImage::platformImage() const
+{
+    return m_backend->platformImage();
+}
+
+IntSize NativeImage::size() const
+{
+    return m_backend->size();
+}
+
+bool NativeImage::hasAlpha() const
+{
+    return m_backend->hasAlpha();
+}
+
+DestinationColorSpace NativeImage::colorSpace() const
+{
+    return m_backend->colorSpace();
+}
+
+void NativeImage::replaceContents(PlatformImagePtr platformImage)
 {
 #if PLATFORM(QT)
-    m_platformImage = QImage(platformImage);
+    UniqueRef<PlatformImageNativeImageBackend> backend { *new PlatformImageNativeImageBackend(WTFMove(platformImage)) };
 #else
-    ASSERT(platformImage);
-    m_platformImage = WTFMove(platformImage);
+    UniqueRef<PlatformImageNativeImageBackend> backend { *new PlatformImageNativeImageBackend(platformImage) };
 #endif
+    m_backend = WTFMove(backend);
 }
 
 } // namespace WebCore

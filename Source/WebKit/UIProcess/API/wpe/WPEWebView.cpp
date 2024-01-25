@@ -275,12 +275,8 @@ View::View(struct wpe_view_backend* backend, WPEDisplay* display, const API::Pag
         // get_accessible
         [](void* data) -> void*
         {
-#if ENABLE(ACCESSIBILITY)
             auto& view = *reinterpret_cast<View*>(data);
             return view.accessible();
-#else
-            return nullptr;
-#endif
         },
         // set_device_scale_factor
         [](void* data, float scale)
@@ -492,10 +488,8 @@ View::~View()
     m_backingStore = nullptr;
 #endif
 
-#if ENABLE(ACCESSIBILITY)
     if (m_accessible)
         webkitWebViewAccessibleSetWebView(m_accessible.get(), nullptr);
-#endif
 }
 
 void View::setClient(std::unique_ptr<API::ViewClient>&& client)
@@ -726,14 +720,12 @@ bool View::setFullScreen(bool fullScreenState)
 };
 #endif
 
-#if ENABLE(ACCESSIBILITY)
 WebKitWebViewAccessible* View::accessible() const
 {
     if (!m_accessible)
         m_accessible = webkitWebViewAccessibleNew(const_cast<View*>(this));
     return m_accessible.get();
 }
-#endif
 
 #if ENABLE(GAMEPAD)
 WebKit::WebPageProxy* View::platformWebPageProxyForGamepadInput()
@@ -927,7 +919,7 @@ void View::setCursor(const WebCore::Cursor& cursor)
     }, surface.leakRef()));
 
     WebCore::IntPoint hotspot = WebCore::determineHotSpot(image.get(), cursor.hotSpot());
-    wpe_view_set_cursor_from_bytes(m_wpeView.get(), bytes.get(), width, height, hotspot.x(), hotspot.y());
+    wpe_view_set_cursor_from_bytes(m_wpeView.get(), bytes.get(), width, height, stride, hotspot.x(), hotspot.y());
 #else
     UNUSED_PARAM(cursor);
 #endif

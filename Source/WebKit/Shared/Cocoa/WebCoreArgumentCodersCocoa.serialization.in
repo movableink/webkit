@@ -47,6 +47,7 @@ header: <WebCore/ResourceRequest.h>
     bool m_privacyProxyFailClosedForUnreachableNonMainHosts;
     bool m_useAdvancedPrivacyProtections;
     bool m_didFilterLinkDecoration;
+    bool m_isPrivateTokenUsageByThirdPartyAllowed;
 };
 
 [Nested] struct WebCore::AttributedString::ParagraphStyleWithTableAndListIDs {
@@ -56,7 +57,7 @@ header: <WebCore/ResourceRequest.h>
 }
 
 [Nested] struct WebCore::AttributedString::AttributeValue {
-    std::variant<double, String, URL, Ref<WebCore::Font>, Vector<String>, Vector<double>, WebCore::AttributedString::ParagraphStyleWithTableAndListIDs, RetainPtr<NSPresentationIntent>, RetainPtr<NSTextAttachment>, RetainPtr<NSShadow>, RetainPtr<NSDate>, WebCore::AttributedString::ColorFromCGColor, WebCore::AttributedString::ColorFromPlatformColor> value;
+    std::variant<double, String, URL, Ref<WebCore::Font>, Vector<String>, Vector<double>, WebCore::AttributedString::ParagraphStyleWithTableAndListIDs, RetainPtr<NSPresentationIntent>, RetainPtr<NSShadow>, RetainPtr<NSDate>, WebCore::AttributedString::ColorFromCGColor, WebCore::AttributedString::ColorFromPlatformColor, WebCore::TextAttachmentFileWrapper, WebCore::TextAttachmentMissingImage> value;
 }
 
 [Nested] struct WebCore::AttributedString::ColorFromPlatformColor {
@@ -108,6 +109,11 @@ enum class WebCore::ApplePaySessionPaymentRequestShippingType : uint8_t {
     StorePickup,
     ServicePickup,
 };
+
+headers: <pal/cocoa/PassKitSoftLink.h>
+class WebCore::PaymentMethod {
+    [Precondition='PAL::isPassKitCoreFrameworkAvailable()', SecureCodingAllowed=[PAL::getPKPaymentMethodClass()], Validator='m_pkPaymentMethod'] RetainPtr<PKPaymentMethod> m_pkPaymentMethod;
+}
 #endif
 
 #if ENABLE(APPLE_PAY_SHIPPING_CONTACT_EDITING_MODE)

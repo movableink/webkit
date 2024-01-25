@@ -25,6 +25,7 @@
 
 #pragma once
 
+#import "BindableResource.h"
 #import "CommandsMixin.h"
 #import <wtf/FastMalloc.h>
 #import <wtf/HashMap.h>
@@ -48,6 +49,9 @@ class Device;
 class QuerySet;
 class RenderBundle;
 class RenderPipeline;
+class TextureView;
+
+struct BindableResources;
 
 // https://gpuweb.github.io/gpuweb/#gpurenderpassencoder
 class RenderPassEncoder : public WGPURenderPassEncoderImpl, public RefCounted<RenderPassEncoder>, public CommandsMixin {
@@ -57,9 +61,9 @@ public:
     {
         return adoptRef(*new RenderPassEncoder(renderCommandEncoder, descriptor, visibilityResultBufferSize, depthReadOnly, stencilReadOnly, parentEncoder, visibilityResultBuffer, device));
     }
-    static Ref<RenderPassEncoder> createInvalid(Device& device)
+    static Ref<RenderPassEncoder> createInvalid(CommandEncoder& parentEncoder, Device& device)
     {
-        return adoptRef(*new RenderPassEncoder(device));
+        return adoptRef(*new RenderPassEncoder(parentEncoder, device));
     }
 
     ~RenderPassEncoder();
@@ -88,15 +92,22 @@ public:
     Device& device() const { return m_device; }
 
     bool isValid() const { return m_renderCommandEncoder; }
+    bool colorDepthStencilTargetsMatch(const RenderPipeline&) const;
+    id<MTLRenderCommandEncoder> renderCommandEncoder() const;
+    void makeInvalid();
+    void addResourceToActiveResources(id<MTLResource>, OptionSet<BindGroupEntryUsage>, uint32_t baseMipLevel = 0, uint32_t baseArrayLayer = 0, WGPUTextureAspect = WGPUTextureAspect_All);
+    CommandEncoder& parentEncoder();
+    void setCommandEncoder(const BindGroupEntryUsageData::Resource&);
 
 private:
     RenderPassEncoder(id<MTLRenderCommandEncoder>, const WGPURenderPassDescriptor&, NSUInteger, bool depthReadOnly, bool stencilReadOnly, CommandEncoder&, id<MTLBuffer>, Device&);
-    RenderPassEncoder(Device&);
+    RenderPassEncoder(CommandEncoder&, Device&);
 
     bool validatePopDebugGroup() const;
 
-    void makeInvalid();
-    void executePreDrawCommands();
+    void executePreDrawCommands(id<MTLBuffer> = nil);
+    void validateBindGroups(id<MTLBuffer> = nil);
+    void addResourceToActiveResources(const TextureView&, BindGroupEntryUsage);
 
     id<MTLRenderCommandEncoder> m_renderCommandEncoder { nil };
 
@@ -119,17 +130,24 @@ private:
     Vector<uint32_t> m_vertexDynamicOffsets;
     Vector<uint32_t> m_fragmentDynamicOffsets;
     const RenderPipeline* m_pipeline { nullptr };
-    RefPtr<CommandEncoder> m_parentEncoder;
+    Ref<CommandEncoder> m_parentEncoder;
     HashMap<uint32_t, Vector<uint32_t>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_bindGroupDynamicOffsets;
+    using EntryUsage = OptionSet<BindGroupEntryUsage>;
+    using EntryMap = HashMap<uint64_t, EntryUsage>;
+    HashMap<void*, EntryMap> m_usagesForResource;
     float m_minDepth { 0.f };
     float m_maxDepth { 1.f };
-    HashSet<uint64_t, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_queryBufferIndicesToClear;
+    HashSet<uint64_t, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_queryBufferIndicesToClear;
     id<MTLBuffer> m_visibilityResultBuffer { nil };
     uint32_t m_renderTargetWidth { 0 };
     uint32_t m_renderTargetHeight { 0 };
     NSMutableDictionary<NSNumber*, TextureAndClearColor*> *m_attachmentsToClear { nil };
     NSMutableDictionary<NSNumber*, TextureAndClearColor*> *m_allColorAttachments { nil };
     id<MTLTexture> m_depthStencilAttachmentToClear { nil };
+    WGPURenderPassDescriptor m_descriptor;
+    Vector<WGPURenderPassColorAttachment> m_descriptorColorAttachments;
+    WGPURenderPassDepthStencilAttachment m_descriptorDepthStencilAttachment;
+    WGPURenderPassTimestampWrites m_descriptorTimestampWrites;
     float m_depthClearValue { 0 };
     uint32_t m_stencilClearValue { 0 };
     bool m_clearDepthAttachment { false };

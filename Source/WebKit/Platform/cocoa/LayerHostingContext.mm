@@ -32,6 +32,15 @@
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
 #import <wtf/MachSendRight.h>
 
+#if USE(EXTENSIONKIT)
+#import "ExtensionKitSPI.h"
+
+SOFT_LINK_FRAMEWORK_OPTIONAL(ServiceExtensions);
+SOFT_LINK_CLASS_OPTIONAL(ServiceExtensions, _SEHostable);
+SOFT_LINK_CLASS_OPTIONAL(ServiceExtensions, _SEHostingHandle);
+SOFT_LINK_CLASS_OPTIONAL(ServiceExtensions, _SEHostingUpdateCoordinator);
+#endif
+
 namespace WebKit {
 
 std::unique_ptr<LayerHostingContext> LayerHostingContext::createForPort(const MachSendRight& serverPort)
@@ -60,13 +69,21 @@ std::unique_ptr<LayerHostingContext> LayerHostingContext::createForExternalHosti
 #if PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
     // Use a very large display ID to ensure that the context is never put on-screen
     // without being explicitly parented. See <rdar://problem/16089267> for details.
-    layerHostingContext->m_context = [CAContext remoteContextWithOptions:@{
+    auto contextOptions = @{
         kCAContextSecure: @(options.canShowWhileLocked),
 #if HAVE(CORE_ANIMATION_RENDER_SERVER)
         kCAContextIgnoresHitTest : @YES,
         kCAContextDisplayId : @10000
 #endif
-    }];
+    };
+#if USE(EXTENSIONKIT)
+    if (options.useHostable) {
+        // Note: this reads like a leak, but the object returned from createHostableWithOptions should not be adopted.
+        layerHostingContext->m_hostable = [get_SEHostableClass() createHostableWithOptions:contextOptions error:nil];
+        return layerHostingContext;
+    }
+#endif
+    layerHostingContext->m_context = [CAContext remoteContextWithOptions:contextOptions];
 #elif !PLATFORM(MACCATALYST)
     [CAContext setAllowsCGSConnections:NO];
     layerHostingContext->m_context = [CAContext remoteContextWithOptions:@{
@@ -116,16 +133,30 @@ LayerHostingContext::~LayerHostingContext()
 
 void LayerHostingContext::setRootLayer(CALayer *rootLayer)
 {
+#if USE(EXTENSIONKIT)
+    if (m_hostable) {
+        [m_hostable setLayer:rootLayer];
+        return;
+    }
+#endif
     [m_context setLayer:rootLayer];
 }
 
 CALayer *LayerHostingContext::rootLayer() const
 {
+#if USE(EXTENSIONKIT)
+    if (m_hostable)
+        return [m_hostable layer];
+#endif
     return [m_context layer];
 }
 
 LayerHostingContextID LayerHostingContext::contextID() const
 {
+#if USE(EXTENSIONKIT)
+    if (auto xpcDictionary = xpcRepresentation())
+        return xpc_dictionary_get_uint64(xpcDictionary.get(), contextIDKey);
+#endif
     return [m_context contextId];
 }
 
@@ -158,6 +189,9 @@ bool LayerHostingContext::colorMatchUntaggedContent() const
 
 void LayerHostingContext::setFencePort(mach_port_t fencePort)
 {
+#if USE(EXTENSIONKIT)
+    ASSERT(!m_hostable);
+#endif
     [m_context setFencePort:fencePort];
 }
 
@@ -175,5 +209,29 @@ LayerHostingContextID LayerHostingContext::cachedContextID()
 {
     return m_cachedContextID;
 }
+
+#if USE(EXTENSIONKIT)
+OSObjectPtr<xpc_object_t> LayerHostingContext::xpcRepresentation() const
+{
+    if (!m_hostable)
+        return nullptr;
+    return [[m_hostable handle] xpcRepresentation];
+}
+
+RetainPtr<_SEHostingUpdateCoordinator> LayerHostingContext::createHostingUpdateCoordinator(mach_port_t sendRight)
+{
+    auto xpcRepresentation = adoptOSObject(xpc_dictionary_create(nullptr, nullptr, 0));
+    xpc_dictionary_set_mach_send(xpcRepresentation.get(), machPortKey, sendRight);
+    return adoptNS([alloc_SEHostingUpdateCoordinatorInstance() initFromXPCRepresentation:xpcRepresentation.get()]);
+}
+
+RetainPtr<_SEHostingHandle> LayerHostingContext::createHostingHandle(uint64_t pid, uint64_t contextID)
+{
+    auto xpcRepresentation = adoptOSObject(xpc_dictionary_create(nullptr, nullptr, 0));
+    xpc_dictionary_set_uint64(xpcRepresentation.get(), processIDKey, pid);
+    xpc_dictionary_set_uint64(xpcRepresentation.get(), contextIDKey, contextID);
+    return adoptNS([alloc_SEHostingHandleInstance() initFromXPCRepresentation:xpcRepresentation.get()]);
+}
+#endif
 
 } // namespace WebKit

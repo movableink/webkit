@@ -239,12 +239,11 @@ void ImageLoader::updateFromElement(RelevantMutation relevantMutation)
         options.loadedFromPluginElement = is<HTMLPlugInElement>(element()) ? LoadedFromPluginElement::Yes : LoadedFromPluginElement::No;
         options.sameOriginDataURLFlag = SameOriginDataURLFlag::Set;
         options.serviceWorkersMode = is<HTMLPlugInElement>(element()) ? ServiceWorkersMode::None : ServiceWorkersMode::All;
-        bool isImageElement = is<HTMLImageElement>(element());
-        if (isImageElement) {
-            auto& imageElement = downcast<HTMLImageElement>(element());
-            options.referrerPolicy = imageElement.referrerPolicy();
-            options.fetchPriorityHint = imageElement.fetchPriorityHint();
-            if (imageElement.usesSrcsetOrPicture())
+        RefPtr imageElement = dynamicDowncast<HTMLImageElement>(element());
+        if (imageElement) {
+            options.referrerPolicy = imageElement->referrerPolicy();
+            options.fetchPriorityHint = imageElement->fetchPriorityHint();
+            if (imageElement->usesSrcsetOrPicture())
                 options.initiator = Initiator::Imageset;
         }
 
@@ -277,9 +276,8 @@ void ImageLoader::updateFromElement(RelevantMutation relevantMutation)
 #if !LOG_DISABLED
             auto oldState = m_lazyImageLoadState;
 #endif
-            if (m_lazyImageLoadState == LazyImageLoadState::None && isImageElement) {
-                auto& imageElement = downcast<HTMLImageElement>(element());
-                if (imageElement.isLazyLoadable() && document.settings().lazyImageLoadingEnabled() && !canReuseFromListOfAvailableImages(request, document)) {
+            if (m_lazyImageLoadState == LazyImageLoadState::None && imageElement) {
+                if (imageElement->isLazyLoadable() && document.settings().lazyImageLoadingEnabled() && !canReuseFromListOfAvailableImages(request, document)) {
                     m_lazyImageLoadState = LazyImageLoadState::Deferred;
                     request.setIgnoreForRequestCount(true);
                 }
@@ -372,6 +370,19 @@ void ImageLoader::updateFromElementIgnoringPreviousError(RelevantMutation releva
 {
     clearFailedLoadURL();
     updateFromElement(relevantMutation);
+}
+
+void ImageLoader::updateFromElementIgnoringPreviousErrorToSameValue()
+{
+    if (!m_image || !m_image->allowsCaching() || !m_failedLoadURL.isEmpty() || element().document().activeServiceWorker()) {
+        updateFromElementIgnoringPreviousError(RelevantMutation::Yes);
+        return;
+    }
+    if (m_hasPendingLoadEvent || !m_pendingURL.isEmpty())
+        return;
+    ASSERT(m_image);
+    m_hasPendingLoadEvent = true;
+    notifyFinished(*m_image, NetworkLoadMetrics { });
 }
 
 static inline void resolvePromises(Vector<RefPtr<DeferredPromise>>& promises)
@@ -467,8 +478,8 @@ RenderImageResource* ImageLoader::renderImageResource()
 
     // We don't return style generated image because it doesn't belong to the ImageLoader.
     // See <https://bugs.webkit.org/show_bug.cgi?id=42840>
-    if (is<RenderImage>(*renderer) && !downcast<RenderImage>(*renderer).isGeneratedContent())
-        return &downcast<RenderImage>(*renderer).imageResource();
+    if (auto* renderImage = dynamicDowncast<RenderImage>(*renderer); renderImage && !renderImage->isGeneratedContent())
+        return &renderImage->imageResource();
 
     if (auto* svgImage = dynamicDowncast<LegacyRenderSVGImage>(renderer))
         return &svgImage->imageResource();
@@ -479,8 +490,8 @@ RenderImageResource* ImageLoader::renderImageResource()
 #endif
 
 #if ENABLE(VIDEO)
-    if (is<RenderVideo>(*renderer))
-        return &downcast<RenderVideo>(*renderer).imageResource();
+    if (auto* renderVideo = dynamicDowncast<RenderVideo>(*renderer))
+        return &renderVideo->imageResource();
 #endif
 
     return nullptr;
@@ -561,14 +572,12 @@ void ImageLoader::decode()
         return;
     }
 
-    Image* image = m_image->image();
-    if (!is<BitmapImage>(image)) {
+    RefPtr bitmapImage = dynamicDowncast<BitmapImage>(m_image->image());
+    if (!bitmapImage) {
         resolveDecodePromises();
         return;
     }
-
-    auto& bitmapImage = downcast<BitmapImage>(*image);
-    bitmapImage.decode([promises = WTFMove(m_decodingPromises)]() mutable {
+    bitmapImage->decode([promises = WTFMove(m_decodingPromises)]() mutable {
         resolvePromises(promises);
     });
 }
@@ -679,11 +688,8 @@ VisibleInViewportState ImageLoader::imageVisibleInViewport(const Document& docum
     if (&element().document() != &document)
         return VisibleInViewportState::No;
 
-    auto* renderer = element().renderer();
-    if (!is<RenderReplaced>(renderer))
-        return VisibleInViewportState::No;
-
-    return downcast<RenderReplaced>(*renderer).isContentLikelyVisibleInViewport() ? VisibleInViewportState::Yes : VisibleInViewportState::No;
+    auto* renderReplaced = dynamicDowncast<RenderReplaced>(element().renderer());
+    return renderReplaced && renderReplaced->isContentLikelyVisibleInViewport() ? VisibleInViewportState::Yes : VisibleInViewportState::No;
 }
 
 }

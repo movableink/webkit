@@ -62,9 +62,11 @@ media/audioSession [ Skip ]
 
 # Media Stream API testing is not supported for WK1 yet.
 fast/mediastream
+http/wpt/mediastream
 imported/w3c/web-platform-tests/feature-policy/reporting/camera-reporting.https.html [ Skip ]
 imported/w3c/web-platform-tests/feature-policy/reporting/microphone-reporting.https.html [ Skip ]
 imported/w3c/web-platform-tests/mediacapture-streams
+imported/w3c/web-platform-tests/mediacapture-insertable-streams
 http/tests/media/media-stream
 http/tests/ssl/media-stream
 inspector/page/overrideSetting-MockCaptureDevicesEnabled.html [ Skip ]
@@ -809,6 +811,7 @@ fast/speechrecognition/start-recognition-after-denied-gum.html [ Skip ]
 fast/speechrecognition/start-recognition-without-devices.html [ Skip ]
 
 accessibility/announcement-notification.html [ WontFix ]
+accessibility/relationships.html [ WontFix ]
 # Datalist is unsupported in WK1
 accessibility/datalist.html [ WontFix ]
 fast/forms/datalist [ WontFix ]
@@ -1019,7 +1022,10 @@ media/W3C/video/canPlayType/canPlayType_supported_but_no_codecs_parameter_1.html
 media/W3C/video/canPlayType/canPlayType_two_implies_one_1.html [ Failure ]
 media/W3C/video/canPlayType/canPlayType_two_implies_one_2.html [ Failure ]
 media/media-can-play-webm.html [ Failure ]
+media/media-vp8-webm-error.html [ Failure ]
+media/media-vp8-webm.html [ Skip ]
 media/track/media-audio-track.html [ Failure ]
+media/media-sources-selection.html [ ImageOnlyFailure ]
 
 # VP9/VP8 are not supported on WK1 and turned off by default
 media/media-source/media-source-webm-configuration-change.html [ Failure ]
@@ -1812,8 +1818,6 @@ displaylists/layer-dispay-list.html [ Failure ]
 
 webkit.org/b/184611 compositing/layer-creation/fixed-overlap-extent.html [ Pass Failure ]
 
-webkit.org/b/189087 svg/animations/animate-end-attribute-numeric-precision.html [ Pass Failure ]
-
 webkit.org/b/189594 imported/w3c/web-platform-tests/css/css-animations/pending-style-changes-001.html [ Pass Failure ]
 
 webkit.org/b/189756 compositing/filters/opacity-change-on-filtered-paints-into-ancestor.html [ Pass ImageOnlyFailure ]
@@ -1871,6 +1875,10 @@ imported/w3c/web-platform-tests/html/rendering/replaced-elements/embedded-conten
 # "reftest-wait" blocks attachment rendering.
 webkit.org/b/263367 fast/attachment/attachment-icon-from-file-extension.html [ Skip ]
 webkit.org/b/263367 fast/attachment/attachment-uti.html [ Skip ]
+webkit.org/b/265962 fast/attachment/attachment-folder-icon.html [ Skip ]
+webkit.org/b/265962 fast/attachment/attachment-type-attribute.html [ Skip ]
+webkit.org/b/265962 fast/attachment/attachment-default-icon.html [ Skip ]
+webkit.org/b/267716 fast/attachment/attachment-title-with-rtl.html [ Skip ]
 
 # <rdar://problem/42625657> REGRESSION (Mojave): 12 fast/images tests timing out on WK1
 fast/images/animated-heics-draw.html [ Skip ]
@@ -2602,6 +2610,7 @@ imported/w3c/web-platform-tests/html/semantics/embedded-content/the-iframe-eleme
 
 # rdar://111704637 - 'mousemove' not emitted from 'eventSender.moveMouseTo()'
 fast/html/transient-activation.html [ Skip ]
+fast/html/history-action-user-activation.html [ Skip ]
 
 webkit.org/b/259485 [ Ventura+ ] http/tests/media/hls/track-in-band-multiple-cues.html [ Crash ]
 
@@ -2732,3 +2741,21 @@ webkit.org/b/266184 compositing/images/truncated-direct-png-image.html [ ImageOn
 # webkit.org/b/266345 [Test Gardening] css-contain/contain-size-block-003.html and css-contain/contain-size-inline-block-003.html only fail on GTK
 imported/w3c/web-platform-tests/css/css-contain/contain-size-block-003.html [ Failure ]
 imported/w3c/web-platform-tests/css/css-contain/contain-size-inline-block-003.html [ Failure ]
+
+# webkit.org/b/263441 [ mac-wk1 ] Several WPTs using wheel actions are timing out after 269632@main
+imported/w3c/web-platform-tests/css/css-overscroll-behavior/overscroll-behavior.html [ Skip ]
+imported/w3c/web-platform-tests/css/css-scroll-snap/input/snap-area-overflow-boundary.html [ Skip ]
+imported/w3c/web-platform-tests/css/css-transforms/scroll-preserve-3d.html [ Skip ]
+imported/w3c/web-platform-tests/dom/events/non-cancelable-when-passive/non-passive-mousewheel-event-listener-on-div.html [ Skip ]
+imported/w3c/web-platform-tests/dom/events/non-cancelable-when-passive/non-passive-wheel-event-listener-on-div.html [ Skip ]
+imported/w3c/web-platform-tests/dom/events/scrolling/iframe-chains.html [ Skip ]
+imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-for-user-scroll.html [ Skip ]
+imported/w3c/web-platform-tests/html/semantics/popovers/popover-light-dismiss.html [ Skip ]
+imported/w3c/web-platform-tests/pointerevents/pointerevent_touch-action-mouse.html [ Skip ]
+
+#test uses test helper functions not implemented on WK1
+fast/dom/no-scroll-when-command-click-fragment-URL.html [ Skip ]
+
+# webkit.org/b/267799 [ Ventura wk1 ] 2 tests in media/track are constant crash
+[ Ventura ] media/track/track-in-band-layout.html [ Crash ]
+[ Ventura ] media/track/track-paint-on-captions.html [ Crash ]

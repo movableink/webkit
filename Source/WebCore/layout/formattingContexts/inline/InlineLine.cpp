@@ -44,7 +44,7 @@ Line::Line(const InlineFormattingContext& inlineFormattingContext)
 {
 }
 
-void Line::initialize(const Vector<InlineItem>& lineSpanningInlineBoxes, bool isFirstFormattedLine)
+void Line::initialize(const Vector<InlineItem, 1>& lineSpanningInlineBoxes, bool isFirstFormattedLine)
 {
     m_isFirstFormattedLine = isFirstFormattedLine;
     m_inlineBoxListWithClonedDecorationEnd.clear();
@@ -216,7 +216,6 @@ void Line::handleTrailingHangingContent(std::optional<IntrinsicWidthMode> intrin
         if (*intrinsicWidthMode == IntrinsicWidthMode::Minimum || !hangingTrailingContentIsConditional) {
             ASSERT(m_trimmableTrailingContent.isEmpty());
             m_contentLogicalWidth -= m_hangingContent.trailingWidth();
-            m_hangingContent.resetTrailingContent();
         }
     }
 }
@@ -601,7 +600,7 @@ InlineLayoutUnit Line::addBorderAndPaddingEndForInlineBoxDecorationClone(const I
         return { };
     // https://drafts.csswg.org/css-break/#break-decoration
     auto& inlineBoxGeometry = formattingContext().geometryForBox(inlineBoxStartItem.layoutBox());
-    auto borderAndPaddingEnd = inlineBoxGeometry.borderEnd() + inlineBoxGeometry.paddingEnd().value_or(0_lu);
+    auto borderAndPaddingEnd = inlineBoxGeometry.borderEnd() + inlineBoxGeometry.paddingEnd();
     m_inlineBoxListWithClonedDecorationEnd.add(&inlineBoxStartItem.layoutBox(), borderAndPaddingEnd);
     m_clonedEndDecorationWidthForInlineBoxRuns += borderAndPaddingEnd;
     return borderAndPaddingEnd;
@@ -943,13 +942,13 @@ bool Line::Run::isContentfulOrHasDecoration(const Run& run, const InlineFormatti
         // Even negative horizontal margin makes the line "contentful".
         auto& inlineBoxGeometry = formattingContext.geometryForBox(run.layoutBox());
         if (run.isInlineBoxStart())
-            return inlineBoxGeometry.marginStart() || inlineBoxGeometry.borderStart() || inlineBoxGeometry.paddingStart().value_or(0_lu);
+            return inlineBoxGeometry.marginStart() || inlineBoxGeometry.borderStart() || inlineBoxGeometry.paddingStart();
         if (run.isInlineBoxEnd())
-            return inlineBoxGeometry.marginEnd() || inlineBoxGeometry.borderEnd() || inlineBoxGeometry.paddingEnd().value_or(0_lu);
+            return inlineBoxGeometry.marginEnd() || inlineBoxGeometry.borderEnd() || inlineBoxGeometry.paddingEnd();
         if (run.isLineSpanningInlineBoxStart()) {
             if (run.style().boxDecorationBreak() != BoxDecorationBreak::Clone)
                 return false;
-            return inlineBoxGeometry.borderStart() || inlineBoxGeometry.paddingStart().value_or(0_lu);
+            return inlineBoxGeometry.borderStart() || inlineBoxGeometry.paddingStart();
         }
     }
     return false;

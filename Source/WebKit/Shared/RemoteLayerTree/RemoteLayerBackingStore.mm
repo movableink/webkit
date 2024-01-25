@@ -32,6 +32,7 @@
 #import "ImageBufferBackendHandleSharing.h"
 #import "Logging.h"
 #import "PlatformCALayerRemote.h"
+#import "RemoteImageBufferSetProxy.h"
 #import "RemoteLayerBackingStoreCollection.h"
 #import "RemoteLayerTreeContext.h"
 #import "RemoteLayerTreeDrawingAreaProxy.h"
@@ -68,7 +69,7 @@ using namespace WebCore;
 
 namespace {
 
-class DelegatedContentsFenceFlusher final : public ThreadSafeImageBufferFlusher {
+class DelegatedContentsFenceFlusher final : public ThreadSafeImageBufferSetFlusher {
     WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(DelegatedContentsFenceFlusher);
 public:
@@ -77,7 +78,7 @@ public:
         return std::unique_ptr<DelegatedContentsFenceFlusher> { new DelegatedContentsFenceFlusher(WTFMove(fence)) };
     }
 
-    void flush() final
+    void flushAndCollectHandles(HashMap<RemoteImageBufferSetIdentifier, std::unique_ptr<BufferSetBackendHandle>>&) final
     {
         m_fence->waitFor(delegatedContentsFinishedTimeout);
     }
@@ -150,9 +151,6 @@ static bool hasValue(const ImageBufferBackendHandle& backendHandle)
 
 void RemoteLayerBackingStore::encode(IPC::Encoder& encoder) const
 {
-    if (auto* collection = backingStoreCollection())
-        collection->backingStoreWillBeEncoded(*this);
-
     encoder << m_parameters.isOpaque;
     encoder << m_parameters.type;
 
@@ -161,7 +159,7 @@ void RemoteLayerBackingStore::encode(IPC::Encoder& encoder) const
     std::optional<ImageBufferBackendHandle> handle;
     if (m_contentsBufferHandle) {
         ASSERT(m_parameters.type == Type::IOSurface);
-        handle = MachSendRight { *m_contentsBufferHandle };
+        handle = ImageBufferBackendHandle { *m_contentsBufferHandle };
     } else
         handle = frontBufferHandle();
 
@@ -173,6 +171,8 @@ void RemoteLayerBackingStore::encode(IPC::Encoder& encoder) const
 
     encoder << WTFMove(handle);
 
+    encoder << bufferSetIdentifier();
+
     encodeBufferAndBackendInfos(encoder);
     encoder << m_contentsRenderingResourceIdentifier;
     encoder << m_previouslyPaintedRect;
@@ -180,40 +180,6 @@ void RemoteLayerBackingStore::encode(IPC::Encoder& encoder) const
 #if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
     encoder << displayListHandle();
 #endif
-}
-
-bool RemoteLayerBackingStoreProperties::decode(IPC::Decoder& decoder, RemoteLayerBackingStoreProperties& result)
-{
-    if (!decoder.decode(result.m_isOpaque))
-        return false;
-
-    if (!decoder.decode(result.m_type))
-        return false;
-
-    if (!decoder.decode(result.m_bufferHandle))
-        return false;
-
-    if (!decoder.decode(result.m_frontBufferInfo))
-        return false;
-
-    if (!decoder.decode(result.m_backBufferInfo))
-        return false;
-
-    if (!decoder.decode(result.m_secondaryBackBufferInfo))
-        return false;
-
-    if (!decoder.decode(result.m_contentsRenderingResourceIdentifier))
-        return false;
-
-    if (!decoder.decode(result.m_paintedRect))
-        return false;
-
-#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
-    if (!decoder.decode(result.m_displayListBufferHandle))
-        return false;
-#endif
-
-    return true;
 }
 
 void RemoteLayerBackingStoreProperties::dump(TextStream& ts) const
@@ -300,7 +266,8 @@ bool RemoteLayerBackingStore::supportsPartialRepaint() const
 #endif
 
     const unsigned maxSmallLayerBackingArea = 64u * 64u;
-    if (ImageBuffer::calculateBackendSize(m_parameters.size, m_parameters.scale).area() <= maxSmallLayerBackingArea)
+    auto checkedArea = ImageBuffer::calculateBackendSize(m_parameters.size, m_parameters.scale).area<RecordOverflow>();
+    if (!checkedArea.hasOverflowed() && checkedArea <= maxSmallLayerBackingArea)
         return false;
     return true;
 
@@ -311,9 +278,9 @@ bool RemoteLayerBackingStore::drawingRequiresClearedPixels() const
     return !m_parameters.isOpaque && !m_layer->owner()->platformCALayerShouldPaintUsingCompositeCopy();
 }
 
-void RemoteLayerBackingStore::setDelegatedContents(const WebCore::PlatformCALayerDelegatedContents& contents)
+void RemoteLayerBackingStore::setDelegatedContents(const PlatformCALayerRemoteDelegatedContents& contents)
 {
-    m_contentsBufferHandle = MachSendRight { contents.surface };
+    m_contentsBufferHandle = ImageBufferBackendHandle { contents.surface };
     if (contents.finishedFence)
         m_frontBufferFlushers.append(DelegatedContentsFenceFlusher::create(Ref { *contents.finishedFence }));
     if (contents.surfaceIdentifier)
@@ -455,7 +422,7 @@ void RemoteLayerBackingStore::drawInContext(GraphicsContext& context)
     m_layer->owner()->platformCALayerLayerDidDisplay(m_layer);
 
     m_previouslyPaintedRect = dirtyBounds;
-    m_frontBufferFlushers.appendVector(createFlushers());
+    m_frontBufferFlushers.append(createFlusher());
 }
 
 void RemoteLayerBackingStore::enumerateRectsBeingDrawn(GraphicsContext& context, void (^block)(FloatRect))
@@ -478,20 +445,20 @@ RetainPtr<id> RemoteLayerBackingStoreProperties::layerContentsBufferFromBackendH
     RetainPtr<id> contents;
     WTF::switchOn(backendHandle,
         [&] (ShareableBitmap::Handle& handle) {
-            if (auto bitmap = ShareableBitmap::create(WTFMove(handle)))
+            if (auto bitmap = ShareableBitmap::create(WTFMove(handle), SharedMemory::Protection::ReadOnly))
                 contents = bridge_id_cast(bitmap->makeCGImageCopy());
         },
         [&] (MachSendRight& machSendRight) {
             switch (contentsType) {
-            case RemoteLayerBackingStoreProperties::LayerContentsType::IOSurface: {
+            case LayerContentsType::IOSurface: {
                 auto surface = WebCore::IOSurface::createFromSendRight(WTFMove(machSendRight));
                 contents = surface ? surface->asLayerContents() : nil;
                 break;
             }
-            case RemoteLayerBackingStoreProperties::LayerContentsType::CAMachPort:
+            case LayerContentsType::CAMachPort:
                 contents = bridge_id_cast(adoptCF(CAMachPortCreate(machSendRight.leakSendRight())));
                 break;
-            case RemoteLayerBackingStoreProperties::LayerContentsType::CachedIOSurface:
+            case LayerContentsType::CachedIOSurface:
                 auto surface = WebCore::IOSurface::createFromSendRight(WTFMove(machSendRight));
                 contents = surface ? surface->asCAIOSurfaceLayerContents() : nil;
                 break;
@@ -602,9 +569,29 @@ void RemoteLayerBackingStoreProperties::updateCachedBuffers(RemoteLayerTreeNode&
     node.setCachedContentsBuffers(WTFMove(cachedBuffers));
 }
 
-Vector<std::unique_ptr<ThreadSafeImageBufferFlusher>> RemoteLayerBackingStore::takePendingFlushers()
+void RemoteLayerBackingStoreProperties::setBackendHandle(BufferSetBackendHandle& bufferSetHandle)
+{
+    m_bufferHandle = std::exchange(bufferSetHandle.bufferHandle, std::nullopt);
+    m_frontBufferInfo = bufferSetHandle.frontBufferInfo;
+    m_backBufferInfo = bufferSetHandle.backBufferInfo;
+    m_secondaryBackBufferInfo = bufferSetHandle.secondaryBackBufferInfo;
+}
+
+Vector<std::unique_ptr<ThreadSafeImageBufferSetFlusher>> RemoteLayerBackingStore::takePendingFlushers()
 {
     return std::exchange(m_frontBufferFlushers, { });
+}
+
+void RemoteLayerBackingStore::purgeFrontBufferForTesting()
+{
+    if (auto* collection = backingStoreCollection())
+        collection->purgeFrontBufferForTesting(*this);
+}
+
+void RemoteLayerBackingStore::purgeBackBufferForTesting()
+{
+    if (auto* collection = backingStoreCollection())
+        collection->purgeBackBufferForTesting(*this);
 }
 
 TextStream& operator<<(TextStream& ts, const RemoteLayerBackingStore& backingStore)

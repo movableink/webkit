@@ -43,9 +43,9 @@ public:
         NonInherited = 1 << 0,
         Inherited = 1 << 1,
         ExplicitlyInherited = 1 << 2,
-        VariableReference = 1 << 3,
-        AfterAnimation = 1 << 4,
-        AfterTransition = 1 << 5
+        AfterAnimation = 1 << 3,
+        AfterTransition = 1 << 4,
+        StartingStyle = 1 << 5,
     };
     static constexpr OptionSet<PropertyType> allProperties() { return { PropertyType::NonInherited,  PropertyType::Inherited }; }
 

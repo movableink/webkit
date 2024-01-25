@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Cameron Zwarich <cwzwarich@uwaterloo.ca>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 #include "DirectEvalCodeCache.h"
 #include "EvalExecutable.h"
 #include "ExecutionCounter.h"
-#include "ExpressionRangeInfo.h"
+#include "ExpressionInfo.h"
 #include "FunctionExecutable.h"
 #include "HandlerInfo.h"
 #include "ICStatusMap.h"
@@ -241,10 +241,9 @@ public:
     HandlerInfo* handlerForBytecodeIndex(BytecodeIndex, RequiredHandler = RequiredHandler::AnyHandler);
     HandlerInfo* handlerForIndex(unsigned, RequiredHandler = RequiredHandler::AnyHandler);
     void removeExceptionHandlerForCallSite(DisposableCallSiteIndex);
-    unsigned lineNumberForBytecodeIndex(BytecodeIndex);
-    unsigned columnNumberForBytecodeIndex(BytecodeIndex);
-    void expressionRangeForBytecodeIndex(BytecodeIndex, unsigned& divot,
-        unsigned& startOffset, unsigned& endOffset, unsigned& line, unsigned& column) const;
+
+    LineColumn lineColumnForBytecodeIndex(BytecodeIndex) const;
+    ExpressionInfo::Entry expressionInfoForBytecodeIndex(BytecodeIndex) const;
 
     std::optional<BytecodeIndex> bytecodeIndexFromCallSiteIndex(CallSiteIndex);
 
@@ -281,8 +280,8 @@ public:
     void resetBaselineJITData();
 #endif // ENABLE(JIT)
 
-    void unlinkIncomingCalls();
-    void linkIncomingCall(CallFrame* callerFrame, CallLinkInfoBase*);
+    void unlinkOrUpgradeIncomingCalls(VM&, CodeBlock*);
+    void linkIncomingCall(JSCell* caller, CallLinkInfoBase*);
 
     const JSInstruction* outOfLineJumpTarget(const JSInstruction* pc);
     int outOfLineJumpOffset(JSInstructionStream::Offset offset)
@@ -880,7 +879,7 @@ private:
     
     CodeBlock* specialOSREntryBlockOrNull();
     
-    void noticeIncomingCall(CallFrame* callerFrame);
+    void noticeIncomingCall(JSCell* caller);
 
     void updateAllNonLazyValueProfilePredictionsAndCountLiveness(const ConcurrentJSLocker&, unsigned& numberOfLiveNonArgumentValueProfiles, unsigned& numberOfSamplesInProfiles);
 

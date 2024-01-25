@@ -39,7 +39,7 @@
 #import "WebPageProxy.h"
 #import "WebPreferences.h"
 #import <WebCore/LocalizedStrings.h>
-#import <WebCore/VideoFullscreenInterfaceAVKit.h>
+#import <WebCore/VideoFullscreenInterfaceIOS.h>
 #import <pal/spi/cocoa/AVKitSPI.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/WeakObjCPtr.h>
@@ -392,6 +392,26 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 #endif // PLATFORM(VISION)
 
+- (UIEdgeInsets)additionalSafeAreaInsets
+{
+    // When the status bar hides, the resulting changes to safeAreaInsets cause
+    // fullscreen content to jump up and down in response.
+
+    // Do not add additional insets if the status bar is not hidden.
+    if (!self.view.window.windowScene.statusBarManager.statusBarHidden)
+        return UIEdgeInsetsZero;
+
+    // Additionally, hiding the status bar does not reduce safeAreaInsets when
+    // the status bar resides within a larger safe area inset (e.g., due to the
+    // camera area).
+    if (self.view.window.safeAreaInsets.top > 0)
+        return UIEdgeInsetsZero;
+
+    // Otherwise, provide what is effectively a constant safeAreaInset.top by adding
+    // an additional safeAreaInset at the top equal to the status bar height.
+    return UIEdgeInsetsMake(_nonZeroStatusBarHeight, 0, 0, 0);
+}
+
 - (void)setPrefersStatusBarHidden:(BOOL)value
 {
     ASSERT(_valid);
@@ -600,6 +620,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     [self videoControlsManagerDidChange];
 
 #if ENABLE(FULLSCREEN_DISMISSAL_GESTURES)
+    [_bannerLabel setPreferredMaxLayoutWidth:self.view.bounds.size.width];
     [_banner setAlpha:0];
     [_banner setHidden:YES];
 #endif
@@ -638,6 +659,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     [self _updateWebViewFullscreenInsets];
     _secheuristic.setSize(self.view.bounds.size);
     [self._webView setFrame:[_animatingView bounds]];
+#if ENABLE(FULLSCREEN_DISMISSAL_GESTURES)
+    [_bannerLabel setPreferredMaxLayoutWidth:self.view.bounds.size.width];
+#endif
 }
 
 - (void)viewWillTransitionToSize:(CGSize)size withTransitionCoordinator:(id<UIViewControllerTransitionCoordinator>)coordinator
@@ -647,9 +671,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         [self._webView _setInterfaceOrientationOverride:UIApplication.sharedApplication.statusBarOrientation];
         ALLOW_DEPRECATED_DECLARATIONS_END
-    } completion:^(id <UIViewControllerTransitionCoordinatorContext>context) {
-        [self._webView _endAnimatedResize];
-    }];
+    } completion:nil];
 }
 
 #if !PLATFORM(VISION)

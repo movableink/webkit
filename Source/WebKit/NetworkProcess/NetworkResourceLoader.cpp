@@ -343,6 +343,19 @@ void NetworkResourceLoader::retrieveCacheEntryInternal(std::unique_ptr<NetworkCa
     didRetrieveCacheEntry(WTFMove(entry));
 }
 
+bool NetworkResourceLoader::shouldSendResourceLoadMessages() const
+{
+    if (m_parameters.pageHasResourceLoadClient)
+        return true;
+
+#if ENABLE(WK_WEB_EXTENSIONS)
+    if (m_parameters.pageHasExtensionController)
+        return true;
+#endif
+
+    return false;
+}
+
 void NetworkResourceLoader::startNetworkLoad(ResourceRequest&& request, FirstLoad load)
 {
     LOADER_RELEASE_LOG("startNetworkLoad: (isFirstLoad=%d, timeout=%f)", load == FirstLoad::Yes, request.timeoutInterval());
@@ -375,7 +388,7 @@ void NetworkResourceLoader::startNetworkLoad(ResourceRequest&& request, FirstLoa
         parameters.blobFileReferences = networkSession->blobRegistry().filesInBlob(originalRequest().url(), parameters.topOrigin ? std::optional { parameters.topOrigin->data() } : std::nullopt);
     }
 
-    if (m_parameters.pageHasResourceLoadClient) {
+    if (shouldSendResourceLoadMessages()) {
         std::optional<IPC::FormDataReference> httpBody;
         if (auto formData = request.httpBody()) {
             static constexpr auto maxSerializedRequestSize = 1024 * 1024;
@@ -384,6 +397,9 @@ void NetworkResourceLoader::startNetworkLoad(ResourceRequest&& request, FirstLoa
         }
         m_connection->networkProcess().parentProcessConnection()->send(Messages::NetworkProcessProxy::ResourceLoadDidSendRequest(m_parameters.webPageProxyID, resourceLoadInfo(), request, httpBody), 0);
     }
+
+    if (networkSession->shouldSendPrivateTokenIPCForTesting())
+        m_connection->networkProcess().parentProcessConnection()->send(Messages::NetworkProcessProxy::DidAllowPrivateTokenUsageByThirdPartyForTesting(sessionID(), request.isPrivateTokenUsageByThirdPartyAllowed(), request.url()), 0);
 
     parameters.request = WTFMove(request);
     parameters.isNavigatingToAppBoundDomain = m_parameters.isNavigatingToAppBoundDomain;
@@ -627,10 +643,10 @@ bool NetworkResourceLoader::shouldInterruptLoadForXFrameOptions(const String& xF
     case XFrameOptionsDisposition::SameOrigin: {
         auto origin = SecurityOrigin::create(url);
         auto topFrameOrigin = m_parameters.frameAncestorOrigins.last();
-        if (!origin->isSameSchemeHostPort(*topFrameOrigin))
+        if (!topFrameOrigin || !origin->isSameSchemeHostPort(*topFrameOrigin))
             return true;
         for (auto& ancestorOrigin : m_parameters.frameAncestorOrigins) {
-            if (!origin->isSameSchemeHostPort(*ancestorOrigin))
+            if (!ancestorOrigin || !origin->isSameSchemeHostPort(*ancestorOrigin))
                 return true;
         }
         return false;
@@ -958,7 +974,7 @@ void NetworkResourceLoader::didReceiveResponse(ResourceResponse&& receivedRespon
         LOADER_RELEASE_LOG("didReceiveResponse: Sending WebResourceLoader::DidReceiveResponse IPC (willWaitForContinueDidReceiveResponse=%d)", willWaitForContinueDidReceiveResponse);
         sendDidReceiveResponsePotentiallyInNewBrowsingContextGroup(response, privateRelayed, willWaitForContinueDidReceiveResponse);
 
-        if (m_parameters.pageHasResourceLoadClient)
+        if (shouldSendResourceLoadMessages())
             m_connection->networkProcess().parentProcessConnection()->send(Messages::NetworkProcessProxy::ResourceLoadDidReceiveResponse(m_parameters.webPageProxyID, resourceLoadInfo, response), 0);
 
         if (willWaitForContinueDidReceiveResponse) {
@@ -1071,7 +1087,7 @@ void NetworkResourceLoader::didFinishLoading(const NetworkLoadMetrics& networkLo
 
     tryStoreAsCacheEntry();
 
-    if (m_parameters.pageHasResourceLoadClient)
+    if (shouldSendResourceLoadMessages())
         m_connection->networkProcess().parentProcessConnection()->send(Messages::NetworkProcessProxy::ResourceLoadDidCompleteWithError(m_parameters.webPageProxyID, resourceLoadInfo(), m_response, { }), 0);
 
     cleanup(LoadResult::Success);
@@ -1101,7 +1117,7 @@ void NetworkResourceLoader::didFailLoading(const ResourceError& error)
             connection->send(Messages::WebResourceLoader::DidFailResourceLoad(error), messageSenderDestinationID());
     }
 
-    if (m_parameters.pageHasResourceLoadClient)
+    if (shouldSendResourceLoadMessages())
         m_connection->networkProcess().parentProcessConnection()->send(Messages::NetworkProcessProxy::ResourceLoadDidCompleteWithError(m_parameters.webPageProxyID, resourceLoadInfo(), { }, error), 0);
 #if ENABLE(ADVANCED_PRIVACY_PROTECTIONS)
     if (error.blockedKnownTracker()) {
@@ -1122,7 +1138,7 @@ void NetworkResourceLoader::didBlockAuthenticationChallenge()
 
 void NetworkResourceLoader::didReceiveChallenge(const AuthenticationChallenge& challenge)
 {
-    if (m_parameters.pageHasResourceLoadClient)
+    if (shouldSendResourceLoadMessages())
         m_connection->networkProcess().parentProcessConnection()->send(Messages::NetworkProcessProxy::ResourceLoadDidReceiveChallenge(m_parameters.webPageProxyID, resourceLoadInfo(), challenge), 0);
 }
 
@@ -1419,7 +1435,7 @@ void NetworkResourceLoader::continueWillSendRequest(ResourceRequest&& newRequest
     if (m_networkLoad) {
         LOADER_RELEASE_LOG("continueWillSendRequest: Telling NetworkLoad to proceed with the redirect");
 
-        if (m_parameters.pageHasResourceLoadClient && !newRequest.isNull())
+        if (shouldSendResourceLoadMessages() && !newRequest.isNull())
             m_connection->networkProcess().parentProcessConnection()->send(Messages::NetworkProcessProxy::ResourceLoadDidPerformHTTPRedirection(m_parameters.webPageProxyID, resourceLoadInfo(), m_redirectResponse, newRequest), 0);
 
         completionHandler(WTFMove(newRequest));

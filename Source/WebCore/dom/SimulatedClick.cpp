@@ -28,6 +28,7 @@
 
 #include "DOMRect.h"
 #include "DataTransfer.h"
+#include "Document.h"
 #include "Element.h"
 #include "EventNames.h"
 #include "MouseEvent.h"
@@ -91,9 +92,6 @@ bool simulateClick(Element& element, Event* underlyingEvent, SimulatedClickMouse
         return false;
 
     auto& eventNames = WebCore::eventNames();
-    if (mouseEventOptions == SendMouseOverUpDownEvents)
-        simulateMouseEvent(eventNames.mouseoverEvent, element, underlyingEvent, creationOptions);
-
     if (mouseEventOptions != SendNoEvents)
         simulateMouseEvent(eventNames.mousedownEvent, element, underlyingEvent, creationOptions);
     if (mouseEventOptions != SendNoEvents || visualOptions == ShowPressedLook)

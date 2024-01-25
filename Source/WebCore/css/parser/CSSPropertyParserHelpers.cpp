@@ -234,7 +234,7 @@ static RefPtr<CSSCalcValue> consumeCalcRawWithKnownTokenTypeFunction(CSSParserTo
     if (!CSSCalcValue::isCalcFunction(functionId))
         return nullptr;
 
-    auto calcValue = CSSCalcValue::create(functionId, consumeFunction(range), category, valueRange, symbolTable);
+    RefPtr calcValue = CSSCalcValue::create(functionId, consumeFunction(range), category, valueRange, symbolTable);
     if (calcValue && calcValue->category() == category)
         return calcValue;
 
@@ -269,7 +269,7 @@ struct IntegerTypeRawKnownTokenTypeFunctionConsumer {
         ASSERT(range.peek().type() == FunctionToken);
 
         auto rangeCopy = range;
-        if (auto value = consumeCalcRawWithKnownTokenTypeFunction(rangeCopy, CalculationCategory::Number, { }, ValueRange::All)) {
+        if (RefPtr value = consumeCalcRawWithKnownTokenTypeFunction(rangeCopy, CalculationCategory::Number, { }, ValueRange::All)) {
             range = rangeCopy;
             // https://drafts.csswg.org/css-values-4/#integers
             // Rounding to the nearest integer requires rounding in the direction of +∞ when the fractional portion is exactly 0.5.
@@ -337,7 +337,7 @@ struct NumberRawKnownTokenTypeFunctionConsumer {
         ASSERT(range.peek().type() == FunctionToken);
 
         auto rangeCopy = range;
-        if (auto value = consumeCalcRawWithKnownTokenTypeFunction(rangeCopy, CalculationCategory::Number, symbolTable, valueRange)) {
+        if (RefPtr value = consumeCalcRawWithKnownTokenTypeFunction(rangeCopy, CalculationCategory::Number, symbolTable, valueRange)) {
             if (auto validatedValue = validatedNumberRaw(value->doubleValue(), valueRange)) {
                 range = rangeCopy;
                 return validatedValue;
@@ -433,7 +433,7 @@ struct PercentRawKnownTokenTypeFunctionConsumer {
         ASSERT(range.peek().type() == FunctionToken);
 
         auto rangeCopy = range;
-        if (auto value = consumeCalcRawWithKnownTokenTypeFunction(rangeCopy, CalculationCategory::Percent, symbolTable, valueRange)) {
+        if (RefPtr value = consumeCalcRawWithKnownTokenTypeFunction(rangeCopy, CalculationCategory::Percent, symbolTable, valueRange)) {
             range = rangeCopy;
 
             // FIXME: Should this validate the calc value as is done for the NumberRaw variant?
@@ -526,7 +526,7 @@ struct LengthRawKnownTokenTypeFunctionConsumer {
         ASSERT(range.peek().type() == FunctionToken);
 
         auto rangeCopy = range;
-        if (auto value = consumeCalcRawWithKnownTokenTypeFunction(rangeCopy, CalculationCategory::Length, symbolTable, valueRange)) {
+        if (RefPtr value = consumeCalcRawWithKnownTokenTypeFunction(rangeCopy, CalculationCategory::Length, symbolTable, valueRange)) {
             range = rangeCopy;
 
             // FIXME: Should this validate the calc value as is done for the NumberRaw variant?
@@ -547,7 +547,7 @@ struct LengthRawKnownTokenTypeDimensionConsumer {
         auto unitType = token.unitType();
         switch (unitType) {
         case CSSUnitType::CSS_QUIRKY_EM:
-            if (parserMode != UASheetMode)
+            if (!isUASheetBehavior(parserMode))
                 return std::nullopt;
             FALLTHROUGH;
         case CSSUnitType::CSS_EM:
@@ -675,7 +675,7 @@ struct AngleRawKnownTokenTypeFunctionConsumer {
     static std::optional<AngleRaw> consume(CSSParserTokenRange& range, const CSSCalcSymbolTable& symbolTable, ValueRange valueRange, CSSParserMode, UnitlessQuirk, UnitlessZeroQuirk)
     {
         auto rangeCopy = range;
-        if (auto value = consumeCalcRawWithKnownTokenTypeFunction(rangeCopy, CalculationCategory::Angle, symbolTable, valueRange)) {
+        if (RefPtr value = consumeCalcRawWithKnownTokenTypeFunction(rangeCopy, CalculationCategory::Angle, symbolTable, valueRange)) {
             range = rangeCopy;
             return { { value->primitiveType(), value->doubleValue() } };
         }
@@ -857,7 +857,7 @@ struct ImageSetTypeCSSPrimitiveValueKnownTokenTypeFunctionConsumer {
 
         auto rangeCopy = range;
         auto typeArg = consumeFunction(rangeCopy);
-        auto result = consumeString(typeArg);
+        RefPtr result = consumeString(typeArg);
 
         if (!result || !typeArg.atEnd())
             return nullptr;
@@ -1611,7 +1611,7 @@ RefPtr<CSSPrimitiveValue> consumeNumberOrPercent(CSSParserTokenRange& range, Val
 
     switch (token.type()) {
     case FunctionToken:
-        if (auto value = NumberCSSPrimitiveValueWithCalcWithKnownTokenTypeFunctionConsumer::consume(range, { }, valueRange, CSSParserMode::HTMLStandardMode, UnitlessQuirk::Forbid, UnitlessZeroQuirk::Forbid))
+        if (RefPtr value = NumberCSSPrimitiveValueWithCalcWithKnownTokenTypeFunctionConsumer::consume(range, { }, valueRange, CSSParserMode::HTMLStandardMode, UnitlessQuirk::Forbid, UnitlessZeroQuirk::Forbid))
             return value;
         return PercentCSSPrimitiveValueWithCalcWithKnownTokenTypeFunctionConsumer::consume(range, { }, valueRange, CSSParserMode::HTMLStandardMode, UnitlessQuirk::Forbid, UnitlessZeroQuirk::Forbid);
 
@@ -2421,7 +2421,7 @@ static Color parseLabParametersRaw(CSSParserTokenRange& args, ConsumerForLightne
 
     auto normalizedLightness = WTF::switchOn(*lightness,
         [] (NumberRaw number) { return std::clamp(number.value, 0.0, NormalizePercentage<ColorType>::maximumLightnessNumber); },
-        [] (PercentRaw percent) { return std::clamp(normalizeLightnessPercent<ColorType>(percent.value), 0.0, 100.0); },
+        [] (PercentRaw percent) { return std::clamp(normalizeLightnessPercent<ColorType>(percent.value), 0.0, NormalizePercentage<ColorType>::maximumLightnessNumber); },
         [] (NoneRaw) { return std::numeric_limits<double>::quiet_NaN(); }
     );
     auto normalizedA = WTF::switchOn(*aValue,
@@ -2510,7 +2510,7 @@ static Color parseLCHParametersRaw(CSSParserTokenRange& args, ConsumerForLightne
 
     auto normalizedLightness = WTF::switchOn(*lightness,
         [] (NumberRaw number) { return std::clamp(number.value, 0.0, NormalizePercentage<ColorType>::maximumLightnessNumber); },
-        [] (PercentRaw percent) { return std::clamp(normalizeLightnessPercent<ColorType>(percent.value), 0.0, 100.0); },
+        [] (PercentRaw percent) { return std::clamp(normalizeLightnessPercent<ColorType>(percent.value), 0.0, NormalizePercentage<ColorType>::maximumLightnessNumber); },
         [] (NoneRaw) { return std::numeric_limits<double>::quiet_NaN(); }
     );
     auto normalizedChroma = WTF::switchOn(*chroma,
@@ -3117,6 +3117,37 @@ static std::optional<ColorOrUnresolvedColor> parseColorMixFunctionParameters(CSS
     } } };
 }
 
+static std::optional<ColorOrUnresolvedColor> parseLightDarkFunctionParameters(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // light-dark() = light-dark( <color>, <color> )
+
+    ASSERT(range.peek().functionId() == CSSValueLightDark);
+
+    if (!context.lightDarkEnabled)
+        return std::nullopt;
+
+    auto args = consumeFunction(range);
+
+    auto lightColor = consumeColor(args, context);
+    if (!lightColor)
+        return std::nullopt;
+
+    if (!consumeCommaIncludingWhitespace(args))
+        return std::nullopt;
+
+    auto darkColor = consumeColor(args, context);
+    if (!darkColor)
+        return std::nullopt;
+
+    if (!args.atEnd())
+        return std::nullopt;
+
+    return { CSSUnresolvedColor { CSSUnresolvedLightDark {
+        lightColor.releaseNonNull(),
+        darkColor.releaseNonNull()
+    } } };
+}
+
 static std::optional<SRGBA<uint8_t>> parseHexColor(CSSParserTokenRange& range, bool acceptQuirkyColors)
 {
     String string;
@@ -3200,6 +3231,9 @@ static Color parseColorFunctionRaw(CSSParserTokenRange& range, const CSSParserCo
     case CSSValueColorMix:
         color = parseColorMixFunctionParametersRaw(colorRange, context);
         break;
+    case CSSValueLightDark:
+        // FIXME: Need a worker-safe way to compute light-dark colors.
+        return { };
     default:
         return { };
     }
@@ -3256,6 +3290,9 @@ static std::optional<ColorOrUnresolvedColor> parseColorFunction(CSSParserTokenRa
     case CSSValueColorMix:
         color = parseColorMixFunctionParameters(colorRange, context);
         break;
+    case CSSValueLightDark:
+        color = parseLightDarkFunctionParameters(colorRange, context);
+        break;
     default:
         return { };
     }
@@ -3273,7 +3310,7 @@ Color consumeColorWorkerSafe(CSSParserTokenRange& range, const CSSParserContext&
         //        For now, we detect the system color, but then intentionally fail parsing.
         if (StyleColor::isSystemColorKeyword(keyword))
             return { };
-        if (!isValueAllowedInMode(keyword, context.mode))
+        if (!isColorKeywordAllowedInMode(keyword, context.mode))
             return { };
         result = StyleColor::colorFromKeyword(keyword, { });
         range.consumeIncludingWhitespace();
@@ -3294,7 +3331,7 @@ RefPtr<CSSPrimitiveValue> consumeColor(CSSParserTokenRange& range, const CSSPars
 {
     auto keyword = range.peek().id();
     if (StyleColor::isColorKeyword(keyword, allowedColorTypes)) {
-        if (!isValueAllowedInMode(keyword, context.mode))
+        if (!isColorKeywordAllowedInMode(keyword, context.mode))
             return nullptr;
         return consumeIdent(range);
     }
@@ -4774,7 +4811,7 @@ AtomString consumeCounterStyleNameInPrelude(CSSParserTokenRange& prelude, CSSPar
     // case-insensitive match for "decimal", "disc", "square", "circle", "disclosure-open" and "disclosure-closed". No <counter-style-name>, prelude or not, may be an ASCII
     // case-insensitive match for "none".
     auto id = nameToken.id();
-    if (identMatches<CSSValueNone>(id) || (mode != CSSParserMode::UASheetMode && identMatches<CSSValueDecimal, CSSValueDisc, CSSValueCircle, CSSValueSquare, CSSValueDisclosureOpen, CSSValueDisclosureClosed>(id)))
+    if (identMatches<CSSValueNone>(id) || (!isUASheetBehavior(mode) && identMatches<CSSValueDecimal, CSSValueDisc, CSSValueCircle, CSSValueSquare, CSSValueDisclosureOpen, CSSValueDisclosureClosed>(id)))
         return AtomString();
     auto name = nameToken.value();
     return isPredefinedCounterStyle(nameToken.id()) ? name.convertToASCIILowercaseAtom() : name.toAtomString();
@@ -5122,7 +5159,7 @@ RefPtr<CSSValue> consumeDisplay(CSSParserTokenRange& range, CSSParserMode mode)
 
     auto allowsValue = [&](CSSValueID value) {
         bool isRuby = value == CSSValueRubyBase || value == CSSValueRubyText || value == CSSValueBlockRuby || value == CSSValueRuby;
-        return !isRuby || mode == CSSParserMode::UASheetMode;
+        return !isRuby || isUASheetBehavior(mode);
     };
 
     if (singleKeyword) {
@@ -6736,27 +6773,59 @@ RefPtr<CSSValue> consumeContent(CSSParserTokenRange& range, const CSSParserConte
     if (identMatches<CSSValueNone, CSSValueNormal>(range.peek().id()))
         return consumeIdent(range);
 
-    CSSValueListBuilder values;
-    do {
-        RefPtr<CSSValue> parsedValue = consumeImage(range, context);
-        if (!parsedValue)
-            parsedValue = consumeIdent<CSSValueOpenQuote, CSSValueCloseQuote, CSSValueNoOpenQuote, CSSValueNoCloseQuote>(range);
-        if (!parsedValue)
-            parsedValue = consumeString(range);
-        if (!parsedValue) {
-            if (range.peek().functionId() == CSSValueAttr)
-                parsedValue = consumeAttr(consumeFunction(range), context);
-            else if (range.peek().functionId() == CSSValueCounter)
-                parsedValue = consumeCounterContent(consumeFunction(range), false, context);
-            else if (range.peek().functionId() == CSSValueCounters)
-                parsedValue = consumeCounterContent(consumeFunction(range), true, context);
-            if (!parsedValue)
-                return nullptr;
-        }
-        values.append(parsedValue.releaseNonNull());
-    } while (!range.atEnd());
+    enum class ContentListType : bool { VisibleContent, AltText };
+    auto consumeContentList = [&](CSSValueListBuilder& values, ContentListType type) -> bool {
+        bool shouldEnd = false;
+        do {
+            RefPtr<CSSValue> parsedValue = consumeString(range);
+            if (type == ContentListType::VisibleContent) {
+                if (!parsedValue)
+                    parsedValue = consumeImage(range, context);
+                if (!parsedValue)
+                    parsedValue = consumeIdent<CSSValueOpenQuote, CSSValueCloseQuote, CSSValueNoOpenQuote, CSSValueNoCloseQuote>(range);
+            }
+            if (!parsedValue) {
+                if (range.peek().functionId() == CSSValueAttr)
+                    parsedValue = consumeAttr(consumeFunction(range), context);
+                // FIXME: Alt-text should support counters.
+                else if (type == ContentListType::VisibleContent) {
+                    if (range.peek().functionId() == CSSValueCounter)
+                        parsedValue = consumeCounterContent(consumeFunction(range), false, context);
+                    else if (range.peek().functionId() == CSSValueCounters)
+                        parsedValue = consumeCounterContent(consumeFunction(range), true, context);
+                }
+                if (!parsedValue)
+                    return false;
+            }
+            values.append(parsedValue.releaseNonNull());
 
-    return CSSValueList::createSpaceSeparated(WTFMove(values));
+            // Visible content parsing ends at '/' or end of range.
+            if (type == ContentListType::VisibleContent && !range.atEnd()) {
+                CSSParserToken value = range.peek();
+                if (value.type() == DelimiterToken && value.delimiter() == '/')
+                    shouldEnd = true;
+            }
+            shouldEnd = shouldEnd || range.atEnd();
+        } while (!shouldEnd);
+        return true;
+    };
+
+    CSSValueListBuilder visibleContent;
+    if (!consumeContentList(visibleContent, ContentListType::VisibleContent))
+        return nullptr;
+
+    // Consume alt-text content if there is any.
+    if (consumeSlashIncludingWhitespace(range)) {
+        CSSValueListBuilder altText;
+        if (!consumeContentList(altText, ContentListType::AltText))
+            return nullptr;
+        return CSSValuePair::createSlashSeparated(
+            CSSValueList::createSpaceSeparated(WTFMove(visibleContent)),
+            CSSValueList::createSpaceSeparated(WTFMove(altText))
+        );
+    }
+
+    return CSSValueList::createSpaceSeparated(WTFMove(visibleContent));
 }
 
 RefPtr<CSSValue> consumeScrollSnapAlign(CSSParserTokenRange& range)
@@ -8206,15 +8275,6 @@ RefPtr<CSSValue> consumeHangingPunctuation(CSSParserTokenRange& range)
     return CSSValueList::createSpaceSeparated(WTFMove(list));
 }
 
-RefPtr<CSSValue> consumeAlt(CSSParserTokenRange& range, const CSSParserContext& context)
-{
-    if (range.peek().type() == StringToken)
-        return consumeString(range);
-    if (range.peek().functionId() != CSSValueAttr)
-        return nullptr;
-    return consumeAttr(consumeFunction(range), context);
-}
-
 RefPtr<CSSValue> consumeContain(CSSParserTokenRange& range)
 {
     if (auto singleValue = consumeIdent<CSSValueNone, CSSValueStrict, CSSValueContent>(range))
@@ -8383,6 +8443,15 @@ RefPtr<CSSValue> consumeOffsetRotate(CSSParserTokenRange& range, CSSParserMode m
 
     range = rangeCopy;
     return CSSOffsetRotateValue::create(WTFMove(modifier), WTFMove(angle));
+}
+
+RefPtr<CSSValue> consumeViewTransitionName(CSSParserTokenRange& range)
+{
+    if (auto noneValue = consumeIdent<CSSValueNone>(range))
+        return noneValue;
+    if (isAuto(range.peek().id()))
+        return nullptr;
+    return consumeCustomIdent(range);
 }
 
 // MARK: - @-rule descriptor consumers:

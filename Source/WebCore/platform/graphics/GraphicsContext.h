@@ -75,7 +75,7 @@ class GraphicsContext {
 public:
     // Indicates if draw operations read the sources such as NativeImage backing stores immediately
     // during draw operations.
-    enum class IsDeferred {
+    enum class IsDeferred : bool {
         No,
         Yes
     };
@@ -223,6 +223,7 @@ public:
 
     virtual void fillRect(const FloatRect&) = 0;
     virtual void fillRect(const FloatRect&, const Color&) = 0;
+    virtual void fillRect(const FloatRect&, Gradient&, const AffineTransform&) = 0;
     WEBCORE_EXPORT virtual void fillRect(const FloatRect&, Gradient&);
     WEBCORE_EXPORT virtual void fillRect(const FloatRect&, const Color&, CompositeOperator, BlendMode = BlendMode::Normal);
     virtual void fillRoundedRectImpl(const FloatRoundedRect&, const Color&) = 0;
@@ -250,7 +251,7 @@ public:
     WEBCORE_EXPORT virtual RefPtr<ImageBuffer> createAlignedImageBuffer(const FloatSize&, const DestinationColorSpace& = DestinationColorSpace::SRGB(), std::optional<RenderingMethod> = std::nullopt) const;
     WEBCORE_EXPORT virtual RefPtr<ImageBuffer> createAlignedImageBuffer(const FloatRect&, const DestinationColorSpace& = DestinationColorSpace::SRGB(), std::optional<RenderingMethod> = std::nullopt) const;
 
-    WEBCORE_EXPORT void drawNativeImage(NativeImage&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions = { });
+    WEBCORE_EXPORT void drawNativeImage(NativeImage&, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions = { });
 
     WEBCORE_EXPORT virtual void drawSystemImage(SystemImage&, const FloatRect&);
 
@@ -372,9 +373,8 @@ public:
     void releaseWindowsContext(HDC, const IntRect&, bool supportAlphaBlend); // The passed in HDC should be the one handed back by getWindowsContext.
 #endif
 
-    IsDeferred deferred() const { return m_isDeferred; }
 private:
-    virtual void drawNativeImageInternal(NativeImage&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions = { }) = 0;
+    virtual void drawNativeImageInternal(NativeImage&, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions = { }) = 0;
 
 protected:
     WEBCORE_EXPORT RefPtr<NativeImage> nativeImageForDrawing(ImageBuffer&);
@@ -389,13 +389,12 @@ protected:
     Vector<FloatPoint> centerLineAndCutOffCorners(bool isVerticalLine, float cornerWidth, FloatPoint point1, FloatPoint point2) const;
 
     GraphicsContextState m_state;
-    const IsDeferred m_isDeferred;
-
 private:
     Vector<GraphicsContextState, 1> m_stack;
 
     unsigned m_transparencyLayerCount { 0 };
-    bool m_contentfulPaintDetected { false };
+    const IsDeferred m_isDeferred : 1; // NOLINT
+    bool m_contentfulPaintDetected : 1 { false };
 };
 
 } // namespace WebCore

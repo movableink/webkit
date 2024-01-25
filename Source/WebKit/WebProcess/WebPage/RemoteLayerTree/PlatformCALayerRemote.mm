@@ -208,7 +208,7 @@ void PlatformCALayerRemote::recursiveBuildTransaction(RemoteLayerTreeContext& co
         // Once that setting is made unnecessary, remove this entire conditional as well.
         if (type() == PlatformCALayer::Type::RemoteCustom
             && !downcast<PlatformCALayerRemoteCustom>(*this).hasVideo()) {
-            RemoteLayerTreePropertyApplier::applyPropertiesToLayer(platformLayer(), nullptr, nullptr, m_properties, RemoteLayerBackingStoreProperties::LayerContentsType::CAMachPort);
+            RemoteLayerTreePropertyApplier::applyPropertiesToLayer(platformLayer(), nullptr, nullptr, m_properties, LayerContentsType::CAMachPort);
             didCommit();
             return;
         }
@@ -743,6 +743,11 @@ void PlatformCALayerRemote::setContents(CFTypeRef value)
 
 void PlatformCALayerRemote::setDelegatedContents(const PlatformCALayerDelegatedContents& contents)
 {
+    setRemoteDelegatedContents({ ImageBufferBackendHandle { MachSendRight { contents.surface } }, contents.finishedFence, contents.surfaceIdentifier });
+}
+
+void PlatformCALayerRemote::setRemoteDelegatedContents(const PlatformCALayerRemoteDelegatedContents& contents)
+{
     ASSERT(m_acceleratesDrawing);
     ensureBackingStore();
     m_properties.backingStoreOrProperties.store->setDelegatedContents(contents);
@@ -825,13 +830,11 @@ void PlatformCALayerRemote::copyFiltersFrom(const PlatformCALayer& sourceLayer)
     m_properties.notePropertiesChanged(LayerChange::FiltersChanged);
 }
 
-#if ENABLE(CSS_COMPOSITING)
 void PlatformCALayerRemote::setBlendMode(BlendMode blendMode)
 {
     m_properties.blendMode = blendMode;
     m_properties.notePropertiesChanged(LayerChange::BlendModeChanged);
 }
-#endif
 
 bool PlatformCALayerRemote::filtersCanBeComposited(const FilterOperations& filters)
 {
@@ -1085,5 +1088,18 @@ void PlatformCALayerRemote::setAcceleratedEffectsAndBaseValues(const Accelerated
     m_properties.notePropertiesChanged(LayerChange::AnimationsChanged);
 }
 #endif
+
+void PlatformCALayerRemote::purgeFrontBufferForTesting()
+{
+    if (m_properties.backingStoreOrProperties.store)
+        return m_properties.backingStoreOrProperties.store->purgeFrontBufferForTesting();
+}
+
+void PlatformCALayerRemote::purgeBackBufferForTesting()
+{
+    if (m_properties.backingStoreOrProperties.store)
+        return m_properties.backingStoreOrProperties.store->purgeBackBufferForTesting();
+}
+
 
 } // namespace WebKit

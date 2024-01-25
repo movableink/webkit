@@ -40,6 +40,19 @@ class TypeChecker;
 class TypeStore;
 struct Type;
 
+enum Packing : uint8_t {
+    Packed       = 1 << 0,
+    Unpacked     = 1 << 1,
+    Either       = Packed | Unpacked,
+
+    PStruct = 1 << 2,
+    Vec3   = 1 << 3,
+
+    PackedStruct = Packed | PStruct,
+    PackedVec3   = Packed | Vec3,
+};
+
+
 namespace Types {
 
 #define FOR_EACH_PRIMITIVE_TYPE(f) \
@@ -134,6 +147,7 @@ private:
     enum Kind : uint8_t {
         FrexpResult,
         ModfResult,
+        AtomicCompareExchangeResult,
     };
 
 public:
@@ -163,9 +177,23 @@ public:
         static constexpr SortedArrayMap map { mapEntries };
     };
 
+    struct AtomicCompareExchangeResult {
+        static constexpr Kind kind = Kind::AtomicCompareExchangeResult;
+        static constexpr unsigned oldValue = 0;
+        static constexpr unsigned exchanged = 1;
+
+        static constexpr std::pair<ComparableASCIILiteral, unsigned> mapEntries[] {
+            { "exchanged", exchanged },
+            { "old_value", oldValue },
+        };
+
+        static constexpr SortedArrayMap map { mapEntries };
+    };
+
     static constexpr SortedArrayMap<std::pair<ComparableASCIILiteral, unsigned>[2]> keys[] {
         FrexpResult::map,
         ModfResult::map,
+        AtomicCompareExchangeResult::map,
     };
 
     String name;
@@ -242,6 +270,8 @@ struct Type : public std::variant<
     String toString() const;
     unsigned size() const;
     unsigned alignment() const;
+    Packing packing() const;
+    bool isConstructible() const;
 };
 
 using ConversionRank = Markable<unsigned, IntegralMarkableTraits<unsigned, std::numeric_limits<unsigned>::max()>>;

@@ -32,7 +32,9 @@
 #include "CommonAtomStrings.h"
 #include "ElementAncestorIteratorInlines.h"
 #include "HTMLBaseElement.h"
+#include "HTMLDocument.h"
 #include "HTMLNames.h"
+#include "SVGElement.h"
 #include "SelectorChecker.h"
 #include "StaticNodeList.h"
 #include "StyledElement.h"
@@ -51,6 +53,12 @@ static bool isSingleClassNameSelector(const CSSSelector& selector)
 {
     return selector.isLastInTagHistory() && selector.match() == CSSSelector::Match::Class;
 }
+
+static bool isSingleAttributeExactSelector(const CSSSelector& selector)
+{
+    return selector.isLastInTagHistory() && selector.match() == CSSSelector::Match::Exact;
+}
+
 #endif // ASSERT_ENABLED
 
 enum class IdMatchingType : uint8_t {
@@ -83,10 +91,31 @@ static IdMatchingType findIdMatchingType(const CSSSelector& firstSelector)
                 return IdMatchingType::Rightmost;
             return IdMatchingType::Filter;
         }
-        if (selector->relation() != CSSSelector::RelationType::Subselector)
+        if (selector->relation() != CSSSelector::Relation::Subselector)
             inRightmost = false;
     }
     return IdMatchingType::None;
+}
+
+static bool canOptimizeSingleAttributeExactMatch(const CSSSelector& selector)
+{
+    // Bailout if attribute name needs to be definitely case-insensitive.
+    if (selector.attributeValueMatchingIsCaseInsensitive())
+        return false;
+
+    const auto& attribute = selector.attribute();
+
+    if (!HTMLDocument::isCaseSensitiveAttribute(attribute))
+        return false;
+
+    // Bailout if we need to synchronize attributes.
+    if (Attribute::nameMatchesFilter(HTMLNames::styleAttr, attribute.prefix(), attribute.localNameLowercase(), attribute.namespaceURI()))
+        return false;
+
+    if (Attribute::nameMatchesFilter(SVGElement::animatableAttributeForName(attribute.localName()), attribute.prefix(), attribute.localName(), attribute.namespaceURI()))
+        return false;
+
+    return true;
 }
 
 SelectorDataList::SelectorDataList(const CSSSelectorList& selectorList)
@@ -108,6 +137,14 @@ SelectorDataList::SelectorDataList(const CSSSelectorList& selectorList)
                 break;
             case CSSSelector::Match::Class:
                 m_matchType = ClassNameMatch;
+                break;
+            case CSSSelector::Match::Exact:
+                if (canBeUsedForIdFastPath(selector))
+                    m_matchType = RightMostWithIdMatch; // [id="name"] pattern goes here.
+                else if (canOptimizeSingleAttributeExactMatch(selector))
+                    m_matchType = AttributeExactMatch;
+                else
+                    m_matchType = CompilableSingle;
                 break;
             default:
                 if (canBeUsedForIdFastPath(selector))
@@ -195,7 +232,7 @@ static const CSSSelector* selectorForIdLookup(const ContainerNode& rootNode, con
     for (const CSSSelector* selector = &firstSelector; selector; selector = selector->tagHistory()) {
         if (canBeUsedForIdFastPath(*selector))
             return selector;
-        if (selector->relation() != CSSSelector::RelationType::Subselector)
+        if (selector->relation() != CSSSelector::Relation::Subselector)
             break;
     }
 
@@ -242,7 +279,7 @@ static ContainerNode& filterRootById(ContainerNode& rootNode, const CSSSelector&
     const CSSSelector* selector = &firstSelector;
     do {
         ASSERT(!canBeUsedForIdFastPath(*selector));
-        if (selector->relation() != CSSSelector::RelationType::Subselector)
+        if (selector->relation() != CSSSelector::Relation::Subselector)
             break;
         selector = selector->tagHistory();
     } while (selector);
@@ -260,9 +297,9 @@ static ContainerNode& filterRootById(ContainerNode& rootNode, const CSSSelector&
                 }
             }
         }
-        if (selector->relation() == CSSSelector::RelationType::Subselector)
+        if (selector->relation() == CSSSelector::Relation::Subselector)
             continue;
-        inAdjacentChain = selector->relation() == CSSSelector::RelationType::DirectAdjacent || selector->relation() == CSSSelector::RelationType::IndirectAdjacent;
+        inAdjacentChain = selector->relation() == CSSSelector::Relation::DirectAdjacent || selector->relation() == CSSSelector::Relation::IndirectAdjacent;
     }
     return rootNode;
 }
@@ -361,6 +398,50 @@ ALWAYS_INLINE void SelectorDataList::executeSingleClassNameSelectorData(const Co
             appendOutputForElement(output, element);
             if constexpr (std::is_same_v<OutputType, Element*>)
                 return;
+        }
+    }
+}
+
+AtomString SelectorDataList::classNameToMatch() const
+{
+    if (m_matchType != MatchType::ClassNameMatch)
+        return nullAtom();
+    ASSERT(m_selectors.size() == 1);
+    ASSERT(isSingleClassNameSelector(*m_selectors.first().selector));
+    return m_selectors.first().selector->value();
+}
+
+template<typename OutputType>
+ALWAYS_INLINE void SelectorDataList::executeSingleAttributeExactSelectorData(const ContainerNode& rootNode, const SelectorData& selectorData, OutputType& output) const
+{
+    ASSERT(m_selectors.size() == 1);
+    ASSERT(isSingleAttributeExactSelector(*selectorData.selector));
+    ASSERT(canOptimizeSingleAttributeExactMatch(*selectorData.selector));
+
+    const auto& selectorAttribute = selectorData.selector->attribute();
+    const auto& selectorValue = selectorData.selector->value();
+    const auto& localNameLowercase = selectorAttribute.localNameLowercase();
+    const auto& localName = selectorAttribute.localName();
+    const auto& prefix = selectorAttribute.prefix();
+    const auto& namespaceURI = selectorAttribute.namespaceURI();
+
+    bool documentIsHTML = rootNode.document().isHTMLDocument();
+    for (auto& element : descendantsOfType<Element>(const_cast<ContainerNode&>(rootNode))) {
+        if (!element.hasAttributesWithoutUpdate())
+            continue;
+
+        bool isHTML = documentIsHTML && element.isHTMLElement();
+        const auto& localNameToMatch = isHTML ? localNameLowercase : localName;
+        for (const Attribute& attribute : element.attributesIterator()) {
+            if (!attribute.matches(prefix, localNameToMatch, namespaceURI))
+                continue;
+
+            if (selectorValue == attribute.value()) {
+                appendOutputForElement(output, element);
+                if constexpr (std::is_same_v<OutputType, Element*>)
+                    return;
+                break;
+            }
         }
     }
 }
@@ -556,6 +637,9 @@ ALWAYS_INLINE void SelectorDataList::execute(ContainerNode& rootNode, OutputType
     case ClassNameMatch:
         executeSingleClassNameSelectorData(*searchRootNode, m_selectors.first(), output);
         break;
+    case AttributeExactMatch:
+        executeSingleAttributeExactSelectorData(*searchRootNode, m_selectors.first(), output);
+        break;
     case CompilableMultipleSelectorMatch:
 #if ENABLE(CSS_SELECTOR_JIT)
         {
@@ -613,12 +697,9 @@ SelectorQuery* SelectorQueryCache::add(const String& selectors, const Document& 
 
     return m_entries.ensure(key, [&]() -> std::unique_ptr<SelectorQuery> {
         auto tokenizer = CSSTokenizer { selectors };
-        auto selectorList = parseCSSSelectorList(tokenizer.tokenRange(), context, nullptr, CSSParserEnum::IsNestedContext::No);
+        auto selectorList = parseCSSSelectorList(tokenizer.tokenRange(), context);
 
-        if (!selectorList || selectorList->hasInvalidSelector())
-            return nullptr;
-
-        if (selectorList->selectorsNeedNamespaceResolution())
+        if (!selectorList)
             return nullptr;
 
         if (selectorList->hasExplicitNestingParent())

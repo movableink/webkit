@@ -309,12 +309,11 @@ ExceptionOr<void> WebSocket::connect(const String& url, const Vector<String>& pr
         ResourceLoadObserver::shared().logWebSocketLoading(targetURL, mainFrameURL);
     });
 
-    if (is<Document>(context)) {
-        Document& document = downcast<Document>(context);
-        RefPtr frame = document.frame();
+    if (RefPtr document = dynamicDowncast<Document>(context)) {
+        RefPtr frame = document->frame();
         // FIXME: make the mixed content check equivalent to the non-document mixed content check currently in WorkerThreadableWebSocketChannel::Bridge::connect()
         // In particular we need to match the error messaging in the console and the inspector instrumentation. See WebSocketChannel::fail.
-        if (!frame || !MixedContentChecker::frameAndAncestorsCanRunInsecureContent(*frame, document.securityOrigin(), m_url)) {
+        if (!frame || !MixedContentChecker::frameAndAncestorsCanRunInsecureContent(*frame, document->securityOrigin(), m_url)) {
             failAsynchronously();
             return { };
         }
@@ -335,8 +334,8 @@ ExceptionOr<void> WebSocket::connect(const String& url, const Vector<String>& pr
     };
     if (is<Document>(context))
         reportRegistrableDomain(context);
-    else
-        downcast<WorkerGlobalScope>(context).thread().workerLoaderProxy().postTaskToLoader(WTFMove(reportRegistrableDomain));
+    else if (auto* workerLoaderProxy = downcast<WorkerGlobalScope>(context).thread().workerLoaderProxy())
+        workerLoaderProxy->postTaskToLoader(WTFMove(reportRegistrableDomain));
 
     m_pendingActivity = makePendingActivity(*this);
 

@@ -29,6 +29,7 @@
 
 #include "SourceBufferParser.h"
 #include "SourceBufferPrivate.h"
+#include "WebAVSampleBufferListener.h"
 #include <dispatch/group.h>
 #include <wtf/Box.h>
 #include <wtf/CancellableTask.h>
@@ -50,7 +51,6 @@ OBJC_CLASS AVSampleBufferDisplayLayer;
 OBJC_CLASS NSData;
 OBJC_CLASS NSError;
 OBJC_CLASS NSObject;
-OBJC_CLASS WebAVSampleBufferListener;
 
 typedef struct opaqueCMSampleBuffer *CMSampleBufferRef;
 typedef const struct opaqueCMFormatDescription *CMFormatDescriptionRef;
@@ -68,6 +68,7 @@ class MediaPlayerPrivateMediaSourceAVFObjC;
 class MediaSourcePrivateAVFObjC;
 class TimeRanges;
 class AudioTrackPrivate;
+class VideoMediaSampleRenderer;
 class VideoTrackPrivate;
 class AudioTrackPrivateMediaSourceAVFObjC;
 class VideoTrackPrivateMediaSourceAVFObjC;
@@ -87,6 +88,7 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
 
 class SourceBufferPrivateAVFObjC final
     : public SourceBufferPrivate
+    , public WebAVSampleBufferListenerClient
 {
 public:
     static Ref<SourceBufferPrivateAVFObjC> create(MediaSourcePrivateAVFObjC&, Ref<SourceBufferParser>&&);
@@ -123,18 +125,9 @@ public:
 
     void registerForErrorNotifications(SourceBufferPrivateAVFObjCErrorClient*);
     void unregisterForErrorNotifications(SourceBufferPrivateAVFObjCErrorClient*);
-    void layerDidReceiveError(AVSampleBufferDisplayLayer *, NSError *);
-    void rendererWasAutomaticallyFlushed(AVSampleBufferAudioRenderer *, const CMTime&);
-    void outputObscuredDueToInsufficientExternalProtectionChanged(bool);
-    void layerRequiresFlushToResumeDecodingChanged(AVSampleBufferDisplayLayer *, bool);
-ALLOW_NEW_API_WITHOUT_GUARDS_BEGIN
-    void rendererDidReceiveError(AVSampleBufferAudioRenderer *, NSError *);
-ALLOW_NEW_API_WITHOUT_GUARDS_END
 
     void setVideoLayer(AVSampleBufferDisplayLayer*);
     void setDecompressionSession(WebCoreDecompressionSession*);
-
-    void layerReadyForDisplayChanged(AVSampleBufferDisplayLayer *, bool isReadyForDisplay);
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
     SharedBuffer* initData() { return m_initData.get(); }
@@ -175,6 +168,14 @@ private:
     void processInitializationSegment(std::optional<InitializationSegment>&&) final;
     void processFormatDescriptionForTrackId(Ref<TrackInfo>&&, TrackID) final;
 
+    // WebAVSampleBufferListenerClient
+    void layerDidReceiveError(AVSampleBufferDisplayLayer *, NSError *) final;
+    void rendererWasAutomaticallyFlushed(AVSampleBufferAudioRenderer *, const CMTime&) final;
+    void outputObscuredDueToInsufficientExternalProtectionChanged(bool) final;
+    void layerRequiresFlushToResumeDecodingChanged(AVSampleBufferDisplayLayer *, bool) final;
+    void layerReadyForDisplayChanged(AVSampleBufferDisplayLayer *, bool isReadyForDisplay) final;
+    void rendererDidReceiveError(AVSampleBufferAudioRenderer *, NSError *) final;
+
     void processPendingTrackChangeTasks();
     void enqueueSample(Ref<MediaSampleAVFObjC>&&, TrackID);
     void enqueueSampleBuffer(MediaSampleAVFObjC&);
@@ -197,7 +198,7 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
     bool trackIsBlocked(TrackID) const;
 
 #if ENABLE(ENCRYPTED_MEDIA) && HAVE(AVCONTENTKEYSESSION)
-    void keyStatusesChanged();
+    void tryToEnqueueBlockedSamples();
 #endif
 
     void setTrackChangeCallbacks(const InitializationSegment&, bool initialized);
@@ -210,11 +211,11 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
     Vector<Function<void()>> m_pendingTrackChangeTasks;
     Deque<std::pair<TrackID, Ref<MediaSampleAVFObjC>>> m_blockedSamples;
 
-    RetainPtr<AVSampleBufferDisplayLayer> m_displayLayer;
+    RefPtr<VideoMediaSampleRenderer> m_videoLayer;
 ALLOW_NEW_API_WITHOUT_GUARDS_BEGIN
     StdUnorderedMap<TrackID, RetainPtr<AVSampleBufferAudioRenderer>> m_audioRenderers;
 ALLOW_NEW_API_WITHOUT_GUARDS_END
-    RetainPtr<WebAVSampleBufferListener> m_listener;
+    RefPtr<WebAVSampleBufferListener> m_listener;
 #if PLATFORM(IOS_FAMILY)
     bool m_displayLayerWasInterrupted { false };
 #endif

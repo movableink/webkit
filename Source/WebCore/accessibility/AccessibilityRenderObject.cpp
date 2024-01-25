@@ -980,7 +980,7 @@ String AccessibilityRenderObject::applePayButtonDescription() const
 }
 #endif
 
-void AccessibilityRenderObject::titleElementText(Vector<AccessibilityText>& textOrder) const
+void AccessibilityRenderObject::labelText(Vector<AccessibilityText>& textOrder) const
 {
 #if ENABLE(APPLE_PAY)
     if (isApplePayButton()) {
@@ -988,11 +988,10 @@ void AccessibilityRenderObject::titleElementText(Vector<AccessibilityText>& text
         return;
     }
 #endif
-
-    AccessibilityNodeObject::titleElementText(textOrder);
+    AccessibilityNodeObject::labelText(textOrder);
 }
-    
-AccessibilityObject* AccessibilityRenderObject::titleUIElement() const
+
+AXCoreObject* AccessibilityRenderObject::titleUIElement() const
 {
     if (m_renderer && isFieldset())
         return axObjectCache()->getOrCreate(dynamicDowncast<RenderBlock>(m_renderer.get())->findFieldsetLegend(RenderBlock::FieldsetIncludeFloatingOrOutOfFlow));
@@ -1231,6 +1230,13 @@ bool AccessibilityRenderObject::computeAccessibilityIsIgnored() const
         return false;
     }
 
+    // Objects that are between table rows and cells should be ignored, otherwise the table hierarchy will be
+    // incorrect, preventing the table content from being accessible to ATs.
+    if (!ancestorFlagsAreInitialized() || isInRow()) {
+        if (!isTableCell() && canHaveChildren() && ignoredByRowAncestor())
+            return true;
+    }
+
     if (ariaRoleAttribute() != AccessibilityRole::Unknown)
         return false;
 
@@ -1333,7 +1339,7 @@ bool AccessibilityRenderObject::computeAccessibilityIsIgnored() const
 
     // Find out if this element is inside of a label element.
     // If so, it may be ignored because it's the label for a checkbox or radio button.
-    auto* controlObject = correspondingControlForLabelElement();
+    auto* controlObject = controlForLabelElement();
     if (controlObject && controlObject->isCheckboxOrRadio() && !controlObject->titleUIElement())
         return true;
 
@@ -1396,11 +1402,11 @@ CharacterRange AccessibilityRenderObject::selectedTextRange() const
 }
 
 #if ENABLE(AX_THREAD_TEXT_APIS)
-Vector<AXTextRun> AccessibilityRenderObject::textRuns()
+AXTextRuns AccessibilityRenderObject::textRuns()
 {
     if (auto* renderLineBreak = dynamicDowncast<RenderLineBreak>(renderer())) {
         auto box = InlineIterator::boxFor(*renderLineBreak);
-        return { { box->lineIndex(), makeString('\n') } };
+        return { renderLineBreak->containingBlock(), { AXTextRun(box->lineIndex(), makeString('\n').isolatedCopy()) } };
     }
 
     WeakPtr renderText = dynamicDowncast<RenderText>(renderer());
@@ -1453,7 +1459,7 @@ Vector<AXTextRun> AccessibilityRenderObject::textRuns()
 
     if (!lineString.isEmpty())
         runs.append({ currentLineIndex, lineString.toString().isolatedCopy() });
-    return runs;
+    return { renderText->containingBlock(), WTFMove(runs) };
 }
 #endif // ENABLE(AX_THREAD_TEXT_APIS)
 
@@ -2023,10 +2029,10 @@ AccessibilityObject* AccessibilityRenderObject::accessibilityHitTest(const IntPo
     result->updateChildrenIfNecessary();
     // Allow the element to perform any hit-testing it might need to do to reach non-render children.
     result = result->elementAccessibilityHitTest(point);
-    
+
     if (result && result->accessibilityIsIgnored()) {
         // If this element is the label of a control, a hit test should return the control.
-        auto* controlObject = result->correspondingControlForLabelElement();
+        auto* controlObject = result->controlForLabelElement();
         if (controlObject && !controlObject->titleUIElement())
             return controlObject;
 

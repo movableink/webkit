@@ -32,6 +32,10 @@
 #include <WebCore/GraphicsLayer.h>
 #include <wtf/OptionSet.h>
 
+namespace WebCore {
+enum class DelegatedScrollingMode : uint8_t;
+}
+
 namespace WebKit {
 
 struct PDFContextMenu;
@@ -55,6 +59,12 @@ public:
     };
     using PDFElementTypes = OptionSet<PDFElementType>;
 
+    CGRect boundsForAnnotation(RetainPtr<PDFAnnotation>&) const final;
+    void setActiveAnnotation(RetainPtr<PDFAnnotation>&&) final;
+    void focusNextAnnotation() final;
+    void focusPreviousAnnotation() final;
+
+    void attemptToUnlockPDF(const String& password) final;
 private:
     explicit UnifiedPDFPlugin(WebCore::HTMLPlugInElement&);
     bool isUnifiedPDFPlugin() const override { return true; }
@@ -67,6 +77,7 @@ private:
     void installPDFDocument() override;
 
     CGFloat scaleFactor() const override;
+    CGSize contentSizeRespectingZoom() const final;
 
     void didBeginMagnificationGesture() override;
     void didEndMagnificationGesture() override;
@@ -94,15 +105,21 @@ private:
     WebCore::IntSize contentsSize() const override;
     unsigned firstPageHeight() const override;
 
-    RetainPtr<PDFDocument> pdfDocumentForPrinting() const override;
-    WebCore::FloatSize pdfDocumentSizeForPrinting() const override;
-
     void scheduleRenderingUpdate();
 
     void updateLayout();
+
+    WebCore::IntRect availableContentsRect() const;
+
+    WebCore::DelegatedScrollingMode scrollingMode() const;
+
+    void scrollbarStyleChanged(WebCore::ScrollbarStyle, bool forceUpdate) override;
+    void updateScrollbars() override;
     void geometryDidChange(const WebCore::IntSize&, const WebCore::AffineTransform&) override;
 
     RefPtr<WebCore::FragmentedSharedBuffer> liveResourceData() const override;
+
+    NSData *liveData() const override;
 
     bool wantsWheelEvents() const override { return false; }
     bool handleMouseEvent(const WebMouseEvent&) override;
@@ -111,43 +128,26 @@ private:
     bool handleMouseLeaveEvent(const WebMouseEvent&) override;
     bool handleContextMenuEvent(const WebMouseEvent&) override;
     bool handleKeyboardEvent(const WebKeyboardEvent&) override;
-    bool handleEditingCommand(StringView commandName) override;
-    bool isEditingCommandEnabled(StringView commandName) override;
+    bool handleEditingCommand(const String& commandName, const String& argument) override;
+    bool isEditingCommandEnabled(const String& commandName) override;
 
     enum class ContextMenuItemTag : uint8_t {
         OpenWithPreview,
         SinglePage,
         SinglePageContinuous,
         TwoPages,
-        TwoPagesContinuous
+        TwoPagesContinuous,
+        ZoomIn,
+        ZoomOut,
+        ActualSize,
     };
 
 #if PLATFORM(MAC)
     PDFContextMenu createContextMenu(const WebCore::IntPoint& contextMenuPoint) const;
     void performContextMenuAction(ContextMenuItemTag);
 
-    ContextMenuItemTag contextMenuItemTagFromDisplyMode(const PDFDocumentLayout::DisplayMode& displayMode) const
-    {
-        switch (displayMode) {
-        case PDFDocumentLayout::DisplayMode::SinglePage: return ContextMenuItemTag::SinglePage;
-        case PDFDocumentLayout::DisplayMode::Continuous: return ContextMenuItemTag::SinglePageContinuous;
-        case PDFDocumentLayout::DisplayMode::TwoUp: return ContextMenuItemTag::TwoPages;
-        case PDFDocumentLayout::DisplayMode::TwoUpContinuous: return ContextMenuItemTag::TwoPagesContinuous;
-        }
-    }
-    PDFDocumentLayout::DisplayMode displayModeFromContextMenuItemTag(const ContextMenuItemTag& tag)
-    {
-        ASSERT(tag == ContextMenuItemTag::SinglePage || tag == ContextMenuItemTag::SinglePageContinuous || tag == ContextMenuItemTag::TwoPages || tag == ContextMenuItemTag::TwoPagesContinuous);
-        switch (tag) {
-        case ContextMenuItemTag::SinglePage: return PDFDocumentLayout::DisplayMode::SinglePage;
-        case ContextMenuItemTag::SinglePageContinuous: return PDFDocumentLayout::DisplayMode::Continuous;
-        case ContextMenuItemTag::TwoPages: return PDFDocumentLayout::DisplayMode::TwoUp;
-        case ContextMenuItemTag::TwoPagesContinuous: return PDFDocumentLayout::DisplayMode::TwoUpContinuous;
-        default:
-            ASSERT_NOT_REACHED();
-            return PDFDocumentLayout::DisplayMode::Continuous;
-        }
-    }
+    ContextMenuItemTag contextMenuItemTagFromDisplayMode(const PDFDocumentLayout::DisplayMode&) const;
+    PDFDocumentLayout::DisplayMode displayModeFromContextMenuItemTag(const ContextMenuItemTag&) const;
     static constexpr int invalidContextMenuItemTag { -1 };
 #endif
 
@@ -169,8 +169,10 @@ private:
     void notifyFlushRequired(const WebCore::GraphicsLayer*) override;
     void paintContents(const WebCore::GraphicsLayer*, WebCore::GraphicsContext&, const WebCore::FloatRect&, OptionSet<WebCore::GraphicsLayerPaintBehavior>) override;
     float deviceScaleFactor() const override;
-    float pageScaleFactor() const override;
+    float pageScaleFactor() const override { return scaleFactor(); }
 
+    void paintPDFContent(WebCore::GraphicsContext&, const WebCore::FloatRect& clipRect);
+    void ensureLayers();
     void updateLayerHierarchy();
 
     void didChangeScrollOffset() override;
@@ -178,20 +180,34 @@ private:
 
     void didChangeSettings() override;
 
+    void createScrollbarsController() override;
+
     bool usesAsyncScrolling() const final { return true; }
     WebCore::ScrollingNodeID scrollingNodeID() const final { return m_scrollingNodeID; }
 
     void invalidateScrollbarRect(WebCore::Scrollbar&, const WebCore::IntRect&) override;
     void invalidateScrollCornerRect(const WebCore::IntRect&) override;
+
+    WebCore::GraphicsLayer* layerForHorizontalScrollbar() const override;
+    WebCore::GraphicsLayer* layerForVerticalScrollbar() const override;
+    WebCore::GraphicsLayer* layerForScrollCorner() const override;
+
     void updateScrollingExtents();
+
+    bool updateOverflowControlsLayers(bool needsHorizontalScrollbarLayer, bool needsVerticalScrollbarLayer, bool needsScrollCornerLayer);
+    void positionOverflowControlsLayers();
+
     WebCore::ScrollingCoordinator* scrollingCoordinator();
+
+    // ScrollableArea
+    bool requestScrollToPosition(const WebCore::ScrollPosition&, const WebCore::ScrollPositionChangeOptions& = WebCore::ScrollPositionChangeOptions::createProgrammatic()) override;
+    bool requestStartKeyboardScrollAnimation(const WebCore::KeyboardScroll& scrollData) override;
+    bool requestStopKeyboardScrollAnimation(bool immediate) override;
 
     // HUD Actions.
 #if ENABLE(PDF_HUD)
     void zoomIn() final;
     void zoomOut() final;
-    void save(CompletionHandler<void(const String&, const URL&, const IPC::DataReference&)>&&) final;
-    void openWithPreview(CompletionHandler<void(const String&, FrameInfoData&&, const IPC::DataReference&, const String&)>&&) final;
 #endif
 
     RefPtr<WebCore::GraphicsLayer> createGraphicsLayer(const String& name, WebCore::GraphicsLayer::Type);
@@ -199,6 +215,7 @@ private:
     WebCore::IntPoint convertFromPluginToDocument(const WebCore::IntPoint&) const;
     std::optional<PDFDocumentLayout::PageIndex> nearestPageIndexForDocumentPoint(const WebCore::IntPoint&) const;
     WebCore::IntPoint convertFromDocumentToPage(const WebCore::IntPoint&, PDFDocumentLayout::PageIndex) const;
+    WebCore::IntPoint convertFromPageToDocument(const WebCore::IntPoint&, PDFDocumentLayout::PageIndex) const;
     PDFElementTypes pdfElementTypesForPluginPoint(const WebCore::IntPoint&) const;
 
     bool isTaggedPDF() const;
@@ -208,6 +225,11 @@ private:
     RefPtr<WebCore::GraphicsLayer> m_scrollContainerLayer;
     RefPtr<WebCore::GraphicsLayer> m_scrolledContentsLayer;
     RefPtr<WebCore::GraphicsLayer> m_contentsLayer;
+
+    RefPtr<WebCore::GraphicsLayer> m_overflowControlsContainer;
+    RefPtr<WebCore::GraphicsLayer> m_layerForHorizontalScrollbar;
+    RefPtr<WebCore::GraphicsLayer> m_layerForVerticalScrollbar;
+    RefPtr<WebCore::GraphicsLayer> m_layerForScrollCorner;
 
     WebCore::ScrollingNodeID m_scrollingNodeID { 0 };
 

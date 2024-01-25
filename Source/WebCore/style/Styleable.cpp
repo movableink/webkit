@@ -35,8 +35,8 @@
 #include "CSSPropertyAnimation.h"
 #include "CSSTransition.h"
 #include "CommonAtomStrings.h"
-#include "DeclarativeAnimation.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "DocumentTimeline.h"
 #include "Element.h"
 #include "KeyframeEffect.h"
@@ -47,6 +47,7 @@
 #include "RenderListMarker.h"
 #include "RenderStyleInlines.h"
 #include "StyleCustomPropertyData.h"
+#include "StyleOriginatedAnimation.h"
 #include "StylePropertyShorthand.h"
 #include "StyleResolver.h"
 #include "StyleScope.h"
@@ -58,7 +59,7 @@ namespace WebCore {
 
 const std::optional<const Styleable> Styleable::fromRenderer(const RenderElement& renderer)
 {
-    switch (renderer.style().styleType()) {
+    switch (renderer.style().pseudoElementType()) {
     case PseudoId::Backdrop:
         for (auto& topLayerElement : renderer.document().topLayerElements()) {
             if (topLayerElement->renderer() && topLayerElement->renderer()->backdropRenderer() == &renderer)
@@ -68,7 +69,8 @@ const std::optional<const Styleable> Styleable::fromRenderer(const RenderElement
     case PseudoId::Marker: {
         auto* ancestor = renderer.parent();
         while (ancestor) {
-            if (is<RenderListItem>(ancestor) && ancestor->element() && downcast<RenderListItem>(ancestor)->markerRenderer() == &renderer)
+            auto* renderListItem = dynamicDowncast<RenderListItem>(ancestor);
+            if (renderListItem && ancestor->element() && renderListItem->markerRenderer() == &renderer)
                 return Styleable(*ancestor->element(), PseudoId::Marker);
             ancestor = ancestor->parent();
         }
@@ -103,8 +105,8 @@ RenderElement* Styleable::renderer() const
             return beforePseudoElement->renderer();
         break;
     case PseudoId::Marker:
-        if (is<RenderListItem>(element.renderer())) {
-            auto* markerRenderer = downcast<RenderListItem>(*element.renderer()).markerRenderer();
+        if (auto* renderListItem = dynamicDowncast<RenderListItem>(element.renderer())) {
+            auto* markerRenderer = renderListItem->markerRenderer();
             if (markerRenderer && !markerRenderer->style().hasEffectiveContentNone())
                 return markerRenderer;
         }
@@ -219,9 +221,9 @@ static inline bool removeCSSTransitionFromMap(CSSTransition& transition, Animata
     return true;
 }
 
-void Styleable::removeDeclarativeAnimationFromListsForOwningElement(WebAnimation& animation) const
+void Styleable::removeStyleOriginatedAnimationFromListsForOwningElement(WebAnimation& animation) const
 {
-    ASSERT(is<DeclarativeAnimation>(animation));
+    ASSERT(is<StyleOriginatedAnimation>(animation));
 
     if (auto* transition = dynamicDowncast<CSSTransition>(animation)) {
         if (!removeCSSTransitionFromMap(*transition, ensureRunningTransitionsByProperty()))
@@ -238,12 +240,12 @@ void Styleable::animationWasRemoved(WebAnimation& animation) const
     // function to be called, but they should remain associated with their owning element until this is changed via a call
     // to the JS API or changing the target element's animation-name property.
     if (is<CSSTransition>(animation))
-        removeDeclarativeAnimationFromListsForOwningElement(animation);
+        removeStyleOriginatedAnimationFromListsForOwningElement(animation);
 }
 
 void Styleable::elementWasRemoved() const
 {
-    cancelDeclarativeAnimations();
+    cancelStyleOriginatedAnimations();
 }
 
 void Styleable::willChangeRenderer() const
@@ -254,12 +256,12 @@ void Styleable::willChangeRenderer() const
     }
 }
 
-void Styleable::cancelDeclarativeAnimations() const
+void Styleable::cancelStyleOriginatedAnimations() const
 {
     if (auto* animations = this->animations()) {
         for (auto& animation : *animations) {
-            if (auto* declarativeAnimation = dynamicDowncast<DeclarativeAnimation>(animation.get()))
-                declarativeAnimation->cancelFromStyle();
+            if (auto* styleOriginatedAnimation = dynamicDowncast<StyleOriginatedAnimation>(animation.get()))
+                styleOriginatedAnimation->cancelFromStyle();
         }
     }
 
@@ -479,8 +481,8 @@ static void updateCSSTransitionsForStyleableAndProperty(const Styleable& styleab
     auto* animation = keyframeEffect ? keyframeEffect->animation() : nullptr;
 
     bool isDeclarative = false;
-    if (auto* declarativeAnimation = dynamicDowncast<DeclarativeAnimation>(animation)) {
-        if (auto owningElement = declarativeAnimation->owningElement())
+    if (auto* styleOriginatedAnimation = dynamicDowncast<StyleOriginatedAnimation>(animation)) {
+        if (auto owningElement = styleOriginatedAnimation->owningElement())
             isDeclarative = *owningElement == styleable;
     }
 
@@ -526,8 +528,9 @@ static void updateCSSTransitionsForStyleableAndProperty(const Styleable& styleab
                     if (!effectTargetsProperty(*effect))
                         continue;
                     auto* effectAnimation = effect->animation();
-                    bool shouldUseTimelineTimeAtCreation = is<CSSTransition>(effectAnimation) && (!effectAnimation->startTime() || *effectAnimation->startTime() == document.timeline().currentTime());
-                    effectAnimation->resolve(style, { nullptr }, shouldUseTimelineTimeAtCreation ? downcast<CSSTransition>(*effectAnimation).timelineTimeAtCreation() : std::nullopt);
+                    auto* cssTransition = dynamicDowncast<CSSTransition>(effectAnimation);
+                    bool shouldUseTimelineTimeAtCreation = cssTransition && (!effectAnimation->startTime() || *effectAnimation->startTime() == document.timeline().currentTime());
+                    effectAnimation->resolve(style, { nullptr }, shouldUseTimelineTimeAtCreation ? cssTransition->timelineTimeAtCreation() : std::nullopt);
                 }
             }
             return style;
@@ -727,11 +730,12 @@ void Styleable::updateCSSTransitions(const RenderStyle& currentStyle, const Rend
 
         transitionCustomProperties.clear();
         auto gatherAnimatableCustomProperties = [&](const StyleCustomPropertyData& customPropertyData) {
+            if (!customPropertyData.mayHaveAnimatableProperties())
+                return;
+
             customPropertyData.forEach([&](auto& customPropertyAndValuePair) {
                 auto [customProperty, customPropertyValue] = customPropertyAndValuePair;
-                auto& variantValue = customPropertyValue->value();
-                if (std::holds_alternative<CSSCustomPropertyValue::SyntaxValue>(variantValue)
-                    || std::holds_alternative<CSSCustomPropertyValue::SyntaxValueList>(variantValue))
+                if (customPropertyValue->isAnimatable())
                     transitionCustomProperties.add(customProperty);
                 return IterationStatus::Continue;
             });

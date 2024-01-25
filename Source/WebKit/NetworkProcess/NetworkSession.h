@@ -46,6 +46,7 @@
 #include <WebCore/SWServerDelegate.h>
 #include <WebCore/StoredCredentialsPolicy.h>
 #include <pal/SessionID.h>
+#include <wtf/CheckedPtr.h>
 #include <wtf/HashSet.h>
 #include <wtf/Ref.h>
 #include <wtf/Seconds.h>
@@ -101,8 +102,7 @@ namespace NetworkCache {
 class Cache;
 }
 
-class NetworkSession
-    : public WebCore::SWServerDelegate {
+class NetworkSession : public WebCore::SWServerDelegate, public CanMakeCheckedPtr {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     static std::unique_ptr<NetworkSession> create(NetworkProcess&, const NetworkSessionCreationParameters&);
@@ -233,6 +233,8 @@ public:
     bool privateClickMeasurementDebugModeEnabled() const { return m_privateClickMeasurementDebugModeEnabled; }
 
     void setBlobRegistryTopOriginPartitioningEnabled(bool);
+    void setShouldSendPrivateTokenIPCForTesting(bool);
+    bool shouldSendPrivateTokenIPCForTesting() const { return m_shouldSendPrivateTokenIPCForTesting; }
 
 #if PLATFORM(COCOA)
     AppPrivacyReportTestingData& appPrivacyReportTestingData() { return m_appPrivacyReportTestingData; }
@@ -334,16 +336,17 @@ protected:
     unsigned m_testSpeedMultiplier { 1 };
     bool m_allowsServerPreconnect { true };
     bool m_shouldRunServiceWorkersOnMainThreadForTesting { false };
+    bool m_shouldSendPrivateTokenIPCForTesting { false };
     std::optional<unsigned> m_overrideServiceWorkerRegistrationCountTestingValue;
     HashSet<std::unique_ptr<ServiceWorkerSoftUpdateLoader>> m_softUpdateLoaders;
-    HashMap<WebCore::FetchIdentifier, WeakPtr<ServiceWorkerFetchTask>> m_navigationPreloaders;
+    HashMap<WebCore::FetchIdentifier, WeakRef<ServiceWorkerFetchTask>> m_navigationPreloaders;
 
     struct ServiceWorkerInfo {
         String databasePath;
         bool processTerminationDelayEnabled { true };
     };
     std::optional<ServiceWorkerInfo> m_serviceWorkerInfo;
-    std::unique_ptr<WebCore::SWServer> m_swServer;
+    RefPtr<WebCore::SWServer> m_swServer;
     RefPtr<BackgroundFetchStoreImpl> m_backgroundFetchStore;
     bool m_inspectionForServiceWorkersAllowed { true };
     std::unique_ptr<WebSharedWorkerServer> m_sharedWorkerServer;

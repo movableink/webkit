@@ -48,7 +48,7 @@ public:
     static void scheduleWidgetToMove(Widget&, LocalFrameView*);
 
 private:
-    using WidgetToParentMap = HashMap<RefPtr<Widget>, LocalFrameView*>;
+    using WidgetToParentMap = HashMap<RefPtr<Widget>, SingleThreadWeakPtr<LocalFrameView>>;
     static WidgetToParentMap& widgetNewParentMap();
 
     WEBCORE_EXPORT void moveWidgets();
@@ -94,8 +94,6 @@ protected:
 
 private:
     void element() const = delete;
-
-    bool isRenderWidget() const final { return true; }
 
     bool needsPreferredWidthsRecalculation() const final;
     RenderBox* embeddedContentBox() const final;

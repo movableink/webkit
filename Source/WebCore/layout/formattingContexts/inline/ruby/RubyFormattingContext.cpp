@@ -57,14 +57,17 @@ static RubyPosition rubyPosition(const Box& rubyBaseLayoutBox)
     return computedRubyPosition == RubyPosition::InterCharacter ? RubyPosition::Before : computedRubyPosition;
 }
 
-static InlineLayoutRect visualRectIncludingBlockDirection(const InlineLayoutRect& visualRectIgnoringBlockDirection, const RenderStyle& rootStyle)
+static inline InlineRect annotationMarginBoxVisualRect(const Box& annotationBox, InlineLayoutUnit lineHeight, const InlineFormattingContext& inlineFormattingContext)
 {
-    if (!rootStyle.isFlippedLinesWritingMode())
-        return visualRectIgnoringBlockDirection;
-
-    auto flippedRect = visualRectIgnoringBlockDirection;
-    rootStyle.isVerticalWritingMode() ? flippedRect.setX(flippedRect.x() - flippedRect.width()) : flippedRect.setY(flippedRect.y() - flippedRect.height());
-    return flippedRect;
+    auto marginBoxLogicalRect = InlineRect { BoxGeometry::marginBoxRect(inlineFormattingContext.geometryForBox(annotationBox)) };
+    auto& rootStyle = inlineFormattingContext.root().style();
+    if (rootStyle.isHorizontalWritingMode())
+        return marginBoxLogicalRect;
+    auto visualTopLeft = marginBoxLogicalRect.topLeft().transposedPoint();
+    if (rootStyle.isFlippedBlocksWritingMode())
+        return InlineRect { visualTopLeft, marginBoxLogicalRect.size().transposedSize() };
+    visualTopLeft.move(lineHeight - marginBoxLogicalRect.height(), { });
+    return InlineRect { visualTopLeft, marginBoxLogicalRect.size().transposedSize() };
 }
 
 static InlineLayoutUnit baseLogicalWidthFromRubyBaseEnd(const Box& rubyBaseLayoutBox, const Line::RunList& lineRuns, const InlineContentBreaker::ContinuousContent::RunList& candidateRuns)
@@ -92,7 +95,7 @@ static InlineLayoutUnit baseLogicalWidthFromRubyBaseEnd(const Box& rubyBaseLayou
     return baseLogicalWidth;
 }
 
-static bool annotationOverlapCheck(const InlineDisplay::Box& adjacentDisplayBox, const InlineLayoutRect& overhangingRect, const InlineFormattingContext& inlineFormattingContext)
+static bool annotationOverlapCheck(const InlineDisplay::Box& adjacentDisplayBox, const InlineLayoutRect& overhangingRect, InlineLayoutUnit lineLogicalHeight, const InlineFormattingContext& inlineFormattingContext)
 {
     // We are in the middle of a line, should not see any line breaks or ellipsis boxes here.
     ASSERT(!adjacentDisplayBox.isEllipsis() && !adjacentDisplayBox.isRootInlineBox());
@@ -100,16 +103,12 @@ static bool annotationOverlapCheck(const InlineDisplay::Box& adjacentDisplayBox,
     if (adjacentDisplayBox.visualRectIgnoringBlockDirection().isEmpty())
         return false;
 
-    auto& rootStyle = inlineFormattingContext.root().style();
-    if (visualRectIncludingBlockDirection(adjacentDisplayBox.inkOverflow(), rootStyle).intersects(visualRectIncludingBlockDirection(overhangingRect, rootStyle)))
+    if (adjacentDisplayBox.inkOverflow().intersects(overhangingRect))
         return true;
     auto& adjacentLayoutBox = adjacentDisplayBox.layoutBox();
     // Adjacent ruby may have overlapping annotation.
-    if (adjacentLayoutBox.isRubyBase() && adjacentLayoutBox.associatedRubyAnnotationBox()) {
-        auto annotationMarginBoxRect = InlineLayoutRect { BoxGeometry::marginBoxRect(inlineFormattingContext.geometryForBox(*adjacentLayoutBox.associatedRubyAnnotationBox())) };
-        if (visualRectIncludingBlockDirection(annotationMarginBoxRect, rootStyle).intersects(visualRectIncludingBlockDirection(overhangingRect, rootStyle)))
-            return true;
-    }
+    if (adjacentLayoutBox.isRubyBase() && adjacentLayoutBox.associatedRubyAnnotationBox())
+        return annotationMarginBoxVisualRect(*adjacentLayoutBox.associatedRubyAnnotationBox(), lineLogicalHeight, inlineFormattingContext).intersects(overhangingRect);
     return false;
 }
 
@@ -302,7 +301,7 @@ void RubyFormattingContext::applyAnnotationAlignmentOffset(InlineDisplay::Boxes&
     InlineContentAligner::applyRubyAnnotationAlignmentOffset(displayBoxes, alignmentOffset, inlineFormattingContext);
 }
 
-InlineLayoutUnit RubyFormattingContext::baseEndAdditionalVisualWidth(const Box& rubyBaseLayoutBox, const InlineDisplay::Box&, InlineLayoutUnit baseContentWidth, const InlineFormattingContext& inlineFormattingContext)
+InlineLayoutUnit RubyFormattingContext::baseEndAdditionalLogicalWidth(const Box& rubyBaseLayoutBox, const InlineDisplay::Box&, InlineLayoutUnit baseContentWidth, const InlineFormattingContext& inlineFormattingContext)
 {
     if (!hasInterCharacterAnnotation(rubyBaseLayoutBox)) {
         // FIXME: We may want to include interlinear annotations here too so that applyAlignmentOffsetList would not need to initiate resizing (only moving base content).
@@ -311,14 +310,14 @@ InlineLayoutUnit RubyFormattingContext::baseEndAdditionalVisualWidth(const Box& 
         auto* annotationBox = rubyBaseLayoutBox.associatedRubyAnnotationBox();
         if (!annotationBox)
             return { };
-        auto& annotationBoxGeometry = inlineFormattingContext.geometryForBox(*annotationBox);
-        return annotationBoxGeometry.marginBoxWidth();
+        auto& annotationBoxLogicalGeometry = inlineFormattingContext.geometryForBox(*annotationBox);
+        return annotationBoxLogicalGeometry.marginBoxWidth();
     }
     // Note that intercharacter annotation stays vertical even when the ruby itself is vertical (which makes it look like interlinear).
     return annotationBoxLogicalWidth(rubyBaseLayoutBox, inlineFormattingContext);
 }
 
-InlineLayoutPoint RubyFormattingContext::placeAnnotationBox(const Box& rubyBaseLayoutBox, const Rect& rubyBaseMarginBox, const InlineFormattingContext& inlineFormattingContext)
+InlineLayoutPoint RubyFormattingContext::placeAnnotationBox(const Box& rubyBaseLayoutBox, const Rect& rubyBaseMarginBoxLogicalRect, const InlineFormattingContext& inlineFormattingContext)
 {
     ASSERT(rubyBaseLayoutBox.isRubyBase());
     auto* annotationBox = rubyBaseLayoutBox.associatedRubyAnnotationBox();
@@ -326,44 +325,24 @@ InlineLayoutPoint RubyFormattingContext::placeAnnotationBox(const Box& rubyBaseL
         ASSERT_NOT_REACHED();
         return { };
     }
-    auto& annotationBoxGeometry = inlineFormattingContext.geometryForBox(*annotationBox);
+    auto& annotationBoxLogicalGeometry = inlineFormattingContext.geometryForBox(*annotationBox);
 
     if (hasInterlinearAnnotation(rubyBaseLayoutBox)) {
         // Move it over/under the base and make it border box positioned.
-        auto leftOffset = annotationBoxGeometry.marginStart();
-        auto position = rubyPosition(rubyBaseLayoutBox);
-        auto topOffset = position == RubyPosition::Before ? -annotationBoxGeometry.marginBoxHeight() : rubyBaseMarginBox.height();
-        switch (writingModeToBlockFlowDirection(rubyBaseLayoutBox.style().writingMode())) {
-        case BlockFlowDirection::TopToBottom:
-            break;
-        case BlockFlowDirection::BottomToTop:
-            topOffset = position == RubyPosition::Before ?  rubyBaseMarginBox.height() : -annotationBoxGeometry.marginBoxHeight();
-            break;
-        case BlockFlowDirection::RightToLeft:
-            topOffset = leftOffset;
-            leftOffset = position == RubyPosition::Before ? -annotationBoxGeometry.marginBoxHeight() : rubyBaseMarginBox.width();
-            break;
-        case BlockFlowDirection::LeftToRight:
-            topOffset = leftOffset;
-            leftOffset = position == RubyPosition::Before ? rubyBaseMarginBox.width() : -annotationBoxGeometry.marginBoxHeight();
-            break;
-        default:
-            ASSERT_NOT_REACHED();
-            break;
-        }
-        auto topLeft = rubyBaseMarginBox.topLeft();
-        topLeft.move(LayoutSize { leftOffset, topOffset });
-        return topLeft;
+        auto leftOffset = annotationBoxLogicalGeometry.marginStart();
+        auto topOffset = rubyPosition(rubyBaseLayoutBox) == RubyPosition::Before ? -annotationBoxLogicalGeometry.marginBoxHeight() : rubyBaseMarginBoxLogicalRect.height();
+        auto logicalTopLeft = rubyBaseMarginBoxLogicalRect.topLeft();
+        logicalTopLeft.move(LayoutSize { leftOffset, topOffset });
+        return logicalTopLeft;
     }
     // Inter-character annotation box is stretched to the size of the base content box and vertically centered.
-    auto isHorizontalWritingMode = rubyBaseLayoutBox.style().isHorizontalWritingMode();
-    auto annotationVisualContentBoxHeight = isHorizontalWritingMode ? annotationBoxGeometry.contentBoxHeight() : annotationBoxGeometry.contentBoxWidth();
-    auto annotationBorderTop = isHorizontalWritingMode ? annotationBoxGeometry.borderBefore() : annotationBoxGeometry.borderStart();
-    auto borderBoxRight = rubyBaseMarginBox.right() - annotationBoxGeometry.marginBoxWidth() + annotationBoxGeometry.marginStart();
-    return { borderBoxRight, rubyBaseMarginBox.top() + ((rubyBaseMarginBox.height() - annotationVisualContentBoxHeight) / 2) - annotationBorderTop };
+    auto annotationContentBoxLogicalHeight = annotationBoxLogicalGeometry.contentBoxHeight();
+    auto annotationBorderTop = annotationBoxLogicalGeometry.borderBefore();
+    auto borderBoxRight = rubyBaseMarginBoxLogicalRect.right() - annotationBoxLogicalGeometry.marginBoxWidth() + annotationBoxLogicalGeometry.marginStart();
+    return { borderBoxRight, rubyBaseMarginBoxLogicalRect.top() + ((rubyBaseMarginBoxLogicalRect.height() - annotationContentBoxLogicalHeight) / 2) - annotationBorderTop };
 }
 
-InlineLayoutSize RubyFormattingContext::sizeAnnotationBox(const Box& rubyBaseLayoutBox, const InlineFormattingContext& inlineFormattingContext)
+InlineLayoutSize RubyFormattingContext::sizeAnnotationBox(const Box& rubyBaseLayoutBox, const Rect& rubyBaseMarginBoxLogicalRect, const InlineFormattingContext& inlineFormattingContext)
 {
     // FIXME: This is where we should take advantage of the ruby-column setup.
     ASSERT(rubyBaseLayoutBox.isRubyBase());
@@ -372,20 +351,13 @@ InlineLayoutSize RubyFormattingContext::sizeAnnotationBox(const Box& rubyBaseLay
         ASSERT_NOT_REACHED();
         return { };
     }
-    auto isHorizontalWritingMode = rubyBaseLayoutBox.style().isHorizontalWritingMode();
-    auto& visualRubyBaseGeometry = inlineFormattingContext.geometryForBox(rubyBaseLayoutBox);
-    auto& logicalAnnotationBoxGeometry = inlineFormattingContext.geometryForBox(*annotationBox);
-
-    if (hasInterlinearAnnotation(rubyBaseLayoutBox)) {
-        if (isHorizontalWritingMode)
-            return { std::max(visualRubyBaseGeometry.marginBoxWidth(), logicalAnnotationBoxGeometry.marginBoxWidth()) - logicalAnnotationBoxGeometry.horizontalMarginBorderAndPadding(), logicalAnnotationBoxGeometry.contentBoxHeight() };
-        return { logicalAnnotationBoxGeometry.contentBoxHeight(), std::max(logicalAnnotationBoxGeometry.marginBoxWidth(), visualRubyBaseGeometry.marginBoxHeight()) - logicalAnnotationBoxGeometry.horizontalMarginBorderAndPadding() };
-    }
-
-    return logicalAnnotationBoxGeometry.contentBoxSize();
+    auto& annotationBoxLogicalGeometry = inlineFormattingContext.geometryForBox(*annotationBox);
+    if (hasInterlinearAnnotation(rubyBaseLayoutBox))
+        return { std::max(rubyBaseMarginBoxLogicalRect.width(), annotationBoxLogicalGeometry.marginBoxWidth()) - annotationBoxLogicalGeometry.horizontalMarginBorderAndPadding(), annotationBoxLogicalGeometry.contentBoxHeight() };
+    return annotationBoxLogicalGeometry.contentBoxSize();
 }
 
-void RubyFormattingContext::adjustLayoutBoundsAndStretchAncestorRubyBase(LineBox& lineBox, InlineLevelBox& rubyBaseInlineBox, const InlineFormattingContext& inlineFormattingContext)
+void RubyFormattingContext::adjustLayoutBoundsAndStretchAncestorRubyBase(LineBox& lineBox, InlineLevelBox& rubyBaseInlineBox, MaximumLayoutBoundsStretchMap& descendantRubySet, const InlineFormattingContext& inlineFormattingContext)
 {
     auto& rubyBaseLayoutBox = rubyBaseInlineBox.layoutBox();
     ASSERT(rubyBaseLayoutBox.isRubyBase());
@@ -399,8 +371,8 @@ void RubyFormattingContext::adjustLayoutBoundsAndStretchAncestorRubyBase(LineBox
                     ASSERT_NOT_REACHED();
                     break;
                 }
-                auto ancestorLayoutBounds = ancestorInlineBox->layoutBounds();
-                ancestorInlineBox->setLayoutBounds({ std::max(ancestorLayoutBounds.ascent, layoutBounds.ascent), std::max(ancestorLayoutBounds.descent, layoutBounds.descent) });
+                auto previousDescendantLayoutBounds = descendantRubySet.get(ancestorInlineBox);
+                descendantRubySet.set(ancestorInlineBox, InlineLevelBox::AscentAndDescent { std::max(previousDescendantLayoutBounds.ascent, layoutBounds.ascent), std::max(previousDescendantLayoutBounds.descent, layoutBounds.descent) });
                 break;
             }
         }
@@ -409,7 +381,7 @@ void RubyFormattingContext::adjustLayoutBoundsAndStretchAncestorRubyBase(LineBox
     auto layoutBounds = rubyBaseInlineBox.layoutBounds();
     auto* annotationBox = rubyBaseLayoutBox.associatedRubyAnnotationBox();
     if (!annotationBox || !hasInterlinearAnnotation(rubyBaseLayoutBox)) {
-        // Make sure decendant rubies with annotations are propagated.
+        // Make sure descendant rubies with annotations are propagated.
         stretchAncestorRubyBaseIfApplicable(layoutBounds);
         return;
     }
@@ -422,17 +394,35 @@ void RubyFormattingContext::adjustLayoutBoundsAndStretchAncestorRubyBase(LineBox
     else
         under = annotationBoxLogicalHeight;
 
+    // FIXME: The spec says annotation should not stretch the line unless line-height is not normal and annotation does not fit (i.e. line is sized too small for the annotation)
+    // Legacy ruby behaves slightly differently by stretching the line box as needed.
+    auto isFirstFormattedLine = !lineBox.lineIndex();
+    auto descendantLayoutBounds = descendantRubySet.get(&rubyBaseInlineBox);
+    auto ascent = std::max(rubyBaseInlineBox.ascent(), descendantLayoutBounds.ascent);
+    auto descent = std::max(rubyBaseInlineBox.descent(), descendantLayoutBounds.descent);
+
     if (rubyBaseInlineBox.isPreferredLineHeightFontMetricsBased()) {
-        layoutBounds.ascent += over;
-        layoutBounds.descent += under;
+        auto extraSpaceForAnnotation = InlineLayoutUnit { };
+        if (!isFirstFormattedLine) {
+            // Note that annotation may leak into the half leading space (gap between lines).
+            auto lineGap = rubyBaseLayoutBox.style().metricsOfPrimaryFont().lineSpacing();
+            extraSpaceForAnnotation = std::max(0.f, (lineGap - (ascent + descent)) / 2);
+        }
+        auto ascentWithAnnotation = (ascent + over) - extraSpaceForAnnotation;
+        auto descentWithAnnotation = (descent + under) - extraSpaceForAnnotation;
+
+        layoutBounds.ascent = std::max(ascentWithAnnotation, layoutBounds.ascent);
+        layoutBounds.descent = std::max(descentWithAnnotation, layoutBounds.descent);
     } else {
-        // FIXME: Missing fallback font handling for annotation content.
-        auto& fontMetrics = rubyBaseLayoutBox.style().metricsOfPrimaryFont();
-        auto ascent = fontMetrics.floatAscent(lineBox.baselineType()) + over;
-        auto descent = fontMetrics.floatDescent(lineBox.baselineType()) + under;
-        if (layoutBounds.height() < ascent + descent)
-            layoutBounds = { ascent, descent };
+        auto ascentWithAnnotation = ascent + over;
+        auto descentWithAnnotation = descent + under;
+        // line-height may produce enough space for annotation.
+        if (layoutBounds.height() < ascentWithAnnotation + descentWithAnnotation) {
+            layoutBounds.ascent = std::max(ascentWithAnnotation, layoutBounds.ascent);
+            layoutBounds.descent = std::max(descentWithAnnotation, layoutBounds.descent);
+        }
     }
+
     rubyBaseInlineBox.setLayoutBounds(layoutBounds);
     stretchAncestorRubyBaseIfApplicable(layoutBounds);
 }
@@ -441,18 +431,19 @@ void RubyFormattingContext::applyAnnotationContributionToLayoutBounds(LineBox& l
 {
     // In order to ensure consistent spacing of lines, documents with ruby typically ensure that the line-height is
     // large enough to accommodate ruby between lines of text. Therefore, ordinarily, ruby annotation containers and ruby annotation
-    // boxes do not contribute to the measured height of a line’s inline contents;
+    // boxes do not contribute to the measured height of a line's inline contents;
     // line-height calculations are performed using only the ruby base container, exactly as if it were a normal inline.
     // However, if the line-height specified on the ruby container is less than the distance between the top of the top ruby annotation
     // container and the bottom of the bottom ruby annotation container, then additional leading is added on the appropriate side(s).
+    MaximumLayoutBoundsStretchMap descentRubySet;
     for (auto& inlineLevelBox : makeReversedRange(lineBox.nonRootInlineLevelBoxes())) {
         if (!inlineLevelBox.isInlineBox() || !inlineLevelBox.layoutBox().isRubyBase())
             continue;
-        adjustLayoutBoundsAndStretchAncestorRubyBase(lineBox, inlineLevelBox, inlineFormattingContext);
+        adjustLayoutBoundsAndStretchAncestorRubyBase(lineBox, inlineLevelBox, descentRubySet, inlineFormattingContext);
     }
 }
 
-InlineLayoutUnit RubyFormattingContext::overhangForAnnotationBefore(const Box& rubyBaseLayoutBox, size_t rubyBaseStart, const InlineDisplay::Boxes& boxes, const InlineFormattingContext& inlineFormattingContext)
+InlineLayoutUnit RubyFormattingContext::overhangForAnnotationBefore(const Box& rubyBaseLayoutBox, size_t rubyBaseStart, const InlineDisplay::Boxes& boxes, InlineLayoutUnit lineLogicalHeight, const InlineFormattingContext& inlineFormattingContext)
 {
     // [root inline box][ruby container][ruby base][ruby annotation]
     ASSERT(rubyBaseStart >= 2);
@@ -464,8 +455,7 @@ InlineLayoutUnit RubyFormattingContext::overhangForAnnotationBefore(const Box& r
         ASSERT_NOT_REACHED();
         return { };
     }
-
-    auto isHorizontalWritingMode = rubyBaseLayoutBox.style().isHorizontalWritingMode();
+    auto isHorizontalWritingMode = inlineFormattingContext.root().style().isHorizontalWritingMode();
     auto baseContentStart = baseContentIndex(rubyBaseStart, boxes);
     if (baseContentStart >= boxes.size()) {
         ASSERT_NOT_REACHED();
@@ -482,18 +472,18 @@ InlineLayoutUnit RubyFormattingContext::overhangForAnnotationBefore(const Box& r
     auto overhangValue = std::min(halfOfAFullWidthCharacter(*annotationBox), gapBetweenBaseAndContent());
     auto wouldAnnotationOrBaseOverlapAdjacentContent = [&] {
         // Check of adjacent (previous) content for overlapping.
-        auto overhangingAnnotationRect = InlineLayoutRect { BoxGeometry::marginBoxRect(inlineFormattingContext.geometryForBox(*annotationBox)) };
+        auto overhangingAnnotationVisualRect = annotationMarginBoxVisualRect(*annotationBox, lineLogicalHeight, inlineFormattingContext);
         auto baseContentBoxRect = boxes[baseContentStart].inkOverflow();
-        // This is how much the annotation box/ base content would be closer to content outside of base.
-        auto offset = isHorizontalWritingMode ? LayoutSize(-overhangValue, 0.f) : LayoutSize(0.f, -overhangValue);
-        overhangingAnnotationRect.move(offset);
-        baseContentBoxRect.move(offset);
+        // This is how much the annotation box/base content would be closer to content outside of base.
+        auto offset = isHorizontalWritingMode ? InlineLayoutPoint(-overhangValue, 0.f) : InlineLayoutPoint(0.f, -overhangValue);
+        overhangingAnnotationVisualRect.moveBy(offset);
+        baseContentBoxRect.moveBy(offset);
 
         for (size_t index = 1; index < rubyBaseStart - 1; ++index) {
             auto& previousDisplayBox = boxes[index];
-            if (annotationOverlapCheck(previousDisplayBox, overhangingAnnotationRect, inlineFormattingContext))
+            if (annotationOverlapCheck(previousDisplayBox, overhangingAnnotationVisualRect, lineLogicalHeight, inlineFormattingContext))
                 return true;
-            if (annotationOverlapCheck(previousDisplayBox, baseContentBoxRect, inlineFormattingContext))
+            if (annotationOverlapCheck(previousDisplayBox, baseContentBoxRect, lineLogicalHeight, inlineFormattingContext))
                 return true;
         }
         return false;
@@ -501,7 +491,7 @@ InlineLayoutUnit RubyFormattingContext::overhangForAnnotationBefore(const Box& r
     return wouldAnnotationOrBaseOverlapAdjacentContent() ? 0.f : overhangValue;
 }
 
-InlineLayoutUnit RubyFormattingContext::overhangForAnnotationAfter(const Box& rubyBaseLayoutBox, WTF::Range<size_t> rubyBaseRange, const InlineDisplay::Boxes& boxes, const InlineFormattingContext& inlineFormattingContext)
+InlineLayoutUnit RubyFormattingContext::overhangForAnnotationAfter(const Box& rubyBaseLayoutBox, WTF::Range<size_t> rubyBaseRange, const InlineDisplay::Boxes& boxes, InlineLayoutUnit lineLogicalHeight, const InlineFormattingContext& inlineFormattingContext)
 {
     auto* annotationBox = rubyBaseLayoutBox.associatedRubyAnnotationBox();
     if (!annotationBox || !hasInterlinearAnnotation(rubyBaseLayoutBox))
@@ -510,7 +500,7 @@ InlineLayoutUnit RubyFormattingContext::overhangForAnnotationAfter(const Box& ru
     if (!rubyBaseRange || rubyBaseRange.distance() == 1 || rubyBaseRange.end() == boxes.size())
         return { };
 
-    auto isHorizontalWritingMode = rubyBaseLayoutBox.style().isHorizontalWritingMode();
+    auto isHorizontalWritingMode = inlineFormattingContext.root().style().isHorizontalWritingMode();
     // FIXME: Usually the last content box is visually the rightmost, but negative margin may override it.
     // FIXME: Currently justified content always expands producing 0 value for gapBetweenBaseEndAndContent.
     auto rubyBaseContentEnd = rubyBaseRange.end() - 1;
@@ -524,18 +514,18 @@ InlineLayoutUnit RubyFormattingContext::overhangForAnnotationAfter(const Box& ru
     auto overhangValue = std::min(halfOfAFullWidthCharacter(*annotationBox), gapBetweenBaseEndAndContent());
     auto wouldAnnotationOrBaseOverlapLineContent = [&] {
         // Check of adjacent (next) content for overlapping.
-        auto overhangingAnnotationRect = InlineLayoutRect { BoxGeometry::marginBoxRect(inlineFormattingContext.geometryForBox(*annotationBox)) };
+        auto overhangingAnnotationVisualRect = annotationMarginBoxVisualRect(*annotationBox, lineLogicalHeight, inlineFormattingContext);
         auto baseContentBoxRect = boxes[rubyBaseContentEnd].inkOverflow();
         // This is how much the base content would be closer to content outside of base.
-        auto offset = isHorizontalWritingMode ? LayoutSize(overhangValue, 0.f) : LayoutSize(0.f, overhangValue);
-        overhangingAnnotationRect.move(offset);
-        baseContentBoxRect.move(offset);
+        auto offset = isHorizontalWritingMode ? InlineLayoutPoint(overhangValue, 0.f) : InlineLayoutPoint(0.f, overhangValue);
+        overhangingAnnotationVisualRect.moveBy(offset);
+        baseContentBoxRect.moveBy(offset);
 
         for (size_t index = boxes.size() - 1; index >= rubyBaseRange.end(); --index) {
             auto& previousDisplayBox = boxes[index];
-            if (annotationOverlapCheck(previousDisplayBox, overhangingAnnotationRect, inlineFormattingContext))
+            if (annotationOverlapCheck(previousDisplayBox, overhangingAnnotationVisualRect, lineLogicalHeight, inlineFormattingContext))
                 return true;
-            if (annotationOverlapCheck(previousDisplayBox, baseContentBoxRect, inlineFormattingContext))
+            if (annotationOverlapCheck(previousDisplayBox, baseContentBoxRect, lineLogicalHeight, inlineFormattingContext))
                 return true;
         }
         return false;

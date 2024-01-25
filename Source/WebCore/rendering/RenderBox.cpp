@@ -30,6 +30,7 @@
 #include "BorderPainter.h"
 #include "CSSFontSelector.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "Editing.h"
 #include "EventHandler.h"
 #include "FloatQuad.h"
@@ -112,16 +113,16 @@ static_assert(sizeof(RenderBox) == sizeof(SameSizeAsRenderBox), "RenderBox shoul
 
 using namespace HTMLNames;
 
-typedef HashMap<const RenderBox*, LayoutUnit> OverrideSizeMap;
+using OverrideSizeMap = HashMap<SingleThreadWeakRef<const RenderBox>, LayoutUnit>;
 static OverrideSizeMap* gOverridingLogicalHeightMap = nullptr;
 static OverrideSizeMap* gOverridingLogicalWidthMap = nullptr;
 
-typedef HashMap<const RenderBox*, Length> OverridingLengthMap;
+using OverridingLengthMap = HashMap<SingleThreadWeakRef<const RenderBox>, Length>;
 static OverridingLengthMap* gOverridingLogicalHeightLengthMap = nullptr;
 static OverridingLengthMap* gOverridingLogicalWidthLengthMap = nullptr;
 
 // FIXME: We should store these based on physical direction.
-typedef HashMap<const RenderBox*, std::optional<LayoutUnit>> OverrideOptionalSizeMap;
+using OverrideOptionalSizeMap = HashMap<SingleThreadWeakRef<const RenderBox>, std::optional<LayoutUnit>>;
 static OverrideOptionalSizeMap* gOverridingContainingBlockContentLogicalHeightMap = nullptr;
 static OverrideOptionalSizeMap* gOverridingContainingBlockContentLogicalWidthMap = nullptr;
 
@@ -132,17 +133,15 @@ static const unsigned backgroundObscurationTestMaxDepth = 4;
 
 bool RenderBox::s_hadNonVisibleOverflow = false;
 
-RenderBox::RenderBox(Type type, Element& element, RenderStyle&& style, OptionSet<RenderElementType> baseTypeFlags)
-    : RenderBoxModelObject(type, element, WTFMove(style), baseTypeFlags)
+RenderBox::RenderBox(Type type, Element& element, RenderStyle&& style, OptionSet<TypeFlag> flags, TypeSpecificFlags typeSpecificFlags)
+    : RenderBoxModelObject(type, element, WTFMove(style), flags | TypeFlag::IsBox, typeSpecificFlags)
 {
-    setIsRenderBox();
     ASSERT(isRenderBox());
 }
 
-RenderBox::RenderBox(Type type, Document& document, RenderStyle&& style, OptionSet<RenderElementType> baseTypeFlags)
-    : RenderBoxModelObject(type, document, WTFMove(style), baseTypeFlags)
+RenderBox::RenderBox(Type type, Document& document, RenderStyle&& style, OptionSet<TypeFlag> flags, TypeSpecificFlags typeSpecificFlags)
+    : RenderBoxModelObject(type, document, WTFMove(style), flags | TypeFlag::IsBox, typeSpecificFlags)
 {
-    setIsRenderBox();
     ASSERT(isRenderBox());
 }
 
@@ -187,7 +186,7 @@ RenderFragmentContainer* RenderBox::clampToStartAndEndFragments(RenderFragmentCo
     // they overflow into, which makes no sense when this block doesn't exist in |fragment| at all.
     RenderFragmentContainer* startFragment = nullptr;
     RenderFragmentContainer* endFragment = nullptr;
-    if (!fragmentedFlow->getFragmentRangeForBox(this, startFragment, endFragment))
+    if (!fragmentedFlow->getFragmentRangeForBox(*this, startFragment, endFragment))
         return fragment;
 
     if (fragment->logicalTopForFragmentedFlowContent() < startFragment->logicalTopForFragmentedFlowContent())
@@ -392,7 +391,10 @@ void RenderBox::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle
 
 void RenderBox::updateGridPositionAfterStyleChange(const RenderStyle& style, const RenderStyle* oldStyle)
 {
-    if (!oldStyle || !is<RenderGrid>(parent()))
+    if (!oldStyle)
+        return;
+    CheckedPtr parentGrid = dynamicDowncast<RenderGrid>(parent());
+    if (!parentGrid)
         return;
 
     if (oldStyle->gridItemColumnStart() == style.gridItemColumnStart()
@@ -411,7 +413,7 @@ void RenderBox::updateGridPositionAfterStyleChange(const RenderStyle& style, con
     // It should be possible to not dirty the grid in some cases (like moving an
     // explicitly placed grid item).
     // For now, it's more simple to just always recompute the grid.
-    downcast<RenderGrid>(*parent()).dirtyGrid();
+    parentGrid->dirtyGrid();
 }
 
 void RenderBox::updateShapeOutsideInfoAfterStyleChange(const RenderStyle& style, const RenderStyle* oldStyle)
@@ -584,7 +586,14 @@ int RenderBox::scrollTop() const
 
 void RenderBox::resetLogicalHeightBeforeLayoutIfNeeded()
 {
-    if (shouldResetLogicalHeightBeforeLayout() || (is<RenderBlock>(parent()) && downcast<RenderBlock>(*parent()).shouldResetChildLogicalHeightBeforeLayout(*this)))
+    bool shouldSetLogicalHeight = [&] {
+        if (shouldResetLogicalHeightBeforeLayout())
+            return true;
+        auto* parentBlock = dynamicDowncast<RenderBlock>(parent());
+        return parentBlock && parentBlock->shouldResetChildLogicalHeightBeforeLayout(*this);
+    }();
+
+    if (shouldSetLogicalHeight)
         setLogicalHeight(0_lu);
 }
 
@@ -634,7 +643,7 @@ void RenderBox::boundingRects(Vector<LayoutRect>& rects, const LayoutPoint& accu
 void RenderBox::absoluteQuads(Vector<FloatQuad>& quads, bool* wasFixed) const
 {
     RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
-    if (fragmentedFlow && fragmentedFlow->absoluteQuadsForBox(quads, wasFixed, this))
+    if (fragmentedFlow && fragmentedFlow->absoluteQuadsForBox(quads, wasFixed, *this))
         return;
 
     auto localRect = FloatRect { 0, 0, width(), height() };
@@ -753,6 +762,15 @@ LayoutUnit RenderBox::constrainContentBoxLogicalHeightByMinMax(LayoutUnit logica
     if (std::optional<LayoutUnit> computedContentLogicalHeight = computeContentLogicalHeight(MinSize, styleToUse.logicalMinHeight(), intrinsicContentHeight))
         return std::max(logicalHeight, computedContentLogicalHeight.value());
     return logicalHeight;
+}
+
+RoundedRect RenderBox::borderRoundedRect() const
+{
+    auto& style = this->style();
+    LayoutRect bounds = frameRect();
+    bounds.setLocation({ });
+
+    return style.getRoundedBorderFor(bounds);
 }
 
 RoundedRect::Radii RenderBox::borderRadii() const
@@ -1096,7 +1114,9 @@ IntSize RenderBox::calculateAutoscrollDirection(const IntPoint& windowPoint) con
 
 RenderBox* RenderBox::findAutoscrollable(RenderObject* renderer)
 {
-    while (renderer && !(is<RenderBox>(*renderer) && downcast<RenderBox>(*renderer).canAutoscroll())) {
+    while (renderer) {
+        if (auto* box = dynamicDowncast<RenderBox>(*renderer); box && box->canAutoscroll())
+            break;
         if (is<RenderView>(*renderer) && renderer->document().ownerElement())
             renderer = renderer->document().ownerElement()->renderer();
         else
@@ -1237,38 +1257,38 @@ LayoutUnit RenderBox::maxPreferredLogicalWidth() const
 
 bool RenderBox::hasOverridingLogicalHeight() const
 {
-    return gOverridingLogicalHeightMap && gOverridingLogicalHeightMap->contains(this);
+    return gOverridingLogicalHeightMap && gOverridingLogicalHeightMap->contains(*this);
 }
 
 bool RenderBox::hasOverridingLogicalWidth() const
 {
-    return gOverridingLogicalWidthMap && gOverridingLogicalWidthMap->contains(this);
+    return gOverridingLogicalWidthMap && gOverridingLogicalWidthMap->contains(*this);
 }
 
 void RenderBox::setOverridingLogicalHeight(LayoutUnit height)
 {
     if (!gOverridingLogicalHeightMap)
         gOverridingLogicalHeightMap = new OverrideSizeMap();
-    gOverridingLogicalHeightMap->set(this, height);
+    gOverridingLogicalHeightMap->set(*this, height);
 }
 
 void RenderBox::setOverridingLogicalWidth(LayoutUnit width)
 {
     if (!gOverridingLogicalWidthMap)
         gOverridingLogicalWidthMap = new OverrideSizeMap();
-    gOverridingLogicalWidthMap->set(this, width);
+    gOverridingLogicalWidthMap->set(*this, width);
 }
 
 void RenderBox::clearOverridingLogicalHeight()
 {
     if (gOverridingLogicalHeightMap)
-        gOverridingLogicalHeightMap->remove(this);
+        gOverridingLogicalHeightMap->remove(*this);
 }
 
 void RenderBox::clearOverridingLogicalWidth()
 {
     if (gOverridingLogicalWidthMap)
-        gOverridingLogicalWidthMap->remove(this);
+        gOverridingLogicalWidthMap->remove(*this);
 }
 
 void RenderBox::clearOverridingContentSize()
@@ -1280,29 +1300,29 @@ void RenderBox::clearOverridingContentSize()
 LayoutUnit RenderBox::overridingLogicalWidth() const
 {
     ASSERT(hasOverridingLogicalWidth());
-    return gOverridingLogicalWidthMap->get(this);
+    return gOverridingLogicalWidthMap->get(*this);
 }
 
 LayoutUnit RenderBox::overridingLogicalHeight() const
 {
     ASSERT(hasOverridingLogicalHeight());
-    return gOverridingLogicalHeightMap->get(this);
+    return gOverridingLogicalHeightMap->get(*this);
 }
 
 std::optional<LayoutUnit> RenderBox::overridingContainingBlockContentWidth() const
 {
     ASSERT(hasOverridingContainingBlockContentWidth());
     return containingBlock()->style().isHorizontalWritingMode()
-        ? gOverridingContainingBlockContentLogicalWidthMap->get(this)
-        : gOverridingContainingBlockContentLogicalHeightMap->get(this);
+        ? gOverridingContainingBlockContentLogicalWidthMap->get(*this)
+        : gOverridingContainingBlockContentLogicalHeightMap->get(*this);
 }
 
 std::optional<LayoutUnit> RenderBox::overridingContainingBlockContentHeight() const
 {
     ASSERT(hasOverridingContainingBlockContentHeight());
     return containingBlock()->style().isHorizontalWritingMode()
-        ? gOverridingContainingBlockContentLogicalHeightMap->get(this)
-        : gOverridingContainingBlockContentLogicalWidthMap->get(this);
+        ? gOverridingContainingBlockContentLogicalHeightMap->get(*this)
+        : gOverridingContainingBlockContentLogicalWidthMap->get(*this);
 }
 
 bool RenderBox::hasOverridingContainingBlockContentWidth() const
@@ -1312,8 +1332,8 @@ bool RenderBox::hasOverridingContainingBlockContentWidth() const
         return false;
 
     return cb->style().isHorizontalWritingMode()
-        ? gOverridingContainingBlockContentLogicalWidthMap && gOverridingContainingBlockContentLogicalWidthMap->contains(this)
-        : gOverridingContainingBlockContentLogicalHeightMap && gOverridingContainingBlockContentLogicalHeightMap->contains(this);
+        ? gOverridingContainingBlockContentLogicalWidthMap && gOverridingContainingBlockContentLogicalWidthMap->contains(*this)
+        : gOverridingContainingBlockContentLogicalHeightMap && gOverridingContainingBlockContentLogicalHeightMap->contains(*this);
 }
 
 bool RenderBox::hasOverridingContainingBlockContentHeight() const
@@ -1323,116 +1343,117 @@ bool RenderBox::hasOverridingContainingBlockContentHeight() const
         return false;
 
     return cb->style().isHorizontalWritingMode()
-        ? gOverridingContainingBlockContentLogicalHeightMap && gOverridingContainingBlockContentLogicalHeightMap->contains(this)
-        : gOverridingContainingBlockContentLogicalWidthMap && gOverridingContainingBlockContentLogicalWidthMap->contains(this);
+        ? gOverridingContainingBlockContentLogicalHeightMap && gOverridingContainingBlockContentLogicalHeightMap->contains(*this)
+        : gOverridingContainingBlockContentLogicalWidthMap && gOverridingContainingBlockContentLogicalWidthMap->contains(*this);
 }
 
 std::optional<LayoutUnit> RenderBox::overridingContainingBlockContentLogicalWidth() const
 {
     ASSERT(hasOverridingContainingBlockContentLogicalWidth());
-    return gOverridingContainingBlockContentLogicalWidthMap->get(this);
+    return gOverridingContainingBlockContentLogicalWidthMap->get(*this);
 }
 
 std::optional<LayoutUnit> RenderBox::overridingContainingBlockContentLogicalHeight() const
 {
     ASSERT(hasOverridingContainingBlockContentLogicalHeight());
-    return gOverridingContainingBlockContentLogicalHeightMap->get(this);
+    return gOverridingContainingBlockContentLogicalHeightMap->get(*this);
 }
 
 bool RenderBox::hasOverridingContainingBlockContentLogicalWidth() const
 {
-    return gOverridingContainingBlockContentLogicalWidthMap && gOverridingContainingBlockContentLogicalWidthMap->contains(this);
+    return gOverridingContainingBlockContentLogicalWidthMap && gOverridingContainingBlockContentLogicalWidthMap->contains(*this);
 }
 
 bool RenderBox::hasOverridingContainingBlockContentLogicalHeight() const
 {
-    return gOverridingContainingBlockContentLogicalHeightMap && gOverridingContainingBlockContentLogicalHeightMap->contains(this);
+    return gOverridingContainingBlockContentLogicalHeightMap && gOverridingContainingBlockContentLogicalHeightMap->contains(*this);
 }
 
 void RenderBox::setOverridingContainingBlockContentLogicalWidth(std::optional<LayoutUnit> logicalWidth)
 {
     if (!gOverridingContainingBlockContentLogicalWidthMap)
         gOverridingContainingBlockContentLogicalWidthMap = new OverrideOptionalSizeMap;
-    gOverridingContainingBlockContentLogicalWidthMap->set(this, logicalWidth);
+    gOverridingContainingBlockContentLogicalWidthMap->set(*this, logicalWidth);
 }
 
 void RenderBox::setOverridingContainingBlockContentLogicalHeight(std::optional<LayoutUnit> logicalHeight)
 {
     if (!gOverridingContainingBlockContentLogicalHeightMap)
         gOverridingContainingBlockContentLogicalHeightMap = new OverrideOptionalSizeMap;
-    gOverridingContainingBlockContentLogicalHeightMap->set(this, logicalHeight);
+    gOverridingContainingBlockContentLogicalHeightMap->set(*this, logicalHeight);
 }
 
 void RenderBox::clearOverridingContainingBlockContentSize()
 {
     if (gOverridingContainingBlockContentLogicalWidthMap)
-        gOverridingContainingBlockContentLogicalWidthMap->remove(this);
+        gOverridingContainingBlockContentLogicalWidthMap->remove(*this);
     clearOverridingContainingBlockContentLogicalHeight();
 }
 
 void RenderBox::clearOverridingContainingBlockContentLogicalHeight()
 {
     if (gOverridingContainingBlockContentLogicalHeightMap)
-        gOverridingContainingBlockContentLogicalHeightMap->remove(this);
+        gOverridingContainingBlockContentLogicalHeightMap->remove(*this);
 }
 
 Length RenderBox::overridingLogicalHeightLength() const
 {
     ASSERT(hasOverridingLogicalHeightLength());
-    return gOverridingLogicalHeightLengthMap->get(this);
+    return gOverridingLogicalHeightLengthMap->get(*this);
 }
 
 void RenderBox::setOverridingLogicalHeightLength(const Length& height)
 {
     if (!gOverridingLogicalHeightLengthMap)
         gOverridingLogicalHeightLengthMap = new OverridingLengthMap();
-    gOverridingLogicalHeightLengthMap->set(this, height);
+    gOverridingLogicalHeightLengthMap->set(*this, height);
 }
 
 bool RenderBox::hasOverridingLogicalHeightLength() const
 {
-    return gOverridingLogicalHeightLengthMap && gOverridingLogicalHeightLengthMap->contains(this);
+    return gOverridingLogicalHeightLengthMap && gOverridingLogicalHeightLengthMap->contains(*this);
 }
 
 void RenderBox::clearOverridingLogicalHeightLength()
 {
     if (gOverridingLogicalHeightLengthMap)
-        gOverridingLogicalHeightLengthMap->remove(this);
+        gOverridingLogicalHeightLengthMap->remove(*this);
 }
 
 Length RenderBox::overridingLogicalWidthLength() const
 {
     ASSERT(hasOverridingLogicalWidthLength());
-    return gOverridingLogicalWidthLengthMap->get(this);
+    return gOverridingLogicalWidthLengthMap->get(*this);
 }
 
 void RenderBox::setOverridingLogicalWidthLength(const Length& height)
 {
     if (!gOverridingLogicalWidthLengthMap)
         gOverridingLogicalWidthLengthMap = new OverridingLengthMap();
-    gOverridingLogicalWidthLengthMap->set(this, height);
+    gOverridingLogicalWidthLengthMap->set(*this, height);
 }
 
 bool RenderBox::hasOverridingLogicalWidthLength() const
 {
-    return gOverridingLogicalWidthLengthMap && gOverridingLogicalWidthLengthMap->contains(this);
+    return gOverridingLogicalWidthLengthMap && gOverridingLogicalWidthLengthMap->contains(*this);
 }
 
 void RenderBox::clearOverridingLogicalWidthLength()
 {
     if (gOverridingLogicalWidthLengthMap)
-        gOverridingLogicalWidthLengthMap->remove(this);
+        gOverridingLogicalWidthLengthMap->remove(*this);
 }
 
 void RenderBox::markMarginAsTrimmed(MarginTrimType newTrimmedMargin)
 {
-    ensureRareData().setTrimmedMargins(rareData().trimmedMargins() | static_cast<unsigned>(newTrimmedMargin));
+    auto& rareData = ensureRareData();
+    rareData.trimmedMargins = rareData.trimmedMargins | newTrimmedMargin;
 }
 
 void RenderBox::clearTrimmedMarginsMarkings()
 {
     ASSERT(hasRareData());
-    ensureRareData().setTrimmedMargins(0);
+    ensureRareData().trimmedMargins = { };
 }
 
 bool RenderBox::hasTrimmedMargin(std::optional<MarginTrimType> marginTrimType) const
@@ -1441,7 +1462,7 @@ bool RenderBox::hasTrimmedMargin(std::optional<MarginTrimType> marginTrimType) c
         return false;
     if (!hasRareData())
         return false;
-    return marginTrimType ? (rareData().trimmedMargins() & static_cast<unsigned>(*marginTrimType)) : rareData().trimmedMargins();
+    return marginTrimType ? rareData().trimmedMargins.contains(*marginTrimType) : !rareData().trimmedMargins.isEmpty();
 }
 
 LayoutUnit RenderBox::adjustBorderBoxLogicalWidthForBoxSizing(const Length& logicalWidth) const
@@ -1523,10 +1544,8 @@ bool RenderBox::hitTestClipPath(const HitTestLocation& hitTestLocation, const La
 
     auto hitsClipContent = [&](Element& element) -> bool {
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
-        if (is<RenderSVGResourceClipper>(element.renderer())) {
-            CheckedRef clipper = downcast<RenderSVGResourceClipper>(*element.renderer());
+        if (CheckedPtr clipper = dynamicDowncast<RenderSVGResourceClipper>(element.renderer()))
             return clipper->hitTestClipContent( FloatRect { borderBoxRect() }, hitTestLocationInLocalCoordinates);
-        }
 #endif
         CheckedRef clipper = downcast<LegacyRenderSVGResourceClipper>(*element.renderer());
         return clipper->hitTestClipContent( FloatRect { borderBoxRect() }, FloatPoint { hitTestLocationInLocalCoordinates });
@@ -1534,14 +1553,14 @@ bool RenderBox::hitTestClipPath(const HitTestLocation& hitTestLocation, const La
 
     switch (style().clipPath()->type()) {
     case PathOperation::Shape: {
-        auto& clipPath = downcast<ShapePathOperation>(*style().clipPath());
+        auto& clipPath = uncheckedDowncast<ShapePathOperation>(*style().clipPath());
         auto referenceBoxRect = this->referenceBoxRect(clipPath.referenceBox());
         if (!clipPath.pathForReferenceRect(referenceBoxRect).contains(hitTestLocationInLocalCoordinates, clipPath.windRule()))
             return false;
         break;
     }
     case PathOperation::Reference: {
-        const auto& referencePathOperation = downcast<ReferencePathOperation>(*style().clipPath());
+        const auto& referencePathOperation = uncheckedDowncast<ReferencePathOperation>(*style().clipPath());
         RefPtr element = document().getElementById(referencePathOperation.fragment());
         if (!element || !element->renderer())
             break;
@@ -2065,8 +2084,9 @@ bool RenderBox::repaintLayerRectsForImage(WrappedImagePtr image, const FillLayer
                 if (drawingRootBackground) {
                     layerRenderer = &view();
 
-                    LayoutUnit rw = downcast<RenderView>(*layerRenderer).frameView().contentsWidth();
-                    LayoutUnit rh = downcast<RenderView>(*layerRenderer).frameView().contentsHeight();
+                    auto& renderView = downcast<RenderView>(*layerRenderer);
+                    LayoutUnit rw = renderView.frameView().contentsWidth();
+                    LayoutUnit rh = renderView.frameView().contentsHeight();
 
                     rendererRect = LayoutRect(-layerRenderer->marginLeft(),
                         -layerRenderer->marginTop(),
@@ -2591,14 +2611,14 @@ auto RenderBox::computeVisibleRectsInContainer(const RepaintRects& rects, const 
         adjustedRects.expand(locationOffset - flooredLocationOffset);
         locationOffset = flooredLocationOffset;
         context.descendantNeedsEnclosingIntRect = true;
-    } else if (is<RenderMultiColumnFlow>(this)) {
+    } else if (auto* columnFlow = dynamicDowncast<RenderMultiColumnFlow>(*this)) {
         // We won't normally run this code. Only when the container is null (i.e., we're trying
         // to get the rect in view coordinates) will we come in here, since normally container
         // will be set and we'll stop at the flow thread. This case is mainly hit by the check for whether
         // or not images should animate.
         // FIXME: Just as with offsetFromContainer, we aren't really handling objects that span multiple columns properly.
         LayoutPoint physicalPoint(flipForWritingMode(adjustedRects.clippedOverflowRect.location()));
-        if (auto* fragment = downcast<RenderMultiColumnFlow>(*this).physicalTranslationFromFlowToFragment((physicalPoint))) {
+        if (auto* fragment = columnFlow->physicalTranslationFromFlowToFragment((physicalPoint))) {
             adjustedRects.clippedOverflowRect.setLocation(fragment->flipForWritingMode(physicalPoint));
             return fragment->computeVisibleRectsInContainer(adjustedRects, container, context);
         }
@@ -2908,11 +2928,11 @@ bool RenderBox::hasStretchedLogicalHeight() const
         return false;
     }
     if (containingBlock->isHorizontalWritingMode() != isHorizontalWritingMode()) {
-        if (is<RenderGrid>(this) && downcast<RenderGrid>(this)->isSubgridInParentDirection(GridTrackSizingDirection::ForColumns))
+        if (auto* grid = dynamicDowncast<RenderGrid>(*this); grid && grid->isSubgridInParentDirection(GridTrackSizingDirection::ForColumns))
             return true;
         return style.resolvedJustifySelf(&containingBlock->style(), containingBlock->selfAlignmentNormalBehavior(this)).position() == ItemPosition::Stretch;
     }
-    if (is<RenderGrid>(this) && downcast<RenderGrid>(this)->isSubgridInParentDirection(GridTrackSizingDirection::ForRows))
+    if (auto* grid = dynamicDowncast<RenderGrid>(*this); grid && grid->isSubgridInParentDirection(GridTrackSizingDirection::ForRows))
         return true;
     return style.resolvedAlignSelf(&containingBlock->style(), containingBlock->selfAlignmentNormalBehavior(this)).position() == ItemPosition::Stretch;
 }
@@ -2931,11 +2951,11 @@ bool RenderBox::hasStretchedLogicalWidth(StretchingMode stretchingMode) const
     }
     auto normalItemPosition = stretchingMode == StretchingMode::Any ? containingBlock->selfAlignmentNormalBehavior(this) : ItemPosition::Normal;
     if (containingBlock->isHorizontalWritingMode() != isHorizontalWritingMode()) {
-        if (is<RenderGrid>(this) && downcast<RenderGrid>(this)->isSubgridInParentDirection(GridTrackSizingDirection::ForRows))
+        if (auto* grid = dynamicDowncast<RenderGrid>(*this); grid && grid->isSubgridInParentDirection(GridTrackSizingDirection::ForRows))
             return true;
         return style.resolvedAlignSelf(&containingBlock->style(), normalItemPosition).position() == ItemPosition::Stretch;
     }
-    if (is<RenderGrid>(this) && downcast<RenderGrid>(this)->isSubgridInParentDirection(GridTrackSizingDirection::ForColumns))
+    if (auto* grid = dynamicDowncast<RenderGrid>(*this); grid && grid->isSubgridInParentDirection(GridTrackSizingDirection::ForColumns))
         return true;
     return style.resolvedJustifySelf(&containingBlock->style(), normalItemPosition).position() == ItemPosition::Stretch;
 }
@@ -3109,7 +3129,7 @@ RenderBoxFragmentInfo* RenderBox::renderBoxFragmentInfo(RenderFragmentContainer*
 
     // If we have computed our width in this fragment already, it will be cached, and we can
     // just return it.
-    RenderBoxFragmentInfo* boxInfo = fragment->renderBoxFragmentInfo(this);
+    RenderBoxFragmentInfo* boxInfo = fragment->renderBoxFragmentInfo(*this);
     if (boxInfo && cacheFlag == CacheRenderBoxFragmentInfo)
         return boxInfo;
 
@@ -3142,14 +3162,26 @@ static bool shouldFlipBeforeAfterMargins(const RenderStyle& containingBlockStyle
     return shouldFlip;
 }
 
+void RenderBox::willBeRemovedFromTree(IsInternalMove isInternalMove)
+{
+    RenderBoxModelObject::willBeRemovedFromTree(isInternalMove);
+    if (CheckedPtr parentFlexibleBox = dynamicDowncast<RenderFlexibleBox>(parent()))
+        parentFlexibleBox->clearCachedMainSizeForChild(*this);
+}
+
 void RenderBox::cacheIntrinsicContentLogicalHeightForFlexItem(LayoutUnit height) const
 {
     // FIXME: it should be enough with checking hasOverridingLogicalHeight() as this logic could be shared
     // by any layout system using overrides like grid or flex. However this causes a never ending sequence of calls
     // between layoutBlock() <-> relayoutToAvoidWidows().
-    if (isFloatingOrOutOfFlowPositioned() || !is<RenderFlexibleBox>(parent()) || hasOverridingLogicalHeight() || shouldComputeLogicalHeightFromAspectRatio())
+    if (isFloatingOrOutOfFlowPositioned())
         return;
-    downcast<RenderFlexibleBox>(parent())->setCachedChildIntrinsicContentLogicalHeight(*this, height);
+    CheckedPtr flexibleBox = dynamicDowncast<RenderFlexibleBox>(parent());
+    if (!flexibleBox)
+        return;
+    if (hasOverridingLogicalHeight() || shouldComputeLogicalHeightFromAspectRatio())
+        return;
+    flexibleBox->setCachedChildIntrinsicContentLogicalHeight(*this, height);
 }
 
 void RenderBox::overrideLogicalHeightForSizeContainment()
@@ -3669,8 +3701,7 @@ LayoutUnit RenderBox::computeReplacedLogicalHeightUsing(SizeType heightType, Len
         }
         bool hasPerpendicularContainingBlock = container->isHorizontalWritingMode() != isHorizontalWritingMode();
         std::optional<LayoutUnit> stretchedHeight;
-        if (is<RenderBlock>(container)) {
-            auto* block = downcast<RenderBlock>(container);
+        if (auto* block = dynamicDowncast<RenderBlock>(container)) {
             block->addPercentHeightDescendant(*const_cast<RenderBox*>(this));
             if (block->isFlexItem() && downcast<RenderFlexibleBox>(block->parent())->useChildOverridingLogicalHeightForPercentageResolution(*block))
                 stretchedHeight = block->overridingContentLogicalHeight();
@@ -3683,8 +3714,7 @@ LayoutUnit RenderBox::computeReplacedLogicalHeightUsing(SizeType heightType, Len
         if (container->isOutOfFlowPositioned()
             && container->style().height().isAuto()
             && !(container->style().top().isAuto() || container->style().bottom().isAuto())) {
-            RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(container->isRenderBlock());
-            auto& block = downcast<RenderBlock>(*container);
+            auto& block = checkedDowncast<RenderBlock>(*container);
             auto computedValues = block.computeLogicalHeight(block.logicalHeight(), 0);
             LayoutUnit newContentHeight = computedValues.m_extent - block.borderAndPaddingLogicalHeight() - block.scrollbarLogicalHeight();
             return adjustContentBoxLogicalHeightForBoxSizing(valueForLength(logicalHeight, newContentHeight));
@@ -3764,10 +3794,9 @@ LayoutUnit RenderBox::availableLogicalHeightUsing(const Length& h, AvailableLogi
 
     // Height of absolutely positioned, non-replaced elements section 5.3 rule 5
     // https://www.w3.org/TR/css-position-3/#abs-non-replaced-height
-    if (is<RenderBlock>(*this) && isOutOfFlowPositioned() && style().logicalHeight().isAuto() && !(style().logicalTop().isAuto() || style().logicalBottom().isAuto())) {
-        RenderBlock& block = const_cast<RenderBlock&>(downcast<RenderBlock>(*this));
-        auto computedValues = block.computeLogicalHeight(block.logicalHeight(), 0);
-        return computedValues.m_extent - block.borderAndPaddingLogicalHeight() - block.scrollbarLogicalHeight();
+    if (CheckedPtr block = dynamicDowncast<RenderBlock>(*this); block && isOutOfFlowPositioned() && style().logicalHeight().isAuto() && !(style().logicalTop().isAuto() || style().logicalBottom().isAuto())) {
+        auto computedValues = block->computeLogicalHeight(block->logicalHeight(), 0);
+        return computedValues.m_extent - block->borderAndPaddingLogicalHeight() - block->scrollbarLogicalHeight();
     }
 
     LayoutUnit availableHeight = isOrthogonal(*this, *containingBlock()) ? containingBlockLogicalWidthForContent() : containingBlockLogicalHeightForContent(heightType);
@@ -3830,36 +3859,37 @@ LayoutUnit RenderBox::containingBlockLogicalWidthForPositioned(const RenderBoxMo
             return width.value();
     }
 
-    if (is<RenderBox>(containingBlock)) {
+    if (auto* box = dynamicDowncast<RenderBox>(containingBlock)) {
         bool isFixedPosition = isFixedPositioned();
 
         RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
         if (!fragmentedFlow) {
-            if (isFixedPosition && is<RenderView>(containingBlock))
-                return downcast<RenderView>(containingBlock).clientLogicalWidthForFixedPosition();
-
+            if (isFixedPosition) {
+                if (auto* renderView = dynamicDowncast<RenderView>(containingBlock))
+                    return renderView->clientLogicalWidthForFixedPosition();
+            }
             return downcast<RenderBox>(containingBlock).clientLogicalWidth();
         }
 
-        if (!is<RenderBlock>(containingBlock))
-            return downcast<RenderBox>(containingBlock).clientLogicalWidth();
+        CheckedPtr cb = dynamicDowncast<RenderBlock>(containingBlock);
+        if (!cb)
+            return box->clientLogicalWidth();
 
-        const RenderBlock& cb = downcast<RenderBlock>(containingBlock);
         RenderBoxFragmentInfo* boxInfo = nullptr;
         if (!fragment) {
-            if (is<RenderFragmentedFlow>(containingBlock) && !checkForPerpendicularWritingMode)
-                return downcast<RenderFragmentedFlow>(containingBlock).contentLogicalWidthOfFirstFragment();
+            if (auto* fragmentedFlow = dynamicDowncast<RenderFragmentedFlow>(containingBlock); fragmentedFlow && !checkForPerpendicularWritingMode)
+                return fragmentedFlow->contentLogicalWidthOfFirstFragment();
             if (isWritingModeRoot()) {
-                LayoutUnit cbPageOffset = cb.offsetFromLogicalTopOfFirstPage();
-                RenderFragmentContainer* cbFragment = cb.fragmentAtBlockOffset(cbPageOffset);
+                LayoutUnit cbPageOffset = cb->offsetFromLogicalTopOfFirstPage();
+                RenderFragmentContainer* cbFragment = cb->fragmentAtBlockOffset(cbPageOffset);
                 if (cbFragment)
-                    boxInfo = cb.renderBoxFragmentInfo(cbFragment);
+                    boxInfo = cb->renderBoxFragmentInfo(cbFragment);
             }
         } else if (fragmentedFlow->isHorizontalWritingMode() == containingBlock.isHorizontalWritingMode()) {
-            RenderFragmentContainer* containingBlockFragment = cb.clampToStartAndEndFragments(fragment);
-            boxInfo = cb.renderBoxFragmentInfo(containingBlockFragment);
+            RenderFragmentContainer* containingBlockFragment = cb->clampToStartAndEndFragments(fragment);
+            boxInfo = cb->renderBoxFragmentInfo(containingBlockFragment);
         }
-        return (boxInfo) ? std::max<LayoutUnit>(0, cb.clientLogicalWidth() - (cb.logicalWidth() - boxInfo->logicalWidth())) : cb.clientLogicalWidth();
+        return (boxInfo) ? std::max<LayoutUnit>(0, cb->clientLogicalWidth() - (cb->logicalWidth() - boxInfo->logicalWidth())) : cb->clientLogicalWidth();
     }
 
     ASSERT(containingBlock.isInFlowPositioned());
@@ -3880,14 +3910,19 @@ LayoutUnit RenderBox::containingBlockLogicalHeightForPositioned(const RenderBoxM
     if (containingBlock.isRenderBox()) {
         bool isFixedPosition = isFixedPositioned();
 
-        if (isFixedPosition && is<RenderView>(containingBlock))
-            return downcast<RenderView>(containingBlock).clientLogicalHeightForFixedPosition();
+        if (isFixedPosition) {
+            if (auto* renderView = dynamicDowncast<RenderView>(containingBlock))
+                return renderView->clientLogicalHeightForFixedPosition();
+        }
 
-        const RenderBlock& cb = is<RenderBlock>(containingBlock) ? downcast<RenderBlock>(containingBlock) : *containingBlock.containingBlock();
+        auto* containingBlockAsRenderBlock = dynamicDowncast<RenderBlock>(containingBlock);
+        const RenderBlock& cb = containingBlockAsRenderBlock ? *containingBlockAsRenderBlock : *containingBlock.containingBlock();
         LayoutUnit result = cb.clientLogicalHeight();
         RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
-        if (fragmentedFlow && is<RenderFragmentedFlow>(containingBlock) && fragmentedFlow->isHorizontalWritingMode() == containingBlock.isHorizontalWritingMode())
-            return downcast<RenderFragmentedFlow>(containingBlock).contentLogicalHeightOfFirstFragment();
+        if (fragmentedFlow && fragmentedFlow->isHorizontalWritingMode() == containingBlock.isHorizontalWritingMode()) {
+            if (auto* containingBlockFragmentedFlow = dynamicDowncast<RenderFragmentedFlow>(containingBlock))
+                return containingBlockFragmentedFlow->contentLogicalHeightOfFirstFragment();
+        }
         return result;
     }
         
@@ -3919,18 +3954,18 @@ static void computeInlineStaticDistance(Length& logicalLeft, Length& logicalRigh
     if (parentDirection == TextDirection::LTR || isOrthogonal(*child, *parent)) {
         LayoutUnit staticPosition = isOrthogonal(*child, *parent) ? child->layer()->staticBlockPosition() - containerBlock.borderBefore() : child->layer()->staticInlinePosition() - containerBlock.borderLogicalLeft();
         for (auto* current = parent; current && current != &containerBlock; current = current->container()) {
-            if (!is<RenderBox>(*current))
+            CheckedPtr renderBox = dynamicDowncast<RenderBox>(*current);
+            if (!renderBox)
                 continue;
-            const auto& renderBox = downcast<RenderBox>(*current);
-            staticPosition += isOrthogonal(*child, *parent) ? renderBox.logicalTop() : renderBox.logicalLeft();
-            if (renderBox.isInFlowPositioned())
-                staticPosition += renderBox.isHorizontalWritingMode() ? renderBox.offsetForInFlowPosition().width() : renderBox.offsetForInFlowPosition().height();
-            if (fragment && is<RenderBlock>(*current)) {
-                const RenderBlock& currentBlock = downcast<RenderBlock>(*current);
-                fragment = currentBlock.clampToStartAndEndFragments(fragment);
-                RenderBoxFragmentInfo* boxInfo = currentBlock.renderBoxFragmentInfo(fragment);
-                if (boxInfo)
-                    staticPosition += boxInfo->logicalLeft();
+            staticPosition += isOrthogonal(*child, *parent) ? renderBox->logicalTop() : renderBox->logicalLeft();
+            if (renderBox->isInFlowPositioned())
+                staticPosition += renderBox->isHorizontalWritingMode() ? renderBox->offsetForInFlowPosition().width() : renderBox->offsetForInFlowPosition().height();
+            if (fragment) {
+                if (CheckedPtr currentBlock = dynamicDowncast<RenderBlock>(*current)) {
+                    fragment = currentBlock->clampToStartAndEndFragments(fragment);
+                    if (auto* boxInfo = currentBlock->renderBoxFragmentInfo(fragment))
+                        staticPosition += boxInfo->logicalLeft();
+                }
             }
         }
         logicalLeft.setValue(LengthType::Fixed, staticPosition);
@@ -3944,24 +3979,25 @@ static void computeInlineStaticDistance(Length& logicalLeft, Length& logicalRigh
         }
         staticPosition -= enclosingBox.logicalWidth();
         for (const RenderElement* current = &enclosingBox; current; current = current->container()) {
-            if (!is<RenderBox>(*current))
+            CheckedPtr renderBox = dynamicDowncast<RenderBox>(*current);
+            if (!renderBox)
                 continue;
 
             if (current != &containerBlock) {
-                auto& renderBox = downcast<RenderBox>(*current);
-                staticPosition -= renderBox.logicalLeft();
-                if (renderBox.isInFlowPositioned())
-                    staticPosition -= renderBox.isHorizontalWritingMode() ? renderBox.offsetForInFlowPosition().width() : renderBox.offsetForInFlowPosition().height();
+                staticPosition -= renderBox->logicalLeft();
+                if (renderBox->isInFlowPositioned())
+                    staticPosition -= renderBox->isHorizontalWritingMode() ? renderBox->offsetForInFlowPosition().width() : renderBox->offsetForInFlowPosition().height();
             }
-            if (fragment && is<RenderBlock>(*current)) {
-                auto& currentBlock = downcast<RenderBlock>(*current);
-                fragment = currentBlock.clampToStartAndEndFragments(fragment);
-                RenderBoxFragmentInfo* boxInfo = currentBlock.renderBoxFragmentInfo(fragment);
-                if (boxInfo) {
-                    if (current != &containerBlock)
-                        staticPosition -= currentBlock.logicalWidth() - (boxInfo->logicalLeft() + boxInfo->logicalWidth());
-                    if (current == &enclosingBox)
-                        staticPosition += enclosingBox.logicalWidth() - boxInfo->logicalWidth();
+            if (fragment) {
+                if (CheckedPtr currentBlock = dynamicDowncast<RenderBlock>(*current)) {
+                    fragment = currentBlock->clampToStartAndEndFragments(fragment);
+                    RenderBoxFragmentInfo* boxInfo = currentBlock->renderBoxFragmentInfo(fragment);
+                    if (boxInfo) {
+                        if (current != &containerBlock)
+                            staticPosition -= currentBlock->logicalWidth() - (boxInfo->logicalLeft() + boxInfo->logicalWidth());
+                        if (current == &enclosingBox)
+                            staticPosition += enclosingBox.logicalWidth() - boxInfo->logicalWidth();
+                    }
                 }
             }
             if (current == &containerBlock)
@@ -4099,26 +4135,26 @@ void RenderBox::computePositionedLogicalWidth(LogicalExtentComputedValues& compu
     }
 
     computedValues.m_extent += bordersPlusPadding;
-    if (is<RenderBox>(containerBlock)) {
-        auto& containingBox = downcast<RenderBox>(containerBlock);
-        if (containingBox.shouldPlaceVerticalScrollbarOnLeft() && isHorizontalWritingMode())
-            computedValues.m_position += containingBox.verticalScrollbarWidth();
+    if (auto* containingBox = dynamicDowncast<RenderBox>(containerBlock)) {
+        if (containingBox->shouldPlaceVerticalScrollbarOnLeft() && isHorizontalWritingMode())
+            computedValues.m_position += containingBox->verticalScrollbarWidth();
     }
     
     // Adjust logicalLeft if we need to for the flipped version of our writing mode in fragments.
     // FIXME: Add support for other types of objects as containerBlock, not only RenderBlock.
     RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
-    if (fragmentedFlow && !fragment && isWritingModeRoot() && isHorizontalWritingMode() == containerBlock.isHorizontalWritingMode() && is<RenderBlock>(containerBlock)) {
-        ASSERT(containerBlock.canHaveBoxInfoInFragment());
-        LayoutUnit logicalLeftPos = computedValues.m_position;
-        const RenderBlock& renderBlock = downcast<RenderBlock>(containerBlock);
-        LayoutUnit cbPageOffset = renderBlock.offsetFromLogicalTopOfFirstPage();
-        RenderFragmentContainer* cbFragment = renderBlock.fragmentAtBlockOffset(cbPageOffset);
-        if (cbFragment) {
-            RenderBoxFragmentInfo* boxInfo = renderBlock.renderBoxFragmentInfo(cbFragment);
-            if (boxInfo) {
-                logicalLeftPos += boxInfo->logicalLeft();
-                computedValues.m_position = logicalLeftPos;
+    if (fragmentedFlow && !fragment && isWritingModeRoot() && isHorizontalWritingMode() == containerBlock.isHorizontalWritingMode()) {
+        if (CheckedPtr renderBlock = dynamicDowncast<RenderBlock>(containerBlock)) {
+            ASSERT(containerBlock.canHaveBoxInfoInFragment());
+            LayoutUnit logicalLeftPos = computedValues.m_position;
+            LayoutUnit cbPageOffset = renderBlock->offsetFromLogicalTopOfFirstPage();
+            RenderFragmentContainer* cbFragment = renderBlock->fragmentAtBlockOffset(cbPageOffset);
+            if (cbFragment) {
+                RenderBoxFragmentInfo* boxInfo = renderBlock->renderBoxFragmentInfo(cbFragment);
+                if (boxInfo) {
+                    logicalLeftPos += boxInfo->logicalLeft();
+                    computedValues.m_position = logicalLeftPos;
+                }
             }
         }
     }
@@ -4140,11 +4176,11 @@ static void computeLogicalLeftPositionedOffset(LayoutUnit& logicalLeftPos, const
 
 static std::optional<float> positionWithRTLInlineBoxContainingBlock(const RenderElement& containingBlock, LayoutUnit logicalLeftValue, LayoutUnit marginLogicalLeftValue)
 {
-    if (!is<RenderInline>(containingBlock) || containingBlock.style().isLeftToRightDirection())
+    CheckedPtr renderInline = dynamicDowncast<RenderInline>(containingBlock);
+    if (!renderInline || containingBlock.style().isLeftToRightDirection())
         return { };
 
-    auto& renderInline = downcast<RenderInline>(containingBlock);
-    auto firstInlineBox = InlineIterator::firstInlineBoxFor(renderInline);
+    auto firstInlineBox = InlineIterator::firstInlineBoxFor(*renderInline);
     if (!firstInlineBox)
         return { };
 
@@ -4156,7 +4192,7 @@ static std::optional<float> positionWithRTLInlineBoxContainingBlock(const Render
     if (firstInlineBox == lastInlineBox)
         return { };
 
-    auto lastInlineBoxPaddingBoxVisualRight = lastInlineBox->logicalLeftIgnoringInlineDirection() + renderInline.borderLogicalLeft();
+    auto lastInlineBoxPaddingBoxVisualRight = lastInlineBox->logicalLeftIgnoringInlineDirection() + renderInline->borderLogicalLeft();
     // FIXME: This does not work with decoration break clone.
     auto firstInlineBoxPaddingBoxVisualRight = firstInlineBox->logicalLeftIgnoringInlineDirection();
     auto distance = lastInlineBoxPaddingBoxVisualRight - firstInlineBoxPaddingBoxVisualRight;
@@ -4364,13 +4400,13 @@ static void computeBlockStaticDistance(Length& logicalTop, Length& logicalBottom
     // the child's writing mode) is retrieved from the static inline position instead of the static block position.
     LayoutUnit staticLogicalTop = isOrthogonal(*child, *parent) ? child->layer()->staticInlinePosition() - containerBlock.borderLogicalLeft() : child->layer()->staticBlockPosition() - containerBlock.borderBefore();
     for (RenderElement* container = child->parent(); container && container != &containerBlock; container = container->container()) {
-        if (!is<RenderBox>(*container))
+        auto* renderBox = dynamicDowncast<RenderBox>(*container);
+        if (!renderBox)
             continue;
-        const auto& renderBox = downcast<RenderBox>(*container);
-        if (!is<RenderTableRow>(renderBox))
-            staticLogicalTop += isOrthogonal(*child, *parent) ? renderBox.logicalLeft() : renderBox.logicalTop();
-        if (renderBox.isInFlowPositioned())
-            staticLogicalTop += renderBox.isHorizontalWritingMode() ? renderBox.offsetForInFlowPosition().height() : renderBox.offsetForInFlowPosition().width();
+        if (!is<RenderTableRow>(*renderBox))
+            staticLogicalTop += isOrthogonal(*child, *parent) ? renderBox->logicalLeft() : renderBox->logicalTop();
+        if (renderBox->isInFlowPositioned())
+            staticLogicalTop += renderBox->isHorizontalWritingMode() ? renderBox->offsetForInFlowPosition().height() : renderBox->offsetForInFlowPosition().width();
     }
 
     // If the parent is RTL then we need to flip the coordinate by setting the logical bottom instead of the logical top. That only needs
@@ -4476,17 +4512,18 @@ void RenderBox::computePositionedLogicalHeight(LogicalExtentComputedValues& comp
     // Adjust logicalTop if we need to for perpendicular writing modes in fragments.
     // FIXME: Add support for other types of objects as containerBlock, not only RenderBlock.
     RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
-    if (fragmentedFlow && isHorizontalWritingMode() != containerBlock.isHorizontalWritingMode() && is<RenderBlock>(containerBlock)) {
-        ASSERT(containerBlock.canHaveBoxInfoInFragment());
-        LayoutUnit logicalTopPos = computedValues.m_position;
-        const RenderBlock& renderBox = downcast<RenderBlock>(containerBlock);
-        LayoutUnit cbPageOffset = renderBox.offsetFromLogicalTopOfFirstPage() - logicalLeft();
-        RenderFragmentContainer* cbFragment = renderBox.fragmentAtBlockOffset(cbPageOffset);
-        if (cbFragment) {
-            RenderBoxFragmentInfo* boxInfo = renderBox.renderBoxFragmentInfo(cbFragment);
-            if (boxInfo) {
-                logicalTopPos += boxInfo->logicalLeft();
-                computedValues.m_position = logicalTopPos;
+    if (fragmentedFlow && isHorizontalWritingMode() != containerBlock.isHorizontalWritingMode()) {
+        if (CheckedPtr renderBox = dynamicDowncast<RenderBlock>(containerBlock)) {
+            ASSERT(containerBlock.canHaveBoxInfoInFragment());
+            LayoutUnit logicalTopPos = computedValues.m_position;
+            LayoutUnit cbPageOffset = renderBox->offsetFromLogicalTopOfFirstPage() - logicalLeft();
+            RenderFragmentContainer* cbFragment = renderBox->fragmentAtBlockOffset(cbPageOffset);
+            if (cbFragment) {
+                RenderBoxFragmentInfo* boxInfo = renderBox->renderBoxFragmentInfo(cbFragment);
+                if (boxInfo) {
+                    logicalTopPos += boxInfo->logicalLeft();
+                    computedValues.m_position = logicalTopPos;
+                }
             }
         }
     }
@@ -4996,9 +5033,9 @@ VisiblePosition RenderBox::positionForPoint(const LayoutPoint& point, const Rend
         adjustedPoint.moveBy(location());
 
     for (auto& renderer : childrenOfType<RenderBox>(*this)) {
-        if (is<RenderFragmentedFlow>(*this)) {
+        if (CheckedPtr fragmentedFlow = dynamicDowncast<RenderFragmentedFlow>(*this)) {
             ASSERT(fragment);
-            if (!downcast<RenderFragmentedFlow>(*this).objectShouldFragmentInFlowFragment(&renderer, fragment))
+            if (!fragmentedFlow->objectShouldFragmentInFlowFragment(&renderer, fragment))
                 continue;
         }
 
@@ -5073,7 +5110,7 @@ bool RenderBox::establishesIndependentFormattingContext() const
 
 bool RenderBox::avoidsFloats() const
 {
-    return isReplacedOrInlineBlock() || isLegend() || isFieldset() || createsNewFormattingContext();
+    return isReplacedOrInlineBlock() || isLegend() || isFieldset() || createsNewFormattingContext() || (element() && element()->isFormControlElement());
 }
 
 void RenderBox::addVisualEffectOverflow()
@@ -5087,7 +5124,7 @@ void RenderBox::addVisualEffectOverflow()
     addVisualOverflow(applyVisualEffectOverflow(borderBoxRect()));
 
     if (auto* fragmentedFlow = enclosingFragmentedFlow())
-        fragmentedFlow->addFragmentsVisualEffectOverflow(this);
+        fragmentedFlow->addFragmentsVisualEffectOverflow(*this);
 }
 
 LayoutRect RenderBox::applyVisualEffectOverflow(const LayoutRect& borderBox) const
@@ -5129,20 +5166,20 @@ LayoutRect RenderBox::applyVisualEffectOverflow(const LayoutRect& borderBox) con
     return LayoutRect(overflowMinX, overflowMinY, overflowMaxX - overflowMinX, overflowMaxY - overflowMinY);
 }
 
-void RenderBox::addOverflowFromChild(const RenderBox* child, const LayoutSize& delta)
+void RenderBox::addOverflowFromChild(const RenderBox& child, const LayoutSize& delta)
 {
     // Never allow flow threads to propagate overflow up to a parent.
-    if (child->isRenderFragmentedFlow())
+    if (child.isRenderFragmentedFlow())
         return;
 
     RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
     if (fragmentedFlow)
-        fragmentedFlow->addFragmentsOverflowFromChild(this, child, delta);
+        fragmentedFlow->addFragmentsOverflowFromChild(*this, child, delta);
 
     // Only propagate layout overflow from the child if the child isn't clipping its overflow.  If it is, then
     // its overflow is internal to it, and we don't care about it. layoutOverflowRectForPropagation takes care of this
     // and just propagates the border box rect instead.
-    LayoutRect childLayoutOverflowRect = child->layoutOverflowRectForPropagation(&style());
+    LayoutRect childLayoutOverflowRect = child.layoutOverflowRectForPropagation(&style());
     childLayoutOverflowRect.move(delta);
     addLayoutOverflow(childLayoutOverflowRect);
 
@@ -5157,17 +5194,17 @@ void RenderBox::addOverflowFromChild(const RenderBox* child, const LayoutSize& d
 
     std::optional<LayoutRect> childVisualOverflowRect;
     auto computeChildVisualOverflowRect = [&] () {
-        childVisualOverflowRect = child->visualOverflowRectForPropagation(&style());
+        childVisualOverflowRect = child.visualOverflowRectForPropagation(&style());
         childVisualOverflowRect->move(delta);
     };
     // If this block is flowed inside a flow thread, make sure its overflow is propagated to the containing fragments.
     if (fragmentedFlow) {
         computeChildVisualOverflowRect();
-        fragmentedFlow->addFragmentsVisualOverflow(this, *childVisualOverflowRect);
+        fragmentedFlow->addFragmentsVisualOverflow(*this, *childVisualOverflowRect);
     } else {
         // Update our visual overflow in case the child spills out the block, but only if we were going to paint
         // the child block ourselves.
-        if (child->hasSelfPaintingLayer())
+        if (child.hasSelfPaintingLayer())
             return;
     }
     if (!childVisualOverflowRect)
@@ -5228,7 +5265,7 @@ void RenderBox::clearOverflow()
     m_overflow = nullptr;
     RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
     if (fragmentedFlow)
-        fragmentedFlow->clearFragmentsOverflow(this);
+        fragmentedFlow->clearFragmentsOverflow(*this);
 }
     
 bool RenderBox::percentageLogicalHeightIsResolvable() const
@@ -5267,7 +5304,7 @@ bool RenderBox::isUnsplittableForPagination() const
     return isReplacedOrInlineBlock()
         || hasUnsplittableScrollingOverflow()
         || (parent() && isWritingModeRoot())
-        || (isFloating() && style().styleType() == PseudoId::FirstLetter && style().initialLetterDrop() > 0)
+        || (isFloating() && style().pseudoElementType() == PseudoId::FirstLetter && style().initialLetterDrop() > 0)
         || shouldApplySizeContainment();
 }
 

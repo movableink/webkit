@@ -5412,8 +5412,8 @@
                     "url": "https://www.w3.org/TR/css-logical/#resize"
                 },
                 {
-                    "value": "auto",
-                    "status": "non-standard"
+                    "value": "-internal-textarea-auto",
+                    "status": "internal"
                 }
             ],
             "codegen-properties": {
@@ -6320,20 +6320,6 @@
                 "url": "https://www.w3.org/TR/CSS22/visuren.html#propdef-z-index"
             }
         },
-        "alt": {
-            "codegen-properties": {
-                "aliases": [
-                    "-webkit-alt"
-                ],
-                "name-for-methods": "ContentAltText",
-                "custom": "Value",
-                "parser-function": "consumeAlt",
-                "parser-function-requires-context": true,
-                "parser-grammar-unused": "<string> | <attr()>",
-                "parser-grammar-unused-reason": "Needs support for function notation."
-            },
-            "status": "non-standard"
-        },
         "appearance": {
             "values": [
                 "checkbox",
@@ -7085,7 +7071,6 @@
             ],
             "codegen-properties": {
                 "name-for-methods": "BlendMode",
-                "enable-if": "ENABLE_CSS_COMPOSITING",
                 "parser-grammar": "<<values>>"
             },
             "specification":  {
@@ -7099,7 +7084,6 @@
                 "isolate"
             ],
             "codegen-properties": {
-                "enable-if": "ENABLE_CSS_COMPOSITING",
                 "parser-grammar": "<<values>>"
             },
             "specification":  {
@@ -9267,7 +9251,9 @@
         "view-transition-name": {
             "codegen-properties": {
                 "converter": "ViewTransitionName",
-                "parser-grammar": "none | <custom-ident>",
+                "parser-function": "consumeViewTransitionName",
+                "parser-grammar-unused": "none | <custom-ident>",
+                "parser-grammar-unused-reason": "Needs support for applying restrictions to <custom-ident>. The <custom-ident> production used here excludes the keyword auto.",
                 "settings-flag": "viewTransitionsEnabled"
             },
             "specification": {
@@ -9423,7 +9409,6 @@
                     "parser-function-requires-context": true,
                     "parser-grammar-unused": "[ <integer [0,inf]> && <symbol> ]#",
                     "parser-grammar-unused-reason": "Needs support for '&&' groups"
-                    
                 },
                 "specification": {
                     "category": "css-counter-styles",

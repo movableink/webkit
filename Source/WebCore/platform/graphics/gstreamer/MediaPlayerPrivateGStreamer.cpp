@@ -129,6 +129,10 @@
 #include <gst/allocators/gstdmabuf.h>
 #endif // USE(TEXTURE_MAPPER_DMABUF)
 
+#if USE(EXTERNAL_HOLEPUNCH)
+#include "MediaPlayerPrivateHolePunch.h"
+#endif
+
 GST_DEBUG_CATEGORY(webkit_media_player_debug);
 #define GST_CAT_DEFAULT webkit_media_player_debug
 
@@ -175,6 +179,9 @@ MediaPlayerPrivateGStreamer::MediaPlayerPrivateGStreamer(MediaPlayer* player)
             if (webKitDMABufVideoSinkIsEnabled() && webKitDMABufVideoSinkProbePlatform())
                 return adoptRef(*new TextureMapperPlatformLayerProxyDMABuf);
 #endif
+#if USE(GSTREAMER_HOLEPUNCH)
+            return adoptRef(*new TextureMapperPlatformLayerProxyGL(true));
+#endif
             return adoptRef(*new TextureMapperPlatformLayerProxyGL);
         }());
 #endif
@@ -211,6 +218,8 @@ MediaPlayerPrivateGStreamer::~MediaPlayerPrivateGStreamer()
     }
 
     if (m_pipeline) {
+        auto bus = adoptGRef(gst_pipeline_get_bus(GST_PIPELINE(m_pipeline.get())));
+        gst_bus_disable_sync_message_emission(bus.get());
         disconnectSimpleBusMessageCallback(m_pipeline.get());
         g_signal_handlers_disconnect_matched(m_pipeline.get(), G_SIGNAL_MATCH_DATA, 0, 0, nullptr, nullptr, this);
     }
@@ -242,8 +251,11 @@ MediaPlayerPrivateGStreamer::~MediaPlayerPrivateGStreamer()
 
     // The change to GST_STATE_NULL state is always synchronous. So after this gets executed we don't need to worry
     // about handlers running in the GStreamer thread.
-    if (m_pipeline)
+    if (m_pipeline) {
+        unregisterPipeline(m_pipeline);
         gst_element_set_state(m_pipeline.get(), GST_STATE_NULL);
+    }
+
 
     m_player = nullptr;
     m_notifier->invalidate();
@@ -664,6 +676,13 @@ void MediaPlayerPrivateGStreamer::setRate(float rate)
             m_playbackRatePausedState = PlaybackRatePausedState::RatePaused;
             updateStates();
         }
+        if (m_currentState == GST_STATE_PLAYING && !m_playbackRate
+            && m_playbackRatePausedState != PlaybackRatePausedState::RatePaused) {
+            GST_INFO_OBJECT(pipeline(), "Pausing stream because of zero playback rate in setRate");
+            m_playbackRatePausedState = PlaybackRatePausedState::RatePaused;
+            changePipelineState(GST_STATE_PAUSED);
+            updatePlaybackRate();
+        }
         return;
     } else if (m_playbackRatePausedState == PlaybackRatePausedState::RatePaused) {
         m_playbackRatePausedState = PlaybackRatePausedState::ShouldMoveToPlaying;
@@ -675,7 +694,12 @@ void MediaPlayerPrivateGStreamer::setRate(float rate)
     if ((state != GST_STATE_PLAYING && state != GST_STATE_PAUSED)
         || (pending == GST_STATE_PAUSED))
         return;
-
+    if (m_currentState == GST_STATE_PAUSED && m_playbackRate
+        && m_playbackRatePausedState != PlaybackRatePausedState::Playing) {
+        m_playbackRatePausedState = PlaybackRatePausedState::Playing;
+        GST_INFO_OBJECT(pipeline(), "[Buffering] Restarting playback (because of resuming from zero playback rate) in setRate");
+        changePipelineState(GST_STATE_PLAYING);
+    }
     updatePlaybackRate();
 }
 
@@ -1802,7 +1826,8 @@ void MediaPlayerPrivateGStreamer::handleMessage(GstMessage* message)
             m_loadingStalled = true;
             error = MediaPlayer::NetworkState::DecodeError;
             attemptNextLocation = true;
-        } else if (err->domain == GST_STREAM_ERROR) {
+        } else if (err->domain == GST_STREAM_ERROR
+            || g_error_matches(err.get(), GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE)) {
             error = MediaPlayer::NetworkState::DecodeError;
             attemptNextLocation = true;
         } else if (err->domain == GST_RESOURCE_ERROR)
@@ -2718,7 +2743,7 @@ bool MediaPlayerPrivateGStreamer::loadNextLocation()
 
         changePipelineState(GST_STATE_READY);
         auto securityOrigin = SecurityOrigin::create(m_url);
-        if (securityOrigin->canRequest(newUrl, EmptyOriginAccessPatterns::singleton())) {
+        if (securityOrigin->canRequest(newUrl, originAccessPatternsForWebProcessOrEmpty())) {
             GST_INFO_OBJECT(pipeline(), "New media url: %s", newUrl.string().utf8().data());
 
             RefPtr player = m_player.get();
@@ -2823,16 +2848,24 @@ MediaPlayer::SupportsType MediaPlayerPrivateGStreamer::supportsType(const MediaE
 #endif
     }
 
-    if (!ensureGStreamerInitialized())
-        return result;
-
-    GST_DEBUG("Checking mime-type \"%s\"", parameters.type.raw().utf8().data());
     if (parameters.type.isEmpty())
         return result;
 
     // This player doesn't support pictures rendering.
     if (parameters.type.raw().startsWith("image"_s))
         return result;
+
+#if USE(EXTERNAL_HOLEPUNCH)
+    HashSet<String> externalHolePunchTypes;
+    MediaPlayerPrivateHolePunch::getSupportedTypes(externalHolePunchTypes);
+    if (externalHolePunchTypes.contains(parameters.type.containerType()))
+        return result;
+#endif
+
+    if (!ensureGStreamerInitialized())
+        return result;
+
+    GST_DEBUG("Checking mime-type \"%s\"", parameters.type.raw().utf8().data());
 
     registerWebKitGStreamerElements();
 
@@ -2980,6 +3013,8 @@ void MediaPlayerPrivateGStreamer::createGSTPlayBin(const URL& url)
         return;
     }
 
+    registerActivePipeline(m_pipeline);
+
     setStreamVolumeElement(GST_STREAM_VOLUME(m_pipeline.get()));
 
     GST_INFO_OBJECT(pipeline(), "Using legacy playbin element: %s", boolForPrinting(m_isLegacyPlaybin));
@@ -3116,7 +3151,11 @@ void MediaPlayerPrivateGStreamer::configureVideoDecoder(GstElement* decoder)
         if (gstObjectHasProperty(decoder, "max-threads"))
             g_object_set(decoder, "max-threads", 2, nullptr);
     }
-#if USE(TEXTURE_MAPPER) && !PLATFORM(QT)
+
+    if (gstObjectHasProperty(decoder, "max-errors"))
+        g_object_set(decoder, "max-errors", 0, nullptr);
+
+#if USE(TEXTURE_MAPPER)
     updateTextureMapperFlags();
 #endif
 
@@ -3125,14 +3164,7 @@ void MediaPlayerPrivateGStreamer::configureVideoDecoder(GstElement* decoder)
     if (!isMediaStreamPlayer())
         return;
 
-    if (gstObjectHasProperty(decoder, "automatic-request-sync-points"))
-        g_object_set(decoder, "automatic-request-sync-points", TRUE, nullptr);
-    if (gstObjectHasProperty(decoder, "discard-corrupted-frames"))
-        g_object_set(decoder, "discard-corrupted-frames", TRUE, nullptr);
-    if (gstObjectHasProperty(decoder, "output-corrupt"))
-        g_object_set(decoder, "output-corrupt", FALSE, nullptr);
-    if (gstObjectHasProperty(decoder, "max-errors"))
-        g_object_set(decoder, "max-errors", -1, nullptr);
+    configureMediaStreamVideoDecoder(decoder);
 
     auto pad = adoptGRef(gst_element_get_static_pad(decoder, "src"));
     gst_pad_add_probe(pad.get(), static_cast<GstPadProbeType>(GST_PAD_PROBE_TYPE_QUERY_DOWNSTREAM | GST_PAD_PROBE_TYPE_BUFFER), [](GstPad*, GstPadProbeInfo* info, gpointer userData) -> GstPadProbeReturn {
@@ -3242,9 +3274,6 @@ PlatformLayer* MediaPlayerPrivateGStreamer::platformLayer() const
 #if USE(NICOSIA)
 void MediaPlayerPrivateGStreamer::swapBuffersIfNeeded()
 {
-#if USE(GSTREAMER_HOLEPUNCH)
-    pushNextHolePunchBuffer();
-#endif
 }
 #else
 RefPtr<TextureMapperPlatformLayerProxy> MediaPlayerPrivateGStreamer::proxy() const

@@ -26,6 +26,7 @@
 
 #include "CSSFontSelector.h"
 #include "CSSValueKeywords.h"
+#include "DocumentInlines.h"
 #include "Font.h"
 #include "FrameSelection.h"
 #include "HTMLNames.h"
@@ -158,7 +159,7 @@ void RenderTextControlSingleLine::layout()
             if (!inputElement().hasAutoFillStrongPasswordButton())
                 return nullptr;
 
-            CheckedPtr autoFillButtonElement = inputElement().autoFillButtonElement();
+            RefPtr autoFillButtonElement = inputElement().autoFillButtonElement();
             if (!autoFillButtonElement)
                 return nullptr;
 

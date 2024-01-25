@@ -41,7 +41,6 @@ struct ContentAlignmentData {
     WTF_MAKE_NONCOPYABLE(ContentAlignmentData); WTF_MAKE_FAST_ALLOCATED;
 public:
     ContentAlignmentData() = default;
-    bool isValid() const { return positionOffset >= 0 && distributionOffset >= 0; }
 
     LayoutUnit positionOffset;
     LayoutUnit distributionOffset;
@@ -76,6 +75,7 @@ public:
     LayoutUnit guttersSize(GridTrackSizingDirection, unsigned startLine, unsigned span, std::optional<LayoutUnit> availableSize) const;
     LayoutUnit gridItemOffset(GridTrackSizingDirection) const;
 
+    std::optional<LayoutUnit> explicitIntrinsicInnerLogicalSize(GridTrackSizingDirection) const;
     void updateGridAreaLogicalSize(RenderBox&, std::optional<LayoutUnit> width, std::optional<LayoutUnit> height) const;
     bool isBaselineAlignmentForChild(const RenderBox&) const;
     bool isBaselineAlignmentForChild(const RenderBox& child, GridAxis, AllowedBaseLine = AllowedBaseLine::BothLines) const;
@@ -128,6 +128,7 @@ public:
     LayoutUnit gridGap(GridTrackSizingDirection, std::optional<LayoutUnit> availableSize) const;
 
     LayoutUnit masonryContentSize() const;
+    Vector<LayoutRect> gridItemsLayoutRects();
 private:
     friend class GridTrackSizingAlgorithm;
     friend class GridMasonryLayout;
@@ -150,7 +151,6 @@ private:
     bool implicitGridLinesDefinitionDidChange(const RenderStyle&) const;
 
     bool shouldCheckExplicitIntrinsicInnerLogicalSize(GridTrackSizingDirection) const;
-    std::optional<LayoutUnit> explicitIntrinsicInnerLogicalSize(GridTrackSizingDirection) const;
     unsigned computeAutoRepeatTracksCount(GridTrackSizingDirection, std::optional<LayoutUnit> availableSize) const;
 
     unsigned clampAutoRepeatTracks(GridTrackSizingDirection, unsigned autoRepeatTracks) const;
@@ -274,7 +274,7 @@ private:
 
     mutable GridMasonryLayout m_masonryLayout;
 
-    typedef HashMap<const RenderBox*, std::optional<size_t>> OutOfFlowPositionsMap;
+    using OutOfFlowPositionsMap = HashMap<SingleThreadWeakRef<const RenderBox>, std::optional<size_t>>;
     OutOfFlowPositionsMap m_outOfFlowItemColumn;
     OutOfFlowPositionsMap m_outOfFlowItemRow;
 

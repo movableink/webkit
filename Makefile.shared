@@ -17,12 +17,11 @@ endif
 BUILD_GOAL = $(SCHEME)
 else
 USE_WORKSPACE =
-BUILD_WEBKIT_OPTIONS += --no-use-workspace
+BUILD_WEBKIT_BASE += --no-use-workspace
 BUILD_GOAL = $(notdir $(CURDIR))
 endif
 
-
-XCODE_OPTIONS = `perl -I$(SCRIPTS_PATH) -Mwebkitdirs -e 'print XcodeOptionString()' -- $(BUILD_WEBKIT_OPTIONS)` $(ARGS)
+XCODE_OPTIONS = $(ARGS)
 XCODE_OPTIONS += $(if $(GCC_PREPROCESSOR_ADDITIONS),GCC_PREPROCESSOR_DEFINITIONS='$(GCC_PREPROCESSOR_ADDITIONS) $$(inherited)')
 ifeq (ON,$(ENABLE_LLVM_PROFILE_GENERATION))
 	XCODE_OPTIONS += ENABLE_LLVM_PROFILE_GENERATION=ENABLE_LLVM_PROFILE_GENERATION
@@ -31,29 +30,27 @@ endif
 ifneq (,$(SDKROOT))
 	ifneq (,$(OVERRIDE_SDKROOT))
 		ifneq (default,$(OVERRIDE_SDKROOT))
-			XCODE_OPTIONS := $(XCODE_OPTIONS) SDKROOT=$(OVERRIDE_SDKROOT)
+			BUILD_WEBKIT_BASE := $(BUILD_WEBKIT_BASE) --sdk=$(OVERRIDE_SDKROOT)
 		endif
 		OVERRIDE_SDKROOT =
 	else
-		XCODE_OPTIONS := $(XCODE_OPTIONS) SDKROOT=$(SDKROOT)
+		BUILD_WEBKIT_BASE := $(BUILD_WEBKIT_BASE) --sdk=$(SDKROOT)
 	endif
 endif
 
 ifneq (,$(ARCHS))
 	ifneq (,$(OVERRIDE_ARCHS))
 		ifneq (default,$(OVERRIDE_ARCHS))
-			XCODE_OPTIONS := $(XCODE_OPTIONS) ARCHS="$(OVERRIDE_ARCHS)"
-			XCODE_OPTIONS += ONLY_ACTIVE_ARCH=NO
+			BUILD_WEBKIT_BASE := $(BUILD_WEBKIT_BASE) --architecture="$(OVERRIDE_ARCHS)"
 		endif
 		OVERRIDE_ARCHS =
 	else
-		XCODE_OPTIONS := $(XCODE_OPTIONS) ARCHS="$(ARCHS)"
-		XCODE_OPTIONS += ONLY_ACTIVE_ARCH=NO
+		BUILD_WEBKIT_BASE := $(BUILD_WEBKIT_BASE) --architecture="$(ARCHS)"
 	endif
 endif
 
-ifneq (,$(SDK_VARIANT))
-	XCODE_OPTIONS += SDK_VARIANT="$(SDK_VARIANT)"
+ifeq (iosmac,$(SDK_VARIANT))
+	BUILD_WEBKIT_BASE += --maccatalyst
 endif
 
 ifeq (, $(findstring WK_USE_CCACHE, $(ARGS)))
@@ -91,6 +88,16 @@ else
 ifeq ($(ASAN),NO)
 CONFIG_OPTIONS += --no-asan
 endif
+endif
+
+ifneq ($(CC),)
+ifneq ($(CC),cc)  # Default value without -R flag
+XCODE_OPTIONS += CC=$(CC)
+endif
+endif
+
+ifneq ($(CPLUSPLUS),)
+XCODE_OPTIONS += CPLUSPLUS=$(CPLUSPLUS)
 endif
 
 ifeq ($(LIBFUZZER),YES)
@@ -140,7 +147,8 @@ define invoke_xcode
 		echo; \
 		echo "===== BUILDING $(BUILD_GOAL) ====="; \
 		echo; \
-		$1 xcodebuild $2 $(OTHER_OPTIONS) $(XCODE_TARGET) $(XCODE_OPTIONS) $3 | $(OUTPUT_FILTER) && exit $${PIPESTATUS[0]} \
+		eval build_webkit_options=(`perl -I$(SCRIPTS_PATH) -Mwebkitdirs -e 'print XcodeOptionString()' -- $(BUILD_WEBKIT_BASE) $(BUILD_WEBKIT_OPTIONS)`); \
+		$1 xcodebuild $2 $(OTHER_OPTIONS) $(XCODE_TARGET) "$${build_webkit_options[@]}" $(XCODE_OPTIONS) $3 | $(OUTPUT_FILTER) && exit $${PIPESTATUS[0]} \
 	)
 endef
 

@@ -31,6 +31,7 @@
 #include "AXGeometryManager.h"
 #include "AXIsolatedTree.h"
 #include "AXLogger.h"
+#include "AXTextRun.h"
 
 #if PLATFORM(MAC)
 #import <pal/spi/mac/HIServicesSPI.h>
@@ -144,7 +145,6 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
     setProperty(AXPropertyName::SupportsDragging, object.supportsDragging());
     setProperty(AXPropertyName::SupportsPressAction, object.supportsPressAction());
     setProperty(AXPropertyName::IsGrabbed, object.isGrabbed());
-    setObjectProperty(AXPropertyName::TitleUIElement, object.titleUIElement());
     setProperty(AXPropertyName::PlaceholderValue, object.placeholderValue().isolatedCopy());
     setProperty(AXPropertyName::ExpandedTextValue, object.expandedTextValue().isolatedCopy());
     setProperty(AXPropertyName::SupportsExpandedTextValue, object.supportsExpandedTextValue());
@@ -464,6 +464,9 @@ void AXIsolatedObject::setProperty(AXPropertyName propertyName, AXPropertyValueV
         [](std::pair<AXID, CharacterRange>& typedValue) {
             return !typedValue.first.isValid() && !typedValue.second.location && !typedValue.second.length;
         },
+#if ENABLE(AX_THREAD_TEXT_APIS)
+        [](AXTextRuns& runs) { return !runs.size(); },
+#endif
         [](auto&) {
             ASSERT_NOT_REACHED();
             return false;
@@ -555,6 +558,19 @@ void AXIsolatedObject::setSelectedChildren(const AccessibilityChildrenVector& se
 
         object->setSelectedChildren(axObjectCache->objectsForIDs(selectedChildrenIDs));
     });
+}
+
+AXCoreObject* AXIsolatedObject::sibling(AXDirection direction) const
+{
+    RefPtr parent = parentObjectUnignored();
+    const auto& siblings = parent->children();
+    size_t indexOfThis = siblings.find(this);
+    if (indexOfThis == notFound)
+        return nullptr;
+
+    if (direction == AXDirection::Next)
+        return indexOfThis + 1 < siblings.size() ? siblings[indexOfThis + 1].get() : nullptr;
+    return indexOfThis > 0 ? siblings[indexOfThis - 1].get() : nullptr;
 }
 
 bool AXIsolatedObject::isDetachedFromParent()
@@ -971,6 +987,19 @@ int AXIsolatedObject::intAttributeValue(AXPropertyName propertyName) const
     );
 }
 
+#if ENABLE(AX_THREAD_TEXT_APIS)
+const AXTextRuns* AXIsolatedObject::textRuns() const
+{
+    auto entry = m_propertyMap.find(AXPropertyName::TextRuns);
+    if (entry == m_propertyMap.end())
+        return nullptr;
+    return WTF::switchOn(entry->value,
+        [] (const AXTextRuns& typedValue) -> const AXTextRuns* { return &typedValue; },
+        [] (auto&) -> const AXTextRuns* { return nullptr; }
+    );
+}
+#endif
+
 template<typename T>
 T AXIsolatedObject::getOrRetrievePropertyValue(AXPropertyName propertyName)
 {
@@ -984,15 +1013,6 @@ T AXIsolatedObject::getOrRetrievePropertyValue(AXPropertyName propertyName)
 
         AXPropertyValueVariant value;
         switch (propertyName) {
-        // FIXME: Once textUnderElement can be retrieved from the AX thread and/or is faster, cache this eagerly.
-        case AXPropertyName::AccessibilityText: {
-            Vector<AccessibilityText> texts;
-            axObject->accessibilityText(texts);
-            value = texts.map([] (const auto& text) -> AccessibilityText {
-                return { text.text.isolatedCopy(), text.textSource };
-            });
-            break;
-        }
         case AXPropertyName::InnerHTML:
             value = axObject->innerHTML().isolatedCopy();
             break;
@@ -1706,18 +1726,6 @@ bool AXIsolatedObject::isDescendantOfRole(AccessibilityRole) const
 {
     ASSERT_NOT_REACHED();
     return false;
-}
-
-AXCoreObject* AXIsolatedObject::correspondingLabelForControlElement() const
-{
-    ASSERT_NOT_REACHED();
-    return nullptr;
-}
-
-AXCoreObject* AXIsolatedObject::correspondingControlForLabelElement() const
-{
-    ASSERT_NOT_REACHED();
-    return nullptr;
 }
 
 bool AXIsolatedObject::inheritsPresentationalRole() const

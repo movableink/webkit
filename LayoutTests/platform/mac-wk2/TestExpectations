@@ -1086,8 +1086,6 @@ webkit.org/b/212413 fast/mediastream/mock-media-source-webaudio.html [ Pass Time
 
 webkit.org/b/212721 svg/custom/textPath-change-id.svg [ Pass ImageOnlyFailure ]
 
-webkit.org/b/212042 [ Debug ] fast/scrolling/mac/scrollbars/select-overlay-scrollbar-reveal.html [ Pass Timeout ]
-
 webkit.org/b/213461 fast/mediastream/mediastreamtrack-video-frameRate-clone-increasing.html [ Pass Failure ]
 
 webkit.org/b/213652 webrtc/video-autoplay1.html [ Pass Failure ]
@@ -1180,8 +1178,6 @@ webkit.org/b/230105 [ Monterey+ Debug arm64 ] imported/w3c/web-platform-tests/ht
 
 webkit.org/b/230691 [ Release ] imported/w3c/web-platform-tests/html/cross-origin-opener-policy/iframe-popup-unsafe-none-to-unsafe-none.https.html [ Pass Failure ]
 
-webkit.org/b/230113 [ Monterey+ Debug arm64 ] svg/animations/animate-elem-14-t-drt.html [ Pass Crash ]
-
 # rdar://66806059 (REGRESSION (20A2321a-20A2348b): 4 fast hidpi tests are a flaky image failure)
 [ arm64 ] fast/flexbox/hidpi-simple-line-layout-with-flexbox-and-transition.html [ ImageOnlyFailure ]
 [ arm64 ] fast/inline-block/hidpi-margin-top-with-subpixel-value-and-overflow-hidden.html [ ImageOnlyFailure ]
@@ -1203,9 +1199,6 @@ webkit.org/b/216292 imported/w3c/web-platform-tests/css/css-flexbox/quirks-auto-
 
 # App Bound Domains is for iOS only
 http/tests/resourceLoadStatistics/exemptDomains/ [ Skip ]
-
-# rdar://68947260 (REGRESSION (r266634): [ BigSur wk2 ] fast/selectors/text-field-selection-window-inactive-stroke-color.html is a flaky image failure)
-fast/selectors/text-field-selection-window-inactive-stroke-color.html [ Pass ImageOnlyFailure ]
 
 #<rdar://68952824> [ macOS iOS wk2 ] media/media-continues-playing-after-replace-source.html is a flaky failure
 [ Monterey+ ] media/media-continues-playing-after-replace-source.html [ Pass Failure ]
@@ -1410,8 +1403,6 @@ webkit.org/b/229237 inspector/canvas/recording-offscreen-canvas-2d-memoryLimit.h
 
 webkit.org/b/228210 [ Debug ] inspector/model/remote-object/iterator-large.html [ Pass Timeout ]
 
-webkit.org/b/228337 [ Release Debug arm64 ] fast/selectors/selection-window-inactive-stroke-color.html [ Pass ImageOnlyFailure ]
-
 webkit.org/b/228528 [ BigSur Debug arm64 ] fast/text/emoji-overlap.html [ Pass ImageOnlyFailure ]
 
 webkit.org/b/228591 fast/scrolling/mac/programmatic-scroll-overrides-rubberband.html [ Pass Failure ]
@@ -1429,7 +1420,7 @@ webkit.org/b/229166 webrtc/utf8-sdp.html [ Pass Failure ]
 #rdar://82032946 ([Mac wk2] webanimations/translate-property-and-translate-animation-with-delay-on-forced-layer.html is a flaky image-only fail)
 [ Monterey+ ] webanimations/translate-property-and-translate-animation-with-delay-on-forced-layer.html [ Pass Failure ]
 
-# webkit.org/b/228200 Setting multiple test expectations for Monetery on OpenSource:
+# webkit.org/b/228200 Setting multiple test expectations for Montery on OpenSource:
 [ Monterey Release ] platform/mac-wk2/plugins/asychronous-deadlock-with-timer-and-evaluate.html [ Pass Crash ]
 [ Monterey Release ] media/media-fragments/TC0004.html [ Pass Timeout ]
 
@@ -1771,8 +1762,6 @@ webkit.org/b/259403 [ x86_64 ] fast/canvas/webgl/texImage2D-video-flipY-false.ht
 
 webkit.org/b/259464 [ Monterey+ ] fast/events/wheel/redispatched-wheel-event.html [ Pass Failure ]
 
-webkit.org/b/259183 fast/attachment/mac/wide-attachment-image-controls-basic.html [ Pass Failure ]
-
 webkit.org/b/259708 fast/mediastream/video-rotation-gpu-process-crash.html [ Pass Crash Failure Timeout ]
 
 webkit.org/b/259740 [ Ventura Release arm64 ] css3/color-filters/color-filter-outline.html [ Pass ImageOnlyFailure ]
@@ -1846,14 +1835,6 @@ imported/w3c/web-platform-tests/fetch/api/abort/serviceworker-intercepted.https.
 # rdar://99153669 ([ iOS macOS ] 4X imported/w3c/web-platform-tests/html/cross-origin-opener-policy/(Layout tests) are flaky failures (244358))
 imported/w3c/web-platform-tests/html/cross-origin-opener-policy/iframe-popup-same-origin-allow-popups-to-unsafe-none.https.html [ Pass Crash ]
 
-# Failing after OS migration rdar://112624778 (Migrate macOS Sonoma test expectations to OpenSource, add expectation files to Down-Levels (259373))
-compositing/backing/inline-block-no-backing.html [ Pass Failure ]
-compositing/backing/whitespace-nodes-no-backing.html [ Pass Failure ]
-compositing/fixed-image-loading.html [ Pass Failure ]
-compositing/tiling/huge-layer-img.html [ Pass Failure ]
-compositing/visibility/visibility-image-layers-dynamic.html [ Pass Failure ]
-editing/input/caret-at-the-edge-of-contenteditable.html [ Pass ImageOnlyFailure Failure ]
-
 webkit.org/b/261005 swipe/pushState-cached-back-swipe.html [ Pass Failure Timeout ]
 
 webkit.org/b/227761 imported/w3c/web-platform-tests/beacon/beacon-cors.https.window.html [ Pass Failure ]
@@ -1897,8 +1878,7 @@ webkit.org/b/262411 [ Sonoma+ ] fast/scrolling/scroll-to-anchor-zoomed-header.ht
 # rdar://114452082 (REGRESSION (262124@main?): [ Sonoma wk2 ] imported/w3c/web-platform-tests/mimesniff/media/media-sniff.window.html is a consistent failure)
 [ Sonoma+ ] imported/w3c/web-platform-tests/mimesniff/media/media-sniff.window.html [ Failure ]
 
-# rdar://114294654 (REGRESSION (265615@main): [ Sonoma ] fast/attachment/cocoa/wide-attachment-rendering.html is a constant failure)
-[ Sonoma+ ] fast/attachment/cocoa/wide-attachment-rendering.html [ Failure ]
+[ Monterey Ventura ] media/media-vp8-webm.html [ ImageOnlyFailure ] # Missing AVSampleBufferDisplayLayer's ReadyForDisplayDidChangeNotification
 
 webkit.org/b/263049 [ Sonoma+ ] fast/forms/scroll-into-view-and-show-validation-message.html [ Pass Failure ]
 
@@ -1914,6 +1894,9 @@ webkit.org/b/263396 css3/color/text.html [ Skip ]
 webkit.org/b/263754 [ Sonoma+ x86_64 ] css3/filters/effect-drop-shadow-clip-abspos.html [ ImageOnlyFailure ]
 
 # WebGPU
+http/tests/webgpu/webgpu/idl/constructable.html [ Pass ]
+http/tests/webgpu/webgpu/idl/constants/flags.html [ Pass ]
+
 http/tests/webgpu/webgpu/api/operation/compute_pipeline/overrides.html [ Pass ]
 http/tests/webgpu/webgpu/api/operation/device/lost.html [ Pass ]
 http/tests/webgpu/webgpu/api/operation/rendering/stencil.html [ Pass ]
@@ -1947,8 +1930,6 @@ webkit.org/b/264362 [ Sonoma+ ] fast/rendering/render-style-null-optgroup-crash.
 
 webkit.org/b/265414 [ Monterey+ ] imported/w3c/web-platform-tests/accname/name/comp_host_language_label.html [ Failure ]
 
-webkit.org/b/260225 [ Monterey+ x86_64 ] imported/w3c/web-platform-tests/webrtc/RTCPeerConnection-GC.https.html [ Pass Failure ]
-
 # rdar://118901410 (NEW TEST (271087@main): [ macOS x86_64 wk2 ] 2 tests in http/wpt/webcodecs are a constant failure)
 http/wpt/webcodecs/h264-encoder-default-config.https.any.html [ Failure ]
 http/wpt/webcodecs/h264-encoder-default-config.https.any.worker.html [ Failure ]
@@ -1960,23 +1941,34 @@ http/wpt/opener/child-access-parent-via-windowproxy.html [ Pass ]
 http/wpt/opener/iframe-access-top-via-windowproxy.html [ Pass ]
 http/wpt/opener/parent-access-child-via-windowproxy.html [ Pass ]
 
-# rdar://119272478 (REGRESSION ( Sonoma?): [ Sonoma Release wk2 ] 3 tests in fast/attachment are a flaky failure with image diff)
-[ Sonoma+ Release ] fast/attachment/attachment-folder-icon.html [ Pass Failure ]
-[ Sonoma+ Release ] fast/attachment/attachment-type-attribute.html [ Pass Failure ]
-[ Sonoma+ Release ] fast/attachment/attachment-default-icon.html [ Pass Failure ]
-
 webkit.org/b/265957 [ Release ] fullscreen/full-screen-layer-dump.html [ Pass Failure ]
 
 # rdar://102425691 ([ New Test ](256068@main): [ Ventura+ ] http/wpt/webcodecs/videoFrame-colorSpace.html is a consistent failure)
 [ Ventura+ ] http/wpt/webcodecs/videoFrame-colorSpace.html [ Pass Failure ]
 
-webkit.org/b/265954 [ Ventura+ Release x86_64 ] media/video-audio-session-mode.html [ Pass Crash ]
+webkit.org/b/265954 [ Ventura+ Release x86_64 ] media/video-audio-session-mode.html [ Failure Crash ]
 
 webkit.org/b/266490 [ Sonoma+ ] fast/scrolling/overlay-scrollbars-scroll-corner.html [ Pass ImageOnlyFailure ]
-
-webkit.org/b/266508 [ Monterey+ Release x86_64 ] fast/selectors/selection-window-inactive-stroke-color.html [ ImageOnlyFailure ]
 
 # rdar://119828743 (REGRESSION (263917@main?): [ Sonoma Debug wk2 x86_64 ] 3 tests in inspector/timeline are flaky crash with ASSERTION FAILED in void WebCore::InspectorTimelineAgent::didCompleteCurrentRecord(TimelineRecordType)
 [ Sonoma+ Debug x86_64 ] inspector/timeline/timeline-event-TimerInstall.html [ Pass Crash ]
 [ Sonoma+ Debug x86_64 ] inspector/timeline/timeline-event-TimerRemove.html [ Pass Crash ]
 [ Sonoma+ Debug x86_64 ] inspector/timeline/timeline-event-TimerFire.html [ Pass Crash ]
+
+webkit.org/b/267384 [ Sonoma+ ] fast/selectors/text-field-selection-window-inactive-stroke-color.html [ Pass ImageOnlyFailure ]
+
+webkit.org/b/267670 [ Sonoma+ ] imported/w3c/web-platform-tests/css/css-position/fixed-z-index-blend.html [ Pass ImageOnlyFailure ]
+
+webkit.org/b/267778 [ Sonoma+ Release ] fast/forms/listbox-padding-clip-selected.html [  Pass ImageOnlyFailure ]
+
+webkit.org/b/267880 [ Sonoma+ ] fast/scrolling/mac/scrollbars/select-overlay-scrollbar-reveal.html [ Pass Timeout ]
+
+webkit.org/b/267885 [ Sonoma+ Release ] fast/scrolling/rtl-scrollbars-overlay-no-push-contents.html [ Pass ImageOnlyFailure ]
+
+webkit.org/b/267891 [ Sonoma+ Release ] fast/css/nested-table-with-collapsed-borders.html [ Pass ImageOnlyFailure ]
+
+webkit.org/b/267796 [ Monterey+ Release ] imported/w3c/web-platform-tests/requestidlecallback/deadline-max-rAF-dynamic.html [ Pass Failure ]
+
+webkit.org/b/267953 [ Monterey+ ] http/wpt/webrtc/video-script-transform.html [ Pass Failure ]
+
+webkit.org/b/268018 [ Sonoma+ Release ] fast/images/text-recognition/mac/select-word-in-transparent-image-overlay.html [ Pass ImageOnlyFailure ]

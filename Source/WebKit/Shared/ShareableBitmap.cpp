@@ -102,9 +102,14 @@ RefPtr<ShareableBitmap> ShareableBitmap::create(const ShareableBitmapConfigurati
 
 RefPtr<ShareableBitmap> ShareableBitmap::createFromImageDraw(NativeImage& image)
 {
+    return createFromImageDraw(image, image.colorSpace());
+}
+
+RefPtr<ShareableBitmap> ShareableBitmap::createFromImageDraw(NativeImage& image, const DestinationColorSpace& colorSpace)
+{
     auto imageSize = image.size();
 
-    auto bitmap = ShareableBitmap::create({ imageSize, image.colorSpace() });
+    auto bitmap = ShareableBitmap::create({ imageSize, colorSpace });
     if (!bitmap)
         return nullptr;
 
@@ -112,7 +117,7 @@ RefPtr<ShareableBitmap> ShareableBitmap::createFromImageDraw(NativeImage& image)
     if (!context)
         return nullptr;
 
-    context->drawNativeImage(image, imageSize, FloatRect({ }, imageSize), FloatRect({ }, imageSize), { CompositeOperator::Copy });
+    context->drawNativeImage(image, FloatRect({ }, imageSize), FloatRect({ }, imageSize), { CompositeOperator::Copy });
     return bitmap;
 }
 

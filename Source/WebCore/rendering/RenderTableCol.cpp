@@ -46,7 +46,7 @@ using namespace HTMLNames;
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderTableCol);
 
 RenderTableCol::RenderTableCol(Element& element, RenderStyle&& style)
-    : RenderBox(Type::TableCol, element, WTFMove(style), { })
+    : RenderBox(Type::TableCol, element, WTFMove(style))
 {
     // init RenderObject attributes
     setInline(true); // our object is not Inline
@@ -55,7 +55,7 @@ RenderTableCol::RenderTableCol(Element& element, RenderStyle&& style)
 }
 
 RenderTableCol::RenderTableCol(Document& document, RenderStyle&& style)
-    : RenderBox(Type::TableCol, document, WTFMove(style), { })
+    : RenderBox(Type::TableCol, document, WTFMove(style))
 {
     setInline(true);
     ASSERT(isRenderTableCol());
@@ -176,13 +176,13 @@ RenderTable* RenderTableCol::table() const
 
 RenderTableCol* RenderTableCol::enclosingColumnGroup() const
 {
-    if (!is<RenderTableCol>(*parent()))
+    auto* parentColumnGroup = dynamicDowncast<RenderTableCol>(*parent());
+    if (!parentColumnGroup)
         return nullptr;
 
-    RenderTableCol& parentColumnGroup = downcast<RenderTableCol>(*parent());
-    ASSERT(parentColumnGroup.isTableColumnGroup());
+    ASSERT(parentColumnGroup->isTableColumnGroup());
     ASSERT(isTableColumn());
-    return &parentColumnGroup;
+    return parentColumnGroup;
 }
 
 RenderTableCol* RenderTableCol::nextColumn() const
@@ -198,9 +198,12 @@ RenderTableCol* RenderTableCol::nextColumn() const
     if (!next && is<RenderTableCol>(*parent()))
         next = parent()->nextSibling();
 
-    for (; next && !is<RenderTableCol>(*next); next = next->nextSibling()) { }
+    for (; next; next = next->nextSibling()) {
+        if (auto* column = dynamicDowncast<RenderTableCol>(*next))
+            return column;
+    }
 
-    return downcast<RenderTableCol>(next);
+    return nullptr;
 }
 
 const BorderValue& RenderTableCol::borderAdjoiningCellStartBorder() const

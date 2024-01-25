@@ -205,7 +205,6 @@ list(APPEND WebCore_SOURCES
     platform/cf/KeyedEncoderCF.cpp
     platform/cf/MainThreadSharedTimerCF.cpp
     platform/cf/MediaAccessibilitySoftLink.cpp
-    platform/cf/RunLoopObserver.cpp
     platform/cf/SharedBufferCF.cpp
 
     platform/cocoa/ContentFilterUnblockHandlerCocoa.mm
@@ -244,6 +243,7 @@ list(APPEND WebCore_SOURCES
     platform/graphics/avfoundation/MediaPlaybackTargetCocoa.mm
     platform/graphics/avfoundation/MediaPlayerPrivateAVFoundation.cpp
     platform/graphics/avfoundation/MediaSelectionGroupAVFObjC.mm
+    platform/graphics/avfoundation/WebAVSampleBufferListener.mm
 
     platform/graphics/avfoundation/objc/AVAssetTrackUtilities.mm
     platform/graphics/avfoundation/objc/AudioTrackPrivateAVFObjC.mm
@@ -251,7 +251,6 @@ list(APPEND WebCore_SOURCES
     platform/graphics/avfoundation/objc/CDMInstanceFairPlayStreamingAVFObjC.mm
     platform/graphics/avfoundation/objc/CDMSessionAVContentKeySession.mm
     platform/graphics/avfoundation/objc/CDMSessionAVFoundationObjC.mm
-    platform/graphics/avfoundation/objc/CDMSessionAVStreamSession.mm
     platform/graphics/avfoundation/objc/CDMSessionMediaSourceAVFObjC.mm
     platform/graphics/avfoundation/objc/ImageDecoderAVFObjC.mm
     platform/graphics/avfoundation/objc/InbandTextTrackPrivateAVFObjC.mm
@@ -592,7 +591,6 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/audio/mac/SharedRoutingArbitrator.h
 
     platform/cf/MediaAccessibilitySoftLink.h
-    platform/cf/RunLoopObserver.h
 
     platform/cocoa/AGXCompilerService.h
     platform/cocoa/CoreVideoSoftLink.h
@@ -607,8 +605,6 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/cocoa/SharedVideoFrameInfo.h
     platform/cocoa/SystemBattery.h
     platform/cocoa/SystemVersion.h
-    platform/cocoa/VideoFullscreenModel.h
-    platform/cocoa/VideoFullscreenModelVideoElement.h
 
     platform/gamepad/cocoa/GameControllerGamepadProvider.h
 
@@ -657,7 +653,6 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/cg/IOSurfacePool.h
     platform/graphics/cg/ImageBufferCGBackend.h
     platform/graphics/cg/ImageBufferCGBitmapBackend.h
-    platform/graphics/cg/ImageBufferIOSurface.h
     platform/graphics/cg/ImageBufferIOSurfaceBackend.h
     platform/graphics/cg/ImageBufferUtilitiesCG.h
     platform/graphics/cg/PDFDocumentImage.h
@@ -708,7 +703,6 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/mac/PasteboardWriter.h
     platform/mac/PlatformEventFactoryMac.h
     platform/mac/PlaybackSessionInterfaceMac.h
-    platform/mac/PluginBlocklist.h
     platform/mac/PowerObserverMac.h
     platform/mac/RevealUtilities.h
     platform/mac/SerializedPlatformDataCueMac.h
@@ -721,7 +715,6 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/mac/WebCoreNSURLExtras.h
     platform/mac/WebCoreObjCExtras.h
     platform/mac/WebCoreView.h
-    platform/mac/WebGLBlocklist.h
     platform/mac/WebNSAttributedStringExtras.h
     platform/mac/WebPlaybackControlsManager.h
 
@@ -785,6 +778,7 @@ list(APPEND WebCore_IDL_FILES
     Modules/applepay/ApplePayInstallmentItemType.idl
     Modules/applepay/ApplePayInstallmentConfiguration.idl
     Modules/applepay/ApplePayInstallmentRetailChannel.idl
+    Modules/applepay/ApplePayLaterAvailability.idl
     Modules/applepay/ApplePayLineItem.idl
     Modules/applepay/ApplePayMerchantCapability.idl
     Modules/applepay/ApplePayPayment.idl

@@ -99,9 +99,9 @@ private:
 };
 
 class ShareableBitmapHandle  {
-    WTF_MAKE_NONCOPYABLE(ShareableBitmapHandle);
 public:
     ShareableBitmapHandle(ShareableBitmapHandle&&) = default;
+    explicit ShareableBitmapHandle(const ShareableBitmapHandle&) = default;
     ShareableBitmapHandle(SharedMemory::Handle&&, const ShareableBitmapConfiguration&);
 
     ShareableBitmapHandle& operator=(ShareableBitmapHandle&&) = default;
@@ -110,6 +110,8 @@ public:
 
     // Take ownership of the memory for process memory accounting purposes.
     void takeOwnershipOfMemory(MemoryLedger) const;
+    // Transfer ownership of the memory for process memory accounting purposes.
+    void setOwnershipOfMemory(const WebCore::ProcessIdentity&, MemoryLedger) const;
 
 private:
     friend struct IPC::ArgumentCoder<ShareableBitmapHandle, void>;
@@ -134,6 +136,7 @@ public:
     static RefPtr<ShareableBitmap> createFromImagePixels(WebCore::NativeImage&);
 #endif
     static RefPtr<ShareableBitmap> createFromImageDraw(WebCore::NativeImage&);
+    static RefPtr<ShareableBitmap> createFromImageDraw(WebCore::NativeImage&, const WebCore::DestinationColorSpace&);
 
     // Create a shareable bitmap from a handle.
     static RefPtr<ShareableBitmap> create(Handle&&, SharedMemory::Protection = SharedMemory::Protection::ReadWrite);
@@ -145,6 +148,8 @@ public:
     
     // Create a ReadOnly handle.
     std::optional<Handle> createReadOnlyHandle() const;
+
+    void setOwnershipOfMemory(const WebCore::ProcessIdentity&);
 
     WebCore::IntSize size() const { return m_configuration.size(); }
     WebCore::IntRect bounds() const { return WebCore::IntRect(WebCore::IntPoint(), size()); }
@@ -199,12 +204,12 @@ private:
     static void releaseSurfaceData(void* typelessBitmap);
 #endif
 
-#if USE(CG)
-    bool m_releaseBitmapContextDataCalled { false };
-#endif
-
     ShareableBitmapConfiguration m_configuration;
     Ref<SharedMemory> m_sharedMemory;
+#if USE(CG)
+    std::optional<SharedMemoryHandle> m_ownershipHandle;
+    bool m_releaseBitmapContextDataCalled : 1 { false };
+#endif
 };
 
 } // namespace WebKit

@@ -58,6 +58,7 @@ Ref<RenderPassEncoder> CommandEncoderImpl::beginRenderPass(const RenderPassDescr
             colorAttachments.append(WGPURenderPassColorAttachment {
                 .nextInChain = nullptr,
                 .view = m_convertToBackingContext->convertToBacking(colorAttachment->view),
+                .depthSlice = colorAttachment->depthSlice,
                 .resolveTarget = colorAttachment->resolveTarget ? m_convertToBackingContext->convertToBacking(*colorAttachment->resolveTarget) : nullptr,
                 .loadOp = m_convertToBackingContext->convertToBacking(colorAttachment->loadOp),
                 .storeOp = m_convertToBackingContext->convertToBacking(colorAttachment->storeOp),
@@ -67,6 +68,7 @@ Ref<RenderPassEncoder> CommandEncoderImpl::beginRenderPass(const RenderPassDescr
             colorAttachments.append(WGPURenderPassColorAttachment {
                 .nextInChain = nullptr,
                 .view = nullptr,
+                .depthSlice = std::nullopt,
                 .resolveTarget = nullptr,
                 .loadOp = WGPULoadOp_Clear,
                 .storeOp = WGPUStoreOp_Discard,
@@ -77,15 +79,15 @@ Ref<RenderPassEncoder> CommandEncoderImpl::beginRenderPass(const RenderPassDescr
     std::optional<WGPURenderPassDepthStencilAttachment> depthStencilAttachment;
     if (descriptor.depthStencilAttachment) {
         depthStencilAttachment = WGPURenderPassDepthStencilAttachment {
-            m_convertToBackingContext->convertToBacking(descriptor.depthStencilAttachment->view),
-            descriptor.depthStencilAttachment->depthLoadOp ? m_convertToBackingContext->convertToBacking(*descriptor.depthStencilAttachment->depthLoadOp) : WGPULoadOp_Clear,
-            descriptor.depthStencilAttachment->depthStoreOp ? m_convertToBackingContext->convertToBacking(*descriptor.depthStencilAttachment->depthStoreOp) : WGPUStoreOp_Discard,
-            descriptor.depthStencilAttachment->depthClearValue,
-            descriptor.depthStencilAttachment->depthReadOnly,
-            descriptor.depthStencilAttachment->stencilLoadOp ? m_convertToBackingContext->convertToBacking(*descriptor.depthStencilAttachment->stencilLoadOp) : WGPULoadOp_Clear,
-            descriptor.depthStencilAttachment->stencilStoreOp ? m_convertToBackingContext->convertToBacking(*descriptor.depthStencilAttachment->stencilStoreOp) : WGPUStoreOp_Discard,
-            descriptor.depthStencilAttachment->stencilClearValue,
-            descriptor.depthStencilAttachment->stencilReadOnly,
+            .view = m_convertToBackingContext->convertToBacking(descriptor.depthStencilAttachment->view),
+            .depthLoadOp = descriptor.depthStencilAttachment->depthLoadOp ? m_convertToBackingContext->convertToBacking(*descriptor.depthStencilAttachment->depthLoadOp) : WGPULoadOp_Undefined,
+            .depthStoreOp = descriptor.depthStencilAttachment->depthStoreOp ? m_convertToBackingContext->convertToBacking(*descriptor.depthStencilAttachment->depthStoreOp) : WGPUStoreOp_Undefined,
+            .depthClearValue = descriptor.depthStencilAttachment->depthClearValue,
+            .depthReadOnly = descriptor.depthStencilAttachment->depthReadOnly,
+            .stencilLoadOp = descriptor.depthStencilAttachment->stencilLoadOp ? m_convertToBackingContext->convertToBacking(*descriptor.depthStencilAttachment->stencilLoadOp) : WGPULoadOp_Undefined,
+            .stencilStoreOp = descriptor.depthStencilAttachment->stencilStoreOp ? m_convertToBackingContext->convertToBacking(*descriptor.depthStencilAttachment->stencilStoreOp) : WGPUStoreOp_Undefined,
+            .stencilClearValue = descriptor.depthStencilAttachment->stencilClearValue,
+            .stencilReadOnly = descriptor.depthStencilAttachment->stencilReadOnly,
         };
     }
 

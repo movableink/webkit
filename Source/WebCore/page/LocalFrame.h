@@ -147,7 +147,7 @@ public:
 
     Editor& editor() { return document()->editor(); }
     const Editor& editor() const { return document()->editor(); }
-    CheckedRef<Editor> checkedEditor();
+    WEBCORE_EXPORT CheckedRef<Editor> checkedEditor();
     CheckedRef<const Editor> checkedEditor() const;
 
     EventHandler& eventHandler() { return m_eventHandler; }
@@ -162,6 +162,7 @@ public:
 
     FrameSelection& selection() { return document()->selection(); }
     const FrameSelection& selection() const { return document()->selection(); }
+    CheckedRef<FrameSelection> checkedSelection() const;
     ScriptController& script() { return m_script; }
     const ScriptController& script() const { return m_script; }
     CheckedRef<ScriptController> checkedScript();
@@ -306,6 +307,8 @@ public:
     void didAccessWindowProxyPropertyViaOpener(WindowProxyProperty);
 #endif
 
+    WEBCORE_EXPORT RefPtr<DocumentLoader> loaderForWebsitePolicies() const;
+
 protected:
     void frameWasDisconnectedFromOwner() const final;
 
@@ -328,6 +331,7 @@ private:
     void setOpener(Frame*) final;
     const Frame* opener() const final;
     Frame* opener();
+    FrameLoaderClient& loaderClient() final;
 
     WeakHashSet<FrameDestructionObserver> m_destructionObservers;
 

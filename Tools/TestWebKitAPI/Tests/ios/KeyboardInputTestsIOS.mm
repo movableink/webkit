@@ -665,6 +665,26 @@ TEST(KeyboardInputTests, OverrideTextInputTraits)
     EXPECT_EQ(keyboardType, [webView effectiveTextInputTraits].keyboardType);
 }
 
+TEST(KeyboardInputTests, ClearSelectedTextRange)
+{
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500)]);
+    auto inputDelegate = adoptNS([[TestInputDelegate alloc] init]);
+    [inputDelegate setFocusStartsInputSessionPolicyHandler:[&] (WKWebView *, id<_WKFocusedElementInfo>) -> _WKFocusStartsInputSessionPolicy {
+        return _WKFocusStartsInputSessionPolicyAllow;
+    }];
+
+    [webView _setInputDelegate:inputDelegate.get()];
+    [webView synchronouslyLoadHTMLString:@"<input id='textField' value='hello' />"];
+    [webView evaluateJavaScriptAndWaitForInputSessionToChange:@"textField.focus()"];
+    [webView objectByEvaluatingJavaScript:@"textField.select()"];
+    auto selectedTextBeforeClearing = [webView selectedText];
+    EXPECT_WK_STREQ(selectedTextBeforeClearing, "hello");
+
+    [webView textInputContentView].selectedTextRange = nil;
+    auto selectedTextAfterClearing = [webView selectedText];
+    EXPECT_WK_STREQ(selectedTextAfterClearing, "");
+}
+
 TEST(KeyboardInputTests, DisableSpellChecking)
 {
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500)]);
@@ -1112,6 +1132,56 @@ TEST(KeyboardInputTests, MarkedTextSegmentsWithUnderlines)
         }
     }
     EXPECT_GT(numberOfDifferentPixels, 0U);
+}
+
+TEST(KeyboardInputTests, HasTextAfterFocusingTextField)
+{
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 600)]);
+
+    enum class HasText : bool { No, Yes };
+    __block Vector<std::pair<WKInputType, HasText>, 3> results;
+    __block bool doneWaitingForInputSession = false;
+
+    auto inputDelegate = adoptNS([[TestInputDelegate alloc] init]);
+    [inputDelegate setDidStartInputSessionHandler:^(WKWebView *webView, id<_WKFormInputSession> session) {
+        results.append({
+            session.focusedElementInfo.type,
+            webView.textInputContentView.hasText ? HasText::Yes : HasText::No
+        });
+        doneWaitingForInputSession = true;
+    }];
+
+    [inputDelegate setFocusStartsInputSessionPolicyHandler:^(WKWebView *, id<_WKFocusedElementInfo>) {
+        return _WKFocusStartsInputSessionPolicyAllow;
+    }];
+    [webView _setInputDelegate:inputDelegate.get()];
+    [webView synchronouslyLoadHTMLString:@"<!DOCTYPE html>"
+        "<html>"
+        "<meta name='viewport' content='width=device-width'>"
+        "<body>"
+        "  <input id='emailField' type='email' value='foo@bar.com'>"
+        "  <input id='passwordField' type='password'>"
+        "  <div id='richTextEditor' contentEditable='true'><span>Hello world</span></div>"
+        "</body>"
+        "</html>"];
+
+    auto waitForInputSessionAfterFocusing = ^(NSString *elementID) {
+        doneWaitingForInputSession = false;
+        [webView objectByEvaluatingJavaScript:[NSString stringWithFormat:@"%@.focus()", elementID]];
+        Util::run(&doneWaitingForInputSession);
+    };
+
+    waitForInputSessionAfterFocusing(@"emailField");
+    waitForInputSessionAfterFocusing(@"passwordField");
+    waitForInputSessionAfterFocusing(@"richTextEditor");
+
+    EXPECT_EQ(results.size(), 3U);
+    EXPECT_EQ(results[0].first, WKInputTypeEmail);
+    EXPECT_EQ(results[0].second, HasText::Yes);
+    EXPECT_EQ(results[1].first, WKInputTypePassword);
+    EXPECT_EQ(results[1].second, HasText::No);
+    EXPECT_EQ(results[2].first, WKInputTypeContentEditable);
+    EXPECT_EQ(results[2].second, HasText::Yes);
 }
 
 #if HAVE(AUTOCORRECTION_ENHANCEMENTS)

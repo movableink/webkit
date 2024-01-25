@@ -184,7 +184,8 @@ void WebLockManager::request(const String& name, Options&& options, Ref<WebLockG
         return;
     }
     auto& context = *scriptExecutionContext();
-    if ((is<Document>(context) && !downcast<Document>(context).isFullyActive())) {
+    auto* document = dynamicDowncast<Document>(context);
+    if (document && !document->isFullyActive()) {
         releasePromise->reject(ExceptionCode::InvalidStateError, "Responsible document is not fully active"_s);
         return;
     }
@@ -196,6 +197,11 @@ void WebLockManager::request(const String& name, Options&& options, Ref<WebLockG
 
     if (name.startsWith('-')) {
         releasePromise->reject(ExceptionCode::NotSupportedError, "Lock name cannot start with '-'"_s);
+        return;
+    }
+
+    if (name.length() > WebLock::maxNameLength) {
+        releasePromise->reject(ExceptionCode::NotSupportedError, makeString("Lock name cannot cannot be longer than "_s, WebLock::maxNameLength, " characters"));
         return;
     }
 
@@ -287,7 +293,8 @@ void WebLockManager::query(Ref<DeferredPromise>&& promise)
         return;
     }
     auto& context = *scriptExecutionContext();
-    if ((is<Document>(context) && !downcast<Document>(context).isFullyActive())) {
+    auto* document = dynamicDowncast<Document>(context);
+    if (document && !document->isFullyActive()) {
         promise->reject(ExceptionCode::InvalidStateError, "Responsible document is not fully active"_s);
         return;
     }

@@ -35,7 +35,6 @@
 #include "DiagnosticLoggingClient.h"
 #include "DiagnosticLoggingKeys.h"
 #include "Document.h"
-#include "EXTBlendFuncExtended.h"
 #include "EXTBlendMinMax.h"
 #include "EXTClipControl.h"
 #include "EXTColorBufferFloat.h"
@@ -99,6 +98,7 @@
 #include "WebCoreOpaqueRootInlines.h"
 #include "WebGL2RenderingContext.h"
 #include "WebGLActiveInfo.h"
+#include "WebGLBlendFuncExtended.h"
 #include "WebGLBuffer.h"
 #include "WebGLClipCullDistance.h"
 #include "WebGLColorBufferFloat.h"
@@ -475,7 +475,7 @@ WebGLRenderingContextBase::WebGLRenderingContextBase(CanvasBase& canvas, WebGLCo
     : GPUBasedCanvasRenderingContext(canvas)
     , m_generatedImageCache(4)
     , m_attributes(WTFMove(attributes))
-    , m_creationAttributes(attributes)
+    , m_creationAttributes(m_attributes)
     , m_numGLErrorsToConsoleAllowed(canvas.scriptExecutionContext()->settingsValues().webGLErrorsToConsoleEnabled ? maxGLErrorsAllowedToConsole : 0)
 {
 }
@@ -715,7 +715,7 @@ void WebGLRenderingContextBase::markContextChangedAndNotifyCanvasObserver(WebGLR
 
     if (m_canvasBufferContents.has_value()) {
         m_canvasBufferContents = std::nullopt;
-        canvasBase().didDraw(FloatRect(FloatPoint(0, 0), clampedCanvasSize()));
+        canvasBase().didDraw(FloatRect(FloatPoint(0, 0), clampedCanvasSize()), ShouldApplyPostProcessingToDirtyRect::No);
     }
 }
 
@@ -1385,7 +1385,7 @@ bool WebGLRenderingContextBase::deleteObject(const AbstractLocker& locker, WebGL
     if (object->object())
         // We need to pass in context here because we want
         // things in this context unbound.
-        object->deleteObject(locker, graphicsContextGL());
+        object->deleteObject(locker, protectedGraphicsContextGL().get());
     return true;
 }
 
@@ -1535,7 +1535,7 @@ void WebGLRenderingContextBase::detachShader(WebGLProgram& program, WebGLShader&
         return;
     }
     m_context->detachShader(program.object(), shader.object());
-    shader.onDetached(locker, graphicsContextGL());
+    shader.onDetached(locker, protectedGraphicsContextGL().get());
 }
 
 void WebGLRenderingContextBase::disable(GCGLenum cap)
@@ -2141,10 +2141,10 @@ WebGLAny WebGLRenderingContextBase::getParameter(GCGLenum pname)
             return getUnsignedIntParameter(pname);
         synthesizeGLError(GraphicsContextGL::INVALID_ENUM, "getParameter", "invalid parameter name, EXT_clip_control not enabled");
         return nullptr;
-    case GraphicsContextGL::MAX_DUAL_SOURCE_DRAW_BUFFERS_EXT: // EXT_blend_func_extended
-        if (m_extBlendFuncExtended)
+    case GraphicsContextGL::MAX_DUAL_SOURCE_DRAW_BUFFERS_EXT: // WEBGL_blend_func_extended
+        if (m_webglBlendFuncExtended)
             return getUnsignedIntParameter(pname);
-        synthesizeGLError(GraphicsContextGL::INVALID_ENUM, "getParameter", "invalid parameter name, EXT_blend_func_extended not enabled");
+        synthesizeGLError(GraphicsContextGL::INVALID_ENUM, "getParameter", "invalid parameter name, WEBGL_blend_func_extended not enabled");
         return nullptr;
     case GraphicsContextGL::MAX_COLOR_ATTACHMENTS_EXT: // EXT_draw_buffers BEGIN
         if (m_webglDrawBuffers || isWebGL2())
@@ -2694,7 +2694,6 @@ bool WebGLRenderingContextBase::extensionIsEnabled(const String& name)
         return variable != nullptr;
 
     CHECK_EXTENSION(m_angleInstancedArrays, "ANGLE_instanced_arrays");
-    CHECK_EXTENSION(m_extBlendFuncExtended, "EXT_blend_func_extended");
     CHECK_EXTENSION(m_extBlendMinMax, "EXT_blend_minmax");
     CHECK_EXTENSION(m_extClipControl, "EXT_clip_control");
     CHECK_EXTENSION(m_extColorBufferFloat, "EXT_color_buffer_float");
@@ -2727,6 +2726,7 @@ bool WebGLRenderingContextBase::extensionIsEnabled(const String& name)
     CHECK_EXTENSION(m_oesTextureHalfFloat, "OES_texture_half_float");
     CHECK_EXTENSION(m_oesTextureHalfFloatLinear, "OES_texture_half_float_linear");
     CHECK_EXTENSION(m_oesVertexArrayObject, "OES_vertex_array_object");
+    CHECK_EXTENSION(m_webglBlendFuncExtended, "WEBGL_blend_func_extended");
     CHECK_EXTENSION(m_webglClipCullDistance, "WEBGL_clip_cull_distance");
     CHECK_EXTENSION(m_webglColorBufferFloat, "WEBGL_color_buffer_float");
     CHECK_EXTENSION(m_webglCompressedTextureASTC, "WEBGL_compressed_texture_astc");
@@ -4225,13 +4225,13 @@ RefPtr<Image> WebGLRenderingContextBase::videoFrameToImage(HTMLVideoElement& vid
             synthesizeGLError(GraphicsContextGL::INVALID_VALUE, functionName, "video visible size is empty");
             return nullptr;
         }
-        FloatRect imageRect { { }, imageSize };
         imageBuffer = m_generatedImageCache.imageBuffer(imageSize, nativeImage->colorSpace(), CompositeOperator::Copy);
         if (!imageBuffer) {
             synthesizeGLError(GraphicsContextGL::OUT_OF_MEMORY, functionName, "out of memory");
             return nullptr;
         }
-        imageBuffer->context().drawNativeImage(*nativeImage, imageRect.size(), imageRect, imageRect, { CompositeOperator::Copy });
+        FloatRect imageRect { { }, imageSize };
+        imageBuffer->context().drawNativeImage(*nativeImage, imageRect, imageRect, { CompositeOperator::Copy });
     }
 #endif
     if (!imageBuffer) {
@@ -4544,7 +4544,7 @@ void WebGLRenderingContextBase::useProgram(WebGLProgram* program)
 
     if (m_currentProgram != program) {
         if (m_currentProgram)
-            m_currentProgram->onDetached(locker, graphicsContextGL());
+            m_currentProgram->onDetached(locker, protectedGraphicsContextGL().get());
         m_currentProgram = program;
         m_context->useProgram(objectOrZero(program));
         if (program)
@@ -5577,7 +5577,6 @@ template<typename T> void loseExtension(RefPtr<T> extension)
 void WebGLRenderingContextBase::loseExtensions(LostContextMode mode)
 {
     loseExtension(WTFMove(m_angleInstancedArrays));
-    loseExtension(WTFMove(m_extBlendFuncExtended));
     loseExtension(WTFMove(m_extBlendMinMax));
     loseExtension(WTFMove(m_extClipControl));
     loseExtension(WTFMove(m_extColorBufferFloat));
@@ -5610,6 +5609,7 @@ void WebGLRenderingContextBase::loseExtensions(LostContextMode mode)
     loseExtension(WTFMove(m_oesTextureHalfFloat));
     loseExtension(WTFMove(m_oesTextureHalfFloatLinear));
     loseExtension(WTFMove(m_oesVertexArrayObject));
+    loseExtension(WTFMove(m_webglBlendFuncExtended));
     loseExtension(WTFMove(m_webglClipCullDistance));
     loseExtension(WTFMove(m_webglColorBufferFloat));
     loseExtension(WTFMove(m_webglCompressedTextureASTC));

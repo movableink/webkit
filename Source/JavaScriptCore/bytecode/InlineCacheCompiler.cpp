@@ -662,8 +662,6 @@ static constexpr size_t prologueSizeInBytesDataIC = 8;
 static constexpr size_t prologueSizeInBytesDataIC = 4;
 #elif CPU(ARM_THUMB2)
 static constexpr size_t prologueSizeInBytesDataIC = 6;
-#elif CPU(MIPS)
-static constexpr size_t prologueSizeInBytesDataIC = 16;
 #elif CPU(RISCV64)
 static constexpr size_t prologueSizeInBytesDataIC = 12;
 #else
@@ -693,10 +691,6 @@ void InlineCacheCompiler::emitDataICPrologue(CCallHelpers& jit)
 #elif CPU(ARM_THUMB2)
     static_assert(maxFrameExtentForSlowPathCall);
     jit.pushPair(CCallHelpers::framePointerRegister, CCallHelpers::linkRegister);
-    jit.subPtr(CCallHelpers::TrustedImm32(maxFrameExtentForSlowPathCall), CCallHelpers::stackPointerRegister);
-#elif CPU(MIPS)
-    static_assert(maxFrameExtentForSlowPathCall);
-    jit.pushPair(CCallHelpers::framePointerRegister, CCallHelpers::returnAddressRegister);
     jit.subPtr(CCallHelpers::TrustedImm32(maxFrameExtentForSlowPathCall), CCallHelpers::stackPointerRegister);
 #elif CPU(RISCV64)
     static_assert(!maxFrameExtentForSlowPathCall);
@@ -1505,7 +1499,7 @@ void InlineCacheCompiler::generateWithGuard(AccessCase& accessCase, CCallHelpers
             jit.load32(CCallHelpers::Address(baseGPR, JSArrayBufferView::offsetOfLength()), scratchGPR);
 #endif
             jit.loadPtr(CCallHelpers::Address(baseGPR, JSArrayBufferView::offsetOfVector()), scratch2GPR);
-            jit.cageConditionallyAndUntag(Gigacage::Primitive, scratch2GPR, scratchGPR, scratchGPR, false);
+            jit.cageConditionally(Gigacage::Primitive, scratch2GPR, scratchGPR, scratchGPR);
             jit.signExtend32ToPtr(propertyGPR, scratchGPR);
             if (isInt(type)) {
                 switch (elementSize(type)) {
@@ -1993,7 +1987,7 @@ void InlineCacheCompiler::generateWithGuard(AccessCase& accessCase, CCallHelpers
         jit.load32(CCallHelpers::Address(baseGPR, JSArrayBufferView::offsetOfLength()), scratchGPR);
 #endif
         jit.loadPtr(CCallHelpers::Address(baseGPR, JSArrayBufferView::offsetOfVector()), scratch2GPR);
-        jit.cageConditionallyAndUntag(Gigacage::Primitive, scratch2GPR, scratchGPR, scratchGPR, false);
+        jit.cageConditionally(Gigacage::Primitive, scratch2GPR, scratchGPR, scratchGPR);
         jit.signExtend32ToPtr(propertyGPR, scratchGPR);
         if (isInt(type)) {
             if (isClamped(type)) {
@@ -2514,7 +2508,7 @@ void InlineCacheCompiler::generateImpl(AccessCase& accessCase)
             setSpillStateForJSCall(spillState);
 
             RELEASE_ASSERT(!access.callLinkInfo());
-            auto* callLinkInfo = m_callLinkInfos.add(stubInfo.codeOrigin, codeBlock->useDataIC() ? CallLinkInfo::UseDataIC::Yes : CallLinkInfo::UseDataIC::No);
+            auto* callLinkInfo = m_callLinkInfos.add(stubInfo.codeOrigin, codeBlock->useDataIC() ? CallLinkInfo::UseDataIC::Yes : CallLinkInfo::UseDataIC::No, nullptr);
             access.m_callLinkInfo = callLinkInfo;
 
             // FIXME: If we generated a polymorphic call stub that jumped back to the getter
@@ -2527,7 +2521,7 @@ void InlineCacheCompiler::generateImpl(AccessCase& accessCase)
             // https://bugs.webkit.org/show_bug.cgi?id=148914
             callLinkInfo->disallowStubs();
 
-            callLinkInfo->setUpCall(CallLinkInfo::Call, loadedValueGPR);
+            callLinkInfo->setUpCall(CallLinkInfo::Call);
 
             CCallHelpers::JumpList done;
 
@@ -2589,26 +2583,27 @@ void InlineCacheCompiler::generateImpl(AccessCase& accessCase)
                         virtualRegisterForArgumentIncludingThis(1).offset() * sizeof(Register)));
             }
 
-            auto slowCase = CallLinkInfo::emitFastPath(jit, callLinkInfo, loadedValueGPR, loadedValueGPR == GPRInfo::regT2 ? GPRInfo::regT0 : GPRInfo::regT2);
+            jit.move(loadedValueGPR, BaselineJITRegisters::Call::calleeJSR.payloadGPR());
+#if USE(JSVALUE32_64)
+            // We *always* know that the getter/setter, if non-null, is a cell.
+            jit.move(CCallHelpers::TrustedImm32(JSValue::CellTag), BaselineJITRegisters::Call::calleeJSR.tagGPR());
+#endif
+            auto [slowCase, dispatchLabel] = CallLinkInfo::emitFastPath(jit, callLinkInfo, BaselineJITRegisters::Call::callLinkInfoGPR);
             auto doneLocation = jit.label();
 
             if (accessCase.m_type == AccessCase::Getter)
                 jit.setupResults(valueRegs);
             done.append(jit.jump());
 
-            slowCase.link(&jit);
-            auto slowPathStart = jit.label();
-            jit.move(loadedValueGPR, GPRInfo::regT0);
-#if USE(JSVALUE32_64)
-            // We *always* know that the getter/setter, if non-null, is a cell.
-            jit.move(CCallHelpers::TrustedImm32(JSValue::CellTag), GPRInfo::regT1);
-#endif
-            jit.move(CCallHelpers::TrustedImmPtr(globalObject), GPRInfo::regT3);
-            callLinkInfo->emitSlowPath(vm, jit);
+            CCallHelpers::Label slowPathStart = jit.label();
+            if (!slowCase.empty()) {
+                slowCase.link(&jit);
+                CallLinkInfo::emitSlowPath(vm, jit, callLinkInfo, BaselineJITRegisters::Call::callLinkInfoGPR);
 
-            if (accessCase.m_type == AccessCase::Getter)
-                jit.setupResults(valueRegs);
-            done.append(jit.jump());
+                if (accessCase.m_type == AccessCase::Getter)
+                    jit.setupResults(valueRegs);
+                done.append(jit.jump());
+            }
 
             if (returnUndefined) {
                 ASSERT(accessCase.m_type == AccessCase::Getter);
@@ -3260,12 +3255,12 @@ void InlineCacheCompiler::emitProxyObjectAccess(ProxyObjectAccessCase& accessCas
     setSpillStateForJSCall(spillState);
 
     ASSERT(!accessCase.callLinkInfo());
-    auto* callLinkInfo = m_callLinkInfos.add(stubInfo.codeOrigin, codeBlock->useDataIC() ? CallLinkInfo::UseDataIC::Yes : CallLinkInfo::UseDataIC::No);
+    auto* callLinkInfo = m_callLinkInfos.add(stubInfo.codeOrigin, codeBlock->useDataIC() ? CallLinkInfo::UseDataIC::Yes : CallLinkInfo::UseDataIC::No, nullptr);
     accessCase.m_callLinkInfo = callLinkInfo;
 
     callLinkInfo->disallowStubs();
 
-    callLinkInfo->setUpCall(CallLinkInfo::Call, scratchGPR);
+    callLinkInfo->setUpCall(CallLinkInfo::Call);
 
     unsigned numberOfParameters;
     JSFunction* proxyInternalMethod = nullptr;
@@ -3331,28 +3326,30 @@ void InlineCacheCompiler::emitProxyObjectAccess(ProxyObjectAccessCase& accessCas
     jit.move(CCallHelpers::TrustedImmPtr(proxyInternalMethod), scratchGPR);
     jit.storeCell(scratchGPR, calleeFrame.withOffset(CallFrameSlot::callee * sizeof(Register)));
 
-    auto slowCase = CallLinkInfo::emitFastPath(jit, callLinkInfo, scratchGPR, scratchGPR == GPRInfo::regT2 ? GPRInfo::regT0 : GPRInfo::regT2);
+    jit.move(scratchGPR, BaselineJITRegisters::Call::calleeJSR.payloadGPR());
+#if USE(JSVALUE32_64)
+    // We *always* know that the proxy function, if non-null, is a cell.
+    jit.move(CCallHelpers::TrustedImm32(JSValue::CellTag), BaselineJITRegisters::Call::calleeJSR.tagGPR());
+#endif
+    auto [slowCase, dispatchLabel] = CallLinkInfo::emitFastPath(jit, callLinkInfo, BaselineJITRegisters::Call::callLinkInfoGPR);
     auto doneLocation = jit.label();
 
     if (accessCase.m_type != AccessCase::ProxyObjectStore)
         jit.setupResults(valueRegs);
 
-    auto done = jit.jump();
-
-    slowCase.link(&jit);
     auto slowPathStart = jit.label();
-    jit.move(scratchGPR, GPRInfo::regT0);
-#if USE(JSVALUE32_64)
-    // We *always* know that the proxy function, if non-null, is a cell.
-    jit.move(CCallHelpers::TrustedImm32(JSValue::CellTag), GPRInfo::regT1);
-#endif
-    jit.move(CCallHelpers::TrustedImmPtr(globalObject), GPRInfo::regT3);
-    callLinkInfo->emitSlowPath(vm, jit);
+    if (!slowCase.empty()) {
+        auto done = jit.jump();
 
-    if (accessCase.m_type != AccessCase::ProxyObjectStore)
-        jit.setupResults(valueRegs);
+        slowPathStart = jit.label();
+        slowCase.link(&jit);
+        CallLinkInfo::emitSlowPath(vm, jit, callLinkInfo, BaselineJITRegisters::Call::callLinkInfoGPR);
 
-    done.link(&jit);
+        if (accessCase.m_type != AccessCase::ProxyObjectStore)
+            jit.setupResults(valueRegs);
+
+        done.link(&jit);
+    }
 
     if (codeBlock->useDataIC()) {
         jit.loadPtr(CCallHelpers::Address(GPRInfo::jitDataRegister, BaselineJITData::offsetOfStackOffset()), m_scratchGPR);
@@ -3407,6 +3404,13 @@ bool InlineCacheCompiler::canEmitIntrinsicGetter(StructureStubInfo& stubInfo, JS
     case UnderscoreProtoIntrinsic: {
         TypeInfo info = structure->typeInfo();
         return info.isObject() && !info.overridesGetPrototype();
+    }
+    case SpeciesGetterIntrinsic: {
+#if USE(JSVALUE32_64)
+        return false;
+#else
+        return !structure->classInfoForCells()->isSubClassOf(JSScope::info());
+#endif
     }
     case WebAssemblyInstanceExportsIntrinsic:
         return structure->typeInfo().type() == WebAssemblyInstanceType;
@@ -3541,6 +3545,12 @@ void InlineCacheCompiler::emitIntrinsicGetter(IntrinsicGetterAccessCase& accessC
             jit.loadValue(CCallHelpers::Address(baseGPR, offsetRelativeToBase(knownPolyProtoOffset)), valueRegs);
         else
             jit.moveValue(accessCase.structure()->storedPrototype(), valueRegs);
+        succeed();
+        return;
+    }
+
+    case SpeciesGetterIntrinsic: {
+        jit.moveValueRegs(stubInfo.baseRegs(), valueRegs);
         succeed();
         return;
     }

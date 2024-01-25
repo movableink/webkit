@@ -85,8 +85,8 @@ void RenderTreeUpdater::GeneratedContent::updateCounters()
 
 static bool elementIsTargetedByKeyframeEffectRequiringPseudoElement(const Element* element, PseudoId pseudoId)
 {
-    if (is<PseudoElement>(element))
-        return elementIsTargetedByKeyframeEffectRequiringPseudoElement(downcast<PseudoElement>(*element).hostElement(), pseudoId);
+    if (auto* pseudoElement = dynamicDowncast<PseudoElement>(element))
+        return elementIsTargetedByKeyframeEffectRequiringPseudoElement(pseudoElement->hostElement(), pseudoId);
 
     if (element) {
         if (auto* stack = element->keyframeEffectStack(pseudoId))
@@ -155,7 +155,7 @@ void RenderTreeUpdater::GeneratedContent::updatePseudoElement(Element& current, 
         // For display:contents we create an inline wrapper that inherits its
         // style from the display:contents style.
         auto contentsStyle = RenderStyle::createPtr();
-        contentsStyle->setStyleType(pseudoId);
+        contentsStyle->setPseudoElementType(pseudoId);
         contentsStyle->inheritFrom(*updateStyle);
         contentsStyle->copyContentFrom(*updateStyle);
         contentsStyle->copyPseudoElementsFrom(*updateStyle);
@@ -163,12 +163,12 @@ void RenderTreeUpdater::GeneratedContent::updatePseudoElement(Element& current, 
         Style::ElementUpdate contentsUpdate { WTFMove(contentsStyle), styleChange, elementUpdate.recompositeLayer };
         m_updater.updateElementRenderer(*pseudoElement, WTFMove(contentsUpdate));
         auto pseudoElementUpdateStyle = RenderStyle::cloneIncludingPseudoElements(*updateStyle);
-        pseudoElement->storeDisplayContentsStyle(makeUnique<RenderStyle>(WTFMove(pseudoElementUpdateStyle)));
+        pseudoElement->storeDisplayContentsOrNoneStyle(makeUnique<RenderStyle>(WTFMove(pseudoElementUpdateStyle)));
     } else {
         auto pseudoElementUpdateStyle = RenderStyle::cloneIncludingPseudoElements(*updateStyle);
         Style::ElementUpdate pseudoElementUpdate { makeUnique<RenderStyle>(WTFMove(pseudoElementUpdateStyle)), styleChange, elementUpdate.recompositeLayer };
         m_updater.updateElementRenderer(*pseudoElement, WTFMove(pseudoElementUpdate));
-        pseudoElement->clearDisplayContentsStyle();
+        pseudoElement->clearDisplayContentsOrNoneStyle();
     }
 
     auto* pseudoElementRenderer = pseudoElement->renderer();

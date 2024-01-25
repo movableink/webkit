@@ -98,7 +98,7 @@ struct WindowFeatures;
 WEBCORE_EXPORT bool isBackForwardLoadType(FrameLoadType);
 WEBCORE_EXPORT bool isReload(FrameLoadType);
 
-using ContentPolicyDecisionFunction = Function<void(PolicyAction, PolicyCheckIdentifier)>;
+using ContentPolicyDecisionFunction = CompletionHandler<void(PolicyAction)>;
 
 class FrameLoader final : public CanMakeCheckedPtr {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
@@ -117,6 +117,7 @@ public:
     PolicyChecker& policyChecker() const { return *m_policyChecker; }
 
     HistoryController& history() const { return *m_history; }
+    CheckedRef<HistoryController> checkedHistory() const;
     ResourceLoadNotifier& notifier() const { return m_notifier; }
 
     class SubframeLoader;
@@ -180,6 +181,9 @@ public:
     RefPtr<DocumentLoader> protectedProvisionalDocumentLoader() const;
     FrameState state() const { return m_state; }
 
+    enum class CanIncludeCurrentDocumentLoader : bool { No, Yes };
+    WEBCORE_EXPORT RefPtr<DocumentLoader> loaderForWebsitePolicies(CanIncludeCurrentDocumentLoader = CanIncludeCurrentDocumentLoader::Yes) const;
+
     bool shouldReportResourceTimingToParentFrame() const { return m_shouldReportResourceTimingToParentFrame; };
     
 #if PLATFORM(IOS_FAMILY)
@@ -231,7 +235,7 @@ public:
 
     void setDefersLoading(bool);
 
-    void checkContentPolicy(const ResourceResponse&, PolicyCheckIdentifier, ContentPolicyDecisionFunction&&);
+    void checkContentPolicy(const ResourceResponse&, ContentPolicyDecisionFunction&&);
 
     void didExplicitOpen();
 
@@ -341,6 +345,8 @@ public:
     void scheduleRefreshIfNeeded(Document&, const String& content, IsMetaRefresh);
 
     void switchBrowsingContextsGroup();
+
+    bool errorOccurredInLoading() const { return m_errorOccurredInLoading; }
 
     // HistoryController specific.
     void loadItem(HistoryItem&, HistoryItem* fromItem, FrameLoadType, ShouldTreatAsContinuingLoad);
@@ -525,6 +531,8 @@ private:
     bool m_inStopForBackForwardCache { false };
     bool m_isHTTPFallbackInProgress { false };
     bool m_shouldRestoreScrollPositionAndViewState { false };
+
+    bool m_errorOccurredInLoading { false };
 };
 
 // This function is called by createWindow() in JSDOMWindowBase.cpp, for example, for

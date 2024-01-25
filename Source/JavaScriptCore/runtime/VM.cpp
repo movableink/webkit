@@ -238,6 +238,31 @@ VM::VM(VMType vmType, HeapType heapType, WTF::RunLoop* runLoop, bool* success)
 
     VMInspector::instance().add(this);
 
+    // Set up lazy initializers.
+    {
+        m_hasOwnPropertyCache.initLater([](VM&, auto& ref) {
+            ref.set(HasOwnPropertyCache::create());
+        });
+
+        m_megamorphicCache.initLater([](VM&, auto& ref) {
+            ref.set(makeUniqueRef<MegamorphicCache>());
+        });
+
+        m_shadowChicken.initLater([](VM&, auto& ref) {
+            ref.set(makeUniqueRef<ShadowChicken>());
+        });
+
+        m_heapProfiler.initLater([](VM& vm, auto& ref) {
+            ref.set(makeUniqueRef<HeapProfiler>(vm));
+        });
+
+        m_watchdog.initLater([](VM& vm, auto& ref) {
+            ref.set(adoptRef(*new Watchdog(&vm)));
+            vm.ensureTerminationException();
+            vm.requestEntryScopeService(EntryScopeService::Watchdog);
+        });
+    }
+
     updateSoftReservedZoneSize(Options::softReservedZoneSize());
     setLastStackTop(Thread::current());
     stringSplitIndice.reserveInitialCapacity(256);
@@ -432,8 +457,8 @@ VM::~VM()
     if (Wasm::Worklist* worklist = Wasm::existingWorklistOrNull())
         worklist->stopAllPlansForContext(*this);
 #endif
-    if (UNLIKELY(m_watchdog))
-        m_watchdog->willDestroyVM(this);
+    if (auto* watchdog = this->watchdog(); UNLIKELY(watchdog))
+        watchdog->willDestroyVM(this);
     m_traps.willDestroyVM();
     m_isInService = false;
     WTF::storeStoreFence();
@@ -565,23 +590,6 @@ VM*& VM::sharedInstanceInternal()
     return sharedInstance;
 }
 
-Watchdog& VM::ensureWatchdog()
-{
-    if (!m_watchdog) {
-        m_watchdog = adoptRef(new Watchdog(this));
-        ensureTerminationException();
-        requestEntryScopeService(EntryScopeService::Watchdog);
-    }
-    return *m_watchdog;
-}
-
-HeapProfiler& VM::ensureHeapProfiler()
-{
-    if (!m_heapProfiler)
-        m_heapProfiler = makeUnique<HeapProfiler>(*this);
-    return *m_heapProfiler;
-}
-
 #if ENABLE(SAMPLING_PROFILER)
 SamplingProfiler& VM::ensureSamplingProfiler(Ref<Stopwatch>&& stopwatch)
 {
@@ -679,6 +687,10 @@ static ThunkGenerator thunkGeneratorForIntrinsic(Intrinsic intrinsic)
         return numberConstructorCallThunkGenerator;
     case StringConstructorIntrinsic:
         return stringConstructorCallThunkGenerator;
+    case ToIntegerOrInfinityIntrinsic:
+        return toIntegerOrInfinityThunkGenerator;
+    case ToLengthIntrinsic:
+        return toLengthThunkGenerator;
     default:
         return nullptr;
     }
@@ -796,15 +808,6 @@ CodePtr<JSEntryPtrTag> VM::getCTIInternalFunctionTrampolineFor(CodeSpecializatio
     if (kind == CodeForCall)
         return LLInt::getCodePtr<JSEntryPtrTag>(llint_internal_function_call_trampoline);
     return LLInt::getCodePtr<JSEntryPtrTag>(llint_internal_function_construct_trampoline);
-}
-
-MacroAssemblerCodeRef<JSEntryPtrTag> VM::getCTILinkCall()
-{
-#if ENABLE(JIT)
-    if (Options::useJIT())
-        return getCTIStub(CommonJITThunkID::LinkCall).template retagged<JSEntryPtrTag>();
-#endif
-    return LLInt::getCodeRef<JSEntryPtrTag>(llint_link_call_trampoline);
 }
 
 MacroAssemblerCodeRef<JSEntryPtrTag> VM::getCTIThrowExceptionFromCallSlowPath()
@@ -1478,13 +1481,6 @@ Ref<Waiter> VM::syncWaiter()
     return m_syncWaiter;
 }
 
-void VM::ensureShadowChicken()
-{
-    if (m_shadowChicken)
-        return;
-    m_shadowChicken = makeUnique<ShadowChicken>();
-}
-
 JSCell* VM::sentinelSetBucketSlow()
 {
     ASSERT(!m_sentinelSetBucket);
@@ -1768,16 +1764,10 @@ void MicrotaskQueue::visitAggregateImpl(Visitor& visitor)
 }
 DEFINE_VISIT_AGGREGATE(MicrotaskQueue);
 
-void VM::ensureMegamorphicCacheSlow()
-{
-    ASSERT(!m_megamorphicCache);
-    m_megamorphicCache = makeUnique<MegamorphicCache>();
-}
-
 void VM::invalidateStructureChainIntegrity(StructureChainIntegrityEvent)
 {
-    if (m_megamorphicCache)
-        m_megamorphicCache->bumpEpoch();
+    if (auto* megamorphicCache = this->megamorphicCache())
+        megamorphicCache->bumpEpoch();
 }
 
 #if ENABLE(WEBASSEMBLY)

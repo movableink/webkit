@@ -180,7 +180,9 @@ def types_that_must_be_moved():
         'std::optional<WebKit::ShareableResource::Handle>',
         'std::optional<WebKit::SharedMemory::Handle>',
         'std::optional<WebKit::SharedVideoFrame::Buffer>',
-        'std::optional<Win32Handle>'
+        'std::optional<Win32Handle>',
+        'WebKit::ImageBufferSetPrepareBufferForDisplayOutputData',
+        'HashMap<WebKit::RemoteImageBufferSetIdentifier, std::unique_ptr<WebKit::BufferSetBackendHandle>>',
     ]
 
 
@@ -432,7 +434,6 @@ def types_that_cannot_be_forward_declared():
         'WebCore::PlatformLayerIdentifier',
         'WebCore::PluginLoadClientPolicy',
         'WebCore::PointerID',
-        'WebCore::PolicyCheckIdentifier',
         'WebCore::RenderingMode',
         'WebCore::RenderingPurpose',
         'WebCore::ScriptExecutionContextIdentifier',
@@ -472,6 +473,8 @@ def types_that_cannot_be_forward_declared():
         'WebKit::WebExtensionRegisteredScriptParameters',
         'WebKit::WebExtensionScriptInjectionParameters',
         'WebKit::WebExtensionScriptInjectionResultParameters',
+        'WebKit::WebExtensionStorageAccessLevel',
+        'WebKit::WebExtensionStorageType',
         'WebKit::WebExtensionTab::ImageFormat',
         'WebKit::WebExtensionTabParameters',
         'WebKit::WebExtensionTabQueryParameters',
@@ -665,6 +668,8 @@ def class_template_headers(template_string):
         'Expected': {'headers': ['<wtf/Expected.h>'], 'argument_coder_headers': ['"ArgumentCoders.h"']},
         'HashMap': {'headers': ['<wtf/HashMap.h>'], 'argument_coder_headers': ['"ArgumentCoders.h"']},
         'HashSet': {'headers': ['<wtf/HashSet.h>'], 'argument_coder_headers': ['"ArgumentCoders.h"']},
+        'KeyValuePair': {'headers': ['<wtf/KeyValuePair.h>'], 'argument_coder_headers': ['"ArgumentCoders.h"']},
+        'Markable': {'headers': ['<wtf/Markable.h>'], 'argument_coder_headers': ['"ArgumentCoders.h"']},
         'OptionSet': {'headers': ['<wtf/OptionSet.h>'], 'argument_coder_headers': ['"ArgumentCoders.h"']},
         'Vector': {'headers': ['<wtf/Vector.h>'], 'argument_coder_headers': ['"ArgumentCoders.h"']},
         'std::optional': {'headers': ['<optional>'], 'argument_coder_headers': ['"ArgumentCoders.h"']},
@@ -675,6 +680,7 @@ def class_template_headers(template_string):
         'RefPtr': {'headers': ['<wtf/RefCounted.h>'], 'argument_coder_headers': ['"ArgumentCoders.h"']},
         'RetainPtr': {'headers': ['<wtf/RetainPtr.h>'], 'argument_coder_headers': ['"ArgumentCodersCF.h"']},
         'WebCore::ProcessQualified': {'headers': ['<WebCore/ProcessQualified.h>'], 'argument_coder_headers': ['"ArgumentCoders.h"']},
+        'std::unique_ptr': {'headers': ['<memory>'], 'argument_coder_headers': ['"ArgumentCoders.h"']},
     }
 
     match = re.match('(?P<template_name>.+?)<(?P<parameter_string>.+)>', template_string)
@@ -825,6 +831,7 @@ def headers_for_type(type):
         'WebCore::NetworkTransactionInformation': ['<WebCore/NetworkLoadInformation.h>'],
         'WebCore::OpaqueOriginIdentifier': ['<WebCore/SecurityOriginData.h>'],
         'WebCore::PasteboardCustomData': ['<WebCore/Pasteboard.h>'],
+        'WebCore::PasteboardBuffer': ['<WebCore/Pasteboard.h>'],
         'WebCore::PasteboardImage': ['<WebCore/Pasteboard.h>'],
         'WebCore::PasteboardURL': ['<WebCore/Pasteboard.h>'],
         'WebCore::PasteboardWebContent': ['<WebCore/Pasteboard.h>'],
@@ -840,7 +847,6 @@ def headers_for_type(type):
         'WebCore::PluginInfo': ['<WebCore/PluginData.h>'],
         'WebCore::PluginLoadClientPolicy': ['<WebCore/PluginData.h>'],
         'WebCore::PolicyAction': ['<WebCore/FrameLoaderTypes.h>'],
-        'WebCore::PolicyCheckIdentifier': ['<WebCore/FrameLoaderTypes.h>'],
         'WebCore::PreserveResolution': ['<WebCore/ImageBufferBackend.h>'],
         'WebCore::ProcessIdentifier': ['<WebCore/ProcessIdentifier.h>'],
         'WebCore::PushSubscriptionIdentifier': ['<WebCore/PushSubscriptionIdentifier.h>'],
@@ -982,6 +988,7 @@ def headers_for_type(type):
         'WebKit::TextCheckerRequestID': ['"IdentifierTypes.h"'],
         'WebKit::WebEventType': ['"WebEvent.h"'],
         'WebKit::WebExtensionContext::InstallReason': ['"WebExtensionContext.h"'],
+        'WebKit::WebExtensionCookieFilterParameters': ['"WebExtensionCookieParameters.h"'],
         'WebKit::WebExtensionTab::ImageFormat': ['"WebExtensionTab.h"'],
         'WebKit::WebGPU::BindGroupDescriptor': ['"WebGPUBindGroupDescriptor.h"'],
         'WebKit::WebGPU::BindGroupEntry': ['"WebGPUBindGroupEntry.h"'],
@@ -1060,6 +1067,7 @@ def headers_for_type(type):
         'WebKit::WebUserStyleSheetData': ['"WebUserContentControllerDataTypes.h"'],
         'WTF::UnixFileDescriptor': ['<wtf/unix/UnixFileDescriptor.h>'],
         'webrtc::WebKitEncodedFrameInfo': ['"RTCWebKitEncodedFrameInfo.h"', '<WebCore/LibWebRTCEnumTraits.h>'],
+        'WebKit::BufferSetBackendHandle': ['"BufferAndBackendInfo.h"'],
     }
 
     headers = []

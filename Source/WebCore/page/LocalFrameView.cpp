@@ -334,8 +334,8 @@ void LocalFrameView::init()
     m_lastUsedSizeForLayout = { };
 
     // Propagate the scrolling mode to the view.
-    auto* ownerElement = m_frame->ownerElement();
-    if (is<HTMLFrameElementBase>(ownerElement) && downcast<HTMLFrameElementBase>(*ownerElement).scrollingMode() == ScrollbarMode::AlwaysOff)
+    RefPtr ownerElement = dynamicDowncast<HTMLFrameElementBase>(m_frame->ownerElement());
+    if (ownerElement && ownerElement->scrollingMode() == ScrollbarMode::AlwaysOff)
         setCanHaveScrollbars(false);
 
     Page* page = m_frame->page();
@@ -608,20 +608,20 @@ void LocalFrameView::applyOverflowToViewport(const RenderElement& renderer, Scro
     Overflow overflowY = renderer.style().overflowY();
 
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
-    if (is<RenderSVGRoot>(renderer)) {
+    if (CheckedPtr renderSVGRoot = dynamicDowncast<RenderSVGRoot>(renderer)) {
         // FIXME: evaluate if we can allow overflow for these cases too.
         // Overflow is always hidden when stand-alone SVG documents are embedded.
-        if (downcast<RenderSVGRoot>(renderer).isEmbeddedThroughFrameContainingSVGDocument()) {
+        if (renderSVGRoot->isEmbeddedThroughFrameContainingSVGDocument()) {
             overflowX = Overflow::Hidden;
             overflowY = Overflow::Hidden;
         }
     }
 #endif
 
-    if (is<LegacyRenderSVGRoot>(renderer)) {
+    if (CheckedPtr legacyRenderSVGRoot = dynamicDowncast<LegacyRenderSVGRoot>(renderer)) {
         // FIXME: evaluate if we can allow overflow for these cases too.
         // Overflow is always hidden when stand-alone SVG documents are embedded.
-        if (downcast<LegacyRenderSVGRoot>(renderer).isEmbeddedThroughFrameContainingSVGDocument()) {
+        if (legacyRenderSVGRoot->isEmbeddedThroughFrameContainingSVGDocument()) {
             overflowX = Overflow::Hidden;
             overflowY = Overflow::Hidden;
         }
@@ -691,7 +691,8 @@ void LocalFrameView::applyPaginationToViewport()
         GapLength columnGapLength = documentOrBodyRenderer->style().columnGap();
         pagination.gap = 0;
         if (!columnGapLength.isNormal()) {
-            if (auto* containerForPaginationGap = is<RenderBox>(documentOrBodyRenderer) ? downcast<RenderBox>(documentOrBodyRenderer) : documentOrBodyRenderer->containingBlock())
+            auto* renderBox = dynamicDowncast<RenderBox>(documentOrBodyRenderer);
+            if (auto* containerForPaginationGap = renderBox ? renderBox : documentOrBodyRenderer->containingBlock())
                 pagination.gap = valueForLength(columnGapLength.length(), containerForPaginationGap->availableLogicalWidth()).toUnsigned();
         }
     }
@@ -1331,7 +1332,8 @@ void LocalFrameView::didLayout(SingleThreadWeakPtr<RenderElement> layoutRoot)
     if (document->hasListenerType(Document::ListenerType::OverflowChanged))
         updateOverflowStatus(layoutWidth() < contentsWidth(), layoutHeight() < contentsHeight());
 
-    document->markers().invalidateRectsForAllMarkers();
+    if (CheckedPtr markers = document->markersIfExists())
+        markers->invalidateRectsForAllMarkers();
 }
 
 bool LocalFrameView::shouldDeferScrollUpdateAfterContentSizeChange()
@@ -1365,8 +1367,8 @@ void LocalFrameView::addEmbeddedObjectToUpdate(RenderEmbeddedObject& embeddedObj
         m_embeddedObjectsToUpdate = makeUnique<ListHashSet<SingleThreadWeakRef<RenderEmbeddedObject>>>();
 
     auto& element = embeddedObject.frameOwnerElement();
-    if (is<HTMLPlugInImageElement>(element))
-        downcast<HTMLPlugInImageElement>(element).setNeedsWidgetUpdate(true);
+    if (RefPtr embedOrObject = dynamicDowncast<HTMLPlugInImageElement>(element))
+        embedOrObject->setNeedsWidgetUpdate(true);
 
     m_embeddedObjectsToUpdate->add(embeddedObject);
 }
@@ -1488,11 +1490,14 @@ String LocalFrameView::debugDescription() const
 bool LocalFrameView::canShowNonOverlayScrollbars() const
 {
     auto usesLegacyScrollbarStyle = [&] {
-        auto element = rootElementForCustomScrollbarPartStyle();
-        if (!element || !is<RenderBox>(element->renderer()))
+        RefPtr element = rootElementForCustomScrollbarPartStyle();
+        if (!element)
             return false;
 
-        return downcast<RenderBox>(*element->renderer()).style().usesLegacyScrollbarStyle();
+        if (CheckedPtr renderBox = dynamicDowncast<RenderBox>(element->renderer()))
+            return renderBox->style().usesLegacyScrollbarStyle();
+
+        return false;
     }();
 
     return canHaveScrollbars() && (usesLegacyScrollbarStyle || !ScrollbarTheme::theme().usesOverlayScrollbars());
@@ -1509,7 +1514,7 @@ bool LocalFrameView::styleHidesScrollbarWithOrientation(ScrollbarOrientation ori
     StyleScrollbarState scrollbarState;
     scrollbarState.scrollbarPart = ScrollbarBGPart;
     scrollbarState.orientation = orientation;
-    auto scrollbarStyle = renderer->getUncachedPseudoStyle({ PseudoId::Scrollbar, scrollbarState }, &renderer->style());
+    auto scrollbarStyle = renderer->getUncachedPseudoStyle({ PseudoId::WebKitScrollbar, scrollbarState }, &renderer->style());
     return scrollbarStyle && scrollbarStyle->display() == DisplayType::None;
 }
 
@@ -1739,6 +1744,11 @@ void LocalFrameView::setLayoutViewportOverrideRect(std::optional<LayoutRect> rec
     LayoutRect oldRect = layoutViewportRect();
     m_layoutViewportOverrideRect = rect;
     LayoutRect newRect = layoutViewportRect();
+
+    if (oldRect != newRect) {
+        invalidateScrollAnchoringElement();
+        updateScrollAnchoringElement();
+    }
 
     // Triggering layout on height changes is necessary to make bottom-fixed elements behave correctly.
     if (oldRect.height() != newRect.height())
@@ -2369,8 +2379,8 @@ void LocalFrameView::maintainScrollPositionAtAnchor(ContainerNode* anchorNode)
 
     cancelScheduledScrolls();
 
-    if (is<Element>(anchorNode))
-        m_frame->document()->contentVisibilityDocumentState().updateContentRelevancyForScrollIfNeeded(downcast<Element>(*anchorNode));
+    if (RefPtr element = dynamicDowncast<Element>(anchorNode))
+        m_frame->document()->updateContentRelevancyForScrollIfNeeded(*element);
 
     // We need to update the layout before scrolling, otherwise we could
     // really mess things up if an anchor scroll comes at a bad moment.
@@ -3101,8 +3111,8 @@ static unsigned countRenderedCharactersInRenderObjectWithThreshold(const RenderE
 {
     unsigned count = 0;
     for (const RenderObject* descendant = &renderer; descendant; descendant = descendant->nextInPreOrder()) {
-        if (is<RenderText>(*descendant)) {
-            count += downcast<RenderText>(*descendant).text().length();
+        if (CheckedPtr renderText = dynamicDowncast<RenderText>(*descendant)) {
+            count += renderText->text().length();
             if (count >= threshold)
                 break;
         }
@@ -3705,12 +3715,9 @@ void LocalFrameView::updateEmbeddedObject(const SingleThreadWeakPtr<RenderEmbedd
     if (embeddedObject->isPluginUnavailable())
         return;
 
-    auto& element = embeddedObject->frameOwnerElement();
-
-    if (is<HTMLPlugInImageElement>(element)) {
-        auto& pluginElement = downcast<HTMLPlugInImageElement>(element);
-        if (pluginElement.needsWidgetUpdate())
-            pluginElement.updateWidget(CreatePlugins::Yes);
+    if (RefPtr embedOrObject = dynamicDowncast<HTMLPlugInImageElement>(embeddedObject->frameOwnerElement())) {
+        if (embedOrObject->needsWidgetUpdate())
+            embedOrObject->updateWidget(CreatePlugins::Yes);
     } else
         ASSERT_NOT_REACHED();
 
@@ -4427,7 +4434,7 @@ void LocalFrameView::updateScrollCorner()
         Element* body = doc ? doc->bodyOrFrameset() : nullptr;
         if (body && body->renderer()) {
             renderer = body->renderer();
-            cornerStyle = renderer->getUncachedPseudoStyle({ PseudoId::ScrollbarCorner }, &renderer->style());
+            cornerStyle = renderer->getUncachedPseudoStyle({ PseudoId::WebKitScrollbarCorner }, &renderer->style());
         }
         
         if (!cornerStyle) {
@@ -4435,7 +4442,7 @@ void LocalFrameView::updateScrollCorner()
             Element* docElement = doc ? doc->documentElement() : nullptr;
             if (docElement && docElement->renderer()) {
                 renderer = docElement->renderer();
-                cornerStyle = renderer->getUncachedPseudoStyle({ PseudoId::ScrollbarCorner }, &renderer->style());
+                cornerStyle = renderer->getUncachedPseudoStyle({ PseudoId::WebKitScrollbarCorner }, &renderer->style());
             }
         }
         
@@ -4443,7 +4450,7 @@ void LocalFrameView::updateScrollCorner()
             // If we have an owning iframe/frame element, then it can set the custom scrollbar also.
             // FIXME: Seems wrong to do this for cross-origin frames.
             if (RenderWidget* renderer = m_frame->ownerRenderer())
-                cornerStyle = renderer->getUncachedPseudoStyle({ PseudoId::ScrollbarCorner }, &renderer->style());
+                cornerStyle = renderer->getUncachedPseudoStyle({ PseudoId::WebKitScrollbarCorner }, &renderer->style());
         }
     }
 
@@ -4520,7 +4527,11 @@ Color LocalFrameView::documentBackgroundColor() const
 
 #if ENABLE(FULLSCREEN_API)
     Color fullscreenBackgroundColor = [&] () -> Color {
-        auto* fullscreenElement = backgroundDocument->fullscreenManager().fullscreenElement();
+        CheckedPtr fullscreenManager = backgroundDocument->fullscreenManagerIfExists();
+        if (!fullscreenManager)
+            return { };
+
+        auto* fullscreenElement = fullscreenManager->fullscreenElement();
         if (!fullscreenElement)
             return { };
 
@@ -4570,11 +4581,11 @@ Color LocalFrameView::documentBackgroundColor() const
 bool LocalFrameView::hasCustomScrollbars() const
 {
     for (auto& widget : children()) {
-        if (is<LocalFrameView>(widget)) {
-            if (downcast<LocalFrameView>(widget.get()).hasCustomScrollbars())
+        if (RefPtr frame = dynamicDowncast<LocalFrameView>(widget)) {
+            if (frame->hasCustomScrollbars())
                 return true;
-        } else if (is<Scrollbar>(widget)) {
-            if (downcast<Scrollbar>(widget.get()).isCustomScrollbar())
+        } else if (RefPtr scrollbar = dynamicDowncast<Scrollbar>(widget)) {
+            if (scrollbar->isCustomScrollbar())
                 return true;
         }
     }
@@ -5427,10 +5438,9 @@ void LocalFrameView::scheduleScrollEvent()
 
 void LocalFrameView::addChild(Widget& widget)
 {
-    if (is<LocalFrameView>(widget)) {
-        auto& childFrameView = downcast<LocalFrameView>(widget);
-        if (childFrameView.isScrollable())
-            addScrollableArea(&childFrameView);
+    if (auto* childFrameView = dynamicDowncast<LocalFrameView>(widget)) {
+        if (childFrameView->isScrollable())
+            addScrollableArea(childFrameView);
     }
 
     ScrollView::addChild(widget);
@@ -5438,8 +5448,8 @@ void LocalFrameView::addChild(Widget& widget)
 
 void LocalFrameView::removeChild(Widget& widget)
 {
-    if (is<LocalFrameView>(widget))
-        removeScrollableArea(&downcast<LocalFrameView>(widget));
+    if (auto* childFrameView = dynamicDowncast<LocalFrameView>(widget))
+        removeScrollableArea(childFrameView);
 
     ScrollView::removeChild(widget);
 }

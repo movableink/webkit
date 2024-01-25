@@ -96,6 +96,8 @@ GStreamerElementHarness::GStreamerElementHarness(GRefPtr<GstElement>&& element, 
         GST_DEBUG_CATEGORY_INIT(webkit_element_harness_debug, "webkitelementharness", 0, "WebKit Element Harness");
     });
 
+    registerActivePipeline(m_element);
+
     auto clock = adoptGRef(gst_system_clock_obtain());
     gst_element_set_clock(m_element.get(), clock.get());
 
@@ -160,6 +162,8 @@ GStreamerElementHarness::GStreamerElementHarness(GRefPtr<GstElement>&& element, 
 GStreamerElementHarness::~GStreamerElementHarness()
 {
     GST_DEBUG_OBJECT(m_element.get(), "Stopping harness");
+    pushEvent(adoptGRef(gst_event_new_eos()));
+    unregisterPipeline(m_element);
     gst_pad_set_active(m_srcPad.get(), FALSE);
     {
         auto streamLock = GstPadStreamLocker(m_srcPad.get());
@@ -187,6 +191,20 @@ void GStreamerElementHarness::start(GRefPtr<GstCaps>&& inputCaps, std::optional<
 
     pushStickyEvents(WTFMove(inputCaps), WTFMove(segment));
     m_playing.store(true);
+}
+
+void GStreamerElementHarness::reset()
+{
+    if (!m_playing.load())
+        return;
+
+    GST_DEBUG_OBJECT(m_element.get(), "Resetting harness");
+    pushEvent(adoptGRef(gst_event_new_eos()));
+    gst_element_set_state(m_element.get(), GST_STATE_NULL);
+
+    processOutputBuffers();
+
+    m_playing.store(false);
 }
 
 void GStreamerElementHarness::pushStickyEvents(GRefPtr<GstCaps>&& inputCaps, std::optional<const GstSegment*>&& segment)
@@ -273,6 +291,13 @@ GStreamerElementHarness::Stream::Stream(GRefPtr<GstPad>&& pad, RefPtr<GStreamerE
                 downstreamHarness->start(GRefPtr<GstCaps>(stream.outputCaps()));
             return downstreamHarness->pushBufferFull(adoptGRef(buffer));
         }
+
+        // Make sure the stream caps are cached by calling outputCaps() here. If we don't do this
+        // and processOutputBuffers() is called after the element received EOS, the caps might be
+        // cleared on the pad. Ideally we should keep track of output samples, not only buffers.
+        const auto& caps = stream.outputCaps();
+        UNUSED_VARIABLE(caps);
+
         return stream.chainBuffer(buffer);
     }),  this, nullptr);
     gst_pad_set_event_function_full(m_targetPad.get(), reinterpret_cast<GstPadEventFunction>(+[](GstPad* pad, GstObject*, GstEvent* event) -> gboolean {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Cameron Zwarich <cwzwarich@uwaterloo.ca>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -436,7 +436,7 @@ bool CodeBlock::finishCreation(VM& vm, ScriptExecutable* ownerExecutable, Unlink
     };
 
     auto link_callLinkInfo = [&](const auto& instruction, auto bytecode, auto& metadata) {
-        metadata.m_callLinkInfo.initialize(vm, CallLinkInfo::callTypeFor(decltype(bytecode)::opcodeID), instruction.index());
+        metadata.m_callLinkInfo.initialize(vm, this, CallLinkInfo::callTypeFor(decltype(bytecode)::opcodeID), instruction.index());
     };
 
 #define LINK_FIELD(__field) \
@@ -863,7 +863,7 @@ CodeBlock::~CodeBlock()
     // So, if we don't remove incoming calls, and get destroyed before the
     // CodeBlock(s) that have calls into us, then the CallLinkInfo vector's
     // destructor will try to remove nodes from our (no longer valid) linked list.
-    unlinkIncomingCalls();
+    unlinkOrUpgradeIncomingCalls(vm, nullptr);
     
     // Note that our outgoing calls will be removed from other CodeBlocks'
     // m_incomingCalls linked lists through the execution of the ~CallLinkInfo
@@ -2040,29 +2040,22 @@ void CodeBlock::removeExceptionHandlerForCallSite(DisposableCallSiteIndex callSi
     RELEASE_ASSERT_NOT_REACHED();
 }
 
-unsigned CodeBlock::lineNumberForBytecodeIndex(BytecodeIndex bytecodeIndex)
+LineColumn CodeBlock::lineColumnForBytecodeIndex(BytecodeIndex bytecodeIndex) const
 {
     RELEASE_ASSERT(bytecodeIndex.offset() < instructions().size());
-    return ownerExecutable()->firstLine() + m_unlinkedCode->lineNumberForBytecodeIndex(bytecodeIndex);
+    auto lineColumn = m_unlinkedCode->lineColumnForBytecodeIndex(bytecodeIndex);
+    lineColumn.column += lineColumn.line ? 1 : firstLineColumnOffset();
+    lineColumn.line += ownerExecutable()->firstLine();
+    return lineColumn;
 }
 
-unsigned CodeBlock::columnNumberForBytecodeIndex(BytecodeIndex bytecodeIndex)
+ExpressionInfo::Entry CodeBlock::expressionInfoForBytecodeIndex(BytecodeIndex bytecodeIndex) const
 {
-    unsigned divot;
-    unsigned startOffset;
-    unsigned endOffset;
-    unsigned line;
-    unsigned column;
-    expressionRangeForBytecodeIndex(bytecodeIndex, divot, startOffset, endOffset, line, column);
-    return column;
-}
-
-void CodeBlock::expressionRangeForBytecodeIndex(BytecodeIndex bytecodeIndex, unsigned& divot, unsigned& startOffset, unsigned& endOffset, unsigned& line, unsigned& column) const
-{
-    m_unlinkedCode->expressionRangeForBytecodeIndex(bytecodeIndex, divot, startOffset, endOffset, line, column);
-    divot += sourceOffset();
-    column += line ? 1 : firstLineColumnOffset();
-    line += ownerExecutable()->firstLine();
+    auto entry = m_unlinkedCode->expressionInfoForBytecodeIndex(bytecodeIndex);
+    entry.divot += sourceOffset();
+    entry.lineColumn.column += entry.lineColumn.line ? 1 : firstLineColumnOffset();
+    entry.lineColumn.line += ownerExecutable()->firstLine();
+    return entry;
 }
 
 bool CodeBlock::hasOpDebugForLineAndColumn(unsigned line, std::optional<unsigned> column)
@@ -2070,11 +2063,8 @@ bool CodeBlock::hasOpDebugForLineAndColumn(unsigned line, std::optional<unsigned
     const auto& instructionStream = instructions();
     for (const auto& it : instructionStream) {
         if (it->is<OpDebug>()) {
-            unsigned unused;
-            unsigned opDebugLine;
-            unsigned opDebugColumn;
-            expressionRangeForBytecodeIndex(it.index(), unused, unused, unused, opDebugLine, opDebugColumn);
-            if (line == opDebugLine && (!column || column == opDebugColumn))
+            auto lineColumn = lineColumnForBytecodeIndex(it.index());
+            if (line == lineColumn.line && (!column || column == lineColumn.column))
                 return true;
         }
     }
@@ -2093,17 +2083,23 @@ void CodeBlock::shrinkToFit(const ConcurrentJSLocker&, ShrinkMode shrinkMode)
 #endif
 }
 
-void CodeBlock::linkIncomingCall(CallFrame* callerFrame, CallLinkInfoBase* incoming)
+void CodeBlock::linkIncomingCall(JSCell* caller, CallLinkInfoBase* incoming)
 {
-    if (callerFrame)
-        noticeIncomingCall(callerFrame);
+    if (caller)
+        noticeIncomingCall(caller);
     m_incomingCalls.push(incoming);
 }
 
-void CodeBlock::unlinkIncomingCalls()
+void CodeBlock::unlinkOrUpgradeIncomingCalls(VM& vm, CodeBlock* newCodeBlock)
 {
-    while (!m_incomingCalls.isEmpty())
-        m_incomingCalls.begin()->unlink(vm());
+    SentinelLinkedList<CallLinkInfoBase, BasicRawSentinelNode<CallLinkInfoBase>> toBeRemoved;
+    toBeRemoved.takeFrom(m_incomingCalls);
+
+    // Note that upgrade may relink CallLinkInfo into newCodeBlock, and it is possible that |this| and newCodeBlock are the same.
+    // This happens when newCodeBlock is installed by upgrading LLInt to Baseline. In that case, |this|'s m_incomingCalls will
+    // be accumulated correctly.
+    while (!toBeRemoved.isEmpty())
+        toBeRemoved.begin()->unlinkOrUpgrade(vm, this, newCodeBlock);
 }
 
 CodeBlock* CodeBlock::newReplacement()
@@ -2284,6 +2280,12 @@ JSGlobalObject* CodeBlock::globalObjectFor(CodeOrigin codeOrigin)
     auto* inlineCallFrame = codeOrigin.inlineCallFrame();
     if (!inlineCallFrame)
         return globalObject();
+    // It is possible that the global object and/or other data relating to this origin
+    // was collected by GC, but we are still asking for this (ex: in a patchpoint generate() function).
+    // Plan::cancel should have cleared this in that case.
+    // Let's make sure we can continue to execute safely, even though we don't have a global object to give.
+    if (!inlineCallFrame->baselineCodeBlock)
+        return nullptr;
     return inlineCallFrame->baselineCodeBlock->globalObject();
 }
 
@@ -2327,12 +2329,11 @@ private:
     mutable bool m_didRecurse;
 };
 
-void CodeBlock::noticeIncomingCall(CallFrame* callerFrame)
+void CodeBlock::noticeIncomingCall(JSCell* caller)
 {
     RELEASE_ASSERT(!m_isJettisoned);
 
-    auto* owner = callerFrame->codeOwnerCell();
-    CodeBlock* callerCodeBlock = jsDynamicCast<CodeBlock*>(owner);
+    CodeBlock* callerCodeBlock = jsDynamicCast<CodeBlock*>(caller);
     
     dataLogLnIf(Options::verboseCallLink(), "Noticing call link from ", pointerDump(callerCodeBlock), " to ", *this);
     
@@ -2387,18 +2388,8 @@ void CodeBlock::noticeIncomingCall(CallFrame* callerFrame)
     }
 
     // Recursive calls won't be inlined.
-    VM& vm = this->vm();
-    RecursionCheckFunctor functor(callerFrame, this, Options::maximumInliningDepth());
-    StackVisitor::visit(vm.topCallFrame, vm, functor);
-
-    if (functor.didRecurse()) {
-        dataLogLnIf(Options::verboseCallLink(), "    Clearing SABI because recursion was detected.");
-        m_shouldAlwaysBeInlined = false;
-        return;
-    }
-    
     if (callerCodeBlock->capabilityLevelState() == DFG::CapabilityLevelNotSet) {
-        dataLog("In call from ", FullCodeOrigin(callerCodeBlock, callerFrame->codeOrigin()), " to ", *this, ": caller's DFG capability level is not set.\n");
+        dataLog("In call from ", FullCodeOrigin(callerCodeBlock, CodeOrigin { }), " to ", *this, ": caller's DFG capability level is not set.\n");
         CRASH();
     }
     

@@ -229,7 +229,19 @@ function onFrameLoaded() {
 <iframe onload="onFrameLoaded();" src="iframe.html"></iframe>
 <iframe onload="onFrameLoaded();" srcdoc="<p>iframe3</p><img src='image.png'>"></iframe>
 )TESTRESOURCE";
-static const char* iframeHTMLDataBytes = R"TESTRESOURCE(<p>iframe2</p><img src='image.png'>)TESTRESOURCE";
+static const char* iframeHTMLDataBytes = R"TESTRESOURCE(
+<head>
+<link rel="stylesheet" href="style.css">
+</head>
+<p>iframe2</p>
+<img src='image.png'>
+)TESTRESOURCE";
+static const char* cssDataBytesForIframe = R"TESTRESOURCE(
+div {
+    height: 50%;
+    width: 50%;
+}
+)TESTRESOURCE";
 
 TEST(WebArchive, SaveResourcesIframe)
 {
@@ -242,6 +254,7 @@ TEST(WebArchive, SaveResourcesIframe)
     [configuration setURLSchemeHandler:schemeHandler.get() forURLScheme:@"webarchivetest"];
     NSData *htmlData = [NSData dataWithBytes:htmlDataBytesForIframe length:strlen(htmlDataBytesForIframe)];
     NSData *iframeHTMLData = [NSData dataWithBytes:iframeHTMLDataBytes length:strlen(iframeHTMLDataBytes)];
+    NSData *cssData = [NSData dataWithBytes:cssDataBytesForIframe length:strlen(cssDataBytesForIframe)];
     NSData *imageData = [NSData dataWithContentsOfURL:[[NSBundle mainBundle] URLForResource:@"400x400-green" withExtension:@"png" subdirectory:@"TestWebKitAPI.resources"]];
     [schemeHandler setStartURLSchemeTaskHandler:^(WKWebView *, id<WKURLSchemeTask> task) {
         NSData *data = nil;
@@ -255,6 +268,9 @@ TEST(WebArchive, SaveResourcesIframe)
         } else if ([task.request.URL.absoluteString isEqualToString:@"webarchivetest://host/image.png"]) {
             mimeType = @"image/png";
             data = imageData;
+        } else if ([task.request.URL.absoluteString isEqualToString:@"webarchivetest://host/style.css"]) {
+            mimeType = @"text/css";
+            data = cssData;
         } else
             FAIL();
 
@@ -281,14 +297,15 @@ TEST(WebArchive, SaveResourcesIframe)
         NSString *savedMainResourceString = [[NSString alloc] initWithData:[NSData dataWithContentsOfFile:mainResourcePath] encoding:NSUTF8StringEncoding];
         NSString *resourceDirectoryName = @"host_files";
         NSString *resourceDirectoryPath = [directoryURL URLByAppendingPathComponent:resourceDirectoryName].path;
-        NSArray *resourceFileNames = [fileManager contentsOfDirectoryAtPath:resourceDirectoryPath error:0];
-        EXPECT_EQ(4llu, resourceFileNames.count);
+        NSArray *savedResourceFileNames = [fileManager contentsOfDirectoryAtPath:resourceDirectoryPath error:0];
+        EXPECT_EQ(5llu, savedResourceFileNames.count);
 
         unsigned frameFileCount = 0;
         unsigned imageFileCount = 0;
+        unsigned cssFileCount = 0;
         NSMutableSet *frameResourceContentsToFind = [NSMutableSet set];
         [frameResourceContentsToFind addObjectsFromArray:[NSArray arrayWithObjects:@"iframe1", @"iframe2", @"iframe3", nil]];
-        for (NSString *fileName in resourceFileNames) {
+        for (NSString *fileName in savedResourceFileNames) {
             if ([fileName containsString:@"frame_"]) {
                 // Ensure urls are replaced with file path.
                 NSString *replacementPath = [resourceDirectoryName stringByAppendingPathComponent:fileName];
@@ -305,9 +322,12 @@ TEST(WebArchive, SaveResourcesIframe)
 
             if ([fileName isEqualToString:@"image.png"])
                 ++imageFileCount;
+            if ([fileName isEqualToString:@"style.css"])
+                ++cssFileCount;
         }
         EXPECT_EQ(3u, frameFileCount);
         EXPECT_EQ(1u, imageFileCount);
+        EXPECT_EQ(1u, cssFileCount);
         EXPECT_EQ(0u, frameResourceContentsToFind.count);
         saved = true;
     }];
@@ -427,7 +447,7 @@ TEST(WebArchive, SaveResourcesValidFileName)
     NSMutableString *mutableFileName = [NSMutableString stringWithCapacity:256];
     for (unsigned i = 0; i < 256; ++i)
         [mutableFileName appendString:@"x"];
-    NSArray *tests = [NSArray arrayWithObjects:[NSString stringWithString:mutableFileName], @"a/image.png", @"b/image.png", @"image.png(1)", @"webarchivetest://host/file:image.png", @"image1/", @"image2///", @"image3.png/./", @"image4/content/../", nil];
+    NSArray *tests = [NSArray arrayWithObjects:[NSString stringWithString:mutableFileName], @"a/image.png", @"b/image.png", @"c/image.png", @"d/image.png", @"image.png(1)", @"webarchivetest://host/file:image.png", @"image1/", @"image2///", @"image3.png/./", @"image4/content/../", @"image5%20file.png", @"image 6.png", nil];
     NSMutableString *mutableHTMLString = [NSMutableString string];
     NSString *scriptString = [NSString stringWithFormat:@"<script>count = 0; function onImageLoad() { if (++count == %d) window.webkit.messageHandlers.testHandler.postMessage('done'); }</script>", (int)tests.count];
     [mutableHTMLString appendString:scriptString];
@@ -460,13 +480,15 @@ TEST(WebArchive, SaveResourcesValidFileName)
     [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"webarchivetest://host/main.html"]]];
     Util::run(&messageReceived);
 
-    NSSet *expectedFileNames = [NSSet setWithArray:[NSArray arrayWithObjects:[mutableFileName substringFromIndex:1], @"image.png", @"image.png(1)", @"image.png(1)(1)", @"file%3Aimage.png", @"image1", @"file", @"image3.png", @"image4", nil]];
+    NSSet *expectedFileNames = [NSSet setWithArray:[NSArray arrayWithObjects:[mutableFileName substringFromIndex:1], @"image.png", @"image.png-1", @"image.png-2", @"image.png-3", @"image.png-1-", @"file-image.png", @"image1", @"file", @"image3.png", @"image4", @"image5-file.png", @"image-6.png", nil]];
     static bool saved = false;
     [webView _saveResources:directoryURL.get() suggestedFileName:@"host" completionHandler:^(NSError *error) {
         EXPECT_NULL(error);
-        NSArray *resourceFileNames = [fileManager contentsOfDirectoryAtPath:[directoryURL URLByAppendingPathComponent:@"host_files"].path error:nil];
+        NSString *resourceDirectoryName = @"host_files";
+        NSArray *resourceFileNames = [fileManager contentsOfDirectoryAtPath:[directoryURL URLByAppendingPathComponent:resourceDirectoryName].path error:nil];
         NSSet *savedFileNames = [NSSet setWithArray:resourceFileNames];
         EXPECT_TRUE([savedFileNames isEqualToSet:expectedFileNames]);
+
         saved = true;
     }];
     Util::run(&saved);
@@ -1249,7 +1271,9 @@ TEST(WebArchive, SaveResourcesInlineStyle)
 
 static const char* htmlDataBytesForLink = R"TESTRESOURCE(
 <head>
-<link href="style.css" rel="stylesheet">
+<link rel="manifest" href="manifest.json">
+<link rel="preload" href="Ahem-10000A.ttf" as="font" type="font/ttf">
+<link rel="stylesheet" href="style.css">
 </head>
 <div><p id="console">Hello</p></div>
 <script>
@@ -1273,6 +1297,13 @@ div {
     background-image: url("files/image.png");
 }
 )TESTRESOURCE";
+static const char* manifestDataBytesForLink = R"TESTRESOURCE(
+{
+    "name": "webarchivetest",
+    "short_name": "wat",
+    "description": "This is a test app."
+}
+)TESTRESOURCE";
 
 TEST(WebArchive, SaveResourcesLink)
 {
@@ -1286,6 +1317,8 @@ TEST(WebArchive, SaveResourcesLink)
     NSData *htmlData = [NSData dataWithBytes:htmlDataBytesForLink length:strlen(htmlDataBytesForLink)];
     NSData *cssData = [NSData dataWithBytes:cssDataBytesForLink length:strlen(cssDataBytesForLink)];
     NSData *imageData = [NSData dataWithContentsOfURL:[[NSBundle mainBundle] URLForResource:@"400x400-green" withExtension:@"png" subdirectory:@"TestWebKitAPI.resources"]];
+    NSData *manifestData = [NSData dataWithBytes:manifestDataBytesForLink length:strlen(manifestDataBytesForLink)];
+    NSData *fontData = [NSData dataWithContentsOfURL:[[NSBundle mainBundle] URLForResource:@"Ahem-10000A" withExtension:@"ttf" subdirectory:@"TestWebKitAPI.resources"]];
     [schemeHandler setStartURLSchemeTaskHandler:^(WKWebView *, id<WKURLSchemeTask> task) {
         NSData *data = nil;
         NSString *mimeType = nil;
@@ -1298,6 +1331,12 @@ TEST(WebArchive, SaveResourcesLink)
         } else if ([task.request.URL.absoluteString isEqualToString:@"webarchivetest://host/style.css"]) {
             mimeType = @"text/css";
             data = cssData;
+        } else if ([task.request.URL.absoluteString isEqualToString:@"webarchivetest://host/manifest.json"]) {
+            mimeType = @"application/json";
+            data = manifestData;
+        } else if ([task.request.URL.absoluteString isEqualToString:@"webarchivetest://host/Ahem-10000A.ttf"]) {
+            mimeType = @"font/ttf";
+            data = fontData;
         }
 
         auto response = adoptNS([[NSURLResponse alloc] initWithURL:task.request.URL MIMEType:mimeType expectedContentLength:data.length textEncodingName:nil]);
@@ -1325,11 +1364,17 @@ TEST(WebArchive, SaveResourcesLink)
         NSString *resourceDirectoryPath =[directoryURL URLByAppendingPathComponent:resourceDirectoryName].path;
         NSArray *resourceFileNames = [fileManager contentsOfDirectoryAtPath:resourceDirectoryPath error:nil];
         NSSet *savedFileNames = [NSSet setWithArray:resourceFileNames];
-        NSSet *expectedFileNames = [NSSet setWithArray:[NSArray arrayWithObjects:@"image.png", @"style.css", nil]];
+        NSSet *expectedFileNames = [NSSet setWithArray:[NSArray arrayWithObjects:@"image.png", @"style.css", @"manifest.json", @"Ahem-10000A.ttf", nil]];
         EXPECT_TRUE([savedFileNames isEqualToSet:expectedFileNames]);
+        for (NSString *savedFileName in resourceFileNames) {
+            // image.png is not subresource in main resource file.
+            if ([savedFileName isEqualToString:@"image.png"])
+                continue;
 
-        NSString *styleResourceFileName = [resourceDirectoryName stringByAppendingPathComponent:@"style.css"];
-        EXPECT_TRUE([savedMainResource containsString:styleResourceFileName]);
+            NSString *savedFileRelativePath = [resourceDirectoryName stringByAppendingPathComponent:savedFileName];
+            EXPECT_TRUE([savedMainResource containsString:savedFileRelativePath]);
+        }
+
         NSString *styleResourceFilePath = [resourceDirectoryPath stringByAppendingPathComponent:@"style.css"];
         NSString *savedStyleResource = [[NSString alloc] initWithData:[NSData dataWithContentsOfFile:styleResourceFilePath] encoding:NSUTF8StringEncoding];
         EXPECT_TRUE([savedStyleResource containsString:@"url(\"image.png\")"]);
@@ -1509,6 +1554,231 @@ TEST(WebArchive, SaveResourcesCSSImportRule)
         NSString *savedStyleResource = [[NSString alloc] initWithData:[NSData dataWithContentsOfFile:styleResourceFilePath] encoding:NSUTF8StringEncoding];
         EXPECT_TRUE([savedStyleResource containsString:@"url(\"image.png\")"]);
         EXPECT_TRUE([savedStyleResource containsString:@"color: fuchsia"]);
+
+        saved = true;
+    }];
+    Util::run(&saved);
+}
+
+static const char* htmlDataBytesForCSSSupportsRule = R"TESTRESOURCE(
+<head>
+<style>
+@supports (background-image: url()) {
+    div {
+        background-image: url("image.png");
+    }
+}
+</style>
+</head>
+<div>Hello</div>
+<script>
+img = null;
+function onImageLoad() {
+    img = null;
+    window.webkit.messageHandlers.testHandler.postMessage("done");
+}
+var img = document.createElement("img");
+img.src = "image.png";
+img.onload = onImageLoad;
+</script>
+)TESTRESOURCE";
+
+TEST(WebArchive, SaveResourcesCSSSupportsRule)
+{
+    RetainPtr<NSURL> directoryURL = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:@"SaveResourcesTest"] isDirectory:YES];
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    [fileManager removeItemAtURL:directoryURL.get() error:nil];
+
+    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    auto schemeHandler = adoptNS([[TestURLSchemeHandler alloc] init]);
+    [configuration setURLSchemeHandler:schemeHandler.get() forURLScheme:@"webarchivetest"];
+    NSData *htmlData = [NSData dataWithBytes:htmlDataBytesForCSSSupportsRule length:strlen(htmlDataBytesForCSSSupportsRule)];
+    NSData *imageData = [NSData dataWithContentsOfURL:[[NSBundle mainBundle] URLForResource:@"400x400-green" withExtension:@"png" subdirectory:@"TestWebKitAPI.resources"]];
+    [schemeHandler setStartURLSchemeTaskHandler:^(WKWebView *, id<WKURLSchemeTask> task) {
+        NSData *data = nil;
+        NSString *mimeType = nil;
+        if ([task.request.URL.absoluteString isEqualToString:@"webarchivetest://host/main.html"]) {
+            mimeType = @"text/html";
+            data = htmlData;
+        } else if ([task.request.URL.absoluteString isEqualToString:@"webarchivetest://host/image.png"]) {
+            mimeType = @"image/png";
+            data = imageData;
+        }
+
+        auto response = adoptNS([[NSURLResponse alloc] initWithURL:task.request.URL MIMEType:mimeType expectedContentLength:data.length textEncodingName:nil]);
+        [task didReceiveResponse:response.get()];
+        [task didReceiveData:data];
+        [task didFinish];
+    }];
+
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
+    static bool messageReceived = false;
+    [webView performAfterReceivingMessage:@"done" action:[&] {
+        messageReceived = true;
+    }];
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"webarchivetest://host/main.html"]]];
+    Util::run(&messageReceived);
+
+    static bool saved = false;
+    [webView _saveResources:directoryURL.get() suggestedFileName:@"host" completionHandler:^(NSError *error) {
+        EXPECT_NULL(error);
+        NSString *mainResourcePath = [directoryURL URLByAppendingPathComponent:@"host.html"].path;
+        EXPECT_TRUE([fileManager fileExistsAtPath:mainResourcePath]);
+
+        NSString *savedMainResource = [[NSString alloc] initWithData:[NSData dataWithContentsOfFile:mainResourcePath] encoding:NSUTF8StringEncoding];
+        NSString *imageFile = @"image.png";
+        NSString *resourceDirectoryName = @"host_files";
+        NSString *imageResouceRelativePath = [resourceDirectoryName stringByAppendingPathComponent:imageFile];
+        EXPECT_TRUE([savedMainResource containsString:imageResouceRelativePath]);
+
+        NSString *imageResourcePath = [directoryURL URLByAppendingPathComponent:imageResouceRelativePath].path;
+        EXPECT_TRUE([fileManager fileExistsAtPath:imageResourcePath]);
+
+        saved = true;
+    }];
+    Util::run(&saved);
+}
+
+static const char* htmlDataBytesForCrossOriginLink = R"TESTRESOURCE(
+<head>
+<link href="webarchivetest://resource.com/style.css" rel="stylesheet">
+</head>
+<div id="console">Hello</div>
+<script>
+console = document.getElementById("console");
+computedStyle = getComputedStyle(console);
+window.webkit.messageHandlers.testHandler.postMessage("done");
+</script>
+)TESTRESOURCE";
+static const char* cssDataBytesForCrossOriginLink = R"TESTRESOURCE(
+div {
+    height: 50%;
+    width: 50%;
+}
+)TESTRESOURCE";
+
+TEST(WebArchive, SaveResourcesCrossOriginLink)
+{
+    RetainPtr<NSURL> directoryURL = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:@"SaveResourcesTest"] isDirectory:YES];
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    [fileManager removeItemAtURL:directoryURL.get() error:nil];
+
+    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    auto schemeHandler = adoptNS([[TestURLSchemeHandler alloc] init]);
+    [configuration setURLSchemeHandler:schemeHandler.get() forURLScheme:@"webarchivetest"];
+    NSData *htmlData = [NSData dataWithBytes:htmlDataBytesForCrossOriginLink length:strlen(htmlDataBytesForCrossOriginLink)];
+    NSData *cssData = [NSData dataWithBytes:cssDataBytesForCrossOriginLink length:strlen(cssDataBytesForCrossOriginLink)];
+    [schemeHandler setStartURLSchemeTaskHandler:^(WKWebView *, id<WKURLSchemeTask> task) {
+        NSData *data = nil;
+        NSString *mimeType = nil;
+        if ([task.request.URL.absoluteString isEqualToString:@"webarchivetest://host.com/main.html"]) {
+            mimeType = @"text/html";
+            data = htmlData;
+        } else if ([task.request.URL.absoluteString isEqualToString:@"webarchivetest://resource.com/style.css"]) {
+            mimeType = @"text/css";
+            data = cssData;
+        }
+
+        auto response = adoptNS([[NSURLResponse alloc] initWithURL:task.request.URL MIMEType:mimeType expectedContentLength:data.length textEncodingName:nil]);
+        [task didReceiveResponse:response.get()];
+        [task didReceiveData:data];
+        [task didFinish];
+    }];
+
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
+    static bool messageReceived = false;
+    [webView performAfterReceivingMessage:@"done" action:[&] {
+        messageReceived = true;
+    }];
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"webarchivetest://host.com/main.html"]]];
+    Util::run(&messageReceived);
+
+    static bool saved = false;
+    [webView _saveResources:directoryURL.get() suggestedFileName:@"host" completionHandler:^(NSError *error) {
+        EXPECT_NULL(error);
+        NSString *mainResourcePath = [directoryURL URLByAppendingPathComponent:@"host.html"].path;
+        EXPECT_TRUE([fileManager fileExistsAtPath:mainResourcePath]);
+
+        NSString *savedMainResource = [[NSString alloc] initWithData:[NSData dataWithContentsOfFile:mainResourcePath] encoding:NSUTF8StringEncoding];
+        NSString *cssFile = @"style.css";
+        NSString *resourceDirectoryName = @"host_files";
+        NSString *cssResourceRelativePath = [resourceDirectoryName stringByAppendingPathComponent:cssFile];
+        EXPECT_TRUE([savedMainResource containsString:cssResourceRelativePath]);
+
+        NSString *cssResourcePath = [directoryURL URLByAppendingPathComponent:cssResourceRelativePath].path;
+        EXPECT_TRUE([fileManager fileExistsAtPath:cssResourcePath]);
+
+        saved = true;
+    }];
+    Util::run(&saved);
+}
+
+static const char* htmlDataBytesForExcludeBaseElement = R"TESTRESOURCE(
+<head>
+<base href="webarchivetest://resource.com" target="_blank">
+</head>
+<img src="image.png" onload="onImageLoad()">
+<a href="/link">Open Link</a>
+<script>
+function onImageLoad() {
+    window.webkit.messageHandlers.testHandler.postMessage("done");
+}
+</script>
+)TESTRESOURCE";
+
+TEST(WebArchive, SaveResourcesExcludeBaseElement)
+{
+    RetainPtr<NSURL> directoryURL = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:@"SaveResourcesTest"] isDirectory:YES];
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    [fileManager removeItemAtURL:directoryURL.get() error:nil];
+
+    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    auto schemeHandler = adoptNS([[TestURLSchemeHandler alloc] init]);
+    [configuration setURLSchemeHandler:schemeHandler.get() forURLScheme:@"webarchivetest"];
+    NSData *htmlData = [NSData dataWithBytes:htmlDataBytesForExcludeBaseElement length:strlen(htmlDataBytesForExcludeBaseElement)];
+    NSData *imageData = [NSData dataWithContentsOfURL:[[NSBundle mainBundle] URLForResource:@"400x400-green" withExtension:@"png" subdirectory:@"TestWebKitAPI.resources"]];
+    [schemeHandler setStartURLSchemeTaskHandler:^(WKWebView *, id<WKURLSchemeTask> task) {
+        NSData *data = nil;
+        NSString *mimeType = nil;
+        if ([task.request.URL.absoluteString isEqualToString:@"webarchivetest://host.com/main.html"]) {
+            mimeType = @"text/html";
+            data = htmlData;
+        } else if ([task.request.URL.absoluteString isEqualToString:@"webarchivetest://resource.com/image.png"]) {
+            mimeType = @"image/png";
+            data = imageData;
+        }
+
+        auto response = adoptNS([[NSURLResponse alloc] initWithURL:task.request.URL MIMEType:mimeType expectedContentLength:data.length textEncodingName:nil]);
+        [task didReceiveResponse:response.get()];
+        [task didReceiveData:data];
+        [task didFinish];
+    }];
+
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
+    static bool messageReceived = false;
+    [webView performAfterReceivingMessage:@"done" action:[&] {
+        messageReceived = true;
+    }];
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"webarchivetest://host.com/main.html"]]];
+    Util::run(&messageReceived);
+
+    static bool saved = false;
+    [webView _saveResources:directoryURL.get() suggestedFileName:@"host" completionHandler:^(NSError *error) {
+        EXPECT_NULL(error);
+        NSString *mainResourcePath = [directoryURL URLByAppendingPathComponent:@"host.html"].path;
+        EXPECT_TRUE([fileManager fileExistsAtPath:mainResourcePath]);
+
+        NSString *savedMainResource = [[NSString alloc] initWithData:[NSData dataWithContentsOfFile:mainResourcePath] encoding:NSUTF8StringEncoding];
+        NSString *imageFile = @"image.png";
+        NSString *resourceDirectoryName = @"host_files";
+        NSString *imageResourceRelativePath = [resourceDirectoryName stringByAppendingPathComponent:imageFile];
+        EXPECT_TRUE([savedMainResource containsString:imageResourceRelativePath]);
+        EXPECT_FALSE([savedMainResource containsString:@"base"]);
+        // The anchor element's url should be resolved.
+        EXPECT_TRUE([savedMainResource containsString:@"webarchivetest://resource.com/link"]);
+
+        NSString *imageResourcePath = [directoryURL URLByAppendingPathComponent:imageResourceRelativePath].path;
+        EXPECT_TRUE([fileManager fileExistsAtPath:imageResourcePath]);
 
         saved = true;
     }];

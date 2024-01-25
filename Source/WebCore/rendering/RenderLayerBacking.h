@@ -289,6 +289,9 @@ public:
     WEBCORE_EXPORT String replayDisplayListAsText(OptionSet<DisplayList::AsTextFlag>) const;
 
     bool shouldPaintUsingCompositeCopy() const { return m_shouldPaintUsingCompositeCopy; }
+
+    void purgeFrontBufferForTesting();
+    void purgeBackBufferForTesting();
 private:
     friend class PaintedContentsInfo;
 
@@ -349,9 +352,7 @@ private:
     void updateBackdropFilters(const RenderStyle&);
     void updateBackdropFiltersGeometry();
     bool updateBackdropRoot();
-#if ENABLE(CSS_COMPOSITING)
     void updateBlendMode(const RenderStyle&);
-#endif
 #if ENABLE(VIDEO)
     void updateVideoGravity(const RenderStyle&);
 #endif

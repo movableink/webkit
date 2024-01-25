@@ -106,7 +106,7 @@ ALWAYS_INLINE auto RemoteImageBufferProxy::sendSync(T&& message)
     if (UNLIKELY(!result.succeeded())) {
         auto& parameters = m_remoteRenderingBackendProxy->parameters();
         RELEASE_LOG(RemoteLayerBuffers, "[pageProxyID=%" PRIu64 ", webPageID=%" PRIu64 ", renderingBackend=%" PRIu64 "] RemoteDisplayListRecorderProxy::sendSync - failed, name:%" PUBLIC_LOG_STRING ", error:%" PUBLIC_LOG_STRING,
-            parameters.pageProxyID.toUInt64(), parameters.pageID.toUInt64(), parameters.identifier.toUInt64(), IPC::description(T::name()), IPC::errorAsString(result.error));
+            parameters.pageProxyID.toUInt64(), parameters.pageID.toUInt64(), parameters.identifier.toUInt64(), IPC::description(T::name()), IPC::errorAsString(result.error()));
     }
 #endif
     return result;
@@ -126,29 +126,36 @@ void RemoteImageBufferProxy::backingStoreWillChange()
     prepareForBackingStoreChange();
 }
 
-void RemoteImageBufferProxy::didCreateBackend(std::optional<ImageBufferBackendHandle> handle)
+void RemoteImageBufferProxy::didCreateBackend(std::optional<ImageBufferBackendHandle> backendHandle)
 {
     ASSERT(!m_backend);
-    if (!handle) {
+    // This should match RemoteImageBufferProxy::create<>() call site and RemoteImageBuffer::create<>() call site.
+    // FIXME: this will be removed and backend be constructed in the contructor.
+    std::unique_ptr<ImageBufferBackend> backend;
+    if (backendHandle) {
+        auto backendParameters = this->backendParameters(parameters());
+#if HAVE(IOSURFACE)
+        if (std::holds_alternative<MachSendRight>(*backendHandle)) {
+            if (canMapBackingStore())
+                backend = ImageBufferShareableMappedIOSurfaceBackend::create(backendParameters, WTFMove(*backendHandle));
+            else
+                backend = ImageBufferRemoteIOSurfaceBackend::create(backendParameters, WTFMove(*backendHandle));
+        }
+#endif
+        if (std::holds_alternative<ShareableBitmap::Handle>(*backendHandle)) {
+            m_backendInfo = ImageBuffer::populateBackendInfo<ImageBufferShareableBitmapBackend>(backendParameters);
+            auto handle = std::get<ShareableBitmap::Handle>(WTFMove(*backendHandle));
+            handle.takeOwnershipOfMemory(MemoryLedger::Graphics);
+            backend = ImageBufferShareableBitmapBackend::create(backendParameters, WTFMove(handle));
+        }
+    }
+    if (!backend) {
         m_remoteDisplayList.disconnect();
         m_remoteRenderingBackendProxy->remoteResourceCacheProxy().forgetImageBuffer(renderingResourceIdentifier());
         m_remoteRenderingBackendProxy->releaseImageBuffer(renderingResourceIdentifier());
         m_remoteRenderingBackendProxy = nullptr;
         return;
     }
-    // This should match RemoteImageBufferProxy::create<>() call site and RemoteImageBuffer::create<>() call site.
-    // FIXME: this will be removed and backend be constructed in the contructor.
-    std::unique_ptr<ImageBufferBackend> backend;
-    auto backendParameters = this->backendParameters(parameters());
-    if (renderingMode() == RenderingMode::Accelerated) {
-#if HAVE(IOSURFACE)
-        if (canMapBackingStore())
-            backend = ImageBufferShareableMappedIOSurfaceBackend::create(backendParameters, WTFMove(*handle));
-        else
-            backend = ImageBufferRemoteIOSurfaceBackend::create(backendParameters, WTFMove(*handle));
-#endif
-    } else
-        backend = ImageBufferShareableBitmapBackend::create(backendParameters, WTFMove(*handle));
 
     setBackend(WTFMove(backend));
 }

@@ -119,7 +119,7 @@ void RenderBoxModelObject::ContinuationChainNode::insertAfter(ContinuationChainN
     after.next = this;
 }
 
-using ContinuationChainNodeMap = HashMap<const RenderBoxModelObject*, std::unique_ptr<RenderBoxModelObject::ContinuationChainNode>>;
+using ContinuationChainNodeMap = HashMap<SingleThreadWeakRef<const RenderBoxModelObject>, std::unique_ptr<RenderBoxModelObject::ContinuationChainNode>>;
 
 static ContinuationChainNodeMap& continuationChainNodeMap()
 {
@@ -127,7 +127,7 @@ static ContinuationChainNodeMap& continuationChainNodeMap()
     return map;
 }
 
-using FirstLetterRemainingTextMap = HashMap<const RenderBoxModelObject*, SingleThreadWeakPtr<RenderTextFragment>>;
+using FirstLetterRemainingTextMap = HashMap<SingleThreadWeakRef<const RenderBoxModelObject>, SingleThreadWeakPtr<RenderTextFragment>>;
 
 static FirstLetterRemainingTextMap& firstLetterRemainingTextMap()
 {
@@ -167,14 +167,14 @@ bool RenderBoxModelObject::hasAcceleratedCompositing() const
     return view().compositor().hasAcceleratedCompositing();
 }
 
-RenderBoxModelObject::RenderBoxModelObject(Type type, Element& element, RenderStyle&& style, OptionSet<RenderElementType> baseTypeFlags)
-    : RenderLayerModelObject(type, element, WTFMove(style), baseTypeFlags | RenderElementType::RenderBoxModelObjectFlag)
+RenderBoxModelObject::RenderBoxModelObject(Type type, Element& element, RenderStyle&& style, OptionSet<TypeFlag> baseTypeFlags, TypeSpecificFlags typeSpecificFlags)
+    : RenderLayerModelObject(type, element, WTFMove(style), baseTypeFlags | TypeFlag::IsBoxModelObject, typeSpecificFlags)
 {
     ASSERT(isRenderBoxModelObject());
 }
 
-RenderBoxModelObject::RenderBoxModelObject(Type type, Document& document, RenderStyle&& style, OptionSet<RenderElementType> baseTypeFlags)
-    : RenderLayerModelObject(type, document, WTFMove(style), baseTypeFlags | RenderElementType::RenderBoxModelObjectFlag)
+RenderBoxModelObject::RenderBoxModelObject(Type type, Document& document, RenderStyle&& style, OptionSet<TypeFlag> baseTypeFlags, TypeSpecificFlags typeSpecificFlags)
+    : RenderLayerModelObject(type, document, WTFMove(style), baseTypeFlags | TypeFlag::IsBoxModelObject, typeSpecificFlags)
 {
     ASSERT(isRenderBoxModelObject());
 }
@@ -225,9 +225,12 @@ static LayoutSize accumulateInFlowPositionOffsets(const RenderObject* child)
     if (!child->isAnonymousBlock() || !child->isInFlowPositioned())
         return LayoutSize();
     LayoutSize offset;
-    for (RenderElement* parent = downcast<RenderBlock>(*child).inlineContinuation(); is<RenderInline>(parent); parent = parent->parent()) {
+    for (RenderElement* parent = downcast<RenderBlock>(*child).inlineContinuation(); parent; parent = parent->parent()) {
+        auto* parentRenderInline = dynamicDowncast<RenderInline>(*parent);
+        if (!parentRenderInline)
+            break;
         if (parent->isInFlowPositioned())
-            offset += downcast<RenderInline>(*parent).offsetForInFlowPosition();
+            offset += parentRenderInline->offsetForInFlowPosition();
     }
     return offset;
 }
@@ -275,12 +278,12 @@ RenderBlock* RenderBoxModelObject::containingBlockForAutoHeightDetection(Length 
     
 bool RenderBoxModelObject::hasAutoHeightOrContainingBlockWithAutoHeight() const
 {
-    const auto* thisBox = isRenderBox() ? downcast<RenderBox>(this) : nullptr;
+    auto* thisBox = dynamicDowncast<RenderBox>(this);
     Length logicalHeightLength = style().logicalHeight();
     auto* cb = containingBlockForAutoHeightDetection(logicalHeightLength);
     
-    if (logicalHeightLength.isPercentOrCalculated() && cb && isRenderBox())
-        cb->addPercentHeightDescendant(*const_cast<RenderBox*>(downcast<RenderBox>(this)));
+    if (logicalHeightLength.isPercentOrCalculated() && cb && thisBox)
+        cb->addPercentHeightDescendant(*const_cast<RenderBox*>(thisBox));
 
     if (thisBox && thisBox->isFlexItem() && downcast<RenderFlexibleBox>(*parent()).useChildOverridingLogicalHeightForPercentageResolution(*thisBox))
         return false;
@@ -302,11 +305,8 @@ bool RenderBoxModelObject::hasAutoHeightOrContainingBlockWithAutoHeight() const
 
 DecodingMode RenderBoxModelObject::decodingModeForImageDraw(const Image& image, const PaintInfo& paintInfo) const
 {
-    if (!is<BitmapImage>(image))
-        return DecodingMode::Synchronous;
-
-    const BitmapImage& bitmapImage = downcast<BitmapImage>(image);
-    if (bitmapImage.canAnimate()) {
+    auto* bitmapImage = dynamicDowncast<BitmapImage>(image);
+    if (!bitmapImage || bitmapImage->canAnimate()) {
         // The DecodingMode for the current frame has to be Synchronous. The DecodingMode
         // for the next frame will be calculated in BitmapImage::internalStartAnimation().
         return DecodingMode::Synchronous;
@@ -339,16 +339,16 @@ DecodingMode RenderBoxModelObject::decodingModeForImageDraw(const Image& image, 
         return isVisibleInViewport() ? DecodingMode::Synchronous : DecodingMode::Asynchronous;
     };
 
-    if (is<HTMLImageElement>(element())) {
+    if (RefPtr imgElement = dynamicDowncast<HTMLImageElement>(element())) {
         // <img decoding="sync"> forces synchronous decoding.
-        if (downcast<HTMLImageElement>(*element()).decodingMode() == DecodingMode::Synchronous)
+        if (imgElement->decodingMode() == DecodingMode::Synchronous)
             return DecodingMode::Synchronous;
 
         // <img decoding="async"> forces asynchronous decoding but make sure this
         // will not cause flickering.
-        if (downcast<HTMLImageElement>(*element()).decodingMode() == DecodingMode::Asynchronous) {
+        if (imgElement->decodingMode() == DecodingMode::Asynchronous) {
             // isAsyncDecodingEnabledForTesting() forces async image decoding regardless whether it is in the viewport or not.
-            if (bitmapImage.isAsyncDecodingEnabledForTesting())
+            if (bitmapImage->isAsyncDecodingEnabledForTesting())
                 return DecodingMode::Asynchronous;
 
             // Choose a decodingMode such that the image does not flicker.
@@ -357,11 +357,11 @@ DecodingMode RenderBoxModelObject::decodingModeForImageDraw(const Image& image, 
     }
 
     // isAsyncDecodingEnabledForTesting() forces async image decoding regardless of the size.
-    if (bitmapImage.isAsyncDecodingEnabledForTesting())
+    if (bitmapImage->isAsyncDecodingEnabledForTesting())
         return DecodingMode::Asynchronous;
 
     // Large image case.
-    if (!(bitmapImage.canUseAsyncDecodingForLargeImages() && settings().largeImageAsyncDecodingEnabled()))
+    if (!(bitmapImage->canUseAsyncDecodingForLargeImages() && settings().largeImageAsyncDecodingEnabled()))
         return DecodingMode::Synchronous;
 
     // Choose a decodingMode such that the image does not flicker.
@@ -439,8 +439,8 @@ LayoutPoint RenderBoxModelObject::adjustedPositionRelativeToOffsetParent(const L
     // return the distance between the canvas origin and the left border edge 
     // of the element and stop this algorithm.
     if (const RenderBoxModelObject* offsetParent = this->offsetParent()) {
-        if (is<RenderBox>(*offsetParent) && !offsetParent->isBody() && !is<RenderTable>(*offsetParent))
-            referencePoint.move(-downcast<RenderBox>(*offsetParent).borderLeft(), -downcast<RenderBox>(*offsetParent).borderTop());
+        if (auto* renderBox = dynamicDowncast<RenderBox>(*offsetParent); renderBox && !offsetParent->isBody() && !is<RenderTable>(*offsetParent))
+            referencePoint.move(-renderBox->borderLeft(), -renderBox->borderTop());
         if (!isOutOfFlowPositioned() || enclosingFragmentedFlow()) {
             if (isRelativelyPositioned())
                 referencePoint.move(relativePositionOffset());
@@ -454,21 +454,20 @@ LayoutPoint RenderBoxModelObject::adjustedPositionRelativeToOffsetParent(const L
             while (ancestor != offsetParent) {
                 // FIXME: What are we supposed to do inside SVG content?
                 
-                if (is<RenderMultiColumnFlow>(*ancestor)) {
+                if (auto* renderMultiColumnFlow = dynamicDowncast<RenderMultiColumnFlow>(*ancestor)) {
                     // We need to apply a translation based off what region we are inside.
-                    RenderFragmentContainer* fragment = downcast<RenderMultiColumnFlow>(*ancestor).physicalTranslationFromFlowToFragment(referencePoint);
-                    if (fragment)
+                    if (auto* fragment = renderMultiColumnFlow->physicalTranslationFromFlowToFragment(referencePoint))
                         referencePoint.moveBy(fragment->topLeftLocation());
                 } else if (!isOutOfFlowPositioned()) {
-                    if (is<RenderBox>(*ancestor) && !is<RenderTableRow>(*ancestor))
-                        referencePoint.moveBy(downcast<RenderBox>(*ancestor).topLeftLocation());
+                    if (auto* renderBox = dynamicDowncast<RenderBox>(*ancestor); renderBox && !is<RenderTableRow>(*ancestor))
+                        referencePoint.moveBy(renderBox->topLeftLocation());
                 }
                 
                 ancestor = ancestor->parent();
             }
             
-            if (is<RenderBox>(*offsetParent) && offsetParent->isBody() && !offsetParent->isPositioned())
-                referencePoint.moveBy(downcast<RenderBox>(*offsetParent).topLeftLocation());
+            if (auto* renderBox = dynamicDowncast<RenderBox>(*offsetParent); renderBox && offsetParent->isBody() && !offsetParent->isPositioned())
+                referencePoint.moveBy(renderBox->topLeftLocation());
         }
     }
 
@@ -551,8 +550,8 @@ void RenderBoxModelObject::computeStickyPositionConstraints(StickyPositionViewpo
     // have already done a similar call to move from the containing block to the scrolling
     // ancestor above, but localToContainerQuad takes care of a lot of complex situations
     // involving inlines, tables, and transformations.
-    if (parent()->isRenderBox())
-        downcast<RenderBox>(parent())->flipForWritingMode(stickyBoxRect);
+    if (CheckedPtr parentBox = dynamicDowncast<RenderBox>(*parent()))
+        parentBox->flipForWritingMode(stickyBoxRect);
     auto stickyBoxRelativeToScrollingAncestor = parent()->localToContainerQuad(FloatRect(stickyBoxRect), &enclosingClippingBox, { } /* ignore transforms */).boundingBox();
 
     if (enclosingClippingLayer) {
@@ -650,14 +649,6 @@ LayoutUnit RenderBoxModelObject::offsetTop() const
     return adjustedPositionRelativeToOffsetParent(LayoutPoint()).y();
 }
 
-LayoutUnit RenderBoxModelObject::computedCSSPadding(const Length& padding) const
-{
-    LayoutUnit w;
-    if (padding.isPercentOrCalculated())
-        w = containingBlockLogicalWidthForContent();
-    return minimumValueForLength(padding, w);
-}
-
 InterpolationQuality RenderBoxModelObject::chooseInterpolationQuality(GraphicsContext& context, Image& image, const void* layer, const LayoutSize& size) const
 {
     return view().imageQualityController().chooseInterpolationQuality(context, const_cast<RenderBoxModelObject*>(this), image, layer, size);
@@ -688,7 +679,8 @@ void RenderBoxModelObject::paintMaskForTextFillBox(ImageBuffer* maskImage, const
         return;
     }
 
-    LayoutSize localOffset = is<RenderBox>(*this) ? downcast<RenderBox>(*this).locationOffset() : LayoutSize();
+    auto* renderBox = dynamicDowncast<RenderBox>(*this);
+    auto localOffset = renderBox ? renderBox->locationOffset() : LayoutSize();
     paint(maskInfo, scrolledPaintRect.location() - localOffset);
 }
 
@@ -844,7 +836,7 @@ RenderBoxModelObject* RenderBoxModelObject::continuation() const
     if (!hasContinuationChainNode())
         return nullptr;
 
-    auto& continuationChainNode = *continuationChainNodeMap().get(this);
+    auto& continuationChainNode = *continuationChainNodeMap().get(*this);
     if (!continuationChainNode.next)
         return nullptr;
     return continuationChainNode.next->renderer.get();
@@ -855,9 +847,9 @@ RenderInline* RenderBoxModelObject::inlineContinuation() const
     if (!hasContinuationChainNode())
         return nullptr;
 
-    for (auto* next = continuationChainNodeMap().get(this)->next; next; next = next->next) {
-        if (is<RenderInline>(*next->renderer))
-            return downcast<RenderInline>(next->renderer.get());
+    for (auto* next = continuationChainNodeMap().get(*this)->next; next; next = next->next) {
+        if (auto* renderInline = dynamicDowncast<RenderInline>(*next->renderer))
+            return renderInline;
     }
     return nullptr;
 }
@@ -868,7 +860,7 @@ void RenderBoxModelObject::forRendererAndContinuations(RenderBoxModelObject& ren
     if (!renderer.hasContinuationChainNode())
         return;
 
-    for (auto* next = continuationChainNodeMap().get(&renderer)->next; next; next = next->next) {
+    for (auto* next = continuationChainNodeMap().get(renderer)->next; next; next = next->next) {
         if (!next->renderer)
             continue;
         function(*next->renderer);
@@ -877,13 +869,13 @@ void RenderBoxModelObject::forRendererAndContinuations(RenderBoxModelObject& ren
 
 RenderBoxModelObject::ContinuationChainNode* RenderBoxModelObject::continuationChainNode() const
 {
-    return continuationChainNodeMap().get(this);
+    return continuationChainNodeMap().get(*this);
 }
 
 void RenderBoxModelObject::insertIntoContinuationChainAfter(RenderBoxModelObject& afterRenderer)
 {
     ASSERT(isContinuation());
-    ASSERT(!continuationChainNodeMap().contains(this));
+    ASSERT(!continuationChainNodeMap().contains(*this));
 
     auto& after = afterRenderer.ensureContinuationChainNode();
     ensureContinuationChainNode().insertAfter(after);
@@ -892,15 +884,15 @@ void RenderBoxModelObject::insertIntoContinuationChainAfter(RenderBoxModelObject
 void RenderBoxModelObject::removeFromContinuationChain()
 {
     ASSERT(hasContinuationChainNode());
-    ASSERT(continuationChainNodeMap().contains(this));
+    ASSERT(continuationChainNodeMap().contains(*this));
     setHasContinuationChainNode(false);
-    continuationChainNodeMap().remove(this);
+    continuationChainNodeMap().remove(*this);
 }
 
 auto RenderBoxModelObject::ensureContinuationChainNode() -> ContinuationChainNode&
 {
     setHasContinuationChainNode(true);
-    return *continuationChainNodeMap().ensure(this, [&] {
+    return *continuationChainNodeMap().ensure(*this, [&] {
         return makeUnique<ContinuationChainNode>(*this);
     }).iterator->value;
 }
@@ -909,19 +901,19 @@ RenderTextFragment* RenderBoxModelObject::firstLetterRemainingText() const
 {
     if (!isFirstLetter())
         return nullptr;
-    return firstLetterRemainingTextMap().get(this).get();
+    return firstLetterRemainingTextMap().get(*this).get();
 }
 
 void RenderBoxModelObject::setFirstLetterRemainingText(RenderTextFragment& remainingText)
 {
     ASSERT(isFirstLetter());
-    firstLetterRemainingTextMap().set(this, remainingText);
+    firstLetterRemainingTextMap().set(*this, remainingText);
 }
 
 void RenderBoxModelObject::clearFirstLetterRemainingText()
 {
     ASSERT(isFirstLetter());
-    firstLetterRemainingTextMap().remove(this);
+    firstLetterRemainingTextMap().remove(*this);
 }
 
 void RenderBoxModelObject::mapAbsoluteToLocalPoint(OptionSet<MapCoordinatesMode> mode, TransformState& transformState) const
@@ -948,12 +940,11 @@ void RenderBoxModelObject::collectAbsoluteQuadsForContinuation(Vector<FloatQuad>
 {
     ASSERT(continuation());
     for (auto* nextInContinuation = this->continuation(); nextInContinuation; nextInContinuation = nextInContinuation->continuation()) {
-        if (is<RenderBlock>(*nextInContinuation)) {
-            auto& blockBox = downcast<RenderBlock>(*nextInContinuation);
+        if (auto blockBox = dynamicDowncast<RenderBlock>(*nextInContinuation)) {
             // For blocks inside inlines, we include margins so that we run right up to the inline boxes
             // above and below us (thus getting merged with them to form a single irregular shape).
-            auto logicalRect = FloatRect { 0, -blockBox.collapsedMarginBefore(), blockBox.width(),
-                blockBox.height() + blockBox.collapsedMarginBefore() + blockBox.collapsedMarginAfter() };
+            auto logicalRect = FloatRect { 0, -blockBox->collapsedMarginBefore(), blockBox->width(),
+                blockBox->height() + blockBox->collapsedMarginBefore() + blockBox->collapsedMarginAfter() };
             nextInContinuation->absoluteQuadsIgnoringContinuation(logicalRect, quads, wasFixed);
             continue;
         }

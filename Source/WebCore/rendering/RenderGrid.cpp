@@ -211,7 +211,7 @@ static void cacheBaselineAlignedChildren(const RenderGrid& grid, GridTrackSizing
         // such items. This cache is needed for performance related reasons due to the cost of evaluating the item's
         // participation in a baseline context during the track sizing algorithm.
         uint32_t innerAxes = 0;
-        RenderGrid* inner = is<RenderGrid>(child) ? downcast<RenderGrid>(child) : nullptr;
+        CheckedPtr inner = dynamicDowncast<RenderGrid>(child);
 
         if (axes & enumToUnderlyingType(GridAxis::GridColumnAxis)) {
             if (inner && inner->isSubgridInParentDirection(GridTrackSizingDirection::ForRows))
@@ -855,12 +855,13 @@ void RenderGrid::placeItems()
 static GridArea insertIntoGrid(Grid& grid, RenderBox& child, const GridArea& area)
 {
     GridArea clamped = grid.insert(child, area);
-    if (!is<RenderGrid>(child))
+
+    CheckedPtr renderGrid = dynamicDowncast<RenderGrid>(child);
+    if (!renderGrid)
         return clamped;
 
-    RenderGrid& renderGrid = downcast<RenderGrid>(child);
-    if (renderGrid.isSubgridRows() || renderGrid.isSubgridColumns())
-        renderGrid.placeItems();
+    if (renderGrid->isSubgridRows() || renderGrid->isSubgridColumns())
+        renderGrid->placeItems();
     return clamped;
 }
 
@@ -1019,6 +1020,16 @@ void RenderGrid::placeItemsOnGrid(std::optional<LayoutUnit> availableLogicalWidt
 LayoutUnit RenderGrid::masonryContentSize() const
 {
     return m_masonryLayout.gridContentSize();
+}
+
+Vector<LayoutRect> RenderGrid::gridItemsLayoutRects()
+{
+    Vector<LayoutRect> items;
+
+    for (RenderBox* child = currentGrid().orderIterator().first(); child; child = currentGrid().orderIterator().next())
+        items.append(child->frameRect());
+
+    return items;
 }
 
 void RenderGrid::performGridItemsPreLayout(const GridTrackSizingAlgorithm& algorithm, const ShouldUpdateGridAreaLogicalSize shouldUpdateGridAreaLogicalSize) const
@@ -1330,7 +1341,8 @@ void RenderGrid::layoutGridItems()
             continue;
         }
 
-        if (is<RenderGrid>(child) && (downcast<RenderGrid>(child)->isSubgridColumns() || downcast<RenderGrid>(child)->isSubgridRows()))
+        auto* renderGrid = dynamicDowncast<RenderGrid>(child);
+        if (renderGrid && (renderGrid->isSubgridColumns() || renderGrid->isSubgridRows()))
             child->setNeedsLayout(MarkOnlyThis);
 
         // Setting the definite grid area's sizes. It may imply that the
@@ -1374,7 +1386,8 @@ void RenderGrid::layoutMasonryItems()
             continue;
         }
 
-        if (is<RenderGrid>(child) && (downcast<RenderGrid>(child)->isSubgridColumns() || downcast<RenderGrid>(child)->isSubgridRows()))
+        auto* renderGrid = dynamicDowncast<RenderGrid>(child);
+        if (renderGrid && (renderGrid->isSubgridColumns() || renderGrid->isSubgridRows()))
             child->setNeedsLayout(MarkOnlyThis);
 
         // Setting the definite grid area's sizes. It may imply that the
@@ -1556,7 +1569,8 @@ LayoutUnit RenderGrid::availableAlignmentSpaceForChildBeforeStretching(LayoutUni
 
 StyleSelfAlignmentData RenderGrid::alignSelfForChild(const RenderBox& child, StretchingMode stretchingMode, const RenderStyle* gridStyle) const
 {
-    if (is<RenderGrid>(child) && downcast<RenderGrid>(child).isSubgridInParentDirection(GridTrackSizingDirection::ForRows))
+    CheckedPtr renderGrid = dynamicDowncast<RenderGrid>(child);
+    if (renderGrid && renderGrid->isSubgridInParentDirection(GridTrackSizingDirection::ForRows))
         return { ItemPosition::Stretch, OverflowAlignment::Default };
     if (!gridStyle)
         gridStyle = &style();
@@ -1566,7 +1580,8 @@ StyleSelfAlignmentData RenderGrid::alignSelfForChild(const RenderBox& child, Str
 
 StyleSelfAlignmentData RenderGrid::justifySelfForChild(const RenderBox& child, StretchingMode stretchingMode, const RenderStyle* gridStyle) const
 {
-    if (is<RenderGrid>(child) && downcast<RenderGrid>(child).isSubgridInParentDirection(GridTrackSizingDirection::ForColumns))
+    CheckedPtr renderGrid = dynamicDowncast<RenderGrid>(child);
+    if (renderGrid && renderGrid->isSubgridInParentDirection(GridTrackSizingDirection::ForColumns))
         return { ItemPosition::Stretch, OverflowAlignment::Default };
     if (!gridStyle)
         gridStyle = &style();
@@ -1634,16 +1649,17 @@ void RenderGrid::applyStretchAlignmentToChildIfNeeded(RenderBox& child)
 
 void RenderGrid::applySubgridStretchAlignmentToChildIfNeeded(RenderBox& child)
 {
-    if (!is<RenderGrid>(child))
+    CheckedPtr renderGrid = dynamicDowncast<RenderGrid>(child);
+    if (!renderGrid)
         return;
 
-    if (downcast<RenderGrid>(child).isSubgrid(GridTrackSizingDirection::ForRows)) {
+    if (renderGrid->isSubgrid(GridTrackSizingDirection::ForRows)) {
         auto childBlockDirection = GridLayoutFunctions::flowAwareDirectionForChild(*this, child, GridTrackSizingDirection::ForRows);
         auto stretchedLogicalHeight = availableAlignmentSpaceForChildBeforeStretching(GridLayoutFunctions::overridingContainingBlockContentSizeForChild(child, childBlockDirection).value(), child, GridTrackSizingDirection::ForRows);
         child.setOverridingLogicalHeight(stretchedLogicalHeight);
     }
 
-    if (downcast<RenderGrid>(child).isSubgrid(GridTrackSizingDirection::ForColumns)) {
+    if (renderGrid->isSubgrid(GridTrackSizingDirection::ForColumns)) {
         auto childInlineDirection = GridLayoutFunctions::flowAwareDirectionForChild(*this, child, GridTrackSizingDirection::ForColumns);
         auto stretchedLogicalWidth = availableAlignmentSpaceForChildBeforeStretching(GridLayoutFunctions::overridingContainingBlockContentSizeForChild(child, childInlineDirection).value(), child, GridTrackSizingDirection::ForColumns);
         child.setOverridingLogicalWidth(stretchedLogicalWidth);
@@ -2083,16 +2099,18 @@ bool RenderGrid::isSubgrid(GridTrackSizingDirection direction) const
         return false;
     if (direction == GridTrackSizingDirection::ForColumns ? !style().gridSubgridColumns() : !style().gridSubgridRows())
         return false;
-    if (!is<RenderGrid>(parent()))
+    auto* renderGrid = dynamicDowncast<RenderGrid>(parent());
+    if (!renderGrid)
         return false;
-    return direction == GridTrackSizingDirection::ForRows ? !downcast<RenderGrid>(parent())->areMasonryRows() : !downcast<RenderGrid>(parent())->areMasonryColumns();
+    return direction == GridTrackSizingDirection::ForRows ? !renderGrid->areMasonryRows() : !renderGrid->areMasonryColumns();
 }
 
 bool RenderGrid::isSubgridInParentDirection(GridTrackSizingDirection parentDirection) const
 {
-    if (!is<RenderGrid>(parent()))
+    auto* renderGrid = dynamicDowncast<RenderGrid>(parent());
+    if (!renderGrid)
         return false;
-    GridTrackSizingDirection direction = GridLayoutFunctions::flowAwareDirectionForChild(*downcast<RenderGrid>(parent()), *this, parentDirection);
+    GridTrackSizingDirection direction = GridLayoutFunctions::flowAwareDirectionForChild(*renderGrid, *this, parentDirection);
     return isSubgrid(direction);
 }
 
@@ -2140,7 +2158,7 @@ LayoutUnit RenderGrid::gridAreaBreadthForOutOfFlowChild(const RenderBox& child, 
     if (startIsAuto)
         start = borderEdge;
     else {
-        outOfFlowItemLine.set(&child, startLine);
+        outOfFlowItemLine.set(child, startLine);
         start = positions[startLine];
     }
     if (endIsAuto)
@@ -2241,48 +2259,6 @@ ContentPosition static resolveContentDistributionFallback(ContentDistribution di
     return ContentPosition::Normal;
 }
 
-static void contentDistributionOffset(ContentAlignmentData& offset, const LayoutUnit& availableFreeSpace, ContentPosition& fallbackPosition, ContentDistribution distribution, unsigned numberOfGridTracks)
-{
-    if (distribution != ContentDistribution::Default && fallbackPosition == ContentPosition::Normal)
-        fallbackPosition = resolveContentDistributionFallback(distribution);
-
-    // Initialize to an invalid offset.
-    offset.positionOffset = -1_lu;
-    offset.distributionOffset = -1_lu;
-    if (availableFreeSpace <= 0)
-        return;
-
-    LayoutUnit positionOffset;
-    LayoutUnit distributionOffset;
-    switch (distribution) {
-    case ContentDistribution::SpaceBetween:
-        if (numberOfGridTracks < 2)
-            return;
-        distributionOffset = availableFreeSpace / (numberOfGridTracks - 1);
-        positionOffset = 0_lu;
-        break;
-    case ContentDistribution::SpaceAround:
-        if (numberOfGridTracks < 1)
-            return;
-        distributionOffset = availableFreeSpace / numberOfGridTracks;
-        positionOffset = distributionOffset / 2;
-        break;
-    case ContentDistribution::SpaceEvenly:
-        distributionOffset = availableFreeSpace / (numberOfGridTracks + 1);
-        positionOffset = distributionOffset;
-        break;
-    case ContentDistribution::Stretch:
-    case ContentDistribution::Default:
-        return;
-    default:
-        ASSERT_NOT_REACHED();
-        return;
-    }
-
-    offset.positionOffset = positionOffset;
-    offset.distributionOffset = distributionOffset;
-}
-
 StyleContentAlignmentData RenderGrid::contentAlignment(GridTrackSizingDirection direction) const
 {
     return direction == GridTrackSizingDirection::ForColumns ? style().resolvedJustifyContent(contentAlignmentNormalBehaviorGrid()) : style().resolvedAlignContent(contentAlignmentNormalBehaviorGrid());
@@ -2293,62 +2269,82 @@ void RenderGrid::computeContentPositionAndDistributionOffset(GridTrackSizingDire
     bool isRowAxis = direction == GridTrackSizingDirection::ForColumns;
     auto& offset =
         isRowAxis ? m_offsetBetweenColumns : m_offsetBetweenRows;
-    if (isRowAxis ? isSubgridColumns() : isSubgridRows()) {
-        offset.positionOffset = 0_lu;
-        offset.distributionOffset = 0_lu;
+
+    // Initialize to start alignment.
+    offset.positionOffset = 0_lu;
+    offset.distributionOffset = 0_lu;
+
+    if (isRowAxis ? isSubgridColumns() : isSubgridRows())
         return;
-    }
+
     auto contentAlignmentData = contentAlignment(direction);
+    auto distribution = contentAlignmentData.distribution();
     auto position = contentAlignmentData.position();
-    // If <content-distribution> value can't be applied, 'position' will become the associated
-    // <content-position> fallback value.
-    contentDistributionOffset(offset, availableFreeSpace, position, contentAlignmentData.distribution(), numberOfGridTracks);
-    if (offset.isValid())
-        return;
 
-    if (availableFreeSpace <= 0 && contentAlignmentData.overflow() == OverflowAlignment::Safe) {
-        offset.positionOffset = 0_lu;
-        offset.distributionOffset = 0_lu;
-        return;
+    // Apply <content-distribution> and return, or continue to fallback positioning if we can't distribute.
+    if (distribution != ContentDistribution::Default) {
+        if (position == ContentPosition::Normal)
+            position = resolveContentDistributionFallback(distribution);
+        if (availableFreeSpace > 0) {
+            switch (distribution) {
+            case ContentDistribution::SpaceBetween:
+                if (numberOfGridTracks < 2)
+                    break;
+                offset.distributionOffset = availableFreeSpace / (numberOfGridTracks - 1);
+                return;
+            case ContentDistribution::SpaceAround:
+                if (numberOfGridTracks < 1)
+                    break;
+                offset.distributionOffset = availableFreeSpace / numberOfGridTracks;
+                offset.positionOffset = offset.distributionOffset / 2;
+                return;
+            case ContentDistribution::SpaceEvenly:
+                offset.distributionOffset = availableFreeSpace / (numberOfGridTracks + 1);
+                offset.positionOffset = offset.distributionOffset;
+                return;
+            case ContentDistribution::Stretch:
+                break;
+            default:
+                ASSERT_NOT_REACHED();
+            }
+        }
     }
 
-    LayoutUnit positionOffset;
+    // Apply alignment safety.
+    if (availableFreeSpace <= 0 && contentAlignmentData.overflow() == OverflowAlignment::Safe)
+        return;
+
+    // Apply <content-position> / fallback positioning.
     switch (position) {
     case ContentPosition::Left:
         ASSERT(isRowAxis);
-        positionOffset = style().isLeftToRightDirection() ? 0_lu : availableFreeSpace;
-        break;
+        if (!style().isLeftToRightDirection())
+            offset.positionOffset = availableFreeSpace;
+        return;
     case ContentPosition::Right:
         ASSERT(isRowAxis);
-        positionOffset = style().isLeftToRightDirection() ? availableFreeSpace : 0_lu;
-        break;
+        if (style().isLeftToRightDirection())
+            offset.positionOffset = availableFreeSpace;
+        return;
     case ContentPosition::Center:
-        positionOffset = availableFreeSpace / 2;
-        break;
+        offset.positionOffset = availableFreeSpace / 2;
+        return;
     case ContentPosition::FlexEnd: // Only used in flex layout, for other layout, it's equivalent to 'end'.
     case ContentPosition::End:
-        positionOffset = availableFreeSpace;
-        break;
+        offset.positionOffset = availableFreeSpace;
+        return;
     case ContentPosition::FlexStart: // Only used in flex layout, for other layout, it's equivalent to 'start'.
     case ContentPosition::Start:
-        if (isRowAxis)
-            positionOffset = 0_lu;
-        break;
     case ContentPosition::Baseline:
     case ContentPosition::LastBaseline:
-        // FIXME: Implement the previous values. For now, we always 'start' align.
+        // FIXME: Implement the baseline values. For now, we always 'start' align.
         // http://webkit.org/b/145566
-        if (isRowAxis)
-            positionOffset = 0_lu;
-        break;
+        return;
     case ContentPosition::Normal:
     default:
         ASSERT_NOT_REACHED();
         return;
     }
-
-    offset.positionOffset = positionOffset;
-    offset.distributionOffset = 0_lu;
 }
 
 LayoutUnit RenderGrid::translateRTLCoordinate(LayoutUnit coordinate) const
@@ -2509,8 +2505,6 @@ GridSpan RenderGrid::gridSpanForOutOfFlowChild(const RenderBox& child, GridTrack
 
 GridSpan RenderGrid::gridSpanForChild(const RenderBox& child, GridTrackSizingDirection direction) const
 {
-    ASSERT(is<RenderGrid>(child.parent()));
-
     RenderGrid* renderGrid = downcast<RenderGrid>(child.parent());
     // |direction| is specified relative to this grid, switch it if |child|'s direct parent grid
     // is using a different writing mode.
@@ -2518,7 +2512,6 @@ GridSpan RenderGrid::gridSpanForChild(const RenderBox& child, GridTrackSizingDir
     GridSpan span = child.isOutOfFlowPositioned() ? renderGrid->gridSpanForOutOfFlowChild(child, direction) : renderGrid->currentGrid().gridItemSpan(child, direction);
 
     while (renderGrid != this) {
-        ASSERT(is<RenderGrid>(renderGrid->parent()));
         RenderGrid* parent = downcast<RenderGrid>(renderGrid->parent());
 
         bool isSubgrid = renderGrid->isSubgrid(direction);

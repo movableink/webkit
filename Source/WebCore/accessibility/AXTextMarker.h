@@ -28,7 +28,25 @@
 
 namespace WebCore {
 
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+class AXIsolatedObject;
+#endif
 struct CharacterOffset;
+struct AXTextRuns;
+
+enum class AXTextUnit : uint8_t {
+    Line,
+    Paragraph,
+    Sentence,
+    Word,
+};
+enum class AXTextUnitBoundary : bool { Start, End, };
+
+enum class LineRangeType : uint8_t {
+    Current,
+    Left,
+    Right,
+};
 
 struct TextMarkerData {
     unsigned treeID;
@@ -109,12 +127,16 @@ public:
 #if PLATFORM(COCOA)
     AXTextMarker(PlatformTextMarkerData);
 #endif
+    AXTextMarker(AXID treeID, AXID objectID, unsigned offset)
+        : m_data({ treeID, objectID, nullptr, offset, Position::PositionIsOffsetInAnchor, Affinity::Downstream, 0, offset })
+    { }
     AXTextMarker() = default;
 
     operator bool() const { return !isNull(); }
     operator VisiblePosition() const;
     operator CharacterOffset() const;
     std::optional<BoundaryPoint> boundaryPoint() const;
+    bool hasSameObjectAndOffset(const AXTextMarker&) const;
 
 #if PLATFORM(COCOA)
     RetainPtr<PlatformTextMarkerData> platformData() const;
@@ -123,7 +145,12 @@ public:
 
     AXID treeID() const { return m_data.axTreeID(); }
     AXID objectID() const { return m_data.axObjectID(); }
+    unsigned offset() const { return m_data.offset; }
     bool isNull() const { return !treeID().isValid() || !objectID().isValid(); }
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    // FIXME: Currently, the logic for serving text APIs off the main-thread requires isolated objects, but should eventually be refactored to work with AXCoreObjects.
+    RefPtr<AXIsolatedObject> isolatedObject() const;
+#endif
     RefPtr<AXCoreObject> object() const;
     bool isValid() const { return object(); }
 
@@ -134,7 +161,29 @@ public:
 
     // Sets m_data.node when the marker was created with a PlatformTextMarkerData that lacks the node pointer because it was created off the main thread.
     void setNodeIfNeeded() const;
+
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    // Find the next or previous marker.
+    AXTextMarker findMarker(AXDirection) const;
+    // Starting from this text marker, creates a new position for the given direction and text unit type.
+    AXTextMarker findMarker(AXDirection, AXTextUnit, AXTextUnitBoundary) const;
+    // Creates a range for the line this marker points to.
+    AXTextMarkerRange lineRange(LineRangeType) const;
+    // Given a character offset relative to this marker, find the next marker the offset points to.
+    AXTextMarker nextMarkerFromOffset(unsigned) const;
+    // Returns the number of intermediate text markers between this and the root.
+    unsigned offsetFromRoot() const;
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
+
 private:
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    const AXTextRuns* runs() const;
+
+    // True if this marker points to a leaf node (no children) with non-empty text runs.
+    bool isInTextLeaf() const;
+    AXTextMarker toTextLeafMarker() const;
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
+
     TextMarkerData m_data;
 };
 
@@ -170,6 +219,11 @@ public:
     AXTextMarker start() const { return m_start; }
     AXTextMarker end() const { return m_end; }
     bool isConfinedTo(AXID) const;
+
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    // Traverses from m_start to m_end, collecting all text along the way.
+    String toString() const;
+#endif
 
     String debugDescription() const;
 private:

@@ -47,7 +47,6 @@
 #include "LabelsNodeList.h"
 #include "LocalFrameView.h"
 #include "MutationEvent.h"
-#include "NameNodeList.h"
 #include "NodeRareData.h"
 #include "NodeRenderStyle.h"
 #include "RadioNodeList.h"
@@ -62,6 +61,7 @@
 #include "ScriptDisallowedScope.h"
 #include "SelectorQuery.h"
 #include "SlotAssignment.h"
+#include "StaticNodeList.h"
 #include "TemplateContentDocumentFragment.h"
 #include <algorithm>
 #include <variant>
@@ -80,8 +80,6 @@ static_assert(sizeof(ContainerNode) == sizeof(SameSizeAsContainerNode), "Contain
 
 static void dispatchChildInsertionEvents(Node&);
 static void dispatchChildRemovalEvents(Ref<Node>&);
-
-ChildNodesLazySnapshot* ChildNodesLazySnapshot::latestSnapshot;
 
 unsigned ScriptDisallowedScope::s_count = 0;
 #if ASSERT_ENABLED
@@ -581,7 +579,7 @@ void ContainerNode::parserInsertBefore(Node& newChild, Node& nextChild)
             document().adoptNode(newChild);
 
         insertBeforeCommon(nextChild, newChild);
-
+        newChild.setTreeScopeRecursively(treeScope());
         newChild.updateAncestorConnectedSubframeCountForInsertion();
     });
 }
@@ -1000,10 +998,18 @@ ExceptionOr<Element*> ContainerNode::querySelector(const String& selectors)
 
 ExceptionOr<Ref<NodeList>> ContainerNode::querySelectorAll(const String& selectors)
 {
-    auto query = protectedDocument()->selectorQueryForString(selectors);
+    auto document = protectedDocument();
+    if (auto results = document->resultForSelectorAll(*this, selectors))
+        return Ref<NodeList> { StaticWrapperNodeList::create(results.releaseNonNull()) };
+    auto query = document->selectorQueryForString(selectors);
     if (query.hasException())
         return query.releaseException();
-    return query.releaseReturnValue().queryAll(*this);
+    auto isCacheable = query.returnValue().shouldStoreInDocument();
+    auto classNameToMatch = query.returnValue().classNameToMatch();
+    auto nodeList = query.releaseReturnValue().queryAll(*this);
+    if (isCacheable)
+        document->addResultForSelectorAll(*this, selectors, nodeList, classNameToMatch);
+    return nodeList;
 }
 
 Ref<HTMLCollection> ContainerNode::getElementsByTagName(const AtomString& qualifiedName)
@@ -1022,11 +1028,6 @@ Ref<HTMLCollection> ContainerNode::getElementsByTagNameNS(const AtomString& name
 {
     ASSERT(!localName.isNull());
     return ensureRareData().ensureNodeLists().addCachedTagCollectionNS(*this, namespaceURI.isEmpty() ? nullAtom() : namespaceURI, localName);
-}
-
-Ref<NodeList> ContainerNode::getElementsByName(const AtomString& elementName)
-{
-    return ensureRareData().ensureNodeLists().addCacheWithAtomName<NameNodeList>(*this, elementName);
 }
 
 Ref<HTMLCollection> ContainerNode::getElementsByClassName(const AtomString& classNames)

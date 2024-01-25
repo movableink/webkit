@@ -91,6 +91,7 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     // scrollbarGutter
     , scrollbarWidth(RenderStyle::initialScrollbarWidth())
     , zoom(RenderStyle::initialZoom())
+    , functionalPseudoElementArgument(nullAtom())
     , blockStepSize(RenderStyle::initialBlockStepSize())
     , blockStepInsert(static_cast<unsigned>(RenderStyle::initialBlockStepInsert()))
     , overscrollBehaviorX(static_cast<unsigned>(RenderStyle::initialOverscrollBehaviorX()))
@@ -103,10 +104,8 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , textDecorationStyle(static_cast<unsigned>(RenderStyle::initialTextDecorationStyle()))
     , textGroupAlign(static_cast<unsigned>(RenderStyle::initialTextGroupAlign()))
     , contentVisibility(static_cast<unsigned>(RenderStyle::initialContentVisibility()))
-#if ENABLE(CSS_COMPOSITING)
     , effectiveBlendMode(static_cast<unsigned>(RenderStyle::initialBlendMode()))
     , isolation(static_cast<unsigned>(RenderStyle::initialIsolation()))
-#endif
 #if ENABLE(APPLE_PAY)
     , applePayButtonStyle(static_cast<unsigned>(RenderStyle::initialApplePayButtonStyle()))
     , applePayButtonType(static_cast<unsigned>(RenderStyle::initialApplePayButtonType()))
@@ -181,6 +180,7 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , scrollbarGutter(o.scrollbarGutter)
     , scrollbarWidth(o.scrollbarWidth)
     , zoom(o.zoom)
+    , functionalPseudoElementArgument(o.functionalPseudoElementArgument)
     , blockStepSize(o.blockStepSize)
     , blockStepInsert(o.blockStepInsert)
     , overscrollBehaviorX(o.overscrollBehaviorX)
@@ -193,10 +193,8 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , textDecorationStyle(o.textDecorationStyle)
     , textGroupAlign(o.textGroupAlign)
     , contentVisibility(o.contentVisibility)
-#if ENABLE(CSS_COMPOSITING)
     , effectiveBlendMode(o.effectiveBlendMode)
     , isolation(o.isolation)
-#endif
 #if ENABLE(APPLE_PAY)
     , applePayButtonStyle(o.applePayButtonStyle)
     , applePayButtonType(o.applePayButtonType)
@@ -277,6 +275,7 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && scrollbarGutter == o.scrollbarGutter
         && scrollbarWidth == o.scrollbarWidth
         && zoom == o.zoom
+        && functionalPseudoElementArgument == o.functionalPseudoElementArgument
         && blockStepSize == o.blockStepSize
         && blockStepInsert == o.blockStepInsert
         && overscrollBehaviorX == o.overscrollBehaviorX
@@ -288,10 +287,8 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && useSmoothScrolling == o.useSmoothScrolling
         && textDecorationStyle == o.textDecorationStyle
         && textGroupAlign == o.textGroupAlign
-#if ENABLE(CSS_COMPOSITING)
         && effectiveBlendMode == o.effectiveBlendMode
         && isolation == o.isolation
-#endif
 #if ENABLE(APPLE_PAY)
         && applePayButtonStyle == o.applePayButtonStyle
         && applePayButtonType == o.applePayButtonType

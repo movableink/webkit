@@ -34,6 +34,7 @@
 #include "AudioNodeOptions.h"
 #include "AudioNodeOutput.h"
 #include "AudioParam.h"
+#include "ContextDestructionObserverInlines.h"
 #include "Logging.h"
 #include <wtf/Atomics.h>
 #include <wtf/IsoMallocInlines.h>
@@ -204,8 +205,9 @@ ExceptionOr<void> AudioNode::connect(AudioNode& destination, unsigned outputInde
     if (!output->numberOfChannels())
         return Exception { ExceptionCode::InvalidAccessError, "Node has zero output channels"_s };
 
-    if (is<AudioContext>(context) && &destination == &context.destination() && !downcast<AudioContext>(context).destination().isConnected())
-        downcast<AudioContext>(context).defaultDestinationWillBecomeConnected();
+    RefPtr audioContext = dynamicDowncast<AudioContext>(context);
+    if (audioContext && &destination == &context.destination() && !audioContext->destination().isConnected())
+        audioContext->defaultDestinationWillBecomeConnected();
 
     input->connect(output);
 

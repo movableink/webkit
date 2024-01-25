@@ -35,7 +35,9 @@
 #include "ServiceWorkerContextData.h"
 #include "ServiceWorkerIdentifier.h"
 #include "ServiceWorkerTypes.h"
+#include <wtf/CheckedPtr.h>
 #include <wtf/URLHash.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -48,12 +50,14 @@ struct ServiceWorkerContextData;
 struct ServiceWorkerJobDataIdentifier;
 enum class WorkerThreadMode : bool;
 
-class SWServerToContextConnection {
+class SWServerToContextConnection: public CanMakeWeakPtr<SWServerToContextConnection>, public CanMakeCheckedPtr {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     WEBCORE_EXPORT virtual ~SWServerToContextConnection();
 
     WEBCORE_EXPORT SWServer* server() const;
+    WEBCORE_EXPORT RefPtr<SWServer> protectedServer() const;
+
     SWServerToContextConnectionIdentifier identifier() const { return m_identifier; }
 
     // This flag gets set when the service worker process is no longer clean (because it has loaded several eTLD+1s).

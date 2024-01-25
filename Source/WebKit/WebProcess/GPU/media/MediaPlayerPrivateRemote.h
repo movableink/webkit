@@ -121,7 +121,7 @@ public:
     void firstVideoFrameAvailable();
     void renderingModeChanged();
 #if PLATFORM(COCOA)
-    void layerHostingContextIdChanged(std::optional<WebKit::LayerHostingContextID>&&, const WebCore::IntSize&);
+    void layerHostingContextIdChanged(std::optional<WebKit::LayerHostingContextID>&&, const WebCore::FloatSize&);
     WebCore::FloatSize videoLayerSize() const final;
     void setVideoLayerSizeFenced(const WebCore::FloatSize&, WTF::MachSendRight&&) final;
 #endif
@@ -336,7 +336,6 @@ private:
 
     bool supportsAcceleratedRendering() const final;
     void acceleratedRenderingStateChanged() final;
-    void checkAcceleratedRenderingState();
 
     void setShouldMaintainAspectRatio(bool) final;
 
@@ -429,6 +428,8 @@ private:
 
     void setShouldDisableHDR(bool) final;
 
+    void setShouldCheckHardwareSupport(bool) final;
+
 #if PLATFORM(COCOA)
     void pushVideoFrameMetadata(WebCore::VideoFrameMetadata&&, RemoteVideoFrameProxy::Properties&&);
 #endif
@@ -479,7 +480,6 @@ private:
     bool m_isCurrentPlaybackTargetWireless { false };
     bool m_waitingForKey { false };
     bool m_timeIsProgressing { false };
-    bool m_renderingCanBeAccelerated { false };
     std::optional<bool> m_shouldMaintainAspectRatio;
     std::optional<bool> m_pageIsVisible;
     RefPtr<RemoteVideoFrameProxy> m_videoFrameForCurrentTime;

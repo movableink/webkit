@@ -32,6 +32,8 @@
 
 #include "CSSFontSelector.h"
 #include "DOMTokenList.h"
+#include "Document.h"
+#include "DocumentInlines.h"
 #include "ElementAncestorIterator.h"
 #include "ElementAncestorIteratorInlines.h"
 #include "ElementInlines.h"
@@ -337,10 +339,11 @@ OptionSet<EventListenerRegionType> Adjuster::computeEventListenerRegionTypes(con
 #endif
 
 #if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
-    if (document.page() && document.page()->shouldBuildInteractionRegions() && eventTarget.isNode()) {
-        const auto& node = downcast<Node>(eventTarget);
-        if (node.willRespondToMouseClickEventsWithEditability(node.computeEditabilityForMouseClickEvents(&style)))
-            types.add(EventListenerRegionType::MouseClick);
+    if (document.page() && document.page()->shouldBuildInteractionRegions()) {
+        if (const auto* node = dynamicDowncast<Node>(eventTarget)) {
+            if (node->willRespondToMouseClickEventsWithEditability(node->computeEditabilityForMouseClickEvents(&style)))
+                types.add(EventListenerRegionType::MouseClick);
+        }
     }
 #else
     UNUSED_PARAM(document);
@@ -378,18 +381,39 @@ static bool isRubyContainerOrInternalRubyBox(const RenderStyle& style)
         || display == DisplayType::RubyBase;
 }
 
+static bool hasUnsupportedRubyDisplay(DisplayType display, const Element* element)
+{
+    // Only allow ruby elements to have ruby display types for now.
+    switch (display) {
+    case DisplayType::Ruby:
+    case DisplayType::RubyBlock:
+        return !element || !element->hasTagName(rubyTag);
+    case DisplayType::RubyAnnotation:
+        return !element || !element->hasTagName(rtTag);
+    case DisplayType::RubyBase:
+        ASSERT_NOT_REACHED();
+        return false;
+    default:
+        return false;
+    }
+}
+
 // https://drafts.csswg.org/css-ruby-1/#bidi
-static UnicodeBidi adjustUnicodeBidiForRuby(UnicodeBidi unicodeBidi)
+static UnicodeBidi forceBidiIsolationForRuby(UnicodeBidi unicodeBidi)
 {
     switch (unicodeBidi) {
     case UnicodeBidi::Normal:
     case UnicodeBidi::Embed:
+    case UnicodeBidi::Isolate:
         return UnicodeBidi::Isolate;
     case UnicodeBidi::Override:
+    case UnicodeBidi::IsolateOverride:
         return UnicodeBidi::IsolateOverride;
-    default:
-        return unicodeBidi;
+    case UnicodeBidi::Plaintext:
+        return UnicodeBidi::Plaintext;
     }
+    ASSERT_NOT_REACHED();
+    return UnicodeBidi::Isolate;
 }
 
 void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearanceStyle) const
@@ -397,18 +421,17 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     if (style.display() == DisplayType::Contents)
         adjustDisplayContentsStyle(style);
 
+    if (m_element && (m_element->hasTagName(frameTag) || m_element->hasTagName(framesetTag))) {
+        // Framesets ignore display and position properties.
+        style.setPosition(PositionType::Static);
+        style.setEffectiveDisplay(DisplayType::Block);
+    }
+
     if (style.display() != DisplayType::None && style.display() != DisplayType::Contents) {
         if (m_element) {
             // Tables never support the -webkit-* values for text-align and will reset back to the default.
             if (is<HTMLTableElement>(*m_element) && (style.textAlign() == TextAlignMode::WebKitLeft || style.textAlign() == TextAlignMode::WebKitCenter || style.textAlign() == TextAlignMode::WebKitRight))
                 style.setTextAlign(TextAlignMode::Start);
-
-            // Frames and framesets never honor position:relative or position:absolute. This is necessary to
-            // fix a crash where a site tries to position these objects. They also never honor display.
-            if (m_element->hasTagName(frameTag) || m_element->hasTagName(framesetTag)) {
-                style.setPosition(PositionType::Static);
-                style.setEffectiveDisplay(DisplayType::Block);
-            }
 
             // Ruby text does not support float or position. This might change with evolution of the specification.
             if (m_element->hasTagName(rtTag)) {
@@ -418,10 +441,10 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
 
             if (m_element->hasTagName(legendTag))
                 style.setEffectiveDisplay(equivalentBlockDisplay(style));
-
-            if (isRubyContainerOrInternalRubyBox(style))
-                style.setEffectiveDisplay(style.display());
         }
+
+        if (hasUnsupportedRubyDisplay(style.display(), m_element))
+            style.setEffectiveDisplay(style.display() == DisplayType::RubyBlock ? DisplayType::Block : DisplayType::Inline);
 
         // Top layer elements are always position: absolute; unless the position is set to fixed.
         // https://fullscreen.spec.whatwg.org/#new-stacking-layer
@@ -434,7 +457,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
 
         // FIXME: Don't support this mutation for pseudo styles like first-letter or first-line, since it's not completely
         // clear how that should work.
-        if (style.display() == DisplayType::Inline && style.styleType() == PseudoId::None && style.writingMode() != m_parentStyle.writingMode())
+        if (style.display() == DisplayType::Inline && style.pseudoElementType() == PseudoId::None && style.writingMode() != m_parentStyle.writingMode())
             style.setEffectiveDisplay(DisplayType::InlineBlock);
 
         // After performing the display mutation, check table rows. We do not honor position:relative or position:sticky on
@@ -452,11 +475,15 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             || style.display() == DisplayType::TableCell)
             style.setWritingMode(m_parentStyle.writingMode());
 
-        // FIXME: Since we don't support block-flow on flexible boxes yet, disallow setting
-        // of block-flow to anything other than WritingMode::HorizontalTb.
-        // https://bugs.webkit.org/show_bug.cgi?id=46418 - Flexible box support.
-        if (style.writingMode() != WritingMode::HorizontalTb && (style.display() == DisplayType::Box || style.display() == DisplayType::InlineBox))
+        if (style.isDisplayDeprecatedFlexibleBox()) {
+            // FIXME: Since we don't support block-flow on flexible boxes yet, disallow setting
+            // of block-flow to anything other than WritingMode::HorizontalTb.
+            // https://bugs.webkit.org/show_bug.cgi?id=46418 - Flexible box support.
             style.setWritingMode(WritingMode::HorizontalTb);
+        }
+
+        if (m_parentBoxStyle.isDisplayDeprecatedFlexibleBox())
+            style.setFloating(Float::None);
 
         // https://www.w3.org/TR/css-display/#transformations
         // "A parent with a grid or flex display value blockifies the box’s display type."
@@ -470,7 +497,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             style.setEffectiveDisplay(equivalentInlineDisplay(style));
         // https://drafts.csswg.org/css-ruby-1/#bidi
         if (isRubyContainerOrInternalRubyBox(style))
-            style.setUnicodeBidi(adjustUnicodeBidiForRuby(style.unicodeBidi()));
+            style.setUnicodeBidi(forceBidiIsolationForRuby(style.unicodeBidi()));
     }
 
     auto hasAutoZIndex = [](const RenderStyle& style, const RenderStyle& parentBoxStyle, const Element* element) {
@@ -556,7 +583,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             style.setTextSecurity(style.inputSecurity() == InputSecurity::Auto ? TextSecurity::Disc : TextSecurity::None);
 
         // Disallow -webkit-user-modify on :pseudo and ::pseudo elements.
-        if (!m_element->shadowPseudoId().isNull())
+        if (m_element->isInUserAgentShadowTree() && !m_element->userAgentPart().isNull())
             style.setUserModify(UserModify::ReadOnly);
 
         if (is<HTMLMarqueeElement>(*m_element)) {
@@ -698,7 +725,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
         if (hasInertAttribute(element))
             return true;
 #if ENABLE(FULLSCREEN_API)
-        if (m_document.fullscreenManager().fullscreenElement() && element == m_document.documentElement())
+        if (CheckedPtr fullscreenManager = m_document.fullscreenManagerIfExists(); fullscreenManager && fullscreenManager->fullscreenElement() && element == m_document.documentElement())
             return true;
 #endif
         return false;
@@ -712,7 +739,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             style.setEffectiveInert(false);
 
 #if ENABLE(FULLSCREEN_API)
-        if (m_element == m_document.fullscreenManager().fullscreenElement() && !hasInertAttribute(m_element))
+        if (CheckedPtr fullscreenManager = m_document.fullscreenManagerIfExists(); fullscreenManager && m_element == fullscreenManager->fullscreenElement() && !hasInertAttribute(m_element))
             style.setEffectiveInert(false);
 #endif
 
@@ -730,7 +757,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
 #endif
     }
     if (isSkippedContentRoot(style, m_element) && m_parentStyle.contentVisibility() != ContentVisibility::Hidden)
-        style.setSkippedContentReason(style.contentVisibility());
+        style.setEffectiveContentVisibility(style.contentVisibility());
 
     if (style.contentVisibility() == ContentVisibility::Auto) {
         style.containIntrinsicWidthAddAuto();
@@ -791,7 +818,7 @@ void Adjuster::adjustDisplayContentsStyle(RenderStyle& style) const
         return;
     }
 
-    if (!m_element && style.styleType() != PseudoId::Before && style.styleType() != PseudoId::After) {
+    if (!m_element && style.pseudoElementType() != PseudoId::Before && style.pseudoElementType() != PseudoId::After) {
         style.setEffectiveDisplay(DisplayType::None);
         return;
     }
@@ -934,6 +961,15 @@ void Adjuster::adjustForSiteSpecificQuirks(RenderStyle& style) const
             }
         }
     }
+#if ENABLE(FULLSCREEN_API)
+    if (CheckedPtr fullscreenManager = m_document.fullscreenManagerIfExists(); fullscreenManager && m_document.quirks().needsFullscreenObjectFitQuirk()) {
+        static MainThreadNeverDestroyed<const AtomString> playerClassName("top-player-video-element"_s);
+        bool isFullscreen = fullscreenManager->isFullscreen();
+        RefPtr video = dynamicDowncast<HTMLVideoElement>(m_element);
+        if (video && isFullscreen && video->hasClass() && video->classNames().contains(playerClassName) && style.objectFit() == ObjectFit::Fill)
+            style.setObjectFit(ObjectFit::Contain);
+    }
+#endif
 #endif
 }
 

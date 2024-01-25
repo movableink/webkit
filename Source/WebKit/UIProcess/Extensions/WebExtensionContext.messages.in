@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,6 +47,13 @@ messages -> WebExtensionContext {
 
     // Commands
     CommandsGetAll() -> (Vector<WebKit::WebExtensionCommandParameters> commands);
+
+    // Cookies
+    CookiesGet(std::optional<PAL::SessionID> sessionID, String name, URL url) -> (std::optional<WebKit::WebExtensionCookieParameters> cookie, WebKit::WebExtensionContext::ErrorString error);
+    CookiesGetAll(std::optional<PAL::SessionID> sessionID, URL url, struct WebKit::WebExtensionCookieFilterParameters filterParameters) -> (Vector<WebKit::WebExtensionCookieParameters> cookies, WebKit::WebExtensionContext::ErrorString error);
+    CookiesSet(std::optional<PAL::SessionID> sessionID, struct WebKit::WebExtensionCookieParameters cookie) -> (std::optional<WebKit::WebExtensionCookieParameters> cookie, WebKit::WebExtensionContext::ErrorString error);
+    CookiesRemove(std::optional<PAL::SessionID> sessionID, String name, URL url) -> (std::optional<WebKit::WebExtensionCookieParameters> cookie, WebKit::WebExtensionContext::ErrorString error);
+    CookiesGetAllCookieStores() -> (HashMap<PAL::SessionID, Vector<WebKit::WebExtensionTabIdentifier>> cookieStores, WebKit::WebExtensionContext::ErrorString error);
 
     // DeclarativeNetRequest
     DeclarativeNetRequestGetEnabledRulesets() -> (Vector<String> rulesetIdentifiers);
@@ -99,6 +106,14 @@ messages -> WebExtensionContext {
     ScriptingUpdateRegisteredScripts(Vector<WebKit::WebExtensionRegisteredScriptParameters> scripts) -> (WebKit::WebExtensionDynamicScripts::Error error);
     ScriptingGetRegisteredScripts(Vector<String> scriptIDs) -> (Vector<WebKit::WebExtensionRegisteredScriptParameters> scripts);
     ScriptingUnregisterContentScripts(Vector<String> scriptIDs) -> (WebKit::WebExtensionDynamicScripts::Error error);
+
+    // Storage APIs
+    StorageGet(WebKit::WebPageProxyIdentifier webPageProxyIdentifier, WebKit::WebExtensionStorageType storageType, IPC::DataReference data) -> (std::optional<IPC::DataReference> data, WebKit::WebExtensionContext::ErrorString error);
+    StorageGetBytesInUse(WebKit::WebPageProxyIdentifier webPageProxyIdentifier, WebKit::WebExtensionStorageType storageType, Vector<String> keys) -> (std::optional<size_t> size, WebKit::WebExtensionContext::ErrorString error);
+    StorageSet(WebKit::WebPageProxyIdentifier webPageProxyIdentifier, WebKit::WebExtensionStorageType storageType, IPC::DataReference dataReference) -> (WebKit::WebExtensionContext::ErrorString error);
+    StorageRemove(WebKit::WebPageProxyIdentifier webPageProxyIdentifier, WebKit::WebExtensionStorageType storageType, Vector<String> keys) -> (WebKit::WebExtensionContext::ErrorString error);
+    StorageClear(WebKit::WebPageProxyIdentifier webPageProxyIdentifier, WebKit::WebExtensionStorageType storageType) -> (WebKit::WebExtensionContext::ErrorString error);
+    StorageSetAccessLevel(WebKit::WebPageProxyIdentifier webPageProxyIdentifier, WebKit::WebExtensionStorageType storageType, WebKit::WebExtensionStorageAccessLevel accessLevel) -> (WebKit::WebExtensionContext::ErrorString error);
 
     // Tabs APIs
     TabsCreate(WebKit::WebPageProxyIdentifier webPageProxyIdentifier, WebKit::WebExtensionTabParameters creationParameters) -> (std::optional<WebKit::WebExtensionTabParameters> tabParameters, WebKit::WebExtensionTab::Error error);

@@ -186,6 +186,7 @@ public:
     ScrollbarWidth scrollbarWidth { ScrollbarWidth::Auto };
 
     float zoom;
+    AtomString functionalPseudoElementArgument;
 
     std::optional<Length> blockStepSize;
     unsigned blockStepInsert : 1; // BlockStepInsert
@@ -206,10 +207,8 @@ public:
 
     unsigned contentVisibility : 2; // ContentVisibility
 
-#if ENABLE(CSS_COMPOSITING)
     unsigned effectiveBlendMode: 5; // EBlendMode
     unsigned isolation : 1; // Isolation
-#endif
 
 #if ENABLE(APPLE_PAY)
     unsigned applePayButtonStyle : 2;

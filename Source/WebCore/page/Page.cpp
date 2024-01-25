@@ -755,6 +755,11 @@ const String& Page::groupName() const
     return m_group ? m_group->name() : nullAtom().string();
 }
 
+Ref<BroadcastChannelRegistry> Page::protectedBroadcastChannelRegistry() const
+{
+    return m_broadcastChannelRegistry;
+}
+
 void Page::setBroadcastChannelRegistry(Ref<BroadcastChannelRegistry>&& broadcastChannelRegistry)
 {
     m_broadcastChannelRegistry = WTFMove(broadcastChannelRegistry);
@@ -775,6 +780,7 @@ void Page::updateStyleAfterChangeInEnvironment()
             styleResolver->invalidateMatchedDeclarationsCache();
         document.scheduleFullStyleRebuild();
         document.styleScope().didChangeStyleSheetEnvironment();
+        document.updateElementsAffectedByMediaQueries();
         document.scheduleRenderingUpdate(RenderingUpdateStep::MediaQueryEvaluation);
     });
 }
@@ -1135,7 +1141,8 @@ uint32_t Page::replaceSelectionWithText(const String& replacementText)
 void Page::unmarkAllTextMatches()
 {
     forEachDocument([] (Document& document) {
-        document.markers().removeMarkers(DocumentMarker::Type::TextMatch);
+        if (CheckedPtr markers = document.markersIfExists())
+            markers->removeMarkers(DocumentMarker::Type::TextMatch);
     });
 }
 
@@ -1183,9 +1190,9 @@ Vector<Ref<Element>> Page::editableElementsInRect(const FloatRect& searchRectInR
         return { };
 
     auto rootEditableElement = [](Node& node) -> Element* {
-        if (is<HTMLTextFormControlElement>(node)) {
-            if (downcast<HTMLTextFormControlElement>(node).isInnerTextElementEditable())
-                return &downcast<Element>(node);
+        if (RefPtr element = dynamicDowncast<HTMLTextFormControlElement>(node)) {
+            if (element->isInnerTextElementEditable())
+                return &uncheckedDowncast<Element>(node);
         } else if (is<Element>(node) && node.hasEditableStyle())
             return node.rootEditableElement();
         return nullptr;
@@ -2128,7 +2135,7 @@ void Page::prioritizeVisibleResources()
             return LoadSchedulingMode::Prioritized;
         
         // Async script execution may generate more resource loads that benefit from prioritization.
-        if (document.scriptRunner().hasPendingScripts())
+        if (CheckedPtr scriptRunner = document.scriptRunnerIfExists(); scriptRunner && scriptRunner->hasPendingScripts())
             return LoadSchedulingMode::Prioritized;
         
         // We still haven't finished loading the visible resources.
@@ -2387,21 +2394,24 @@ void Page::userAgentChanged()
 void Page::invalidateStylesForAllLinks()
 {
     forEachDocument([] (Document& document) {
-        document.visitedLinkState().invalidateStyleForAllLinks();
+        if (auto* visitedLinkState = document.visitedLinkStateIfExists())
+            visitedLinkState->invalidateStyleForAllLinks();
     });
 }
 
 void Page::invalidateStylesForLink(SharedStringHash linkHash)
 {
     forEachDocument([&] (Document& document) {
-        document.visitedLinkState().invalidateStyleForLink(linkHash);
+        if (auto* visitedLinkState = document.visitedLinkStateIfExists())
+            visitedLinkState->invalidateStyleForLink(linkHash);
     });
 }
 
 void Page::invalidateInjectedStyleSheetCacheInAllFrames()
 {
     forEachDocument([] (Document& document) {
-        document.extensionStyleSheets().invalidateInjectedStyleSheetCache();
+        if (CheckedPtr extensionStyleSheets = document.extensionStyleSheetsIfExists())
+            extensionStyleSheets->invalidateInjectedStyleSheetCache();
     });
 }
 
@@ -3682,8 +3692,10 @@ void Page::setUseSystemAppearance(bool value)
 
     forEachDocument([&] (Document& document) {
         // System apperance change may affect stylesheet parsing. We need to reparse.
-        document.extensionStyleSheets().clearPageUserSheet();
-        document.extensionStyleSheets().invalidateInjectedStyleSheetCache();
+        if (CheckedPtr extensionStyleSheets = document.extensionStyleSheetsIfExists()) {
+            extensionStyleSheets->clearPageUserSheet();
+            extensionStyleSheets->invalidateInjectedStyleSheetCache();
+        }
     });
 }
 
@@ -3789,8 +3801,8 @@ Document* Page::outermostFullscreenDocument() const
     if (!localMainFrame)
         return nullptr;
 
-    CheckedPtr<Document> outermostFullscreenDocument = nullptr;
-    CheckedPtr currentDocument = localMainFrame->document();
+    RefPtr<Document> outermostFullscreenDocument;
+    RefPtr currentDocument = localMainFrame->document();
     while (currentDocument) {
         auto* fullscreenElement = currentDocument->fullscreenManager().fullscreenElement();
         if (!fullscreenElement)

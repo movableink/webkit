@@ -123,9 +123,8 @@ void RealtimeMediaSource::initializePersistentId()
     if (m_device.persistentId().isEmpty())
         m_device.setPersistentId(createVersion4UUIDString());
 
-    auto& center = RealtimeMediaSourceCenter::singleton();
-    m_hashedID = AtomString { center.hashStringWithSalt(m_device.persistentId(), m_idHashSalts.persistentDeviceSalt) };
-    m_ephemeralHashedID = AtomString { center.hashStringWithSalt(m_device.persistentId(), m_idHashSalts.ephemeralDeviceSalt) };
+    m_hashedID = RealtimeMediaSourceCenter::hashStringWithSalt(m_device.persistentId(), m_idHashSalts.persistentDeviceSalt);
+    m_ephemeralHashedID = RealtimeMediaSourceCenter::hashStringWithSalt(m_device.persistentId(), m_idHashSalts.ephemeralDeviceSalt);
 }
 
 void RealtimeMediaSource::addAudioSampleObserver(AudioSampleObserver& observer)
@@ -379,6 +378,9 @@ void RealtimeMediaSource::start()
     m_isProducingData = true;
     startProducingData();
 
+    if (m_registerOwnerCallback)
+        m_registerOwnerCallback(*this, false);
+
     if (!m_isProducingData)
         return;
 
@@ -427,10 +429,20 @@ void RealtimeMediaSource::end(Observer* callingObserver)
     m_isEnded = true;
     didEnd();
 
+    if (m_registerOwnerCallback)
+        m_registerOwnerCallback(*this, false);
+
     forEachObserver([&callingObserver](auto& observer) {
         if (&observer != callingObserver)
             observer.sourceStopped();
     });
+}
+
+void RealtimeMediaSource::registerOwnerCallback(OwnerCallback&& callback)
+{
+    ASSERT(isMainThread());
+    ASSERT(!m_registerOwnerCallback);
+    m_registerOwnerCallback = WTFMove(callback);
 }
 
 void RealtimeMediaSource::captureFailed()
@@ -1426,7 +1438,7 @@ void RealtimeMediaSource::scheduleDeferredTask(Function<void()>&& function)
     });
 }
 
-const AtomString& RealtimeMediaSource::hashedId() const
+const String& RealtimeMediaSource::hashedId() const
 {
     ASSERT(!m_hashedID.isEmpty());
     ASSERT(!m_ephemeralHashedID.isEmpty());

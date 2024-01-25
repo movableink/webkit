@@ -111,6 +111,10 @@
 #include "HighPerformanceGPUManager.h"
 #endif
 
+#if ENABLE(GPU_PROCESS)
+#include "APIPageConfiguration.h"
+#endif
+
 #if ENABLE(SEC_ITEM_SHIM)
 #include "SecItemShimProxy.h"
 #endif
@@ -278,7 +282,7 @@ private:
         return dummy.get();
     }
 
-    CheckedRef<WebProcessProxy> m_process;
+    WeakRef<WebProcessProxy> m_process;
 };
 #endif
 
@@ -390,7 +394,9 @@ void WebProcessProxy::setIsInProcessCache(bool value, WillShutDown willShutDown)
     if (willShutDown == WillShutDown::Yes)
         return;
 
-    send(Messages::WebProcess::SetIsInProcessCache(m_isInProcessCache), 0);
+    // The WebProcess might be task_suspended at this point, so use sendWithAsyncReply to resume
+    // the process via a background activity long enough to process the IPC if necessary.
+    sendWithAsyncReply(Messages::WebProcess::SetIsInProcessCache(m_isInProcessCache), []() { });
 
     if (m_isInProcessCache) {
         // WebProcessProxy objects normally keep the process pool alive but we do not want this to be the case
@@ -1159,6 +1165,9 @@ void WebProcessProxy::processDidTerminateOrFailedToLaunch(ProcessTerminationReas
 
     for (auto& page : pages)
         page->dispatchProcessDidTerminate(reason);
+
+    for (auto& remotePage : m_remotePages)
+        remotePage.processDidTerminate(coreProcessIdentifier());
 }
 
 void WebProcessProxy::didReceiveInvalidMessage(IPC::Connection& connection, IPC::MessageName messageName)
@@ -1316,12 +1325,14 @@ bool WebProcessProxy::wasPreviouslyApprovedFileURL(const URL& url) const
     return m_previouslyApprovedFilePaths.contains(fileSystemPath);
 }
 
-void WebProcessProxy::recordUserGestureAuthorizationToken(WTF::UUID authorizationToken)
+void WebProcessProxy::recordUserGestureAuthorizationToken(PageIdentifier pageID, WTF::UUID authorizationToken)
 {
     if (!UserInitiatedActionByAuthorizationTokenMap::isValidKey(authorizationToken) || !authorizationToken)
         return;
 
-    m_userInitiatedActionByAuthorizationTokenMap.ensure(authorizationToken, [authorizationToken] {
+    m_userInitiatedActionByAuthorizationTokenMap.ensure(pageID, [] {
+        return UserInitiatedActionByAuthorizationTokenMap { };
+    }).iterator->value.ensure(authorizationToken, [authorizationToken] {
         Ref action = API::UserInitiatedAction::create();
         action->setAuthorizationToken(authorizationToken);
         return action;
@@ -1337,28 +1348,36 @@ RefPtr<API::UserInitiatedAction> WebProcessProxy::userInitiatedActivity(uint64_t
     return result.iterator->value;
 }
 
-RefPtr<API::UserInitiatedAction> WebProcessProxy::userInitiatedActivity(std::optional<WTF::UUID> authorizationToken, uint64_t identifier)
+RefPtr<API::UserInitiatedAction> WebProcessProxy::userInitiatedActivity(PageIdentifier pageID, std::optional<WTF::UUID> authorizationToken, uint64_t identifier)
 {
     if (!UserInitiatedActionMap::isValidKey(identifier) || !identifier)
         return nullptr;
 
     if (authorizationToken) {
-        auto it = m_userInitiatedActionByAuthorizationTokenMap.find(*authorizationToken);
-        if (it != m_userInitiatedActionByAuthorizationTokenMap.end()) {
-            auto result = m_userInitiatedActionMap.ensure(identifier, [it] {
-                return it->value;
-            });
-            return result.iterator->value;
+        auto authorizationTokenMapByPageIterator = m_userInitiatedActionByAuthorizationTokenMap.find(pageID);
+        if (authorizationTokenMapByPageIterator != m_userInitiatedActionByAuthorizationTokenMap.end()) {
+            auto it = authorizationTokenMapByPageIterator->value.find(*authorizationToken);
+            if (it != authorizationTokenMapByPageIterator->value.end()) {
+                auto result = m_userInitiatedActionMap.ensure(identifier, [it] {
+                    return it->value;
+                });
+                return result.iterator->value;
+            }
         }
     }
 
     return userInitiatedActivity(identifier);
 }
 
-void WebProcessProxy::consumeIfNotVerifiablyFromUIProcess(API::UserInitiatedAction& action, std::optional<WTF::UUID> authToken)
+void WebProcessProxy::consumeIfNotVerifiablyFromUIProcess(PageIdentifier pageID, API::UserInitiatedAction& action, std::optional<WTF::UUID> authToken)
 {
-    if (authToken && m_userInitiatedActionByAuthorizationTokenMap.remove(*authToken))
-        return;
+    auto authorizationTokenMapByPageIterator = m_userInitiatedActionByAuthorizationTokenMap.find(pageID);
+    if (authorizationTokenMapByPageIterator != m_userInitiatedActionByAuthorizationTokenMap.end()) {
+        if (authToken && authorizationTokenMapByPageIterator->value.contains(*authToken)) {
+            m_userInitiatedActionByAuthorizationTokenMap.remove(authorizationTokenMapByPageIterator);
+            return;
+        }
+    }
     action.setConsumed();
 }
 
@@ -1367,11 +1386,17 @@ bool WebProcessProxy::isResponsive() const
     return responsivenessTimer().isResponsive() && m_backgroundResponsivenessTimer.isResponsive();
 }
 
-void WebProcessProxy::didDestroyUserGestureToken(uint64_t identifier)
+void WebProcessProxy::didDestroyUserGestureToken(PageIdentifier pageID, uint64_t identifier)
 {
     ASSERT(UserInitiatedActionMap::isValidKey(identifier));
-    if (auto removed = m_userInitiatedActionMap.take(identifier); removed && removed->authorizationToken())
-        m_userInitiatedActionByAuthorizationTokenMap.remove(*removed->authorizationToken());
+    auto authorizationTokenMapByPageIterator = m_userInitiatedActionByAuthorizationTokenMap.find(pageID);
+    if (authorizationTokenMapByPageIterator != m_userInitiatedActionByAuthorizationTokenMap.end()) {
+        if (auto removed = m_userInitiatedActionMap.take(identifier); removed && removed->authorizationToken()) {
+            authorizationTokenMapByPageIterator->value.remove(*removed->authorizationToken());
+            if (authorizationTokenMapByPageIterator->value.isEmpty())
+                m_userInitiatedActionByAuthorizationTokenMap.remove(authorizationTokenMapByPageIterator);
+        }
+    }
 }
 
 bool WebProcessProxy::canBeAddedToWebProcessCache() const
@@ -1604,20 +1629,20 @@ RefPtr<API::Object> WebProcessProxy::transformHandlesToObjects(API::Object* obje
 
             case API::Object::Type::PageHandle:
                 ASSERT(static_cast<API::PageHandle&>(object).isAutoconverting());
-                return checkedProcess()->webPage(static_cast<API::PageHandle&>(object).pageProxyID());
+                return protectedProcess()->webPage(static_cast<API::PageHandle&>(object).pageProxyID());
 
 #if PLATFORM(COCOA)
             case API::Object::Type::ObjCObjectGraph:
-                return checkedProcess()->transformHandlesToObjects(static_cast<ObjCObjectGraph&>(object));
+                return protectedProcess()->transformHandlesToObjects(static_cast<ObjCObjectGraph&>(object));
 #endif
             default:
                 return &object;
             }
         }
 
-        CheckedRef<WebProcessProxy> checkedProcess() const { return m_webProcessProxy; }
+        Ref<WebProcessProxy> protectedProcess() const { return m_webProcessProxy.get(); }
 
-        CheckedRef<WebProcessProxy> m_webProcessProxy;
+        WeakRef<WebProcessProxy> m_webProcessProxy;
     };
 
     return UserData::transform(object, Transformer(*this));
@@ -1739,16 +1764,25 @@ void WebProcessProxy::didDropLastAssertion()
 
 void WebProcessProxy::prepareToDropLastAssertion(CompletionHandler<void()>&& completionHandler)
 {
-#if PLATFORM(MAC)
-    if (isInProcessCache()) {
-        // We don't free caches in cached WebProcesses on macOS for performance reasons.
-        // Cached WebProcess will anyway shutdown on memory pressure.
+#if ENABLE(WEBPROCESS_CACHE)
+    if (isInProcessCache() || !m_suspendedPages.isEmptyIgnoringNullReferences() || (canTerminateAuxiliaryProcess() && canBeAddedToWebProcessCache())) {
+        // We avoid freeing caches if:
+        //
+        //  1. The process is already in the WebProcess cache.
+        //  2. The process is already in the back/forward cache.
+        //  3. The process might end up in the process cache (canTerminateAuxiliaryProcess() && canBeAddedToWebProcessCache())
+        //
+        // The idea here is that we want these cached processes to retain useful data if they're
+        // reused. They have a low jetsam priority and will be killed by our low memory handler or
+        // the kernel if necessary.
         return completionHandler();
     }
-#endif
-    // We don't slim down the process in the PrepareToSuspend IPC, we delay clearing the
-    // caches until we release the suspended assertion.
+    // When the WebProcess cache is enabled, instead of freeing caches in the PrepareToSuspend
+    // we free caches here just before we drop our last process assertion.
     sendWithAsyncReply(Messages::WebProcess::ReleaseMemory(), WTFMove(completionHandler), 0, { }, ShouldStartProcessThrottlerActivity::No);
+#else
+    completionHandler();
+#endif
 }
 
 String WebProcessProxy::environmentIdentifier() const

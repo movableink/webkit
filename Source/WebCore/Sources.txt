@@ -233,6 +233,7 @@ Modules/mediastream/MediaDevices.cpp
 Modules/mediastream/MediaStream.cpp
 Modules/mediastream/MediaStreamTrack.cpp
 Modules/mediastream/MediaStreamTrackEvent.cpp
+Modules/mediastream/MediaStreamTrackProcessor.cpp
 Modules/mediastream/MediaTrackCapabilities.cpp
 Modules/mediastream/MediaTrackConstraints.cpp
 Modules/mediastream/NavigatorMediaDevices.cpp
@@ -275,6 +276,7 @@ Modules/mediastream/SFrameUtils.cpp
 Modules/mediastream/STUNMessageParsing.cpp
 Modules/mediastream/UserMediaController.cpp
 Modules/mediastream/UserMediaRequest.cpp
+Modules/mediastream/VideoTrackGenerator.cpp
 Modules/model-element/HTMLModelElement.cpp
 Modules/model-element/ModelPlayer.cpp
 Modules/model-element/ModelPlayerClient.cpp
@@ -419,7 +421,6 @@ Modules/webauthn/AuthenticatorAttestationResponse.cpp
 Modules/webauthn/AuthenticatorCoordinator.cpp
 Modules/webauthn/AuthenticatorResponse.cpp
 Modules/webauthn/PublicKeyCredential.cpp
-Modules/webauthn/PublicKeyCredentialClientCapabilities.cpp
 Modules/webauthn/WebAuthenticationUtils.cpp
 Modules/webauthn/apdu/ApduCommand.cpp
 Modules/webauthn/apdu/ApduResponse.cpp
@@ -522,6 +523,7 @@ accessibility/AXImage.cpp
 accessibility/AXLogger.cpp
 accessibility/AXObjectCache.cpp
 accessibility/AXTextMarker.cpp
+accessibility/AXTextRun.cpp
 accessibility/AccessibilityARIAGrid.cpp
 accessibility/AccessibilityARIAGridCell.cpp
 accessibility/AccessibilityARIAGridRow.cpp
@@ -569,8 +571,6 @@ animation/CSSTransition.cpp
 animation/CSSTransitionEvent.cpp
 animation/CompositeOperation.cpp
 animation/CustomEffect.cpp
-animation/DeclarativeAnimation.cpp
-animation/DeclarativeAnimationEvent.cpp
 animation/DocumentTimeline.cpp
 animation/DocumentTimelinesController.cpp
 animation/ElementAnimationRareData.cpp
@@ -579,6 +579,8 @@ animation/KeyframeEffect.cpp
 animation/KeyframeEffectStack.cpp
 animation/KeyframeInterpolation.cpp
 animation/ScrollTimeline.cpp
+animation/StyleOriginatedAnimation.cpp
+animation/StyleOriginatedAnimationEvent.cpp
 animation/ViewTimeline.cpp
 animation/WebAnimation.cpp
 animation/WebAnimationUtilities.cpp
@@ -950,6 +952,7 @@ css/calc/CSSCalcValue.cpp
 css/color/CSSResolvedColorMix.cpp
 css/color/CSSUnresolvedColor.cpp
 css/color/CSSUnresolvedColorMix.cpp
+css/color/CSSUnresolvedLightDark.cpp
 css/parser/CSSAtRuleID.cpp
 css/parser/CSSCustomPropertySyntax.cpp
 css/parser/CSSParser.cpp
@@ -958,7 +961,6 @@ css/parser/CSSParserFastPaths.cpp
 css/parser/CSSParserIdioms.cpp
 css/parser/CSSParserImpl.cpp
 css/parser/CSSParserObserverWrapper.cpp
-css/parser/CSSParserSelector.cpp
 css/parser/CSSParserToken.cpp
 css/parser/CSSParserTokenRange.cpp
 css/parser/CSSPropertyParser.cpp
@@ -971,6 +973,7 @@ css/parser/CSSTokenizer.cpp
 css/parser/CSSTokenizerInputStream.cpp
 css/parser/CSSVariableParser.cpp
 css/parser/MediaQueryBlockWatcher.cpp
+css/parser/MutableCSSSelector.cpp
 css/parser/SizesAttributeParser.cpp
 css/parser/SizesCalcParser.cpp
 css/query/ContainerQueryFeatures.cpp
@@ -1098,7 +1101,6 @@ dom/EventContext.cpp
 dom/EventDispatcher.cpp
 dom/EventListenerMap.cpp
 dom/EventLoop.cpp
-dom/EventNames.cpp
 dom/EventPath.cpp
 dom/EventTarget.cpp
 dom/EventTargetConcrete.cpp
@@ -1428,7 +1430,6 @@ html/HTMLVideoElement.cpp
 html/HTMLWBRElement.cpp
 html/HiddenInputType.cpp
 html/ImageBitmap.cpp
-html/ImageBitmapBacking.cpp
 html/ImageData.cpp
 html/ImageDocument.cpp
 html/ImageInputType.cpp
@@ -1486,7 +1487,6 @@ html/canvas/CanvasRenderingContext.cpp
 html/canvas/CanvasRenderingContext2D.cpp
 html/canvas/CanvasRenderingContext2DBase.cpp
 html/canvas/CanvasStyle.cpp
-html/canvas/EXTBlendFuncExtended.cpp
 html/canvas/EXTBlendMinMax.cpp
 html/canvas/EXTClipControl.cpp
 html/canvas/EXTColorBufferFloat.cpp
@@ -1528,6 +1528,7 @@ html/canvas/Path2D.cpp
 html/canvas/PlaceholderRenderingContext.cpp
 html/canvas/PredefinedColorSpace.cpp
 html/canvas/WebGL2RenderingContext.cpp
+html/canvas/WebGLBlendFuncExtended.cpp
 html/canvas/WebGLBuffer.cpp
 html/canvas/WebGLClipCullDistance.cpp
 html/canvas/WebGLColorBufferFloat.cpp
@@ -1601,11 +1602,8 @@ html/shadow/DateTimeNumericFieldElement.cpp
 html/shadow/DateTimeSymbolicFieldElement.cpp
 html/shadow/MediaControlTextTrackContainerElement.cpp
 html/shadow/ProgressShadowElement.cpp
-html/shadow/ShadowPseudoIds.cpp
 html/shadow/SliderThumbElement.cpp
 html/shadow/SpinButtonElement.cpp
-html/shadow/SwitchThumbElement.cpp
-html/shadow/SwitchTrackElement.cpp
 html/shadow/TextControlInnerElements.cpp
 html/shadow/TextPlaceholderElement.cpp
 html/track/AudioTrack.cpp
@@ -2350,7 +2348,7 @@ platform/graphics/controls/ProgressBarPart.cpp
 platform/graphics/controls/SliderTrackPart.cpp
 platform/graphics/cpu/arm/filters/FEBlendNeonApplier.cpp
 platform/graphics/cpu/arm/filters/FECompositeNeonArithmeticApplier.cpp
-platform/graphics/cpu/arm/filters/FELightingNEON.cpp
+platform/graphics/cpu/arm/filters/FELightingNeonParallelApplier.cpp
 platform/graphics/displaylists/DisplayList.cpp
 platform/graphics/displaylists/DisplayListDrawingContext.cpp
 platform/graphics/displaylists/DisplayListItem.cpp
@@ -2403,6 +2401,7 @@ platform/graphics/filters/software/FEFloodSoftwareApplier.cpp
 platform/graphics/filters/software/FEGaussianBlurSoftwareApplier.cpp
 platform/graphics/filters/software/FEImageSoftwareApplier.cpp
 platform/graphics/filters/software/FELightingSoftwareApplier.cpp
+platform/graphics/filters/software/FELightingSoftwareParallelApplier.cpp
 platform/graphics/filters/software/FEMergeSoftwareApplier.cpp
 platform/graphics/filters/software/FEMorphologySoftwareApplier.cpp
 platform/graphics/filters/software/FEOffsetSoftwareApplier.cpp
@@ -2443,6 +2442,7 @@ platform/mediastream/CaptureDeviceManager.cpp
 platform/mediastream/MediaConstraints.cpp
 platform/mediastream/MediaEndpointConfiguration.cpp
 platform/mediastream/MediaStreamPrivate.cpp
+platform/mediastream/MediaStreamTrackDataHolder.cpp
 platform/mediastream/MediaStreamTrackPrivate.cpp
 platform/mediastream/RTCIceCandidateDescriptor.cpp
 platform/mediastream/RTCSessionDescriptionDescriptor.cpp
@@ -2560,6 +2560,7 @@ rendering/GridLayoutFunctions.cpp
 rendering/GridMasonryLayout.cpp
 rendering/GridTrackSizingAlgorithm.cpp
 rendering/GlyphDisplayListCache.cpp
+rendering/GlyphDisplayListCacheRemoval.cpp
 rendering/HitTestLocation.cpp
 rendering/HitTestResult.cpp
 rendering/HitTestingTransformState.cpp
@@ -2794,7 +2795,11 @@ rendering/svg/RenderSVGPath.cpp
 rendering/svg/RenderSVGRect.cpp
 rendering/svg/RenderSVGResourceClipper.cpp
 rendering/svg/RenderSVGResourceContainer.cpp
+rendering/svg/RenderSVGResourceGradient.cpp
+rendering/svg/RenderSVGResourceLinearGradient.cpp
 rendering/svg/RenderSVGResourceMasker.cpp
+rendering/svg/RenderSVGResourcePaintServer.cpp
+rendering/svg/RenderSVGResourceRadialGradient.cpp
 rendering/svg/RenderSVGRoot.cpp
 rendering/svg/RenderSVGShape.cpp
 rendering/svg/RenderSVGTSpan.cpp
@@ -2840,6 +2845,7 @@ rendering/updating/RenderTreeBuilderTable.cpp
 rendering/updating/RenderTreePosition.cpp
 rendering/updating/RenderTreeUpdater.cpp
 rendering/updating/RenderTreeUpdaterGeneratedContent.cpp
+rendering/updating/RenderTreeUpdaterViewTransition.cpp
 storage/Storage.cpp
 storage/StorageEvent.cpp
 storage/StorageEventDispatcher.cpp
@@ -2882,6 +2888,7 @@ style/StyleResolver.cpp
 style/StyleScope.cpp
 style/StyleScopeRuleSets.cpp
 style/StyleSharingResolver.cpp
+style/StyleSheetContentsCache.cpp
 style/StyleTreeResolver.cpp
 style/StyleUpdate.cpp
 style/Styleable.cpp
@@ -3143,6 +3150,7 @@ CSSPropertyParsing.cpp
 CSSValueKeywords.cpp
 ColorData.cpp
 EventFactory.cpp
+EventNames.cpp
 EventTargetFactory.cpp
 HTMLElementFactory.cpp
 HTMLEntityTable.cpp
@@ -3445,7 +3453,6 @@ JSDoubleRange.cpp
 JSDragEvent.cpp
 JSDynamicsCompressorNode.cpp
 JSDynamicsCompressorOptions.cpp
-JSEXTBlendFuncExtended.cpp
 JSEXTBlendMinMax.cpp
 JSEXTClipControl.cpp
 JSEXTColorBufferFloat.cpp
@@ -3874,6 +3881,7 @@ JSMediaStreamAudioSourceNode.cpp
 JSMediaStreamAudioSourceOptions.cpp
 JSMediaStreamTrack.cpp
 JSMediaStreamTrackEvent.cpp
+JSMediaStreamTrackProcessor.cpp
 JSMediaTrackCapabilities.cpp
 JSMediaTrackConstraints.cpp
 JSMediaTrackSupportedConstraints.cpp
@@ -4011,7 +4019,6 @@ JSProcessingInstruction.cpp
 JSProgressEvent.cpp
 JSPromiseRejectionEvent.cpp
 JSPublicKeyCredential.cpp
-JSPublicKeyCredentialClientCapabilities.cpp
 JSPublicKeyCredentialCreationOptions.cpp
 JSPublicKeyCredentialDescriptor.cpp
 JSPublicKeyCredentialRequestOptions.cpp
@@ -4410,6 +4417,7 @@ JSVideoPixelFormat.cpp
 JSVideoPlaybackQuality.cpp
 JSVideoTrack.cpp
 JSVideoTrackConfiguration.cpp
+JSVideoTrackGenerator.cpp
 JSVideoTrackList.cpp
 JSVideoTransferCharacteristics.cpp
 JSViewTimeline.cpp
@@ -4456,6 +4464,7 @@ JSWebCodecsVideoFrameOutputCallback.cpp
 JSWebCodecsVideoFrame.cpp
 JSWebGL2RenderingContext.cpp
 JSWebGLActiveInfo.cpp
+JSWebGLBlendFuncExtended.cpp
 JSWebGLBuffer.cpp
 JSWebGLClipCullDistance.cpp
 JSWebGLColorBufferFloat.cpp

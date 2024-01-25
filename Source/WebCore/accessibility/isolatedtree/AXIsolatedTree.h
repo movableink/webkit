@@ -29,6 +29,7 @@
 
 #include "AXCoreObject.h"
 #include "AXTextMarker.h"
+#include "AXTextRun.h"
 #include "AXTreeStore.h"
 #include "PageIdentifier.h"
 #include "RenderStyleConstants.h"
@@ -47,6 +48,7 @@ class TextStream;
 namespace WebCore {
 
 class AXIsolatedObject;
+class AXGeometryManager;
 class AXObjectCache;
 class AccessibilityObject;
 class Page;
@@ -89,7 +91,6 @@ enum class AXPropertyName : uint16_t {
     DatetimeAttributeValue,
     DecrementButton,
     Description,
-    DescriptionAttributeValue,
     DisclosedByRow,
     DisclosedRows,
     DocumentEncoding,
@@ -106,7 +107,6 @@ enum class AXPropertyName : uint16_t {
     HasUnderline,
     HeaderContainer,
     HeadingLevel,
-    HelpText,
     HierarchicalLevel,
     HorizontalScrollBar,
     IdentifierAttribute,
@@ -237,7 +237,6 @@ enum class AXPropertyName : uint16_t {
 #endif
     Title,
     TitleAttributeValue,
-    TitleUIElement,
     URL,
     ValueAutofillButtonType,
     ValueDescription,
@@ -255,7 +254,7 @@ using AXPropertyValueVariant = std::variant<std::nullptr_t, AXID, String, bool, 
     , RetainPtr<NSAttributedString>
 #endif
 #if ENABLE(AX_THREAD_TEXT_APIS)
-    , Vector<AXTextRun>
+    , AXTextRuns
 #endif
 >;
 using AXPropertyMap = HashMap<AXPropertyName, AXPropertyValueVariant, IntHash<AXPropertyName>, WTF::StrongEnumHashTraits<AXPropertyName>>;
@@ -322,17 +321,29 @@ public:
     WEBCORE_EXPORT RefPtr<AXIsolatedObject> focusedNode();
 
     RefPtr<AXIsolatedObject> objectForID(const AXID) const;
-    template<typename U> Vector<RefPtr<AXCoreObject>> objectsForIDs(const U&);
+    template<typename U>
+    Vector<RefPtr<AXCoreObject>> objectsForIDs(const U& axIDs) const
+    {
+        ASSERT(!isMainThread());
+
+        Vector<RefPtr<AXCoreObject>> result;
+        result.reserveInitialCapacity(axIDs.size());
+        for (const auto& axID : axIDs) {
+            if (RefPtr object = objectForID(axID))
+                result.append(WTFMove(object));
+        }
+        result.shrinkToFit();
+        return result;
+    }
 
     void generateSubtree(AccessibilityObject&);
-    void labelCreated(AccessibilityObject&);
     void updateNode(AccessibilityObject&);
     enum class ResolveNodeChanges : bool { No, Yes };
     void updateChildren(AccessibilityObject&, ResolveNodeChanges = ResolveNodeChanges::Yes);
     void updateChildrenForObjects(const ListHashSet<RefPtr<AccessibilityObject>>&);
     void updateNodeProperty(AXCoreObject& object, AXPropertyName property) { updateNodeProperties(object, { property }); };
     void updateNodeProperties(AXCoreObject&, const AXPropertyNameSet&);
-    void updateNodeAndDependentProperties(AccessibilityObject&);
+    void updateDependentProperties(AccessibilityObject&);
     void updatePropertiesForSelfAndDescendants(AccessibilityObject&, const AXPropertyNameSet&);
     void updateFrame(AXID, IntRect&&);
     void overrideNodeProperties(AXID, AXPropertyMap&&);
@@ -430,6 +441,10 @@ private:
     // IsolatedObject must have one and only one entry in this map, that maps
     // its ObjectID to its ParentChildrenIDs struct.
     HashMap<AXID, ParentChildrenIDs> m_nodeMap;
+
+    // Only accessed on the main thread.
+    // Stores all nodes that are added via addUnconnectedNode, which do not get stored in m_nodeMap.
+    HashSet<AXID> m_unconnectedNodes;
 
     // Only accessed on the main thread.
     // The key is the ID of the object that will be resolved into an m_pendingAppends NodeChange.

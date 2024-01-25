@@ -18,20 +18,6 @@ macro(MAKE_HASH_TOOLS _source)
 endmacro()
 
 
-# Append the given dependencies to the source file
-# This one consider the given dependencies are in ${WebCore_DERIVED_SOURCES_DIR}
-# and prepends this to every member of dependencies list
-macro(ADD_SOURCE_WEBCORE_DERIVED_DEPENDENCIES _source _deps)
-    set(_tmp "")
-    foreach (f ${_deps})
-        list(APPEND _tmp "${WebCore_DERIVED_SOURCES_DIR}/${f}")
-    endforeach ()
-
-    WEBKIT_ADD_SOURCE_DEPENDENCIES(${_source} ${_tmp})
-    unset(_tmp)
-endmacro()
-
-
 macro(MAKE_JS_FILE_ARRAYS _output_cpp _output_h _namespace _scripts _scripts_dependencies)
     add_custom_command(
         OUTPUT ${_output_h} ${_output_cpp}
@@ -185,6 +171,20 @@ macro(GENERATE_EVENT_FACTORY _infile _namespace)
         MAIN_DEPENDENCY ${_infile}
         DEPENDS ${NAMES_GENERATOR} ${SCRIPTS_BINDINGS}
         COMMAND ${PERL_EXECUTABLE} ${NAMES_GENERATOR} --input ${_infile} --outputDir ${WebCore_DERIVED_SOURCES_DIR}
+        VERBATIM)
+endmacro()
+
+
+macro(GENERATE_EVENT_NAMES _infile)
+    set(NAMES_GENERATOR ${WEBCORE_DIR}/dom/make-event-names.py)
+    set(_outputfiles ${WebCore_DERIVED_SOURCES_DIR}/EventNames.h ${WebCore_DERIVED_SOURCES_DIR}/EventNames.cpp)
+
+    add_custom_command(
+        OUTPUT  ${_outputfiles}
+        MAIN_DEPENDENCY ${_infile}
+        DEPENDS ${NAMES_GENERATOR} ${SCRIPTS_BINDINGS}
+        WORKING_DIRECTORY ${WebCore_DERIVED_SOURCES_DIR}
+        COMMAND ${PYTHON_EXECUTABLE} ${NAMES_GENERATOR} --event-names ${_infile}
         VERBATIM)
 endmacro()
 

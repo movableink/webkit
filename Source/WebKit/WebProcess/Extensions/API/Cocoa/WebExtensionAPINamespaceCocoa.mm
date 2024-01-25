@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -184,6 +184,16 @@ WebExtensionAPIScripting& WebExtensionAPINamespace::scripting()
     return *m_scripting;
 }
 
+WebExtensionAPIStorage& WebExtensionAPINamespace::storage()
+{
+    // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/storage
+
+    if (!m_storage)
+        m_storage = WebExtensionAPIStorage::create(forMainWorld(), runtime(), extensionContext());
+
+    return *m_storage;
+}
+
 WebExtensionAPITabs& WebExtensionAPINamespace::tabs()
 {
     // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/tabs
@@ -222,6 +232,16 @@ WebExtensionAPIWebNavigation& WebExtensionAPINamespace::webNavigation()
         m_webNavigation = WebExtensionAPIWebNavigation::create(forMainWorld(), runtime(), extensionContext());
 
     return *m_webNavigation;
+}
+
+WebExtensionAPIWebRequest& WebExtensionAPINamespace::webRequest()
+{
+    // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/webRequest
+
+    if (!m_webRequest)
+        m_webRequest = WebExtensionAPIWebRequest::create(forMainWorld(), runtime(), extensionContext());
+
+    return *m_webRequest;
 }
 
 } // namespace WebKit

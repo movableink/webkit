@@ -25,6 +25,7 @@
 
 #include "Blob.h"
 #include "CachedResourceRequestInitiatorTypes.h"
+#include "CommonAtomStrings.h"
 #include "ContentSecurityPolicy.h"
 #include "CrossOriginAccessControl.h"
 #include "DOMFormData.h"
@@ -184,16 +185,15 @@ ExceptionOr<Document*> XMLHttpRequest::responseXML()
                 responseDocument = HTMLDocument::create(nullptr, context.settings(), m_response.url(), { });
             else
                 responseDocument = XMLDocument::create(nullptr, context.settings(), m_response.url());
-            responseDocument->setParserContentPolicy({ ParserContentPolicy::AllowScriptingContent });
             responseDocument->overrideLastModified(m_response.lastModified());
             responseDocument->setContextDocument(context);
             responseDocument->setSecurityOriginPolicy(context.securityOriginPolicy());
             responseDocument->overrideMIMEType(mimeType);
-            responseDocument->setContent(m_responseBuilder.toStringPreserveCapacity());
+            responseDocument->setMarkupUnsafe(m_responseBuilder.toStringPreserveCapacity(), { });
             if (m_decoder)
                 responseDocument->setDecoder(m_decoder.copyRef());
 
-            if (!responseDocument->wellFormed())
+            if (!isHTML && !responseDocument->wellFormed())
                 m_responseDocument = nullptr;
             else
                 m_responseDocument = WTFMove(responseDocument);
@@ -339,8 +339,8 @@ ExceptionOr<void> XMLHttpRequest::open(const String& method, const String& url)
 ExceptionOr<void> XMLHttpRequest::open(const String& method, const URL& url, bool async)
 {
     auto* context = scriptExecutionContext();
-    bool contextIsDocument = is<Document>(*context);
-    if (contextIsDocument && !downcast<Document>(*context).isFullyActive())
+    RefPtr contextDocument = dynamicDowncast<Document>(*context);
+    if (contextDocument && !contextDocument->isFullyActive())
         return Exception { ExceptionCode::InvalidStateError, "Document is not fully active"_s };
 
     if (!isValidHTTPToken(method))
@@ -352,7 +352,7 @@ ExceptionOr<void> XMLHttpRequest::open(const String& method, const URL& url, boo
     if (!url.isValid())
         return Exception { ExceptionCode::SyntaxError };
 
-    if (!async && contextIsDocument) {
+    if (!async && contextDocument) {
         // Newer functionality is not available to synchronous requests in window contexts, as a spec-mandated
         // attempt to discourage synchronous XHR use. responseType is one such piece of functionality.
         // We'll only disable this functionality for HTTP(S) requests since sync requests for local protocols
@@ -416,8 +416,8 @@ std::optional<ExceptionOr<void>> XMLHttpRequest::prepareToSend()
 
     auto& context = *scriptExecutionContext();
 
-    if (is<Document>(context) && downcast<Document>(context).shouldIgnoreSyncXHRs()) {
-        logConsoleError(scriptExecutionContext(), makeString("Ignoring XMLHttpRequest.send() call for '", m_url.url().string(), "' because the maximum number of synchronous failures was reached."));
+    if (RefPtr contextDocument = dynamicDowncast<Document>(context); contextDocument && contextDocument->shouldIgnoreSyncXHRs()) {
+        logConsoleError(&context, makeString("Ignoring XMLHttpRequest.send() call for '", m_url.url().string(), "' because the maximum number of synchronous failures was reached."));
         return ExceptionOr<void> { };
     }
 

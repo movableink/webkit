@@ -537,40 +537,6 @@ public:
 #endif // CPU(ARM64)
 #endif
 
-#if CPU(MIPS)
-    void emitFunctionPrologue()
-    {
-        pushPair(framePointerRegister, returnAddressRegister);
-        move(stackPointerRegister, framePointerRegister);
-    }
-
-    void emitFunctionEpilogueWithEmptyFrame()
-    {
-        popPair(framePointerRegister, returnAddressRegister);
-    }
-
-    void emitFunctionEpilogue()
-    {
-        move(framePointerRegister, stackPointerRegister);
-        emitFunctionEpilogueWithEmptyFrame();
-    }
-
-    ALWAYS_INLINE void preserveReturnAddressAfterCall(RegisterID reg)
-    {
-        move(returnAddressRegister, reg);
-    }
-
-    ALWAYS_INLINE void restoreReturnAddressBeforeReturn(RegisterID reg)
-    {
-        move(reg, returnAddressRegister);
-    }
-
-    ALWAYS_INLINE void restoreReturnAddressBeforeReturn(Address address)
-    {
-        loadPtr(address, returnAddressRegister);
-    }
-#endif
-
 #if CPU(RISCV64)
     void emitFunctionPrologue()
     {
@@ -994,7 +960,7 @@ public:
         JumpList doneCases;
         doneCases.append(branchTest32(Zero, destGPR));
         loadPtr(Address(cellGPR, JSBigInt::offsetOfData()), scratchGPR);
-        cageConditionallyAndUntag(Gigacage::Primitive, scratchGPR, destGPR, scratch2GPR, false, false);
+        cageConditionally(Gigacage::Primitive, scratchGPR, destGPR, scratch2GPR);
         load64(Address(scratchGPR), destGPR);
         doneCases.append(branchTest8(Zero, Address(cellGPR, JSBigInt::offsetOfSign())));
         neg64(destGPR);
@@ -1340,6 +1306,34 @@ public:
             GPRInfo::regT3,
             GPRInfo::regT4,
             GPRInfo::regT5,
+#if CPU(ARM64)
+            GPRInfo::regT6,
+            GPRInfo::regT7,
+            GPRInfo::regT8,
+            GPRInfo::regT9,
+            GPRInfo::regT10,
+            GPRInfo::regT11,
+            GPRInfo::regT12,
+            GPRInfo::regT13,
+            GPRInfo::regT14,
+            GPRInfo::regT15,
+#elif CPU(X86_64) && OS(WINDOWS)
+            // No additional registers.
+#elif CPU(X86_64)
+            GPRInfo::regT6,
+            GPRInfo::regT7,
+#elif CPU(ARM_THUMB2)
+            GPRInfo::regT6,
+            GPRInfo::regT7,
+#elif CPU(RISCV64)
+            GPRInfo::regT6,
+            GPRInfo::regT7,
+            GPRInfo::regT8,
+            GPRInfo::regT9,
+            GPRInfo::regT10,
+            GPRInfo::regT11,
+            GPRInfo::regT12,
+#endif
         };
 
         for (GPRReg reg : registers) {
@@ -1748,9 +1742,9 @@ public:
         ok.link(this);
     }
 
-    JS_EXPORT_PRIVATE void cageWithoutUntagging(Gigacage::Kind, GPRReg storage, bool mayBeNull = true);
+    JS_EXPORT_PRIVATE void cage(Gigacage::Kind, GPRReg storage);
     // length may be the same register as scratch.
-    JS_EXPORT_PRIVATE void cageConditionallyAndUntag(Gigacage::Kind, GPRReg storage, GPRReg length, GPRReg scratch, bool validateAuth = true, bool mayBeNull = true);
+    JS_EXPORT_PRIVATE void cageConditionally(Gigacage::Kind, GPRReg storage, GPRReg length, GPRReg scratch);
 
     void emitComputeButterflyIndexingMask(GPRReg vectorLengthGPR, GPRReg scratchGPR, GPRReg resultGPR)
     {
@@ -1886,7 +1880,7 @@ public:
         functor(TypeofType::Undefined, true);
     }
     
-    void emitVirtualCall(VM&, JSGlobalObject*, CallLinkInfo*);
+    void emitVirtualCall(VM&, CallLinkInfo*);
     void emitVirtualCallWithoutMovingGlobalObject(VM&, GPRReg callLinkInfoGPR, CallMode);
     
     void makeSpaceOnStackForCCall();

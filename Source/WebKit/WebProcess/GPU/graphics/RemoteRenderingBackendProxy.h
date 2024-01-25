@@ -43,6 +43,8 @@
 #include "RenderingUpdateID.h"
 #include "SharedMemory.h"
 #include "StreamClientConnection.h"
+#include "ThreadSafeObjectHeap.h"
+#include "WorkQueueMessageReceiver.h"
 #include <WebCore/RenderingResourceIdentifier.h>
 #include <WebCore/Timer.h>
 #include <span>
@@ -110,9 +112,13 @@ public:
     void releaseAllDrawingResources();
     void releaseAllImageResources();
     void releaseRenderingResource(WebCore::RenderingResourceIdentifier);
-    void markSurfacesVolatile(Vector<std::pair<Ref<RemoteImageBufferSetProxy>, OptionSet<BufferInSetType>>>&&, CompletionHandler<void(bool madeAllVolatile)>&&);
+    void markSurfacesVolatile(Vector<std::pair<Ref<RemoteImageBufferSetProxy>, OptionSet<BufferInSetType>>>&&, CompletionHandler<void(bool madeAllVolatile)>&&, bool forcePurge);
     RefPtr<RemoteImageBufferSetProxy> createRemoteImageBufferSet();
     void releaseRemoteImageBufferSet(RemoteImageBufferSetProxy&);
+
+#if USE(GRAPHICS_LAYER_WC)
+    Function<bool()> flushImageBuffers();
+#endif
 
     std::unique_ptr<RemoteDisplayListRecorderProxy> createDisplayListRecorder(WebCore::RenderingResourceIdentifier, const WebCore::FloatSize&, WebCore::RenderingPurpose, float resolutionScale, const WebCore::DestinationColorSpace&, WebCore::PixelFormat, OptionSet<WebCore::ImageBufferOptions>);
 
@@ -131,14 +137,8 @@ public:
     };
 
 #if PLATFORM(COCOA)
-    struct SwapBuffersResult {
-        std::optional<ImageBufferBackendHandle> backendHandle;
-        SwapBuffersDisplayRequirement displayRequirement;
-        BufferIdentifierSet cacheIdentifiers;
-    };
-
-    void prepareImageBufferSetsForDisplay(Vector<LayerPrepareBuffersData>&&, CompletionHandler<void(Vector<SwapBuffersResult>&&)>);
-    void ensurePrepareCompleted();
+    Vector<SwapBuffersDisplayRequirement> prepareImageBufferSetsForDisplay(Vector<LayerPrepareBuffersData>&&);
+    void didPrepareForDisplay(RemoteImageBufferSetProxy&);
 #endif
 
     void finalizeRenderingUpdate();
@@ -200,12 +200,11 @@ private:
     MarkSurfacesAsVolatileRequestIdentifier m_currentVolatilityRequest;
     HashMap<MarkSurfacesAsVolatileRequestIdentifier, CompletionHandler<void(bool)>> m_markAsVolatileRequests;
     HashMap<RemoteImageBufferSetIdentifier, WeakPtr<RemoteImageBufferSetProxy>> m_bufferSets;
+    HashMap<RemoteImageBufferSetIdentifier, RefPtr<RemoteImageBufferSetProxy>> m_bufferSetsInDisplay;
     SerialFunctionDispatcher& m_dispatcher;
 
     RenderingUpdateID m_renderingUpdateID;
     RenderingUpdateID m_didRenderingUpdateID;
-
-    IPC::Connection::AsyncReplyID m_prepareReply;
 };
 
 } // namespace WebKit

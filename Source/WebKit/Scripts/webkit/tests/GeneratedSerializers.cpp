@@ -104,6 +104,11 @@ template<> struct ArgumentCoder<Namespace::OtherClass> {
     static std::optional<Namespace::OtherClass> decode(Decoder&);
 };
 
+template<> struct ArgumentCoder<Namespace::ClassWithMemberPrecondition> {
+    static void encode(Encoder&, const Namespace::ClassWithMemberPrecondition&);
+    static std::optional<Namespace::ClassWithMemberPrecondition> decode(Decoder&);
+};
+
 #if ENABLE(TEST_FEATURE)
 void ArgumentCoder<Namespace::Subnamespace::StructName>::encode(Encoder& encoder, const Namespace::Subnamespace::StructName& instance)
 {
@@ -220,6 +225,34 @@ std::optional<Namespace::OtherClass> ArgumentCoder<Namespace::OtherClass>::decod
             WTFMove(*a),
             WTFMove(*b),
             WTFMove(*dataDetectorResults)
+        }
+    };
+}
+
+void ArgumentCoder<Namespace::ClassWithMemberPrecondition>::encode(Encoder& encoder, const Namespace::ClassWithMemberPrecondition& instance)
+{
+    static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.m_pkPaymentMethod)>, RetainPtr<PKPaymentMethod>>);
+    struct ShouldBeSameSizeAsClassWithMemberPrecondition : public VirtualTableAndRefCountOverhead<std::is_polymorphic_v<Namespace::ClassWithMemberPrecondition>, false> {
+        RetainPtr<PKPaymentMethod> m_pkPaymentMethod;
+    };
+    static_assert(sizeof(ShouldBeSameSizeAsClassWithMemberPrecondition) == sizeof(Namespace::ClassWithMemberPrecondition));
+    static_assert(MembersInCorrectOrder < 0
+        , offsetof(Namespace::ClassWithMemberPrecondition, m_pkPaymentMethod)
+    >::value);
+
+    encoder << instance.m_pkPaymentMethod;
+}
+
+std::optional<Namespace::ClassWithMemberPrecondition> ArgumentCoder<Namespace::ClassWithMemberPrecondition>::decode(Decoder& decoder)
+{
+    if (!(PAL::isPassKitCoreFrameworkAvailable()))
+        return std::nullopt;
+    auto m_pkPaymentMethod = decoder.decodeWithAllowedClasses<PKPaymentMethod>({ PAL::getPKPaymentMethodClass() });
+    if (UNLIKELY(!decoder.isValid()))
+        return std::nullopt;
+    return {
+        Namespace::ClassWithMemberPrecondition {
+            WTFMove(*m_pkPaymentMethod)
         }
     };
 }
@@ -1236,10 +1269,9 @@ IGNORE_WARNINGS_BEGIN("switch-unreachable")
 #endif
     case IPC::WebCore_TimingFunction_Subclass::SpringTimingFunction:
         return true;
-    default:
-        return false;
     }
 IGNORE_WARNINGS_END
+    return false;
 }
 
 template<> bool isValidEnum<IPC::WebCore_MoveOnlyBaseClass_Subclass, void>(IPC::EncodedVariantIndex value)
@@ -1248,10 +1280,9 @@ IGNORE_WARNINGS_BEGIN("switch-unreachable")
     switch (static_cast<IPC::WebCore_MoveOnlyBaseClass_Subclass>(value)) {
     case IPC::WebCore_MoveOnlyBaseClass_Subclass::MoveOnlyDerivedClass:
         return true;
-    default:
-        return false;
     }
 IGNORE_WARNINGS_END
+    return false;
 }
 
 template<> bool isValidEnum<EnumWithoutNamespace, void>(uint8_t value)

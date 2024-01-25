@@ -54,9 +54,6 @@
 #import "WebPasteboardProxyMessages.h"
 #import "WebProcess.h"
 #import "WebWheelEvent.h"
-#import <JavaScriptCore/JSContextRef.h>
-#import <JavaScriptCore/JSObjectRef.h>
-#import <JavaScriptCore/OpaqueJSString.h>
 #import <Quartz/Quartz.h>
 #import <QuartzCore/QuartzCore.h>
 #import <WebCore/AXObjectCache.h>
@@ -117,36 +114,6 @@
 @end
 #endif
 
-// Set overflow: hidden on the annotation container so <input> elements scrolled out of view don't show
-// scrollbars on the body. We can't add annotations directly to the body, because overflow: hidden on the body
-// will break rubber-banding.
-static constexpr auto annotationStyle =
-"#annotationContainer {"
-"    overflow: hidden; "
-"    position: absolute; "
-"    pointer-events: none; "
-"    top: 0; "
-"    left: 0; "
-"    right: 0; "
-"    bottom: 0; "
-"    display: -webkit-box; "
-"    -webkit-box-align: center; "
-"    -webkit-box-pack: center; "
-"} "
-".annotation { "
-"    position: absolute; "
-"    pointer-events: auto; "
-"} "
-"textarea.annotation { "
-"    resize: none; "
-"} "
-"input.annotation[type='password'] { "
-"    position: static; "
-"    width: 238px; "
-"    height: 20px; "
-"    margin-top: 110px; "
-"    font-size: 15px; "
-"} "_s;
 
 // In non-continuous modes, a single scroll event with a magnitude of >= 20px
 // will jump to the next or previous page, to match PDFKit behavior.
@@ -553,99 +520,6 @@ static WebCore::Cursor::Type toWebCoreCursorType(PDFLayerControllerCursorType cu
 namespace WebKit {
 using namespace WebCore;
 using namespace HTMLNames;
-
-static void appendValuesInPDFNameSubtreeToVector(CGPDFDictionaryRef subtree, Vector<CGPDFObjectRef>& values)
-{
-    CGPDFArrayRef names;
-    if (CGPDFDictionaryGetArray(subtree, "Names", &names)) {
-        size_t nameCount = CGPDFArrayGetCount(names) / 2;
-        for (size_t i = 0; i < nameCount; ++i) {
-            CGPDFObjectRef object;
-            CGPDFArrayGetObject(names, 2 * i + 1, &object);
-            values.append(object);
-        }
-        return;
-    }
-
-    CGPDFArrayRef kids;
-    if (!CGPDFDictionaryGetArray(subtree, "Kids", &kids))
-        return;
-
-    size_t kidCount = CGPDFArrayGetCount(kids);
-    for (size_t i = 0; i < kidCount; ++i) {
-        CGPDFDictionaryRef kid;
-        if (!CGPDFArrayGetDictionary(kids, i, &kid))
-            continue;
-        appendValuesInPDFNameSubtreeToVector(kid, values);
-    }
-}
-
-static void getAllValuesInPDFNameTree(CGPDFDictionaryRef tree, Vector<CGPDFObjectRef>& allValues)
-{
-    appendValuesInPDFNameSubtreeToVector(tree, allValues);
-}
-
-static void getAllScriptsInPDFDocument(CGPDFDocumentRef pdfDocument, Vector<RetainPtr<CFStringRef>>& scripts)
-{
-    if (!pdfDocument)
-        return;
-
-    CGPDFDictionaryRef pdfCatalog = CGPDFDocumentGetCatalog(pdfDocument);
-    if (!pdfCatalog)
-        return;
-
-    // Get the dictionary of all document-level name trees.
-    CGPDFDictionaryRef namesDictionary;
-    if (!CGPDFDictionaryGetDictionary(pdfCatalog, "Names", &namesDictionary))
-        return;
-
-    // Get the document-level "JavaScript" name tree.
-    CGPDFDictionaryRef javaScriptNameTree;
-    if (!CGPDFDictionaryGetDictionary(namesDictionary, "JavaScript", &javaScriptNameTree))
-        return;
-
-    // The names are arbitrary. We are only interested in the values.
-    Vector<CGPDFObjectRef> objects;
-    getAllValuesInPDFNameTree(javaScriptNameTree, objects);
-    size_t objectCount = objects.size();
-
-    for (size_t i = 0; i < objectCount; ++i) {
-        CGPDFDictionaryRef javaScriptAction;
-        if (!CGPDFObjectGetValue(reinterpret_cast<CGPDFObjectRef>(objects[i]), kCGPDFObjectTypeDictionary, &javaScriptAction))
-            continue;
-
-        // A JavaScript action must have an action type of "JavaScript".
-        const char* actionType;
-        if (!CGPDFDictionaryGetName(javaScriptAction, "S", &actionType) || strcmp(actionType, "JavaScript"))
-            continue;
-
-        const UInt8* bytes = nullptr;
-        CFIndex length = 0;
-        CGPDFStreamRef stream;
-        CGPDFStringRef string;
-        RetainPtr<CFDataRef> data;
-        if (CGPDFDictionaryGetStream(javaScriptAction, "JS", &stream)) {
-            CGPDFDataFormat format;
-            data = adoptCF(CGPDFStreamCopyData(stream, &format));
-            if (!data)
-                continue;
-            bytes = CFDataGetBytePtr(data.get());
-            length = CFDataGetLength(data.get());
-        } else if (CGPDFDictionaryGetString(javaScriptAction, "JS", &string)) {
-            bytes = CGPDFStringGetBytePtr(string);
-            length = CGPDFStringGetLength(string);
-        }
-        if (!bytes || !length)
-            continue;
-
-        CFStringEncoding encoding = (length > 1 && bytes[0] == 0xFE && bytes[1] == 0xFF) ? kCFStringEncodingUnicode : kCFStringEncodingUTF8;
-        RetainPtr<CFStringRef> script = adoptCF(CFStringCreateWithBytes(kCFAllocatorDefault, bytes, length, encoding, true));
-        if (!script)
-            continue;
-        
-        scripts.append(script);
-    }
-}
 
 bool PDFPlugin::pdfKitLayerControllerIsAvailable()
 {
@@ -1340,73 +1214,6 @@ void PDFPlugin::destroyScrollbar(ScrollbarOrientation orientation)
     }
 }
 
-static void jsPDFDocInitialize(JSContextRef ctx, JSObjectRef object)
-{
-    PDFPlugin* pdfView = static_cast<PDFPlugin*>(JSObjectGetPrivate(object));
-    pdfView->ref();
-}
-
-static void jsPDFDocFinalize(JSObjectRef object)
-{
-    PDFPlugin* pdfView = static_cast<PDFPlugin*>(JSObjectGetPrivate(object));
-    pdfView->deref();
-}
-
-JSClassRef PDFPlugin::jsPDFDocClass()
-{
-    static const JSStaticFunction jsPDFDocStaticFunctions[] = {
-        { "print", jsPDFDocPrint, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-        { 0, 0, 0 },
-    };
-
-    static const JSClassDefinition jsPDFDocClassDefinition = {
-        0,
-        kJSClassAttributeNone,
-        "Doc",
-        0,
-        0,
-        jsPDFDocStaticFunctions,
-        jsPDFDocInitialize, jsPDFDocFinalize, 0, 0, 0, 0, 0, 0, 0, 0, 0
-    };
-
-    static JSClassRef jsPDFDocClass = JSClassCreate(&jsPDFDocClassDefinition);
-    return jsPDFDocClass;
-}
-
-JSValueRef PDFPlugin::jsPDFDocPrint(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
-{
-    if (!JSValueIsObjectOfClass(ctx, thisObject, jsPDFDocClass()))
-        return JSValueMakeUndefined(ctx);
-
-    RefPtr pdfPlugin = static_cast<PDFPlugin*>(JSObjectGetPrivate(thisObject));
-
-    RefPtr frame = pdfPlugin->m_frame.get();
-    if (!frame)
-        return JSValueMakeUndefined(ctx);
-
-    RefPtr coreFrame = frame->coreLocalFrame();
-    if (!coreFrame)
-        return JSValueMakeUndefined(ctx);
-
-    RefPtr page = coreFrame->page();
-    if (!page)
-        return JSValueMakeUndefined(ctx);
-
-    page->chrome().print(*coreFrame);
-
-    return JSValueMakeUndefined(ctx);
-}
-
-FloatSize PDFPlugin::pdfDocumentSizeForPrinting() const
-{
-    return FloatSize([[m_pdfDocument pageAtIndex:0] boundsForBox:kPDFDisplayBoxCropBox].size);
-}
-
-JSObjectRef PDFPlugin::makeJSPDFDoc(JSContextRef ctx)
-{
-    return JSObjectMake(ctx, jsPDFDocClass(), this);
-}
-
 void PDFPlugin::installPDFDocument()
 {
     ASSERT(isMainRunLoop());
@@ -1496,51 +1303,12 @@ void PDFPlugin::incrementalPDFStreamDidFail()
 #endif
 }
 
-void PDFPlugin::tryRunScriptsInPDFDocument()
-{
-    ASSERT(isMainRunLoop());
-
-    if (!m_pdfDocument || !m_documentFinishedLoading)
-        return;
-
-    auto completionHandler = [this, protectedThis = Ref { *this }] (Vector<RetainPtr<CFStringRef>>&& scripts) mutable {
-        if (scripts.isEmpty())
-            return;
-
-        JSGlobalContextRef ctx = JSGlobalContextCreate(nullptr);
-        JSObjectRef jsPDFDoc = makeJSPDFDoc(ctx);
-        for (auto& script : scripts)
-            JSEvaluateScript(ctx, OpaqueJSString::tryCreate(script.get()).get(), jsPDFDoc, nullptr, 1, nullptr);
-        JSGlobalContextRelease(ctx);
-    };
-
-#if HAVE(INCREMENTAL_PDF_APIS)
-    auto scriptUtilityQueue = WorkQueue::create("PDF script utility");
-    auto& rawQueue = scriptUtilityQueue.get();
-    RetainPtr<CGPDFDocumentRef> document = [m_pdfDocument documentRef];
-    rawQueue.dispatch([scriptUtilityQueue = WTFMove(scriptUtilityQueue), completionHandler = WTFMove(completionHandler), document = WTFMove(document)] () mutable {
-        ASSERT(!isMainRunLoop());
-
-        Vector<RetainPtr<CFStringRef>> scripts;
-        getAllScriptsInPDFDocument(document.get(), scripts);
-
-        callOnMainRunLoop([completionHandler = WTFMove(completionHandler), scripts = WTFMove(scripts)] () mutable {
-            completionHandler(WTFMove(scripts));
-        });
-    });
-#else
-    Vector<RetainPtr<CFStringRef>> scripts;
-    getAllScriptsInPDFDocument([m_pdfDocument documentRef], scripts);
-    completionHandler(WTFMove(scripts));
-#endif
-}
-
 void PDFPlugin::createPasswordEntryForm()
 {
     if (!supportsForms())
         return;
 
-    auto passwordField = PDFPluginPasswordField::create(m_pdfLayerController.get(), this);
+    auto passwordField = PDFPluginPasswordField::create(this);
     m_passwordField = passwordField.ptr();
     passwordField->attach(m_annotationContainer.get());
 }
@@ -1987,7 +1755,7 @@ bool PDFPlugin::handleContextMenuEvent(const WebMouseEvent& event)
     if (!nsMenu)
         return false;
     
-    std::optional<int> openInPreviewIndex;
+    std::optional<int> openInPreviewTag;
     Vector<PDFContextMenuItem> items;
     auto itemCount = [nsMenu numberOfItems];
     for (int i = 0; i < itemCount; i++) {
@@ -1995,7 +1763,7 @@ bool PDFPlugin::handleContextMenuEvent(const WebMouseEvent& event)
         if ([item submenu])
             continue;
         if ([NSStringFromSelector(item.action) isEqualToString:@"openWithPreview"])
-            openInPreviewIndex = i;
+            openInPreviewTag = i;
         PDFContextMenuItem menuItem { String([item title]), static_cast<int>([item state]), i,
             [item isEnabled] ? ContextMenuItemEnablement::Enabled : ContextMenuItemEnablement::Disabled,
             [item action] ? ContextMenuItemHasAction::Yes : ContextMenuItemHasAction::No,
@@ -2003,7 +1771,7 @@ bool PDFPlugin::handleContextMenuEvent(const WebMouseEvent& event)
         };
         items.append(WTFMove(menuItem));
     }
-    PDFContextMenu contextMenu { point, WTFMove(items), WTFMove(openInPreviewIndex) };
+    PDFContextMenu contextMenu { point, WTFMove(items), WTFMove(openInPreviewTag) };
 
     auto sendResult = webPage->sendSync(Messages::WebPageProxy::ShowPDFContextMenu(contextMenu, m_identifier));
     auto [selectedIndex] = sendResult.takeReplyOr(-1);
@@ -2031,7 +1799,7 @@ bool PDFPlugin::handleKeyboardEvent(const WebKeyboardEvent& event)
     return false;
 }
     
-bool PDFPlugin::handleEditingCommand(StringView commandName)
+bool PDFPlugin::handleEditingCommand(const String& commandName, const String&)
 {
     if (commandName == "copy"_s)
         [m_pdfLayerController copySelection];
@@ -2046,7 +1814,7 @@ bool PDFPlugin::handleEditingCommand(StringView commandName)
     return true;
 }
 
-bool PDFPlugin::isEditingCommandEnabled(StringView commandName)
+bool PDFPlugin::isEditingCommandEnabled(const String& commandName)
 {
     if (commandName == "copy"_s || commandName == "takeFindStringFromSelection"_s)
         return [m_pdfLayerController currentSelection];
@@ -2098,7 +1866,7 @@ void PDFPlugin::clickedLink(NSURL *url)
     frame->loader().changeLocation(coreURL, emptyAtom(), coreEvent.get(), ReferrerPolicy::NoReferrer, ShouldOpenExternalURLsPolicy::ShouldAllow);
 }
 
-void PDFPlugin::setActiveAnnotation(PDFAnnotation *annotation)
+void PDFPlugin::setActiveAnnotation(RetainPtr<PDFAnnotation>&& annotation)
 {
     if (!supportsForms())
         return;
@@ -2114,17 +1882,11 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         }
 ALLOW_DEPRECATED_DECLARATIONS_END
 
-        auto activeAnnotation = PDFPluginAnnotation::create(annotation, m_pdfLayerController.get(), this);
+        auto activeAnnotation = PDFPluginAnnotation::create(annotation.get(), this);
         m_activeAnnotation = activeAnnotation.get();
         activeAnnotation->attach(m_annotationContainer.get());
     } else
         m_activeAnnotation = nullptr;
-}
-
-bool PDFPlugin::supportsForms()
-{
-    // FIXME: We support forms for full-main-frame and <iframe> PDFs, but not <embed> or <object>, because those cases do not have their own Document into which to inject form elements.
-    return isFullFramePlugin();
 }
 
 void PDFPlugin::notifyContentScaleFactorChanged(CGFloat scaleFactor)
@@ -2160,24 +1922,6 @@ void PDFPlugin::zoomIn()
 void PDFPlugin::zoomOut()
 {
     [m_pdfLayerController zoomOut:nil];
-}
-
-void PDFPlugin::save(CompletionHandler<void(const String&, const URL&, const IPC::DataReference&)>&& completionHandler)
-{
-    NSData *data = liveData();
-    URL url;
-    if (m_frame)
-        url = m_frame->url();
-    completionHandler(m_suggestedFilename, url, IPC:: DataReference(static_cast<const uint8_t*>(data.bytes), data.length));
-}
-
-void PDFPlugin::openWithPreview(CompletionHandler<void(const String&, FrameInfoData&&, const IPC::DataReference&, const String&)>&& completionHandler)
-{
-    NSData *data = liveData();
-    FrameInfoData frameInfo;
-    if (m_frame)
-        frameInfo = m_frame->info();
-    completionHandler(m_suggestedFilename, WTFMove(frameInfo), IPC:: DataReference { static_cast<const uint8_t*>(data.bytes), data.length }, createVersion4UUIDString());
 }
 
 void PDFPlugin::writeItemsToPasteboard(NSString *pasteboardName, NSArray *items, NSArray *types)
@@ -2328,6 +2072,14 @@ bool PDFPlugin::performDictionaryLookupAtLocation(const WebCore::FloatPoint& poi
     if ([[lookupSelection string] length])
         [m_pdfLayerController searchInDictionaryWithSelection:lookupSelection];
     return true;
+}
+
+CGRect PDFPlugin::boundsForAnnotation(RetainPtr<PDFAnnotation>& annotation) const
+{
+    auto documentSize = contentSizeRespectingZoom();
+    auto annotationBounds = [m_pdfLayerController boundsForAnnotation:annotation.get()];
+    annotationBounds.origin.y = documentSize.height - annotationBounds.origin.y - annotationBounds.size.height;
+    return annotationBounds;
 }
 
 void PDFPlugin::focusNextAnnotation()
@@ -2484,6 +2236,11 @@ WebCore::FloatRect PDFPlugin::rectForSelectionInRootView(PDFSelection *selection
     return rectInView;
 }
 
+CGSize PDFPlugin::contentSizeRespectingZoom() const
+{
+    return [m_pdfLayerController contentSizeRespectingZoom];
+}
+
 CGFloat PDFPlugin::scaleFactor() const
 {
     return [m_pdfLayerController contentScaleFactor];
@@ -2554,7 +2311,7 @@ NSData *PDFPlugin::liveData() const
     if (m_pdfDocumentWasMutated)
         return [m_pdfDocument dataRepresentation];
 
-    return rawData();
+    return originalData();
 }
 
 id PDFPlugin::accessibilityAssociatedPluginParentForElement(WebCore::Element* element) const

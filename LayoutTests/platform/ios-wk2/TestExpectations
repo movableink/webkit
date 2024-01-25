@@ -194,31 +194,10 @@ svg/transforms/transform-origin-and-box-getCTM.html [ Failure ]
 svg/transforms/translation-tiny-element.svg [ ImageOnlyFailure ]
 
 # SVG tests that time out (these require EventSender)
-svg/animations/animVal-basics.html
-svg/animations/animate-calcMode-spline-by.html
-svg/animations/animate-calcMode-spline-from-by.html
-svg/animations/animate-calcMode-spline-from-to.html
-svg/animations/animate-calcMode-spline-to.html
-svg/animations/animate-calcMode-spline-values.html
-svg/animations/animate-color-calcMode-discrete.html
-svg/animations/animate-color-fill-currentColor.html
-svg/animations/animate-color-fill-from-by.html
 svg/animations/animate-color-rgba-calcMode-discrete.html
-svg/animations/animate-color-transparent.html
-svg/animations/animate-currentColor.html
-svg/animations/animate-dynamic-update-attributeName.html
 svg/animations/animate-end-attribute.html
 svg/animations/animate-endElement-beginElement.html
-svg/animations/animate-from-to-keyTimes.html
-svg/animations/animate-gradient-transform.html
-svg/animations/animate-inherit-css-property.html
-svg/animations/animate-keySplines.html
-svg/animations/animate-marker-orient-from-angle-to-angle.html
-svg/animations/animate-marker-orient-from-angle-to-auto.html
-svg/animations/animate-marker-orient-to-angle.html
 svg/animations/animate-mpath-insert.html
-svg/animations/animate-number-calcMode-discrete-keyTimes.html
-svg/animations/animate-number-calcMode-discrete.html
 svg/animations/animate-path-animation-Cc-Ss.html
 svg/animations/animate-path-animation-Ll-Vv-Hh.html
 svg/animations/animate-path-animation-Qq-Tt.html
@@ -228,74 +207,13 @@ svg/animations/animate-path-animation-qQ-tT-inverse.html
 svg/animations/animate-path-nested-transforms.html
 svg/animations/animate-path-to-animation.html
 svg/animations/animate-text-nested-transforms.html
-svg/animations/animateTransform-pattern-transform.html
 svg/animations/animateTransform-translate-attributetype-auto.html
 svg/animations/animateTransform-translate-invalid-attributetype.html
 svg/animations/deferred-insertion.html
 svg/animations/svgPreserveAspectRatio-animation-1.html
-svg/animations/svgangle-animation-deg-to-grad.html
-svg/animations/svgangle-animation-deg-to-rad.html
-svg/animations/svgangle-animation-grad-to-deg.html
-svg/animations/svgangle-animation-grad-to-rad.html
-svg/animations/svgangle-animation-rad-to-deg.html
-svg/animations/svgangle-animation-rad-to-grad.html
-svg/animations/svgboolean-animation-1.html
-svg/animations/svgenum-animation-1.html
-svg/animations/svgenum-animation-10.html
-svg/animations/svgenum-animation-11.html
-svg/animations/svgenum-animation-12.html
-svg/animations/svgenum-animation-13.html
-svg/animations/svgenum-animation-2.html
-svg/animations/svgenum-animation-3.html
-svg/animations/svgenum-animation-4.html
-svg/animations/svgenum-animation-5.html
-svg/animations/svgenum-animation-6.html
-svg/animations/svgenum-animation-7.html
-svg/animations/svgenum-animation-8.html
-svg/animations/svgenum-animation-9.html
-svg/animations/svginteger-animation-1.html
-svg/animations/svginteger-animation-2.html
-svg/animations/svglength-animation-LengthModeHeight.html
-svg/animations/svglength-animation-LengthModeOther.html
-svg/animations/svglength-animation-LengthModeWidth.html
-svg/animations/svglength-animation-invalid-value-1.html
-svg/animations/svglength-animation-invalid-value-2.html
-svg/animations/svglength-animation-invalid-value-3.html
-svg/animations/svglength-animation-number-to-number.html
-svg/animations/svglength-animation-px-to-cm.html
-svg/animations/svglength-animation-px-to-ems.html
 svg/animations/svglength-animation-px-to-exs.html
-svg/animations/svglength-animation-px-to-in.html
-svg/animations/svglength-animation-px-to-number.html
-svg/animations/svglength-animation-px-to-pc.html
 svg/animations/svglength-animation-px-to-percentage.html
-svg/animations/svglength-animation-px-to-pt.html
-svg/animations/svglength-animation-px-to-px.html
-svg/animations/svglength-animation-unitType.html
-svg/animations/svglength-animation-values.html
-svg/animations/svglengthlist-animation-1.html
-svg/animations/svglengthlist-animation-2.html
-svg/animations/svglengthlist-animation-3.html
-svg/animations/svglengthlist-animation-4.html
-svg/animations/svglengthlist-animation-5.html
-svg/animations/svgnumber-animation-1.html
-svg/animations/svgnumber-animation-2.html
-svg/animations/svgnumber-animation-3.html
-svg/animations/svgnumber-animation-4.html
-svg/animations/svgnumberlist-animation-1.html
-svg/animations/svgnumberlist-animation-2.html
-svg/animations/svgnumberoptionalnumber-animation-1.html
-svg/animations/svgnumberoptionalnumber-animation-2.html
-svg/animations/svgnumberoptionalnumber-animation-3.html
-svg/animations/svgnumberoptionalnumber-animation-4.html
 svg/animations/svgpath-animation-1.html
-svg/animations/svgpointlist-animation-1.html
-svg/animations/svgpointlist-animation-2.html
-svg/animations/svgrect-animation-1.html
-svg/animations/svgrect-animation-2.html
-svg/animations/svgstring-animation-fallback-to-discrete.html
-svg/animations/svgtransform-animation-1.html
-svg/animations/svgtransform-animation-discrete.html
 svg/animations/use-animate-transform-and-position.html
 svg/animations/use-animate-width-and-height.html [ Skip ]
 svg/custom/gradient-attr-update.svg
@@ -1264,8 +1182,6 @@ webkit.org/b/184783 compositing/ios/overflow-scroll-touch-tiles.html [ Pass Fail
 
 webkit.org/b/179853 [ Debug ] imported/blink/fast/text/international-iteration-simple-text.html [ Pass Failure ]
 
-webkit.org/b/189087 svg/animations/animate-end-attribute-numeric-precision.html [ Pass Failure ]
-
 webkit.org/b/190847 [ Debug ] imported/w3c/web-platform-tests/service-workers/service-worker/unregister-then-register-new-script.https.html [ Pass Failure ]
 
 webkit.org/b/190848 imported/w3c/web-platform-tests/service-workers/service-worker/navigation-redirect-to-http.https.html [ Pass Failure ]
@@ -1761,8 +1677,6 @@ webkit.org/b/209544 svg/custom/object-sizing-explicit-width.xhtml [ Pass Failure
 
 webkit.org/b/209869 crypto/subtle/rsa-indexeddb-non-exportable-private.html [ Pass Timeout ]
 
-webkit.org/b/209908 svg/custom/animate-initial-pause-unpause.html [ Pass Timeout ]
-
 webkit.org/b/206750 http/tests/security/appcache-in-private-browsing.html [ Pass Timeout ]
 
 webkit.org/b/210201 [ Debug ] editing/editability/empty-document-delete.html [ Pass Crash ]
@@ -1811,6 +1725,8 @@ webkit.org/b/251848 imported/w3c/web-platform-tests/css/css-images/image-set/ima
 webkit.org/b/214468 imported/w3c/web-platform-tests/css/css-fonts/font-language-override-02.html [ ImageOnlyFailure ]
 webkit.org/b/214468 imported/w3c/web-platform-tests/css/css-multicol/equal-gap-and-rule.html [ ImageOnlyFailure ]
 webkit.org/b/214468 imported/w3c/web-platform-tests/css/css-multicol/fixed-size-child-with-overflow.html [ ImageOnlyFailure ]
+webkit.org/b/214468 imported/w3c/web-platform-tests/css/css-pseudo/active-selection-041.html [ ImageOnlyFailure ]
+webkit.org/b/214468 imported/w3c/web-platform-tests/css/css-pseudo/highlight-styling-003.tentative.html [ ImageOnlyFailure ]
 webkit.org/b/214468 imported/w3c/web-platform-tests/css/css-pseudo/textpath-selection-011.html [ ImageOnlyFailure ]
 webkit.org/b/214468 imported/w3c/web-platform-tests/css/css-shapes/shape-outside/shape-image/shape-image-000.html [ ImageOnlyFailure ]
 webkit.org/b/214468 imported/w3c/web-platform-tests/css/css-shapes/shape-outside/shape-image/shape-image-004.html [ ImageOnlyFailure ]
@@ -2221,6 +2137,8 @@ http/tests/resourceLoadStatistics/capped-lifetime-for-cookie-set-in-js.html  [ S
 http/tests/resourceLoadStatistics/website-data-removal-for-site-navigated-to-with-link-decoration.html [ Skip ]
 http/tests/resourceLoadStatistics/website-data-removal-for-site-without-user-interaction.html [ Skip ]
 
+# Trusted Types aren't implemented yet
+webkit.org/b/266630 imported/w3c/web-platform-tests/trusted-types/trusted-types-reporting.html [ Skip ]
 
 # rdar://97297483 ([ iOS16 ] fast/events/ios/rotation/zz-no-rotation.html is a constant timeout =)
 fast/events/ios/rotation/zz-no-rotation.html [ Timeout ]
@@ -2407,8 +2325,6 @@ webkit.org/b/264063 platform/ios/mediastream/video-muted-in-background-tab.html 
 
 webkit.org/b/259524 media/audioSession/audioSessionState.html [ Pass Failure ]
 
-webkit.org/b/260225 imported/w3c/web-platform-tests/webrtc/RTCPeerConnection-GC.https.html [ Pass Failure ]
-
 webkit.org/b/260224 compositing/geometry/clipped-out-perspective.html [ ImageOnlyFailure ]
 webkit.org/b/260224 compositing/overlap-blending/opacity-and-infinity.html [ ImageOnlyFailure ]
 webkit.org/b/260224 imported/w3c/web-platform-tests/css/css-transforms/perspective-split-by-zero-w.html [ ImageOnlyFailure ]
@@ -2440,3 +2356,22 @@ imported/w3c/web-platform-tests/css/css-view-transitions/input-targets-root-whil
 http/wpt/opener/child-access-parent-via-windowproxy.html [ Pass ]
 http/wpt/opener/iframe-access-top-via-windowproxy.html [ Pass ]
 http/wpt/opener/parent-access-child-via-windowproxy.html [ Pass ]
+
+# webkit.org/b/267890 REGRESSION (273260@main): [ iOS17 ]ASSERTION FAILED: isStackingContext() result of 5 tests in fast/forms/switch to consistent timeout/crash
+[ Debug ] fast/forms/switch/click-animation-disabled.html [ Crash ]
+[ Debug ] fast/forms/switch/pointer-tracking-disabled.html [ Crash ]
+fast/forms/switch/pointer-tracking-there-and-back-again-rtl.html [ Timeout ]
+fast/forms/switch/pointer-tracking-there-and-back-again.html [ Timeout ]
+fast/forms/switch/pointer-tracking.html [ Timeout ]
+
+webkit.org/b/267796 [ Release ] imported/w3c/web-platform-tests/requestidlecallback/deadline-max-rAF-dynamic.html [ Pass Failure ]
+
+webkit.org/b/267934 [ Debug ] fast/dom/Orientation/no-orientation-change-event-when-unparenting-view.html [ Crash ]
+
+webkit.org/b/264296 fast/forms/ios/show-and-dismiss-date-input-in-landscape.html [ Pass Timeout Crash ]
+
+webkit.org/b/267974 fast/forms/ios/dismiss-date-picker-on-rotation.html [ Pass Timeout Crash ]
+
+webkit.org/b/268029 [ Debug arm64 ] http/tests/workers/service/postmessage-after-terminate.https.html [ Pass Crash ]
+
+webkit.org/b/268044 [ Debug ] ipc/shared-video-frame-size.html [ Crash ]

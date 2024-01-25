@@ -196,6 +196,9 @@ bool PropertyCascade::addMatch(const MatchedProperties& matchedProperties, Casca
     if (m_maximumCascadeLayerPriorityForRollback && !includePropertiesForRollback())
         return false;
 
+    if (matchedProperties.isStartingStyle == IsStartingStyle::Yes && !m_includedProperties.contains(PropertyType::StartingStyle))
+        return false;
+
     auto propertyAllowlist = matchedProperties.allowlistType;
     bool hasImportantProperties = false;
 
@@ -240,11 +243,6 @@ bool PropertyCascade::addMatch(const MatchedProperties& matchedProperties, Casca
             // Apply all deferred properties if we have applied any. They may override the ones we already applied.
             if (propertyID >= firstDeferredProperty && m_lastIndexForDeferred)
                 return true;
-
-            if (m_includedProperties.contains(PropertyType::VariableReference)) {
-                if (current.value()->hasVariableReferences())
-                    return true;
-            }
 
             return false;
         }();

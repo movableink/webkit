@@ -31,6 +31,7 @@
 #include "Page.h"
 #include "RemoteFrame.h"
 #include "RenderElement.h"
+#include "RenderWidget.h"
 #include "WindowProxy.h"
 
 namespace WebCore {
@@ -123,6 +124,11 @@ RenderWidget* Frame::ownerRenderer() const
 bool Frame::arePluginsEnabled()
 {
     return settings().arePluginsEnabled();
+}
+
+RefPtr<FrameView> Frame::protectedVirtualView() const
+{
+    return virtualView();
 }
 
 } // namespace WebCore

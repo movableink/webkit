@@ -131,6 +131,8 @@ set(WTF_PUBLIC_HEADERS
     KeyValuePair.h
     LEBDecoder.h
     Language.h
+    LazyRef.h
+    LazyUniqueRef.h
     LikelyDenseUnsignedIntegerSet.h
     ListDump.h
     ListHashSet.h
@@ -454,7 +456,6 @@ set(WTF_SOURCES
     ApproximateTime.cpp
     Assertions.cpp
     AutomaticThread.cpp
-    Bag.cpp
     BitVector.cpp
     BloomFilter.cpp
     CPUTime.cpp

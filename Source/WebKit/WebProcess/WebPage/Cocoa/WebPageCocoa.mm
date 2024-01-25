@@ -425,7 +425,8 @@ WebPaymentCoordinator* WebPage::paymentCoordinator()
 
 void WebPage::getContentsAsAttributedString(CompletionHandler<void(const WebCore::AttributedString&)>&& completionHandler)
 {
-    completionHandler(is<LocalFrame>(m_page->mainFrame()) ? attributedString(makeRangeSelectingNodeContents(Ref { *downcast<LocalFrame>(m_page->mainFrame()).document() })) : AttributedString());
+    auto* localFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
+    completionHandler(localFrame ? attributedString(makeRangeSelectingNodeContents(Ref { *localFrame->document() })) : AttributedString());
 }
 
 void WebPage::setRemoteObjectRegistry(WebRemoteObjectRegistry* registry)
@@ -600,19 +601,16 @@ void WebPage::getPlatformEditorStateCommon(const LocalFrame& frame, EditorState&
 
 void WebPage::getPDFFirstPageSize(WebCore::FrameIdentifier frameID, CompletionHandler<void(WebCore::FloatSize)>&& completionHandler)
 {
-#if !ENABLE(LEGACY_PDFKIT_PLUGIN)
-    return completionHandler({ });
-#else
     RefPtr webFrame = WebProcess::singleton().webFrame(frameID);
     if (!webFrame)
         return completionHandler({ });
 
-    auto* pluginView = pluginViewForFrame(webFrame->coreLocalFrame());
-    if (!pluginView)
-        return completionHandler({ });
-    
-    completionHandler(FloatSize(pluginView->pdfDocumentSizeForPrinting()));
+#if ENABLE(PDF_PLUGIN)
+    if (auto* pluginView = pluginViewForFrame(webFrame->coreLocalFrame()))
+        return completionHandler(pluginView->pdfDocumentSizeForPrinting());
 #endif
+
+    completionHandler({ });
 }
 
 #if ENABLE(DATA_DETECTION)

@@ -92,6 +92,11 @@ public:
         return m_keys;
     }
 
+    bool isEmpty() const
+    {
+        return m_keys.isEmpty();
+    }
+
     CapturedElement* find(const AtomString& key)
     {
         if (auto it = m_map.find(key); it != m_map.end())
@@ -145,7 +150,6 @@ private:
     PromiseAndWrapper m_updateCallbackDone;
     PromiseAndWrapper m_finished;
 
-    // WeakPtr<RenderObject> m_rootPseudoElement;
     FloatSize m_initialSnapshotContainingBlockSize;
 };
 

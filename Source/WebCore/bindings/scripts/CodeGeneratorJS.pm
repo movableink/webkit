@@ -1208,6 +1208,7 @@ sub GeneratePut
     # Temporary quirk for ungap/@custom-elements polyfill (rdar://problem/111008826), consider removing in 2025.
     if (!$namedSetterOperation && !$indexedSetterOperation) {
        AddToImplIncludes("Document.h");
+       AddToImplIncludes("DocumentInlines.h");
        AddToImplIncludes("Quirks.h");
        push(@$outputArray, "\n    // Temporary quirk for ungap/\@custom-elements polyfill (rdar://problem/111008826), consider removing in 2025.\n");
        push(@$outputArray, "    if (auto* document = dynamicDowncast<Document>(jsDynamicCast<JSDOMGlobalObject*>(lexicalGlobalObject)->scriptExecutionContext())) {\n");
@@ -1318,6 +1319,7 @@ sub GeneratePutByIndex
     # Temporary quirk for ungap/@custom-elements polyfill (rdar://problem/111008826), consider removing in 2025.
     if (!$namedSetterOperation && !$indexedSetterOperation) {
        AddToImplIncludes("Document.h");
+       AddToImplIncludes("DocumentInlines.h");
        AddToImplIncludes("Quirks.h");
        push(@$outputArray, "\n    // Temporary quirk for ungap/\@custom-elements polyfill (rdar://problem/111008826), consider removing in 2025.\n");
        push(@$outputArray, "    if (auto* document = dynamicDowncast<Document>(jsDynamicCast<JSDOMGlobalObject*>(lexicalGlobalObject)->scriptExecutionContext())) {\n");
@@ -1609,6 +1611,7 @@ sub GenerateDeleteProperty
     # Temporary quirk for ungap/@custom-elements polyfill (rdar://problem/111008826), consider removing in 2025.
     if (!$namedDeleterOperation) {
        AddToImplIncludes("Document.h");
+       AddToImplIncludes("DocumentInlines.h");
        AddToImplIncludes("Quirks.h");
        push(@$outputArray, "\n    // Temporary quirk for ungap/\@custom-elements polyfill (rdar://problem/111008826), consider removing in 2025.\n");
        push(@$outputArray, "    if (auto* document = dynamicDowncast<Document>(jsDynamicCast<JSDOMGlobalObject*>(lexicalGlobalObject)->scriptExecutionContext())) {\n");
@@ -1661,6 +1664,7 @@ sub GenerateDeletePropertyByIndex
     # Temporary quirk for ungap/@custom-elements polyfill (rdar://problem/111008826), consider removing in 2025.
     if (!$namedDeleterOperation) {
        AddToImplIncludes("Document.h");
+       AddToImplIncludes("DocumentInlines.h");
        AddToImplIncludes("Quirks.h");
        push(@$outputArray, "\n    // Temporary quirk for ungap/\@custom-elements polyfill (rdar://problem/111008826), consider removing in 2025.\n");
        push(@$outputArray, "    if (auto* document = dynamicDowncast<Document>(jsDynamicCast<JSDOMGlobalObject*>(lexicalGlobalObject)->scriptExecutionContext())) {\n");
@@ -3318,6 +3322,7 @@ sub GenerateHeader
             push(@functionArguments, "JSC::JSGlobalObject&");
             push(@functionArguments, "JSC::CallFrame&");
             push(@functionArguments, "Ref<DeferredPromise>&&") if $codeGenerator->IsPromiseType($operation->type) && !$operation->extendedAttributes->{ReturnsOwnPromise};
+            push(@functionArguments, "Ref<DeferredPromise>&&, Ref<DeferredPromise>&&") if $operation->extendedAttributes->{ReturnsPromisePair};
 
             push(@headerContent, "    " . ($operation->isStatic ? "static " : "") . "JSC::JSValue " . $functionImplementationName . "(" . join(", ", @functionArguments) . ");\n");
 
@@ -3331,7 +3336,8 @@ sub GenerateHeader
             push(@headerContent, "    $interfaceName& wrapped() const\n");
             push(@headerContent, "    {\n");
             push(@headerContent, "        return static_cast<$interfaceName&>(Base::wrapped());\n");
-            push(@headerContent, "    }\n");
+            push(@headerContent, "    }\n\n");
+            push(@headerContent, "    Ref<$interfaceName> protectedWrapped() const;\n\n");
         }
     }
 
@@ -4265,6 +4271,7 @@ sub GenerateRuntimeEnableConditionalString
         assert("Must specify value for EnabledByQuirk.") if $context->extendedAttributes->{DisabledByQuirk} eq "VALUE_IS_MISSING";
 
         AddToImplIncludes("Document.h");
+        AddToImplIncludes("DocumentInlines.h");
         AddToImplIncludes("Quirks.h");
 
         assert("EnabledByQuirk can only be used by interfaces only exposed to the Window") if $interface->extendedAttributes->{Exposed} && $interface->extendedAttributes->{Exposed} ne "Window";
@@ -4279,6 +4286,7 @@ sub GenerateRuntimeEnableConditionalString
         assert("Must specify value for DisabledByQuirk.") if $context->extendedAttributes->{DisabledByQuirk} eq "VALUE_IS_MISSING";
 
         AddToImplIncludes("Document.h");
+        AddToImplIncludes("DocumentInlines.h");
         AddToImplIncludes("Quirks.h");
 
         assert("DisabledByQuirk can only be used by interfaces only exposed to the Window") if $interface->extendedAttributes->{Exposed} && $interface->extendedAttributes->{Exposed} ne "Window";
@@ -4877,6 +4885,13 @@ sub GenerateImplementation
         push(@implContent, "${className}::$className(Structure* structure, JSDOMGlobalObject& globalObject, Ref<$implType>&& impl)\n");
         push(@implContent, "    : $parentClassName(structure, globalObject, WTFMove(impl))\n");
         push(@implContent, "{\n");
+        push(@implContent, "}\n\n");
+    }
+
+    if (NeedsImplementationClass($interface) && $hasParent) {
+        push(@implContent, "Ref<$interfaceName> ${className}::protectedWrapped() const\n");
+        push(@implContent, "{\n");
+        push(@implContent, "    return wrapped();\n");
         push(@implContent, "}\n\n");
     }
 
@@ -5825,9 +5840,10 @@ sub GenerateOperationTrampolineDefinition
     my ($outputArray, $interface, $className, $operation, $functionName, $functionBodyName) = @_;
 
     my $hasPromiseReturnType = $codeGenerator->IsPromiseType($operation->type);
-    my $idlOperationType = $hasPromiseReturnType ? "IDLOperationReturningPromise" : "IDLOperation";
+    my $idlOperationType = $hasPromiseReturnType || $operation->extendedAttributes->{ReturnsPromisePair} ? "IDLOperationReturningPromise" : "IDLOperation";
 
     my $callFunctionName = "call";
+    $callFunctionName .= "ReturningPromisePair" if $operation->extendedAttributes->{ReturnsPromisePair};
     $callFunctionName .= "Static" if $operation->isStatic;
     $callFunctionName .= "ReturningOwnPromise" if $hasPromiseReturnType && $operation->extendedAttributes->{ReturnsOwnPromise};
 
@@ -5846,7 +5862,7 @@ sub GenerateOperationBodyDefinition
     my ($outputArray, $interface, $className, $operation, $functionName, $functionImplementationName, $functionBodyName, $isOverloaded, $generatingOverloadDispatcher) = @_;
 
     my $hasPromiseReturnType = $codeGenerator->IsPromiseType($operation->type);
-    my $idlOperationType = $hasPromiseReturnType ? "IDLOperationReturningPromise" : "IDLOperation";
+    my $idlOperationType = $hasPromiseReturnType || $operation->extendedAttributes->{ReturnsPromisePair} ? "IDLOperationReturningPromise" : "IDLOperation";
     my $conditional = $operation->extendedAttributes->{Conditional};
 
     my @signatureArguments = ();
@@ -5854,6 +5870,7 @@ sub GenerateOperationBodyDefinition
     push(@signatureArguments, "JSC::CallFrame* callFrame");
     push(@signatureArguments, "typename ${idlOperationType}<${className}>::ClassParameter castedThis") if !$operation->isStatic;
     push(@signatureArguments, "Ref<DeferredPromise>&& promise") if $hasPromiseReturnType && !$operation->extendedAttributes->{ReturnsOwnPromise};
+    push(@signatureArguments, "Ref<DeferredPromise>&& promise, Ref<DeferredPromise>&& promise2") if $operation->extendedAttributes->{ReturnsPromisePair};
 
     push(@$outputArray, "static inline JSC::EncodedJSValue ${functionBodyName}(" . join(", ", @signatureArguments) . ")\n");
     push(@$outputArray, "{\n");
@@ -5891,6 +5908,7 @@ sub GenerateOperationBodyDefinition
         push(@argumentsToForward, "callFrame");
         push(@argumentsToForward, "castedThis") if !$operation->isStatic;
         push(@argumentsToForward, "WTFMove(promise)") if $hasPromiseReturnType && !$operation->extendedAttributes->{ReturnsOwnPromise};
+        push(@argumentsToForward, "WTFMove(promise), WTFMove(promise2)") if $operation->extendedAttributes->{ReturnsPromisePair};
 
         GenerateOverloadDispatcher($operation, $interface, $functionName, "Body", join(", ", @argumentsToForward));
     } elsif (HasCustomMethod($operation)) {
@@ -5954,7 +5972,7 @@ sub GenerateOperationDefinition
 
     AddToImplIncludesForIDLType($operation->type, $conditional) unless $isCustom or $hasPromiseReturnType;
     AddToImplIncludes("JSDOMOperation.h", $conditional) if !$hasPromiseReturnType;
-    AddToImplIncludes("JSDOMOperationReturningPromise.h", $conditional) if $hasPromiseReturnType;
+    AddToImplIncludes("JSDOMOperationReturningPromise.h", $conditional) if $hasPromiseReturnType || $operation->extendedAttributes->{ReturnsPromisePair};
 
     my $functionName = GetFunctionName($interface, $className, $operation);
     my $functionImplementationName = $operation->extendedAttributes->{ImplementedAs} || $codeGenerator->WK_lcfirst($operation->name);
@@ -6483,6 +6501,7 @@ sub GenerateParametersCheck
     }
 
     push(@arguments, "WTFMove(promise)") if $operation->type && $codeGenerator->IsPromiseType($operation->type) && !$operation->extendedAttributes->{PromiseProxy};
+    push(@arguments, "WTFMove(promise), WTFMove(promise2)") if $operation->extendedAttributes->{ReturnsPromisePair};
 
     return "$functionName(" . join(", ", @arguments) . ")";
 }
@@ -6672,7 +6691,13 @@ sub GenerateCallbackHeaderContent
 
             foreach my $argument (@{$operation->arguments}) {
                 my $IDLType = GetIDLType($interfaceOrCallback, $argument->type);
-                push(@arguments, "typename ${IDLType}::ParameterType " . $argument->name);
+                if ($argument->isVariadic) {
+                    AddToIncludes("JSDOMConvertVariadic.h", $includesRef, 1);
+                    AddToIncludesForIDLType($argument->type, $includesRef, 1);
+                    push(@arguments, "FixedVector<typename VariadicConverter<${IDLType}>::Item>&& " . $argument->name);
+                } else {
+                    push(@arguments, "typename ${IDLType}::ParameterType " . $argument->name);
+                }
             }
 
             my $nativeReturnType = "CallbackResult<typename " . GetIDLType($interfaceOrCallback, $operation->type) . "::ImplementationType>";
@@ -6815,9 +6840,13 @@ sub GenerateCallbackImplementationContent
             }
 
             foreach my $argument (@{$operation->arguments}) {
-                AddToIncludesForIDLType($argument->type, $includesRef, 1);
                 my $IDLType = GetIDLType($interfaceOrCallback, $argument->type);
-                push(@arguments, "typename ${IDLType}::ParameterType " . $argument->name);
+                if ($argument->isVariadic) {
+                    push(@arguments, "FixedVector<typename VariadicConverter<${IDLType}>::Item>&& " . $argument->name);
+                } else {
+                    AddToIncludesForIDLType($argument->type, $includesRef, 1);
+                    push(@arguments, "typename ${IDLType}::ParameterType " . $argument->name);
+                }
             }
             
             push(@$contentRef, "${nativeReturnType} ${className}::${functionImplementationName}(" . join(", ", @arguments) . ")\n");
@@ -6841,7 +6870,14 @@ sub GenerateCallbackImplementationContent
             push(@$contentRef, "    MarkedArgumentBuffer args;\n");
 
             foreach my $argument (@{$operation->arguments}) {
-                push(@$contentRef, "    args.append(" . NativeToJSValueUsingReferences($argument, $interfaceOrCallback, $argument->name, "globalObject") . ");\n");
+                if ($argument->isVariadic) {
+                    my $argumentName = $argument->name;
+                    push(@$contentRef, "    for (auto&& ${argumentName}Item : WTFMove(${argumentName})) {\n");
+                    push(@$contentRef, "        args.append(" . NativeToJSValueUsingReferences($argument, $interfaceOrCallback, "WTFMove(${argumentName}Item)", "globalObject") . ");\n");
+                    push(@$contentRef, "    }\n");
+                } else {
+                    push(@$contentRef, "    args.append(" . NativeToJSValueUsingReferences($argument, $interfaceOrCallback, $argument->name, "globalObject") . ");\n");
+                }
             }
             push(@$contentRef, "    ASSERT(!args.hasOverflowed());\n");
 
@@ -7527,7 +7563,7 @@ sub NativeToJSValue
 
     # FIXME: Not all promise types require the functor wrapping (some attribute getters actually return a value)
     # but wrapping is a no-op, so fixing this would purely be a stylistic / compile time fix.
-    my $needsFunctorWrapping = $type->name eq "undefined" || $codeGenerator->IsPromiseType($type);
+    my $needsFunctorWrapping = $type->name eq "undefined" || $codeGenerator->IsPromiseType($type) || $context->extendedAttributes->{ReturnsPromisePair};
 
     my @conversionArguments = ();
     push(@conversionArguments, $lexicalGlobalObjectReference) if NativeToJSValueDOMConvertNeedsState($type) || $mayThrowException;

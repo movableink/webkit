@@ -86,10 +86,11 @@ Ref<MediaPromise> SourceBufferPrivateRemote::append(Ref<SharedBuffer>&& data)
     if (!isGPURunning())
         return MediaPromise::createAndReject(PlatformMediaError::IPCError);
 
-    return gpuProcessConnection->connection().sendWithPromisedReply(Messages::RemoteSourceBufferProxy::Append(IPC::SharedBufferReference { WTFMove(data) }), m_remoteSourceBufferIdentifier)->whenSettled(RunLoop::current(), [weakThis = ThreadSafeWeakPtr { *this }, this](auto&& result) {
+    return gpuProcessConnection->connection().sendWithPromisedReply(Messages::RemoteSourceBufferProxy::Append(IPC::SharedBufferReference { WTFMove(data) }), m_remoteSourceBufferIdentifier)->whenSettled(RunLoop::current(), [weakThis = ThreadSafeWeakPtr { *this }](auto&& result) {
         if (!result)
             return MediaPromise::createAndReject(PlatformMediaError::IPCError);
-        setTimestampOffset(std::get<MediaTime>(*result));
+        if (RefPtr protectedThis = weakThis.get())
+            protectedThis->setTimestampOffset(std::get<MediaTime>(*result));
         return MediaPromise::createAndSettle(std::get<MediaPromise::Result>(*result));
     });
 }
@@ -448,12 +449,6 @@ void SourceBufferPrivateRemote::sourceBufferPrivateBufferedChanged(Vector<WebCor
         client->sourceBufferPrivateBufferedChanged(WTFMove(trackBuffersRanges), extraMemory)->whenSettled(RunLoop::current(), WTFMove(completionHandler));
     else
         completionHandler();
-}
-
-void SourceBufferPrivateRemote::sourceBufferPrivateDidParseSample(double sampleDuration)
-{
-    if (RefPtr client = this->client())
-        client->sourceBufferPrivateDidParseSample(sampleDuration);
 }
 
 void SourceBufferPrivateRemote::sourceBufferPrivateDidDropSample()

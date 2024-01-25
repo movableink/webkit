@@ -343,9 +343,8 @@ RenderElement* RenderView::rendererForRootBackground() const
     auto* firstChild = this->firstChild();
     if (!firstChild)
         return nullptr;
-    ASSERT(is<RenderElement>(*firstChild));
-    auto& documentRenderer = downcast<RenderElement>(*firstChild);
 
+    auto& documentRenderer = downcast<RenderElement>(*firstChild);
     if (documentRenderer.hasBackground())
         return &documentRenderer;
 
@@ -376,6 +375,11 @@ static inline bool rendererObscuresBackground(const RenderElement& rootElement)
 
     if (rootElement.isComposited())
         return false;
+
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (rootElement.hasClipPath() && rootElement.isRenderSVGRoot())
+        return false;
+#endif
 
     auto* rendererForBackground = rootElement.view().rendererForRootBackground();
     if (!rendererForBackground)
@@ -1104,6 +1108,16 @@ void RenderView::addCounterNeedingUpdate(RenderCounter& renderer)
 SingleThreadWeakHashSet<RenderCounter> RenderView::takeCountersNeedingUpdate()
 {
     return std::exchange(m_countersNeedingUpdate, { });
+}
+
+SingleThreadWeakPtr<RenderElement> RenderView::viewTransitionRoot() const
+{
+    return m_viewTransitionRoot;
+}
+
+void RenderView::setViewTransitionRoot(RenderElement& renderer)
+{
+    m_viewTransitionRoot = renderer;
 }
 
 } // namespace WebCore

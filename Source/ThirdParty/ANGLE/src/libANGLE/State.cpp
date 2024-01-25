@@ -1377,10 +1377,10 @@ void PrivateState::setEnableFeature(GLenum feature, bool enabled)
             mGLES1State.mAlphaTestEnabled = enabled;
             break;
         case GL_TEXTURE_2D:
-            mGLES1State.mTexUnitEnables[mActiveSampler].set(TextureType::_2D, enabled);
+            mGLES1State.setTextureEnabled(mActiveSampler, TextureType::_2D, enabled);
             break;
         case GL_TEXTURE_CUBE_MAP:
-            mGLES1State.mTexUnitEnables[mActiveSampler].set(TextureType::CubeMap, enabled);
+            mGLES1State.setTextureEnabled(mActiveSampler, TextureType::CubeMap, enabled);
             break;
         case GL_LIGHTING:
             mGLES1State.mLightingEnabled = enabled;
@@ -1664,8 +1664,15 @@ void PrivateState::getBooleanv(GLenum pname, GLboolean *params) const
             *params = mRasterizer.dither;
             break;
         case GL_COLOR_LOGIC_OP:
-            ASSERT(mClientVersion.major > 1);
-            *params = mLogicOpEnabled;
+            if (mClientVersion.major == 1)
+            {
+                // Handle logicOp in GLES1 through the GLES1 state management.
+                *params = getEnableFeature(pname);
+            }
+            else
+            {
+                *params = mLogicOpEnabled;
+            }
             break;
         case GL_PRIMITIVE_RESTART_FIXED_INDEX:
             *params = mPrimitiveRestart;
@@ -1740,7 +1747,14 @@ void PrivateState::getBooleanv(GLenum pname, GLboolean *params) const
             *params = mCaps.fragmentShaderFramebufferFetchMRT;
             break;
         default:
-            UNREACHABLE();
+            if (mClientVersion.major == 1)
+            {
+                *params = getEnableFeature(pname);
+            }
+            else
+            {
+                UNREACHABLE();
+            }
             break;
     }
 }

@@ -10,6 +10,8 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/CSSPropertyNames.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/CSSPropertyNames.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/CSSPropertyParsing.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/CSSPropertyParsing.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/CSSSelectorEnums.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/CSSSelectorInlines.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/CSSStyleDeclaration+PropertyNames.idl
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/CSSValueKeywords.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/CSSValueKeywords.h
@@ -33,6 +35,8 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/ElementName.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/EventFactory.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/EventHeaders.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/EventInterfaces.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/EventNames.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/EventNames.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/EventTargetFactory.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/EventTargetHeaders.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/EventTargetInterfaces.h
@@ -887,8 +891,6 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSDynamicsCompressorNode.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSDynamicsCompressorNode.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSDynamicsCompressorOptions.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSDynamicsCompressorOptions.h
-$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSEXTBlendFuncExtended.cpp
-$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSEXTBlendFuncExtended.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSEXTBlendMinMax.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSEXTBlendMinMax.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSEXTClipControl.cpp
@@ -1867,6 +1869,8 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSMediaStreamTrack.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSMediaStreamTrack.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSMediaStreamTrackEvent.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSMediaStreamTrackEvent.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSMediaStreamTrackProcessor.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSMediaStreamTrackProcessor.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSMediaTrackCapabilities.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSMediaTrackCapabilities.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSMediaTrackConstraints.cpp
@@ -2230,8 +2234,6 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSPromiseRejectionEvent.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSPromiseRejectionEvent.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSPublicKeyCredential.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSPublicKeyCredential.h
-$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSPublicKeyCredentialClientCapabilities.cpp
-$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSPublicKeyCredentialClientCapabilities.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSPublicKeyCredentialCreationOptions.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSPublicKeyCredentialCreationOptions.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSPublicKeyCredentialDescriptor.cpp
@@ -2992,6 +2994,8 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSVideoTrack.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSVideoTrack.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSVideoTrackConfiguration.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSVideoTrackConfiguration.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSVideoTrackGenerator.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSVideoTrackGenerator.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSVideoTrackList.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSVideoTrackList.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSVideoTrackMediaSource.cpp
@@ -3090,6 +3094,8 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSWebGL2RenderingContext.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSWebGL2RenderingContext.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSWebGLActiveInfo.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSWebGLActiveInfo.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSWebGLBlendFuncExtended.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSWebGLBlendFuncExtended.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSWebGLBuffer.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSWebGLBuffer.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSWebGLClipCullDistance.cpp
@@ -3434,7 +3440,7 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/SVGElementTypeHelpers.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/SVGNames.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/SVGNames.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/SelectorPseudoClassAndCompatibilityElementMap.cpp
-$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/SelectorPseudoElementTypeMap.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/SelectorPseudoElementMap.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/ServiceWorkerGlobalScopeConstructors.idl
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/Settings.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/Settings.h
@@ -3458,6 +3464,8 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/TransformStreamDefaultControllerBui
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/TransformStreamDefaultControllerBuiltins.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/TransformStreamInternalsBuiltins.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/TransformStreamInternalsBuiltins.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/UserAgentParts.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/UserAgentParts.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/UserAgentScripts.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/UserAgentScriptsData.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/UserAgentStyleSheets.h

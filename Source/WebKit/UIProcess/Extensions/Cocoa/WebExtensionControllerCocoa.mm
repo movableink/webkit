@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,6 +36,8 @@
 #import "ContextMenuContextData.h"
 #import "Logging.h"
 #import "SandboxUtilities.h"
+#import "WKWebViewConfigurationPrivate.h"
+#import "WKWebsiteDataStoreInternal.h"
 #import "WebExtensionContext.h"
 #import "WebExtensionContextMessages.h"
 #import "WebExtensionContextParameters.h"
@@ -162,8 +164,11 @@ void WebExtensionController::addPage(WebPageProxy& page)
     Ref pool = page.process().processPool();
     addProcessPool(pool);
 
+    Ref dataStore = page.websiteDataStore();
+    addWebsiteDataStore(dataStore);
+
     Ref controller = page.userContentController();
-    addUserContentController(controller, page.websiteDataStore().isPersistent() ? ForPrivateBrowsing::No : ForPrivateBrowsing::Yes);
+    addUserContentController(controller, dataStore->isPersistent() ? ForPrivateBrowsing::No : ForPrivateBrowsing::Yes);
 }
 
 void WebExtensionController::removePage(WebPageProxy& page)
@@ -174,6 +179,9 @@ void WebExtensionController::removePage(WebPageProxy& page)
     Ref pool = page.process().processPool();
     removeProcessPool(pool);
 
+    Ref dataStore = page.websiteDataStore();
+    removeWebsiteDataStore(dataStore);
+
     Ref controller = page.userContentController();
     removeUserContentController(controller);
 }
@@ -182,6 +190,12 @@ void WebExtensionController::addProcessPool(WebProcessPool& processPool)
 {
     if (!m_processPools.add(processPool))
         return;
+
+    for (auto& urlScheme : WebExtensionMatchPattern::extensionSchemes()) {
+        processPool.registerURLSchemeAsSecure(urlScheme);
+        processPool.registerURLSchemeAsBypassingContentSecurityPolicy(urlScheme);
+        processPool.setDomainRelaxationForbiddenForURLScheme(urlScheme);
+    }
 
     processPool.addMessageReceiver(Messages::WebExtensionController::messageReceiverName(), m_identifier, *this);
 
@@ -239,6 +253,51 @@ void WebExtensionController::removeUserContentController(WebUserContentControlle
     m_allUserContentControllers.remove(userContentController);
 }
 
+WebsiteDataStore* WebExtensionController::websiteDataStore(std::optional<PAL::SessionID> sessionID) const
+{
+    if (!sessionID || configuration().defaultWebsiteDataStore().sessionID() == sessionID.value())
+        return &configuration().defaultWebsiteDataStore();
+
+    for (Ref dataStore : allWebsiteDataStores()) {
+        if (dataStore->sessionID() == sessionID.value())
+            return dataStore.ptr();
+    }
+
+    return nullptr;
+}
+
+void WebExtensionController::addWebsiteDataStore(WebsiteDataStore& dataStore)
+{
+    if (!m_cookieStoreObserver)
+        m_cookieStoreObserver = makeUnique<HTTPCookieStoreObserver>(*this);
+
+    m_websiteDataStores.add(dataStore);
+    dataStore.cookieStore().registerObserver(*m_cookieStoreObserver);
+}
+
+void WebExtensionController::removeWebsiteDataStore(WebsiteDataStore& dataStore)
+{
+    // Only remove the data store if no other pages use the same one.
+    for (auto& knownPage : m_pages) {
+        if (knownPage.websiteDataStore() == dataStore)
+            return;
+    }
+
+    m_websiteDataStores.remove(dataStore);
+    dataStore.cookieStore().unregisterObserver(*m_cookieStoreObserver);
+
+    if (m_websiteDataStores.isEmptyIgnoringNullReferences())
+        m_cookieStoreObserver = nullptr;
+}
+
+void WebExtensionController::cookiesDidChange(API::HTTPCookieStore& cookieStore)
+{
+    // FIXME: <https://webkit.org/b/267514> Add support for changeInfo.
+
+    for (auto& extensionContext : m_extensionContexts)
+        extensionContext->cookiesDidChange(cookieStore);
+}
+
 RefPtr<WebExtensionContext> WebExtensionController::extensionContext(const WebExtension& extension) const
 {
     for (auto& extensionContext : m_extensionContexts) {
@@ -273,6 +332,8 @@ void WebExtensionController::addItemsToContextMenu(WebPageProxy& page, const Con
 }
 #endif
 
+// MARK: webNavigation
+
 void WebExtensionController::didStartProvisionalLoadForFrame(WebPageProxyIdentifier pageID, WebExtensionFrameIdentifier frameID, WebExtensionFrameIdentifier parentFrameID, const URL& targetURL, WallTime timestamp)
 {
     for (auto& context : m_extensionContexts)
@@ -296,6 +357,8 @@ void WebExtensionController::didFailLoadForFrame(WebPageProxyIdentifier pageID, 
     for (auto& context : m_extensionContexts)
         context->didFailLoadForFrame(pageID, frameID, parentFrameID, frameURL, timestamp);
 }
+
+// MARK: declarativeNetRequest
 
 void WebExtensionController::handleContentRuleListNotification(WebPageProxyIdentifier pageID, URL& url, WebCore::ContentRuleListResults& results)
 {
@@ -334,6 +397,38 @@ void WebExtensionController::purgeOldMatchedRules()
 
     if (!stillHaveRules)
         m_purgeOldMatchedRulesTimer = nullptr;
+}
+
+// MARK: webRequest
+
+void WebExtensionController::resourceLoadDidSendRequest(WebPageProxyIdentifier pageID, const ResourceLoadInfo& loadInfo, const WebCore::ResourceRequest& request)
+{
+    for (auto& context : m_extensionContexts)
+        context->resourceLoadDidSendRequest(pageID, loadInfo, request);
+}
+
+void WebExtensionController::resourceLoadDidPerformHTTPRedirection(WebPageProxyIdentifier pageID, const ResourceLoadInfo& loadInfo, const WebCore::ResourceResponse& response, const WebCore::ResourceRequest& request)
+{
+    for (auto& context : m_extensionContexts)
+        context->resourceLoadDidPerformHTTPRedirection(pageID, loadInfo, response, request);
+}
+
+void WebExtensionController::resourceLoadDidReceiveChallenge(WebPageProxyIdentifier pageID, const ResourceLoadInfo& loadInfo, const WebCore::AuthenticationChallenge& challenge)
+{
+    for (auto& context : m_extensionContexts)
+        context->resourceLoadDidReceiveChallenge(pageID, loadInfo, challenge);
+}
+
+void WebExtensionController::resourceLoadDidReceiveResponse(WebPageProxyIdentifier pageID, const ResourceLoadInfo& loadInfo, const WebCore::ResourceResponse& response)
+{
+    for (auto& context : m_extensionContexts)
+        context->resourceLoadDidReceiveResponse(pageID, loadInfo, response);
+}
+
+void WebExtensionController::resourceLoadDidCompleteWithError(WebPageProxyIdentifier pageID, const ResourceLoadInfo& loadInfo, const WebCore::ResourceResponse& response, const WebCore::ResourceError& error)
+{
+    for (auto& context : m_extensionContexts)
+        context->resourceLoadDidCompleteWithError(pageID, loadInfo, response, error);
 }
 
 } // namespace WebKit

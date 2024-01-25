@@ -377,8 +377,10 @@ static BOOL areEssentiallyEqual(double a, double b)
 
     if (_zoomTextOnly)
         _webView._textZoomFactor = 1;
-    else
+    else {
         _webView.pageZoom = 1;
+        _webView.magnification = 1;
+    }
 }
 
 - (BOOL)canResetZoom
@@ -735,6 +737,12 @@ static BOOL areEssentiallyEqual(double a, double b)
 - (WKDragDestinationAction)_webView:(WKWebView *)webView dragDestinationActionMaskForDraggingInfo:(id)draggingInfo
 {
     return WKDragDestinationActionAny;
+}
+
+- (void)_webView:(WKWebView *)webView printFrame:(_WKFrameHandle *)frame pdfFirstPageSize:(CGSize)size completionHandler:(void (^)(void))completionHandler
+{
+    [[_webView printOperationWithPrintInfo:[NSPrintInfo sharedPrintInfo]] runOperationModalForWindow:self.window delegate:nil didRunSelector:nil contextInfo:nil];
+    completionHandler();
 }
 
 - (void)updateTextFieldFromURL:(NSURL *)URL

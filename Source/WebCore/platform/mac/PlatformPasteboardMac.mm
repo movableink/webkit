@@ -30,9 +30,12 @@
 
 #import "Color.h"
 #import "ColorMac.h"
+#import "CommonAtomStrings.h"
 #import "LegacyNSPasteboardTypes.h"
 #import "Pasteboard.h"
 #import "SharedBuffer.h"
+#import <pal/spi/cocoa/FoundationSPI.h>
+#import <pal/spi/mac/NSPasteboardSPI.h>
 #import <wtf/HashCountedSet.h>
 #import <wtf/ListHashSet.h>
 #import <wtf/URL.h>
@@ -86,12 +89,45 @@ void PlatformPasteboard::getTypes(Vector<String>& types) const
     types = makeVector<String>([m_pasteboard types]);
 }
 
-RefPtr<SharedBuffer> PlatformPasteboard::bufferForType(const String& pasteboardType) const
+PasteboardBuffer PlatformPasteboard::bufferForType(const String& pasteboardType) const
 {
-    NSData *data = [m_pasteboard dataForType:pasteboardType];
+    NSData *data = nil;
+    String bufferType = pasteboardType;
+
+    if (pasteboardType == String(legacyTIFFPasteboardType())) {
+        data = [m_pasteboard _dataWithoutConversionForType:pasteboardType securityScoped:NO];
+        if (!data) {
+            static NeverDestroyed<RetainPtr<NSArray>> sourceTypes;
+            static std::once_flag onceFlag;
+            std::call_once(onceFlag, [] {
+                auto originalSourceTypes = adoptCF(CGImageSourceCopyTypeIdentifiers());
+                if (originalSourceTypes) {
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+                    sourceTypes.get() = [(__bridge NSArray *)originalSourceTypes.get() arrayByExcludingObjectsInArray:@[(__bridge NSString *)kUTTypePDF]];
+ALLOW_DEPRECATED_DECLARATIONS_END
+                } else
+                    sourceTypes.get() = nil;
+            });
+
+            for (NSString *sourceType in sourceTypes.get().get()) {
+                data = [m_pasteboard _dataWithoutConversionForType:sourceType securityScoped:NO];
+                if (data) {
+                    bufferType = sourceType;
+                    break;
+                }
+            }
+        }
+    } else
+        data = [m_pasteboard dataForType:pasteboardType];
+
+    PasteboardBuffer pasteboardBuffer;
+    pasteboardBuffer.type = bufferType;
+
     if (!data)
-        return nullptr;
-    return SharedBuffer::create(adoptNS([data copy]).get());
+        return pasteboardBuffer;
+
+    pasteboardBuffer.data = SharedBuffer::create(adoptNS([data copy]).get());
+    return pasteboardBuffer;
 }
 
 int PlatformPasteboard::numberOfFiles() const
@@ -308,10 +344,10 @@ int64_t PlatformPasteboard::changeCount() const
 
 String PlatformPasteboard::platformPasteboardTypeForSafeTypeForDOMToReadAndWrite(const String& domType, IncludeImageTypes includeImageTypes)
 {
-    if (domType == "text/plain"_s)
+    if (domType == textPlainContentTypeAtom())
         return legacyStringPasteboardType();
 
-    if (domType == "text/html"_s)
+    if (domType == textHTMLContentTypeAtom())
         return legacyHTMLPasteboardType();
 
     if (domType == "text/uri-list"_s)
@@ -441,9 +477,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 static NSPasteboardType modernPasteboardTypeForWebSafeMIMEType(const String& webSafeType)
 {
-    if (webSafeType == "text/plain"_s)
+    if (webSafeType == textPlainContentTypeAtom())
         return NSPasteboardTypeString;
-    if (webSafeType == "text/html"_s)
+    if (webSafeType == textHTMLContentTypeAtom())
         return NSPasteboardTypeHTML;
     if (webSafeType == "text/uri-list"_s)
         return NSPasteboardTypeURL;
@@ -456,9 +492,9 @@ enum class ContainsFileURL : bool { No, Yes };
 static String webSafeMIMETypeForModernPasteboardType(NSPasteboardType platformType, ContainsFileURL containsFileURL)
 {
     if ([platformType isEqual:NSPasteboardTypeString] && containsFileURL == ContainsFileURL::No)
-        return "text/plain"_s;
+        return textPlainContentTypeAtom();
     if ([platformType isEqual:NSPasteboardTypeHTML] || [platformType isEqual:NSPasteboardTypeRTF] || [platformType isEqual:NSPasteboardTypeRTFD])
-        return "text/html"_s;
+        return textHTMLContentTypeAtom();
     if ([platformType isEqual:NSPasteboardTypeURL] && containsFileURL == ContainsFileURL::No)
         return "text/uri-list"_s;
     if ([platformType isEqual:NSPasteboardTypePNG] || [platformType isEqual:NSPasteboardTypeTIFF])
@@ -469,7 +505,7 @@ static String webSafeMIMETypeForModernPasteboardType(NSPasteboardType platformTy
 RefPtr<SharedBuffer> PlatformPasteboard::readBuffer(std::optional<size_t> index, const String& type) const
 {
     if (!index)
-        return bufferForType(type);
+        return bufferForType(type).data;
 
     NSPasteboardItem *item = itemAtIndex(*index);
     if (!item)

@@ -55,11 +55,6 @@ OBJC_CLASS PDFSelection;
 OBJC_CLASS WKPDFLayerControllerDelegate;
 OBJC_CLASS WKPDFPluginAccessibilityObject;
 
-typedef const struct OpaqueJSContext* JSContextRef;
-typedef struct OpaqueJSValue* JSObjectRef;
-typedef const struct OpaqueJSValue* JSValueRef;
-typedef struct OpaqueJSClass* JSClassRef;
-
 namespace WebCore {
 class AXObjectCache;
 class Element;
@@ -89,10 +84,9 @@ public:
     static Ref<PDFPlugin> create(WebCore::HTMLPlugInElement&);
     virtual ~PDFPlugin() = default;
 
-    void didMutatePDFDocument() { m_pdfDocumentWasMutated = true; }
 
     void paintControlForLayerInContext(CALayer *, CGContextRef);
-    void setActiveAnnotation(PDFAnnotation *);
+    void setActiveAnnotation(RetainPtr<PDFAnnotation>&&) final;
 
     void notifyContentScaleFactorChanged(CGFloat scaleFactor);
     void notifyDisplayModeChanged(int);
@@ -103,8 +97,6 @@ public:
 #if ENABLE(PDF_HUD)
     void zoomIn() final;
     void zoomOut() final;
-    void save(CompletionHandler<void(const String&, const URL&, const IPC::DataReference&)>&&) final;
-    void openWithPreview(CompletionHandler<void(const String&, FrameInfoData&&, const IPC::DataReference&, const String&)>&&) final;
 #endif
 
     void clickedLink(NSURL *);
@@ -114,10 +106,11 @@ public:
     void performWebSearch(NSString *);
     void performSpotlightSearch(NSString *);
 
-    void focusNextAnnotation();
-    void focusPreviousAnnotation();
+    CGRect boundsForAnnotation(RetainPtr<PDFAnnotation>&) const final;
+    void focusNextAnnotation() final;
+    void focusPreviousAnnotation() final;
 
-    void attemptToUnlockPDF(const String& password);
+    void attemptToUnlockPDF(const String& password) final;
 
     bool showContextMenuAtPoint(const WebCore::IntPoint&);
 
@@ -143,6 +136,9 @@ public:
     WebCore::IntPoint convertFromRootViewToPDFView(const WebCore::IntPoint&) const;
     WebCore::FloatRect convertFromPDFViewToScreen(const WebCore::FloatRect&) const;
 
+    CGFloat scaleFactor() const override;
+    CGSize contentSizeRespectingZoom() const final;
+
 private:
     explicit PDFPlugin(WebCore::HTMLPlugInElement&);
     bool isLegacyPDFPlugin() const override { return true; }
@@ -154,7 +150,6 @@ private:
     void invalidateScrollbarRect(WebCore::Scrollbar&, const WebCore::IntRect&) override;
     void invalidateScrollCornerRect(const WebCore::IntRect&) override;
     void updateScrollbars() override;
-    WebCore::IntPoint lastKnownMousePositionInView() const override { return m_lastMousePositionInPluginCoordinates; }
     Ref<WebCore::Scrollbar> createScrollbar(WebCore::ScrollbarOrientation) override;
     void destroyScrollbar(WebCore::ScrollbarOrientation) override;
 
@@ -167,12 +162,6 @@ private:
     bool isComposited() const override { return true; }
 
     void installPDFDocument() override;
-    void tryRunScriptsInPDFDocument() override;
-
-    CGFloat scaleFactor() const override;
-
-    RetainPtr<PDFDocument> pdfDocumentForPrinting() const override { return m_pdfDocument; }
-    WebCore::FloatSize pdfDocumentSizeForPrinting() const override;
 
     void geometryDidChange(const WebCore::IntSize& pluginSize, const WebCore::AffineTransform& pluginToRootViewTransform) override;
     void deviceScaleFactorChanged(float) override;
@@ -191,8 +180,8 @@ private:
     bool handleMouseLeaveEvent(const WebMouseEvent&) override;
     bool handleContextMenuEvent(const WebMouseEvent&) override;
     bool handleKeyboardEvent(const WebKeyboardEvent&) override;
-    bool handleEditingCommand(StringView commandName) override;
-    bool isEditingCommandEnabled(StringView commandName) override;
+    bool handleEditingCommand(const String& commandName, const String& argument) override;
+    bool isEditingCommandEnabled(const String& commandName) override;
 
     String getSelectionString() const override;
     bool existingSelectionContainsPoint(const WebCore::FloatPoint&) const override;
@@ -217,19 +206,11 @@ private:
 
     NSEvent *nsEventForWebMouseEvent(const WebMouseEvent&);
 
-    bool supportsForms();
-
     void updatePageAndDeviceScaleFactors();
 
     void createPasswordEntryForm();
 
-    NSData *liveData() const;
-    JSObjectRef makeJSPDFDoc(JSContextRef);
-    static JSClassRef jsPDFDocClass();
-    static JSValueRef jsPDFDocPrint(JSContextRef, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception);
-
-
-    bool m_pdfDocumentWasMutated { false };
+    NSData *liveData() const override;
 
     RetainPtr<CALayer> m_containerLayer;
     RetainPtr<CALayer> m_contentLayer;
@@ -239,12 +220,9 @@ private:
     RetainPtr<PDFLayerController> m_pdfLayerController;
     RetainPtr<WKPDFPluginAccessibilityObject> m_accessibilityObject;
     
-    RefPtr<PDFPluginAnnotation> m_activeAnnotation;
     RefPtr<PDFPluginPasswordField> m_passwordField;
-    RefPtr<WebCore::Element> m_annotationContainer;
 
     std::optional<WebMouseEvent> m_lastMouseEvent;
-    WebCore::IntPoint m_lastMousePositionInPluginCoordinates;
 
     String m_temporaryPDFUUID;
     String m_lastFoundString;

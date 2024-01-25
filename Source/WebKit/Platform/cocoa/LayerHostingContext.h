@@ -27,10 +27,17 @@
 
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/OSObjectPtr.h>
 #include <wtf/RetainPtr.h>
 
 OBJC_CLASS CALayer;
 OBJC_CLASS CAContext;
+
+#if USE(EXTENSIONKIT)
+OBJC_CLASS _SEHostable;
+OBJC_CLASS _SEHostingHandle;
+OBJC_CLASS _SEHostingUpdateCoordinator;
+#endif
 
 namespace WTF {
 class MachSendRight;
@@ -38,12 +45,21 @@ class MachSendRight;
 
 namespace WebKit {
 
+#if USE(EXTENSIONKIT)
+constexpr auto contextIDKey = "cid";
+constexpr auto processIDKey = "pid";
+constexpr auto machPortKey = "p";
+#endif
+
 using LayerHostingContextID = uint32_t;
 enum class LayerHostingMode : uint8_t;
 
 struct LayerHostingContextOptions {
 #if PLATFORM(IOS_FAMILY)
     bool canShowWhileLocked { false };
+#endif
+#if USE(EXTENSIONKIT)
+    bool useHostable { false };
 #endif
 };
 
@@ -96,6 +112,14 @@ public:
     void updateCachedContextID(LayerHostingContextID);
     LayerHostingContextID cachedContextID();
 
+#if USE(EXTENSIONKIT)
+    OSObjectPtr<xpc_object_t> xpcRepresentation() const;
+    RetainPtr<_SEHostable> hostable() const { return m_hostable; }
+
+    static RetainPtr<_SEHostingHandle> createHostingHandle(uint64_t pid, uint64_t contextID);
+    static RetainPtr<_SEHostingUpdateCoordinator> createHostingUpdateCoordinator(mach_port_t sendRight);
+#endif
+
 private:
     LayerHostingMode m_layerHostingMode;
     // Denotes the contextID obtained from GPU process, should be returned
@@ -103,6 +127,9 @@ private:
     // is enabled. This is done to avoid making calls to CARenderServer from webprocess
     LayerHostingContextID m_cachedContextID;
     RetainPtr<CAContext> m_context;
+#if USE(EXTENSIONKIT)
+    RetainPtr<_SEHostable> m_hostable;
+#endif
 };
 
 } // namespace WebKit

@@ -62,12 +62,16 @@ class NativeExecutable;
     macro(NativeTailCallWithoutSavedTags, nativeTailCallWithoutSavedTagsGenerator) \
     macro(InternalFunctionCall, internalFunctionCallGenerator) \
     macro(InternalFunctionConstruct, internalFunctionConstructGenerator) \
-    macro(LinkCall, linkCallThunkGenerator) \
-    macro(LinkPolymorphicCall, linkPolymorphicCallThunkGenerator) \
+    macro(ThrowExceptionFromCall, throwExceptionFromCallGenerator) \
     macro(ThrowExceptionFromCallSlowPath, throwExceptionFromCallSlowPathGenerator) \
+    macro(PolymorphicRepatchThunk, polymorphicRepatchThunk) \
     macro(VirtualThunkForRegularCall, virtualThunkForRegularCall) \
     macro(VirtualThunkForTailCall, virtualThunkForTailCall) \
     macro(VirtualThunkForConstruct, virtualThunkForConstruct) \
+    macro(PolymorphicThunkForRegularCall, polymorphicThunkForRegularCall) \
+    macro(PolymorphicThunkForTailCall, polymorphicThunkForTailCall) \
+    macro(PolymorphicThunkForRegularCallForClosure, polymorphicThunkForRegularCallForClosure) \
+    macro(PolymorphicThunkForTailCallForClosure, polymorphicThunkForTailCallForClosure) \
     macro(ReturnFromBaseline, returnFromBaselineGenerator) \
     macro(ArityFixup, arityFixupGenerator) \
 

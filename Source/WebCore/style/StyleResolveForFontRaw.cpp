@@ -35,6 +35,7 @@
 #include "CSSHelper.h"
 #include "CSSPropertyParserHelpers.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "FontCascade.h"
 #include "FontCascadeDescription.h"
 #include "RenderStyle.h"
@@ -212,7 +213,8 @@ std::optional<FontCascade> resolveForFontRaw(const FontRaw& fontRaw, FontCascade
             //        that it's off-screen and therefore doesn't strictly have an associated viewport.
             //        This needs clarification and possibly fixing.
             // FIXME: How should root font units work in OffscreenCanvas?
-            return static_cast<float>(CSSPrimitiveValue::computeUnzoomedNonCalcLengthDouble(length.type, length.value, CSSPropertyFontSize, &fontCascade, is<Document>(context) ? downcast<Document>(context).renderView() : nullptr));
+            auto* document = dynamicDowncast<Document>(context);
+            return static_cast<float>(CSSPrimitiveValue::computeUnzoomedNonCalcLengthDouble(length.type, length.value, CSSPropertyFontSize, &fontCascade, document ? document->renderView() : nullptr));
         }, [&] (const CSSPropertyParserHelpers::PercentRaw& percentage) {
             return static_cast<float>((parentSize * percentage.value) / 100.0);
         });

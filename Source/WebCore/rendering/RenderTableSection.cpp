@@ -91,14 +91,14 @@ static inline void updateLogicalHeightForCell(RenderTableSection::RowStruct& row
 }
 
 RenderTableSection::RenderTableSection(Element& element, RenderStyle&& style)
-    : RenderBox(Type::TableSection, element, WTFMove(style), { })
+    : RenderBox(Type::TableSection, element, WTFMove(style))
 {
     setInline(false);
     ASSERT(isRenderTableSection());
 }
 
 RenderTableSection::RenderTableSection(Document& document, RenderStyle&& style)
-    : RenderBox(Type::TableSection, document, WTFMove(style), { })
+    : RenderBox(Type::TableSection, document, WTFMove(style))
 {
     setInline(false);
     ASSERT(isRenderTableSection());
@@ -506,11 +506,12 @@ void RenderTableSection::relayoutCellIfFlexed(RenderTableCell& cell, int rowInde
     bool flexAllChildren = cell.style().logicalHeight().isFixed() || (!table()->style().logicalHeight().isAuto() && rowHeight != cell.logicalHeight());
     
     for (auto& renderer : childrenOfType<RenderBox>(cell)) {
-        if (renderer.style().logicalHeight().isPercentOrCalculated()
-            && (flexAllChildren || shouldFlexCellChild(cell, renderer))
-            && (!is<RenderTable>(renderer) || downcast<RenderTable>(renderer).hasSections())) {
-            cellChildrenFlex = true;
-            break;
+        if (renderer.style().logicalHeight().isPercentOrCalculated() && (flexAllChildren || shouldFlexCellChild(cell, renderer))) {
+            auto* renderTable = dynamicDowncast<RenderTable>(renderer);
+            if (!renderTable || renderTable->hasSections()) {
+                cellChildrenFlex = true;
+                break;
+            }
         }
     }
 
@@ -668,7 +669,7 @@ void RenderTableSection::computeOverflowFromCells(unsigned totalRows, unsigned n
                 continue;
             if (r < totalRows - 1 && cell == primaryCellAt(r + 1, c))
                 continue;
-            addOverflowFromChild(cell);
+            addOverflowFromChild(*cell);
 #if ASSERT_ENABLED
             hasOverflowingCell |= cell->hasVisualOverflow();
 #endif

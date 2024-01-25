@@ -124,8 +124,6 @@ class NetworkConnectionToWebProcess
 #endif
 #if HAVE(COOKIE_CHANGE_LISTENER_API)
     , public WebCore::CookieChangeObserver
-#else
-    , public CanMakeCheckedPtr
 #endif
     , public IPC::Connection::Client {
 public:
@@ -201,7 +199,7 @@ public:
 
     void serviceWorkerServerToContextConnectionNoLongerNeeded();
     WebSWServerConnection* swConnection();
-    std::unique_ptr<ServiceWorkerFetchTask> createFetchTask(NetworkResourceLoader&, const WebCore::ResourceRequest&);
+    RefPtr<ServiceWorkerFetchTask> createFetchTask(NetworkResourceLoader&, const WebCore::ResourceRequest&);
     void sharedWorkerServerToContextConnectionIsNoLongerNeeded();
 
     WebSharedWorkerServerConnection* sharedWorkerConnection();
@@ -229,7 +227,7 @@ public:
     NetworkMDNSRegister& mdnsRegister() { return m_mdnsRegister; }
 #endif
 
-    WeakPtr<WebSWServerToContextConnection> swContextConnection() { return m_swContextConnection.get(); }
+    WebSWServerToContextConnection* swContextConnection() { return m_swContextConnection.get(); }
 
 private:
     NetworkConnectionToWebProcess(NetworkProcess&, WebCore::ProcessIdentifier, PAL::SessionID, NetworkProcessConnectionParameters&&, IPC::Connection::Identifier);

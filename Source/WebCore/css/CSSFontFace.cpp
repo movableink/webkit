@@ -37,6 +37,7 @@
 #include "CSSValueList.h"
 #include "CachedFont.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "Font.h"
 #include "FontCache.h"
 #include "FontDescription.h"
@@ -318,8 +319,6 @@ void CSSFontFace::setFeatureSettings(CSSValue& featureSettings)
 
 void CSSFontFace::setSizeAdjust(CSSValue& value)
 {
-    ASSERT(is<CSSPrimitiveValue>(value));
-
     mutableProperties().setProperty(CSSPropertySizeAdjust, &value);
 
     auto& sizeAdjustValue = downcast<CSSPrimitiveValue>(value);

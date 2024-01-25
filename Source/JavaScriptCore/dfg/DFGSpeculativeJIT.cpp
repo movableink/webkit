@@ -3905,21 +3905,9 @@ JITCompiler::Jump SpeculativeJIT::jumpForTypedArrayIsDetachedIfOutOfBounds(Node*
                 Address(base, JSArrayBufferView::offsetOfMode()),
                 TrustedImm32(isWastefulTypedArrayMode));
 
-            Jump hasNullVector;
-#if CPU(ARM64E)
-            {
-                GPRReg scratch = scratchRegister();
-                DisallowMacroScratchRegisterUsage disallowScratch(*this);
-
-                loadPtr(Address(base, JSArrayBufferView::offsetOfVector()), scratch);
-                removeArrayPtrTag(scratch);
-                hasNullVector = branchTestPtr(Zero, scratch);
-            }
-#else // CPU(ARM64E)
-            hasNullVector = branchTestPtr(
+            auto hasNullVector = branchTestPtr(
                 Zero,
                 Address(base, JSArrayBufferView::offsetOfVector()));
-#endif
             speculationCheck(Uncountable, JSValueSource(), node, hasNullVector);
             notWasteful.link(this);
         }
@@ -8760,38 +8748,23 @@ void SpeculativeJIT::compileConstantStoragePointer(Node* node)
     storageResult(storageGPR, node);
 }
 
-void SpeculativeJIT::cageTypedArrayStorage(GPRReg baseReg, GPRReg storageReg, bool validateAuth)
+void SpeculativeJIT::cageTypedArrayStorage(GPRReg baseReg, GPRReg storageReg)
 {
-    auto untagArrayPtr = [&]() {
-#if CPU(ARM64E)
-        untagArrayPtrLength64(Address(baseReg, JSArrayBufferView::offsetOfLength()), storageReg, validateAuth);
-#else
-        UNUSED_PARAM(validateAuth);
-        UNUSED_PARAM(baseReg);
-        UNUSED_PARAM(storageReg);
-#endif
-    };
-
-#if GIGACAGE_ENABLED
     UNUSED_PARAM(baseReg);
-    if (!Gigacage::shouldBeEnabled()) {
-        untagArrayPtr();
+    UNUSED_PARAM(storageReg);
+#if GIGACAGE_ENABLED
+    if (!Gigacage::shouldBeEnabled())
         return;
-    }
     
     if (!Gigacage::disablingPrimitiveGigacageIsForbidden()) {
         VM& vm = this->vm();
-        if (vm.primitiveGigacageEnabled().isStillValid())
-            m_graph.watchpoints().addLazily(vm.primitiveGigacageEnabled());
-        else {
-            untagArrayPtr();
+        if (!vm.primitiveGigacageEnabled().isStillValid())
             return;
-        }
+        m_graph.watchpoints().addLazily(vm.primitiveGigacageEnabled());
     }
     
-    cageWithoutUntagging(Gigacage::Primitive, storageReg);
+    cage(Gigacage::Primitive, storageReg);
 #endif
-    untagArrayPtr();
 }
 
 void SpeculativeJIT::compileGetIndexedPropertyStorage(Node* node)
@@ -12179,11 +12152,6 @@ void SpeculativeJIT::emitNewTypedArrayWithSizeInRegister(Node* node, TypedArrayT
         BaseIndex(storageGPR, scratchGPR, TimesFour));
     branchTest32(NonZero, scratchGPR).linkTo(loop, this);
     done.link(this);
-#if CPU(ARM64E)
-    // sizeGPR is still boxed as a number and there is no 32-bit variant of the PAC instructions.
-    zeroExtend48ToWord(sizeGPR, scratchGPR); // See rdar://107561209, rdar://107724053.
-    tagArrayPtr(scratchGPR, storageGPR);
-#endif
 
     auto butterfly = TrustedImmPtr(nullptr);
     switch (typedArrayType) {
@@ -17387,6 +17355,114 @@ void SpeculativeJIT::compileNumberIsNaN(Node* node)
         if (mayBeInt32)
             isInt32.link(this);
         unblessedBooleanResult(scratch1GPR, node);
+        break;
+    }
+    default:
+        DFG_CRASH(m_graph, node, "Bad use kind");
+        break;
+    }
+}
+
+void SpeculativeJIT::compileToIntegerOrInfinity(Node* node)
+{
+    switch (node->child1().useKind()) {
+    case DoubleRepUse: {
+        SpeculateDoubleOperand argument(this, node->child1());
+
+        FPRReg argumentFPR = argument.fpr();
+
+        flushRegisters();
+        JSValueRegsFlushedCallResult result(this);
+        JSValueRegs resultRegs = result.regs();
+        callOperation(operationToIntegerOrInfinityDouble, resultRegs, argumentFPR);
+        jsValueResult(resultRegs, node);
+        break;
+    }
+    case UntypedUse: {
+        JSValueOperand argument(this, node->child1());
+        JSValueRegsTemporary result(this);
+
+        bool mayBeInt32 = m_interpreter.forNode(node->child1()).m_type & SpecInt32Only;
+
+        JSValueRegs argumentRegs = argument.jsValueRegs();
+        JSValueRegs resultRegs = result.regs();
+
+        flushRegisters();
+        Jump isInt32;
+        if (mayBeInt32) {
+            moveValueRegs(argumentRegs, resultRegs);
+            isInt32 = branchIfInt32(argumentRegs);
+        }
+        callOperation(operationToIntegerOrInfinityUntyped, resultRegs, LinkableConstant::globalObject(*this, node), argumentRegs);
+        exceptionCheck();
+        if (mayBeInt32)
+            isInt32.link(this);
+        jsValueResult(resultRegs, node);
+        break;
+    }
+    default:
+        DFG_CRASH(m_graph, node, "Bad use kind");
+        break;
+    }
+}
+
+void SpeculativeJIT::compileToLength(Node* node)
+{
+    switch (node->child1().useKind()) {
+    case Int32Use: {
+        SpeculateInt32Operand argument(this, node->child1());
+        GPRTemporary scratch1(this);
+
+        GPRReg argumentGPR = argument.gpr();
+        GPRReg scratch1GPR = scratch1.gpr();
+
+        move(TrustedImm32(0), scratch1GPR);
+        moveConditionally32(CCallHelpers::LessThan, argumentGPR, TrustedImm32(0), scratch1GPR, argumentGPR, scratch1GPR);
+        zeroExtend32ToWord(scratch1GPR, scratch1GPR);
+        strictInt32Result(scratch1GPR, node);
+        break;
+    }
+    case DoubleRepUse: {
+        SpeculateDoubleOperand argument(this, node->child1());
+
+        FPRReg argumentFPR = argument.fpr();
+
+        flushRegisters();
+        JSValueRegsFlushedCallResult result(this);
+        JSValueRegs resultRegs = result.regs();
+        callOperation(operationToLengthDouble, resultRegs, argumentFPR);
+        jsValueResult(resultRegs, node);
+        break;
+    }
+    case UntypedUse: {
+        JSValueOperand argument(this, node->child1());
+        JSValueRegsTemporary result(this);
+
+        bool mayBeInt32 = m_interpreter.forNode(node->child1()).m_type & SpecInt32Only;
+
+        JSValueRegs argumentRegs = argument.jsValueRegs();
+        JSValueRegs resultRegs = result.regs();
+
+        flushRegisters();
+        Jump isNotInt32;
+        Jump done;
+        if (mayBeInt32) {
+            isNotInt32 = branchIfNotInt32(argumentRegs);
+            move(TrustedImm32(0), resultRegs.payloadGPR());
+            moveConditionally32(CCallHelpers::LessThan, argumentRegs.payloadGPR(), TrustedImm32(0), resultRegs.payloadGPR(), argumentRegs.payloadGPR(), resultRegs.payloadGPR());
+            zeroExtend32ToWord(resultRegs.payloadGPR(), resultRegs.payloadGPR());
+            boxInt32(resultRegs.payloadGPR(), resultRegs);
+            done = jump();
+        }
+
+        if (mayBeInt32)
+            isNotInt32.link(this);
+        callOperation(operationToLengthUntyped, resultRegs, LinkableConstant::globalObject(*this, node), argumentRegs);
+        exceptionCheck();
+
+        if (mayBeInt32)
+            done.link(this);
+        jsValueResult(resultRegs, node);
         break;
     }
     default:

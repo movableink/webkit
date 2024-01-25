@@ -29,6 +29,8 @@
 #include "CSSFontSelector.h"
 #include "ComposedTreeAncestorIterator.h"
 #include "ComposedTreeIterator.h"
+#include "Document.h"
+#include "DocumentInlines.h"
 #include "HTMLBodyElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLMeterElement.h"
@@ -277,7 +279,7 @@ auto TreeResolver::resolveElement(Element& element, const RenderStyle* existingS
         auto pseudoElementUpdate = resolvePseudoElement(element, pseudoId, update);
         auto pseudoElementChange = [&] {
             if (pseudoElementUpdate) {
-                if (pseudoId == PseudoId::Scrollbar)
+                if (pseudoId == PseudoId::WebKitScrollbar)
                     return pseudoElementUpdate->change;
                 return pseudoElementUpdate->change == Change::None ? Change::None : Change::NonInherited;
             }
@@ -299,7 +301,7 @@ auto TreeResolver::resolveElement(Element& element, const RenderStyle* existingS
         descendantsToResolve = DescendantsToResolve::All;
     if (resolveAndAddPseudoElementStyle(PseudoId::FirstLetter) != Change::None)
         descendantsToResolve = DescendantsToResolve::All;
-    if (resolveAndAddPseudoElementStyle(PseudoId::Scrollbar) != Change::None)
+    if (resolveAndAddPseudoElementStyle(PseudoId::WebKitScrollbar) != Change::None)
         descendantsToResolve = DescendantsToResolve::All;
 
     resolveAndAddPseudoElementStyle(PseudoId::Marker);
@@ -344,7 +346,7 @@ std::optional<ElementUpdate> TreeResolver::resolvePseudoElement(Element& element
         return { };
     if (pseudoId == PseudoId::FirstLetter && !scope().resolver->usesFirstLetterRules())
         return { };
-    if (pseudoId == PseudoId::Scrollbar && elementUpdate.style->overflowX() != Overflow::Scroll && elementUpdate.style->overflowY() != Overflow::Scroll)
+    if (pseudoId == PseudoId::WebKitScrollbar && elementUpdate.style->overflowX() != Overflow::Scroll && elementUpdate.style->overflowY() != Overflow::Scroll)
         return { };
     if (pseudoId == PseudoId::ViewTransition && (!element.document().hasViewTransitionPseudoElementTree() || &element != element.document().documentElement()))
         return { };
@@ -368,7 +370,7 @@ std::optional<ElementUpdate> TreeResolver::resolvePseudoElement(Element& element
             // ::first-line can inherit to ::before/::after
             if (auto firstLineContext = makeResolutionContextForInheritedFirstLine(elementUpdate, *elementUpdate.style)) {
                 auto firstLineStyle = scope().resolver->styleForPseudoElement(element, { pseudoId }, *firstLineContext);
-                firstLineStyle->style->setStyleType(PseudoId::FirstLine);
+                firstLineStyle->style->setPseudoElementType(PseudoId::FirstLine);
                 animatedUpdate.style->addCachedPseudoStyle(WTFMove(firstLineStyle->style));
             }
         }
@@ -433,7 +435,7 @@ std::optional<ResolvedStyle> TreeResolver::resolveAncestorFirstLinePseudoElement
             return { };
 
         auto elementStyle = scope().resolver->styleForElement(element, *resolutionContext);
-        elementStyle.style->setStyleType(PseudoId::FirstLine);
+        elementStyle.style->setPseudoElementType(PseudoId::FirstLine);
 
         return elementStyle;
     }
@@ -863,7 +865,7 @@ void TreeResolver::resolveComposedTree()
                 m_update->addText(*text, parent.element, WTFMove(textUpdate));
             }
 
-            if (!text->data().containsOnly<isASCIIWhitespace>())
+            if (!text->containsOnlyASCIIWhitespace())
                 parent.resolvedFirstLineAndLetterChild = true;
 
             text->setHasValidStyle();

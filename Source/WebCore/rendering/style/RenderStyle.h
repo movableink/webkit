@@ -280,7 +280,7 @@ struct ScopedName;
 constexpr auto PublicPseudoIDBits = 16;
 constexpr auto TextDecorationLineBits = 4;
 constexpr auto TextTransformBits = 5;
-constexpr auto StyleTypeBits = 5;
+constexpr auto PseudoElementTypeBits = 5;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PseudoStyleCache);
 struct PseudoStyleCache {
@@ -342,8 +342,10 @@ public:
     StyleSelfAlignmentData resolvedJustifySelf(const RenderStyle* parentStyle, ItemPosition normalValueBehaviour) const;
     StyleContentAlignmentData resolvedJustifyContent(const StyleContentAlignmentData& normalValueBehaviour) const;
 
-    PseudoId styleType() const { return static_cast<PseudoId>(m_nonInheritedFlags.styleType); }
-    void setStyleType(PseudoId styleType) { m_nonInheritedFlags.styleType = static_cast<unsigned>(styleType); }
+    PseudoId pseudoElementType() const { return static_cast<PseudoId>(m_nonInheritedFlags.pseudoElementType); }
+    void setPseudoElementType(PseudoId pseudoElementType) { m_nonInheritedFlags.pseudoElementType = static_cast<unsigned>(pseudoElementType); }
+    const AtomString& functionalPseudoElementArgument() const;
+    void setFunctionalPseudoElementArgument(const AtomString&);
 
     RenderStyle* getCachedPseudoStyle(PseudoId) const;
     RenderStyle* addCachedPseudoStyle(std::unique_ptr<RenderStyle>);
@@ -715,7 +717,12 @@ public:
 
     inline ContentVisibility contentVisibility() const;
 
-    inline std::optional<ContentVisibility> skippedContentReason() const;
+    // effectiveContentVisibility will return ContentVisibility::Hidden in a content-visibility: hidden subtree (overriding
+    // content-visibility: auto at all times), ContentVisibility::Auto in a content-visibility: auto subtree (when the
+    // content is not user relevant and thus skipped), and ContentVisibility::Visible otherwise.
+    inline ContentVisibility effectiveContentVisibility() const;
+    // Returns true for skipped content roots and skipped content itself.
+    inline bool hasSkippedContent() const;
 
     inline ContainIntrinsicSizeType containIntrinsicWidthType() const;
     inline ContainIntrinsicSizeType containIntrinsicHeightType() const;
@@ -1062,12 +1069,10 @@ public:
     inline const FilterOperations& backdropFilter() const;
     inline bool hasBackdropFilter() const;
 
-#if ENABLE(CSS_COMPOSITING)
     inline void setBlendMode(BlendMode);
     inline bool isInSubtreeWithBlendMode() const;
 
     inline void setIsolation(Isolation);
-#endif
 
     inline BlendMode blendMode() const;
     inline bool hasBlendMode() const;
@@ -1310,7 +1315,7 @@ public:
 
     inline void setContentVisibility(ContentVisibility);
 
-    inline void setSkippedContentReason(ContentVisibility);
+    inline void setEffectiveContentVisibility(ContentVisibility);
 
     inline void setListStyleType(ListStyleType);
     void setListStyleImage(RefPtr<StyleImage>&&);
@@ -1726,7 +1731,6 @@ public:
     const AtomString& hyphenString() const;
 
     bool inheritedEqual(const RenderStyle&) const;
-    bool inheritedCustomPropertiesEqual(const RenderStyle&) const;
     bool fastPathInheritedEqual(const RenderStyle&) const;
     bool nonFastPathInheritedEqual(const RenderStyle&) const;
 
@@ -1744,6 +1748,7 @@ public:
     constexpr bool isDisplayInlineType() const;
     constexpr bool isOriginalDisplayInlineType() const;
     constexpr bool isDisplayFlexibleOrGridBox() const;
+    constexpr bool isDisplayDeprecatedFlexibleBox() const;
     constexpr bool isDisplayFlexibleBoxIncludingDeprecatedOrGridBox() const;
     constexpr bool isDisplayRegionType() const;
     constexpr bool isDisplayBlockLevel() const;
@@ -1964,7 +1969,6 @@ public:
     static StyleImage* initialMaskBorderSource() { return nullptr; }
     static constexpr PrintColorAdjust initialPrintColorAdjust();
     static QuotesData* initialQuotes() { return nullptr; }
-    static inline const AtomString& initialContentAltText();
 
 #if ENABLE(DARK_MODE_CSS)
     static constexpr StyleColorScheme initialColorScheme();
@@ -2067,10 +2071,8 @@ public:
 
     static inline FilterOperations initialBackdropFilter();
 
-#if ENABLE(CSS_COMPOSITING)
     static constexpr BlendMode initialBlendMode();
     static constexpr Isolation initialIsolation();
-#endif
 
     static constexpr MathStyle initialMathStyle();
 
@@ -2201,7 +2203,7 @@ private:
         unsigned firstChildState : 1;
         unsigned lastChildState : 1;
         unsigned isLink : 1;
-        unsigned styleType : StyleTypeBits; // PseudoId
+        unsigned pseudoElementType : PseudoElementTypeBits; // PseudoId
         unsigned pseudoBits : PublicPseudoIDBits;
 
         // If you add more style bits here, you will also need to update RenderStyle::NonInheritedFlags::copyNonInheritedFrom().

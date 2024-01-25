@@ -436,7 +436,7 @@ void WebProcess::initializeWebProcess(WebProcessCreationParameters&& parameters)
 
 #if PLATFORM(COCOA)
             // If this is a process we keep around for performance, kill it on memory pressure instead of trying to free up its memory.
-            if (!m_isSuspending && (m_processType == ProcessType::CachedWebContent || m_processType == ProcessType::PrewarmedWebContent || areAllPagesSuspended())) {
+            if (m_allowExitOnMemoryPressure && (m_processType == ProcessType::CachedWebContent || m_processType == ProcessType::PrewarmedWebContent || areAllPagesSuspended())) {
                 if (m_processType == ProcessType::CachedWebContent)
                     WEBPROCESS_RELEASE_LOG(Process, "initializeWebProcess: Cached WebProcess is exiting due to memory pressure");
                 else if (m_processType == ProcessType::PrewarmedWebContent)
@@ -448,8 +448,8 @@ void WebProcess::initializeWebProcess(WebProcessCreationParameters&& parameters)
             }
 #endif
 
-            auto maintainBackForwardCache = m_isSuspending ? WebCore::MaintainBackForwardCache::Yes : WebCore::MaintainBackForwardCache::No;
-            auto maintainMemoryCache = m_isSuspending && m_hasSuspendedPageProxy ? WebCore::MaintainMemoryCache::Yes : WebCore::MaintainMemoryCache::No;
+            auto maintainBackForwardCache = m_allowExitOnMemoryPressure ? WebCore::MaintainBackForwardCache::No : WebCore::MaintainBackForwardCache::Yes;
+            auto maintainMemoryCache = (m_allowExitOnMemoryPressure || !m_hasSuspendedPageProxy) ? WebCore::MaintainMemoryCache::No : WebCore::MaintainMemoryCache::Yes;
             WebCore::releaseMemory(critical, synchronous, maintainBackForwardCache, maintainMemoryCache);
             for (auto& page : m_pageMap.values())
                 page->releaseMemory(critical);
@@ -674,7 +674,7 @@ void WebProcess::setHasSuspendedPageProxy(bool hasSuspendedPageProxy)
     m_hasSuspendedPageProxy = hasSuspendedPageProxy;
 }
 
-void WebProcess::setIsInProcessCache(bool isInProcessCache)
+void WebProcess::setIsInProcessCache(bool isInProcessCache, CompletionHandler<void()>&& completionHandler)
 {
 #if PLATFORM(COCOA)
     if (isInProcessCache) {
@@ -690,6 +690,7 @@ void WebProcess::setIsInProcessCache(bool isInProcessCache)
 #else
     UNUSED_PARAM(isInProcessCache);
 #endif
+    completionHandler();
 }
 
 void WebProcess::markIsNoLongerPrewarmed()
@@ -1021,25 +1022,28 @@ static uint64_t nextUserGestureTokenIdentifier()
     return identifier++;
 }
 
-uint64_t WebProcess::userGestureTokenIdentifier(RefPtr<UserGestureToken> token)
+uint64_t WebProcess::userGestureTokenIdentifier(std::optional<PageIdentifier> pageID, RefPtr<UserGestureToken> token)
 {
+    if (!pageID)
+        return 0;
+
     if (!token || !token->processingUserGesture())
         return 0;
 
     auto result = m_userGestureTokens.ensure(*token, [] { return nextUserGestureTokenIdentifier(); });
     if (result.isNewEntry) {
-        result.iterator->key.addDestructionObserver([] (UserGestureToken& tokenBeingDestroyed) {
-            WebProcess::singleton().userGestureTokenDestroyed(tokenBeingDestroyed);
+        result.iterator->key.addDestructionObserver([pageID] (UserGestureToken& tokenBeingDestroyed) {
+            WebProcess::singleton().userGestureTokenDestroyed(*pageID, tokenBeingDestroyed);
         });
     }
     
     return result.iterator->value;
 }
 
-void WebProcess::userGestureTokenDestroyed(UserGestureToken& token)
+void WebProcess::userGestureTokenDestroyed(PageIdentifier pageID, UserGestureToken& token)
 {
     auto identifier = m_userGestureTokens.take(token);
-    parentProcessConnection()->send(Messages::WebProcessProxy::DidDestroyUserGestureToken(identifier), 0);
+    parentProcessConnection()->send(Messages::WebProcessProxy::DidDestroyUserGestureToken(pageID, identifier), 0);
 }
 
 void WebProcess::isJITEnabled(CompletionHandler<void(bool)>&& completionHandler)
@@ -1161,7 +1165,7 @@ static NetworkProcessConnectionInfo getNetworkProcessConnection(IPC::Connection&
     auto requestConnection = [&]() -> bool {
         auto sendResult = connection.sendSync(Messages::WebProcessProxy::GetNetworkProcessConnection(), 0);
         if (!sendResult.succeeded()) {
-            RELEASE_LOG_ERROR(Process, "getNetworkProcessConnection: Failed to send message or receive invalid message: error %" PUBLIC_LOG_STRING, IPC::errorAsString(sendResult.error));
+            RELEASE_LOG_ERROR(Process, "getNetworkProcessConnection: Failed to send message or receive invalid message: error %" PUBLIC_LOG_STRING, IPC::errorAsString(sendResult.error()));
             failedToGetNetworkProcessConnection();
         }
         std::tie(connectionInfo) = sendResult.takeReply();
@@ -1520,6 +1524,7 @@ void WebProcess::pageActivityStateDidChange(PageIdentifier, OptionSet<WebCore::A
 void WebProcess::releaseMemory(CompletionHandler<void()>&& completionHandler)
 {
     WEBPROCESS_RELEASE_LOG(ProcessSuspension, "releaseMemory: BEGIN");
+    SetForScope allowExitScope(m_allowExitOnMemoryPressure, false);
     MemoryPressureHandler::singleton().releaseMemory(Critical::Yes, Synchronous::Yes);
     for (auto& page : m_pageMap.values())
         page->releaseMemory(Critical::Yes);
@@ -1534,7 +1539,7 @@ void WebProcess::prepareToSuspend(bool isSuspensionImminent, MonotonicTime estim
     double remainingRunTime = nowTime > estimatedSuspendTime ? (nowTime - estimatedSuspendTime).value() : 0.0;
 #endif
     WEBPROCESS_RELEASE_LOG(ProcessSuspension, "prepareToSuspend: isSuspensionImminent=%d, remainingRunTime=%fs", isSuspensionImminent, remainingRunTime);
-    SetForScope suspensionScope(m_isSuspending, true);
+    SetForScope allowExitScope(m_allowExitOnMemoryPressure, false);
     m_processIsSuspended = true;
 
     flushResourceLoadStatistics();

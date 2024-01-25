@@ -7,7 +7,7 @@
  * Copyright (C) Research In Motion Limited 2009-2010. All rights reserved.
  * Copyright (C) 2018 Adobe Systems Incorporated. All rights reserved.
  * Copyright (C) 2020 Apple Inc. All rights reserved.
- * Copyright (C) 2021 Igalia S.L.
+ * Copyright (C) 2021, 2023, 2024 Igalia S.L.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -34,6 +34,7 @@
 #include "RenderChildIterator.h"
 #include "RenderSVGInline.h"
 #include "RenderSVGModelObject.h"
+#include "RenderSVGResourceGradient.h"
 #include "RenderSVGRoot.h"
 #include "RenderSVGShape.h"
 #include "RenderSVGText.h"
@@ -66,8 +67,8 @@ void SVGContainerLayout::layoutChildren(bool containerNeedsLayout)
 
         if (transformChanged) {
             // If the transform changed we need to update the text metrics (note: this also happens for layoutSizeChanged=true).
-            if (is<RenderSVGText>(child))
-                downcast<RenderSVGText>(child).setNeedsTextMetricsUpdate();
+            if (CheckedPtr text = dynamicDowncast<RenderSVGText>(child))
+                text->setNeedsTextMetricsUpdate();
             needsLayout = true;
         }
 
@@ -75,33 +76,32 @@ void SVGContainerLayout::layoutChildren(bool containerNeedsLayout)
             if (child.isAnonymous()) {
                 ASSERT(is<RenderSVGViewportContainer>(child));
                 needsLayout = true;
-            } else if (is<SVGElement>(*child.node())) {
+            } else if (auto* element = dynamicDowncast<SVGElement>(*child.node()); element && element->hasRelativeLengths()) {
                 // When containerNeedsLayout is false and the layout size changed, we have to check whether this child uses relative lengths
-                if (auto& element = downcast<SVGElement>(*child.node()); element.hasRelativeLengths()) {
-                    // When the layout size changed and when using relative values tell the RenderSVGShape to update its shape object
-                    if (is<RenderSVGShape>(child))
-                        downcast<RenderSVGShape>(child).setNeedsShapeUpdate();
-                    else if (is<RenderSVGText>(child)) {
-                        auto& svgText = downcast<RenderSVGText>(child);
-                        svgText.setNeedsTextMetricsUpdate();
-                        svgText.setNeedsPositioningValuesUpdate();
-                    }
 
+                // When the layout size changed and when using relative values tell the RenderSVGShape to update its shape object
+                if (CheckedPtr shape = dynamicDowncast<RenderSVGShape>(child)) {
+                    shape->setNeedsShapeUpdate();
                     needsLayout = true;
-                }
+                } else if (CheckedPtr svgText = dynamicDowncast<RenderSVGText>(child)) {
+                    svgText->setNeedsTextMetricsUpdate();
+                    svgText->setNeedsPositioningValuesUpdate();
+                    needsLayout = true;
+                } else if (CheckedPtr resource = dynamicDowncast<RenderSVGResourceGradient>(child))
+                    resource->invalidateGradient();
+                // FIXME: [LBSE] Add pattern support.
             }
         }
 
         if (needsLayout)
             child.setNeedsLayout(MarkOnlyThis);
 
-        if (is<RenderElement>(child)) {
-            auto& element = downcast<RenderElement>(child);
-            if (element.needsLayout())
-                element.layout();
+        if (auto* element = dynamicDowncast<RenderElement>(child)) {
+            if (element->needsLayout())
+                element->layout();
 
-            if (!childEverHadLayout && element.checkForRepaintDuringLayout())
-                element.repaint();
+            if (!childEverHadLayout && element->checkForRepaintDuringLayout())
+                element->repaint();
         }
 
         ASSERT(!child.needsLayout());
@@ -135,8 +135,8 @@ void SVGContainerLayout::positionChildrenRelativeToContainer()
         // only meaningful for the children of the RenderSVGRoot. RenderSVGRoot itself is positioned according to
         // the CSS box model object, where we need to respect border & padding, encoded in the contentBoxLocation().
         // -> Position all RenderSVGRoot children relative to the contentBoxLocation() to avoid intruding border/padding area.
-        if (is<RenderSVGRoot>(m_container))
-            return -downcast<RenderSVGRoot>(m_container).contentBoxLocation();
+        if (auto* svgRoot = dynamicDowncast<RenderSVGRoot>(m_container))
+            return -svgRoot->contentBoxLocation();
 
         // For (inner) RenderSVGViewportContainer nominalSVGLayoutLocation() returns the viewport boundaries,
         // including the effect of the 'x'/'y' attribute values. Do not subtract the location, otherwise the
@@ -223,14 +223,14 @@ bool SVGContainerLayout::layoutSizeOfNearestViewportChanged() const
 bool SVGContainerLayout::transformToRootChanged(const RenderObject* ancestor)
 {
     while (ancestor) {
-        if (is<RenderSVGTransformableContainer>(*ancestor))
-            return downcast<const RenderSVGTransformableContainer>(*ancestor).didTransformToRootUpdate();
+        if (CheckedPtr container = dynamicDowncast<RenderSVGTransformableContainer>(*ancestor))
+            return container->didTransformToRootUpdate();
 
-        if (is<RenderSVGViewportContainer>(*ancestor))
-            return downcast<const RenderSVGViewportContainer>(*ancestor).didTransformToRootUpdate();
+        if (CheckedPtr container = dynamicDowncast<RenderSVGViewportContainer>(*ancestor))
+            return container->didTransformToRootUpdate();
 
-        if (is<RenderSVGRoot>(*ancestor))
-            return downcast<const RenderSVGRoot>(*ancestor).didTransformToRootUpdate();
+        if (CheckedPtr svgRoot = dynamicDowncast<RenderSVGRoot>(*ancestor))
+            return svgRoot->didTransformToRootUpdate();
         ancestor = ancestor->parent();
     }
 

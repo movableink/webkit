@@ -179,9 +179,14 @@ class EmptyChromeClient : public ChromeClient {
     void triggerRenderingUpdate() final { }
 
 #if PLATFORM(WIN)
-    void setLastSetCursorToCurrentCursor() final { }
     void AXStartFrameLoad() final { }
     void AXFinishFrameLoad() final { }
+#endif
+
+#if PLATFORM(PLAYSTATION)
+    void postAccessibilityNotification(AccessibilityObject&, AXObjectCache::AXNotification) final { }
+    void postAccessibilityNodeTextChangeNotification(AccessibilityObject*, AXTextChange, unsigned, const String&) final { }
+    void postAccessibilityFrameLoadingEventNotification(AccessibilityObject*, AXObjectCache::AXLoadingEvent) final { }
 #endif
 
 #if ENABLE(IOS_TOUCH_EVENTS)

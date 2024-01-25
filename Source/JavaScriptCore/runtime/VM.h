@@ -68,6 +68,8 @@
 #include <wtf/Forward.h>
 #include <wtf/Gigacage.h>
 #include <wtf/HashMap.h>
+#include <wtf/LazyRef.h>
+#include <wtf/LazyUniqueRef.h>
 #include <wtf/SetForScope.h>
 #include <wtf/StackPointer.h>
 #include <wtf/Stopwatch.h>
@@ -271,11 +273,7 @@ struct ScratchBuffer {
         size_t m_activeLength;
         double pad; // Make sure m_buffer is double aligned.
     } u;
-#if CPU(MIPS) && (defined WTF_MIPS_ARCH_REV && WTF_MIPS_ARCH_REV == 2)
-    alignas(8) void* m_buffer[0];
-#else
     void* m_buffer[0];
-#endif
 };
 #if COMPILER(MSVC)
 #pragma warning(pop)
@@ -322,11 +320,11 @@ public:
     static Ref<VM> createContextGroup(HeapType = HeapType::Small);
     JS_EXPORT_PRIVATE ~VM();
 
-    Watchdog& ensureWatchdog();
-    Watchdog* watchdog() { return m_watchdog.get(); }
+    Watchdog* watchdog() { return m_watchdog.getIfExists(); }
+    Watchdog& ensureWatchdog() { return m_watchdog.get(*this); }
 
-    HeapProfiler* heapProfiler() const { return m_heapProfiler.get(); }
-    JS_EXPORT_PRIVATE HeapProfiler& ensureHeapProfiler();
+    HeapProfiler* heapProfiler() { return m_heapProfiler.getIfExists(); }
+    HeapProfiler& ensureHeapProfiler() { return m_heapProfiler.get(*this); }
 
     bool isAnalyzingHeap() const { return m_activeHeapAnalyzer; }
     HeapAnalyzer* activeHeapAnalyzer() const { return m_activeHeapAnalyzer; }
@@ -691,7 +689,6 @@ public:
     NativeExecutable* getRemoteFunction(bool isJSFunction);
 
     CodePtr<JSEntryPtrTag> getCTIInternalFunctionTrampolineFor(CodeSpecializationKind);
-    MacroAssemblerCodeRef<JSEntryPtrTag> getCTILinkCall();
     MacroAssemblerCodeRef<JSEntryPtrTag> getCTIThrowExceptionFromCallSlowPath();
     MacroAssemblerCodeRef<JITStubRoutinePtrTag> getCTIVirtualCall(CallMode);
 
@@ -843,19 +840,13 @@ public:
 
     Ref<CompactTDZEnvironmentMap> m_compactVariableMap;
 
-    std::unique_ptr<HasOwnPropertyCache> m_hasOwnPropertyCache;
-    ALWAYS_INLINE HasOwnPropertyCache* hasOwnPropertyCache() { return m_hasOwnPropertyCache.get(); }
-    HasOwnPropertyCache& ensureHasOwnPropertyCache();
+    LazyUniqueRef<VM, HasOwnPropertyCache> m_hasOwnPropertyCache;
+    ALWAYS_INLINE HasOwnPropertyCache* hasOwnPropertyCache() { return m_hasOwnPropertyCache.getIfExists(); }
+    HasOwnPropertyCache& ensureHasOwnPropertyCache() { return m_hasOwnPropertyCache.get(*this); }
 
-    std::unique_ptr<MegamorphicCache> m_megamorphicCache;
-    ALWAYS_INLINE MegamorphicCache* megamorphicCache() { return m_megamorphicCache.get(); }
-    JS_EXPORT_PRIVATE void ensureMegamorphicCacheSlow();
-    MegamorphicCache& ensureMegamorphicCache()
-    {
-        if (UNLIKELY(!m_megamorphicCache))
-            ensureMegamorphicCacheSlow();
-        return *m_megamorphicCache;
-    }
+    LazyUniqueRef<VM, MegamorphicCache> m_megamorphicCache;
+    ALWAYS_INLINE MegamorphicCache* megamorphicCache() { return m_megamorphicCache.getIfExists(); }
+    MegamorphicCache& ensureMegamorphicCache() { return m_megamorphicCache.get(*this); }
 
     enum class StructureChainIntegrityEvent : uint8_t {
         Add,
@@ -953,8 +944,8 @@ public:
 
     BytecodeIntrinsicRegistry& bytecodeIntrinsicRegistry() { return *m_bytecodeIntrinsicRegistry; }
     
-    ShadowChicken* shadowChicken() { return m_shadowChicken.get(); }
-    void ensureShadowChicken();
+    ShadowChicken* shadowChicken() { return m_shadowChicken.getIfExists(); }
+    ShadowChicken& ensureShadowChicken() { return m_shadowChicken.get(*this); }
     
     template<typename Func>
     void logEvent(CodeBlock*, const char* summary, const Func& func);
@@ -1120,13 +1111,13 @@ private:
     MicrotaskQueue m_microtaskQueue;
     MallocPtr<EncodedJSValue, VMMalloc> m_exceptionFuzzBuffer;
     VMTraps m_traps;
-    RefPtr<Watchdog> m_watchdog;
-    std::unique_ptr<HeapProfiler> m_heapProfiler;
+    LazyRef<VM, Watchdog> m_watchdog;
+    LazyUniqueRef<VM, HeapProfiler> m_heapProfiler;
 #if ENABLE(SAMPLING_PROFILER)
     RefPtr<SamplingProfiler> m_samplingProfiler;
 #endif
     std::unique_ptr<FuzzerAgent> m_fuzzerAgent;
-    std::unique_ptr<ShadowChicken> m_shadowChicken;
+    LazyUniqueRef<VM, ShadowChicken> m_shadowChicken;
     std::unique_ptr<BytecodeIntrinsicRegistry> m_bytecodeIntrinsicRegistry;
     uint64_t m_drainMicrotaskDelayScopeCount { 0 };
 

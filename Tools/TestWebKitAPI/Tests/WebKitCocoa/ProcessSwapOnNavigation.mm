@@ -6283,6 +6283,10 @@ function saveOpenee()
 <a id="testLink" target="foo" href="pson://www.webkit.org/main2.html">Link</a>
 )PSONRESOURCE";
 
+static const char* pageWithLinkToAppleBytes = R"PSONRESOURCE(
+<a id="apple" href="pson://www.apple.com/main.html">Apple</a>
+)PSONRESOURCE";
+
 TEST(ProcessSwap, NavigateCrossOriginWithOpener)
 {
     auto processPoolConfiguration = psonProcessPoolConfiguration();
@@ -6292,6 +6296,7 @@ TEST(ProcessSwap, NavigateCrossOriginWithOpener)
     [webViewConfiguration setProcessPool:processPool.get()];
     auto handler = adoptNS([[PSONScheme alloc] init]);
     [handler addMappingFromURLString:@"pson://www.webkit.org/main1.html" toData:crossSiteLinkWithOpenerTestBytes];
+    [handler addMappingFromURLString:@"pson://www.webkit.org/main2.html" toData:pageWithLinkToAppleBytes];
     [webViewConfiguration setURLSchemeHandler:handler.get() forURLScheme:@"PSON"];
 
     auto messageHandler = adoptNS([[PSONMessageHandler alloc] init]);
@@ -6345,9 +6350,8 @@ TEST(ProcessSwap, NavigateCrossOriginWithOpener)
     TestWebKitAPI::Util::run(&done);
     done = false;
 
-    // Navigate auxiliary window cross-origin.
-    request = [NSURLRequest requestWithURL:[NSURL URLWithString:@"pson://www.apple.com/main.html"]];
-    [createdWebView loadRequest:request];
+    // Navigate auxiliary window cross-origin via a link click.
+    [createdWebView evaluateJavaScript:@"document.getElementById('apple').click()" completionHandler:^(id, NSError*) { }];
     TestWebKitAPI::Util::run(&done);
     done = false;
 
@@ -6385,9 +6389,8 @@ TEST(ProcessSwap, NavigateCrossOriginWithOpener)
     TestWebKitAPI::Util::run(&done);
     done = false;
 
-    // Navigate openee cross-origin again.
-    request = [NSURLRequest requestWithURL:[NSURL URLWithString:@"pson://www.google.com/main.html"]];
-    [createdWebView loadRequest:request];
+    // Navigate openee cross-origin again via JS.
+    [createdWebView evaluateJavaScript:@"window.location = 'pson://www.google.com/main.html'" completionHandler:^(id, NSError*) { }];
     TestWebKitAPI::Util::run(&done);
     done = false;
 
@@ -6405,6 +6408,118 @@ TEST(ProcessSwap, NavigateCrossOriginWithOpener)
 
     [webView evaluateJavaScript:@"openee.closed ? 'true' : 'false'" completionHandler: [&] (id openeeIsClosed, NSError *error) {
         EXPECT_WK_STREQ(@"false", openeeIsClosed);
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+}
+
+TEST(ProcessSwap, NavigateCrossOriginWithOpenerViaClientInitiatedNavigation)
+{
+    auto processPoolConfiguration = psonProcessPoolConfiguration();
+    auto processPool = adoptNS([[WKProcessPool alloc] _initWithConfiguration:processPoolConfiguration.get()]);
+
+    auto webViewConfiguration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [webViewConfiguration setProcessPool:processPool.get()];
+    auto handler = adoptNS([[PSONScheme alloc] init]);
+    [handler addMappingFromURLString:@"pson://www.webkit.org/main1.html" toData:crossSiteLinkWithOpenerTestBytes];
+    [handler addMappingFromURLString:@"pson://www.webkit.org/main2.html" toData:pageWithLinkToAppleBytes];
+    [webViewConfiguration setURLSchemeHandler:handler.get() forURLScheme:@"PSON"];
+
+    auto messageHandler = adoptNS([[PSONMessageHandler alloc] init]);
+    [[webViewConfiguration userContentController] addScriptMessageHandler:messageHandler.get() name:@"pson"];
+
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:webViewConfiguration.get()]);
+    auto navigationDelegate = adoptNS([[PSONNavigationDelegate alloc] init]);
+    [webView setNavigationDelegate:navigationDelegate.get()];
+    auto uiDelegate = adoptNS([[PSONUIDelegate alloc] initWithNavigationDelegate:navigationDelegate.get()]);
+    [webView setUIDelegate:uiDelegate.get()];
+
+    NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:@"pson://www.webkit.org/main1.html"]];
+
+    [webView loadRequest:request];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+
+    // Opens "pson://www.webkit.org/main2.html" in an auxiliary window.
+    [webView evaluateJavaScript:@"testLink.click()" completionHandler:nil];
+
+    TestWebKitAPI::Util::run(&didCreateWebView);
+    didCreateWebView = false;
+
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+
+    EXPECT_EQ([webView _webProcessIdentifier], [createdWebView _webProcessIdentifier]);
+    auto webkitPID = [webView _webProcessIdentifier];
+
+    EXPECT_WK_STREQ(@"pson://www.webkit.org/main1.html", [[webView URL] absoluteString]);
+    EXPECT_WK_STREQ(@"pson://www.webkit.org/main2.html", [[createdWebView URL] absoluteString]);
+
+    [webView evaluateJavaScript:@"saveOpenee()" completionHandler: [&] (id, NSError *error) {
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+
+    [webView evaluateJavaScript:@"openee.location.href" completionHandler: [&] (id openeeURL, NSError *error) {
+        EXPECT_WK_STREQ(@"pson://www.webkit.org/main2.html", openeeURL);
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+
+    // New window should have an opener.
+    [createdWebView evaluateJavaScript:@"window.opener ? 'true' : 'false'" completionHandler: [&] (id hasOpener, NSError *error) {
+        EXPECT_WK_STREQ(@"true", hasOpener);
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+
+    // Navigate auxiliary window cross-origin via a link click.
+    [createdWebView evaluateJavaScript:@"document.getElementById('apple').click()" completionHandler:^(id, NSError*) { }];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+
+    EXPECT_WK_STREQ(@"pson://www.apple.com/main.html", [[createdWebView URL] absoluteString]);
+
+    // Auxiliary window should still have an opener.
+    [createdWebView evaluateJavaScript:@"window.opener ? 'true' : 'false'" completionHandler: [&] (id hasOpener, NSError *error) {
+        EXPECT_WK_STREQ(@"true", hasOpener);
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+    [createdWebView evaluateJavaScript:@"window.opener.closed ? 'true' : 'false'" completionHandler: [&] (id openerIsClosed, NSError *error) {
+        EXPECT_WK_STREQ(@"false", openerIsClosed);
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+
+    // We should not have process-swapped since the auxiliary window has an opener.
+    EXPECT_EQ(webkitPID, [createdWebView _webProcessIdentifier]);
+
+    // Navigate cross-origin via a client-initiated navigation (like a user typing into address bar). This should sever the opener.
+    [createdWebView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"pson://www.google.com/main.html"]]];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+
+    // Auxiliary window should not have an opener.
+    [createdWebView evaluateJavaScript:@"window.opener ? 'true' : 'false'" completionHandler: [&] (id hasOpener, NSError *error) {
+        EXPECT_WK_STREQ(@"false", hasOpener);
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+
+    EXPECT_WK_STREQ(@"pson://www.google.com/main.html", [[createdWebView URL] absoluteString]);
+    // We should have process-swapped due to the client-initiated navigation.
+    EXPECT_NE(webkitPID, [createdWebView _webProcessIdentifier]);
+
+    [webView evaluateJavaScript:@"openee.closed ? 'true' : 'false'" completionHandler: [&] (id openeeIsClosed, NSError *error) {
+        EXPECT_WK_STREQ(@"true", openeeIsClosed);
         done = true;
     }];
     TestWebKitAPI::Util::run(&done);
@@ -7988,6 +8103,71 @@ static bool isJITEnabled(WKWebView *webView)
     EXPECT_NE([webView _webProcessIdentifier], 0);
     return isJITEnabledResult;
 }
+
+// On iOS, we require the browser entitlement to change the lockdown mode, which TestWebKitAPI doesn't have.
+#if !PLATFORM(IOS_FAMILY)
+
+TEST(ProcessSwap, COEPProcessSwapOnSiteWhereLockdownModeIsDisabled)
+{
+    RetainPtr kvo = adoptNS([LockdownModeKVO new]);
+    didChangeLockdownMode = false;
+
+    using namespace TestWebKitAPI;
+    HTTPServer server({
+        { "/source.html"_s, { "foo"_s } },
+        { "/destination.html"_s, { { { "Content-Type"_s, "text/html"_s }, { "Cross-Origin-Opener-Policy"_s, "same-origin"_s }, { "Cross-Origin-Embedder-Policy"_s, "require-corp"_s } }, "bar"_s } },
+    }, HTTPServer::Protocol::Https);
+
+    RetainPtr processPoolConfiguration = psonProcessPoolConfiguration();
+    RetainPtr processPool = adoptNS([[WKProcessPool alloc] _initWithConfiguration:processPoolConfiguration.get()]);
+
+    RetainPtr webViewConfiguration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [webViewConfiguration.get().defaultWebpagePreferences addObserver:kvo.get() forKeyPath:@"lockdownModeEnabled" options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld context:nil];
+    [webViewConfiguration setProcessPool:processPool.get()];
+    for (_WKFeature *feature in [WKPreferences _features]) {
+        if ([feature.key isEqualToString:@"CrossOriginOpenerPolicyEnabled"])
+            [[webViewConfiguration preferences] _setEnabled:YES forFeature:feature];
+        else if ([feature.key isEqualToString:@"CrossOriginEmbedderPolicyEnabled"])
+            [[webViewConfiguration preferences] _setEnabled:YES forFeature:feature];
+    }
+
+    // Enable lockdown mode globally.
+    [WKProcessPool _setCaptivePortalModeEnabledGloballyForTesting:YES];
+
+    TestWebKitAPI::Util::run(&didChangeLockdownMode);
+
+    RetainPtr webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:webViewConfiguration.get()]);
+    RetainPtr navigationDelegate = adoptNS([TestNavigationDelegate new]);
+    [navigationDelegate allowAnyTLSCertificate];
+    __block bool finishedNavigation = false;
+    navigationDelegate.get().didFinishNavigation = ^(WKWebView *, WKNavigation *) {
+        finishedNavigation = true;
+    };
+    [webView setNavigationDelegate:navigationDelegate.get()];
+
+    [webView loadRequest:server.request("/source.html"_s)];
+
+    TestWebKitAPI::Util::run(&finishedNavigation);
+    finishedNavigation = false;
+
+    EXPECT_FALSE(isJITEnabled(webView.get()));
+
+    // Opt next navigation out of lockdown mode.
+    navigationDelegate.get().decidePolicyForNavigationActionWithPreferences = ^(WKNavigationAction *action, WKWebpagePreferences *preferences, void (^completionHandler)(WKNavigationActionPolicy, WKWebpagePreferences *)) {
+        EXPECT_TRUE(preferences.lockdownModeEnabled);
+        preferences.lockdownModeEnabled = NO;
+        completionHandler(WKNavigationActionPolicyAllow, preferences);
+    };
+
+    [webView loadRequest:server.requestWithLocalhost("/destination.html"_s)];
+
+    TestWebKitAPI::Util::run(&finishedNavigation);
+    finishedNavigation = false;
+
+    EXPECT_TRUE(isJITEnabled(webView.get()));
+}
+
+#endif // !PLATFORM(IOS_FAMILY)
 
 enum class ShouldBeEnabled : bool { No, Yes };
 enum class IsShowingInitialEmptyDocument : bool { No, Yes };

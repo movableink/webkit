@@ -29,6 +29,7 @@
 #include "PasteboardContext.h"
 #include "PasteboardCustomData.h"
 #include "PasteboardItemInfo.h"
+#include "SharedBuffer.h"
 #include <wtf/HashMap.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/Noncopyable.h>
@@ -65,7 +66,6 @@ typedef struct HWND__* HWND;
 
 namespace WebCore {
 
-class SharedBuffer;
 class DocumentFragment;
 class DragData;
 class Element;
@@ -318,6 +318,12 @@ public:
     bool isForCopyAndPaste() const { return !m_isForDragAndDrop; }
     void writeImage(Node&, const URL&, const String& title); // FIXME: Layering violation.
     void updateSystemPasteboard();
+#endif
+
+#if PLATFORM(MAC)
+    WEBCORE_EXPORT static RefPtr<SharedBuffer> bufferConvertedToPasteboardType(const PasteboardBuffer&, const String& pasteboardType);
+#else
+    static RefPtr<SharedBuffer> bufferConvertedToPasteboardType(const PasteboardBuffer& pasteboardBuffer, const String&) { return pasteboardBuffer.data; };
 #endif
 
 #if PLATFORM(WIN)

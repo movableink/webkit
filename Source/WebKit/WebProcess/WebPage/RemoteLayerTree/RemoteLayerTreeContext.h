@@ -92,6 +92,10 @@ public:
     bool useDynamicContentScalingDisplayListsForDOMRendering() const { return m_useDynamicContentScalingDisplayListsForDOMRendering; }
     void setUseDynamicContentScalingDisplayListsForDOMRendering(bool useDynamicContentScalingDisplayLists) { m_useDynamicContentScalingDisplayListsForDOMRendering = useDynamicContentScalingDisplayLists; }
 
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+    WebCore::DynamicContentScalingResourceCache ensureDynamicContentScalingResourceCache();
+#endif
+
     void gpuProcessConnectionWasDestroyed();
 
 #if PLATFORM(IOS_FAMILY)
@@ -109,19 +113,23 @@ private:
     HashMap<WebCore::PlatformLayerIdentifier, RemoteLayerTreeTransaction::LayerCreationProperties> m_createdLayers;
     Vector<WebCore::PlatformLayerIdentifier> m_destroyedLayers;
 
-    HashMap<WebCore::PlatformLayerIdentifier, CheckedPtr<PlatformCALayerRemote>> m_livePlatformLayers;
-    HashMap<WebCore::PlatformLayerIdentifier, CheckedPtr<PlatformCALayerRemote>> m_layersWithAnimations;
+    HashMap<WebCore::PlatformLayerIdentifier, WeakPtr<PlatformCALayerRemote>> m_livePlatformLayers;
+    HashMap<WebCore::PlatformLayerIdentifier, WeakPtr<PlatformCALayerRemote>> m_layersWithAnimations;
 #if HAVE(AVKIT)
     HashMap<WebCore::PlatformLayerIdentifier, PlaybackSessionContextIdentifier> m_videoLayers;
 #endif
 
-    HashSet<CheckedPtr<GraphicsLayerCARemote>> m_liveGraphicsLayers;
+    HashSet<WeakRef<GraphicsLayerCARemote>> m_liveGraphicsLayers;
 
     std::unique_ptr<RemoteLayerBackingStoreCollection> m_backingStoreCollection;
 
     WebCore::LayerPool m_layerPool;
 
     RemoteLayerTreeTransaction* m_currentTransaction { nullptr };
+
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+    WebCore::DynamicContentScalingResourceCache m_dynamicContentScalingResourceCache;
+#endif
 
     bool m_nextRenderingUpdateRequiresSynchronousImageDecoding { false };
     bool m_useDynamicContentScalingDisplayListsForDOMRendering { false };

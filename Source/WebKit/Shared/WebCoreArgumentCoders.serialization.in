@@ -1870,6 +1870,7 @@ header: <WebCore/ResourceRequest.h>
     [BitField] bool m_privacyProxyFailClosedForUnreachableNonMainHosts;
     [BitField] bool m_useAdvancedPrivacyProtections;
     [BitField] bool m_didFilterLinkDecoration;
+    [BitField] bool m_isPrivateTokenUsageByThirdPartyAllowed;
 };
 
 #if USE(SOUP)
@@ -2681,13 +2682,9 @@ class WebCore::TransformOperations {
     WebCore::Pattern::Parameters parameters();
 }
 
-[Nested, AdditionalEncoder=StreamConnectionEncoder] class WebCore::SourceBrush::Brush {
-    std::variant<WebCore::SourceBrush::Brush::LogicalGradient, Ref<WebCore::Pattern>> brush;
-}
-
 [AdditionalEncoder=StreamConnectionEncoder] class WebCore::SourceBrush {
     WebCore::Color color();
-    std::optional<WebCore::SourceBrush::Brush> brush();
+    WebCore::SourceBrush::OptionalPatternGradient patternGradient();
 }
 
 header: <WebCore/ThreadSafeDataBuffer.h>
@@ -5007,9 +5004,9 @@ class WebCore::RealtimeMediaSourceSettings {
     uint32_t sampleRate();
     uint32_t sampleSize();
     bool echoCancellation();
-    AtomString deviceId();
+    String deviceId();
     String groupId();
-    AtomString label();
+    String label();
     WebCore::DisplaySurfaceType displaySurface();
     bool logicalSurface();
     WebCore::MeteringMode whiteBalanceMode();
@@ -5072,8 +5069,8 @@ class WebCore::RealtimeMediaSourceCapabilities {
     WebCore::CapabilityRange sampleRate();
     WebCore::CapabilityRange sampleSize();
     WebCore::RealtimeMediaSourceCapabilities::EchoCancellation echoCancellation();
-    AtomString deviceId();
-    AtomString groupId();
+    String deviceId();
+    String groupId();
     WebCore::CapabilityRange focusDistance();
     Vector<WebCore::MeteringMode> whiteBalanceModes();
     WebCore::CapabilityRange zoom();
@@ -5583,8 +5580,9 @@ struct WebCore::InteractionRegion {
     WebCore::InteractionRegion::Type type;
     WebCore::ElementIdentifier elementIdentifier;
     WebCore::FloatRect rectInLayerCoordinates;
-    float borderRadius;
+    float cornerRadius;
     OptionSet<WebCore::InteractionRegion::CornerMask> maskedCorners;
+    std::optional<WebCore::Path> clipPath;
 };
 
 [Nested, AdditionalEncoder=StreamConnectionEncoder] struct WebCore::Region::Span {
@@ -6560,11 +6558,11 @@ header: <WebCore/GraphicsContextState.h>
 };
 
 [LegacyPopulateFromEmptyConstructor, AdditionalEncoder=StreamConnectionEncoder] class WebCore::GraphicsContextState {
-    OptionSet<WebCore::GraphicsContextState::Change> m_changeFlags;
     WebCore::SourceBrush m_fillBrush;
-    WebCore::WindRule m_fillRule;
     WebCore::SourceBrush m_strokeBrush;
+    OptionSet<WebCore::GraphicsContextState::Change> m_changeFlags;
     float m_strokeThickness;
+    WebCore::WindRule m_fillRule;
     WebCore::StrokeStyle m_strokeStyle;
     WebCore::CompositeMode m_compositeMode;
     std::optional<WebCore::GraphicsDropShadow> m_dropShadow;
@@ -6913,7 +6911,7 @@ header: <WebCore/WebCodecsEncodedAudioChunk.h>
 };
 #endif
 
-headers: <JavaScriptCore/WasmModule.h> <WebCore/ImageBitmapBacking.h> <WebCore/MessagePort.h> <WebCore/OffscreenCanvas.h>
+headers: <JavaScriptCore/WasmModule.h> <WebCore/ImageBitmap.h> <WebCore/MessagePort.h> <WebCore/OffscreenCanvas.h>
 [Nested] class WebCore::SerializedScriptValue::Internals {
     Vector<uint8_t> data;
     std::unique_ptr<Vector<JSC::ArrayBufferContents>> arrayBufferContentsArray;
@@ -6926,8 +6924,11 @@ headers: <JavaScriptCore/WasmModule.h> <WebCore/ImageBitmapBacking.h> <WebCore/M
     [NotSerialized] Vector<WebCore::WebCodecsVideoFrameData> serializedVideoFrames;
     [NotSerialized] Vector<WebCore::WebCodecsAudioInternalData> serializedAudioData;
 #endif
+#if ENABLE(MEDIA_STREAM)
+    [NotSerialized] Vector<std::unique_ptr<WebCore::MediaStreamTrackDataHolder>> serializedMediaStreamTracks;
+#endif
     [NotSerialized] std::unique_ptr<Vector<JSC::ArrayBufferContents>> sharedBufferContentsArray;
-    [NotSerialized] Vector<std::optional<WebCore::ImageBitmapBacking>> backingStores;
+    [NotSerialized] Vector<std::optional<WebCore::DetachedImageBitmap>> detachedImageBitmaps;
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
     [NotSerialized] Vector<std::unique_ptr<WebCore::DetachedOffscreenCanvas>> detachedOffscreenCanvases;
     [NotSerialized] Vector<RefPtr<WebCore::OffscreenCanvas>> inMemoryOffscreenCanvases;
@@ -7211,4 +7212,234 @@ enum class WebCore::ContextMenuItemType : uint8_t {
     CheckableAction,
     Separator,
     Submenu,
+};
+
+#if PLATFORM(COCOA)
+header: <WebCore/TextAttachmentForSerialization.h>
+[CustomHeader] struct WebCore::TextAttachmentMissingImage {
+}
+
+[CustomHeader] struct WebCore::TextAttachmentFileWrapper {
+#if !PLATFORM(IOS_FAMILY)
+    bool ignoresOrientation;
+#endif
+    String preferredFilename;
+    RetainPtr<CFDataRef> data;
+    String accessibilityLabel;
+}
+#endif
+
+[Nested] enum class WebCore::PopupMenuStyle::Size : uint8_t {
+    Normal,
+    Small,
+    Mini,
+    Large,
+};
+
+header: <WebCore/PredefinedColorSpace.h>
+enum class WebCore::PredefinedColorSpace : uint8_t {
+    SRGB
+#if ENABLE(PREDEFINED_COLOR_SPACE_DISPLAY_P3)
+    , DisplayP3
+#endif
+};
+
+header: <WebCore/TransformOperation.h>
+enum class WebCore::TransformOperationType : uint8_t {
+    ScaleX,
+    ScaleY,
+    Scale,
+    TranslateX,
+    TranslateY,
+    Translate,
+    RotateX,
+    RotateY,
+    Rotate,
+    SkewX,
+    SkewY,
+    Skew,
+    Matrix,
+    ScaleZ,
+    Scale3D,
+    TranslateZ,
+    Translate3D,
+    RotateZ,
+    Rotate3D,
+    Matrix3D,
+    Perspective,
+    Identity,
+    None
+};
+
+enum class WebCore::GraphicsContextGLSurfaceBuffer : bool;
+
+[Nested] enum class WebCore::GraphicsLayer::CustomAppearance : bool;
+
+[OptionSet] enum class GCGLErrorCode : uint8_t {
+    ContextLost,
+    InvalidFramebufferOperation,
+    OutOfMemory,
+    InvalidOperation,
+    InvalidValue,
+    InvalidEnum
+};
+
+#if ENABLE(IMAGE_ANALYSIS) && ENABLE(DATA_DETECTION)
+header: <WebCore/TextRecognitionResult.h>
+[CustomHeader] struct WebCore::TextRecognitionDataDetector {
+    RetainPtr<DDScannerResult> result;
+    Vector<WebCore::FloatQuad> normalizedQuads;
+};
+#endif // ENABLE(IMAGE_ANALYSIS) && ENABLE(DATA_DETECTION)
+
+#if ENABLE(VIDEO)
+
+header: <WebCore/AudioTrackPrivate.h>
+[Nested] enum class WebCore::AudioTrackPrivate::Kind : uint8_t {
+    Alternative,
+    Description,
+    Main,
+    MainDesc,
+    Translation,
+    Commentary,
+    None
+};
+
+header: <WebCore/VideoTrackPrivate.h>
+[Nested] enum class WebCore::VideoTrackPrivate::Kind : uint8_t {
+    Alternative,
+    Captions,
+    Main,
+    Sign,
+    Subtitles,
+    Commentary,
+    None
+};
+
+#endif
+header: <WebCore/FEComposite.h>
+enum class WebCore::CompositeOperationType : uint8_t {
+    FECOMPOSITE_OPERATOR_UNKNOWN,
+    FECOMPOSITE_OPERATOR_OVER,
+    FECOMPOSITE_OPERATOR_IN,
+    FECOMPOSITE_OPERATOR_OUT,
+    FECOMPOSITE_OPERATOR_ATOP,
+    FECOMPOSITE_OPERATOR_XOR,
+    FECOMPOSITE_OPERATOR_ARITHMETIC,
+    FECOMPOSITE_OPERATOR_LIGHTER
+};
+
+header: <WebCore/FEColorMatrix.h>
+enum class WebCore::ColorMatrixType : uint8_t {
+    FECOLORMATRIX_TYPE_UNKNOWN,
+    FECOLORMATRIX_TYPE_MATRIX,
+    FECOLORMATRIX_TYPE_SATURATE,
+    FECOLORMATRIX_TYPE_HUEROTATE,
+    FECOLORMATRIX_TYPE_LUMINANCETOALPHA
+};
+
+header: <WebCore/FETurbulence.h>
+enum class WebCore::TurbulenceType : uint8_t {
+    Unknown,
+    FractalNoise,
+    Turbulence
+};
+
+header: <WebCore/FilterRenderingMode.h>
+[OptionSet] enum class WebCore::FilterRenderingMode : uint8_t {
+    Software,
+    Accelerated,
+    GraphicsContext
+};
+
+header: <WebCore/LightSource.h>
+enum class WebCore::LightType : uint8_t {
+    LS_DISTANT,
+    LS_POINT,
+    LS_SPOT
+};
+
+header: <WebCore/FEComponentTransfer.h>
+enum class WebCore::ComponentTransferType : uint8_t {
+    FECOMPONENTTRANSFER_TYPE_UNKNOWN,
+    FECOMPONENTTRANSFER_TYPE_IDENTITY,
+    FECOMPONENTTRANSFER_TYPE_TABLE,
+    FECOMPONENTTRANSFER_TYPE_DISCRETE,
+    FECOMPONENTTRANSFER_TYPE_LINEAR,
+    FECOMPONENTTRANSFER_TYPE_GAMMA
+};
+
+enum class WebCore::ComponentTransferChannel : uint8_t {
+    Red,
+    Green,
+    Blue,
+    Alpha
+};
+
+header: <WebCore/FEMorphology.h>
+enum class WebCore::MorphologyOperatorType : uint8_t {
+    Unknown,
+    Erode,
+    Dilate
+};
+
+header: <WebCore/FEDisplacementMap.h>
+enum class WebCore::ChannelSelectorType : uint8_t {
+    CHANNEL_UNKNOWN,
+    CHANNEL_R,
+    CHANNEL_G,
+    CHANNEL_B,
+    CHANNEL_A
+};
+
+header: <WebCore/FEConvolveMatrix.h>
+enum class WebCore::EdgeModeType : uint8_t {
+    Unknown,
+    Duplicate,
+    Wrap,
+    None
+};
+
+header: <WebCore/FilterOperation.h>
+[Nested] enum class WebCore::FilterOperation::Type : uint8_t {
+    Reference,
+    Grayscale,
+    Sepia,
+    Saturate,
+    HueRotate,
+    Invert,
+    AppleInvertLightness,
+    Opacity,
+    Brightness,
+    Contrast,
+    Blur,
+    DropShadow,
+    Passthrough,
+    Default,
+    None
+};
+
+header: <WebCore/FilterFunction.h>
+[Nested] enum class WebCore::FilterFunction::Type : uint8_t {
+    CSSFilter,
+    SVGFilter,
+    FEBlend,
+    FEColorMatrix,
+    FEComponentTransfer,
+    FEComposite,
+    FEConvolveMatrix,
+    FEDiffuseLighting,
+    FEDisplacementMap,
+    FEDropShadow,
+    FEFlood,
+    FEGaussianBlur,
+    FEImage,
+    FEMerge,
+    FEMorphology,
+    FEOffset,
+    FESpecularLighting,
+    FETile,
+    FETurbulence,
+    SourceAlpha,
+    SourceGraphic
 };

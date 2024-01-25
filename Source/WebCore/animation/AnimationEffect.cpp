@@ -59,8 +59,8 @@ void AnimationEffect::setAnimation(WebAnimation* animation)
 
 EffectTiming AnimationEffect::getBindingsTiming() const
 {
-    if (auto* declarativeAnimation = dynamicDowncast<DeclarativeAnimation>(animation()))
-        declarativeAnimation->flushPendingStyleChanges();
+    if (auto* styleOriginatedAnimation = dynamicDowncast<StyleOriginatedAnimation>(animation()))
+        styleOriginatedAnimation->flushPendingStyleChanges();
 
     EffectTiming timing;
     timing.delay = secondsToWebAnimationsAPITime(m_timing.delay);
@@ -102,8 +102,8 @@ BasicEffectTiming AnimationEffect::getBasicTiming(std::optional<Seconds> startTi
 
 ComputedEffectTiming AnimationEffect::getBindingsComputedTiming() const
 {
-    if (auto* declarativeAnimation = dynamicDowncast<DeclarativeAnimation>(animation()))
-        declarativeAnimation->flushPendingStyleChanges();
+    if (auto* styleOriginatedAnimation = dynamicDowncast<StyleOriginatedAnimation>(animation()))
+        styleOriginatedAnimation->flushPendingStyleChanges();
     return getComputedTiming();
 }
 
@@ -135,8 +135,10 @@ ComputedEffectTiming AnimationEffect::getComputedTiming(std::optional<Seconds> s
 ExceptionOr<void> AnimationEffect::bindingsUpdateTiming(std::optional<OptionalEffectTiming> timing)
 {
     auto retVal = updateTiming(timing);
-    if (!retVal.hasException() && timing && is<CSSAnimation>(animation()))
-        downcast<CSSAnimation>(*animation()).effectTimingWasUpdatedUsingBindings(*timing);
+    if (!retVal.hasException() && timing) {
+        if (auto* cssAnimation = dynamicDowncast<CSSAnimation>(animation()))
+            cssAnimation->effectTimingWasUpdatedUsingBindings(*timing);
+    }
     return retVal;
 }
 
@@ -306,10 +308,11 @@ void AnimationEffect::setTimingFunction(const RefPtr<TimingFunction>& timingFunc
 
 std::optional<double> AnimationEffect::progressUntilNextStep(double iterationProgress) const
 {
-    if (!is<StepsTimingFunction>(m_timing.timingFunction))
+    RefPtr stepsTimingFunction = dynamicDowncast<StepsTimingFunction>(m_timing.timingFunction);
+    if (!stepsTimingFunction)
         return std::nullopt;
 
-    auto numberOfSteps = downcast<StepsTimingFunction>(*m_timing.timingFunction).numberOfSteps();
+    auto numberOfSteps = stepsTimingFunction->numberOfSteps();
     auto nextStepProgress = ceil(iterationProgress * numberOfSteps) / numberOfSteps;
     return nextStepProgress - iterationProgress;
 }

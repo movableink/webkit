@@ -49,6 +49,10 @@ private:
         AST::Attribute::List attributes;
     };
 
+    struct BuiltinMemberOrParameter : MemberOrParameter {
+        Builtin builtin;
+    };
+
     enum class IsBuiltin {
         No = 0,
         Yes = 1,
@@ -57,7 +61,7 @@ private:
     void collectParameters();
     void checkReturnType();
     void constructInputStruct();
-    void materialize(Vector<String>& path, MemberOrParameter&, IsBuiltin);
+    void materialize(Vector<String>& path, MemberOrParameter&, IsBuiltin, const String* builtinName = nullptr);
     void visit(Vector<String>& path, MemberOrParameter&&);
     void appendBuiltins();
 
@@ -65,13 +69,14 @@ private:
     ShaderModule& m_shaderModule;
     const AST::Function& m_function;
 
-    Vector<MemberOrParameter> m_builtins;
+    Vector<BuiltinMemberOrParameter> m_builtins;
     Vector<MemberOrParameter> m_parameters;
     AST::Statement::List m_materializations;
     const Type* m_structType;
     String m_structTypeName;
     String m_structParameterName;
     Reflection::EntryPointInformation& m_information;
+    unsigned m_builtinID { 0 };
 };
 
 EntryPointRewriter::EntryPointRewriter(ShaderModule& shaderModule, const AST::Function& function, ShaderStage stage, Reflection::EntryPointInformation& information)
@@ -246,11 +251,11 @@ void EntryPointRewriter::constructInputStruct()
     m_structType = m_shaderModule.types().structType(structure);
 }
 
-void EntryPointRewriter::materialize(Vector<String>& path, MemberOrParameter& data, IsBuiltin isBuiltin)
+void EntryPointRewriter::materialize(Vector<String>& path, MemberOrParameter& data, IsBuiltin isBuiltin, const String* builtinName)
 {
     AST::Expression::Ptr rhs;
     if (isBuiltin == IsBuiltin::Yes)
-        rhs = &m_shaderModule.astBuilder().construct<AST::IdentifierExpression>(SourceSpan::empty(), AST::Identifier::make(data.name));
+        rhs = &m_shaderModule.astBuilder().construct<AST::IdentifierExpression>(SourceSpan::empty(), AST::Identifier::make(*builtinName));
     else {
         rhs = &m_shaderModule.astBuilder().construct<AST::FieldAccessExpression>(
             SourceSpan::empty(),
@@ -315,22 +320,35 @@ void EntryPointRewriter::visit(Vector<String>& path, MemberOrParameter&& data)
         return;
     }
 
-    bool isBuiltin = false;
+    std::optional<Builtin> builtin;
     for (auto& attribute : data.attributes) {
         if (is<AST::BuiltinAttribute>(attribute)) {
-            isBuiltin = true;
+            builtin = downcast<AST::BuiltinAttribute>(attribute).builtin();
             break;
         }
     }
 
-    if (isBuiltin) {
-        // if path is empty, then it was already a parameter and there's nothing to do
-        if (!path.isEmpty())
-            materialize(path, data, IsBuiltin::Yes);
+    if (builtin.has_value()) {
+        if (!path.isEmpty()) {
+            // builtin was hoisted from a struct into a parameter, we need to reconstruct the struct
+            // ${path}.${data.name} = __builtin${builtinID}
+            // Note that we don't use ${data.name} on the right-hand side because it's the name of a
+            // struct field, and it might not be unique.
+            auto builtinName = makeString("__builtin", String::number(m_builtinID++));
+            materialize(path, data, IsBuiltin::Yes, &builtinName);
+            m_builtins.append({
+                {
+                    AST::Identifier::make(builtinName),
+                    data.type,
+                    data.attributes
+                },
+                *builtin
+            });
+            return;
+        }
 
-        // builtin was hoisted from a struct into a parameter, we need to reconstruct the struct
-        // ${path}.${data.name} = ${data.name}
-        m_builtins.append(WTFMove(data));
+        // if path is empty, then it was already a parameter and there's nothing to do
+        m_builtins.append({ data, *builtin });
         return;
     }
 
@@ -343,13 +361,15 @@ void EntryPointRewriter::visit(Vector<String>& path, MemberOrParameter&& data)
 void EntryPointRewriter::appendBuiltins()
 {
     for (auto& data : m_builtins) {
-        m_shaderModule.append(m_function.parameters(), m_shaderModule.astBuilder().construct<AST::Parameter>(
+        auto& parameter = m_shaderModule.astBuilder().construct<AST::Parameter>(
             SourceSpan::empty(),
             AST::Identifier::make(data.name),
             data.type,
             WTFMove(data.attributes),
             AST::ParameterRole::UserDefined
-        ));
+        );
+        parameter.m_builtin = data.builtin;
+        m_shaderModule.append(m_function.parameters(), parameter);
     }
 }
 

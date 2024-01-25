@@ -40,7 +40,6 @@
 #include <WebKit/WKBundleBackForwardList.h>
 #include <WebKit/WKBundleFrame.h>
 #include <WebKit/WKBundleFramePrivate.h>
-#include <WebKit/WKBundleInspector.h>
 #include <WebKit/WKBundleNodeHandlePrivate.h>
 #include <WebKit/WKBundlePage.h>
 #include <WebKit/WKBundlePagePrivate.h>
@@ -258,7 +257,7 @@ void TestRunner::notifyDone()
         return;
 
     if (shouldWaitUntilDone() && !injectedBundle.topLoadingFrame())
-        injectedBundle.page()->dump();
+        injectedBundle.page()->dump(m_forceRepaint);
 
     // We don't call invalidateWaitToDumpWatchdogTimer() here, even if we continue to wait for a load to finish.
     // The test is still subject to timeout checking - it is better to detect an async timeout inside WebKitTestRunner
@@ -274,7 +273,7 @@ void TestRunner::forceImmediateCompletion()
         return;
 
     if (shouldWaitUntilDone() && injectedBundle.page())
-        injectedBundle.page()->dump();
+        injectedBundle.page()->dump(m_forceRepaint);
 
     setWaitUntilDone(false);
 }
@@ -541,17 +540,17 @@ void TestRunner::makeWindowObject(JSContextRef context)
 
 void TestRunner::showWebInspector()
 {
-    WKBundleInspectorShow(WKBundlePageGetInspector(page()));
+    WKBundlePageShowInspectorForTest(page());
 }
 
 void TestRunner::closeWebInspector()
 {
-    WKBundleInspectorClose(WKBundlePageGetInspector(page()));
+    WKBundlePageCloseInspectorForTest(page());
 }
 
 void TestRunner::evaluateInWebInspector(JSStringRef script)
 {
-    WKBundleInspectorEvaluateScriptForTest(WKBundlePageGetInspector(page()), toWK(script).get());
+    WKBundlePageEvaluateScriptInInspectorForTest(page(), toWK(script).get());
 }
 
 using WorldMap = WTF::HashMap<unsigned, WKRetainPtr<WKBundleScriptWorldRef>>;

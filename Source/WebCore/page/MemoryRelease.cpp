@@ -35,6 +35,7 @@
 #include "CommonVM.h"
 #include "CookieJar.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "FontCache.h"
 #include "GCController.h"
 #include "HRTFElevation.h"
@@ -55,6 +56,7 @@
 #include "ScrollingThread.h"
 #include "SelectorQuery.h"
 #include "StyleScope.h"
+#include "StyleSheetContentsCache.h"
 #include "StyledElement.h"
 #include "TextPainter.h"
 #include "WorkerGlobalScope.h"
@@ -88,7 +90,7 @@ static void releaseNoncriticalMemory(MaintainMemoryCache maintainMemoryCache)
     if (maintainMemoryCache == MaintainMemoryCache::No)
         MemoryCache::singleton().pruneDeadResourcesToSize(0);
 
-    InlineStyleSheetOwner::clearCache();
+    Style::StyleSheetContentsCache::singleton().clear();
     HTMLNameCache::clear();
     ImmutableStyleProperties::clearDeduplicationMap();
     SVGPathElement::clearCache();
@@ -121,8 +123,10 @@ static void releaseCriticalMemory(Synchronous synchronous, MaintainBackForwardCa
         return document.get();
     });
     for (auto& document : protectedDocuments) {
+        document->clearQuerySelectorAllResults();
         document->styleScope().releaseMemory();
-        document->fontSelector().emptyCaches();
+        if (RefPtr fontSelector = document->fontSelectorIfExists())
+            fontSelector->emptyCaches();
         document->cachedResourceLoader().garbageCollectDocumentResources();
     }
 

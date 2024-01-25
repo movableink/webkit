@@ -41,7 +41,8 @@ namespace WebGPU {
 enum class ShaderStage {
     Vertex = 0,
     Fragment = 1,
-    Compute = 2
+    Compute = 2,
+    Undefined = 3
 };
 
 class Device;
@@ -63,6 +64,7 @@ public:
         std::optional<uint32_t> vertexDynamicOffset;
         std::optional<uint32_t> fragmentDynamicOffset;
         std::optional<uint32_t> computeDynamicOffset;
+        uint32_t dynamicOffsetsIndex;
     };
     using EntriesContainer = HashMap<uint32_t, Entry, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>;
 
@@ -111,6 +113,7 @@ public:
     static bool isPresent(const WGPUStorageTextureBindingLayout&);
 
     const EntriesContainer& entries() const { return m_bindGroupLayoutEntries; }
+    const Vector<const Entry*> sortedEntries() const;
     uint32_t sizeOfVertexDynamicOffsets() const;
     uint32_t sizeOfFragmentDynamicOffsets() const;
     uint32_t sizeOfComputeDynamicOffsets() const;
@@ -136,6 +139,7 @@ private:
     const id<MTLArgumentEncoder> m_computeArgumentEncoder { nil };
 
     const EntriesContainer m_bindGroupLayoutEntries;
+    Vector<const Entry*> m_sortedEntries;
     const bool m_valid { true };
     const size_t m_sizeOfVertexDynamicOffsets { 0 };
     const size_t m_sizeOfFragmentDynamicOffsets { 0 };

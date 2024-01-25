@@ -29,6 +29,7 @@
 #if PLATFORM(IOS_FAMILY)
 
 #import "ColorCocoa.h"
+#import "CommonAtomStrings.h"
 #import "Image.h"
 #import "NSURLUtilities.h"
 #import "Pasteboard.h"
@@ -40,6 +41,7 @@
 #import <UIKit/UIColor.h>
 #import <UIKit/UIImage.h>
 #import <UIKit/UIPasteboard.h>
+#import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #import <pal/spi/ios/UIKitSPI.h>
 #import <wtf/ListHashSet.h>
 #import <wtf/URL.h>
@@ -79,9 +81,12 @@ void PlatformPasteboard::getTypes(Vector<String>& types) const
     types = makeVector<String>([m_pasteboard pasteboardTypes]);
 }
 
-RefPtr<SharedBuffer> PlatformPasteboard::bufferForType(const String& type) const
+PasteboardBuffer PlatformPasteboard::bufferForType(const String& type) const
 {
-    return readBuffer(0, type);
+    PasteboardBuffer pasteboardBuffer;
+    pasteboardBuffer.data = readBuffer(0, type);
+    pasteboardBuffer.type = type;
+    return pasteboardBuffer;
 }
 
 void PlatformPasteboard::performAsDataOwner(DataOwnerType type, Function<void()>&& actions)
@@ -354,10 +359,10 @@ int64_t PlatformPasteboard::changeCount() const
 String PlatformPasteboard::platformPasteboardTypeForSafeTypeForDOMToReadAndWrite(const String& domType, IncludeImageTypes includeImageTypes)
 {
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    if (domType == "text/plain"_s)
+    if (domType == textPlainContentTypeAtom())
         return kUTTypePlainText;
 
-    if (domType == "text/html"_s)
+    if (domType == textHTMLContentTypeAtom())
         return kUTTypeHTML;
 
     if (domType == "text/uri-list"_s)
@@ -465,15 +470,10 @@ void PlatformPasteboard::write(const PasteboardWebContent& content)
 
     if (content.dataInWebArchiveFormat) {
         auto webArchiveData = content.dataInWebArchiveFormat->createNSData();
-#if PLATFORM(MACCATALYST)
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        NSString *webArchiveType = (__bridge NSString *)kUTTypeWebArchive;
-ALLOW_DEPRECATED_DECLARATIONS_END
-#else
-        // FIXME: We should additionally register "com.apple.webarchive" once <rdar://problem/46830277> is fixed.
-        NSString *webArchiveType = WebArchivePboardType;
+#if !PLATFORM(MACCATALYST)
+        [representationsToRegister addData:webArchiveData.get() forType:WebArchivePboardType];
 #endif
-        [representationsToRegister addData:webArchiveData.get() forType:webArchiveType];
+        [representationsToRegister addData:webArchiveData.get() forType:UTTypeWebArchive.identifier];
     }
 
     if (content.dataInAttributedStringFormat) {

@@ -58,7 +58,9 @@ struct WebKit::WebHitTestResultData {
     std::optional<WebKit::SharedMemoryHandle> getImageSharedMemoryHandle();
     RefPtr<WebKit::ShareableBitmap> imageBitmap;
     String sourceImageMIMEType;
-    
+    String linkLocalDataMIMEType;
+    bool hasLocalDataForLinkURL;
+
 #if PLATFORM(MAC)
     WebKit::WebHitTestResultPlatformData platformData;
 #endif

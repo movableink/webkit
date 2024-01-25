@@ -44,6 +44,7 @@
 #include "CachedResourceLoader.h"
 #include "CompositeOperation.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "ElementRuleCollector.h"
 #include "FrameSelection.h"
 #include "InspectorInstrumentation.h"
@@ -64,7 +65,6 @@
 #include "SVGElement.h"
 #include "SVGFontFaceElement.h"
 #include "Settings.h"
-#include "ShadowPseudoIds.h"
 #include "ShadowRoot.h"
 #include "SharedStringHash.h"
 #include "StyleAdjuster.h"
@@ -75,6 +75,7 @@
 #include "StyleResolveForDocument.h"
 #include "StyleRule.h"
 #include "StyleSheetContents.h"
+#include "UserAgentParts.h"
 #include "UserAgentStyle.h"
 #include "VisitedLinkState.h"
 #include "WebAnimationTypes.h"
@@ -255,7 +256,7 @@ ResolvedStyle Resolver::styleForElement(const Element& element, const Resolution
         style.setIsLink(true);
         InsideLink linkState = document().visitedLinkState().determineLinkState(element);
         if (linkState != InsideLink::NotInside) {
-            bool forceVisited = InspectorInstrumentation::forcePseudoState(element, CSSSelector::PseudoClassType::Visited);
+            bool forceVisited = InspectorInstrumentation::forcePseudoState(element, CSSSelector::PseudoClass::Visited);
             if (forceVisited)
                 linkState = InsideLink::InsideVisited;
         }
@@ -306,8 +307,8 @@ std::unique_ptr<RenderStyle> Resolver::styleForKeyframe(const Element& element, 
         if (auto* value = propertyReference.value()) {
             auto resolvedProperty = CSSProperty::resolveDirectionAwareProperty(unresolvedProperty, elementStyle.direction(), elementStyle.writingMode());
             if (resolvedProperty != CSSPropertyAnimationTimingFunction && resolvedProperty != CSSPropertyAnimationComposition) {
-                if (value->isCustomPropertyValue())
-                    blendingKeyframe.addProperty(downcast<CSSCustomPropertyValue>(*value).name());
+                if (auto customValue = dynamicDowncast<CSSCustomPropertyValue>(*value))
+                    blendingKeyframe.addProperty(customValue->name());
                 else
                     blendingKeyframe.addProperty(resolvedProperty);
             }
@@ -322,7 +323,7 @@ std::unique_ptr<RenderStyle> Resolver::styleForKeyframe(const Element& element, 
     state.setParentStyle(RenderStyle::clonePtr(context.parentStyle ? *context.parentStyle : elementStyle));
 
     ElementRuleCollector collector(element, m_ruleSets, context.selectorMatchingState);
-    collector.setPseudoElementRequest({ elementStyle.styleType() });
+    collector.setPseudoElementRequest({ elementStyle.pseudoElementType() });
     if (hasRevert) {
         // In the animation origin, 'revert' rolls back the cascaded value to the user level.
         // Therefore, we need to collect UA and user rules.
@@ -483,7 +484,9 @@ std::optional<ResolvedStyle> Resolver::styleForPseudoElement(const Element& elem
     if (collector.matchResult().isEmpty())
         return { };
 
-    state.style()->setStyleType(pseudoElementRequest.pseudoId);
+    state.style()->setPseudoElementType(pseudoElementRequest.pseudoId);
+    if (!pseudoElementRequest.nameIdentifier.isNull())
+        state.style()->setFunctionalPseudoElementArgument(pseudoElementRequest.nameIdentifier);
 
     applyMatchedProperties(state, collector.matchResult());
 
@@ -582,7 +585,7 @@ static bool elementTypeHasAppearanceFromUAStyle(const Element& element)
         || localName == HTMLNames::progressTag
         || localName == HTMLNames::selectTag
         || localName == HTMLNames::meterTag
-        || (element.isInUserAgentShadowTree() && element.shadowPseudoId() == ShadowPseudoIds::webkitListButton());
+        || (element.isInUserAgentShadowTree() && element.userAgentPart() == UserAgentParts::webkitListButton());
 }
 
 void Resolver::invalidateMatchedDeclarationsCache()
@@ -597,15 +600,17 @@ void Resolver::clearCachedDeclarationsAffectedByViewportUnits()
 
 void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResult)
 {
-    unsigned cacheHash = MatchedDeclarationsCache::computeHash(matchResult);
-    auto includedProperties = PropertyCascade::allProperties();
-
     auto& style = *state.style();
     auto& parentStyle = *state.parentStyle();
     auto& element = *state.element();
 
-    auto* cacheEntry = m_matchedDeclarationsCache.find(cacheHash, matchResult);
-    if (cacheEntry && MatchedDeclarationsCache::isCacheable(element, style, parentStyle)) {
+    unsigned cacheHash = MatchedDeclarationsCache::computeHash(matchResult, parentStyle.inheritedCustomProperties());
+    auto includedProperties = PropertyCascade::allProperties();
+
+    auto* cacheEntry = m_matchedDeclarationsCache.find(cacheHash, matchResult, parentStyle.inheritedCustomProperties());
+
+    auto hasUsableEntry = cacheEntry && MatchedDeclarationsCache::isCacheable(element, style, parentStyle);
+    if (hasUsableEntry) {
         // We can build up the style by copying non-inherited properties from an earlier style object built using the same exact
         // style declarations. We then only need to apply the inherited properties, if any, as their values can depend on the 
         // element context. This is fast and saves memory by reusing the style data structures.
@@ -633,8 +638,6 @@ void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResu
             includedProperties.add(PropertyCascade::PropertyType::Inherited);
         if (hasExplicitlyInherited)
             includedProperties.add(PropertyCascade::PropertyType::ExplicitlyInherited);
-        if (!inheritedStyleEqual && !parentStyle.inheritedCustomPropertiesEqual(*cacheEntry->parentRenderStyle))
-            includedProperties.add(PropertyCascade::PropertyType::VariableReference);
     }
 
     if (elementTypeHasAppearanceFromUAStyle(element)) {

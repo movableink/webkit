@@ -32,6 +32,7 @@
 
 #include "CSSFontSelector.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "FontCascade.h"
 #include "RenderStyleInlines.h"
 #include "StyleResolver.h"
@@ -65,7 +66,7 @@ bool MatchedDeclarationsCache::isCacheable(const Element& element, const RenderS
     if (&element == element.document().documentElement())
         return false;
     // content:attr() value depends on the element it is being applied to.
-    if (style.hasAttrContent() || (style.styleType() != PseudoId::None && parentStyle.hasAttrContent()))
+    if (style.hasAttrContent() || (style.pseudoElementType() != PseudoId::None && parentStyle.hasAttrContent()))
         return false;
     if (style.zoom() != RenderStyle::initialZoom())
         return false;
@@ -100,15 +101,15 @@ bool MatchedDeclarationsCache::Entry::isUsableAfterHighPriorityProperties(const 
     return CSSPrimitiveValue::equalForLengthResolution(style, *renderStyle);
 }
 
-unsigned MatchedDeclarationsCache::computeHash(const MatchResult& matchResult)
+unsigned MatchedDeclarationsCache::computeHash(const MatchResult& matchResult, const StyleCustomPropertyData& inheritedCustomProperties)
 {
     if (!matchResult.isCacheable)
         return 0;
 
-    return WTF::computeHash(matchResult);
+    return WTF::computeHash(matchResult, &inheritedCustomProperties);
 }
 
-const MatchedDeclarationsCache::Entry* MatchedDeclarationsCache::find(unsigned hash, const MatchResult& matchResult)
+const MatchedDeclarationsCache::Entry* MatchedDeclarationsCache::find(unsigned hash, const MatchResult& matchResult, const StyleCustomPropertyData& inheritedCustomProperties)
 {
     if (!hash)
         return nullptr;
@@ -119,6 +120,9 @@ const MatchedDeclarationsCache::Entry* MatchedDeclarationsCache::find(unsigned h
 
     auto& entry = it->value;
     if (matchResult != entry.matchResult)
+        return nullptr;
+
+    if (&entry.parentRenderStyle->inheritedCustomProperties() != &inheritedCustomProperties)
         return nullptr;
 
     return &entry;

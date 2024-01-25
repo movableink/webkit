@@ -37,6 +37,10 @@
 #import <WebCore/VideoFrameCV.h>
 #import <wtf/MachSendRight.h>
 
+#if USE(EXTENSIONKIT)
+#import "ExtensionKitSoftLink.h"
+#endif
+
 namespace WebKit {
 
 void RemoteMediaPlayerProxy::setVideoLayerSizeIfPossible(const WebCore::FloatSize& size)
@@ -66,9 +70,16 @@ void RemoteMediaPlayerProxy::mediaPlayerRenderingModeChanged()
 
     auto* layer = m_player->platformLayer();
     if (layer && !m_inlineLayerHostingContext) {
-        m_inlineLayerHostingContext = LayerHostingContext::createForExternalHostingProcess();
-        IntSize presentationSize = enclosingIntRect(FloatRect(layer.frame)).size();
-        m_webProcessConnection->send(Messages::MediaPlayerPrivateRemote::LayerHostingContextIdChanged(m_inlineLayerHostingContext->contextID(), presentationSize), m_id);
+        LayerHostingContextOptions contextOptions;
+#if USE(EXTENSIONKIT)
+        contextOptions.useHostable = true;
+#endif
+        m_inlineLayerHostingContext = LayerHostingContext::createForExternalHostingProcess(contextOptions);
+        if (m_configuration.videoLayerSize.isEmpty())
+            m_configuration.videoLayerSize = enclosingIntRect(FloatRect(layer.frame)).size();
+        auto& size = m_configuration.videoLayerSize;
+        [layer setFrame:CGRectMake(0, 0, size.width(), size.height())];
+        m_webProcessConnection->send(Messages::MediaPlayerPrivateRemote::LayerHostingContextIdChanged(m_inlineLayerHostingContext->contextID(), size), m_id);
         for (auto& request : std::exchange(m_layerHostingContextIDRequests, { }))
             request(m_inlineLayerHostingContext->contextID());
     } else if (!layer && m_inlineLayerHostingContext) {
@@ -95,13 +106,27 @@ void RemoteMediaPlayerProxy::requestHostingContextID(CompletionHandler<void(Laye
 void RemoteMediaPlayerProxy::setVideoLayerSizeFenced(const WebCore::FloatSize& size, WTF::MachSendRight&& machSendRight)
 {
     ALWAYS_LOG(LOGIDENTIFIER, size.width(), "x", size.height());
-    if (m_inlineLayerHostingContext)
+
+#if USE(EXTENSIONKIT)
+    RetainPtr<_SEHostingUpdateCoordinator> hostingUpdateCoordinator;
+#endif
+
+    if (m_inlineLayerHostingContext) {
+#if USE(EXTENSIONKIT)
+        hostingUpdateCoordinator = LayerHostingContext::createHostingUpdateCoordinator(machSendRight.sendRight());
+        [hostingUpdateCoordinator addHostable:m_inlineLayerHostingContext->hostable().get()];
+#else
         m_inlineLayerHostingContext->setFencePort(machSendRight.sendRight());
+#endif
+    }
 
     m_configuration.videoLayerSize = size;
     setVideoLayerSizeIfPossible(size);
 
     m_player->setVideoLayerSizeFenced(size, WTFMove(machSendRight));
+#if USE(EXTENSIONKIT)
+    [hostingUpdateCoordinator commit];
+#endif
 }
 
 void RemoteMediaPlayerProxy::mediaPlayerOnNewVideoFrameMetadata(VideoFrameMetadata&& metadata, RetainPtr<CVPixelBufferRef>&& buffer)

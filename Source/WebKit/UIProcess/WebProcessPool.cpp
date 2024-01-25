@@ -192,9 +192,9 @@ Ref<WebProcessPool> WebProcessPool::create(API::ProcessPoolConfiguration& config
     return adoptRef(*new WebProcessPool(configuration));
 }
 
-static Vector<CheckedRef<WebProcessPool>>& processPools()
+static Vector<WeakRef<WebProcessPool>>& processPools()
 {
-    static NeverDestroyed<Vector<CheckedRef<WebProcessPool>>> processPools;
+    static NeverDestroyed<Vector<WeakRef<WebProcessPool>>> processPools;
     return processPools;
 }
 
@@ -253,6 +253,11 @@ WebProcessPool::WebProcessPool(API::ProcessPoolConfiguration& configuration)
     , m_audibleActivityTimer(RunLoop::main(), this, &WebProcessPool::clearAudibleActivity)
     , m_webProcessWithMediaStreamingCounter([this](RefCounterEvent) { updateMediaStreamingActivity(); })
 {
+#if USE(EXTENSIONKIT)
+    bool manageProcessesAsExtensions = !CFPreferencesGetAppBooleanValue(CFSTR("disableProcessesAsExtensions"), kCFPreferencesCurrentApplication, nullptr);
+    AuxiliaryProcessProxy::setManageProcessesAsExtensions(manageProcessesAsExtensions);
+#endif
+
     static auto s_needsGlobalStaticInitialization = NeedsGlobalStaticInitialization::Yes;
     auto needsGlobalStaticInitialization = std::exchange(s_needsGlobalStaticInitialization, NeedsGlobalStaticInitialization::No);
     if (needsGlobalStaticInitialization == NeedsGlobalStaticInitialization::Yes) {
@@ -345,6 +350,15 @@ WebProcessPool::WebProcessPool(API::ProcessPoolConfiguration& configuration)
 
 WebProcessPool::~WebProcessPool()
 {
+#if ENABLE(GPU_PROCESS)
+    // Some apps keep destroying and reconstructing new WebProcessPool objects whenever
+    // they create new web views (rdar://121128159). To avoid relaunching the GPUProcess
+    // unnecessarily in this case, we keep the GPUProcess running for a minute after the
+    // last WebProcessPool object gets destroyed.
+    if (m_gpuProcess && GPUProcessProxy::singletonIfCreated() == m_gpuProcess.get())
+        GPUProcessProxy::keepProcessAliveTemporarily();
+#endif
+
     checkedWebProcessCache()->clear();
 
     bool removed = processPools().removeFirst(*this);
@@ -706,11 +720,6 @@ Ref<WebProcessProxy> WebProcessPool::createNewWebProcess(WebsiteDataStore* websi
         websiteDataStore->setTrackingPreventionEnabled(m_tccPreferenceEnabled);
 #endif
 
-#if USE(EXTENSIONKIT)
-    bool manageProcessesAsExtensions = !CFPreferencesGetAppBooleanValue(CFSTR("disableProcessesAsExtensions"), kCFPreferencesCurrentApplication, nullptr);
-    AuxiliaryProcessProxy::setManageProcessesAsExtensions(manageProcessesAsExtensions);
-#endif
-
     auto processProxy = WebProcessProxy::create(*this, websiteDataStore, lockdownMode, isPrewarmed, crossOriginMode);
     initializeNewWebProcess(processProxy, websiteDataStore, isPrewarmed);
     m_processes.append(processProxy.copyRef());
@@ -1063,8 +1072,8 @@ void WebProcessPool::processDidFinishLaunching(WebProcessProxy& process)
 #if ENABLE(EXTENSION_CAPABILITIES)
     for (auto& page : process.pages()) {
         if (auto& mediaCapability = page->mediaCapability()) {
-            WEBPROCESSPOOL_RELEASE_LOG(ProcessCapabilities, "processDidFinishLaunching: granting media capability (envID=%{public}s)", mediaCapability->environmentIdentifier().utf8().data());
-            extensionCapabilityGranter().grant(*mediaCapability);
+            WEBPROCESSPOOL_RELEASE_LOG(ProcessCapabilities, "processDidFinishLaunching[envID=%{public}s]: updating media capability", mediaCapability->environmentIdentifier().utf8().data());
+            page->updateMediaCapability();
         }
     }
 #endif
@@ -2013,6 +2022,12 @@ std::tuple<Ref<WebProcessProxy>, SuspendedPageProxy*, ASCIILiteral> WebProcessPo
     if (m_automationSession)
         return { WTFMove(sourceProcess), nullptr, "An automation session is active"_s };
 
+    // Redirects to a different scheme for which the client has registered their own custom handler.
+    // We need to process swap so that we end up with a fresh navigation instead of a redirect, so
+    // that the app's scheme handler gets used (rdar://117891282).
+    if (navigation.currentRequestIsRedirect() && navigation.originalRequest().url().protocol() != targetURL.protocol() && page.urlSchemeHandlerForScheme(targetURL.protocol().toString()))
+        return { createNewProcess(), nullptr, "Redirect to a different scheme for which the app registered a custom handler"_s };
+
     // FIXME: We ought to be able to re-use processes that haven't committed anything with site isolation enabled, but cross-site redirects are tricky. <rdar://116203552>
     if (!sourceProcess->hasCommittedAnyProvisionalLoads() && !page.preferences().siteIsolationEnabled()) {
         tryPrewarmWithDomainInformation(sourceProcess, targetRegistrableDomain);
@@ -2021,7 +2036,12 @@ std::tuple<Ref<WebProcessProxy>, SuspendedPageProxy*, ASCIILiteral> WebProcessPo
 
     // FIXME: We should support process swap when a window has been opened via window.open() without 'noopener'.
     // The issue is that the opener has a handle to the WindowProxy.
-    if (navigation.openedByDOMWithOpener() && !!page.openerFrame() && !(page.preferences().processSwapOnCrossSiteWindowOpenEnabled() || page.preferences().siteIsolationEnabled()))
+    //
+    // We may allow a process swap to occur even when the window has an opener if the request came from the client
+    // (e.g. a location bar navigation as opposed to a link click). If there's substitute data, then the response
+    // may be a response generated by the engine, so consider those navigations as non-client-initiated.
+    bool isRequestFromClientOrUserInput = navigation.isRequestFromClientOrUserInput() && !navigation.substituteData();
+    if (navigation.openedByDOMWithOpener() && !!page.openerFrame() && !(isRequestFromClientOrUserInput || page.preferences().processSwapOnCrossSiteWindowOpenEnabled() || page.preferences().siteIsolationEnabled()))
         return { WTFMove(sourceProcess), nullptr, "Browsing context been opened by DOM without 'noopener'"_s };
 
     // FIXME: We should support process swap when a window has opened other windows via window.open.

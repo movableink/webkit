@@ -68,10 +68,6 @@ public:
     void setUsesPackArray() { m_usesPackArray = true; }
     void clearUsesPackArray() { m_usesPackArray = false; }
 
-    bool usesPackedStructs() const { return m_usesPackedStructs; }
-    void setUsesPackedStructs() { m_usesPackedStructs = true; }
-    void clearUsesPackedStructs() { m_usesPackedStructs = false; }
-
     bool usesUnpackArray() const { return m_usesUnpackArray; }
     void setUsesUnpackArray() { m_usesUnpackArray = true; }
     void clearUsesUnpackArray() { m_usesUnpackArray = false; }
@@ -90,6 +86,41 @@ public:
 
     bool usesModf() const { return m_usesModf; }
     void setUsesModf() { m_usesModf = true; }
+
+    bool usesAtomicCompareExchange() const { return m_usesAtomicCompareExchange; }
+    void setUsesAtomicCompareExchange() { m_usesAtomicCompareExchange = true; }
+    bool usesFragDepth() const { return m_usesFragDepth; }
+    void setUsesFragDepth() { m_usesFragDepth = true; }
+
+    bool usesDot() const { return m_usesDot; }
+    void setUsesDot() { m_usesDot = true; }
+
+    bool usesFirstLeadingBit() const { return m_usesFirstLeadingBit; }
+    void setUsesFirstLeadingBit() { m_usesFirstLeadingBit = true; }
+
+    bool usesFirstTrailingBit() const { return m_usesFirstTrailingBit; }
+    void setUsesFirstTrailingBit() { m_usesFirstTrailingBit = true; }
+
+    bool usesSign() const { return m_usesSign; }
+    void setUsesSign() { m_usesSign = true; }
+
+    bool usesSampleMask() const { return m_usesSampleMask; }
+    void setUsesSampleMask() { m_usesSampleMask = true; }
+
+    bool usesFrontFacing() const { return m_usesFrontFacing; }
+    void setUsesFrontFacing() { m_usesFrontFacing = true; }
+
+    bool usesSampleIndex() const { return m_usesSampleIndex; }
+    void setUsesSampleIndex() { m_usesSampleIndex = true; }
+
+    bool usesDot4I8Packed() const { return m_usesDot4I8Packed; }
+    void setUsesDot4I8Packed() { m_usesDot4I8Packed = true; }
+
+    bool usesDot4U8Packed() const { return m_usesDot4U8Packed; }
+    void setUsesDot4U8Packed() { m_usesDot4U8Packed = true; }
+
+    bool usesExtractBits() const { return m_usesExtractBits; }
+    void setUsesExtractBits() { m_usesExtractBits = true; }
 
     template<typename T>
     std::enable_if_t<std::is_base_of_v<AST::Node, T>, void> replace(T* current, T&& replacement)
@@ -232,18 +263,30 @@ public:
     {
         m_pipelineOverrideIds.add(idValue);
     }
+    bool hasFeature(const String& featureName) const { return m_configuration.supportedFeatures.contains(featureName); }
 
 private:
     String m_source;
     bool m_usesExternalTextures { false };
     bool m_usesPackArray { false };
-    bool m_usesPackedStructs { false };
     bool m_usesUnpackArray { false };
     bool m_usesWorkgroupUniformLoad { false };
     bool m_usesDivision { false };
     bool m_usesModulo { false };
     bool m_usesFrexp { false };
     bool m_usesModf { false };
+    bool m_usesAtomicCompareExchange { false };
+    bool m_usesFragDepth { false };
+    bool m_usesDot { false };
+    bool m_usesFirstLeadingBit { false };
+    bool m_usesFirstTrailingBit { false };
+    bool m_usesSign { false };
+    bool m_usesSampleMask { false };
+    bool m_usesFrontFacing { false };
+    bool m_usesSampleIndex { false };
+    bool m_usesDot4I8Packed { false };
+    bool m_usesDot4U8Packed { false };
+    bool m_usesExtractBits { false };
     OptionSet<Extension> m_enabledExtensions;
     OptionSet<LanguageFeature> m_requiredFeatures;
     Configuration m_configuration;

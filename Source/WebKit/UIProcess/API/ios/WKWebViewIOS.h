@@ -31,7 +31,7 @@
 
 #import "UIKitSPI.h"
 
-@class UIScrollEvent;
+@class WKSEScrollViewScrollUpdate;
 
 namespace WebKit {
 enum class TapHandlingResult : uint8_t;
@@ -160,6 +160,9 @@ enum class TapHandlingResult : uint8_t;
 - (void)_updateScrollViewInsetAdjustmentBehavior;
 - (void)_resetScrollViewInsetAdjustmentBehavior;
 
+- (void)_beginAnimatedFullScreenExit;
+- (void)_endAnimatedFullScreenExit;
+
 - (BOOL)_effectiveAppearanceIsDark;
 - (BOOL)_effectiveUserInterfaceLevelIsElevated;
 
@@ -172,6 +175,10 @@ enum class TapHandlingResult : uint8_t;
 
 #if ENABLE(LOCKDOWN_MODE_API)
 + (void)_clearLockdownModeWarningNeeded;
+#endif
+
+#if HAVE(UISCROLLVIEW_ASYNCHRONOUS_SCROLL_EVENT_HANDLING)
+- (void)scrollView:(WKBaseScrollView *)scrollView handleScrollUpdate:(WKSEScrollViewScrollUpdate *)update completion:(void (^)(BOOL handled))completion;
 #endif
 
 - (UIColor *)_insertionPointColor;
@@ -201,9 +208,6 @@ enum class TapHandlingResult : uint8_t;
 
 @property (nonatomic, readonly) BOOL _haveSetUnobscuredSafeAreaInsets;
 @property (nonatomic, readonly) BOOL _hasOverriddenLayoutParameters;
-@property (nonatomic, readonly) std::optional<CGSize> _viewLayoutSizeOverride;
-@property (nonatomic, readonly) std::optional<CGSize> _minimumUnobscuredSizeOverride;
-@property (nonatomic, readonly) std::optional<CGSize> _maximumUnobscuredSizeOverride;
 - (void)_resetContentOffset;
 - (void)_resetUnobscuredSafeAreaInsets;
 - (void)_resetObscuredInsets;

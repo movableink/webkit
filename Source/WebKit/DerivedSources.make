@@ -194,6 +194,7 @@ MESSAGE_RECEIVERS = \
 	WebProcess/Extensions/WebExtensionControllerProxy \
 	WebProcess/GPU/GPUProcessConnection \
 	WebProcess/GPU/graphics/RemoteImageBufferProxy \
+	WebProcess/GPU/graphics/RemoteImageBufferSetProxy \
 	WebProcess/GPU/graphics/RemoteRenderingBackendProxy \
 	WebProcess/GPU/graphics/RemoteGraphicsContextGLProxy \
 	WebProcess/GPU/graphics/WebGPU/RemoteGPUProxy \
@@ -523,11 +524,16 @@ SERIALIZATION_DESCRIPTION_FILES = \
 	Shared/AccessibilityPreferences.serialization.in \
 	Shared/AlternativeTextClient.serialization.in \
 	Shared/AppPrivacyReportTestingData.serialization.in \
+	Shared/Authentication/AuthenticationChallengeDisposition.serialization.in \
+	Shared/BackgroundFetchChange.serialization.in \
+	Shared/BackgroundFetchState.serialization.in \
+	Shared/CacheModel.serialization.in \
 	Shared/Cocoa/CacheStoragePolicy.serialization.in \
 	Shared/Cocoa/CoreIPCAVOutputContext.serialization.in \
 	Shared/Cocoa/CoreIPCArray.serialization.in \
 	Shared/Cocoa/CoreIPCAuditToken.serialization.in \
 	Shared/Cocoa/CoreIPCCFType.serialization.in \
+	Shared/Cocoa/CoreIPCCFURL.serialization.in \
 	Shared/Cocoa/CoreIPCColor.serialization.in \
 	Shared/Cocoa/CoreIPCContacts.serialization.in \
 	Shared/Cocoa/CoreIPCDDActionContext.serialization.in \
@@ -551,11 +557,12 @@ SERIALIZATION_DESCRIPTION_FILES = \
 	Shared/Cocoa/SharedCARingBuffer.serialization.in \
 	Shared/Cocoa/WebCoreArgumentCodersCocoa.serialization.in \
 	Shared/CallbackID.serialization.in \
-	Shared/BackgroundFetchState.serialization.in \
 	Shared/ContextMenuContextData.serialization.in \
+	Shared/CoordinateSystem.serialization.in \
 	Shared/DebuggableInfoData.serialization.in \
 	Shared/DisplayListArgumentCoders.serialization.in \
 	Shared/DocumentEditingContext.serialization.in \
+	Shared/DragControllerAction.serialization.in \
 	Shared/DrawingAreaInfo.serialization.in \
 	Shared/EditingRange.serialization.in \
 	Shared/EditorState.serialization.in \
@@ -565,12 +572,14 @@ SERIALIZATION_DESCRIPTION_FILES = \
 	Shared/Extensions/WebExtensionContext.serialization.in \
 	Shared/Extensions/WebExtensionContextParameters.serialization.in \
 	Shared/Extensions/WebExtensionControllerParameters.serialization.in \
+	Shared/Extensions/WebExtensionCookieParameters.serialization.in \
 	Shared/Extensions/WebExtensionDynamicScripts.serialization.in \
 	Shared/Extensions/WebExtensionEventListenerType.serialization.in \
 	Shared/Extensions/WebExtensionFrameParameters.serialization.in \
 	Shared/Extensions/WebExtensionMatchedRuleParameters.serialization.in \
 	Shared/Extensions/WebExtensionMenuItem.serialization.in \
 	Shared/Extensions/WebExtensionMessageSenderParameters.serialization.in \
+	Shared/Extensions/WebExtensionStorage.serialization.in \
 	Shared/Extensions/WebExtensionTab.serialization.in \
 	Shared/Extensions/WebExtensionWindow.serialization.in \
 	Shared/FileSystemSyncAccessHandleInfo.serialization.in \
@@ -583,6 +592,7 @@ SERIALIZATION_DESCRIPTION_FILES = \
 	Shared/GPUProcessConnectionParameters.serialization.in \
 	Shared/GPUProcessPreferencesForWebProcess.serialization.in \
 	Shared/GoToBackForwardItemParameters.serialization.in \
+	Shared/InspectorExtensionTypes.serialization.in \
 	Shared/ios/DynamicViewportSizeUpdate.serialization.in \
 	Shared/ios/GestureTypes.serialization.in \
 	Shared/ios/InteractionInformationAtPosition.serialization.in \
@@ -593,6 +603,7 @@ SERIALIZATION_DESCRIPTION_FILES = \
 	Shared/LayerTreeContext.serialization.in \
 	Shared/LoadParameters.serialization.in \
 	Shared/LocalFrameCreationParameters.serialization.in \
+	Shared/MediaPlaybackState.serialization.in \
 	Shared/Model.serialization.in \
 	Shared/NavigationActionData.serialization.in \
 	Shared/NetworkProcessConnectionParameters.serialization.in \
@@ -613,12 +624,16 @@ SERIALIZATION_DESCRIPTION_FILES = \
 	Shared/SessionState.serialization.in \
 	Shared/ShareableBitmap.serialization.in \
 	Shared/ShareableResource.serialization.in \
+	Shared/SyntheticEditingCommandType.serialization.in \
 	Shared/TextFlags.serialization.in \
 	Shared/TextRecognitionResult.serialization.in \
+	Shared/TextRecognitionUpdateResult.serialization.in \
 	Shared/URLSchemeTaskParameters.serialization.in \
+	Shared/UndoOrRedo.serialization.in \
 	Shared/UserContentControllerParameters.serialization.in \
 	Shared/UserData.serialization.in \
 	Shared/UserInterfaceIdiom.serialization.in \
+	Shared/VideoCodecType.serialization.in \
 	Shared/WebCompiledContentRuleListData.serialization.in \
 	Shared/ViewWindowCoordinates.serialization.in \
 	Shared/VisibleContentRectUpdateInfo.serialization.in \
@@ -641,7 +656,10 @@ SERIALIZATION_DESCRIPTION_FILES = \
 	Shared/WebProcessDataStoreParameters.serialization.in \
 	Shared/WebPushDaemonConnectionConfiguration.serialization.in \
 	Shared/WebPushMessage.serialization.in \
+	Shared/WebsiteAutoplayPolicy.serialization.in \
+	Shared/WebsiteAutoplayQuirk.serialization.in \
 	Shared/WebsitePoliciesData.serialization.in \
+	Shared/WebsitePopUpPolicy.serialization.in \
 	Shared/ApplePay/ApplePayPaymentSetupFeatures.serialization.in \
 	Shared/ApplePay/PaymentSetupConfiguration.serialization.in \
 	Shared/Databases/IndexedDB/WebIDBResult.serialization.in \
@@ -657,6 +675,7 @@ SERIALIZATION_DESCRIPTION_FILES = \
 	Shared/mac/SecItemResponseData.serialization.in \
 	Shared/mac/WebHitTestResultPlatformData.serialization.in \
 	Shared/WebsiteDataStoreParameters.serialization.in \
+	Shared/WebsiteData/UnifiedOriginStorageLevel.serialization.in \
 	Shared/WebsiteData/WebsiteData.serialization.in \
 	Shared/WebsiteData/WebsiteDataFetchOption.serialization.in \
 	Shared/WebsiteData/WebsiteDataType.serialization.in \
@@ -741,6 +760,7 @@ SERIALIZATION_DESCRIPTION_FILES = \
 	WebProcess/GPU/webrtc/SharedVideoFrame.serialization.in \
 	WebProcess/MediaStream/MediaDeviceSandboxExtensions.serialization.in \
 	WebProcess/Network/NetworkProcessConnectionInfo.serialization.in \
+	WebProcess/UserContent/InjectUserScriptImmediately.serialization.in \
 	WebProcess/WebCoreSupport/WebSpeechSynthesisVoice.serialization.in \
 	WebProcess/WebPage/RemoteLayerTree/PlatformCAAnimationRemoteProperties.serialization.in \
 #
@@ -802,10 +822,14 @@ EXTENSION_INTERFACES = \
     WebExtensionAPIPort \
     WebExtensionAPIRuntime \
     WebExtensionAPIScripting \
+    WebExtensionAPIStorage \
+    WebExtensionAPIStorageArea \
     WebExtensionAPITabs \
     WebExtensionAPITest \
     WebExtensionAPIWebNavigation \
     WebExtensionAPIWebNavigationEvent \
+    WebExtensionAPIWebRequest \
+    WebExtensionAPIWebRequestEvent \
     WebExtensionAPIWindows \
     WebExtensionAPIWindowsEvent \
 #

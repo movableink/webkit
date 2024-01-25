@@ -163,6 +163,8 @@ public:
     String cssTextWithReplacementURLs(const HashMap<String, String>&, const HashMap<RefPtr<CSSStyleSheet>, String>&);
     void getChildStyleSheets(HashSet<RefPtr<CSSStyleSheet>>&);
 
+    bool isDetached() const;
+
 private:
     CSSStyleSheet(Ref<StyleSheetContents>&&, CSSImportRule* ownerRule);
     CSSStyleSheet(Ref<StyleSheetContents>&&, Node* ownerNode, const TextPosition& startPosition, bool isInlineStylesheet);
@@ -173,6 +175,7 @@ private:
 
     bool isCSSStyleSheet() const final { return true; }
     String type() const final { return cssContentTypeAtom(); }
+    RefPtr<CSSRuleList> cssRulesSkippingAccessCheck();
 
     Ref<StyleSheetContents> m_contents;
     bool m_isInlineStylesheet { false };

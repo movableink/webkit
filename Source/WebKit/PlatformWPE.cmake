@@ -417,6 +417,7 @@ list(APPEND WebKit_SYSTEM_INCLUDE_DIRECTORIES
 )
 
 list(APPEND WebKit_LIBRARIES
+    ATK::Bridge
     Cairo::Cairo
     Freetype::Freetype
     HarfBuzz::HarfBuzz
@@ -427,10 +428,6 @@ list(APPEND WebKit_LIBRARIES
     ${GLIB_GMODULE_LIBRARIES}
     ${LIBSOUP_LIBRARIES}
 )
-
-if (ENABLE_ACCESSIBILITY)
-    list(APPEND WebKit_LIBRARIES ATK::Bridge)
-endif ()
 
 if (ENABLE_BUBBLEWRAP_SANDBOX)
     list(APPEND WebKit_LIBRARIES Libseccomp::Libseccomp)
@@ -544,11 +541,11 @@ if (ENABLE_WPE_QT_API)
     )
 
     set(qtwpe_LIBRARIES
+        Epoxy::Epoxy
         Qt6::Core Qt6::Quick
         WebKit
         ${GLIB_GOBJECT_LIBRARIES}
         ${GLIB_LIBRARIES}
-        ${LIBEPOXY_LIBRARIES}
         ${WPEBACKEND_FDO_LIBRARIES}
     )
 
@@ -559,7 +556,6 @@ if (ENABLE_WPE_QT_API)
         ${GLIB_INCLUDE_DIRS}
         ${Qt6_INCLUDE_DIRS}
         ${Qt6Gui_PRIVATE_INCLUDE_DIRS}
-        ${LIBEPOXY_INCLUDE_DIRS}
         ${LIBSOUP_INCLUDE_DIRS}
         ${WPE_INCLUDE_DIRS}
         ${WPEBACKEND_FDO_INCLUDE_DIRS}

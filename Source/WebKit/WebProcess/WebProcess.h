@@ -49,6 +49,7 @@
 #include <wtf/HashSet.h>
 #include <wtf/RefCounter.h>
 #include <wtf/WeakHashMap.h>
+#include <wtf/text/ASCIILiteral.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/AtomStringHash.h>
 
@@ -232,8 +233,8 @@ public:
     WebPageGroupProxy* webPageGroup(PageGroupIdentifier);
     WebPageGroupProxy* webPageGroup(const WebPageGroupData&);
 
-    uint64_t userGestureTokenIdentifier(RefPtr<WebCore::UserGestureToken>);
-    void userGestureTokenDestroyed(WebCore::UserGestureToken&);
+    uint64_t userGestureTokenIdentifier(std::optional<WebCore::PageIdentifier>, RefPtr<WebCore::UserGestureToken>);
+    void userGestureTokenDestroyed(WebCore::PageIdentifier, WebCore::UserGestureToken&);
     
     const TextCheckerState& textCheckerState() const { return m_textCheckerState; }
     void setTextCheckerState(const TextCheckerState&);
@@ -470,7 +471,7 @@ private:
     void platformTerminate();
 
     void setHasSuspendedPageProxy(bool);
-    void setIsInProcessCache(bool);
+    void setIsInProcessCache(bool, CompletionHandler<void()>&&);
     void markIsNoLongerPrewarmed();
 
     void registerURLSchemeAsEmptyDocument(const String&);
@@ -687,7 +688,7 @@ private:
 
     HashMap<WebCore::FrameIdentifier, WeakPtr<WebFrame>> m_frameMap;
 
-    typedef HashMap<const char*, std::unique_ptr<WebProcessSupplement>, PtrHash<const char*>> WebProcessSupplementMap;
+    using WebProcessSupplementMap = HashMap<ASCIILiteral, std::unique_ptr<WebProcessSupplement>, ASCIILiteralPtrHash>;
     WebProcessSupplementMap m_supplements;
 
     TextCheckerState m_textCheckerState;
@@ -781,7 +782,7 @@ private:
 #endif
 
     bool m_hasSuspendedPageProxy { false };
-    bool m_isSuspending { false };
+    bool m_allowExitOnMemoryPressure { true };
     bool m_isLockdownModeEnabled { false };
 
 #if ENABLE(MEDIA_STREAM) && ENABLE(SANDBOX_EXTENSIONS)

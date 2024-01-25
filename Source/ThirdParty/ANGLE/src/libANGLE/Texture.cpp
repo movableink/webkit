@@ -1833,12 +1833,7 @@ angle::Result Texture::generateMipmap(Context *context)
 angle::Result Texture::bindTexImageFromSurface(Context *context, egl::Surface *surface)
 {
     ASSERT(surface);
-
-    if (mBoundSurface)
-    {
-        ANGLE_TRY(releaseTexImageFromSurface(context));
-    }
-
+    ASSERT(!mBoundSurface);
     mBoundSurface = surface;
 
     // Set the image info to the size and format of the surface
@@ -2498,22 +2493,6 @@ GLenum Texture::getImplementationColorReadFormat(const Context *context) const
 GLenum Texture::getImplementationColorReadType(const Context *context) const
 {
     return mTexture->getColorReadType(context);
-}
-
-bool Texture::isCompressedFormatEmulated(const Context *context,
-                                         TextureTarget target,
-                                         GLint level) const
-{
-    if (!getFormat(target, level).info->compressed)
-    {
-        // If it isn't compressed, the remaining logic won't work
-        return false;
-    }
-
-    GLenum implFormat = getImplementationColorReadFormat(context);
-
-    // Check against the list of formats used to emulate compressed textures
-    return IsEmulatedCompressedFormat(implFormat);
 }
 
 angle::Result Texture::getTexImage(const Context *context,

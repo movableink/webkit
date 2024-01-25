@@ -37,6 +37,7 @@
 #include "DiagnosticLoggingClient.h"
 #include "DiagnosticLoggingKeys.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "DocumentLoader.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
@@ -257,7 +258,8 @@ void ResourceLoader::start()
     }
 #endif
 
-    RefPtr<SecurityOrigin> sourceOrigin = is<SubresourceLoader>(*this) ? downcast<SubresourceLoader>(*this).origin() : nullptr;
+    auto* subresourceLoader = dynamicDowncast<SubresourceLoader>(*this);
+    RefPtr<SecurityOrigin> sourceOrigin = subresourceLoader ? subresourceLoader->origin() : nullptr;
     if (!sourceOrigin && frameLoader()) {
         auto* document = frameLoader()->frame().document();
         sourceOrigin =  document ? &document->securityOrigin() : nullptr;
@@ -366,6 +368,11 @@ void ResourceLoader::addBuffer(const FragmentedSharedBuffer& buffer, DataPayload
 const FragmentedSharedBuffer* ResourceLoader::resourceData() const
 {
     return m_resourceData.get().get();
+}
+
+RefPtr<const FragmentedSharedBuffer> ResourceLoader::protectedResourceData() const
+{
+    return resourceData();
 }
 
 void ResourceLoader::clearResourceData()
@@ -913,6 +920,11 @@ bool ResourceLoader::isPDFJSResourceLoad() const
 #else
     return false;
 #endif
+}
+
+RefPtr<LocalFrame> ResourceLoader::protectedFrame() const
+{
+    return m_frame;
 }
 
 } // namespace WebCore

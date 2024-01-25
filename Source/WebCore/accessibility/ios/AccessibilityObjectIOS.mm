@@ -26,7 +26,7 @@
 #import "config.h"
 #import "AccessibilityObject.h"
 
-#if ENABLE(ACCESSIBILITY) && PLATFORM(IOS_FAMILY)
+#if PLATFORM(IOS_FAMILY)
 
 #import "AccessibilityRenderObject.h"
 #import "EventNames.h"
@@ -122,14 +122,14 @@ AccessibilityObjectInclusion AccessibilityObject::accessibilityPlatformIncludesO
 bool AccessibilityObject::hasTouchEventListener() const
 {
     // Check whether this->node or any of its ancestors has any of the touch-related event listeners.
-    auto touchEventNames = eventNames().touchRelatedEventNames();
+    auto& eventNames = WebCore::eventNames();
     // If the node is in a shadowRoot, going up the node parent tree will stop and
     // not check the entire chain of ancestors. Thus, use the parentInComposedTree instead.
     for (auto* node = this->node(); node; node = node->parentInComposedTree()) {
-        for (auto eventName : touchEventNames) {
-            if (node->hasEventListeners(eventName))
-                return true;
-        }
+        if (node->containsMatchingEventListener([&](const AtomString& name, auto&) {
+            return eventNames.typeInfoForEvent(name).isInCategory(EventCategory::TouchRelated);
+        }))
+            return true;
     }
     return false;
 }
@@ -300,4 +300,4 @@ RetainPtr<NSAttributedString> attributedStringCreate(Node* node, StringView text
 
 } // WebCore
 
-#endif // ENABLE(ACCESSIBILITY) && PLATFORM(IOS_FAMILY)
+#endif // PLATFORM(IOS_FAMILY)

@@ -66,6 +66,7 @@
 #include "PointerEvent.h"
 #include "ProcessingInstruction.h"
 #include "ProgressEvent.h"
+#include "Quirks.h"
 #include "RenderBlock.h"
 #include "RenderBox.h"
 #include "RenderTextControl.h"
@@ -152,8 +153,8 @@ static const char* stringForRareDataUseType(NodeRareData::UseType useType)
         return "ScrollingPosition";
     case NodeRareData::UseType::ComputedStyle:
         return "ComputedStyle";
-    case NodeRareData::UseType::DisplayContentsStyle:
-        return "DisplayContentsStyle";
+    case NodeRareData::UseType::DisplayContentsOrNoneStyle:
+        return "DisplayContentsOrNoneStyle";
     case NodeRareData::UseType::EffectiveLang:
         return "EffectiveLang";
     case NodeRareData::UseType::Dataset:
@@ -252,7 +253,7 @@ void Node::dumpStatistics()
                 ++elementNodes;
 
                 // Tag stats
-                Element& element = downcast<Element>(node);
+                Element& element = uncheckedDowncast<Element>(node);
                 HashMap<String, size_t>::AddResult result = perTagCount.add(element.tagName(), 1);
                 if (!result.isNewEntry)
                     result.iterator->value++;
@@ -394,11 +395,12 @@ inline void NodeRareData::operator delete(NodeRareData* nodeRareData, std::destr
         destroyAndFree(*nodeRareData);
 }
 
-Node::Node(Document& document, ConstructionType type)
+Node::Node(Document& document, NodeType type, OptionSet<TypeFlag> flags)
     : EventTarget(ConstructNode)
-    , m_nodeFlags(type)
+    , m_typeBitFields(constructBitFieldsFromNodeTypeAndFlags(type, flags))
     , m_treeScope((isDocumentNode() || isShadowRoot()) ? nullptr : &document)
 {
+    ASSERT(nodeType() == type);
     ASSERT(isMainThread());
 
     // Allow code to ref the Document while it is being constructed to make our life easier.
@@ -713,7 +715,7 @@ void Node::normalize()
             continue;
         }
 
-        Ref text = downcast<Text>(*node);
+        Ref text = uncheckedDowncast<Text>(*node);
 
         // Remove empty text nodes.
         if (!text->length()) {
@@ -727,7 +729,7 @@ void Node::normalize()
         while (RefPtr nextSibling = node->nextSibling()) {
             if (nextSibling->nodeType() != TEXT_NODE)
                 break;
-            Ref nextText = downcast<Text>(nextSibling.releaseNonNull());
+            Ref nextText = uncheckedDowncast<Text>(nextSibling.releaseNonNull());
 
             // Remove empty text nodes.
             if (!nextText->length()) {
@@ -921,7 +923,7 @@ void Node::adjustStyleValidity(Style::Validity validity, Style::InvalidationMode
         break;
     case Style::InvalidationMode::RebuildRenderer:
     case Style::InvalidationMode::InsertedIntoAncestor:
-        setStyleFlag(NodeStyleFlag::HasInvalidRenderer);
+        setStateFlag(StateFlag::HasInvalidRenderer);
         break;
     };
 }
@@ -970,7 +972,7 @@ void Node::invalidateStyle(Style::Validity validity, Style::InvalidationMode mod
         return;
 
     if (validity != Style::Validity::Valid)
-        setNodeFlag(NodeFlag::IsComputedStyleInvalidFlag);
+        setStateFlag(StateFlag::IsComputedStyleInvalidFlag);
 
     bool markAncestors = styleValidity() == Style::Validity::Valid || mode == Style::InvalidationMode::InsertedIntoAncestor;
 
@@ -1030,6 +1032,8 @@ void Node::invalidateNodeListAndCollectionCachesInAncestors()
         if (auto* lists = rareData()->nodeLists())
             lists->clearChildNodeListCache();
     }
+
+    document().invalidateQuerySelectorAllResults(*this);
 
     if (!document().shouldInvalidateNodeListAndCollectionCaches())
         return;
@@ -1430,9 +1434,9 @@ void Node::queueTaskToDispatchEvent(TaskSource source, Ref<Event>&& event)
 Node::InsertedIntoAncestorResult Node::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
     if (insertionType.connectedToDocument)
-        setNodeFlag(NodeFlag::IsConnected);
+        setEventTargetFlag(EventTargetFlag::IsConnected);
     if (parentOfInsertedTree.isInShadowTree())
-        setNodeFlag(NodeFlag::IsInShadowTree);
+        setEventTargetFlag(EventTargetFlag::IsInShadowTree);
 
     invalidateStyle(Style::Validity::SubtreeInvalid, Style::InvalidationMode::InsertedIntoAncestor);
 
@@ -1442,9 +1446,9 @@ Node::InsertedIntoAncestorResult Node::insertedIntoAncestor(InsertionType insert
 void Node::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
 {
     if (removalType.disconnectedFromDocument)
-        clearNodeFlag(NodeFlag::IsConnected);
+        clearEventTargetFlag(EventTargetFlag::IsConnected);
     if (isInShadowTree() && !treeScope().rootNode().isShadowRoot())
-        clearNodeFlag(NodeFlag::IsInShadowTree);
+        clearEventTargetFlag(EventTargetFlag::IsInShadowTree);
     if (removalType.disconnectedFromDocument) {
         if (auto* cache = oldParentOfRemovedTree.document().existingAXObjectCache())
             cache->remove(*this);
@@ -1494,8 +1498,8 @@ bool Node::isEqualNode(Node* other) const
     
     switch (nodeType) {
     case Node::DOCUMENT_TYPE_NODE: {
-        auto& thisDocType = downcast<DocumentType>(*this);
-        auto& otherDocType = downcast<DocumentType>(*other);
+        auto& thisDocType = uncheckedDowncast<DocumentType>(*this);
+        auto& otherDocType = uncheckedDowncast<DocumentType>(*other);
         if (thisDocType.name() != otherDocType.name())
             return false;
         if (thisDocType.publicId() != otherDocType.publicId())
@@ -1505,8 +1509,8 @@ bool Node::isEqualNode(Node* other) const
         break;
         }
     case Node::ELEMENT_NODE: {
-        auto& thisElement = downcast<Element>(*this);
-        auto& otherElement = downcast<Element>(*other);
+        auto& thisElement = uncheckedDowncast<Element>(*this);
+        auto& otherElement = uncheckedDowncast<Element>(*other);
         if (thisElement.tagQName() != otherElement.tagQName())
             return false;
         if (!thisElement.hasEquivalentAttributes(otherElement))
@@ -1514,8 +1518,8 @@ bool Node::isEqualNode(Node* other) const
         break;
         }
     case Node::PROCESSING_INSTRUCTION_NODE: {
-        auto& thisProcessingInstruction = downcast<ProcessingInstruction>(*this);
-        auto& otherProcessingInstruction = downcast<ProcessingInstruction>(*other);
+        auto& thisProcessingInstruction = uncheckedDowncast<ProcessingInstruction>(*this);
+        auto& otherProcessingInstruction = uncheckedDowncast<ProcessingInstruction>(*other);
         if (thisProcessingInstruction.target() != otherProcessingInstruction.target())
             return false;
         if (thisProcessingInstruction.data() != otherProcessingInstruction.data())
@@ -1525,15 +1529,15 @@ bool Node::isEqualNode(Node* other) const
     case Node::CDATA_SECTION_NODE:
     case Node::TEXT_NODE:
     case Node::COMMENT_NODE: {
-        auto& thisCharacterData = downcast<CharacterData>(*this);
-        auto& otherCharacterData = downcast<CharacterData>(*other);
+        auto& thisCharacterData = uncheckedDowncast<CharacterData>(*this);
+        auto& otherCharacterData = uncheckedDowncast<CharacterData>(*other);
         if (thisCharacterData.data() != otherCharacterData.data())
             return false;
         break;
         }
     case Node::ATTRIBUTE_NODE: {
-        auto& thisAttribute = downcast<Attr>(*this);
-        auto& otherAttribute = downcast<Attr>(*other);
+        auto& thisAttribute = uncheckedDowncast<Attr>(*this);
+        auto& otherAttribute = uncheckedDowncast<Attr>(*other);
         if (thisAttribute.qualifiedName() != otherAttribute.qualifiedName())
             return false;
         if (thisAttribute.value() != otherAttribute.value())
@@ -1572,7 +1576,7 @@ static const AtomString& locateDefaultNamespace(const Node& node, const AtomStri
         if (prefix == xmlnsAtom())
             return XMLNSNames::xmlnsNamespaceURI.get();
 
-        auto& element = downcast<Element>(node);
+        auto& element = uncheckedDowncast<Element>(node);
         auto& namespaceURI = element.namespaceURI();
         if (!namespaceURI.isNull() && element.prefix() == prefix)
             return namespaceURI;
@@ -1592,14 +1596,14 @@ static const AtomString& locateDefaultNamespace(const Node& node, const AtomStri
         return parent ? locateDefaultNamespace(*parent, prefix) : nullAtom();
     }
     case Node::DOCUMENT_NODE:
-        if (auto* documentElement = downcast<Document>(node).documentElement())
+        if (auto* documentElement = uncheckedDowncast<Document>(node).documentElement())
             return locateDefaultNamespace(*documentElement, prefix);
         return nullAtom();
     case Node::DOCUMENT_TYPE_NODE:
     case Node::DOCUMENT_FRAGMENT_NODE:
         return nullAtom();
     case Node::ATTRIBUTE_NODE:
-        if (auto* ownerElement = downcast<Attr>(node).ownerElement())
+        if (auto* ownerElement = uncheckedDowncast<Attr>(node).ownerElement())
             return locateDefaultNamespace(*ownerElement, prefix);
         return nullAtom();
     default:
@@ -1647,16 +1651,16 @@ const AtomString& Node::lookupPrefix(const AtomString& namespaceURI) const
     
     switch (nodeType()) {
     case ELEMENT_NODE:
-        return locateNamespacePrefix(downcast<Element>(*this), namespaceURI);
+        return locateNamespacePrefix(uncheckedDowncast<Element>(*this), namespaceURI);
     case DOCUMENT_NODE:
-        if (auto* documentElement = downcast<Document>(*this).documentElement())
+        if (auto* documentElement = uncheckedDowncast<Document>(*this).documentElement())
             return locateNamespacePrefix(*documentElement, namespaceURI);
         return nullAtom();
     case DOCUMENT_FRAGMENT_NODE:
     case DOCUMENT_TYPE_NODE:
         return nullAtom();
     case ATTRIBUTE_NODE:
-        if (auto* ownerElement = downcast<Attr>(*this).ownerElement())
+        if (auto* ownerElement = uncheckedDowncast<Attr>(*this).ownerElement())
             return locateNamespacePrefix(*ownerElement, namespaceURI);
         return nullAtom();
     default:
@@ -1673,17 +1677,17 @@ static void appendTextContent(const Node* node, bool convertBRsToNewlines, bool&
     case Node::CDATA_SECTION_NODE:
     case Node::COMMENT_NODE:
         isNullString = false;
-        content.append(downcast<CharacterData>(*node).data());
+        content.append(uncheckedDowncast<CharacterData>(*node).data());
         break;
 
     case Node::PROCESSING_INSTRUCTION_NODE:
         isNullString = false;
-        content.append(downcast<ProcessingInstruction>(*node).data());
+        content.append(uncheckedDowncast<ProcessingInstruction>(*node).data());
         break;
     
     case Node::ATTRIBUTE_NODE:
         isNullString = false;
-        content.append(downcast<Attr>(*node).value());
+        content.append(uncheckedDowncast<Attr>(*node).value());
         break;
 
     case Node::ELEMENT_NODE:
@@ -1728,7 +1732,7 @@ void Node::setTextContent(String&& text)
         return;
     case ELEMENT_NODE:
     case DOCUMENT_FRAGMENT_NODE:
-        downcast<ContainerNode>(*this).stringReplaceAll(WTFMove(text));
+        uncheckedDowncast<ContainerNode>(*this).stringReplaceAll(WTFMove(text));
         return;
     case DOCUMENT_NODE:
     case DOCUMENT_TYPE_NODE:
@@ -1963,7 +1967,7 @@ void Node::showNodePathForThis() const
         case ELEMENT_NODE: {
             fprintf(stderr, "/%s", node->nodeName().utf8().data());
 
-            const Element& element = downcast<Element>(*node);
+            const Element& element = uncheckedDowncast<Element>(*node);
             const AtomString& idattr = element.getIdAttribute();
             bool hasIdAttr = !idattr.isNull() && !idattr.isEmpty();
             if (node->previousSibling() || node->nextSibling()) {
@@ -2154,7 +2158,7 @@ void Node::moveTreeToNewScope(Node& root, TreeScope& oldScope, TreeScope& newSco
             ASSERT(!node.isTreeScope());
             RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(&node.treeScope() == &oldScope);
             if (newScopeIsUAShadowTree)
-                node.setNodeFlag(NodeFlag::HasBeenInUserAgentShadowTree);
+                node.setEventTargetFlag(EventTargetFlag::HasBeenInUserAgentShadowTree);
             node.setTreeScope(newScope);
             node.moveNodeToNewDocument(oldDocument, newDocument);
         }, [&](ShadowRoot& shadowRoot) {
@@ -2169,7 +2173,7 @@ void Node::moveTreeToNewScope(Node& root, TreeScope& oldScope, TreeScope& newSco
             ASSERT(!node.isTreeScope());
             RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(&node.treeScope() == &oldScope);
             if (newScopeIsUAShadowTree)
-                node.setNodeFlag(NodeFlag::HasBeenInUserAgentShadowTree);
+                node.setEventTargetFlag(EventTargetFlag::HasBeenInUserAgentShadowTree);
             node.setTreeScope(newScope);
             if (UNLIKELY(!node.hasRareData()))
                 return;
@@ -2216,31 +2220,39 @@ void Node::moveNodeToNewDocument(Document& oldDocument, Document& newDocument)
     if (UNLIKELY(textManipulationController))
         textManipulationController->removeNode(*this);
 
-    if (auto* eventTargetData = this->eventTargetData()) {
-        auto& eventNames = WebCore::eventNames();
-        if (!eventTargetData->eventListenerMap.isEmpty()) {
-            for (auto& type : eventTargetData->eventListenerMap.eventTypes())
-                newDocument.addListenerTypeIfNeeded(type);
-        }
+    if (hasEventTargetData()) {
+        unsigned numWheelEventHandlers = 0;
+        unsigned numTouchEventListeners = 0;
+#if ENABLE(TOUCH_EVENTS) && ENABLE(IOS_GESTURE_EVENTS)
+        unsigned numGestureEventListeners = 0;
+#endif
 
-        unsigned numWheelEventHandlers = eventListeners(eventNames.mousewheelEvent).size() + eventListeners(eventNames.wheelEvent).size();
+        auto touchEventCategory = EventCategory::TouchRelated;
+#if ENABLE(TOUCH_EVENTS)
+        if (newDocument.quirks().shouldDispatchSimulatedMouseEvents(this))
+            touchEventCategory = EventCategory::ExtendedTouchRelated;
+#endif
+
+        auto& eventNames = WebCore::eventNames();
+        enumerateEventListenerTypes([&](auto& eventType, unsigned count) {
+            oldDocument.didRemoveEventListenersOfType(eventType, count);
+            newDocument.didAddEventListenersOfType(eventType, count);
+
+            auto typeInfo = eventNames.typeInfoForEvent(eventType);
+            if (typeInfo.isInCategory(EventCategory::Wheel))
+                numWheelEventHandlers += count;
+            else if (typeInfo.isInCategory(touchEventCategory))
+                numTouchEventListeners += count;
+#if ENABLE(TOUCH_EVENTS) && ENABLE(IOS_GESTURE_EVENTS)
+            else if (typeInfo.isInCategory(EventCategory::Gesture))
+                numGestureEventListeners += count;
+#endif
+        });
+
         for (unsigned i = 0; i < numWheelEventHandlers; ++i) {
             oldDocument.didRemoveWheelEventHandler(*this);
             newDocument.didAddWheelEventHandler(*this);
         }
-
-        unsigned numTouchEventListeners = 0;
-#if ENABLE(TOUCH_EVENTS)
-        if (newDocument.quirks().shouldDispatchSimulatedMouseEvents(this)) {
-            for (auto& name : eventNames.extendedTouchRelatedEventNames())
-                numTouchEventListeners += eventListeners(name).size();
-        } else {
-#endif
-            for (auto& name : eventNames.touchRelatedEventNames())
-                numTouchEventListeners += eventListeners(name).size();
-#if ENABLE(TOUCH_EVENTS)
-        }
-#endif
 
         for (unsigned i = 0; i < numTouchEventListeners; ++i) {
             oldDocument.didRemoveTouchEventHandler(*this);
@@ -2252,10 +2264,6 @@ void Node::moveNodeToNewDocument(Document& oldDocument, Document& newDocument)
         }
 
 #if ENABLE(TOUCH_EVENTS) && ENABLE(IOS_GESTURE_EVENTS)
-        unsigned numGestureEventListeners = 0;
-        for (auto& name : eventNames.gestureEventNames())
-            numGestureEventListeners += eventListeners(name).size();
-
         for (unsigned i = 0; i < numGestureEventListeners; ++i) {
             oldDocument.removeTouchEventHandler(*this);
             newDocument.addTouchEventHandler(*this);
@@ -2277,36 +2285,49 @@ void Node::moveNodeToNewDocument(Document& oldDocument, Document& newDocument)
         element->didMoveToNewDocument(oldDocument, newDocument);
 }
 
+bool isTouchRelatedEventType(const EventTypeInfo& eventType, const EventTarget& target)
+{
+#if ENABLE(TOUCH_EVENTS)
+    if (auto* node = dynamicDowncast<Node>(target); node && node->document().quirks().shouldDispatchSimulatedMouseEvents(&target))
+        return eventType.isInCategory(EventCategory::ExtendedTouchRelated);
+#endif
+    UNUSED_PARAM(target);
+    return eventType.isInCategory(EventCategory::TouchRelated);
+}
+
 static inline bool tryAddEventListener(Node* targetNode, const AtomString& eventType, Ref<EventListener>&& listener, const AddEventListenerOptions& options)
 {
     if (!targetNode->EventTarget::addEventListener(eventType, listener.copyRef(), options))
         return false;
 
-    targetNode->document().addListenerTypeIfNeeded(eventType);
+    Ref document = targetNode->document();
+    document->didAddEventListenersOfType(eventType);
 
     auto& eventNames = WebCore::eventNames();
-    if (eventNames.isWheelEventType(eventType))
-        targetNode->document().didAddWheelEventHandler(*targetNode);
-    else if (eventNames.isTouchRelatedEventType(eventType, *targetNode))
-        targetNode->document().didAddTouchEventHandler(*targetNode);
-    else if (eventNames.isMouseClickRelatedEventType(eventType))
-        targetNode->document().didAddOrRemoveMouseEventHandler(*targetNode);
+    auto typeInfo = eventNames.typeInfoForEvent(eventType);
+    if (typeInfo.isInCategory(EventCategory::Wheel)) {
+        document->didAddWheelEventHandler(*targetNode);
+        document->invalidateEventListenerRegions();
+    } else if (isTouchRelatedEventType(typeInfo, *targetNode))
+        document->didAddTouchEventHandler(*targetNode);
+    else if (typeInfo.isInCategory(EventCategory::MouseClickRelated))
+        document->didAddOrRemoveMouseEventHandler(*targetNode);
 
 #if PLATFORM(IOS_FAMILY)
-    if (targetNode == &targetNode->document() && eventType == eventNames.scrollEvent) {
-        if (auto* window = targetNode->document().domWindow())
+    if (targetNode == document.ptr() && typeInfo.type() == EventType::scroll) {
+        if (auto* window = document->domWindow())
             window->incrementScrollEventListenersCount();
     }
 
 #if ENABLE(TOUCH_EVENTS)
-    if (eventNames.isTouchRelatedEventType(eventType, *targetNode))
-        targetNode->document().addTouchEventListener(*targetNode);
+    if (isTouchRelatedEventType(typeInfo, *targetNode))
+        document->addTouchEventListener(*targetNode);
 #endif
 #endif // PLATFORM(IOS_FAMILY)
 
 #if ENABLE(IOS_GESTURE_EVENTS) && ENABLE(TOUCH_EVENTS)
-    if (eventNames.isGestureEventType(eventType))
-        targetNode->document().addTouchEventHandler(*targetNode);
+    if (typeInfo.isInCategory(EventCategory::Gesture))
+        document->addTouchEventHandler(*targetNode);
 #endif
 
     return true;
@@ -2317,36 +2338,38 @@ bool Node::addEventListener(const AtomString& eventType, Ref<EventListener>&& li
     return tryAddEventListener(this, eventType, WTFMove(listener), options);
 }
 
-static inline bool tryRemoveEventListener(Node* targetNode, const AtomString& eventType, EventListener& listener, const EventListenerOptions& options)
+static inline bool didRemoveEventListenerOfType(Node& targetNode, const AtomString& eventType)
 {
-    if (!targetNode->EventTarget::removeEventListener(eventType, listener, options))
-        return false;
+    Ref document = targetNode.document();
+    document->didRemoveEventListenersOfType(eventType);
 
     // FIXME: Notify Document that the listener has vanished. We need to keep track of a number of
     // listeners for each type, not just a bool - see https://bugs.webkit.org/show_bug.cgi?id=33861
     auto& eventNames = WebCore::eventNames();
-    if (eventNames.isWheelEventType(eventType))
-        targetNode->document().didRemoveWheelEventHandler(*targetNode);
-    else if (eventNames.isTouchRelatedEventType(eventType, *targetNode))
-        targetNode->document().didRemoveTouchEventHandler(*targetNode);
-    else if (eventNames.isMouseClickRelatedEventType(eventType))
-        targetNode->document().didAddOrRemoveMouseEventHandler(*targetNode);
+    auto typeInfo = eventNames.typeInfoForEvent(eventType);
+    if (typeInfo.isInCategory(EventCategory::Wheel)) {
+        document->didRemoveWheelEventHandler(targetNode);
+        document->invalidateEventListenerRegions();
+    } else if (isTouchRelatedEventType(typeInfo, targetNode))
+        document->didRemoveTouchEventHandler(targetNode);
+    else if (typeInfo.isInCategory(EventCategory::MouseClickRelated))
+        document->didAddOrRemoveMouseEventHandler(targetNode);
 
 #if PLATFORM(IOS_FAMILY)
-    if (targetNode == &targetNode->document() && eventType == eventNames.scrollEvent) {
-        if (auto* window = targetNode->document().domWindow())
+    if (&targetNode == document.ptr() && typeInfo.type() == EventType::scroll) {
+        if (auto* window = document->domWindow())
             window->decrementScrollEventListenersCount();
     }
 
 #if ENABLE(TOUCH_EVENTS)
-    if (eventNames.isTouchRelatedEventType(eventType, *targetNode))
-        targetNode->document().removeTouchEventListener(*targetNode);
+    if (isTouchRelatedEventType(typeInfo, targetNode))
+        document->removeTouchEventListener(targetNode);
 #endif
 #endif // PLATFORM(IOS_FAMILY)
 
 #if ENABLE(IOS_GESTURE_EVENTS) && ENABLE(TOUCH_EVENTS)
-    if (eventNames.isGestureEventType(eventType))
-        targetNode->document().removeTouchEventHandler(*targetNode);
+    if (typeInfo.isInCategory(EventCategory::Gesture))
+        document->removeTouchEventHandler(targetNode);
 #endif
 
     return true;
@@ -2354,7 +2377,19 @@ static inline bool tryRemoveEventListener(Node* targetNode, const AtomString& ev
 
 bool Node::removeEventListener(const AtomString& eventType, EventListener& listener, const EventListenerOptions& options)
 {
-    return tryRemoveEventListener(this, eventType, listener, options);
+    if (!EventTarget::removeEventListener(eventType, listener, options))
+        return false;
+    didRemoveEventListenerOfType(*this, eventType);
+    return true;
+}
+
+void Node::removeAllEventListeners()
+{
+    EventTarget::removeAllEventListeners();
+    enumerateEventListenerTypes([&](const AtomString& type, unsigned count) {
+        for (unsigned i = 0; i < count; ++i)
+            didRemoveEventListenerOfType(*this, type);
+    });
 }
 
 Vector<std::unique_ptr<MutationObserverRegistration>>* Node::mutationObserverRegistry()
@@ -2538,28 +2573,36 @@ void Node::defaultEventHandler(Event& event)
         return;
     auto& eventType = event.type();
     auto& eventNames = WebCore::eventNames();
-    if (eventType == eventNames.keydownEvent || eventType == eventNames.keypressEvent || eventType == eventNames.keyupEvent) {
+    auto typeInfo = eventNames.typeInfoForEvent(eventType);
+    switch (typeInfo.type()) {
+    case EventType::keydown:
+    case EventType::keypress:
+    case EventType::keyup:
         if (RefPtr keyboardEvent = dynamicDowncast<KeyboardEvent>(event)) {
             if (RefPtr frame = document().frame())
                 frame->eventHandler().defaultKeyboardEventHandler(*keyboardEvent);
         }
-    } else if (eventType == eventNames.clickEvent) {
+        break;
+    case EventType::click:
         dispatchDOMActivateEvent(event);
+        break;
 #if ENABLE(CONTEXT_MENUS)
-    } else if (eventType == eventNames.contextmenuEvent) {
+    case EventType::contextmenu:
         if (RefPtr frame = document().frame()) {
             if (auto* page = frame->page())
                 page->contextMenuController().handleContextMenuEvent(event);
         }
+        break;
 #endif
-    } else if (eventType == eventNames.textInputEvent) {
+    case EventType::textInput:
         if (RefPtr textEvent = dynamicDowncast<TextEvent>(event)) {
             if (RefPtr frame = document().frame())
                 frame->eventHandler().defaultTextInputEventHandler(*textEvent);
         }
+        break;
 #if ENABLE(PAN_SCROLLING)
-    } else if (auto* mouseEvent = dynamicDowncast<MouseEvent>(event); mouseEvent && eventType == eventNames.mousedownEvent) {
-        if (mouseEvent->button() == MouseButton::Middle) {
+    case EventType::mousedown:
+        if (auto* mouseEvent = dynamicDowncast<MouseEvent>(event); mouseEvent && mouseEvent->button() == MouseButton::Middle) {
             if (enclosingLinkEventParentOrSelf())
                 return;
 
@@ -2572,45 +2615,54 @@ void Node::defaultEventHandler(Event& event)
                 }
             }
         }
+        break;
 #endif
-    } else if (auto* wheelEvent = dynamicDowncast<WheelEvent>(event); wheelEvent && eventNames.isWheelEventType(eventType)) {
-        // If we don't have a renderer, send the wheel event to the first node we find with a renderer.
-        // This is needed for <option> and <optgroup> elements so that <select>s get a wheel scroll.
-        Node* startNode = this;
-        while (startNode && !startNode->renderer())
-            startNode = startNode->parentOrShadowHostNode();
+    case EventType::mousewheel:
+    case EventType::wheel:
+        ASSERT(typeInfo.isInCategory(EventCategory::Wheel));
+        if (auto* wheelEvent = dynamicDowncast<WheelEvent>(event); wheelEvent) {
+            // If we don't have a renderer, send the wheel event to the first node we find with a renderer.
+            // This is needed for <option> and <optgroup> elements so that <select>s get a wheel scroll.
+            Node* startNode = this;
+            while (startNode && !startNode->renderer())
+                startNode = startNode->parentOrShadowHostNode();
         
-        if (startNode && startNode->renderer()) {
-            if (RefPtr frame = document().frame())
-                frame->eventHandler().defaultWheelEventHandler(RefPtr { startNode }.get(), *wheelEvent);
+            if (startNode && startNode->renderer()) {
+                if (RefPtr frame = document().frame())
+                    frame->eventHandler().defaultWheelEventHandler(RefPtr { startNode }.get(), *wheelEvent);
+            }
         }
+        break;
+    default:
 #if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS_FAMILY)
-    } else if (auto* touchEvent = dynamicDowncast<TouchEvent>(event); touchEvent && eventNames.isTouchRelatedEventType(eventType, *this)) {
-        // Capture the target node's visibility state before dispatching touchStart.
-        if (auto* element = dynamicDowncast<Element>(*this); element && eventType == eventNames.touchstartEvent) {
+        if (auto* touchEvent = dynamicDowncast<TouchEvent>(event); touchEvent && isTouchRelatedEventType(typeInfo, *this)) {
+            // Capture the target node's visibility state before dispatching touchStart.
+            if (auto* element = dynamicDowncast<Element>(*this); element && typeInfo.type() == EventType::touchstart) {
 #if ENABLE(CONTENT_CHANGE_OBSERVER)
-            auto& contentChangeObserver = document().contentChangeObserver();
-            if (ContentChangeObserver::isVisuallyHidden(*this))
-                contentChangeObserver.setHiddenTouchTarget(*element);
-            else
-                contentChangeObserver.resetHiddenTouchTarget();
+                auto& contentChangeObserver = document().contentChangeObserver();
+                if (ContentChangeObserver::isVisuallyHidden(*this))
+                    contentChangeObserver.setHiddenTouchTarget(*element);
+                else
+                    contentChangeObserver.resetHiddenTouchTarget();
 #endif
-        }
+            }
 
-        RenderObject* renderer = this->renderer();
-        for (; renderer; renderer = renderer->parent()) {
-            auto* renderBox = dynamicDowncast<RenderBox>(*renderer);
-            if (renderBox && renderBox->canBeScrolledAndHasScrollableArea())
-                break;
-        }
+            RenderObject* renderer = this->renderer();
+            for (; renderer; renderer = renderer->parent()) {
+                auto* renderBox = dynamicDowncast<RenderBox>(*renderer);
+                if (renderBox && renderBox->canBeScrolledAndHasScrollableArea())
+                    break;
+            }
 
-        if (renderer && renderer->node()) {
-            if (RefPtr frame = document().frame()) {
-                RefPtr rendererNode = renderer->node();
-                frame->eventHandler().defaultTouchEventHandler(*rendererNode, *touchEvent);
+            if (renderer && renderer->node()) {
+                if (RefPtr frame = document().frame()) {
+                    RefPtr rendererNode = renderer->node();
+                    frame->eventHandler().defaultTouchEventHandler(*rendererNode, *touchEvent);
+                }
             }
         }
 #endif
+        break;
     }
 }
 
@@ -2626,7 +2678,7 @@ bool Node::willRespondToMouseMoveEvents() const
 #endif
     auto& eventNames = WebCore::eventNames();
     return eventTypes().containsIf([&](const auto& type) {
-        return eventNames.isMouseMoveRelatedEventType(type);
+        return eventNames.typeInfoForEvent(type).isInCategory(EventCategory::MouseMoveRelated);
     });
 }
 
@@ -2634,7 +2686,7 @@ bool Node::willRespondToTouchEvents() const
 {
     auto& eventNames = WebCore::eventNames();
     return eventTypes().containsIf([&](const auto& type) {
-        return eventNames.isTouchRelatedEventType(type, *this);
+        return eventNames.typeInfoForEvent(type).isInCategory(EventCategory::TouchRelated);
     });
 }
 
@@ -2670,7 +2722,7 @@ bool Node::willRespondToMouseClickEventsWithEditability(Editability editability)
 
     auto& eventNames = WebCore::eventNames();
     return eventTypes().containsIf([&](const auto& type) {
-        return eventNames.isMouseClickRelatedEventType(type);
+        return eventNames.typeInfoForEvent(type).isInCategory(EventCategory::MouseClickRelated);
     });
 }
 
