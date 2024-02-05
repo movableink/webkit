@@ -399,8 +399,8 @@ void ComplexTextController::collectComplexTextRunsForCharacters(const UChar* cha
     QFontEngine* fe = QRawFontPrivate::get(rawFont)->fontEngine;
     
     NakedPtr<hb_blob_t> blob = hb_face_reference_blob(hb_qt_face_get_for_engine(fe));
-    NakedPtr<hb_face_t> face = hb_face_create(blob.get(), 0);
-    NakedPtr<hb_font_t> harfBuzzFont(hb_font_create(face.get()));
+    HbUniquePtr<hb_face_t> face = hb_face_create(blob.get(), 0);
+    HbUniquePtr<hb_font_t> harfBuzzFont(hb_font_create(face.get()));
     
     const float size = fontPlatformData.size();
     if (floorf(size) == size)
