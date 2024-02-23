@@ -34,6 +34,7 @@
 #include <QObject>
 #include <QThread>
 #include <QTimerEvent>
+#include <QDebug>
 
 namespace WTF {
 
@@ -116,7 +117,7 @@ static QEventLoop* currentEventLoop;
 
 void RunLoop::run()
 {
-    static bool mainEventLoopIsRunning = false;
+    static bool mainEventLoopIsRunning = true;
     if (!mainEventLoopIsRunning) {
         mainEventLoopIsRunning = true;
         QCoreApplication::exec();

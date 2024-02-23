@@ -98,7 +98,11 @@ FloatPoint BasicScrollingMomentumCalculator::cubicallyInterpolatedOffsetAtProgre
     ASSERT(!m_forceLinearAnimationCurve);
     FloatPoint interpolatedPoint;
     for (int i = 0; i < 4; ++i)
+#if COMPILER(MINGW64) && (!defined(__MINGW64_VERSION_RC) || __MINGW64_VERSION_RC < 1)
+        interpolatedPoint += pow(progress, i) * m_snapAnimationCurveCoefficients[i];
+#else
         interpolatedPoint += std::pow(progress, i) * m_snapAnimationCurveCoefficients[i];
+#endif
 
     return interpolatedPoint;
 }
@@ -221,7 +225,11 @@ void BasicScrollingMomentumCalculator::initializeSnapProgressCurve()
     m_snapAnimationCurveMagnitude = initialScrollSnapCurveMagnitude;
     for (int i = 0; i < maxNumScrollSnapParameterEstimationIterations; ++i) {
         m_snapAnimationDecayFactor = m_snapAnimationCurveMagnitude / (m_snapAnimationCurveMagnitude - initialProgress);
+#if COMPILER(MINGW64) && (!defined(__MINGW64_VERSION_RC) || __MINGW64_VERSION_RC < 1)
+        m_snapAnimationCurveMagnitude = 1.0f / (1.0f - pow(m_snapAnimationDecayFactor, -framesPerSecond * scrollSnapAnimationDuration.value()));
+#else
         m_snapAnimationCurveMagnitude = 1.0f / (1.0f - std::pow(m_snapAnimationDecayFactor, -framesPerSecond * scrollSnapAnimationDuration.value()));
+#endif
         if (std::abs(m_snapAnimationDecayFactor - previousDecayFactor) < scrollSnapDecayFactorConvergenceThreshold)
             break;
 
@@ -232,7 +240,11 @@ void BasicScrollingMomentumCalculator::initializeSnapProgressCurve()
 float BasicScrollingMomentumCalculator::animationProgressAfterElapsedTime(Seconds elapsedTime) const
 {
     float timeProgress = clampTo<float>(elapsedTime / scrollSnapAnimationDuration, 0, 1);
+#if COMPILER(MINGW64) && (!defined(__MINGW64_VERSION_RC) || __MINGW64_VERSION_RC < 1)
+    return std::min(1.0, m_snapAnimationCurveMagnitude * (1.0 - pow(m_snapAnimationDecayFactor, -framesPerSecond * scrollSnapAnimationDuration.value() * timeProgress)));
+#else
     return std::min(1.0, m_snapAnimationCurveMagnitude * (1.0 - std::pow(m_snapAnimationDecayFactor, -framesPerSecond * scrollSnapAnimationDuration.value() * timeProgress)));
+#endif
 }
 
 }; // namespace WebCore

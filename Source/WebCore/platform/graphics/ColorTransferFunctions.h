@@ -71,7 +71,11 @@ struct SRGBTransferFunction {
 template<typename T, TransferFunctionMode mode> T A98RGBTransferFunction<T, mode>::toGammaEncoded(T c)
 {
     auto sign = std::signbit(c) ? -1.0f : 1.0f;
+#if COMPILER(MINGW64) && (!defined(__MINGW64_VERSION_RC) || __MINGW64_VERSION_RC < 1)
+    auto result = pow(std::abs(c), 256.0f / 563.0f) * sign;
+#else
     auto result = std::pow(std::abs(c), 256.0f / 563.0f) * sign;
+#endif
     if constexpr (mode == TransferFunctionMode::Clamped)
         return clampTo<T>(result, 0, 1);
     return result;
@@ -80,7 +84,11 @@ template<typename T, TransferFunctionMode mode> T A98RGBTransferFunction<T, mode
 template<typename T, TransferFunctionMode mode> T A98RGBTransferFunction<T, mode>::toLinear(T c)
 {
     auto sign = std::signbit(c) ? -1.0f : 1.0f;
+#if COMPILER(MINGW64) && (!defined(__MINGW64_VERSION_RC) || __MINGW64_VERSION_RC < 1)
+    auto result = pow(std::abs(c), 563.0f / 256.0f) * sign;
+#else
     auto result = std::pow(std::abs(c), 563.0f / 256.0f) * sign;
+#endif
     if constexpr (mode == TransferFunctionMode::Clamped)
         return clampTo<T>(result, 0, 1);
     return result;
@@ -93,14 +101,21 @@ template<typename T, TransferFunctionMode mode> T ProPhotoRGBTransferFunction<T,
     if constexpr (mode == TransferFunctionMode::Clamped) {
         if (c < 1.0 / 512.0)
             return 16.0 * c;
-
+#if COMPILER(MINGW64) && (!defined(__MINGW64_VERSION_RC) || __MINGW64_VERSION_RC < 1)
+        return clampTo<T>(pow(c, 1.0 / gamma), 0, 1);
+#else
         return clampTo<T>(std::pow(c, 1.0 / gamma), 0, 1);
+#endif
     } else {
         if (std::abs(c) < 1.0 / 512.0)
             return 16.0 * c;
 
         float sign = std::signbit(c) ? -1.0 : 1.0;
+#if COMPILER(MINGW64) && (!defined(__MINGW64_VERSION_RC) || __MINGW64_VERSION_RC < 1)
+        return pow(c, 1.0 / gamma) * sign;
+#else
         return std::pow(c, 1.0 / gamma) * sign;
+#endif
     }
 }
 
@@ -109,14 +124,21 @@ template<typename T, TransferFunctionMode mode> T ProPhotoRGBTransferFunction<T,
     if constexpr (mode == TransferFunctionMode::Clamped) {
         if (c <= 16.0 / 512.0)
             return c / 16.0;
-
+#if COMPILER(MINGW64) && (!defined(__MINGW64_VERSION_RC) || __MINGW64_VERSION_RC < 1)
+        return clampTo<T>(pow(c, gamma), 0, 1);
+#else
         return clampTo<T>(std::pow(c, gamma), 0, 1);
+#endif
     } else {
         if (std::abs(c) <= 16.0 / 512.0)
             return c / 16.0;
 
         float sign = std::signbit(c) ? -1.0 : 1.0;
+#if COMPILER(MINGW64) && (!defined(__MINGW64_VERSION_RC) || __MINGW64_VERSION_RC < 1)
+        return pow(c, gamma) * sign;
+#else
         return std::pow(c, gamma) * sign;
+#endif
     }
 }
 
@@ -127,14 +149,21 @@ template<typename T, TransferFunctionMode mode> T Rec2020TransferFunction<T, mod
     if constexpr (mode == TransferFunctionMode::Clamped) {
         if (c <= beta)
             return 4.5f * c;
-
+#if COMPILER(MINGW64) && (!defined(__MINGW64_VERSION_RC) || __MINGW64_VERSION_RC < 1)
+        return clampTo<T>(alpha * pow(c, gamma) - (alpha - 1.0f), 0, 1);
+#else
         return clampTo<T>(alpha * std::pow(c, gamma) - (alpha - 1.0f), 0, 1);
+#endif
     } else {
         if (std::abs(c) <= beta)
             return 4.5f * c;
 
         float sign = std::signbit(c) ? -1.0 : 1.0;
+#if COMPILER(MINGW64) && (!defined(__MINGW64_VERSION_RC) || __MINGW64_VERSION_RC < 1)
+        return (alpha * pow(c, gamma) - (alpha - 1.0)) * sign;
+#else
         return (alpha * std::pow(c, gamma) - (alpha - 1.0)) * sign;
+#endif
     }
 }
 
@@ -143,13 +172,21 @@ template<typename T, TransferFunctionMode mode> T Rec2020TransferFunction<T, mod
     if constexpr (mode == TransferFunctionMode::Clamped) {
         if (c < beta * 4.5f)
             return c / 4.5f;
+#if COMPILER(MINGW64) && (!defined(__MINGW64_VERSION_RC) || __MINGW64_VERSION_RC < 1)
+        return clampTo<T>(pow((c + alpha - 1.0) / alpha, 1.0 / gamma), 0, 1);
+#else
         return clampTo<T>(std::pow((c + alpha - 1.0) / alpha, 1.0 / gamma), 0, 1);
+#endif
     } else {
         if (std::abs(c) < beta * 4.5f)
             return c / 4.5f;
 
         float sign = std::signbit(c) ? -1.0 : 1.0;
+#if COMPILER(MINGW64) && (!defined(__MINGW64_VERSION_RC) || __MINGW64_VERSION_RC < 1)
+        return pow((c + alpha - 1.0) / alpha, 1.0 / gamma) * sign;
+#else
         return std::pow((c + alpha - 1.0) / alpha, 1.0 / gamma) * sign;
+#endif
     }
 }
 
@@ -160,14 +197,22 @@ template<typename T, TransferFunctionMode mode> T SRGBTransferFunction<T, mode>:
     if constexpr (mode == TransferFunctionMode::Clamped) {
         if (c < 0.0031308f)
             return std::max<T>(12.92f * c, 0);
+#if COMPILER(MINGW64) && (!defined(__MINGW64_VERSION_RC) || __MINGW64_VERSION_RC < 1)
+        return clampTo<T>(1.055f * pow(c, 1.0f / 2.4f) - 0.055f, 0, 1);
+#else
         return clampTo<T>(1.055f * std::pow(c, 1.0f / 2.4f) - 0.055f, 0, 1);
+#endif
     } else {
         auto sign = std::signbit(c) ? -1.0f : 1.0f;
         c = std::abs(c);
 
         if (c < 0.0031308f)
             return 12.92f * c * sign;
+#if COMPILER(MINGW64) && (!defined(__MINGW64_VERSION_RC) || __MINGW64_VERSION_RC < 1)
+        return (1.055f * pow(c, 1.0f / 2.4f) - 0.055f) * sign;
+#else
         return (1.055f * std::pow(c, 1.0f / 2.4f) - 0.055f) * sign;
+#endif
     }
 }
 
@@ -176,14 +221,22 @@ template<typename T, TransferFunctionMode mode> T SRGBTransferFunction<T, mode>:
     if constexpr (mode == TransferFunctionMode::Clamped) {
         if (c <= 0.04045f)
             return std::max<float>(c / 12.92f, 0);
+#if COMPILER(MINGW64) && (!defined(__MINGW64_VERSION_RC) || __MINGW64_VERSION_RC < 1)
+        return clampTo<float>(pow((c + 0.055f) / 1.055f, 2.4f), 0, 1);
+#else
         return clampTo<float>(std::pow((c + 0.055f) / 1.055f, 2.4f), 0, 1);
+#endif
     } else {
         auto sign = std::signbit(c) ? -1.0f : 1.0f;
         c = std::abs(c);
 
         if (c <= 0.04045f)
             return c / 12.92f * sign;
+#if COMPILER(MINGW64) && (!defined(__MINGW64_VERSION_RC) || __MINGW64_VERSION_RC < 1)
+        return pow((c + 0.055f) / 1.055f, 2.4f) * sign;
+#else
         return std::pow((c + 0.055f) / 1.055f, 2.4f) * sign;
+#endif
     }
 }
 

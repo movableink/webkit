@@ -75,7 +75,9 @@ protected:
     WorkQueueBase(const char* name, Type, QOS);
 #if USE(COCOA_EVENT_LOOP) || (PLATFORM(QT) && USE(MACH_PORTS))
     explicit WorkQueueBase(OSObjectPtr<dispatch_queue_t>&&);
-#elif !PLATFORM(QT)
+#elif PLATFORM(QT) && USE(UNIX_DOMAIN_SOCKETS)
+    //Nothing here...
+#else
     explicit WorkQueueBase(RunLoop&);
 #endif
 

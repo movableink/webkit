@@ -13,6 +13,11 @@ DerivedData
 .mailmap
 results
 
+AAAAAAAA/
+build-dep-win/
+build-win/
+install-win/
+
 # Ignore Buildstream local files
 /Tools/buildstream/.bst2
 /Tools/buildstream/cache

@@ -211,6 +211,7 @@ if (!$shouldCombineMain) {
 # Always refer to the copy in derived sources so the order of replacements does not matter.
 make_path($derivedSourcesDir);
 my $derivedSourcesMainHTML = File::Spec->catfile($derivedSourcesDir, 'Main.html');
+unlink(File::Spec->catfile($derivedSourcesDir, 'Main.html'));
 copy(File::Spec->catfile($uiRoot, 'Main.html'), File::Spec->catfile($derivedSourcesDir, 'Main.html')) or die "Copy failed: $!";
 
 if (!$shouldIncludeBrowserInspectorFrontendHost) {

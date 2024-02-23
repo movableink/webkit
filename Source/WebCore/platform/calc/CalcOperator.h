@@ -133,7 +133,11 @@ double evaluateCalcExpression(CalcOperator calcOperator, const Vector<T>& childr
     case CalcOperator::Pow:
         if (children.size() != 2)
             return std::numeric_limits<double>::quiet_NaN();
+#if COMPILER(MINGW64) && (!defined(__MINGW64_VERSION_RC) || __MINGW64_VERSION_RC < 1)
+        return pow(evaluate(children[0]), evaluate(children[1]));
+#else
         return std::pow(evaluate(children[0]), evaluate(children[1]));
+#endif
     case CalcOperator::Sqrt: {
         if (children.size() != 1)
             return std::numeric_limits<double>::quiet_NaN();

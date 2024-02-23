@@ -564,11 +564,19 @@ JSC_DEFINE_JIT_OPERATION(sqrtFloat, float, (float value))
 
 JSC_DEFINE_JIT_OPERATION(stdPowDouble, double, (double x, double y))
 {
+#if COMPILER(MINGW64) && (!defined(__MINGW64_VERSION_RC) || __MINGW64_VERSION_RC < 1)
+    return pow(x, y);
+#else
     return std::pow(x, y);
+#endif
 }
 JSC_DEFINE_JIT_OPERATION(stdPowFloat, float, (float x, float y))
 {
+#if COMPILER(MINGW64) && (!defined(__MINGW64_VERSION_RC) || __MINGW64_VERSION_RC < 1)
+    return pow(x, y);
+#else
     return std::pow(x, y);
+#endif
 }
 
 JSC_DEFINE_JIT_OPERATION(fmodDouble, double, (double x, double y))

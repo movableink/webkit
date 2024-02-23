@@ -103,15 +103,16 @@ void initialize()
 #else // !ENABLE(C_LOOP)
 
     if (UNLIKELY(g_jscConfig.vmEntryDisallowed))
+    {
         neuterOpcodeMaps();
-    else {
+    }
+    else 
+    {
         llint_entry(&g_opcodeMap, &g_opcodeMapWide16, &g_opcodeMapWide32);
-    
 #if ENABLE(WEBASSEMBLY)
         wasm_entry(&g_opcodeMap[numOpcodeIDs], &g_opcodeMapWide16[numOpcodeIDs], &g_opcodeMapWide32[numOpcodeIDs]);
 #endif // ENABLE(WEBASSEMBLY)
     }
-
     static_assert(llint_throw_from_slow_path_trampoline < UINT8_MAX);
     static_assert(wasm_throw_from_slow_path_trampoline < UINT8_MAX);
     for (unsigned i = 0; i < maxBytecodeStructLength + 1; ++i) {

@@ -90,6 +90,12 @@ public:
 
     void setURLForRect(const URL& url, const FloatRect& rect) final;
     RenderingMode renderingMode() const final;
+    
+    // FIXED: Moved from GraphicsContext.h to GraphicContextQt.h, probably belongs here.
+#if OS(WINDOWS)
+    HDC getWindowsContext(const IntRect&, bool supportAlphaBlend); // The passed in rect is used to create a bitmap for compositing inside transparency layers.
+    void releaseWindowsContext(HDC, const IntRect&, bool supportAlphaBlend); // The passed in HDC should be the one handed back by getWindowsContext.
+#endif
 
     using GraphicsContext::scale;
     void scale(const FloatSize&) final;

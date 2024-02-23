@@ -548,7 +548,11 @@ class LabelReference
         # https://bugs.webkit.org/show_bug.cgi?id=175104
         used
         if !isIntelSyntax
-            $asm.puts "movq #{asmLabel}@GOTPCREL(%rip), #{dst.x86Operand(:ptr)}"
+            if isWin
+                $asm.puts "leaq #{asmLabel}(%rip), #{dst.x86Operand(:ptr)}"
+            else
+                $asm.puts "movq #{asmLabel}@GOTPCREL(%rip), #{dst.x86Operand(:ptr)}"
+            end
         else
             $asm.puts "lea #{dst.x86Operand(:ptr)}, #{asmLabel}"
         end
@@ -677,7 +681,11 @@ class Instruction
         if src.is_a? LabelReference
             src.used
             if !isIntelSyntax
-                $asm.puts "movq #{src.asmLabel}@GOTPCREL(%rip), #{dst.x86Operand(:ptr)}"
+                if isWin
+                    $asm.puts "leaq #{src.asmLabel}(%rip), #{dst.x86Operand(:ptr)}"
+                else
+                    $asm.puts "movq #{src.asmLabel}@GOTPCREL(%rip), #{dst.x86Operand(:ptr)}"
+                end
             else
                 $asm.puts "lea #{dst.x86Operand(:ptr)}, #{src.asmLabel}"
             end
