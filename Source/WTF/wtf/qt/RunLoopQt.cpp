@@ -34,7 +34,6 @@
 #include <QObject>
 #include <QThread>
 #include <QTimerEvent>
-#include <QDebug>
 
 namespace WTF {
 
@@ -114,15 +113,23 @@ private:
 };
 
 static QEventLoop* currentEventLoop;
+static bool mainEventLoopIsRunning = false;
 
 void RunLoop::run()
 {
-    static bool mainEventLoopIsRunning = true;
-    if (!mainEventLoopIsRunning) {
+    /* 
+       This call to QCoreApplication::exec() must be protected to not accidentially be called from another thread.
+       bacause it will lock (freeze) WebKit if it happens.
+    */
+
+    if (!mainEventLoopIsRunning && WTF::isMainThread()) 
+    {
         mainEventLoopIsRunning = true;
         QCoreApplication::exec();
         mainEventLoopIsRunning = false;
-    } else {
+    } 
+    else 
+    {
         QEventLoop eventLoop;
         QEventLoop* previousEventLoop = currentEventLoop;
         currentEventLoop = &eventLoop;
@@ -136,9 +143,22 @@ void RunLoop::run()
 void RunLoop::stop()
 {
     if (currentEventLoop)
+    {
         currentEventLoop->exit();
-    else
+    }
+    else if(mainEventLoopIsRunning)
+    {
         QCoreApplication::exit();
+    }
+    else
+    {
+        /*
+          Do nothing?, there is no more QEvenLoops and mainEventLoop was not started
+          Not sure if all this is right, so leaving it as it is
+          Maybe someone with more knowledge will chime in here later to fix this mess.
+        */
+        return;
+    }
 }
 
 RunLoop::RunLoop()

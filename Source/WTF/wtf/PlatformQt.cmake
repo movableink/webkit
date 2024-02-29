@@ -114,10 +114,12 @@ endif ()
 if (WIN32)
     list(APPEND WTF_SOURCES
         win/CPUTimeWin.cpp
-        generic/WorkQueueGeneric.cpp
         win/SignalsWin.cpp
         
+        qt/WorkQueueQt.cpp
     )
+    QTWEBKIT_GENERATE_MOC_FILES_CPP(WTF qt/WorkQueueQt.cpp)
+    
     list(APPEND WTF_LIBRARIES
         winmm
     )
