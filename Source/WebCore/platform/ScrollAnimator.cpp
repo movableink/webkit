@@ -399,6 +399,14 @@ bool ScrollAnimator::scrollAnimationEnabled() const
 {
     return m_scrollableArea.scrollAnimatorEnabled();
 }
+#elif PLATFORM(QT)
+bool ScrollAnimator::scrollAnimationEnabled() const
+{
+    // FIXME:
+    // Scrolling animation doesn't work right now.
+    // Return false so that non-animated wheel scrolling works.
+    return false;
+}
 #endif
 
 void ScrollAnimator::cancelAnimations()
