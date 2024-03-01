@@ -552,7 +552,11 @@ GradientColorStops StyleGradientImage::computeStops(GradientAdapter& gradientAda
         // calculate colors
         for (size_t y = 0; y < 9; ++y) {
             float relativeOffset = (*newStops[y].offset - offset1) / (offset2 - offset1);
+#if COMPILER(MINGW64) && (!defined(__MINGW64_VERSION_RC) || __MINGW64_VERSION_RC < 1)
+            float multiplier = pow(relativeOffset, std::log(.5f) / std::log(midpoint));
+#else
             float multiplier = std::pow(relativeOffset, std::log(.5f) / std::log(midpoint));
+#endif
             newStops[y].color = interpolateColors(m_colorInterpolationMethod.method, color1, 1.0f - multiplier, color2, multiplier);
         }
 

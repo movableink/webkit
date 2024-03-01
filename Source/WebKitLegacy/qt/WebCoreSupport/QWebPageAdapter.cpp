@@ -96,6 +96,7 @@
 #include <WebCore/PageIdentifier.h>
 #include <WebCore/PlatformKeyboardEvent.h>
 #include <WebCore/PlatformMouseEvent.h>
+#include <WebCore/PlatformTouchEvent.h>
 #include <WebCore/ProgressTracker.h>
 #include <WebCore/QWebPageClient.h>
 #include <WebCore/RemoteFrameClient.h>
@@ -1541,7 +1542,7 @@ bool QWebPageAdapter::handleShortcutOverrideEvent(QKeyEvent* event)
 bool QWebPageAdapter::touchEvent(QTouchEvent* event)
 {
 #if ENABLE(TOUCH_EVENTS)
-    Frame* frame = mainFrameAdapter().frame;
+    WebCore::LocalFrame* frame = mainFrameAdapter().frame;
     if (!frame->view() || !frame->document())
         return false;
 
@@ -1554,7 +1555,7 @@ bool QWebPageAdapter::touchEvent(QTouchEvent* event)
     event->setAccepted(true);
 
     // Return whether the default action was cancelled in the JS event handler
-    return frame->eventHandler().handleTouchEvent(convertTouchEvent(event));
+    return frame->eventHandler().handleTouchEvent(convertTouchEvent(event)).wasHandled();
 #else
     event->ignore();
     return false;

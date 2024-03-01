@@ -726,13 +726,13 @@ namespace JSC {
         }
 
 #if OS(WINDOWS) && CPU(X86_64)
-        template<typename Type>
+        template<typename Type, typename fake = void>
         struct is64BitType {
             static constexpr bool value = sizeof(Type) <= 8;
         };
 
-        template<>
-        struct is64BitType<void> {
+        template<typename fake>
+        struct is64BitType<void,fake> {
             static constexpr bool value = true;
         };
 

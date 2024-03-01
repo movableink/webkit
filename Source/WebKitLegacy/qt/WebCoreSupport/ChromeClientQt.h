@@ -152,7 +152,7 @@ public:
 #endif
 
 #if ENABLE(TOUCH_EVENTS)
-    void needTouchEvents(bool) final { }
+    void needTouchEvents(bool) { }
 #endif
 
     void isPlayingMediaDidChange(MediaProducerMediaStateFlags) final;

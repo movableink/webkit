@@ -163,7 +163,7 @@ private:
     void deferWheelEventTestCompletionForReason(WheelEventTestMonitor::ScrollableAreaIdentifier, WheelEventTestMonitor::DeferReason) const final;
     void removeWheelEventTestCompletionDeferralForReason(WheelEventTestMonitor::ScrollableAreaIdentifier, WheelEventTestMonitor::DeferReason) const final;
 
-#if PLATFORM(GTK) || USE(NICOSIA)
+#if PLATFORM(GTK) || PLATFORM(QT) || USE(NICOSIA)
     bool scrollAnimationEnabled() const final;
 #endif
 

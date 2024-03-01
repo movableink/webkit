@@ -16,6 +16,7 @@ QTWEBKIT_GENERATE_MOC_FILES_CPP(WTF qt/MainThreadQt.cpp qt/RunLoopQt.cpp)
 if (WIN32)
     list(APPEND WTF_PUBLIC_HEADERS
         text/win/WCharStringEXtras.h
+        win/DbgHelperWin.h
     )
     list(APPEND WTF_SOURCES
         text/win/StringWin.cpp
@@ -24,7 +25,10 @@ if (WIN32)
         win/FileSystemWin.cpp
         win/OSAllocatorWin.cpp
         win/PathWalker.cpp
-        win/ThreadSpecificWin.cpp
+        
+        #missing file, removing it for now.
+        #win/ThreadSpecificWin.cpp
+        
         win/ThreadingWin.cpp
     )
     list(APPEND WTF_LIBRARIES
@@ -78,7 +82,6 @@ endif ()
 if (USE_UNIX_DOMAIN_SOCKETS)
     list(APPEND WTF_SOURCES
         qt/WorkQueueQt.cpp
-
         unix/UniStdExtrasUnix.cpp
     )
     QTWEBKIT_GENERATE_MOC_FILES_CPP(WTF qt/WorkQueueQt.cpp)
@@ -111,8 +114,12 @@ endif ()
 if (WIN32)
     list(APPEND WTF_SOURCES
         win/CPUTimeWin.cpp
-        win/WorkQueueWin.cpp
+        win/SignalsWin.cpp
+        
+        qt/WorkQueueQt.cpp
     )
+    QTWEBKIT_GENERATE_MOC_FILES_CPP(WTF qt/WorkQueueQt.cpp)
+    
     list(APPEND WTF_LIBRARIES
         winmm
     )
@@ -156,6 +163,7 @@ if (WIN32)
     list(APPEND WTF_SOURCES
         win/MemoryFootprintWin.cpp
         win/MemoryPressureHandlerWin.cpp
+        win/Win32Handle.cpp
     )
     list(APPEND WTF_PUBLIC_HEADERS
         win/Win32Handle.h

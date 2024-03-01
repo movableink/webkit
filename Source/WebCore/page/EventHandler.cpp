@@ -3433,20 +3433,20 @@ bool EventHandler::handleGestureEvent(const PlatformGestureEvent& gestureEvent)
     Scrollbar* scrollbar = 0;
 
     IntPoint adjustedPoint = gestureEvent.position();
-    HitTestRequest::HitTestRequestType hitType = HitTestRequest::TouchEvent;
+    HitTestRequest::Type hitType = HitTestRequest::Type::TouchEvent;
     if (gestureEvent.type() == PlatformEvent::Type::GestureTap) {
         // The mouseup event synthesized for this gesture will clear the active state of the
         // targeted node, so performing a ReadOnly hit test here is fine.
-        hitType |= HitTestRequest::ReadOnly;
+        hitType |= HitTestRequest::Type::ReadOnly;
     } else
-        hitType |= HitTestRequest::Active | HitTestRequest::ReadOnly;
+        hitType |= HitTestRequest::Type::Active | HitTestRequest::Type::ReadOnly;
 
     if (!shouldGesturesTriggerActive())
-        hitType |= HitTestRequest::ReadOnly;
+        hitType |= HitTestRequest::Type::ReadOnly;
 
-    if ((!scrollbar && !eventTarget) || !(hitType & HitTestRequest::ReadOnly)) {
-        IntPoint hitTestPoint = m_frame.view()->windowToContents(adjustedPoint);
-        HitTestResult result = hitTestResultAtPoint(hitTestPoint, hitType | HitTestRequest::AllowFrameScrollbars);
+    if ((!scrollbar && !eventTarget) || !static_cast<int>(hitType & HitTestRequest::Type::ReadOnly)) {
+        IntPoint hitTestPoint = m_frame->view()->windowToContents(adjustedPoint);
+        HitTestResult result = hitTestResultAtPoint(hitTestPoint, hitType | HitTestRequest::Type::AllowFrameScrollbars);
         eventTarget = result.targetNode();
         if (!scrollbar)
             scrollbar = result.scrollbar();
@@ -3466,7 +3466,7 @@ bool EventHandler::handleGestureEvent(const PlatformGestureEvent& gestureEvent)
 
     // FIXME: A more general scroll system (https://bugs.webkit.org/show_bug.cgi?id=80596) will
     // eliminate the need for this.
-    TemporaryChange<PlatformEvent::Type> baseEventType(m_baseEventType, gestureEvent.type());
+    //TemporaryChange<PlatformEvent::Type> baseEventType(m_baseEventType, gestureEvent.type());
 
     switch (gestureEvent.type()) {
     case PlatformEvent::Type::GestureTap:
@@ -3489,22 +3489,22 @@ bool EventHandler::handleGestureTap(const PlatformGestureEvent& gestureEvent)
 #endif
 
     PlatformMouseEvent fakeMouseMove(adjustedPoint, gestureEvent.globalPosition(),
-        NoButton, PlatformEvent::Type::MouseMoved, /* clickCount */ 0,
-        gestureEvent.shiftKey(), gestureEvent.ctrlKey(), gestureEvent.altKey(), gestureEvent.metaKey(), gestureEvent.timestamp(), ForceAtClick);
+        MouseButton::None, PlatformEvent::Type::MouseMoved, /* clickCount */ 0,
+        gestureEvent.modifiers(), gestureEvent.timestamp(), ForceAtClick, SyntheticClickType::NoTap);
     mouseMoved(fakeMouseMove);
 
     int tapCount = 1;
 
     bool defaultPrevented = false;
     PlatformMouseEvent fakeMouseDown(adjustedPoint, gestureEvent.globalPosition(),
-        LeftButton, PlatformEvent::MousePressed, tapCount,
-        gestureEvent.shiftKey(), gestureEvent.ctrlKey(), gestureEvent.altKey(), gestureEvent.metaKey(), gestureEvent.timestamp(), ForceAtClick);
-    defaultPrevented |= handleMousePressEvent(fakeMouseDown);
+        MouseButton::Left, PlatformEventType::MousePressed, tapCount,
+        gestureEvent.modifiers(), gestureEvent.timestamp(), ForceAtClick, SyntheticClickType::NoTap);
+    defaultPrevented |= handleMousePressEvent(fakeMouseDown).wasHandled();
 
     PlatformMouseEvent fakeMouseUp(adjustedPoint, gestureEvent.globalPosition(),
-        LeftButton, PlatformEvent::MouseReleased, tapCount,
-        gestureEvent.shiftKey(), gestureEvent.ctrlKey(), gestureEvent.altKey(), gestureEvent.metaKey(), gestureEvent.timestamp(), ForceAtClick);
-    defaultPrevented |= handleMouseReleaseEvent(fakeMouseUp);
+        MouseButton::Left, PlatformEventType::MouseReleased, tapCount,
+        gestureEvent.modifiers(), gestureEvent.timestamp(), ForceAtClick, SyntheticClickType::NoTap);
+    defaultPrevented |= handleMouseReleaseEvent(fakeMouseUp).wasHandled();
 
     return defaultPrevented;
 }
@@ -3709,16 +3709,16 @@ bool EventHandler::sendContextMenuEventForKey()
 bool EventHandler::sendContextMenuEventForGesture(const PlatformGestureEvent& event)
 {
 #if OS(WINDOWS)
-    PlatformEvent::Type eventType = PlatformEvent::MouseReleased;
+    PlatformEvent::Type eventType = PlatformEvent::Type::MouseReleased;
 #else
-    PlatformEvent::Type eventType = PlatformEvent::MousePressed;
+    PlatformEvent::Type eventType = PlatformEvent::Type::MousePressed;
 #endif
 
     IntPoint adjustedPoint = event.position();
 #if ENABLE(TOUCH_ADJUSTMENT)
     adjustGesturePosition(event, adjustedPoint);
 #endif
-    PlatformMouseEvent mouseEvent(adjustedPoint, event.globalPosition(), RightButton, eventType, 1, false, false, false, false, WTF::currentTime(), ForceAtClick);
+    PlatformMouseEvent mouseEvent(adjustedPoint, event.globalPosition(), MouseButton::Right, eventType, 1, { }, WallTime::now(), ForceAtClick, SyntheticClickType::NoTap);
     // To simulate right-click behavior, we send a right mouse down and then
     // context menu event.
     handleMousePressEvent(mouseEvent);

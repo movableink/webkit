@@ -63,7 +63,7 @@
 #endif
 
 #if ENABLE(QT_GESTURE_EVENTS)
-#include "PlatformGestureEvent.h"
+#include  <WebCore/PlatformGestureEvent.h>
 #include "WebEventConversion.h"
 #endif
 

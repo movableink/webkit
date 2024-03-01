@@ -2511,7 +2511,7 @@ void Node::dispatchDOMActivateEvent(Event& underlyingClickEvent)
 #if ENABLE(QT_GESTURE_EVENTS)
 bool Node::dispatchGestureEvent(const PlatformGestureEvent& event)
 {
-    RefPtr<GestureEvent> gestureEvent = GestureEvent::create(document().defaultView(), event);
+    RefPtr<GestureEvent> gestureEvent = GestureEvent::create(document().windowProxy(), event);
     if (!gestureEvent.get())
         return false;
 
@@ -2520,7 +2520,7 @@ bool Node::dispatchGestureEvent(const PlatformGestureEvent& event)
     if (downcast<Element>(*this).isDisabledFormControl())
         return false;
 
-    EventDispatcher::dispatchEvent(this, *gestureEvent);
+    EventDispatcher::dispatchEvent(*this, *gestureEvent);
 
     ASSERT(!gestureEvent->defaultPrevented());
     return gestureEvent->defaultHandled() || gestureEvent->defaultPrevented();

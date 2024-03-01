@@ -506,7 +506,7 @@ void initialize()
 #if PLATFORM(COCOA)
         initializeLibraryPathDiagnostics();
 #endif
-#if OS(WINDOWS)
+#if OS(WINDOWS) && !PLATFORM(QT)
         RunLoop::registerRunLoopMessageWindowClass();
 #endif
     });

@@ -29,7 +29,7 @@ namespace WebCore {
 
 class HitTestRequest {
 public:
-    enum class Type {
+    enum class Type : int {
         ReadOnly = 1 << 0,
         Active = 1 << 1,
         Move = 1 << 2,
@@ -51,7 +51,7 @@ public:
         IncludeAllElementsUnderPoint = 1 << 16,
         PenEvent = 1 << 17,
     };
-
+    
     HitTestRequest(OptionSet<Type> type = { Type::ReadOnly, Type::Active, Type::DisallowUserAgentShadowContent })
         : m_type { type }
     {
@@ -88,5 +88,60 @@ public:
 private:
     OptionSet<Type> m_type;
 };
+
+      inline constexpr HitTestRequest::Type
+      operator&(HitTestRequest::Type x, HitTestRequest::Type y)
+      {
+        return static_cast<HitTestRequest::Type>
+          (static_cast<int>(x) & static_cast<int>(y));
+      }
+
+      inline constexpr HitTestRequest::Type
+      operator|(HitTestRequest::Type x, HitTestRequest::Type y)
+      {
+        return static_cast<HitTestRequest::Type>
+          (static_cast<int>(x) | static_cast<int>(y));
+      }
+
+      inline constexpr HitTestRequest::Type
+      operator^(HitTestRequest::Type x, HitTestRequest::Type y)
+      {
+        return static_cast<HitTestRequest::Type>
+          (static_cast<int>(x) ^ static_cast<int>(y));
+      }
+
+      inline constexpr HitTestRequest::Type
+      operator~(HitTestRequest::Type x)
+      {
+        return static_cast<HitTestRequest::Type>(~static_cast<int>(x));
+      }
+      
+      inline constexpr HitTestRequest::Type
+      operator!(HitTestRequest::Type x)
+      {
+        return static_cast<HitTestRequest::Type>(!static_cast<int>(x));
+      }
+
+      inline HitTestRequest::Type &
+      operator&=(HitTestRequest::Type & x, HitTestRequest::Type y)
+      {
+        x = x & y;
+        return x;
+      }
+
+      inline HitTestRequest::Type &
+      operator|=(HitTestRequest::Type & x, HitTestRequest::Type y)
+      {
+        x = x | y;
+        return x;
+      }
+
+      inline HitTestRequest::Type &
+      operator^=(HitTestRequest::Type & x, HitTestRequest::Type y)
+      {
+        x = x ^ y;
+        return x;
+      }
+
 
 } // namespace WebCore

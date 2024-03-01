@@ -39,7 +39,7 @@ typedef struct CGPath PlatformPath;
 typedef PlatformPath* PlatformPathPtr;
 #elif PLATFORM(QT)
 /* QPainterPath is valued based */
-typedef const PlatformPath& PlatformPathPtr;
+typedef const PlatformPath PlatformPathPtr;
 #else
 typedef cairo_t* PlatformPathPtr;
 #endif

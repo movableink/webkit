@@ -370,7 +370,9 @@ asm (
     "popl %ecx" "\n"
     "popl %ebp" "\n"
     "ret" "\n"
+#if !OS(WINDOWS)
     ".previous" "\n"
+#endif
 );
 #endif
 
@@ -739,7 +741,9 @@ asm (
     "popq %rcx" "\n"
     "popq %rbp" "\n"
     "ret" "\n"
+#if !OS(WINDOWS)
     ".previous" "\n"
+#endif
 );
 
 // And now, the slower version that saves the full width of vectors in xmm registers.
@@ -937,7 +941,9 @@ asm (
     "popq %rcx" "\n"
     "popq %rbp" "\n"
     "ret" "\n"
+#if !OS(WINDOWS)
     ".previous" "\n"
+#endif
 );
 #endif // COMPILER(GCC_COMPATIBLE)
 #endif // CPU(X86_64)

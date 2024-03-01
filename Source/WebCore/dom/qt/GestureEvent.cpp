@@ -38,13 +38,13 @@ RefPtr<GestureEvent> GestureEvent::create(AbstractView* view, const PlatformGest
 {
     AtomString eventType;
     switch (event.type()) {
-    case PlatformEvent::GestureTap:
+    case PlatformEventType::GestureTap:
         eventType = eventNames().gesturetapEvent; break;
-    case PlatformEvent::GestureLongPress:
+    case PlatformEventType::GestureLongPress:
     default:
-        return 0;
+        return nullptr;
     }
-    return adoptRef(new GestureEvent(eventType, MonotonicTime(event.timestamp()), view, event.globalPosition().x(), event.globalPosition().y(), event.position().x(), event.position().y(), event.modifierKeys()));
+    return adoptRef(new GestureEvent(eventType, event.timestamp().approximateMonotonicTime(), view, event.globalPosition().x(), event.globalPosition().y(), event.position().x(), event.position().y(), event.modifiers()));
 }
 
 EventInterface GestureEvent::eventInterface() const
@@ -54,11 +54,7 @@ EventInterface GestureEvent::eventInterface() const
 }
 
 GestureEvent::GestureEvent(const AtomString& type, MonotonicTime timestamp, AbstractView* view, int screenX, int screenY, int clientX, int clientY, OptionSet<Modifier> modifiers)
-    : MouseRelatedEvent(type, CanBubble::Yes, IsCancelable::Yes, IsComposed::Yes, timestamp, view, 0, IntPoint(screenX, screenY), IntPoint(clientX, clientY)
-#if ENABLE(POINTER_LOCK)
-        , IntPoint(0, 0)
-#endif
-        , modifierKeys)
+    : MouseRelatedEvent(type, CanBubble::Yes, IsCancelable::Yes, IsComposed::Yes, timestamp, view, 0, IntPoint(screenX, screenY), IntPoint(clientX, clientY), 0, 0, modifiers)
 {
 }
 
