@@ -205,7 +205,7 @@ void RenderThemeQt::computeControlRect(QStyleFacade::ButtonType, FloatRect&) con
 {
 }
 
-void RenderThemeQt::adjustRepaintRect(const RenderObject& o, FloatRect& rect)
+void RenderThemeQt::inflateRectForControlRenderer(const RenderObject& o, FloatRect& rect)
 {
     switch (o.style().effectiveAppearance()) {
     case StyleAppearance::Checkbox:
@@ -225,6 +225,14 @@ void RenderThemeQt::adjustRepaintRect(const RenderObject& o, FloatRect& rect)
     default:
         break;
     }
+}
+
+void RenderThemeQt::adjustRepaintRect(const RenderBox& renderer, FloatRect& rect)
+{
+    auto repaintRect = rect;
+    inflateRectForControlRenderer(renderer, repaintRect);
+    renderer.flipForWritingMode(repaintRect);
+    rect = repaintRect;
 }
 
 Color RenderThemeQt::platformActiveSelectionBackgroundColor(OptionSet<StyleColorOptions>) const
