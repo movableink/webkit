@@ -55,12 +55,12 @@ namespace WebCore {
 
 IntSize NativeImage::size() const
 {
-    return IntSize(m_platformImage.size());
+    return IntSize(platformImage().size());
 }
 
 bool NativeImage::hasAlpha() const
 {
-    return m_platformImage.hasAlphaChannel();
+    return platformImage().hasAlphaChannel();
 }
 
 Color NativeImage::singlePixelSolidColor() const
@@ -68,7 +68,7 @@ Color NativeImage::singlePixelSolidColor() const
     if (size() != IntSize(1, 1))
         return Color();
 
-    return QColor::fromRgba(m_platformImage.pixel(0, 0));
+    return QColor::fromRgba(platformImage().pixel(0, 0));
 }
 
 DestinationColorSpace NativeImage::colorSpace() const
@@ -82,9 +82,9 @@ void NativeImage::clearSubimages()
 {
 }
 
-void NativeImage::draw(GraphicsContext& context, const FloatSize& imageSize, const FloatRect& destinationRect, const FloatRect& sourceRect, ImagePaintingOptions options)
+void NativeImage::draw(GraphicsContext& context, const FloatRect& destinationRect, const FloatRect& sourceRect, ImagePaintingOptions options)
 {
-    context.drawNativeImageInternal(*this, imageSize, destinationRect, sourceRect, options);
+    context.drawNativeImageInternal(*this, destinationRect, sourceRect, options);
 }
 
 } // namespace WebCore

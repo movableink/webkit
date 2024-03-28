@@ -38,7 +38,11 @@ const PlatformImagePtr& PlatformImageNativeImageBackend::platformImage() const
 }
 
 PlatformImageNativeImageBackend::PlatformImageNativeImageBackend(PlatformImagePtr platformImage)
+#if PLATFORM(QT)
+    : m_platformImage(platformImage)
+#else
     : m_platformImage(WTFMove(platformImage))
+#endif
 {
 }
 

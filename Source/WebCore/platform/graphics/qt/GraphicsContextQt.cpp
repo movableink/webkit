@@ -760,7 +760,7 @@ const QImage* prescaleImageIfRequired(QPainter* painter, const QImage* image, QI
     return prescaledImage;
 }
 
-void GraphicsContextQt::drawNativeImageInternal(NativeImage& image, const FloatSize&, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
+void GraphicsContextQt::drawNativeImageInternal(NativeImage& image, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
 {
     painter()->setRenderHint(QPainter::SmoothPixmapTransform, true);
 
