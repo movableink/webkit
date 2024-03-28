@@ -1016,6 +1016,30 @@ void GraphicsContextQt::fillRect(const FloatRect& rect, Gradient& gradient)
     gradient.fill(*this, platformRect);
 }
 
+void GraphicsContextQt::fillRect(const FloatRect& rect, Gradient& gradient, const AffineTransform& transform)
+{
+    QRectF platformRect(rect);
+    QPainter* p = m_data->p();
+
+    QBrush brush = p->brush();
+    brush.setTransform(transform);
+    p->setBrush(brush);
+
+    if (hasDropShadow()) {
+        const auto shadow = dropShadow();
+        ASSERT(shadow);
+        if (mustUseShadowBlur()) {
+            ShadowBlur contextShadow(*shadow, shadowsIgnoreTransforms());
+            contextShadow.drawRectShadow(*this, FloatRoundedRect(platformRect));
+        } else {
+            QColor _shadowColor = shadow->color;
+            _shadowColor.setAlphaF(_shadowColor.alphaF() * p->brush().color().alphaF());
+            p->fillRect(platformRect.translated(QPointF(shadow->offset.width(), shadow->offset.height())), _shadowColor);
+        }
+    }
+    gradient.fill(*this, platformRect);
+}
+
 void GraphicsContextQt::fillRoundedRectImpl(const FloatRoundedRect& rect, const Color& color)
 {
     if (!color.isValid())
