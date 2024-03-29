@@ -44,6 +44,7 @@
 #include "GraphicsContextQt.h"
 #include "NotImplemented.h"
 
+#include <QColorSpace>
 #include <QPainter>
 #include <QPaintEngine>
 #include <QPixmap>
@@ -53,14 +54,27 @@
 
 namespace WebCore {
 
-IntSize NativeImage::size() const
+IntSize PlatformImageNativeImageBackend::size() const
 {
-    return IntSize(platformImage().size());
+    return IntSize(m_platformImage.size());
 }
 
-bool NativeImage::hasAlpha() const
+bool PlatformImageNativeImageBackend::hasAlpha() const
 {
-    return platformImage().hasAlphaChannel();
+    return m_platformImage.hasAlphaChannel();
+}
+
+DestinationColorSpace PlatformImageNativeImageBackend::colorSpace() const
+{
+    QColorSpace colorSpace = m_platformImage.colorSpace();
+
+    if (colorSpace == QColorSpace::SRgb)
+        return DestinationColorSpace::SRGB();
+#if ENABLE(PREDEFINED_COLOR_SPACE_DISPLAY_P3)
+    if (colorSpace == QColorSpace::DisplayP3)
+        return DestinationColorSpace::DisplayP3();
+#endif
+    return DestinationColorSpace::SRGB();
 }
 
 Color NativeImage::singlePixelSolidColor() const
@@ -70,13 +84,6 @@ Color NativeImage::singlePixelSolidColor() const
 
     return QColor::fromRgba(platformImage().pixel(0, 0));
 }
-
-DestinationColorSpace NativeImage::colorSpace() const
-{
-    notImplemented();
-    return DestinationColorSpace::SRGB();
-}
-
 
 void NativeImage::clearSubimages()
 {

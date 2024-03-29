@@ -67,11 +67,7 @@ RefPtr<NativeImage> NativeImage::createTransient(PlatformImagePtr&& image, Rende
 
 NativeImage::NativeImage(UniqueRef<NativeImageBackend> backend, RenderingResourceIdentifier renderingResourceIdentifier)
     : RenderingResource(renderingResourceIdentifier)
-#if PLATFORM(QT)
-    , m_platformImage(platformImage)
-#else
-    , m_platformImage(WTFMove(platformImage))
-#endif
+    , m_backend(WTFMove(backend))
 {
 }
 
