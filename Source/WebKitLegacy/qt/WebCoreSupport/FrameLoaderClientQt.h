@@ -120,9 +120,9 @@ public:
     WebCore::LocalFrame* dispatchCreatePage(const WebCore::NavigationAction&, NewFrameOpenerPolicy) override;
     void dispatchShow() override;
 
-    void dispatchDecidePolicyForResponse(const WebCore::ResourceResponse&, const WebCore::ResourceRequest&, PolicyCheckIdentifier, const String& downloadAttribute, FramePolicyFunction&&) override;
-    void dispatchDecidePolicyForNewWindowAction(const WebCore::NavigationAction&, const WebCore::ResourceRequest&, FormState*, const String&, PolicyCheckIdentifier, FramePolicyFunction&&) override;
-    void dispatchDecidePolicyForNavigationAction(const WebCore::NavigationAction&, const WebCore::ResourceRequest&, const ResourceResponse& redirectResponse, FormState*, PolicyDecisionMode, PolicyCheckIdentifier, FramePolicyFunction&&) override;
+    void dispatchDecidePolicyForResponse(const WebCore::ResourceResponse&, const WebCore::ResourceRequest&, const String& downloadAttribute, FramePolicyFunction&&) override;
+    void dispatchDecidePolicyForNewWindowAction(const WebCore::NavigationAction&, const WebCore::ResourceRequest&, FormState*, const String&, std::optional<HitTestResult>&&, FramePolicyFunction&&) override;
+    void dispatchDecidePolicyForNavigationAction(const WebCore::NavigationAction&, const WebCore::ResourceRequest&, const WebCore::ResourceResponse& redirectResponse, WebCore::FormState*, const String&, uint64_t, std::optional<HitTestResult>&&, bool, WebCore::SandboxFlags, WebCore::PolicyDecisionMode, FramePolicyFunction&&) override;
     void cancelPolicyCheck() override;
 
     void dispatchUnableToImplementPolicy(const WebCore::ResourceError&) override;
@@ -147,7 +147,7 @@ public:
     void updateGlobalHistoryRedirectLinks() override;
     bool shouldGoToHistoryItem(HistoryItem&) const override;
     void didDisplayInsecureContent() override;
-    void didRunInsecureContent(SecurityOrigin&, const URL&) override;
+    void didRunInsecureContent(SecurityOrigin&) override;
 
     ResourceError cancelledError(const ResourceRequest&) const override;
     ResourceError blockedError(const ResourceRequest&) const override;
@@ -192,7 +192,7 @@ public:
     void convertMainResourceLoadToDownload(DocumentLoader*, const ResourceRequest&, const WebCore::ResourceResponse&) override;
 
     RefPtr<LocalFrame> createFrame(const AtomString& name, HTMLFrameOwnerElement&) override;
-    RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement&, const URL&, const Vector<AtomString>&, const Vector<AtomString>&, const String&, bool) override;
+    RefPtr<Widget> createPlugin(HTMLPlugInElement&, const URL&, const Vector<AtomString>&, const Vector<AtomString>&, const String&, bool) override;
     void redirectDataToPlugin(Widget& pluginWidget) override;
 
     ObjectContentType objectContentType(const URL&, const String& mimeTypeIn) override;

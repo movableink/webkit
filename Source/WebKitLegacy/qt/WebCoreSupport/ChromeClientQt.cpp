@@ -179,8 +179,12 @@ void ChromeClientQt::focusedFrameChanged(Frame*)
 Page* ChromeClientQt::createWindow(LocalFrame& frame, const WindowFeatures& features, const NavigationAction&)
 {
 #if ENABLE(FULLSCREEN_API)
-    if (frame.document() && frame.document()->fullscreenManager().currentFullscreenElement())
-        frame.document()->fullscreenManager().cancelFullscreen();
+    if (!frame.document())
+        return 0;
+
+    CheckedPtr fullscreenManager = frame.document()->fullscreenManagerIfExists();
+    if (fullscreenManager && fullscreenManager->currentFullscreenElement())
+        fullscreenManager->cancelFullscreen();
 #else
     UNUSED_PARAM(frame);
 #endif
