@@ -45,84 +45,19 @@ void AXObjectCache::detachWrapper(AXCoreObject*, AccessibilityDetachmentType)
 {
 }
 
-static AXCoreObject* notifyChildrenSelectionChange(AXCoreObject* object)
+void AXObjectCache::postPlatformNotification(AXCoreObject*, AXNotification)
 {
-    // Only list boxes supported so far.
-    if (!object || !object->isListBox())
-        return object;
-
-    // Only support HTML select elements so far (ARIA selectors not supported).
-    Node* node = object->node();
-    if (!is<HTMLSelectElement>(node))
-        return object;
-
-    // Find the item where the selection change was triggered from.
-    HTMLSelectElement& select = downcast<HTMLSelectElement>(*node);
-    int changedItemIndex = select.activeSelectionStartListIndex();
-
-    const AccessibilityObject::AccessibilityChildrenVector& items = object->children();
-    if (changedItemIndex < 0 || changedItemIndex >= static_cast<int>(items.size()))
-        return object;
-    return items.at(changedItemIndex).get();
+    notImplemented();
 }
 
-static AXObjectCache::AXNotification checkInteractableObjects(AXCoreObject* object)
+void AXObjectCache::nodeTextChangePlatformNotification(AccessibilityObject*, AXTextChange, unsigned, const String&)
 {
-    if (!object->isEnabled())
-        return AXObjectCache::AXNotification::AXPressDidFail;
-
-    if (object->isTextControl() && !object->canSetValueAttribute()) // Also determine whether it is readonly
-        return AXObjectCache::AXNotification::AXPressDidFail;
-
-    return AXObjectCache::AXNotification::AXPressDidSucceed;
+    notImplemented();
 }
 
-void AXObjectCache::postPlatformNotification(AXCoreObject* object, AXNotification notification)
+void AXObjectCache::frameLoadingEventPlatformNotification(AccessibilityObject*, AXLoadingEvent)
 {
-    if (!object
-        || !object->document()
-        || !object->document()->view()
-        || object->document()->view()->layoutContext().layoutState()
-        || object->document()->childNeedsStyleRecalc())
-        return;
-
-    switch (notification) {
-    case AXNotification::AXSelectedChildrenChanged:
-        object = notifyChildrenSelectionChange(object);
-        break;
-    case AXNotification::AXPressDidSucceed:
-        notification = checkInteractableObjects(object);
-        break;
-    default:
-        break;
-    }
-
-    ChromeClient& client = document().frame()->page()->chrome().client();
-    client.postAccessibilityNotification(*static_cast<AccessibilityObject*>(object), notification);
-}
-
-void AXObjectCache::nodeTextChangePlatformNotification(AccessibilityObject* object, AXTextChange textChange, unsigned offset, const String& text)
-{
-    if (!object
-        || !object->document()
-        || !object->document()->view()
-        || object->document()->view()->layoutContext().layoutState()
-        || object->document()->childNeedsStyleRecalc())
-        return;
-    ChromeClient& client = document().frame()->page()->chrome().client();
-    client.postAccessibilityNodeTextChangeNotification(object, textChange, offset, text);
-}
-
-void AXObjectCache::frameLoadingEventPlatformNotification(AccessibilityObject* object, AXLoadingEvent loadingEvent)
-{
-    if (!object
-        || !object->document()
-        || !object->document()->view()
-        || object->document()->view()->layoutContext().layoutState()
-        || object->document()->childNeedsStyleRecalc())
-        return;
-    ChromeClient& client = document().frame()->page()->chrome().client();
-    client.postAccessibilityFrameLoadingEventNotification(object, loadingEvent);
+    notImplemented();
 }
 
 void AXObjectCache::handleScrolledToAnchor(const Node* scrolledToNode)

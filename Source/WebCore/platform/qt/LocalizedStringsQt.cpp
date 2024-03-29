@@ -443,6 +443,12 @@ String AXListMarkerText()
     return String();
 }
 
+String AXListItemActionVerb()
+{
+    notImplemented();
+    return String();
+}
+
 String AXImageMapText()
 {
     notImplemented();
@@ -503,13 +509,13 @@ String AXTextFieldActionVerb()
     return String();
 }
 
-String AXCheckedCheckBoxActionVerb()
+String AXCheckedCheckboxActionVerb()
 {
     notImplemented();
     return String();
 }
 
-String AXUncheckedCheckBoxActionVerb()
+String AXUncheckedCheckboxActionVerb()
 {
     notImplemented();
     return String();

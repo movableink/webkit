@@ -13,6 +13,8 @@ list(REMOVE_ITEM DumpRenderTree_SOURCES
 )
 
 list(APPEND DumpRenderTree_SOURCES
+    qt/AccessibilityControllerQt.cpp
+    qt/AccessibilityUIElementQt.cpp
     qt/DumpRenderTreeMain.cpp
     qt/DumpRenderTreeQt.cpp
     qt/EventSenderQt.cpp

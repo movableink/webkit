@@ -97,6 +97,7 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
 
 list(APPEND WebCore_SOURCES
     accessibility/qt/AccessibilityObjectQt.cpp
+    accessibility/qt/AXObjectCacheQt.cpp
 
     bindings/js/ScriptControllerQt.cpp
 

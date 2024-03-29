@@ -215,7 +215,7 @@ public:
     AccessibilityUIElement ariaFlowToElementAtIndex(unsigned);
     AccessibilityUIElement ariaControlsElementAtIndex(unsigned);
 
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) || PLATFORM(QT)
     JSRetainPtr<JSStringRef> customContent() const;
 #endif
 
