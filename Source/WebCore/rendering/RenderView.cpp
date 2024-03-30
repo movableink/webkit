@@ -274,7 +274,7 @@ void RenderView::mapLocalToContainer(const RenderLayerModelObject* ancestorConta
 
     if (!ancestorContainer && mode.contains(UseTransforms) && shouldUseTransformFromContainer(nullptr)) {
         TransformationMatrix t;
-        getTransformFromContainer(nullptr, LayoutSize(), t);
+        getTransformFromContainer(LayoutSize(), t);
         transformState.applyTransform(t);
     }
 }
@@ -289,7 +289,7 @@ const RenderObject* RenderView::pushMappingToContainer(const RenderLayerModelObj
 
     if (!ancestorToStopAt && shouldUseTransformFromContainer(nullptr)) {
         TransformationMatrix t;
-        getTransformFromContainer(nullptr, LayoutSize(), t);
+        getTransformFromContainer(LayoutSize(), t);
         geometryMap.pushView(this, toLayoutSize(scrollPosition), &t);
     } else
         geometryMap.pushView(this, toLayoutSize(scrollPosition));
@@ -301,7 +301,7 @@ void RenderView::mapAbsoluteToLocalPoint(OptionSet<MapCoordinatesMode> mode, Tra
 {
     if (mode & UseTransforms && shouldUseTransformFromContainer(nullptr)) {
         TransformationMatrix t;
-        getTransformFromContainer(nullptr, LayoutSize(), t);
+        getTransformFromContainer(LayoutSize(), t);
         transformState.applyTransform(t);
     }
 
@@ -367,7 +367,7 @@ RenderElement* RenderView::rendererForRootBackground() const
 static inline bool rendererObscuresBackground(const RenderElement& rootElement)
 {
     auto& style = rootElement.style();
-    if (style.visibility() != Visibility::Visible || style.opacity() != 1 || style.hasTransform())
+    if (style.usedVisibility() != Visibility::Visible || style.opacity() != 1 || style.hasTransform())
         return false;
 
     if (style.hasBorderRadius())
@@ -376,10 +376,8 @@ static inline bool rendererObscuresBackground(const RenderElement& rootElement)
     if (rootElement.isComposited())
         return false;
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (rootElement.hasClipPath() && rootElement.isRenderSVGRoot())
         return false;
-#endif
 
     auto* rendererForBackground = rootElement.view().rendererForRootBackground();
     if (!rendererForBackground)
@@ -678,8 +676,11 @@ bool RenderView::rootElementShouldPaintBaseBackground() const
     if (RenderElement* rootRenderer = documentElement ? documentElement->renderer() : nullptr) {
         // The document element's renderer is currently forced to be a block, but may not always be.
         auto* rootBox = dynamicDowncast<RenderBox>(*rootRenderer);
-        if (rootBox && rootBox->hasLayer() && rootBox->layer()->isolatesBlending())
-            return false;
+        if (rootBox && rootBox->hasLayer()) {
+            RenderLayer* layer = rootBox->layer();
+            if (layer->isolatesBlending() || layer->isBackdropRoot())
+                return false;
+        }
     }
     return shouldPaintBaseBackground();
 }
@@ -712,7 +713,7 @@ int RenderView::viewHeight() const
     int height = 0;
     if (!shouldUsePrintingLayout()) {
         height = frameView().layoutHeight();
-        height = frameView().useFixedLayout() ? ceilf(style().effectiveZoom() * float(height)) : height;
+        height = frameView().useFixedLayout() ? ceilf(style().usedZoom() * float(height)) : height;
     }
     return height;
 }
@@ -722,7 +723,7 @@ int RenderView::viewWidth() const
     int width = 0;
     if (!shouldUsePrintingLayout()) {
         width = frameView().layoutWidth();
-        width = frameView().useFixedLayout() ? ceilf(style().effectiveZoom() * float(width)) : width;
+        width = frameView().useFixedLayout() ? ceilf(style().usedZoom() * float(width)) : width;
     }
     return width;
 }
@@ -779,10 +780,10 @@ void RenderView::updateHitTestResult(HitTestResult& result, const LayoutPoint& p
     if (multiColumnFlow() && multiColumnFlow()->firstMultiColumnSet())
         return multiColumnFlow()->firstMultiColumnSet()->updateHitTestResult(result, point);
 
-    if (auto* node = nodeForHitTest()) {
-        result.setInnerNode(node);
+    if (RefPtr node = nodeForHitTest()) {
+        result.setInnerNode(node.get());
         if (!result.innerNonSharedNode())
-            result.setInnerNonSharedNode(node);
+            result.setInnerNonSharedNode(node.get());
 
         LayoutPoint adjustedPoint = point;
         offsetForContents(adjustedPoint);
@@ -929,10 +930,8 @@ static SVGSVGElement* svgSvgElementFrom(RenderElement& renderElement)
 {
     if (auto* svgSvgElement = dynamicDowncast<SVGSVGElement>(renderElement.element()))
         return svgSvgElement;
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (auto* svgRoot = dynamicDowncast<RenderSVGRoot>(renderElement))
         return &svgRoot->svgSVGElement();
-#endif
     if (auto* svgRoot = dynamicDowncast<LegacyRenderSVGRoot>(renderElement))
         return &svgRoot->svgSVGElement();
 

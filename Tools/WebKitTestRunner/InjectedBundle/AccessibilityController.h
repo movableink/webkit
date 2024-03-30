@@ -61,6 +61,7 @@ public:
 
     void setIsolatedTreeMode(bool);
     void setForceDeferredSpellChecking(bool);
+    void setForceInitialFrameCaching(bool);
 
     JSRetainPtr<JSStringRef> platformName();
 
@@ -93,6 +94,7 @@ public:
 
 private:
     AccessibilityController();
+    void platformInitialize();
 
 #if PLATFORM(COCOA)
     RetainPtr<id> m_globalNotificationHandler;

@@ -256,6 +256,11 @@ void TestRunner::notifyDone()
     if (!injectedBundle.isTestRunning())
         return;
 
+    bool mainFrameIsRemote = WKBundleFrameIsRemote(WKBundlePageGetMainFrame(injectedBundle.pageRef()));
+    if (mainFrameIsRemote) {
+        setWaitUntilDone(false);
+        return postPageMessage("NotifyDone");
+    }
     if (shouldWaitUntilDone() && !injectedBundle.topLoadingFrame())
         injectedBundle.page()->dump(m_forceRepaint);
 
@@ -351,8 +356,12 @@ bool TestRunner::findString(JSStringRef target, JSValueRef optionsArrayAsValue)
 
 void TestRunner::findStringMatchesInPage(JSStringRef target, JSValueRef optionsArrayAsValue)
 {
-    if (auto options = findOptionsFromArray(optionsArrayAsValue))
-        WKBundlePageFindStringMatches(page(), toWK(target).get(), *options);
+    if (auto options = findOptionsFromArray(optionsArrayAsValue)) {
+        postPageMessage("FindStringMatches", createWKDictionary({
+            { "String", toWK(target) },
+            { "FindOptions", toWK(*options) },
+        }));
+    }
 }
 
 void TestRunner::replaceFindMatchesAtIndices(JSValueRef matchIndicesAsValue, JSStringRef replacementText, bool selectionOnly)
@@ -389,31 +398,6 @@ void TestRunner::syncLocalStorage()
     postSynchronousMessage("SyncLocalStorage", true);
 }
 
-void TestRunner::clearAllApplicationCaches()
-{
-    WKBundlePageClearApplicationCache(page());
-}
-
-void TestRunner::clearApplicationCacheForOrigin(JSStringRef origin)
-{
-    WKBundlePageClearApplicationCacheForOrigin(page(), toWK(origin).get());
-}
-
-void TestRunner::setAppCacheMaximumSize(uint64_t size)
-{
-    WKBundlePageSetAppCacheMaximumSize(page(), size);
-}
-
-long long TestRunner::applicationCacheDiskUsageForOrigin(JSStringRef origin)
-{
-    return WKBundlePageGetAppCacheUsageForOrigin(page(), toWK(origin).get());
-}
-
-void TestRunner::disallowIncreaseForApplicationCacheQuota()
-{
-    m_disallowIncreaseForApplicationCacheQuota = true;
-}
-
 static inline JSValueRef stringArrayToJS(JSContextRef context, WKArrayRef strings)
 {
     const size_t count = WKArrayGetSize(strings);
@@ -423,11 +407,6 @@ static inline JSValueRef stringArrayToJS(JSContextRef context, WKArrayRef string
         JSObjectSetPropertyAtIndex(context, array, i, JSValueMakeString(context, toJS(stringRef).get()), nullptr);
     }
     return array;
-}
-
-JSValueRef TestRunner::originsWithApplicationCache()
-{
-    return stringArrayToJS(mainFrameJSContext(), adoptWK(WKBundlePageCopyOriginsWithApplicationCache(page())).get());
 }
 
 bool TestRunner::isCommandEnabled(JSStringRef name)
@@ -1564,11 +1543,12 @@ void TestRunner::setStatisticsTopFrameUniqueRedirectFrom(JSStringRef hostName, J
     }));
 }
 
-void TestRunner::setStatisticsCrossSiteLoadWithLinkDecoration(JSStringRef fromHost, JSStringRef toHost)
+void TestRunner::setStatisticsCrossSiteLoadWithLinkDecoration(JSStringRef fromHost, JSStringRef toHost, bool wasFiltered)
 {
     postSynchronousMessage("SetStatisticsCrossSiteLoadWithLinkDecoration", createWKDictionary({
         { "FromHost", toWK(fromHost) },
         { "ToHost", toWK(toHost) },
+        { "WasFiltered", adoptWK(WKBooleanCreate(wasFiltered)) },
     }));
 }
 
@@ -1866,10 +1846,16 @@ static JSValueRef makeDomainsValue(const Vector<String>& domains)
     builder.append(']');
     return JSValueMakeFromJSONString(mainFrameJSContext(), createJSString(builder.toString().utf8().data()).get());
 }
+
 void TestRunner::callDidReceiveAllStorageAccessEntriesCallback(Vector<String>& domains)
 {
     auto result = makeDomainsValue(domains);
     callTestRunnerCallback(AllStorageAccessEntriesCallbackID, 1, &result);
+}
+
+void TestRunner::setRequestStorageAccessThrowsExceptionUntilReload(bool enabled)
+{
+    postSynchronousPageMessage("SetRequestStorageAccessThrowsExceptionUntilReload", enabled);
 }
 
 void TestRunner::loadedSubresourceDomains(JSValueRef callback)
@@ -1902,6 +1888,9 @@ void TestRunner::addMockMediaDevice(JSStringRef persistentId, JSStringRef label,
 static WKRetainPtr<WKDictionaryRef> captureDeviceProperties(JSValueRef properties)
 {
     auto context = mainFrameJSContext();
+
+    if (JSValueGetType(context, properties) == kJSTypeUndefined)
+        return { };
 
     Vector<WKRetainPtr<WKStringRef>> strings;
     Vector<WKStringRef> keys;

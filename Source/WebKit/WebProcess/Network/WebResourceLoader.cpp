@@ -41,7 +41,6 @@
 #include "WebPage.h"
 #include "WebProcess.h"
 #include "WebURLSchemeHandlerProxy.h"
-#include <WebCore/ApplicationCacheHost.h>
 #include <WebCore/CertificateInfo.h>
 #include <WebCore/DiagnosticLoggingClient.h>
 #include <WebCore/DiagnosticLoggingKeys.h>
@@ -57,6 +56,10 @@
 #include <WebCore/SubresourceLoader.h>
 #include <WebCore/SubstituteData.h>
 #include <wtf/CompletionHandler.h>
+
+#if ENABLE(QUICKLOOK_SANDBOX_RESTRICTIONS)
+#include <wtf/spi/darwin/SandboxSPI.h>
+#endif
 
 #define WEBRESOURCELOADER_RELEASE_LOG(fmt, ...) RELEASE_LOG(Network, "%p - [webPageID=%" PRIu64 ", frameID=%" PRIu64 ", resourceID=%" PRIu64 ", durationSeconds=%.3f] WebResourceLoader::" fmt, this, m_trackingParameters.pageID.toUInt64(), m_trackingParameters.frameID.object().toUInt64(), m_trackingParameters.resourceID.toUInt64(), timeSinceLoadStart().value(), ##__VA_ARGS__)
 
@@ -123,11 +126,6 @@ void WebResourceLoader::willSendRequest(ResourceRequest&& proposedRequest, IPC::
 
     LOG(Network, "(WebProcess) WebResourceLoader::willSendRequest to '%s'", proposedRequest.url().string().latin1().data());
     WEBRESOURCELOADER_RELEASE_LOG("willSendRequest:");
-
-    if (m_coreLoader->documentLoader()->applicationCacheHost().maybeLoadFallbackForRedirect(m_coreLoader.get(), proposedRequest, redirectResponse)) {
-        WEBRESOURCELOADER_RELEASE_LOG("willSendRequest: exiting early because maybeLoadFallbackForRedirect returned false");
-        return completionHandler({ }, false);
-    }
     
     if (auto* frame = m_coreLoader->frame()) {
         if (auto* page = frame->page()) {
@@ -159,6 +157,13 @@ void WebResourceLoader::didReceiveResponse(ResourceResponse&& response, PrivateR
 
     Ref<WebResourceLoader> protectedThis(*this);
 
+#if ENABLE(QUICKLOOK_SANDBOX_RESTRICTIONS)
+    if (!response.isQuickLook()) {
+        auto auditToken = WebProcess::singleton().auditTokenForSelf();
+        sandbox_enable_state_flag("BlockQuickLookSandboxResources", *auditToken);
+    }
+#endif
+
     if (metrics) {
         metrics->workerStart = m_workerStart;
         response.setDeprecatedNetworkLoadMetrics(Box<NetworkLoadMetrics>::create(WTFMove(*metrics)));
@@ -166,11 +171,6 @@ void WebResourceLoader::didReceiveResponse(ResourceResponse&& response, PrivateR
 
     if (privateRelayed == PrivateRelayed::Yes && mainFrameMainResource() == MainFrameMainResource::Yes)
         WebProcess::singleton().setHadMainFrameMainResourcePrivateRelayed();
-
-    if (m_coreLoader->documentLoader()->applicationCacheHost().maybeLoadFallbackForResponse(m_coreLoader.get(), response)) {
-        WEBRESOURCELOADER_RELEASE_LOG("didReceiveResponse: not continuing load because the content is already cached");
-        return;
-    }
 
     CompletionHandler<void()> policyDecisionCompletionHandler;
     if (needsContinueDidReceiveResponseMessage) {
@@ -302,8 +302,6 @@ void WebResourceLoader::didFailResourceLoad(const ResourceError& error)
 
     ASSERT_WITH_MESSAGE(!m_isProcessingNetworkResponse, "Load should not be able to finish before we've validated the response");
 
-    if (m_coreLoader->documentLoader()->applicationCacheHost().maybeLoadFallbackForError(m_coreLoader.get(), error))
-        return;
     m_coreLoader->didFail(error);
 }
 

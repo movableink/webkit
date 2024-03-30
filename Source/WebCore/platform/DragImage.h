@@ -47,6 +47,8 @@ QT_END_NAMESPACE
 typedef struct HBITMAP__* HBITMAP;
 #elif USE(CAIRO)
 #include "RefPtrCairo.h"
+#elif USE(SKIA)
+#include <skia/core/SkImage.h>
 #endif
 
 namespace WebCore {
@@ -67,6 +69,10 @@ typedef QImage DragImageRef;
 typedef HBITMAP DragImageRef;
 #elif USE(CAIRO)
 typedef RefPtr<cairo_surface_t> DragImageRef;
+#elif USE(SKIA)
+typedef sk_sp<SkImage> DragImageRef;
+#else
+typedef void* DragImageRef;
 #endif
 
 #if PLATFORM(COCOA)

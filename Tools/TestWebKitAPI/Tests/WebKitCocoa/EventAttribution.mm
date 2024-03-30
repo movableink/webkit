@@ -37,6 +37,7 @@
 #import "WKWebViewConfigurationExtras.h"
 #import <WebKit/WKMain.h>
 #import <WebKit/WKNavigationActionPrivate.h>
+#import <WebKit/WKNavigationDelegatePrivate.h>
 #import <WebKit/WKPage.h>
 #import <WebKit/WKPageInjectedBundleClient.h>
 #import <WebKit/WKPreferencesPrivate.h>
@@ -47,6 +48,7 @@
 #import <WebKit/_WKFeature.h>
 #import <WebKit/_WKInspector.h>
 #import <WebKit/_WKWebsiteDataStoreConfiguration.h>
+#import <wtf/cocoa/VectorCocoa.h>
 #import <wtf/spi/darwin/XPCSPI.h>
 #import <wtf/text/StringConcatenateNumbers.h>
 
@@ -258,8 +260,7 @@ static void signUnlinkableTokenAndSendSecretToken(TokenSigningParty signingParty
         (__bridge id)kSecAttrKeyType: (__bridge id)kSecAttrKeyTypeRSA,
         (__bridge id)kSecAttrKeyClass: (__bridge id)kSecAttrKeyClassPublic
     }, nil));
-    Vector<uint8_t> rawKeyBytes(static_cast<const uint8_t*>(publicKey.get().bytes), publicKey.get().length);
-    auto wrappedKeyBytes = wrapPublicKeyWithRSAPSSOID(WTFMove(rawKeyBytes));
+    auto wrappedKeyBytes = wrapPublicKeyWithRSAPSSOID(makeVector(publicKey.get()));
 
     auto keyData = base64URLEncodeToString(wrappedKeyBytes.data(), wrappedKeyBytes.size());
     // The server.
@@ -606,6 +607,9 @@ TEST(PrivateClickMeasurement, SKAdNetwork)
     Vector<String> consoleMessages;
     auto delegate = adoptNS([TestNavigationDelegate new]);
     [delegate allowAnyTLSCertificate];
+    delegate.get().decidePolicyForNavigationAction = ^(WKNavigationAction *navigationAction, void (^decisionHandler)(WKNavigationActionPolicy)) {
+        decisionHandler(_WKNavigationActionPolicyAllowWithoutTryingAppLink);
+    };
     setupSKAdNetworkTest(consoleMessages, delegate.get());
     while (consoleMessages.isEmpty())
         Util::spinRunLoop();

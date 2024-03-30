@@ -735,6 +735,11 @@
 (allow mach-lookup
     (global-name "com.apple.audio.AudioSession"))
 
+#if HAVE(AUDIO_CONVERTER_SERVICE)
+;; See <rdar://118049196>
+(allow mach-lookup (xpc-service-name "com.apple.audio.AudioConverterService"))
+#endif
+
 #if !ENABLE(CFPREFS_DIRECT_MODE)
 (allow mach-lookup
     (global-name "com.apple.cfprefsd.agent"))
@@ -868,7 +873,6 @@
 (allow mach-lookup
     (global-name "com.apple.coremedia.routingcontext.xpc"))
 (allow mach-lookup
-    (global-name "com.apple.coremedia.endpoint.xpc")
     (global-name "com.apple.coremedia.endpointstream.xpc")
     (global-name "com.apple.coremedia.endpointstreamaudioengine.xpc") ;; <rdar://76029596>
     (global-name "com.apple.coremedia.endpointplaybacksession.xpc")
@@ -888,6 +892,8 @@
 #if HAVE(REFACTORED_MEDIASERVERD)
     (global-name "com.apple.airplay.endpoint.xpc")
     (global-name "com.apple.mediaexperience.endpoint.xpc")
+#else
+    (global-name "com.apple.coremedia.endpoint.xpc")
 #endif
 )
 
@@ -1092,6 +1098,9 @@
                 mach_vm_remap_external
                 semaphore_create
                 semaphore_destroy
+#if HAVE(AUDIO_CONVERTER_SERVICE)
+                task_create_identity_token
+#endif
                 task_get_special_port_from_user
                 task_info_from_user
                 task_policy_set

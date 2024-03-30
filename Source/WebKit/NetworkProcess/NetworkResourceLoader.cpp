@@ -26,6 +26,7 @@
 #include "config.h"
 #include "NetworkResourceLoader.h"
 
+#include "ArgumentCoders.h"
 #include "EarlyHintsResourceLoader.h"
 #include "FormDataReference.h"
 #include "LoadedWebArchive.h"
@@ -63,6 +64,7 @@
 #include <WebCore/CrossOriginEmbedderPolicy.h>
 #include <WebCore/DiagnosticLoggingKeys.h>
 #include <WebCore/HTTPParsers.h>
+#include <WebCore/HTTPStatusCodes.h>
 #include <WebCore/LegacySchemeRegistry.h>
 #include <WebCore/LinkHeader.h>
 #include <WebCore/NetworkLoadMetrics.h>
@@ -73,6 +75,7 @@
 #include <WebCore/SameSiteInfo.h>
 #include <WebCore/SecurityOrigin.h>
 #include <WebCore/SecurityPolicy.h>
+#include <WebCore/ShareableResource.h>
 #include <WebCore/SharedBuffer.h>
 #include <WebCore/ViolationReportType.h>
 #include <wtf/CallbackAggregator.h>
@@ -114,9 +117,12 @@ static void sendReplyToSynchronousRequest(NetworkResourceLoader::SynchronousLoad
     ASSERT(data.delayedReply);
     ASSERT(!data.response.isNull() || !data.error.isNull());
 
+    if (!data.delayedReply)
+        return;
+
     Vector<uint8_t> responseBuffer;
     if (buffer && buffer->size())
-        responseBuffer.append(buffer->makeContiguous()->data(), buffer->size());
+        responseBuffer.append(buffer->makeContiguous()->span());
 
     data.response.setDeprecatedNetworkLoadMetrics(Box<NetworkLoadMetrics>::create(metrics));
 
@@ -778,7 +784,7 @@ void NetworkResourceLoader::processClearSiteDataHeader(const WebCore::ResourceRe
     if (clearSiteDataValues.contains(ClearSiteDataValue::Cookies))
         typesToRemove.add(WebsiteDataType::Cookies);
     if (clearSiteDataValues.contains(ClearSiteDataValue::Storage)) {
-        typesToRemove.add({ WebsiteDataType::LocalStorage, WebsiteDataType::SessionStorage, WebsiteDataType::IndexedDBDatabases, WebsiteDataType::DOMCache, WebsiteDataType::OfflineWebApplicationCache, WebsiteDataType::FileSystem, WebsiteDataType::WebSQLDatabases });
+        typesToRemove.add({ WebsiteDataType::LocalStorage, WebsiteDataType::SessionStorage, WebsiteDataType::IndexedDBDatabases, WebsiteDataType::DOMCache, WebsiteDataType::FileSystem, WebsiteDataType::WebSQLDatabases });
         typesToRemove.add(WebsiteDataType::ServiceWorkerRegistrations);
     }
 
@@ -829,7 +835,7 @@ static BrowsingContextGroupSwitchDecision toBrowsingContextGroupSwitchDecision(c
 
 void NetworkResourceLoader::didReceiveInformationalResponse(ResourceResponse&& response)
 {
-    if (response.httpStatusCode() != 103)
+    if (response.httpStatusCode() != httpStatus103EarlyHints)
         return;
 
     if (!m_earlyHintsResourceLoader)
@@ -839,7 +845,7 @@ void NetworkResourceLoader::didReceiveInformationalResponse(ResourceResponse&& r
 
 void NetworkResourceLoader::didReceiveResponse(ResourceResponse&& receivedResponse, PrivateRelayed privateRelayed, ResponseCompletionHandler&& completionHandler)
 {
-    LOADER_RELEASE_LOG("didReceiveResponse: (httpStatusCode=%d, MIMEType=%" PUBLIC_LOG_STRING ", expectedContentLength=%" PRId64 ", hasCachedEntryForValidation=%d, hasNetworkLoadChecker=%d)", receivedResponse.httpStatusCode(), receivedResponse.mimeType().string().utf8().data(), receivedResponse.expectedContentLength(), !!m_cacheEntryForValidation, !!m_networkLoadChecker);
+    LOADER_RELEASE_LOG("didReceiveResponse: (httpStatusCode=%d, MIMEType=%" PUBLIC_LOG_STRING ", expectedContentLength=%" PRId64 ", hasCachedEntryForValidation=%d, hasNetworkLoadChecker=%d)", receivedResponse.httpStatusCode(), receivedResponse.mimeType().utf8().data(), receivedResponse.expectedContentLength(), !!m_cacheEntryForValidation, !!m_networkLoadChecker);
 
 #if ENABLE(CONTENT_FILTERING)
     if (m_contentFilter && !m_contentFilter->continueAfterResponseReceived(receivedResponse))
@@ -889,7 +895,7 @@ void NetworkResourceLoader::didReceiveResponse(ResourceResponse&& receivedRespon
         m_bufferedDataForCache.reset();
 
     if (m_cacheEntryForValidation) {
-        bool validationSucceeded = m_response.httpStatusCode() == 304; // 304 Not Modified
+        bool validationSucceeded = m_response.httpStatusCode() == httpStatus304NotModified;
         LOADER_RELEASE_LOG("didReceiveResponse: Received revalidation response (validationSucceeded=%d, wasOriginalRequestConditional=%d)", validationSucceeded, originalRequest().isConditional());
         if (validationSucceeded) {
             m_cacheEntryForValidation = m_cache->update(originalRequest(), *m_cacheEntryForValidation, m_response, m_privateRelayed);
@@ -1056,8 +1062,7 @@ void NetworkResourceLoader::didFinishLoading(const NetworkLoadMetrics& networkLo
         m_connection->addNetworkLoadInformationMetrics(coreIdentifier(), networkLoadMetrics);
 
     if (m_cacheEntryForValidation) {
-        // 304 Not Modified
-        ASSERT(m_response.httpStatusCode() == 304);
+        ASSERT(m_response.httpStatusCode() == httpStatus304NotModified);
         LOG(NetworkCache, "(NetworkProcess) revalidated");
         didRetrieveCacheEntry(WTFMove(m_cacheEntryForValidation));
         return;

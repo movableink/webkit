@@ -31,6 +31,7 @@
 
 #include "CSSStyleSheet.h"
 #include "CascadeLevel.h"
+#include "DocumentInlines.h"
 #include "ExtensionStyleSheets.h"
 #include "FrameLoader.h"
 #include "HTMLNames.h"
@@ -80,6 +81,11 @@ void ScopeRuleSets::updateUserAgentMediaQueryStyleIfNeeded() const
 
     RuleSetBuilder builder(*m_userAgentMediaQueryStyle, mediaQueryEvaluator, &m_styleResolver);
     builder.addRulesFromSheet(*UserAgentStyle::mediaQueryStyleSheet);
+}
+
+RuleSet* ScopeRuleSets::dynamicViewTransitionsStyle() const
+{
+    return m_dynamicViewTransitionsStyle.get();
 }
 
 RuleSet* ScopeRuleSets::userStyle() const
@@ -271,6 +277,8 @@ void ScopeRuleSets::collectFeatures() const
     m_pseudoClassInvalidationRuleSets.clear();
     m_hasPseudoClassInvalidationRuleSets.clear();
 
+    m_customPropertyNamesInStyleContainerQueries = std::nullopt;
+
     m_cachedHasComplexSelectorsForStyleAttribute = std::nullopt;
 
     m_features.shrinkToFit();
@@ -336,6 +344,35 @@ const Vector<InvalidationRuleSet>* ScopeRuleSets::pseudoClassInvalidationRuleSet
 const Vector<InvalidationRuleSet>* ScopeRuleSets::hasPseudoClassInvalidationRuleSets(const PseudoClassInvalidationKey& key) const
 {
     return ensureInvalidationRuleSets(key, m_hasPseudoClassInvalidationRuleSets, m_features.hasPseudoClassRules);
+}
+
+const HashSet<AtomString>& ScopeRuleSets::customPropertyNamesInStyleContainerQueries() const
+{
+    if (!m_customPropertyNamesInStyleContainerQueries) {
+        HashSet<AtomString> propertyNames;
+
+        auto collectPropertyNames = [&](auto* ruleSet) {
+            if (!ruleSet)
+                return;
+            for (auto query : ruleSet->containerQueryRules()) {
+                traverseFeatures(query->containerQuery().condition, [&](auto& containerFeature) {
+                    if (isCustomPropertyName(containerFeature.name))
+                        propertyNames.add(containerFeature.name);
+                });
+            }
+        };
+
+        collectPropertyNames(&authorStyle());
+        collectPropertyNames(userStyle());
+
+        m_customPropertyNamesInStyleContainerQueries = propertyNames;
+    }
+    return *m_customPropertyNamesInStyleContainerQueries;
+}
+
+bool ScopeRuleSets::hasSelectorsForStyleAttribute() const
+{
+    return !!attributeInvalidationRuleSets(HTMLNames::styleAttr->localName());
 }
 
 bool ScopeRuleSets::hasComplexSelectorsForStyleAttribute() const

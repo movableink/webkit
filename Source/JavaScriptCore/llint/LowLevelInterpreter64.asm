@@ -600,9 +600,6 @@ end
 
 macro loadCagedJSValue(source, dest, scratchOrLength)
     loadp source, dest
-    if GIGACAGE_ENABLED
-        cage(GigacageConfig + Gigacage::Config::basePtrs + GigacageJSValueBasePtrOffset, constexpr Gigacage::jsValueGigacageMask, dest, scratchOrLength)
-    end
 end
 
 macro loadVariable(get, fieldName, valueReg)
@@ -2537,7 +2534,7 @@ macro callHelper(opcodeName, opcodeStruct, dispatchAfterCall, valueProfileName, 
     move t3, sp
     addp CallerFrameAndPCSize, sp
 
-    loadp %opcodeStruct%::Metadata::m_callLinkInfo.m_calleeOrCodeBlock[t5], t1
+    loadp %opcodeStruct%::Metadata::m_callLinkInfo.m_callee[t5], t1
     btpz t1, (constexpr CallLinkInfo::polymorphicCalleeMask), .notPolymorphic
     prepareCall(t2, t3, t4, t1, macro(address)
         loadp %opcodeStruct%::Metadata::m_callLinkInfo.u.dataIC.m_codeBlock[t5], t2
@@ -2626,7 +2623,7 @@ macro doCallVarargs(opcodeName, size, get, opcodeStruct, valueProfileName, dstVi
             loadConstantOrVariable(size, t1, t0)
             metadata(t5, t2)
 
-            loadp %opcodeStruct%::Metadata::m_callLinkInfo.m_calleeOrCodeBlock[t5], t1
+            loadp %opcodeStruct%::Metadata::m_callLinkInfo.m_callee[t5], t1
             btpz t1, (constexpr CallLinkInfo::polymorphicCalleeMask), .notPolymorphic
             prepareCall(t2, t3, t4, t1, macro(address)
                 loadp %opcodeStruct%::Metadata::m_callLinkInfo.u.dataIC.m_codeBlock[t5], t2
@@ -2702,6 +2699,23 @@ llintOpWithReturn(op_to_property_key, OpToPropertyKey, macro (size, get, dispatc
 
 .opToPropertyKeySlow:
     callSlowPath(_slow_path_to_property_key)
+    dispatch()
+end)
+
+llintOpWithReturn(op_to_property_key_or_number, OpToPropertyKeyOrNumber, macro (size, get, dispatch, return)
+    get(m_src, t2)
+    loadConstantOrVariable(size, t2, t0)
+
+    btqnz t0, numberTag, .done
+    btqnz t0, notCellMask, .opToPropertyKeyOrNumberSlow
+    bbeq JSCell::m_type[t0], SymbolType, .done
+    bbneq JSCell::m_type[t0], StringType, .opToPropertyKeyOrNumberSlow
+
+.done:
+    return(t0)
+
+.opToPropertyKeyOrNumberSlow:
+    callSlowPath(_slow_path_to_property_key_or_number)
     dispatch()
 end)
 
@@ -3079,7 +3093,7 @@ llintOpWithMetadata(op_put_to_scope, OpPutToScope, macro (size, get, dispatch, m
         loadi OpPutToScope::Metadata::m_getPutInfo + GetPutInfo::m_operand[t5], t0
         andi InitializationModeMask, t0
         rshifti InitializationModeShift, t0
-        bineq t0, NotInitialization, .noNeedForTDZCheck
+        bilt t0, NotInitialization, .noNeedForTDZCheck
         loadp OpPutToScope::Metadata::m_operand[t5], t0
         loadq [t0], t0
         bqeq t0, ValueEmpty, .pDynamic

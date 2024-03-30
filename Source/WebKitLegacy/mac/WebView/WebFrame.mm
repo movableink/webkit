@@ -968,7 +968,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
     if (WebCore::MIMETypeRegistry::isTextMIMEType(mimeType)
         || WebCore::Image::supportsType(mimeType)
-        || (pluginData && pluginData->supportsWebVisibleMimeType(mimeType, WebCore::PluginData::AllPlugins) && frame->arePluginsEnabled())
+        || (pluginData && pluginData->supportsWebVisibleMimeType(mimeType, WebCore::PluginData::AllPlugins))
         || (pluginData && pluginData->supportsWebVisibleMimeType(mimeType, WebCore::PluginData::OnlyApplicationPlugins)))
         return NO;
 
@@ -1772,7 +1772,7 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
     PAL::TextEncoding encoding(textEncodingName);
     if (!encoding.isValid())
         encoding = PAL::WindowsLatin1Encoding();
-    return encoding.decode(reinterpret_cast<const char*>([data bytes]), [data length]);
+    return encoding.decode(span(data));
 }
 
 - (NSRect)caretRectAtNode:(DOMNode *)node offset:(int)offset affinity:(NSSelectionAffinity)affinity

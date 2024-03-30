@@ -47,6 +47,7 @@ Ref<AccessibilityController> AccessibilityController::create()
 
 AccessibilityController::AccessibilityController()
 {
+    platformInitialize();
 }
 
 AccessibilityController::~AccessibilityController()
@@ -71,6 +72,11 @@ void AccessibilityController::setIsolatedTreeMode(bool flag)
 void AccessibilityController::setForceDeferredSpellChecking(bool shouldForce)
 {
     WKAccessibilitySetForceDeferredSpellChecking(shouldForce);
+}
+
+void AccessibilityController::setForceInitialFrameCaching(bool shouldForce)
+{
+    WKAccessibilitySetForceInitialFrameCaching(shouldForce);
 }
 
 void AccessibilityController::makeWindowObject(JSContextRef context)
@@ -168,6 +174,12 @@ void AccessibilityController::announce(JSStringRef message)
     auto page = InjectedBundle::singleton().page()->page();
     WKAccessibilityAnnounce(page, toWK(message).get());
 }
+
+#if !PLATFORM(MAC)
+void AccessibilityController::platformInitialize()
+{
+}
+#endif
 
 #if PLATFORM(COCOA)
 

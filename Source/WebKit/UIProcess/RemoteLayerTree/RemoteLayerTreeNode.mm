@@ -120,17 +120,16 @@ void RemoteLayerTreeNode::initializeLayer()
 CALayer* RemoteLayerTreeNode::ensureInteractionRegionsContainer()
 {
     if (m_interactionRegionsContainer)
-        return m_interactionRegionsContainer.get();
+        return [m_interactionRegionsContainer layer];
 
-    m_interactionRegionsContainer = adoptNS([[CALayer alloc] init]);
-    [m_interactionRegionsContainer setName:@"InteractionRegions Container"];
-    [m_interactionRegionsContainer setValue:@(YES) forKey:WKInteractionRegionContainerKey];
-    [m_interactionRegionsContainer setDelegate:[WebActionDisablingCALayerDelegate shared]];
+    m_interactionRegionsContainer = adoptNS([[UIView alloc] init]);
+    [[m_interactionRegionsContainer layer] setName:@"InteractionRegions Container"];
+    [[m_interactionRegionsContainer layer] setValue:@YES forKey:WKInteractionRegionContainerKey];
 
     repositionInteractionRegionsContainerIfNeeded();
     propagateInteractionRegionsChangeInHierarchy(InteractionRegionsInSubtree::Yes);
 
-    return m_interactionRegionsContainer.get();
+    return [m_interactionRegionsContainer layer];
 }
 
 void RemoteLayerTreeNode::removeInteractionRegionsContainer()
@@ -138,7 +137,7 @@ void RemoteLayerTreeNode::removeInteractionRegionsContainer()
     if (!m_interactionRegionsContainer)
         return;
 
-    [m_interactionRegionsContainer removeFromSuperlayer];
+    [m_interactionRegionsContainer removeFromSuperview];
     m_interactionRegionsContainer = nullptr;
 
     propagateInteractionRegionsChangeInHierarchy(InteractionRegionsInSubtree::Unknown);
@@ -174,13 +173,14 @@ void RemoteLayerTreeNode::repositionInteractionRegionsContainerIfNeeded()
 {
     if (!m_interactionRegionsContainer)
         return;
+    ASSERT(uiView());
 
     NSUInteger insertionPoint = 0;
-    for (CALayer *sublayer in layer().sublayers) {
-        if ([sublayer valueForKey:WKInteractionRegionContainerKey])
+    for (UIView *subview in uiView().subviews) {
+        if ([subview.layer valueForKey:WKInteractionRegionContainerKey])
             continue;
 
-        if (auto *subnode = forCALayer(sublayer)) {
+        if (auto *subnode = forCALayer(subview.layer)) {
             if (subnode->hasInteractionRegions())
                 break;
         }
@@ -188,11 +188,13 @@ void RemoteLayerTreeNode::repositionInteractionRegionsContainerIfNeeded()
         insertionPoint++;
     }
 
-    if ([layer().sublayers objectAtIndex:insertionPoint] == m_interactionRegionsContainer)
-        return;
-
-    [m_interactionRegionsContainer removeFromSuperlayer];
-    [layer() insertSublayer:m_interactionRegionsContainer.get() atIndex:insertionPoint];
+    // We searched through the subviews, so insertionPoint is always <= subviews.count.
+    ASSERT(insertionPoint <= uiView().subviews.count);
+    bool shouldAppendView = insertionPoint == uiView().subviews.count;
+    if (shouldAppendView || [uiView().subviews objectAtIndex:insertionPoint] != m_interactionRegionsContainer) {
+        [m_interactionRegionsContainer removeFromSuperview];
+        [uiView() insertSubview:m_interactionRegionsContainer.get() atIndex:insertionPoint];
+    }
 }
 
 void RemoteLayerTreeNode::propagateInteractionRegionsChangeInHierarchy(InteractionRegionsInSubtree interactionRegionsInSubtree)
@@ -247,20 +249,37 @@ NSString *RemoteLayerTreeNode::appendLayerDescription(NSString *description, CAL
     return [description stringByAppendingString:layerDescription];
 }
 
+void RemoteLayerTreeNode::addToHostingNode(RemoteLayerTreeNode& hostingNode)
+{
+#if PLATFORM(IOS_FAMILY)
+    [hostingNode.uiView() addSubview:uiView()];
+#else
+    [hostingNode.layer() addSublayer:layer()];
+#endif
+}
+
+void RemoteLayerTreeNode::removeFromHostingNode()
+{
+#if PLATFORM(IOS_FAMILY)
+    [uiView() removeFromSuperview];
+#else
+    [layer() removeFromSuperlayer];
+#endif
+}
+
 #if ENABLE(THREADED_ANIMATION_RESOLUTION)
 void RemoteLayerTreeNode::setAcceleratedEffectsAndBaseValues(const WebCore::AcceleratedEffects& effects, const WebCore::AcceleratedEffectValues& baseValues, RemoteLayerTreeHost& host)
 {
     ASSERT(isUIThread());
 
-    if (m_effectStack) {
+    if (m_effectStack)
         m_effectStack->clear(layer());
-        host.animationsWereRemovedFromNode(*this);
-    }
+    host.animationsWereRemovedFromNode(*this);
 
     if (effects.isEmpty())
         return;
 
-    m_effectStack = RemoteAcceleratedEffectStack::create(host.acceleratedTimelineTimeOrigin());
+    m_effectStack = RemoteAcceleratedEffectStack::create(layer().bounds, host.acceleratedTimelineTimeOrigin());
 
     auto clonedEffects = effects;
     auto clonedBaseValues = baseValues.clone();
@@ -268,7 +287,9 @@ void RemoteLayerTreeNode::setAcceleratedEffectsAndBaseValues(const WebCore::Acce
     m_effectStack->setEffects(WTFMove(clonedEffects));
     m_effectStack->setBaseValues(WTFMove(clonedBaseValues));
 
-#if PLATFORM(MAC)
+#if PLATFORM(IOS_FAMILY)
+    m_effectStack->applyEffectsFromMainThread(layer(), host.animationCurrentTime(), host.cssUnprefixedBackdropFilterEnabled());
+#else
     m_effectStack->initEffectsFromMainThread(layer(), host.animationCurrentTime());
 #endif
 

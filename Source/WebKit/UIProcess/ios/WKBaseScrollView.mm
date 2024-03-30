@@ -35,6 +35,12 @@
 #import <wtf/SetForScope.h>
 #import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 
+#if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
+#import "UIKitUtilities.h"
+#import <pal/spi/cocoa/QuartzCoreSPI.h>
+#import <wtf/cocoa/VectorCocoa.h>
+#endif
+
 @interface UIScrollView (GestureRecognizerDelegate) <UIGestureRecognizerDelegate>
 @end
 
@@ -42,6 +48,9 @@
     RetainPtr<UIPanGestureRecognizer> _axisLockingPanGestureRecognizer;
     UIAxis _axesToPreventMomentumScrolling;
     BOOL _isBeingRemovedFromSuperview;
+#if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
+    HashSet<WebCore::IntRect> _overlayRegionRects;
+#endif
 }
 
 - (instancetype)initWithFrame:(CGRect)frame
@@ -51,7 +60,7 @@
     if (!(self = [super initWithFrame:frame]))
         return nil;
 
-#if HAVE(UISCROLLVIEW_ASYNCHRONOUS_SCROLL_EVENT_HANDLING) && !SERVICE_EXTENSIONS_SCROLL_VIEW_IS_AVAILABLE
+#if HAVE(UISCROLLVIEW_ASYNCHRONOUS_SCROLL_EVENT_HANDLING) && !USE(BROWSERENGINEKIT)
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     self._allowsAsyncScrollEvent = YES;
 ALLOW_DEPRECATED_DECLARATIONS_END
@@ -117,6 +126,17 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         break;
     }
 
+    switch ([_axisLockingPanGestureRecognizer state]) {
+    case UIGestureRecognizerStateCancelled:
+    case UIGestureRecognizerStateFailed:
+        return;
+    case UIGestureRecognizerStatePossible:
+    case UIGestureRecognizerStateBegan:
+    case UIGestureRecognizerStateChanged:
+    case UIGestureRecognizerStateEnded:
+        break;
+    }
+
     auto axesToPrevent = self._axesToPreventScrollingFromDelegate;
     if (axesToPrevent == UIAxisNeither)
         return;
@@ -153,6 +173,19 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     auto delegate = self.baseScrollViewDelegate;
     return delegate ? [delegate axesToPreventScrollingForPanGestureInScrollView:self] : UIAxisNeither;
 }
+
+
+#if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
+
+#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/WKBaseScrollViewAdditions.mm>)
+#import <WebKitAdditions/WKBaseScrollViewAdditions.mm>
+#else
+- (BOOL)_hasEnoughContentForOverlayRegions { return false; }
+- (void)_updateOverlayRegionRects:(HashSet<WebCore::IntRect>&)overlayRegions { }
+- (void)_updateOverlayRegions:(NSArray<NSData *> *)overlayRegions { }
+#endif
+
+#endif // ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
 
 #pragma mark - UIGestureRecognizerDelegate
 

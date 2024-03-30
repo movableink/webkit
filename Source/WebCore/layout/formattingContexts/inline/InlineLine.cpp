@@ -92,6 +92,7 @@ Line::Result Line::close()
         , contentLogicalRight
         , !!m_hangingContent.trailingWhitespaceLength()
         , m_hangingContent.trailingWidth()
+        , m_hangingContent.leadingPunctuationWidth()
         , m_hasNonDefaultBidiLevelRun
         , m_nonSpanningInlineLevelBoxCount
     };
@@ -268,8 +269,8 @@ void Line::resetBidiLevelForTrailingWhitespace(UBiDiLevel rootBidiLevel)
 
 void Line::append(const InlineItem& inlineItem, const RenderStyle& style, InlineLayoutUnit logicalWidth)
 {
-    if (inlineItem.isText())
-        appendTextContent(downcast<InlineTextItem>(inlineItem), style, logicalWidth);
+    if (auto* inlineTextItem = dynamicDowncast<InlineTextItem>(inlineItem))
+        appendTextContent(*inlineTextItem, style, logicalWidth);
     else if (inlineItem.isLineBreak())
         appendLineBreak(inlineItem, style);
     else if (inlineItem.isWordBreakOpportunity())
@@ -579,7 +580,6 @@ void Line::appendLineBreak(const InlineItem& inlineItem, const RenderStyle& styl
         return m_runs.append({ inlineItem, style, lastRunLogicalRight() });
     }
     // Soft line breaks (preserved new line characters) require inline text boxes for compatibility reasons.
-    ASSERT(inlineItem.isSoftLineBreak());
     m_runs.append({ downcast<InlineSoftLineBreakItem>(inlineItem), inlineItem.style(), lastRunLogicalRight() });
 }
 

@@ -26,7 +26,6 @@
 #include "config.h"
 #include "WebSWServerConnection.h"
 
-#include "DataReference.h"
 #include "FormDataReference.h"
 #include "Logging.h"
 #include "MessageSenderInlines.h"
@@ -91,10 +90,9 @@ WebSWServerConnection::~WebSWServerConnection()
 {
     if (CheckedPtr session = this->session())
         session->unregisterSWServerConnection(*this);
-    for (const auto& keyValue : m_clientOrigins) {
-        // Unable to protect the server as it may have started destruction.
-        server().unregisterServiceWorkerClient(keyValue.value, keyValue.key);
-    }
+    RefAllowingPartiallyDestroyed<SWServer> server = this->server();
+    for (const auto& keyValue : m_clientOrigins)
+        server->unregisterServiceWorkerClient(keyValue.value, keyValue.key);
     for (auto& completionHandler : m_unregisterJobs.values())
         completionHandler(false);
 }
@@ -294,7 +292,7 @@ void WebSWServerConnection::startFetch(ServiceWorkerFetchTask& task, SWServerWor
         }
 
         if (!worker->contextConnection())
-            server->createContextConnection(worker->registrableDomain(), worker->serviceWorkerPageIdentifier());
+            server->createContextConnection(worker->topRegistrableDomain(), worker->serviceWorkerPageIdentifier());
 
         auto identifier = task->serviceWorkerIdentifier();
         server->runServiceWorkerIfNecessary(identifier, [weakThis = WTFMove(weakThis), this, task = WTFMove(task)](auto* contextConnection) mutable {

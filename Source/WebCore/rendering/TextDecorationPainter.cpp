@@ -283,7 +283,6 @@ void TextDecorationPainter::paintBackgroundDecorations(const RenderStyle& style,
         };
         applyShadowIfNeeded();
 
-        // FIXME: Add support to handle left/right case
         if (decorationType.contains(TextDecorationLine::Underline) && !underlineRect.isEmpty())
             paintDecoration(TextDecorationLine::Underline, decorationStyle.underline.decorationStyle, decorationStyle.underline.color, underlineRect);
         if (decorationType.contains(TextDecorationLine::Overline) && !overlineRect.isEmpty())
@@ -350,8 +349,8 @@ static void collectStylesForRenderer(TextDecorationPainter::Styles& result, cons
     auto styleForRenderer = [&] (const RenderObject& renderer) -> const RenderStyle& {
         if (pseudoId != PseudoId::None && renderer.style().hasPseudoStyle(pseudoId)) {
             if (auto textRenderer = dynamicDowncast<RenderText>(renderer))
-                return *textRenderer->getCachedPseudoStyle(pseudoId);
-            return *downcast<RenderElement>(renderer).getCachedPseudoStyle(pseudoId);
+                return *textRenderer->getCachedPseudoStyle({ pseudoId });
+            return *downcast<RenderElement>(renderer).getCachedPseudoStyle({ pseudoId });
         }
         return firstLineStyle ? renderer.firstLineStyle() : renderer.style();
     };
@@ -361,7 +360,7 @@ static void collectStylesForRenderer(TextDecorationPainter::Styles& result, cons
         const auto& style = styleForRenderer(*current);
         extractDecorations(style, style.textDecorationLine());
 
-        if (current->isRenderRubyText() || current->style().display() == DisplayType::RubyAnnotation)
+        if (current->style().display() == DisplayType::RubyAnnotation)
             return;
 
         current = current->parent();

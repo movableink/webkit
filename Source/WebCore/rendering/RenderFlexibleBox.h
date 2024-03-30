@@ -95,8 +95,7 @@ public:
 
     const OrderIterator& orderIterator() const { return m_orderIterator; }
 
-    bool isTopLayoutOverflowAllowed() const override;
-    bool isLeftLayoutOverflowAllowed() const override;
+    LayoutOptionalOutsets allowedLayoutOverflow() const override;
 
     virtual bool isFlexibleBoxImpl() const { return false; };
     
@@ -124,6 +123,8 @@ public:
     bool shouldApplyMinBlockSizeAutoForChild(const RenderBox&) const;
 
     bool isComputingFlexBaseSizes() const { return m_isComputingFlexBaseSizes; }
+
+    static std::optional<TextDirection> leftRightAxisDirectionFromStyle(const RenderStyle&);
 
 protected:
     void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override;
@@ -198,6 +199,7 @@ private:
     void maybeCacheChildMainIntrinsicSize(RenderBox& child, bool relayoutChildren);
     void adjustAlignmentForChild(RenderBox& child, LayoutUnit);
     ItemPosition alignmentForChild(const RenderBox& child) const;
+    inline OverflowAlignment overflowAlignmentForChild(const RenderBox& child) const;
     bool canComputePercentageFlexBasis(const RenderBox& child, const Length& flexBasis, UpdatePercentageHeightDescendants);
     bool childMainSizeIsDefinite(const RenderBox&, const Length& flexBasis);
     bool childCrossSizeIsDefinite(const RenderBox&, const Length& flexBasis);

@@ -32,6 +32,7 @@
 #import "BackgroundFetchState.h"
 #import "CompletionHandlerCallChecker.h"
 #import "NetworkProcessProxy.h"
+#import "RestrictedOpenerType.h"
 #import "ShouldGrandfatherStatistics.h"
 #import "WKError.h"
 #import "WKHTTPCookieStoreInternal.h"
@@ -52,12 +53,16 @@
 #import "_WKWebsiteDataStoreDelegate.h"
 #import <WebCore/Credential.h>
 #import <WebCore/RegistrableDomain.h>
+#import <WebCore/ResourceResponse.h>
+#import <WebCore/SerializedCryptoKeyWrap.h>
 #import <WebCore/ServiceWorkerClientData.h>
 #import <WebCore/WebCoreObjCExtras.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/URL.h>
+#import <wtf/Vector.h>
 #import <wtf/WeakObjCPtr.h>
 #import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
+#import <wtf/cocoa/VectorCocoa.h>
 
 #if HAVE(NW_PROXY_CONFIG)
 #import <Network/Network.h>
@@ -80,10 +85,24 @@ public:
         , m_hasNotifyBackgroundFetchChangeSelector([m_delegate.get() respondsToSelector:@selector(notifyBackgroundFetchChange:change:)])
         , m_hasWindowProxyPropertyAccessSelector([m_delegate.get() respondsToSelector:@selector(websiteDataStore:domain:didOpenDomainViaWindowOpen:withProperty:directly:)])
         , m_hasDidAllowPrivateTokenUsageByThirdPartyForTestingSelector([m_delegate.get() respondsToSelector:@selector(websiteDataStore:didAllowPrivateTokenUsageByThirdPartyForTesting:forResourceURL:)])
+        , m_hasDidExceedMemoryFootprintThresholdSelector([m_delegate.get() respondsToSelector:@selector(websiteDataStore:domain:didExceedMemoryFootprintThreshold:withPageCount:processLifetime:inForeground:wasPrivateRelayed:canSuspend:)])
+        , m_hasWebCryptoMasterKeySelector([m_delegate.get() respondsToSelector:@selector(webCryptoMasterKey)])
     {
     }
 
 private:
+
+    std::optional<Vector<uint8_t>> webCryptoMasterKey() final
+    {
+        if (!m_hasWebCryptoMasterKeySelector || !m_delegate)
+            return std::nullopt;
+
+        RetainPtr<NSData> result = [m_delegate webCryptoMasterKey];
+        if (!result)
+            return std::nullopt;
+        return makeVector(result.get());
+    }
+
     void requestStorageSpace(const WebCore::SecurityOriginData& topOrigin, const WebCore::SecurityOriginData& frameOrigin, uint64_t quota, uint64_t currentSize, uint64_t spaceRequired, CompletionHandler<void(std::optional<uint64_t>)>&& completionHandler) final
     {
         if (!m_hasRequestStorageSpaceSelector || !m_delegate) {
@@ -299,6 +318,14 @@ private:
         [m_delegate.getAutoreleased() websiteDataStore:m_dataStore.getAutoreleased() didAllowPrivateTokenUsageByThirdPartyForTesting:wasAllowed forResourceURL:resourceURL];
     }
 
+    void didExceedMemoryFootprintThreshold(size_t footprint, const String& domain, unsigned pageCount, Seconds processLifetime, bool inForeground, WebCore::WasPrivateRelayed wasPrivateRelayed, CanSuspend canSuspend)
+    {
+        if (!m_hasDidExceedMemoryFootprintThresholdSelector)
+            return;
+
+        [m_delegate.getAutoreleased() websiteDataStore:m_dataStore.getAutoreleased() domain:(NSString *)domain didExceedMemoryFootprintThreshold:footprint withPageCount:pageCount processLifetime:processLifetime.seconds() inForeground:inForeground wasPrivateRelayed:wasPrivateRelayed == WebCore::WasPrivateRelayed::Yes canSuspend:canSuspend == CanSuspend::Yes];
+    }
+
     WeakObjCPtr<WKWebsiteDataStore> m_dataStore;
     WeakObjCPtr<id <_WKWebsiteDataStoreDelegate> > m_delegate;
     bool m_hasRequestStorageSpaceSelector { false };
@@ -313,6 +340,8 @@ private:
     bool m_hasNotifyBackgroundFetchChangeSelector { false };
     bool m_hasWindowProxyPropertyAccessSelector { false };
     bool m_hasDidAllowPrivateTokenUsageByThirdPartyForTestingSelector { false };
+    bool m_hasDidExceedMemoryFootprintThresholdSelector { false };
+    bool m_hasWebCryptoMasterKeySelector { false };
 };
 
 @implementation WKWebsiteDataStore {
@@ -477,7 +506,7 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
         uuid_t proxyIdentifier;
         nw_proxy_config_get_identifier(proxyConfig, proxyIdentifier);
 
-        configDataVector.append({ vectorFromNSData(agentData.get()), WTF::UUID(proxyIdentifier) });
+        configDataVector.append({ makeVector(agentData.get()), WTF::UUID(proxyIdentifier) });
     }
     
     _websiteDataStore->setProxyConfigData(WTFMove(configDataVector));
@@ -568,6 +597,7 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 
     auto sessionID = configuration.isPersistent ? PAL::SessionID::generatePersistentSessionID() : PAL::SessionID::generateEphemeralSessionID();
     API::Object::constructInWrapper<WebKit::WebsiteDataStore>(self, configuration->_configuration->copy(), sessionID);
+    _websiteDataStore->resolveDirectoriesAsynchronously();
 
     return self;
 }
@@ -596,7 +626,6 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 
 - (void)_setResourceLoadStatisticsEnabled:(BOOL)enabled
 {
-    _websiteDataStore->useExplicitTrackingPreventionState();
     _websiteDataStore->setTrackingPreventionEnabled(enabled);
 }
 
@@ -675,12 +704,12 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
     _websiteDataStore->setStatisticsTestingCallback(nullptr);
 }
 
-- (void)_setStorageAccessPromptQuirkForTesting:(NSString *)topFrameDomain withSubFrameDomains:(NSArray<NSString *> *)subFrameDomains completionHandler:(void(^)(void))completionHandler
+- (void)_setStorageAccessPromptQuirkForTesting:(NSString *)topFrameDomain withSubFrameDomains:(NSArray<NSString *> *)subFrameDomains withTriggerPages:(NSArray<NSString *> *)triggerPages completionHandler:(void(^)(void))completionHandler
 {
     if (!_websiteDataStore->isPersistent())
         return;
 
-    _websiteDataStore->setStorageAccessPromptQuirkForTesting(topFrameDomain, makeVector<String>(subFrameDomains), makeBlockPtr(completionHandler));
+    _websiteDataStore->setStorageAccessPromptQuirkForTesting(topFrameDomain, makeVector<String>(subFrameDomains), makeVector<String>(triggerPages), makeBlockPtr(completionHandler));
 }
 
 - (void)_grantStorageAccessForTesting:(NSString *)topFrameDomain withSubFrameDomains:(NSArray<NSString *> *)subFrameDomains completionHandler:(void(^)(void))completionHandler
@@ -1218,6 +1247,11 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 
         return completionHandlerCopy(nil);
     });
+}
+
+- (void)_setRestrictedOpenerTypeForTesting:(_WKRestrictedOpenerType)openerType forDomain:(NSString *)domain
+{
+    _websiteDataStore->setRestrictedOpenerTypeForDomainForTesting(WebCore::RegistrableDomain::fromRawString(domain), static_cast<WebKit::RestrictedOpenerType>(openerType));
 }
 
 @end

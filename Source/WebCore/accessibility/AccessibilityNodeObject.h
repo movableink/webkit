@@ -55,6 +55,7 @@ public:
 
     bool isBusy() const override;
     bool isControl() const override;
+    bool isRadioInput() const override;
     bool isFieldset() const override;
     bool isHovered() const override;
     bool isInputImage() const override;
@@ -113,6 +114,7 @@ public:
     void alternativeText(Vector<AccessibilityText>&) const;
     void helpText(Vector<AccessibilityText>&) const;
     String stringValue() const override;
+    WallTime dateTimeValue() const final;
     SRGBA<uint8_t> colorValue() const override;
     String ariaLabeledByAttribute() const override;
     bool hasAttributesRequiredForInclusion() const final;
@@ -122,10 +124,8 @@ public:
     Element* mouseButtonListener(MouseButtonListenerResultFilter = ExcludeBodyElement) const;
     Element* anchorElement() const override;
     RefPtr<Element> popoverTargetElement() const final;
-    AccessibilityObject* internalLinkElement() const;
-    void addRadioButtonGroupMembers(AccessibilityChildrenVector& linkedUIElements) const;
-    void addRadioButtonGroupChildren(AXCoreObject&, AccessibilityChildrenVector&) const;
-    AccessibilityChildrenVector linkedObjects() const override;
+    AXCoreObject* internalLinkElement() const final;
+    AccessibilityChildrenVector radioButtonGroup() const final;
     AccessibilityObject* menuForMenuButton() const;
    
     virtual void changeValueByPercent(float percentChange);
@@ -144,6 +144,10 @@ public:
     bool toggleDetailsAncestor() final;
 
     LayoutRect elementRect() const override;
+
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    bool shouldEmitNewlinesBeforeAndAfterNode() const final;
+#endif
 
 protected:
     explicit AccessibilityNodeObject(Node*);
@@ -194,7 +198,7 @@ protected:
     String accessKey() const final;
     bool isLabelable() const;
     AccessibilityObject* controlForLabelElement() const final;
-    String textAsLabel() const;
+    String textAsLabelFor(const AccessibilityObject&) const;
     String textForLabelElements(Vector<Ref<HTMLElement>>&&) const;
     HTMLLabelElement* labelElementContainer() const;
 
@@ -228,7 +232,7 @@ private:
     void setNeedsToUpdateSubtree() override { m_subtreeDirty = true; }
 
     bool isDescendantOfElementType(const HashSet<QualifiedName>&) const;
-
+protected:
     WeakPtr<Node, WeakPtrImplWithEventTargetData> m_node;
 };
 

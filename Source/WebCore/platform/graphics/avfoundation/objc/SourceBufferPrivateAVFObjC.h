@@ -27,6 +27,7 @@
 
 #if ENABLE(MEDIA_SOURCE) && USE(AVFOUNDATION)
 
+#include "ProcessIdentity.h"
 #include "SourceBufferParser.h"
 #include "SourceBufferPrivate.h"
 #include "WebAVSampleBufferListener.h"
@@ -51,6 +52,7 @@ OBJC_CLASS AVSampleBufferDisplayLayer;
 OBJC_CLASS NSData;
 OBJC_CLASS NSError;
 OBJC_CLASS NSObject;
+OBJC_PROTOCOL(WebSampleBufferVideoRendering);
 
 typedef struct opaqueCMSampleBuffer *CMSampleBufferRef;
 typedef const struct opaqueCMFormatDescription *CMFormatDescriptionRef;
@@ -80,9 +82,9 @@ struct TrackInfo;
 class SourceBufferPrivateAVFObjCErrorClient {
 public:
     virtual ~SourceBufferPrivateAVFObjCErrorClient() = default;
-    virtual void layerDidReceiveError(AVSampleBufferDisplayLayer *, NSError *, bool& shouldIgnore) = 0;
+    virtual void videoRendererDidReceiveError(WebSampleBufferVideoRendering *, NSError *, bool& shouldIgnore) = 0;
 ALLOW_NEW_API_WITHOUT_GUARDS_BEGIN
-    virtual void rendererDidReceiveError(AVSampleBufferAudioRenderer *, NSError *, bool& shouldIgnore) = 0;
+    virtual void audioRendererDidReceiveError(AVSampleBufferAudioRenderer *, NSError *, bool& shouldIgnore) = 0;
 ALLOW_NEW_API_WITHOUT_GUARDS_END
 };
 
@@ -126,7 +128,7 @@ public:
     void registerForErrorNotifications(SourceBufferPrivateAVFObjCErrorClient*);
     void unregisterForErrorNotifications(SourceBufferPrivateAVFObjCErrorClient*);
 
-    void setVideoLayer(AVSampleBufferDisplayLayer*);
+    void setVideoRenderer(WebSampleBufferVideoRendering *);
     void setDecompressionSession(WebCoreDecompressionSession*);
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
@@ -141,6 +143,8 @@ public:
     const Logger& sourceBufferLogger() const final { return m_logger.get(); }
     const void* sourceBufferLogIdentifier() final { return logIdentifier(); }
 #endif
+
+    void setResourceOwner(const ProcessIdentity& resourceOwner) { m_resourceOwner = resourceOwner; }
 
 private:
     explicit SourceBufferPrivateAVFObjC(MediaSourcePrivateAVFObjC&, Ref<SourceBufferParser>&&);
@@ -169,12 +173,12 @@ private:
     void processFormatDescriptionForTrackId(Ref<TrackInfo>&&, TrackID) final;
 
     // WebAVSampleBufferListenerClient
-    void layerDidReceiveError(AVSampleBufferDisplayLayer *, NSError *) final;
-    void rendererWasAutomaticallyFlushed(AVSampleBufferAudioRenderer *, const CMTime&) final;
+    void videoRendererDidReceiveError(WebSampleBufferVideoRendering *, NSError *) final;
+    void audioRendererWasAutomaticallyFlushed(AVSampleBufferAudioRenderer *, const CMTime&) final;
     void outputObscuredDueToInsufficientExternalProtectionChanged(bool) final;
-    void layerRequiresFlushToResumeDecodingChanged(AVSampleBufferDisplayLayer *, bool) final;
-    void layerReadyForDisplayChanged(AVSampleBufferDisplayLayer *, bool isReadyForDisplay) final;
-    void rendererDidReceiveError(AVSampleBufferAudioRenderer *, NSError *) final;
+    void videoRendererRequiresFlushToResumeDecodingChanged(WebSampleBufferVideoRendering *, bool) final;
+    void videoRendererReadyForDisplayChanged(WebSampleBufferVideoRendering *, bool isReadyForDisplay) final;
+    void audioRendererDidReceiveError(AVSampleBufferAudioRenderer *, NSError *) final;
 
     void processPendingTrackChangeTasks();
     void enqueueSample(Ref<MediaSampleAVFObjC>&&, TrackID);
@@ -211,11 +215,11 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
     Vector<Function<void()>> m_pendingTrackChangeTasks;
     Deque<std::pair<TrackID, Ref<MediaSampleAVFObjC>>> m_blockedSamples;
 
-    RefPtr<VideoMediaSampleRenderer> m_videoLayer;
+    RefPtr<VideoMediaSampleRenderer> m_videoRenderer;
 ALLOW_NEW_API_WITHOUT_GUARDS_BEGIN
     StdUnorderedMap<TrackID, RetainPtr<AVSampleBufferAudioRenderer>> m_audioRenderers;
 ALLOW_NEW_API_WITHOUT_GUARDS_END
-    RefPtr<WebAVSampleBufferListener> m_listener;
+    Ref<WebAVSampleBufferListener> m_listener;
 #if PLATFORM(IOS_FAMILY)
     bool m_displayLayerWasInterrupted { false };
 #endif
@@ -262,6 +266,8 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
     Ref<const Logger> m_logger;
     const void* m_logIdentifier;
 #endif
+
+    ProcessIdentity m_resourceOwner;
 };
 
 } // namespace WebCore

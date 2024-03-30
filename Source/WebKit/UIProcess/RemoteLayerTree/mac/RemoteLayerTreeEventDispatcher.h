@@ -30,6 +30,8 @@
 #include "DisplayLinkObserverID.h"
 #include "MomentumEventDispatcher.h"
 #include "NativeWebWheelEvent.h"
+#include <WebCore/PlatformLayerIdentifier.h>
+#include <WebCore/ProcessQualified.h>
 #include <pal/HysteresisActivity.h>
 #include <wtf/Condition.h>
 #include <wtf/Deque.h>
@@ -44,7 +46,8 @@ namespace WebCore {
 class PlatformWheelEvent;
 class WheelEventDeltaFilter;
 struct WheelEventHandlingResult;
-using ScrollingNodeID = uint64_t;
+struct ScrollingNodeIDType;
+using ScrollingNodeID = ProcessQualified<ObjectIdentifier<ScrollingNodeIDType>>;
 enum class WheelScrollGestureState : uint8_t;
 enum class WheelEventProcessingSteps : uint8_t;
 };
@@ -53,8 +56,10 @@ namespace WebKit {
 
 class DisplayLink;
 class NativeWebWheelEvent;
+class RemoteAcceleratedEffectStack;
 class RemoteScrollingCoordinatorProxyMac;
 class RemoteLayerTreeDrawingAreaProxyMac;
+class RemoteLayerTreeNode;
 class RemoteScrollingTree;
 class RemoteLayerTreeEventDispatcherDisplayLinkClient;
 
@@ -74,7 +79,7 @@ public:
     void cacheWheelEventScrollingAccelerationCurve(const NativeWebWheelEvent&);
 
     void handleWheelEvent(const WebWheelEvent&, WebCore::RectEdges<bool> rubberBandableEdges);
-    void wheelEventHandlingCompleted(const WebCore::PlatformWheelEvent&, WebCore::ScrollingNodeID, std::optional<WebCore::WheelScrollGestureState>, bool wasHandled);
+    void wheelEventHandlingCompleted(const WebCore::PlatformWheelEvent&, std::optional<WebCore::ScrollingNodeID>, std::optional<WebCore::WheelScrollGestureState>, bool wasHandled);
 
     void setScrollingTree(RefPtr<RemoteScrollingTree>&&);
 

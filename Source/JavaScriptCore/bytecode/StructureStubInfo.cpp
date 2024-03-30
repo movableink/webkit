@@ -421,6 +421,8 @@ StubInfoSummary StructureStubInfo::summary(VM& vm) const
             case AccessCase::IndexedMegamorphicLoad:
             case AccessCase::StoreMegamorphic:
             case AccessCase::IndexedMegamorphicStore:
+            case AccessCase::InMegamorphic:
+            case AccessCase::IndexedMegamorphicIn:
                 return StubInfoSummary::Megamorphic;
             default:
                 break;
@@ -786,37 +788,14 @@ void StructureStubInfo::checkConsistency()
 }
 #endif // ASSERT_ENABLED
 
-RefPtr<PolymorphicAccessJITStubRoutine> SharedJITStubSet::getMegamorphic(AccessType type) const
+RefPtr<PolymorphicAccessJITStubRoutine> SharedJITStubSet::getStatelessStub(StatelessCacheKey key) const
 {
-    switch (type) {
-    case AccessType::GetByVal:
-        return m_getByValMegamorphic;
-    case AccessType::GetByValWithThis:
-        return m_getByValWithThisMegamorphic;
-    case AccessType::PutByValStrict:
-    case AccessType::PutByValSloppy:
-        return m_putByValMegamorphic;
-    default:
-        return nullptr;
-    }
+    return m_statelessStubs.get(key);
 }
 
-void SharedJITStubSet::setMegamorphic(AccessType type, Ref<PolymorphicAccessJITStubRoutine> stub)
+void SharedJITStubSet::setStatelessStub(StatelessCacheKey key, Ref<PolymorphicAccessJITStubRoutine> stub)
 {
-    switch (type) {
-    case AccessType::GetByVal:
-        m_getByValMegamorphic = WTFMove(stub);
-        break;
-    case AccessType::GetByValWithThis:
-        m_getByValWithThisMegamorphic = WTFMove(stub);
-        break;
-    case AccessType::PutByValStrict:
-    case AccessType::PutByValSloppy:
-        m_putByValMegamorphic = WTFMove(stub);
-        break;
-    default:
-        break;
-    }
+    m_statelessStubs.add(key, WTFMove(stub));
 }
 
 RefPtr<InlineCacheHandler> SharedJITStubSet::getSlowPathHandler(AccessType type) const

@@ -318,7 +318,7 @@ static String trimInputSample(CharType* p, size_t length)
 {
     if (length <= maxInputSampleSize)
         return String(p, length);
-    return makeString(StringView(p, length).left(maxInputSampleSize), horizontalEllipsis);
+    return makeString(std::span { p, length }.first(maxInputSampleSize), horizontalEllipsis);
 }
 
 #if PLATFORM(QT)
@@ -733,10 +733,10 @@ static inline bool isValidHeaderNameCharacter(CharacterType character)
     }
 }
 
-size_t parseHTTPHeader(const uint8_t* start, size_t length, String& failureReason, StringView& nameStr, String& valueStr, bool strict)
+size_t parseHTTPHeader(std::span<const uint8_t> data, String& failureReason, StringView& nameStr, String& valueStr, bool strict)
 {
-    auto p = start;
-    auto end = start + length;
+    auto p = data.data();
+    auto end = data.data() + data.size();
 
     Vector<uint8_t> name;
     Vector<uint8_t> value;
@@ -753,7 +753,7 @@ size_t parseHTTPHeader(const uint8_t* start, size_t length, String& failureReaso
         case '\r':
             if (name.isEmpty()) {
                 if (p + 1 < end && *(p + 1) == '\n')
-                    return (p + 2) - start;
+                    return (p + 2) - data.data();
                 failureReason = makeString("CR doesn't follow LF in header name at ", trimInputSample(p, end - p));
                 return 0;
             }
@@ -786,7 +786,7 @@ size_t parseHTTPHeader(const uint8_t* start, size_t length, String& failureReaso
     }
 
     nameSize = name.size();
-    nameStr = StringView(namePtr, nameSize);
+    nameStr = std::span { namePtr, nameSize };
 
     for (; p < end && *p == 0x20; p++) { }
 
@@ -817,15 +817,15 @@ size_t parseHTTPHeader(const uint8_t* start, size_t length, String& failureReaso
         failureReason = "Invalid UTF-8 sequence in header value"_s;
         return 0;
     }
-    return p - start;
+    return p - data.data();
 }
 
-size_t parseHTTPRequestBody(const uint8_t* data, size_t length, Vector<uint8_t>& body)
+size_t parseHTTPRequestBody(std::span<const uint8_t> data, Vector<uint8_t>& body)
 {
     body.clear();
-    body.append(data, length);
+    body.append(data);
 
-    return length;
+    return data.size();
 }
 
 std::optional<uint64_t> parseContentLength(StringView contentLengthValue)

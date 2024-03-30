@@ -30,9 +30,9 @@
 #include "BackgroundPainter.h"
 #include "BitmapImage.h"
 #include "BlendingKeyframes.h"
-#include "CanvasRenderingContext.h"
 #include "CSSPropertyNames.h"
 #include "CachedImage.h"
+#include "CanvasRenderingContext.h"
 #include "Chrome.h"
 #include "DebugOverlayRegions.h"
 #include "DebugPageOverlays.h"
@@ -74,6 +74,7 @@
 #include "RenderSVGModelObject.h"
 #include "RenderVideo.h"
 #include "RenderView.h"
+#include "SVGGraphicsElement.h"
 #include "ScrollingCoordinator.h"
 #include "Settings.h"
 #include "StyleResolver.h"
@@ -100,6 +101,7 @@
 #include "AcceleratedEffectValues.h"
 #include "KeyframeEffect.h"
 #include "KeyframeEffectStack.h"
+#include <wtf/WeakListHashSet.h>
 #endif
 
 namespace WebCore {
@@ -359,10 +361,8 @@ Ref<GraphicsLayer> RenderLayerBacking::createGraphicsLayer(const String& name, G
     graphicsLayer->setAcceleratesDrawing(compositor().acceleratedDrawingEnabled());
 #endif
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (renderer().isSVGLayerAwareRenderer() && renderer().document().settings().layerBasedSVGEngineEnabled())
         graphicsLayer->setShouldUpdateRootRelativeScaleFactor(true);
-#endif
     
     return graphicsLayer;
 }
@@ -631,10 +631,8 @@ static LayoutRect clippingLayerBox(const RenderLayerModelObject& renderer)
     if (renderer.hasNonVisibleOverflow()) {
         if (CheckedPtr box = dynamicDowncast<RenderBox>(renderer))
             result = box->overflowClipRect({ }, 0); // FIXME: Incorrect for CSS regions.
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
         else if (CheckedPtr modelObject = dynamicDowncast<RenderSVGModelObject>(renderer))
             result = modelObject->overflowClipRect({ }, 0); // FIXME: Incorrect for CSS regions.
-#endif
     }
 
     if (renderer.hasClip()) {
@@ -657,6 +655,13 @@ void RenderLayerBacking::updateOpacity(const RenderStyle& style)
 
 void RenderLayerBacking::updateTransform(const RenderStyle& style)
 {
+    if (renderer().capturedInViewTransition()) {
+        if (m_contentsContainmentLayer)
+            m_contentsContainmentLayer->setTransform({ });
+        m_graphicsLayer->setTransform({ });
+        return;
+    }
+
     TransformationMatrix t;
     if (m_owningLayer.isTransformed())
         m_owningLayer.updateTransformFromStyle(t, style, RenderStyle::individualTransformOperations());
@@ -779,7 +784,7 @@ void RenderLayerBacking::updateBackdropFiltersGeometry()
 
     FloatRoundedRect backdropFiltersRect;
     if (renderBox->style().hasBorderRadius() && !renderBox->hasClip()) {
-        auto roundedBoxRect = renderBox->roundedBorderBoxRect();
+        auto roundedBoxRect = renderBox->borderRoundedRect();
         roundedBoxRect.move(contentOffsetInCompositingLayer());
         backdropFiltersRect = roundedBoxRect.pixelSnappedRoundedRectForPainting(deviceScaleFactor());
     } else {
@@ -795,9 +800,12 @@ void RenderLayerBacking::updateBackdropFiltersGeometry()
 
 bool RenderLayerBacking::updateBackdropRoot()
 {
-    if (m_graphicsLayer->isBackdropRoot() == m_owningLayer.isBackdropRoot())
+    // Don't try to make the RenderView's layer a backdrop root if it's going to
+    // paint into the window since it won't work (WebKitLegacy only).
+    bool willBeBackdropRoot = m_owningLayer.isBackdropRoot() && !paintsIntoWindow();
+    if (m_graphicsLayer->isBackdropRoot() == willBeBackdropRoot)
         return false;
-    m_graphicsLayer->setIsBackdropRoot(m_owningLayer.isBackdropRoot());
+    m_graphicsLayer->setIsBackdropRoot(willBeBackdropRoot);
     return true;
 }
 
@@ -1189,6 +1197,12 @@ bool RenderLayerBacking::updateConfiguration(const RenderLayer* compositingAnces
         // but this is a runtime decision.
         if (element->usesPlatformLayer())
             m_graphicsLayer->setContentsToPlatformLayer(element->platformLayer(), GraphicsLayer::ContentsLayerPurpose::Model);
+#if ENABLE(MODEL_PROCESS)
+        else if (auto contextID = element->layerHostingContextIdentifier(); contextID && element->document().settings().modelProcessEnabled()) {
+            m_graphicsLayer->setContentsToRemotePlatformContext(contextID.value(), GraphicsLayer::ContentsLayerPurpose::HostedModel);
+            element->applyBackgroundColor(rendererBackgroundColor());
+        }
+#endif
         else if (auto model = element->model())
             m_graphicsLayer->setContentsToModel(WTFMove(model), element->isInteractive() ? GraphicsLayer::ModelInteraction::Enabled : GraphicsLayer::ModelInteraction::Disabled);
 
@@ -1196,7 +1210,7 @@ bool RenderLayerBacking::updateConfiguration(const RenderLayer* compositingAnces
 
         layerConfigChanged = true;
     }
-#endif
+#endif // ENABLE(MODEL_ELEMENT)
     // FIXME: Why do we do this twice?
     if (CheckedPtr widget = dynamicDowncast<RenderWidget>(renderer()); widget && compositor.attachWidgetContentLayers(*widget)) {
         m_owningLayer.setNeedsCompositingGeometryUpdate();
@@ -1398,6 +1412,15 @@ void RenderLayerBacking::updateGeometry(const RenderLayer* compositedAncestor)
 
     ASSERT(compositedAncestor == m_owningLayer.ancestorCompositingLayer());
     LayoutRect parentGraphicsLayerRect = computeParentGraphicsLayerRect(compositedAncestor);
+
+    // If our content is being used in a view-transition, then all positioning
+    // is handled using a synthesized 'transform' property on the wrapping
+    // ::view-transition-new element. Move the parent graphics layer rect to our
+    // position so that layer positions are computed relative to our origin.
+    if (renderer().capturedInViewTransition()) {
+        ComputedOffsets computedOffsets(m_owningLayer, compositedAncestor, compositedBounds(), { }, { });
+        parentGraphicsLayerRect.move(computedOffsets.fromParentGraphicsLayer());
+    }
 
     if (m_ancestorClippingStack)
         updateClippingStackLayerGeometry(*m_ancestorClippingStack, compositedAncestor, parentGraphicsLayerRect);
@@ -1671,7 +1694,7 @@ void RenderLayerBacking::updateAfterDescendants()
 
     m_graphicsLayer->setContentsVisible(m_owningLayer.hasVisibleContent() || hasVisibleNonCompositedDescendants());
     if (m_scrollContainerLayer) {
-        m_scrollContainerLayer->setContentsVisible(renderer().style().visibility() == Visibility::Visible);
+        m_scrollContainerLayer->setContentsVisible(renderer().style().usedVisibility() == Visibility::Visible);
 
         bool userInteractive = renderer().visibleToHitTesting();
         m_scrollContainerLayer->setUserInteractionEnabled(userInteractive);
@@ -2378,7 +2401,7 @@ bool RenderLayerBacking::updateTransformFlatteningLayer(const RenderLayer* compo
 {
     bool needsFlatteningLayer = false;
     // If our parent layer has preserve-3d or perspective, and it's not our DOM parent, then we need a flattening layer to block that from being applied in 3d.
-    if (useCSS3DTransformInteroperability() && ancestorLayerWillCombineTransform(compositingAncestor) && !ancestorLayerIsDOMParent(m_owningLayer, compositingAncestor))
+    if (ancestorLayerWillCombineTransform(compositingAncestor) && !ancestorLayerIsDOMParent(m_owningLayer, compositingAncestor))
         needsFlatteningLayer = true;
 
     bool layerChanged = false;
@@ -2556,17 +2579,17 @@ void RenderLayerBacking::detachFromScrollingCoordinator(OptionSet<ScrollCoordina
     if (roles.contains(ScrollCoordinationRole::Scrolling) && m_scrollingNodeID) {
         LOG_WITH_STREAM(Compositing, stream << "Detaching Scrolling node " << m_scrollingNodeID);
         scrollingCoordinator->unparentChildrenAndDestroyNode(m_scrollingNodeID);
-        m_scrollingNodeID = 0;
+        m_scrollingNodeID = { };
         
 #if ENABLE(SCROLLING_THREAD)
         if (m_scrollContainerLayer)
-            m_scrollContainerLayer->setScrollingNodeID(0);
+            m_scrollContainerLayer->setScrollingNodeID({ });
         if (m_layerForHorizontalScrollbar)
-            m_layerForHorizontalScrollbar->setScrollingNodeID(0);
+            m_layerForHorizontalScrollbar->setScrollingNodeID({ });
         if (m_layerForVerticalScrollbar)
-            m_layerForVerticalScrollbar->setScrollingNodeID(0);
+            m_layerForVerticalScrollbar->setScrollingNodeID({ });
         if (m_layerForScrollCorner)
-            m_layerForScrollCorner->setScrollingNodeID(0);
+            m_layerForScrollCorner->setScrollingNodeID({ });
 #endif
     }
 
@@ -2578,27 +2601,27 @@ void RenderLayerBacking::detachFromScrollingCoordinator(OptionSet<ScrollCoordina
     if (roles.contains(ScrollCoordinationRole::FrameHosting) && m_frameHostingNodeID) {
         LOG_WITH_STREAM(Compositing, stream << "Detaching FrameHosting node " << m_frameHostingNodeID);
         scrollingCoordinator->unparentChildrenAndDestroyNode(m_frameHostingNodeID);
-        m_frameHostingNodeID = 0;
+        m_frameHostingNodeID = { };
     }
 
     if (roles.contains(ScrollCoordinationRole::PluginHosting) && m_pluginHostingNodeID) {
         LOG_WITH_STREAM(Compositing, stream << "Detaching PluginHosting node " << m_pluginHostingNodeID);
         scrollingCoordinator->unparentChildrenAndDestroyNode(m_pluginHostingNodeID);
-        m_pluginHostingNodeID = 0;
+        m_pluginHostingNodeID = { };
     }
 
     if (roles.contains(ScrollCoordinationRole::ViewportConstrained) && m_viewportConstrainedNodeID) {
         LOG_WITH_STREAM(Compositing, stream << "Detaching ViewportConstrained node " << m_viewportConstrainedNodeID);
         scrollingCoordinator->unparentChildrenAndDestroyNode(m_viewportConstrainedNodeID);
-        m_viewportConstrainedNodeID = 0;
+        m_viewportConstrainedNodeID = { };
     }
 
     if (roles.contains(ScrollCoordinationRole::Positioning) && m_positioningNodeID) {
         LOG_WITH_STREAM(Compositing, stream << "Detaching Positioned node " << m_positioningNodeID);
         scrollingCoordinator->unparentChildrenAndDestroyNode(m_positioningNodeID);
-        m_positioningNodeID = 0;
+        m_positioningNodeID = { };
 #if ENABLE(SCROLLING_THREAD)
-        m_graphicsLayer->setScrollingNodeID(0);
+        m_graphicsLayer->setScrollingNodeID({ });
 #endif
     }
 }
@@ -2680,7 +2703,7 @@ float RenderLayerBacking::compositingOpacity(float rendererOpacity) const
 // FIXME: Code is duplicated in RenderLayer. Also, we should probably not consider filters a box decoration here.
 static inline bool hasVisibleBoxDecorations(const RenderStyle& style)
 {
-    return style.hasVisibleBorder() || style.hasBorderRadius() || style.hasOutline() || style.hasEffectiveAppearance() || style.boxShadow() || style.hasFilter();
+    return style.hasVisibleBorder() || style.hasBorderRadius() || style.hasOutline() || style.hasUsedAppearance() || style.boxShadow() || style.hasFilter();
 }
 
 static bool canDirectlyCompositeBackgroundBackgroundImage(const RenderElement& renderer)
@@ -2913,7 +2936,6 @@ bool RenderLayerBacking::paintsContent(RenderLayer::PaintedContentRequest& reque
     if (request.isSatisfied())
         return paintsContent;
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (is<RenderSVGModelObject>(m_owningLayer.renderer())) {
         // FIXME: [LBSE] Eventually cache if we're part of a RenderSVGHiddenContainer subtree to avoid tree walks.
         // FIXME: [LBSE] Eventually refine the logic to end up with a narrower set of conditions (webkit.org/b/243417).
@@ -2923,7 +2945,6 @@ bool RenderLayerBacking::paintsContent(RenderLayer::PaintedContentRequest& reque
 
     if (request.isSatisfied())
         return paintsContent;
-#endif
 
     if (request.hasPaintedContent == RequestState::Unknown)
         request.hasPaintedContent = RequestState::False;
@@ -3108,7 +3129,7 @@ bool RenderLayerBacking::isDirectlyCompositedImage() const
         if (!image)
             return false;
 
-        if (image->orientationForCurrentFrame() != ImageOrientation::Orientation::None)
+        if (image->currentFrameOrientation() != ImageOrientation::Orientation::None)
             return false;
 
 #if (PLATFORM(GTK) || PLATFORM(WPE))
@@ -3155,7 +3176,7 @@ bool RenderLayerBacking::isUnscaledBitmapOnly() const
             if (!image)
                 return false;
 
-            if (image->orientationForCurrentFrame() != ImageOrientation::Orientation::None)
+            if (image->currentFrameOrientation() != ImageOrientation::Orientation::None)
                 return false;
 
             return contents.size() == image->size();
@@ -3942,9 +3963,9 @@ bool RenderLayerBacking::useGiantTiles() const
     return renderer().settings().useGiantTiles();
 }
 
-bool RenderLayerBacking::useCSS3DTransformInteroperability() const
+bool RenderLayerBacking::cssUnprefixedBackdropFilterEnabled() const
 {
-    return renderer().settings().css3DTransformInteroperabilityEnabled();
+    return renderer().settings().cssUnprefixedBackdropFilterEnabled();
 }
 
 void RenderLayerBacking::logFilledVisibleFreshTile(unsigned blankPixelCount)
@@ -4057,24 +4078,51 @@ bool RenderLayerBacking::startAnimation(double timeOffset, const Animation& anim
 #if ENABLE(THREADED_ANIMATION_RESOLUTION)
 bool RenderLayerBacking::updateAcceleratedEffectsAndBaseValues()
 {
-    if (!renderer().settings().acceleratedCompositedAnimationsEnabled())
+    auto& renderer = this->renderer();
+    if (!renderer.settings().acceleratedCompositedAnimationsEnabled())
         return false;
 
-    auto target = Styleable::fromRenderer(renderer());
+    OptionSet<AcceleratedEffectProperty> disallowedAcceleratedProperties;
+
+    auto rendererAllowsTransform = renderer.isRenderBox() || renderer.isSVGLayerAwareRenderer();
+    if (!rendererAllowsTransform)
+        disallowedAcceleratedProperties.add(transformRelatedAcceleratedProperties);
+
+    auto target = Styleable::fromRenderer(renderer);
     ASSERT(target);
 
     bool hasInterpolatingEffect = false;
     auto borderBoxRect = snappedIntRect(m_owningLayer.rendererBorderBoxRect());
 
+    auto baseValues = [&]() -> AcceleratedEffectValues {
+        if (auto* style = target->lastStyleChangeEventStyle())
+            return { *style, borderBoxRect, &renderer };
+        return { };
+    }();
+
     AcceleratedEffects acceleratedEffects;
+    WeakListHashSet<AcceleratedEffect> weakAcceleratedEffects;
     if (auto* effectStack = target->keyframeEffectStack()) {
+        auto animatesWidth = effectStack->containsProperty(CSSPropertyWidth);
+        auto animatesHeight = effectStack->containsProperty(CSSPropertyHeight);
         for (const auto& effect : effectStack->sortedEffects()) {
             if (!effect || !effect->canBeAccelerated())
                 continue;
+            if (animatesWidth || animatesHeight) {
+                auto& blendingKeyframes = effect->blendingKeyframes();
+                if ((animatesWidth && blendingKeyframes.hasWidthDependentTransform()) || (animatesHeight && blendingKeyframes.hasHeightDependentTransform()))
+                    disallowedAcceleratedProperties.add(transformRelatedAcceleratedProperties);
+            }
+            auto acceleratedEffect = AcceleratedEffect::create(*effect, borderBoxRect, baseValues, disallowedAcceleratedProperties);
+            if (!acceleratedEffect)
+                continue;
             if (!hasInterpolatingEffect && effect->isRunningAccelerated())
                 hasInterpolatingEffect = true;
-            acceleratedEffects.append(AcceleratedEffect::create(*effect, borderBoxRect));
+            effect->setAcceleratedRepresentation(acceleratedEffect.get());
+            weakAcceleratedEffects.add(*acceleratedEffect);
+            acceleratedEffects.append(acceleratedEffect.releaseNonNull());
         }
+        effectStack->setAcceleratedEffects(WTFMove(weakAcceleratedEffects));
     }
 
     // If all of the effects in the stack are either idle, paused or filling, then the
@@ -4082,12 +4130,6 @@ bool RenderLayerBacking::updateAcceleratedEffectsAndBaseValues()
     // any of these effects.
     if (!hasInterpolatingEffect)
         acceleratedEffects.clear();
-
-    auto baseValues = [&]() -> AcceleratedEffectValues {
-        if (auto* style = target->lastStyleChangeEventStyle())
-            return { *style, borderBoxRect };
-        return { };
-    }();
 
     m_graphicsLayer->setAcceleratedEffectsAndBaseValues(WTFMove(acceleratedEffects), WTFMove(baseValues));
 
@@ -4327,14 +4369,20 @@ TransformationMatrix RenderLayerBacking::transformMatrixForProperty(AnimatedProp
 
 void RenderLayerBacking::purgeFrontBufferForTesting()
 {
-    if (m_graphicsLayer)
-        m_graphicsLayer->purgeFrontBufferForTesting();
+    if (RefPtr graphicsLayer = m_graphicsLayer)
+        graphicsLayer->purgeFrontBufferForTesting();
 }
 
 void RenderLayerBacking::purgeBackBufferForTesting()
 {
-    if (m_graphicsLayer)
-        m_graphicsLayer->purgeBackBufferForTesting();
+    if (RefPtr graphicsLayer = m_graphicsLayer)
+        graphicsLayer->purgeBackBufferForTesting();
+}
+
+void RenderLayerBacking::markFrontBufferVolatileForTesting()
+{
+    if (RefPtr graphicsLayer = m_graphicsLayer)
+        graphicsLayer->markFrontBufferVolatileForTesting();
 }
 
 } // namespace WebCore

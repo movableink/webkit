@@ -30,7 +30,7 @@
 #include "ContentSecurityPolicy.h"
 #include "ContentSecurityPolicyDirectiveNames.h"
 #include "ParsingUtilities.h"
-#include "PublicSuffix.h"
+#include "PublicSuffixStore.h"
 #include <pal/text/TextEncoding.h>
 #include <wtf/ASCIICType.h>
 #include <wtf/NeverDestroyed.h>
@@ -205,11 +205,6 @@ static bool isRestrictedDirectiveForMode(const String& directive, ContentSecurit
 
 bool ContentSecurityPolicySourceList::isValidSourceForExtensionMode(const ContentSecurityPolicySourceList::Source& parsedSource)
 {
-    bool hostIsPublicSuffix = false;
-#if ENABLE(PUBLIC_SUFFIX_LIST)
-    hostIsPublicSuffix = isPublicSuffix(parsedSource.host.value);
-#endif
-
     switch (m_contentSecurityPolicyModeForExtension) {
     case ContentSecurityPolicyModeForExtension::None:
         return true;
@@ -217,7 +212,7 @@ bool ContentSecurityPolicySourceList::isValidSourceForExtensionMode(const Conten
         if (!isRestrictedDirectiveForMode(m_directiveName, ContentSecurityPolicyModeForExtension::ManifestV2))
             return true;
 
-        if (parsedSource.host.hasWildcard && hostIsPublicSuffix)
+        if (parsedSource.host.hasWildcard && PublicSuffixStore::singleton().isPublicSuffix(parsedSource.host.value))
             return false;
 
         if (equalLettersIgnoringASCIICase(parsedSource.scheme, "blob"_s))
@@ -469,7 +464,7 @@ template<typename CharacterType> StringView ContentSecurityPolicySourceList::par
     if (!buffer.atEnd())
         return { };
 
-    return StringView(begin, buffer.position() - begin);
+    return std::span(begin, buffer.position() - begin);
 }
 
 // host              = [ "*." ] 1*host-char *( "." 1*host-char )
@@ -508,7 +503,7 @@ template<typename CharacterType> std::optional<ContentSecurityPolicySourceList::
     }
 
     ASSERT(buffer.atEnd());
-    host.value = StringView(hostBegin, buffer.position() - hostBegin);
+    host.value = std::span(hostBegin, buffer.position() - hostBegin);
     return host;
 }
 
@@ -526,7 +521,7 @@ template<typename CharacterType> String ContentSecurityPolicySourceList::parsePa
     ASSERT(buffer.position() <= buffer.end());
     ASSERT(buffer.atEnd() || (*buffer == '#' || *buffer == '?'));
 
-    return PAL::decodeURLEscapeSequences(StringView(begin, buffer.position() - begin));
+    return PAL::decodeURLEscapeSequences(std::span(begin, buffer.position() - begin));
 }
 
 // port              = ":" ( 1*DIGIT / "*" )
@@ -554,7 +549,7 @@ template<typename CharacterType> std::optional<ContentSecurityPolicySourceList::
         return std::nullopt;
 
     unsigned length = buffer.position() - begin;
-    auto portInteger = parseInteger<uint16_t>({ begin, length }).value_or(0);
+    auto portInteger = parseInteger<uint16_t>(std::span { begin, length }).value_or(0);
     if (!portInteger)
         return std::nullopt;
 

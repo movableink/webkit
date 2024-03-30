@@ -1314,11 +1314,6 @@ framework module WebKit_Private [system] {
     export *
   }
 
-  explicit module WebApplicationCache {
-    header "WebApplicationCache.h"
-    export *
-  }
-
   explicit module WebAutocapitalizeTypes {
     header "WebAutocapitalizeTypes.h"
     export *
@@ -1506,11 +1501,6 @@ framework module WebKit_Private [system] {
 
   explicit module WebLocalizableStrings {
     header "WebLocalizableStrings.h"
-    export *
-  }
-
-  explicit module WebNSDataExtrasPrivate {
-    header "WebNSDataExtrasPrivate.h"
     export *
   }
 
@@ -2179,6 +2169,21 @@ framework module WebKit_Private [system] {
     export *
   }
 
+  explicit module _WKWebExtensionDataRecord {
+    header "_WKWebExtensionDataRecord.h"
+    export *
+  }
+
+  explicit module _WKWebExtensionDataRecordPrivate {
+    header "_WKWebExtensionDataRecordPrivate.h"
+    export *
+  }
+
+  explicit module _WKWebExtensionDataType {
+    header "_WKWebExtensionDataType.h"
+    export *
+  }
+
   explicit module _WKWebExtensionMatchPattern {
     header "_WKWebExtensionMatchPattern.h"
     export *
@@ -2201,6 +2206,11 @@ framework module WebKit_Private [system] {
 
   explicit module _WKWebExtensionPermission {
     header "_WKWebExtensionPermission.h"
+    export *
+  }
+
+  explicit module _WKWebExtensionPermissionPrivate {
+    header "_WKWebExtensionPermissionPrivate.h"
     export *
   }
 

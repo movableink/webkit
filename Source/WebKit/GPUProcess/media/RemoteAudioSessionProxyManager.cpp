@@ -214,7 +214,7 @@ void RemoteAudioSessionProxyManager::updatePresentingProcesses()
 
     Vector<audit_token_t> presentingProcesses;
 
-    if (auto token = m_gpuProcess.parentProcessConnection()->getAuditToken())
+    if (auto token = m_gpuProcess->parentProcessConnection()->getAuditToken())
         presentingProcesses.append(*token);
 
     // AVAudioSession will take out an assertion on all the "presenting applications"
@@ -225,7 +225,7 @@ void RemoteAudioSessionProxyManager::updatePresentingProcesses()
     m_proxies.forEach([&](auto& proxy) {
         if (!proxy.isActive())
             return;
-        if (auto& token = proxy.gpuConnectionToWebProcess().presentingApplicationAuditToken())
+        if (auto& token = proxy.gpuConnectionToWebProcess()->presentingApplicationAuditToken())
             presentingProcesses.append(*token);
     });
     AudioSession::sharedSession().setPresentingProcesses(WTFMove(presentingProcesses));

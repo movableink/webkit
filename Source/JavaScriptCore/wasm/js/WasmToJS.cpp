@@ -62,7 +62,7 @@ static Expected<MacroAssemblerCodeRef<WasmEntryPtrTag>, BindingFailure> handleBa
     if (UNLIKELY(linkBuffer.didFailToAllocate()))
         return makeUnexpected(BindingFailure::OutOfMemory);
 
-    return FINALIZE_WASM_CODE(linkBuffer, WasmEntryPtrTag, "WebAssembly->JavaScript throw exception due to invalid use of restricted type in import[%i]", importIndex);
+    return FINALIZE_WASM_CODE(linkBuffer, WasmEntryPtrTag, nullptr, "WebAssembly->JavaScript throw exception due to invalid use of restricted type in import[%i]", importIndex);
 }
 
 Expected<MacroAssemblerCodeRef<WasmEntryPtrTag>, BindingFailure> wasmToJS(VM& vm, WasmToJSCallee& callee, OptimizingCallLinkInfo& callLinkInfo, TypeIndex typeIndex, unsigned importIndex)
@@ -80,8 +80,8 @@ Expected<MacroAssemblerCodeRef<WasmEntryPtrTag>, BindingFailure> wasmToJS(VM& vm
     CallInformation wasmCallInfo = wasmCC.callInformationFor(typeDefinition, CallRole::Callee);
     RegisterAtOffsetList savedResultRegisters = wasmCallInfo.computeResultsOffsetList();
 
-    // Note: WasmB3IRGenerator assumes that this stub treats SP as a callee save.
-    // If we ever change this, we will also need to change WasmB3IRGenerator.
+    // Note: WasmOMGIRGenerator assumes that this stub treats SP as a callee save.
+    // If we ever change this, we will also need to change WasmOMGIRGenerator.
 
     // Below, we assume that the JS calling convention is always on the stack.
     ASSERT_UNUSED(jsCC, !jsCC.jsrArgs.size());
@@ -116,7 +116,7 @@ Expected<MacroAssemblerCodeRef<WasmEntryPtrTag>, BindingFailure> wasmToJS(VM& vm
     });
 #endif
 
-    // Note: We don't need to perform a stack check here since WasmB3IRGenerator
+    // Note: We don't need to perform a stack check here since WasmOMGIRGenerator
     // will do the stack check for us. Whenever it detects that it might make
     // a call to this thunk, it'll make sure its stack check includes space
     // for us here.
@@ -337,14 +337,12 @@ Expected<MacroAssemblerCodeRef<WasmEntryPtrTag>, BindingFailure> wasmToJS(VM& vm
 #if USE(JSVALUE32_64)
     jit.move(CCallHelpers::TrustedImm32(JSValue::CellTag), BaselineJITRegisters::Call::calleeJSR.tagGPR());
 #endif
-    auto [slowPath, dispatchLabel] = CallLinkInfo::emitFastPath(jit, &callLinkInfo, BaselineJITRegisters::Call::callLinkInfoGPR);
+    auto [slowPath, dispatchLabel] = CallLinkInfo::emitFastPath(jit, &callLinkInfo);
 
-    auto slowPathStart = jit.label();
     if (!slowPath.empty()) {
         JIT::Jump done = jit.jump();
         slowPath.link(&jit);
-        slowPathStart = jit.label();
-        CallLinkInfo::emitSlowPath(vm, jit, &callLinkInfo, BaselineJITRegisters::Call::callLinkInfoGPR);
+        CallLinkInfo::emitSlowPath(vm, jit, &callLinkInfo);
         done.link(&jit);
     }
     auto doneLocation = jit.label();
@@ -506,11 +504,9 @@ Expected<MacroAssemblerCodeRef<WasmEntryPtrTag>, BindingFailure> wasmToJS(VM& vm
     if (UNLIKELY(patchBuffer.didFailToAllocate()))
         return makeUnexpected(BindingFailure::OutOfMemory);
 
-    callLinkInfo.setCodeLocations(
-        patchBuffer.locationOf<JSInternalPtrTag>(slowPathStart),
-        patchBuffer.locationOf<JSInternalPtrTag>(doneLocation));
+    callLinkInfo.setDoneLocation(patchBuffer.locationOf<JSInternalPtrTag>(doneLocation));
 
-    return FINALIZE_WASM_CODE(patchBuffer, WasmEntryPtrTag, "WebAssembly->JavaScript import[%i] %s", importIndex, signature.toString().ascii().data());
+    return FINALIZE_WASM_CODE(patchBuffer, WasmEntryPtrTag, nullptr, "WebAssembly->JavaScript import[%i] %s", importIndex, signature.toString().ascii().data());
 }
 
 void emitThrowWasmToJSException(CCallHelpers& jit, GPRReg wasmInstance, Wasm::ExceptionType type)

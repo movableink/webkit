@@ -32,12 +32,19 @@
 
 #if ENABLE(WK_WEB_EXTENSIONS)
 
+#import "CocoaHelpers.h"
+#import "WebExtensionAPINamespace.h"
 #import "WebExtensionAPIStorageArea.h"
+#import "WebExtensionContextMessages.h"
+#import "WebExtensionContextProxy.h"
 
 namespace WebKit {
 
-bool WebExtensionAPIStorage::isPropertyAllowed(ASCIILiteral propertyName, WebPage*)
+bool WebExtensionAPIStorage::isPropertyAllowed(const ASCIILiteral& propertyName, WebPage&)
 {
+    if (UNLIKELY(extensionContext().isUnsupportedAPI(propertyPath(), propertyName)))
+        return false;
+
     if (propertyName == "session"_s)
         return extensionContext().isSessionStorageAllowedInContentScripts() || isForMainWorld();
 
@@ -50,7 +57,7 @@ WebExtensionAPIStorageArea& WebExtensionAPIStorage::local()
     // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/storage/local
 
     if (!m_local)
-        m_local = WebExtensionAPIStorageArea::create(forMainWorld(), runtime(), extensionContext(), WebExtensionStorageType::Local);
+        m_local = WebExtensionAPIStorageArea::create(*this, WebExtensionDataType::Local);
 
     return *m_local;
 }
@@ -60,7 +67,7 @@ WebExtensionAPIStorageArea& WebExtensionAPIStorage::session()
     // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/storage/session
 
     if (!m_session)
-        m_session = WebExtensionAPIStorageArea::create(forMainWorld(), runtime(), extensionContext(), WebExtensionStorageType::Session);
+        m_session = WebExtensionAPIStorageArea::create(*this, WebExtensionDataType::Session);
 
     return *m_session;
 }
@@ -70,9 +77,24 @@ WebExtensionAPIStorageArea& WebExtensionAPIStorage::sync()
     // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/storage/sync
 
     if (!m_sync)
-        m_sync = WebExtensionAPIStorageArea::create(forMainWorld(), runtime(), extensionContext(), WebExtensionStorageType::Sync);
+        m_sync = WebExtensionAPIStorageArea::create(*this, WebExtensionDataType::Sync);
 
     return *m_sync;
+}
+
+WebExtensionAPIStorageArea& WebExtensionAPIStorage::storageAreaForType(WebExtensionDataType storageType)
+{
+    switch (storageType) {
+    case WebExtensionDataType::Local:
+        return local();
+    case WebExtensionDataType::Session:
+        return session();
+    case WebExtensionDataType::Sync:
+        return sync();
+    }
+
+    ASSERT_NOT_REACHED();
+    return local();
 }
 
 WebExtensionAPIEvent& WebExtensionAPIStorage::onChanged()
@@ -80,9 +102,22 @@ WebExtensionAPIEvent& WebExtensionAPIStorage::onChanged()
     // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/storage/onChanged
 
     if (!m_onChanged)
-        m_onChanged = WebExtensionAPIEvent::create(forMainWorld(), runtime(), extensionContext(), WebExtensionEventListenerType::StorageOnChanged);
+        m_onChanged = WebExtensionAPIEvent::create(*this, WebExtensionEventListenerType::StorageOnChanged);
 
     return *m_onChanged;
+}
+
+void WebExtensionContextProxy::dispatchStorageChangedEvent(const String& onChangedJSON, WebExtensionDataType dataType, WebExtensionContentWorldType contentWorldType)
+{
+    if (!hasDOMWrapperWorld(contentWorldType))
+        return;
+
+    NSDictionary *onChangedData = parseJSON(onChangedJSON);
+
+    enumerateFramesAndNamespaceObjects([&](WebFrame&, auto& namespaceObject) {
+        namespaceObject.storage().onChanged().invokeListenersWithArgument(onChangedData);
+        namespaceObject.storage().storageAreaForType(dataType).onChanged().invokeListenersWithArgument(onChangedData);
+    }, toDOMWrapperWorld(contentWorldType));
 }
 
 } // namespace WebKit

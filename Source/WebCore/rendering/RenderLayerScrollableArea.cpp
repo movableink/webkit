@@ -501,7 +501,7 @@ bool RenderLayerScrollableArea::scrollsOverflow() const
 bool RenderLayerScrollableArea::canUseCompositedScrolling() const
 {
     auto& renderer = m_layer.renderer();
-    bool isVisible = renderer.style().visibility() == Visibility::Visible;
+    bool isVisible = renderer.style().usedVisibility() == Visibility::Visible;
     if (renderer.settings().asyncOverflowScrollingEnabled())
         return isVisible && scrollsOverflow() && !m_layer.isInsideSVGForeignObject();
 
@@ -520,7 +520,7 @@ void RenderLayerScrollableArea::setScrollOffset(const ScrollOffset& offset)
 ScrollingNodeID RenderLayerScrollableArea::scrollingNodeID() const
 {
     if (!m_layer.isComposited())
-        return 0;
+        return { };
 
     return m_layer.backing()->scrollingNodeIDForRole(ScrollCoordinationRole::Scrolling);
 }
@@ -649,6 +649,7 @@ IntSize RenderLayerScrollableArea::reachableTotalContentsSize() const
 
 void RenderLayerScrollableArea::availableContentSizeChanged(AvailableSizeChangeReason reason)
 {
+    ALWAYS_LOG_WITH_STREAM(stream << " RenderLayerScrollableArea::availableContentSizeChanged " << scrollingNodeID());
     ScrollableArea::availableContentSizeChanged(reason);
 
     auto& renderer = m_layer.renderer();
@@ -657,6 +658,7 @@ void RenderLayerScrollableArea::availableContentSizeChanged(AvailableSizeChangeR
             renderBlock->setShouldForceRelayoutChildren(true);
         renderer.setNeedsLayout();
     }
+    ALWAYS_LOG_WITH_STREAM(stream << " RenderLayerScrollableArea::availableContentSizeChanged " << m_layer.renderer().needsLayout());
 }
 
 bool RenderLayerScrollableArea::shouldSuspendScrollAnimations() const
@@ -1024,14 +1026,14 @@ OverscrollBehavior RenderLayerScrollableArea::verticalOverscrollBehavior() const
 Color RenderLayerScrollableArea::scrollbarThumbColorStyle() const
 {
     if (auto* renderer = m_layer.renderBox())
-        return renderer->style().effectiveScrollbarThumbColor();
+        return renderer->style().usedScrollbarThumbColor();
     return { };
 }
 
 Color RenderLayerScrollableArea::scrollbarTrackColorStyle() const
 {
     if (auto* renderer = m_layer.renderBox())
-        return renderer->style().effectiveScrollbarTrackColor();
+        return renderer->style().usedScrollbarTrackColor();
     return { };
 }
 
@@ -1250,7 +1252,7 @@ void RenderLayerScrollableArea::updateScrollbarsAfterStyleChange(const RenderSty
         return;
 
     // List box parts handle the scrollbars by themselves so we have nothing to do.
-    if (box->style().effectiveAppearance() == StyleAppearance::Listbox)
+    if (box->style().usedAppearance() == StyleAppearance::Listbox)
         return;
 
     bool hadVerticalScrollbar = hasVerticalScrollbar();
@@ -1270,7 +1272,7 @@ void RenderLayerScrollableArea::updateScrollbarsAfterLayout()
     ASSERT(box);
 
     // List box parts handle the scrollbars by themselves so we have nothing to do.
-    if (box->style().effectiveAppearance() == StyleAppearance::Listbox)
+    if (box->style().usedAppearance() == StyleAppearance::Listbox)
         return;
 
     bool hadHorizontalScrollbar = hasHorizontalScrollbar();
@@ -1509,12 +1511,12 @@ void RenderLayerScrollableArea::drawPlatformResizerImage(GraphicsContext& contex
     RefPtr<Image> resizeCornerImage;
     FloatSize cornerResizerSize;
     if (renderer.document().deviceScaleFactor() >= 2) {
-        static NeverDestroyed<Image*> resizeCornerImageHiRes(&Image::loadPlatformResource("textAreaResizeCorner@2x").leakRef());
+        static NeverDestroyed<Image*> resizeCornerImageHiRes(&ImageAdapter::loadPlatformResource("textAreaResizeCorner@2x").leakRef());
         resizeCornerImage = resizeCornerImageHiRes;
         cornerResizerSize = resizeCornerImage->size();
         cornerResizerSize.scale(0.5f);
     } else {
-        static NeverDestroyed<Image*> resizeCornerImageLoRes(&Image::loadPlatformResource("textAreaResizeCorner").leakRef());
+        static NeverDestroyed<Image*> resizeCornerImageLoRes(&ImageAdapter::loadPlatformResource("textAreaResizeCorner").leakRef());
         resizeCornerImage = resizeCornerImageLoRes;
         cornerResizerSize = resizeCornerImage->size();
     }

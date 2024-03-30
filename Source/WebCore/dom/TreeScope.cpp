@@ -87,20 +87,20 @@ TreeScope::TreeScope(Document& document)
 
 TreeScope::~TreeScope() = default;
 
-void TreeScope::incrementPtrCount() const
+void TreeScope::ref() const
 {
     if (auto* document = dynamicDowncast<Document>(m_rootNode))
-        document->incrementPtrCount();
+        document->ref();
     else
-        checkedDowncast<ShadowRoot>(m_rootNode).incrementPtrCount();
+        downcast<ShadowRoot>(m_rootNode).ref();
 }
 
-void TreeScope::decrementPtrCount() const
+void TreeScope::deref() const
 {
     if (auto* document = dynamicDowncast<Document>(m_rootNode))
-        document->decrementPtrCount();
+        document->deref();
     else
-        checkedDowncast<ShadowRoot>(m_rootNode).decrementPtrCount();
+        downcast<ShadowRoot>(m_rootNode).deref();
 }
 
 #if CHECKED_POINTER_DEBUG
@@ -109,7 +109,7 @@ void TreeScope::registerCheckedPtr(const void* pointer) const
     if (auto* document = dynamicDowncast<Document>(m_rootNode))
         document->registerCheckedPtr(pointer);
     else
-        checkedDowncast<ShadowRoot>(m_rootNode).registerCheckedPtr(pointer);
+        downcast<ShadowRoot>(m_rootNode).registerCheckedPtr(pointer);
 }
 
 void TreeScope::copyCheckedPtr(const void* source, const void* destination) const
@@ -117,7 +117,7 @@ void TreeScope::copyCheckedPtr(const void* source, const void* destination) cons
     if (auto* document = dynamicDowncast<Document>(m_rootNode))
         document->copyCheckedPtr(source, destination);
     else
-        checkedDowncast<ShadowRoot>(m_rootNode).copyCheckedPtr(source, destination);
+        downcast<ShadowRoot>(m_rootNode).copyCheckedPtr(source, destination);
 }
 
 void TreeScope::moveCheckedPtr(const void* source, const void* destination) const
@@ -125,7 +125,7 @@ void TreeScope::moveCheckedPtr(const void* source, const void* destination) cons
     if (auto* document = dynamicDowncast<Document>(m_rootNode))
         document->moveCheckedPtr(source, destination);
     else
-        checkedDowncast<ShadowRoot>(m_rootNode).moveCheckedPtr(source, destination);
+        downcast<ShadowRoot>(m_rootNode).moveCheckedPtr(source, destination);
 }
 
 void TreeScope::unregisterCheckedPtr(const void* pointer) const
@@ -133,7 +133,7 @@ void TreeScope::unregisterCheckedPtr(const void* pointer) const
     if (auto* document = dynamicDowncast<Document>(m_rootNode))
         document->unregisterCheckedPtr(pointer);
     else
-        checkedDowncast<ShadowRoot>(m_rootNode).unregisterCheckedPtr(pointer);
+        downcast<ShadowRoot>(m_rootNode).unregisterCheckedPtr(pointer);
 }
 #endif // CHECKED_POINTER_DEBUG
 
@@ -413,7 +413,7 @@ static std::optional<LayoutPoint> absolutePointIfNotClipped(Document& document, 
     return std::nullopt;
 }
 
-RefPtr<Node> TreeScope::nodeFromPoint(const LayoutPoint& clientPoint, LayoutPoint* localPoint)
+RefPtr<Node> TreeScope::nodeFromPoint(const LayoutPoint& clientPoint, LayoutPoint* localPoint, HitTestSource source)
 {
     Ref document = protectedDocumentScope();
     auto absolutePoint = absolutePointIfNotClipped(document, clientPoint);
@@ -421,18 +421,18 @@ RefPtr<Node> TreeScope::nodeFromPoint(const LayoutPoint& clientPoint, LayoutPoin
         return nullptr;
 
     HitTestResult result(absolutePoint.value());
-    document->hitTest(HitTestRequest(), result);
+    document->hitTest({ source, HitTestRequest::defaultTypes }, result);
     if (localPoint)
         *localPoint = result.localPoint();
     return result.innerNode();
 }
 
-RefPtr<Element> TreeScope::elementFromPoint(double clientX, double clientY)
+RefPtr<Element> TreeScope::elementFromPoint(double clientX, double clientY, HitTestSource source)
 {
     if (!protectedDocumentScope()->hasLivingRenderTree())
         return nullptr;
 
-    auto node = nodeFromPoint(LayoutPoint { clientX, clientY }, nullptr);
+    auto node = nodeFromPoint(LayoutPoint { clientX, clientY }, nullptr, source);
     if (!node)
         return nullptr;
 
@@ -447,7 +447,7 @@ RefPtr<Element> TreeScope::elementFromPoint(double clientX, double clientY)
     return static_pointer_cast<Element>(WTFMove(node));
 }
 
-Vector<RefPtr<Element>> TreeScope::elementsFromPoint(double clientX, double clientY)
+Vector<RefPtr<Element>> TreeScope::elementsFromPoint(double clientX, double clientY, HitTestSource source)
 {
     Vector<RefPtr<Element>> elements;
 
@@ -459,9 +459,16 @@ Vector<RefPtr<Element>> TreeScope::elementsFromPoint(double clientX, double clie
     if (!absolutePoint)
         return elements;
 
-    constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::DisallowUserAgentShadowContent, HitTestRequest::Type::CollectMultipleElements, HitTestRequest::Type::IncludeAllElementsUnderPoint };
+    static constexpr OptionSet hitTypes {
+        HitTestRequest::Type::ReadOnly,
+        HitTestRequest::Type::Active,
+        HitTestRequest::Type::DisallowUserAgentShadowContent,
+        HitTestRequest::Type::CollectMultipleElements,
+        HitTestRequest::Type::IncludeAllElementsUnderPoint
+    };
+
     HitTestResult result { absolutePoint.value() };
-    document->hitTest(hitType, result);
+    document->hitTest({ source, hitTypes }, result);
 
     RefPtr<Node> lastNode;
     auto& nodeSet = result.listBasedTestResult();
@@ -498,11 +505,6 @@ Vector<RefPtr<Element>> TreeScope::elementsFromPoint(double clientX, double clie
     }
 
     return elements;
-}
-
-Vector<RefPtr<Element>> TreeScope::elementsFromPoint(const FloatPoint& p)
-{
-    return elementsFromPoint(p.x(), p.y());
 }
 
 // FIXME: Would be nice to change this to take a StringView, since that's what callers have

@@ -31,11 +31,13 @@
 #include "DocumentMarkerController.h"
 #include "DocumentParser.h"
 #include "Element.h"
+#include "ExtensionStyleSheets.h"
 #include "FocusOptions.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FullscreenManager.h"
 #include "LocalDOMWindow.h"
 #include "MediaProducer.h"
+#include "NodeIterator.h"
 #include "ReportingScope.h"
 #include "SecurityOrigin.h"
 #include "TextResourceDecoder.h"
@@ -72,6 +74,11 @@ inline ExtensionStyleSheets& Document::extensionStyleSheets()
     if (!m_extensionStyleSheets)
         return ensureExtensionStyleSheets();
     return *m_extensionStyleSheets;
+}
+
+inline CheckedRef<ExtensionStyleSheets> Document::checkedExtensionStyleSheets()
+{
+    return extensionStyleSheets();
 }
 
 inline VisitedLinkState& Document::visitedLinkState() const
@@ -126,6 +133,11 @@ inline Ref<Document> Document::create(const Settings& settings, const URL& url)
     auto document = adoptRef(*new Document(nullptr, settings, url));
     document->addToContextsMap();
     return document;
+}
+
+bool Document::hasNodeIterators() const
+{
+    return !m_nodeIterators.isEmptyIgnoringNullReferences();
 }
 
 inline void Document::invalidateAccessKeyCache()

@@ -51,6 +51,10 @@ QT_END_NAMESPACE
 typedef struct _cairo_rectangle cairo_rectangle_t;
 #endif
 
+#if USE(SKIA)
+struct SkRect;
+#endif
+
 #if PLATFORM(WIN)
 typedef struct tagRECT RECT;
 #endif
@@ -232,6 +236,11 @@ public:
     FloatRect(const QRectF&);
     operator QRectF() const;
     FloatRect normalized() const;
+#endif
+
+#if USE(SKIA)
+    FloatRect(const SkRect&);
+    operator SkRect() const;
 #endif
 
 #if USE(CAIRO)

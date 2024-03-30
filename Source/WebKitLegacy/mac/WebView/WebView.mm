@@ -43,12 +43,12 @@
 #import "SocketStreamHandleImpl.h"
 #import "StorageThread.h"
 #import "WebAlternativeTextClient.h"
-#import "WebApplicationCacheInternal.h"
 #import "WebArchive.h"
 #import "WebBackForwardListInternal.h"
 #import "WebBroadcastChannelRegistry.h"
 #import "WebCache.h"
 #import "WebChromeClient.h"
+#import "WebCryptoClient.h"
 #import "WebDOMOperationsPrivate.h"
 #import "WebDataSourceInternal.h"
 #import "WebDatabaseManagerPrivate.h"
@@ -90,7 +90,6 @@
 #import "WebLocalizableStrings.h"
 #import "WebMediaKeySystemClient.h"
 #import "WebNSDataExtras.h"
-#import "WebNSDataExtrasPrivate.h"
 #import "WebNSDictionaryExtras.h"
 #import "WebNSURLExtras.h"
 #import "WebNSURLRequestExtras.h"
@@ -252,6 +251,7 @@
 #import <pal/spi/cocoa/NSURLDownloadSPI.h>
 #import <pal/spi/cocoa/NSURLFileTypeMappingsSPI.h>
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
+#import <pal/spi/ios/BrowserEngineKitSPI.h>
 #import <pal/spi/mac/NSResponderSPI.h>
 #import <pal/spi/mac/NSSpellCheckerSPI.h>
 #import <pal/spi/mac/NSViewSPI.h>
@@ -374,10 +374,6 @@
 
 #if PLATFORM(IOS_FAMILY)
 #import <pal/ios/ManagedConfigurationSoftLink.h>
-#endif
-
-#if USE(APPLE_INTERNAL_SDK)
-#import <WebKitAdditions/ServiceExtensionsAdditions.h>
 #endif
 
 #if HAVE(TOUCH_BAR) && ENABLE(WEB_PLAYBACK_CONTROLS_MANAGER)
@@ -1385,6 +1381,32 @@ static void WebKitInitializeGamepadProviderIfNecessary()
 }
 #endif
 
+static NSString *applicationCacheBundleIdentifier()
+{
+    NSString *appName = [[NSBundle mainBundle] bundleIdentifier];
+    if (!appName)
+        appName = [[NSProcessInfo processInfo] processName];
+
+    ASSERT(appName);
+    return appName;
+}
+
+static NSString *applicationCachePath()
+{
+    return [NSString _webkit_localCacheDirectoryWithBundleIdentifier:applicationCacheBundleIdentifier()];
+}
+
+static WebCore::ApplicationCacheStorage& webApplicationCacheStorage()
+{
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [] {
+        FileSystem::deleteNonEmptyDirectory(applicationCachePath());
+    });
+    static WebCore::ApplicationCacheStorage& storage = WebCore::ApplicationCacheStorage::create(emptyString(), emptyString()).leakRef();
+
+    return storage;
+}
+
 - (void)_commonInitializationWithFrameName:(NSString *)frameName groupName:(NSString *)groupName
 {
     WebCoreThreadViolationCheckRoundTwo();
@@ -1489,6 +1511,7 @@ static void WebKitInitializeGamepadProviderIfNecessary()
         makeUniqueRef<WebProgressTrackerClient>(self),
         UniqueRef<WebCore::LocalFrameLoaderClient>(makeUniqueRef<WebFrameLoaderClient>()),
         WebCore::FrameIdentifier::generate(),
+        nullptr,
         makeUniqueRef<WebCore::DummySpeechRecognitionProvider>(),
         makeUniqueRef<WebCore::MediaRecorderProvider>(),
         WebBroadcastChannelRegistry::getOrCreate([[self preferences] privateBrowsingEnabled]),
@@ -1503,10 +1526,11 @@ static void WebKitInitializeGamepadProviderIfNecessary()
         makeUniqueRef<WebPaymentCoordinatorClient>(),
 #endif
 #if !PLATFORM(IOS_FAMILY)
-        makeUniqueRef<WebChromeClient>(self)
+        makeUniqueRef<WebChromeClient>(self),
 #else
-        makeUniqueRef<WebChromeClientIOS>(self)
+        makeUniqueRef<WebChromeClientIOS>(self),
 #endif
+        makeUniqueRef<WebCryptoClient>(self)
     );
 #if !PLATFORM(IOS_FAMILY)
     pageConfiguration.validationMessageClient = makeUnique<WebValidationMessageClient>(self);
@@ -1751,6 +1775,7 @@ static void WebKitInitializeGamepadProviderIfNecessary()
         makeUniqueRef<WebProgressTrackerClient>(self),
         UniqueRef<WebCore::LocalFrameLoaderClient>(makeUniqueRef<WebFrameLoaderClient>()),
         WebCore::FrameIdentifier::generate(),
+        nullptr,
         makeUniqueRef<WebCore::DummySpeechRecognitionProvider>(),
         makeUniqueRef<WebCore::MediaRecorderProvider>(),
         WebBroadcastChannelRegistry::getOrCreate([[self preferences] privateBrowsingEnabled]),
@@ -1761,7 +1786,8 @@ static void WebKitInitializeGamepadProviderIfNecessary()
 #if ENABLE(APPLE_PAY)
         makeUniqueRef<WebPaymentCoordinatorClient>(),
 #endif
-        makeUniqueRef<WebChromeClientIOS>(self)
+        makeUniqueRef<WebChromeClientIOS>(self),
+        makeUniqueRef<WebCryptoClient>(self)
     );
 #if ENABLE(DRAG_SUPPORT)
     pageConfiguration.dragClient = makeUnique<WebDragClient>(self);
@@ -2023,8 +2049,10 @@ static void WebKitInitializeGamepadProviderIfNecessary()
         WebCore::TextIndicatorOption::IncludeSnapshotWithSelectionHighlight,
         WebCore::TextIndicatorOption::RespectTextColor
     };
-    auto& frame = page->focusController().focusedOrMainFrame();
-    if (auto range = frame.selection().selection().toNormalizedRange()) {
+    RefPtr frame = page->focusController().focusedOrMainFrame();
+    if (!frame)
+        return;
+    if (auto range = frame->selection().selection().toNormalizedRange()) {
         if (auto textIndicator = WebCore::TextIndicator::createWithRange(*range, defaultEditDragTextIndicatorOptions, WebCore::TextIndicatorPresentationTransition::None, WebCore::FloatSize()))
             _private->dataOperationTextIndicator = adoptNS([[WebUITextIndicatorData alloc] initWithImage:nil textIndicatorData:textIndicator->data() scale:page->deviceScaleFactor()]);
     }
@@ -2175,7 +2203,7 @@ static NSMutableSet *knownPluginMIMETypes()
 
 - (BOOL)_viewClass:(Class *)vClass andRepresentationClass:(Class *)rClass forMIMEType:(NSString *)MIMEType
 {
-    if ([[self class] _viewClass:vClass andRepresentationClass:rClass forMIMEType:MIMEType allowingPlugins:[_private->preferences arePlugInsEnabled]])
+    if ([[self class] _viewClass:vClass andRepresentationClass:rClass forMIMEType:MIMEType allowingPlugins:NO])
         return YES;
 #if !PLATFORM(IOS_FAMILY)
     if (_private->pluginDatabase) {
@@ -2915,9 +2943,6 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     // FIXME: Is this relevent to WebKitLegacy? If not, we should remove it.
     WebCore::DeprecatedGlobalSettings::setTrackingPreventionEnabled([preferences resourceLoadStatisticsEnabled]);
 
-    // Application Cache Preferences are stored on the global cache storage manager, not in Settings.
-    [WebApplicationCache setDefaultOriginQuota:[preferences applicationCacheDefaultOriginQuota]];
-
     BOOL zoomsTextOnly = [preferences zoomsTextOnly];
     if (_private->zoomsTextOnly != zoomsTextOnly)
         [self _setZoomMultiplier:_private->zoomMultiplier isTextOnly:zoomsTextOnly];
@@ -3227,7 +3252,7 @@ IGNORE_WARNINGS_END
 + (NSString *)_decodeData:(NSData *)data
 {
     WebCore::HTMLNames::init(); // this method is used for importing bookmarks at startup, so HTMLNames are likely to be uninitialized yet
-    return WebCore::TextResourceDecoder::create("text/html"_s)->decodeAndFlush(static_cast<const char*>([data bytes]), [data length]); // bookmark files are HTML
+    return WebCore::TextResourceDecoder::create("text/html"_s)->decodeAndFlush(span(data)); // bookmark files are HTML
 }
 
 - (void)_pushPerformingProgrammaticFocus
@@ -4033,8 +4058,13 @@ IGNORE_WARNINGS_END
 
 - (void)_executeCoreCommandByName:(NSString *)name value:(NSString *)value
 {
-    if (RefPtr page = _private->page)
-        page->focusController().focusedOrMainFrame().editor().command(name).execute(value);
+    RefPtr page = _private->page;
+    if (!page)
+        return;
+    RefPtr focusedOrMainFrame = page->focusController().focusedOrMainFrame();
+    if (!focusedOrMainFrame)
+        return;
+    focusedOrMainFrame->editor().command(name).execute(value);
 }
 
 - (void)_clearMainFrameName
@@ -4674,6 +4704,15 @@ IGNORE_WARNINGS_END
     WebCore::ResourceRequest::setHTTPPipeliningEnabled(enabled);
 }
 
+- (void)_setPortsForUpgradingInsecureSchemeForTesting:(uint16_t)insecureUpgradePort withSecurePort:(uint16_t)secureUpgradePort
+{
+    auto* page = core(self);
+    if (!page)
+        return;
+
+    page->setPortsForUpgradingInsecureSchemeForTesting(insecureUpgradePort, secureUpgradePort);
+}
+
 - (void)_didScrollDocumentInFrameView:(WebFrameView *)frameView
 {
     [self hideFormValidationMessage];
@@ -5109,40 +5148,16 @@ IGNORE_WARNINGS_END
 
 - (BOOL)_canShowMIMEType:(NSString *)MIMEType
 {
-    return [[self class] _canShowMIMEType:MIMEType allowingPlugins:[_private->preferences arePlugInsEnabled]];
+    return [[self class] _canShowMIMEType:MIMEType allowingPlugins:NO];
 }
 
 - (WebBasePluginPackage *)_pluginForMIMEType:(NSString *)MIMEType
 {
-    if (![_private->preferences arePlugInsEnabled])
-        return nil;
-
-    WebBasePluginPackage *pluginPackage = [[WebPluginDatabase sharedDatabase] pluginForMIMEType:MIMEType];
-    if (pluginPackage)
-        return pluginPackage;
-
-#if !PLATFORM(IOS_FAMILY)
-    if (_private->pluginDatabase)
-        return [_private->pluginDatabase pluginForMIMEType:MIMEType];
-#endif
-
     return nil;
 }
 
 - (WebBasePluginPackage *)_pluginForExtension:(NSString *)extension
 {
-    if (![_private->preferences arePlugInsEnabled])
-        return nil;
-
-    WebBasePluginPackage *pluginPackage = [[WebPluginDatabase sharedDatabase] pluginForExtension:extension];
-    if (pluginPackage)
-        return pluginPackage;
-
-#if !PLATFORM(IOS_FAMILY)
-    if (_private->pluginDatabase)
-        return [_private->pluginDatabase pluginForExtension:extension];
-#endif
-
     return nil;
 }
 
@@ -5169,17 +5184,6 @@ IGNORE_WARNINGS_END
 
 - (BOOL)_isMIMETypeRegisteredAsPlugin:(NSString *)MIMEType
 {
-    if (![_private->preferences arePlugInsEnabled])
-        return NO;
-
-    if ([[WebPluginDatabase sharedDatabase] isMIMETypeRegistered:MIMEType])
-        return YES;
-
-#if !PLATFORM(IOS_FAMILY)
-    if (_private->pluginDatabase && [_private->pluginDatabase isMIMETypeRegistered:MIMEType])
-        return YES;
-#endif
-
     return NO;
 }
 
@@ -8619,18 +8623,6 @@ FORWARD(toggleUnderline)
     NSPerformService(@"Search With Google", pasteboard);
 }
 
-- (void)_searchWithSpotlightFromMenu:(id)sender
-{
-    id documentView = [[[self selectedFrame] frameView] documentView];
-    if (![documentView conformsToProtocol:@protocol(WebDocumentText)])
-        return;
-
-    NSString *selectedString = [(id <WebDocumentText>)documentView selectedString];
-    if (![selectedString length])
-        return;
-
-    [[NSWorkspace sharedWorkspace] showSearchResultsForQueryString:selectedString];
-}
 #endif // !PLATFORM(IOS_FAMILY)
 
 @end

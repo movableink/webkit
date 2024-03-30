@@ -50,7 +50,7 @@ void PolymorphicCallNode::unlinkOrUpgradeImpl(VM& vm, CodeBlock* oldCodeBlock, C
         if (!newCodeBlock || !owner()->upgradeIfPossible(vm, oldCodeBlock, newCodeBlock, m_index)) {
             m_cleared = true;
             CallLinkInfo* callLinkInfo = owner()->callLinkInfo();
-            dataLogLnIf(Options::dumpDisassembly(), "Unlinking polymorphic call at ", callLinkInfo->doneLocation(), ", bc#", callLinkInfo->codeOrigin().bytecodeIndex());
+            dataLogLnIf(Options::dumpDisassembly(), "Unlinking polymorphic call at ", callLinkInfo->doneLocationIfExists(), ", bc#", callLinkInfo->codeOrigin().bytecodeIndex());
             callLinkInfo->unlinkOrUpgrade(vm, oldCodeBlock, newCodeBlock);
         }
     }
@@ -119,7 +119,7 @@ bool PolymorphicCallStubRoutine::upgradeIfPossible(VM&, CodeBlock* oldCodeBlock,
     auto target = newCodeBlock->jitCode()->addressForCall(slot.m_arityCheckMode);
     slot.m_codeBlock = newCodeBlock;
     slot.m_target = target;
-    newCodeBlock->linkIncomingCall(m_callLinkInfo->owner(), &callNode); // This is just relinking. So owner and caller frame can be nullptr.
+    newCodeBlock->linkIncomingCall(nullptr, &callNode); // This is just relinking. So owner and caller frame can be nullptr.
     return true;
 }
 

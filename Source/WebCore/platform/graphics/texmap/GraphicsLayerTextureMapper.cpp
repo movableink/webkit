@@ -314,8 +314,7 @@ void GraphicsLayerTextureMapper::setContentsToImage(Image* image)
         // Make the decision about whether the image has changed.
         // This code makes the assumption that pointer equality on a PlatformImagePtr is a valid way to tell if the image is changed.
         // This assumption is true for the GTK+ port.
-        auto newNativeImage = image->nativeImageForCurrentFrame();
-
+        auto newNativeImage = image->currentNativeImage();
         if (!newNativeImage)
             return;
 
@@ -328,11 +327,8 @@ void GraphicsLayerTextureMapper::setContentsToImage(Image* image)
         m_compositedImage->setContentsToImage(image);
         m_compositedImage->updateContentsScale(pageScaleFactor() * deviceScaleFactor());
     } else {
-#if PLATFORM(QT)
         m_compositedNativeImage = nullptr;
-#else
         m_compositedImage = nullptr;
-#endif
     }
 
     setContentsToPlatformLayer(m_compositedImage.get(), ContentsLayerPurpose::Image);
@@ -519,11 +515,16 @@ void GraphicsLayerTextureMapper::commitLayerChanges()
     if (m_changeMask & BackingStoreChange)
         m_layer.setBackingStore(m_backingStore.get());
 
-    if (m_changeMask & DebugVisualsChange)
-        m_layer.setDebugVisuals(isShowingDebugBorder(), debugBorderColor(), debugBorderWidth());
+    if (m_changeMask & DebugVisualsChange) {
+        m_layer.setShowDebugBorder(isShowingDebugBorder());
+        m_layer.setDebugBorderColor(debugBorderColor());
+        m_layer.setDebugBorderWidth(debugBorderWidth());
+    }
 
-    if (m_changeMask & RepaintCountChange)
-        m_layer.setRepaintCounter(isShowingRepaintCounter(), repaintCount());
+    if (m_changeMask & RepaintCountChange) {
+        m_layer.setShowRepaintCounter(isShowingRepaintCounter());
+        m_layer.setRepaintCount(repaintCount());
+    }
 
     if (m_changeMask & ContentChange)
         m_layer.setContentsLayer(platformLayer());

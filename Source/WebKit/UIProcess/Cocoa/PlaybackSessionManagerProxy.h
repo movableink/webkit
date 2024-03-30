@@ -74,6 +74,7 @@ public:
     void volumeChanged(double);
     void pictureInPictureSupportedChanged(bool);
     void pictureInPictureActiveChanged(bool);
+    void isInWindowFullscreenActiveChanged(bool);
 
     bool wirelessVideoPlaybackDisabled() const final { return m_wirelessVideoPlaybackDisabled; }
 
@@ -98,12 +99,16 @@ private:
     void setPlaybackRate(double) final;
     void selectAudioMediaOption(uint64_t) final;
     void selectLegibleMediaOption(uint64_t) final;
+    void toggleFullscreen() final;
     void togglePictureInPicture() final;
+    void toggleInWindowFullscreen() final;
+    void enterFullscreen() final;
     void toggleMuted() final;
     void setMuted(bool) final;
     void setVolume(double) final;
     void setPlayingOnSecondScreen(bool) final;
     void sendRemoteCommand(WebCore::PlatformMediaSession::RemoteControlCommandType, const WebCore::PlatformMediaSession::RemoteCommandArgument&) final;
+    void setVideoReceiverEndpoint(const WebCore::VideoReceiverEndpoint&) final;
 
     double playbackStartedTime() const final { return m_playbackStartedTime; }
     double duration() const final { return m_duration; }
@@ -129,6 +134,7 @@ private:
     double volume() const final { return m_volume; }
     bool isPictureInPictureSupported() const final { return m_pictureInPictureSupported; }
     bool isPictureInPictureActive() const final { return m_pictureInPictureActive; }
+    bool isInWindowFullscreenActive() const final { return m_isInWindowFullscreenActive; }
 
 #if !RELEASE_LOG_DISABLED
     void setLogIdentifier(const void* identifier) { m_logIdentifier = identifier; }
@@ -167,6 +173,7 @@ private:
     double m_volume { 0 };
     bool m_pictureInPictureSupported { false };
     bool m_pictureInPictureActive { false };
+    bool m_isInWindowFullscreenActive { false };
 
 #if !RELEASE_LOG_DISABLED
     const void* m_logIdentifier { nullptr };
@@ -232,6 +239,7 @@ private:
     void mutedChanged(PlaybackSessionContextIdentifier, bool muted);
     void volumeChanged(PlaybackSessionContextIdentifier, double volume);
     void pictureInPictureSupportedChanged(PlaybackSessionContextIdentifier, bool pictureInPictureSupported);
+    void isInWindowFullscreenActiveChanged(PlaybackSessionContextIdentifier, bool isInWindow);
 
     // Messages to PlaybackSessionManager
     void play(PlaybackSessionContextIdentifier);
@@ -248,12 +256,16 @@ private:
     void setPlaybackRate(PlaybackSessionContextIdentifier, double);
     void selectAudioMediaOption(PlaybackSessionContextIdentifier, uint64_t index);
     void selectLegibleMediaOption(PlaybackSessionContextIdentifier, uint64_t index);
+    void toggleFullscreen(PlaybackSessionContextIdentifier);
     void togglePictureInPicture(PlaybackSessionContextIdentifier);
+    void enterFullscreen(PlaybackSessionContextIdentifier);
+    void toggleInWindow(PlaybackSessionContextIdentifier);
     void toggleMuted(PlaybackSessionContextIdentifier);
     void setMuted(PlaybackSessionContextIdentifier, bool);
     void setVolume(PlaybackSessionContextIdentifier, double);
     void setPlayingOnSecondScreen(PlaybackSessionContextIdentifier, bool);
     void sendRemoteCommand(PlaybackSessionContextIdentifier, WebCore::PlatformMediaSession::RemoteControlCommandType, const WebCore::PlatformMediaSession::RemoteCommandArgument&);
+    void setVideoReceiverEndpoint(PlaybackSessionContextIdentifier, const WebCore::VideoReceiverEndpoint&);
 
 #if !RELEASE_LOG_DISABLED
     void setLogIdentifier(PlaybackSessionContextIdentifier, uint64_t);

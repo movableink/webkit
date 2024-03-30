@@ -29,7 +29,6 @@
 #include "DownloadID.h"
 #include "IdentifierTypes.h"
 #include "PolicyDecision.h"
-#include "ShareableBitmap.h"
 #include "TransactionID.h"
 #include "WKBase.h"
 #include "WebLocalFrameLoaderClient.h"
@@ -42,6 +41,7 @@
 #include <WebCore/LocalFrameLoaderClient.h>
 #include <WebCore/MarkupExclusionRule.h>
 #include <WebCore/ProcessIdentifier.h>
+#include <WebCore/ShareableBitmap.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/RefPtr.h>
@@ -76,6 +76,7 @@ class WebKeyboardEvent;
 class WebImage;
 class WebMouseEvent;
 class WebPage;
+class WebRemoteFrameClient;
 struct FrameInfoData;
 struct FrameTreeNodeData;
 struct WebsitePoliciesData;
@@ -98,6 +99,7 @@ public:
 
     static RefPtr<WebFrame> fromCoreFrame(const WebCore::Frame&);
     WebCore::LocalFrame* coreLocalFrame() const;
+    RefPtr<WebCore::LocalFrame> protectedCoreLocalFrame() const;
     WebCore::RemoteFrame* coreRemoteFrame() const;
     WebCore::Frame* coreFrame() const;
 
@@ -216,6 +218,7 @@ public:
 #endif
 
     WebLocalFrameLoaderClient* localFrameLoaderClient() const;
+    WebRemoteFrameClient* remoteFrameClient() const;
     WebFrameLoaderClient* frameLoaderClient() const;
 
 #if ENABLE(APP_BOUND_DOMAINS)
@@ -235,6 +238,8 @@ public:
     bool handleKeyEvent(const WebKeyboardEvent&);
 
     bool isFocused() const;
+
+    String frameTextForTesting(bool);
 private:
     WebFrame(WebPage&, WebCore::FrameIdentifier);
 

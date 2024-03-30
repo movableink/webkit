@@ -27,7 +27,6 @@
 #include "InjectedBundleNodeHandle.h"
 
 #include "InjectedBundleRangeHandle.h"
-#include "ShareableBitmap.h"
 #include "WebFrame.h"
 #include "WebImage.h"
 #include "WebLocalFrameLoaderClient.h"
@@ -51,6 +50,7 @@
 #include <WebCore/Position.h>
 #include <WebCore/Range.h>
 #include <WebCore/RenderElement.h>
+#include <WebCore/ShareableBitmap.h>
 #include <WebCore/SimpleRange.h>
 #include <WebCore/Text.h>
 #include <WebCore/VisiblePosition.h>
@@ -419,7 +419,7 @@ bool InjectedBundleNodeHandle::isSelectableTextNode() const
         return false;
 
     auto renderer = m_node->renderer();
-    return renderer && renderer->style().effectiveUserSelect() != UserSelect::None;
+    return renderer && renderer->style().usedUserSelect() != UserSelect::None;
 }
 
 RefPtr<InjectedBundleNodeHandle> InjectedBundleNodeHandle::htmlTableCellElementCellAbove()

@@ -49,6 +49,7 @@ public:
     virtual ~RemoteLayerTreeDrawingAreaProxy();
 
     virtual bool isRemoteLayerTreeDrawingAreaProxyMac() const { return false; }
+    virtual bool isRemoteLayerTreeDrawingAreaProxyIOS() const { return false; }
 
     const RemoteLayerTreeHost& remoteLayerTreeHost() const { return *m_remoteLayerTreeHost; }
     std::unique_ptr<RemoteLayerTreeHost> detachRemoteLayerTreeHost();
@@ -68,10 +69,6 @@ public:
     bool hasDebugIndicator() const { return !!m_debugIndicatorLayerTreeHost; }
 
     CALayer *layerWithIDForTesting(WebCore::PlatformLayerIdentifier) const;
-
-#if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
-    void updateOverlayRegionIDs(const HashSet<WebCore::PlatformLayerIdentifier> &overlayRegionIDs) { m_remoteLayerTreeHost->updateOverlayRegionIDs(overlayRegionIDs); }
-#endif
 
     void viewWillStartLiveResize() final;
     void viewWillEndLiveResize() final;

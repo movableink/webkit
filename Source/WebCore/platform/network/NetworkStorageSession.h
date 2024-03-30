@@ -40,6 +40,7 @@
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/Vector.h>
 #include <wtf/WallTime.h>
+#include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
@@ -96,7 +97,7 @@ enum class ApplyTrackingPrevention : bool { No, Yes };
 enum class ScriptWrittenCookiesOnly : bool { No, Yes };
 
 #if HAVE(COOKIE_CHANGE_LISTENER_API)
-class CookieChangeObserver : public CanMakeCheckedPtr {
+class CookieChangeObserver : public CanMakeWeakPtr<CookieChangeObserver> {
 public:
     virtual ~CookieChangeObserver() { }
     virtual void cookiesAdded(const String& host, const Vector<WebCore::Cookie>&) = 0;
@@ -104,6 +105,12 @@ public:
     virtual void allCookiesDeleted() = 0;
 };
 #endif
+
+class CookiesEnabledStateObserver : public CanMakeWeakPtr<CookiesEnabledStateObserver> {
+public:
+    virtual ~CookiesEnabledStateObserver() { }
+    virtual void cookieEnabledStateMayHaveChanged() = 0;
+};
 
 class NetworkStorageSession : public CanMakeWeakPtr<NetworkStorageSession> {
     WTF_MAKE_NONCOPYABLE(NetworkStorageSession); WTF_MAKE_FAST_ALLOCATED;
@@ -118,7 +125,7 @@ public:
     CredentialStorage& credentialStorage() { return m_credentialStorage; }
 
 #ifdef __OBJC__
-    WEBCORE_EXPORT NSHTTPCookieStorage *nsCookieStorage() const;
+    WEBCORE_EXPORT RetainPtr<NSHTTPCookieStorage> nsCookieStorage() const;
 #endif
 
 #if PLATFORM(COCOA)
@@ -195,6 +202,7 @@ public:
     WEBCORE_EXPORT std::optional<Vector<Cookie>> cookiesForDOMAsVector(const URL& firstParty, const SameSiteInfo&, const URL&, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, IncludeSecureCookies, ApplyTrackingPrevention, ShouldRelaxThirdPartyCookieBlocking, CookieStoreGetOptions&&) const;
     WEBCORE_EXPORT std::pair<String, bool> cookieRequestHeaderFieldValue(const URL& firstParty, const SameSiteInfo&, const URL&, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, IncludeSecureCookies, ApplyTrackingPrevention, ShouldRelaxThirdPartyCookieBlocking) const;
     WEBCORE_EXPORT std::pair<String, bool> cookieRequestHeaderFieldValue(const CookieRequestHeaderFieldProxy&) const;
+    WEBCORE_EXPORT bool cookiesEnabled(const URL& firstParty, const URL&, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, ShouldRelaxThirdPartyCookieBlocking) const;
 
     WEBCORE_EXPORT Vector<Cookie> domCookiesForHost(const String& host);
 
@@ -202,6 +210,9 @@ public:
     WEBCORE_EXPORT void startListeningForCookieChangeNotifications(CookieChangeObserver&, const String& host);
     WEBCORE_EXPORT void stopListeningForCookieChangeNotifications(CookieChangeObserver&, const HashSet<String>& hosts);
 #endif
+    WEBCORE_EXPORT void addCookiesEnabledStateObserver(CookiesEnabledStateObserver&);
+    WEBCORE_EXPORT void removeCookiesEnabledStateObserver(CookiesEnabledStateObserver&);
+    void cookieEnabledStateMayHaveChanged();
 
     WEBCORE_EXPORT void setTrackingPreventionEnabled(bool);
     WEBCORE_EXPORT bool trackingPreventionEnabled() const;
@@ -219,7 +230,7 @@ public:
     WEBCORE_EXPORT void setPrevalentDomainsToBlockAndDeleteCookiesFor(const Vector<RegistrableDomain>&);
     WEBCORE_EXPORT void setPrevalentDomainsToBlockButKeepCookiesFor(const Vector<RegistrableDomain>&);
     WEBCORE_EXPORT void setDomainsWithUserInteractionAsFirstParty(const Vector<RegistrableDomain>&);
-    WEBCORE_EXPORT void setDomainsWithCrossPageStorageAccess(const HashMap<TopFrameDomain, SubResourceDomain>&);
+    WEBCORE_EXPORT void setDomainsWithCrossPageStorageAccess(const HashMap<TopFrameDomain, Vector<SubResourceDomain>>&);
     WEBCORE_EXPORT void grantCrossPageStorageAccess(const TopFrameDomain&, const SubResourceDomain&);
     WEBCORE_EXPORT void setAgeCapForClientSideCookies(std::optional<Seconds>);
     WEBCORE_EXPORT bool hasStorageAccess(const RegistrableDomain& resourceDomain, const RegistrableDomain& firstPartyDomain, std::optional<FrameIdentifier>, PageIdentifier) const;
@@ -241,7 +252,7 @@ public:
     WEBCORE_EXPORT static std::optional<HashSet<RegistrableDomain>> subResourceDomainsInNeedOfStorageAccessForFirstParty(const RegistrableDomain&);
     WEBCORE_EXPORT static bool loginDomainMatchesRequestingDomain(const TopFrameDomain&, const SubResourceDomain&);
     WEBCORE_EXPORT static std::optional<RegistrableDomain> findAdditionalLoginDomain(const TopFrameDomain&, const SubResourceDomain&);
-    WEBCORE_EXPORT static Vector<RegistrableDomain> storageAccessQuirkForTopFrameDomain(const TopFrameDomain&);
+    WEBCORE_EXPORT static Vector<RegistrableDomain> storageAccessQuirkForTopFrameDomain(const URL& topFrameURL);
     WEBCORE_EXPORT static std::optional<OrganizationStorageAccessPromptQuirk> storageAccessQuirkForDomainPair(const TopFrameDomain&, const SubResourceDomain&);
 
 #if ENABLE(APP_BOUND_DOMAINS)
@@ -296,8 +307,9 @@ private:
 #if HAVE(COOKIE_CHANGE_LISTENER_API)
     bool m_didRegisterCookieListeners { false };
     RetainPtr<NSMutableSet> m_subscribedDomainsForCookieChanges;
-    MemoryCompactRobinHoodHashMap<String, HashSet<CheckedPtr<CookieChangeObserver>>> m_cookieChangeObservers;
+    MemoryCompactRobinHoodHashMap<String, WeakHashSet<CookieChangeObserver>> m_cookieChangeObservers;
 #endif
+    WeakHashSet<CookiesEnabledStateObserver> m_cookiesEnabledStateObservers;
 
     CredentialStorage m_credentialStorage;
 

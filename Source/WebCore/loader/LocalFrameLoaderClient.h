@@ -290,6 +290,7 @@ public:
 #if PLATFORM(COCOA)
     // Allow an accessibility object to retrieve a Frame parent if there's no PlatformWidget.
     virtual RemoteAXObjectRef accessibilityRemoteObject() = 0;
+    virtual IntPoint accessibilityRemoteFrameOffset() = 0;
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     virtual void setAXIsolatedTreeRoot(AXCoreObject*) = 0;
 #endif
@@ -371,7 +372,6 @@ public:
     virtual void modelInlinePreviewUUIDs(CompletionHandler<void(Vector<String>)>&&) const { }
 #endif
 
-    virtual void broadcastFrameRemovalToOtherProcesses() = 0;
     virtual void broadcastMainFrameURLChangeToOtherProcesses(const URL&) = 0;
 
     virtual void dispatchLoadEventToOwnerElementInAnotherProcess() = 0;

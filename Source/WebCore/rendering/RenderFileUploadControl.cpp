@@ -125,7 +125,7 @@ int RenderFileUploadControl::maxFilenameLogicalWidth() const
 
 void RenderFileUploadControl::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
-    if (style().visibility() != Visibility::Visible)
+    if (style().usedVisibility() != Visibility::Visible)
         return;
     
     if (!paintInfo.context().paintingDisabled())
@@ -194,15 +194,15 @@ void RenderFileUploadControl::paintControl(PaintInfo& paintInfo, const LayoutPoi
 
                         if (!isHorizontalWritingMode) {
                             if (isFlippedBlocksWritingMode)
-                                return textVisualRect.x() - metrics.ascent();
+                                return textVisualRect.x() - metrics.intAscent();
 
-                            return textVisualRect.x() + metrics.descent();
+                            return textVisualRect.x() + metrics.intDescent();
                         }
 
                         if (isFlippedBlocksWritingMode)
-                            return textVisualRect.y() - metrics.descent();
+                            return textVisualRect.y() - metrics.intDescent();
 
-                        return textVisualRect.y() + metrics.ascent();
+                        return textVisualRect.y() + metrics.intAscent();
                     }
                 }
             }
@@ -300,7 +300,7 @@ void RenderFileUploadControl::computePreferredLogicalWidths()
     setPreferredLogicalWidthsDirty(false);
 }
 
-VisiblePosition RenderFileUploadControl::positionForPoint(const LayoutPoint&, const RenderFragmentContainer*)
+VisiblePosition RenderFileUploadControl::positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*)
 {
     return VisiblePosition();
 }

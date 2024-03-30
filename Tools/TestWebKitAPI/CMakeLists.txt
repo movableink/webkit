@@ -31,6 +31,7 @@ set(TestWTF_SOURCES
     Tests/WTF/BoxPtr.cpp
     Tests/WTF/BumpPointerAllocator.cpp
     Tests/WTF/CString.cpp
+    Tests/WTF/CharacterProperties.cpp
     Tests/WTF/CheckedArithmeticOperations.cpp
     Tests/WTF/CompactPtr.cpp
     Tests/WTF/CompactRefPtr.cpp
@@ -192,6 +193,7 @@ if (ENABLE_WEBCORE)
         Tests/WebCore/ColorTests.cpp
         Tests/WebCore/ComplexTextController.cpp
         Tests/WebCore/ContextMenuAction.cpp
+        Tests/WebCore/Decimal.cpp
         Tests/WebCore/FileMonitor.cpp
         Tests/WebCore/FloatPointTests.cpp
         Tests/WebCore/FloatRectTests.cpp
@@ -204,6 +206,7 @@ if (ENABLE_WEBCORE)
         Tests/WebCore/IntSizeTests.cpp
         Tests/WebCore/KeyedCoding.cpp
         Tests/WebCore/LayoutUnitTests.cpp
+        Tests/WebCore/MIMESniffer.cpp
         Tests/WebCore/MIMETypeRegistry.cpp
         Tests/WebCore/MonospaceFontTests.cpp
         Tests/WebCore/NowPlayingInfoTests.cpp

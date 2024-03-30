@@ -51,6 +51,9 @@ public:
     WTF_EXPORT_PRIVATE void dump(PrintStream& out) const;
 
     ASCIILiteral() = default;
+    constexpr ASCIILiteral(std::nullptr_t)
+        : ASCIILiteral()
+    { }
 
     unsigned hash() const;
     constexpr bool isNull() const { return !m_characters; }
@@ -142,6 +145,15 @@ constexpr ASCIILiteral operator"" _s(const char* characters, size_t n)
     UNUSED_PARAM(n);
 #endif
     return ASCIILiteral::fromLiteralUnsafe(characters);
+}
+
+constexpr std::span<const LChar> operator"" _span(const char* characters, size_t n)
+{
+#if ASSERT_ENABLED
+    for (size_t i = 0; i < n; ++i)
+        ASSERT_UNDER_CONSTEXPR_CONTEXT(isASCII(characters[i]));
+#endif
+    return std::span { bitwise_cast<const LChar*>(characters), n };
 }
 
 } // inline StringLiterals

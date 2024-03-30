@@ -129,7 +129,9 @@ public:
     bool setFullScreen(bool);
 #endif
 
+#if USE(ATK)
     WebKitWebViewAccessible* accessible() const;
+#endif
 
 #if ENABLE(TOUCH_EVENTS)
     WebKit::TouchGestureController& touchGestureController() const { return *m_touchGestureController; }
@@ -144,6 +146,8 @@ public:
 
     void setCursor(const WebCore::Cursor&);
 
+    void callAfterNextPresentationUpdate(CompletionHandler<void()>&&);
+
 private:
 #if ENABLE(WPE_PLATFORM)
     View(struct wpe_view_backend*, WPEDisplay*, const API::PageConfiguration&);
@@ -154,6 +158,10 @@ private:
     void setSize(const WebCore::IntSize&);
     void setViewState(OptionSet<WebCore::ActivityState>);
     void handleKeyboardEvent(struct wpe_input_keyboard_event*);
+
+#if ENABLE(WPE_PLATFORM)
+    void updateDisplayID();
+#endif
 
 #if ENABLE(TOUCH_EVENTS) && ENABLE(WPE_PLATFORM)
     Vector<WebKit::WebPlatformTouchPoint> touchPointsForEvent(WPEEvent*);
@@ -176,14 +184,21 @@ private:
 #if ENABLE(WPE_PLATFORM)
     GRefPtr<WPEView> m_wpeView;
     std::unique_ptr<WebKit::AcceleratedBackingStoreDMABuf> m_backingStore;
+    uint32_t m_displayID { 0 };
+    unsigned long m_bufferRenderedID { 0 };
+    CompletionHandler<void()> m_nextPresentationUpdateCallback;
 #endif
 
 #if ENABLE(FULLSCREEN_API)
     WebKit::WebFullScreenManagerProxy::FullscreenState m_fullscreenState { WebKit::WebFullScreenManagerProxy::FullscreenState::NotInFullscreen };
+#if ENABLE(WPE_PLATFORM)
     bool m_viewWasAlreadyInFullScreen { false };
 #endif
+#endif
 
+#if USE(ATK)
     mutable GRefPtr<WebKitWebViewAccessible> m_accessible;
+#endif
 
     bool m_horizontalScrollActive { false };
     bool m_verticalScrollActive { false };

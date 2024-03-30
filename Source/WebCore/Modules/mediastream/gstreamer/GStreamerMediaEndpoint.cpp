@@ -312,6 +312,15 @@ static std::optional<std::pair<RTCSdpType, String>> fetchDescription(GstElement*
     if (!description)
         return { };
 
+    unsigned totalAttributesNumber = gst_sdp_message_attributes_len(description->sdp);
+    for (unsigned i = 0; i < totalAttributesNumber; i++) {
+        const auto attribute = gst_sdp_message_get_attribute(description->sdp, i);
+        if (!g_strcmp0(attribute->key, "end-of-candidates")) {
+            gst_sdp_message_remove_attribute(description->sdp, i);
+            break;
+        }
+    }
+
     GUniquePtr<char> sdpString(gst_sdp_message_as_text(description->sdp));
     GST_TRACE_OBJECT(webrtcBin, "%s-description SDP: %s", name, sdpString.get());
     return { { fromSessionDescriptionType(*description.get()), String::fromLatin1(sdpString.get()) } };
@@ -455,18 +464,9 @@ void GStreamerMediaEndpoint::doSetLocalDescription(const RTCSessionDescription* 
             }
         }
 
-        // Notify the backend in case all m-lines of the current local description have signalled
-        // all their ICE candidates.
-        std::optional<bool> isIceGatheringComplete;
-        if (descriptions && !descriptions->currentLocalDescriptionSdp.isEmpty())
-            isIceGatheringComplete = this->isIceGatheringComplete(descriptions->currentLocalDescriptionSdp);
-
         GRefPtr<GstWebRTCSCTPTransport> transport;
         g_object_get(m_webrtcBin.get(), "sctp-transport", &transport.outPtr(), nullptr);
         m_peerConnectionBackend.setLocalDescriptionSucceeded(WTFMove(descriptions), { }, transport ? makeUnique<GStreamerSctpTransportBackend>(WTFMove(transport)) : nullptr);
-
-        if (isIceGatheringComplete && *isIceGatheringComplete)
-            m_peerConnectionBackend.doneGatheringCandidates();
     }, [protectedThis = Ref(*this), this](const GError* error) {
         if (protectedThis->isStopped())
             return;
@@ -498,11 +498,11 @@ void GStreamerMediaEndpoint::doSetRemoteDescription(const RTCSessionDescription&
 
             GRefPtr<GstWebRTCRTPTransceiver> rtcTransceiver;
             g_signal_emit_by_name(m_webrtcBin.get(), "get-transceiver", i, &rtcTransceiver.outPtr());
+            if (!rtcTransceiver)
+                continue;
+
             auto caps = capsFromSDPMedia(media);
-            if (rtcTransceiver)
-                g_object_set(rtcTransceiver.get(), "direction", direction, "codec-preferences", caps.get(), nullptr);
-            else
-                g_signal_emit_by_name(m_webrtcBin.get(), "add-transceiver", direction, caps.get(), &rtcTransceiver.outPtr());
+            g_object_set(rtcTransceiver.get(), "codec-preferences", caps.get(), nullptr);
         }
     }, [protectedThis = Ref(*this), this, initialSDP = WTFMove(initialSDP), localDescriptionSdp = WTFMove(localDescriptionSdp), localDescriptionSdpType = WTFMove(localDescriptionSdpType)](const GstSDPMessage& message) {
         if (protectedThis->isStopped())
@@ -538,18 +538,9 @@ void GStreamerMediaEndpoint::doSetRemoteDescription(const RTCSessionDescription&
             }
         }
 
-        // Notify the backend in case all m-lines of the current local description have signalled
-        // all their ICE candidates.
-        std::optional<bool> isIceGatheringComplete;
-        if (descriptions && !descriptions->currentLocalDescriptionSdp.isEmpty())
-            isIceGatheringComplete = this->isIceGatheringComplete(descriptions->currentLocalDescriptionSdp);
-
         GRefPtr<GstWebRTCSCTPTransport> transport;
         g_object_get(m_webrtcBin.get(), "sctp-transport", &transport.outPtr(), nullptr);
         m_peerConnectionBackend.setRemoteDescriptionSucceeded(WTFMove(descriptions), { }, transport ? makeUnique<GStreamerSctpTransportBackend>(WTFMove(transport)) : nullptr);
-
-        if (isIceGatheringComplete && *isIceGatheringComplete)
-            m_peerConnectionBackend.doneGatheringCandidates();
     }, [protectedThis = Ref(*this), this](const GError* error) {
         if (protectedThis->isStopped())
             return;
@@ -705,10 +696,8 @@ void GStreamerMediaEndpoint::configureAndLinkSource(RealtimeOutgoingMediaSourceG
         }
     }
 
-    if (!source.pad()) {
-        source.setSinkPad(requestPad(m_requestPadCounter, source.allowedCaps(), source.mediaStreamID()));
-        m_requestPadCounter++;
-    }
+    if (!source.pad())
+        source.setSinkPad(requestPad(source.allowedCaps(), source.mediaStreamID()));
 
     auto& sinkPad = source.pad();
     ASSERT(!gst_pad_is_linked(sinkPad.get()));
@@ -728,8 +717,9 @@ void GStreamerMediaEndpoint::configureAndLinkSource(RealtimeOutgoingMediaSourceG
 #endif
 }
 
-GRefPtr<GstPad> GStreamerMediaEndpoint::requestPad(std::optional<unsigned> mLineIndex, const GRefPtr<GstCaps>& allowedCaps, const String& mediaStreamID)
+GRefPtr<GstPad> GStreamerMediaEndpoint::requestPad(const GRefPtr<GstCaps>& allowedCaps, const String& mediaStreamID)
 {
+    GST_DEBUG_OBJECT(m_pipeline.get(), "Requesting sink pad for %" GST_PTR_FORMAT " and mediaStreamID %s", allowedCaps.get(), mediaStreamID.ascii().data());
     auto caps = adoptGRef(gst_caps_copy(allowedCaps.get()));
     int availablePayloadType = pickAvailablePayloadType();
     unsigned i = 0;
@@ -753,25 +743,8 @@ GRefPtr<GstPad> GStreamerMediaEndpoint::requestPad(std::optional<unsigned> mLine
         i++;
     }
 
-    auto requestPad = [&](const String& padId) -> GRefPtr<GstPad> {
-        if (padId == "sink_%u"_s)
-            return adoptGRef(gst_element_request_pad_simple(m_webrtcBin.get(), padId.ascii().data()));
-
-        // FIXME: Restricting caps and codec-preferences breaks caps negotiation of outgoing sources
-        // in some cases.
-        GST_DEBUG_OBJECT(m_pipeline.get(), "Requesting pad %s restricted to %" GST_PTR_FORMAT, padId.ascii().data(), caps.get());
-        auto* padTemplate = gst_element_get_pad_template(m_webrtcBin.get(), "sink_%u");
-        return adoptGRef(gst_element_request_pad(m_webrtcBin.get(), padTemplate, padId.ascii().data(), caps.get()));
-    };
-
-    GRefPtr<GstPad> sinkPad;
-    if (mLineIndex) {
-        auto padId = makeString("sink_"_s, *mLineIndex);
-        sinkPad = adoptGRef(gst_element_get_static_pad(m_webrtcBin.get(), padId.ascii().data()));
-        if (!sinkPad)
-            sinkPad = requestPad(padId);
-    } else
-        sinkPad = requestPad("sink_%u"_s);
+    auto padTemplate = gst_element_get_pad_template(m_webrtcBin.get(), "sink_%u");
+    auto sinkPad = adoptGRef(gst_element_request_pad(m_webrtcBin.get(), padTemplate, nullptr, caps.get()));
 
     GST_DEBUG_OBJECT(m_pipeline.get(), "Setting msid to %s on sink pad %" GST_PTR_FORMAT, mediaStreamID.ascii().data(), sinkPad.get());
     if (gstObjectHasProperty(sinkPad.get(), "msid"))
@@ -906,7 +879,7 @@ void GStreamerMediaEndpoint::initiate(bool isInitiator, GstStructure* rawOptions
 void GStreamerMediaEndpoint::getStats(GstPad* pad, const GstStructure* additionalStats, Ref<DeferredPromise>&& promise)
 {
     GUniquePtr<GstStructure> aggregatedStats(additionalStats ? gst_structure_copy(additionalStats) : gst_structure_new_empty("stats"));
-    for (auto& processor : m_trackProcessors) {
+    for (auto& processor : m_trackProcessors.values()) {
         if (pad && pad != processor->pad())
             continue;
 
@@ -951,7 +924,7 @@ void GStreamerMediaEndpoint::getStats(RTCRtpReceiver& receiver, Ref<DeferredProm
         // The incoming source bin is not linked yet, so look for a matching upstream track processor.
         GstPad* pad = nullptr;
         const auto& trackId = receiver.track().id();
-        for (auto& processor : m_trackProcessors) {
+        for (auto& processor : m_trackProcessors.values()) {
             if (processor->trackId() != trackId)
                 continue;
             pad = processor->pad();
@@ -1035,13 +1008,12 @@ void GStreamerMediaEndpoint::connectIncomingTrack(WebRTCTrackData& data)
     auto& mediaStream = mediaStreamFromRTCStream(data.mediaStreamId);
     mediaStream.addTrackFromPlatform(track);
 
-    for (auto& processor : m_trackProcessors) {
+    for (auto& processor : m_trackProcessors.values()) {
         if (!processor->isReady())
             return;
     }
 
     GST_DEBUG_OBJECT(m_pipeline.get(), "Incoming streams gathered, now dispatching track events");
-    m_pendingIncomingStreams = 0;
     m_peerConnectionBackend.dispatchPendingTrackEvents(mediaStream);
     gst_element_set_state(m_pipeline.get(), GST_STATE_PLAYING);
 
@@ -1053,9 +1025,12 @@ void GStreamerMediaEndpoint::connectIncomingTrack(WebRTCTrackData& data)
 
 void GStreamerMediaEndpoint::connectPad(GstPad* pad)
 {
-    m_pendingIncomingStreams++;
+    GRefPtr<GstWebRTCRTPTransceiver> transceiver;
+    g_object_get(pad, "transceiver", &transceiver.outPtr(), nullptr);
 
-    auto trackProcessor = GStreamerIncomingTrackProcessor::create(ThreadSafeWeakPtr { *this }, GRefPtr<GstPad>(pad));
+    auto trackProcessor = m_trackProcessors.get(transceiver);
+    trackProcessor->configure(ThreadSafeWeakPtr { *this }, GRefPtr<GstPad>(pad));
+
     auto bin = trackProcessor->bin();
     gst_bin_add(GST_BIN_CAST(m_pipeline.get()), bin);
 
@@ -1063,7 +1038,6 @@ void GStreamerMediaEndpoint::connectPad(GstPad* pad)
     gst_pad_link(pad, sinkPad.get());
     gst_element_sync_state_with_parent(bin);
 
-    m_trackProcessors.append(WTFMove(trackProcessor));
 #ifndef GST_DISABLE_GST_DEBUG
     auto dotFileName = makeString(GST_OBJECT_NAME(m_pipeline.get()), ".pending-"_s, GST_OBJECT_NAME(pad));
     GST_DEBUG_BIN_TO_DOT_FILE_WITH_TS(GST_BIN(m_pipeline.get()), GST_DEBUG_GRAPH_SHOW_ALL, dotFileName.utf8().data());
@@ -1092,6 +1066,9 @@ int GStreamerMediaEndpoint::pickAvailablePayloadType()
 
         GRefPtr<GstCaps> codecPreferences;
         g_object_get(current, "codec-preferences", &codecPreferences.outPtr(), nullptr);
+        if (!codecPreferences)
+            continue;
+
         gst_caps_foreach(codecPreferences.get(), reinterpret_cast<GstCapsForeachFunc>(+[](GstCapsFeatures*, GstStructure* structure, gpointer data) -> gboolean {
             int payloadType;
             if (!gst_structure_get_int(structure, "payload", &payloadType))
@@ -1295,7 +1272,7 @@ void GStreamerMediaEndpoint::addIceCandidate(GStreamerIceCandidate& candidate, P
     }
 
     // https://gitlab.freedesktop.org/gstreamer/gstreamer/-/merge_requests/3960
-    if (webkitGstCheckVersion(1, 23, 0)) {
+    if (webkitGstCheckVersion(1, 24, 0)) {
         auto* data = createAddIceCandidateCallData();
         data->webrtcBin = m_webrtcBin;
         data->callback = WTFMove(callback);
@@ -1518,16 +1495,10 @@ void GStreamerMediaEndpoint::onIceCandidate(guint sdpMLineIndex, gchararray cand
         return;
 
     auto candidateString = makeString(candidate);
-    if (candidateString.isEmpty()) {
-        callOnMainThread([protectedThis = Ref(*this), this] {
-            if (isStopped())
-                return;
-            // webrtcbin notifies an empty ICE candidate when gathering is complete.
-            GST_DEBUG_OBJECT(m_pipeline.get(), "Signaling end-of-candidates");
-            m_peerConnectionBackend.doneGatheringCandidates();
-        });
+
+    // webrtcbin notifies an empty ICE candidate when gathering is complete.
+    if (candidateString.isEmpty())
         return;
-    }
 
     callOnMainThread([protectedThis = Ref(*this), this, sdp = WTFMove(candidateString), sdpMLineIndex]() mutable {
         if (isStopped())
@@ -1600,6 +1571,9 @@ void GStreamerMediaEndpoint::collectTransceivers()
 
     for (unsigned i = 0; i < transceivers->len; i++) {
         auto current = adoptGRef(g_array_index(transceivers, GstWebRTCRTPTransceiver*, i));
+        m_trackProcessors.ensure(GRefPtr(current), [] {
+            return GStreamerIncomingTrackProcessor::create();
+        });
         auto* existingTransceiver = m_peerConnectionBackend.existingTransceiver([&](auto& transceiverBackend) {
             return current == transceiverBackend.rtcTransceiver();
         });

@@ -28,14 +28,14 @@
 #if PLATFORM(IOS_FAMILY)
 
 #import "UIScriptControllerCocoa.h"
-#import "WKSEDefinitions.h"
+#import "WKBrowserEngineDefinitions.h"
 #import <wtf/BlockPtr.h>
 
 typedef struct CGRect CGRect;
 OBJC_CLASS UITextSelectionDisplayInteraction;
 
 @protocol UICoordinateSpace;
-@protocol WKSETextInput;
+@protocol BETextInput;
 
 namespace WebCore {
 class FloatPoint;
@@ -56,6 +56,7 @@ private:
     void doAfterNextStablePresentationUpdate(JSValueRef) override;
     void ensurePositionInformationIsUpToDateAt(long x, long y, JSValueRef) override;
     void doAfterVisibleContentRectUpdate(JSValueRef) override;
+    void doAfterNextVisibleContentRectAndStablePresentationUpdate(JSValueRef) override;
     void doAfterDoubleTapDelay(JSValueRef) override;
     void zoomToScale(double scale, JSValueRef) override;
     void retrieveSpeakSelectionContent(JSValueRef) override;
@@ -205,8 +206,8 @@ private:
 
     void clipSelectionViewRectToContentView(CGRect&) const;
 
-#if HAVE(UI_ASYNC_TEXT_INTERACTION)
-    id<WKSETextInput> asyncTextInput() const;
+#if USE(BROWSERENGINEKIT)
+    id<BETextInput> asyncTextInput() const;
 #endif
 
 #if HAVE(UI_TEXT_SELECTION_DISPLAY_INTERACTION)

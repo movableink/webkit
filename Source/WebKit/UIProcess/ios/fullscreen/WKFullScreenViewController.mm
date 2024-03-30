@@ -39,8 +39,10 @@
 #import "WebPageProxy.h"
 #import "WebPreferences.h"
 #import <WebCore/LocalizedStrings.h>
-#import <WebCore/VideoFullscreenInterfaceIOS.h>
+#import <WebCore/PlaybackSessionInterfaceAVKit.h>
+#import <WebCore/VideoPresentationInterfaceAVKit.h>
 #import <pal/spi/cocoa/AVKitSPI.h>
+#import <wtf/MonotonicTime.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/WeakObjCPtr.h>
 
@@ -48,13 +50,10 @@
 #import "MRUIKitSPI.h"
 #endif
 
-namespace WebCore {
-class PlaybackSessionInterfaceAVKit;
-}
-
 static const NSTimeInterval showHideAnimationDuration = 0.1;
 static const NSTimeInterval pipHideAnimationDuration = 0.2;
 static const NSTimeInterval autoHideDelay = 4.0;
+static const Seconds bannerMinimumHideDelay = 1_s;
 
 @class WKFullscreenStackView;
 
@@ -78,7 +77,7 @@ public:
             controller.pictureInPictureActive = active;
     }
 
-    void setInterface(WebCore::PlaybackSessionInterfaceAVKit* interface)
+    void setInterface(WebCore::PlaybackSessionInterfaceIOS* interface)
     {
         if (m_interface == interface)
             return;
@@ -92,7 +91,7 @@ public:
 
 private:
     WeakObjCPtr<WKFullScreenViewController> m_parent;
-    RefPtr<WebCore::PlaybackSessionInterfaceAVKit> m_interface;
+    RefPtr<WebCore::PlaybackSessionInterfaceIOS> m_interface;
 };
 
 #pragma mark - _WKInsetLabel
@@ -133,6 +132,8 @@ private:
 #if ENABLE(FULLSCREEN_DISMISSAL_GESTURES)
     RetainPtr<UIStackView> _banner;
     RetainPtr<_WKInsetLabel> _bannerLabel;
+    RetainPtr<UITapGestureRecognizer> _bannerTapToDismissRecognizer;
+    MonotonicTime _bannerMinimumHideDelayTime;
 #endif
     RetainPtr<WKExtrinsicButton> _cancelButton;
     RetainPtr<WKExtrinsicButton> _pipButton;
@@ -147,6 +148,7 @@ private:
     BOOL _isShowingMenu;
 #if PLATFORM(VISION)
     RetainPtr<WKExtrinsicButton> _moreActionsButton;
+    RetainPtr<WKExtrinsicButton> _enterVideoFullscreenButton;
     BOOL _shouldHideCustomControls;
     BOOL _isInteractingWithSystemChrome;
 #endif
@@ -260,8 +262,6 @@ ALLOW_DEPRECATED_DECLARATIONS_END
             [NSLayoutConstraint deactivateConstraints:@[_topConstraint.get()]];
         _topConstraint = [[_topGuide topAnchor] constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor];
         [_topConstraint setActive:YES];
-        if (auto* manager = self._manager)
-            manager->setFullscreenControlsHidden(false);
     }];
 }
 
@@ -287,8 +287,6 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         [_stackView setAlpha:0];
         self.prefersStatusBarHidden = YES;
         self.prefersHomeIndicatorAutoHidden = YES;
-        if (auto* manager = self._manager)
-            manager->setFullscreenControlsHidden(true);
     } completion:^(BOOL finished) {
         if (!finished)
             return;
@@ -307,6 +305,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         [_banner setHidden:NO];
         [_banner setAlpha:1];
     }];
+
+    _bannerMinimumHideDelayTime = MonotonicTime::now() + bannerMinimumHideDelay;
 
     [self performSelector:@selector(hideBanner) withObject:nil afterDelay:autoHideDelay];
 #endif
@@ -328,13 +328,26 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 #endif
 }
 
+#if ENABLE(FULLSCREEN_DISMISSAL_GESTURES)
+- (void)_bannerDismissalRecognized:(NSNotification*)notification
+{
+    auto remainingDelay = _bannerMinimumHideDelayTime - MonotonicTime::now();
+    if (remainingDelay <= 0_s) {
+        [self hideBanner];
+        return;
+    }
+
+    [self performSelector:@selector(hideBanner) withObject:nil afterDelay:remainingDelay.seconds()];
+}
+#endif
+
 - (void)videoControlsManagerDidChange
 {
     ASSERT(_valid);
     auto page = [self._webView _page];
     auto* videoPresentationManager = page ? page->videoPresentationManager() : nullptr;
-    auto* videoFullscreenInterface = videoPresentationManager ? videoPresentationManager->controlsManagerInterface() : nullptr;
-    auto* playbackSessionInterface = videoFullscreenInterface ? &videoFullscreenInterface->playbackSessionInterface() : nullptr;
+    auto* videoPresentationInterface = videoPresentationManager ? videoPresentationManager->controlsManagerInterface() : nullptr;
+    auto* playbackSessionInterface = videoPresentationInterface ? &videoPresentationInterface->playbackSessionInterface() : nullptr;
 
     _playbackClient.setInterface(playbackSessionInterface);
 
@@ -392,6 +405,11 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 #endif // PLATFORM(VISION)
 
++ (NSSet<NSString *> *)keyPathsForValuesAffectingAdditionalSafeAreaInsets
+{
+    return [NSSet setWithObjects:@"prefersStatusBarHidden", @"view.window.windowScene.statusBarManager.statusBarHidden", @"view.window.safeAreaInsets", nil];
+}
+
 - (UIEdgeInsets)additionalSafeAreaInsets
 {
     // When the status bar hides, the resulting changes to safeAreaInsets cause
@@ -399,6 +417,11 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
     // Do not add additional insets if the status bar is not hidden.
     if (!self.view.window.windowScene.statusBarManager.statusBarHidden)
+        return UIEdgeInsetsZero;
+
+    // If the status bar is hidden while would would prefer it not be,
+    // we should not reserve space as it likely won't re-appear.
+    if (!self.prefersStatusBarHidden)
         return UIEdgeInsetsZero;
 
     // Additionally, hiding the status bar does not reduce safeAreaInsets when
@@ -543,12 +566,22 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         [_moreActionsButton setMenu:self._webView.fullScreenWindowSceneDimmingAction];
         [_moreActionsButton setShowsMenuAsPrimaryAction:YES];
         [_moreActionsButton setImage:[[UIImage systemImageNamed:@"ellipsis"] imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate] forState:UIControlStateNormal];
+
+        _enterVideoFullscreenButton = [self _createButtonWithExtrinsicContentSize:buttonSize];
+        [_enterVideoFullscreenButton setConfiguration:cancelButtonConfiguration];
+        [_enterVideoFullscreenButton setImage:[[UIImage systemImageNamed:@"video"] imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate] forState:UIControlStateNormal];
+        [_enterVideoFullscreenButton sizeToFit];
+        [_enterVideoFullscreenButton addTarget:self action:@selector(_enterVideoFullscreenAction:) forControlEvents:UIControlEventTouchUpInside];
 #endif
 
         _stackView = adoptNS([[UIStackView alloc] init]);
         [_stackView addArrangedSubview:_cancelButton.get()];
         [_stackView addArrangedSubview:_pipButton.get()];
 #if PLATFORM(VISION)
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+        if (self._webView._page->preferences().linearMediaPlayerEnabled())
+            [_stackView addArrangedSubview:_enterVideoFullscreenButton.get()];
+#endif
         [_stackView addArrangedSubview:_moreActionsButton.get()];
 #endif
         [_stackView setSpacing:24.0];
@@ -588,6 +621,11 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     [banner addArrangedSubview:_bannerLabel.get() applyingMaterialStyle:AVBackgroundViewMaterialStyleSecondary tintEffectStyle:AVBackgroundViewTintEffectStyleSecondary];
 #endif
     _banner = WTFMove(banner);
+
+    _bannerTapToDismissRecognizer = adoptNS([[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(_bannerDismissalRecognized:)]);
+    [_bannerTapToDismissRecognizer setDelegate:self];
+    [_banner addGestureRecognizer:_bannerTapToDismissRecognizer.get()];
+
     [_banner setTranslatesAutoresizingMaskIntoConstraints:NO];
 
     [_animatingView addSubview:_banner.get()];
@@ -609,7 +647,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         _topConstraint.get(),
         stackViewToTopGuideConstraint,
 #if ENABLE(FULLSCREEN_DISMISSAL_GESTURES)
-        [[_banner centerYAnchor] constraintEqualToAnchor:self.view.centerYAnchor],
+        [[_banner topAnchor] constraintEqualToSystemSpacingBelowAnchor:[_stackView bottomAnchor] multiplier:3],
         [[_banner centerXAnchor] constraintEqualToAnchor:self.view.centerXAnchor],
 #endif
         [[_stackView leadingAnchor] constraintEqualToAnchor:margins.leadingAnchor],
@@ -750,6 +788,28 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         return;
 
     playbackSessionModel->togglePictureInPicture();
+}
+
+- (void)_enterVideoFullscreenAction:(id)sender
+{
+    ASSERT(_valid);
+    RefPtr page = [self._webView _page].get();
+    if (!page)
+        return;
+
+    RefPtr playbackSessionManager = page->playbackSessionManager();
+    if (!playbackSessionManager)
+        return;
+
+    RefPtr playbackSessionInterface = playbackSessionManager->controlsManagerInterface();
+    if (!playbackSessionInterface)
+        return;
+
+    auto playbackSessionModel = playbackSessionInterface->playbackSessionModel();
+    if (!playbackSessionModel)
+        return;
+
+    playbackSessionModel->enterFullscreen();
 }
 
 - (void)_touchDetected:(id)sender

@@ -60,15 +60,6 @@
 #include <WebCore/CurlProxySettings.h>
 #endif
 
-#if ENABLE(WIRELESS_PLAYBACK_TARGET)
-#include <WebCore/MediaPlaybackTargetContext.h>
-#endif
-
-#if ENABLE(ENCRYPTED_MEDIA)
-#include <WebCore/CDMInstance.h>
-#include <WebCore/CDMInstanceSession.h>
-#endif
-
 #if PLATFORM(IOS_FAMILY)
 #include <WebCore/InspectorOverlay.h>
 #endif
@@ -90,21 +81,13 @@
 #include <WebCore/MockContentFilterSettings.h>
 #endif
 
-#if PLATFORM(COCOA)
-#include "ArgumentCodersCF.h"
-#endif
-
-OBJC_CLASS VKCImageAnalysis;
-
 #if USE(AVFOUNDATION)
 typedef struct __CVBuffer* CVPixelBufferRef;
 #endif
 
 namespace WebCore {
 
-class AppKitControlSystemImage;
 class BlobPart;
-class ControlPart;
 class Credential;
 class Cursor;
 class FilterEffect;
@@ -117,8 +100,6 @@ class FontPlatformData;
 class FragmentedSharedBuffer;
 class PaymentInstallmentConfiguration;
 class PixelBuffer;
-class ResourceError;
-class ScriptBuffer;
 class SerializedScriptValue;
 class SharedBuffer;
 class StickyPositionViewportConstraints;
@@ -140,18 +121,7 @@ struct Record;
 
 namespace IPC {
 
-template<> struct ArgumentCoder<WebCore::Credential> {
-    static void encode(Encoder&, const WebCore::Credential&);
-    static WARN_UNUSED_RETURN bool decode(Decoder&, WebCore::Credential&);
-    static void encodePlatformData(Encoder&, const WebCore::Credential&);
-    static WARN_UNUSED_RETURN bool decodePlatformData(Decoder&, WebCore::Credential&);
-};
-
-template<> struct ArgumentCoder<WebCore::Image> {
-    static void encode(Encoder&, const WebCore::Image&);
-    static std::optional<Ref<WebCore::Image>> decode(Decoder&);
-};
-
+#if !USE(CORE_TEXT)
 template<> struct ArgumentCoder<WebCore::Font> {
     static void encode(Encoder&, const WebCore::Font&);
     static std::optional<Ref<WebCore::Font>> decode(Decoder&);
@@ -159,33 +129,17 @@ template<> struct ArgumentCoder<WebCore::Font> {
     static std::optional<WebCore::FontPlatformData> decodePlatformData(Decoder&);
 };
 
-template<> struct ArgumentCoder<WebCore::FontPlatformData::Attributes> {
-    static void encode(Encoder&, const WebCore::FontPlatformData::Attributes&);
-    static std::optional<WebCore::FontPlatformData::Attributes> decode(Decoder&);
-    static void encodePlatformData(Encoder&, const WebCore::FontPlatformData::Attributes&);
-    static WARN_UNUSED_RETURN bool decodePlatformData(Decoder&, WebCore::FontPlatformData::Attributes&);
+template<> struct ArgumentCoder<WebCore::FontPlatformDataAttributes> {
+    static void encode(Encoder&, const WebCore::FontPlatformDataAttributes&);
+    static std::optional<WebCore::FontPlatformDataAttributes> decode(Decoder&);
+    static void encodePlatformData(Encoder&, const WebCore::FontPlatformDataAttributes&);
+    static WARN_UNUSED_RETURN bool decodePlatformData(Decoder&, WebCore::FontPlatformDataAttributes&);
 };
 
 template<> struct ArgumentCoder<WebCore::FontCustomPlatformData> {
     static void encode(Encoder&, const WebCore::FontCustomPlatformData&);
     static std::optional<Ref<WebCore::FontCustomPlatformData>> decode(Decoder&);
 };
-
-template<> struct ArgumentCoder<WebCore::ResourceError> {
-    static void encode(Encoder&, const WebCore::ResourceError&);
-    static WARN_UNUSED_RETURN bool decode(Decoder&, WebCore::ResourceError&);
-    static void encodePlatformData(Encoder&, const WebCore::ResourceError&);
-    static WARN_UNUSED_RETURN bool decodePlatformData(Decoder&, WebCore::ResourceError&);
-};
-
-#if USE(APPKIT)
-
-template<> struct ArgumentCoder<WebCore::AppKitControlSystemImage> {
-    template<typename Encoder>
-    static void encode(Encoder&, const WebCore::AppKitControlSystemImage&);
-    static std::optional<Ref<WebCore::AppKitControlSystemImage>> decode(Decoder&);
-};
-
 #endif
 
 #if USE(SOUP)
@@ -202,126 +156,7 @@ template<> struct ArgumentCoder<WebCore::CurlProxySettings> {
 };
 #endif
 
-#if !USE(COORDINATED_GRAPHICS)
-template<> struct ArgumentCoder<WebCore::FilterOperations> {
-    static void encode(Encoder&, const WebCore::FilterOperations&);
-    static WARN_UNUSED_RETURN bool decode(Decoder&, WebCore::FilterOperations&);
-};
-#endif
-
-#if ENABLE(WIRELESS_PLAYBACK_TARGET)
-template<> struct ArgumentCoder<WebCore::MediaPlaybackTargetContext> {
-    static void encode(Encoder&, const WebCore::MediaPlaybackTargetContext&);
-    static WARN_UNUSED_RETURN bool decode(Decoder&, WebCore::MediaPlaybackTargetContext&);
-    static void encodePlatformData(Encoder&, const WebCore::MediaPlaybackTargetContext&);
-    static WARN_UNUSED_RETURN bool decodePlatformData(Decoder&, WebCore::MediaPlaybackTargetContext::Type, WebCore::MediaPlaybackTargetContext&);
-};
-#endif
-
-#if ENABLE(APPLE_PAY)
-
-template<> struct ArgumentCoder<WebCore::Payment> {
-    static void encode(Encoder&, const WebCore::Payment&);
-    static std::optional<WebCore::Payment> decode(Decoder&);
-};
-
-template<> struct ArgumentCoder<WebCore::PaymentContact> {
-    static void encode(Encoder&, const WebCore::PaymentContact&);
-    static std::optional<WebCore::PaymentContact> decode(Decoder&);
-};
-
-template<> struct ArgumentCoder<WebCore::PaymentMerchantSession> {
-    static void encode(Encoder&, const WebCore::PaymentMerchantSession&);
-    static std::optional<WebCore::PaymentMerchantSession> decode(Decoder&);
-};
-
-template<> struct ArgumentCoder<WebCore::ApplePaySessionPaymentRequest> {
-    static void encode(Encoder&, const WebCore::ApplePaySessionPaymentRequest&);
-    static WARN_UNUSED_RETURN bool decode(Decoder&, WebCore::ApplePaySessionPaymentRequest&);
-};
-template<> struct ArgumentCoder<WebCore::ApplePaySessionPaymentRequest::ContactFields> {
-    static void encode(Encoder&, const WebCore::ApplePaySessionPaymentRequest::ContactFields&);
-    static WARN_UNUSED_RETURN bool decode(Decoder&, WebCore::ApplePaySessionPaymentRequest::ContactFields&);
-};
-
-template<> struct ArgumentCoder<WebCore::ApplePaySessionPaymentRequest::MerchantCapabilities> {
-    static void encode(Encoder&, const WebCore::ApplePaySessionPaymentRequest::MerchantCapabilities&);
-    static WARN_UNUSED_RETURN bool decode(Decoder&, WebCore::ApplePaySessionPaymentRequest::MerchantCapabilities&);
-};
-
-template<> struct ArgumentCoder<WebCore::PaymentSessionError> {
-    static void encode(Encoder&, const WebCore::PaymentSessionError&);
-    static std::optional<WebCore::PaymentSessionError> decode(Decoder&);
-};
-
-#endif
-
-#if ENABLE(VIDEO)
-template<> struct ArgumentCoder<WebCore::SerializedPlatformDataCueValue> {
-    static void encode(Encoder&, const WebCore::SerializedPlatformDataCueValue&);
-    static std::optional<WebCore::SerializedPlatformDataCueValue> decode(Decoder&);
-    static void encodePlatformData(Encoder&, const WebCore::SerializedPlatformDataCueValue&);
-    static std::optional<WebCore::SerializedPlatformDataCueValue> decodePlatformData(Decoder&, WebCore::SerializedPlatformDataCueValue::PlatformType);
-};
-#endif
-
-template<> struct ArgumentCoder<WebCore::FragmentedSharedBuffer> {
-    static void encode(Encoder&, const WebCore::FragmentedSharedBuffer&);
-    static std::optional<Ref<WebCore::FragmentedSharedBuffer>> decode(Decoder&);
-};
-
-template<> struct ArgumentCoder<WebCore::SharedBuffer> {
-    static void encode(Encoder&, const WebCore::SharedBuffer&);
-    static std::optional<Ref<WebCore::SharedBuffer>> decode(Decoder&);
-};
-
-template<> struct ArgumentCoder<WebCore::ScriptBuffer> {
-    static void encode(Encoder&, const WebCore::ScriptBuffer&);
-    static std::optional<WebCore::ScriptBuffer> decode(Decoder&);
-};
-
-template<> struct ArgumentCoder<WebCore::ControlPart> {
-    template<typename Encoder>
-    static void encode(Encoder&, const WebCore::ControlPart&);
-    static std::optional<Ref<WebCore::ControlPart>> decode(Decoder&);
-};
-
-#if ENABLE(DATA_DETECTION)
-
-template<> struct ArgumentCoder<WebCore::DataDetectorElementInfo> {
-    static void encode(Encoder&, const WebCore::DataDetectorElementInfo&);
-    static std::optional<WebCore::DataDetectorElementInfo> decode(Decoder&);
-};
-
-#endif
-
-#if ENABLE(ENCRYPTED_MEDIA)
-template<> struct ArgumentCoder<WebCore::CDMInstanceSession::Message> {
-    static void encode(Encoder&, const WebCore::CDMInstanceSession::Message&);
-    static std::optional<WebCore::CDMInstanceSession::Message> decode(Decoder&);
-};
-#endif
-
-#if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
-
-template<> struct ArgumentCoder<RetainPtr<VKCImageAnalysis>> {
-    static void encode(Encoder&, const RetainPtr<VKCImageAnalysis>&);
-    static WARN_UNUSED_RETURN std::optional<RetainPtr<VKCImageAnalysis>> decode(Decoder&);
-};
-
-#endif // ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
-
-#if USE(AVFOUNDATION)
-
-template<> struct ArgumentCoder<RetainPtr<CVPixelBufferRef>> {
-    static void encode(Encoder&, const RetainPtr<CVPixelBufferRef>&);
-    static std::optional<RetainPtr<CVPixelBufferRef>> decode(Decoder&);
-};
-
-#endif
-
 } // namespace IPC
-
 namespace WTF {
 
 #if USE(CURL)

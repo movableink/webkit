@@ -101,17 +101,19 @@ static ConstantValue zeroValue(const Type* type)
             return result;
         },
         [&](const Types::Array& array) -> ConstantValue {
-            ASSERT(array.size.has_value());
-            ConstantArray result(*array.size);
+            ASSERT(std::holds_alternative<unsigned>(array.size));
+            auto size = std::get<unsigned>(array.size);
+            ConstantArray result(size);
             auto value = zeroValue(array.element);
-            for (unsigned i = 0; i < array.size; ++i)
+            for (unsigned i = 0; i < size; ++i)
                 result.elements[i] = value;
             return result;
         },
-        [&](const Types::Struct&) -> ConstantValue {
-            // FIXME: this is valid and needs to be implemented, but we don't
-            // yet have ConstantStruct
-            RELEASE_ASSERT_NOT_REACHED();
+        [&](const Types::Struct& structType) -> ConstantValue {
+            HashMap<String, ConstantValue> constantFields;
+            for (auto& [key, type] : structType.fields)
+                constantFields.set(key, zeroValue(type));
+            return ConstantStruct { WTFMove(constantFields) };
         },
         [&](const Types::PrimitiveStruct&) -> ConstantValue {
             // Primitive structs can't be zero initialized
@@ -695,11 +697,26 @@ CONSTANT_FUNCTION(BitwiseShiftLeft)
     // i.e. we accept (u32, u32) as well as (i32, u32)
     UNUSED_PARAM(resultType);
     ASSERT(arguments.size() == 2);
-    const auto& shift = [&]<typename T>(T left, uint32_t right) -> T {
-        return left << right;
+    const auto& shift = [&]<typename T>(T left, uint32_t right) -> ConstantResult {
+        constexpr auto bitSize = sizeof(T) * 8;
+        if (right >= bitSize)
+            return makeUnexpected(makeString("shift left value must be less than the bit width of the shifted value, which is ", String::number(bitSize)));
+
+        if constexpr (std::is_unsigned_v<T>) {
+            uint32_t mask = -1 << (bitSize - right);
+            if (left & mask)
+                return makeUnexpected("shift left overflows"_s);
+        } else {
+            uint32_t mask = -1 << (bitSize - (right + 1));
+            auto leftBits = left & mask;
+            if (leftBits && leftBits != mask)
+                return makeUnexpected("shift left overflows"_s);
+        }
+
+        return { left << right };
     };
 
-    return scalarOrVector([&](const auto& left, const auto& rightValue) -> ConstantValue {
+    return scalarOrVector([&](const auto& left, const auto& rightValue) -> ConstantResult {
         auto right = std::get<uint32_t>(rightValue);
         if (auto* i32 = std::get_if<int32_t>(&left))
             return shift(*i32, right);
@@ -717,11 +734,14 @@ CONSTANT_FUNCTION(BitwiseShiftRight)
     // i.e. we accept (u32, u32) as well as (i32, u32)
     UNUSED_PARAM(resultType);
     ASSERT(arguments.size() == 2);
-    const auto& shift = [&]<typename T>(T left, uint32_t right) {
-        return left >> right;
+    const auto& shift = [&]<typename T>(T left, uint32_t right) -> ConstantResult {
+        constexpr auto bitSize = sizeof(T) * 8;
+        if (right >= bitSize)
+            return makeUnexpected(makeString("shift right value must be less than the bit width of the shifted value, which is ", String::number(bitSize)));
+        return { left >> right };
     };
 
-    return scalarOrVector([&](const auto& left, const auto& rightValue) -> ConstantValue {
+    return scalarOrVector([&](const auto& left, const auto& rightValue) -> ConstantResult {
         auto right = std::get<uint32_t>(rightValue);
         if (auto* i32 = std::get_if<int32_t>(&left))
             return shift(*i32, right);
@@ -1651,6 +1671,11 @@ CONSTANT_FUNCTION(Bitcast)
             if (!i32)
                 return { makeString("value ", String::number(*abstractInt), " cannot be represented as 'i32'") };
             value = bitwise_cast<uint32_t>(*i32);
+        } else if (auto* abstractFloat = std::get_if<double>(&argument)) {
+            auto f32 = convertFloat<float>(*abstractFloat);
+            if (!f32)
+                return { makeString("value ", String::number(*abstractFloat), " cannot be represented as 'f32'") };
+            value = bitwise_cast<uint32_t>(*f32);
         } else {
             RELEASE_ASSERT_NOT_REACHED();
             value = 0;
@@ -1718,6 +1743,14 @@ CONSTANT_FUNCTION(Bitcast)
             return makeUnexpected(makeString("value ", String::number(*abstractInt), " cannot be represented as 'i32'"));
         return { convertValue<BitwiseCast>(resultType, *result) };
     }
+
+    if (auto* abstractFloat = std::get_if<double>(&argument)) {
+        auto result = convertFloat<float>(*abstractFloat);
+        if (!result.has_value())
+            return makeUnexpected(makeString("value ", String::number(*abstractFloat), " cannot be represented as 'f32'"));
+        return { convertValue<BitwiseCast>(resultType, *result) };
+    }
+
     return { convertValue<BitwiseCast>(resultType, argument) };
 }
 

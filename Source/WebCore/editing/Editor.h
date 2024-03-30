@@ -109,6 +109,7 @@ enum class MailBlockquoteHandling : bool {
 };
 
 #if ENABLE(ATTACHMENT_ELEMENT)
+class AttachmentAssociatedElement;
 class HTMLAttachmentElement;
 #endif
 
@@ -550,6 +551,10 @@ public:
     WEBCORE_EXPORT void readSelectionFromPasteboard(const String& pasteboardName);
     WEBCORE_EXPORT void replaceNodeFromPasteboard(Node&, const String& pasteboardName, EditAction = EditAction::Paste);
 
+#if ENABLE(MULTI_REPRESENTATION_HEIC)
+    WEBCORE_EXPORT void insertMultiRepresentationHEIC(const std::span<const uint8_t>&);
+#endif
+
     static RefPtr<SharedBuffer> dataInRTFDFormat(NSAttributedString *);
     static RefPtr<SharedBuffer> dataInRTFFormat(NSAttributedString *);
 #endif
@@ -585,7 +590,7 @@ public:
     void registerAttachmentIdentifier(const String&, const String& contentType, const String& preferredFileName, Ref<FragmentedSharedBuffer>&& fileData);
     void registerAttachments(Vector<SerializedAttachmentData>&&);
     void registerAttachmentIdentifier(const String&, const String& contentType, const String& filePath);
-    void registerAttachmentIdentifier(const String&, const HTMLImageElement&);
+    void registerAttachmentIdentifier(const String&, const AttachmentAssociatedElement&);
     void cloneAttachmentData(const String& fromIdentifier, const String& toIdentifier);
     void didInsertAttachmentElement(HTMLAttachmentElement&);
     void didRemoveAttachmentElement(HTMLAttachmentElement&);

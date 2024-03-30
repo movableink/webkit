@@ -291,11 +291,11 @@ bool WebExtensionAPIMenus::parseCreateAndUpdateProperties(ForUpdate forUpdate, N
     return true;
 }
 
-id WebExtensionAPIMenus::createMenu(WebPage* page, NSDictionary *properties, Ref<WebExtensionCallbackHandler>&& callback, NSString **outExceptionString)
+id WebExtensionAPIMenus::createMenu(WebPage& page, NSDictionary *properties, Ref<WebExtensionCallbackHandler>&& callback, NSString **outExceptionString)
 {
     // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/menus/create
 
-    m_pageProxyIdentifier = page->webPageProxyIdentifier();
+    m_pageProxyIdentifier = page.webPageProxyIdentifier();
 
     std::optional<WebExtensionMenuItemParameters> parameters;
     RefPtr<WebExtensionCallbackHandler> clickCallback;
@@ -305,9 +305,9 @@ id WebExtensionAPIMenus::createMenu(WebPage* page, NSDictionary *properties, Ref
     if (parameters.value().identifier.isEmpty())
         parameters.value().identifier = createVersion4UUIDString();
 
-    WebProcess::singleton().sendWithAsyncReply(Messages::WebExtensionContext::MenusCreate(parameters.value()), [this, protectedThis = Ref { *this }, callback = WTFMove(callback), clickCallback = WTFMove(clickCallback), identifier = parameters.value().identifier](std::optional<String> error) mutable {
-        if (error) {
-            callback->reportError(error.value());
+    WebProcess::singleton().sendWithAsyncReply(Messages::WebExtensionContext::MenusCreate(parameters.value()), [this, protectedThis = Ref { *this }, callback = WTFMove(callback), clickCallback = WTFMove(clickCallback), identifier = parameters.value().identifier](Expected<void, WebExtensionError>&& result) mutable {
+        if (!result) {
+            callback->reportError(result.error());
             return;
         }
 
@@ -324,11 +324,11 @@ id WebExtensionAPIMenus::createMenu(WebPage* page, NSDictionary *properties, Ref
     return toMenuIdentifierWebAPI(parameters.value().identifier);
 }
 
-void WebExtensionAPIMenus::update(WebPage* page, id identifier, NSDictionary *properties, Ref<WebExtensionCallbackHandler>&& callback, NSString **outExceptionString)
+void WebExtensionAPIMenus::update(WebPage& page, id identifier, NSDictionary *properties, Ref<WebExtensionCallbackHandler>&& callback, NSString **outExceptionString)
 {
     // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/menus/update
 
-    m_pageProxyIdentifier = page->webPageProxyIdentifier();
+    m_pageProxyIdentifier = page.webPageProxyIdentifier();
 
     if (!validateObject(identifier, @"identifier", [NSOrderedSet orderedSetWithObjects:NSString.class, NSNumber.class, nil], outExceptionString))
         return;
@@ -341,9 +341,9 @@ void WebExtensionAPIMenus::update(WebPage* page, id identifier, NSDictionary *pr
     if (NSNumber *identifierNumber = dynamic_objc_cast<NSNumber>(identifier))
         identifier = identifierNumber.stringValue;
 
-    WebProcess::singleton().sendWithAsyncReply(Messages::WebExtensionContext::MenusUpdate(identifier, parameters.value()), [this, protectedThis = Ref { *this }, callback = WTFMove(callback), clickCallback = WTFMove(clickCallback), newIdentifier = parameters.value().identifier, oldIdentifier = String(identifier)](std::optional<String> error) mutable {
-        if (error) {
-            callback->reportError(error.value());
+    WebProcess::singleton().sendWithAsyncReply(Messages::WebExtensionContext::MenusUpdate(identifier, parameters.value()), [this, protectedThis = Ref { *this }, callback = WTFMove(callback), clickCallback = WTFMove(clickCallback), newIdentifier = parameters.value().identifier, oldIdentifier = String(identifier)](Expected<void, WebExtensionError>&& result) mutable {
+        if (!result) {
+            callback->reportError(result.error());
             return;
         }
 
@@ -378,9 +378,9 @@ void WebExtensionAPIMenus::remove(id identifier, Ref<WebExtensionCallbackHandler
     if (NSNumber *identifierNumber = dynamic_objc_cast<NSNumber>(identifier))
         identifier = identifierNumber.stringValue;
 
-    WebProcess::singleton().sendWithAsyncReply(Messages::WebExtensionContext::MenusRemove(identifier), [this, protectedThis = Ref { *this }, callback = WTFMove(callback), identifier = String(identifier)](std::optional<String> error) {
-        if (error) {
-            callback->reportError(error.value());
+    WebProcess::singleton().sendWithAsyncReply(Messages::WebExtensionContext::MenusRemove(identifier), [this, protectedThis = Ref { *this }, callback = WTFMove(callback), identifier = String(identifier)](Expected<void, WebExtensionError>&& result) {
+        if (!result) {
+            callback->reportError(result.error());
             return;
         }
 
@@ -397,9 +397,9 @@ void WebExtensionAPIMenus::removeAll(Ref<WebExtensionCallbackHandler>&& callback
 {
     // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/menus/removeAll
 
-    WebProcess::singleton().sendWithAsyncReply(Messages::WebExtensionContext::MenusRemoveAll(), [this, protectedThis = Ref { *this }, callback = WTFMove(callback)](std::optional<String> error) {
-        if (error) {
-            callback->reportError(error.value());
+    WebProcess::singleton().sendWithAsyncReply(Messages::WebExtensionContext::MenusRemoveAll(), [this, protectedThis = Ref { *this }, callback = WTFMove(callback)](Expected<void, WebExtensionError>&& result) {
+        if (!result) {
+            callback->reportError(result.error());
             return;
         }
 
@@ -418,7 +418,7 @@ WebExtensionAPIEvent& WebExtensionAPIMenus::onClicked()
     // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/menus/onClicked
 
     if (!m_onClicked)
-        m_onClicked = WebExtensionAPIEvent::create(forMainWorld(), runtime(), extensionContext(), WebExtensionEventListenerType::MenusOnClicked);
+        m_onClicked = WebExtensionAPIEvent::create(*this, WebExtensionEventListenerType::MenusOnClicked);
 
     return *m_onClicked;
 }
@@ -473,7 +473,10 @@ void WebExtensionContextProxy::dispatchMenusClickedEvent(const WebExtensionMenuI
 
     auto *tab = tabParameters ? toWebAPI(tabParameters.value()) : nil;
 
-    enumerateNamespaceObjects([&](auto& namespaceObject) {
+    enumerateFramesAndNamespaceObjects([&](auto& frame, auto& namespaceObject) {
+        RefPtr coreFrame = frame.protectedCoreLocalFrame();
+        WebCore::UserGestureIndicator gestureIndicator(WebCore::IsProcessingUserGesture::Yes, coreFrame ? coreFrame->document() : nullptr);
+
         if (RefPtr clickHandler = namespaceObject.menus().clickHandlers().get(menuItemParameters.identifier))
             clickHandler->call(info, tab);
 

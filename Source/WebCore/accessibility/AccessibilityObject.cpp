@@ -85,7 +85,6 @@
 #include "RenderView.h"
 #include "RenderWidget.h"
 #include "RenderedPosition.h"
-#include "RuntimeApplicationChecks.h"
 #include "Settings.h"
 #include "TextCheckerClient.h"
 #include "TextCheckingHelper.h"
@@ -117,11 +116,6 @@ AXID AccessibilityObject::treeID() const
 {
     auto* cache = axObjectCache();
     return cache ? cache->treeID() : AXID();
-}
-
-inline ProcessID AccessibilityObject::processID() const
-{
-    return presentingApplicationPID();
 }
 
 String AccessibilityObject::dbg() const
@@ -544,7 +538,9 @@ FloatRect AccessibilityObject::convertFrameToSpace(const FloatRect& frameRect, A
     
 FloatRect AccessibilityObject::relativeFrame() const
 {
-    return convertFrameToSpace(elementRect(), AccessibilityConversionSpace::Page);
+    auto rect = elementRect();
+    rect.moveBy(remoteFrameOffset());
+    return convertFrameToSpace(rect, AccessibilityConversionSpace::Page);
 }
 
 AccessibilityObject* AccessibilityObject::nextSiblingUnignored(int limit) const
@@ -1278,7 +1274,7 @@ IntRect AccessibilityObject::boundingBoxForQuads(RenderObject* obj, const Vector
     for (const auto& quad : quads) {
         FloatRect r = quad.enclosingBoundingBox();
         if (!r.isEmpty()) {
-            if (obj->style().hasEffectiveAppearance())
+            if (obj->style().hasUsedAppearance())
                 obj->theme().inflateRectForControlRenderer(*obj, r);
             result.unite(r);
         }
@@ -1289,7 +1285,7 @@ IntRect AccessibilityObject::boundingBoxForQuads(RenderObject* obj, const Vector
 bool AccessibilityObject::press()
 {
     // The presence of the actionElement will confirm whether we should even attempt a press.
-    Element* actionElem = actionElement();
+    RefPtr actionElem = actionElement();
     if (!actionElem)
         return false;
     if (auto* frame = actionElem->document().frame())
@@ -1297,41 +1293,40 @@ bool AccessibilityObject::press()
     
     // Hit test at this location to determine if there is a sub-node element that should act
     // as the target of the action.
-    Element* hitTestElement = nullptr;
-    Document* document = this->document();
+    RefPtr<Element> hitTestElement;
+    RefPtr document = this->document();
     if (document) {
         constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::AccessibilityHitTest };
         HitTestResult hitTestResult { clickPoint() };
         document->hitTest(hitType, hitTestResult);
-        if (auto* innerNode = hitTestResult.innerNode()) {
-            if (auto* shadowHost = innerNode->shadowHost())
-                hitTestElement = shadowHost;
-            else if (is<Element>(*innerNode))
-                hitTestElement = &downcast<Element>(*innerNode);
+        if (RefPtr innerNode = hitTestResult.innerNode()) {
+            if (RefPtr shadowHost = innerNode->shadowHost())
+                hitTestElement = WTFMove(shadowHost);
+            else if (RefPtr element = dynamicDowncast<Element>(*innerNode))
+                hitTestElement = WTFMove(element);
             else
                 hitTestElement = innerNode->parentElement();
         }
     }
 
     // Prefer the actionElement instead of this node, if the actionElement is inside this node.
-    Element* pressElement = this->element();
+    RefPtr pressElement = this->element();
     if (!pressElement || actionElem->isDescendantOf(*pressElement))
-        pressElement = actionElem;
-    
+        pressElement = WTFMove(actionElem);
+
     ASSERT(pressElement);
     // Prefer the hit test element, if it is inside the target element.
     if (hitTestElement && hitTestElement->isDescendantOf(*pressElement))
-        pressElement = hitTestElement;
-    
-    UserGestureIndicator gestureIndicator(IsProcessingUserGesture::Yes, document);
-    
+        pressElement = WTFMove(hitTestElement);
+
+    UserGestureIndicator gestureIndicator(IsProcessingUserGesture::Yes, document.get());
+
     bool dispatchedEvent = false;
 #if PLATFORM(IOS_FAMILY)
     if (hasTouchEventListener())
         dispatchedEvent = dispatchTouchEvent();
 #endif
-    
-    Ref protectedPressElement { *pressElement };
+
     return dispatchedEvent || pressElement->accessKeyAction(true) || pressElement->dispatchSimulatedClick(nullptr, SendMouseUpDownEvents);
 }
     
@@ -1457,7 +1452,7 @@ VisiblePosition AccessibilityObject::visiblePositionForPoint(const IntPoint& poi
 #endif
     }
     
-    return innerNode->renderer()->positionForPoint(pointResult, nullptr);
+    return innerNode->renderer()->positionForPoint(pointResult, HitTestSource::User, nullptr);
 }
 
 VisiblePositionRange AccessibilityObject::visiblePositionRangeForUnorderedPositions(const VisiblePosition& visiblePos1, const VisiblePosition& visiblePos2) const
@@ -1780,7 +1775,7 @@ String AccessibilityObject::stringForRange(const SimpleRange& range) const
             // because a RenderListMarker does not have a Node equivalent and thus does not appear
             // when iterating text.
             // Don't add list marker text for new line character.
-            if (it.text().length() != 1 || !deprecatedIsSpaceOrNewline(it.text()[0]))
+            if (it.text().length() != 1 || !isUnicodeWhitespace(it.text()[0]))
                 builder.append(listMarkerTextForNodeAndPosition(it.node(), makeDeprecatedLegacyPosition(it.range().start)));
             it.appendTextToStringBuilder(builder);
         } else {
@@ -1921,6 +1916,43 @@ InsideLink AccessibilityObject::insideLink() const
 bool AccessibilityObject::hasContentEditableAttributeSet() const
 {
     return contentEditableAttributeIsEnabled(element());
+}
+
+bool AccessibilityObject::dependsOnTextUnderElement() const
+{
+    switch (roleValue()) {
+    case AccessibilityRole::PopUpButton:
+        // Native popup buttons should not use their descendant's text as a title. That value is retrieved through stringValue().
+        if (hasTagName(selectTag))
+            break;
+        FALLTHROUGH;
+    case AccessibilityRole::Summary:
+    case AccessibilityRole::Button:
+    case AccessibilityRole::ToggleButton:
+    case AccessibilityRole::Checkbox:
+    case AccessibilityRole::ListBoxOption:
+#if !PLATFORM(COCOA)
+    // MacOS does not expect native <li> elements to expose label information, it only expects leaf node elements to do that.
+    case AccessibilityRole::ListItem:
+#endif
+    case AccessibilityRole::MenuButton:
+    case AccessibilityRole::MenuItem:
+    case AccessibilityRole::MenuItemCheckbox:
+    case AccessibilityRole::MenuItemRadio:
+    case AccessibilityRole::RadioButton:
+    case AccessibilityRole::Switch:
+    case AccessibilityRole::Tab:
+        return true;
+    default:
+        break;
+    }
+
+    // If it's focusable but it's not content editable or a known control type, then it will appear to
+    // the user as a single atomic object, so we should use its text as the default title.
+    if (isHeading() || isLink())
+        return true;
+
+    return isOutput();
 }
 
 bool AccessibilityObject::supportsReadOnly() const
@@ -2067,13 +2099,13 @@ void AccessibilityObject::updateBackingStore()
     // Updating the layout may delete this object.
     RefPtr<AccessibilityObject> protectedThis(this);
     if (auto* document = this->document()) {
-        if (!document->view()->layoutContext().isInRenderTreeLayout() && !document->inRenderTreeUpdate() && !document->inStyleRecalc())
+        if (!Accessibility::inRenderTreeOrStyleUpdate(*document))
             document->updateLayoutIgnorePendingStylesheets();
     }
 
-    if (auto cache = axObjectCache())
-        cache->performDeferredCacheUpdate();
-    
+    if (auto* cache = axObjectCache())
+        cache->performDeferredCacheUpdate(ForceLayout::Yes);
+
     updateChildrenIfNecessary();
 }
 
@@ -2087,13 +2119,22 @@ const AccessibilityScrollView* AccessibilityObject::ancestorAccessibilityScrollV
 #if PLATFORM(COCOA)
 RemoteAXObjectRef AccessibilityObject::remoteParentObject() const
 {
-    if (auto* document = this->document()) {
-        if (auto* frame = document->frame())
-            return frame->loader().client().accessibilityRemoteObject();
-    }
-    return nullptr;
+    auto* document = this->document();
+    auto* frame = document ? document->frame() : nullptr;
+    return frame ? frame->loader().client().accessibilityRemoteObject() : nullptr;
 }
 #endif
+
+IntPoint AccessibilityObject::remoteFrameOffset() const
+{
+#if PLATFORM(COCOA)
+    auto* document = this->document();
+    auto* frame = document ? document->frame() : nullptr;
+    return frame ? frame->loader().client().accessibilityRemoteFrameOffset() : IntPoint();
+#else
+    return IntPoint();
+#endif
+}
 
 Document* AccessibilityObject::document() const
 {
@@ -2103,7 +2144,12 @@ Document* AccessibilityObject::document() const
 
     return frameView->frame().document();
 }
-    
+
+RefPtr<Document> AccessibilityObject::protectedDocument() const
+{
+    return document();
+}
+
 Page* AccessibilityObject::page() const
 {
     Document* document = this->document();
@@ -2652,6 +2698,7 @@ static void initializeRoleMap()
         { "doc-subtitle"_s, AccessibilityRole::Heading },
         { "doc-tip"_s, AccessibilityRole::DocumentNote },
         { "doc-toc"_s, AccessibilityRole::LandmarkNavigation },
+        { "emphasis"_s, AccessibilityRole::Emphasis },
         { "figure"_s, AccessibilityRole::Figure },
         { "generic"_s, AccessibilityRole::Generic },
         // The mappings for 'graphics-*' roles are defined in this spec: https://w3c.github.io/graphics-aam/
@@ -2712,6 +2759,7 @@ static void initializeRoleMap()
         { "subscript"_s, AccessibilityRole::Subscript },
         { "suggestion"_s, AccessibilityRole::Suggestion },
         { "superscript"_s, AccessibilityRole::Superscript },
+        { "strong"_s, AccessibilityRole::Strong },
         { "switch"_s, AccessibilityRole::Switch },
         { "tab"_s, AccessibilityRole::Tab },
         { "tablist"_s, AccessibilityRole::TabList },
@@ -2737,8 +2785,15 @@ static void initializeRoleMap()
     }
 
     // Create specific synonyms for the computedRole which is used in WPT tests and the accessibility inspector.
-    gAriaReverseRoleMap->set(enumToUnderlyingType(AccessibilityRole::Image), "image"_s);
+    gAriaReverseRoleMap->set(enumToUnderlyingType(AccessibilityRole::DateTime), "textbox"_s);
     gAriaReverseRoleMap->set(enumToUnderlyingType(AccessibilityRole::TextArea), "textbox"_s);
+
+    gAriaReverseRoleMap->set(enumToUnderlyingType(AccessibilityRole::DescriptionListDetail), "definition"_s);
+    gAriaReverseRoleMap->set(enumToUnderlyingType(AccessibilityRole::DescriptionListTerm), "term"_s);
+    gAriaReverseRoleMap->set(enumToUnderlyingType(AccessibilityRole::Details), "group"_s);
+    gAriaReverseRoleMap->set(enumToUnderlyingType(AccessibilityRole::Image), "image"_s);
+    gAriaReverseRoleMap->set(enumToUnderlyingType(AccessibilityRole::ListBoxOption), "option"_s);
+    gAriaReverseRoleMap->set(enumToUnderlyingType(AccessibilityRole::MenuListOption), "option"_s);
     gAriaReverseRoleMap->set(enumToUnderlyingType(AccessibilityRole::Presentational), "none"_s);
 }
 
@@ -2809,7 +2864,7 @@ void AccessibilityObject::updateRole()
     m_role = determineAccessibilityRole();
     if (previousRole != m_role) {
         if (auto* cache = axObjectCache())
-            cache->handleRoleChanged(this);
+            cache->handleRoleChanged(*this);
     }
 }
 
@@ -2950,7 +3005,7 @@ bool AccessibilityObject::supportsPressAction() const
         // Limit the amount of children we take. Some objects can have tens of thousands of children, so we don't want to unconditionally append `children()` to the candidate pool.
         const auto& children = candidate->children();
         if (size_t maxChildrenToTake = std::min(static_cast<size_t>(halfSearchLimit), candidatesLeftUntilLimit))
-            candidates.append(children.span().subspan(0, std::min(children.size(), maxChildrenToTake)));
+            candidates.append(children.subspan(0, std::min(children.size(), maxChildrenToTake)));
 
         // `candidates` should never be allowed to grow past `searchLimit`.
         ASSERT(searchLimit >= candidates.size());
@@ -3041,8 +3096,12 @@ bool AccessibilityObject::isSelected() const
         return true;
 
     // Menu items are considered selectable by assistive technologies
-    if (isMenuItem())
-        return isFocused() || parentObjectUnignored()->activeDescendant() == this;
+    if (isMenuItem()) {
+        if (isFocused())
+            return true;
+        WeakPtr parent = parentObjectUnignored();
+        return parent && parent->activeDescendant() == this;
+    }
 
     return false;
 }
@@ -3947,7 +4006,7 @@ bool AccessibilityObject::isAXHidden() const
 bool AccessibilityObject::isDOMHidden() const
 {
     if (auto* style = this->style())
-        return style->display() == DisplayType::None || style->visibility() != Visibility::Visible;
+        return style->display() == DisplayType::None || style->usedVisibility() != Visibility::Visible;
     return true;
 }
 
@@ -3974,7 +4033,7 @@ AccessibilityObjectInclusion AccessibilityObject::defaultObjectInclusion() const
     if (auto* style = this->style()) {
         if (style->effectiveInert())
             return AccessibilityObjectInclusion::IgnoreObject;
-        if (style->visibility() != Visibility::Visible) {
+        if (style->usedVisibility() != Visibility::Visible) {
             // aria-hidden is meant to override visibility as the determinant in AX hierarchy inclusion.
             if (equalLettersIgnoringASCIICase(getAttribute(aria_hiddenAttr), "false"_s))
                 return AccessibilityObjectInclusion::DefaultBehavior;
@@ -4057,19 +4116,17 @@ Vector<Ref<Element>> AccessibilityObject::elementsFromAttribute(const QualifiedN
     if (!element)
         return { };
 
-    if (document()->settings().ariaReflectionForElementReferencesEnabled()) {
-        if (Element::isElementReflectionAttribute(document()->settings(), attribute)) {
-            if (RefPtr reflectedElement = element->getElementAttribute(attribute)) {
-                Vector<Ref<Element>> elements;
-                elements.append(reflectedElement.releaseNonNull());
-                return elements;
-            }
-        } else if (Element::isElementsArrayReflectionAttribute(document()->settings(), attribute)) {
-            if (auto reflectedElements = element->getElementsArrayAttribute(attribute)) {
-                return WTF::map(reflectedElements.value(), [](RefPtr<Element> element) -> Ref<Element> {
-                    return *element;
-                });
-            }
+    if (Element::isElementReflectionAttribute(document()->settings(), attribute)) {
+        if (RefPtr reflectedElement = element->getElementAttribute(attribute)) {
+            Vector<Ref<Element>> elements;
+            elements.append(reflectedElement.releaseNonNull());
+            return elements;
+        }
+    } else if (Element::isElementsArrayReflectionAttribute(attribute)) {
+        if (auto reflectedElements = element->getElementsArrayAttribute(attribute)) {
+            return WTF::map(reflectedElements.value(), [](RefPtr<Element> element) -> Ref<Element> {
+                return *element;
+            });
         }
     }
 
@@ -4238,6 +4295,10 @@ AXCoreObject::AccessibilityChildrenVector AccessibilityObject::selectedChildren(
 
     AccessibilityChildrenVector result;
     switch (roleValue()) {
+    case AccessibilityRole::ComboBox:
+        if (auto* descendant = activeDescendant())
+            result = { descendant };
+        break;
     case AccessibilityRole::ListBox:
         // native list boxes would be AccessibilityListBoxes, so only check for aria list boxes
         result = ariaListboxSelectedChildren();

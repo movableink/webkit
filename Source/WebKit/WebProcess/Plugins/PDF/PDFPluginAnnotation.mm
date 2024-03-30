@@ -29,6 +29,7 @@
 #if ENABLE(LEGACY_PDFKIT_PLUGIN)
 
 #import "PDFLayerControllerSPI.h"
+#import "PDFPlugin.h"
 #import "PDFPluginBase.h"
 #import "PDFPluginChoiceAnnotation.h"
 #import "PDFPluginTextAnnotation.h"
@@ -71,7 +72,8 @@ void PDFPluginAnnotation::attach(Element* parent)
     Ref element = createAnnotationElement();
     m_element = element.copyRef();
 
-    element->setAttributeWithoutSynchronization(classAttr, "annotation"_s);
+    if (!element->hasClass())
+        element->setAttributeWithoutSynchronization(classAttr, "annotation"_s);
     element->setAttributeWithoutSynchronization(x_apple_pdf_annotationAttr, "true"_s);
     element->addEventListener(eventNames().changeEvent, *m_eventListener, false);
     element->addEventListener(eventNames().blurEvent, *m_eventListener, false);
@@ -104,14 +106,13 @@ PDFPluginAnnotation::~PDFPluginAnnotation()
 
 void PDFPluginAnnotation::updateGeometry()
 {
-    NSRect annotationRect = NSRectFromCGRect(m_plugin->boundsForAnnotation(m_annotation));
+    NSRect annotationRect = NSRectFromCGRect(m_plugin->pluginBoundsForAnnotation(m_annotation));
 
     StyledElement* styledElement = static_cast<StyledElement*>(element());
     styledElement->setInlineStyleProperty(CSSPropertyWidth, annotationRect.size.width, CSSUnitType::CSS_PX);
     styledElement->setInlineStyleProperty(CSSPropertyHeight, annotationRect.size.height, CSSUnitType::CSS_PX);
-    IntPoint scrollPosition(m_plugin->scrollPosition());
-    styledElement->setInlineStyleProperty(CSSPropertyLeft, annotationRect.origin.x - scrollPosition.x(), CSSUnitType::CSS_PX);
-    styledElement->setInlineStyleProperty(CSSPropertyTop, annotationRect.origin.y - scrollPosition.y(), CSSUnitType::CSS_PX);
+    styledElement->setInlineStyleProperty(CSSPropertyLeft, annotationRect.origin.x, CSSUnitType::CSS_PX);
+    styledElement->setInlineStyleProperty(CSSPropertyTop, annotationRect.origin.y, CSSUnitType::CSS_PX);
 }
 
 bool PDFPluginAnnotation::handleEvent(Event& event)

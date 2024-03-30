@@ -298,6 +298,8 @@ static Atspi::Role atspiRole(AccessibilityRole role)
         return Atspi::Role::Canvas;
     case AccessibilityRole::HorizontalRule:
         return Atspi::Role::Separator;
+    case AccessibilityRole::DateTime:
+        return Atspi::Role::Entry;
     case AccessibilityRole::SpinButton:
         return Atspi::Role::SpinButton;
     case AccessibilityRole::Tab:
@@ -352,6 +354,7 @@ static Atspi::Role atspiRole(AccessibilityRole role)
     case AccessibilityRole::Mark:
         return Atspi::Role::Mark;
     case AccessibilityRole::Details:
+    case AccessibilityRole::Emphasis:
     case AccessibilityRole::Ignored:
     case AccessibilityRole::Incrementor:
     case AccessibilityRole::LineBreak:
@@ -365,9 +368,11 @@ static Atspi::Role atspiRole(AccessibilityRole role)
     case AccessibilityRole::RubyText:
     case AccessibilityRole::SliderThumb:
     case AccessibilityRole::SpinButtonPart:
+    case AccessibilityRole::Strong:
     case AccessibilityRole::Summary:
     case AccessibilityRole::TableHeaderContainer:
     case AccessibilityRole::Suggestion:
+    case AccessibilityRole::RemoteFrame:
         return Atspi::Role::Unknown;
     // Add most new roles above. The release assert is for roles that are handled specially.
     case AccessibilityRole::ListMarker:

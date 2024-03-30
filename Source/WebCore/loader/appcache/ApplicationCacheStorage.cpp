@@ -87,8 +87,8 @@ static unsigned urlHostHash(const URL& url)
 {
     StringView host = url.host();
     if (host.is8Bit())
-        return AlreadyHashed::avoidDeletedValue(StringHasher::computeHashAndMaskTop8Bits(host.characters8(), host.length()));
-    return AlreadyHashed::avoidDeletedValue(StringHasher::computeHashAndMaskTop8Bits(host.characters16(), host.length()));
+        return AlreadyHashed::avoidDeletedValue(StringHasher::computeHashAndMaskTop8Bits(host.span8()));
+    return AlreadyHashed::avoidDeletedValue(StringHasher::computeHashAndMaskTop8Bits(host.span16()));
 }
 
 ApplicationCacheGroup* ApplicationCacheStorage::loadCacheGroup(const URL& manifestURL)
@@ -815,7 +815,7 @@ bool ApplicationCacheStorage::store(ApplicationCacheResource* resource, unsigned
     } else {
         if (resource->data().size()) {
             auto contiguousData = resource->data().makeContiguous();
-            dataStatement->bindBlob(1, contiguousData->dataAsSpanForContiguousData());
+            dataStatement->bindBlob(1, contiguousData->span());
         }
     }
     
@@ -1291,7 +1291,7 @@ bool ApplicationCacheStorage::writeDataToUniqueFileInDirectory(FragmentedSharedB
         return false;
     
     int64_t writtenBytes = 0;
-    data.forEachSegment([&](auto& segment) {
+    data.forEachSegment([&](auto segment) {
         writtenBytes += FileSystem::writeToFile(handle, segment.data(), segment.size());
     });
     FileSystem::closeFile(handle);

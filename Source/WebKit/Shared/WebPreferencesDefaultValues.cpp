@@ -125,18 +125,6 @@ bool defaultAppleMailPaginationQuirkEnabled()
 
 #endif
 
-bool defaultOfflineWebApplicationCacheEnabled()
-{
-#if PLATFORM(COCOA)
-    static bool newSDK = linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::ApplicationCacheDisabledByDefault);
-    return !newSDK;
-#else
-    // FIXME: Other platforms should consider turning this off.
-    // ApplicationCache is on its way to being removed from WebKit.
-    return true;
-#endif
-}
-
 #if ENABLE(MEDIA_STREAM)
 
 bool defaultCaptureAudioInGPUProcessEnabled()
@@ -234,7 +222,7 @@ bool defaultShouldDropNearSuspendedAssertionAfterDelay()
 
 bool defaultShouldTakeNearSuspendedAssertion()
 {
-#if PLATFORM(IOS_FAMILY)
+#if PLATFORM(COCOA)
     static bool newSDK = linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::FullySuspendsBackgroundContentImmediately);
     return !newSDK;
 #else

@@ -110,6 +110,8 @@ public:
     Markable<WebCore::LayerHostingContextIdentifier> remoteContextHostingIdentifier() const { return m_remoteContextHostingIdentifier; }
     Markable<WebCore::LayerHostingContextIdentifier> remoteContextHostedIdentifier() const { return m_remoteContextHostedIdentifier; }
     void setRemoteContextHostedIdentifier(WebCore::LayerHostingContextIdentifier identifier) { m_remoteContextHostedIdentifier = identifier; }
+    void addToHostingNode(RemoteLayerTreeNode&);
+    void removeFromHostingNode();
 
     // A cached CAIOSurface object to retain CA render resources.
     struct CachedContentsBuffer {
@@ -159,7 +161,7 @@ private:
     void setHasInteractionRegionsDescendant(bool value) { m_hasInteractionRegionsDescendant = value; }
 
     bool m_hasInteractionRegionsDescendant { false };
-    RetainPtr<CALayer> m_interactionRegionsContainer;
+    RetainPtr<UIView> m_interactionRegionsContainer;
 #endif
 #if PLATFORM(IOS_FAMILY)
     RetainPtr<UIView> m_uiView;
@@ -168,7 +170,7 @@ private:
     WebCore::EventRegion m_eventRegion;
 
 #if ENABLE(SCROLLING_THREAD)
-    WebCore::ScrollingNodeID m_scrollingNodeID { 0 };
+    WebCore::ScrollingNodeID m_scrollingNodeID;
 #endif
 
     WebCore::PlatformLayerIdentifier m_actingScrollContainerID;

@@ -65,7 +65,7 @@ RenderListItem::~RenderListItem()
 RenderStyle RenderListItem::computeMarkerStyle() const
 {
     if (!is<PseudoElement>(element())) {
-        if (auto markerStyle = getCachedPseudoStyle(PseudoId::Marker, &style()))
+        if (auto markerStyle = getCachedPseudoStyle({ PseudoId::Marker }, &style()))
             return RenderStyle::clone(*markerStyle);
     }
 
@@ -292,13 +292,6 @@ void RenderListItem::layout()
     ASSERT(needsLayout());
 
     RenderBlockFlow::layout();
-}
-
-void RenderListItem::addOverflowFromChildren()
-{
-    if (m_marker)
-        m_marker->addOverflowFromListMarker();
-    RenderBlockFlow::addOverflowFromChildren();
 }
 
 void RenderListItem::computePreferredLogicalWidths()

@@ -42,6 +42,9 @@ typedef cairo_pattern_t* PlatformPatternPtr;
 #elif PLATFORM(QT)
 #include <QBrush>
 typedef QBrush PlatformPatternPtr;
+#elif USE(SKIA)
+#include <skia/core/SkShader.h>
+typedef sk_sp<SkShader> PlatformPatternPtr;
 #endif
 
 namespace WebCore {
@@ -72,7 +75,9 @@ public:
     const Parameters& parameters() const { return m_parameters; }
 
     // Pattern space is an abstract space that maps to the default user space by the transformation 'userSpaceTransform'
-#if PLATFORM(QT)
+#if USE(SKIA)
+    PlatformPatternPtr createPlatformPattern(const AffineTransform& userSpaceTransform, const SkSamplingOptions&) const;
+#elif PLATFORM(QT)
     // Qt ignores user space transformation and uses pattern's instead
     PlatformPatternPtr createPlatformPattern() const;
 #else

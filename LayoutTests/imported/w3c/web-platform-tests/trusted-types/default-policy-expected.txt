@@ -1,18 +1,31 @@
-CONSOLE MESSAGE: Unrecognized Content-Security-Policy directive 'require-trusted-types-for'.
+CONSOLE MESSAGE: This requires a TrustedScriptURL value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
+CONSOLE MESSAGE: This requires a TrustedHTML value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
+CONSOLE MESSAGE: This requires a TrustedScript value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
+CONSOLE MESSAGE: This requires a TrustedScriptURL value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
+CONSOLE MESSAGE: This requires a TrustedScriptURL value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
+CONSOLE MESSAGE: This requires a TrustedHTML value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
+CONSOLE MESSAGE: This requires a TrustedHTML value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
+CONSOLE MESSAGE: This requires a TrustedScript value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
+CONSOLE MESSAGE: This requires a TrustedScript value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
+CONSOLE MESSAGE: This requires a TrustedScript value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
 
-CONSOLE MESSAGE: ReferenceError: Can't find variable: trustedTypes
-
-Harness Error (FAIL), message = ReferenceError: Can't find variable: trustedTypes
-
-TIMEOUT Count SecurityPolicyViolation events. Test timed out
-FAIL script.src no default policy assert_throws_js: function "_ => element[c[1]] = "nodefault"" did not throw
-FAIL div.innerHTML no default policy assert_throws_js: function "_ => element[c[1]] = "nodefault"" did not throw
-FAIL script.text no default policy assert_throws_js: function "_ => element[c[1]] = "nodefault"" did not throw
-
-Harness Error (FAIL), message = ReferenceError: Can't find variable: trustedTypes
-
-TIMEOUT Count SecurityPolicyViolation events. Test timed out
-FAIL script.src no default policy assert_throws_js: function "_ => element[c[1]] = "nodefault"" did not throw
-FAIL div.innerHTML no default policy assert_throws_js: function "_ => element[c[1]] = "nodefault"" did not throw
-FAIL script.text no default policy assert_throws_js: function "_ => element[c[1]] = "nodefault"" did not throw
+PASS Count SecurityPolicyViolation events.
+PASS script.src no default policy
+PASS div.innerHTML no default policy
+PASS script.text no default policy
+PASS script.src default
+PASS script.src null
+PASS script.src throw
+PASS script.src undefined
+PASS script.src typeerror
+PASS div.innerHTML default
+PASS div.innerHTML null
+PASS div.innerHTML throw
+PASS div.innerHTML undefined
+PASS div.innerHTML typeerror
+PASS script.text default
+PASS script.text null
+PASS script.text throw
+PASS script.text undefined
+PASS script.text typeerror
 

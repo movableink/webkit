@@ -264,27 +264,29 @@ static RefPtr<ImageBuffer> allocateImageBufferInternal(const FloatSize& logicalS
     return imageBuffer;
 }
 
-RefPtr<ImageBuffer> RemoteRenderingBackend::allocateImageBuffer(const FloatSize& logicalSize, RenderingMode renderingMode, RenderingPurpose purpose, float resolutionScale, const DestinationColorSpace& colorSpace, PixelFormat pixelFormat, RenderingResourceIdentifier imageBufferIdentifier)
+RefPtr<ImageBuffer> RemoteRenderingBackend::allocateImageBuffer(const FloatSize& logicalSize, RenderingMode renderingMode, RenderingPurpose purpose, float resolutionScale, const DestinationColorSpace& colorSpace, PixelFormat pixelFormat, const ImageBufferCreationContext& creationContext, RenderingResourceIdentifier imageBufferIdentifier)
 {
     assertIsCurrent(workQueue());
 
-    ImageBufferCreationContext creationContext;
-    creationContext.resourceOwner = m_resourceOwner;
+    ASSERT(!creationContext.resourceOwner);
 #if HAVE(IOSURFACE)
-    creationContext.surfacePool = &ioSurfacePool();
+    ASSERT(!creationContext.surfacePool);
+#endif
+    ImageBufferCreationContext adjustedCreationContext = creationContext;
+    adjustedCreationContext.resourceOwner = m_resourceOwner;
+#if HAVE(IOSURFACE)
+    adjustedCreationContext.surfacePool = &ioSurfacePool();
 #endif
 
     RefPtr<ImageBuffer> imageBuffer;
 
 #if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
-    if (m_gpuConnectionToWebProcess->isDynamicContentScalingEnabled() && (purpose == RenderingPurpose::LayerBacking || purpose == RenderingPurpose::DOM)) {
-        creationContext.dynamicContentScalingResourceCache = ensureDynamicContentScalingResourceCache();
-        imageBuffer = allocateImageBufferInternal<DynamicContentScalingBifurcatedImageBuffer>(logicalSize, renderingMode, purpose, resolutionScale, colorSpace, pixelFormat, creationContext, imageBufferIdentifier);
-    }
+    if (m_gpuConnectionToWebProcess->isDynamicContentScalingEnabled() && (purpose == RenderingPurpose::LayerBacking || purpose == RenderingPurpose::DOM))
+        imageBuffer = allocateImageBufferInternal<DynamicContentScalingBifurcatedImageBuffer>(logicalSize, renderingMode, purpose, resolutionScale, colorSpace, pixelFormat, adjustedCreationContext, imageBufferIdentifier);
 #endif
 
     if (!imageBuffer)
-        imageBuffer = allocateImageBufferInternal<ImageBuffer>(logicalSize, renderingMode, purpose, resolutionScale, colorSpace, pixelFormat, creationContext, imageBufferIdentifier);
+        imageBuffer = allocateImageBufferInternal<ImageBuffer>(logicalSize, renderingMode, purpose, resolutionScale, colorSpace, pixelFormat, adjustedCreationContext, imageBufferIdentifier);
 
     return imageBuffer;
 }
@@ -293,7 +295,7 @@ RefPtr<ImageBuffer> RemoteRenderingBackend::allocateImageBuffer(const FloatSize&
 void RemoteRenderingBackend::createImageBuffer(const FloatSize& logicalSize, RenderingMode renderingMode, RenderingPurpose purpose, float resolutionScale, const DestinationColorSpace& colorSpace, PixelFormat pixelFormat, RenderingResourceIdentifier imageBufferIdentifier)
 {
     assertIsCurrent(workQueue());
-    RefPtr<ImageBuffer> imageBuffer = allocateImageBuffer(logicalSize, renderingMode, purpose, resolutionScale, colorSpace, pixelFormat, imageBufferIdentifier);
+    RefPtr<ImageBuffer> imageBuffer = allocateImageBuffer(logicalSize, renderingMode, purpose, resolutionScale, colorSpace, pixelFormat, { }, imageBufferIdentifier);
 
     if (imageBuffer)
         didCreateImageBuffer(imageBuffer.releaseNonNull());
@@ -345,7 +347,7 @@ void RemoteRenderingBackend::cacheNativeImage(ShareableBitmap::Handle&& handle, 
     m_remoteResourceCache.cacheNativeImage(image.releaseNonNull());
 }
 
-void RemoteRenderingBackend::cacheFont(const Font::Attributes& fontAttributes, FontPlatformData::Attributes platformData, std::optional<RenderingResourceIdentifier> fontCustomPlatformDataIdentifier)
+void RemoteRenderingBackend::cacheFont(const Font::Attributes& fontAttributes, FontPlatformDataAttributes platformData, std::optional<RenderingResourceIdentifier> fontCustomPlatformDataIdentifier)
 {
     ASSERT(!RunLoop::isMain());
 
@@ -414,7 +416,7 @@ void RemoteRenderingBackend::flush(IPC::Semaphore&& semaphore)
 #endif
 
 #if PLATFORM(COCOA)
-void RemoteRenderingBackend::prepareImageBufferSetsForDisplay(Vector<ImageBufferSetPrepareBufferForDisplayInputData> swapBuffersInput, RenderingUpdateID renderingUpdateID)
+void RemoteRenderingBackend::prepareImageBufferSetsForDisplay(Vector<ImageBufferSetPrepareBufferForDisplayInputData> swapBuffersInput)
 {
     assertIsCurrent(workQueue());
 
@@ -422,24 +424,15 @@ void RemoteRenderingBackend::prepareImageBufferSetsForDisplay(Vector<ImageBuffer
         RefPtr<RemoteImageBufferSet> remoteImageBufferSet = m_remoteImageBufferSets.get(swapBuffersInput[i].remoteBufferSet);
         MESSAGE_CHECK(remoteImageBufferSet, "BufferSet is being updated before being created"_s);
         SwapBuffersDisplayRequirement displayRequirement = SwapBuffersDisplayRequirement::NeedsNormalDisplay;
-        remoteImageBufferSet->ensureBufferForDisplay(swapBuffersInput[i], displayRequirement, renderingUpdateID);
+        remoteImageBufferSet->ensureBufferForDisplay(swapBuffersInput[i], displayRequirement);
         MESSAGE_CHECK(displayRequirement != SwapBuffersDisplayRequirement::NeedsFullDisplay, "Can't asynchronously require full display for a buffer set"_s);
-    }
 
-
-    // Defer preparing all the front buffers (which triggers pixel copy
-    // operations) until after we've sent the completion handler (and any
-    // buffer backend created messages) to unblock the WebProcess as soon
-    // as possible.
-    for (unsigned i = 0; i < swapBuffersInput.size(); ++i) {
-        RefPtr<RemoteImageBufferSet> remoteImageBufferSet = m_remoteImageBufferSets.get(swapBuffersInput[i].remoteBufferSet);
-        MESSAGE_CHECK(remoteImageBufferSet, "BufferSet is being updated before being created"_s);
-
-        remoteImageBufferSet->prepareBufferForDisplay(swapBuffersInput[i].dirtyRegion, swapBuffersInput[i].requiresClearedPixels);
+        if (displayRequirement != SwapBuffersDisplayRequirement::NeedsNoDisplay)
+            remoteImageBufferSet->prepareBufferForDisplay(swapBuffersInput[i].dirtyRegion, swapBuffersInput[i].requiresClearedPixels);
     }
 }
 
-void RemoteRenderingBackend::prepareImageBufferSetsForDisplaySync(Vector<ImageBufferSetPrepareBufferForDisplayInputData> swapBuffersInput, RenderingUpdateID renderingUpdateID,  CompletionHandler<void(Vector<SwapBuffersDisplayRequirement>&&)>&& completionHandler)
+void RemoteRenderingBackend::prepareImageBufferSetsForDisplaySync(Vector<ImageBufferSetPrepareBufferForDisplayInputData> swapBuffersInput, CompletionHandler<void(Vector<SwapBuffersDisplayRequirement>&&)>&& completionHandler)
 {
     assertIsCurrent(workQueue());
 
@@ -449,7 +442,7 @@ void RemoteRenderingBackend::prepareImageBufferSetsForDisplaySync(Vector<ImageBu
     for (unsigned i = 0; i < swapBuffersInput.size(); ++i) {
         RefPtr<RemoteImageBufferSet> remoteImageBufferSet = m_remoteImageBufferSets.get(swapBuffersInput[i].remoteBufferSet);
         MESSAGE_CHECK(remoteImageBufferSet, "BufferSet is being updated before being created"_s);
-        remoteImageBufferSet->ensureBufferForDisplay(swapBuffersInput[i], outputData[i], renderingUpdateID);
+        remoteImageBufferSet->ensureBufferForDisplay(swapBuffersInput[i], outputData[i]);
     }
 
     completionHandler(WTFMove(outputData));
@@ -462,7 +455,8 @@ void RemoteRenderingBackend::prepareImageBufferSetsForDisplaySync(Vector<ImageBu
         RefPtr<RemoteImageBufferSet> remoteImageBufferSet = m_remoteImageBufferSets.get(swapBuffersInput[i].remoteBufferSet);
         MESSAGE_CHECK(remoteImageBufferSet, "BufferSet is being updated before being created"_s);
 
-        remoteImageBufferSet->prepareBufferForDisplay(swapBuffersInput[i].dirtyRegion, swapBuffersInput[i].requiresClearedPixels);
+        if (outputData[i] != SwapBuffersDisplayRequirement::NeedsNoDisplay)
+            remoteImageBufferSet->prepareBufferForDisplay(swapBuffersInput[i].dirtyRegion, swapBuffersInput[i].requiresClearedPixels);
     }
 }
 #endif
@@ -603,15 +597,6 @@ void RemoteRenderingBackend::terminateWebProcess(ASCIILiteral message)
         m_gpuConnectionToWebProcess->terminateWebProcess();
     }
 }
-
-#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
-DynamicContentScalingResourceCache RemoteRenderingBackend::ensureDynamicContentScalingResourceCache()
-{
-    if (!m_dynamicContentScalingResourceCache)
-        m_dynamicContentScalingResourceCache = DynamicContentScalingResourceCache::create();
-    return m_dynamicContentScalingResourceCache;
-}
-#endif
 
 } // namespace WebKit
 

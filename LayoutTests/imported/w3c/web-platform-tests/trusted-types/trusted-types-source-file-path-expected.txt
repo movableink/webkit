@@ -1,9 +1,8 @@
-CONSOLE MESSAGE: Unrecognized Content-Security-Policy directive 'require-trusted-types-for'.
+CONSOLE MESSAGE: This requires a TrustedHTML value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
+CONSOLE MESSAGE: This requires a TrustedHTML value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
+CONSOLE MESSAGE: This requires a TrustedHTML value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
 
-CONSOLE MESSAGE: Unrecognized Content-Security-Policy directive 'trusted-types'.
-
-CONSOLE MESSAGE: ReferenceError: Can't find variable: trustedTypes
-
-Harness Error (FAIL), message = ReferenceError: Can't find variable: trustedTypes
-
+PASS same-document script
+PASS same-origin script
+PASS cross-origin script
 

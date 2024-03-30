@@ -423,10 +423,10 @@ static void bindGStreamerData(Vector<CString>& args)
 
     // The plugin scanner needs write permissions in the parent directory of GST_REGISTRY in order to
     // write the registry file.
-    if (const char* registryPath = g_getenv("GST_REGISTRY")) {
-        auto registryDir = FileSystem::parentPath(FileSystem::stringFromFileSystemRepresentation(registryPath));
-        bindIfExists(args, registryDir.utf8().data(), BindFlags::ReadWrite);
-    }
+    GUniquePtr<char> defaultRegistryPath(g_build_filename(g_get_user_cache_dir(), "gstreamer-1.0", nullptr));
+    const char* registryPath = environmentVariableValue("GST_REGISTRY", defaultRegistryPath.get());
+    auto registryDir = FileSystem::parentPath(FileSystem::stringFromFileSystemRepresentation(registryPath));
+    bindIfExists(args, registryDir.utf8().data(), BindFlags::ReadWrite);
 
     bindPathVar(args, "GST_PRESET_PATH");
 
@@ -872,7 +872,7 @@ GRefPtr<GSubprocess> bubblewrapSpawn(GSubprocessLauncher* launcher, const Proces
     // full permissions unless it can identify you as a snap or flatpak.
     // The easiest method is for us to pretend to be a flatpak and if that
     // fails just blocking portals entirely as it just becomes a sandbox escape.
-    GUniquePtr<char> instanceID(g_strdup_printf("webkit-%d-%lu", getpid(), launchOptions.processIdentifier.toUInt64()));
+    GUniquePtr<char> instanceID(g_strdup_printf("webkit-%d-%" PRIu64, getpid(), launchOptions.processIdentifier.toUInt64()));
     int flatpakInfoFd = createFlatpakInfo(instanceID.get());
     if (flatpakInfoFd != -1) {
         g_subprocess_launcher_take_fd(launcher, flatpakInfoFd, flatpakInfoFd);
@@ -897,7 +897,7 @@ GRefPtr<GSubprocess> bubblewrapSpawn(GSubprocessLauncher* launcher, const Proces
             bindX11(sandboxArgs);
 #endif
 
-        Vector<String> extraPaths = { "applicationCacheDirectory"_s, "mediaKeysDirectory"_s, "waylandSocket"_s };
+        Vector<String> extraPaths = { "mediaKeysDirectory"_s, "waylandSocket"_s };
         for (const auto& path : extraPaths) {
             String extraPath = launchOptions.extraInitializationData.get(path);
             if (!extraPath.isEmpty())

@@ -218,6 +218,7 @@ else
     const CellTag = constexpr JSValue::CellTag
     const EmptyValueTag = constexpr JSValue::EmptyValueTag
     const DeletedValueTag = constexpr JSValue::DeletedValueTag
+    const InvalidTag = constexpr JSValue::InvalidTag
     const LowestTag = constexpr JSValue::LowestTag
 end
 
@@ -320,7 +321,6 @@ end
 
 if GIGACAGE_ENABLED
     const GigacagePrimitiveBasePtrOffset = constexpr Gigacage::offsetOfPrimitiveGigacageBasePtr
-    const GigacageJSValueBasePtrOffset = constexpr Gigacage::offsetOfJSValueGigacageBasePtr
 end
 
 # Opcode offsets
@@ -1653,11 +1653,16 @@ macro functionInitialization(profileArgSkip)
         subp sizeof ArgumentValueProfile, t3
         storeq t2, profileArgSkip * sizeof ArgumentValueProfile + ValueProfile::m_buckets[t3]
     else
-        loadi ThisArgumentOffset + TagOffset - 8 + profileArgSkip * 8[cfr, t0], t2
         subp sizeof ArgumentValueProfile, t3
-        storei t2, profileArgSkip * sizeof ArgumentValueProfile + ValueProfile::m_buckets + TagOffset[t3]
+        loadi ThisArgumentOffset + TagOffset - 8 + profileArgSkip * 8[cfr, t0], t1
         loadi ThisArgumentOffset + PayloadOffset - 8 + profileArgSkip * 8[cfr, t0], t2
-        storei t2, profileArgSkip * sizeof ArgumentValueProfile + ValueProfile::m_buckets + PayloadOffset[t3]
+        storeJSValueConcurrent(
+            macro (val, offset)
+                storei val, profileArgSkip * sizeof ArgumentValueProfile + ValueProfile::m_buckets + offset[t3]
+            end,
+            t1,
+            t2
+        )
     end
     baddpnz -8, t0, .argumentProfileLoop
 .argumentProfileDone:
@@ -1733,16 +1738,16 @@ global _vmEntryHostFunction
 _vmEntryHostFunction:
     jmp a2, HostFunctionPtrTag
 
-# unsigned vmEntryToCSSJIT(uintptr_t, uintptr_t, uintptr_t, const void* codePtr);
 if ARM64E
-emit ".globl _vmEntryToCSSJIT"
-emit "_vmEntryToCSSJIT:"
-    functionPrologue()
-    jmp t3, CSSSelectorPtrTag
-    emit ".globl _vmEntryToCSSJITAfter"
-    emit "_vmEntryToCSSJITAfter:"
-    functionEpilogue()
-    ret
+    # unsigned vmEntryToCSSJIT(uintptr_t, uintptr_t, uintptr_t, const void* codePtr);
+    globalexport _vmEntryToCSSJIT
+    _vmEntryToCSSJIT:
+        functionPrologue()
+        jmp t3, CSSSelectorPtrTag
+    globalexport _vmEntryToCSSJITAfter
+    _vmEntryToCSSJITAfter:
+        functionEpilogue()
+        ret
 end
 
 if not (C_LOOP or C_LOOP_WIN)
@@ -1815,8 +1820,8 @@ end
 if ARM64E
     if JIT_CAGE
         # void* jitCagePtr(void* pointer, uintptr_t tag)
-        emit ".globl _jitCagePtr"
-        emit "_jitCagePtr:"
+        globalexport _jitCagePtr
+        _jitCagePtr:
             tagReturnAddress sp
             leap _g_config, t2
             jmp JSCConfigGateMapOffset + (constexpr Gate::jitCagePtr) * PtrSize[t2], NativeToJITGatePtrTag
@@ -2084,11 +2089,7 @@ macro slowPathOp(opcodeName)
     end)
 end
 
-slowPathOp(create_cloned_arguments)
-slowPathOp(create_direct_arguments)
-slowPathOp(create_lexical_environment)
 slowPathOp(create_rest)
-slowPathOp(create_scoped_arguments)
 slowPathOp(create_this)
 slowPathOp(create_promise)
 slowPathOp(create_generator)
@@ -2134,6 +2135,10 @@ llintSlowPathOp(has_private_brand)
 llintSlowPathOp(del_by_id)
 llintSlowPathOp(del_by_val)
 llintSlowPathOp(instanceof)
+llintSlowPathOp(create_lexical_environment)
+llintSlowPathOp(create_direct_arguments)
+llintSlowPathOp(create_scoped_arguments)
+llintSlowPathOp(create_cloned_arguments)
 llintSlowPathOp(new_array)
 llintSlowPathOp(new_array_with_size)
 llintSlowPathOp(new_async_func)

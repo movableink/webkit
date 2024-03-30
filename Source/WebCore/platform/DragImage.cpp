@@ -100,20 +100,32 @@ struct ScopedNodeDragEnabler {
 static DragImageRef createDragImageFromSnapshot(RefPtr<ImageBuffer> snapshot, Node* node)
 {
     if (!snapshot)
+#if PLATFORM(QT)
         return QImage();
+#else
+        return nullptr;
+#endif
 
     ImageOrientation orientation;
     if (node) {
-        RenderObject* renderer = node->renderer();
-        if (!renderer || !is<RenderElement>(renderer))
+        auto* elementRenderer = dynamicDowncast<RenderElement>(node->renderer());
+        if (!elementRenderer)
+#if PLATFORM(QT)
             return QImage();
+#else
+            return nullptr;
+#endif
 
-        orientation = downcast<RenderElement>(*renderer).imageOrientation();
+        orientation = elementRenderer->imageOrientation();
     }
 
     auto image = BitmapImage::create(ImageBuffer::sinkIntoNativeImage(WTFMove(snapshot)));
     if (!image)
+#if PLATFORM(QT)
         return QImage();
+#else
+        return nullptr;
+#endif
     return createDragImageFromImage(image.get(), orientation);
 }
 
@@ -162,7 +174,11 @@ DragImageRef createDragImageForRange(LocalFrame& frame, const SimpleRange& range
     frame.document()->updateLayout();
     RenderView* view = frame.contentRenderer();
     if (!view)
+#if PLATFORM(QT)
         return QImage();
+#else
+        return nullptr;
+#endif
 
     // To snapshot the range, temporarily select it and take selection snapshot.
     Position start = makeDeprecatedLegacyPosition(range.start);
@@ -176,14 +192,22 @@ DragImageRef createDragImageForRange(LocalFrame& frame, const SimpleRange& range
         end = candidate;
 
     if (start.isNull() || end.isNull() || start == end)
+#if PLATFORM(QT)
         return QImage();
+#else
+        return nullptr;
+#endif
 
     const ScopedFrameSelectionState selectionState(frame);
 
     RenderObject* startRenderer = start.deprecatedNode()->renderer();
     RenderObject* endRenderer = end.deprecatedNode()->renderer();
     if (!startRenderer || !endRenderer)
+#if PLATFORM(QT)
         return QImage();
+#else
+        return nullptr;
+#endif
 
     SnapshotOptions options { { SnapshotFlags::PaintSelectionOnly }, PixelFormat::BGRA8, DestinationColorSpace::SRGB() };
     if (forceBlackText)
@@ -206,14 +230,22 @@ DragImageRef createDragImageForImage(LocalFrame& frame, Node& node, IntRect& ima
 
     RenderObject* renderer = node.renderer();
     if (!renderer)
+#if PLATFORM(QT)
         return QImage();
+#else
+        return nullptr;
+#endif
 
     // Calculate image and element metrics for the client, then create drag image.
     LayoutRect topLevelRect;
     IntRect paintingRect = snappedIntRect(renderer->paintingRootRect(topLevelRect));
 
     if (paintingRect.isEmpty())
+#if PLATFORM(QT)
         return QImage();
+#else
+        return nullptr;
+#endif
 
     elementRect = snappedIntRect(topLevelRect);
     imageRect = paintingRect;
@@ -246,7 +278,9 @@ FloatPoint anchorPointForLinkDragImage(DragImageRef dragImage)
 #endif
 
 DragImage::DragImage()
-//    : m_dragImageRef { nullptr }
+#if !PLATFORM(QT)
+    : m_dragImageRef { nullptr }
+#endif
 {
 }
 
@@ -268,7 +302,11 @@ DragImage::DragImage(DragImage&& other)
 
 DragImage& DragImage::operator=(DragImage&& other)
 {
+#if PLATFORM(QT
     if (!m_dragImageRef.isNull())
+#else
+    if (m_dragImageRef)
+#endif
         deleteDragImage(m_dragImageRef);
 
 #if PLATFORM(QT)
@@ -284,7 +322,11 @@ DragImage& DragImage::operator=(DragImage&& other)
 
 DragImage::~DragImage()
 {
+#if PLATFORM(QT)
     if (!m_dragImageRef.isNull())
+#else
+    if (m_dragImageRef)
+#endif
         deleteDragImage(m_dragImageRef);
 }
 

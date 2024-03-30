@@ -143,7 +143,7 @@ bool FrameLoader::SubframeLoader::pluginIsLoadable(const URL& url)
             return false;
         }
 
-        if (!MixedContentChecker::frameAndAncestorsCanRunInsecureContent(protectedFrame(), securityOrigin, url))
+        if (MixedContentChecker::shouldBlockRequestForRunnableContent(protectedFrame(), securityOrigin, url))
             return false;
     }
 
@@ -180,7 +180,7 @@ bool FrameLoader::SubframeLoader::requestPlugin(HTMLPlugInImageElement& ownerEle
     // Application plug-ins are plug-ins implemented by the user agent, for example Qt plug-ins,
     // as opposed to third-party code such as Flash. The user agent decides whether or not they are
     // permitted, rather than WebKit.
-    if (!(m_frame->arePluginsEnabled() || MIMETypeRegistry::isApplicationPluginMIMEType(mimeType)))
+    if (!MIMETypeRegistry::isApplicationPluginMIMEType(mimeType))
         return false;
 
     if (!pluginIsLoadable(url))
@@ -268,7 +268,7 @@ LocalFrame* FrameLoader::SubframeLoader::loadOrRedirectSubframe(HTMLFrameOwnerEl
 
         frame->checkedNavigationScheduler()->scheduleLocationChange(initiatingDocument, initiatingDocument->protectedSecurityOrigin(), upgradedRequestURL, m_frame->loader().outgoingReferrer(), lockHistory, lockBackForwardList, WTFMove(stopDelayingLoadEvent));
     } else
-        frame = loadSubframe(ownerElement, upgradedRequestURL, frameName, m_frame->loader().outgoingReferrer());
+        frame = loadSubframe(ownerElement, upgradedRequestURL, frameName, m_frame->loader().outgoingReferrerURL());
 
     if (!frame)
         return nullptr;
@@ -277,7 +277,7 @@ LocalFrame* FrameLoader::SubframeLoader::loadOrRedirectSubframe(HTMLFrameOwnerEl
     return dynamicDowncast<LocalFrame>(ownerElement.contentFrame());
 }
 
-RefPtr<LocalFrame> FrameLoader::SubframeLoader::loadSubframe(HTMLFrameOwnerElement& ownerElement, const URL& url, const AtomString& name, const String& referrer)
+RefPtr<LocalFrame> FrameLoader::SubframeLoader::loadSubframe(HTMLFrameOwnerElement& ownerElement, const URL& url, const AtomString& name, const URL& referrer)
 {
     Ref frame = m_frame.get();
     Ref document = ownerElement.document();
@@ -313,7 +313,17 @@ RefPtr<LocalFrame> FrameLoader::SubframeLoader::loadSubframe(HTMLFrameOwnerEleme
     ReferrerPolicy policy = ownerElement.referrerPolicy();
     if (policy == ReferrerPolicy::EmptyString)
         policy = document->referrerPolicy();
-    String referrerToUse = SecurityPolicy::generateReferrerHeader(policy, url, referrer, OriginAccessPatternsForWebProcess::singleton());
+    // For any new (about:blank) browsing context, step 16 of
+    // https://html.spec.whatwg.org/#creating-a-new-browsing-context requires
+    // setting the referrer to "the serialization of creator's URL" — that is,
+    // the full URL, without regard to Referrer Policy.
+    // And rather than doing this in SecurityPolicy::generateReferrerHeader,
+    // we do it here because per-spec, this should only happen when creating
+    // a new browsing context — and per step 13 of the spec algorithm at
+    // https://html.spec.whatwg.org/#initialise-the-document-object, should
+    // not happen when creating and initializing a new Document object (in
+    // which case, Referrer Policy is applied).
+    auto referrerToUse = url.isAboutBlank() ? referrer.string() : SecurityPolicy::generateReferrerHeader(policy, url, referrer, OriginAccessPatternsForWebProcess::singleton());
 
     frame->checkedLoader()->loadURLIntoChildFrame(url, referrerToUse, subFrame.get());
 

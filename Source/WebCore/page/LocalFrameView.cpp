@@ -607,7 +607,6 @@ void LocalFrameView::applyOverflowToViewport(const RenderElement& renderer, Scro
     Overflow overflowX = renderer.style().overflowX();
     Overflow overflowY = renderer.style().overflowY();
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (CheckedPtr renderSVGRoot = dynamicDowncast<RenderSVGRoot>(renderer)) {
         // FIXME: evaluate if we can allow overflow for these cases too.
         // Overflow is always hidden when stand-alone SVG documents are embedded.
@@ -616,7 +615,6 @@ void LocalFrameView::applyOverflowToViewport(const RenderElement& renderer, Scro
             overflowY = Overflow::Hidden;
         }
     }
-#endif
 
     if (CheckedPtr legacyRenderSVGRoot = dynamicDowncast<LegacyRenderSVGRoot>(renderer)) {
         // FIXME: evaluate if we can allow overflow for these cases too.
@@ -863,11 +861,11 @@ ScrollingNodeID LocalFrameView::scrollingNodeID() const
 {
     RenderView* renderView = this->renderView();
     if (!renderView)
-        return 0;
+        return { };
 
     RenderLayerBacking* backing = renderView->layer()->backing();
     if (!backing)
-        return 0;
+        return { };
 
     return backing->scrollingNodeIDForRole(ScrollCoordinationRole::Scrolling);
 }
@@ -918,8 +916,8 @@ void LocalFrameView::updateSnapOffsets()
     if (!m_frame->document())
         return;
 
-    auto* documentElement = m_frame->document()->documentElement();
-    auto* rootRenderer = documentElement ? documentElement->renderBox() : nullptr;
+    RefPtr documentElement = m_frame->document()->documentElement();
+    CheckedPtr rootRenderer = documentElement ? documentElement->renderBox() : nullptr;
 
     const RenderStyle* styleToUse = nullptr;
     if (rootRenderer && rootRenderer->style().scrollSnapType().strictness != ScrollSnapStrictness::None)
@@ -937,7 +935,7 @@ void LocalFrameView::updateSnapOffsets()
     LayoutRect viewport = LayoutRect(IntPoint(), baseLayoutViewportSize());
     viewport.move(-rootRenderer->marginLeft(), -rootRenderer->marginTop());
 
-    updateSnapOffsetsForScrollableArea(*this, *rootRenderer, *styleToUse, viewport, rootRenderer->style().writingMode(), rootRenderer->style().direction(), m_frame->document()->focusedElement());
+    updateSnapOffsetsForScrollableArea(*this, *rootRenderer, *styleToUse, viewport, rootRenderer->style().writingMode(), rootRenderer->style().direction(), m_frame->document()->protectedFocusedElement().get());
 }
 
 bool LocalFrameView::isScrollSnapInProgress() const
@@ -1215,12 +1213,10 @@ void LocalFrameView::forceLayoutParentViewIfNeeded()
             return;
     }
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (auto* svgRoot = dynamicDowncast<RenderSVGRoot>(contentBox)) {
         if (svgRoot->everHadLayout() && !svgRoot->needsLayout())
             return;
     }
-#endif
 
     LOG(Layout, "LocalFrameView %p forceLayoutParentViewIfNeeded scheduling layout on parent LocalFrameView %p", this, &ownerRenderer->view().frameView());
 
@@ -1353,10 +1349,8 @@ RenderBox* LocalFrameView::embeddedContentBox() const
     if (auto* svgRoot = dynamicDowncast<LegacyRenderSVGRoot>(firstChild))
         return svgRoot;
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (auto* svgRoot = dynamicDowncast<RenderSVGRoot>(firstChild))
         return svgRoot;
-#endif
 
     return nullptr;
 }
@@ -1644,7 +1638,7 @@ LayoutRect LocalFrameView::computeUpdatedLayoutViewportRect(const LayoutRect& la
     LayoutSize constrainedSize = baseLayoutViewportSize;
     layoutViewportRect.setSize(constrainedSize.expandedTo(unobscuredContentSize));
         
-    LayoutPoint layoutViewportOrigin = computeLayoutViewportOrigin(unobscuredContentRect, stableLayoutViewportOriginMin, stableLayoutViewportOriginMax, layoutViewportRect, StickToViewportBounds);
+    LayoutPoint layoutViewportOrigin = computeLayoutViewportOrigin(unobscuredContentRect, stableLayoutViewportOriginMin, stableLayoutViewportOriginMax, layoutViewportRect, ScrollBehaviorForFixedElements::StickToViewportBounds);
 
     // FIXME: Is this equivalent to calling computeLayoutViewportOrigin() with StickToDocumentBounds?
     if (constraint == LayoutViewportConstraint::ConstrainedToDocumentRect) {
@@ -1663,7 +1657,7 @@ LayoutRect LocalFrameView::computeUpdatedLayoutViewportRect(const LayoutRect& la
 LayoutPoint LocalFrameView::computeLayoutViewportOrigin(const LayoutRect& visualViewport, const LayoutPoint& stableLayoutViewportOriginMin, const LayoutPoint& stableLayoutViewportOriginMax, const LayoutRect& layoutViewport, ScrollBehaviorForFixedElements fixedBehavior)
 {
     LayoutPoint layoutViewportOrigin = layoutViewport.location();
-    bool allowRubberBanding = fixedBehavior == StickToViewportBounds;
+    bool allowRubberBanding = fixedBehavior == ScrollBehaviorForFixedElements::StickToViewportBounds;
 
     if (visualViewport.width() > layoutViewport.width()) {
         layoutViewportOrigin.setX(visualViewport.x());
@@ -1797,7 +1791,7 @@ void LocalFrameView::updateLayoutViewport()
     if (m_layoutViewportOverrideRect) {
         if (currentScrollType() == ScrollType::Programmatic) {
             LOG_WITH_STREAM(Scrolling, stream << "computing new override layout viewport because of programmatic scrolling");
-            LayoutPoint newOrigin = computeLayoutViewportOrigin(visualViewportRect(), minStableLayoutViewportOrigin(), maxStableLayoutViewportOrigin(), layoutViewport, StickToDocumentBounds);
+            LayoutPoint newOrigin = computeLayoutViewportOrigin(visualViewportRect(), minStableLayoutViewportOrigin(), maxStableLayoutViewportOrigin(), layoutViewport, ScrollBehaviorForFixedElements::StickToDocumentBounds);
             setLayoutViewportOverrideRect(LayoutRect(newOrigin, m_layoutViewportOverrideRect.value().size()));
         }
         layoutOrVisualViewportChanged();
@@ -1910,7 +1904,7 @@ LayoutPoint LocalFrameView::scrollPositionForFixedPosition() const
 LayoutPoint LocalFrameView::scrollPositionForFixedPosition(const LayoutRect& visibleContentRect, const LayoutSize& totalContentsSize, const LayoutPoint& scrollPosition, const LayoutPoint& scrollOrigin, float frameScaleFactor, bool fixedElementsLayoutRelativeToFrame, ScrollBehaviorForFixedElements behaviorForFixed, int headerHeight, int footerHeight)
 {
     LayoutPoint position;
-    if (behaviorForFixed == StickToDocumentBounds)
+    if (behaviorForFixed == ScrollBehaviorForFixedElements::StickToDocumentBounds)
         position = ScrollableArea::constrainScrollPositionForOverhang(visibleContentRect, totalContentsSize, scrollPosition, scrollOrigin, headerHeight, footerHeight);
     else {
         position = scrollPosition;
@@ -2004,7 +1998,7 @@ LayoutRect LocalFrameView::rectForViewportConstrainedObjects(const LayoutRect& v
         viewportConstrainedObjectsRect = enclosingLayoutRect(rescaleTransform.mapRect(visibleContentRect));
     }
     
-    if (scrollBehavior == StickToDocumentBounds) {
+    if (scrollBehavior == ScrollBehaviorForFixedElements::StickToDocumentBounds) {
         LayoutRect documentBounds(LayoutPoint(), totalContentsSize);
         viewportConstrainedObjectsRect.intersect(documentBounds);
     }
@@ -2574,24 +2568,24 @@ void LocalFrameView::textFragmentIndicatorTimerFired()
 
         constexpr auto hitType = OptionSet { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::AllowVisibleChildFrameContentOnly };
         auto result = localMainFrame->eventHandler().hitTestResultAtPoint(LayoutPoint(textRects.first().center()), hitType);
-        if (!intersects(range, *result.targetNode()))
+        if (!intersects(range, *result.protectedTargetNode()))
             return;
         
         if (textRects.size() >= 2) {
             result = localMainFrame->eventHandler().hitTestResultAtPoint(LayoutPoint(textRects[1].center()), hitType);
-            if (!intersects(range, *result.targetNode()))
+            if (!intersects(range, *result.protectedTargetNode()))
                 return;
         }
         
         if (textRects.size() >= 4) {
             result = localMainFrame->eventHandler().hitTestResultAtPoint(LayoutPoint(textRects.last().center()), hitType);
-            if (!intersects(range, *result.targetNode()))
+            if (!intersects(range, *result.protectedTargetNode()))
                 return;
             result = localMainFrame->eventHandler().hitTestResultAtPoint(LayoutPoint(textRects[textRects.size() - 2].center()), hitType);
-            if (!intersects(range, *result.targetNode()))
+            if (!intersects(range, *result.protectedTargetNode()))
                 return;
         }
-        document.page()->chrome().client().setTextIndicator(textIndicator->data());
+        document.protectedPage()->chrome().client().setTextIndicator(textIndicator->data());
     }
 }
 
@@ -2819,7 +2813,7 @@ void LocalFrameView::didChangeScrollOffset()
 void LocalFrameView::scrollOffsetChangedViaPlatformWidgetImpl(const ScrollOffset& oldOffset, const ScrollOffset& newOffset)
 {
 #if PLATFORM(COCOA)
-    auto deferrer = WheelEventTestMonitorCompletionDeferrer { m_frame->page()->wheelEventTestMonitor().get(), this, WheelEventTestMonitor::DeferReason::ContentScrollInProgress };
+    auto deferrer = WheelEventTestMonitorCompletionDeferrer { m_frame->page()->wheelEventTestMonitor().get(), scrollingNodeIDForTesting(), WheelEventTestMonitor::DeferReason::ContentScrollInProgress };
 #endif
 
     updateLayerPositionsAfterScrolling();
@@ -3278,7 +3272,7 @@ void LocalFrameView::adjustTiledBackingCoverage()
 
 static bool shouldEnableSpeculativeTilingDuringLoading(const LocalFrameView& view)
 {
-    auto* page = view.frame().page();
+    RefPtr page = view.frame().page();
     return page && view.isVisuallyNonEmpty() && !page->progress().isMainLoadProgressing();
 }
 
@@ -3585,23 +3579,23 @@ bool LocalFrameView::shouldUpdate() const
 
 bool LocalFrameView::safeToPropagateScrollToParent() const
 {
-    auto* document = m_frame->document();
+    RefPtr document = m_frame->document();
     if (!document)
         return false;
 
-    auto* parentFrame = m_frame->tree().parent();
+    RefPtr parentFrame = m_frame->tree().parent();
     if (!parentFrame)
         return false;
     
-    auto* localParent = dynamicDowncast<LocalFrame>(parentFrame);
+    RefPtr localParent = dynamicDowncast<LocalFrame>(parentFrame);
     if (!localParent)
         return false;
 
-    auto* parentDocument = localParent->document();
+    RefPtr parentDocument = localParent->document();
     if (!parentDocument)
         return false;
 
-    return document->securityOrigin().isSameOriginDomain(parentDocument->securityOrigin());
+    return document->protectedSecurityOrigin()->isSameOriginDomain(parentDocument->protectedSecurityOrigin());
 }
 
 void LocalFrameView::scheduleScrollToAnchorAndTextFragment()
@@ -4263,7 +4257,7 @@ float LocalFrameView::adjustVerticalPageScrollStepForFixedContent(float step)
     float bottomObscuredArea = 0;
     for (const auto& positionedObject : *positionedObjects) {
         const RenderStyle& style = positionedObject.style();
-        if (style.position() != PositionType::Fixed || style.visibility() == Visibility::Hidden || !style.opacity())
+        if (style.position() != PositionType::Fixed || style.usedVisibility() == Visibility::Hidden || !style.opacity())
             continue;
 
         FloatQuad contentQuad = positionedObject.absoluteContentQuad();
@@ -4415,10 +4409,10 @@ void LocalFrameView::notifyScrollableAreasThatContentAreaWillPaint() const
 
 void LocalFrameView::updateScrollCorner()
 {
-    RenderElement* renderer = nullptr;
+    CheckedPtr<RenderElement> renderer;
     std::unique_ptr<RenderStyle> cornerStyle;
     IntRect cornerRect = scrollCornerRect();
-    Document* doc = m_frame->document();
+    RefPtr doc = m_frame->document();
 
     auto usesStandardScrollbarStyle = [](auto& doc) {
         if (!doc || !doc->documentElement())
@@ -4431,7 +4425,7 @@ void LocalFrameView::updateScrollCorner()
 
     if (!(usesStandardScrollbarStyle(doc) || cornerRect.isEmpty())) {
         // Try the <body> element first as a scroll corner source.
-        Element* body = doc ? doc->bodyOrFrameset() : nullptr;
+        RefPtr body = doc ? doc->bodyOrFrameset() : nullptr;
         if (body && body->renderer()) {
             renderer = body->renderer();
             cornerStyle = renderer->getUncachedPseudoStyle({ PseudoId::WebKitScrollbarCorner }, &renderer->style());
@@ -4439,7 +4433,7 @@ void LocalFrameView::updateScrollCorner()
         
         if (!cornerStyle) {
             // If the <body> didn't have a custom style, then the root element might.
-            Element* docElement = doc ? doc->documentElement() : nullptr;
+            RefPtr docElement = doc ? doc->documentElement() : nullptr;
             if (docElement && docElement->renderer()) {
                 renderer = docElement->renderer();
                 cornerStyle = renderer->getUncachedPseudoStyle({ PseudoId::WebKitScrollbarCorner }, &renderer->style());
@@ -4449,7 +4443,7 @@ void LocalFrameView::updateScrollCorner()
         if (!cornerStyle) {
             // If we have an owning iframe/frame element, then it can set the custom scrollbar also.
             // FIXME: Seems wrong to do this for cross-origin frames.
-            if (RenderWidget* renderer = m_frame->ownerRenderer())
+            if (RefPtr renderer = m_frame->ownerRenderer())
                 cornerStyle = renderer->getUncachedPseudoStyle({ PseudoId::WebKitScrollbarCorner }, &renderer->style());
         }
     }
@@ -4458,7 +4452,7 @@ void LocalFrameView::updateScrollCorner()
         m_scrollCorner = nullptr;
     else {
         if (!m_scrollCorner) {
-            m_scrollCorner = createRenderer<RenderScrollbarPart>(renderer->document(), WTFMove(*cornerStyle));
+            m_scrollCorner = createRenderer<RenderScrollbarPart>(renderer->protectedDocument(), WTFMove(*cornerStyle));
             m_scrollCorner->initializeStyle();
         } else
             m_scrollCorner->setStyle(WTFMove(*cornerStyle));
@@ -4677,8 +4671,9 @@ void LocalFrameView::setWasScrolledByUser(bool wasScrolledByUser)
     if (currentScrollType() == ScrollType::Programmatic)
         return;
 
-    if (wasScrolledByUser)
-        m_frame->document()->setGotoAnchorNeededAfterStylesheetsLoad(false);
+    RefPtr document = m_frame->document();
+    if (wasScrolledByUser && document)
+        document->setGotoAnchorNeededAfterStylesheetsLoad(false);
 
     m_maintainScrollPositionAnchor = nullptr;
     if (m_wasScrolledByUser == wasScrolledByUser)
@@ -4926,7 +4921,7 @@ void LocalFrameView::updateLayoutAndStyleIfNeededRecursive(OptionSet<LayoutOptio
     auto needsStyleRecalc = [&] {
         DescendantsDeque deque;
         while (auto view = nextRenderedDescendant(deque)) {
-            auto* document = view->m_frame->document();
+            RefPtr document = view->m_frame->document();
             if (document && document->childNeedsStyleRecalc())
                 return true;
         }
@@ -5031,7 +5026,7 @@ void LocalFrameView::checkAndDispatchDidReachVisuallyNonEmptyState()
                 return false;
             if (!element->renderer()->opacity())
                 return false;
-            return element->renderer()->style().visibility() == Visibility::Visible;
+            return element->renderer()->style().usedVisibility() == Visibility::Visible;
         };
 
         if (!isVisible(documentElement))
@@ -5231,32 +5226,32 @@ void LocalFrameView::adjustPageHeightDeprecated(float *newBottom, float oldTop, 
     renderView->setPrintRect(IntRect());
 }
 
-float LocalFrameView::documentToAbsoluteScaleFactor(std::optional<float> effectiveZoom) const
+float LocalFrameView::documentToAbsoluteScaleFactor(std::optional<float> usedZoom) const
 {
-    // If effectiveZoom is passed, it already factors in pageZoomFactor(). 
-    return effectiveZoom.value_or(m_frame->pageZoomFactor()) * m_frame->frameScaleFactor();
+    // If usedZoom is passed, it already factors in pageZoomFactor().
+    return usedZoom.value_or(m_frame->pageZoomFactor()) * m_frame->frameScaleFactor();
 }
 
-float LocalFrameView::absoluteToDocumentScaleFactor(std::optional<float> effectiveZoom) const
+float LocalFrameView::absoluteToDocumentScaleFactor(std::optional<float> usedZoom) const
 {
-    // If effectiveZoom is passed, it already factors in pageZoomFactor(). 
-    return 1 / documentToAbsoluteScaleFactor(effectiveZoom);
+    // If usedZoom is passed, it already factors in pageZoomFactor().
+    return 1 / documentToAbsoluteScaleFactor(usedZoom);
 }
 
-FloatRect LocalFrameView::absoluteToDocumentRect(FloatRect rect, std::optional<float> effectiveZoom) const
+FloatRect LocalFrameView::absoluteToDocumentRect(FloatRect rect, std::optional<float> usedZoom) const
 {
-    rect.scale(absoluteToDocumentScaleFactor(effectiveZoom));
+    rect.scale(absoluteToDocumentScaleFactor(usedZoom));
     return rect;
 }
 
-FloatPoint LocalFrameView::absoluteToDocumentPoint(FloatPoint p, std::optional<float> effectiveZoom) const
+FloatPoint LocalFrameView::absoluteToDocumentPoint(FloatPoint p, std::optional<float> usedZoom) const
 {
-    return p.scaled(absoluteToDocumentScaleFactor(effectiveZoom));
+    return p.scaled(absoluteToDocumentScaleFactor(usedZoom));
 }
 
-FloatRect LocalFrameView::absoluteToClientRect(FloatRect rect, std::optional<float> effectiveZoom) const
+FloatRect LocalFrameView::absoluteToClientRect(FloatRect rect, std::optional<float> usedZoom) const
 {
-    return documentToClientRect(absoluteToDocumentRect(rect, effectiveZoom));
+    return documentToClientRect(absoluteToDocumentRect(rect, usedZoom));
 }
 
 FloatSize LocalFrameView::documentToClientOffset() const
@@ -5732,7 +5727,7 @@ void LocalFrameView::setScrollPinningBehavior(ScrollPinningBehavior pinning)
 
 ScrollBehaviorForFixedElements LocalFrameView::scrollBehaviorForFixedElements() const
 {
-    return m_frame->settings().backgroundShouldExtendBeyondPage() ? StickToViewportBounds : StickToDocumentBounds;
+    return m_frame->settings().backgroundShouldExtendBeyondPage() ? ScrollBehaviorForFixedElements::StickToViewportBounds : ScrollBehaviorForFixedElements::StickToDocumentBounds;
 }
 
 LocalFrame& LocalFrameView::frame() const
@@ -5750,14 +5745,21 @@ RenderView* LocalFrameView::renderView() const
     return m_frame->contentRenderer();
 }
 
+CheckedPtr<RenderView> LocalFrameView::checkedRenderView() const
+{
+    return renderView();
+}
+
 int LocalFrameView::mapFromLayoutToCSSUnits(LayoutUnit value) const
 {
-    return value / (m_frame->pageZoomFactor() * m_frame->frameScaleFactor());
+    Ref frame = m_frame;
+    return value / (frame->pageZoomFactor() * frame->frameScaleFactor());
 }
 
 LayoutUnit LocalFrameView::mapFromCSSToLayoutUnits(int value) const
 {
-    return LayoutUnit(value * m_frame->pageZoomFactor() * m_frame->frameScaleFactor());
+    Ref frame = m_frame;
+    return LayoutUnit(value * frame->pageZoomFactor() * frame->frameScaleFactor());
 }
 
 void LocalFrameView::didAddWidgetToRenderTree(Widget& widget)
@@ -6079,7 +6081,7 @@ Color LocalFrameView::scrollbarThumbColorStyle() const
     auto* document = m_frame->document();
     auto scrollingObject = document && document->documentElement() ? document->documentElement()->renderer() : nullptr;
     if (scrollingObject)
-        return scrollingObject->style().effectiveScrollbarThumbColor();
+        return scrollingObject->style().usedScrollbarThumbColor();
     return { };
 }
 
@@ -6088,7 +6090,7 @@ Color LocalFrameView::scrollbarTrackColorStyle() const
     auto* document = m_frame->document();
     auto scrollingObject = document && document->documentElement() ? document->documentElement()->renderer() : nullptr;
     if (scrollingObject)
-        return scrollingObject->style().effectiveScrollbarTrackColor();
+        return scrollingObject->style().usedScrollbarTrackColor();
     return { };
 }
 
@@ -6183,6 +6185,15 @@ void LocalFrameView::invalidateScrollAnchoringElement()
 {
     if (m_scrollAnchoringController)
         m_scrollAnchoringController->invalidateAnchorElement();
+}
+
+void LocalFrameView::scrollbarStyleDidChange()
+{
+    if (auto scrollableAreas = this->scrollableAreas()) {
+        for (auto& scrollableArea : *scrollableAreas)
+            scrollableArea.scrollbarsController().updateScrollbarStyle();
+    }
+    scrollbarsController().updateScrollbarStyle();
 }
 
 } // namespace WebCore

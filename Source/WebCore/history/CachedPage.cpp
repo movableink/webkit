@@ -60,7 +60,10 @@ CachedPage::CachedPage(Page& page)
     : m_page(page)
     , m_expirationTime(MonotonicTime::now() + page.settings().backForwardCacheExpirationInterval())
     , m_cachedMainFrame(makeUnique<CachedFrame>(page.mainFrame()))
-    , m_loadedSubresourceDomains(is<LocalFrame>(page.mainFrame()) ? downcast<LocalFrame>(page.mainFrame()).loader().client().loadedSubresourceDomains() : Vector<RegistrableDomain>())
+    , m_loadedSubresourceDomains([&] {
+        auto* localFrame = dynamicDowncast<LocalFrame>(page.mainFrame());
+        return localFrame ? localFrame->loader().client().loadedSubresourceDomains() : Vector<RegistrableDomain>();
+    }())
 {
 #ifndef NDEBUG
     cachedPageCounter.increment();
@@ -134,7 +137,11 @@ void CachedPage::restore(Page& page)
 
     // Restore the focus appearance for the focused element.
     // FIXME: Right now we don't support pages w/ frames in the b/f cache.  This may need to be tweaked when we add support for that.
-    RefPtr focusedDocument = CheckedRef(page.focusController())->focusedOrMainFrame().document();
+    RefPtr focusedOrMainFrame = page.checkedFocusController()->focusedOrMainFrame();
+    if (!focusedOrMainFrame)
+        return;
+
+    RefPtr focusedDocument = focusedOrMainFrame->document();
     if (RefPtr element = focusedDocument->focusedElement()) {
 #if PLATFORM(IOS_FAMILY)
         // We don't want focused nodes changing scroll position when restoring from the cache

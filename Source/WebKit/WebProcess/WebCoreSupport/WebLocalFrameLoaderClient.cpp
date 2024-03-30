@@ -30,7 +30,6 @@
 #include "APIInjectedBundlePageLoaderClient.h"
 #include "APIInjectedBundlePageResourceLoadClient.h"
 #include "AuthenticationManager.h"
-#include "DataReference.h"
 #include "DrawingArea.h"
 #include "FindController.h"
 #include "FormDataReference.h"
@@ -876,15 +875,11 @@ LocalFrame* WebLocalFrameLoaderClient::dispatchCreatePage(const NavigationAction
     // Just call through to the chrome client.
     WindowFeatures windowFeatures;
     windowFeatures.noopener = newFrameOpenerPolicy == NewFrameOpenerPolicy::Suppress;
-    Page* newPage = webPage->corePage()->chrome().createWindow(*m_frame->coreLocalFrame(), windowFeatures, navigationAction);
+    RefPtr newPage = webPage->corePage()->chrome().createWindow(*m_frame->coreLocalFrame(), windowFeatures, navigationAction);
     if (!newPage)
         return nullptr;
     
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(newPage->mainFrame());
-    if (!localMainFrame)
-        return nullptr;
-
-    return localMainFrame;
+    return dynamicDowncast<LocalFrame>(newPage->mainFrame());
 }
 
 void WebLocalFrameLoaderClient::dispatchShow()
@@ -926,7 +921,10 @@ void WebLocalFrameLoaderClient::dispatchDecidePolicyForResponse(const ResourceRe
     auto protectedFrame = m_frame.copyRef();
     uint64_t listenerID = protectedFrame->setUpPolicyListener(WTFMove(function), WebFrame::ForNavigationAction::No);
 
-    webPage->sendWithAsyncReply(Messages::WebPageProxy::DecidePolicyForResponse(protectedFrame->info(), navigationID, response, request, canShowResponse, downloadAttribute), [frame = protectedFrame, listenerID] (PolicyDecision&& policyDecision) {
+    bool isShowingInitialAboutBlank = coreFrame && coreFrame->loader().stateMachine().isDisplayingInitialEmptyDocument();
+    auto activeDocumentCOOPValue = coreFrame && coreFrame->document() ? coreFrame->document()->crossOriginOpenerPolicy().value : CrossOriginOpenerPolicyValue::SameOrigin;
+
+    webPage->sendWithAsyncReply(Messages::WebPageProxy::DecidePolicyForResponse(protectedFrame->info(), navigationID, response, request, canShowResponse, downloadAttribute, isShowingInitialAboutBlank, activeDocumentCOOPValue), [frame = protectedFrame, listenerID] (PolicyDecision&& policyDecision) {
         frame->didReceivePolicyDecision(listenerID, WTFMove(policyDecision));
     });
 }
@@ -986,7 +984,7 @@ void WebLocalFrameLoaderClient::dispatchDecidePolicyForNewWindowAction(const Nav
     });
 }
 
-void WebLocalFrameLoaderClient::applyToDocumentLoader(WebsitePoliciesData&& websitePolicies)
+void WebLocalFrameLoaderClient::applyWebsitePolicies(WebsitePoliciesData&& websitePolicies)
 {
     auto* coreFrame = m_frame->coreLocalFrame();
     if (!coreFrame)
@@ -1163,7 +1161,7 @@ void WebLocalFrameLoaderClient::finishedLoading(DocumentLoader* loader)
         RefPtr<const FragmentedSharedBuffer> mainResourceData = loader->mainResourceData();
         if (mainResourceData)
             contiguousData = mainResourceData->makeContiguous();
-        IPC::DataReference dataReference(contiguousData ? contiguousData->data() : nullptr, contiguousData ? contiguousData->size() : 0);
+        std::span dataReference(contiguousData ? contiguousData->data() : nullptr, contiguousData ? contiguousData->size() : 0);
         webPage->send(Messages::WebPageProxy::DidFinishLoadingDataForCustomContentProvider(loader->response().suggestedFilename(), dataReference));
     }
 
@@ -1360,22 +1358,21 @@ void WebLocalFrameLoaderClient::loadStorageAccessQuirksIfNeeded()
 {
     RefPtr webPage = m_frame->page();
 
-    if (!webPage || !m_frame->coreLocalFrame() || !m_frame->coreLocalFrame()->isMainFrame() || !m_frame->coreLocalFrame()->document())
+    if (!webPage || !m_frame->isMainFrame() || !m_frame->coreLocalFrame()->document())
         return;
 
     auto* document = m_frame->coreLocalFrame()->document();
-    RegistrableDomain domain { document->url() };
-    if (!WebProcess::singleton().haveStorageAccessQuirksForDomain(domain))
+    URL documentURLWithoutFragmentOrQueries { document->url().viewWithoutQueryOrFragmentIdentifier().toStringWithoutCopying() };
+    if (!WebProcess::singleton().haveStorageAccessQuirksForDomain(RegistrableDomain { documentURLWithoutFragmentOrQueries }))
         return;
 
-    WebProcess::singleton().ensureNetworkProcessConnection().connection().sendWithAsyncReply(Messages::NetworkConnectionToWebProcess::StorageAccessQuirkForTopFrameDomain(WTFMove(domain)), [weakDocument = WeakPtr { *document }](Vector<RegistrableDomain>&& domains) {
+    WebProcess::singleton().ensureNetworkProcessConnection().connection().sendWithAsyncReply(Messages::NetworkConnectionToWebProcess::StorageAccessQuirkForTopFrameDomain(documentURLWithoutFragmentOrQueries), [weakDocument = WeakPtr { *document }](Vector<RegistrableDomain>&& domains) {
         if (!domains.size())
             return;
         if (!weakDocument)
             return;
         weakDocument->quirks().setSubFrameDomainsForStorageAccessQuirk(WTFMove(domains));
     });
-
 }
 
 String WebLocalFrameLoaderClient::generatedMIMETypeForURLScheme(StringView /*URLScheme*/) const
@@ -1699,8 +1696,7 @@ ObjectContentType WebLocalFrameLoaderClient::objectContentType(const URL& url, c
         return ObjectContentType::Image;
 
     if (RefPtr webPage = m_frame->page()) {
-        auto allowedPluginTypes = webFrame().coreLocalFrame()->arePluginsEnabled()
-            ? PluginData::AllPlugins : PluginData::OnlyApplicationPlugins;
+        auto allowedPluginTypes = PluginData::OnlyApplicationPlugins;
         if (webPage->corePage()->pluginData().supportsMimeType(mimeType, allowedPluginTypes))
             return ObjectContentType::PlugIn;
     }
@@ -1809,6 +1805,12 @@ void WebLocalFrameLoaderClient::dispatchWillDestroyGlobalObjectForDOMWindowExten
 
 #if PLATFORM(COCOA)
     
+WebCore::IntPoint WebLocalFrameLoaderClient::accessibilityRemoteFrameOffset()
+{
+    RefPtr webPage = m_frame->page();
+    return webPage ? webPage->accessibilityRemoteFrameOffset() : IntPoint();
+}
+
 RemoteAXObjectRef WebLocalFrameLoaderClient::accessibilityRemoteObject()
 {
     RefPtr webPage = m_frame->page();
@@ -1937,11 +1939,6 @@ void WebLocalFrameLoaderClient::getLoadDecisionForIcons(const Vector<std::pair<W
 
     for (auto& icon : icons)
         webPage->send(Messages::WebPageProxy::GetLoadDecisionForIcon(icon.first, CallbackID::fromInteger(icon.second)));
-}
-
-void WebLocalFrameLoaderClient::broadcastFrameRemovalToOtherProcesses()
-{
-    WebFrameLoaderClient::broadcastFrameRemovalToOtherProcesses();
 }
 
 void WebLocalFrameLoaderClient::broadcastMainFrameURLChangeToOtherProcesses(const URL& url)

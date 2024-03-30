@@ -363,12 +363,11 @@ Heap::Heap(VM& vm, HeapType heapType)
     // AlignedMemoryAllocators
     , fastMallocAllocator(makeUnique<FastMallocAlignedMemoryAllocator>())
     , primitiveGigacageAllocator(makeUnique<GigacageAlignedMemoryAllocator>(Gigacage::Primitive))
-    , jsValueGigacageAllocator(makeUnique<GigacageAlignedMemoryAllocator>(Gigacage::JSValue))
 
     // Subspaces
     , primitiveGigacageAuxiliarySpace("Primitive Gigacage Auxiliary", *this, auxiliaryHeapCellType, primitiveGigacageAllocator.get()) // Hash:0x3e7cd762
-    , jsValueGigacageAuxiliarySpace("JSValue Gigacage Auxiliary", *this, auxiliaryHeapCellType, jsValueGigacageAllocator.get()) // Hash:0x241e946
-    , immutableButterflyJSValueGigacageAuxiliarySpace("ImmutableButterfly Gigacage JSCellWithIndexingHeader", *this, immutableButterflyHeapCellType, jsValueGigacageAllocator.get()) // Hash:0x7a945300
+    , auxiliarySpace("Auxiliary", *this, auxiliaryHeapCellType, fastMallocAllocator.get()) // Hash:0x241e946
+    , immutableButterflyAuxiliarySpace("ImmutableButterfly JSCellWithIndexingHeader", *this, immutableButterflyHeapCellType, fastMallocAllocator.get()) // Hash:0x7a945300
     , cellSpace("JSCell", *this, cellHeapCellType, fastMallocAllocator.get()) // Hash:0xadfb5a79
     , variableSizedCellSpace("Variable Sized JSCell", *this, cellHeapCellType, fastMallocAllocator.get()) // Hash:0xbcd769cc
     , destructibleObjectSpace("JSDestructibleObject", *this, destructibleObjectHeapCellType, fastMallocAllocator.get()) // Hash:0x4f5ed7a9
@@ -716,10 +715,7 @@ void Heap::finalizeMarkedUnconditionalFinalizers(CellSet& cellSet, CollectionSco
 
 void Heap::finalizeUnconditionalFinalizers()
 {
-    VM& vm = this->vm();
     CollectionScope collectionScope = this->collectionScope().value_or(CollectionScope::Full);
-
-    vm.builtinExecutables()->finalizeUnconditionally(collectionScope);
 
     {
         // We run this before CodeBlock's unconditional finalizer since CodeBlock looks at the owner executable's installed CodeBlock in its finalizeUnconditionally.

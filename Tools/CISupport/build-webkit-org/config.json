@@ -102,6 +102,7 @@
                   { "name": "gtk-linux-bot-19", "platform": "gtk" },
                   { "name": "gtk-linux-bot-20", "platform": "gtk" },
                   { "name": "gtk-linux-bot-21", "platform": "gtk" },
+                  { "name": "gtk-linux-bot-22", "platform": "gtk" },
 
                   { "name": "jsconly-linux-igalia-bot-1", "platform": "jsc-only" },
                   { "name": "jsconly-linux-igalia-bot-2", "platform": "jsc-only" },
@@ -141,7 +142,8 @@
                   { "name": "wpe-linux-bot-31", "platform": "wpe" },
                   { "name": "wpe-linux-bot-32", "platform": "wpe" },
                   { "name": "wpe-linux-bot-33", "platform": "wpe" },
-                  { "name": "wpe-linux-bot-34", "platform": "wpe" }
+                  { "name": "wpe-linux-bot-34", "platform": "wpe" },
+                  { "name": "wpe-linux-bot-35", "platform": "wpe" }
                 ],
 
   "builders":   [
@@ -471,10 +473,16 @@
                     "workernames": ["gtk-linux-bot-9"]
                   },
                   {
-                    "name": "GTK-Linux-64-bit-Release-Debian-Stable-Build", "factory": "NoInstallDependenciesBuildFactory",
+                    "name": "GTK-Linux-64-bit-Release-Debian-11-Build", "factory": "NoInstallDependenciesBuildFactory",
                     "platform": "gtk", "configuration": "release", "architectures": ["x86_64"],
                     "additionalArguments": ["--no-experimental-features"],
                     "workernames": ["gtk-linux-bot-10"]
+                  },
+                  {
+                    "name": "GTK-Linux-64-bit-Release-Debian-Stable-Build", "factory": "NoInstallDependenciesBuildFactory",
+                    "platform": "gtk", "configuration": "release", "architectures": ["x86_64"],
+                    "additionalArguments": ["--no-experimental-features"],
+                    "workernames": ["gtk-linux-bot-22"]
                   },
                   {
                     "name": "GTK-Linux-64-bit-Release-Ubuntu-2004-Build", "factory": "NoInstallDependenciesBuildFactory",
@@ -678,12 +686,18 @@
                     "name": "WPE-Linux-RPi4-64bits-Mesa-Release-Perf-Tests", "factory": "CrossTargetDownloadAndPerfTestFactory",
                     "platform": "wpe", "configuration": "release", "architectures": ["arm64"],
                     "workernames": ["wpe-linux-bot-27", "wpe-linux-bot-28", "wpe-linux-bot-29", "wpe-linux-bot-30", "wpe-linux-bot-31", "wpe-linux-bot-32", "wpe-linux-bot-33", "wpe-linux-bot-34"]
-                   }
+                  },
+                  {
+                    "name": "WPE-Linux-64-bit-Release-Skia-Build", "factory": "BuildFactory",
+                    "platform": "wpe", "configuration": "release", "architectures": ["x86_64"],
+                    "workernames": ["wpe-linux-bot-35"]
+                  }
                 ],
 
   "schedulers": [ { "type": "AnyBranchScheduler", "name": "main", "change_filter": "main_filter", "treeStableTimer": 45.0,
                     "builderNames": ["GTK-Linux-64-bit-Release-Build", "GTK-Linux-64-bit-Debug-Build",
                                      "GTK-Linux-64-bit-Release-Clang-Build",
+                                     "GTK-Linux-64-bit-Release-Debian-11-Build",
                                      "GTK-Linux-64-bit-Release-Debian-Stable-Build",
                                      "GTK-Linux-64-bit-Release-Ubuntu-2004-Build",
                                      "GTK-Linux-64-bit-Release-Ubuntu-LTS-Build",
@@ -698,6 +712,7 @@
                                      "WinCairo-64-bit-Release-Build", "WinCairo-64-bit-Debug-Build",
                                      "WPE-Linux-64-bit-Release-Build", "WPE-Linux-64-bit-Debug-Build",
                                      "WPE-Linux-64-bit-Release-Clang-Build",
+                                     "WPE-Linux-64-bit-Release-Skia-Build",
                                      "WPE-Linux-ARM64-bit-Release-Debian-Stable-Build",
                                      "WPE-Linux-ARM32-bit-Release-Debian-Stable-Build",
                                      "WPE-Linux-64-bit-Release-Non-Unified-Build"]

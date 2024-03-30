@@ -92,7 +92,7 @@ public:
     JSValueRef children() const;
     RefPtr<AccessibilityUIElement> childAtIndex(unsigned);
     unsigned indexOfChild(AccessibilityUIElement*);
-    int childrenCount();
+    unsigned childrenCount();
     RefPtr<AccessibilityUIElement> titleUIElement();
     RefPtr<AccessibilityUIElement> parentElement();
 
@@ -160,6 +160,7 @@ public:
     JSRetainPtr<JSStringRef> description();
     JSRetainPtr<JSStringRef> language();
     JSRetainPtr<JSStringRef> stringValue();
+    JSRetainPtr<JSStringRef> dateValue();
     JSRetainPtr<JSStringRef> accessibilityValue() const;
     JSRetainPtr<JSStringRef> helpText() const;
     JSRetainPtr<JSStringRef> orientation() const;
@@ -170,6 +171,8 @@ public:
     double width();
     double height();
     JSRetainPtr<JSStringRef> lineRectsAndText() const;
+    JSRetainPtr<JSStringRef> brailleLabel() const;
+    JSRetainPtr<JSStringRef> brailleRoleDescription() const;
 
     double intValue() const;
     double minValue();
@@ -443,8 +446,8 @@ private:
     void getUIElementsWithAttribute(JSStringRef, Vector<RefPtr<AccessibilityUIElement> >&) const;
 #endif
 
-    void getChildren(Vector<RefPtr<AccessibilityUIElement> >&);
-    void getChildrenWithRange(Vector<RefPtr<AccessibilityUIElement> >&, unsigned location, unsigned length);
+    Vector<RefPtr<AccessibilityUIElement>> getChildren() const;
+    Vector<RefPtr<AccessibilityUIElement>> getChildrenInRange(unsigned location, unsigned length) const;
 
 #if USE(ATSPI)
     static RefPtr<AccessibilityController> s_controller;

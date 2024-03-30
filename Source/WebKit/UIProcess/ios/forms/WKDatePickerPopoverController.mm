@@ -228,6 +228,10 @@
     [self _scaleDownToFitHeightIfNeeded];
 }
 
+#if !PLATFORM(MACCATALYST)
+// FIXME: This platform conditional works around the fact that -isBeingPresented is sometimes NO in Catalyst, when presenting
+// a popover. This may cause a crash in the case where this size transition occurs while the popover is appearing.
+
 - (void)viewWillTransitionToSize:(CGSize)size withTransitionCoordinator:(id<UIViewControllerTransitionCoordinator>)coordinator
 {
     [super viewWillTransitionToSize:size withTransitionCoordinator:coordinator];
@@ -235,6 +239,8 @@
     if (!self.isBeingPresented && !self.isBeingDismissed)
         [self dismissDatePickerAnimated:NO];
 }
+
+#endif // !PLATFORM(MACCATALYST)
 
 - (void)_scaleDownToFitHeightIfNeeded
 {
@@ -272,6 +278,13 @@
     [_transformedContentWidthConstraint setActive:YES];
 }
 
+- (void)viewDidDisappear:(BOOL)animated
+{
+    [super viewDidDisappear:animated];
+
+    [self _dispatchPopoverControllerDidDismissIfNeeded];
+}
+
 - (void)presentInView:(UIView *)view sourceRect:(CGRect)rect completion:(void(^)())completion
 {
     RetainPtr controller = [view _wk_viewControllerForFullScreenPresentation];
@@ -298,13 +311,15 @@
     auto distanceFromTop = CGRectGetMinY(rectInWindow) - CGRectGetMinY(windowBounds);
     auto distanceFromLeft = CGRectGetMinX(rectInWindow) - CGRectGetMinX(windowBounds);
     auto distanceFromRight = CGRectGetMaxX(windowBounds) - CGRectGetMaxX(rectInWindow);
-    auto distanceFromBottom = CGRectGetMaxY(windowBounds) - CGRectGetMaxY(rectInWindow);
     auto estimatedMaximumPopoverSize = [_contentView estimatedMaximumPopoverSize];
 
     auto canContainPopover = [&](CGFloat width, CGFloat height) {
         return estimatedMaximumPopoverSize.width < width && estimatedMaximumPopoverSize.height < height;
     };
 
+    // FIXME: We intentionally avoid presenting below the input element, since UIKit will prefer shrinking
+    // the popover instead of shifting it upwards in the case where the software keyboard is show.
+    // See also: <rdar://121571971>.
     auto presentationController = self.popoverPresentationController;
     UIPopoverArrowDirection permittedDirections = 0;
     if (canContainPopover(CGRectGetWidth(windowBounds), distanceFromTop))
@@ -313,8 +328,6 @@
         permittedDirections |= UIPopoverArrowDirectionRight;
     if (canContainPopover(distanceFromRight, CGRectGetHeight(windowBounds)))
         permittedDirections |= UIPopoverArrowDirectionLeft;
-    if (canContainPopover(CGRectGetWidth(windowBounds), distanceFromBottom))
-        permittedDirections |= UIPopoverArrowDirectionUp;
 
     presentationController.permittedArrowDirections = permittedDirections;
     presentationController.sourceView = view;

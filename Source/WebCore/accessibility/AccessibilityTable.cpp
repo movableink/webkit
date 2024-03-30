@@ -404,7 +404,7 @@ void AccessibilityTable::recomputeIsExposable()
     if (previouslyExposable != m_isExposable) {
         // A table's role value is dependent on whether it's exposed, so notify the cache this has changed.
         if (auto* cache = axObjectCache())
-            cache->handleRoleChanged(this);
+            cache->handleRoleChanged(*this);
 
         // Before resetting our existing children, possibly losing references to them, ensure we update their role (since a table cell's role is dependent on whether its parent table is exposable).
         updateChildrenRoles();
@@ -845,7 +845,7 @@ unsigned AccessibilityTable::columnCount()
 {
     updateChildrenIfNecessary();
     
-    return m_columns.size();    
+    return m_columns.size();
 }
     
 unsigned AccessibilityTable::rowCount()
@@ -864,6 +864,13 @@ AccessibilityObject* AccessibilityTable::cellForColumnAndRow(unsigned column, un
     if (AXID cellID = m_cellSlots[row][column])
         return axObjectCache()->objectForID(cellID);
     return nullptr;
+}
+
+bool AccessibilityTable::hasGridAriaRole() const
+{
+    auto ariaRole = ariaRoleAttribute();
+    // Notably, this excludes role="table".
+    return ariaRole == AccessibilityRole::Grid || ariaRole == AccessibilityRole::TreeGrid;
 }
 
 AccessibilityRole AccessibilityTable::roleValue() const

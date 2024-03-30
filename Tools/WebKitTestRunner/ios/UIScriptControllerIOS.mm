@@ -45,16 +45,13 @@
 #import <WebKit/WKWebViewPrivate.h>
 #import <WebKit/WKWebViewPrivateForTesting.h>
 #import <WebKit/WebKit.h>
+#import <pal/spi/ios/BrowserEngineKitSPI.h>
 #import <pal/spi/ios/GraphicsServicesSPI.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/MonotonicTime.h>
 #import <wtf/SoftLinking.h>
 #import <wtf/Vector.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
-
-#if USE(APPLE_INTERNAL_SDK)
-#import <WebKitAdditions/ServiceExtensionsAdditions.h>
-#endif
 
 SOFT_LINK_FRAMEWORK(UIKit)
 SOFT_LINK_CLASS(UIKit, UIPhysicalKeyboardEvent)
@@ -218,6 +215,16 @@ void UIScriptControllerIOS::doAfterVisibleContentRectUpdate(JSValueRef callback)
 {
     unsigned callbackID = m_context->prepareForAsyncTask(callback, CallbackTypeNonPersistent);
     [webView() _doAfterNextVisibleContentRectUpdate:makeBlockPtr([this, protectedThis = Ref { *this }, callbackID] {
+        if (!m_context)
+            return;
+        m_context->asyncTaskComplete(callbackID);
+    }).get()];
+}
+
+void UIScriptControllerIOS::doAfterNextVisibleContentRectAndStablePresentationUpdate(JSValueRef callback)
+{
+    unsigned callbackID = m_context->prepareForAsyncTask(callback, CallbackTypeNonPersistent);
+    [webView() _doAfterNextVisibleContentRectAndStablePresentationUpdate:makeBlockPtr([this, protectedThis = Ref { *this }, callbackID] {
         if (!m_context)
             return;
         m_context->asyncTaskComplete(callbackID);
@@ -839,7 +846,7 @@ void UIScriptControllerIOS::applyAutocorrection(JSStringRef newString, JSStringR
 {
     unsigned callbackID = m_context->prepareForAsyncTask(callback, CallbackTypeNonPersistent);
 
-#if HAVE(UI_ASYNC_TEXT_INTERACTION)
+#if USE(BROWSERENGINEKIT)
     if (auto asyncInput = asyncTextInput()) {
         auto completionWrapper = makeBlockPtr([this, protectedThis = Ref { *this }, callbackID](NSArray<UITextSelectionRect *> *) {
             dispatch_async(dispatch_get_main_queue(), makeBlockPtr([this, protectedThis = Ref { *this }, callbackID] {
@@ -847,14 +854,10 @@ void UIScriptControllerIOS::applyAutocorrection(JSStringRef newString, JSStringR
                     m_context->asyncTaskComplete(callbackID);
             }).get());
         });
-#if SERVICE_EXTENSIONS_TEXT_INPUT_IS_AVAILABLE
         [asyncInput replaceText:toWTFString(oldString) withText:toWTFString(newString) options:0 completionHandler:completionWrapper.get()];
-#else
-        [asyncInput replaceText:toWTFString(oldString) withText:toWTFString(newString) options:0 withCompletionHandler:completionWrapper.get()];
-#endif
         return;
     }
-#endif // HAVE(UI_ASYNC_TEXT_INTERACTION)
+#endif // USE(BROWSERENGINEKIT)
 
     auto contentView = static_cast<id<UIWKInteractionViewProtocol>>(platformContentView());
     [contentView applyAutocorrection:toWTFString(newString) toString:toWTFString(oldString) shouldUnderline:NO withCompletionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, callbackID](UIWKAutocorrectionRects *) {
@@ -909,7 +912,7 @@ void UIScriptControllerIOS::clipSelectionViewRectToContentView(CGRect& rect) con
     auto contentView = platformContentView();
     rect = CGRectIntersection(contentView.bounds, rect);
 
-#if HAVE(UI_ASYNC_TEXT_INTERACTION)
+#if USE(BROWSERENGINEKIT)
     if (auto asyncInput = asyncTextInput()) {
         auto selectionClipRect = asyncInput.selectionClipRect;
         if (!CGRectIsNull(selectionClipRect))
@@ -1117,9 +1120,9 @@ void UIScriptControllerIOS::simulateRotation(DeviceOrientation orientation, JSVa
 {
     auto callbackID = m_context->prepareForAsyncTask(callback, CallbackTypeNonPersistent);
     webView().rotationDidEndCallback = makeBlockPtr([this, protectedThis = Ref { *this }, callbackID] {
-        if (!m_context)
-            return;
-        m_context->asyncTaskComplete(callbackID);
+        if (m_context)
+            m_context->asyncTaskComplete(callbackID);
+        webView().rotationDidEndCallback = nil;
     }).get();
 
 #if HAVE(UI_WINDOW_SCENE_GEOMETRY_PREFERENCES)
@@ -1592,18 +1595,18 @@ void UIScriptControllerIOS::resignFirstResponder()
     [webView() resignFirstResponder];
 }
 
-#if HAVE(UI_ASYNC_TEXT_INTERACTION)
+#if USE(BROWSERENGINEKIT)
 
-id<WKSETextInput> UIScriptControllerIOS::asyncTextInput() const
+id<BETextInput> UIScriptControllerIOS::asyncTextInput() const
 {
-    static BOOL conformsToAsyncTextInput = class_conformsToProtocol(NSClassFromString(@"WKContentView"), @protocol(WKSETextInput));
+    static BOOL conformsToAsyncTextInput = class_conformsToProtocol(NSClassFromString(@"WKContentView"), @protocol(BETextInput));
     if (!conformsToAsyncTextInput)
         return nil;
 
-    return (id<WKSETextInput>)platformContentView();
+    return (id<BETextInput>)platformContentView();
 }
 
-#endif // HAVE(UI_ASYNC_TEXT_INTERACTION)
+#endif // USE(BROWSERENGINEKIT)
 
 #if HAVE(UI_TEXT_SELECTION_DISPLAY_INTERACTION)
 

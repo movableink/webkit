@@ -207,18 +207,22 @@ class Tracker(GenericTracker):
         issue._labels = []
         issue._classification = ''  # Bugzilla doesn't have a concept of "classification"
 
-        if member in ('title', 'timestamp', 'creator', 'opened', 'assignee', 'watchers', 'project', 'component', 'version', 'keywords', 'related'):
+        if member in ('title', 'timestamp', 'modified', 'creator', 'opened', 'assignee', 'watchers', 'project', 'component', 'version', 'keywords', 'related'):
             response = self.session.get(
                 '{}/rest/bug/{}{}'.format(self.url, issue.id, self._login_arguments(required=False)),
                 timeout=self.timeout,
             )
             if response.status_code // 100 == 4 and self._logins_left:
                 self._logins_left -= 1
+                if response.json().get('code') == 101:
+                    sys.stderr.write("{}\n".format(response.json().get('message')))
+                    return None
             response = response.json().get('bugs', []) if response.status_code == 200 else None
             if response:
                 response = response[0]
                 issue._title = response['summary']
                 issue._timestamp = int(calendar.timegm(datetime.strptime(response['creation_time'], '%Y-%m-%dT%H:%M:%SZ').timetuple()))
+                issue._modified = int(calendar.timegm(datetime.strptime(response['last_change_time'], '%Y-%m-%dT%H:%M:%SZ').timetuple()))
                 if response.get('creator_detail'):
                     issue._creator = self.user(
                         name=response['creator_detail'].get('real_name'),
@@ -646,6 +650,11 @@ class Tracker(GenericTracker):
                     self.radar_importer.name,
                     issue.references[0] if issue.references else '?',
                 ))
+                response = webkitcorepy.Terminal.choose(
+                    'Double-check you have the correct bug. Would you like to continue?', options=('Yes', 'No'), default='Yes',
+                )
+                if response == 'No':
+                    raise ValueError('Radar is tracking a different bug')
 
         did_modify_cc = False
         if user_to_cc or keyword_to_add:

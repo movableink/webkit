@@ -49,6 +49,8 @@ interface AccessibilityUIElement {
     readonly attribute DOMString language;
     readonly attribute DOMString helpText;
     readonly attribute DOMString valueDescription;
+    readonly attribute DOMString brailleLabel;
+    readonly attribute DOMString brailleRoleDescription;
     readonly attribute DOMString url;
     readonly attribute DOMString speakAs;
     readonly attribute DOMString liveRegionRelevant;
@@ -76,10 +78,11 @@ interface AccessibilityUIElement {
     undefined setValue(DOMString value);
 
     readonly attribute DOMString stringValue;
+    readonly attribute DOMString dateValue;
     readonly attribute long intValue;
     readonly attribute long minValue;
     readonly attribute long maxValue;
-    
+
     readonly attribute boolean isAtomicLiveRegion;
     readonly attribute boolean isBusy;
     readonly attribute boolean isEnabled;
@@ -126,7 +129,7 @@ interface AccessibilityUIElement {
     readonly attribute DOMString lineRectsAndText;
 
     readonly attribute object children;
-    readonly attribute long childrenCount;
+    readonly attribute unsigned long childrenCount;
     readonly attribute long selectedChildrenCount;
     readonly attribute long rowCount;
     readonly attribute long columnCount;

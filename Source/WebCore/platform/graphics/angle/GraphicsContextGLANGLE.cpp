@@ -2852,17 +2852,17 @@ Vector<GCGLuint> GraphicsContextGLANGLE::getUniformIndices(PlatformGLObject prog
     return result;
 }
 
-void GraphicsContextGLANGLE::getActiveUniformBlockiv(GCGLuint program, GCGLuint uniformBlockIndex, GCGLenum pname, std::span<GCGLint> params)
+void GraphicsContextGLANGLE::getActiveUniformBlockiv(PlatformGLObject program, GCGLuint uniformBlockIndex, GCGLenum pname, std::span<GCGLint> params)
 {
     if (!makeContextCurrent())
         return;
     GL_GetActiveUniformBlockivRobustANGLE(program, uniformBlockIndex, pname, params.size(), nullptr, params.data());
 }
 
-std::optional<GraphicsContextGL::EGLImageAttachResult> GraphicsContextGLANGLE::createAndBindEGLImage(GCGLenum, EGLImageSource)
+GCEGLImage GraphicsContextGLANGLE::createAndBindEGLImage(GCGLenum, GCGLenum, EGLImageSource, GCGLint)
 {
     notImplemented();
-    return std::nullopt;
+    return nullptr;
 }
 
 void GraphicsContextGLANGLE::destroyEGLImage(GCEGLImage handle)
@@ -2876,9 +2876,10 @@ GCEGLSync GraphicsContextGLANGLE::createEGLSync(ExternalEGLSyncEvent)
     return nullptr;
 }
 
-bool GraphicsContextGLANGLE::destroyEGLSync(GCEGLSync sync)
+void GraphicsContextGLANGLE::destroyEGLSync(GCEGLSync sync)
 {
-    return !!EGL_DestroySync(platformDisplay(), sync);
+    bool result = EGL_DestroySync(platformDisplay(), sync);
+    ASSERT_UNUSED(result, !!result);
 }
 
 void GraphicsContextGLANGLE::clientWaitEGLSyncWithFlush(GCEGLSync sync, uint64_t timeout)

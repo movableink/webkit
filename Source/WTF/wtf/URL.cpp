@@ -251,7 +251,7 @@ StringView URL::fragmentIdentifier() const
 }
 
 // https://wicg.github.io/scroll-to-text-fragment/#the-fragment-directive
-String URL::consumefragmentDirective()
+String URL::consumeFragmentDirective()
 {
     ASCIILiteral fragmentDirectiveDelimiter = ":~:"_s;
     auto fragment = fragmentIdentifier();
@@ -263,7 +263,11 @@ String URL::consumefragmentDirective()
     
     auto fragmentDirective = fragment.substring(fragmentDirectiveStart + fragmentDirectiveDelimiter.length()).toString();
     
-    setFragmentIdentifier(fragment.left(fragmentDirectiveStart));
+    auto remainingFragment = fragment.left(fragmentDirectiveStart);
+    if (remainingFragment.isEmpty())
+        removeFragmentIdentifier();
+    else
+        setFragmentIdentifier(remainingFragment);
     
     return fragmentDirective;
 }
@@ -464,7 +468,7 @@ static bool appendEncodedHostname(Vector<UChar, 512>& buffer, StringView string)
         string.upconvertedCharacters(), string.length(), hostnameBuffer, URLParser::hostnameBufferLength, &processingDetails, &error);
 
     if (U_SUCCESS(error) && !(processingDetails.errors & ~URLParser::allowedNameToASCIIErrors) && numCharactersConverted) {
-        buffer.append(hostnameBuffer, numCharactersConverted);
+        buffer.append(std::span(hostnameBuffer, numCharactersConverted));
         return true;
     }
     return false;
@@ -515,7 +519,7 @@ void URL::setHost(StringView newHost)
     parse(makeString(
         StringView(m_string).left(hostStart()),
         slashSlashNeeded ? "//"_s : ""_s,
-        hasSpecialScheme() ? StringView(encodedHostName.data(), encodedHostName.size()) : newHost,
+        hasSpecialScheme() ? StringView(encodedHostName.span()) : newHost,
         StringView(m_string).substring(m_hostEnd)
     ));
 }
@@ -568,7 +572,7 @@ void URL::setHostAndPort(StringView hostAndPort)
     parse(makeString(
         StringView(m_string).left(hostStart()),
         slashSlashNeeded ? "//"_s : ""_s,
-        hasSpecialScheme() ? StringView(encodedHostName.data(), encodedHostName.size()) : hostName,
+        hasSpecialScheme() ? StringView(encodedHostName.span()) : hostName,
         portString.isEmpty() ? ""_s : ":"_s,
         portString,
         StringView(m_string).substring(pathStart())
@@ -842,6 +846,11 @@ String encodeWithURLEscapeSequences(const String& input)
     return percentEncodeCharacters(input, URLParser::isInUserInfoEncodeSet);
 }
 
+String percentEncodeFragmentDirectiveSpecialCharacters(const String& input)
+{
+    return percentEncodeCharacters(input, URLParser::isSpecialCharacterForFragmentDirective);
+}
+
 static bool protocolIsInternal(StringView string, ASCIILiteral protocolLiteral)
 {
     assertProtocolIsGood(protocolLiteral);
@@ -887,26 +896,23 @@ void URL::dump(PrintStream& out) const
     out.print(m_string);
 }
 
-String URL::strippedForUseAsReferrer() const
+URL::StripResult URL::strippedForUseAsReferrer() const
 {
     if (!m_isValid)
-        return m_string;
+        return { m_string, false };
 
     unsigned end = credentialsEnd();
 
     if (m_userStart == end && m_queryEnd == m_string.length())
-        return m_string;
+        return { m_string, false };
 
-    return makeString(
-        StringView(m_string).left(m_userStart),
-        StringView(m_string).substring(end, m_queryEnd - end)
-    );
+    return { makeString(StringView(m_string).left(m_userStart), StringView(m_string).substring(end, m_queryEnd - end)), true };
 }
 
-String URL::strippedForUseAsReferrerWithExplicitPort() const
+URL::StripResult URL::strippedForUseAsReferrerWithExplicitPort() const
 {
     if (!m_isValid)
-        return m_string;
+        return { m_string, false };
 
     // Custom ports will appear in the URL string:
     if (m_portLength)
@@ -919,9 +925,9 @@ String URL::strippedForUseAsReferrerWithExplicitPort() const
     unsigned end = credentialsEnd();
 
     if (m_userStart == end && m_queryEnd == m_string.length())
-        return makeString(StringView(m_string).left(m_hostEnd), ':', static_cast<unsigned>(*port), StringView(m_string).substring(pathStart()));
+        return { makeString(StringView(m_string).left(m_hostEnd), ':', static_cast<unsigned>(*port), StringView(m_string).substring(pathStart())), true };
 
-    return makeString(StringView(m_string).left(m_hostEnd), ':', static_cast<unsigned>(*port), StringView(m_string).substring(end, m_queryEnd - end));
+    return { makeString(StringView(m_string).left(m_hostEnd), ':', static_cast<unsigned>(*port), StringView(m_string).substring(end, m_queryEnd - end)), true };
 }
 
 String URL::strippedForUseAsReport() const

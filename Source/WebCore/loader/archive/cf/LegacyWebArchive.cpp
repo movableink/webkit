@@ -639,9 +639,6 @@ static HashMap<RefPtr<CSSStyleSheet>, String> addSubresourcesForCSSStyleSheetsIf
 
     for (auto& [cssStyleSheet, path]  : uniqueCSSStyleSheets) {
         auto contentString = cssStyleSheet->cssTextWithReplacementURLs(relativeUniqueSubresources, relativeUniqueCSSStyleSheets);
-        if (contentString.isEmpty())
-            continue;
-
         if (auto newResource = ArchiveResource::create(utf8Buffer(contentString), URL { cssStyleSheet->href() }, "text/css"_s, "UTF-8"_s, frameName, ResourceResponse(), path))
             subresources.append(newResource.releaseNonNull());
     }
@@ -788,7 +785,7 @@ RefPtr<LegacyWebArchive> LegacyWebArchive::createFromSelection(LocalFrame* frame
     builder.append(documentTypeString(*document));
 
     Vector<Ref<Node>> nodeList;
-    builder.append(serializePreservingVisualAppearance(frame->selection().selection(), ResolveURLs::No, SerializeComposedTree::Yes, IgnoreUserSelectNone::Yes, &nodeList));
+    builder.append(serializePreservingVisualAppearance(frame->selection().selection(), ResolveURLs::No, SerializeComposedTree::Yes, IgnoreUserSelectNone::Yes, PreserveBaseElement::Yes, &nodeList));
 
     auto archive = create(builder.toString(), *frame, WTFMove(nodeList), nullptr);
     if (!archive)

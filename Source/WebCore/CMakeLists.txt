@@ -39,6 +39,7 @@ set(WebCore_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/Modules/filesystemaccess"
     "${WEBCORE_DIR}/Modules/geolocation"
     "${WEBCORE_DIR}/Modules/highlight"
+    "${WEBCORE_DIR}/Modules/identity"
     "${WEBCORE_DIR}/Modules/indexeddb"
     "${WEBCORE_DIR}/Modules/indexeddb/client"
     "${WEBCORE_DIR}/Modules/indexeddb/server"
@@ -140,6 +141,7 @@ set(WebCore_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/page"
     "${WEBCORE_DIR}/page/csp"
     "${WEBCORE_DIR}/page/scrolling"
+    "${WEBCORE_DIR}/page/text-extraction"
     "${WEBCORE_DIR}/platform"
     "${WEBCORE_DIR}/platform/animation"
     "${WEBCORE_DIR}/platform/audio"
@@ -223,6 +225,7 @@ set(WebCore_IDL_INCLUDES
     Modules/filesystemaccess
     Modules/geolocation
     Modules/highlight
+    Modules/identity
     Modules/indexeddb
     Modules/mediacapabilities
     Modules/mediarecorder
@@ -369,6 +372,12 @@ set(WebCore_NON_SVG_IDL_FILES
     Modules/highlight/Highlight.idl
     Modules/highlight/HighlightRegistry.idl
 
+    Modules/identity/DigitalCredential.idl
+    Modules/identity/DigitalCredentialRequestOptions.idl
+    Modules/identity/IdentityCredentialProtocol.idl
+    Modules/identity/IdentityRequestProvider.idl
+    Modules/identity/Navigator+Identity.idl
+
     Modules/indexeddb/IDBCursor.idl
     Modules/indexeddb/IDBCursorDirection.idl
     Modules/indexeddb/IDBCursorWithValue.idl
@@ -431,6 +440,7 @@ set(WebCore_NON_SVG_IDL_FILES
     Modules/mediasource/ManagedMediaSource.idl
     Modules/mediasource/ManagedSourceBuffer.idl
     Modules/mediasource/MediaSource.idl
+    Modules/mediasource/MediaSourceHandle.idl
     Modules/mediasource/SourceBuffer.idl
     Modules/mediasource/SourceBufferList.idl
     Modules/mediasource/TextTrack+MediaSource.idl
@@ -925,6 +935,7 @@ set(WebCore_NON_SVG_IDL_FILES
     css/CSSRule.idl
     css/CSSRuleList.idl
     css/CSSScopeRule.idl
+    css/CSSStartingStyleRule.idl
     css/CSSStyleDeclaration.idl
     css/CSSStyleRule.idl
     css/CSSStyleSheet.idl
@@ -1019,6 +1030,9 @@ set(WebCore_NON_SVG_IDL_FILES
     dom/Comment.idl
     dom/CompositionEvent.idl
     dom/ContentVisibilityAutoStateChangeEvent.idl
+    dom/CreateHTMLCallback.idl
+    dom/CreateScriptCallback.idl
+    dom/CreateScriptURLCallback.idl
     dom/CustomElementRegistry.idl
     dom/CustomEvent.idl
     dom/CustomStateSet.idl
@@ -1111,6 +1125,7 @@ set(WebCore_NON_SVG_IDL_FILES
     dom/PageTransitionEvent.idl
     dom/ParentNode.idl
     dom/PointerEvent.idl
+    dom/PointerLockOptions.idl
     dom/PopStateEvent.idl
     dom/ProcessingInstruction.idl
     dom/ProgressEvent.idl
@@ -1141,6 +1156,12 @@ set(WebCore_NON_SVG_IDL_FILES
     dom/TouchEvent.idl
     dom/TouchList.idl
     dom/TreeWalker.idl
+    dom/TrustedHTML.idl
+    dom/TrustedScript.idl
+    dom/TrustedScriptURL.idl
+    dom/TrustedTypePolicy.idl
+    dom/TrustedTypePolicyFactory.idl
+    dom/TrustedTypePolicyOptions.idl
     dom/UIEvent.idl
     dom/UIEventInit.idl
     dom/ValidityStateFlags.idl
@@ -1148,6 +1169,7 @@ set(WebCore_NON_SVG_IDL_FILES
     dom/ViewTransitionUpdateCallback.idl
     dom/VisibilityState.idl
     dom/WheelEvent.idl
+    dom/WindowOrWorkerGlobalScope+TrustedTypes.idl
     dom/XMLDocument.idl
 
     fileapi/Blob.idl
@@ -1323,6 +1345,7 @@ set(WebCore_NON_SVG_IDL_FILES
     inspector/InspectorAuditDOMObject.idl
     inspector/InspectorAuditResourcesObject.idl
     inspector/InspectorFrontendHost.idl
+    inspector/RTCLogsCallback.idl
 
     loader/COEPInheritenceViolationReportBody.idl
     loader/CORPViolationReportBody.idl
@@ -1492,7 +1515,6 @@ set(WebCore_SVG_IDL_FILES
     svg/Document+SVG.idl
     svg/SVGAElement.idl
     svg/SVGAngle.idl
-    svg/SVGAnimateColorElement.idl
     svg/SVGAnimateElement.idl
     svg/SVGAnimateMotionElement.idl
     svg/SVGAnimateTransformElement.idl
@@ -1850,6 +1872,7 @@ list(APPEND WebCore_NON_SVG_IDL_FILES
     Modules/WebGPU/GPUVertexState.idl
     Modules/WebGPU/GPUVertexStepMode.idl
     Modules/WebGPU/NavigatorGPU.idl
+    Modules/WebGPU/WGSLLanguageFeatures.idl
 )
 
 set(WebCore_IDL_FILES
@@ -1879,7 +1902,6 @@ set(WebCore_USER_AGENT_STYLE_SHEETS
     ${WEBCORE_DIR}/css/plugIns.css
     ${WEBCORE_DIR}/css/popover.css
     ${WEBCORE_DIR}/css/quirks.css
-    ${WEBCORE_DIR}/css/ruby.css
     ${WEBCORE_DIR}/css/svg.css
     ${WEBCORE_DIR}/css/viewTransitions.css
     ${WEBCORE_DIR}/html/shadow/attachmentElementShadow.css
@@ -1908,6 +1930,18 @@ endif ()
 
 if (ENABLE_XSLT)
     list(APPEND WebCore_LIBRARIES LibXslt::LibXslt)
+endif ()
+
+if (UNIX)
+    check_function_exists(shm_open SHM_OPEN_EXISTS)
+    if (NOT SHM_OPEN_EXISTS)
+        set(CMAKE_REQUIRED_LIBRARIES rt)
+        check_function_exists(shm_open SHM_OPEN_REQUIRES_LIBRT)
+        if (SHM_OPEN_REQUIRES_LIBRT)
+            list(APPEND WebCore_PRIVATE_LIBRARIES rt)
+        endif ()
+        unset(CMAKE_REQUIRED_LIBRARIES)
+    endif ()
 endif ()
 
 # For platforms that want to use system-provided OpenGL (ES) / EGL headers,
@@ -2199,7 +2233,7 @@ if (USE_LCMS)
 endif ()
 
 if (USE_WOFF2)
-  list(APPEND WebCore_LIBRARIES WOFF2::dec)
+    list(APPEND WebCore_LIBRARIES WOFF2::dec)
 endif ()
 
 if (USE_XDGMIME)

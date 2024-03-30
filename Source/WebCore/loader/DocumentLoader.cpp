@@ -68,6 +68,7 @@
 #include "LocalFrame.h"
 #include "LocalFrameLoaderClient.h"
 #include "Logging.h"
+#include "MIMETypeRegistry.h"
 #include "MemoryCache.h"
 #include "MixedContentChecker.h"
 #include "NavigationRequester.h"
@@ -191,6 +192,11 @@ FrameLoader* DocumentLoader::frameLoader() const
     if (!m_frame)
         return nullptr;
     return &m_frame->loader();
+}
+
+CheckedPtr<FrameLoader> DocumentLoader::checkedFrameLoader() const
+{
+    return frameLoader();
 }
 
 SubresourceLoader* DocumentLoader::mainResourceLoader() const
@@ -493,6 +499,7 @@ void DocumentLoader::finishedLoading()
         if (!frameLoader())
             return;
         frameLoader()->client().finishedLoading(this);
+        frameLoader()->client().loadStorageAccessQuirksIfNeeded();
     }
 
     m_writer.end();
@@ -734,7 +741,7 @@ void DocumentLoader::willSendRequest(ResourceRequest&& newRequest, const Resourc
         if (!parentFrame)
             return completionHandler(WTFMove(newRequest));
 
-        if (!MixedContentChecker::frameAndAncestorsCanDisplayInsecureContent(*parentFrame, MixedContentChecker::ContentType::Active, newRequest.url())) {
+        if (MixedContentChecker::shouldBlockRequestForDisplayableContent(*parentFrame, newRequest.url(), MixedContentChecker::ContentType::Active)) {
             cancelMainResourceLoad(frameLoader()->cancelledError(newRequest));
             return completionHandler(WTFMove(newRequest));
         }
@@ -892,19 +899,26 @@ static URL microsoftTeamsRedirectURL()
     return URL { "https://www.microsoft.com/en-us/microsoft-365/microsoft-teams/"_str };
 }
 
+bool DocumentLoader::shouldClearContentSecurityPolicyForResponse(const ResourceResponse& response) const
+{
+    return response.httpHeaderField(HTTPHeaderName::ContentSecurityPolicy).isNull() && !m_isLoadingMultipartContent;
+}
+
 void DocumentLoader::responseReceived(CachedResource& resource, const ResourceResponse& response, CompletionHandler<void()>&& completionHandler)
 {
     ASSERT_UNUSED(resource, m_mainResource == &resource);
 
-    if (!response.httpHeaderField(HTTPHeaderName::ContentSecurityPolicy).isNull()) {
+    if (shouldClearContentSecurityPolicyForResponse(response))
+        m_contentSecurityPolicy = nullptr;
+    else {
         ReportingClient* reportingClient = nullptr;
         if (m_frame && m_frame->document())
             reportingClient = m_frame->document();
 
-        m_contentSecurityPolicy = makeUnique<ContentSecurityPolicy>(URL { response.url() }, nullptr, reportingClient);
+        if (!m_contentSecurityPolicy)
+            m_contentSecurityPolicy = makeUnique<ContentSecurityPolicy>(URL { response.url() }, nullptr, reportingClient);
         m_contentSecurityPolicy->didReceiveHeaders(ContentSecurityPolicyResponseHeaders { response }, m_request.httpReferrer(), ContentSecurityPolicy::ReportParsingErrors::No);
-    } else
-        m_contentSecurityPolicy = nullptr;
+    }
     if (m_frame && m_frame->document() && m_frame->document()->settings().crossOriginOpenerPolicyEnabled())
         m_responseCOOP = obtainCrossOriginOpenerPolicy(response);
 
@@ -1048,20 +1062,8 @@ void DocumentLoader::responseReceived(const ResourceResponse& response, Completi
 // because they can claim to be from any domain and thus avoid cross-domain security checks (4120255, 45524528, 47610130).
 bool DocumentLoader::disallowWebArchive() const
 {
-    using MIMETypeHashSet = HashSet<String, ASCIICaseInsensitiveHash>;
-    static NeverDestroyed<MIMETypeHashSet> webArchiveMIMETypes {
-        MIMETypeHashSet {
-            "application/x-webarchive"_s,
-            "application/x-mimearchive"_s,
-            "multipart/related"_s,
-#if PLATFORM(GTK)
-            "message/rfc822"_s,
-#endif
-        }
-    };
-
     String mimeType = m_response.mimeType();
-    if (mimeType.isNull() || !webArchiveMIMETypes.get().contains(mimeType))
+    if (mimeType.isNull() || !MIMETypeRegistry::isWebArchiveMIMEType(mimeType))
         return false;
 
 #if USE(QUICK_LOOK)
@@ -1075,16 +1077,16 @@ bool DocumentLoader::disallowWebArchive() const
     if (!LegacySchemeRegistry::shouldTreatURLSchemeAsLocal(m_request.url().protocol()))
         return true;
 
-    if (!frame() || (frame()->isMainFrame() && allowsWebArchiveForMainFrame()))
-        return false;
-
+#if ENABLE(WEB_ARCHIVE)
     // On purpose of maintaining existing tests.
     auto* localFrame = dynamicDowncast<LocalFrame>(frame()->mainFrame());
-    if (!localFrame)
+    bool alwaysAllowLocalWebArchive = localFrame && localFrame->settings().alwaysAllowLocalWebarchive();
+#else
+    bool alwaysAllowLocalWebArchive { false };
+#endif
+    if (!frame() || (frame()->isMainFrame() && allowsWebArchiveForMainFrame()) || alwaysAllowLocalWebArchive)
         return false;
 
-    if (localFrame->loader().alwaysAllowLocalWebarchive())
-        return false;
     return true;
 }
 
@@ -1929,9 +1931,9 @@ URL DocumentLoader::documentURL() const
 #if PLATFORM(IOS_FAMILY)
 
 // FIXME: This method seems to violate the encapsulation of this class.
-void DocumentLoader::setResponseMIMEType(const AtomString& responseMIMEType)
+void DocumentLoader::setResponseMIMEType(const String& responseMIMEType)
 {
-    m_response.setMimeType(responseMIMEType);
+    m_response.setMimeType(String { responseMIMEType });
 }
 
 #endif
@@ -1967,7 +1969,7 @@ void DocumentLoader::stopLoadingSubresources()
     ASSERT(m_subresourceLoaders.isEmpty());
 }
 
-void DocumentLoader::addSubresourceLoader(ResourceLoader& loader)
+void DocumentLoader::addSubresourceLoader(SubresourceLoader& loader)
 {
     // The main resource's underlying ResourceLoader will ask to be added here.
     // It is much simpler to handle special casing of main resource loads if we don't
@@ -1991,7 +1993,7 @@ void DocumentLoader::addSubresourceLoader(ResourceLoader& loader)
             break;
         case Document::AboutToEnterBackForwardCache: {
             // A page about to enter the BackForwardCache should only be able to start ping loads.
-            auto* cachedResource = downcast<SubresourceLoader>(loader).cachedResource();
+            auto* cachedResource = loader.cachedResource();
             ASSERT(cachedResource && (CachedResource::shouldUsePingLoad(cachedResource->type()) || cachedResource->options().keepAlive));
             break;
         }
@@ -2006,15 +2008,15 @@ void DocumentLoader::addSubresourceLoader(ResourceLoader& loader)
     m_subresourceLoaders.add(loader.identifier(), &loader);
 }
 
-void DocumentLoader::removeSubresourceLoader(LoadCompletionType type, ResourceLoader* loader)
+void DocumentLoader::removeSubresourceLoader(LoadCompletionType type, SubresourceLoader& loader)
 {
-    ASSERT(loader->identifier());
+    ASSERT(loader.identifier());
 
-    if (!m_subresourceLoaders.remove(loader->identifier()))
+    if (!m_subresourceLoaders.remove(loader.identifier()))
         return;
     checkLoadComplete();
-    if (m_frame)
-        m_frame->loader().subresourceLoadDone(type);
+    if (RefPtr frame = m_frame.get())
+        frame->checkedLoader()->subresourceLoadDone(type);
 }
 
 void DocumentLoader::addPlugInStreamLoader(ResourceLoader& loader)
@@ -2225,8 +2227,11 @@ void DocumentLoader::loadMainResource(ResourceRequest&& request)
         mainResourceLoadOptions.serviceWorkersMode = ServiceWorkersMode::None;
     else {
         // The main navigation load will trigger the registration of the client.
-        if (m_resultingClientId)
+        if (m_resultingClientId) {
             scriptExecutionContextIdentifierToLoaderMap().remove(m_resultingClientId);
+            unregisterReservedServiceWorkerClient();
+        }
+
         m_resultingClientId = ScriptExecutionContextIdentifier::generate();
         ASSERT(!scriptExecutionContextIdentifierToLoaderMap().contains(m_resultingClientId));
         scriptExecutionContextIdentifierToLoaderMap().add(m_resultingClientId, this);

@@ -26,20 +26,22 @@ import unittest
 from webkitbugspy import Issue, Tracker, User, radar, mocks
 from webkitcorepy import mocks as wkmocks, OutputCapture
 
-RELATED_BLANK = {'related-to': [], 'blocked-by': [], 'blocking': [], 'parent-of': [], 'subtask-of': [], 'cause-of': [], 'caused-by': [], 'duplicate-of': [], 'original-of': []}
+RELATED_BLANK = {'related-to': [], 'blocked-by': [], 'blocking': [], 'parent-of': [], 'subtask-of': [], 'cause-of': [], 'caused-by': [], 'duplicate-of': [], 'original-of': [], 'clone-of': [], 'cloned-to': []}
 
 
 class TestRadar(unittest.TestCase):
     def test_encoding(self):
-        self.assertEqual(
-            radar.Tracker.Encoder().default(radar.Tracker(project='WebKit')),
-            dict(hide_title=True, type='radar', projects=['WebKit']),
-        )
+        with OutputCapture():
+            self.assertEqual(
+                radar.Tracker.Encoder().default(radar.Tracker(project='WebKit')),
+                dict(hide_title=True, type='radar', projects=['WebKit']),
+            )
 
     def test_decoding(self):
-        decoded = Tracker.from_json(json.dumps(radar.Tracker(), cls=Tracker.Encoder))
-        self.assertIsInstance(decoded, radar.Tracker)
-        self.assertEqual(decoded.from_string('rdar://1234').id, 1234)
+        with OutputCapture():
+            decoded = Tracker.from_json(json.dumps(radar.Tracker(), cls=Tracker.Encoder))
+            self.assertIsInstance(decoded, radar.Tracker)
+            self.assertEqual(decoded.from_string('rdar://1234').id, 1234)
 
     def test_no_radar(self):
         with mocks.NoRadar():
@@ -93,6 +95,10 @@ class TestRadar(unittest.TestCase):
     def test_timestamp(self):
         with mocks.Radar(issues=mocks.ISSUES):
             self.assertEqual(radar.Tracker().issue(1).timestamp, 1639510960)
+
+    def test_modified(self):
+        with mocks.Radar(issues=mocks.ISSUES):
+            self.assertEqual(radar.Tracker().issue(1).modified, 1710859207)
 
     def test_creator(self):
         with mocks.Radar(issues=mocks.ISSUES):
@@ -392,7 +398,7 @@ What version of 'WebKit Text' should the bug be associated with?:
             self.assertEqual(tracker.issue(1).redacted, radar.Tracker.Redaction(True, "matches 'component:Text'"))
             self.assertEqual(tracker.issue(2).redacted, False)
             tracker.issue(1).close(original=tracker.issue(2))
-            self.assertEqual(tracker.issue(2).redacted, radar.Tracker.Redaction(True, "matches 'component:Text'"))
+            self.assertEqual(tracker.issue(2).redacted, radar.Tracker.Redaction(True, "is related to rdar://1 which matches 'component:Text'"))
 
     def test_redacted_original(self):
         with wkmocks.Environment(RADAR_USERNAME='tcontributor'), mocks.Radar(issues=mocks.ISSUES, projects=mocks.PROJECTS):
@@ -400,7 +406,7 @@ What version of 'WebKit Text' should the bug be associated with?:
             self.assertEqual(tracker.issue(1).redacted, radar.Tracker.Redaction(True, "matches 'component:Text'"))
             self.assertEqual(tracker.issue(2).redacted, False)
             tracker.issue(2).close(original=tracker.issue(1))
-            self.assertEqual(tracker.issue(2).redacted, radar.Tracker.Redaction(True, "matches 'component:Text'"))
+            self.assertEqual(tracker.issue(2).redacted, radar.Tracker.Redaction(True, "is related to rdar://1 which matches 'component:Text'"))
 
     def test_redaction_exception(self):
         with wkmocks.Environment(RADAR_USERNAME='tcontributor'), mocks.Radar(issues=mocks.ISSUES, projects=mocks.PROJECTS):
@@ -469,7 +475,7 @@ What version of 'WebKit Text' should the bug be associated with?:
 
             self.assertEqual(issue.related, RELATED_BLANK)
             issue.relate(related_to=issue2)
-            self.assertEqual(issue.related, {'related-to': [issue2], 'blocked-by': [], 'blocking': [], 'parent-of': [], 'subtask-of': [], 'cause-of': [], 'caused-by': [], 'duplicate-of': [], 'original-of': []})
+            self.assertEqual(issue.related, {'related-to': [issue2], 'blocked-by': [], 'blocking': [], 'parent-of': [], 'subtask-of': [], 'cause-of': [], 'caused-by': [], 'duplicate-of': [], 'original-of': [], 'clone-of': [], 'cloned-to': []})
 
     def test_relate(self):
         with wkmocks.Environment(RADAR_USERNAME='tcontributor'), mocks.Radar(issues=mocks.ISSUES, projects=mocks.PROJECTS):

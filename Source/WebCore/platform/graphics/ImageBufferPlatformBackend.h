@@ -31,6 +31,8 @@
 #include "ImageBufferCairoImageSurfaceBackend.h"
 #elif PLATFORM(QT)
 #include "ImageBufferQtBackend.h"
+#elif USE(SKIA)
+#include "ImageBufferSkiaUnacceleratedBackend.h"
 #endif
 
 namespace WebCore {
@@ -44,6 +46,9 @@ using ImageBufferPlatformBitmapBackend = ImageBufferCairoImageSurfaceBackend;
 #elif PLATFORM(QT)
 using ImageBufferPlatformBackend = ImageBufferQtBackend;
 using ImageBufferPlatformBitmapBackend = ImageBufferQtBackend;
+#elif USE(SKIA)
+using ImageBufferPlatformBackend = ImageBufferSkiaBackend;
+using ImageBufferPlatformBitmapBackend = ImageBufferSkiaUnacceleratedBackend;
 #endif
 
 } // namespace WebCore

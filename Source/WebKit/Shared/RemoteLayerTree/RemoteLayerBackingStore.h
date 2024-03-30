@@ -29,6 +29,7 @@
 #include "BufferIdentifierSet.h"
 #include "ImageBufferBackendHandle.h"
 #include "RemoteImageBufferSetIdentifier.h"
+#include "RemoteImageBufferSetProxy.h"
 #include <WebCore/FloatRect.h>
 #include <WebCore/ImageBuffer.h>
 #include <WebCore/PlatformCALayer.h>
@@ -78,6 +79,8 @@ public:
     RemoteLayerBackingStore(PlatformCALayerRemote*);
     virtual ~RemoteLayerBackingStore();
 
+    static std::unique_ptr<RemoteLayerBackingStore> createForLayer(PlatformCALayerRemote*);
+
     enum class Type : bool {
         IOSurface,
         Bitmap
@@ -89,6 +92,10 @@ public:
 
     virtual bool isRemoteLayerWithRemoteRenderingBackingStore() const { return false; }
     virtual bool isRemoteLayerWithInProcessRenderingBackingStore() const { return false; }
+
+    enum class ProcessModel : uint8_t { InProcess, Remote };
+    virtual ProcessModel processModel() const = 0;
+    static ProcessModel processModelForLayer(PlatformCALayerRemote*);
 
     struct Parameters {
         Type type { Type::Bitmap };
@@ -122,7 +129,7 @@ public:
     virtual void prepareToDisplay() = 0;
     virtual void createContextAndPaintContents() = 0;
 
-    virtual std::unique_ptr<ThreadSafeImageBufferSetFlusher> createFlusher() = 0;
+    virtual std::unique_ptr<ThreadSafeImageBufferSetFlusher> createFlusher(ThreadSafeImageBufferSetFlusher::FlushType = ThreadSafeImageBufferSetFlusher::FlushType::BackendHandlesAndDrawing) = 0;
 
     WebCore::FloatSize size() const { return m_parameters.size; }
     float scale() const { return m_parameters.scale; }
@@ -171,6 +178,7 @@ public:
 
     void purgeFrontBufferForTesting();
     void purgeBackBufferForTesting();
+    void markFrontBufferVolatileForTesting();
 
 protected:
     RemoteLayerBackingStoreCollection* backingStoreCollection() const;

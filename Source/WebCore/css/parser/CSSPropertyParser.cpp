@@ -739,7 +739,7 @@ bool CSSPropertyParser::consumeFontVariantShorthand(bool important)
         if (!eastAsianValue && (eastAsianValue = consumeFontVariantEastAsian(m_range)))
             continue;
 
-        if (!emojiValue && (emojiValue = CSSPropertyParsing::consumeFontVariantEmoji(m_range)))
+        if (m_context.propertySettings.cssFontVariantEmojiEnabled && !emojiValue && (emojiValue = CSSPropertyParsing::consumeFontVariantEmoji(m_range)))
             continue;
 
         // Saw some value that didn't match anything else.
@@ -1238,6 +1238,8 @@ static constexpr InitialValue initialValueForLonghand(CSSPropertyID longhand)
         return CSSValueNoAutospace;
     case CSSPropertyWhiteSpaceCollapse:
         return CSSValueCollapse;
+    case CSSPropertyFieldSizing:
+        return CSSValueFixed;
     default:
         RELEASE_ASSERT_NOT_REACHED();
     }
@@ -1953,8 +1955,6 @@ bool CSSPropertyParser::consumeBackgroundShorthand(const StylePropertyShorthand&
 
     for (size_t i = 0; i < longhandCount; ++i) {
         CSSPropertyID property = shorthand.properties()[i];
-        if (property == CSSPropertyBackgroundSize && !longhands[i].isEmpty() && m_context.useLegacyBackgroundSizeShorthandBehavior)
-            continue;
         if (longhands[i].size() == 1)
             addProperty(property, shorthand.id(), WTFMove(longhands[i][0]), important);
         else

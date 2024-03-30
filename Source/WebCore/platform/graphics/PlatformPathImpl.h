@@ -29,6 +29,8 @@
 #include "PathCG.h"
 #elif PLATFORM(QT)
 #include "PathQt.h"
-#else
+#elif USE(CAIRO)
 #include "PathCairo.h"
+#elif USE(SKIA)
+#include "PathSkia.h"
 #endif

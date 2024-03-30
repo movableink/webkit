@@ -42,10 +42,12 @@
 #include "HTMLNames.h"
 #include "HTMLOListElement.h"
 #include "HTMLParagraphElement.h"
+#include "HTMLPictureElement.h"
 #include "HTMLSpanElement.h"
 #include "HTMLTableElement.h"
 #include "HTMLTextFormControlElement.h"
 #include "HTMLUListElement.h"
+#include "HitTestSource.h"
 #include "LocalFrame.h"
 #include "NodeTraversal.h"
 #include "PositionIterator.h"
@@ -73,7 +75,7 @@ static bool isVisiblyAdjacent(const Position&, const Position&);
 
 bool canHaveChildrenForEditing(const Node& node)
 {
-    return !is<Text>(node) && node.canContainRangeEndPoint();
+    return !is<Text>(node) && !is<HTMLPictureElement>(node) && node.canContainRangeEndPoint();
 }
 
 // Atomic means that the node has no children, or has children which are ignored for the purposes of editing.
@@ -314,7 +316,7 @@ Position lastEditablePositionBeforePositionInRoot(const Position& position, Cont
 // Whether or not content before and after this node will collapse onto the same line as it.
 bool isBlock(const Node& node)
 {
-    return node.renderer() && !node.renderer()->isInline() && !node.renderer()->isRenderRubyText();
+    return node.renderer() && !node.renderer()->isInline();
 }
 
 bool isInline(const Node& node)
@@ -476,7 +478,7 @@ VisiblePosition closestEditablePositionInElementForAbsolutePoint(const Element& 
     auto absoluteBoundingBox = renderer->absoluteBoundingBoxRect();
     auto constrainedAbsolutePoint = point.constrainedBetween(absoluteBoundingBox.minXMinYCorner(), absoluteBoundingBox.maxXMaxYCorner());
     auto localPoint = renderer->absoluteToLocal(constrainedAbsolutePoint, UseTransforms);
-    auto visiblePosition = renderer->positionForPoint(flooredLayoutPoint(localPoint), nullptr);
+    auto visiblePosition = renderer->positionForPoint(flooredLayoutPoint(localPoint), HitTestSource::User, nullptr);
     return isEditablePosition(visiblePosition.deepEquivalent()) ? visiblePosition : VisiblePosition { };
 }
 
@@ -1055,14 +1057,12 @@ bool isRenderedAsNonInlineTableImageOrHR(const Node* node)
     return renderer && !renderer->isInline() && (renderer->isRenderTable() || renderer->isImage() || renderer->isHR());
 }
 
-bool areIdenticalElements(const Node& first, const Node& second)
+Element* elementIfEquivalent(const Element& first, Node& second)
 {
-    auto* firstElement = dynamicDowncast<Element>(first);
     auto* secondElement = dynamicDowncast<Element>(second);
-    if (!firstElement || !secondElement)
-        return false;
-
-    return firstElement->hasTagName(secondElement->tagQName()) && firstElement->hasEquivalentAttributes(*secondElement);
+    if (secondElement && first.hasTagName(secondElement->tagQName()) && first.hasEquivalentAttributes(*secondElement))
+        return secondElement;
+    return nullptr;
 }
 
 bool isNonTableCellHTMLBlockElement(const Node* node)

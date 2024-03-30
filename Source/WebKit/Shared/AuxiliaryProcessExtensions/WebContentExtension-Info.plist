@@ -5,7 +5,7 @@
 	<key>EXAppExtensionAttributes</key>
 	<dict>
 		<key>EXExtensionPointIdentifier</key>
-		<string>com.apple.web-browser-engine.content</string>
+		<string>com.apple.web-browser-engine.webcontent</string>
 	</dict>
 	<key>CFBundleIdentifier</key>
 	<string>${PRODUCT_BUNDLE_IDENTIFIER}</string>
@@ -15,5 +15,7 @@
 	<string>${BUNDLE_VERSION}</string>
 	<key>CFBundleName</key>
 	<string>${PRODUCT_BUNDLE_NAME}</string>
+	<key>CFBundleFollowParentLocalization</key>
+	<true/>
 </dict>
 </plist>

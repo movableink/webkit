@@ -33,6 +33,7 @@
 #include "WebExtensionAPICommands.h"
 #include "WebExtensionAPICookies.h"
 #include "WebExtensionAPIDeclarativeNetRequest.h"
+#include "WebExtensionAPIDevTools.h"
 #include "WebExtensionAPIExtension.h"
 #include "WebExtensionAPILocalization.h"
 #include "WebExtensionAPIMenus.h"
@@ -54,11 +55,11 @@ class WebExtensionAPIExtension;
 class WebExtensionAPIRuntime;
 
 class WebExtensionAPINamespace : public WebExtensionAPIObject, public JSWebExtensionWrappable {
-    WEB_EXTENSION_DECLARE_JS_WRAPPER_CLASS(WebExtensionAPINamespace, namespace);
+    WEB_EXTENSION_DECLARE_JS_WRAPPER_CLASS(WebExtensionAPINamespace, namespace, browser);
 
 public:
 #if PLATFORM(COCOA)
-    bool isPropertyAllowed(ASCIILiteral propertyName, WebPage*);
+    bool isPropertyAllowed(const ASCIILiteral& propertyName, WebPage&);
 
     WebExtensionAPIAction& action();
     WebExtensionAPIAlarms& alarms();
@@ -67,13 +68,16 @@ public:
     WebExtensionAPICookies& cookies();
     WebExtensionAPIMenus& contextMenus() { return menus(); }
     WebExtensionAPIDeclarativeNetRequest& declarativeNetRequest();
+#if ENABLE(INSPECTOR_EXTENSIONS)
+    WebExtensionAPIDevTools& devtools();
+#endif
     WebExtensionAPIExtension& extension();
     WebExtensionAPILocalization& i18n();
     WebExtensionAPIMenus& menus();
     WebExtensionAPINotifications& notifications();
     WebExtensionAPIAction& pageAction() { return action(); }
     WebExtensionAPIPermissions& permissions();
-    WebExtensionAPIRuntime& runtime() final;
+    WebExtensionAPIRuntime& runtime() const final;
     WebExtensionAPIScripting& scripting();
     WebExtensionAPIStorage& storage();
     WebExtensionAPITabs& tabs();
@@ -89,12 +93,15 @@ private:
     RefPtr<WebExtensionAPICommands> m_commands;
     RefPtr<WebExtensionAPICookies> m_cookies;
     RefPtr<WebExtensionAPIDeclarativeNetRequest> m_declarativeNetRequest;
+#if ENABLE(INSPECTOR_EXTENSIONS)
+    RefPtr<WebExtensionAPIDevTools> m_devtools;
+#endif
     RefPtr<WebExtensionAPIExtension> m_extension;
     RefPtr<WebExtensionAPILocalization> m_i18n;
     RefPtr<WebExtensionAPIMenus> m_menus;
     RefPtr<WebExtensionAPINotifications> m_notifications;
     RefPtr<WebExtensionAPIPermissions> m_permissions;
-    RefPtr<WebExtensionAPIRuntime> m_runtime;
+    mutable RefPtr<WebExtensionAPIRuntime> m_runtime;
     RefPtr<WebExtensionAPIScripting> m_scripting;
     RefPtr<WebExtensionAPIStorage> m_storage;
     RefPtr<WebExtensionAPITabs> m_tabs;

@@ -1343,7 +1343,6 @@ void WebFrameLoaderClient::setTitle(const WebCore::StringWithDirection& title, c
     if ([[nsURL absoluteString] isEqualToString:@"about:blank"])
         return;
 #endif
-    [[[WebHistory optionalSharedHistory] itemForURL:nsURL] setTitle:title.string];
 }
 
 void WebFrameLoaderClient::savePlatformDataToCachedFrame(WebCore::CachedFrame* cachedFrame)
@@ -2052,7 +2051,7 @@ static NSImage *webGetNSImage(WebCore::Image* image, NSSize size)
     // to WebCore::Image at some point.
     if (!image)
         return nil;
-    NSImage* nsImage = image->nsImage();
+    NSImage* nsImage = image->adapter().nsImage();
     if (!nsImage)
         return nil;
     if (!NSEqualSizes([nsImage size], size)) {

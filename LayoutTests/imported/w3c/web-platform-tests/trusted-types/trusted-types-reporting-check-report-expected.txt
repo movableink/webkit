@@ -1,7 +1,4 @@
-CONSOLE MESSAGE: Unrecognized Content-Security-Policy directive 'trusted-types'.
+CONSOLE MESSAGE: [Report Only] Refused to create a TrustedTypePolicy named 'three' because it violates the following Content Security Policy directive: "trusted-types one two"
 
-CONSOLE MESSAGE: ReferenceError: Can't find variable: trustedTypes
-
-Harness Error (FAIL), message = ReferenceError: Can't find variable: trustedTypes
-
+PASS Violation report status OK.
 

@@ -122,6 +122,7 @@ public:
         String whiteBalanceMode;
         std::optional<double> zoom;
         std::optional<bool> torch;
+        std::optional<bool> backgroundBlur;
     };
     TrackSettings getSettings() const;
 
@@ -199,7 +200,7 @@ private:
     // EventTarget
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
-    EventTargetInterface eventTargetInterface() const final { return MediaStreamTrackEventTargetInterfaceType; }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::MediaStreamTrack; }
 
     // MediaStreamTrackPrivate::Observer
     void trackStarted(MediaStreamTrackPrivate&) final;

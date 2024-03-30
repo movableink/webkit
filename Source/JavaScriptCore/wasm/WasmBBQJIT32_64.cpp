@@ -45,7 +45,6 @@
 #include "JSWebAssemblyStruct.h"
 #include "MacroAssembler.h"
 #include "RegisterSet.h"
-#include "WasmB3IRGenerator.h"
 #include "WasmBBQDisassembler.h"
 #include "WasmCallingConvention.h"
 #include "WasmCompilationMode.h"
@@ -56,6 +55,7 @@
 #include "WasmMemoryInformation.h"
 #include "WasmModule.h"
 #include "WasmModuleInformation.h"
+#include "WasmOMGIRGenerator.h"
 #include "WasmOperations.h"
 #include "WasmOps.h"
 #include "WasmThunks.h"
@@ -1476,6 +1476,27 @@ Value BBQJIT::marshallToI64(Value value)
     }
 }
 
+PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayNew(uint32_t typeIndex, ExpressionType size, ExpressionType initValue, ExpressionType& result)
+{
+    result = topValue(TypeKind::Arrayref);
+
+    initValue = marshallToI64(initValue);
+
+    Vector<Value, 8> arguments = {
+        instanceValue(),
+        Value::fromI32(typeIndex),
+        size,
+        initValue,
+    };
+    emitCCall(operationWasmArrayNew, arguments, result);
+
+    Location resultLocation = loadIfNecessary(result);
+    emitThrowOnNullReference(ExceptionType::BadArrayNew, resultLocation);
+
+    LOG_INSTRUCTION("ArrayNew", typeIndex, size, initValue, RESULT(result));
+    return { };
+}
+
 PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayNewFixed(uint32_t typeIndex, Vector<ExpressionType>& args, ExpressionType& result)
 {
     // Allocate an uninitialized array whose length matches the argument count
@@ -1822,6 +1843,37 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayLen(ExpressionType arrayref, Ex
     return { };
 }
 
+PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayFill(uint32_t typeIndex, ExpressionType arrayref, ExpressionType offset, ExpressionType value, ExpressionType size)
+{
+    if (arrayref.isConst()) {
+        ASSERT(arrayref.asI64() == JSValue::encode(jsNull()));
+        emitThrowException(ExceptionType::NullArrayFill);
+        return { };
+    }
+
+    emitThrowOnNullReference(ExceptionType::NullArrayFill, loadIfNecessary(arrayref));
+
+    Value shouldThrow = topValue(TypeKind::I32);
+    value = marshallToI64(value);
+    Vector<Value, 8> arguments = {
+        instanceValue(),
+        arrayref,
+        offset,
+        value,
+        size
+    };
+    emitCCall(&operationWasmArrayFill, arguments, shouldThrow);
+    Location shouldThrowLocation = allocate(shouldThrow);
+
+    LOG_INSTRUCTION("ArrayFill", typeIndex, arrayref, offset, value, size);
+
+    throwExceptionIf(ExceptionType::OutOfBoundsArrayFill, m_jit.branchTest32(ResultCondition::Zero, shouldThrowLocation.asGPR()));
+
+    consume(shouldThrow);
+
+    return { };
+}
+
 void BBQJIT::emitStructPayloadSet(GPRReg payloadGPR, const StructType& structType, uint32_t fieldIndex, Value value)
 {
     unsigned fieldOffset = *structType.offsetOfField(fieldIndex);
@@ -1903,10 +1955,9 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addStructNewDefault(uint32_t typeIndex,
     result = topValue(TypeKind::I64);
     emitCCall(operationWasmStructNewEmpty, arguments, result);
 
-    // FIXME: What about OOM?
-
     const auto& structType = *m_info.typeSignatures[typeIndex]->expand().template as<StructType>();
     Location structLocation = allocate(result);
+    emitThrowOnNullReference(ExceptionType::BadStructNew, structLocation);
     m_jit.loadPtr(MacroAssembler::Address(structLocation.asGPRlo(), JSWebAssemblyStruct::offsetOfPayload()), wasmScratchGPR);
     for (StructFieldCount i = 0; i < structType.fieldCount(); ++i) {
         if (Wasm::isRefType(structType.field(i).type))
@@ -1934,6 +1985,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addStructNew(uint32_t typeIndex, Vector
 
     const auto& structType = *m_info.typeSignatures[typeIndex]->expand().template as<StructType>();
     Location structLocation = allocate(allocationResult);
+    emitThrowOnNullReference(ExceptionType::BadStructNew, structLocation);
     m_jit.loadPtr(MacroAssembler::Address(structLocation.asGPRlo(), JSWebAssemblyStruct::offsetOfPayload()), wasmScratchGPR);
     bool hasRefTypeField = false;
     for (uint32_t i = 0; i < args.size(); ++i) {
@@ -1969,7 +2021,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addStructGet(ExtGCOpType structGetKind,
         return { };
     }
 
-    Location structLocation = allocate(structValue);
+    Location structLocation = loadIfNecessary(structValue);
     emitThrowOnNullReference(ExceptionType::NullStructGet, structLocation);
 
     m_jit.loadPtr(MacroAssembler::Address(structLocation.asGPRlo(), JSWebAssemblyStruct::offsetOfPayload()), wasmScratchGPR);
@@ -3429,6 +3481,13 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addCallRef(const TypeDefinition& origin
         calleePtr = calleeLocation.asGPRlo();
         calleeInstance = otherScratches.gpr(1);
         jsCalleeAnchor = otherScratches.gpr(2);
+
+        {
+            auto calleeTmp = jsCalleeAnchor;
+            m_jit.loadPtr(Address(calleePtr, WebAssemblyFunctionBase::offsetOfBoxedWasmCalleeLoadLocation()), calleeTmp);
+            m_jit.loadPtr(Address(calleeTmp), calleeTmp);
+            m_jit.storeWasmCalleeCallee(calleeTmp);
+        }
 
         m_jit.loadPtr(MacroAssembler::Address(calleePtr, WebAssemblyFunctionBase::offsetOfInstance()), jsCalleeAnchor);
         m_jit.loadPtr(MacroAssembler::Address(calleePtr, WebAssemblyFunctionBase::offsetOfEntrypointLoadLocation()), calleeCode);

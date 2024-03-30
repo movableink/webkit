@@ -26,6 +26,7 @@
 #pragma once
 
 #include "RemoteLayerBackingStore.h"
+#include <WebCore/DynamicContentScalingResourceCache.h>
 
 namespace WebKit {
 
@@ -34,10 +35,11 @@ public:
     using RemoteLayerBackingStore::RemoteLayerBackingStore;
 
     bool isRemoteLayerWithInProcessRenderingBackingStore() const final { return true; }
+    ProcessModel processModel() const final { return ProcessModel::InProcess; }
 
     void prepareToDisplay() final;
     void createContextAndPaintContents() final;
-    std::unique_ptr<ThreadSafeImageBufferSetFlusher> createFlusher() final;
+    std::unique_ptr<ThreadSafeImageBufferSetFlusher> createFlusher(ThreadSafeImageBufferSetFlusher::FlushType) final;
 
     void clearBackingStore() final;
 
@@ -52,13 +54,17 @@ public:
     void dump(WTF::TextStream&) const final;
 
 private:
-    RefPtr<WebCore::ImageBuffer> allocateBuffer() const;
+    RefPtr<WebCore::ImageBuffer> allocateBuffer();
     SwapBuffersDisplayRequirement prepareBuffers();
     WebCore::SetNonVolatileResult swapToValidFrontBuffer();
 
     void ensureFrontBuffer();
     bool hasFrontBuffer() const final;
     bool frontBufferMayBeVolatile() const final;
+
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+    WebCore::DynamicContentScalingResourceCache ensureDynamicContentScalingResourceCache();
+#endif
 
     struct Buffer {
         RefPtr<WebCore::ImageBuffer> imageBuffer;
@@ -81,6 +87,10 @@ private:
     Buffer m_frontBuffer;
     Buffer m_backBuffer;
     Buffer m_secondaryBackBuffer;
+
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+    WebCore::DynamicContentScalingResourceCache m_dynamicContentScalingResourceCache;
+#endif
 };
 
 } // namespace WebKit

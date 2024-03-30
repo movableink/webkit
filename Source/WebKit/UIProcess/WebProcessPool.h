@@ -143,6 +143,7 @@ void setLockdownModeEnabledGloballyForTesting(std::optional<bool>);
 
 enum class CallDownloadDidStart : bool;
 enum class ProcessSwapRequestedByClient : bool;
+enum class ShouldSkipSuspendedProcesses : bool { No, Yes };
 
 class WebProcessPool final
     : public API::ObjectImpl<API::Object::Type::ProcessPool>
@@ -212,10 +213,10 @@ public:
     WebProcessProxy* dummyProcessProxy(PAL::SessionID sessionID) const { return m_dummyProcessProxies.get(sessionID).get(); }
 
     void forEachProcessForSession(PAL::SessionID, const Function<void(WebProcessProxy&)>&);
-    template<typename T> void sendToAllProcesses(const T& message);
-    template<typename T> void sendToAllProcessesForSession(const T& message, PAL::SessionID);
+    template<typename T> void sendToAllProcesses(const T& message, ShouldSkipSuspendedProcesses = ShouldSkipSuspendedProcesses::No);
+    template<typename T> void sendToAllProcessesForSession(const T& message, PAL::SessionID, ShouldSkipSuspendedProcesses = ShouldSkipSuspendedProcesses::No);
 
-    template<typename T> static void sendToAllRemoteWorkerProcesses(const T& message);
+    template<typename T> static void sendToAllRemoteWorkerProcesses(const T& message, ShouldSkipSuspendedProcesses = ShouldSkipSuspendedProcesses::No);
 
     void processDidFinishLaunching(WebProcessProxy&);
 
@@ -378,12 +379,25 @@ public:
     Ref<GPUProcessProxy> ensureProtectedGPUProcess();
     GPUProcessProxy* gpuProcess() const { return m_gpuProcess.get(); }
 #endif
+
+#if ENABLE(MODEL_PROCESS)
+    void modelProcessDidFinishLaunching(ProcessID);
+    void modelProcessExited(ProcessID, ProcessTerminationReason);
+
+    void createModelProcessConnection(WebProcessProxy&, IPC::Connection::Handle&&, WebKit::ModelProcessConnectionParameters&&);
+
+    ModelProcessProxy& ensureModelProcess();
+    Ref<ModelProcessProxy> ensureProtectedModelProcess();
+    ModelProcessProxy* modelProcess() const { return m_modelProcess.get(); }
+#endif
+
     // Network Process Management
     void networkProcessDidTerminate(NetworkProcessProxy&, ProcessTerminationReason);
 
     bool isServiceWorkerPageID(WebPageProxyIdentifier) const;
 
     size_t serviceWorkerProxiesCount() const;
+    void isJITDisabledInAllRemoteWorkerProcesses(CompletionHandler<void(bool)>&&) const;
     bool hasServiceWorkerForegroundActivityForTesting() const;
     bool hasServiceWorkerBackgroundActivityForTesting() const;
     void serviceWorkerProcessCrashed(WebProcessProxy&, ProcessTerminationReason);
@@ -417,6 +431,7 @@ public:
     void updateProcessSuppressionState() const { }
 #endif
 
+    Seconds hiddenPageThrottlingAutoIncreaseLimit() const;
     void updateHiddenPageThrottlingAutoIncreaseLimit();
 
     void setMemoryCacheDisabled(bool);
@@ -460,7 +475,7 @@ public:
     bool hasForegroundWebProcesses() const { return m_foregroundWebProcessCounter.value(); }
     bool hasBackgroundWebProcesses() const { return m_backgroundWebProcessCounter.value(); }
 
-    void processForNavigation(WebPageProxy&, WebFrameProxy&, const API::Navigation&, Ref<WebProcessProxy>&& sourceProcess, const URL& sourceURL, ProcessSwapRequestedByClient, WebProcessProxy::LockdownMode, const FrameInfoData&, Ref<WebsiteDataStore>&&, CompletionHandler<void(Ref<WebProcessProxy>&&, SuspendedPageProxy*, ASCIILiteral)>&&);
+    void processForNavigation(WebPageProxy&, WebFrameProxy&, const API::Navigation&, const URL& sourceURL, ProcessSwapRequestedByClient, WebProcessProxy::LockdownMode, const FrameInfoData&, Ref<WebsiteDataStore>&&, CompletionHandler<void(Ref<WebProcessProxy>&&, SuspendedPageProxy*, ASCIILiteral)>&&);
 
     void didReachGoodTimeToPrewarm();
     bool hasPrewarmedProcess() const { return m_prewarmedProcess.get(); }
@@ -476,7 +491,7 @@ public:
     void clearCurrentModifierStateForTesting();
 
     void setDomainsWithUserInteraction(HashSet<WebCore::RegistrableDomain>&&);
-    void setDomainsWithCrossPageStorageAccess(HashMap<TopFrameDomain, SubResourceDomain>&&, CompletionHandler<void()>&&);
+    void setDomainsWithCrossPageStorageAccess(HashMap<TopFrameDomain, Vector<SubResourceDomain>>&&, CompletionHandler<void()>&&);
     void seedResourceLoadStatisticsForTesting(const WebCore::RegistrableDomain& firstPartyDomain, const WebCore::RegistrableDomain& thirdPartyDomain, bool shouldScheduleNotification, CompletionHandler<void()>&&);
     void sendResourceLoadStatisticsDataImmediately(CompletionHandler<void()>&&);
 
@@ -520,6 +535,12 @@ public:
     int32_t userId() const { return m_userId; }
 #endif
 
+#if PLATFORM(WIN) // FIXME: remove this line when this feature is enabled for playstation port.
+#if ENABLE(REMOTE_INSPECTOR)
+    void setPagesControlledByAutomation(bool);
+#endif
+#endif
+
     static void platformInitializeNetworkProcess(NetworkProcessCreationParameters&);
     static Vector<String> urlSchemesWithCustomProtocolHandlers();
 
@@ -552,7 +573,7 @@ private:
     std::tuple<Ref<WebProcessProxy>, SuspendedPageProxy*, ASCIILiteral> processForNavigationInternal(WebPageProxy&, const API::Navigation&, Ref<WebProcessProxy>&& sourceProcess, const URL& sourceURL, ProcessSwapRequestedByClient, WebProcessProxy::LockdownMode, const FrameInfoData&, Ref<WebsiteDataStore>&&);
     void prepareProcessForNavigation(Ref<WebProcessProxy>&&, WebPageProxy&, SuspendedPageProxy*, ASCIILiteral reason, const WebCore::RegistrableDomain&, const API::Navigation&, WebProcessProxy::LockdownMode, Ref<WebsiteDataStore>&&, CompletionHandler<void(Ref<WebProcessProxy>&&, SuspendedPageProxy*, ASCIILiteral)>&&, unsigned previousAttemptsCount = 0);
 
-    RefPtr<WebProcessProxy> tryTakePrewarmedProcess(WebsiteDataStore&, WebProcessProxy::LockdownMode);
+    RefPtr<WebProcessProxy> tryTakePrewarmedProcess(WebsiteDataStore&, WebProcessProxy::LockdownMode, const API::PageConfiguration&);
 
     void initializeNewWebProcess(WebProcessProxy&, WebsiteDataStore*, WebProcessProxy::IsPrewarmed = WebProcessProxy::IsPrewarmed::No);
 
@@ -569,6 +590,7 @@ private:
 #endif
 
     void updateProcessAssertions();
+    static constexpr Seconds audibleActivityClearDelay = 5_s;
     void updateAudibleMediaAssertions();
     void updateMediaStreamingActivity();
 
@@ -663,6 +685,9 @@ private:
 #if ENABLE(GPU_PROCESS)
     RefPtr<GPUProcessProxy> m_gpuProcess;
 #endif
+#if ENABLE(MODEL_PROCESS)
+    RefPtr<ModelProcessProxy> m_modelProcess;
+#endif
 
     Ref<WebPageGroup> m_defaultPageGroup;
 
@@ -738,7 +763,6 @@ private:
     bool m_alwaysRunsAtBackgroundPriority;
     bool m_shouldTakeUIBackgroundAssertion;
     bool m_shouldMakeNextWebProcessLaunchFailForTesting { false };
-    bool m_tccPreferenceEnabled { false };
 
     UserObservablePageCounter m_userObservablePageCounter;
     ProcessSuppressionDisabledCounter m_processSuppressionDisabledForPageCounter;
@@ -748,6 +772,11 @@ private:
 #if ENABLE(GPU_PROCESS)
     RunLoop::Timer m_resetGPUProcessCrashCountTimer;
     unsigned m_recentGPUProcessCrashCount { 0 };
+#endif
+
+#if ENABLE(MODEL_PROCESS)
+    RunLoop::Timer m_resetModelProcessCrashCountTimer;
+    unsigned m_recentModelProcessCrashCount { 0 };
 #endif
 
 #if PLATFORM(COCOA)
@@ -805,7 +834,7 @@ private:
     WebProcessWithAudibleMediaCounter m_webProcessWithAudibleMediaCounter;
 
     struct AudibleMediaActivity {
-        Ref<ProcessAssertion> uiProcessMediaPlaybackAssertion;
+        RefPtr<ProcessAssertion> uiProcessMediaPlaybackAssertion;
 #if ENABLE(GPU_PROCESS)
         RefPtr<ProcessAssertion> gpuProcessMediaPlaybackAssertion;
 #endif
@@ -825,14 +854,14 @@ private:
     static bool s_useSeparateServiceWorkerProcess;
 
     HashSet<WebCore::RegistrableDomain> m_domainsWithUserInteraction;
-    HashMap<TopFrameDomain, SubResourceDomain> m_domainsWithCrossPageStorageAccessQuirk;
+    HashMap<TopFrameDomain, Vector<SubResourceDomain>> m_domainsWithCrossPageStorageAccessQuirk;
     
 #if PLATFORM(MAC)
     std::unique_ptr<WebCore::PowerObserver> m_powerObserver;
     std::unique_ptr<PAL::SystemSleepListener> m_systemSleepListener;
     Vector<int> m_openDirectoryNotifyTokens;
 #endif
-#if ENABLE(NOTIFYD_BLOCKING_IN_WEBCONTENT)
+#if ENABLE(NOTIFY_BLOCKING)
     Vector<int> m_notifyTokens;
     Vector<RetainPtr<NSObject>> m_notificationObservers;
 #endif
@@ -854,28 +883,36 @@ private:
 };
 
 template<typename T>
-void WebProcessPool::sendToAllProcesses(const T& message)
+void WebProcessPool::sendToAllProcesses(const T& message, ShouldSkipSuspendedProcesses shouldSkipSuspendedProcesses)
 {
     for (auto& process : m_processes) {
-        if (process->canSendMessage())
-            process->send(T(message), 0);
+        if (!process->canSendMessage())
+            continue;
+        if (shouldSkipSuspendedProcesses == ShouldSkipSuspendedProcesses::Yes && process->throttler().isSuspended())
+            continue;
+        process->send(T(message), 0);
     }
 }
 
 template<typename T>
-void WebProcessPool::sendToAllProcessesForSession(const T& message, PAL::SessionID sessionID)
+void WebProcessPool::sendToAllProcessesForSession(const T& message, PAL::SessionID sessionID, ShouldSkipSuspendedProcesses shouldSkipSuspendedProcesses)
 {
     forEachProcessForSession(sessionID, [&](auto& process) {
+        if (shouldSkipSuspendedProcesses == ShouldSkipSuspendedProcesses::Yes && process.throttler().isSuspended())
+            return;
         process.send(T(message), 0);
     });
 }
 
 template<typename T>
-void WebProcessPool::sendToAllRemoteWorkerProcesses(const T& message)
+void WebProcessPool::sendToAllRemoteWorkerProcesses(const T& message, ShouldSkipSuspendedProcesses shouldSkipSuspendedProcesses)
 {
     for (auto& process : remoteWorkerProcesses()) {
-        if (process.canSendMessage())
-            process.send(T(message), 0);
+        if (!process.canSendMessage())
+            continue;
+        if (shouldSkipSuspendedProcesses == ShouldSkipSuspendedProcesses::Yes && process.throttler().isSuspended())
+            continue;
+        process.send(T(message), 0);
     }
 }
 

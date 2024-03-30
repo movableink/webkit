@@ -33,14 +33,8 @@
 
 namespace WebCore {
 
-static SWServerToContextConnectionIdentifier generateServerToContextConnectionIdentifier()
-{
-    return SWServerToContextConnectionIdentifier::generate();
-}
-
 SWServerToContextConnection::SWServerToContextConnection(SWServer& server, RegistrableDomain&& registrableDomain, std::optional<ScriptExecutionContextIdentifier> serviceWorkerPageIdentifier)
     : m_server(server)
-    , m_identifier(generateServerToContextConnectionIdentifier())
     , m_registrableDomain(WTFMove(registrableDomain))
     , m_serviceWorkerPageIdentifier(serviceWorkerPageIdentifier)
 {
@@ -144,7 +138,7 @@ void SWServerToContextConnection::terminateWhenPossible()
 
     bool hasServiceWorkerWithPendingEvents = false;
     protectedServer()->forEachServiceWorker([&](auto& worker) {
-        if (worker.isRunning() && worker.registrableDomain() == m_registrableDomain && worker.hasPendingEvents()) {
+        if (worker.isRunning() && worker.topRegistrableDomain() == m_registrableDomain && worker.hasPendingEvents()) {
             hasServiceWorkerWithPendingEvents = true;
             return false;
         }

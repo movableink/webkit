@@ -256,6 +256,10 @@ VM::VM(VMType vmType, HeapType heapType, WTF::RunLoop* runLoop, bool* success)
             ref.set(makeUniqueRef<HeapProfiler>(vm));
         });
 
+        m_stringSearcherTables.initLater([](VM&, auto& ref) {
+            ref.set(makeUniqueRef<AdaptiveStringSearcherTables>());
+        });
+
         m_watchdog.initLater([](VM& vm, auto& ref) {
             ref.set(adoptRef(*new Watchdog(&vm)));
             vm.ensureTerminationException();
@@ -866,6 +870,7 @@ void VM::deleteAllCode(DeleteAllCodeEffort effort)
 {
     whenIdle([=, this] () {
         m_codeCache->clear();
+        m_builtinExecutables->clear();
         m_regExpCache->deleteAllCode();
         heap.deleteAllCodeBlocks(effort);
         heap.deleteAllUnlinkedCodeBlocks(effort);
@@ -1171,15 +1176,15 @@ void VM::addRegExpToTrace(RegExp* regExp)
 
 void VM::dumpRegExpTrace()
 {
+    if (m_rtTraceList.size() <= 1)
+        return;
+
     // The first RegExp object is ignored. It is created by the RegExpPrototype ctor and not used.
     RTTraceList::iterator iter = ++m_rtTraceList.begin();
     
     if (iter != m_rtTraceList.end()) {
-        dataLogF("\nRegExp Tracing\n");
-        dataLogF("Regular Expression                              8 Bit          16 Bit        match()    Matches    Average\n");
-        dataLogF(" <Match only / Match>                         JIT Addr      JIT Address       calls      found   String len\n");
-        dataLogF("----------------------------------------+----------------+----------------+----------+----------+-----------\n");
-    
+        RegExp::printTraceHeader();
+
         unsigned reCount = 0;
     
         for (; iter != m_rtTraceList.end(); ++iter, ++reCount) {
@@ -1616,6 +1621,7 @@ void VM::visitAggregateImpl(Visitor& visitor)
 {
     m_microtaskQueue.visitAggregate(visitor);
     numericStrings.visitAggregate(visitor);
+    m_builtinExecutables->visitAggregate(visitor);
 
     visitor.append(structureStructure);
     visitor.append(structureRareDataStructure);

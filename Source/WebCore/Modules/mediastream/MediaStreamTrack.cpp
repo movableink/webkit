@@ -135,20 +135,20 @@ const String& MediaStreamTrack::label() const
     return m_private->label();
 }
 
-static AtomString contentHintToAtomString(MediaStreamTrackPrivate::HintValue hint)
+static AtomString contentHintToAtomString(MediaStreamTrackHintValue hint)
 {
     switch (hint) {
-    case MediaStreamTrackPrivate::HintValue::Empty:
+    case MediaStreamTrackHintValue::Empty:
         return emptyAtom();
-    case MediaStreamTrackPrivate::HintValue::Speech:
+    case MediaStreamTrackHintValue::Speech:
         return "speech"_s;
-    case MediaStreamTrackPrivate::HintValue::Music:
+    case MediaStreamTrackHintValue::Music:
         return "music"_s;
-    case MediaStreamTrackPrivate::HintValue::Motion:
+    case MediaStreamTrackHintValue::Motion:
         return "motion"_s;
-    case MediaStreamTrackPrivate::HintValue::Detail:
+    case MediaStreamTrackHintValue::Detail:
         return "detail"_s;
-    case MediaStreamTrackPrivate::HintValue::Text:
+    case MediaStreamTrackHintValue::Text:
         return "text"_s;
     default:
         return emptyAtom();
@@ -159,30 +159,31 @@ const AtomString& MediaStreamTrack::contentHint() const
 {
     if (m_contentHint.isNull())
         m_contentHint = contentHintToAtomString(m_private->contentHint());
+
     return m_contentHint;
 }
 
 void MediaStreamTrack::setContentHint(const String& hintValue)
 {
-    MediaStreamTrackPrivate::HintValue value;
+    MediaStreamTrackHintValue value;
     if (m_private->isAudio()) {
         if (hintValue.isEmpty())
-            value = MediaStreamTrackPrivate::HintValue::Empty;
+            value = MediaStreamTrackHintValue::Empty;
         else if (hintValue == "speech"_s)
-            value = MediaStreamTrackPrivate::HintValue::Speech;
+            value = MediaStreamTrackHintValue::Speech;
         else if (hintValue == "music"_s)
-            value = MediaStreamTrackPrivate::HintValue::Music;
+            value = MediaStreamTrackHintValue::Music;
         else
             return;
     } else {
         if (hintValue.isEmpty())
-            value = MediaStreamTrackPrivate::HintValue::Empty;
+            value = MediaStreamTrackHintValue::Empty;
         else if (hintValue == "detail"_s)
-            value = MediaStreamTrackPrivate::HintValue::Detail;
+            value = MediaStreamTrackHintValue::Detail;
         else if (hintValue == "motion"_s)
-            value = MediaStreamTrackPrivate::HintValue::Motion;
+            value = MediaStreamTrackHintValue::Motion;
         else if (hintValue == "text"_s)
-            value = MediaStreamTrackPrivate::HintValue::Text;
+            value = MediaStreamTrackHintValue::Text;
         else
             return;
     }
@@ -290,6 +291,9 @@ MediaStreamTrack::TrackSettings MediaStreamTrack::getSettings() const
     if (settings.supportsTorch())
         result.torch = settings.torch();
 
+    if (settings.supportsBackgroundBlur())
+        result.backgroundBlur = settings.backgroundBlur();
+
     return result;
 }
 
@@ -306,12 +310,7 @@ MediaStreamTrack::TrackCapabilities MediaStreamTrack::getCapabilities() const
 
 auto MediaStreamTrack::takePhoto(PhotoSettings&& settings) -> Ref<TakePhotoPromise>
 {
-    // https://w3c.github.io/mediacapture-image/#dom-imagecapture-takephoto
-    // If the readyState of track provided in the constructor is not live, return
-    // a promise rejected with a new DOMException whose name is InvalidStateError,
-    // and abort these steps.
-    if (m_ended)
-        return TakePhotoPromise::createAndReject(Exception { ExceptionCode::InvalidStateError, "Track has ended"_s });
+    ASSERT(!m_ended);
 
     return m_private->takePhoto(WTFMove(settings))->whenSettled(RunLoop::main(), [protectedThis = Ref { *this }] (auto&& result) mutable {
 
@@ -333,12 +332,7 @@ auto MediaStreamTrack::takePhoto(PhotoSettings&& settings) -> Ref<TakePhotoPromi
 
 auto MediaStreamTrack::getPhotoCapabilities() -> Ref<PhotoCapabilitiesPromise>
 {
-    // https://w3c.github.io/mediacapture-image/#dom-imagecapture-getphotocapabilities
-    // If the readyState of track provided in the constructor is not live, return
-    // a promise rejected with a new DOMException whose name is InvalidStateError,
-    // and abort these steps.
-    if (m_ended)
-        return PhotoCapabilitiesPromise::createAndReject(Exception { ExceptionCode::InvalidStateError, "Track has ended"_s });
+    ASSERT(!m_ended);
 
     return m_private->getPhotoCapabilities()->whenSettled(RunLoop::main(), [protectedThis = Ref { *this }] (auto&& result) mutable {
 
@@ -359,8 +353,7 @@ auto MediaStreamTrack::getPhotoCapabilities() -> Ref<PhotoCapabilitiesPromise>
 
 auto MediaStreamTrack::getPhotoSettings() -> Ref<PhotoSettingsPromise>
 {
-    if (m_ended)
-        return PhotoSettingsPromise::createAndReject(Exception { ExceptionCode::InvalidStateError, "Track has ended"_s });
+    ASSERT(!m_ended);
 
     return m_private->getPhotoSettings()->whenSettled(RunLoop::main(), [protectedThis = Ref { *this }] (auto&& result) mutable {
 
@@ -392,14 +385,14 @@ static MediaConstraints createMediaConstraints(const std::optional<MediaTrackCon
 void MediaStreamTrack::applyConstraints(const std::optional<MediaTrackConstraints>& constraints, DOMPromiseDeferred<void>&& promise)
 {
     if (m_ended) {
-        promise.reject(Exception { ExceptionCode::InvalidAccessError, "Track has ended"_s });
+        promise.resolve();
         return;
     }
 
     m_private->applyConstraints(createMediaConstraints(constraints), [this, protectedThis = Ref { *this }, constraints, promise = WTFMove(promise)](auto&& error) mutable {
         queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [protectedThis = WTFMove(protectedThis), error = WTFMove(error), constraints, promise = WTFMove(promise)]() mutable {
             if (error) {
-                promise.rejectType<IDLInterface<OverconstrainedError>>(OverconstrainedError::create(WTFMove(error->badConstraint), WTFMove(error->message)));
+                promise.rejectType<IDLInterface<OverconstrainedError>>(OverconstrainedError::create(error->invalidConstraint, WTFMove(error->message)));
                 return;
             }
 
@@ -606,7 +599,11 @@ bool MediaStreamTrack::virtualHasPendingActivity() const
 
 RefPtr<WebAudioSourceProvider> MediaStreamTrack::createAudioSourceProvider()
 {
+#if ENABLE(WEB_AUDIO)
     return m_private->createAudioSourceProvider();
+#else
+    return nullptr;
+#endif
 }
 
 bool MediaStreamTrack::isCapturingAudio() const
@@ -629,18 +626,13 @@ UniqueRef<MediaStreamTrackDataHolder> MediaStreamTrack::detach()
 
 Ref<MediaStreamTrack> MediaStreamTrack::create(ScriptExecutionContext& context, UniqueRef<MediaStreamTrackDataHolder>&& dataHolder)
 {
-    RefPtr<MediaStreamTrackPrivate> privateTrack;
-    if (RefPtr document = dynamicDowncast<Document>(context))
-        privateTrack = MediaStreamTrackPrivate::create(document->logger(), WTFMove(dataHolder->source), WTFMove(dataHolder->trackId));
-    else {
-        privateTrack = MediaStreamTrackPrivate::create(Logger::create(&context), WTFMove(dataHolder), [identifier = context.identifier()](Function<void()>&& task) {
-            ScriptExecutionContext::postTaskTo(identifier, [task = WTFMove(task)] (auto&) mutable {
-                task();
-            });
+    auto privateTrack = MediaStreamTrackPrivate::create(Logger::create(&context), WTFMove(dataHolder), [identifier = context.identifier()](Function<void()>&& task) {
+        ScriptExecutionContext::postTaskTo(identifier, [task = WTFMove(task)] (auto&) mutable {
+            task();
         });
-    }
+    });
 
-    return MediaStreamTrack::create(context, privateTrack.releaseNonNull(), RegisterCaptureTrackToOwner::No);
+    return MediaStreamTrack::create(context, WTFMove(privateTrack), RegisterCaptureTrackToOwner::No);
 }
 
 #if !RELEASE_LOG_DISABLED

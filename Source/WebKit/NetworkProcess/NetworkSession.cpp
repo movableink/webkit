@@ -229,18 +229,21 @@ void NetworkSession::destroyPrivateClickMeasurementStore(CompletionHandler<void(
     privateClickMeasurement().destroyStoreForTesting(WTFMove(completionHandler));
 }
 
-void NetworkSession::setTrackingPreventionEnabled(bool enable)
+void NetworkSession::setTrackingPreventionEnabled(bool enabled)
 {
     ASSERT(!m_isInvalidated);
+    bool isCurrentlyEnabled = !!m_resourceLoadStatistics;
+    if (isCurrentlyEnabled == enabled)
+        return;
+
+    RELEASE_LOG(Storage, "%p - NetworkSession::setTrackingPreventionEnabled: sessionID=%" PRIu64 ", enabled=%d", this, m_sessionID.toUInt64(), enabled);
+
     if (auto* storageSession = networkStorageSession())
-        storageSession->setTrackingPreventionEnabled(enable);
-    if (!enable) {
+        storageSession->setTrackingPreventionEnabled(enabled);
+    if (!enabled) {
         destroyResourceLoadStatistics([] { });
         return;
     }
-
-    if (m_resourceLoadStatistics)
-        return;
 
     m_resourceLoadStatistics = WebResourceLoadStatisticsStore::create(*this, m_resourceLoadStatisticsDirectory, m_shouldIncludeLocalhostInResourceLoadStatistics, (m_sessionID.isEphemeral() ? ResourceLoadStatistics::IsEphemeral::Yes : ResourceLoadStatistics::IsEphemeral::No));
     if (!m_sessionID.isEphemeral())
@@ -270,11 +273,6 @@ bool NetworkSession::isTrackingPreventionEnabled() const
 void NetworkSession::notifyResourceLoadStatisticsProcessed()
 {
     m_networkProcess->parentProcessConnection()->send(Messages::NetworkProcessProxy::NotifyResourceLoadStatisticsProcessed(), 0);
-}
-
-void NetworkSession::logDiagnosticMessageWithValue(const String& message, const String& description, unsigned value, unsigned significantFigures, WebCore::ShouldSample shouldSample)
-{
-    m_networkProcess->parentProcessConnection()->send(Messages::WebPageProxy::LogDiagnosticMessageWithValueFromWebProcess(message, description, value, significantFigures, shouldSample), 0);
 }
 
 void NetworkSession::deleteAndRestrictWebsiteDataForRegistrableDomains(OptionSet<WebsiteDataType> dataTypes, RegistrableDomainsToDeleteOrRestrictWebsiteDataFor&& domains, bool shouldNotifyPage, CompletionHandler<void(HashSet<RegistrableDomain>&&)>&& completionHandler)

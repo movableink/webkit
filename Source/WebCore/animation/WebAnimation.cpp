@@ -706,7 +706,7 @@ Seconds WebAnimation::effectEndTime() const
     return m_effect ? m_effect->endTime() : 0_s;
 }
 
-void WebAnimation::cancel()
+void WebAnimation::cancel(Silently silently)
 {
     LOG_WITH_STREAM(Animations, stream << "WebAnimation " << this << " cancel() (current time is " << currentTime() << ")");
 
@@ -762,7 +762,7 @@ void WebAnimation::cancel()
     // 3. Make animation's start time unresolved.
     m_startTime = std::nullopt;
 
-    timingDidChange(DidSeek::No, SynchronouslyNotify::No);
+    timingDidChange(DidSeek::No, SynchronouslyNotify::No, silently);
 
     invalidateEffect();
 
@@ -1584,7 +1584,7 @@ ExceptionOr<void> WebAnimation::commitStyles()
         return styleDeclaration->copyProperties();
     }();
 
-    auto& keyframeStack = styledElement->ensureKeyframeEffectStack(PseudoId::None);
+    auto& keyframeStack = styledElement->ensureKeyframeEffectStack({ });
 
     auto commitProperty = [&](AnimatableCSSProperty property) {
         // 1. Let partialEffectStack be a copy of the effect stack for property on target.

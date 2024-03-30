@@ -61,14 +61,13 @@ Ref<Element> PDFPluginPasswordField::createAnnotationElement()
 
 void PDFPluginPasswordField::updateGeometry()
 {
+    // Intentionally do not call the superclass.
 }
 
 bool PDFPluginPasswordField::handleEvent(WebCore::Event& event)
 {
-    if (event.isKeyboardEvent() && event.type() == eventNames().keyupEvent) {
-        auto& keyboardEvent = downcast<KeyboardEvent>(event);
-
-        if (keyboardEvent.keyIdentifier() == "Enter"_s) {
+    if (auto* keyboardEvent = dynamicDowncast<KeyboardEvent>(event); keyboardEvent && keyboardEvent->type() == eventNames().keyupEvent) {
+        if (keyboardEvent->keyIdentifier() == "Enter"_s) {
             plugin()->attemptToUnlockPDF(value());
             event.preventDefault();
             return true;
@@ -76,6 +75,11 @@ bool PDFPluginPasswordField::handleEvent(WebCore::Event& event)
     }
 
     return false;
+}
+
+void PDFPluginPasswordField::resetField()
+{
+    setValue(""_s);
 }
     
 } // namespace WebKit

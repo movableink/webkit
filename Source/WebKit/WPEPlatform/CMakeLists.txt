@@ -20,6 +20,8 @@ set(WPEPlatform_SOURCES
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEKeyUnicode.cpp
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEKeymap.cpp
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEKeymapXKB.cpp
+    ${WEBKIT_DIR}/WPEPlatform/wpe/WPEMonitor.cpp
+    ${WEBKIT_DIR}/WPEPlatform/wpe/WPERectangle.cpp
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEVersion.cpp
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEView.cpp
     ${WPEPlatform_DERIVED_SOURCES_DIR}/wpe/WPEEnumTypes.cpp
@@ -38,6 +40,8 @@ set(WPEPlatform_INSTALLED_HEADERS
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEKeymap.h
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEKeymapXKB.h
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEKeysyms.h
+    ${WEBKIT_DIR}/WPEPlatform/wpe/WPEMonitor.h
+    ${WEBKIT_DIR}/WPEPlatform/wpe/WPERectangle.h
     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEView.h
     ${WEBKIT_DIR}/WPEPlatform/wpe/wpe-platform.h
     ${WPEPlatform_DERIVED_SOURCES_DIR}/wpe/WPEConfig.h
@@ -86,13 +90,9 @@ set(WPEPlatform_LIBRARIES
 )
 
 if (USE_GBM)
-    list(APPEND WPEPlatform_SYSTEM_INCLUDE_DIRECTORIES
-        ${LIBDRM_INCLUDE_DIR}
-    )
-    list(APPEND WPEPlatform_LIBRARIES
-        GBM::GBM
-        ${LIBDRM_LIBRARIES}
-    )
+    list(APPEND WPEPlatform_LIBRARIES GBM::GBM)
+elseif (USE_LIBDRM)
+    list(APPEND WPEPlatform_LIBRARIES LibDRM::LibDRM)
 endif ()
 
 if (NOT USE_SYSTEM_MALLOC)
@@ -148,7 +148,6 @@ if (ENABLE_WPE_PLATFORM_DRM)
         OPTIONS
             -I${WEBKIT_DIR}/WPEPlatform
             -I${WPEPlatform_DERIVED_SOURCES_DIR}
-            -I${LIBDRM_INCLUDE_DIR}
         SOURCES
             ${WPEPlatformDRM_SOURCES_FOR_INTROSPECTION}
         NO_IMPLICIT_SOURCES

@@ -260,6 +260,9 @@ void RenderListBox::computePreferredLogicalWidths()
 
 unsigned RenderListBox::size() const
 {
+    if (style().fieldSizing() == FieldSizing::Content)
+        return static_cast<unsigned>(numItems());
+
     unsigned specifiedSize = selectElement().size();
     if (specifiedSize >= 1)
         return specifiedSize;
@@ -385,7 +388,7 @@ void RenderListBox::paintItem(PaintInfo& paintInfo, const LayoutPoint& paintOffs
 
 void RenderListBox::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
-    if (style().visibility() != Visibility::Visible)
+    if (style().usedVisibility() != Visibility::Visible)
         return;
     
     if (paintInfo.phase == PaintPhase::Foreground) {
@@ -444,6 +447,11 @@ void RenderListBox::addFocusRingRects(Vector<LayoutRect>& rects, const LayoutPoi
     }
 }
 
+bool RenderListBox::useDarkAppearance() const
+{
+    return RenderBlockFlow::useDarkAppearance();
+}
+
 void RenderListBox::paintScrollbar(PaintInfo& paintInfo, const LayoutPoint& paintOffset, Scrollbar& scrollbar)
 {
     auto scrollRect = rectForScrollbar(scrollbar);
@@ -463,7 +471,7 @@ static LayoutSize itemOffsetForAlignment(TextRun textRun, const RenderStyle& ele
     bool isHorizontalWritingMode = elementStyle.isHorizontalWritingMode();
 
     auto itemBoundingBoxLogicalWidth = isHorizontalWritingMode ? itemBoundingBox.width() : itemBoundingBox.height();
-    auto offset = LayoutSize(0, itemFont.metricsOfPrimaryFont().ascent());
+    auto offset = LayoutSize(0, itemFont.metricsOfPrimaryFont().intAscent());
     if (actualAlignment == TextAlignMode::Right || actualAlignment == TextAlignMode::WebKitRight) {
         float textWidth = itemFont.width(textRun);
         offset.setWidth(itemBoundingBoxLogicalWidth - textWidth - optionsSpacingInlineStart);
@@ -488,7 +496,7 @@ void RenderListBox::paintItemForeground(PaintInfo& paintInfo, const LayoutPoint&
     if (!itemStyle)
         return;
 
-    if (itemStyle->visibility() == Visibility::Hidden)
+    if (itemStyle->usedVisibility() == Visibility::Hidden)
         return;
 
     String itemText;
@@ -558,7 +566,7 @@ void RenderListBox::paintItemBackground(PaintInfo& paintInfo, const LayoutPoint&
         backColor = itemStyle->visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor);
 
     // Draw the background for this list box item
-    if (itemStyle->visibility() == Visibility::Hidden)
+    if (itemStyle->usedVisibility() == Visibility::Hidden)
         return;
 
     LayoutRect itemRect = itemBoundingBoxRect(paintOffset, listIndex);
@@ -840,7 +848,7 @@ void RenderListBox::scrollTo(const ScrollPosition& position)
 
 LayoutUnit RenderListBox::itemLogicalHeight() const
 {
-    return style().metricsOfPrimaryFont().height() + itemBlockSpacing;
+    return style().metricsOfPrimaryFont().intHeight() + itemBlockSpacing;
 }
 
 int RenderListBox::verticalScrollbarWidth() const

@@ -125,12 +125,12 @@ class EmptyContextMenuClient final : public ContextMenuClient {
     void speak(const String&) final { }
     void stopSpeaking() final { }
 
-#if PLATFORM(COCOA)
-    void searchWithSpotlight() final { }
-#endif
-
 #if HAVE(TRANSLATION_UI_SERVICES)
     void handleTranslation(const TranslationContextMenuInfo&) final { }
+#endif
+
+#if ENABLE(UNIFIED_TEXT_REPLACEMENT)
+    void handleSwapCharacters(IntRect) final { };
 #endif
 
 #if PLATFORM(GTK)
@@ -191,11 +191,11 @@ private:
 class EmptyDatabaseProvider final : public DatabaseProvider {
     struct EmptyIDBConnectionToServerDeletegate final : public IDBClient::IDBConnectionToServerDelegate {
         IDBConnectionIdentifier identifier() const final { return { }; }
-        void deleteDatabase(const IDBRequestData&) final { }
-        void openDatabase(const IDBRequestData&) final { }
+        void deleteDatabase(const IDBOpenRequestData&) final { }
+        void openDatabase(const IDBOpenRequestData&) final { }
         void abortTransaction(const IDBResourceIdentifier&) final { }
         void commitTransaction(const IDBResourceIdentifier&, uint64_t) final { }
-        void didFinishHandlingVersionChangeTransaction(uint64_t, const IDBResourceIdentifier&) final { }
+        void didFinishHandlingVersionChangeTransaction(IDBDatabaseConnectionIdentifier, const IDBResourceIdentifier&) final { }
         void createObjectStore(const IDBRequestData&, const IDBObjectStoreInfo&) final { }
         void deleteObjectStore(const IDBRequestData&, const String&) final { }
         void renameObjectStore(const IDBRequestData&, uint64_t, const String&) final { }
@@ -210,12 +210,12 @@ class EmptyDatabaseProvider final : public DatabaseProvider {
         void deleteRecord(const IDBRequestData&, const IDBKeyRangeData&) final { }
         void openCursor(const IDBRequestData&, const IDBCursorInfo&) final { }
         void iterateCursor(const IDBRequestData&, const IDBIterateCursorData&) final { }
-        void establishTransaction(uint64_t, const IDBTransactionInfo&) final { }
-        void databaseConnectionPendingClose(uint64_t) final { }
-        void databaseConnectionClosed(uint64_t) final { }
-        void abortOpenAndUpgradeNeeded(uint64_t, const std::optional<IDBResourceIdentifier>&) final { }
-        void didFireVersionChangeEvent(uint64_t, const IDBResourceIdentifier&, const IndexedDB::ConnectionClosedOnBehalfOfServer) final { }
-        void openDBRequestCancelled(const IDBRequestData&) final { }
+        void establishTransaction(IDBDatabaseConnectionIdentifier, const IDBTransactionInfo&) final { }
+        void databaseConnectionPendingClose(IDBDatabaseConnectionIdentifier) final { }
+        void databaseConnectionClosed(IDBDatabaseConnectionIdentifier) final { }
+        void abortOpenAndUpgradeNeeded(IDBDatabaseConnectionIdentifier, const std::optional<IDBResourceIdentifier>&) final { }
+        void didFireVersionChangeEvent(IDBDatabaseConnectionIdentifier, const IDBResourceIdentifier&, const IndexedDB::ConnectionClosedOnBehalfOfServer) final { }
+        void openDBRequestCancelled(const IDBOpenRequestData&) final { }
         void getAllDatabaseNamesAndVersions(const IDBResourceIdentifier&, const ClientOrigin&) final { }
         ~EmptyIDBConnectionToServerDeletegate() { }
     };
@@ -609,10 +609,6 @@ void EmptyFrameLoaderClient::dispatchDecidePolicyForNewWindowAction(const Naviga
 }
 
 void EmptyFrameLoaderClient::dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, const ResourceResponse&, FormState*, const String&, uint64_t, std::optional<HitTestResult>&&, bool, SandboxFlags, PolicyDecisionMode, FramePolicyFunction&&)
-{
-}
-
-void EmptyFrameLoaderClient::broadcastFrameRemovalToOtherProcesses()
 {
 }
 
@@ -1087,6 +1083,11 @@ RemoteAXObjectRef EmptyFrameLoaderClient::accessibilityRemoteObject()
     return nullptr;
 }
 
+IntPoint EmptyFrameLoaderClient::accessibilityRemoteFrameOffset()
+{
+    return { };
+}
+
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 void EmptyFrameLoaderClient::setAXIsolatedTreeRoot(WebCore::AXCoreObject*)
 {
@@ -1225,6 +1226,7 @@ PageConfiguration pageConfigurationWithEmptyClients(std::optional<PageIdentifier
         makeUniqueRef<EmptyProgressTrackerClient>(),
         UniqueRef<LocalFrameLoaderClient>(makeUniqueRef<EmptyFrameLoaderClient>()),
         FrameIdentifier::generate(),
+        nullptr,
         makeUniqueRef<DummySpeechRecognitionProvider>(),
         makeUniqueRef<EmptyMediaRecorderProvider>(),
         EmptyBroadcastChannelRegistry::create(),
@@ -1238,7 +1240,8 @@ PageConfiguration pageConfigurationWithEmptyClients(std::optional<PageIdentifier
 #if ENABLE(APPLE_PAY)
         makeUniqueRef<EmptyPaymentCoordinatorClient>(),
 #endif
-        makeUniqueRef<EmptyChromeClient>()
+        makeUniqueRef<EmptyChromeClient>(),
+        makeUniqueRef<EmptyCryptoClient>()
     };
 
 #if ENABLE(DRAG_SUPPORT)

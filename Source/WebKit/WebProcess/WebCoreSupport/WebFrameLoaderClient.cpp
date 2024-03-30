@@ -62,6 +62,8 @@ WebFrameLoaderClient::WebFrameLoaderClient(Ref<WebFrame>&& frame)
 {
 }
 
+WebFrameLoaderClient::~WebFrameLoaderClient() = default;
+
 std::optional<NavigationActionData> WebFrameLoaderClient::navigationActionData(const NavigationAction& navigationAction, const ResourceRequest& request, const ResourceResponse& redirectResponse, const String& clientRedirectSourceForHistory, uint64_t navigationID, std::optional<WebCore::HitTestResult>&& hitTestResult, bool hasOpener, SandboxFlags sandboxFlags) const
 {
     RefPtr webPage = m_frame->page();
@@ -196,14 +198,6 @@ void WebFrameLoaderClient::dispatchDecidePolicyForNavigationAction(const Navigat
 
         frame->didReceivePolicyDecision(listenerID, WTFMove(policyDecision));
     });
-}
-
-void WebFrameLoaderClient::broadcastFrameRemovalToOtherProcesses()
-{
-    auto* webPage = m_frame->page();
-    if (!webPage)
-        return;
-    webPage->send(Messages::WebPageProxy::BroadcastFrameRemovalToOtherProcesses(m_frame->frameID()));
 }
 
 }

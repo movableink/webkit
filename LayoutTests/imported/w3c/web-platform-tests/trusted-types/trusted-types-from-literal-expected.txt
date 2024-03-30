@@ -1,7 +1,0 @@
-CONSOLE MESSAGE: Unrecognized Content-Security-Policy directive 'require-trusted-types-for'.
-
-CONSOLE MESSAGE: ReferenceError: Can't find variable: TrustedHTML
-
-Harness Error (FAIL), message = ReferenceError: Can't find variable: TrustedHTML
-
-

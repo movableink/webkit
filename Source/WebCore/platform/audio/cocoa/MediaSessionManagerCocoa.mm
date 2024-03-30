@@ -30,7 +30,6 @@
 
 #import "AudioUtilities.h"
 #import "DeprecatedGlobalSettings.h"
-#import "HTMLMediaElement.h"
 #import "Logging.h"
 #import "MediaConfiguration.h"
 #import "MediaPlayer.h"
@@ -436,7 +435,7 @@ void MediaSessionManagerCocoa::setNowPlayingInfo(bool setAsNowPlayingApplication
         auto cfCurrentTime = adoptCF(CFNumberCreate(kCFAllocatorDefault, kCFNumberDoubleType, &nowPlayingInfo.currentTime));
         CFDictionarySetValue(info.get(), kMRMediaRemoteNowPlayingInfoElapsedTime, cfCurrentTime.get());
     }
-    RetainPtr tiffImage = nowPlayingInfo.artwork && nowPlayingInfo.artwork->image ? nowPlayingInfo.artwork->image->tiffRepresentation() : nullptr;
+    RetainPtr tiffImage = nowPlayingInfo.artwork && nowPlayingInfo.artwork->image ? nowPlayingInfo.artwork->image->adapter().tiffRepresentation() : nullptr;
     if (tiffImage) {
         CFDictionarySetValue(info.get(), kMRMediaRemoteNowPlayingInfoArtworkData, tiffImage.get());
         CFDictionarySetValue(info.get(), kMRMediaRemoteNowPlayingInfoArtworkMIMEType, @"image/tiff");
@@ -465,13 +464,11 @@ void MediaSessionManagerCocoa::setNowPlayingInfo(bool setAsNowPlayingApplication
     }
 }
 
-PlatformMediaSession* MediaSessionManagerCocoa::nowPlayingEligibleSession()
+WeakPtr<PlatformMediaSession> MediaSessionManagerCocoa::nowPlayingEligibleSession()
 {
-    // FIXME: Fix this layering violation.
-    if (auto element = HTMLMediaElement::bestMediaElementForRemoteControls(MediaElementSession::PlaybackControlsPurpose::NowPlaying))
-        return &element->mediaSession();
-
-    return nullptr;
+    return bestEligibleSessionForRemoteControls([](auto& session) {
+        return session.isNowPlayingEligible();
+    }, PlatformMediaSession::PlaybackControlsPurpose::NowPlaying);
 }
 
 void MediaSessionManagerCocoa::updateNowPlayingInfo()
@@ -482,7 +479,7 @@ void MediaSessionManagerCocoa::updateNowPlayingInfo()
     BEGIN_BLOCK_OBJC_EXCEPTIONS
 
     std::optional<NowPlayingInfo> nowPlayingInfo;
-    if (auto* session = nowPlayingEligibleSession())
+    if (auto session = nowPlayingEligibleSession())
         nowPlayingInfo = session->nowPlayingInfo();
 
     if (!nowPlayingInfo) {
@@ -533,6 +530,7 @@ void MediaSessionManagerCocoa::updateNowPlayingInfo()
         m_lastUpdatedNowPlayingElapsedTime = currentTime;
 
     m_nowPlayingActive = nowPlayingInfo->allowsNowPlayingControlsVisibility;
+    m_nowPlayingInfo = nowPlayingInfo;
 
     END_BLOCK_OBJC_EXCEPTIONS
 }

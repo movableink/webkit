@@ -35,7 +35,6 @@
 #endif
 
 #include "CachedFont.h"
-#include "CharacterProperties.h"
 #include "FontCache.h"
 #include "FontCascade.h"
 #include "FontCustomPlatformData.h"
@@ -43,6 +42,7 @@
 #include <wtf/MathExtras.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/AtomStringHash.h>
+#include <wtf/text/CharacterProperties.h>
 #include <wtf/text/TextStream.h>
 
 #if ENABLE(OPENTYPE_VERTICAL)
@@ -72,6 +72,11 @@ Ref<Font> Font::create(Ref<SharedBuffer>&& fontFaceData, Font::Origin origin, fl
     // FIXME: Why doesn't this pass in any meaningful data for the last few arguments?
     auto platformData = CachedFont::platformDataFromCustomData(*customFontData, description, syntheticBold, syntheticItalic, { });
     return Font::create(WTFMove(platformData), origin);
+}
+
+Ref<Font> Font::create(FontInternalAttributes&& attributes, FontPlatformData&& platformData)
+{
+    return Font::create(platformData, attributes.origin, attributes.isInterstitial, attributes.visibility, attributes.isTextOrientationFallback, attributes.renderingResourceIdentifier);
 }
 
 Font::Font(const FontPlatformData& platformData, Origin origin, IsInterstitial interstitial, Visibility visibility, IsOrientationFallback orientationFallback, std::optional<RenderingResourceIdentifier> renderingResourceIdentifier)
@@ -111,10 +116,10 @@ void Font::initCharWidths()
 
     // If we can't retrieve the width of a '0', fall back to the x height.
     if (m_avgCharWidth <= 0.f)
-        m_avgCharWidth = m_fontMetrics.xHeight();
+        m_avgCharWidth = m_fontMetrics.xHeight().value_or(0);
 
     if (m_maxCharWidth <= 0.f)
-        m_maxCharWidth = std::max(m_avgCharWidth, m_fontMetrics.floatAscent());
+        m_maxCharWidth = std::max(m_avgCharWidth, m_fontMetrics.ascent());
 }
 
 void Font::platformGlyphInit()
@@ -162,9 +167,9 @@ void Font::platformGlyphInit()
         m_fontMetrics.setIdeogramWidth(platformData().size());
 
     m_spaceWidth = widthForGlyph(m_spaceGlyph, SyntheticBoldInclusion::Exclude); // spaceWidth() handles adding in the synthetic bold.
-    auto amountToAdjustLineGap = std::min(m_fontMetrics.floatLineGap(), 0.0f);
-    m_fontMetrics.setLineGap(m_fontMetrics.floatLineGap() - amountToAdjustLineGap);
-    m_fontMetrics.setLineSpacing(m_fontMetrics.floatLineSpacing() - amountToAdjustLineGap);
+    auto amountToAdjustLineGap = std::min(m_fontMetrics.lineGap(), 0.0f);
+    m_fontMetrics.setLineGap(m_fontMetrics.lineGap() - amountToAdjustLineGap);
+    m_fontMetrics.setLineSpacing(m_fontMetrics.lineSpacing() - amountToAdjustLineGap);
     determinePitch();
 }
 
@@ -556,7 +561,7 @@ RefPtr<Font> Font::systemFallbackFontForCharacterCluster(StringView characterClu
     return SystemFallbackFontCache::forCurrentThread().systemFallbackFontForCharacterCluster(this, characterCluster, description, resolvedEmojiPolicy, isForPlatformFont);
 }
 
-#if !PLATFORM(COCOA) && !USE(FREETYPE)
+#if !PLATFORM(COCOA) && !USE(FREETYPE) && !USE(SKIA)
 bool Font::variantCapsSupportedForSynthesis(FontVariantCaps fontVariantCaps) const
 {
     switch (fontVariantCaps) {

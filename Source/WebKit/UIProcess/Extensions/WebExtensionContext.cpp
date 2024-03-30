@@ -30,6 +30,7 @@
 
 #include "WebExtensionContextParameters.h"
 #include "WebExtensionContextProxyMessages.h"
+#include "WebExtensionController.h"
 #include "WebPageProxy.h"
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
@@ -38,22 +39,21 @@ namespace WebKit {
 
 using namespace WebCore;
 
-static HashMap<WebExtensionContextIdentifier, WeakPtr<WebExtensionContext>>& webExtensionContexts()
+static HashMap<WebExtensionContextIdentifier, WeakRef<WebExtensionContext>>& webExtensionContexts()
 {
-    static NeverDestroyed<HashMap<WebExtensionContextIdentifier, WeakPtr<WebExtensionContext>>> contexts;
+    static NeverDestroyed<HashMap<WebExtensionContextIdentifier, WeakRef<WebExtensionContext>>> contexts;
     return contexts;
 }
 
 WebExtensionContext* WebExtensionContext::get(WebExtensionContextIdentifier identifier)
 {
-    return webExtensionContexts().get(identifier).get();
+    return webExtensionContexts().get(identifier);
 }
 
 WebExtensionContext::WebExtensionContext()
-    : m_identifier(WebExtensionContextIdentifier::generate())
 {
-    ASSERT(!webExtensionContexts().contains(m_identifier));
-    webExtensionContexts().add(m_identifier, this);
+    ASSERT(!get(identifier()));
+    webExtensionContexts().add(identifier(), *this);
 }
 
 WebExtensionContextParameters WebExtensionContext::parameters() const
@@ -62,53 +62,93 @@ WebExtensionContextParameters WebExtensionContext::parameters() const
         identifier(),
         baseURL(),
         uniqueIdentifier(),
+        unsupportedAPIs(),
+        m_grantedPermissions,
         extension().serializeLocalization(),
         extension().serializeManifest(),
         extension().manifestVersion(),
-        inTestingMode(),
         isSessionStorageAllowedInContentScripts(),
         backgroundPageIdentifier(),
+#if ENABLE(INSPECTOR_EXTENSIONS)
+        inspectorPageIdentifiers(),
+        inspectorBackgroundPageIdentifiers(),
+#endif
         popupPageIdentifiers(),
         tabPageIdentifiers()
     };
 }
 
+bool WebExtensionContext::inTestingMode() const
+{
+    return m_extensionController && m_extensionController->inTestingMode();
+}
+
+const WebExtensionContext::UserContentControllerProxySet& WebExtensionContext::userContentControllers() const
+{
+    ASSERT(isLoaded());
+
+    if (hasAccessInPrivateBrowsing())
+        return extensionController()->allUserContentControllers();
+    return extensionController()->allNonPrivateUserContentControllers();
+}
+
 bool WebExtensionContext::pageListensForEvent(const WebPageProxy& page, WebExtensionEventListenerType type, WebExtensionContentWorldType contentWorldType) const
 {
+    if (!isLoaded())
+        return false;
+
     if (!hasAccessInPrivateBrowsing() && page.sessionID().isEphemeral())
         return false;
 
-    auto pagesEntry = m_eventListenerPages.find({ type, contentWorldType });
-    if (pagesEntry == m_eventListenerPages.end())
-        return false;
+    auto findAndCheckPage = [&](WebExtensionContentWorldType worldType) {
+        auto entry = m_eventListenerPages.find({ type, worldType });
+        return entry != m_eventListenerPages.end() && entry->value.contains(page);
+    };
 
-    if (!pagesEntry->value.contains(page))
+    bool found = findAndCheckPage(contentWorldType);
+
+#if ENABLE(INSPECTOR_EXTENSIONS)
+    if (!found) {
+        // Inspector content world is a special alias of Main. Check it when Main is requested (and vice versa).
+        found = findAndCheckPage(contentWorldType == WebExtensionContentWorldType::Main ? WebExtensionContentWorldType::Inspector : WebExtensionContentWorldType::Main);
+    }
+#endif
+
+    if (!found)
         return false;
 
     return page.process().canSendMessage();
 }
 
-WebExtensionContext::WebProcessProxySet WebExtensionContext::processes(WebExtensionEventListenerType type, WebExtensionContentWorldType contentWorldType) const
-{
-    return processes(EventListenerTypeSet { type }, contentWorldType);
-}
-
-WebExtensionContext::WebProcessProxySet WebExtensionContext::processes(EventListenerTypeSet typeSet, WebExtensionContentWorldType contentWorldType) const
+WebExtensionContext::WebProcessProxySet WebExtensionContext::processes(EventListenerTypeSet&& typeSet, ContentWorldTypeSet&& contentWorldTypeSet) const
 {
     WebProcessProxySet result;
 
-    for (auto type : typeSet) {
-        auto pagesEntry = m_eventListenerPages.find({ type, contentWorldType });
-        if (pagesEntry == m_eventListenerPages.end())
-            continue;
+    if (!isLoaded())
+        return result;
 
-        for (auto entry : pagesEntry->value) {
-            if (!hasAccessInPrivateBrowsing() && entry.key.sessionID().isEphemeral())
+#if ENABLE(INSPECTOR_EXTENSIONS)
+    // Inspector content world is a special alias of Main. Include it when Main is requested (and vice versa).
+    if (contentWorldTypeSet.contains(WebExtensionContentWorldType::Main))
+        contentWorldTypeSet.add(WebExtensionContentWorldType::Inspector);
+    else if (contentWorldTypeSet.contains(WebExtensionContentWorldType::Inspector))
+        contentWorldTypeSet.add(WebExtensionContentWorldType::Main);
+#endif
+
+    for (auto type : typeSet) {
+        for (auto contentWorldType : contentWorldTypeSet) {
+            auto pagesEntry = m_eventListenerPages.find({ type, contentWorldType });
+            if (pagesEntry == m_eventListenerPages.end())
                 continue;
 
-            Ref process = entry.key.process();
-            if (process->canSendMessage())
-                result.add(WTFMove(process));
+            for (auto entry : pagesEntry->value) {
+                if (!hasAccessInPrivateBrowsing() && entry.key.sessionID().isEphemeral())
+                    continue;
+
+                Ref process = entry.key.process();
+                if (process->canSendMessage())
+                    result.add(WTFMove(process));
+            }
         }
     }
 

@@ -40,7 +40,7 @@ from twisted.trial import unittest
 from .steps import *
 
 CURRENT_HOSTNAME = socket.gethostname().strip()
-
+FakeBuild._builderid = 1
 
 class ExpectMasterShellCommand(object):
     def __init__(self, command, workdir=None, env=None, usePTY=0):
@@ -403,7 +403,7 @@ class TestCompileWebKit(BuildStepMixinAdditions, unittest.TestCase):
         self.expectRemoteCommands(
             ExpectShell(
                 workdir='wkdir',
-                timeout=1800,
+                timeout=3600,
                 logEnviron=True,
                 command=['perl', 'Tools/Scripts/build-webkit', '--no-fatal-warnings', '--release'],
             ) + 0,
@@ -420,9 +420,9 @@ class TestCompileWebKit(BuildStepMixinAdditions, unittest.TestCase):
         self.expectRemoteCommands(
             ExpectShell(
                 workdir='wkdir',
-                timeout=1800,
+                timeout=3600,
                 logEnviron=True,
-                command=['perl', 'Tools/Scripts/build-webkit', '--no-fatal-warnings', '--release', '--architecture', 'x86_64 arm64', 'WK_VALIDATE_DEPENDENCIES=YES'],
+                command=['/bin/sh', '-c', 'perl Tools/Scripts/build-webkit --no-fatal-warnings --release --architecture "x86_64 arm64" WK_VALIDATE_DEPENDENCIES=YES 2>&1 | perl Tools/Scripts/filter-build-webkit -logfile build-log.txt'],
             ) + 0,
         )
         self.expectOutcome(result=SUCCESS, state_string='compiled')
@@ -435,7 +435,7 @@ class TestCompileWebKit(BuildStepMixinAdditions, unittest.TestCase):
         self.expectRemoteCommands(
             ExpectShell(
                 workdir='wkdir',
-                timeout=1800,
+                timeout=3600,
                 logEnviron=True,
                 command=['perl', 'Tools/Scripts/build-webkit', '--no-fatal-warnings', '--release'],
             ) + 0,
@@ -451,7 +451,7 @@ class TestCompileWebKit(BuildStepMixinAdditions, unittest.TestCase):
         self.expectRemoteCommands(
             ExpectShell(
                 workdir='wkdir',
-                timeout=1800,
+                timeout=3600,
                 logEnviron=True,
                 command=['perl', 'Tools/Scripts/build-webkit', '--no-fatal-warnings', '--release', '--prefix=/app/webkit/WebKitBuild/Release/install', '--gtk'],
             ) + 0,
@@ -467,7 +467,7 @@ class TestCompileWebKit(BuildStepMixinAdditions, unittest.TestCase):
         self.expectRemoteCommands(
             ExpectShell(
                 workdir='wkdir',
-                timeout=1800,
+                timeout=3600,
                 logEnviron=True,
                 command=['perl', 'Tools/Scripts/build-webkit', '--no-fatal-warnings', '--release', '--wpe'],
             ) + 0,
@@ -482,7 +482,7 @@ class TestCompileWebKit(BuildStepMixinAdditions, unittest.TestCase):
         self.expectRemoteCommands(
             ExpectShell(
                 workdir='wkdir',
-                timeout=1800,
+                timeout=3600,
                 logEnviron=True,
                 command=['perl', 'Tools/Scripts/build-webkit', '--no-fatal-warnings', '--debug'],
             ) + 2
@@ -507,7 +507,7 @@ class TestCompileJSCOnly(BuildStepMixinAdditions, unittest.TestCase):
         self.expectRemoteCommands(
             ExpectShell(
                 workdir='wkdir',
-                timeout=1800,
+                timeout=3600,
                 logEnviron=True,
                 command=['perl', 'Tools/Scripts/build-jsc', '--release'],
             ) + 0,
@@ -522,7 +522,7 @@ class TestCompileJSCOnly(BuildStepMixinAdditions, unittest.TestCase):
         self.expectRemoteCommands(
             ExpectShell(
                 workdir='wkdir',
-                timeout=1800,
+                timeout=3600,
                 logEnviron=True,
                 command=['perl', 'Tools/Scripts/build-jsc', '--debug'],
             ) + 2
@@ -1622,3 +1622,211 @@ class TestCheckIfNeededUpdateCrossTargetImageSteps(BuildStepMixinAdditions, unit
         rc = self.runStep()
         self.assertTrue(RebootWithUpdatedCrossTargetImage() in self.build.addedStepsAfterCurrentStep)
         return rc
+
+
+class TestRunWebDriverTests(BuildStepMixinAdditions, unittest.TestCase):
+    def setUp(self):
+        self.longMessage = True
+        self.jsonFileName = 'webdriver_tests.json'
+        return self.setUpBuildStep()
+
+    def tearDown(self):
+        return self.tearDownBuildStep()
+
+    def configureStep(self):
+        self.setupStep(RunWebDriverTests())
+        self.setProperty('buildername', 'GTK-Linux-64-bit-Release-WebDriver-Tests')
+        self.setProperty('buildnumber', '101')
+        self.setProperty('workername', 'gtk-linux-bot-14')
+
+    def test_success(self):
+        self.configureStep()
+        self.setProperty('fullPlatform', 'gtk')
+        self.setProperty('configuration', 'release')
+        self.expectRemoteCommands(
+            ExpectShell(
+                workdir='wkdir',
+                logEnviron=True,
+                logfiles={'json': self.jsonFileName},
+                command=['python3', 'Tools/Scripts/run-webdriver-tests', '--json-output=webdriver_tests.json', '--release'],
+            ) + 0,
+        )
+        self.expectOutcome(result=SUCCESS, state_string='webdriver-tests')
+        return self.runStep()
+
+    def test_failure(self):
+        self.configureStep()
+        self.setProperty('fullPlatform', 'gtk')
+        self.setProperty('configuration', 'release')
+        self.expectRemoteCommands(
+            ExpectShell(
+                workdir='wkdir',
+                logEnviron=True,
+                logfiles={'json': self.jsonFileName},
+                command=['python3', 'Tools/Scripts/run-webdriver-tests', '--json-output=webdriver_tests.json', '--release'],
+            ) + 1,
+        )
+        self.expectOutcome(result=FAILURE, state_string='webdriver-tests (failure)')
+        return self.runStep()
+
+
+class current_hostname(object):
+    def __init__(self, hostname):
+        self.hostname = hostname
+        self.saved_hostname = None
+
+    def __enter__(self):
+        from . import steps
+        self.saved_hostname = steps.CURRENT_HOSTNAME
+        steps.CURRENT_HOSTNAME = self.hostname
+
+    def __exit__(self, type, value, tb):
+        from . import steps
+        steps.CURRENT_HOSTNAME = self.saved_hostname
+
+
+class TestGenerateS3URL(BuildStepMixinAdditions, unittest.TestCase):
+    def setUp(self):
+        self.longMessage = True
+        return self.setUpBuildStep()
+
+    def tearDown(self):
+        return self.tearDownBuildStep()
+
+    def configureStep(self, identifier='mac-highsierra-x86_64-release', extension='zip', content_type=None):
+        self.setupStep(GenerateS3URL(identifier, extension=extension, content_type=content_type))
+        self.setProperty('archive_revision', '1234')
+
+    def disabled_test_success(self):
+        # TODO: Figure out how to pass logs to unit-test for MasterShellCommand steps
+        self.configureStep()
+        self.expectLocalCommands(
+            ExpectMasterShellCommand(command=['python3',
+                                              '../Shared/generate-s3-url',
+                                              '--revision', '1234',
+                                              '--identifier', 'mac-highsierra-x86_64-release',
+                                              '--extension', 'zip',
+                                              ])
+            + 0,
+        )
+        self.expectOutcome(result=SUCCESS, state_string='Generated S3 URL')
+        with current_hostname(BUILD_WEBKIT_HOSTNAMES[0]):
+            return self.runStep()
+
+    def test_failure(self):
+        self.configureStep('ios-simulator-16-x86_64-debug')
+        self.expectLocalCommands(
+            ExpectMasterShellCommand(command=['python3',
+                                              '../Shared/generate-s3-url',
+                                              '--revision', '1234',
+                                              '--identifier', 'ios-simulator-16-x86_64-debug',
+                                              '--extension', 'zip',
+                                              ])
+            + 2,
+        )
+        self.expectOutcome(result=FAILURE, state_string='Failed to generate S3 URL')
+
+        try:
+            with current_hostname(BUILD_WEBKIT_HOSTNAMES[0]), open(os.devnull, 'w') as null:
+                sys.stdout = null
+                return self.runStep()
+        finally:
+            sys.stdout = sys.__stdout__
+
+    def test_failure_with_extension(self):
+        self.configureStep('macos-arm64-release-compile-webkit', extension='txt', content_type='text/plain')
+        self.expectLocalCommands(
+            ExpectMasterShellCommand(command=['python3',
+                                              '../Shared/generate-s3-url',
+                                              '--revision', '1234',
+                                              '--identifier', 'macos-arm64-release-compile-webkit',
+                                              '--extension', 'txt',
+                                              '--content-type', 'text/plain',
+                                              ])
+            + 2,
+        )
+        self.expectOutcome(result=FAILURE, state_string='Failed to generate S3 URL')
+
+        try:
+            with current_hostname(BUILD_WEBKIT_HOSTNAMES[0]), open(os.devnull, 'w') as null:
+                sys.stdout = null
+                return self.runStep()
+        finally:
+            sys.stdout = sys.__stdout__
+
+    def test_skipped(self):
+        self.configureStep()
+        self.expectOutcome(result=SKIPPED, state_string='Generated S3 URL (skipped)')
+        with current_hostname('something-other-than-steps.BUILD_WEBKIT_HOSTNAMES'):
+            return self.runStep()
+
+
+class TestUploadFileToS3(BuildStepMixinAdditions, unittest.TestCase):
+    def setUp(self):
+        self.longMessage = True
+        return self.setUpBuildStep()
+
+    def tearDown(self):
+        return self.tearDownBuildStep()
+
+    def configureStep(self, file='WebKitBuild/release.zip', content_type=None):
+        self.setupStep(UploadFileToS3(file, content_type=content_type))
+        self.build.s3url = 'https://test-s3-url'
+
+    def test_success(self):
+        self.configureStep()
+        self.assertEqual(UploadFileToS3.haltOnFailure, True)
+        self.assertEqual(UploadFileToS3.flunkOnFailure, True)
+        self.expectRemoteCommands(
+            ExpectShell(workdir='wkdir',
+                        env=dict(UPLOAD_URL='https://test-s3-url'),
+                        logEnviron=False,
+                        command=['python3', 'Tools/Scripts/upload-file-to-url', '--filename', 'WebKitBuild/release.zip'],
+                        timeout=1860,
+                        )
+            + 0,
+        )
+        self.expectOutcome(result=SUCCESS, state_string='Uploaded WebKitBuild/release.zip to S3')
+        with current_hostname(BUILD_WEBKIT_HOSTNAMES[0]):
+            return self.runStep()
+
+    def test_success_content_type(self):
+        self.configureStep(file='build-log.txt', content_type='text/plain')
+        self.assertEqual(UploadFileToS3.haltOnFailure, True)
+        self.assertEqual(UploadFileToS3.flunkOnFailure, True)
+        self.expectRemoteCommands(
+            ExpectShell(workdir='wkdir',
+                        env=dict(UPLOAD_URL='https://test-s3-url'),
+                        logEnviron=False,
+                        command=['python3', 'Tools/Scripts/upload-file-to-url', '--filename', 'build-log.txt', '--content-type', 'text/plain'],
+                        timeout=1860,
+                        )
+            + 0,
+        )
+        self.expectOutcome(result=SUCCESS, state_string='Uploaded build-log.txt to S3')
+        with current_hostname(BUILD_WEBKIT_HOSTNAMES[0]):
+            return self.runStep()
+
+    def test_failure(self):
+        self.configureStep()
+        self.expectRemoteCommands(
+            ExpectShell(workdir='wkdir',
+                        env=dict(UPLOAD_URL='https://test-s3-url'),
+                        logEnviron=False,
+                        command=['python3', 'Tools/Scripts/upload-file-to-url', '--filename', 'WebKitBuild/release.zip'],
+                        timeout=1860,
+                        )
+            + ExpectShell.log('stdio', stdout='''Uploading WebKitBuild/release.zip
+response: <Response [403]>, 403, Forbidden
+exit 1''')
+            + 2,
+        )
+        self.expectOutcome(result=FAILURE, state_string='Failed to upload WebKitBuild/release.zip to S3. Please inform an admin.')
+        with current_hostname(BUILD_WEBKIT_HOSTNAMES[0]):
+            return self.runStep()
+
+    def test_skipped(self):
+        self.configureStep()
+        self.expectOutcome(result=SKIPPED, state_string='Skipped upload to S3')
+        with current_hostname('something-other-than-steps.BUILD_WEBKIT_HOSTNAMES'):
+            return self.runStep()

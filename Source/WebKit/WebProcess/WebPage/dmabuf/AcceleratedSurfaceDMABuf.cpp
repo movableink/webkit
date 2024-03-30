@@ -30,10 +30,10 @@
 
 #include "AcceleratedBackingStoreDMABufMessages.h"
 #include "AcceleratedSurfaceDMABufMessages.h"
-#include "ShareableBitmap.h"
 #include "WebPage.h"
 #include "WebProcess.h"
 #include <WebCore/PlatformDisplay.h>
+#include <WebCore/ShareableBitmap.h>
 #include <array>
 #include <epoxy/egl.h>
 #include <wtf/SafeStrerror.h>
@@ -69,7 +69,7 @@ AcceleratedSurfaceDMABuf::AcceleratedSurfaceDMABuf(WebPage& webPage, Client& cli
 {
 #if USE(GBM)
     if (m_swapChain.type() == SwapChain::Type::EGLImage)
-        m_swapChain.setupBufferFormat(m_webPage.preferredBufferFormats());
+        m_swapChain.setupBufferFormat(m_webPage.preferredBufferFormats(), m_isOpaque);
 #endif
 }
 
@@ -132,7 +132,7 @@ std::unique_ptr<AcceleratedSurfaceDMABuf::RenderTarget> AcceleratedSurfaceDMABuf
         return nullptr;
     }
 
-    auto* device = WebCore::GBMDevice::singleton().device();
+    auto* device = WebCore::GBMDevice::singleton().device(dmabufFormat.usage == DMABufRendererBufferFormat::Usage::Scanout ? WebCore::GBMDevice::Type::Scanout : WebCore::GBMDevice::Type::Render);
     if (!device) {
         WTFLogAlways("Failed to create GBM buffer of size %dx%d: no GBM device found", size.width(), size.height());
         return nullptr;
@@ -235,7 +235,7 @@ AcceleratedSurfaceDMABuf::RenderTargetEGLImage::~RenderTargetEGLImage()
 
 std::unique_ptr<AcceleratedSurfaceDMABuf::RenderTarget> AcceleratedSurfaceDMABuf::RenderTargetSHMImage::create(uint64_t surfaceID, const WebCore::IntSize& size)
 {
-    auto buffer = ShareableBitmap::create({ size });
+    RefPtr buffer = WebCore::ShareableBitmap::create({ size });
     if (!buffer) {
         WTFLogAlways("Failed to allocate shared memory buffer of size %dx%d", size.width(), size.height());
         return nullptr;
@@ -250,7 +250,7 @@ std::unique_ptr<AcceleratedSurfaceDMABuf::RenderTarget> AcceleratedSurfaceDMABuf
     return makeUnique<RenderTargetSHMImage>(surfaceID, size, Ref { *buffer }, WTFMove(*bufferHandle));
 }
 
-AcceleratedSurfaceDMABuf::RenderTargetSHMImage::RenderTargetSHMImage(uint64_t surfaceID, const WebCore::IntSize& size, Ref<ShareableBitmap>&& bitmap, ShareableBitmap::Handle&& bitmapHandle)
+AcceleratedSurfaceDMABuf::RenderTargetSHMImage::RenderTargetSHMImage(uint64_t surfaceID, const WebCore::IntSize& size, Ref<WebCore::ShareableBitmap>&& bitmap, WebCore::ShareableBitmap::Handle&& bitmapHandle)
     : RenderTargetColorBuffer(surfaceID, size)
     , m_bitmap(WTFMove(bitmap))
 {
@@ -362,7 +362,7 @@ AcceleratedSurfaceDMABuf::SwapChain::SwapChain(uint64_t surfaceID)
 }
 
 #if USE(GBM)
-void AcceleratedSurfaceDMABuf::SwapChain::setupBufferFormat(const Vector<DMABufRendererBufferFormat>& preferredFormats)
+void AcceleratedSurfaceDMABuf::SwapChain::setupBufferFormat(const Vector<DMABufRendererBufferFormat>& preferredFormats, bool isOpaque)
 {
     // The preferred formats vector is sorted by usage, but all formats for the same usage has the same priority.
     // We split the preferred formats by usage to find in them separately.
@@ -391,29 +391,56 @@ void AcceleratedSurfaceDMABuf::SwapChain::setupBufferFormat(const Vector<DMABufR
         return notFound;
     };
 
+    auto isOpaqueFormat = [](uint32_t fourcc) -> bool {
+        return fourcc != DRM_FORMAT_ARGB8888
+            && fourcc != DRM_FORMAT_RGBA8888
+            && fourcc != DRM_FORMAT_ABGR8888
+            && fourcc != DRM_FORMAT_BGRA8888
+            && fourcc != DRM_FORMAT_ARGB2101010
+            && fourcc != DRM_FORMAT_ABGR2101010
+            && fourcc != DRM_FORMAT_ARGB16161616F
+            && fourcc != DRM_FORMAT_ABGR16161616F;
+    };
+
     Locker locker { m_dmabufFormatLock };
+    DMABufRendererBufferFormat dmabufFormat;
     const auto& supportedFormats = WebCore::PlatformDisplay::sharedDisplayForCompositing().dmabufFormats();
-    for (const auto& format : supportedFormats) {
-        for (const auto& tranche : tranches) {
+    for (const auto& tranche : tranches) {
+        for (const auto& format : supportedFormats) {
             auto index = findInRange(format.fourcc, tranche);
             if (index != notFound) {
-                const auto& dmabufFormat = preferredFormats[index];
-                m_dmabufFormat.usage = dmabufFormat.usage;
-                m_dmabufFormat.fourcc = dmabufFormat.fourcc;
-                if (dmabufFormat.modifiers[0] == DRM_FORMAT_MOD_INVALID)
-                    m_dmabufFormat.modifiers = dmabufFormat.modifiers;
+                const auto& preferredFormat = preferredFormats[index];
+
+                bool matchesOpacity = isOpaqueFormat(preferredFormat.fourcc) == isOpaque;
+                if (!matchesOpacity && dmabufFormat.fourcc)
+                    continue;
+
+                dmabufFormat.usage = preferredFormat.usage;
+                dmabufFormat.fourcc = preferredFormat.fourcc;
+                if (preferredFormat.modifiers[0] == DRM_FORMAT_MOD_INVALID)
+                    dmabufFormat.modifiers = preferredFormat.modifiers;
                 else {
-                    m_dmabufFormat.modifiers = WTF::compactMap(dmabufFormat.modifiers, [&format](uint64_t modifier) -> std::optional<uint64_t> {
+                    dmabufFormat.modifiers = WTF::compactMap(preferredFormat.modifiers, [&format](uint64_t modifier) -> std::optional<uint64_t> {
                         if (format.modifiers.contains(modifier))
                             return modifier;
                         return std::nullopt;
                     });
                 }
-                m_dmabufFormatChanged = true;
-                return;
+
+                if (matchesOpacity)
+                    break;
             }
         }
+
+        if (dmabufFormat.fourcc)
+            break;
     }
+
+    if (!dmabufFormat.fourcc || dmabufFormat == m_dmabufFormat)
+        return;
+
+    m_dmabufFormat = WTFMove(dmabufFormat);
+    m_dmabufFormatChanged = true;
 }
 #endif
 
@@ -492,7 +519,7 @@ void AcceleratedSurfaceDMABuf::preferredBufferFormatsDidChange()
     if (m_swapChain.type() != SwapChain::Type::EGLImage)
         return;
 
-    m_swapChain.setupBufferFormat(m_webPage.preferredBufferFormats());
+    m_swapChain.setupBufferFormat(m_webPage.preferredBufferFormats(), m_isOpaque);
 }
 #endif
 
@@ -511,6 +538,19 @@ void AcceleratedSurfaceDMABuf::visibilityDidChange(bool isVisible)
         static const Seconds releaseUnusedBuffersDelay = 10_s;
         m_releaseUnusedBuffersTimer->startOneShot(releaseUnusedBuffersDelay);
     }
+}
+
+bool AcceleratedSurfaceDMABuf::backgroundColorDidChange()
+{
+    if (!AcceleratedSurface::backgroundColorDidChange())
+        return false;
+
+#if USE(GBM)
+    if (m_swapChain.type() == SwapChain::Type::EGLImage)
+        m_swapChain.setupBufferFormat(m_webPage.preferredBufferFormats(), m_isOpaque);
+#endif
+
+    return true;
 }
 
 void AcceleratedSurfaceDMABuf::releaseUnusedBuffersTimerFired()

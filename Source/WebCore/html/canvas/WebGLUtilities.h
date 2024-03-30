@@ -191,10 +191,9 @@ public:
     ~ScopedWebGLRestoreFramebuffer()
     {
         RefPtr gl = m_context.graphicsContextGL();
-        if (m_context.isWebGL2()) {
-            auto& context2 = downcast<WebGL2RenderingContext>(m_context);
-            gl->bindFramebuffer(GraphicsContextGL::READ_FRAMEBUFFER, objectOrZero(context2.m_readFramebufferBinding));
-            gl->bindFramebuffer(GraphicsContextGL::DRAW_FRAMEBUFFER, objectOrZero(context2.m_framebufferBinding));
+        if (auto* gl2Ccontext = dynamicDowncast<WebGL2RenderingContext>(m_context)) {
+            gl->bindFramebuffer(GraphicsContextGL::READ_FRAMEBUFFER, objectOrZero(gl2Ccontext->m_readFramebufferBinding));
+            gl->bindFramebuffer(GraphicsContextGL::DRAW_FRAMEBUFFER, objectOrZero(gl2Ccontext->m_framebufferBinding));
         } else
             gl->bindFramebuffer(GraphicsContextGL::FRAMEBUFFER, objectOrZero(m_context.m_framebufferBinding));
     }
@@ -252,11 +251,105 @@ public:
         RefPtr gl = m_context.graphicsContextGL();
         gl->bindTexture(m_target, texture);
     }
+
 private:
     WebGLRenderingContextBase& m_context;
     const GCGLenum m_target;
 };
 
+class ScopedClearColorAndMask {
+    WTF_MAKE_NONCOPYABLE(ScopedClearColorAndMask);
+public:
+    explicit ScopedClearColorAndMask(WebGLRenderingContextBase& context, GCGLclampf clearRed, GCGLclampf clearGreen, GCGLclampf clearBlue, GCGLclampf clearAlpha, GCGLboolean maskRed, GCGLboolean maskGreen, GCGLboolean maskBlue, GCGLboolean maskAlpha)
+        : m_context(context)
+    {
+        RefPtr gl = m_context.protectedGraphicsContextGL();
+        gl->clearColor(clearRed, clearGreen, clearBlue, clearAlpha);
+        if (m_context.m_oesDrawBuffersIndexed)
+            gl->colorMaskiOES(0, maskRed, maskGreen, maskBlue, maskAlpha);
+        else
+            gl->colorMask(maskRed, maskGreen, maskBlue, maskAlpha);
+    }
+
+    ~ScopedClearColorAndMask()
+    {
+        auto clearRed   = m_context.m_clearColor[0];
+        auto clearGreen = m_context.m_clearColor[1];
+        auto clearBlue  = m_context.m_clearColor[2];
+        auto clearAlpha = m_context.m_clearColor[3];
+
+        auto maskRed   = m_context.m_colorMask[0];
+        auto maskGreen = m_context.m_colorMask[1];
+        auto maskBlue  = m_context.m_colorMask[2];
+        auto maskAlpha = m_context.m_colorMask[3];
+
+        RefPtr gl = m_context.protectedGraphicsContextGL();
+        gl->clearColor(clearRed, clearGreen, clearBlue, clearAlpha);
+        if (m_context.m_oesDrawBuffersIndexed)
+            gl->colorMaskiOES(0, maskRed, maskGreen, maskBlue, maskAlpha);
+        else
+            gl->colorMask(maskRed, maskGreen, maskBlue, maskAlpha);
+    }
+
+private:
+    WebGLRenderingContextBase& m_context;
+};
+
+class ScopedClearDepthAndMask {
+    WTF_MAKE_NONCOPYABLE(ScopedClearDepthAndMask);
+public:
+    explicit ScopedClearDepthAndMask(WebGLRenderingContextBase& context, GCGLclampf clear, bool mask, bool enabled)
+        : m_context(enabled ? &context : nullptr) // NOLINT
+    {
+        if (!m_context)
+            return;
+
+        RefPtr gl = m_context->protectedGraphicsContextGL();
+        gl->clearDepth(clear);
+        gl->depthMask(mask);
+    }
+
+    ~ScopedClearDepthAndMask()
+    {
+        if (!m_context)
+            return;
+
+        RefPtr gl = m_context->protectedGraphicsContextGL();
+        gl->clearDepth(m_context->m_clearDepth);
+        gl->depthMask(m_context->m_depthMask);
+    }
+
+private:
+    WebGLRenderingContextBase* const m_context;
+};
+
+class ScopedClearStencilAndMask {
+    WTF_MAKE_NONCOPYABLE(ScopedClearStencilAndMask);
+public:
+    explicit ScopedClearStencilAndMask(WebGLRenderingContextBase& context, GCGLint clear, GCGLenum face, GCGLuint mask, bool enabled)
+        : m_context(enabled ? &context : nullptr) // NOLINT
+    {
+        if (!m_context)
+            return;
+
+        RefPtr gl = m_context->protectedGraphicsContextGL();
+        gl->clearStencil(clear);
+        gl->stencilMaskSeparate(face, mask);
+    }
+
+    ~ScopedClearStencilAndMask()
+    {
+        if (!m_context)
+            return;
+
+        RefPtr gl = m_context->protectedGraphicsContextGL();
+        gl->clearStencil(m_context->m_clearStencil);
+        gl->stencilMaskSeparate(GraphicsContextGL::FRONT, m_context->m_stencilMask);
+    }
+
+private:
+    WebGLRenderingContextBase* const m_context;
+};
 
 }
 

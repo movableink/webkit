@@ -38,6 +38,7 @@
 #include "CSSPageRule.h"
 #include "CSSPropertyRule.h"
 #include "CSSScopeRule.h"
+#include "CSSStartingStyleRule.h"
 #include "CSSStyleRule.h"
 #include "CSSSupportsRule.h"
 #include "MediaList.h"
@@ -213,9 +214,8 @@ Ref<CSSRule> StyleRuleBase::createCSSOMWrapper(CSSStyleSheet* parentSheet, CSSRu
         [&](StyleRuleScope& rule) -> Ref<CSSRule> {
             return CSSScopeRule::create(rule, parentSheet);
         },
-        [&](StyleRuleStartingStyle&) -> Ref<CSSRule> {
-            // FIXME: Implement.
-            RELEASE_ASSERT_NOT_REACHED();
+        [&](StyleRuleStartingStyle& rule) -> Ref<CSSRule> {
+            return CSSStartingStyleRule::create(rule, parentSheet);
         },
         [](StyleRuleCharset&) -> Ref<CSSRule> {
             RELEASE_ASSERT_NOT_REACHED();
@@ -260,6 +260,11 @@ Ref<StyleRule> StyleRule::create(Ref<StyleProperties>&& properties, bool hasDocu
 Ref<StyleRule> StyleRule::copy() const
 {
     return adoptRef(*new StyleRule(*this));
+}
+
+Ref<const StyleProperties> StyleRule::protectedProperties() const
+{
+    return m_properties;
 }
 
 void StyleRule::setProperties(Ref<StyleProperties>&& properties)

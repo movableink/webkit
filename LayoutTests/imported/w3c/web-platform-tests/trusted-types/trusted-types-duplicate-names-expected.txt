@@ -1,5 +1,4 @@
-CONSOLE MESSAGE: Unrecognized Content-Security-Policy directive 'trusted-types'.
+CONSOLE MESSAGE: Refused to create a TrustedTypePolicy named 'default' because it violates the following Content Security Policy directive: "trusted-types 'allow-duplicates' duplicatename default"
 
-
-FAIL policy - duplicate names Can't find variable: trustedTypes
+PASS policy - duplicate names
 

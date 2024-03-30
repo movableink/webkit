@@ -29,12 +29,14 @@
 #include "AuxiliaryProcessCreationParameters.h"
 #include "AuxiliaryProcessMessages.h"
 #include "Logging.h"
+#include "MessageNames.h"
 #include "OverrideLanguages.h"
 #include "UIProcessLogInitialization.h"
 #include "WebPageProxy.h"
 #include "WebPageProxyIdentifier.h"
 #include "WebProcessProxy.h"
 #include <wtf/RunLoop.h>
+#include <wtf/Scope.h>
 
 #if PLATFORM(COCOA)
 #include "CoreIPCSecureCoding.h"
@@ -66,13 +68,10 @@ static Seconds adjustedTimeoutForThermalState(Seconds timeout)
 #endif
 }
 
-#if USE(EXTENSIONKIT)
-bool AuxiliaryProcessProxy::s_manageProcessesAsExtensions = false;
-#endif
-
-AuxiliaryProcessProxy::AuxiliaryProcessProxy(bool alwaysRunsAtBackgroundPriority, Seconds responsivenessTimeout)
+AuxiliaryProcessProxy::AuxiliaryProcessProxy(ShouldTakeUIBackgroundAssertion shouldTakeUIBackgroundAssertion, AlwaysRunsAtBackgroundPriority alwaysRunsAtBackgroundPriority, Seconds responsivenessTimeout)
     : m_responsivenessTimer(*this, adjustedTimeoutForThermalState(responsivenessTimeout))
-    , m_alwaysRunsAtBackgroundPriority(alwaysRunsAtBackgroundPriority)
+    , m_alwaysRunsAtBackgroundPriority(alwaysRunsAtBackgroundPriority == AlwaysRunsAtBackgroundPriority::Yes)
+    , m_throttler(*this, shouldTakeUIBackgroundAssertion == ShouldTakeUIBackgroundAssertion::Yes)
 #if USE(RUNNINGBOARD)
     , m_timedActivityForIPC(3_s)
 #endif
@@ -81,6 +80,8 @@ AuxiliaryProcessProxy::AuxiliaryProcessProxy(bool alwaysRunsAtBackgroundPriority
 
 AuxiliaryProcessProxy::~AuxiliaryProcessProxy()
 {
+    throttler().didDisconnectFromProcess();
+
     if (RefPtr connection = m_connection)
         connection->invalidate();
 
@@ -141,6 +142,11 @@ void AuxiliaryProcessProxy::getLaunchOptions(ProcessLauncher::LaunchOptions& lau
         varname = "GPU_PROCESS_CMD_PREFIX";
         break;
 #endif
+#if ENABLE(MODEL_PROCESS)
+    case ProcessLauncher::ProcessType::Model:
+        varname = "MODEL_PROCESS_CMD_PREFIX";
+        break;
+#endif
 #if ENABLE(BUBBLEWRAP_SANDBOX)
     case ProcessLauncher::ProcessType::DBusProxy:
         ASSERT_NOT_REACHED();
@@ -156,12 +162,6 @@ void AuxiliaryProcessProxy::getLaunchOptions(ProcessLauncher::LaunchOptions& lau
 
     platformGetLaunchOptions(launchOptions);
 }
-
-#if !PLATFORM(COCOA)
-void AuxiliaryProcessProxy::platformGetLaunchOptions(ProcessLauncher::LaunchOptions&)
-{
-}
-#endif
 
 void AuxiliaryProcessProxy::connect()
 {
@@ -252,7 +252,7 @@ bool AuxiliaryProcessProxy::sendMessage(UniqueRef<IPC::Encoder>&& encoder, Optio
 
     if (asyncReplyHandler && canSendMessage() && shouldStartProcessThrottlerActivity == ShouldStartProcessThrottlerActivity::Yes) {
         auto completionHandler = WTFMove(asyncReplyHandler->completionHandler);
-        asyncReplyHandler->completionHandler = [activity = throttler().backgroundActivity({ }), completionHandler = WTFMove(completionHandler)](IPC::Decoder* decoder) mutable {
+        asyncReplyHandler->completionHandler = [activity = throttler().quietBackgroundActivity(descriptionLiteral(encoder->messageName())), completionHandler = WTFMove(completionHandler)](IPC::Decoder* decoder) mutable {
             completionHandler(decoder);
         };
     }
@@ -316,7 +316,7 @@ bool AuxiliaryProcessProxy::dispatchSyncMessage(IPC::Connection& connection, IPC
     return m_messageReceiverMap.dispatchSyncMessage(connection, decoder, replyEncoder);
 }
 
-void AuxiliaryProcessProxy::didFinishLaunching(ProcessLauncher*, IPC::Connection::Identifier connectionIdentifier)
+void AuxiliaryProcessProxy::didFinishLaunching(ProcessLauncher* launcher, IPC::Connection::Identifier connectionIdentifier)
 {
     ASSERT(!m_connection);
     ASSERT(isMainRunLoop());
@@ -338,7 +338,7 @@ void AuxiliaryProcessProxy::didFinishLaunching(ProcessLauncher*, IPC::Connection
     //m_connection->setShouldCloseConnectionOnProcessTermination(processIdentifier());
 #endif
 
-    RefPtr connection = IPC::Connection::createServerConnection(connectionIdentifier);
+    RefPtr connection = IPC::Connection::createServerConnection(connectionIdentifier, Thread::QOS::UserInteractive);
     m_connection = connection.copyRef();
 
     connectionWillOpen(*connection);
@@ -358,6 +358,15 @@ void AuxiliaryProcessProxy::didFinishLaunching(ProcessLauncher*, IPC::Connection
         else
             connection->sendMessage(WTFMove(pendingMessage.encoder), pendingMessage.sendOptions);
     }
+
+#if USE(RUNNINGBOARD)
+    m_throttler.didConnectToProcess(*this);
+#if USE(EXTENSIONKIT)
+    ASSERT(launcher);
+    if (launcher)
+        launcher->releaseLaunchGrant();
+#endif // USE(EXTENSIONKIT)
+#endif // USE(RUNNINGBOARD)
 }
 
 void AuxiliaryProcessProxy::outgoingMessageQueueIsGrowingLarge()
@@ -388,6 +397,10 @@ void AuxiliaryProcessProxy::replyToPendingMessages()
 
 void AuxiliaryProcessProxy::shutDownProcess()
 {
+    auto scopeExit = WTF::makeScopeExit([&] {
+        throttler().didDisconnectFromProcess();
+    });
+
     switch (state()) {
     case State::Launching: {
         RefPtr processLauncher = std::exchange(m_processLauncher, nullptr);

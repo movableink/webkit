@@ -43,6 +43,8 @@ WebCore::FindOptions core(OptionSet<FindOptions> options)
         result.add(WebCore::WrapAround);
     if (options.contains(FindOptions::AtWordEnds))
         result.add(WebCore::AtWordEnds);
+    if (options.contains(FindOptions::DoNotSetSelection))
+        result.add(WebCore::DoNotSetSelection);
     return result;
 }
 

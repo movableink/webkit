@@ -37,7 +37,7 @@
 #import "SandboxExtension.h"
 #import "WebCookieManager.h"
 #import <WebCore/NetworkStorageSession.h>
-#import <WebCore/PublicSuffix.h>
+#import <WebCore/PublicSuffixStore.h>
 #import <WebCore/ResourceRequestCFNet.h>
 #import <WebCore/RuntimeApplicationChecks.h>
 #import <WebCore/SecurityOrigin.h>
@@ -206,10 +206,12 @@ void saveCookies(NSHTTPCookieStorage *cookieStorage, CompletionHandler<void()>&&
 void NetworkProcess::platformFlushCookies(PAL::SessionID sessionID, CompletionHandler<void()>&& completionHandler)
 {
     ASSERT(hasProcessPrivilege(ProcessPrivilege::CanAccessRawCookies));
-    if (auto* networkStorageSession = storageSession(sessionID))
-        saveCookies(networkStorageSession->nsCookieStorage(), WTFMove(completionHandler));
-    else
-        completionHandler();
+    auto* networkStorageSession = storageSession(sessionID);
+    if (!networkStorageSession)
+        return completionHandler();
+
+    RetainPtr cookieStorage = networkStorageSession->nsCookieStorage();
+    saveCookies(cookieStorage.get(), WTFMove(completionHandler));
 }
 
 #if ENABLE(CFPREFS_DIRECT_MODE)
@@ -257,27 +259,40 @@ void NetworkProcess::setProxyConfigData(PAL::SessionID sessionID, Vector<std::pa
 #endif // HAVE(NW_PROXY_CONFIG)
 
 #if USE(RUNNINGBOARD) && USE(EXTENSIONKIT)
-bool NetworkProcess::aqcuireLockedFileGrant()
+bool NetworkProcess::acquireLockedFileActivity()
 {
-    m_holdingLockedFileGrant = [WKProcessExtension.sharedInstance grant:@"com.apple.common" name:@"FinishTaskInterruptable"];
-    if (m_holdingLockedFileGrant)
-        RELEASE_LOG(Process, "Successfully took assertion on Network process for locked file.");
-    else
-        RELEASE_LOG_ERROR(Process, "Unable to take assertion on Network process for locked file.");
-    return !!m_holdingLockedFileGrant;
+    RELEASE_LOG(Process, "NetworkProcess::acquireLockedFileActivity hasAcquiredFileActivity = %d", hasAcquiredFileActivity());
+
+    invalidateFileActivity();
+
+    m_holdingLockedFileSemaphore = adoptOSObject(dispatch_semaphore_create(0));
+    [[NSProcessInfo processInfo] performExpiringActivityWithReason:@"Expiring activity for locked file" usingBlock:[holdingLockedFileSemaphore = m_holdingLockedFileSemaphore] (BOOL expired) {
+        RELEASE_LOG(Process, "Starting expiring activity, expired = %d", expired);
+        if (!expired) {
+            auto timeout = dispatch_time(DISPATCH_TIME_NOW, 30 * NSEC_PER_SEC);
+            dispatch_semaphore_wait(holdingLockedFileSemaphore.get(), timeout);
+        }
+    }];
+
+    return true;
 }
 
-void NetworkProcess::invalidateGrant()
+void NetworkProcess::invalidateFileActivity()
 {
-    if (!hasAcquiredGrant())
+    RELEASE_LOG(Process, "NetworkProcess::invalidateActivity hasAcquiredFileActivity = %d", hasAcquiredFileActivity());
+
+    if (!hasAcquiredFileActivity())
         return;
 
-    m_holdingLockedFileGrant = nil;
+    if (m_holdingLockedFileSemaphore) {
+        dispatch_semaphore_signal(m_holdingLockedFileSemaphore.get());
+        m_holdingLockedFileSemaphore = nullptr;
+    }
 }
 
-bool NetworkProcess::hasAcquiredGrant() const
+bool NetworkProcess::hasAcquiredFileActivity() const
 {
-    return !!m_holdingLockedFileGrant;
+    return !!m_holdingLockedFileSemaphore;
 }
 #endif
 

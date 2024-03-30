@@ -137,11 +137,11 @@ private:
 
     // FIXME: Remove legacy rounding.
     void setLogicalWidth(InlineLayoutUnit logicalWidth) { m_logicalRect.setWidth(logicalWidth); }
-    void setLogicalHeight(InlineLayoutUnit logicalHeight) { m_logicalRect.setHeight(roundToInt(logicalHeight)); }
-    void setLogicalTop(InlineLayoutUnit logicalTop) { m_logicalRect.setTop(logicalTop >= 0 ? roundToInt(logicalTop) : -roundToInt(-logicalTop)); }
+    void setLogicalHeight(InlineLayoutUnit logicalHeight) { m_logicalRect.setHeight(logicalHeight); }
+    void setLogicalTop(InlineLayoutUnit logicalTop) { m_logicalRect.setTop(logicalTop); }
     void setLogicalLeft(InlineLayoutUnit logicalLeft) { m_logicalRect.setLeft(logicalLeft); }
-    void setAscentAndDescent(AscentAndDescent ascentAndDescent) { m_ascentAndDescent = { InlineLayoutUnit(roundToInt(ascentAndDescent.ascent)), InlineLayoutUnit(roundToInt(ascentAndDescent.descent)) }; }
-    void setLayoutBounds(const AscentAndDescent& layoutBounds) { m_layoutBounds = { InlineLayoutUnit(roundToInt(layoutBounds.ascent)), InlineLayoutUnit(roundToInt(layoutBounds.descent)) }; }
+    void setAscentAndDescent(AscentAndDescent ascentAndDescent) { m_ascentAndDescent = ascentAndDescent; }
+    void setLayoutBounds(const AscentAndDescent& layoutBounds) { m_layoutBounds = layoutBounds; }
     void setInlineBoxContentOffsetForTextBoxTrim(InlineLayoutUnit offset) { m_inlineBoxContentOffsetForTextBoxTrim = offset; }
 
     void setIsFirstBox() { m_isFirstWithinLayoutBox = true; }
@@ -189,13 +189,12 @@ inline void InlineLevelBox::setHasContent()
 
 inline InlineLayoutUnit InlineLevelBox::preferredLineHeight() const
 {
-    // FIXME: Remove integral flooring when legacy line layout stops using it.
     if (isPreferredLineHeightFontMetricsBased())
         return primarymetricsOfPrimaryFont().lineSpacing();
 
     if (m_style.lineHeight.isPercentOrCalculated())
-        return floorf(minimumValueForLength(m_style.lineHeight, fontSize()));
-    return floorf(m_style.lineHeight.value());
+        return minimumValueForLength(m_style.lineHeight, fontSize());
+    return m_style.lineHeight.value();
 }
 
 inline bool InlineLevelBox::hasLineBoxRelativeAlignment() const

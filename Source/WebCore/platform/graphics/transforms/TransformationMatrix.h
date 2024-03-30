@@ -44,6 +44,12 @@ typedef struct CGAffineTransform CGAffineTransform;
 #include <QMatrix4x4>
 #include <QTransform>
 #endif
+#if PLATFORM(COCOA)
+#include <simd/simd.h>
+#endif
+#if USE(SKIA)
+class SkM44;
+#endif
 
 #if PLATFORM(WIN) || (PLATFORM(GTK) && OS(WINDOWS)) || (PLATFORM(QT) && OS(WINDOWS))
 #if COMPILER(MINGW) && !COMPILER(MINGW64)
@@ -406,6 +412,14 @@ public:
 #elif PLATFORM(QT)
     operator QTransform() const;
     operator QMatrix4x4() const;
+#endif
+#if PLATFORM(COCOA)
+    WEBCORE_EXPORT TransformationMatrix(const simd_float4x4&);
+    WEBCORE_EXPORT operator simd_float4x4() const;
+#endif
+#if USE(SKIA)
+    TransformationMatrix(const SkM44&);
+    operator SkM44() const;
 #endif
 
 #if PLATFORM(WIN) || (PLATFORM(GTK) && OS(WINDOWS)) || (PLATFORM(QT) && OS(WINDOWS))

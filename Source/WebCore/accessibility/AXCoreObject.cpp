@@ -28,6 +28,7 @@
 
 #include "config.h"
 #include "AXCoreObject.h"
+#include "LocalFrameView.h"
 
 namespace WebCore {
 
@@ -131,6 +132,7 @@ bool AXCoreObject::canHaveSelectedChildren() const
     // focused element.
     case AccessibilityRole::Menu:
     case AccessibilityRole::MenuBar:
+    case AccessibilityRole::ComboBox:
 #if USE(ATSPI)
     case AccessibilityRole::MenuListPopup:
 #endif
@@ -228,6 +230,9 @@ AXCoreObject::AXValue AXCoreObject::value()
 
     if (isTabItem())
         return isSelected();
+
+    if (isDateTime())
+        return dateTimeValue();
 
     if (isColorWell()) {
         auto color = convertColor<SRGBA<float>>(colorValue()).resolved();
@@ -549,5 +554,62 @@ AXCoreObject* AXCoreObject::titleUIElement() const
     return labels.size() ? labels.first().get() : nullptr;
 #endif
 }
+
+AXCoreObject::AccessibilityChildrenVector AXCoreObject::linkedObjects() const
+{
+    auto linkedObjects = flowToObjects();
+
+    if (isLink()) {
+        if (auto* linkedAXElement = internalLinkElement())
+            linkedObjects.append(linkedAXElement);
+    } else if (isRadioButton())
+        appendRadioButtonGroupMembers(linkedObjects);
+
+    linkedObjects.appendVector(controlledObjects());
+    linkedObjects.appendVector(ownedObjects());
+
+    return linkedObjects;
+}
+
+void AXCoreObject::appendRadioButtonDescendants(AXCoreObject& parent, AccessibilityChildrenVector& linkedUIElements) const
+{
+    for (const auto& child : parent.children()) {
+        if (child->isRadioButton())
+            linkedUIElements.append(child);
+        else
+            appendRadioButtonDescendants(*child, linkedUIElements);
+    }
+}
+
+void AXCoreObject::appendRadioButtonGroupMembers(AccessibilityChildrenVector& linkedUIElements) const
+{
+    if (!isRadioButton())
+        return;
+
+    if (isRadioInput()) {
+        for (auto& radioSibling : radioButtonGroup())
+            linkedUIElements.append(radioSibling);
+    } else {
+        // If we didn't find any radio button siblings with the traditional naming, lets search for a radio group role and find its children.
+        for (auto* parent = parentObject(); parent; parent = parent->parentObject()) {
+            if (parent->roleValue() == AccessibilityRole::RadioGroup) {
+                appendRadioButtonDescendants(*parent, linkedUIElements);
+                break;
+            }
+        }
+    }
+}
+
+namespace Accessibility {
+
+bool inRenderTreeOrStyleUpdate(const Document& document)
+{
+    if (document.inStyleRecalc() || document.inRenderTreeUpdate())
+        return true;
+    auto* view = document.view();
+    return view && view->layoutContext().isInRenderTreeLayout();
+}
+
+} // namespace Accessibility
 
 } // namespace WebCore

@@ -106,6 +106,10 @@ class TestBugzilla(unittest.TestCase):
         with mocks.Bugzilla(self.URL.split('://')[1], issues=mocks.ISSUES):
             self.assertEqual(bugzilla.Tracker(self.URL).issue(1).timestamp, 1639510960)
 
+    def test_modified(self):
+        with mocks.Bugzilla(self.URL.split('://')[1], issues=mocks.ISSUES):
+            self.assertEqual(bugzilla.Tracker(self.URL).issue(1).modified, 1710859207)
+
     def test_creator(self):
         with mocks.Bugzilla(self.URL.split('://')[1], issues=mocks.ISSUES):
             self.assertEqual(
@@ -455,7 +459,7 @@ What component in 'WebKit' should the bug be associated with?:
             self.assertEqual(tracker.issue(1).redacted, bugzilla.Tracker.Redaction(True, "matches 'component:Text'"))
             self.assertEqual(tracker.issue(2).redacted, False)
             tracker.issue(1).close(original=tracker.issue(2))
-            self.assertEqual(tracker.issue(2).redacted, bugzilla.Tracker.Redaction(True, "matches 'component:Text'"))
+            self.assertEqual(tracker.issue(2).redacted, bugzilla.Tracker.Redaction(True, "is related to https://bugs.example.com/show_bug.cgi?id=1 which matches 'component:Text'"))
 
     def test_redacted_original(self):
         with mocks.Bugzilla(self.URL.split('://')[1], issues=mocks.ISSUES, environment=wkmocks.Environment(
@@ -466,7 +470,7 @@ What component in 'WebKit' should the bug be associated with?:
             self.assertEqual(tracker.issue(1).redacted, bugzilla.Tracker.Redaction(True, "matches 'component:Text'"))
             self.assertEqual(tracker.issue(2).redacted, False)
             tracker.issue(2).close(original=tracker.issue(1))
-            self.assertEqual(tracker.issue(2).redacted, bugzilla.Tracker.Redaction(True, "matches 'component:Text'"))
+            self.assertEqual(tracker.issue(2).redacted, bugzilla.Tracker.Redaction(True, "is related to https://bugs.example.com/show_bug.cgi?id=1 which matches 'component:Text'"))
 
     def test_redaction_exception(self):
         with mocks.Bugzilla(self.URL.split('://')[1], issues=mocks.ISSUES, projects=mocks.PROJECTS):

@@ -35,8 +35,10 @@ class RemoteImageBufferSetProxy;
 class RemoteLayerWithRemoteRenderingBackingStore : public RemoteLayerBackingStore {
 public:
     RemoteLayerWithRemoteRenderingBackingStore(PlatformCALayerRemote*);
+    ~RemoteLayerWithRemoteRenderingBackingStore();
 
     bool isRemoteLayerWithRemoteRenderingBackingStore() const final { return true; }
+    ProcessModel processModel() const final { return ProcessModel::Remote; }
 
     void prepareToDisplay() final;
     void clearBackingStore() final;
@@ -44,7 +46,7 @@ public:
 
     RefPtr<RemoteImageBufferSetProxy> protectedBufferSet() { return m_bufferSet; }
 
-    std::unique_ptr<ThreadSafeImageBufferSetFlusher> createFlusher() final;
+    std::unique_ptr<ThreadSafeImageBufferSetFlusher> createFlusher(ThreadSafeImageBufferSetFlusher::FlushType) final;
     std::optional<ImageBufferBackendHandle> frontBufferHandle() const final { return std::exchange(const_cast<RemoteLayerWithRemoteRenderingBackingStore*>(this)->m_backendHandle, std::nullopt); }
 #if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
     std::optional<ImageBufferBackendHandle> displayListHandle() const final;

@@ -202,7 +202,7 @@ bool JIT::compileTailCall(const Op&, BaselineUnlinkedCallLinkInfo*, unsigned)
 template<>
 bool JIT::compileTailCall(const OpTailCall& bytecode, BaselineUnlinkedCallLinkInfo* callLinkInfo, unsigned callLinkInfoIndex)
 {
-    auto [slowPaths, dispatchLabel] = CallLinkInfo::emitTailCallFastPath(*this, callLinkInfo, BaselineJITRegisters::Call::callLinkInfoGPR, scopedLambda<void()>([&] {
+    auto [slowPaths, dispatchLabel] = CallLinkInfo::emitTailCallFastPath(*this, callLinkInfo, scopedLambda<void()>([&] {
         CallFrameShuffleData shuffleData = CallFrameShuffleData::createForBaselineOrLLIntTailCall(bytecode, m_unlinkedCodeBlock->numParameters());
         CallFrameShuffler shuffler { *this, shuffleData };
         shuffler.setCalleeJSValueRegs(BaselineJITRegisters::Call::calleeJSR);
@@ -266,7 +266,7 @@ void JIT::compileOpCall(const JSInstruction* instruction)
         compileTailCall(bytecode, callLinkInfo, callLinkInfoIndex);
     else {
         if constexpr (Op::opcodeID == op_tail_call_varargs || Op::opcodeID == op_tail_call_forward_arguments) {
-            auto [slowPaths, dispatchLabel] = CallLinkInfo::emitTailCallFastPath(*this, callLinkInfo, BaselineJITRegisters::Call::callLinkInfoGPR, scopedLambda<void()>([&] {
+            auto [slowPaths, dispatchLabel] = CallLinkInfo::emitTailCallFastPath(*this, callLinkInfo, scopedLambda<void()>([&] {
                 emitRestoreCalleeSaves();
                 prepareForTailCallSlow(RegisterSet {
                     BaselineJITRegisters::Call::calleeJSR.payloadGPR(),
@@ -281,7 +281,7 @@ void JIT::compileOpCall(const JSInstruction* instruction)
             auto doneLocation = label();
             m_callCompilationInfo[callLinkInfoIndex].doneLocation = doneLocation;
         } else {
-            auto [slowPaths, dispatchLabel] = CallLinkInfo::emitFastPath(*this, callLinkInfo, BaselineJITRegisters::Call::callLinkInfoGPR);
+            auto [slowPaths, dispatchLabel] = CallLinkInfo::emitFastPath(*this, callLinkInfo);
             ASSERT(slowPaths.empty());
             auto doneLocation = label();
             m_callCompilationInfo[callLinkInfoIndex].doneLocation = doneLocation;
@@ -421,15 +421,6 @@ void JIT::emitSlow_op_iterator_open(const JSInstruction*, Vector<SlowCaseEntry>:
 void JIT::emit_op_iterator_next(const JSInstruction* instruction)
 {
     auto bytecode = instruction->as<OpIteratorNext>();
-    auto* tryFastFunction = ([&] () {
-        switch (instruction->width()) {
-        case Narrow: return iterator_next_try_fast_narrow;
-        case Wide16: return iterator_next_try_fast_wide16;
-        case Wide32: return iterator_next_try_fast_wide32;
-        default: RELEASE_ASSERT_NOT_REACHED();
-        }
-    })();
-
     using BaselineJITRegisters::GetById::baseJSR;
     using BaselineJITRegisters::GetById::resultJSR;
     using BaselineJITRegisters::GetById::stubInfoGPR;
@@ -438,9 +429,30 @@ void JIT::emit_op_iterator_next(const JSInstruction* instruction)
     emitGetVirtualRegister(bytecode.m_next, nextJSR);
     Jump genericCase = branchIfNotEmpty(nextJSR);
 
+    JumpList doneCases;
+#if CPU(ARM64) || (CPU(X86_64) && !OS(WINDOWS))
+    loadGlobalObject(argumentGPR0);
+    emitGetVirtualRegister(bytecode.m_iterator, argumentGPR1);
+    emitGetVirtualRegister(bytecode.m_iterable, argumentGPR2);
+    materializePointerIntoMetadata(bytecode, 0, argumentGPR3);
+    callOperation(operationIteratorNextTryFast, argumentGPR0, argumentGPR1, argumentGPR2, argumentGPR3);
+    emitPutVirtualRegister(bytecode.m_done, returnValueGPR);
+    emitPutVirtualRegister(bytecode.m_value, returnValueGPR2);
+    doneCases.append(branchIfEmpty(JSValueRegs { returnValueGPR2 }));
+    emitValueProfilingSite(bytecode, JSValueRegs { returnValueGPR2 });
+#else
+    auto* tryFastFunction = ([&] () {
+        switch (instruction->width()) {
+        case Narrow: return iterator_next_try_fast_narrow;
+        case Wide16: return iterator_next_try_fast_wide16;
+        case Wide32: return iterator_next_try_fast_wide32;
+        default: RELEASE_ASSERT_NOT_REACHED();
+        }
+    })();
     JITSlowPathCall slowPathCall(this, tryFastFunction);
     slowPathCall.call();
-    Jump fastCase = branch32(NotEqual, GPRInfo::returnValueGPR2, TrustedImm32(static_cast<uint32_t>(IterationMode::Generic)));
+#endif
+    doneCases.append(jump());
 
     genericCase.link(this);
     load8FromMetadata(bytecode, OpIteratorNext::Metadata::offsetOfIterationMetadata() + IterationModeMetadata::offsetOfSeenModes(), regT0);
@@ -505,7 +517,7 @@ void JIT::emit_op_iterator_next(const JSInstruction* instruction)
         iterationDone.link(this);
     }
 
-    fastCase.link(this);
+    doneCases.link(this);
 }
 
 void JIT::emitSlow_op_iterator_next(const JSInstruction*, Vector<SlowCaseEntry>::iterator& iter)

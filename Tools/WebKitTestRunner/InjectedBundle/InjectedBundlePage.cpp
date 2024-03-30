@@ -298,7 +298,7 @@ InjectedBundlePage::InjectedBundlePage(WKBundlePageRef page)
         0, /*statusBarIsVisible*/
         0, /*menuBarIsVisible*/
         0, /*toolbarsAreVisible*/
-        didReachApplicationCacheOriginQuota,
+        0, /*didReachApplicationCacheOriginQuota*/
         didExceedDatabaseQuota,
         0, /*plugInStartLabelTitle*/
         0, /*plugInStartLabelSubtitle*/
@@ -701,60 +701,11 @@ void InjectedBundlePage::dumpAllFrameScrollPositions(StringBuilder& stringBuilde
     dumpDescendantFrameScrollPositions(frame, stringBuilder);
 }
 
-static bool hasDocumentElement(WKBundleFrameRef frame)
-{
-    auto context = WKBundleFrameGetJavaScriptContext(frame);
-    if (!context)
-        return false;
-    return objectProperty(context, JSContextGetGlobalObject(context), { "document", "documentElement" });
-}
-
-static void dumpFrameText(WKBundleFrameRef frame, StringBuilder& builder)
-{
-    // If the frame doesn't have a document element, its inner text will be an empty string, so
-    // we'll end up just appending a single newline below. Since DumpRenderTree didn't append
-    // anything in this case, we decided to preserve that behavior.
-    if (!hasDocumentElement(frame))
-        return;
-
-    // To keep things tidy, strip all trailing spaces: they are not a meaningful part of dumpAsText test output.
-    // Breaking the string up into lines lets us efficiently strip and has a side effect of adding a newline after the last line.
-    auto text = toWTFString(adoptWK(WKBundleFrameCopyInnerText(frame)));
-    for (auto line : StringView(text).splitAllowingEmptyEntries('\n')) {
-        while (line.endsWith(' '))
-            line = line.left(line.length() - 1);
-        builder.append(line, '\n');
-    }
-}
-
-static void dumpDescendantFramesText(WKBundleFrameRef frame, StringBuilder& stringBuilder)
-{
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    auto childFrames = adoptWK(WKBundleFrameCopyChildFrames(frame));
-    ALLOW_DEPRECATED_DECLARATIONS_END
-    size_t size = WKArrayGetSize(childFrames.get());
-    for (size_t i = 0; i < size; ++i) {
-        WKBundleFrameRef subframe = static_cast<WKBundleFrameRef>(WKArrayGetItemAtIndex(childFrames.get(), i));
-        auto subframeName = adoptWK(WKBundleFrameCopyName(subframe));
-
-        // DumpRenderTree ignores empty frames, so do the same thing here.
-        if (!hasDocumentElement(subframe))
-            continue;
-
-        stringBuilder.append("\n--------\nFrame: '", subframeName.get(), "'\n--------\n");
-
-        dumpFrameText(subframe, stringBuilder);
-        dumpDescendantFramesText(subframe, stringBuilder);
-    }
-}
-
 void InjectedBundlePage::dumpAllFramesText(StringBuilder& stringBuilder)
 {
-    WKBundleFrameRef frame = WKBundlePageGetMainFrame(m_page);
-    dumpFrameText(frame, stringBuilder);
-    dumpDescendantFramesText(frame, stringBuilder);
+    constexpr bool includeSubframes { true };
+    stringBuilder.append(toWTFString(adoptWK(WKBundlePageCopyFrameTextForTesting(m_page, includeSubframes))));
 }
-
 
 void InjectedBundlePage::dumpDOMAsWebArchive(WKBundleFrameRef frame, StringBuilder& stringBuilder)
 {
@@ -795,9 +746,11 @@ void InjectedBundlePage::dump(bool forceRepaint)
             stringBuilder.append(adoptWK(WKBundlePageCopyRenderTreeExternalRepresentation(m_page, injectedBundle.testRunner()->renderTreeDumpOptions())).get());
         break;
     }
-    case WhatToDump::MainFrameText:
-        dumpFrameText(WKBundlePageGetMainFrame(m_page), stringBuilder);
+    case WhatToDump::MainFrameText: {
+        constexpr bool includeSubframes { false };
+        stringBuilder.append(toWTFString(adoptWK(WKBundlePageCopyFrameTextForTesting(m_page, includeSubframes))));
         break;
+    }
     case WhatToDump::AllFramesText:
         dumpAllFramesText(stringBuilder);
         break;
@@ -1189,11 +1142,6 @@ void InjectedBundlePage::willRunJavaScriptPrompt(WKBundlePageRef page, WKStringR
     static_cast<InjectedBundlePage*>(const_cast<void*>(clientInfo))->willRunJavaScriptPrompt(message, defaultValue, frame);
 }
 
-void InjectedBundlePage::didReachApplicationCacheOriginQuota(WKBundlePageRef page, WKSecurityOriginRef origin, int64_t totalBytesNeeded, const void* clientInfo)
-{
-    static_cast<InjectedBundlePage*>(const_cast<void*>(clientInfo))->didReachApplicationCacheOriginQuota(origin, totalBytesNeeded);
-}
-
 uint64_t InjectedBundlePage::didExceedDatabaseQuota(WKBundlePageRef page, WKSecurityOriginRef origin, WKStringRef databaseName, WKStringRef databaseDisplayName, uint64_t currentQuotaBytes, uint64_t currentOriginUsageBytes, uint64_t currentDatabaseUsageBytes, uint64_t expectedUsageBytes, const void* clientInfo)
 {
     return static_cast<InjectedBundlePage*>(const_cast<void*>(clientInfo))->didExceedDatabaseQuota(origin, databaseName, databaseDisplayName, currentQuotaBytes, currentOriginUsageBytes, currentDatabaseUsageBytes, expectedUsageBytes);
@@ -1291,25 +1239,6 @@ void InjectedBundlePage::willRunJavaScriptConfirm(WKStringRef message, WKBundleF
 void InjectedBundlePage::willRunJavaScriptPrompt(WKStringRef message, WKStringRef defaultValue, WKBundleFrameRef)
 {
     InjectedBundle::singleton().outputText(makeString("PROMPT: ", message, ", default text:", addLeadingSpaceStripTrailingSpacesAddNewline(toWTFString(defaultValue))));
-}
-
-void InjectedBundlePage::didReachApplicationCacheOriginQuota(WKSecurityOriginRef origin, int64_t totalBytesNeeded)
-{
-    auto& injectedBundle = InjectedBundle::singleton();
-    if (injectedBundle.testRunner()->shouldDumpApplicationCacheDelegateCallbacks()) {
-        // For example, numbers from 30000 - 39999 will output as 30000.
-        // Rounding up or down does not really matter for these tests. It's
-        // sufficient to just get a range of 10000 to determine if we were
-        // above or below a threshold.
-        auto truncatedSpaceNeeded = (totalBytesNeeded / 10000) * 10000;
-        injectedBundle.outputText(makeString("UI DELEGATE APPLICATION CACHE CALLBACK: exceededApplicationCacheOriginQuotaForSecurityOrigin:", string(origin), " totalSpaceNeeded:~", truncatedSpaceNeeded, '\n'));
-    }
-
-    if (injectedBundle.testRunner()->shouldDisallowIncreaseForApplicationCacheQuota())
-        return;
-
-    // Reset default application cache quota.
-    WKBundlePageResetApplicationCacheOriginQuota(injectedBundle.page()->page(), adoptWK(WKSecurityOriginCopyToString(origin)).get());
 }
 
 uint64_t InjectedBundlePage::didExceedDatabaseQuota(WKSecurityOriginRef origin, WKStringRef databaseName, WKStringRef databaseDisplayName, uint64_t currentQuotaBytes, uint64_t currentOriginUsageBytes, uint64_t currentDatabaseUsageBytes, uint64_t expectedUsageBytes)

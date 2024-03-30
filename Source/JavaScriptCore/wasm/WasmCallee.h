@@ -243,6 +243,9 @@ private:
     Vector<Ref<NameSection>, 0> nameSections;
 };
 
+constexpr int32_t stackCheckUnset = 0;
+constexpr int32_t stackCheckNotNeeded = -1;
+
 class OSREntryCallee final : public OptimizingJITCallee {
     WTF_MAKE_TZONE_ALLOCATED(OSREntryCallee);
 public:
@@ -261,6 +264,19 @@ public:
         OptimizingJITCallee::setEntrypoint(WTFMove(entrypoint), WTFMove(unlinkedCalls), WTFMove(stackmaps), WTFMove(exceptionHandlers), WTFMove(exceptionHandlerLocations));
     }
 
+    void setStackCheckSize(int32_t stackCheckSize)
+    {
+        ASSERT(m_stackCheckSize == stackCheckUnset);
+        ASSERT(stackCheckSize > 0 || stackCheckSize == stackCheckNotNeeded);
+        m_stackCheckSize = stackCheckSize;
+    }
+
+    int32_t stackCheckSize() const
+    {
+        ASSERT(m_stackCheckSize > 0 || m_stackCheckSize == stackCheckNotNeeded);
+        return m_stackCheckSize;
+    }
+
 private:
     OSREntryCallee(CompilationMode compilationMode, size_t index, std::pair<const Name*, RefPtr<NameSection>>&& name, uint32_t loopIndex)
         : OptimizingJITCallee(compilationMode, index, WTFMove(name))
@@ -270,6 +286,7 @@ private:
 
     unsigned m_osrEntryScratchBufferSize { 0 };
     uint32_t m_loopIndex;
+    int32_t m_stackCheckSize { stackCheckUnset };
 };
 
 #endif // ENABLE(WEBASSEMBLY_BBQJIT) || ENABLE(WEBASSEMBLY_OMGJIT)
@@ -277,6 +294,7 @@ private:
 #if ENABLE(WEBASSEMBLY_OMGJIT)
 
 class OMGCallee final : public OptimizingJITCallee {
+    WTF_MAKE_TZONE_ALLOCATED(OMGCallee);
 public:
     static Ref<OMGCallee> create(size_t index, std::pair<const Name*, RefPtr<NameSection>>&& name)
     {
@@ -350,6 +368,18 @@ public:
         return m_switchJumpTables.last().ptr();
     }
 
+    void setStackCheckSize(unsigned stackCheckSize)
+    {
+        ASSERT(m_stackCheckSize == stackCheckUnset);
+        ASSERT(stackCheckSize > 0 || int32_t(stackCheckSize) == stackCheckNotNeeded);
+        m_stackCheckSize = stackCheckSize;
+    }
+    int32_t stackCheckSize() const
+    {
+        ASSERT(m_stackCheckSize > 0 || int32_t(m_stackCheckSize) == stackCheckNotNeeded);
+        return m_stackCheckSize;
+    }
+
 private:
     BBQCallee(size_t index, std::pair<const Name*, RefPtr<NameSection>>&& name, std::unique_ptr<TierUpCount>&& tierUpCount, SavedFPWidth savedFPWidth)
         : OptimizingJITCallee(Wasm::CompilationMode::BBQMode, index, WTFMove(name))
@@ -366,6 +396,7 @@ private:
     std::optional<CodeLocationLabel<WasmEntryPtrTag>> m_sharedLoopEntrypoint;
     Vector<CodeLocationLabel<WasmEntryPtrTag>> m_loopEntrypoints;
     unsigned m_osrEntryScratchBufferSize { 0 };
+    unsigned m_stackCheckSize { 0 };
     bool m_didStartCompilingOSREntryCallee { false };
     SavedFPWidth m_savedFPWidth { SavedFPWidth::DontSaveVectors };
     Vector<UniqueRef<EmbeddedFixedVector<CodeLocationLabel<JSSwitchPtrTag>>>> m_switchJumpTables;
@@ -440,6 +471,7 @@ public:
     unsigned m_numRethrowSlotsToAlloc;
     unsigned m_numLocals;
     unsigned m_numArgumentsOnStack;
+    unsigned m_maxFrameSizeInV128;
 
     IPIntTierUpCounter m_tierUpCounter;
 };

@@ -50,6 +50,12 @@ RemoteLayerWithRemoteRenderingBackingStore::RemoteLayerWithRemoteRenderingBackin
     m_bufferSet = collection->layerTreeContext().ensureRemoteRenderingBackendProxy().createRemoteImageBufferSet();
 }
 
+RemoteLayerWithRemoteRenderingBackingStore::~RemoteLayerWithRemoteRenderingBackingStore()
+{
+    if (m_bufferSet)
+        m_bufferSet->close();
+}
+
 bool RemoteLayerWithRemoteRenderingBackingStore::hasFrontBuffer() const
 {
     return m_contentsBufferHandle || !m_cleared;
@@ -73,11 +79,11 @@ void RemoteLayerWithRemoteRenderingBackingStore::clearBackingStore()
     m_cleared = true;
 }
 
-std::unique_ptr<ThreadSafeImageBufferSetFlusher> RemoteLayerWithRemoteRenderingBackingStore::createFlusher()
+std::unique_ptr<ThreadSafeImageBufferSetFlusher> RemoteLayerWithRemoteRenderingBackingStore::createFlusher(ThreadSafeImageBufferSetFlusher::FlushType flushType)
 {
     if (!m_bufferSet)
         return { };
-    return m_bufferSet->flushFrontBufferAsync();
+    return m_bufferSet->flushFrontBufferAsync(flushType);
 }
 
 void RemoteLayerWithRemoteRenderingBackingStore::createContextAndPaintContents()

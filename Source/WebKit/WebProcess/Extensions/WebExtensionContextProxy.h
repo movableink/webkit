@@ -44,6 +44,8 @@ OBJC_CLASS _WKWebExtensionLocalization;
 namespace WebKit {
 
 class WebExtensionAPINamespace;
+class WebExtensionAPIStorage;
+class WebExtensionControllerProxy;
 class WebExtensionMatchPattern;
 class WebFrame;
 
@@ -57,7 +59,7 @@ class WebExtensionContextProxy final : public RefCounted<WebExtensionContextProx
 
 public:
     static RefPtr<WebExtensionContextProxy> get(WebExtensionContextIdentifier);
-    static Ref<WebExtensionContextProxy> getOrCreate(const WebExtensionContextParameters&, WebPage* = nullptr);
+    static Ref<WebExtensionContextProxy> getOrCreate(const WebExtensionContextParameters&, WebExtensionControllerProxy&, WebPage* = nullptr);
 
     ~WebExtensionContextProxy();
 
@@ -65,34 +67,53 @@ public:
     using WeakPageSet = WeakHashSet<WebPage>;
     using TabWindowIdentifierPair = std::pair<std::optional<WebExtensionTabIdentifier>, std::optional<WebExtensionWindowIdentifier>>;
     using WeakPageTabWindowMap = WeakHashMap<WebPage, TabWindowIdentifierPair>;
+    using PermissionsMap = WebExtensionContext::PermissionsMap;
 
-    WebExtensionContextIdentifier identifier() { return m_identifier; }
+    WebExtensionContextIdentifier identifier() const { return m_identifier; }
+    WebExtensionControllerProxy* extensionControllerProxy() const;
 
     bool operator==(const WebExtensionContextProxy& other) const { return (this == &other); }
 
-    const URL& baseURL() { return m_baseURL; }
+    const URL& baseURL() const { return m_baseURL; }
     const String& uniqueIdentifier() const { return m_uniqueIdentifier; }
 
-    NSDictionary *manifest() { return m_manifest.get(); }
+    NSDictionary *manifest() const { return m_manifest.get(); }
 
-    double manifestVersion() { return m_manifestVersion; }
-    bool supportsManifestVersion(double version) { return manifestVersion() >= version; }
+    double manifestVersion() const { return m_manifestVersion; }
+    bool supportsManifestVersion(double version) const { return manifestVersion() >= version; }
 
-    _WKWebExtensionLocalization *localization() { return m_localization.get(); }
+    _WKWebExtensionLocalization *localization() const { return m_localization.get(); }
 
-    bool isSessionStorageAllowedInContentScripts() { return m_isSessionStorageAllowedInContentScripts; }
+    bool isSessionStorageAllowedInContentScripts() const { return m_isSessionStorageAllowedInContentScripts; }
 
-    bool inTestingMode() { return m_testingMode; }
+    bool inTestingMode() const;
+
+    bool hasDOMWrapperWorld(WebExtensionContentWorldType contentWorldType) const { return contentWorldType != WebExtensionContentWorldType::ContentScript || hasContentScriptWorld(); }
+    WebCore::DOMWrapperWorld& toDOMWrapperWorld(WebExtensionContentWorldType) const;
 
     static WebCore::DOMWrapperWorld& mainWorld() { return WebCore::mainThreadNormalWorld(); }
 
-    WebCore::DOMWrapperWorld& contentScriptWorld() { return *m_contentScriptWorld; }
+    bool hasContentScriptWorld() const { return !!m_contentScriptWorld; }
+    WebCore::DOMWrapperWorld& contentScriptWorld() const { RELEASE_ASSERT(hasContentScriptWorld()); return *m_contentScriptWorld; }
     void setContentScriptWorld(WebCore::DOMWrapperWorld* world) { m_contentScriptWorld = world; }
 
     void addFrameWithExtensionContent(WebFrame&);
 
+    std::optional<WebExtensionTabIdentifier> tabIdentifier(WebPage&) const;
+
     RefPtr<WebPage> backgroundPage() const;
     void setBackgroundPage(WebPage&);
+
+    bool isUnsupportedAPI(const String& propertyPath, const ASCIILiteral& propertyName) const;
+
+    bool hasPermission(const String& permission) const;
+
+#if ENABLE(INSPECTOR_EXTENSIONS)
+    void addInspectorPage(WebPage&, std::optional<WebExtensionTabIdentifier>, std::optional<WebExtensionWindowIdentifier>);
+
+    void addInspectorBackgroundPage(WebPage&, std::optional<WebExtensionTabIdentifier>, std::optional<WebExtensionWindowIdentifier>);
+    bool isInspectorBackgroundPage(WebPage&) const;
+#endif
 
     Vector<Ref<WebPage>> popupPages(std::optional<WebExtensionTabIdentifier> = std::nullopt, std::optional<WebExtensionWindowIdentifier> = std::nullopt) const;
     void addPopupPage(WebPage&, std::optional<WebExtensionTabIdentifier>, std::optional<WebExtensionWindowIdentifier>);
@@ -104,14 +125,9 @@ public:
 
     void enumerateNamespaceObjects(const Function<void(WebExtensionAPINamespace&)>& function, WebCore::DOMWrapperWorld& = mainWorld())
     {
-        enumerateFramesAndNamespaceObjects([&](WebFrame&, WebExtensionAPINamespace& namespaceObject) {
+        enumerateFramesAndNamespaceObjects([&](auto&, auto& namespaceObject) {
             function(namespaceObject);
         });
-    }
-
-    void enumerateContentScriptFramesAndNamespaceObjects(const Function<void(WebFrame&, WebExtensionAPINamespace&)>& function)
-    {
-        enumerateFramesAndNamespaceObjects(function, contentScriptWorld());
     }
 
 private:
@@ -132,6 +148,16 @@ private:
     // Cookies
     void dispatchCookiesChangedEvent();
 
+#if ENABLE(INSPECTOR_EXTENSIONS)
+    // DevTools
+    void addInspectorPageIdentifier(WebCore::PageIdentifier, std::optional<WebExtensionTabIdentifier>, std::optional<WebExtensionWindowIdentifier>);
+    void addInspectorBackgroundPageIdentifier(WebCore::PageIdentifier, std::optional<WebExtensionTabIdentifier>, std::optional<WebExtensionWindowIdentifier>);
+    void dispatchDevToolsExtensionPanelShownEvent(Inspector::ExtensionTabID, WebCore::FrameIdentifier);
+    void dispatchDevToolsExtensionPanelHiddenEvent(Inspector::ExtensionTabID);
+    void dispatchDevToolsNetworkNavigatedEvent(const URL&);
+    void dispatchDevToolsPanelsThemeChangedEvent(Inspector::ExtensionAppearance);
+#endif
+
     // Extension
     void setBackgroundPageIdentifier(WebCore::PageIdentifier);
     void addPopupPageIdentifier(WebCore::PageIdentifier, std::optional<WebExtensionTabIdentifier>, std::optional<WebExtensionWindowIdentifier>);
@@ -141,22 +167,24 @@ private:
     void dispatchMenusClickedEvent(const WebExtensionMenuItemParameters&, bool wasChecked, const WebExtensionMenuItemContextParameters&, const std::optional<WebExtensionTabParameters>&);
 
     // Permissions
+    void updateGrantedPermissions(PermissionsMap&&);
     void dispatchPermissionsEvent(WebExtensionEventListenerType, HashSet<String> permissions, HashSet<String> origins);
 
     // Port
-    void dispatchPortMessageEvent(WebExtensionPortChannelIdentifier, const String& messageJSON);
+    void dispatchPortMessageEvent(std::optional<WebKit::WebPageProxyIdentifier>, WebExtensionPortChannelIdentifier, const String& messageJSON);
     void dispatchPortDisconnectEvent(WebExtensionPortChannelIdentifier);
 
     // Runtime
-    void internalDispatchRuntimeMessageEvent(WebCore::DOMWrapperWorld&, const String& messageJSON, std::optional<WebExtensionFrameIdentifier>, const WebExtensionMessageSenderParameters&, CompletionHandler<void(std::optional<String> replyJSON)>&&);
-    void internalDispatchRuntimeConnectEvent(WebCore::DOMWrapperWorld&, WebExtensionPortChannelIdentifier, const String& name, std::optional<WebExtensionFrameIdentifier>, const WebExtensionMessageSenderParameters&, CompletionHandler<void(size_t firedEventCount)>&&);
-    void dispatchRuntimeMessageEvent(WebExtensionContentWorldType, const String& messageJSON, std::optional<WebExtensionFrameIdentifier>, const WebExtensionMessageSenderParameters&, CompletionHandler<void(std::optional<String> replyJSON)>&&);
-    void dispatchRuntimeConnectEvent(WebExtensionContentWorldType, WebExtensionPortChannelIdentifier, const String& name, std::optional<WebExtensionFrameIdentifier>, const WebExtensionMessageSenderParameters&, CompletionHandler<void(size_t firedEventCount)>&&);
+    void internalDispatchRuntimeMessageEvent(WebExtensionContentWorldType, const String& messageJSON, std::optional<WebExtensionFrameIdentifier>, const WebExtensionMessageSenderParameters&, CompletionHandler<void(String&& replyJSON)>&&);
+    void internalDispatchRuntimeConnectEvent(WebExtensionContentWorldType, WebExtensionPortChannelIdentifier, const String& name, std::optional<WebExtensionFrameIdentifier>, const WebExtensionMessageSenderParameters&, CompletionHandler<void(HashCountedSet<WebPageProxyIdentifier>&&)>&&);
+    void dispatchRuntimeMessageEvent(WebExtensionContentWorldType, const String& messageJSON, std::optional<WebExtensionFrameIdentifier>, const WebExtensionMessageSenderParameters&, CompletionHandler<void(String&& replyJSON)>&&);
+    void dispatchRuntimeConnectEvent(WebExtensionContentWorldType, WebExtensionPortChannelIdentifier, const String& name, std::optional<WebExtensionFrameIdentifier>, const WebExtensionMessageSenderParameters&, CompletionHandler<void(HashCountedSet<WebPageProxyIdentifier>&&)>&&);
     void dispatchRuntimeInstalledEvent(WebExtensionContext::InstallReason, String previousVersion);
     void dispatchRuntimeStartupEvent();
 
     // Storage
     void setStorageAccessLevel(bool);
+    void dispatchStorageChangedEvent(const String& onChangedJSON, WebExtensionDataType, WebExtensionContentWorldType);
 
     // Tabs
     void dispatchTabsCreatedEvent(const WebExtensionTabParameters&);
@@ -186,16 +214,23 @@ private:
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
 
     WebExtensionContextIdentifier m_identifier;
+    WeakPtr<WebExtensionControllerProxy> m_extensionControllerProxy;
     URL m_baseURL;
     String m_uniqueIdentifier;
+    HashSet<String> m_unsupportedAPIs;
     RetainPtr<_WKWebExtensionLocalization> m_localization;
     RetainPtr<NSDictionary> m_manifest;
     double m_manifestVersion { 0 };
-    bool m_testingMode { false };
     bool m_isSessionStorageAllowedInContentScripts { false };
+    mutable PermissionsMap m_grantedPermissions;
+    mutable WallTime m_nextGrantedPermissionsExpirationDate { WallTime::nan() };
     RefPtr<WebCore::DOMWrapperWorld> m_contentScriptWorld;
     WeakFrameSet m_extensionContentFrames;
     WeakPtr<WebPage> m_backgroundPage;
+#if ENABLE(INSPECTOR_EXTENSIONS)
+    WeakPageTabWindowMap m_inspectorPageMap;
+    WeakPageTabWindowMap m_inspectorBackgroundPageMap;
+#endif
     WeakPageTabWindowMap m_popupPageMap;
     WeakPageTabWindowMap m_tabPageMap;
 };

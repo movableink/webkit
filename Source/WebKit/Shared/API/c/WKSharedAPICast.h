@@ -437,8 +437,6 @@ inline WKContextMenuItemTag toAPI(WebCore::ContextMenuAction action)
         return kWKContextMenuItemTagLearnSpelling;
     case WebCore::ContextMenuItemTagOther:
         return kWKContextMenuItemTagOther;
-    case WebCore::ContextMenuItemTagSearchInSpotlight:
-        return kWKContextMenuItemTagSearchInSpotlight;
     case WebCore::ContextMenuItemTagSearchWeb:
         return kWKContextMenuItemTagSearchWeb;
     case WebCore::ContextMenuItemTagLookUpInDictionary:
@@ -547,6 +545,8 @@ inline WKContextMenuItemTag toAPI(WebCore::ContextMenuAction action)
         return kWKContextMenuItemTagAddHighlightToCurrentQuickNote;
     case WebCore::ContextMenuItemTagAddHighlightToNewQuickNote:
         return kWKContextMenuItemTagAddHighlightToNewQuickNote;
+    case WebCore::ContextMenuItemTagCopyLinkToHighlight:
+        return kWKContextMenuItemTagCopyLinkToHighlight;
 #if PLATFORM(COCOA)
     case WebCore::ContextMenuItemTagCorrectSpellingAutomatically:
         return kWKContextMenuItemTagCorrectSpellingAutomatically;
@@ -585,6 +585,8 @@ inline WKContextMenuItemTag toAPI(WebCore::ContextMenuAction action)
         return kWKContextMenuItemTagRevealImage;
     case WebCore::ContextMenuItemTagTranslate:
         return kWKContextMenuItemTagTranslate;
+    case WebCore::ContextMenuItemTagSwapCharacters:
+        return kWKContextMenuItemTagSwapCharacters;
     case WebCore::ContextMenuItemTagCopySubject:
         return kWKContextMenuItemTagCopyCroppedImage;
     default:
@@ -656,7 +658,7 @@ inline WebCore::ContextMenuAction toImpl(WKContextMenuItemTag tag)
     case kWKContextMenuItemTagOther:
         return WebCore::ContextMenuItemTagOther;
     case kWKContextMenuItemTagSearchInSpotlight:
-        return WebCore::ContextMenuItemTagSearchInSpotlight;
+        return WebCore::ContextMenuItemTagNoAction;
     case kWKContextMenuItemTagSearchWeb:
         return WebCore::ContextMenuItemTagSearchWeb;
     case kWKContextMenuItemTagLookUpInDictionary:
@@ -765,6 +767,8 @@ inline WebCore::ContextMenuAction toImpl(WKContextMenuItemTag tag)
         return WebCore::ContextMenuItemTagAddHighlightToCurrentQuickNote;
     case kWKContextMenuItemTagAddHighlightToNewQuickNote:
         return WebCore::ContextMenuItemTagAddHighlightToNewQuickNote;
+    case kWKContextMenuItemTagCopyLinkToHighlight:
+        return WebCore::ContextMenuItemTagCopyLinkToHighlight;
 #if PLATFORM(COCOA)
     case kWKContextMenuItemTagCorrectSpellingAutomatically:
         return WebCore::ContextMenuItemTagCorrectSpellingAutomatically;
@@ -803,6 +807,8 @@ inline WebCore::ContextMenuAction toImpl(WKContextMenuItemTag tag)
         return WebCore::ContextMenuItemTagLookUpImage;
     case kWKContextMenuItemTagTranslate:
         return WebCore::ContextMenuItemTagTranslate;
+    case kWKContextMenuItemTagSwapCharacters:
+        return WebCore::ContextMenuItemTagSwapCharacters;
     case kWKContextMenuItemTagCopyCroppedImage:
         return WebCore::ContextMenuItemTagCopySubject;
     case kWKContextMenuItemTagOpenLinkInThisWindow:

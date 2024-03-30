@@ -32,6 +32,8 @@ typedef struct CGImage* CGImageRef;
 #include "RefPtrCairo.h"
 #elif PLATFORM(QT)
 #include <QImage>
+#elif USE(SKIA)
+#include <skia/core/SkImage.h>
 #endif
 
 namespace WebCore {
@@ -42,6 +44,8 @@ using PlatformImagePtr = RetainPtr<CGImageRef>;
 using PlatformImagePtr = RefPtr<cairo_surface_t>;
 #elif PLATFORM(QT)
 using PlatformImagePtr = QImage;
+#elif USE(SKIA)
+using PlatformImagePtr = sk_sp<SkImage>;
 #endif
 
 }

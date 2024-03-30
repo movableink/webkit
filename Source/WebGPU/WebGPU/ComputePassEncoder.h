@@ -31,6 +31,7 @@
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
 #import <wtf/Vector.h>
+#import <wtf/WeakPtr.h>
 
 struct WGPUComputePassEncoderImpl {
 };
@@ -54,9 +55,9 @@ public:
     {
         return adoptRef(*new ComputePassEncoder(computeCommandEncoder, descriptor, parentEncoder, device));
     }
-    static Ref<ComputePassEncoder> createInvalid(CommandEncoder& parentEncoder, Device& device)
+    static Ref<ComputePassEncoder> createInvalid(CommandEncoder& parentEncoder, Device& device, NSString* errorString)
     {
-        return adoptRef(*new ComputePassEncoder(parentEncoder, device));
+        return adoptRef(*new ComputePassEncoder(parentEncoder, device, errorString));
     }
 
     ~ComputePassEncoder();
@@ -78,12 +79,13 @@ public:
 
 private:
     ComputePassEncoder(id<MTLComputeCommandEncoder>, const WGPUComputePassDescriptor&, CommandEncoder&, Device&);
-    ComputePassEncoder(CommandEncoder&, Device&);
+    ComputePassEncoder(CommandEncoder&, Device&, NSString*);
 
     bool validatePopDebugGroup() const;
 
-    void makeInvalid();
-    void executePreDispatchCommands(id<MTLBuffer> = nil);
+    void makeInvalid(NSString* = nil);
+    void executePreDispatchCommands(const Buffer* = nullptr);
+    id<MTLBuffer> runPredispatchIndirectCallValidation(const Buffer&, uint64_t);
 
     id<MTLComputeCommandEncoder> m_computeCommandEncoder { nil };
 
@@ -97,10 +99,13 @@ private:
     const Ref<Device> m_device;
     MTLSize m_threadsPerThreadgroup;
     Vector<uint32_t> m_computeDynamicOffsets;
-    const ComputePipeline* m_pipeline { nullptr };
+    WeakPtr<const ComputePipeline> m_pipeline;
     Ref<CommandEncoder> m_parentEncoder;
     HashMap<uint32_t, Vector<uint32_t>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_bindGroupDynamicOffsets;
     HashMap<uint32_t, Vector<const BindableResources*>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_bindGroupResources;
+    HashMap<uint32_t, WeakPtr<BindGroup>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_bindGroups;
+    NSString *m_lastErrorString { nil };
+    bool m_passEnded { false };
 };
 
 } // namespace WebGPU

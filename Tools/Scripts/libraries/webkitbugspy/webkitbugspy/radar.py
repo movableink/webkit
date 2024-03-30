@@ -71,7 +71,7 @@ class Tracker(GenericTracker):
         TASK
     ]
 
-    RELATIONSHIP_TYPES = ['related-to', 'blocked-by', 'blocking', 'parent-of', 'subtask-of', 'cause-of', 'caused-by', 'duplicate-of', 'original-of']
+    RELATIONSHIP_TYPES = ['related-to', 'blocked-by', 'blocking', 'parent-of', 'subtask-of', 'cause-of', 'caused-by', 'duplicate-of', 'original-of', 'clone-of', 'cloned-to']
 
     ALWAYS = 'Always'
     SOMETIMES = 'Sometimes'
@@ -203,6 +203,7 @@ class Tracker(GenericTracker):
 
         issue._title = radar.title
         issue._timestamp = int(calendar.timegm(radar.createdAt.timetuple()))
+        issue._modified = int(calendar.timegm(radar.lastModifiedAt.timetuple()))
         issue._assignee = self.user(
             name='{} {}'.format(radar.assignee.firstName, radar.assignee.lastName),
             username=radar.assignee.dsid,

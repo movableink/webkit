@@ -219,10 +219,10 @@ UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const S
         JSTextPosition positionBeforeLastNewlineFromParser;
         ParserError error;
         JSParserBuiltinMode builtinMode = isBuiltinDefaultClassConstructor ? JSParserBuiltinMode::NotBuiltin : JSParserBuiltinMode::Builtin;
-        std::unique_ptr<ProgramNode> program = parse<ProgramNode>(
-            vm, source, Identifier(), implementationVisibility, builtinMode,
-            JSParserStrictMode::NotStrict, JSParserScriptMode::Classic, SourceParseMode::ProgramMode, FunctionMode::None, SuperBinding::NotNeeded, error,
-            &positionBeforeLastNewlineFromParser, constructorKind);
+        std::unique_ptr<ProgramNode> program = parseRootNode<ProgramNode>(
+            vm, source, implementationVisibility, builtinMode,
+            JSParserStrictMode::NotStrict, JSParserScriptMode::Classic, SourceParseMode::ProgramMode, error,
+            constructorKind, &positionBeforeLastNewlineFromParser);
 
         if (program) {
             StatementNode* exprStatement = program->singleStatement();
@@ -265,12 +265,20 @@ UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const S
     return functionExecutable;
 }
 
-void BuiltinExecutables::finalizeUnconditionally(CollectionScope)
+template<typename Visitor>
+void BuiltinExecutables::visitAggregateImpl(Visitor& visitor)
 {
     for (auto*& unlinkedExecutable : m_unlinkedExecutables) {
-        if (unlinkedExecutable && !m_vm.heap.isMarked(unlinkedExecutable))
-            unlinkedExecutable = nullptr;
+        if (unlinkedExecutable)
+            visitor.appendUnbarriered(unlinkedExecutable);
     }
+}
+
+DEFINE_VISIT_AGGREGATE(BuiltinExecutables);
+
+void BuiltinExecutables::clear()
+{
+    std::fill(std::begin(m_unlinkedExecutables), std::end(m_unlinkedExecutables), nullptr);
 }
 
 #define DEFINE_BUILTIN_EXECUTABLES(name, functionName, overrideName, length) \

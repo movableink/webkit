@@ -151,6 +151,7 @@ public:
 
     bool shouldRegisterScrollbar() const;
     int minimumThumbLength() const;
+    void updateScrollbarThickness();
 
     virtual bool isMacScrollbar() const { return false; }
 

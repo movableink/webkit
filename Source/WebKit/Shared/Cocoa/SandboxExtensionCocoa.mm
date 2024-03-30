@@ -28,7 +28,6 @@
 
 #if ENABLE(SANDBOX_EXTENSIONS)
 
-#import "DataReference.h"
 #import "Logging.h"
 #import "WebCoreArgumentCoders.h"
 #import <string.h>
@@ -244,8 +243,7 @@ auto SandboxExtension::createHandleForTemporaryFile(StringView prefix, Type type
     ASSERT(path.last() == '/');
 
     // Append the file name.
-    auto prefixAsUTF8 = prefix.utf8();
-    path.append(prefixAsUTF8.data(), prefixAsUTF8.length());
+    path.append(prefix.utf8().span());
     path.append('\0');
 
     auto pathString = String::fromUTF8(path.data());

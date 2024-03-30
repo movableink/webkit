@@ -64,7 +64,6 @@
 #include "RenderListItem.h"
 #include "RenderListMarker.h"
 #include "RenderQuote.h"
-#include "RenderRuby.h"
 #include "RenderSVGContainer.h"
 #include "RenderSVGGradientStop.h"
 #include "RenderSVGInlineText.h"
@@ -222,15 +221,10 @@ static inline bool hasNonEmptySibling(const RenderInline& inlineRenderer)
 
 inline bool shouldEnableSubpixelPrecisionForTextDump(const Document& document)
 {
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     // If LBSE is activated and the document contains outermost <svg> elements, generate the text
     // representation with subpixel precision. It would be awkward to only see the SVG part of a
     // compound document with subpixel precision in the render tree dumps, and not the surrounding content.
     return document.settings().layerBasedSVGEngineEnabled() && document.mayHaveRenderedSVGRootElements();
-#else
-    UNUSED_PARAM(document);
-    return false;
-#endif
 }
 
 void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, OptionSet<RenderAsTextFlag> behavior)
@@ -257,63 +251,25 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
         }
     }
     
-    RenderBlock* cb = o.containingBlock();
-    bool adjustForTableCells = cb ? cb->isRenderTableCell() : false;
-
     bool enableSubpixelPrecisionForTextDump = shouldEnableSubpixelPrecisionForTextDump(o.document());
     LayoutRect r;
-    if (auto* text = dynamicDowncast<RenderText>(o)) {
-        // FIXME: Would be better to dump the bounding box x and y rather than the first run's x and y, but that would involve updating
-        // many test results.
-        r = IntRect(text->firstRunLocation(), text->linesBoundingBox().size());
-        if (!InlineIterator::firstTextBoxFor(*text))
-            adjustForTableCells = false;
-    } else if (o.isBR()) {
-        const RenderLineBreak& br = downcast<RenderLineBreak>(o);
-        IntRect linesBox = br.linesBoundingBox();
-        r = IntRect(linesBox.x(), linesBox.y(), linesBox.width(), linesBox.height());
-        if (!br.inlineBoxWrapper() && !InlineIterator::boxFor(br))
-            adjustForTableCells = false;
-    } else if (auto* inlineFlow = dynamicDowncast<RenderInline>(o)) {
-        // FIXME: Would be better not to just dump 0, 0 as the x and y here.
-        auto width = inlineFlow->linesBoundingBox().width();
-        auto inlineHeight = [&] {
-            // Let's match legacy line layout's RenderInline behavior and report 0 height when the inline box is "empty".
-            // FIXME: Remove and rebaseline when LFC inline boxes are enabled (see webkit.org/b/220722) 
-            auto height = inlineFlow->linesBoundingBox().height();
-            if (width)
-                return height;
-            if (is<RenderQuote>(*inlineFlow) || is<RenderRubyAsInline>(*inlineFlow))
-                return height;
-            if (inlineFlow->marginStart() || inlineFlow->marginEnd())
-                return height;
-            // This is mostly pre/post continuation content. Also see webkit.org/b/220735
-            if (hasNonEmptySibling(*inlineFlow))
-                return height;
-            if (isRenderInlineEmpty(*inlineFlow))
-                return 0;
-            return height;
-        };
-        r = IntRect(0, 0, width, inlineHeight());
-        adjustForTableCells = false;
-    } else if (auto* cell = dynamicDowncast<RenderTableCell>(o)) {
+    if (auto* text = dynamicDowncast<RenderText>(o))
+        r = text->linesBoundingBox();
+    else if (auto* br = dynamicDowncast<RenderLineBreak>(o); br && br->isBR())
+        r = br->linesBoundingBox();
+    else if (auto* inlineFlow = dynamicDowncast<RenderInline>(o))
+        r = inlineFlow->linesBoundingBox();
+    else if (auto* cell = dynamicDowncast<RenderTableCell>(o)) {
         // FIXME: Deliberately dump the "inner" box of table cells, since that is what current results reflect.  We'd like
         // to clean up the results to dump both the outer box and the intrinsic padding so that both bits of information are
         // captured by the results.
         r = LayoutRect(cell->x(), cell->y() + cell->intrinsicPaddingBefore(), cell->width(), cell->height() - cell->intrinsicPaddingBefore() - cell->intrinsicPaddingAfter());
     } else if (auto* box = dynamicDowncast<RenderBox>(o))
         r = box->frameRect();
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     else if (auto* svgModelObject = dynamicDowncast<RenderSVGModelObject>(o)) {
         r = svgModelObject->frameRectEquivalent();
         ASSERT(r.location() == svgModelObject->currentSVGLayoutLocation());
     }
-#endif
-
-    // FIXME: Temporary in order to ensure compatibility with existing layout test results.
-    if (adjustForTableCells)
-        r.move(0_lu, -downcast<RenderTableCell>(*o.containingBlock()).intrinsicPaddingBefore());
-
     // FIXME: Convert layout test results to report sub-pixel values, in the meantime using enclosingIntRect
     // for consistency with old results.
     if (enableSubpixelPrecisionForTextDump)
@@ -321,7 +277,6 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
     else
         ts << " " << enclosingIntRect(r);
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (auto* svgModelObject = dynamicDowncast<RenderSVGModelObject>(o)) {
         writeSVGPaintingFeatures(ts, *svgModelObject, behavior);
 
@@ -331,7 +286,6 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
         writeDebugInfo(ts, o, behavior);
         return;
     }
-#endif
 
     if (!is<RenderText>(o)) {
         if (auto* control = dynamicDowncast<RenderFileUploadControl>(o))
@@ -568,15 +522,12 @@ void writeDebugInfo(TextStream& ts, const RenderObject& object, OptionSet<Render
             }
         }
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
         if (auto* renderSVGModelObject = dynamicDowncast<RenderSVGModelObject>(object)) {
             if (renderSVGModelObject->hasVisualOverflow()) {
                 auto visualOverflow = renderSVGModelObject->visualOverflowRectEquivalent();
                 ts << " (visual overflow " << visualOverflow.x() << "," << visualOverflow.y() << " " << visualOverflow.width() << "x" << visualOverflow.height() << ")";
             }
         }
-#endif
-
     }
 }
 
@@ -663,10 +614,8 @@ void write(TextStream& ts, const RenderObject& o, OptionSet<RenderAsTextFlag> be
         }
     }
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (is<RenderSVGModelObject>(o) || is<RenderSVGRoot>(o))
         writeResources(ts, o, behavior);
-#endif
 }
 
 enum LayerPaintPhase {

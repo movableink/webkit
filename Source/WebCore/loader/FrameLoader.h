@@ -78,6 +78,7 @@ class LocalFrameLoaderClient;
 class NavigationAction;
 class NetworkingContext;
 class Node;
+class Page;
 class ResourceError;
 class ResourceRequest;
 class ResourceResponse;
@@ -171,9 +172,11 @@ public:
     ReferrerPolicy effectiveReferrerPolicy() const;
     String referrer() const;
     WEBCORE_EXPORT String outgoingReferrer() const;
+    WEBCORE_EXPORT URL outgoingReferrerURL();
     String outgoingOrigin() const;
 
     WEBCORE_EXPORT DocumentLoader* activeDocumentLoader() const;
+    RefPtr<DocumentLoader> protectedActiveDocumentLoader() const;
     DocumentLoader* documentLoader() const { return m_documentLoader.get(); }
     RefPtr<DocumentLoader> protectedDocumentLoader() const;
     DocumentLoader* policyDocumentLoader() const { return m_policyDocumentLoader.get(); }
@@ -226,7 +229,7 @@ public:
     void detachViewsAndDocumentLoader();
 
     static void addHTTPOriginIfNeeded(ResourceRequest&, const String& origin);
-    static void addSameSiteInfoToRequestIfNeeded(ResourceRequest&, const Document* initiator = nullptr);
+    static void addSameSiteInfoToRequestIfNeeded(ResourceRequest&, const Document* initiator = nullptr, const Page* = nullptr);
 
     const LocalFrameLoaderClient& client() const { return m_client.get(); }
     LocalFrameLoaderClient& client() { return m_client.get(); }
@@ -310,6 +313,7 @@ public:
     PageDismissalType pageDismissalEventBeingDispatched() const { return m_pageDismissalEventBeingDispatched; }
 
     WEBCORE_EXPORT NetworkingContext* networkingContext() const;
+    WEBCORE_EXPORT RefPtr<NetworkingContext> protectedNetworkingContext() const;
 
     void loadProgressingStatusChanged();
 
@@ -334,6 +338,7 @@ public:
     bool isReloadingFromOrigin() const { return m_loadType == FrameLoadType::ReloadFromOrigin; }
 
     // Used in webarchive loading tests.
+    // FIXME: Clean up uses of setAlwaysAllowLocalWebarchive. The AlwaysAllowLocalWebarchive preference replaces it.
     void setAlwaysAllowLocalWebarchive(bool alwaysAllowLocalWebarchive) { m_alwaysAllowLocalWebarchive = alwaysAllowLocalWebarchive; }
     bool alwaysAllowLocalWebarchive() const { return m_alwaysAllowLocalWebarchive; }
 
@@ -357,6 +362,8 @@ private:
         MayAttemptCacheOnlyLoadForFormSubmissionItem,
         MayNotAttemptCacheOnlyLoadForFormSubmissionItem
     };
+
+    RefPtr<LocalFrame> nonSrcdocFrame() const;
 
     std::optional<PageIdentifier> pageID() const;
     void executeJavaScriptURL(const URL&, const NavigationAction&);
@@ -453,6 +460,8 @@ private:
     void clearProvisionalLoadForPolicyCheck();
     bool hasOpenedFrames() const;
 
+    void updateNavigationAPIEntries();
+
     WeakRef<LocalFrame> m_frame;
     UniqueRef<LocalFrameLoaderClient> m_client;
 
@@ -486,6 +495,7 @@ private:
     bool m_provisionalLoadHappeningInAnotherProcess { false };
 
     String m_outgoingReferrer;
+    URL m_outgoingReferrerURL;
 
     bool m_isExecutingJavaScriptFormAction { false };
 

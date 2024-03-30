@@ -192,6 +192,7 @@ public:
     WEBCORE_EXPORT virtual void detachFromFrame(LoadWillContinueInAnotherProcess);
 
     WEBCORE_EXPORT FrameLoader* frameLoader() const;
+    CheckedPtr<FrameLoader> checkedFrameLoader() const;
     WEBCORE_EXPORT SubresourceLoader* mainResourceLoader() const;
     WEBCORE_EXPORT RefPtr<FragmentedSharedBuffer> mainResourceData() const;
     
@@ -216,7 +217,7 @@ public:
     const String& responseMIMEType() const;
 #if PLATFORM(IOS_FAMILY)
     // FIXME: This method seems to violate the encapsulation of this class.
-    WEBCORE_EXPORT void setResponseMIMEType(const AtomString&);
+    WEBCORE_EXPORT void setResponseMIMEType(const String&);
 #endif
     const String& currentContentType() const;
     void replaceRequestURLForSameDocumentNavigation(const URL&);
@@ -378,8 +379,8 @@ public:
     WEBCORE_EXPORT ColorSchemePreference colorSchemePreference() const;
     void setColorSchemePreference(ColorSchemePreference preference) { m_colorSchemePreference = preference; }
 
-    void addSubresourceLoader(ResourceLoader&);
-    void removeSubresourceLoader(LoadCompletionType, ResourceLoader*);
+    void addSubresourceLoader(SubresourceLoader&);
+    void removeSubresourceLoader(LoadCompletionType, SubresourceLoader&);
     void addPlugInStreamLoader(ResourceLoader&);
     void removePlugInStreamLoader(ResourceLoader&);
 
@@ -552,6 +553,8 @@ private:
 
     bool maybeLoadEmpty();
     void loadErrorDocument();
+
+    bool shouldClearContentSecurityPolicyForResponse(const ResourceResponse&) const;
 
     bool isMultipartReplacingLoad() const;
     bool isPostOrRedirectAfterPost(const ResourceRequest&, const ResourceResponse&);

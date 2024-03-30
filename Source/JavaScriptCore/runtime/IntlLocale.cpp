@@ -112,7 +112,7 @@ void LocaleIDBuilder::overrideLanguageScriptRegion(StringView language, StringVi
 {
     unsigned length = strlen(m_buffer.data());
 
-    StringView localeIDView { m_buffer.data(), length };
+    StringView localeIDView { m_buffer.subspan(0, length) };
 
     auto endOfLanguageScriptRegionVariant = localeIDView.find(ULOC_KEYWORD_SEPARATOR);
     if (endOfLanguageScriptRegionVariant == notFound)
@@ -154,9 +154,9 @@ void LocaleIDBuilder::overrideLanguageScriptRegion(StringView language, StringVi
 
         ASSERT(subtag.containsOnlyASCII());
         if (subtag.is8Bit())
-            buffer.append(subtag.characters8(), subtag.length());
+            buffer.append(subtag.span8());
         else
-            buffer.append(subtag.characters16(), subtag.length());
+            buffer.append(subtag.span16());
     }
 
     if (endOfLanguageScriptRegionVariant != length) {
@@ -164,9 +164,9 @@ void LocaleIDBuilder::overrideLanguageScriptRegion(StringView language, StringVi
 
         ASSERT(rest.containsOnlyASCII());
         if (rest.is8Bit())
-            buffer.append(rest.characters8(), rest.length());
+            buffer.append(rest.span8());
         else
-            buffer.append(rest.characters16(), rest.length());
+            buffer.append(rest.span16());
     }
 
     buffer.append('\0');
@@ -643,7 +643,7 @@ JSArray* IntlLocale::hourCycles(JSGlobalObject* globalObject)
         return nullptr;
     }
 
-    dataLogLnIf(IntlLocaleInternal::verbose, "pattern:(", StringView(pattern.data(), pattern.size()), ")");
+    dataLogLnIf(IntlLocaleInternal::verbose, "pattern:(", StringView { pattern.span() }, ")");
 
     switch (IntlDateTimeFormat::hourCycleFromPattern(pattern)) {
     case IntlDateTimeFormat::HourCycle::None:

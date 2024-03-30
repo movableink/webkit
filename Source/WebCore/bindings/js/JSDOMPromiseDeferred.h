@@ -160,9 +160,9 @@ public:
 
     void reject(RejectAsHandled = RejectAsHandled::No);
     void reject(std::nullptr_t, RejectAsHandled = RejectAsHandled::No);
+    void reject(Exception, RejectAsHandled, JSC::JSValue&);
     WEBCORE_EXPORT void reject(Exception, RejectAsHandled = RejectAsHandled::No);
     WEBCORE_EXPORT void reject(ExceptionCode, const String& = { }, RejectAsHandled = RejectAsHandled::No);
-    void reject(const JSC::PrivateName&, RejectAsHandled = RejectAsHandled::No);
 
     template<typename Callback>
     void resolveWithCallback(Callback callback)
@@ -336,7 +336,7 @@ public:
 
 void fulfillPromiseWithJSON(Ref<DeferredPromise>&&, const String&);
 void fulfillPromiseWithArrayBuffer(Ref<DeferredPromise>&&, ArrayBuffer*);
-void fulfillPromiseWithArrayBuffer(Ref<DeferredPromise>&&, const void*, size_t);
+void fulfillPromiseWithArrayBufferFromSpan(Ref<DeferredPromise>&&, std::span<const uint8_t>);
 WEBCORE_EXPORT void rejectPromiseWithExceptionIfAny(JSC::JSGlobalObject&, JSDOMGlobalObject&, JSC::JSPromise&, JSC::CatchScope&);
 
 enum class RejectedPromiseWithTypeErrorCause { NativeGetter, InvalidThis };

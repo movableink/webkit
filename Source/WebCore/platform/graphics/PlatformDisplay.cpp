@@ -163,10 +163,12 @@ std::unique_ptr<PlatformDisplay> PlatformDisplay::createPlatformDisplay()
 
 #if PLATFORM(WPE)
     if (s_useDMABufForRendering) {
+#if USE(GBM)
         if (GBMDevice::singleton().isInitialized()) {
-            if (auto* device = GBMDevice::singleton().device())
+            if (auto* device = GBMDevice::singleton().device(GBMDevice::Type::Render))
                 return PlatformDisplayGBM::create(device);
         }
+#endif
         return PlatformDisplaySurfaceless::create();
     }
 #endif
@@ -549,7 +551,7 @@ struct gbm_device* PlatformDisplay::gbmDevice()
     if (!device.isInitialized())
         device.initialize(drmRenderNodeFile());
 
-    return device.device();
+    return device.device(GBMDevice::Type::Render);
 }
 
 const Vector<PlatformDisplay::DMABufFormat>& PlatformDisplay::dmabufFormats()
@@ -577,11 +579,11 @@ const Vector<PlatformDisplay::DMABufFormat>& PlatformDisplay::dmabufFormats()
 
         // For now we only support formats that can be created with a single GBM buffer for all planes.
         static const Vector<EGLint> s_supportedFormats = {
-            DRM_FORMAT_ARGB8888, DRM_FORMAT_RGBA8888, DRM_FORMAT_ABGR8888, DRM_FORMAT_BGRA8888,
             DRM_FORMAT_XRGB8888, DRM_FORMAT_RGBX8888, DRM_FORMAT_XBGR8888, DRM_FORMAT_BGRX8888,
+            DRM_FORMAT_ARGB8888, DRM_FORMAT_RGBA8888, DRM_FORMAT_ABGR8888, DRM_FORMAT_BGRA8888,
             DRM_FORMAT_RGB565,
-            DRM_FORMAT_ARGB2101010, DRM_FORMAT_ABGR2101010, DRM_FORMAT_XRGB2101010, DRM_FORMAT_XBGR2101010,
-            DRM_FORMAT_ARGB16161616F, DRM_FORMAT_ABGR16161616F, DRM_FORMAT_XRGB16161616F, DRM_FORMAT_XBGR16161616F
+            DRM_FORMAT_XRGB2101010, DRM_FORMAT_XBGR2101010, DRM_FORMAT_ARGB2101010, DRM_FORMAT_ABGR2101010,
+            DRM_FORMAT_XRGB16161616F, DRM_FORMAT_XBGR16161616F, DRM_FORMAT_ARGB16161616F, DRM_FORMAT_ABGR16161616F
         };
 
         m_dmabufFormats = WTF::compactMap(s_supportedFormats, [&](auto format) -> std::optional<DMABufFormat> {

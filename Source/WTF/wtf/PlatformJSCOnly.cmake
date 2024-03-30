@@ -17,6 +17,7 @@ if (WIN32)
         win/PathWalker.cpp
         win/SignalsWin.cpp
         win/ThreadingWin.cpp
+        win/Win32Handle.cpp
     )
     list(APPEND WTF_PUBLIC_HEADERS
         text/win/WCharStringExtras.h
@@ -83,7 +84,7 @@ elseif (APPLE)
             ${WTF_DERIVED_SOURCES_DIR}/mach_excUser.c
         MAIN_DEPENDENCY mac/MachExceptions.defs
         WORKING_DIRECTORY ${WTF_DERIVED_SOURCES_DIR}
-        COMMAND mig -sheader MachExceptionsServer.h MachExceptions.defs
+        COMMAND mig -DMACH_EXC_SERVER_TASKIDTOKEN_STATE -sheader MachExceptionsServer.h MachExceptions.defs
         VERBATIM)
     list(APPEND WTF_SOURCES
         cocoa/MemoryFootprintCocoa.cpp

@@ -142,15 +142,7 @@ std::optional<FilterOperations> BuilderState::createFilterOperations(const CSSVa
 
 bool BuilderState::isColorFromPrimitiveValueDerivedFromElement(const CSSPrimitiveValue& value)
 {
-    switch (value.valueID()) {
-    case CSSValueInternalDocumentTextColor:
-    case CSSValueWebkitLink:
-    case CSSValueWebkitActivelink:
-    case CSSValueCurrentcolor:
-        return true;
-    default:
-        return false;
-    }
+    return StyleColor::containsCurrentColor(value) || StyleColor::containsColorSchemeDependentColor(value);
 }
 
 StyleColor BuilderState::colorFromPrimitiveValue(const CSSPrimitiveValue& value, ForVisitedLink forVisitedLink) const
@@ -226,7 +218,7 @@ void BuilderState::updateFontForTextSizeAdjust()
 
 void BuilderState::updateFontForZoomChange()
 {
-    if (m_style.effectiveZoom() == parentStyle().effectiveZoom() && m_style.textZoom() == parentStyle().textZoom())
+    if (m_style.usedZoom() == parentStyle().usedZoom() && m_style.textZoom() == parentStyle().textZoom())
         return;
 
     const auto& childFont = m_style.fontDescription();

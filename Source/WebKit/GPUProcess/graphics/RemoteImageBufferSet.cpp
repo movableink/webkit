@@ -57,9 +57,9 @@ Ref<RemoteImageBufferSet> RemoteImageBufferSet::create(RemoteImageBufferSetIdent
 }
 
 RemoteImageBufferSet::RemoteImageBufferSet(RemoteImageBufferSetIdentifier identifier, WebCore::RenderingResourceIdentifier displayListIdentifier, RemoteRenderingBackend& backend)
-    : m_backend(&backend)
-    , m_identifier(identifier)
+    : m_identifier(identifier)
     , m_displayListIdentifier(displayListIdentifier)
+    , m_backend(&backend)
 {
 }
 
@@ -104,22 +104,35 @@ void RemoteImageBufferSet::updateConfiguration(const WebCore::FloatSize& logical
 
 }
 
-void RemoteImageBufferSet::setFlushSignal(IPC::Signal&& signal)
+void RemoteImageBufferSet::endPrepareForDisplay(RenderingUpdateID renderingUpdateID)
 {
-    m_flushSignal = WTFMove(signal);
-}
-
-void RemoteImageBufferSet::flush()
-{
-    m_backend->releaseDisplayListRecorder(m_displayListIdentifier);
-    ASSERT(m_flushSignal);
+    if (m_displayListCreated) {
+        m_backend->releaseDisplayListRecorder(m_displayListIdentifier);
+        m_displayListCreated = false;
+    }
     if (m_frontBuffer)
         m_frontBuffer->flushDrawingContext();
-    m_flushSignal->signal();
+
+#if PLATFORM(COCOA)
+    auto bufferIdentifier = [](RefPtr<WebCore::ImageBuffer> buffer) -> std::optional<WebCore::RenderingResourceIdentifier> {
+        if (!buffer)
+            return std::nullopt;
+        return buffer->renderingResourceIdentifier();
+    };
+
+    ImageBufferSetPrepareBufferForDisplayOutputData outputData;
+    if (m_frontBuffer) {
+        auto* sharing = m_frontBuffer->toBackendSharing();
+        outputData.backendHandle = downcast<ImageBufferBackendHandleSharing>(*sharing).createBackendHandle();
+    }
+
+    outputData.bufferCacheIdentifiers = BufferIdentifierSet { bufferIdentifier(m_frontBuffer), bufferIdentifier(m_backBuffer), bufferIdentifier(m_secondaryBackBuffer) };
+    m_backend->streamConnection().send(Messages::RemoteImageBufferSetProxy::DidPrepareForDisplay(WTFMove(outputData), renderingUpdateID), m_identifier);
+#endif
 }
 
 // This is the GPU Process version of RemoteLayerBackingStore::prepareBuffers().
-void RemoteImageBufferSet::ensureBufferForDisplay(ImageBufferSetPrepareBufferForDisplayInputData& inputData, SwapBuffersDisplayRequirement& displayRequirement, RenderingUpdateID renderingUpdateID)
+void RemoteImageBufferSet::ensureBufferForDisplay(ImageBufferSetPrepareBufferForDisplayInputData& inputData, SwapBuffersDisplayRequirement& displayRequirement)
 {
     assertIsCurrent(workQueue());
     LOG_WITH_STREAM(RemoteLayerBuffers, stream << "GPU Process: ::ensureFrontBufferForDisplay " << " - front "
@@ -168,32 +181,22 @@ void RemoteImageBufferSet::ensureBufferForDisplay(ImageBufferSetPrepareBufferFor
     }
 
     if (!m_frontBuffer) {
-        m_frontBuffer = m_backend->allocateImageBuffer(m_logicalSize, m_renderingMode, WebCore::RenderingPurpose::LayerBacking, m_resolutionScale, m_colorSpace, m_pixelFormat, WebCore::RenderingResourceIdentifier::generate());
+        WebCore::ImageBufferCreationContext creationContext;
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+        creationContext.dynamicContentScalingResourceCache = ensureDynamicContentScalingResourceCache();
+#endif
+
+        m_frontBuffer = m_backend->allocateImageBuffer(m_logicalSize, m_renderingMode, WebCore::RenderingPurpose::LayerBacking, m_resolutionScale, m_colorSpace, m_pixelFormat, creationContext, WebCore::RenderingResourceIdentifier::generate());
         m_frontBufferIsCleared = true;
     }
 
     LOG_WITH_STREAM(RemoteLayerBuffers, stream << "GPU Process: ensureFrontBufferForDisplay - swapped to ["
         << m_frontBuffer << ", " << m_backBuffer << ", " << m_secondaryBackBuffer << "]");
 
-    if (displayRequirement != SwapBuffersDisplayRequirement::NeedsNoDisplay)
+    if (displayRequirement != SwapBuffersDisplayRequirement::NeedsNoDisplay) {
         m_backend->createDisplayListRecorder(m_frontBuffer, m_displayListIdentifier);
-
-#if PLATFORM(COCOA)
-    auto bufferIdentifier = [](RefPtr<WebCore::ImageBuffer> buffer) -> std::optional<WebCore::RenderingResourceIdentifier> {
-        if (!buffer)
-            return std::nullopt;
-        return buffer->renderingResourceIdentifier();
-    };
-
-    ImageBufferSetPrepareBufferForDisplayOutputData outputData;
-    if (m_frontBuffer) {
-        auto* sharing = m_frontBuffer->toBackendSharing();
-        outputData.backendHandle = downcast<ImageBufferBackendHandleSharing>(*sharing).createBackendHandle();
+        m_displayListCreated = true;
     }
-
-    outputData.bufferCacheIdentifiers = BufferIdentifierSet { bufferIdentifier(m_frontBuffer), bufferIdentifier(m_backBuffer), bufferIdentifier(m_secondaryBackBuffer) };
-    m_backend->streamConnection().send(Messages::RemoteImageBufferSetProxy::DidPrepareForDisplay(WTFMove(outputData), renderingUpdateID), m_identifier);
-#endif
 }
 
 void RemoteImageBufferSet::prepareBufferForDisplay(const WebCore::Region& dirtyRegion, bool requiresClearedPixels)
@@ -296,6 +299,13 @@ void RemoteImageBufferSet::dynamicContentScalingDisplayList(CompletionHandler<vo
     if (m_frontBuffer)
         displayList = m_frontBuffer->dynamicContentScalingDisplayList();
     completionHandler({ WTFMove(displayList) });
+}
+
+DynamicContentScalingResourceCache RemoteImageBufferSet::ensureDynamicContentScalingResourceCache()
+{
+    if (!m_dynamicContentScalingResourceCache)
+        m_dynamicContentScalingResourceCache = DynamicContentScalingResourceCache::create();
+    return m_dynamicContentScalingResourceCache;
 }
 #endif
 

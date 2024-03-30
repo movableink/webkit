@@ -151,7 +151,6 @@ public:
 
     WEBCORE_EXPORT virtual GraphicsContext& context() const;
 
-    virtual bool prefersPreparationForDisplay() { return false; }
     WEBCORE_EXPORT virtual void flushDrawingContext();
     WEBCORE_EXPORT virtual bool flushDrawingContextAsync();
 
@@ -210,7 +209,7 @@ public:
     //     auto nativeImage = buffer.copyNativeImage();
     //     buffer = nullptr;
     WEBCORE_EXPORT static RefPtr<NativeImage> sinkIntoNativeImage(RefPtr<ImageBuffer>);
-    static RefPtr<ImageBuffer> sinkIntoBufferForDifferentThread(RefPtr<ImageBuffer>);
+    WEBCORE_EXPORT static RefPtr<ImageBuffer> sinkIntoBufferForDifferentThread(RefPtr<ImageBuffer>);
     static std::unique_ptr<SerializedImageBuffer> sinkIntoSerializedImageBuffer(RefPtr<ImageBuffer>&&);
 
     WEBCORE_EXPORT virtual void convertToLuminanceMask();

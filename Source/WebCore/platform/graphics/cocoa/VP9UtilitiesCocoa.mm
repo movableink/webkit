@@ -269,7 +269,7 @@ std::optional<MediaCapabilitiesInfo> validateVPParameters(const VPCodecConfigura
         if (*videoConfiguration.colorGamut == ColorGamut::Rec2020 && codecConfiguration.colorPrimaries != 9)
             return std::nullopt;
     }
-    return computeVPParameters(videoConfiguration);
+    return computeVPParameters(videoConfiguration, vp9HardwareDecoderAvailable());
 }
 
 bool isVPSoftwareDecoderSmooth(const VideoConfiguration& videoConfiguration)
@@ -283,11 +283,11 @@ bool isVPSoftwareDecoderSmooth(const VideoConfiguration& videoConfiguration)
     return true;
 }
 
-std::optional<MediaCapabilitiesInfo> computeVPParameters(const VideoConfiguration& videoConfiguration)
+std::optional<MediaCapabilitiesInfo> computeVPParameters(const VideoConfiguration& videoConfiguration, bool vp9HardwareDecoderAvailable)
 {
     MediaCapabilitiesInfo info;
 
-    if (vp9HardwareDecoderAvailable()) {
+    if (vp9HardwareDecoderAvailable) {
         // HW VP9 Decoder does not support alpha channel:
         if (videoConfiguration.alphaChannel && *videoConfiguration.alphaChannel)
             return std::nullopt;
@@ -603,7 +603,7 @@ static Ref<VideoInfo> createVideoInfoFromVPCodecConfigurationRecord(const VPCode
     view->set(8, record.transferCharacteristics, false);
     view->set(9, record.matrixCoefficients, false);
     view->set(10, codecIntializationDataSize, false);
-    videoInfo->atomData = SharedBuffer::create(static_cast<uint8_t*>(view->data()), view->byteLength());
+    videoInfo->atomData = SharedBuffer::create(view->span());
     videoInfo->colorSpace.fullRange = record.videoFullRangeFlag == VPConfigurationRange::FullRange;
     videoInfo->colorSpace.primaries = convertToPlatformVideoColorPrimaries(record.colorPrimaries);
     videoInfo->colorSpace.transfer = convertToPlatformVideoTransferCharacteristics(record.transferCharacteristics);
@@ -805,15 +805,6 @@ Ref<VideoInfo> createVideoInfoFromVP8Header(const VP8FrameHeader& header, const 
     }
 
     return createVideoInfoFromVPCodecConfigurationRecord(record, header.width, header.height);
-}
-
-bool hasVP9ExtensionSupport()
-{
-#if USE(APPLE_INTERNAL_SDK)
-#include <WebKitAdditions/VP9UtilitiesCocoaAdditions.mm>
-#endif
-
-    return false;
 }
 
 }

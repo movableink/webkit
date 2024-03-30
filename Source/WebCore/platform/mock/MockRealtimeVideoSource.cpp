@@ -49,6 +49,10 @@
 #include <wtf/UUID.h>
 #include <wtf/text/StringConcatenateNumbers.h>
 
+#if ENABLE(EXTENSION_CAPABILITIES)
+#include <wtf/cocoa/Entitlements.h>
+#endif
+
 namespace WebCore {
 
 #if !PLATFORM(MAC) && !PLATFORM(IOS_FAMILY) && !USE(GSTREAMER)
@@ -64,7 +68,7 @@ CaptureSourceOrError MockRealtimeVideoSource::create(String&& deviceID, AtomStri
     auto source = adoptRef(*new MockRealtimeVideoSource(WTFMove(deviceID), WTFMove(name), WTFMove(hashSalts), pageIdentifier));
     if (constraints) {
         if (auto error = source->applyConstraints(*constraints))
-            return CaptureSourceOrError({ WTFMove(error->badConstraint), MediaAccessDenialReason::InvalidConstraint });
+            return CaptureSourceOrError({ WTFMove(error->invalidConstraint), MediaAccessDenialReason::InvalidConstraint });
     }
 
     return CaptureSourceOrError(RealtimeVideoSource::create(WTFMove(source)));
@@ -212,7 +216,7 @@ const RealtimeMediaSourceCapabilities& MockRealtimeVideoSource::capabilities()
         updateCapabilities(capabilities);
 
         if (facingMode == VideoFacingMode::Environment) {
-            capabilities.setFocusDistance(CapabilityRange(0.2, std::numeric_limits<double>::max()));
+            capabilities.setFocusDistance({ 0.2, std::numeric_limits<double>::max() });
             supportedConstraints.setSupportsFocusDistance(true);
         }
 
@@ -227,15 +231,18 @@ const RealtimeMediaSourceCapabilities& MockRealtimeVideoSource::capabilities()
             supportedConstraints.setSupportsTorch(true);
         }
 
+        capabilities.setBackgroundBlur(std::get<MockCameraProperties>(m_device.properties).hasBackgroundBlur ? RealtimeMediaSourceCapabilities::BackgroundBlur::On : RealtimeMediaSourceCapabilities::BackgroundBlur::Off);
+        supportedConstraints.setSupportsBackgroundBlur(true);
+
         capabilities.setSupportedConstraints(supportedConstraints);
     } else if (mockDisplay()) {
-        capabilities.setWidth(CapabilityRange(72, std::get<MockDisplayProperties>(m_device.properties).defaultSize.width()));
-        capabilities.setHeight(CapabilityRange(45, std::get<MockDisplayProperties>(m_device.properties).defaultSize.height()));
-        capabilities.setFrameRate(CapabilityRange(.01, 60.0));
+        capabilities.setWidth({ 72, std::get<MockDisplayProperties>(m_device.properties).defaultSize.width() });
+        capabilities.setHeight({ 45, std::get<MockDisplayProperties>(m_device.properties).defaultSize.height() });
+        capabilities.setFrameRate({ .01, 60.0 });
     } else {
-        capabilities.setWidth(CapabilityRange(72, 2880));
-        capabilities.setHeight(CapabilityRange(45, 1800));
-        capabilities.setFrameRate(CapabilityRange(.01, 60.0));
+        capabilities.setWidth({ 72, 2880 });
+        capabilities.setHeight({ 45, 1800 });
+        capabilities.setFrameRate({ .01, 60.0 });
     }
 
     m_capabilities = WTFMove(capabilities);
@@ -266,10 +273,10 @@ auto MockRealtimeVideoSource::getPhotoCapabilities() -> Ref<PhotoCapabilitiesNat
     PhotoCapabilities photoCapabilities;
 
     auto height = capabilities.height();
-    photoCapabilities.imageHeight = { height.longRange().max, height.longRange().min, 1 };
+    photoCapabilities.imageHeight = { height.max(), height.min(), 1 };
 
     auto width = capabilities.width();
-    photoCapabilities.imageWidth = { width.longRange().max, width.longRange().min, 1 };
+    photoCapabilities.imageWidth = { width.max(), width.min(), 1 };
 
     m_photoCapabilities = WTFMove(photoCapabilities);
 
@@ -348,6 +355,8 @@ const RealtimeMediaSourceSettings& MockRealtimeVideoSource::settings()
             settings.setTorch(torch());
         }
 
+        supportedConstraints.setSupportsBackgroundBlur(true);
+        settings.setBackgroundBlur(std::get<MockCameraProperties>(m_device.properties).hasBackgroundBlur);
     } else {
         supportedConstraints.setSupportsDisplaySurface(true);
         supportedConstraints.setSupportsLogicalSurface(true);
@@ -418,6 +427,11 @@ void MockRealtimeVideoSource::startCaptureTimer()
 void MockRealtimeVideoSource::startProducingData()
 {
     ASSERT(!m_beingConfigured);
+
+#if ENABLE(EXTENSION_CAPABILITIES)
+    ASSERT(!RealtimeMediaSourceCenter::singleton().currentMediaEnvironment().isEmpty() || !WTF::processHasEntitlement("com.apple.developer.web-browser-engine.rendering"_s));
+#endif
+
     startCaptureTimer();
     m_startTime = MonotonicTime::now();
 }

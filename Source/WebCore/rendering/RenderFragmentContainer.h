@@ -104,9 +104,9 @@ public:
 
     void addLayoutOverflowForBox(const RenderBox&, const LayoutRect&);
     void addVisualOverflowForBox(const RenderBox&, const LayoutRect&);
-    LayoutRect visualOverflowRectForBox(const RenderBoxModelObject&) const;
+    LayoutRect visualOverflowRectForBox(const RenderBox&) const;
     LayoutRect layoutOverflowRectForBoxForPropagation(const RenderBox&);
-    LayoutRect visualOverflowRectForBoxForPropagation(const RenderBoxModelObject&);
+    LayoutRect visualOverflowRectForBoxForPropagation(const RenderBox&);
 
     LayoutRect rectFlowPortionForBox(const RenderBox&, const LayoutRect&) const;
     
@@ -115,7 +115,7 @@ public:
 
     bool canHaveChildren() const override { return false; }
     bool canHaveGeneratedChildren() const override { return true; }
-    VisiblePosition positionForPoint(const LayoutPoint&, const RenderFragmentContainer*) override;
+    VisiblePosition positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) override;
 
     virtual Vector<LayoutRect> fragmentRectsForFlowContentRect(const LayoutRect&) const;
 

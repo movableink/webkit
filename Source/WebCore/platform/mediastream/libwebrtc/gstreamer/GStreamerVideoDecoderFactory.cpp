@@ -48,9 +48,9 @@ typedef struct {
     int64_t renderTimeMs;
 } InputTimestamps;
 
-class GStreamerVideoDecoder : public webrtc::VideoDecoder {
+class GStreamerWebRTCVideoDecoder : public webrtc::VideoDecoder {
 public:
-    GStreamerVideoDecoder()
+    GStreamerWebRTCVideoDecoder()
         : m_pictureId(0)
         , m_width(0)
         , m_height(0)
@@ -112,12 +112,12 @@ public:
 
             auto bus = adoptGRef(gst_pipeline_get_bus(GST_PIPELINE(m_pipeline.get())));
             gst_bus_enable_sync_message_emission(bus.get());
-            g_signal_connect_swapped(bus.get(), "sync-message::warning", G_CALLBACK(+[](GStreamerVideoDecoder* decoder, GstMessage* message) {
+            g_signal_connect_swapped(bus.get(), "sync-message::warning", G_CALLBACK(+[](GStreamerWebRTCVideoDecoder* decoder, GstMessage* message) {
                 GUniqueOutPtr<GError> error;
                 gst_message_parse_warning(message, &error.outPtr(), nullptr);
                 decoder->handleError(error.get());
             }), this);
-            g_signal_connect_swapped(bus.get(), "sync-message::error", G_CALLBACK(+[](GStreamerVideoDecoder* decoder, GstMessage* message) {
+            g_signal_connect_swapped(bus.get(), "sync-message::error", G_CALLBACK(+[](GStreamerWebRTCVideoDecoder* decoder, GstMessage* message) {
                 GUniqueOutPtr<GError> error;
                 gst_message_parse_error(message, &error.outPtr(), nullptr);
                 decoder->handleError(error.get());
@@ -198,6 +198,14 @@ public:
             return WEBRTC_VIDEO_CODEC_UNINITIALIZED;
         }
 
+        // No renderTime provided, probably some issue with the WebRTC clock. Use a monotonically
+        // incrementing counter instead.
+        static int64_t s_forgedRenderTime { 0 };
+        if (!renderTimeMs) {
+            renderTimeMs = s_forgedRenderTime;
+            s_forgedRenderTime += 30 * GST_MSECOND;
+        }
+
         if (!GST_CLOCK_TIME_IS_VALID(m_firstBufferPts)) {
             GRefPtr<GstPad> srcpad = adoptGRef(gst_element_get_static_pad(m_src, "src"));
             m_firstBufferPts = (static_cast<guint64>(renderTimeMs)) * GST_MSECOND;
@@ -240,7 +248,7 @@ public:
         auto timestamps = m_dtsPtsMap[GST_BUFFER_PTS(buffer)];
         m_dtsPtsMap.erase(GST_BUFFER_PTS(buffer));
 
-        auto frame(convertGStreamerSampleToLibWebRTCVideoFrame(sample, webrtc::kVideoRotation_0,
+        auto frame(convertGStreamerSampleToLibWebRTCVideoFrame(WTFMove(sample), webrtc::kVideoRotation_0,
             timestamps.timestamp, timestamps.renderTimeMs));
 
         GST_BUFFER_DTS(buffer) = GST_CLOCK_TIME_NONE;
@@ -277,7 +285,7 @@ public:
         return { webrtc::SdpVideoFormat(Name()) };
     }
 
-    static GRefPtr<GstElementFactory> GstDecoderFactory(const char *capsStr)
+    static GRefPtr<GstElementFactory> GstDecoderFactory(const char* capsStr)
     {
         auto allDecoders = gst_element_factory_list_get_elements(GST_ELEMENT_FACTORY_TYPE_DECODER,
             GST_RANK_MARGINAL);
@@ -324,7 +332,7 @@ private:
     GstClockTime m_firstBufferDts;
 };
 
-class H264Decoder : public GStreamerVideoDecoder {
+class H264Decoder : public GStreamerWebRTCVideoDecoder {
 public:
     H264Decoder() { m_requireParse = true; }
 
@@ -333,7 +341,7 @@ public:
         if (codecSettings.codec_type() != webrtc::kVideoCodecH264)
             return WEBRTC_VIDEO_CODEC_ERR_PARAMETER;
 
-        return GStreamerVideoDecoder::Configure(codecSettings);
+        return GStreamerWebRTCVideoDecoder::Configure(codecSettings);
     }
 
     GstCaps* GetCapsForFrame(const webrtc::EncodedImage& image) final
@@ -358,7 +366,7 @@ public:
     }
 };
 
-class VP8Decoder : public GStreamerVideoDecoder {
+class VP8Decoder : public GStreamerWebRTCVideoDecoder {
 public:
     VP8Decoder() { }
     const gchar* Caps() final { return "video/x-vp8"; }
@@ -379,7 +387,7 @@ public:
     }
 };
 
-class VP9Decoder : public GStreamerVideoDecoder {
+class VP9Decoder : public GStreamerWebRTCVideoDecoder {
 public:
     VP9Decoder(bool isSupportingVP9Profile0 = true, bool isSupportingVP9Profile2 = true)
         : m_isSupportingVP9Profile0(isSupportingVP9Profile0)

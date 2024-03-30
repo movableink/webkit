@@ -973,17 +973,16 @@ template <bool shouldCreateIdentifier> ALWAYS_INLINE JSTokenType Lexer<LChar>::p
     const Identifier* ident = nullptr;
     
     if (shouldCreateIdentifier || m_parsingBuiltinFunction) {
-        int identifierLength = currentSourcePtr() - identifierStart;
-        ident = makeIdentifier(identifierStart, identifierLength);
+        std::span identifierSpan { identifierStart, static_cast<size_t>(currentSourcePtr() - identifierStart) };
         if (m_parsingBuiltinFunction && isBuiltinName) {
             if (isWellKnownSymbol)
-                ident = &m_arena->makeIdentifier(m_vm, m_vm.propertyNames->builtinNames().lookUpWellKnownSymbol(identifierStart, identifierLength));
+                ident = &m_arena->makeIdentifier(m_vm, m_vm.propertyNames->builtinNames().lookUpWellKnownSymbol(identifierSpan));
             else
-                ident = &m_arena->makeIdentifier(m_vm, m_vm.propertyNames->builtinNames().lookUpPrivateName(identifierStart, identifierLength));
+                ident = &m_arena->makeIdentifier(m_vm, m_vm.propertyNames->builtinNames().lookUpPrivateName(identifierSpan));
             if (!ident)
                 return INVALID_PRIVATE_NAME_ERRORTOK;
         } else {
-            ident = makeIdentifier(identifierStart, identifierLength);
+            ident = makeIdentifier(identifierSpan);
             if (m_parsingBuiltinFunction) {
                 if (!isSafeBuiltinIdentifier(m_vm, ident)) {
                     m_lexErrorMessage = makeString("The use of '"_s, ident->string(), "' is disallowed in builtin functions."_s);
@@ -1095,7 +1094,7 @@ JSTokenType Lexer<CharacterType>::parseIdentifierSlowCase(JSTokenData* tokenData
     auto fillBuffer = [&] (bool isStart = false) {
         // \uXXXX unicode characters or Surrogate pairs.
         if (identifierStart != currentSourcePtr())
-            m_buffer16.append(identifierStart, currentSourcePtr() - identifierStart);
+            m_buffer16.append(std::span(identifierStart, currentSourcePtr() - identifierStart));
 
         if (m_current == '\\') {
             tokenData->escaped = true;
@@ -1150,7 +1149,7 @@ JSTokenType Lexer<CharacterType>::parseIdentifierSlowCase(JSTokenData* tokenData
     const Identifier* ident = nullptr;
     if (shouldCreateIdentifier) {
         if (identifierStart != currentSourcePtr())
-            m_buffer16.append(identifierStart, currentSourcePtr() - identifierStart);
+            m_buffer16.append(std::span(identifierStart, currentSourcePtr() - identifierStart));
         ident = makeIdentifier(m_buffer16.data(), m_buffer16.size());
 
         tokenData->ident = ident;
@@ -1431,7 +1430,7 @@ typename Lexer<T>::StringParseResult Lexer<T>::parseTemplateLiteral(JSTokenData*
                     ASSERT_WITH_MESSAGE(rawStringStart != currentSourcePtr(), "We should have at least shifted the escape.");
 
                     if (rawStringsBuildMode == RawStringsBuildMode::BuildRawStrings) {
-                        m_bufferForRawTemplateString16.append(rawStringStart, currentSourcePtr() - rawStringStart);
+                        m_bufferForRawTemplateString16.append(std::span(rawStringStart, currentSourcePtr() - rawStringStart));
                         m_bufferForRawTemplateString16.append('\n');
                     }
 
@@ -1474,7 +1473,7 @@ typename Lexer<T>::StringParseResult Lexer<T>::parseTemplateLiteral(JSTokenData*
                     if (stringStart != currentSourcePtr())
                         append16(stringStart, currentSourcePtr() - stringStart);
                     if (rawStringStart != currentSourcePtr() && rawStringsBuildMode == RawStringsBuildMode::BuildRawStrings)
-                        m_bufferForRawTemplateString16.append(rawStringStart, currentSourcePtr() - rawStringStart);
+                        m_bufferForRawTemplateString16.append(std::span(rawStringStart, currentSourcePtr() - rawStringStart));
 
                     record16('\n');
                     if (rawStringsBuildMode == RawStringsBuildMode::BuildRawStrings)
@@ -1497,7 +1496,7 @@ typename Lexer<T>::StringParseResult Lexer<T>::parseTemplateLiteral(JSTokenData*
     if (currentSourcePtr() != stringStart)
         append16(stringStart, currentSourcePtr() - stringStart);
     if (rawStringStart != currentSourcePtr() && rawStringsBuildMode == RawStringsBuildMode::BuildRawStrings)
-        m_bufferForRawTemplateString16.append(rawStringStart, currentSourcePtr() - rawStringStart);
+        m_bufferForRawTemplateString16.append(std::span(rawStringStart, currentSourcePtr() - rawStringStart));
 
     if (!parseCookedFailed)
         tokenData->cooked = makeIdentifier(m_buffer16.data(), m_buffer16.size());
@@ -2519,8 +2518,18 @@ start:
             shift();
             goto inSingleLineComment;
         }
-        // Otherwise, it could be a valid PrivateName.
-        if (isSingleCharacterIdentStart(next) || next == '\\') {
+
+        bool isValidPrivateName;
+        if (LIKELY(isLatin1(next)))
+            isValidPrivateName = typesOfLatin1Characters[static_cast<LChar>(next)] == CharacterIdentifierStart || next == '\\';
+        else {
+            ASSERT(m_code + 1 < m_codeEnd);
+            char32_t codePoint;
+            U16_GET(m_code + 1, 0, 0, m_codeEnd - (m_code + 1), codePoint);
+            isValidPrivateName = isNonLatin1IdentStart(codePoint);
+        }
+
+        if (isValidPrivateName) {
             lexerFlags.remove(LexerFlags::DontBuildKeywords);
             goto parseIdent;
         }

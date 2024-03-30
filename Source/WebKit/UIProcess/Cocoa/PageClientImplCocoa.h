@@ -60,6 +60,11 @@ public:
     void gpuProcessDidExit() override;
 #endif
 
+#if ENABLE(MODEL_PROCESS)
+    void modelProcessDidFinishLaunching() override;
+    void modelProcessDidExit() override;
+#endif
+
     void themeColorWillChange() final;
     void themeColorDidChange() final;
     void underPageBackgroundColorWillChange() final;
@@ -104,6 +109,12 @@ public:
     void systemAudioCaptureChanged() final;
 
     WindowKind windowKind() final;
+
+#if ENABLE(UNIFIED_TEXT_REPLACEMENT)
+    void textReplacementSessionShowInformationForReplacementWithUUIDRelativeToRect(const WTF::UUID& sessionUUID, const WTF::UUID& replacementUUID, WebCore::IntRect selectionBoundsInRootView) final;
+
+    void textReplacementSessionUpdateStateForReplacementWithUUID(const WTF::UUID& sessionUUID, WebTextReplacementDataState, const WTF::UUID& replacementUUID) final;
+#endif
 
 protected:
     RetainPtr<WKWebView> webView() const { return m_webView.get(); }

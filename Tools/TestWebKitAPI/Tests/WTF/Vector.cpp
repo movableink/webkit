@@ -126,8 +126,7 @@ TEST(WTF_Vector, ConstructWithFromString)
     EXPECT_TRUE(s1 == vector[0]);
     EXPECT_TRUE(s2 == vector[1]);
     EXPECT_TRUE(s1 == vector[2]);
-    IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE
-    EXPECT_TRUE(s3.isNull());
+    SUPPRESS_USE_AFTER_MOVE EXPECT_TRUE(s3.isNull());
 }
 
 TEST(WTF_Vector, IsolatedCopy)
@@ -151,8 +150,7 @@ TEST(WTF_Vector, IsolatedCopy)
     EXPECT_FALSE(data2 == vector2[1].impl());
 
     auto vector3 = crossThreadCopy(WTFMove(vector1));
-    IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE
-    EXPECT_EQ(0U, vector1.size());
+    SUPPRESS_USE_AFTER_MOVE EXPECT_EQ(0U, vector1.size());
 
     EXPECT_TRUE("s1"_s == vector3[0]);
     EXPECT_TRUE("s2"_s == vector3[1]);
@@ -323,7 +321,7 @@ TEST(WTF_Vector, CopyFromOtherMinCapacity)
 TEST(WTF_Vector, ConstructorOtherRawPointerTypeAndLength)
 {
     const UChar uchars[] = { 'b', 'a', 'r' };
-    Vector<LChar> vector(uchars, 3);
+    Vector<LChar> vector(std::span(uchars, static_cast<size_t>(3)));
     EXPECT_EQ(vector.size(), 3U);
     EXPECT_EQ(vector[0], 'b');
     EXPECT_EQ(vector[1], 'a');
@@ -433,8 +431,7 @@ TEST(WTF_Vector, MoveOnly_UncheckedAppend)
     for (size_t i = 0; i < 100; ++i) {
         MoveOnly moveOnly(i);
         vector.append(WTFMove(moveOnly));
-        IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE
-        EXPECT_EQ(0U, moveOnly.value());
+        SUPPRESS_USE_AFTER_MOVE EXPECT_EQ(0U, moveOnly.value());
     }
 
     for (size_t i = 0; i < 100; ++i)
@@ -448,8 +445,7 @@ TEST(WTF_Vector, MoveOnly_Append)
     for (size_t i = 0; i < 100; ++i) {
         MoveOnly moveOnly(i);
         vector.append(WTFMove(moveOnly));
-        IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE
-        EXPECT_EQ(0U, moveOnly.value());
+        SUPPRESS_USE_AFTER_MOVE EXPECT_EQ(0U, moveOnly.value());
     }
 
     for (size_t i = 0; i < 100; ++i)
@@ -464,8 +460,7 @@ TEST(WTF_Vector, MoveOnly_Append)
             vector.append(j);
         vector.append(WTFMove(vector[0]));
 
-        IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE
-        EXPECT_EQ(0U, vector[0].value());
+        SUPPRESS_USE_AFTER_MOVE EXPECT_EQ(0U, vector[0].value());
 
         for (size_t j = 0; j < i; ++j)
             EXPECT_EQ(j, vector[j + 1].value());
@@ -480,8 +475,7 @@ TEST(WTF_Vector, MoveOnly_Insert)
     for (size_t i = 0; i < 100; ++i) {
         MoveOnly moveOnly(i);
         vector.insert(0, WTFMove(moveOnly));
-        IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE
-        EXPECT_EQ(0U, moveOnly.value());
+        SUPPRESS_USE_AFTER_MOVE EXPECT_EQ(0U, moveOnly.value());
     }
 
     EXPECT_EQ(vector.size(), 100U);
@@ -491,8 +485,7 @@ TEST(WTF_Vector, MoveOnly_Insert)
     for (size_t i = 0; i < 200; i += 2) {
         MoveOnly moveOnly(1000 + i);
         vector.insert(i, WTFMove(moveOnly));
-        IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE
-        EXPECT_EQ(0U, moveOnly.value());
+        SUPPRESS_USE_AFTER_MOVE EXPECT_EQ(0U, moveOnly.value());
     }
 
     EXPECT_EQ(200U, vector.size());
@@ -511,8 +504,7 @@ TEST(WTF_Vector, MoveOnly_TakeLast)
     for (size_t i = 0; i < 100; ++i) {
         MoveOnly moveOnly(i);
         vector.append(WTFMove(moveOnly));
-        IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE
-        EXPECT_EQ(0U, moveOnly.value());
+        SUPPRESS_USE_AFTER_MOVE EXPECT_EQ(0U, moveOnly.value());
     }
 
     EXPECT_EQ(100U, vector.size());
@@ -1723,9 +1715,9 @@ TEST(WTF_Vector, HashKeyString)
 TEST(WTF_Vector, ConstructorFromRawPointerAndSize)
 {
     constexpr size_t inputSize = 5;
-    uint8_t input[inputSize] = { 1, 2, 3, 4, 5 };
+    std::array<uint8_t, inputSize> input { 1, 2, 3, 4, 5 };
 
-    Vector<uint8_t> vector { input, inputSize };
+    Vector<uint8_t> vector { input };
     ASSERT_EQ(vector.size(), inputSize);
     EXPECT_EQ(vector[0], 1);
     EXPECT_EQ(vector[1], 2);
@@ -1752,10 +1744,10 @@ TEST(WTF_Vector, MoveConstructor)
         Vector<String> strings({ "a"_str, "b"_str, "c"_str, "d"_str, "e"_str });
         EXPECT_EQ(strings.size(), 5U);
         Vector<String> strings2(WTFMove(strings));
-        IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE
-        EXPECT_EQ(strings.size(), 0U);
-        IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE
-        EXPECT_EQ(strings.capacity(), 0U);
+        SUPPRESS_USE_AFTER_MOVE {
+            EXPECT_EQ(strings.size(), 0U);
+            EXPECT_EQ(strings.capacity(), 0U);
+        }
         EXPECT_EQ(strings2.size(), 5U);
         EXPECT_EQ(strings2.capacity(), 5U);
         EXPECT_STREQ(strings2[0].utf8().data(), "a");
@@ -1774,10 +1766,10 @@ TEST(WTF_Vector, MoveConstructor)
         EXPECT_EQ(strings.size(), 5U);
         EXPECT_EQ(strings.capacity(), 10U);
         Vector<String, 10> strings2(WTFMove(strings));
-        IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE
-        EXPECT_EQ(strings.size(), 0U);
-        IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE
-        EXPECT_EQ(strings.capacity(), 10U);
+        SUPPRESS_USE_AFTER_MOVE {
+            EXPECT_EQ(strings.size(), 0U);
+            EXPECT_EQ(strings.capacity(), 10U);
+        }
         EXPECT_EQ(strings2.size(), 5U);
         EXPECT_EQ(strings2.capacity(), 10U);
         EXPECT_STREQ(strings2[0].utf8().data(), "a");
@@ -1796,10 +1788,10 @@ TEST(WTF_Vector, MoveConstructor)
         EXPECT_EQ(strings.size(), 5U);
         EXPECT_EQ(strings.capacity(), 5U);
         Vector<String, 2> strings2(WTFMove(strings));
-        IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE
-        EXPECT_EQ(strings.size(), 0U);
-        IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE
-        EXPECT_EQ(strings.capacity(), 2U);
+        SUPPRESS_USE_AFTER_MOVE {
+            EXPECT_EQ(strings.size(), 0U);
+            EXPECT_EQ(strings.capacity(), 2U);
+        }
         EXPECT_EQ(strings2.size(), 5U);
         EXPECT_EQ(strings2.capacity(), 5U);
         EXPECT_STREQ(strings2[0].utf8().data(), "a");
@@ -1822,10 +1814,10 @@ TEST(WTF_Vector, MoveAssignmentOperator)
         EXPECT_EQ(strings.capacity(), 5U);
         Vector<String> strings2;
         strings2 = WTFMove(strings);
-        IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE
-        EXPECT_EQ(strings.size(), 0U);
-        IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE
-        EXPECT_EQ(strings.capacity(), 0U);
+        SUPPRESS_USE_AFTER_MOVE {
+            EXPECT_EQ(strings.size(), 0U);
+            EXPECT_EQ(strings.capacity(), 0U);
+        }
         EXPECT_EQ(strings2.size(), 5U);
         EXPECT_EQ(strings2.capacity(), 5U);
         EXPECT_STREQ(strings2[0].utf8().data(), "a");
@@ -1844,10 +1836,10 @@ TEST(WTF_Vector, MoveAssignmentOperator)
         EXPECT_EQ(strings.size(), 5U);
         Vector<String> strings2({ "foo"_str, "bar"_str });
         strings2 = WTFMove(strings);
-        IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE
-        EXPECT_EQ(strings.size(), 0U);
-        IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE
-        EXPECT_EQ(strings.capacity(), 0U);
+        SUPPRESS_USE_AFTER_MOVE {
+            EXPECT_EQ(strings.size(), 0U);
+            EXPECT_EQ(strings.capacity(), 0U);
+        }
         EXPECT_EQ(strings2.size(), 5U);
         EXPECT_EQ(strings2.capacity(), 5U);
         EXPECT_STREQ(strings2[0].utf8().data(), "a");
@@ -1867,10 +1859,10 @@ TEST(WTF_Vector, MoveAssignmentOperator)
         EXPECT_EQ(strings.capacity(), 10U);
         Vector<String, 10> strings2;
         strings2 = WTFMove(strings);
-        IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE
-        EXPECT_EQ(strings.size(), 0U);
-        IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE
-        EXPECT_EQ(strings.capacity(), 10U);
+        SUPPRESS_USE_AFTER_MOVE {
+            EXPECT_EQ(strings.size(), 0U);
+            EXPECT_EQ(strings.capacity(), 10U);
+        }
         EXPECT_EQ(strings2.size(), 5U);
         EXPECT_EQ(strings2.capacity(), 10U);
         EXPECT_STREQ(strings2[0].utf8().data(), "a");
@@ -1890,10 +1882,10 @@ TEST(WTF_Vector, MoveAssignmentOperator)
         EXPECT_EQ(strings.capacity(), 10U);
         Vector<String, 10> strings2({ "foo"_str, "bar"_str });
         strings2 = WTFMove(strings);
-        IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE
-        EXPECT_EQ(strings.size(), 0U);
-        IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE
-        EXPECT_EQ(strings.capacity(), 10U);
+        SUPPRESS_USE_AFTER_MOVE {
+            EXPECT_EQ(strings.size(), 0U);
+            EXPECT_EQ(strings.capacity(), 10U);
+        }
         EXPECT_EQ(strings2.size(), 5U);
         EXPECT_EQ(strings2.capacity(), 10U);
         EXPECT_STREQ(strings2[0].utf8().data(), "a");
@@ -1913,10 +1905,10 @@ TEST(WTF_Vector, MoveAssignmentOperator)
         EXPECT_EQ(strings.capacity(), 5U);
         Vector<String, 2> strings2;
         strings2 = WTFMove(strings);
-        IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE
-        EXPECT_EQ(strings.size(), 0U);
-        IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE
-        EXPECT_EQ(strings.capacity(), 2U);
+        SUPPRESS_USE_AFTER_MOVE {
+            EXPECT_EQ(strings.size(), 0U);
+            EXPECT_EQ(strings.capacity(), 2U);
+        }
         EXPECT_EQ(strings2.size(), 5U);
         EXPECT_EQ(strings2.capacity(), 5U);
         EXPECT_STREQ(strings2[0].utf8().data(), "a");
@@ -1936,10 +1928,10 @@ TEST(WTF_Vector, MoveAssignmentOperator)
         EXPECT_EQ(strings.capacity(), 5U);
         Vector<String, 2> strings2({ "foo"_str, "bar"_str });
         strings2 = WTFMove(strings);
-        IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE
-        EXPECT_EQ(strings.size(), 0U);
-        IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE
-        EXPECT_EQ(strings.capacity(), 2U);
+        SUPPRESS_USE_AFTER_MOVE {
+            EXPECT_EQ(strings.size(), 0U);
+            EXPECT_EQ(strings.capacity(), 2U);
+        }
         EXPECT_EQ(strings2.size(), 5U);
         EXPECT_EQ(strings2.capacity(), 5U);
         EXPECT_STREQ(strings2[0].utf8().data(), "a");
@@ -1959,10 +1951,10 @@ TEST(WTF_Vector, MoveAssignmentOperator)
         EXPECT_EQ(strings.capacity(), 5U);
         Vector<String, 2> strings2({ "foo"_str, "bar"_str, "baz"_str });
         strings2 = WTFMove(strings);
-        IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE
-        EXPECT_EQ(strings.size(), 0U);
-        IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE
-        EXPECT_EQ(strings.capacity(), 2U);
+        SUPPRESS_USE_AFTER_MOVE {
+            EXPECT_EQ(strings.size(), 0U);
+            EXPECT_EQ(strings.capacity(), 2U);
+        }
         EXPECT_EQ(strings2.size(), 5U);
         EXPECT_EQ(strings2.capacity(), 5U);
         EXPECT_STREQ(strings2[0].utf8().data(), "a");
@@ -1982,10 +1974,10 @@ TEST(WTF_Vector, MoveAssignmentOperator)
         EXPECT_EQ(strings.capacity(), 2U);
         Vector<String, 2> strings2({ "foo"_str, "bar"_str, "baz"_str });
         strings2 = WTFMove(strings);
-        IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE
-        EXPECT_EQ(strings.size(), 0U);
-        IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE
-        EXPECT_EQ(strings.capacity(), 2U);
+        SUPPRESS_USE_AFTER_MOVE {
+            EXPECT_EQ(strings.size(), 0U);
+            EXPECT_EQ(strings.capacity(), 2U);
+        }
         EXPECT_EQ(strings2.size(), 2U);
         EXPECT_EQ(strings2.capacity(), 2U);
         EXPECT_STREQ(strings2[0].utf8().data(), "a");
@@ -2092,6 +2084,28 @@ TEST(WTF_Vector, FlatMapInnerStruct)
     EXPECT_EQ(2, mapped[1]);
     EXPECT_EQ(3, mapped[2]);
     EXPECT_EQ(4, mapped[3]);
+}
+
+TEST(WTF_Vector, InsertFill)
+{
+    Vector<unsigned> vector;
+
+    for (size_t i = 0; i < 100; ++i)
+        vector.append(i);
+
+    EXPECT_EQ(vector.size(), 100U);
+
+    vector.insertFill(50, 0xffff, 100);
+    EXPECT_EQ(vector.size(), 200U);
+
+    for (size_t i = 0; i < 50; ++i)
+        EXPECT_EQ(vector[i], i);
+
+    for (size_t i = 0; i < 100; ++i)
+        EXPECT_EQ(vector[i + 50], 0xffffU);
+
+    for (size_t i = 0; i < 50; ++i)
+        EXPECT_EQ(vector[i + 150], i + 50U);
 }
 
 } // namespace TestWebKitAPI

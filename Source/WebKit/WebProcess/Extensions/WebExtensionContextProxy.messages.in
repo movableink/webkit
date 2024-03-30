@@ -39,6 +39,16 @@ messages -> WebExtensionContextProxy {
     // Cookies
     DispatchCookiesChangedEvent()
 
+#if ENABLE(INSPECTOR_EXTENSIONS)
+    // DevTools
+    AddInspectorPageIdentifier(WebCore::PageIdentifier pageID, std::optional<WebKit::WebExtensionTabIdentifier> tabIdentifier, std::optional<WebKit::WebExtensionWindowIdentifier> windowIdentifier)
+    AddInspectorBackgroundPageIdentifier(WebCore::PageIdentifier pageID, std::optional<WebKit::WebExtensionTabIdentifier> tabIdentifier, std::optional<WebKit::WebExtensionWindowIdentifier> windowIdentifier)
+    DispatchDevToolsExtensionPanelShownEvent(Inspector::ExtensionTabID identifier, WebCore::FrameIdentifier frameIdentifier)
+    DispatchDevToolsExtensionPanelHiddenEvent(Inspector::ExtensionTabID identifier)
+    DispatchDevToolsNetworkNavigatedEvent(URL url)
+    DispatchDevToolsPanelsThemeChangedEvent(Inspector::ExtensionAppearance appearance)
+#endif
+
     // Extension
     SetBackgroundPageIdentifier(WebCore::PageIdentifier pageID)
     AddPopupPageIdentifier(WebCore::PageIdentifier pageID, std::optional<WebKit::WebExtensionTabIdentifier> tabIdentifier, std::optional<WebKit::WebExtensionWindowIdentifier> windowIdentifier)
@@ -48,20 +58,22 @@ messages -> WebExtensionContextProxy {
     DispatchMenusClickedEvent(struct WebKit::WebExtensionMenuItemParameters menuItemParameters, bool wasChecked, struct WebKit::WebExtensionMenuItemContextParameters contextParameters, std::optional<WebKit::WebExtensionTabParameters> tabParameters)
 
     // Permissions
+    UpdateGrantedPermissions(HashMap<String, WallTime> permissions)
     DispatchPermissionsEvent(WebKit::WebExtensionEventListenerType type, HashSet<String> permissions, HashSet<String> origins)
 
     // Ports
-    DispatchPortMessageEvent(WebKit::WebExtensionPortChannelIdentifier channelIdentifier, String messageJSON)
+    DispatchPortMessageEvent(std::optional<WebKit::WebPageProxyIdentifier> sendingPageProxyIdentifier, WebKit::WebExtensionPortChannelIdentifier channelIdentifier, String messageJSON)
     DispatchPortDisconnectEvent(WebKit::WebExtensionPortChannelIdentifier channelIdentifier)
 
     // Runtime
-    DispatchRuntimeMessageEvent(WebKit::WebExtensionContentWorldType contentWorldType, String messageJSON, std::optional<WebKit::WebExtensionFrameIdentifier> targetFrameIdentifier, struct WebKit::WebExtensionMessageSenderParameters senderParameters) -> (std::optional<String> replyJSON)
-    DispatchRuntimeConnectEvent(WebKit::WebExtensionContentWorldType contentWorldType, WebKit::WebExtensionPortChannelIdentifier channelIdentifier, String name, std::optional<WebKit::WebExtensionFrameIdentifier> targetFrameIdentifier, struct WebKit::WebExtensionMessageSenderParameters senderParameters) -> (size_t firedEventCount)
-    DispatchRuntimeInstalledEvent(WebKit::WebExtensionContext::InstallReason installReason, String previousVersion)
+    DispatchRuntimeMessageEvent(WebKit::WebExtensionContentWorldType contentWorldType, String messageJSON, std::optional<WebKit::WebExtensionFrameIdentifier> targetFrameIdentifier, struct WebKit::WebExtensionMessageSenderParameters senderParameters) -> (String replyJSON)
+    DispatchRuntimeConnectEvent(WebKit::WebExtensionContentWorldType contentWorldType, WebKit::WebExtensionPortChannelIdentifier channelIdentifier, String name, std::optional<WebKit::WebExtensionFrameIdentifier> targetFrameIdentifier, struct WebKit::WebExtensionMessageSenderParameters senderParameters) -> (HashCountedSet<WebKit::WebPageProxyIdentifier> addedPortCounts)
+    DispatchRuntimeInstalledEvent(enum:uint8_t WebKit::WebExtensionContextInstallReason installReason, String previousVersion)
     DispatchRuntimeStartupEvent()
 
     // Storage
     SetStorageAccessLevel(bool allowedInContentScripts)
+    DispatchStorageChangedEvent(String onChangedJSON, WebKit::WebExtensionDataType dataType, WebKit::WebExtensionContentWorldType contentWorldType)
 
     // Tabs Events
     DispatchTabsCreatedEvent(WebKit::WebExtensionTabParameters tabParameters)
