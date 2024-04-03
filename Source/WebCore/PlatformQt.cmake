@@ -146,7 +146,7 @@ list(APPEND WebCore_SOURCES
     platform/graphics/qt/GradientQt.cpp
     platform/graphics/qt/GraphicsContextQt.cpp
     platform/graphics/qt/IconQt.cpp
-    platform/graphics/qt/ImageQt.cpp
+    platform/graphics/qt/ImageAdapterQt.cpp
     platform/graphics/qt/ImageBufferQtBackend.cpp
     platform/graphics/qt/ImageBufferUtilitiesQt.cpp
     platform/graphics/qt/IntPointQt.cpp

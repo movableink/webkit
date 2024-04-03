@@ -105,12 +105,12 @@ static QImage loadResourcePixmap(const char* name)
 
 namespace WebCore {
 
-Ref<Image> Image::loadPlatformResource(const char* name)
+Ref<Image> ImageAdapter::loadPlatformResource(const char* name)
 {
     return StillImage::create(loadResourcePixmap(name));
 }
 
-void Image::setPlatformResource(const char* name, const QImage& pixmap)
+void ImageAdapter::setPlatformResource(const char* name, const QImage& pixmap)
 {
     if (pixmap.isNull())
         graphics().remove(name);
@@ -118,7 +118,7 @@ void Image::setPlatformResource(const char* name, const QImage& pixmap)
         graphics().add(name, WebGraphicVector { pixmap });
 }
 
-void BitmapImage::invalidatePlatformData()
+void BitmapImage::invalidate()
 {
 }
 
