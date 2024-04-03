@@ -45,7 +45,7 @@ public:
     void encodeVariant(const String& key, const QVariant&);
 
 public:
-    void encodeBytes(const String& key, const uint8_t*, size_t) override;
+    void encodeBytes(const String& key, std::span<const uint8_t>) override;
     void encodeBool(const String& key, bool) override;
     void encodeUInt32(const String& key, uint32_t) override;
     void encodeUInt64(const String& key, uint64_t) override;

@@ -37,28 +37,28 @@ String::String(const QString& qstr)
 {
     if (qstr.isNull())
         return;
-    m_impl = StringImpl::create(reinterpret_cast_ptr<const UChar*>(qstr.constData()), qstr.length());
+    m_impl = StringImpl::create({ reinterpret_cast_ptr<const UChar*>(qstr.constData()), static_cast<std::size_t>(qstr.length()) });
 }
 
 String::String(QLatin1StringView view)
 {
     if (view.isNull())
         return;
-    m_impl = StringImpl::create(reinterpret_cast_ptr<const LChar*>(view.data()), view.length());
+    m_impl = StringImpl::create({ reinterpret_cast_ptr<const LChar*>(view.data()), static_cast<std::size_t>(view.length()) });
 }
 
 String::String(QStringView view)
 {
     if (view.isNull())
         return;
-    m_impl = StringImpl::create(reinterpret_cast_ptr<const UChar*>(view.data()), view.length());
+    m_impl = StringImpl::create({ reinterpret_cast_ptr<const UChar*>(view.data()), static_cast<std::size_t>(view.length()) });
 }
 
 String::String(QByteArrayView view)
 {
     if (view.isNull())
         return;
-    m_impl = StringImpl::create(reinterpret_cast_ptr<const LChar*>(view.data()), view.length());
+    m_impl = StringImpl::create({ reinterpret_cast_ptr<const LChar*>(view.data()), static_cast<std::size_t>(view.length()) });
 }
 
 String::operator QString() const

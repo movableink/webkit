@@ -43,9 +43,9 @@ KeyedEncoderQt::KeyedEncoderQt()
     m_objectStack.constructAndAppend(QString(), QVariantMap());
 }
 
-void KeyedEncoderQt::encodeBytes(const String& key, const uint8_t* bytes, size_t size)
+void KeyedEncoderQt::encodeBytes(const String& key, std::span<const uint8_t> bytes)
 {
-    currentObject().insert(key, QByteArray::fromRawData(reinterpret_cast<const char*>(bytes), size));
+    currentObject().insert(key, QByteArray::fromRawData(reinterpret_cast<const char*>(bytes.data()), bytes.size()));
 }
 
 void KeyedEncoderQt::encodeBool(const String& key, bool value)
@@ -132,7 +132,7 @@ RefPtr<SharedBuffer> KeyedEncoderQt::finishEncoding()
     QDataStream stream(&data, QIODevice::WriteOnly);
     stream << toMap();
     // TODO: Wrap SharedBuffer around QByteArray when it's possible
-    return SharedBuffer::create(data.data(), data.size());
+    return SharedBuffer::create(std::span<const uint8_t> { reinterpret_cast<const uint8_t*>(data.constData()), static_cast<std::size_t>(data.size()) });
 }
 
 QVariantMap& KeyedEncoderQt::toMap()
