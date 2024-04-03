@@ -437,26 +437,26 @@ if (USE_COMMONCRYPTO)
     list(APPEND WebCore_SOURCES
         crypto/CommonCryptoUtilities.cpp
 
-        crypto/mac/CommonCryptoDERUtilities.cpp
-        crypto/mac/CryptoAlgorithmAES_CBCMac.cpp
-        crypto/mac/CryptoAlgorithmAES_CFBMac.cpp
-        crypto/mac/CryptoAlgorithmAES_CTRMac.cpp
-        crypto/mac/CryptoAlgorithmAES_GCMMac.cpp
-        crypto/mac/CryptoAlgorithmAES_KWMac.cpp
-        crypto/mac/CryptoAlgorithmECDHMac.cpp
-        crypto/mac/CryptoAlgorithmECDSAMac.cpp
-        crypto/mac/CryptoAlgorithmHKDFMac.cpp
-        crypto/mac/CryptoAlgorithmHMACMac.cpp
-        crypto/mac/CryptoAlgorithmPBKDF2Mac.cpp
-        crypto/mac/CryptoAlgorithmRSAES_PKCS1_v1_5Mac.cpp
-        crypto/mac/CryptoAlgorithmRSASSA_PKCS1_v1_5Mac.cpp
-        crypto/mac/CryptoAlgorithmRSA_OAEPMac.cpp
-        crypto/mac/CryptoAlgorithmRSA_PSSMac.cpp
-        crypto/mac/CryptoAlgorithmRegistryMac.cpp
-        crypto/mac/CryptoKeyECMac.cpp
-        crypto/mac/CryptoKeyMac.cpp
-        crypto/mac/CryptoKeyRSAMac.cpp
-        crypto/mac/CryptoUtilitiesCocoa.cpp
+        crypto/cocoa/CommonCryptoDERUtilities.cpp
+        crypto/cocoa/CryptoAlgorithmAESCBCMac.cpp
+        crypto/cocoa/CryptoAlgorithmAESCFBMac.cpp
+        crypto/cocoa/CryptoAlgorithmAESCTRMac.cpp
+        crypto/cocoa/CryptoAlgorithmAESGCMMac.cpp
+        crypto/cocoa/CryptoAlgorithmAESKWMac.cpp
+        crypto/cocoa/CryptoAlgorithmECDHMac.cpp
+        crypto/cocoa/CryptoAlgorithmECDSAMac.cpp
+        crypto/cocoa/CryptoAlgorithmHKDFMac.cpp
+        crypto/cocoa/CryptoAlgorithmHMACMac.cpp
+        crypto/cocoa/CryptoAlgorithmPBKDF2Mac.cpp
+        crypto/cocoa/CryptoAlgorithmRSAES_PKCS1_v1_5Mac.cpp
+        crypto/cocoa/CryptoAlgorithmRSASSA_PKCS1_v1_5Mac.cpp
+        crypto/cocoa/CryptoAlgorithmRSA_OAEPMac.cpp
+        crypto/cocoa/CryptoAlgorithmRSA_PSSMac.cpp
+        crypto/cocoa/CryptoAlgorithmRegistryMac.cpp
+        crypto/cocoa/CryptoKeyECMac.cpp
+        crypto/cocoa/CryptoKeyMac.cpp
+        crypto/cocoa/CryptoKeyRSAMac.cpp
+        crypto/cocoa/CryptoUtilitiesCocoa.cpp
 
         crypto/qt/SerializedCryptoKeyWrapNone.cpp
     )
