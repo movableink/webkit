@@ -67,7 +67,7 @@ public:
 
     ~TimerObject()
     {
-        LockHolder locker(m_runLoop->m_loopLock);
+        Locker<Lock> locker(m_runLoop->m_loopLock);
         TimerObjectMap::iterator it = m_runLoop->m_timerObjects.find(QThread::currentThread());
         if (it != m_runLoop->m_timerObjects.end())
             m_runLoop->m_timerObjects.remove(it);
@@ -89,11 +89,11 @@ public:
         timer->m_ID = 0;
     }
     Q_SLOT void startWithLock(RunLoop::TimerBase* timer, int milliseconds) {
-        LockHolder locker(m_runLoop->m_loopLock);
+        Locker<Lock> locker(m_runLoop->m_loopLock);
         start(timer, milliseconds);
     }
     Q_SLOT void stopWithLock(RunLoop::TimerBase* timer) {
-        LockHolder locker(m_runLoop->m_loopLock);
+        Locker<Lock> locker(m_runLoop->m_loopLock);
         stop(timer);
     }
 
@@ -195,7 +195,7 @@ void RunLoop::TimerBase::start(Seconds nextFireInterval, bool repeat)
 {
     stop();
 
-    LockHolder locker(m_runLoop->m_loopLock);
+    Locker<Lock> locker(m_runLoop->m_loopLock);
 
     m_isActive = true;
     m_isRepeating = repeat;
@@ -220,7 +220,7 @@ void RunLoop::TimerBase::start(Seconds nextFireInterval, bool repeat)
 
 void RunLoop::TimerBase::stop()
 {
-    LockHolder locker(m_runLoop->m_loopLock);
+    Locker<Lock> locker(m_runLoop->m_loopLock);
     if (!m_isActive)
         return;
 
@@ -238,7 +238,7 @@ void RunLoop::TimerBase::stop()
 
 bool RunLoop::TimerBase::isActive() const
 {
-    LockHolder locker(m_runLoop->m_loopLock);
+    Locker<Lock> locker(m_runLoop->m_loopLock);
     return m_isActive;
 }
 
