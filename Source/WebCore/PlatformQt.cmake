@@ -169,7 +169,7 @@ list(APPEND WebCore_SOURCES
     platform/network/qt/DNSResolveQueueQt.cpp
     platform/network/qt/NetworkStateNotifierQt.cpp
     platform/network/qt/NetworkStorageSessionQt.cpp
-    platform/network/qt/PublicSuffixQt.cpp
+    platform/network/qt/PublicSuffixStoreQt.cpp
     platform/network/qt/QNetworkReplyHandler.cpp
     platform/network/qt/QtMIMETypeSniffer.cpp
     platform/network/qt/ResourceHandleQt.cpp
