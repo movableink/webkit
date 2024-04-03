@@ -49,7 +49,7 @@ namespace WebCore {
 #ifndef QT_NO_CURSOR
 static std::optional<QCursor> createCustomCursor(Image* image, const IntPoint& hotSpot)
 {
-    QImage nativeImage = image->nativeImageForCurrentFrame()->platformImage();
+    QImage nativeImage = image->currentNativeImage()->platformImage();
     if (nativeImage.isNull())
         return std::nullopt;
     IntPoint effectiveHotSpot = determineHotSpot(image, hotSpot);

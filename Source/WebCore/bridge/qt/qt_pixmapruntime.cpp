@@ -247,7 +247,7 @@ QVariant QtPixmapRuntime::toQt(JSContextRef context, JSObjectRef obj, QMetaType:
     if (!image)
         return emptyVariantForHint(hint);
 
-    QImage nativeImage = image->nativeImageForCurrentFrame()->platformImage();
+    QImage nativeImage = image->currentNativeImage()->platformImage();
     if (nativeImage.isNull())
         return emptyVariantForHint(hint);
 
