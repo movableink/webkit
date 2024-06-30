@@ -57,7 +57,9 @@ public:
     void updateSizes(ForceUpdate force = ForceUpdate::No);
     void updateDisplay();
 
+    TextTrackRepresentation* textTrackRepresentation() const { return m_textTrackRepresentation.get(); }
     void updateTextTrackRepresentationImageIfNeeded();
+    void requiresTextTrackRepresentationChanged();
 
     void enteredFullscreen();
     void exitedFullscreen();
@@ -89,7 +91,7 @@ private:
     const Logger& logger() const final;
     const void* logIdentifier() const final;
     WTFLogChannel& logChannel() const final;
-    const char* logClassName() const final { return "MediaControlTextTrackContainerElement"; }
+    ASCIILiteral logClassName() const final { return "MediaControlTextTrackContainerElement"_s; }
     mutable RefPtr<Logger> m_logger;
     mutable const void* m_logIdentifier { nullptr };
 #endif

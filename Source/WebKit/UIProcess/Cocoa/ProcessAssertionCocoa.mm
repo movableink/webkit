@@ -57,7 +57,7 @@ using WebKit::ProcessAndUIAssertion;
 
 static WorkQueue& assertionsWorkQueue()
 {
-    static NeverDestroyed<Ref<WorkQueue>> workQueue(WorkQueue::create("ProcessAssertion Queue", WorkQueue::QOS::UserInitiated));
+    static NeverDestroyed<Ref<WorkQueue>> workQueue(WorkQueue::create("ProcessAssertion Queue"_s, WorkQueue::QOS::UserInitiated));
     return workQueue.get();
 }
 
@@ -342,6 +342,8 @@ static ASCIILiteral runningBoardNameForAssertionType(ProcessAssertionType assert
         return "Foreground"_s;
     case ProcessAssertionType::MediaPlayback:
         return "MediaPlayback"_s;
+    case ProcessAssertionType::FinishTaskCanSleep:
+        return "FinishTaskCanSleep"_s;
     case ProcessAssertionType::FinishTaskInterruptable:
         return "FinishTaskInterruptable"_s;
     case ProcessAssertionType::BoostedJetsam:
@@ -359,6 +361,7 @@ static ASCIILiteral runningBoardDomainForAssertionType(ProcessAssertionType asse
     case ProcessAssertionType::MediaPlayback:
     case ProcessAssertionType::BoostedJetsam:
         return "com.apple.webkit"_s;
+    case ProcessAssertionType::FinishTaskCanSleep:
     case ProcessAssertionType::FinishTaskInterruptable:
         return "com.apple.common"_s;
     }
@@ -476,9 +479,8 @@ void ProcessAssertion::acquireSync()
     RELEASE_LOG(ProcessSuspension, "%p - ProcessAssertion::acquireSync Trying to take RBS assertion '%{public}s' for process with PID=%d", this, m_reason.utf8().data(), m_pid);
 #if USE(EXTENSIONKIT)
     if (m_process && m_capability && m_capability->hasPlatformCapability()) {
-        auto capability = m_capability->platformCapability();
         Locker locker { s_capabilityLock };
-        auto grant = m_process->grantCapability(capability);
+        auto grant = m_process->grantCapability(m_capability->platformCapability(), m_capability->didInvalidateBlock());
         m_grant.setPlatformGrant(WTFMove(grant));
         if (m_grant.isValid()) {
             RELEASE_LOG(ProcessSuspension, "%p - ProcessAssertion() Successfully granted capability", this);

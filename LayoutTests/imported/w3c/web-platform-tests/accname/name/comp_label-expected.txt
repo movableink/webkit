@@ -114,9 +114,6 @@ x	x
 x	x
 
 x
-Undefined aria-label tests
-
-
 Name computation precedence tests
 
 x   x    x  x label    label   x
@@ -234,7 +231,7 @@ PASS label valid on nav element
 PASS label valid on list (ordered) element
 PASS label valid on section element
 PASS label valid on select element
-FAIL label valid on option element assert_equals: <option aria-label="label" value="foo" data-expectedlabel="label" data-testname="label valid on option element" class="ex">x</option> expected "label" but got ""
+PASS label valid on option element
 PASS label valid on table element
 PASS label valid on thead element
 PASS label valid on th element with the scope of col
@@ -245,24 +242,10 @@ PASS label valid on td element
 PASS label valid on tfoot element
 PASS label valid on textarea element
 PASS label valid on list (unordered) element
-FAIL aria-label undefined on img w/ alt assert_equals: <img alt="alt" aria-label="undefined" data-expectedlabel="alt" data-testname="aria-label undefined on img w/ alt" class="ex"> expected "alt" but got "undefined"
-FAIL aria-label undefined on img w/o alt assert_equals: <img aria-label="undefined" data-expectedlabel="" data-testname="aria-label undefined on img w/o alt" class="ex"> expected "" but got "undefined"
-FAIL aria-label undefined on img w/ empty alt assert_equals: <img alt="" aria-label="undefined" data-expectedlabel="" data-testname="aria-label undefined on img w/ empty alt" class="ex"> expected "" but got "undefined"
-FAIL aria-label undefined on img w/o alt but w/ title assert_equals: <img aria-label="undefined" data-expectedlabel="title" data-testname="aria-label undefined on img w/o alt but w/ title" class="ex"> expected "title" but got "undefined"
-FAIL aria-label undefined on img w/ empty alt but w/ title assert_equals: <img alt="" aria-label="undefined" data-expectedlabel="title" data-testname="aria-label undefined on img w/ empty alt but w/ title" class="ex"> expected "title" but got "undefined"
-FAIL button's hidden referenced name (display:none) supercedes aria-label assert_equals: <button aria-labelledby="span1" aria-label="foo" data-expectedlabel="label" data-testname="button's hidden referenced name (display:none) supercedes aria-label" class="ex">
-  <span id="span1" style="display:none;">
-    <span id="span2" style="display:none;">label</span>
-  </span>
-x
-</button> expected "label" but got "foo"
+PASS button's hidden referenced name (display:none) supercedes aria-label
 PASS button's hidden referenced name (visibility:hidden) supercedes aria-label
-FAIL button's hidden referenced name (visibility:hidden) with hidden aria-labelledby traversal falls back to aria-label assert_equals: <button aria-labelledby="span4" aria-label="foo" data-expectedlabel="foo" data-testname="button's hidden referenced name (visibility:hidden) with hidden aria-labelledby traversal falls back to aria-label" class="ex">
-  <span id="span4">
-    <span id="span5" style="visibility:hidden;">label</span>
-  </span>
-  x
-</button> expected "foo" but got "label"
+PASS button's hidden referenced name (visibility:hidden) with hidden aria-labelledby traversal falls back to aria-label
+PASS Hidden button's label should be the empty string
 PASS link's aria-labelledby name supercedes aria-label
 PASS img's aria-label supercedes alt attribute
 PASS svg's aria-label supercedes title tag
@@ -279,8 +262,7 @@ PASS button with leading form feed control character in aria-label is valid
 PASS nav with trailing nbsp char aria-label is valid (nbsp is preserved in name)
 PASS button with leading nbsp char in aria-label is valid (and uses aria-label)
 PASS button with empty aria-label does not use aria-label as name
-FAIL textarea with tab character as aria-label does not use aria-label as name assert_equals: <textarea aria-label="  " title="title" data-testname="textarea with tab character as aria-label does not use aria-label as name" data-expectedlabel="title" class="ex">textarea contents</textarea> expected "title" but got ""
-FAIL button with carriage return as aria-label does not use aria-label as name assert_equals: <button aria-label="
-" data-testname="button with carriage return as aria-label does not use aria-label as name" data-expectedlabel="my button" class="ex">my button</button> expected "my button" but got ""
-FAIL button with space characters as aria-label does not use aria-label as name assert_equals: <button aria-label="      " data-testname="button with space characters as aria-label does not use aria-label as name" data-expectedlabel="my button" class="ex">my button</button> expected "my button" but got ""
+PASS textarea with tab character as aria-label does not use aria-label as name
+PASS button with carriage return as aria-label does not use aria-label as name
+PASS button with space characters as aria-label does not use aria-label as name
 

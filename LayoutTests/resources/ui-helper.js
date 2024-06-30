@@ -612,12 +612,12 @@ window.UIHelper = class UIHelper {
         });
     }
 
-    static async setInlinePrediction(text)
+    static async setInlinePrediction(text, startIndex = 0)
     {
         if (!this.isWebKit2())
             return Promise.resolve();
 
-        return new Promise(resolve => testRunner.runUIScript(`uiController.setInlinePrediction(\`${text}\`)`, resolve));
+        return new Promise(resolve => testRunner.runUIScript(`uiController.setInlinePrediction(\`${text}\`, ${startIndex})`, resolve));
     }
 
     static async acceptInlinePrediction()
@@ -908,9 +908,9 @@ window.UIHelper = class UIHelper {
         if (!this.isWebKit2() || this.isIOSFamily())
             return Promise.resolve();
 
-        if (internals.isUsingUISideCompositing() && (!scroller || scroller.nodeName != "SELECT")) {
-            var scrollingNodeID = internalFunctions.scrollingNodeIDForNode(scroller);
-            return new Promise(resolve => {
+            if (internals.isUsingUISideCompositing() && (!scroller || scroller.nodeName != "SELECT")) {
+                var scrollingNodeID = internalFunctions.scrollingNodeIDForNode(scroller);
+                return new Promise(resolve => {
                 testRunner.runUIScript(`(function() {
                     uiController.doAfterNextStablePresentationUpdate(function() {
                         uiController.uiScriptComplete(uiController.scrollbarStateForScrollingNodeID(${scrollingNodeID[0]}, ${scrollingNodeID[1]}, ${isVertical}));
@@ -2182,6 +2182,15 @@ window.UIHelper = class UIHelper {
             testRunner.runUIScript(`(() => {
                 uiController.adjustVisibilityForFrontmostTarget(${x}, ${y}, result => uiController.uiScriptComplete(result));
             })()`, resolve);
+        });
+    }
+
+    static resetVisibilityAdjustments() {
+        if (!this.isWebKit2())
+            return Promise.resolve();
+
+        return new Promise(resolve => {
+            testRunner.runUIScript("uiController.resetVisibilityAdjustments(result => uiController.uiScriptComplete(result));", resolve);
         });
     }
 }

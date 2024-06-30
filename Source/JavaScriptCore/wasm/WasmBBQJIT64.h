@@ -267,15 +267,15 @@ void BBQJIT::emitModOrDiv(Value& lhs, Location lhsLocation, Value& rhs, Location
                 throwExceptionIf(ExceptionType::IntegerOverflow, jump);
             }
 
-            if constexpr (IsMod) {
-                // N % 1 == 0
-                if constexpr (is32)
-                    m_jit.xor32(resultLocation.asGPR(), resultLocation.asGPR());
-                else
-                    m_jit.xor64(resultLocation.asGPR(), resultLocation.asGPR());
-                return;
-            }
             if constexpr (isSigned) {
+                if constexpr (IsMod) {
+                    // N % 1 == 0
+                    if constexpr (is32)
+                        m_jit.xor32(resultLocation.asGPR(), resultLocation.asGPR());
+                    else
+                        m_jit.xor64(resultLocation.asGPR(), resultLocation.asGPR());
+                    return;
+                }
                 if constexpr (is32)
                     m_jit.neg32(lhsLocation.asGPR(), resultLocation.asGPR());
                 else
@@ -490,7 +490,7 @@ void BBQJIT::emitCCall(Func function, const Vector<Value, N>& arguments)
     });
     RefPtr<TypeDefinition> functionType = TypeInformation::typeDefinitionForFunction(resultTypes, argumentTypes);
     CallInformation callInfo = wasmCallingConvention().callInformationFor(*functionType, CallRole::Caller);
-    Checked<int32_t> calleeStackSize = WTF::roundUpToMultipleOf(stackAlignmentBytes(), callInfo.headerAndArgumentStackSizeInBytes);
+    Checked<int32_t> calleeStackSize = WTF::roundUpToMultipleOf<stackAlignmentBytes()>(callInfo.headerAndArgumentStackSizeInBytes);
     m_maxCalleeStackSize = std::max<int>(calleeStackSize, m_maxCalleeStackSize);
 
     // Prepare wasm operation calls.
@@ -519,7 +519,7 @@ void BBQJIT::emitCCall(Func function, const Vector<Value, N>& arguments, Value& 
 
     RefPtr<TypeDefinition> functionType = TypeInformation::typeDefinitionForFunction(resultTypes, argumentTypes);
     CallInformation callInfo = wasmCallingConvention().callInformationFor(*functionType, CallRole::Caller);
-    Checked<int32_t> calleeStackSize = WTF::roundUpToMultipleOf(stackAlignmentBytes(), callInfo.headerAndArgumentStackSizeInBytes);
+    Checked<int32_t> calleeStackSize = WTF::roundUpToMultipleOf<stackAlignmentBytes()>(callInfo.headerAndArgumentStackSizeInBytes);
     m_maxCalleeStackSize = std::max<int>(calleeStackSize, m_maxCalleeStackSize);
 
     // Prepare wasm operation calls.

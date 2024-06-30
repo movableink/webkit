@@ -91,7 +91,7 @@ public:
 
     Document& documentScope() const { return m_documentScope.get(); }
     Ref<Document> protectedDocumentScope() const;
-    static ptrdiff_t documentScopeMemoryOffset() { return OBJECT_OFFSETOF(TreeScope, m_documentScope); }
+    static constexpr ptrdiff_t documentScopeMemoryOffset() { return OBJECT_OFFSETOF(TreeScope, m_documentScope); }
 
     // https://dom.spec.whatwg.org/#retarget
     Ref<Node> retargetToScope(Node&) const;
@@ -132,8 +132,8 @@ public:
     RadioButtonGroups& radioButtonGroups();
 
     JSC::JSValue adoptedStyleSheetWrapper(JSDOMGlobalObject&);
-    std::span<const RefPtr<CSSStyleSheet>> adoptedStyleSheets() const;
-    ExceptionOr<void> setAdoptedStyleSheets(Vector<RefPtr<CSSStyleSheet>>&&);
+    std::span<const Ref<CSSStyleSheet>> adoptedStyleSheets() const;
+    ExceptionOr<void> setAdoptedStyleSheets(Vector<Ref<CSSStyleSheet>>&&);
 
     void addSVGResource(const AtomString& id, LegacyRenderSVGResourceContainer&);
     void removeSVGResource(const AtomString& id);

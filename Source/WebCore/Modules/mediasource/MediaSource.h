@@ -87,8 +87,10 @@ public:
     using CanMakeWeakPtr<MediaSource>::weakPtrFactory;
     using CanMakeWeakPtr<MediaSource>::WeakValueType;
     using CanMakeWeakPtr<MediaSource>::WeakPtrImplType;
-    using RefCounted::ref;
-    using RefCounted::deref;
+
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     static bool enabledForContext(ScriptExecutionContext&);
 
@@ -142,7 +144,7 @@ public:
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
     const void* logIdentifier() const final { return m_logIdentifier; }
-    const char* logClassName() const final { return "MediaSource"; }
+    ASCIILiteral logClassName() const final { return "MediaSource"_s; }
     WTFLogChannel& logChannel() const final;
     void setLogIdentifier(const void*);
 
@@ -190,8 +192,8 @@ private:
 
     // ActiveDOMObject.
     void stop() final;
-    const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
+
     static bool isTypeSupported(ScriptExecutionContext&, const String& type, Vector<ContentType>&& contentTypesRequiringHardwareSupport);
 
     void setPrivateAndOpen(Ref<MediaSourcePrivate>&&);

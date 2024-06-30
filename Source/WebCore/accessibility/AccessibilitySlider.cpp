@@ -42,12 +42,12 @@ namespace WebCore {
     
 using namespace HTMLNames;
 
-AccessibilitySlider::AccessibilitySlider(RenderObject* renderer)
+AccessibilitySlider::AccessibilitySlider(RenderObject& renderer)
     : AccessibilityRenderObject(renderer)
 {
 }
 
-Ref<AccessibilitySlider> AccessibilitySlider::create(RenderObject* renderer)
+Ref<AccessibilitySlider> AccessibilitySlider::create(RenderObject& renderer)
 {
     return adoptRef(*new AccessibilitySlider(renderer));
 }
@@ -105,13 +105,6 @@ void AccessibilitySlider::addChildren()
         addChild(thumb.ptr());
 }
 
-const AtomString& AccessibilitySlider::getAttribute(const QualifiedName& attribute) const
-{
-    if (auto* input = inputElement())
-        return input->getAttribute(attribute);
-    return nullAtom();
-}
-    
 AccessibilityObject* AccessibilitySlider::elementAccessibilityHitTest(const IntPoint& point) const
 {
     if (m_children.size()) {
@@ -147,11 +140,11 @@ float AccessibilitySlider::minValueForRange() const
 bool AccessibilitySlider::setValue(const String& value)
 {
     RefPtr input = inputElement();
-    
-    if (input->value() == value)
-        return true;
+    if (!input)
+        return false;
 
-    input->setValue(value, DispatchChangeEvent);
+    if (input->value() != value)
+        input->setValue(value, DispatchInputAndChangeEvent);
     return true;
 }
 

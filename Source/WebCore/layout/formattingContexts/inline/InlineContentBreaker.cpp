@@ -85,6 +85,8 @@ static inline bool isNonContentRunsOnly(const InlineContentBreaker::ContinuousCo
         auto& inlineItem = run.inlineItem;
         if (inlineItem.isInlineBoxStart() || inlineItem.isInlineBoxEnd() || inlineItem.isOpaque())
             continue;
+        if (auto* inlineTextItem = dynamicDowncast<InlineTextItem>(inlineItem); inlineTextItem && inlineTextItem->isEmpty())
+            continue;
         return false;
     }
     return true;
@@ -238,12 +240,19 @@ InlineContentBreaker::Result InlineContentBreaker::processOverflowingContent(con
     // Now either wrap this content over to the next line or revert back to an earlier wrapping opportunity, or not wrap at all.
     auto shouldWrapUnbreakableContentToNextLine = [&] {
         // The individual runs in this continuous content don't break, let's check if we are allowed to wrap this content to next line (e.g. pre would prevent us from wrapping).
-        // Parent style drives the wrapping behavior here in case of non-inline-box content.
+        // Parent style drives the wrapping behavior here unless the overflowing run is an inline box.
+        // In such cases decoration overflow is considered as "content" and we need to check the style accordingly.
         // e.g. <div style="white-space: nowrap">no wrap<div style="display: inline-block; white-space: normal">yes wrap</div></div>.
         // While the inline-block has pre-wrap which allows wrapping (for its own content), the content lives in a nowrap context.
-        auto& overflowingBox = continuousContent.runs()[overflowingRunIndex].inlineItem.layoutBox();
+        auto& runs = continuousContent.runs();
+        auto& overflowingBox = runs[overflowingRunIndex].inlineItem.layoutBox();
         auto& styleToUse = overflowingBox.isInlineBox() ? overflowingBox.style() : overflowingBox.parent().style();
-        return TextUtil::isWrappingAllowed(styleToUse);
+        auto isWrappingAllowed = TextUtil::isWrappingAllowed(styleToUse);
+        for (auto index = overflowingRunIndex; !isWrappingAllowed && index--;) {
+            auto& styleToUse = runs[index].inlineItem.layoutBox().parent().style();
+            isWrappingAllowed = TextUtil::isWrappingAllowed(styleToUse);
+        }
+        return isWrappingAllowed;
     };
     if (shouldWrapUnbreakableContentToNextLine())
         return { Result::Action::Wrap, IsEndOfLine::Yes };
@@ -682,7 +691,7 @@ std::optional<InlineContentBreaker::OverflowingTextContent::BreakingPosition> In
     }
     // Only non-whitespace text runs with same style.
     auto& fontCascade = style.fontCascade();
-    auto hyphenWidth = InlineLayoutUnit { fontCascade.width(TextRun { StringView { style.hyphenString() } }) };
+    auto hyphenWidth = std::max(fontCascade.width(TextRun { StringView { style.hyphenString() } }), 0.f);
     auto availableWidthExcludingHyphen = lineStatus.availableWidth - hyphenWidth;
     if (availableWidthExcludingHyphen <= 0 || !enoughWidthForHyphenation(availableWidthExcludingHyphen, fontCascade.size()))
         return { };

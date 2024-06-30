@@ -42,7 +42,7 @@ using namespace WebCore;
 
 static WorkQueue& sharedServiceWorkerDownloadTaskQueue()
 {
-    static NeverDestroyed<Ref<WorkQueue>> queue(WorkQueue::create("Shared ServiceWorkerDownloadTask Queue"));
+    static NeverDestroyed<Ref<WorkQueue>> queue(WorkQueue::create("Shared ServiceWorkerDownloadTask Queue"_s));
     return queue.get();
 }
 
@@ -190,7 +190,7 @@ void ServiceWorkerDownloadTask::didReceiveData(const IPC::SharedBufferReference&
     if (m_downloadFile == FileSystem::invalidPlatformFileHandle)
         return;
 
-    size_t bytesWritten = FileSystem::writeToFile(m_downloadFile, data.data(), data.size());
+    size_t bytesWritten = FileSystem::writeToFile(m_downloadFile, data.span());
 
     if (bytesWritten != data.size()) {
         didFailDownload();

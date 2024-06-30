@@ -68,7 +68,7 @@ RefPtr<MediaTrackReader> MediaTrackReader::create(Allocator&& allocator, const M
 
 WorkQueue& MediaTrackReader::storageQueue()
 {
-    static NeverDestroyed<Ref<WorkQueue>> queue = WorkQueue::create("WebKit::MediaFormatReader Queue");
+    static NeverDestroyed<Ref<WorkQueue>> queue = WorkQueue::create("WebKit::MediaFormatReader Queue"_s);
     return queue.get();
 }
 
@@ -147,18 +147,18 @@ void MediaTrackReader::finishParsing()
     m_sampleStorageCondition.notifyAll();
 }
 
-const char* MediaTrackReader::mediaTypeString() const
+ASCIILiteral MediaTrackReader::mediaTypeString() const
 {
     switch (m_mediaType) {
     case kCMMediaType_Video:
-        return "video";
+        return "video"_s;
     case kCMMediaType_Audio:
-        return "audio";
+        return "audio"_s;
     case kCMMediaType_Text:
-        return "text";
+        return "text"_s;
     }
     ASSERT_NOT_REACHED();
-    return "unknown";
+    return "unknown"_s;
 }
 
 OSStatus MediaTrackReader::copyProperty(CFStringRef key, CFAllocatorRef allocator, void* copiedValue)

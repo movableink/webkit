@@ -27,7 +27,6 @@
 
 #include "FloatRect.h"
 #include "Image.h"
-#include <wtf/EnumTraits.h>
 #include <wtf/OptionSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Seconds.h>
@@ -121,6 +120,9 @@ enum class TextIndicatorOption : uint16_t {
     // By default, TextIndicator does not consider the user-select property.
     // If this option is set, expand the range to include the highest `user-select: all` ancestor.
     UseUserSelectAllCommonAncestor = 1 << 12,
+
+    // If this option is set, exclude all content that is replaced by a separate render pass, like images, media, etc.
+    SkipReplacedContent = 1 << 13,
 };
 
 struct TextIndicatorData {

@@ -40,6 +40,7 @@
 #include "NotificationClient.h"
 #include "NotificationPermission.h"
 #include "PushEvent.h"
+#include "PushNotificationEvent.h"
 #include "ServiceWorker.h"
 #include "ServiceWorkerContainer.h"
 #include "ServiceWorkerGlobalScope.h"
@@ -252,11 +253,6 @@ enum EventTargetInterfaceType ServiceWorkerRegistration::eventTargetInterface() 
 ScriptExecutionContext* ServiceWorkerRegistration::scriptExecutionContext() const
 {
     return ActiveDOMObject::scriptExecutionContext();
-}
-
-const char* ServiceWorkerRegistration::activeDOMObjectName() const
-{
-    return "ServiceWorkerRegistration";
 }
 
 void ServiceWorkerRegistration::stop()

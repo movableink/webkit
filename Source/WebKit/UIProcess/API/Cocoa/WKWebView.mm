@@ -47,8 +47,8 @@
 #import "MediaPlaybackState.h"
 #import "MediaUtilities.h"
 #import "NavigationState.h"
-#import "ObjCObjectGraph.h"
 #import "PageClient.h"
+#import "PlatformWritingToolsUtilities.h"
 #import "ProvisionalPageProxy.h"
 #import "QuickLookThumbnailLoader.h"
 #import "RemoteLayerTreeScrollingPerformanceData.h"
@@ -83,6 +83,7 @@
 #import "WKSecurityOriginInternal.h"
 #import "WKSharedAPICast.h"
 #import "WKSnapshotConfigurationPrivate.h"
+#import "WKTextAnimationType.h"
 #import "WKTextExtractionItem.h"
 #import "WKTextExtractionUtilities.h"
 #import "WKUIDelegate.h"
@@ -100,6 +101,7 @@
 #import "WebPageGroup.h"
 #import "WebPageInspectorController.h"
 #import "WebPageProxy.h"
+#import "WebPageProxyTesting.h"
 #import "WebPreferences.h"
 #import "WebProcessPool.h"
 #import "WebProcessProxy.h"
@@ -108,6 +110,7 @@
 #import "_WKActivatedElementInfoInternal.h"
 #import "_WKAppHighlightDelegate.h"
 #import "_WKAppHighlightInternal.h"
+#import "_WKApplicationManifestInternal.h"
 #import "_WKArchiveConfiguration.h"
 #import "_WKArchiveExclusionRule.h"
 #import "_WKDataTaskInternal.h"
@@ -122,7 +125,7 @@
 #import "_WKRemoteObjectRegistryInternal.h"
 #import "_WKSessionStateInternal.h"
 #import "_WKTargetedElementInfoInternal.h"
-#import "_WKTargetedElementRequest.h"
+#import "_WKTargetedElementRequestInternal.h"
 #import "_WKTextInputContextInternal.h"
 #import "_WKTextManipulationConfiguration.h"
 #import "_WKTextManipulationDelegate.h"
@@ -172,10 +175,6 @@
 #import <wtf/spi/darwin/dyldSPI.h>
 #import <wtf/text/StringToIntegerConversion.h>
 #import <wtf/text/TextStream.h>
-
-#if ENABLE(APPLICATION_MANIFEST)
-#import "_WKApplicationManifestInternal.h"
-#endif
 
 #if ENABLE(WK_WEB_EXTENSIONS)
 #import "_WKWebExtensionControllerInternal.h"
@@ -258,6 +257,8 @@ RetainPtr<NSError> nsErrorFromExceptionDetails(const WebCore::ExceptionDetails& 
 
 @implementation WKWebView
 
+WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
+
 - (instancetype)initWithFrame:(CGRect)frame
 {
     return [self initWithFrame:frame configuration:adoptNS([[WKWebViewConfiguration alloc] init]).get()];
@@ -332,8 +333,7 @@ static void hardwareKeyboardAvailabilityChangedCallback(CFNotificationCenterRef,
     RetainPtr webView { (__bridge WKWebView *)observer };
     if (!webView)
         return;
-    [webView->_contentView _hardwareKeyboardAvailabilityChanged];
-    webView->_page->hardwareKeyboardAvailabilityChanged(GSEventIsHardwareKeyboardAttached());
+    webView->_page->hardwareKeyboardAvailabilityChanged();
 }
 #endif
 
@@ -442,8 +442,9 @@ static void hardwareKeyboardAvailabilityChangedCallback(CFNotificationCenterRef,
     _timeOfFirstVisibleContentRectUpdateWithPendingCommit = timeNow;
 #endif
 
-#if ENABLE(UNIFIED_TEXT_REPLACEMENT)
-    _unifiedTextReplacementSessions = [NSMapTable strongToWeakObjectsMapTable];
+#if ENABLE(WRITING_TOOLS)
+    _writingToolsSessions = [NSMapTable strongToWeakObjectsMapTable];
+    _writingToolsTextSuggestions = [NSMapTable strongToWeakObjectsMapTable];
 #endif
 }
 
@@ -522,6 +523,8 @@ static void hardwareKeyboardAvailabilityChangedCallback(CFNotificationCenterRef,
     pageConfiguration->preferences().setSystemPreviewEnabled(!![_configuration _systemPreviewEnabled]);
 #endif
 #endif // PLATFORM(IOS_FAMILY)
+    pageConfiguration->preferences().setScrollToTextFragmentIndicatorEnabled(!![_configuration _scrollToTextFragmentIndicatorEnabled]);
+    pageConfiguration->preferences().setScrollToTextFragmentMarkingEnabled(!![_configuration _scrollToTextFragmentMarkingEnabled]);
 
     WKAudiovisualMediaTypes mediaTypesRequiringUserGesture = [_configuration mediaTypesRequiringUserActionForPlayback];
     pageConfiguration->preferences().setRequiresUserGestureForVideoPlayback((mediaTypesRequiringUserGesture & WKAudiovisualMediaTypeVideo) == WKAudiovisualMediaTypeVideo);
@@ -648,7 +651,7 @@ static void hardwareKeyboardAvailabilityChangedCallback(CFNotificationCenterRef,
     [_contentView _webViewDestroyed];
 
     if (_page && _remoteObjectRegistry)
-        _page->process().processPool().removeMessageReceiver(Messages::RemoteObjectRegistry::messageReceiverName(), _page->identifier());
+        _page->configuration().processPool().removeMessageReceiver(Messages::RemoteObjectRegistry::messageReceiverName(), _page->identifier());
 #endif
 
     if (_page)
@@ -691,6 +694,7 @@ static void hardwareKeyboardAvailabilityChangedCallback(CFNotificationCenterRef,
 
 - (WKBackForwardList *)backForwardList
 {
+    [self _didAccessBackForwardList];
     return wrapper(_page->backForwardList());
 }
 
@@ -858,19 +862,35 @@ static void hardwareKeyboardAvailabilityChangedCallback(CFNotificationCenterRef,
     return _page->pageLoadState().certificateInfo().trust().get();
 }
 
+- (void)_didAccessBackForwardList
+{
+    BOOL oldValue = _didAccessBackForwardList;
+    _didAccessBackForwardList = YES;
+
+#if ENABLE(PAGE_LOAD_OBSERVER)
+    if (!oldValue)
+        [self _updatePageLoadObserverState];
+#else
+    UNUSED_PARAM(oldValue);
+#endif
+}
+
 - (BOOL)canGoBack
 {
+    [self _didAccessBackForwardList];
     return _page->pageLoadState().canGoBack();
 }
 
 - (BOOL)canGoForward
 {
+    [self _didAccessBackForwardList];
     return _page->pageLoadState().canGoForward();
 }
 
 - (WKNavigation *)goBack
 {
     THROW_IF_SUSPENDED;
+    [self _didAccessBackForwardList];
     if (self._safeBrowsingWarning)
         return [self reload];
     return wrapper(_page->goBack()).autorelease();
@@ -879,6 +899,7 @@ static void hardwareKeyboardAvailabilityChangedCallback(CFNotificationCenterRef,
 - (WKNavigation *)goForward
 {
     THROW_IF_SUSPENDED;
+    [self _didAccessBackForwardList];
     return wrapper(_page->goForward()).autorelease();
 }
 
@@ -1383,6 +1404,9 @@ static WKMediaPlaybackState toWKMediaPlaybackState(WebKit::MediaPlaybackState me
 - (void)setPageZoom:(CGFloat)pageZoom
 {
     THROW_IF_SUSPENDED;
+#if PLATFORM(MAC)
+    _impl->suppressContentRelativeChildViews(WebKit::WebViewImpl::ContentRelativeChildViewsSuppressionType::TemporarilyRemove);
+#endif
     _page->setPageZoomFactor(pageZoom);
 }
 
@@ -1765,6 +1789,43 @@ inline OptionSet<WebKit::FindOptions> toFindOptions(WKFindConfiguration *configu
 }
 #endif
 
+static inline WKTextAnimationType toWKTextAnimationType(WebKit::TextAnimationType style)
+{
+    switch (style) {
+    case WebKit::TextAnimationType::Initial:
+        return WKTextAnimationTypeInitial;
+    case WebKit::TextAnimationType::Source:
+        return WKTextAnimationTypeSource;
+    case WebKit::TextAnimationType::Final:
+        return WKTextAnimationTypeFinal;
+    }
+}
+
+#if ENABLE(WRITING_TOOLS_UI)
+- (void)_addTextAnimationForAnimationID:(NSUUID *)nsUUID withData:(const WebKit::TextAnimationData&)data
+{
+#if PLATFORM(IOS_FAMILY)
+    [_contentView addTextAnimationForAnimationID:nsUUID withStyleType:toWKTextAnimationType(data.style)];
+#elif PLATFORM(MAC)
+    auto uuid = WTF::UUID::fromNSUUID(nsUUID);
+    if (!uuid)
+        return;
+    _impl->addTextAnimationForAnimationID(*uuid, data);
+#endif
+}
+- (void)_removeTextAnimationForAnimationID:(NSUUID *)nsUUID
+{
+#if PLATFORM(IOS_FAMILY)
+    [_contentView removeTextAnimationForAnimationID:nsUUID];
+#elif PLATFORM(MAC)
+    auto uuid = WTF::UUID::fromNSUUID(nsUUID);
+    if (!uuid)
+        return;
+    _impl->removeTextAnimationForAnimationID(*uuid);
+#endif
+}
+#endif
+
 - (WKPageRef)_pageForTesting
 {
     return toAPI(_page.get());
@@ -1811,8 +1872,11 @@ inline OptionSet<WebKit::FindOptions> toFindOptions(WKFindConfiguration *configu
 - (void)createWebArchiveDataWithCompletionHandler:(void (^)(NSData *, NSError *))completionHandler
 {
     THROW_IF_SUSPENDED;
-    _page->getWebArchiveOfFrame(_page->mainFrame(), [completionHandler = makeBlockPtr(completionHandler)](API::Data* data) {
-        completionHandler(wrapper(data), nil);
+    _page->getWebArchiveOfFrame(nullptr, [completionHandler = makeBlockPtr(completionHandler)](API::Data* data) {
+        if (data)
+            completionHandler(wrapper(data), nil);
+        else
+            completionHandler(nil, [NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:nil]);
     });
 }
 
@@ -1996,8 +2060,229 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
     _maximumViewportInset = maximumViewportInset;
 }
 
+#if ENABLE(WRITING_TOOLS)
+
+#pragma mark - Writing Tools API
+
+- (BOOL)isWritingToolsActive
+{
+#if ENABLE(WRITING_TOOLS)
+    return _page->isWritingToolsActive();
+#else
+    return NO;
+#endif
+}
+
+#pragma mark - WTWritingToolsDelegate conformance
+
+- (PlatformWritingToolsAllowedInputOptions)writingToolsAllowedInputOptions {
+    auto& editorState = _page->editorState();
+    if (editorState.isContentEditable && !editorState.isContentRichlyEditable)
+        return PlatformWritingToolsAllowedInputOptionsPlainText;
+
+    PlatformWritingToolsAllowedInputOptions listOption = (PlatformWritingToolsAllowedInputOptions)(1 << 2);
+
+    return PlatformWritingToolsAllowedInputOptionsPlainText | PlatformWritingToolsAllowedInputOptionsRichText | listOption | PlatformWritingToolsAllowedInputOptionsTable;
+}
+
+- (BOOL)wantsWritingToolsInlineEditing
+{
+    return [self _isEditable] || [_configuration writingToolsBehavior] == PlatformWritingToolsBehaviorComplete;
+}
+
+- (void)willBeginWritingToolsSession:(WTSession *)session requestContexts:(void (^)(NSArray<WTContext *> *))completion
+{
+    auto webSession = WebKit::convertToWebSession(session);
+
+    if (session) {
+        [_writingToolsSessions setObject:session forKey:session.uuid];
+        _page->setWritingToolsActive(true);
+    }
+
+    _page->willBeginWritingToolsSession(webSession, [completion = makeBlockPtr(completion)](const auto& contextData) {
+        auto contexts = [NSMutableArray arrayWithCapacity:contextData.size()];
+        for (auto& context : contextData) {
+            auto platformContext = WebKit::convertToPlatformContext(context);
+            [contexts addObject:platformContext.get()];
+        }
+        completion(contexts);
+    });
+}
+
+- (void)didBeginWritingToolsSession:(WTSession *)session contexts:(NSArray<WTContext *> *)contexts
+{
+    auto webSession = WebKit::convertToWebSession(session);
+    if (!webSession) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    Vector<WebCore::WritingTools::Context> contextData;
+    for (WTContext *context in contexts) {
+        auto webContext = WebKit::convertToWebContext(context);
+        if (!webContext) {
+            ASSERT_NOT_REACHED();
+            return;
+        }
+
+        contextData.append(*webContext);
+    }
+
+    _page->didBeginWritingToolsSession(*webSession, contextData);
+}
+
+- (void)proofreadingSession:(WTSession *)session didReceiveSuggestions:(NSArray<WTTextSuggestion *> *)suggestions processedRange:(NSRange)range inContext:(WTContext *)context finished:(BOOL)finished
+{
+    auto webSession = WebKit::convertToWebSession(session);
+    if (!webSession) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    auto webContext = WebKit::convertToWebContext(context);
+    if (!webContext) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    Vector<WebCore::WritingTools::TextSuggestion> replacementData;
+    for (WTTextSuggestion *suggestion in suggestions) {
+        auto replacementDataItem = WebKit::convertToWebTextSuggestion(suggestion);
+        if (!replacementDataItem) {
+            ASSERT_NOT_REACHED();
+            continue;
+        }
+
+        replacementData.append(*replacementDataItem);
+
+        [_writingToolsTextSuggestions setObject:suggestion forKey:suggestion.uuid];
+    }
+
+    _page->proofreadingSessionDidReceiveSuggestions(*webSession, replacementData, *webContext, finished);
+}
+
+- (void)proofreadingSession:(WTSession *)session didUpdateState:(WTTextSuggestionState)state forSuggestionWithUUID:(NSUUID *)suggestionUUID inContext:(WTContext *)context
+{
+    auto webSession = WebKit::convertToWebSession(session);
+    if (!webSession) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    auto webContext = WebKit::convertToWebContext(context);
+    if (!webContext) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    auto webTextSuggestionState = WebKit::convertToWebTextSuggestionState(state);
+
+    WTTextSuggestion *suggestion = [_writingToolsTextSuggestions objectForKey:suggestionUUID];
+    if (!suggestion) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    auto webTextSuggestion = WebKit::convertToWebTextSuggestion(suggestion);
+    if (!webTextSuggestion) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    _page->proofreadingSessionDidUpdateStateForSuggestion(*webSession, webTextSuggestionState, *webTextSuggestion, *webContext);
+}
+
+- (void)didEndWritingToolsSession:(WTSession *)session accepted:(BOOL)accepted
+{
+    auto webSession = WebKit::convertToWebSession(session);
+    if (!webSession) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    [_writingToolsSessions removeObjectForKey:session.uuid];
+    [_writingToolsTextSuggestions removeAllObjects];
+
+    _page->setWritingToolsActive(false);
+
+    _page->didEndWritingToolsSession(*webSession, accepted);
+}
+
+- (void)compositionSession:(WTSession *)session didReceiveText:(NSAttributedString *)attributedText replacementRange:(NSRange)range inContext:(WTContext *)context finished:(BOOL)finished
+{
+    auto webSession = WebKit::convertToWebSession(session);
+    if (!webSession) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    auto webContext = WebKit::convertToWebContext(context);
+    if (!webContext) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    _page->compositionSessionDidReceiveTextWithReplacementRange(*webSession, WebCore::AttributedString::fromNSAttributedString(attributedText), { range }, *webContext, finished);
+}
+
+- (void)writingToolsSession:(WTSession *)session didReceiveAction:(WTAction)action
+{
+    auto webSession = WebKit::convertToWebSession(session);
+    if (!webSession) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    _page->writingToolsSessionDidReceiveAction(*webSession, WebKit::convertToWebAction(action));
+}
+
+
+#pragma mark - WTTextViewDelegate invoking methods
+
+- (void)_proofreadingSessionWithUUID:(NSUUID *)sessionUUID showDetailsForSuggestionWithUUID:(NSUUID *)replacementUUID relativeToRect:(CGRect)rect
+{
+    WTSession *session = [_writingToolsSessions objectForKey:sessionUUID];
+    if (!session)
+        return;
+
+    auto textViewDelegate = (NSObject<WTTextViewDelegate> *)session.textViewDelegate;
+
+    if (![textViewDelegate respondsToSelector:@selector(proofreadingSessionWithUUID:showDetailsForSuggestionWithUUID:relativeToRect:inView:)])
+        return;
+
+#if PLATFORM(MAC)
+    RetainPtr view = self;
+#else
+    RetainPtr view = _contentView;
+#endif
+
+    [textViewDelegate proofreadingSessionWithUUID:session.uuid showDetailsForSuggestionWithUUID:replacementUUID relativeToRect:rect inView:view.get()];
+}
+
+- (void)_proofreadingSessionWithUUID:(NSUUID *)sessionUUID updateState:(WebCore::WritingTools::TextSuggestion::State)state forSuggestionWithUUID:(NSUUID *)replacementUUID
+{
+    WTSession *session = [_writingToolsSessions objectForKey:sessionUUID];
+    if (!session)
+        return;
+
+    auto textViewDelegate = (NSObject<WTTextViewDelegate> *)session.textViewDelegate;
+
+    if (![textViewDelegate respondsToSelector:@selector(proofreadingSessionWithUUID:updateState:forSuggestionWithUUID:)])
+        return;
+
+    [textViewDelegate proofreadingSessionWithUUID:session.uuid updateState:WebKit::convertToPlatformTextSuggestionState(state) forSuggestionWithUUID:replacementUUID];
+}
+
+#endif
+
 #if USE(APPLE_INTERNAL_SDK)
 #import <WebKitAdditions/WKWebViewAdditionsAfter.mm>
+#endif
+
+#if ENABLE(GAMEPAD) && !__has_include(<WebKitAdditions/WKWebViewAdditionsAfter+Gamepad.mm>)
+- (void)_setGamepadsRecentlyAccessed:(BOOL)gamepadsRecentlyAccessed
+{
+}
 #endif
 
 @end
@@ -2490,7 +2775,7 @@ static RetainPtr<NSArray> wkTextManipulationErrors(NSArray<_WKTextManipulationIt
 #else
     if (!_remoteObjectRegistry) {
         _remoteObjectRegistry = adoptNS([[_WKRemoteObjectRegistry alloc] _initWithWebPageProxy:*_page]);
-        _page->process().processPool().addMessageReceiver(Messages::RemoteObjectRegistry::messageReceiverName(), _page->identifier(), [_remoteObjectRegistry remoteObjectRegistry]);
+        _page->configuration().processPool().addMessageReceiver(Messages::RemoteObjectRegistry::messageReceiverName(), _page->identifier(), [_remoteObjectRegistry remoteObjectRegistry]);
     }
 
     return _remoteObjectRegistry.get();
@@ -2524,6 +2809,11 @@ static RetainPtr<NSArray> wkTextManipulationErrors(NSArray<_WKTextManipulationIt
 #if HAVE(TOUCH_BAR) && ENABLE(WEB_PLAYBACK_CONTROLS_MANAGER)
     _impl->updateMediaPlaybackControlsManager();
 #endif
+}
+
+- (BOOL)_isSuspended
+{
+    return _page->legacyMainFrameProcess().throttler().isSuspended();
 }
 
 - (BOOL)_canTogglePictureInPicture
@@ -2651,7 +2941,8 @@ static RetainPtr<NSArray> wkTextManipulationErrors(NSArray<_WKTextManipulationIt
 
 - (void)_setStatisticsCrossSiteLoadWithLinkDecorationForTesting:(NSString *)fromHost withToHost:(NSString *)toHost withWasFiltered:(BOOL)wasFiltered withCompletionHandler:(void(^)(void))completionHandler
 {
-    _page->setCrossSiteLoadWithLinkDecorationForTesting(URL { fromHost }, URL { toHost }, wasFiltered, makeBlockPtr(completionHandler));
+    if (auto* pageForTesting = _page->pageForTesting())
+        pageForTesting->setCrossSiteLoadWithLinkDecorationForTesting(URL { fromHost }, URL { toHost }, wasFiltered, makeBlockPtr(completionHandler));
 }
 
 - (_WKMediaMutedState)_mediaMutedState
@@ -2692,10 +2983,9 @@ static RetainPtr<NSArray> wkTextManipulationErrors(NSArray<_WKTextManipulationIt
 #if ENABLE(APP_HIGHLIGHTS)
 static void convertAndAddHighlight(Vector<Ref<WebCore::SharedMemory>>& buffers, NSData *highlight)
 {
-    auto sharedMemory = WebCore::SharedMemory::allocate(highlight.length);
-    if (sharedMemory) {
-        [highlight getBytes:sharedMemory->data() length:highlight.length];
-        buffers.append(*sharedMemory);
+    if (auto sharedMemory = WebCore::SharedMemory::allocate(highlight.length)) {
+        [highlight getBytes:sharedMemory->mutableSpan().data() length:highlight.length];
+        buffers.append(sharedMemory.releaseNonNull());
     }
 }
 #endif
@@ -2742,17 +3032,80 @@ static void convertAndAddHighlight(Vector<Ref<WebCore::SharedMemory>>& buffers, 
 #endif
 }
 
+- (NSUUID *)_enableTextIndicatorStylingAfterElementWithID:(NSString *)elementID
+{
+    return [self _enableSourceTextAnimationAfterElementWithID:elementID];
+}
+- (NSUUID *)_enableTextIndicatorStylingForElementWithID:(NSString *)elementID
+{
+    return [self _enableFinalTextAnimationForElementWithID:elementID];
+}
+- (void)_disableTextIndicatorStylingWithUUID:(NSUUID *)nsUUID
+{
+    return [self _disableTextAnimationWithUUID:nsUUID];
+}
+
+- (NSUUID *)_enableSourceTextAnimationAfterElementWithID:(NSString *)elementID
+{
+    RetainPtr nsUUID = [NSUUID UUID];
+
+    auto uuid = WTF::UUID::fromNSUUID(nsUUID.get());
+    if (!uuid)
+        return nil;
+
+#if ENABLE(WRITING_TOOLS_UI)
+    _page->enableSourceTextAnimationAfterElementWithID(elementID, *uuid);
+
+#if PLATFORM(IOS_FAMILY)
+    [_contentView addTextAnimationForAnimationID:nsUUID.get() withStyleType:WKTextAnimationTypeInitial];
+#elif PLATFORM(MAC)
+    _impl->addTextAnimationForAnimationID(*uuid, { WebKit::TextAnimationType::Initial, WTF::UUID(WTF::UUID::emptyValue) });
+#endif
+    return nsUUID.get();
+#else // ENABLE(WRITING_TOOLS_UI)
+    return nil;
+#endif
+}
+
+- (NSUUID *)_enableFinalTextAnimationForElementWithID:(NSString *)elementID
+{
+    RetainPtr nsUUID = [NSUUID UUID];
+
+    auto uuid = WTF::UUID::fromNSUUID(nsUUID.get());
+    if (!uuid)
+        return nil;
+
+#if ENABLE(WRITING_TOOLS_UI)
+    _page->enableTextAnimationTypeForElementWithID(elementID, *uuid);
+
+#if PLATFORM(IOS_FAMILY)
+    [_contentView addTextAnimationForAnimationID:nsUUID.get() withStyleType:WKTextAnimationTypeFinal];
+#elif PLATFORM(MAC)
+    _impl->addTextAnimationForAnimationID(*uuid, { WebKit::TextAnimationType::Final, WTF::UUID(WTF::UUID::emptyValue) });
+#endif
+    return nsUUID.get();
+#else // ENABLE(WRITING_TOOLS_UI)
+    return nil;
+#endif
+}
+
+- (void)_disableTextAnimationWithUUID:(NSUUID *)nsUUID
+{
+#if ENABLE(WRITING_TOOLS_UI)
+#if PLATFORM(IOS_FAMILY)
+    [_contentView removeTextAnimationForAnimationID:nsUUID];
+#elif PLATFORM(MAC)
+    auto uuid = WTF::UUID::fromNSUUID(nsUUID);
+    if (!uuid)
+        return;
+    _impl->removeTextAnimationForAnimationID(*uuid);
+#endif
+#endif // ENABLE(WRITING_TOOLS_UI)
+}
+
 - (void)_requestTargetedElementInfo:(_WKTargetedElementRequest *)request completionHandler:(void(^)(NSArray<_WKTargetedElementInfo *> *))completion
 {
-    WebCore::TargetedElementRequest coreRequest {
-#if PLATFORM(IOS_FAMILY)
-        [self convertPoint:request.point toView:_contentView.get()],
-#else
-        request.point,
-#endif
-        static_cast<bool>(request.canIncludeNearbyElements)
-    };
-    _page->requestTargetedElement(WTFMove(coreRequest), [completion = makeBlockPtr(completion)](auto& elements) {
+    _page->requestTargetedElement(*request->_request, [completion = makeBlockPtr(completion)](auto& elements) {
         completion(createNSArray(elements, [](auto& element) {
             return wrapper(element);
         }).get());
@@ -2781,7 +3134,7 @@ static void convertAndAddHighlight(Vector<Ref<WebCore::SharedMemory>>& buffers, 
 - (WKNavigation *)_loadData:(NSData *)data MIMEType:(NSString *)MIMEType characterEncodingName:(NSString *)characterEncodingName baseURL:(NSURL *)baseURL userData:(id)userData
 {
     THROW_IF_SUSPENDED;
-    return wrapper(_page->loadData(span(data), MIMEType, characterEncodingName, baseURL.absoluteString, WebKit::ObjCObjectGraph::create(userData).ptr())).autorelease();
+    return wrapper(_page->loadData(span(data), MIMEType, characterEncodingName, baseURL.absoluteString, [userData isKindOfClass:NSData.class] ? API::Data::createWithoutCopying((NSData *)userData).ptr() : nullptr)).autorelease();
 }
 
 - (WKNavigation *)_loadRequest:(NSURLRequest *)request shouldOpenExternalURLs:(BOOL)shouldOpenExternalURLs
@@ -2807,6 +3160,26 @@ static void convertAndAddHighlight(Vector<Ref<WebCore::SharedMemory>>& buffers, 
         break;
     }
     return wrapper(_page->loadRequest(request, policy)).autorelease();
+}
+
+- (void)_loadAndDecodeImage:(NSURLRequest *)request constrainedToSize:(CGSize)maxSize maximumBytesFromNetwork:(size_t)maximumBytesFromNetwork completionHandler:(void (^)(CocoaImage *, NSError *))completionHandler
+{
+    auto sizeConstraint = (maxSize.height || maxSize.width) ? std::optional(WebCore::FloatSize(maxSize)) : std::nullopt;
+    WebCore::ResourceRequest resourceRequest(request);
+    auto url = resourceRequest.url();
+    _page->loadAndDecodeImage(request, sizeConstraint, maximumBytesFromNetwork, [completionHandler = makeBlockPtr(completionHandler), url](std::variant<WebCore::ResourceError, Ref<WebCore::ShareableBitmap>>&& result) mutable {
+        WTF::switchOn(WTFMove(result), [&] (WebCore::ResourceError&& error) {
+            if (error.isNull())
+                return completionHandler(nil, WebCore::internalError(url)); // This can happen if IPC fails.
+            completionHandler(nil, error.nsError());
+        }, [&] (Ref<WebCore::ShareableBitmap>&& bitmap) {
+#if PLATFORM(MAC)
+            completionHandler(adoptNS([[NSImage alloc] initWithCGImage:bitmap->makeCGImageCopy().get() size:bitmap->size()]).get(), nil);
+#else
+            completionHandler(adoptNS([[UIImage alloc] initWithCGImage:bitmap->makeCGImageCopy().get()]).get(), nil);
+#endif
+        });
+    });
 }
 
 - (void)_loadServiceWorker:(NSURL *)url usingModules:(BOOL)usingModules completionHandler:(void (^)(BOOL success))completionHandler
@@ -2955,7 +3328,7 @@ static void convertAndAddHighlight(Vector<Ref<WebCore::SharedMemory>>& buffers, 
     if (![self _isValid])
         return 0;
 
-    return _page->processID();
+    return _page->legacyMainFrameProcessID();
 }
 
 - (pid_t)_provisionalWebProcessIdentifier
@@ -2989,7 +3362,7 @@ static void convertAndAddHighlight(Vector<Ref<WebCore::SharedMemory>>& buffers, 
 
 - (BOOL)_webProcessIsResponsive
 {
-    return _page->process().isResponsive();
+    return _page->legacyMainFrameProcess().isResponsive();
 }
 
 - (void)_killWebContentProcess
@@ -2998,7 +3371,7 @@ static void convertAndAddHighlight(Vector<Ref<WebCore::SharedMemory>>& buffers, 
     if (![self _isValid])
         return;
 
-    _page->process().terminate();
+    _page->legacyMainFrameProcess().terminate();
 }
 
 - (WKNavigation *)_reloadWithoutContentBlockers
@@ -3016,7 +3389,7 @@ static void convertAndAddHighlight(Vector<Ref<WebCore::SharedMemory>>& buffers, 
 - (void)_killWebContentProcessAndResetState
 {
     THROW_IF_SUSPENDED;
-    Ref<WebKit::WebProcessProxy> protectedProcessProxy(_page->process());
+    Ref<WebKit::WebProcessProxy> protectedProcessProxy(_page->legacyMainFrameProcess());
     protectedProcessProxy->requestTermination(WebKit::ProcessTerminationReason::RequestedByClient);
 
     if (auto* provisionalPageProxy = _page->provisionalPageProxy()) {
@@ -3164,7 +3537,7 @@ static void convertAndAddHighlight(Vector<Ref<WebCore::SharedMemory>>& buffers, 
 - (void)_clearBackForwardCache
 {
     THROW_IF_SUSPENDED;
-    _page->process().processPool().backForwardCache().removeEntriesForPage(*_page);
+    _page->configuration().processPool().backForwardCache().removeEntriesForPage(*_page);
 }
 
 + (BOOL)_handlesSafeBrowsing
@@ -3281,6 +3654,12 @@ static void convertAndAddHighlight(Vector<Ref<WebCore::SharedMemory>>& buffers, 
 {
     THROW_IF_SUSPENDED;
     [self _evaluateJavaScript:javaScriptString asAsyncFunction:NO withSourceURL:url withArguments:nil forceUserGesture:YES inFrame:frame inWorld:contentWorld completionHandler:completionHandler];
+}
+
+- (void)_evaluateJavaScript:(NSString *)javaScriptString withSourceURL:(NSURL *)url inFrame:(WKFrameInfo *)frame inContentWorld:(WKContentWorld *)contentWorld withUserGesture:(BOOL)withUserGesture completionHandler:(void (^)(id, NSError *error))completionHandler
+{
+    THROW_IF_SUSPENDED;
+    [self _evaluateJavaScript:javaScriptString asAsyncFunction:NO withSourceURL:url withArguments:nil forceUserGesture:withUserGesture inFrame:frame inWorld:contentWorld completionHandler:completionHandler];
 }
 
 - (void)_updateWebpagePreferences:(WKWebpagePreferences *)webpagePreferences
@@ -3451,7 +3830,7 @@ static inline OptionSet<WebCore::LayoutMilestone> layoutMilestones(_WKRenderingP
 - (void)_getContentsAsStringWithCompletionHandlerKeepIPCConnectionAliveForTesting:(void (^)(NSString *, NSError *))completionHandler
 {
     THROW_IF_SUSPENDED;
-    _page->getContentsAsString(WebKit::ContentAsStringIncludesChildFrames::No, [handler = makeBlockPtr(completionHandler), connection = RefPtr { _page->process().connection() }](String string) {
+    _page->getContentsAsString(WebKit::ContentAsStringIncludesChildFrames::No, [handler = makeBlockPtr(completionHandler), connection = RefPtr { _page->legacyMainFrameProcess().connection() }](String string) {
         handler(string, nil);
     });
 }
@@ -3478,7 +3857,6 @@ static inline OptionSet<WebCore::LayoutMilestone> layoutMilestones(_WKRenderingP
 - (void)_getApplicationManifestWithCompletionHandler:(void (^)(_WKApplicationManifest *))completionHandler
 {
     THROW_IF_SUSPENDED;
-#if ENABLE(APPLICATION_MANIFEST)
     _page->getApplicationManifest([completionHandler = makeBlockPtr(completionHandler)](const std::optional<WebCore::ApplicationManifest>& manifest) {
         if (completionHandler) {
             if (manifest) {
@@ -3488,10 +3866,6 @@ static inline OptionSet<WebCore::LayoutMilestone> layoutMilestones(_WKRenderingP
                 completionHandler(nil);
         }
     });
-#else
-    if (completionHandler)
-        completionHandler(nil);
-#endif
 }
 
 - (void)_getTextFragmentMatchWithCompletionHandler:(void (^)(NSString *))completionHandler
@@ -3608,6 +3982,9 @@ static inline OptionSet<WebCore::LayoutMilestone> layoutMilestones(_WKRenderingP
 - (void)_setTextZoomFactor:(double)zoomFactor
 {
     THROW_IF_SUSPENDED;
+#if PLATFORM(MAC)
+    _impl->suppressContentRelativeChildViews(WebKit::WebViewImpl::ContentRelativeChildViewsSuppressionType::TemporarilyRemove);
+#endif
     _page->setTextZoomFactor(zoomFactor);
 }
 
@@ -3836,6 +4213,21 @@ static inline OptionSet<WebKit::FindOptions> toFindOptions(_WKFindOptions wkFind
         _page->setFormClient(nullptr);
 }
 
+- (BOOL)_isDisplayingPDF
+{
+#if PLATFORM(MAC)
+    if (RefPtr mainFrame = _page->mainFrame())
+        return mainFrame->isDisplayingPDFDocument();
+#else
+    for (auto& type : WebCore::MIMETypeRegistry::pdfMIMETypes()) {
+        Class providerClass = [[self _contentProviderRegistry] providerForMIMEType:@(type.characters())];
+        if ([_customContentView isKindOfClass:providerClass])
+            return YES;
+    }
+#endif
+    return NO;
+}
+
 - (BOOL)_isDisplayingStandaloneImageDocument
 {
     if (auto* mainFrame = _page->mainFrame())
@@ -3932,7 +4324,7 @@ static inline OptionSet<WebKit::FindOptions> toFindOptions(_WKFindOptions wkFind
 #if PLATFORM(MAC)
     return _page->viewScaleFactor();
 #else
-    return _page->layoutSizeScaleFactor();
+    return _page->layoutSizeScaleFactorFromClient();
 #endif
 }
 
@@ -3945,7 +4337,7 @@ static inline OptionSet<WebKit::FindOptions> toFindOptions(_WKFindOptions wkFind
 #if PLATFORM(MAC)
     _impl->setViewScale(viewScale);
 #else
-    if (_page->layoutSizeScaleFactor() == viewScale)
+    if (_page->layoutSizeScaleFactorFromClient() == viewScale)
         return;
 
     _page->setViewportConfigurationViewLayoutSize(_page->viewLayoutSize(), viewScale, _page->minimumEffectiveDeviceWidth());
@@ -3968,7 +4360,7 @@ static inline OptionSet<WebKit::FindOptions> toFindOptions(_WKFindOptions wkFind
         return;
 
     if (!self._shouldDeferGeometryUpdates)
-        _page->setViewportConfigurationViewLayoutSize(_page->viewLayoutSize(), _page->layoutSizeScaleFactor(), minimumEffectiveDeviceWidth);
+        _page->setViewportConfigurationViewLayoutSize(_page->viewLayoutSize(), _page->layoutSizeScaleFactorFromClient(), minimumEffectiveDeviceWidth);
     else
         _page->setMinimumEffectiveDeviceWidthWithoutViewportConfigurationUpdate(minimumEffectiveDeviceWidth);
 #endif
@@ -4225,14 +4617,33 @@ static inline OptionSet<WebKit::FindOptions> toFindOptions(_WKFindOptions wkFind
     return [_configuration _requiredWebExtensionBaseURL];
 }
 
-- (void)_adjustVisibilityForTargetedElements:(NSArray<_WKTargetedElementInfo *> *)wkElements completionHandler:(void(^)(BOOL success))completion
+static Vector<Ref<API::TargetedElementInfo>> elementsFromWKElements(NSArray<_WKTargetedElementInfo *> *wkElements)
 {
     Vector<Ref<API::TargetedElementInfo>> elements;
     elements.reserveInitialCapacity(wkElements.count);
     for (_WKTargetedElementInfo *element in wkElements)
         elements.append(*element->_info);
-    _page->adjustVisibilityForTargetedElements(elements, [completion = makeBlockPtr(completion)](bool success) {
+    return elements;
+}
+
+- (void)_resetVisibilityAdjustmentsForTargetedElements:(NSArray<_WKTargetedElementInfo *> *)elements completionHandler:(void(^)(BOOL success))completion
+{
+    _page->resetVisibilityAdjustmentsForTargetedElements(elementsFromWKElements(elements), [completion = makeBlockPtr(completion)](bool success) {
         completion(static_cast<BOOL>(success));
+    });
+}
+
+- (void)_adjustVisibilityForTargetedElements:(NSArray<_WKTargetedElementInfo *> *)elements completionHandler:(void(^)(BOOL success))completion
+{
+    _page->adjustVisibilityForTargetedElements(elementsFromWKElements(elements), [completion = makeBlockPtr(completion)](bool success) {
+        completion(static_cast<BOOL>(success));
+    });
+}
+
+- (void)_numberOfVisibilityAdjustmentRectsWithCompletionHandler:(void(^)(NSUInteger))completion
+{
+    _page->numberOfVisibilityAdjustmentRects([completion = makeBlockPtr(completion)](uint64_t count) {
+        completion(static_cast<NSUInteger>(count));
     });
 }
 

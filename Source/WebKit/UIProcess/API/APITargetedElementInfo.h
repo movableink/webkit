@@ -31,6 +31,10 @@
 #include <wtf/Forward.h>
 #include <wtf/WeakPtr.h>
 
+namespace WebCore {
+class ShareableBitmapHandle;
+}
+
 namespace WebKit {
 class WebPageProxy;
 }
@@ -51,13 +55,22 @@ public:
     WebCore::RectEdges<bool> offsetEdges() const { return m_info.offsetEdges; }
 
     const WTF::String& renderedText() const { return m_info.renderedText; }
-    const Vector<WTF::String>& selectors() const { return m_info.selectors; }
+    const WTF::String& searchableText() const { return m_info.searchableText; }
+    const WTF::String& screenReaderText() const { return m_info.screenReaderText; }
+    const Vector<Vector<WTF::String>>& selectors() const { return m_info.selectors; }
     WebCore::PositionType positionType() const { return m_info.positionType; }
     WebCore::FloatRect boundsInRootView() const { return m_info.boundsInRootView; }
     WebCore::FloatRect boundsInWebView() const;
+    WebCore::FloatRect boundsInClientCoordinates() const { return m_info.boundsInClientCoordinates; }
 
-    bool isUnderPoint() const { return m_info.isUnderPoint; }
+    bool isNearbyTarget() const { return m_info.isNearbyTarget; }
     bool isPseudoElement() const { return m_info.isPseudoElement; }
+    bool isInShadowTree() const { return m_info.isInShadowTree; }
+    bool isInVisibilityAdjustmentSubtree() const { return m_info.isInVisibilityAdjustmentSubtree; }
+    bool hasLargeReplacedDescendant() const { return m_info.hasLargeReplacedDescendant; }
+    bool hasAudibleMedia() const { return m_info.hasAudibleMedia; }
+
+    const HashSet<WTF::URL>& mediaAndLinkURLs() const { return m_info.mediaAndLinkURLs; }
 
     void childFrames(CompletionHandler<void(Vector<Ref<FrameTreeNode>>&&)>&&) const;
 
@@ -65,6 +78,8 @@ public:
 
     WebCore::ElementIdentifier elementIdentifier() const { return m_info.elementIdentifier; }
     WebCore::ScriptExecutionContextIdentifier documentIdentifier() const { return m_info.documentIdentifier; }
+
+    void takeSnapshot(CompletionHandler<void(std::optional<WebCore::ShareableBitmapHandle>&&)>&&);
 
 private:
     WebCore::TargetedElementInfo m_info;

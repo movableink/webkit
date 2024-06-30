@@ -42,7 +42,7 @@ namespace WebKit {
 
 using namespace WebCore;
 
-BackgroundFetchLoad::BackgroundFetchLoad(NetworkProcess& networkProcess, PAL::SessionID sessionID, Client& client, const BackgroundFetchRequest& request, size_t responseDataSize, const ClientOrigin& clientOrigin)
+BackgroundFetchLoad::BackgroundFetchLoad(NetworkProcess& networkProcess, PAL::SessionID sessionID, BackgroundFetchRecordLoaderClient& client, const BackgroundFetchRequest& request, size_t responseDataSize, const ClientOrigin& clientOrigin)
     : m_sessionID(WTFMove(sessionID))
     , m_client(client)
     , m_request(request.internalRequest)
@@ -54,7 +54,7 @@ BackgroundFetchLoad::BackgroundFetchLoad(NetworkProcess& networkProcess, PAL::Se
     }
 
     if (responseDataSize)
-        m_request.setHTTPHeaderField(HTTPHeaderName::Range, makeString("bytes=", responseDataSize, '-'));
+        m_request.setHTTPHeaderField(HTTPHeaderName::Range, makeString("bytes="_s, responseDataSize, '-'));
 
     m_networkLoadChecker->enableContentExtensionsCheck();
     if (request.cspResponseHeaders)

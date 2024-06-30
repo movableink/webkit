@@ -39,6 +39,7 @@ extern "C" {
 #endif
 
 #define WEBKIT2_LOG_CHANNELS(M) \
+    M(API) \
     M(ActivityState) \
     M(AdvancedPrivacyProtections) \
     M(AppSSO) \
@@ -51,6 +52,7 @@ extern "C" {
     M(ContentObservation) \
     M(ContextMenu) \
     M(DisplayLink) \
+    M(DisplayLists) \
     M(DiskPersistency) \
     M(DragAndDrop) \
     M(EME) \
@@ -86,6 +88,7 @@ extern "C" {
     M(Notifications) \
     M(PDF) \
     M(PDFAsyncRendering) \
+    M(PageLoadObserver) \
     M(PerformanceLogging) \
     M(Plugins) \
     M(Printing) \
@@ -116,7 +119,6 @@ extern "C" {
     M(TextInput) \
     M(TextInteraction) \
     M(Translation) \
-    M(UnifiedTextReplacement) \
     M(UIHitTesting) \
     M(ViewGestures) \
     M(ViewState) \

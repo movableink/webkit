@@ -60,8 +60,8 @@
 // 2 - Run a test exercising that type
 
 @interface NSURLProtectionSpace (WebKitNSURLProtectionSpace)
-- (void)_setServerTrust:(nullable SecTrustRef)serverTrust;
-- (void)_setDistinguishedNames:(nullable NSArray<NSData *> *)distinguishedNames;
+- (void)_setServerTrust:(SecTrustRef)serverTrust;
+- (void)_setDistinguishedNames:(NSArray<NSData *> *)distinguishedNames;
 @end
 
 class SerializationTestSender final : public IPC::MessageSender {
@@ -77,7 +77,7 @@ private:
 
 bool SerializationTestSender::performSendWithAsyncReplyWithoutUsingIPCConnection(UniqueRef<IPC::Encoder>&& encoder, CompletionHandler<void(IPC::Decoder*)>&& completionHandler) const
 {
-    auto decoder = IPC::Decoder::create({ encoder->buffer(), encoder->bufferSize() }, encoder->releaseAttachments());
+    auto decoder = IPC::Decoder::create(encoder->span(), encoder->releaseAttachments());
     ASSERT(decoder);
 
     completionHandler(decoder.get());
@@ -145,6 +145,22 @@ std::optional<CFHolderForTesting> CFHolderForTesting::decode(IPC::Decoder& decod
     return { {
         WTFMove(*value)
     } };
+}
+
+namespace IPC {
+
+template<> struct ArgumentCoder<CFHolderForTesting> {
+    template<typename Encoder>
+    static void encode(Encoder& encoder, const CFHolderForTesting& holder)
+    {
+        holder.encode(encoder);
+    }
+    static std::optional<CFHolderForTesting> decode(Decoder& decoder)
+    {
+        return CFHolderForTesting::decode(decoder);
+    }
+};
+
 }
 
 static bool cvPixelBufferRefsEqual(CVPixelBufferRef pixelBuffer1, CVPixelBufferRef pixelBuffer2)
@@ -455,6 +471,22 @@ std::optional<ObjCHolderForTesting> ObjCHolderForTesting::decode(IPC::Decoder& d
     } };
 }
 
+namespace IPC {
+
+template<> struct ArgumentCoder<ObjCHolderForTesting> {
+    template<typename Encoder>
+    static void encode(Encoder& encoder, const ObjCHolderForTesting& holder)
+    {
+        holder.encode(encoder);
+    }
+    static std::optional<ObjCHolderForTesting> decode(Decoder& decoder)
+    {
+        return ObjCHolderForTesting::decode(decoder);
+    }
+};
+
+}
+
 @interface NSDateComponents ()
 -(BOOL)oldIsEqual:(id)other;
 @end
@@ -533,6 +565,21 @@ static bool wkNSURLProtectionSpace_isEqual(NSURLProtectionSpace *a, SEL, NSURLPr
     return true;
 }
 
+#if USE(PASSKIT) && !PLATFORM(WATCHOS)
+static bool CNPostalAddressTesting_isEqual(CNPostalAddress *a, CNPostalAddress *b)
+{
+    // CNPostalAddress treats a nil formattedAddress and empty formattedAddress the same for equality.
+    // But, there's other behavior with CNPostalAddress where nil-vs-empty makes a critical difference.
+    // To regression test our IPC of the object, we explicitly make sure that "nil goes in, nil comes out"
+    if (a.formattedAddress && !b.formattedAddress)
+        return false;
+    if (!a.formattedAddress && b.formattedAddress)
+        return false;
+
+    return [a isEqual:b];
+}
+#endif
+
 static bool NSURLCredentialTesting_isEqual(NSURLCredential *a, NSURLCredential *b)
 {
     if (a.persistence != b.persistence)
@@ -595,6 +642,11 @@ inline bool operator==(const ObjCHolderForTesting& a, const ObjCHolderForTesting
 
     EXPECT_TRUE(aObject != nil);
     EXPECT_TRUE(bObject != nil);
+
+#if USE(PASSKIT) && !PLATFORM(WATCHOS)
+    if ([aObject isKindOfClass:PAL::getCNPostalAddressClass()])
+        return CNPostalAddressTesting_isEqual(aObject, bObject);
+#endif
 
     if ([aObject isKindOfClass:NSURLCredential.class])
         return NSURLCredentialTesting_isEqual(aObject, bObject);
@@ -930,7 +982,7 @@ TEST(IPCSerialization, Basic)
     };
 
     // CFCharacterSet
-    auto characterSet = adoptCF(CFCharacterSetGetPredefined(kCFCharacterSetWhitespaceAndNewline));
+    RetainPtr characterSet = CFCharacterSetGetPredefined(kCFCharacterSetWhitespaceAndNewline);
     runTestCF({ characterSet.get() });
 
     // NSNumber
@@ -1044,18 +1096,44 @@ TEST(IPCSerialization, Basic)
     auto components = personNameComponentsForTesting();
     runTestNS({ components.get().phoneticRepresentation });
     runTestNS({ components.get() });
+    components.get().namePrefix = nil;
+    runTestNS({ components.get() });
+    components.get().givenName = nil;
+    runTestNS({ components.get() });
+    components.get().middleName = nil;
+    runTestNS({ components.get() });
+    components.get().familyName = nil;
+    runTestNS({ components.get() });
+    components.get().nickname = nil;
+    runTestNS({ components.get() });
 
 #if USE(PASSKIT) && !PLATFORM(WATCHOS)
     // CNPhoneNumber
+    // Digits must be non-null at init-time, but countryCode can be null.
+    // However, Contacts will calculate a default country code if you pass in a null one,
+    // so testing encode/decode of such an instance is pointless.
     RetainPtr<CNPhoneNumber> phoneNumber = [PAL::getCNPhoneNumberClass() phoneNumberWithDigits:@"4085551234" countryCode:@"us"];
     runTestNS({ phoneNumber.get() });
 
     // CNPostalAddress
     RetainPtr<CNMutablePostalAddress> address = postalAddressForTesting();
     runTestNS({ address.get() });
+    address.get().formattedAddress = nil;
+    runTestNS({ address.get() });
 
     // PKContact
-    runTestNS({ pkContactForTesting().get() });
+    auto pkContact = pkContactForTesting();
+    runTestNS({ pkContact.get() });
+    pkContact.get().name = nil;
+    runTestNS({ pkContact.get() });
+    pkContact.get().postalAddress = nil;
+    runTestNS({ pkContact.get() });
+    pkContact.get().phoneNumber = nil;
+    runTestNS({ pkContact.get() });
+    pkContact.get().emailAddress = nil;
+    runTestNS({ pkContact.get() });
+    pkContact.get().supplementarySubLocality = nil;
+    runTestNS({ pkContact.get() });
 #endif // USE(PASSKIT) && !PLATFORM(WATCHOS)
 
 
@@ -1281,8 +1359,8 @@ static RetainPtr<DDScannerResult> fakeDataDetectorResultForTesting()
                                displayName:(NSString *)displayName
                          initiativeContext:(NSString *)initiativeContext
                                 initiative:(NSString *)initiative
-                      ampEnrollmentPinning:(nullable NSData *)ampEnrollmentPinning
-            operationalAnalyticsIdentifier:(nullable NSString *)operationalAnalyticsIdentifier
+                      ampEnrollmentPinning:(NSData *)ampEnrollmentPinning
+            operationalAnalyticsIdentifier:(NSString *)operationalAnalyticsIdentifier
                               signedFields:(NSArray<NSString *> *)signedFields
                                  signature:(NSData *)signature;
 
@@ -1293,7 +1371,7 @@ static RetainPtr<DDScannerResult> fakeDataDetectorResultForTesting()
                                  expiresAt:(NSUInteger)expiresAt
                                     domain:(NSString *)domainName
                                displayName:(NSString *)displayName
-            operationalAnalyticsIdentifier:(nullable NSString *)operationalAnalyticsIdentifier
+            operationalAnalyticsIdentifier:(NSString *)operationalAnalyticsIdentifier
                                  signature:(NSData *)signature;
 @end
 

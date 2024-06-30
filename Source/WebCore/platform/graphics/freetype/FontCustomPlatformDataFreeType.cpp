@@ -39,6 +39,7 @@
 #include <mutex>
 
 #ifdef HAVE_HB_FEATURES_H
+#include <hb.h>
 // Workaround https://github.com/harfbuzz/harfbuzz/commit/30c5402e3d0cc156fd5f04560864a88723173cf2
 #define HB_NO_SINGLE_HEADER_ERROR
 #include <hb-features.h>
@@ -147,8 +148,9 @@ RefPtr<FontCustomPlatformData> FontCustomPlatformData::create(SharedBuffer& buff
         return nullptr;
     }
 
+    auto span = buffer.span();
     FT_Face freeTypeFace;
-    if (FT_New_Memory_Face(library, reinterpret_cast<const FT_Byte*>(buffer.data()), buffer.size(), 0, &freeTypeFace))
+    if (FT_New_Memory_Face(library, reinterpret_cast<const FT_Byte*>(span.data()), span.size(), 0, &freeTypeFace))
         return nullptr;
     FontPlatformData::CreationData creationData = { buffer, itemInCollection };
     return adoptRef(new FontCustomPlatformData(freeTypeFace, WTFMove(creationData)));

@@ -189,11 +189,7 @@ const FeatureSchema* MediaQueryParser::schemaForFeatureName(const AtomString& na
 
 void serialize(StringBuilder& builder, const MediaQueryList& list)
 {
-    for (auto& query : list) {
-        if (&query != &list.first())
-            builder.append(", ");
-        serialize(builder, query);
-    }
+    builder.append(interleave(list, serialize, ", "_s));
 }
 
 void serialize(StringBuilder& builder, const MediaQuery& query)
@@ -201,10 +197,10 @@ void serialize(StringBuilder& builder, const MediaQuery& query)
     if (query.prefix) {
         switch (*query.prefix) {
         case Prefix::Not:
-            builder.append("not ");
+            builder.append("not "_s);
             break;
         case Prefix::Only:
-            builder.append("only ");
+            builder.append("only "_s);
             break;
         }
     }
@@ -212,7 +208,7 @@ void serialize(StringBuilder& builder, const MediaQuery& query)
     if (!query.mediaType.isEmpty() && (!query.condition || query.prefix || query.mediaType != allAtom())) {
         serializeIdentifier(query.mediaType, builder);
         if (query.condition)
-            builder.append(" and ");
+            builder.append(" and "_s);
     }
 
     if (query.condition)

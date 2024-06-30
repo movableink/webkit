@@ -174,6 +174,8 @@ namespace WebCore {
 #if PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)
     String contextMenuItemTagEnterVideoEnhancedFullscreen();
     String contextMenuItemTagExitVideoEnhancedFullscreen();
+    String contextMenuItemTagEnterVideoViewer();
+    String contextMenuItemTagExitVideoViewer();
 #endif
     String contextMenuItemTagMediaPlay();
     String contextMenuItemTagMediaPause();
@@ -188,8 +190,8 @@ namespace WebCore {
 #if HAVE(TRANSLATION_UI_SERVICES)
     String contextMenuItemTagTranslate(const String& selectedString);
 #endif
-#if ENABLE(UNIFIED_TEXT_REPLACEMENT)
-    String contextMenuItemTagSwapCharacters();
+#if ENABLE(WRITING_TOOLS)
+    String contextMenuItemTagWritingTools();
 #endif
 #if ENABLE(UNIFIED_PDF)
     WEBCORE_EXPORT String contextMenuItemPDFOpenWithPreview();

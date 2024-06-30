@@ -26,6 +26,7 @@
 #pragma once
 
 #include <unicode/utypes.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/DataRef.h>
 #include <wtf/OptionSet.h>
 #include <wtf/Vector.h>
@@ -34,6 +35,7 @@ namespace WebCore {
 
 class AnimationList;
 class AutosizeStatus;
+class BasicShapePath;
 class BorderData;
 class BorderValue;
 class CSSCustomPropertyValue;
@@ -293,8 +295,9 @@ struct PseudoStyleCache {
 };
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(RenderStyle);
-class RenderStyle {
+class RenderStyle final : public CanMakeCheckedPtr<RenderStyle> {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(RenderStyle);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderStyle);
 private:
     enum CloneTag { Clone };
     enum CreateDefaultStyleTag { CreateDefaultStyle };
@@ -551,7 +554,7 @@ public:
     inline FontSelectionValue fontWeight() const;
     inline FontSelectionValue fontStretch() const;
     inline std::optional<FontSelectionValue> fontItalic() const;
-    inline FontPalette fontPalette() const;
+    inline const FontPalette& fontPalette() const;
     inline FontSizeAdjust fontSizeAdjust() const;
 
     inline const Length& textIndent() const;
@@ -1069,16 +1072,13 @@ public:
 
     inline OptionSet<SpeakAs> speakAs() const;
 
-    inline FilterOperations& mutableFilter();
     inline const FilterOperations& filter() const;
     inline bool hasFilter() const;
     bool hasReferenceFilterOnly() const;
 
-    inline FilterOperations& mutableAppleColorFilter();
     inline const FilterOperations& appleColorFilter() const;
     inline bool hasAppleColorFilter() const;
 
-    inline FilterOperations& mutableBackdropFilter();
     inline const FilterOperations& backdropFilter() const;
     inline bool hasBackdropFilter() const;
 
@@ -1244,7 +1244,7 @@ public:
     void setFontWeight(FontSelectionValue);
     void setFontStretch(FontSelectionValue);
     void setFontItalic(std::optional<FontSelectionValue>);
-    void setFontPalette(FontPalette);
+    void setFontPalette(const FontPalette&);
 
     void setColor(const Color&);
     inline void setTextIndent(Length&&);
@@ -1481,7 +1481,7 @@ public:
     inline void setColumnSpan(ColumnSpan);
     inline void inheritColumnPropertiesFrom(const RenderStyle& parent);
 
-    inline void setTransform(const TransformOperations&);
+    inline void setTransform(TransformOperations&&);
     inline void setTransformOriginX(Length&&);
     inline void setTransformOriginY(Length&&);
     inline void setTransformOriginZ(float);
@@ -1510,10 +1510,10 @@ public:
     inline void setColorScheme(StyleColorScheme);
 #endif
 
-    inline void setFilter(const FilterOperations&);
-    inline void setAppleColorFilter(const FilterOperations&);
+    inline void setFilter(FilterOperations&&);
+    inline void setAppleColorFilter(FilterOperations&&);
 
-    inline void setBackdropFilter(const FilterOperations&);
+    inline void setBackdropFilter(FilterOperations&&);
 
     inline void setTabSize(const TabSize&);
 
@@ -1606,9 +1606,7 @@ public:
     inline void setApplePayButtonType(ApplePayButtonType);
 #endif
 
-#if ENABLE(CSS_PAINTING_API)
     void addCustomPaintWatchProperty(const AtomString&);
-#endif
 
     // Support for paint-order, stroke-linecap, stroke-linejoin, and stroke-miterlimit from https://drafts.fxtf.org/paint/.
     inline void setPaintOrder(PaintOrder);
@@ -1652,16 +1650,22 @@ public:
     inline SVGRenderStyle& accessSVGStyle();
 
     inline SVGPaintType fillPaintType() const;
-    inline StyleColor fillPaintColor() const;
+    inline SVGPaintType visitedFillPaintType() const;
+    inline const StyleColor& fillPaintColor() const;
+    inline const StyleColor& visitedFillPaintColor() const;
     inline void setFillPaintColor(const StyleColor&);
+    inline void setVisitedFillPaintColor(const StyleColor&);
     inline void setHasExplicitlySetColor(bool);
     inline bool hasExplicitlySetColor() const;
     inline float fillOpacity() const;
     inline void setFillOpacity(float);
 
     inline SVGPaintType strokePaintType() const;
-    inline StyleColor strokePaintColor() const;
+    inline SVGPaintType visitedStrokePaintType() const;
+    inline const StyleColor& strokePaintColor() const;
+    inline const StyleColor& visitedStrokePaintColor() const;
     inline void setStrokePaintColor(const StyleColor&);
+    inline void setVisitedStrokePaintColor(const StyleColor&);
     inline float strokeOpacity() const;
     inline void setStrokeOpacity(float);
     inline Vector<SVGLengthValue> strokeDashArray() const;
@@ -1683,6 +1687,10 @@ public:
     inline void setX(Length&&);
     inline const Length& y() const;
     inline void setY(Length&&);
+
+    inline void setD(RefPtr<BasicShapePath>&&);
+    inline BasicShapePath* d() const;
+    static BasicShapePath* initialD() { return nullptr; }
 
     inline float floodOpacity() const;
     inline void setFloodOpacity(float);
@@ -2188,6 +2196,14 @@ public:
     inline void setBlockStepInsert(BlockStepInsert);
     bool scrollAnchoringSuppressionStyleDidChange(const RenderStyle*) const;
     bool outOfFlowPositionStyleDidChange(const RenderStyle*) const;
+
+    static Vector<AtomString> initialAnchorNames();
+    inline const Vector<AtomString>& anchorNames() const;
+    inline void setAnchorNames(const Vector<AtomString>&);
+
+    static inline const AtomString& initialPositionAnchor();
+    inline const AtomString& positionAnchor() const;
+    inline void setPositionAnchor(const AtomString&);
 
 private:
     struct NonInheritedFlags {

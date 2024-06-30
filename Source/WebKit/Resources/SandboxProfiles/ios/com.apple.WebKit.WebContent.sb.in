@@ -445,8 +445,7 @@
        (iokit-property "IORegistryEntryPropertyKeys"))
 
 (deny mach-lookup (with no-report)
-    (global-name "com.apple.runningboard")
-)
+    (global-name "com.apple.runningboard"))
 
 (allow system-sched
        (require-entitlement "com.apple.private.kernel.override-cpumon"))
@@ -467,35 +466,33 @@
         (literal "/private/var/run/syslog")))
 
 (define (notifyd-message-numbers) (message-number 1002 1011 1012 1016 1017 1018 1021 1025 1026 1028 1029 1030 1031 1032))
-
-(allow mach-lookup (global-name "com.apple.system.notification_center")
-    (apply-message-filter
-        (deny mach-message-send)
-        (deny mach-message-send (with no-report) (message-number 1023))
-        (allow mach-message-send (notifyd-message-numbers))))
-
-(allow ipc-posix-shm-read*
-    (ipc-posix-name "apple.shm.notification_center"))
-
-#if ENABLE(NOTIFY_BLOCKING)
-(with-filter (state-flag "EnableExperimentalSandbox")
+(define (allow-notifyd)
+    (allow ipc-posix-shm-read* (ipc-posix-name "apple.shm.notification_center"))
     (allow mach-lookup (global-name "com.apple.system.notification_center")
         (apply-message-filter
             (deny mach-message-send)
             (deny mach-message-send (with no-report) (message-number 1023))
-            (deny mach-message-send (with telemetry-backtrace) (notifyd-message-numbers)))))
+            (allow mach-message-send (notifyd-message-numbers)))))
+
+#if ENABLE(NOTIFY_BLOCKING)
+(allow mach-lookup (global-name "com.apple.system.notification_center")
+    (apply-message-filter (deny mach-message-send)))
+(with-filter (require-not (webcontent-process-launched))
+    (allow-notifyd))
+#else
+(allow-notifyd)
 #endif
 
 (managed-configuration-read-public)
 
 (deny system-info (with no-report)
-      (info-type "net.link.addr"))
+    (info-type "net.link.addr"))
 
 (allow file-read*
-       (subpath "/private/var/db/datadetectors/sys"))
+    (subpath "/private/var/db/datadetectors/sys"))
 
 (allow-well-known-system-group-container-subpath-read
-       "/systemgroup.com.apple.icloud.findmydevice.managed/Library")
+    "/systemgroup.com.apple.icloud.findmydevice.managed/Library")
 
 (allow mach-task-name (target self))
 
@@ -666,6 +663,7 @@
         "kern.osversion"
         "kern.secure_kernel" ;; Needed by XPC bundle resolution
         "kern.version"
+        "kern.willshutdown" ;; <rdar://122511261>
         "sysctl.name2oid"
         "vm.footprint_suspend")
     (sysctl-name-prefix "net.routetable") ;; <rdar://problem/57665153>
@@ -956,10 +954,10 @@
         SYS_getpid
         SYS_kdebug_trace_string
         SYS_objc_bp_assist_cfg_np
+        SYS_persona
         SYS_shared_region_check_np
         SYS_sigaction
-        SYS_workq_open
-        SYS_writev))
+        SYS_workq_open))
 
 (define (syscall-unix-in-use-after-launch)
     (syscall-number
@@ -1030,7 +1028,8 @@
         SYS_ulock_wait2 ;; <rdar://problem/58743778>
         SYS_ulock_wake
         SYS_workq_kernreturn
-        SYS_write_nocancel))
+        SYS_write_nocancel
+        SYS_writev)) ;; used in CFLog, can possibly be blocked.
 
 (define (syscall-unix-in-use-after-launch-blocked-in-lockdown-mode) (syscall-number
     SYS_abort_with_payload ;; <rdar://problem/50967271>
@@ -1108,11 +1107,13 @@
 
 
 #if ENABLE(QUICKLOOK_SANDBOX_RESTRICTIONS)
-(with-filter (require-not (state-flag "BlockQuickLookSandboxResources"))
-    (allow syscall-unix
-        (syscall-unix-rarely-in-use)
-        (syscall-unix-rarely-in-use-blocked-in-lockdown-mode)))
-(with-filter (state-flag "BlockQuickLookSandboxResources")
+(allow syscall-unix
+    (syscall-unix-rarely-in-use)
+    (syscall-unix-rarely-in-use-blocked-in-lockdown-mode))
+(with-filter
+    (require-all
+        (state-flag "ParentProcessCanEnableQuickLookStateFlag")
+        (require-not (state-flag "EnableQuickLookSandboxResources")))
     (allow syscall-unix (with report) (with telemetry-backtrace)
         (syscall-unix-rarely-in-use)
         (syscall-unix-rarely-in-use-blocked-in-lockdown-mode)))
@@ -1329,6 +1330,7 @@
         host_info
         io_server_version
         (when (defined? 'mach_vm_range_create) mach_vm_range_create) ;; <rdar://105161083>
+        mach_voucher_attr_command
         task_restartable_ranges_register
         task_set_special_port))
 
@@ -1391,10 +1393,10 @@
         thread_policy
         thread_policy_set))
 
-; This rule is only temporary and should be removed shortly
-; See: rdar://125256111.
-(mobile-preferences-read "com.apple.webkit-new-sandbox-test")
-    
+(define (kernel-mig-routines-iokit-service) (kernel-mig-routine
+    io_service_get_matching_service_bin
+    io_service_get_matching_services_bin))
+
 (allow mach-kernel-endpoint
     (apply-message-filter
         (deny mach-message-send (with telemetry))
@@ -1424,36 +1426,23 @@
                 (with telemetry)
                 (with message "kernel mig routine used after launch")
                 (kernel-mig-routine-only-in-use-during-launch)))
-#if !ENABLE(WEBCONTENT_GPU_SANDBOX_EXTENSIONS_BLOCKING)
+#if ENABLE(WEBCONTENT_GPU_SANDBOX_EXTENSIONS_BLOCKING)
+        (deny mach-message-send (with no-report) (kernel-mig-routines-iokit-service))
+#else
         (with-filter (require-not (state-flag "BlockIOKitInWebContentSandbox"))
-            (allow mach-message-send (kernel-mig-routine
-                io_service_get_matching_service_bin
-                io_service_get_matching_services_bin)))
+            (allow mach-message-send (kernel-mig-routines-iokit-service)))
 #endif
 #endif
 
 #if HAVE(HARDENED_MACH_EXCEPTIONS)
         (with-filter (require-not (lockdown-mode))
             (allow mach-message-send (kernel-mig-routine thread_adopt_exception_handler))
-#if ENABLE(BLOCK_SET_EXCEPTION_PORTS)
             (with-filter (require-not (webcontent-process-launched))
-                (allow mach-message-send (kernel-mig-routine task_register_hardened_exception_handler)))
-#else
-            (allow mach-message-send (kernel-mig-routine task_register_hardened_exception_handler))
-#endif ;; ENABLE(BLOCK_SET_EXCEPTION_PORTS)
-        )
+                (allow mach-message-send (kernel-mig-routine task_register_hardened_exception_handler))))
 #else
         (with-filter (require-not (lockdown-mode))
-#if ENABLE(BLOCK_SET_EXCEPTION_PORTS)
-            (with-filter (require-not (webcontent-process-launched))
-                (allow mach-message-send (kernel-mig-routine thread_set_exception_ports)))
-#else
-            (allow mach-message-send (kernel-mig-routine thread_set_exception_ports))
-#endif ;; ENABLE(BLOCK_SET_EXCEPTION_PORTS)
-        )
+            (allow mach-message-send (kernel-mig-routine thread_set_exception_ports)))
 #endif ;; HAVE(HARDENED_MACH_EXCEPTIONS)
-
-
 
         (with-filter (lockdown-mode)
             (deny mach-message-send (with telemetry) (with message "Lockdown mode")
@@ -1470,33 +1459,13 @@
 (allow darwin-notification-post
     (notification-name
 #if ENABLE(NOTIFY_BLOCKING)
-        "com.apple.WebKit.LibraryPathDiagnostics"
-        "com.apple.WebKit.deleteAllCode"
-        "com.apple.WebKit.dumpGCHeap"
-        "com.apple.WebKit.dumpUntrackedMallocs"
-        "com.apple.WebKit.fullGC"
-        "com.apple.WebKit.logMemStats"
-        "com.apple.WebKit.logPageState"
-        "com.apple.WebKit.showAllDocuments"
-        "com.apple.WebKit.showBackForwardCache"
-        "com.apple.WebKit.showGraphicsLayerTree"
-        "com.apple.WebKit.showLayerTree"
-        "com.apple.WebKit.showLayoutTree"
-        "com.apple.WebKit.showMemoryCache"
-        "com.apple.WebKit.showPaintOrderTree"
-        "com.apple.WebKit.showRenderTree"
-        "com.apple.language.changed"
-        "com.apple.mediaaccessibility.captionAppearanceSettingsChanged"
-        "com.apple.powerlog.state_changed"
-        "com.apple.system.lowpowermode"
-        "com.apple.system.timezone"
-        "com.apple.zoomwindow"
-        "org.WebKit.lowMemory"
-        "org.WebKit.lowMemory.begin"
-        "org.WebKit.lowMemory.end"
-        "org.WebKit.memoryWarning"
-        "org.WebKit.memoryWarning.begin"
-        "org.WebKit.memoryWarning.end"
+#define WK_NOTIFICATION_COMMENT(...)
+#define WK_NOTIFICATION(name) name
+#include "Resources/cocoa/NotificationAllowList/ForwardedNotifications.def"
+#include "Resources/cocoa/NotificationAllowList/EmbeddedForwardedNotifications.def"
+#include "Resources/cocoa/NotificationAllowList/NonForwardedNotifications.def"
+#undef WK_NOTIFICATION
+#undef WK_NOTIFICATION_COMMENT
 #endif
         "_AXNotification_AXSClassicInvertColorsPreference"
         "com.apple.WebContentFilter.remoteUI.WebContentAnalysisUI-com.apple.uikit.viewService.connectionRequest"

@@ -27,6 +27,9 @@
 
 #if ENABLE(WK_WEB_EXTENSIONS)
 
+#import "HTTPServer.h"
+#import "PlatformUtilities.h"
+#import "WebExtensionUtilities.h"
 #import <WebKit/_WKWebExtensionWebRequestFilter.h>
 
 namespace TestWebKitAPI {
@@ -230,7 +233,7 @@ TEST(WKWebExtensionAPIWebRequest, ErrorOccurred)
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, "<img src='nonexistent.png' />"_s } },
-        { "/nonexistent.png"_s, { HTTPResponse::TerminateConnection::Yes } },
+        { "/nonexistent.png"_s, { HTTPResponse::Behavior::TerminateConnectionAfterReceivingResponse } },
     }, TestWebKitAPI::HTTPServer::Protocol::Http);
 
     auto *backgroundScript = Util::constructScript(@[

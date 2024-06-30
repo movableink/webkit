@@ -85,7 +85,7 @@ MediaKeySession::MediaKeySession(Document& document, WeakPtr<MediaKeys>&& keys, 
     // https://w3c.github.io/encrypted-media/#dom-mediakeys-createsession
     // W3C Editor's Draft 09 November 2016
     // createSession(), ctd.
-    ALWAYS_LOG(LOGIDENTIFIER, "sessionType(", sessionType, "), useDistinctiveIdentifier(", useDistinctiveIdentifier, ")");
+    ALWAYS_LOG(LOGIDENTIFIER, "sessionType("_s, sessionType, "), useDistinctiveIdentifier("_s, useDistinctiveIdentifier, ")"_s);
 
     // 3.1. Let the sessionId attribute be the empty string.
     // 3.2. Let the expiration attribute be NaN.
@@ -719,8 +719,8 @@ void MediaKeySession::updateKeyStatuses(CDMInstanceSession::KeyStatusVector&& in
         if (!statusCount.value)
             continue;
         if (!statusString.isEmpty())
-            statusString.append(", ");
-        statusString.append(makeString(convertEnumerationToString(statusCount.key), ": ", statusCount.value));
+            statusString.append(", "_s);
+        statusString.append(convertEnumerationToString(statusCount.key), ": "_s, statusCount.value);
     }
     ALWAYS_LOG(LOGIDENTIFIER, "statuses: {", statusString.toString(), "}");
 #endif
@@ -812,11 +812,6 @@ bool MediaKeySession::virtualHasPendingActivity() const
 {
     // A MediaKeySession object SHALL NOT be destroyed and SHALL continue to receive events if it is not closed and the MediaKeys object that created it remains accessible.
     return !m_closed && m_keys;
-}
-
-const char* MediaKeySession::activeDOMObjectName() const
-{
-    return "MediaKeySession";
 }
 
 void MediaKeySession::stop()

@@ -21,6 +21,7 @@
 #include "include/core/SkSurfaceProps.h"
 #include "include/core/SkTileMode.h"
 #include "include/core/SkTypes.h"
+#include "include/private/base/SkFloatingPoint.h"
 #include "include/private/base/SkTArray.h"
 #include "include/private/base/SkTPin.h"
 #include "include/private/base/SkTo.h"
@@ -75,7 +76,7 @@ struct Vector {
     Vector(SkScalar x, SkScalar y) : fX(x), fY(y) {}
     explicit Vector(const SkVector& v) : fX(v.fX), fY(v.fY) {}
 
-    bool isFinite() const { return SkScalarsAreFinite(fX, fY); }
+    bool isFinite() const { return SkIsFinite(fX, fY); }
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -721,8 +722,8 @@ public:
     // on the context's desired output. 'image' must not be null.
     static FilterResult MakeFromImage(const Context& ctx,
                                       sk_sp<SkImage> image,
-                                      const SkRect& srcRect,
-                                      const ParameterSpace<SkRect>& dstRect,
+                                      SkRect srcRect,
+                                      ParameterSpace<SkRect> dstRect,
                                       const SkSamplingOptions& sampling);
 
     // Bilinear is used as the default because it can be downgraded to nearest-neighbor when the
@@ -847,6 +848,8 @@ private:
     FilterResult subset(const LayerSpace<SkIPoint>& knownOrigin,
                         const LayerSpace<SkIRect>& subsetBounds,
                         bool clampSrcIfDisjoint=false) const;
+    // Convenient version of subset() that insets a single pixel.
+    FilterResult insetByPixel() const;
 
     enum class BoundsAnalysis : int {
         // The image can be drawn directly, without needing to apply tiling, or handling how any

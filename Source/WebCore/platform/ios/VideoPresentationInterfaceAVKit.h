@@ -41,6 +41,8 @@ namespace WebCore {
 class PlaybackSessionInterfaceIOS;
 
 class VideoPresentationInterfaceAVKit final : public VideoPresentationInterfaceIOS {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(VideoPresentationInterfaceAVKit);
 public:
     WEBCORE_EXPORT static Ref<VideoPresentationInterfaceAVKit> create(PlaybackSessionInterfaceIOS&);
     WEBCORE_EXPORT ~VideoPresentationInterfaceAVKit();
@@ -48,7 +50,7 @@ public:
     WEBCORE_EXPORT void hasVideoChanged(bool) final;
 
 #if !RELEASE_LOG_DISABLED
-    const char* logClassName() const { return "VideoPresentationInterfaceAVKit"; };
+    ASCIILiteral logClassName() const { return "VideoPresentationInterfaceAVKit"_s; };
 #endif
 
     WEBCORE_EXPORT AVPlayerViewController *avPlayerViewController() const final;
@@ -74,6 +76,7 @@ private:
     void setContentDimensions(const FloatSize&) final;
     void setAllowsPictureInPicturePlayback(bool) final;
     bool isExternalPlaybackActive() const final;
+    bool willRenderToLayer() const final;
 
     RetainPtr<WebAVPlayerViewControllerDelegate> m_playerViewControllerDelegate;
     RetainPtr<WebAVPlayerViewController> m_playerViewController;

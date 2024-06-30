@@ -27,8 +27,6 @@
 #include "config.h"
 #include "CSSPaintImageValue.h"
 
-#if ENABLE(CSS_PAINTING_API)
-
 #include "CSSVariableData.h"
 #include "StylePaintImage.h"
 #include <wtf/text/StringBuilder.h>
@@ -47,7 +45,7 @@ CSSPaintImageValue::~CSSPaintImageValue() = default;
 String CSSPaintImageValue::customCSSText() const
 {
     // FIXME: This should include the arguments too.
-    return makeString("paint(", m_name, ')');
+    return makeString("paint("_s, m_name, ')');
 }
 
 RefPtr<StyleImage> CSSPaintImageValue::createStyleImage(Style::BuilderState&) const
@@ -56,5 +54,3 @@ RefPtr<StyleImage> CSSPaintImageValue::createStyleImage(Style::BuilderState&) co
 }
 
 } // namespace WebCore
-
-#endif

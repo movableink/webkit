@@ -61,8 +61,9 @@ public:
     void remove(String&& name, Ref<DeferredPromise>&&);
     void remove(CookieStoreDeleteOptions&&, Ref<DeferredPromise>&&);
 
-    using RefCounted::ref;
-    using RefCounted::deref;
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     using EventTarget::weakPtrFactory;
     using EventTarget::WeakValueType;
@@ -75,7 +76,6 @@ private:
     void cookiesDeleted(const String& host, const Vector<Cookie>&) final;
 
     // ActiveDOMObject
-    const char* activeDOMObjectName() const final;
     void stop() final;
     bool virtualHasPendingActivity() const final;
 
@@ -90,6 +90,7 @@ private:
 
     class MainThreadBridge;
     Ref<MainThreadBridge> m_mainThreadBridge;
+    Ref<MainThreadBridge> protectedMainThreadBridge() const;
 
     bool m_hasChangeEventListener { false };
     WeakPtr<CookieJar> m_cookieJar;

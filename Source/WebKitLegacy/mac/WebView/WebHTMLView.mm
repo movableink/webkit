@@ -405,6 +405,8 @@ static std::optional<WebCore::ContextMenuAction> toAction(NSInteger tag)
         return ContextMenuItemTagEnterVideoFullscreen;
     case WebMenuItemTagToggleVideoEnhancedFullscreen:
         return ContextMenuItemTagToggleVideoEnhancedFullscreen;
+    case WebMenuItemTagToggleVideoViewer:
+        return ContextMenuItemTagToggleVideoViewer;
     case WebMenuItemTagMediaPlayPause:
         return ContextMenuItemTagMediaPlayPause;
     case WebMenuItemTagMediaMute:
@@ -413,8 +415,8 @@ static std::optional<WebCore::ContextMenuAction> toAction(NSInteger tag)
         return ContextMenuItemTagDictationAlternative;
     case WebMenuItemTagTranslate:
         return ContextMenuItemTagTranslate;
-    case WebMenuItemTagSwapCharacters:
-        return ContextMenuItemTagSwapCharacters;
+    case WebMenuItemTagWritingTools:
+        return ContextMenuItemTagWritingTools;
     }
     return std::nullopt;
 }
@@ -593,10 +595,12 @@ static std::optional<NSInteger> toTag(WebCore::ContextMenuAction action)
         return WebMenuItemTagShareMenu;
     case ContextMenuItemTagToggleVideoEnhancedFullscreen:
         return WebMenuItemTagToggleVideoEnhancedFullscreen;
+    case ContextMenuItemTagToggleVideoViewer:
+        return WebMenuItemTagToggleVideoViewer;
     case ContextMenuItemTagTranslate:
         return WebMenuItemTagTranslate;
-    case ContextMenuItemTagSwapCharacters:
-        return WebMenuItemTagSwapCharacters;
+    case ContextMenuItemTagWritingTools:
+        return WebMenuItemTagWritingTools;
 #if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
     case ContextMenuItemTagPlayAllAnimations:
         return WebMenuItemTagPlayAllAnimations;
@@ -2659,7 +2663,7 @@ static String commandNameForSelector(SEL selector)
     size_t selectorNameLength = strlen(selectorName);
     if (selectorNameLength < 2 || selectorName[selectorNameLength - 1] != ':')
         return String();
-    return String(selectorName, selectorNameLength - 1);
+    return String({ selectorName, selectorNameLength - 1 });
 }
 
 - (WebCore::Editor::Command)coreCommandBySelector:(SEL)selector
@@ -2964,11 +2968,11 @@ IGNORE_WARNINGS_END
         return [self _hasSelection];
 
     if (action == @selector(paste:) || action == @selector(pasteAsPlainText:))
-        return frame && (frame->editor().canDHTMLPaste() || frame->editor().canPaste());
+        return frame && (frame->editor().canDHTMLPaste() || frame->editor().canEdit());
 
     if (action == @selector(pasteAsRichText:))
         return frame && (frame->editor().canDHTMLPaste()
-            || (frame->editor().canPaste() && frame->selection().selection().isContentRichlyEditable()));
+            || (frame->editor().canEdit() && frame->selection().selection().isContentRichlyEditable()));
 
     if (action == @selector(performFindPanelAction:))
         return NO;
@@ -6130,7 +6134,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     WebFrame *webFrame = [self _frame];
     auto* coreFrame = core(webFrame);
     if (coreFrame && coreFrame->view())
-        coreFrame->view()->updateLayoutAndStyleIfNeededRecursive();
+        coreFrame->view()->updateLayoutAndStyleIfNeededRecursive(WebCore::LayoutOptions::UpdateCompositingLayers);
 }
 
 - (void) _destroyAllWebPlugins

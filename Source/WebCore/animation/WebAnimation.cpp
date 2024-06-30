@@ -38,6 +38,7 @@
 #include "ComputedStyleExtractor.h"
 #include "DOMPromiseProxy.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "DocumentTimeline.h"
 #include "Element.h"
 #include "EventLoop.h"
@@ -1378,14 +1379,15 @@ void WebAnimation::tick()
         m_effect->animationDidTick();
 }
 
-void WebAnimation::resolve(RenderStyle& targetStyle, const Style::ResolutionContext& resolutionContext, std::optional<Seconds> startTime)
+OptionSet<AnimationImpact> WebAnimation::resolve(RenderStyle& targetStyle, const Style::ResolutionContext& resolutionContext, std::optional<Seconds> startTime)
 {
     if (!m_shouldSkipUpdatingFinishedStateWhenResolving)
         updateFinishedState(DidSeek::No, SynchronouslyNotify::No);
     m_shouldSkipUpdatingFinishedStateWhenResolving = false;
 
     if (auto keyframeEffect = dynamicDowncast<KeyframeEffect>(m_effect.get()))
-        keyframeEffect->apply(targetStyle, resolutionContext, startTime);
+        return keyframeEffect->apply(targetStyle, resolutionContext, startTime);
+    return { };
 }
 
 void WebAnimation::setSuspended(bool isSuspended)
@@ -1413,11 +1415,6 @@ WebAnimation& WebAnimation::readyPromiseResolve()
 WebAnimation& WebAnimation::finishedPromiseResolve()
 {
     return *this;
-}
-
-const char* WebAnimation::activeDOMObjectName() const
-{
-    return "Animation";
 }
 
 void WebAnimation::suspend(ReasonForSuspension)
@@ -1556,7 +1553,7 @@ ExceptionOr<void> WebAnimation::commitStyles()
         return Exception { ExceptionCode::NoModificationAllowedError };
 
     // 2.2 If, after applying any pending style changes, target is not being rendered, throw an "InvalidStateError" DOMException and abort these steps.
-    styledElement->document().updateStyleIfNeeded();
+    styledElement->protectedDocument()->updateStyleIfNeeded();
     auto* renderer = styledElement->renderer();
     if (!renderer)
         return Exception { ExceptionCode::InvalidStateError };

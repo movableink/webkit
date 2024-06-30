@@ -35,6 +35,7 @@
 #import "WebProcessPool.h"
 #import "_WKCustomHeaderFieldsInternal.h"
 #import <WebCore/DocumentLoader.h>
+#import <WebCore/ElementTargetingTypes.h>
 #import <WebCore/WebCoreObjCExtras.h>
 #import <wtf/RetainPtr.h>
 
@@ -131,6 +132,8 @@ static WebCore::ModalContainerObservationPolicy coreModalContainerObservationPol
 } // namespace WebKit
 
 @implementation WKWebpagePreferences
+
+WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
 
 + (instancetype)defaultPreferences
 {
@@ -652,6 +655,64 @@ static _WKWebsiteDeviceOrientationAndMotionAccessPolicy toWKWebsiteDeviceOrienta
         webCorePolicy.add(WebCore::AdvancedPrivacyProtections::LinkDecorationFiltering);
 
     _websitePolicies->setAdvancedPrivacyProtections(webCorePolicy);
+}
+
+- (void)_setVisibilityAdjustmentSelectorsIncludingShadowHosts:(NSArray<NSArray<NSSet<NSString *> *> *> *)elements
+{
+    Vector<WebCore::TargetedElementSelectors> result;
+    result.reserveInitialCapacity(elements.count);
+    for (NSArray<NSSet<NSString *> *> *nsSelectorsForElement in elements) {
+        WebCore::TargetedElementSelectors selectorsForElement;
+        selectorsForElement.reserveInitialCapacity(nsSelectorsForElement.count);
+        for (NSSet<NSString *> *nsSelectors in nsSelectorsForElement) {
+            HashSet<String> selectors;
+            selectors.reserveInitialCapacity(nsSelectors.count);
+            for (NSString *selector in nsSelectors)
+                selectors.add(selector);
+            selectorsForElement.append(WTFMove(selectors));
+        }
+        result.append(WTFMove(selectorsForElement));
+    }
+    _websitePolicies->setVisibilityAdjustmentSelectors(WTFMove(result));
+}
+
+- (NSArray<NSArray<NSSet<NSString *> *> *> *)_visibilityAdjustmentSelectorsIncludingShadowHosts
+{
+    RetainPtr result = adoptNS([[NSMutableArray alloc] initWithCapacity:_websitePolicies->visibilityAdjustmentSelectors().size()]);
+    for (auto& selectorsForElement : _websitePolicies->visibilityAdjustmentSelectors()) {
+        RetainPtr nsSelectorsForElement = adoptNS([[NSMutableArray alloc] initWithCapacity:selectorsForElement.size()]);
+        for (auto& selectors : selectorsForElement) {
+            RetainPtr nsSelectors = adoptNS([[NSMutableSet alloc] initWithCapacity:selectors.size()]);
+            for (auto& selector : selectors)
+                [nsSelectors addObject:selector];
+            [nsSelectorsForElement addObject:nsSelectors.get()];
+        }
+        [result addObject:nsSelectorsForElement.get()];
+    }
+    return result.autorelease();
+}
+
+- (void)_setVisibilityAdjustmentSelectors:(NSSet<NSString *> *)nsSelectors
+{
+    RetainPtr elements = adoptNS([[NSMutableArray alloc] initWithCapacity:nsSelectors.count]);
+    for (NSString *selector : nsSelectors)
+        [elements addObject:@[ [NSSet setWithObject:selector] ]];
+    self._visibilityAdjustmentSelectorsIncludingShadowHosts = elements.get();
+}
+
+- (NSSet<NSString *> *)_visibilityAdjustmentSelectors
+{
+    RetainPtr selectors = adoptNS([[NSMutableSet alloc] init]);
+    for (auto& elementSelectors : _websitePolicies->visibilityAdjustmentSelectors()) {
+        if (elementSelectors.size() != 1) {
+            // Ignore shadow roots for compatibility with this soon-to-be deprecated method.
+            continue;
+        }
+
+        for (auto& selector : elementSelectors.first())
+            [selectors addObject:selector];
+    }
+    return selectors.autorelease();
 }
 
 @end

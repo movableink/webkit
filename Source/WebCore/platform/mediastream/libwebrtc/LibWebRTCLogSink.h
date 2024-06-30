@@ -36,16 +36,20 @@ ALLOW_UNUSED_PARAMETERS_BEGIN
 ALLOW_UNUSED_PARAMETERS_END
 
 namespace WebCore {
+class LibWebRTCLogSink;
+}
 
-class LibWebRTCLogSink final : rtc::LogSink, public CanMakeWeakPtr<LibWebRTCLogSink, WeakPtrFactoryInitialization::Eager> {
+namespace WebCore {
+
+class LibWebRTCLogSink final : rtc::LogSink {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    using LogCallback = Function<void(String&& level, String&& message)>;
+    using LogCallback = Function<void(rtc::LoggingSeverity, const std::string&)>;
     explicit LibWebRTCLogSink(LogCallback&&);
 
     ~LibWebRTCLogSink();
 
-    void start();
+    void start(rtc::LoggingSeverity = rtc::LoggingSeverity::LS_VERBOSE);
     void stop();
 
 private:
@@ -55,6 +59,7 @@ private:
     void logMessage(const std::string&, rtc::LoggingSeverity);
 
     LogCallback m_callback;
+    std::optional<rtc::LoggingSeverity> m_loggingLevel;
 };
 
 } // namespace WebCore

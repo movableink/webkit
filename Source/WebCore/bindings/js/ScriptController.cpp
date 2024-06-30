@@ -34,9 +34,9 @@
 #include "InspectorInstrumentation.h"
 #include "JSDOMBindingSecurity.h"
 #include "JSDOMExceptionHandling.h"
+#include "JSDOMWindow.h"
 #include "JSDocument.h"
 #include "JSExecState.h"
-#include "JSLocalDOMWindow.h"
 #include "LoadableModuleScript.h"
 #include "LocalFrame.h"
 #include "LocalFrameLoaderClient.h"
@@ -296,7 +296,7 @@ void ScriptController::initScriptForWindowProxy(JSWindowProxy& windowProxy)
     JSC::VM& vm = world.vm();
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
-    jsCast<JSLocalDOMWindow*>(windowProxy.window())->updateDocument();
+    jsCast<JSDOMWindow*>(windowProxy.window())->updateDocument();
     EXCEPTION_ASSERT_UNUSED(scope, !scope.exception());
 
     if (RefPtr document = m_frame.document())
@@ -453,6 +453,14 @@ void ScriptController::setWebAssemblyEnabled(bool value, const String& errorMess
     jsWindowProxy->window()->setWebAssemblyEnabled(value, errorMessage);
 }
 
+void ScriptController::setRequiresTrustedTypes(bool required)
+{
+    auto* proxy = windowProxy().existingJSWindowProxy(mainThreadNormalWorld());
+    if (!proxy)
+        return;
+    proxy->window()->setRequiresTrustedTypes(required);
+}
+
 bool ScriptController::canAccessFromCurrentOrigin(LocalFrame* frame, Document& accessingDocument)
 {
     auto* lexicalGlobalObject = JSExecState::currentState();
@@ -470,7 +478,7 @@ void ScriptController::updateDocument()
 {
     for (auto& jsWindowProxy : windowProxy().jsWindowProxiesAsVector()) {
         JSLockHolder lock(jsWindowProxy->world().vm());
-        jsCast<JSLocalDOMWindow*>(jsWindowProxy->window())->updateDocument();
+        jsCast<JSDOMWindow*>(jsWindowProxy->window())->updateDocument();
     }
 }
 
@@ -646,7 +654,7 @@ ValueOrException ScriptController::callInWorld(RunJavaScriptParameters&& paramet
     String errorMessage;
 
     // Build up a new script string that is an async function with arguments, and deserialize those arguments.
-    functionStringBuilder.append("(async function(");
+    functionStringBuilder.append("(async function("_s);
     for (auto argument = parameters.arguments->begin(); argument != parameters.arguments->end();) {
         functionStringBuilder.append(argument->key);
         auto serializedArgument = SerializedScriptValue::createFromWireBytes(WTFMove(argument->value));
@@ -669,7 +677,7 @@ ValueOrException ScriptController::callInWorld(RunJavaScriptParameters&& paramet
     if (!errorMessage.isEmpty())
         return makeUnexpected(ExceptionDetails { errorMessage });
 
-    functionStringBuilder.append("){", parameters.source, "})");
+    functionStringBuilder.append("){"_s, parameters.source, "})"_s);
 
     auto sourceCode = ScriptSourceCode { functionStringBuilder.toString(), parameters.taintedness, WTFMove(parameters.sourceURL), TextPosition(), JSC::SourceProviderSourceType::Program, CachedScriptFetcher::create(m_frame.document()->charset()) };
     const auto& jsSourceCode = sourceCode.jsSourceCode();
@@ -801,7 +809,7 @@ bool ScriptController::canExecuteScripts(ReasonForCallingCanExecuteScripts reaso
     if (m_frame.document() && m_frame.document()->isSandboxed(SandboxScripts)) {
         // FIXME: This message should be moved off the console once a solution to https://bugs.webkit.org/show_bug.cgi?id=103274 exists.
         if (reason == ReasonForCallingCanExecuteScripts::AboutToExecuteScript || reason == ReasonForCallingCanExecuteScripts::AboutToCreateEventListener)
-            m_frame.document()->addConsoleMessage(MessageSource::Security, MessageLevel::Error, "Blocked script execution in '" + m_frame.document()->url().stringCenterEllipsizedToLength() + "' because the document's frame is sandboxed and the 'allow-scripts' permission is not set.");
+            m_frame.document()->addConsoleMessage(MessageSource::Security, MessageLevel::Error, makeString("Blocked script execution in '"_s, m_frame.document()->url().stringCenterEllipsizedToLength(), "' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."_s));
         return false;
     }
 

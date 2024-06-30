@@ -117,7 +117,7 @@ static bool writeCachesList(const String& cachesListDirectoryPath, const Vector<
         encoder << caches[index]->uniqueName();
     }
 
-    FileSystem::overwriteEntireFile(cachesListFilePath, std::span(const_cast<uint8_t*>(encoder.buffer()), encoder.bufferSize()));
+    FileSystem::overwriteEntireFile(cachesListFilePath, encoder.span());
     return true;
 }
 
@@ -519,29 +519,25 @@ bool CacheStorageManager::isActive()
 String CacheStorageManager::representationString()
 {
     StringBuilder builder;
-    builder.append("{ \"persistent\": [");
+    builder.append("{ \"persistent\": ["_s);
 
     bool isFirst = true;
     for (auto& cache : m_caches) {
         if (!isFirst)
-            builder.append(", ");
+            builder.append(", "_s);
         isFirst = false;
-        builder.append("\"");
-        builder.append(cache->name());
-        builder.append("\"");
+        builder.append('"', cache->name(), '"');
     }
 
-    builder.append("], \"removed\": [");
+    builder.append("], \"removed\": ["_s);
     isFirst = true;
     for (auto& cache : m_removedCaches.values()) {
         if (!isFirst)
-            builder.append(", ");
+            builder.append(", "_s);
         isFirst = false;
-        builder.append("\"");
-        builder.append(cache->name());
-        builder.append("\"");
+        builder.append('"', cache->name(), '"');
     }
-    builder.append("]}\n");
+    builder.append("]}\n"_s);
     return builder.toString();
 }
 

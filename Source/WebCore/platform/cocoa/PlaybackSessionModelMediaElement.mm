@@ -49,6 +49,7 @@ namespace WebCore {
 
 PlaybackSessionModelMediaElement::PlaybackSessionModelMediaElement()
     : EventListener(EventListener::CPPEventListenerType)
+    , m_soundStageSize { AudioSessionSoundStageSize::Automatic }
 {
 }
 
@@ -339,21 +340,6 @@ void PlaybackSessionModelMediaElement::selectLegibleMediaOption(uint64_t index)
     m_mediaElement->setSelectedTextTrack(textTrack);
 }
 
-void PlaybackSessionModelMediaElement::toggleFullscreen()
-{
-#if ENABLE(VIDEO_PRESENTATION_MODE)
-    auto* element = dynamicDowncast<HTMLVideoElement>(*m_mediaElement);
-    ASSERT(element);
-    if (!element)
-        return;
-
-    if (element->fullscreenMode() == MediaPlayerEnums::VideoFullscreenModeStandard)
-        element->setPresentationMode(HTMLVideoElement::VideoPresentationMode::Inline);
-    else
-        element->setPresentationMode(HTMLVideoElement::VideoPresentationMode::Fullscreen);
-#endif
-}
-
 void PlaybackSessionModelMediaElement::togglePictureInPicture()
 {
 #if ENABLE(VIDEO_PRESENTATION_MODE)
@@ -396,6 +382,16 @@ void PlaybackSessionModelMediaElement::enterFullscreen()
     element->webkitEnterFullscreen();
 }
 
+void PlaybackSessionModelMediaElement::exitFullscreen()
+{
+    RefPtr element = dynamicDowncast<HTMLVideoElement>(*m_mediaElement);
+    ASSERT(element);
+    if (!element)
+        return;
+
+    element->webkitExitFullscreen();
+}
+
 void PlaybackSessionModelMediaElement::toggleMuted()
 {
     setMuted(!isMuted());
@@ -419,6 +415,7 @@ void PlaybackSessionModelMediaElement::setPlayingOnSecondScreen(bool value)
         m_mediaElement->setPlayingOnSecondScreen(value);
 }
 
+#if HAVE(SPATIAL_TRACKING_LABEL)
 const String& PlaybackSessionModelMediaElement::spatialTrackingLabel() const
 {
     if (m_mediaElement)
@@ -426,11 +423,12 @@ const String& PlaybackSessionModelMediaElement::spatialTrackingLabel() const
     return emptyString();
 }
 
-void PlaybackSessionModelMediaElement::setSpatialTrackingLabel(String&& spatialTrackingLabel)
+void PlaybackSessionModelMediaElement::setSpatialTrackingLabel(const String& spatialTrackingLabel)
 {
     if (m_mediaElement)
-        m_mediaElement->setSpatialTrackingLabel(WTFMove(spatialTrackingLabel));
+        m_mediaElement->setSpatialTrackingLabel(spatialTrackingLabel);
 }
+#endif
 
 void PlaybackSessionModelMediaElement::sendRemoteCommand(PlatformMediaSession::RemoteControlCommandType command, const PlatformMediaSession::RemoteCommandArgument& argument)
 {

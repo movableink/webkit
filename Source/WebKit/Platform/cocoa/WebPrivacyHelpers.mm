@@ -217,8 +217,13 @@ void LinkDecorationFilteringController::updateStrings(CompletionHandler<void()>&
             RELEASE_LOG_ERROR(ResourceLoadStatistics, "Failed to request query parameters from WebPrivacy.");
         else {
             auto rules = [data rules];
-            for (WPLinkFilteringRule *rule : rules)
-                result.append(WebCore::LinkDecorationFilteringData { rule.domain, [rule respondsToSelector:@selector(path)] ? rule.path : @"", rule.queryParameter });
+            for (WPLinkFilteringRule *rule : rules) {
+                auto domain = WebCore::RegistrableDomain { URL { makeString("http://"_s, String { rule.domain }) } };
+                // FIXME: This should be removed with rdar://127137181
+                if ([rule.domain hasPrefix:@"http://"])
+                    domain = WebCore::RegistrableDomain { URL { String { rule.domain } } };
+                result.append(WebCore::LinkDecorationFilteringData { WTFMove(domain), [rule respondsToSelector:@selector(path)] ? rule.path : @"", rule.queryParameter });
+            }
             setCachedStrings(WTFMove(result));
         }
 
@@ -259,8 +264,13 @@ void requestLinkDecorationFilteringData(LinkFilteringRulesCallback&& callback)
             RELEASE_LOG_ERROR(ResourceLoadStatistics, "Failed to request allowed query parameters from WebPrivacy.");
         else {
             auto rules = [data rules];
-            for (WPLinkFilteringRule *rule : rules)
-                result.append(WebCore::LinkDecorationFilteringData { rule.domain, { }, rule.queryParameter });
+            for (WPLinkFilteringRule *rule : rules) {
+                auto domain = WebCore::RegistrableDomain { URL { makeString("http://"_s, String { rule.domain }) } };
+                // FIXME: This should be removed with rdar://127137181
+                if ([rule.domain hasPrefix:@"http://"])
+                    domain = WebCore::RegistrableDomain { URL { String { rule.domain } } };
+                result.append(WebCore::LinkDecorationFilteringData { WTFMove(domain), { }, rule.queryParameter });
+            }
         }
 
         auto callbacks = std::exchange(lookupCallbacks.get(), { });
@@ -302,7 +312,7 @@ void StorageAccessPromptQuirkController::setCachedQuirks(Vector<WebCore::Organiz
 {
     m_cachedQuirks = WTFMove(quirks);
     m_cachedQuirks.shrinkToFit();
-    RELEASE_LOG_ERROR(ResourceLoadStatistics, "StorageAccessPromptQuirkController::setCachedQuirks: Loaded %lu storage access prompt(s) quirks from WebPrivacy.", quirks.size());
+    RELEASE_LOG(ResourceLoadStatistics, "StorageAccessPromptQuirkController::setCachedQuirks: Loaded %lu storage access prompt(s) quirks from WebPrivacy.", m_cachedQuirks.size());
 }
 
 void StorageAccessPromptQuirkController::setCachedQuirksForTesting(Vector<WebCore::OrganizationStorageAccessPromptQuirk>&& quirks)
@@ -817,7 +827,7 @@ void configureForAdvancedPrivacyProtections(NSURLSession *session)
         }
 
         if (auto host = hostname(endpoint)) {
-            auto domain = WebCore::RegistrableDomain { URL { makeString("http://", String::fromLatin1(*host)) } };
+            auto domain = WebCore::RegistrableDomain { URL { makeString("http://"_s, String::fromLatin1(*host)) } };
             if (auto info = TrackerDomainLookupInfo::find(domain.string()); info.owner().length()) {
                 *owner = info.owner().data();
                 *hostName = *host;

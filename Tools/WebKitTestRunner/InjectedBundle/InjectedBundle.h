@@ -35,6 +35,7 @@
 #include <WebKit/WKRetainPtr.h>
 #include <sstream>
 #include <wtf/Forward.h>
+#include <wtf/Function.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
 
@@ -81,13 +82,6 @@ public:
     void outputText(StringView, IsFinalTestOutput = IsFinalTestOutput::No);
     void dumpToStdErr(const String&);
     void postNewBeforeUnloadReturnValue(bool);
-    void postAddChromeInputField();
-    void postRemoveChromeInputField();
-    void postSetTextInChromeInputField(const String&);
-    void postSelectChromeInputField();
-    void postGetSelectedTextInChromeInputField();
-    void postFocusWebView();
-    void postSetBackingScaleFactor(double);
     void postSetWindowIsKey(bool);
     void postSetViewSize(double width, double height);
     void postSimulateWebNotificationClick(WKDataRef notificationID);
@@ -275,5 +269,8 @@ template<typename T> void postSynchronousPageMessage(const char* name, const WKR
         WKBundlePagePostSynchronousMessageForTesting(page, toWK(name).get(), value.get(), nullptr);
     }
 }
+
+void postMessageWithAsyncReply(JSContextRef, const char* messageName, JSValueRef callback);
+void postMessageWithAsyncReply(JSContextRef, const char* messageName, WKRetainPtr<WKTypeRef> value, JSValueRef callback);
 
 } // namespace WTR

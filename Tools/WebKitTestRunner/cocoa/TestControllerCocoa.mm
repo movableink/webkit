@@ -60,6 +60,7 @@
 #import <WebKit/_WKWebsiteDataStoreConfiguration.h>
 #import <pal/spi/cocoa/LaunchServicesSPI.h>
 #import <wtf/BlockPtr.h>
+#import <wtf/CompletionHandler.h>
 #import <wtf/MainThread.h>
 #import <wtf/RunLoop.h>
 #import <wtf/UniqueRef.h>
@@ -197,9 +198,9 @@ void TestController::cocoaPlatformInitialize(const Options& options)
     if (!dumpRenderTreeTemp)
         return;
 
-    String resourceLoadStatisticsFolder = makeString(dumpRenderTreeTemp, "/ResourceLoadStatistics");
+    String resourceLoadStatisticsFolder = makeString(String::fromUTF8(dumpRenderTreeTemp), "/ResourceLoadStatistics"_s);
     [[NSFileManager defaultManager] createDirectoryAtPath:resourceLoadStatisticsFolder withIntermediateDirectories:YES attributes:nil error: nil];
-    String fullBrowsingSessionResourceLog = makeString(resourceLoadStatisticsFolder, "/full_browsing_session_resourceLog.plist");
+    String fullBrowsingSessionResourceLog = makeString(resourceLoadStatisticsFolder, "/full_browsing_session_resourceLog.plist"_s);
     NSDictionary *resourceLogPlist = @{ @"version": @(1) };
     if (![resourceLogPlist writeToFile:fullBrowsingSessionResourceLog atomically:YES])
         WTFCrash();
@@ -452,6 +453,7 @@ void TestController::cocoaResetStateToConsistentValues(const TestOptions& option
 
         auto configuration = platformView.configuration;
         configuration.preferences.textInteractionEnabled = options.textInteractionEnabled();
+        configuration.preferences._textExtractionEnabled = options.textExtractionEnabled();
     }
 
     [LayoutTestSpellChecker uninstallAndReset];
@@ -504,43 +506,12 @@ unsigned TestController::imageCountInGeneralPasteboard() const
     return imagesArray.count;
 }
 
-void TestController::removeAllSessionCredentials()
+void TestController::removeAllSessionCredentials(CompletionHandler<void(WKTypeRef)>&& completionHandler)
 {
     auto types = adoptNS([[NSSet alloc] initWithObjects:_WKWebsiteDataTypeCredentials, nil]);
-    [[globalWebViewConfiguration() websiteDataStore] removeDataOfTypes:types.get() modifiedSince:[NSDate distantPast] completionHandler:^() {
-        m_currentInvocation->didRemoveAllSessionCredentials();
-    }];
-}
-
-void TestController::getAllStorageAccessEntries()
-{
-    auto* parentView = mainWebView();
-    if (!parentView)
-        return;
-
-    [[globalWebViewConfiguration() websiteDataStore] _getAllStorageAccessEntriesFor:parentView->platformView() completionHandler:^(NSArray<NSString *> *domains) {
-        m_currentInvocation->didReceiveAllStorageAccessEntries(makeVector<String>(domains));
-    }];
-}
-
-void TestController::loadedSubresourceDomains()
-{
-    auto* parentView = mainWebView();
-    if (!parentView)
-        return;
-    
-    [[globalWebViewConfiguration() websiteDataStore] _loadedSubresourceDomainsFor:parentView->platformView() completionHandler:^(NSArray<NSString *> *domains) {
-        m_currentInvocation->didReceiveLoadedSubresourceDomains(makeVector<String>(domains));
-    }];
-}
-
-void TestController::clearLoadedSubresourceDomains()
-{
-    auto* parentView = mainWebView();
-    if (!parentView)
-        return;
-
-    [[globalWebViewConfiguration() websiteDataStore] _clearLoadedSubresourceDomainsFor:parentView->platformView()];
+    [[globalWebViewConfiguration() websiteDataStore] removeDataOfTypes:types.get() modifiedSince:[NSDate distantPast] completionHandler:makeBlockPtr([completionHandler = WTFMove(completionHandler)] () mutable {
+        completionHandler(nullptr);
+    }).get()];
 }
 
 bool TestController::didLoadAppInitiatedRequest()
@@ -809,10 +780,10 @@ WKRetainPtr<WKStringRef> TestController::backgroundFetchState(WKStringRef identi
     __block bool isDone = false;
     __block String backgroundFetchState;
     [globalWebViewConfiguration().get().websiteDataStore _getBackgroundFetchState:toWTFString(identifier) completionHandler:^(NSDictionary *state) {
-        backgroundFetchState = makeString("{ ",
-            "\"downloaded\":", [[state valueForKey:@"Downloaded"] unsignedIntegerValue], ",",
-            "\"isPaused\":", [[state valueForKey:@"IsPaused"] boolValue] ? "true" : "false",
-        "}");
+        backgroundFetchState = makeString("{ "_s,
+            "\"downloaded\":"_s, [[state valueForKey:@"Downloaded"] unsignedIntegerValue], ',',
+            "\"isPaused\":"_s, [[state valueForKey:@"IsPaused"] boolValue] ? "true"_s : "false"_s,
+        '}');
         isDone = true;
     }];
     platformRunUntil(isDone, noTimeout);

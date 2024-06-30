@@ -98,9 +98,11 @@ RenderTableCell::RenderTableCell(Document& document, RenderStyle&& style)
     ASSERT(isRenderTableCell());
 }
 
-void RenderTableCell::willBeRemovedFromTree(IsInternalMove isInternalMove)
+RenderTableCell::~RenderTableCell() = default;
+
+void RenderTableCell::willBeRemovedFromTree()
 {
-    RenderBlockFlow::willBeRemovedFromTree(isInternalMove);
+    RenderBlockFlow::willBeRemovedFromTree();
     if (!table() || !section())
         return;
     RenderTableSection* section = this->section();
@@ -1015,6 +1017,23 @@ inline CollapsedBorderValue RenderTableCell::cachedCollapsedBottomBorder(const R
     if (styleForCellFlow.isHorizontalWritingMode())
         return styleForCellFlow.isFlippedBlocksWritingMode() ? section()->cachedCollapsedBorder(*this, CBSBefore) : section()->cachedCollapsedBorder(*this, CBSAfter);
     return styleForCellFlow.isLeftToRightDirection() ? section()->cachedCollapsedBorder(*this, CBSEnd) : section()->cachedCollapsedBorder(*this, CBSStart);
+}
+
+RectEdges<LayoutUnit> RenderTableCell::borderWidths() const
+{
+    RenderTable* table = this->table();
+    if (!table)
+        return RenderBlockFlow::borderWidths();
+
+    if (!table->collapseBorders())
+        return RenderBlockFlow::borderWidths();
+
+    return {
+        borderHalfTop(false),
+        borderHalfRight(false),
+        borderHalfBottom(false),
+        borderHalfLeft(false)
+    };
 }
 
 LayoutUnit RenderTableCell::borderLeft() const

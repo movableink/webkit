@@ -563,26 +563,9 @@ ResolutionContext TreeResolver::makeResolutionContext()
 ResolutionContext TreeResolver::makeResolutionContextForPseudoElement(const ElementUpdate& elementUpdate, const PseudoElementIdentifier& pseudoElementIdentifier)
 {
     auto parentStyle = [&]() -> const RenderStyle* {
-        switch (pseudoElementIdentifier.pseudoId) {
-        case PseudoId::FirstLetter:
-            if (auto* firstLineStyle = elementUpdate.style->getCachedPseudoStyle({ PseudoId::FirstLine }))
-                return firstLineStyle;
-            break;
-        case PseudoId::ViewTransitionGroup:
-            if (auto* viewTransitionStyle = elementUpdate.style->getCachedPseudoStyle({ PseudoId::ViewTransition }))
-                return viewTransitionStyle;
-            break;
-        case PseudoId::ViewTransitionImagePair:
-            if (auto* groupStyle = elementUpdate.style->getCachedPseudoStyle({ PseudoId::ViewTransitionGroup, pseudoElementIdentifier.nameArgument }))
-                return groupStyle;
-            break;
-        case PseudoId::ViewTransitionOld:
-        case PseudoId::ViewTransitionNew:
-            if (auto* imagePairStyle = elementUpdate.style->getCachedPseudoStyle({ PseudoId::ViewTransitionImagePair, pseudoElementIdentifier.nameArgument }))
-                return imagePairStyle;
-            break;
-        default:
-            break;
+        if (auto parentPseudoId = parentPseudoElement(pseudoElementIdentifier.pseudoId)) {
+            if (auto* parentPseudoStyle = elementUpdate.style->getCachedPseudoStyle({ *parentPseudoId, (*parentPseudoId == PseudoId::ViewTransitionGroup || *parentPseudoId == PseudoId::ViewTransitionImagePair) ? pseudoElementIdentifier.nameArgument : nullAtom() }))
+                return parentPseudoStyle;
         }
         return elementUpdate.style.get();
     };
@@ -738,8 +721,6 @@ ElementUpdate TreeResolver::createAnimatedElementUpdate(ResolvedStyle&& resolved
     if (element.hasInvalidRenderer() || parentChange == Change::Renderer)
         change = Change::Renderer;
 
-    bool shouldRecompositeLayer = animationImpact.contains(AnimationImpact::RequiresRecomposite) || element.styleResolutionShouldRecompositeLayer();
-
     auto animationsAffectedDisplay = [&, animatedDisplay = newStyle->display()]() {
         auto* keyframeEffectStack = styleable.keyframeEffectStack();
         if (!keyframeEffectStack)
@@ -768,7 +749,18 @@ ElementUpdate TreeResolver::createAnimatedElementUpdate(ResolvedStyle&& resolved
     if (animationsAffectedDisplay)
         newStyle->setHasDisplayAffectedByAnimations();
 
-    return { WTFMove(newStyle), change, shouldRecompositeLayer };
+    bool shouldRecompositeLayer = animationImpact.contains(AnimationImpact::RequiresRecomposite) || element.styleResolutionShouldRecompositeLayer();
+
+    auto mayNeedRebuildRoot = [&, newStyle = newStyle.get()] {
+        if (change == Change::Renderer)
+            return true;
+        // We may need to rebuild the tree starting from further up if there is a position property change to clean up continuations.
+        if (currentStyle && currentStyle->position() != newStyle->position())
+            return true;
+        return false;
+    }();
+
+    return { WTFMove(newStyle), change, shouldRecompositeLayer, mayNeedRebuildRoot };
 }
 
 std::unique_ptr<RenderStyle> TreeResolver::resolveStartingStyle(const ResolvedStyle& resolvedStyle, const Styleable& styleable, const ResolutionContext& resolutionContext) const
@@ -815,10 +807,7 @@ std::unique_ptr<RenderStyle> TreeResolver::resolveStartingStyle(const ResolvedSt
     if (startingStyle->display() == DisplayType::None)
         return nullptr;
 
-    // FIXME: This logic seems wrong, because passing a non-null Element to Adjuster corresponds
-    // to the absence (not presence) of a pseudo ID. We should instead refactor this code to
-    // pass a non-null element, along with an optional pseudo element identifier.
-    Adjuster adjuster(m_document, parentAfterChangeStyle, resolutionContext.parentBoxStyle, styleable.pseudoElementIdentifier ? &styleable.element : nullptr);
+    Adjuster adjuster(m_document, parentAfterChangeStyle, resolutionContext.parentBoxStyle, !styleable.pseudoElementIdentifier ? &styleable.element : nullptr);
     adjuster.adjust(*startingStyle, nullptr);
 
     return startingStyle;

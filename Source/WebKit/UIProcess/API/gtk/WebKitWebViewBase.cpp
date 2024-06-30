@@ -35,6 +35,7 @@
 #include "DrawingAreaProxyCoordinatedGraphics.h"
 #include "DropTarget.h"
 #include "EditorState.h"
+#include "GtkSettingsManager.h"
 #include "InputMethodFilter.h"
 #include "KeyAutoRepeatHandler.h"
 #include "KeyBindingTranslator.h"
@@ -190,12 +191,19 @@ struct MotionEvent {
             yRoot = rootPoint.y();
         }
 
-        MotionEvent(FloatPoint(x, y), FloatPoint(xRoot, yRoot), state);
+        position = FloatPoint(x, y);
+        globalPosition = FloatPoint(xRoot, yRoot);
+        setState(state);
     }
 
     MotionEvent(FloatPoint&& position, FloatPoint&& globalPosition, GdkModifierType state)
         : position(WTFMove(position))
         , globalPosition(WTFMove(globalPosition))
+    {
+        setState(state);
+    }
+
+    void setState(GdkModifierType state)
     {
         if (state & GDK_CONTROL_MASK)
             modifiers.add(WebEventModifier::ControlKey);
@@ -245,6 +253,7 @@ struct _WebKitWebViewBasePrivate {
     _WebKitWebViewBasePrivate()
         : updateActivityStateTimer(RunLoop::main(), this, &_WebKitWebViewBasePrivate::updateActivityStateTimerFired)
 #if GTK_CHECK_VERSION(3, 24, 0)
+        , pageScaleFactor(1.0)
         , releaseEmojiChooserTimer(RunLoop::main(), this, &_WebKitWebViewBasePrivate::releaseEmojiChooserTimerFired)
 #endif
         , nextPresentationUpdateTimer(RunLoop::main(), this, &_WebKitWebViewBasePrivate::nextPresentationUpdateTimerFired)
@@ -339,6 +348,7 @@ struct _WebKitWebViewBasePrivate {
     RunLoop::Timer updateActivityStateTimer;
 
     PlatformDisplayID displayID;
+    double pageScaleFactor; // Adjusts all CSS units to match fontDPI
 
 #if ENABLE(FULLSCREEN_API)
     WebFullScreenManagerProxy::FullscreenState fullScreenState;
@@ -424,6 +434,26 @@ webkitWebViewBaseAccessibleInterfaceInit(GtkAccessibleInterface* iface)
 }
 #endif
 
+static void refreshInternalScaling(WebKitWebViewBase* self)
+{
+    // We have for the moment settled on the scheme of entirely trusting
+    // fontDPI to determine the overall page scaling of the web view, and not
+    // performing any separate font scaling. The page scaling ensures the fonts
+    // are the specified size, and scaling the entire page, as opposed to just
+    // the fonts, ensures that the layout is self-consistent (i.e., that divs
+    // or other boxes holding text won't find their contents overflowing or
+    // wrapping weirdly.
+
+    double newPageScale = WebCore::fontDPI() / 96.;
+
+    // Adjust the page zoom if needed, updating the internal scale factor.
+    if (std::abs(newPageScale / self->priv->pageScaleFactor - 1.) > 0.02) {
+        auto* page = webkitWebViewBaseGetPage(self);
+        page->setPageZoomFactor(page->pageZoomFactor() * newPageScale / self->priv->pageScaleFactor);
+        self->priv->pageScaleFactor = newPageScale;
+    }
+}
+
 static void webkitWebViewBaseUpdateDisplayID(WebKitWebViewBase* webViewBase, GdkMonitor* monitor)
 {
     if (!monitor)
@@ -434,6 +464,7 @@ static void webkitWebViewBaseUpdateDisplayID(WebKitWebViewBase* webViewBase, Gdk
         return;
 
     webViewBase->priv->displayID = displayID;
+    refreshInternalScaling(webViewBase);
     if (webViewBase->priv->pageProxy)
         webViewBase->priv->pageProxy->windowScreenDidChange(displayID);
 }
@@ -692,27 +723,18 @@ void webkitWebViewBaseAddDialog(WebKitWebViewBase* webViewBase, GtkWidget* dialo
 {
     WebKitWebViewBasePrivate* priv = webViewBase->priv;
     priv->dialog = dialog;
-#if USE(GTK4)
-    g_object_add_weak_pointer(G_OBJECT(dialog), reinterpret_cast<void**>(&priv->dialog));
-#endif
     gtk_widget_set_parent(dialog, GTK_WIDGET(webViewBase));
     gtk_widget_show(dialog);
+
+#if USE(GTK4)
+    g_signal_connect_object(dialog, "notify::parent", G_CALLBACK(+[](GObject*, GParamSpec*, WebKitWebViewBase* webViewBase) {
+        webViewBase->priv->dialog = nullptr;
+    }), webViewBase, static_cast<GConnectFlags>(0));
+#endif
 
     // We need to draw the shadow over the widget.
     gtk_widget_queue_draw(GTK_WIDGET(webViewBase));
 }
-
-#if USE(GTK4)
-static void webkitWebViewBaseRemoveDialog(WebKitWebViewBase* webViewBase, GtkWidget* dialog)
-{
-    WebKitWebViewBasePrivate* priv = webViewBase->priv;
-    if (!priv->dialog)
-        return;
-
-    g_object_remove_weak_pointer(G_OBJECT(dialog), reinterpret_cast<void**>(&priv->dialog));
-    g_clear_pointer(&priv->dialog, gtk_widget_unparent);
-}
-#endif
 
 #if !USE(GTK4)
 static void webkitWebViewBaseContainerRemove(GtkContainer* container, GtkWidget* widget)
@@ -843,7 +865,7 @@ static void webkitWebViewBaseDispose(GObject* gobject)
     WebKitWebViewBase* webView = WEBKIT_WEB_VIEW_BASE(gobject);
     webkitWebViewBaseNextPresentationUpdateMonitorStop(webView);
 #if USE(GTK4)
-    webkitWebViewBaseRemoveDialog(webView, webView->priv->dialog);
+    g_clear_pointer(&webView->priv->dialog, gtk_widget_unparent);
     webkitWebViewBaseRemoveWebInspector(webView, webView->priv->inspectorView);
     if (auto* widget = webView->priv->keyBindingTranslator.widget())
         gtk_widget_unparent(widget);
@@ -854,6 +876,7 @@ static void webkitWebViewBaseDispose(GObject* gobject)
         webkitWebViewAccessibleSetWebView(WEBKIT_WEB_VIEW_ACCESSIBLE(webView->priv->accessible.get()), nullptr);
 #endif
 
+    GtkSettingsManager::singleton().removeObserver(webView);
     webkitWebViewBaseSetToplevelOnScreenWindow(webView, nullptr);
 #if GTK_CHECK_VERSION(3, 24, 0)
     webkitWebViewBaseCompleteEmojiChooserRequest(webView, emptyString());
@@ -1277,7 +1300,7 @@ void webkitWebViewBaseProcessAcceleratorsForKeyPressEvent(WebKitWebViewBase* web
     if (gdk_key_event_is_modifier(event))
         return;
 
-    GUniquePtr<char> accelerator(gtk_accelerator_name(gdk_key_event_get_keyval(event), gdk_event_get_modifier_state(event)));
+    GUniquePtr<char> accelerator(gtk_accelerator_name_with_keycode(gtk_widget_get_display(GTK_WIDGET(webViewBase)), gdk_key_event_get_keyval(event), gdk_key_event_get_keycode(event), gdk_event_get_modifier_state(event)));
     GUniquePtr<char*> actions(gtk_application_get_actions_for_accel(GTK_APPLICATION(app), accelerator.get()));
     for (int i = 0; actions.get()[i]; ++i) {
         const char* detailedAction = actions.get()[i];
@@ -1722,7 +1745,7 @@ static gboolean webkitWebViewBaseCrossingNotifyEvent(GtkWidget* widget, GdkEvent
     // Do not send mouse move events to the WebProcess for crossing events during testing.
     // WTR never generates crossing events and they can confuse tests.
     // https://bugs.webkit.org/show_bug.cgi?id=185072.
-    if (UNLIKELY(priv->pageProxy->process().processPool().configuration().fullySynchronousModeIsAllowedForTesting()))
+    if (UNLIKELY(priv->pageProxy->configuration().processPool().configuration().fullySynchronousModeIsAllowedForTesting()))
         return GDK_EVENT_PROPAGATE;
 #endif
 
@@ -1773,7 +1796,7 @@ static void webkitWebViewBaseEnter(WebKitWebViewBase* webViewBase, double x, dou
     // Do not send mouse move events to the WebProcess for crossing events during testing.
     // WTR never generates crossing events and they can confuse tests.
     // https://bugs.webkit.org/show_bug.cgi?id=185072.
-    if (UNLIKELY(priv->pageProxy->process().processPool().configuration().fullySynchronousModeIsAllowedForTesting()))
+    if (UNLIKELY(priv->pageProxy->configuration().processPool().configuration().fullySynchronousModeIsAllowedForTesting()))
         return;
 #endif
 
@@ -1813,7 +1836,7 @@ static void webkitWebViewBaseLeave(WebKitWebViewBase* webViewBase, GdkCrossingMo
     // Do not send mouse move events to the WebProcess for crossing events during testing.
     // WTR never generates crossing events and they can confuse tests.
     // https://bugs.webkit.org/show_bug.cgi?id=185072.
-    if (UNLIKELY(priv->pageProxy->process().processPool().configuration().fullySynchronousModeIsAllowedForTesting()))
+    if (UNLIKELY(priv->pageProxy->configuration().processPool().configuration().fullySynchronousModeIsAllowedForTesting()))
         return;
 #endif
 
@@ -2564,9 +2587,15 @@ WebPageProxy* webkitWebViewBaseGetPage(WebKitWebViewBase* webkitWebViewBase)
     return webkitWebViewBase->priv->pageProxy.get();
 }
 
+double webkitWebViewBaseGetPageScale(WebKitWebViewBase* webkitWebViewBase)
+{
+    return webkitWebViewBase->priv->pageScaleFactor;
+}
+
 static void deviceScaleFactorChanged(WebKitWebViewBase* webkitWebViewBase)
 {
     webkitWebViewBase->priv->pageProxy->setIntrinsicDeviceScaleFactor(gtk_widget_get_scale_factor(GTK_WIDGET(webkitWebViewBase)));
+    refreshInternalScaling(webkitWebViewBase);
 }
 
 void webkitWebViewBaseCreateWebPage(WebKitWebViewBase* webkitWebViewBase, Ref<API::PageConfiguration>&& configuration)
@@ -2582,8 +2611,15 @@ void webkitWebViewBaseCreateWebPage(WebKitWebViewBase* webkitWebViewBase, Ref<AP
     if (priv->displayID)
         priv->pageProxy->windowScreenDidChange(priv->displayID);
 
+    refreshInternalScaling(webkitWebViewBase);
     // We attach this here, because changes in scale factor are passed directly to the page proxy.
     g_signal_connect(webkitWebViewBase, "notify::scale-factor", G_CALLBACK(deviceScaleFactorChanged), nullptr);
+    // Also watch for changes to xft-dpi
+    GtkSettingsManager::singleton().addObserver([webkitWebViewBase](const GtkSettingsState& state) {
+        if (!state.xftDPI)
+            return;
+        refreshInternalScaling(webkitWebViewBase);
+    }, webkitWebViewBase);
 }
 
 void webkitWebViewBaseSetTooltipText(WebKitWebViewBase* webViewBase, const char* tooltip)
@@ -3022,7 +3058,7 @@ RefPtr<WebKit::ViewSnapshot> webkitWebViewBaseTakeViewSnapshot(WebKitWebViewBase
         return nullptr;
 
     graphene_rect_t viewport = { { 0, 0 }, { static_cast<float>(size.width()), static_cast<float>(size.height()) } };
-    GdkTexture* texture = gsk_renderer_render_texture(renderer, renderNode.get(), &viewport);
+    GRefPtr<GdkTexture> texture = adoptGRef(gsk_renderer_render_texture(renderer, renderNode.get(), &viewport));
 
     return ViewSnapshot::create(WTFMove(texture));
 #endif
@@ -3502,3 +3538,12 @@ void webkitWebViewBaseSetPlugID(WebKitWebViewBase* webViewBase, const String& pl
 #endif // GTK_ACCESSIBILITY_ATSPI
 }
 #endif
+
+RendererBufferFormat webkitWebViewBaseGetRendererBufferFormat(WebKitWebViewBase* webViewBase)
+{
+    auto* drawingArea = static_cast<DrawingAreaProxyCoordinatedGraphics*>(webViewBase->priv->pageProxy->drawingArea());
+    if (!drawingArea || !drawingArea->isInAcceleratedCompositingMode())
+        return { };
+
+    return webViewBase->priv->acceleratedBackingStore->bufferFormat();
+}

@@ -36,18 +36,32 @@ using namespace WebCore;
 
 namespace TestWebKitAPI {
 
-void GStreamerTest::SetUp()
+void GStreamerTest::SetUpTestSuite()
 {
-    if (!gst_is_initialized())
-        gst_init(nullptr, nullptr);
+    ASSERT(!gst_is_initialized());
+    gst_init(nullptr, nullptr);
+    ASSERT(gst_is_initialized());
 }
 
-void GStreamerTest::TearDown()
+void GStreamerTest::TearDownTestSuite()
 {
-    // It might be tempting to call gst_deinit() here. However, that
-    // will tear down the whole process from the GStreamer POV, and the
-    // seemingly symmetrical call to gst_init() will fail to
-    // initialize GStreamer correctly.
+    ASSERT(gst_is_initialized());
+    gst_deinit();
+}
+
+TEST_F(GStreamerTest, gstStructureGetters)
+{
+    GUniquePtr<GstStructure> structure(gst_structure_new("foo", "int-val", G_TYPE_INT, -5, "int64-val", G_TYPE_INT64, -10, "uint-val", G_TYPE_UINT, 5, "uint64-val", G_TYPE_UINT64, 10, "double-val", G_TYPE_DOUBLE, 1.0, nullptr));
+    ASSERT_EQ(gstStructureGet<int>(structure.get(), "int-val"_s), -5);
+    ASSERT_TRUE(!gstStructureGet<int>(structure.get(), "int-val-noexist"_s).has_value());
+    ASSERT_EQ(gstStructureGet<int64_t>(structure.get(), "int64-val"_s), -10);
+    ASSERT_TRUE(!gstStructureGet<int64_t>(structure.get(), "int64-val-noexist"_s).has_value());
+    ASSERT_EQ(gstStructureGet<unsigned>(structure.get(), "uint-val"_s), 5);
+    ASSERT_TRUE(!gstStructureGet<unsigned>(structure.get(), "uint-val-noexist"_s).has_value());
+    ASSERT_EQ(gstStructureGet<uint64_t>(structure.get(), "uint64-val"_s), 10);
+    ASSERT_TRUE(!gstStructureGet<uint64_t>(structure.get(), "uint64-val-noexist"_s).has_value());
+    ASSERT_EQ(gstStructureGet<double>(structure.get(), "double-val"_s), 1.0);
+    ASSERT_TRUE(!gstStructureGet<double>(structure.get(), "double-val-noexist"_s).has_value());
 }
 
 TEST_F(GStreamerTest, gstStructureJSONSerializing)
@@ -66,7 +80,7 @@ TEST_F(GStreamerTest, gstStructureJSONSerializing)
     ASSERT_EQ(jsonString, "{\"words\":[\"hello\",\"world\"]}"_s);
 }
 
-TEST_F(GStreamerTest, codecStringParsing)
+TEST_F(GStreamerTest, hevcProfileParsing)
 {
     using namespace GStreamerCodecUtilities;
 
@@ -101,6 +115,71 @@ TEST_F(GStreamerTest, codecStringParsing)
     ASSERT_STREQ(parseHEVCProfile("hev1.9.200.L30.BE.0C"_s), "screen-extended-main-444");
     ASSERT_STREQ(parseHEVCProfile("hev1.9.200.L30.BC.0C"_s), "screen-extended-main-444-10");
     ASSERT_STREQ(parseHEVCProfile("hev1.9.200.L30.B0.0C"_s), "screen-extended-high-throughput-444-14");
+}
+
+TEST_F(GStreamerTest, capsFromCodecString)
+{
+    using namespace GStreamerCodecUtilities;
+
+#define TEST_CAPS_FROM_CODEC(codecString, expectedInputFormat, expectedOutputCaps) G_STMT_START { \
+        auto [input, output] = capsFromCodecString(codecString);        \
+        auto inputStructure = gst_caps_get_structure(input.get(), 0);   \
+        const char* inputFormat = gst_structure_get_string(inputStructure, "format"); \
+        ASSERT_STREQ(inputFormat, expectedInputFormat);                 \
+        GUniquePtr<char> outputCaps(gst_caps_to_string(output.get()));  \
+        ASSERT_STREQ(outputCaps.get(), expectedOutputCaps);             \
+    } G_STMT_END
+
+#define TEST_CAPS_FROM_CODEC_FULL(codecString, expectedInputCaps, expectedOutputCaps) G_STMT_START { \
+        auto [input, output] = capsFromCodecString(codecString);        \
+        GUniquePtr<char> inputCaps(gst_caps_to_string(input.get()));    \
+        ASSERT_STREQ(inputCaps.get(), expectedInputCaps);               \
+        GUniquePtr<char> outputCaps(gst_caps_to_string(output.get()));  \
+        ASSERT_STREQ(outputCaps.get(), expectedOutputCaps);             \
+    } G_STMT_END
+
+    TEST_CAPS_FROM_CODEC("av01.0.01M.08"_s, "I420", "video/x-av1, profile=(string)main, bit-depth-luma=(uint)8, bit-depth-chroma=(uint)8, chroma-format=(string)4:2:0");
+    TEST_CAPS_FROM_CODEC("av01.1.04M.10"_s, "I420_10LE", "video/x-av1, profile=(string)high, bit-depth-luma=(uint)10, bit-depth-chroma=(uint)10, chroma-format=(string)4:2:0");
+    TEST_CAPS_FROM_CODEC("av01.2.04M.12"_s, "I420_12LE", "video/x-av1, profile=(string)professional, bit-depth-luma=(uint)12, bit-depth-chroma=(uint)12, chroma-format=(string)4:2:0");
+
+    // AV1 levels, per spec valid values range from 00 to 31, but we support only up to 23.
+    for (unsigned i = 0; i < 23; i++) {
+        GUniquePtr<char> codecString(g_strdup_printf("av01.0.%02dM.08", i));
+        TEST_CAPS_FROM_CODEC(makeString(span(codecString.get())), "I420", "video/x-av1, profile=(string)main, bit-depth-luma=(uint)8, bit-depth-chroma=(uint)8, chroma-format=(string)4:2:0");
+    }
+
+    // AV1 monochrome.
+    TEST_CAPS_FROM_CODEC("av01.0.00M.08.0"_s, "I420", "video/x-av1, profile=(string)main, bit-depth-luma=(uint)8, bit-depth-chroma=(uint)8, chroma-format=(string)4:2:0");
+    TEST_CAPS_FROM_CODEC("av01.0.00M.08.1"_s, "I420", "video/x-av1, profile=(string)main, bit-depth-luma=(uint)8, bit-depth-chroma=(uint)8, chroma-format=(string)4:0:0");
+
+    // AV1 sub-sampling.
+    TEST_CAPS_FROM_CODEC("av01.1.00M.10.0.000"_s, "Y444_10LE", "video/x-av1, profile=(string)high, bit-depth-luma=(uint)10, bit-depth-chroma=(uint)10, chroma-format=(string)4:4:4");
+    TEST_CAPS_FROM_CODEC("av01.2.00M.10.0.100"_s, "I422_10LE", "video/x-av1, profile=(string)professional, bit-depth-luma=(uint)10, bit-depth-chroma=(uint)10, chroma-format=(string)4:2:2");
+    TEST_CAPS_FROM_CODEC("av01.0.00M.10.0.110"_s, "I420_10LE", "video/x-av1, profile=(string)main, bit-depth-luma=(uint)10, bit-depth-chroma=(uint)10, chroma-format=(string)4:2:0");
+    TEST_CAPS_FROM_CODEC("av01.0.00M.10.0.111"_s, "I420_10LE", "video/x-av1, profile=(string)main, bit-depth-luma=(uint)10, bit-depth-chroma=(uint)10, chroma-format=(string)4:2:0");
+    TEST_CAPS_FROM_CODEC("av01.0.00M.10.0.112"_s, "I420_10LE", "video/x-av1, profile=(string)main, bit-depth-luma=(uint)10, bit-depth-chroma=(uint)10, chroma-format=(string)4:2:0");
+
+    // AV1 colorimetry.
+    TEST_CAPS_FROM_CODEC_FULL("av01.0.00M.10.0.110.01"_s, "video/x-raw, format=(string)I420_10LE, interlace-mode=(string)progressive, pixel-aspect-ratio=(fraction)1/1, chroma-site=(string)jpeg, colorimetry=(string)bt709", "video/x-av1, profile=(string)main, bit-depth-luma=(uint)10, bit-depth-chroma=(uint)10, chroma-format=(string)4:2:0");
+    TEST_CAPS_FROM_CODEC_FULL("av01.0.00M.10.0.110.09"_s, "video/x-raw, format=(string)I420_10LE, interlace-mode=(string)progressive, pixel-aspect-ratio=(fraction)1/1, chroma-site=(string)jpeg, colorimetry=(string)2:3:5:7", "video/x-av1, profile=(string)main, bit-depth-luma=(uint)10, bit-depth-chroma=(uint)10, chroma-format=(string)4:2:0");
+
+    // AV1 bt709 transfer characteristics.
+    TEST_CAPS_FROM_CODEC_FULL("av01.0.00M.10.0.110.01.01"_s, "video/x-raw, format=(string)I420_10LE, interlace-mode=(string)progressive, pixel-aspect-ratio=(fraction)1/1, chroma-site=(string)jpeg, colorimetry=(string)bt709", "video/x-av1, profile=(string)main, bit-depth-luma=(uint)10, bit-depth-chroma=(uint)10, chroma-format=(string)4:2:0");
+    TEST_CAPS_FROM_CODEC_FULL("av01.0.00M.10.0.110.01.04"_s, "video/x-raw, format=(string)I420_10LE, interlace-mode=(string)progressive, pixel-aspect-ratio=(fraction)1/1, chroma-site=(string)jpeg, colorimetry=(string)bt709", "video/x-av1, profile=(string)main, bit-depth-luma=(uint)10, bit-depth-chroma=(uint)10, chroma-format=(string)4:2:0");
+
+    // AV1 custom transfer characteristics.
+    TEST_CAPS_FROM_CODEC_FULL("av01.0.00M.10.0.110.01.06"_s, "video/x-raw, format=(string)I420_10LE, interlace-mode=(string)progressive, pixel-aspect-ratio=(fraction)1/1, chroma-site=(string)jpeg, colorimetry=(string)2:3:16:1", "video/x-av1, profile=(string)main, bit-depth-luma=(uint)10, bit-depth-chroma=(uint)10, chroma-format=(string)4:2:0");
+    TEST_CAPS_FROM_CODEC_FULL("av01.0.00M.10.0.110.01.13"_s, "video/x-raw, format=(string)I420_10LE, interlace-mode=(string)progressive, pixel-aspect-ratio=(fraction)1/1, chroma-site=(string)jpeg, colorimetry=(string)2:3:0:1", "video/x-av1, profile=(string)main, bit-depth-luma=(uint)10, bit-depth-chroma=(uint)10, chroma-format=(string)4:2:0");
+    TEST_CAPS_FROM_CODEC_FULL("av01.0.00M.10.0.110.01.14"_s, "video/x-raw, format=(string)I420_10LE, interlace-mode=(string)progressive, pixel-aspect-ratio=(fraction)1/1, chroma-site=(string)jpeg, colorimetry=(string)2:3:13:1", "video/x-av1, profile=(string)main, bit-depth-luma=(uint)10, bit-depth-chroma=(uint)10, chroma-format=(string)4:2:0");
+    TEST_CAPS_FROM_CODEC_FULL("av01.0.00M.10.0.110.01.15"_s, "video/x-raw, format=(string)I420_10LE, interlace-mode=(string)progressive, pixel-aspect-ratio=(fraction)1/1, chroma-site=(string)jpeg, colorimetry=(string)2:3:11:1", "video/x-av1, profile=(string)main, bit-depth-luma=(uint)10, bit-depth-chroma=(uint)10, chroma-format=(string)4:2:0");
+    TEST_CAPS_FROM_CODEC_FULL("av01.0.00M.10.0.110.01.16"_s, "video/x-raw, format=(string)I420_10LE, interlace-mode=(string)progressive, pixel-aspect-ratio=(fraction)1/1, chroma-site=(string)jpeg, colorimetry=(string)2:3:14:1", "video/x-av1, profile=(string)main, bit-depth-luma=(uint)10, bit-depth-chroma=(uint)10, chroma-format=(string)4:2:0");
+
+    // AV1 video full range flag.
+    TEST_CAPS_FROM_CODEC_FULL("av01.0.00M.10.0.110.01.01.00.0"_s, "video/x-raw, format=(string)I420_10LE, interlace-mode=(string)progressive, pixel-aspect-ratio=(fraction)1/1, chroma-site=(string)jpeg, colorimetry=(string)2:1:5:1", "video/x-av1, profile=(string)main, bit-depth-luma=(uint)10, bit-depth-chroma=(uint)10, chroma-format=(string)4:2:0");
+    TEST_CAPS_FROM_CODEC_FULL("av01.0.00M.10.0.110.01.01.00.1"_s, "video/x-raw, format=(string)I420_10LE, interlace-mode=(string)progressive, pixel-aspect-ratio=(fraction)1/1, chroma-site=(string)jpeg, colorimetry=(string)1:1:5:1", "video/x-av1, profile=(string)main, bit-depth-luma=(uint)10, bit-depth-chroma=(uint)10, chroma-format=(string)4:2:0");
+
+#undef TEST_CAPS_FROM_CODEC
+#undef TEST_CAPS_FROM_CODEC_FULL
 }
 
 } // namespace TestWebKitAPI

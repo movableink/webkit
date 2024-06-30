@@ -143,9 +143,11 @@ private:
 
     void ensureOnDispatcherSync(Function<void()>&&);
     void ensureWeakOnDispatcher(Function<void()>&&);
-    template<typename T> Ref<typename T::Promise> sendWithPromisedReply(T&& message)
+
+    template<typename PC = IPC::Connection::NoOpPromiseConverter, typename T>
+    auto sendWithPromisedReply(T&& message)
     {
-        return m_gpuProcessConnection.get()->connection().sendWithPromisedReply(std::forward<T>(message), m_remoteSourceBufferIdentifier);
+        return m_gpuProcessConnection.get()->connection().sendWithPromisedReply<PC, T>(std::forward<T>(message), m_remoteSourceBufferIdentifier);
     }
 
     friend class MessageReceiver;
@@ -167,7 +169,7 @@ private:
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
-    const char* logClassName() const override { return "SourceBufferPrivateRemote"; }
+    ASCIILiteral logClassName() const override { return "SourceBufferPrivateRemote"_s; }
     const void* logIdentifier() const final { return m_logIdentifier; }
     WTFLogChannel& logChannel() const final;
     const Logger& sourceBufferLogger() const final { return m_logger.get(); }

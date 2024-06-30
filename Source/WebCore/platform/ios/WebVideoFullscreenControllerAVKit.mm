@@ -42,6 +42,7 @@
 #import <QuartzCore/CoreAnimation.h>
 #import <UIKit/UIView.h>
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
+#import <wtf/CheckedRef.h>
 #import <wtf/CrossThreadCopier.h>
 #import <wtf/WorkQueue.h>
 
@@ -100,8 +101,10 @@ class VideoFullscreenControllerContext final
     : public VideoPresentationModel
     , private VideoPresentationModelClient
     , private PlaybackSessionModel
-    , private PlaybackSessionModelClient {
-
+    , private PlaybackSessionModelClient
+    , public CanMakeCheckedPtr<VideoFullscreenControllerContext> {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(VideoFullscreenControllerContext);
 public:
     static Ref<VideoFullscreenControllerContext> create()
     {
@@ -112,12 +115,18 @@ public:
 
     void setController(WebVideoFullscreenController* controller) { m_controller = controller; }
     void setUpFullscreen(HTMLVideoElement&, UIView *, HTMLMediaElementEnums::VideoFullscreenMode);
-    void exitFullscreen();
+    void exitFullscreen() final;
     void requestHideAndExitFullscreen();
     void invalidate();
 
 private:
     VideoFullscreenControllerContext() { }
+
+    // CheckedPtr interface
+    uint32_t ptrCount() const final { return CanMakeCheckedPtr::ptrCount(); }
+    uint32_t ptrCountWithoutThreadCheck() const final { return CanMakeCheckedPtr::ptrCountWithoutThreadCheck(); }
+    void incrementPtrCount() const final { CanMakeCheckedPtr::incrementPtrCount(); }
+    void decrementPtrCount() const final { CanMakeCheckedPtr::decrementPtrCount(); }
 
     // VideoPresentationModelClient
     void hasVideoChanged(bool) override;
@@ -161,7 +170,6 @@ private:
     ExternalPlaybackTargetType externalPlaybackTargetType() const override;
     String externalPlaybackLocalizedDeviceName() const override;
     bool wirelessVideoPlaybackDisabled() const override;
-    void toggleFullscreen() override { }
     void togglePictureInPicture() override { }
     void toggleInWindowFullscreen() override { }
     void enterFullscreen() override { }
@@ -170,6 +178,8 @@ private:
     void setVolume(double) final;
     void setPlayingOnSecondScreen(bool) final;
     void setVideoReceiverEndpoint(const VideoReceiverEndpoint&) final { }
+    AudioSessionSoundStageSize soundStageSize() const final { return AudioSessionSoundStageSize::Automatic; }
+    void setSoundStageSize(AudioSessionSoundStageSize) final { }
 
     // PlaybackSessionModelClient
     void durationChanged(double) override;
@@ -191,6 +201,7 @@ private:
     void requestFullscreenMode(HTMLMediaElementEnums::VideoFullscreenMode, bool finishedWithMedia = false) override;
     void setVideoLayerFrame(FloatRect) override;
     void setVideoLayerGravity(MediaPlayerEnums::VideoGravity) override;
+    void setVideoFullscreenFrame(FloatRect) override { }
     void fullscreenModeChanged(HTMLMediaElementEnums::VideoFullscreenMode) override;
     bool hasVideo() const override;
     FloatSize videoDimensions() const override;

@@ -43,6 +43,7 @@
 #import <WebCore/RuntimeApplicationChecks.h>
 #import <WebCore/SearchPopupMenuCocoa.h>
 #import <pal/spi/cf/CFNetworkSPI.h>
+#import <pal/spi/cocoa/NetworkSPI.h>
 #import <wtf/FileSystem.h>
 #import <wtf/NeverDestroyed.h>
 #import <wtf/ProcessPrivilege.h>
@@ -71,7 +72,7 @@ static constexpr double defaultAppOriginQuotaRatio = 0.15;
 #if ENABLE(APP_BOUND_DOMAINS)
 static WorkQueue& appBoundDomainQueue()
 {
-    static auto& queue = WorkQueue::create("com.apple.WebKit.AppBoundDomains").leakRef();
+    static auto& queue = WorkQueue::create("com.apple.WebKit.AppBoundDomains"_s).leakRef();
     return queue;
 }
 static std::atomic<bool> hasInitializedAppBoundDomains = false;
@@ -81,7 +82,7 @@ static std::atomic<bool> keyExists = false;
 #if ENABLE(MANAGED_DOMAINS)
 static WorkQueue& managedDomainQueue()
 {
-    static auto& queue = WorkQueue::create("com.apple.WebKit.ManagedDomains").leakRef();
+    static auto& queue = WorkQueue::create("com.apple.WebKit.ManagedDomains"_s).leakRef();
     return queue;
 }
 static std::atomic<bool> hasInitializedManagedDomains = false;
@@ -152,7 +153,7 @@ void WebsiteDataStore::platformSetNetworkParameters(WebsiteDataStoreParameters& 
     if (auto manualPrevalentResource = [defaults stringForKey:@"ITPManualPrevalentResource"]) {
         URL url { { }, manualPrevalentResource };
         if (!url.isValid())
-            url = { { }, makeString("http://", manualPrevalentResource) };
+            url = { { }, makeString("http://"_s, manualPrevalentResource) };
         if (url.isValid())
             resourceLoadStatisticsManualPrevalentResource = WebCore::RegistrableDomain { url };
     }
@@ -220,11 +221,32 @@ void WebsiteDataStore::platformSetNetworkParameters(WebsiteDataStoreParameters& 
 
 std::optional<bool> WebsiteDataStore::useNetworkLoader()
 {
-#if HAVE(NETWORK_LOADER)
-    return optionalExperimentalFeatureEnabled(WebPreferencesKey::cFNetworkNetworkLoaderEnabledKey(), std::nullopt);
-#else
+#if !HAVE(NETWORK_LOADER)
     return false;
+#else
+
+    [[maybe_unused]] const auto isSafari =
+#if PLATFORM(MAC)
+        MacApplication::isSafari();
+#elif PLATFORM(IOS_FAMILY)
+        WebCore::IOSApplication::isMobileSafari() || WebCore::IOSApplication::isSafariViewService();
+#else
+        false;
 #endif
+
+    if (auto isEnabled = optionalExperimentalFeatureEnabled(WebPreferencesKey::cFNetworkNetworkLoaderEnabledKey(), std::nullopt))
+        return isEnabled;
+    if (!linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::UseCFNetworkNetworkLoader))
+        return std::nullopt;
+#if defined(NW_SETTINGS_HAS_UNIFIED_HTTP)
+    if (isRunningTest(WebCore::applicationBundleIdentifier()))
+        return true;
+    if (nw_settings_get_unified_http_enabled())
+        return isSafari;
+#endif
+    return std::nullopt;
+
+#endif // NETWORK_LOADER
 }
 
 void WebsiteDataStore::platformInitialize()
@@ -288,14 +310,14 @@ void WebsiteDataStore::removeDataStoreWithIdentifier(const WTF::UUID& identifier
             return completionHandler("Data store is in use (by network process)"_s);
     }
 
-    auto nsCredentialStorage = adoptNS([[NSURLCredentialStorage alloc] _initWithIdentifier:identifier.toString() private:NO]);
-    auto* credentials = [nsCredentialStorage.get() allCredentials];
-    for (NSURLProtectionSpace *space in credentials) {
-        for (NSURLCredential *credential in [credentials[space] allValues])
-            [nsCredentialStorage.get() removeCredential:credential forProtectionSpace:space];
-    }
+    websiteDataStoreIOQueue().dispatch([completionHandler = WTFMove(completionHandler), identifier, directory = defaultWebsiteDataStoreDirectory(identifier).isolatedCopy()]() mutable {
+        RetainPtr nsCredentialStorage = adoptNS([[NSURLCredentialStorage alloc] _initWithIdentifier:identifier.toString() private:NO]);
+        auto* credentials = [nsCredentialStorage allCredentials];
+        for (NSURLProtectionSpace *space in credentials) {
+            for (NSURLCredential *credential in [credentials[space] allValues])
+                [nsCredentialStorage removeCredential:credential forProtectionSpace:space];
+        }
 
-    websiteDataStoreIOQueue().dispatch([completionHandler = WTFMove(completionHandler), directory = defaultWebsiteDataStoreDirectory(identifier).isolatedCopy()]() mutable {
         bool deleted = FileSystem::deleteNonEmptyDirectory(directory);
         RunLoop::main().dispatch([completionHandler = WTFMove(completionHandler), deleted]() mutable {
             if (!deleted)
@@ -737,6 +759,7 @@ static HashSet<WebCore::RegistrableDomain>& managedDomains()
 
 NSString *kManagedSitesIdentifier = @"com.apple.mail-shared";
 NSString *kCrossSiteTrackingPreventionRelaxedDomainsKey = @"CrossSiteTrackingPreventionRelaxedDomains";
+NSString *kCrossSiteTrackingPreventionRelaxedAppsKey = @"CrossSiteTrackingPreventionRelaxedApps";
 
 void WebsiteDataStore::initializeManagedDomains(ForceReinitialization forceReinitialization)
 {
@@ -750,17 +773,34 @@ void WebsiteDataStore::initializeManagedDomains(ForceReinitialization forceReini
             return;
         static const auto maxManagedDomainCount = 10;
         NSArray<NSString *> *crossSiteTrackingPreventionRelaxedDomains = nil;
+        NSArray<NSString *> *crossSiteTrackingPreventionRelaxedApps = nil;
+
+        bool isSafari = false;
 #if PLATFORM(MAC)
+        isSafari = WebCore::MacApplication::isSafari();
         NSDictionary *managedSitesPrefs = [NSDictionary dictionaryWithContentsOfFile:[[NSString stringWithFormat:@"/Library/Managed Preferences/%@/%@.plist", NSUserName(), kManagedSitesIdentifier] stringByStandardizingPath]];
         crossSiteTrackingPreventionRelaxedDomains = [managedSitesPrefs objectForKey:kCrossSiteTrackingPreventionRelaxedDomainsKey];
+        crossSiteTrackingPreventionRelaxedApps = [managedSitesPrefs objectForKey:kCrossSiteTrackingPreventionRelaxedAppsKey];
 #elif !PLATFORM(MACCATALYST)
+        isSafari = WebCore::IOSApplication::isMobileSafari();
         if ([PAL::getMCProfileConnectionClass() instancesRespondToSelector:@selector(crossSiteTrackingPreventionRelaxedDomains)])
             crossSiteTrackingPreventionRelaxedDomains = [(MCProfileConnection *)[PAL::getMCProfileConnectionClass() sharedConnection] crossSiteTrackingPreventionRelaxedDomains];
         else
             crossSiteTrackingPreventionRelaxedDomains = @[];
+
+        auto relaxedAppsSelector = NSSelectorFromString(@"crossSiteTrackingPreventionRelaxedApps");
+        if ([PAL::getMCProfileConnectionClass() instancesRespondToSelector:relaxedAppsSelector])
+            crossSiteTrackingPreventionRelaxedApps = [[PAL::getMCProfileConnectionClass() sharedConnection] performSelector:relaxedAppsSelector];
+        else
+            crossSiteTrackingPreventionRelaxedApps = @[];
 #endif
         managedKeyExists = !!crossSiteTrackingPreventionRelaxedDomains;
     
+        NSString *bundleID = [[NSBundle mainBundle] bundleIdentifier];
+        bool shouldUseRelaxedDomainsIfAvailable = isSafari || isRunningTest(bundleID) || [crossSiteTrackingPreventionRelaxedApps containsObject:bundleID];
+        if (!shouldUseRelaxedDomainsIfAvailable)
+            return;
+
         RunLoop::main().dispatch([forceReinitialization, crossSiteTrackingPreventionRelaxedDomains = retainPtr(crossSiteTrackingPreventionRelaxedDomains)] {
             if (hasInitializedManagedDomains && forceReinitialization != ForceReinitialization::Yes)
                 return;

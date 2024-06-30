@@ -151,7 +151,7 @@ public:
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
-    const char* logClassName() const override { return "MediaPlayerPrivateAVFoundation"; }
+    ASCIILiteral logClassName() const override { return "MediaPlayerPrivateAVFoundation"_s; }
     const void* logIdentifier() const final { return reinterpret_cast<const void*>(m_logIdentifier); }
     WTFLogChannel& logChannel() const final;
 #endif
@@ -183,7 +183,7 @@ protected:
     FloatSize naturalSize() const override;
     bool hasVideo() const override { return m_cachedHasVideo; }
     bool hasAudio() const override { return m_cachedHasAudio; }
-    void setPageIsVisible(bool, String&& sceneIdentifier) final;
+    void setPageIsVisible(bool) final;
     MediaTime duration() const override;
     MediaTime currentTime() const override = 0;
     void seekToTarget(const SeekTarget&) final;
@@ -277,9 +277,6 @@ protected:
 
     virtual bool isHLS() const { return false; }
 
-    static bool isUnsupportedMIMEType(const String&);
-    static const HashSet<String>& staticMIMETypeList();
-
     void updateStates();
 
     void setHasVideo(bool);
@@ -293,6 +290,7 @@ protected:
     void setNetworkState(MediaPlayer::NetworkState);
     void setReadyState(MediaPlayer::ReadyState);
 
+    bool isVisible() const { return m_visible; }
     MediaRenderingMode currentRenderingMode() const;
     MediaRenderingMode preferredRenderingMode() const;
 
@@ -316,10 +314,8 @@ protected:
     long platformErrorCode() const override { return assetErrorCode(); }
 
     void trackModeChanged() override;
-#if ENABLE(AVF_CAPTIONS)
     void notifyTrackModeChanged() override { }
     virtual void synchronizeTextTrackState() { }
-#endif
     void processNewAndRemovedTextTracks(const Vector<RefPtr<InbandTextTrackPrivateAVF>>&);
     void clearTextTracks();
     Vector<RefPtr<InbandTextTrackPrivateAVF>> m_textTracks;

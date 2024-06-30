@@ -43,9 +43,7 @@
     if (!(self = [super init]))
         return nil;
 
-#if USE(BROWSERENGINEKIT)
     self.typingAdaptationEnabled = YES;
-#endif
     self.autocapitalizationType = UITextAutocapitalizationTypeSentences;
     return self;
 }
@@ -80,8 +78,6 @@
     return _insertionPointColor.get();
 }
 
-#if USE(BROWSERENGINEKIT)
-
 - (void)setSelectionHandleColor:(UIColor *)color
 {
     _selectionHandleColor = color;
@@ -91,20 +87,6 @@
 {
     return _selectionHandleColor.get();
 }
-
-#else
-
-- (void)setSelectionBarColor:(UIColor *)color
-{
-    _selectionHandleColor = color;
-}
-
-- (UIColor *)selectionBarColor
-{
-    return _selectionHandleColor.get();
-}
-
-#endif
 
 - (void)setSelectionHighlightColor:(UIColor *)color
 {
@@ -121,13 +103,45 @@
     static constexpr auto selectionHighlightAlphaComponent = 0.2;
     BOOL shouldUseTintColor = tintColor && tintColor != UIColor.systemBlueColor;
     self.insertionPointColor = shouldUseTintColor ? tintColor : nil;
-#if USE(BROWSERENGINEKIT)
     self.selectionHandleColor = shouldUseTintColor ? tintColor : nil;
-#else
-    self.selectionBarColor = shouldUseTintColor ? tintColor : nil;
-#endif
     self.selectionHighlightColor = shouldUseTintColor ? [tintColor colorWithAlphaComponent:selectionHighlightAlphaComponent] : nil;
 }
+
+- (void)restoreDefaultValues
+{
+    self.typingAdaptationEnabled = YES;
+#if HAVE(INLINE_PREDICTIONS)
+    self.inlinePredictionType = UITextInlinePredictionTypeDefault;
+#endif
+    self.autocapitalizationType = UITextAutocapitalizationTypeSentences;
+    self.autocorrectionType = UITextAutocorrectionTypeDefault;
+    self.spellCheckingType = UITextSpellCheckingTypeDefault;
+    self.smartQuotesType = UITextSmartQuotesTypeDefault;
+    self.smartDashesType = UITextSmartDashesTypeDefault;
+    self.keyboardType = UIKeyboardTypeDefault;
+    self.keyboardAppearance = UIKeyboardAppearanceDefault;
+    self.returnKeyType = UIReturnKeyDefault;
+    self.secureTextEntry = NO;
+    self.singleLineDocument = NO;
+    self.textContentType = nil;
+    self.passwordRules = nil;
+    self.smartInsertDeleteType = UITextSmartInsertDeleteTypeDefault;
+    self.enablesReturnKeyAutomatically = NO;
+    self.insertionPointColor = nil;
+    self.selectionHandleColor = nil;
+    self.selectionHighlightColor = nil;
+
+#if ENABLE(WRITING_TOOLS)
+    [self restoreDefaultWritingToolsBehaviorValue];
+#endif
+}
+
+#if ENABLE(WRITING_TOOLS)
+- (void)restoreDefaultWritingToolsBehaviorValue
+{
+    self.writingToolsBehavior = UIWritingToolsBehaviorLimited;
+}
+#endif
 
 @end
 

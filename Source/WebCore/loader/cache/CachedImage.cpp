@@ -68,6 +68,7 @@ CachedImage::CachedImage(CachedResourceRequest&& request, PAL::SessionID session
     , m_isManuallyCached(false)
     , m_shouldPaintBrokenImage(true)
     , m_forceUpdateImageDataEnabledForTesting(false)
+    , m_allowsOrientationOverride(true)
 {
     setStatus(Unknown);
 }
@@ -79,6 +80,7 @@ CachedImage::CachedImage(Image* image, PAL::SessionID sessionID, const CookieJar
     , m_isManuallyCached(false)
     , m_shouldPaintBrokenImage(true)
     , m_forceUpdateImageDataEnabledForTesting(false)
+    , m_allowsOrientationOverride(true)
 {
 }
 
@@ -95,6 +97,8 @@ CachedImage::CachedImage(const URL& url, Image* image, PAL::SessionID sessionID,
     // Use the incoming URL in the response field. This ensures that code using the response directly,
     // such as origin checks for security, actually see something.
     mutableResponse().setURL(url);
+
+    setAllowsOrientationOverride(isCORSSameOrigin() || m_image->sourceURL().protocolIsData());
 }
 
 CachedImage::~CachedImage()
@@ -379,11 +383,6 @@ bool CachedImage::isPDFResource() const
     return Image::isPDFResource(response().mimeType(), url());
 }
 
-bool CachedImage::isPostScriptResource() const
-{
-    return Image::isPostScriptResource(response().mimeType(), url());
-}
-
 void CachedImage::clear()
 {
     destroyDecodedData();
@@ -500,6 +499,7 @@ inline void CachedImage::clearImage()
     m_image = nullptr;
     m_lastUpdateImageDataTime = { };
     m_updateImageDataCount = 0;
+    m_allowsOrientationOverride = true;
 }
 
 void CachedImage::updateBufferInternal(const FragmentedSharedBuffer& data)
@@ -516,21 +516,10 @@ void CachedImage::updateBufferInternal(const FragmentedSharedBuffer& data)
 
     EncodedDataStatus encodedDataStatus = EncodedDataStatus::Unknown;
 
-    if (isPostScriptResource()) {
-#if PLATFORM(MAC) && !USE(WEBKIT_IMAGE_DECODERS)
-        // Delay updating the image with the PostScript data till all the data
-        // is received so it can be converted to PDF data.
-        return;
-#else
-        // Set the encodedDataStatus to Error so loading this image will be canceled.
-        encodedDataStatus = EncodedDataStatus::Error;
-#endif
-    } else {
-        // Have the image update its data from its internal buffer. Decoding the image data
-        // will be delayed until info (like size or specific image frames) are queried which
-        // usually happens when the observers are repainted.
-        encodedDataStatus = updateImageData(false);
-    }
+    // Have the image update its data from its internal buffer. Decoding the image data
+    // will be delayed until info (like size or specific image frames) are queried which
+    // usually happens when the observers are repainted.
+    encodedDataStatus = updateImageData(false);
 
     if (encodedDataStatus > EncodedDataStatus::Error && encodedDataStatus < EncodedDataStatus::SizeAvailable)
         return;
@@ -614,6 +603,8 @@ void CachedImage::finishLoading(const FragmentedSharedBuffer* data, const Networ
     }
 
     setLoading(false);
+    setAllowsOrientationOverride(isCORSSameOrigin() || m_image->sourceURL().protocolIsData());
+
     notifyObservers();
     CachedResource::finishLoading(data, metrics);
 }

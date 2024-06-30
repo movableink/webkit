@@ -73,28 +73,28 @@ static bool flagsAreSet(MediaProducerMediaStateFlags value, MediaProducerMediaSt
 String mediaProducerStateString(MediaProducerMediaStateFlags flags)
 {
     StringBuilder string;
-    string.append(" { ");
+    string.append(" { "_s);
     if (flags & MediaProducerMediaState::IsPlayingAudio)
-        string.append("IsPlayingAudio+");
+        string.append("IsPlayingAudio+"_s);
     if (flags & MediaProducerMediaState::IsPlayingVideo)
-        string.append("IsPlayingVideo+");
+        string.append("IsPlayingVideo+"_s);
     if (flags & MediaProducerMediaState::IsPlayingToExternalDevice)
-        string.append("IsPlayingToExternalDevice+");
+        string.append("IsPlayingToExternalDevice+"_s);
     if (flags & MediaProducerMediaState::HasPlaybackTargetAvailabilityListener)
-        string.append("HasTargetAvailabilityListener+");
+        string.append("HasTargetAvailabilityListener+"_s);
     if (flags & MediaProducerMediaState::RequiresPlaybackTargetMonitoring)
-        string.append("RequiresTargetMonitoring+");
+        string.append("RequiresTargetMonitoring+"_s);
     if (flags & MediaProducerMediaState::ExternalDeviceAutoPlayCandidate)
-        string.append("ExternalDeviceAutoPlayCandidate+");
+        string.append("ExternalDeviceAutoPlayCandidate+"_s);
     if (flags & MediaProducerMediaState::DidPlayToEnd)
-        string.append("DidPlayToEnd+");
+        string.append("DidPlayToEnd+"_s);
     if (flags & MediaProducerMediaState::HasAudioOrVideo)
-        string.append("HasAudioOrVideo+");
+        string.append("HasAudioOrVideo+"_s);
     if (string.isEmpty())
-        string.append("IsNotPlaying");
+        string.append("IsNotPlaying"_s);
     else
         string.shrink(string.length() - 1);
-    string.append(" }");
+    string.append(" }"_s);
     return string.toString();
 }
 
@@ -114,7 +114,7 @@ public:
         if (!state->client.alwaysOnLoggingAllowed())
             return;
 
-        m_logger->logAlways(LogMedia, makeString("WebMediaSessionManager::", methodName, ' '), state->contextId.toUInt64(), state->flags, arguments...);
+        m_logger->logAlways(LogMedia, makeString("WebMediaSessionManager::"_s, span(methodName), ' '), state->contextId.toUInt64(), state->flags, arguments...);
     }
 
     template<typename... Arguments>
@@ -123,7 +123,7 @@ public:
         if (!m_manager.alwaysOnLoggingAllowed())
             return;
 
-        m_logger->logAlways(LogMedia, makeString("WebMediaSessionManager::", methodName, ' '), arguments...);
+        m_logger->logAlways(LogMedia, makeString("WebMediaSessionManager::"_s, span(methodName), ' '), arguments...);
     }
 
 private:

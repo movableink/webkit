@@ -1,4 +1,4 @@
-add_definitions("-ObjC++ -std=c++2a -D__STDC_WANT_LIB_EXT1__")
+add_definitions("-ObjC++ -std=c++2b -D__STDC_WANT_LIB_EXT1__")
 find_library(APPLICATIONSERVICES_LIBRARY ApplicationServices)
 find_library(CARBON_LIBRARY Carbon)
 find_library(CORESERVICES_LIBRARY CoreServices)
@@ -261,6 +261,7 @@ list(APPEND WebKit_SERIALIZATION_IN_FILES
     Shared/Cocoa/CacheStoragePolicy.serialization.in
     Shared/Cocoa/DataDetectionResult.serialization.in
     Shared/Cocoa/InsertTextOptions.serialization.in
+    Shared/Cocoa/RemoteObjectInvocation.serialization.in
     Shared/Cocoa/RevealItem.serialization.in
     Shared/Cocoa/WebCoreArgumentCodersCocoa.serialization.in
 )

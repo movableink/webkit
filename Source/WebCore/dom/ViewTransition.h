@@ -25,12 +25,14 @@
 
 #pragma once
 
+#include "ActiveDOMObject.h"
 #include "Document.h"
 #include "Element.h"
 #include "ExceptionOr.h"
 #include "ImageBuffer.h"
 #include "JSValueInWrappedObject.h"
 #include "MutableStyleProperties.h"
+#include "Styleable.h"
 #include "ViewTransitionUpdateCallback.h"
 #include <wtf/CheckedRef.h>
 #include <wtf/Ref.h>
@@ -40,6 +42,9 @@ namespace WebCore {
 
 class DOMPromise;
 class DeferredPromise;
+class RenderLayerModelObject;
+class RenderViewTransitionCapture;
+class RenderLayerModelObject;
 
 enum class ViewTransitionPhase : uint8_t {
     PendingCapture,
@@ -56,9 +61,10 @@ public:
     // nullptr represents an absent snapshot on an capturable element.
     std::optional<RefPtr<ImageBuffer>> oldImage;
     LayoutRect oldOverflowRect;
+    LayoutPoint oldLayerToLayoutOffset;
     LayoutSize oldSize;
     RefPtr<MutableStyleProperties> oldProperties;
-    WeakPtr<Element, WeakPtrImplWithEventTargetData> newElement;
+    WeakStyleable newElement;
 
     RefPtr<MutableStyleProperties> groupStyleProperties;
 };
@@ -126,22 +132,20 @@ private:
     HashMap<AtomString, UniqueRef<CapturedElement>> m_map;
 };
 
-class ViewTransition : public RefCounted<ViewTransition>, public CanMakeWeakPtr<ViewTransition> {
+class ViewTransition : public RefCounted<ViewTransition>, public CanMakeWeakPtr<ViewTransition>, public ActiveDOMObject {
 public:
     static Ref<ViewTransition> create(Document&, RefPtr<ViewTransitionUpdateCallback>&&);
     ~ViewTransition();
 
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     void skipTransition();
     void skipViewTransition(ExceptionOr<JSC::JSValue>&&);
-    void callUpdateCallback();
 
     void setupViewTransition();
-    ExceptionOr<void> captureOldState();
-    ExceptionOr<void> captureNewState();
-    void setupTransitionPseudoElements();
-    void activateViewTransition();
     void handleTransitionFrame();
-    void clearViewTransition();
 
     DOMPromise& ready();
     DOMPromise& updateCallbackDone();
@@ -150,20 +154,39 @@ public:
     ViewTransitionPhase phase() const { return m_phase; }
     const OrderedNamedElementsMap& namedElements() const { return m_namedElements; };
 
-    RefPtr<Document> protectedDocument() const { return m_document.get(); }
+    Document* document() const { return downcast<Document>(scriptExecutionContext()); }
+    RefPtr<Document> protectedDocument() const { return document(); }
+
+    bool documentElementIsCaptured() const;
+
+    RenderViewTransitionCapture* viewTransitionNewPseudoForCapturedElement(RenderLayerModelObject&);
 
 private:
     ViewTransition(Document&, RefPtr<ViewTransitionUpdateCallback>&&);
 
-    Ref<MutableStyleProperties> copyElementBaseProperties(Element&, const LayoutSize&);
+    Ref<MutableStyleProperties> copyElementBaseProperties(RenderLayerModelObject&, LayoutSize&);
 
-    ExceptionOr<void> updatePseudoElementStyles();
+    // Setup view transition sub-algorithms.
+    void activateViewTransition();
+    ExceptionOr<void> captureOldState();
+    ExceptionOr<void> captureNewState();
+    void setupTransitionPseudoElements();
     void setupDynamicStyleSheet(const AtomString&, const CapturedElement&);
 
-    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
+    void callUpdateCallback();
+
+    ExceptionOr<void> updatePseudoElementStyles();
+    ExceptionOr<void> checkForViewportSizeChange();
+
+    void clearViewTransition();
+
+    // ActiveDOMObject.
+    void stop() final;
 
     OrderedNamedElementsMap m_namedElements;
     ViewTransitionPhase m_phase { ViewTransitionPhase::PendingCapture };
+    FloatSize m_initialLargeViewportSize;
+    float m_initialPageZoom;
 
     RefPtr<ViewTransitionUpdateCallback> m_updateCallback;
 
@@ -171,8 +194,7 @@ private:
     PromiseAndWrapper m_ready;
     PromiseAndWrapper m_updateCallbackDone;
     PromiseAndWrapper m_finished;
-
-    FloatSize m_initialSnapshotContainingBlockSize;
+    EventLoopTimerHandle m_updateCallbackTimeout;
 };
 
 }

@@ -90,6 +90,7 @@ enum class LayoutViewportConstraint : bool { Unconstrained, ConstrainedToDocumen
 
 class LocalFrameView final : public FrameView {
     WTF_MAKE_ISO_ALLOCATED(LocalFrameView);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LocalFrameView);
 public:
     friend class Internals;
     friend class LocalFrameViewLayoutContext;
@@ -448,6 +449,8 @@ public:
     void incrementVisuallyNonEmptyCharacterCount(const String&);
     void incrementVisuallyNonEmptyPixelCount(const IntSize&);
     bool isVisuallyNonEmpty() const { return m_contentQualifiesAsVisuallyNonEmpty; }
+
+    bool hasEnoughContentForVisualMilestones() const;
     bool hasContentfulDescendants() const;
     void checkAndDispatchDidReachVisuallyNonEmptyState();
 
@@ -721,6 +724,8 @@ public:
 
     WEBCORE_EXPORT void scrollbarStyleDidChange();
 
+    FrameIdentifier rootFrameID() const final;
+
 private:
     explicit LocalFrameView(LocalFrame&);
 
@@ -885,7 +890,7 @@ private:
     RenderElement* viewportRenderer() const;
     
     void willDoLayout(SingleThreadWeakPtr<RenderElement> layoutRoot);
-    void didLayout(SingleThreadWeakPtr<RenderElement> layoutRoot);
+    void didLayout(SingleThreadWeakPtr<RenderElement> layoutRoot, bool didRunSimplifiedLayout);
 
     FloatSize calculateSizeForCSSViewportUnitsOverride(std::optional<OverrideViewportSize>) const;
 
@@ -1067,6 +1072,13 @@ inline void LocalFrameView::incrementVisuallyNonEmptyCharacterCount(const String
         return;
 
     incrementVisuallyNonEmptyCharacterCountSlowCase(inlineText);
+}
+
+inline bool LocalFrameView::hasEnoughContentForVisualMilestones() const
+{
+    if (!m_frame->page())
+        return false;
+    return isVisuallyNonEmpty() && hasContentfulDescendants() && (!m_frame->page()->requestedLayoutMilestones().contains(LayoutMilestone::DidRenderSignificantAmountOfText) || m_renderedSignificantAmountOfText);
 }
 
 inline RefPtr<LocalFrameView> LocalFrame::protectedView() const

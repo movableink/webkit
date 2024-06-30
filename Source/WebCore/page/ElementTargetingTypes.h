@@ -32,14 +32,24 @@
 #include "RectEdges.h"
 #include "RenderStyleConstants.h"
 #include "ScriptExecutionContextIdentifier.h"
+#include <wtf/URLHash.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
+using TargetedElementSelectors = Vector<HashSet<String>>;
+using TargetedElementIdentifiers = std::pair<ElementIdentifier, ScriptExecutionContextIdentifier>;
+
+struct TargetedElementAdjustment {
+    TargetedElementIdentifiers identifiers;
+    TargetedElementSelectors selectors;
+};
+
 struct TargetedElementRequest {
-    FloatPoint pointInRootView;
+    std::variant<FloatPoint, String, TargetedElementSelectors> data;
     bool canIncludeNearbyElements { true };
+    bool shouldIgnorePointerEventsNone { true };
 };
 
 struct TargetedElementInfo {
@@ -47,12 +57,20 @@ struct TargetedElementInfo {
     ScriptExecutionContextIdentifier documentIdentifier;
     RectEdges<bool> offsetEdges;
     String renderedText;
-    Vector<String> selectors;
+    String searchableText;
+    String screenReaderText;
+    Vector<Vector<String>> selectors;
     FloatRect boundsInRootView;
+    FloatRect boundsInClientCoordinates;
     PositionType positionType { PositionType::Static };
     Vector<FrameIdentifier> childFrameIdentifiers;
-    bool isUnderPoint { true };
+    HashSet<URL> mediaAndLinkURLs;
+    bool isNearbyTarget { true };
     bool isPseudoElement { false };
+    bool isInShadowTree { false };
+    bool isInVisibilityAdjustmentSubtree { false };
+    bool hasLargeReplacedDescendant { false };
+    bool hasAudibleMedia { false };
 };
 
 } // namespace WebCore

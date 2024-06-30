@@ -428,7 +428,8 @@ ALWAYS_INLINE bool matchesFullscreenDocumentPseudoClass(const Element& element)
     return fullscreenManager && fullscreenManager->fullscreenElement();
 }
 
-ALWAYS_INLINE bool matchesInWindowFullScreenPseudoClass(const Element& element)
+#if ENABLE(VIDEO)
+ALWAYS_INLINE bool matchesInWindowFullscreenPseudoClass(const Element& element)
 {
     if (&element != element.document().fullscreenManager().currentFullscreenElement())
         return false;
@@ -436,6 +437,7 @@ ALWAYS_INLINE bool matchesInWindowFullScreenPseudoClass(const Element& element)
     auto* mediaElement = dynamicDowncast<HTMLMediaElement>(element);
     return mediaElement && mediaElement->fullscreenMode() == HTMLMediaElementEnums::VideoFullscreenModeInWindow;
 }
+#endif
 
 #endif
 
@@ -579,6 +581,13 @@ ALWAYS_INLINE bool matchesUserInvalidPseudoClass(const Element& element)
 ALWAYS_INLINE bool matchesUserValidPseudoClass(const Element& element)
 {
     return element.matchesUserValidPseudoClass();
+}
+
+ALWAYS_INLINE bool matchesActiveViewTransitionPseudoClass(const Element& element)
+{
+    if (&element != element.document().documentElement())
+        return false;
+    return !!element.document().activeViewTransition();
 }
 
 } // namespace WebCore

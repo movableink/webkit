@@ -54,7 +54,7 @@
 #endif
 
 #if USE(GBM)
-#include <WebCore/GBMDevice.h>
+#include <WebCore/DRMDeviceManager.h>
 #endif
 
 #if PLATFORM(GTK)
@@ -89,6 +89,10 @@
 
 #if USE(CAIRO)
 #include <WebCore/CairoUtilities.h>
+#endif
+
+#if USE(SKIA)
+#include <WebCore/ProcessCapabilities.h>
 #endif
 
 #define RELEASE_LOG_SESSION_ID (m_sessionID ? m_sessionID->toUInt64() : 0)
@@ -128,6 +132,12 @@ void WebProcess::platformInitializeProcess(const AuxiliaryProcessInitializationP
 
 void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& parameters)
 {
+#if USE(SKIA)
+    const char* enableCPURendering = getenv("WEBKIT_SKIA_ENABLE_CPU_RENDERING");
+    if (enableCPURendering && strcmp(enableCPURendering, "0"))
+        ProcessCapabilities::setCanUseAcceleratedBuffers(false);
+#endif
+
 #if ENABLE(MEDIA_STREAM)
     addSupplement<UserMediaCaptureManager>();
 #endif
@@ -145,7 +155,7 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
 #endif
 
 #if USE(GBM)
-    WebCore::GBMDevice::singleton().initialize(parameters.renderDeviceFile);
+    DRMDeviceManager::singleton().initializeMainDevice(parameters.renderDeviceFile);
 #endif
 
 #if PLATFORM(WPE)
@@ -153,15 +163,15 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
         WebCore::PlatformDisplay::setUseDMABufForRendering(true);
 #endif
 
-#if PLATFORM(GTK) && USE(EGL)
+#if PLATFORM(GTK)
     m_dmaBufRendererBufferMode = parameters.dmaBufRendererBufferMode;
     if (!m_dmaBufRendererBufferMode.isEmpty()) {
 #if USE(GBM)
         if (m_dmaBufRendererBufferMode.contains(DMABufRendererBufferMode::Hardware)) {
             const char* disableGBM = getenv("WEBKIT_DMABUF_RENDERER_DISABLE_GBM");
             if (!disableGBM || !strcmp(disableGBM, "0")) {
-                if (auto* device = WebCore::GBMDevice::singleton().device(GBMDevice::Type::Render))
-                    m_displayForCompositing = WebCore::PlatformDisplayGBM::create(device);
+                if (auto* device = DRMDeviceManager::singleton().mainGBMDeviceNode(DRMDeviceManager::NodeType::Render))
+                    m_displayForCompositing = PlatformDisplayGBM::create(device);
             }
         }
 #endif

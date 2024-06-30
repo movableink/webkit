@@ -94,14 +94,26 @@ bool screenHasInvertedColors()
     return false;
 }
 
-double screenDPI()
+double screenDPI(PlatformDisplayID screendisplayID)
 {
 #if ENABLE(WPE_PLATFORM)
-    auto* data = screenData(primaryScreenDisplayID());
+    auto* data = screenData(screendisplayID);
     return data ? data->dpi : 96.;
 #else
+    UNUSED_PARAM(screendisplayID);
     notImplemented();
     return 96;
+#endif
+}
+
+double fontDPI()
+{
+#if ENABLE(WPE_PLATFORM)
+    // In WPE, there is no notion of font scaling separate from device DPI.
+    return screenDPI(primaryScreenDisplayID());
+#else
+    notImplemented();
+    return 96.;
 #endif
 }
 

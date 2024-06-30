@@ -35,6 +35,15 @@
 #include <wtf/Seconds.h>
 #include <wtf/WeakPtr.h>
 
+namespace WebKit {
+class UserMediaPermissionRequestManagerProxy;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebKit::UserMediaPermissionRequestManagerProxy> : std::true_type { };
+}
+
 namespace WebCore {
 class CaptureDevice;
 class SecurityOrigin;
@@ -133,7 +142,7 @@ private:
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final;
     const void* logIdentifier() const final { return m_logIdentifier; }
-    const char* logClassName() const override { return "UserMediaPermissionRequestManagerProxy"; }
+    ASCIILiteral logClassName() const override { return "UserMediaPermissionRequestManagerProxy"_s; }
     WTFLogChannel& logChannel() const final;
 #endif
 

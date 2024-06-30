@@ -143,6 +143,8 @@ public:
     static bool readLastBaseURLFromState(const String& filePath, URL& outLastBaseURL);
     static bool readDisplayNameFromState(const String& filePath, String& outDisplayName);
 
+    static bool isURLForAnyExtension(const URL&);
+
     static WebExtensionContext* get(WebExtensionContextIdentifier);
 
     explicit WebExtensionContext(Ref<WebExtension>&&);
@@ -227,6 +229,8 @@ public:
         AlreadyLoaded,
         NotLoaded,
         BaseURLAlreadyInUse,
+        NoBackgroundContent,
+        BackgroundContentFailedToLoad,
     };
 
     enum class PermissionState : int8_t {
@@ -281,7 +285,6 @@ public:
     void setBaseURL(URL&&);
 
     bool isURLForThisExtension(const URL&) const;
-    bool extensionCanAccessWebPage(WebPageProxyIdentifier);
 
     bool hasCustomUniqueIdentifier() const { return m_customUniqueIdentifier; }
 
@@ -378,8 +381,8 @@ public:
 
     void openNewTab(const WebExtensionTabParameters&, CompletionHandler<void(RefPtr<WebExtensionTab>)>&&);
 
-    WindowVector openWindows() const;
-    TabVector openTabs() const;
+    WindowVector openWindows(IgnoreExtensionAccess = IgnoreExtensionAccess::No) const;
+    TabVector openTabs(IgnoreExtensionAccess = IgnoreExtensionAccess::No) const;
 
     RefPtr<WebExtensionWindow> focusedWindow(IgnoreExtensionAccess = IgnoreExtensionAccess::No) const;
     RefPtr<WebExtensionWindow> frontmostWindow(IgnoreExtensionAccess = IgnoreExtensionAccess::No) const;
@@ -397,7 +400,7 @@ public:
     void didSelectOrDeselectTabs(const TabSet&);
 
     void didMoveTab(WebExtensionTab&, size_t oldIndex, const WebExtensionWindow* oldWindow = nullptr);
-    void didReplaceTab(WebExtensionTab& oldTab, WebExtensionTab& newTab);
+    void didReplaceTab(WebExtensionTab& oldTab, WebExtensionTab& newTab, SuppressEvents = SuppressEvents::No);
     void didChangeTabProperties(WebExtensionTab&, OptionSet<WebExtensionTab::ChangedProperties> = { });
 
     void didStartProvisionalLoadForFrame(WebPageProxyIdentifier, WebExtensionFrameIdentifier, WebExtensionFrameIdentifier parentFrameID, const URL&, WallTime);
@@ -432,6 +435,10 @@ public:
     WebExtensionCommand* command(const String& identifier);
     void performCommand(WebExtensionCommand&, UserTriggered = UserTriggered::No);
 
+#if TARGET_OS_IPHONE
+    WebExtensionCommand* commandMatchingKeyCommand(UIKeyCommand *);
+    bool performCommand(UIKeyCommand *);
+#endif
 #if USE(APPKIT)
     WebExtensionCommand* command(NSEvent *);
     bool performCommand(NSEvent *);
@@ -458,6 +465,11 @@ public:
     URL backgroundContentURL();
     WKWebView *backgroundWebView() const { return m_backgroundWebView.get(); }
     bool safeToLoadBackgroundContent() const { return m_safeToLoadBackgroundContent; }
+
+    NSError *backgroundContentLoadError() const { return m_backgroundContentLoadError.get(); }
+
+    NSString *backgroundWebViewInspectionName();
+    void setBackgroundWebViewInspectionName(const String&);
 
     bool decidePolicyForNavigationAction(WKWebView *, WKNavigationAction *);
     void didFinishDocumentLoad(WKWebView *, WKNavigation *);
@@ -496,6 +508,8 @@ public:
     WebsiteDataStore* websiteDataStore(std::optional<PAL::SessionID> = std::nullopt) const;
 
     void cookiesDidChange(API::HTTPCookieStore&);
+
+    void loadBackgroundContent(CompletionHandler<void(NSError *)>&&);
 
     void wakeUpBackgroundContentIfNecessary(CompletionHandler<void()>&&);
     void wakeUpBackgroundContentIfNecessaryToFireEvents(EventListenerTypeSet&&, CompletionHandler<void()>&&);
@@ -543,6 +557,7 @@ private:
     NSDictionary *readStateFromStorage();
     void writeStateToStorage() const;
 
+    void determineInstallReasonDuringLoad();
     void moveLocalStorageIfNeeded(const URL& previousBaseURL, CompletionHandler<void()>&&);
 
     void permissionsDidChange(const PermissionsSet&);
@@ -565,7 +580,6 @@ private:
     void loadBackgroundWebViewIfNeeded();
     void loadBackgroundWebView();
     void unloadBackgroundWebView();
-    void queueStartupAndInstallEventsForExtensionIfNecessary();
     void scheduleBackgroundContentToUnload();
     void unloadBackgroundContentIfPossible();
 
@@ -574,6 +588,8 @@ private:
     void saveBackgroundPageListenersToStorage();
 
     void performTasksAfterBackgroundContentLoads();
+
+    void reportWebViewConfigurationErrorIfNeeded(const WebExtensionTab&) const;
 
 #if ENABLE(INSPECTOR_EXTENSIONS)
     URL inspectorBackgroundPageURL() const;
@@ -639,6 +655,7 @@ private:
 
     // Registered content scripts methods.
     void loadRegisteredContentScripts();
+    void clearRegisteredContentScripts();
     _WKWebExtensionRegisteredScriptsSQLiteStore *registeredContentScriptsStore();
 
     // Storage
@@ -697,7 +714,7 @@ private:
     void declarativeNetRequestDisplayActionCountAsBadgeText(bool displayActionCountAsBadgeText, CompletionHandler<void(Expected<void, WebExtensionError>&&)>&&);
     void declarativeNetRequestIncrementActionCount(WebExtensionTabIdentifier, double increment, CompletionHandler<void(Expected<void, WebExtensionError>&&)>&&);
     DeclarativeNetRequestValidatedRulesets declarativeNetRequestValidateRulesetIdentifiers(const Vector<String>&);
-    size_t declarativeNetRequestEnabledRulesetCount();
+    size_t declarativeNetRequestEnabledRulesetCount() { return m_enabledStaticRulesetIDs.size(); }
     void declarativeNetRequestToggleRulesets(const Vector<String>& rulesetIdentifiers, bool newValue, NSMutableDictionary *rulesetIdentifiersToEnabledState);
     void declarativeNetRequestGetMatchedRules(std::optional<WebExtensionTabIdentifier>, std::optional<WallTime> minTimeStamp, CompletionHandler<void(Expected<Vector<WebExtensionMatchedRuleParameters>, WebExtensionError>&&)>&&);
     void declarativeNetRequestGetDynamicRules(CompletionHandler<void(Expected<String, WebExtensionError>&&)>&&);
@@ -885,7 +902,10 @@ private:
     String m_previousVersion;
 
     RetainPtr<WKWebView> m_backgroundWebView;
+    RetainPtr<NSError> m_backgroundContentLoadError;
     RetainPtr<_WKWebExtensionContextDelegate> m_delegate;
+
+    String m_backgroundWebViewInspectionName;
 
     std::unique_ptr<WebCore::Timer> m_unloadBackgroundWebViewTimer;
     MonotonicTime m_lastBackgroundPortActivityTime;
@@ -932,6 +952,7 @@ private:
     DeclarativeNetRequestMatchedRuleVector m_matchedRules;
     RetainPtr<_WKWebExtensionDeclarativeNetRequestSQLiteStore> m_declarativeNetRequestDynamicRulesStore;
     RetainPtr<_WKWebExtensionDeclarativeNetRequestSQLiteStore> m_declarativeNetRequestSessionRulesStore;
+    HashSet<String> m_enabledStaticRulesetIDs;
     HashSet<double> m_sessionRulesIDs;
     HashSet<double> m_dynamicRulesIDs;
 

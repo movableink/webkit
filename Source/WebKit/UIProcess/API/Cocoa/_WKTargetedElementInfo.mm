@@ -31,6 +31,7 @@
 #import "WebPageProxy.h"
 #import "_WKFrameTreeNodeInternal.h"
 #import "_WKTargetedElementInfoInternal.h"
+#import <WebCore/ShareableBitmap.h>
 #import <WebCore/WebCoreObjCExtras.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/cocoa/VectorCocoa.h>
@@ -71,14 +72,52 @@
     return _info->boundsInRootView();
 }
 
+- (CGRect)boundsInWebView
+{
+    return _info->boundsInWebView();
+}
+
+- (CGRect)boundsInClientCoordinates
+{
+    return _info->boundsInClientCoordinates();
+}
+
 - (NSArray<NSString *> *)selectors
 {
-    return createNSArray(_info->selectors()).autorelease();
+    if (_info->selectors().isEmpty())
+        return @[ ];
+
+    if (_info->isInShadowTree())
+        return @[ ];
+
+    return createNSArray(_info->selectors().first()).autorelease();
+}
+
+- (NSArray<NSArray<NSString *> *> *)selectorsIncludingShadowHosts
+{
+    RetainPtr result = adoptNS([[NSMutableArray alloc] initWithCapacity:_info->selectors().size()]);
+    for (auto& selectors : _info->selectors()) {
+        RetainPtr nsSelectors = adoptNS([[NSMutableArray alloc] initWithCapacity:selectors.size()]);
+        for (auto& selector : selectors)
+            [nsSelectors addObject:selector];
+        [result addObject:nsSelectors.get()];
+    }
+    return result.autorelease();
 }
 
 - (NSString *)renderedText
 {
     return _info->renderedText();
+}
+
+- (NSString *)searchableText
+{
+    return _info->searchableText();
+}
+
+- (NSString *)screenReaderText
+{
+    return _info->screenReaderText();
 }
 
 - (_WKRectEdge)offsetEdges
@@ -110,14 +149,76 @@
     return _info->isSameElement(*other->_info);
 }
 
-- (BOOL)isUnderPoint
+- (BOOL)isNearbyTarget
 {
-    return _info->isUnderPoint();
+    return _info->isNearbyTarget();
+}
+
+- (BOOL)isInVisibilityAdjustmentSubtree
+{
+    return _info->isInVisibilityAdjustmentSubtree();
+}
+
+- (BOOL)hasLargeReplacedDescendant
+{
+    return _info->hasLargeReplacedDescendant();
+}
+
+- (NSSet<NSURL *> *)mediaAndLinkURLs
+{
+    RetainPtr result = adoptNS([NSMutableSet<NSURL *> new]);
+    for (auto& url : _info->mediaAndLinkURLs())
+        [result addObject:(NSURL *)url];
+    return result.autorelease();
 }
 
 - (BOOL)isPseudoElement
 {
     return _info->isPseudoElement();
+}
+
+- (BOOL)isInShadowTree
+{
+    return _info->isInShadowTree();
+}
+
+- (BOOL)hasAudibleMedia
+{
+    return _info->hasAudibleMedia();
+}
+
+- (void)takeSnapshotWithCompletionHandler:(void(^)(CGImageRef))completion
+{
+    return _info->takeSnapshot([completion = makeBlockPtr(completion)](std::optional<WebCore::ShareableBitmapHandle>&& imageHandle) mutable {
+        if (!imageHandle)
+            return completion(nullptr);
+
+        if (RefPtr bitmap = WebCore::ShareableBitmap::create(WTFMove(*imageHandle), WebCore::SharedMemory::Protection::ReadOnly))
+            return completion(bitmap->makeCGImage().get());
+
+        completion(nullptr);
+    });
+}
+
+- (NSString *)debugDescription
+{
+    auto firstSelector = [&]() -> String {
+        auto& allSelectors = _info->selectors();
+        if (allSelectors.isEmpty())
+            return { };
+
+        if (allSelectors.last().isEmpty())
+            return { };
+
+        // Most relevant selector for the final target element (after all enclosing shadow
+        // roots have been resolved).
+        return allSelectors.last().first();
+    }();
+
+    auto bounds = _info->boundsInRootView();
+    return [NSString stringWithFormat:@"<%@ %p \"%@\" at {{%.0f,%.0f},{%.0f,%.0f}}>"
+        , self.class, self, (NSString *)firstSelector
+        , bounds.x(), bounds.y(), bounds.width(), bounds.height()];
 }
 
 @end

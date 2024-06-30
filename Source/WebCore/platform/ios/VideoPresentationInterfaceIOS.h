@@ -44,6 +44,7 @@
 #include <wtf/ThreadSafeWeakPtr.h>
 
 OBJC_CLASS AVPlayerViewController;
+OBJC_CLASS LMPlayableViewController;
 OBJC_CLASS UIViewController;
 OBJC_CLASS UIWindow;
 OBJC_CLASS UIView;
@@ -61,9 +62,19 @@ class VideoPresentationInterfaceIOS
     : public VideoPresentationModelClient
     , public PlaybackSessionModelClient
     , public VideoFullscreenCaptions
-    , public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<VideoPresentationInterfaceIOS, WTF::DestructionThread::MainRunLoop> {
+    , public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<VideoPresentationInterfaceIOS, WTF::DestructionThread::MainRunLoop>
+    , public CanMakeCheckedPtr<VideoPresentationInterfaceIOS> {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(VideoPresentationInterfaceIOS);
 public:
     WEBCORE_EXPORT ~VideoPresentationInterfaceIOS();
+
+    // CheckedPtr interface
+    uint32_t ptrCount() const final { return CanMakeCheckedPtr::ptrCount(); }
+    uint32_t ptrCountWithoutThreadCheck() const final { return CanMakeCheckedPtr::ptrCountWithoutThreadCheck(); }
+    void incrementPtrCount() const final { CanMakeCheckedPtr::incrementPtrCount(); }
+    void decrementPtrCount() const final { CanMakeCheckedPtr::decrementPtrCount(); }
+
     WEBCORE_EXPORT void setVideoPresentationModel(VideoPresentationModel*);
     PlaybackSessionInterfaceIOS& playbackSessionInterface() const { return m_playbackSessionInterface.get(); }
     PlaybackSessionModel* playbackSessionModel() const { return m_playbackSessionInterface->playbackSessionModel(); }
@@ -87,6 +98,7 @@ public:
     WEBCORE_EXPORT virtual void setInlineRect(const FloatRect&, bool visible);
     WEBCORE_EXPORT void preparedToReturnToStandby();
     bool changingStandbyOnly() { return m_changingStandbyOnly; }
+    WEBCORE_EXPORT void failedToRestoreFullscreen();
 
     enum class ExitFullScreenReason {
         DoneButtonTapped,
@@ -149,10 +161,14 @@ public:
 
     WEBCORE_EXPORT std::optional<MediaPlayerIdentifier> playerIdentifier() const;
 
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+    virtual LMPlayableViewController *playableViewController() { return nil; }
+#endif
+
 #if !RELEASE_LOG_DISABLED
     const void* logIdentifier() const;
     const Logger* loggerPtr() const;
-    const char* logClassName() const { return "VideoPresentationInterfaceIOS"; };
+    ASCIILiteral logClassName() const { return "VideoPresentationInterfaceIOS"_s; };
     WTFLogChannel& logChannel() const;
 #endif
 
@@ -194,7 +210,7 @@ protected:
     RetainPtr<UIView> m_videoView;
     RetainPtr<WebAVPlayerLayerView> m_playerLayerView;
 
-    void finalizeSetup();
+    virtual void finalizeSetup();
     virtual void updateRouteSharingPolicy() = 0;
     virtual void setupPlayerViewController() = 0;
     virtual void invalidatePlayerViewController() = 0;
@@ -219,6 +235,7 @@ protected:
     virtual void setContentDimensions(const FloatSize&) = 0;
     virtual void setAllowsPictureInPicturePlayback(bool) = 0;
     virtual bool isExternalPlaybackActive() const = 0;
+    virtual bool willRenderToLayer() const = 0;
 
 #if PLATFORM(WATCHOS)
     bool m_waitingForPreparedToExit { false };

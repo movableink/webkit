@@ -39,8 +39,6 @@
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderStyleInlines.h"
 #include "RenderText.h"
-#include "ScaleTransformOperation.h"
-#include "TransformOperations.h"
 #include <cmath>
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/MathExtras.h>
@@ -62,6 +60,8 @@ RenderMathMLOperator::RenderMathMLOperator(Type type, Document& document, Render
     : RenderMathMLToken(type, document, WTFMove(style))
 {
 }
+
+RenderMathMLOperator::~RenderMathMLOperator() = default;
 
 MathMLOperatorElement& RenderMathMLOperator::element() const
 {

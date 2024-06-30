@@ -31,6 +31,7 @@
 #include <WebCore/ContentSecurityPolicy.h>
 #include <WebCore/FrameIdentifier.h>
 #include <WebCore/ShouldRelaxThirdPartyCookieBlocking.h>
+#include <WebCore/WritingToolsTypes.h>
 #include <wtf/Forward.h>
 #include <wtf/GetPtr.h>
 #include <wtf/HashMap.h>
@@ -95,6 +96,7 @@ public:
     virtual ~PageConfiguration();
 
     Ref<PageConfiguration> copy() const;
+    void copyDataFrom(const PageConfiguration&);
 
     WebKit::BrowsingContextGroup& browsingContextGroup() const;
     void setBrowsingContextGroup(RefPtr<WebKit::BrowsingContextGroup>&&);
@@ -238,8 +240,8 @@ public:
     const Vector<WTF::String>& corsDisablingPatterns() const { return m_data.corsDisablingPatterns; }
     void setCORSDisablingPatterns(Vector<WTF::String>&& patterns) { m_data.corsDisablingPatterns = WTFMove(patterns); }
 
-    const HashSet<WTF::String>& maskedURLSchemes() const { return m_data.maskedURLSchemes; }
-    void setMaskedURLSchemes(HashSet<WTF::String>&& schemes) { m_data.maskedURLSchemes = WTFMove(schemes); }
+    HashSet<WTF::String> maskedURLSchemes() const;
+    void setMaskedURLSchemes(HashSet<WTF::String>&& schemes) { m_data.maskedURLSchemesWasSet = true; m_data.maskedURLSchemes = WTFMove(schemes); }
 
     bool userScriptsShouldWaitUntilNotification() const { return m_data.userScriptsShouldWaitUntilNotification; }
     void setUserScriptsShouldWaitUntilNotification(bool value) { m_data.userScriptsShouldWaitUntilNotification = value; }
@@ -304,6 +306,11 @@ public:
 #if ENABLE(APP_HIGHLIGHTS)
     bool appHighlightsEnabled() const { return m_data.appHighlightsEnabled; }
     void setAppHighlightsEnabled(bool enabled) { m_data.appHighlightsEnabled = enabled; }
+#endif
+
+#if ENABLE(MULTI_REPRESENTATION_HEIC)
+    bool multiRepresentationHEICInsertionEnabled() const { return m_data.multiRepresentationHEICInsertionEnabled; }
+    void setMultiRepresentationHEICInsertionEnabled(bool enabled) { m_data.multiRepresentationHEICInsertionEnabled = enabled; }
 #endif
 
     const WTF::String& groupIdentifier() const { return m_data.groupIdentifier; }
@@ -375,6 +382,11 @@ public:
     bool allowsInlinePredictions() const { return m_data.allowsInlinePredictions; }
     void setAllowsInlinePredictions(bool allows) { m_data.allowsInlinePredictions = allows; }
 
+#if ENABLE(WRITING_TOOLS)
+    WebCore::WritingTools::Behavior writingToolsBehavior() const { return m_data.writingToolsBehavior; }
+    void setWritingToolsBehavior(WebCore::WritingTools::Behavior behavior) { m_data.writingToolsBehavior = behavior; }
+#endif
+
     void setShouldRelaxThirdPartyCookieBlocking(WebCore::ShouldRelaxThirdPartyCookieBlocking value) { m_data.shouldRelaxThirdPartyCookieBlocking = value; }
     WebCore::ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking() const { return m_data.shouldRelaxThirdPartyCookieBlocking; }
 
@@ -391,6 +403,12 @@ public:
     
     void setAllowTestOnlyIPC(bool enabled) { m_data.allowTestOnlyIPC = enabled; }
     bool allowTestOnlyIPC() const { return m_data.allowTestOnlyIPC; }
+
+    bool scrollToTextFragmentIndicatorEnabled () const { return m_data.scrollToTextFragmentIndicatorEnabled; }
+    void setScrollToTextFragmentIndicatorEnabled(bool enabled) { m_data.scrollToTextFragmentIndicatorEnabled = enabled; }
+
+    bool scrollToTextFragmentMarkingEnabled() const { return m_data.scrollToTextFragmentMarkingEnabled; }
+    void setScrollToTextFragmentMarkingEnabled(bool enabled) { m_data.scrollToTextFragmentMarkingEnabled = enabled; }
 
     void setPortsForUpgradingInsecureSchemeForTesting(uint16_t upgradeFromInsecurePort, uint16_t upgradeToSecurePort) { m_data.portsForUpgradingInsecureSchemeForTesting = { upgradeFromInsecurePort, upgradeToSecurePort }; }
     std::optional<std::pair<uint16_t, uint16_t>> portsForUpgradingInsecureSchemeForTesting() const { return m_data.portsForUpgradingInsecureSchemeForTesting; }
@@ -508,6 +526,7 @@ private:
         HashMap<WTF::String, Ref<WebKit::WebURLSchemeHandler>> urlSchemeHandlers;
         Vector<WTF::String> corsDisablingPatterns;
         HashSet<WTF::String> maskedURLSchemes;
+        bool maskedURLSchemesWasSet { false };
         bool userScriptsShouldWaitUntilNotification { true };
         bool crossOriginAccessControlCheckEnabled { true };
         WTF::String processDisplayName;
@@ -538,6 +557,9 @@ private:
 #if ENABLE(APP_HIGHLIGHTS)
         bool appHighlightsEnabled { DEFAULT_VALUE_FOR_AppHighlightsEnabled };
 #endif
+#if ENABLE(MULTI_REPRESENTATION_HEIC)
+        bool multiRepresentationHEICInsertionEnabled { false };
+#endif
         WTF::String groupIdentifier;
         WTF::String mediaContentTypesRequiringHardwareSupport;
         std::optional<WTF::String> applicationNameForUserAgent;
@@ -561,6 +583,12 @@ private:
         bool attachmentElementEnabled { false };
         bool attachmentWideLayoutEnabled { false };
         bool allowsInlinePredictions { false };
+        bool scrollToTextFragmentIndicatorEnabled { true };
+        bool scrollToTextFragmentMarkingEnabled { true };
+
+#if ENABLE(WRITING_TOOLS)
+        WebCore::WritingTools::Behavior writingToolsBehavior { WebCore::WritingTools::Behavior::Default };
+#endif
 
         WebCore::ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking { WebCore::ShouldRelaxThirdPartyCookieBlocking::No };
         WTF::String attributedBundleIdentifier;

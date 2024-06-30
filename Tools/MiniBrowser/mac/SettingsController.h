@@ -66,6 +66,8 @@ typedef NS_ENUM(NSInteger, AttachmentElementEnabledState) {
 @property (nonatomic, readonly) BOOL usesGameControllerFramework;
 @property (nonatomic, readonly) BOOL networkCacheSpeculativeRevalidationDisabled;
 @property (nonatomic, readonly) BOOL advancedPrivacyProtectionsEnabled;
+@property (nonatomic, readonly) BOOL siteIsolationOverlayEnabled;
+@property (nonatomic, readonly) BOOL allowsContentJavascript;
 
 @property (nonatomic, readonly) NSString *defaultURL;
 @property (nonatomic, readonly) NSString *customUserAgent;

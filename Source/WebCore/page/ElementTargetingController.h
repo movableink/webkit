@@ -27,38 +27,79 @@
 
 #include "ElementIdentifier.h"
 #include "ElementTargetingTypes.h"
-#include "IntRect.h"
+#include "EventTarget.h"
+#include "IntRectHash.h"
 #include "Region.h"
 #include "ScriptExecutionContextIdentifier.h"
+#include "Timer.h"
+#include <wtf/ApproximateTime.h>
 #include <wtf/CheckedPtr.h>
-#include <wtf/HashMap.h>
 #include <wtf/Ref.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
+class Element;
 class Document;
+class Image;
+class Node;
 class Page;
 
-class ElementTargetingController : public CanMakeCheckedPtr {
+class ElementTargetingController final : public CanMakeCheckedPtr<ElementTargetingController> {
     WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ElementTargetingController);
 public:
     ElementTargetingController(Page&);
 
     WEBCORE_EXPORT Vector<TargetedElementInfo> findTargets(TargetedElementRequest&&);
 
-    WEBCORE_EXPORT bool adjustVisibility(const Vector<std::pair<ElementIdentifier, ScriptExecutionContextIdentifier>>&);
+    WEBCORE_EXPORT bool adjustVisibility(Vector<TargetedElementAdjustment>&&);
     void adjustVisibilityInRepeatedlyTargetedRegions(Document&);
 
-    void resetAdjustmentRegions();
+    void reset();
+
+    WEBCORE_EXPORT uint64_t numberOfVisibilityAdjustmentRects() const;
+    WEBCORE_EXPORT bool resetVisibilityAdjustments(const Vector<TargetedElementIdentifiers>&);
+
+    WEBCORE_EXPORT RefPtr<Image> snapshotIgnoringVisibilityAdjustment(ElementIdentifier, ScriptExecutionContextIdentifier);
 
 private:
+    void cleanUpAdjustmentClientRects();
+
+    void applyVisibilityAdjustmentFromSelectors();
+
+    struct FindElementFromSelectorsResult {
+        RefPtr<Element> element;
+        String lastSelectorIncludingPseudo;
+    };
+    FindElementFromSelectorsResult findElementFromSelectors(const TargetedElementSelectors&);
+
+    RefPtr<Document> mainDocument() const;
+
+    void dispatchVisibilityAdjustmentStateDidChange();
+    void selectorBasedVisibilityAdjustmentTimerFired();
+
+    std::pair<Vector<Ref<Node>>, RefPtr<Element>> findNodes(FloatPoint location, bool shouldIgnorePointerEventsNone);
+    std::pair<Vector<Ref<Node>>, RefPtr<Element>> findNodes(const String& searchText);
+    std::pair<Vector<Ref<Node>>, RefPtr<Element>> findNodes(const TargetedElementSelectors&);
+
+    Vector<TargetedElementInfo> extractTargets(Vector<Ref<Node>>&&, RefPtr<Element>&& innerElement, bool canIncludeNearbyElements);
+
     SingleThreadWeakPtr<Page> m_page;
-    HashMap<ElementIdentifier, IntRect> m_pendingAdjustmentClientRects;
+    DeferrableOneShotTimer m_recentAdjustmentClientRectsCleanUpTimer;
+    HashMap<ElementIdentifier, IntRect> m_recentAdjustmentClientRects;
+    ApproximateTime m_startTimeForSelectorBasedVisibilityAdjustment;
+    Timer m_selectorBasedVisibilityAdjustmentTimer;
+    Vector<std::pair<ElementIdentifier, TargetedElementSelectors>> m_visibilityAdjustmentSelectors;
+    Vector<TargetedElementSelectors> m_initialVisibilityAdjustmentSelectors;
     Region m_adjustmentClientRegion;
     Region m_repeatedAdjustmentClientRegion;
+    WeakHashSet<Element, WeakPtrImplWithEventTargetData> m_adjustedElements;
     FloatSize m_viewportSizeForVisibilityAdjustment;
+    unsigned m_additionalAdjustmentCount { 0 };
+    bool m_didCollectInitialAdjustments { false };
 };
 
 } // namespace WebCore

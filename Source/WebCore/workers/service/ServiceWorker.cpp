@@ -104,7 +104,7 @@ ExceptionOr<void> ServiceWorker::postMessage(JSC::JSGlobalObject& globalObject, 
     if (m_isStopped)
         return Exception { ExceptionCode::InvalidStateError };
 
-    Vector<RefPtr<MessagePort>> ports;
+    Vector<Ref<MessagePort>> ports;
     auto messageData = SerializedScriptValue::create(globalObject, messageValue, WTFMove(options.transfer), ports, SerializationForStorage::No, SerializationContext::WorkerPostMessage);
     if (messageData.hasException())
         return messageData.releaseException();
@@ -135,11 +135,6 @@ enum EventTargetInterfaceType ServiceWorker::eventTargetInterface() const
 ScriptExecutionContext* ServiceWorker::scriptExecutionContext() const
 {
     return ContextDestructionObserver::scriptExecutionContext();
-}
-
-const char* ServiceWorker::activeDOMObjectName() const
-{
-    return "ServiceWorker";
 }
 
 void ServiceWorker::stop()

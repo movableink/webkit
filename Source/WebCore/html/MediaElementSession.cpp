@@ -29,6 +29,9 @@
 
 #include "MediaElementSession.h"
 
+#include "AudioTrack.h"
+#include "AudioTrackConfiguration.h"
+#include "AudioTrackList.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "DocumentInlines.h"
@@ -55,6 +58,11 @@
 #include "ScriptController.h"
 #include "Settings.h"
 #include "SourceBuffer.h"
+#include "TextTrack.h"
+#include "TextTrackList.h"
+#include "VideoTrack.h"
+#include "VideoTrackConfiguration.h"
+#include "VideoTrackList.h"
 #include <wtf/text/StringBuilder.h>
 
 #if ENABLE(MEDIA_SESSION)
@@ -89,8 +97,8 @@ static String restrictionNames(MediaElementSession::BehaviorRestrictions restric
 #define CASE(restrictionType) \
     if (restriction & MediaElementSession::restrictionType) { \
         if (!restrictionBuilder.isEmpty()) \
-            restrictionBuilder.append(", "); \
-        restrictionBuilder.append(#restrictionType); \
+            restrictionBuilder.append(", "_s); \
+        restrictionBuilder.append(#restrictionType ## _s); \
     } \
 
     CASE(NoRestrictions)
@@ -123,16 +131,16 @@ static bool pageExplicitlyAllowsElementToAutoplayInline(const HTMLMediaElement& 
 }
 
 #if ENABLE(MEDIA_SESSION)
-class MediaSessionObserver : public MediaSession::Observer {
+class MediaElementSessionObserver : public MediaSessionObserver {
     WTF_MAKE_FAST_ALLOCATED;
 
 public:
-    MediaSessionObserver(MediaElementSession& session, const Ref<MediaSession>& mediaSession)
+    MediaElementSessionObserver(MediaElementSession& session, const Ref<MediaSession>& mediaSession)
         : m_session(session), m_mediaSession(mediaSession)
     {
         m_mediaSession->addObserver(*this);
     }
-    ~MediaSessionObserver()
+    ~MediaElementSessionObserver()
     {
         m_mediaSession->removeObserver(*this);
     }
@@ -171,9 +179,6 @@ MediaElementSession::MediaElementSession(HTMLMediaElement& element)
 #endif
     , m_mainContentCheckTimer(*this, &MediaElementSession::mainContentCheckTimerFired)
     , m_clientDataBufferingTimer(*this, &MediaElementSession::clientDataBufferingTimerFired)
-#if !RELEASE_LOG_DISABLED
-    , m_logIdentifier(element.logIdentifier())
-#endif
 {
 }
 
@@ -628,8 +633,8 @@ bool MediaElementSession::canShowControlsManager(PlaybackControlsPurpose purpose
 
 #if ENABLE(FULLSCREEN_API)
     // Elements which are not descendants of the current fullscreen element cannot be main content.
-    if (CheckedPtr fullsreenManager = m_element.document().fullscreenManagerIfExists()) {
-        RefPtr fullscreenElement = fullsreenManager->currentFullscreenElement();
+    if (CheckedPtr fullscreenManager = m_element.document().fullscreenManagerIfExists()) {
+        RefPtr fullscreenElement = fullscreenManager->currentFullscreenElement();
         if (fullscreenElement && !m_element.isDescendantOf(*fullscreenElement)) {
             INFO_LOG(LOGIDENTIFIER, "returning FALSE: outside of full screen");
             return false;
@@ -1285,7 +1290,22 @@ std::optional<NowPlayingInfo> MediaElementSession::computeNowPlayingInfo() const
         sourceApplicationIdentifier = presentingApplicationBundleIdentifier();
 #endif
 
-    NowPlayingInfo info { m_element.mediaSessionTitle(), emptyString(), emptyString(), sourceApplicationIdentifier, duration, currentTime, rate, supportsSeeking, m_element.mediaUniqueIdentifier(), isPlaying, allowsNowPlayingControlsVisibility, { } };
+    NowPlayingInfo info {
+        {
+            m_element.mediaSessionTitle(),
+            emptyString(),
+            emptyString(),
+            sourceApplicationIdentifier,
+            { }
+        },
+        duration,
+        currentTime,
+        rate,
+        supportsSeeking,
+        m_element.mediaUniqueIdentifier(),
+        isPlaying,
+        allowsNowPlayingControlsVisibility
+    };
 #if ENABLE(MEDIA_SESSION)
     if (RefPtr session = mediaSession())
         session->updateNowPlayingInfo(info);
@@ -1401,7 +1421,7 @@ void MediaElementSession::ensureIsObservingMediaSession()
     auto* session = mediaSession();
     if (!session || m_observer)
         return;
-    m_observer = makeUnique<MediaSessionObserver>(*this, *session);
+    m_observer = makeUnique<MediaElementSessionObserver>(*this, *session);
 #endif
 }
 
@@ -1436,6 +1456,42 @@ void MediaElementSession::clientCharacteristicsChanged(bool positionChanged)
 #endif
     PlatformMediaSession::clientCharacteristicsChanged(positionChanged);
 }
+
+#if !RELEASE_LOG_DISABLED
+String MediaElementSession::description() const
+{
+    StringBuilder builder;
+    builder.append(PlatformMediaSession::description());
+
+    builder.append(", "_s, m_element.localizedSourceType());
+
+    if (RefPtr videoTracks = m_element.videoTracks()) {
+        if (RefPtr selectedVideoTrack = videoTracks->selectedItem()) {
+            builder.append(", "_s, selectedVideoTrack->configuration().width(), 'x', selectedVideoTrack->configuration().height());
+            if (!selectedVideoTrack->configuration().codec().isEmpty())
+                builder.append(' ', selectedVideoTrack->configuration().codec());
+        }
+    }
+
+    if (RefPtr audioTracks = m_element.audioTracks()) {
+        if (RefPtr enabledAudioTrack = audioTracks->firstEnabled()) {
+            if (!enabledAudioTrack->configuration().codec().isEmpty())
+                builder.append(", "_s, enabledAudioTrack->configuration().codec());
+        }
+    }
+
+    if (RefPtr textTracks = m_element.textTracks()) {
+        for (unsigned i = 0, length = textTracks->length(); i < length; ++i) {
+            RefPtr textTrack = textTracks->item(i);
+            if (textTrack->mode() != TextTrack::Mode::Showing)
+                continue;
+            builder.append(", "_s, textTrack->kind(), ' ', textTrack->language());
+        }
+    }
+
+    return builder.toString();
+}
+#endif
 
 }
 

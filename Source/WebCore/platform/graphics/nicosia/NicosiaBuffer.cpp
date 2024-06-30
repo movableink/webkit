@@ -33,15 +33,18 @@
 
 #if USE(SKIA)
 #include "FontRenderOptions.h"
+#include "GLContext.h"
 #include "GLFence.h"
 #include "PlatformDisplay.h"
 #include <skia/core/SkCanvas.h>
+#include <skia/core/SkColorSpace.h>
 #include <skia/core/SkImage.h>
 #include <skia/core/SkStream.h>
 #include <skia/gpu/GrBackendSurface.h>
 #include <skia/gpu/ganesh/SkSurfaceGanesh.h>
 #include <skia/gpu/ganesh/gl/GrGLBackendSurface.h>
 #include <skia/gpu/ganesh/gl/GrGLDirectContext.h>
+#include <wtf/MainThread.h>
 
 #if USE(LIBEPOXY)
 #include <epoxy/gl.h>
@@ -51,6 +54,7 @@
 #endif
 
 namespace Nicosia {
+using namespace WebCore;
 
 Lock Buffer::s_layersMemoryUsageLock;
 double Buffer::s_currentLayersMemoryUsage = 0.0;
@@ -90,7 +94,7 @@ UnacceleratedBuffer::UnacceleratedBuffer(const WebCore::IntSize& size, Flags fla
     }
 
 #if USE(SKIA)
-    auto imageInfo = SkImageInfo::MakeN32Premul(size.width(), size.height());
+    auto imageInfo = SkImageInfo::MakeN32Premul(size.width(), size.height(), SkColorSpace::MakeSRGB());
     // FIXME: ref buffer and unref on release proc?
     SkSurfaceProps properties = { 0, WebCore::FontRenderOptions::singleton().subpixelOrder() };
     m_surface = SkSurfaces::WrapPixels(imageInfo, m_data.get(), imageInfo.minRowBytes64(), &properties);
@@ -141,7 +145,14 @@ AcceleratedBuffer::AcceleratedBuffer(sk_sp<SkSurface>&& surface, Flags flags)
     m_surface = WTFMove(surface);
 }
 
-AcceleratedBuffer::~AcceleratedBuffer() = default;
+AcceleratedBuffer::~AcceleratedBuffer()
+{
+    ensureOnMainThread([surface = WTFMove(m_surface), fence = WTFMove(m_fence)]() mutable {
+        PlatformDisplay::sharedDisplayForCompositing().skiaGLContext()->makeContextCurrent();
+        fence = nullptr;
+        surface = nullptr;
+    });
+}
 
 WebCore::IntSize AcceleratedBuffer::size() const
 {
@@ -159,9 +170,13 @@ void AcceleratedBuffer::completePainting()
     m_surface->getCanvas()->restore();
 
     auto* grContext = WebCore::PlatformDisplay::sharedDisplayForCompositing().skiaGrContext();
-    grContext->flush(m_surface.get());
-    m_fence = WebCore::GLFence::create();
-    grContext->submit(m_fence ? GrSyncCpu::kNo : GrSyncCpu::kYes);
+    if (WebCore::GLFence::isSupported()) {
+        grContext->flushAndSubmit(m_surface.get(), GrSyncCpu::kNo);
+        m_fence = WebCore::GLFence::create();
+        if (!m_fence)
+            grContext->submit(GrSyncCpu::kYes);
+    } else
+        grContext->flushAndSubmit(m_surface.get(), GrSyncCpu::kYes);
 
     auto texture = SkSurfaces::GetBackendTexture(m_surface.get(), SkSurface::BackendHandleAccess::kFlushRead);
     ASSERT(texture.isValid());

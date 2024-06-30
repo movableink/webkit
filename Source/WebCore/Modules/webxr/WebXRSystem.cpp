@@ -165,7 +165,7 @@ void WebXRSystem::isSessionSupported(XRSessionMode mode, IsSessionSupportedPromi
     // 3. If the requesting document's origin is not allowed to use the "xr-spatial-tracking" feature policy,
     //    reject promise with a "SecurityError" DOMException and return it.
     auto document = downcast<Document>(scriptExecutionContext());
-    if (!isPermissionsPolicyAllowedByDocumentAndAllOwners(PermissionsPolicy::Type::XRSpatialTracking, *document, LogPermissionsPolicyFailure::Yes)) {
+    if (!PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::XRSpatialTracking, *document)) {
         promise.reject(Exception { ExceptionCode::SecurityError });
         return;
     }
@@ -266,6 +266,26 @@ static bool featureRequiresExplicitConsent(PlatformXR::SessionFeature feature)
     return false;
 }
 
+bool WebXRSystem::isFeaturePermitted(PlatformXR::SessionFeature feature) const
+{
+    switch (feature) {
+    case PlatformXR::SessionFeature::ReferenceSpaceTypeViewer:
+        return true;
+    case PlatformXR::SessionFeature::ReferenceSpaceTypeLocal:
+    case PlatformXR::SessionFeature::ReferenceSpaceTypeLocalFloor:
+    case PlatformXR::SessionFeature::ReferenceSpaceTypeBoundedFloor:
+    case PlatformXR::SessionFeature::ReferenceSpaceTypeUnbounded:
+#if ENABLE(WEBXR_HANDS)
+    case PlatformXR::SessionFeature::HandTracking:
+#endif
+        RefPtr document = downcast<Document>(scriptExecutionContext());
+        return document && PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::XRSpatialTracking, *document);
+    }
+
+    ASSERT_NOT_REACHED();
+    return false;
+}
+
 bool WebXRSystem::isFeatureSupported(PlatformXR::SessionFeature feature, XRSessionMode mode, const PlatformXR::Device& device) const
 {
     if (!device.supportedFeatures(mode).contains(feature))
@@ -346,6 +366,8 @@ std::optional<WebXRSystem::ResolvedRequestedFeatures> WebXRSystem::resolveReques
 
             // 4. If the requesting document's origin is not allowed to use any feature policy required by feature
             //    as indicated by the feature requirements table, (return null|continue to next entry).
+            if (!isFeaturePermitted(feature.value()))
+                RETURN_FALSE_OR_CONTINUE(returnOnFailure);
 
             // 5. If session's XR device is not capable of supporting the functionality described by feature or the
             //    user agent has otherwise determined to reject the feature, (return null|continue to next entry).
@@ -544,11 +566,6 @@ void WebXRSystem::requestSession(Document& document, XRSessionMode mode, const X
     });
 }
 
-const char* WebXRSystem::activeDOMObjectName() const
-{
-    return "XRSystem";
-}
-
 void WebXRSystem::stop()
 {
 }
@@ -592,9 +609,9 @@ void WebXRSystem::sessionEnded(WebXRSession& session)
     m_inlineSessions.remove(session);
 }
 
-bool WebXRSystem::hasActiveImmersiveSession() const
+RefPtr<WebXRSession> WebXRSystem::activeImmersiveSession() const
 {
-    return !!m_activeImmersiveSession;
+    return m_activeImmersiveSession;
 }
 
 class InlineRequestAnimationFrameCallback final: public RequestAnimationFrameCallback {

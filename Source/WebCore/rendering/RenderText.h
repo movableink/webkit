@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "DocumentMarker.h"
 #include "RenderElement.h"
 #include "RenderTextLineBoxes.h"
 #include "Text.h"
@@ -36,17 +37,25 @@ class LegacyInlineTextBox;
 struct GlyphOverflow;
 struct WordTrailingSpace;
 
+namespace Layout {
+class InlineTextBox;
+}
+
 namespace LayoutIntegration {
 class LineLayout;
 }
 
 class RenderText : public RenderObject {
     WTF_MAKE_ISO_ALLOCATED(RenderText);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderText);
 public:
     RenderText(Type, Text&, const String&);
     RenderText(Type, Document&, const String&);
 
     virtual ~RenderText();
+
+    Layout::InlineTextBox* layoutBox();
+    const Layout::InlineTextBox* layoutBox() const;
 
     WEBCORE_EXPORT Text* textNode() const;
 
@@ -175,7 +184,7 @@ public:
     
     bool containsOnlyCSSWhitespace(unsigned from, unsigned length) const;
 
-    Vector<std::pair<unsigned, unsigned>> draggedContentRangesBetweenOffsets(unsigned startOffset, unsigned endOffset) const;
+    Vector<std::pair<unsigned, unsigned>> contentRangesBetweenOffsetsForType(const DocumentMarker::Type, unsigned startOffset, unsigned endOffset) const;
 
     RenderInline* inlineWrapperForDisplayContents();
     void setInlineWrapperForDisplayContents(RenderInline*);
@@ -191,6 +200,8 @@ public:
     std::optional<bool> canUseSimplifiedTextMeasuring() const { return m_canUseSimplifiedTextMeasuring; }
     void setHasPositionDependentContentWidth(bool hasPositionDependentContentWidth) { m_hasPositionDependentContentWidth = hasPositionDependentContentWidth; }
     std::optional<bool> hasPositionDependentContentWidth() const { return m_hasPositionDependentContentWidth; }
+    void setHasStrongDirectionalityContent(bool hasStrongDirectionalityContent) { m_hasStrongDirectionalityContent = hasStrongDirectionalityContent; }
+    std::optional<bool> hasStrongDirectionalityContent() const { return m_hasStrongDirectionalityContent; }
 
 protected:
     virtual void computePreferredLogicalWidths(float leadWidth, bool forcedMinMaxWidthComputation = false);
@@ -249,7 +260,9 @@ private:
 
     String m_text;
 
+protected:
     std::optional<bool> m_canUseSimplifiedTextMeasuring;
+private:
     std::optional<bool> m_hasPositionDependentContentWidth;
     std::optional<bool> m_hasStrongDirectionalityContent;
     unsigned m_hasBreakableChar : 1 { false }; // Whether or not we can be broken into multiple lines.
@@ -268,6 +281,7 @@ private:
     unsigned m_useBackslashAsYenSymbol : 1 { false };
     unsigned m_originalTextDiffersFromRendered : 1 { false };
     unsigned m_hasInlineWrapperForDisplayContents : 1 { false };
+    unsigned m_hasSecureTextTimer : 1 { false };
 };
 
 String applyTextTransform(const RenderStyle&, const String&, UChar previousCharacter);

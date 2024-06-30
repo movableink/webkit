@@ -1739,7 +1739,10 @@ No pre-PR checks to run""")
         )
 
     def test_bitbucket_update(self):
-        with mocks.remote.BitBucket() as remote, mocks.local.Git(self.path, remote='ssh://git@{}/{}/{}.git'.format(
+        with mocks.remote.BitBucket(environment=Environment(**{
+            'BITBUCKET_EXAMPLE_COM_USERNAME': 'timcommitter',
+            'BITBUCKET_EXAMPLE_COM_PASSWORD': 'password',
+        })) as remote, mocks.local.Git(self.path, remote='ssh://git@{}/{}/{}.git'.format(
             remote.hosts[0], remote.project.split('/')[1], remote.project.split('/')[3],
         )) as repo, mocks.local.Svn(), patch('webkitbugspy.Tracker._trackers', []):
             with OutputCapture():
@@ -1778,7 +1781,10 @@ No pre-PR checks to run""")
         )
 
     def test_bitbucket_append(self):
-        with mocks.remote.BitBucket() as remote, mocks.local.Git(self.path, remote='ssh://git@{}/{}/{}.git'.format(
+        with mocks.remote.BitBucket(environment=Environment(**{
+            'BITBUCKET_EXAMPLE_COM_USERNAME': 'timcommitter',
+            'BITBUCKET_EXAMPLE_COM_PASSWORD': 'password',
+        })) as remote, mocks.local.Git(self.path, remote='ssh://git@{}/{}/{}.git'.format(
             remote.hosts[0], remote.project.split('/')[1], remote.project.split('/')[3],
         )) as repo, mocks.local.Svn(), patch('webkitbugspy.Tracker._trackers', []):
             with OutputCapture():
@@ -1817,7 +1823,10 @@ No pre-PR checks to run""")
         )
 
     def test_bitbucket_reopen(self):
-        with mocks.remote.BitBucket() as remote, mocks.local.Git(self.path, remote='ssh://git@{}/{}/{}.git'.format(
+        with mocks.remote.BitBucket(environment=Environment(**{
+            'BITBUCKET_EXAMPLE_COM_USERNAME': 'timcommitter',
+            'BITBUCKET_EXAMPLE_COM_PASSWORD': 'password',
+        })) as remote, mocks.local.Git(self.path, remote='ssh://git@{}/{}/{}.git'.format(
             remote.hosts[0], remote.project.split('/')[1], remote.project.split('/')[3],
         )) as repo, mocks.local.Svn(), patch('webkitbugspy.Tracker._trackers', []):
             with OutputCapture():
@@ -1970,8 +1979,11 @@ class TestNetworkPullRequestGitHub(unittest.TestCase):
     remote = 'https://github.example.com/WebKit/WebKit'
 
     @classmethod
-    def webserver(cls):
-        result = mocks.remote.GitHub()
+    def webserver(cls, user='tcontributor'):
+        result = mocks.remote.GitHub(environment=Environment(
+            GITHUB_EXAMPLE_COM_USERNAME=user,
+            GITHUB_EXAMPLE_COM_TOKEN='password',
+        ))
         result.users.create('Eager Reviewer', 'ereviewer', ['ereviewer@webkit.org'])
         result.users.create('Reluctant Reviewer', 'rreviewer', ['rreviewer@webkit.org'])
         result.users.create('Suspicious Reviewer', 'sreviewer', ['sreviewer@webkit.org'])
@@ -1991,6 +2003,7 @@ class TestNetworkPullRequestGitHub(unittest.TestCase):
         result.pull_requests = [dict(
             number=1,
             state='open',
+            merged=False,
             title='Example Change',
             user=dict(login='tcontributor'),
             body='''#### 95507e3a1a4a919d1a156abbc279fdf6d24b13f5
@@ -2013,6 +2026,14 @@ Reviewed by NOBODY (OOPS!).
                 issue=dict(href='https://{}/issues/1'.format(result.api_remote)),
             ), draft=False,
         )]
+
+        result.commits['eng/pull-request'] = [
+            result.commits['main'][-1],
+            Commit(
+                hash='95507e3a1a4a919d1a156abbc279fdf6d24b13f5',
+                message='Example Change\nhttps://bugs.webkit.org/show_bug.cgi?id=1234\n\nReviewed by NOBODY (OOPS!).\n* Source/file.cpp:\n',
+            ),
+        ]
 
         result.statuses['95507e3a1a4a'] = PullRequest.Status.Encoder().default([
             PullRequest.Status(name='test-webkitpy', status='pending', description='Running...'),
@@ -2042,6 +2063,15 @@ Reviewed by NOBODY (OOPS!).
             self.assertEqual(pr.hash, '95507e3a1a4a919d1a156abbc279fdf6d24b13f5')
             self.assertEqual(pr.base, 'main')
             self.assertEqual(pr.draft, False)
+
+    def test_title(self):
+        with self.webserver():
+            pr = remote.GitHub(self.remote).pull_requests.get(1)
+            self.assertEqual(pr.title, 'Example Change')
+            pr.generator.update(pr, title='New Title')
+
+            pr = remote.GitHub(self.remote).pull_requests.get(1)
+            self.assertEqual(pr.title, 'New Title')
 
     def test_reviewers(self):
         with self.webserver():
@@ -2093,10 +2123,22 @@ Reviewed by NOBODY (OOPS!).
             repo = remote.GitHub(self.remote)
             pr = repo.pull_requests.get(1)
             self.assertTrue(pr.opened)
+            self.assertFalse(pr.merged)
             pr.close()
             self.assertFalse(pr.opened)
+            self.assertFalse(pr.merged)
             pr.open()
             self.assertTrue(pr.opened)
+            self.assertFalse(pr.merged)
+
+    def test_merged(self):
+        with self.webserver() as server:
+            server.pull_requests[0]['state'] = 'closed'
+            server.pull_requests[0]['merged'] = True
+
+            repo = remote.GitHub(self.remote)
+            pr = repo.pull_requests.get(1)
+            self.assertTrue(pr.merged)
 
     def test_review(self):
         with self.webserver():
@@ -2106,8 +2148,23 @@ Reviewed by NOBODY (OOPS!).
             self.assertEqual(pr.blockers, [Contributor('Suspicious Reviewer', ['sreviewer@webkit.org'])])
 
             pr.review(comment='Looks good!', approve=True)
+
+            pr = repo.pull_requests.get(1)
             self.assertEqual(pr.comments[-1].content, 'Looks good!')
             self.assertEqual(len(pr.approvers), 2)
+
+    def test_review_reject(self):
+        with self.webserver():
+            repo = remote.GitHub(self.remote)
+            pr = repo.pull_requests.get(1)
+            self.assertEqual(pr.approvers, [Contributor('Eager Reviewer', ['ereviewer@webkit.org'])])
+            self.assertEqual(pr.blockers, [Contributor('Suspicious Reviewer', ['sreviewer@webkit.org'])])
+
+            pr.review(comment='Needs work.', approve=False)
+
+            pr = repo.pull_requests.get(1)
+            self.assertEqual(pr.comments[-1].content, 'Needs work.')
+            self.assertEqual(len(pr.blockers), 2)
 
     def test_status(self):
         with self.webserver():
@@ -2119,14 +2176,120 @@ Reviewed by NOBODY (OOPS!).
                 ['pending', 'success', 'failure'],
             )
 
+    def test_diff(self):
+        with self.webserver():
+            repo = remote.GitHub(self.remote)
+            pr = repo.pull_requests.get(1)
+            self.assertEqual([
+                'diff --git a/ChangeLog b/ChangeLog',
+                '--- a/ChangeLog',
+                '+++ b/ChangeLog',
+                '@@ -1,0 +1,0 @@',
+                '+Example Change',
+                '+https://bugs.webkit.org/show_bug.cgi?id=1234',
+                '+',
+                '+Reviewed by NOBODY (OOPS!).',
+                '+* Source/file.cpp:',
+            ], list(pr.diff()))
+
+    def test_no_comments(self):
+        with self.webserver():
+            repo = remote.GitHub(self.remote)
+            pr = repo.pull_requests.get(1)
+            self.assertEqual([
+                'diff --git a/ChangeLog b/ChangeLog',
+                '--- a/ChangeLog',
+                '+++ b/ChangeLog',
+                '@@ -1,0 +1,0 @@',
+                '+Example Change',
+                '+https://bugs.webkit.org/show_bug.cgi?id=1234',
+                '+',
+                '+Reviewed by NOBODY (OOPS!).',
+                '+* Source/file.cpp:',
+            ], list(pr.diff(comments=True)))
+
+    def test_comment(self):
+        with self.webserver():
+            repo = remote.GitHub(self.remote)
+            pr = repo.pull_requests.get(1)
+            pr.review(diff_comments=dict(ChangeLog={4: ['We need a review before landing']}))
+            self.assertEqual([
+                'diff --git a/ChangeLog b/ChangeLog',
+                '--- a/ChangeLog',
+                '+++ b/ChangeLog',
+                '@@ -1,0 +1,0 @@',
+                '+Example Change',
+                '+https://bugs.webkit.org/show_bug.cgi?id=1234',
+                '+',
+                '+Reviewed by NOBODY (OOPS!).',
+                '>>>>',
+                'tcontributor <?>: We need a review before landing',
+                '<<<<',
+                '+* Source/file.cpp:',
+            ], list(pr.diff(comments=True)))
+
+    def test_file_comment(self):
+        with self.webserver():
+            repo = remote.GitHub(self.remote)
+            pr = repo.pull_requests.get(1)
+            pr.review(diff_comments=dict(ChangeLog={None: ['ChangeLogs are deprecated, please remove']}))
+            self.assertEqual([
+                'diff --git a/ChangeLog b/ChangeLog',
+                '--- a/ChangeLog',
+                '+++ b/ChangeLog',
+                '>>>>',
+                'tcontributor <?>: ChangeLogs are deprecated, please remove',
+                '<<<<',
+                '@@ -1,0 +1,0 @@',
+                '+Example Change',
+                '+https://bugs.webkit.org/show_bug.cgi?id=1234',
+                '+',
+                '+Reviewed by NOBODY (OOPS!).',
+                '+* Source/file.cpp:',
+            ], list(pr.diff(comments=True)))
+
+    def test_comment_reply(self):
+        with self.webserver():
+            repo = remote.GitHub(self.remote)
+            pr = repo.pull_requests.get(1)
+            pr.review(diff_comments=dict(ChangeLog={
+                None: ['Top-level comment 1'],
+                4: ['Line comment 1'],
+            }))
+            pr.review(diff_comments=dict(ChangeLog={
+                None: ['Top-level comment 2'],
+                4: ['Line comment 2'],
+            }))
+            self.assertEqual([
+                'diff --git a/ChangeLog b/ChangeLog',
+                '--- a/ChangeLog',
+                '+++ b/ChangeLog',
+                '>>>>',
+                'tcontributor <?>: Top-level comment 1',
+                'tcontributor <?>: Top-level comment 2',
+                '<<<<',
+                '@@ -1,0 +1,0 @@',
+                '+Example Change',
+                '+https://bugs.webkit.org/show_bug.cgi?id=1234',
+                '+',
+                '+Reviewed by NOBODY (OOPS!).',
+                '>>>>',
+                'tcontributor <?>: Line comment 1',
+                'tcontributor <?>: Line comment 2',
+                '<<<<',
+                '+* Source/file.cpp:',
+            ], list(pr.diff(comments=True)))
 
 
 class TestNetworkPullRequestBitBucket(unittest.TestCase):
     remote = 'https://bitbucket.example.com/projects/WEBKIT/repos/webkit'
 
     @classmethod
-    def webserver(cls):
-        result = mocks.remote.BitBucket()
+    def webserver(cls, user='tcontributor'):
+        result = mocks.remote.BitBucket(environment=Environment(
+            BITBUCKET_EXAMPLE_COM_USERNAME=user,
+            BITBUCKET_EXAMPLE_COM_PASSWORD='password',
+        ))
         result.pull_requests = [dict(
             id=1,
             state='OPEN',
@@ -2140,7 +2303,7 @@ class TestNetworkPullRequestBitBucket(unittest.TestCase):
                     emailAddress='tcontributor@apple.com',
                     displayName='Tim Contributor',
                 ),
-            ), body='''#### 95507e3a1a4a919d1a156abbc279fdf6d24b13f5
+            ), description='''#### 95507e3a1a4a919d1a156abbc279fdf6d24b13f5
 ```
 Example Change
 https://bugs.webkit.org/show_bug.cgi?id=1234
@@ -2170,6 +2333,10 @@ Reviewed by NOBODY (OOPS!).
                     ), status='NEEDS_WORK',
                 ),
             ],
+            commit=Commit(
+                hash='95507e3a1a4a919d1a156abbc279fdf6d24b13f5',
+                message='Example Change\nhttps://bugs.webkit.org/show_bug.cgi?id=1234\n\nReviewed by NOBODY (OOPS!).\n* Source/file.cpp:\n',
+            ),
         )]
 
         result.statuses['95507e3a1a4a'] = PullRequest.Status.Encoder().default([
@@ -2201,6 +2368,15 @@ Reviewed by NOBODY (OOPS!).
             self.assertEqual(pr.hash, '95507e3a1a4a919d1a156abbc279fdf6d24b13f5')
             self.assertEqual(pr.base, 'main')
             self.assertEqual(pr.draft, False)
+
+    def test_title(self):
+        with self.webserver():
+            pr = remote.BitBucket(self.remote).pull_requests.get(1)
+            self.assertEqual(pr.title, 'Example Change')
+            pr.generator.update(pr, title='New Title')
+
+            pr = remote.BitBucket(self.remote).pull_requests.get(1)
+            self.assertEqual(pr.title, 'New Title')
 
     def test_reviewers(self):
         with self.webserver():
@@ -2237,20 +2413,48 @@ Reviewed by NOBODY (OOPS!).
             pr.comment('Commenting!')
             self.assertEqual([c.content for c in pr.comments], ['Commenting!'])
 
+    def test_comment_replies(self):
+        with self.webserver() as webserver:
+            repo = remote.BitBucket(self.remote)
+            pr = repo.pull_requests.get(1)
+            self.assertEqual(pr.comments, [])
+            a_id = webserver.current_id
+            pr.comment('Comment A')
+            repo.pull_requests.comment(pr, 'Comment B')
+            repo.pull_requests.comment(pr, 'Comment C', parent=a_id)
+
+            self.assertEqual(
+                [c.content for c in pr.comments],
+                ['Comment B', 'Comment A', 'Comment C'],
+            )
+
     def test_open_close(self):
         with self.webserver():
             repo = remote.BitBucket(self.remote)
             pr = repo.pull_requests.get(1)
             self.assertTrue(pr.opened)
+            self.assertFalse(pr.merged)
             pr.close()
             self.assertFalse(pr.opened)
+            self.assertFalse(pr.merged)
             pr.open()
             self.assertTrue(pr.opened)
+            self.assertFalse(pr.merged)
+
+    def test_merged(self):
+        with self.webserver() as server:
+            server.pull_requests[0]['open'] = False
+            server.pull_requests[0]['closed'] = True
+            server.pull_requests[0]['state'] = 'MERGED'
+
+            repo = remote.BitBucket(self.remote)
+            pr = repo.pull_requests.get(1)
+            self.assertTrue(pr.merged)
 
     def test_whoami(self):
         with self.webserver():
             repo = remote.BitBucket(self.remote)
-            self.assertEqual(repo.whoami(), 'timcommitter')
+            self.assertEqual(repo.whoami(), 'tcontributor')
 
     def test_review(self):
         with self.webserver():
@@ -2273,3 +2477,102 @@ Reviewed by NOBODY (OOPS!).
                 [pr.status for pr in pr.statuses],
                 ['pending', 'success', 'failure'],
             )
+
+    def test_diff(self):
+        with self.webserver():
+            repo = remote.BitBucket(self.remote)
+            pr = repo.pull_requests.get(1)
+            self.assertEqual([
+                '--- a/ChangeLog',
+                '+++ b/ChangeLog',
+                '@@ -1,0 +1,0 @@',
+                '+Example Change',
+                '+https://bugs.webkit.org/show_bug.cgi?id=1234',
+                '+',
+                '+Reviewed by NOBODY (OOPS!).',
+                '+* Source/file.cpp:',
+            ], list(pr.diff()))
+
+    def test_no_comments(self):
+        with self.webserver():
+            repo = remote.BitBucket(self.remote)
+            pr = repo.pull_requests.get(1)
+            self.assertEqual([
+                '--- a/ChangeLog',
+                '+++ b/ChangeLog',
+                '@@ -1,0 +1,0 @@',
+                '+Example Change',
+                '+https://bugs.webkit.org/show_bug.cgi?id=1234',
+                '+',
+                '+Reviewed by NOBODY (OOPS!).',
+                '+* Source/file.cpp:',
+            ], list(pr.diff(comments=True)))
+
+    def test_comment(self):
+        with self.webserver():
+            repo = remote.BitBucket(self.remote)
+            pr = repo.pull_requests.get(1)
+            pr.review(diff_comments=dict(ChangeLog={4: ['We need a review before landing']}))
+            self.assertEqual([
+                '--- a/ChangeLog',
+                '+++ b/ChangeLog',
+                '@@ -1,0 +1,0 @@',
+                '+Example Change',
+                '+https://bugs.webkit.org/show_bug.cgi?id=1234',
+                '+',
+                '+Reviewed by NOBODY (OOPS!).',
+                '>>>>',
+                'Tim Committer <committer@webkit.org>: We need a review before landing',
+                '<<<<',
+                '+* Source/file.cpp:',
+            ], list(pr.diff(comments=True)))
+
+    def test_file_comment(self):
+        with self.webserver():
+            repo = remote.BitBucket(self.remote)
+            pr = repo.pull_requests.get(1)
+            pr.review(diff_comments=dict(ChangeLog={None: ['ChangeLogs are deprecated, please remove']}))
+            self.assertEqual([
+                '--- a/ChangeLog',
+                '+++ b/ChangeLog',
+                '>>>>',
+                'Tim Committer <committer@webkit.org>: ChangeLogs are deprecated, please remove',
+                '<<<<',
+                '@@ -1,0 +1,0 @@',
+                '+Example Change',
+                '+https://bugs.webkit.org/show_bug.cgi?id=1234',
+                '+',
+                '+Reviewed by NOBODY (OOPS!).',
+                '+* Source/file.cpp:',
+            ], list(pr.diff(comments=True)))
+
+    def test_comment_reply(self):
+        with self.webserver():
+            repo = remote.BitBucket(self.remote)
+            pr = repo.pull_requests.get(1)
+            pr.review(diff_comments=dict(ChangeLog={
+                None: ['Top-level comment 1'],
+                4: ['Line comment 1'],
+            }))
+            pr.review(diff_comments=dict(ChangeLog={
+                None: ['Top-level comment 2'],
+                4: ['Line comment 2'],
+            }))
+            self.assertEqual([
+                '--- a/ChangeLog',
+                '+++ b/ChangeLog',
+                '>>>>',
+                'Tim Committer <committer@webkit.org>: Top-level comment 1',
+                '    Tim Committer <committer@webkit.org>: Top-level comment 2',
+                '<<<<',
+                '@@ -1,0 +1,0 @@',
+                '+Example Change',
+                '+https://bugs.webkit.org/show_bug.cgi?id=1234',
+                '+',
+                '+Reviewed by NOBODY (OOPS!).',
+                '>>>>',
+                'Tim Committer <committer@webkit.org>: Line comment 1',
+                '    Tim Committer <committer@webkit.org>: Line comment 2',
+                '<<<<',
+                '+* Source/file.cpp:',
+            ], list(pr.diff(comments=True)))

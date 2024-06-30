@@ -27,6 +27,7 @@
 
 #include "ExceptionOr.h"
 #include "GPUIntegralTypes.h"
+#include "GPUTextureAspect.h"
 #include "GPUTextureDimension.h"
 #include "GPUTextureFormat.h"
 #include "WebGPUTexture.h"
@@ -57,6 +58,7 @@ public:
     ExceptionOr<Ref<GPUTextureView>> createView(const std::optional<GPUTextureViewDescriptor>&) const;
 
     void destroy();
+    bool isDestroyed() const;
 
     WebGPU::Texture& backing() { return m_backing; }
     const WebGPU::Texture& backing() const { return m_backing; }
@@ -69,6 +71,11 @@ public:
     GPUSize32Out sampleCount() const;
     GPUTextureDimension dimension() const;
     GPUFlagsConstant usage() const;
+
+    static GPUTextureFormat aspectSpecificFormat(GPUTextureFormat, GPUTextureAspect);
+    static uint32_t texelBlockSize(GPUTextureFormat);
+    static uint32_t texelBlockWidth(GPUTextureFormat);
+    static uint32_t texelBlockHeight(GPUTextureFormat);
 
     virtual ~GPUTexture();
 private:
@@ -89,6 +96,7 @@ private:
     const GPUTextureDimension m_dimension;
     const GPUFlagsConstant m_usage;
     Ref<const GPUDevice> m_device;
+    bool m_isDestroyed { false };
 };
 
 }

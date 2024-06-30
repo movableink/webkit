@@ -92,7 +92,7 @@ SuccessfulCheck::SuccessfulCheck(Vector<Warning>&& messages, UniqueRef<ShaderMod
 
 SuccessfulCheck::~SuccessfulCheck() = default;
 
-inline std::variant<PrepareResult, Error> prepareImpl(ShaderModule& shaderModule, const HashMap<String, std::optional<PipelineLayout>>& pipelineLayouts)
+inline std::variant<PrepareResult, Error> prepareImpl(ShaderModule& shaderModule, const HashMap<String, PipelineLayout*>& pipelineLayouts)
 {
     CompilationScope compilationScope(shaderModule);
 
@@ -103,8 +103,8 @@ inline std::variant<PrepareResult, Error> prepareImpl(ShaderModule& shaderModule
         HashMap<String, Reflection::EntryPointInformation> entryPoints;
 
         RUN_PASS(mangleNames, shaderModule);
-        RUN_PASS(rewritePointers, shaderModule);
         RUN_PASS(insertBoundsChecks, shaderModule);
+        RUN_PASS(rewritePointers, shaderModule);
         RUN_PASS(rewriteEntryPoints, shaderModule, pipelineLayouts);
         CHECK_PASS(rewriteGlobalVariables, shaderModule, pipelineLayouts, entryPoints);
 
@@ -130,23 +130,26 @@ String generate(ShaderModule& shaderModule, PrepareResult& prepareResult, HashMa
     return result;
 }
 
-std::variant<PrepareResult, Error> prepare(ShaderModule& ast, const HashMap<String, std::optional<PipelineLayout>>& pipelineLayouts)
+std::variant<PrepareResult, Error> prepare(ShaderModule& ast, const HashMap<String, PipelineLayout*>& pipelineLayouts)
 {
     return prepareImpl(ast, pipelineLayouts);
 }
 
-std::variant<PrepareResult, Error> prepare(ShaderModule& ast, const String& entryPointName, const std::optional<PipelineLayout>& pipelineLayout)
+std::variant<PrepareResult, Error> prepare(ShaderModule& ast, const String& entryPointName, PipelineLayout* pipelineLayout)
 {
-    HashMap<String, std::optional<PipelineLayout>> pipelineLayouts;
+    HashMap<String, PipelineLayout*> pipelineLayouts;
     pipelineLayouts.add(entryPointName, pipelineLayout);
     return prepareImpl(ast, pipelineLayouts);
 }
 
-ConstantValue evaluate(const AST::Expression& expression, const HashMap<String, ConstantValue>& constants)
+std::optional<ConstantValue> evaluate(const AST::Expression& expression, const HashMap<String, ConstantValue>& constants)
 {
     if (auto constantValue = expression.constantValue())
         return *constantValue;
-    auto constantValue = constants.get(downcast<const AST::IdentifierExpression>(expression).identifier());
+    auto* maybeIdentifierExpression = dynamicDowncast<const AST::IdentifierExpression>(expression);
+    if (!maybeIdentifierExpression)
+        return std::nullopt;
+    auto constantValue = constants.get(maybeIdentifierExpression->identifier());
     const_cast<AST::Expression&>(expression).setConstantValue(constantValue);
     return constantValue;
 }

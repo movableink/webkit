@@ -242,7 +242,7 @@ void WKAccessibilityTestingInjectPreference(WKBundlePageRef pageRef, WKStringRef
         return;
     
 #if ENABLE(CFPREFS_DIRECT_MODE)
-    WebKit::WebProcess::singleton().notifyPreferencesChanged(WebKit::toWTFString(domain), WebKit::toWTFString(key), WebKit::toWTFString(encodedValue));
+    WebKit::WebProcess::singleton().preferenceDidUpdate(WebKit::toWTFString(domain), WebKit::toWTFString(key), WebKit::toWTFString(encodedValue));
 #endif
 }
 
@@ -353,11 +353,6 @@ void WKAccessibilitySetForceInitialFrameCaching(bool shouldForce)
     WebCore::AXObjectCache::setForceInitialFrameCaching(shouldForce);
 }
 
-void WKBundlePageStopLoading(WKBundlePageRef pageRef)
-{
-    WebKit::toImpl(pageRef)->stopLoading();
-}
-
 void WKBundlePageSetDefersLoading(WKBundlePageRef, bool)
 {
 }
@@ -371,16 +366,6 @@ WKStringRef WKBundlePageCopyRenderTreeExternalRepresentation(WKBundlePageRef pag
 WKStringRef WKBundlePageCopyRenderTreeExternalRepresentationForPrinting(WKBundlePageRef pageRef)
 {
     return WebKit::toCopiedAPI(WebKit::toImpl(pageRef)->renderTreeExternalRepresentationForPrinting());
-}
-
-void WKBundlePageExecuteEditingCommand(WKBundlePageRef pageRef, WKStringRef name, WKStringRef argument)
-{
-    WebKit::toImpl(pageRef)->executeEditingCommand(WebKit::toWTFString(name), WebKit::toWTFString(argument));
-}
-
-bool WKBundlePageIsEditingCommandEnabled(WKBundlePageRef pageRef, WKStringRef name)
-{
-    return WebKit::toImpl(pageRef)->isEditingCommandEnabled(WebKit::toWTFString(name));
 }
 
 void WKBundlePageClearMainFrameName(WKBundlePageRef pageRef)
@@ -398,19 +383,9 @@ double WKBundlePageGetTextZoomFactor(WKBundlePageRef pageRef)
     return WebKit::toImpl(pageRef)->textZoomFactor();
 }
 
-void WKBundlePageSetTextZoomFactor(WKBundlePageRef pageRef, double zoomFactor)
-{
-    WebKit::toImpl(pageRef)->setTextZoomFactor(zoomFactor);
-}
-
 double WKBundlePageGetPageZoomFactor(WKBundlePageRef pageRef)
 {
     return WebKit::toImpl(pageRef)->pageZoomFactor();
-}
-
-void WKBundlePageSetPageZoomFactor(WKBundlePageRef pageRef, double zoomFactor)
-{
-    WebKit::toImpl(pageRef)->setPageZoomFactor(zoomFactor);
 }
 
 void WKBundlePageSetScaleAtOrigin(WKBundlePageRef pageRef, double scale, WKPoint origin)
@@ -570,24 +545,12 @@ void WKBundlePageEvaluateScriptInInspectorForTest(WKBundlePageRef page, WKString
 
 void WKBundlePageForceRepaint(WKBundlePageRef page)
 {
-    WebKit::toImpl(page)->forceRepaintWithoutCallback();
+    WebKit::toImpl(page)->updateRenderingWithForcedRepaintWithoutCallback();
 }
 
 void WKBundlePageFlushPendingEditorStateUpdate(WKBundlePageRef page)
 {
     WebKit::toImpl(page)->flushPendingEditorStateUpdate();
-}
-
-void WKBundlePageSimulateMouseDown(WKBundlePageRef, int, WKPoint, int, WKEventModifiers, double)
-{
-}
-
-void WKBundlePageSimulateMouseUp(WKBundlePageRef, int, WKPoint, int, WKEventModifiers, double)
-{
-}
-
-void WKBundlePageSimulateMouseMotion(WKBundlePageRef, WKPoint, double)
-{
 }
 
 uint64_t WKBundlePageGetRenderTreeSize(WKBundlePageRef pageRef)
@@ -657,18 +620,21 @@ void WKBundlePageSetComposition(WKBundlePageRef pageRef, WKStringRef text, int f
             });
         }
     }
+
     HashMap<String, Vector<WebCore::CharacterRange>> annotations;
     if (annotationData) {
-        auto* annotationDataArray = WebKit::toImpl(annotationData);
-        for (auto dictionary : annotationDataArray->elementsOfType<API::Dictionary>()) {
-            auto location = static_cast<API::UInt64*>(dictionary->get("from"_s))->value();
-            auto length = static_cast<API::UInt64*>(dictionary->get("length"_s))->value();
-            auto name = static_cast<API::String*>(dictionary->get("annotation"_s))->string();
+        if (auto* annotationDataArray = WebKit::toImpl(annotationData)) {
+            for (auto dictionary : annotationDataArray->elementsOfType<API::Dictionary>()) {
+                auto location = static_cast<API::UInt64*>(dictionary->get("from"_s))->value();
+                auto length = static_cast<API::UInt64*>(dictionary->get("length"_s))->value();
+                auto name = static_cast<API::String*>(dictionary->get("annotation"_s))->string();
 
-            auto it = annotations.find(name);
-            if (it == annotations.end())
-                it = annotations.add(name, Vector<WebCore::CharacterRange> { }).iterator;
-            it->value.append({ location, length });
+                auto it = annotations.find(name);
+                if (it == annotations.end())
+                    annotations.add(name, Vector<WebCore::CharacterRange> { { location, length } });
+                else
+                    it->value.append({ location, length });
+            }
         }
     }
 
@@ -810,14 +776,16 @@ void WKBundlePageCallAfterTasksAndTimers(WKBundlePageRef pageRef, WKBundlePageTe
     });
 }
 
-void WKBundlePageFlushDeferredDidReceiveMouseEventForTesting(WKBundlePageRef page)
-{
-    WebKit::toImpl(page)->flushDeferredDidReceiveMouseEvent();
-}
-
 void WKBundlePagePostMessage(WKBundlePageRef pageRef, WKStringRef messageNameRef, WKTypeRef messageBodyRef)
 {
     WebKit::toImpl(pageRef)->postMessage(WebKit::toWTFString(messageNameRef), WebKit::toImpl(messageBodyRef));
+}
+
+void WKBundlePagePostMessageWithAsyncReply(WKBundlePageRef page, WKStringRef messageName, WKTypeRef messageBody, WKBundlePageMessageReplyCallback replyCallback, void* context)
+{
+    WebKit::toImpl(page)->postMessageWithAsyncReply(WebKit::toWTFString(messageName), WebKit::toImpl(messageBody), [replyCallback, context] (API::Object* reply) mutable {
+        replyCallback(WebKit::toAPI(reply), context);
+    });
 }
 
 void WKBundlePagePostMessageIgnoringFullySynchronousMode(WKBundlePageRef pageRef, WKStringRef messageNameRef, WKTypeRef messageBodyRef)

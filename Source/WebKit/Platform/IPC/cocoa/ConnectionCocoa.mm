@@ -195,7 +195,7 @@ void Connection::platformOpen()
     }
 
     // Change the message queue length for the receive port.
-    setMachPortQueueLength(m_receivePort, MACH_PORT_QLIMIT_LARGE);
+    setMachPortQueueLength(m_receivePort, largeOutgoingMessageQueueCountThreshold);
 
     m_receiveSource = adoptOSObject(dispatch_source_create(DISPATCH_SOURCE_TYPE_MACH_RECV, m_receivePort, 0, m_connectionQueue->dispatchQueue()));
     dispatch_source_set_event_handler(m_receiveSource.get(), [this, protectedThis = Ref { *this }] {
@@ -251,8 +251,8 @@ bool Connection::sendMessage(std::unique_ptr<MachMessage> message)
 
     default:
         auto messageName = message->messageName();
-        auto errorMessage = makeString("Unhandled error code 0x", hex(kr), ", message '", description(messageName), "' (", messageName, ')');
-#if !PLATFORM(QT)
+        auto errorMessage = makeString("Unhandled error code 0x"_s, hex(kr), ", message '"_s, description(messageName), "' ("_s, messageName, ')');
+#if !PLATFORM(QT)            
         WebKit::logAndSetCrashLogMessage(errorMessage.utf8().data());
 #endif
         CRASH_WITH_INFO(kr, WTF::enumToUnderlyingType(messageName));
@@ -272,7 +272,7 @@ bool Connection::sendOutgoingMessage(UniqueRef<Encoder>&& encoder)
     auto numberOfPortDescriptors = attachments.size();
 
     bool messageBodyIsOOL = false;
-    auto messageSize = MachMessage::messageSize(encoder->bufferSize(), numberOfPortDescriptors, messageBodyIsOOL);
+    auto messageSize = MachMessage::messageSize(encoder->span().size(), numberOfPortDescriptors, messageBodyIsOOL);
     if (UNLIKELY(messageSize.hasOverflowed()))
         return false;
 
@@ -318,8 +318,9 @@ bool Connection::sendOutgoingMessage(UniqueRef<Encoder>&& encoder)
 
         if (messageBodyIsOOL) {
             auto* descriptor = getDescriptorAndAdvance(messageData, sizeof(mach_msg_ool_descriptor_t));
-            descriptor->out_of_line.address = encoder->buffer();
-            descriptor->out_of_line.size = encoder->bufferSize();
+            auto buffer = encoder->span();
+            descriptor->out_of_line.address = const_cast<uint8_t*>(buffer.data());
+            descriptor->out_of_line.size = buffer.size();
             descriptor->out_of_line.copy = MACH_MSG_VIRTUAL_COPY;
             descriptor->out_of_line.deallocate = false;
             descriptor->out_of_line.type = MACH_MSG_OOL_DESCRIPTOR;
@@ -327,8 +328,10 @@ bool Connection::sendOutgoingMessage(UniqueRef<Encoder>&& encoder)
     }
 
     // Copy the data if it is not being sent out-of-line.
-    if (!messageBodyIsOOL)
-        memcpy(messageData, encoder->buffer(), encoder->bufferSize());
+    if (!messageBodyIsOOL) {
+        auto buffer = encoder->span();
+        memcpy(messageData, buffer.data(), buffer.size());
+    }
 
     return sendMessage(WTFMove(message));
 }
@@ -485,7 +488,7 @@ static mach_msg_header_t* readFromMachPort(mach_port_t machPort, ReceiveBuffer& 
     if (kr != MACH_MSG_SUCCESS) {
 #if !PLATFORM(QT)
 #if ASSERT_ENABLED
-        auto errorMessage = makeString("Unhandled error code 0x", hex(kr), " from mach_msg, receive port is 0x", hex(machPort));
+        auto errorMessage = makeString("Unhandled error code 0x"_s, hex(kr), " from mach_msg, receive port is 0x"_s, hex(machPort));
         WebKit::logAndSetCrashLogMessage(errorMessage.utf8().data());
 #endif
 #endif
@@ -494,6 +497,18 @@ static mach_msg_header_t* readFromMachPort(mach_port_t machPort, ReceiveBuffer& 
     }
 
     return header;
+}
+
+static bool shouldLogIncomingMessageHandling()
+{
+    static dispatch_once_t once;
+    static bool shouldLog;
+
+    dispatch_once(&once, ^{
+        shouldLog = !!getenv("WEBKIT_LOG_INCOMING_MESSAGES");
+    });
+
+    return shouldLog;
 }
 
 void Connection::receiveSourceEventHandler()
@@ -559,6 +574,9 @@ void Connection::receiveSourceEventHandler()
         return;
     }
 
+    if (UNLIKELY(shouldLogIncomingMessageHandling()))
+        RELEASE_LOG(IPCMessages, "Connection::processIncomingMessage(%p) received %" PUBLIC_LOG_STRING " from port 0x%08x", this, description(decoder->messageName()).characters(), m_receivePort);
+
     processIncomingMessage(makeUniqueRefFromNonNullUniquePtr(WTFMove(decoder)));
 }
 
@@ -577,6 +595,7 @@ std::optional<audit_token_t> Connection::getAuditToken()
     return WTFMove(auditToken);
 }
 
+#if !USE(EXTENSIONKIT_PROCESS_TERMINATION)
 bool Connection::kill()
 {
     if (m_xpcConnection) {
@@ -584,9 +603,9 @@ bool Connection::kill()
         m_wasKilled = true;
         return true;
     }
-
     return false;
 }
+#endif
 
 pid_t Connection::remoteProcessID() const
 {

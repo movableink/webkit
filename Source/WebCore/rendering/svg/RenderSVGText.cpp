@@ -108,8 +108,8 @@ static inline bool findPreviousAndNextAttributes(RenderElement& start, RenderSVG
 {
     ASSERT(locateElement);
     // FIXME: Make this iterative.
-    for (auto& child : childrenOfType<RenderObject>(start)) {
-        if (auto* text = dynamicDowncast<RenderSVGInlineText>(child)) {
+    for (CheckedRef child : childrenOfType<RenderObject>(start)) {
+        if (auto* text = dynamicDowncast<RenderSVGInlineText>(child.get())) {
             if (locateElement != text) {
                 if (stopAfterNext) {
                     next = text->layoutAttributes();
@@ -124,7 +124,7 @@ static inline bool findPreviousAndNextAttributes(RenderElement& start, RenderSVG
             continue;
         }
 
-        auto* childSVGInline = dynamicDowncast<RenderSVGInline>(child);
+        auto* childSVGInline = dynamicDowncast<RenderSVGInline>(child.get());
         if (!childSVGInline)
             continue;
 
@@ -262,18 +262,6 @@ void RenderSVGText::subtreeChildWasRemoved(const Vector<SVGTextLayoutAttributes*
         m_layoutAttributesBuilder.buildLayoutAttributesForTextRenderer(affectedAttributes[i]->context());
 }
 
-void RenderSVGText::willLayout()
-{
-    if (!shouldHandleSubtreeMutations() || renderTreeBeingDestroyed())
-        return;
-
-    checkLayoutAttributesConsistency(this, m_layoutAttributes);
-
-    // Only update the metrics cache, but not the text positioning element cache
-    // nor the layout attributes cached in the leaf #text renderers.
-    m_layoutAttributesBuilder.rebuildMetricsForSubtree(*this);
-}
-
 void RenderSVGText::subtreeTextDidChange(RenderSVGInlineText* text)
 {
     ASSERT(text);
@@ -298,14 +286,12 @@ void RenderSVGText::subtreeTextDidChange(RenderSVGInlineText* text)
     setNeedsLayout();
 }
 
-static inline void updateFontInAllDescendants(RenderSVGText& text, SVGTextLayoutAttributesBuilder* builder = nullptr)
+static inline void updateFontInAllDescendants(RenderSVGText& text)
 {
     for (RenderObject* descendant = &text; descendant; descendant = descendant->nextInPreOrder(&text)) {
-        if (auto* text = dynamicDowncast<RenderSVGInlineText>(*descendant))
+        if (CheckedPtr text = dynamicDowncast<RenderSVGInlineText>(*descendant))
             text->updateScaledFont();
     }
-    if (builder)
-        builder->rebuildMetricsForSubtree(text);
 }
 
 void RenderSVGText::layout()
@@ -317,9 +303,11 @@ void RenderSVGText::layout()
     StackStats::LayoutCheckPoint layoutCheckPoint;
     ASSERT(needsLayout());
 
-    willLayout();
+    if (shouldHandleSubtreeMutations() && !renderTreeBeingDestroyed())
+        checkLayoutAttributesConsistency(this, m_layoutAttributes);
 
-    LayoutRepainter repainter(*this, isLayerBasedSVGEngineEnabled() ? checkForRepaintDuringLayout() : SVGRenderSupport::checkForSVGRepaintDuringLayout(*this));
+    auto checkForRepaintOverride = !isLayerBasedSVGEngineEnabled() ? std::make_optional(SVGRenderSupport::checkForSVGRepaintDuringLayout(*this)) : std::nullopt;
+    LayoutRepainter repainter(*this, checkForRepaintOverride);
 
     bool updateCachedBoundariesInParents = false;
     auto previousReferenceBoxRect = transformReferenceBoxRect();
@@ -346,13 +334,11 @@ void RenderSVGText::layout()
     } else if (m_needsPositioningValuesUpdate) {
         // When the x/y/dx/dy/rotate lists change, recompute the layout attributes, and eventually
         // update the on-screen font objects as well in all descendants.
-        if (m_needsTextMetricsUpdate) {
+        if (m_needsTextMetricsUpdate)
             updateFontInAllDescendants(*this);
-            m_needsTextMetricsUpdate = false;
-        }
-
         m_layoutAttributesBuilder.buildLayoutAttributesForForSubtree(*this);
         m_needsReordering = true;
+        m_needsTextMetricsUpdate = false;
         m_needsPositioningValuesUpdate = false;
         updateCachedBoundariesInParents = true;
     } else {
@@ -365,13 +351,14 @@ void RenderSVGText::layout()
         if (m_needsTextMetricsUpdate || isLayoutSizeChanged) {
             // If the root layout size changed (eg. window size changes) or the transform to the root
             // context has changed then recompute the on-screen font size.
-            updateFontInAllDescendants(*this, &m_layoutAttributesBuilder);
+            updateFontInAllDescendants(*this);
 
             ASSERT(!m_needsReordering);
             ASSERT(!m_needsPositioningValuesUpdate);
             m_needsTextMetricsUpdate = false;
             updateCachedBoundariesInParents = true;
         }
+        m_layoutAttributesBuilder.rebuildMetricsForSubtree(*this);
     }
 
     checkLayoutAttributesConsistency(this, m_layoutAttributes);
@@ -441,7 +428,7 @@ bool RenderSVGText::nodeAtFloatPoint(const HitTestRequest& request, HitTestResul
 {
     ASSERT(!document().settings().layerBasedSVGEngineEnabled());
 
-    PointerEventsHitRules hitRules(PointerEventsHitRules::HitTestingTargetType::SVGText, request, style().usedPointerEvents());
+    PointerEventsHitRules hitRules(PointerEventsHitRules::HitTestingTargetType::SVGText, request, usedPointerEvents());
     if (isVisibleToHitTesting(style(), request) || !hitRules.requireVisible) {
         if ((hitRules.canHitStroke && (style().svgStyle().hasStroke() || !hitRules.requireStroke))
             || (hitRules.canHitFill && (style().svgStyle().hasFill() || !hitRules.requireFill))) {

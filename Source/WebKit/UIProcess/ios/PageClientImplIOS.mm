@@ -40,7 +40,6 @@
 #import "PlatformXRSystem.h"
 #import "RemoteLayerTreeNode.h"
 #import "RunningBoardServicesSPI.h"
-#import "StringUtilities.h"
 #import "TapHandlingResult.h"
 #import "UIKitSPI.h"
 #import "UndoOrRedo.h"
@@ -77,10 +76,11 @@
 #import <WebCore/ValidationBubble.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/cocoa/Entitlements.h>
+#import <wtf/cocoa/SpanCocoa.h>
 
 #define MESSAGE_CHECK(assertion) do { \
     if (auto webView = this->webView()) { \
-        MESSAGE_CHECK_BASE(assertion, webView->_page->process().connection()); \
+        MESSAGE_CHECK_BASE(assertion, webView->_page->legacyMainFrameProcess().connection()); \
     } else { \
         ASSERT_NOT_REACHED(); \
     } \
@@ -166,6 +166,14 @@ bool PageClientImpl::isViewVisible()
 #endif
 
     return false;
+}
+
+void PageClientImpl::viewIsBecomingVisible()
+{
+#if ENABLE(PAGE_LOAD_OBSERVER)
+    if (RetainPtr webView = this->webView())
+        [webView _updatePageLoadObserverState];
+#endif
 }
 
 bool PageClientImpl::canTakeForegroundAssertions()
@@ -291,7 +299,7 @@ void PageClientImpl::didCompleteSyntheticClick()
 void PageClientImpl::decidePolicyForGeolocationPermissionRequest(WebFrameProxy& frame, const FrameInfoData& frameInfo, Function<void(bool)>& completionHandler)
 {
     if (auto webView = this->webView()) {
-        auto* geolocationProvider = [wrapper(webView->_page->process().processPool()) _geolocationProvider];
+        auto* geolocationProvider = [wrapper(webView->_page->configuration().processPool()) _geolocationProvider];
         [geolocationProvider decidePolicyForGeolocationRequestFromOrigin:FrameInfoData { frameInfo } completionHandler:std::exchange(completionHandler, nullptr) view:webView.get()];
     }
 }
@@ -393,8 +401,7 @@ void PageClientImpl::executeUndoRedo(UndoOrRedo undoOrRedo)
 
 void PageClientImpl::accessibilityWebProcessTokenReceived(std::span<const uint8_t> data, WebCore::FrameIdentifier, pid_t)
 {
-    NSData *remoteToken = [NSData dataWithBytes:data.data() length:data.size()];
-    [contentView() _setAccessibilityWebProcessToken:remoteToken];
+    [contentView() _setAccessibilityWebProcessToken:toNSData(data).get()];
 }
 
 bool PageClientImpl::interpretKeyEvent(const NativeWebKeyboardEvent& event, bool isCharEvent)
@@ -781,9 +788,9 @@ bool PageClientImpl::isFullScreen()
     return [webView fullScreenWindowController].isFullScreen;
 }
 
-void PageClientImpl::enterFullScreen(FloatSize videoDimensions)
+void PageClientImpl::enterFullScreen(FloatSize mediaDimensions)
 {
-    [[webView() fullScreenWindowController] enterFullScreen:videoDimensions];
+    [[webView() fullScreenWindowController] enterFullScreen:mediaDimensions];
 }
 
 void PageClientImpl::exitFullScreen()
@@ -832,8 +839,7 @@ void PageClientImpl::beganExitFullScreen(const IntRect& initialFrame, const IntR
 
 void PageClientImpl::didFinishLoadingDataForCustomContentProvider(const String& suggestedFilename, std::span<const uint8_t> dataReference)
 {
-    RetainPtr<NSData> data = adoptNS([[NSData alloc] initWithBytes:dataReference.data() length:dataReference.size()]);
-    [webView() _didFinishLoadingDataForCustomContentProviderWithSuggestedFilename:suggestedFilename data:data.get()];
+    [webView() _didFinishLoadingDataForCustomContentProviderWithSuggestedFilename:suggestedFilename data:toNSData(dataReference).get()];
 }
 
 void PageClientImpl::scrollingNodeScrollViewWillStartPanGesture(ScrollingNodeID)
@@ -1053,9 +1059,9 @@ void PageClientImpl::requestPasswordForQuickLookDocument(const String& fileName,
 }
 #endif
 
-void PageClientImpl::requestDOMPasteAccess(WebCore::DOMPasteAccessCategory pasteAccessCategory, const WebCore::IntRect& elementRect, const String& originIdentifier, CompletionHandler<void(WebCore::DOMPasteAccessResponse)>&& completionHandler)
+void PageClientImpl::requestDOMPasteAccess(WebCore::DOMPasteAccessCategory pasteAccessCategory, WebCore::DOMPasteRequiresInteraction requiresInteraction, const WebCore::IntRect& elementRect, const String& originIdentifier, CompletionHandler<void(WebCore::DOMPasteAccessResponse)>&& completionHandler)
 {
-    [contentView() _requestDOMPasteAccessForCategory:pasteAccessCategory elementRect:elementRect originIdentifier:originIdentifier completionHandler:WTFMove(completionHandler)];
+    [contentView() _requestDOMPasteAccessForCategory:pasteAccessCategory requiresInteraction:requiresInteraction elementRect:elementRect originIdentifier:originIdentifier completionHandler:WTFMove(completionHandler)];
 }
 
 void PageClientImpl::cancelPointersForGestureRecognizer(UIGestureRecognizer* gestureRecognizer)
@@ -1083,16 +1089,25 @@ void PageClientImpl::showDataDetectorsUIForPositionInformation(const Interaction
     [contentView() _showDataDetectorsUIForPositionInformation:positionInformation];
 }
 
-#if ENABLE(VIDEO_PRESENTATION_MODE)
-
-void PageClientImpl::didEnterFullscreen()
+void PageClientImpl::hardwareKeyboardAvailabilityChanged()
 {
-    [contentView() _didEnterFullscreen];
+    [contentView() _hardwareKeyboardAvailabilityChanged];
 }
+
+#if ENABLE(VIDEO_PRESENTATION_MODE)
 
 void PageClientImpl::didExitFullscreen()
 {
-    [contentView() _didExitFullscreen];
+#if ENABLE(FULLSCREEN_API)
+    [[webView() fullScreenWindowController] didExitFullscreen];
+#endif
+}
+
+void PageClientImpl::didCleanupFullscreen()
+{
+#if ENABLE(FULLSCREEN_API)
+    [[webView() fullScreenWindowController] didCleanupFullscreen];
+#endif
 }
 
 #endif // ENABLE(VIDEO_PRESENTATION_MODE)
@@ -1135,23 +1150,12 @@ void PageClientImpl::runModalJavaScriptDialog(CompletionHandler<void()>&& callba
 WebCore::Color PageClientImpl::contentViewBackgroundColor()
 {
     WebCore::Color color;
-    auto computeContentViewBackgroundColor = [&]() {
+    [[webView() traitCollection] performAsCurrentTraitCollection:[&]() {
         color = WebCore::roundAndClampToSRGBALossy([contentView() backgroundColor].CGColor);
         if (color.isValid())
             return;
-
-#if HAVE(OS_DARK_MODE_SUPPORT)
         color = WebCore::roundAndClampToSRGBALossy(UIColor.systemBackgroundColor.CGColor);
-#else
-        color = { };
-#endif
-    };
-
-#if HAVE(OS_DARK_MODE_SUPPORT)
-    [[webView() traitCollection] performAsCurrentTraitCollection:computeContentViewBackgroundColor];
-#else
-    computeContentViewBackgroundColor();
-#endif
+    }];
 
     return color;
 }
@@ -1159,6 +1163,11 @@ WebCore::Color PageClientImpl::contentViewBackgroundColor()
 Color PageClientImpl::insertionPointColor()
 {
     return roundAndClampToSRGBALossy([webView() _insertionPointColor].CGColor);
+}
+
+bool PageClientImpl::isScreenBeingCaptured()
+{
+    return [contentView() screenIsBeingCaptured];
 }
 
 void PageClientImpl::requestScrollToRect(const FloatRect& targetRect, const FloatPoint& origin)
@@ -1225,6 +1234,23 @@ UIViewController *PageClientImpl::presentingViewController() const
 FloatRect PageClientImpl::rootViewToWebView(const FloatRect& rect) const
 {
     return [webView() convertRect:rect fromView:contentView().get()];
+}
+
+FloatPoint PageClientImpl::webViewToRootView(const FloatPoint& point) const
+{
+    return [webView() convertPoint:point toView:contentView().get()];
+}
+
+#if HAVE(SPATIAL_TRACKING_LABEL)
+const String& PageClientImpl::spatialTrackingLabel() const
+{
+    return [contentView() spatialTrackingLabel];
+}
+#endif
+
+void PageClientImpl::scheduleVisibleContentRectUpdate()
+{
+    [webView() _scheduleVisibleContentRectUpdate];
 }
 
 } // namespace WebKit

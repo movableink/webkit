@@ -115,7 +115,7 @@ public:
     using WebCore::MediaPlayerClient::WeakValueType;
     using WebCore::MediaPlayerClient::weakPtrFactory;
 
-    static Ref<RemoteMediaPlayerProxy> create(RemoteMediaPlayerManagerProxy&, WebCore::MediaPlayerIdentifier, Ref<IPC::Connection>&&, WebCore::MediaPlayerEnums::MediaEngineIdentifier, RemoteMediaPlayerProxyConfiguration&&, RemoteVideoFrameObjectHeap&, const WebCore::ProcessIdentity&);
+    static Ref<RemoteMediaPlayerProxy> create(RemoteMediaPlayerManagerProxy&, WebCore::MediaPlayerIdentifier, WebCore::MediaPlayerClientIdentifier, Ref<IPC::Connection>&&, WebCore::MediaPlayerEnums::MediaEngineIdentifier, RemoteMediaPlayerProxyConfiguration&&, RemoteVideoFrameObjectHeap&, const WebCore::ProcessIdentity&);
     ~RemoteMediaPlayerProxy();
 
     WebCore::MediaPlayerIdentifier identifier() const { return m_id; }
@@ -166,7 +166,7 @@ public:
     void setPreservesPitch(bool);
     void setPitchCorrectionAlgorithm(WebCore::MediaPlayer::PitchCorrectionAlgorithm);
 
-    void setPageIsVisible(bool, String&& sceneIdentifier);
+    void setPageIsVisible(bool);
     void setShouldMaintainAspectRatio(bool);
 #if ENABLE(VIDEO_PRESENTATION_MODE)
     void setVideoFullscreenGravity(WebCore::MediaPlayerEnums::VideoGravity);
@@ -238,7 +238,7 @@ public:
     void addRemoteTextTrackProxy(WebCore::InbandTextTrackPrivate&);
 
 private:
-    RemoteMediaPlayerProxy(RemoteMediaPlayerManagerProxy&, WebCore::MediaPlayerIdentifier, Ref<IPC::Connection>&&, WebCore::MediaPlayerEnums::MediaEngineIdentifier, RemoteMediaPlayerProxyConfiguration&&, RemoteVideoFrameObjectHeap&, const WebCore::ProcessIdentity&);
+    RemoteMediaPlayerProxy(RemoteMediaPlayerManagerProxy&, WebCore::MediaPlayerIdentifier, WebCore::MediaPlayerClientIdentifier, Ref<IPC::Connection>&&, WebCore::MediaPlayerEnums::MediaEngineIdentifier, RemoteMediaPlayerProxyConfiguration&&, RemoteVideoFrameObjectHeap&, const WebCore::ProcessIdentity&);
 
     // MediaPlayerClient
     void mediaPlayerCharacteristicChanged() final;
@@ -297,7 +297,7 @@ private:
 
     void textTrackRepresentationBoundsChanged(const WebCore::IntRect&) final;
 
-#if ENABLE(AVF_CAPTIONS)
+#if PLATFORM(COCOA)
     Vector<RefPtr<WebCore::PlatformTextTrack>> outOfBandTrackSources() final;
 #endif
 
@@ -327,6 +327,8 @@ private:
 
     bool mediaPlayerPrefersSandboxedParsing() const final { return m_configuration.prefersSandboxedParsing; }
     bool mediaPlayerShouldDisableHDR() const final { return m_configuration.shouldDisableHDR; }
+
+    WebCore::PlatformVideoTarget mediaPlayerVideoTarget() const final;
 
     void startUpdateCachedStateMessageTimer();
     void updateCachedState(bool = false);
@@ -367,14 +369,19 @@ private:
     using LayerHostingContextIDCallback = WebCore::MediaPlayer::LayerHostingContextIDCallback;
     void requestHostingContextID(LayerHostingContextIDCallback&&);
     void setShouldCheckHardwareSupport(bool);
-    void setSpatialTrackingLabel(String&&);
+#if HAVE(SPATIAL_TRACKING_LABEL)
+    void setDefaultSpatialTrackingLabel(const String&);
+    void setSpatialTrackingLabel(const String&);
+#endif
+
+    void isInFullscreenOrPictureInPictureChanged(bool);
 
 #if !RELEASE_LOG_DISABLED
     const Logger& mediaPlayerLogger() final { return m_logger; }
     const void* mediaPlayerLogIdentifier() { return reinterpret_cast<const void*>(m_configuration.logIdentifier); }
     const Logger& logger() { return mediaPlayerLogger(); }
     const void* logIdentifier() { return mediaPlayerLogIdentifier(); }
-    const char* logClassName() const { return "RemoteMediaPlayerProxy"; }
+    ASCIILiteral logClassName() const { return "RemoteMediaPlayerProxy"_s; }
     WTFLogChannel& logChannel() const;
 #endif
 
@@ -383,6 +390,7 @@ private:
     Vector<Ref<RemoteTextTrackProxy>> m_textTracks;
 
     WebCore::MediaPlayerIdentifier m_id;
+    WebCore::MediaPlayerClientIdentifier m_clientIdentifier;
     RefPtr<SandboxExtension> m_sandboxExtension;
     Ref<IPC::Connection> m_webProcessConnection;
     RefPtr<WebCore::MediaPlayer> m_player;

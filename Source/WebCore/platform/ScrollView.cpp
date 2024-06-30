@@ -286,7 +286,7 @@ IntRect ScrollView::unobscuredContentRectInternal(VisibleContentRectIncludesScro
 IntSize ScrollView::sizeForVisibleContent(VisibleContentRectIncludesScrollbars scrollbarInclusion) const
 {
     if (platformWidget())
-        return platformVisibleContentSizeIncludingObscuredArea(scrollbarInclusion == IncludeScrollbars);
+        return platformVisibleContentSizeIncludingObscuredArea(scrollbarInclusion == VisibleContentRectIncludesScrollbars::Yes);
 
 #if USE(COORDINATED_GRAPHICS) || PLATFORM(QT)
     if (m_useFixedLayout && !m_fixedVisibleContentRect.isEmpty())
@@ -294,7 +294,7 @@ IntSize ScrollView::sizeForVisibleContent(VisibleContentRectIncludesScrollbars s
 #endif
 
     IntSize scrollbarSpace;
-    if (scrollbarInclusion == ExcludeScrollbars)
+    if (scrollbarInclusion == VisibleContentRectIncludesScrollbars::No)
         scrollbarSpace = scrollbarIntrusion();
 
     return IntSize(width() - scrollbarSpace.width(), height() - scrollbarSpace.height()).expandedTo(IntSize());
@@ -303,7 +303,7 @@ IntSize ScrollView::sizeForVisibleContent(VisibleContentRectIncludesScrollbars s
 IntSize ScrollView::sizeForUnobscuredContent(VisibleContentRectIncludesScrollbars scrollbarInclusion) const
 {
     if (platformWidget())
-        return platformVisibleContentSize(scrollbarInclusion == IncludeScrollbars);
+        return platformVisibleContentSize(scrollbarInclusion == VisibleContentRectIncludesScrollbars::Yes);
 
     IntSize visibleContentSize = sizeForVisibleContent(scrollbarInclusion);
 
@@ -321,7 +321,7 @@ IntRect ScrollView::visibleContentRectInternal(VisibleContentRectIncludesScrollb
 #if PLATFORM(IOS_FAMILY)
     if (visibleContentRectBehavior == LegacyIOSDocumentViewRect) {
         if (platformWidget())
-            return platformVisibleContentRect(scrollbarInclusion == IncludeScrollbars);
+            return platformVisibleContentRect(scrollbarInclusion == VisibleContentRectIncludesScrollbars::Yes);
     }
     
     if (platformWidget())
@@ -331,7 +331,7 @@ IntRect ScrollView::visibleContentRectInternal(VisibleContentRectIncludesScrollb
 #endif
 
     if (platformWidget())
-        return platformVisibleContentRect(scrollbarInclusion == IncludeScrollbars);
+        return platformVisibleContentRect(scrollbarInclusion == VisibleContentRectIncludesScrollbars::Yes);
 
 #if USE(COORDINATED_GRAPHICS) || PLATFORM(QT)
     if (m_useFixedLayout && !m_fixedVisibleContentRect.isEmpty())
@@ -830,11 +830,14 @@ IntRect ScrollView::rectToCopyOnScroll() const
 {
     IntRect scrollViewRect = convertToRootView(IntRect(0, 0, visibleWidth(), visibleHeight()));
     if (hasOverlayScrollbars()) {
-        int verticalScrollbarWidth = (verticalScrollbar() && !hasLayerForVerticalScrollbar()) ? verticalScrollbar()->width() : 0;
-        int horizontalScrollbarHeight = (horizontalScrollbar() && !hasLayerForHorizontalScrollbar()) ? horizontalScrollbar()->height() : 0;
-        
-        scrollViewRect.setWidth(scrollViewRect.width() - verticalScrollbarWidth);
-        scrollViewRect.setHeight(scrollViewRect.height() - horizontalScrollbarHeight);
+        if (verticalScrollbar() && !hasLayerForVerticalScrollbar()) {
+            if (shouldPlaceVerticalScrollbarOnLeft())
+                scrollViewRect.shiftXEdgeBy(verticalScrollbar()->width());
+            else
+                scrollViewRect.shiftMaxXEdgeBy(-verticalScrollbar()->width());
+        }
+        if (horizontalScrollbar() && !hasLayerForHorizontalScrollbar())
+            scrollViewRect.shiftMaxYEdgeBy(-horizontalScrollbar()->height());
     }
     return scrollViewRect;
 }
@@ -1637,7 +1640,7 @@ ScrollView::ProhibitScrollingWhenChangingContentSizeForScope::~ProhibitScrolling
 
 String ScrollView::debugDescription() const
 {
-    return makeString("ScrollView 0x", hex(reinterpret_cast<uintptr_t>(this), Lowercase));
+    return makeString("ScrollView 0x"_s, hex(reinterpret_cast<uintptr_t>(this), Lowercase));
 }
 
 #if !PLATFORM(COCOA) && !PLATFORM(QT)

@@ -38,13 +38,34 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(RenderViewTransitionCapture);
 
 RenderViewTransitionCapture::RenderViewTransitionCapture(Type type, Document& document, RenderStyle&& style)
     : RenderReplaced(type, document, WTFMove(style), { }, ReplacedFlag::IsViewTransitionCapture)
-{ }
-
-void RenderViewTransitionCapture::setImage(RefPtr<ImageBuffer> oldImage, const LayoutSize& size, const LayoutRect& overflowRect)
 {
-    setIntrinsicSize(size);
+}
+
+RenderViewTransitionCapture::~RenderViewTransitionCapture() = default;
+
+void RenderViewTransitionCapture::setImage(RefPtr<ImageBuffer> oldImage)
+{
     m_oldImage = oldImage;
+}
+
+bool RenderViewTransitionCapture::setCapturedSize(const LayoutSize& size, const LayoutRect& overflowRect, const LayoutPoint& layerToLayoutOffset)
+{
+    if (m_overflowRect == overflowRect && intrinsicSize() == size && m_layerToLayoutOffset == layerToLayoutOffset)
+        return false;
+    m_imageIntrinsicSize = size;
+    setIntrinsicSize(size);
     m_overflowRect = overflowRect;
+    m_layerToLayoutOffset = layerToLayoutOffset;
+    return true;
+}
+
+void RenderViewTransitionCapture::intrinsicSizeChanged()
+{
+    if (intrinsicSize() == m_imageIntrinsicSize)
+        return;
+    setIntrinsicSize(m_imageIntrinsicSize);
+    setPreferredLogicalWidthsDirty(true);
+    setNeedsLayout();
 }
 
 void RenderViewTransitionCapture::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
@@ -56,19 +77,57 @@ void RenderViewTransitionCapture::paintReplaced(PaintInfo& paintInfo, const Layo
     LayoutRect replacedContentRect = this->replacedContentRect();
     replacedContentRect.moveBy(paintOffset);
 
-    IntPoint position = snappedIntRect(replacedContentRect).location();
-    position.moveBy(roundedIntPoint(m_overflowRect.location()));
+    FloatRect paintRect = m_localOverflowRect;
 
     InterpolationQualityMaintainer interpolationMaintainer(context, ImageQualityController::interpolationQualityFromStyle(style()));
     if (m_oldImage)
-        context.drawImageBuffer(*m_oldImage, position, { context.compositeOperation() });
-
+        context.drawImageBuffer(*m_oldImage, paintRect, { context.compositeOperation() });
 }
 
 void RenderViewTransitionCapture::layout()
 {
     RenderReplaced::layout();
-    addVisualOverflow(m_overflowRect);
+    // Move the overflow rect of the captured renderer into layout coords, and then scale/position so that the intrinsic size subset covers
+    // our replaced content rect.
+    m_localOverflowRect = m_overflowRect;
+    m_localOverflowRect.moveBy(-m_layerToLayoutOffset);
+    m_scale = { replacedContentRect().width().toFloat() / intrinsicSize().width().toFloat() , replacedContentRect().height().toFloat() / intrinsicSize().height().toFloat()  };
+    m_localOverflowRect.scale(m_scale.width(), m_scale.height());
+    m_localOverflowRect.moveBy(replacedContentRect().location());
+
+    addVisualOverflow(m_localOverflowRect);
+}
+
+void RenderViewTransitionCapture::updateFromStyle()
+{
+    RenderReplaced::updateFromStyle();
+
+    if (effectiveOverflowX() != Overflow::Visible || effectiveOverflowY() != Overflow::Visible)
+        setHasNonVisibleOverflow();
+}
+
+LayoutPoint RenderViewTransitionCapture::captureContentInset() const
+{
+    LayoutPoint location = m_localOverflowRect.location();
+    location.moveBy(-visualOverflowRect().location());
+    return location;
+}
+
+Node* RenderViewTransitionCapture::nodeForHitTest() const
+{
+    // The view transition pseudo-elements should hit-test to their originating element (the document element).
+    return document().documentElement();
+}
+
+String RenderViewTransitionCapture::debugDescription() const
+{
+    StringBuilder builder;
+
+    builder.append(renderName(), " 0x"_s, hex(reinterpret_cast<uintptr_t>(this), Lowercase));
+
+    builder.append(" ::view-transition-"_s, style().pseudoElementType() == PseudoId::ViewTransitionNew ? "new("_s : "old("_s);
+    builder.append(style().pseudoElementNameArgument(), ')');
+    return builder.toString();
 }
 
 } // namespace WebCore

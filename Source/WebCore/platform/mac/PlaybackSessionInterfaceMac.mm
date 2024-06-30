@@ -294,6 +294,26 @@ void PlaybackSessionInterfaceMac::updatePlaybackControlsManagerTiming(double cur
     manager.timing = [getAVValueTimingClass() valueTimingWithAnchorValue:currentTime anchorTimeStamp:effectiveAnchorTime rate:effectivePlaybackRate];
 }
 
+uint32_t PlaybackSessionInterfaceMac::ptrCount() const
+{
+    return CanMakeCheckedPtr::ptrCount();
+}
+
+uint32_t PlaybackSessionInterfaceMac::ptrCountWithoutThreadCheck() const
+{
+    return CanMakeCheckedPtr::ptrCountWithoutThreadCheck();
+}
+
+void PlaybackSessionInterfaceMac::incrementPtrCount() const
+{
+    CanMakeCheckedPtr::incrementPtrCount();
+}
+
+void PlaybackSessionInterfaceMac::decrementPtrCount() const
+{
+    CanMakeCheckedPtr::decrementPtrCount();
+}
+
 #endif // ENABLE(WEB_PLAYBACK_CONTROLS_MANAGER)
 
 #if !RELEASE_LOG_DISABLED
@@ -311,6 +331,7 @@ WTFLogChannel& PlaybackSessionInterfaceMac::logChannel() const
 {
     return LogMedia;
 }
+
 #endif
 
 }

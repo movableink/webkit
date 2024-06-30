@@ -41,12 +41,12 @@ namespace WebCore {
 
 using PutBytesCallback = size_t(std::span<const uint8_t>);
 
-uint8_t verifyImageBufferIsBigEnough(const void* buffer, size_t bufferSize)
+uint8_t verifyImageBufferIsBigEnough(std::span<const uint8_t> buffer)
 {
-    RELEASE_ASSERT(bufferSize);
+    RELEASE_ASSERT(!buffer.empty());
 
     uintptr_t lastByte;
-    bool isSafe = WTF::safeAdd((uintptr_t)buffer, bufferSize - 1, lastByte);
+    bool isSafe = WTF::safeAdd((uintptr_t)buffer.data(), buffer.size() - 1, lastByte);
     RELEASE_ASSERT(isSafe);
 
     return *(uint8_t*)lastByte;
@@ -144,7 +144,7 @@ static bool encode(const PixelBuffer& source, const String& mimeType, std::optio
     CGImageAlphaInfo dataAlphaInfo = kCGImageAlphaLast;
     
     auto data = source.bytes();
-    auto dataSize = source.sizeInBytes();
+    auto dataSize = data.size();
 
     Vector<uint8_t> premultipliedData;
 
@@ -171,12 +171,12 @@ static bool encode(const PixelBuffer& source, const String& mimeType, std::optio
         }
 
         dataAlphaInfo = kCGImageAlphaNoneSkipLast; // Ignore the alpha channel.
-        data = premultipliedData.data();
+        data = premultipliedData.mutableSpan();
     }
 
-    verifyImageBufferIsBigEnough(data, dataSize);
+    verifyImageBufferIsBigEnough(data);
 
-    auto dataProvider = adoptCF(CGDataProviderCreateWithData(nullptr, data, dataSize, nullptr));
+    auto dataProvider = adoptCF(CGDataProviderCreateWithData(nullptr, data.data(), dataSize, nullptr));
     if (!dataProvider)
         return false;
 
@@ -186,7 +186,7 @@ static bool encode(const PixelBuffer& source, const String& mimeType, std::optio
     return encode(image.get(), mimeType, quality, function);
 }
 
-static bool encode(const std::span<const uint8_t>& data, const String& mimeType, std::optional<double> quality, const ScopedLambda<PutBytesCallback>& function)
+static bool encode(std::span<const uint8_t> data, const String& mimeType, std::optional<double> quality, const ScopedLambda<PutBytesCallback>& function)
 {
     if (data.empty())
         return false;
@@ -242,7 +242,7 @@ template<typename Source> static String encodeToDataURL(Source&& source, const S
     if (encodedData.isEmpty())
         return "data:,"_s;
 
-    return makeString("data:", mimeType, ";base64,", base64Encoded(encodedData));
+    return makeString("data:"_s, mimeType, ";base64,"_s, base64Encoded(encodedData));
 }
 
 Vector<uint8_t> encodeData(CGImageRef image, const String& mimeType, std::optional<double> quality)
@@ -255,7 +255,7 @@ Vector<uint8_t> encodeData(const PixelBuffer& pixelBuffer, const String& mimeTyp
     return encodeToVector(pixelBuffer, mimeType, quality);
 }
 
-Vector<uint8_t> encodeData(const std::span<const uint8_t>& data, const String& mimeType, std::optional<double> quality)
+Vector<uint8_t> encodeData(std::span<const uint8_t> data, const String& mimeType, std::optional<double> quality)
 {
     return encodeToVector(data, mimeType, quality);
 }

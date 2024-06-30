@@ -26,11 +26,13 @@
 #include "GStreamerCommon.h"
 #include "GStreamerHolePunchQuirkBcmNexus.h"
 #include "GStreamerHolePunchQuirkFake.h"
+#include "GStreamerHolePunchQuirkRialto.h"
 #include "GStreamerHolePunchQuirkWesteros.h"
 #include "GStreamerQuirkAmLogic.h"
 #include "GStreamerQuirkBcmNexus.h"
 #include "GStreamerQuirkBroadcom.h"
 #include "GStreamerQuirkRealtek.h"
+#include "GStreamerQuirkRialto.h"
 #include "GStreamerQuirkWesteros.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/OptionSet.h>
@@ -84,6 +86,8 @@ GStreamerQuirksManager::GStreamerQuirksManager(bool isForTesting, bool loadQuirk
                 quirk = WTF::makeUnique<GStreamerQuirkBcmNexus>();
             else if (WTF::equalLettersIgnoringASCIICase(identifier, "realtek"_s))
                 quirk = WTF::makeUnique<GStreamerQuirkRealtek>();
+            else if (WTF::equalLettersIgnoringASCIICase(identifier, "rialto"_s))
+                quirk = WTF::makeUnique<GStreamerQuirkRialto>();
             else if (WTF::equalLettersIgnoringASCIICase(identifier, "westeros"_s))
                 quirk = WTF::makeUnique<GStreamerQuirkWesteros>();
             else {
@@ -113,6 +117,8 @@ GStreamerQuirksManager::GStreamerQuirksManager(bool isForTesting, bool loadQuirk
     // TODO: Maybe check this is coherent (somehow) with the quirk(s) selected above.
     if (WTF::equalLettersIgnoringASCIICase(identifier, "bcmnexus"_s))
         m_holePunchQuirk = WTF::makeUnique<GStreamerHolePunchQuirkBcmNexus>();
+    else if (WTF::equalLettersIgnoringASCIICase(identifier, "rialto"_s))
+        m_holePunchQuirk = WTF::makeUnique<GStreamerHolePunchQuirkRialto>();
     else if (WTF::equalLettersIgnoringASCIICase(identifier, "westeros"_s))
         m_holePunchQuirk = WTF::makeUnique<GStreamerHolePunchQuirkWesteros>();
     else if (WTF::equalLettersIgnoringASCIICase(identifier, "fake"_s))
@@ -124,6 +130,19 @@ GStreamerQuirksManager::GStreamerQuirksManager(bool isForTesting, bool loadQuirk
 bool GStreamerQuirksManager::isEnabled() const
 {
     return !m_quirks.isEmpty();
+}
+
+GstElement* GStreamerQuirksManager::createAudioSink()
+{
+    for (const auto& quirk : m_quirks) {
+        auto* sink = quirk->createAudioSink();
+        if (sink) {
+            GST_DEBUG("Using AudioSink from quirk %s : %" GST_PTR_FORMAT, quirk->identifier(), sink);
+            return sink;
+        }
+    }
+
+    return nullptr;
 }
 
 GstElement* GStreamerQuirksManager::createWebAudioSink()
@@ -174,10 +193,8 @@ bool GStreamerQuirksManager::sinksRequireClockSynchronization() const
 void GStreamerQuirksManager::configureElement(GstElement* element, OptionSet<ElementRuntimeCharacteristics>&& characteristics)
 {
     GST_DEBUG("Configuring element %" GST_PTR_FORMAT, element);
-    for (const auto& quirk : m_quirks) {
-        if (quirk->configureElement(element, characteristics))
-            return;
-    }
+    for (const auto& quirk : m_quirks)
+        quirk->configureElement(element, characteristics);
 }
 
 std::optional<bool> GStreamerQuirksManager::isHardwareAccelerated(GstElementFactory* factory) const
@@ -232,14 +249,29 @@ void GStreamerQuirksManager::setHolePunchEnabledForTesting(bool enabled)
 
 unsigned GStreamerQuirksManager::getAdditionalPlaybinFlags() const
 {
+    unsigned flags = 0;
     for (const auto& quirk : m_quirks) {
-        if (auto flags = quirk->getAdditionalPlaybinFlags()) {
-            GST_DEBUG("Quirk %s requests these playbin flags: %u", quirk->identifier(), flags);
-            return flags;
-        }
+        auto quirkFlags = quirk->getAdditionalPlaybinFlags();
+        GST_DEBUG("Quirk %s requests these playbin flags: %u", quirk->identifier(), quirkFlags);
+        flags |= quirkFlags;
     }
-    GST_DEBUG("Quirks didn't request any specific playbin flags.");
-    return getGstPlayFlag("text") | getGstPlayFlag("soft-colorbalance");
+
+    if (flags)
+        GST_DEBUG("Final quirk flags: %u", flags);
+    else {
+        GST_DEBUG("Quirks didn't request any specific playbin flags, returning default text+soft-colorbalance.");
+        flags = getGstPlayFlag("text") | getGstPlayFlag("soft-colorbalance");
+    }
+    return flags;
+}
+
+bool GStreamerQuirksManager::shouldParseIncomingLibWebRTCBitStream() const
+{
+    for (auto& quirk : m_quirks) {
+        if (!quirk->shouldParseIncomingLibWebRTCBitStream())
+            return false;
+    }
+    return true;
 }
 
 #undef GST_CAT_DEFAULT

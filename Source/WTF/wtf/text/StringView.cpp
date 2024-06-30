@@ -92,10 +92,10 @@ bool StringView::endsWithIgnoringASCIICase(StringView suffix) const
 Expected<CString, UTF8ConversionError> StringView::tryGetUTF8(ConversionMode mode) const
 {
     if (isNull())
-        return CString("", 0);
+        return CString { ""_span };
     if (is8Bit())
-        return StringImpl::utf8ForCharacters(characters8(), length());
-    return StringImpl::utf8ForCharacters(characters16(), length(), mode);
+        return StringImpl::utf8ForCharacters(span8());
+    return StringImpl::utf8ForCharacters(span16(), mode);
 }
 
 CString StringView::utf8(ConversionMode mode) const
@@ -126,13 +126,13 @@ size_t StringView::find(AdaptiveStringSearcherTables& tables, StringView matchSt
 
     if (is8Bit()) {
         if (matchString.is8Bit())
-            return searchStringRaw(tables, characters8(), length(), matchString.characters8(), matchString.length(), start);
-        return searchStringRaw(tables, characters8(), length(), matchString.characters16(), matchString.length(), start);
+            return searchString(tables, span8(), matchString.span8(), start);
+        return searchString(tables, span8(), matchString.span16(), start);
     }
 
     if (matchString.is8Bit())
-        return searchStringRaw(tables, characters16(), length(), matchString.characters8(), matchString.length(), start);
-    return searchStringRaw(tables, characters16(), length(), matchString.characters16(), matchString.length(), start);
+        return searchString(tables, span16(), matchString.span8(), start);
+    return searchString(tables, span16(), matchString.span16(), start);
 }
 
 size_t StringView::find(std::span<const LChar> match, unsigned start) const
@@ -147,20 +147,19 @@ size_t StringView::find(std::span<const LChar> match, unsigned start) const
         return notFound;
 
     if (is8Bit())
-        return findInner(characters8() + start, match.data(), start, searchLength, match.size());
-    return findInner(characters16() + start, match.data(), start, searchLength, match.size());
+        return findInner(span8().subspan(start), match, start);
+    return findInner(span16().subspan(start), match, start);
 }
 
 size_t StringView::reverseFind(std::span<const LChar> match, unsigned start) const
 {
     ASSERT(!match.empty());
-    auto length = this->length();
-    if (match.size() > length)
+    if (match.size() > length())
         return notFound;
 
     if (is8Bit())
-        return reverseFindInner(characters8(), match.data(), start, length, match.size());
-    return reverseFindInner(characters16(), match.data(), start, length, match.size());
+        return reverseFindInner(span8(), match, start);
+    return reverseFindInner(span16(), match, start);
 }
 
 void StringView::SplitResult::Iterator::findNextSubstring()
@@ -268,74 +267,74 @@ bool StringView::GraphemeClusters::Iterator::operator==(const Iterator& other) c
 enum class ASCIICase { Lower, Upper };
 
 template<ASCIICase type, typename CharacterType>
-String convertASCIICase(const CharacterType* input, unsigned length)
+String convertASCIICase(std::span<const CharacterType> input)
 {
     if (!input)
         return { };
 
     CharacterType* characters;
-    auto result = String::createUninitialized(length, characters);
-    for (unsigned i = 0; i < length; ++i)
-        characters[i] = type == ASCIICase::Lower ? toASCIILower(input[i]) : toASCIIUpper(input[i]);
+    auto result = String::createUninitialized(input.size(), characters);
+    for (auto character : input)
+        *characters++ = type == ASCIICase::Lower ? toASCIILower(character) : toASCIIUpper(character);
     return result;
 }
 
 String StringView::convertToASCIILowercase() const
 {
     if (m_is8Bit)
-        return convertASCIICase<ASCIICase::Lower>(static_cast<const LChar*>(m_characters), m_length);
-    return convertASCIICase<ASCIICase::Lower>(static_cast<const UChar*>(m_characters), m_length);
+        return convertASCIICase<ASCIICase::Lower>(span8());
+    return convertASCIICase<ASCIICase::Lower>(span16());
 }
 
 String StringView::convertToASCIIUppercase() const
 {
     if (m_is8Bit)
-        return convertASCIICase<ASCIICase::Upper>(static_cast<const LChar*>(m_characters), m_length);
-    return convertASCIICase<ASCIICase::Upper>(static_cast<const UChar*>(m_characters), m_length);
+        return convertASCIICase<ASCIICase::Upper>(span8());
+    return convertASCIICase<ASCIICase::Upper>(span16());
 }
 
 template<typename CharacterType>
-static AtomString convertASCIILowercaseAtom(const CharacterType* input, unsigned length)
+static AtomString convertASCIILowercaseAtom(std::span<const CharacterType> input)
 {
-    for (unsigned i = 0; i < length; ++i) {
-        if (UNLIKELY(isASCIIUpper(input[i])))
-            return makeAtomString(asASCIILowercase(std::span { input, length }));
+    for (auto character : input) {
+        if (UNLIKELY(isASCIIUpper(character)))
+            return makeAtomString(asASCIILowercase(input));
     }
     // Fast path when the StringView is already all lowercase.
-    return AtomString(input, length);
+    return input;
 }
 
 AtomString StringView::convertToASCIILowercaseAtom() const
 {
     if (m_is8Bit)
-        return convertASCIILowercaseAtom(characters8(), m_length);
-    return convertASCIILowercaseAtom(characters16(), m_length);
+        return convertASCIILowercaseAtom(span8());
+    return convertASCIILowercaseAtom(span16());
 }
 
 template<typename DestinationCharacterType, typename SourceCharacterType>
-void getCharactersWithASCIICaseInternal(StringView::CaseConvertType type, DestinationCharacterType* destination, const SourceCharacterType* source, unsigned length)
+void getCharactersWithASCIICaseInternal(StringView::CaseConvertType type, DestinationCharacterType* destination, std::span<const SourceCharacterType> source)
 {
     static_assert(std::is_same<SourceCharacterType, LChar>::value || std::is_same<SourceCharacterType, UChar>::value);
     static_assert(std::is_same<DestinationCharacterType, LChar>::value || std::is_same<DestinationCharacterType, UChar>::value);
     static_assert(sizeof(DestinationCharacterType) >= sizeof(SourceCharacterType));
     auto caseConvert = (type == StringView::CaseConvertType::Lower) ? toASCIILower<SourceCharacterType> : toASCIIUpper<SourceCharacterType>;
-    for (unsigned i = 0; i < length; ++i)
-        destination[i] = caseConvert(source[i]);
+    for (auto character : source)
+        *destination++ = caseConvert(character);
 }
 
 void StringView::getCharactersWithASCIICase(CaseConvertType type, LChar* destination) const
 {
     ASSERT(is8Bit());
-    getCharactersWithASCIICaseInternal(type, destination, characters8(), m_length);
+    getCharactersWithASCIICaseInternal(type, destination, span8());
 }
 
 void StringView::getCharactersWithASCIICase(CaseConvertType type, UChar* destination) const
 {
     if (is8Bit()) {
-        getCharactersWithASCIICaseInternal(type, destination, characters8(), m_length);
+        getCharactersWithASCIICaseInternal(type, destination, span8());
         return;
     }
-    getCharactersWithASCIICaseInternal(type, destination, characters16(), m_length);
+    getCharactersWithASCIICaseInternal(type, destination, span16());
 }
 
 StringViewWithUnderlyingString normalizedNFC(StringView string)
@@ -349,18 +348,19 @@ StringViewWithUnderlyingString normalizedNFC(StringView string)
     ASSERT(U_SUCCESS(status));
 
     // No need to normalize if already normalized.
-    UBool checkResult = unorm2_isNormalized(normalizer, string.characters16(), string.length(), &status);
+    auto span = string.span16();
+    UBool checkResult = unorm2_isNormalized(normalizer, span.data(), span.size(), &status);
     if (checkResult)
         return { string, { } };
 
-    unsigned normalizedLength = unorm2_normalize(normalizer, string.characters16(), string.length(), nullptr, 0, &status);
+    unsigned normalizedLength = unorm2_normalize(normalizer, span.data(), span.size(), nullptr, 0, &status);
     ASSERT(needsToGrowToProduceBuffer(status));
 
     UChar* characters;
     String result = String::createUninitialized(normalizedLength, characters);
 
     status = U_ZERO_ERROR;
-    unorm2_normalize(normalizer, string.characters16(), string.length(), characters, normalizedLength, &status);
+    unorm2_normalize(normalizer, span.data(), span.size(), characters, normalizedLength, &status);
     ASSERT(U_SUCCESS(status));
 
     StringView view { result };
@@ -393,24 +393,22 @@ size_t StringView::reverseFind(StringView matchString, unsigned start) const
     if (isNull())
         return notFound;
 
-    unsigned matchLength = matchString.length();
-    unsigned ourLength = length();
-    if (!matchLength)
-        return std::min(start, ourLength);
+    if (matchString.length())
+        return std::min(start, length());
 
     // Check start & matchLength are in range.
-    if (matchLength > ourLength)
+    if (matchString.length() > length())
         return notFound;
 
     if (is8Bit()) {
         if (matchString.is8Bit())
-            return reverseFindInner(characters8(), matchString.characters8(), start, ourLength, matchLength);
-        return reverseFindInner(characters8(), matchString.characters16(), start, ourLength, matchLength);
+            return reverseFindInner(span8(), matchString.span8(), start);
+        return reverseFindInner(span8(), matchString.span16(), start);
     }
 
     if (matchString.is8Bit())
-        return reverseFindInner(characters16(), matchString.characters8(), start, ourLength, matchLength);
-    return reverseFindInner(characters16(), matchString.characters16(), start, ourLength, matchLength);
+        return reverseFindInner(span16(), matchString.span8(), start);
+    return reverseFindInner(span16(), matchString.span16(), start);
 }
 
 String makeStringByReplacingAll(StringView string, UChar target, UChar replacement)
@@ -421,28 +419,28 @@ String makeStringByReplacingAll(StringView string, UChar target, UChar replaceme
             return string.toString();
         }
 
-        auto* characters = string.characters8();
-        unsigned i;
+        auto characters = string.span8();
+        size_t i;
         unsigned length = string.length();
-        for (i = 0; i != length; ++i) {
+        for (i = 0; i != characters.size(); ++i) {
             if (characters[i] == target)
                 break;
         }
         if (i == length)
             return string.toString();
-        return StringImpl::createByReplacingInCharacters(characters, length, target, replacement, i);
+        return StringImpl::createByReplacingInCharacters(characters, target, replacement, i);
     }
 
-    auto* characters = string.characters16();
-    unsigned i;
+    auto characters = string.span16();
+    size_t i;
     unsigned length = string.length();
-    for (i = 0; i != length; ++i) {
+    for (i = 0; i != characters.size(); ++i) {
         if (characters[i] == target)
             break;
     }
     if (i == length)
         return string.toString();
-    return StringImpl::createByReplacingInCharacters(characters, length, target, replacement, i);
+    return StringImpl::createByReplacingInCharacters(characters, target, replacement, i);
 }
 
 int codePointCompare(StringView lhs, StringView rhs)
@@ -451,22 +449,22 @@ int codePointCompare(StringView lhs, StringView rhs)
     bool rhsIs8Bit = rhs.is8Bit();
     if (lhsIs8Bit) {
         if (rhsIs8Bit)
-            return codePointCompare(lhs.characters8(), lhs.length(), rhs.characters8(), rhs.length());
-        return codePointCompare(lhs.characters8(), lhs.length(), rhs.characters16(), rhs.length());
+            return codePointCompare(lhs.span8(), rhs.span8());
+        return codePointCompare(lhs.span8(), rhs.span16());
     }
     if (rhsIs8Bit)
-        return codePointCompare(lhs.characters16(), lhs.length(), rhs.characters8(), rhs.length());
-    return codePointCompare(lhs.characters16(), lhs.length(), rhs.characters16(), rhs.length());
+        return codePointCompare(lhs.span16(), rhs.span8());
+    return codePointCompare(lhs.span16(), rhs.span16());
 }
 
 template<typename CharacterType> static String makeStringBySimplifyingNewLinesSlowCase(const String& string, unsigned firstCarriageReturn)
 {
     unsigned length = string.length();
     unsigned resultLength = firstCarriageReturn;
-    auto* characters = string.characters<CharacterType>();
+    auto characters = string.span<CharacterType>();
     CharacterType* resultCharacters;
     auto result = String::createUninitialized(length, resultCharacters);
-    memcpy(resultCharacters, characters, firstCarriageReturn * sizeof(CharacterType));
+    memcpy(resultCharacters, characters.data(), firstCarriageReturn * sizeof(CharacterType));
     for (unsigned i = firstCarriageReturn; i < length; ++i) {
         if (characters[i] != '\r')
             resultCharacters[resultLength++] = characters[i];
@@ -496,7 +494,7 @@ struct StringView::UnderlyingString {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
     std::atomic_uint refCount { 1u };
     bool isValid { true };
-    const StringImpl& string;
+    SUPPRESS_UNCOUNTED_MEMBER const StringImpl& string;
     explicit UnderlyingString(const StringImpl&);
 };
 
@@ -592,6 +590,13 @@ void StringView::setUnderlyingStringImpl(const StringView&)
 }
 
 #endif // not CHECK_STRINGVIEW_LIFETIME
+
+#ifndef NDEBUG
+void StringView::show() const
+{
+    toStringWithoutCopying().show();
+}
+#endif
 
 #if !defined(NDEBUG)
 namespace Detail {

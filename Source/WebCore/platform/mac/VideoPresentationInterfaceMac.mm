@@ -336,6 +336,7 @@ enum class PIPState {
         }
 
         model->didExitFullscreen();
+        model->setRequiresTextTrackRepresentation(false);
     }
 
     _videoPresentationInterfaceMac->clearMode(HTMLMediaElementEnums::VideoFullscreenModePictureInPicture);
@@ -408,7 +409,15 @@ void VideoPresentationInterfaceMac::setMode(HTMLMediaElementEnums::VideoFullscre
         return;
 
     m_mode = newMode;
-    if (auto model = videoPresentationModel())
+
+    RefPtr model = videoPresentationModel();
+    if (model)
+        model->setRequiresTextTrackRepresentation(hasMode(HTMLMediaElementEnums::VideoFullscreenModePictureInPicture));
+
+    if (hasMode(HTMLMediaElementEnums::VideoFullscreenModePictureInPicture) && !isMode(HTMLMediaElementEnums::VideoFullscreenModePictureInPicture))
+        return;
+
+    if (model)
         model->fullscreenModeChanged(m_mode);
 }
 
@@ -419,7 +428,15 @@ void VideoPresentationInterfaceMac::clearMode(HTMLMediaElementEnums::VideoFullsc
         return;
 
     m_mode = newMode;
-    if (auto model = videoPresentationModel())
+
+    RefPtr model = videoPresentationModel();
+    if (model)
+        model->setRequiresTextTrackRepresentation(hasMode(HTMLMediaElementEnums::VideoFullscreenModePictureInPicture));
+
+    if (hasMode(HTMLMediaElementEnums::VideoFullscreenModePictureInPicture) && !isMode(HTMLMediaElementEnums::VideoFullscreenModePictureInPicture))
+        return;
+
+    if (model)
         model->fullscreenModeChanged(m_mode);
 }
 
@@ -448,13 +465,15 @@ void VideoPresentationInterfaceMac::setupFullscreen(NSView& layerHostedView, con
     UNUSED_PARAM(allowsPictureInPicturePlayback);
     ASSERT(mode == HTMLMediaElementEnums::VideoFullscreenModePictureInPicture);
 
-    m_mode = mode;
+    m_mode |= mode;
 
     [videoPresentationInterfaceObjC() setUpPIPForVideoView:&layerHostedView withFrame:(NSRect)initialRect inWindow:parentWindow];
 
     RunLoop::main().dispatch([protectedThis = Ref { *this }, this] {
-        if (auto model = videoPresentationModel())
+        if (RefPtr model = videoPresentationModel()) {
             model->didSetupFullscreen();
+            model->setRequiresTextTrackRepresentation(true);
+        }
     });
 }
 
@@ -462,7 +481,7 @@ void VideoPresentationInterfaceMac::enterFullscreen()
 {
     LOG(Fullscreen, "VideoPresentationInterfaceMac::enterFullscreen(%p)", this);
 
-    if (mode() == HTMLMediaElementEnums::VideoFullscreenModePictureInPicture) {
+    if (hasMode(HTMLMediaElementEnums::VideoFullscreenModePictureInPicture)) {
         if (auto model = videoPresentationModel())
             model->willEnterPictureInPicture();
         [m_webVideoPresentationInterfaceObjC enterPIP];
@@ -537,8 +556,28 @@ void VideoPresentationInterfaceMac::requestHideAndExitPiP()
     if (!model)
         return;
 
-    model->requestFullscreenMode(HTMLMediaElementEnums::VideoFullscreenModeNone);
-    model->willExitPictureInPicture();
+    if (m_documentIsVisible) {
+        model->requestFullscreenMode(m_mode & ~HTMLMediaElementEnums::VideoFullscreenModePictureInPicture);
+        model->willExitPictureInPicture();
+    } else {
+        auto callback = [this, model] () {
+            model->requestFullscreenMode(m_mode & ~HTMLMediaElementEnums::VideoFullscreenModePictureInPicture);
+            model->willExitPictureInPicture();
+        };
+        setDocumentBecameVisibleCallback(WTFMove(callback));
+    }
+
+}
+
+void VideoPresentationInterfaceMac::documentVisibilityChanged(bool isDocumentVisible)
+{
+    bool documentWasVisible = m_documentIsVisible;
+    m_documentIsVisible = isDocumentVisible;
+
+    if (!documentWasVisible && m_documentIsVisible && m_documentBecameVisibleCallback) {
+        m_documentBecameVisibleCallback();
+        m_documentBecameVisibleCallback = nullptr;
+    }
 }
 
 #if !LOG_DISABLED

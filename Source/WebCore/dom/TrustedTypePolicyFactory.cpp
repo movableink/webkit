@@ -27,6 +27,7 @@
 #include "TrustedTypePolicyFactory.h"
 
 #include "ContentSecurityPolicy.h"
+#include "ContextDestructionObserver.h"
 #include "HTMLNames.h"
 #include "JSDOMConvertObject.h"
 #include "JSTrustedHTML.h"
@@ -43,10 +44,14 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(TrustedTypePolicyFactory);
 
-Ref<TrustedTypePolicyFactory> TrustedTypePolicyFactory::create()
+Ref<TrustedTypePolicyFactory> TrustedTypePolicyFactory::create(ScriptExecutionContext& context)
 {
-    return adoptRef(*new TrustedTypePolicyFactory());
+    return adoptRef(*new TrustedTypePolicyFactory(context));
 }
+
+TrustedTypePolicyFactory::TrustedTypePolicyFactory(ScriptExecutionContext& context)
+    : ContextDestructionObserver(&context)
+{ }
 
 ExceptionOr<Ref<TrustedTypePolicy>> TrustedTypePolicyFactory::createPolicy(ScriptExecutionContext& context, const String& policyName, const TrustedTypePolicyOptions& options)
 {
@@ -103,30 +108,7 @@ Ref<TrustedScript> TrustedTypePolicyFactory::emptyScript() const
 
 String TrustedTypePolicyFactory::getAttributeType(const String& tagName, const String& attributeParameter, const String& elementNamespace, const String& attributeNamespace) const
 {
-    auto localName = tagName.convertToASCIILowercase();
-    auto attributeName = attributeParameter.convertToASCIILowercase();
-
-    if (attributeName.startsWith("on"_s))
-        return trustedTypeToString(TrustedType::TrustedScript);
-
-    AtomString elementNS = elementNamespace.isEmpty() ? HTMLNames::xhtmlNamespaceURI : AtomString(elementNamespace);
-    AtomString attributeNS = attributeNamespace.isEmpty() ? nullAtom() : AtomString(attributeNamespace);
-
-    QualifiedName element(nullAtom(), AtomString(localName), elementNS);
-    QualifiedName attribute(nullAtom(), AtomString(attributeName), attributeNS);
-
-    if (element.matches(HTMLNames::embedTag) && attribute.matches(HTMLNames::srcAttr))
-        return trustedTypeToString(TrustedType::TrustedScriptURL);
-    if (element.matches(HTMLNames::iframeTag) && attribute.matches(HTMLNames::srcdocAttr))
-        return trustedTypeToString(TrustedType::TrustedHTML);
-    if (element.matches(HTMLNames::objectTag) && (attribute.matches(HTMLNames::codebaseAttr) || attribute.matches(HTMLNames::dataAttr)))
-        return trustedTypeToString(TrustedType::TrustedScriptURL);
-    if (element.matches(HTMLNames::scriptTag) && (attribute.matches(HTMLNames::srcAttr) || attribute.matches(HTMLNames::dataAttr)))
-        return trustedTypeToString(TrustedType::TrustedScriptURL);
-    if (element.matches(SVGNames::scriptTag) && (attribute.matches(SVGNames::hrefAttr) || attribute.matches(XLinkNames::hrefAttr)))
-        return trustedTypeToString(TrustedType::TrustedScriptURL);
-
-    return nullString();
+    return trustedTypeForAttribute(tagName, attributeParameter.convertToASCIILowercase(), elementNamespace, attributeNamespace).attributeType;
 }
 
 String TrustedTypePolicyFactory::getPropertyType(const String& tagName, const String& property, const String& elementNamespace) const
@@ -139,12 +121,8 @@ String TrustedTypePolicyFactory::getPropertyType(const String& tagName, const St
 
     const QualifiedName element(nullAtom(), AtomString(localName), elementNS);
 
-    if (element.matches(HTMLNames::embedTag) && property == "src"_s)
-        return trustedTypeToString(TrustedType::TrustedScriptURL);
     if (element.matches(HTMLNames::iframeTag) && property == "srcdoc"_s)
         return trustedTypeToString(TrustedType::TrustedHTML);
-    if (element.matches(HTMLNames::objectTag) && (property == "codeBase"_s || property == "data"_s))
-        return trustedTypeToString(TrustedType::TrustedScriptURL);
     if (element.matches(HTMLNames::scriptTag) && property == "src"_s)
         return trustedTypeToString(TrustedType::TrustedScriptURL);
     if (element.matches(HTMLNames::scriptTag) && (property == "innerText"_s || property == "textContent"_s || property == "text"_s))

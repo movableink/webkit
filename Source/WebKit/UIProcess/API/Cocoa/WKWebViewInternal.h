@@ -24,11 +24,13 @@
  */
 
 #import "PDFPluginIdentifier.h"
+#import "WKTextAnimationType.h"
 #import <WebKit/WKShareSheet.h>
 #import <WebKit/WKWebViewConfiguration.h>
 #import <WebKit/WKWebViewPrivate.h>
 #import "_WKAttachmentInternal.h"
 #import "_WKWebViewPrintFormatterInternal.h"
+#import <pal/spi/cocoa/WritingToolsSPI.h>
 #import <variant>
 #import <wtf/BlockPtr.h>
 #import <wtf/CompletionHandler.h>
@@ -36,6 +38,7 @@
 #import <wtf/RefPtr.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/WeakObjCPtr.h>
+#import <wtf/spi/cocoa/NSObjCRuntimeSPI.h>
 
 #if PLATFORM(IOS_FAMILY)
 #import "DynamicViewportSizeUpdate.h"
@@ -52,11 +55,23 @@
 #endif
 
 #if PLATFORM(IOS_FAMILY)
+
+#if ENABLE(WRITING_TOOLS)
+#define WK_WEB_VIEW_PROTOCOLS <WKBEScrollViewDelegate, WTWritingToolsDelegate>
+#else
 #define WK_WEB_VIEW_PROTOCOLS <WKBEScrollViewDelegate>
 #endif
 
+#endif
+
 #if PLATFORM(MAC)
+
+#if ENABLE(WRITING_TOOLS)
+#define WK_WEB_VIEW_PROTOCOLS <WKShareSheetDelegate, WTWritingToolsDelegate>
+#else
 #define WK_WEB_VIEW_PROTOCOLS <WKShareSheetDelegate>
+#endif
+
 #endif
 
 #if !defined(WK_WEB_VIEW_PROTOCOLS)
@@ -85,7 +100,6 @@ enum class WheelScrollGestureState : uint8_t;
 
 namespace WebKit {
 enum class ContinueUnsafeLoad : bool;
-enum class WebTextReplacementDataState : uint8_t;
 class IconLoadingDelegate;
 class NavigationState;
 class ResourceLoadDelegate;
@@ -111,6 +125,11 @@ class ViewGestureController;
 @class WKWebViewContentProviderRegistry;
 @class _WKFrameHandle;
 
+#if ENABLE(WRITING_TOOLS)
+@class WTTextSuggestion;
+@class WTSession;
+#endif
+
 #if PLATFORM(IOS_FAMILY)
 @class WKFullScreenWindowController;
 @protocol WKWebViewContentProvider;
@@ -118,14 +137,6 @@ class ViewGestureController;
 
 #if PLATFORM(MAC)
 @class WKTextFinderClient;
-#endif
-
-#if USE(APPLE_INTERNAL_SDK)
-#import <WebKitAdditions/UnifiedTextReplacementAdditions.h>
-#endif
-
-#if ENABLE(UNIFIED_TEXT_REPLACEMENT)
-@class WKWebTextReplacementSession;
 #endif
 
 @protocol _WKTextManipulationDelegate;
@@ -236,8 +247,9 @@ struct PerWebProcessState {
     CocoaEdgeInsets _minimumViewportInset;
     CocoaEdgeInsets _maximumViewportInset;
 
-#if ENABLE(UNIFIED_TEXT_REPLACEMENT)
-    RetainPtr<NSMapTable<NSUUID *, WKWebTextReplacementSession *>> _unifiedTextReplacementSessions;
+#if ENABLE(WRITING_TOOLS)
+    RetainPtr<NSMapTable<NSUUID *, WTTextSuggestion *>> _writingToolsTextSuggestions;
+    RetainPtr<NSMapTable<NSUUID *, WTSession *>> _writingToolsSessions;
 #endif
 
 #if PLATFORM(MAC)
@@ -304,7 +316,8 @@ struct PerWebProcessState {
     RetainPtr<UIView> _resizeAnimationView;
     CGFloat _lastAdjustmentForScroller;
 
-    RetainPtr<id> _endLiveResizeNotificationObserver;
+    CGSize _lastKnownWindowSize;
+    RetainPtr<NSTimer> _endLiveResizeTimer;
 
     WebCore::FloatBoxExtent _obscuredInsetsWhenSaved;
 
@@ -355,6 +368,20 @@ struct PerWebProcessState {
 
     RetainPtr<NSArray<NSNumber *>> _scrollViewDefaultAllowedTouchTypes;
 #endif
+
+#if PLATFORM(VISION)
+    String _defaultSTSLabel;
+#endif
+
+    BOOL _didAccessBackForwardList;
+
+#if ENABLE(PAGE_LOAD_OBSERVER)
+    RetainPtr<NSString> _pendingPageLoadObserverHost;
+#endif
+
+#if ENABLE(GAMEPAD)
+    RetainPtr<id> _gamepadsRecentlyAccessedState;
+#endif
 }
 
 - (BOOL)_isValid;
@@ -374,10 +401,22 @@ struct PerWebProcessState {
 - (void)_storeAppHighlight:(const WebCore::AppHighlight&)info;
 #endif
 
-#if ENABLE(UNIFIED_TEXT_REPLACEMENT)
-- (void)_textReplacementSession:(NSUUID *)sessionUUID showInformationForReplacementWithUUID:(NSUUID *)replacementUUID relativeToRect:(CGRect)rect;
+#if ENABLE(WRITING_TOOLS)
+- (void)_proofreadingSessionWithUUID:(NSUUID *)sessionUUID showDetailsForSuggestionWithUUID:(NSUUID *)replacementUUID relativeToRect:(CGRect)rect;
 
-- (void)_textReplacementSession:(NSUUID *)sessionUUID updateState:(WebKit::WebTextReplacementDataState)state forReplacementWithUUID:(NSUUID *)replacementUUID;
+- (void)_proofreadingSessionWithUUID:(NSUUID *)sessionUUID updateState:(WebCore::WritingTools::TextSuggestionState)state forSuggestionWithUUID:(NSUUID *)replacementUUID;
+
+#if PLATFORM(MAC)
+- (NSWritingToolsAllowedInputOptions)writingToolsAllowedInputOptions;
+#else
+- (UIWritingToolsAllowedInputOptions)writingToolsAllowedInputOptions;
+#endif
+
+#endif // ENABLE(WRITING_TOOLS)
+
+#if ENABLE(WRITING_TOOLS_UI)
+- (void)_addTextAnimationForAnimationID:(NSUUID *)uuid withData:(const WebKit::TextAnimationData&)styleData;
+- (void)_removeTextAnimationForAnimationID:(NSUUID *)uuid;
 #endif
 
 - (void)_internalDoAfterNextPresentationUpdate:(void (^)(void))updateBlock withoutWaitingForPainting:(BOOL)withoutWaitingForPainting withoutWaitingForAnimatedResize:(BOOL)withoutWaitingForAnimatedResize;
@@ -392,8 +431,16 @@ struct PerWebProcessState {
 
 - (std::optional<BOOL>)_resolutionForShareSheetImmediateCompletionForTesting;
 
+- (void)_didAccessBackForwardList NS_DIRECT;
+
+#if ENABLE(GAMEPAD)
+- (void)_setGamepadsRecentlyAccessed:(BOOL)gamepadsRecentlyAccessed;
+#endif
+
 - (WKPageRef)_pageForTesting;
 - (NakedPtr<WebKit::WebPageProxy>)_page;
+
+@property (nonatomic, setter=_setHasActiveNowPlayingSession:) BOOL _hasActiveNowPlayingSession;
 
 @end
 

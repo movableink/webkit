@@ -35,9 +35,6 @@
     },
     "pseudo-classes": {
         "-apple-has-attachment": {
-            "aliases": [
-                "has-attachment"
-            ],
             "comment": "For use in Apple internal apps.",
             "conditional": "ENABLE(ATTACHMENT_ELEMENT)",
             "settings-flag": "DeprecatedGlobalSettings::attachmentElementEnabled"
@@ -49,7 +46,7 @@
             "conditional": "ENABLE(FULLSCREEN_API)"
         },
         "-internal-html-document": {},
-        "-internal-in-window-full-screen": {
+        "-internal-in-window-fullscreen": {
             "conditional": "ENABLE(FULLSCREEN_API)"
         },
         "-internal-media-document": {},
@@ -75,6 +72,9 @@
             "status": "non-standard"
         },
         "active": {},
+        "active-view-transition": {
+            "settings-flag": "viewTransitionsEnabled"
+        },
         "any-link": {
             "aliases": [
                 "-webkit-any-link"
@@ -253,6 +253,7 @@
         "-internal-loading-auto-fill-button": {
             "user-agent-part": true
         },
+        "-internal-writing-suggestions": {},
         "-webkit-caps-lock-indicator": {
             "status": "non-standard",
             "user-agent-part": true

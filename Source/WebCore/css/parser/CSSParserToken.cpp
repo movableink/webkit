@@ -41,10 +41,10 @@ namespace WebCore {
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSParserToken);
 
 template<typename CharacterType>
-CSSUnitType cssPrimitiveValueUnitFromTrie(const CharacterType* data, unsigned length)
+CSSUnitType cssPrimitiveValueUnitFromTrie(std::span<const CharacterType> data)
 {
-    ASSERT(data);
-    switch (length) {
+    ASSERT(data.data());
+    switch (data.size()) {
     case 1:
         switch (toASCIILower(data[0])) {
         case 'q':
@@ -348,8 +348,8 @@ CSSUnitType cssPrimitiveValueUnitFromTrie(const CharacterType* data, unsigned le
 CSSUnitType CSSParserToken::stringToUnitType(StringView stringView)
 {
     if (stringView.is8Bit())
-        return cssPrimitiveValueUnitFromTrie(stringView.characters8(), stringView.length());
-    return cssPrimitiveValueUnitFromTrie(stringView.characters16(), stringView.length());
+        return cssPrimitiveValueUnitFromTrie(stringView.span8());
+    return cssPrimitiveValueUnitFromTrie(stringView.span16());
 }
 
 CSSParserToken::CSSParserToken(CSSParserTokenType type, BlockType blockType)
@@ -404,13 +404,13 @@ CSSParserToken::CSSParserToken(HashTokenType type, StringView value)
 static StringView mergeIfAdjacent(StringView a, StringView b)
 {
     if (a.is8Bit() && b.is8Bit()) {
-        auto characters = a.characters8();
-        if (characters + a.length() == b.characters8())
-            return std::span { characters, a.length() + b.length() };
+        auto characters = a.span8();
+        if (characters.end() == b.span8().begin())
+            return std::span { characters.data(), a.length() + b.length() };
     } else if (!a.is8Bit() && !b.is8Bit()) {
-        auto characters = a.characters16();
-        if (characters + a.length() == b.characters16())
-            return std::span { characters, a.length() + b.length() };
+        auto characters = a.span16();
+        if (characters.end() == b.span16().begin())
+            return std::span { characters.data(), a.length() + b.length() };
     }
     return { };
 }
@@ -562,7 +562,7 @@ bool CSSParserToken::tryUseStringLiteralBacking()
         if (value() != literal)
             return false;
 
-        updateCharacters(literal.characters8(), literal.length());
+        updateCharacters(literal.span8());
 
         m_isBackedByStringLiteral = true;
     }
@@ -623,12 +623,12 @@ void CSSParserToken::serialize(StringBuilder& builder, const CSSParserToken* nex
 
         CSSParserTokenType nextType = nextToken->type();
         if (tokensNeedingComment.buffer[nextType]) {
-            builder.append("/**/");
+            builder.append("/**/"_s);
             return;
         }
 
         if (nextType == DelimiterToken && ((delimitersNeedingComment == nextToken->delimiter()) || ... || false)) {
-            builder.append("/**/");
+            builder.append("/**/"_s);
             return;
         }
     };
@@ -653,14 +653,14 @@ void CSSParserToken::serialize(StringBuilder& builder, const CSSParserToken* nex
         appendCommentIfNeeded({ IdentToken, FunctionToken, UrlToken, BadUrlToken, NumberToken, PercentageToken, DimensionToken, CDCToken }, '-');
         break;
     case UrlToken:
-        builder.append("url(");
+        builder.append("url("_s);
         serializeIdentifier(value().toString(), builder);
         builder.append(')');
         break;
     case DelimiterToken:
         switch (delimiter()) {
         case '\\':
-            builder.append("\\\n");
+            builder.append("\\\n"_s);
             break;
 
         case '#':
@@ -722,34 +722,34 @@ void CSSParserToken::serialize(StringBuilder& builder, const CSSParserToken* nex
         break;
 
     case IncludeMatchToken:
-        builder.append("~=");
+        builder.append("~="_s);
         break;
     case DashMatchToken:
-        builder.append("|=");
+        builder.append("|="_s);
         break;
     case PrefixMatchToken:
-        builder.append("^=");
+        builder.append("^="_s);
         break;
     case SuffixMatchToken:
-        builder.append("$=");
+        builder.append("$="_s);
         break;
     case SubstringMatchToken:
-        builder.append("*=");
+        builder.append("*="_s);
         break;
     case ColumnToken:
-        builder.append("||");
+        builder.append("||"_s);
         break;
     case CDOToken:
-        builder.append("<!--");
+        builder.append("<!--"_s);
         break;
     case CDCToken:
-        builder.append("-->");
+        builder.append("-->"_s);
         break;
     case BadStringToken:
-        builder.append("'\n");
+        builder.append("'\n"_s);
         break;
     case BadUrlToken:
-        builder.append("url(()");
+        builder.append("url(()"_s);
         break;
     case WhitespaceToken: {
         auto count = mode == SerializationMode::CustomProperty ? m_whitespaceCount : 1;

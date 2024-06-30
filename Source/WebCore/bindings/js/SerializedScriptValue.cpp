@@ -108,6 +108,7 @@
 #include <wtf/DataLog.h>
 #include <wtf/MainThread.h>
 #include <wtf/RunLoop.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
 #include <wtf/threads/BinarySemaphore.h>
 
@@ -265,93 +266,93 @@ enum ArrayBufferViewSubtag {
     BigUint64ArrayTag = 11,
 };
 
-static const char* name(SerializationTag tag)
+static ASCIILiteral name(SerializationTag tag)
 {
     switch (tag) {
-    case ArrayTag: return "ArrayTag";
-    case ObjectTag: return "ObjectTag";
-    case UndefinedTag: return "UndefinedTag";
-    case NullTag: return "NullTag";
-    case IntTag: return "IntTag";
-    case ZeroTag: return "ZeroTag";
-    case OneTag: return "OneTag";
-    case FalseTag: return "FalseTag";
-    case TrueTag: return "TrueTag";
-    case DoubleTag: return "DoubleTag";
-    case DateTag: return "DateTag";
-    case FileTag: return "FileTag";
-    case FileListTag: return "FileListTag";
-    case ImageDataTag: return "ImageDataTag";
-    case BlobTag: return "BlobTag";
-    case StringTag: return "StringTag";
-    case EmptyStringTag: return "EmptyStringTag";
-    case RegExpTag: return "RegExpTag";
-    case ObjectReferenceTag: return "ObjectReferenceTag";
-    case MessagePortReferenceTag: return "MessagePortReferenceTag";
-    case ArrayBufferTag: return "ArrayBufferTag";
-    case ArrayBufferViewTag: return "ArrayBufferViewTag";
-    case ArrayBufferTransferTag: return "ArrayBufferTransferTag";
-    case TrueObjectTag: return "TrueObjectTag";
-    case FalseObjectTag: return "FalseObjectTag";
-    case StringObjectTag: return "StringObjectTag";
-    case EmptyStringObjectTag: return "EmptyStringObjectTag";
-    case NumberObjectTag: return "NumberObjectTag";
-    case SetObjectTag: return "SetObjectTag";
-    case MapObjectTag: return "MapObjectTag";
-    case NonMapPropertiesTag: return "NonMapPropertiesTag";
-    case NonSetPropertiesTag: return "NonSetPropertiesTag";
-    case CryptoKeyTag: return "CryptoKeyTag";
-    case SharedArrayBufferTag: return "SharedArrayBufferTag";
+    case ArrayTag: return "ArrayTag"_s;
+    case ObjectTag: return "ObjectTag"_s;
+    case UndefinedTag: return "UndefinedTag"_s;
+    case NullTag: return "NullTag"_s;
+    case IntTag: return "IntTag"_s;
+    case ZeroTag: return "ZeroTag"_s;
+    case OneTag: return "OneTag"_s;
+    case FalseTag: return "FalseTag"_s;
+    case TrueTag: return "TrueTag"_s;
+    case DoubleTag: return "DoubleTag"_s;
+    case DateTag: return "DateTag"_s;
+    case FileTag: return "FileTag"_s;
+    case FileListTag: return "FileListTag"_s;
+    case ImageDataTag: return "ImageDataTag"_s;
+    case BlobTag: return "BlobTag"_s;
+    case StringTag: return "StringTag"_s;
+    case EmptyStringTag: return "EmptyStringTag"_s;
+    case RegExpTag: return "RegExpTag"_s;
+    case ObjectReferenceTag: return "ObjectReferenceTag"_s;
+    case MessagePortReferenceTag: return "MessagePortReferenceTag"_s;
+    case ArrayBufferTag: return "ArrayBufferTag"_s;
+    case ArrayBufferViewTag: return "ArrayBufferViewTag"_s;
+    case ArrayBufferTransferTag: return "ArrayBufferTransferTag"_s;
+    case TrueObjectTag: return "TrueObjectTag"_s;
+    case FalseObjectTag: return "FalseObjectTag"_s;
+    case StringObjectTag: return "StringObjectTag"_s;
+    case EmptyStringObjectTag: return "EmptyStringObjectTag"_s;
+    case NumberObjectTag: return "NumberObjectTag"_s;
+    case SetObjectTag: return "SetObjectTag"_s;
+    case MapObjectTag: return "MapObjectTag"_s;
+    case NonMapPropertiesTag: return "NonMapPropertiesTag"_s;
+    case NonSetPropertiesTag: return "NonSetPropertiesTag"_s;
+    case CryptoKeyTag: return "CryptoKeyTag"_s;
+    case SharedArrayBufferTag: return "SharedArrayBufferTag"_s;
 #if ENABLE(WEBASSEMBLY)
-    case WasmModuleTag: return "WasmModuleTag";
+    case WasmModuleTag: return "WasmModuleTag"_s;
 #endif
-    case DOMPointReadOnlyTag: return "DOMPointReadOnlyTag";
-    case DOMPointTag: return "DOMPointTag";
-    case DOMRectReadOnlyTag: return "DOMRectReadOnlyTag";
-    case DOMRectTag: return "DOMRectTag";
-    case DOMMatrixReadOnlyTag: return "DOMMatrixReadOnlyTag";
-    case DOMMatrixTag: return "DOMMatrixTag";
-    case DOMQuadTag: return "DOMQuadTag";
-    case ImageBitmapTransferTag: return "ImageBitmapTransferTag";
+    case DOMPointReadOnlyTag: return "DOMPointReadOnlyTag"_s;
+    case DOMPointTag: return "DOMPointTag"_s;
+    case DOMRectReadOnlyTag: return "DOMRectReadOnlyTag"_s;
+    case DOMRectTag: return "DOMRectTag"_s;
+    case DOMMatrixReadOnlyTag: return "DOMMatrixReadOnlyTag"_s;
+    case DOMMatrixTag: return "DOMMatrixTag"_s;
+    case DOMQuadTag: return "DOMQuadTag"_s;
+    case ImageBitmapTransferTag: return "ImageBitmapTransferTag"_s;
 #if ENABLE(WEB_RTC)
-    case RTCCertificateTag: return "RTCCertificateTag";
+    case RTCCertificateTag: return "RTCCertificateTag"_s;
 #endif
-    case ImageBitmapTag: return "ImageBitmapTag";
+    case ImageBitmapTag: return "ImageBitmapTag"_s;
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
-    case OffscreenCanvasTransferTag: return "OffscreenCanvasTransferTag";
+    case OffscreenCanvasTransferTag: return "OffscreenCanvasTransferTag"_s;
 #endif
-    case BigIntTag: return "BigIntTag";
-    case BigIntObjectTag: return "BigIntObjectTag";
+    case BigIntTag: return "BigIntTag"_s;
+    case BigIntObjectTag: return "BigIntObjectTag"_s;
 #if ENABLE(WEBASSEMBLY)
-    case WasmMemoryTag: return "WasmMemoryTag";
+    case WasmMemoryTag: return "WasmMemoryTag"_s;
 #endif
 #if ENABLE(WEB_RTC)
-    case RTCDataChannelTransferTag: return "RTCDataChannelTransferTag";
+    case RTCDataChannelTransferTag: return "RTCDataChannelTransferTag"_s;
 #endif
-    case DOMExceptionTag: return "DOMExceptionTag";
+    case DOMExceptionTag: return "DOMExceptionTag"_s;
 #if ENABLE(WEB_CODECS)
-    case WebCodecsEncodedVideoChunkTag: return "WebCodecsEncodedVideoChunkTag";
-    case WebCodecsVideoFrameTag: return "WebCodecsVideoFrameTag";
+    case WebCodecsEncodedVideoChunkTag: return "WebCodecsEncodedVideoChunkTag"_s;
+    case WebCodecsVideoFrameTag: return "WebCodecsVideoFrameTag"_s;
 #endif
-    case ResizableArrayBufferTag: return "ResizableArrayBufferTag";
-    case ErrorInstanceTag: return "ErrorInstanceTag";
+    case ResizableArrayBufferTag: return "ResizableArrayBufferTag"_s;
+    case ErrorInstanceTag: return "ErrorInstanceTag"_s;
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
-    case InMemoryOffscreenCanvasTag: return "InMemoryOffscreenCanvasTag";
+    case InMemoryOffscreenCanvasTag: return "InMemoryOffscreenCanvasTag"_s;
 #endif
-    case InMemoryMessagePortTag: return "InMemoryMessagePortTag";
+    case InMemoryMessagePortTag: return "InMemoryMessagePortTag"_s;
 #if ENABLE(WEB_CODECS)
-    case WebCodecsEncodedAudioChunkTag: return "WebCodecsEncodedAudioChunkTag";
-    case WebCodecsAudioDataTag: return "WebCodecsAudioDataTag";
+    case WebCodecsEncodedAudioChunkTag: return "WebCodecsEncodedAudioChunkTag"_s;
+    case WebCodecsAudioDataTag: return "WebCodecsAudioDataTag"_s;
 #endif
 #if ENABLE(MEDIA_STREAM)
-    case MediaStreamTrackTag: return "MediaStreamTrackTag";
+    case MediaStreamTrackTag: return "MediaStreamTrackTag"_s;
 #endif
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
-    case MediaSourceHandleTransferTag: return "MediaSourceHandleTransferTag";
+    case MediaSourceHandleTransferTag: return "MediaSourceHandleTransferTag"_s;
 #endif
-    case ErrorTag: return "ErrorTag";
+    case ErrorTag: return "ErrorTag"_s;
     }
-    return "<unknown tag>";
+    return "<unknown tag>"_s;
 }
 
 } // namespace WebCore
@@ -362,11 +363,11 @@ void printInternal(PrintStream&, WebCore::SerializationTag);
 
 void printInternal(PrintStream& out, WebCore::SerializationTag tag)
 {
-    const char* tagName = WebCore::name(tag);
-    if (tagName[0] != '<')
+    auto tagName = WebCore::name(tag);
+    if (tagName[0U] != '<')
         out.print(tagName);
     else
-        out.print("<unknown tag ", static_cast<unsigned>(tag), ">");
+        out.print("<unknown tag "_s, static_cast<unsigned>(tag), ">"_s);
 }
 
 } // namespace WTF
@@ -998,7 +999,7 @@ template <typename T> static bool writeLittleEndian(Vector<uint8_t>& buffer, std
         return false;
 
 #if ASSUME_LITTLE_ENDIAN
-    buffer.append(std::span { reinterpret_cast<const uint8_t*>(values.data()), values.size() * sizeof(T) });
+    buffer.append(asBytes(values));
 #else
     for (unsigned i = 0; i < values.size(); i++) {
         T value = values[i];
@@ -1019,18 +1020,18 @@ template <> bool writeLittleEndian<uint8_t>(Vector<uint8_t>& buffer, std::span<c
 
 class CloneSerializer;
 #if ASSERT_ENABLED
-static void validateSerializedResult(CloneSerializer&, SerializationReturnCode, Vector<uint8_t>& result, JSGlobalObject*, Vector<RefPtr<MessagePort>>&, ArrayBufferContentsArray&, ArrayBufferContentsArray& sharedBuffers, Vector<RefPtr<MessagePort>>&);
+static void validateSerializedResult(CloneSerializer&, SerializationReturnCode, Vector<uint8_t>& result, JSGlobalObject*, Vector<Ref<MessagePort>>&, ArrayBufferContentsArray&, ArrayBufferContentsArray& sharedBuffers, Vector<Ref<MessagePort>>&);
 #endif
 
 class CloneSerializer : public CloneBase {
     WTF_FORBID_HEAP_ALLOCATION;
 public:
-    static SerializationReturnCode serialize(JSGlobalObject* lexicalGlobalObject, JSValue value, Vector<RefPtr<MessagePort>>& messagePorts, Vector<RefPtr<JSC::ArrayBuffer>>& arrayBuffers, const Vector<RefPtr<ImageBitmap>>& imageBitmaps,
+    static SerializationReturnCode serialize(JSGlobalObject* lexicalGlobalObject, JSValue value, Vector<Ref<MessagePort>>& messagePorts, Vector<RefPtr<JSC::ArrayBuffer>>& arrayBuffers, const Vector<RefPtr<ImageBitmap>>& imageBitmaps,
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
             const Vector<RefPtr<OffscreenCanvas>>& offscreenCanvases,
             Vector<RefPtr<OffscreenCanvas>>& inMemoryOffscreenCanvases,
 #endif
-            Vector<RefPtr<MessagePort>>& inMemoryMessagePorts,
+            Vector<Ref<MessagePort>>& inMemoryMessagePorts,
 #if ENABLE(WEB_RTC)
             const Vector<Ref<RTCDataChannel>>& rtcDataChannels,
 #endif
@@ -1118,12 +1119,12 @@ public:
 private:
     using ObjectPoolMap = HashMap<JSObject*, uint32_t>;
 
-    CloneSerializer(JSGlobalObject* lexicalGlobalObject, Vector<RefPtr<MessagePort>>& messagePorts, Vector<RefPtr<JSC::ArrayBuffer>>& arrayBuffers, const Vector<RefPtr<ImageBitmap>>& imageBitmaps,
+    CloneSerializer(JSGlobalObject* lexicalGlobalObject, Vector<Ref<MessagePort>>& messagePorts, Vector<RefPtr<JSC::ArrayBuffer>>& arrayBuffers, const Vector<RefPtr<ImageBitmap>>& imageBitmaps,
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
             const Vector<RefPtr<OffscreenCanvas>>& offscreenCanvases,
             Vector<RefPtr<OffscreenCanvas>>& inMemoryOffscreenCanvases,
 #endif
-            Vector<RefPtr<MessagePort>>& inMemoryMessagePorts,
+            Vector<Ref<MessagePort>>& inMemoryMessagePorts,
 #if ENABLE(WEB_RTC)
             const Vector<Ref<RTCDataChannel>>& rtcDataChannels,
 #endif
@@ -1803,7 +1804,7 @@ private:
             if (auto* stringObject = jsDynamicCast<StringObject*>(obj)) {
                 if (!addToObjectPoolIfNotDupe<EmptyStringObjectTag, StringObjectTag>(stringObject))
                     return true;
-                String str = asString(stringObject->internalValue())->value(m_lexicalGlobalObject);
+                auto str = asString(stringObject->internalValue())->value(m_lexicalGlobalObject);
                 dumpStringObject(str);
                 return true;
             }
@@ -1939,7 +1940,7 @@ private:
                 } else if (m_context == SerializationContext::CloneAcrossWorlds) {
                     write(InMemoryMessagePortTag);
                     write(static_cast<uint32_t>(m_inMemoryMessagePorts.size()));
-                    m_inMemoryMessagePorts.append(&jsCast<JSMessagePort*>(obj)->wrapped());
+                    m_inMemoryMessagePorts.append(jsCast<JSMessagePort*>(obj)->wrapped());
                     return true;
                 }
                 // MessagePort object could not be found in transferred message ports
@@ -1960,9 +1961,9 @@ private:
                 if (!addToObjectPoolIfNotDupe<ArrayBufferTag, ResizableArrayBufferTag, SharedArrayBufferTag>(obj))
                     return true;
                 
-                if (arrayBuffer->isShared() && m_context == SerializationContext::WorkerPostMessage) {
+                if (arrayBuffer->isShared() && (m_context == SerializationContext::WorkerPostMessage || m_forStorage == SerializationForStorage::Yes)) {
                     // https://html.spec.whatwg.org/multipage/structured-data.html#structuredserializeinternal
-                    if (!JSC::Options::useSharedArrayBuffer()) {
+                    if (!JSC::Options::useSharedArrayBuffer() || m_forStorage == SerializationForStorage::Yes) {
                         code = SerializationReturnCode::DataCloneError;
                         return true;
                     }
@@ -2010,7 +2011,7 @@ private:
                 write(CryptoKeyTag);
                 Vector<uint8_t> serializedKey;
                 Vector<URLKeepingBlobAlive> dummyBlobHandles;
-                Vector<RefPtr<MessagePort>> dummyMessagePorts;
+                Vector<Ref<MessagePort>> dummyMessagePorts;
                 Vector<RefPtr<JSC::ArrayBuffer>> dummyArrayBuffers;
 #if ENABLE(WEB_CODECS)
                 Vector<RefPtr<WebCodecsEncodedVideoChunkStorage>> dummyVideoChunks;
@@ -2029,7 +2030,7 @@ private:
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
                 Vector<RefPtr<OffscreenCanvas>> dummyInMemoryOffscreenCanvases;
 #endif
-                Vector<RefPtr<MessagePort>> dummyInMemoryMessagePorts;
+                Vector<Ref<MessagePort>> dummyInMemoryMessagePorts;
                 CloneSerializer rawKeySerializer(m_lexicalGlobalObject, dummyMessagePorts, dummyArrayBuffers, { },
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
                     { },
@@ -2607,7 +2608,7 @@ private:
             switch (key->type()) {
             case CryptoKey::Type::Public: {
                 write(CryptoKeyAsymmetricTypeSubtag::Public);
-                auto result = downcast<CryptoKeyEC>(*key).exportRaw();
+                auto result = downcast<CryptoKeyEC>(*key).exportRaw(isUsingCryptoKit());
                 ASSERT(!result.hasException());
                 write(result.releaseReturnValue());
                 break;
@@ -2615,7 +2616,7 @@ private:
             case CryptoKey::Type::Private: {
                 write(CryptoKeyAsymmetricTypeSubtag::Private);
                 // Use the standard complied method is not very efficient, but simple/reliable.
-                auto result = downcast<CryptoKeyEC>(*key).exportPkcs8();
+                auto result = downcast<CryptoKeyEC>(*key).exportPkcs8(isUsingCryptoKit());
                 ASSERT(!result.hasException());
                 write(result.releaseReturnValue());
                 break;
@@ -2649,6 +2650,11 @@ private:
         }
     }
 
+    UseCryptoKit isUsingCryptoKit()
+    {
+        return executionContext(m_lexicalGlobalObject)->settingsValues().cryptoKitEnabled ? UseCryptoKit::Yes : UseCryptoKit::No;
+    }
+
     void write(std::span<const uint8_t> data)
     {
         m_buffer.append(data);
@@ -2679,7 +2685,7 @@ private:
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
     Vector<RefPtr<OffscreenCanvas>>& m_inMemoryOffscreenCanvases;
 #endif
-    Vector<RefPtr<MessagePort>>& m_inMemoryMessagePorts;
+    Vector<Ref<MessagePort>>& m_inMemoryMessagePorts;
 #if ENABLE(WEBASSEMBLY)
     WasmModuleArray& m_wasmModules;
     WasmMemoryHandleArray& m_wasmMemoryHandles;
@@ -2989,12 +2995,12 @@ public:
         return str;
     }
 
-    static DeserializationResult deserialize(JSGlobalObject* lexicalGlobalObject, JSGlobalObject* globalObject, const Vector<RefPtr<MessagePort>>& messagePorts, Vector<std::optional<DetachedImageBitmap>>&& detachedImageBitmaps
+    static DeserializationResult deserialize(JSGlobalObject* lexicalGlobalObject, JSGlobalObject* globalObject, const Vector<Ref<MessagePort>>& messagePorts, Vector<std::optional<DetachedImageBitmap>>&& detachedImageBitmaps
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
         , Vector<std::unique_ptr<DetachedOffscreenCanvas>>&& detachedOffscreenCanvases
         , const Vector<RefPtr<OffscreenCanvas>>& inMemoryOffscreenCanvases
 #endif
-        , const Vector<RefPtr<MessagePort>>& inMemoryMessagePorts
+        , const Vector<Ref<MessagePort>>& inMemoryMessagePorts
 #if ENABLE(WEB_RTC)
         , Vector<std::unique_ptr<DetachedRTCDataChannel>>&& detachedRTCDataChannels
 #endif
@@ -3123,12 +3129,12 @@ private:
         size_t m_index { 0 };
     };
 
-    CloneDeserializer(JSGlobalObject* lexicalGlobalObject, JSGlobalObject* globalObject, const Vector<RefPtr<MessagePort>>& messagePorts, ArrayBufferContentsArray* arrayBufferContents, Vector<std::optional<DetachedImageBitmap>>&& detachedImageBitmaps, const Vector<uint8_t>& buffer
+    CloneDeserializer(JSGlobalObject* lexicalGlobalObject, JSGlobalObject* globalObject, const Vector<Ref<MessagePort>>& messagePorts, ArrayBufferContentsArray* arrayBufferContents, Vector<std::optional<DetachedImageBitmap>>&& detachedImageBitmaps, const Vector<uint8_t>& buffer
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
         , Vector<std::unique_ptr<DetachedOffscreenCanvas>>&& detachedOffscreenCanvases = { }
         , const Vector<RefPtr<OffscreenCanvas>>& inMemoryOffscreenCanvases = { }
 #endif
-        , const Vector<RefPtr<MessagePort>>& inMemoryMessagePorts = { }
+        , const Vector<Ref<MessagePort>>& inMemoryMessagePorts = { }
 #if ENABLE(WEB_RTC)
         , Vector<std::unique_ptr<DetachedRTCDataChannel>>&& detachedRTCDataChannels = { }
 #endif
@@ -3202,12 +3208,12 @@ private:
         }
     }
 
-    CloneDeserializer(JSGlobalObject* lexicalGlobalObject, JSGlobalObject* globalObject, const Vector<RefPtr<MessagePort>>& messagePorts, ArrayBufferContentsArray* arrayBufferContents, const Vector<uint8_t>& buffer, const Vector<String>& blobURLs, const Vector<String> blobFilePaths, ArrayBufferContentsArray* sharedBuffers, Vector<std::optional<DetachedImageBitmap>>&& detachedImageBitmaps
+    CloneDeserializer(JSGlobalObject* lexicalGlobalObject, JSGlobalObject* globalObject, const Vector<Ref<MessagePort>>& messagePorts, ArrayBufferContentsArray* arrayBufferContents, const Vector<uint8_t>& buffer, const Vector<String>& blobURLs, const Vector<String> blobFilePaths, ArrayBufferContentsArray* sharedBuffers, Vector<std::optional<DetachedImageBitmap>>&& detachedImageBitmaps
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
         , Vector<std::unique_ptr<DetachedOffscreenCanvas>>&& detachedOffscreenCanvases
         , const Vector<RefPtr<OffscreenCanvas>>& inMemoryOffscreenCanvases
 #endif
-        , const Vector<RefPtr<MessagePort>>& inMemoryMessagePorts
+        , const Vector<Ref<MessagePort>>& inMemoryMessagePorts
 #if ENABLE(WEB_RTC)
         , Vector<std::unique_ptr<DetachedRTCDataChannel>>&& detachedRTCDataChannels
 #endif
@@ -3285,6 +3291,11 @@ private:
     }
 
     enum class VisitNamedMemberResult : uint8_t { Error, Break, Start, Unknown };
+
+    UseCryptoKit isUsingCryptoKit()
+    {
+        return executionContext(m_lexicalGlobalObject)->settingsValues().cryptoKitEnabled ? UseCryptoKit::Yes : UseCryptoKit::No;
+    }
 
     template<WalkerState endState>
     ALWAYS_INLINE VisitNamedMemberResult startVisitNamedMember(MarkedVector<JSObject*, 32>& outputObjectStack, Vector<Identifier, 16>& propertyNameStack, Vector<WalkerState, 16>& stateStack, JSValue& outValue)
@@ -3515,9 +3526,9 @@ private:
             if ((end - ptr) < static_cast<int>(length))
                 return false;
             if (shouldAtomize == ShouldAtomize::Yes)
-                str = AtomString { ptr, length };
+                str = AtomString({ ptr, length });
             else
-                str = String { ptr, length };
+                str = String({ ptr, length });
             ptr += length;
             return true;
         }
@@ -3528,9 +3539,9 @@ private:
 
 #if ASSUME_LITTLE_ENDIAN
         if (shouldAtomize == ShouldAtomize::Yes)
-            str = AtomString(reinterpret_cast<const UChar*>(ptr), length);
+            str = AtomString({ reinterpret_cast<const UChar*>(ptr), length });
         else
-            str = String(reinterpret_cast<const UChar*>(ptr), length);
+            str = String({ reinterpret_cast<const UChar*>(ptr), length });
         ptr += length * sizeof(UChar);
 #else
         UChar* characters;
@@ -3672,7 +3683,7 @@ private:
             return false;
         if (m_ptr + length > m_end)
             return false;
-        arrayBuffer = ArrayBuffer::tryCreate(m_ptr, length);
+        arrayBuffer = ArrayBuffer::tryCreate({ m_ptr, static_cast<size_t>(length) });
         if (!arrayBuffer)
             return false;
         m_ptr += length;
@@ -3751,6 +3762,9 @@ private:
                 return false;
             return true;
         };
+
+        if (!ArrayBufferView::verifySubRangeLength(arrayBuffer->byteLength(), byteOffset, length.value_or(0), 1))
+            return false;
 
         switch (arrayBufferViewSubtag) {
         case DataViewTag:
@@ -4155,10 +4169,10 @@ private:
 
         switch (type) {
         case CryptoKeyAsymmetricTypeSubtag::Public:
-            result = CryptoKeyEC::importRaw(algorithm, curve->string(), WTFMove(keyData), extractable, usages);
+            result = CryptoKeyEC::importRaw(algorithm, curve->string(), WTFMove(keyData), extractable, usages, isUsingCryptoKit());
             break;
         case CryptoKeyAsymmetricTypeSubtag::Private:
-            result = CryptoKeyEC::importPkcs8(algorithm, curve->string(), WTFMove(keyData), extractable, usages);
+            result = CryptoKeyEC::importPkcs8(algorithm, curve->string(), WTFMove(keyData), extractable, usages, isUsingCryptoKit());
             break;
         }
 
@@ -4527,7 +4541,8 @@ private:
             return JSValue();
 
         Vector<RTCCertificate::DtlsFingerprint> fingerprints;
-        fingerprints.reserveInitialCapacity(size);
+        if (!fingerprints.tryReserveInitialCapacity(size))
+            return JSValue();
         for (unsigned i = 0; i < size; i++) {
             CachedStringRef algorithm;
             if (!readStringData(algorithm))
@@ -5107,13 +5122,7 @@ private:
                 fail();
                 return JSValue();
             }
-            auto scope = DECLARE_THROW_SCOPE(m_lexicalGlobalObject->vm());
-            JSValue result = JSC::JSWebAssemblyModule::createStub(m_lexicalGlobalObject->vm(), m_lexicalGlobalObject, m_globalObject->webAssemblyModuleStructure(), m_wasmModules->at(index));
-            // Since we are cloning a JSWebAssemblyModule, it's impossible for that
-            // module to not have been a valid module. Therefore, createStub should
-            // not throw.
-            scope.releaseAssertNoException();
-            return result;
+            return JSC::JSWebAssemblyModule::create(m_lexicalGlobalObject->vm(), m_globalObject->webAssemblyModuleStructure(), Ref { *m_wasmModules->at(index) });
         }
         case WasmMemoryTag: {
             if (m_majorVersion >= 12) {
@@ -5137,7 +5146,7 @@ private:
             auto scope = DECLARE_THROW_SCOPE(vm);
             JSWebAssemblyMemory* result = JSC::JSWebAssemblyMemory::tryCreate(m_lexicalGlobalObject, vm, m_globalObject->webAssemblyMemoryStructure());
             // Since we are cloning a JSWebAssemblyMemory, it's impossible for that
-            // module to not have been a valid module. Therefore, createStub should
+            // module to not have been a valid module. Therefore, tryCreate should
             // not throw.
             scope.releaseAssertNoException();
 
@@ -5254,7 +5263,7 @@ private:
             }
 
             JSValue cryptoKey;
-            Vector<RefPtr<MessagePort>> dummyMessagePorts;
+            Vector<Ref<MessagePort>> dummyMessagePorts;
             CloneDeserializer rawKeyDeserializer(m_lexicalGlobalObject, m_globalObject, dummyMessagePorts, nullptr, { }, *serializedKey);
             if (!rawKeyDeserializer.readCryptoKey(cryptoKey)) {
                 SERIALIZE_TRACE("FAIL deserialize");
@@ -5342,7 +5351,7 @@ private:
     unsigned m_minorVersion;
     Vector<CachedString> m_constantPool;
     Vector<Ref<ImageData>> m_imageDataPool;
-    const Vector<RefPtr<MessagePort>>& m_messagePorts;
+    const Vector<Ref<MessagePort>>& m_messagePorts;
     ArrayBufferContentsArray* m_arrayBufferContents;
     Vector<RefPtr<JSC::ArrayBuffer>> m_arrayBuffers;
     Vector<String> m_blobURLs;
@@ -5355,7 +5364,7 @@ private:
     Vector<RefPtr<OffscreenCanvas>> m_offscreenCanvases;
     const Vector<RefPtr<OffscreenCanvas>>& m_inMemoryOffscreenCanvases;
 #endif
-    const Vector<RefPtr<MessagePort>>& m_inMemoryMessagePorts;
+    const Vector<Ref<MessagePort>>& m_inMemoryMessagePorts;
 #if ENABLE(WEB_RTC)
     Vector<std::unique_ptr<DetachedRTCDataChannel>> m_detachedRTCDataChannels;
     Vector<RefPtr<RTCDataChannel>> m_rtcDataChannels;
@@ -5395,7 +5404,7 @@ private:
     }
 
 #if ASSERT_ENABLED
-    friend void validateSerializedResult(CloneSerializer&, SerializationReturnCode, Vector<uint8_t>&, JSGlobalObject*, Vector<RefPtr<MessagePort>>&, ArrayBufferContentsArray&, ArrayBufferContentsArray&, Vector<RefPtr<MessagePort>>&);
+    friend void validateSerializedResult(CloneSerializer&, SerializationReturnCode, Vector<uint8_t>&, JSGlobalObject*, Vector<Ref<MessagePort>>&, ArrayBufferContentsArray&, ArrayBufferContentsArray&, Vector<Ref<MessagePort>>&);
 #endif
 };
 
@@ -5621,7 +5630,7 @@ error:
 }
 
 #if ASSERT_ENABLED
-void validateSerializedResult(CloneSerializer& serializer, SerializationReturnCode code, Vector<uint8_t>& result, JSGlobalObject* lexicalGlobalObject, Vector<RefPtr<MessagePort>>& messagePorts, ArrayBufferContentsArray& arrayBufferContentsArray, ArrayBufferContentsArray& sharedBuffers, Vector<RefPtr<MessagePort>>& inMemoryMessagePorts)
+void validateSerializedResult(CloneSerializer& serializer, SerializationReturnCode code, Vector<uint8_t>& result, JSGlobalObject* lexicalGlobalObject, Vector<Ref<MessagePort>>& messagePorts, ArrayBufferContentsArray& arrayBufferContentsArray, ArrayBufferContentsArray& sharedBuffers, Vector<Ref<MessagePort>>& inMemoryMessagePorts)
 {
     if (!JSC::Options::validateSerializedValue())
         return;
@@ -5784,7 +5793,7 @@ SerializedScriptValue::SerializedScriptValue(Vector<uint8_t>&& buffer, Vector<UR
         , Vector<std::unique_ptr<DetachedOffscreenCanvas>>&& detachedOffscreenCanvases
         , Vector<RefPtr<OffscreenCanvas>>&& inMemoryOffscreenCanvases
 #endif
-        , Vector<RefPtr<MessagePort>>&& inMemoryMessagePorts
+        , Vector<Ref<MessagePort>>&& inMemoryMessagePorts
 #if ENABLE(WEB_RTC)
         , Vector<std::unique_ptr<DetachedRTCDataChannel>>&& detachedRTCDataChannels
 #endif
@@ -5792,7 +5801,7 @@ SerializedScriptValue::SerializedScriptValue(Vector<uint8_t>&& buffer, Vector<UR
         , Vector<RefPtr<DetachedMediaSourceHandle>>&& detachedMediaSourceHandles
 #endif
 #if ENABLE(WEBASSEMBLY)
-        , std::unique_ptr<WasmModuleArray> wasmModulesArray
+        , WasmModuleArray&& wasmModulesArray
         , std::unique_ptr<WasmMemoryHandleArray> wasmMemoryHandlesArray
 #endif
 #if ENABLE(WEB_CODECS)
@@ -5831,7 +5840,7 @@ SerializedScriptValue::SerializedScriptValue(Vector<uint8_t>&& buffer, Vector<UR
 #endif
         , .inMemoryMessagePorts = WTFMove(inMemoryMessagePorts)
 #if ENABLE(WEBASSEMBLY)
-        , .wasmModulesArray = WTFMove(wasmModulesArray)
+        , .wasmModulesArray = wasmModulesArray.isEmpty() ? nullptr : makeUnique<WasmModuleArray>(WTFMove(wasmModulesArray))
         , .wasmMemoryHandlesArray = WTFMove(wasmMemoryHandlesArray)
 #endif
         , .blobHandles = crossThreadCopy(WTFMove(blobHandles))
@@ -5864,12 +5873,6 @@ size_t SerializedScriptValue::computeMemoryCost() const
             cost += detachedImageBitmap->memoryCost();
     }
 
-#if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
-    for (auto& canvas : m_internals.detachedOffscreenCanvases) {
-        if (canvas)
-            cost += canvas->memoryCost();
-    }
-#endif
 #if ENABLE(WEB_RTC)
     for (auto& channel : m_internals.detachedRTCDataChannels) {
         if (channel)
@@ -6043,19 +6046,19 @@ static bool canDetachMediaSourceHandles(const Vector<Ref<MediaSourceHandle>>& ha
 
 RefPtr<SerializedScriptValue> SerializedScriptValue::create(JSC::JSGlobalObject& globalObject, JSC::JSValue value, SerializationForStorage forStorage, SerializationErrorMode throwExceptions, SerializationContext serializationContext)
 {
-    Vector<RefPtr<MessagePort>> dummyPorts;
+    Vector<Ref<MessagePort>> dummyPorts;
     auto result = create(globalObject, value, { }, dummyPorts, forStorage, throwExceptions, serializationContext);
     if (result.hasException())
         return nullptr;
     return result.releaseReturnValue();
 }
 
-ExceptionOr<Ref<SerializedScriptValue>> SerializedScriptValue::create(JSGlobalObject& globalObject, JSValue value, Vector<JSC::Strong<JSC::JSObject>>&& transferList, Vector<RefPtr<MessagePort>>& messagePorts, SerializationForStorage forStorage, SerializationContext serializationContext)
+ExceptionOr<Ref<SerializedScriptValue>> SerializedScriptValue::create(JSGlobalObject& globalObject, JSValue value, Vector<JSC::Strong<JSC::JSObject>>&& transferList, Vector<Ref<MessagePort>>& messagePorts, SerializationForStorage forStorage, SerializationContext serializationContext)
 {
     return create(globalObject, value, WTFMove(transferList), messagePorts, forStorage, SerializationErrorMode::NonThrowing, serializationContext);
 }
 
-ExceptionOr<Ref<SerializedScriptValue>> SerializedScriptValue::create(JSGlobalObject& lexicalGlobalObject, JSValue value, Vector<JSC::Strong<JSC::JSObject>>&& transferList, Vector<RefPtr<MessagePort>>& messagePorts, SerializationForStorage forStorage, SerializationErrorMode throwExceptions, SerializationContext context)
+ExceptionOr<Ref<SerializedScriptValue>> SerializedScriptValue::create(JSGlobalObject& lexicalGlobalObject, JSValue value, Vector<JSC::Strong<JSC::JSObject>>&& transferList, Vector<Ref<MessagePort>>& messagePorts, SerializationForStorage forStorage, SerializationErrorMode throwExceptions, SerializationContext context)
 {
     VM& vm = lexicalGlobalObject.vm();
     Vector<RefPtr<JSC::ArrayBuffer>> arrayBuffers;
@@ -6096,7 +6099,7 @@ ExceptionOr<Ref<SerializedScriptValue>> SerializedScriptValue::create(JSGlobalOb
         if (auto port = JSMessagePort::toWrapped(vm, transferable.get())) {
             if (port->isDetached())
                 return Exception { ExceptionCode::DataCloneError, "MessagePort is detached"_s };
-            messagePorts.append(WTFMove(port));
+            messagePorts.append(*port);
             continue;
         }
 
@@ -6184,7 +6187,7 @@ ExceptionOr<Ref<SerializedScriptValue>> SerializedScriptValue::create(JSGlobalOb
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
     Vector<RefPtr<OffscreenCanvas>> inMemoryOffscreenCanvases;
 #endif
-    Vector<RefPtr<MessagePort>> inMemoryMessagePorts;
+    Vector<Ref<MessagePort>> inMemoryMessagePorts;
 #if ENABLE(WEBASSEMBLY)
     WasmModuleArray wasmModules;
     WasmMemoryHandleArray wasmMemoryHandles;
@@ -6286,7 +6289,7 @@ ExceptionOr<Ref<SerializedScriptValue>> SerializedScriptValue::create(JSGlobalOb
                 , WTFMove(detachedMediaSourceHandles)
 #endif
 #if ENABLE(WEBASSEMBLY)
-                , makeUnique<WasmModuleArray>(wasmModules)
+                , WTFMove(wasmModules)
                 , context == SerializationContext::WorkerPostMessage ? makeUnique<WasmMemoryHandleArray>(wasmMemoryHandles) : nullptr
 #endif
 #if ENABLE(WEB_CODECS)
@@ -6338,14 +6341,14 @@ JSValue SerializedScriptValue::deserialize(JSGlobalObject& lexicalGlobalObject, 
     return deserialize(lexicalGlobalObject, globalObject, { }, throwExceptions, didFail);
 }
 
-JSValue SerializedScriptValue::deserialize(JSGlobalObject& lexicalGlobalObject, JSGlobalObject* globalObject, const Vector<RefPtr<MessagePort>>& messagePorts, SerializationErrorMode throwExceptions, bool* didFail)
+JSValue SerializedScriptValue::deserialize(JSGlobalObject& lexicalGlobalObject, JSGlobalObject* globalObject, const Vector<Ref<MessagePort>>& messagePorts, SerializationErrorMode throwExceptions, bool* didFail)
 {
     Vector<String> dummyBlobs;
     Vector<String> dummyPaths;
     return deserialize(lexicalGlobalObject, globalObject, messagePorts, dummyBlobs, dummyPaths, throwExceptions, didFail);
 }
 
-JSValue SerializedScriptValue::deserialize(JSGlobalObject& lexicalGlobalObject, JSGlobalObject* globalObject, const Vector<RefPtr<MessagePort>>& messagePorts, const Vector<String>& blobURLs, const Vector<String>& blobFilePaths, SerializationErrorMode throwExceptions, bool* didFail)
+JSValue SerializedScriptValue::deserialize(JSGlobalObject& lexicalGlobalObject, JSGlobalObject* globalObject, const Vector<Ref<MessagePort>>& messagePorts, const Vector<String>& blobURLs, const Vector<String>& blobFilePaths, SerializationErrorMode throwExceptions, bool* didFail)
 {
     DeserializationResult result = CloneDeserializer::deserialize(&lexicalGlobalObject, globalObject, messagePorts, WTFMove(m_internals.detachedImageBitmaps)
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)

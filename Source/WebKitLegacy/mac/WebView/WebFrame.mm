@@ -87,7 +87,7 @@
 #import <WebCore/HTMLNames.h>
 #import <WebCore/HistoryItem.h>
 #import <WebCore/HitTestResult.h>
-#import <WebCore/JSLocalDOMWindow.h>
+#import <WebCore/JSDOMWindow.h>
 #import <WebCore/JSNode.h>
 #import <WebCore/LegacyWebArchive.h>
 #import <WebCore/LocalFrame.h>
@@ -191,7 +191,6 @@ NSString *WebFrameHasPlugins = @"WebFrameHasPluginsKey";
 NSString *WebFrameHasUnloadListener = @"WebFrameHasUnloadListenerKey";
 NSString *WebFrameUsesDatabases = @"WebFrameUsesDatabasesKey";
 NSString *WebFrameUsesGeolocation = @"WebFrameUsesGeolocationKey";
-NSString *WebFrameUsesApplicationCache = @"WebFrameUsesApplicationCacheKey";
 NSString *WebFrameCanSuspendActiveDOMObjects = @"WebFrameCanSuspendActiveDOMObjectsKey";
 
 // FIXME: Remove when this key becomes publicly defined
@@ -310,7 +309,9 @@ WebView *getWebView(WebFrame *webFrame)
     WebView *webView = kit(&page);
 
     RetainPtr<WebFrame> frame = adoptNS([[self alloc] _initWithWebFrameView:frameView webView:webView]);
-    auto coreFrame = WebCore::LocalFrame::createSubframe(page, makeUniqueRef<WebFrameLoaderClient>(frame.get()), WebCore::FrameIdentifier::generate(), ownerElement);
+    auto coreFrame = WebCore::LocalFrame::createSubframe(page, [frame] (auto&) {
+        return makeUniqueRef<WebFrameLoaderClient>(frame.get());
+    }, WebCore::FrameIdentifier::generate(), ownerElement);
     frame->_private->coreFrame = coreFrame.ptr();
 
     coreFrame.get().tree().setSpecifiedName(name);
@@ -1233,7 +1234,7 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
 {
     ASSERT(!WebThreadIsEnabled() || WebThreadIsLocked());
     auto& frameLoader = _private->coreFrame->loader();
-    auto* item = frameLoader.history().currentItem();
+    auto* item = _private->coreFrame->history().currentItem();
     if (item)
         frameLoader.client().saveViewStateToItem(*item);
 }
@@ -1624,7 +1625,7 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
     WebCore::LocalFrame *frame = core(self);
     if (!frame)
         return;
-        
+
     Vector<WebCore::CompositionUnderline> underlines;
     frame->editor().setComposition(text, underlines, { }, { }, 0, [text length]);
 }
@@ -2038,8 +2039,6 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
     if (auto* domWindow = _private->coreFrame->document()->domWindow()) {
         if (domWindow->hasEventListeners(WebCore::eventNames().unloadEvent))
             [result setObject:@YES forKey:WebFrameHasUnloadListener];
-        if (domWindow->optionalApplicationCache())
-            [result setObject:@YES forKey:WebFrameUsesApplicationCache];
     }
     
     if (auto* document = _private->coreFrame->document()) {
@@ -2071,13 +2070,13 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
     // The global object is probably a proxy object? - if so, we know how to use this!
     JSC::JSObject* globalObjectObj = toJS(globalObjectRef);
     if (!strcmp(globalObjectObj->classInfo()->className, "JSWindowProxy"))
-        anyWorldGlobalObject = JSC::jsDynamicCast<WebCore::JSLocalDOMWindow*>(static_cast<WebCore::JSWindowProxy*>(globalObjectObj)->window());
+        anyWorldGlobalObject = JSC::jsDynamicCast<WebCore::JSDOMWindow*>(static_cast<WebCore::JSWindowProxy*>(globalObjectObj)->window());
 
     if (!anyWorldGlobalObject)
         return @"";
 
     // Get the frame frome the global object we've settled on.
-    auto* frame = JSC::jsCast<WebCore::JSLocalDOMWindow*>(anyWorldGlobalObject)->wrapped().frame();
+    auto* frame = dynamicDowncast<WebCore::LocalFrame>(JSC::jsCast<WebCore::JSDOMWindow*>(anyWorldGlobalObject)->wrapped().frame());
     ASSERT(frame->document());
     RetainPtr<WebFrame> webFrame(kit(frame)); // Running arbitrary JavaScript can destroy the frame.
 
@@ -2201,9 +2200,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (void)_clearOpener
 {
-    auto coreFrame = _private->coreFrame;
-    if (coreFrame)
-        coreFrame->loader().setOpener(nullptr);
+    if (auto coreFrame = _private->coreFrame)
+        coreFrame->setOpener(nullptr);
 }
 
 - (BOOL)hasRichlyEditableDragCaret

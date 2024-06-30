@@ -39,10 +39,13 @@
 
 #if TARGET_OS_IPHONE
 @class UIMenuElement;
+@class UIKeyCommand;
 #else
 @class NSEvent;
 @class NSMenuItem;
 #endif
+
+#define HAVE_UPDATED_WEB_EXTENSION_CONTEXT_INSPECTION_OVERRIDE_NAME 1
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -55,12 +58,16 @@ WK_EXTERN NSErrorDomain const _WKWebExtensionContextErrorDomain NS_SWIFT_NAME(_W
  @constant WKWebExtensionContextErrorAlreadyLoaded  Indicates that the context is already loaded by a @link WKWebExtensionController @/link.
  @constant WKWebExtensionContextErrorNotLoaded  Indicates that the context is not loaded by a @link WKWebExtensionController @/link.
  @constant WKWebExtensionContextErrorBaseURLAlreadyInUse  Indicates that another context is already using the specified base URL.
+ @constant WKWebExtensionContextErrorNoBackgroundContent  Indicates that the extension does not have background content.
+ @constant WKWebExtensionContextErrorBackgroundContentFailedToLoad  Indicates that an error occurred loading the background content.
  */
 typedef NS_ERROR_ENUM(_WKWebExtensionContextErrorDomain, _WKWebExtensionContextError) {
     _WKWebExtensionContextErrorUnknown = 1,
     _WKWebExtensionContextErrorAlreadyLoaded,
     _WKWebExtensionContextErrorNotLoaded,
     _WKWebExtensionContextErrorBaseURLAlreadyInUse,
+    _WKWebExtensionContextErrorNoBackgroundContent,
+    _WKWebExtensionContextErrorBackgroundContentFailedToLoad,
 } NS_SWIFT_NAME(_WKWebExtensionContext.Error) WK_API_AVAILABLE(macos(13.3), ios(16.4));
 
 /*!
@@ -184,6 +191,12 @@ WK_CLASS_AVAILABLE(macos(13.3), ios(16.4))
  You should set this to `YES` when needed for debugging purposes. The default value is `NO`.
 */
 @property (nonatomic, getter=isInspectable) BOOL inspectable;
+
+/*!
+ @abstract The name shown when inspecting the background web view.
+ @discussion This is the text that will appear when inspecting the background web view.
+ */
+@property (nonatomic, nullable, copy) NSString *inspectionName;
 
 /*!
  @abstract Specifies unsupported APIs for this extension, making them `undefined` in JavaScript.
@@ -517,6 +530,15 @@ WK_CLASS_AVAILABLE(macos(13.3), ios(16.4))
 - (void)setPermissionStatus:(_WKWebExtensionContextPermissionStatus)status forMatchPattern:(_WKWebExtensionMatchPattern *)pattern expirationDate:(nullable NSDate *)expirationDate NS_SWIFT_NAME(setPermissionStatus(_:for:expirationDate:));
 
 /*!
+ @abstract Loads the background content if needed for the extension.
+ @param completionHandler A block to be called upon completion of the loading process, with an optional error object.
+ @discussion This method forces the loading of the background content for the extension that will otherwise be loaded on-demand during specific events.
+ It is useful when the app requires the background content to be loaded for other reasons. If the background content is already loaded, the completion handler
+ will be called immediately. An error will occur if the extension does not have any background content to load or loading fails.
+ */
+- (void)loadBackgroundContentWithCompletionHandler:(void (^)(NSError * _Nullable error))completionHandler;
+
+/*!
  @abstract Retrieves the extension action for a given tab, or the default action if `nil` is passed.
  @param tab The tab for which to retrieve the extension action, or `nil` to get the default action.
  @discussion The returned object represents the action specific to the tab when provided; otherwise, it returns the default action. The default
@@ -549,6 +571,17 @@ WK_CLASS_AVAILABLE(macos(13.3), ios(16.4))
  @discussion This method performs the given command as if it was triggered by a user gesture within the context of the focused window and active tab.
  */
 - (void)performCommand:(_WKWebExtensionCommand *)command;
+
+#if TARGET_OS_IPHONE
+/*!
+ @abstract Performs the command associated with the given UIKeyCommand.
+ @discussion This method checks for a command corresponding to the provided UIKeyCommand and performs it, if available. The app should use this method to perform
+ any extension commands at an appropriate time in the app's responder object that handles the performWebExtensionCommandForKeyCommand: action.
+ @param event The UIKeyCommand received by the first responder.
+ @result Returns `YES` if a command corresponding to the UIKeyCommand was found and performed, `NO` otherwise.
+ */
+- (BOOL)performCommandForKeyCommand:(UIKeyCommand *)keyCommand;
+#endif
 
 #if TARGET_OS_OSX
 /*!

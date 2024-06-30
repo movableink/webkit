@@ -67,6 +67,7 @@
 #include "ShadowRoot.h"
 #include "StyleSelfAlignmentData.h"
 #include "StyleUpdate.h"
+#include "Styleable.h"
 #include "Text.h"
 #include "TouchAction.h"
 #include "TypedElementDescendantIterator.h"
@@ -88,7 +89,7 @@ namespace Style {
 
 using namespace HTMLNames;
 
-Adjuster::Adjuster(const Document& document, const RenderStyle& parentStyle, const RenderStyle* parentBoxStyle, const Element* element)
+Adjuster::Adjuster(const Document& document, const RenderStyle& parentStyle, const RenderStyle* parentBoxStyle, Element* element)
     : m_document(document)
     , m_parentStyle(parentStyle)
     , m_parentBoxStyle(parentBoxStyle ? *parentBoxStyle : m_parentStyle)
@@ -686,6 +687,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     if (style.hasPseudoStyle(PseudoId::FirstLetter))
         style.setUnique();
 
+    // This should be kept in sync with requiresRenderingConsolidationForViewTransition
     if (style.preserves3D()) {
         bool forceToFlat = style.overflowX() != Overflow::Visible
             || style.hasOpacity()
@@ -696,7 +698,12 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             || style.hasIsolation()
             || style.hasMask()
             || style.hasBackdropFilter()
-            || style.hasBlendMode();
+            || style.hasBlendMode()
+            || style.viewTransitionName();
+        if (m_element) {
+            auto styleable = Styleable::fromElement(*m_element);
+            forceToFlat |= styleable.capturedInViewTransition();
+        }
         style.setTransformStyleForcedToFlat(forceToFlat);
     }
 
@@ -947,7 +954,7 @@ void Adjuster::adjustForSiteSpecificQuirks(RenderStyle& style) const
             static MainThreadNeverDestroyed<const AtomString> instreamNativeVideoDivClass("instream-native-video--mobile"_s);
             static MainThreadNeverDestroyed<const AtomString> videoElementID("vjs_video_3_html5_api"_s);
 
-            if (div->hasClass() && div->classNames().contains(instreamNativeVideoDivClass)) {
+            if (div->hasClassName(instreamNativeVideoDivClass)) {
                 RefPtr video = dynamicDowncast<HTMLVideoElement>(div->treeScope().getElementById(videoElementID));
                 if (video && video->isFullscreen())
                     style.setEffectiveDisplay(DisplayType::Block);
@@ -959,7 +966,7 @@ void Adjuster::adjustForSiteSpecificQuirks(RenderStyle& style) const
         static MainThreadNeverDestroyed<const AtomString> playerClassName("top-player-video-element"_s);
         bool isFullscreen = fullscreenManager->isFullscreen();
         RefPtr video = dynamicDowncast<HTMLVideoElement>(m_element);
-        if (video && isFullscreen && video->hasClass() && video->classNames().contains(playerClassName) && style.objectFit() == ObjectFit::Fill)
+        if (video && isFullscreen && video->hasClassName(playerClassName) && style.objectFit() == ObjectFit::Fill)
             style.setObjectFit(ObjectFit::Contain);
     }
 #endif

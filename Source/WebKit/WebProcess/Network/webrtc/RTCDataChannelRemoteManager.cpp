@@ -50,7 +50,7 @@ RTCDataChannelRemoteManager& RTCDataChannelRemoteManager::sharedManager()
 }
 
 RTCDataChannelRemoteManager::RTCDataChannelRemoteManager()
-    : m_queue(WorkQueue::create("RTCDataChannelRemoteManager"))
+    : m_queue(WorkQueue::create("RTCDataChannelRemoteManager"_s))
     , m_connection(&WebProcess::singleton().ensureNetworkProcessConnection().connection())
 {
 }
@@ -146,7 +146,7 @@ void RTCDataChannelRemoteManager::receiveData(WebCore::RTCDataChannelIdentifier 
     if (isRaw)
         buffer = Vector(data);
     else
-        text = String::fromUTF8(data.data(), data.size());
+        text = String::fromUTF8(data);
 
     postTaskToHandler(handlerIdentifier, [isRaw, text = WTFMove(text).isolatedCopy(), buffer = WTFMove(buffer)](auto& handler) mutable {
         if (isRaw)

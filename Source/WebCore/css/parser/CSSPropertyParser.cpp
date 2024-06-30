@@ -1,5 +1,6 @@
 // Copyright 2015 The Chromium Authors. All rights reserved.
 // Copyright (C) 2016-2022 Apple Inc. All rights reserved.
+// Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -45,6 +46,19 @@
 #include "CSSParserIdioms.h"
 #include "CSSPendingSubstitutionValue.h"
 #include "CSSPrimitiveValueMappings.h"
+#include "CSSPropertyParserConsumer+Angle.h"
+#include "CSSPropertyParserConsumer+Color.h"
+#include "CSSPropertyParserConsumer+Ident.h"
+#include "CSSPropertyParserConsumer+Image.h"
+#include "CSSPropertyParserConsumer+Integer.h"
+#include "CSSPropertyParserConsumer+Length.h"
+#include "CSSPropertyParserConsumer+List.h"
+#include "CSSPropertyParserConsumer+Number.h"
+#include "CSSPropertyParserConsumer+Percent.h"
+#include "CSSPropertyParserConsumer+Position.h"
+#include "CSSPropertyParserConsumer+Resolution.h"
+#include "CSSPropertyParserConsumer+Time.h"
+#include "CSSPropertyParserConsumer+URL.h"
 #include "CSSPropertyParsing.h"
 #include "CSSQuadValue.h"
 #include "CSSTokenizer.h"
@@ -62,6 +76,7 @@
 #include "TimingFunction.h"
 #include "TransformFunctions.h"
 #include <memory>
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -71,45 +86,41 @@ bool isCustomPropertyName(StringView propertyName)
     return propertyName.length() > 2 && propertyName.characterAt(0) == '-' && propertyName.characterAt(1) == '-';
 }
 
-static bool hasPrefix(const char* string, unsigned length, const char* prefix)
+static bool hasPrefix(std::span<const char> string, std::span<const LChar> prefix)
 {
-    for (unsigned i = 0; i < length; ++i) {
-        if (!prefix[i])
-            return true;
-        if (string[i] != prefix[i])
-            return false;
-    }
-    return false;
+    if (string.size() < prefix.size())
+        return false;
+    return equalSpans(string.first(prefix.size()), prefix);
 }
 
-template<typename CharacterType> static CSSPropertyID cssPropertyID(const CharacterType* characters, unsigned length)
+template<typename CharacterType> static CSSPropertyID cssPropertyID(std::span<const CharacterType> characters)
 {
     char buffer[maxCSSPropertyNameLength];
-    for (unsigned i = 0; i != length; ++i) {
+    for (size_t i = 0; i != characters.size(); ++i) {
         auto character = characters[i];
         if (!character || !isASCII(character))
             return CSSPropertyInvalid;
         buffer[i] = toASCIILower(character);
     }
-    return findCSSProperty(buffer, length);
+    return findCSSProperty(buffer, characters.size());
 }
 
 // FIXME: Remove this mechanism entirely once we can do it without breaking the web.
-static bool isAppleLegacyCSSValueKeyword(const char* characters, unsigned length)
+static bool isAppleLegacyCSSValueKeyword(std::span<const char> characters)
 {
-    return hasPrefix(characters + 1, length - 1, "apple-")
-        && !hasPrefix(characters + 7, length - 7, "system")
-        && !hasPrefix(characters + 7, length - 7, "pay")
-        && !hasPrefix(characters + 7, length - 7, "wireless");
+    return hasPrefix(characters.subspan(1), "apple-"_span)
+        && !hasPrefix(characters.subspan(7), "system"_span)
+        && !hasPrefix(characters.subspan(7), "pay"_span)
+        && !hasPrefix(characters.subspan(7), "wireless"_span);
 }
 
-template<typename CharacterType> static CSSValueID cssValueKeywordID(const CharacterType* characters, unsigned length)
+template<typename CharacterType> static CSSValueID cssValueKeywordID(std::span<const CharacterType> characters)
 {
-    ASSERT(length > 0); // Otherwise buffer[0] would access uninitialized memory below.
+    ASSERT(!characters.empty()); // Otherwise buffer[0] would access uninitialized memory below.
 
-    char buffer[maxCSSValueKeywordLength + 1]; // 1 to turn "apple" into "webkit"
+    std::array<char, maxCSSValueKeywordLength + 1> buffer; // 1 to turn "apple" into "webkit"
     
-    for (unsigned i = 0; i != length; ++i) {
+    for (unsigned i = 0; i != characters.size(); ++i) {
         auto character = characters[i];
         if (!character || !isASCII(character))
             return CSSValueInvalid;
@@ -117,13 +128,14 @@ template<typename CharacterType> static CSSValueID cssValueKeywordID(const Chara
     }
 
     // In most cases, if the prefix is -apple-, change it to -webkit-. This makes the string one character longer.
-    if (buffer[0] == '-' && isAppleLegacyCSSValueKeyword(buffer, length)) {
-        memmove(buffer + 7, buffer + 6, length - 6);
-        memcpy(buffer + 1, "webkit", 6);
+    auto length = characters.size();
+    if (buffer[0] == '-' && isAppleLegacyCSSValueKeyword(std::span { buffer }.first(length))) {
+        memmove(buffer.data() + 7, buffer.data() + 6, length - 6);
+        memcpy(buffer.data() + 1, "webkit", 6);
         ++length;
     }
 
-    return findCSSValueKeyword(buffer, length);
+    return findCSSValueKeyword(std::span { buffer }.first(length));
 }
 
 CSSValueID cssValueKeywordID(StringView string)
@@ -134,7 +146,7 @@ CSSValueID cssValueKeywordID(StringView string)
     if (length > maxCSSValueKeywordLength)
         return CSSValueInvalid;
     
-    return string.is8Bit() ? cssValueKeywordID(string.characters8(), length) : cssValueKeywordID(string.characters16(), length);
+    return string.is8Bit() ? cssValueKeywordID(string.span8()) : cssValueKeywordID(string.span16());
 }
 
 CSSPropertyID cssPropertyID(StringView string)
@@ -146,7 +158,7 @@ CSSPropertyID cssPropertyID(StringView string)
     if (length > maxCSSPropertyNameLength)
         return CSSPropertyInvalid;
     
-    return string.is8Bit() ? cssPropertyID(string.characters8(), length) : cssPropertyID(string.characters16(), length);
+    return string.is8Bit() ? cssPropertyID(string.span8()) : cssPropertyID(string.span16());
 }
     
 using namespace CSSPropertyParserHelpers;
@@ -349,9 +361,9 @@ std::pair<RefPtr<CSSValue>, CSSCustomPropertySyntax::Type> CSSPropertyParser::co
     auto consumeSingleValue = [&](auto& range, auto& component) -> RefPtr<CSSValue> {
         switch (component.type) {
         case CSSCustomPropertySyntax::Type::Length:
-            return consumeLength(range, m_context.mode, ValueRange::All);
+            return consumeLength(range, m_context.mode);
         case CSSCustomPropertySyntax::Type::LengthPercentage:
-            return consumeLengthOrPercent(range, m_context.mode, ValueRange::All);
+            return consumeLengthOrPercent(range, m_context.mode);
         case CSSCustomPropertySyntax::Type::CustomIdent:
             if (RefPtr value = consumeCustomIdent(range)) {
                 if (component.ident.isNull() || value->stringValue() == component.ident)
@@ -359,15 +371,15 @@ std::pair<RefPtr<CSSValue>, CSSCustomPropertySyntax::Type> CSSPropertyParser::co
             }
             return nullptr;
         case CSSCustomPropertySyntax::Type::Percentage:
-            return consumePercent(range, ValueRange::All);
+            return consumePercent(range);
         case CSSCustomPropertySyntax::Type::Integer:
             return consumeInteger(range);
         case CSSCustomPropertySyntax::Type::Number:
-            return consumeNumber(range, ValueRange::All);
+            return consumeNumber(range);
         case CSSCustomPropertySyntax::Type::Angle:
             return consumeAngle(range, m_context.mode);
         case CSSCustomPropertySyntax::Type::Time:
-            return consumeTime(range, m_context.mode, ValueRange::All);
+            return consumeTime(range, m_context.mode);
         case CSSCustomPropertySyntax::Type::Resolution:
             return consumeResolution(range);
         case CSSCustomPropertySyntax::Type::Color:
@@ -483,8 +495,8 @@ RefPtr<CSSCustomPropertyValue> CSSPropertyParser::parseTypedCustomPropertyValue(
 
         case CSSCustomPropertySyntax::Type::TransformFunction:
         case CSSCustomPropertySyntax::Type::TransformList:
-            if (auto transform = transformForValue(value, builderState.cssToLengthConversionData()))
-                return { CSSCustomPropertyValue::TransformSyntaxValue { transform } };
+            if (RefPtr transform = transformForValue(value, builderState.cssToLengthConversionData()))
+                return { CSSCustomPropertyValue::TransformSyntaxValue { transform.releaseNonNull() } };
             return { };
         case CSSCustomPropertySyntax::Type::Unknown:
             return { };
@@ -1702,12 +1714,12 @@ static RefPtr<CSSValue> consumeAnimationValueForShorthand(CSSPropertyID property
     switch (property) {
     case CSSPropertyAnimationDelay:
     case CSSPropertyTransitionDelay:
-        return consumeTime(range, context.mode, ValueRange::All, UnitlessQuirk::Forbid);
+        return consumeTime(range, context.mode);
     case CSSPropertyAnimationDirection:
         return CSSPropertyParsing::consumeSingleAnimationDirection(range);
     case CSSPropertyAnimationDuration:
     case CSSPropertyTransitionDuration:
-        return consumeTime(range, context.mode, ValueRange::NonNegative, UnitlessQuirk::Forbid);
+        return consumeTime(range, context.mode, ValueRange::NonNegative);
     case CSSPropertyAnimationFillMode:
         return CSSPropertyParsing::consumeSingleAnimationFillMode(range);
     case CSSPropertyAnimationIterationCount:
@@ -2416,7 +2428,7 @@ bool CSSPropertyParser::consumeTransformOrigin(bool important)
     if (auto resultXY = consumeOneOrTwoValuedPositionCoordinates(m_range, m_context.mode, UnitlessQuirk::Forbid)) {
         m_range.consumeWhitespace();
         bool atEnd = m_range.atEnd();
-        auto resultZ = consumeLength(m_range, m_context.mode, ValueRange::All);
+        auto resultZ = consumeLength(m_range, m_context.mode);
         if ((!resultZ && !atEnd) || !m_range.atEnd())
             return false;
         addProperty(CSSPropertyTransformOriginX, CSSPropertyTransformOrigin, WTFMove(resultXY->x), important);

@@ -90,6 +90,10 @@ public:
 
     virtual SubsamplingLevel subsamplingLevelForScaleFactor(GraphicsContext&, const FloatSize&, AllowImageSubsampling) { return SubsamplingLevel::Default; }
 
+#if ENABLE(QUICKLOOK_FULLSCREEN)
+    virtual bool shouldUseQuickLookForFullscreen() const { return false; }
+#endif
+
     // ImageFrame Metadata
     virtual Seconds frameDurationAtIndex(unsigned) const { RELEASE_ASSERT_NOT_REACHED(); return 0_s; }
     virtual ImageOrientation frameOrientationAtIndex(unsigned) const { RELEASE_ASSERT_NOT_REACHED(); return ImageOrientation::Orientation::None; }
@@ -97,6 +101,7 @@ public:
 
     // Testing support
     virtual unsigned decodeCountForTesting() const { return 0; }
+    virtual unsigned blankDrawCountForTesting() const { return 0; }
     virtual void setMinimumDecodingDurationForTesting(Seconds) { RELEASE_ASSERT_NOT_REACHED(); }
     virtual void setClearDecoderAfterAsyncFrameRequestForTesting(bool) { RELEASE_ASSERT_NOT_REACHED(); }
     virtual void setAsyncDecodingEnabledForTesting(bool) { RELEASE_ASSERT_NOT_REACHED(); }

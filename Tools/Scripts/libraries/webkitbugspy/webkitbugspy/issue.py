@@ -20,6 +20,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import sys
+
 from .tracker import Tracker
 from .user import User
 from datetime import datetime
@@ -77,6 +79,8 @@ class Issue(object):
         self._milestone = None
         self._keywords = None
         self._classification = None
+
+        self._source_changes = None
 
         self.tracker.populate(self, None)
 
@@ -238,6 +242,23 @@ class Issue(object):
         return self._classification
 
     @property
+    def source_changes(self):
+        if self._source_changes is None:
+            self.tracker.populate(self, 'source_changes')
+        return self._source_changes
+
+    def add_source_change(self, line):
+        parts = line.split(', ')
+        parts[-1] = parts[-1][:12]
+        search_for = ', '.join(parts) if parts[-1] else line
+
+        for change in self.source_changes:
+            if change.startswith(search_for):
+                sys.stderr.write("'{}' is already a registered source change\n".format(line))
+                return None
+        return self.tracker.set(self, source_changes=self.source_changes + [line])
+
+    @property
     def _redaction_match(self):
         result = ''
         for member in ('title', 'project', 'component', 'version', 'classification'):
@@ -257,10 +278,16 @@ class Issue(object):
                 )
 
         match_strings = {self.link: match_string}
-        if self.original:
-            match_strings[self.original.link] = self.original._redaction_match
-        for dupe in self.duplicates or []:
-            match_strings[dupe.link] = dupe._redaction_match
+        duplicates = self.duplicates or []
+        originals = [self.original] if self.original else []
+        for related_issue in duplicates + originals:
+            match_string = related_issue._redaction_match
+            for key, value in self.tracker._redact_exemption.items():
+                if key.search(match_string) and value:
+                    match_string = None
+                    break
+            if match_string:
+                match_strings[related_issue.link] = match_string
 
         for m_link, m_string in match_strings.items():
             for key, value in self.tracker._redact.items():

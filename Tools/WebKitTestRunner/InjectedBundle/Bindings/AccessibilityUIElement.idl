@@ -32,6 +32,8 @@ interface AccessibilityUIElement {
     AccessibilityUIElement childAtIndex(unsigned long index);
     unsigned long indexOfChild(AccessibilityUIElement child);
     AccessibilityUIElement linkedUIElementAtIndex(unsigned long index);
+    readonly attribute AccessibilityUIElement activeElement;
+    object selectedChildren();
     AccessibilityUIElement selectedChildAtIndex(unsigned long index);
     undefined setSelectedChild(AccessibilityUIElement element);
     undefined setSelectedChildAtIndex(unsigned long index);
@@ -39,7 +41,7 @@ interface AccessibilityUIElement {
     undefined clearSelectedChildren();
     AccessibilityUIElement titleUIElement();
     AccessibilityUIElement parentElement();
-    
+
     readonly attribute DOMString role;
     readonly attribute DOMString subrole;
     readonly attribute DOMString roleDescription;
@@ -118,7 +120,6 @@ interface AccessibilityUIElement {
     readonly attribute boolean isDeletion;
     readonly attribute boolean isFirstItemInSuggestion;
     readonly attribute boolean isLastItemInSuggestion;
-    readonly attribute boolean isInNonNativeTextControl;
 
     readonly attribute long x;
     readonly attribute long y;
@@ -211,10 +212,10 @@ interface AccessibilityUIElement {
     DOMString attributedStringForRange(unsigned long location, unsigned long length);
     DOMString attributedStringForElement();
     boolean attributedStringRangeIsMisspelled(unsigned long location, unsigned long length);
-    [PassContext] unsigned long uiElementCountForSearchPredicate(AccessibilityUIElement startElement, boolean isDirectionNext, object searchKey, DOMString searchText, boolean visibleOnly, boolean immediateDescendantsOnly);
-    [PassContext] AccessibilityUIElement uiElementForSearchPredicate(AccessibilityUIElement startElement, boolean isDirectionNext, object searchKey, DOMString searchText, boolean visibleOnly, boolean immediateDescendantsOnly);
-    [PassContext] DOMString selectTextWithCriteria(DOMString ambiguityResolution, object searchStrings, DOMString replacementString, DOMString activity);
-    [PassContext] object searchTextWithCriteria(object searchStrings, DOMString startFrom, DOMString direction);
+    unsigned long uiElementCountForSearchPredicate(AccessibilityUIElement startElement, boolean isDirectionNext, object searchKey, DOMString searchText, boolean visibleOnly, boolean immediateDescendantsOnly);
+    AccessibilityUIElement uiElementForSearchPredicate(AccessibilityUIElement startElement, boolean isDirectionNext, object searchKey, DOMString searchText, boolean visibleOnly, boolean immediateDescendantsOnly);
+    DOMString selectTextWithCriteria(DOMString ambiguityResolution, object searchStrings, DOMString replacementString, DOMString activity);
+    object searchTextWithCriteria(object searchStrings, DOMString startFrom, DOMString direction);
     boolean setSelectedTextRange(unsigned long location, unsigned long length);
 
     // Scroll area attributes.
@@ -256,6 +257,7 @@ interface AccessibilityUIElement {
     AccessibilityTextMarker previousTextMarker(AccessibilityTextMarker marker);
     AccessibilityTextMarker nextTextMarker(AccessibilityTextMarker marker);
     AccessibilityUIElement accessibilityElementForTextMarker(AccessibilityTextMarker marker);
+    AccessibilityTextMarkerRange textMarkerRangeForLine(long lineIndex);
     DOMString stringForTextMarkerRange(AccessibilityTextMarkerRange range);
     DOMString rectsForTextMarkerRange(AccessibilityTextMarkerRange range, DOMString searchText);
     DOMString attributedStringForTextMarkerRange(AccessibilityTextMarkerRange range);
@@ -264,6 +266,7 @@ interface AccessibilityUIElement {
     boolean attributedStringForTextMarkerRangeContainsAttribute(DOMString attr, AccessibilityTextMarkerRange range);
     long indexForTextMarker(AccessibilityTextMarker marker);
     boolean isTextMarkerValid(AccessibilityTextMarker marker);
+    boolean isTextMarkerRangeValid(AccessibilityTextMarkerRange markerRange);
     boolean isTextMarkerNull(AccessibilityTextMarker marker);
     AccessibilityTextMarker textMarkerForIndex(long textIndex);
     readonly attribute AccessibilityTextMarker startTextMarker;
@@ -312,8 +315,9 @@ interface AccessibilityUIElement {
     readonly attribute boolean isInDescriptionListDetail;
     readonly attribute boolean isInDescriptionListTerm;
 
-    readonly attribute boolean hasContainedByFieldsetTrait;
     readonly attribute boolean hasTextEntryTrait;
+    readonly attribute boolean hasTabBarTrait;
+    readonly attribute boolean hasMenuItemTrait;
     AccessibilityUIElement fieldsetAncestorElement();
     AccessibilityUIElement focusableAncestor();
     AccessibilityUIElement editableAncestor();

@@ -139,7 +139,7 @@ bool ValidatedFormListedElement::reportValidity()
 
     // Needs to update layout now because we'd like to call isFocusable(),
     // which has !renderer()->needsLayout() assertion.
-    asHTMLElement().document().updateLayoutIgnorePendingStylesheets();
+    asHTMLElement().protectedDocument()->updateLayoutIgnorePendingStylesheets();
     if (auto validationAnchor = focusableValidationAnchorElement())
         focusAndShowValidationMessage(validationAnchor.releaseNonNull());
     else
@@ -168,16 +168,15 @@ void ValidatedFormListedElement::focusAndShowValidationMessage(Ref<HTMLElement> 
     // focus() will scroll the element into view and this scroll may happen asynchronously.
     // Because scrolling the view hides the validation message, we need to show the validation
     // message asynchronously as well.
-    callOnMainThread([this, protectedThis, validationAnchor] {
-        updateVisibleValidationMessage(validationAnchor);
-    });
+    if (RefPtr page = validationAnchor->document().page())
+        page->scheduleValidationMessageUpdate(*this, validationAnchor);
 }
 
 void ValidatedFormListedElement::reportNonFocusableControlError()
 {
     auto& document = asHTMLElement().document();
     if (document.frame()) {
-        auto message = makeString("An invalid form control with name='", name(), "' is not focusable.");
+        auto message = makeString("An invalid form control with name='"_s, name(), "' is not focusable."_s);
         document.addConsoleMessage(MessageSource::Rendering, MessageLevel::Error, message);
     }
 }
@@ -276,7 +275,7 @@ void ValidatedFormListedElement::updateValidity()
             }
         }
 
-        if (auto* cache = element.document().existingAXObjectCache())
+        if (CheckedPtr cache = element.document().existingAXObjectCache())
             cache->onValidityChange(element);
     }
 

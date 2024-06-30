@@ -147,6 +147,7 @@ add_library(Skia STATIC
     src/codec/SkImageGenerator_FromEncoded.cpp
     src/codec/SkJpegCodec.cpp
     src/codec/SkJpegDecoderMgr.cpp
+    src/codec/SkJpegMetadataDecoderImpl.cpp
     src/codec/SkJpegSegmentScan.cpp
     src/codec/SkJpegSourceMgr.cpp
     src/codec/SkJpegUtility.cpp
@@ -353,6 +354,7 @@ add_library(Skia STATIC
     src/gpu/Blend.cpp
     src/gpu/BlendFormula.cpp
     src/gpu/BlurUtils.cpp
+    src/gpu/DataUtils.cpp
     src/gpu/DitherUtils.cpp
     src/gpu/PipelineUtils.cpp
     src/gpu/RectanizerPow2.cpp
@@ -849,11 +851,12 @@ add_library(Skia STATIC
     src/sksl/transform/SkSLReplaceConstVarsWithLiterals.cpp
     src/sksl/transform/SkSLRewriteIndexedSwizzle.cpp
 
-    src/utils/SkClipStackUtils.cpp
     src/utils/SkCharToGlyphCache.cpp
+    src/utils/SkClipStackUtils.cpp
     src/utils/SkCustomTypeface.cpp
     src/utils/SkDashPath.cpp
     src/utils/SkFloatToDecimal.cpp
+    src/utils/SkJSONWriter.cpp
     src/utils/SkMatrix22.cpp
     src/utils/SkNWayCanvas.cpp
     src/utils/SkPatchUtils.cpp
@@ -900,10 +903,6 @@ else ()
     target_link_libraries(Skia PRIVATE WebKit::WTF)
 endif ()
 
-set_target_properties(Skia PROPERTIES
-    CXX_STANDARD 17
-)
-
 target_link_libraries(Skia PRIVATE
     Epoxy::Epoxy
     Fontconfig::Fontconfig
@@ -928,22 +927,16 @@ WEBKIT_ADD_TARGET_CXX_FLAGS(Skia
     -Wno-unused-parameter
 )
 
-add_custom_target(Skia_headers_symlink
-    COMMAND ${CMAKE_COMMAND} -E create_symlink
-        "${CMAKE_CURRENT_SOURCE_DIR}/include"
-        "${Skia_FRAMEWORK_HEADERS_DIR}/skia"
-    BYPRODUCTS
-        "${Skia_FRAMEWORK_HEADERS_DIR}/skia"
-    COMMENT "Link Skia headers"
-    VERBATIM
+target_include_directories(Skia
+    PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}"
+    INTERFACE "${Skia_FRAMEWORK_HEADERS_DIR}"
 )
-add_dependencies(Skia Skia_headers_symlink)
-target_include_directories(Skia PRIVATE
-    "${CMAKE_CURRENT_SOURCE_DIR}"
-)
-target_include_directories(Skia INTERFACE
-    "${CMAKE_CURRENT_SOURCE_DIR}"
-    "${Skia_FRAMEWORK_HEADERS_DIR}"
+
+file(MAKE_DIRECTORY "${Skia_FRAMEWORK_HEADERS_DIR}")
+file(CREATE_LINK
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${Skia_FRAMEWORK_HEADERS_DIR}/skia"
+    SYMBOLIC
 )
 
 target_compile_definitions(Skia PRIVATE

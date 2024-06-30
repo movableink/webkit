@@ -27,7 +27,9 @@
 
 #import "HTTPServer.h"
 #import "PlatformUtilities.h"
+#import "Test.h"
 #import "TestNavigationDelegate.h"
+#import "TestUIDelegate.h"
 #import "TestWKWebView.h"
 #import <WebKit/WKFoundation.h>
 #import <WebKit/WKHTTPCookieStorePrivate.h>
@@ -57,6 +59,12 @@ static RetainPtr<WKHTTPCookieStore> globalCookieStore;
     ++observerCallbacks;
 }
 
+@end
+
+@interface EmptyCookieObserver : NSObject<WKHTTPCookieStoreObserver>
+@end
+
+@implementation EmptyCookieObserver
 @end
 
 static void runTestWithWebsiteDataStore(WKWebsiteDataStore* dataStore)
@@ -480,6 +488,12 @@ TEST(WKHTTPCookieStore, ObserveCookiesReceivedFromHTTP)
         globalCookieStore = webView.get().configuration.websiteDataStore.httpCookieStore;
         clearCookies(dataStore);
         [globalCookieStore addObserver:observer.get()];
+
+        // Also observing with an EmptyCookieObserver tests whether or
+        // not WebKit makes an unrecognized selector call
+        auto emptyCookieObserver = adoptNS([EmptyCookieObserver new]);
+        [globalCookieStore addObserver:emptyCookieObserver.get()];
+
         observerCallbacks = 0;
         [webView loadRequest:server.request()];
         [webView _test_waitForDidFinishNavigation];

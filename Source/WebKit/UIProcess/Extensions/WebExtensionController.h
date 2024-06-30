@@ -36,6 +36,7 @@
 #include "WebExtensionControllerConfiguration.h"
 #include "WebExtensionControllerIdentifier.h"
 #include "WebExtensionDataType.h"
+#include "WebExtensionError.h"
 #include "WebExtensionFrameIdentifier.h"
 #include "WebExtensionURLSchemeHandler.h"
 #include "WebProcessProxy.h"
@@ -55,6 +56,11 @@ OBJC_PROTOCOL(_WKWebExtensionControllerDelegatePrivate);
 #ifdef __OBJC__
 #import "_WKWebExtensionController.h"
 #endif
+
+namespace API {
+class NavigationAction;
+class WebsitePolicies;
+}
 
 namespace WebKit {
 
@@ -108,10 +114,9 @@ public:
     void getDataRecords(OptionSet<WebExtensionDataType>, CompletionHandler<void(Vector<Ref<WebExtensionDataRecord>>)>&&);
     void getDataRecord(OptionSet<WebExtensionDataType>, WebExtensionContext&, CompletionHandler<void(RefPtr<WebExtensionDataRecord>)>&&);
     void removeData(OptionSet<WebExtensionDataType>, const Vector<Ref<WebExtensionDataRecord>>&, CompletionHandler<void()>&&);
-    void removeData(OptionSet<WebExtensionDataType>, const WebExtensionContextSet&, CompletionHandler<void()>&&);
 
-    void calculateStorageSize(_WKWebExtensionStorageSQLiteStore *, WebExtensionDataType, CompletionHandler<void(size_t)>&&);
-    void removeStorage(_WKWebExtensionStorageSQLiteStore *, WebExtensionDataType, CompletionHandler<void()>&&);
+    void calculateStorageSize(_WKWebExtensionStorageSQLiteStore *, WebExtensionDataType, CompletionHandler<void(Expected<size_t, WebExtensionError>&&)>&&);
+    void removeStorage(_WKWebExtensionStorageSQLiteStore *, WebExtensionDataType, CompletionHandler<void(Expected<void, WebExtensionError>&&)>&&);
 
     bool hasLoadedContexts() const { return !m_extensionContexts.isEmpty(); }
     bool isFreshlyCreated() const { return m_freshlyCreated; }
@@ -146,8 +151,8 @@ public:
 
     void cookiesDidChange(API::HTTPCookieStore&);
 
-    template<typename T>
-    void sendToAllProcesses(const T& message, const ObjectIdentifierGenericBase& destinationID);
+    template<typename T, typename RawValue>
+    void sendToAllProcesses(const T& message, const ObjectIdentifierGenericBase<RawValue>& destinationID);
 
 #if PLATFORM(MAC)
     void addItemsToContextMenu(WebPageProxy&, const ContextMenuContextData&, NSMenu *);
@@ -160,11 +165,16 @@ public:
     void inspectorWillClose(WebInspectorUIProxy&, WebPageProxy&);
 #endif
 
+    void updateWebsitePoliciesForNavigation(API::WebsitePolicies&, API::NavigationAction&);
+
     void resourceLoadDidSendRequest(WebPageProxyIdentifier, const ResourceLoadInfo&, const WebCore::ResourceRequest&);
     void resourceLoadDidPerformHTTPRedirection(WebPageProxyIdentifier, const ResourceLoadInfo&, const WebCore::ResourceResponse&, const WebCore::ResourceRequest&);
     void resourceLoadDidReceiveChallenge(WebPageProxyIdentifier, const ResourceLoadInfo&, const WebCore::AuthenticationChallenge&);
     void resourceLoadDidReceiveResponse(WebPageProxyIdentifier, const ResourceLoadInfo&, const WebCore::ResourceResponse&);
     void resourceLoadDidCompleteWithError(WebPageProxyIdentifier, const ResourceLoadInfo&, const WebCore::ResourceResponse&, const WebCore::ResourceError&);
+
+    bool isShowingActionPopup() { return m_showingActionPopup; };
+    void setShowingActionPopup(bool isOpen) { m_showingActionPopup = isOpen; };
 
 #ifdef __OBJC__
     _WKWebExtensionController *wrapper() const { return (_WKWebExtensionController *)API::ObjectImpl<API::Object::Type::WebExtensionController>::wrapper(); }
@@ -206,7 +216,7 @@ private:
     void testYielded(String message, String sourceURL, unsigned lineNumber);
     void testFinished(bool result, String message, String sourceURL, unsigned lineNumber);
 
-    class HTTPCookieStoreObserver : public API::HTTPCookieStore::Observer {
+    class HTTPCookieStoreObserver : public API::HTTPCookieStoreObserver {
         WTF_MAKE_FAST_ALLOCATED;
 
     public:
@@ -246,13 +256,14 @@ private:
 #else
     bool m_testingMode : 1 { true };
 #endif
+    bool m_showingActionPopup { false };
 
     std::unique_ptr<WebCore::Timer> m_purgeOldMatchedRulesTimer;
     std::unique_ptr<HTTPCookieStoreObserver> m_cookieStoreObserver;
 };
 
-template<typename T>
-void WebExtensionController::sendToAllProcesses(const T& message, const ObjectIdentifierGenericBase& destinationID)
+template<typename T, typename RawValue>
+void WebExtensionController::sendToAllProcesses(const T& message, const ObjectIdentifierGenericBase<RawValue>& destinationID)
 {
     for (auto& process : allProcesses()) {
         if (process.canSendMessage())

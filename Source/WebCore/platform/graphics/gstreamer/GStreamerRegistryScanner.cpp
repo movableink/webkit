@@ -1009,8 +1009,11 @@ static inline Vector<RTCRtpCapabilities::HeaderExtensionCapability> probeRtpExte
 
 void GStreamerRegistryScanner::fillAudioRtpCapabilities(Configuration configuration, RTCRtpCapabilities& capabilities)
 {
-    if (!m_audioRtpExtensions)
-        m_audioRtpExtensions = probeRtpExtensions(m_allAudioRtpExtensions);
+    if (!m_audioRtpExtensions) {
+        auto extensions = m_commonRtpExtensions;
+        extensions.appendVector(m_allAudioRtpExtensions);
+        m_audioRtpExtensions = probeRtpExtensions(extensions);
+    }
     if (m_audioRtpExtensions)
         capabilities.headerExtensions = copyToVector(*m_audioRtpExtensions);
 
@@ -1037,8 +1040,11 @@ void GStreamerRegistryScanner::fillAudioRtpCapabilities(Configuration configurat
 
 void GStreamerRegistryScanner::fillVideoRtpCapabilities(Configuration configuration, RTCRtpCapabilities& capabilities)
 {
-    if (!m_videoRtpExtensions)
-        m_videoRtpExtensions = probeRtpExtensions(m_allVideoRtpExtensions);
+    if (!m_videoRtpExtensions) {
+        auto extensions = m_commonRtpExtensions;
+        extensions.appendVector(m_allVideoRtpExtensions);
+        m_videoRtpExtensions = probeRtpExtensions(extensions);
+    }
     if (m_videoRtpExtensions)
         capabilities.headerExtensions = copyToVector(*m_videoRtpExtensions);
 
@@ -1067,20 +1073,22 @@ void GStreamerRegistryScanner::fillVideoRtpCapabilities(Configuration configurat
             };
 
             for (auto& profileLevelId : profiles) {
-                auto spsAsInteger = parseInteger<uint64_t>(profileLevelId, 16).value_or(0);
-                uint8_t sps[3];
-                sps[0] = spsAsInteger >> 16;
-                sps[1] = (spsAsInteger >> 8) & 0xff;
-                sps[2] = spsAsInteger & 0xff;
-
-                auto caps = adoptGRef(gst_caps_new_empty_simple("video/x-h264"));
-                gst_codec_utils_h264_caps_set_level_and_profile(caps.get(), sps, 3);
-
                 if (WEBKIT_IS_VIDEO_ENCODER(element.get())) {
-                    if (!videoEncoderSupportsFormat(WEBKIT_VIDEO_ENCODER(element.get()), caps))
+                    auto codec = makeString("avc1."_s, profileLevelId);
+                    if (!videoEncoderSupportsCodec(WEBKIT_VIDEO_ENCODER(element.get()), codec))
                         continue;
-                } else if (!gst_element_factory_can_sink_any_caps(gst_element_get_factory(element.get()), caps.get()))
-                    continue;
+                } else {
+                    auto spsAsInteger = parseInteger<uint64_t>(profileLevelId, 16).value_or(0);
+                    uint8_t sps[3];
+                    sps[0] = spsAsInteger >> 16;
+                    sps[1] = (spsAsInteger >> 8) & 0xff;
+                    sps[2] = spsAsInteger & 0xff;
+
+                    auto caps = adoptGRef(gst_caps_new_empty_simple("video/x-h264"));
+                    gst_codec_utils_h264_caps_set_level_and_profile(caps.get(), sps, 3);
+                    if (!gst_element_factory_can_sink_any_caps(gst_element_get_factory(element.get()), caps.get()))
+                        continue;
+                }
 
                 capabilities.codecs.append({ .mimeType = "video/H264"_s, .clockRate = 90000, .channels = { }, .sdpFmtpLine = makeString("level-asymmetry-allowed=1;packetization-mode=1;profile-level-id="_s, profileLevelId) });
                 capabilities.codecs.append({ .mimeType = "video/H264"_s, .clockRate = 90000, .channels = { }, .sdpFmtpLine = makeString("level-asymmetry-allowed=1;packetization-mode=0;profile-level-id="_s, profileLevelId) });

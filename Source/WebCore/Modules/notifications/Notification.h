@@ -119,8 +119,9 @@ public:
     WEBCORE_EXPORT NotificationData data() const;
     RefPtr<NotificationResources> resources() const { return m_resources; }
 
-    using RefCounted::ref;
-    using RefCounted::deref;
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     void markAsShown();
     void showSoon();
@@ -141,7 +142,6 @@ private:
     void stopResourcesLoader();
 
     // ActiveDOMObject
-    const char* activeDOMObjectName() const final;
     void suspend(ReasonForSuspension);
     void stop() final;
     bool virtualHasPendingActivity() const final;

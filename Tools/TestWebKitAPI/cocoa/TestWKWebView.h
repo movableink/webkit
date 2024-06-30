@@ -26,12 +26,14 @@
 #import <WebKit/WebKit.h>
 #import <wtf/RetainPtr.h>
 
+@class _WKFrameTreeNode;
 @class _WKProcessPoolConfiguration;
 
 #if PLATFORM(IOS_FAMILY)
 #import "WKBrowserEngineDefinitions.h"
 @class _WKActivatedElementInfo;
 @class _WKTextInputContext;
+@class UITextSuggestion;
 @protocol UITextInputInternal;
 @protocol UITextInputMultiDocument;
 @protocol UITextInputPrivate;
@@ -90,11 +92,13 @@ struct AutocorrectionContext {
 - (void)extendSelectionToStartOfParagraph;
 - (void)moveSelectionToEndOfParagraph;
 - (void)extendSelectionToEndOfParagraph;
+- (void)insertTextSuggestion:(UITextSuggestion *)textSuggestion;
 #endif // PLATFORM(IOS_FAMILY)
 
 @property (nonatomic, readonly) CGImageRef snapshotAfterScreenUpdates;
 @property (nonatomic, readonly) NSUInteger gpuToWebProcessConnectionCount;
 @property (nonatomic, readonly) NSString *contentsAsString;
+@property (nonatomic, readonly) NSData *contentsAsWebArchive;
 @property (nonatomic, readonly) NSArray<NSString *> *tagsInBody;
 @property (nonatomic, readonly) NSString *selectedText;
 - (void)loadTestPageNamed:(NSString *)pageName;
@@ -107,6 +111,7 @@ struct AutocorrectionContext {
 - (void)synchronouslyLoadRequest:(NSURLRequest *)request preferences:(WKWebpagePreferences *)preferences;
 - (void)synchronouslyLoadRequestIgnoringSSLErrors:(NSURLRequest *)request;
 - (void)synchronouslyLoadTestPageNamed:(NSString *)pageName;
+- (void)synchronouslyLoadTestPageNamed:(NSString *)pageName preferences:(WKWebpagePreferences *)preferences;
 - (BOOL)_synchronouslyExecuteEditCommand:(NSString *)command argument:(NSString *)argument;
 - (void)expectElementTagsInOrder:(NSArray<NSString *> *)tagNames;
 - (void)expectElementCount:(NSInteger)count querySelector:(NSString *)querySelector;
@@ -115,6 +120,7 @@ struct AutocorrectionContext {
 - (NSString *)stringByEvaluatingJavaScript:(NSString *)script;
 - (id)objectByEvaluatingJavaScriptWithUserGesture:(NSString *)script;
 - (id)objectByEvaluatingJavaScript:(NSString *)script;
+- (id)objectByEvaluatingJavaScript:(NSString *)script inFrame:(WKFrameInfo *)frame;
 - (id)objectByCallingAsyncFunction:(NSString *)script withArguments:(NSDictionary *)arguments error:(NSError **)errorOut;
 - (unsigned)waitUntilClientWidthIs:(unsigned)expectedClientWidth;
 - (CGRect)elementRectFromSelector:(NSString *)selector;
@@ -140,6 +146,7 @@ struct AutocorrectionContext {
 - (void)performAfterLoading:(dispatch_block_t)actions;
 
 - (void)waitForNextPresentationUpdate;
+- (void)waitForNextVisibleContentRectUpdate;
 - (void)waitUntilActivityStateUpdateDone;
 - (void)forceDarkMode;
 - (NSString *)stylePropertyAtSelectionStart:(NSString *)propertyName;
@@ -194,10 +201,18 @@ struct AutocorrectionContext {
 - (NSWindow *)hostWindow;
 - (void)typeCharacter:(char)character modifiers:(NSEventModifierFlags)modifiers;
 - (void)typeCharacter:(char)character;
+- (void)sendKey:(NSString *)characters code:(unsigned short)keyCode isDown:(BOOL)isDown modifiers:(NSEventModifierFlags)modifiers;
 - (void)setEventTimestampOffset:(NSTimeInterval)offset;
 @property (nonatomic, readonly) NSArray<NSString *> *collectLogsForNewConnections;
 @property (nonatomic, readonly) NSTimeInterval eventTimestamp;
 @property (nonatomic) BOOL forceWindowToBecomeKey;
 @end
 #endif
+
+@interface TestWKWebView (SiteIsolation)
+- (_WKFrameTreeNode *)mainFrame;
+- (_WKFrameTreeNode *)firstChildFrame;
+- (void)evaluateJavaScript:(NSString *)string inFrame:(WKFrameInfo *)frame completionHandler:(void(^)(id, NSError *))completionHandler;
+- (WKFindResult *)findStringAndWait:(NSString *)string withConfiguration:(WKFindConfiguration *)configuration;
+@end
 

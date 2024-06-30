@@ -235,7 +235,7 @@ bool MediaSessionGLib::ensureMprisSessionRegistered()
     }
 
     const auto& applicationID = getApplicationID();
-    m_instanceId = applicationID.isEmpty() ? makeString("org.mpris.MediaPlayer2.webkit.instance", getpid(), "-", m_identifier.toUInt64()) : makeString("org.mpris.MediaPlayer2.", applicationID.ascii().data(), ".Sandboxed.instance-", m_identifier.toUInt64());
+    m_instanceId = applicationID.isEmpty() ? makeString("org.mpris.MediaPlayer2.webkit.instance"_s, getpid(), '-', m_identifier.toUInt64()) : makeString("org.mpris.MediaPlayer2."_s, applicationID.ascii().span(), ".Sandboxed.instance-"_s, m_identifier.toUInt64());
 
     m_ownerId = g_bus_own_name_on_connection(m_connection.get(), m_instanceId.ascii().data(), G_BUS_NAME_OWNER_FLAGS_NONE, nullptr, nullptr, this, nullptr);
 
@@ -301,14 +301,14 @@ GVariant* MediaSessionGLib::getMetadataAsGVariant(std::optional<NowPlayingInfo> 
 
     g_variant_builder_add(&builder, "{sv}", "mpris:trackid", g_variant_new("o", DBUS_MPRIS_TRACK_PATH));
     g_variant_builder_add(&builder, "{sv}", "mpris:length", g_variant_new_int64(info->duration * 1000000));
-    g_variant_builder_add(&builder, "{sv}", "xesam:title", g_variant_new_string(info->title.utf8().data()));
-    g_variant_builder_add(&builder, "{sv}", "xesam:album", g_variant_new_string(info->album.utf8().data()));
-    if (info->artwork)
-        g_variant_builder_add(&builder, "{sv}", "mpris:artUrl", g_variant_new_string(info->artwork->src.utf8().data()));
+    g_variant_builder_add(&builder, "{sv}", "xesam:title", g_variant_new_string(info->metadata.title.utf8().data()));
+    g_variant_builder_add(&builder, "{sv}", "xesam:album", g_variant_new_string(info->metadata.album.utf8().data()));
+    if (info->metadata.artwork)
+        g_variant_builder_add(&builder, "{sv}", "mpris:artUrl", g_variant_new_string(info->metadata.artwork->src.utf8().data()));
 
     GVariantBuilder artistBuilder;
     g_variant_builder_init(&artistBuilder, G_VARIANT_TYPE("as"));
-    g_variant_builder_add(&artistBuilder, "s", info->artist.utf8().data());
+    g_variant_builder_add(&artistBuilder, "s", info->metadata.artist.utf8().data());
     g_variant_builder_add(&builder, "{sv}", "xesam:artist", g_variant_builder_end(&artistBuilder));
 
     return g_variant_builder_end(&builder);

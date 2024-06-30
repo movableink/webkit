@@ -55,7 +55,7 @@ using TestPromiseExcl = NativePromise<int, double>;
 
 class WorkQueueWithShutdown : public WorkQueue {
 public:
-    static Ref<WorkQueueWithShutdown> create(const char* name) { return adoptRef(*new WorkQueueWithShutdown(name)); }
+    static Ref<WorkQueueWithShutdown> create(ASCIILiteral name) { return adoptRef(*new WorkQueueWithShutdown(name)); }
     void beginShutdown()
     {
         dispatch([this, strong = Ref { *this }] {
@@ -70,7 +70,7 @@ public:
     }
 
 private:
-    WorkQueueWithShutdown(const char* name)
+    WorkQueueWithShutdown(ASCIILiteral name)
         : WorkQueue(name, QOS::Default)
     {
     }
@@ -81,7 +81,7 @@ private:
 class AutoWorkQueue {
 public:
     AutoWorkQueue()
-        : m_workQueue(WorkQueueWithShutdown::create("com.apple.WebKit.Test.simple"))
+        : m_workQueue(WorkQueueWithShutdown::create("com.apple.WebKit.Test.simple"_s))
     {
     }
 
@@ -1842,7 +1842,7 @@ public:
     }
 private:
     explicit PhotoProducer(const PhotoSettings& settings)
-        : m_generatePhotoQueue(WorkQueue::create("takePhoto queue"))
+        : m_generatePhotoQueue(WorkQueue::create("takePhoto queue"_s))
     {
     }
 
@@ -1855,7 +1855,7 @@ private:
             // Note that you can resolve a NativePromise on any threads. Unlike with a CompletionHandler it is not the responsibility of the producer to resolve the promise
             // on a particular thread.
             // The consumer specifies the thread on which it wants to be called back.
-            producer.resolve(std::make_pair<Vector<uint8_t>, String>(std::span { image }, { mimeType.data(), static_cast<unsigned>(mimeType.size()) }));
+            producer.resolve(std::make_pair<Vector<uint8_t>, String>(std::span { image }, std::span<const char> { mimeType }));
         }));
 
         // Return the promise which the producer will resolve at a later stage.

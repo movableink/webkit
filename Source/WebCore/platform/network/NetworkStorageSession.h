@@ -76,6 +76,19 @@ OBJC_CLASS NSMutableSet;
 #endif
 
 namespace WebCore {
+class CookieChangeObserver;
+class CookiesEnabledStateObserver;
+class NetworkStorageSession;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::CookieChangeObserver> : std::true_type { };
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::CookiesEnabledStateObserver> : std::true_type { };
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::NetworkStorageSession> : std::true_type { };
+}
+
+namespace WebCore {
 
 class CurlProxySettings;
 class NetworkingContext;
@@ -112,8 +125,12 @@ public:
     virtual void cookieEnabledStateMayHaveChanged() = 0;
 };
 
-class NetworkStorageSession : public CanMakeWeakPtr<NetworkStorageSession> {
-    WTF_MAKE_NONCOPYABLE(NetworkStorageSession); WTF_MAKE_FAST_ALLOCATED;
+class NetworkStorageSession
+    : public CanMakeWeakPtr<NetworkStorageSession>
+    , public CanMakeCheckedPtr<NetworkStorageSession> {
+    WTF_MAKE_NONCOPYABLE(NetworkStorageSession);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(NetworkStorageSession);
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     using TopFrameDomain = WebCore::RegistrableDomain;
     using SubResourceDomain = WebCore::RegistrableDomain;

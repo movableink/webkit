@@ -132,6 +132,16 @@ bool URL::hasLocalScheme() const
         || protocolIsData();
 }
 
+bool URL::hasFetchScheme() const
+{
+    // https://fetch.spec.whatwg.org/#fetch-scheme
+    return protocolIsInHTTPFamily()
+        || protocolIsAbout()
+        || protocolIsBlob()
+        || protocolIsData()
+        || protocolIsFile();
+}
+
 unsigned URL::pathStart() const
 {
     unsigned start = m_hostEnd + m_portLength;
@@ -216,7 +226,7 @@ static String decodeEscapeSequencesFromParsedURL(StringView input)
 
     // FIXME: Is UTF-8 always the correct encoding?
     // FIXME: This returns a null string when we encounter an invalid UTF-8 sequence. Is that OK?
-    return String::fromUTF8(percentDecoded.data(), percentDecoded.size());
+    return String::fromUTF8(percentDecoded.span());
 }
 
 String URL::user() const
@@ -542,27 +552,48 @@ void URL::setPort(std::optional<uint16_t> port)
     ));
 }
 
+static unsigned countASCIIDigits(StringView string)
+{
+    unsigned length = string.length();
+    for (unsigned count = 0; count < length; ++count) {
+        if (!isASCIIDigit(string[count]))
+            return count;
+    }
+    return length;
+}
+
 void URL::setHostAndPort(StringView hostAndPort)
 {
     if (!m_isValid)
         return;
 
-    auto hostName = hostAndPort;
-    StringView portString;
-    auto colonIndex = hostName.reverseFind(':');
-    if (colonIndex != notFound) {
-        portString = hostName.substring(colonIndex + 1);
-        hostName = hostName.left(colonIndex);
-        // Multiple colons are acceptable only in case of IPv6.
-        if (hostName.contains(':') && !hostName.startsWith('['))
-            return;
-        if (!parseInteger<uint16_t>(portString))
-            portString = { };
-    }
-    if (hostName.isEmpty()) {
-        remove(hostStart(), pathStart() - hostStart());
+    if (auto index = hostAndPort.find(hasSpecialScheme() ? slashHashOrQuestionMark : forwardSlashHashOrQuestionMark); index != notFound)
+        hostAndPort = hostAndPort.left(index);
+
+    auto colonIndex = hostAndPort.reverseFind(':');
+    if (!colonIndex)
+        return;
+
+    auto ipv6Separator = hostAndPort.reverseFind(']');
+    if (colonIndex == notFound || (ipv6Separator != notFound && ipv6Separator > colonIndex)) {
+        setHost(hostAndPort);
         return;
     }
+
+    auto portString = hostAndPort.substring(colonIndex + 1);
+    auto hostName = hostAndPort.left(colonIndex);
+    // Multiple colons are acceptable only in case of IPv6.
+    if (hostName.contains(':') && ipv6Separator == notFound)
+        return;
+
+    unsigned portLength = countASCIIDigits(portString);
+    if (!portLength) {
+        setHost(hostName);
+        return;
+    }
+    portString = portString.left(portLength);
+    if (!parseInteger<uint16_t>(portString))
+        portString = { };
 
     Vector<UChar, 512> encodedHostName;
     if (hasSpecialScheme() && !appendEncodedHostname(encodedHostName, hostName))
@@ -579,19 +610,22 @@ void URL::setHostAndPort(StringView hostAndPort)
     ));
 }
 
+void URL::removeHostAndPort()
+{
+    if (m_isValid)
+        remove(hostStart(), pathStart() - hostStart());
+}
+
 template<typename StringType>
 static String percentEncodeCharacters(const StringType& input, bool(*shouldEncode)(UChar))
 {
     auto encode = [shouldEncode] (const StringType& input) {
-        auto result = input.tryGetUTF8([&](std::span<const char> span) -> String {
+        auto result = input.tryGetUTF8([&](std::span<const char8_t> span) -> String {
             StringBuilder builder;
-            for (unsigned j = 0; j < span.size(); j++) {
-                auto c = span[j];
-                if (shouldEncode(c)) {
-                    builder.append('%');
-                    builder.append(upperNibbleToASCIIHexDigit(c));
-                    builder.append(lowerNibbleToASCIIHexDigit(c));
-                } else
+            for (char c : span) {
+                if (shouldEncode(c))
+                    builder.append('%', upperNibbleToASCIIHexDigit(c), lowerNibbleToASCIIHexDigit(c));
+                else
                     builder.append(c);
             }
             return builder.toString();
@@ -1365,7 +1399,7 @@ Vector<String> removeQueryParameters(URL& url, Function<bool(const String&)>&& s
             continue;
         }
 
-        queryWithoutRemovalKeys.append(queryWithoutRemovalKeys.isEmpty() ? "" : "&", bytes);
+        queryWithoutRemovalKeys.append(queryWithoutRemovalKeys.isEmpty() ? ""_s : "&"_s, bytes);
     }
 
     if (!removedParameters.isEmpty())

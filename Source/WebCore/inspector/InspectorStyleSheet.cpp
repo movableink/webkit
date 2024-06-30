@@ -157,7 +157,7 @@ static bool isValidRuleHeaderText(const String& headerText, StyleRuleType styleR
         // the rule text is entirely consumed and it creates a rule of the expected type, we consider it valid because
         // we will be able to continue to edit the rule in the future.
         CSSParserContext context(parserContextForDocument(document)); // CSSParserImpl holds a reference to this.
-        CSSParserImpl parser(context, atRuleIdentifier + ' ' + headerText + " {}");
+        CSSParserImpl parser(context, makeString(atRuleIdentifier, ' ', headerText, " {}"_s));
         if (!parser.tokenizer())
             return false;
 
@@ -299,7 +299,7 @@ private:
     void observeComment(unsigned startOffset, unsigned endOffset) override;
     
     Ref<CSSRuleSourceData> popRuleData();
-    template <typename CharacterType> inline void setRuleHeaderEnd(const CharacterType*, unsigned);
+    template <typename CharacterType> inline void setRuleHeaderEnd(std::span<const CharacterType>);
     void fixUnparsedPropertyRanges(CSSRuleSourceData*);
     
     const String& m_parsedText;
@@ -322,18 +322,18 @@ void StyleSheetHandler::startRuleHeader(StyleRuleType type, unsigned offset)
     m_currentRuleDataStack.append(WTFMove(data));
 }
 
-template <typename CharacterType> inline void StyleSheetHandler::setRuleHeaderEnd(const CharacterType* dataStart, unsigned listEndOffset)
+template <typename CharacterType> inline void StyleSheetHandler::setRuleHeaderEnd(std::span<const CharacterType> data)
 {
-    while (listEndOffset > m_currentRuleDataStack.last()->ruleHeaderRange.start) {
-        if (isASCIIWhitespace<CharacterType>(*(dataStart + listEndOffset - 1)))
-            --listEndOffset;
+    while (data.size() > m_currentRuleDataStack.last()->ruleHeaderRange.start) {
+        if (isASCIIWhitespace<CharacterType>(data[data.size() - 1]))
+            data = data.first(data.size() - 1);
         else
             break;
     }
 
-    m_currentRuleDataStack.last()->ruleHeaderRange.end = listEndOffset;
+    m_currentRuleDataStack.last()->ruleHeaderRange.end = data.size();
     if (!m_currentRuleDataStack.last()->selectorRanges.isEmpty())
-        m_currentRuleDataStack.last()->selectorRanges.last().end = listEndOffset;
+        m_currentRuleDataStack.last()->selectorRanges.last().end = data.size();
 }
 
 void StyleSheetHandler::endRuleHeader(unsigned offset)
@@ -341,9 +341,9 @@ void StyleSheetHandler::endRuleHeader(unsigned offset)
     ASSERT(!m_currentRuleDataStack.isEmpty());
     
     if (m_parsedText.is8Bit())
-        setRuleHeaderEnd<LChar>(m_parsedText.characters8(), offset);
+        setRuleHeaderEnd<LChar>(m_parsedText.span8().first(offset));
     else
-        setRuleHeaderEnd<UChar>(m_parsedText.characters16(), offset);
+        setRuleHeaderEnd<UChar>(m_parsedText.span16().first(offset));
 }
 
 void StyleSheetHandler::observeSelector(unsigned startOffset, unsigned endOffset)
@@ -408,7 +408,7 @@ Ref<CSSRuleSourceData> StyleSheetHandler::popRuleData()
 }
 
 template <typename CharacterType>
-static inline void fixUnparsedProperties(const CharacterType* characters, CSSRuleSourceData* ruleData)
+static inline void fixUnparsedProperties(std::span<const CharacterType> characters, CSSRuleSourceData* ruleData)
 {
     Vector<CSSPropertySourceData>& propertyData = ruleData->styleSourceData->propertyData;
     unsigned size = propertyData.size();
@@ -452,7 +452,7 @@ static inline void fixUnparsedProperties(const CharacterType* characters, CSSRul
                 ++valueStart;
             
             // Need to exclude the trailing ';' from the property value.
-            currentData->value = String(characters + valueStart, propertyEnd - valueStart + (characters[propertyEnd] == ';' ? 0 : 1));
+            currentData->value = String(characters.subspan(valueStart, propertyEnd - valueStart + (characters[propertyEnd] == ';' ? 0 : 1)));
         }
     }
 }
@@ -463,11 +463,11 @@ void StyleSheetHandler::fixUnparsedPropertyRanges(CSSRuleSourceData* ruleData)
         return;
     
     if (m_parsedText.is8Bit()) {
-        fixUnparsedProperties<LChar>(m_parsedText.characters8(), ruleData);
+        fixUnparsedProperties<LChar>(m_parsedText.span8(), ruleData);
         return;
     }
     
-    fixUnparsedProperties<UChar>(m_parsedText.characters16(), ruleData);
+    fixUnparsedProperties<UChar>(m_parsedText.span16(), ruleData);
 }
 
 void StyleSheetHandler::observeProperty(unsigned startOffset, unsigned endOffset, bool isImportant, bool isParsed)
@@ -884,11 +884,11 @@ Ref<Inspector::Protocol::CSS::CSSStyle> InspectorStyle::styleWithProperties() co
                 HashMap<String, RefPtr<Inspector::Protocol::CSS::CSSProperty>>::iterator activeIt = propertyNameToPreviousActiveProperty.find(canonicalPropertyName);
                 if (activeIt != propertyNameToPreviousActiveProperty.end()) {
                     if (propertyEntry.parsedOk) {
-                        auto newPriority = activeIt->value->getString(Inspector::Protocol::CSS::CSSProperty::priorityKey);
+                        auto newPriority = activeIt->value->getString("priority"_s);
                         if (!!newPriority)
                             previousPriority = newPriority;
 
-                        auto newStatus = activeIt->value->getString(Inspector::Protocol::CSS::CSSProperty::statusKey);
+                        auto newStatus = activeIt->value->getString("status"_s);
                         if (!!newStatus) {
                             previousStatus = newStatus;
                             if (previousStatus != Inspector::Protocol::Helpers::getEnumConstantValue(Inspector::Protocol::CSS::CSSPropertyStatus::Inactive)) {
@@ -901,7 +901,7 @@ Ref<Inspector::Protocol::CSS::CSSStyle> InspectorStyle::styleWithProperties() co
                             }
                         }
                     } else {
-                        auto previousParsedOk = activeIt->value->getBoolean(Inspector::Protocol::CSS::CSSProperty::parsedOkKey);
+                        auto previousParsedOk = activeIt->value->getBoolean("parsedOk"_s);
                         if (previousParsedOk && !previousParsedOk)
                             shouldInactivate = true;
                     }
@@ -1171,7 +1171,7 @@ ExceptionOr<CSSStyleRule*> InspectorStyleSheet::addRule(const String& selector)
     if (!styleSheetText.isEmpty())
         styleSheetText.append('\n');
 
-    styleSheetText.append(selector, " {}");
+    styleSheetText.append(selector, " {}"_s);
 
     // Using setText() as this operation changes the stylesheet rule set.
     setText(styleSheetText.toString());
@@ -1540,7 +1540,7 @@ ExceptionOr<void> InspectorStyleSheet::setRuleStyleText(const InspectorCSSId& id
             replacementBodyText.append(atRuleIdentifierForType(childRuleSourceData->type));
 
         replacementBodyText.appendSubstring(styleSheetText, childStart, childEnd - childStart);
-        replacementBodyText.append("}\n");
+        replacementBodyText.append("}\n"_s);
     }
 
     auto closingIndentationLineStart = newText.reverseFind('\n');

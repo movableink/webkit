@@ -77,15 +77,17 @@ class WebWheelEvent;
 struct WebHitTestResultData;
 
 class PDFPlugin final : public PDFPluginBase {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(PDFPlugin);
 public:
     static bool pdfKitLayerControllerIsAvailable();
 
     static Ref<PDFPlugin> create(WebCore::HTMLPlugInElement&);
-    virtual ~PDFPlugin() = default;
 
+    virtual ~PDFPlugin();
 
     void paintControlForLayerInContext(CALayer *, CGContextRef);
-    void setActiveAnnotation(RetainPtr<PDFAnnotation>&&) final;
+    void setActiveAnnotation(SetActiveAnnotationParams&&) final;
 
     void notifyContentScaleFactorChanged(CGFloat scaleFactor);
     void notifyDisplayModeChanged(int);
@@ -116,8 +118,8 @@ public:
     WebCore::IntPoint convertFromRootViewToPDFView(const WebCore::IntPoint&) const;
     WebCore::FloatRect convertFromPDFViewToScreen(const WebCore::FloatRect&) const;
 
-    CGFloat scaleFactor() const override;
-    float contentScaleFactor() const final;
+    double scaleFactor() const override;
+    double contentScaleFactor() const final;
     CGSize contentSizeRespectingZoom() const;
 
 private:

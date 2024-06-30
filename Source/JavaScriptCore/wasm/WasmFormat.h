@@ -471,17 +471,17 @@ static_assert(static_cast<int>(ExternalKind::Memory)   == 2, "Wasm needs Memory 
 static_assert(static_cast<int>(ExternalKind::Global)   == 3, "Wasm needs Global to have the value 3");
 static_assert(static_cast<int>(ExternalKind::Exception)   == 4, "Wasm needs Exception to have the value 4");
 
-inline const char* makeString(ExternalKind kind)
+inline ASCIILiteral makeString(ExternalKind kind)
 {
     switch (kind) {
-    case ExternalKind::Function: return "function";
-    case ExternalKind::Table: return "table";
-    case ExternalKind::Memory: return "memory";
-    case ExternalKind::Global: return "global";
-    case ExternalKind::Exception: return "tag";
+    case ExternalKind::Function: return "function"_s;
+    case ExternalKind::Table: return "table"_s;
+    case ExternalKind::Memory: return "memory"_s;
+    case ExternalKind::Global: return "global"_s;
+    case ExternalKind::Exception: return "tag"_s;
     }
     RELEASE_ASSERT_NOT_REACHED();
-    return "?";
+    return "?"_s;
 }
 
 struct Import {
@@ -598,7 +598,7 @@ struct Segment {
     uint8_t& byte(uint32_t pos)
     {
         ASSERT(pos < sizeInBytes);
-        return *reinterpret_cast<uint8_t*>(reinterpret_cast<char*>(this) + sizeof(Segment) + pos);
+        return *(reinterpret_cast<uint8_t*>(this) + sizeof(Segment) + pos);
     }
 
     static void destroy(Segment*);
@@ -761,10 +761,10 @@ static constexpr uintptr_t NullWasmCallee = 0;
 struct WasmToWasmImportableFunction {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
     using LoadLocation = CodePtr<WasmEntryPtrTag>*;
-    static ptrdiff_t offsetOfSignatureIndex() { return OBJECT_OFFSETOF(WasmToWasmImportableFunction, typeIndex); }
-    static ptrdiff_t offsetOfEntrypointLoadLocation() { return OBJECT_OFFSETOF(WasmToWasmImportableFunction, entrypointLoadLocation); }
-    static ptrdiff_t offsetOfBoxedWasmCalleeLoadLocation() { return OBJECT_OFFSETOF(WasmToWasmImportableFunction, boxedWasmCalleeLoadLocation); }
-    static ptrdiff_t offsetOfRTT() { return OBJECT_OFFSETOF(WasmToWasmImportableFunction, rtt); }
+    static constexpr ptrdiff_t offsetOfSignatureIndex() { return OBJECT_OFFSETOF(WasmToWasmImportableFunction, typeIndex); }
+    static constexpr ptrdiff_t offsetOfEntrypointLoadLocation() { return OBJECT_OFFSETOF(WasmToWasmImportableFunction, entrypointLoadLocation); }
+    static constexpr ptrdiff_t offsetOfBoxedWasmCalleeLoadLocation() { return OBJECT_OFFSETOF(WasmToWasmImportableFunction, boxedWasmCalleeLoadLocation); }
+    static constexpr ptrdiff_t offsetOfRTT() { return OBJECT_OFFSETOF(WasmToWasmImportableFunction, rtt); }
 
     // FIXME: Pack type index and code pointer into one 64-bit value. See <https://bugs.webkit.org/show_bug.cgi?id=165511>.
     TypeIndex typeIndex { TypeDefinition::invalidIndex };

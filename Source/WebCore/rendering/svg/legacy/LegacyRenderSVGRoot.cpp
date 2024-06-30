@@ -176,7 +176,8 @@ void LegacyRenderSVGRoot::layout()
     LayoutStateDisabler layoutStateDisabler(view().frameView().layoutContext());
 
     bool needsLayout = selfNeedsLayout();
-    LayoutRepainter repainter(*this, checkForRepaintDuringLayout() && needsLayout);
+    auto checkForRepaintOverride = !needsLayout ? std::make_optional(LayoutRepainter::CheckForRepaint::No) : std::nullopt;
+    LayoutRepainter repainter(*this, checkForRepaintOverride);
 
     LayoutSize oldSize = size();
     updateLogicalWidth();
@@ -325,16 +326,16 @@ void LegacyRenderSVGRoot::willBeDestroyed()
     RenderReplaced::willBeDestroyed();
 }
 
-void LegacyRenderSVGRoot::insertedIntoTree(IsInternalMove isInternalMove)
+void LegacyRenderSVGRoot::insertedIntoTree()
 {
-    RenderReplaced::insertedIntoTree(isInternalMove);
+    RenderReplaced::insertedIntoTree();
     SVGResourcesCache::clientWasAddedToTree(*this);
 }
 
-void LegacyRenderSVGRoot::willBeRemovedFromTree(IsInternalMove isInternalMove)
+void LegacyRenderSVGRoot::willBeRemovedFromTree()
 {
     SVGResourcesCache::clientWillBeRemovedFromTree(*this);
-    RenderReplaced::willBeRemovedFromTree(isInternalMove);
+    RenderReplaced::willBeRemovedFromTree();
 }
 
 void LegacyRenderSVGRoot::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)

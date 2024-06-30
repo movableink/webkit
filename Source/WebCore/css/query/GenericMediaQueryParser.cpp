@@ -29,6 +29,11 @@
 #include "CSSCustomPropertyValue.h"
 #include "CSSParserImpl.h"
 #include "CSSPropertyParser.h"
+#include "CSSPropertyParserConsumer+Ident.h"
+#include "CSSPropertyParserConsumer+Integer.h"
+#include "CSSPropertyParserConsumer+Length.h"
+#include "CSSPropertyParserConsumer+Number.h"
+#include "CSSPropertyParserConsumer+Resolution.h"
 #include "CSSPropertyParserHelpers.h"
 #include "CSSValue.h"
 #include "CSSVariableParser.h"
@@ -243,9 +248,9 @@ RefPtr<CSSValue> FeatureParser::consumeValue(CSSParserTokenRange& range, const M
 
     if (RefPtr value = CSSPropertyParserHelpers::consumeInteger(range))
         return value;
-    if (RefPtr value = CSSPropertyParserHelpers::consumeNumber(range, ValueRange::All))
+    if (RefPtr value = CSSPropertyParserHelpers::consumeNumber(range))
         return value;
-    if (RefPtr value = CSSPropertyParserHelpers::consumeLength(range, HTMLStandardMode, ValueRange::All))
+    if (RefPtr value = CSSPropertyParserHelpers::consumeLength(range, HTMLStandardMode))
         return value;
     if (RefPtr value = CSSPropertyParserHelpers::consumeResolution(range))
         return value;

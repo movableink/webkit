@@ -201,7 +201,7 @@ void RenderSVGRoot::layout()
     // Arbitrary affine transforms are incompatible with RenderLayoutState.
     LayoutStateDisabler layoutStateDisabler(view().frameView().layoutContext());
 
-    LayoutRepainter repainter(*this, checkForRepaintDuringLayout());
+    LayoutRepainter repainter(*this);
 
     // Update layer transform before laying out children (SVG needs access to the transform matrices during layout for on-screen text font-size calculations).
     // Eventually re-update if the transform reference box, relevant for transform-origin, has changed during layout.
@@ -415,7 +415,7 @@ void RenderSVGRoot::updateFromStyle()
 
     // Additionally update style of the anonymous RenderSVGViewportContainer,
     // which handles zoom / pan / viewBox transformations.
-    if (auto* viewportContainer = this->viewportContainer())
+    if (CheckedPtr viewportContainer = this->viewportContainer())
         viewportContainer->updateFromStyle();
 
     if (shouldApplyViewportClip())
@@ -486,7 +486,7 @@ void RenderSVGRoot::mapLocalToContainer(const RenderLayerModelObject* repaintCon
         return;
 
     bool containerSkipped;
-    auto* container = this->container(repaintContainer, containerSkipped);
+    CheckedPtr container = this->container(repaintContainer, containerSkipped);
     if (!container)
         return;
 
@@ -504,7 +504,7 @@ void RenderSVGRoot::mapLocalToContainer(const RenderLayerModelObject* repaintCon
     auto containerOffset = offsetFromContainer(*container, LayoutPoint(transformState.mappedPoint()));
 
     bool preserve3D = mode & UseTransforms && participatesInPreserve3D();
-    if (mode & UseTransforms && shouldUseTransformFromContainer(container)) {
+    if (mode & UseTransforms && shouldUseTransformFromContainer(container.get())) {
         TransformationMatrix t;
         getTransformFromContainer(containerOffset, t);
 

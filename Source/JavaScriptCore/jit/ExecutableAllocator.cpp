@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -157,14 +157,16 @@ static_assert(fixedExecutableMemoryPoolSize * executablePoolReservationFraction 
 static_assert(fixedExecutableMemoryPoolSize < 4 * GB, "ExecutableMemoryHandle assumes it is less than 4GB");
 #endif
 
+#if HAVE(KDEBUG_H)
 // 325696c8-e7cc-11ee-9f4e-325096b39f47
 static constexpr WTF::UUID jscJITNamespace { static_cast<UInt128>(0x325696c8e7cc11eeULL) << 64 | (0x9f4e325096b39f47ULL) };
+#endif
 
 static bool isJITEnabled()
 {
     bool jitEnabled = !g_jscConfig.jitDisabled;
 #if HAVE(IOS_JIT_RESTRICTIONS)
-    jitEnabled = jitEnabled && processHasEntitlement("dynamic-codesigning"_s);
+    jitEnabled = jitEnabled && (processHasEntitlement("dynamic-codesigning"_s) || processHasEntitlement("com.apple.developer.cs.allow-jit"_s));
 #elif HAVE(MAC_JIT_RESTRICTIONS) && USE(APPLE_INTERNAL_SDK)
     jitEnabled = jitEnabled && processHasEntitlement("com.apple.security.cs.allow-jit"_s);
 #endif
@@ -184,7 +186,7 @@ void ExecutableAllocator::disableJIT()
 
 #if HAVE(IOS_JIT_RESTRICTIONS) || HAVE(MAC_JIT_RESTRICTIONS) && USE(APPLE_INTERNAL_SDK)
 #if HAVE(IOS_JIT_RESTRICTIONS)
-    bool shouldDisableJITMemory = processHasEntitlement("dynamic-codesigning"_s);
+    bool shouldDisableJITMemory = processHasEntitlement("dynamic-codesigning"_s) || processHasEntitlement("com.apple.developer.cs.allow-jit"_s);
 #else
     bool shouldDisableJITMemory = processHasEntitlement("com.apple.security.cs.allow-jit"_s) && !isKernOpenSource();
 #endif
@@ -530,6 +532,11 @@ public:
             m_allocator.addFreshFreeSpace(reservation.base, reservation.size);
             m_bytesReserved += reservation.size;
 #endif
+
+#if ENABLE(MPROTECT_RX_TO_RWX)
+            ptrdiff_t pagesInReservation = (bitwise_cast<uint8_t*>(g_jscConfig.endExecutableMemory) - bitwise_cast<uint8_t*>(g_jscConfig.startExecutableMemory)) / executablePageSize();
+            m_pageWriterCounts = bitwise_cast<uint8_t*>(WTF::fastZeroedMalloc(pagesInReservation));
+#endif
         }
     }
 
@@ -667,6 +674,61 @@ public:
         forEachAllocator([&] (Allocator& allocator) {
             allocator.dumpProfile();
         });
+    }
+#endif
+
+#if ENABLE(MPROTECT_RX_TO_RWX)
+    static std::pair<size_t, size_t> pageRangeForWrittenRegion(const void* start, size_t sizeInBytes, size_t pageSize)
+    {
+        size_t startPage = bitwise_cast<uintptr_t>(bitwise_cast<uint8_t*>(start) - bitwise_cast<uint8_t*>(g_jscConfig.startExecutableMemory)) / pageSize;
+        size_t endPage = WTF::roundUpToMultipleOf(pageSize, bitwise_cast<uintptr_t>(start) - bitwise_cast<uintptr_t>(g_jscConfig.startExecutableMemory) + sizeInBytes) / pageSize;
+        return { startPage, endPage };
+    }
+
+    void startWriting(const void* start, size_t sizeInBytes)
+    {
+        size_t pageSize = executablePageSize();
+        auto [startPage, endPage] = pageRangeForWrittenRegion(start, sizeInBytes, pageSize);
+        uint8_t* startAddress = bitwise_cast<uint8_t*>(g_jscConfig.startExecutableMemory);
+
+        {
+            Locker locker(m_pageLock);
+            ssize_t firstFirstWriterPage = -1; // We use this to track runs of pages for which we are the first writer, since this means their mprotect() calls can be batched.
+            for (size_t i = startPage; i < endPage; i ++) {
+                if (!(m_pageWriterCounts[i]++)) {
+                    if (firstFirstWriterPage == -1)
+                        firstFirstWriterPage = i;
+                } else if (firstFirstWriterPage != -1) {
+                    mprotect(startAddress + pageSize * firstFirstWriterPage, (i - firstFirstWriterPage) * pageSize, PROT_READ | PROT_WRITE | PROT_EXEC);
+                    firstFirstWriterPage = -1;
+                }
+            }
+            if (firstFirstWriterPage != -1)
+                mprotect(startAddress + pageSize * firstFirstWriterPage, (endPage - firstFirstWriterPage) * pageSize, PROT_READ | PROT_WRITE | PROT_EXEC);
+        }
+    }
+
+    void finishWriting(const void* start, size_t sizeInBytes)
+    {
+        size_t pageSize = executablePageSize();
+        auto [startPage, endPage] = pageRangeForWrittenRegion(start, sizeInBytes, pageSize);
+        uint8_t* startAddress = bitwise_cast<uint8_t*>(g_jscConfig.startExecutableMemory);
+
+        {
+            Locker locker(m_pageLock);
+            ssize_t firstLastWriterPage = -1; // We use this to track runs of pages for which we are the last writer, since this means their mprotect() calls can be batched.
+            for (size_t i = startPage; i < endPage; i ++) {
+                if (!--m_pageWriterCounts[i]) {
+                    if (firstLastWriterPage == -1)
+                        firstLastWriterPage = i;
+                } else if (firstLastWriterPage != -1) {
+                    mprotect(startAddress + pageSize * firstLastWriterPage, (i - firstLastWriterPage) * pageSize, PROT_READ | PROT_EXEC);
+                    firstLastWriterPage = -1;
+                }
+            }
+            if (firstLastWriterPage != -1)
+                mprotect(startAddress + pageSize * firstLastWriterPage, (endPage - firstLastWriterPage) * pageSize, PROT_READ | PROT_EXEC);
+        }
     }
 #endif
 
@@ -1057,6 +1119,12 @@ private:
 #else
     Allocator m_allocator;
 #endif // ENABLE(JUMP_ISLANDS)
+
+#if ENABLE(MPROTECT_RX_TO_RWX)
+    Lock m_pageLock;
+    uint8_t* m_pageWriterCounts;
+#endif
+
     size_t m_bytesReserved { 0 };
 #if ENABLE(LIBPAS_JIT_HEAP)
     std::atomic<size_t> m_bytesAllocated { 0 };
@@ -1303,7 +1371,7 @@ void dumpJITMemory(const void* dst, const void* src, size_t size)
     static std::once_flag once;
     std::call_once(once, [] {
         buffer = bitwise_cast<uint8_t*>(malloc(bufferSize));
-        flushQueue.construct(WorkQueue::create("jsc.dumpJITMemory.queue", WorkQueue::QOS::Background));
+        flushQueue.construct(WorkQueue::create("jsc.dumpJITMemory.queue"_s, WorkQueue::QOS::Background));
         std::atexit([] {
             Locker locker { dumpJITMemoryLock };
             DumpJIT::flush();
@@ -1328,6 +1396,19 @@ void dumpJITMemory(const void* dst, const void* src, size_t size)
     RELEASE_ASSERT_NOT_REACHED();
 #endif
 }
+
+#if ENABLE(MPROTECT_RX_TO_RWX)
+void ExecutableAllocator::startWriting(const void* start, size_t sizeInBytes) { g_jscConfig.fixedVMPoolExecutableAllocator->startWriting(start, sizeInBytes); }
+void ExecutableAllocator::finishWriting(const void* start, size_t sizeInBytes) { g_jscConfig.fixedVMPoolExecutableAllocator->finishWriting(start, sizeInBytes); }
+
+void* performJITMemcpyWithMProtect(void *dst, const void *src, size_t n)
+{
+    g_jscConfig.fixedVMPoolExecutableAllocator->startWriting(dst, n);
+    memcpy(dst, src, n);
+    g_jscConfig.fixedVMPoolExecutableAllocator->finishWriting(dst, n);
+    return dst;
+}
+#endif
 
 #if ENABLE(LIBPAS_JIT_HEAP) && ENABLE(JIT)
 RefPtr<ExecutableMemoryHandle> ExecutableMemoryHandle::createImpl(size_t sizeInBytes)

@@ -77,6 +77,7 @@ using BorderEdges = RectEdges<BorderEdge>;
 
 class RenderBoxModelObject : public RenderLayerModelObject {
     WTF_MAKE_ISO_ALLOCATED(RenderBoxModelObject);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderBoxModelObject);
 public:
     virtual ~RenderBoxModelObject();
     
@@ -126,12 +127,15 @@ public:
     virtual inline LayoutUnit paddingStart() const;
     virtual inline LayoutUnit paddingEnd() const;
 
+    virtual inline RectEdges<LayoutUnit> borderWidths() const;
     virtual inline LayoutUnit borderTop() const;
     virtual inline LayoutUnit borderBottom() const;
     virtual inline LayoutUnit borderLeft() const;
     virtual inline LayoutUnit borderRight() const;
+
     virtual inline LayoutUnit horizontalBorderExtent() const;
     virtual inline LayoutUnit verticalBorderExtent() const;
+
     virtual inline LayoutUnit borderBefore() const;
     virtual inline LayoutUnit borderAfter() const;
     virtual inline LayoutUnit borderStart() const;
@@ -205,11 +209,6 @@ public:
 
     bool hasRunningAcceleratedAnimations() const;
 
-    virtual std::optional<LayoutUnit> overridingContainingBlockContentWidth() const { ASSERT_NOT_REACHED(); return -1_lu; }
-    virtual std::optional<LayoutUnit> overridingContainingBlockContentHeight() const { ASSERT_NOT_REACHED(); return -1_lu; }
-    virtual bool hasOverridingContainingBlockContentWidth() const { return false; }
-    virtual bool hasOverridingContainingBlockContentHeight() const { return false; }
-
     void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption>) const override;
 
 protected:
@@ -259,7 +258,7 @@ public:
     ContinuationChainNode* continuationChainNode() const;
 
 protected:
-    LayoutUnit computedCSSPadding(const Length&) const;
+    LayoutUnit resolveLengthPercentageUsingContainerLogicalWidth(const Length&) const;
     virtual void absoluteQuadsIgnoringContinuation(const FloatRect&, Vector<FloatQuad>&, bool* /*wasFixed*/) const { ASSERT_NOT_REACHED(); }
     void collectAbsoluteQuadsForContinuation(Vector<FloatQuad>& quads, bool* wasFixed) const;
 

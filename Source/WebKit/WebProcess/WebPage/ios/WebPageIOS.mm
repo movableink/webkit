@@ -75,6 +75,7 @@
 #import <WebCore/DataDetectionResultsStorage.h>
 #import <WebCore/DiagnosticLoggingClient.h>
 #import <WebCore/DiagnosticLoggingKeys.h>
+#import <WebCore/Document.h>
 #import <WebCore/DocumentLoader.h>
 #import <WebCore/DocumentMarkerController.h>
 #import <WebCore/DragController.h>
@@ -152,9 +153,9 @@
 #import <WebCore/StyleProperties.h>
 #import <WebCore/TextIndicator.h>
 #import <WebCore/TextIterator.h>
-#import <WebCore/TextPlaceholderElement.h>
 #import <WebCore/UserAgent.h>
 #import <WebCore/UserGestureIndicator.h>
+#import <WebCore/ViewportArguments.h>
 #import <WebCore/VisibleUnits.h>
 #import <WebCore/WebEvent.h>
 #import <pal/system/ios/UserInterfaceIdiom.h>
@@ -216,7 +217,7 @@ static void adjustCandidateAutocorrectionInFrame(const String& correction, Local
     if (!referenceRange)
         return;
 
-    auto correctedRange = findPlainText(*referenceRange, correction, { Backwards });
+    auto correctedRange = findPlainText(*referenceRange, correction, { FindOption::Backwards });
     if (correctedRange.collapsed())
         return;
 
@@ -451,6 +452,11 @@ FloatSize WebPage::overrideScreenSize() const
     return m_overrideScreenSize;
 }
 
+FloatSize WebPage::overrideAvailableScreenSize() const
+{
+    return m_overrideAvailableScreenSize;
+}
+
 void WebPage::didReceiveMobileDocType(bool isMobileDoctype)
 {
     m_isMobileDoctype = isMobileDoctype;
@@ -599,6 +605,8 @@ bool WebPage::handleEditingKeyboardEvent(KeyboardEvent& event)
     if (handleKeyEventByRelinquishingFocusToChrome(event))
         return true;
 
+    updateLastNodeBeforeWritingSuggestions(event);
+
     // FIXME: Interpret the event immediately upon receiving it in UI process, without sending to WebProcess first.
     auto sendResult = WebProcess::singleton().parentProcessConnection()->sendSync(Messages::WebPageProxy::InterpretKeyEvent(editorState(ShouldPerformLayout::Yes), platformEvent->type() == PlatformKeyboardEvent::Type::Char), m_identifier);
     auto [eventWasHandled] = sendResult.takeReplyOr(false);
@@ -668,8 +676,7 @@ void WebPage::registerRemoteFrameAccessibilityTokens(pid_t, std::span<const uint
 
 void WebPage::registerUIProcessAccessibilityTokens(std::span<const uint8_t> elementToken, std::span<const uint8_t>)
 {
-    NSData *elementTokenData = [NSData dataWithBytes:elementToken.data() length:elementToken.size()];
-    [m_mockAccessibilityElement setRemoteTokenData:elementTokenData];
+    [m_mockAccessibilityElement setRemoteTokenData:toNSData(elementToken).get()];
 }
 
 void WebPage::getStringSelectionForPasteboard(CompletionHandler<void(String&&)>&& completionHandler)
@@ -824,12 +831,11 @@ void WebPage::handleSyntheticClick(Node& nodeRespondingToClick, const WebCore::F
     {
         LOG_WITH_STREAM(ContentObservation, stream << "handleSyntheticClick: node(" << &nodeRespondingToClick << ") " << location);
         ContentChangeObserver::MouseMovedScope observingScope(respondingDocument);
-        auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
+        RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
         if (!localMainFrame)
             return;
-        auto& mainFrame = *localMainFrame;
-        dispatchSyntheticMouseMove(mainFrame, location, modifiers, pointerId);
-        mainFrame.document()->updateStyleIfNeeded();
+        dispatchSyntheticMouseMove(*localMainFrame, location, modifiers, pointerId);
+        localMainFrame->protectedDocument()->updateStyleIfNeeded();
         if (m_isClosed)
             return;
     }
@@ -2778,7 +2784,7 @@ bool WebPage::applyAutocorrectionInternal(const String& correction, const String
                 textForRange = emptyString();
                 range = makeSimpleRange(position);
             } else if (auto searchRange = rangeExpandedAroundPositionByCharacters(position, characterCount)) {
-                if (auto foundRange = findPlainText(*searchRange, originalTextWithFoldedQuoteMarks, { DoNotSetSelection, DoNotRevealSelection }); !foundRange.collapsed()) {
+                if (auto foundRange = findPlainText(*searchRange, originalTextWithFoldedQuoteMarks, { FindOption::DoNotSetSelection, FindOption::DoNotRevealSelection }); !foundRange.collapsed()) {
                     textForRange = plainTextForContext(foundRange);
                     range = foundRange;
                 }
@@ -3869,23 +3875,38 @@ void WebPage::autofillLoginCredentials(const String& username, const String& pas
     }
 }
 
-void WebPage::setViewportConfigurationViewLayoutSize(const FloatSize& size, double scaleFactor, double minimumEffectiveDeviceWidth)
+void WebPage::setViewportConfigurationViewLayoutSize(const FloatSize& size, double layoutSizeScaleFactorFromClient, double minimumEffectiveDeviceWidth)
 {
-    LOG_WITH_STREAM(VisibleRects, stream << "WebPage " << m_identifier << " setViewportConfigurationViewLayoutSize " << size << " scaleFactor " << scaleFactor << " minimumEffectiveDeviceWidth " << minimumEffectiveDeviceWidth);
+    LOG_WITH_STREAM(VisibleRects, stream << "WebPage " << m_identifier << " setViewportConfigurationViewLayoutSize " << size << " layoutSizeScaleFactorFromClient " << layoutSizeScaleFactorFromClient << " minimumEffectiveDeviceWidth " << minimumEffectiveDeviceWidth);
 
     if (!m_viewportConfiguration.isKnownToLayOutWiderThanViewport())
         m_viewportConfiguration.setMinimumEffectiveDeviceWidthForShrinkToFit(0);
 
+    m_baseViewportLayoutSizeScaleFactor = [&] {
+        if (!m_page->settings().automaticallyAdjustsViewScaleUsingMinimumEffectiveDeviceWidth())
+            return 1.0;
+
+        if (!minimumEffectiveDeviceWidth)
+            return 1.0;
+
+        if (minimumEffectiveDeviceWidth >= size.width())
+            return 1.0;
+
+        return size.width() / minimumEffectiveDeviceWidth;
+    }();
+
+    double layoutSizeScaleFactor = layoutSizeScaleFactorFromClient * m_baseViewportLayoutSizeScaleFactor;
+
     auto previousLayoutSizeScaleFactor = m_viewportConfiguration.layoutSizeScaleFactor();
-    if (!m_viewportConfiguration.setViewLayoutSize(size, scaleFactor, minimumEffectiveDeviceWidth))
+    if (!m_viewportConfiguration.setViewLayoutSize(size, layoutSizeScaleFactor, minimumEffectiveDeviceWidth))
         return;
 
     auto zoomToInitialScale = ZoomToInitialScale::No;
     auto newInitialScale = m_viewportConfiguration.initialScale();
     auto currentPageScaleFactor = pageScaleFactor();
-    if (scaleFactor > previousLayoutSizeScaleFactor && newInitialScale > currentPageScaleFactor)
+    if (layoutSizeScaleFactor > previousLayoutSizeScaleFactor && newInitialScale > currentPageScaleFactor)
         zoomToInitialScale = ZoomToInitialScale::Yes;
-    else if (scaleFactor < previousLayoutSizeScaleFactor && newInitialScale < currentPageScaleFactor)
+    else if (layoutSizeScaleFactor < previousLayoutSizeScaleFactor && newInitialScale < currentPageScaleFactor)
         zoomToInitialScale = ZoomToInitialScale::Yes;
 
     viewportConfigurationChanged(zoomToInitialScale);
@@ -4090,7 +4111,8 @@ void WebPage::dynamicViewportSizeUpdate(const DynamicViewportSizeUpdate& target)
     // FIXME: Move settings from Frame to Frame and remove this check.
     auto& settings = frameView.frame().settings();
     LayoutRect documentRect = IntRect(frameView.scrollOrigin(), frameView.contentsSize());
-    auto layoutViewportSize = LocalFrameView::expandedLayoutViewportSize(frameView.baseLayoutViewportSize(), LayoutSize(documentRect.size()), settings.layoutViewportHeightExpansionFactor());
+    double heightExpansionFactor = m_disallowLayoutViewportHeightExpansionReasons.isEmpty() ? settings.layoutViewportHeightExpansionFactor() : 0;
+    auto layoutViewportSize = LocalFrameView::expandedLayoutViewportSize(frameView.baseLayoutViewportSize(), LayoutSize(documentRect.size()), heightExpansionFactor);
     LayoutRect layoutViewportRect = LocalFrameView::computeUpdatedLayoutViewportRect(frameView.layoutViewportRect(), documentRect, LayoutSize(newUnobscuredContentRect.size()), LayoutRect(newUnobscuredContentRect), layoutViewportSize, frameView.minStableLayoutViewportOrigin(), frameView.maxStableLayoutViewportOrigin(), LayoutViewportConstraint::ConstrainedToDocumentRect);
     frameView.setLayoutViewportOverrideRect(layoutViewportRect);
     frameView.layoutOrVisualViewportChanged();
@@ -4128,26 +4150,63 @@ void WebPage::resetViewportDefaultConfiguration(WebFrame* frame, bool hasMobileD
         return ViewportConfiguration::webpageParameters();
     };
 
-    if (!frame) {
+    RefPtr localFrame = frame->coreLocalFrame() ? frame->coreLocalFrame() : frame->provisionalFrame();
+    ASSERT(localFrame);
+    if (!frame || !localFrame) {
         m_viewportConfiguration.setDefaultConfiguration(parametersForStandardFrame());
         return;
     }
+
+    RefPtr document = localFrame->document();
+
+    auto updateViewportConfigurationForMobileDocType = [this, document] {
+        m_viewportConfiguration.setDefaultConfiguration(ViewportConfiguration::xhtmlMobileParameters());
+
+        // Do not update the viewport arguments if they are already configured from, say, a meta tag.
+        if (m_viewportConfiguration.viewportArguments().type >= ViewportArguments::Type::CSSDeviceAdaptation)
+            return;
+
+        if (!document || !document->isViewportDocument())
+            return;
+
+        auto viewportArguments = ViewportArguments { ViewportArguments::Type::CSSDeviceAdaptation };
+        document->setViewportArguments(viewportArguments);
+        viewportPropertiesDidChange(viewportArguments);
+    };
 
     if (hasMobileDocType) {
-        m_viewportConfiguration.setDefaultConfiguration(ViewportConfiguration::xhtmlMobileParameters());
-        return;
+        return updateViewportConfigurationForMobileDocType();
     }
 
-    auto* document = frame->coreLocalFrame()->document();
-    if (document->isImageDocument())
-        m_viewportConfiguration.setDefaultConfiguration(ViewportConfiguration::imageDocumentParameters());
-    else if (document->isTextDocument())
-        m_viewportConfiguration.setDefaultConfiguration(ViewportConfiguration::textDocumentParameters());
-    else
-        m_viewportConfiguration.setDefaultConfiguration(parametersForStandardFrame());
+    bool configureWithParametersForStandardFrame = !document;
+
+    if (document) {
+        if (document->isImageDocument())
+            m_viewportConfiguration.setDefaultConfiguration(ViewportConfiguration::imageDocumentParameters());
+        else if (document->isTextDocument())
+            m_viewportConfiguration.setDefaultConfiguration(ViewportConfiguration::textDocumentParameters());
+        else
+            configureWithParametersForStandardFrame = true;
+    }
+
+    if (configureWithParametersForStandardFrame)
+        return m_viewportConfiguration.setDefaultConfiguration(parametersForStandardFrame());
 }
 
 #if ENABLE(TEXT_AUTOSIZING)
+
+void WebPage::updateTextAutosizingEnablementFromInitialScale(double initialScale)
+{
+    if (m_page->settings().textAutosizingEnabledAtLargeInitialScale())
+        return;
+
+    bool shouldEnable = initialScale <= 1;
+    if (shouldEnable == m_page->settings().textAutosizingEnabled())
+        return;
+
+    m_page->settings().setTextAutosizingEnabled(shouldEnable);
+}
+
 void WebPage::resetIdempotentTextAutosizingIfNeeded(double previousInitialScale)
 {
     if (!m_page->settings().textAutosizingEnabled() || !m_page->settings().textAutosizingUsesIdempotentMode())
@@ -4297,6 +4356,7 @@ void WebPage::viewportConfigurationChanged(ZoomToInitialScale zoomToInitialScale
     double previousInitialScaleIgnoringContentSize = m_page->initialScaleIgnoringContentSize();
     m_page->setInitialScaleIgnoringContentSize(initialScaleIgnoringContentSize);
     resetIdempotentTextAutosizingIfNeeded(previousInitialScaleIgnoringContentSize);
+    updateTextAutosizingEnablementFromInitialScale(initialScale);
 #endif
     if (setFixedLayoutSize(m_viewportConfiguration.layoutSize()))
         resetTextAutosizing();
@@ -4594,6 +4654,9 @@ void WebPage::updateVisibleContentRects(const VisibleContentRectUpdateInfo& visi
         }
 
         frameView.layoutOrVisualViewportChanged();
+    } else if (visibleContentRectUpdateInfo.unobscuredContentRect() != visibleContentRectUpdateInfo.unobscuredContentRectRespectingInputViewBounds()) {
+        frameView.setVisualViewportOverrideRect(LayoutRect(visibleContentRectUpdateInfo.unobscuredContentRectRespectingInputViewBounds()));
+        frameView.layoutOrVisualViewportChanged();
     }
 
     bool isChangingObscuredInsetsInteractively = visibleContentRectUpdateInfo.viewStability().contains(ViewStabilityFlag::ChangingObscuredInsetsInteractively);
@@ -4613,6 +4676,51 @@ void WebPage::updateVisibleContentRects(const VisibleContentRectUpdateInfo& visi
         }
         scrollingCoordinator->reconcileScrollingState(frameView, scrollPosition, visibleContentRectUpdateInfo.layoutViewportRect(), ScrollType::User, viewportStability, layerAction);
     }
+}
+
+void WebPage::updateLayoutViewportHeightExpansionTimerFired()
+{
+    RefPtr mainFrame = m_mainFrame->coreLocalFrame();
+    if (!mainFrame)
+        return;
+
+    RefPtr view = mainFrame->view();
+    if (!view)
+        return;
+
+    FloatRect viewportRect = view->viewportConstrainedObjectsRect();
+
+    bool hitTestedToLargeViewportConstrainedElement = [&] {
+        if (!view->hasViewportConstrainedObjects())
+            return false;
+
+        Vector<Ref<Element>> largeViewportConstrainedElements;
+        for (auto& renderer : *view->viewportConstrainedObjects()) {
+            RefPtr element = renderer.element();
+            if (!element)
+                continue;
+
+            auto bounds = renderer.absoluteBoundingBoxRect();
+            if (intersection(viewportRect, bounds).area() > 0.9 * viewportRect.area())
+                largeViewportConstrainedElements.append(element.releaseNonNull());
+        }
+
+        if (largeViewportConstrainedElements.isEmpty())
+            return false;
+
+        RefPtr hitTestedNode = mainFrame->eventHandler().hitTestResultAtPoint(LayoutPoint { viewportRect.center() }, HitTestRequest::Type::ReadOnly).innerNode();
+        if (!hitTestedNode)
+            return false;
+
+        return largeViewportConstrainedElements.containsIf([hitTestedNode](auto& element) {
+            return element->contains(*hitTestedNode);
+        });
+    }();
+
+    if (hitTestedToLargeViewportConstrainedElement)
+        addReasonsToDisallowLayoutViewportHeightExpansion(DisallowLayoutViewportHeightExpansionReason::LargeContainer);
+    else
+        removeReasonsToDisallowLayoutViewportHeightExpansion(DisallowLayoutViewportHeightExpansionReason::LargeContainer);
 }
 
 void WebPage::willStartUserTriggeredZooming()
@@ -4834,9 +4942,10 @@ OptionSet<PointerCharacteristics> WebPage::pointerCharacteristicsOfAllAvailableP
     return result;
 }
 
-void WebPage::hardwareKeyboardAvailabilityChanged(bool keyboardIsAttached)
+void WebPage::hardwareKeyboardAvailabilityChanged(HardwareKeyboardState state)
 {
-    m_keyboardIsAttached = keyboardIsAttached;
+    m_keyboardIsAttached = state.isAttached;
+    setHardwareKeyboardState(state);
 
     if (RefPtr focusedFrame = m_page->checkedFocusController()->focusedLocalFrame())
         focusedFrame->eventHandler().capsLockStateMayHaveChanged();
@@ -4854,26 +4963,6 @@ bool WebPage::platformPrefersTextLegibilityBasedZoomScaling() const
 #else
     return false;
 #endif
-}
-
-void WebPage::insertTextPlaceholder(const IntSize& size, CompletionHandler<void(const std::optional<WebCore::ElementContext>&)>&& completionHandler)
-{
-    // Inserting the placeholder may run JavaScript, which can do anything, including frame destruction.
-    RefPtr frame = m_page->checkedFocusController()->focusedOrMainFrame();
-    if (!frame)
-        return completionHandler({ });
-
-    auto placeholder = frame->editor().insertTextPlaceholder(size);
-    completionHandler(placeholder ? contextForElement(*placeholder) : std::nullopt);
-}
-
-void WebPage::removeTextPlaceholder(const ElementContext& placeholder, CompletionHandler<void()>&& completionHandler)
-{
-    if (auto element = elementForContext(placeholder)) {
-        if (RefPtr frame = element->document().frame())
-            frame->editor().removeTextPlaceholder(downcast<TextPlaceholderElement>(*element));
-    }
-    completionHandler();
 }
 
 void WebPage::updateSelectionWithDelta(int64_t locationDelta, int64_t lengthDelta, CompletionHandler<void()>&& completionHandler)
@@ -4965,7 +5054,7 @@ void WebPage::requestDocumentEditingContext(DocumentEditingContextRequest&& requ
     if (!frame)
         return completionHandler({ });
 
-    RefPtr { frame->document() }->updateLayout(LayoutOptions::IgnorePendingStylesheets);
+    frame->protectedDocument()->updateLayout(LayoutOptions::IgnorePendingStylesheets);
 
     VisibleSelection selection = frame->selection().selection();
 
@@ -5223,7 +5312,7 @@ void WebPage::focusTextInputContextAndPlaceCaret(const ElementContext& elementCo
     ASSERT(target->document().frame());
     Ref targetFrame = *target->document().frame();
 
-    targetFrame->document()->updateLayout(LayoutOptions::IgnorePendingStylesheets);
+    targetFrame->protectedDocument()->updateLayout(LayoutOptions::IgnorePendingStylesheets);
 
     // Performing layout could have could torn down the element's renderer. Check that we still
     // have one. Otherwise, bail out as this function only focuses elements that have a visual

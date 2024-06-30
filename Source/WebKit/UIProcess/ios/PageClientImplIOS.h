@@ -69,6 +69,7 @@ private:
     bool isViewWindowActive() override;
     bool isViewFocused() override;
     bool isViewVisible() override;
+    void viewIsBecomingVisible() override;
     bool canTakeForegroundAssertions() override;
     bool isViewInWindow() override;
     bool isViewVisibleOrOccluded() override;
@@ -204,6 +205,8 @@ private:
     void showPlaybackTargetPicker(bool hasVideo, const WebCore::IntRect& elementRect, WebCore::RouteSharingPolicy, const String&) override;
     void showDataDetectorsUIForPositionInformation(const InteractionInformationAtPosition&) override;
 
+    void hardwareKeyboardAvailabilityChanged() override;
+
     bool handleRunOpenPanel(WebPageProxy*, WebFrameProxy*, const FrameInfoData&, API::OpenPanelParameters*, WebOpenPanelResultListenerProxy*) override;
     bool showShareSheet(const WebCore::ShareDataWithParsedURL&, WTF::CompletionHandler<void(bool)>&&) override;
     void showContactPicker(const WebCore::ContactsRequestData&, WTF::CompletionHandler<void(std::optional<Vector<WebCore::ContactInfo>>&&)>&&) override;
@@ -239,7 +242,7 @@ private:
     // WebFullScreenManagerProxyClient
     void closeFullScreenManager() override;
     bool isFullScreen() override;
-    void enterFullScreen(WebCore::FloatSize videoDimensions) override;
+    void enterFullScreen(WebCore::FloatSize mediaDimensions) override;
     void exitFullScreen() override;
     void beganEnterFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame) override;
     void beganExitFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame) override;
@@ -282,7 +285,7 @@ private:
     void requestPasswordForQuickLookDocument(const String& fileName, WTF::Function<void(const String&)>&&) override;
 #endif
 
-    void requestDOMPasteAccess(WebCore::DOMPasteAccessCategory, const WebCore::IntRect& elementRect, const String&, CompletionHandler<void(WebCore::DOMPasteAccessResponse)>&&) final;
+    void requestDOMPasteAccess(WebCore::DOMPasteAccessCategory, WebCore::DOMPasteRequiresInteraction, const WebCore::IntRect& elementRect, const String&, CompletionHandler<void(WebCore::DOMPasteAccessResponse)>&&) final;
 
 #if ENABLE(DRAG_SUPPORT)
     void didPerformDragOperation(bool handled) override;
@@ -319,6 +322,7 @@ private:
 
     WebCore::Color contentViewBackgroundColor() final;
     WebCore::Color insertionPointColor() final;
+    bool isScreenBeingCaptured() final;
 
     String sceneID() final;
 
@@ -334,15 +338,23 @@ private:
     bool hasResizableWindows() const final;
 
 #if ENABLE(VIDEO_PRESENTATION_MODE)
-    void didEnterFullscreen() final;
+    void didEnterFullscreen() final { };
     void didExitFullscreen() final;
+    void didCleanupFullscreen() final;
 #endif
 
 #if PLATFORM(IOS_FAMILY)
     UIViewController *presentingViewController() const final;
 #endif
 
+    WebCore::FloatPoint webViewToRootView(const WebCore::FloatPoint&) const final;
     WebCore::FloatRect rootViewToWebView(const WebCore::FloatRect&) const final;
+
+#if HAVE(SPATIAL_TRACKING_LABEL)
+    const String& spatialTrackingLabel() const final;
+#endif
+
+    void scheduleVisibleContentRectUpdate() final;
 
     RetainPtr<WKContentView> contentView() const { return m_contentView.get(); }
 

@@ -802,7 +802,7 @@ TEST(URLSchemeHandler, Threads)
         auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600) configuration:configuration.get()]);
         [handler setStartURLSchemeTaskHandler:^(WKWebView *, id<WKURLSchemeTask> task) {
             theTask.get() = retainPtr(task);
-            theThread = Thread::create("A", [task] {
+            theThread = Thread::create("A"_s, [task] {
                 auto response = adoptNS([[NSURLResponse alloc] initWithURL:task.request.URL MIMEType:@"text/html" expectedContentLength:0 textEncodingName:nil]);
                 [task didReceiveResponse:response.get()];
                 [task didFinish];
@@ -820,7 +820,7 @@ TEST(URLSchemeHandler, Threads)
         theThread = nullptr;
     }
 
-    Thread::create("B", [] {
+    Thread::create("B"_s, [] {
         theTask.get() = nil;
     })->waitForCompletion();
 }
@@ -1312,7 +1312,7 @@ TEST(URLSchemeHandler, AllowedNetworkHostsRedirect)
     TestWebKitAPI::HTTPServer server127001({
         { "/"_s, { 301, {
             { "Access-Control-Allow-Origin"_s, "*"_s },
-            { "Location"_s, makeString("http://localhost:", serverLocalhost.port(), "/redirectTarget") }
+            { "Location"_s, makeString("http://localhost:"_s, serverLocalhost.port(), "/redirectTarget"_s) }
         }}},
     });
 

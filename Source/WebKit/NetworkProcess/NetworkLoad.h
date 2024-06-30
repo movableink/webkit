@@ -30,6 +30,15 @@
 #include "NetworkLoadParameters.h"
 #include <wtf/text/WTFString.h>
 
+namespace WebKit {
+class NetworkLoad;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebKit::NetworkLoad> : std::true_type { };
+}
+
 namespace WebCore {
 class AuthenticationChallenge;
 }
@@ -71,6 +80,8 @@ public:
 
     String description() const;
     void setH2PingCallback(const URL&, CompletionHandler<void(Expected<WTF::Seconds, WebCore::ResourceError>&&)>&&);
+
+    void setTimingAllowFailedFlag();
 
 private:
     // NetworkDataTaskClient

@@ -107,7 +107,7 @@ CacheStorageDiskStore::CacheStorageDiskStore(const String& cacheName, const Stri
     , m_path(path)
     , m_salt(valueOrDefault(FileSystem::readOrMakeSalt(saltFilePath())))
     , m_callbackQueue(WTFMove(queue))
-    , m_ioQueue(WorkQueue::create("com.apple.WebKit.CacheStorageCache"))
+    , m_ioQueue(WorkQueue::create("com.apple.WebKit.CacheStorageCache"_s))
 {
     ASSERT(!m_cacheName.isEmpty());
     ASSERT(!m_path.isEmpty());
@@ -325,8 +325,7 @@ std::optional<CacheStorageRecord> CacheStorageDiskStore::readRecordFromFileData(
             return std::nullopt;
 
         auto sharedBuffer = WebCore::SharedBuffer::create(WTFMove(blobBuffer));
-        auto bodyData = std::span(sharedBuffer->data(), sharedBuffer->size());
-        if (storedInfo->metaData.bodyHash != computeSHA1(bodyData, m_salt))
+        if (storedInfo->metaData.bodyHash != computeSHA1(sharedBuffer->span(), m_salt))
             return std::nullopt;
 
         responseBody = sharedBuffer;
@@ -500,12 +499,6 @@ static Vector<uint8_t> encodeRecord(const NetworkCache::Key& key, const Vector<u
     result.append(metaData);
     result.appendVector(headerData);
 
-    StringBuilder sb;
-    for (auto& data : bodyData) {
-        sb.append(data);
-        sb.append(",");
-    }
-    
     if (isBodyInline)
         result.appendVector(bodyData);
 

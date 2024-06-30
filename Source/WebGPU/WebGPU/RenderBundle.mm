@@ -93,7 +93,7 @@ void RenderBundle::updateMinMaxDepths(float minDepth, float maxDepth)
     m_maxDepth = maxDepth;
     float twoFloats[2] = { m_minDepth, m_maxDepth };
     for (RenderBundleICBWithResources* icb in m_renderBundlesResources)
-        m_device->getQueue().writeBuffer(icb.fragmentDynamicOffsetsBuffer, 0, twoFloats, sizeof(float) * 2);
+        m_device->getQueue().writeBuffer(icb.fragmentDynamicOffsetsBuffer, 0, { reinterpret_cast<uint8_t*>(twoFloats), sizeof(float) * 2 });
 }
 
 uint64_t RenderBundle::drawCount() const
@@ -101,7 +101,7 @@ uint64_t RenderBundle::drawCount() const
     return m_commandCount;
 }
 
-bool RenderBundle::validateRenderPass(bool depthReadOnly, bool stencilReadOnly, const WGPURenderPassDescriptor& descriptor) const
+bool RenderBundle::validateRenderPass(bool depthReadOnly, bool stencilReadOnly, const WGPURenderPassDescriptor& descriptor, const Vector<RefPtr<TextureView>>& colorAttachmentViews, const RefPtr<TextureView>& depthStencilView) const
 {
     if (depthReadOnly && !m_descriptor.depthReadOnly)
         return false;
@@ -120,24 +120,24 @@ bool RenderBundle::validateRenderPass(bool depthReadOnly, bool stencilReadOnly, 
                 continue;
             return false;
         }
-        const auto& attachment = descriptor.colorAttachments[i];
-        if (!attachment.view) {
+        auto* attachmentView = colorAttachmentViews[i].get();
+        if (!attachmentView) {
             if (descriptorColorFormat == WGPUTextureFormat_Undefined)
                 continue;
             return false;
         }
-        auto& texture = fromAPI(attachment.view);
+        auto& texture = *attachmentView;
         if (descriptorColorFormat != texture.format())
             return false;
         defaultRasterSampleCount = texture.sampleCount();
     }
 
     if (auto* depthStencil = descriptor.depthStencilAttachment) {
-        if (!depthStencil->view) {
+        if (!depthStencilView) {
             if (m_descriptor.depthStencilFormat != WGPUTextureFormat_Undefined)
                 return false;
         } else {
-            auto& texture = fromAPI(depthStencil->view);
+            auto& texture = *depthStencilView.get();
             if (texture.format() != m_descriptor.depthStencilFormat)
                 return false;
             defaultRasterSampleCount = texture.sampleCount();

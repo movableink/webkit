@@ -64,9 +64,20 @@ bool TextureView::previouslyCleared() const
     return m_parentTexture->previouslyCleared(m_texture.parentRelativeLevel, m_texture.parentRelativeSlice);
 }
 
-void TextureView::setPreviouslyCleared()
+void TextureView::setPreviouslyCleared(uint32_t mipLevel, uint32_t slice)
 {
-    m_parentTexture->setPreviouslyCleared(m_texture.parentRelativeLevel, m_texture.parentRelativeSlice);
+    m_parentTexture->setPreviouslyCleared(m_texture.parentRelativeLevel + mipLevel, m_texture.parentRelativeSlice + slice);
+}
+
+uint32_t TextureView::parentRelativeMipLevel() const
+{
+    RELEASE_ASSERT(baseMipLevel() == m_texture.parentRelativeLevel);
+    return m_texture.parentRelativeLevel;
+}
+
+uint32_t TextureView::parentRelativeSlice() const
+{
+    return m_texture.parentRelativeSlice;
 }
 
 uint32_t TextureView::width() const
@@ -87,6 +98,11 @@ uint32_t TextureView::depthOrArrayLayers() const
 WGPUTextureUsageFlags TextureView::usage() const
 {
     return m_parentTexture->usage();
+}
+
+id<MTLTexture> TextureView::texture() const
+{
+    return isDestroyed() ? parentTexture() : m_texture;
 }
 
 uint32_t TextureView::sampleCount() const
@@ -151,17 +167,19 @@ bool TextureView::isValid() const
 
 void TextureView::destroy()
 {
-    m_texture = m_device->placeholderTexture();
-    if (m_commandEncoder)
-        m_commandEncoder.get()->makeSubmitInvalid();
+    m_texture = m_device->placeholderTexture(format());
+    if (!m_parentTexture->isCanvasBacking()) {
+        for (auto& commandEncoder : m_commandEncoders)
+            commandEncoder.makeSubmitInvalid();
+    }
 
-    m_commandEncoder = nullptr;
+    m_commandEncoders.clear();
 }
 
 void TextureView::setCommandEncoder(CommandEncoder& commandEncoder) const
 {
-    m_commandEncoder = &commandEncoder;
-    if (isDestroyed())
+    m_commandEncoders.add(commandEncoder);
+    if (isDestroyed() && !m_parentTexture->isCanvasBacking())
         commandEncoder.makeSubmitInvalid();
 }
 

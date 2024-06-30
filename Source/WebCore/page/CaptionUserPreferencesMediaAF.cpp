@@ -329,7 +329,7 @@ String CaptionUserPreferencesMediaAF::captionsWindowCSS() const
     if (!opacity)
         return windowStyle;
 
-    return makeString(windowStyle, nameLiteral(CSSPropertyPadding), ": .4em !important;");
+    return makeString(windowStyle, nameLiteral(CSSPropertyPadding), ": .4em !important;"_s);
 }
 
 String CaptionUserPreferencesMediaAF::captionsBackgroundCSS() const
@@ -379,7 +379,7 @@ String CaptionUserPreferencesMediaAF::captionsTextColorCSS() const
 
 template<typename... Types> void appendCSS(StringBuilder& builder, CSSPropertyID id, bool important, const Types&... values)
 {
-    builder.append(nameLiteral(id), ':', values..., important ? " !important;" : ";");
+    builder.append(nameLiteral(id), ':', values..., important ? " !important;"_s : ";"_s);
 }
 
 String CaptionUserPreferencesMediaAF::windowRoundedCornerRadiusCSS() const
@@ -390,7 +390,7 @@ String CaptionUserPreferencesMediaAF::windowRoundedCornerRadiusCSS() const
         return emptyString();
 
     StringBuilder builder;
-    appendCSS(builder, CSSPropertyBorderRadius, behavior == kMACaptionAppearanceBehaviorUseValue, radius, "px");
+    appendCSS(builder, CSSPropertyBorderRadius, behavior == kMACaptionAppearanceBehaviorUseValue, radius, "px"_s);
     return builder.toString();
 }
 
@@ -433,14 +433,14 @@ String CaptionUserPreferencesMediaAF::captionsTextEdgeCSS() const
     StringBuilder builder;
     bool important = behavior == kMACaptionAppearanceBehaviorUseValue;
     if (textEdgeStyle == kMACaptionAppearanceTextEdgeStyleRaised)
-        appendCSS(builder, CSSPropertyTextShadow, important, "-.1em -.1em .16em black");
+        appendCSS(builder, CSSPropertyTextShadow, important, "-.1em -.1em .16em black"_s);
     else if (textEdgeStyle == kMACaptionAppearanceTextEdgeStyleDepressed)
-        appendCSS(builder, CSSPropertyTextShadow, important, ".1em .1em .16em black");
+        appendCSS(builder, CSSPropertyTextShadow, important, ".1em .1em .16em black"_s);
     else if (textEdgeStyle == kMACaptionAppearanceTextEdgeStyleDropShadow)
-        appendCSS(builder, CSSPropertyTextShadow, important, "0 .1em .16em black");
+        appendCSS(builder, CSSPropertyTextShadow, important, "0 .1em .16em black"_s);
 
     if (textEdgeStyle == kMACaptionAppearanceTextEdgeStyleDropShadow || textEdgeStyle == kMACaptionAppearanceTextEdgeStyleUniform) {
-        appendCSS(builder, CSSPropertyStrokeColor, important, "black");
+        appendCSS(builder, CSSPropertyStrokeColor, important, "black"_s);
         appendCSS(builder, CSSPropertyPaintOrder, important, nameLiteral(CSSValueStroke));
         appendCSS(builder, CSSPropertyStrokeLinejoin, important, nameLiteral(CSSValueRound));
         appendCSS(builder, CSSPropertyStrokeLinecap, important, nameLiteral(CSSValueRound));
@@ -462,7 +462,7 @@ String CaptionUserPreferencesMediaAF::captionsDefaultFontCSS() const
         return emptyString();
 
     StringBuilder builder;
-    builder.append("font-family: \"", name.get(), '"');
+    builder.append("font-family: \""_s, name.get(), '"');
     if (RetainPtr cascadeList = adoptCF(static_cast<CFArrayRef>(CTFontDescriptorCopyAttribute(font.get(), kCTFontCascadeListAttribute)))) {
         for (CFIndex i = 0; i < CFArrayGetCount(cascadeList.get()); i++) {
             auto fontCascade = static_cast<CTFontDescriptorRef>(CFArrayGetValueAtIndex(cascadeList.get(), i));
@@ -471,10 +471,10 @@ String CaptionUserPreferencesMediaAF::captionsDefaultFontCSS() const
             RetainPtr fontCascadeName = adoptCF(static_cast<CFStringRef>(CTFontDescriptorCopyAttribute(fontCascade, kCTFontNameAttribute)));
             if (!fontCascadeName)
                 continue;
-            builder.append(", \"", fontCascadeName.get(), '"');
+            builder.append(", \""_s, fontCascadeName.get(), '"');
         }
     }
-    builder.append(behavior == kMACaptionAppearanceBehaviorUseValue ? " !important;" : ";");
+    builder.append(behavior == kMACaptionAppearanceBehaviorUseValue ? " !important;"_s : ";"_s);
     return builder.toString();
 }
 
@@ -591,13 +591,13 @@ String CaptionUserPreferencesMediaAF::captionsStyleSheetOverride() const
     String fontName = captionsDefaultFontCSS();
     String background = captionsBackgroundCSS();
     if (!background.isEmpty() || !captionsColor.isEmpty() || !edgeStyle.isEmpty() || !fontName.isEmpty()) {
-        captionsOverrideStyleSheet.append(" ::", UserAgentParts::cue(), '{', background, captionsColor, edgeStyle, fontName, '}');
-        captionsOverrideStyleSheet.append(" ::", UserAgentParts::cue(), "(rt) {", background, captionsColor, edgeStyle, fontName, '}');
+        captionsOverrideStyleSheet.append(" ::"_s, UserAgentParts::cue(), '{', background, captionsColor, edgeStyle, fontName, '}');
+        captionsOverrideStyleSheet.append(" ::"_s, UserAgentParts::cue(), "(rt) {"_s, background, captionsColor, edgeStyle, fontName, '}');
     }
     String windowColor = captionsWindowCSS();
     String windowCornerRadius = windowRoundedCornerRadiusCSS();
     if (!windowColor.isEmpty() || !windowCornerRadius.isEmpty())
-        captionsOverrideStyleSheet.append(" ::", UserAgentParts::webkitMediaTextTrackDisplayBackdrop(), '{', windowColor, windowCornerRadius, '}');
+        captionsOverrideStyleSheet.append(" ::"_s, UserAgentParts::webkitMediaTextTrackDisplayBackdrop(), '{', windowColor, windowCornerRadius, '}');
 #endif // HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
 
     LOG(Media, "CaptionUserPreferencesMediaAF::captionsStyleSheetOverrideSetting style to:\n%s", captionsOverrideStyleSheet.toString().utf8().data());

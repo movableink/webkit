@@ -52,6 +52,7 @@ OBJC_CLASS UIViewController;
 #endif
 
 #if ENABLE(WEBXR) && PLATFORM(COCOA)
+#include "PlatformXRSessionEnums.h"
 #include <WebCore/PlatformXR.h>
 #endif
 
@@ -234,12 +235,19 @@ public:
 
 #if PLATFORM(IOS_FAMILY)
     virtual void startXRSession(WebKit::WebPageProxy&, const PlatformXR::Device::FeatureList&, CompletionHandler<void(RetainPtr<id>, PlatformViewController *)>&& completionHandler) { completionHandler(nil, nil); }
-    virtual void endXRSession(WebKit::WebPageProxy&) { }
+    virtual void endXRSession(WebKit::WebPageProxy&, WebKit::PlatformXRSessionEndReason) { }
 #endif
 #endif
 
     virtual void updateAppBadge(WebKit::WebPageProxy&, const WebCore::SecurityOriginData&, std::optional<uint64_t>) { }
     virtual void updateClientBadge(WebKit::WebPageProxy&, const WebCore::SecurityOriginData&, std::optional<uint64_t>) { }
+
+    virtual void didAdjustVisibilityWithSelectors(WebKit::WebPageProxy&, Vector<WTF::String>&&) { }
+
+#if ENABLE(GAMEPAD)
+    virtual void recentlyAccessedGamepadsForTesting(WebKit::WebPageProxy&) { }
+    virtual void stoppedAccessingGamepadsForTesting(WebKit::WebPageProxy&) { }
+#endif
 };
 
 } // namespace API

@@ -26,7 +26,7 @@
 #include "config.h"
 #include "RemoteMediaRecorder.h"
 
-#if PLATFORM(COCOA) && ENABLE(GPU_PROCESS) && ENABLE(MEDIA_STREAM)
+#if PLATFORM(COCOA) && ENABLE(GPU_PROCESS) && ENABLE(MEDIA_RECORDER)
 
 #include "Connection.h"
 #include "GPUConnectionToWebProcess.h"
@@ -99,9 +99,7 @@ void RemoteMediaRecorder::videoFrameAvailable(SharedVideoFrame&& sharedVideoFram
 void RemoteMediaRecorder::fetchData(CompletionHandler<void(std::span<const uint8_t>, double)>&& completionHandler)
 {
     m_writer->fetchData([completionHandler = WTFMove(completionHandler)](auto&& data, auto timeCode) mutable {
-        auto buffer = data ? data->makeContiguous() : RefPtr<WebCore::SharedBuffer>();
-        auto* pointer = buffer ? buffer->data() : nullptr;
-        completionHandler(std::span { pointer, data ? data->size() : 0 }, timeCode);
+        completionHandler(data ? data->makeContiguous()->span() : std::span<const uint8_t> { }, timeCode);
     });
 }
 
@@ -137,4 +135,4 @@ void RemoteMediaRecorder::setSharedVideoFrameMemory(SharedMemory::Handle&& handl
 
 #undef MESSAGE_CHECK
 
-#endif // PLATFORM(COCOA) && ENABLE(GPU_PROCESS) && ENABLE(MEDIA_STREAM)
+#endif // PLATFORM(COCOA) && ENABLE(GPU_PROCESS) && ENABLE(MEDIA_RECORDER)

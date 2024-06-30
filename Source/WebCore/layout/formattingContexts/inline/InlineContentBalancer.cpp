@@ -156,7 +156,7 @@ void InlineContentBalancer::initialize()
         if (numberOfVisibleLinesAllowed && (lineIndex + 1 >= numberOfVisibleLinesAllowed))
             break;
 
-        layoutRange.start = InlineFormattingUtils::leadingInlineItemPositionForNextLine(lineLayoutResult.inlineItemRange.end, previousLineEnd, !lineLayoutResult.floatContent.hasIntrusiveFloat.isEmpty(), layoutRange.end);
+        layoutRange.start = InlineFormattingUtils::leadingInlineItemPositionForNextLine(lineLayoutResult.inlineItemRange.end, previousLineEnd, !lineLayoutResult.floatContent.hasIntrusiveFloat.isEmpty() || !lineLayoutResult.floatContent.placedFloats.isEmpty(), layoutRange.end);
         previousLineEnd = layoutRange.start;
         previousLine = PreviousLine { lineIndex, lineLayoutResult.contentGeometry.trailingOverflowingContentWidth, !lineLayoutResult.inlineContent.isEmpty() && lineLayoutResult.inlineContent.last().isLineBreak(), !lineLayoutResult.inlineContent.isEmpty(), lineLayoutResult.directionality.inlineBaseDirection, WTFMove(lineLayoutResult.floatContent.suspendedFloats) };
         lineIndex++;
@@ -190,16 +190,19 @@ std::optional<Vector<LayoutUnit>> InlineContentBalancer::computeBalanceConstrain
     for (auto chunkSize : chunkSizes) {
         bool isFirstChunk = !startLine;
         auto rangeToBalance = InlineItemRange { m_originalLineInlineItemRanges[startLine].startIndex(), m_originalLineInlineItemRanges[startLine + chunkSize - 1].endIndex() };
-        InlineLayoutUnit totalWidth = 0;
-        for (size_t i = 0; i < chunkSize; i++)
-            totalWidth += m_originalLineWidths[startLine + i];
-        InlineLayoutUnit idealLineWidth = totalWidth / chunkSize;
-
         std::optional<Vector<LayoutUnit>> balancedLineWidthsForChunk;
-        if (m_numberOfLinesInOriginalLayout <= maximumLinesToBalanceWithLineRequirement)
-            balancedLineWidthsForChunk = balanceRangeWithLineRequirement(rangeToBalance, idealLineWidth, chunkSize, isFirstChunk);
-        else
-            balancedLineWidthsForChunk = balanceRangeWithNoLineRequirement(rangeToBalance, idealLineWidth, isFirstChunk);
+
+        if (rangeToBalance.startIndex() < rangeToBalance.endIndex()) {
+            InlineLayoutUnit totalWidth = 0;
+            for (size_t i = 0; i < chunkSize; i++)
+                totalWidth += m_originalLineWidths[startLine + i];
+            InlineLayoutUnit idealLineWidth = totalWidth / chunkSize;
+
+            if (m_numberOfLinesInOriginalLayout <= maximumLinesToBalanceWithLineRequirement)
+                balancedLineWidthsForChunk = balanceRangeWithLineRequirement(rangeToBalance, idealLineWidth, chunkSize, isFirstChunk);
+            else
+                balancedLineWidthsForChunk = balanceRangeWithNoLineRequirement(rangeToBalance, idealLineWidth, isFirstChunk);
+        }
 
         if (!balancedLineWidthsForChunk) {
             for (size_t i = 0; i < chunkSize; i++)
@@ -217,6 +220,8 @@ std::optional<Vector<LayoutUnit>> InlineContentBalancer::computeBalanceConstrain
 
 std::optional<Vector<LayoutUnit>> InlineContentBalancer::balanceRangeWithLineRequirement(InlineItemRange range, InlineLayoutUnit idealLineWidth, size_t numberOfLines, bool isFirstChunk)
 {
+    ASSERT(range.startIndex() < range.endIndex());
+
     // breakOpportunities holds the indices i such that a line break can occur before m_inlineItemList[i].
     auto breakOpportunities = computeBreakOpportunities(range);
 
@@ -318,6 +323,8 @@ std::optional<Vector<LayoutUnit>> InlineContentBalancer::balanceRangeWithLineReq
 
 std::optional<Vector<LayoutUnit>> InlineContentBalancer::balanceRangeWithNoLineRequirement(InlineItemRange range, InlineLayoutUnit idealLineWidth, bool isFirstChunk)
 {
+    ASSERT(range.startIndex() < range.endIndex());
+
     // breakOpportunities holds the indices i such that a line break can occur before m_inlineItemList[i].
     auto breakOpportunities = computeBreakOpportunities(range);
 
@@ -556,7 +563,7 @@ Vector<size_t> InlineContentBalancer::computeBreakOpportunities(InlineItemRange 
     Vector<size_t> breakOpportunities;
     size_t currentIndex = range.startIndex();
     while (currentIndex < range.endIndex()) {
-        currentIndex = m_inlineFormattingContext.formattingUtils().nextWrapOpportunity(currentIndex, range, m_inlineItemList);
+        currentIndex = m_inlineFormattingContext.formattingUtils().nextWrapOpportunity(currentIndex, range, m_inlineItemList.span());
         breakOpportunities.append(currentIndex);
     }
     return breakOpportunities;

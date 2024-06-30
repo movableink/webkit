@@ -48,7 +48,7 @@ public:
         static std::once_flag onceKey;
         static LazyNeverDestroyed<Ref<WorkQueue>> messageQueue;
         std::call_once(onceKey, [] {
-            messageQueue.construct(WorkQueue::create("PlatformMediaResourceLoader"));
+            messageQueue.construct(WorkQueue::create("PlatformMediaResourceLoader"_s));
         });
         return messageQueue.get();
     }
@@ -56,7 +56,7 @@ public:
 private:
     RefPtr<WebCore::PlatformMediaResource> requestResource(WebCore::ResourceRequest&&, LoadOptions) final;
     void sendH2Ping(const URL&, CompletionHandler<void(Expected<WTF::Seconds, WebCore::ResourceError>&&)>&&) final;
-    Ref<WorkQueue> targetQueue() final { return defaultQueue(); }
+    Ref<RefCountedSerialFunctionDispatcher> targetDispatcher() final { return defaultQueue(); }
 
     WeakPtr<RemoteMediaPlayerProxy> m_remoteMediaPlayerProxy;
 };

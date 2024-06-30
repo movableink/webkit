@@ -66,7 +66,6 @@ public:
     WEBCORE_EXPORT static std::optional<Ref<Image>> create(RefPtr<ShareableBitmap>&&);
     WEBCORE_EXPORT static bool supportsType(const String&);
     static bool isPDFResource(const String& mimeType, const URL&);
-    static bool isPostScriptResource(const String& mimeType, const URL&);
 
     virtual bool isBitmapImage() const { return false; }
     virtual bool isGeneratedImage() const { return false; }
@@ -162,6 +161,9 @@ public:
     
 #if ASSERT_ENABLED
     virtual bool hasSolidColor() { return false; }
+#endif
+#if ENABLE(QUICKLOOK_FULLSCREEN)
+    virtual bool shouldUseQuickLookForFullscreen() const { return false; }
 #endif
 
     virtual void dump(WTF::TextStream&) const;

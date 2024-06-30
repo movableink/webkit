@@ -64,11 +64,6 @@ IDBIndex::~IDBIndex()
     ASSERT(canCurrentThreadAccessThreadLocalData(m_objectStore.transaction().database().originThread()));
 }
 
-const char* IDBIndex::activeDOMObjectName() const
-{
-    return "IDBIndex";
-}
-
 bool IDBIndex::virtualHasPendingActivity() const
 {
     return m_objectStore.hasPendingActivity();
@@ -100,7 +95,7 @@ ExceptionOr<void> IDBIndex::setName(const String& name)
         return { };
 
     if (m_objectStore.info().hasIndex(name))
-        return Exception { ExceptionCode::ConstraintError, makeString("Failed set property 'name' on 'IDBIndex': The owning object store already has an index named '", name, "'.") };
+        return Exception { ExceptionCode::ConstraintError, makeString("Failed set property 'name' on 'IDBIndex': The owning object store already has an index named '"_s, name, "'."_s) };
 
     m_objectStore.transaction().database().renameIndex(*this, name);
     m_info.rename(name);
@@ -425,12 +420,12 @@ void IDBIndex::markAsDeleted()
     m_deleted = true;
 }
 
-void IDBIndex::ref()
+void IDBIndex::ref() const
 {
     m_objectStore.ref();
 }
 
-void IDBIndex::deref()
+void IDBIndex::deref() const
 {
     m_objectStore.deref();
 }

@@ -404,8 +404,8 @@ String languageTagForLocaleID(const char* localeID, bool isImmortal)
         // This is used to store into static variables that may be shared across JSC execution threads.
         // This must be immortal to make concurrent ref/deref safe.
         if (isImmortal)
-            return StringImpl::createStaticStringImpl(buffer.data(), buffer.size());
-        return String(buffer.data(), buffer.size());
+            return StringImpl::createStaticStringImpl(buffer.span());
+        return buffer.span();
     };
 
     return createResult(canonicalizeUnicodeExtensionsAfterICULocaleCanonicalization(WTFMove(buffer)));
@@ -434,7 +434,7 @@ static void addScriptlessLocaleIfNeeded(LocaleSet& availableLocales, StringView 
     ASSERT(subtags[2].is8Bit() && subtags[2].containsOnlyASCII());
     buffer.append(subtags[2].span8());
 
-    availableLocales.add(StringImpl::createStaticStringImpl(buffer.data(), buffer.size()));
+    availableLocales.add(StringImpl::createStaticStringImpl(buffer.span()));
 }
 
 const LocaleSet& intlAvailableLocales()
@@ -1088,7 +1088,7 @@ Vector<String> numberingSystemsForLocale(const String& locale)
             ASSERT(U_SUCCESS(status));
             // Only support algorithmic if it is the default fot the locale, handled below.
             if (!unumsys_isAlgorithmic(numsys))
-                availableNumberingSystems->append(String(StringImpl::createStaticStringImpl(result, resultLength)));
+                availableNumberingSystems->append(String(StringImpl::createStaticStringImpl({ result, static_cast<size_t>(resultLength) })));
             unumsys_close(numsys);
         }
         uenum_close(numberingSystemNames);
@@ -1628,15 +1628,15 @@ const Vector<String>& intlAvailableCalendars()
 
         auto createImmortalThreadSafeString = [&](String&& string) {
             if (string.is8Bit())
-                return StringImpl::createStaticStringImpl(string.characters8(), string.length());
-            return StringImpl::createStaticStringImpl(string.characters16(), string.length());
+                return StringImpl::createStaticStringImpl(string.span8());
+            return StringImpl::createStaticStringImpl(string.span16());
         };
 
         availableCalendars.construct(count, [&](size_t) {
             int32_t length = 0;
             const char* pointer = uenum_next(enumeration.get(), &length, &status);
             ASSERT(U_SUCCESS(status));
-            String calendar(pointer, length);
+            String calendar({ pointer, static_cast<size_t>(length) });
             if (auto mapped = mapICUCalendarKeywordToBCP47(calendar))
                 return createImmortalThreadSafeString(WTFMove(mapped.value()));
             return createImmortalThreadSafeString(WTFMove(calendar));
@@ -1707,7 +1707,7 @@ static JSArray* availableCollations(JSGlobalObject* globalObject)
             throwTypeError(globalObject, scope, "failed to enumerate available collations"_s);
             return { };
         }
-        String collation(pointer, length);
+        String collation({ pointer, static_cast<size_t>(length) });
         if (collation == "standard"_s || collation == "search"_s)
             continue;
         if (auto mapped = mapICUCollationKeywordToBCP47(collation))
@@ -1764,7 +1764,7 @@ static JSArray* availableCurrencies(JSGlobalObject* globalObject)
             throwTypeError(globalObject, scope, "failed to enumerate available currencies"_s);
             return { };
         }
-        String currency(pointer, length);
+        String currency({ pointer, static_cast<size_t>(length) });
         if (currency == "EQE"_s)
             continue;
         if (currency == "LSM"_s)
@@ -1819,7 +1819,7 @@ static JSArray* availableNumberingSystems(JSGlobalObject* globalObject)
         }
         if (unumsys_isAlgorithmic(numberingSystem.get()))
             continue;
-        elements.constructAndAppend(name, length);
+        elements.constructAndAppend(std::span { name, static_cast<size_t>(length) });
     }
 
     // The AvailableNumberingSystems abstract operation returns a List, ordered as if an Array of the same
@@ -1873,7 +1873,7 @@ const Vector<String>& intlAvailableTimeZones()
             int32_t length = 0;
             const char* pointer = uenum_next(enumeration.get(), &length, &status);
             ASSERT(U_SUCCESS(status));
-            String timeZone(pointer, length);
+            String timeZone({ pointer, static_cast<size_t>(length) });
             if (isValidTimeZoneNameFromICUTimeZone(timeZone)) {
                 if (auto mapped = canonicalizeTimeZoneNameFromICUTimeZone(WTFMove(timeZone)))
                     temporary.append(WTFMove(mapped.value()));
@@ -1891,8 +1891,8 @@ const Vector<String>& intlAvailableTimeZones()
 
         auto createImmortalThreadSafeString = [&](String&& string) {
             if (string.is8Bit())
-                return StringImpl::createStaticStringImpl(string.characters8(), string.length());
-            return StringImpl::createStaticStringImpl(string.characters16(), string.length());
+                return StringImpl::createStaticStringImpl(string.span8());
+            return StringImpl::createStaticStringImpl(string.span16());
         };
         availableTimeZones.get() = WTF::map(std::span(temporary.begin(), end), [&](auto&& string) -> String {
             return createImmortalThreadSafeString(WTFMove(string));

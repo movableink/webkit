@@ -34,6 +34,7 @@
 #include <WebCore/HTMLMediaElementEnums.h>
 #include <WebCore/PlatformCALayer.h>
 #include <WebCore/VideoPresentationModelVideoElement.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/HashMap.h>
 #include <wtf/RefCounted.h>
@@ -58,17 +59,18 @@ class ShareableBitmapHandle;
 
 namespace WebKit {
 
-using LayerHostingContextID = uint32_t;
-
 class LayerHostingContext;
 class WebPage;
 class PlaybackSessionInterfaceContext;
 class PlaybackSessionManager;
 class VideoPresentationManager;
 
-class VideoPresentationInterfaceContext
+class VideoPresentationInterfaceContext final
     : public RefCounted<VideoPresentationInterfaceContext>
-    , public WebCore::VideoPresentationModelClient {
+    , public WebCore::VideoPresentationModelClient
+    , public CanMakeCheckedPtr<VideoPresentationInterfaceContext> {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(VideoPresentationInterfaceContext);
 public:
     static Ref<VideoPresentationInterfaceContext> create(VideoPresentationManager& manager, PlaybackSessionContextIdentifier contextId)
     {
@@ -101,6 +103,14 @@ public:
 private:
     // VideoPresentationModelClient
     void hasVideoChanged(bool) override;
+    void documentVisibilityChanged(bool) override;
+
+    // CheckedPtr interface
+    uint32_t ptrCount() const final { return CanMakeCheckedPtr::ptrCount(); }
+    uint32_t ptrCountWithoutThreadCheck() const final { return CanMakeCheckedPtr::ptrCountWithoutThreadCheck(); }
+    void incrementPtrCount() const final { CanMakeCheckedPtr::incrementPtrCount(); }
+    void decrementPtrCount() const final { CanMakeCheckedPtr::decrementPtrCount(); }
+
     void videoDimensionsChanged(const WebCore::FloatSize&) override;
     void setPlayerIdentifier(std::optional<WebCore::MediaPlayerIdentifier>) final;
 
@@ -145,7 +155,8 @@ public:
     void enterVideoFullscreenForVideoElement(WebCore::HTMLVideoElement&, WebCore::HTMLMediaElementEnums::VideoFullscreenMode, bool standby);
     void exitVideoFullscreenForVideoElement(WebCore::HTMLVideoElement&, WTF::CompletionHandler<void(bool)>&& = [](bool) { });
     void exitVideoFullscreenToModeWithoutAnimation(WebCore::HTMLVideoElement&, WebCore::HTMLMediaElementEnums::VideoFullscreenMode);
-
+    void setVideoFullscreenMode(WebCore::HTMLVideoElement&, WebCore::HTMLMediaElementEnums::VideoFullscreenMode);
+    void clearVideoFullscreenMode(WebCore::HTMLVideoElement&, WebCore::HTMLMediaElementEnums::VideoFullscreenMode);
     void updateTextTrackRepresentationForVideoElement(WebCore::HTMLVideoElement&, WebCore::ShareableBitmapHandle&&);
     void setTextTrackRepresentationContentScaleForVideoElement(WebCore::HTMLVideoElement&, float scale);
     void setTextTrackRepresentationIsHiddenForVideoElement(WebCore::HTMLVideoElement&, bool hidden);
@@ -168,6 +179,7 @@ protected:
 
     // Interface to VideoPresentationInterfaceContext
     void hasVideoChanged(PlaybackSessionContextIdentifier, bool hasVideo);
+    void documentVisibilityChanged(PlaybackSessionContextIdentifier, bool isDocumentVisible);
     void videoDimensionsChanged(PlaybackSessionContextIdentifier, const WebCore::FloatSize&);
     void setPlayerIdentifier(PlaybackSessionContextIdentifier, std::optional<WebCore::MediaPlayerIdentifier>);
 
@@ -186,17 +198,20 @@ protected:
     void didCleanupFullscreen(PlaybackSessionContextIdentifier);
     void setVideoLayerFrameFenced(PlaybackSessionContextIdentifier, WebCore::FloatRect bounds, WTF::MachSendRight&&);
     void setVideoLayerGravityEnum(PlaybackSessionContextIdentifier, unsigned gravity);
+    void setVideoFullscreenFrame(PlaybackSessionContextIdentifier, WebCore::FloatRect);
     void fullscreenModeChanged(PlaybackSessionContextIdentifier, WebCore::HTMLMediaElementEnums::VideoFullscreenMode);
     void fullscreenMayReturnToInline(PlaybackSessionContextIdentifier, bool isPageVisible);
     void requestRouteSharingPolicyAndContextUID(PlaybackSessionContextIdentifier, CompletionHandler<void(WebCore::RouteSharingPolicy, String)>&&);
     void ensureUpdatedVideoDimensions(PlaybackSessionContextIdentifier, WebCore::FloatSize existingVideoDimensions);
 
     void setCurrentlyInFullscreen(VideoPresentationInterfaceContext&, bool);
+    void setRequiresTextTrackRepresentation(PlaybackSessionContextIdentifier, bool);
+    void setTextTrackRepresentationBounds(PlaybackSessionContextIdentifier, const WebCore::IntRect&);
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const;
     const void* logIdentifier() const;
-    const char* logClassName() const;
+    ASCIILiteral logClassName() const;
     WTFLogChannel& logChannel() const;
 #endif
 
@@ -208,7 +223,6 @@ protected:
     HashMap<PlaybackSessionContextIdentifier, int> m_clientCounts;
     WeakPtr<WebCore::HTMLVideoElement> m_videoElementInPictureInPicture;
     bool m_currentlyInFullscreen { false };
-    WTF::Function<void(LayerHostingContextID, const WebCore::FloatSize&)> m_setupFullscreenHandler;
 };
 
 } // namespace WebKit

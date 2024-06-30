@@ -137,26 +137,8 @@ macro cCall2(function)
     checkStackPointerAlignment(t4, 0xbad0c002)
     if C_LOOP or C_LOOP_WIN
         cloopCallSlowPath function, a0, a1
-    elsif X86_64 or ARM64 or ARM64E or RISCV64
+    elsif X86_64 or X86_64_WIN or ARM64 or ARM64E or RISCV64
         call function
-    elsif X86_64_WIN
-        # Note: this implementation is only correct if the return type size is > 8 bytes.
-        # See macro cCall2Void for an implementation when the return type <= 8 bytes.
-        # On Win64, when the return type is larger than 8 bytes, we need to allocate space on the stack for the return value.
-        # On entry rcx (a0), should contain a pointer to this stack space. The other parameters are shifted to the right,
-        # rdx (a1) should contain the first argument, and r8 (a2) should contain the second argument.
-        # On return, rax contains a pointer to this stack value, and we then need to copy the 16 byte return value into rax (r0) and rdx (r1)
-        # since the return value is expected to be split between the two.
-        # See http://msdn.microsoft.com/en-us/library/7572ztz4.aspx
-        move a1, a2
-        move a0, a1
-        subp 48, sp
-        move sp, a0
-        addp 32, a0
-        call function
-        move 8[r0], r1
-        move [r0], r0
-        addp 48, sp
     else
         error
     end
@@ -165,15 +147,6 @@ end
 macro cCall2Void(function)
     if C_LOOP or C_LOOP_WIN
         cloopCallSlowPathVoid function, a0, a1
-    elsif X86_64_WIN
-        # Note: we cannot use the cCall2 macro for Win64 in this case,
-        # as the Win64 cCall2 implemenation is only correct when the return type size is > 8 bytes.
-        # On Win64, rcx and rdx are used for passing the first two parameters.
-        # We also need to make room on the stack for all four parameter registers.
-        # See http://msdn.microsoft.com/en-us/library/ms235286.aspx
-        subp 32, sp 
-        call function
-        addp 32, sp
     else
         cCall2(function)
     end
@@ -183,27 +156,8 @@ macro cCall3(function)
     checkStackPointerAlignment(t4, 0xbad0c004)
     if C_LOOP or C_LOOP_WIN
         cloopCallSlowPath3 function, a0, a1, a2
-    elsif X86_64 or ARM64 or ARM64E or RISCV64
+    elsif X86_64 or X86_64_WIN or ARM64 or ARM64E or RISCV64
         call function
-    elsif X86_64_WIN
-        # Note: this implementation is only correct if the return type size is > 8 bytes.
-        # See macro cCall2Void for an implementation when the return type <= 8 bytes.
-        # On Win64, when the return type is larger than 8 bytes, we need to allocate space on the stack for the return value.
-        # On entry rcx (a0), should contain a pointer to this stack space. The other parameters are shifted to the right,
-        # rdx (a1) should contain the first argument, r8 (a2) should contain the second argument, and r9 (a3) should contain the third argument.
-        # On return, rax contains a pointer to this stack value, and we then need to copy the 16 byte return value into rax (r0) and rdx (r1)
-        # since the return value is expected to be split between the two.
-        # See http://msdn.microsoft.com/en-us/library/7572ztz4.aspx
-        move a2, a3
-        move a1, a2
-        move a0, a1
-        subp 64, sp
-        move sp, a0
-        addp 32, a0
-        call function
-        move 8[r0], r1
-        move [r0], r0
-        addp 64, sp
     else
         error
     end
@@ -214,15 +168,8 @@ macro cCall4(function)
     checkStackPointerAlignment(t4, 0xbad0c004)
     if C_LOOP or C_LOOP_WIN
         cloopCallSlowPath4 function, a0, a1, a2, a3
-    elsif X86_64 or ARM64 or ARM64E or RISCV64
+    elsif X86_64 or X86_64_WIN or ARM64 or ARM64E or RISCV64
         call function
-    elsif X86_64_WIN
-        # On Win64, rcx, rdx, r8, and r9 are used for passing the first four parameters.
-        # We also need to make room on the stack for all four parameter registers.
-        # See http://msdn.microsoft.com/en-us/library/ms235286.aspx
-        subp 64, sp
-        call function
-        addp 64, sp
     else
         error
     end
@@ -390,7 +337,8 @@ _llint_throw_stack_overflow_error_from_vm_entry:
 
 # a0, a2, t3, t4
 macro makeJavaScriptCall(entry, protoCallFrame, temp1, temp2)
-    addp 16, sp
+_llint_call_javascript:
+    addp CallerFrameAndPCSize, sp
     if C_LOOP or C_LOOP_WIN
         cloopCallJSFunction entry
     elsif ARM64E
@@ -407,7 +355,7 @@ macro makeJavaScriptCall(entry, protoCallFrame, temp1, temp2)
         global _vmEntryToJavaScriptGateAfter
         _vmEntryToJavaScriptGateAfter:
     end
-    subp 16, sp
+    subp CallerFrameAndPCSize, sp
 end
 
 # a0, a2, t3, t4
@@ -419,11 +367,6 @@ macro makeHostFunctionCall(entry, protoCallFrame, temp1, temp2)
     if C_LOOP or C_LOOP_WIN
         storep lr, 8[sp]
         cloopCallNative temp1
-    elsif X86_64_WIN
-        # We need to allocate 32 bytes on the stack for the shadow space.
-        subp 32, sp
-        call temp1, HostFunctionPtrTag
-        addp 32, sp
     else
         call temp1, HostFunctionPtrTag
     end
@@ -1711,8 +1654,8 @@ llintOpWithMetadata(op_get_by_id_direct, OpGetByIdDirect, macro (size, get, disp
 end)
 
 # The base object is expected in t3
-macro performGetByIDHelper(opcodeStruct, modeMetadataName, valueProfileName, slowLabel, size, metadata, return)
-    metadata(t2, t1)
+# metadata needs to be loaded in t2
+macro performGetByIDHelper(opcodeStruct, modeMetadataName, valueProfileName, slowLabel, size, return)
     loadb %opcodeStruct%::Metadata::%modeMetadataName%.mode[t2], t1
 
 .opGetByIdDefault:
@@ -1738,8 +1681,7 @@ macro performGetByIDHelper(opcodeStruct, modeMetadataName, valueProfileName, slo
 
 .opGetByIdArrayLength:
     bbneq t1, constexpr GetByIdMode::ArrayLength, .opGetByIdUnset
-    move t3, t0
-    arrayProfile(%opcodeStruct%::Metadata::%modeMetadataName%.arrayLengthMode.arrayProfile, t0, t2, t5)
+    loadb JSCell::m_indexingTypeAndMisc[t3], t0
     btiz t0, IsArray, slowLabel
     btiz t0, IndexingShapeMask, slowLabel
     loadCagedJSValue(JSObject::m_butterfly[t3], t0, t1)
@@ -1761,7 +1703,8 @@ end
 llintOpWithMetadata(op_get_by_id, OpGetById, macro (size, get, dispatch, metadata, return)
     get(m_base, t0)
     loadConstantOrVariableCell(size, t0, t3, .opGetByIdSlow)
-    performGetByIDHelper(OpGetById, m_modeMetadata, m_valueProfile, .opGetByIdSlow, size, metadata, return)
+    metadata(t2, t1)
+    performGetByIDHelper(OpGetById, m_modeMetadata, m_valueProfile, .opGetByIdSlow, size, return)
 
 .opGetByIdSlow:
     callSlowPath(_llint_slow_path_get_by_id)
@@ -1771,7 +1714,24 @@ llintOpWithMetadata(op_get_by_id, OpGetById, macro (size, get, dispatch, metadat
     getterSetterOSRExitReturnPoint(op_get_by_id, size)
     valueProfile(size, OpGetById, m_valueProfile, r0, t2)
     return(r0)
+end)
 
+
+llintOpWithMetadata(op_get_length, OpGetLength, macro (size, get, dispatch, metadata, return)
+    get(m_base, t0)
+    loadConstantOrVariableCell(size, t0, t3, .opGetLengthSlow)
+    metadata(t2, t1)
+    arrayProfile(OpGetLength::Metadata::m_arrayProfile, t3, t2, t5)
+    performGetByIDHelper(OpGetLength, m_modeMetadata, m_valueProfile, .opGetLengthSlow, size, return)
+
+.opGetLengthSlow:
+    callSlowPath(_llint_slow_path_get_length)
+    dispatch()
+
+.osrReturnPoint:
+    getterSetterOSRExitReturnPoint(op_get_length, size)
+    valueProfile(size, OpGetLength, m_valueProfile, r0, t2)
+    return(r0)
 end)
 
 
@@ -1906,6 +1866,7 @@ llintOpWithMetadata(op_get_by_val, OpGetByVal, macro (size, get, dispatch, metad
 
     move t0, t2
     arrayProfile(OpGetByVal::Metadata::m_arrayProfile, t2, t5, t1)
+    loadb JSCell::m_indexingTypeAndMisc[t2], t2
 
     get(m_property, t3)
     loadConstantOrVariableInt32(size, t3, t1, .opGetByValSlow)
@@ -2096,6 +2057,7 @@ macro putByValOp(opcodeName, opcodeStruct, osrExitPoint)
         move t1, t2
         metadata(t5, t0)
         arrayProfile(%opcodeStruct%::Metadata::m_arrayProfile, t2, t5, t0)
+        loadb JSCell::m_indexingTypeAndMisc[t2], t2
         get(m_property, t0)
         loadConstantOrVariableInt32(size, t0, t3, .opPutByValSlow)
         sxi2q t3, t3
@@ -2813,13 +2775,7 @@ macro nativeCallTrampoline(executableOffsetToFunction)
     if C_LOOP or C_LOOP_WIN
         cloopCallNative executableOffsetToFunction[a2]
     else
-        if X86_64_WIN
-            subp 32, sp
-            call executableOffsetToFunction[a2], HostFunctionPtrTag
-            addp 32, sp
-        else
-            call executableOffsetToFunction[a2], HostFunctionPtrTag
-        end
+        call executableOffsetToFunction[a2], HostFunctionPtrTag
     end
 
     loadp Callee[cfr], t3
@@ -2851,13 +2807,7 @@ macro internalFunctionCallTrampoline(offsetOfFunction)
     if C_LOOP or C_LOOP_WIN
         cloopCallNative offsetOfFunction[a2]
     else
-        if X86_64_WIN
-            subp 32, sp
-            call offsetOfFunction[a2], HostFunctionPtrTag
-            addp 32, sp
-        else
-            call offsetOfFunction[a2], HostFunctionPtrTag
-        end
+        call offsetOfFunction[a2], HostFunctionPtrTag
     end
 
     loadp Callee[cfr], t3
@@ -3324,7 +3274,8 @@ llintOpWithMetadata(op_iterator_open, OpIteratorOpen, macro (size, get, dispatch
 
     loadVariable(get, m_iterator, t3)
     btqnz t3, notCellMask, .iteratorOpenGenericGetNextSlow
-    performGetByIDHelper(OpIteratorOpen, m_modeMetadata, m_nextValueProfile, .iteratorOpenGenericGetNextSlow, size, metadata, storeNextAndDispatch)
+    metadata(t2, t1)
+    performGetByIDHelper(OpIteratorOpen, m_modeMetadata, m_nextValueProfile, .iteratorOpenGenericGetNextSlow, size, storeNextAndDispatch)
 
 .iteratorOpenGenericGetNextSlow:
     callSlowPath(_llint_slow_path_iterator_open_get_next)
@@ -3384,7 +3335,8 @@ llintOpWithMetadata(op_iterator_next, OpIteratorNext, macro (size, get, dispatch
 
     loadVariable(get, m_value, t3)
     btqnz t3, notCellMask, .getDoneSlow
-    performGetByIDHelper(OpIteratorNext, m_doneModeMetadata, m_doneValueProfile, .getDoneSlow, size, metadata, storeDoneAndJmpToGetValue)
+    metadata(t2, t1)
+    performGetByIDHelper(OpIteratorNext, m_doneModeMetadata, m_doneValueProfile, .getDoneSlow, size, storeDoneAndJmpToGetValue)
 
 .getDoneSlow:
     callSlowPath(_llint_slow_path_iterator_next_get_done)
@@ -3409,7 +3361,8 @@ llintOpWithMetadata(op_iterator_next, OpIteratorNext, macro (size, get, dispatch
     # Reload the next result tmp since the get_by_id above may have clobbered t3.
     loadVariable(get, m_value, t3)
     # We don't need to check if the iterator result is a cell here since we will have thrown an error before.
-    performGetByIDHelper(OpIteratorNext, m_valueModeMetadata, m_valueValueProfile, .getValueSlow, size, metadata, storeValueAndDispatch)
+    metadata(t2, t1)
+    performGetByIDHelper(OpIteratorNext, m_valueModeMetadata, m_valueValueProfile, .getValueSlow, size, storeValueAndDispatch)
 
 .getValueSlow:
     callSlowPath(_llint_slow_path_iterator_next_get_value)

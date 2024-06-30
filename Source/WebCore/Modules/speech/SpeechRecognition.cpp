@@ -78,7 +78,7 @@ ExceptionOr<void> SpeechRecognition::startRecognition()
         return Exception { ExceptionCode::UnknownError, "Recognition is not in a valid frame"_s };
 
     auto optionalFrameIdentifier = document->frameID();
-    if (!isPermissionsPolicyAllowedByDocumentAndAllOwners(PermissionsPolicy::Type::Microphone, document.get(), LogPermissionsPolicyFailure::No)) {
+    if (!PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Microphone, document.get(), PermissionsPolicy::ShouldReportViolation::No)) {
         didError({ SpeechRecognitionErrorType::NotAllowed, "Permission is denied"_s });
         return { };
     }
@@ -105,11 +105,6 @@ void SpeechRecognition::abortRecognition()
 
     m_connection->abort(identifier());
     m_state = State::Aborting;
-}
-
-const char* SpeechRecognition::activeDOMObjectName() const
-{
-    return "SpeechRecognition";
 }
 
 void SpeechRecognition::stop()

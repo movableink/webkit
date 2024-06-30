@@ -158,11 +158,13 @@ namespace JSC {
     macro(regExpBuiltinExec) \
     macro(regExpMatchFast) \
     macro(regExpProtoFlagsGetter) \
+    macro(regExpProtoHasIndicesGetter) \
     macro(regExpProtoGlobalGetter) \
     macro(regExpProtoIgnoreCaseGetter) \
     macro(regExpProtoMultilineGetter) \
     macro(regExpProtoSourceGetter) \
     macro(regExpProtoStickyGetter) \
+    macro(regExpProtoDotAllGetter) \
     macro(regExpProtoUnicodeGetter) \
     macro(regExpProtoUnicodeSetsGetter) \
     macro(regExpPrototypeSymbolMatch) \
@@ -184,6 +186,7 @@ namespace JSC {
     macro(handleProxyGetTrapResult) \
     macro(importModule) \
     macro(copyDataProperties) \
+    macro(cloneObject) \
     macro(meta) \
     macro(webAssemblyCompileStreamingInternal) \
     macro(webAssemblyInstantiateStreamingInternal) \

@@ -43,6 +43,7 @@ class CanvasBase;
 class GPU;
 struct GPUCanvasConfiguration;
 class GPUTexture;
+class ImageBitmap;
 
 class GPUCanvasContext : public GPUBasedCanvasRenderingContext {
     WTF_MAKE_ISO_ALLOCATED(GPUCanvasContext);
@@ -58,13 +59,9 @@ public:
     virtual CanvasType canvas() = 0;
     virtual ExceptionOr<void> configure(GPUCanvasConfiguration&&) = 0;
     virtual void unconfigure() = 0;
-    virtual RefPtr<GPUTexture> getCurrentTexture() = 0;
+    virtual ExceptionOr<RefPtr<GPUTexture>> getCurrentTexture() = 0;
 
     bool isWebGPU() const override { return true; }
-    const char* activeDOMObjectName() const override
-    {
-        return "GPUCanvasElement";
-    }
 
 protected:
     GPUCanvasContext(CanvasBase&);

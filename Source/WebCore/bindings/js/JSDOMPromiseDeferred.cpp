@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,7 +29,6 @@
 #include "EventLoop.h"
 #include "JSDOMExceptionHandling.h"
 #include "JSDOMPromise.h"
-#include "JSLocalDOMWindow.h"
 #include "LocalDOMWindow.h"
 #include "ScriptController.h"
 #include "ScriptDisallowedScope.h"
@@ -286,6 +285,20 @@ void fulfillPromiseWithArrayBuffer(Ref<DeferredPromise>&& promise, ArrayBuffer* 
 void fulfillPromiseWithArrayBufferFromSpan(Ref<DeferredPromise>&& promise, std::span<const uint8_t> data)
 {
     fulfillPromiseWithArrayBuffer(WTFMove(promise), ArrayBuffer::tryCreate(data).get());
+}
+
+void fulfillPromiseWithUint8Array(Ref<DeferredPromise>&& promise, Uint8Array* bytes)
+{
+    if (!bytes) {
+        promise->reject<IDLAny>(createOutOfMemoryError(promise->globalObject()));
+        return;
+    }
+    promise->resolve<IDLInterface<Uint8Array>>(*bytes);
+}
+
+void fulfillPromiseWithUint8ArrayFromSpan(Ref<DeferredPromise>&& promise, std::span<const uint8_t> data)
+{
+    fulfillPromiseWithUint8Array(WTFMove(promise), Uint8Array::tryCreate(data).get());
 }
 
 bool DeferredPromise::handleTerminationExceptionIfNeeded(CatchScope& scope, JSDOMGlobalObject& lexicalGlobalObject)

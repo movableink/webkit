@@ -32,6 +32,8 @@
 namespace WebCore {
 
 class WEBCORE_EXPORT PlaybackSessionInterfaceAVKit final : public PlaybackSessionInterfaceIOS {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(PlaybackSessionInterfaceAVKit);
 public:
     static Ref<PlaybackSessionInterfaceAVKit> create(PlaybackSessionModel&);
     ~PlaybackSessionInterfaceAVKit();
@@ -52,7 +54,7 @@ public:
     void mutedChanged(bool) final;
     void volumeChanged(double) final;
 #if !RELEASE_LOG_DISABLED
-    const char* logClassName() const final;
+    ASCIILiteral logClassName() const final;
 #endif
 
 private:

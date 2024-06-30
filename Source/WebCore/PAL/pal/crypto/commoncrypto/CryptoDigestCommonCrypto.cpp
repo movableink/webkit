@@ -187,13 +187,13 @@ String CryptoDigest::toHexString()
         snprintf(buffer, 3, "%02X", hash.at(i));
         buffer += 2;
     }
-    return String::fromUTF8(result);
+    return String::fromUTF8(result.span());
 }
 
-std::optional<Vector<uint8_t>> CryptoDigest::computeHash(CryptoDigest::Algorithm algo, const Vector<uint8_t>& data, bool useCryptoKit)
+std::optional<Vector<uint8_t>> CryptoDigest::computeHash(CryptoDigest::Algorithm algo, const Vector<uint8_t>& data, UseCryptoKit useCryptoKit)
 {
 #if HAVE(SWIFT_CPP_INTEROP)
-    if (useCryptoKit) {
+    if (useCryptoKit == UseCryptoKit::Yes) {
         switch (algo) {
         case CryptoDigest::Algorithm::SHA_1:
             return PAL::Digest::sha1(data.span());

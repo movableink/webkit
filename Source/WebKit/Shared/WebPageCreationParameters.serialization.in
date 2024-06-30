@@ -56,7 +56,7 @@ enum class WebCore::UserInterfaceLayoutDirection : bool;
 
     bool suppressScrollbarAnimations;
 
-    WebCore::Pagination::Mode paginationMode;
+    WebCore::PaginationMode paginationMode;
     bool paginationBehavesLikeColumns;
     double pageLength;
     double gapBetweenPages;
@@ -118,7 +118,7 @@ enum class WebCore::UserInterfaceLayoutDirection : bool;
 #if ENABLE(META_VIEWPORT)
     bool ignoresViewportScaleLimits;
     WebCore::FloatSize viewportConfigurationViewLayoutSize;
-    double viewportConfigurationLayoutSizeScaleFactor;
+    double viewportConfigurationLayoutSizeScaleFactorFromClient;
     double viewportConfigurationMinimumEffectiveDeviceWidth;
     WebCore::FloatSize viewportConfigurationViewSize;
     std::optional<WebCore::ViewportArguments> overrideViewportArguments;
@@ -127,9 +127,10 @@ enum class WebCore::UserInterfaceLayoutDirection : bool;
     WebCore::FloatSize screenSize;
     WebCore::FloatSize availableScreenSize;
     WebCore::FloatSize overrideScreenSize;
+    WebCore::FloatSize overrideAvailableScreenSize;
     float textAutosizingWidth;
     WebCore::IntDegrees deviceOrientation;
-    bool keyboardIsAttached;
+    WebKit::HardwareKeyboardState hardwareKeyboardState;
     bool canShowWhileLocked;
     bool isCapturingScreen;
     WebCore::Color insertionPointColor;
@@ -216,7 +217,6 @@ enum class WebCore::UserInterfaceLayoutDirection : bool;
 #endif
     bool shouldEnableVP8Decoder;
     bool shouldEnableVP9Decoder;
-    bool shouldEnableVP9SWDecoder;
 #if ENABLE(APP_BOUND_DOMAINS)
     bool limitsNavigationsToAppBoundDomains;
 #endif
@@ -243,7 +243,7 @@ enum class WebCore::UserInterfaceLayoutDirection : bool;
 
     WebCore::ContentSecurityPolicyModeForExtension contentSecurityPolicyModeForExtension;
 
-    std::optional<WebKit::SubframeProcessPageParameters> subframeProcessPageParameters;
+    std::optional<WebKit::RemotePageParameters> remotePageParameters;
     std::optional<WebCore::FrameIdentifier> openerFrameIdentifier;
     std::optional<WebCore::FrameIdentifier> mainFrameIdentifier;
 
@@ -261,7 +261,7 @@ enum class WebCore::UserInterfaceLayoutDirection : bool;
 #endif
 }
 
-[Nested] struct WebKit::SubframeProcessPageParameters {
+[Nested] struct WebKit::RemotePageParameters {
     URL initialMainDocumentURL;
     WebKit::FrameTreeCreationParameters frameTreeParameters;
     std::optional<WebKit::WebsitePoliciesData> websitePoliciesData;

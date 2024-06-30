@@ -82,12 +82,16 @@ struct GPUTextureDescriptor;
 class GPUDevice : public RefCounted<GPUDevice>, public ActiveDOMObject, public EventTarget {
     WTF_MAKE_ISO_ALLOCATED(GPUDevice);
 public:
-    static Ref<GPUDevice> create(ScriptExecutionContext* scriptExecutionContext, Ref<WebGPU::Device>&& backing)
+    static Ref<GPUDevice> create(ScriptExecutionContext* scriptExecutionContext, Ref<WebGPU::Device>&& backing, String&& queueLabel)
     {
-        return adoptRef(*new GPUDevice(scriptExecutionContext, WTFMove(backing)));
+        return adoptRef(*new GPUDevice(scriptExecutionContext, WTFMove(backing), WTFMove(queueLabel)));
     }
 
     virtual ~GPUDevice();
+
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     String label() const;
     void setLabel(String&&);
@@ -136,17 +140,14 @@ public:
     void removeBufferToUnmap(GPUBuffer&);
     void addBufferToUnmap(GPUBuffer&);
 
-    using RefCounted::ref;
-    using RefCounted::deref;
-
+#if ENABLE(VIDEO)
     WeakPtr<GPUExternalTexture> takeExternalTextureForVideoElement(const HTMLVideoElement&);
+#endif
 
 private:
-    GPUDevice(ScriptExecutionContext*, Ref<WebGPU::Device>&&);
+    GPUDevice(ScriptExecutionContext*, Ref<WebGPU::Device>&&, String&& queueLabel);
 
-    // ActiveDOMObject.
     // FIXME: We probably need to override more methods to make this work properly.
-    const char* activeDOMObjectName() const final { return "GPUDevice"; }
     RefPtr<GPUPipelineLayout> createAutoPipelineLayout();
 
     // EventTarget.
@@ -160,7 +161,10 @@ private:
     Ref<GPUQueue> m_queue;
     RefPtr<GPUPipelineLayout> m_autoPipelineLayout;
     WeakHashSet<GPUBuffer> m_buffersToUnmap;
+
+#if ENABLE(VIDEO)
     GPUExternalTexture* externalTextureForDescriptor(const GPUExternalTextureDescriptor&);
+#endif
 
     WeakHashMap<HTMLVideoElement, WeakPtr<GPUExternalTexture>> m_videoElementToExternalTextureMap;
     bool m_waitingForDeviceLostPromise { false };

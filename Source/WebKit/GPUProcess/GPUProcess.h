@@ -119,6 +119,10 @@ public:
 
     void webProcessConnectionCountForTesting(CompletionHandler<void(uint64_t)>&&);
 
+#if USE(EXTENSIONKIT)
+    void resolveBookmarkDataForCacheDirectory(std::span<const uint8_t> bookmarkData);
+#endif
+
 #if PLATFORM(COCOA) && ENABLE(MEDIA_STREAM)
     void processIsStartingToCaptureAudio(GPUConnectionToWebProcess&);
 #endif
@@ -184,7 +188,6 @@ private:
 #endif
 
 #if ENABLE(CFPREFS_DIRECT_MODE)
-    void notifyPreferencesChanged(const String& domain, const String& key, const std::optional<String>& encodedValue);
     void dispatchSimulatedNotificationsForPreferenceChange(const String& key) final;
 #endif
 
@@ -241,7 +244,7 @@ private:
 #if ENABLE(VP9) && PLATFORM(COCOA)
     bool m_haveEnabledVP8Decoder { false };
     bool m_haveEnabledVP9Decoder { false };
-    bool m_haveEnabledVP9SWDecoder { false };
+    bool m_haveEnabledSWVPDecoders { false };
 #endif
 
 };

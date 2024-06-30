@@ -30,10 +30,21 @@
 #include "TrustedScript.h"
 #include "TrustedScriptURL.h"
 
+namespace JSC {
+
+class JSValue;
+
+enum class CompilationType;
+
+} // namespace JSC
+
 namespace WebCore {
 
+class Document;
 class Exception;
+class Node;
 class ScriptExecutionContext;
+class Text;
 
 enum class TrustedType : int8_t {
     TrustedHTML,
@@ -41,7 +52,13 @@ enum class TrustedType : int8_t {
     TrustedScriptURL,
 };
 
+struct AttributeTypeAndSink {
+    String attributeType;
+    String sink;
+};
+
 ASCIILiteral trustedTypeToString(TrustedType);
+TrustedType stringToTrustedType(String);
 ASCIILiteral trustedTypeToCallbackName(TrustedType);
 
 WEBCORE_EXPORT std::variant<std::monostate, Exception, Ref<TrustedHTML>, Ref<TrustedScript>, Ref<TrustedScriptURL>> processValueWithDefaultPolicy(ScriptExecutionContext&, TrustedType, const String& input, const String& sink);
@@ -49,5 +66,17 @@ WEBCORE_EXPORT std::variant<std::monostate, Exception, Ref<TrustedHTML>, Ref<Tru
 WEBCORE_EXPORT ExceptionOr<String> trustedTypeCompliantString(TrustedType, ScriptExecutionContext&, const String& input, const String& sink);
 
 WEBCORE_EXPORT ExceptionOr<String> requireTrustedTypesForPreNavigationCheckPasses(ScriptExecutionContext&, const String& urlString);
+
+ExceptionOr<String> trustedTypeCompliantString(ScriptExecutionContext&, std::variant<RefPtr<TrustedHTML>, String>&&, const String& sink);
+
+ExceptionOr<String> trustedTypeCompliantString(ScriptExecutionContext&, std::variant<RefPtr<TrustedScript>, String>&&, const String& sink);
+
+ExceptionOr<String> trustedTypeCompliantString(ScriptExecutionContext&, std::variant<RefPtr<TrustedScriptURL>, String>&&, const String& sink);
+
+ExceptionOr<RefPtr<Text>> processNodeOrStringAsTrustedType(Ref<Document>, RefPtr<Node> parent, std::variant<RefPtr<Node>, String, RefPtr<TrustedScript>>);
+
+WEBCORE_EXPORT AttributeTypeAndSink trustedTypeForAttribute(const String& elementName, const String& attributeName, const String& elementNamespace, const String& attributeNamespace);
+
+ExceptionOr<bool> canCompile(ScriptExecutionContext&, JSC::CompilationType, String codeString, JSC::JSValue bodyArgument);
 
 } // namespace WebCore

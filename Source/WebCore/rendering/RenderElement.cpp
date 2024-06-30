@@ -44,6 +44,7 @@
 #include "InlineIteratorLineBox.h"
 #include "InlineIteratorTextBox.h"
 #include "LayoutElementBox.h"
+#include "LayoutIntegrationLineLayout.h"
 #include "LengthFunctions.h"
 #include "LocalFrame.h"
 #include "Logging.h"
@@ -126,13 +127,13 @@ inline RenderElement::RenderElement(Type type, ContainerNode& elementOrDocument,
     , m_hasPausedImageAnimations(false)
     , m_hasCounterNodeMap(false)
     , m_hasContinuationChainNode(false)
-    , m_lastChild(nullptr)
     , m_isContinuation(false)
     , m_isFirstLetter(false)
     , m_renderBlockHasMarginBeforeQuirk(false)
     , m_renderBlockHasMarginAfterQuirk(false)
     , m_renderBlockShouldForceRelayoutChildren(false)
     , m_renderBlockFlowLineLayoutPath(RenderBlockFlow::UndeterminedPath)
+    , m_lastChild(nullptr)
     , m_isRegisteredForVisibleInViewportCallback(false)
     , m_visibleInViewportState(static_cast<unsigned>(VisibleInViewportState::Unknown))
     , m_didContributeToVisuallyNonEmptyPixelCount(false)
@@ -507,6 +508,9 @@ void RenderElement::initializeStyle()
 
     // It would be nice to assert that !parent() here, but some RenderLayer subrenderers
     // have their parent set before getting a call to initializeStyle() :|
+
+    if (auto styleable = Styleable::fromRenderer(*this))
+        setCapturedInViewTransition(styleable->capturedInViewTransition());
 }
 
 void RenderElement::setStyle(RenderStyle&& style, StyleDifference minimalStyleDifference)
@@ -788,7 +792,7 @@ void RenderElement::propagateStyleToAnonymousChildren(StylePropagationType propa
         if (!elementChild->isAnonymous() || elementChild->style().pseudoElementType() != PseudoId::None)
             continue;
 
-        if (propagationType == PropagateToBlockChildrenOnly && !is<RenderBlock>(elementChild.get()))
+        if (propagationType == StylePropagationType::BlockChildrenOnly && !is<RenderBlock>(elementChild.get()))
             continue;
 
         // RenderFragmentedFlows are updated through the RenderView::styleDidChange function.
@@ -847,6 +851,14 @@ void RenderElement::styleWillChange(StyleDifference diff, const RenderStyle& new
     };
 
     if (oldStyle) {
+        if (diff >= StyleDifference::Repaint && layoutBox()) {
+            // FIXME: It is highly unlikely that a style mutation has effect on both the formatting context the box lives in
+            // and the one it establishes but calling only one would require to come up with a list of properties that only affects one or the other.
+            if (auto* inlineFormattingContextRoot = dynamicDowncast<RenderBlockFlow>(*this); inlineFormattingContextRoot && inlineFormattingContextRoot->modernLineLayout())
+                inlineFormattingContextRoot->modernLineLayout()->rootStyleWillChange(*inlineFormattingContextRoot, newStyle);
+            if (auto* lineLayout = LayoutIntegration::LineLayout::containing(*this))
+                lineLayout->styleWillChange(*this, newStyle);
+        }
         // If our z-index changes value or our visibility changes,
         // we need to dirty our stacking context's z-order list.
         bool visibilityChanged = m_style.usedVisibility() != newStyle.usedVisibility()
@@ -1011,7 +1023,7 @@ void RenderElement::styleDidChange(StyleDifference diff, const RenderStyle* oldS
         // directly affect the containing block of this object is a change to
         // the position style.
         if (needsLayout() && oldStyle && oldStyle->position() != m_style.position())
-            markContainingBlocksForLayout();
+            scheduleLayout(markContainingBlocksForLayout());
 
         if (diff == StyleDifference::Layout)
             setNeedsLayoutAndPrefWidthsRecalc();
@@ -1045,9 +1057,14 @@ void RenderElement::styleDidChange(StyleDifference diff, const RenderStyle* oldS
         if (controller && (!shouldCheckIfInAncestorChain || (shouldCheckIfInAncestorChain && controller->isInScrollAnchoringAncestorChain(*this))))
             controller->notifyChildHadSuppressingStyleChange();
     }
+
+    // FIXME: First line change on the block comes in as equal on inline boxes.
+    auto needsLayoutBoxStyleUpdate = (diff >= StyleDifference::Repaint || (is<RenderInline>(*this) && &style() != &firstLineStyle())) && layoutBox();
+    if (needsLayoutBoxStyleUpdate)
+        LayoutIntegration::LineLayout::updateStyle(*this);
 }
 
-void RenderElement::insertedIntoTree(IsInternalMove isInternalMove)
+void RenderElement::insertedIntoTree()
 {
     // Keep our layer hierarchy updated. Optimize for the common case where we don't have any children
     // and don't have a layer attached to ourselves.
@@ -1063,10 +1080,10 @@ void RenderElement::insertedIntoTree(IsInternalMove isInternalMove)
             parentLayer->dirtyVisibleContentStatus();
     }
 
-    RenderObject::insertedIntoTree(isInternalMove);
+    RenderObject::insertedIntoTree();
 }
 
-void RenderElement::willBeRemovedFromTree(IsInternalMove isInternalMove)
+void RenderElement::willBeRemovedFromTree()
 {
     // If we remove a visible child from an invisible parent, we don't know the layer visibility any more.
     if (parent()->style().usedVisibility() != Visibility::Visible && style().usedVisibility() == Visibility::Visible && !hasLayer()) {
@@ -1081,7 +1098,12 @@ void RenderElement::willBeRemovedFromTree(IsInternalMove isInternalMove)
     if (isOutOfFlowPositioned() && parent()->childrenInline())
         checkedParent()->dirtyLinesFromChangedChild(*this);
 
-    RenderObject::willBeRemovedFromTree(isInternalMove);
+    RenderObject::willBeRemovedFromTree();
+}
+
+bool RenderElement::didVisitDuringLastLayout() const
+{
+    return layoutIdentifier() == view().frameView().layoutContext().layoutIdentifier();
 }
 
 inline void RenderElement::clearSubtreeLayoutRootIfNeeded() const
@@ -1159,7 +1181,7 @@ void RenderElement::setNeedsPositionedMovementLayout(const RenderStyle* oldStyle
     if (needsPositionedMovementLayout())
         return;
     setNeedsPositionedMovementLayoutBit(true);
-    markContainingBlocksForLayout();
+    scheduleLayout(markContainingBlocksForLayout());
     if (hasLayer()) {
         if (oldStyle && style().diffRequiresLayerRepaint(*oldStyle, downcast<RenderLayerModelObject>(*this).layer()->isComposited()))
             setLayerNeedsFullRepaint();
@@ -1174,6 +1196,7 @@ void RenderElement::clearChildNeedsLayout()
     setPosChildNeedsLayoutBit(false);
     setNeedsSimplifiedNormalFlowLayoutBit(false);
     setNeedsPositionedMovementLayoutBit(false);
+    setOutOfFlowChildNeedsStaticPositionLayoutBit(false);
 }
 
 void RenderElement::setNeedsSimplifiedNormalFlowLayout()
@@ -1182,9 +1205,19 @@ void RenderElement::setNeedsSimplifiedNormalFlowLayout()
     if (needsSimplifiedNormalFlowLayout())
         return;
     setNeedsSimplifiedNormalFlowLayoutBit(true);
-    markContainingBlocksForLayout();
+    scheduleLayout(markContainingBlocksForLayout());
     if (hasLayer())
         setLayerNeedsFullRepaint();
+}
+
+void RenderElement::setOutOfFlowChildNeedsStaticPositionLayout()
+{
+    // FIXME: Currently this dirty bit has a very limited useage but should be expanded to
+    // optimize all kinds of out-of-flow cases.
+    // It's also assumed that regular, positioned child related bits are already set.
+    ASSERT(!isSetNeedsLayoutForbidden());
+    ASSERT(posChildNeedsLayout() || selfNeedsLayout() || needsSimplifiedNormalFlowLayout() || !parent());
+    setOutOfFlowChildNeedsStaticPositionLayoutBit(true);
 }
 
 static inline void paintPhase(RenderElement& element, PaintPhase phase, PaintInfo& paintInfo, const LayoutPoint& childPoint)
@@ -1257,7 +1290,7 @@ static bool mustRepaintFillLayers(const RenderElement& renderer, const FillLayer
     return false;
 }
 
-bool RenderElement::repaintAfterLayoutIfNeeded(const RenderLayerModelObject* repaintContainer, RequiresFullRepaint requiresFullRepaint, const RepaintRects& oldRects, const RepaintRects& newRects)
+bool RenderElement::repaintAfterLayoutIfNeeded(SingleThreadWeakPtr<const RenderLayerModelObject>&& repaintContainer, RequiresFullRepaint requiresFullRepaint, const RepaintRects& oldRects, const RepaintRects& newRects)
 {
     if (view().printing())
         return false; // Don't repaint if we're printing.
@@ -1327,12 +1360,12 @@ bool RenderElement::repaintAfterLayoutIfNeeded(const RenderLayerModelObject* rep
 
     if (fullRepaint) {
         if (newClippedOverflowRect.contains(oldClippedOverflowRect))
-            repaintUsingContainer(repaintContainer, newClippedOverflowRect);
+            repaintUsingContainer(WeakPtr { repaintContainer }, newClippedOverflowRect);
         else if (oldClippedOverflowRect.contains(newClippedOverflowRect))
-            repaintUsingContainer(repaintContainer, oldClippedOverflowRect);
+            repaintUsingContainer(WeakPtr { repaintContainer }, oldClippedOverflowRect);
         else {
-            repaintUsingContainer(repaintContainer, oldClippedOverflowRect);
-            repaintUsingContainer(repaintContainer, newClippedOverflowRect);
+            repaintUsingContainer(WeakPtr { repaintContainer }, oldClippedOverflowRect);
+            repaintUsingContainer(WeakPtr { repaintContainer }, newClippedOverflowRect);
         }
         return true;
     }
@@ -1342,27 +1375,27 @@ bool RenderElement::repaintAfterLayoutIfNeeded(const RenderLayerModelObject* rep
 
     LayoutUnit deltaLeft = newClippedOverflowRect.x() - oldClippedOverflowRect.x();
     if (deltaLeft > 0)
-        repaintUsingContainer(repaintContainer, LayoutRect(oldClippedOverflowRect.x(), oldClippedOverflowRect.y(), deltaLeft, oldClippedOverflowRect.height()));
+        repaintUsingContainer(WeakPtr { repaintContainer }, LayoutRect(oldClippedOverflowRect.x(), oldClippedOverflowRect.y(), deltaLeft, oldClippedOverflowRect.height()));
     else if (deltaLeft < 0)
-        repaintUsingContainer(repaintContainer, LayoutRect(newClippedOverflowRect.x(), newClippedOverflowRect.y(), -deltaLeft, newClippedOverflowRect.height()));
+        repaintUsingContainer(WeakPtr { repaintContainer }, LayoutRect(newClippedOverflowRect.x(), newClippedOverflowRect.y(), -deltaLeft, newClippedOverflowRect.height()));
 
     LayoutUnit deltaRight = newClippedOverflowRect.maxX() - oldClippedOverflowRect.maxX();
     if (deltaRight > 0)
-        repaintUsingContainer(repaintContainer, LayoutRect(oldClippedOverflowRect.maxX(), newClippedOverflowRect.y(), deltaRight, newClippedOverflowRect.height()));
+        repaintUsingContainer(WeakPtr { repaintContainer }, LayoutRect(oldClippedOverflowRect.maxX(), newClippedOverflowRect.y(), deltaRight, newClippedOverflowRect.height()));
     else if (deltaRight < 0)
-        repaintUsingContainer(repaintContainer, LayoutRect(newClippedOverflowRect.maxX(), oldClippedOverflowRect.y(), -deltaRight, oldClippedOverflowRect.height()));
+        repaintUsingContainer(WeakPtr { repaintContainer }, LayoutRect(newClippedOverflowRect.maxX(), oldClippedOverflowRect.y(), -deltaRight, oldClippedOverflowRect.height()));
 
     LayoutUnit deltaTop = newClippedOverflowRect.y() - oldClippedOverflowRect.y();
     if (deltaTop > 0)
-        repaintUsingContainer(repaintContainer, LayoutRect(oldClippedOverflowRect.x(), oldClippedOverflowRect.y(), oldClippedOverflowRect.width(), deltaTop));
+        repaintUsingContainer(WeakPtr { repaintContainer }, LayoutRect(oldClippedOverflowRect.x(), oldClippedOverflowRect.y(), oldClippedOverflowRect.width(), deltaTop));
     else if (deltaTop < 0)
-        repaintUsingContainer(repaintContainer, LayoutRect(newClippedOverflowRect.x(), newClippedOverflowRect.y(), newClippedOverflowRect.width(), -deltaTop));
+        repaintUsingContainer(WeakPtr { repaintContainer }, LayoutRect(newClippedOverflowRect.x(), newClippedOverflowRect.y(), newClippedOverflowRect.width(), -deltaTop));
 
     LayoutUnit deltaBottom = newClippedOverflowRect.maxY() - oldClippedOverflowRect.maxY();
     if (deltaBottom > 0)
-        repaintUsingContainer(repaintContainer, LayoutRect(newClippedOverflowRect.x(), oldClippedOverflowRect.maxY(), newClippedOverflowRect.width(), deltaBottom));
+        repaintUsingContainer(WeakPtr { repaintContainer }, LayoutRect(newClippedOverflowRect.x(), oldClippedOverflowRect.maxY(), newClippedOverflowRect.width(), deltaBottom));
     else if (deltaBottom < 0)
-        repaintUsingContainer(repaintContainer, LayoutRect(oldClippedOverflowRect.x(), newClippedOverflowRect.maxY(), oldClippedOverflowRect.width(), -deltaBottom));
+        repaintUsingContainer(WeakPtr { repaintContainer }, LayoutRect(oldClippedOverflowRect.x(), newClippedOverflowRect.maxY(), oldClippedOverflowRect.width(), -deltaBottom));
 
     if (!haveOutlinesBoundsRects || *oldRects.outlineBoundsRect == *newRects.outlineBoundsRect)
         return false;
@@ -1419,7 +1452,7 @@ bool RenderElement::repaintAfterLayoutIfNeeded(const RenderLayerModelObject* rep
         if (damageExtentWithinClippedOverflow > 0) {
             damageExtentWithinClippedOverflow = std::min(sizeDelta.width() + decorationRightExtent, damageExtentWithinClippedOverflow);
             auto damagedRect = LayoutRect { decorationLeft, newOutlineBoundsRect.y(), damageExtentWithinClippedOverflow, std::max(newOutlineBoundsRect.height(), oldOutlineBoundsRect.height()) };
-            repaintUsingContainer(repaintContainer, damagedRect);
+            repaintUsingContainer(WeakPtr { repaintContainer }, damagedRect);
         }
     }
     if (sizeDelta.height()) {
@@ -1461,7 +1494,7 @@ bool RenderElement::repaintAfterLayoutIfNeeded(const RenderLayerModelObject* rep
         if (damageExtentWithinClippedOverflow > 0) {
             damageExtentWithinClippedOverflow = std::min(sizeDelta.height() + decorationBottomExtent, damageExtentWithinClippedOverflow);
             auto damagedRect = LayoutRect { newOutlineBoundsRect.x(), decorationTop, std::max(newOutlineBoundsRect.width(), oldOutlineBoundsRect.width()), damageExtentWithinClippedOverflow };
-            repaintUsingContainer(repaintContainer, damagedRect);
+            repaintUsingContainer(WeakPtr { repaintContainer }, damagedRect);
         }
     }
     return false;
@@ -1594,7 +1627,7 @@ VisibleInViewportState RenderElement::imageVisibleInViewport(const Document& doc
     return isVisibleInViewport() ? VisibleInViewportState::Yes : VisibleInViewportState::No;
 }
 
-void RenderElement::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&)
+void RenderElement::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess)
 {
     document().protectedCachedResourceLoader()->notifyFinished(resource);
 }
@@ -2057,22 +2090,19 @@ bool RenderElement::hasSelfPaintingLayer() const
     return layerModelObject.hasSelfPaintingLayer();
 }
 
-bool RenderElement::capturedInViewTransition() const
-{
-    if (!hasViewTransitionName())
-        return false;
-
-    return element() && element()->capturedInViewTransition();
-}
-
 bool RenderElement::hasViewTransitionName() const
 {
     return !!style().viewTransitionName();
 }
 
-bool RenderElement::isViewTransitionPseudo() const
+bool RenderElement::requiresRenderingConsolidationForViewTransition() const
 {
-    return style().pseudoElementType() == PseudoId::ViewTransitionNew || style().pseudoElementType() == PseudoId::ViewTransitionOld;
+    return hasViewTransitionName() || capturedInViewTransition();
+}
+
+bool RenderElement::isViewTransitionRoot() const
+{
+    return style().pseudoElementType() == PseudoId::ViewTransition;
 }
 
 bool RenderElement::checkForRepaintDuringLayout() const
@@ -2449,6 +2479,27 @@ FloatRect RenderElement::referenceBoxRect(CSSBoxType boxType) const
     return { };
 }
 
+void RenderElement::markRendererDirtyAfterTopLayerChange(RenderElement* renderer, RenderBlock* containingBlockBeforeStyleResolution)
+{
+    auto* renderBox = dynamicDowncast<RenderBox>(renderer);
+    if (!renderBox || !renderBox->parent() || !containingBlockBeforeStyleResolution)
+        return;
+    auto* newContainingBlock = renderBox->containingBlock();
+    ASSERT(newContainingBlock);
+    if (containingBlockBeforeStyleResolution == newContainingBlock)
+        return;
+
+    // Let's carry out the same set of tasks we would normally do when containing block changes for out-of-flow content in RenderBox::styleWillChange.
+    if (!renderBox->isOutOfFlowPositioned())
+        return;
+
+    RenderBlock::removePositionedObject(*renderBox);
+    // This is to make sure we insert the box to the correct containing block list during static position computation.
+    renderBox->parent()->setChildNeedsLayout();
+    newContainingBlock->setChildNeedsLayout();
+    renderBox->setNeedsLayout();
+}
+
 bool RenderElement::isSkippedContentRoot() const
 {
     return WebCore::isSkippedContentRoot(style(), element()) && !view().frameView().layoutContext().needsSkippedContentLayout();
@@ -2473,9 +2524,9 @@ bool RenderElement::hasEligibleContainmentForSizeQuery() const
 
 void RenderElement::clearNeedsLayoutForSkippedContent()
 {
-    for (CheckedRef descendant : descendantsOfType<RenderObject>(*this))
-        descendant->clearNeedsLayout(EverHadSkippedContentLayout::No);
-    clearNeedsLayout(EverHadSkippedContentLayout::No);
+    for (CheckedRef descendant : descendantsOfTypePostOrder<RenderObject>(*this))
+        descendant->clearNeedsLayout(HadSkippedLayout::Yes);
+    clearNeedsLayout(HadSkippedLayout::Yes);
 }
 
 void RenderElement::layoutIfNeeded()

@@ -169,7 +169,7 @@ Ref<ArrayBuffer> buildClientDataJson(ClientDataType type, const BufferSource& ch
         object->setString("type"_s, "webauthn.get"_s);
         break;
     }
-    object->setString("challenge"_s, base64URLEncodeToString(challenge.data(), challenge.length()));
+    object->setString("challenge"_s, base64URLEncodeToString(challenge.span()));
     object->setString("origin"_s, origin.toRawString());
     
     if (!topOrigin.isNull())
@@ -178,9 +178,7 @@ Ref<ArrayBuffer> buildClientDataJson(ClientDataType type, const BufferSource& ch
     if (scope != WebAuthn::Scope::SameOrigin)
         object->setBoolean("crossOrigin"_s, scope != WebAuthn::Scope::SameOrigin);
 
-    auto utf8JSONString = object->toJSONString().utf8();
-
-    return ArrayBuffer::create(utf8JSONString.data(), utf8JSONString.length());
+    return ArrayBuffer::create(object->toJSONString().utf8().span());
 }
 
 Vector<uint8_t> buildClientDataJsonHash(const ArrayBuffer& clientDataJson)
@@ -228,6 +226,24 @@ String toString(AuthenticatorTransport transport)
     return nullString();
 }
 
+std::optional<AuthenticatorTransport> convertStringToAuthenticatorTransport(const String& transport)
+{
+    if (transport == authenticatorTransportUsb)
+        return AuthenticatorTransport::Usb;
+    if (transport == authenticatorTransportNfc)
+        return AuthenticatorTransport::Nfc;
+    if (transport == authenticatorTransportBle)
+        return AuthenticatorTransport::Ble;
+    if (transport == authenticatorTransportInternal)
+        return AuthenticatorTransport::Internal;
+    if (transport == authenticatorTransportCable)
+        return AuthenticatorTransport::Cable;
+    if (transport == authenticatorTransportHybrid)
+        return AuthenticatorTransport::Hybrid;
+    if (transport == authenticatorTransportSmartCard)
+        return AuthenticatorTransport::SmartCard;
+    return std::nullopt;
+}
 
 } // namespace WebCore
 

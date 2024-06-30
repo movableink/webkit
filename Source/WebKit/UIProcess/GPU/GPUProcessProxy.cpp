@@ -287,21 +287,21 @@ static inline bool addCameraSandboxExtensions(Vector<SandboxExtension::Handle>& 
             // Needed for rdar://108282689:
             auto appleCameraUserClientExtensionHandle = SandboxExtension::createHandleForMachLookup(appleCameraUserClientPath, std::nullopt);
             if (!appleCameraUserClientExtensionHandle) {
-                RELEASE_LOG_ERROR(WebRTC, "Unable to create %s sandbox extension", appleCameraUserClientPath.characters8());
+                RELEASE_LOG_ERROR(WebRTC, "Unable to create %s sandbox extension", appleCameraUserClientPath.characters());
                 return false;
             }
             extensions.append(WTFMove(*appleCameraUserClientExtensionHandle));
 
             auto appleCameraUserClientIOKitClientClassExtensionHandle = SandboxExtension::createHandleForIOKitClassExtension(appleCameraUserClientIOKitClientClass, std::nullopt);
             if (!appleCameraUserClientIOKitClientClassExtensionHandle) {
-                RELEASE_LOG_ERROR(WebRTC, "Unable to create %s sandbox extension", appleCameraUserClientIOKitClientClass.characters8());
+                RELEASE_LOG_ERROR(WebRTC, "Unable to create %s sandbox extension", appleCameraUserClientIOKitClientClass.characters());
                 return false;
             }
             extensions.append(WTFMove(*appleCameraUserClientIOKitClientClassExtensionHandle));
 
             auto appleCameraUserClientIOKitServiceClassExtensionHandle = SandboxExtension::createHandleForIOKitClassExtension(appleCameraUserClientIOKitServiceClass, std::nullopt);
             if (!appleCameraUserClientIOKitServiceClassExtensionHandle) {
-                RELEASE_LOG_ERROR(WebRTC, "Unable to create %s sandbox extension", appleCameraUserClientIOKitServiceClass.characters8());
+                RELEASE_LOG_ERROR(WebRTC, "Unable to create %s sandbox extension", appleCameraUserClientIOKitServiceClass.characters());
                 return false;
             }
             extensions.append(WTFMove(*appleCameraUserClientIOKitServiceClassExtensionHandle));
@@ -514,7 +514,7 @@ void GPUProcessProxy::gpuProcessExited(ProcessTerminationReason reason)
     case ProcessTerminationReason::IdleExit:
     case ProcessTerminationReason::Unresponsive:
     case ProcessTerminationReason::Crash:
-        RELEASE_LOG_ERROR(Process, "%p - GPUProcessProxy::gpuProcessExited: reason=%" PUBLIC_LOG_STRING, this, processTerminationReasonToString(reason));
+        RELEASE_LOG_ERROR(Process, "%p - GPUProcessProxy::gpuProcessExited: reason=%" PUBLIC_LOG_STRING, this, processTerminationReasonToString(reason).characters());
         break;
     case ProcessTerminationReason::ExceededProcessCountLimit:
     case ProcessTerminationReason::NavigationSwap:
@@ -547,6 +547,11 @@ void GPUProcessProxy::processIsReadyToExit()
     RELEASE_LOG(Process, "%p - GPUProcessProxy::processIsReadyToExit:", this);
     terminate();
     gpuProcessExited(ProcessTerminationReason::IdleExit); // May cause |this| to get deleted.
+}
+
+void GPUProcessProxy::childConnectionDidBecomeUnresponsive()
+{
+    didBecomeUnresponsive();
 }
 
 void GPUProcessProxy::terminateForTesting()
@@ -608,6 +613,10 @@ void GPUProcessProxy::didFinishLaunching(ProcessLauncher* launcher, IPC::Connect
             weakThis->enablePowerLogging();
         });
     }).get());
+#endif
+
+#if USE(EXTENSIONKIT)
+    sendBookmarkDataForCacheDirectory();
 #endif
 }
 
@@ -711,7 +720,7 @@ void GPUProcessProxy::didCreateContextForVisibilityPropagation(WebPageProxyIdent
         RELEASE_LOG(Process, "GPUProcessProxy::didCreateContextForVisibilityPropagation() No WebPageProxy with this identifier");
         return;
     }
-    if (page->webPageID() == pageID) {
+    if (page->webPageIDInMainFrameProcess() == pageID) {
         page->didCreateContextInGPUProcessForVisibilityPropagation(contextID);
         return;
     }

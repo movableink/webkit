@@ -205,14 +205,14 @@ static void prepareContextForQRCode(ContextMenuContext& context)
     if (!frame)
         return;
 
-    auto nodeSnapshotImageBuffer = snapshotNode(*frame, *element, { { }, PixelFormat::BGRA8, DestinationColorSpace::SRGB() });
+    auto nodeSnapshotImageBuffer = snapshotNode(*frame, *element, { { }, ImageBufferPixelFormat::BGRA8, DestinationColorSpace::SRGB() });
     RefPtr nodeSnapshotImage = BitmapImage::create(ImageBuffer::sinkIntoNativeImage(WTFMove(nodeSnapshotImageBuffer)));
     context.setPotentialQRCodeNodeSnapshotImage(nodeSnapshotImage.get());
 
     // FIXME: Node snapshotting does not take transforms into account, making it unreliable for QR code detection.
     // As a fallback, also take a viewport-level snapshot. A node snapshot is still required to capture partially
     // obscured elements. This workaround can be removed once rdar://87204215 is fixed.
-    auto viewportSnapshotImageBuffer = snapshotFrameRect(*frame, elementRect, { { }, PixelFormat::BGRA8, DestinationColorSpace::SRGB() });
+    auto viewportSnapshotImageBuffer = snapshotFrameRect(*frame, elementRect, { { }, ImageBufferPixelFormat::BGRA8, DestinationColorSpace::SRGB() });
     RefPtr viewportSnapshotImage = BitmapImage::create(ImageBuffer::sinkIntoNativeImage(WTFMove(viewportSnapshotImageBuffer)));
     context.setPotentialQRCodeViewportSnapshotImage(viewportSnapshotImage.get());
 }
@@ -280,7 +280,7 @@ static void openNewWindow(const URL& urlToLoad, LocalFrame& frame, Event* event,
 
 static void insertUnicodeCharacter(UChar character, LocalFrame& frame)
 {
-    String text(&character, 1);
+    String text(span(character));
     if (!frame.checkedEditor()->shouldInsertText(text, frame.selection().selection().toNormalizedRange(), EditorInsertAction::Typed))
         return;
 
@@ -373,6 +373,9 @@ void ContextMenuController::contextMenuItemSelected(ContextMenuAction action, co
         break;
     case ContextMenuItemTagToggleVideoEnhancedFullscreen:
         m_context.hitTestResult().toggleEnhancedFullscreenForVideo();
+        break;
+    case ContextMenuItemTagToggleVideoViewer:
+        m_context.hitTestResult().toggleVideoViewer();
         break;
     case ContextMenuItemTagOpenFrameInNewWindow: {
         RefPtr loader = frame->loader().documentLoader();
@@ -654,10 +657,10 @@ void ContextMenuController::contextMenuItemSelected(ContextMenuAction action, co
 #endif
         break;
 
-    case ContextMenuItemTagSwapCharacters:
-#if ENABLE(UNIFIED_TEXT_REPLACEMENT)
+    case ContextMenuItemTagWritingTools:
+#if ENABLE(WRITING_TOOLS)
         if (RefPtr view = frame->view())
-            m_client->handleSwapCharacters(view->contentsToRootView(enclosingIntRect(frame->selection().selectionBounds())));
+            m_client->handleWritingTools(view->contentsToRootView(enclosingIntRect(frame->selection().selectionBounds())));
 #endif
         break;
 
@@ -957,6 +960,7 @@ void ContextMenuController::populate()
         contextMenuItemTagEnterVideoFullscreen());
 #if PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)
     ContextMenuItem ToggleVideoEnhancedFullscreen(ContextMenuItemType::Action, ContextMenuItemTagToggleVideoEnhancedFullscreen, contextMenuItemTagEnterVideoEnhancedFullscreen());
+    ContextMenuItem ToggleVideoViewer(ContextMenuItemType::Action, ContextMenuItemTagToggleVideoViewer, contextMenuItemTagEnterVideoViewer());
 #endif
 
 #if ENABLE(PDFJS)
@@ -1054,9 +1058,9 @@ void ContextMenuController::populate()
         appendItem(translateItem, m_contextMenu.get());
 #endif
 
-#if ENABLE(UNIFIED_TEXT_REPLACEMENT)
-        ContextMenuItem swapCharactersItem(ContextMenuItemType::Action, ContextMenuItemTagSwapCharacters, contextMenuItemTagSwapCharacters());
-        appendItem(swapCharactersItem, m_contextMenu.get());
+#if ENABLE(WRITING_TOOLS)
+        ContextMenuItem writingToolsItem(ContextMenuItemType::Action, ContextMenuItemTagWritingTools, contextMenuItemTagWritingTools());
+        appendItem(writingToolsItem, m_contextMenu.get());
 #endif
 
 #if !PLATFORM(GTK)
@@ -1156,12 +1160,14 @@ void ContextMenuController::populate()
             appendItem(ToggleMediaControls, m_contextMenu.get());
             appendItem(ToggleMediaLoop, m_contextMenu.get());
 #if SUPPORTS_TOGGLE_VIDEO_FULLSCREEN
-            appendItem(ToggleVideoFullscreen, m_contextMenu.get());
+            if (!m_context.hitTestResult().mediaIsInVideoViewer())
+                appendItem(ToggleVideoFullscreen, m_contextMenu.get());
 #else
             appendItem(EnterVideoFullscreen, m_contextMenu.get());
 #endif
 #if PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)
             appendItem(ToggleVideoEnhancedFullscreen, m_contextMenu.get());
+            appendItem(ToggleVideoViewer, m_contextMenu.get());
 #endif
             if (m_context.hitTestResult().isDownloadableMedia() && loader->client().canHandleRequest(ResourceRequest(mediaURL))) {
                 appendItem(*separatorItem(), m_contextMenu.get());
@@ -1537,14 +1543,14 @@ void ContextMenuController::checkOrEnableIfNeeded(ContextMenuItem& item) const
             shouldEnable = frame->selection().isRange();
             break;
         case ContextMenuItemTagPaste:
-            shouldEnable = frame->editor().canDHTMLPaste() || frame->editor().canPaste();
+            shouldEnable = frame->editor().canDHTMLPaste() || frame->editor().canEdit();
             break;
         case ContextMenuItemTagCopyLinkToHighlight:
             shouldEnable = shouldEnableCopyLinkToHighlight();
             break;
 #if PLATFORM(GTK)
         case ContextMenuItemTagPasteAsPlainText:
-            shouldEnable = frame->editor().canDHTMLPaste() || frame->editor().canPaste();
+            shouldEnable = frame->editor().canDHTMLPaste() || frame->editor().canEdit();
             break;
         case ContextMenuItemTagDelete:
             shouldEnable = frame->editor().canDelete();
@@ -1771,6 +1777,11 @@ void ContextMenuController::checkOrEnableIfNeeded(ContextMenuItem& item) const
 #endif
             shouldEnable = m_context.hitTestResult().mediaSupportsEnhancedFullscreen();
             break;
+        case ContextMenuItemTagToggleVideoViewer:
+#if PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)
+            item.setTitle(m_context.hitTestResult().mediaIsInVideoViewer() ? contextMenuItemTagExitVideoViewer() : contextMenuItemTagEnterVideoViewer());
+#endif
+            break;
         case ContextMenuItemTagOpenFrameInNewWindow:
         case ContextMenuItemTagSpellingGuess:
         case ContextMenuItemTagOther:
@@ -1825,7 +1836,7 @@ void ContextMenuController::checkOrEnableIfNeeded(ContextMenuItem& item) const
             break;
         case ContextMenuItemTagLookUpImage:
         case ContextMenuItemTagTranslate:
-        case ContextMenuItemTagSwapCharacters:
+        case ContextMenuItemTagWritingTools:
             break;
     }
 

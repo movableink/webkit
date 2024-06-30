@@ -80,7 +80,7 @@ public:
 
     // These two callee getters are only valid once the callees have been populated.
 
-    Callee& jsEntrypointCalleeFromFunctionIndexSpace(unsigned functionIndexSpace)
+    JSEntrypointCallee& jsEntrypointCalleeFromFunctionIndexSpace(unsigned functionIndexSpace)
     {
         ASSERT(runnable());
         RELEASE_ASSERT(functionIndexSpace >= functionImportCount());
@@ -102,7 +102,7 @@ public:
         if (!m_bbqCallees.isEmpty() && m_bbqCallees[calleeIndex])
             return *m_bbqCallees[calleeIndex].get();
 #endif
-        if (Options::useWasmIPInt())
+        if (Options::useWebAssemblyIPInt())
             return m_ipintCallees->at(calleeIndex).get();
         return m_llintCallees->at(calleeIndex).get();
     }

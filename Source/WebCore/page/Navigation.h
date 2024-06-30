@@ -26,7 +26,6 @@
 #pragma once
 
 #include "EventTarget.h"
-#include "JSDOMPromise.h"
 #include "JSDOMPromiseDeferred.h"
 #include "LocalDOMWindowProperty.h"
 #include "NavigationHistoryEntry.h"
@@ -37,39 +36,52 @@
 
 namespace WebCore {
 
+class FormState;
 class HistoryItem;
 class SerializedScriptValue;
 class NavigateEvent;
+class NavigationActivation;
 class NavigationDestination;
 
 enum class FrameLoadType : uint8_t;
 
+enum class NavigationAPIMethodTrackerType { };
+using NavigationAPIMethodTrackerIdentifier = ObjectIdentifier<NavigationAPIMethodTrackerType>;
+
 // https://html.spec.whatwg.org/multipage/nav-history-apis.html#navigation-api-method-tracker
-struct NavigationAPIMethodTracker {
-    NavigationAPIMethodTracker(uint64_t id, Ref<DeferredPromise>&& committed, Ref<DeferredPromise>&& finished, JSC::JSValue&& info, RefPtr<SerializedScriptValue>&& serializedState)
-        : info(info)
-        , serializedState(serializedState)
-        , committedPromise(DOMPromise::create(*committed->globalObject(), *JSC::jsCast<JSC::JSPromise*>(committed->promise())))
-        , finishedPromise(DOMPromise::create(*finished->globalObject(), *JSC::jsCast<JSC::JSPromise*>(finished->promise())))
-        , id(id)
+struct NavigationAPIMethodTracker : public RefCounted<NavigationAPIMethodTracker> {
+    WTF_MAKE_STRUCT_FAST_ALLOCATED(NavigationAPIMethodTracker);
+
+    static Ref<NavigationAPIMethodTracker> create(Ref<DeferredPromise>&& committed, Ref<DeferredPromise>&& finished, JSC::JSValue&& info, RefPtr<SerializedScriptValue>&& serializedState)
     {
-    };
+        return adoptRef(*new NavigationAPIMethodTracker(WTFMove(committed), WTFMove(finished), WTFMove(info), WTFMove(serializedState)));
+    }
 
     bool operator==(const NavigationAPIMethodTracker& other) const
     {
         // key is optional so we manually identify each tracker.
-        return id == other.id;
-    };
+        return identifier == other.identifier;
+    }
 
+    bool finishedBeforeCommit { false };
     String key;
     JSC::JSValue info;
     RefPtr<SerializedScriptValue> serializedState;
     RefPtr<NavigationHistoryEntry> committedToEntry;
-    Ref<DOMPromise> committedPromise;
-    Ref<DOMPromise> finishedPromise;
+    Ref<DeferredPromise> committedPromise;
+    Ref<DeferredPromise> finishedPromise;
 
 private:
-    uint64_t id;
+    explicit NavigationAPIMethodTracker(Ref<DeferredPromise>&& committed, Ref<DeferredPromise>&& finished, JSC::JSValue&& info, RefPtr<SerializedScriptValue>&& serializedState)
+        : info(info)
+        , serializedState(serializedState)
+        , committedPromise(WTFMove(committed))
+        , finishedPromise(WTFMove(finished))
+        , identifier(NavigationAPIMethodTrackerIdentifier::generate())
+    {
+    }
+
+    NavigationAPIMethodTrackerIdentifier identifier;
 };
 
 class Navigation final : public RefCounted<Navigation>, public EventTarget, public LocalDOMWindowProperty {
@@ -82,11 +94,7 @@ public:
     using RefCounted<Navigation>::ref;
     using RefCounted<Navigation>::deref;
 
-    enum class HistoryBehavior : uint8_t {
-        Auto,
-        Push,
-        Replace,
-    };
+    using HistoryBehavior = NavigationHistoryBehavior;
 
     struct UpdateCurrentEntryOptions {
         JSC::JSValue state;
@@ -113,11 +121,12 @@ public:
     const Vector<Ref<NavigationHistoryEntry>>& entries() const;
     NavigationHistoryEntry* currentEntry() const;
     NavigationTransition* transition() { return m_transition.get(); };
+    NavigationActivation* activation() { return m_activation.get(); };
 
     bool canGoBack() const;
     bool canGoForward() const;
 
-    void initializeEntries(const Ref<HistoryItem>& currentItem, Vector<Ref<HistoryItem>> &items);
+    void initializeEntries(Ref<HistoryItem>&& currentItem, Vector<Ref<HistoryItem>>& items);
 
     Result navigate(const String& url, NavigateOptions&&, Ref<DeferredPromise>&&, Ref<DeferredPromise>&&);
 
@@ -129,11 +138,13 @@ public:
 
     ExceptionOr<void> updateCurrentEntry(UpdateCurrentEntryOptions&&);
 
-    bool dispatchTraversalNavigateEvent(Ref<HistoryItem>);
-    bool dispatchPushReplaceReloadNavigateEvent(const URL&, NavigationNavigationType, bool isSameDocument);
+    bool dispatchTraversalNavigateEvent(HistoryItem&);
+    bool dispatchPushReplaceReloadNavigateEvent(const URL&, NavigationNavigationType, bool isSameDocument, FormState*, SerializedScriptValue* classicHistoryAPIState = nullptr);
     bool dispatchDownloadNavigateEvent(const URL&, const String& downloadFilename);
 
     void updateForNavigation(Ref<HistoryItem>&&, NavigationNavigationType);
+    void updateForReactivation(Vector<Ref<HistoryItem>>& newHistoryItems, HistoryItem& reactivatedItem);
+    void updateForActivation(HistoryItem* previousItem, std::optional<NavigationNavigationType>);
 
 private:
     explicit Navigation(LocalDOMWindow&);
@@ -145,23 +156,32 @@ private:
     void derefEventTarget() final { deref(); }
 
     bool hasEntriesAndEventsDisabled() const;
-    Result performTraversal(NavigationHistoryEntry&, Ref<DeferredPromise> committed, Ref<DeferredPromise> finished);
+    Result performTraversal(const String& key, Navigation::Options, FrameLoadType, Ref<DeferredPromise>&& committed, Ref<DeferredPromise>&& finished);
     std::optional<Ref<NavigationHistoryEntry>> findEntryByKey(const String& key);
     ExceptionOr<RefPtr<SerializedScriptValue>> serializeState(JSC::JSValue state);
-    NavigationAPIMethodTracker maybeSetUpcomingNonTraversalTracker(Ref<DeferredPromise>&& committed, Ref<DeferredPromise>&& finished, JSC::JSValue info, RefPtr<SerializedScriptValue>&&);
-    bool innerDispatchNavigateEvent(NavigationNavigationType, Ref<NavigationDestination>&&, const String& downloadRequestFilename);
+    bool innerDispatchNavigateEvent(NavigationNavigationType, Ref<NavigationDestination>&&, const String& downloadRequestFilename, FormState* = nullptr, SerializedScriptValue* classicHistoryAPIState = nullptr);
 
+    RefPtr<NavigationAPIMethodTracker> maybeSetUpcomingNonTraversalTracker(Ref<DeferredPromise>&& committed, Ref<DeferredPromise>&& finished, JSC::JSValue info, RefPtr<SerializedScriptValue>&&);
+    RefPtr<NavigationAPIMethodTracker> addUpcomingTrarveseAPIMethodTracker(Ref<DeferredPromise>&& committed, Ref<DeferredPromise>&& finished, const String& key, JSC::JSValue info);
+    void cleanupAPIMethodTracker(NavigationAPIMethodTracker*);
+    void resolveFinishedPromise(NavigationAPIMethodTracker*);
+    void rejectFinishedPromise(NavigationAPIMethodTracker*, Exception&&, JSC::JSValue exceptionObject);
+    void abortOngoingNavigation(NavigateEvent&);
+    void promoteUpcomingAPIMethodTracker(const String& destinationKey);
+    void notifyCommittedToEntry(NavigationAPIMethodTracker*, NavigationHistoryEntry*, NavigationNavigationType);
+    Result apiMethodTrackerDerivedResult(const NavigationAPIMethodTracker&);
 
     std::optional<size_t> m_currentEntryIndex;
     RefPtr<NavigationTransition> m_transition;
+    RefPtr<NavigationActivation> m_activation;
     Vector<Ref<NavigationHistoryEntry>> m_entries;
 
     RefPtr<NavigateEvent> m_ongoingNavigateEvent;
     bool m_focusChangedDuringOnoingNavigation { false };
     bool m_suppressNormalScrollRestorationDuringOngoingNavigation { false };
-    std::optional<NavigationAPIMethodTracker> m_ongoingAPIMethodTracker;
-    std::optional<NavigationAPIMethodTracker> m_upcomingNonTraverseMethodTracker;
-    HashMap<String, NavigationAPIMethodTracker> m_upcomingTraverseMethodTrackers;
+    RefPtr<NavigationAPIMethodTracker> m_ongoingAPIMethodTracker;
+    RefPtr<NavigationAPIMethodTracker> m_upcomingNonTraverseMethodTracker;
+    HashMap<String, Ref<NavigationAPIMethodTracker>> m_upcomingTraverseMethodTrackers;
 };
 
 } // namespace WebCore

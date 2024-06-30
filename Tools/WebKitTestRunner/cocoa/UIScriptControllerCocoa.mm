@@ -346,8 +346,7 @@ void UIScriptControllerCocoa::requestTextExtraction(JSValueRef callback, TextExt
 void UIScriptControllerCocoa::requestRenderedTextForFrontmostTarget(int x, int y, JSValueRef callback)
 {
     unsigned callbackID = m_context->prepareForAsyncTask(callback, CallbackTypeNonPersistent);
-    auto request = adoptNS([_WKTargetedElementRequest new]);
-    [request setPoint:CGPointMake(x, y)];
+    auto request = adoptNS([[_WKTargetedElementRequest alloc] initWithPoint:CGPointMake(x, y)]);
     [webView() _requestTargetedElementInfo:request.get() completionHandler:^(NSArray<_WKTargetedElementInfo *> *elements) {
         if (!m_context)
             return;
@@ -360,8 +359,7 @@ void UIScriptControllerCocoa::requestRenderedTextForFrontmostTarget(int x, int y
 void UIScriptControllerCocoa::adjustVisibilityForFrontmostTarget(int x, int y, JSValueRef callback)
 {
     unsigned callbackID = m_context->prepareForAsyncTask(callback, CallbackTypeNonPersistent);
-    auto request = adoptNS([_WKTargetedElementRequest new]);
-    [request setPoint:CGPointMake(x, y)];
+    auto request = adoptNS([[_WKTargetedElementRequest alloc] initWithPoint:CGPointMake(x, y)]);
     [webView() _requestTargetedElementInfo:request.get() completionHandler:[callbackID, this](NSArray<_WKTargetedElementInfo *> *elements) {
         if (!elements.count) {
             m_context->asyncTaskComplete(callbackID);
@@ -378,6 +376,14 @@ void UIScriptControllerCocoa::adjustVisibilityForFrontmostTarget(int x, int y, J
             JSRetainPtr firstSelector = adopt(JSStringCreateWithCFString((__bridge CFStringRef)[frontTarget selectors].firstObject));
             m_context->asyncTaskComplete(callbackID, { JSValueMakeString(m_context->jsContext(), firstSelector.get()) });
         }];
+    }];
+}
+
+void UIScriptControllerCocoa::resetVisibilityAdjustments(JSValueRef callback)
+{
+    unsigned callbackID = m_context->prepareForAsyncTask(callback, CallbackTypeNonPersistent);
+    [webView() _resetVisibilityAdjustmentsForTargetedElements:nil completionHandler:[callbackID, this](BOOL success) {
+        m_context->asyncTaskComplete(callbackID, { JSValueMakeBoolean(m_context->jsContext(), success) });
     }];
 }
 

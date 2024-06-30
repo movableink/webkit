@@ -35,6 +35,7 @@
 #if (_LIBCPP_VERSION >= 14000) && !defined(_LIBCPP_HAS_NO_CXX20_COROUTINES)
 #import <coroutine>
 #else
+// FIXME: Remove this once all supported toolchains have non-experimental coroutine support.
 #import <experimental/coroutine>
 namespace std {
 using std::experimental::coroutine_handle;
@@ -170,7 +171,11 @@ private:
 };
 
 struct HTTPResponse {
-    enum class TerminateConnection : bool { No, Yes };
+    enum class Behavior : uint8_t {
+        SendResponseNormally,
+        TerminateConnectionAfterReceivingResponse,
+        NeverSendResponse
+    };
 
     HTTPResponse(Vector<uint8_t>&& body)
         : body(WTFMove(body)) { }
@@ -183,8 +188,8 @@ struct HTTPResponse {
         : statusCode(statusCode)
         , headerFields(WTFMove(headerFields))
         , body(bodyFromString(body)) { }
-    HTTPResponse(TerminateConnection terminateConnection)
-        : terminateConnection(terminateConnection) { }
+    HTTPResponse(Behavior behavior)
+        : behavior(behavior) { }
 
     HTTPResponse(const HTTPResponse&) = default;
     HTTPResponse(HTTPResponse&&) = default;
@@ -199,7 +204,7 @@ struct HTTPResponse {
     unsigned statusCode { 200 };
     HashMap<String, String> headerFields;
     Vector<uint8_t> body;
-    TerminateConnection terminateConnection { TerminateConnection::No };
+    Behavior behavior { Behavior::SendResponseNormally };
 };
 
 namespace H2 {

@@ -176,8 +176,8 @@ void ColorInputType::attributeChanged(const QualifiedName& name)
     if (name == valueAttr) {
         updateColorSwatch();
 
-        if (auto* cache = element()->document().existingAXObjectCache())
-            cache->valueChanged(element());
+        if (CheckedPtr cache = element()->document().existingAXObjectCache())
+            cache->valueChanged(*element());
     }
 
     InputType::attributeChanged(name);
@@ -253,8 +253,8 @@ void ColorInputType::didChooseColor(const Color& color)
     updateColorSwatch();
     element()->dispatchFormControlChangeEvent();
 
-    if (auto* cache = element()->document().existingAXObjectCache())
-        cache->valueChanged(element());
+    if (CheckedPtr cache = element()->document().existingAXObjectCache())
+        cache->valueChanged(*element());
 }
 
 void ColorInputType::didEndChooser()

@@ -47,7 +47,7 @@ void SVGPolyElement::attributeChanged(const QualifiedName& name, const AtomStrin
 {
     if (name == SVGNames::pointsAttr) {
         if (!m_points->baseVal()->parse(newValue))
-            protectedDocument()->checkedSVGExtensions()->reportError("Problem parsing points=\"" + newValue + "\"");
+            protectedDocument()->checkedSVGExtensions()->reportError(makeString("Problem parsing points=\""_s, newValue, "\""_s));
     }
 
     SVGGeometryElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
@@ -66,6 +66,7 @@ void SVGPolyElement::svgAttributeChanged(const QualifiedName& attrName)
             path->setNeedsShapeUpdate();
 
         updateSVGRendererForElementChange();
+        invalidateResourceImageBuffersIfNeeded();
         return;
     }
 

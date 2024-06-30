@@ -132,6 +132,7 @@ list(APPEND WebKit_UNIFIED_SOURCE_LIST_FILES
 set(WebKit_MESSAGES_IN_FILES
     GPUProcess/GPUConnectionToWebProcess
     GPUProcess/GPUProcess
+    GPUProcess/RemoteSharedResourceCache
 
     GPUProcess/ShapeDetection/RemoteBarcodeDetector
     GPUProcess/ShapeDetection/RemoteFaceDetector
@@ -229,7 +230,6 @@ set(WebKit_MESSAGES_IN_FILES
     Shared/IPCStreamTesterProxy
     Shared/IPCTester
     Shared/IPCTesterReceiver
-    Shared/WebConnection
 
     Shared/Authentication/AuthenticationManager
 
@@ -345,6 +345,7 @@ set(WebKit_MESSAGES_IN_FILES
     WebProcess/WebPage/EventDispatcher
     WebProcess/WebPage/VisitedLinkTableController
     WebProcess/WebPage/WebPage
+    WebProcess/WebPage/WebPageTesting
 
     WebProcess/WebStorage/StorageAreaMap
 
@@ -360,7 +361,6 @@ set(WebKit_SERIALIZATION_IN_FILES
 
     GPUProcess/graphics/PathSegment.serialization.in
     GPUProcess/graphics/RemoteGraphicsContextGLInitializationState.serialization.in
-    GPUProcess/graphics/RemoteRenderingBackendCreationParameters.serialization.in
 
     GPUProcess/graphics/WebGPU/RemoteGPURequestAdapterResponse.serialization.in
 
@@ -413,7 +413,6 @@ set(WebKit_SERIALIZATION_IN_FILES
     Shared/EditorState.serialization.in
     Shared/FileSystemSyncAccessHandleInfo.serialization.in
     Shared/FocusedElementInformation.serialization.in
-    Shared/FontInfo.serialization.in
     Shared/FrameInfoData.serialization.in
     Shared/FrameTreeCreationParameters.serialization.in
     Shared/FrameTreeNodeData.serialization.in
@@ -425,7 +424,6 @@ set(WebKit_SERIALIZATION_IN_FILES
     Shared/JavaScriptCore.serialization.in
     Shared/LayerTreeContext.serialization.in
     Shared/LoadParameters.serialization.in
-    Shared/LocalFrameCreationParameters.serialization.in
     Shared/MediaPlaybackState.serialization.in
     Shared/Model.serialization.in
     Shared/ModelProcessConnectionParameters.serialization.in
@@ -434,10 +432,12 @@ set(WebKit_SERIALIZATION_IN_FILES
     Shared/NetworkProcessConnectionParameters.serialization.in
     Shared/NetworkProcessPreferencesForWebProcess.serialization.in
     Shared/Pasteboard.serialization.in
+    Shared/PlatformFontInfo.serialization.in
     Shared/PlatformPopupMenuData.serialization.in
     Shared/PolicyDecision.serialization.in
     Shared/PrintInfo.serialization.in
     Shared/ProcessQualified.serialization.in
+    Shared/ProvisionalFrameCreationParameters.serialization.in
     Shared/RTCNetwork.serialization.in
     Shared/RTCPacketOptions.serialization.in
     Shared/RemoteWorkerInitializationData.serialization.in
@@ -662,15 +662,13 @@ elseif (USE_ANGLE_EGL)
         ANGLE::EGL
     )
 else ()
-    if (USE_EGL)
-        list(APPEND WebKit_SYSTEM_INCLUDE_DIRECTORIES
-            ${EGL_INCLUDE_DIRS}
-        )
-        list(APPEND WebKit_PRIVATE_LIBRARIES
-            ${EGL_LIBRARIES}
-        )
-        add_definitions(${EGL_DEFINITIONS})
-    endif ()
+    list(APPEND WebKit_SYSTEM_INCLUDE_DIRECTORIES
+        ${EGL_INCLUDE_DIRS}
+    )
+    list(APPEND WebKit_PRIVATE_LIBRARIES
+        ${EGL_LIBRARIES}
+    )
+    add_definitions(${EGL_DEFINITIONS})
 endif ()
 
 if (USE_LIBWEBRTC)

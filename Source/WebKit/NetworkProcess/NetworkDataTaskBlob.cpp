@@ -278,7 +278,7 @@ void NetworkDataTaskBlob::dispatchDidReceiveResponse()
     // as if the response had a Content-Disposition header with the filename parameter set to the File's name attribute.
     // Notably, this will affect a name suggested in "File Save As".
 
-    didReceiveResponse(WTFMove(response), NegotiatedLegacyTLS::No, PrivateRelayed::No, [this, protectedThis = WTFMove(protectedThis)](PolicyAction policyAction) {
+    didReceiveResponse(WTFMove(response), NegotiatedLegacyTLS::No, PrivateRelayed::No, std::nullopt, [this, protectedThis = WTFMove(protectedThis)](PolicyAction policyAction) {
         LOG(NetworkSession, "%p - NetworkDataTaskBlob::didReceiveResponse completionHandler (%u)", this, static_cast<unsigned>(policyAction));
 
         if (m_state == State::Canceling || m_state == State::Completed) {
@@ -331,7 +331,7 @@ void NetworkDataTaskBlob::readData(const BlobDataItem& item)
     if (bytesToRead > m_totalRemainingSize)
         bytesToRead = m_totalRemainingSize;
 
-    std::span data { item.data()->data() + item.offset() + m_currentItemReadSize, static_cast<size_t>(bytesToRead) };
+    auto data = item.data()->span().subspan(item.offset() + m_currentItemReadSize, static_cast<size_t>(bytesToRead));
     m_currentItemReadSize = 0;
 
     consumeData(data);
@@ -465,7 +465,7 @@ void NetworkDataTaskBlob::download()
 bool NetworkDataTaskBlob::writeDownload(std::span<const uint8_t> data)
 {
     ASSERT(isDownload());
-    int bytesWritten = FileSystem::writeToFile(m_downloadFile, data.data(), data.size());
+    int bytesWritten = FileSystem::writeToFile(m_downloadFile, data);
     if (static_cast<size_t>(bytesWritten) != data.size()) {
         didFailDownload(cancelledError(m_firstRequest));
         return false;

@@ -1079,24 +1079,38 @@ class Git(Scm):
                     return None
                 self.config.clear()
             branch = match.group('branch')
-            rc = run(
-                [self.executable(), 'checkout'] + ['-B', branch, '{}/{}'.format(name, branch)] + log_arg,
-                cwd=self.root_path,
-            ).returncode
-            if not rc:
-                return self.commit()
-            if rc == 128:
-                command = [self.executable(), 'fetch', name]
-                if prune is None:
-                    if self.config()['webkitscmpy.auto-prune'] == 'true':
-                        command.append('--prune')
-                    elif name in self.source_remotes() and self.config()['webkitscmpy.auto-prune'] == 'only-source':
-                        command.append('--prune')
-                run(command, cwd=self.root_path)
-            return None if run(
-                [self.executable(), 'checkout'] + ['-B', branch, '{}/{}'.format(name, branch)] + log_arg,
-                cwd=self.root_path,
-            ).returncode else self.commit()
+
+            # The names GitHub provides are often too short. If we are tracking other remotes which start
+            # with this name, we should try those too
+            candidate_remotes = [name]
+            for key in self.config().keys():
+                if key.startswith(f'remote.{name}'):
+                    candidate = key.split('.', 2)[1]
+                    if candidate not in candidate_remotes:
+                        candidate_remotes.append(candidate)
+
+            for remote_name in candidate_remotes:
+                rc = run(
+                    [self.executable(), 'checkout'] + ['-B', branch, 'remotes/{}/{}'.format(remote_name, branch)],
+                    cwd=self.root_path, capture_output=True,
+                ).returncode
+                if not rc:
+                    return self.commit()
+                if rc == 128:
+                    command = [self.executable(), 'fetch', remote_name]
+                    if prune is None:
+                        if self.config()['webkitscmpy.auto-prune'] == 'true':
+                            command.append('--prune')
+                        elif name in self.source_remotes() and self.config()['webkitscmpy.auto-prune'] == 'only-source':
+                            command.append('--prune')
+                    log.info(f'Fetching {remote_name}...')
+                    run(command, cwd=self.root_path, capture_output=True)
+                if not run(
+                    [self.executable(), 'checkout'] + ['-B', branch, '{}/{}'.format(remote_name, branch)] + log_arg,
+                    cwd=self.root_path,
+                ).returncode:
+                    return self.commit()
+            return None
 
         match = self.dev_branches.match(argument)
         branch_remote = self.remote_for(argument)
@@ -1280,16 +1294,34 @@ class Git(Scm):
             return staged
         return staged + self.modified(staged=False)
 
-    def diff_lines(self, base, head=None):
-        base = self._to_git_ref(base)
-        head = self._to_git_ref(head)
+    def diff(self, head='HEAD', base=None, include_log=False):
+        head = head if head == 'HEAD' else self._to_git_ref(head)
+        if not base:
+            base = head if head == 'HEAD' else self._to_git_ref('{}~1'.format(head))
+        else:
+            base = self._to_git_ref(base)
+
+        if head == base and head != 'HEAD':
+            sys.stderr.write("'{}' provided as both head and base\n".format(head))
+            return
+
+        if include_log and head == 'HEAD':
+            for line in self.diff(head=head, base='HEAD', include_log=False):
+                yield line
+
+        if head == base:
+            command = [self.executable(), 'diff', '{}'.format(head)]
+        elif include_log:
+            command = [self.executable(), 'format-patch', '{}..{}'.format(base, head), '--stdout']
+        else:
+            command = [self.executable(), 'diff', '{}..{}'.format(base, head)]
 
         kwargs = dict()
         if sys.version_info >= (3, 6):
             kwargs = dict(encoding='utf-8')
         target = '{}..{}'.format(base, head) if head else base
         proc = subprocess.Popen(
-            [self.executable(), 'diff', target],
+            command,
             cwd=self.root_path,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -1298,6 +1330,7 @@ class Git(Scm):
 
         if proc.poll():
             sys.stderr.write("Failed to generate diff for '{}'\n".format(target))
+            return
 
         line = proc.stdout.readline()
         while line:

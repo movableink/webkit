@@ -39,6 +39,15 @@
 #include "ResourceLoadStatisticsClassifierCocoa.h"
 #endif
 
+namespace WebKit {
+class ResourceLoadStatisticsStore;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebKit::ResourceLoadStatisticsStore> : std::true_type { };
+}
+
 namespace WebCore {
 class KeyedDecoder;
 class KeyedEncoder;
@@ -229,8 +238,8 @@ private:
     const RegistrableDomain& debugManualPrevalentResource() const { return m_debugManualPrevalentResource; }
     const RegistrableDomain& debugStaticPrevalentResource() const { return m_debugStaticPrevalentResource; }
     void debugBroadcastConsoleMessage(MessageSource, MessageLevel, const String& message);
-    void debugLogDomainsInBatches(const char* action, const RegistrableDomainsToBlockCookiesFor&);
-    bool debugLoggingEnabled() const { return m_debugLoggingEnabled; };
+    void debugLogDomainsInBatches(ASCIILiteral action, const RegistrableDomainsToBlockCookiesFor&);
+    bool debugLoggingEnabled() const { return m_debugLoggingEnabled; }
     bool debugModeEnabled() const { return m_debugModeEnabled; }
     bool shouldExemptFromWebsiteDataDeletion(const RegistrableDomain&) const;
 

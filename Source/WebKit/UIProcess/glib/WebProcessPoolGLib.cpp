@@ -34,6 +34,7 @@
 #include "WebProcessCreationParameters.h"
 #include <WebCore/PlatformDisplay.h>
 #include <wtf/FileSystem.h>
+#include <wtf/glib/Application.h>
 #include <wtf/glib/Sandbox.h>
 
 #if ENABLE(REMOTE_INSPECTOR)
@@ -53,9 +54,7 @@
 #endif
 
 #if PLATFORM(GTK)
-#if USE(EGL)
 #include "AcceleratedBackingStoreDMABuf.h"
-#endif
 #include "GtkSettingsManager.h"
 #endif
 
@@ -95,7 +94,7 @@ void WebProcessPool::platformInitializeWebProcess(const WebProcessProxy& process
 #endif
 #endif
 
-#if PLATFORM(GTK) && USE(EGL)
+#if PLATFORM(GTK)
     parameters.dmaBufRendererBufferMode = AcceleratedBackingStoreDMABuf::rendererBufferMode();
 #elif PLATFORM(WPE) && ENABLE(WPE_PLATFORM)
     if (usingWPEPlatformAPI) {
@@ -135,9 +134,7 @@ void WebProcessPool::platformInitializeWebProcess(const WebProcessProxy& process
 
     parameters.disableFontHintingForTesting = m_configuration->disableFontHintingForTesting();
 
-    GApplication* app = g_application_get_default();
-    if (app)
-        parameters.applicationID = String::fromLatin1(g_application_get_application_id(app));
+    parameters.applicationID = String::fromUTF8(WTF::applicationID().span());
     parameters.applicationName = String::fromLatin1(g_get_application_name());
 
 #if ENABLE(REMOTE_INSPECTOR)

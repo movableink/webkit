@@ -63,8 +63,9 @@ public:
 
     virtual ~HTMLImageElement();
 
-    using HTMLElement::ref;
-    using HTMLElement::deref;
+    // ActiveDOMObject.
+    void ref() const final { HTMLElement::ref(); }
+    void deref() const final { HTMLElement::deref(); }
 
     void formOwnerRemovedFromTree(const Node& formRoot);
 
@@ -209,7 +210,6 @@ private:
     Ref<Element> cloneElementWithoutAttributesAndChildren(Document& targetDocument) final;
 
     // ActiveDOMObject.
-    const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
 
     void didAttachRenderers() override;

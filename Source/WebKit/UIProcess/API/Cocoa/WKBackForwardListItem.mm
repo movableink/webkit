@@ -33,6 +33,8 @@
     API::ObjectStorage<WebKit::WebBackForwardListItem> _item;
 }
 
+WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
+
 - (void)dealloc
 {
     if (WebCoreObjCScheduleDeallocateOnMainRunLoop(WKBackForwardListItem.class, self))
@@ -50,7 +52,10 @@
 
 - (NSString *)title
 {
-    return nil;
+    if (!_item->title())
+        return nil;
+
+    return _item->title();
 }
 
 - (NSURL *)initialURL

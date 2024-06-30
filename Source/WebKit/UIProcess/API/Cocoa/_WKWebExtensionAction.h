@@ -41,17 +41,19 @@
 @class NSPopover;
 #endif
 
+#define HAVE_UPDATED_WEB_EXTENSION_ACTION_INSPECTION_OVERRIDE_NAME 1
+
 NS_ASSUME_NONNULL_BEGIN
 
 /*! @abstract This notification is sent whenever a @link WKWebExtensionAction has changed properties. */
-WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA))
+WK_API_AVAILABLE(macos(14.4), ios(17.4), visionos(1.1))
 WK_EXTERN NSNotificationName const _WKWebExtensionActionPropertiesDidChangeNotification NS_SWIFT_NAME(_WKWebExtensionAction.propertiesDidChangeNotification);
 
 /*!
  @abstract A `WKWebExtensionAction` object encapsulates the properties for an individual web extension action.
  @discussion Provides access to action properties such as popup, icon, and title, with tab-specific values.
  */
-WK_CLASS_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA))
+WK_CLASS_AVAILABLE(macos(14.4), ios(17.4), visionos(1.1))
 NS_SWIFT_NAME(_WKWebExtension.Action)
 @interface _WKWebExtensionAction : NSObject
 
@@ -96,6 +98,12 @@ NS_SWIFT_NAME(_WKWebExtension.Action)
  has been presented to the user. This property is useful for higher-level notification badges when extensions might be hidden behind an action sheet.
  */
 @property (nonatomic) BOOL hasUnreadBadgeText;
+
+/*!
+ @abstract The name shown when inspecting the popup web view.
+ @discussion This is the text that will appear when inspecting the popup web view.
+ */
+@property (nonatomic, nullable, copy) NSString *inspectionName;
 
 /*! @abstract A Boolean value indicating whether the action is enabled. */
 @property (nonatomic, readonly, getter=isEnabled) BOOL enabled;

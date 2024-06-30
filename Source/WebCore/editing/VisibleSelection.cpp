@@ -696,6 +696,9 @@ bool VisibleSelection::isInPasswordField() const
 
 bool VisibleSelection::canEnableWritingSuggestions() const
 {
+    if (RefPtr formControl = enclosingTextFormControl(start()))
+        return formControl->isWritingSuggestionsEnabled();
+
     RefPtr containerNode = start().containerNode();
     if (!containerNode)
         return false;
@@ -741,7 +744,7 @@ String VisibleSelection::debugDescription() const
 {
     if (isNone())
         return "<none>"_s;
-    return makeString("from ", start().debugDescription(), " to ", end().debugDescription());
+    return makeString("from "_s, start().debugDescription(), " to "_s, end().debugDescription());
 }
 
 void VisibleSelection::showTreeForThis() const

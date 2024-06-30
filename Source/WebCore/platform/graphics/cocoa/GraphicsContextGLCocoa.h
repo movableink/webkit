@@ -76,18 +76,25 @@ public:
     void* createPbufferAndAttachIOSurface(GCGLenum target, PbufferAttachmentUsage, GCGLenum internalFormat, GCGLsizei width, GCGLsizei height, GCGLenum type, IOSurfaceRef, GCGLuint plane);
     void destroyPbufferAndDetachIOSurface(void* handle);
 
-    GCEGLImage createAndBindEGLImage(GCGLenum, GCGLenum, EGLImageSource, GCGLint) final;
+#if ENABLE(WEBXR)
+    GCGLExternalImage createExternalImage(ExternalImageSource&&, GCGLenum internalFormat, GCGLint layer) final;
+    void bindExternalImage(GCGLenum target, GCGLExternalImage) final;
 
-    bool createFoveation(IntSize, IntSize, IntSize, std::span<const GCGLfloat>, std::span<const GCGLfloat>, std::span<const GCGLfloat>) final;
+    bool addFoveation(IntSize, IntSize, IntSize, std::span<const GCGLfloat>, std::span<const GCGLfloat>, std::span<const GCGLfloat>) final;
     void enableFoveation(GCGLuint) final;
     void disableFoveation() final;
 
     RetainPtr<id> newSharedEventWithMachPort(mach_port_t);
-    GCEGLSync createEGLSync(ExternalEGLSyncEvent) final;
-    // Short term support for in-process WebGL.
-    GCEGLSync createEGLSync(id, uint64_t);
+    GCGLExternalSync createExternalSync(ExternalSyncSource&&) final;
+#endif
+    GCGLExternalSync createExternalSync(id, uint64_t);
 
+#if ENABLE(WEBXR)
     bool enableRequiredWebXRExtensions() final;
+
+    // GL_EXT_discard_framebuffer
+    void framebufferDiscard(GCGLenum, std::span<const GCGLenum>) final;
+#endif
 
     void waitUntilWorkScheduled();
 

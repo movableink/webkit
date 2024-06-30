@@ -1071,7 +1071,7 @@ void InspectorOverlay::drawRulers(GraphicsContext& context, const InspectorOverl
         font.update(nullptr);
 
         auto viewportRect = pageView->visualViewportRect();
-        TextRun viewportTextRun(makeString(viewportRect.width() / pageZoomFactor, "px", ' ', multiplicationSign, ' ', viewportRect.height() / pageZoomFactor, "px"));
+        TextRun viewportTextRun(makeString(viewportRect.width() / pageZoomFactor, "px"_s, ' ', multiplicationSign, ' ', viewportRect.height() / pageZoomFactor, "px"_s));
 
         const float margin = 4;
         const float padding = 2;
@@ -1206,7 +1206,7 @@ Path InspectorOverlay::drawElementTitle(GraphicsContext& context, Node& node, co
 
     String elementRole;
     if (AXObjectCache* axObjectCache = node.document().axObjectCache()) {
-        if (auto* axObject = axObjectCache->getOrCreate(&node); axObject && !axObject->accessibilityIsIgnored())
+        if (auto* axObject = axObjectCache->getOrCreate(node); axObject && !axObject->accessibilityIsIgnored())
             elementRole = axObject->computedRoleString();
     }
 
@@ -2046,16 +2046,13 @@ std::optional<InspectorOverlay::Highlight::FlexHighlightOverlay> InspectorOverla
             if (flexOverlay.config.showOrderNumbers) {
                 StringBuilder orderNumbers;
 
-                if (auto index = renderChildrenInDOMOrder.find(renderChild); index != notFound) {
-                    orderNumbers.append("Item #");
-                    orderNumbers.append(index + 1);
-                }
+                if (auto index = renderChildrenInDOMOrder.find(renderChild); index != notFound)
+                    orderNumbers.append("Item #"_s, index + 1);
 
                 if (auto order = renderChild->style().order(); order || hasCustomOrder) {
                     if (!orderNumbers.isEmpty())
                         orderNumbers.append('\n');
-                    orderNumbers.append("order: ");
-                    orderNumbers.append(order);
+                    orderNumbers.append("order: "_s, order);
                 }
 
                 if (!orderNumbers.isEmpty())

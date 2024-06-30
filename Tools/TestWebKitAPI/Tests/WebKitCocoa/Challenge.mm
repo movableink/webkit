@@ -29,6 +29,7 @@
 #import "PlatformUtilities.h"
 #import "Test.h"
 #import "TestNavigationDelegate.h"
+#import "TestUIDelegate.h"
 #import "TestWKWebView.h"
 #import "WKWebViewConfigurationExtras.h"
 #import <WebKit/WKNavigationDelegate.h>
@@ -629,7 +630,7 @@ TEST(WebKit, FastServerTrust)
 
 TEST(WebKit, ErrorSecureCoding)
 {
-    HTTPServer server({{ "/"_s, { HTTPResponse::TerminateConnection::Yes }}});
+    HTTPServer server({ { "/"_s, { HTTPResponse::Behavior::TerminateConnectionAfterReceivingResponse } } });
     auto webView = [[WKWebView new] autorelease];
     auto delegate = [[TestNavigationDelegate new] autorelease];
     webView.navigationDelegate = delegate;
@@ -645,6 +646,10 @@ TEST(WebKit, ErrorSecureCoding)
     EXPECT_EQ(decodedError.code, NSURLErrorNetworkConnectionLost);
     EXPECT_WK_STREQ(decodedError.domain, NSURLErrorDomain);
     EXPECT_WK_STREQ(NSStringFromClass([decodedError.userInfo[_WKRecoveryAttempterErrorKey] class]), @"WKReloadFrameErrorRecoveryAttempter");
+
+    server.setResponse("/"_s, { "<script>alert('reloaded successfully')</script>"_s });
+    EXPECT_TRUE([(id<_WKErrorRecoveryAttempting>)error.userInfo[_WKRecoveryAttempterErrorKey] attemptRecovery]);
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "reloaded successfully");
 }
 
 } // namespace TestWebKitAPI

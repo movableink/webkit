@@ -338,8 +338,7 @@ TEST(WTF, StringViewEqualIgnoringASCIICaseBasic)
     RefPtr<StringImpl> b = StringImpl::create("ABCDEFG"_s);
     RefPtr<StringImpl> c = StringImpl::create("abcdefg"_s);
     constexpr auto d = "aBcDeFG"_s;
-    constexpr size_t zeroLength = 0; // LLVM bug workaround.
-    RefPtr<StringImpl> empty = StringImpl::create(std::span { reinterpret_cast<const LChar*>(""), zeroLength });
+    RefPtr<StringImpl> empty = StringImpl::create(""_span);
     RefPtr<StringImpl> shorter = StringImpl::create("abcdef"_s);
     RefPtr<StringImpl> different = StringImpl::create("abcrefg"_s);
 
@@ -384,9 +383,8 @@ TEST(WTF, StringViewEqualIgnoringASCIICaseBasic)
 
 TEST(WTF, StringViewEqualIgnoringASCIICaseWithEmpty)
 {
-    constexpr size_t zeroLength = 0; // LLVM bug workaround.
-    RefPtr<StringImpl> a = StringImpl::create(std::span { reinterpret_cast<const LChar*>(""), zeroLength });
-    RefPtr<StringImpl> b = StringImpl::create(std::span { reinterpret_cast<const LChar*>(""), zeroLength });
+    RefPtr<StringImpl> a = StringImpl::create(""_span);
+    RefPtr<StringImpl> b = StringImpl::create(""_span);
     StringView stringViewA(*a.get());
     StringView stringViewB(*b.get());
     ASSERT_TRUE(equalIgnoringASCIICase(stringViewA, stringViewB));
@@ -983,7 +981,8 @@ TEST(WTF, StringViewContainsOnlyASCII)
     EXPECT_TRUE(StringView(String("Cocoa"_s)).containsOnlyASCII());
     EXPECT_FALSE(StringView(String::fromLatin1("📱")).containsOnlyASCII());
     EXPECT_FALSE(StringView(String::fromLatin1("\u0080")).containsOnlyASCII());
-    EXPECT_TRUE(StringView(String(bitwise_cast<const UChar*>(u"Hello"), 0)).containsOnlyASCII());
+    constexpr size_t zeroLength = 0;
+    EXPECT_TRUE(StringView(String({ bitwise_cast<const UChar*>(u"Hello"), zeroLength })).containsOnlyASCII());
 }
 
 TEST(WTF, StringViewUpconvert)
@@ -995,7 +994,7 @@ TEST(WTF, StringViewUpconvert)
     for (auto literal : data) {
         StringView string(literal);
         auto upconverted = string.upconvertedCharacters();
-        const UChar* characters = upconverted.get();
+        auto characters = upconverted.span();
         for (unsigned index = 1; index < string.length(); ++index)
             EXPECT_EQ(characters[index], string[index]) << index << " " << literal.characters();
     }

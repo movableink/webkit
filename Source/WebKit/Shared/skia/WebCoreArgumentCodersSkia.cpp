@@ -28,6 +28,9 @@
 
 #if USE(SKIA)
 
+#include "CoreIPCSkColorSpace.h"
+#include "CoreIPCSkData.h"
+#include "StreamConnectionEncoder.h"
 #include <WebCore/Font.h>
 
 namespace IPC {
@@ -52,6 +55,42 @@ bool ArgumentCoder<WebCore::FontPlatformData::Attributes>::decodePlatformData(De
 {
     ASSERT_NOT_REACHED();
     return false;
+}
+
+void ArgumentCoder<sk_sp<SkColorSpace>>::encode(Encoder& encoder, const sk_sp<SkColorSpace>& colorSpace)
+{
+    encoder << WebKit::CoreIPCSkColorSpace(colorSpace);
+}
+
+void ArgumentCoder<sk_sp<SkColorSpace>>::encode(StreamConnectionEncoder& encoder, const sk_sp<SkColorSpace>& colorSpace)
+{
+    encoder << WebKit::CoreIPCSkColorSpace(colorSpace);
+}
+
+std::optional<sk_sp<SkColorSpace>> ArgumentCoder<sk_sp<SkColorSpace>>::decode(Decoder& decoder)
+{
+    auto colorSpace = decoder.decode<WebKit::CoreIPCSkColorSpace>();
+    if (UNLIKELY(!decoder.isValid()))
+        return std::nullopt;
+    return colorSpace->skColorSpace();
+}
+
+void ArgumentCoder<sk_sp<SkData>>::encode(Encoder& encoder, const sk_sp<SkData>& data)
+{
+    encoder << WebKit::CoreIPCSkData(data);
+}
+
+void ArgumentCoder<sk_sp<SkData>>::encode(StreamConnectionEncoder& encoder, const sk_sp<SkData>& data)
+{
+    encoder << WebKit::CoreIPCSkData(data);
+}
+
+std::optional<sk_sp<SkData>> ArgumentCoder<sk_sp<SkData>>::decode(Decoder& decoder)
+{
+    auto data = decoder.decode<WebKit::CoreIPCSkData>();
+    if (UNLIKELY(!decoder.isValid()))
+        return std::nullopt;
+    return data->skData();
 }
 
 } // namespace IPC

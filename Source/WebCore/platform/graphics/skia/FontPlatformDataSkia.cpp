@@ -131,8 +131,11 @@ hb_font_t* FontPlatformData::hbFont() const
 #if ENABLE(MATHML)
 HbUniquePtr<hb_font_t> FontPlatformData::createOpenTypeMathHarfBuzzFont() const
 {
-    notImplemented();
-    return nullptr;
+    auto* face = hb_font_get_face(hbFont());
+    if (!hb_ot_math_has_data(face))
+        return nullptr;
+
+    return HbUniquePtr<hb_font_t>(hb_font_create(face));
 }
 #endif
 
@@ -150,7 +153,7 @@ Vector<FontPlatformData::FontVariationAxis> FontPlatformData::variationAxes(Shou
 
     return WTF::map(defaultFontVariationValues(*typeface), [](auto&& entry) {
         auto& [tag, values] = entry;
-        return FontPlatformData::FontVariationAxis { values.axisName, String(tag.data(), tag.size()), values.defaultValue, values.minimumValue, values.maximumValue };
+        return FontPlatformData::FontVariationAxis { values.axisName, String(tag), values.defaultValue, values.minimumValue, values.maximumValue };
     });
 }
 

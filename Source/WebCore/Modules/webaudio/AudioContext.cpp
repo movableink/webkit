@@ -39,6 +39,7 @@
 #include "Navigator.h"
 #include "NavigatorAudioSession.h"
 #include "NavigatorMediaSession.h"
+#include "NowPlayingInfo.h"
 #include "PageInlines.h"
 #include "Performance.h"
 #include "PlatformMediaSessionManager.h"
@@ -439,11 +440,6 @@ void AudioContext::resume()
     document()->updateIsPlayingMedia();
 }
 
-const char* AudioContext::activeDOMObjectName() const
-{
-    return "AudioContext";
-}
-
 void AudioContext::suspendPlayback()
 {
     if (state() == State::Closed || !isInitialized())
@@ -542,18 +538,20 @@ std::optional<NowPlayingInfo> AudioContext::nowPlayingInfo() const
         return { };
 
     NowPlayingInfo nowPlayingInfo {
-        { },
-        { },
-        { },
-        { },
+        {
+            { },
+            { },
+            { },
+            { },
+            { }
+        },
         MediaPlayer::invalidTime(),
         MediaPlayer::invalidTime(),
         1.0,
         false,
         m_currentIdentifier,
         isPlaying(),
-        !page->isVisibleAndActive(),
-        { }
+        !page->isVisibleAndActive()
     };
 
 #if ENABLE(MEDIA_SESSION)
@@ -561,10 +559,10 @@ std::optional<NowPlayingInfo> AudioContext::nowPlayingInfo() const
         mediaSession->updateNowPlayingInfo(nowPlayingInfo);
 #endif
 
-    if (nowPlayingInfo.title.isEmpty()) {
+    if (nowPlayingInfo.metadata.title.isEmpty()) {
         RegistrableDomain domain { document->securityOrigin().data() };
         if (!domain.isEmpty())
-            nowPlayingInfo.title = domain.string();
+            nowPlayingInfo.metadata.title = domain.string();
     }
 
     return nowPlayingInfo;
@@ -662,6 +660,14 @@ void AudioContext::defaultDestinationWillBecomeConnected()
     m_canOverrideBackgroundPlaybackRestriction = false;
     m_mediaSession->beginInterruption(PlatformMediaSession::InterruptionType::EnteringBackground);
     m_canOverrideBackgroundPlaybackRestriction = true;
+}
+
+void AudioContext::isActiveNowPlayingSessionChanged()
+{
+    if (RefPtr document = this->document()) {
+        if (RefPtr page = document->protectedPage())
+            page->hasActiveNowPlayingSessionChanged();
+    }
 }
 
 #if !RELEASE_LOG_DISABLED

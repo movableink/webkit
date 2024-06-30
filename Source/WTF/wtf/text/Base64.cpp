@@ -25,6 +25,7 @@
 #include <wtf/text/Base64.h>
 
 #include <limits.h>
+#include <wtf/StdLibExtras.h>
 
 namespace WTF {
 
@@ -130,7 +131,7 @@ template<typename CharacterType> static void base64EncodeInternal(std::span<cons
 
 template<typename CharacterType> static void base64EncodeInternal(std::span<const std::byte> input, std::span<CharacterType> destinationDataBuffer, Base64EncodeMode mode)
 {
-    base64EncodeInternal(std::span(reinterpret_cast<const uint8_t*>(input.data()), input.size()), destinationDataBuffer, mode);
+    base64EncodeInternal(asBytes(input), destinationDataBuffer, mode);
 }
 
 static Vector<uint8_t> base64EncodeInternal(std::span<const std::byte> input, Base64EncodeMode mode)
@@ -174,13 +175,14 @@ String base64EncodeToStringReturnNullIfOverflow(std::span<const std::byte> input
 }
 
 template<typename T, typename Malloc = VectorBufferMalloc>
-static std::optional<Vector<uint8_t, 0, CrashOnOverflow, 16, Malloc>> base64DecodeInternal(std::span<const T> inputDataBuffer, Base64DecodeMode mode)
+static std::optional<Vector<uint8_t, 0, CrashOnOverflow, 16, Malloc>> base64DecodeInternal(std::span<const T> inputDataBuffer, OptionSet<Base64DecodeOption> options)
 {
     if (!inputDataBuffer.size())
         return Vector<uint8_t, 0, CrashOnOverflow, 16, Malloc> { };
 
-    auto decodeMap = (mode == Base64DecodeMode::URL) ? base64URLDecMap : base64DecMap;
-    auto validatePadding = mode == Base64DecodeMode::DefaultValidatePadding || mode == Base64DecodeMode::DefaultValidatePaddingAndIgnoreWhitespace;
+    auto decodeMap = options.contains(Base64DecodeOption::URL) ? base64URLDecMap : base64DecMap;
+    auto validatePadding = options.contains(Base64DecodeOption::ValidatePadding);
+    auto ignoreWhitespace = options.contains(Base64DecodeOption::IgnoreWhitespace);
 
     Vector<uint8_t, 0, CrashOnOverflow, 16, Malloc> destination(inputDataBuffer.size());
 
@@ -200,7 +202,7 @@ static std::optional<Vector<uint8_t, 0, CrashOnOverflow, 16, Malloc>> base64Deco
                 if (equalsSignCount)
                     return std::nullopt;
                 destination[destinationLength++] = decodedCharacter;
-            } else if ((mode != Base64DecodeMode::DefaultValidatePaddingAndIgnoreWhitespace && mode != Base64DecodeMode::DefaultIgnoreWhitespaceForQuirk) || !isASCIIWhitespace(ch))
+            } else if (!ignoreWhitespace || !isASCIIWhitespace(ch))
                 return std::nullopt;
         }
     }
@@ -253,22 +255,21 @@ static std::optional<Vector<uint8_t, 0, CrashOnOverflow, 16, Malloc>> base64Deco
     return destination;
 }
 
-std::optional<Vector<uint8_t>> base64Decode(std::span<const std::byte> input, Base64DecodeMode mode)
+std::optional<Vector<uint8_t>> base64Decode(std::span<const std::byte> input, OptionSet<Base64DecodeOption> options)
 {
     if (input.size() > std::numeric_limits<unsigned>::max())
         return std::nullopt;
-    return base64DecodeInternal(std::span(reinterpret_cast<const uint8_t*>(input.data()), input.size()), mode);
+    return base64DecodeInternal(asBytes(input), options);
 }
 
-std::optional<Vector<uint8_t>> base64Decode(StringView input, Base64DecodeMode mode)
+std::optional<Vector<uint8_t>> base64Decode(StringView input, OptionSet<Base64DecodeOption> options)
 {
-    unsigned length = input.length();
-    if (!length || input.is8Bit())
-        return base64DecodeInternal(std::span(input.characters8(), length), mode);
-    return base64DecodeInternal(std::span(input.characters16(), length), mode);
+    if (input.is8Bit())
+        return base64DecodeInternal(input.span8(), options);
+    return base64DecodeInternal(input.span16(), options);
 }
 
-String base64DecodeToString(StringView input, Base64DecodeMode mode)\
+String base64DecodeToString(StringView input, OptionSet<Base64DecodeOption> options)
 {
     auto toString = [&] (auto optionalBuffer) {
         if (!optionalBuffer)
@@ -276,10 +277,9 @@ String base64DecodeToString(StringView input, Base64DecodeMode mode)\
         return String::adopt(WTFMove(*optionalBuffer));
     };
 
-    unsigned length = input.length();
-    if (!length || input.is8Bit())
-        return toString(base64DecodeInternal<LChar, StringImplMalloc>(std::span(input.characters8(), length), mode));
-    return toString(base64DecodeInternal<UChar, StringImplMalloc>(std::span(input.characters16(), length), mode));
+    if (input.is8Bit())
+        return toString(base64DecodeInternal<LChar, StringImplMalloc>(input.span8(), options));
+    return toString(base64DecodeInternal<UChar, StringImplMalloc>(input.span16(), options));
 }
 
 } // namespace WTF

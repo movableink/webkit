@@ -39,6 +39,7 @@
 #import <objc/runtime.h>
 #import <pal/spi/cg/CoreGraphicsSPI.h>
 #import <pal/spi/cocoa/NSKeyedUnarchiverSPI.h>
+#import <pal/spi/cocoa/NotifySPI.h>
 #import <wtf/FileSystem.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/cocoa/Entitlements.h>
@@ -74,6 +75,16 @@ static void initializeTimerCoalescingPolicy()
 }
 #endif
 
+#if PLATFORM(MAC)
+static void disableDowngradeToLayoutManager()
+{
+    NSDictionary *existingArguments = [[NSUserDefaults standardUserDefaults] volatileDomainForName:NSArgumentDomain];
+    auto newArguments = adoptNS([existingArguments mutableCopy]);
+    [newArguments setValue:@NO forKey:@"NSTextViewAllowsDowngradeToLayoutManager"];
+    [[NSUserDefaults standardUserDefaults] setVolatileDomain:newArguments.get() forName:NSArgumentDomain];
+}
+#endif
+
 void AuxiliaryProcess::platformInitialize(const AuxiliaryProcessInitializationParameters& parameters)
 {
 #if PLATFORM(MAC) || PLATFORM(MACCATALYST)
@@ -91,6 +102,10 @@ void AuxiliaryProcess::platformInitialize(const AuxiliaryProcessInitializationPa
     WebCore::setApplicationBundleIdentifier(parameters.clientBundleIdentifier);
     setSDKAlignedBehaviors(parameters.clientSDKAlignedBehaviors);
 
+#if PLATFORM(MAC)
+    disableDowngradeToLayoutManager();
+#endif
+
 #if USE(EXTENSIONKIT)
     setProcessIsExtension(!!WKProcessExtension.sharedInstance);
 #endif
@@ -98,7 +113,7 @@ void AuxiliaryProcess::platformInitialize(const AuxiliaryProcessInitializationPa
 
 void AuxiliaryProcess::didReceiveInvalidMessage(IPC::Connection&, IPC::MessageName messageName)
 {
-    auto errorMessage = makeString("Received invalid message: '", description(messageName), "' (", messageName, ')');
+    auto errorMessage = makeString("Received invalid message: '"_s, description(messageName), "' ("_s, messageName, ')');
     logAndSetCrashLogMessage(errorMessage.utf8().data());
     CRASH_WITH_INFO(WTF::enumToUnderlyingType(messageName));
 }
@@ -210,6 +225,16 @@ void AuxiliaryProcess::preferenceDidUpdate(const String& domain, const String& k
     handlePreferenceChange(domain, key, value);
 }
 
+#if ENABLE(CFPREFS_DIRECT_MODE)
+void AuxiliaryProcess::preferencesDidUpdate(HashMap<String, std::optional<String>> domainlessPreferences, HashMap<std::pair<String, String>, std::optional<String>> preferences)
+{
+    for (auto& [key, value] : domainlessPreferences)
+        preferenceDidUpdate(String(), key, value);
+    for (auto& [key, value] : preferences)
+        preferenceDidUpdate(key.first, key.second, value);
+}
+#endif
+
 #if !HAVE(UPDATE_WEB_ACCESSIBILITY_SETTINGS) && PLATFORM(IOS_FAMILY)
 static const WTF::String& increaseContrastPreferenceKey()
 {
@@ -311,5 +336,13 @@ bool AuxiliaryProcess::isSystemWebKit()
     return isSystemWebKit;
 }
 
+void AuxiliaryProcess::setNotifyOptions()
+{
+#if ENABLE(NOTIFY_BLOCKING)
+    notify_set_options(NOTIFY_OPT_DISPATCH);
+#elif ENABLE(NOTIFY_FILTERING)
+    notify_set_options(NOTIFY_OPT_DISPATCH | NOTIFY_OPT_REGEN | NOTIFY_OPT_FILTERED);
+#endif
+}
 
 } // namespace WebKit

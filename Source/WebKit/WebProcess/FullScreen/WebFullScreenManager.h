@@ -30,6 +30,7 @@
 #include "WebCoreArgumentCoders.h"
 #include <WebCore/EventListener.h>
 #include <WebCore/HTMLMediaElement.h>
+#include <WebCore/HTMLMediaElementEnums.h>
 #include <WebCore/IntRect.h>
 #include <WebCore/LengthBox.h>
 #include <wtf/RefCounted.h>
@@ -87,7 +88,7 @@ protected:
     void setPIPStandbyElement(WebCore::HTMLVideoElement*);
 
     void setAnimatingFullScreen(bool);
-    void requestRestoreFullScreen();
+    void requestRestoreFullScreen(CompletionHandler<void(bool)>&&);
     void requestExitFullScreen();
     void setFullscreenInsets(const WebCore::FloatBoxExtent&);
     void setFullscreenAutoHideDuration(Seconds);
@@ -116,7 +117,7 @@ private:
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const { return m_logger; }
     const void* logIdentifier() const { return m_logIdentifier; }
-    const char* logClassName() const { return "WebFullScreenManager"; }
+    ASCIILiteral logClassName() const { return "WebFullScreenManager"_s; }
     WTFLogChannel& logChannel() const;
 #endif
 

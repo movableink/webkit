@@ -69,7 +69,7 @@ public:
 #endif
     static constexpr FPRReg wasmScratchFPR = FPRInfo::nonPreservedNonArgumentFPR0;
 
-#if CPU(X86) || CPU(X86_64)
+#if CPU(X86_64)
     static constexpr GPRReg shiftRCX = X86Registers::ecx;
 #else
     static constexpr GPRReg shiftRCX = InvalidGPRReg;
@@ -702,7 +702,7 @@ public:
     using Stack = FunctionParser<BBQJIT>::Stack;
     using ControlStack = FunctionParser<BBQJIT>::ControlStack;
 
-    unsigned stackCheckSize() const { return WTF::roundUpToMultipleOf(stackAlignmentBytes(), m_maxCalleeStackSize + m_frameSize); }
+    unsigned stackCheckSize() const { return alignedFrameSize(m_maxCalleeStackSize + m_frameSize); }
 
 private:
     unsigned m_loggingIndent = 0;
@@ -1404,8 +1404,22 @@ public:
 
     enum class MinOrMax { Min, Max };
 
-    template<typename FloatType, MinOrMax IsMinOrMax>
+    template<MinOrMax IsMinOrMax, typename FloatType>
     void emitFloatingPointMinOrMax(FPRReg left, FPRReg right, FPRReg result);
+
+    template<MinOrMax IsMinOrMax, typename FloatType>
+    constexpr FloatType computeFloatingPointMinOrMax(FloatType left, FloatType right)
+    {
+        if (std::isnan(left))
+            return left;
+        if (std::isnan(right))
+            return right;
+
+        if constexpr (IsMinOrMax == MinOrMax::Min)
+            return std::min<FloatType>(left, right);
+        else
+            return std::max<FloatType>(left, right);
+    }
 
     PartialResult WARN_UNUSED_RETURN addF32Min(Value lhs, Value rhs, Value& result);
 
@@ -1679,7 +1693,7 @@ public:
 
     StackMap makeStackMap(const ControlData& data, Stack& enclosingStack);
 
-    void emitLoopTierUpCheck(const ControlData& data, Stack& enclosingStack, unsigned loopIndex);
+    void emitLoopTierUpCheckAndOSREntryData(const ControlData& data, Stack& enclosingStack, unsigned loopIndex);
 
     PartialResult WARN_UNUSED_RETURN addLoop(BlockSignature signature, Stack& enclosingStack, ControlType& result, Stack& newStack, uint32_t loopIndex);
 
@@ -1729,7 +1743,7 @@ public:
 
     PartialResult WARN_UNUSED_RETURN addEndToUnreachable(ControlEntry& entry, Stack& stack, bool unreachable = true);
 
-    int alignedFrameSize(int frameSize);
+    int alignedFrameSize(int frameSize) const;
 
     PartialResult WARN_UNUSED_RETURN endTopLevel(BlockSignature, const Stack&);
 
@@ -1781,6 +1795,8 @@ public:
     ALWAYS_INLINE void didParseOpcode();
 
     // SIMD
+
+    bool usesSIMD();
 
     void notifyFunctionUsesSIMD();
 

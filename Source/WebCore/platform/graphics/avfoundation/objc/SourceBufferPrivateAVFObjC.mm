@@ -66,7 +66,7 @@
 #import <wtf/WTFSemaphore.h>
 #import <wtf/WeakPtr.h>
 #import <wtf/WorkQueue.h>
-#import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
+#import <wtf/cocoa/Entitlements.h>
 #import <wtf/text/CString.h>
 
 #pragma mark - Soft Linking
@@ -103,7 +103,12 @@ static bool sampleBufferRenderersSupportKeySession()
 
 static inline bool supportsAttachContentKey()
 {
-    return processIsExtension();
+    static bool supportsAttachContentKey;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        supportsAttachContentKey = WTF::processHasEntitlement("com.apple.developer.web-browser-engine.rendering"_s) || WTF::processHasEntitlement("com.apple.private.coremedia.allow-fps-attachment"_s);
+    });
+    return supportsAttachContentKey;
 }
 
 static inline bool shouldAddContentKeyRecipients()
@@ -120,7 +125,7 @@ SourceBufferPrivateAVFObjC::SourceBufferPrivateAVFObjC(MediaSourcePrivateAVFObjC
     : SourceBufferPrivate(parent)
     , m_parser(WTFMove(parser))
     , m_listener(WebAVSampleBufferListener::create(*this))
-    , m_appendQueue(WorkQueue::create("SourceBufferPrivateAVFObjC data parser queue"))
+    , m_appendQueue(WorkQueue::create("SourceBufferPrivateAVFObjC data parser queue"_s))
 #if ENABLE(ENCRYPTED_MEDIA) && HAVE(AVCONTENTKEYSESSION)
     , m_keyStatusesChangedObserver(makeUniqueRef<Observer<void()>>([this] { tryToEnqueueBlockedSamples(); }))
     , m_streamDataParser([&] {
@@ -798,6 +803,8 @@ void SourceBufferPrivateAVFObjC::videoRendererDidReceiveError(WebSampleBufferVid
 #if PLATFORM(IOS_FAMILY)
     if (renderer.status == AVQueuedSampleBufferRenderingStatusFailed && [error.domain isEqualToString:@"AVFoundationErrorDomain"] && error.code == AVErrorOperationInterrupted) {
         m_displayLayerWasInterrupted = true;
+        if (RefPtr player = this->player())
+            player->setNeedsPlaceholderImage(true);
         return;
     }
 #endif
@@ -888,6 +895,7 @@ void SourceBufferPrivateAVFObjC::videoRendererReadyForDisplayChanged(WebSampleBu
         return;
 
     ALWAYS_LOG(LOGIDENTIFIER);
+
     if (RefPtr player = this->player())
         player->setHasAvailableVideoFrame(true);
 }
@@ -1117,8 +1125,13 @@ void SourceBufferPrivateAVFObjC::enqueueSampleBuffer(MediaSampleAVFObjC& sample)
             if (!protectedThis)
                 return;
 
-            if (!success || !m_videoRenderer) {
+            if (!success) {
                 ERROR_LOG(logSiteIdentifier, "prerollDecodeWithCompletionHandler failed");
+                return;
+            }
+
+            if (!m_videoRenderer) {
+                ERROR_LOG(logSiteIdentifier, "prerollDecodeWithCompletionHandler called after renderer destroyed");
                 return;
             }
 
@@ -1267,7 +1280,56 @@ bool SourceBufferPrivateAVFObjC::isSeeking() const
     return m_seeking;
 }
 
+void SourceBufferPrivateAVFObjC::configureVideoRenderer(VideoMediaSampleRenderer& videoRenderer)
+{
+    videoRenderer.setResourceOwner(m_resourceOwner);
+#if ENABLE(ENCRYPTED_MEDIA) && HAVE(AVCONTENTKEYSESSION)
+    if (m_cdmInstance && shouldAddContentKeyRecipients())
+        [m_cdmInstance->contentKeySession() addContentKeyRecipient:videoRenderer.displayLayer()];
+#endif
+    videoRenderer.requestMediaDataWhenReady([weakThis = ThreadSafeWeakPtr { *this }] {
+        if (RefPtr protectedThis = weakThis.get(); protectedThis && protectedThis->m_enabledVideoTrackID)
+            protectedThis->didBecomeReadyForMoreSamples(*protectedThis->m_enabledVideoTrackID);
+    });
+    m_listener->beginObservingVideoRenderer(videoRenderer.renderer());
+}
+
+void SourceBufferPrivateAVFObjC::invalidateVideoRenderer(VideoMediaSampleRenderer& videoRenderer)
+{
+    videoRenderer.flush();
+    videoRenderer.stopRequestingMediaData();
+    m_listener->stopObservingVideoRenderer(videoRenderer.renderer());
+
+#if ENABLE(ENCRYPTED_MEDIA) && HAVE(AVCONTENTKEYSESSION)
+    if (m_cdmInstance && shouldAddContentKeyRecipients())
+        [m_cdmInstance->contentKeySession() removeContentKeyRecipient:videoRenderer.displayLayer()];
+#endif
+}
+
 void SourceBufferPrivateAVFObjC::setVideoRenderer(WebSampleBufferVideoRendering *renderer)
+{
+    if (m_videoRenderer && renderer == m_videoRenderer->renderer()) {
+        if (RefPtr expiringVideoRenderer = std::exchange(m_expiringVideoRenderer, nullptr))
+            invalidateVideoRenderer(*expiringVideoRenderer);
+        return;
+    }
+
+    ALWAYS_LOG(LOGIDENTIFIER, "!!renderer = ", !!renderer);
+    ASSERT(!renderer || !m_decompressionSession || hasSelectedVideo());
+
+    if (m_videoRenderer)
+        invalidateVideoRenderer(*std::exchange(m_videoRenderer, nullptr));
+
+    if (!renderer)
+        return;
+
+    m_videoRenderer = VideoMediaSampleRenderer::create(renderer);
+    configureVideoRenderer(*m_videoRenderer);
+    if (m_enabledVideoTrackID)
+        reenqueSamples(*m_enabledVideoTrackID);
+}
+
+void SourceBufferPrivateAVFObjC::stageVideoRenderer(WebSampleBufferVideoRendering *renderer)
 {
     if (m_videoRenderer && renderer == m_videoRenderer->renderer())
         return;
@@ -1275,33 +1337,14 @@ void SourceBufferPrivateAVFObjC::setVideoRenderer(WebSampleBufferVideoRendering 
     ALWAYS_LOG(LOGIDENTIFIER, "!!renderer = ", !!renderer);
     ASSERT(!renderer || !m_decompressionSession || hasSelectedVideo());
 
-    if (m_videoRenderer) {
-        m_videoRenderer->flush();
-        m_videoRenderer->stopRequestingMediaData();
-        m_listener->stopObservingVideoRenderer(m_videoRenderer->renderer());
+    if (m_expiringVideoRenderer)
+        invalidateVideoRenderer(*std::exchange(m_expiringVideoRenderer, nullptr));
 
-#if ENABLE(ENCRYPTED_MEDIA) && HAVE(AVCONTENTKEYSESSION)
-        if (m_cdmInstance && shouldAddContentKeyRecipients())
-            [m_cdmInstance->contentKeySession() removeContentKeyRecipient:m_videoRenderer->displayLayer()];
-#endif
-        m_videoRenderer = nullptr;
-    }
-
-    if (renderer) {
-        m_videoRenderer = VideoMediaSampleRenderer::create(renderer);
-        m_videoRenderer->setResourceOwner(m_resourceOwner);
-#if ENABLE(ENCRYPTED_MEDIA) && HAVE(AVCONTENTKEYSESSION)
-        if (m_cdmInstance && shouldAddContentKeyRecipients())
-            [m_cdmInstance->contentKeySession() addContentKeyRecipient:m_videoRenderer->displayLayer()];
-#endif
-        m_videoRenderer->requestMediaDataWhenReady([weakThis = ThreadSafeWeakPtr { *this }] {
-            if (RefPtr protectedThis = weakThis.get(); protectedThis && protectedThis->m_enabledVideoTrackID)
-                protectedThis->didBecomeReadyForMoreSamples(*protectedThis->m_enabledVideoTrackID);
-        });
-        m_listener->beginObservingVideoRenderer(renderer);
-        if (m_enabledVideoTrackID)
-            reenqueSamples(*m_enabledVideoTrackID);
-    }
+    m_expiringVideoRenderer = WTFMove(m_videoRenderer);
+    m_videoRenderer = VideoMediaSampleRenderer::create(renderer);
+    configureVideoRenderer(*m_videoRenderer);
+    if (m_enabledVideoTrackID)
+        reenqueSamples(*m_enabledVideoTrackID, NeedsFlush::No);
 }
 
 void SourceBufferPrivateAVFObjC::setDecompressionSession(WebCoreDecompressionSession* decompressionSession)

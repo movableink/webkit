@@ -62,21 +62,19 @@ public:
     RefPtr<GraphicsLayerContentsDisplayDelegate> layerContentsDisplayDelegate() override;
     bool needsPreparationForDisplay() const override { return true; }
     void prepareForDisplay() override;
-    PixelFormat pixelFormat() const override;
-    void reshape(int width, int height) override;
+    ImageBufferPixelFormat pixelFormat() const override;
+    void reshape() override;
 
-    void drawBufferToCanvas(SurfaceBuffer) override;
+
+    RefPtr<ImageBuffer> surfaceBufferToImageBuffer(SurfaceBuffer) override;
     // GPUCanvasContext methods:
     CanvasType canvas() override;
     ExceptionOr<void> configure(GPUCanvasConfiguration&&) override;
     void unconfigure() override;
-    RefPtr<GPUTexture> getCurrentTexture() override;
+    ExceptionOr<RefPtr<GPUTexture>> getCurrentTexture() override;
+    RefPtr<ImageBuffer> transferToImageBuffer() override;
 
     bool isWebGPU() const override { return true; }
-    const char* activeDOMObjectName() const override
-    {
-        return "GPUCanvasElement";
-    }
 
 private:
     explicit GPUCanvasContextCocoa(CanvasBase&, GPU&);
@@ -89,6 +87,8 @@ private:
     }
 
     CanvasType htmlOrOffscreenCanvas() const;
+    ExceptionOr<void> configure(GPUCanvasConfiguration&&, bool);
+    void present();
 
     struct Configuration {
         Ref<GPUDevice> device;

@@ -12,11 +12,11 @@
 #include "include/core/SkSize.h"
 #include "include/gpu/GpuTypes.h"
 #include "include/gpu/GrTypes.h"
+#include "include/gpu/mock/GrMockTypes.h"
 #include "include/private/base/SkAPI.h"
 #include "include/private/base/SkAnySubclass.h"
+#include "include/private/base/SkDebug.h"
 #include "include/private/gpu/ganesh/GrTypesPriv.h"
-
-#include "include/gpu/mock/GrMockTypes.h"
 
 enum class SkTextureCompressionType;
 class GrBackendFormatData;
@@ -26,10 +26,6 @@ class GrBackendRenderTargetData;
 namespace skgpu {
 class MutableTextureState;
 }
-
-#ifdef SK_METAL
-#include "include/gpu/mtl/GrMtlTypes.h"
-#endif
 
 #ifdef SK_DIRECT3D
 #include "include/private/gpu/ganesh/GrD3DTypesMinimal.h"
@@ -52,12 +48,6 @@ public:
     GrBackendFormat(const GrBackendFormat&);
     GrBackendFormat& operator=(const GrBackendFormat&);
     ~GrBackendFormat();
-
-#ifdef SK_METAL
-    static GrBackendFormat MakeMtl(GrMTLPixelFormat format) {
-        return GrBackendFormat(format);
-    }
-#endif
 
 #ifdef SK_DIRECT3D
     static GrBackendFormat MakeDxgi(DXGI_FORMAT format) {
@@ -82,14 +72,6 @@ public:
     uint32_t channelMask() const;
 
     GrColorFormatDesc desc() const;
-
-#ifdef SK_METAL
-    /**
-     * If the backend API is Metal this gets the format as a GrMtlPixelFormat. Otherwise,
-     * Otherwise, returns MTLPixelFormatInvalid.
-     */
-    GrMTLPixelFormat asMtlFormat() const;
-#endif
 
 #ifdef SK_DIRECT3D
     /**
@@ -123,7 +105,7 @@ public:
 private:
     // Size determined by looking at the GrBackendFormatData subclasses, then guessing-and-checking.
     // Compiler will complain if this is too small - in that case, just increase the number.
-    inline constexpr static size_t kMaxSubclassSize = 64;
+    inline constexpr static size_t kMaxSubclassSize = 80;
     using AnyFormatData = SkAnySubclass<GrBackendFormatData, kMaxSubclassSize>;
 
     friend class GrBackendSurfacePriv;
@@ -136,10 +118,6 @@ private:
             : fBackend(api), fValid(true), fTextureType(textureType) {
         fFormatData.emplace<FormatData>(formatData);
     }
-
-#ifdef SK_METAL
-    GrBackendFormat(const GrMTLPixelFormat mtlFormat);
-#endif
 
 #ifdef SK_DIRECT3D
     GrBackendFormat(DXGI_FORMAT dxgiFormat);
@@ -156,10 +134,6 @@ private:
     AnyFormatData fFormatData;
 
     union {
-#ifdef SK_METAL
-        GrMTLPixelFormat fMtlFormat;
-#endif
-
 #ifdef SK_DIRECT3D
         DXGI_FORMAT fDxgiFormat;
 #endif
@@ -176,14 +150,6 @@ class SK_API GrBackendTexture {
 public:
     // Creates an invalid backend texture.
     GrBackendTexture();
-
-#ifdef SK_METAL
-    GrBackendTexture(int width,
-                     int height,
-                     skgpu::Mipmapped,
-                     const GrMtlTextureInfo& mtlInfo,
-                     std::string_view label = {});
-#endif
 
 #ifdef SK_DIRECT3D
     GrBackendTexture(int width,
@@ -210,16 +176,8 @@ public:
     std::string_view getLabel() const { return fLabel; }
     skgpu::Mipmapped mipmapped() const { return fMipmapped; }
     bool hasMipmaps() const { return fMipmapped == skgpu::Mipmapped::kYes; }
-    /** deprecated alias of hasMipmaps(). */
-    bool hasMipMaps() const { return this->hasMipmaps(); }
     GrBackendApi backend() const {return fBackend; }
     GrTextureType textureType() const { return fTextureType; }
-
-#ifdef SK_METAL
-    // If the backend API is Metal, copies a snapshot of the GrMtlTextureInfo struct into the passed
-    // in pointer and returns true. Otherwise returns false if the backend API is not Metal.
-    bool getMtlTextureInfo(GrMtlTextureInfo*) const;
-#endif
 
 #ifdef SK_DIRECT3D
     // If the backend API is Direct3D, copies a snapshot of the GrD3DTextureResourceInfo struct into
@@ -262,7 +220,7 @@ public:
 private:
     // Size determined by looking at the GrBackendTextureData subclasses, then guessing-and-checking.
     // Compiler will complain if this is too small - in that case, just increase the number.
-    inline constexpr static size_t kMaxSubclassSize = 160;
+    inline constexpr static size_t kMaxSubclassSize = 176;
     using AnyTextureData = SkAnySubclass<GrBackendTextureData, kMaxSubclassSize>;
 
     friend class GrBackendSurfacePriv;
@@ -320,21 +278,12 @@ private:
         GrD3DBackendSurfaceInfo fD3DInfo;
 #endif
     };
-#ifdef SK_METAL
-    GrMtlTextureInfo fMtlInfo;
-#endif
 };
 
 class SK_API GrBackendRenderTarget {
 public:
     // Creates an invalid backend texture.
     GrBackendRenderTarget();
-
-#ifdef SK_METAL
-    GrBackendRenderTarget(int width,
-                          int height,
-                          const GrMtlTextureInfo& mtlInfo);
-#endif
 
 #ifdef SK_DIRECT3D
     GrBackendRenderTarget(int width,
@@ -360,12 +309,6 @@ public:
     int stencilBits() const { return fStencilBits; }
     GrBackendApi backend() const {return fBackend; }
     bool isFramebufferOnly() const { return fFramebufferOnly; }
-
-#ifdef SK_METAL
-    // If the backend API is Metal, copies a snapshot of the GrMtlTextureInfo struct into the passed
-    // in pointer and returns true. Otherwise returns false if the backend API is not Metal.
-    bool getMtlTextureInfo(GrMtlTextureInfo*) const;
-#endif
 
 #ifdef SK_DIRECT3D
     // If the backend API is Direct3D, copies a snapshot of the GrMtlTextureInfo struct into the
@@ -405,7 +348,7 @@ private:
     // Size determined by looking at the GrBackendRenderTargetData subclasses, then
     // guessing-and-checking. Compiler will complain if this is too small - in that case, just
     // increase the number.
-    inline constexpr static size_t kMaxSubclassSize = 160;
+    inline constexpr static size_t kMaxSubclassSize = 176;
     using AnyRenderTargetData = SkAnySubclass<GrBackendRenderTargetData, kMaxSubclassSize>;
 
     friend class GrBackendSurfacePriv;
@@ -464,9 +407,6 @@ private:
         GrD3DBackendSurfaceInfo fD3DInfo;
 #endif
     };
-#ifdef SK_METAL
-    GrMtlTextureInfo fMtlInfo;
-#endif
 };
 
 #endif

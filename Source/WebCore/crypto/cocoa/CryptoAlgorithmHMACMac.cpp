@@ -29,6 +29,9 @@
 #include "CryptoKeyHMAC.h"
 #include "CryptoUtilitiesCocoa.h"
 #include <CommonCrypto/CommonHMAC.h>
+#if HAVE(SWIFT_CPP_INTEROP)
+#include <pal/PALSwiftUtils.h>
+#endif
 #include <wtf/CryptographicUtilities.h>
 
 namespace WebCore {
@@ -51,24 +54,60 @@ static std::optional<CCHmacAlgorithm> commonCryptoHMACAlgorithm(CryptoAlgorithmI
     }
 }
 
-ExceptionOr<Vector<uint8_t>> CryptoAlgorithmHMAC::platformSign(const CryptoKeyHMAC& key, const Vector<uint8_t>& data)
+#if HAVE(SWIFT_CPP_INTEROP)
+static ExceptionOr<Vector<uint8_t>> platformSignCryptoKit(const CryptoKeyHMAC& key, const Vector<uint8_t>& data)
+{
+    if (!isValidHashParameter(key.hashAlgorithmIdentifier()))
+        return Exception { ExceptionCode::OperationError };
+    return PAL::HMAC::sign(key.key().span(), data.span(), toCKHashFunction(key.hashAlgorithmIdentifier()));
+}
+static ExceptionOr<bool> platformVerifyCryptoKit(const CryptoKeyHMAC& key, const Vector<uint8_t>& signature, const Vector<uint8_t>& data)
+{
+    if (!isValidHashParameter(key.hashAlgorithmIdentifier()))
+        return Exception { ExceptionCode::OperationError };
+    return PAL::HMAC::verify(signature.span(), key.key().span(), data.span(), toCKHashFunction(key.hashAlgorithmIdentifier()));
+}
+#endif
+
+static ExceptionOr<Vector<uint8_t>> platformSignCC(const CryptoKeyHMAC& key, const Vector<uint8_t>& data)
 {
     auto algorithm = commonCryptoHMACAlgorithm(key.hashAlgorithmIdentifier());
     if (!algorithm)
         return Exception { ExceptionCode::OperationError };
 
-    return calculateHMACSignature(*algorithm, key.key(), data.data(), data.size());
+    return calculateHMACSignature(*algorithm, key.key(), data.span());
 }
 
-ExceptionOr<bool> CryptoAlgorithmHMAC::platformVerify(const CryptoKeyHMAC& key, const Vector<uint8_t>& signature, const Vector<uint8_t>& data)
+static ExceptionOr<bool> platformVerifyCC(const CryptoKeyHMAC& key, const Vector<uint8_t>& signature, const Vector<uint8_t>& data)
 {
     auto algorithm = commonCryptoHMACAlgorithm(key.hashAlgorithmIdentifier());
     if (!algorithm)
         return Exception { ExceptionCode::OperationError };
 
-    auto expectedSignature = calculateHMACSignature(*algorithm, key.key(), data.data(), data.size());
+    auto expectedSignature = calculateHMACSignature(*algorithm, key.key(), data.span());
     // Using a constant time comparison to prevent timing attacks.
     return signature.size() == expectedSignature.size() && !constantTimeMemcmp(expectedSignature.data(), signature.data(), expectedSignature.size());
 }
 
+ExceptionOr<Vector<uint8_t>> CryptoAlgorithmHMAC::platformSign(const CryptoKeyHMAC& key, const Vector<uint8_t>& data, UseCryptoKit useCryptoKit)
+{
+#if HAVE(SWIFT_CPP_INTEROP)
+    if (useCryptoKit == UseCryptoKit::Yes)
+        return platformSignCryptoKit(key, data);
+#else
+    UNUSED_PARAM(useCryptoKit);
+#endif
+    return platformSignCC(key, data);
+}
+
+ExceptionOr<bool> CryptoAlgorithmHMAC::platformVerify(const CryptoKeyHMAC& key, const Vector<uint8_t>& signature, const Vector<uint8_t>& data, UseCryptoKit useCryptoKit)
+{
+#if HAVE(SWIFT_CPP_INTEROP)
+    if (useCryptoKit == UseCryptoKit::Yes)
+        return platformVerifyCryptoKit(key, signature, data);
+#else
+    UNUSED_PARAM(useCryptoKit);
+#endif
+    return platformVerifyCC(key, signature, data);
+}
 } // namespace WebCore

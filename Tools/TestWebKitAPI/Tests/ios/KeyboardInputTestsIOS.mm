@@ -925,8 +925,19 @@ TEST(KeyboardInputTests, DoNotCrashWhenFocusingSelectWithoutViewSnapshot)
     [webView waitForNextPresentationUpdate];
 }
 
+static BOOL overrideHardwareKeyboardAttached(id, SEL)
+{
+    return NO;
+}
+
 TEST(KeyboardInputTests, EditableWebViewRequiresKeyboardWhenFirstResponder)
 {
+    InstanceMethodSwizzler swizzler {
+        UIKeyboardImpl.class,
+        @selector(hardwareKeyboardAttached),
+        reinterpret_cast<IMP>(overrideHardwareKeyboardAttached)
+    };
+
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500)]);
     auto delegate = adoptNS([TestInputDelegate new]);
     [webView _setInputDelegate:delegate.get()];
@@ -1255,8 +1266,10 @@ TEST(KeyboardInputTests, AutocorrectionIndicatorColorNotAffectedByAuthorDefinedA
     CGImagePixelReader snapshotReaderExpected { expected.get() };
     CGImagePixelReader snapshotReaderActual { actual.get() };
 
-    for (int x = 0; x < frame.size.width * 3; ++x) {
-        for (int y = 0; y < frame.size.height * 3; ++y)
+    auto scale = UIScreen.mainScreen.scale;
+
+    for (int x = 0; x < frame.size.width * scale; ++x) {
+        for (int y = 0; y < frame.size.height * scale; ++y)
             EXPECT_EQ(snapshotReaderExpected.at(x, y), snapshotReaderActual.at(x, y));
     }
 }
@@ -1274,7 +1287,11 @@ static BOOL allowESIMAutoFillForWebKit(id, SEL, NSString *host, NSError **)
 TEST(KeyboardInputTests, DeviceEIDAndIMEIAutoFill)
 {
     InstanceMethodSwizzler swizzler {
+#if HAVE(DELAY_INIT_LINKING)
+        CoreTelephonyClient.class,
+#else
         PAL::getCoreTelephonyClientClass(),
+#endif
         @selector(isAutofilleSIMIdAllowedForDomain:error:),
         reinterpret_cast<IMP>(allowESIMAutoFillForWebKit)
     };

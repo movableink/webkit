@@ -71,6 +71,10 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 @property (nonatomic, readonly) UIInterfaceOrientation interfaceOrientation;
 @property (nonatomic, readonly) NSUndoManager *undoManagerForWebView;
 
+#if HAVE(SPATIAL_TRACKING_LABEL)
+@property (nonatomic, readonly) const String& spatialTrackingLabel;
+#endif
+
 - (instancetype)initWithFrame:(CGRect)frame processPool:(NakedRef<WebKit::WebProcessPool>)processPool configuration:(Ref<API::PageConfiguration>&&)configuration webView:(WKWebView *)webView;
 
 - (void)didUpdateVisibleRect:(CGRect)visibleRect
@@ -89,6 +93,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 - (void)didInterruptScrolling;
 - (void)didZoomToScale:(CGFloat)scale;
 - (void)willStartZoomOrScroll;
+- (BOOL)screenIsBeingCaptured;
 
 - (void)_webViewDestroyed;
 

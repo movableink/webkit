@@ -126,7 +126,7 @@ static RefPtr<HTMLElement> imageOverlayHost(const Node& node)
 
 bool isDataDetectorResult(const HTMLElement& element)
 {
-    return imageOverlayHost(element) && element.hasClass() && element.classNames().contains(imageOverlayDataDetectorClass());
+    return imageOverlayHost(element) && element.hasClassName(imageOverlayDataDetectorClass());
 }
 
 std::optional<CharacterRange> characterRange(const VisibleSelection& selection)
@@ -230,7 +230,7 @@ IntRect containerRect(HTMLElement& element)
 
 static void installImageOverlayStyleSheet(ShadowRoot& shadowRoot)
 {
-    static MainThreadNeverDestroyed<const String> shadowStyle(StringImpl::createWithoutCopying(imageOverlayUserAgentStyleSheet, sizeof(imageOverlayUserAgentStyleSheet)));
+    static MainThreadNeverDestroyed<const String> shadowStyle(StringImpl::createWithoutCopying(imageOverlayUserAgentStyleSheet));
     Ref style = HTMLStyleElement::create(HTMLNames::styleTag, shadowRoot.protectedDocument(), false);
     style->setTextContent(String { shadowStyle });
     shadowRoot.appendChild(WTFMove(style));
@@ -269,7 +269,7 @@ static Elements updateSubtree(HTMLElement& element, const TextRecognitionResult&
 
         auto& containerClass = controlsHost->mediaControlsContainerClassName();
         for (auto& child : childrenOfType<HTMLDivElement>(shadowRoot.get())) {
-            if (child.hasClass() && child.classNames().contains(containerClass))
+            if (child.hasClassName(containerClass))
                 return &child;
         }
         ASSERT_NOT_REACHED();

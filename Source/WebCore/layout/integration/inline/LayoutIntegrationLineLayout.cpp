@@ -28,7 +28,9 @@
 
 #include "BlockFormattingState.h"
 #include "BlockLayoutState.h"
+#include "ElementInlines.h"
 #include "EventRegion.h"
+#include "FormattingContextBoxIterator.h"
 #include "HitTestLocation.h"
 #include "HitTestRequest.h"
 #include "HitTestResult.h"
@@ -157,7 +159,7 @@ bool LineLayout::contains(const RenderElement& renderer) const
 {
     if (!m_boxTree.contains(renderer))
         return false;
-    return layoutState().hasBoxGeometry(m_boxTree.layoutBoxForRenderer(renderer));
+    return layoutState().hasBoxGeometry(*renderer.layoutBox());
 }
 
 LineLayout* LineLayout::containing(RenderObject& renderer)
@@ -179,13 +181,16 @@ LineLayout* LineLayout::containing(RenderObject& renderer)
         }
         auto adjustedContainingBlock = [&] {
             RenderElement* containingBlock = nullptr;
+            // Only out of flow and floating block level boxes may participate in IFC.
             if (renderer.isOutOfFlowPositioned()) {
                 // Here we are looking for the containing block as if the out-of-flow box was inflow (for static position purpose).
                 containingBlock = renderer.parent();
                 if (is<RenderInline>(containingBlock))
                     containingBlock = containingBlock->containingBlock();
-            } else if (renderer.isFloating())
-                containingBlock = renderer.containingBlock();
+            } else if (renderer.isFloating()) {
+                // Note that containigBlock() on boxes in top layer (i.e. dialog) may return incorrect result during style change even with not-yet-updated style.
+                containingBlock = RenderObject::containingBlockForPositionType(renderer.style().position(), renderer);
+            }
             return dynamicDowncast<RenderBlockFlow>(containingBlock);
         };
         if (auto* blockContainer = adjustedContainingBlock())
@@ -229,13 +234,33 @@ void LineLayout::updateInlineContentDimensions()
     m_boxGeometryUpdater.setGeometriesForLayout();
 }
 
-void LineLayout::updateStyle(const RenderBoxModelObject& renderer, const RenderStyle& oldStyle)
+void LineLayout::updateStyle(const RenderObject& renderer)
 {
-    if (m_inlineContent) {
-        auto invalidation = Layout::InlineInvalidation { ensureLineDamage(), m_inlineContentCache.inlineItems().content(), m_inlineContent->displayContent() };
-        invalidation.styleChanged(m_boxTree.layoutBoxForRenderer(renderer), oldStyle);
+    BoxTree::updateStyle(renderer);
+}
+
+bool LineLayout::rootStyleWillChange(const RenderBlockFlow& root, const RenderStyle& newStyle)
+{
+    if (!root.layoutBox() || !root.layoutBox()->isElementBox()) {
+        ASSERT_NOT_REACHED();
+        return false;
     }
-    m_boxTree.updateStyle(renderer);
+    if (!m_inlineContent)
+        return false;
+
+    return Layout::InlineInvalidation { ensureLineDamage(), m_inlineContentCache.inlineItems().content(), m_inlineContent->displayContent() }.rootStyleWillChange(downcast<Layout::ElementBox>(*root.layoutBox()), newStyle);
+}
+
+bool LineLayout::styleWillChange(const RenderElement& renderer, const RenderStyle& newStyle)
+{
+    if (!renderer.layoutBox()) {
+        ASSERT_NOT_REACHED();
+        return false;
+    }
+    if (!m_inlineContent)
+        return false;
+
+    return Layout::InlineInvalidation { ensureLineDamage(), m_inlineContentCache.inlineItems().content(), m_inlineContent->displayContent() }.styleWillChange(*renderer.layoutBox(), newStyle);
 }
 
 void LineLayout::updateOverflow()
@@ -314,20 +339,11 @@ std::optional<LayoutRect> LineLayout::layout()
 {
     preparePlacedFloats();
 
-    auto isPartialLayout = m_lineDamage && m_lineDamage->layoutStartPosition();
-
-    auto clearInlineContentAndCacheBeforeFullLayoutIfNeeded = [&] {
-        if (isPartialLayout)
-            return;
-        // FIXME: Partial layout should not rely on inline display content, but instead InlineContentCache
-        // should retain all the pieces of data required -and then we can destroy damaged content here instead of after
-        // layout in constructContent.
+    auto isPartialLayout = Layout::InlineInvalidation::mayOnlyNeedPartialLayout(m_lineDamage.get());
+    if (!isPartialLayout) {
+        // FIXME: Partial layout should not rely on previous inline display content.
         clearInlineContent();
-        if (m_lineDamage && m_lineDamage->reasons().contains(Layout::InlineDamage::Reason::StyleChange))
-            releaseCaches();
-        m_lineDamage = { };
-    };
-    clearInlineContentAndCacheBeforeFullLayoutIfNeeded();
+    }
 
     ASSERT(m_inlineContentConstraints);
     auto intrusiveInitialLetterBottom = [&]() -> std::optional<LayoutUnit> {
@@ -423,7 +439,7 @@ void LineLayout::updateRenderTreePositions(const Vector<LineAdjustment>& lineAdj
         if (!layoutBox.isAtomicInlineLevelBox())
             continue;
 
-        auto& renderer = downcast<RenderBox>(m_boxTree.rendererForLayoutBox(layoutBox));
+        auto& renderer = downcast<RenderBox>(*box.layoutBox().rendererForIntegration());
         if (auto* layer = renderer.layer())
             layer->setIsHiddenByOverflowTruncation(box.isFullyTruncated());
 
@@ -458,13 +474,12 @@ void LineLayout::updateRenderTreePositions(const Vector<LineAdjustment>& lineAdj
         }
     }
 
-    for (auto& renderObject : m_boxTree.renderers()) {
-        auto& layoutBox = *renderObject->layoutBox();
+    for (auto& layoutBox : formattingContextBoxes(rootLayoutBox())) {
         if (!layoutBox.isFloatingPositioned() && !layoutBox.isOutOfFlowPositioned())
             continue;
         if (layoutBox.isLineBreakBox())
             continue;
-        auto& renderer = downcast<RenderBox>(m_boxTree.rendererForLayoutBox(layoutBox));
+        auto& renderer = downcast<RenderBox>(*layoutBox.rendererForIntegration());
         auto& logicalGeometry = layoutState().geometryForBox(layoutBox);
 
         if (layoutBox.isFloatingPositioned()) {
@@ -741,6 +756,8 @@ LayoutUnit LineLayout::lastLineLogicalBaseline() const
 
 Vector<LineAdjustment> LineLayout::adjustContentForPagination(const Layout::BlockLayoutState& blockLayoutState, bool isPartialLayout)
 {
+    ASSERT(!m_lineDamage);
+
     if (!m_inlineContent)
         return { };
 
@@ -755,7 +772,9 @@ Vector<LineAdjustment> LineLayout::adjustContentForPagination(const Layout::Bloc
 
     if (layoutRestartLineIndex) {
         auto invalidation = Layout::InlineInvalidation { ensureLineDamage(), m_inlineContentCache.inlineItems().content(), m_inlineContent->displayContent() };
-        invalidation.restartForPagination(*layoutRestartLineIndex, adjustments[*layoutRestartLineIndex].offset);
+        auto canRestart = invalidation.restartForPagination(*layoutRestartLineIndex, adjustments[*layoutRestartLineIndex].offset);
+        if (!canRestart)
+            m_lineDamage = { };
     }
 
     return adjustments;
@@ -785,7 +804,7 @@ InlineIterator::TextBoxIterator LineLayout::textBoxesFor(const RenderText& rende
     if (!m_inlineContent)
         return { };
 
-    auto& layoutBox = m_boxTree.layoutBoxForRenderer(renderText);
+    auto& layoutBox = *renderText.layoutBox();
     auto firstIndex = m_inlineContent->firstBoxIndexForLayoutBox(layoutBox);
     if (!firstIndex)
         return { };
@@ -798,7 +817,7 @@ InlineIterator::LeafBoxIterator LineLayout::boxFor(const RenderElement& renderEl
     if (!m_inlineContent)
         return { };
 
-    auto& layoutBox = m_boxTree.layoutBoxForRenderer(renderElement);
+    auto& layoutBox = *renderElement.layoutBox();
     auto firstIndex = m_inlineContent->firstBoxIndexForLayoutBox(layoutBox);
     if (!firstIndex)
         return { };
@@ -811,7 +830,7 @@ InlineIterator::InlineBoxIterator LineLayout::firstInlineBoxFor(const RenderInli
     if (!m_inlineContent)
         return { };
 
-    auto& layoutBox = m_boxTree.layoutBoxForRenderer(renderInline);
+    auto& layoutBox = *renderInline.layoutBox();
     auto* box = m_inlineContent->firstBoxForLayoutBox(layoutBox);
     if (!box)
         return { };
@@ -848,7 +867,7 @@ LayoutRect LineLayout::firstInlineBoxRect(const RenderInline& renderInline) cons
     if (!m_inlineContent)
         return { };
 
-    auto& layoutBox = m_boxTree.layoutBoxForRenderer(renderInline);
+    auto& layoutBox = *renderInline.layoutBox();
     auto* firstBox = m_inlineContent->firstBoxForLayoutBox(layoutBox);
     if (!firstBox)
         return { };
@@ -879,7 +898,7 @@ LayoutRect LineLayout::enclosingBorderBoxRectFor(const RenderInline& renderInlin
     if (!m_inlineContent->hasContent())
         return { };
 
-    auto borderBoxLogicalRect = LayoutRect { Layout::BoxGeometry::borderBoxRect(layoutState().geometryForBox(m_boxTree.layoutBoxForRenderer(renderInline))) };
+    auto borderBoxLogicalRect = LayoutRect { Layout::BoxGeometry::borderBoxRect(layoutState().geometryForBox(*renderInline.layoutBox())) };
     return WebCore::isHorizontalWritingMode(flow().style().writingMode()) ? borderBoxLogicalRect : borderBoxLogicalRect.transposedRect();
 }
 
@@ -888,7 +907,7 @@ LayoutRect LineLayout::visualOverflowBoundingBoxRectFor(const RenderInline& rend
     if (!m_inlineContent)
         return { };
 
-    auto& layoutBox = m_boxTree.layoutBoxForRenderer(renderInline);
+    auto& layoutBox = *renderInline.layoutBox();
 
     LayoutRect result;
     m_inlineContent->traverseNonRootInlineBoxes(layoutBox, [&](auto& inlineBox) {
@@ -903,7 +922,7 @@ Vector<FloatRect> LineLayout::collectInlineBoxRects(const RenderInline& renderIn
     if (!m_inlineContent)
         return { };
 
-    auto& layoutBox = m_boxTree.layoutBoxForRenderer(renderInline);
+    auto& layoutBox = *renderInline.layoutBox();
 
     Vector<FloatRect> result;
     m_inlineContent->traverseNonRootInlineBoxes(layoutBox, [&](auto& inlineBox) {
@@ -911,11 +930,6 @@ Vector<FloatRect> LineLayout::collectInlineBoxRects(const RenderInline& renderIn
     });
 
     return result;
-}
-
-const RenderObject& LineLayout::rendererForLayoutBox(const Layout::Box& layoutBox) const
-{
-    return m_boxTree.rendererForLayoutBox(layoutBox);
 }
 
 const Layout::ElementBox& LineLayout::rootLayoutBox() const
@@ -988,7 +1002,7 @@ bool LineLayout::hitTest(const HitTestRequest& request, HitTestResult& result, c
         if (!visibleForHitTesting)
             continue;
 
-        auto& renderer = m_boxTree.rendererForLayoutBox(box.layoutBox());
+        auto& renderer = *box.layoutBox().rendererForIntegration();
 
         if (!layerPaintScope.includes(box))
             continue;
@@ -1039,15 +1053,14 @@ void LineLayout::shiftLinesBy(LayoutUnit blockShift)
             box.moveHorizontally(blockShift);
 
         if (box.isAtomicInlineLevelBox()) {
-            CheckedRef renderer = downcast<RenderBox>(m_boxTree.rendererForLayoutBox(box.layoutBox()));
+            CheckedRef renderer = downcast<RenderBox>(*box.layoutBox().rendererForIntegration());
             renderer->move(deltaX, deltaY);
         }
     }
 
-    for (auto& object : m_boxTree.renderers()) {
-        Layout::Box& layoutBox = *object->layoutBox();
+    for (auto& layoutBox : formattingContextBoxes(rootLayoutBox())) {
         if (layoutBox.isOutOfFlowPositioned() && layoutBox.style().hasStaticBlockPosition(isHorizontalWritingMode)) {
-            CheckedRef renderer = downcast<RenderLayerModelObject>(m_boxTree.rendererForLayoutBox(layoutBox));
+            CheckedRef renderer = downcast<RenderLayerModelObject>(*layoutBox.rendererForIntegration());
             if (!renderer->layer())
                 continue;
             CheckedRef layer = *renderer->layer();
@@ -1088,7 +1101,7 @@ bool LineLayout::removedFromTree(const RenderElement& parent, RenderObject& chil
         return false;
     }
 
-    auto& childLayoutBox = m_boxTree.layoutBoxForRenderer(child);
+    auto& childLayoutBox = *child.layoutBox();
     auto* childInlineTextBox = dynamicDowncast<Layout::InlineTextBox>(childLayoutBox);
     auto invalidation = Layout::InlineInvalidation { ensureLineDamage(), m_inlineContentCache.inlineItems().content(), m_inlineContent->displayContent() };
     auto boxIsInvalidated = childInlineTextBox ? invalidation.textWillBeRemoved(*childInlineTextBox) : childLayoutBox.isLineBreakBox() ? invalidation.inlineLevelBoxWillBeRemoved(childLayoutBox) : false;
@@ -1100,14 +1113,15 @@ bool LineLayout::removedFromTree(const RenderElement& parent, RenderObject& chil
 bool LineLayout::updateTextContent(const RenderText& textRenderer, size_t offset, int delta)
 {
     if (!m_inlineContent) {
-        // This should only be called on partial layout.
-        ASSERT_NOT_REACHED();
+        // This is supposed to be only called on partial layout, but
+        // RenderText::setText may be (force) called after min/max size computation and before layout.
+        // We may need to invalidate anyway to clean up inline item list.
         return false;
     }
 
     m_boxTree.updateContent(textRenderer);
     auto invalidation = Layout::InlineInvalidation { ensureLineDamage(), m_inlineContentCache.inlineItems().content(), m_inlineContent->displayContent() };
-    auto& inlineTextBox = downcast<Layout::InlineTextBox>(m_boxTree.layoutBoxForRenderer(textRenderer));
+    auto& inlineTextBox = *textRenderer.layoutBox();
     return delta >= 0 ? invalidation.textInserted(inlineTextBox, offset) : invalidation.textWillBeRemoved(inlineTextBox, offset);
 }
 
@@ -1115,15 +1129,17 @@ void LineLayout::releaseCaches(RenderView& view)
 {
     for (auto& renderer : descendantsOfType<RenderBlockFlow>(view)) {
         if (auto* lineLayout = renderer.modernLineLayout())
-            lineLayout->releaseCaches();
+            lineLayout->releaseCachesAndResetDamage();
     }
 }
 
-void LineLayout::releaseCaches()
+void LineLayout::releaseCachesAndResetDamage()
 {
     m_inlineContentCache.inlineItems().content().clear();
     if (m_inlineContent)
         m_inlineContent->releaseCaches();
+    if (m_lineDamage)
+        Layout::InlineInvalidation::resetInlineDamage(*m_lineDamage);
 }
 
 void LineLayout::clearInlineContent()
@@ -1148,7 +1164,8 @@ bool LineLayout::contentNeedsVisualReordering() const
 #if ENABLE(TREE_DEBUGGING)
 void LineLayout::outputLineTree(WTF::TextStream& stream, size_t depth) const
 {
-    showInlineContent(stream, *m_inlineContent, depth, isDamaged());
+    if (m_inlineContent)
+        showInlineContent(stream, *m_inlineContent, depth, isDamaged());
 }
 #endif
 

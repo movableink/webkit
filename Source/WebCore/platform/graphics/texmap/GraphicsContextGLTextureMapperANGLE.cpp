@@ -54,12 +54,18 @@
 #include "GraphicsContextGLGBMTextureMapper.h"
 #endif
 
+#if PLATFORM(GTK) || PLATFORM(WPE)
+#include "GLFence.h"
+#endif
+
 namespace WebCore {
 
 GraphicsContextGLANGLE::~GraphicsContextGLANGLE()
 {
     if (!makeContextCurrent())
         return;
+
+    GL_Disable(DEBUG_OUTPUT);
 
     if (m_texture)
         GL_DeleteTextures(1, &m_texture);
@@ -310,6 +316,7 @@ void GraphicsContextGLTextureMapperANGLE::swapCompositorTexture()
 #if USE(NICOSIA)
     std::swap(m_textureID, m_compositorTextureID);
 #endif
+    m_isCompositorTextureInitialized = true;
 
     if (m_preserveDrawingBufferTexture) {
         // The context requires the use of an intermediate texture in order to implement preserveDrawingBuffer:true without antialiasing.
@@ -350,6 +357,8 @@ bool GraphicsContextGLTextureMapperANGLE::reshapeDrawingBuffer()
     GL_BindTexture(textureTarget, m_texture);
     GL_TexImage2D(textureTarget, 0, internalColorFormat, width, height, 0, colorFormat, GL_UNSIGNED_BYTE, 0);
 
+    m_isCompositorTextureInitialized = false;
+
     return true;
 }
 
@@ -360,6 +369,10 @@ void GraphicsContextGLTextureMapperANGLE::prepareForDisplay()
 
     prepareTexture();
     swapCompositorTexture();
+
+#if PLATFORM(GTK) || PLATFORM(WPE)
+    m_frameFence = GLFence::create();
+#endif
 }
 
 GLContextWrapper::Type GraphicsContextGLTextureMapperANGLE::type() const
@@ -377,7 +390,8 @@ bool GraphicsContextGLTextureMapperANGLE::unmakeCurrentImpl()
     return !!EGL_MakeCurrent(m_displayObj, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 }
 
-bool GraphicsContextGLTextureMapperANGLE::createFoveation(IntSize, IntSize, IntSize, std::span<const GCGLfloat>, std::span<const GCGLfloat>, std::span<const GCGLfloat>)
+#if ENABLE(WEBXR)
+bool GraphicsContextGLTextureMapperANGLE::addFoveation(IntSize, IntSize, IntSize, std::span<const GCGLfloat>, std::span<const GCGLfloat>, std::span<const GCGLfloat>)
 {
     return false;
 }
@@ -389,6 +403,7 @@ void GraphicsContextGLTextureMapperANGLE::enableFoveation(GCGLuint)
 void GraphicsContextGLTextureMapperANGLE::disableFoveation()
 {
 }
+#endif
 
 } // namespace WebCore
 

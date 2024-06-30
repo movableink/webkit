@@ -88,7 +88,7 @@ AffineTransform SVGLocatable::computeCTM(SVGElement* element, CTMScope mode, Sty
 {
     ASSERT(element);
     if (styleUpdateStrategy == AllowStyleUpdate)
-        element->document().updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, element);
+        element->protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, element);
 
     RefPtr stopAtElement = mode == NearestViewportScope ? nearestViewportElement(element) : nullptr;
 
@@ -118,21 +118,6 @@ AffineTransform SVGLocatable::computeCTM(SVGElement* element, CTMScope mode, Sty
     }
 
     return ctm;
-}
-
-ExceptionOr<Ref<SVGMatrix>> SVGLocatable::getTransformToElement(SVGElement* target, StyleUpdateStrategy styleUpdateStrategy)
-{
-    AffineTransform ctm = getCTM(styleUpdateStrategy);
-
-    if (RefPtr graphicsElement = dynamicDowncast<SVGGraphicsElement>(target)) {
-        AffineTransform targetCTM = graphicsElement->getCTM(styleUpdateStrategy);
-        if (auto inverse = targetCTM.inverse())
-            ctm = inverse.value() * ctm;
-        else
-            return Exception { ExceptionCode::InvalidStateError, "Matrix is not invertible"_s };
-    }
-
-    return SVGMatrix::create(ctm);
 }
 
 }

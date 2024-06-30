@@ -34,6 +34,15 @@
 #include <wtf/WeakRef.h>
 
 namespace WebCore {
+class CachedImage;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::CachedImage> : std::true_type { };
+}
+
+namespace WebCore {
 
 class CachedImageClient;
 class CachedResourceLoader;
@@ -66,6 +75,9 @@ public:
     bool willPaintBrokenImage() const;
 
     bool canRender(const RenderElement* renderer, float multiplier) { return !errorOccurred() && !imageSizeForRenderer(renderer, multiplier).isEmpty(); }
+
+    void setAllowsOrientationOverride(bool b) { m_allowsOrientationOverride = b; }
+    bool allowsOrientationOverride() const { return m_allowsOrientationOverride; }
 
     void setContainerContextForClient(const CachedImageClient&, const LayoutSize&, float, const URL&);
     bool usesImageContainerSize() const { return m_image && m_image->usesContainerSize(); }
@@ -113,7 +125,6 @@ private:
     void setBodyDataFrom(const CachedResource&) final;
 
     bool isPDFResource() const;
-    bool isPostScriptResource() const;
 
     void createImage();
     void clearImage();
@@ -208,6 +219,7 @@ private:
     bool m_shouldPaintBrokenImage : 1;
     bool m_forceUpdateImageDataEnabledForTesting : 1;
     bool m_layerBasedSVGEngineEnabled : 1 { false };
+    bool m_allowsOrientationOverride : 1;
 };
 
 } // namespace WebCore

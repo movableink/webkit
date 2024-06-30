@@ -71,6 +71,7 @@ public:
 
     String cssText() const;
 
+    bool isAnchorValue() const { return m_classType == AnchorClass; }
     bool isAspectRatioValue() const { return m_classType == AspectRatioClass; }
     bool isBackgroundRepeatValue() const { return m_classType == BackgroundRepeatClass; }
     bool isBorderImageSliceValue() const { return m_classType == BorderImageSliceClass; }
@@ -136,10 +137,7 @@ public:
     bool isVariableReferenceValue() const { return m_classType == VariableReferenceClass; }
     bool isViewValue() const { return m_classType == ViewClass; }
     bool isXywhShape() const { return m_classType == XywhShapeClass; }
-
-#if ENABLE(CSS_PAINTING_API)
     bool isPaintImageValue() const { return m_classType == PaintImageClass; }
-#endif
 
     bool hasVariableReferences() const { return isVariableReferenceValue() || isPendingSubstitutionValue(); }
     bool isGradientValue() const { return m_classType >= LinearGradientClass && m_classType <= PrefixedRadialGradientClass; }
@@ -220,9 +218,7 @@ protected:
 
         // Image generator classes.
         CanvasClass,
-#if ENABLE(CSS_PAINTING_API)
         PaintImageClass,
-#endif
         NamedImageClass,
         CrossfadeClass,
         FilterImageClass,
@@ -241,6 +237,7 @@ protected:
         StepsTimingFunctionClass,
 
         // Other non-list classes.
+        AnchorClass,
         AspectRatioClass,
         BackgroundRepeatClass,
         BorderImageSliceClass,

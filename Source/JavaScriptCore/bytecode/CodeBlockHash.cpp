@@ -32,7 +32,7 @@
 
 namespace JSC {
 
-CodeBlockHash::CodeBlockHash(const char* string)
+CodeBlockHash::CodeBlockHash(std::span<const char, 6> string)
     : m_hash(sixCharacterHashStringToInteger(string))
 {
 }
@@ -53,7 +53,7 @@ CodeBlockHash::CodeBlockHash(const SourceCode& sourceCode, CodeSpecializationKin
     ASSERT(sourceCode.length() >= 0);
     constexpr unsigned maxSourceCodeLengthToHash = 500 * MB;
     if (static_cast<unsigned>(sourceCode.length()) < maxSourceCodeLengthToHash)
-        sha1.addBytes(sourceCode.toUTF8());
+        sha1.addUTF8Bytes(sourceCode.view());
     else {
         // Just hash with the length and samples of the source string instead.
         StringView str = sourceCode.provider()->source();
@@ -85,14 +85,14 @@ CodeBlockHash::CodeBlockHash(const SourceCode& sourceCode, CodeSpecializationKin
 
 void CodeBlockHash::dump(PrintStream& out) const
 {
-    std::array<char, 7> buffer = integerToSixCharacterHashString(m_hash);
+    auto buffer = integerToSixCharacterHashString(m_hash);
     
 #if ASSERT_ENABLED
-    CodeBlockHash recompute(buffer.data());
+    CodeBlockHash recompute(buffer);
     ASSERT(recompute == *this);
 #endif // ASSERT_ENABLED
     
-    out.print(buffer.data());
+    out.print(std::span<const char> { buffer });
 }
 
 } // namespace JSC

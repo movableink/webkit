@@ -52,9 +52,6 @@
 
 namespace WebCore {
 
-using namespace HTMLNames;
-using namespace WTF::Unicode;
-
 static Node* previousLeafWithSameEditability(Node* node, EditableType editableType)
 {
     bool editable = hasEditableStyle(*node, editableType);
@@ -95,7 +92,7 @@ static Position previousLineCandidatePosition(Node* node, const VisiblePosition&
         if (highestEditableRoot(firstPositionInOrBeforeNode(previousNode.get()), editableType) != highestRoot)
             break;
 
-        Position pos = previousNode->hasTagName(brTag) ? positionBeforeNode(previousNode.get()) :
+        Position pos = previousNode->hasTagName(HTMLNames::brTag) ? positionBeforeNode(previousNode.get()) :
             makeDeprecatedLegacyPosition(previousNode.get(), caretMaxOffset(*previousNode));
         
         if (pos.isCandidate())
@@ -1945,6 +1942,32 @@ std::optional<SimpleRange> rangeExpandedAroundPositionByCharacters(const Visible
         start = start.previous(Character);
         end = end.next(Character);
     }
+    return makeSimpleRange(start, end);
+}
+
+std::optional<SimpleRange> rangeExpandedAroundRangeByCharacters(const VisibleSelection& selection, uint64_t numberOfCharactersToExpandBackwards, uint64_t numberOfCharactersToExpandForwards)
+{
+    auto range = selection.firstRange();
+    if (!range)
+        return std::nullopt;
+
+    auto extendedPosition = [](const BoundaryPoint& point, uint64_t characterCount, SelectionDirection direction) {
+        auto visiblePosition = VisiblePosition { makeContainerOffsetPosition(point) };
+
+        for (uint64_t i = 0; i < characterCount; ++i) {
+            auto nextVisiblePosition = positionOfNextBoundaryOfGranularity(visiblePosition, TextGranularity::CharacterGranularity, direction);
+            if (nextVisiblePosition.isNull())
+                break;
+
+            visiblePosition = nextVisiblePosition;
+        }
+
+        return visiblePosition;
+    };
+
+    auto start = extendedPosition(range->start, numberOfCharactersToExpandBackwards, SelectionDirection::Backward);
+    auto end = extendedPosition(range->end, numberOfCharactersToExpandForwards, SelectionDirection::Forward);
+
     return makeSimpleRange(start, end);
 }
 

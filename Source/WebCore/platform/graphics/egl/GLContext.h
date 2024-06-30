@@ -19,7 +19,6 @@
 
 #pragma once
 
-#if USE(EGL)
 #include "GLContextWrapper.h"
 #include "IntSize.h"
 #include "PlatformDisplay.h"
@@ -53,6 +52,7 @@ public:
 
     static GLContext* current();
     static bool isExtensionSupported(const char* extensionList, const char* extension);
+    static unsigned versionFromString(const char* versionString);
 
     static const char* errorString(int statusCode);
     static const char* lastErrorString();
@@ -77,6 +77,7 @@ public:
         bool OES_texture_npot { false };
         bool EXT_unpack_subimage { false };
         bool APPLE_sync { false };
+        bool OES_packed_depth_stencil { false };
     };
     const GLExtensions& glExtensions() const;
 
@@ -144,5 +145,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // USE(EGL)

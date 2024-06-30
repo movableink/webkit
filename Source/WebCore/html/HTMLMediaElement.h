@@ -157,7 +157,7 @@ class HTMLMediaElement
     , private TextTrackClient
     , private VideoTrackClient
 #if USE(AUDIO_SESSION) && PLATFORM(MAC)
-    , private AudioSession::ConfigurationChangeObserver
+    , private AudioSessionConfigurationChangeObserver
 #endif
 #if ENABLE(ENCRYPTED_MEDIA)
     , private CDMClient
@@ -172,6 +172,10 @@ public:
     using CanMakeWeakPtr<HTMLMediaElement, WeakPtrFactoryInitialization::Eager>::weakPtrFactory;
     using CanMakeWeakPtr<HTMLMediaElement, WeakPtrFactoryInitialization::Eager>::WeakValueType;
     using CanMakeWeakPtr<HTMLMediaElement, WeakPtrFactoryInitialization::Eager>::WeakPtrImplType;
+
+    // ActiveDOMObject.
+    void ref() const final { HTMLElement::ref(); }
+    void deref() const final { HTMLElement::deref(); }
 
     MediaPlayer* player() const { return m_player.get(); }
     RefPtr<MediaPlayer> protectedPlayer() const { return m_player; }
@@ -228,6 +232,8 @@ public:
     bool inActiveDocument() const { return m_inActiveDocument; }
 
     MediaSessionGroupIdentifier mediaSessionGroupIdentifier() const final;
+
+    void isActiveNowPlayingSessionChanged() final;
 
 // DOM API
 // error state
@@ -307,7 +313,7 @@ public:
 #endif
 
     using HTMLMediaElementEnums::BufferingPolicy;
-    void setBufferingPolicy(BufferingPolicy);
+    WEBCORE_EXPORT void setBufferingPolicy(BufferingPolicy);
     WEBCORE_EXPORT BufferingPolicy bufferingPolicy() const;
     WEBCORE_EXPORT void purgeBufferedDataIfPossible();
 
@@ -436,6 +442,8 @@ public:
     void videoTrackSelectedChanged(VideoTrack&) final;
     void willRemoveVideoTrack(VideoTrack&) final;
 
+    void setTextTrackRepresentataionBounds(const IntRect&);
+    void setRequiresTextTrackRepresentation(bool);
     bool requiresTextTrackRepresentation() const;
     void setTextTrackRepresentation(TextTrackRepresentation*);
     void syncTextTrackBounds();
@@ -457,10 +465,14 @@ public:
     void playbackTargetPickerWasDismissed() override;
     bool hasWirelessPlaybackTargetAlternative() const;
     bool isWirelessPlaybackTargetDisabled() const;
+    void isWirelessPlaybackTargetDisabledChanged();
+    bool hasTargetAvailabilityListeners();
+    bool hasEnabledTargetAvailabilityListeners();
 #endif
 
     bool isPlayingToWirelessPlaybackTarget() const override { return m_isPlayingToWirelessTarget; };
     void setIsPlayingToWirelessTarget(bool);
+
     bool webkitCurrentPlaybackTargetIsWireless() const;
 
     void setPlayingOnSecondScreen(bool value);
@@ -589,12 +601,13 @@ public:
     const Logger& logger() const final { return *m_logger.get(); }
     Ref<Logger> protectedLogger() const;
     const void* logIdentifier() const final { return m_logIdentifier; }
-    const char* logClassName() const final { return "HTMLMediaElement"; }
+    ASCIILiteral logClassName() const final { return "HTMLMediaElement"_s; }
     WTFLogChannel& logChannel() const final;
 #endif
 
     bool willLog(WTFLogLevel) const;
 
+    bool isAudible() const final { return canProduceAudio(); }
     bool isSuspended() const final;
 
     WEBCORE_EXPORT void didBecomeFullscreenElement() final;
@@ -670,8 +683,13 @@ public:
 
     LayoutRect contentBoxRect() const { return mediaPlayerContentBoxRect(); }
 
+#if HAVE(SPATIAL_TRACKING_LABEL)
+    void updateSpatialTrackingLabel();
+    void defaultSpatialTrackingLabelChanged(const String&);
+
     const String& spatialTrackingLabel() const;
-    void setSpatialTrackingLabel(String&&);
+    void setSpatialTrackingLabel(const String&);
+#endif
 
     void mediaSourceWasDetached();
 
@@ -720,6 +738,7 @@ protected:
     void mediaPlayerTimeChanged() final;
     void mediaPlayerVolumeChanged() final;
     void mediaPlayerMuteChanged() final;
+    void mediaPlayerSeeked(const MediaTime&) final;
     void mediaPlayerDurationChanged() final;
     void mediaPlayerRateChanged() final;
     void mediaPlayerPlaybackStateChanged() final;
@@ -755,8 +774,7 @@ private:
     void setFullscreenMode(VideoFullscreenMode);
     void willStopBeingFullscreenElement() override;
 
-    // ActiveDOMObject API.
-    const char* activeDOMObjectName() const override;
+    // ActiveDOMObject.
     void suspend(ReasonForSuspension) override;
     void resume() override;
     void stop() override;
@@ -855,6 +873,8 @@ private:
 
     FloatSize mediaPlayerVideoLayerSize() const final { return videoLayerSize(); }
     void mediaPlayerVideoLayerSizeDidChange(const FloatSize& size) final { m_videoLayerSize = size; }
+
+    MediaPlayerClientIdentifier mediaPlayerClientIdentifier() const final { return identifier(); }
 
     void pendingActionTimerFired();
     void progressEventTimerFired();
@@ -993,7 +1013,6 @@ private:
     bool shouldOverrideBackgroundPlaybackRestriction(PlatformMediaSession::InterruptionType) const override;
     bool shouldOverrideBackgroundLoadingRestriction() const override;
     bool canProduceAudio() const final;
-    bool isAudible() const final { return canProduceAudio(); };
     bool isEnded() const final { return ended(); }
     MediaTime mediaSessionDuration() const final;
     bool hasMediaStreamSource() const final;
@@ -1003,6 +1022,7 @@ private:
     std::optional<NowPlayingInfo> nowPlayingInfo() const final;
     WeakPtr<PlatformMediaSession> selectBestMediaSession(const Vector<WeakPtr<PlatformMediaSession>>&, PlatformMediaSession::PlaybackControlsPurpose) final;
 
+    void visibilityAdjustmentStateDidChange() final;
     void pageMutedStateDidChange() override;
 
 #if USE(AUDIO_SESSION) && PLATFORM(MAC)
@@ -1014,7 +1034,7 @@ private:
 
     bool processingUserGestureForMedia() const;
 
-    bool effectiveMuted() const;
+    WEBCORE_EXPORT bool effectiveMuted() const;
     double effectiveVolume() const;
 
     void registerWithDocument(Document&);
@@ -1074,6 +1094,8 @@ private:
         bool paused;
     };
     void applyConfiguration(const RemotePlaybackConfiguration&);
+
+    bool videoUsesElementFullscreen() const;
 
 #if !RELEASE_LOG_DISABLED
     const void* mediaPlayerLogIdentifier() final { return logIdentifier(); }
@@ -1248,8 +1270,11 @@ private:
     bool m_shouldAudioPlaybackRequireUserGesture : 1;
     bool m_shouldVideoPlaybackRequireUserGesture : 1;
     bool m_volumeLocked : 1;
+    bool m_cachedIsInVisibilityAdjustmentSubtree : 1 { false };
+    bool m_requiresTextTrackRepresentation : 1 { false };
 
-    enum class ControlsState : uint8_t { None, Initializing, Ready };
+    enum class ControlsState : uint8_t { None, Initializing, Ready, PartiallyDeinitialized };
+    friend String convertEnumerationToString(HTMLMediaElement::ControlsState enumerationValue);
     ControlsState m_controlsState { ControlsState::None };
 
     AutoplayEventPlaybackState m_autoplayEventPlaybackState { AutoplayEventPlaybackState::None };
@@ -1329,6 +1354,7 @@ private:
 
     std::optional<RemotePlaybackConfiguration> m_remotePlaybackConfiguration;
 
+    bool m_wirelessPlaybackTargetDisabled { false };
     bool m_isPlayingToWirelessTarget { false };
     bool m_playingOnSecondScreen { false };
     bool m_removedBehaviorRestrictionsAfterFirstUserGesture { false };
@@ -1362,6 +1388,12 @@ private:
     bool m_networkErrorOccured { false };
     std::optional<ContentType> m_lastContentTypeUsed;
 
+#if HAVE(SPATIAL_TRACKING_LABEL)
+    using DefaultSpatialTrackingLabelChangedObserver = WTF::Observer<void(String&&)>;
+    DefaultSpatialTrackingLabelChangedObserver m_defaultSpatialTrackingLabelChangedObserver;
+    String m_spatialTrackingLabel;
+#endif
+
 #if !RELEASE_LOG_DISABLED
     RefPtr<Logger> m_logger;
     const void* m_logIdentifier;
@@ -1370,6 +1402,9 @@ private:
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
     Ref<RemotePlayback> m_remote;
 #endif
+
+    bool m_isChangingReadyStateWhileSuspended { false };
+    Atomic<unsigned> m_remainingReadyStateChangedAttempts;
 };
 
 String convertEnumerationToString(HTMLMediaElement::AutoplayEventPlaybackState);

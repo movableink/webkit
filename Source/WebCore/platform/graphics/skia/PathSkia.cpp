@@ -32,8 +32,11 @@
 #include "PathStream.h"
 #include <skia/core/SkPathUtils.h>
 #include <skia/core/SkRRect.h>
-#include <skia/core/SkSurface.h>
 #include <wtf/NeverDestroyed.h>
+
+IGNORE_CLANG_WARNINGS_BEGIN("cast-align")
+#include <skia/core/SkSurface.h>
+IGNORE_CLANG_WARNINGS_END
 
 namespace WebCore {
 
@@ -216,9 +219,21 @@ bool PathSkia::applyElements(const PathElementApplier& applier) const
             pathElement.type = PathElement::Type::AddCurveToPoint;
             convertPoints(pathElement.points, &skPoints[1], 3);
             break;
-        case SkPath::kConic_Verb:
-            notImplemented();
-            break;
+        case SkPath::kConic_Verb: {
+            // Approximate conic with quads.
+            // The amount of quads can be altered to change the performance/precision tradeoff.
+            // At the moment of writing, at least 4 quads are needed to satisfy layout tests.
+            pathElement.type = PathElement::Type::AddQuadCurveToPoint;
+            const int quadCountLog2 = 2;
+            const unsigned quadCount = 1 << quadCountLog2;
+            SkPoint quadPoints[1 + 2 * quadCount];
+            SkPath::ConvertConicToQuads(skPoints[0], skPoints[1], skPoints[2], iter.conicWeight(), quadPoints, quadCountLog2);
+            for (unsigned quadIndex = 0; quadIndex < quadCount; quadIndex++) {
+                convertPoints(pathElement.points, &quadPoints[1 + 2 * quadIndex], 2);
+                applier(pathElement);
+            }
+            continue;
+        }
         case SkPath::kClose_Verb:
             pathElement.type = PathElement::Type::CloseSubpath;
             break;

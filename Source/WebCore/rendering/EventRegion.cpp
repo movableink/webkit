@@ -62,7 +62,7 @@ void EventRegionContext::unite(const FloatRoundedRect& roundedRect, RenderObject
     auto region = transformAndClipIfNeeded(approximateAsRegion(roundedRect), [](auto affineTransform, auto region) {
         return affineTransform.mapRegion(region);
     });
-    m_eventRegion.unite(region, style, overrideUserModifyIsEditable);
+    m_eventRegion.unite(region, renderer, style, overrideUserModifyIsEditable);
 
 #if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
     auto rect = roundedRect.rect();
@@ -71,7 +71,20 @@ void EventRegionContext::unite(const FloatRoundedRect& roundedRect, RenderObject
     auto layerBounds = transformAndClipIfNeeded(rect, [](auto affineTransform, auto rect) {
         return affineTransform.mapRect(rect);
     });
-    uniteInteractionRegions(renderer, layerBounds);
+
+    // Same transform as `transformAndClipIfNeeded`.
+    std::optional<AffineTransform> transform;
+    if (!m_transformStack.isEmpty()) {
+        transform = m_transformStack.last();
+        rect = transform->mapRect(rect);
+    }
+
+    // The paths we generate to match shapes are complete and relative to the bounds.
+    // But the layerBounds we pass are already clipped.
+    // Keep track of the offset so we can adjust the paths location if needed.
+    auto clipOffset = rect.location() - layerBounds.location();
+
+    uniteInteractionRegions(renderer, layerBounds, clipOffset, transform);
 #else
     UNUSED_PARAM(renderer);
 #endif
@@ -116,12 +129,12 @@ static std::optional<FloatRect> guardRectForRegionBounds(const InteractionRegion
     return std::nullopt;
 }
 
-void EventRegionContext::uniteInteractionRegions(RenderObject& renderer, const FloatRect& layerBounds)
+void EventRegionContext::uniteInteractionRegions(RenderObject& renderer, const FloatRect& layerBounds, const FloatSize& clipOffset, const std::optional<AffineTransform>& transform)
 {
     if (!renderer.page().shouldBuildInteractionRegions())
         return;
 
-    if (auto interactionRegion = interactionRegionForRenderedRegion(renderer, layerBounds)) {
+    if (auto interactionRegion = interactionRegionForRenderedRegion(renderer, layerBounds, clipOffset, transform)) {
         auto rectForTracking = enclosingIntRect(interactionRegion->rectInLayerCoordinates);
         
         if (interactionRegion->type == InteractionRegion::Type::Occlusion) {
@@ -148,7 +161,8 @@ void EventRegionContext::uniteInteractionRegions(RenderObject& renderer, const F
             return;
         }
 
-        if (shouldConsolidateInteractionRegion(renderer, rectForTracking))
+        bool defaultContentHint = interactionRegion->contentHint == InteractionRegion::ContentHint::Default;
+        if (defaultContentHint && shouldConsolidateInteractionRegion(renderer, rectForTracking, interactionRegion->elementIdentifier))
             return;
 
         m_interactionRectsAndContentHints.add(rectForTracking, interactionRegion->contentHint);
@@ -176,7 +190,7 @@ void EventRegionContext::uniteInteractionRegions(RenderObject& renderer, const F
     }
 }
 
-bool EventRegionContext::shouldConsolidateInteractionRegion(RenderObject& renderer, const IntRect& bounds)
+bool EventRegionContext::shouldConsolidateInteractionRegion(RenderObject& renderer, const IntRect& bounds, const ElementIdentifier& elementIdentifier)
 {
     for (auto& ancestor : ancestorsOfType<RenderElement>(renderer)) {
         if (!ancestor.element())
@@ -213,14 +227,10 @@ bool EventRegionContext::shouldConsolidateInteractionRegion(RenderObject& render
             && marginTop <= maxMargin
             && marginBottom <= maxMargin;
 
-        constexpr auto offCenterThreshold = 2;
-        bool centered = std::abs(bounds.center().x() - ancestorBounds.center().x()) < offCenterThreshold
-            || std::abs(bounds.center().y() - ancestorBounds.center().y()) < offCenterThreshold;
-
         bool hasNoVisualBorders = !renderer.hasVisibleBoxDecorations();
 
         bool canConsolidate = hasNoVisualBorders
-            && (majorOverlap || (centered && elementMatchesHoverRules(*ancestor.element())));
+            && (majorOverlap || elementIdentifier == ancestorElementIdentifier);
 
         // We're consolidating the region based on this ancestor, it shouldn't be removed or candidate for removal.
         if (canConsolidate) {
@@ -245,6 +255,27 @@ bool EventRegionContext::shouldConsolidateInteractionRegion(RenderObject& render
     }
 
     return false;
+}
+
+void EventRegionContext::convertGuardContainersToInterationIfNeeded(float minimumCornerRadius)
+{
+    for (auto& region : m_interactionRegions) {
+        if (region.type != InteractionRegion::Type::Guard)
+            continue;
+
+        if (!m_discoveredRegionsByElement.contains(region.elementIdentifier)) {
+            auto rectForTracking = enclosingIntRect(region.rectInLayerCoordinates);
+            if (!m_interactionRectsAndContentHints.contains(rectForTracking)) {
+                region.type = InteractionRegion::Type::Interaction;
+                region.cornerRadius = minimumCornerRadius;
+
+                m_interactionRectsAndContentHints.add(rectForTracking, region.contentHint);
+                Vector<InteractionRegion, 1> discoveredRegions;
+                discoveredRegions.append(region);
+                m_discoveredRegionsByElement.add(region.elementIdentifier, discoveredRegions);
+            }
+        }
+    }
 }
 
 void EventRegionContext::shrinkWrapInteractionRegions()
@@ -347,8 +378,9 @@ void EventRegionContext::removeSuperfluousInteractionRegions()
     });
 }
 
-void EventRegionContext::copyInteractionRegionsToEventRegion()
+void EventRegionContext::copyInteractionRegionsToEventRegion(float minimumCornerRadius)
 {
+    convertGuardContainersToInterationIfNeeded(minimumCornerRadius);
     removeSuperfluousInteractionRegions();
     shrinkWrapInteractionRegions();
     m_eventRegion.appendInteractionRegions(m_interactionRegions);
@@ -390,9 +422,9 @@ EventRegion::EventRegion(Region&& region
 {
 }
 
-void EventRegion::unite(const Region& region, const RenderStyle& style, bool overrideUserModifyIsEditable)
+void EventRegion::unite(const Region& region, RenderObject& renderer, const RenderStyle& style, bool overrideUserModifyIsEditable)
 {
-    if (style.usedPointerEvents() == PointerEvents::None)
+    if (renderer.usedPointerEvents() == PointerEvents::None)
         return;
 
     m_region.unite(region);

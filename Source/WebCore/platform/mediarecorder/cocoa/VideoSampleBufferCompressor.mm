@@ -31,10 +31,10 @@
 #import "Logging.h"
 #import <CoreMedia/CoreMedia.h>
 #import <Foundation/Foundation.h>
-#import <VideoToolbox/VTCompressionSession.h>
 #import <wtf/EnumTraits.h>
 #import <wtf/SoftLinking.h>
 
+#import "VideoToolboxSoftLink.h"
 #import <pal/cf/CoreMediaSoftLink.h>
 #import <pal/cf/VideoToolboxSoftLink.h>
 
@@ -60,7 +60,7 @@ std::unique_ptr<VideoSampleBufferCompressor> VideoSampleBufferCompressor::create
 }
 
 VideoSampleBufferCompressor::VideoSampleBufferCompressor(CMVideoCodecType outputCodecType, Profile profile)
-    : m_serialDispatchQueue { WorkQueue::create("com.apple.VideoSampleBufferCompressor") }
+    : m_serialDispatchQueue { WorkQueue::create("com.apple.VideoSampleBufferCompressor"_s) }
     , m_outputCodecType { outputCodecType }
     , m_profile { profile }
 {

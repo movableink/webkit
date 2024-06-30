@@ -348,6 +348,8 @@ private:
     RetainPtr<NSArray> _proxyConfigurations;
 }
 
+WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
+
 + (WKWebsiteDataStore *)defaultDataStore
 {
     return wrapper(WebKit::WebsiteDataStore::defaultDataStore()).autorelease();
@@ -644,6 +646,16 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
     _websiteDataStore->setPrivateClickMeasurementDebugMode(enabled);
 }
 
+- (BOOL)_storageSiteValidationEnabled
+{
+    return _websiteDataStore->storageSiteValidationEnabled();
+}
+
+- (void)_setStorageSiteValidationEnabled:(BOOL)enabled
+{
+    _websiteDataStore->setStorageSiteValidationEnabled(enabled);
+}
+
 - (NSUInteger)_perOriginStorageQuota
 {
     return 0;
@@ -763,28 +775,6 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
         return;
 
     webPageProxy->clearLoadedSubresourceDomains();
-}
-
-
-- (void)_getAllStorageAccessEntriesFor:(WKWebView *)webView completionHandler:(void (^)(NSArray<NSString *> *domains))completionHandler
-{
-    if (!webView) {
-        completionHandler({ });
-        return;
-    }
-
-    auto webPageProxy = [webView _page];
-    if (!webPageProxy) {
-        completionHandler({ });
-        return;
-    }
-
-    _websiteDataStore->getAllStorageAccessEntries(webPageProxy->identifier(), [completionHandler = makeBlockPtr(completionHandler)](auto domains) {
-        auto apiDomains = WTF::map(domains, [](auto& domain) -> RefPtr<API::Object> {
-            return API::String::create(domain);
-        });
-        completionHandler(wrapper(API::Array::create(WTFMove(apiDomains))).get());
-    });
 }
 
 - (void)_scheduleCookieBlockingUpdate:(void (^)(void))completionHandler

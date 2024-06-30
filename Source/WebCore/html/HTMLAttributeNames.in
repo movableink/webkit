@@ -182,7 +182,6 @@ loopend
 loopstart
 low
 lowsrc
-manifest
 marginheight
 marginwidth
 max
@@ -388,6 +387,7 @@ selected
 shadowrootclonable
 shadowrootdelegatesfocus
 shadowrootmode
+shadowrootserializable
 shape
 size
 sizes

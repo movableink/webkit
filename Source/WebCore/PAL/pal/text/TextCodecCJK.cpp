@@ -255,7 +255,7 @@ String TextCodecCJK::eucJPDecode(std::span<const uint8_t> bytes, bool flush, boo
             return SawError::Yes;
         }
         if (isASCII(byte)) {
-            result.append(static_cast<char>(byte));
+            result.append(byteCast<char>(byte));
             return SawError::No;
         }
         if (byte == 0x8E || byte == 0x8F || (byte >= 0xA1 && byte <= 0xFE)) {
@@ -273,7 +273,7 @@ static Vector<uint8_t> eucJPEncode(StringView string, Function<void(char32_t, Ve
     result.reserveInitialCapacity(string.length());
 
     auto characters = string.upconvertedCharacters();
-    for (WTF::CodePointIterator<UChar> iterator(characters.get(), characters.get() + string.length()); !iterator.atEnd(); ++iterator) {
+    for (WTF::CodePointIterator<UChar> iterator(characters); !iterator.atEnd(); ++iterator) {
         auto codePoint = *iterator;
         if (isASCII(codePoint)) {
             result.append(codePoint);
@@ -590,7 +590,7 @@ static Vector<uint8_t> iso2022JPEncode(StringView string, Function<void(char32_t
     };
 
     auto characters = string.upconvertedCharacters();
-    for (WTF::CodePointIterator<UChar> iterator(characters.get(), characters.get() + string.length()); !iterator.atEnd(); ++iterator)
+    for (WTF::CodePointIterator<UChar> iterator(characters); !iterator.atEnd(); ++iterator)
         parseCodePoint(*iterator);
 
     if (state != State::ASCII)
@@ -644,7 +644,7 @@ static Vector<uint8_t> shiftJISEncode(StringView string, Function<void(char32_t,
     result.reserveInitialCapacity(string.length());
 
     auto characters = string.upconvertedCharacters();
-    for (WTF::CodePointIterator<UChar> iterator(characters.get(), characters.get() + string.length()); !iterator.atEnd(); ++iterator) {
+    for (WTF::CodePointIterator<UChar> iterator(characters); !iterator.atEnd(); ++iterator) {
         auto codePoint = *iterator;
         if (isASCII(codePoint) || codePoint == 0x0080) {
             result.append(codePoint);
@@ -712,7 +712,7 @@ static Vector<uint8_t> eucKREncode(StringView string, Function<void(char32_t, Ve
     result.reserveInitialCapacity(string.length());
 
     auto characters = string.upconvertedCharacters();
-    for (WTF::CodePointIterator<UChar> iterator(characters.get(), characters.get() + string.length()); !iterator.atEnd(); ++iterator) {
+    for (WTF::CodePointIterator<UChar> iterator(characters); !iterator.atEnd(); ++iterator) {
         auto codePoint = *iterator;
         if (isASCII(codePoint)) {
             result.append(codePoint);
@@ -783,7 +783,7 @@ static Vector<uint8_t> big5Encode(StringView string, Function<void(char32_t, Vec
     result.reserveInitialCapacity(string.length());
 
     auto characters = string.upconvertedCharacters();
-    for (WTF::CodePointIterator<UChar> iterator(characters.get(), characters.get() + string.length()); !iterator.atEnd(); ++iterator) {
+    for (WTF::CodePointIterator<UChar> iterator(characters); !iterator.atEnd(); ++iterator) {
         auto codePoint = *iterator;
         if (isASCII(codePoint)) {
             result.append(codePoint);
@@ -1045,7 +1045,7 @@ static Vector<uint8_t> gbEncodeShared(StringView string, Function<void(char32_t,
     result.reserveInitialCapacity(string.length());
 
     auto characters = string.upconvertedCharacters();
-    for (WTF::CodePointIterator<UChar> iterator(characters.get(), characters.get() + string.length()); !iterator.atEnd(); ++iterator) {
+    for (WTF::CodePointIterator<UChar> iterator(characters); !iterator.atEnd(); ++iterator) {
         auto codePoint = *iterator;
         if (isASCII(codePoint)) {
             result.append(codePoint);
@@ -1177,7 +1177,7 @@ String TextCodecCJK::big5Decode(std::span<const uint8_t> bytes, bool flush, bool
             return SawError::Yes;
         }
         if (isASCII(byte)) {
-            result.append(static_cast<char>(byte));
+            result.append(byteCast<char>(byte));
             return SawError::No;
         }
         if (byte >= 0x81 && byte <= 0xFE) {

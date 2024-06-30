@@ -182,12 +182,14 @@ void SVGUseElement::svgAttributeChanged(const QualifiedName& attrName)
                 transferSizeAttributesToTargetClone(*targetClone);
         }
         updateSVGRendererForElementChange();
+        invalidateResourceImageBuffersIfNeeded();
         return;
     }
 
     if (SVGURIReference::isKnownAttribute(attrName)) {
         updateExternalDocument();
         invalidateShadowTree();
+        invalidateResourceImageBuffersIfNeeded();
         return;
     }
 
@@ -601,7 +603,7 @@ bool SVGUseElement::selfHasRelativeLengths() const
     return targetClone && targetClone->hasRelativeLengths();
 }
 
-void SVGUseElement::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&)
+void SVGUseElement::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess)
 {
     ASSERT(ScriptDisallowedScope::InMainThread::isScriptAllowed());
     invalidateShadowTree();

@@ -178,6 +178,7 @@
 #import <WebCore/HistoryController.h>
 #import <WebCore/HistoryItem.h>
 #import <WebCore/JSCSSStyleDeclaration.h>
+#import <WebCore/JSDOMWindow.h>
 #import <WebCore/JSDocument.h>
 #import <WebCore/JSElement.h>
 #import <WebCore/JSNodeList.h>
@@ -216,6 +217,7 @@
 #import <WebCore/ResourceLoadObserver.h>
 #import <WebCore/ResourceRequest.h>
 #import <WebCore/RuntimeApplicationChecks.h>
+#import <WebCore/SQLiteFileSystem.h>
 #import <WebCore/ScriptController.h>
 #import <WebCore/SecurityOrigin.h>
 #import <WebCore/SecurityPolicy.h>
@@ -729,17 +731,17 @@ WebCore::FindOptions coreOptions(WebFindOptions options)
 {
     WebCore::FindOptions findOptions;
     if (options & WebFindOptionsCaseInsensitive)
-        findOptions.add(WebCore::CaseInsensitive);
+        findOptions.add(WebCore::FindOption::CaseInsensitive);
     if (options & WebFindOptionsAtWordStarts)
-        findOptions.add(WebCore::AtWordStarts);
+        findOptions.add(WebCore::FindOption::AtWordStarts);
     if (options & WebFindOptionsTreatMedialCapitalAsWordStart)
-        findOptions.add(WebCore::TreatMedialCapitalAsWordStart);
+        findOptions.add(WebCore::FindOption::TreatMedialCapitalAsWordStart);
     if (options & WebFindOptionsBackwards)
-        findOptions.add(WebCore::Backwards);
+        findOptions.add(WebCore::FindOption::Backwards);
     if (options & WebFindOptionsWrapAround)
-        findOptions.add(WebCore::WrapAround);
+        findOptions.add(WebCore::FindOption::WrapAround);
     if (options & WebFindOptionsStartInSelection)
-        findOptions.add(WebCore::StartInSelection);
+        findOptions.add(WebCore::FindOption::StartInSelection);
     return findOptions;
 }
 
@@ -1304,7 +1306,7 @@ static RetainPtr<CFMutableSetRef>& allWebViewsSet()
     JSC::JSLockHolder lock(globalObject);
 
     // Make sure the context has a LocalDOMWindow global object, otherwise this context didn't originate from a WebView.
-    if (!globalObject->inherits<WebCore::JSLocalDOMWindow>())
+    if (!globalObject->inherits<WebCore::JSDOMWindow>())
         return;
 
     WebCore::reportException(globalObject, toJS(globalObject, exception));
@@ -1400,7 +1402,10 @@ static WebCore::ApplicationCacheStorage& webApplicationCacheStorage()
 {
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
-        FileSystem::deleteNonEmptyDirectory(applicationCachePath());
+        String applicationCacheDirectory = applicationCachePath();
+        auto applicationCacheDatabasePath = FileSystem::pathByAppendingComponent(applicationCacheDirectory, "ApplicationCache.db"_s);
+        WebCore::SQLiteFileSystem::deleteDatabaseFile(applicationCacheDatabasePath);
+        FileSystem::deleteNonEmptyDirectory(FileSystem::pathByAppendingComponent(applicationCacheDirectory, "ApplicationCache"_s));
     });
     static WebCore::ApplicationCacheStorage& storage = WebCore::ApplicationCacheStorage::create(emptyString(), emptyString()).leakRef();
 
@@ -1509,7 +1514,9 @@ static WebCore::ApplicationCacheStorage& webApplicationCacheStorage()
         BackForwardList::create(self),
         WebCore::CookieJar::create(storageProvider.copyRef()),
         makeUniqueRef<WebProgressTrackerClient>(self),
-        UniqueRef<WebCore::LocalFrameLoaderClient>(makeUniqueRef<WebFrameLoaderClient>()),
+        CompletionHandler<UniqueRef<WebCore::LocalFrameLoaderClient>(WebCore::LocalFrame&)> { [] (auto&) {
+            return makeUniqueRef<WebFrameLoaderClient>();
+        } },
         WebCore::FrameIdentifier::generate(),
         nullptr,
         makeUniqueRef<WebCore::DummySpeechRecognitionProvider>(),
@@ -1654,10 +1661,7 @@ static WebCore::ApplicationCacheStorage& webApplicationCacheStorage()
         WebCore::ResourceHandle::forceContentSniffing();
 
     _private->page->setDeviceScaleFactor([self _deviceScaleFactor]);
-
-#if HAVE(OS_DARK_MODE_SUPPORT)
     _private->page->effectiveAppearanceDidChange(self._effectiveAppearanceIsDark, self._effectiveUserInterfaceLevelIsElevated);
-#endif
 
     [WebViewVisualIdentificationOverlay installForWebViewIfNeeded:self kind:@"WebView" deprecated:YES];
 
@@ -1773,7 +1777,9 @@ static WebCore::ApplicationCacheStorage& webApplicationCacheStorage()
         BackForwardList::create(self),
         WebCore::CookieJar::create(storageProvider.copyRef()),
         makeUniqueRef<WebProgressTrackerClient>(self),
-        UniqueRef<WebCore::LocalFrameLoaderClient>(makeUniqueRef<WebFrameLoaderClient>()),
+        CompletionHandler<UniqueRef<WebCore::LocalFrameLoaderClient>(WebCore::LocalFrame&)> { [] (auto&) {
+            return makeUniqueRef<WebFrameLoaderClient>();
+        } },
         WebCore::FrameIdentifier::generate(),
         nullptr,
         makeUniqueRef<WebCore::DummySpeechRecognitionProvider>(),
@@ -1863,7 +1869,7 @@ static WebCore::ApplicationCacheStorage& webApplicationCacheStorage()
 {
     auto* frame = [self _mainCoreFrame];
     if (frame)
-        frame->loader().history().replaceCurrentItem(core(item));
+        frame->history().replaceCurrentItem(core(item));
 }
 
 + (void)willEnterBackgroundWithCompletionHandler:(void(^)(void))handler
@@ -2774,16 +2780,17 @@ ALLOW_DEPRECATED_DECLARATIONS_END
             // since that might have changed since loading and it is normally not saved
             // until we leave that page.
             if (auto* localMainFrame = dynamicDowncast<WebCore::LocalFrame>(otherView->_private->page->mainFrame()))
-                localMainFrame->loader().history().saveDocumentAndScrollState();
+                localMainFrame->history().saveDocumentAndScrollState();
         }
         Ref<WebCore::HistoryItem> newItem = otherBackForward.itemAtIndex(i)->copy();
         if (i == 0)
             newItemToGoTo = newItem.ptr();
-        backForward.client().addItem(WTFMove(newItem));
+        backForward.client().addItem(_private->page->mainFrame().frameID(), WTFMove(newItem));
     }
 
     ASSERT(newItemToGoTo);
-    _private->page->goToItem(*newItemToGoTo, WebCore::FrameLoadType::IndexedBackForward, WebCore::ShouldTreatAsContinuingLoad::No);
+    if (RefPtr localMainFrame = dynamicDowncast<WebCore::LocalFrame>(_private->page->mainFrame()))
+        _private->page->goToItem(*localMainFrame, *newItemToGoTo, WebCore::FrameLoadType::IndexedBackForward, WebCore::ShouldTreatAsContinuingLoad::No);
 }
 
 - (void)_setFormDelegate: (id<WebFormDelegate>)delegate
@@ -4789,7 +4796,7 @@ IGNORE_WARNINGS_END
     return insets;
 }
 
-#if HAVE(OS_DARK_MODE_SUPPORT) && PLATFORM(MAC)
+#if PLATFORM(MAC)
 - (bool)_effectiveAppearanceIsDark
 {
     NSAppearanceName appearance = [[self effectiveAppearance] bestMatchFromAppearancesWithNames:@[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]];
@@ -4816,7 +4823,7 @@ IGNORE_WARNINGS_END
     return _private->page->useSystemAppearance();
 }
 
-#if HAVE(OS_DARK_MODE_SUPPORT) && PLATFORM(MAC)
+#if PLATFORM(MAC)
 - (void)viewDidChangeEffectiveAppearance
 {
     // This can be called during [super initWithCoder:] and [super initWithFrame:].
@@ -5946,7 +5953,8 @@ static bool needsWebViewInitThreadWorkaround()
         return NO;
 
     ASSERT(item);
-    _private->page->goToItem(*core(item), WebCore::FrameLoadType::IndexedBackForward, WebCore::ShouldTreatAsContinuingLoad::No);
+    if (RefPtr localMainFrame = dynamicDowncast<WebCore::LocalFrame>(_private->page->mainFrame()))
+        _private->page->goToItem(*localMainFrame, *core(item), WebCore::FrameLoadType::IndexedBackForward, WebCore::ShouldTreatAsContinuingLoad::No);
     return YES;
 }
 
@@ -7419,7 +7427,7 @@ static NSAppleEventDescriptor* aeDescFromJSValue(JSC::JSGlobalObject* lexicalGlo
     if (jsValue.isBoolean())
         return [NSAppleEventDescriptor descriptorWithBoolean:jsValue.asBoolean()];
     if (jsValue.isString())
-        return [NSAppleEventDescriptor descriptorWithString:asString(jsValue)->value(lexicalGlobalObject)];
+        return [NSAppleEventDescriptor descriptorWithString:asString(jsValue)->value(lexicalGlobalObject).data];
     if (jsValue.isNumber()) {
         double value = jsValue.asNumber();
         int intValue = value;

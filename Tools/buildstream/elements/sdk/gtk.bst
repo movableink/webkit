@@ -2,11 +2,13 @@ kind: meson
 sources:
 - kind: git_repo
   url: gitlab_gnome_org:GNOME/gtk.git
-  track: 4.*
-  ref: 4.14.1-0-gc648bb7b19bede75d3af4acaed468b922269ed05
+  track: 4.14.*
+  ref: 4.14.3-0-g686a629f98f743eb4fafd94c8216972f1387b8f3
 build-depends:
 - sdk-build-depends/sassc.bst
 - freedesktop-sdk.bst:public-stacks/buildsystem-meson.bst
+- freedesktop-sdk.bst:components/shaderc.bst
+- freedesktop-sdk.bst:components/vulkan-headers.bst
 
 depends:
 - freedesktop-sdk.bst:components/at-spi2-core.bst
@@ -27,7 +29,6 @@ depends:
 
 variables:
   meson-local: >-
-    -Dvulkan=disabled
     -Dbuild-tests=false
     -Dbuild-testsuite=false
 public:

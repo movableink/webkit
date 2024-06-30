@@ -80,17 +80,17 @@ public:
 
     static JSBigInt* createFrom(JSGlobalObject*, VM&, int32_t value);
 
-    static size_t offsetOfLength()
+    static constexpr size_t offsetOfLength()
     {
         return OBJECT_OFFSETOF(JSBigInt, m_length);
     }
 
-    static size_t offsetOfSign()
+    static constexpr size_t offsetOfSign()
     {
         return OBJECT_OFFSETOF(JSBigInt, m_sign);
     }
 
-    inline static size_t offsetOfData()
+    static constexpr size_t offsetOfData()
     {
         return OBJECT_OFFSETOF(JSBigInt, m_data);
     }
@@ -599,10 +599,10 @@ private:
     }
 
     template <typename CharType>
-    static JSValue parseInt(JSGlobalObject*, CharType*  data, unsigned length, ErrorParseMode);
+    static JSValue parseInt(JSGlobalObject*, std::span<const CharType> data, ErrorParseMode);
 
     template <typename CharType>
-    static JSValue parseInt(JSGlobalObject*, VM&, CharType* data, unsigned length, unsigned startIndex, unsigned radix, ErrorParseMode, ParseIntSign = ParseIntSign::Signed, ParseIntMode = ParseIntMode::AllowEmptyString);
+    static JSValue parseInt(JSGlobalObject*, VM&, std::span<const CharType> data, unsigned startIndex, unsigned radix, ErrorParseMode, ParseIntSign = ParseIntSign::Signed, ParseIntMode = ParseIntMode::AllowEmptyString);
 
     static JSBigInt* allocateFor(JSGlobalObject*, VM&, unsigned radix, unsigned charcount);
 

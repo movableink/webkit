@@ -58,6 +58,7 @@
 #include "SimpleRange.h"
 #include "SliderThumbElement.h"
 #include "StyleResolver.h"
+#include "TextIterator.h"
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
@@ -125,7 +126,7 @@ static bool shouldAllowAccessibilityRoleAsPointerCursorReplacement(const Element
     }
 }
 
-bool elementMatchesHoverRules(Element& element)
+static bool elementMatchesHoverRules(Element& element)
 {
     bool foundHoverRules = false;
     bool initialValue = element.isUserActionElement() && element.document().userActionElements().isHovered(element);
@@ -161,8 +162,8 @@ static bool shouldAllowNonInteractiveCursorForElement(const Element& element)
         return true;
 #endif
 
-    if (is<HTMLTextFormControlElement>(element))
-        return !element.focused();
+    if (RefPtr textElement = dynamicDowncast<HTMLTextFormControlElement>(element))
+        return !textElement->focused() || !textElement->lastChangeWasUserEdit() || textElement->value().isEmpty();
 
     if (is<HTMLFormControlElement>(element))
         return true;
@@ -207,6 +208,20 @@ static bool hasTransparentContainerStyle(const RenderStyle& style)
             || !(style.borderTopWidth() && style.borderRightWidth() && style.borderBottomWidth() && style.borderLeftWidth()));
 }
 
+static bool usesFillColorWithExtremeLuminance(const RenderStyle& style)
+{
+    auto fillPaintType = style.fillPaintType();
+    if (fillPaintType != SVGPaintType::RGBColor && fillPaintType != SVGPaintType::CurrentColor)
+        return false;
+
+    auto fillColor = style.colorResolvingCurrentColor(style.fillPaintColor());
+
+    constexpr double luminanceThreshold = 0.01;
+
+    return fillColor.isValid()
+        && ((fillColor.luminance() < luminanceThreshold || std::abs(fillColor.luminance() - 1) < luminanceThreshold));
+}
+
 static bool isGuardContainer(const Element& element)
 {
     bool isButton = is<HTMLButtonElement>(element);
@@ -223,6 +238,21 @@ static bool isGuardContainer(const Element& element)
 
     auto& renderer = *element.renderer();
     return hasTransparentContainerStyle(renderer.style());
+}
+
+static FloatSize boundingSize(const RenderObject& renderer, const std::optional<AffineTransform>& transform)
+{
+    Vector<LayoutRect> rects;
+    renderer.boundingRects(rects, LayoutPoint());
+
+    if (!rects.size())
+        return FloatSize();
+
+    FloatSize size = unionRect(rects).size();
+    if (transform)
+        size.scale(transform->xScale(), transform->yScale());
+
+    return size;
 }
 
 static bool cachedImageIsPhoto(const CachedImage& cachedImage)
@@ -246,11 +276,11 @@ static RefPtr<Image> findIconImage(const RenderObject& renderer)
         if (!renderImage->cachedImage() || renderImage->cachedImage()->errorOccurred())
             return nullptr;
 
-        auto* image = renderImage->cachedImage()->image();
+        auto* image = renderImage->cachedImage()->imageForRenderer(renderImage);
         if (!image)
             return nullptr;
 
-        if (image->isSVGImage()
+        if (image->isSVGImageForContainer()
             || (image->isBitmapImage() && image->nativeImage() && image->nativeImage()->hasAlpha()))
             return image;
     }
@@ -271,20 +301,22 @@ static std::optional<std::pair<Ref<SVGSVGElement>, Ref<SVGGraphicsElement>>> fin
     return std::nullopt;
 }
 
-std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject& regionRenderer, const FloatRect& bounds)
+#if ENABLE(INTERACTION_REGION_TEXT_CONTENT)
+static String interactionRegionTextContentForNode(Node& node)
+{
+    if (auto nodeRange = makeRangeSelectingNode(node))
+        return plainText(*nodeRange);
+    return { };
+}
+#endif
+
+std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject& regionRenderer, const FloatRect& bounds, const FloatSize& clipOffset, const std::optional<AffineTransform>& transform)
 {
     if (bounds.isEmpty())
         return std::nullopt;
 
     if (!regionRenderer.node())
         return std::nullopt;
-
-    Ref mainFrameView = *regionRenderer.document().frame()->mainFrame().virtualView();
-
-    FloatSize frameViewSize = mainFrameView->size();
-    auto scale = 1 / mainFrameView->visibleContentScaleFactor();
-    frameViewSize.scale(scale, scale);
-    auto frameViewArea = frameViewSize.area();
 
     auto originalElement = dynamicDowncast<Element>(regionRenderer.node());
     if (originalElement && originalElement->isPseudoElement())
@@ -320,7 +352,7 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
         return std::nullopt;
     auto& renderer = *matchedElement->renderer();
 
-    if (renderer.style().usedPointerEvents() == PointerEvents::None)
+    if (renderer.usedPointerEvents() == PointerEvents::None)
         return std::nullopt;
 
     bool isOriginalMatch = matchedElement == originalElement;
@@ -328,8 +360,22 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
     // FIXME: Consider also allowing elements that only receive touch events.
     bool hasListener = renderer.style().eventListenerRegionTypes().contains(EventListenerRegionType::MouseClick);
     bool hasPointer = hasInteractiveCursorType(*matchedElement) || shouldAllowNonInteractiveCursorForElement(*matchedElement);
-    bool isTooBigForInteraction = bounds.area() > frameViewArea / 3;
-    bool isTooBigForOcclusion = bounds.area() > frameViewArea * 3;
+
+    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(regionRenderer.document().frame()->mainFrame());
+    if (!localMainFrame) {
+        ASSERT_NOT_REACHED();
+        return std::nullopt;
+    }
+    RefPtr pageView = localMainFrame->view();
+    if (!pageView) {
+        ASSERT_NOT_REACHED();
+        return std::nullopt;
+    }
+
+    auto viewportSize = FloatSize(pageView->baseLayoutViewportSize());
+    auto viewportArea = viewportSize.area();
+    bool isTooBigForInteraction = bounds.area() > viewportArea / 3;
+    bool isTooBigForOcclusion = bounds.area() > viewportArea * 3;
 
     auto elementIdentifier = matchedElement->identifier();
 
@@ -372,14 +418,15 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
     bool isInlineNonBlock = renderer.isInline() && !renderer.isReplacedOrInlineBlock();
     bool isPhoto = false;
 
-    float minimumContentHintArea = 200 / scale * 200 / scale;
+    float minimumContentHintArea = 200 * 200;
     bool needsContentHint = bounds.area() > minimumContentHintArea;
     if (needsContentHint) {
         if (auto* renderImage = dynamicDowncast<RenderImage>(regionRenderer)) {
             isPhoto = [&]() -> bool {
+#if ENABLE(VIDEO)
                 if (is<RenderVideo>(renderImage))
                     return true;
-
+#endif
                 if (!renderImage->cachedImage())
                     return false;
 
@@ -410,51 +457,70 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
     if (!isOriginalMatch && !matchedElementIsGuardContainer && !isPhoto && !isInlineNonBlock && !renderer.style().isDisplayTableOrTablePart())
         return std::nullopt;
 
+    // FIXME: Consider allowing rotation / skew - rdar://127499446.
+    bool hasRotationOrShear = false;
+    if (transform)
+        hasRotationOrShear = transform->isRotateOrShear();
+
     RefPtr<Image> iconImage;
     std::optional<std::pair<Ref<SVGSVGElement>, Ref<SVGGraphicsElement>>> svgClipElements;
-    if (!needsContentHint)
+    if (!hasRotationOrShear && !needsContentHint)
         iconImage = findIconImage(regionRenderer);
-    if (!iconImage)
+    if (!hasRotationOrShear && !iconImage)
         svgClipElements = findSVGClipElements(regionRenderer);
 
     auto rect = bounds;
     float cornerRadius = 0;
     OptionSet<InteractionRegion::CornerMask> maskedCorners { };
     std::optional<Path> clipPath = std::nullopt;
-    RefPtr styleClipPath = regionRenderer.style().clipPath();
 
-    if (styleClipPath && styleClipPath->type() == PathOperation::OperationType::Shape) {
-        auto boundingRect = originalElement->boundingClientRect();
-        clipPath = styleClipPath->getPath(TransformOperationData(FloatRect(FloatPoint(), boundingRect.size())));
+    auto& style = regionRenderer.style();
+    RefPtr styleClipPath = style.clipPath();
+
+    if (!hasRotationOrShear && styleClipPath && styleClipPath->type() == PathOperation::OperationType::Shape && originalElement) {
+        auto size = boundingSize(regionRenderer, transform);
+        auto path = styleClipPath->getPath(TransformOperationData(FloatRect(FloatPoint(), size)));
+
+        if (path && !clipOffset.isZero())
+            path->translate(clipOffset);
+
+        clipPath = path;
     } else if (iconImage && originalElement) {
-        LayoutRect imageRect(rect);
+        auto size = boundingSize(regionRenderer, transform);
+        LayoutRect imageRect(FloatPoint(), size);
         Ref shape = Shape::createRasterShape(iconImage.get(), 0, imageRect, imageRect, WritingMode::HorizontalTb, 0);
         Shape::DisplayPaths paths;
         shape->buildDisplayPaths(paths);
         auto path = paths.shape;
-        auto boundingRect = originalElement->boundingClientRect();
-        path.translate(FloatSize(-boundingRect.x(), -boundingRect.y()));
+
+        if (!clipOffset.isZero())
+            path.translate(clipOffset);
+
         clipPath = path;
     } else if (svgClipElements) {
         auto& [svgSVGElement, shapeElement] = *svgClipElements;
         auto path = shapeElement->toClipPath();
 
-        auto shapeBoundingBox = shapeElement->getBBox(SVGLocatable::DisallowStyleUpdate);
-        path.translate(FloatSize(-shapeBoundingBox.x(), -shapeBoundingBox.y()));
-
         FloatSize size = svgSVGElement->currentViewportSizeExcludingZoom();
         auto viewBoxTransform = svgSVGElement->viewBoxToViewTransform(size.width(), size.height());
-        shapeBoundingBox = viewBoxTransform.mapRect(shapeBoundingBox);
-        path.transform(AffineTransform::makeScale(FloatSize(viewBoxTransform.xScale(), viewBoxTransform.yScale())));
 
-        // Position to respect clipping. `rect` is already clipped but the Path is complete.
-        auto clipDeltaX = rect.width() - shapeBoundingBox.width();
-        auto clipDeltaY = rect.height() - shapeBoundingBox.height();
-        if (shapeBoundingBox.x() >= 0)
-            clipDeltaX = 0;
-        if (shapeBoundingBox.y() >= 0)
-            clipDeltaY = 0;
-        path.translate(FloatSize(clipDeltaX, clipDeltaY));
+        auto shapeBoundingBox = shapeElement->getBBox(SVGLocatable::DisallowStyleUpdate);
+        path.transform(viewBoxTransform);
+        shapeBoundingBox = viewBoxTransform.mapRect(shapeBoundingBox);
+
+        constexpr float smallShapeDimension = 30;
+        bool shouldFallbackToContainerRegion = shapeBoundingBox.size().minDimension() < smallShapeDimension
+            && usesFillColorWithExtremeLuminance(style)
+            && matchedElementIsGuardContainer;
+
+        // Bail out, we'll convert the guard container to Interaction.
+        if (shouldFallbackToContainerRegion)
+            return std::nullopt;
+
+        path.translate(FloatSize(-shapeBoundingBox.x(), -shapeBoundingBox.y()));
+
+        if (!clipOffset.isZero())
+            path.translate(clipOffset);
 
         clipPath = path;
     } else if (const auto& renderBox = dynamicDowncast<RenderBox>(regionRenderer)) {
@@ -492,7 +558,6 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
         }
     }
 
-    auto& style = regionRenderer.style();
     bool canTweakShape = !isPhoto
         && !clipPath
         && hasTransparentContainerStyle(style);
@@ -511,7 +576,10 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
         cornerRadius,
         maskedCorners,
         isPhoto ? InteractionRegion::ContentHint::Photo : InteractionRegion::ContentHint::Default,
-        clipPath
+        clipPath,
+#if ENABLE(INTERACTION_REGION_TEXT_CONTENT)
+        interactionRegionTextContentForNode(*regionRenderer.node())
+#endif
     } };
 }
 
@@ -539,7 +607,10 @@ TextStream& operator<<(TextStream& ts, const InteractionRegion& interactionRegio
     }
     if (interactionRegion.clipPath)
         ts.dumpProperty("clipPath", interactionRegion.clipPath.value());
-
+#if ENABLE(INTERACTION_REGION_TEXT_CONTENT)
+    if (!interactionRegion.text.isEmpty())
+        ts.dumpProperty("text", interactionRegion.text);
+#endif
     return ts;
 }
 

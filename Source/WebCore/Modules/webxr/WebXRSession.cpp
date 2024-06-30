@@ -33,6 +33,7 @@
 #include "EventNames.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSWebXRReferenceSpace.h"
+#include "Page.h"
 #include "SecurityOrigin.h"
 #include "WebCoreOpaqueRoot.h"
 #include "WebXRBoundedReferenceSpace.h"
@@ -119,7 +120,7 @@ ExceptionOr<void> WebXRSession::updateRenderState(const XRRenderStateInit& newSt
 
     // 3. If newState's baseLayer was created with an XRSession other than session,
     //    throw an InvalidStateError and abort these steps.
-    if (newState.baseLayer && &newState.baseLayer->session() != this)
+    if (newState.baseLayer && newState.baseLayer->session() != this)
         return Exception { ExceptionCode::InvalidStateError };
 
     // 4. If newState's inlineVerticalFieldOfView is set and session is an immersive session,
@@ -349,11 +350,14 @@ void WebXRSession::shutdown(InitiatedBySystem initiatedBySystem)
 
     m_inputSources->clear();
 
+    RefPtr device = m_device.get();
     if (initiatedBySystem == InitiatedBySystem::Yes) {
         // If we get here, the session termination was triggered by the system rather than
         // via XRSession.end(). Since the system has completed the session shutdown, we can
         // immediately do the final cleanup.
         didCompleteShutdown();
+        if (device)
+            device->didCompleteShutdownTriggeredBySystem();
         return;
     }
 
@@ -363,7 +367,6 @@ void WebXRSession::shutdown(InitiatedBySystem initiatedBySystem)
     //  6.1. Releasing exclusive access to the XR device if session is an immersive session.
     //  6.2. Deallocating any graphics resources acquired by session for presentation to the XR device.
     //  6.3. Putting the XR device in a state such that a different source may be able to initiate a session with the same device if session is an immersive session.
-    auto device = m_device.get();
     if (device)
         device->shutDownTrackingAndRendering();
 
@@ -375,6 +378,9 @@ void WebXRSession::shutdown(InitiatedBySystem initiatedBySystem)
 
 void WebXRSession::didCompleteShutdown()
 {
+    if (isImmersive(m_mode) && m_activeRenderState && m_activeRenderState->baseLayer())
+        m_activeRenderState->baseLayer()->sessionEnded();
+
     if (auto device = m_device.get())
         device->setTrackingAndRenderingClient(nullptr);
 
@@ -412,11 +418,6 @@ ExceptionOr<void> WebXRSession::end(EndPromise&& promise)
     // 3.2 Resolve promise.
     // 4. Return promise.
     return { };
-}
-
-const char* WebXRSession::activeDOMObjectName() const
-{
-    return "XRSession";
 }
 
 void WebXRSession::stop()
@@ -514,6 +515,24 @@ void WebXRSession::applyPendingRenderState()
     }
 }
 
+void WebXRSession::minimalUpdateRendering()
+{
+    // Spec is unclear about this, but we have to execute any scheduled video frame updates for
+    // videos to work in WebXR if the page is backgrounded
+    if (!m_shouldServiceRequestVideoFrameCallbacks)
+        return;
+
+    RefPtr sessionDocument = downcast<Document>(scriptExecutionContext());
+    if (!sessionDocument)
+        return;
+
+    if (auto* page = sessionDocument->page()) {
+        page->forEachDocument([&] (Document& document) {
+            document.serviceRequestVideoFrameCallbacks();
+        });
+    }
+}
+
 // https://immersive-web.github.io/webxr/#should-be-rendered
 bool WebXRSession::frameShouldBeRendered() const
 {
@@ -602,6 +621,7 @@ void WebXRSession::onFrame(PlatformXR::FrameData&& frameData)
                 m_inputSources->update(now, m_frameData.inputSources);
 
             tracePoint(WebXRSessionFrameCallbacksStart);
+            minimalUpdateRendering();
             // 6.5.For each entry in session’s list of currently running animation frame callbacks, in order:
             for (auto& callback : callbacks) {
                 //  6.6.If the entry’s cancelled boolean is true, continue to the next entry.
@@ -624,6 +644,8 @@ void WebXRSession::onFrame(PlatformXR::FrameData&& frameData)
             // If the session is ended, m_animationFrame->setActive false is set in shutdown().
             frame->setActive(false);
 
+            if (m_ended)
+                return;
 
             // Submit current frame layers to the device.
             Vector<PlatformXR::Device::Layer> frameLayers;

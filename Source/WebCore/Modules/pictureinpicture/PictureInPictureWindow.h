@@ -49,16 +49,14 @@ public:
     void setSize(const IntSize&);
     void close();
 
-    using RefCounted<PictureInPictureWindow>::ref;
-    using RefCounted<PictureInPictureWindow>::deref;
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
 private:
     PictureInPictureWindow(Document&);
-        
-    // ActiveDOMObject
-    const char* activeDOMObjectName() const final { return "PictureInPictureWindow"; }
 
-    // EventTarget
+    // EventTarget.
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
     enum EventTargetInterfaceType eventTargetInterface() const override { return EventTargetInterfaceType::PictureInPictureWindow; };

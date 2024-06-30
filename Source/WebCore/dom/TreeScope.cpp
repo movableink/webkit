@@ -69,6 +69,16 @@ static_assert(sizeof(TreeScope) == sizeof(SameSizeAsTreeScope), "treescope shoul
 
 using namespace HTMLNames;
 
+struct SVGResourcesMap {
+    WTF_MAKE_NONCOPYABLE(SVGResourcesMap);
+    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    SVGResourcesMap() = default;
+
+    MemoryCompactRobinHoodHashMap<AtomString, WeakHashSet<SVGElement, WeakPtrImplWithEventTargetData>> pendingResources;
+    MemoryCompactRobinHoodHashMap<AtomString, WeakHashSet<SVGElement, WeakPtrImplWithEventTargetData>> pendingResourcesForRemoval;
+    MemoryCompactRobinHoodHashMap<AtomString, LegacyRenderSVGResourceContainer*> legacyResources;
+};
+
 TreeScope::TreeScope(ShadowRoot& shadowRoot, Document& document)
     : m_rootNode(shadowRoot)
     , m_documentScope(document)
@@ -102,40 +112,6 @@ void TreeScope::deref() const
     else
         downcast<ShadowRoot>(m_rootNode).deref();
 }
-
-#if CHECKED_POINTER_DEBUG
-void TreeScope::registerCheckedPtr(const void* pointer) const
-{
-    if (auto* document = dynamicDowncast<Document>(m_rootNode))
-        document->registerCheckedPtr(pointer);
-    else
-        downcast<ShadowRoot>(m_rootNode).registerCheckedPtr(pointer);
-}
-
-void TreeScope::copyCheckedPtr(const void* source, const void* destination) const
-{
-    if (auto* document = dynamicDowncast<Document>(m_rootNode))
-        document->copyCheckedPtr(source, destination);
-    else
-        downcast<ShadowRoot>(m_rootNode).copyCheckedPtr(source, destination);
-}
-
-void TreeScope::moveCheckedPtr(const void* source, const void* destination) const
-{
-    if (auto* document = dynamicDowncast<Document>(m_rootNode))
-        document->moveCheckedPtr(source, destination);
-    else
-        downcast<ShadowRoot>(m_rootNode).moveCheckedPtr(source, destination);
-}
-
-void TreeScope::unregisterCheckedPtr(const void* pointer) const
-{
-    if (auto* document = dynamicDowncast<Document>(m_rootNode))
-        document->unregisterCheckedPtr(pointer);
-    else
-        downcast<ShadowRoot>(m_rootNode).unregisterCheckedPtr(pointer);
-}
-#endif // CHECKED_POINTER_DEBUG
 
 IdTargetObserverRegistry& TreeScope::ensureIdTargetObserverRegistry()
 {
@@ -620,9 +596,9 @@ CSSStyleSheetObservableArray& TreeScope::ensureAdoptedStyleSheets()
     return *m_adoptedStyleSheets;
 }
 
-std::span<const RefPtr<CSSStyleSheet>> TreeScope::adoptedStyleSheets() const
+std::span<const Ref<CSSStyleSheet>> TreeScope::adoptedStyleSheets() const
 {
-    return m_adoptedStyleSheets ? m_adoptedStyleSheets->sheets().span() : std::span<const RefPtr<CSSStyleSheet>> { };
+    return m_adoptedStyleSheets ? m_adoptedStyleSheets->sheets().span() : std::span<const Ref<CSSStyleSheet>> { };
 }
 
 JSC::JSValue TreeScope::adoptedStyleSheetWrapper(JSDOMGlobalObject& lexicalGlobalObject)
@@ -630,21 +606,12 @@ JSC::JSValue TreeScope::adoptedStyleSheetWrapper(JSDOMGlobalObject& lexicalGloba
     return JSC::JSObservableArray::create(&lexicalGlobalObject, ensureAdoptedStyleSheets());
 }
 
-ExceptionOr<void> TreeScope::setAdoptedStyleSheets(Vector<RefPtr<CSSStyleSheet>>&& sheets)
+ExceptionOr<void> TreeScope::setAdoptedStyleSheets(Vector<Ref<CSSStyleSheet>>&& sheets)
 {
     if (!m_adoptedStyleSheets && sheets.isEmpty())
         return { };
     return ensureAdoptedStyleSheets().setSheets(WTFMove(sheets));
 }
-
-struct SVGResourcesMap {
-    WTF_MAKE_NONCOPYABLE(SVGResourcesMap); WTF_MAKE_STRUCT_FAST_ALLOCATED;
-    SVGResourcesMap() = default;
-
-    MemoryCompactRobinHoodHashMap<AtomString, WeakHashSet<SVGElement, WeakPtrImplWithEventTargetData>> pendingResources;
-    MemoryCompactRobinHoodHashMap<AtomString, WeakHashSet<SVGElement, WeakPtrImplWithEventTargetData>> pendingResourcesForRemoval;
-    MemoryCompactRobinHoodHashMap<AtomString, LegacyRenderSVGResourceContainer*> legacyResources;
-};
 
 SVGResourcesMap& TreeScope::svgResourcesMap() const
 {

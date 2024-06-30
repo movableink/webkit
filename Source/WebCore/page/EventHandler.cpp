@@ -782,13 +782,7 @@ bool EventHandler::handleMousePressEventSingleClick(const MouseEventWithHitTestR
         newSelection = expandSelectionToRespectSelectOnMouseDown(*targetNode, visiblePosition);
     }
 
-    bool handled = updateSelectionForMouseDownDispatchingSelectStart(targetNode.get(), newSelection, granularity);
-
-    if (event.event().button() == MouseButton::Middle) {
-        // Ignore handled, since we want to paste to where the caret was placed anyway.
-        handled = handlePasteGlobalSelection(event.event()) || handled;
-    }
-    return handled;
+    return updateSelectionForMouseDownDispatchingSelectStart(targetNode.get(), newSelection, granularity);
 }
 
 bool EventHandler::canMouseDownStartSelect(const MouseEventWithHitTestResults& event)
@@ -979,7 +973,8 @@ bool EventHandler::handleMouseDraggedEvent(const MouseEventWithHitTestResults& e
         frame->protectedDocument()->hitTest(HitTestRequest(), result);
 
         updateSelectionForMouseDrag(result);
-    }
+    } else
+        event.targetNode()->protectedDocument()->updateStyleIfNeeded();
     updateSelectionForMouseDrag(event.hitTestResult());
     return true;
 }
@@ -1197,9 +1192,28 @@ bool EventHandler::handleMouseReleaseEvent(const MouseEventWithHitTestResults& e
         handled = true;
     }
 
+    // If the event was a middle click, attempt to copy global selection in after
+    // the newly set caret position.
+    //
+    // There is some debate about when the global selection is pasted:
+    //   xterm: pastes on up.
+    //   GTK: pastes on down.
+    //   Qt: pastes on up.
+    //   Firefox: pastes on up.
+    //   Chromium: pastes on up.
+    //
+    // However, WebKitGTK actually needs to paste on up to avoid clashing with
+    // mouse gestures, https://gitlab.gnome.org/GNOME/epiphany/-/issues/1814. So
+    // let's always paste on up, and forget about matching GTK.
+    //
+    // There is something of a webcompat angle to this well, as highlighted by
+    // crbug.com/14608. Pages can clear text boxes 'onclick' and, if we paste on
+    // down then the text is pasted just before the onclick handler runs and
+    // clears the text box. So it's important this happens after the event
+    // handlers have been fired.
     if (event.event().button() == MouseButton::Middle) {
         // Ignore handled, since we want to paste to where the caret was placed anyway.
-        handled = handlePasteGlobalSelection(event.event()) || handled;
+        handled = handlePasteGlobalSelection() || handled;
     }
 
     return handled;
@@ -1220,7 +1234,7 @@ void EventHandler::didPanScrollStop()
 void EventHandler::startPanScrolling(RenderElement& renderer)
 {
     CheckedPtr renderBox = dynamicDowncast<RenderBox>(renderer);
-    if (renderBox)
+    if (!renderBox)
         return;
     m_autoscrollController->startPanScrolling(*renderBox, lastKnownMousePosition());
     invalidateClick();
@@ -1831,7 +1845,7 @@ HandleUserInputEventResult EventHandler::handleMousePressEvent(const PlatformMou
 
     m_mousePressed = true;
     m_capturesDragging = true;
-    setLastKnownMousePosition(platformMouseEvent);
+    setLastKnownMousePosition(platformMouseEvent.position(), platformMouseEvent.globalPosition());
     m_mouseDownTimestamp = platformMouseEvent.timestamp();
 #if ENABLE(DRAG_SUPPORT)
     m_mouseDownMayStartDrag = false;
@@ -1973,7 +1987,7 @@ bool EventHandler::handleMouseDoubleClickEvent(const PlatformMouseEvent& platfor
 
     // We get this instead of a second mouse-up 
     m_mousePressed = false;
-    setLastKnownMousePosition(platformMouseEvent);
+    setLastKnownMousePosition(platformMouseEvent.position(), platformMouseEvent.globalPosition());
 
     constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::Release, HitTestRequest::Type::DisallowUserAgentShadowContent };
     MouseEventWithHitTestResults mouseEvent = prepareMouseEvent(hitType, platformMouseEvent);
@@ -2123,7 +2137,7 @@ HandleUserInputEventResult EventHandler::handleMouseMoveEvent(const PlatformMous
     }
 #endif
 
-    setLastKnownMousePosition(platformMouseEvent);
+    setLastKnownMousePosition(platformMouseEvent.position(), platformMouseEvent.globalPosition());
 
     if (m_hoverTimer.isActive())
         m_hoverTimer.stop();
@@ -2289,7 +2303,7 @@ HandleUserInputEventResult EventHandler::handleMouseReleaseEvent(const PlatformM
 #endif
 
     m_mousePressed = false;
-    setLastKnownMousePosition(platformMouseEvent);
+    setLastKnownMousePosition(platformMouseEvent.position(), platformMouseEvent.globalPosition());
 
     if (m_svgPan) {
         m_svgPan = false;
@@ -2363,7 +2377,7 @@ bool EventHandler::handleMouseForceEvent(const PlatformMouseEvent& event)
     }
 #endif
 
-    setLastKnownMousePosition(event);
+    setLastKnownMousePosition(event.position(), event.globalPosition());
 
     OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::DisallowUserAgentShadowContent };
 
@@ -2381,32 +2395,8 @@ bool EventHandler::handleMouseForceEvent(const PlatformMouseEvent& event)
     return swallowedEvent;
 }
 
-bool EventHandler::handlePasteGlobalSelection(const PlatformMouseEvent& platformMouseEvent)
+bool EventHandler::handlePasteGlobalSelection()
 {
-    // If the event was a middle click, attempt to copy global selection in after
-    // the newly set caret position.
-    //
-    // This code is called from either the mouse up or mouse down handling. There
-    // is some debate about when the global selection is pasted:
-    //   xterm: pastes on up.
-    //   GTK: pastes on down.
-    //   Qt: pastes on up.
-    //   Firefox: pastes on up.
-    //   Chromium: pastes on up.
-    //
-    // There is something of a webcompat angle to this well, as highlighted by
-    // crbug.com/14608. Pages can clear text boxes 'onclick' and, if we paste on
-    // down then the text is pasted just before the onclick handler runs and
-    // clears the text box. So it's important this happens after the event
-    // handlers have been fired.
-#if PLATFORM(GTK)
-    if (platformMouseEvent.type() != PlatformEvent::Type::MousePressed)
-        return false;
-#else
-    if (platformMouseEvent.type() != PlatformEvent::Type::MouseReleased)
-        return false;
-#endif
-
     if (!m_frame->page())
         return false;
     RefPtr focusFrame = m_frame->page()->checkedFocusController()->focusedOrMainFrame();
@@ -2518,12 +2508,12 @@ static bool findDropZone(Node& target, DataTransfer& dataTransfer)
         SpaceSplitString keywords(element->attributeWithoutSynchronization(webkitdropzoneAttr), SpaceSplitString::ShouldFoldCase::Yes);
         bool matched = false;
         std::optional<DragOperation> dragOperation;
-        for (unsigned i = 0, size = keywords.size(); i < size; ++i) {
-            if (auto operationFromKeyword = convertDropZoneOperationToDragOperation(keywords[i])) {
+        for (auto& keyword : keywords) {
+            if (auto operationFromKeyword = convertDropZoneOperationToDragOperation(keyword)) {
                 if (!dragOperation)
                     dragOperation = operationFromKeyword;
             } else
-                matched = matched || hasDropZoneType(dataTransfer, keywords[i].string());
+                matched = matched || hasDropZoneType(dataTransfer, keyword.string());
             if (matched && dragOperation)
                 break;
         }
@@ -3156,6 +3146,7 @@ HandleUserInputEventResult EventHandler::handleWheelEventInternal(const Platform
     auto allowsScrollingState = SetForScope(m_currentWheelEventAllowsScrolling, processingSteps.contains(WheelEventProcessingSteps::SynchronousScrolling));
     
     setFrameWasScrolledByUser();
+    setLastKnownMousePosition(event.position(), event.globalPosition());
 
     if (m_frame->isMainFrame()) {
         RefPtr page = m_frame->page();
@@ -5346,10 +5337,10 @@ HandleUserInputEventResult EventHandler::dispatchSyntheticTouchEventIfEnabled(co
 }
 #endif // ENABLE(TOUCH_EVENTS)
 
-void EventHandler::setLastKnownMousePosition(const PlatformMouseEvent& event)
+void EventHandler::setLastKnownMousePosition(IntPoint position, IntPoint globalPosition)
 {
-    m_lastKnownMousePosition = event.position();
-    m_lastKnownMouseGlobalPosition = event.globalPosition();
+    m_lastKnownMousePosition = position;
+    m_lastKnownMouseGlobalPosition = globalPosition;
 }
 
 void EventHandler::setImmediateActionStage(ImmediateActionStage stage)

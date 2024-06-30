@@ -31,8 +31,9 @@ public:
     GStreamerQuirkWesteros();
     const char* identifier() final { return "Westeros"; }
 
-    bool configureElement(GstElement*, const OptionSet<ElementRuntimeCharacteristics>&) final;
+    void configureElement(GstElement*, const OptionSet<ElementRuntimeCharacteristics>&) final;
     std::optional<bool> isHardwareAccelerated(GstElementFactory*) final;
+    unsigned getAdditionalPlaybinFlags() const final { return getGstPlayFlag("text") | getGstPlayFlag("native-video"); }
 
 private:
     GRefPtr<GstCaps> m_sinkCaps;

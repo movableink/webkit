@@ -45,7 +45,7 @@ RenderTreeUpdater::ViewTransition::ViewTransition(RenderTreeUpdater& updater)
 
 // The contents and ordering of the named elements map should remain stable during the duration of the transition.
 // We should only need to handle changes in the `display` CSS property by recreating / deleting renderers as needed.
-void RenderTreeUpdater::ViewTransition::updatePseudoElementTree(RenderElement& documentElementRenderer)
+void RenderTreeUpdater::ViewTransition::updatePseudoElementTree(RenderElement& documentElementRenderer, StyleDifference minimalStyleDifference)
 {
     auto destroyPseudoElementTreeIfNeeded = [&documentElementRenderer, this]() {
         if (WeakPtr viewTransitionRoot = documentElementRenderer.view().viewTransitionRoot())
@@ -75,9 +75,9 @@ void RenderTreeUpdater::ViewTransition::updatePseudoElementTree(RenderElement& d
     // Create ::view-transition as needed.
     WeakPtr viewTransitionRoot = documentElementRenderer.view().viewTransitionRoot();
     if (viewTransitionRoot)
-        viewTransitionRoot->setStyle(WTFMove(newRootStyle));
+        viewTransitionRoot->setStyle(WTFMove(newRootStyle), minimalStyleDifference);
     else {
-        auto newViewTransitionRoot = WebCore::createRenderer<RenderBlockFlow>(RenderObject::Type::BlockFlow, documentElementRenderer.document(), WTFMove(newRootStyle));
+        auto newViewTransitionRoot = WebCore::createRenderer<RenderBlockFlow>(RenderObject::Type::BlockFlow, documentElementRenderer.document(), WTFMove(newRootStyle), RenderObject::BlockFlowFlag::IsViewTransitionContainer);
         newViewTransitionRoot->initializeStyle();
         documentElementRenderer.view().setViewTransitionRoot(*newViewTransitionRoot.get());
         viewTransitionRoot = newViewTransitionRoot.get();
@@ -98,13 +98,10 @@ void RenderTreeUpdater::ViewTransition::updatePseudoElementTree(RenderElement& d
             if (!style || style->display() == DisplayType::None)
                 descendantsToDelete.append(currentGroup);
             else
-                updatePseudoElementGroup(*style, downcast<RenderElement>(*currentGroup), documentElementRenderer);
-        } else {
+                updatePseudoElementGroup(*style, downcast<RenderElement>(*currentGroup), documentElementRenderer, minimalStyleDifference);
+            currentGroup = currentGroup->nextSibling();
+        } else
             buildPseudoElementGroup(name, documentElementRenderer, currentGroup);
-            currentGroup = currentGroup ? currentGroup->previousSibling() : nullptr;
-        }
-
-        currentGroup = currentGroup ? currentGroup->nextSibling() : nullptr;
     }
 
     for (auto& descendant : descendantsToDelete) {
@@ -131,10 +128,12 @@ static RenderPtr<RenderBox> createRendererIfNeeded(RenderElement& documentElemen
             return nullptr;
 
         RenderPtr<RenderViewTransitionCapture> rendererViewTransition = WebCore::createRenderer<RenderViewTransitionCapture>(RenderObject::Type::ViewTransitionCapture, document, RenderStyle::clone(*style));
-        rendererViewTransition->setImage(pseudoId == PseudoId::ViewTransitionOld ? capturedElement->oldImage.value_or(nullptr) : nullptr, capturedElement->oldSize, capturedElement->oldOverflowRect);
+        if (pseudoId == PseudoId::ViewTransitionOld)
+            rendererViewTransition->setImage(capturedElement->oldImage.value_or(nullptr));
+        rendererViewTransition->setCapturedSize(capturedElement->oldSize, capturedElement->oldOverflowRect, capturedElement->oldLayerToLayoutOffset);
         renderer = WTFMove(rendererViewTransition);
     } else
-        renderer = WebCore::createRenderer<RenderBlockFlow>(RenderObject::Type::BlockFlow, document, RenderStyle::clone(*style));
+        renderer = WebCore::createRenderer<RenderBlockFlow>(RenderObject::Type::BlockFlow, document, RenderStyle::clone(*style), RenderObject::BlockFlowFlag::IsViewTransitionContainer);
 
     renderer->initializeStyle();
     return renderer;
@@ -161,13 +160,13 @@ void RenderTreeUpdater::ViewTransition::buildPseudoElementGroup(const AtomString
         m_updater.m_builder.attach(*documentElementRenderer.view().viewTransitionRoot(), WTFMove(viewTransitionGroup), beforeChild);
 }
 
-void RenderTreeUpdater::ViewTransition::updatePseudoElementGroup(const RenderStyle& groupStyle, RenderElement& group, RenderElement& documentElementRenderer)
+void RenderTreeUpdater::ViewTransition::updatePseudoElementGroup(const RenderStyle& groupStyle, RenderElement& group, RenderElement& documentElementRenderer, StyleDifference minimalStyleDifference)
 {
     auto& documentElementStyle = documentElementRenderer.style();
     auto name = groupStyle.pseudoElementNameArgument();
 
     auto newGroupStyle = RenderStyle::clone(groupStyle);
-    group.setStyle(WTFMove(newGroupStyle));
+    group.setStyle(WTFMove(newGroupStyle), minimalStyleDifference);
 
     enum class ShouldDeleteRenderer : bool { No, Yes };
     auto updateRenderer = [&](RenderObject& renderer) -> ShouldDeleteRenderer {
@@ -176,7 +175,7 @@ void RenderTreeUpdater::ViewTransition::updatePseudoElementGroup(const RenderSty
             return ShouldDeleteRenderer::Yes;
 
         auto newStyle = RenderStyle::clone(*style);
-        downcast<RenderElement>(renderer).setStyle(WTFMove(newStyle));
+        downcast<RenderElement>(renderer).setStyle(WTFMove(newStyle), minimalStyleDifference);
         return ShouldDeleteRenderer::No;
     };
 

@@ -54,14 +54,10 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 #if HAVE(SWIFT_CPP_INTEROP)
 static ExceptionOr<Vector<uint8_t>> encryptCryptoKitAESGCM(const Vector<uint8_t>& iv, const Vector<uint8_t>& key, const Vector<uint8_t>& plainText, const Vector<uint8_t>& additionalData, size_t desiredTagLengthInBytes)
 {
-    // Protect against underflow in the subtraction below.
-    if (desiredTagLengthInBytes > CryptoAlgorithmAESGCM::DefaultTagLength / 8)
+    auto rv = PAL::AesGcm::encrypt(key.span(), iv.span(), additionalData.span(), plainText.span(), desiredTagLengthInBytes);
+    if (rv.errorCode != Cpp::ErrorCodes::Success)
         return Exception { ExceptionCode::OperationError };
-    Vector<uint8_t> cipherText(plainText.size() + CryptoAlgorithmAESGCM::DefaultTagLength);
-    if (!PAL::AesGcm::encrypt(key.data(), key.size(), iv.data(), iv.size(), additionalData.data(), additionalData.size(), plainText.data(), plainText.size(), cipherText.data()).isSuccess())
-        return Exception { ExceptionCode::OperationError };
-    cipherText.resize(cipherText.size() - (CryptoAlgorithmAESGCM::DefaultTagLength - desiredTagLengthInBytes));
-    return WTFMove(cipherText);
+    return WTFMove(rv.result);
 }
 #endif
 
@@ -85,10 +81,10 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     return WTFMove(plainText);
 }
 
-ExceptionOr<Vector<uint8_t>> CryptoAlgorithmAESGCM::platformEncrypt(const CryptoAlgorithmAesGcmParams& parameters, const CryptoKeyAES& key, const Vector<uint8_t>& plainText, bool useCryptoKit)
+ExceptionOr<Vector<uint8_t>> CryptoAlgorithmAESGCM::platformEncrypt(const CryptoAlgorithmAesGcmParams& parameters, const CryptoKeyAES& key, const Vector<uint8_t>& plainText, UseCryptoKit useCryptoKit)
 {
 #if HAVE(SWIFT_CPP_INTEROP)
-    if (useCryptoKit)
+    if (useCryptoKit == UseCryptoKit::Yes)
         return encryptCryptoKitAESGCM(parameters.ivVector(), key.key(), plainText, parameters.additionalDataVector(), parameters.tagLength.value_or(0) / 8);
 #else
     UNUSED_PARAM(useCryptoKit);
@@ -99,6 +95,7 @@ ExceptionOr<Vector<uint8_t>> CryptoAlgorithmAESGCM::platformEncrypt(const Crypto
 
 ExceptionOr<Vector<uint8_t>> CryptoAlgorithmAESGCM::platformDecrypt(const CryptoAlgorithmAesGcmParams& parameters, const CryptoKeyAES& key, const Vector<uint8_t>& cipherText)
 {
+    // FIXME: Add decrypt with CryptoKit once rdar://92701544 is resolved.
     return decyptAESGCM(parameters.ivVector(), key.key(), cipherText, parameters.additionalDataVector(), parameters.tagLength.value_or(0) / 8);
 }
 

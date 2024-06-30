@@ -30,6 +30,7 @@
 #include "FontRenderOptions.h"
 #include "GLContext.h"
 #include "PlatformDisplay.h"
+#include <skia/core/SkColorSpace.h>
 #include <skia/gpu/GrBackendSurface.h>
 #include <skia/gpu/ganesh/SkSurfaceGanesh.h>
 #include <skia/gpu/ganesh/gl/GrGLBackendSurface.h>
@@ -44,16 +45,7 @@ SkiaAcceleratedBufferPool::SkiaAcceleratedBufferPool()
 {
 }
 
-SkiaAcceleratedBufferPool::~SkiaAcceleratedBufferPool()
-{
-    if (m_buffers.isEmpty())
-        return;
-
-    if (!PlatformDisplay::sharedDisplayForCompositing().skiaGLContext()->makeContextCurrent())
-        return;
-
-    m_buffers.clear();
-}
+SkiaAcceleratedBufferPool::~SkiaAcceleratedBufferPool() = default;
 
 RefPtr<Nicosia::Buffer> SkiaAcceleratedBufferPool::acquireBuffer(const IntSize& size, bool supportsAlpha)
 {
@@ -79,7 +71,7 @@ RefPtr<Nicosia::Buffer> SkiaAcceleratedBufferPool::createAcceleratedBuffer(const
 {
     auto* grContext = PlatformDisplay::sharedDisplayForCompositing().skiaGrContext();
     RELEASE_ASSERT(grContext);
-    auto imageInfo = SkImageInfo::MakeN32Premul(size.width(), size.height());
+    auto imageInfo = SkImageInfo::MakeN32Premul(size.width(), size.height(), SkColorSpace::MakeSRGB());
     SkSurfaceProps properties = { 0, FontRenderOptions::singleton().subpixelOrder() };
     auto surface = SkSurfaces::RenderTarget(grContext, skgpu::Budgeted::kNo, imageInfo, 0, kTopLeft_GrSurfaceOrigin, &properties);
     if (!surface)
@@ -105,11 +97,9 @@ void SkiaAcceleratedBufferPool::releaseUnusedBuffersTimerFired()
     static const Seconds releaseUnusedSecondsTolerance { 3_s };
     MonotonicTime minUsedTime = MonotonicTime::now() - releaseUnusedSecondsTolerance;
 
-    if (PlatformDisplay::sharedDisplayForCompositing().skiaGLContext()->makeContextCurrent()) {
-        m_buffers.removeAllMatching([&minUsedTime](const Entry& entry) {
-            return entry.canBeReleased(minUsedTime);
-        });
-    }
+    m_buffers.removeAllMatching([&minUsedTime](const Entry& entry) {
+        return entry.canBeReleased(minUsedTime);
+    });
 
     if (!m_buffers.isEmpty())
         scheduleReleaseUnusedBuffers();

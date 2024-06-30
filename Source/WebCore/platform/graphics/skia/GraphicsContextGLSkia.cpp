@@ -33,6 +33,7 @@
 #include "NotImplemented.h"
 #include "PixelBuffer.h"
 #include "PlatformDisplay.h"
+#include "SharedBuffer.h"
 #include <skia/core/SkData.h>
 #include <skia/core/SkImage.h>
 
@@ -44,7 +45,7 @@ namespace WebCore {
 
 GraphicsContextGLImageExtractor::~GraphicsContextGLImageExtractor() = default;
 
-bool GraphicsContextGLImageExtractor::extractImage(bool premultiplyAlpha, bool ignoreGammaAndColorProfile, bool)
+bool GraphicsContextGLImageExtractor::extractImage(bool premultiplyAlpha, bool ignoreGammaAndColorProfile, bool ignoreNativeImageAlphaPremultiplication)
 {
     if (!m_image)
         return false;
@@ -69,9 +70,24 @@ bool GraphicsContextGLImageExtractor::extractImage(bool premultiplyAlpha, bool i
     if (!m_imageWidth || !m_imageHeight)
         return false;
 
-    m_alphaOp = AlphaOp::DoNothing;
-
     const auto& imageInfo = platformImage->imageInfo();
+    m_alphaOp = AlphaOp::DoNothing;
+    switch (imageInfo.alphaType()) {
+    case kUnknown_SkAlphaType:
+    case kOpaque_SkAlphaType:
+        break;
+    case kPremul_SkAlphaType:
+        if (!premultiplyAlpha)
+            m_alphaOp = AlphaOp::DoUnmultiply;
+        else if (ignoreNativeImageAlphaPremultiplication)
+            m_alphaOp = AlphaOp::DoPremultiply;
+        break;
+    case kUnpremul_SkAlphaType:
+        if (premultiplyAlpha)
+            m_alphaOp = AlphaOp::DoPremultiply;
+        break;
+    }
+
     unsigned srcUnpackAlignment = 1;
     size_t bytesPerRow = imageInfo.minRowBytes();
     size_t bytesPerPixel = imageInfo.bytesPerPixel();
@@ -116,10 +132,10 @@ RefPtr<NativeImage> GraphicsContextGL::createNativeImageFromPixelBuffer(const Gr
         alphaType = kOpaque_SkAlphaType;
     else if (sourceContextAttributes.premultipliedAlpha)
         alphaType = kPremul_SkAlphaType;
-    auto imageInfo = SkImageInfo::Make(imageSize.width(), imageSize.height(), kRGBA_8888_SkColorType, alphaType);
+    auto imageInfo = SkImageInfo::Make(imageSize.width(), imageSize.height(), kRGBA_8888_SkColorType, alphaType, SkColorSpace::MakeSRGB());
 
     Ref protectedPixelBuffer = pixelBuffer;
-    SkPixmap pixmap(imageInfo, pixelBuffer->bytes(), imageInfo.minRowBytes());
+    SkPixmap pixmap(imageInfo, pixelBuffer->bytes().data(), imageInfo.minRowBytes());
     auto image = SkImages::RasterFromPixmap(pixmap, [](const void*, void* context) {
         static_cast<PixelBuffer*>(context)->deref();
     }, &protectedPixelBuffer.leakRef());

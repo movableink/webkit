@@ -29,10 +29,18 @@
 
 #import <Foundation/Foundation.h>
 
-WK_CLASS_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA))
+NS_ASSUME_NONNULL_BEGIN
+
+WK_CLASS_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA))
 @interface _WKTargetedElementRequest : NSObject
 
-@property (nonatomic) CGPoint point;
+- (instancetype)initWithPoint:(CGPoint)point;
+- (instancetype)initWithSearchText:(NSString *)searchText;
+- (instancetype)initWithSelectors:(NSArray<NSSet<NSString *> *> *)selectors;
+
 @property (nonatomic) BOOL canIncludeNearbyElements;
+@property (nonatomic) BOOL shouldIgnorePointerEventsNone;
 
 @end
+
+NS_ASSUME_NONNULL_END

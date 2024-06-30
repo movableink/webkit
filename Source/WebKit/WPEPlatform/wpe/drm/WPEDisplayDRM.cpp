@@ -32,6 +32,7 @@
 #include "WPEDisplayDRMPrivate.h"
 #include "WPEExtensions.h"
 #include "WPEMonitorDRMPrivate.h"
+#include "WPEToplevelDRM.h"
 #include "WPEViewDRM.h"
 #include <fcntl.h>
 #include <gio/gio.h>
@@ -308,21 +309,25 @@ static WPEView* wpeDisplayDRMCreateView(WPEDisplay* display)
 {
     auto* displayDRM = WPE_DISPLAY_DRM(display);
     auto* view = wpe_view_drm_new(displayDRM);
+
+    GRefPtr<WPEToplevel> toplevel = adoptGRef(wpe_toplevel_drm_new(displayDRM));
+    wpe_view_set_toplevel(view, toplevel.get());
+
     displayDRM->priv->seat->setView(view);
     return view;
 }
 
-static GList* wpeDisplayDRMGetPreferredDMABufFormats(WPEDisplay* display)
+static WPEBufferDMABufFormats* wpeDisplayDRMGetPreferredDMABufFormats(WPEDisplay* display)
 {
     auto* displayDRM = WPE_DISPLAY_DRM(display);
-    GList* preferredFormats = nullptr;
+    auto* builder = wpe_buffer_dma_buf_formats_builder_new(displayDRM->priv->drmDevice.data());
+    wpe_buffer_dma_buf_formats_builder_append_group(builder, nullptr, WPE_BUFFER_DMA_BUF_FORMAT_USAGE_SCANOUT);
     for (const auto& format : displayDRM->priv->primaryPlane->formats()) {
-        GRefPtr<GArray> dmabufModifiers = adoptGRef(g_array_sized_new(FALSE, TRUE, sizeof(guint64), format.modifiers.size()));
         for (auto modifier : format.modifiers)
-            g_array_append_val(dmabufModifiers.get(), modifier);
-        preferredFormats = g_list_prepend(preferredFormats, wpe_buffer_dma_buf_format_new(WPE_BUFFER_DMA_BUF_FORMAT_USAGE_SCANOUT, format.format, dmabufModifiers.get()));
+            wpe_buffer_dma_buf_formats_builder_append_format(builder, format.format, modifier);
     }
-    return g_list_reverse(preferredFormats);
+
+    return wpe_buffer_dma_buf_formats_builder_end(builder);
 }
 
 static guint wpeDisplayDRMGetNMonitors(WPEDisplay*)
@@ -346,7 +351,7 @@ static const char* wpeDisplayDRMGetDRMRenderNode(WPEDisplay* display)
 {
     auto* priv = WPE_DISPLAY_DRM(display)->priv;
     if (!priv->drmRenderNode.isNull())
-        priv->drmRenderNode.data();
+        return priv->drmRenderNode.data();
     return priv->drmDevice.data();
 }
 

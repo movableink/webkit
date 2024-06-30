@@ -33,7 +33,6 @@
 #include <WebCore/GraphicsLayer.h>
 #include <WebCore/TextureMapperSparseBackingStore.h>
 #include <optional>
-#include <wtf/EnumTraits.h>
 #include <wtf/OptionSet.h>
 
 namespace WebKit {
@@ -104,6 +103,7 @@ struct WCLayerUpdateInfo {
     struct BackgroundChanges {
         WebCore::Color color;
         bool hasBackingStore;
+        WebCore::IntSize backingStoreSize;
         Vector<WCTileUpdate> tileUpdates;
     } background;
 
@@ -123,6 +123,7 @@ struct WCLayerUpdateInfo {
 };
 
 struct WCUpdateInfo {
+    WebCore::IntSize viewport;
     Markable<WebCore::LayerHostingContextIdentifier> remoteContextHostedIdentifier;
     WebCore::PlatformLayerIdentifier rootLayer;
     Vector<WebCore::PlatformLayerIdentifier> addedLayers;

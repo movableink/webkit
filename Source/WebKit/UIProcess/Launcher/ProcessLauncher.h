@@ -73,7 +73,7 @@ public:
 private:
     explicit LaunchGrant(ExtensionProcess&);
 
-    RetainPtr<BEProcessCapabilityGrant> m_grant;
+    ExtensionCapabilityGrant m_grant;
 };
 #endif
 
@@ -88,6 +88,7 @@ public:
         virtual bool isJITEnabled() const { return true; }
         virtual bool shouldEnableSharedArrayBuffer() const { return false; }
         virtual bool shouldEnableLockdownMode() const { return false; }
+        virtual bool shouldDisableJITCage() const { return false; }
 #if PLATFORM(COCOA)
         virtual RefPtr<XPCEventHandler> xpcEventHandler() const { return nullptr; }
 #endif
@@ -151,7 +152,7 @@ private:
     ProcessLauncher(Client*, LaunchOptions&&);
 
     void launchProcess();
-    void finishLaunchingProcess(const char* name);
+    void finishLaunchingProcess(ASCIILiteral name);
     void didFinishLaunchingProcess(ProcessID, IPC::Connection::Identifier);
 
     void platformInvalidate();

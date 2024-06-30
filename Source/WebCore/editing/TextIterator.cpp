@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
- * Copyright (C) 2015 Google Inc. All rights reserved.
+ * Copyright (C) 2015-2018 Google Inc. All rights reserved.
  * Copyright (C) 2005 Alexey Proskuryakov.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,9 +34,11 @@
 #include "ElementInlines.h"
 #include "ElementRareData.h"
 #include "FontCascade.h"
+#include "HTMLAttachmentElement.h"
 #include "HTMLBodyElement.h"
 #include "HTMLElement.h"
 #include "HTMLFrameOwnerElement.h"
+#include "HTMLImageElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLLegendElement.h"
 #include "HTMLMeterElement.h"
@@ -350,6 +352,8 @@ static Node* firstNode(const BoundaryPoint& point)
 TextIterator::TextIterator(const SimpleRange& range, TextIteratorBehaviors behaviors)
     : m_behaviors(behaviors)
 {
+    ASSERT(!m_behaviors.contains(TextIteratorBehavior::EmitsObjectReplacementCharacters) || !m_behaviors.contains(TextIteratorBehavior::EmitsObjectReplacementCharactersForImages));
+
     range.start.protectedDocument()->updateLayoutIgnorePendingStylesheets();
 
     m_startContainer = range.start.container.ptr();
@@ -565,7 +569,7 @@ bool TextIterator::handleTextNode()
 
     CheckedRef renderer = *textNode->renderer();
     m_lastTextNode = textNode.ptr();
-    String rendererText = renderer->text();
+    auto rendererText = rendererTextForBehavior(renderer.get());
 
     // handle pre-formatted text
     if (!renderer->style().collapseWhiteSpace()) {
@@ -624,7 +628,7 @@ void TextIterator::handleTextRun()
 
     auto [firstTextRun, orderCache] = InlineIterator::firstTextBoxInLogicalOrderFor(renderer);
 
-    String rendererText = renderer->text();
+    auto rendererText = rendererTextForBehavior(renderer.get());
     unsigned rangeStart = m_offset;
     auto rangeEnd = std::optional<unsigned> { };
     if (textNode.ptr() == m_endContainer)
@@ -642,11 +646,11 @@ void TextIterator::handleTextRun()
         auto hasPrecedingCollapsedWhitespace = m_lastTextNodeEndedWithCollapsedSpace || (m_textRun == firstTextRun && textRunStart == runStart && runStart);
         auto shouldEmitWhitespace = !isAfterRangeEnd && hasPrecedingCollapsedWhitespace && m_lastCharacter && !renderer->style().isCollapsibleWhiteSpace(m_lastCharacter);
         if (shouldEmitWhitespace) {
-            if (m_lastTextNode == textNode.ptr() && runStart && rendererText[runStart - 1] == ' ') {
+            if (m_lastTextNode == textNode.ptr() && runStart && renderer->style().isCollapsibleWhiteSpace(rendererText[runStart - 1])) {
                 unsigned spaceRunStart = runStart - 1;
-                while (spaceRunStart && rendererText[spaceRunStart - 1] == ' ')
+                while (spaceRunStart && renderer->style().isCollapsibleWhiteSpace(rendererText[spaceRunStart - 1]))
                     --spaceRunStart;
-                emitText(textNode, renderer, spaceRunStart, spaceRunStart + 1);
+                emitCharacter(' ', WTFMove(textNode), nullptr, spaceRunStart, spaceRunStart + 1);
             } else
                 emitCharacter(' ', WTFMove(textNode), nullptr, runStart, runStart);
             return;
@@ -772,7 +776,22 @@ bool TextIterator::handleReplacedElement()
 
     m_hasEmitted = true;
 
-    if (m_behaviors.contains(TextIteratorBehavior::EmitsObjectReplacementCharacters)) {
+    auto shouldEmitObjectReplacementCharacter = [&] {
+        if (m_behaviors.contains(TextIteratorBehavior::EmitsObjectReplacementCharacters))
+            return true;
+
+        if (m_behaviors.contains(TextIteratorBehavior::EmitsObjectReplacementCharactersForImages) && is<HTMLImageElement>(m_currentNode.get()))
+            return true;
+
+#if ENABLE(ATTACHMENT_ELEMENT)
+        if (m_behaviors.contains(TextIteratorBehavior::EmitsObjectReplacementCharactersForAttachments) && is<HTMLAttachmentElement>(m_currentNode.get()))
+            return true;
+#endif
+
+        return false;
+    }();
+
+    if (shouldEmitObjectReplacementCharacter) {
         emitCharacter(objectReplacementCharacter, m_currentNode->protectedParentNode(), protectedCurrentNode(), 0, 1);
         // Don't process subtrees for embedded objects. If the text there is required,
         // it must be explicitly asked by specifying a range falling inside its boundaries.
@@ -853,6 +872,8 @@ bool shouldEmitNewlinesBeforeAndAfterNode(Node& node)
     // a newline both before and after the element.
     CheckedPtr renderer = node.renderer();
     if (!renderer) {
+        if (hasDisplayContents(node))
+            return false;
         RefPtr element = dynamicDowncast<HTMLElement>(node);
         return element && (hasHeaderTag(*element)
             || element->hasTagName(blockquoteTag)
@@ -1139,7 +1160,9 @@ void TextIterator::emitText(Text& textNode, RenderText& renderer, int textStartO
     String string = m_behaviors.contains(TextIteratorBehavior::EmitsOriginalText) ? renderer.originalText()
         : (m_behaviors.contains(TextIteratorBehavior::EmitsTextsWithoutTranscoding) ? renderer.textWithoutConvertingBackslashToYenSymbol() : renderer.text());
 
-    ASSERT(string.length() >= static_cast<unsigned>(textEndOffset));
+    ASSERT(m_behaviors.contains(TextIteratorBehavior::EmitsOriginalText) || string.length() >= static_cast<unsigned>(textEndOffset));
+
+    textEndOffset = std::min(string.length(), static_cast<unsigned>(textEndOffset));
 
     m_positionNode = &textNode;
     m_positionOffsetBaseNode = nullptr;
@@ -1179,6 +1202,15 @@ RefPtr<Node> TextIterator::protectedCurrentNode() const
 {
     return m_currentNode;
 }
+
+#if ENABLE(TREE_DEBUGGING)
+void TextIterator::showTreeForThis() const
+{
+    if (m_currentNode)
+        m_currentNode->showTreeForThis();
+    fprintf(stderr, "offset: %d\n", m_offset);
+}
+#endif
 
 // --------
 
@@ -1635,43 +1667,45 @@ StringView WordAwareIterator::text() const
 
 // --------
 
-static inline UChar foldQuoteMark(UChar c)
+static inline UChar foldQuoteMarkAndReplaceNoBreakSpace(UChar c)
 {
     switch (c) {
-        case hebrewPunctuationGershayim:
-        case leftDoubleQuotationMark:
-        case leftLowDoubleQuotationMark:
-        case rightDoubleQuotationMark:
-        case leftPointingDoubleAngleQuotationMark:
-        case rightPointingDoubleAngleQuotationMark:
-        case doubleHighReversed9QuotationMark:
-        case doubleLowReversed9QuotationMark:
-        case reversedDoublePrimeQuotationMark:
-        case doublePrimeQuotationMark:
-        case lowDoublePrimeQuotationMark:
-        case fullwidthQuotationMark:
-            return '"';
-        case hebrewPunctuationGeresh:
-        case leftSingleQuotationMark:
-        case leftLowSingleQuotationMark:
-        case rightSingleQuotationMark:
-        case singleLow9QuotationMark:
-        case singleLeftPointingAngleQuotationMark:
-        case singleRightPointingAngleQuotationMark:
-        case leftCornerBracket:
-        case rightCornerBracket:
-        case leftWhiteCornerBracket:
-        case rightWhiteCornerBracket:
-        case presentationFormForVerticalLeftCornerBracket:
-        case presentationFormForVerticalRightCornerBracket:
-        case presentationFormForVerticalLeftWhiteCornerBracket:
-        case presentationFormForVerticalRightWhiteCornerBracket:
-        case fullwidthApostrophe:
-        case halfwidthLeftCornerBracket:
-        case halfwidthRightCornerBracket:
-            return '\'';
-        default:
-            return c;
+    case hebrewPunctuationGershayim:
+    case leftDoubleQuotationMark:
+    case leftLowDoubleQuotationMark:
+    case rightDoubleQuotationMark:
+    case leftPointingDoubleAngleQuotationMark:
+    case rightPointingDoubleAngleQuotationMark:
+    case doubleHighReversed9QuotationMark:
+    case doubleLowReversed9QuotationMark:
+    case reversedDoublePrimeQuotationMark:
+    case doublePrimeQuotationMark:
+    case lowDoublePrimeQuotationMark:
+    case fullwidthQuotationMark:
+        return '"';
+    case hebrewPunctuationGeresh:
+    case leftSingleQuotationMark:
+    case leftLowSingleQuotationMark:
+    case rightSingleQuotationMark:
+    case singleLow9QuotationMark:
+    case singleLeftPointingAngleQuotationMark:
+    case singleRightPointingAngleQuotationMark:
+    case leftCornerBracket:
+    case rightCornerBracket:
+    case leftWhiteCornerBracket:
+    case rightWhiteCornerBracket:
+    case presentationFormForVerticalLeftCornerBracket:
+    case presentationFormForVerticalRightCornerBracket:
+    case presentationFormForVerticalLeftWhiteCornerBracket:
+    case presentationFormForVerticalRightWhiteCornerBracket:
+    case fullwidthApostrophe:
+    case halfwidthLeftCornerBracket:
+    case halfwidthRightCornerBracket:
+        return '\'';
+    case noBreakSpace:
+        return ' ';
+    default:
+        return c;
     }
 }
 
@@ -1726,7 +1760,7 @@ static UStringSearch* createSearcher()
     // but it doesn't matter exactly what it is, since we don't perform any searches
     // without setting both the pattern and the text.
     UErrorCode status = U_ZERO_ERROR;
-    auto searchCollatorName = makeString(currentSearchLocaleID(), "@collation=search");
+    auto searchCollatorName = makeString(span(currentSearchLocaleID()), "@collation=search"_s);
     UStringSearch* searcher = usearch_open(&newlineCharacter, 1, &newlineCharacter, 1, searchCollatorName.utf8().data(), 0, &status);
     ASSERT(U_SUCCESS(status) || status == U_USING_FALLBACK_WARNING || status == U_USING_DEFAULT_WARNING);
     return searcher;
@@ -1928,10 +1962,8 @@ static inline bool containsKanaLetters(const String& pattern)
 {
     if (pattern.is8Bit())
         return false;
-    const UChar* characters = pattern.characters16();
-    unsigned length = pattern.length();
-    for (unsigned i = 0; i < length; ++i) {
-        if (isKanaLetter(characters[i]))
+    for (auto character : pattern.span16()) {
+        if (isKanaLetter(character))
             return true;
     }
     return false;
@@ -1989,7 +2021,7 @@ inline SearchBuffer::SearchBuffer(const String& target, FindOptions options)
     , m_options(options)
     , m_prefixLength(0)
     , m_atBreak(true)
-    , m_needsMoreContext(options.contains(AtWordStarts))
+    , m_needsMoreContext(options.contains(FindOption::AtWordStarts))
     , m_targetRequiresKanaWorkaround(containsKanaLetters(m_target))
 {
     ASSERT(!m_target.isEmpty());
@@ -1998,13 +2030,13 @@ inline SearchBuffer::SearchBuffer(const String& target, FindOptions options)
     m_buffer.reserveInitialCapacity(std::max(targetLength * 8, minimumSearchBufferSize));
     m_overlap = m_buffer.capacity() / 4;
 
-    if (m_options.contains(AtWordStarts) && targetLength) {
+    if (m_options.contains(FindOption::AtWordStarts) && targetLength) {
         char32_t targetFirstCharacter;
         U16_GET(m_target, 0, 0u, targetLength, targetFirstCharacter);
         // Characters in the separator category never really occur at the beginning of a word,
         // so if the target begins with such a character, we just ignore the AtWordStart option.
         if (isSeparator(targetFirstCharacter)) {
-            m_options.remove(AtWordStarts);
+            m_options.remove(FindOption::AtWordStarts);
             m_needsMoreContext = false;
         }
     }
@@ -2019,7 +2051,7 @@ inline SearchBuffer::SearchBuffer(const String& target, FindOptions options)
 
     UCollationStrength strength;
     USearchAttributeValue comparator;
-    if (m_options.contains(CaseInsensitive)) {
+    if (m_options.contains(FindOption::CaseInsensitive)) {
         // Without loss of generality, have 'e' match {'e', 'E', 'é', 'É'} and 'é' match {'é', 'É'}.
         strength = UCOL_SECONDARY;
         comparator = USEARCH_PATTERN_BASE_WEIGHT_IS_WILDCARD;
@@ -2076,7 +2108,7 @@ inline size_t SearchBuffer::append(StringView text)
     ASSERT(usableLength);
     m_buffer.grow(oldLength + usableLength);
     for (unsigned i = 0; i < usableLength; ++i)
-        m_buffer[oldLength + i] = foldQuoteMark(text[i]);
+        m_buffer[oldLength + i] = foldQuoteMarkAndReplaceNoBreakSpace(text[i]);
     return usableLength;
 }
 
@@ -2182,7 +2214,7 @@ inline bool SearchBuffer::isBadMatch(const UChar* match, size_t matchLength) con
 inline bool SearchBuffer::isWordEndMatch(size_t start, size_t length) const
 {
     ASSERT(length);
-    ASSERT(m_options.contains(AtWordEnds));
+    ASSERT(m_options.contains(FindOption::AtWordEnds));
 
     // Start searching at the end of matched search, so that multiple word matches succeed.
     int endWord;
@@ -2192,7 +2224,7 @@ inline bool SearchBuffer::isWordEndMatch(size_t start, size_t length) const
 
 inline bool SearchBuffer::isWordStartMatch(size_t start, size_t length) const
 {
-    ASSERT(m_options.contains(AtWordStarts));
+    ASSERT(m_options.contains(FindOption::AtWordStarts));
 
     if (!start)
         return true;
@@ -2202,7 +2234,7 @@ inline bool SearchBuffer::isWordStartMatch(size_t start, size_t length) const
     char32_t firstCharacter;
     U16_GET(m_buffer.data(), 0, offset, size, firstCharacter);
 
-    if (m_options.contains(TreatMedialCapitalAsWordStart)) {
+    if (m_options.contains(FindOption::TreatMedialCapitalAsWordStart)) {
         char32_t previousCharacter;
         U16_PREV(m_buffer.data(), 0, offset, previousCharacter);
 
@@ -2279,7 +2311,7 @@ nextMatch:
     // possibly including a combining character that's not yet in the buffer.
     if (!m_atBreak && static_cast<size_t>(matchStart) >= size - m_overlap) {
         size_t overlap = m_overlap;
-        if (m_options.contains(AtWordStarts)) {
+        if (m_options.contains(FindOption::AtWordStarts)) {
             // Ensure that there is sufficient context before matchStart the next time around for
             // determining if it is at a word boundary.
             unsigned wordBoundaryContextStart = matchStart;
@@ -2298,8 +2330,8 @@ nextMatch:
 
     // If this match is "bad", move on to the next match.
     if (isBadMatch(m_buffer.data() + matchStart, matchedLength)
-        || (m_options.contains(AtWordStarts) && !isWordStartMatch(matchStart, matchedLength))
-        || (m_options.contains(AtWordEnds) && !isWordEndMatch(matchStart, matchedLength))) {
+        || (m_options.contains(FindOption::AtWordStarts) && !isWordStartMatch(matchStart, matchedLength))
+        || (m_options.contains(FindOption::AtWordEnds) && !isWordEndMatch(matchStart, matchedLength))) {
         matchStart = usearch_next(searcher, &status);
         ASSERT(U_SUCCESS(status));
         goto nextMatch;
@@ -2343,7 +2375,7 @@ inline bool SearchBuffer::atBreak() const
 
 inline void SearchBuffer::append(UChar c, bool isStart)
 {
-    m_buffer[m_cursor] = c == noBreakSpace ? ' ' : foldQuoteMark(c);
+    m_buffer[m_cursor] = foldQuoteMarkAndReplaceNoBreakSpace(c);
     m_isCharacterStartBuffer[m_cursor] = isStart;
     if (++m_cursor == m_target.length()) {
         m_cursor = 0;
@@ -2585,7 +2617,7 @@ static void forEachMatch(const SimpleRange& range, const String& target, FindOpt
 static SimpleRange rangeForMatch(const SimpleRange& range, FindOptions options, CharacterRange match)
 {
     auto noMatchResult = [&] () {
-        auto& boundary = options.contains(Backwards) ? range.start : range.end;
+        auto& boundary = options.contains(FindOption::Backwards) ? range.start : range.end;
         return SimpleRange { boundary, boundary };
     };
 
@@ -2617,10 +2649,10 @@ SimpleRange findClosestPlainText(const SimpleRange& range, const String& target,
         auto matchDistance = std::min(distance(match.location, targetOffset), distance(match.location + match.length, targetOffset));
         if (matchDistance > closestMatchDistance)
             return false;
-        if (matchDistance == closestMatchDistance && !options.contains(Backwards))
+        if (matchDistance == closestMatchDistance && !options.contains(FindOption::Backwards))
             return false;
         closestMatch = match;
-        if (!matchDistance && !options.contains(Backwards))
+        if (!matchDistance && !options.contains(FindOption::Backwards))
             return true;
         closestMatchDistance = matchDistance;
         return false;
@@ -2632,7 +2664,7 @@ SimpleRange findPlainText(const SimpleRange& range, const String& target, FindOp
 {
     // When searching forward stop since we want the first match.
     // When searching backward keep going since we want the last match.
-    bool stopAfterFindingMatch = !options.contains(Backwards);
+    bool stopAfterFindingMatch = !options.contains(FindOption::Backwards);
     CharacterRange lastMatchFound;
     forEachMatch(range, target, options, [&] (CharacterRange match) {
         lastMatchFound = match;
@@ -2658,3 +2690,18 @@ bool containsPlainText(const String& document, const String& target, FindOptions
 }
 
 }
+
+#if ENABLE(TREE_DEBUGGING)
+
+void showTree(const WebCore::TextIterator& pos)
+{
+    pos.showTreeForThis();
+}
+
+void showTree(const WebCore::TextIterator* pos)
+{
+    if (pos)
+        pos->showTreeForThis();
+}
+
+#endif

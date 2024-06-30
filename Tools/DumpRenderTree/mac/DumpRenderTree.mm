@@ -112,6 +112,7 @@
 #import <wtf/cocoa/VectorCocoa.h>
 #import <wtf/text/StringBuilder.h>
 #import <wtf/text/WTFString.h>
+#import <wtf/text/cf/StringConcatenateCF.h>
 
 #if !PLATFORM(IOS_FAMILY)
 #import <Carbon/Carbon.h>
@@ -1443,7 +1444,7 @@ static RetainPtr<NSString> dumpFramesAsText(WebFrame *frame)
     // the result without any conversion.
     if (auto utf8Result = WTF::String(innerText).tryGetUTF8()) {
         auto string = WTFMove(utf8Result.value());
-        [result appendFormat:@"%@\n", String::fromUTF8WithLatin1Fallback(string.data(), string.length()).createCFString().get()];
+        [result appendFormat:@"%@\n", String::fromUTF8WithLatin1Fallback(string.span()).createCFString().get()];
     } else
         [result appendString:@"\n"];
 
@@ -1901,7 +1902,10 @@ static NSURL *computeTestURL(NSString *pathOrURLString, NSString **relativeTestP
 static WTR::TestOptions testOptionsForTest(const WTR::TestCommand& command)
 {
     // hack for cases when useDollarVM will be reset before injectInternalsObject is called in DRT
-    JSC::Options::useDollarVM() = true;
+    {
+        JSC::Options::AllowUnfinalizedAccessScope scope;
+        JSC::Options::useDollarVM() = true;
+    }
     WTR::TestFeatures features = WTR::TestOptions::defaults();
     WTR::merge(features, WTR::hardcodedFeaturesBasedOnPathForTest(command));
     WTR::merge(features, WTR::featureDefaultsFromTestHeaderForTest(command, WTR::TestOptions::keyTypeMapping()));
@@ -1945,7 +1949,7 @@ static void runTest(const std::string& inputLine)
     if (!testPath)
         testPath = [url absoluteString];
 
-    auto message = makeString("CRASHING TEST: ", testPath.UTF8String);
+    auto message = makeString("CRASHING TEST: "_s, testPath);
     WTF::setCrashLogMessage(message.utf8().data());
 
     auto options = testOptionsForTest(command);

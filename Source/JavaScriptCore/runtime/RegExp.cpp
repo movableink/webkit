@@ -202,7 +202,7 @@ RegExp* RegExp::createWithoutCaching(VM& vm, const String& patternString, Option
 
 RegExp* RegExp::create(VM& vm, const String& patternString, OptionSet<Yarr::Flags> flags)
 {
-    return vm.regExpCache()->lookupOrCreate(patternString, flags);
+    return vm.regExpCache()->lookupOrCreate(vm, patternString, flags);
 }
 
 
@@ -581,13 +581,13 @@ inline void appendLineTerminatorEscape<UChar>(StringBuilder& builder, UChar line
     else if (lineTerminator == '\r')
         builder.append('r');
     else if (lineTerminator == 0x2028)
-        builder.append("u2028");
+        builder.append("u2028"_s);
     else
-        builder.append("u2029");
+        builder.append("u2029"_s);
 }
 
 template <typename CharacterType>
-static inline String escapePattern(const String& pattern, const CharacterType* characters, unsigned length)
+static inline String escapePattern(const String& pattern, std::span<const CharacterType> characters)
 {
     bool previousCharacterWasBackslash = false;
     bool inBrackets = false;
@@ -598,12 +598,11 @@ static inline String escapePattern(const String& pattern, const CharacterType* c
     // not a valid RegularExpressionLiteral (since it is a single line comment), and hence
     // source cannot ever validly be "". If the source is empty, return a different Pattern
     // that would match the same thing.
-    if (!length)
+    if (characters.empty())
         return "(?:)"_s;
 
     // early return for strings that don't contain a forwards slash and LineTerminator
-    for (unsigned i = 0; i < length; ++i) {
-        CharacterType ch = characters[i];
+    for (auto ch : characters) {
         if (!previousCharacterWasBackslash) {
             if (inBrackets) {
                 if (ch == ']')
@@ -635,8 +634,7 @@ static inline String escapePattern(const String& pattern, const CharacterType* c
     previousCharacterWasBackslash = false;
     inBrackets = false;
     StringBuilder result;
-    for (unsigned i = 0; i < length; ++i) {
-        CharacterType ch = characters[i];
+    for (auto ch : characters) {
         if (!previousCharacterWasBackslash) {
             if (inBrackets) {
                 if (ch == ']')
@@ -670,13 +668,13 @@ static inline String escapePattern(const String& pattern, const CharacterType* c
 String RegExp::escapedPattern() const
 {
     if (m_patternString.is8Bit())
-        return escapePattern(m_patternString, m_patternString.characters8(), m_patternString.length());
-    return escapePattern(m_patternString, m_patternString.characters16(), m_patternString.length());
+        return escapePattern(m_patternString, m_patternString.span8());
+    return escapePattern(m_patternString, m_patternString.span16());
 }
 
 String RegExp::toSourceString() const
 {
-    return makeString('/', escapedPattern(), '/', Yarr::flagsString(flags()).data());
+    return makeString('/', escapedPattern(), '/', span(Yarr::flagsString(flags()).data()));
 }
 
 } // namespace JSC

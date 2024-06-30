@@ -46,7 +46,7 @@ namespace JSC { namespace DFG {
 class ConstantFoldingPhase : public Phase {
 public:
     ConstantFoldingPhase(Graph& graph)
-        : Phase(graph, "constant folding")
+        : Phase(graph, "constant folding"_s)
         , m_state(graph)
         , m_interpreter(graph, m_state)
         , m_insertionSet(graph)
@@ -57,10 +57,8 @@ public:
     {
         bool changed = false;
 
-        for (BasicBlock* block : m_graph.blocksInNaturalOrder()) {
-            if (block->cfaThinksShouldTryConstantFolding)
-                changed |= foldConstants(block);
-        }
+        for (BasicBlock* block : m_graph.blocksInNaturalOrder())
+            changed |= foldConstants(block);
         
         if (changed && m_graph.m_form == SSA) {
             // It's now possible that we have Upsilons pointed at JSConstants. Fix that.
@@ -389,7 +387,38 @@ private:
             }
             case CheckInBoundsInt52:
                 break;
-                
+
+            case GetArrayLength: {
+                ArrayMode arrayMode = node->arrayMode();
+                AbstractValue& abstractValue = m_state.forNode(node->child1());
+                if (arrayMode.type() != Array::AnyTypedArray && arrayMode.isSomeTypedArrayView() && !arrayMode.mayBeResizableOrGrowableSharedTypedArray()) {
+                    if ((abstractValue.m_type && !(abstractValue.m_type & ~SpecObject)) && abstractValue.m_structure.isFinite()) {
+                        bool canFold = !abstractValue.m_structure.isClear();
+                        JSGlobalObject* globalObject = m_graph.globalObjectFor(node->origin.semantic);
+                        abstractValue.m_structure.forEach([&](RegisteredStructure structure) {
+                            if (!arrayMode.structureWouldPassArrayModeFiltering(structure.get())) {
+                                canFold = false;
+                                return;
+                            }
+
+                            if (structure->globalObject() != globalObject) {
+                                canFold = false;
+                                return;
+                            }
+                        });
+
+                        if (canFold) {
+                            if (m_graph.isWatchingArrayBufferDetachWatchpoint(node)) {
+                                node->setOp(GetUndetachedTypeArrayLength);
+                                changed = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+
             case GetMyArgumentByVal:
             case GetMyArgumentByValOutOfBounds: {
                 JSValue indexValue = m_state.forNode(node->child2()).value();
@@ -1294,6 +1323,8 @@ private:
             
             changed = true;
         }
+        if (m_graph.m_form == SSA || m_graph.m_form == ThreadedCPS)
+            m_state.endBasicBlock();
         m_state.reset();
         m_insertionSet.execute(block);
         

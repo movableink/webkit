@@ -35,6 +35,7 @@
 #include "IPCTesterReceiverMessages.h"
 #include "IPCUtilities.h"
 
+#include <WebCore/ExceptionData.h>
 #include <atomic>
 #include <dlfcn.h>
 #include <stdio.h>
@@ -62,10 +63,9 @@ extern "C" {
 static void defaultTestDriver(WKMessageTestSendMessageFunc sendMessageFunc, void* context)
 {
     Vector<uint8_t> data(1000);
-    for (int i = 0; i < 1000; i++) {
-        cryptographicallyRandomValues(data.data(), data.size());
-        int ret = sendMessageFunc(data.span(), context);
-        if (ret)
+    for (unsigned i = 0; i < 1000; ++i) {
+        cryptographicallyRandomValues(data.mutableSpan());
+        if (sendMessageFunc(data.span(), context))
             return;
     }
 }
@@ -120,7 +120,7 @@ IPCTester::~IPCTester()
 void IPCTester::startMessageTesting(IPC::Connection& connection, String&& driverName)
 {
     if (!m_testQueue)
-        m_testQueue = WorkQueue::create("IPC testing work queue");
+        m_testQueue = WorkQueue::create("IPC testing work queue"_s);
     m_testQueue->dispatch([connection = Ref { connection }, &shouldStop = m_shouldStop, driverName = WTFMove(driverName)]() mutable {
         IPC::startTestingIPC();
         runMessageTesting(connection, shouldStop, WTFMove(driverName));
@@ -203,7 +203,7 @@ void IPCTester::releaseConnectionTester(IPCConnectionTesterIdentifier identifier
     completionHandler();
 }
 
-void IPCTester::asyncPing(IPC::Connection&, uint32_t value, CompletionHandler<void(uint32_t)>&& completionHandler)
+void IPCTester::asyncPing(uint32_t value, CompletionHandler<void(uint32_t)>&& completionHandler)
 {
     completionHandler(value + 1);
 }
@@ -217,6 +217,15 @@ void IPCTester::syncPingEmptyReply(IPC::Connection&, uint32_t value, CompletionH
 {
     UNUSED_PARAM(value);
     completionHandler();
+}
+
+void IPCTester::asyncOptionalExceptionData(IPC::Connection&, bool sendEngaged, CompletionHandler<void(std::optional<WebCore::ExceptionData>, String)>&& completionHandler)
+{
+    if (sendEngaged) {
+        completionHandler(WebCore::ExceptionData { WebCore::ExceptionCode::WrongDocumentError, "m"_s }, "a"_s);
+        return;
+    }
+    completionHandler(std::nullopt, "b"_s);
 }
 
 void IPCTester::stopIfNeeded()

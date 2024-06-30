@@ -108,7 +108,6 @@ public:
     bool performImmediateActionHitTestAtLocation(const WebCore::FloatPoint&, WebHitTestResultData&) const;
 
     WebCore::FloatRect rectForSelectionInRootView(PDFSelection *) const;
-    CGFloat contentScaleFactor() const;
     
     bool isUsingUISideCompositing() const;
 
@@ -178,6 +177,8 @@ private:
     bool transformsAffectFrameRect() final;
     void clipRectChanged() final;
 
+    void releaseMemory() final;
+
     RefPtr<WebPage> protectedWebPage() const;
 
     Ref<WebCore::HTMLPlugInElement> m_pluginElement;
@@ -206,6 +207,8 @@ private:
     // This snapshot is used to avoid side effects should the plugin run JS during painting.
     RefPtr<WebCore::ShareableBitmap> m_transientPaintingSnapshot;
 
+    bool sendEditingCommandToPDFForTesting(const String& commandName, const String& argument) final;
+    void setPDFDisplayModeForTesting(const String&) final;
     Vector<WebCore::FloatRect> pdfAnnotationRectsForTesting() const override;
     void registerPDFTestCallback(RefPtr<WebCore::VoidCallback> &&) final;
 };

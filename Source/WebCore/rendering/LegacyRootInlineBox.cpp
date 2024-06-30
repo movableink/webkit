@@ -42,7 +42,10 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(LegacyRootInlineBox);
 
-struct SameSizeAsLegacyRootInlineBox : LegacyInlineFlowBox, CanMakeWeakPtr<LegacyRootInlineBox>, CanMakeCheckedPtr {
+struct SameSizeAsLegacyRootInlineBox : LegacyInlineFlowBox, CanMakeWeakPtr<LegacyRootInlineBox>, CanMakeCheckedPtr<SameSizeAsLegacyRootInlineBox> {
+    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_STRUCT_OVERRIDE_DELETE_FOR_CHECKED_PTR(SameSizeAsLegacyRootInlineBox);
+
     int layoutUnits[4];
 };
 
@@ -193,9 +196,9 @@ void LegacyRootInlineBox::outputLineBox(WTF::TextStream& stream, bool mark, int 
     LegacyInlineBox::outputLineBox(stream, mark, depth);
 }
 
-const char* LegacyRootInlineBox::boxName() const
+ASCIILiteral LegacyRootInlineBox::boxName() const
 {
-    return "RootInlineBox";
+    return "RootInlineBox"_s;
 }
 #endif
 

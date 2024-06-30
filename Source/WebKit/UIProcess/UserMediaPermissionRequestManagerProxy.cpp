@@ -20,6 +20,7 @@
 #include "config.h"
 #include "UserMediaPermissionRequestManagerProxy.h"
 
+#include "APIPageConfiguration.h"
 #include "APISecurityOrigin.h"
 #include "APIUIClient.h"
 #include "DeviceIdHashSaltStorage.h"
@@ -48,6 +49,7 @@
 #include <WebCore/UserMediaRequest.h>
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/Scope.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/WeakHashSet.h>
 
 #if ENABLE(GPU_PROCESS)
@@ -109,9 +111,9 @@ UserMediaPermissionRequestManagerProxy::UserMediaPermissionRequestManagerProxy(W
 
 UserMediaPermissionRequestManagerProxy::~UserMediaPermissionRequestManagerProxy()
 {
-    protectedPage()->sendWithAsyncReply(Messages::WebPage::StopMediaCapture { MediaProducerMediaCaptureKind::EveryKind }, [] { });
+    protectedPage()->legacyMainFrameProcess().sendWithAsyncReply(Messages::WebPage::StopMediaCapture { MediaProducerMediaCaptureKind::EveryKind }, [] { }, protectedPage()->webPageIDInMainFrameProcess());
 #if ENABLE(MEDIA_STREAM)
-    UserMediaProcessManager::singleton().revokeSandboxExtensionsIfNeeded(page().protectedProcess());
+    UserMediaProcessManager::singleton().revokeSandboxExtensionsIfNeeded(page().protectedLegacyMainFrameProcess());
     proxies().remove(*this);
 #endif
     invalidatePendingRequests();
@@ -183,7 +185,7 @@ void UserMediaPermissionRequestManagerProxy::captureDevicesChanged(PermissionInf
     if (!page->hasRunningProcess())
         return;
 
-    page->send(Messages::WebPage::CaptureDevicesChanged());
+    page->legacyMainFrameProcess().send(Messages::WebPage::CaptureDevicesChanged(), page->webPageIDInMainFrameProcess());
 }
 #endif
 
@@ -245,7 +247,7 @@ void UserMediaPermissionRequestManagerProxy::denyRequest(UserMediaPermissionRequ
     }
 
 #if ENABLE(MEDIA_STREAM)
-    page->send(Messages::WebPage::UserMediaAccessWasDenied(request.userMediaID(), toWebCore(reason), message, invalidConstraint));
+    page->legacyMainFrameProcess().send(Messages::WebPage::UserMediaAccessWasDenied(request.userMediaID(), toWebCore(reason), message, invalidConstraint), page->webPageIDInMainFrameProcess());
 #else
     UNUSED_PARAM(reason);
     UNUSED_PARAM(invalidConstraint);
@@ -317,17 +319,17 @@ void UserMediaPermissionRequestManagerProxy::finishGrantingRequest(UserMediaPerm
         Vector<SandboxExtension::Handle> handles;
 #if PLATFORM(COCOA)
         if (!m_hasCreatedSandboxExtensionForTCCD && doesPageNeedTCCD(page)) {
-            handles = SandboxExtension::createHandlesForMachLookup({ "com.apple.tccd"_s }, page->process().auditToken(), SandboxExtension::MachBootstrapOptions::EnableMachBootstrap);
+            handles = SandboxExtension::createHandlesForMachLookup({ "com.apple.tccd"_s }, page->legacyMainFrameProcess().auditToken(), SandboxExtension::MachBootstrapOptions::EnableMachBootstrap);
             m_hasCreatedSandboxExtensionForTCCD = true;
         }
 #endif
 
-        page->sendWithAsyncReply(Messages::WebPage::UserMediaAccessWasGranted { request->userMediaID(), request->audioDevice(), request->videoDevice(), request->deviceIdentifierHashSalts(), WTFMove(handles) }, [this, weakThis = WTFMove(weakThis)] {
+        page->legacyMainFrameProcess().sendWithAsyncReply(Messages::WebPage::UserMediaAccessWasGranted { request->userMediaID(), request->audioDevice(), request->videoDevice(), request->deviceIdentifierHashSalts(), WTFMove(handles) }, [this, weakThis = WTFMove(weakThis)] {
             if (!weakThis)
                 return;
             if (!--m_hasPendingCapture)
-                UserMediaProcessManager::singleton().revokeSandboxExtensionsIfNeeded(this->page().protectedProcess());
-        });
+                UserMediaProcessManager::singleton().revokeSandboxExtensionsIfNeeded(this->page().protectedLegacyMainFrameProcess());
+        }, page->webPageIDInMainFrameProcess());
 
         processNextUserMediaRequestIfNeeded();
     });
@@ -562,8 +564,8 @@ String UserMediaPermissionRequestManagerProxy::ephemeralDeviceHashSaltForFrame(W
     static constexpr unsigned hashSaltSize { 48 };
     static constexpr unsigned randomDataSize { hashSaltSize / 16 };
 
-    uint64_t randomData[randomDataSize];
-    cryptographicallyRandomValues(reinterpret_cast<unsigned char*>(randomData), sizeof(randomData));
+    std::array<uint64_t, randomDataSize> randomData;
+    cryptographicallyRandomValues(asWritableBytes(std::span<uint64_t> { randomData }));
 
     StringBuilder builder;
     builder.reserveCapacity(hashSaltSize);
@@ -677,7 +679,7 @@ void UserMediaPermissionRequestManagerProxy::processUserMediaPermissionValidRequ
     }
 
     if (page->isControlledByAutomation()) {
-        if (WebAutomationSession* automationSession = page->process().processPool().automationSession()) {
+        if (WebAutomationSession* automationSession = page->configuration().processPool().automationSession()) {
             ALWAYS_LOG(LOGIDENTIFIER, currentUserMediaRequest->userMediaID().toUInt64(), ", page controlled by automation");
             if (automationSession->shouldAllowGetUserMediaForPage(page))
                 grantRequest(*currentUserMediaRequest);
@@ -1007,7 +1009,7 @@ void UserMediaPermissionRequestManagerProxy::syncWithWebCorePrefs() const
 
 #if ENABLE(GPU_PROCESS)
     if (page->preferences().captureAudioInGPUProcessEnabled() || page->preferences().captureVideoInGPUProcessEnabled())
-        page->process().protectedProcessPool()->ensureProtectedGPUProcess()->setUseMockCaptureDevices(mockDevicesEnabled);
+        page->legacyMainFrameProcess().protectedProcessPool()->ensureProtectedGPUProcess()->setUseMockCaptureDevices(mockDevicesEnabled);
 #endif
 
 #if HAVE(SC_CONTENT_SHARING_PICKER)
@@ -1015,7 +1017,7 @@ void UserMediaPermissionRequestManagerProxy::syncWithWebCorePrefs() const
 
 #if ENABLE(GPU_PROCESS)
     if (useSharingPicker)
-        page->process().protectedProcessPool()->ensureProtectedGPUProcess()->setUseSCContentSharingPicker(useSharingPicker);
+        page->legacyMainFrameProcess().protectedProcessPool()->ensureProtectedGPUProcess()->setUseSCContentSharingPicker(useSharingPicker);
 #endif
 
     PlatformMediaSessionManager::setUseSCContentSharingPicker(useSharingPicker);
@@ -1035,7 +1037,7 @@ void UserMediaPermissionRequestManagerProxy::captureStateChanged(MediaProducerMe
 
 #if ENABLE(MEDIA_STREAM)
     if (!m_hasPendingCapture)
-        UserMediaProcessManager::singleton().revokeSandboxExtensionsIfNeeded(page->protectedProcess());
+        UserMediaProcessManager::singleton().revokeSandboxExtensionsIfNeeded(page->protectedLegacyMainFrameProcess());
 
     if (m_captureState == (newState & activeCaptureMask))
         return;

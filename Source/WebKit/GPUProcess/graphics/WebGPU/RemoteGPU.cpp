@@ -46,15 +46,27 @@
 #include <wtf/threads/BinarySemaphore.h>
 
 #if HAVE(WEBGPU_IMPLEMENTATION)
-#import <WebCore/WebGPUCreateImpl.h>
 #include <WebCore/ProcessIdentity.h>
+#include <WebCore/WebGPUCreateImpl.h>
+#endif
+
+#if PLATFORM(COCOA)
+#define MESSAGE_CHECK(assertion) do { \
+    if (UNLIKELY(!(assertion))) { \
+        if (auto connection = m_gpuConnectionToWebProcess.get()) \
+            connection->terminateWebProcess(); \
+        return; \
+    } \
+} while (0)
+#else
+#define MESSAGE_CHECK RELEASE_ASSERT
 #endif
 
 namespace WebKit {
 
 RemoteGPU::RemoteGPU(WebGPUIdentifier identifier, GPUConnectionToWebProcess& gpuConnectionToWebProcess, RemoteRenderingBackend& renderingBackend, Ref<IPC::StreamServerConnection>&& streamConnection)
     : m_gpuConnectionToWebProcess(gpuConnectionToWebProcess)
-    , m_workQueue(IPC::StreamConnectionWorkQueue::create("WebGPU work queue"))
+    , m_workQueue(IPC::StreamConnectionWorkQueue::create("WebGPU work queue"_s))
     , m_streamConnection(WTFMove(streamConnection))
     , m_objectHeap(WebGPU::ObjectHeap::create())
     , m_identifier(identifier)
@@ -185,12 +197,17 @@ void RemoteGPU::createPresentationContext(const WebGPU::PresentationContextDescr
     ASSERT(m_backing);
 
     auto convertedDescriptor = m_objectHeap->convertFromBacking(descriptor);
-    RELEASE_ASSERT(convertedDescriptor);
+    MESSAGE_CHECK(convertedDescriptor);
 
     auto presentationContext = m_backing->createPresentationContext(*convertedDescriptor);
-    RELEASE_ASSERT(presentationContext);
-    auto remotePresentationContext = RemotePresentationContext::create(*presentationContext, m_objectHeap, *m_streamConnection, identifier);
+    MESSAGE_CHECK(presentationContext);
+    auto remotePresentationContext = RemotePresentationContext::create(*m_gpuConnectionToWebProcess.get(), *presentationContext, m_objectHeap, *m_streamConnection, identifier);
     m_objectHeap->addObject(identifier, remotePresentationContext);
+}
+
+RefPtr<GPUConnectionToWebProcess> RemoteGPU::gpuConnectionToWebProcess() const
+{
+    return m_gpuConnectionToWebProcess.get();
 }
 
 void RemoteGPU::createCompositorIntegration(WebGPUIdentifier identifier)
@@ -199,7 +216,7 @@ void RemoteGPU::createCompositorIntegration(WebGPUIdentifier identifier)
     ASSERT(m_backing);
 
     auto compositorIntegration = m_backing->createCompositorIntegration();
-    RELEASE_ASSERT(compositorIntegration);
+    MESSAGE_CHECK(compositorIntegration);
     auto remoteCompositorIntegration = RemoteCompositorIntegration::create(*compositorIntegration, m_objectHeap, *m_streamConnection, *this, identifier);
     m_objectHeap->addObject(identifier, remoteCompositorIntegration);
 }
@@ -220,6 +237,21 @@ void RemoteGPU::paintNativeImageToImageBuffer(WebCore::NativeImage& nativeImage,
     semaphore.wait();
 }
 
+void RemoteGPU::isValid(WebGPUIdentifier identifier, CompletionHandler<void(bool, bool)>&& completionHandler)
+{
+    assertIsCurrent(workQueue());
+    auto* gpu = static_cast<WebCore::WebGPU::GPU*>(m_backing.get());
+    if (!gpu) {
+        completionHandler(false, false);
+        return;
+    }
+
+    auto result = m_objectHeap->objectExistsAndValid(*gpu, identifier);
+    completionHandler(result.valid, result.exists);
+}
+
 } // namespace WebKit
+
+#undef MESSAGE_CHECK
 
 #endif // ENABLE(GPU_PROCESS)

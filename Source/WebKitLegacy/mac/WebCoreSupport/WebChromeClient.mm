@@ -84,6 +84,7 @@
 #import <WebCore/PlatformScreen.h>
 #import <WebCore/ResourceRequest.h>
 #import <WebCore/SerializedCryptoKeyWrap.h>
+#import <WebCore/StorageNamespaceProvider.h>
 #import <WebCore/UniversalAccessZoom.h>
 #import <WebCore/Widget.h>
 #import <WebCore/WindowFeatures.h>
@@ -298,7 +299,12 @@ Page* WebChromeClient::createWindow(LocalFrame& frame, const WindowFeatures& fea
         newWebView = CallUIDelegate(m_webView, @selector(webView:createWebViewModalDialogWithRequest:), nil);
     else
         newWebView = CallUIDelegate(m_webView, @selector(webView:createWebViewWithRequest:), nil);
-    return core(newWebView);
+
+    auto* newPage = core(newWebView);
+    if (newPage && !features.wantsNoOpener())
+        m_webView.page->protectedStorageNamespaceProvider()->cloneSessionStorageNamespaceForPage(*m_webView.page, *newPage);
+
+    return newPage;
 }
 
 void WebChromeClient::show()
@@ -709,12 +715,6 @@ std::unique_ptr<DateTimeChooser> WebChromeClient::createDateTimeChooser(DateTime
 }
 #endif
 
-#if ENABLE(APP_HIGHLIGHTS)
-void WebChromeClient::storeAppHighlight(WebCore::AppHighlight&&) const
-{
-}
-#endif
-
 void WebChromeClient::setTextIndicator(const WebCore::TextIndicatorData& indicatorData) const
 {
 }
@@ -1017,7 +1017,7 @@ void WebChromeClient::clearPlaybackControlsManager()
     [m_webView _clearPlaybackControlsManager];
 }
 
-void WebChromeClient::playbackControlsMediaEngineChanged()
+void WebChromeClient::mediaEngineChanged(WebCore::HTMLMediaElement&)
 {
     [m_webView _playbackControlsMediaEngineChanged];
 }

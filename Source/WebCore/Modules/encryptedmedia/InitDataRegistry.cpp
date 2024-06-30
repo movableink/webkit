@@ -69,7 +69,7 @@ static std::optional<Vector<Ref<SharedBuffer>>> extractKeyIDsKeyids(const Shared
     // https://w3c.github.io/encrypted-media/format-registry/initdata/keyids.html#format
     if (buffer.size() > std::numeric_limits<unsigned>::max())
         return std::nullopt;
-    String json { buffer.data(), static_cast<unsigned>(buffer.size()) };
+    String json { buffer.span() };
 
     auto value = JSON::Value::parseJSON(json);
     if (!value)
@@ -113,7 +113,7 @@ static RefPtr<SharedBuffer> sanitizeKeyids(const SharedBuffer& buffer)
     auto object = JSON::Object::create();
     auto kidsArray = JSON::Array::create();
     for (auto& buffer : keyIDBuffer.value())
-        kidsArray->pushString(base64URLEncodeToString(buffer->data(), buffer->size()));
+        kidsArray->pushString(base64URLEncodeToString(buffer->span()));
     object->setArray("kids"_s, WTFMove(kidsArray));
 
     return SharedBuffer::create(object->toJSONString().utf8().span());
@@ -194,7 +194,7 @@ std::optional<Vector<Ref<SharedBuffer>>> InitDataRegistry::extractKeyIDsCenc(con
 #if USE(GSTREAMER)
 bool isPlayReadySanitizedInitializationData(const SharedBuffer& buffer)
 {
-    const char* protectionData = buffer.dataAsCharPtr();
+    auto* protectionData = byteCast<char>(buffer.span().data());
     size_t protectionDataLength = buffer.size();
 
     // The protection data starts with a 10-byte PlayReady version
@@ -245,7 +245,7 @@ bool isPlayReadySanitizedInitializationData(const SharedBuffer& buffer)
         return false;
 
     xmlChar* encodedKeyID = xmlNodeGetContent(keyIDNode->nodeTab[0]);
-    std::optional<Vector<uint8_t>> decodedKeyID = base64Decode(encodedKeyID, xmlStrlen(encodedKeyID));
+    std::optional<Vector<uint8_t>> decodedKeyID = base64Decode({ reinterpret_cast<const uint8_t*>(encodedKeyID), static_cast<size_t>(xmlStrlen(encodedKeyID)) });
     xmlFree(encodedKeyID);
     if (!decodedKeyID)
         return false;

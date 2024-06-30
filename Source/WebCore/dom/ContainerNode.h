@@ -39,10 +39,10 @@ public:
 
     Node* firstChild() const { return m_firstChild; }
     RefPtr<Node> protectedFirstChild() const { return m_firstChild; }
-    static ptrdiff_t firstChildMemoryOffset() { return OBJECT_OFFSETOF(ContainerNode, m_firstChild); }
+    static constexpr ptrdiff_t firstChildMemoryOffset() { return OBJECT_OFFSETOF(ContainerNode, m_firstChild); }
     Node* lastChild() const { return m_lastChild; }
     RefPtr<Node> protectedLastChild() const { return m_lastChild; }
-    static ptrdiff_t lastChildMemoryOffset() { return OBJECT_OFFSETOF(ContainerNode, m_lastChild); }
+    static constexpr ptrdiff_t lastChildMemoryOffset() { return OBJECT_OFFSETOF(ContainerNode, m_lastChild); }
     bool hasChildNodes() const { return m_firstChild; }
     bool hasOneChild() const { return m_firstChild && m_firstChild == m_lastChild; }
 
@@ -135,10 +135,10 @@ public:
     WEBCORE_EXPORT Element* firstElementChild() const;
     WEBCORE_EXPORT Element* lastElementChild() const;
     WEBCORE_EXPORT unsigned childElementCount() const;
-    ExceptionOr<void> append(FixedVector<NodeOrString>&&);
-    ExceptionOr<void> prepend(FixedVector<NodeOrString>&&);
+    ExceptionOr<void> append(FixedVector<NodeOrStringOrTrustedScript>&&);
+    ExceptionOr<void> prepend(FixedVector<NodeOrStringOrTrustedScript>&&);
 
-    ExceptionOr<void> replaceChildren(FixedVector<NodeOrString>&&);
+    ExceptionOr<void> replaceChildren(FixedVector<NodeOrStringOrTrustedScript>&&);
 
     ExceptionOr<void> ensurePreInsertionValidity(Node& newChild, Node* refChild);
     ExceptionOr<void> ensurePreInsertionValidityForPhantomDocumentFragment(NodeVector& newChildren, Node* refChild = nullptr);

@@ -28,8 +28,18 @@
 #if ENABLE(GAMEPAD)
 
 #include "Supplementable.h"
+#include <wtf/MonotonicTime.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
+
+namespace WebCore {
+class NavigatorGamepad;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::NavigatorGamepad> : std::true_type { };
+}
 
 namespace WebCore {
 
@@ -55,10 +65,14 @@ public:
 
     Ref<Gamepad> gamepadFromPlatformGamepad(PlatformGamepad&);
 
+    WEBCORE_EXPORT static void setGamepadsRecentlyAccessedThreshold(Seconds);
+    static Seconds gamepadsRecentlyAccessedThreshold();
+
 private:
     static ASCIILiteral supplementName();
 
     void gamepadsBecameVisible();
+    void maybeNotifyRecentAccess();
 
     const Vector<RefPtr<Gamepad>>& gamepads();
 

@@ -37,6 +37,7 @@ class RenderStyle;
 namespace Layout {
 
 class Box;
+class ElementBox;
 class InlineTextBox;
 struct InvalidatedLine;
 
@@ -44,7 +45,8 @@ class InlineInvalidation {
 public:
     InlineInvalidation(InlineDamage&, const InlineItemList&, const InlineDisplay::Content&);
 
-    void styleChanged(const Box&, const RenderStyle& oldStyle);
+    bool rootStyleWillChange(const ElementBox& formattingContextRoot, const RenderStyle& newStyle);
+    bool styleWillChange(const Box&, const RenderStyle& newStyle);
 
     bool textInserted(const InlineTextBox& newOrDamagedInlineTextBox, std::optional<size_t> offset = { });
     bool textWillBeRemoved(const InlineTextBox&, std::optional<size_t> offset = { });
@@ -52,7 +54,10 @@ public:
     bool inlineLevelBoxInserted(const Box&);
     bool inlineLevelBoxWillBeRemoved(const Box&);
 
-    void restartForPagination(size_t lineIndex, LayoutUnit pageTopAdjustment);
+    bool restartForPagination(size_t lineIndex, LayoutUnit pageTopAdjustment);
+
+    static bool mayOnlyNeedPartialLayout(const InlineDamage* inlineDamage) { return inlineDamage && inlineDamage->layoutStartPosition(); }
+    static void resetInlineDamage(InlineDamage&);
 
 private:
     enum class ShouldApplyRangeLayout : bool { No, Yes };

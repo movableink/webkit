@@ -1047,8 +1047,8 @@ sub printTagNameCppFile
     print F "TagName findTagName(const String& name)\n";
     print F "{\n";
     print F "    if (name.is8Bit())\n";
-    print F "        return findTagFromBuffer(std::span(name.characters8(), name.length()));\n";
-    print F "    return findTagFromBuffer(std::span(name.characters16(), name.length()));\n";
+    print F "        return findTagFromBuffer(name.span8());\n";
+    print F "    return findTagFromBuffer(name.span16());\n";
     print F "}\n";
     print F "#endif\n";
     print F "\n";
@@ -1255,8 +1255,8 @@ sub printNodeNameCppFile
     print F "NodeName findNodeName(Namespace ns, const String& name)\n";
     print F "{\n";
     print F "    if (name.is8Bit())\n";
-    print F "        return findNodeNameFromBuffer(ns, std::span(name.characters8(), name.length()));\n";
-    print F "    return findNodeNameFromBuffer(ns, std::span(name.characters16(), name.length()));\n";
+    print F "        return findNodeNameFromBuffer(ns, name.span8());\n";
+    print F "    return findNodeNameFromBuffer(ns, name.span16());\n";
     print F "}\n";
     print F "\n";
     print F "ElementName findHTMLElementName(std::span<const LChar> buffer)\n";
@@ -1272,22 +1272,22 @@ sub printNodeNameCppFile
     print F "ElementName findHTMLElementName(const String& name)\n";
     print F "{\n";
     print F "    if (name.is8Bit())\n";
-    print F "        return findHTMLNodeName(std::span(name.characters8(), name.length()));\n";
-    print F "    return findHTMLNodeName(std::span(name.characters16(), name.length()));\n";
+    print F "        return findHTMLNodeName(name.span8());\n";
+    print F "    return findHTMLNodeName(name.span16());\n";
     print F "}\n";
     print F "\n";
     print F "ElementName findSVGElementName(const String& name)\n";
     print F "{\n";
     print F "    if (name.is8Bit())\n";
-    print F "        return findSVGNodeName(std::span(name.characters8(), name.length()));\n";
-    print F "    return findSVGNodeName(std::span(name.characters16(), name.length()));\n";
+    print F "        return findSVGNodeName(name.span8());\n";
+    print F "    return findSVGNodeName(name.span16());\n";
     print F "}\n";
     print F "\n";
     print F "ElementName findMathMLElementName(const String& name)\n";
     print F "{\n";
     print F "    if (name.is8Bit())\n";
-    print F "        return findMathMLNodeName(std::span(name.characters8(), name.length()));\n";
-    print F "    return findMathMLNodeName(std::span(name.characters16(), name.length()));\n";
+    print F "        return findMathMLNodeName(name.span8());\n";
+    print F "    return findMathMLNodeName(name.span16());\n";
     print F "}\n";
     print F "\n";
     print F "const QualifiedName& qualifiedNameForNodeName(NodeName nodeName)\n";
@@ -1392,13 +1392,7 @@ sub generateFindNameForLength
                     }
                     print F ")) {\n";
                 } else {
-                    print F "${indent}static constexpr characterType rest[] = { ";
-                    for (my $index = $currentIndex; $index < $length; $index = $index + 1) {
-                        my $letter = substr($string, $index, 1);
-                        print F "'$letter', ";
-                    }
-                    print F "};\n";
-                    print F "${indent}if (WTF::equal($bufferStart, rest, $lengthToCompare)) {\n";
+                    print F "${indent}if (WTF::equal($bufferStart, \"". substr($string, $currentIndex, $length - $currentIndex) . "\"_span)) {\n";
                 }
             }
             print F "$indent    return ${enumClass}::$enumValue;\n";

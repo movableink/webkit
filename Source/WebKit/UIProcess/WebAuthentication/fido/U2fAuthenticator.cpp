@@ -148,7 +148,7 @@ void U2fAuthenticator::responseReceived(Vector<uint8_t>&& response, CommandType 
         receiveRespond(ExceptionData { ExceptionCode::UnknownError, "Couldn't parse the APDU response."_s });
         return;
     }
-    U2F_RELEASE_LOG("responseReceived: Got response for command type: %hhu", type);
+    U2F_RELEASE_LOG("responseReceived: Got response for command type: %hhu", enumToUnderlyingType(type));
 
     switch (type) {
     case CommandType::RegisterCommand:
@@ -172,7 +172,7 @@ void U2fAuthenticator::responseReceived(Vector<uint8_t>&& response, CommandType 
 
 void U2fAuthenticator::continueRegisterCommandAfterResponseReceived(ApduResponse&& apduResponse)
 {
-    U2F_RELEASE_LOG("continueRegisterCommandAfterResponseReceived: Status %hu", apduResponse.status());
+    U2F_RELEASE_LOG("continueRegisterCommandAfterResponseReceived: Status %hu", enumToUnderlyingType(apduResponse.status()));
     switch (apduResponse.status()) {
     case ApduResponse::Status::SW_NO_ERROR: {
         auto& options = std::get<PublicKeyCredentialCreationOptions>(requestData().options);
@@ -190,13 +190,13 @@ void U2fAuthenticator::continueRegisterCommandAfterResponseReceived(ApduResponse
         m_retryTimer.startOneShot(Seconds::fromMilliseconds(retryTimeOutValueMs));
         return;
     default:
-        receiveRespond(ExceptionData { ExceptionCode::UnknownError, makeString("Unknown internal error. Error code: ", static_cast<unsigned>(apduResponse.status())) });
+        receiveRespond(ExceptionData { ExceptionCode::UnknownError, makeString("Unknown internal error. Error code: "_s, static_cast<unsigned>(apduResponse.status())) });
     }
 }
 
 void U2fAuthenticator::continueCheckOnlyCommandAfterResponseReceived(ApduResponse&& apduResponse)
 {
-    U2F_RELEASE_LOG("continueCheckOnlyCommandAfterResponseReceived: Status %hu", apduResponse.status());
+    U2F_RELEASE_LOG("continueCheckOnlyCommandAfterResponseReceived: Status %hu", enumToUnderlyingType(apduResponse.status()));
     switch (apduResponse.status()) {
     case ApduResponse::Status::SW_NO_ERROR:
     case ApduResponse::Status::SW_CONDITIONS_NOT_SATISFIED:
@@ -209,7 +209,7 @@ void U2fAuthenticator::continueCheckOnlyCommandAfterResponseReceived(ApduRespons
 
 void U2fAuthenticator::continueBogusCommandExcludeCredentialsMatchAfterResponseReceived(ApduResponse&& apduResponse)
 {
-    U2F_RELEASE_LOG("continueBogusCommandExcludeCredentialsMatchAfterResponseReceived: Status %hu", apduResponse.status());
+    U2F_RELEASE_LOG("continueBogusCommandExcludeCredentialsMatchAfterResponseReceived: Status %hu", enumToUnderlyingType(apduResponse.status()));
     switch (apduResponse.status()) {
     case ApduResponse::Status::SW_NO_ERROR:
         receiveRespond(ExceptionData { ExceptionCode::InvalidStateError, "At least one credential matches an entry of the excludeCredentials list in the authenticator."_s });
@@ -219,13 +219,13 @@ void U2fAuthenticator::continueBogusCommandExcludeCredentialsMatchAfterResponseR
         m_retryTimer.startOneShot(Seconds::fromMilliseconds(retryTimeOutValueMs));
         return;
     default:
-        receiveRespond(ExceptionData { ExceptionCode::UnknownError, makeString("Unknown internal error. Error code: ", static_cast<unsigned>(apduResponse.status())) });
+        receiveRespond(ExceptionData { ExceptionCode::UnknownError, makeString("Unknown internal error. Error code: "_s, static_cast<unsigned>(apduResponse.status())) });
     }
 }
 
 void U2fAuthenticator::continueBogusCommandNoCredentialsAfterResponseReceived(ApduResponse&& apduResponse)
 {
-    U2F_RELEASE_LOG("continueBogusCommandNoCredentialsAfterResponseReceived: Status %hu", apduResponse.status());
+    U2F_RELEASE_LOG("continueBogusCommandNoCredentialsAfterResponseReceived: Status %hu", enumToUnderlyingType(apduResponse.status()));
     switch (apduResponse.status()) {
     case ApduResponse::Status::SW_NO_ERROR:
         if (auto* observer = this->observer())
@@ -237,13 +237,13 @@ void U2fAuthenticator::continueBogusCommandNoCredentialsAfterResponseReceived(Ap
         m_retryTimer.startOneShot(Seconds::fromMilliseconds(retryTimeOutValueMs));
         return;
     default:
-        receiveRespond(ExceptionData { ExceptionCode::UnknownError, makeString("Unknown internal error. Error code: ", static_cast<unsigned>(apduResponse.status())) });
+        receiveRespond(ExceptionData { ExceptionCode::UnknownError, makeString("Unknown internal error. Error code: "_s, static_cast<unsigned>(apduResponse.status())) });
     }
 }
 
 void U2fAuthenticator::continueSignCommandAfterResponseReceived(ApduResponse&& apduResponse)
 {
-    U2F_RELEASE_LOG("continueSignCommandAfterResponseReceived: Status %hu", apduResponse.status());
+    U2F_RELEASE_LOG("continueSignCommandAfterResponseReceived: Status %hu", enumToUnderlyingType(apduResponse.status()));
     auto& requestOptions = std::get<PublicKeyCredentialRequestOptions>(requestData().options);
     switch (apduResponse.status()) {
     case ApduResponse::Status::SW_NO_ERROR: {

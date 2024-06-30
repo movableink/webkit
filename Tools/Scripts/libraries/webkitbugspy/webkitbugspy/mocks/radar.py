@@ -141,8 +141,10 @@ class RadarModel(object):
         def __init__(self, name):
             self.name = name
 
-    def __init__(self, client, issue):
+    def __init__(self, client, issue, additional_fields=None):
         from datetime import datetime, timedelta
+
+        additional_fields = additional_fields or []
 
         self.client = client
         self._issue = issue
@@ -193,6 +195,9 @@ class RadarModel(object):
         else:
             self.component = None
 
+        if 'sourceChanges' in additional_fields:
+            self.sourceChanges = issue.get('sourceChanges', None)
+
     def related_radars(self):
         for reference in self._issue.get('references', []):
             ref = self.client.radar_for_id(reference)
@@ -203,6 +208,8 @@ class RadarModel(object):
         return [self.client.parent.keywords[keyword] for keyword in self._issue.get('keywords', [])]
 
     def commit_changes(self):
+        self.client.parent.request_count += 1
+
         self.client.parent.issues[self.id]['comments'] = [
             Issue.Comment(
                 user=self.client.parent.users[entry.addedBy.email],
@@ -246,6 +253,9 @@ class RadarModel(object):
                 self.client.parent.issues[r.related_radar_id]['related'] = list()
             self.client.parent.issues[r.related_radar_id]['related'].append(inverse_r_dict)
 
+        if getattr(self, 'sourceChanges', None):
+            self.client.parent.issues[self.id]['sourceChanges'] = self.sourceChanges
+
     def milestone_associations(self, milestone=None):
         return RadarModel.MilestoneAssociations(milestone or self.milestone)
 
@@ -284,13 +294,17 @@ class RadarClient(object):
         self.parent = parent
         self.authentication_strategy = authentication_strategy
 
-    def radar_for_id(self, problem_id):
+    def radar_for_id(self, problem_id, additional_fields=None):
+        self.parent.request_count += 1
+
         found = self.parent.issues.get(problem_id)
         if not found:
             return None
-        return RadarModel(self, found)
+        return RadarModel(self, found, additional_fields=additional_fields)
 
     def find_radars(self, query, return_find_results_directly=False):
+        self.parent.request_count += 1
+
         result = []
         for issue in self.parent.issues.values():
             r = RadarModel(self, issue)
@@ -309,9 +323,12 @@ class RadarClient(object):
         return result
 
     def milestones_for_component(self, component, include_access_groups=False):
+        self.parent.request_count += 1
         return list(self.parent.milestones.values())
 
     def find_components(self, request_data):
+        self.parent.request_count += 1
+
         filters = []
         for key in ('name', 'version'):
             if key in request_data:
@@ -339,6 +356,8 @@ class RadarClient(object):
         return result
 
     def create_radar(self, request_data):
+        self.parent.request_count += 1
+
         if not all((
             request_data.get('title'), request_data.get('description'), request_data.get('component'),
             request_data.get('classification'), request_data.get('reproducible'),
@@ -383,6 +402,8 @@ class RadarClient(object):
         return self.radar_for_id(id)
 
     def clone_radar(self, problem_id, reason_text, component=None):
+        self.parent.request_count += 1
+
         original = self.radar_for_id(problem_id)
         if not original:
             raise Radar.exceptions.UnsuccessfulResponseException("'{}' does not match a known radar".format(problem_id))
@@ -404,6 +425,8 @@ class RadarClient(object):
         ))
 
     def keywords_for_name(self, keyword_name):
+        self.parent.request_count += 1
+
         return [
             keyword for name, keyword in self.parent.keywords.items()
             if name.startswith(keyword_name)
@@ -483,6 +506,9 @@ class Radar(Base, ContextStack):
         class UnsuccessfulResponseException(Exception):
             pass
 
+        class RadarAccessDeniedResponseException(Exception):
+            pass
+
     class RetryPolicy(object):
         pass
 
@@ -550,6 +576,8 @@ class Radar(Base, ContextStack):
 
         from mock import patch
         self.patches.append(patch('webkitbugspy.radar.Tracker.radarclient', new=lambda s=None: self))
+
+        self.request_count = 0
 
 
 class NoRadar(ContextStack):

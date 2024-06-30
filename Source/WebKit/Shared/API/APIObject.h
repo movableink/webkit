@@ -55,7 +55,6 @@ public:
         AuthenticationDecisionListener,
         CaptionUserPreferencesTestingModeToken,
         CertificateInfo,
-        Connection,
         ContextMenuItem,
         Credential,
         Data,
@@ -73,6 +72,7 @@ public:
         SerializedScriptValue,
         String,
         TargetedElementInfo,
+        TargetedElementRequest,
         URL,
         URLRequest,
         URLResponse,
@@ -218,7 +218,6 @@ public:
 
         // Platform specific
         EditCommandProxy,
-        ObjCObjectGraph,
         View,
 #if USE(SOUP)
         SoupRequestManager,

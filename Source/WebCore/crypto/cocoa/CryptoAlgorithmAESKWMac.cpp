@@ -63,33 +63,25 @@ static ExceptionOr<Vector<uint8_t>> unwrapKeyAESKW(const Vector<uint8_t>& key, c
 #if HAVE(SWIFT_CPP_INTEROP)
 static ExceptionOr<Vector<uint8_t>> wrapKeyAESKWCryptoKit(const Vector<uint8_t>& key, const Vector<uint8_t>& data)
 {
-    Vector<uint8_t> result(data.size() + CryptoAlgorithmAESKW::s_extraSize);
-    uint64_t resultSize = result.size();
-    const PAL::AesKwRV rv = PAL::AesKw::wrap(key.data(), key.size(), data.data(), data.size(), result.data(), resultSize);
-    if (!rv.getErrCode().isSuccess())
+    auto rv = PAL::AesKw::wrap(data.span(), key.span());
+    if (rv.errorCode != Cpp::ErrorCodes::Success)
         return Exception { ExceptionCode::OperationError };
-    result.shrink(rv.getOutputSize());
-    return WTFMove(result);
+    return WTFMove(rv.result);
 }
 
 static ExceptionOr<Vector<uint8_t>> unwrapKeyAESKWCryptoKit(const Vector<uint8_t>& key, const Vector<uint8_t>& data)
 {
-    Vector<uint8_t> dataOut(data.size());
-    uint64_t dataOutSize = dataOut.size();
-    const PAL::AesKwRV rv = PAL::AesKw::unwrap(key.data(), key.size(), data.data(), data.size(), dataOut.data(), dataOutSize);
-    if (!rv.getErrCode().isSuccess())
+    auto rv = PAL::AesKw::unwrap(data.span(), key.span());
+    if (rv.errorCode != Cpp::ErrorCodes::Success)
         return Exception { ExceptionCode::OperationError };
-    if (rv.getOutputSize() % 8)
-        return Exception { ExceptionCode::OperationError };
-    dataOut.shrink(rv.getOutputSize());
-    return WTFMove(dataOut);
+    return WTFMove(rv.result);
 }
 #endif
 
-ExceptionOr<Vector<uint8_t>> CryptoAlgorithmAESKW::platformWrapKey(const CryptoKeyAES& key, const Vector<uint8_t>& data, bool useCryptoKit)
+ExceptionOr<Vector<uint8_t>> CryptoAlgorithmAESKW::platformWrapKey(const CryptoKeyAES& key, const Vector<uint8_t>& data, UseCryptoKit useCryptoKit)
 {
 #if HAVE(SWIFT_CPP_INTEROP)
-    if (useCryptoKit)
+    if (useCryptoKit == UseCryptoKit::Yes)
         return wrapKeyAESKWCryptoKit(key.key(), data);
 #else
     UNUSED_PARAM(useCryptoKit);
@@ -97,10 +89,10 @@ ExceptionOr<Vector<uint8_t>> CryptoAlgorithmAESKW::platformWrapKey(const CryptoK
     return wrapKeyAESKW(key.key(), data);
 }
 
-ExceptionOr<Vector<uint8_t>> CryptoAlgorithmAESKW::platformUnwrapKey(const CryptoKeyAES& key, const Vector<uint8_t>& data, bool useCryptoKit)
+ExceptionOr<Vector<uint8_t>> CryptoAlgorithmAESKW::platformUnwrapKey(const CryptoKeyAES& key, const Vector<uint8_t>& data, UseCryptoKit useCryptoKit)
 {
 #if HAVE(SWIFT_CPP_INTEROP)
-    if (useCryptoKit)
+    if (useCryptoKit == UseCryptoKit::Yes)
         return unwrapKeyAESKWCryptoKit(key.key(), data);
 #else
     UNUSED_PARAM(useCryptoKit);

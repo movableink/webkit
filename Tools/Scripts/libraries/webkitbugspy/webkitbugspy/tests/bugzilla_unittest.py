@@ -96,6 +96,13 @@ class TestBugzilla(unittest.TestCase):
         )
         self.assertEqual(tracker.from_string('http://bugs.other.com/show_bug.cgi?id=1234'), None)
 
+    def test_link_brackets(self):
+        tracker = bugzilla.Tracker(self.URL)
+        self.assertEqual(
+            tracker.from_string('<http://bugs.example.com/show_bug.cgi?id=1234>').link,
+            'https://bugs.example.com/show_bug.cgi?id=1234',
+        )
+
     def test_title(self):
         with mocks.Bugzilla(self.URL.split('://')[1], issues=mocks.ISSUES):
             tracker = bugzilla.Tracker(self.URL)
@@ -666,3 +673,14 @@ What component in 'WebKit' should the bug be associated with?:
                 issue.relate(blocks=radar_tracker.issue(1))
             self.assertEqual('Cannot relate issues of different types.', str(c.exception))
             self.assertEqual(issue.related, {'depends_on': [], 'blocks': [], 'regressions': [], 'regressed_by': []})
+
+    def test_source_changes(self):
+        with OutputCapture() as captured, mocks.Bugzilla(self.URL.split('://')[1], issues=mocks.ISSUES):
+            tracker = bugzilla.Tracker(self.URL)
+            self.assertEqual(tracker.issue(1).source_changes, [])
+            self.assertIsNone(tracker.issue(1).add_source_change('WebKit, merge, a4daad5b9fbd26d557088037f54dc0935a437182'))
+
+        self.assertEqual(
+            captured.stderr.getvalue(),
+            'Bugzilla does not support source changes at this time\n',
+        )

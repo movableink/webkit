@@ -85,6 +85,7 @@ public:
     void stopListeningForIPC();
 
     void paintNativeImageToImageBuffer(WebCore::NativeImage&, WebCore::RenderingResourceIdentifier);
+    RefPtr<GPUConnectionToWebProcess> gpuConnectionToWebProcess() const;
 
 private:
     friend class WebGPU::ObjectHeap;
@@ -114,6 +115,8 @@ private:
     void createPresentationContext(const WebGPU::PresentationContextDescriptor&, WebGPUIdentifier);
 
     void createCompositorIntegration(WebGPUIdentifier);
+
+    void isValid(WebGPUIdentifier, CompletionHandler<void(bool, bool)>&&);
 
     ThreadSafeWeakPtr<GPUConnectionToWebProcess> m_gpuConnectionToWebProcess;
     Ref<IPC::StreamConnectionWorkQueue> m_workQueue;

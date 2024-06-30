@@ -423,6 +423,18 @@ What version of 'WebKit Text' should the bug be associated with?:
                 redact_exemption={'component:Scrolling': True},
             ).issue(1).redacted, radar.Tracker.Redaction(True, 'is a Radar'))
 
+    def test_redacted_exception_duplicate(self):
+        with wkmocks.Environment(RADAR_USERNAME='tcontributor'), mocks.Radar(issues=mocks.ISSUES, projects=mocks.PROJECTS):
+            tracker = radar.Tracker(
+                project='WebKit',
+                redact={'component:Scrolling': True},
+                redact_exemption={'version:Safari 15': True},
+            )
+            self.assertEqual(tracker.issue(1).redacted, False)
+            self.assertEqual(tracker.issue(2).redacted, radar.Tracker.Redaction(exemption=True, reason="matches 'version:Safari 15'"))
+            tracker.issue(1).close(original=tracker.issue(2))
+            self.assertEqual(tracker.issue(1).redacted, False)
+
     def test_milestone(self):
         with mocks.Radar(issues=mocks.ISSUES):
             tracker = radar.Tracker()
@@ -518,3 +530,32 @@ What version of 'WebKit Text' should the bug be associated with?:
                 issue.relate(fake_relation=issue2)
             self.assertEqual('\'fake_relation\' is an invalid relation', str(c.exception))
             self.assertEqual(issue.related, RELATED_BLANK)
+
+    def test_source_changes(self):
+        with mocks.Radar(issues=mocks.ISSUES):
+            tracker = radar.Tracker()
+            self.assertEqual(tracker.issue(1).source_changes, [])
+            self.assertIsNotNone(tracker.issue(1).add_source_change('WebKit, merge, a4daad5b9fbd26d557088037f54dc0935a437182'))
+            self.assertEqual(tracker.issue(1).source_changes, ['WebKit, merge, a4daad5b9fbd26d557088037f54dc0935a437182'])
+
+            repr = tracker.client.radar_for_id(1, additional_fields=['sourceChanges'])
+            self.assertEqual(
+                repr.sourceChanges,
+                'WebKit, merge, a4daad5b9fbd26d557088037f54dc0935a437182',
+            )
+
+    def test_source_changes_advanced(self):
+        with mocks.Radar(issues=mocks.ISSUES), OutputCapture():
+            tracker = radar.Tracker()
+            self.assertEqual(tracker.issue(1).source_changes, [])
+            self.assertIsNotNone(tracker.issue(1).add_source_change('Repo1, merged, a4daad5b9fbd26d557088037f54dc0935a437182'))
+            self.assertIsNotNone(tracker.issue(1).add_source_change('Repo2, merged, 604395a516c13cff80d4b0400e43a4c322dbb32f'))
+
+            self.assertIsNone(tracker.issue(1).add_source_change('Repo1, merged, a4daad5b9fbd26d557088037f54dc0935a437182'))
+            self.assertIsNone(tracker.issue(1).add_source_change('Repo2, merged, 604395a516c1'))
+
+            self.assertEqual(
+                tracker.issue(1).source_changes, [
+                    'Repo1, merged, a4daad5b9fbd26d557088037f54dc0935a437182',
+                    'Repo2, merged, 604395a516c13cff80d4b0400e43a4c322dbb32f',
+                ])

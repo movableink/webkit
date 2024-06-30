@@ -56,6 +56,7 @@ struct OwnedString;
 
 class XMLHttpRequest final : public ActiveDOMObject, public RefCounted<XMLHttpRequest>, private ThreadableLoaderClient, public XMLHttpRequestEventTarget {
     WTF_MAKE_ISO_ALLOCATED_EXPORT(XMLHttpRequest, WEBCORE_EXPORT);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(XMLHttpRequest);
 public:
     static Ref<XMLHttpRequest> create(ScriptExecutionContext&);
     WEBCORE_EXPORT ~XMLHttpRequest();
@@ -128,8 +129,9 @@ public:
 
     const ResourceResponse& resourceResponse() const { return m_response; }
 
-    using RefCounted<XMLHttpRequest>::ref;
-    using RefCounted<XMLHttpRequest>::deref;
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     size_t memoryCost() const;
 
@@ -153,7 +155,6 @@ private:
     void suspend(ReasonForSuspension) override;
     void resume() override;
     void stop() override;
-    const char* activeDOMObjectName() const override;
     bool virtualHasPendingActivity() const final;
 
     void refEventTarget() override { ref(); }
@@ -164,10 +165,10 @@ private:
 
     // ThreadableLoaderClient
     void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent) override;
-    void didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse&) override;
+    void didReceiveResponse(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const ResourceResponse&) override;
     void didReceiveData(const SharedBuffer&) override;
-    void didFinishLoading(ResourceLoaderIdentifier, const NetworkLoadMetrics&) override;
-    void didFail(const ResourceError&) override;
+    void didFinishLoading(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const NetworkLoadMetrics&) override;
+    void didFail(ScriptExecutionContextIdentifier, const ResourceError&) override;
     void notifyIsDone(bool) final;
 
     std::optional<ExceptionOr<void>> prepareToSend();

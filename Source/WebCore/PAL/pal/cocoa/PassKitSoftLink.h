@@ -152,6 +152,9 @@ SOFT_LINK_CONSTANT_FOR_HEADER(PAL, PassKitCore, PKPaymentErrorDomain, NSString *
 SOFT_LINK_CONSTANT_FOR_HEADER(PAL, PassKitCore, PKPaymentErrorPostalAddressUserInfoKey, PKPaymentErrorKey)
 #define PKPaymentErrorPostalAddressUserInfoKey PAL::get_PassKitCore_PKPaymentErrorPostalAddressUserInfoKey()
 
+SOFT_LINK_CONSTANT_FOR_HEADER(PAL, PassKitCore, PKDisbursementErrorDomain, NSString *)
+#define PKDisbursementErrorDomain PAL::get_PassKitCore_PKDisbursementErrorDomain()
+
 SOFT_LINK_CONSTANT_FOR_HEADER(PAL, PassKitCore, PKPaymentNetworkAmex, PKPaymentNetwork)
 #define PKPaymentNetworkAmex PAL::get_PassKitCore_PKPaymentNetworkAmex()
 SOFT_LINK_CONSTANT_FOR_HEADER(PAL, PassKitCore, PKPaymentNetworkPagoBancomat, PKPaymentNetwork)
@@ -209,6 +212,10 @@ SOFT_LINK_CONSTANT_FOR_HEADER(PAL, PassKitCore, PKPaymentNetworkPostFinance, PKP
 SOFT_LINK_CONSTANT_FOR_HEADER(PAL, PassKitCore, PKPaymentNetworkTmoney, PKPaymentNetwork)
 #define PKPaymentNetworkTmoney PAL::get_PassKitCore_PKPaymentNetworkTmoney()
 
+#if HAVE(PASSKIT_MERCHANT_CATEGORY_CODE)
+SOFT_LINK_CONSTANT_FOR_HEADER(PAL, PassKitCore, PKMerchantCategoryCodeNone, PKMerchantCategoryCode)
+#define PKMerchantCategoryCodeNone PAL::get_PassKitCore_PKMerchantCategoryCodeNone()
+#endif
 
 SOFT_LINK_FUNCTION_FOR_HEADER(PAL, PassKitCore, PKCanMakePaymentsWithMerchantIdentifierDomainAndSourceApplication, void, (NSString *identifier, NSString *domain, NSString *sourceApplicationSecondaryIdentifier, PKCanMakePaymentsCompletion completion), (identifier, domain, sourceApplicationSecondaryIdentifier, completion))
 #define PKCanMakePaymentsWithMerchantIdentifierDomainAndSourceApplication PAL::softLink_PassKitCore_PKCanMakePaymentsWithMerchantIdentifierDomainAndSourceApplication

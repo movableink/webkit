@@ -39,6 +39,29 @@
 #include <wtf/WeakRef.h>
 
 namespace TestWebKitAPI {
+class Base;
+class Derived;
+struct Int;
+struct Foo;
+class MultipleInheritanceBase1;
+class MultipleInheritanceBase2;
+class MultipleInheritanceDerived;
+class TestType;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<TestWebKitAPI::Base> : std::true_type { };
+template<> struct IsDeprecatedWeakRefSmartPointerException<TestWebKitAPI::Derived> : std::true_type { };
+template<> struct IsDeprecatedWeakRefSmartPointerException<TestWebKitAPI::Foo> : std::true_type { };
+template<> struct IsDeprecatedWeakRefSmartPointerException<TestWebKitAPI::Int> : std::true_type { };
+template<> struct IsDeprecatedWeakRefSmartPointerException<TestWebKitAPI::MultipleInheritanceBase1> : std::true_type { };
+template<> struct IsDeprecatedWeakRefSmartPointerException<TestWebKitAPI::MultipleInheritanceBase2> : std::true_type { };
+template<> struct IsDeprecatedWeakRefSmartPointerException<TestWebKitAPI::MultipleInheritanceDerived> : std::true_type { };
+template<> struct IsDeprecatedWeakRefSmartPointerException<TestWebKitAPI::TestType> : std::true_type { };
+}
+
+namespace TestWebKitAPI {
 
 static unsigned s_baseWeakReferences = 0;
 
@@ -3129,6 +3152,8 @@ TEST(WTF_ThreadSafeWeakPtr, WeakRefInDestructor)
     EXPECT_NULL(shouldBeNull.get());
 }
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DidUpdateRefCountWeakPtrImpl);
+
 class DidUpdateRefCountWeakPtrImpl final {
     WTF_MAKE_NONCOPYABLE(DidUpdateRefCountWeakPtrImpl);
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(DidUpdateRefCountWeakPtrImpl);
@@ -3177,6 +3202,7 @@ private:
     void* m_ptr;
     mutable bool m_didUpdateRefCount { false };
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DidUpdateRefCountWeakPtrImpl);
 
 class TestType : public WTF::CanMakeWeakPtr<TestType, WeakPtrFactoryInitialization::Lazy, DidUpdateRefCountWeakPtrImpl> {
 public:

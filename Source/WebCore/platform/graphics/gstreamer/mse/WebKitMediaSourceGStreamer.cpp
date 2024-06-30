@@ -105,7 +105,7 @@ static RefPtr<MediaPlayerPrivateGStreamerMSE> webKitMediaSrcPlayer(WebKitMediaSr
 #define webkit_media_src_parent_class parent_class
 
 struct WebKitMediaSrcPadPrivate {
-    RefPtr<Stream> stream;
+    ThreadSafeWeakPtr<Stream> stream;
 };
 
 struct WebKitMediaSrcPad {
@@ -154,7 +154,7 @@ WEBKIT_DEFINE_TYPE_WITH_CODE(WebKitMediaSrc, webkit_media_src, GST_TYPE_ELEMENT,
     G_IMPLEMENT_INTERFACE(GST_TYPE_URI_HANDLER, webKitMediaSrcUriHandlerInit);
     GST_DEBUG_CATEGORY_INIT(webkit_media_src_debug, "webkitmediasrc", 0, "WebKit MSE source element"));
 
-struct Stream : public ThreadSafeRefCounted<Stream> {
+struct Stream : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<Stream> {
     Stream(WebKitMediaSrc* source, GRefPtr<GstPad>&& pad, Ref<MediaSourceTrackGStreamer>&& track, GRefPtr<GstStream>&& streamInfo)
         : source(source)
         , pad(WTFMove(pad))
@@ -210,15 +210,15 @@ static GRefPtr<GstElement> findPipeline(GRefPtr<GstElement> element)
 }
 #endif // GST_DISABLE_GST_DEBUG
 
-static void dumpPipeline(const char* description, const RefPtr<Stream>& stream)
+static void dumpPipeline(ASCIILiteral description, const RefPtr<Stream>& stream)
 {
 #ifdef GST_DISABLE_GST_DEBUG
-    [[maybe_unused]] fileNamePattern;
+    [[maybe_unused]] description;
     [[maybe_unused]] stream;
 #else
-    auto fileName = makeString("playback-pipeline-", stream->track->stringId(), "-", description);
-    GST_DEBUG_BIN_TO_DOT_FILE_WITH_TS(GST_BIN(findPipeline(GRefPtr<GstElement>(GST_ELEMENT(stream->source))).get()),
-        GST_DEBUG_GRAPH_SHOW_ALL, fileName.utf8().data());
+    auto pipeline = findPipeline(GRefPtr<GstElement>(GST_ELEMENT(stream->source)));
+    auto fileName = makeString(span(GST_OBJECT_NAME(pipeline.get())), '-', stream->track->stringId(), '-', description);
+    GST_DEBUG_BIN_TO_DOT_FILE_WITH_TS(GST_BIN_CAST(pipeline.get()), GST_DEBUG_GRAPH_SHOW_ALL, fileName.utf8().data());
 #endif
 }
 
@@ -322,14 +322,19 @@ void webKitMediaSrcEmitStreams(WebKitMediaSrc* source, const Vector<RefPtr<Media
 #ifndef GST_DISABLE_GST_DEBUG
         GST_DEBUG_OBJECT(source, "Adding stream with trackId '%s' of type %s with caps %" GST_PTR_FORMAT, track->stringId().string().utf8().data(), streamTypeToString(track->type()), track->initialCaps().get());
 #endif // GST_DISABLE_GST_DEBUG
+        if (source->priv->streams.contains(track->stringId())) {
+            GST_ERROR_OBJECT(source, "stream with trackId '%s' already exists", track->stringId().string().utf8().data());
+            ASSERT_NOT_REACHED();
+            continue;
+        }
 
-        GRefPtr<WebKitMediaSrcPad> pad = WEBKIT_MEDIA_SRC_PAD(g_object_new(webkit_media_src_pad_get_type(), "name", makeString("src_", track->stringId()).utf8().data(), "direction", GST_PAD_SRC, NULL));
+        GRefPtr<WebKitMediaSrcPad> pad = WEBKIT_MEDIA_SRC_PAD(g_object_new(webkit_media_src_pad_get_type(), "name", makeString("src_"_s, track->stringId()).utf8().data(), "direction", GST_PAD_SRC, NULL));
         gst_pad_set_activatemode_function(GST_PAD(pad.get()), webKitMediaSrcActivateMode);
 
         ASSERT(track->initialCaps());
         auto stream = adoptRef(new Stream(source, GRefPtr<GstPad>(GST_PAD(pad.get())), *track,
             adoptGRef(gst_stream_new(track->stringId().string().utf8().data(), track->initialCaps().get(), gstStreamType(track->type()), GST_STREAM_FLAG_SELECT))));
-        pad->priv->stream = stream;
+        pad->priv->stream = ThreadSafeWeakPtr { *stream.get() };
 
         gst_stream_collection_add_stream(source->priv->collection.get(), GRefPtr<GstStream>(stream->streamInfo.get()).leakRef());
         source->priv->streams.set(track->stringId(), WTFMove(stream));
@@ -394,8 +399,11 @@ static gboolean webKitMediaSrcActivateMode(GstPad* pad, GstObject* source, GstPa
     if (active)
         gst_pad_start_task(pad, webKitMediaSrcLoop, pad, nullptr);
     else {
+        RefPtr<Stream> stream(WEBKIT_MEDIA_SRC_PAD(pad)->priv->stream.get());
+        if (!stream)
+            return false;
+
         // Unblock the streaming thread.
-        RefPtr<Stream>& stream = WEBKIT_MEDIA_SRC_PAD(pad)->priv->stream;
         {
             DataMutexLocker streamingMembers { stream->streamingMembersDataMutex };
             streamingMembers->isFlushing = true;
@@ -416,7 +424,10 @@ static gboolean webKitMediaSrcActivateMode(GstPad* pad, GstObject* source, GstPa
 
 static void webKitMediaSrcPadLinked(GstPad* pad, GstPad*, void*)
 {
-    RefPtr<Stream>& stream = WEBKIT_MEDIA_SRC_PAD(pad)->priv->stream;
+    RefPtr<Stream> stream(WEBKIT_MEDIA_SRC_PAD(pad)->priv->stream.get());
+    if (!stream)
+        return;
+
     DataMutexLocker streamingMembers { stream->streamingMembersDataMutex };
     streamingMembers->padLinkedOrFlushedCondition.notifyOne();
 }
@@ -443,7 +454,9 @@ static void webKitMediaSrcWaitForPadLinkedOrFlush(GstPad* pad, DataMutexLocker<S
 static void webKitMediaSrcLoop(void* userData)
 {
     GstPad* pad = GST_PAD(userData);
-    RefPtr<Stream>& stream = WEBKIT_MEDIA_SRC_PAD(pad)->priv->stream;
+    RefPtr<Stream> stream(WEBKIT_MEDIA_SRC_PAD(pad)->priv->stream.get());
+    if (!stream)
+        return;
 
     DataMutexLocker streamingMembers { stream->streamingMembersDataMutex };
     if (streamingMembers->isFlushing) {
@@ -573,7 +586,7 @@ static void webKitMediaSrcLoop(void* userData)
         bool pushingFirstBuffer = !streamingMembers->hasPushedFirstBuffer;
         if (pushingFirstBuffer) {
             GST_DEBUG_OBJECT(pad, "Sending first buffer on this pad.");
-            dumpPipeline("first-frame-before", stream);
+            dumpPipeline("first-frame-before"_s, stream);
             streamingMembers->hasPushedFirstBuffer = true;
         }
 
@@ -584,12 +597,11 @@ static void webKitMediaSrcLoop(void* userData)
         GST_TRACE_OBJECT(pad, "Pushing buffer downstream: %" GST_PTR_FORMAT, buffer.get());
         GstFlowReturn result = gst_pad_push(pad, buffer.leakRef());
         if (result != GST_FLOW_OK && result != GST_FLOW_FLUSHING) {
-            GST_ERROR_OBJECT(pad, "Pushing buffer returned %s", gst_flow_get_name(result));
-            dumpPipeline("pushing-buffer-failed", stream);
             gst_pad_pause_task(pad);
-        } else {
+            GST_ELEMENT_ERROR(stream->source, CORE, PAD, ("Failed to push buffer"), ("gst_pad_push() returned %s", gst_flow_get_name(result)));
+        } else if (pushingFirstBuffer) {
             GST_DEBUG_OBJECT(pad, "First buffer on this pad was pushed (ret = %s).", gst_flow_get_name(result));
-            dumpPipeline("first-frame-after", stream);
+            dumpPipeline("first-frame-after"_s, stream);
         }
     } else if (GST_IS_EVENT(object.get())) {
         // EOS events and other enqueued events are also sent unlocked so they can react to flushes if necessary.
@@ -644,10 +656,10 @@ static void webKitMediaSrcStreamFlush(Stream* stream, bool isSeekingFlush)
         // downstream chain() function, it will quickly return to the loop() function, which thanks to the
         // previous section will also quickly end.
         GST_DEBUG_OBJECT(stream->pad.get(), "Sending FLUSH_START downstream.");
-        dumpPipeline("flush-start-before", stream);
+        dumpPipeline("flush-start-before"_s, stream);
         gst_pad_push_event(stream->pad.get(), gst_event_new_flush_start());
         GST_DEBUG_OBJECT(stream->pad.get(), "FLUSH_START sent.");
-        dumpPipeline("flush-start-after", stream);
+        dumpPipeline("flush-start-after"_s, stream);
     }
 
     // Adjust segment. This is different for seeks and non-seeking flushes.
@@ -703,11 +715,11 @@ static void webKitMediaSrcStreamFlush(Stream* stream, bool isSeekingFlush)
         }
 
         GST_DEBUG_OBJECT(stream->pad.get(), "Sending FLUSH_STOP downstream (resetTime = %s).", boolForPrinting(isSeekingFlush));
-        dumpPipeline("flush-stop-before", stream);
+        dumpPipeline("flush-stop-before"_s, stream);
         // Since FLUSH_STOP is a synchronized event, we send it while we still hold the stream lock of the pad.
         gst_pad_push_event(stream->pad.get(), gst_event_new_flush_stop(isSeekingFlush));
         GST_DEBUG_OBJECT(stream->pad.get(), "FLUSH_STOP sent.");
-        dumpPipeline("flush-stop-after", stream);
+        dumpPipeline("flush-stop-after"_s, stream);
 
         {
             DataMutexLocker streamingMembers { stream->streamingMembersDataMutex };

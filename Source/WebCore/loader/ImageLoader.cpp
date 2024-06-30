@@ -28,6 +28,7 @@
 #include "CachedResourceRequest.h"
 #include "CrossOriginAccessControl.h"
 #include "Document.h"
+#include "DocumentLoader.h"
 #include "ElementInlines.h"
 #include "Event.h"
 #include "EventNames.h"
@@ -37,6 +38,7 @@
 #include "HTMLNames.h"
 #include "HTMLObjectElement.h"
 #include "HTMLPlugInElement.h"
+#include "HTMLSrcsetParser.h"
 #include "InspectorInstrumentation.h"
 #include "JSDOMPromiseDeferred.h"
 #include "LazyLoadImageObserver.h"
@@ -426,7 +428,7 @@ inline void ImageLoader::rejectDecodePromises(ASCIILiteral message)
     rejectPromises(m_decodingPromises, message);
 }
 
-void ImageLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&)
+void ImageLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess)
 {
     LOG_WITH_STREAM(LazyLoading, stream << "ImageLoader " << this << " notifyFinished - hasPendingLoadEvent " << m_hasPendingLoadEvent);
 
@@ -456,7 +458,7 @@ void ImageLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetr
         m_hasPendingErrorEvent = true;
         loadEventSender().dispatchEventSoon(*this, eventNames().errorEvent);
 
-        auto message = makeString("Cannot load image ", imageURL.string(), " due to access control checks.");
+        auto message = makeString("Cannot load image "_s, imageURL.string(), " due to access control checks."_s);
         element().protectedDocument()->addConsoleMessage(MessageSource::Security, MessageLevel::Error, message);
 
         if (hasPendingDecodePromises())
@@ -708,6 +710,29 @@ VisibleInViewportState ImageLoader::imageVisibleInViewport(const Document& docum
 
     CheckedPtr renderReplaced = dynamicDowncast<RenderReplaced>(element().renderer());
     return renderReplaced && renderReplaced->isContentLikelyVisibleInViewport() ? VisibleInViewportState::Yes : VisibleInViewportState::No;
+}
+
+bool ImageLoader::shouldIgnoreCandidateWhenLoadingFromArchive(const ImageCandidate& candidate) const
+{
+#if ENABLE(WEB_ARCHIVE) || ENABLE(MHTML)
+    if (candidate.originAttribute == ImageCandidate::SrcOrigin)
+        return false;
+
+    Ref document = element().document();
+    RefPtr loader = document->loader();
+    if (!loader || !loader->hasArchiveResourceCollection())
+        return false;
+
+    auto candidateURL = URL { element().resolveURLStringIfNeeded(candidate.string.toString()) };
+    if (loader->archiveResourceForURL(candidateURL))
+        return false;
+
+    RefPtr page = document->protectedPage();
+    return !page || !page->allowsLoadFromURL(candidateURL, MainFrameMainResource::No);
+#else
+    UNUSED_PARAM(candidate);
+    return false;
+#endif
 }
 
 } // namespace WebCore

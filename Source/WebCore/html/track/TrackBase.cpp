@@ -27,6 +27,7 @@
 #include "TrackBase.h"
 
 #include "ContextDestructionObserverInlines.h"
+#include "Document.h"
 #include "Logging.h"
 #include "TrackListBase.h"
 #include "TrackPrivateBase.h"
@@ -74,6 +75,8 @@ TrackBase::TrackBase(ScriptExecutionContext* context, Type type, const std::opti
     m_logger = nullLogger(*this);
 #endif
 }
+
+TrackBase::~TrackBase() = default;
 
 void TrackBase::didMoveToNewDocument(Document& newDocument)
 {
@@ -171,7 +174,7 @@ void TrackBase::setLanguage(const AtomString& language)
     if (language.contains((UChar)'\0'))
         message = "The language contains a null character and is not a valid BCP 47 language tag."_s;
     else
-        message = makeString("The language '", language, "' is not a valid BCP 47 language tag.");
+        message = makeString("The language '"_s, language, "' is not a valid BCP 47 language tag."_s);
 
     context->addConsoleMessage(MessageSource::Rendering, MessageLevel::Warning, message);
 }

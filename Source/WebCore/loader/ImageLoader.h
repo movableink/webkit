@@ -31,12 +31,22 @@
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
+class ImageLoader;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::ImageLoader> : std::true_type { };
+}
+
+namespace WebCore {
 
 class DeferredPromise;
 class Document;
 class ImageLoader;
 class Page;
 class RenderImageResource;
+struct ImageCandidate;
 
 template<typename T, typename Counter> class EventSender;
 using ImageEventSender = EventSender<ImageLoader, SingleThreadWeakPtrImpl>;
@@ -64,6 +74,8 @@ public:
     Element& element() { return m_element.get(); }
     const Element& element() const { return m_element.get(); }
     Ref<Element> protectedElement() const { return m_element.get(); }
+
+    bool shouldIgnoreCandidateWhenLoadingFromArchive(const ImageCandidate&) const;
 
     bool imageComplete() const { return m_imageComplete; }
 
@@ -96,7 +108,7 @@ public:
 
 protected:
     explicit ImageLoader(Element&);
-    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) override;
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess = LoadWillContinueInAnotherProcess::No) override;
 
 private:
     void resetLazyImageLoading(Document&);

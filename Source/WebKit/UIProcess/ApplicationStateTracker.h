@@ -39,6 +39,15 @@ OBJC_CLASS UIScene;
 OBJC_CLASS WKUIWindowSceneObserver;
 
 namespace WebKit {
+class ApplicationStateTracker;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebKit::ApplicationStateTracker> : std::true_type { };
+}
+
+namespace WebKit {
 
 enum class ApplicationType : uint8_t {
     Application,
@@ -65,6 +74,7 @@ private:
     void applicationWillEnterForeground();
     void willBeginSnapshotSequence();
     void didCompleteSnapshotSequence();
+    void removeAllObservers();
 
     WeakObjCPtr<UIView> m_view;
     WeakObjCPtr<UIWindow> m_window;
@@ -82,10 +92,10 @@ private:
 
     bool m_isInBackground;
 
-    id m_didEnterBackgroundObserver;
-    id m_willEnterForegroundObserver;
-    id m_willBeginSnapshotSequenceObserver;
-    id m_didCompleteSnapshotSequenceObserver;
+    WeakObjCPtr<NSObject> m_didEnterBackgroundObserver;
+    WeakObjCPtr<NSObject> m_willEnterForegroundObserver;
+    WeakObjCPtr<NSObject> m_willBeginSnapshotSequenceObserver;
+    WeakObjCPtr<NSObject> m_didCompleteSnapshotSequenceObserver;
 };
 
 ApplicationType applicationType(UIWindow *);

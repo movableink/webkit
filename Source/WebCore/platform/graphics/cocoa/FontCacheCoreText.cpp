@@ -103,11 +103,11 @@ VariationDefaultsMap defaultVariationValues(CTFontRef font, ShouldLocalizeAxisNa
         if (rawMinimumValue > rawMaximumValue)
             std::swap(rawMinimumValue, rawMaximumValue);
 
-        auto b1 = rawAxisIdentifier >> 24;
-        auto b2 = (rawAxisIdentifier & 0xFF0000) >> 16;
-        auto b3 = (rawAxisIdentifier & 0xFF00) >> 8;
-        auto b4 = rawAxisIdentifier & 0xFF;
-        FontTag resultKey = {{ static_cast<char>(b1), static_cast<char>(b2), static_cast<char>(b3), static_cast<char>(b4) }};
+        char b1 = rawAxisIdentifier >> 24;
+        char b2 = (rawAxisIdentifier & 0xFF0000) >> 16;
+        char b3 = (rawAxisIdentifier & 0xFF00) >> 8;
+        char b4 = rawAxisIdentifier & 0xFF;
+        FontTag resultKey = { { b1, b2, b3, b4 } };
         VariationDefaults resultValues = { axisName, rawDefaultValue, rawMinimumValue, rawMaximumValue };
         result.set(resultKey, resultValues);
     }
@@ -940,7 +940,7 @@ void FontCache::prewarm(PrewarmInformation&& prewarmInformation)
         return;
 
     if (!m_prewarmQueue)
-        m_prewarmQueue = WorkQueue::create("WebKit font prewarm queue");
+        m_prewarmQueue = WorkQueue::create("WebKit font prewarm queue"_s);
 
     m_prewarmQueue->dispatch([&database = m_databaseDisallowingUserInstalledFonts, prewarmInformation = WTFMove(prewarmInformation).isolatedCopy()] {
         for (auto& family : prewarmInformation.seenFamilies)

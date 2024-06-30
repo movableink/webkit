@@ -44,6 +44,7 @@
 #include "Page.h"
 #include "PlatformMouseEvent.h"
 #include "PluginViewBase.h"
+#include "RemoteFrame.h"
 #include "RenderImage.h"
 #include "RenderTreeUpdater.h"
 #include "ScriptController.h"
@@ -96,10 +97,11 @@ bool HTMLPlugInImageElement::canLoadURL(const String& relativeURL) const
     return canLoadURL(document().completeURL(relativeURL));
 }
 
-// Note that unlike HTMLFrameElementBase::canLoadURL this uses SecurityOrigin::canAccess.
 bool HTMLPlugInImageElement::canLoadURL(const URL& completeURL) const
 {
     if (completeURL.protocolIsJavaScript()) {
+        if (is<RemoteFrame>(contentFrame()))
+            return false;
         RefPtr<Document> contentDocument = this->contentDocument();
         if (contentDocument && !document().securityOrigin().isSameOriginDomain(contentDocument->securityOrigin()))
             return false;
@@ -322,8 +324,8 @@ bool HTMLPlugInImageElement::requestObject(const String& relativeURL, const Stri
     if (ScriptDisallowedScope::InMainThread::isScriptAllowed())
         return document->frame()->loader().subframeLoader().requestObject(*this, relativeURL, getNameAttribute(), mimeType, paramNames, paramValues);
 
-    document->eventLoop().queueTask(TaskSource::Networking, [this, protectedThis = Ref { *this }, relativeURL, nameAttribute = getNameAttribute(), mimeType, paramNames, paramValues]() mutable {
-        if (!isConnected())
+    document->eventLoop().queueTask(TaskSource::Networking, [this, protectedThis = Ref { *this }, relativeURL, nameAttribute = getNameAttribute(), mimeType, paramNames, paramValues, document]() mutable {
+        if (!this->isConnected() || &this->document() != document.ptr())
             return;
         RefPtr frame = this->document().frame();
         if (!frame)

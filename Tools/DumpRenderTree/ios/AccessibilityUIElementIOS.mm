@@ -81,7 +81,6 @@ typedef void (*AXPostedNotificationCallback)(id element, NSString* notification,
 - (BOOL)accessibilityARIALiveRegionIsAtomic;
 - (NSString *)accessibilityARIALiveRegionStatus;
 - (NSString *)accessibilityARIARelevantStatus;
-- (UIAccessibilityTraits)_axContainedByFieldsetTrait;
 - (UIAccessibilityTraits)_axTextEntryTrait;
 - (id)_accessibilityFieldsetAncestor;
 - (BOOL)_accessibilityHasTouchEventListener;
@@ -111,7 +110,6 @@ typedef void (*AXPostedNotificationCallback)(id element, NSString* notification,
 - (BOOL)accessibilityIsFirstItemInSuggestion;
 - (BOOL)accessibilityIsLastItemInSuggestion;
 - (BOOL)accessibilityIsMarkAnnotation;
-- (BOOL)accessibilityIsInNonNativeTextControl;
 
 // TextMarker related
 - (NSArray *)textMarkerRange;
@@ -183,12 +181,6 @@ int AccessibilityUIElement::elementTextLength()
 {
     NSRange range = [[m_element valueForKey:@"elementTextRange"] rangeValue];
     return range.length;    
-}
-
-bool AccessibilityUIElement::hasContainedByFieldsetTrait()
-{
-    UIAccessibilityTraits traits = [m_element accessibilityTraits];
-    return (traits & [m_element _axContainedByFieldsetTrait]) == [m_element _axContainedByFieldsetTrait];
 }
 
 bool AccessibilityUIElement::hasTextEntryTrait()
@@ -1333,9 +1325,4 @@ bool AccessibilityUIElement::isLastItemInSuggestion()
 bool AccessibilityUIElement::isMarkAnnotation() const
 {
     return [m_element accessibilityIsMarkAnnotation];
-}
-
-bool AccessibilityUIElement::isInNonNativeTextControl() const
-{
-    return [m_element accessibilityIsInNonNativeTextControl];
 }

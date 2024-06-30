@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2023 Apple Inc.  All rights reserved.
+ * Copyright (C) 2003-2024 Apple Inc.  All rights reserved.
  * Copyright (C) 2007-2009 Torch Mobile, Inc.
  * Copyright (C) 2011 University of Szeged. All rights reserved.
  *
@@ -46,11 +46,8 @@
 #include <CoreFoundation/CFString.h>
 #endif // USE(CF)
 
-#if COMPILER(MSVC)
-#include <crtdbg.h>
-#endif
-
 #if OS(WINDOWS)
+#include <crtdbg.h>
 #include <windows.h>
 #endif
 
@@ -87,7 +84,7 @@ ALLOW_NONLITERAL_FORMAT_BEGIN
 #endif
 
     // Do the format once to get the length.
-#if COMPILER(MSVC)
+#if OS(WINDOWS)
     int result = _vscprintf(format, args);
 #else
     char ch;
@@ -104,8 +101,7 @@ ALLOW_NONLITERAL_FORMAT_BEGIN
     }
 
     Vector<char, 256> buffer;
-    unsigned length = result;
-    buffer.grow(length + 1);
+    buffer.grow(result + 1);
 
     // Now do the formatting again, guaranteed to fit.
     vsnprintf(buffer.data(), buffer.size(), format, argsCopy);
@@ -113,7 +109,7 @@ ALLOW_NONLITERAL_FORMAT_BEGIN
 
 ALLOW_NONLITERAL_FORMAT_END
 
-    return StringImpl::create(std::span { reinterpret_cast<const LChar*>(buffer.data()), length });
+    return StringImpl::create(buffer.subspan(0, buffer.size() - 1));
 }
 
 #if PLATFORM(COCOA)
@@ -344,17 +340,15 @@ void WTFPrintBacktrace(void** stack, int size)
 #if !defined(NDEBUG) || !(OS(DARWIN) || PLATFORM(PLAYSTATION))
 void WTFCrash()
 {
-    WTFReportBacktrace();
 #if ASAN_ENABLED
     __builtin_trap();
+#elif OS(DARWIN) && CPU(ARM64)
+    WTFBreakpointTrap();
+    __builtin_trap(); // Suppress NO_RETURN_DUE_TO_CRASH warning.
 #else
     *(int *)(uintptr_t)0xbbadbeef = 0;
     // More reliable, but doesn't say BBADBEEF.
-#if COMPILER(GCC) || COMPILER(CLANG)
     __builtin_trap();
-#else
-    ((void(*)())nullptr)();
-#endif // COMPILER(GCC_COMPATIBLE)
 #endif // ASAN_ENABLED
 }
 #else
@@ -618,34 +612,6 @@ void WTFInitializeLogChannelStatesFromString(WTFLogChannel* channels[], size_t c
             WTFLogAlways("Unknown logging channel: %s", component.utf8().data());
     }
 }
-
-#if !RELEASE_LOG_DISABLED
-void WTFReleaseLogStackTrace(WTFLogChannel* channel)
-{
-    void* stack[kDefaultFramesToShow + kDefaultFramesToSkip];
-    int frames = kDefaultFramesToShow + kDefaultFramesToSkip;
-    WTFGetBacktrace(stack, &frames);
-    StackTraceSymbolResolver { { stack, static_cast<size_t>(frames) } }.forEach([&](int frameNumber, void* stackFrame, const char* name) {
-#if USE(OS_LOG)
-        if (name)
-            os_log(channel->osLogChannel, "%-3d %p %{public}s", frameNumber, stackFrame, name);
-        else
-            os_log(channel->osLogChannel, "%-3d %p", frameNumber, stackFrame);
-#else
-        StringPrintStream out;
-        if (name)
-            out.printf("%-3d %p %s", frameNumber, stackFrame, name);
-        else
-            out.printf("%-3d %p", frameNumber, stackFrame);
-#if ENABLE(JOURNALD_LOG)
-        sd_journal_send("WEBKIT_SUBSYSTEM=%s", channel->subsystem, "WEBKIT_CHANNEL=%s", channel->name, "MESSAGE=%s", out.toCString().data(), nullptr);
-#else
-        fprintf(stderr, "[%s:%s:-] %s\n", channel->subsystem, channel->name, out.toCString().data());
-#endif
-#endif
-    });
-}
-#endif
 
 } // extern "C"
 

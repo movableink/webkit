@@ -180,7 +180,7 @@ AccessibilityScrollbar* AccessibilityScrollView::addChildScrollbar(Scrollbar* sc
     if (!cache)
         return nullptr;
 
-    auto& scrollBarObject = uncheckedDowncast<AccessibilityScrollbar>(*cache->getOrCreate(scrollbar));
+    auto& scrollBarObject = uncheckedDowncast<AccessibilityScrollbar>(*cache->getOrCreate(*scrollbar));
     scrollBarObject.setParent(this);
     addChild(&scrollBarObject);
     return &scrollBarObject;
@@ -222,14 +222,13 @@ void AccessibilityScrollView::addRemoteFrameChild()
 
 #if PLATFORM(MAC)
         // Generate a new token and pass it back to the other remote frame so it can bind these objects together.
-        auto generatedToken = m_remoteFrame->generateRemoteToken();
-        auto& remoteFrame = remoteFrameView->frame();
-        remoteFrame.bindRemoteAccessibilityFrames(getpid(), generatedToken, [this, &remoteFrame, protectedAccessbilityRemoteFrame = RefPtr { m_remoteFrame }] (std::span<const uint8_t> token, int processIdentifier) mutable {
-            protectedAccessbilityRemoteFrame->initializePlatformElementWithRemoteToken(token, processIdentifier);
+        Ref remoteFrame = remoteFrameView->frame();
+        remoteFrame->bindRemoteAccessibilityFrames(getpid(), { m_remoteFrame->generateRemoteToken() }, [this, &remoteFrame, protectedAccessbilityRemoteFrame = RefPtr { m_remoteFrame }] (Vector<uint8_t> token, int processIdentifier) mutable {
+            protectedAccessbilityRemoteFrame->initializePlatformElementWithRemoteToken(token.span(), processIdentifier);
 
             // Update the remote side with the offset of this object so it can calculate frames correctly.
             auto location = elementRect().location();
-            remoteFrame.updateRemoteFrameAccessibilityOffset(flooredIntPoint(location));
+            remoteFrame->updateRemoteFrameAccessibilityOffset(flooredIntPoint(location));
         });
 #endif
     } else
@@ -255,7 +254,7 @@ AccessibilityObject* AccessibilityScrollView::webAreaObject() const
         return nullptr;
 
     if (auto* cache = axObjectCache())
-        return cache->getOrCreate(document);
+        return cache->getOrCreate(*document);
 
     return nullptr;
 }
@@ -317,7 +316,7 @@ AccessibilityObject* AccessibilityScrollView::parentObject() const
         owner = remoteFrameView->frame().ownerElement();
 
     if (owner && owner->renderer())
-        return cache->getOrCreate(owner.get());
+        return cache->getOrCreate(*owner);
     return nullptr;
 }
 

@@ -25,21 +25,42 @@
 #if USE(LIBEPOXY)
 #include <epoxy/gl.h>
 #else
-#include <GLES2/gl2.h>
-#include <GLES2/gl2ext.h>
+#include <GLES3/gl3.h>
 #endif
 
 namespace WebCore {
 
-std::unique_ptr<GLFence> GLFence::create()
+bool GLFence::isSupported()
 {
-    auto* context = GLContext::current();
-    if (!context)
+    static std::once_flag onceFlag;
+    static bool supported = false;
+
+    std::call_once(onceFlag, [&]() {
+        auto version = GLContext::versionFromString(reinterpret_cast<const char*>(glGetString(GL_VERSION)));
+        if (version >= 300) {
+            supported = true;
+            return;
+        }
+
+        const char* extensionsString = reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS));
+        if (GLContext::isExtensionSupported(extensionsString, "GL_APPLE_sync"))
+            supported = true;
+    });
+
+    return supported;
+}
+
+std::unique_ptr<GLFence> GLFence::create(ShouldFlush shouldFlush)
+{
+    if (!GLContextWrapper::currentContext())
         return nullptr;
 
-    if (context->version() >= 300 || context->glExtensions().APPLE_sync) {
-        if (auto* sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0))
+    if (isSupported()) {
+        if (auto* sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0)) {
+            if (shouldFlush == ShouldFlush::Yes)
+                glFlush();
             return makeUnique<GLFence>(sync);
+        }
         return nullptr;
     }
 

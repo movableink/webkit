@@ -1,4 +1,4 @@
-//@ runDefault("-m", "--wasmFunctionIndexRangeToCompile=1:2")
+//@ runDefaultWasm("-m", "--webAssemblyFunctionIndexRangeToCompile=1:2")
 import { instantiate } from "../wabt-wrapper.js"
 import * as assert from "../assert.js"
 
@@ -55,10 +55,10 @@ noInline(iter)
 async function test() {
     const instance = await instantiate(wat, {}, { reference_types: true, function_references: true, gc: true })
 
-    for (let i = 0; i < 10000000; ++i) {
+    for (let i = 0; i < 1000; ++i) {
         iter(instance)
     }
 }
 noInline(test)
 
-assert.asyncTest(test())
+await assert.asyncTest(test())

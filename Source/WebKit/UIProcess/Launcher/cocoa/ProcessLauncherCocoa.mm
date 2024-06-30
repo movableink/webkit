@@ -58,10 +58,11 @@
 #endif
 
 #if USE(EXTENSIONKIT)
+#import "AssertionCapability.h"
+#import "ExtensionKitSPI.h"
 #import <BrowserEngineKit/BENetworkingProcess.h>
 #import <BrowserEngineKit/BERenderingProcess.h>
 #import <BrowserEngineKit/BEWebContentProcess.h>
-#import "ExtensionKitSPI.h"
 
 #if USE(LEGACY_EXTENSIONKIT_SPI)
 SOFT_LINK_FRAMEWORK_OPTIONAL(ServiceExtensions);
@@ -125,6 +126,19 @@ static void launchWithExtensionKitFallback(ProcessLauncher& processLauncher, Pro
 }
 #endif // USE(LEGACY_EXTENSIONKIT_SPI)
 
+#if !USE(LEGACY_EXTENSIONKIT_SPI)
+static bool hasExtensionInAppBundle(NSString *name)
+{
+#if PLATFORM(IOS_SIMULATOR)
+    NSString *path = [[NSBundle mainBundle] pathForResource:name ofType:@"appex" inDirectory:@"Extensions"];
+    return !!path;
+#else
+    UNUSED_PARAM(name);
+    return false;
+#endif
+}
+#endif // !USE(LEGACY_EXTENSIONKIT_SPI)
+
 static void launchWithExtensionKit(ProcessLauncher& processLauncher, ProcessLauncher::ProcessType processType, ProcessLauncher::Client* client, WTF::Function<void(ThreadSafeWeakPtr<ProcessLauncher> weakProcessLauncher, ExtensionProcess&& process, ASCIILiteral name, NSError *error)>&& handler)
 {
 #if USE(LEGACY_EXTENSIONKIT_SPI)
@@ -137,21 +151,30 @@ static void launchWithExtensionKit(ProcessLauncher& processLauncher, ProcessLaun
         auto block = makeBlockPtr([handler = WTFMove(handler), weakProcessLauncher = ThreadSafeWeakPtr { processLauncher }, name = name](BEWebContentProcess *_Nullable process, NSError *_Nullable error) {
             handler(WTFMove(weakProcessLauncher), process, name, error);
         });
-        [BEWebContentProcess webContentProcessWithBundleID:identifier.get() interruptionHandler: ^{ } completion:block.get()];
+        if (hasExtensionInAppBundle(@"WebContentExtension"))
+            [BEWebContentProcess webContentProcessWithInterruptionHandler:^{ } completion:block.get()];
+        else
+            [BEWebContentProcess webContentProcessWithBundleID:identifier.get() interruptionHandler:^{ } completion:block.get()];
         break;
     }
     case ProcessLauncher::ProcessType::Network: {
         auto block = makeBlockPtr([handler = WTFMove(handler), weakProcessLauncher = ThreadSafeWeakPtr { processLauncher }, name = name](BENetworkingProcess *_Nullable process, NSError *_Nullable error) {
             handler(WTFMove(weakProcessLauncher), process, name, error);
         });
-        [BENetworkingProcess networkProcessWithBundleID:identifier.get() interruptionHandler: ^{ } completion:block.get()];
+        if (hasExtensionInAppBundle(@"NetworkingExtension"))
+            [BENetworkingProcess networkProcessWithInterruptionHandler:^{ } completion:block.get()];
+        else
+            [BENetworkingProcess networkProcessWithBundleID:identifier.get() interruptionHandler:^{ } completion:block.get()];
         break;
     }
     case ProcessLauncher::ProcessType::GPU: {
         auto block = makeBlockPtr([handler = WTFMove(handler), weakProcessLauncher = ThreadSafeWeakPtr { processLauncher }, name = name](BERenderingProcess *_Nullable process, NSError *_Nullable error) {
             handler(WTFMove(weakProcessLauncher), process, name, error);
         });
-        [BERenderingProcess renderingProcessWithBundleID:identifier.get() interruptionHandler: ^{ } completion:block.get()];
+        if (hasExtensionInAppBundle(@"GPUExtension"))
+            [BERenderingProcess renderingProcessWithInterruptionHandler:^{ } completion:block.get()];
+        else
+            [BERenderingProcess renderingProcessWithBundleID:identifier.get() interruptionHandler:^{ } completion:block.get()];
         break;
     }
     }
@@ -160,28 +183,28 @@ static void launchWithExtensionKit(ProcessLauncher& processLauncher, ProcessLaun
 #endif // USE(EXTENSIONKIT)
 
 #if !USE(EXTENSIONKIT) || !PLATFORM(IOS)
-static const char* webContentServiceName(const ProcessLauncher::LaunchOptions& launchOptions, ProcessLauncher::Client* client)
+static ASCIILiteral webContentServiceName(const ProcessLauncher::LaunchOptions& launchOptions, ProcessLauncher::Client* client)
 {
     if (client && client->shouldEnableLockdownMode())
-        return "com.apple.WebKit.WebContent.CaptivePortal";
+        return "com.apple.WebKit.WebContent.CaptivePortal"_s;
 
-    return launchOptions.nonValidInjectedCodeAllowed ? "com.apple.WebKit.WebContent.Development" : "com.apple.WebKit.WebContent";
+    return launchOptions.nonValidInjectedCodeAllowed ? "com.apple.WebKit.WebContent.Development"_s : "com.apple.WebKit.WebContent"_s;
 }
 
-static const char* serviceName(const ProcessLauncher::LaunchOptions& launchOptions, ProcessLauncher::Client* client)
+static ASCIILiteral serviceName(const ProcessLauncher::LaunchOptions& launchOptions, ProcessLauncher::Client* client)
 {
     switch (launchOptions.processType) {
     case ProcessLauncher::ProcessType::Web:
         return webContentServiceName(launchOptions, client);
     case ProcessLauncher::ProcessType::Network:
-        return "com.apple.WebKit.Networking";
+        return "com.apple.WebKit.Networking"_s;
 #if ENABLE(GPU_PROCESS)
     case ProcessLauncher::ProcessType::GPU:
-        return "com.apple.WebKit.GPU";
+        return "com.apple.WebKit.GPU"_s;
 #endif
 #if ENABLE(MODEL_PROCESS)
     case ProcessLauncher::ProcessType::Model:
-        return "com.apple.WebKit.Model";
+        return "com.apple.WebKit.Model"_s;
 #endif
     }
 }
@@ -195,13 +218,14 @@ Ref<LaunchGrant> LaunchGrant::create(ExtensionProcess& process)
 
 LaunchGrant::LaunchGrant(ExtensionProcess& process)
 {
-    BEProcessCapability* capability = [BEProcessCapability foreground];
-    m_grant = process.grantCapability(capability);
+    AssertionCapability capability(emptyString(), emptyString(), "Foreground"_s);
+    auto grant = process.grantCapability(capability.platformCapability());
+    m_grant.setPlatformGrant(WTFMove(grant));
 }
 
 LaunchGrant::~LaunchGrant()
 {
-    [m_grant invalidate];
+    m_grant.invalidate();
 }
 #endif
 
@@ -238,7 +262,7 @@ void ProcessLauncher::launchProcess()
                 auto launcher = weakProcessLauncher.get();
                 if (!launcher)
                     return;
-                const char* name = serviceName(launcher->m_launchOptions, launcher->m_client);
+                auto name = serviceName(launcher->m_launchOptions, launcher->m_client);
                 launcher->m_xpcConnection = adoptOSObject(xpc_connection_create(name, nullptr));
                 launcher->finishLaunchingProcess(name);
             });
@@ -269,19 +293,19 @@ void ProcessLauncher::launchProcess()
             launcher->m_xpcConnection = WTFMove(xpcConnection);
             launcher->m_process = WTFMove(process);
             launcher->m_launchGrant = WTFMove(launchGrant);
-            launcher->finishLaunchingProcess(name.characters());
+            launcher->finishLaunchingProcess(name);
         });
     };
 
     launchWithExtensionKit(*this, m_launchOptions.processType, m_client, WTFMove(handler));
 #else
-    const char* name = serviceName(m_launchOptions, m_client);
+    auto name = serviceName(m_launchOptions, m_client);
     m_xpcConnection = adoptOSObject(xpc_connection_create(name, nullptr));
     finishLaunchingProcess(name);
 #endif
 }
 
-void ProcessLauncher::finishLaunchingProcess(const char* name)
+void ProcessLauncher::finishLaunchingProcess(ASCIILiteral name)
 {
     uuid_t uuid;
     uuid_generate(uuid);
@@ -294,17 +318,6 @@ void ProcessLauncher::finishLaunchingProcess(const char* name)
     // 2. When AppleLanguages is passed as command line argument for UI process, or set in its preferences, we should respect it in child processes.
     auto initializationMessage = adoptOSObject(xpc_dictionary_create(nullptr, nullptr, 0));
     _CFBundleSetupXPCBootstrap(initializationMessage.get());
-
-    auto languagesIterator = m_launchOptions.extraInitializationData.find<HashTranslatorASCIILiteral>("OverrideLanguages"_s);
-    if (languagesIterator != m_launchOptions.extraInitializationData.end()) {
-        LOG_WITH_STREAM(Language, stream << "Process Launcher is copying OverrideLanguages into initialization message: " << languagesIterator->value);
-        auto languages = adoptOSObject(xpc_array_create(nullptr, 0));
-        for (auto language : StringView(languagesIterator->value).split(','))
-            xpc_array_set_string(languages.get(), XPC_ARRAY_APPEND, language.utf8().data());
-        xpc_dictionary_set_value(initializationMessage.get(), "OverrideLanguages", languages.get());
-    }
-
-    xpc_connection_set_bootstrap(m_xpcConnection.get(), initializationMessage.get());
 
     // Create the listening port.
     mach_port_t listeningPort = MACH_PORT_NULL;
@@ -340,6 +353,15 @@ void ProcessLauncher::finishLaunchingProcess(const char* name)
     xpc_dictionary_set_string(bootstrapMessage.get(), "WebKitBundleVersion", WEBKIT_BUNDLE_VERSION);
 #endif
 
+    auto languagesIterator = m_launchOptions.extraInitializationData.find<HashTranslatorASCIILiteral>("OverrideLanguages"_s);
+    if (languagesIterator != m_launchOptions.extraInitializationData.end()) {
+        LOG_WITH_STREAM(Language, stream << "Process Launcher is copying OverrideLanguages into initialization message: " << languagesIterator->value);
+        auto languages = adoptOSObject(xpc_array_create(nullptr, 0));
+        for (auto language : StringView(languagesIterator->value).split(','))
+            xpc_array_set_string(languages.get(), XPC_ARRAY_APPEND, language.utf8().data());
+        xpc_dictionary_set_value(bootstrapMessage.get(), "OverrideLanguages", languages.get());
+    }
+
 #if PLATFORM(IOS_FAMILY)
     // Clients that set these environment variables explicitly do not have the values automatically forwarded by libxpc.
     auto containerEnvironmentVariables = adoptOSObject(xpc_dictionary_create(nullptr, nullptr, 0));
@@ -361,6 +383,8 @@ void ProcessLauncher::finishLaunchingProcess(const char* name)
             xpc_dictionary_set_bool(bootstrapMessage.get(), "enable-shared-array-buffer", true);
         if (m_client->shouldEnableLockdownMode())
             xpc_dictionary_set_bool(bootstrapMessage.get(), "enable-captive-portal-mode", true);
+        if (m_client->shouldDisableJITCage())
+            xpc_dictionary_set_bool(bootstrapMessage.get(), "disable-jit-cage", true);
     }
 
     xpc_dictionary_set_string(bootstrapMessage.get(), "message-name", "bootstrap");
@@ -503,15 +527,13 @@ void ProcessLauncher::finishLaunchingProcess(const char* name)
 
 void ProcessLauncher::terminateProcess()
 {
-    if (m_isLaunching) {
-        terminateXPCConnection();
-        return;
-    }
+#if USE(EXTENSIONKIT)
+    if (m_process)
+        m_process->invalidate();
+#endif
 
-    if (!m_processID)
-        return;
+    terminateXPCConnection();
 
-    kill(m_processID, SIGKILL);
     m_processID = 0;
 }
 
@@ -532,7 +554,9 @@ void ProcessLauncher::terminateXPCConnection()
         return;
 
     xpc_connection_cancel(m_xpcConnection.get());
+#if !USE(EXTENSIONKIT)
     terminateWithReason(m_xpcConnection.get(), WebKit::ReasonCode::Invalidation, "ProcessLauncher::platformInvalidate");
+#endif
     m_xpcConnection = nullptr;
 }
 

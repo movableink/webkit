@@ -57,6 +57,7 @@
 #import <wtf/OSObjectPtr.h>
 #import <wtf/UUID.h>
 #import <wtf/UniqueRef.h>
+#import <wtf/cocoa/SpanCocoa.h>
 #import <wtf/spi/darwin/XPCSPI.h>
 #import <wtf/text/Base64.h>
 
@@ -234,7 +235,8 @@ OSObjectPtr<xpc_object_t> WebPushXPCConnectionMessageSender::messageDictionaryFr
     xpc_dictionary_set_uint64(dictionary.get(), WebKit::WebPushD::protocolVersionKey, protocolVersion);
 
     __block auto blockEncoder = WTFMove(encoder);
-    auto dispatchData = adoptNS(dispatch_data_create(blockEncoder->buffer(), blockEncoder->bufferSize(), dispatch_get_main_queue(), ^{
+    auto buffer = blockEncoder->span();
+    auto dispatchData = adoptNS(dispatch_data_create(buffer.data(), buffer.size(), dispatch_get_main_queue(), ^{
         // Explicitly clear out the encoder, destroying it.
         blockEncoder.moveToUniquePtr();
     }));
@@ -805,9 +807,8 @@ public:
             @"topic": (NSString *)topic,
             @"userInfo": apsUserInfo
         };
-        NSData *data = [NSJSONSerialization dataWithJSONObject:obj options:0 error:nullptr];
 
-        String message { static_cast<const char *>(data.bytes), static_cast<unsigned>(data.length) };
+        String message { span([NSJSONSerialization dataWithJSONObject:obj options:0 error:nullptr]) };
 
         auto utilityConnection = createAndConfigureConnectionToService("org.webkit.webpushtestdaemon.service");
         auto sender = WebPushXPCConnectionMessageSender { utilityConnection.get() };

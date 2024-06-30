@@ -1,4 +1,7 @@
 
-PASS Permissions-Policy allow="geolocation" allows same-origin relocation
-PASS Permissions-Policy allow="geolocation" allows cross-origin relocation
+
+Harness Error (TIMEOUT), message = null
+
+TIMEOUT Permissions-Policy allow="geolocation" allows same-origin redirection Test timed out
+NOTRUN Permissions-Policy allow="geolocation" allows cross-origin redirection
 

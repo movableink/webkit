@@ -1,4 +1,4 @@
-//@ requireOptions("--useWebAssemblySIMD=1", "--useBBQJIT=0", "--useWasmLLInt=1")
+//@ requireOptions("--useWebAssemblySIMD=1", "--useBBQJIT=0", "--useWebAssemblyLLInt=1")
 //@ skip if !$isSIMDPlatform or $memoryLimited
 import * as assert from "../assert.js"
 
@@ -36,4 +36,4 @@ async function test() {
   try { fn80(null); } catch { }
 }
 
-assert.asyncTest(test())
+await assert.asyncTest(test())

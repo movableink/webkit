@@ -42,6 +42,7 @@
 
 namespace WebCore {
 
+enum class AdvancedPrivacyProtections : uint16_t;
 struct BackgroundFetchInformation;
 struct NotificationData;
 struct NotificationPayload;
@@ -51,8 +52,9 @@ struct ServiceWorkerContextData;
 struct ServiceWorkerJobDataIdentifier;
 enum class WorkerThreadMode : bool;
 
-class SWServerToContextConnection: public CanMakeWeakPtr<SWServerToContextConnection>, public CanMakeCheckedPtr, public Identified<SWServerToContextConnectionIdentifier> {
+class SWServerToContextConnection: public CanMakeWeakPtr<SWServerToContextConnection>, public CanMakeCheckedPtr<SWServerToContextConnection>, public Identified<SWServerToContextConnectionIdentifier> {
     WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SWServerToContextConnection);
 public:
     WEBCORE_EXPORT virtual ~SWServerToContextConnection();
 
@@ -64,7 +66,7 @@ public:
     void terminateWhenPossible();
 
     // Messages to the SW host process
-    virtual void installServiceWorkerContext(const ServiceWorkerContextData&, const ServiceWorkerData&, const String& userAgent, WorkerThreadMode) = 0;
+    virtual void installServiceWorkerContext(const ServiceWorkerContextData&, const ServiceWorkerData&, const String& userAgent, WorkerThreadMode, OptionSet<AdvancedPrivacyProtections>) = 0;
     virtual void updateAppInitiatedValue(ServiceWorkerIdentifier, LastNavigationWasAppInitiated) = 0;
     virtual void fireInstallEvent(ServiceWorkerIdentifier) = 0;
     virtual void fireActivateEvent(ServiceWorkerIdentifier) = 0;

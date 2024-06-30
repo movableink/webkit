@@ -115,6 +115,10 @@ static NSString * const nameKey = @"name";
 static NSString * const allFramesKey = @"allFrames";
 static NSString * const codeKey = @"code";
 static NSString * const fileKey = @"file";
+static NSString * const cssOriginKey = @"cssOrigin";
+
+static NSString * const authorValue = @"author";
+static NSString * const userValue = @"user";
 
 static NSString * const emptyURLValue = @"";
 static NSString * const emptyTitleValue = @"";
@@ -142,7 +146,7 @@ NSDictionary *toWebAPI(const WebExtensionTabParameters& parameters)
         result[windowIdKey] = @(toWebAPI(parameters.windowIdentifier.value()));
 
     if (parameters.index)
-        result[indexKey] = @(parameters.index.value());
+        result[indexKey] = toWebAPI(parameters.index.value());
 
     if (parameters.size) {
         auto size = parameters.size.value();
@@ -502,7 +506,7 @@ bool WebExtensionAPITabs::parseScriptOptions(NSDictionary *options, WebExtension
         return false;
     }
 
-    if (options[allFramesKey] && options[frameIdKey]) {
+    if (objectForKey<NSNumber>(options, allFramesKey).boolValue && options[frameIdKey]) {
         *outExceptionString = toErrorString(nil, @"details", @"it cannot specify both 'allFrames' and 'frameId'");
         return false;
     }
@@ -526,6 +530,17 @@ bool WebExtensionAPITabs::parseScriptOptions(NSDictionary *options, WebExtension
     if (!boolForKey(options, allFramesKey, false))
         parameters.frameIDs = { WebExtensionFrameConstants::MainFrameIdentifier };
 
+    if (NSString *origin = options[cssOriginKey]) {
+        if ([origin isEqualToString:userValue])
+            parameters.styleLevel = WebCore::UserStyleLevel::User;
+        else if ([origin isEqualToString:authorValue])
+            parameters.styleLevel = WebCore::UserStyleLevel::Author;
+        else {
+            *outExceptionString = toErrorString(nil, cssOriginKey, @"it must specify either 'author' or 'user'");
+            return false;
+        }
+    }
+
     return true;
 }
 
@@ -544,7 +559,7 @@ bool isValid(std::optional<WebExtensionTabIdentifier> identifier, NSString **out
     return true;
 }
 
-bool WebExtensionAPITabs::isPropertyAllowed(const ASCIILiteral& name, WebPage&)
+bool WebExtensionAPITabs::isPropertyAllowed(const ASCIILiteral& name, WebPage*)
 {
     if (UNLIKELY(extensionContext().isUnsupportedAPI(propertyPath(), name)))
         return false;

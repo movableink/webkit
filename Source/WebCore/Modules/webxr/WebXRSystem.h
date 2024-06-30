@@ -65,8 +65,9 @@ public:
     static Ref<WebXRSystem> create(Navigator&);
     ~WebXRSystem();
 
-    using RefCounted<WebXRSystem>::ref;
-    using RefCounted<WebXRSystem>::deref;
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     void isSessionSupported(XRSessionMode, IsSessionSupportedPromise&&);
     void requestSession(Document&, XRSessionMode, const XRSessionInit&, RequestSessionPromise&&);
@@ -75,7 +76,7 @@ public:
     void ensureImmersiveXRDeviceIsSelected(CompletionHandler<void()>&&);
     bool hasActiveImmersiveXRDevice() const { return !!m_activeImmersiveDevice.get(); }
 
-    bool hasActiveImmersiveSession() const;
+    RefPtr<WebXRSession> activeImmersiveSession() const;
     void sessionEnded(WebXRSession&);
 
     // For testing purpouses only.
@@ -92,7 +93,6 @@ protected:
     void derefEventTarget() override { deref(); }
 
     // ActiveDOMObject
-    const char* activeDOMObjectName() const override;
     void stop() override;
 
 private:
@@ -105,6 +105,7 @@ private:
     bool immersiveSessionRequestIsAllowedForGlobalObject(LocalDOMWindow&, Document&) const;
     bool inlineSessionRequestIsAllowedForGlobalObject(LocalDOMWindow&, Document&, const XRSessionInit&) const;
 
+    bool isFeaturePermitted(PlatformXR::SessionFeature) const;
     bool isFeatureSupported(PlatformXR::SessionFeature, XRSessionMode, const PlatformXR::Device&) const;
     struct ResolvedRequestedFeatures;
     std::optional<ResolvedRequestedFeatures> resolveRequestedFeatures(XRSessionMode, const XRSessionInit&, RefPtr<PlatformXR::Device>, JSC::JSGlobalObject&) const;

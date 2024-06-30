@@ -120,7 +120,7 @@ String WebResourceLoadObserver::statisticsForURL(const URL& url)
     if (!statistics)
         return emptyString();
 
-    return makeString("Statistics for ", url.host().toString(), ":\n", statistics->toString());
+    return makeString("Statistics for "_s, url.host().toString(), ":\n"_s, statistics->toString());
 }
 
 Vector<ResourceLoadStatistics> WebResourceLoadObserver::takeStatistics()
@@ -386,7 +386,7 @@ void WebResourceLoadObserver::logUserInteractionWithReducedTimeResolution(const 
     }
 
     if (RefPtr frame = document.frame()) {
-        if (RefPtr opener = dynamicDowncast<LocalFrame>(frame->loader().opener())) {
+        if (RefPtr opener = dynamicDowncast<LocalFrame>(frame->opener())) {
             if (RefPtr openerDocument = opener->document()) {
                 if (auto* openerPage = openerDocument->page())
                     requestStorageAccessUnderOpener(topFrameDomain, Ref { *WebPage::fromCorePage(*openerPage) }, *openerDocument);

@@ -41,7 +41,7 @@ namespace WebCore {
     
 using namespace HTMLNames;
 
-AccessibilityList::AccessibilityList(RenderObject* renderer)
+AccessibilityList::AccessibilityList(RenderObject& renderer)
     : AccessibilityRenderObject(renderer)
 {
 }
@@ -53,7 +53,7 @@ AccessibilityList::AccessibilityList(Node& node)
 
 AccessibilityList::~AccessibilityList() = default;
 
-Ref<AccessibilityList> AccessibilityList::create(RenderObject* renderer)
+Ref<AccessibilityList> AccessibilityList::create(RenderObject& renderer)
 {
     return adoptRef(*new AccessibilityList(renderer));
 }
@@ -184,7 +184,7 @@ AccessibilityRole AccessibilityList::determineAccessibilityRole()
     // <ul>, <ol> lists need to have visible markers.
     if (ariaRoleAttribute() != AccessibilityRole::Unknown) {
         if (!listItemCount)
-            role = AccessibilityRole::ApplicationGroup;
+            role = AccessibilityRole::Group;
     } else if (!hasVisibleMarkers) {
         // http://webkit.org/b/193382 lists inside of navigation hierarchies should still be considered lists.
         if (Accessibility::findAncestor<AccessibilityObject>(*this, false, [] (auto& object) { return object.roleValue() == AccessibilityRole::LandmarkNavigation; }))

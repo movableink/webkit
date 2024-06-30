@@ -32,7 +32,7 @@ class MediaSessionGLib;
 
 class MediaSessionManagerGLib
     : public PlatformMediaSessionManager
-    , private NowPlayingManager::Client {
+    , private NowPlayingManagerClient {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     MediaSessionManagerGLib(GRefPtr<GDBusNodeInfo>&&);
@@ -83,10 +83,10 @@ protected:
 
 private:
 #if !RELEASE_LOG_DISABLED
-    const char* logClassName() const override { return "MediaSessionManagerGLib"; }
+    ASCIILiteral logClassName() const override { return "MediaSessionManagerGLib"_s; }
 #endif
 
-    // NowPlayingManager::Client
+    // NowPlayingManagerClient
     void didReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType type, const PlatformMediaSession::RemoteCommandArgument& argument) final { processDidReceiveRemoteControlCommand(type, argument); }
 
     bool m_isSeeking { false };

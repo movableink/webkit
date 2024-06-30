@@ -113,7 +113,8 @@ void GPUAdapter::requestDevice(ScriptExecutionContext& scriptExecutionContext, c
         if (!device.get())
             promise.reject(Exception(ExceptionCode::OperationError));
         else {
-            Ref<GPUDevice> gpuDevice = GPUDevice::create(scriptExecutionContextRef.ptr(), device.releaseNonNull());
+            auto queueLabel = deviceDescriptor->defaultQueue.label;
+            Ref<GPUDevice> gpuDevice = GPUDevice::create(scriptExecutionContextRef.ptr(), device.releaseNonNull(), deviceDescriptor ? WTFMove(queueLabel) : ""_s);
             gpuDevice->suspendIfNeeded();
             promise.resolve(WTFMove(gpuDevice));
         }
@@ -123,6 +124,11 @@ void GPUAdapter::requestDevice(ScriptExecutionContext& scriptExecutionContext, c
 void GPUAdapter::requestAdapterInfo(const std::optional<Vector<String>>&, RequestAdapterInfoPromise&& promise)
 {
     promise.resolve(GPUAdapterInfo::create(name()));
+}
+
+Ref<GPUAdapterInfo> GPUAdapter::info()
+{
+    return GPUAdapterInfo::create(name());
 }
 
 }

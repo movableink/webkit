@@ -160,6 +160,8 @@ public:
 
 #if PLATFORM(COCOA)
     struct PasteboardAccessInformation {
+        ~PasteboardAccessInformation();
+
         int64_t changeCount { 0 };
         Vector<std::pair<WeakPtr<WebProcessProxy>, PasteboardAccessType>> processes;
 

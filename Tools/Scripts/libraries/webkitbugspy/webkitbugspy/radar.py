@@ -45,6 +45,7 @@ class Tracker(GenericTracker):
         re.compile(r'<?radar://problem/(?P<id>\d+)>?'),
         re.compile(r'<?rdar:\/\/(?P<id>\d+)>?'),
         re.compile(r'<?radar:\/\/(?P<id>\d+)>?'),
+        re.compile(r'<?https:\/\/rdar\.apple\.com\/(?P<id>\d+)>?'),
     ]
 
     OTHER_BUG = 'Other Bug'
@@ -104,6 +105,16 @@ class Tracker(GenericTracker):
             return radarclient
         except ImportError:
             return None
+
+    def handle_access_exception(func):
+        def try_func(self, *args, **kwargs):
+            try:
+                return func(self, *args, **kwargs)
+            except self.radarclient().exceptions.RadarAccessDeniedResponseException as e:
+                sys.stderr.write(f'{e.code} Permission Denied\n')
+                sys.stderr.write(f'{e.reason}\n')
+                sys.exit(1)
+        return try_func
 
     def __init__(self, users=None, authentication=None, project=None, projects=None, redact=None, hide_title=None, redact_exemption=None):
         hide_title = True if hide_title is None else hide_title
@@ -186,6 +197,7 @@ class Tracker(GenericTracker):
     def issue(self, id):
         return Issue(id=int(id), tracker=self)
 
+    @handle_access_exception
     def populate(self, issue, member=None):
         issue._link = 'rdar://{}'.format(issue.id)
         issue._labels = []
@@ -196,7 +208,10 @@ class Tracker(GenericTracker):
         if not member or member == 'labels':
             return issue
 
-        radar = self.client.radar_for_id(issue.id)
+        additional_fields = []
+        if member == 'source_changes':
+            additional_fields.append('sourceChanges')
+        radar = self.client.radar_for_id(issue.id, additional_fields=additional_fields)
         if not radar:
             sys.stderr.write("Failed to fetch '{}'\n".format(issue.link))
             return issue
@@ -219,6 +234,11 @@ class Tracker(GenericTracker):
             email=radar.originator.email,
         )
         issue._milestone = radar.milestone.name if radar.milestone else ''
+
+        if member == 'source_changes':
+            issue._source_changes = []
+            if radar.sourceChanges is not None:
+                issue._source_changes = radar.sourceChanges.splitlines()
 
         if member == 'keywords':
             issue._keywords = [kw.name for kw in (radar.keywords() or [])]
@@ -290,14 +310,18 @@ class Tracker(GenericTracker):
 
         return issue
 
-    def set(self, issue, assignee=None, opened=None, why=None, project=None, component=None, version=None, original=None, keywords=None, **properties):
+    @handle_access_exception
+    def set(self, issue, assignee=None, opened=None, why=None, project=None, component=None, version=None, original=None, keywords=None, source_changes=None, **properties):
         if not self.client or not self.library:
             sys.stderr.write('radarclient inaccessible on this machine\n')
             return None
         if properties:
             raise TypeError("'{}' is an invalid property".format(list(properties.keys())[0]))
 
-        radar = self.client.radar_for_id(issue.id)
+        additional_fields = []
+        if source_changes:
+            additional_fields.append('sourceChanges')
+        radar = self.client.radar_for_id(issue.id, additional_fields=additional_fields)
         if not radar:
             sys.stderr.write("Failed to fetch '{}'\n".format(issue.link))
             return None
@@ -390,10 +414,15 @@ class Tracker(GenericTracker):
             did_change = True
             issue._keywords = keywords
 
+        if source_changes:
+            did_change = True
+            radar.sourceChanges = '\n'.join(source_changes)
+
         if did_change:
             radar.commit_changes()
         return self.add_comment(issue, why) if why else issue
 
+    @handle_access_exception
     def add_comment(self, issue, text):
         if not self.client or not self.library:
             sys.stderr.write('radarclient inaccessible on this machine\n')
@@ -420,6 +449,7 @@ class Tracker(GenericTracker):
 
         return result
 
+    @handle_access_exception
     def create_relationship(self, issue, issue2, relationship):
         if relationship not in self.RELATIONSHIP_TYPES:
             sys.stderr.write('{} is not a valid relationship type.'.format(relationship))
@@ -460,6 +490,7 @@ class Tracker(GenericTracker):
 
         return None
 
+    @handle_access_exception
     def relate(self, issue, related_to=None, blocked_by=None, blocking=None, parent_of=None, subtask_of=None,
                cause_of=None, caused_by=None, duplicate_of=None, original_of=None, **relations):
         if relations:
@@ -495,6 +526,7 @@ class Tracker(GenericTracker):
 
     @property
     @webkitcorepy.decorators.Memoize()
+    @handle_access_exception
     def projects(self):
         result = dict()
         for project in self._projects:
@@ -518,6 +550,7 @@ class Tracker(GenericTracker):
                 result[project]['components'][name]['versions'].append(component.version)
         return result
 
+    @handle_access_exception
     def create(
         self, title, description,
         project=None, component=None, version=None,
@@ -598,6 +631,7 @@ class Tracker(GenericTracker):
         # cc-ing radar is a no-op for radar
         return issue
 
+    @handle_access_exception
     def clone(
         self, issue, reason,
         project=None, component=None, version=None,
@@ -629,6 +663,7 @@ class Tracker(GenericTracker):
             result.assign(self.me())
         return result
 
+    @handle_access_exception
     def search(self, query):
         if not query or len(query) == 0:
             raise ValueError('Query must be provided')

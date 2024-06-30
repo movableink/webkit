@@ -67,8 +67,9 @@ public:
 
     void updateInformation(const BackgroundFetchInformation&);
 
-    using RefCounted::ref;
-    using RefCounted::deref;
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
 private:
     BackgroundFetchRegistration(ScriptExecutionContext&, BackgroundFetchInformation&&);
@@ -82,7 +83,6 @@ private:
     void derefEventTarget() final { deref(); }
 
     // ActiveDOMObject
-    const char* activeDOMObjectName() const final;
     void stop() final;
     bool virtualHasPendingActivity() const final;
 

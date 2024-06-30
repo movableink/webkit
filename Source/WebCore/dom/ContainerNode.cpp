@@ -890,10 +890,11 @@ ExceptionOr<void> ContainerNode::appendChildWithoutPreInsertionValidityCheck(Nod
 
 ExceptionOr<void> ContainerNode::insertChildrenBeforeWithoutPreInsertionValidityCheck(NodeVector&& newChildren, Node* nextChild)
 {
+    RefPtr refChild = nextChild;
     for (auto& child : newChildren) {
         if (RefPtr oldParent = child->parentNode()) {
-            if (nextChild == child.ptr())
-                nextChild = child->nextSibling();
+            if (refChild.get() == child.ptr())
+                refChild = child->nextSibling();
             if (auto result = oldParent->removeChild(child); result.hasException())
                 return result.releaseException();
         }
@@ -910,14 +911,14 @@ ExceptionOr<void> ContainerNode::insertChildrenBeforeWithoutPreInsertionValidity
 
     ChildListMutationScope mutation(*this);
     for (auto& child : newChildren) {
-        if (nextChild && nextChild->parentNode() != this) // Event listeners moved nextChild elsewhere.
+        if (refChild && refChild->parentNode() != this) // Event listeners moved nextChild elsewhere.
             break;
         if (child->parentNode()) // Event listeners inserted this child elsewhere.
             break;
-        executeNodeInsertionWithScriptAssertion(*this, child.get(), nextChild, ChildChange::Source::API, ReplacedAllChildren::No, [&] {
+        executeNodeInsertionWithScriptAssertion(*this, child.get(), refChild.get(), ChildChange::Source::API, ReplacedAllChildren::No, [&] {
             child->setTreeScopeRecursively(treeScope());
-            if (nextChild)
-                insertBeforeCommon(*nextChild, child.get());
+            if (refChild)
+                insertBeforeCommon(*refChild, child.get());
             else
                 appendChildCommon(child);
         });
@@ -1163,9 +1164,9 @@ unsigned ContainerNode::childElementCount() const
     return std::distance(children.begin(), { });
 }
 
-ExceptionOr<void> ContainerNode::append(FixedVector<NodeOrString>&& vector)
+ExceptionOr<void> ContainerNode::append(FixedVector<NodeOrStringOrTrustedScript>&& vector)
 {
-    auto result = convertNodesOrStringsIntoNodeVector(WTFMove(vector));
+    auto result = convertNodesOrStringsOrTrustedScriptsIntoNodeVector(this, WTFMove(vector));
     if (result.hasException())
         return result.releaseException();
 
@@ -1184,9 +1185,9 @@ ExceptionOr<void> ContainerNode::append(FixedVector<NodeOrString>&& vector)
     return { };
 }
 
-ExceptionOr<void> ContainerNode::prepend(FixedVector<NodeOrString>&& vector)
+ExceptionOr<void> ContainerNode::prepend(FixedVector<NodeOrStringOrTrustedScript>&& vector)
 {
-    auto result = convertNodesOrStringsIntoNodeVector(WTFMove(vector));
+    auto result = convertNodesOrStringsOrTrustedScriptsIntoNodeVector(this, WTFMove(vector));
     if (result.hasException())
         return result.releaseException();
 
@@ -1207,9 +1208,9 @@ ExceptionOr<void> ContainerNode::prepend(FixedVector<NodeOrString>&& vector)
 }
 
 // https://dom.spec.whatwg.org/#dom-parentnode-replacechildren
-ExceptionOr<void> ContainerNode::replaceChildren(FixedVector<NodeOrString>&& vector)
+ExceptionOr<void> ContainerNode::replaceChildren(FixedVector<NodeOrStringOrTrustedScript>&& vector)
 {
-    auto result = convertNodesOrStringsIntoNodeVector(WTFMove(vector));
+    auto result = convertNodesOrStringsOrTrustedScriptsIntoNodeVector(this, WTFMove(vector));
     if (result.hasException())
         return result.releaseException();
     auto newChildren = result.releaseReturnValue();

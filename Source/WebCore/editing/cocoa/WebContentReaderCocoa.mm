@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -67,6 +67,7 @@
 #import "WebArchiveResourceWebResourceHandler.h"
 #import "WebNSAttributedStringExtras.h"
 #import "markup.h"
+#import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #import <pal/spi/cocoa/NSAttributedStringSPI.h>
 #import <wtf/FileSystem.h>
 #import <wtf/SoftLinking.h>
@@ -90,14 +91,14 @@ namespace WebCore {
 
 #if PLATFORM(MACCATALYST)
 
-static FragmentAndResources createFragment(LocalFrame&, NSAttributedString *)
+static FragmentAndResources createFragmentInternal(LocalFrame&, NSAttributedString *, OptionSet<FragmentCreationOptions>)
 {
     return { };
 }
 
 #elif !PLATFORM(WATCHOS) && !PLATFORM(APPLETV)
 
-static NSDictionary *attributesForAttributedStringConversion()
+static NSDictionary *attributesForAttributedStringConversion(bool useInterchangeNewlines)
 {
     // This function needs to be kept in sync with identically named one in WebKitLegacy, which is used on older OS versions.
     RetainPtr<NSMutableArray> excludedElements = adoptNS([[NSMutableArray alloc] initWithObjects:
@@ -127,14 +128,14 @@ static NSDictionary *attributesForAttributedStringConversion()
 
     return @{
         NSExcludedElementsDocumentAttribute: excludedElements.get(),
-        @"InterchangeNewline": @YES,
+        @"InterchangeNewline": @(useInterchangeNewlines),
         @"CoalesceTabSpans": @YES,
         @"OutputBaseURL": baseURL,
         @"WebResourceHandler": adoptNS([WebArchiveResourceWebResourceHandler new]).get(),
     };
 }
 
-static FragmentAndResources createFragment(LocalFrame& frame, NSAttributedString *string)
+static FragmentAndResources createFragmentInternal(LocalFrame& frame, NSAttributedString *string, OptionSet<FragmentCreationOptions> fragmentCreationOptions)
 {
     FragmentAndResources result;
     Document& document = *frame.document();
@@ -145,10 +146,12 @@ static FragmentAndResources createFragment(LocalFrame& frame, NSAttributedString
 #endif
 
     NSArray *subresources = nil;
-    NSString *fragmentString = [string _htmlDocumentFragmentString:NSMakeRange(0, [string length]) documentAttributes:attributesForAttributedStringConversion() subresources:&subresources];
+    NSString *fragmentString = [string _htmlDocumentFragmentString:NSMakeRange(0, [string length]) documentAttributes:attributesForAttributedStringConversion(!fragmentCreationOptions.contains(FragmentCreationOptions::NoInterchangeNewlines)) subresources:&subresources];
+
     auto fragment = DocumentFragment::create(document);
     auto dummyBodyToForceInBodyInsertionMode = HTMLBodyElement::create(document);
-    fragment->parseHTML(fragmentString, dummyBodyToForceInBodyInsertionMode, { });
+    auto markup = fragmentCreationOptions.contains(FragmentCreationOptions::SanitizeMarkup) ? sanitizeMarkup(fragmentString) : String(fragmentString);
+    fragment->parseHTML(markup, dummyBodyToForceInBodyInsertionMode, { });
 
     result.fragment = WTFMove(fragment);
     for (WebArchiveResourceFromNSAttributedString *resource in subresources)
@@ -160,7 +163,7 @@ static FragmentAndResources createFragment(LocalFrame& frame, NSAttributedString
 #else
 
 // FIXME: Do we really need to keep this legacy code path around for watchOS and tvOS?
-static FragmentAndResources createFragment(LocalFrame& frame, NSAttributedString *string)
+static FragmentAndResources createFragmentInternal(LocalFrame& frame, NSAttributedString *string, OptionSet<FragmentCreationOptions>)
 {
     FragmentAndResources result;
     _WebCreateFragment(*frame.document(), string, result);
@@ -219,14 +222,13 @@ static bool shouldReplaceRichContentWithAttachments()
 
 static String mimeTypeFromContentType(const String& contentType)
 {
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    if (contentType == String(kUTTypeVCard)) {
+    if (contentType == String(UTTypeVCard.identifier)) {
         // CoreServices erroneously reports that "public.vcard" maps to "text/directory", rather
         // than either "text/vcard" or "text/x-vcard". Work around this by special casing the
         // "public.vcard" UTI type. See <rdar://problem/49478229> for more detail.
         return "text/vcard"_s;
     }
-ALLOW_DEPRECATED_DECLARATIONS_END
+
     return isDeclaredUTI(contentType) ? MIMETypeFromUTI(contentType) : contentType;
 }
 
@@ -377,6 +379,16 @@ static void replaceRichContentWithAttachments(LocalFrame& frame, DocumentFragmen
         if (!parent)
             continue;
 
+        // If the filename begins with this sentinel value, this means that an existing attachment should be used.
+        // See `HTMLConverter.mm` for more details.
+        if (info.fileName.startsWith(WebContentReader::placeholderAttachmentFilenamePrefix)) {
+            RefPtr document = frame.document();
+            if (RefPtr existingAttachment = document->attachmentForIdentifier({ info.data->span() })) {
+                parent->replaceChild(*existingAttachment.get(), WTFMove(originalElement));
+                continue;
+            }
+        }
+
         auto attachment = HTMLAttachmentElement::create(HTMLNames::attachmentTag, fragment.document());
         if (supportsClientSideAttachmentData(frame)) {
             if (RefPtr image = dynamicDowncast<HTMLImageElement>(originalElement); image && contentTypeIsSuitableForInlineImageRepresentation(info.contentType)) {
@@ -407,7 +419,7 @@ static void replaceRichContentWithAttachments(LocalFrame& frame, DocumentFragmen
 #endif
 }
 
-RefPtr<DocumentFragment> createFragment(LocalFrame& frame, NSAttributedString *string, AddResources addResources)
+RefPtr<DocumentFragment> createFragment(LocalFrame& frame, NSAttributedString *string, OptionSet<FragmentCreationOptions> fragmentCreationOptions)
 {
     if (!frame.page() || !frame.document())
         return nullptr;
@@ -417,11 +429,11 @@ RefPtr<DocumentFragment> createFragment(LocalFrame& frame, NSAttributedString *s
         return nullptr;
 
     DeferredLoadingScope scope(frame);
-    auto fragmentAndResources = createFragment(frame, string);
+    auto fragmentAndResources = createFragmentInternal(frame, string, fragmentCreationOptions);
     if (!fragmentAndResources.fragment)
         return nullptr;
 
-    if (addResources == AddResources::No)
+    if (fragmentCreationOptions.contains(FragmentCreationOptions::IgnoreResources))
         return fragmentAndResources.fragment;
 
     if (!DeprecatedGlobalSettings::customPasteboardDataEnabled()) {
@@ -468,7 +480,7 @@ static std::optional<MarkupAndArchive> extractMarkupAndArchive(SharedBuffer& buf
     if (!canShowMIMETypeAsHTML(type))
         return std::nullopt;
 
-    return MarkupAndArchive { String::fromUTF8(mainResource->data().makeContiguous()->data(), mainResource->data().size()), mainResource.releaseNonNull(), archive.releaseNonNull() };
+    return MarkupAndArchive { String::fromUTF8(mainResource->data().makeContiguous()->span()), mainResource.releaseNonNull(), archive.releaseNonNull() };
 }
 
 static String sanitizeMarkupWithArchive(LocalFrame& frame, Document& destinationDocument, MarkupAndArchive& markupAndArchive, MSOListQuirks msoListQuirks, const std::function<bool(const String)>& canShowMIMETypeAsHTML)
@@ -511,7 +523,7 @@ static String sanitizeMarkupWithArchive(LocalFrame& frame, Document& destination
         if (!shouldReplaceSubresourceURLWithBlobDuringSanitization(subframeURL))
             continue;
 
-        MarkupAndArchive subframeContent = { String::fromUTF8(subframeMainResource->data().makeContiguous()->data(), subframeMainResource->data().size()),
+        MarkupAndArchive subframeContent = { String::fromUTF8(subframeMainResource->data().makeContiguous()->span()),
             subframeMainResource.releaseNonNull(), subframeArchive.copyRef() };
         auto subframeMarkup = sanitizeMarkupWithArchive(frame, destinationDocument, subframeContent, MSOListQuirks::Disabled, canShowMIMETypeAsHTML);
 
@@ -648,7 +660,7 @@ bool WebContentReader::readRTFD(SharedBuffer& buffer)
         return false;
 
     auto string = adoptNS([[NSAttributedString alloc] initWithRTFD:buffer.createNSData().get() documentAttributes:nullptr]);
-    auto fragment = createFragment(frame, string.get(), AddResources::Yes);
+    auto fragment = createFragment(frame, string.get());
     if (!fragment)
         return false;
     addFragment(fragment.releaseNonNull());
@@ -662,7 +674,7 @@ bool WebContentMarkupReader::readRTFD(SharedBuffer& buffer)
     if (!frame->document())
         return false;
     auto string = adoptNS([[NSAttributedString alloc] initWithRTFD:buffer.createNSData().get() documentAttributes:nullptr]);
-    auto fragment = createFragment(frame, string.get(), AddResources::Yes);
+    auto fragment = createFragment(frame, string.get());
     if (!fragment)
         return false;
 
@@ -677,7 +689,7 @@ bool WebContentReader::readRTF(SharedBuffer& buffer)
         return false;
 
     auto string = adoptNS([[NSAttributedString alloc] initWithRTF:buffer.createNSData().get() documentAttributes:nullptr]);
-    auto fragment = createFragment(frame, string.get(), AddResources::Yes);
+    auto fragment = createFragment(frame, string.get());
     if (!fragment)
         return false;
     addFragment(fragment.releaseNonNull());
@@ -691,7 +703,7 @@ bool WebContentMarkupReader::readRTF(SharedBuffer& buffer)
     if (!frame->document())
         return false;
     auto string = adoptNS([[NSAttributedString alloc] initWithRTF:buffer.createNSData().get() documentAttributes:nullptr]);
-    auto fragment = createFragment(frame, string.get(), AddResources::Yes);
+    auto fragment = createFragment(frame, string.get());
     if (!fragment)
         return false;
     m_markup = serializeFragment(*fragment, SerializedNodes::SubtreeIncludingNode);
@@ -753,15 +765,13 @@ static Ref<HTMLElement> attachmentForFilePath(LocalFrame& frame, const String& p
     bool isDirectory = fileType == FileSystem::FileType::Directory;
     String contentType = typeForAttachmentElement(explicitContentType);
     if (contentType.isEmpty()) {
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         if (isDirectory)
-            contentType = kUTTypeDirectory;
+            contentType = UTTypeDirectory.identifier;
         else {
             contentType = File::contentTypeForFile(path);
             if (contentType.isEmpty())
-                contentType = kUTTypeData;
+                contentType = UTTypeData.identifier;
         }
-ALLOW_DEPRECATED_DECLARATIONS_END
     }
 
     std::optional<uint64_t> fileSizeForDisplay;

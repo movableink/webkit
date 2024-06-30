@@ -28,7 +28,9 @@
 
 #include "InlineDamage.h"
 #include "InlineSoftLineBreakItem.h"
+#include "LayoutElementBox.h"
 #include "LayoutUnit.h"
+#include "TextBreakingPositionContext.h"
 #include "TextDirection.h"
 #include <wtf/Range.h>
 
@@ -42,12 +44,81 @@ InlineInvalidation::InlineInvalidation(InlineDamage& inlineDamage, const InlineI
 {
 }
 
-void InlineInvalidation::styleChanged(const Box& layoutBox, const RenderStyle& oldStyle)
+bool InlineInvalidation::rootStyleWillChange(const ElementBox& formattingContextRoot, const RenderStyle& newStyle)
 {
-    UNUSED_PARAM(layoutBox);
-    UNUSED_PARAM(oldStyle);
+    ASSERT(formattingContextRoot.establishesInlineFormattingContext());
 
     m_inlineDamage.setDamageReason(InlineDamage::Reason::StyleChange);
+
+    if (m_inlineDamage.isInlineItemListDirty())
+        return true;
+
+    auto inlineItemListNeedsUpdate = [&] {
+        auto& oldStyle = formattingContextRoot.style();
+
+        if (TextBreakingPositionContext { oldStyle } != TextBreakingPositionContext { newStyle })
+            return true;
+
+        if (oldStyle.fontCascade() != newStyle.fontCascade())
+            return true;
+
+        auto* newFirstLineStyle = newStyle.getCachedPseudoStyle({ PseudoId::FirstLine });
+        auto* oldFirstLineStyle = oldStyle.getCachedPseudoStyle({ PseudoId::FirstLine });
+        if (newFirstLineStyle && oldFirstLineStyle && oldFirstLineStyle->fontCascade() != newFirstLineStyle->fontCascade())
+            return true;
+
+        if ((newFirstLineStyle && newFirstLineStyle->fontCascade() != oldStyle.fontCascade()) || (oldFirstLineStyle && oldFirstLineStyle->fontCascade() != newStyle.fontCascade()))
+            return true;
+
+        if (oldStyle.direction() != newStyle.direction() || oldStyle.unicodeBidi() != newStyle.unicodeBidi() || oldStyle.tabSize() != newStyle.tabSize() || oldStyle.textSecurity() != newStyle.textSecurity())
+            return true;
+
+        return false;
+    };
+
+    if (inlineItemListNeedsUpdate())
+        m_inlineDamage.setInlineItemListDirty();
+
+    return true;
+}
+
+bool InlineInvalidation::styleWillChange(const Box& layoutBox, const RenderStyle& newStyle)
+{
+    m_inlineDamage.setDamageReason(InlineDamage::Reason::StyleChange);
+
+    if (m_inlineDamage.isInlineItemListDirty())
+        return true;
+
+    if (layoutBox.isInlineTextBox()) {
+        // Either the root or parent inline box takes care of this style change.
+        return true;
+    }
+
+    auto inlineItemListNeedsUpdate = [&] {
+        auto& oldStyle = layoutBox.style();
+
+        auto hasInlineItemTypeChanged = oldStyle.hasOutOfFlowPosition() != newStyle.hasOutOfFlowPosition() || oldStyle.isFloating() != newStyle.isFloating() || oldStyle.display() != newStyle.display();
+        if (hasInlineItemTypeChanged)
+            return true;
+
+        if (!layoutBox.isInlineBox())
+            return false;
+
+        auto contentMayNeedNewBreakingPositionsAndMeasuring = TextBreakingPositionContext { oldStyle } != TextBreakingPositionContext { newStyle } || oldStyle.fontCascade() != newStyle.fontCascade();
+        if (contentMayNeedNewBreakingPositionsAndMeasuring)
+            return true;
+
+        auto bidiContextChanged = oldStyle.unicodeBidi() != newStyle.unicodeBidi() || oldStyle.direction() != newStyle.direction();
+        if (bidiContextChanged)
+            return true;
+
+        return false;
+    };
+
+    if (inlineItemListNeedsUpdate())
+        m_inlineDamage.setInlineItemListDirty();
+
+    return true;
 }
 
 struct DamagedContent {
@@ -159,7 +230,8 @@ static const InlineDisplay::Box* leadingContentDisplayForLineIndex(size_t lineIn
 
     for (auto firstContentDisplayBoxIndex = rootInlineBoxIndexOnLine() + 1; firstContentDisplayBoxIndex < displayBoxes.size(); ++firstContentDisplayBoxIndex) {
         auto& displayBox = displayBoxes[firstContentDisplayBoxIndex];
-        ASSERT(!displayBox.isRootInlineBox());
+        if (displayBox.isRootInlineBox())
+            return nullptr;
         if (!displayBox.isNonRootInlineBox() || displayBox.isFirstForLayoutBox())
             return &displayBox;
     }
@@ -396,6 +468,8 @@ bool InlineInvalidation::setFullLayoutIfNeeded(const Box& layoutBox)
 
 bool InlineInvalidation::textInserted(const InlineTextBox& newOrDamagedInlineTextBox, std::optional<size_t> offset)
 {
+    m_inlineDamage.setInlineItemListDirty();
+
     if (setFullLayoutIfNeeded(newOrDamagedInlineTextBox))
         return false;
 
@@ -435,6 +509,8 @@ bool InlineInvalidation::textInserted(const InlineTextBox& newOrDamagedInlineTex
 
 bool InlineInvalidation::textWillBeRemoved(const InlineTextBox& damagedInlineTextBox, std::optional<size_t> offset)
 {
+    m_inlineDamage.setInlineItemListDirty();
+
     if (setFullLayoutIfNeeded(damagedInlineTextBox))
         return false;
 
@@ -447,6 +523,8 @@ bool InlineInvalidation::textWillBeRemoved(const InlineTextBox& damagedInlineTex
 
 bool InlineInvalidation::inlineLevelBoxInserted(const Box& layoutBox)
 {
+    m_inlineDamage.setInlineItemListDirty();
+
     if (setFullLayoutIfNeeded(layoutBox))
         return false;
 
@@ -478,6 +556,8 @@ bool InlineInvalidation::inlineLevelBoxInserted(const Box& layoutBox)
 
 bool InlineInvalidation::inlineLevelBoxWillBeRemoved(const Box& layoutBox)
 {
+    m_inlineDamage.setInlineItemListDirty();
+
     if (setFullLayoutIfNeeded(layoutBox))
         return false;
 
@@ -488,16 +568,22 @@ bool InlineInvalidation::inlineLevelBoxWillBeRemoved(const Box& layoutBox)
     return false;
 }
 
-void InlineInvalidation::restartForPagination(size_t lineIndex, LayoutUnit pageTopAdjustment)
+bool InlineInvalidation::restartForPagination(size_t lineIndex, LayoutUnit pageTopAdjustment)
 {
     auto leadingContentDisplayBoxOnDamagedLine = leadingContentDisplayForLineIndex(lineIndex, displayBoxes());
     if (!leadingContentDisplayBoxOnDamagedLine)
-        return;
+        return false;
     auto inlineItemPositionForLeadingDisplayBox = inlineItemPositionForDisplayBox(*leadingContentDisplayBoxOnDamagedLine, m_inlineItemList);
-    if (!leadingContentDisplayBoxOnDamagedLine)
-        return;
+    if (!inlineItemPositionForLeadingDisplayBox || !*inlineItemPositionForLeadingDisplayBox)
+        return false;
 
-    updateInlineDamage({ lineIndex, *inlineItemPositionForLeadingDisplayBox }, InlineDamage::Reason::Pagination, ShouldApplyRangeLayout::Yes, pageTopAdjustment);
+    return updateInlineDamage({ lineIndex, *inlineItemPositionForLeadingDisplayBox }, InlineDamage::Reason::Pagination, ShouldApplyRangeLayout::Yes, pageTopAdjustment);
+}
+
+void InlineInvalidation::resetInlineDamage(InlineDamage& inlineDamage)
+{
+    inlineDamage.setInlineItemListDirty();
+    inlineDamage.resetLayoutPosition();
 }
 
 }

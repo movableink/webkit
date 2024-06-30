@@ -27,6 +27,7 @@
 
 #if ENABLE(WPE_PLATFORM)
 #include "MessageReceiver.h"
+#include "RendererBufferFormat.h"
 #include <WebCore/IntSize.h>
 #include <wtf/HashMap.h>
 #include <wtf/glib/GRefPtr.h>
@@ -36,7 +37,7 @@ typedef struct _WPEBuffer WPEBuffer;
 typedef struct _WPEView WPEView;
 
 namespace WebCore {
-class IntRect;
+class Region;
 class ShareableBitmapHandle;
 }
 
@@ -56,16 +57,18 @@ public:
 
     void updateSurfaceID(uint64_t);
 
+    RendererBufferFormat bufferFormat() const;
+
 private:
     AcceleratedBackingStoreDMABuf(WebPageProxy&, WPEView*);
 
     // IPC::MessageReceiver.
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
 
-    void didCreateBuffer(uint64_t id, const WebCore::IntSize&, uint32_t format, Vector<WTF::UnixFileDescriptor>&&, Vector<uint32_t>&& offsets, Vector<uint32_t>&& strides, uint64_t modifier);
+    void didCreateBuffer(uint64_t id, const WebCore::IntSize&, uint32_t format, Vector<WTF::UnixFileDescriptor>&&, Vector<uint32_t>&& offsets, Vector<uint32_t>&& strides, uint64_t modifier, DMABufRendererBufferFormat::Usage);
     void didCreateBufferSHM(uint64_t id, WebCore::ShareableBitmapHandle&&);
     void didDestroyBuffer(uint64_t id);
-    void frame(uint64_t bufferID);
+    void frame(uint64_t bufferID, const std::optional<WebCore::Region>&);
     void frameDone();
     void bufferRendered();
     void bufferReleased(WPEBuffer*);
@@ -74,6 +77,7 @@ private:
     GRefPtr<WPEView> m_wpeView;
     uint64_t m_surfaceID { 0 };
     GRefPtr<WPEBuffer> m_pendingBuffer;
+    GRefPtr<WPEBuffer> m_committedBuffer;
     HashMap<uint64_t, GRefPtr<WPEBuffer>> m_buffers;
     HashMap<WPEBuffer*, uint64_t> m_bufferIDs;
 };

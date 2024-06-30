@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -51,21 +51,19 @@ public:
     bool hasOverflowed() const { return m_length > String::MaxLength; }
     bool crashesOnOverflow() const { return m_shouldCrashOnOverflow; }
 
-    WTF_EXPORT_PRIVATE void appendCharacters(const UChar*, unsigned);
-    WTF_EXPORT_PRIVATE void appendCharacters(const LChar*, unsigned);
-    void appendCharacters(const char* characters, unsigned length) { appendCharacters(reinterpret_cast<const LChar*>(characters), length); }
-
-    template<typename... StringTypes> void append(StringTypes...);
+    template<StringTypeAdaptable... StringTypes> void append(const StringTypes&...);
 
     // FIXME: We should keep these overloads only if optimizations make them more efficient than the single-argument form of the variadic append above.
+    WTF_EXPORT_PRIVATE void append(std::span<const UChar>);
+    WTF_EXPORT_PRIVATE void append(std::span<const LChar>);
     void append(const AtomString& string) { append(string.string()); }
     void append(const String&);
     void append(StringView);
     void append(ASCIILiteral);
+    void append(const char*) = delete; // Pass ASCIILiteral or span instead.
     void append(UChar);
     void append(LChar);
-    void append(char character) { append(static_cast<LChar>(character)); }
-    void append(const char*);
+    void append(char character) { append(byteCast<LChar>(character)); }
 
     // FIXME: Add a StringTypeAdapter so we can append one string builder to another with variadic append.
     void append(const StringBuilder&);
@@ -85,9 +83,8 @@ public:
     UChar operator[](unsigned i) const;
 
     bool is8Bit() const;
-    template<typename CharacterType> const CharacterType* characters() const;
-    const LChar* characters8() const { return characters<LChar>(); }
-    const UChar* characters16() const { return characters<UChar>(); }
+    std::span<const LChar> span8() const { return { characters<LChar>(), length() }; }
+    std::span<const UChar> span16() const { return { characters<UChar>(), length() }; }
     template<typename CharacterType> std::span<const CharacterType> span() const { return std::span(characters<CharacterType>(), length()); }
     
     unsigned capacity() const;
@@ -101,6 +98,7 @@ public:
 
 private:
     static unsigned expandedCapacity(unsigned capacity, unsigned requiredCapacity);
+    template<typename CharacterType> const CharacterType* characters() const;
 
     template<typename AllocationCharacterType, typename CurrentCharacterType> void allocateBuffer(const CurrentCharacterType* currentCharacters, unsigned requiredCapacity);
     template<typename CharacterType> void reallocateBuffer(unsigned requiredCapacity);
@@ -113,7 +111,10 @@ private:
 
     WTF_EXPORT_PRIVATE void reifyString() const;
 
-    template<typename... StringTypeAdapters> void appendFromAdapters(StringTypeAdapters...);
+    void appendFromAdapters() { /* empty base case */ }
+    template<typename... StringTypeAdapters> void appendFromAdapters(const StringTypeAdapters&...);
+    template<typename StringTypeAdapter, typename... StringTypeAdapters> void appendFromAdaptersSlow(const StringTypeAdapter&, const StringTypeAdapters&...);
+    template<typename StringTypeAdapter> void appendFromAdapterSlow(const StringTypeAdapter&);
 
     mutable String m_string;
     RefPtr<StringImpl> m_buffer;
@@ -160,27 +161,27 @@ inline void StringBuilder::append(UChar character)
 {
     if (m_buffer && m_length < m_buffer->length() && m_string.isNull()) {
         if (!m_buffer->is8Bit()) {
-            const_cast<UChar*>(m_buffer->characters<UChar>())[m_length++] = character;
+            spanConstCast(m_buffer->span16())[m_length++] = character;
             return;
         }
         if (isLatin1(character)) {
-            const_cast<LChar*>(m_buffer->characters<LChar>())[m_length++] = static_cast<LChar>(character);
+            spanConstCast(m_buffer->span8())[m_length++] = static_cast<LChar>(character);
             return;
         }
     }
-    appendCharacters(&character, 1);
+    append(WTF::span(character));
 }
 
 inline void StringBuilder::append(LChar character)
 {
     if (m_buffer && m_length < m_buffer->length() && m_string.isNull()) {
         if (m_buffer->is8Bit())
-            const_cast<LChar*>(m_buffer->characters<LChar>())[m_length++] = character;
+            spanConstCast(m_buffer->span8())[m_length++] = character;
         else
-            const_cast<UChar*>(m_buffer->characters<UChar>())[m_length++] = character;
+            spanConstCast(m_buffer->span16())[m_length++] = character;
         return;
     }
-    appendCharacters(&character, 1);
+    append(WTF::span(character));
 }
 
 inline void StringBuilder::append(const String& string)
@@ -213,24 +214,19 @@ inline void StringBuilder::append(const StringBuilder& other)
 inline void StringBuilder::append(StringView string)
 {
     if (string.is8Bit())
-        appendCharacters(string.characters8(), string.length());
+        append(string.span8());
     else
-        appendCharacters(string.characters16(), string.length());
+        append(string.span16());
 }
 
 inline void StringBuilder::append(ASCIILiteral string)
 {
-    appendCharacters(string.characters8(), string.length());
+    append(string.span8());
 }
 
 inline void StringBuilder::appendSubstring(const String& string, unsigned offset, unsigned length)
 {
     append(StringView { string }.substring(offset, length));
-}
-
-inline void StringBuilder::append(const char* characters)
-{
-    append(StringView::fromLatin1(characters));
 }
 
 inline String StringBuilder::toString()
@@ -293,27 +289,51 @@ template<typename CharacterType> inline const CharacterType* StringBuilder::char
     if (!m_length)
         return nullptr;
     if (!m_string.isNull())
-        return m_string.characters<CharacterType>();
-    return m_buffer->characters<CharacterType>();
+        return m_string.span<CharacterType>().data();
+    return m_buffer->span<CharacterType>().data();
 }
 
-template<typename... StringTypeAdapters> void StringBuilder::appendFromAdapters(StringTypeAdapters... adapters)
+template<typename StringTypeAdapter> constexpr bool stringBuilderSlowPathRequiredForAdapter = requires(const StringTypeAdapter& adapter) {
+    { adapter.writeUsing(std::declval<StringBuilder&>) } -> std::same_as<void>;
+};
+template<typename... StringTypeAdapters> constexpr bool stringBuilderSlowPathRequired = (... || stringBuilderSlowPathRequiredForAdapter<StringTypeAdapters>);
+
+template<typename... StringTypeAdapters> void StringBuilder::appendFromAdapters(const StringTypeAdapters&... adapters)
 {
-    auto requiredLength = saturatedSum<uint32_t>(m_length, adapters.length()...);
-    if (is8Bit() && are8Bit(adapters...)) {
-        auto destination = extendBufferForAppendingLChar(requiredLength);
-        if (!destination)
-            return;
-        stringTypeAdapterAccumulator(destination, adapters...);
+    if constexpr (stringBuilderSlowPathRequired<StringTypeAdapters...>) {
+        appendFromAdaptersSlow(adapters...);
     } else {
-        auto destination = extendBufferForAppendingWithUpconvert(requiredLength);
-        if (!destination)
-            return;
-        stringTypeAdapterAccumulator(destination, adapters...);
+        auto requiredLength = saturatedSum<uint32_t>(m_length, adapters.length()...);
+        if (is8Bit() && are8Bit(adapters...)) {
+            auto destination = extendBufferForAppendingLChar(requiredLength);
+            if (!destination)
+                return;
+            stringTypeAdapterAccumulator(destination, adapters...);
+        } else {
+            auto destination = extendBufferForAppendingWithUpconvert(requiredLength);
+            if (!destination)
+                return;
+            stringTypeAdapterAccumulator(destination, adapters...);
+        }
     }
 }
 
-template<typename... StringTypes> void StringBuilder::append(StringTypes... strings)
+template<typename StringTypeAdapter> void StringBuilder::appendFromAdapterSlow(const StringTypeAdapter& adapter)
+{
+    if constexpr (stringBuilderSlowPathRequired<StringTypeAdapter>) {
+        adapter.writeUsing(*this);
+    } else {
+        appendFromAdapters(adapter);
+    }
+}
+
+template<typename StringTypeAdapter, typename... StringTypeAdapters> void StringBuilder::appendFromAdaptersSlow(const StringTypeAdapter& adapter, const StringTypeAdapters&... adapters)
+{
+    appendFromAdapterSlow(adapter);
+    appendFromAdapters(adapters...);
+}
+
+template<StringTypeAdaptable... StringTypes> void StringBuilder::append(const StringTypes&... strings)
 {
     appendFromAdapters(StringTypeAdapter<StringTypes>(strings)...);
 }
@@ -326,7 +346,7 @@ template<typename CharacterType> bool equal(const StringBuilder& builder, const 
 template<> struct IntegerToStringConversionTrait<StringBuilder> {
     using ReturnType = void;
     using AdditionalArgumentType = StringBuilder;
-    static void flush(const LChar* characters, unsigned length, StringBuilder* builder) { builder->appendCharacters(characters, length); }
+    static void flush(std::span<const LChar> characters, StringBuilder* builder) { builder->append(characters); }
 };
 
 } // namespace WTF

@@ -33,6 +33,7 @@
 #import "PlaybackSessionModel.h"
 #import "TimeRanges.h"
 #import <AVFoundation/AVTime.h>
+#import <wtf/LoggerHelper.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/text/CString.h>
 #import <wtf/text/WTFString.h>
@@ -104,6 +105,14 @@ void PlaybackSessionInterfaceIOS::setPlayerIdentifier(std::optional<MediaPlayerI
     m_playerIdentifier = WTFMove(identifier);
 }
 
+void PlaybackSessionInterfaceIOS::startObservingNowPlayingMetadata()
+{
+}
+
+void PlaybackSessionInterfaceIOS::stopObservingNowPlayingMetadata()
+{
+}
+
 #if !RELEASE_LOG_DISABLED
 const void* PlaybackSessionInterfaceIOS::logIdentifier() const
 {
@@ -119,6 +128,27 @@ WTFLogChannel& PlaybackSessionInterfaceIOS::logChannel() const
 {
     return LogMedia;
 }
+
+uint32_t PlaybackSessionInterfaceIOS::ptrCount() const
+{
+    return CanMakeCheckedPtr::ptrCount();
+}
+
+uint32_t PlaybackSessionInterfaceIOS::ptrCountWithoutThreadCheck() const
+{
+    return CanMakeCheckedPtr::ptrCountWithoutThreadCheck();
+}
+
+void PlaybackSessionInterfaceIOS::incrementPtrCount() const
+{
+    CanMakeCheckedPtr::incrementPtrCount();
+}
+
+void PlaybackSessionInterfaceIOS::decrementPtrCount() const
+{
+    CanMakeCheckedPtr::decrementPtrCount();
+}
+
 #endif
 
 } // namespace WebCore

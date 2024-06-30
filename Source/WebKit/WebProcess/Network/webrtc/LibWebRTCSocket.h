@@ -39,6 +39,15 @@ ALLOW_COMMA_BEGIN
 
 ALLOW_COMMA_END
 
+namespace WebKit {
+class LibWebRTCSocket;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebKit::LibWebRTCSocket> : std::true_type { };
+}
+
 namespace IPC {
 class Connection;
 class Decoder;
@@ -71,7 +80,7 @@ private:
 
     friend class LibWebRTCNetwork;
     void signalReadPacket(std::span<const uint8_t>, rtc::SocketAddress&&, int64_t);
-    void signalSentPacket(int, int64_t);
+    void signalSentPacket(int64_t, int64_t);
     void signalAddressReady(const rtc::SocketAddress&);
     void signalConnect();
     void signalClose(int);

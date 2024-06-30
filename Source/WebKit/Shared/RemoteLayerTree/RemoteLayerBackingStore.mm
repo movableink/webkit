@@ -80,9 +80,9 @@ public:
         return std::unique_ptr<DelegatedContentsFenceFlusher> { new DelegatedContentsFenceFlusher(WTFMove(fence)) };
     }
 
-    void flushAndCollectHandles(HashMap<RemoteImageBufferSetIdentifier, std::unique_ptr<BufferSetBackendHandle>>&) final
+    bool flushAndCollectHandles(HashMap<RemoteImageBufferSetIdentifier, std::unique_ptr<BufferSetBackendHandle>>&) final
     {
-        m_fence->waitFor(delegatedContentsFinishedTimeout);
+        return m_fence->waitFor(delegatedContentsFinishedTimeout);
     }
 
 private:
@@ -203,21 +203,21 @@ void RemoteLayerBackingStore::encode(IPC::Encoder& encoder) const
 
 void RemoteLayerBackingStoreProperties::dump(TextStream& ts) const
 {
-    auto dumpBuffer = [&](const char* name, const std::optional<BufferAndBackendInfo>& bufferInfo) {
+    auto dumpBuffer = [&](ASCIILiteral name, const std::optional<BufferAndBackendInfo>& bufferInfo) {
         ts.startGroup();
-        ts << name << " ";
+        ts << name << " "_s;
         if (bufferInfo)
-            ts << bufferInfo->resourceIdentifier << " backend generation " << bufferInfo->backendGeneration;
+            ts << bufferInfo->resourceIdentifier << " backend generation "_s << bufferInfo->backendGeneration;
         else
-            ts << "none";
+            ts << "none"_s;
         ts.endGroup();
     };
-    dumpBuffer("front buffer", m_frontBufferInfo);
-    dumpBuffer("back buffer", m_backBufferInfo);
-    dumpBuffer("secondaryBack buffer", m_secondaryBackBufferInfo);
+    dumpBuffer("front buffer"_s, m_frontBufferInfo);
+    dumpBuffer("back buffer"_s, m_backBufferInfo);
+    dumpBuffer("secondaryBack buffer"_s, m_secondaryBackBufferInfo);
 
-    ts.dumpProperty("is opaque", isOpaque());
-    ts.dumpProperty("has buffer handle", !!bufferHandle());
+    ts.dumpProperty("is opaque"_s, isOpaque());
+    ts.dumpProperty("has buffer handle"_s, !!bufferHandle());
 }
 
 bool RemoteLayerBackingStore::layerWillBeDisplayed()
@@ -255,22 +255,21 @@ bool RemoteLayerBackingStore::usesDeepColorBackingStore() const
     return false;
 }
 
-PixelFormat RemoteLayerBackingStore::pixelFormat() const
+ImageBufferPixelFormat RemoteLayerBackingStore::pixelFormat() const
 {
     if (usesDeepColorBackingStore())
-        return m_parameters.isOpaque ? PixelFormat::RGB10 : PixelFormat::RGB10A8;
+        return m_parameters.isOpaque ? ImageBufferPixelFormat::RGB10 : ImageBufferPixelFormat::RGB10A8;
 
-    return m_parameters.isOpaque ? PixelFormat::BGRX8 : PixelFormat::BGRA8;
+    return m_parameters.isOpaque ? ImageBufferPixelFormat::BGRX8 : ImageBufferPixelFormat::BGRA8;
 }
 
 unsigned RemoteLayerBackingStore::bytesPerPixel() const
 {
     switch (pixelFormat()) {
-    case PixelFormat::RGBA8: return 4;
-    case PixelFormat::BGRX8: return 4;
-    case PixelFormat::BGRA8: return 4;
-    case PixelFormat::RGB10: return 4;
-    case PixelFormat::RGB10A8: return 5;
+    case ImageBufferPixelFormat::BGRX8: return 4;
+    case ImageBufferPixelFormat::BGRA8: return 4;
+    case ImageBufferPixelFormat::RGB10: return 4;
+    case ImageBufferPixelFormat::RGB10A8: return 5;
     }
     return 4;
 }
@@ -447,7 +446,8 @@ void RemoteLayerBackingStore::drawInContext(GraphicsContext& context)
     m_layer->owner()->platformCALayerLayerDidDisplay(m_layer);
 
     m_previouslyPaintedRect = dirtyBounds;
-    m_frontBufferFlushers.append(createFlusher());
+    if (auto flusher = createFlusher())
+        m_frontBufferFlushers.append(WTFMove(flusher));
 }
 
 void RemoteLayerBackingStore::enumerateRectsBeingDrawn(GraphicsContext& context, void (^block)(FloatRect))
@@ -649,5 +649,8 @@ TextStream& operator<<(TextStream& ts, BackingStoreNeedsDisplayReason reason)
 
     return ts;
 }
+
+RemoteLayerBackingStoreOrProperties::RemoteLayerBackingStoreOrProperties(std::unique_ptr<RemoteLayerBackingStoreProperties>&& properties)
+    : properties(WTFMove(properties)) { }
 
 } // namespace WebKit

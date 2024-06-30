@@ -257,6 +257,7 @@ public:
     }
 
     void didPopValueFromStack(ExpressionType, String) { --m_stackSize; }
+    bool usesSIMD() { return m_usesSIMD; }
     void notifyFunctionUsesSIMD() { ASSERT(Options::useWebAssemblySIMD()); m_usesSIMD = true; }
 
     PartialResult WARN_UNUSED_RETURN addDrop(ExpressionType);
@@ -423,7 +424,7 @@ private:
         if (UNLIKELY(!m_jsNullConstant.isValid())) {
             m_jsNullConstant = VirtualRegister(FirstConstantRegisterIndex + m_codeBlock->m_constants.size());
             m_codeBlock->m_constants.append(JSValue::encode(jsNull()));
-            if (UNLIKELY(Options::dumpGeneratedWasmBytecodes()))
+            if (UNLIKELY(Options::dumpGeneratedWebAssemblyBytecodes()))
                 m_codeBlock->m_constantTypes.append(Types::Externref);
         }
         return m_jsNullConstant;
@@ -434,7 +435,7 @@ private:
         if (UNLIKELY(!m_zeroConstant.isValid())) {
             m_zeroConstant = VirtualRegister(FirstConstantRegisterIndex + m_codeBlock->m_constants.size());
             m_codeBlock->m_constants.append(0);
-            if (UNLIKELY(Options::dumpGeneratedWasmBytecodes()))
+            if (UNLIKELY(Options::dumpGeneratedWebAssemblyBytecodes()))
                 m_codeBlock->m_constantTypes.append(Types::I32);
         }
         return m_zeroConstant;
@@ -579,10 +580,10 @@ private:
     bool m_usesSIMD { false };
 };
 
-Expected<std::unique_ptr<FunctionCodeBlockGenerator>, String> parseAndCompileBytecode(const uint8_t* functionStart, size_t functionLength, const TypeDefinition& signature, ModuleInformation& info, uint32_t functionIndex)
+Expected<std::unique_ptr<FunctionCodeBlockGenerator>, String> parseAndCompileBytecode(std::span<const uint8_t> function, const TypeDefinition& signature, ModuleInformation& info, uint32_t functionIndex)
 {
     LLIntGenerator llintGenerator(info, functionIndex, signature);
-    FunctionParser<LLIntGenerator> parser(llintGenerator, functionStart, functionLength, signature, info);
+    FunctionParser<LLIntGenerator> parser(llintGenerator, function, signature, info);
     WASM_FAIL_IF_HELPER_FAILS(parser.parse());
 
     return llintGenerator.finalize();
@@ -970,7 +971,7 @@ auto LLIntGenerator::addConstantWithoutPush(Type type, int64_t value) -> Express
     if (!result.isNewEntry)
         return result.iterator->value;
     m_codeBlock->m_constants.append(value);
-    if (UNLIKELY(Options::dumpGeneratedWasmBytecodes()))
+    if (UNLIKELY(Options::dumpGeneratedWebAssemblyBytecodes()))
         m_codeBlock->m_constantTypes.append(type);
     return source;
 }
@@ -2294,7 +2295,7 @@ void LLIntGenerator::dump(const ControlStack& controlStack, const Stack* stack)
     dataLogLn("Control stack: stackSize:(", m_stackSize.value(), ")");
     for (size_t i = controlStack.size(); i--;) {
         dataLog("  ", controlStack[i].controlData, ": ");
-        CommaPrinter comma(", ", "");
+        CommaPrinter comma(", "_s, ""_s);
         dumpExpressionStack(comma, *stack);
         stack = &controlStack[i].enclosedExpressionStack;
         dataLogLn();

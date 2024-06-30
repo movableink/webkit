@@ -34,6 +34,7 @@ class SVGImageElement;
 
 class RenderSVGImage final : public RenderSVGModelObject {
     WTF_MAKE_ISO_ALLOCATED(RenderSVGImage);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGImage);
 public:
     RenderSVGImage(SVGImageElement&, RenderStyle&&);
     virtual ~RenderSVGImage();
@@ -71,7 +72,7 @@ private:
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) final;
 
     void repaintOrMarkForLayout(const IntRect* = nullptr);
-    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) final;
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) final;
     bool bufferForeground(PaintInfo&, const LayoutPoint&);
 
     bool needsHasSVGTransformFlags() const final;

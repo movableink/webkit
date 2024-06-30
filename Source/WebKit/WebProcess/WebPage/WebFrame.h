@@ -48,6 +48,15 @@
 #include <wtf/RetainPtr.h>
 #include <wtf/WeakPtr.h>
 
+namespace WebKit {
+class LoadListener;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebKit::LoadListener> : std::true_type { };
+}
+
 namespace API {
 class Array;
 }
@@ -79,7 +88,17 @@ class WebPage;
 class WebRemoteFrameClient;
 struct FrameInfoData;
 struct FrameTreeNodeData;
+struct ProvisionalFrameCreationParameters;
 struct WebsitePoliciesData;
+
+// Simple listener class used by plug-ins to know when frames finish or fail loading.
+class LoadListener : public CanMakeWeakPtr<LoadListener> {
+public:
+    virtual ~LoadListener() { }
+
+    virtual void didFinishLoad(WebFrame*) = 0;
+    virtual void didFailLoad(WebFrame*, bool wasCancelled) = 0;
+};
 
 class WebFrame : public API::ObjectImpl<API::Object::Type::BundleFrame>, public CanMakeWeakPtr<WebFrame> {
 public:
@@ -88,7 +107,7 @@ public:
     static Ref<WebFrame> createRemoteSubframe(WebPage&, WebFrame& parent, WebCore::FrameIdentifier, const String& frameName);
     ~WebFrame();
 
-    void initWithCoreMainFrame(WebPage&, WebCore::Frame&, bool receivedMainFrameIdentifierFromUIProcess);
+    void initWithCoreMainFrame(WebPage&, WebCore::Frame&);
 
     // Called when the FrameLoaderClient (and therefore the WebCore::Frame) is being torn down.
     void invalidate();
@@ -103,7 +122,11 @@ public:
     WebCore::RemoteFrame* coreRemoteFrame() const;
     WebCore::Frame* coreFrame() const;
 
-    void transitionToLocal(std::optional<WebCore::LayerHostingContextIdentifier> = std::nullopt);
+    void createProvisionalFrame(ProvisionalFrameCreationParameters&&);
+    void commitProvisionalFrame();
+    void destroyProvisionalFrame();
+    void loadDidCommitInAnotherProcess(std::optional<WebCore::LayerHostingContextIdentifier>);
+    WebCore::LocalFrame* provisionalFrame() { return m_provisionalFrame.get(); }
 
     FrameInfoData info() const;
     FrameTreeNodeData frameTreeData() const;
@@ -116,7 +139,6 @@ public:
     void invalidatePolicyListeners();
     void didReceivePolicyDecision(uint64_t listenerID, PolicyDecision&&);
 
-    void didCommitLoadInAnotherProcess(std::optional<WebCore::LayerHostingContextIdentifier>);
     void didFinishLoadInAnotherProcess();
     void removeFromTree();
 
@@ -194,14 +216,6 @@ public:
     void setTextDirection(const String&);
     void updateRemoteFrameSize(WebCore::IntSize);
 
-    // Simple listener class used by plug-ins to know when frames finish or fail loading.
-    class LoadListener : public CanMakeWeakPtr<LoadListener> {
-    public:
-        virtual ~LoadListener() { }
-
-        virtual void didFinishLoad(WebFrame*) = 0;
-        virtual void didFailLoad(WebFrame*, bool wasCancelled) = 0;
-    };
     void setLoadListener(LoadListener* loadListener) { m_loadListener = loadListener; }
     LoadListener* loadListener() const { return m_loadListener.get(); }
     
@@ -249,6 +263,7 @@ private:
 
     WeakPtr<WebCore::Frame> m_coreFrame;
     WeakPtr<WebPage> m_page;
+    RefPtr<WebCore::LocalFrame> m_provisionalFrame;
 
     struct PolicyCheck {
         ForNavigationAction forNavigationAction { ForNavigationAction::No };

@@ -91,6 +91,15 @@ typedef void* PlatformScrollEvent;
 #endif
 
 namespace WebKit {
+class ViewGestureController;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebKit::ViewGestureController> : std::true_type { };
+}
+
+namespace WebKit {
 
 class ViewSnapshot;
 class WebBackForwardListItem;
@@ -314,7 +323,7 @@ private:
         bool handleEvent(PlatformScrollEvent);
         void eventWasNotHandledByWebCore(PlatformScrollEvent);
 
-        void reset(const char* resetReasonForLogging);
+        void reset(ASCIILiteral resetReasonForLogging);
 
         bool shouldIgnorePinnedState() { return m_shouldIgnorePinnedState; }
         void setShouldIgnorePinnedState(bool ignore) { m_shouldIgnorePinnedState = ignore; }
@@ -333,7 +342,7 @@ private:
             WaitingForWebCore,
             InsufficientMagnitude
         };
-        static const char* stateToString(State);
+        static ASCIILiteral stateToString(State);
 
         State m_state { State::None };
         SwipeDirection m_direction;

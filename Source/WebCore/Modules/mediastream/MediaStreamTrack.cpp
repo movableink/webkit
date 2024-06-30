@@ -573,11 +573,6 @@ void MediaStreamTrack::configureTrackRendering()
     // ... media from the source only flows when a MediaStreamTrack object is both unmuted and enabled
 }
 
-const char* MediaStreamTrack::activeDOMObjectName() const
-{
-    return "MediaStreamTrack";
-}
-
 void MediaStreamTrack::suspend(ReasonForSuspension reason)
 {
     if (reason != ReasonForSuspension::BackForwardCache)
@@ -597,14 +592,12 @@ bool MediaStreamTrack::virtualHasPendingActivity() const
     return !m_ended;
 }
 
+#if ENABLE(WEB_AUDIO)
 RefPtr<WebAudioSourceProvider> MediaStreamTrack::createAudioSourceProvider()
 {
-#if ENABLE(WEB_AUDIO)
     return m_private->createAudioSourceProvider();
-#else
-    return nullptr;
-#endif
 }
+#endif
 
 bool MediaStreamTrack::isCapturingAudio() const
 {

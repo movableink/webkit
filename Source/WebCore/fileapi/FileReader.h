@@ -75,14 +75,14 @@ public:
     FileReaderLoader::ReadType readType() const { return m_readType; }
     std::optional<std::variant<String, RefPtr<JSC::ArrayBuffer>>> result() const;
 
-    using RefCounted::ref;
-    using RefCounted::deref;
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
 private:
     explicit FileReader(ScriptExecutionContext&);
 
     // ActiveDOMObject.
-    const char* activeDOMObjectName() const final;
     void stop() final;
     bool virtualHasPendingActivity() const final;
 

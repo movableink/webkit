@@ -40,6 +40,7 @@
 #include "LegacyRenderSVGResourceContainer.h"
 #include "NodeName.h"
 #include "RenderAncestorIterator.h"
+#include "RenderSVGResourceContainer.h"
 #include "ResolvedStyle.h"
 #include "SVGDocumentExtensions.h"
 #include "SVGElementRareData.h"
@@ -154,17 +155,17 @@ void SVGElement::reportAttributeParsingError(SVGParsingError error, const Qualif
     if (error == NoError)
         return;
 
-    String errorString = "<" + tagName() + "> attribute " + name.toString() + "=\"" + value + "\"";
+    auto errorString = makeString('<', tagName(), "> attribute "_s, name.toString(), "=\""_s, value, "\""_s);
     Ref document = this->document();
     CheckedRef extensions = document->svgExtensions();
 
     if (error == NegativeValueForbiddenError) {
-        extensions->reportError("Invalid negative value for " + errorString);
+        extensions->reportError(makeString("Invalid negative value for "_s, errorString));
         return;
     }
 
     if (error == ParsingAttributeFailedError) {
-        extensions->reportError("Invalid value for " + errorString);
+        extensions->reportError(makeString("Invalid value for "_s, errorString));
         return;
     }
 
@@ -286,6 +287,8 @@ Vector<WeakPtr<SVGResourceElementClient>> SVGElement::referencingCSSClients() co
 
 void SVGElement::addReferencingCSSClient(SVGResourceElementClient& client)
 {
+    if (CheckedPtr container = dynamicDowncast<RenderSVGResourceContainer>(this->renderer()))
+        container->addReferencingCSSClient(client.renderer());
     ensureSVGRareData().addReferencingCSSClient(client);
 }
 
@@ -293,6 +296,8 @@ void SVGElement::removeReferencingCSSClient(SVGResourceElementClient& client)
 {
     if (!m_svgRareData)
         return;
+    if (CheckedPtr container = dynamicDowncast<RenderSVGResourceContainer>(this->renderer()))
+        container->removeReferencingCSSClient(client.renderer());
     ensureSVGRareData().removeReferencingCSSClient(client);
 }
 
@@ -452,6 +457,7 @@ static inline bool isSVGLayerAwareElement(const SVGElement& element)
     case SVG::clipPath:
     case SVG::defs:
     case SVG::ellipse:
+    case SVG::filter:
     case SVG::foreignObject:
     case SVG::g:
     case SVG::image:
@@ -1016,7 +1022,7 @@ void SVGElement::svgAttributeChanged(const QualifiedName& attrName)
     }
 
     if (attrName == HTMLNames::classAttr) {
-        classAttributeChanged(className());
+        classAttributeChanged(className(), AttributeModificationReason::Directly);
         invalidateInstances();
         return;
     }
@@ -1041,12 +1047,12 @@ Node::InsertedIntoAncestorResult SVGElement::insertedIntoAncestor(InsertionType 
     else if (RefPtr parentElement = dynamicDowncast<SVGElement>(parentNode()); parentElement && &parentOfInsertedTree == parentNode())
         parentElement->updateRelativeLengthsInformationForChild(hasRelativeLengths(), *this);
 
+    hideNonce();
+
     if (needsPendingResourceHandling() && insertionType.connectedToDocument && !isInShadowTree()) {
         if (treeScopeForSVGReferences().isIdOfPendingSVGResource(getIdAttribute()))
             return InsertedIntoAncestorResult::NeedsPostInsertionCallback;
     }
-
-    hideNonce();
 
     return InsertedIntoAncestorResult::Done;
 }

@@ -116,16 +116,14 @@ enum class AXAncestorFlag : uint8_t {
     // Bit 7 is free.
 };
 
-enum class AccessibilityRole {
-    Application = 1,
+enum class AccessibilityRole : uint8_t {
+    Application,
     ApplicationAlert,
     ApplicationAlertDialog,
     ApplicationDialog,
-    ApplicationGroup,
     ApplicationLog,
     ApplicationMarquee,
     ApplicationStatus,
-    ApplicationTextGroup,
     ApplicationTimer,
     Audio,
     Blockquote,
@@ -274,16 +272,12 @@ ALWAYS_INLINE String accessibilityRoleToString(AccessibilityRole role)
         return "ApplicationAlertDialog"_s;
     case AccessibilityRole::ApplicationDialog:
         return "ApplicationDialog"_s;
-    case AccessibilityRole::ApplicationGroup:
-        return "ApplicationGroup"_s;
     case AccessibilityRole::ApplicationLog:
         return "ApplicationLog"_s;
     case AccessibilityRole::ApplicationMarquee:
         return "ApplicationMarquee"_s;
     case AccessibilityRole::ApplicationStatus:
         return "ApplicationStatus"_s;
-    case AccessibilityRole::ApplicationTextGroup:
-        return "ApplicationTextGroup"_s;
     case AccessibilityRole::ApplicationTimer:
         return "ApplicationTimer"_s;
     case AccessibilityRole::Audio:
@@ -645,7 +639,7 @@ struct AccessibilitySearchCriteria {
     { }
 };
 
-enum class AccessibilityObjectInclusion {
+enum class AccessibilityObjectInclusion : uint8_t {
     IncludeObject,
     IgnoreObject,
     DefaultBehavior,
@@ -727,22 +721,23 @@ enum class AccessibilityOrientation {
     Undefined,
 };
 
-struct AccessibilityTextUnderElementMode {
-    enum ChildrenInclusion {
-        TextUnderElementModeSkipIgnoredChildren,
-        TextUnderElementModeIncludeAllChildren,
-        TextUnderElementModeIncludeNameFromContentsChildren, // This corresponds to ARIA concept: nameFrom
+enum class TrimWhitespace : bool { No, Yes };
+
+struct TextUnderElementMode {
+    enum class Children : uint8_t {
+        SkipIgnoredChildren,
+        IncludeAllChildren,
+        IncludeNameFromContentsChildren, // This corresponds to ARIA concept: nameFrom
     };
 
-    ChildrenInclusion childrenInclusion;
-    bool includeFocusableContent;
-    Node* ignoredChildNode;
+    Children childrenInclusion { Children::SkipIgnoredChildren };
+    bool includeFocusableContent { false };
+    bool considerHiddenState { true };
+    bool inHiddenSubtree { false };
+    TrimWhitespace trimWhitespace { TrimWhitespace::Yes };
+    Node* ignoredChildNode { nullptr };
 
-    AccessibilityTextUnderElementMode(ChildrenInclusion c = TextUnderElementModeSkipIgnoredChildren, bool i = false, Node* ignored = nullptr)
-        : childrenInclusion(c)
-        , includeFocusableContent(i)
-        , ignoredChildNode(ignored)
-    { }
+    bool isHidden() { return considerHiddenState && inHiddenSubtree; }
 };
 
 enum class AccessibilityVisiblePositionForBounds {
@@ -840,7 +835,7 @@ public:
     bool isCheckbox() const { return roleValue() == AccessibilityRole::Checkbox; }
     bool isRadioButton() const { return roleValue() == AccessibilityRole::RadioButton; }
     bool isListBox() const { return roleValue() == AccessibilityRole::ListBox; }
-    virtual bool isListBoxOption() const = 0;
+    bool isListBoxOption() const { return roleValue() == AccessibilityRole::ListBoxOption; }
     virtual bool isAttachment() const = 0;
     bool isMenuRelated() const;
     bool isMenu() const { return roleValue() == AccessibilityRole::Menu; }
@@ -927,6 +922,7 @@ public:
     bool isRadioGroup() const { return roleValue() == AccessibilityRole::RadioGroup; }
     bool isComboBox() const { return roleValue() == AccessibilityRole::ComboBox; }
     bool isDateTime() const { return roleValue() == AccessibilityRole::DateTime; }
+    bool isGrid() const { return roleValue() == AccessibilityRole::Grid; }
     bool isTree() const { return roleValue() == AccessibilityRole::Tree; }
     bool isTreeGrid() const { return roleValue() == AccessibilityRole::TreeGrid; }
     bool isTreeItem() const { return roleValue() == AccessibilityRole::TreeItem; }
@@ -1033,6 +1029,7 @@ public:
     virtual std::optional<AccessibilityChildrenVector> imageOverlayElements() = 0;
     virtual String extendedDescription() const = 0;
 
+    bool supportsActiveDescendant() const;
     virtual bool supportsARIAOwns() const = 0;
 
     // Retrieval of related objects.
@@ -1140,7 +1137,7 @@ public:
 
     // Methods for determining accessibility text.
     virtual String stringValue() const = 0;
-    virtual String textUnderElement(AccessibilityTextUnderElementMode = AccessibilityTextUnderElementMode()) const = 0;
+    virtual String textUnderElement(TextUnderElementMode = { }) const = 0;
     virtual String text() const = 0;
     virtual unsigned textLength() const = 0;
 #if PLATFORM(COCOA)
@@ -1257,8 +1254,7 @@ public:
     virtual void detachFromParent() = 0;
     virtual bool isDetachedFromParent() = 0;
 
-    bool canHaveSelectedChildren() const;
-    virtual AccessibilityChildrenVector selectedChildren() = 0;
+    virtual std::optional<AccessibilityChildrenVector> selectedChildren() = 0;
     virtual void setSelectedChildren(const AccessibilityChildrenVector&) = 0;
     virtual AccessibilityChildrenVector visibleChildren() = 0;
     AccessibilityChildrenVector tabChildren();
@@ -1266,7 +1262,6 @@ public:
     bool isAncestorOfObject(const AXCoreObject*) const;
 
     virtual String nameAttribute() const = 0;
-    virtual AtomString tagName() const = 0;
 
     virtual std::optional<SimpleRange> simpleRange() const = 0;
     virtual VisiblePositionRange visiblePositionRange() const = 0;
@@ -1274,14 +1269,9 @@ public:
 
     virtual VisiblePositionRange visiblePositionRangeForLine(unsigned) const = 0;
     virtual VisiblePositionRange visiblePositionRangeForUnorderedPositions(const VisiblePosition&, const VisiblePosition&) const = 0;
-    virtual VisiblePositionRange positionOfLeftWord(const VisiblePosition&) const = 0;
-    virtual VisiblePositionRange positionOfRightWord(const VisiblePosition&) const = 0;
     virtual VisiblePositionRange leftLineVisiblePositionRange(const VisiblePosition&) const = 0;
     virtual VisiblePositionRange rightLineVisiblePositionRange(const VisiblePosition&) const = 0;
-    virtual VisiblePositionRange sentenceForPosition(const VisiblePosition&) const = 0;
-    virtual VisiblePositionRange paragraphForPosition(const VisiblePosition&) const = 0;
     virtual VisiblePositionRange styleRangeForPosition(const VisiblePosition&) const = 0;
-    virtual VisiblePositionRange visiblePositionRangeForRange(const CharacterRange&) const = 0;
     virtual VisiblePositionRange lineRangeForPosition(const VisiblePosition&) const = 0;
 
     virtual std::optional<SimpleRange> rangeForCharacterRange(const CharacterRange&) const = 0;
@@ -1297,13 +1287,9 @@ public:
     virtual void setSelectedVisiblePositionRange(const VisiblePositionRange&) const = 0;
 
     virtual VisiblePosition visiblePositionForPoint(const IntPoint&) const = 0;
+    virtual VisiblePosition visiblePositionForIndex(unsigned, bool /* lastIndexOK */) const = 0;
     virtual VisiblePosition nextLineEndPosition(const VisiblePosition&) const = 0;
     virtual VisiblePosition previousLineStartPosition(const VisiblePosition&) const = 0;
-    virtual VisiblePosition nextSentenceEndPosition(const VisiblePosition&) const = 0;
-    virtual VisiblePosition previousSentenceStartPosition(const VisiblePosition&) const = 0;
-    virtual VisiblePosition nextParagraphEndPosition(const VisiblePosition&) const = 0;
-    virtual VisiblePosition previousParagraphStartPosition(const VisiblePosition&) const = 0;
-    virtual VisiblePosition visiblePositionForIndex(unsigned, bool /*lastIndexOK */) const = 0;
 
     virtual VisiblePosition visiblePositionForIndex(int) const = 0;
     virtual int indexForVisiblePosition(const VisiblePosition&) const = 0;
@@ -1327,7 +1313,8 @@ public:
     virtual AutoFillButtonType valueAutofillButtonType() const = 0;
 
     // Used by an ARIA tree to get all its rows.
-    virtual void ariaTreeRows(AccessibilityChildrenVector&) = 0;
+    // FIXME: this should be folded into rows().
+    virtual AccessibilityChildrenVector ariaTreeRows() = 0;
     // Used by an ARIA tree item to get only its content, and not its child tree items and groups.
     AccessibilityChildrenVector ariaTreeItemContent();
 
@@ -1727,5 +1714,6 @@ WTF::TextStream& operator<<(WTF::TextStream&, const AXCoreObject&);
 WTF::TextStream& operator<<(WTF::TextStream&, AccessibilityText);
 WTF::TextStream& operator<<(WTF::TextStream&, AccessibilityTextSource);
 WTF::TextStream& operator<<(WTF::TextStream&, AXRelationType);
+WTF::TextStream& operator<<(WTF::TextStream&, const TextUnderElementMode&);
 
 } // namespace WebCore

@@ -119,8 +119,9 @@ public:
 
     String toJSONString() const;
 
-    using RefCounted::ref;
-    using RefCounted::deref;
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     virtual void recalculateStyles() { m_displayTreeNeedsUpdate = true; }
     virtual void setFontSize(int fontSize, bool important);
@@ -153,9 +154,6 @@ private:
     void dispatchEvent(Event&) final;
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::TextTrackCue; }
     ScriptExecutionContext* scriptExecutionContext() const final;
-
-    // ActiveDOMObject
-    const char* activeDOMObjectName() const final;
 
     void rebuildDisplayTree();
 

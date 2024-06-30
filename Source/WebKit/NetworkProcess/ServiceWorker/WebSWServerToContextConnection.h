@@ -57,6 +57,8 @@ class ServiceWorkerDownloadTask;
 class WebSWServerConnection;
 
 class WebSWServerToContextConnection final: public WebCore::SWServerToContextConnection, public IPC::MessageSender, public IPC::MessageReceiver {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WebSWServerToContextConnection);
 public:
     using WebCore::SWServerToContextConnection::weakPtrFactory;
     using WebCore::SWServerToContextConnection::WeakValueType;
@@ -86,6 +88,8 @@ public:
 
     WebCore::ProcessIdentifier webProcessIdentifier() const final;
     NetworkProcess& networkProcess();
+    void didFinishInstall(const std::optional<WebCore::ServiceWorkerJobDataIdentifier>&, WebCore::ServiceWorkerIdentifier, bool wasSuccessful);
+    void didFinishActivation(WebCore::ServiceWorkerIdentifier);
 
 private:
     // IPC::MessageSender
@@ -96,7 +100,7 @@ private:
     void skipWaiting(uint64_t requestIdentifier, WebCore::ServiceWorkerIdentifier);
 
     // Messages to the SW host WebProcess
-    void installServiceWorkerContext(const WebCore::ServiceWorkerContextData&, const WebCore::ServiceWorkerData&, const String& userAgent, WebCore::WorkerThreadMode) final;
+    void installServiceWorkerContext(const WebCore::ServiceWorkerContextData&, const WebCore::ServiceWorkerData&, const String& userAgent, WebCore::WorkerThreadMode, OptionSet<WebCore::AdvancedPrivacyProtections>) final;
     void updateAppInitiatedValue(WebCore::ServiceWorkerIdentifier, WebCore::LastNavigationWasAppInitiated) final;
     void fireInstallEvent(WebCore::ServiceWorkerIdentifier) final;
     void fireActivateEvent(WebCore::ServiceWorkerIdentifier) final;

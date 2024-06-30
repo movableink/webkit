@@ -250,3 +250,114 @@ void wgpuInstanceRequestAdapterWithBlock(WGPUInstance instance, WGPURequestAdapt
         callback(status, WebGPU::releaseToAPI(WTFMove(adapter)), message.utf8().data());
     });
 }
+
+// Fuzzer things
+WGPUBool wgpuBufferIsValid(WGPUBuffer buffer)
+{
+    return WebGPU::fromAPI(buffer).isValid();
+}
+
+WGPUBool wgpuAdapterIsValid(WGPUAdapter adapter)
+{
+    return WebGPU::fromAPI(adapter).isValid();
+}
+
+WGPUBool wgpuBindGroupIsValid(WGPUBindGroup bindGroup)
+{
+    return WebGPU::fromAPI(bindGroup).isValid();
+}
+
+WGPUBool wgpuBindGroupLayoutIsValid(WGPUBindGroupLayout bindGroupLayout)
+{
+    return WebGPU::fromAPI(bindGroupLayout).isValid();
+}
+
+WGPUBool wgpuCommandBufferIsValid(WGPUCommandBuffer commandBuffer)
+{
+    return WebGPU::fromAPI(commandBuffer).isValid();
+}
+
+WGPUBool wgpuCommandEncoderIsValid(WGPUCommandEncoder commandEncoder)
+{
+    return WebGPU::fromAPI(commandEncoder).isValid();
+}
+
+WGPUBool wgpuComputePassEncoderIsValid(WGPUComputePassEncoder computePassEncoder)
+{
+    return WebGPU::fromAPI(computePassEncoder).isValid();
+}
+
+WGPUBool wgpuComputePipelineIsValid(WGPUComputePipeline computePipeline)
+{
+    return WebGPU::fromAPI(computePipeline).isValid();
+}
+
+WGPUBool wgpuDeviceIsValid(WGPUDevice device)
+{
+    return WebGPU::fromAPI(device).isValid();
+}
+
+WGPUBool wgpuExternalTextureIsValid(WGPUExternalTexture externalTexture)
+{
+    return WebGPU::fromAPI(externalTexture).isValid();
+}
+
+WGPUBool wgpuPipelineLayoutIsValid(WGPUPipelineLayout pipelineLayout)
+{
+    return WebGPU::fromAPI(pipelineLayout).isValid();
+}
+
+WGPUBool wgpuPresentationContextIsValid(WGPUSurface presentationContext)
+{
+    return WebGPU::fromAPI(presentationContext).isValid();
+}
+
+WGPUBool wgpuQuerySetIsValid(WGPUQuerySet querySet)
+{
+    return WebGPU::fromAPI(querySet).isValid();
+}
+
+WGPUBool wgpuQueueIsValid(WGPUQueue queue)
+{
+    return WebGPU::fromAPI(queue).isValid();
+}
+
+WGPUBool wgpuRenderBundleEncoderIsValid(WGPURenderBundleEncoder renderBundleEncoder)
+{
+    return WebGPU::fromAPI(renderBundleEncoder).isValid();
+}
+
+WGPUBool wgpuRenderBundleIsValid(WGPURenderBundle renderBundle)
+{
+    return WebGPU::fromAPI(renderBundle).isValid();
+}
+
+WGPUBool wgpuRenderPassEncoderIsValid(WGPURenderPassEncoder renderPassEncoder)
+{
+    return WebGPU::fromAPI(renderPassEncoder).isValid();
+}
+
+WGPUBool wgpuRenderPipelineIsValid(WGPURenderPipeline renderPipeline)
+{
+    return WebGPU::fromAPI(renderPipeline).isValid();
+}
+
+WGPUBool wgpuSamplerIsValid(WGPUSampler sampler)
+{
+    return WebGPU::fromAPI(sampler).isValid();
+}
+
+WGPUBool wgpuShaderModuleIsValid(WGPUShaderModule shaderModule)
+{
+    return WebGPU::fromAPI(shaderModule).isValid();
+}
+
+WGPUBool wgpuTextureIsValid(WGPUTexture texture)
+{
+    return WebGPU::fromAPI(texture).isValid();
+}
+
+WGPUBool wgpuTextureViewIsValid(WGPUTextureView textureView)
+{
+    return WebGPU::fromAPI(textureView).isValid();
+}

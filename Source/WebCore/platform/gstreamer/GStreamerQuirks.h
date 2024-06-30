@@ -54,12 +54,14 @@ public:
     virtual ~GStreamerQuirk() = default;
 
     virtual bool isPlatformSupported() const { return true; }
+    virtual GstElement* createAudioSink() { return nullptr; }
     virtual GstElement* createWebAudioSink() { return nullptr; }
-    virtual bool configureElement(GstElement*, const OptionSet<ElementRuntimeCharacteristics>&) { return false; }
+    virtual void configureElement(GstElement*, const OptionSet<ElementRuntimeCharacteristics>&) { }
     virtual std::optional<bool> isHardwareAccelerated(GstElementFactory*) { return std::nullopt; }
     virtual std::optional<GstElementFactoryListType> audioVideoDecoderFactoryListType() const { return std::nullopt; }
     virtual Vector<String> disallowedWebAudioDecoders() const { return { }; }
-    virtual unsigned getAdditionalPlaybinFlags() const { return getGstPlayFlag("text") | getGstPlayFlag("soft-colorbalance"); }
+    virtual unsigned getAdditionalPlaybinFlags() const { return 0; }
+    virtual bool shouldParseIncomingLibWebRTCBitStream() const { return true; }
 };
 
 class GStreamerHolePunchQuirk : public GStreamerQuirkBase {
@@ -87,6 +89,7 @@ public:
 
     bool isEnabled() const;
 
+    GstElement* createAudioSink();
     GstElement* createWebAudioSink();
     void configureElement(GstElement*, OptionSet<ElementRuntimeCharacteristics>&&);
     std::optional<bool> isHardwareAccelerated(GstElementFactory*) const;
@@ -101,6 +104,8 @@ public:
     void setHolePunchEnabledForTesting(bool);
 
     unsigned getAdditionalPlaybinFlags() const;
+
+    bool shouldParseIncomingLibWebRTCBitStream() const;
 
 private:
     GStreamerQuirksManager(bool, bool);

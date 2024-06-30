@@ -39,7 +39,6 @@
 #include "WasmMemory.h"
 #include "WasmThunks.h"
 #include <wtf/CodePtr.h>
-#include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
 #include <wtf/threads/Signals.h>
@@ -49,18 +48,8 @@ namespace JSC { namespace Wasm {
 using WTF::CodePtr;
 
 #if CPU(ARM64E) && HAVE(HARDENED_MACH_EXCEPTIONS)
-void* presignedTrampoline = { };
-
-MachExceptionSigningKey::MachExceptionSigningKey()
-{
-    // Sign the trampoline pointer using a random diversifier and stash it away before webcontent has started so that
-    // even a PAC signing gadget cannot fake this random diversifier
-    randomSigningKey = WTF::cryptographicallyRandomNumber<uint32_t>() & __DARWIN_ARM_THREAD_STATE64_USER_DIVERSIFIER_MASK;
-    uint64_t diversifier = ptrauth_blend_discriminator((void *)(unsigned long)randomSigningKey, ptrauth_string_discriminator("pc"));
-    presignedTrampoline = JSC::LLInt::getCodePtr<CFunctionPtrTag>(wasm_throw_from_fault_handler_trampoline_reg_instance).untaggedPtr();
-    presignedTrampoline = ptrauth_sign_unauthenticated(presignedTrampoline, ptrauth_key_function_pointer, diversifier);
-}
-#endif // CPU(ARM64E) && HAVE(HARDENED_MACH_EXCEPTIONS)
+void* presignedTrampoline { nullptr };
+#endif
 
 namespace {
 namespace WasmFaultSignalHandlerInternal {
@@ -115,7 +104,7 @@ static SignalAction trapHandler(Signal signal, SigInfo& sigInfo, PlatformRegiste
 
             if (didFaultInWasm(faultingInstruction)) {
 #if CPU(ARM64E) && HAVE(HARDENED_MACH_EXCEPTIONS)
-                if (!WTF::fallbackToOldExceptions.load()) {
+                if (g_wtfConfig.signalHandlers.useHardenedHandler) {
                     MachineContext::setInstructionPointer(context, presignedTrampoline);
                     return SignalAction::Handled;
                 }
@@ -135,11 +124,10 @@ void activateSignalingMemory()
         if (!Wasm::isSupported())
             return;
 
-        if (!Options::useWasmFaultSignalHandler())
+        if (!Options::useWebAssemblyFaultSignalHandler())
             return;
 
         activateSignalHandlersFor(Signal::AccessFault);
-        WTF::finalizeSignalHandlers();
     });
 }
 
@@ -150,9 +138,12 @@ void prepareSignalingMemory()
         if (!Wasm::isSupported())
             return;
 
-        if (!Options::useWasmFaultSignalHandler())
+        if (!Options::useWebAssemblyFaultSignalHandler())
             return;
 
+#if CPU(ARM64E) && HAVE(HARDENED_MACH_EXCEPTIONS)
+        presignedTrampoline = g_wtfConfig.signalHandlers.presignReturnPCForHandler(LLInt::getCodePtr<NoPtrTag>(wasm_throw_from_fault_handler_trampoline_reg_instance));
+#endif
         addSignalHandler(Signal::AccessFault, [] (Signal signal, SigInfo& sigInfo, PlatformRegisters& ucontext) {
             return trapHandler(signal, sigInfo, ucontext);
         });

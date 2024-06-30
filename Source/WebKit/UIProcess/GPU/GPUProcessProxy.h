@@ -69,6 +69,7 @@ struct GPUProcessPreferencesForWebProcess;
 class GPUProcessProxy final : public AuxiliaryProcessProxy {
     WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(GPUProcessProxy);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(GPUProcessProxy);
     friend LazyNeverDestroyed<GPUProcessProxy>;
 public:
     static void keepProcessAliveTemporarily();
@@ -116,6 +117,8 @@ public:
     void updatePreferences(WebProcessProxy&);
     void updateScreenPropertiesIfNeeded();
 
+    void childConnectionDidBecomeUnresponsive();
+
     void terminateForTesting();
     void webProcessConnectionCountForTesting(CompletionHandler<void(uint64_t)>&&);
 
@@ -130,6 +133,8 @@ public:
 
 private:
     explicit GPUProcessProxy();
+
+    Type type() const final { return Type::GraphicsProcessing; }
 
     void addSession(const WebsiteDataStore&);
 
@@ -178,6 +183,10 @@ private:
 
     GPUProcessCreationParameters processCreationParameters();
     void platformInitializeGPUProcessParameters(GPUProcessCreationParameters&);
+
+#if USE(EXTENSIONKIT)
+    void sendBookmarkDataForCacheDirectory();
+#endif
 
     ProcessThrottler::ActivityVariant m_activityFromWebProcesses;
 #if ENABLE(MEDIA_STREAM)

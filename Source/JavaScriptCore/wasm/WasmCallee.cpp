@@ -29,7 +29,9 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "InPlaceInterpreter.h"
+#include "LLIntData.h"
 #include "LLIntExceptions.h"
+#include "LLIntThunks.h"
 #include "NativeCalleeRegistry.h"
 #include "WasmCallingConvention.h"
 #include "WasmModuleInformation.h"
@@ -40,6 +42,7 @@ namespace JSC { namespace Wasm {
 WTF_MAKE_TZONE_ALLOCATED_IMPL(Callee);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(JITCallee);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(JSEntrypointCallee);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(JSEntrypointInterpreterCallee);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(WasmToJSCallee);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(JSToWasmICCallee);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(OptimizingJITCallee);
@@ -72,6 +75,9 @@ inline void Callee::runWithDowncast(const Func& func)
     case CompilationMode::LLIntMode:
         func(static_cast<LLIntCallee*>(this));
         break;
+    case CompilationMode::JSEntrypointInterpreterMode:
+        func(static_cast<JSEntrypointInterpreterCallee*>(this));
+        break;
 #if ENABLE(WEBASSEMBLY_BBQJIT)
     case CompilationMode::BBQMode:
         func(static_cast<BBQCallee*>(this));
@@ -96,8 +102,8 @@ inline void Callee::runWithDowncast(const Func& func)
     case CompilationMode::OMGForOSREntryMode:
         break;
 #endif
-    case CompilationMode::JSEntrypointMode:
-        func(static_cast<JSEntrypointCallee*>(this));
+    case CompilationMode::JSEntrypointJITMode:
+        func(static_cast<JSEntrypointJITCallee*>(this));
         break;
     case CompilationMode::JSToWasmICMode:
 #if ENABLE(JIT)
@@ -162,7 +168,6 @@ const HandlerInfo* Callee::handlerForIndex(Instance& instance, unsigned index, c
     return HandlerInfo::handlerForIndex(instance, m_exceptionHandlers, index, tag);
 }
 
-#if ENABLE(JIT)
 JITCallee::JITCallee(Wasm::CompilationMode compilationMode)
     : Callee(compilationMode)
 {
@@ -173,7 +178,14 @@ JITCallee::JITCallee(Wasm::CompilationMode compilationMode, size_t index, std::p
 {
 }
 
+#if ENABLE(JIT)
 void JITCallee::setEntrypoint(Wasm::Entrypoint&& entrypoint)
+{
+    m_entrypoint = WTFMove(entrypoint);
+    NativeCalleeRegistry::singleton().registerCallee(this);
+}
+
+void JSEntrypointJITCallee::setEntrypoint(Wasm::Entrypoint&& entrypoint)
 {
     m_entrypoint = WTFMove(entrypoint);
     NativeCalleeRegistry::singleton().registerCallee(this);
@@ -186,12 +198,22 @@ WasmToJSCallee::WasmToJSCallee()
     NativeCalleeRegistry::singleton().registerCallee(this);
 }
 
+WasmToJSCallee& WasmToJSCallee::singleton()
+{
+    static LazyNeverDestroyed<Ref<WasmToJSCallee>> callee;
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [&]() {
+        callee.construct(adoptRef(*new WasmToJSCallee));
+    });
+    return callee.get().get();
+}
+
 IPIntCallee::IPIntCallee(FunctionIPIntMetadataGenerator& generator, size_t index, std::pair<const Name*, RefPtr<NameSection>>&& name)
     : Callee(Wasm::CompilationMode::IPIntMode, index, WTFMove(name))
     , m_functionIndex(generator.m_functionIndex)
     , m_signatures(WTFMove(generator.m_signatures))
-    , m_bytecode(generator.m_bytecode + generator.m_bytecodeOffset)
-    , m_bytecodeLength(generator.m_bytecodeLength - generator.m_bytecodeOffset)
+    , m_bytecode(generator.m_bytecode.data() + generator.m_bytecodeOffset)
+    , m_bytecodeLength(generator.m_bytecode.size() - generator.m_bytecodeOffset)
     , m_metadataVector(WTFMove(generator.m_metadata))
     , m_metadata(m_metadataVector.data())
     , m_argumINTBytecode(WTFMove(generator.m_argumINTBytecode))
@@ -307,11 +329,8 @@ RegisterAtOffsetList* LLIntCallee::calleeSaveRegistersImpl()
     std::call_once(initializeFlag, [] {
         RegisterSet registers;
         registers.add(GPRInfo::regCS0, IgnoreVectors); // Wasm::Instance
-#if CPU(X86_64) && !OS(WINDOWS)
+#if CPU(X86_64)
         registers.add(GPRInfo::regCS2, IgnoreVectors); // PB
-#elif CPU(X86_64) && OS(WINDOWS)
-        registers.add(GPRInfo::regCS2, IgnoreVectors); // wasmScratch
-        registers.add(GPRInfo::regCS4, IgnoreVectors); // PB
 #elif CPU(ARM64) || CPU(RISCV64)
         registers.add(GPRInfo::regCS7, IgnoreVectors); // PB
 #elif CPU(ARM)
@@ -391,6 +410,45 @@ const StackMap& OptimizingJITCallee::stackmap(CallSiteIndex callSiteIndex) const
     return iter->value;
 }
 #endif
+
+JSEntrypointInterpreterCallee::JSEntrypointInterpreterCallee(unsigned frameSize, TypeIndex typeIndex)
+    : JSEntrypointCallee(Wasm::CompilationMode::JSEntrypointInterpreterMode)
+    , frameSize(frameSize)
+    , typeIndex(typeIndex)
+    , wasmFunctionPrologue(Options::useJIT()
+        ? LLInt::wasmFunctionEntryThunk().code().retagged<LLIntToWasmEntryPtrTag>()
+        : CodePtr<CFunctionPtrTag>(LLInt::getCodeFunctionPtr<CFunctionPtrTag>(wasm_function_prologue_trampoline)).retagged<LLIntToWasmEntryPtrTag>())
+{
+}
+
+CodePtr<WasmEntryPtrTag> JSEntrypointInterpreterCallee::entrypointImpl() const
+{
+    if (m_replacementCallee)
+        return m_replacementCallee->entrypoint();
+    return LLInt::getCodeFunctionPtr<CFunctionPtrTag>(js_to_wasm_wrapper_entry);
+}
+
+RegisterAtOffsetList* JSEntrypointInterpreterCallee::calleeSaveRegistersImpl()
+{
+    // This must be the same to JSToWasm's callee save registers.
+    // The reason is that we may use m_replacementCallee which can be set at any time.
+    // So, we must store the same callee save registers at the same location to the JIT version.
+    static LazyNeverDestroyed<RegisterAtOffsetList> calleeSaveRegisters;
+    static std::once_flag initializeFlag;
+    std::call_once(initializeFlag, [] {
+        RegisterSet registers = RegisterSetBuilder::wasmPinnedRegisters();
+#if CPU(X86_64)
+#elif CPU(ARM64) || CPU(RISCV64)
+        ASSERT(registers.numberOfSetRegisters() == 3);
+#elif CPU(ARM)
+#else
+#error Unsupported architecture.
+#endif
+        calleeSaveRegisters.construct(WTFMove(registers));
+    });
+    ASSERT(WTF::roundUpToMultipleOf<stackAlignmentBytes()>(calleeSaveRegisters->sizeOfAreaInBytes()) == SpillStackSpaceAligned);
+    return &calleeSaveRegisters.get();
+}
 
 #if ENABLE(WEBASSEMBLY_BBQJIT)
 

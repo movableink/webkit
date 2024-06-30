@@ -79,8 +79,10 @@ public:
     using CanMakeWeakPtr<SourceBuffer>::weakPtrFactory;
     using CanMakeWeakPtr<SourceBuffer>::WeakValueType;
     using CanMakeWeakPtr<SourceBuffer>::WeakPtrImplType;
-    using RefCounted::ref;
-    using RefCounted::deref;
+
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     static bool enabledForContext(ScriptExecutionContext&);
 
@@ -141,7 +143,7 @@ public:
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
     const void* logIdentifier() const final { return m_logIdentifier; }
-    const char* logClassName() const final { return "SourceBuffer"; }
+    ASCIILiteral logClassName() const final { return "SourceBuffer"_s; }
     WTFLogChannel& logChannel() const final;
 #endif
 
@@ -160,7 +162,6 @@ private:
     void derefEventTarget() final { deref(); }
 
     // ActiveDOMObject.
-    const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
 
     Ref<MediaPromise> sourceBufferPrivateDidReceiveInitializationSegment(SourceBufferPrivateClient::InitializationSegment&&);
@@ -212,7 +213,7 @@ private:
     void rangeRemoval(const MediaTime&, const MediaTime&);
 
     friend class Internals;
-    using SamplesPromise = NativePromise<Vector<String>, int>;
+    using SamplesPromise = NativePromise<Vector<String>, PlatformMediaError>;
     WEBCORE_EXPORT Ref<SamplesPromise> bufferedSamplesForTrackId(TrackID);
     WEBCORE_EXPORT Ref<SamplesPromise> enqueuedSamplesForTrackID(TrackID);
     WEBCORE_EXPORT MediaTime minimumUpcomingPresentationTimeForTrackID(TrackID);

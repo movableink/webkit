@@ -28,6 +28,7 @@
 #pragma once
 
 #include "BasicShapeFunctions.h"
+#include "CSSBasicShapes.h"
 #include "CSSCalcValue.h"
 #include "CSSContentDistributionValue.h"
 #include "CSSCounterStyleRegistry.h"
@@ -81,7 +82,9 @@
 namespace WebCore {
 namespace Style {
 
-// Note that we assume the CSS parser only allows valid CSSValue types.
+// FIXME: Some of those functions assume the CSS parser only allows valid CSSValue types.
+// This might not be true if we pass the CSSValue from js via CSS Typed OM.
+
 class BuilderConverter {
 public:
     static Length convertLength(const BuilderState&, const CSSValue&);
@@ -120,6 +123,7 @@ public:
     static OptionSet<TextEmphasisPosition> convertTextEmphasisPosition(BuilderState&, const CSSValue&);
     static TextAlignMode convertTextAlign(BuilderState&, const CSSValue&);
     static TextAlignLast convertTextAlignLast(BuilderState&, const CSSValue&);
+    static RefPtr<BasicShapePath> convertSVGPath(BuilderState&, const CSSValue&);
     static RefPtr<PathOperation> convertPathOperation(BuilderState&, const CSSValue&);
     static RefPtr<PathOperation> convertRayPathOperation(BuilderState&, const CSSValue&);
     static Resize convertResize(BuilderState&, const CSSValue&);
@@ -217,6 +221,8 @@ public:
     static Vector<ScrollAxis> convertScrollTimelineAxis(BuilderState&, const CSSValue&);
     static Vector<ViewTimelineInsets> convertViewTimelineInset(BuilderState&, const CSSValue&);
 
+    static Vector<AtomString> convertAnchorName(BuilderState&, const CSSValue&);
+
 private:
     friend class BuilderCustom;
 
@@ -257,6 +263,9 @@ inline Length BuilderConverter::convertLength(const BuilderState& builderState, 
 
     if (primitiveValue.isCalculatedPercentageWithLength())
         return Length(primitiveValue.cssCalcValue()->createCalculationValue(conversionData));
+
+    if (primitiveValue.isAnchor())
+        return Length(0, LengthType::Fixed);
 
     ASSERT_NOT_REACHED();
     return Length(0, LengthType::Fixed);
@@ -304,7 +313,7 @@ inline Length BuilderConverter::convertLengthSizing(const BuilderState& builderS
         return Length(LengthType::Content);
     default:
         ASSERT_NOT_REACHED();
-        return Length();
+        return { };
     }
 }
 
@@ -744,6 +753,16 @@ inline RefPtr<PathOperation> BuilderConverter::convertRayPathOperation(BuilderSt
     return RayPathOperation::create(rayValue.angle()->computeDegrees(), size, rayValue.isContaining());
 }
 
+inline RefPtr<BasicShapePath> BuilderConverter::convertSVGPath(BuilderState& builderState, const CSSValue& value)
+{
+    if (auto* pathValue = dynamicDowncast<CSSPathValue>(value))
+        return basicShapePathForValue(*pathValue, builderState.style().usedZoom());
+
+    ASSERT(is<CSSPrimitiveValue>(value));
+    ASSERT(downcast<CSSPrimitiveValue>(value).valueID() == CSSValueNone);
+    return nullptr;
+}
+
 inline RefPtr<PathOperation> BuilderConverter::convertPathOperation(BuilderState& builderState, const CSSValue& value)
 {
     if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value)) {
@@ -1125,7 +1144,10 @@ inline GridLength BuilderConverter::createGridTrackBreadth(const CSSPrimitiveVal
     if (primitiveValue.isFlex())
         return GridLength(primitiveValue.doubleValue());
 
-    return primitiveValue.convertToLength<FixedIntegerConversion | PercentConversion | CalculatedConversion | AutoConversion>(builderState.cssToLengthConversionData());
+    auto length = primitiveValue.convertToLength<FixedIntegerConversion | PercentConversion | CalculatedConversion | AutoConversion>(builderState.cssToLengthConversionData());
+    if (!length.isUndefined())
+        return length;
+    return Length(0.0, LengthType::Fixed);
 }
 
 inline GridTrackSize BuilderConverter::createGridTrackSize(const CSSValue& value, BuilderState& builderState)
@@ -2105,6 +2127,23 @@ inline Vector<ViewTimelineInsets> BuilderConverter::convertViewTimelineInset(Bui
         if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(item))
             return { convertLengthOrAuto(state, *primitiveValue), std::nullopt };
         return { };
+    });
+}
+
+inline Vector<AtomString> BuilderConverter::convertAnchorName(BuilderState&, const CSSValue& value)
+{
+    if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value)) {
+        if (value.valueID() == CSSValueNone)
+            return { };
+        return { AtomString { primitiveValue->stringValue() } };
+    }
+
+    auto* list = dynamicDowncast<CSSValueList>(value);
+    if (!list)
+        return { };
+
+    return WTF::map(*list, [&](auto& item) {
+        return AtomString { downcast<CSSPrimitiveValue>(item).stringValue() };
     });
 }
 

@@ -578,7 +578,7 @@ static bool fragmentNeedsColorTransformed(ReplacementFragment& fragment, const P
             return false;
 
         const auto& colorFilter = editableRootRenderer->style().appleColorFilter();
-        for (const auto& colorFilterOperation : colorFilter.operations()) {
+        for (const auto& colorFilterOperation : colorFilter) {
             if (colorFilterOperation->type() != FilterOperation::Type::AppleInvertLightness)
                 return false;
         }
@@ -1238,8 +1238,7 @@ void ReplaceSelectionCommand::doApply()
     
     // Adjust insertionPos to prevent nesting.
     // If the start was in a Mail blockquote, we will have already handled adjusting insertionPos above.
-    if (m_preventNesting && insertionBlock && !isTableCell(*insertionBlock) && !shouldHandleMailBlockquote) {
-        ASSERT(insertionBlock != currentRoot);
+    if (m_preventNesting && insertionBlock && insertionBlock != currentRoot && !isTableCell(*insertionBlock) && !shouldHandleMailBlockquote) {
         VisiblePosition visibleInsertionPos(insertionPos);
         if (isEndOfBlock(visibleInsertionPos) && !(isStartOfBlock(visibleInsertionPos) && fragment.hasInterchangeNewlineAtEnd()))
             insertionPos = positionInParentAfterNode(insertionBlock.get());

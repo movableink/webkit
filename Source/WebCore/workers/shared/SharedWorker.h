@@ -37,14 +37,18 @@ namespace WebCore {
 
 class MessagePort;
 class ResourceError;
+class TrustedScriptURL;
 
 struct WorkerOptions;
 
 class SharedWorker final : public AbstractWorker, public ActiveDOMObject, public Identified<SharedWorkerObjectIdentifier> {
     WTF_MAKE_ISO_ALLOCATED(SharedWorker);
 public:
-    static ExceptionOr<Ref<SharedWorker>> create(Document&, String&& scriptURL, std::optional<std::variant<String, WorkerOptions>>&&);
+    static ExceptionOr<Ref<SharedWorker>> create(Document&, std::variant<RefPtr<TrustedScriptURL>, String>&&, std::optional<std::variant<String, WorkerOptions>>&&);
     ~SharedWorker();
+
+    void ref() const final { AbstractWorker::ref(); }
+    void deref() const final { AbstractWorker::deref(); }
 
     static SharedWorker* fromIdentifier(SharedWorkerObjectIdentifier);
     MessagePort& port() const { return m_port.get(); }
@@ -63,12 +67,10 @@ private:
     enum EventTargetInterfaceType eventTargetInterface() const final;
 
     // ActiveDOMObject.
-    const char* activeDOMObjectName() const final;
     void stop() final;
     bool virtualHasPendingActivity() const final;
     void suspend(ReasonForSuspension) final;
     void resume() final;
-
 
     SharedWorkerKey m_key;
     Ref<MessagePort> m_port;

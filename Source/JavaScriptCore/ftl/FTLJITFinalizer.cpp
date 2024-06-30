@@ -44,9 +44,7 @@ JITFinalizer::JITFinalizer(DFG::Plan& plan)
 {
 }
 
-JITFinalizer::~JITFinalizer()
-{
-}
+JITFinalizer::~JITFinalizer() = default;
 
 size_t JITFinalizer::codeSize()
 {
@@ -62,7 +60,7 @@ bool JITFinalizer::finalize()
 
     CodeBlock* codeBlock = m_plan.codeBlock();
 
-    codeBlock->setJITCode(*jitCode);
+    codeBlock->setJITCode(*m_jitCode);
 
     if (UNLIKELY(m_plan.compilation()))
         vm.m_perBytecodeProfiler->addCompilation(codeBlock, *m_plan.compilation());

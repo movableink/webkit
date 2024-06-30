@@ -81,6 +81,7 @@ list(APPEND WebKit_SOURCES
 
     UIProcess/libwpe/WebPasteboardProxyLibWPE.cpp
 
+    UIProcess/playstation/DisplayLinkPlayStation.cpp
     UIProcess/playstation/PageClientImpl.cpp
     UIProcess/playstation/PlayStationWebView.cpp
     UIProcess/playstation/WebPageProxyPlayStation.cpp
@@ -155,12 +156,10 @@ if (USE_CAIRO)
         Shared/API/c/cairo/WKImageCairo.h
     )
 elseif (USE_SKIA)
-    list(APPEND WebKit_SOURCES
-        Shared/skia/WebCoreArgumentCodersSkia.cpp
-    )
+    include(Platform/Skia.cmake)
 
-    list(APPEND WebKit_LIBRARIES
-        Skia
+    list(APPEND WebKit_SOURCES
+        UIProcess/skia/BackingStoreSkia.cpp
     )
 endif ()
 

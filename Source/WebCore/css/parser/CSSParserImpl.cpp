@@ -43,6 +43,9 @@
 #include "CSSParserObserver.h"
 #include "CSSParserObserverWrapper.h"
 #include "CSSPropertyParser.h"
+#include "CSSPropertyParserConsumer+Ident.h"
+#include "CSSPropertyParserConsumer+Integer.h"
+#include "CSSPropertyParserConsumer+Length.h"
 #include "CSSSelectorList.h"
 #include "CSSSelectorParser.h"
 #include "CSSStyleSheet.h"
@@ -91,6 +94,8 @@ static void appendImplicitSelectorNestingParentIfNeeded(MutableCSSSelector& sele
         selector.appendTagHistoryAsRelative(WTFMove(nestingParentSelector));
     }
 }
+
+CSSParserImpl::~CSSParserImpl() = default;
 
 void CSSParserImpl::appendImplicitSelectorIfNeeded(MutableCSSSelector& selector, AncestorRuleType last)
 {
@@ -922,7 +927,10 @@ RefPtr<StyleRuleFontPaletteValues> CSSParserImpl::consumeFontPaletteValuesRule(C
             if (!pair.key().isInteger())
                 continue;
             unsigned key = pair.key().value<unsigned>();
-            Color color = pair.color().isColor() ? pair.color().color() : StyleColor::colorFromKeyword(pair.color().valueID(), { });
+            auto color = pair.color().absoluteColor();
+            // Ignore non absolute color https://drafts.csswg.org/css-fonts/#override-color
+            if (!color.isValid())
+                continue;
             overrideColors.append(std::make_pair(key, color));
         }
     }

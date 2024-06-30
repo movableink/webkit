@@ -64,6 +64,10 @@ public:
     static Ref<HTMLModelElement> create(const QualifiedName&, Document&);
     virtual ~HTMLModelElement();
 
+    // ActiveDOMObject.
+    void ref() const final { HTMLElement::ref(); }
+    void deref() const final { HTMLElement::deref(); }
+
     void sourcesChanged();
     const URL& currentSrc() const { return m_sourceURL; }
     bool complete() const { return m_dataComplete; }
@@ -139,8 +143,7 @@ private:
 
     HTMLModelElement& readyPromiseResolve();
 
-    // ActiveDOMObject
-    const char* activeDOMObjectName() const final;
+    // ActiveDOMObject.
     bool virtualHasPendingActivity() const final;
 
     // DOM overrides.
@@ -158,7 +161,7 @@ private:
 
     // CachedRawResourceClient overrides.
     void dataReceived(CachedResource&, const SharedBuffer&) final;
-    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) final;
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) final;
 
     // ModelPlayerClient overrides.
     void didUpdateLayerHostingContextIdentifier(ModelPlayer&, LayerHostingContextIdentifier) final;

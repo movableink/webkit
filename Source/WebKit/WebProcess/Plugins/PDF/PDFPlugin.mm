@@ -89,6 +89,7 @@
 #import <WebCore/ScrollbarTheme.h>
 #import <WebCore/Settings.h>
 #import <WebCore/SharedBuffer.h>
+#import <WebCore/TextIndicator.h>
 #import <WebCore/WebAccessibilityObjectWrapperMac.h>
 #import <WebCore/WheelEventTestMonitor.h>
 #import <pal/spi/cg/CoreGraphicsSPI.h>
@@ -456,7 +457,7 @@ static WebCore::Cursor::Type toWebCoreCursorType(PDFLayerControllerCursorType cu
 
 - (void)pdfLayerController:(PDFLayerController *)pdfLayerController didChangeActiveAnnotation:(PDFAnnotation *)annotation
 {
-    _pdfPlugin->setActiveAnnotation(annotation);
+    _pdfPlugin->setActiveAnnotation({ annotation });
 }
 
 - (void)pdfLayerController:(PDFLayerController *)pdfLayerController didChangeContentScaleFactor:(CGFloat)scaleFactor
@@ -561,6 +562,8 @@ PDFPlugin::PDFPlugin(HTMLPlugInElement& element)
     if ([getPDFLayerControllerClass() respondsToSelector:@selector(setUseIOSurfaceForTiles:)])
         [getPDFLayerControllerClass() setUseIOSurfaceForTiles:false];
 }
+
+PDFPlugin::~PDFPlugin() = default;
 
 void PDFPlugin::updateScrollbars()
 {
@@ -1191,10 +1194,10 @@ void PDFPlugin::invalidateScrollCornerRect(const IntRect& rect)
     [m_scrollCornerLayer setNeedsDisplay];
 }
 
-void PDFPlugin::setActiveAnnotation(RetainPtr<PDFAnnotation>&& annotation)
+void PDFPlugin::setActiveAnnotation(SetActiveAnnotationParams&& setActiveAnnotationParams)
 {
     // This may be called off the main thread if VoiceOver is running, thus dispatch to the main runloop since it involves main thread only objects.
-    callOnMainRunLoopAndWait([annotation = WTFMove(annotation), this] {
+    callOnMainRunLoopAndWait([annotation = WTFMove(setActiveAnnotationParams.annotation), this] {
         if (!supportsForms())
             return;
 
@@ -1260,7 +1263,7 @@ void PDFPlugin::showDefinitionForAttributedString(NSAttributedString *string, CG
     
     NSRect rangeRect;
     rangeRect.origin = NSMakePoint(point.x, point.y);
-    CGFloat scaleFactor = PDFPlugin::scaleFactor();
+    auto scaleFactor = PDFPlugin::scaleFactor();
 
     rangeRect.size.height = string.size.height * scaleFactor;
     rangeRect.size.width = string.size.width * scaleFactor;
@@ -1287,7 +1290,7 @@ unsigned PDFPlugin::countFindMatches(const String& target, WebCore::FindOptions 
     if (!target.length())
         return 0;
 
-    NSStringCompareOptions nsOptions = options.contains(WebCore::CaseInsensitive) ? NSCaseInsensitiveSearch : 0;
+    NSStringCompareOptions nsOptions = options.contains(FindOption::CaseInsensitive) ? NSCaseInsensitiveSearch : 0;
     return [[m_pdfDocument findString:target withOptions:nsOptions] count];
 }
 
@@ -1333,15 +1336,15 @@ PDFSelection *PDFPlugin::nextMatchForString(const String& target, bool searchFor
 
 bool PDFPlugin::findString(const String& target, WebCore::FindOptions options, unsigned maxMatchCount)
 {
-    bool searchForward = !options.contains(WebCore::Backwards);
-    bool caseSensitive = !options.contains(WebCore::CaseInsensitive);
-    bool wrapSearch = options.contains(WebCore::WrapAround);
+    bool searchForward = !options.contains(FindOption::Backwards);
+    bool caseSensitive = !options.contains(FindOption::CaseInsensitive);
+    bool wrapSearch = options.contains(FindOption::WrapAround);
 
     // If the max was zero, any result means we exceeded the max, so we can skip computing the actual count.
     // FIXME: How can always returning true without searching if passed a max of 0 be right?
     // Even if it is right, why not put that special case inside countFindMatches instead of here?
     bool foundMatch = !maxMatchCount || countFindMatches(target, options, maxMatchCount);
-    if (options.contains(WebCore::DoNotSetSelection))
+    if (options.contains(FindOption::DoNotSetSelection))
         return foundMatch && !target.isEmpty();
 
     if (target.isEmpty()) {
@@ -1536,12 +1539,12 @@ CGSize PDFPlugin::contentSizeRespectingZoom() const
     return [m_pdfLayerController contentSizeRespectingZoom];
 }
 
-CGFloat PDFPlugin::scaleFactor() const
+double PDFPlugin::scaleFactor() const
 {
     return [m_pdfLayerController contentScaleFactor];
 }
 
-float PDFPlugin::contentScaleFactor() const
+double PDFPlugin::contentScaleFactor() const
 {
     return scaleFactor();
 }

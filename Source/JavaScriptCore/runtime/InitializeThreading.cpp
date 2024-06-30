@@ -30,6 +30,7 @@
 #include "InitializeThreading.h"
 
 #include "AssemblyComments.h"
+#include "AssertInvariants.h"
 #include "ExecutableAllocator.h"
 #include "InPlaceInterpreter.h"
 #include "JITOperationList.h"
@@ -115,7 +116,7 @@ void initialize()
 
         AssemblyCommentRegistry::initialize();
 #if ENABLE(WEBASSEMBLY)
-        if (Options::useWasmIPInt())
+        if (Options::useWebAssemblyIPInt() || Options::useInterpretedJSEntryWrappers())
             IPInt::initialize();
 #endif
         LLInt::initialize();
@@ -136,23 +137,13 @@ void initialize()
             WTF::fastEnableMiniMode();
 
         if (Wasm::isSupported() || !Options::usePollingTraps()) {
-            // JSLock::lock() can call registerThreadForMachExceptionHandling() which crashes if this has not been called first.
-            int mask = 0;
-#if CPU(ARM64E) && HAVE(HARDENED_MACH_EXCEPTIONS)
-            JSC::Wasm::MachExceptionSigningKey keygen;
-            uint32_t signingKey = keygen.randomSigningKey;
-            mask |= toMachMask(Signal::AccessFault);
-#else
-            uint32_t signingKey = 0;
-#endif // CPU(ARM64E) && HAVE(HARDENED_MACH_EXCEPTIONS)
-            initializeSignalHandling(signingKey, mask);
-
             if (!Options::usePollingTraps())
                 VMTraps::initializeSignals();
             if (Wasm::isSupported())
                 Wasm::prepareSignalingMemory();
-        } else
-            disableSignalHandling();
+        }
+
+        assertInvariants();
 
         WTF::compilerFence();
         RELEASE_ASSERT(!g_jscConfig.initializeHasBeenCalled);

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 #
 # Copyright (C) 2022-2023 Apple Inc. All rights reserved.
+# Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -2601,8 +2602,7 @@ class GenerateCSSPropertyNames:
                     }
                     *nextCharacter++ = character;
                 }
-                unsigned length = nextCharacter - characters;
-                return { characters, length };
+                return std::span<const LChar> { characters, nextCharacter };
             }
 
             """)
@@ -2614,7 +2614,7 @@ class GenerateCSSPropertyNames:
         to.write(f"{signature}")
         to.write(f"{{")
         with to.indent():
-            to.write(f"auto textflow = makeTextFlow(writingMode, direction);")
+            to.write(f"TextFlow flow {{ writingModeToBlockFlowDirection(writingMode), direction }};")
             to.write(f"switch (id) {{")
 
             for group_name, property_group in sorted(self.properties_and_descriptors.style_properties.logical_property_groups.items(), key=lambda x: x[0]):
@@ -2631,7 +2631,7 @@ class GenerateCSSPropertyNames:
                     to.write(f"case {property.id}: {{")
                     with to.indent():
                         to.write(f"static constexpr CSSPropertyID properties[{len(properties)}] = {{ {', '.join(properties)} }};")
-                        to.write(f"return properties[static_cast<size_t>(map{source_as_id}{kind_as_id}To{destination_as_id}{kind_as_id}(textflow, {resolver_enum}))];")
+                        to.write(f"return properties[static_cast<size_t>(map{source_as_id}{kind_as_id}To{destination_as_id}{kind_as_id}(flow, {resolver_enum}))];")
                     to.write(f"}}")
 
             to.write(f"default:")
@@ -3969,6 +3969,21 @@ class GenerateCSSPropertyParsing:
                     "CSSParserContext.h",
                     "CSSParserIdioms.h",
                     "CSSPropertyParser.h",
+                    "CSSPropertyParserConsumer+Angle.h",
+                    "CSSPropertyParserConsumer+Color.h",
+                    "CSSPropertyParserConsumer+Ident.h",
+                    "CSSPropertyParserConsumer+Integer.h",
+                    "CSSPropertyParserConsumer+Image.h",
+                    "CSSPropertyParserConsumer+Length.h",
+                    "CSSPropertyParserConsumer+List.h",
+                    "CSSPropertyParserConsumer+Number.h",
+                    "CSSPropertyParserConsumer+Percent.h",
+                    "CSSPropertyParserConsumer+Position.h",
+                    "CSSPropertyParserConsumer+Primitives.h",
+                    "CSSPropertyParserConsumer+Resolution.h",
+                    "CSSPropertyParserConsumer+String.h",
+                    "CSSPropertyParserConsumer+Time.h",
+                    "CSSPropertyParserConsumer+URL.h",
                     "CSSPropertyParserWorkerSafe.h",
                     "CSSValuePool.h",
                     "DeprecatedGlobalSettings.h",
@@ -4438,7 +4453,7 @@ class TermGeneratorReferenceTerm(TermGenerator):
                 return f"{builtin.consume_function_name}({range_string}, {context_string}.mode, {builtin.unitless}, PositionSyntax::Position)"
             elif isinstance(builtin, BuiltinColorConsumer):
                 if builtin.quirky_colors:
-                    return f"{builtin.consume_function_name}({range_string}, {context_string}, {context_string}.mode == HTMLQuirksMode)"
+                    return f"{builtin.consume_function_name}({range_string}, {context_string}, {{ .acceptQuirkyColors = ({context_string}.mode == HTMLQuirksMode) }})"
                 return f"{builtin.consume_function_name}({range_string}, {context_string})"
             else:
                 assert(not self.requires_context)

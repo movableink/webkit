@@ -133,6 +133,8 @@ SOFT_LINK_CONSTANT_FOR_SOURCE_WITH_EXPORT(PAL, PassKitCore, PKPassKitErrorDomain
 SOFT_LINK_CONSTANT_FOR_SOURCE_WITH_EXPORT(PAL, PassKitCore, PKPaymentErrorDomain, NSString *, PAL_EXPORT)
 SOFT_LINK_CONSTANT_FOR_SOURCE_WITH_EXPORT(PAL, PassKitCore, PKPaymentErrorPostalAddressUserInfoKey, PKPaymentErrorKey, PAL_EXPORT)
 
+SOFT_LINK_CONSTANT_FOR_SOURCE_WITH_EXPORT(PAL, PassKitCore, PKDisbursementErrorDomain, NSString *, PAL_EXPORT)
+
 SOFT_LINK_CONSTANT_FOR_SOURCE_WITH_EXPORT(PAL, PassKitCore, PKPaymentNetworkAmex, PKContactField, PAL_EXPORT)
 SOFT_LINK_CONSTANT_FOR_SOURCE_WITH_EXPORT(PAL, PassKitCore, PKPaymentNetworkPagoBancomat, PKContactField, PAL_EXPORT)
 SOFT_LINK_CONSTANT_FOR_SOURCE_WITH_EXPORT(PAL, PassKitCore, PKPaymentNetworkBancontact, PKContactField, PAL_EXPORT)
@@ -162,6 +164,9 @@ SOFT_LINK_CONSTANT_FOR_SOURCE_WITH_EXPORT(PAL, PassKitCore, PKPaymentNetworkNana
 SOFT_LINK_CONSTANT_FOR_SOURCE_WITH_EXPORT(PAL, PassKitCore, PKPaymentNetworkPostFinance, PKContactField, PAL_EXPORT)
 SOFT_LINK_CONSTANT_FOR_SOURCE_WITH_EXPORT(PAL, PassKitCore, PKPaymentNetworkTmoney, PKContactField, PAL_EXPORT)
 
+#if HAVE(PASSKIT_MERCHANT_CATEGORY_CODE)
+SOFT_LINK_CONSTANT_FOR_SOURCE_WITH_EXPORT(PAL, PassKitCore, PKMerchantCategoryCodeNone, PKMerchantCategoryCode, PAL_EXPORT)
+#endif
 
 SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(PAL, PassKitCore, PKCanMakePaymentsWithMerchantIdentifierDomainAndSourceApplication, void, (NSString *identifier, NSString *domain, NSString *sourceApplicationSecondaryIdentifier, PKCanMakePaymentsCompletion completion), (identifier, domain, sourceApplicationSecondaryIdentifier, completion), PAL_EXPORT)
 

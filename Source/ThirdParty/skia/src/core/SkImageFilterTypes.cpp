@@ -39,6 +39,7 @@
 #include "src/effects/colorfilters/SkColorFilterBase.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace skif {
 
@@ -97,7 +98,7 @@ void decompose_transform(const SkMatrix& transform, SkPoint representativePoint,
         // Perspective, which has a non-uniform scaling effect on the filter. Pick a single scale
         // factor that best matches where the filter will be evaluated.
         SkScalar approxScale = SkMatrixPriv::DifferentialAreaScale(transform, representativePoint);
-        if (SkScalarIsFinite(approxScale) && !SkScalarNearlyZero(approxScale)) {
+        if (SkIsFinite(approxScale) && !SkScalarNearlyZero(approxScale)) {
             // Now take the sqrt to go from an area scale factor to a scaling per X and Y
             approxScale = SkScalarSqrt(approxScale);
         } else {
@@ -327,10 +328,10 @@ SkIRect Mapping::map<SkIRect>(const SkIRect& geom, const SkMatrix& matrix) {
         double r = (double)matrix.getScaleX()*geom.fRight  + (double)matrix.getTranslateX();
         double t = (double)matrix.getScaleY()*geom.fTop    + (double)matrix.getTranslateY();
         double b = (double)matrix.getScaleY()*geom.fBottom + (double)matrix.getTranslateY();
-        return {sk_double_saturate2int(sk_double_floor(std::min(l, r) + kRoundEpsilon)),
-                sk_double_saturate2int(sk_double_floor(std::min(t, b) + kRoundEpsilon)),
-                sk_double_saturate2int(sk_double_ceil(std::max(l, r)  - kRoundEpsilon)),
-                sk_double_saturate2int(sk_double_ceil(std::max(t, b)  - kRoundEpsilon))};
+        return {sk_double_saturate2int(std::floor(std::min(l, r) + kRoundEpsilon)),
+                sk_double_saturate2int(std::floor(std::min(t, b) + kRoundEpsilon)),
+                sk_double_saturate2int(std::ceil(std::max(l, r)  - kRoundEpsilon)),
+                sk_double_saturate2int(std::ceil(std::max(t, b)  - kRoundEpsilon))};
     } else {
         return RoundOut(matrix.mapRect(SkRect::Make(geom)));
     }
@@ -490,10 +491,10 @@ bool LayerSpace<SkMatrix>::inverseMapRect(const LayerSpace<SkIRect>& rect,
         double t = (rect.top()    - (double)fData.getTranslateY()) / (double)fData.getScaleY();
         double b = (rect.bottom() - (double)fData.getTranslateY()) / (double)fData.getScaleY();
 
-        SkIRect mapped{sk_double_saturate2int(sk_double_floor(std::min(l, r) + kRoundEpsilon)),
-                       sk_double_saturate2int(sk_double_floor(std::min(t, b) + kRoundEpsilon)),
-                       sk_double_saturate2int(sk_double_ceil(std::max(l, r)  - kRoundEpsilon)),
-                       sk_double_saturate2int(sk_double_ceil(std::max(t, b)  - kRoundEpsilon))};
+        SkIRect mapped{sk_double_saturate2int(std::floor(std::min(l, r) + kRoundEpsilon)),
+                       sk_double_saturate2int(std::floor(std::min(t, b) + kRoundEpsilon)),
+                       sk_double_saturate2int(std::ceil(std::max(l, r)  - kRoundEpsilon)),
+                       sk_double_saturate2int(std::ceil(std::max(t, b)  - kRoundEpsilon))};
         *out = LayerSpace<SkIRect>(mapped);
         return true;
     } else {
@@ -634,17 +635,12 @@ FilterResult FilterResult::insetForSaveLayer() const {
         return {};
     }
 
-    // A layer image should not have any other transform beyond it's origin that matches its bounds
-    SkDEBUGCODE(LayerSpace<SkIPoint> origin;)
-    SkASSERT(is_nearly_integer_translation(fTransform, &origin) &&
-             SkIPoint(origin) == SkIPoint(fLayerBounds.topLeft()));
+    // SkCanvas processing should have prepared a decal-tiled image before calling this.
     SkASSERT(fTileMode == SkTileMode::kDecal);
 
     // PixelBoundary tracking assumes the special image's subset does not include the padding, so
     // inset by a single pixel.
-    auto layerBounds = fLayerBounds;
-    layerBounds.inset(LayerSpace<SkISize>({1, 1}));
-    FilterResult inset = this->subset(fLayerBounds.topLeft(), layerBounds);
+    FilterResult inset = this->insetByPixel();
     // Trust that SkCanvas configured the layer's SkDevice to ensure the padding remained
     // transparent. Upgrading this pixel boundary knowledge allows the source image to use the
     // simpler clamp math (vs. decal math) when used in a shader context.
@@ -652,6 +648,16 @@ FilterResult FilterResult::insetForSaveLayer() const {
              inset.fTileMode == SkTileMode::kDecal);
     inset.fBoundary = PixelBoundary::kTransparent;
     return inset;
+}
+
+FilterResult FilterResult::insetByPixel() const {
+    // This assumes that the image is pixel aligned with its layer bounds, which is validated in
+    // the call to subset().
+    auto insetBounds = fLayerBounds;
+    insetBounds.inset(LayerSpace<SkISize>({1, 1}));
+     // Shouldn't be calling this except in situations where padding was explicitly added before.
+    SkASSERT(!insetBounds.isEmpty());
+    return this->subset(fLayerBounds.topLeft(), insetBounds);
 }
 
 SkEnumBitMask<FilterResult::BoundsAnalysis> FilterResult::analyzeBounds(
@@ -1421,7 +1427,7 @@ sk_sp<SkShader> FilterResult::getAnalyzedShaderView(
         imageShader = builder.makeShader();
     }
 
-    if (imageShader && !postDecal.isIdentity()) {
+    if (imageShader && (analysis & BoundsAnalysis::kRequiresDecalInLayerSpace)) {
         imageShader = imageShader->makeWithLocalMatrix(postDecal);
     }
 
@@ -1696,10 +1702,25 @@ FilterResult FilterResult::MakeFromShader(const Context& ctx,
 
 FilterResult FilterResult::MakeFromImage(const Context& ctx,
                                          sk_sp<SkImage> image,
-                                         const SkRect& srcRect,
-                                         const ParameterSpace<SkRect>& dstRect,
+                                         SkRect srcRect,
+                                         ParameterSpace<SkRect> dstRect,
                                          const SkSamplingOptions& sampling) {
     SkASSERT(image);
+
+    SkRect imageBounds = SkRect::Make(image->dimensions());
+    if (!imageBounds.contains(srcRect)) {
+        SkMatrix srcToDst = SkMatrix::RectToRect(srcRect, SkRect(dstRect));
+        if (!srcRect.intersect(imageBounds)) {
+            return {}; // No overlap, so return an empty/transparent image
+        }
+        // Adjust dstRect to match the updated srcRect
+        dstRect = ParameterSpace<SkRect>{srcToDst.mapRect(srcRect)};
+    }
+
+    if (SkRect(dstRect).isEmpty()) {
+        return {}; // Output collapses to empty
+    }
+
     // Check for direct conversion to an SkSpecialImage and then FilterResult. Eventually this
     // whole function should be replaceable with:
     //    FilterResult(fImage, fSrcRect, fDstRect).applyTransform(mapping.layerMatrix(), fSampling);

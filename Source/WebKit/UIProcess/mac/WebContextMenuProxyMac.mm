@@ -251,12 +251,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         }
         items = @[ itemProvider.get() ];
         
-    } else if (!m_context.controlledSelectionData().isEmpty()) {
-        auto selectionData = adoptNS([[NSData alloc] initWithBytes:static_cast<const void*>(m_context.controlledSelectionData().data()) length:m_context.controlledSelectionData().size()]);
-        auto selection = adoptNS([[NSAttributedString alloc] initWithRTFD:selectionData.get() documentAttributes:nil]);
-
+    } else if (RetainPtr selection = m_context.controlledSelection().nsAttributedString())
         items = @[ selection.get() ];
-    } else if (isPDFAttachment) {
+    else if (isPDFAttachment) {
         itemProvider = adoptNS([[NSItemProvider alloc] initWithItem:attachment->associatedElementNSData() typeIdentifier:attachment->utiType()]);
         items = @[ itemProvider.get() ];
     } else {
@@ -427,7 +424,7 @@ void WebContextMenuProxyMac::getShareMenuItem(CompletionHandler<void(NSMenuItem 
     }
 
     if (hitTestData.imageSharedMemory) {
-        if (auto image = adoptNS([[NSImage alloc] initWithData:[NSData dataWithBytes:(unsigned char*)hitTestData.imageSharedMemory->data() length:hitTestData.imageSharedMemory->size()]])) {
+        if (auto image = adoptNS([[NSImage alloc] initWithData:hitTestData.imageSharedMemory->toNSData().get()])) {
 #if HAVE(NSPREVIEWREPRESENTINGACTIVITYITEM)
             NSString *title = hitTestData.imageText;
             if (!title.length)
@@ -624,11 +621,14 @@ static NSString *menuItemIdentifier(const WebCore::ContextMenuAction action)
     case ContextMenuItemTagToggleVideoFullscreen:
         return _WKMenuItemIdentifierToggleFullScreen;
 
+    case ContextMenuItemTagToggleVideoViewer:
+        return _WKMenuItemIdentifierToggleVideoViewer;
+
     case ContextMenuItemTagTranslate:
         return _WKMenuItemIdentifierTranslate;
 
-    case ContextMenuItemTagSwapCharacters:
-        return _WKMenuItemIdentifierSwapCharacters;
+    case ContextMenuItemTagWritingTools:
+        return _WKMenuItemIdentifierWritingTools;
 
     case ContextMenuItemTagCopySubject:
         return _WKMenuItemIdentifierCopySubject;
@@ -745,6 +745,14 @@ void WebContextMenuProxyMac::getContextMenuFromItems(const Vector<WebContextMenu
     if (!page()->canHandleContextMenuTranslation() || isPopover) {
         filteredItems.removeAllMatching([] (auto& item) {
             return item.action() == ContextMenuItemTagTranslate;
+        });
+    }
+#endif
+
+#if ENABLE(WRITING_TOOLS)
+    if (!page()->canHandleContextMenuWritingTools() || isPopover) {
+        filteredItems.removeAllMatching([] (auto& item) {
+            return item.action() == ContextMenuItemTagWritingTools;
         });
     }
 #endif

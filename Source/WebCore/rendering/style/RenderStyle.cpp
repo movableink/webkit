@@ -87,7 +87,7 @@ struct SameSizeAsBorderValue {
 
 static_assert(sizeof(BorderValue) == sizeof(SameSizeAsBorderValue), "BorderValue should not grow");
 
-struct SameSizeAsRenderStyle {
+struct SameSizeAsRenderStyle : CanMakeCheckedPtr<SameSizeAsRenderStyle> {
     void* nonInheritedDataRefs[1];
     struct NonInheritedFlags {
         unsigned m_bitfields[2];
@@ -1220,7 +1220,6 @@ static bool rareInheritedDataChangeRequiresRepaint(const StyleRareInheritedData&
     ;
 }
 
-#if ENABLE(CSS_PAINTING_API)
 void RenderStyle::addCustomPaintWatchProperty(const AtomString& name)
 {
     auto& data = m_nonInheritedData.access().rareData.access();
@@ -1265,7 +1264,6 @@ inline static bool changedCustomPaintWatchedProperty(const RenderStyle& a, const
 
     return false;
 }
-#endif
 
 bool RenderStyle::changeRequiresRepaint(const RenderStyle& other, OptionSet<StyleDifferenceContextSensitiveProperty>& changedContextSensitiveProperties) const
 {
@@ -1312,10 +1310,8 @@ bool RenderStyle::changeRequiresRepaint(const RenderStyle& other, OptionSet<Styl
         && rareInheritedDataChangeRequiresRepaint(*m_rareInheritedData, *other.m_rareInheritedData))
         return true;
 
-#if ENABLE(CSS_PAINTING_API)
     if (changedCustomPaintWatchedProperty(*this, *m_nonInheritedData->rareData, other, *other.m_nonInheritedData->rareData))
         return true;
-#endif
 
     return false;
 }
@@ -1916,6 +1912,10 @@ void RenderStyle::conservativelyCollectChangedAnimatableProperties(const RenderS
             changingProperties.m_properties.set(CSSPropertyViewTransitionName);
         if (first.contentVisibility != second.contentVisibility)
             changingProperties.m_properties.set(CSSPropertyContentVisibility);
+        if (first.anchorNames != second.anchorNames)
+            changingProperties.m_properties.set(CSSPropertyAnchorName);
+        if (first.positionAnchor != second.positionAnchor)
+            changingProperties.m_properties.set(CSSPropertyPositionAnchor);
 
         // Non animated styles are followings.
         // customProperties
@@ -2282,14 +2282,13 @@ void RenderStyle::setHasAttrContent()
 
 bool RenderStyle::affectedByTransformOrigin() const
 {
-    if (m_nonInheritedData->rareData->rotate && !m_nonInheritedData->rareData->rotate->isIdentity())
+    if (rotate() && !rotate()->isIdentity())
         return true;
 
-    if (m_nonInheritedData->rareData->scale && !m_nonInheritedData->rareData->scale->isIdentity())
+    if (scale() && !scale()->isIdentity())
         return true;
 
-    auto& transformOperations = m_nonInheritedData->miscData->transform->operations;
-    if (transformOperations.affectedByTransformOrigin())
+    if (transform().affectedByTransformOrigin())
         return true;
 
     if (offsetPath())
@@ -2366,21 +2365,22 @@ void RenderStyle::applyCSSTransform(TransformationMatrix& transform, const Trans
     // 2. Translate by the computed X, Y, and Z values of transform-origin.
     // (implemented in applyTransformOrigin)
     auto& boundingBox = operationData.boundingBox;
+
     // 3. Translate by the computed X, Y, and Z values of translate.
     if (options.contains(RenderStyle::TransformOperationOption::Translate)) {
-        if (TransformOperation* translate = m_nonInheritedData->rareData->translate.get())
+        if (auto* translate = this->translate())
             translate->apply(transform, boundingBox.size());
     }
 
     // 4. Rotate by the computed <angle> about the specified axis of rotate.
     if (options.contains(RenderStyle::TransformOperationOption::Rotate)) {
-        if (TransformOperation* rotate = m_nonInheritedData->rareData->rotate.get())
+        if (auto* rotate = this->rotate())
             rotate->apply(transform, boundingBox.size());
     }
 
     // 5. Scale by the computed X, Y, and Z values of scale.
     if (options.contains(RenderStyle::TransformOperationOption::Scale)) {
-        if (TransformOperation* scale = m_nonInheritedData->rareData->scale.get())
+        if (auto* scale = this->scale())
             scale->apply(transform, boundingBox.size());
     }
 
@@ -2389,9 +2389,7 @@ void RenderStyle::applyCSSTransform(TransformationMatrix& transform, const Trans
         MotionPath::applyMotionPathTransform(*this, operationData, transform);
 
     // 7. Multiply by each of the transform functions in transform from left to right.
-    auto& transformOperations = m_nonInheritedData->miscData->transform->operations;
-    for (auto& operation : transformOperations.operations())
-        operation->apply(transform, boundingBox.size());
+    this->transform().apply(transform, boundingBox.size());
 
     // 8. Translate by the negated computed X, Y and Z values of transform-origin.
     // (implemented in unapplyTransformOrigin)
@@ -2401,9 +2399,8 @@ void RenderStyle::setPageScaleTransform(float scale)
 {
     if (scale == 1)
         return;
-    TransformOperations transform;
-    transform.operations().append(ScaleTransformOperation::create(scale, scale, TransformOperation::Type::Scale));
-    setTransform(transform);
+
+    setTransform(TransformOperations { ScaleTransformOperation::create(scale, scale, TransformOperation::Type::Scale) });
     setTransformOriginX(Length(0, LengthType::Fixed));
     setTransformOriginY(Length(0, LengthType::Fixed));
 }
@@ -2578,8 +2575,8 @@ const AtomString& RenderStyle::hyphenString() const
         return hyphenationString;
 
     // FIXME: This should depend on locale.
-    static MainThreadNeverDestroyed<const AtomString> hyphenMinusString(&hyphenMinus, 1);
-    static MainThreadNeverDestroyed<const AtomString> hyphenString(&hyphen, 1);
+    static MainThreadNeverDestroyed<const AtomString> hyphenMinusString(span(hyphenMinus));
+    static MainThreadNeverDestroyed<const AtomString> hyphenString(span(hyphen));
     return fontCascade().primaryFont().glyphForCharacter(hyphen) ? hyphenString : hyphenMinusString;
 }
 
@@ -2591,28 +2588,28 @@ const AtomString& RenderStyle::textEmphasisMarkString() const
     case TextEmphasisMark::Custom:
         return textEmphasisCustomMark();
     case TextEmphasisMark::Dot: {
-        static MainThreadNeverDestroyed<const AtomString> filledDotString(&bullet, 1);
-        static MainThreadNeverDestroyed<const AtomString> openDotString(&whiteBullet, 1);
+        static MainThreadNeverDestroyed<const AtomString> filledDotString(span(bullet));
+        static MainThreadNeverDestroyed<const AtomString> openDotString(span(whiteBullet));
         return textEmphasisFill() == TextEmphasisFill::Filled ? filledDotString : openDotString;
     }
     case TextEmphasisMark::Circle: {
-        static MainThreadNeverDestroyed<const AtomString> filledCircleString(&blackCircle, 1);
-        static MainThreadNeverDestroyed<const AtomString> openCircleString(&whiteCircle, 1);
+        static MainThreadNeverDestroyed<const AtomString> filledCircleString(span(blackCircle));
+        static MainThreadNeverDestroyed<const AtomString> openCircleString(span(whiteCircle));
         return textEmphasisFill() == TextEmphasisFill::Filled ? filledCircleString : openCircleString;
     }
     case TextEmphasisMark::DoubleCircle: {
-        static MainThreadNeverDestroyed<const AtomString> filledDoubleCircleString(&fisheye, 1);
-        static MainThreadNeverDestroyed<const AtomString> openDoubleCircleString(&bullseye, 1);
+        static MainThreadNeverDestroyed<const AtomString> filledDoubleCircleString(span(fisheye));
+        static MainThreadNeverDestroyed<const AtomString> openDoubleCircleString(span(bullseye));
         return textEmphasisFill() == TextEmphasisFill::Filled ? filledDoubleCircleString : openDoubleCircleString;
     }
     case TextEmphasisMark::Triangle: {
-        static MainThreadNeverDestroyed<const AtomString> filledTriangleString(&blackUpPointingTriangle, 1);
-        static MainThreadNeverDestroyed<const AtomString> openTriangleString(&whiteUpPointingTriangle, 1);
+        static MainThreadNeverDestroyed<const AtomString> filledTriangleString(span(blackUpPointingTriangle));
+        static MainThreadNeverDestroyed<const AtomString> openTriangleString(span(whiteUpPointingTriangle));
         return textEmphasisFill() == TextEmphasisFill::Filled ? filledTriangleString : openTriangleString;
     }
     case TextEmphasisMark::Sesame: {
-        static MainThreadNeverDestroyed<const AtomString> filledSesameString(&sesameDot, 1);
-        static MainThreadNeverDestroyed<const AtomString> openSesameString(&whiteSesameDot, 1);
+        static MainThreadNeverDestroyed<const AtomString> filledSesameString(span(sesameDot));
+        static MainThreadNeverDestroyed<const AtomString> openSesameString(span(whiteSesameDot));
         return textEmphasisFill() == TextEmphasisFill::Filled ? filledSesameString : openSesameString;
     }
     case TextEmphasisMark::Auto:
@@ -2927,7 +2924,7 @@ void RenderStyle::setFontItalic(std::optional<FontSelectionValue> value)
     fontCascade().update(selector);
 }
 
-void RenderStyle::setFontPalette(FontPalette value)
+void RenderStyle::setFontPalette(const FontPalette& value)
 {
     auto selector = fontCascade().fontSelector();
     auto description = fontDescription();

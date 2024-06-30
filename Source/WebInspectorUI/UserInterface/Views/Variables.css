@@ -105,7 +105,7 @@
     --yellow-highlight-text-color: var(--text-color);
 
     --console-secondary-text-color: hsla(0, 0%, 0%, 0.33);
-    --console-prompt-min-height: 30px;
+    --console-prompt-min-height: 30px; /* Keep in sync with `WI.QuickConsole.MinimumHeight` */
 
     --message-text-view-font-size: 16px;
     --message-text-view-large-font-size: 28px;
@@ -423,15 +423,13 @@ body {
             --border-color-secondary: hsl(0, 0%, 24%);
         }
     }
-    
-    &:not(.mac-platform.monterey, .mac-platform.big-sur):not(.docked) {
-        /* keep in sync with `WI.undockedTitleAreaHeight` */
-        --undocked-title-area-height: calc(22px / var(--zoom-factor));
-    }
 
     &:is(.mac-platform.monterey, .mac-platform.big-sur):not(.docked) {
-        /* keep in sync with `WI.undockedTitleAreaHeight` */
         --undocked-title-area-height: calc(27px / var(--zoom-factor));
+    }
+
+    &:is(.mac-platform.catalina):not(.docked) {
+        --undocked-title-area-height: calc(22px / var(--zoom-factor));
     }
 
     &.mac-platform {

@@ -39,6 +39,7 @@
 #import <WebKit/WKWebViewPrivateForTesting.h>
 #import <WebKit/WebKitPrivate.h>
 #import <WebKit/_WKActivatedElementInfo.h>
+#import <WebKit/_WKFrameTreeNode.h>
 #import <WebKit/_WKProcessPoolConfiguration.h>
 #import <WebKit/_WKTextInputContext.h>
 #import <objc/runtime.h>
@@ -59,9 +60,6 @@ SOFT_LINK_FRAMEWORK(UIKit)
 SOFT_LINK_CLASS(UIKit, UIWindow)
 
 #if USE(BROWSERENGINEKIT)
-// FIXME: Replace this with linker flags in TestWebKitAPI.xcconfig once BrowserEngineKit
-// is available everywhere we require it.
-asm(".linker_option \"-framework\", \"BrowserEngineKit\"");
 // FIXME: This workaround can be removed once the fix for rdar://120390585 lands in the SDK.
 SOFT_LINK_CLASS(UIKit, UIKeyEvent)
 #endif
@@ -135,6 +133,12 @@ static NSString *overrideBundleIdentifier(id, SEL)
 {
     [self loadTestPageNamed:pageName];
     [self _test_waitForDidFinishNavigation];
+}
+
+- (void)synchronouslyLoadTestPageNamed:(NSString *)pageName preferences:(WKWebpagePreferences *)preferences
+{
+    [self loadTestPageNamed:pageName];
+    [self _test_waitForDidFinishNavigationWithPreferences:preferences];
 }
 
 - (BOOL)_synchronouslyExecuteEditCommand:(NSString *)command argument:(NSString *)argument
@@ -250,6 +254,18 @@ static NSString *overrideBundleIdentifier(id, SEL)
     }
 #endif
     [self.textInputContentView _moveToEndOfParagraph:YES withHistory:nil];
+}
+
+- (void)insertTextSuggestion:(UITextSuggestion *)textSuggestion
+{
+#if USE(BROWSERENGINEKIT)
+    if (id<BETextInput> asyncTextInput = self.asyncTextInput) {
+        RetainPtr beTextSuggestion = adoptNS([[BETextSuggestion alloc] _initWithUIKitTextSuggestion:textSuggestion]);
+        [asyncTextInput insertTextSuggestion:beTextSuggestion.get()];
+        return;
+    }
+#endif
+    [self.textInputContentView insertTextSuggestion:textSuggestion];
 }
 
 #if USE(BROWSERENGINEKIT)
@@ -458,6 +474,18 @@ static WebEvent *unwrap(BEKeyEntry *event)
     return result.autorelease();
 }
 
+- (NSData *)contentsAsWebArchive
+{
+    __block bool done = false;
+    __block RetainPtr<NSData> result;
+    [self createWebArchiveDataWithCompletionHandler:^(NSData *contents, NSError *error) {
+        result = contents;
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    return result.autorelease();
+}
+
 - (NSArray<NSString *> *)tagsInBody
 {
     return [self objectByEvaluatingJavaScript:@"Array.from(document.body.getElementsByTagName('*')).map(e => e.tagName)"];
@@ -504,6 +532,21 @@ static WebEvent *unwrap(BEKeyEntry *event)
     bool callbackComplete = false;
     RetainPtr<id> evalResult;
     [self _evaluateJavaScriptWithoutUserGesture:script completionHandler:[&] (id result, NSError *error) {
+        evalResult = result;
+        callbackComplete = true;
+        EXPECT_TRUE(!error);
+        if (error)
+            NSLog(@"Encountered error: %@ while evaluating script: %@", error, script);
+    }];
+    TestWebKitAPI::Util::run(&callbackComplete);
+    return evalResult.autorelease();
+}
+
+- (id)objectByEvaluatingJavaScript:(NSString *)script inFrame:(WKFrameInfo *)frame
+{
+    bool callbackComplete = false;
+    RetainPtr<id> evalResult;
+    [self _evaluateJavaScript:script withSourceURL:nil inFrame:frame inContentWorld:WKContentWorld.pageWorld withUserGesture:NO completionHandler:[&](id result, NSError *error) {
         evalResult = result;
         callbackComplete = true;
         EXPECT_TRUE(!error);
@@ -922,10 +965,19 @@ static InputSessionChangeCount nextInputSessionChangeCount()
 - (void)waitForNextPresentationUpdate
 {
     __block bool done = false;
-    [self _doAfterNextPresentationUpdate:^() {
+    [self _doAfterNextPresentationUpdate:^{
         done = true;
     }];
 
+    TestWebKitAPI::Util::run(&done);
+}
+
+- (void)waitForNextVisibleContentRectUpdate
+{
+    __block bool done = false;
+    [self _doAfterNextVisibleContentRectUpdate:^{
+        done = true;
+    }];
     TestWebKitAPI::Util::run(&done);
 }
 
@@ -1291,13 +1343,30 @@ static WKContentView *recursiveFindWKContentView(UIView *view)
     [self typeCharacter:character modifiers:0];
 }
 
+- (void)sendKey:(NSString *)characters code:(unsigned short)keyCode isDown:(BOOL)isDown modifiers:(NSEventModifierFlags)modifiers
+{
+    NSEvent *event = [NSEvent keyEventWithType:isDown ? NSEventTypeKeyDown : NSEventTypeKeyUp
+        location:NSZeroPoint
+        modifierFlags:modifiers
+        timestamp:self.eventTimestamp
+        windowNumber:[_hostWindow windowNumber]
+        context:nil
+        characters:characters
+        charactersIgnoringModifiers:characters
+        isARepeat:NO
+        keyCode:keyCode];
+
+    if (isDown)
+        [self keyDown:event];
+    else
+        [self keyUp:event];
+}
+
 - (void)typeCharacter:(char)character modifiers:(NSEventModifierFlags)modifiers
 {
-    NSString *characterAsString = [NSString stringWithFormat:@"%c" , character];
-    NSEventType keyDownEventType = NSEventTypeKeyDown;
-    NSEventType keyUpEventType = NSEventTypeKeyUp;
-    [self keyDown:[NSEvent keyEventWithType:keyDownEventType location:NSZeroPoint modifierFlags:modifiers timestamp:self.eventTimestamp windowNumber:[_hostWindow windowNumber] context:nil characters:characterAsString charactersIgnoringModifiers:characterAsString isARepeat:NO keyCode:character]];
-    [self keyUp:[NSEvent keyEventWithType:keyUpEventType location:NSZeroPoint modifierFlags:modifiers timestamp:self.eventTimestamp windowNumber:[_hostWindow windowNumber] context:nil characters:characterAsString charactersIgnoringModifiers:characterAsString isARepeat:NO keyCode:character]];
+    NSString *characters = [NSString stringWithFormat:@"%c", character];
+    for (auto isDown : std::array { YES, NO })
+        [self sendKey:characters code:character isDown:isDown modifiers:modifiers];
 }
 
 // Note: this testing strategy makes a couple of assumptions:
@@ -1364,3 +1433,39 @@ static WKContentView *recursiveFindWKContentView(UIView *view)
 @end
 
 #endif // PLATFORM(IOS_FAMILY)
+
+@implementation TestWKWebView (SiteIsolation)
+
+- (_WKFrameTreeNode *)mainFrame
+{
+    __block RetainPtr<_WKFrameTreeNode> frame;
+    [self _frames:^(_WKFrameTreeNode *mainFrame) {
+        frame = mainFrame;
+    }];
+    while (!frame)
+        TestWebKitAPI::Util::spinRunLoop();
+    return frame.autorelease();
+}
+
+- (_WKFrameTreeNode *)firstChildFrame
+{
+    return [self mainFrame].childFrames.firstObject;
+}
+
+- (void)evaluateJavaScript:(NSString *)string inFrame:(WKFrameInfo *)frame completionHandler:(void(^)(id, NSError *))completionHandler
+{
+    [self evaluateJavaScript:string inFrame:frame inContentWorld:WKContentWorld.pageWorld completionHandler:completionHandler];
+}
+
+- (WKFindResult *)findStringAndWait:(NSString *)string withConfiguration:(WKFindConfiguration *)configuration
+{
+    __block RetainPtr<WKFindResult> findResult;
+    [self findString:string withConfiguration:configuration completionHandler:^(WKFindResult *result) {
+        findResult = result;
+    }];
+    while (!findResult)
+        TestWebKitAPI::Util::spinRunLoop();
+    return findResult.autorelease();
+}
+
+@end

@@ -1226,7 +1226,7 @@ void WebFrameLoaderClient::saveViewStateToItem(WebCore::HistoryItem& item)
 
 void WebFrameLoaderClient::restoreViewState()
 {
-    WebCore::HistoryItem* currentItem = core(m_webFrame.get())->loader().history().currentItem();
+    WebCore::HistoryItem* currentItem = core(m_webFrame.get())->history().currentItem();
     ASSERT(currentItem);
 
     // FIXME: As the ASSERT attests, it seems we should always have a currentItem here.
@@ -1343,6 +1343,7 @@ void WebFrameLoaderClient::setTitle(const WebCore::StringWithDirection& title, c
     if ([[nsURL absoluteString] isEqualToString:@"about:blank"])
         return;
 #endif
+    [[[WebHistory optionalSharedHistory] itemForURL:nsURL] setTitle:title.string];
 }
 
 void WebFrameLoaderClient::savePlatformDataToCachedFrame(WebCore::CachedFrame* cachedFrame)
@@ -1384,7 +1385,7 @@ void WebFrameLoaderClient::didRestoreFrameHierarchyForCachedFrame()
 }
 #endif
 
-void WebFrameLoaderClient::transitionToCommittedForNewPage()
+void WebFrameLoaderClient::transitionToCommittedForNewPage(InitializingIframe)
 {
     WebDataSource *dataSource = [m_webFrame.get() _dataSource];
 

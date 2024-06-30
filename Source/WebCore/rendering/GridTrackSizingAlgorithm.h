@@ -31,6 +31,15 @@
 #include "RenderBoxInlines.h"
 
 namespace WebCore {
+class GridTrack;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::GridTrack> : std::true_type { };
+}
+
+namespace WebCore {
 
 static const int infinity = -1;
 
@@ -107,12 +116,8 @@ class GridTrackSizingAlgorithm final {
     friend class GridTrackSizingAlgorithmStrategy;
 
 public:
-    GridTrackSizingAlgorithm(const RenderGrid* renderGrid, Grid& grid)
-        : m_grid(grid)
-        , m_renderGrid(renderGrid)
-        , m_sizingState(SizingState::ColumnSizingFirstIteration)
-    {
-    }
+    GridTrackSizingAlgorithm(const RenderGrid*, Grid&);
+    ~GridTrackSizingAlgorithm();
 
     void setup(GridTrackSizingDirection, unsigned numTracks, SizingOperation, std::optional<LayoutUnit> availableSpace);
     void run();
@@ -197,7 +202,7 @@ private:
     void stretchFlexibleTracks(std::optional<LayoutUnit> freeSpace);
     void stretchAutoTracks();
 
-    void accumulateIntrinsicSizesForTrack(GridTrack&, unsigned trackIndex, GridIterator&, Vector<GridItemWithSpan>& itemsSortedByIncreasingSpan, Vector<GridItemWithSpan>& itemsCrossingFlexibleTracks, SingleThreadWeakHashSet<RenderBox>& itemsSet, LayoutUnit currentAccumulatedMbp);
+    void accumulateIntrinsicSizesForTrack(GridTrack&, unsigned trackIndex, GridIterator&, Vector<GridItemWithSpan>& itemsSortedByIncreasingSpan, Vector<GridItemWithSpan>& itemsCrossingFlexibleTracks, SingleThreadWeakHashSet<RenderBox>& itemsSet, SingleThreadWeakListHashSet<RenderBox>& masonryIndefiniteItems, LayoutUnit currentAccumulatedMbp);
 
     bool copyUsedTrackSizesForSubgrid();
 

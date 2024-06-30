@@ -385,17 +385,16 @@ Vector<uint8_t> FragmentedSharedBuffer::read(size_t offset, size_t length) const
     return data;
 }
 
-void FragmentedSharedBuffer::copyTo(void* destination, size_t length) const
+void FragmentedSharedBuffer::copyTo(std::span<uint8_t> destination) const
 {
-    return copyTo(destination, 0, length);
+    return copyTo(destination, 0);
 }
 
-void FragmentedSharedBuffer::copyTo(void* destination, size_t offset, size_t length) const
+void FragmentedSharedBuffer::copyTo(std::span<uint8_t> destination, size_t offset) const
 {
-    ASSERT(length + offset <= size());
     if (offset >= size())
         return;
-    auto remaining = std::min(length, size() - offset);
+    auto remaining = std::min(destination.size(), size() - offset);
     if (!remaining)
         return;
 
@@ -407,7 +406,7 @@ void FragmentedSharedBuffer::copyTo(void* destination, size_t offset, size_t len
         segment = std::upper_bound(segment, end(), offset, comparator);
         segment--; // std::upper_bound gives a pointer to the segment that is greater than offset. We want the segment just before that.
     }
-    auto destinationPtr = static_cast<uint8_t*>(destination);
+    auto destinationPtr = destination.data();
 
     size_t positionInSegment = offset - segment->beginPosition;
     size_t amountToCopyThisTime = std::min(remaining, segment->segment->size() - positionInSegment);
@@ -682,7 +681,7 @@ void SharedBufferBuilder::initialize(Ref<FragmentedSharedBuffer>&& buffer)
 
 RefPtr<ArrayBuffer> SharedBufferBuilder::tryCreateArrayBuffer() const
 {
-    return m_buffer ? m_buffer->tryCreateArrayBuffer() : ArrayBuffer::tryCreate(nullptr, 0);
+    return m_buffer ? m_buffer->tryCreateArrayBuffer() : ArrayBuffer::tryCreate();
 }
 
 Ref<FragmentedSharedBuffer> SharedBufferBuilder::take()
@@ -698,7 +697,7 @@ Ref<SharedBuffer> SharedBufferBuilder::takeAsContiguous()
 RefPtr<ArrayBuffer> SharedBufferBuilder::takeAsArrayBuffer()
 {
     if (!m_buffer)
-        return ArrayBuffer::tryCreate(nullptr, 0);
+        return ArrayBuffer::tryCreate();
     return take()->tryCreateArrayBuffer();
 }
 
@@ -724,9 +723,8 @@ SharedBufferDataView::SharedBufferDataView(const SharedBufferDataView& other, si
 
 Ref<SharedBuffer> SharedBufferDataView::createSharedBuffer() const
 {
-    const Ref<const DataSegment> segment = m_segment;
     return SharedBuffer::create(DataSegment::Provider {
-        [segment, data = data()]() { return data; },
+        [segment = m_segment, data = span().data()]() { return data; },
         [size = size()]() { return size; }
     });
 }
@@ -741,22 +739,17 @@ RefPtr<SharedBuffer> utf8Buffer(const String& string)
     }
 
     Vector<uint8_t> buffer(length * 3);
-
-    // Convert to runs of 8-bit characters.
-    char* p = reinterpret_cast<char*>(buffer.data());
+    WTF::Unicode::ConversionResult<char8_t> result;
     if (length) {
-        if (string.is8Bit()) {
-            const LChar* d = string.characters8();
-            if (!WTF::Unicode::convertLatin1ToUTF8(&d, d + length, &p, p + buffer.size()))
-                return nullptr;
-        } else {
-            const UChar* d = string.characters16();
-            if (WTF::Unicode::convertUTF16ToUTF8(&d, d + length, &p, p + buffer.size()) != WTF::Unicode::ConversionResult::Success)
-                return nullptr;
-        }
+        if (string.is8Bit())
+            result = WTF::Unicode::convert(string.span8(), spanReinterpretCast<char8_t>(buffer.mutableSpan()));
+        else
+            result = WTF::Unicode::convert(string.span16(), spanReinterpretCast<char8_t>(buffer.mutableSpan()));
+        if (result.code != WTF::Unicode::ConversionResultCode::Success)
+            return nullptr;
     }
 
-    buffer.shrink(p - reinterpret_cast<char*>(buffer.data()));
+    buffer.shrink(result.buffer.size());
     return SharedBuffer::create(WTFMove(buffer));
 }
 

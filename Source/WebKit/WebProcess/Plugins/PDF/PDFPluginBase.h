@@ -87,18 +87,27 @@ using ByteRangeRequestIdentifier = ObjectIdentifier<ByteRangeRequestIdentifierTy
 
 enum class CheckValidRanges : bool { No, Yes };
 
-class PDFPluginBase : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<PDFPluginBase>, public WebCore::ScrollableArea, public PDFScriptEvaluator::Client, public Identified<PDFPluginIdentifier> {
-    WTF_MAKE_FAST_ALLOCATED;
+class PDFPluginBase : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<PDFPluginBase>, public CanMakeThreadSafeCheckedPtr<PDFPluginBase>, public WebCore::ScrollableArea, public PDFScriptEvaluatorClient, public Identified<PDFPluginIdentifier> {
     WTF_MAKE_NONCOPYABLE(PDFPluginBase);
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(PDFPluginBase);
     friend class PDFIncrementalLoader;
+    friend class PDFPluginChoiceAnnotation;
+    friend class PDFPluginTextAnnotation;
 public:
     static WebCore::PluginInfo pluginInfo();
 
     virtual ~PDFPluginBase();
 
-    using WebKit::PDFScriptEvaluator::Client::weakPtrFactory;
-    using WebKit::PDFScriptEvaluator::Client::WeakValueType;
-    using WebKit::PDFScriptEvaluator::Client::WeakPtrImplType;
+    // CheckedPtr interface
+    uint32_t ptrCount() const final { return CanMakeThreadSafeCheckedPtr::ptrCount(); }
+    uint32_t ptrCountWithoutThreadCheck() const final { return CanMakeThreadSafeCheckedPtr::ptrCountWithoutThreadCheck(); }
+    void incrementPtrCount() const final { CanMakeThreadSafeCheckedPtr::incrementPtrCount(); }
+    void decrementPtrCount() const final { CanMakeThreadSafeCheckedPtr::decrementPtrCount(); }
+
+    using WebKit::PDFScriptEvaluatorClient::weakPtrFactory;
+    using WebKit::PDFScriptEvaluatorClient::WeakValueType;
+    using WebKit::PDFScriptEvaluatorClient::WeakPtrImplType;
 
     void startLoading();
     void destroy();
@@ -120,8 +129,8 @@ public:
     virtual RefPtr<WebCore::ShareableBitmap> snapshot() { return nullptr; }
     virtual void paint(WebCore::GraphicsContext&, const WebCore::IntRect&) { }
 
-    virtual CGFloat scaleFactor() const = 0;
-    virtual float contentScaleFactor() const = 0;
+    virtual double scaleFactor() const = 0;
+    virtual void setPageScaleFactor(double, std::optional<WebCore::IntPoint> origin) = 0;
 
     virtual CGFloat minScaleFactor() const { return 0.25; }
     virtual CGFloat maxScaleFactor() const { return 5; }
@@ -138,7 +147,6 @@ public:
     bool handlesPageScaleFactor() const;
     virtual void didBeginMagnificationGesture() { }
     virtual void didEndMagnificationGesture() { }
-    virtual void setPageScaleFactor(double, std::optional<WebCore::IntPoint> origin) = 0;
 
     void updateControlTints(WebCore::GraphicsContext&);
 
@@ -176,6 +184,7 @@ public:
     id accessibilityAssociatedPluginParentForElement(WebCore::Element*) const;
 
     bool isBeingDestroyed() const { return m_isBeingDestroyed; }
+    virtual void releaseMemory() { }
 
     bool isFullFramePlugin() const;
     WebCore::IntSize size() const { return m_size; }
@@ -190,8 +199,6 @@ public:
     WebCore::IntPoint convertFromPluginToRootView(const WebCore::IntPoint&) const;
     WebCore::IntRect convertFromPluginToRootView(const WebCore::IntRect&) const;
     WebCore::IntRect boundsOnScreen() const;
-
-    WebCore::IntPoint mousePositionInView(const WebMouseEvent&) const;
 
     bool showContextMenuAtPoint(const WebCore::IntPoint&);
     WebCore::AXObjectCache* axObjectCache() const;
@@ -221,14 +228,23 @@ public:
     PDFPluginAnnotation* activeAnnotation() const { return m_activeAnnotation.get(); }
     RefPtr<PDFPluginAnnotation> protectedActiveAnnotation() const;
 #endif
-    virtual void setActiveAnnotation(RetainPtr<PDFAnnotation>&&) = 0;
+
+    enum class IsInPluginCleanup : bool { No, Yes };
+
+    struct SetActiveAnnotationParams {
+        RetainPtr<PDFAnnotation> annotation;
+        IsInPluginCleanup isInPluginCleanup { IsInPluginCleanup::No };
+    };
+
+    virtual void setActiveAnnotation(SetActiveAnnotationParams&&) = 0;
     void didMutatePDFDocument() { m_pdfDocumentWasMutated = true; }
 
     virtual CGRect pluginBoundsForAnnotation(RetainPtr<PDFAnnotation>&) const = 0;
     virtual void focusNextAnnotation() = 0;
     virtual void focusPreviousAnnotation() = 0;
 
-    virtual Vector<WebCore::FloatRect> annotationRectsForTesting() const { return { }; };
+    virtual Vector<WebCore::FloatRect> annotationRectsForTesting() const { return { }; }
+    virtual void setPDFDisplayModeForTesting(const String&) { }
     void registerPDFTest(RefPtr<WebCore::VoidCallback>&&);
 
     void navigateToURL(const URL&);
@@ -254,6 +270,10 @@ public:
 #endif
 
     uint64_t streamedBytes() const;
+    WebCore::FrameIdentifier rootFrameID() const final;
+
+protected:
+    virtual double contentScaleFactor() const = 0;
 
 private:
     bool documentFinishedLoading() const { return m_documentFinishedLoading; }
@@ -265,9 +285,9 @@ private:
     void insertRangeRequestData(uint64_t offset, const Vector<uint8_t>&);
 
     // Returns the number of bytes copied.
-    size_t copyDataAtPosition(void* buffer, uint64_t sourcePosition, size_t count) const;
+    size_t copyDataAtPosition(std::span<uint8_t> buffer, uint64_t sourcePosition) const;
     // FIXME: It would be nice to avoid having both the "copy into a buffer" and "return a pointer" ways of getting data.
-    std::span<const uint8_t> dataPtrForRange(uint64_t sourcePosition, size_t count, CheckValidRanges) const;
+    std::span<const uint8_t> dataSpanForRange(uint64_t sourcePosition, size_t count, CheckValidRanges) const;
     // Returns true only if we can satisfy all of the requests.
     bool getByteRanges(CFMutableArrayRef, const CFRange*, size_t count) const;
 
@@ -332,6 +352,10 @@ protected:
     virtual void updateScrollbars();
     virtual Ref<WebCore::Scrollbar> createScrollbar(WebCore::ScrollbarOrientation);
     virtual void destroyScrollbar(WebCore::ScrollbarOrientation);
+
+    virtual void incrementalLoadingDidProgress() { }
+    virtual void incrementalLoadingDidCancel() { }
+    virtual void incrementalLoadingDidFinish() { }
 
 #if ENABLE(PDF_HUD)
     void updateHUDLocation();

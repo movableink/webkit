@@ -42,7 +42,8 @@
 namespace WebKit {
 
 class RemoteInspectorProxy final : public RemoteWebInspectorUIProxyClient {
-    WTF_MAKE_FAST_ALLOCATED();
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RemoteInspectorProxy);
 public:
     RemoteInspectorProxy(RemoteInspectorClient& inspectorClient, uint64_t connectionID, uint64_t targetID)
         : m_inspectorClient(inspectorClient)
@@ -209,7 +210,7 @@ void RemoteInspectorClient::setBackendCommands(const char* backendCommands)
         return;
     }
 
-    m_backendCommandsURL = makeString("data:text/javascript;base64,", base64Encoded(backendCommands, strlen(backendCommands)));
+    m_backendCommandsURL = makeString("data:text/javascript;base64,"_s, base64Encoded(span8(backendCommands)));
 }
 
 void RemoteInspectorClient::connectionDidClose()

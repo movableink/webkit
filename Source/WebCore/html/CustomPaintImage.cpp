@@ -26,8 +26,6 @@
 #include "config.h"
 #include "CustomPaintImage.h"
 
-#if ENABLE(CSS_PAINTING_API)
-
 #include "CSSComputedStyleDeclaration.h"
 #include "CSSImageValue.h"
 #include "CSSPrimitiveValue.h"
@@ -50,7 +48,7 @@
 
 namespace WebCore {
 
-CustomPaintImage::CustomPaintImage(PaintWorkletGlobalScope::PaintDefinition& definition, const FloatSize& size, const RenderElement& element, const Vector<String>& arguments)
+CustomPaintImage::CustomPaintImage(PaintDefinition& definition, const FloatSize& size, const RenderElement& element, const Vector<String>& arguments)
     : m_paintDefinition(definition)
     , m_inputProperties(definition.inputProperties)
     , m_element(element)
@@ -168,5 +166,4 @@ void CustomPaintImage::drawPattern(GraphicsContext& destContext, const FloatRect
     destContext.setDrawLuminanceMask(false);
 }
 
-}
-#endif
+} // namespace WebCore

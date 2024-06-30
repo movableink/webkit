@@ -193,7 +193,7 @@ TEST(WKWebExtensionAPIStorage, SetAccessLevelTrustedAndUntrustedContexts)
 TEST(WKWebExtensionAPIStorage, Set)
 {
     auto *backgroundScript = Util::constructScript(@[
-        @"const data = { 'string': 'string', 'number': 1, 'boolean': true, 'dictionary': {'key': 'value'}, 'array': [1, true, 'string'], 'null': null }",
+        @"const data = { 'string': 'string', 'number': 1, 'boolean': true, 'dictionary': {'key': 'value'}, 'array': [1, true, 'string'], 'null': null, 'undefined': undefined }",
         @"await browser?.storage?.local?.set(data)",
 
         @"var result = await browser?.storage?.local?.get()",
@@ -265,7 +265,7 @@ TEST(WKWebExtensionAPIStorage, SetCustomObject)
 TEST(WKWebExtensionAPIStorage, Get)
 {
     auto *backgroundScript = Util::constructScript(@[
-        @"const data = { 'string': 'string', 'number': 1, 'boolean': true, 'dictionary': {'key': 'value'}, 'array': [1, true, 'string'], 'null': null, 'nan': NaN }",
+        @"const data = { 'string': 'string', 'number': 1, 'boolean': true, 'dictionary': {'key': 'value'}, 'array': [1, true, 'string'], 'null': null, 'nan': NaN, '': 'empty' }",
         @"await browser?.storage?.local?.set(data)",
 
         @"var result = await browser?.storage?.local?.get()",
@@ -277,8 +277,11 @@ TEST(WKWebExtensionAPIStorage, Get)
         @"result = await browser?.storage?.local?.get('nan')",
         @"browser.test.assertEq(result?.nan, null)",
 
-        @"result = await browser?.storage?.local?.get([ 'string', 'number' ])",
-        @"browser.test.assertDeepEq({ 'string': 'string', 'number': 1 }, result)",
+        @"result = await browser?.storage?.local?.get('')",
+        @"browser.test.assertEq(result?.[''], 'empty')",
+
+        @"result = await browser?.storage?.local?.get([ 'string', 'number', 'boolean', 'dictionary', 'array', 'null', 'nan', '' ])",
+        @"browser.test.assertDeepEq(data, result)",
 
         @"result = await browser?.storage?.local?.get({ 'boolean': false, 'unrecognized_key': 'default_value', 'array': [1, true, 'string'], 'null': 42 })",
         @"browser.test.assertDeepEq({ 'boolean': true, 'unrecognized_key': 'default_value', 'array': [1, true, 'string'], 'null': null }, result)",
@@ -385,6 +388,60 @@ TEST(WKWebExtensionAPIStorage, StorageAreaOnChanged)
     ]);
 
     Util::loadAndRunExtension(storageManifest, @{ @"background.js": backgroundScript });
+}
+
+TEST(WKWebExtensionAPIStorage, StorageFromSubframe)
+{
+    TestWebKitAPI::HTTPServer server({
+        { "/main"_s, { { { "Content-Type"_s, "text/html"_s } },
+            "<body><script>"
+            "  document.write('<iframe src=\"http://127.0.0.1:' + location.port + '/subframe\"></iframe>')"
+            "</script></body>"_s
+        } },
+        { "/subframe"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } },
+    }, TestWebKitAPI::HTTPServer::Protocol::Http);
+
+    auto *urlRequestMain = server.requestWithLocalhost("/main"_s);
+    auto *urlRequestSubframe = server.request("/subframe"_s);
+
+    auto *contentScript = Util::constructScript(@[
+        @"(async () => {",
+        @"  await browser.storage.local.set({ key: 'value' })",
+        @"  const result = await browser.storage.local.get('key')",
+        @"  browser.test.assertEq(result?.key, 'value', 'Stored value should be retrievable')",
+
+        @"  browser.test.notifyPass()",
+        @"})()"
+    ]);
+
+    auto *manifest = @{
+        @"manifest_version": @3,
+
+        @"name": @"Test",
+        @"description": @"Test",
+        @"version": @"1",
+
+        @"permissions": @[ @"storage" ],
+
+        @"content_scripts": @[@{
+            @"matches": @[ @"*://127.0.0.1/*" ],
+            @"js": @[ @"content.js" ],
+            @"all_frames": @YES
+        }]
+    };
+
+    auto *resources = @{
+        @"content.js": contentScript
+    };
+
+    auto extension = adoptNS([[_WKWebExtension alloc] _initWithManifestDictionary:manifest resources:resources]);
+    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+
+    [manager.get().context setPermissionStatus:_WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:urlRequestSubframe.URL];
+
+    [manager.get().defaultTab.mainWebView loadRequest:urlRequestMain];
+
+    [manager loadAndRun];
 }
 
 } // namespace TestWebKitAPI

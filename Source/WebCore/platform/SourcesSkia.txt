@@ -23,8 +23,15 @@
 
 page/skia/MemoryReleaseSkia.cpp
 
+platform/graphics/filters/skia/FEColorMatrixSkiaApplier.cpp
+platform/graphics/filters/skia/FEComponentTransferSkiaApplier.cpp
+platform/graphics/filters/skia/FEDropShadowSkiaApplier.cpp
+platform/graphics/filters/skia/FEGaussianBlurSkiaApplier.cpp
+platform/graphics/filters/skia/SourceGraphicSkiaApplier.cpp
+
 platform/graphics/skia/TransformationMatrixSkia.cpp
 platform/graphics/skia/ColorSkia.cpp
+platform/graphics/skia/ColorSpaceSkia.cpp
 platform/graphics/skia/ComplexTextControllerSkia.cpp
 platform/graphics/skia/DrawGlyphsRecorderSkia.cpp
 platform/graphics/skia/FloatRectSkia.cpp

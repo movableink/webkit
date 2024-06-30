@@ -16,8 +16,8 @@ None
 List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/009900-image-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/009900-tagged-image-ref.html
-/LayoutTests/imported/w3c/web-platform-tests/css/css-color/LICENSE
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/META.yml
+/LayoutTests/imported/w3c/web-platform-tests/css/css-color/WEB_FEATURES.yml
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/a98rgb-001-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/a98rgb-001.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/a98rgb-002-expected.html
@@ -69,6 +69,9 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/border-top-color.xht
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/canvas-change-opacity-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/canvas-change-opacity.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-color/clip-opacity-out-of-flow-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-color/clip-opacity-out-of-flow-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-color/clip-opacity-out-of-flow.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/color-001-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/color-001.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/color-002-expected.html
@@ -216,6 +219,9 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/hsl-007.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/hsl-008-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/hsl-008.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-color/hsl-clamp-negative-saturation-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-color/hsl-clamp-negative-saturation-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-color/hsl-clamp-negative-saturation.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/hsla-001-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/hsla-001.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/hsla-002-expected.html
@@ -232,6 +238,9 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/hsla-007.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/hsla-008-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/hsla-008.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-color/hsla-clamp-negative-saturation-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-color/hsla-clamp-negative-saturation-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-color/hsla-clamp-negative-saturation.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/htaccess
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/hwb-001-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/hwb-001.html
@@ -619,9 +628,6 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/t424-hsl-basic-a-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/t424-hsl-basic-a-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/t424-hsl-basic-a.xht
-/LayoutTests/imported/w3c/web-platform-tests/css/css-color/t424-hsl-clip-outside-gamut-b-expected.html
-/LayoutTests/imported/w3c/web-platform-tests/css/css-color/t424-hsl-clip-outside-gamut-b-ref.html
-/LayoutTests/imported/w3c/web-platform-tests/css/css-color/t424-hsl-clip-outside-gamut-b.xht
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/t424-hsl-h-rotating-b-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/t424-hsl-h-rotating-b-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/t424-hsl-h-rotating-b.xht
@@ -676,9 +682,6 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/t425-hsla-basic-a-expected.xht
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/t425-hsla-basic-a-ref.xht
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/t425-hsla-basic-a.xht
-/LayoutTests/imported/w3c/web-platform-tests/css/css-color/t425-hsla-clip-outside-device-gamut-b-expected.html
-/LayoutTests/imported/w3c/web-platform-tests/css/css-color/t425-hsla-clip-outside-device-gamut-b-ref.html
-/LayoutTests/imported/w3c/web-platform-tests/css/css-color/t425-hsla-clip-outside-device-gamut-b.xht
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/t425-hsla-h-rotating-b-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/t425-hsla-h-rotating-b-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-color/t425-hsla-h-rotating-b.xht

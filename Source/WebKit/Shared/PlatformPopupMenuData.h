@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "FontInfo.h"
+#include "PlatformFontInfo.h"
 #include <WebCore/PopupMenuStyle.h>
 #include <WebCore/ShareableBitmap.h>
 #include <wtf/text/WTFString.h>
@@ -34,7 +34,7 @@ namespace WebKit {
 
 struct PlatformPopupMenuData {
 #if PLATFORM(COCOA)
-    WebKit::FontInfo fontInfo;
+    WebKit::PlatformFontInfo fontInfo;
     bool shouldPopOver { false };
     bool hideArrows { false };
     WebCore::PopupMenuStyle::Size menuSize { WebCore::PopupMenuStyle::Size::Normal };
@@ -46,7 +46,8 @@ struct PlatformPopupMenuData {
     int m_clientInsetLeft { 0 };
     int m_clientInsetRight { 0 };
     int m_popupWidth { 0 };
-    int m_itemHeight { 0 };
+    float m_itemHeight { 0 };
+    bool m_isRTL { false };
     RefPtr<WebCore::ShareableBitmap> m_notSelectedBackingStore;
     RefPtr<WebCore::ShareableBitmap> m_selectedBackingStore;
 #endif

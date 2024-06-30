@@ -2,6 +2,96 @@ Skia Graphics Release Notes
 
 This file includes a list of high level updates for each milestone release.
 
+Milestone 125
+-------------
+  * The size of the GPU memory cache budget can now be queried using member `maxBudgetedBytes` of `skgpu::graphite::Context` and `skgpu::graphite::Recorder`.
+  * Added `skgpu::graphite::Context::maxTextureSize()`, which exposes the maximum
+    texture dimension supported by the underlying backend.
+  * Using a MTLBinaryArchive to pre-load the MSL shader cache is no longer
+    supported in Ganesh, and the fBinaryArchive member of GrMtlBackendContext
+    has been removed.
+  * The `sksl-minify` tool can now eliminate unnecessary braces. For instance,
+    given the following SkSL code:
+
+    ```
+    if (condition) {
+        return 1;
+    } else {
+        return 2;
+    }
+    ```
+
+    The minifier will now emit:
+
+    ```
+    if(a)return 1;else return 2;
+    ```
+  * Added `SkBitmap::setColorSpace`. This API allows the colorspace of an existing
+    `SkBitmap` to be reinterpreted. The pixel data backing the bitmap will be left
+    as-is. The colorspace will be honored when the bitmap is accessed via APIs which
+    support colorspace conversion, like `readPixels`.
+  * `SkDrawLooper` has been removed completely from Skia. It was previously deprecated.
+  * Metal-specific constructors and methods have been removed from `GrBackendFormat`,
+    `GrBackendTexture`, and `GrBackendRenderTarget` and moved to
+    `include/gpu/ganesh/mtl/GrMtlBackendSurface.h`
+  * By default, //modules/skottie and //modules/svg will use primitive text shaping.
+    Clients that wish to use harfbuzz/icu for more correct shaping will need to
+    use one of the builders and call `setTextShapingFactory` with a newly-created
+    `SkShapers::Factory` implementation during construction.
+
+    For ease of configuration, `modules/skshaper/utils/FactoryHelpers.h` can be used
+    to provide this, but only if the client is depending on the correct skshaper
+    and skunicode modules (which should set defines such as `SK_SHAPER_HARFBUZZ_AVAILABLE`).
+
+    For example `builder.setTextShapingFactory(SkShapers::BestAvailable())` will use
+    Harfbuzz or CoreText for shaping if they were compiled in to the clients binary.
+
+* * *
+
+Milestone 124
+-------------
+  * `SkColorFilter::filterColor` is now deprecated and will eventually be removed in favor of `filterColor4f`.
+  * The Perlin noise shaders (`MakeFractalNoise` and `MakeTurbulence`) will now properly rotate when
+    transformed. On raster surfaces, the performance of Perlin noise has also been significantly
+    improved.
+  * Graphite's `SkImages::WrapTexture` now takes an additional parameter that indicates whether
+    a mipmapped texture should be used as is or whether Graphite should generate the upper level
+    contents from the base level contents.
+  * `GrBackendSemaphore::initMetal`, `GrBackendSemaphore::mtlSemaphore`, and
+    `GrBackendSemaphore::mtlValue` have been replaced with `GrBackendSemaphores::MakeMtl`,
+    `GrBackendSemaphores::GetMtlHandle`, and `GrBackendSemaphores::GetMtlValue`, defined in
+    `include/gpu/ganesh/mtl/GrMtlBackendSemaphore.h`
+  * `GrDirectContext::MakeMetal` has been moved to `GrDirectContexts::MakeMetal`, located in
+    `include/gpu/ganesh/mtl/GrMtlDirectContext.h`. The APIs that passed in void* have been removed
+    in that change, so clients who use those need to create a `GrMtlBackendContext` themselves.
+
+    `include/gpu/mtl/GrMtlTypes.h` and `include/gpu/mtl/GrMtlBackendContext.h` have been relocated to
+    `include/gpu/ganesh/mtl/GrMtlTypes.h` and `include/gpu/ganesh/mtl/GrMtlBackendContext.h`
+    respectively.
+  * Added `SkCodecs::DeferredImage` which is similar to `SkImages::DeferredFromEncodedData` except it
+    allows the caller to pass in a `SkCodec` directly instead of depending on compiled-in codecs.
+  * The following SkShaper functions have been moved or deleted:
+      - SkShaper::MakePrimitive() -> SkShapers::Primitive()
+      - SkShaper::MakeShaperDrivenWrapper() -> SkShapers::HB::ShaperDrivenWrapper()
+      - SkShaper::MakeShapeThenWrap() -> SkShapers::HB::ShapeThenWrap()
+      - SkShaper::MakeShapeDontWrapOrReorder() -> SkShapers::HB::ShapeDontWrapOrReorder()
+      - SkShaper::MakeCoreText() -> SkShapers::CT::CoreText()
+      - SkShaper::Make() -> deleted, use one of the above directly,
+      - SkShaper::MakeSkUnicodeBidiRunIterator() -> SkShapers::unicode::BidiRunIterator()
+      - SkShaper::MakeBiDiRunIterator() -> deleted, use SkShapers::unicode::BidiRunIterator() or SkShapers::TrivialBiDiRunIterator()
+      - SkShaper::MakeIcuBiDiRunIterator() -> deleted, use SkShapers::unicode::BidiRunIterator()
+      - SkShaper::MakeSkUnicodeHbScriptRunIterator() -> SkShapers::HB::ScriptRunIterator()
+      - SkShaper::MakeHbIcuScriptRunIterator() -> SkShapers::HB::ScriptRunIterator()
+      - SkShaper::MakeScriptRunIterator() -> deleted, use SkShapers::HB::ScriptRunIterator() or SkShapers::TrivialScriptRunIterator
+
+    Additionally, two `SkShaper::shape` method overloads have been removed - clients now need to
+    specify all 10 arguments (although it is common to pass in nullptr for features).
+  * `SkStream::getData()` has been added as a virtual. Subclasses can implement this if it is efficient
+    to turn the underlying contents into an SkData (e.g. SkStreamMemory). `SkStreamMemory::asData()`
+    has been renamed to `getData()` as a result of this change and will be removed in a future release.
+
+* * *
+
 Milestone 123
 -------------
   * When `SkCodec::SelectionPolicy::kPreferStillImage` is passed to `SkWuffsCodec`/`SkGifDecoder`

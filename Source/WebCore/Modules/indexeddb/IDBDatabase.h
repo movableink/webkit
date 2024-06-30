@@ -80,8 +80,9 @@ public:
     void refEventTarget() final { ThreadSafeRefCounted<IDBDatabase>::ref(); }
     void derefEventTarget() final { ThreadSafeRefCounted<IDBDatabase>::deref(); }
 
-    using ThreadSafeRefCounted<IDBDatabase>::ref;
-    using ThreadSafeRefCounted<IDBDatabase>::deref;
+    // ActiveDOMObject.
+    void ref() const final { ThreadSafeRefCounted::ref(); }
+    void deref() const final { ThreadSafeRefCounted::deref(); }
 
     IDBDatabaseInfo& info() { return m_info; }
     IDBDatabaseConnectionIdentifier databaseConnectionIdentifier() const { return m_databaseConnectionIdentifier; }
@@ -117,7 +118,6 @@ private:
 
     // ActiveDOMObject.
     bool virtualHasPendingActivity() const final;
-    const char* activeDOMObjectName() const final;
     void stop() final;
 
     void maybeCloseInServer();

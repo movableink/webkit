@@ -47,6 +47,7 @@
 #include <WebCore/RegistrableDomain.h>
 #include <WebCore/ResourceRequest.h>
 #include <pal/HysteresisActivity.h>
+#include <wtf/UUID.h>
 
 #if ENABLE(APPLE_PAY)
 #include "WebPaymentCoordinatorProxy.h"
@@ -88,6 +89,10 @@
 
 #if ENABLE(EXTENSION_CAPABILITIES)
 #include "MediaCapability.h"
+#endif
+
+#if PLATFORM(IOS_FAMILY)
+#include "HardwareKeyboardState.h"
 #endif
 
 namespace WebKit {
@@ -153,7 +158,7 @@ struct WebPageProxy::Internals final : WebPopupMenuProxy::Client
     , WebColorPickerClient
 #endif
 #if PLATFORM(MACCATALYST)
-    , EndowmentStateTracker::Client
+    , EndowmentStateTrackerClient
 #endif
 #if ENABLE(SPEECH_SYNTHESIS)
     , WebCore::PlatformSpeechSynthesisUtteranceClient
@@ -288,7 +293,13 @@ struct WebPageProxy::Internals final : WebPopupMenuProxy::Client
     Deque<QueuedTouchEvents> touchEventQueue;
 #endif
 
+#if ENABLE(WRITING_TOOLS)
+    HashMap<WTF::UUID, WebCore::TextIndicatorData> textIndicatorDataForChunk;
+#endif
+
     MonotonicTime didFinishDocumentLoadForMainFrameTimestamp;
+    MonotonicTime lastActivationTimestamp;
+    MonotonicTime didCommitLoadForMainFrameTimestamp;
 
 #if ENABLE(UI_SIDE_COMPOSITING)
     VisibleContentRectUpdateInfo lastVisibleContentRectUpdate;
@@ -307,10 +318,16 @@ struct WebPageProxy::Internals final : WebPopupMenuProxy::Client
     std::optional<MediaCapability> mediaCapability;
 #endif
 
+#if PLATFORM(IOS_FAMILY)
+    HardwareKeyboardState hardwareKeyboardState;
+#endif
+
 #if ENABLE(WINDOW_PROXY_PROPERTY_ACCESS_NOTIFICATION)
     std::unique_ptr<WebPageProxyFrameLoadStateObserver> frameLoadStateObserver;
     HashMap<WebCore::RegistrableDomain, OptionSet<WebCore::WindowProxyProperty>> windowOpenerAccessedProperties;
 #endif
+
+    bool allowsLayoutViewportHeightExpansion { true };
 
     explicit Internals(WebPageProxy&);
 
@@ -353,7 +370,7 @@ struct WebPageProxy::Internals final : WebPopupMenuProxy::Client
 #endif
 
 #if PLATFORM(MACCATALYST)
-    // EndowmentStateTracker::Client
+    // EndowmentStateTrackerClient
     void isUserFacingChanged(bool) final;
 #endif
 

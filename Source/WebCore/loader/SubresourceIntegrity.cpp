@@ -102,8 +102,7 @@ std::optional<Vector<EncodedResourceCryptographicDigest>> parseIntegrityMetadata
 
     std::optional<Vector<EncodedResourceCryptographicDigest>> result;
     
-    readCharactersForParsing(integrityMetadata, [&result] (auto buffer) {
-        using CharacterType = typename decltype(buffer)::CharacterType;
+    readCharactersForParsing(integrityMetadata, [&result]<typename CharacterType> (StringParsingBuffer<CharacterType> buffer) {
         splitOnSpaces(buffer, IntegrityMetadataParser<CharacterType> { result });
     });
 
@@ -204,11 +203,11 @@ String integrityMismatchDescription(const CachedResource& resource, const String
 {
     auto resourceURL = resource.url().stringCenterEllipsizedToLength();
     if (auto resourceBuffer = resource.resourceBuffer()) {
-        return makeString(resourceURL, ". Failed integrity metadata check. Content length: ", resourceBuffer->size(), ", Expected content length: ",
-            resource.response().expectedContentLength(), ", Expected metadata: ", integrityMetadata);
+        return makeString(resourceURL, ". Failed integrity metadata check. Content length: "_s, resourceBuffer->size(), ", Expected content length: "_s,
+            resource.response().expectedContentLength(), ", Expected metadata: "_s, integrityMetadata);
     }
-    return makeString(resourceURL, ". Failed integrity metadata check. Content length: (no content), Expected content length: ",
-        resource.response().expectedContentLength(), ", Expected metadata: ", integrityMetadata);
+    return makeString(resourceURL, ". Failed integrity metadata check. Content length: (no content), Expected content length: "_s,
+        resource.response().expectedContentLength(), ", Expected metadata: "_s, integrityMetadata);
 }
 
 }

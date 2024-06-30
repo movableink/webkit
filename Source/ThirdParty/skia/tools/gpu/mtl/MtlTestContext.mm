@@ -9,10 +9,8 @@
 
 #include "include/gpu/GrContextOptions.h"
 #include "include/gpu/GrDirectContext.h"
-
+#include "include/gpu/ganesh/mtl/GrMtlDirectContext.h"
 #include "src/gpu/ganesh/mtl/GrMtlUtil.h"
-
-#ifdef SK_METAL
 
 #import <Metal/Metal.h>
 
@@ -57,10 +55,8 @@ public:
 
     void testAbandon() override {}
 
-    void finish() override {}
-
     sk_sp<GrDirectContext> makeContext(const GrContextOptions& options) override {
-        return GrDirectContext::MakeMetal(fMtl, options);
+        return GrDirectContexts::MakeMetal(fMtl, options);
     }
 
 private:
@@ -85,6 +81,3 @@ MtlTestContext* CreatePlatformMtlTestContext(MtlTestContext* sharedContext) {
 }
 
 }  // namespace sk_gpu_test
-
-
-#endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,6 +42,7 @@
 #import "_WKWebExtensionInternal.h"
 #import "_WKWebExtensionMatchPatternInternal.h"
 #import "_WKWebExtensionTab.h"
+#import <wtf/BlockPtr.h>
 #import <wtf/URLParser.h>
 #import <wtf/cocoa/VectorCocoa.h>
 
@@ -142,6 +143,16 @@ WK_OBJECT_DEALLOC_IMPL_ON_MAIN_THREAD(_WKWebExtensionContext, WebExtensionContex
 - (void)setInspectable:(BOOL)inspectable
 {
     _webExtensionContext->setInspectable(inspectable);
+}
+
+- (NSString *)inspectionName
+{
+    return _webExtensionContext->backgroundWebViewInspectionName();
+}
+
+- (void)setInspectionName:(NSString *)name
+{
+    _webExtensionContext->setBackgroundWebViewInspectionName(name);
 }
 
 - (NSSet<NSString *> *)unsupportedAPIs
@@ -527,6 +538,11 @@ static inline WebKit::WebExtensionContext::PermissionState toImpl(_WKWebExtensio
     return _webExtensionContext->hasContentModificationRules();
 }
 
+- (void)loadBackgroundContentWithCompletionHandler:(void (^)(NSError *error))completionHandler
+{
+    _webExtensionContext->loadBackgroundContent(makeBlockPtr(completionHandler));
+}
+
 - (_WKWebExtensionAction *)actionForTab:(id<_WKWebExtensionTab>)tab
 {
     if (tab)
@@ -556,6 +572,15 @@ static inline WebKit::WebExtensionContext::PermissionState toImpl(_WKWebExtensio
 
     _webExtensionContext->performCommand(command._webExtensionCommand, WebKit::WebExtensionContext::UserTriggered::Yes);
 }
+
+#if TARGET_OS_IPHONE
+- (BOOL)performCommandForKeyCommand:(UIKeyCommand *)keyCommand
+{
+    NSParameterAssert([keyCommand isKindOfClass:UIKeyCommand.class]);
+
+    return _webExtensionContext->performCommand(keyCommand);
+}
+#endif
 
 #if USE(APPKIT)
 - (BOOL)performCommandForEvent:(NSEvent *)event
@@ -625,7 +650,7 @@ static inline NSArray *toAPI(const WebKit::WebExtensionContext::WindowVector& wi
 
 - (NSArray<id<_WKWebExtensionWindow>> *)openWindows
 {
-    return toAPI(_webExtensionContext->openWindows());
+    return toAPI(_webExtensionContext->openWindows(WebKit::WebExtensionContext::IgnoreExtensionAccess::Yes));
 }
 
 - (id<_WKWebExtensionWindow>)focusedWindow
@@ -650,7 +675,7 @@ static inline NSSet *toAPI(const WebKit::WebExtensionContext::TabVector& tabs)
 
 - (NSSet<id<_WKWebExtensionTab>> *)openTabs
 {
-    return toAPI(_webExtensionContext->openTabs());
+    return toAPI(_webExtensionContext->openTabs(WebKit::WebExtensionContext::IgnoreExtensionAccess::Yes));
 }
 
 static inline Ref<WebKit::WebExtensionWindow> toImpl(id<_WKWebExtensionWindow> window, WebKit::WebExtensionContext& context)
@@ -880,6 +905,15 @@ static inline OptionSet<WebKit::WebExtensionTab::ChangedProperties> toImpl(_WKWe
 {
 }
 
+- (NSString *)inspectionName
+{
+    return nil;
+}
+
+- (void)setInspectionName:(NSString *)name
+{
+}
+
 - (NSSet<NSString *> *)unsupportedAPIs
 {
     return nil;
@@ -1067,6 +1101,10 @@ static inline OptionSet<WebKit::WebExtensionTab::ChangedProperties> toImpl(_WKWe
     return NO;
 }
 
+- (void)loadBackgroundContentWithCompletionHandler:(void (^)(NSError *error))completionHandler
+{
+}
+
 - (_WKWebExtensionAction *)actionForTab:(id<_WKWebExtensionTab>)tab NS_SWIFT_NAME(action(for:))
 {
     return nil;
@@ -1084,6 +1122,13 @@ static inline OptionSet<WebKit::WebExtensionTab::ChangedProperties> toImpl(_WKWe
 - (void)performCommand:(_WKWebExtensionCommand *)command
 {
 }
+
+#if TARGET_OS_IPHONE
+- (BOOL)performCommandForKeyCommand:(UIKeyCommand *)keyCommand
+{
+    return NO;
+}
+#endif
 
 #if USE(APPKIT)
 - (BOOL)performCommandForEvent:(NSEvent *)event

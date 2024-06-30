@@ -33,6 +33,7 @@
 #import "CachedResourceLoader.h"
 #import "ColorMac.h"
 #import "DOMURL.h"
+#import "DeprecatedGlobalSettings.h"
 #import "DocumentFragment.h"
 #import "DocumentLoader.h"
 #import "Editing.h"
@@ -95,19 +96,17 @@ String Editor::selectionInHTMLFormat()
 
 #if ENABLE(ATTACHMENT_ELEMENT)
 
-void Editor::getPasteboardTypesAndDataForAttachment(Element& element, Vector<String>& outTypes, Vector<RefPtr<SharedBuffer>>& outData)
+void Editor::getPasteboardTypesAndDataForAttachment(Element& element, Vector<std::pair<String, RefPtr<SharedBuffer>>>& outTypesAndData)
 {
     auto elementRange = makeRangeSelectingNode(element);
-    client()->getClientPasteboardData(elementRange, outTypes, outData);
+    client()->getClientPasteboardData(elementRange, outTypesAndData);
 
-    outTypes.append(PasteboardCustomData::cocoaType());
-    outData.append(PasteboardCustomData { element.document().originIdentifierForPasteboard(), { } }.createSharedBuffer());
+    outTypesAndData.append(std::make_pair(PasteboardCustomData::cocoaType(), PasteboardCustomData { element.document().originIdentifierForPasteboard(), { } }.createSharedBuffer()));
 
     if (elementRange) {
         if (auto archive = LegacyWebArchive::create(*elementRange)) {
             if (auto data = archive->rawDataRepresentation()) {
-                outTypes.append(WebArchivePboardType);
-                outData.append(SharedBuffer::create(data.get()));
+                outTypesAndData.append(std::make_pair(WebArchivePboardType, SharedBuffer::create(data.get())));
             }
         }
     }
@@ -185,7 +184,7 @@ void Editor::writeSelectionToPasteboard(Pasteboard& pasteboard)
     if (!pasteboard.isStatic()) {
         content.dataInWebArchiveFormat = selectionInWebArchiveFormat();
         populateRichTextDataIfNeeded(content, document);
-        client()->getClientPasteboardData(selectedRange(), content.clientTypes, content.clientData);
+        client()->getClientPasteboardData(selectedRange(), content.clientTypesAndData);
     }
     content.dataInHTMLFormat = selectionInHTMLFormat();
     content.dataInStringFormat = stringSelectionForPasteboardWithImageAltText();
@@ -204,7 +203,7 @@ void Editor::writeSelection(PasteboardWriterData& pasteboardWriterData)
     populateRichTextDataIfNeeded(webContent, document);
     webContent.dataInHTMLFormat = selectionInHTMLFormat();
     webContent.dataInStringFormat = stringSelectionForPasteboardWithImageAltText();
-    client()->getClientPasteboardData(selectedRange(), webContent.clientTypes, webContent.clientData);
+    client()->getClientPasteboardData(selectedRange(), webContent.clientTypesAndData);
 
     pasteboardWriterData.setWebContent(WTFMove(webContent));
 }
@@ -242,7 +241,7 @@ void Editor::replaceSelectionWithAttributedString(NSAttributedString *attributed
         return;
 
     if (document->selection().selection().isContentRichlyEditable()) {
-        if (auto fragment = createFragment(*document->frame(), attributedString, AddResources::Yes)) {
+        if (auto fragment = createFragment(*document->frame(), attributedString)) {
             if (shouldInsertFragment(*fragment, selectedRange(), EditorInsertAction::Pasted))
                 pasteAsFragment(fragment.releaseNonNull(), false, false, mailBlockquoteHandling);
         }
@@ -398,7 +397,7 @@ void Editor::replaceNodeFromPasteboard(Node& node, const String& pasteboardName,
 }
 
 #if ENABLE(MULTI_REPRESENTATION_HEIC)
-void Editor::insertMultiRepresentationHEIC(const std::span<const uint8_t>& data)
+void Editor::insertMultiRepresentationHEIC(const std::span<const uint8_t>& data, const String& altText)
 {
     auto document = protectedDocument();
 
@@ -418,6 +417,8 @@ void Editor::insertMultiRepresentationHEIC(const std::span<const uint8_t>& data)
 
     auto image = HTMLImageElement::create(document);
     image->setSrc(AtomString { DOMURL::createObjectURL(document, Blob::create(document.ptr(), fallbackBuffer->copyData(), fallbackType)) });
+    if (!altText.isEmpty())
+        image->setAttributeWithoutSynchronization(HTMLNames::altAttr, AtomString { altText });
     picture->appendChild(WTFMove(image));
 
     auto fragment = document->createDocumentFragment();
@@ -425,15 +426,19 @@ void Editor::insertMultiRepresentationHEIC(const std::span<const uint8_t>& data)
 
     ReplaceSelectionCommand::create(document.get(), WTFMove(fragment), ReplaceSelectionCommand::PreventNesting, EditAction::Insert)->apply();
 
-    auto primaryAttachment = HTMLAttachmentElement::create(HTMLNames::attachmentTag, document.get());
-    auto primaryIdentifier = primaryAttachment->ensureUniqueIdentifier();
-    registerAttachmentIdentifier(primaryIdentifier, "image/heic"_s, makeString(primaryIdentifier, ".heic"_s), WTFMove(primaryBuffer));
-    source->setAttachmentElement(WTFMove(primaryAttachment));
+#if ENABLE(ATTACHMENT_ELEMENT)
+    if (DeprecatedGlobalSettings::attachmentElementEnabled()) {
+        auto primaryAttachment = HTMLAttachmentElement::create(HTMLNames::attachmentTag, document.get());
+        auto primaryIdentifier = primaryAttachment->ensureUniqueIdentifier();
+        registerAttachmentIdentifier(primaryIdentifier, "image/heic"_s, makeString(primaryIdentifier, ".heic"_s), WTFMove(primaryBuffer));
+        source->setAttachmentElement(WTFMove(primaryAttachment));
 
-    auto fallbackAttachment = HTMLAttachmentElement::create(HTMLNames::attachmentTag, document.get());
-    auto fallbackIdentifier = fallbackAttachment->ensureUniqueIdentifier();
-    registerAttachmentIdentifier(fallbackIdentifier, fallbackType, makeString(fallbackIdentifier, ".png"_s), WTFMove(fallbackBuffer));
-    image->setAttachmentElement(WTFMove(fallbackAttachment));
+        auto fallbackAttachment = HTMLAttachmentElement::create(HTMLNames::attachmentTag, document.get());
+        auto fallbackIdentifier = fallbackAttachment->ensureUniqueIdentifier();
+        registerAttachmentIdentifier(fallbackIdentifier, fallbackType, makeString(fallbackIdentifier, ".png"_s), WTFMove(fallbackBuffer));
+        image->setAttachmentElement(WTFMove(fallbackAttachment));
+    }
+#endif
 }
 #endif
 

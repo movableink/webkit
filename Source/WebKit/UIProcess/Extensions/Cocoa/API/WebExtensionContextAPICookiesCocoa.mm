@@ -226,10 +226,7 @@ void WebExtensionContext::cookiesGetAllCookieStores(CompletionHandler<void(Expec
     stores.set(defaultSessionID, Vector<WebExtensionTabIdentifier> { });
 
     for (Ref tab : openTabs()) {
-        if (!tab->extensionHasAccess())
-            continue;
-
-        for (WKWebView *webView in tab->webViews()) {
+        if (WKWebView *webView = tab->mainWebView()) {
             auto sessionID = webView.configuration.websiteDataStore->_websiteDataStore.get()->sessionID();
 
             auto& tabsVector = stores.ensure(sessionID, [] {

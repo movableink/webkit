@@ -52,6 +52,15 @@
 #include <wtf/WeakPtr.h>
 
 namespace WTF {
+class NativePromiseRequest;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WTF::NativePromiseRequest> : std::true_type { };
+}
+
+namespace WTF {
 
 /*
  * A promise manages an asynchronous request that may or may not be able to be fulfilled immediately.
@@ -213,7 +222,7 @@ namespace WTF {
  *    }
  * private:
  *    explicit PhotoProducer(const PhotoSettings& settings)
- *        : m_generatePhotoQueue(WorkQueue::create("takePhoto queue"))
+ *        : m_generatePhotoQueue(WorkQueue::create("takePhoto queue"_s))
  *    {
  *    }
  *
@@ -1573,7 +1582,7 @@ template<typename ResolveValueT, typename RejectValueT, unsigned options>
 struct LogArgument<NativePromise<ResolveValueT, RejectValueT, options>> {
     static String toString(const NativePromise<ResolveValueT, RejectValueT, options>& p)
     {
-        return makeString("NativePromise", LogArgument<const void*>::toString(&p), '<', LogArgument<Logger::LogSiteIdentifier>::toString(p.logSiteIdentifier()), '>');
+        return makeString("NativePromise"_s, LogArgument<const void*>::toString(&p), '<', LogArgument<Logger::LogSiteIdentifier>::toString(p.logSiteIdentifier()), '>');
     }
 };
 
@@ -1581,7 +1590,7 @@ template<>
 struct LogArgument<GenericPromise> {
     static String toString(const GenericPromise& p)
     {
-        return makeString("GenericPromise", LogArgument<const void*>::toString(&p), '<', LogArgument<Logger::LogSiteIdentifier>::toString(p.logSiteIdentifier()), '>');
+        return makeString("GenericPromise"_s, LogArgument<const void*>::toString(&p), '<', LogArgument<Logger::LogSiteIdentifier>::toString(p.logSiteIdentifier()), '>');
     }
 };
 

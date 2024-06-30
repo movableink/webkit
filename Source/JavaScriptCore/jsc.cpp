@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2004-2023 Apple Inc. All rights reserved.
+ *  Copyright (C) 2004-2024 Apple Inc. All rights reserved.
  *  Copyright (C) 2006 Bjoern Graf (bjoern.graf@gmail.com)
  *
  *  This library is free software; you can redistribute it and/or
@@ -94,6 +94,8 @@
 #include <sys/types.h>
 #include <type_traits>
 #include <wtf/CPUTime.h>
+#include <wtf/CommaPrinter.h>
+#include <wtf/FastMalloc.h>
 #include <wtf/FileSystem.h>
 #include <wtf/MainThread.h>
 #include <wtf/MemoryPressureHandler.h>
@@ -122,6 +124,7 @@
 #if PLATFORM(COCOA)
 #include <crt_externs.h>
 #include <wtf/OSObjectPtr.h>
+#include <wtf/cocoa/CrashReporter.h>
 #include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #endif
 
@@ -138,7 +141,7 @@
 #undef Function
 #endif
 
-#if COMPILER(MSVC)
+#if OS(WINDOWS)
 #include <crtdbg.h>
 #include <mmsystem.h>
 #include <windows.h>
@@ -482,6 +485,7 @@ public:
     bool m_exitCode { false };
     bool m_destroyVM { false };
     bool m_treatWatchdogExceptionAsSuccess { false };
+    bool m_ignoreUncaughtExceptions { false };
     bool m_alwaysDumpUncaughtException { false };
     bool m_dumpMemoryFootprint { false };
     bool m_dumpLinkBufferStats { false };
@@ -525,7 +529,7 @@ long StopWatch::getElapsedMS()
 template<typename Vector>
 static inline String stringFromUTF(const Vector& utf8)
 {
-    return String::fromUTF8WithLatin1Fallback(utf8.data(), utf8.size());
+    return String::fromUTF8WithLatin1Fallback(utf8.span());
 }
 
 static JSC_DECLARE_CUSTOM_GETTER(accessorMakeMasquerader);
@@ -945,7 +949,9 @@ const GlobalObjectMethodTable GlobalObject::s_globalObjectMethodTable = {
     nullptr, // defaultLanguage
     nullptr, // compileStreaming
     nullptr, // instantinateStreaming
-    &deriveShadowRealmGlobalObject
+    &deriveShadowRealmGlobalObject,
+    &codeForEval,
+    &canCompileStrings,
 };
 
 GlobalObject::GlobalObject(VM& vm, Structure* structure)
@@ -1080,7 +1086,7 @@ JSInternalPromise* GlobalObject::moduleLoaderImportModule(JSGlobalObject* global
     RETURN_IF_EXCEPTION(scope, promise->rejectWithCaughtException(globalObject, scope));
 
     if (!referrer.protocolIsFile())
-        RELEASE_AND_RETURN(scope, rejectWithError(createError(globalObject, makeString("Could not resolve the referrer's path '"_s, referrer.string(), "', while trying to resolve module '"_s, specifier, "'."_s))));
+        RELEASE_AND_RETURN(scope, rejectWithError(createError(globalObject, makeString("Could not resolve the referrer's path '"_s, referrer.string(), "', while trying to resolve module '"_s, specifier.data, "'."_s))));
 
     auto attributes = JSC::retrieveImportAttributesFromDynamicImportOptions(globalObject, parameters, { vm.propertyNames->type.impl() });
     RETURN_IF_EXCEPTION(scope, promise->rejectWithCaughtException(globalObject, scope));
@@ -1159,6 +1165,11 @@ static void convertShebangToJSComment(Vector& buffer)
 
 static RefPtr<Uint8Array> fillBufferWithContentsOfFile(FILE* file)
 {
+    struct stat statBuf;
+    if (fstat(fileno(file), &statBuf) == -1)
+        return nullptr;
+    if ((statBuf.st_mode & S_IFMT) != S_IFREG)
+        return nullptr;
     if (fseek(file, 0, SEEK_END) == -1)
         return nullptr;
     long bufferCapacity = ftell(file);
@@ -1208,6 +1219,16 @@ static bool fillBufferWithContentsOfFile(FILE* file, Vector& buffer)
 
 static bool fillBufferWithContentsOfFile(const String& fileName, Vector<char>& buffer)
 {
+    struct stat statBuf;
+    if (stat(fileName.utf8().data(), &statBuf) == -1) {
+        fprintf(stderr, "Could not open file: %s\n", fileName.utf8().data());
+        return false;
+    }
+
+    if ((statBuf.st_mode & S_IFMT) != S_IFREG) {
+        fprintf(stderr, "Trying to open a non-file: %s\n", fileName.utf8().data());
+        return false;
+    }
     FILE* f = fopen(fileName.utf8().data(), "rb");
     if (!f) {
         fprintf(stderr, "Could not open file: %s\n", fileName.utf8().data());
@@ -1299,11 +1320,11 @@ public:
         if (!FileSystem::truncateFile(fd, m_cachedBytecode->sizeForUpdate()))
             return;
 
-        m_cachedBytecode->commitUpdates([&] (off_t offset, const void* data, size_t size) {
+        m_cachedBytecode->commitUpdates([&] (off_t offset, std::span<const uint8_t> data) {
             long long result = FileSystem::seekFile(fd, offset, FileSystem::FileSeekOrigin::Beginning);
             ASSERT_UNUSED(result, result != -1);
-            size_t bytesWritten = static_cast<size_t>(FileSystem::writeToFile(fd, data, size));
-            ASSERT_UNUSED(bytesWritten, bytesWritten == size);
+            size_t bytesWritten = static_cast<size_t>(FileSystem::writeToFile(fd, data));
+            ASSERT_UNUSED(bytesWritten, bytesWritten == data.size());
         });
     }
 
@@ -1382,7 +1403,7 @@ static bool fetchModuleFromLocalFileSystem(const URL& fileURL, Vector& buffer)
     // These also appear to turn off handling forward slashes as
     // directory separators as it disables all string parsing on names.
     fileName = makeStringByReplacingAll(fileName, '/', '\\');
-    auto pathName = makeString("\\\\?\\", fileName).wideCharacters();
+    auto pathName = makeString("\\\\?\\"_s, fileName).wideCharacters();
     struct _stat status { };
     if (_wstat(pathName.data(), &status))
         return false;
@@ -1496,26 +1517,25 @@ void GlobalObject::promiseRejectionTracker(JSGlobalObject*, JSPromise*, JSPromis
 
 #endif // ENABLE(FUZZILLI)
 
-template <typename T>
-static CString toCString(JSGlobalObject* globalObject, ThrowScope& scope, T& string)
+static CString toCString(JSGlobalObject* globalObject, ThrowScope& scope, Expected<CString, UTF8ConversionError> expectedString)
 {
-    Expected<CString, UTF8ConversionError> expectedString = string.tryGetUTF8();
     if (expectedString)
         return expectedString.value();
     switch (expectedString.error()) {
     case UTF8ConversionError::OutOfMemory:
         throwOutOfMemoryError(globalObject, scope);
-        break;
-    case UTF8ConversionError::IllegalSource:
+        return { };
+    case UTF8ConversionError::Invalid:
         scope.throwException(globalObject, createError(globalObject, "Illegal source encountered during UTF8 conversion"_s));
-        break;
-    case UTF8ConversionError::SourceExhausted:
-        scope.throwException(globalObject, createError(globalObject, "Source exhausted during UTF8 conversion"_s));
-        break;
-    default:
-        RELEASE_ASSERT_NOT_REACHED();
+        return { };
     }
+    RELEASE_ASSERT_NOT_REACHED();
     return { };
+}
+
+template<typename T> static CString toCString(JSGlobalObject* globalObject, ThrowScope& scope, T& string)
+{
+    return toCString(globalObject, scope, string.tryGetUTF8());
 }
 
 static EncodedJSValue printInternal(JSGlobalObject* globalObject, CallFrame* callFrame, FILE* out, bool pretty)
@@ -1525,7 +1545,7 @@ static EncodedJSValue printInternal(JSGlobalObject* globalObject, CallFrame* cal
 
     if (asyncTestExpectedPasses) {
         JSValue value = callFrame->argument(0);
-        if (value.isString() && WTF::equal(asString(value)->value(globalObject).impl(), "Test262:AsyncTestComplete"_s)) {
+        if (value.isString() && WTF::equal(asString(value)->value(globalObject).data.impl(), "Test262:AsyncTestComplete"_s)) {
             asyncTestPasses++;
             return JSValue::encode(jsUndefined());
         }
@@ -1584,7 +1604,7 @@ JSC_DEFINE_HOST_FUNCTION(functionAtob, (JSGlobalObject* globalObject, CallFrame*
     if (encodedString.isNull())
         return JSValue::encode(jsEmptyString(vm));
 
-    auto decodedString = base64DecodeToString(encodedString, Base64DecodeMode::DefaultValidatePaddingAndIgnoreWhitespace);
+    auto decodedString = base64DecodeToString(encodedString, { Base64DecodeOption::ValidatePadding, Base64DecodeOption::IgnoreWhitespace });
     if (decodedString.isNull())
         return JSValue::encode(throwException(globalObject, scope, createError(globalObject, "Invalid character in argument for atob."_s)));
 
@@ -1629,7 +1649,7 @@ JSC_DEFINE_HOST_FUNCTION(functionDisassembleBase64, (JSGlobalObject* globalObjec
     if (encodedString.isNull())
         return JSValue::encode(jsEmptyString(vm));
 
-    std::optional<Vector<uint8_t>> decodedVector = base64Decode(encodedString, Base64DecodeMode::DefaultValidatePaddingAndIgnoreWhitespace);
+    std::optional<Vector<uint8_t>> decodedVector = base64Decode(encodedString, { Base64DecodeOption::ValidatePadding, Base64DecodeOption::IgnoreWhitespace });
     if (!decodedVector)
         return JSValue::encode(throwException(globalObject, scope, createError(globalObject, "Invalid character in base64 string argument."_s)));
 
@@ -1649,9 +1669,9 @@ JSC_DEFINE_HOST_FUNCTION(functionDebug, (JSGlobalObject* globalObject, CallFrame
     auto scope = DECLARE_THROW_SCOPE(vm);
     auto* jsString = callFrame->argument(0).toString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    auto viewWithString = jsString->viewWithUnderlyingString(globalObject);
+    auto view = jsString->view(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    auto string = toCString(globalObject, scope, viewWithString.view);
+    auto string = toCString(globalObject, scope, view.data);
     RETURN_IF_EXCEPTION(scope, { });
     fputs("--> ", stderr);
     fwrite(string.data(), sizeof(char), string.length(), stderr);
@@ -1713,7 +1733,7 @@ JSC_DEFINE_HOST_FUNCTION(functionJSCStack, (JSGlobalObject* globalObject, CallFr
 {
     VM& vm = globalObject->vm();
     StringBuilder trace;
-    trace.append("--> Stack trace:\n");
+    trace.append("--> Stack trace:\n"_s);
 
     FunctionJSCStackFunctor functor(trace);
     StackVisitor::visit(callFrame, vm, functor);
@@ -1999,7 +2019,7 @@ JSC_DEFINE_HOST_FUNCTION(functionReadFile, (JSGlobalObject* globalObject, CallFr
         return throwVMError(globalObject, scope, "Could not open file."_s);
 
     if (!isBinary)
-        return JSValue::encode(jsString(vm, String::fromUTF8WithLatin1Fallback(content->data(), content->length())));
+        return JSValue::encode(jsString(vm, String::fromUTF8WithLatin1Fallback(content->span())));
 
     Structure* structure = globalObject->typedArrayStructure(TypeUint8, content->isResizableOrGrowableShared());
     JSObject* result = JSUint8Array::create(vm, structure, WTFMove(content));
@@ -2045,9 +2065,9 @@ JSC_DEFINE_HOST_FUNCTION(functionWriteFile, (JSGlobalObject* globalObject, CallF
 
     int size = std::visit(WTF::makeVisitor([&](const String& string) {
         CString utf8 = string.utf8();
-        return FileSystem::writeToFile(handle, utf8.data(), utf8.length());
+        return FileSystem::writeToFile(handle, utf8.span());
     }, [&] (const std::span<const uint8_t>& data) {
-        return FileSystem::writeToFile(handle, data.data(), data.size());
+        return FileSystem::writeToFile(handle, data);
     }), data);
 
     FileSystem::closeFile(handle);
@@ -2199,7 +2219,7 @@ JSC_DEFINE_HOST_FUNCTION(functionOpenFile, (JSGlobalObject* globalObject, CallFr
 
     FILE* descriptor = fopen(filePath.fileSystemPath().ascii().data(), "r");
     if (!descriptor)
-        return throwVMException(globalObject, scope, createURIError(globalObject, makeString("Could not open file at "_s, filePath.string(), " fopen had error: "_s, safeStrerror(errno).data())));
+        return throwVMException(globalObject, scope, createURIError(globalObject, makeString("Could not open file at "_s, filePath.string(), " fopen had error: "_s, safeStrerror(errno).span())));
 
     RELEASE_AND_RETURN(scope, JSValue::encode(JSFileDescriptor::create(vm, globalObject, WTFMove(descriptor))));
 }
@@ -2294,9 +2314,7 @@ Message::Message(Content&& contents, int32_t index)
 {
 }
 
-Message::~Message()
-{
-}
+Message::~Message() = default;
 
 Worker::Worker(Workers& workers, bool isMain)
     : m_workers(workers)
@@ -2345,9 +2363,7 @@ ThreadSpecific<Worker*>& Worker::currentWorker()
     return *result;
 }
 
-Workers::Workers()
-{
-}
+Workers::Workers() = default;
 
 Workers::~Workers()
 {
@@ -2503,7 +2519,7 @@ JSC_DEFINE_HOST_FUNCTION(functionDollarAgentStart, (JSGlobalObject* globalObject
     }
     
     Thread::create(
-        "JSC Agent",
+        "JSC Agent"_s,
         [sourceCode = WTFMove(sourceCode).isolatedCopy(), workerPath = WTFMove(workerPath).isolatedCopy(), &didStartLock, &didStartCondition, &didStart] () {
             CommandLine commandLine(CommandLine::CommandLineForWorkers);
             commandLine.m_interactive = false;
@@ -2801,11 +2817,6 @@ JSC_DEFINE_HOST_FUNCTION(functionQuit, (JSGlobalObject* globalObject, CallFrame*
     vm.codeCache()->write();
 
     jscExit(EXIT_SUCCESS);
-
-#if COMPILER(MSVC) && !COMPILER(CLANG)
-    // Without this, Visual Studio will complain that this method does not return a value.
-    return JSValue::encode(jsUndefined());
-#endif
 }
 
 JSC_DEFINE_HOST_FUNCTION(functionFalse, (JSGlobalObject*, CallFrame*))
@@ -3366,7 +3377,7 @@ static void startMemoryMonitoringThreadIfNeeded()
     if (!memoryLimit)
         return;
 
-    Thread::create("jsc Memory Monitor", [=] {
+    Thread::create("jsc Memory Monitor"_s, [=] {
         while (true) {
             sleep(Seconds::fromMilliseconds(5));
             crashIfExceedingMemoryLimit();
@@ -3383,7 +3394,7 @@ static VM* s_vm;
 
 static void startTimeoutTimer(Seconds duration)
 {
-    Thread::create("jsc Timeout Thread", [=] () {
+    Thread::create("jsc Timeout Thread"_s, [=] () {
         sleep(duration);
         VMInspector::forEachVM([&] (VM& vm) -> IterationStatus {
             if (&vm != s_vm)
@@ -3406,13 +3417,22 @@ static void startTimeoutTimer(Seconds duration)
     });
 }
 
+// The purpose of crashDueToJSCShellTimeout is solely to make it easier to distinquish
+// jsc shell test timeouts (i.e. crashDueToJSCShellTimeout is present in crash stack
+// traces) from other crashes.
+NO_RETURN_DUE_TO_CRASH NEVER_INLINE void crashDueToJSCShellTimeout();
+void crashDueToJSCShellTimeout()
+{
+    CRASH();
+}
+
 static void timeoutCheckCallback(VM& vm)
 {
     RELEASE_ASSERT(&vm == s_vm);
     auto cpuTime = CPUTime::forCurrentThread();
     if (cpuTime >= s_maxAllowedCPUTime) {
         dataLog("Timed out after ", s_timeoutDuration, " seconds!\n");
-        CRASH();
+        crashDueToJSCShellTimeout();
     }
     auto remainingTime = s_maxAllowedCPUTime - cpuTime;
     startTimeoutTimer(remainingTime);
@@ -3443,14 +3463,6 @@ static void startTimeoutThreadIfNeeded(VM& vm)
 
 int main(int argc, char** argv WTF_TZONE_EXTRA_MAIN_ARGS)
 {
-#if OS(DARWIN) && CPU(ARM_THUMB2)
-    // Enabled IEEE754 denormal support.
-    fenv_t env;
-    fegetenv( &env );
-    env.__fpscr &= ~0x01000000u;
-    fesetenv( &env );
-#endif
-
 #if USE(TZONE_MALLOC)
     const char* boothash = GET_TZONE_SEED_FROM_ENV(darwinEnvp);
     WTF_TZONE_INIT(boothash);
@@ -3500,13 +3512,18 @@ int main(int argc, char** argv WTF_TZONE_EXTRA_MAIN_ARGS)
     WTF::initialize();
 #if PLATFORM(COCOA)
     WTF::disableForwardingVPrintfStdErrToOSLog();
+
+    if (getenv("JSCTEST_CrashReportArgV")) {
+        StringPrintStream out;
+        CommaPrinter space(" "_s);
+        for (int i = 0; i < argc; ++i)
+            out.print(space, argv[i]);
+        WTF::setCrashLogMessage(out.toCString().data());
+    }
 #endif
 
 #if OS(UNIX)
     if (getenv("JS_SHELL_WAIT_FOR_SIGUSR2_TO_EXIT")) {
-        uint32_t key = 0;
-        int mask = 0;
-        initializeSignalHandling(key, mask);
         addSignalHandler(Signal::Usr, SignalHandler([&] (Signal, SigInfo&, PlatformRegisters&) {
             dataLogLn("Signal handler hit, we can exit now.");
             waitToExit.signal();
@@ -3668,13 +3685,13 @@ static void checkException(GlobalObject* globalObject, bool isLastFile, bool has
     }
 
     if (!options.m_uncaughtExceptionName || !isLastFile) {
-        success = success && !hasException;
+        success = success && (!hasException || options.m_ignoreUncaughtExceptions);
         if (options.m_dump && !hasException)
             printf("End: %s\n", value.toWTFString(globalObject).utf8().data());
-        if (hasException)
+        if (hasException && !options.m_ignoreUncaughtExceptions)
             dumpException(globalObject, value);
     } else
-        success = success && checkUncaughtException(vm, globalObject, (hasException) ? value : JSValue(), options);
+        success = success && (checkUncaughtException(vm, globalObject, (hasException) ? value : JSValue(), options) || options.m_ignoreUncaughtExceptions);
 }
 
 void GlobalObject::reportUncaughtExceptionAtEventLoop(JSGlobalObject* globalObject, Exception* exception)
@@ -3865,7 +3882,8 @@ static void runInteractive(GlobalObject* globalObject)
 static NO_RETURN void printUsageStatement(bool help = false)
 {
     fprintf(stderr, "Usage: jsc [options] [files] [-- arguments]\n");
-    fprintf(stderr, "  -d         Dumps bytecode (debug builds only)\n");
+    fprintf(stderr, "  -d         Dumps bytecode\n");
+    fprintf(stderr, "  -s         Synchronous compilation (equivalent to `--useConcurrentJIT=0`)\n");
     fprintf(stderr, "  -e         Evaluate argument as script code\n");
     fprintf(stderr, "  -f         Specifies a source file (deprecated)\n");
     fprintf(stderr, "  -h|--help  Prints this help message\n");
@@ -3874,23 +3892,27 @@ static NO_RETURN void printUsageStatement(bool help = false)
 #endif
     fprintf(stderr, "  -i         Enables interactive mode (default if no files are specified)\n");
     fprintf(stderr, "  -m         Execute as a module\n");
-#if OS(UNIX)
-    fprintf(stderr, "  -s         Installs signal handlers that exit on a crash (Unix platforms only, lldb will not work with this option) \n");
-#endif
     fprintf(stderr, "  -p <file>  Outputs profiling data to a file\n");
     fprintf(stderr, "  -x         Output exit code before terminating\n");
     fprintf(stderr, "\n");
+#if OS(UNIX)
+    fprintf(stderr, "  --signal-expected          Installs signal handlers that exit on a crash (Unix platforms only, lldb will not work with this option) \n");
+#endif
     fprintf(stderr, "  --sample                   Collects and outputs sampling profiler data\n");
     fprintf(stderr, "  --test262-async            Check that some script calls the print function with the string 'Test262:AsyncTestComplete'\n");
     fprintf(stderr, "  --strict-file=<file>       Parse the given file as if it were in strict mode (this option may be passed more than once)\n");
     fprintf(stderr, "  --module-file=<file>       Parse and evaluate the given file as module (this option may be passed more than once)\n");
     fprintf(stderr, "  --exception=<name>         Check the last script exits with an uncaught exception with the specified name\n");
+    fprintf(stderr, "  --ignoreUncaughtExceptions Do not error out if an uncaught exception is observed\n");
     fprintf(stderr, "  --watchdog-exception-ok    Uncaught watchdog exceptions exit with success\n");
     fprintf(stderr, "  --dumpException            Dump uncaught exception text\n");
     fprintf(stderr, "  --footprint                Dump memory footprint after done executing\n");
     fprintf(stderr, "  --options                  Dumps all JSC VM options and exits\n");
     fprintf(stderr, "  --dumpOptions              Dumps all non-default JSC VM options before continuing\n");
     fprintf(stderr, "  --<jsc VM option>=<value>  Sets the specified JSC VM option\n");
+#if PLATFORM(COCOA)
+    fprintf(stderr, "  --crash-vm=<value>         Crash VM on startup due to PGM failure. Options PGMOOBLowerGuardPage, PGMOOBUpperGuardPage, or PGMUAF (For Testing Purposes).\n");
+#endif
     fprintf(stderr, "  --destroy-vm               Destroy VM before exiting\n");
     fprintf(stderr, "  --can-block-is-false       Make main thread's Atomics.wait throw\n");
     fprintf(stderr, "\n");
@@ -3909,6 +3931,33 @@ static bool isMJSFile(char *filename)
 
     return false;
 }
+
+#if PLATFORM(COCOA)
+static NEVER_INLINE void crashPGMUAF()
+{
+    WTF::forceEnablePGM();
+    char* result = static_cast<char*>(fastMalloc(10000000));
+    fastFree(result);
+    *result = 'a';
+}
+
+static NEVER_INLINE void crashPGMUpperGuardPage()
+{
+    WTF::forceEnablePGM();
+    size_t allocSize = getpagesize() * 10000;
+    char* result = static_cast<char*>(fastMalloc(10000000));
+    result = result + allocSize;
+    *result = 'a';
+}
+
+static NEVER_INLINE void crashPGMLowerGuardPage()
+{
+    WTF::forceEnablePGM();
+    char* result = static_cast<char*>(fastMalloc(10000000));
+    result = result - getpagesize();
+    *result = 'a';
+}
+#endif
 
 void CommandLine::parseArguments(int argc, char** argv)
 {
@@ -3967,6 +4016,10 @@ void CommandLine::parseArguments(int argc, char** argv)
             m_dump = true;
             continue;
         }
+        if (!strcmp(arg, "-s")) {
+            Options::useConcurrentJIT() = false;
+            continue;
+        }
         if (!strcmp(arg, "-p")) {
             if (++i == argc)
                 printUsageStatement();
@@ -3978,25 +4031,12 @@ void CommandLine::parseArguments(int argc, char** argv)
             m_module = true;
             continue;
         }
-        if (!strcmp(arg, "-s")) {
+        if (!strcmp(arg, "--signal-expected")) {
 #if OS(UNIX)
-            uint32_t key = 0;
-            int mask = 0;
-#if HAVE(MACH_EXCEPTIONS)
-            mask |= toMachMask(Signal::IllegalInstruction);
-            mask |= toMachMask(Signal::AccessFault);
-            mask |= toMachMask(Signal::FloatingPoint);
-            mask |= toMachMask(Signal::Breakpoint);
-#if !OS(DARWIN)
-            mask |= toMachMask(Signal::Abort);
-#endif // !OS(DARWIN)
-#endif // HAVE(MACH_EXCEPTIONS)
-
-            initializeSignalHandling(key, mask);
-
             SignalAction (*exit)(Signal, SigInfo&, PlatformRegisters&) = [] (Signal, SigInfo&, PlatformRegisters&) {
-                dataLogLn("Signal handler hit. Exiting with status 0");
-                terminateProcess(EXIT_SUCCESS);
+                dataLogLn("Signal handler hit. Exiting with status 137");
+                // Deliberate exit with a SIGKILL code greater than 130.
+                terminateProcess(137);
                 return SignalAction::ForceDefault;
             };
 
@@ -4015,7 +4055,6 @@ void CommandLine::parseArguments(int argc, char** argv)
             addSignalHandler(Signal::Abort, SignalHandler(exit));
             activateSignalHandlersFor(Signal::Abort);
 #endif
-            finalizeSignalHandlers();
 #endif
             continue;
         }
@@ -4045,6 +4084,14 @@ void CommandLine::parseArguments(int argc, char** argv)
             m_dumpSamplingProfilerData = true;
             continue;
         }
+#if PLATFORM(COCOA)
+        if (!strcmp(arg, "--crash-vm=PGMOOBLowerGuardPage"))
+            crashPGMLowerGuardPage();
+        if (!strcmp(arg, "--crash-vm=PGMOOBUpperGuardPage"))
+            crashPGMUpperGuardPage();
+        if (!strcmp(arg, "--crash-vm=PGMUAF"))
+            crashPGMUAF();
+#endif
         if (!strcmp(arg, "--destroy-vm")) {
             m_destroyVM = true;
             continue;
@@ -4091,6 +4138,11 @@ void CommandLine::parseArguments(int argc, char** argv)
 
         if (!strcmp(arg, "--dumpException")) {
             m_alwaysDumpUncaughtException = true;
+            continue;
+        }
+
+        if (!strcmp(arg, "--ignoreUncaughtExceptions")) {
+            m_ignoreUncaughtExceptions = true;
             continue;
         }
 
@@ -4161,6 +4213,7 @@ void CommandLine::parseArguments(int argc, char** argv)
 
 CommandLine::CommandLine(CommandLineForWorkersTag)
     : m_treatWatchdogExceptionAsSuccess(mainCommandLine->m_treatWatchdogExceptionAsSuccess)
+    , m_ignoreUncaughtExceptions(mainCommandLine->m_ignoreUncaughtExceptions)
 {
 }
 
@@ -4348,6 +4401,9 @@ int jscmain(int argc, char** argv)
         JSC::JITOperationList::populateDisassemblyLabelsInEmbedder(&startOfJITOperationsInShell, &endOfJITOperationsInShell);
 #endif
 
+    if (!Options::maxHeapSizeAsRAMSizeMultiple())
+        Options::maxHeapSizeAsRAMSizeMultiple() = 2;
+
     initializeTimeoutIfNeeded();
 
 #if OS(DARWIN) || OS(LINUX)
@@ -4358,7 +4414,7 @@ int jscmain(int argc, char** argv)
         enableSuperSampler();
 
     bool gigacageDisableRequested = false;
-#if GIGACAGE_ENABLED && !COMPILER(MSVC)
+#if GIGACAGE_ENABLED && !OS(WINDOWS)
     if (char* gigacageEnabled = getenv("GIGACAGE_ENABLED")) {
         if (!strcasecmp(gigacageEnabled, "no") || !strcasecmp(gigacageEnabled, "false") || !strcasecmp(gigacageEnabled, "0"))
             gigacageDisableRequested = true;

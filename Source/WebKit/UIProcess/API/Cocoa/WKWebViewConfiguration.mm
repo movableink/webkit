@@ -28,20 +28,24 @@
 
 #import "APIPageConfiguration.h"
 #import "CSPExtensionUtilities.h"
+#import "PlatformWritingToolsUtilities.h"
 #import "WKDataDetectorTypesInternal.h"
 #import "WKPreferencesInternal.h"
 #import "WKProcessPoolInternal.h"
 #import "WKUserContentControllerInternal.h"
 #import "WKWebViewContentProviderRegistry.h"
+#import "WKWebViewInternal.h"
 #import "WKWebpagePreferencesInternal.h"
 #import "WKWebsiteDataStoreInternal.h"
 #import "WebKit2Initialize.h"
+#import "WebPageProxy.h"
 #import "WebPreferencesDefinitions.h"
 #import "WebURLSchemeHandlerCocoa.h"
 #import "_WKApplicationManifestInternal.h"
 #import "_WKVisitedLinkStoreInternal.h"
 #import <WebCore/RuntimeApplicationChecks.h>
 #import <WebCore/Settings.h>
+#import <WebCore/WebCoreObjCExtras.h>
 #import <WebKit/WKProcessPool.h>
 #import <WebKit/WKRetainPtr.h>
 #import <WebKit/WKUserContentController.h>
@@ -94,6 +98,8 @@ WebKit::DragLiftDelay fromWKDragLiftDelay(_WKDragLiftDelay delay)
 #endif // PLATFORM(IOS_FAMILY)
 
 @implementation WKWebViewConfiguration
+
+WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
 
 - (instancetype)init
 {
@@ -240,6 +246,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 #else
     [coder encodeInteger:self.userInterfaceDirectionPolicy forKey:@"userInterfaceDirectionPolicy"];
 #endif
+    [coder encodeBool:self._scrollToTextFragmentIndicatorEnabled forKey:@"scrollToTextFragmentIndicatorEnabled"];
+    [coder encodeBool:self._scrollToTextFragmentMarkingEnabled forKey:@"scrollToTextFragmentMarkingEnabled"];
+    [coder encodeBool:self._multiRepresentationHEICInsertionEnabled forKey:@"multiRepresentationHEICInsertionEnabled"];
 }
 
 - (instancetype)initWithCoder:(NSCoder *)coder
@@ -284,13 +293,39 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     if (userInterfaceDirectionPolicyCandidate == WKUserInterfaceDirectionPolicyContent || userInterfaceDirectionPolicyCandidate == WKUserInterfaceDirectionPolicySystem)
         self.userInterfaceDirectionPolicy = userInterfaceDirectionPolicyCandidate;
 #endif
+    self._scrollToTextFragmentIndicatorEnabled = [coder decodeBoolForKey:@"scrollToTextFragmentIndicatorEnabled"];
+    self._scrollToTextFragmentMarkingEnabled = [coder decodeBoolForKey:@"scrollToTextFragmentMarkingEnabled"];
+    self._multiRepresentationHEICInsertionEnabled = [coder decodeBoolForKey:@"multiRepresentationHEICInsertionEnabled"];
 
     return self;
 }
 
 - (id)copyWithZone:(NSZone *)zone
 {
-    return wrapper(_pageConfiguration->copy().leakRef());
+    WKWebViewConfiguration *configuration = [(WKWebViewConfiguration *)[[self class] allocWithZone:zone] init];
+    configuration->_pageConfiguration->copyDataFrom(*_pageConfiguration);
+    return configuration;
+}
+
+- (void)setValue:(id)value forKey:(NSString *)key
+{
+    if (([key isEqualToString:@"allowUniversalAccessFromFileURLs"] || [key isEqualToString:@"_allowUniversalAccessFromFileURLs"]) && [value isKindOfClass:[NSNumber class]] && !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::ThrowOnKVCInstanceVariableAccess)) {
+        RELEASE_LOG_FAULT(API, "Do not mutate private state `%{public}@` via KVC. Doing this when linking against newer SDKs will result in a crash.", key);
+        [self _setAllowUniversalAccessFromFileURLs:[(NSNumber *)value boolValue]];
+        return;
+    }
+
+    [super setValue:value forKey:key];
+}
+
+- (id)valueForKey:(NSString *)key
+{
+    if (([key isEqualToString:@"allowUniversalAccessFromFileURLs"] || [key isEqualToString:@"_allowUniversalAccessFromFileURLs"]) && !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::ThrowOnKVCInstanceVariableAccess)) {
+        RELEASE_LOG_FAULT(API, "Do not access private state `%{public}@` via KVC. Doing this when linking against newer SDKs will result in a crash.", key);
+        return @([self _allowUniversalAccessFromFileURLs]);
+    }
+
+    return [super valueForKey:key];
 }
 
 - (WKProcessPool *)processPool
@@ -513,6 +548,30 @@ static NSString *defaultApplicationNameForUserAgent()
     _pageConfiguration->setLimitsNavigationsToAppBoundDomains(limitsToAppBoundDomains);
 }
 #endif
+
+#if ENABLE(WRITING_TOOLS)
+
+- (void)setSupportsAdaptiveImageGlyph:(BOOL)supportsAdaptiveImageGlyph
+{
+    [self _setMultiRepresentationHEICInsertionEnabled:supportsAdaptiveImageGlyph];
+}
+
+- (BOOL)supportsAdaptiveImageGlyph
+{
+    return [self _multiRepresentationHEICInsertionEnabled];
+}
+
+- (void)setWritingToolsBehavior:(PlatformWritingToolsBehavior)writingToolsBehavior
+{
+    _pageConfiguration->setWritingToolsBehavior(WebKit::convertToWebWritingToolsBehavior(writingToolsBehavior));
+}
+
+- (PlatformWritingToolsBehavior)writingToolsBehavior
+{
+    return WebKit::convertToPlatformWritingToolsBehavior(_pageConfiguration->writingToolsBehavior());
+}
+
+#endif // ENABLE(WRITING_TOOLS)
 
 #pragma mark WKObject protocol implementation
 
@@ -1172,6 +1231,26 @@ static WebKit::AttributionOverrideTesting toAttributionOverrideTesting(_WKAttrib
 #endif
 }
 
+- (BOOL)_scrollToTextFragmentIndicatorEnabled
+{
+    return _pageConfiguration->scrollToTextFragmentIndicatorEnabled();
+}
+
+- (void)_setScrollToTextFragmentIndicatorEnabled:(BOOL)enabled
+{
+    _pageConfiguration->setScrollToTextFragmentIndicatorEnabled(enabled);
+}
+
+- (BOOL)_scrollToTextFragmentMarkingEnabled
+{
+    return _pageConfiguration->scrollToTextFragmentMarkingEnabled();
+}
+
+- (void)_setScrollToTextFragmentMarkingEnabled:(BOOL)enabled
+{
+    _pageConfiguration->setScrollToTextFragmentMarkingEnabled(enabled);
+}
+
 - (BOOL)_needsStorageAccessFromFileURLsQuirk
 {
     return _pageConfiguration->needsStorageAccessFromFileURLsQuirk();
@@ -1379,6 +1458,22 @@ static WebKit::AttributionOverrideTesting toAttributionOverrideTesting(_WKAttrib
 - (BOOL)_markedTextInputEnabled
 {
     return _pageConfiguration->allowsInlinePredictions();
+}
+
+- (void)_setMultiRepresentationHEICInsertionEnabled:(BOOL)enabled
+{
+#if ENABLE(MULTI_REPRESENTATION_HEIC)
+    _pageConfiguration->setMultiRepresentationHEICInsertionEnabled(enabled);
+#endif
+}
+
+- (BOOL)_multiRepresentationHEICInsertionEnabled
+{
+#if ENABLE(MULTI_REPRESENTATION_HEIC)
+    return _pageConfiguration->multiRepresentationHEICInsertionEnabled();
+#else
+    return NO;
+#endif
 }
 
 @end

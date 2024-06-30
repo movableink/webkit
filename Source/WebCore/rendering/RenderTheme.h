@@ -54,8 +54,7 @@ class Settings;
 class RenderTheme {
 protected:
     RenderTheme();
-
-    virtual ~RenderTheme() = default;
+    virtual ~RenderTheme();
 
 public:
     // This function is to be implemented in platform-specific theme implementations to hand back the
@@ -157,8 +156,8 @@ public:
     virtual bool searchFieldShouldAppearAsTextField(const RenderStyle&) const { return false; }
 
     // Text selection colors.
-    Color activeSelectionBackgroundColor(OptionSet<StyleColorOptions>) const;
-    Color inactiveSelectionBackgroundColor(OptionSet<StyleColorOptions>) const;
+    WEBCORE_EXPORT Color activeSelectionBackgroundColor(OptionSet<StyleColorOptions>) const;
+    WEBCORE_EXPORT Color inactiveSelectionBackgroundColor(OptionSet<StyleColorOptions>) const;
     virtual Color transformSelectionBackgroundColor(const Color&, OptionSet<StyleColorOptions>) const;
     Color activeSelectionForegroundColor(OptionSet<StyleColorOptions>) const;
     Color inactiveSelectionForegroundColor(OptionSet<StyleColorOptions>) const;
@@ -255,7 +254,7 @@ public:
     virtual void paintSystemPreviewBadge(Image&, const PaintInfo&, const FloatRect&);
 #endif
     virtual Seconds switchAnimationVisuallyOnDuration() const { return 0_s; }
-    virtual Seconds switchAnimationPressedDuration() const { return 0_s; }
+    virtual Seconds switchAnimationHeldDuration() const { return 0_s; }
     float switchPointerTrackingMagnitudeProportion() const { return 0.4f; }
     virtual bool hasSwitchHapticFeedback(SwitchTrigger) const { return false; }
 

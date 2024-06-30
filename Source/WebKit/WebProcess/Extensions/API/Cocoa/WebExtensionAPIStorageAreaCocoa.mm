@@ -49,7 +49,7 @@ static NSString * const accessLevelTrustedAndUntrustedContexts = @"TRUSTED_AND_U
 
 namespace WebKit {
 
-bool WebExtensionAPIStorageArea::isPropertyAllowed(const ASCIILiteral& propertyName, WebPage&)
+bool WebExtensionAPIStorageArea::isPropertyAllowed(const ASCIILiteral& propertyName, WebPage*)
 {
     if (UNLIKELY(extensionContext().isUnsupportedAPI(propertyPath(), propertyName)))
         return false;
@@ -97,14 +97,8 @@ void WebExtensionAPIStorageArea::get(WebPage& page, id items, Ref<WebExtensionCa
         keysVector = makeVector<String>(keys);
     }
 
-    if (NSString *key = dynamic_objc_cast<NSString>(items)) {
-        if (!key.length) {
-            callback->call(@{ });
-            return;
-        }
-
+    if (NSString *key = dynamic_objc_cast<NSString>(items))
         keysVector = { key };
-    }
 
     WebProcess::singleton().sendWithAsyncReply(Messages::WebExtensionContext::StorageGet(page.webPageProxyIdentifier(), m_type, keysVector), [keysWithDefaultValues, protectedThis = Ref { *this }, callback = WTFMove(callback)](Expected<String, WebExtensionError>&& result) {
         if (!result) {
@@ -159,6 +153,9 @@ void WebExtensionAPIStorageArea::set(WebPage& page, NSDictionary *items, Ref<Web
 
     auto *serializedData = mapObjects(items, ^NSString *(NSString *key, id object) {
         ASSERT([object isKindOfClass:JSValue.class]);
+
+        if (((JSValue *)object).isUndefined)
+            return nil;
 
         if (keyWithError)
             return nil;

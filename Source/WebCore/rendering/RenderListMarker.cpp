@@ -71,13 +71,13 @@ void RenderListMarker::willBeDestroyed()
 
 void RenderListMarker::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
-    RenderBox::styleDidChange(diff, oldStyle);
-    if (oldStyle) {
-        if (style().listStylePosition() != oldStyle->listStylePosition() || style().listStyleType() != oldStyle->listStyleType())
-            setNeedsLayoutAndPrefWidthsRecalc();
-        if (oldStyle->isDisplayInlineType() && !style().isDisplayInlineType())
-            setNeedsLayoutAndPrefWidthsRecalc();
+    if (oldStyle && diff < StyleDifference::Layout) {
+        auto& style = this->style();
+        // FIXME: Preferably we do this at RenderStyle::changeRequiresLayout but checking against pseudo(::marker) is not sufficient.
+        auto needsLayout = style.listStylePosition() != oldStyle->listStylePosition() || style.listStyleType() != oldStyle->listStyleType() || style.isDisplayInlineType() != oldStyle->isDisplayInlineType();
+        diff = needsLayout ? StyleDifference::Layout : diff;
     }
+    RenderBox::styleDidChange(diff, oldStyle);
 
     if (m_image != style().listStyleImage()) {
         if (m_image)
@@ -126,12 +126,8 @@ auto RenderListMarker::textRun() const -> TextRunWithUnderlyingString
     if (m_textIsLeftToRightDirection) {
         if (style().isLeftToRightDirection())
             textForRun = m_textWithSuffix;
-        else {
-            if (style().listStyleType().isDisclosureClosed())
-                textForRun = { &blackLeftPointingSmallTriangle, 1 };
-            else
-                textForRun = makeString(reversed(StringView(m_textWithSuffix).substring(m_textWithoutSuffixLength)), m_textWithSuffix.left(m_textWithoutSuffixLength));
-        }
+        else
+            textForRun = makeString(reversed(StringView(m_textWithSuffix).substring(m_textWithoutSuffixLength)), m_textWithSuffix.left(m_textWithoutSuffixLength));
     } else {
         if (!style().isLeftToRightDirection())
             textForRun = reversed(m_textWithSuffix);
@@ -272,11 +268,13 @@ void RenderListMarker::layout()
 
 void RenderListMarker::imageChanged(WrappedImagePtr o, const IntRect* rect)
 {
-    if (m_image && o == m_image->data()) {
-        if (width() != m_image->imageSize(this, style().usedZoom()).width() || height() != m_image->imageSize(this, style().usedZoom()).height() || m_image->errorOccurred())
-            setNeedsLayoutAndPrefWidthsRecalc();
-        else
-            repaint();
+    if (parent()) {
+        if (m_image && o == m_image->data()) {
+            if (width() != m_image->imageSize(this, style().usedZoom()).width() || height() != m_image->imageSize(this, style().usedZoom()).height() || m_image->errorOccurred())
+                setNeedsLayoutAndPrefWidthsRecalc();
+            else
+                repaint();
+        }
     }
     RenderBox::imageChanged(o, rect);
 }
@@ -315,7 +313,7 @@ void RenderListMarker::updateContent()
     case ListStyleType::Type::CounterStyle: {
         auto counter = counterStyle();
         ASSERT(counter);
-        auto text = makeString(counter->prefix().text, counter->text(m_listItem->value()));
+        auto text = makeString(counter->prefix().text, counter->text(m_listItem->value(), { style().blockFlowDirection(), style().direction() }));
         m_textWithSuffix = makeString(text, counter->suffix().text);
         m_textWithoutSuffixLength = text.length();
         m_textIsLeftToRightDirection = u_charDirection(text[0]) != U_RIGHT_TO_LEFT;

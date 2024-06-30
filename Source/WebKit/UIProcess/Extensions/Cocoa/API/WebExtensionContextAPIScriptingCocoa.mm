@@ -85,7 +85,7 @@ void WebExtensionContext::scriptingExecuteScript(const WebExtensionScriptInjecti
         auto scriptPairs = getSourcePairsForParameters(parameters, m_extension);
         Ref executionWorld = toContentWorld(parameters.world);
 
-        executeScript(scriptPairs, webView, executionWorld, tab.get(), parameters, *this, [completionHandler = WTFMove(completionHandler)](InjectionResults&& injectionResults) mutable {
+        executeScript(scriptPairs, webView, executionWorld, *tab, parameters, *this, [completionHandler = WTFMove(completionHandler)](InjectionResults&& injectionResults) mutable {
             completionHandler(WTFMove(injectionResults));
         });
     });
@@ -117,7 +117,7 @@ void WebExtensionContext::scriptingInsertCSS(const WebExtensionScriptInjectionPa
         auto injectedFrames = parameters.frameIDs ? WebCore::UserContentInjectedFrames::InjectInTopFrameOnly : WebCore::UserContentInjectedFrames::InjectInAllFrames;
 
         auto styleSheetPairs = getSourcePairsForParameters(parameters, m_extension);
-        injectStyleSheets(styleSheetPairs, webView, *m_contentScriptWorld, injectedFrames, *this);
+        injectStyleSheets(styleSheetPairs, webView, *m_contentScriptWorld, parameters.styleLevel, injectedFrames, *this);
 
         completionHandler({ });
     });
@@ -283,8 +283,8 @@ void WebExtensionContext::scriptingUnregisterContentScripts(const Vector<String>
         }
 
         auto removeUserScriptsAndStyleSheets = ^(String scriptID) {
-            RefPtr registeredScript = m_registeredScriptsMap.take(scriptID);
-            registeredScript->removeUserScriptsAndStyleSheets(scriptID);
+            if (RefPtr registeredScript = m_registeredScriptsMap.take(scriptID))
+                registeredScript->removeUserScriptsAndStyleSheets(scriptID);
         };
 
         for (auto& scriptID : ids)
@@ -324,6 +324,16 @@ void WebExtensionContext::loadRegisteredContentScripts()
 
         addInjectedContent(injectedContents);
     }).get()];
+}
+
+void WebExtensionContext::clearRegisteredContentScripts()
+{
+    m_registeredScriptsMap.clear();
+
+    [registeredContentScriptsStore() deleteDatabaseWithCompletionHandler:^(NSString *errorMessage) {
+        if (errorMessage)
+            RELEASE_LOG_ERROR(Extensions, "Failed to delete registered content scripts database. Error: %{public}@", errorMessage);
+    }];
 }
 
 bool WebExtensionContext::createInjectedContentForScripts(const Vector<WebExtensionRegisteredScriptParameters>& scripts, FirstTimeRegistration firstTimeRegistration, DynamicInjectedContentsMap& injectedContentsMap, NSString *callingAPIName, NSString **errorMessage)
@@ -408,6 +418,7 @@ bool WebExtensionContext::createInjectedContentForScripts(const Vector<WebExtens
         injectedContentData.injectionTime = parameters.injectionTime.value_or(WebExtension::InjectionTime::DocumentIdle);
         injectedContentData.injectsIntoAllFrames = parameters.allFrames.value_or(false);
         injectedContentData.contentWorldType = parameters.world.value_or(WebExtensionContentWorldType::ContentScript);
+        injectedContentData.styleLevel = parameters.styleLevel.value_or(WebCore::UserStyleLevel::Author);
         injectedContentData.scriptPaths = scriptPaths;
         injectedContentData.styleSheetPaths = styleSheetPaths;
 

@@ -44,6 +44,10 @@ class PageClientImpl final : public PageClient
 public:
     PageClientImpl(PlayStationWebView&);
 
+#if USE(GRAPHICS_LAYER_WC)
+    uint64_t viewWidget();
+#endif
+
 private:
     // Create a new drawing area proxy for the given page.
     std::unique_ptr<DrawingAreaProxy> createDrawingAreaProxy(WebProcessProxy&) override;
@@ -154,7 +158,7 @@ private:
 
     WebCore::UserInterfaceLayoutDirection userInterfaceLayoutDirection() override;
 
-    void requestDOMPasteAccess(WebCore::DOMPasteAccessCategory, const WebCore::IntRect&, const String&, CompletionHandler<void(WebCore::DOMPasteAccessResponse)>&&) override;
+    void requestDOMPasteAccess(WebCore::DOMPasteAccessCategory, WebCore::DOMPasteRequiresInteraction, const WebCore::IntRect&, const String&, CompletionHandler<void(WebCore::DOMPasteAccessResponse)>&&) override;
 
 #if USE(WPE_RENDERER)
     UnixFileDescriptor hostFileDescriptor() override;

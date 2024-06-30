@@ -70,6 +70,8 @@ inline Length forwardInheritedValue(const Length& value) { auto copy = value; re
 inline LengthSize forwardInheritedValue(const LengthSize& value) { auto copy = value; return copy; }
 inline LengthBox forwardInheritedValue(const LengthBox& value) { auto copy = value; return copy; }
 inline GapLength forwardInheritedValue(const GapLength& value) { auto copy = value; return copy; }
+inline FilterOperations forwardInheritedValue(const FilterOperations& value) { auto copy = value; return copy; }
+inline TransformOperations forwardInheritedValue(const TransformOperations& value) { auto copy = value; return copy; }
 
 // Note that we assume the CSS parser only allows valid CSSValue types.
 class BuilderCustom {
@@ -1635,9 +1637,9 @@ inline void BuilderCustom::applyInitialFontVariantAlternates(BuilderState& build
 
 inline void BuilderCustom::applyValueFontVariantAlternates(BuilderState& builderState, CSSValue& value)
 {
-    auto setAlternates = [&builderState](FontVariantAlternates alternates) {
+    auto setAlternates = [&builderState](const FontVariantAlternates& alternates) {
         auto fontDescription = builderState.fontDescription();
-        fontDescription.setVariantAlternates(WTFMove(alternates));
+        fontDescription.setVariantAlternates(alternates);
         builderState.setFontDescription(WTFMove(fontDescription));
     };
 
@@ -1649,7 +1651,7 @@ inline void BuilderCustom::applyValueFontVariantAlternates(BuilderState& builder
         if (primitiveValue->valueID() == CSSValueHistoricalForms) {
             auto alternates = FontVariantAlternates::Normal();
             alternates.valuesRef().historicalForms = true;
-            setAlternates(WTFMove(alternates));
+            setAlternates(alternates);
             return;
         }
         return;

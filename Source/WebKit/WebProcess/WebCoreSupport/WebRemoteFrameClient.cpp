@@ -39,8 +39,7 @@ namespace WebKit {
 using namespace WebCore;
 
 WebRemoteFrameClient::WebRemoteFrameClient(Ref<WebFrame>&& frame, ScopeExit<Function<void()>>&& frameInvalidator)
-    : WebFrameLoaderClient(WTFMove(frame))
-    , m_frameInvalidator(WTFMove(frameInvalidator))
+    : WebFrameLoaderClient(WTFMove(frame), WTFMove(frameInvalidator))
 {
 }
 
@@ -113,17 +112,19 @@ void WebRemoteFrameClient::updateRemoteFrameAccessibilityOffset(WebCore::FrameId
         page->send(Messages::WebPageProxy::UpdateRemoteFrameAccessibilityOffset(frameID, offset));
 }
 
-void WebRemoteFrameClient::bindRemoteAccessibilityFrames(int processIdentifier, WebCore::FrameIdentifier frameID, std::span<const uint8_t> dataToken, CompletionHandler<void(std::span<const uint8_t>, int)>&& completionHandler)
+void WebRemoteFrameClient::bindRemoteAccessibilityFrames(int processIdentifier, WebCore::FrameIdentifier frameID, Vector<uint8_t>&& dataToken, CompletionHandler<void(Vector<uint8_t>, int)>&& completionHandler)
 {
     RefPtr page = m_frame->page();
     if (!page) {
-        completionHandler(std::span<const uint8_t> { }, 0);
+        completionHandler({ }, 0);
         return;
     }
 
-    auto sendResult = page->sendSync(Messages::WebPageProxy::BindRemoteAccessibilityFrames(processIdentifier, frameID, dataToken));
-    if (!sendResult.succeeded())
+    auto sendResult = page->sendSync(Messages::WebPageProxy::BindRemoteAccessibilityFrames(processIdentifier, frameID, WTFMove(dataToken)));
+    if (!sendResult.succeeded()) {
+        completionHandler({ }, 0);
         return;
+    }
 
     auto [resultToken, processIdentifierResult] = sendResult.takeReply();
 
@@ -152,6 +153,14 @@ void WebRemoteFrameClient::unfocus()
         page->send(Messages::WebPageProxy::SetFocus(false));
 }
 
+void WebRemoteFrameClient::documentURLForConsoleLog(CompletionHandler<void(const URL&)>&& completionHandler)
+{
+    if (auto* page = m_frame->page())
+        page->sendWithAsyncReply(Messages::WebPageProxy::DocumentURLForConsoleLog(m_frame->frameID()), WTFMove(completionHandler));
+    else
+        completionHandler({ });
+}
+
 void WebRemoteFrameClient::dispatchDecidePolicyForNavigationAction(const NavigationAction& navigationAction, const ResourceRequest& request, const ResourceResponse& redirectResponse,
     FormState* formState, const String& clientRedirectSourceForHistory, uint64_t navigationID, std::optional<HitTestResult>&& hitTestResult, bool hasOpener, SandboxFlags sandboxFlags, PolicyDecisionMode policyDecisionMode, FramePolicyFunction&& function)
 {
@@ -168,6 +177,8 @@ void WebRemoteFrameClient::applyWebsitePolicies(WebsitePoliciesData&& websitePol
 
     coreFrame->setCustomUserAgent(websitePolicies.customUserAgent);
     coreFrame->setCustomUserAgentAsSiteSpecificQuirks(websitePolicies.customUserAgentAsSiteSpecificQuirks);
+    coreFrame->setAdvancedPrivacyProtections(websitePolicies.advancedPrivacyProtections);
+    coreFrame->setCustomNavigatorPlatform(websitePolicies.customNavigatorPlatform);
 }
 
 }

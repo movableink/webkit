@@ -145,7 +145,7 @@ public:
     WEBCORE_EXPORT virtual void memoryPressure(const MediaTime& currentTime);
 
     // Internals Utility methods
-    using SamplesPromise = NativePromise<Vector<String>, int>;
+    using SamplesPromise = NativePromise<Vector<String>, PlatformMediaError>;
     WEBCORE_EXPORT virtual Ref<SamplesPromise> bufferedSamplesForTrackId(TrackID);
     WEBCORE_EXPORT virtual Ref<SamplesPromise> enqueuedSamplesForTrackID(TrackID);
     virtual MediaTime minimumUpcomingPresentationTimeForTrackID(TrackID) { return MediaTime::invalidTime(); }
@@ -192,7 +192,12 @@ protected:
     virtual void setMinimumUpcomingPresentationTime(TrackID, const MediaTime&) { }
     virtual void clearMinimumUpcomingPresentationTime(TrackID) { }
 
-    void reenqueSamples(TrackID);
+    enum class NeedsFlush: bool {
+        No = 0,
+        Yes
+    };
+
+    void reenqueSamples(TrackID, NeedsFlush = NeedsFlush::Yes);
 
     virtual bool precheckInitializationSegment(const InitializationSegment&) { return true; }
     virtual void processInitializationSegment(std::optional<InitializationSegment>&&) { }
@@ -218,7 +223,7 @@ private:
     Ref<MediaPromise> updateBuffered();
     void updateHighestPresentationTimestamp();
     void updateMinimumUpcomingPresentationTime(TrackBuffer&, TrackID);
-    void reenqueueMediaForTime(TrackBuffer&, TrackID, const MediaTime&);
+    void reenqueueMediaForTime(TrackBuffer&, TrackID, const MediaTime&, NeedsFlush = NeedsFlush::Yes);
     bool validateInitializationSegment(const InitializationSegment&);
     void provideMediaData(TrackBuffer&, TrackID);
     void setBufferedDirty(bool);

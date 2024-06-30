@@ -48,6 +48,10 @@ public:
     WEBCORE_EXPORT static Ref<MediaKeySystemRequest> create(Document&, const String& keySystem, Ref<DeferredPromise>&&);
     virtual ~MediaKeySystemRequest();
 
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     void setAllowCallback(CompletionHandler<void(Ref<DeferredPromise>&&)>&& callback) { m_allowCompletionHandler = WTFMove(callback); }
     WEBCORE_EXPORT void start();
 
@@ -62,8 +66,8 @@ public:
 private:
     MediaKeySystemRequest(Document&, const String& keySystem, Ref<DeferredPromise>&&);
 
+    // ActiveDOMObject.
     void stop() final;
-    const char* activeDOMObjectName() const final;
 
     String m_keySystem;
     Ref<DeferredPromise> m_promise;

@@ -45,7 +45,7 @@ ShareableBitmapConfiguration::ShareableBitmapConfiguration(const IntSize& size, 
     , m_bitmapInfo(calculateBitmapInfo(this->colorSpace(), isOpaque))
 #endif
 #if USE(SKIA)
-    , m_imageInfo(SkImageInfo::MakeN32Premul(size.width(), size.height()))
+    , m_imageInfo(SkImageInfo::MakeN32Premul(size.width(), size.height(), this->colorSpace().platformColorSpace()))
 #endif
 {
     ASSERT(!m_size.isEmpty());
@@ -65,7 +65,7 @@ ShareableBitmapConfiguration::ShareableBitmapConfiguration(const IntSize& size, 
     , m_bitmapInfo(bitmapInfo)
 #endif
 #if USE(SKIA)
-    , m_imageInfo(SkImageInfo::MakeN32Premul(size.width(), size.height()))
+    , m_imageInfo(SkImageInfo::MakeN32Premul(size.width(), size.height(), this->colorSpace().platformColorSpace()))
 #endif
 {
     // This constructor is called when decoding ShareableBitmapConfiguration. So this constructor
@@ -111,8 +111,11 @@ RefPtr<ShareableBitmap> ShareableBitmap::createFromImageDraw(NativeImage& image)
 
 RefPtr<ShareableBitmap> ShareableBitmap::createFromImageDraw(NativeImage& image, const DestinationColorSpace& colorSpace)
 {
-    auto imageSize = image.size();
+    return createFromImageDraw(image, colorSpace, image.size());
+}
 
+RefPtr<ShareableBitmap> ShareableBitmap::createFromImageDraw(NativeImage& image, const DestinationColorSpace& colorSpace, const IntSize& imageSize)
+{
     auto bitmap = ShareableBitmap::create({ imageSize, colorSpace });
     if (!bitmap)
         return nullptr;
@@ -165,9 +168,14 @@ ShareableBitmap::ShareableBitmap(ShareableBitmapConfiguration configuration, Ref
 {
 }
 
-void* ShareableBitmap::data() const
+std::span<const uint8_t> ShareableBitmap::span() const
 {
-    return m_sharedMemory->data();
+    return m_sharedMemory->span();
+}
+
+std::span<uint8_t> ShareableBitmap::mutableSpan()
+{
+    return m_sharedMemory->mutableSpan();
 }
 
 } // namespace WebCore

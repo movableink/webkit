@@ -76,6 +76,8 @@ RenderInline::RenderInline(Type type, Document& document, RenderStyle&& style)
     ASSERT(isRenderInline());
 }
 
+RenderInline::~RenderInline() = default;
+
 void RenderInline::willBeDestroyed()
 {
 #if ASSERT_ENABLED
@@ -194,16 +196,7 @@ void RenderInline::styleDidChange(StyleDifference diff, const RenderStyle* oldSt
             updateStyleOfAnonymousBlockContinuations(*containingBlock(), &newStyle, oldStyle);
     }
 
-    if (diff >= StyleDifference::Repaint) {
-        if (auto* lineLayout = LayoutIntegration::LineLayout::containing(*this)) {
-            if (selfNeedsLayout())
-                lineLayout->flow().invalidateLineLayoutPath();
-            else
-                lineLayout->updateStyle(*this, *oldStyle);
-        }
-    }
-
-    propagateStyleToAnonymousChildren(PropagateToAllChildren);
+    propagateStyleToAnonymousChildren(StylePropagationType::AllChildren);
 }
 
 bool RenderInline::mayAffectLayout() const
@@ -1015,7 +1008,7 @@ inline bool RenderInline::willChangeCreatesStackingContext() const
 
 bool RenderInline::requiresLayer() const
 {
-    return isInFlowPositioned() || createsGroup() || hasClipPath() || shouldApplyPaintContainment() || willChangeCreatesStackingContext() || hasRunningAcceleratedAnimations() || hasViewTransitionName();
+    return isInFlowPositioned() || createsGroup() || hasClipPath() || shouldApplyPaintContainment() || willChangeCreatesStackingContext() || hasRunningAcceleratedAnimations() || requiresRenderingConsolidationForViewTransition();
 }
 
 } // namespace WebCore

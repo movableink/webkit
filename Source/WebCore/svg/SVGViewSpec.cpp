@@ -73,9 +73,7 @@ template<typename CharacterType> static constexpr CharacterType viewTargetSpec[]
 
 bool SVGViewSpec::parseViewSpec(StringView string)
 {
-    return readCharactersForParsing(string, [&](auto buffer) -> bool {
-        using CharacterType = typename decltype(buffer)::CharacterType;
-
+    return readCharactersForParsing(string, [&]<typename CharacterType> (StringParsingBuffer<CharacterType> buffer) -> bool {
         if (buffer.atEnd() || !m_contextElement)
             return false;
 
@@ -103,7 +101,7 @@ bool SVGViewSpec::parseViewSpec(StringView string)
                     skipUntil(buffer, ')');
                     if (buffer.atEnd())
                         return false;
-                    m_viewTargetString = String(viewTargetStart, buffer.position() - viewTargetStart);
+                    m_viewTargetString = String({ viewTargetStart, buffer.position() });
                     ++buffer;
                 } else
                     return false;

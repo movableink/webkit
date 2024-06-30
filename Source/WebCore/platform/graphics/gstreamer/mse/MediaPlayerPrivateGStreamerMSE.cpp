@@ -100,6 +100,20 @@ private:
     }
 };
 
+static Vector<RefPtr<MediaSourceTrackGStreamer>> filterOutRepeatingTracks(const Vector<RefPtr<MediaSourceTrackGStreamer>>& tracks)
+{
+    Vector<RefPtr<MediaSourceTrackGStreamer>> uniqueTracks;
+    uniqueTracks.reserveInitialCapacity(tracks.size());
+
+    for (const auto& track : tracks) {
+        if (!uniqueTracks.containsIf([&track](const auto& current) { return track->stringId() == current->stringId(); }))
+            uniqueTracks.append(track);
+    }
+
+    uniqueTracks.shrinkToFit();
+    return uniqueTracks;
+}
+
 void MediaPlayerPrivateGStreamerMSE::registerMediaEngine(MediaEngineRegistrar registrar)
 {
     GST_DEBUG_CATEGORY_INIT(webkit_mse_debug, "webkitmse", 0, "WebKit MSE media player");
@@ -129,7 +143,7 @@ void MediaPlayerPrivateGStreamerMSE::load(const String&)
 
 void MediaPlayerPrivateGStreamerMSE::load(const URL& url, const ContentType&, MediaSourcePrivateClient& mediaSource)
 {
-    auto mseBlobURI = makeString("mediasource", url.string().isEmpty() ? "blob://"_s : url.string());
+    auto mseBlobURI = makeString("mediasource"_s, url.string().isEmpty() ? "blob://"_s : url.string());
     GST_DEBUG("Loading %s", mseBlobURI.ascii().data());
     m_mediaSourcePrivate = MediaSourcePrivateGStreamer::open(mediaSource, *this);
 
@@ -151,7 +165,46 @@ void MediaPlayerPrivateGStreamerMSE::pause()
     m_isPaused = true;
     m_playbackRatePausedState = PlaybackRatePausedState::ManuallyPaused;
     updateStates();
+
+    // HTMLMediaElement::pauseInternal() synchronously schedules the pause event right after pausing
+    // the player, so without a playbackStateChanged notification here we would still observe an
+    // active sleep disabler right after receiving the pause event on JS side.
+    RefPtr player = m_player.get();
+    if (UNLIKELY(!player))
+        return;
+    player->playbackStateChanged();
 }
+
+void MediaPlayerPrivateGStreamerMSE::checkPlayingConsistency()
+{
+    MediaPlayerPrivateGStreamer::checkPlayingConsistency();
+
+    if (!m_playbackStateChangedNotificationPending)
+        return;
+
+    m_playbackStateChangedNotificationPending = false;
+    RefPtr player = m_player.get();
+    if (UNLIKELY(!player))
+        return;
+
+    GstState state, pendingState;
+    gst_element_get_state(pipeline(), &state, &pendingState, 0);
+    if (pendingState != GST_STATE_VOID_PENDING)
+        return;
+
+    if ((state == GST_STATE_PLAYING && m_playbackRatePausedState == PlaybackRatePausedState::Playing) || (state == GST_STATE_PAUSED && m_playbackRatePausedState == PlaybackRatePausedState::ManuallyPaused)) {
+        GST_DEBUG_OBJECT(pipeline(), "Notifying MediaPlayer of pipeline state change to %s", gst_element_state_get_name(state));
+        player->playbackStateChanged();
+    }
+}
+
+#ifndef GST_DISABLE_DEBUG
+void MediaPlayerPrivateGStreamerMSE::setShouldDisableSleep(bool shouldDisableSleep)
+{
+    // This method is useful only for logging purpose. The actual sleep disabler is managed by HTMLMediaElement.
+    GST_DEBUG_OBJECT(pipeline(), "%s display sleep.", shouldDisableSleep ? "Disabling" : "Enabling");
+}
+#endif
 
 MediaTime MediaPlayerPrivateGStreamerMSE::duration() const
 {
@@ -188,8 +241,19 @@ bool MediaPlayerPrivateGStreamerMSE::doSeek(const SeekTarget& target, float rate
 
     // Important: In order to ensure correct propagation whether pre-roll has happened or not, we send the seek directly
     // to the source element, rather than letting playbin do the routing.
-    gst_element_seek(m_source.get(), rate, GST_FORMAT_TIME, m_seekFlags,
-        GST_SEEK_TYPE_SET, toGstClockTime(target.time), GST_SEEK_TYPE_NONE, 0);
+    {
+        // Take the STATE_LOCK of the __pipeline__.
+        //
+        // gst_element_send_event() [which is called by gst_element_seek()] already takes the STATE_LOCK of the element
+        // in order to delay any state change attempts from other threads while the event is travelling the pipeline.
+        //
+        // Normally that would happen to both the pipeline and then recursively to the elements inside as they handle
+        // the seek event, but since we're sending the event directly to the source element we need to take the
+        // STATE_LOCK on the pipeline ourselves.
+        auto locker = GstStateLocker(pipeline());
+        gst_element_seek(m_source.get(), rate, GST_FORMAT_TIME, m_seekFlags,
+            GST_SEEK_TYPE_SET, toGstClockTime(target.time), GST_SEEK_TYPE_NONE, 0);
+    }
     invalidateCachedPosition();
 
     // Notify MediaSource and have new frames enqueued (when they're available).
@@ -298,6 +362,8 @@ void MediaPlayerPrivateGStreamerMSE::didPreroll()
 
     if (m_isSeeking) {
         m_isSeeking = false;
+        m_canFallBackToLastFinishedSeekPosition = true;
+        invalidateCachedPosition();
         GST_DEBUG("Seek complete because of preroll. currentMediaTime = %s", currentTime().toString().utf8().data());
         // By calling timeChanged(), m_isSeeking will be checked an a "seeked" event will be emitted.
         timeChanged(currentTime());
@@ -324,8 +390,10 @@ void MediaPlayerPrivateGStreamerMSE::sourceSetup(GstElement* sourceElement)
     webKitMediaSrcSetPlayer(WEBKIT_MEDIA_SRC(sourceElement), ThreadSafeWeakPtr { *this });
     m_source = sourceElement;
 
-    if (m_mediaSourcePrivate && m_mediaSourcePrivate->hasAllTracks())
+    if (m_mediaSourcePrivate && m_mediaSourcePrivate->hasAllTracks()) {
+        m_tracks = filterOutRepeatingTracks(m_tracks);
         webKitMediaSrcEmitStreams(WEBKIT_MEDIA_SRC(m_source.get()), m_tracks);
+    }
 }
 
 size_t MediaPlayerPrivateGStreamerMSE::extraMemoryCost() const
@@ -335,21 +403,32 @@ size_t MediaPlayerPrivateGStreamerMSE::extraMemoryCost() const
 
 void MediaPlayerPrivateGStreamerMSE::updateStates()
 {
-    bool isSeeking = isPipelineSeeking();
+    bool isWaitingPreroll = isPipelineWaitingPreroll();
+    bool shouldUpdatePlaybackState = false;
     bool shouldBePlaying = (!m_isPaused && readyState() >= MediaPlayer::ReadyState::HaveFutureData && m_playbackRatePausedState != PlaybackRatePausedState::RatePaused)
         || m_playbackRatePausedState == PlaybackRatePausedState::ShouldMoveToPlaying;
     GST_DEBUG_OBJECT(pipeline(), "shouldBePlaying = %s, m_isPipelinePlaying = %s, is seeking %s", boolForPrinting(shouldBePlaying),
-        boolForPrinting(m_isPipelinePlaying), boolForPrinting(isSeeking));
-    if (!isSeeking && shouldBePlaying && !m_isPipelinePlaying) {
+        boolForPrinting(m_isPipelinePlaying), boolForPrinting(isWaitingPreroll));
+    if (!isWaitingPreroll && shouldBePlaying && !m_isPipelinePlaying) {
         auto result = changePipelineState(GST_STATE_PLAYING);
         if (result == ChangePipelineStateResult::Failed)
             GST_ERROR_OBJECT(pipeline(), "Setting the pipeline to PLAYING failed");
-        else if (result == ChangePipelineStateResult::Ok)
+        else if (result == ChangePipelineStateResult::Ok) {
             m_playbackRatePausedState = PlaybackRatePausedState::Playing;
-    } else if (!isSeeking && !shouldBePlaying && m_isPipelinePlaying) {
-        if (changePipelineState(GST_STATE_PAUSED) == ChangePipelineStateResult::Failed)
+            shouldUpdatePlaybackState = true;
+        }
+    } else if (!isWaitingPreroll && !shouldBePlaying && m_isPipelinePlaying) {
+        auto result = changePipelineState(GST_STATE_PAUSED);
+        if (result == ChangePipelineStateResult::Failed)
             GST_ERROR_OBJECT(pipeline(), "Setting the pipeline to PAUSED failed");
+
+        shouldUpdatePlaybackState = result == ChangePipelineStateResult::Ok;
     }
+
+    if (!shouldUpdatePlaybackState)
+        return;
+
+    m_playbackStateChangedNotificationPending = shouldUpdatePlaybackState;
 }
 
 bool MediaPlayerPrivateGStreamerMSE::isTimeBuffered(const MediaTime &time) const
@@ -395,8 +474,8 @@ void MediaPlayerPrivateGStreamerMSE::setInitialVideoSize(const FloatSize& videoS
 
 void MediaPlayerPrivateGStreamerMSE::startSource(const Vector<RefPtr<MediaSourceTrackGStreamer>>& tracks)
 {
-    m_tracks = tracks;
-    webKitMediaSrcEmitStreams(WEBKIT_MEDIA_SRC(m_source.get()), tracks);
+    m_tracks = filterOutRepeatingTracks(tracks);
+    webKitMediaSrcEmitStreams(WEBKIT_MEDIA_SRC(m_source.get()), m_tracks);
 }
 
 void MediaPlayerPrivateGStreamerMSE::getSupportedTypes(HashSet<String>& types)
@@ -453,7 +532,13 @@ bool MediaPlayerPrivateGStreamerMSE::timeIsProgressing() const
 {
     if (!m_mediaSourcePrivate)
         return false;
-    return !paused() && m_mediaSourcePrivate->hasFutureTime(currentTime());
+
+    bool isPaused = paused();
+    const auto currentTime = this->currentTime();
+    bool hasFutureTime = m_mediaSourcePrivate->hasFutureTime(currentTime);
+    bool isProgressing = !isPaused && hasFutureTime;
+    GST_DEBUG_OBJECT(pipeline(), "Is paused: %s, has future time for %f: %s, time is progressing: %s", boolForPrinting(isPaused), currentTime.toDouble(), boolForPrinting(hasFutureTime), boolForPrinting(isProgressing));
+    return isProgressing;
 }
 
 void MediaPlayerPrivateGStreamerMSE::notifyActiveSourceBuffersChanged()
@@ -466,4 +551,4 @@ void MediaPlayerPrivateGStreamerMSE::notifyActiveSourceBuffersChanged()
 
 } // namespace WebCore.
 
-#endif // USE(GSTREAMER)
+#endif // ENABLE(VIDEO) && USE(GSTREAMER) && ENABLE(MEDIA_SOURCE)

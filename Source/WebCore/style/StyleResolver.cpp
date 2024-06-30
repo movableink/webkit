@@ -97,7 +97,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(Resolver);
 
 class Resolver::State {
 public:
-    State() { }
+    State() = default;
     State(const Element& element, const RenderStyle* parentStyle, const RenderStyle* documentElementStyle = nullptr)
         : m_element(&element)
         , m_parentStyle(parentStyle)
@@ -248,7 +248,7 @@ BuilderContext Resolver::builderContext(const State& state)
     };
 }
 
-ResolvedStyle Resolver::styleForElement(const Element& element, const ResolutionContext& context, RuleMatchingBehavior matchingBehavior)
+ResolvedStyle Resolver::styleForElement(Element& element, const ResolutionContext& context, RuleMatchingBehavior matchingBehavior)
 {
     auto state = State(element, context.parentStyle, context.documentElementStyle);
 
@@ -307,7 +307,7 @@ ResolvedStyle Resolver::styleForElement(const Element& element, const Resolution
     return { state.takeStyle(), WTFMove(elementStyleRelations), collector.releaseMatchResult() };
 }
 
-std::unique_ptr<RenderStyle> Resolver::styleForKeyframe(const Element& element, const RenderStyle& elementStyle, const ResolutionContext& context, const StyleRuleKeyframe& keyframe, BlendingKeyframe& blendingKeyframe)
+std::unique_ptr<RenderStyle> Resolver::styleForKeyframe(Element& element, const RenderStyle& elementStyle, const ResolutionContext& context, const StyleRuleKeyframe& keyframe, BlendingKeyframe& blendingKeyframe)
 {
     // Add all the animating properties to the keyframe.
     bool hasRevert = false;
@@ -452,7 +452,7 @@ Vector<Ref<StyleRuleKeyframe>> Resolver::keyframeRulesForName(const AtomString& 
     return deduplicatedKeyframes;
 }
 
-void Resolver::keyframeStylesForAnimation(const Element& element, const RenderStyle& elementStyle, const ResolutionContext& context, BlendingKeyframes& list)
+void Resolver::keyframeStylesForAnimation(Element& element, const RenderStyle& elementStyle, const ResolutionContext& context, BlendingKeyframes& list)
 {
     list.clear();
 
@@ -479,7 +479,7 @@ void Resolver::keyframeStylesForAnimation(const Element& element, const RenderSt
     }
 }
 
-std::optional<ResolvedStyle> Resolver::styleForPseudoElement(const Element& element, const PseudoElementRequest& pseudoElementRequest, const ResolutionContext& context)
+std::optional<ResolvedStyle> Resolver::styleForPseudoElement(Element& element, const PseudoElementRequest& pseudoElementRequest, const ResolutionContext& context)
 {
     auto state = State(element, context.parentStyle, context.documentElementStyle);
 
@@ -645,25 +645,36 @@ void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResu
         bool hasExplicitlyInherited = cacheEntry->renderStyle->hasExplicitlyInheritedProperties();
         bool inheritedStyleEqual = parentStyle.inheritedEqual(*cacheEntry->parentRenderStyle);
 
-        if (inheritedStyleEqual && !hasExplicitlyInherited) {
+        if (inheritedStyleEqual) {
             InsideLink linkStatus = state.style()->insideLink();
             // If the cache item parent style has identical inherited properties to the current parent style then the
             // resulting style will be identical too. We copy the inherited properties over from the cache and are done.
             style.inheritFrom(*cacheEntry->renderStyle);
 
-            // Unfortunately the link status is treated like an inherited property. We need to explicitly restore it.
+            // Link status is treated like an inherited property. We need to explicitly restore it.
             style.setInsideLink(linkStatus);
 
-            if (cacheEntry->userAgentAppearanceStyle && elementTypeHasAppearanceFromUAStyle(element))
-                state.setUserAgentAppearanceStyle(RenderStyle::clonePtr(*cacheEntry->userAgentAppearanceStyle));
+            if (!hasExplicitlyInherited && matchResult.nonCacheablePropertyIds.isEmpty()) {
+                if (cacheEntry->userAgentAppearanceStyle && elementTypeHasAppearanceFromUAStyle(element))
+                    state.setUserAgentAppearanceStyle(RenderStyle::clonePtr(*cacheEntry->userAgentAppearanceStyle));
 
-            return;
+                return;
+            }
         }
 
-        if (!inheritedStyleEqual)
+        includedProperties = { };
+
+        if (!inheritedStyleEqual) {
             includedProperties.add(PropertyCascade::PropertyType::Inherited);
+            // FIXME: See colorFromPrimitiveValueWithResolvedCurrentColor().
+            bool mayContainResolvedCurrentcolor = style.disallowsFastPathInheritance() && hasExplicitlyInherited;
+            if (mayContainResolvedCurrentcolor && parentStyle.color() != cacheEntry->parentRenderStyle->color())
+                includedProperties.add(PropertyCascade::PropertyType::NonInherited);
+        }
         if (hasExplicitlyInherited)
             includedProperties.add(PropertyCascade::PropertyType::ExplicitlyInherited);
+        if (!matchResult.nonCacheablePropertyIds.isEmpty())
+            includedProperties.add(PropertyCascade::PropertyType::NonCacheable);
     }
 
     if (elementTypeHasAppearanceFromUAStyle(element)) {

@@ -47,6 +47,7 @@ public:
 
     void setNeedsDisplay() override;
     void setNeedsDisplayInRect(const FloatRect& dirtyRect) override;
+    bool needsDisplay() const override;
 
     void copyContentsFromLayer(PlatformCALayer*) override;
 
@@ -87,7 +88,9 @@ public:
     TransformationMatrix sublayerTransform() const override;
     void setSublayerTransform(const TransformationMatrix&) override;
 
-    void setIsBackdropRoot(bool) override;
+    void setIsBackdropRoot(bool) final;
+    bool backdropRootIsOpaque() const final;
+    void setBackdropRootIsOpaque(bool) final;
 
     bool isHidden() const override;
     void setHidden(bool) override;
@@ -230,6 +233,7 @@ private:
     EventRegion m_eventRegion;
     bool m_wantsDeepColorBackingStore { false };
     bool m_backingStoreAttached { true };
+    bool m_backdropRootIsOpaque { false };
 };
 
 } // namespace WebCore

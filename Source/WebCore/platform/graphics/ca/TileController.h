@@ -52,6 +52,8 @@ const int kDefaultTileSize = 512;
 
 class TileController final : public TiledBacking {
     WTF_MAKE_NONCOPYABLE(TileController); WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(TileController);
+
     friend class TileCoverageMap;
     friend class TileGrid;
 public:
@@ -110,6 +112,7 @@ public:
     void didEndLiveResize() final;
 
     IntSize tileSize() const final;
+    FloatRect rectForTile(TileIndex) const final;
     IntRect bounds() const final;
     IntRect boundsWithoutMargin() const final;
     bool hasMargins() const final;
@@ -153,7 +156,12 @@ private:
     float topContentInset() const { return m_topContentInset; }
 
     // TiledBacking member functions.
+    PlatformLayerIdentifier layerIdentifier() const final;
     void setClient(TiledBackingClient*) final;
+
+    TileGridIdentifier primaryGridIdentifier() const final;
+    std::optional<TileGridIdentifier> secondaryGridIdentifier() const final;
+
     void setVisibleRect(const FloatRect&) final;
     void setLayoutViewportRect(std::optional<FloatRect>) final;
     void setCoverageRect(const FloatRect&) final;

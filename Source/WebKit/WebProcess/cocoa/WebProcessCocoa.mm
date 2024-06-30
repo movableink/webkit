@@ -35,7 +35,6 @@
 #import "Logging.h"
 #import "NetworkConnectionToWebProcessMessages.h"
 #import "NetworkProcessConnection.h"
-#import "ObjCObjectGraph.h"
 #import "ProcessAssertion.h"
 #import "SandboxExtension.h"
 #import "SandboxInitializationParameters.h"
@@ -115,17 +114,20 @@
 #import <pal/spi/cocoa/pthreadSPI.h>
 #import <pal/spi/mac/NSApplicationSPI.h>
 #import <stdio.h>
+#import <wtf/BlockPtr.h>
 #import <wtf/FileSystem.h>
 #import <wtf/Language.h>
 #import <wtf/LogInitialization.h>
 #import <wtf/MemoryPressureHandler.h>
 #import <wtf/ProcessPrivilege.h>
 #import <wtf/SoftLinking.h>
+#import <wtf/cocoa/Entitlements.h>
 #import <wtf/cocoa/NSURLExtras.h>
 #import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/cocoa/VectorCocoa.h>
 #import <wtf/spi/cocoa/OSLogSPI.h>
+#import <wtf/spi/darwin/SandboxSPI.h>
 
 #if ENABLE(REMOTE_INSPECTOR)
 #import <JavaScriptCore/RemoteInspector.h>
@@ -212,8 +214,7 @@ void WebProcess::bindAccessibilityFrameWithData(WebCore::FrameIdentifier frameID
         m_accessibilityRemoteFrameTokenCache = adoptNS([[NSMutableDictionary alloc] init]);
 
     auto frameInt = frameID.object().toUInt64();
-    NSData *nsData = [NSData dataWithBytes:data.data() length:data.size()];
-    [m_accessibilityRemoteFrameTokenCache setObject:nsData forKey:@(frameInt)];
+    [m_accessibilityRemoteFrameTokenCache setObject:toNSData(data).get() forKey:@(frameInt)];
 }
 
 id WebProcess::accessibilityFocusedUIElement()
@@ -568,6 +569,17 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
 
     disableURLSchemeCheckInDataDetectors();
 
+#if ENABLE(QUICKLOOK_SANDBOX_RESTRICTIONS)
+    if (auto auditToken = parentProcessConnection()->getAuditToken()) {
+        bool parentCanSetStateFlags = WTF::hasEntitlementValueInArray(auditToken.value(), "com.apple.private.security.enable-state-flags"_s, "EnableQuickLookSandboxResources"_s);
+        if (parentCanSetStateFlags) {
+            auto auditToken = auditTokenForSelf();
+            bool status = sandbox_enable_state_flag("ParentProcessCanEnableQuickLookStateFlag", auditToken.value());
+            WEBPROCESS_RELEASE_LOG(Sandbox, "Enabling ParentProcessCanEnableQuickLookStateFlag state flag, status = %d", status);
+        }
+    }
+#endif
+
 #if HAVE(VIDEO_RESTRICTED_DECODING) && PLATFORM(MAC) && !ENABLE(TRUSTD_BLOCKING_IN_WEBCONTENT)
     if (codeCheckSemaphore)
         dispatch_semaphore_wait(codeCheckSemaphore.get(), DISPATCH_TIME_FOREVER);
@@ -597,7 +609,7 @@ void WebProcess::platformSetWebsiteDataStoreParameters(WebProcessDataStoreParame
 #endif
 
     if (!parameters.javaScriptConfigurationDirectory.isEmpty()) {
-        String javaScriptConfigFile = parameters.javaScriptConfigurationDirectory + "/JSC.config";
+        String javaScriptConfigFile = parameters.javaScriptConfigurationDirectory + "/JSC.config"_s;
         JSC::processConfigFile(javaScriptConfigFile.latin1().data(), "com.apple.WebKit.WebContent", m_uiProcessBundleIdentifier.latin1().data());
     }
 }
@@ -732,9 +744,9 @@ RetainPtr<NSDictionary> WebProcess::additionalStateForDiagnosticReport() const
     auto stateDictionary = adoptNS([[NSMutableDictionary alloc] init]);
     {
         auto memoryUsageStats = adoptNS([[NSMutableDictionary alloc] init]);
-        for (auto& it : PerformanceLogging::memoryUsageStatistics(ShouldIncludeExpensiveComputations::Yes)) {
-            auto keyString = adoptNS([[NSString alloc] initWithUTF8String:it.key]);
-            [memoryUsageStats setObject:@(it.value) forKey:keyString.get()];
+        for (auto& [key, value] : PerformanceLogging::memoryUsageStatistics(ShouldIncludeExpensiveComputations::Yes)) {
+            auto keyString = adoptNS([[NSString alloc] initWithUTF8String:key]);
+            [memoryUsageStats setObject:@(value) forKey:keyString.get()];
         }
         [stateDictionary setObject:memoryUsageStats.get() forKey:@"Memory Usage Stats"];
     }
@@ -768,6 +780,7 @@ RetainPtr<NSDictionary> WebProcess::additionalStateForDiagnosticReport() const
 #endif // USE(OS_STATE)
 
 #if ENABLE(LOGD_BLOCKING_IN_WEBCONTENT)
+#if PLATFORM(IOS_FAMILY)
 static void prewarmLogs()
 {
     // This call will create container manager log objects.
@@ -775,12 +788,12 @@ static void prewarmLogs()
     // This would be desirable, since the WebContent process is blocking access to the container manager daemon.
     PublicSuffixStore::singleton().topPrivatelyControlledDomain("apple.com"_s);
 
-    static std::array<std::pair<const char*, const char*>, 5> logs { {
-        { "com.apple.CFBundle", "strings" },
-        { "com.apple.network", "" },
-        { "com.apple.CFNetwork", "ATS" },
-        { "com.apple.coremedia", "" },
-        { "com.apple.SafariShared", "Translation" },
+    static std::array<std::pair<ASCIILiteral, ASCIILiteral>, 5> logs { {
+        { "com.apple.CFBundle"_s, "strings"_s },
+        { "com.apple.network"_s, ""_s },
+        { "com.apple.CFNetwork"_s, "ATS"_s },
+        { "com.apple.coremedia"_s, ""_s },
+        { "com.apple.SafariShared"_s, "Translation"_s },
     } };
 
     for (auto& log : logs) {
@@ -789,13 +802,14 @@ static void prewarmLogs()
         UNUSED_PARAM(enabled);
     }
 }
+#endif // PLATFORM(IOS_FAMILY)
 
 static Ref<WorkQueue> logQueue()
 {
     static LazyNeverDestroyed<Ref<WorkQueue>> queue;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, [&] {
-        queue.construct(WorkQueue::create("Log Queue", WorkQueue::QOS::Background));
+        queue.construct(WorkQueue::create("Log Queue"_s, WorkQueue::QOS::Background));
     });
     return queue.get();
 }
@@ -807,16 +821,27 @@ static void registerLogHook()
 
     static os_log_hook_t prevHook = nullptr;
 
-    prevHook = os_log_set_hook(OS_LOG_TYPE_DEFAULT, ^(os_log_type_t type, os_log_message_t msg) {
+#ifdef NDEBUG
+    // OS_LOG_TYPE_DEFAULT implies default, fault, and error.
+    constexpr auto minimumType = OS_LOG_TYPE_DEFAULT;
+#else
+    // OS_LOG_TYPE_DEBUG implies debug, info, default, fault, and error.
+    constexpr auto minimumType = OS_LOG_TYPE_DEBUG;
+#endif
+
+    prevHook = os_log_set_hook(minimumType, ^(os_log_type_t type, os_log_message_t msg) {
         if (prevHook)
             prevHook(type, msg);
 
         if (msg->buffer_sz > 1024)
             return;
 
-        // Skip debug logs in non-internal builds.
-        if (type == OS_LOG_TYPE_DEBUG)
+#ifdef NDEBUG
+        // Don't send messages with types we don't want to log in release. Even though OS_LOG_TYPE_DEFAULT is the minimum,
+        // the hook will be called for other subsystems with debug and info types.
+        if (type & (OS_LOG_TYPE_DEBUG | OS_LOG_TYPE_INFO))
             return;
+#endif
 
         CString logFormat(msg->format);
         CString logChannel(msg->subsystem);
@@ -846,11 +871,11 @@ static void registerLogHook()
             char* messageString = os_log_copy_message_string(&msg);
             if (!messageString)
                 return;
-            std::span logString(reinterpret_cast<uint8_t*>(messageString), strlen(messageString) + 1);
+            std::span logStringIncludingNullTerminator(messageString, strlen(messageString) + 1);
 
             auto connectionID = WebProcess::singleton().networkProcessConnectionID();
             if (connectionID)
-                IPC::Connection::send(connectionID, Messages::NetworkConnectionToWebProcess::LogOnBehalfOfWebContent(logChannel.spanIncludingNullTerminator(), logCategory.spanIncludingNullTerminator(), logString, type, getpid()), 0, { }, qos);
+                IPC::Connection::send(connectionID, Messages::NetworkConnectionToWebProcess::LogOnBehalfOfWebContent(logChannel.spanIncludingNullTerminator(), logCategory.spanIncludingNullTerminator(), logStringIncludingNullTerminator, type, getpid()), 0, { }, qos);
 
             free(messageString);
         }, qos);
@@ -865,7 +890,9 @@ void WebProcess::platformInitializeProcess(const AuxiliaryProcessInitializationP
     WebCore::PublicSuffixStore::singleton().enablePublicSuffixCache();
 
 #if ENABLE(LOGD_BLOCKING_IN_WEBCONTENT)
+#if PLATFORM(IOS_FAMILY)
     prewarmLogs();
+#endif
     registerLogHook();
 #endif
 
@@ -943,7 +970,7 @@ void WebProcess::initializeSandbox(const AuxiliaryProcessInitializationParameter
 #if PLATFORM(MAC) || PLATFORM(MACCATALYST)
     auto webKitBundle = [NSBundle bundleForClass:NSClassFromString(@"WKWebView")];
 
-    sandboxParameters.setOverrideSandboxProfilePath(makeString(String([webKitBundle resourcePath]), "/com.apple.WebProcess.sb"));
+    sandboxParameters.setOverrideSandboxProfilePath(makeString(String([webKitBundle resourcePath]), "/com.apple.WebProcess.sb"_s));
 
     AuxiliaryProcess::initializeSandbox(parameters, sandboxParameters);
 #endif
@@ -1073,52 +1100,6 @@ void WebProcess::updateCPUMonitorState(CPUMonitorUpdateReason reason)
 #else
     UNUSED_PARAM(reason);
 #endif
-}
-
-RefPtr<ObjCObjectGraph> WebProcess::transformHandlesToObjects(ObjCObjectGraph& objectGraph)
-{
-    struct Transformer final : ObjCObjectGraph::Transformer {
-        bool shouldTransformObject(id object) const override
-        {
-            if (dynamic_objc_cast<WKBrowsingContextHandle>(object))
-                return true;
-            return false;
-        }
-
-        RetainPtr<id> transformObject(id object) const override
-        {
-            if (auto* handle = dynamic_objc_cast<WKBrowsingContextHandle>(object)) {
-                if (auto* webPage = WebProcess::singleton().webPage(ObjectIdentifier<WebCore::PageIdentifierType>(handle._webPageID)))
-                    return wrapper(*webPage);
-
-                return [NSNull null];
-            }
-            return object;
-        }
-    };
-
-    return ObjCObjectGraph::create(ObjCObjectGraph::transform(objectGraph.rootObject(), Transformer()).get());
-}
-
-RefPtr<ObjCObjectGraph> WebProcess::transformObjectsToHandles(ObjCObjectGraph& objectGraph)
-{
-    struct Transformer final : ObjCObjectGraph::Transformer {
-        bool shouldTransformObject(id object) const override
-        {
-            if (dynamic_objc_cast<WKWebProcessPlugInBrowserContextController>(object))
-                return true;
-            return false;
-        }
-
-        RetainPtr<id> transformObject(id object) const override
-        {
-            if (auto* controller = dynamic_objc_cast<WKWebProcessPlugInBrowserContextController>(object))
-                return controller.handle;
-            return object;
-        }
-    };
-
-    return ObjCObjectGraph::create(ObjCObjectGraph::transform(objectGraph.rootObject(), Transformer()).get());
 }
 
 void WebProcess::destroyRenderingResources()
@@ -1380,11 +1361,6 @@ void WebProcess::handlePreferenceChange(const String& domain, const String& key,
     AuxiliaryProcess::handlePreferenceChange(domain, key, value);
 }
 
-void WebProcess::notifyPreferencesChanged(const String& domain, const String& key, const std::optional<String>& encodedValue)
-{
-    preferenceDidUpdate(domain, key, encodedValue);
-}
-
 void WebProcess::accessibilitySettingsDidChange()
 {
     for (auto& page : m_pageMap.values())
@@ -1519,15 +1495,19 @@ void WebProcess::systemDidWake()
 #if PLATFORM(MAC)
 void WebProcess::openDirectoryCacheInvalidated(SandboxExtension::Handle&& handle, SandboxExtension::Handle&& machBootstrapHandle)
 {
-    auto bootstrapExtension = SandboxExtension::create(WTFMove(machBootstrapHandle));
+    auto cacheInvalidationHandler = [handle = WTFMove(handle), machBootstrapHandle = WTFMove(machBootstrapHandle)] () mutable {
+        auto bootstrapExtension = SandboxExtension::create(WTFMove(machBootstrapHandle));
 
-    if (bootstrapExtension)
-        bootstrapExtension->consume();
-    
-    AuxiliaryProcess::openDirectoryCacheInvalidated(WTFMove(handle));
-    
-    if (bootstrapExtension)
-        bootstrapExtension->revoke();
+        if (bootstrapExtension)
+            bootstrapExtension->consume();
+
+        AuxiliaryProcess::openDirectoryCacheInvalidated(WTFMove(handle));
+
+        if (bootstrapExtension)
+            bootstrapExtension->revoke();
+    };
+
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), makeBlockPtr(WTFMove(cacheInvalidationHandler)).get());
 }
 #endif
 

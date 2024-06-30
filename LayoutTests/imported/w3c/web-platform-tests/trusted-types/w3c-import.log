@@ -22,6 +22,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/Element-insertAdjacentHTML.html
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/Element-insertAdjacentText.html
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/Element-outerHTML.html
+/LayoutTests/imported/w3c/web-platform-tests/trusted-types/Element-setAttribute-respects-Elements-node-documents-globals-CSP.html
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/Element-setAttribute.html
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/Element-setAttributeNS.html
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/GlobalEventHandlers-onclick.html
@@ -31,6 +32,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/META.yml
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/Node-multiple-arguments.html
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/Range-createContextualFragment.html
+/LayoutTests/imported/w3c/web-platform-tests/trusted-types/SVGScriptElement-internal-slot.html
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/TrustedType-AttributeNodes.html
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/TrustedTypePolicy-CSP-no-name.html
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/TrustedTypePolicy-CSP-wildcard.html
@@ -39,6 +41,8 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/TrustedTypePolicyFactory-constants.html
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/TrustedTypePolicyFactory-createPolicy-createXYZTests.html
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/TrustedTypePolicyFactory-createPolicy-cspTests-noNamesGiven.html
+/LayoutTests/imported/w3c/web-platform-tests/trusted-types/TrustedTypePolicyFactory-createPolicy-cspTests-none-none-name.html
+/LayoutTests/imported/w3c/web-platform-tests/trusted-types/TrustedTypePolicyFactory-createPolicy-cspTests-none-none.html
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/TrustedTypePolicyFactory-createPolicy-cspTests-none-skip.html
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/TrustedTypePolicyFactory-createPolicy-cspTests-none.html
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/TrustedTypePolicyFactory-createPolicy-cspTests-wildcard.html
@@ -48,9 +52,10 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/TrustedTypePolicyFactory-defaultPolicy.html
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/TrustedTypePolicyFactory-getAttributeType-namespace.html
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/TrustedTypePolicyFactory-getAttributeType-svg.html
-/LayoutTests/imported/w3c/web-platform-tests/trusted-types/TrustedTypePolicyFactory-getPropertyType.html
+/LayoutTests/imported/w3c/web-platform-tests/trusted-types/TrustedTypePolicyFactory-getPropertyType.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/TrustedTypePolicyFactory-isXXX.html
-/LayoutTests/imported/w3c/web-platform-tests/trusted-types/TrustedTypePolicyFactory-metadata.html
+/LayoutTests/imported/w3c/web-platform-tests/trusted-types/TrustedTypePolicyFactory-metadata.tentative.html
+/LayoutTests/imported/w3c/web-platform-tests/trusted-types/WEB_FEATURES.yml
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/Window-TrustedTypes.html
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/WorkerGlobalScope-eval.html
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/WorkerGlobalScope-importScripts.html
@@ -88,6 +93,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/eval-no-csp-no-tt.html
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/eval-with-permissive-csp.html
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/idlharness.window.js
+/LayoutTests/imported/w3c/web-platform-tests/trusted-types/modify-attributes-in-callback.html
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/no-require-trusted-types-for-report-only.html
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/no-require-trusted-types-for-report-only.html.headers
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/no-require-trusted-types-for.html
@@ -116,6 +122,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/trusted-types-reporting.html
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/trusted-types-reporting.html.headers
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/trusted-types-source-file-path.html
+/LayoutTests/imported/w3c/web-platform-tests/trusted-types/trusted-types-svg-script-set-href.html
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/trusted-types-svg-script.html
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/trusted-types-tojson.html
 /LayoutTests/imported/w3c/web-platform-tests/trusted-types/tt-block-eval.html

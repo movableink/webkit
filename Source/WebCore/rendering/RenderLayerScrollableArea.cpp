@@ -546,7 +546,7 @@ bool RenderLayerScrollableArea::handleWheelEventForScrolling(const PlatformWheel
 IntRect RenderLayerScrollableArea::visibleContentRectInternal(VisibleContentRectIncludesScrollbars scrollbarInclusion, VisibleContentRectBehavior) const
 {
     IntSize scrollbarSpace;
-    if (showsOverflowControls() && scrollbarInclusion == IncludeScrollbars)
+    if (showsOverflowControls() && scrollbarInclusion == VisibleContentRectIncludesScrollbars::Yes)
         scrollbarSpace = scrollbarIntrusion();
 
     auto visibleSize = this->visibleSize();
@@ -649,7 +649,6 @@ IntSize RenderLayerScrollableArea::reachableTotalContentsSize() const
 
 void RenderLayerScrollableArea::availableContentSizeChanged(AvailableSizeChangeReason reason)
 {
-    ALWAYS_LOG_WITH_STREAM(stream << " RenderLayerScrollableArea::availableContentSizeChanged " << scrollingNodeID());
     ScrollableArea::availableContentSizeChanged(reason);
 
     auto& renderer = m_layer.renderer();
@@ -658,7 +657,6 @@ void RenderLayerScrollableArea::availableContentSizeChanged(AvailableSizeChangeR
             renderBlock->setShouldForceRelayoutChildren(true);
         renderer.setNeedsLayout();
     }
-    ALWAYS_LOG_WITH_STREAM(stream << " RenderLayerScrollableArea::availableContentSizeChanged " << m_layer.renderer().needsLayout());
 }
 
 bool RenderLayerScrollableArea::shouldSuspendScrollAnimations() const
@@ -849,12 +847,7 @@ bool RenderLayerScrollableArea::canShowNonOverlayScrollbars() const
 
 void RenderLayerScrollableArea::createScrollbarsController()
 {
-    if (auto scrollbarController = m_layer.page().chrome().client().createScrollbarsController(m_layer.page(), *this)) {
-        setScrollbarsController(WTFMove(scrollbarController));
-        return;
-    }
-
-    ScrollableArea::createScrollbarsController();
+    m_layer.page().chrome().client().ensureScrollbarsController(m_layer.page(), *this);
 }
 
 static inline RenderElement* rendererForScrollbar(RenderLayerModelObject& renderer)
@@ -1583,7 +1576,6 @@ bool RenderLayerScrollableArea::hitTestOverflowControls(HitTestResult& result, c
 
     auto rects = overflowControlsRects();
 
-    IntRect resizeControlRect;
     auto& renderer = m_layer.renderer();
     if (renderer.style().resize() != Resize::None) {
         if (rects.resizer.contains(localPoint))
@@ -2003,7 +1995,7 @@ bool RenderLayerScrollableArea::mockScrollbarsControllerEnabled() const
 
 void RenderLayerScrollableArea::logMockScrollbarsControllerMessage(const String& message) const
 {
-    m_layer.renderer().document().addConsoleMessage(MessageSource::Other, MessageLevel::Debug, "RenderLayer: " + message);
+    m_layer.renderer().document().addConsoleMessage(MessageSource::Other, MessageLevel::Debug, makeString("RenderLayer: "_s, message));
 }
 
 String RenderLayerScrollableArea::debugDescription() const
@@ -2047,6 +2039,11 @@ void RenderLayerScrollableArea::invalidateScrollAnchoringElement()
 {
     if (m_scrollAnchoringController)
         m_scrollAnchoringController->invalidateAnchorElement();
+}
+
+FrameIdentifier RenderLayerScrollableArea::rootFrameID() const
+{
+    return m_layer.renderer().frame().rootFrame().frameID();
 }
 
 

@@ -39,6 +39,7 @@
 #include "RenderSVGBlock.h"
 #include "RenderSVGModelObject.h"
 #include "RenderSVGResourceClipper.h"
+#include "RenderSVGResourceFilter.h"
 #include "RenderSVGResourceLinearGradient.h"
 #include "RenderSVGResourceMarker.h"
 #include "RenderSVGResourceMasker.h"
@@ -47,6 +48,7 @@
 #include "RenderStyleInlines.h"
 #include "RenderView.h"
 #include "SVGClipPathElement.h"
+#include "SVGFilterElement.h"
 #include "SVGGraphicsElement.h"
 #include "SVGMarkerElement.h"
 #include "SVGMaskElement.h"
@@ -99,15 +101,6 @@ void RenderLayerModelObject::willBeDestroyed()
     }
 
     RenderElement::willBeDestroyed();
-}
-
-void RenderLayerModelObject::willBeRemovedFromTree(IsInternalMove isInternalMove)
-{
-    bool shouldNotRepaint = is<RenderMultiColumnSet>(this->previousSibling());
-    if (auto* layer = this->layer(); layer && layer->needsFullRepaint() && isInternalMove == IsInternalMove::No && !shouldNotRepaint && containingBlock())
-        issueRepaint(std::nullopt, ClipRepaintToLayer::No, ForceRepaint::Yes);
-
-    RenderElement::willBeRemovedFromTree(isInternalMove);
 }
 
 void RenderLayerModelObject::destroyLayer()
@@ -483,6 +476,30 @@ RenderSVGResourceClipper* RenderLayerModelObject::svgClipperResourceFromStyle() 
     return nullptr;
 }
 
+RenderSVGResourceFilter* RenderLayerModelObject::svgFilterResourceFromStyle() const
+{
+    if (!document().settings().layerBasedSVGEngineEnabled())
+        return nullptr;
+
+    const auto& operations = style().filter();
+    if (operations.size() != 1)
+        return nullptr;
+
+    RefPtr referenceFilterOperation = dynamicDowncast<ReferenceFilterOperation>(operations.at(0));
+    if (!referenceFilterOperation)
+        return nullptr;
+
+    if (RefPtr referencedFilterElement = ReferencedSVGResources::referencedFilterElement(treeScopeForSVGReferences(), *referenceFilterOperation)) {
+        if (auto* referencedFilterRenderer = dynamicDowncast<RenderSVGResourceFilter>(referencedFilterElement->renderer()))
+            return referencedFilterRenderer;
+    }
+
+    if (auto* svgElement = dynamicDowncast<SVGElement>(this->element()))
+        document().addPendingSVGResource(referenceFilterOperation->fragment(), *svgElement);
+
+    return nullptr;
+}
+
 RenderSVGResourceMasker* RenderLayerModelObject::svgMaskerResourceFromStyle() const
 {
     if (!document().settings().layerBasedSVGEngineEnabled())
@@ -493,7 +510,7 @@ RenderSVGResourceMasker* RenderLayerModelObject::svgMaskerResourceFromStyle() co
     if (reresolvedURL.isEmpty())
         return nullptr;
 
-    auto resourceID = SVGURIReference::fragmentIdentifierFromIRIString(reresolvedURL.string(), document());
+    auto resourceID = SVGURIReference::fragmentIdentifierFromIRIString(reresolvedURL.string(), protectedDocument());
 
     if (RefPtr referencedMaskElement = ReferencedSVGResources::referencedMaskElement(treeScopeForSVGReferences(), *maskImage)) {
         if (auto* referencedMaskerRenderer = dynamicDowncast<RenderSVGResourceMasker>(referencedMaskElement->renderer()))

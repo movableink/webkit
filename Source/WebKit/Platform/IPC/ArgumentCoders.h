@@ -42,6 +42,9 @@
 #include <wtf/Unexpected.h>
 #include <wtf/WallTime.h>
 
+#if USE(GLIB)
+#include "ArgumentCodersGlib.h"
+#endif
 #if OS(WINDOWS)
 #include "ArgumentCodersWin.h"
 #endif
@@ -300,7 +303,7 @@ template<typename T> struct ArgumentCoder<std::unique_ptr<T>> {
         static_assert(std::is_same_v<std::remove_cvref_t<U>, std::unique_ptr<T>>);
 
         if (object)
-            encoder << true << std::forward_like<U>(*object);
+            encoder << true << WTF::forward_like<U>(*object);
         else
             encoder << false;
     }
@@ -327,7 +330,7 @@ template<typename T> struct ArgumentCoder<UniqueRef<T>> {
     static void encode(Encoder& encoder, U&& object)
     {
         static_assert(std::is_same_v<std::remove_cvref_t<U>, UniqueRef<T>>);
-        encoder << std::forward_like<U>(*object);
+        encoder << WTF::forward_like<U>(*object);
     }
 
     template<typename Decoder>
@@ -379,7 +382,7 @@ template<typename KeyType, typename ValueType> struct ArgumentCoder<WTF::KeyValu
     static void encode(Encoder& encoder, T&& pair)
     {
         static_assert(std::is_same_v<std::remove_cvref_t<T>, WTF::KeyValuePair<KeyType, ValueType>>);
-        encoder << std::forward_like<T>(pair.key) << std::forward_like<T>(pair.value);
+        encoder << WTF::forward_like<T>(pair.key) << WTF::forward_like<T>(pair.value);
     }
 
     template<typename Decoder>
@@ -404,7 +407,7 @@ template<typename T, size_t size> struct ArgumentCoder<std::array<T, size>> {
         static_assert(std::is_same_v<std::remove_cvref_t<U>, std::array<T, size>>);
 
         for (auto&& item : array)
-            encoder << std::forward_like<U>(item);
+            encoder << WTF::forward_like<U>(item);
     }
 
     template<typename Decoder, typename... DecodedTypes>
@@ -455,7 +458,7 @@ template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t min
 
         encoder << static_cast<size_t>(vector.size());
         for (auto&& item : vector)
-            encoder << std::forward_like<U>(item);
+            encoder << WTF::forward_like<U>(item);
     }
 
     template<typename Decoder>
@@ -520,18 +523,18 @@ template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTrai
 
         encoder << static_cast<unsigned>(hashMap.size());
         for (auto&& entry : hashMap)
-            encoder << std::forward_like<T>(entry);
+            encoder << WTF::forward_like<T>(entry);
     }
 
     template<typename Decoder>
     static std::optional<HashMapType> decode(Decoder& decoder)
     {
-        unsigned hashMapSize;
-        if (!decoder.decode(hashMapSize))
+        auto hashMapSize = decoder.template decode<unsigned>();
+        if (!hashMapSize)
             return std::nullopt;
 
         HashMapType hashMap;
-        for (unsigned i = 0; i < hashMapSize; ++i) {
+        for (unsigned i = 0; i < *hashMapSize; ++i) {
             auto key = decoder.template decode<KeyArg>();
             if (UNLIKELY(!key))
                 return std::nullopt;
@@ -567,12 +570,12 @@ template<typename KeyArg, typename HashArg, typename KeyTraitsArg, typename Hash
     template<typename Decoder>
     static std::optional<HashSetType> decode(Decoder& decoder)
     {
-        unsigned hashSetSize;
-        if (!decoder.decode(hashSetSize))
+        auto hashSetSize = decoder.template decode<unsigned>();
+        if (!hashSetSize)
             return std::nullopt;
 
         HashSetType hashSet;
-        for (unsigned i = 0; i < hashSetSize; ++i) {
+        for (unsigned i = 0; i < *hashSetSize; ++i) {
             auto key = decoder.template decode<KeyArg>();
             if (!key)
                 return std::nullopt;
@@ -600,30 +603,30 @@ template<typename KeyArg, typename HashArg, typename KeyTraitsArg> struct Argume
 
         encoder << static_cast<unsigned>(hashCountedSet.size());
         for (auto&& entry : hashCountedSet)
-            encoder << std::forward_like<T>(entry);
+            encoder << WTF::forward_like<T>(entry);
     }
 
     template<typename Decoder>
     static std::optional<HashCountedSetType> decode(Decoder& decoder)
     {
-        unsigned hashCountedSetSize;
-        if (!decoder.decode(hashCountedSetSize))
+        auto hashCountedSetSize = decoder.template decode<unsigned>();
+        if (!hashCountedSetSize)
             return std::nullopt;
 
         HashCountedSetType tempHashCountedSet;
-        for (unsigned i = 0; i < hashCountedSetSize; ++i) {
-            KeyArg key;
-            if (!decoder.decode(key))
+        for (unsigned i = 0; i < *hashCountedSetSize; ++i) {
+            auto key = decoder.template decode<KeyArg>();
+            if (!key)
                 return std::nullopt;
 
-            unsigned count;
-            if (!decoder.decode(count))
+            auto count = decoder.template decode<unsigned>();
+            if (!count)
                 return std::nullopt;
 
-            if (UNLIKELY(!HashCountedSetType::isValidValue(key)))
+            if (UNLIKELY(!HashCountedSetType::isValidValue(*key)))
                 return std::nullopt;
 
-            if (UNLIKELY(!tempHashCountedSet.add(key, count).isNewEntry)) {
+            if (UNLIKELY(!tempHashCountedSet.add(*key, *count).isNewEntry)) {
                 // The hash counted set already has the specified key, bail.
                 return std::nullopt;
             }
@@ -777,6 +780,34 @@ template<> struct ArgumentCoder<std::nullptr_t> {
     template<typename Encoder>
     static void encode(Encoder&, const std::nullptr_t&) { }
     static std::optional<std::nullptr_t> decode(Decoder&) { return nullptr; }
+};
+
+template<typename T, typename Traits> struct ArgumentCoder<WTF::Markable<T, Traits>> {
+    template<typename Encoder, typename U>
+    static void encode(Encoder& encoder, U&& markable)
+    {
+        bool isEmpty = !markable;
+        encoder << isEmpty;
+        if (!isEmpty)
+            encoder << *markable;
+    }
+
+    template<typename Decoder>
+    static std::optional<WTF::Markable<T>> decode(Decoder& decoder)
+    {
+        auto isEmpty = decoder.template decode<bool>();
+        if (UNLIKELY(!isEmpty))
+            return std::nullopt;
+
+        if (*isEmpty)
+            return WTF::Markable<T, Traits> { };
+
+        auto value = decoder.template decode<T>();
+        if (UNLIKELY(!value))
+            return std::nullopt;
+
+        return WTF::Markable<T, Traits>(WTFMove(*value));
+    }
 };
 
 } // namespace IPC

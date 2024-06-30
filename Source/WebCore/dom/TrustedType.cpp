@@ -28,12 +28,18 @@
 
 #include "ContentSecurityPolicy.h"
 #include "Document.h"
+#include "HTMLScriptElement.h"
 #include "JSDOMExceptionHandling.h"
+#include "JSTrustedScript.h"
 #include "LocalDOMWindow.h"
+#include "Node.h"
+#include "SVGNames.h"
+#include "Text.h"
 #include "TrustedTypePolicy.h"
 #include "TrustedTypePolicyFactory.h"
 #include "WindowOrWorkerGlobalScopeTrustedTypes.h"
 #include "WorkerGlobalScope.h"
+#include "XLinkNames.h"
 #include <JavaScriptCore/HeapInlines.h>
 #include <JavaScriptCore/JSCInlines.h>
 #include <JavaScriptCore/JSCJSValueInlines.h>
@@ -76,6 +82,19 @@ ASCIILiteral trustedTypeToString(TrustedType trustedType)
     case TrustedType::TrustedScriptURL:
         return "TrustedScriptURL"_s;
     }
+
+    ASSERT_NOT_REACHED();
+    return { };
+}
+
+TrustedType stringToTrustedType(String str)
+{
+    if (str == "TrustedHTML"_s)
+        return TrustedType::TrustedHTML;
+    if (str == "TrustedScript"_s)
+        return TrustedType::TrustedScript;
+    if (str == "TrustedScriptURL"_s)
+        return TrustedType::TrustedScriptURL;
 
     ASSERT_NOT_REACHED();
     return { };
@@ -164,10 +183,85 @@ ExceptionOr<String> trustedTypeCompliantString(TrustedType expectedType, ScriptE
         auto allowMissingTrustedTypes = contentSecurityPolicy->allowMissingTrustedTypesForSinkGroup(trustedTypeToString(expectedType), sink, "script"_s, stringValue);
 
         if (!allowMissingTrustedTypes)
-            return Exception { ExceptionCode::TypeError, makeString("This assignment requires a ", trustedTypeToString(expectedType)) };
+            return Exception { ExceptionCode::TypeError, makeString("This assignment requires a "_s, trustedTypeToString(expectedType)) };
     }
 
     return stringValue;
+}
+
+ExceptionOr<String> trustedTypeCompliantString(ScriptExecutionContext& scriptExecutionContext, std::variant<RefPtr<TrustedHTML>, String>&& input, const String& sink)
+{
+    return WTF::switchOn(
+        WTFMove(input),
+        [&scriptExecutionContext, &sink](const String& string) -> ExceptionOr<String> {
+            return trustedTypeCompliantString(TrustedType::TrustedHTML, scriptExecutionContext, string, sink);
+        },
+        [](const RefPtr<TrustedHTML>& html) -> ExceptionOr<String> {
+            return html->toString();
+        }
+    );
+}
+
+ExceptionOr<String> trustedTypeCompliantString(ScriptExecutionContext& scriptExecutionContext, std::variant<RefPtr<TrustedScript>, String>&& input, const String& sink)
+{
+    return WTF::switchOn(
+        WTFMove(input),
+        [&scriptExecutionContext, &sink](const String& string) -> ExceptionOr<String> {
+            return trustedTypeCompliantString(TrustedType::TrustedScript, scriptExecutionContext, string, sink);
+        },
+        [](const RefPtr<TrustedScript>& script) -> ExceptionOr<String> {
+            return script->toString();
+        }
+    );
+}
+
+ExceptionOr<String> trustedTypeCompliantString(ScriptExecutionContext& scriptExecutionContext, std::variant<RefPtr<TrustedScriptURL>, String>&& input, const String& sink)
+{
+    return WTF::switchOn(
+        WTFMove(input),
+        [&scriptExecutionContext, &sink](const String& string) -> ExceptionOr<String> {
+            return trustedTypeCompliantString(TrustedType::TrustedScriptURL, scriptExecutionContext, string, sink);
+        },
+        [](const RefPtr<TrustedScriptURL>& scriptURL) -> ExceptionOr<String> {
+            return scriptURL->toString();
+        }
+    );
+}
+
+AttributeTypeAndSink trustedTypeForAttribute(const String& elementName, const String& attributeName, const String& elementNamespace, const String& attributeNamespace)
+{
+    AttributeTypeAndSink returnValues;
+    auto localName = elementName.convertToASCIILowercase();
+
+    AtomString elementNS = elementNamespace.isEmpty() ? HTMLNames::xhtmlNamespaceURI : AtomString(elementNamespace);
+    AtomString attributeNS = attributeNamespace.isEmpty() ? nullAtom() : AtomString(attributeNamespace);
+
+    QualifiedName element(nullAtom(), AtomString(localName), elementNS);
+    QualifiedName attribute(nullAtom(), AtomString(attributeName), attributeNS);
+
+    if (attributeNS.isNull() && !attributeName.isNull()) {
+        auto& eventName = HTMLElement::eventNameForEventHandlerAttribute(attribute);
+        if (!eventName.isNull()) {
+            returnValues.sink = "Element "_s + attributeName;
+            returnValues.attributeType = trustedTypeToString(TrustedType::TrustedScript);
+            return returnValues;
+        }
+    }
+
+    if (element.matches(HTMLNames::iframeTag) && attribute.matches(HTMLNames::srcdocAttr)) {
+        returnValues.sink = "HTMLIFrameElement srcdoc"_s;
+        returnValues.attributeType = trustedTypeToString(TrustedType::TrustedHTML);
+    }
+    if (element.matches(HTMLNames::scriptTag) && attribute.matches(HTMLNames::srcAttr)) {
+        returnValues.sink = "HTMLScriptElement src"_s;
+        returnValues.attributeType = trustedTypeToString(TrustedType::TrustedScriptURL);
+    }
+    if (element.matches(SVGNames::scriptTag) && (attribute.matches(SVGNames::hrefAttr) || attribute.matches(XLinkNames::hrefAttr))) {
+        returnValues.sink = "SVGScriptElement href"_s;
+        returnValues.attributeType = trustedTypeToString(TrustedType::TrustedScriptURL);
+    }
+
+    return returnValues;
 }
 
 // https://w3c.github.io/trusted-types/dist/spec/#require-trusted-types-for-pre-navigation-check
@@ -196,7 +290,7 @@ ExceptionOr<String> requireTrustedTypesForPreNavigationCheckPasses(ScriptExecuti
         auto allowMissingTrustedTypes = contentSecurityPolicy->allowMissingTrustedTypesForSinkGroup(trustedTypeToString(expectedType), sink, sinkGroup, scriptSource);
 
         if (!allowMissingTrustedTypes)
-            return Exception { ExceptionCode::TypeError, makeString("This assignment requires a ", trustedTypeToString(expectedType)) };
+            return Exception { ExceptionCode::TypeError, makeString("This assignment requires a "_s, trustedTypeToString(expectedType)) };
 
         return String(urlString);
     }
@@ -207,6 +301,48 @@ ExceptionOr<String> requireTrustedTypesForPreNavigationCheckPasses(ScriptExecuti
     return String(newURL.isValid()
         ? newURL.string()
         : nullString());
+}
+
+ExceptionOr<RefPtr<Text>> processNodeOrStringAsTrustedType(Ref<Document> document, RefPtr<Node> parent, std::variant<RefPtr<Node>, String, RefPtr<TrustedScript>> variant)
+{
+    RefPtr<Text> text;
+    if (std::holds_alternative<String>(variant))
+        text = Text::create(document, WTFMove(std::get<String>(variant)));
+    else if (std::holds_alternative<RefPtr<Node>>(variant)) {
+        if (RefPtr textNode = dynamicDowncast<Text>(std::get<RefPtr<Node>>(variant)))
+            text = textNode;
+    }
+
+    if (text) {
+        if (UNLIKELY(is<HTMLScriptElement>(parent))) {
+            auto holder = trustedTypeCompliantString(TrustedType::TrustedScript, *document->scriptExecutionContext(), text->wholeText(), "HTMLScriptElement text"_s);
+            if (holder.hasException())
+                return holder.releaseException();
+
+            text->replaceWholeText(holder.releaseReturnValue());
+        }
+    } else if (std::holds_alternative<RefPtr<TrustedScript>>(variant))
+        text = Text::create(document, std::get<RefPtr<TrustedScript>>(variant)->toString());
+
+    return text;
+}
+
+ExceptionOr<bool> canCompile(ScriptExecutionContext& scriptExecutionContext, JSC::CompilationType compilationType, String codeString, JSC::JSValue bodyArgument)
+{
+    VM& vm = scriptExecutionContext.vm();
+
+    if (bodyArgument.isObject())
+        return JSTrustedScript::toWrapped(vm, bodyArgument) ? true : false;
+
+    ASSERT(bodyArgument.isString());
+
+    auto sink = compilationType == CompilationType::Function ? "Function"_s : "eval"_s;
+
+    auto stringValueHolder = trustedTypeCompliantString(TrustedType::TrustedScript, scriptExecutionContext, codeString, sink);
+    if (stringValueHolder.hasException())
+        return stringValueHolder.releaseException();
+
+    return codeString == stringValueHolder.releaseReturnValue();
 }
 
 } // namespace WebCore

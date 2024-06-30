@@ -167,7 +167,7 @@ static String generateTemporaryPath(const Function<bool(const String&)>& action)
     do {
         wchar_t tempFile[] = L"XXXXXXXX.tmp"; // Use 8.3 style name (more characters aren't helpful due to 8.3 short file names)
         const int randomPartLength = 8;
-        cryptographicallyRandomValues(tempFile, randomPartLength * sizeof(wchar_t));
+        cryptographicallyRandomValues({ reinterpret_cast<uint8_t*>(tempFile), randomPartLength * sizeof(wchar_t) });
 
         // Limit to valid filesystem characters, also excluding others that could be problematic, like punctuation.
         // don't include both upper and lowercase since Windows file systems are typically not case sensitive.
@@ -275,26 +275,26 @@ bool flushFile(PlatformFileHandle)
     return false;
 }
 
-int64_t writeToFile(PlatformFileHandle handle, const void* data, size_t length)
+int64_t writeToFile(PlatformFileHandle handle, std::span<const uint8_t> data)
 {
     if (!isHandleValid(handle))
         return -1;
 
     DWORD bytesWritten;
-    bool success = WriteFile(handle, data, length, &bytesWritten, nullptr);
+    bool success = WriteFile(handle, data.data(), data.size(), &bytesWritten, nullptr);
 
     if (!success)
         return -1;
     return static_cast<int64_t>(bytesWritten);
 }
 
-int64_t readFromFile(PlatformFileHandle handle, void* data, size_t length)
+int64_t readFromFile(PlatformFileHandle handle, std::span<uint8_t> data)
 {
     if (!isHandleValid(handle))
         return -1;
 
     DWORD bytesRead;
-    bool success = ::ReadFile(handle, data, length, &bytesRead, nullptr);
+    bool success = ::ReadFile(handle, data.data(), data.size(), &bytesRead, nullptr);
 
     if (!success)
         return -1;

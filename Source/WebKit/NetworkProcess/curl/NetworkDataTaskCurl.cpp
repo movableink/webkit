@@ -199,7 +199,7 @@ void NetworkDataTaskCurl::curlDidReceiveData(CurlRequest&, Ref<SharedBuffer>&& b
         RELEASE_ASSERT(download);
         uint64_t bytesWritten = 0;
         for (auto& segment : buffer.get()) {
-            if (-1 == FileSystem::writeToFile(m_downloadDestinationFile, segment.segment->data(), segment.segment->size())) {
+            if (-1 == FileSystem::writeToFile(m_downloadDestinationFile, segment.segment->span())) {
                 download->didFail(ResourceError(CURLE_WRITE_ERROR, m_response.url()), { });
                 invalidateAndCancel();
                 return;
@@ -292,7 +292,7 @@ bool NetworkDataTaskCurl::shouldRedirectAsGET(const ResourceRequest& request, bo
 
 void NetworkDataTaskCurl::invokeDidReceiveResponse()
 {
-    didReceiveResponse(ResourceResponse(m_response), NegotiatedLegacyTLS::No, PrivateRelayed::No, [this, protectedThis = Ref { *this }](PolicyAction policyAction) {
+    didReceiveResponse(ResourceResponse(m_response), NegotiatedLegacyTLS::No, PrivateRelayed::No, std::nullopt, [this, protectedThis = Ref { *this }](PolicyAction policyAction) {
         if (m_state == State::Canceling || m_state == State::Completed)
             return;
 
@@ -593,16 +593,15 @@ void NetworkDataTaskCurl::updateNetworkLoadMetrics(WebCore::NetworkLoadMetrics& 
     if (!m_startTime)
         m_startTime = networkLoadMetrics.fetchStart;
 
-    if (!m_failsTAOCheck) {
-        RefPtr<SecurityOrigin> origin = isTopLevelNavigation() ? SecurityOrigin::create(firstRequest().url()) : m_sourceOrigin;
-        if (origin)
-            m_failsTAOCheck = !passesTimingAllowOriginCheck(m_response, *origin);
-    }
-
     networkLoadMetrics.redirectStart = m_startTime;
     networkLoadMetrics.redirectCount = m_redirectCount;
     networkLoadMetrics.failsTAOCheck = m_failsTAOCheck;
     networkLoadMetrics.hasCrossOriginRedirect = m_hasCrossOriginRedirect;
+}
+
+void NetworkDataTaskCurl::setTimingAllowFailedFlag()
+{
+    m_failsTAOCheck = true;
 }
 
 void NetworkDataTaskCurl::setPendingDownloadLocation(const String& filename, SandboxExtension::Handle&& sandboxExtensionHandle, bool allowOverwrite)

@@ -197,7 +197,7 @@ static String formSignature(const HTMLFormElement& form)
 
     ScriptDisallowedScope::InMainThread scriptDisallowedScope;
     unsigned count = 0;
-    builder.append(" [");
+    builder.append(" ["_s);
     for (const auto& element : descendantsOfType<Element>(form)) {
         if (!shouldBeUsedForFormSignature(element) || element.hasAttributeWithoutSynchronization(HTMLNames::formAttr))
             continue;
@@ -223,7 +223,7 @@ String FormController::FormKeyGenerator::formKey(const ValidatedFormListedElemen
     return m_formToKeyMap.ensure(*form, [this, form] {
         auto signature = formSignature(*form);
         auto nextIndex = m_formSignatureToNextIndexMap.add(signature, 0).iterator->value++;
-        return makeString(signature, " #", nextIndex);
+        return makeString(signature, " #"_s, nextIndex);
     }).iterator->value;
 }
 

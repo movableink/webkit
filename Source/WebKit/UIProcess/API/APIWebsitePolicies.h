@@ -107,9 +107,6 @@ public:
     WTF::String applicationNameForDesktopUserAgent() const { return m_data.applicationNameForDesktopUserAgent; }
     void setApplicationNameForDesktopUserAgent(const WTF::String& applicationName) { m_data.applicationNameForDesktopUserAgent = applicationName; }
 
-    bool allowContentChangeObserverQuirk() const { return m_data.allowContentChangeObserverQuirk; }
-    void setAllowContentChangeObserverQuirk(bool allow) { m_data.allowContentChangeObserverQuirk = allow; }
-
     WebCore::AllowsContentJavaScript allowsContentJavaScript() const { return m_data.allowsContentJavaScript; }
     void setAllowsContentJavaScript(WebCore::AllowsContentJavaScript allows) { m_data.allowsContentJavaScript = allows; }
 
@@ -134,6 +131,9 @@ public:
 
     bool allowPrivacyProxy() const { return m_data.allowPrivacyProxy; }
     void setAllowPrivacyProxy(bool allow) { m_data.allowPrivacyProxy = allow; }
+
+    const Vector<Vector<HashSet<WTF::String>>>& visibilityAdjustmentSelectors() const { return m_data.visibilityAdjustmentSelectors; }
+    void setVisibilityAdjustmentSelectors(Vector<Vector<HashSet<WTF::String>>>&& selectors) { m_data.visibilityAdjustmentSelectors = WTFMove(selectors); }
 
 private:
     WebKit::WebsitePoliciesData m_data;

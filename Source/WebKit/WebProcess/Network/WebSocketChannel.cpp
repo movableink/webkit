@@ -65,13 +65,13 @@ NetworkSendQueue WebSocketChannel::createMessageQueue(Document& document, WebSoc
     return { document, [&channel](auto& utf8String) {
         auto data = utf8String.span();
         channel.notifySendFrame(WebSocketFrame::OpCode::OpCodeText, data);
-        channel.sendMessage(Messages::NetworkSocketChannel::SendString { data }, utf8String.length());
+        channel.sendMessageInternal(Messages::NetworkSocketChannel::SendString { data }, utf8String.length());
     }, [&channel](auto span) {
         channel.notifySendFrame(WebSocketFrame::OpCode::OpCodeBinary, span);
-        channel.sendMessage(Messages::NetworkSocketChannel::SendData { span }, span.size());
+        channel.sendMessageInternal(Messages::NetworkSocketChannel::SendData { span }, span.size());
     }, [&channel](ExceptionCode exceptionCode) {
         auto code = static_cast<int>(exceptionCode);
-        channel.fail(makeString("Failed to load Blob: exception code = ", code));
+        channel.fail(makeString("Failed to load Blob: exception code = "_s, code));
         return NetworkSendQueue::Continue::No;
     } };
 }
@@ -194,7 +194,7 @@ void WebSocketChannel::decreaseBufferedAmount(size_t byteLength)
         m_client->didUpdateBufferedAmount(m_bufferedAmount);
 }
 
-template<typename T> void WebSocketChannel::sendMessage(T&& message, size_t byteLength)
+template<typename T> void WebSocketChannel::sendMessageInternal(T&& message, size_t byteLength)
 {
     CompletionHandler<void()> completionHandler = [this, protectedThis = Ref { *this }, byteLength] {
         decreaseBufferedAmount(byteLength);
@@ -339,9 +339,9 @@ void WebSocketChannel::logErrorMessage(const String& errorMessage)
 
     String consoleMessage;
     if (!m_url.isNull())
-        consoleMessage = makeString("WebSocket connection to '", m_url.string(), "' failed: ", errorMessage);
+        consoleMessage = makeString("WebSocket connection to '"_s, m_url.string(), "' failed: "_s, errorMessage);
     else
-        consoleMessage = makeString("WebSocket connection failed: ", errorMessage);
+        consoleMessage = makeString("WebSocket connection failed: "_s, errorMessage);
     m_document->addConsoleMessage(MessageSource::Network, MessageLevel::Error, consoleMessage);
 }
 

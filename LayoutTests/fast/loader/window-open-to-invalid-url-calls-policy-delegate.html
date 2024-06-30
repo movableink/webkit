@@ -14,9 +14,11 @@ if (window.testRunner) {
 <p>Note, this test must be run in DumpRenderTree.</p>
 <script>
 window.open("http://A=a&B=b", "_top");
-window.setTimeout(function() {
-    if (window.testRunner)
+window.setTimeout(async function () {
+    if (window.testRunner) {
+        await testRunner.flushConsoleLogs();
         testRunner.notifyDone();
+    }
 }, 0);
 </script>
 </body>

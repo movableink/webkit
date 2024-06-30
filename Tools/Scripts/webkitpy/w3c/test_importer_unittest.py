@@ -237,6 +237,42 @@ class TestImporterTest(unittest.TestCase):
         self.assertTrue(fs.exists('/mock-checkout/LayoutTests/w3c/web-platform-tests/web-platform-tests/css/css-images/support/test2.html'))
         self.assertTrue(fs.exists('/mock-checkout/LayoutTests/w3c/web-platform-tests/web-platform-tests/css/css-images/work-in-progress/test3.html'))
 
+    def test_skip_new_directories(self):
+        FAKE_FILES = {}
+        FAKE_FILES.update(FAKE_RESOURCES)
+        FAKE_FILES.update(
+            {
+                "/mock-checkout/LayoutTests/imported/w3c/resources/import-expectations.json": """
+{
+"web-platform-tests/css": "skip-new-directories"
+}""",
+                "/mock-checkout/WebKitBuild/w3c-tests/web-platform-tests/css/css-viewport/computedStyle-zoom.html": MINIMAL_TESTHARNESS,
+                "/mock-checkout/WebKitBuild/w3c-tests/web-platform-tests/css/css-viewport/zoom/scroll-top-test-with-zoom.html": MINIMAL_TESTHARNESS,
+            }
+        )
+
+        fs = self.import_downloaded_tests(["--no-fetch", "-d", "w3c"], FAKE_FILES)
+
+        import_expectations = json.loads(
+            fs.read_text_file(
+                "/mock-checkout/LayoutTests/imported/w3c/resources/import-expectations.json"
+            )
+        )
+        self.assertEqual(
+            "skip", import_expectations["web-platform-tests/css/css-viewport"]
+        )
+
+        self.assertFalse(
+            fs.exists(
+                "/mock-checkout/LayoutTests/w3c/web-platform-tests/css/css-viewport/computedStyle-zoom.html"
+            )
+        )
+        self.assertFalse(
+            fs.exists(
+                "/mock-checkout/LayoutTests/w3c/web-platform-tests/css/css-viewport/zoom/scroll-top-test-with-zoom.html"
+            )
+        )
+
     def test_checkout_directory(self):
         FAKE_FILES = {
             '/mock-checkout/WebKitBuild2/w3c-tests/web-platform-tests/existing-test.html': '',
@@ -555,6 +591,27 @@ class TestImporterTest(unittest.TestCase):
         # test4
         self.assertTrue(fs.exists('/mock-checkout/LayoutTests/w3c/web-platform-tests/web-platform-tests/css/css-images/test4.html'))
         self.assertFalse(fs.exists('/mock-checkout/LayoutTests/w3c/web-platform-tests/web-platform-tests/css/css-images/test4-expected.html'))
+
+    def test_keep_original_reftest_reference(self):
+        FAKE_FILES = {
+            '/home/user/wpt/web-platform-tests/css/css-images/test1.html': '<html><head><link rel=match href=test1-ref.html></head></html>',
+            '/home/user/wpt/web-platform-tests/css/css-images/test1-ref.html': '<html></html>',
+            '/home/user/wpt/web-platform-tests/css/css-images/test2.html': '<html><head><link rel=mismatch href=test2-notref.html></head></html>',
+            '/home/user/wpt/web-platform-tests/css/css-images/test2-notref.html': '<html></html>',
+        }
+        FAKE_FILES.update(FAKE_RESOURCES)
+
+        fs = self.import_directory(['-s', '/home/user/wpt', '-d', '/mock-checkout/LayoutTests/w3c/web-platform-tests'], FAKE_FILES, ['web-platform-tests/css/css-images'])
+
+        # test1
+        self.assertTrue(fs.exists('/mock-checkout/LayoutTests/w3c/web-platform-tests/web-platform-tests/css/css-images/test1.html'))
+        self.assertTrue(fs.exists('/mock-checkout/LayoutTests/w3c/web-platform-tests/web-platform-tests/css/css-images/test1-ref.html'))
+        self.assertTrue(fs.exists('/mock-checkout/LayoutTests/w3c/web-platform-tests/web-platform-tests/css/css-images/test1-expected.html'))
+
+        # test2
+        self.assertTrue(fs.exists('/mock-checkout/LayoutTests/w3c/web-platform-tests/web-platform-tests/css/css-images/test2.html'))
+        self.assertTrue(fs.exists('/mock-checkout/LayoutTests/w3c/web-platform-tests/web-platform-tests/css/css-images/test2-notref.html'))
+        self.assertTrue(fs.exists('/mock-checkout/LayoutTests/w3c/web-platform-tests/web-platform-tests/css/css-images/test2-expected-mismatch.html'))
 
     def test_template_test(self):
         FAKE_FILES = {

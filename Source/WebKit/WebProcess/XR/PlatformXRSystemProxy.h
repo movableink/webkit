@@ -32,6 +32,15 @@
 #include "XRDeviceProxy.h"
 #include <WebCore/PlatformXR.h>
 
+namespace WebKit {
+class PlatformXRSystemProxy;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebKit::PlatformXRSystemProxy> : std::true_type { };
+}
+
 namespace WebCore {
 class SecurityOriginData;
 }
@@ -49,6 +58,7 @@ public:
     void requestPermissionOnSessionFeatures(const WebCore::SecurityOriginData&, PlatformXR::SessionMode, const PlatformXR::Device::FeatureList& /* granted */, const PlatformXR::Device::FeatureList& /* consentRequired */, const PlatformXR::Device::FeatureList& /* consentOptional */, const PlatformXR::Device::FeatureList& /* requiredFeaturesRequested */, const PlatformXR::Device::FeatureList& /* optionalFeaturesRequested */,  CompletionHandler<void(std::optional<PlatformXR::Device::FeatureList>&&)>&&);
     void initializeTrackingAndRendering();
     void shutDownTrackingAndRendering();
+    void didCompleteShutdownTriggeredBySystem();
     void requestFrame(PlatformXR::Device::RequestFrameCallback&&);
     std::optional<PlatformXR::LayerHandle> createLayerProjection(uint32_t, uint32_t, bool);
     void submitFrame();

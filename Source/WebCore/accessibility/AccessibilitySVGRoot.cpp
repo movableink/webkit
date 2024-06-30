@@ -39,14 +39,14 @@
 
 namespace WebCore {
 
-AccessibilitySVGRoot::AccessibilitySVGRoot(RenderObject* renderer, AXObjectCache* cache)
+AccessibilitySVGRoot::AccessibilitySVGRoot(RenderObject& renderer, AXObjectCache* cache)
     : AccessibilitySVGElement(renderer, cache)
 {
 }
 
 AccessibilitySVGRoot::~AccessibilitySVGRoot() = default;
 
-Ref<AccessibilitySVGRoot> AccessibilitySVGRoot::create(RenderObject* renderer, AXObjectCache* cache)
+Ref<AccessibilitySVGRoot> AccessibilitySVGRoot::create(RenderObject& renderer, AXObjectCache* cache)
 {
     return adoptRef(*new AccessibilitySVGRoot(renderer, cache));
 }
@@ -70,7 +70,7 @@ AccessibilityRole AccessibilitySVGRoot::determineAccessibilityRole()
 {
     if ((m_ariaRole = determineAriaRoleAttribute()) != AccessibilityRole::Unknown)
         return m_ariaRole;
-    return AccessibilityRole::Group;
+    return AccessibilityRole::Generic;
 }
 
 bool AccessibilitySVGRoot::hasAccessibleContent() const

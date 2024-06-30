@@ -37,7 +37,7 @@ namespace WebCore {
 
 WorkQueue& sharedImageTranscodingQueue()
 {
-    static NeverDestroyed<Ref<WorkQueue>> queue(WorkQueue::create("com.apple.WebKit.ImageTranscoding"));
+    static NeverDestroyed<Ref<WorkQueue>> queue(WorkQueue::create("com.apple.WebKit.ImageTranscoding"_s));
     return queue.get();
 }
 
@@ -76,7 +76,7 @@ static String transcodeImage(const String& path, const String& destinationUTI, c
     CGDataConsumerCallbacks callbacks = {
         [](void* info, const void* buffer, size_t count) -> size_t {
             auto handle = *static_cast<FileSystem::PlatformFileHandle*>(info);
-            return FileSystem::writeToFile(handle, buffer, count);
+            return FileSystem::writeToFile(handle, { static_cast<const uint8_t*>(buffer), count });
         },
         nullptr
     };

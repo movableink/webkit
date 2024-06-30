@@ -683,6 +683,77 @@ TEST(WKWebExtensionAPIRuntime, SendMessageFromContentScriptWithNoReply)
     [manager run];
 }
 
+TEST(WKWebExtensionAPIRuntime, SendMessageFromSubframe)
+{
+    TestWebKitAPI::HTTPServer server({
+        { "/main"_s, { { { "Content-Type"_s, "text/html"_s } },
+            "<body><script>"
+            "  document.write('<iframe src=\"http://127.0.0.1:' + location.port + '/subframe\"></iframe>')"
+            "</script></body>"_s
+        } },
+        { "/subframe"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } },
+    }, TestWebKitAPI::HTTPServer::Protocol::Http);
+
+    auto *urlRequestMain = server.requestWithLocalhost("/main"_s);
+    auto *urlRequestSubframe = server.request("/subframe"_s);
+
+    auto *backgroundScript = Util::constructScript(@[
+        @"browser.runtime.onMessage.addListener((message, sender) => {",
+        @"  browser.test.assertEq(message?.content, 'Hello from Subframe', 'Should receive the correct message from the subframe content script')",
+        @"  return Promise.resolve({ content: 'Received your message' })",
+        @"})",
+
+        @"browser.test.yield('Load Tab')"
+    ]);
+
+    auto *contentScript = Util::constructScript(@[
+        @"(async () => {",
+        @"  const response = await browser.runtime.sendMessage({ content: 'Hello from Subframe' })",
+        @"  browser.test.assertEq(response?.content, 'Received your message', 'Should get the response from the background script')",
+
+        @"  browser.test.notifyPass()",
+        @"})()"
+    ]);
+
+    auto *manifest = @{
+        @"manifest_version": @3,
+
+        @"name": @"Test",
+        @"description": @"Test",
+        @"version": @"1",
+
+        @"background": @{
+            @"scripts": @[ @"background.js" ],
+            @"type": @"module",
+            @"persistent": @NO,
+        },
+
+        @"content_scripts": @[@{
+            @"matches": @[ @"*://127.0.0.1/*" ],
+            @"js": @[ @"content.js" ],
+            @"all_frames": @YES
+        }]
+    };
+
+    auto *resources = @{
+        @"background.js": backgroundScript,
+        @"content.js": contentScript
+    };
+
+    auto extension = adoptNS([[_WKWebExtension alloc] _initWithManifestDictionary:manifest resources:resources]);
+    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+
+    [manager.get().context setPermissionStatus:_WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:urlRequestSubframe.URL];
+
+    [manager loadAndRun];
+
+    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Load Tab");
+
+    [manager.get().defaultTab.mainWebView loadRequest:urlRequestMain];
+
+    [manager run];
+}
+
 TEST(WKWebExtensionAPIRuntime, SendMessageWithTabFrameAndAsyncReply)
 {
     TestWebKitAPI::HTTPServer server({
@@ -866,6 +937,85 @@ TEST(WKWebExtensionAPIRuntime, ConnectFromContentScript)
     [manager.get().defaultTab.mainWebView loadRequest:urlRequest];
 
     [manager loadAndRun];
+}
+
+TEST(WKWebExtensionAPIRuntime, ConnectFromSubframe)
+{
+    TestWebKitAPI::HTTPServer server({
+        { "/main"_s, { { { "Content-Type"_s, "text/html"_s } },
+            "<body><script>"
+            "  document.write('<iframe src=\"http://127.0.0.1:' + location.port + '/subframe\"></iframe>')"
+            "</script></body>"_s
+        } },
+        { "/subframe"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } },
+    }, TestWebKitAPI::HTTPServer::Protocol::Http);
+
+    auto *urlRequestMain = server.requestWithLocalhost("/main"_s);
+    auto *urlRequestSubframe = server.request("/subframe"_s);
+
+    auto *backgroundScript = Util::constructScript(@[
+        @"browser.runtime.onConnect.addListener((port) => {",
+        @"  browser.test.assertEq(port.name, 'subframePort', 'Port name should be subframePort')",
+
+        @"  port.onMessage.addListener((message) => {",
+        @"    browser.test.assertEq(message, 'Hello from Subframe', 'Should receive the correct message content from subframe')",
+        @"    port.postMessage('Received from Background')",
+        @"  })",
+        @"})",
+
+        @"browser.test.yield('Load Tab')",
+    ]);
+
+    auto *contentScript = Util::constructScript(@[
+        @"(async () => {",
+        @"  const port = browser.runtime.connect({ name: 'subframePort' })",
+        @"  port.postMessage('Hello from Subframe')",
+
+        @"  port.onMessage.addListener((response) => {",
+        @"    browser.test.assertEq(response, 'Received from Background', 'Should get the response from the background script')",
+
+        @"    browser.test.notifyPass()",
+        @"  })",
+        @"})()"
+    ]);
+
+    auto *manifest = @{
+        @"manifest_version": @3,
+
+        @"name": @"Test",
+        @"description": @"Test",
+        @"version": @"1",
+
+        @"background": @{
+            @"scripts": @[ @"background.js" ],
+            @"type": @"module",
+            @"persistent": @NO,
+        },
+
+        @"content_scripts": @[@{
+            @"matches": @[ @"*://127.0.0.1/*" ],
+            @"js": @[ @"content.js" ],
+            @"all_frames": @YES
+        }]
+    };
+
+    auto *resources = @{
+        @"background.js": backgroundScript,
+        @"content.js": contentScript
+    };
+
+    auto extension = adoptNS([[_WKWebExtension alloc] _initWithManifestDictionary:manifest resources:resources]);
+    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+
+    [manager.get().context setPermissionStatus:_WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:urlRequestSubframe.URL];
+
+    [manager loadAndRun];
+
+    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Load Tab");
+
+    [manager.get().defaultTab.mainWebView loadRequest:urlRequestMain];
+
+    [manager run];
 }
 
 TEST(WKWebExtensionAPIRuntime, ConnectFromContentScriptWithMultipleListeners)
@@ -1178,7 +1328,7 @@ TEST(WKWebExtensionAPIRuntime, ConnectNative)
     manager.get().internalDelegate.connectUsingMessagePort = ^(_WKWebExtensionMessagePort *messagePort) {
         EXPECT_NS_EQUAL(messagePort.applicationIdentifier, @"test");
 
-        messagePort.messageHandler = ^(id _Nullable message, NSError * _Nullable error) {
+        messagePort.messageHandler = ^(id message, NSError *error) {
             EXPECT_NULL(error);
             EXPECT_NS_EQUAL(message, @"Hello");
 
@@ -1214,7 +1364,7 @@ TEST(WKWebExtensionAPIRuntime, ConnectNativeWithInvalidMessage)
     manager.get().internalDelegate.connectUsingMessagePort = ^(_WKWebExtensionMessagePort *messagePort) {
         EXPECT_NS_EQUAL(messagePort.applicationIdentifier, @"test");
 
-        messagePort.messageHandler = ^(id _Nullable message, NSError * _Nullable error) {
+        messagePort.messageHandler = ^(id message, NSError *error) {
             EXPECT_NULL(error);
             EXPECT_NS_EQUAL(message, @"Hello");
 
@@ -1222,6 +1372,49 @@ TEST(WKWebExtensionAPIRuntime, ConnectNativeWithInvalidMessage)
                 EXPECT_FALSE(success);
                 EXPECT_NOT_NULL(error);
                 EXPECT_EQ(error.code, _WKWebExtensionMessagePortErrorMessageInvalid);
+            }];
+
+            [messagePort disconnectWithError:nil];
+
+            [manager done];
+        };
+    };
+
+    [manager loadAndRun];
+}
+
+TEST(WKWebExtensionAPIRuntime, ConnectNativeWithUndefinedMessage)
+{
+    auto *backgroundScript = Util::constructScript(@[
+        @"const port = browser.runtime?.connectNative('test')",
+        @"browser.test.assertEq(typeof port, 'object', 'Port should be an object')",
+        @"browser.test.assertEq(port?.name, 'test', 'Port name should be test')",
+        @"browser.test.assertEq(port?.sender, null, 'Port sender should be null')",
+
+        @"port?.onMessage.addListener((response) => {",
+        @"  browser.test.assertEq(response, undefined, 'Response should be undefined when sending null message')",
+
+        @"  browser.test.notifyPass()",
+        @"})",
+
+        @"port?.postMessage('Hello')"
+    ]);
+
+    auto extension = adoptNS([[_WKWebExtension alloc] _initWithManifestDictionary:runtimeManifest resources:@{ @"background.js": backgroundScript }]);
+    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+
+    [manager.get().context setPermissionStatus:_WKWebExtensionContextPermissionStatusGrantedExplicitly forPermission:_WKWebExtensionPermissionNativeMessaging];
+
+    manager.get().internalDelegate.connectUsingMessagePort = ^(_WKWebExtensionMessagePort *messagePort) {
+        EXPECT_NS_EQUAL(messagePort.applicationIdentifier, @"test");
+
+        messagePort.messageHandler = ^(id message, NSError *error) {
+            EXPECT_NULL(error);
+            EXPECT_NS_EQUAL(message, @"Hello");
+
+            [messagePort sendMessage:nil completionHandler:^(BOOL success, NSError *error) {
+                EXPECT_TRUE(success);
+                EXPECT_NULL(error);
             }];
 
             [messagePort disconnectWithError:nil];
