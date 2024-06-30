@@ -38,6 +38,12 @@
 
 namespace WebCore {
 
+String formatLocalizedString(const char* format, ...)
+{
+    notImplemented();
+    return String::fromUTF8(format);
+}
+
 String inputElementAltText()
 {
     return QCoreApplication::translate("QWebPage", "Submit", "Submit (input element) alt text for <input> elements with no alt, title, or value");
