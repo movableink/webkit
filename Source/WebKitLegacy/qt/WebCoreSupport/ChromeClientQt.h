@@ -167,7 +167,7 @@ public:
 
 #if ENABLE(FULLSCREEN_API)
     bool supportsFullScreenForElement(const Element&, bool) final;
-    void enterFullScreenForElement(Element&) final;
+    void enterFullScreenForElement(Element&, WebCore::HTMLMediaElementEnums::VideoFullscreenMode = WebCore::HTMLMediaElementEnums::VideoFullscreenModeStandard) final;
     void exitFullScreenForElement(Element*) final;
 #endif
 
