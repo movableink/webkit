@@ -30,17 +30,20 @@
 #include <QImage>
 #include <QPainter>
 #include <QtGlobal>
-#include <WebCore/BitmapImage.h>
-#include <WebCore/GraphicsContext.h>
+#include "BitmapImage.h"
+#include "GraphicsContextQt.h"
 
-using namespace WebCore;
+namespace WebCore {
 
-namespace WebKit {
+std::optional<DestinationColorSpace> ShareableBitmapConfiguration::validateColorSpace(std::optional<DestinationColorSpace> colorSpace)
+{
+    return colorSpace;
+}
 
 QImage ShareableBitmap::createQImage()
 {
     ref(); // Balanced by deref in releaseSharedMemoryData
-    return QImage(reinterpret_cast<uchar*>(data()), m_size.width(), m_size.height(), m_size.width() * 4,
+    return QImage(reinterpret_cast<uchar*>(data()), size().width(), size().height(), size().width() * 4,
                   NativeImageQt::defaultFormatForOpaqueImages(),//FIXME
                   releaseSharedMemoryData, this);
 }
@@ -63,7 +66,7 @@ std::unique_ptr<GraphicsContext> ShareableBitmap::createGraphicsContext()
     QImage* image = new QImage(createQImage());
     QPainter* painter = new QPainter(image);
     painter->setRenderHint(QPainter::SmoothPixmapTransform, true);
-    auto context = std::make_unique<GraphicsContext>(painter);
+    auto context = std::make_unique<GraphicsContextQt>(painter);
     context->takeOwnershipOfPlatformContext();
     return context;
 }
@@ -71,7 +74,7 @@ std::unique_ptr<GraphicsContext> ShareableBitmap::createGraphicsContext()
 void ShareableBitmap::paint(GraphicsContext& context, const IntPoint& dstPoint, const IntRect& srcRect)
 {
     QImage image = createQImage();
-    QPainter* painter = context.platformContext();
+    QPainter* painter = context.platformContext()->painter();
     painter->drawImage(dstPoint, image, QRect(srcRect));
 }
 
@@ -83,7 +86,7 @@ void ShareableBitmap::paint(GraphicsContext& context, float scaleFactor, const I
     }
 
     QImage image = createQImage();
-    QPainter* painter = context.platformContext();
+    QPainter* painter = context.platformContext()->painter();
 
     painter->save();
     painter->scale(scaleFactor, scaleFactor);
@@ -91,16 +94,15 @@ void ShareableBitmap::paint(GraphicsContext& context, float scaleFactor, const I
     painter->restore();
 }
 
-Checked<unsigned, RecordOverflow> ShareableBitmap::calculateBytesPerRow(WebCore::IntSize size, const ShareableBitmap::Configuration& config)
+CheckedUint32 ShareableBitmapConfiguration::calculateBytesPerRow(const IntSize& size, const DestinationColorSpace& colorSpace)
 {
-    unsigned bytes = calculateBytesPerPixel(config)*size.width();
-    return bytes;
+    return calculateBytesPerPixel(colorSpace) * size.width();
 }
 
-unsigned ShareableBitmap::calculateBytesPerPixel(const Configuration&)
+CheckedUint32 ShareableBitmapConfiguration::calculateBytesPerPixel(const DestinationColorSpace&)
 {
-    return 4;	
+    return 4;
 }
 
 }
-// namespace WebKit
+// namespace WebCore
