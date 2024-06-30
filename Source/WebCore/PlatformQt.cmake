@@ -155,6 +155,7 @@ list(APPEND WebCore_SOURCES
     platform/graphics/qt/NativeImageQt.cpp
     platform/graphics/qt/PathQt.cpp
     platform/graphics/qt/PatternQt.cpp
+    platform/graphics/qt/ShareableBitmapQt.cpp
     platform/graphics/qt/StillImageQt.cpp
     platform/graphics/qt/SystemFontDatabaseQt.cpp
     platform/graphics/qt/TileQt.cpp
