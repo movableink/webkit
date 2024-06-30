@@ -147,7 +147,8 @@ void QWebFrameAdapter::load(const QNetworkRequest& req, QNetworkAccessManager::O
     QList<QByteArray> httpHeaders = req.rawHeaderList();
     for (int i = 0; i < httpHeaders.size(); ++i) {
         const QByteArray &headerName = httpHeaders.at(i);
-        request.addHTTPHeaderField(QByteArrayView(headerName), QByteArrayView(req.rawHeader(headerName)));
+        const QByteArray rawHeaderName = req.rawHeader(headerName);
+        request.addHTTPHeaderField(std::span { headerName.constData(), static_cast<size_t>(headerName.size()) }, std::span { rawHeaderName.constData(), static_cast<size_t>(rawHeaderName.size()) });
     }
 
     if (!body.isEmpty())
