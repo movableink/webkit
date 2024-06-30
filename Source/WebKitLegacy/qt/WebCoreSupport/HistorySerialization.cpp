@@ -44,7 +44,7 @@ static void encodeElement(KeyedEncoder& encoder, const FormDataElement& element)
     switchOn(element.data,
         [&] (const Vector<uint8_t>& bytes) {
             encoder.encodeEnum("type"_s, FormDataType::Data);
-            encoder.encodeBytes("data"_s, bytes.data(), bytes.size());
+            encoder.encodeBytes("data"_s, std::span { bytes.data(), bytes.size() });
         }, [&] (const FormDataElement::EncodedFileData& fileData) {
             encoder.encodeEnum("type"_s, FormDataType::EncodedFile);
             encoder.encodeString("filename"_s, fileData.filename);
@@ -125,7 +125,7 @@ static bool decodeElement(KeyedDecoder& decoder, FormDataElement& element)
 void encodeFormData(const FormData& formData, KeyedEncoder& encoder)
 {
     encoder.encodeBool("alwaysStream"_s, formData.alwaysStream());
-    encoder.encodeBytes("boundary"_s, reinterpret_cast<const uint8_t*>(formData.boundary().data()), formData.boundary().size());
+    encoder.encodeBytes("boundary"_s, std::span { formData.boundary().data(), formData.boundary().size() });
 
     encoder.encodeObjects("elements"_s, formData.elements().begin(), formData.elements().end(), [](KeyedEncoder& encoder, const FormDataElement& element) {
         encodeElement(encoder, element);
@@ -143,7 +143,7 @@ RefPtr<FormData> decodeFormData(KeyedDecoder& decoder)
         return nullptr;
     data->setAlwaysStream(alwaysStream);
 
-    if (!decoder.decodeBytes("boundary"_s, const_cast<Vector<char>&>(data->boundary())))
+    if (!decoder.decodeBytes("boundary"_s, const_cast<Vector<uint8_t>&>(data->boundary())))
         return nullptr;
 
     if (!decoder.decodeObjects("elements"_s, const_cast<Vector<FormDataElement>&>(data->elements()), [](KeyedDecoder& decoder, FormDataElement& element) {
@@ -191,7 +191,7 @@ static void encodeBackForwardTreeNode(KeyedEncoder& encoder, const HistoryItem& 
     encoder.encodeFloat("pageScaleFactor"_s, item.pageScaleFactor());
 
     encoder.encodeConditionalObject("stateObject"_s, item.stateObject(), [](KeyedEncoder& encoder, const SerializedScriptValue& stateObject) {
-        encoder.encodeBytes("data"_s, stateObject.wireBytes().data(), stateObject.wireBytes().size());
+        encoder.encodeBytes("data"_s, std::span { stateObject.wireBytes().data(), stateObject.wireBytes().size() });
     });
 
     encoder.encodeString("target"_s, item.target());

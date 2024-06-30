@@ -152,7 +152,7 @@ void QWebFrameAdapter::load(const QNetworkRequest& req, QNetworkAccessManager::O
     }
 
     if (!body.isEmpty())
-        request.setHTTPBody(WebCore::FormData::create(body.constData(), body.size()));
+        request.setHTTPBody(WebCore::FormData::create(std::span { body.constData(), static_cast<size_t>(body.size()) }));
 
     frame->loader().load(WebCore::FrameLoadRequest(*frame, request));
 
@@ -248,7 +248,7 @@ void QWebFrameAdapter::setContent(const QByteArray &data, const QString &mimeTyp
 {
     URL kurl(baseUrl);
     WebCore::ResourceRequest request(kurl);
-    WTF::RefPtr<WebCore::SharedBuffer> buffer = WebCore::SharedBuffer::create(data.constData(), data.length());
+    WTF::RefPtr<WebCore::SharedBuffer> buffer = WebCore::SharedBuffer::create(std::span { data.constData(), static_cast<size_t>(data.length()) });
     QString actualMimeType;
     WTF::StringView encoding;
     if (mimeType.isEmpty())
@@ -268,7 +268,7 @@ void QWebFrameAdapter::setHtml(const QString &html, const QUrl &baseUrl)
     URL kurl(baseUrl);
     WebCore::ResourceRequest request(kurl);
     const QByteArray utf8 = html.toUtf8();
-    WTF::RefPtr<WebCore::SharedBuffer> data = WebCore::SharedBuffer::create(utf8.constData(), utf8.length());
+    WTF::RefPtr<WebCore::SharedBuffer> data = WebCore::SharedBuffer::create(std::span { utf8.constData(), static_cast<size_t>(utf8.length()) });
     WebCore::ResourceResponse response(URL(), "text/html"_s, data->size(), "utf-8"_s);
     // FIXME: visibility?
     WebCore::SubstituteData substituteData(WTFMove(data), URL(), response, SubstituteData::SessionHistoryVisibility::Hidden);

@@ -1023,7 +1023,7 @@ bool FrameLoaderClientQt::callErrorPageExtension(const WebCore::ResourceError& e
     URL failingUrl(option.url);
 
     WebCore::ResourceRequest request(baseUrl);
-    WTF::RefPtr<WebCore::SharedBuffer> buffer = WebCore::SharedBuffer::create(output.content.constData(), output.content.length());
+    WTF::RefPtr<WebCore::SharedBuffer> buffer = WebCore::SharedBuffer::create(std::span { output.content.constData(), static_cast<size_t>(output.content.size()) });
     WebCore::ResourceResponse response(failingUrl, output.contentType, buffer->size(), output.encoding);
     // FIXME: visibility?
     WebCore::SubstituteData substituteData(WTFMove(buffer), failingUrl, response, SubstituteData::SessionHistoryVisibility::Hidden);

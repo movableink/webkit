@@ -622,11 +622,13 @@ void QNetworkReplyHandler::sendResponseIfNeeded()
         // The status code is equal to 0 for protocols not in the HTTP family.
         int statusCode = m_replyWrapper->reply()->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         response.setHTTPStatusCode(statusCode);
-        response.setHTTPStatusText(AtomString::fromLatin1(m_replyWrapper->reply()->attribute(QNetworkRequest::HttpReasonPhraseAttribute).toByteArray().constData()));
+        QByteArray status = m_replyWrapper->reply()->attribute(QNetworkRequest::HttpReasonPhraseAttribute).toByteArray();
+        response.setHTTPStatusText(String(status.constData(), status.length()));
 
         // Add remaining headers. Qt may send a header with multiple values newline-separated; replace with comma.
         Q_FOREACH (const QNetworkReply::RawHeaderPair& pair, m_replyWrapper->reply()->rawHeaderPairs())
-            response.setHTTPHeaderField(String(pair.first.constData(), pair.first.size()), makeStringByReplacingAll(StringView(pair.second.constData(), pair.second.size()), '\n', ','));
+            response.setHTTPHeaderField(String(pair.first.constData(), pair.first.length()),
+                                        makeStringByReplacingAll(StringView(std::span { pair.second.constData(), static_cast<size_t>(pair.second.length()) }), '\n', ','));
     }
 
     // Note: Qt sets RedirectionTargetAttribute only for 3xx responses, so Location header in 201 responce won't affect this code
