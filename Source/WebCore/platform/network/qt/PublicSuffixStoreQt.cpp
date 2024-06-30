@@ -26,8 +26,6 @@
 #include "config.h"
 #include "PublicSuffixStore.h"
 
-#if ENABLE(PUBLIC_SUFFIX_LIST)
-
 #include <QVector>
 #include <private/qtldurl_p.h>
 #include <private/qurl_p.h>
@@ -85,5 +83,3 @@ String PublicSuffixStore::platformTopPrivatelyControlledDomain(const String& dom
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(PUBLIC_SUFFIX_LIST)
