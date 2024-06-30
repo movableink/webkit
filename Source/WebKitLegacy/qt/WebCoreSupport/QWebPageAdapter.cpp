@@ -292,6 +292,7 @@ void QWebPageAdapter::initializeWebCorePage()
         makeUniqueRef<ProgressTrackerClientQt>(this),
         UniqueRef<WebCore::LocalFrameLoaderClient>(makeUniqueRef<FrameLoaderClientQt>()),
         WebCore::FrameIdentifier::generate(),
+        nullptr,
         makeUniqueRef<WebCore::DummySpeechRecognitionProvider>(),
         makeUniqueRef<WebCore::MediaRecorderProvider>(),
         WebBroadcastChannelRegistry::getOrCreate(isPrivateBrowsingEnabled),
