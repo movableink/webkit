@@ -302,7 +302,7 @@ DragImage::DragImage(DragImage&& other)
 
 DragImage& DragImage::operator=(DragImage&& other)
 {
-#if PLATFORM(QT
+#if PLATFORM(QT)
     if (!m_dragImageRef.isNull())
 #else
     if (m_dragImageRef)

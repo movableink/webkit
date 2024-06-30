@@ -442,26 +442,12 @@ TextStream& operator<<(TextStream& ts, const Image& image)
     return ts;
 }
 
-<<<<<<< HEAD
-#if !PLATFORM(COCOA) && !PLATFORM(GTK) && !PLATFORM(WIN) && !PLATFORM(QT)
-=======
+
 bool Image::gSystemAllowsAnimationControls = false;
->>>>>>> upstream
 
 void Image::setSystemAllowsAnimationControls(bool allowsControls)
 {
     gSystemAllowsAnimationControls = allowsControls;
 }
 
-<<<<<<< HEAD
-Ref<Image> Image::loadPlatformResource(const char* resource)
-{
-    WTFLogAlways("WARNING: trying to load platform resource '%s'", resource);
-    return BitmapImage::create();
-}
-
-#endif // !PLATFORM(COCOA) && !PLATFORM(GTK) && !PLATFORM(WIN) && !PLATFORM(QT)
-}
-=======
 } // namespace WebCore
->>>>>>> upstream
