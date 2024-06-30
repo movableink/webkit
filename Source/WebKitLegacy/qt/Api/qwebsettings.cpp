@@ -223,10 +223,6 @@ void QWebSettingsPrivate::apply()
                                       global->attributes.value(QWebSettings::PrintElementBackgrounds));
         settings->setShouldPrintBackgrounds(value);
 
-        value = attributes.value(QWebSettings::OfflineWebApplicationCacheEnabled,
-                                      global->attributes.value(QWebSettings::OfflineWebApplicationCacheEnabled));
-        settings->setOfflineWebApplicationCacheEnabled(value);
-
         value = attributes.value(QWebSettings::LocalStorageEnabled,
                                       global->attributes.value(QWebSettings::LocalStorageEnabled));
         settings->setLocalStorageEnabled(value);
@@ -441,8 +437,7 @@ QWebSettings* QWebSettings::globalSettings()
         are also drawn when the page is printed. This is enabled by default.
     \value OfflineStorageDatabaseEnabled Specifies whether support for the HTML 5
         offline storage feature is enabled or not. This is disabled by default.
-    \value OfflineWebApplicationCacheEnabled Specifies whether support for the HTML 5
-        web application cache feature is enabled or not. This is disabled by default.
+    \value OfflineWebApplicationCacheEnabled \e{This enum value is deprecated.}
     \value LocalStorageEnabled Specifies whether support for the HTML 5
         local storage feature is enabled or not. This is disabled by default.
         (This value was introduced in 4.6.)
@@ -1119,9 +1114,6 @@ qint64 QWebSettings::offlineStorageDefaultQuota()
 
     Setting an empty path disables the feature.
 
-    Support for offline web application cache storage can enabled by setting the
-    \l{QWebSettings::OfflineWebApplicationCacheEnabled}{OfflineWebApplicationCacheEnabled} attribute.
-
     \sa offlineWebApplicationCachePath()
 */
 void QWebSettings::setOfflineWebApplicationCachePath(const QString& path)
@@ -1247,7 +1239,6 @@ void QWebSettings::enablePersistentStorage(const QString& path)
     QWebSettings::globalSettings()->setLocalStoragePath(FileSystem::pathByAppendingComponent(String(storagePath), "LocalStorage"_s));
     QWebSettings::globalSettings()->setAttribute(QWebSettings::LocalStorageEnabled, true);
     QWebSettings::globalSettings()->setAttribute(QWebSettings::OfflineStorageDatabaseEnabled, true);
-    QWebSettings::globalSettings()->setAttribute(QWebSettings::OfflineWebApplicationCacheEnabled, true);
 
 #if ENABLE(NETSCAPE_PLUGIN_METADATA_CACHE)
     // All applications can share the common QtWebkit cache file(s).

@@ -129,7 +129,6 @@ public Q_SLOTS:
     void removeAllVisitedLinks();
     void setAllowUniversalAccessFromFileURLs(bool enable);
     void setAllowFileAccessFromFileURLs(bool enable);
-    void setAppCacheMaximumSize(unsigned long long quota);
     void setValueForUser(const QWebElement&, const QString& value);
     void setFixedContentsSize(int width, int height);
     void setPrivateBrowsingEnabled(bool);
@@ -150,7 +149,6 @@ public Q_SLOTS:
     void addOriginAccessAllowlistEntry(const QString& sourceOrigin, const QString& destinationProtocol, const QString& destinationHost, bool allowDestinationSubdomains);
     void removeOriginAccessAllowlistEntry(const QString& sourceOrigin, const QString& destinationProtocol, const QString& destinationHost, bool allowDestinationSubdomains);
 
-    void clearAllApplicationCaches();
     void setApplicationCacheOriginQuota(unsigned long long);
     QStringList originsWithApplicationCache();
 
