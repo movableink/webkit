@@ -649,7 +649,7 @@ RenderThemeQtMobile::~RenderThemeQtMobile()
 
 bool RenderThemeQtMobile::isControlStyled(const RenderStyle& style, const RenderStyle& userAgentStyle) const
 {
-    switch (style.effectiveAppearance()) {
+    switch (style.usedAppearance()) {
     case StyleAppearance::Checkbox:
     case StyleAppearance::Radio:
         return false;
@@ -667,7 +667,7 @@ void RenderThemeQtMobile::computeSizeBasedOnStyle(RenderStyle& renderStyle) cons
 {
     QSize size(0, 0);
 
-    switch (renderStyle.effectiveAppearance()) {
+    switch (renderStyle.usedAppearance()) {
     case StyleAppearance::TextArea:
     case StyleAppearance::SearchField:
     case StyleAppearance::TextField: {
@@ -686,14 +686,14 @@ void RenderThemeQtMobile::computeSizeBasedOnStyle(RenderStyle& renderStyle) cons
     if (!renderStyle.width().isIntrinsicOrAuto() && !renderStyle.height().isAuto())
         return;
 
-    switch (renderStyle.effectiveAppearance()) {
+    switch (renderStyle.usedAppearance()) {
     case StyleAppearance::Checkbox: {
-        const int w = checkBoxWidth * renderStyle.effectiveZoom();
+        const int w = checkBoxWidth * renderStyle.usedZoom();
         size = QSize(w, w);
         break;
     }
     case StyleAppearance::Radio: {
-        const int w = radioWidth * renderStyle.effectiveZoom();
+        const int w = radioWidth * renderStyle.usedZoom();
         size = QSize(w, w);
         break;
     }
@@ -702,7 +702,7 @@ void RenderThemeQtMobile::computeSizeBasedOnStyle(RenderStyle& renderStyle) cons
     case StyleAppearance::DefaultButton:
     case StyleAppearance::Button:
     case StyleAppearance::Menulist: {
-        const int height = renderStyle.metricsOfPrimaryFont().height() * buttonHeightRatio * renderStyle.effectiveZoom();
+        const int height = renderStyle.metricsOfPrimaryFont().height() * buttonHeightRatio * renderStyle.usedZoom();
         size = QSize(renderStyle.width().value(), height);
         break;
     }
@@ -748,7 +748,7 @@ bool RenderThemeQtMobile::paintButton(const RenderObject& o, const PaintInfo& i,
     if (!p.isValid())
        return true;
 
-    StyleAppearance appearance = o.style().effectiveAppearance();
+    StyleAppearance appearance = o.style().usedAppearance();
     if (appearance == StyleAppearance::PushButton || appearance == StyleAppearance::Button) {
         p.drawPushButton(r, isPressed(o), isEnabled(o));
     } else if (appearance == StyleAppearance::Radio)
@@ -784,7 +784,7 @@ bool RenderThemeQtMobile::paintTextField(const RenderObject& o, const PaintInfo&
     if (!p.isValid())
         return true;
 
-    StyleAppearance appearance = o.style().effectiveAppearance();
+    StyleAppearance appearance = o.style().usedAppearance();
     if (appearance != StyleAppearance::TextField
         && appearance != StyleAppearance::SearchField
         && appearance != StyleAppearance::TextArea)
@@ -890,7 +890,7 @@ bool RenderThemeQtMobile::paintSliderTrack(const RenderObject& o, const PaintInf
     const double progress = (max - min > 0) ? (slider->valueAsNumber() - min) / (max - min) : 0;
 
     QRect rect(r);
-    const bool vertical = (o.style().effectiveAppearance() == StyleAppearance::SliderVertical);
+    const bool vertical = (o.style().usedAppearance() == StyleAppearance::SliderVertical);
     const int groovePadding = vertical ? r.width() * sliderGrooveBorderRatio : r.height() * sliderGrooveBorderRatio;
     if (vertical) {
         rect.adjust(groovePadding, 0, -groovePadding, 0);
@@ -925,9 +925,9 @@ bool RenderThemeQtMobile::checkMultiple(const RenderObject& o) const
 
 void RenderThemeQtMobile::adjustSliderThumbSize(RenderStyle& style, const Element* element) const
 {
-    const StyleAppearance part = style.effectiveAppearance();
+    const StyleAppearance part = style.usedAppearance();
     if (part == StyleAppearance::SliderThumbHorizontal || part == StyleAppearance::SliderThumbVertical) {
-        const int size = sliderSize * style.effectiveZoom();
+        const int size = sliderSize * style.usedZoom();
         style.setWidth(Length(size, LengthType::Fixed));
         style.setHeight(Length(size, LengthType::Fixed));
     } else

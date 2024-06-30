@@ -56,7 +56,7 @@ public:
 
     String extraDefaultStyleSheet() override;
 
-    bool supportsHover(const RenderStyle&) const override;
+    bool supportsHover() const override;
     bool supportsFocusRing(const RenderStyle&) const override;
 
     int baselinePosition(const RenderBox&) const override;
