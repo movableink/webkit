@@ -478,7 +478,20 @@ endif ()
 
 # From PlatformWin.cmake
 
-if (WIN32)
+
+
+if (USE_MACH_PORTS)
+    list(APPEND WebCore_SOURCES
+        platform/cf/SharedBufferCF.cpp
+        platform/cocoa/SharedMemoryCocoa.cpp
+    )
+
+    if (HAVE_FONTCONFIG)
+        list(APPEND WebCoreTestSupport_INCLUDE_DIRECTORIES
+            ${FONTCONFIG_INCLUDE_DIR}
+        )
+    endif ()
+elseif (WIN32)
     # Eliminate C2139 errors
     if (MSVC)
         add_compile_options(/D_ENABLE_EXTENDED_ALIGNED_STORAGE)
@@ -489,18 +502,11 @@ if (WIN32)
     endif ()
 
     list(APPEND WebCore_SOURCES
+        platform/win/SharedMemoryWin.cpp
         platform/win/SystemInfo.cpp
     )
-endif ()
-
-if (APPLE)
+else ()
     list(APPEND WebCore_SOURCES
-        platform/cf/SharedBufferCF.cpp
+        platform/SharedMemoryUnix.cpp
     )
-
-    if (HAVE_FONTCONFIG)
-        list(APPEND WebCoreTestSupport_INCLUDE_DIRECTORIES
-            ${FONTCONFIG_INCLUDE_DIR}
-        )
-    endif ()
 endif ()

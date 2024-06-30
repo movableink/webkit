@@ -68,7 +68,7 @@ Ref<SharedBuffer> SharedMemory::createSharedBuffer(size_t dataSize) const
     });
 }
 
-#if !PLATFORM(COCOA)
+#if !PLATFORM(COCOA) && !(PLATFORM(QT) && USE(MACH_PORTS))
 void SharedMemoryHandle::takeOwnershipOfMemory(MemoryLedger) const
 {
 }
