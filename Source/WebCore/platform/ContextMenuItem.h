@@ -80,7 +80,7 @@ enum ContextMenuAction {
     ContextMenuItemTagIgnoreSpelling,
     ContextMenuItemTagLearnSpelling,
     ContextMenuItemTagOther,
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || PLATFORM(QT)
     ContextMenuItemTagSearchWeb = 38,
 #else
     ContextMenuItemTagSearchWeb = 21,
