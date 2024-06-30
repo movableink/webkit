@@ -199,7 +199,6 @@ static void encodeBackForwardTreeNode(KeyedEncoder& encoder, const HistoryItem& 
 
 void encodeBackForwardTree(KeyedEncoderQt& encoder, const HistoryItem& item)
 {
-    encoder.encodeString("title"_s, item.title());
     encodeBackForwardTreeNode(encoder, item);
     if (item.userData().isValid())
         encoder.encodeVariant("userData"_s, item.userData());
@@ -300,11 +299,6 @@ static bool decodeBackForwardTreeNode(KeyedDecoder& decoder, HistoryItem& item)
 
 bool decodeBackForwardTree(KeyedDecoderQt& decoder, HistoryItem& item)
 {
-    if (!decodeString(decoder, "title"_s, [&item](String&& str) {
-        item.setTitle(str);
-    }))
-        return false;
-
     QVariant userData;
     if (decoder.decodeVariant("userData"_s, userData))
         item.setUserData(userData);
