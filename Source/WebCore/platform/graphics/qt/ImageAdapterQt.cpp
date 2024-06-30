@@ -110,7 +110,7 @@ Ref<Image> ImageAdapter::loadPlatformResource(const char* name)
     return StillImage::create(loadResourcePixmap(name));
 }
 
-void ImageAdapter::setPlatformResource(const char* name, const QImage& pixmap)
+void Image::setPlatformResource(const char* name, const QImage& pixmap)
 {
     if (pixmap.isNull())
         graphics().remove(name);
@@ -118,7 +118,7 @@ void ImageAdapter::setPlatformResource(const char* name, const QImage& pixmap)
         graphics().add(name, WebGraphicVector { pixmap });
 }
 
-void BitmapImage::invalidate()
+void ImageAdapter::invalidate()
 {
 }
 

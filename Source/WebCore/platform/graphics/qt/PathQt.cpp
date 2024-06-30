@@ -370,6 +370,12 @@ void PathQt::add(PathArc arc)
     addEllipticArc(m_path, arc.center.x(), arc.center.y(), arc.radius, arc.radius, arc.startAngle, arc.endAngle, arc.direction);
 }
 
+void PathQt::add(PathClosedArc closedArc)
+{
+    add(closedArc.arc);
+    add(PathCloseSubpath());
+}
+
 void PathQt::add(PathRect r)
 {
     m_path.addRect(r.rect.x(), r.rect.y(), r.rect.width(), r.rect.height());

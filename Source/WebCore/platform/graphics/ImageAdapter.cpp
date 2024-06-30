@@ -30,7 +30,7 @@
 
 namespace WebCore {
 
-#if !PLATFORM(COCOA) && !PLATFORM(GTK) && !PLATFORM(WIN)
+#if !PLATFORM(COCOA) && !PLATFORM(GTK) && !PLATFORM(WIN) && !PLATFORM(QT)
 Ref<Image> ImageAdapter::loadPlatformResource(const char* resource)
 {
     WTFLogAlways("WARNING: trying to load platform resource '%s'", resource);

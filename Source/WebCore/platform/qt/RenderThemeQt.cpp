@@ -458,8 +458,8 @@ bool RenderThemeQt::paintSearchFieldCancelButton(const RenderBox& box, const Pai
     FloatPoint paintingPos = convertToPaintingPosition(inputBox, box, cancelButtonRect.location(), r.location());
     cancelButtonRect.setLocation(paintingPos);
 
-    static Ref<Image> cancelImage = Image::loadPlatformResource("searchCancelButton");
-    static Ref<Image> cancelPressedImage = Image::loadPlatformResource("searchCancelButtonPressed");
+    static Ref<Image> cancelImage = ImageAdapter::loadPlatformResource("searchCancelButton");
+    static Ref<Image> cancelPressedImage = ImageAdapter::loadPlatformResource("searchCancelButtonPressed");
     pi.context().drawImage(isPressed(box) ? cancelPressedImage : cancelImage, cancelButtonRect);
     return false;
 }

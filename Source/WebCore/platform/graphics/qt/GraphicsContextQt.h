@@ -109,11 +109,10 @@ public:
     QPainter* painter() const;
 
     void pushTransparencyLayerInternal(const QRect&, qreal, const QImage&);
-private:
-
-    void popTransparencyLayerInternal();
 
     void takeOwnershipOfPlatformContext();
+private:
+    void popTransparencyLayerInternal();
 
     GraphicsContextPlatformPrivate* m_data { nullptr };
 };

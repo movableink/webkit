@@ -78,6 +78,7 @@ private:
     void add(PathArcTo) final;
 
     void add(PathArc) final;
+    void add(PathClosedArc) final;
     void add(PathEllipse) final;
     void add(PathEllipseInRect) final;
     void add(PathRect) final;

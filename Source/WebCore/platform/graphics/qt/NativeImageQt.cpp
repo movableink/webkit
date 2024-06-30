@@ -77,10 +77,10 @@ DestinationColorSpace PlatformImageNativeImageBackend::colorSpace() const
     return DestinationColorSpace::SRGB();
 }
 
-Color NativeImage::singlePixelSolidColor() const
+std::optional<Color> NativeImage::singlePixelSolidColor() const
 {
     if (size() != IntSize(1, 1))
-        return Color();
+        return std::nullopt;
 
     return QColor::fromRgba(platformImage().pixel(0, 0));
 }
