@@ -94,6 +94,8 @@ private:
     unsigned long long blobSize(const URL& url) final { return m_blobRegistry.blobSize(url); }
     void writeBlobsToTemporaryFilesForIndexedDB(const Vector<String>& blobURLs, CompletionHandler<void(Vector<String>&& filePaths)>&& completionHandler) final { m_blobRegistry.writeBlobsToTemporaryFilesForIndexedDB(blobURLs, WTFMove(completionHandler)); }
 
+    String blobType(const URL& url) final { return m_blobRegistry.blobType(url); }
+
     BlobRegistryImpl* blobRegistryImpl() final { return &m_blobRegistry; }
 
     BlobRegistryImpl m_blobRegistry;

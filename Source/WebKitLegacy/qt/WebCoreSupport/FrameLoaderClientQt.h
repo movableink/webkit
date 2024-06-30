@@ -218,7 +218,6 @@ public:
 
     void sendH2Ping(const URL&, CompletionHandler<void(Expected<Seconds, ResourceError>&&)>&&) override;
 
-    void broadcastFrameRemovalToOtherProcesses() override { };
     void broadcastMainFrameURLChangeToOtherProcesses(const URL&) override { };
 
     static bool dumpFrameLoaderCallbacks;

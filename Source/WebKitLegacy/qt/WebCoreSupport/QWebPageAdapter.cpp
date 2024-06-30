@@ -223,7 +223,7 @@ static void openNewWindow(const QUrl& url, LocalFrame& frame)
         WindowFeatures features;
         NavigationAction action;
         FrameLoadRequest request = frameLoadRequest(url, frame);
-        if (Page* newPage = oldPage->chrome().createWindow(frame, features, action)) {
+        if (auto newPage = oldPage->chrome().createWindow(frame, features, action)) {
             WebCore::LocalFrame* newFrame = dynamicDowncast<WebCore::LocalFrame>(newPage->mainFrame());
             newFrame->loader().loadFrameRequest(WTFMove(request), /*event*/ nullptr, /*FormState*/ nullptr);
             newPage->chrome().show();
@@ -525,7 +525,7 @@ bool QWebPageAdapter::findText(const QString& subString, FindFlag options)
         }
     }
 
-    return page->findString(subString, webCoreFindOptions);
+    return page->findString(subString, webCoreFindOptions).has_value();
 }
 
 void QWebPageAdapter::adjustPointForClicking(QMouseEvent* ev)
