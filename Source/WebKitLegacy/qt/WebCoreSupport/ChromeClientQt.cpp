@@ -749,21 +749,6 @@ void ChromeClientQt::attachViewOverlayGraphicsLayer(WebCore::GraphicsLayer*)
 {
 }
 
-#if ENABLE(WEB_CRYPTO)
-bool ChromeClientQt::wrapCryptoKey(const Vector<uint8_t>& key, Vector<uint8_t>& wrappedKey) const
-{
-    // This is no-op for Qt port, see GCrypt implementation for more details
-    // This means that we don't need master key
-    return wrapSerializedCryptoKey({ }, key, wrappedKey);
-}
-
-bool ChromeClientQt::unwrapCryptoKey(const Vector<uint8_t>& wrappedKey, Vector<uint8_t>& key) const
-{
-    // This is no-op so we don't need master key
-    return unwrapSerializedCryptoKey({ }, wrappedKey, key);
-}
-#endif
-
 IntPoint ChromeClientQt::accessibilityScreenToRootView(const IntPoint&) const
 {
     return { };

@@ -203,11 +203,6 @@ public:
 
     void attachViewOverlayGraphicsLayer(GraphicsLayer*) final;
 
-#if ENABLE(WEB_CRYPTO)
-    bool wrapCryptoKey(const Vector<uint8_t>&, Vector<uint8_t>&) const final;
-    bool unwrapCryptoKey(const Vector<uint8_t>&, Vector<uint8_t>&) const final;
-#endif
-
     void requestCookieConsent(CompletionHandler<void(WebCore::CookieConsentDecisionResult)>&&) final;
 
     IntPoint accessibilityScreenToRootView(const IntPoint&) const final;

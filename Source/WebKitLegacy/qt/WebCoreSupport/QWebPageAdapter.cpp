@@ -23,6 +23,7 @@
 #include "BackForwardList.h"
 #include "ChromeClientQt.h"
 #include "ContextMenuClientQt.h"
+#include "CryptoClientQt.h"
 #include "DragClientQt.h"
 #include "EditorClientQt.h"
 #include "FrameLoaderClientQt.h"
@@ -301,7 +302,8 @@ void QWebPageAdapter::initializeWebCorePage()
 #if ENABLE(CONTEXT_MENUS)
         makeUniqueRef<ContextMenuClientQt>(),
 #endif
-        makeUniqueRef<ChromeClientQt>(this)
+        makeUniqueRef<ChromeClientQt>(this),
+        makeUniqueRef<CryptoClientQt>()
     };
     pageConfiguration.applicationCacheStorage = ApplicationCacheStorage::create({ }, { }); // QTFIXME
     pageConfiguration.dragClient = makeUnique<DragClientQt>(pageConfiguration.chromeClient.ptr());
