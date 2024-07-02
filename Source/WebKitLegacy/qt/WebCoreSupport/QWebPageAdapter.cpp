@@ -290,7 +290,9 @@ void QWebPageAdapter::initializeWebCorePage()
         BackForwardList::create(*this),
         CookieJar::create(storageProvider.copyRef()),
         makeUniqueRef<ProgressTrackerClientQt>(this),
-        UniqueRef<WebCore::LocalFrameLoaderClient>(makeUniqueRef<FrameLoaderClientQt>()),
+        CompletionHandler<UniqueRef<WebCore::LocalFrameLoaderClient>(WebCore::LocalFrame&)> { [] (auto&) {
+            return makeUniqueRef<FrameLoaderClientQt>();
+        } },
         WebCore::FrameIdentifier::generate(),
         nullptr,
         makeUniqueRef<WebCore::DummySpeechRecognitionProvider>(),
@@ -485,25 +487,25 @@ bool QWebPageAdapter::findText(const QString& subString, FindFlag options)
     WebCore::FindOptions webCoreFindOptions;
 
     if (!(options & FindCaseSensitively))
-        webCoreFindOptions.add(WebCore::CaseInsensitive);
+        webCoreFindOptions.add(WebCore::FindOption::CaseInsensitive);
 
     if (options & FindBackward)
-        webCoreFindOptions.add(WebCore::Backwards);
+        webCoreFindOptions.add(WebCore::FindOption::Backwards);
 
     if (options & FindWrapsAroundDocument)
-        webCoreFindOptions.add(WebCore::WrapAround);
+        webCoreFindOptions.add(WebCore::FindOption::WrapAround);
 
     if (options & FindAtWordBeginningsOnly)
-        webCoreFindOptions.add(WebCore::AtWordStarts);
+        webCoreFindOptions.add(WebCore::FindOption::AtWordStarts);
 
     if (options & TreatMedialCapitalAsWordBeginning)
-        webCoreFindOptions.add(WebCore::TreatMedialCapitalAsWordStart);
+        webCoreFindOptions.add(WebCore::FindOption::TreatMedialCapitalAsWordStart);
 
     if (options & FindBeginsInSelection)
-        webCoreFindOptions.add(WebCore::StartInSelection);
+        webCoreFindOptions.add(WebCore::FindOption::StartInSelection);
 
     if (options & FindAtWordEndingsOnly)
-        webCoreFindOptions.add(WebCore::AtWordEnds);
+        webCoreFindOptions.add(WebCore::FindOption::AtWordEnds);
 
     if (options & HighlightAllOccurrences) {
         if (subString.isEmpty()) {

@@ -184,7 +184,7 @@ public:
 
     void savePlatformDataToCachedFrame(WebCore::CachedFrame*) override;
     void transitionToCommittedFromCachedFrame(WebCore::CachedFrame*) override;
-    void transitionToCommittedForNewPage() override;
+    void transitionToCommittedForNewPage(InitializingIframe) override;
 
     void didRestoreFromBackForwardCache() override;
 

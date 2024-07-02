@@ -39,7 +39,7 @@ public:
     PopupMenuQt(PopupMenuClient*, const ChromeClientQt*);
     ~PopupMenuQt();
 
-    void show(const IntRect&, LocalFrameView*, int index) final;
+    void show(const IntRect&, LocalFrameView&, int index) final;
     void hide() final;
     void updateFromElement() final;
     void disconnectClient() final;

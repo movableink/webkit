@@ -247,7 +247,7 @@ void FrameLoaderClientQt::transitionToCommittedFromCachedFrame(CachedFrame*)
 {
 }
 
-void FrameLoaderClientQt::transitionToCommittedForNewPage()
+void FrameLoaderClientQt::transitionToCommittedForNewPage(InitializingIframe)
 {
     ASSERT(m_frame);
     ASSERT(m_webFrame);
