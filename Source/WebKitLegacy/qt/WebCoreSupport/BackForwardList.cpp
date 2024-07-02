@@ -53,12 +53,12 @@ BackForwardList::~BackForwardList()
     ASSERT(m_closed);
 }
 
-void BackForwardList::addItem(Ref<HistoryItem>&& newItem)
+void BackForwardList::addItem(FrameIdentifier, Ref<HistoryItem>&& newItem)
 {
     if (!m_capacity || !m_enabled)
         return;
-    
-    // Toss anything in the forward list    
+
+    // Toss anything in the forward list
     if (m_current != NoCurrentItemIndex) {
         unsigned targetSize = m_current + 1;
         while (m_entries.size() > targetSize) {
