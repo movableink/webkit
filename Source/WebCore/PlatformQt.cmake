@@ -507,6 +507,6 @@ elseif (WIN32)
     )
 else ()
     list(APPEND WebCore_SOURCES
-        platform/SharedMemoryUnix.cpp
+        platform/unix/SharedMemoryUnix.cpp
     )
 endif ()
