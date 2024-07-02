@@ -24,7 +24,7 @@
  */
 
 #include "config.h"
-#include "SerializedCryptoKeyWrap.h"
+#include "WrappedCryptoKey.h"
 #include "NotImplemented.h"
 
 namespace WebCore {
@@ -51,13 +51,19 @@ bool wrapSerializedCryptoKey(const Vector<uint8_t>& masterKey, const Vector<uint
     return true;
 }
 
-bool unwrapSerializedCryptoKey(const Vector<uint8_t>& masterKey, const Vector<uint8_t>& wrappedKey, Vector<uint8_t>& key)
+std::optional<struct WrappedCryptoKey> readSerializedCryptoKey(const Vector<uint8_t>& wrappedKey)
+{
+    std::array<uint8_t, 24> a { 0 };
+    std::array<uint8_t, 16> b { 0 };
+    struct WrappedCryptoKey k { a, wrappedKey, b };
+    return k;
+}
+
+std::optional<Vector<uint8_t>> unwrapCryptoKey(const Vector<uint8_t>& masterKey, const struct WrappedCryptoKey& wrappedKey)
 {
     UNUSED_PARAM(masterKey);
 
-    // No unwrapping performed -- the serialized key data is copied into the `key` variable.
-    key = Vector<uint8_t>(wrappedKey);
-    return true;
+    return wrappedKey.encryptedKey;
 }
 
 }

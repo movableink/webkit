@@ -89,7 +89,7 @@ Vector<uint8_t> CryptoDigest::computeHash()
     return Vector<uint8_t>(std::span { reinterpret_cast<const uint8_t*>(digest.constData()), static_cast<size_t>(digest.size()) });
 }
 
-std::optional<Vector<uint8_t>> CryptoDigest::computeHash(Algorithm algorithm, const Vector<uint8_t>& input, bool)
+std::optional<Vector<uint8_t>> CryptoDigest::computeHash(Algorithm algorithm, const Vector<uint8_t>& input, UseCryptoKit)
 {
     QCryptographicHash hash(toQtAlgorithm(algorithm));
     hash.addData(input);

@@ -1,5 +1,6 @@
 #include "CryptoClientQt.h"
-#include "WebCore/SerializedCryptoKeyWrap.h"
+#include <WebCore/WrappedCryptoKey.h>
+#include <WebCore/SerializedCryptoKeyWrap.h>
 
 std::optional<Vector<uint8_t>> CryptoClientQt::wrapCryptoKey(const Vector<uint8_t>& key) const
 {
@@ -11,11 +12,11 @@ std::optional<Vector<uint8_t>> CryptoClientQt::wrapCryptoKey(const Vector<uint8_
     return wrappedKey;
 }
 
-std::optional<Vector<uint8_t>> CryptoClientQt::unwrapCryptoKey(const Vector<uint8_t>& wrappedKey) const
+std::optional<Vector<uint8_t>> CryptoClientQt::unwrapCryptoKey(const Vector<uint8_t>& serializedKey) const
 {
-    // This is no-op so we don't need master key
-    Vector<uint8_t> key;
-    if (!WebCore::unwrapSerializedCryptoKey({ }, wrappedKey, key))
+    auto wrappedKey = WebCore::readSerializedCryptoKey(serializedKey);
+    if (!wrappedKey)
         return std::nullopt;
-    return key;
+
+    return WebCore::unwrapCryptoKey({ }, *wrappedKey);
 }
