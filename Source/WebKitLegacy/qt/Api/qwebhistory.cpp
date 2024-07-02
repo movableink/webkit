@@ -292,8 +292,11 @@ void QWebHistory::clear()
     lst->setCapacity(capacity);   //revert capacity
 
     if (current) {
-        lst->addItem(*current); // insert old current item
-        lst->goToItem(*current); // and set it as current again
+        auto page = lst->page().page;
+        if (page) {
+            lst->addItem(page->mainFrame().frameID(), *current); // insert old current item
+            lst->goToItem(*current); // and set it as current again
+        }
     }
 
     d->page()->updateNavigationActions();
@@ -525,8 +528,14 @@ void QWebHistory::loadFromMap(const QVariantMap& map)
         auto item = WebCore::HistoryItem::create(LegacyHistoryItemClient::singleton());
         if (!WebCore::decodeBackForwardTree(decoder, item))
             return false;
-        lst->addItem(WTFMove(item));
-        return true;
+
+        auto page = lst->page().page;
+        if (page) {
+            lst->addItem(page->mainFrame().frameID(), WTFMove(item));
+            return true;
+        } else {
+            return false;
+        }
     });
 
     if (result && !d->lst->entries().isEmpty()) {
@@ -595,7 +604,7 @@ void QWebHistoryPrivate::goToItem(RefPtr<WebCore::HistoryItem>&& item)
         return;
 
     auto page = lst->page().page;
-    page->goToItem(*item, WebCore::FrameLoadType::IndexedBackForward, WebCore::ShouldTreatAsContinuingLoad::No);
+    page->goToItem(page->mainFrame(), *item, WebCore::FrameLoadType::IndexedBackForward, WebCore::ShouldTreatAsContinuingLoad::No);
 }
 
 QWebPageAdapter* QWebHistoryPrivate::page()
