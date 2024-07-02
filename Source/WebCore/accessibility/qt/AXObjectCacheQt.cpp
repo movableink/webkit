@@ -35,17 +35,17 @@
 
 namespace WebCore {
 
-void AXObjectCache::attachWrapper(AccessibilityObject* obj)
+void AXObjectCache::attachWrapper(AccessibilityObject& object)
 {
     auto wrapper = adoptRef(*new AccessibilityObjectWrapper());
-    obj->setWrapper(wrapper.ptr());
+    object.setWrapper(wrapper.ptr());
 }
 
 void AXObjectCache::detachWrapper(AXCoreObject*, AccessibilityDetachmentType)
 {
 }
 
-void AXObjectCache::postPlatformNotification(AXCoreObject*, AXNotification)
+void AXObjectCache::postPlatformNotification(AccessibilityObject&, AXNotification)
 {
     notImplemented();
 }
@@ -64,7 +64,9 @@ void AXObjectCache::handleScrolledToAnchor(const Node* scrolledToNode)
 {
     if (!scrolledToNode)
         return;
-    postPlatformNotification(AccessibilityObject::firstAccessibleObjectFromNode(scrolledToNode), AXScrolledToAnchor);
+
+    if (RefPtr object = AccessibilityObject::firstAccessibleObjectFromNode(scrolledToNode))
+        postPlatformNotification(*object, AXScrolledToAnchor);
 }
 
 void AXObjectCache::platformHandleFocusedUIElementChanged(Node*, Node* newFocusedNode)
@@ -76,11 +78,8 @@ void AXObjectCache::platformHandleFocusedUIElementChanged(Node*, Node* newFocuse
     if (!page || !page->chrome().platformPageClient())
         return;
 
-    AXCoreObject* focusedObject = focusedObjectForPage(page);
-    if (!focusedObject)
-        return;
-
-    postPlatformNotification(focusedObject, AXFocusedUIElementChanged);
+    if (RefPtr focusedObject = focusedObjectForPage(page))
+        postPlatformNotification(*focusedObject, AXFocusedUIElementChanged);
 }
 
 void AXObjectCache::platformPerformDeferredCacheUpdate()
