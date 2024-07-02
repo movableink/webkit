@@ -483,7 +483,7 @@ endif ()
 if (USE_MACH_PORTS)
     list(APPEND WebCore_SOURCES
         platform/cf/SharedBufferCF.cpp
-        platform/cocoa/SharedMemoryCocoa.cpp
+        platform/qt/SharedMemoryMac.cpp
     )
 
     if (HAVE_FONTCONFIG)
