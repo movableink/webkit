@@ -138,6 +138,11 @@ String DragData::asURL(FilenameConversionPolicy filenamePolicy, String*) const
     return std::span { encodedUrl.constData(), static_cast<size_t>(encodedUrl.length()) };
 }
 
+bool DragData::shouldMatchStyleOnDrop() const
+{
+    return false;
+}
+
 /*
 RefPtr<DocumentFragment> DragData::asFragment(Ref<Range>&&, bool, bool&) const
 {
