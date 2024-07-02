@@ -313,7 +313,6 @@ void GraphicsLayerTextureMapper::setContentsToImage(Image* image)
         // This code makes the assumption that pointer equality on a PlatformImagePtr is a valid way to tell if the image is changed.
         // This assumption is true for the GTK+ port.
         auto newNativeImage = image->currentNativeImage();
-
         if (!newNativeImage)
             return;
 
@@ -327,6 +326,7 @@ void GraphicsLayerTextureMapper::setContentsToImage(Image* image)
         m_compositedImage->updateContentsScale(pageScaleFactor() * deviceScaleFactor());
     } else {
         m_compositedNativeImage = nullptr;
+        m_compositedImage = nullptr;
     }
 
     setContentsToPlatformLayer(m_compositedImage.get(), ContentsLayerPurpose::Image);
@@ -425,11 +425,10 @@ void GraphicsLayerTextureMapper::commitLayerChanges()
         return;
 
     if (m_changeMask & ChildrenChange) {
-        Vector<TextureMapperLayer*> rawChildren;
-        rawChildren.reserveInitialCapacity(children().size());
-        for (auto& child : children())
-            rawChildren.append(&downcast<GraphicsLayerTextureMapper>(child.get()).layer());
-        m_layer.setChildren(rawChildren);
+        auto rawChildren = WTF::map(children(), [](auto& child) -> TextureMapperLayer* {
+            return &downcast<GraphicsLayerTextureMapper>(child.get()).layer();
+        });
+        m_layer.setChildren(WTFMove(rawChildren));
     }
 
     if (m_changeMask & MaskLayerChange) {
@@ -514,11 +513,16 @@ void GraphicsLayerTextureMapper::commitLayerChanges()
     if (m_changeMask & BackingStoreChange)
         m_layer.setBackingStore(m_backingStore.get());
 
-    if (m_changeMask & DebugVisualsChange)
-        m_layer.setDebugVisuals(isShowingDebugBorder(), debugBorderColor(), debugBorderWidth());
+    if (m_changeMask & DebugVisualsChange) {
+        m_layer.setShowDebugBorder(isShowingDebugBorder());
+        m_layer.setDebugBorderColor(debugBorderColor());
+        m_layer.setDebugBorderWidth(debugBorderWidth());
+    }
 
-    if (m_changeMask & RepaintCountChange)
-        m_layer.setRepaintCounter(isShowingRepaintCounter(), repaintCount());
+    if (m_changeMask & RepaintCountChange) {
+        m_layer.setShowRepaintCounter(isShowingRepaintCounter());
+        m_layer.setRepaintCount(repaintCount());
+    }
 
     if (m_changeMask & ContentChange)
         m_layer.setContentsLayer(platformLayer());
@@ -595,12 +599,7 @@ bool GraphicsLayerTextureMapper::filtersCanBeComposited(const FilterOperations& 
     if (!filters.size())
         return false;
 
-    for (const auto& filterOperation : filters.operations()) {
-        if (filterOperation->type() == FilterOperation::Type::Reference)
-            return false;
-    }
-
-    return true;
+    return !filters.hasReferenceFilter();
 }
 
 bool GraphicsLayerTextureMapper::addAnimation(const KeyframeValueList& valueList, const FloatSize& boxSize, const Animation* anim, const String& keyframesName, double timeOffset)

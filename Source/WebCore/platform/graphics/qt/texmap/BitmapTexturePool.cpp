@@ -32,13 +32,13 @@ namespace WebCore {
 static const Seconds releaseUnusedSecondsTolerance { 3_s };
 static const Seconds releaseUnusedTexturesTimerInterval { 500_ms };
 
-RefPtr<BitmapTexture> BitmapTexturePool::acquireTexture(const IntSize& size, const BitmapTexture::Flags flags)
+RefPtr<BitmapTexture> BitmapTexturePool::acquireTexture(const IntSize& size, OptionSet<BitmapTexture::Flags> flags)
 {
     Entry* selectedEntry = std::find_if(m_textures.begin(), m_textures.end(),
         [&](Entry& entry) {
             return entry.m_texture->refCount() == 1
                 && entry.m_texture->size() == size
-                && (entry.m_texture->flags() & BitmapTexture::DepthBuffer) == (flags & BitmapTexture::DepthBuffer);
+                && (entry.m_texture->flags() & BitmapTexture::Flags::DepthBuffer) == (flags & BitmapTexture::Flags::DepthBuffer);
         });
 
     if (selectedEntry == m_textures.end()) {
@@ -75,7 +75,7 @@ void BitmapTexturePool::releaseUnusedTexturesTimerFired()
         scheduleReleaseUnusedTextures();
 }
 
-RefPtr<BitmapTexture> BitmapTexturePool::createTexture(const BitmapTexture::Flags flags)
+RefPtr<BitmapTexture> BitmapTexturePool::createTexture(OptionSet<BitmapTexture::Flags> flags)
 {
     UNUSED_PARAM(flags);
     return nullptr;
