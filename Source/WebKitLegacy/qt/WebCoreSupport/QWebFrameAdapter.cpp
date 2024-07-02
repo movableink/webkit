@@ -152,7 +152,7 @@ void QWebFrameAdapter::load(const QNetworkRequest& req, QNetworkAccessManager::O
     }
 
     if (!body.isEmpty())
-        request.setHTTPBody(WebCore::FormData::create(std::span { body.constData(), static_cast<size_t>(body.size()) }));
+        request.setHTTPBody(WebCore::FormData::create(std::span<const uint8_t> { reinterpret_cast<const uint8_t*>(body.constData()), static_cast<size_t>(body.size()) }));
 
     frame->loader().load(WebCore::FrameLoadRequest(*frame, request));
 
@@ -223,7 +223,7 @@ void QWebFrameAdapter::addToJavaScriptWindowObject(const QString& name, QObject*
     JSC::JSObject* runtimeObject = JSC::Bindings::QtInstance::getQtInstance(object, root, valueOwnership)->createRuntimeObject(lexicalGlobalObject);
 
     JSC::PutPropertySlot slot(window);
-    window->methodTable()->put(window, lexicalGlobalObject, JSC::Identifier::fromString(lexicalGlobalObject->vm(), reinterpret_cast_ptr<const UChar*>(name.constData()), name.length()), runtimeObject, slot);
+    window->methodTable()->put(window, lexicalGlobalObject, JSC::Identifier::fromString(lexicalGlobalObject->vm(), std::span { reinterpret_cast_ptr<const UChar*>(name.constData()), static_cast<size_t>(name.length()) }), runtimeObject, slot);
 }
 
 QString QWebFrameAdapter::toHtml() const

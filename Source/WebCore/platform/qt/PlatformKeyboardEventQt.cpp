@@ -347,7 +347,7 @@ String keyIdentifierForQtKeyCode(int keyCode)
         return "U+007F"_s; // return "Del"_s;
     default:
         if (keyCode < 128)
-            return makeString("U+", hex(toASCIIUpper(keyCode), 4));
+            return makeString("U+"_s, hex(toASCIIUpper(keyCode), 4));
         return String();
     }
 }

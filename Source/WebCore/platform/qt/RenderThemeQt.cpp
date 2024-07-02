@@ -122,8 +122,8 @@ String RenderThemeQt::extraDefaultStyleSheet()
     // When no theme factory is provided we default to using our platform independent "Mobile Qt" theme,
     // which requires the following stylesheets.
     if (!themeFactory) {
-        result.append(String(themeQtNoListboxesUserAgentStyleSheet, sizeof(themeQtNoListboxesUserAgentStyleSheet)));
-        result.append(String(mobileThemeQtUserAgentStyleSheet, sizeof(mobileThemeQtUserAgentStyleSheet)));
+        result.append(String(StringImpl::createWithoutCopying(themeQtNoListboxesUserAgentStyleSheet)));
+        result.append(String(StringImpl::createWithoutCopying(mobileThemeQtUserAgentStyleSheet)));
     }
     return result.toString();
 }

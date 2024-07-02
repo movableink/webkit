@@ -135,7 +135,7 @@ String DragData::asURL(FilenameConversionPolicy filenamePolicy, String*) const
         return String();
 
     QByteArray encodedUrl = urls.first().toEncoded();
-    return String(encodedUrl.constData(), encodedUrl.length());
+    return std::span { encodedUrl.constData(), static_cast<size_t>(encodedUrl.length()) };
 }
 
 /*

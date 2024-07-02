@@ -48,12 +48,14 @@ String homeDirectoryPath()
 
 CString currentExecutablePath()
 {
-    return CString(QCoreApplication::applicationDirPath().toUtf8());
+    QByteArray applicationPath = QCoreApplication::applicationDirPath().toUtf8();
+    return CString(std::span { applicationPath.data(), static_cast<size_t>(applicationPath.size()) });
 }
 
 CString currentExecutableName()
 {
-    return CString(QCoreApplication::applicationName().toUtf8());
+    QByteArray applicationName = QCoreApplication::applicationName().toUtf8();
+    return CString(std::span { applicationName.data(), static_cast<size_t>(applicationName.size()) });
 }
 
 } // namespace FileSystemImpl

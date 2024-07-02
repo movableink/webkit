@@ -36,7 +36,7 @@ namespace WebCore {
 static inline QByteArray asciiStringToByteArrayNoCopy(const String& string)
 {
     ASSERT(string.is8Bit());
-    return QByteArray::fromRawData(reinterpret_cast<const char*>(string.characters8()), string.length());
+    return QByteArray::fromRawData(reinterpret_cast<const char*>(string.span8().data()), string.span8().size());
 }
 
 static QString fromAce(StringView domain)
@@ -54,10 +54,9 @@ bool PublicSuffixStore::platformIsPublicSuffix(StringView domain) const
     return qIsEffectiveTLD(fromAce(domain));
 }
 
-static QString qTopLevelDomain(const QString &domain)
+static QString qTopLevelDomain(QStringView domain)
 {
-    const QString domainLower = domain.toLower();
-    QVector<QString> sections = domainLower.split(QLatin1Char('.'), Qt::SkipEmptyParts);
+    QVector<QStringView> sections = domain.split(QLatin1Char('.'), Qt::SkipEmptyParts);
     if (sections.isEmpty())
         return QString();
 
@@ -70,9 +69,10 @@ static QString qTopLevelDomain(const QString &domain)
     return tld;
 }
 
-String PublicSuffixStore::platformTopPrivatelyControlledDomain(const String& domain) const
+String PublicSuffixStore::platformTopPrivatelyControlledDomain(StringView domain) const
 {
-    QString qDomain = domain;
+    QString qDomain = QString::fromUtf8(reinterpret_cast<const char*>(domain.span8().data()), domain.span8().size());
+
     if (qIsEffectiveTLD(qDomain))
         return String();
 

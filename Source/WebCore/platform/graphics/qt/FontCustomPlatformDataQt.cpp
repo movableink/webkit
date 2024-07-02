@@ -39,7 +39,7 @@ FontPlatformData FontCustomPlatformData::fontPlatformData(const FontDescription&
 
 RefPtr<FontCustomPlatformData> FontCustomPlatformData::create(SharedBuffer& buffer, const String& itemInCollection)
 {
-    const QByteArray fontData(reinterpret_cast<const char*>(buffer.data()), buffer.size());
+    const QByteArray fontData(reinterpret_cast<const char*>(buffer.span().data()), buffer.span().size());
 
     // Pixel size doesn't matter at this point, it is set in FontCustomPlatformData::fontPlatformData.
     QRawFont rawFont(fontData, /*pixelSize = */0, QFont::PreferVerticalHinting);

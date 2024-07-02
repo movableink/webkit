@@ -855,7 +855,7 @@ void FrameLoaderClientQt::convertMainResourceLoadToDownload(DocumentLoader* docu
 
     QNetworkReplyHandler* handler = documentLoader->mainResourceLoader()->handle()->getInternal()->m_job;
     if (!handler) {
-        qWarning("Attempted to download unsupported URL %s", request.url().string().characters8());
+        qWarning("Attempted to download unsupported URL %s", request.url().string().span8().data());
         return;
     }
 

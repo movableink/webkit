@@ -357,7 +357,7 @@ void Pasteboard::writeString(const String& type, const String& data)
         m_writableData->setHtml(QString(data));
     else {
         // FIXME: we may want to transfer String in UTF8
-        QByteArray array(reinterpret_cast<const char*>(data.characters16()), data.length() * 2);
+        QByteArray array(reinterpret_cast<const char*>(data.span16().data()), data.span16().size());
         m_writableData->setData(QString(mimeType), array);
     }
 }

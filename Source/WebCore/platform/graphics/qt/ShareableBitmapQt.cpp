@@ -43,7 +43,7 @@ std::optional<DestinationColorSpace> ShareableBitmapConfiguration::validateColor
 QImage ShareableBitmap::createQImage()
 {
     ref(); // Balanced by deref in releaseSharedMemoryData
-    return QImage(reinterpret_cast<uchar*>(data()), size().width(), size().height(), size().width() * 4,
+    return QImage(reinterpret_cast<const uchar*>(span().data()), size().width(), size().height(), size().width() * 4,
                   NativeImageQt::defaultFormatForOpaqueImages(),//FIXME
                   releaseSharedMemoryData, this);
 }

@@ -961,7 +961,7 @@ String snapshottedPlugInLabelSubtitle()
 
 String localizedString(const char* key)
 {
-    return String::fromUTF8(key, strlen(key));
+    return String::fromUTF8(key);
 }
 
 #if ENABLE(INPUT_TYPE_WEEK)

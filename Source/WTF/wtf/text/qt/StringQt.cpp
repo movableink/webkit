@@ -40,31 +40,15 @@ String::String(const QString& qstr)
     m_impl = StringImpl::create({ reinterpret_cast_ptr<const UChar*>(qstr.constData()), static_cast<std::size_t>(qstr.length()) });
 }
 
-String::String(QLatin1StringView view)
-{
-    if (view.isNull())
-        return;
-    m_impl = StringImpl::create({ reinterpret_cast_ptr<const LChar*>(view.data()), static_cast<std::size_t>(view.length()) });
-}
-
-String::String(QStringView view)
-{
-    if (view.isNull())
-        return;
-    m_impl = StringImpl::create({ reinterpret_cast_ptr<const UChar*>(view.data()), static_cast<std::size_t>(view.length()) });
-}
-
 String::operator QString() const
 {
     if (!m_impl)
         return QString();
 
     if (is8Bit())
-        return QString::fromLatin1(reinterpret_cast<const char*>(characters8()), length());
+        return QString::fromLatin1(reinterpret_cast<const char*>(span8().data()), span8().size());
 
-    return QString(reinterpret_cast<const QChar*>(characters16()), length());
+    return QString(reinterpret_cast<const QChar*>(span16().data()), span16().size());
 }
 
 }
-
-// vim: ts=4 sw=4 et

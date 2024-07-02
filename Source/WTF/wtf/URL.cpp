@@ -316,7 +316,7 @@ String URL::fileSystemPath() const
 
     // A valid qrc resource path begins with a colon.
     if (protocolIs("qrc"_s))
-        return ":" + decodeEscapeSequencesFromParsedURL(StringView(path()));
+        return ":"_s + decodeEscapeSequencesFromParsedURL(path());
 
     return String();
 }
