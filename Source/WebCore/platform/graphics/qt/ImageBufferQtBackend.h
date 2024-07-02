@@ -56,6 +56,8 @@ public:
     GraphicsContext& context() override;
     String debugDescription() const override;
 
+    bool canMapBackingStore() const final { return true; }
+
     void getPixelBuffer(const IntRect& srcRect, PixelBuffer& destination) override;
     void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) override;
 
