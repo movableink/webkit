@@ -81,6 +81,9 @@ if (USE_UNIX_DOMAIN_SOCKETS)
 
         unix/UniStdExtrasUnix.cpp
     )
+    list(APPEND WTF_PUBLIC_HEADERS
+       unix/UnixFileDescriptor.h
+    )
     QTWEBKIT_GENERATE_MOC_FILES_CPP(WTF qt/WorkQueueQt.cpp)
 endif ()
 
