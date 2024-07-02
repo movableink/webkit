@@ -48,6 +48,8 @@
 #include <WebCore/GCController.h>
 #include <WebCore/HTMLInputElement.h>
 #include <WebCore/InspectorController.h>
+#include <WebCore/JSDOMWindowBase.h>
+#include <WebCore/JSDOMWindow.h>
 #include <WebCore/JSNode.h>
 #include <WebCore/LegacySchemeRegistry.h>
 #include <WebCore/MemoryCache.h>
@@ -740,7 +742,7 @@ void DumpRenderTreeSupportQt::confirmComposition(QWebPageAdapter *adapter, const
 void DumpRenderTreeSupportQt::injectInternalsObject(QWebFrameAdapter* adapter)
 {
     WebCore::LocalFrame* coreFrame = adapter->frame;
-    JSLocalDOMWindow* window = toJSLocalDOMWindow(coreFrame, mainThreadNormalWorld());
+    JSDOMWindow* window = toJSDOMWindow(coreFrame, mainThreadNormalWorld());
     Q_ASSERT(window);
 
     JSC::JSGlobalObject* lexicalGlobalObject = window->globalObject();
@@ -759,7 +761,7 @@ void DumpRenderTreeSupportQt::injectInternalsObject(JSContextRef context)
 void DumpRenderTreeSupportQt::resetInternalsObject(QWebFrameAdapter* adapter)
 {
     WebCore::LocalFrame* coreFrame = adapter->frame;
-    JSLocalDOMWindow* window = toJSLocalDOMWindow(coreFrame, mainThreadNormalWorld());
+    JSDOMWindow* window = toJSDOMWindow(coreFrame, mainThreadNormalWorld());
     Q_ASSERT(window);
 
     JSC::JSGlobalObject* lexicalGlobalObject = window->globalObject();
@@ -864,7 +866,7 @@ void DumpRenderTreeSupportQt::resetPageVisibility(QWebPageAdapter* adapter)
 
 void DumpRenderTreeSupportQt::getJSWindowObject(QWebFrameAdapter* adapter, JSContextRef* context, JSObjectRef* object)
 {
-    JSLocalDOMWindow* window = toJSLocalDOMWindow(adapter->frame, mainThreadNormalWorld());
+    JSDOMWindow* window = toJSDOMWindow(adapter->frame, mainThreadNormalWorld());
 
     // TODO: fix this
     //*object = toRef(window);
