@@ -73,7 +73,7 @@ public:
     void didEndEditing() override;
     void willWriteSelectionToPasteboard(const std::optional<SimpleRange>&) override;
     void didWriteSelectionToPasteboard() override;
-    void getClientPasteboardData(const std::optional<SimpleRange>&, Vector<String>& pasteboardTypes, Vector<RefPtr<WebCore::SharedBuffer> >& pasteboardData) override;
+    void getClientPasteboardData(const std::optional<SimpleRange>&, Vector<std::pair<String, RefPtr<WebCore::SharedBuffer>>>& pasteboardTypesAndData) override;
 
     void registerUndoStep(UndoStep&) override;
     void registerRedoStep(UndoStep&) override;
@@ -114,7 +114,7 @@ public:
 
     void didEndUserTriggeredSelectionChanges() final;
     void updateEditorStateAfterLayoutIfEditabilityChanged() final;
-    DOMPasteAccessResponse requestDOMPasteAccess(DOMPasteAccessCategory, const WTF::String& originIdentifier) final;
+    DOMPasteAccessResponse requestDOMPasteAccess(DOMPasteAccessCategory, FrameIdentifier, const WTF::String& originIdentifier) final;
     void canceledComposition() final;
     void didUpdateComposition() final;
     bool performTwoStepDrop(DocumentFragment&, const SimpleRange& destination, bool isMove) final;

@@ -222,7 +222,7 @@ void EditorClientQt::willWriteSelectionToPasteboard(const std::optional<SimpleRa
 {
 }
 
-void EditorClientQt::getClientPasteboardData(const std::optional<SimpleRange>&, Vector<String>&, Vector<RefPtr<SharedBuffer> >&)
+void EditorClientQt::getClientPasteboardData(const std::optional<SimpleRange>&, Vector<std::pair<String, RefPtr<WebCore::SharedBuffer>>>&)
 {
 }
 
@@ -657,7 +657,7 @@ void EditorClientQt::updateEditorStateAfterLayoutIfEditabilityChanged()
 {
 }
 
-DOMPasteAccessResponse EditorClientQt::requestDOMPasteAccess(DOMPasteAccessCategory, const WTF::String& originIdentifier)
+DOMPasteAccessResponse EditorClientQt::requestDOMPasteAccess(DOMPasteAccessCategory, FrameIdentifier, const WTF::String& originIdentifier)
 {
     return WebCore::DOMPasteAccessResponse::DeniedForGesture;
 }
