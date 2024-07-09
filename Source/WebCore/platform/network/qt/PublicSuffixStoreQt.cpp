@@ -71,7 +71,11 @@ static QString qTopLevelDomain(QStringView domain)
 
 String PublicSuffixStore::platformTopPrivatelyControlledDomain(StringView domain) const
 {
-    QString qDomain = QString::fromUtf8(reinterpret_cast<const char*>(domain.span8().data()), domain.span8().size());
+    QString qDomain;
+    if (domain.is8Bit())
+        qDomain = QString::fromUtf8(reinterpret_cast<const char*>(domain.span8().data()), domain.span8().size());
+    else
+        qDomain = QString(reinterpret_cast<const QChar*>(domain.span16().data()), static_cast<qsizetype>(domain.span16().size()));
 
     if (qIsEffectiveTLD(qDomain))
         return String();
