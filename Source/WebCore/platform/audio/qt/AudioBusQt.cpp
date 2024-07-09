@@ -32,7 +32,7 @@ RefPtr<AudioBus> AudioBus::loadPlatformResource(const char* name, float sampleRa
     QString path = QStringLiteral(":/webkit/resources/audio/");
     path.append(QLatin1String(name));
     QResource resource(path);
-    return createBusFromInMemoryAudioFile(resource.data(), resource.size(), /* mixToMono */ false, sampleRate);
+    return createBusFromInMemoryAudioFile(std::span { resource.data(), static_cast<size_t>(resource.size()) }, /* mixToMono */ false, sampleRate);
 }
 
 } // namespace WebCore
