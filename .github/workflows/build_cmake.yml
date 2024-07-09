@@ -10,7 +10,7 @@ on:
       - master
 
 env:
-  QT_VERSION: 6.6.1
+  QT_VERSION: 6.7.0
   CCACHE_VERSION: 3.7.7
   CACHE_PARTITION: dev
   HOST_N_CORES: 2
