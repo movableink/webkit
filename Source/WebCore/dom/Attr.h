@@ -45,7 +45,7 @@ public:
     Element* ownerElement() const { return m_element.get(); }
 
     WEBCORE_EXPORT AtomString value() const;
-    WEBCORE_EXPORT void setValue(const AtomString&);
+    WEBCORE_EXPORT ExceptionOr<void> setValue(const AtomString&);
 
     const QualifiedName& qualifiedName() const { return m_name; }
 
@@ -63,10 +63,9 @@ private:
     Attr(Document&, const QualifiedName&, const AtomString& value);
 
     String nodeName() const final { return name(); }
-    NodeType nodeType() const final { return ATTRIBUTE_NODE; }
 
     String nodeValue() const final { return value(); }
-    void setNodeValue(const String&) final;
+    ExceptionOr<void> setNodeValue(const String&) final;
 
     ExceptionOr<void> setPrefix(const AtomString&) final;
 

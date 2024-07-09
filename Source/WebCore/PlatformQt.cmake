@@ -97,6 +97,7 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
 
 list(APPEND WebCore_SOURCES
     accessibility/qt/AccessibilityObjectQt.cpp
+    accessibility/qt/AXObjectCacheQt.cpp
 
     bindings/js/ScriptControllerQt.cpp
 
@@ -145,7 +146,7 @@ list(APPEND WebCore_SOURCES
     platform/graphics/qt/GradientQt.cpp
     platform/graphics/qt/GraphicsContextQt.cpp
     platform/graphics/qt/IconQt.cpp
-    platform/graphics/qt/ImageQt.cpp
+    platform/graphics/qt/ImageAdapterQt.cpp
     platform/graphics/qt/ImageBufferQtBackend.cpp
     platform/graphics/qt/ImageBufferUtilitiesQt.cpp
     platform/graphics/qt/IntPointQt.cpp
@@ -154,6 +155,7 @@ list(APPEND WebCore_SOURCES
     platform/graphics/qt/NativeImageQt.cpp
     platform/graphics/qt/PathQt.cpp
     platform/graphics/qt/PatternQt.cpp
+    platform/graphics/qt/ShareableBitmapQt.cpp
     platform/graphics/qt/StillImageQt.cpp
     platform/graphics/qt/SystemFontDatabaseQt.cpp
     platform/graphics/qt/TileQt.cpp
@@ -168,7 +170,7 @@ list(APPEND WebCore_SOURCES
     platform/network/qt/DNSResolveQueueQt.cpp
     platform/network/qt/NetworkStateNotifierQt.cpp
     platform/network/qt/NetworkStorageSessionQt.cpp
-    platform/network/qt/PublicSuffixQt.cpp
+    platform/network/qt/PublicSuffixStoreQt.cpp
     platform/network/qt/QNetworkReplyHandler.cpp
     platform/network/qt/QtMIMETypeSniffer.cpp
     platform/network/qt/ResourceHandleQt.cpp
@@ -436,26 +438,26 @@ if (USE_COMMONCRYPTO)
     list(APPEND WebCore_SOURCES
         crypto/CommonCryptoUtilities.cpp
 
-        crypto/mac/CommonCryptoDERUtilities.cpp
-        crypto/mac/CryptoAlgorithmAES_CBCMac.cpp
-        crypto/mac/CryptoAlgorithmAES_CFBMac.cpp
-        crypto/mac/CryptoAlgorithmAES_CTRMac.cpp
-        crypto/mac/CryptoAlgorithmAES_GCMMac.cpp
-        crypto/mac/CryptoAlgorithmAES_KWMac.cpp
-        crypto/mac/CryptoAlgorithmECDHMac.cpp
-        crypto/mac/CryptoAlgorithmECDSAMac.cpp
-        crypto/mac/CryptoAlgorithmHKDFMac.cpp
-        crypto/mac/CryptoAlgorithmHMACMac.cpp
-        crypto/mac/CryptoAlgorithmPBKDF2Mac.cpp
-        crypto/mac/CryptoAlgorithmRSAES_PKCS1_v1_5Mac.cpp
-        crypto/mac/CryptoAlgorithmRSASSA_PKCS1_v1_5Mac.cpp
-        crypto/mac/CryptoAlgorithmRSA_OAEPMac.cpp
-        crypto/mac/CryptoAlgorithmRSA_PSSMac.cpp
-        crypto/mac/CryptoAlgorithmRegistryMac.cpp
-        crypto/mac/CryptoKeyECMac.cpp
-        crypto/mac/CryptoKeyMac.cpp
-        crypto/mac/CryptoKeyRSAMac.cpp
-        crypto/mac/CryptoUtilitiesCocoa.cpp
+        crypto/cocoa/CommonCryptoDERUtilities.cpp
+        crypto/cocoa/CryptoAlgorithmAESCBCMac.cpp
+        crypto/cocoa/CryptoAlgorithmAESCFBMac.cpp
+        crypto/cocoa/CryptoAlgorithmAESCTRMac.cpp
+        crypto/cocoa/CryptoAlgorithmAESGCMMac.cpp
+        crypto/cocoa/CryptoAlgorithmAESKWMac.cpp
+        crypto/cocoa/CryptoAlgorithmECDHMac.cpp
+        crypto/cocoa/CryptoAlgorithmECDSAMac.cpp
+        crypto/cocoa/CryptoAlgorithmHKDFMac.cpp
+        crypto/cocoa/CryptoAlgorithmHMACMac.cpp
+        crypto/cocoa/CryptoAlgorithmPBKDF2Mac.cpp
+        crypto/cocoa/CryptoAlgorithmRSAES_PKCS1_v1_5Mac.cpp
+        crypto/cocoa/CryptoAlgorithmRSASSA_PKCS1_v1_5Mac.cpp
+        crypto/cocoa/CryptoAlgorithmRSA_OAEPMac.cpp
+        crypto/cocoa/CryptoAlgorithmRSA_PSSMac.cpp
+        crypto/cocoa/CryptoAlgorithmRegistryMac.cpp
+        crypto/cocoa/CryptoKeyECMac.cpp
+        crypto/cocoa/CryptoKeyMac.cpp
+        crypto/cocoa/CryptoKeyRSAMac.cpp
+        crypto/cocoa/CryptoUtilitiesCocoa.cpp
 
         crypto/qt/SerializedCryptoKeyWrapNone.cpp
     )
@@ -476,7 +478,20 @@ endif ()
 
 # From PlatformWin.cmake
 
-if (WIN32)
+
+
+if (USE_MACH_PORTS)
+    list(APPEND WebCore_SOURCES
+        platform/cf/SharedBufferCF.cpp
+        platform/qt/SharedMemoryMac.cpp
+    )
+
+    if (HAVE_FONTCONFIG)
+        list(APPEND WebCoreTestSupport_INCLUDE_DIRECTORIES
+            ${FONTCONFIG_INCLUDE_DIR}
+        )
+    endif ()
+elseif (WIN32)
     # Eliminate C2139 errors
     if (MSVC)
         add_compile_options(/D_ENABLE_EXTENDED_ALIGNED_STORAGE)
@@ -487,18 +502,11 @@ if (WIN32)
     endif ()
 
     list(APPEND WebCore_SOURCES
+        platform/win/SharedMemoryWin.cpp
         platform/win/SystemInfo.cpp
     )
-endif ()
-
-if (APPLE)
+else ()
     list(APPEND WebCore_SOURCES
-        platform/cf/SharedBufferCF.cpp
+        platform/unix/SharedMemoryUnix.cpp
     )
-
-    if (HAVE_FONTCONFIG)
-        list(APPEND WebCoreTestSupport_INCLUDE_DIRECTORIES
-            ${FONTCONFIG_INCLUDE_DIR}
-        )
-    endif ()
 endif ()

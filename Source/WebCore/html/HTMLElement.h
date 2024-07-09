@@ -84,6 +84,9 @@ public:
     WEBCORE_EXPORT bool spellcheck() const;
     WEBCORE_EXPORT void setSpellcheck(bool);
 
+    WEBCORE_EXPORT bool writingsuggestions() const;
+    WEBCORE_EXPORT void setWritingsuggestions(bool);
+
     WEBCORE_EXPORT bool translate() const;
     WEBCORE_EXPORT void setTranslate(bool);
 
@@ -92,8 +95,6 @@ public:
     bool accessKeyAction(bool sendMouseEvents) override;
 
     String accessKeyLabel() const;
-
-    bool rendererIsEverNeeded() final;
 
     WEBCORE_EXPORT const AtomString& dir() const;
     WEBCORE_EXPORT void setDir(const AtomString&);
@@ -159,14 +160,15 @@ public:
     void setPopover(const AtomString& value) { setAttributeWithoutSynchronization(HTMLNames::popoverAttr, value); };
     void popoverAttributeChanged(const AtomString& value);
 
-    virtual void handleInvokeInternal(const AtomString&) { }
+    bool isValidInvokeAction(const InvokeAction) override;
+    bool handleInvokeInternal(const HTMLFormControlElement& invoker, const InvokeAction&) override;
 
 #if PLATFORM(IOS_FAMILY)
     static SelectionRenderingBehavior selectionRenderingBehavior(const Node*);
 #endif
 
 protected:
-    HTMLElement(const QualifiedName& tagName, Document&, ConstructionType);
+    HTMLElement(const QualifiedName& tagName, Document&, OptionSet<TypeFlag>);
 
     enum class AllowZeroValue : bool { No, Yes };
     void addHTMLLengthToStyle(MutableStyleProperties&, CSSPropertyID, StringView value, AllowZeroValue = AllowZeroValue::Yes);
@@ -223,8 +225,8 @@ private:
     void addHTMLLengthToStyle(MutableStyleProperties&, CSSPropertyID, StringView value, AllowPercentage, UseCSSPXAsUnitType, IsMultiLength, AllowZeroValue = AllowZeroValue::Yes);
 };
 
-inline HTMLElement::HTMLElement(const QualifiedName& tagName, Document& document, ConstructionType type = CreateHTMLElement)
-    : StyledElement(tagName, document, type)
+inline HTMLElement::HTMLElement(const QualifiedName& tagName, Document& document, OptionSet<TypeFlag> type = { })
+    : StyledElement(tagName, document, type | TypeFlag::IsHTMLElement)
 {
     ASSERT(tagName.localName().impl());
 }

@@ -59,21 +59,21 @@ void HandlePlatformError(PlatformMethods *platform, const char *errorMessage)
 constexpr char kCTSRootPath[] = "third_party/VK-GL-CTS/src/";
 constexpr char kSupportPath[] = "src/tests/deqp_support/";
 
-#define GLES_CTS_DIR(PATH) "external/openglcts/data/mustpass/gles/" PATH
-#define GL_CTS_DIR(PATH) "external/openglcts/data/mustpass/gl/" PATH
-#define EGL_CTS_DIR(PATH) "external/openglcts/data/mustpass/egl/" PATH
+#define GLES_CTS_DIR(PATH) "external/openglcts/data/gl_cts/data/mustpass/gles/" PATH
+#define GL_CTS_DIR(PATH) "external/openglcts/data/gl_cts/data/mustpass/gl/" PATH
+#define EGL_CTS_DIR(PATH) "external/openglcts/data/gl_cts/data/mustpass/egl/" PATH
 
 const char *gCaseListFiles[] = {
-    EGL_CTS_DIR("aosp_mustpass/main/egl-master.txt"),
-    GLES_CTS_DIR("aosp_mustpass/main/gles2-master.txt"),
-    GLES_CTS_DIR("aosp_mustpass/main/gles3-master.txt"),
-    GLES_CTS_DIR("aosp_mustpass/main/gles31-master.txt"),
-    GLES_CTS_DIR("khronos_mustpass/main/gles2-khr-master.txt"),
-    GLES_CTS_DIR("khronos_mustpass/main/gles3-khr-master.txt"),
-    GLES_CTS_DIR("khronos_mustpass/main/gles31-khr-master.txt"),
-    GLES_CTS_DIR("khronos_mustpass/main/gles32-khr-master.txt"),
-    GLES_CTS_DIR("khronos_mustpass_noctx/main/gles2-khr-noctx-master.txt"),
-    GLES_CTS_DIR("khronos_mustpass_noctx/main/gles32-khr-noctx-master.txt"),
+    EGL_CTS_DIR("aosp_mustpass/main/egl-main.txt"),
+    GLES_CTS_DIR("aosp_mustpass/main/gles2-main.txt"),
+    GLES_CTS_DIR("aosp_mustpass/main/gles3-main.txt"),
+    GLES_CTS_DIR("aosp_mustpass/main/gles31-main.txt"),
+    GLES_CTS_DIR("khronos_mustpass/main/gles2-khr-main.txt"),
+    GLES_CTS_DIR("khronos_mustpass/main/gles3-khr-main.txt"),
+    GLES_CTS_DIR("khronos_mustpass/main/gles31-khr-main.txt"),
+    GLES_CTS_DIR("khronos_mustpass/main/gles32-khr-main.txt"),
+    GLES_CTS_DIR("khronos_mustpass_noctx/main/gles2-khr-noctx-main.txt"),
+    GLES_CTS_DIR("khronos_mustpass_noctx/main/gles32-khr-noctx-main.txt"),
     GLES_CTS_DIR("khronos_mustpass_single/main/gles32-khr-single.txt"),
     GLES_CTS_DIR("aosp_mustpass/main/gles3-rotate-landscape.txt"),
     GLES_CTS_DIR("aosp_mustpass/main/gles3-rotate-reverse-portrait.txt"),
@@ -85,7 +85,7 @@ const char *gCaseListFiles[] = {
     GLES_CTS_DIR("aosp_mustpass/main/gles3-565-no-depth-no-stencil.txt"),
     GLES_CTS_DIR("aosp_mustpass/main/gles31-multisample.txt"),
     GLES_CTS_DIR("aosp_mustpass/main/gles31-565-no-depth-no-stencil.txt"),
-    GL_CTS_DIR("khronos_mustpass/main/gl46-master.txt"),
+    GL_CTS_DIR("khronos_mustpass/main/gl46-main.txt"),
 };
 
 const std::vector<const char *> gTestSuiteConfigParameters[] = {
@@ -480,10 +480,7 @@ void dEQPCaseList::initialize()
         mCaseInfoList.push_back(CaseInfo(testName, expectation));
     }
 
-    if (testSuite->logAnyUnusedTestExpectations())
-    {
-        Die();
-    }
+    testSuite->logAnyUnusedTestExpectations();
 }
 
 bool IsPassingResult(dEQPTestResult result)
@@ -693,7 +690,7 @@ void dEQPTest::SetUpTestSuite()
         argv.push_back("--deqp-log-images=disable");
     }
 
-    // Flushing during multi-process execution punishes HDDs. http://anglebug.com/5157
+    // Flushing during multi-process execution punishes HDDs. http://anglebug.com/42263718
     if (testSuite->getBatchId() != -1)
     {
         argv.push_back("--deqp-log-flush=disable");

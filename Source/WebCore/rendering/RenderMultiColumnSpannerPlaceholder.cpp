@@ -49,12 +49,14 @@ RenderPtr<RenderMultiColumnSpannerPlaceholder> RenderMultiColumnSpannerPlacehold
 }
 
 RenderMultiColumnSpannerPlaceholder::RenderMultiColumnSpannerPlaceholder(RenderMultiColumnFlow& fragmentedFlow, RenderBox& spanner, RenderStyle&& style)
-    : RenderBox(Type::MultiColumnSpannerPlaceholder, fragmentedFlow.document(), WTFMove(style), RenderElementType::RenderBoxModelObjectFlag)
+    : RenderBox(Type::MultiColumnSpannerPlaceholder, fragmentedFlow.document(), WTFMove(style), TypeFlag::IsBoxModelObject)
     , m_spanner(spanner)
     , m_fragmentedFlow(fragmentedFlow)
 {
     ASSERT(isRenderMultiColumnSpannerPlaceholder());
 }
+
+RenderMultiColumnSpannerPlaceholder::~RenderMultiColumnSpannerPlaceholder() = default;
 
 ASCIILiteral RenderMultiColumnSpannerPlaceholder::renderName() const
 {

@@ -35,16 +35,18 @@
 #include "ArgList.h"
 #include "BatchedTransitionOptimizer.h"
 #include "Bytecodes.h"
+#include "CallLinkInfo.h"
 #include "CatchScope.h"
 #include "CheckpointOSRExitSideState.h"
 #include "CodeBlock.h"
-#include "DirectArguments.h"
 #include "Debugger.h"
+#include "DirectArguments.h"
 #include "DirectEvalCodeCache.h"
 #include "EvalCodeBlock.h"
 #include "ExecutableBaseInlines.h"
 #include "FrameTracers.h"
 #include "GlobalObjectMethodTable.h"
+#include "InlineCallFrame.h"
 #include "InterpreterInlines.h"
 #include "JITCode.h"
 #include "JSArrayInlines.h"
@@ -106,6 +108,9 @@ JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain,
     UnlinkedCodeBlock* callerUnlinkedCodeBlock = callerBaselineCodeBlock->unlinkedCodeBlock();
     JSGlobalObject* globalObject = callerBaselineCodeBlock->globalObject();
 
+    if (UNLIKELY(callFrame->guaranteedJSValueCallee() != globalObject->evalFunction()))
+        return { };
+
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
@@ -117,20 +122,32 @@ JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain,
         return jsUndefined();
 
     JSValue program = callFrame->argument(0);
-    if (!program.isString())
+    JSString* programString = nullptr;
+    if (LIKELY(program.isString()))
+        programString = asString(program);
+    else if (Options::useTrustedTypes()) {
+        auto code = globalObject->globalObjectMethodTable()->codeForEval(globalObject, program);
+        if (!code.isNull())
+            programString = jsString(vm, code);
+    }
+
+    if (!programString)
         return program;
 
-    auto* programString = asString(program);
+    auto programSource = programString->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, JSValue());
+
+    if (Options::useTrustedTypes() && globalObject->requiresTrustedTypes() && !globalObject->globalObjectMethodTable()->canCompileStrings(globalObject, CompilationType::DirectEval, programSource, program)) {
+        throwException(globalObject, scope, createEvalError(globalObject, "Refused to evaluate a string as JavaScript because this document requires a 'Trusted Type' assignment."_s));
+        return { };
+    }
 
     TopCallFrameSetter topCallFrame(vm, callFrame);
     if (!globalObject->evalEnabled()) {
         globalObject->globalObjectMethodTable()->reportViolationForUnsafeEval(globalObject, programString);
         throwException(globalObject, scope, createEvalError(globalObject, globalObject->evalDisabledErrorMessage()));
-        return jsUndefined();
+        return { };
     }
-    String programSource = programString->value(globalObject);
-    RETURN_IF_EXCEPTION(scope, JSValue());
-    
 
     bool isArrowFunctionContext = callerUnlinkedCodeBlock->isArrowFunction() || callerUnlinkedCodeBlock->isArrowFunctionContext();
 
@@ -154,13 +171,13 @@ JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain,
     DirectEvalExecutable* eval = callerBaselineCodeBlock->directEvalCodeCache().tryGet(programSource, bytecodeIndex);
     if (!eval) {
         if (!ecmaMode.isStrict()) {
-            if (programSource.is8Bit()) {
-                LiteralParser<LChar> preparser(globalObject, programSource.characters8(), programSource.length(), SloppyJSON, callerBaselineCodeBlock);
+            if (programSource->is8Bit()) {
+                LiteralParser preparser(globalObject, programSource->span8(), SloppyJSON, callerBaselineCodeBlock);
                 if (JSValue parsedObject = preparser.tryLiteralParse())
                     RELEASE_AND_RETURN(scope, parsedObject);
 
             } else {
-                LiteralParser<UChar> preparser(globalObject, programSource.characters16(), programSource.length(), SloppyJSON, callerBaselineCodeBlock);
+                LiteralParser preparser(globalObject, programSource->span16(), SloppyJSON, callerBaselineCodeBlock);
                 if (JSValue parsedObject = preparser.tryLiteralParse())
                     RELEASE_AND_RETURN(scope, parsedObject);
 
@@ -175,7 +192,7 @@ JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain,
         eval = DirectEvalExecutable::create(globalObject, makeSource(programSource, callerBaselineCodeBlock->source().provider()->sourceOrigin(), sourceTaintedOrigin), derivedContextType, callerUnlinkedCodeBlock->needsClassFieldInitializer(), callerUnlinkedCodeBlock->privateBrandRequirement(), isArrowFunctionContext, callerBaselineCodeBlock->ownerExecutable()->isInsideOrdinaryFunction(), evalContextType, &variablesUnderTDZ, &privateNameEnvironment, ecmaMode);
         EXCEPTION_ASSERT(!!scope.exception() == !eval);
         if (!eval)
-            return jsUndefined();
+            return { };
 
         // Skip the eval cache if tainted since another eval call could have a different taintedness.
         if (sourceTaintedOrigin == SourceTaintedOrigin::Untainted)
@@ -362,9 +379,7 @@ Interpreter::Interpreter()
 #endif // ASSERT_ENABLED
 }
 
-Interpreter::~Interpreter()
-{
-}
+Interpreter::~Interpreter() = default;
 
 #if ENABLE(COMPUTED_GOTO_OPCODES)
 #if !ENABLE(LLINT_EMBEDDED_OPCODE_ID) || ASSERT_ENABLED
@@ -400,13 +415,13 @@ bool Interpreter::isOpcode(Opcode opcode)
 
 class GetStackTraceFunctor {
 public:
-    GetStackTraceFunctor(VM& vm, JSCell* owner, Vector<StackFrame>& results, size_t framesToSkip, size_t capacity)
+    GetStackTraceFunctor(VM& vm, JSCell* owner, Vector<StackFrame>& results, size_t framesToSkip, size_t frameCountInResults)
         : m_vm(vm)
         , m_owner(owner)
         , m_results(results)
         , m_framesToSkip(framesToSkip)
+        , m_frameCountInResults(frameCountInResults)
     {
-        m_results.grow(capacity);
     }
 
     IterationStatus operator()(StackVisitor& visitor) const
@@ -446,11 +461,11 @@ private:
     VM& m_vm;
     JSCell* m_owner;
     Vector<StackFrame>& m_results;
-    mutable size_t m_frameCountInResults { 0 };
     mutable size_t m_framesToSkip;
+    mutable size_t m_frameCountInResults;
 };
 
-void Interpreter::getStackTrace(JSCell* owner, Vector<StackFrame>& results, size_t framesToSkip, size_t maxStackSize, JSCell* caller)
+void Interpreter::getStackTrace(JSCell* owner, Vector<StackFrame>& results, size_t framesToSkip, size_t maxStackSize, JSCell* caller, JSCell* ownerOfCallLinkInfo, CallLinkInfo* callLinkInfo)
 {
     DisallowGC disallowGC;
     VM& vm = this->vm();
@@ -460,6 +475,46 @@ void Interpreter::getStackTrace(JSCell* owner, Vector<StackFrame>& results, size
 
     size_t skippedFrames = 0;
     size_t visitedFrames = 0;
+
+    auto isImplementationVisibilityPrivate = [&](CodeBlock* codeBlock) {
+        if (auto* executable = codeBlock->ownerExecutable())
+            return executable->implementationVisibility() != ImplementationVisibility::Public;
+        return false;
+    };
+
+    // This is OK since we never cause GC inside it (see DisallowGC).
+    Vector<std::tuple<CodeBlock*, BytecodeIndex>, 16> reconstructedFrames;
+    auto countFrame = [&](CodeBlock* codeBlock, BytecodeIndex bytecodeIndex) {
+        if (skippedFrames < framesToSkip) {
+            skippedFrames++;
+            return IterationStatus::Continue;
+        }
+        if (isImplementationVisibilityPrivate(codeBlock))
+            return IterationStatus::Continue;
+
+        reconstructedFrames.append(std::tuple { codeBlock, bytecodeIndex });
+        if (++visitedFrames < maxStackSize)
+            return IterationStatus::Continue;
+
+        return IterationStatus::Done;
+    };
+
+    if (!caller && ownerOfCallLinkInfo && callLinkInfo && callLinkInfo->isTailCall()) {
+        // Reconstruct the top frame from CallLinkInfo*
+        CodeBlock* codeBlock = jsDynamicCast<CodeBlock*>(ownerOfCallLinkInfo);
+        if (codeBlock) {
+            CodeOrigin codeOrigin = callLinkInfo->codeOrigin();
+            if (codeOrigin.inlineCallFrame()) {
+                for (auto currentCodeOrigin = &codeOrigin; currentCodeOrigin && currentCodeOrigin->inlineCallFrame(); currentCodeOrigin = currentCodeOrigin->inlineCallFrame()->getCallerSkippingTailCalls()) {
+                    if (countFrame(baselineCodeBlockForInlineCallFrame(currentCodeOrigin->inlineCallFrame()), currentCodeOrigin->bytecodeIndex()) == IterationStatus::Done)
+                        break;
+                }
+            } else
+                countFrame(codeBlock, codeOrigin.bytecodeIndex());
+        }
+    }
+
+    size_t skippedFramesInReconstructedFrames = skippedFrames;
     bool foundCaller = !caller;
     StackVisitor::visit(callFrame, vm, [&] (StackVisitor& visitor) -> IterationStatus {
         if (skippedFrames < framesToSkip) {
@@ -485,7 +540,12 @@ void Interpreter::getStackTrace(JSCell* owner, Vector<StackFrame>& results, size
     if (!visitedFrames)
         return;
 
-    GetStackTraceFunctor functor(vm, owner, results, skippedFrames, visitedFrames);
+    results.grow(visitedFrames);
+    unsigned index = 0;
+    for (auto [codeBlock, bytecodeIndex] : reconstructedFrames)
+        results[index++] = StackFrame(vm, owner, codeBlock, bytecodeIndex);
+
+    GetStackTraceFunctor functor(vm, owner, results, skippedFrames - skippedFramesInReconstructedFrames, reconstructedFrames.size());
     StackVisitor::visit(callFrame, vm, functor);
     ASSERT(functor.frameCountInResults() == results.size());
 }
@@ -587,7 +647,7 @@ CatchInfo::CatchInfo(const Wasm::HandlerInfo* handler, const Wasm::Callee* calle
             m_catchMetadataPCForInterpreter = handler->m_targetMetadata;
             m_tryDepthForThrow = handler->m_tryDepth;
         } else {
-#if USE(JSVALUE64) && ENABLE(JIT)
+#if ENABLE(JIT)
             m_nativeCode = Wasm::Thunks::singleton().stub(Wasm::catchInWasmThunkGenerator).template retagged<ExceptionHandlerPtrTag>().code();
             m_nativeCodeForDispatchAndCatch = handler->m_nativeCode;
 #endif
@@ -912,10 +972,10 @@ JSValue Interpreter::executeProgram(const SourceCode& source, JSGlobalObject*, J
     if (programSource.isNull())
         return jsUndefined();
     if (programSource.is8Bit()) {
-        LiteralParser<LChar> literalParser(globalObject, programSource.characters8(), programSource.length(), JSONP);
+        LiteralParser literalParser(globalObject, programSource.span8(), JSONP);
         parseResult = literalParser.tryJSONPParse(JSONPData, globalObject->globalObjectMethodTable()->supportsRichSourceInfo(globalObject));
     } else {
-        LiteralParser<UChar> literalParser(globalObject, programSource.characters16(), programSource.length(), JSONP);
+        LiteralParser literalParser(globalObject, programSource.span16(), JSONP);
         parseResult = literalParser.tryJSONPParse(JSONPData, globalObject->globalObjectMethodTable()->supportsRichSourceInfo(globalObject));
     }
 

@@ -56,7 +56,6 @@ public:
 protected:
     void initialize();
 
-    static constexpr auto CreateTextTrackCueBox = CreateHTMLElement | NodeFlag::HasCustomStyleResolveCallbacks;
     TextTrackCueBox(Document&, TextTrackCue&);
     ~TextTrackCueBox() { }
 
@@ -70,7 +69,10 @@ class TextTrackCue : public RefCounted<TextTrackCue>, public EventTarget, public
 public:
     static ExceptionOr<Ref<TextTrackCue>> create(Document&, double start, double end, DocumentFragment&);
 
+    void didMoveToNewDocument(Document&);
+
     TextTrack* track() const;
+    RefPtr<TextTrack> protectedTrack() const;
     void setTrack(TextTrack*);
 
     const AtomString& id() const { return m_id; }
@@ -117,8 +119,9 @@ public:
 
     String toJSONString() const;
 
-    using RefCounted::ref;
-    using RefCounted::deref;
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     virtual void recalculateStyles() { m_displayTreeNeedsUpdate = true; }
     virtual void setFontSize(int fontSize, bool important);
@@ -149,11 +152,8 @@ private:
     void derefEventTarget() final { deref(); }
     using EventTarget::dispatchEvent;
     void dispatchEvent(Event&) final;
-    EventTargetInterface eventTargetInterface() const final { return TextTrackCueEventTargetInterfaceType; }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::TextTrackCue; }
     ScriptExecutionContext* scriptExecutionContext() const final;
-
-    // ActiveDOMObject
-    const char* activeDOMObjectName() const final;
 
     void rebuildDisplayTree();
 
@@ -162,7 +162,7 @@ private:
     MediaTime m_endTime;
     int m_processingCueChanges { 0 };
 
-    TextTrack* m_track { nullptr };
+    WeakPtr<TextTrack, WeakPtrImplWithEventTargetData> m_track;
 
     RefPtr<DocumentFragment> m_cueNode;
     RefPtr<TextTrackCueBox> m_displayTree;

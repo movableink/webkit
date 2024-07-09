@@ -41,16 +41,30 @@ SecurityContext::~SecurityContext() = default;
 
 void SecurityContext::setSecurityOriginPolicy(RefPtr<SecurityOriginPolicy>&& securityOriginPolicy)
 {
+    auto currentOrigin = securityOrigin() ? securityOrigin()->data() : SecurityOriginData { };
+    bool haveInitializedSecurityOrigin = std::exchange(m_haveInitializedSecurityOrigin, true);
+
     m_securityOriginPolicy = WTFMove(securityOriginPolicy);
-    m_haveInitializedSecurityOrigin = true;
+    m_hasEmptySecurityOriginPolicy = false;
+
+    auto origin = securityOrigin() ? securityOrigin()->data() : SecurityOriginData { };
+    if (!haveInitializedSecurityOrigin || currentOrigin != origin)
+        securityOriginDidChange();
+}
+
+ContentSecurityPolicy* SecurityContext::contentSecurityPolicy()
+{
+    if (!m_contentSecurityPolicy && m_hasEmptyContentSecurityPolicy)
+        m_contentSecurityPolicy = makeEmptyContentSecurityPolicy();
+    return m_contentSecurityPolicy.get();
 }
 
 SecurityOrigin* SecurityContext::securityOrigin() const
 {
-    if (!m_securityOriginPolicy)
+    RefPtr policy = securityOriginPolicy();
+    if (!policy)
         return nullptr;
-
-    return &m_securityOriginPolicy->origin();
+    return &policy->origin();
 }
 
 RefPtr<SecurityOrigin> SecurityContext::protectedSecurityOrigin() const
@@ -58,9 +72,17 @@ RefPtr<SecurityOrigin> SecurityContext::protectedSecurityOrigin() const
     return securityOrigin();
 }
 
+SecurityOriginPolicy* SecurityContext::securityOriginPolicy() const
+{
+    if (!m_securityOriginPolicy && m_hasEmptySecurityOriginPolicy)
+        const_cast<SecurityContext&>(*this).m_securityOriginPolicy = SecurityOriginPolicy::create(SecurityOrigin::createOpaque());
+    return m_securityOriginPolicy.get();
+}
+
 void SecurityContext::setContentSecurityPolicy(std::unique_ptr<ContentSecurityPolicy>&& contentSecurityPolicy)
 {
     m_contentSecurityPolicy = WTFMove(contentSecurityPolicy);
+    m_hasEmptyContentSecurityPolicy = false;
 }
 
 bool SecurityContext::isSecureTransitionTo(const URL& url) const
@@ -150,7 +172,7 @@ SandboxFlags SecurityContext::parseSandboxPolicy(StringView policy, String& inva
             flags &= ~SandboxStorageAccessByUserActivation;
         else {
             if (numberOfTokenErrors)
-                tokenErrors.append(", '");
+                tokenErrors.append(", '"_s);
             else
                 tokenErrors.append('\'');
             tokenErrors.append(sandboxToken, '\'');
@@ -162,9 +184,9 @@ SandboxFlags SecurityContext::parseSandboxPolicy(StringView policy, String& inva
 
     if (numberOfTokenErrors) {
         if (numberOfTokenErrors > 1)
-            tokenErrors.append(" are invalid sandbox flags.");
+            tokenErrors.append(" are invalid sandbox flags."_s);
         else
-            tokenErrors.append(" is an invalid sandbox flag.");
+            tokenErrors.append(" is an invalid sandbox flag."_s);
         invalidTokensErrorMessage = tokenErrors.toString();
     }
 
@@ -205,7 +227,7 @@ void SecurityContext::inheritPolicyContainerFrom(const PolicyContainer& policyCo
 
 CheckedPtr<ContentSecurityPolicy> SecurityContext::checkedContentSecurityPolicy()
 {
-    return m_contentSecurityPolicy.get();
+    return contentSecurityPolicy();
 }
 
 }

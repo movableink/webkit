@@ -43,6 +43,7 @@
 #include "StyleRule.h"
 #include "StyleScope.h"
 #include "StyleSheetContents.h"
+#include "StyleSheetContentsCache.h"
 
 #include <wtf/HexNumber.h>
 #include <wtf/text/StringBuilder.h>
@@ -151,6 +152,7 @@ CSSStyleSheet::CSSStyleSheet(Ref<StyleSheetContents>&& contents, Document& docum
     , m_constructorDocument(document)
 {
     m_contents->registerClient(this);
+    m_contents->checkLoaded();
 
     WTF::switchOn(WTFMove(options.media), [this](RefPtr<MediaList>&& mediaList) {
         if (auto queries = mediaList->mediaQueries(); !queries.isEmpty())
@@ -195,12 +197,11 @@ RefPtr<StyleRuleWithNesting> CSSStyleSheet::prepareChildStyleRuleForNesting(Styl
     return { };
 }
 
-CSSStyleSheet::WhetherContentsWereClonedForMutation CSSStyleSheet::willMutateRules()
-{
+auto CSSStyleSheet::willMutateRules() -> ContentsClonedForMutation {
     // If we are the only client it is safe to mutate.
     if (m_contents->hasOneClient() && !m_contents->isInMemoryCache()) {
         m_contents->setMutable();
-        return ContentsWereNotClonedForMutation;
+        return ContentsClonedForMutation::No;
     }
     // Only cacheable stylesheets should have multiple clients.
     ASSERT(m_contents->isCacheable());
@@ -215,7 +216,7 @@ CSSStyleSheet::WhetherContentsWereClonedForMutation CSSStyleSheet::willMutateRul
     // Any existing CSSOM wrappers need to be connected to the copied child rules.
     reattachChildRuleCSSOMWrappers();
 
-    return ContentsWereClonedForMutation;
+    return ContentsClonedForMutation::Yes;
 }
 
 void CSSStyleSheet::didMutateRuleFromCSSStyleDeclaration()
@@ -226,13 +227,13 @@ void CSSStyleSheet::didMutateRuleFromCSSStyleDeclaration()
 }
 
 // FIXME: counter-style: we might need something similar for counter-style (rdar://103018993).
-void CSSStyleSheet::didMutateRules(RuleMutationType mutationType, WhetherContentsWereClonedForMutation contentsWereClonedForMutation, StyleRuleKeyframes* insertedKeyframesRule, const String& modifiedKeyframesRuleName)
+void CSSStyleSheet::didMutateRules(RuleMutationType mutationType, ContentsClonedForMutation contentsClonedForMutation, StyleRuleKeyframes* insertedKeyframesRule, const String& modifiedKeyframesRuleName)
 {
     ASSERT(m_contents->isMutable());
     ASSERT(m_contents->hasOneClient());
 
     forEachStyleScope([&](Style::Scope& scope) {
-        if ((mutationType == RuleInsertion || mutationType == RuleReplace) && !contentsWereClonedForMutation && !scope.activeStyleSheetsContains(*this)) {
+        if ((mutationType == RuleInsertion || mutationType == RuleReplace) && contentsClonedForMutation == ContentsClonedForMutation::No && !scope.activeStyleSheetsContains(*this)) {
             if (insertedKeyframesRule) {
                 if (auto* resolver = scope.resolverIfExists())
                     resolver->addKeyframeStyle(*insertedKeyframesRule);
@@ -377,8 +378,9 @@ ExceptionOr<void> CSSStyleSheet::deleteRule(unsigned index)
         return Exception { ExceptionCode::IndexSizeError };
     RuleMutationScope mutationScope(this);
 
-    m_contents->wrapperDeleteRule(index);
-
+    bool success = m_contents->wrapperDeleteRule(index);
+    if (!success)
+        return Exception { ExceptionCode::InvalidStateError };
     if (!m_childRuleCSSOMWrappers.isEmpty()) {
         if (m_childRuleCSSOMWrappers[index])
             m_childRuleCSSOMWrappers[index]->setParentStyleSheet(nullptr);
@@ -392,7 +394,7 @@ ExceptionOr<int> CSSStyleSheet::addRule(const String& selector, const String& st
 {
     LOG_WITH_STREAM(StyleSheets, stream << "CSSStyleSheet " << this << " addRule() selector " << selector << " style " << style << " at " << index);
 
-    auto text = makeString(selector, " { ", style, !style.isEmpty() ? " " : "", '}');
+    auto text = makeString(selector, " { "_s, style, !style.isEmpty() ? " "_s : ""_s, '}');
     auto insertRuleResult = insertRule(text, index.value_or(length()));
     if (insertRuleResult.hasException())
         return insertRuleResult.releaseException();
@@ -412,8 +414,15 @@ RefPtr<CSSRuleList> CSSStyleSheet::cssRules()
 {
     if (!canAccessRules())
         return nullptr;
+
+    return cssRulesSkippingAccessCheck();
+}
+
+RefPtr<CSSRuleList> CSSStyleSheet::cssRulesSkippingAccessCheck()
+{
     if (!m_ruleListCSSOMWrapper)
         m_ruleListCSSOMWrapper = makeUnique<StyleSheetCSSRuleList>(this);
+
     return m_ruleListCSSOMWrapper.get();
 }
 
@@ -481,7 +490,7 @@ String CSSStyleSheet::debugDescription() const
 
 String CSSStyleSheet::cssTextWithReplacementURLs(const HashMap<String, String>& replacementURLStrings, const HashMap<RefPtr<CSSStyleSheet>, String>& replacementURLStringsForCSSStyleSheet)
 {
-    auto ruleList = cssRules();
+    auto ruleList = cssRulesSkippingAccessCheck();
     if (!ruleList)
         return { };
 
@@ -493,7 +502,7 @@ String CSSStyleSheet::cssTextWithReplacementURLs(const HashMap<String, String>& 
 
         auto ruleText = rule->cssTextWithReplacementURLs(replacementURLStrings, replacementURLStringsForCSSStyleSheet);
         if (!result.isEmpty() && !ruleText.isEmpty())
-            result.append(" ");
+            result.append(' ');
 
         result.append(ruleText);
     }
@@ -515,6 +524,22 @@ ExceptionOr<void> CSSStyleSheet::replaceSync(String&& text)
     if (!m_wasConstructedByJS)
         return Exception { ExceptionCode::NotAllowedError, "This CSSStyleSheet object was not constructed by JavaScript"_s };
 
+    // Try to use the cache in the case where contents is replaced before the stylesheet is attached to the document.
+    if (isDetached() && m_childRuleCSSOMWrappers.isEmpty()) {
+        auto key = Style::StyleSheetContentsCache::Key { text, m_contents->parserContext() };
+        auto cachedContents = Style::StyleSheetContentsCache::singleton().get(key);
+        if (cachedContents) {
+            m_contents->unregisterClient(this);
+            m_contents = *cachedContents;
+            m_contents->registerClient(this);
+        } else {
+            m_contents->parseString(WTFMove(text));
+            if (m_contents->isCacheable())
+                Style::StyleSheetContentsCache::singleton().add(WTFMove(key), m_contents);
+        }
+        return { };
+    }
+
     RuleMutationScope mutationScope(this, RuleReplace);
     m_contents->clearRules();
     for (auto& childRuleWrapper : m_childRuleCSSOMWrappers)
@@ -524,6 +549,13 @@ ExceptionOr<void> CSSStyleSheet::replaceSync(String&& text)
 
     m_contents->parseString(WTFMove(text));
     return { };
+}
+
+bool CSSStyleSheet::isDetached() const
+{
+    return !m_ownerNode
+        && !m_ownerRule
+        && m_adoptingTreeScopes.isEmptyIgnoringNullReferences();
 }
 
 Document* CSSStyleSheet::constructorDocument() const
@@ -568,13 +600,13 @@ CSSStyleSheet::RuleMutationScope::RuleMutationScope(CSSStyleSheet* sheet, RuleMu
     , m_insertedKeyframesRule(insertedKeyframesRule)
 {
     ASSERT(m_styleSheet);
-    m_contentsWereClonedForMutation = m_styleSheet->willMutateRules();
+    m_contentsClonedForMutation = m_styleSheet->willMutateRules();
 }
 
 CSSStyleSheet::RuleMutationScope::RuleMutationScope(CSSRule* rule)
     : m_styleSheet(rule ? rule->parentStyleSheet() : nullptr)
     , m_mutationType(is<CSSKeyframesRule>(rule) ? KeyframesRuleMutation : OtherMutation)
-    , m_contentsWereClonedForMutation(ContentsWereNotClonedForMutation)
+    , m_contentsClonedForMutation(ContentsClonedForMutation::No)
     , m_insertedKeyframesRule(nullptr)
     , m_modifiedKeyframesRuleName([rule] {
         auto* cssKeyframeRule = dynamicDowncast<CSSKeyframesRule>(rule);
@@ -582,13 +614,13 @@ CSSStyleSheet::RuleMutationScope::RuleMutationScope(CSSRule* rule)
     }())
 {
     if (m_styleSheet)
-        m_contentsWereClonedForMutation = m_styleSheet->willMutateRules();
+        m_contentsClonedForMutation = m_styleSheet->willMutateRules();
 }
 
 CSSStyleSheet::RuleMutationScope::~RuleMutationScope()
 {
     if (m_styleSheet)
-        m_styleSheet->didMutateRules(m_mutationType, m_contentsWereClonedForMutation, m_insertedKeyframesRule.get(), m_modifiedKeyframesRuleName);
+        m_styleSheet->didMutateRules(m_mutationType, m_contentsClonedForMutation, m_insertedKeyframesRule.get(), m_modifiedKeyframesRuleName);
 }
 
 }

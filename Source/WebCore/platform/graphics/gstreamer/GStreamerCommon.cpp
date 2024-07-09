@@ -27,11 +27,13 @@
 #include "DMABufVideoSinkGStreamer.h"
 #include "GLVideoSinkGStreamer.h"
 #include "GStreamerAudioMixer.h"
+#include "GStreamerQuirks.h"
 #include "GStreamerRegistryScanner.h"
 #include "GStreamerSinksWorkarounds.h"
 #include "GUniquePtrGStreamer.h"
 #include "GstAllocatorFastMalloc.h"
 #include "IntSize.h"
+#include "PlatformDisplay.h"
 #include "RuntimeApplicationChecks.h"
 #include "SharedBuffer.h"
 #include "WebKitAudioSinkGStreamer.h"
@@ -39,10 +41,16 @@
 #include <gst/gst.h>
 #include <mutex>
 #include <wtf/FileSystem.h>
+#include <wtf/HashMap.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/PrintStream.h>
+#include <wtf/RecursiveLockAdapter.h>
 #include <wtf/Scope.h>
+#include <wtf/glib/GThreadSafeWeakPtr.h>
 #include <wtf/glib/GUniquePtr.h>
 #include <wtf/glib/RunLoopSourcePriority.h>
+#include <wtf/glib/WTFGType.h>
+#include <wtf/text/StringHash.h>
 
 #if USE(GSTREAMER_MPEGTS)
 #define GST_USE_UNSTABLE_API
@@ -51,6 +59,7 @@
 #endif
 
 #if ENABLE(MEDIA_SOURCE)
+#include "GStreamerRegistryScannerMSE.h"
 #include "WebKitMediaSourceGStreamer.h"
 #endif
 
@@ -69,6 +78,7 @@
 #endif
 
 #if ENABLE(VIDEO)
+#include "ImageDecoderGStreamer.h"
 #include "VideoEncoderPrivateGStreamer.h"
 #include "WebKitWebSourceGStreamer.h"
 #endif
@@ -254,7 +264,7 @@ Vector<String> extractGStreamerOptionsFromCommandLine()
         return { };
 
     Vector<String> options;
-    auto optionsString = String::fromUTF8(contents.get(), length);
+    auto optionsString = String::fromUTF8(std::span(contents.get(), length));
     optionsString.split('\0', [&options](StringView item) {
         if (item.startsWith("--gst"_s))
             options.append(item.toString());
@@ -367,19 +377,20 @@ void registerWebKitGStreamerElements()
         // We don't want autoaudiosink to autoplug our sink.
         gst_element_register(0, "webkitaudiosink", GST_RANK_NONE, WEBKIT_TYPE_AUDIO_SINK);
 
-        // If the FDK-AAC decoder is available, promote it and downrank the
-        // libav AAC decoders, due to their broken LC support, as reported in:
-        // https://ffmpeg.org/pipermail/ffmpeg-devel/2019-July/247063.html
+        // If the FDK-AAC decoder is available, promote it.
         GRefPtr<GstElementFactory> elementFactory = adoptGRef(gst_element_factory_find("fdkaacdec"));
-        if (elementFactory) {
+        if (elementFactory)
             gst_plugin_feature_set_rank(GST_PLUGIN_FEATURE_CAST(elementFactory.get()), GST_RANK_PRIMARY);
+        else
+            g_warning("The GStreamer FDK AAC plugin is missing, AAC playback is unlikely to work.");
 
-            const char* const elementNames[] = {"avdec_aac", "avdec_aac_fixed", "avdec_aac_latm"};
-            for (unsigned i = 0; i < G_N_ELEMENTS(elementNames); i++) {
-                GRefPtr<GstElementFactory> avAACDecoderFactory = adoptGRef(gst_element_factory_find(elementNames[i]));
-                if (avAACDecoderFactory)
-                    gst_plugin_feature_set_rank(GST_PLUGIN_FEATURE_CAST(avAACDecoderFactory.get()), GST_RANK_MARGINAL);
-            }
+        // Downrank the libav AAC decoders, due to their broken LC support, as reported in:
+        // https://ffmpeg.org/pipermail/ffmpeg-devel/2019-July/247063.html
+        const char* const elementNames[] = { "avdec_aac", "avdec_aac_fixed", "avdec_aac_latm" };
+        for (unsigned i = 0; i < G_N_ELEMENTS(elementNames); i++) {
+            GRefPtr<GstElementFactory> avAACDecoderFactory = adoptGRef(gst_element_factory_find(elementNames[i]));
+            if (avAACDecoderFactory)
+                gst_plugin_feature_set_rank(GST_PLUGIN_FEATURE_CAST(avAACDecoderFactory.get()), GST_RANK_MARGINAL);
         }
 
         // Prevent decodebin(3) from auto-plugging hlsdemux if it was disabled. UAs should be able
@@ -418,12 +429,16 @@ void registerWebKitGStreamerElements()
             if (auto vaapiPlugin = adoptGRef(gst_registry_find_plugin(registry, "vaapi")))
                 gst_registry_remove_plugin(registry, vaapiPlugin.get());
         }
+
+        // Make sure the quirks are created as early as possible.
+        [[maybe_unused]] auto& quirksManager = GStreamerQuirksManager::singleton();
+
         registryWasUpdated = true;
     });
 
     // The GStreamer registry might be updated after the scanner was initialized, so in this situation
     // we need to reset the internal state of the registry scanner.
-    if (registryWasUpdated && !GStreamerRegistryScanner::singletonNeedsInitialization())
+    if (registryWasUpdated && GStreamerRegistryScanner::singletonWasInitialized())
         GStreamerRegistryScanner::singleton().refresh();
 }
 
@@ -437,16 +452,123 @@ void registerWebKitGStreamerVideoEncoder()
 
     // The video encoder might be registered after the scanner was initialized, so in this situation
     // we need to reset the internal state of the registry scanner.
-    if (registryWasUpdated && !GStreamerRegistryScanner::singletonNeedsInitialization())
+    if (registryWasUpdated && GStreamerRegistryScanner::singletonWasInitialized())
         GStreamerRegistryScanner::singleton().refresh();
+}
+
+// We use a recursive lock because the removal of a pipeline can trigger the removal of another one,
+// from the same thread, specially when using chained element harnesses.
+static RecursiveLock s_activePipelinesMapLock;
+static HashMap<String, GRefPtr<GstElement>>& activePipelinesMap()
+{
+    static NeverDestroyed<HashMap<String, GRefPtr<GstElement>>> activePipelines;
+    return activePipelines.get();
+}
+
+void registerActivePipeline(const GRefPtr<GstElement>& pipeline)
+{
+    GUniquePtr<gchar> name(gst_object_get_name(GST_OBJECT_CAST(pipeline.get())));
+    Locker locker { s_activePipelinesMapLock };
+    activePipelinesMap().add(span(name.get()), GRefPtr<GstElement>(pipeline));
+}
+
+void unregisterPipeline(const GRefPtr<GstElement>& pipeline)
+{
+    GUniquePtr<gchar> name(gst_object_get_name(GST_OBJECT_CAST(pipeline.get())));
+    Locker locker { s_activePipelinesMapLock };
+    activePipelinesMap().remove(span(name.get()));
+}
+
+void WebCoreLogObserver::didLogMessage(const WTFLogChannel& channel, WTFLogLevel level, Vector<JSONLogValue>&& values)
+{
+#ifndef GST_DISABLE_GST_DEBUG
+    if (!shouldEmitLogMessage(channel))
+        return;
+
+    StringBuilder builder;
+    for (auto& [_, value] : values)
+        builder.append(value);
+
+    auto logString = builder.toString();
+    GstDebugLevel gstDebugLevel;
+    switch (level) {
+    case WTFLogLevel::Error:
+        gstDebugLevel = GST_LEVEL_ERROR;
+        break;
+    case WTFLogLevel::Debug:
+        gstDebugLevel = GST_LEVEL_DEBUG;
+        break;
+    case WTFLogLevel::Always:
+    case WTFLogLevel::Info:
+        gstDebugLevel = GST_LEVEL_INFO;
+        break;
+    case WTFLogLevel::Warning:
+        gstDebugLevel = GST_LEVEL_WARNING;
+        break;
+    };
+    gst_debug_log(debugCategory(), gstDebugLevel, __FILE__, __FUNCTION__, __LINE__, nullptr, "%s", logString.utf8().data());
+#else
+    UNUSED_PARAM(channel);
+    UNUSED_PARAM(level);
+    UNUSED_PARAM(values);
+#endif
+}
+
+void WebCoreLogObserver::addWatch(const Logger& logger)
+{
+    auto totalObservers = m_totalObservers.exchangeAdd(1);
+    if (!totalObservers)
+        logger.addObserver(*this);
+}
+
+void WebCoreLogObserver::removeWatch(const Logger& logger)
+{
+    auto totalObservers = m_totalObservers.exchangeSub(1);
+    if (totalObservers <= 1)
+        logger.removeObserver(*this);
 }
 
 void deinitializeGStreamer()
 {
+#if USE(GSTREAMER_GL)
+    auto& sharedDisplay = PlatformDisplay::sharedDisplayForCompositing();
+    sharedDisplay.clearGStreamerGLState();
+#endif
 #if ENABLE(MEDIA_STREAM)
     teardownGStreamerCaptureDeviceManagers();
 #endif
+#if ENABLE(MEDIA_SOURCE)
+    teardownGStreamerRegistryScannerMSE();
+#endif
     teardownGStreamerRegistryScanner();
+#if ENABLE(VIDEO)
+    teardownVideoEncoderSingleton();
+    teardownGStreamerImageDecoders();
+#endif
+
+    bool isLeaksTracerActive = false;
+    auto activeTracers = gst_tracing_get_active_tracers();
+    while (activeTracers) {
+        auto tracer = adoptGRef(GST_TRACER_CAST(activeTracers->data));
+        if (!isLeaksTracerActive && !g_strcmp0(G_OBJECT_TYPE_NAME(G_OBJECT(tracer.get())), "GstLeaksTracer"))
+            isLeaksTracerActive = true;
+        activeTracers = g_list_delete_link(activeTracers, activeTracers);
+    }
+
+    if (!isLeaksTracerActive)
+        return;
+
+    // Make sure there is no active pipeline left. Those might trigger deadlocks during gst_deinit().
+    {
+        Locker locker { s_activePipelinesMapLock };
+        for (auto& pipeline : activePipelinesMap().values()) {
+            GST_DEBUG("Pipeline %" GST_PTR_FORMAT " was left running. Forcing clean-up.", pipeline.get());
+            disconnectSimpleBusMessageCallback(pipeline.get());
+            gst_element_set_state(pipeline.get(), GST_STATE_NULL);
+        }
+        activePipelinesMap().clear();
+    }
+
     gst_deinit();
 }
 
@@ -473,42 +595,205 @@ uint64_t toGstUnsigned64Time(const MediaTime& mediaTime)
     return time.timeValue();
 }
 
-void disconnectSimpleBusMessageCallback(GstElement* pipeline)
+RefPtr<GstMappedOwnedBuffer> GstMappedOwnedBuffer::create(GRefPtr<GstBuffer>&& buffer)
 {
-    auto bus = adoptGRef(gst_pipeline_get_bus(GST_PIPELINE(pipeline)));
-    g_signal_handlers_disconnect_by_data(bus.get(), pipeline);
-    gst_bus_remove_signal_watch(bus.get());
+    auto* mappedBuffer = new GstMappedOwnedBuffer(WTFMove(buffer));
+    if (!mappedBuffer->isValid()) {
+        delete mappedBuffer;
+        return nullptr;
+    }
+
+    return adoptRef(mappedBuffer);
 }
 
-struct CustomMessageHandlerHolder {
-    explicit CustomMessageHandlerHolder(Function<void(GstMessage*)>&& handler)
-    {
-        this->handler = WTFMove(handler);
+RefPtr<GstMappedOwnedBuffer> GstMappedOwnedBuffer::create(const GRefPtr<GstBuffer>& buffer)
+{
+    return GstMappedOwnedBuffer::create(GRefPtr(buffer));
+}
+
+// This GstBuffer is [ transfer none ], meaning the reference
+// count is increased during the life of this object.
+RefPtr<GstMappedOwnedBuffer> GstMappedOwnedBuffer::create(GstBuffer* buffer)
+{
+    return GstMappedOwnedBuffer::create(GRefPtr(buffer));
+}
+
+GstMappedOwnedBuffer::~GstMappedOwnedBuffer()
+{
+    unmapEarly();
+}
+
+Ref<SharedBuffer> GstMappedOwnedBuffer::createSharedBuffer()
+{
+    return SharedBuffer::create(*this);
+}
+
+GstMappedFrame::GstMappedFrame(GstBuffer* buffer, GstVideoInfo* info, GstMapFlags flags)
+{
+    gst_video_frame_map(&m_frame, info, buffer, flags);
+}
+
+GstMappedFrame::GstMappedFrame(const GRefPtr<GstSample>& sample, GstMapFlags flags)
+{
+    GstVideoInfo info;
+    if (!gst_video_info_from_caps(&info, gst_sample_get_caps(sample.get())))
+        return;
+
+    gst_video_frame_map(&m_frame, &info, gst_sample_get_buffer(sample.get()), flags);
+}
+
+GstMappedFrame::~GstMappedFrame()
+{
+    // FIXME: Make this un-conditional when the minimum GStreamer dependency version is >= 1.22.
+    if (m_frame.buffer)
+        gst_video_frame_unmap(&m_frame);
+}
+
+GstVideoFrame* GstMappedFrame::get()
+{
+    RELEASE_ASSERT(isValid());
+    return &m_frame;
+}
+
+uint8_t* GstMappedFrame::componentData(int comp) const
+{
+    RELEASE_ASSERT(isValid());
+    return GST_VIDEO_FRAME_COMP_DATA(&m_frame, comp);
+}
+
+int GstMappedFrame::componentStride(int stride) const
+{
+    RELEASE_ASSERT(isValid());
+    return GST_VIDEO_FRAME_COMP_STRIDE(&m_frame, stride);
+}
+
+GstVideoInfo* GstMappedFrame::info()
+{
+    RELEASE_ASSERT(isValid());
+    return &m_frame.info;
+}
+
+int GstMappedFrame::width() const
+{
+    RELEASE_ASSERT(isValid());
+    return GST_VIDEO_FRAME_WIDTH(&m_frame);
+}
+
+int GstMappedFrame::height() const
+{
+    RELEASE_ASSERT(isValid());
+    return GST_VIDEO_FRAME_HEIGHT(&m_frame);
+}
+
+int GstMappedFrame::format() const
+{
+    RELEASE_ASSERT(isValid());
+    return GST_VIDEO_FRAME_FORMAT(&m_frame);
+}
+
+void* GstMappedFrame::planeData(uint32_t planeIndex) const
+{
+    RELEASE_ASSERT(isValid());
+    return GST_VIDEO_FRAME_PLANE_DATA(&m_frame, planeIndex);
+}
+
+int GstMappedFrame::planeStride(uint32_t planeIndex) const
+{
+    RELEASE_ASSERT(isValid());
+    return GST_VIDEO_FRAME_PLANE_STRIDE(&m_frame, planeIndex);
+}
+
+GstMappedAudioBuffer::GstMappedAudioBuffer(GstBuffer* buffer, GstAudioInfo info, GstMapFlags flags)
+{
+    m_isValid = gst_audio_buffer_map(&m_buffer, &info, buffer, flags);
+}
+
+GstMappedAudioBuffer::GstMappedAudioBuffer(GRefPtr<GstSample> sample, GstMapFlags flags)
+{
+    GstAudioInfo info;
+
+    if (!gst_audio_info_from_caps(&info, gst_sample_get_caps(sample.get())))
+        return;
+
+    m_isValid = gst_audio_buffer_map(&m_buffer, &info, gst_sample_get_buffer(sample.get()), flags);
+}
+
+GstMappedAudioBuffer::~GstMappedAudioBuffer()
+{
+    if (!m_isValid)
+        return;
+
+    gst_audio_buffer_unmap(&m_buffer);
+    m_isValid = false;
+}
+
+GstAudioBuffer* GstMappedAudioBuffer::get()
+{
+    if (!m_isValid) {
+        GST_INFO("Invalid buffer, returning NULL");
+        return nullptr;
     }
+
+    return &m_buffer;
+}
+
+GstAudioInfo* GstMappedAudioBuffer::info()
+{
+    if (!m_isValid) {
+        GST_INFO("Invalid frame, returning NULL");
+        return nullptr;
+    }
+
+    return &m_buffer.info;
+}
+
+static GQuark customMessageHandlerQuark()
+{
+    static GQuark quark = g_quark_from_static_string("pipeline-custom-message-handler");
+    return quark;
+}
+
+void disconnectSimpleBusMessageCallback(GstElement* pipeline)
+{
+    auto handler = GPOINTER_TO_UINT(g_object_get_qdata(G_OBJECT(pipeline), customMessageHandlerQuark()));
+    if (!handler)
+        return;
+
+    auto bus = adoptGRef(gst_pipeline_get_bus(GST_PIPELINE(pipeline)));
+    g_signal_handler_disconnect(bus.get(), handler);
+    gst_bus_remove_signal_watch(bus.get());
+    g_object_set_qdata(G_OBJECT(pipeline), customMessageHandlerQuark(), nullptr);
+}
+
+struct MessageBusData {
+    GThreadSafeWeakPtr<GstElement> pipeline;
     Function<void(GstMessage*)> handler;
 };
+WEBKIT_DEFINE_ASYNC_DATA_STRUCT(MessageBusData)
 
 void connectSimpleBusMessageCallback(GstElement* pipeline, Function<void(GstMessage*)>&& customHandler)
 {
     auto bus = adoptGRef(gst_pipeline_get_bus(GST_PIPELINE(pipeline)));
     gst_bus_add_signal_watch_full(bus.get(), RunLoopSourcePriority::RunLoopDispatcher);
 
-    auto* holder = new CustomMessageHandlerHolder(WTFMove(customHandler));
-    GQuark quark = g_quark_from_static_string("pipeline-custom-message-handler");
-    g_object_set_qdata_full(G_OBJECT(pipeline), quark, holder, [](gpointer data) {
-        delete reinterpret_cast<CustomMessageHandlerHolder*>(data);
-    });
+    auto data = createMessageBusData();
+    data->pipeline.reset(pipeline);
+    data->handler = WTFMove(customHandler);
+    auto handler = g_signal_connect_data(bus.get(), "message", G_CALLBACK(+[](GstBus*, GstMessage* message, gpointer userData) {
+        auto data = reinterpret_cast<MessageBusData*>(userData);
+        auto pipeline = data->pipeline.get();
+        if (!pipeline)
+            return;
 
-    g_signal_connect(bus.get(), "message", G_CALLBACK(+[](GstBus*, GstMessage* message, GstElement* pipeline) {
         switch (GST_MESSAGE_TYPE(message)) {
         case GST_MESSAGE_ERROR: {
-            GST_ERROR_OBJECT(pipeline, "Got message: %" GST_PTR_FORMAT, message);
-            auto dotFileName = makeString(GST_OBJECT_NAME(pipeline), "_error");
-            GST_DEBUG_BIN_TO_DOT_FILE_WITH_TS(GST_BIN_CAST(pipeline), GST_DEBUG_GRAPH_SHOW_ALL, dotFileName.utf8().data());
+            GST_ERROR_OBJECT(pipeline.get(), "Got message: %" GST_PTR_FORMAT, message);
+            auto dotFileName = makeString(span(GST_OBJECT_NAME(pipeline.get())), "_error"_s);
+            GST_DEBUG_BIN_TO_DOT_FILE_WITH_TS(GST_BIN_CAST(pipeline.get()), GST_DEBUG_GRAPH_SHOW_ALL, dotFileName.utf8().data());
             break;
         }
         case GST_MESSAGE_STATE_CHANGED: {
-            if (GST_MESSAGE_SRC(message) != GST_OBJECT_CAST(pipeline))
+            if (GST_MESSAGE_SRC(message) != GST_OBJECT_CAST(pipeline.get()))
                 break;
 
             GstState oldState;
@@ -516,38 +801,31 @@ void connectSimpleBusMessageCallback(GstElement* pipeline, Function<void(GstMess
             GstState pending;
             gst_message_parse_state_changed(message, &oldState, &newState, &pending);
 
-            GST_INFO_OBJECT(pipeline, "State changed (old: %s, new: %s, pending: %s)", gst_element_state_get_name(oldState),
+            GST_INFO_OBJECT(pipeline.get(), "State changed (old: %s, new: %s, pending: %s)", gst_element_state_get_name(oldState),
                 gst_element_state_get_name(newState), gst_element_state_get_name(pending));
 
-            auto dotFileName = makeString(GST_OBJECT_NAME(pipeline), '_', gst_element_state_get_name(oldState), '_', gst_element_state_get_name(newState));
-            GST_DEBUG_BIN_TO_DOT_FILE_WITH_TS(GST_BIN_CAST(pipeline), GST_DEBUG_GRAPH_SHOW_ALL, dotFileName.utf8().data());
+            auto dotFileName = makeString(span(GST_OBJECT_NAME(pipeline.get())), '_', span(gst_element_state_get_name(oldState)), '_', span(gst_element_state_get_name(newState)));
+            GST_DEBUG_BIN_TO_DOT_FILE_WITH_TS(GST_BIN_CAST(pipeline.get()), GST_DEBUG_GRAPH_SHOW_ALL, dotFileName.utf8().data());
             break;
         }
         case GST_MESSAGE_LATENCY:
-            gst_bin_recalculate_latency(GST_BIN_CAST(pipeline));
+            gst_bin_recalculate_latency(GST_BIN_CAST(pipeline.get()));
             break;
         default:
             break;
         }
 
-        GQuark quark = g_quark_from_static_string("pipeline-custom-message-handler");
-        auto* holder = reinterpret_cast<CustomMessageHandlerHolder*>(g_object_get_qdata(G_OBJECT(pipeline), quark));
-        if (!holder)
-            return;
-
-        holder->handler(message);
-    }), pipeline);
+        data->handler(message);
+    }), data, reinterpret_cast<GClosureNotify>(+[](gpointer data, GClosure*) {
+        destroyMessageBusData(reinterpret_cast<MessageBusData*>(data));
+    }), static_cast<GConnectFlags>(0));
+    g_object_set_qdata(G_OBJECT(pipeline), customMessageHandlerQuark(), GUINT_TO_POINTER(handler));
 }
 
 template<>
 Vector<uint8_t> GstMappedBuffer::createVector() const
 {
-    return { data(), size() };
-}
-
-Ref<SharedBuffer> GstMappedOwnedBuffer::createSharedBuffer()
-{
-    return SharedBuffer::create(*this);
+    return std::span<const uint8_t> { data(), size() };
 }
 
 bool isGStreamerPluginAvailable(const char* name)
@@ -719,12 +997,12 @@ static std::optional<RefPtr<JSON::Value>> gstStructureValueToJSON(const GValue* 
         return JSON::Value::create(static_cast<int>(g_value_get_uint64(value)))->asValue();
 
     if (valueType == G_TYPE_STRING)
-        return JSON::Value::create(makeString(g_value_get_string(value)))->asValue();
+        return JSON::Value::create(makeString(span(g_value_get_string(value))))->asValue();
 
 #if USE(GSTREAMER_WEBRTC)
     if (valueType == GST_TYPE_WEBRTC_STATS_TYPE) {
         GUniquePtr<char> statsType(g_enum_to_string(GST_TYPE_WEBRTC_STATS_TYPE, g_value_get_enum(value)));
-        return JSON::Value::create(makeString(statsType.get()))->asValue();
+        return JSON::Value::create(makeString(span(statsType.get())))->asValue();
     }
 #endif
 
@@ -1050,11 +1328,40 @@ void configureVideoDecoderForHarnessing(const GRefPtr<GstElement>& element)
     if (gstObjectHasProperty(element.get(), "max-errors"))
         g_object_set(element.get(), "max-errors", 0, nullptr);
 
+    // avdec-specific:
     if (gstObjectHasProperty(element.get(), "std-compliance"))
         gst_util_set_object_arg(G_OBJECT(element.get()), "std-compliance", "strict");
 
     if (gstObjectHasProperty(element.get(), "output-corrupt"))
         g_object_set(element.get(), "output-corrupt", FALSE, nullptr);
+
+    // dav1ddec-specific:
+    if (gstObjectHasProperty(element.get(), "n-threads"))
+        g_object_set(element.get(), "n-threads", 1, nullptr);
+}
+
+void configureMediaStreamVideoDecoder(GstElement* element)
+{
+    if (gstObjectHasProperty(element, "automatic-request-sync-points"))
+        g_object_set(element, "automatic-request-sync-points", TRUE, nullptr);
+
+    if (gstObjectHasProperty(element, "discard-corrupted-frames"))
+        g_object_set(element, "discard-corrupted-frames", TRUE, nullptr);
+
+    if (gstObjectHasProperty(element, "output-corrupt"))
+        g_object_set(element, "output-corrupt", FALSE, nullptr);
+
+    if (gstObjectHasProperty(element, "max-errors"))
+        g_object_set(element, "max-errors", -1, nullptr);
+}
+
+void configureVideoRTPDepayloader(GstElement* element)
+{
+    if (gstObjectHasProperty(element, "request-keyframe"))
+        g_object_set(element, "request-keyframe", TRUE, nullptr);
+
+    if (gstObjectHasProperty(element, "wait-for-keyframe"))
+        g_object_set(element, "wait-for-keyframe", TRUE, nullptr);
 }
 
 static bool gstObjectHasProperty(GstObject* gstObject, const char* name)
@@ -1091,5 +1398,14 @@ GRefPtr<GstBuffer> wrapSpanData(const std::span<const uint8_t>& span)
 } // namespace WebCore
 
 #undef IS_GST_FULL_1_18
+
+#if !GST_CHECK_VERSION(1, 20, 0)
+GstBuffer* gst_buffer_new_memdup(gconstpointer data, gsize size)
+{
+    gpointer copiedData = g_memdup2(data, size);
+
+    return gst_buffer_new_wrapped_full(static_cast<GstMemoryFlags>(0), copiedData, size, 0, size, copiedData, g_free);
+}
+#endif
 
 #endif // USE(GSTREAMER)

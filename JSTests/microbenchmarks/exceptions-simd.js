@@ -1,6 +1,6 @@
+//@ skip unless $isWasmPlatform
+//@ skip unless $isSIMDPlatform
 //@ requireOptions("--useWebAssemblySIMD=1")
-//@ skip if $architecture != "arm64" && $architecture != "x86_64"
-//@ skip if !$isFTLPlatform
 //@ requireOptions("--useExecutableAllocationFuzz=false")
 
 // The purpose of this test is to compare SIMD and non-SIMD versions of this code.

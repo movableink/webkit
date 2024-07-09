@@ -53,6 +53,11 @@ class DarwinPort(ApplePort):
             # with MallocStackLogging enabled.
             self.set_option_default("batch_size", 1000)
 
+    def sharding_groups(self):
+        return {
+            'media': lambda shard: 'media' in shard.name or 'webaudio' in shard.name,
+        }
+
     def default_timeout_ms(self):
         if self.get_option('guard_malloc'):
             return 350 * 1000
@@ -81,9 +86,6 @@ class DarwinPort(ApplePort):
         total_leaks = self._leak_detector.count_total_leaks(leaks_files)
         _log.info("%s total leaks found for a total of %s." % (total_leaks, total_bytes_string))
         _log.info("%s unique leaks found." % unique_leaks)
-
-    def _path_to_webcore_library(self):
-        return self._build_path('WebCore.framework/Versions/A/WebCore')
 
     def show_results_html_file(self, results_filename):
         # We don't use self._run_script() because we don't want to wait for the script
@@ -249,17 +251,6 @@ class DarwinPort(ApplePort):
             return _path_to_test
 
         return _image_diff_in_build_path
-
-    def make_command(self):
-        return self.xcrun_find('make', '/usr/bin/make')
-
-    def xcrun_find(self, command, fallback=None):
-        fallback = fallback or command
-        try:
-            return self._executive.run_command(['xcrun', '--sdk', self.SDK, '-find', command]).rstrip()
-        except ScriptError:
-            _log.warn("xcrun failed; falling back to '%s'." % fallback)
-            return fallback
 
     @memoized
     def _plist_data_from_bundle(self, app_bundle, entry):

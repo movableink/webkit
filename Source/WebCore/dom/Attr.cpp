@@ -44,14 +44,14 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(Attr);
 using namespace HTMLNames;
 
 Attr::Attr(Element& element, const QualifiedName& name)
-    : Node(element.document(), CreateOther)
+    : Node(element.document(), ATTRIBUTE_NODE, { })
     , m_element(element)
     , m_name(name)
 {
 }
 
 Attr::Attr(Document& document, const QualifiedName& name, const AtomString& standaloneValue)
-    : Node(document, CreateOther)
+    : Node(document, ATTRIBUTE_NODE, { })
     , m_name(name)
     , m_standaloneValue(standaloneValue)
 {
@@ -94,17 +94,19 @@ ExceptionOr<void> Attr::setPrefix(const AtomString& prefix)
     return { };
 }
 
-void Attr::setValue(const AtomString& value)
+ExceptionOr<void> Attr::setValue(const AtomString& value)
 {
     if (RefPtr element = m_element.get())
-        element->setAttribute(qualifiedName(), value);
+        return element->setAttribute(qualifiedName(), value, true);
     else
         m_standaloneValue = value;
+
+    return { };
 }
 
-void Attr::setNodeValue(const String& value)
+ExceptionOr<void> Attr::setNodeValue(const String& value)
 {
-    setValue(value.isNull() ? emptyAtom() : AtomString(value));
+    return setValue(value.isNull() ? emptyAtom() : AtomString(value));
 }
 
 Ref<Node> Attr::cloneNodeInternal(Document& targetDocument, CloningOperation)
@@ -138,8 +140,7 @@ void Attr::detachFromElementWithValue(const AtomString& value)
     ASSERT(m_standaloneValue.isNull());
     m_standaloneValue = value;
     m_element = nullptr;
-    // Unable to ref the document here because it may have started destruction.
-    setTreeScopeRecursively(document());
+    setTreeScopeRecursively(RefAllowingPartiallyDestroyed<Document> { document() });
 }
 
 void Attr::attachToElement(Element& element)

@@ -117,7 +117,7 @@ JSValue JSInjectedScriptHost::evaluateWithScopeExtension(JSGlobalObject* globalO
     if (!scriptValue.isString())
         return throwTypeError(globalObject, scope, "InjectedScriptHost.evaluateWithScopeExtension first argument must be a string."_s);
 
-    String program = asString(scriptValue)->value(globalObject);
+    auto program = asString(scriptValue)->value(globalObject);
     RETURN_IF_EXCEPTION(scope, JSValue());
 
     NakedPtr<Exception> exception;
@@ -850,7 +850,7 @@ public:
     void analyzeIndexEdge(JSCell* from, JSCell* to, uint32_t) final { analyzeEdge(from, to, RootMarkReason::None); }
 
     void analyzeNode(JSCell*) final { }
-    void setOpaqueRootReachabilityReasonForCell(JSCell*, const char*) final { }
+    void setOpaqueRootReachabilityReasonForCell(JSCell*, ASCIILiteral) final { }
     void setWrappedObjectForCell(JSCell*, void*) final { }
     void setLabelForCell(JSCell*, const String&) final { }
 

@@ -102,15 +102,12 @@ public:
     const AtomString& popoverTargetAction() const;
     void setPopoverTargetAction(const AtomString& value);
 
-    RefPtr<HTMLElement> invokeTargetElement() const;
-    const AtomString& invokeAction() const;
-    void setInvokeAction(const AtomString& value);
+    RefPtr<Element> invokeTargetElement() const;
 
     using Node::ref;
     using Node::deref;
 
 protected:
-    static constexpr auto CreateHTMLFormControlElement = CreateHTMLElement | NodeFlag::HasCustomStyleResolveCallbacks;
     HTMLFormControlElement(const QualifiedName& tagName, Document&, HTMLFormElement*);
 
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) override;
@@ -133,6 +130,7 @@ protected:
 
     void handlePopoverTargetAction() const;
 
+    InvokeAction invokeAction() const;
     void handleInvokeAction();
 
 private:

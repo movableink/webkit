@@ -56,7 +56,7 @@ public:
 
     String extraDefaultStyleSheet() override;
 
-    bool supportsHover(const RenderStyle&) const override;
+    bool supportsHover() const override;
     bool supportsFocusRing(const RenderStyle&) const override;
 
     int baselinePosition(const RenderBox&) const override;
@@ -67,7 +67,8 @@ public:
     // A general method asking if any control tinting is supported at all.
     bool supportsControlTints() const override;
 
-    void adjustRepaintRect(const RenderObject&, FloatRect&) override;
+    void inflateRectForControlRenderer(const RenderObject&, FloatRect&) final;
+    void adjustRepaintRect(const RenderBox&, FloatRect&) override;
 
     // The platform selection color.
     Color platformActiveSelectionBackgroundColor(OptionSet<StyleColorOptions>) const override;

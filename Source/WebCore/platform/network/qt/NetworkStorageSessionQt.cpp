@@ -41,9 +41,9 @@ namespace WebCore {
 static void appendCookie(StringBuilder& builder, const QNetworkCookie& cookie)
 {
     if (!builder.isEmpty())
-        builder.append("; ");
+        builder.append("; "_s);
     QByteArray rawData = cookie.toRawForm(QNetworkCookie::NameAndValueOnly);
-    builder.append(rawData.constData(), rawData.length());
+    builder.append(std::span { rawData.constData(), static_cast<size_t>(rawData.length()) });
 }
 
 NetworkStorageSession::NetworkStorageSession(PAL::SessionID sessionID)

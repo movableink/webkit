@@ -26,14 +26,35 @@
 
 #if PLATFORM(MAC)
 
-namespace WebCore::SwitchMacUtilities {
+namespace WebCore {
 
-static IntSize cellSize(NSControlSize);
-static IntOutsets cellOutsets(NSControlSize);
-static FloatRect rectForBounds(const FloatRect&);
-static NSString *coreUISizeForControlSize(const NSControlSize);
-static float easeInOut(float);
+class FloatRect;
+class FloatSize;
+class GraphicsContext;
+class ImageBuffer;
+class IntSize;
 
-} // namespace WebCore::SwitchMacUtilities
+struct ControlStyle;
+
+template<typename> class RectEdges;
+using IntOutsets = RectEdges<int>;
+
+namespace SwitchMacUtilities {
+
+IntSize cellSize(NSControlSize);
+FloatSize visualCellSize(IntSize, const ControlStyle&);
+IntOutsets cellOutsets(NSControlSize);
+IntOutsets visualCellOutsets(NSControlSize, bool);
+FloatRect rectForBounds(const FloatRect&);
+NSString *coreUISizeForControlSize(const NSControlSize);
+float easeInOut(float);
+FloatRect rectWithTransposedSize(const FloatRect&, bool);
+FloatRect trackRectForBounds(const FloatRect&, const FloatSize&);
+void rotateContextForVerticalWritingMode(GraphicsContext&, const FloatRect&);
+RefPtr<ImageBuffer> trackMaskImage(GraphicsContext&, FloatSize, float, bool, NSString *);
+
+} // namespace SwitchMacUtilities
+
+} // namespace WebCore
 
 #endif // PLATFORM(MAC)

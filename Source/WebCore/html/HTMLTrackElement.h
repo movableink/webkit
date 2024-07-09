@@ -42,6 +42,12 @@ class HTMLTrackElement final : public HTMLElement, public ActiveDOMObject, publi
 public:
     static Ref<HTMLTrackElement> create(const QualifiedName&, Document&);
 
+    // ActiveDOMObject.
+    void ref() const final { HTMLElement::ref(); }
+    void deref() const final { HTMLElement::deref(); }
+
+    using HTMLElement::scriptExecutionContext;
+
     const AtomString& kind();
     void setKind(const AtomString&);
 
@@ -70,13 +76,13 @@ private:
     virtual ~HTMLTrackElement();
 
     // ActiveDOMObject.
-    const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
 
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
 
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
     void removedFromAncestor(RemovalType, ContainerNode&) final;
+    void didMoveToNewDocument(Document& oldDocument, Document& newDocument) final;
 
     bool isURLAttribute(const Attribute&) const final;
 

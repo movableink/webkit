@@ -69,10 +69,6 @@ class TestExporterTest(unittest.TestCase):
         def push(self, options):
             self.calls.append('push ' + ' '.join(options))
 
-        def format_patch(self, options):
-            self.calls.append('format patch ' + ' '.join(options))
-            return 'formatted patch with changes done to LayoutTests/imported/w3c/web-platform-tests/test1.html'
-
         def delete_branch(self, branch_name):
             self.calls.append('delete branch ' + branch_name)
 
@@ -220,6 +216,14 @@ class TestExporterTest(unittest.TestCase):
         host._mockSCM.mock_format_patch_result = b"""
 Subversion Revision: 231920
 diff --git a/LayoutTests/imported/w3c/web-platform-tests/fetch/api/headers/header-values-expected.txt b/LayoutTests/imported/w3c/web-platform-tests/fetch/api/headers/header-values-expected.txt
+
++change to expected
+
+diff --git a/LayoutTests/imported/w3c/web-platform-tests/fetch/api/headers/header-values.any.serviceworker.html b/LayoutTests/imported/w3c/web-platform-tests/fetch/api/headers/header-values.any.serviceworker.html
+
++change to expected
+
+diff --git a/LayoutTests/imported/w3c/web-platform-tests/fetch/api/headers/header-values.any.sharedworker.html b/LayoutTests/imported/w3c/web-platform-tests/fetch/api/headers/header-values.any.sharedworker.html
 
 +change to expected
 """

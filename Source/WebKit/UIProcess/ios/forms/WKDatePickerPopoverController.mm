@@ -30,6 +30,7 @@
 
 #import "UIKitUtilities.h"
 #import <WebCore/LocalizedStrings.h>
+#import <pal/system/ios/UserInterfaceIdiom.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/text/WTFString.h>
@@ -86,6 +87,8 @@
     _contentSize.width = 2 * marginSize + std::max<CGFloat>(datePickerSize.width, accessoryViewSize.width);
     _contentSize.height = toolbarBottomMargin + 2 * marginSize + datePickerSize.height + accessoryViewSize.height;
 
+    auto accessoryViewHorizontalMargin = PAL::currentUserInterfaceIdiomIsVision() ? marginSize : 0;
+
     [NSLayoutConstraint activateConstraints:@[
         [self.widthAnchor constraintEqualToConstant:_contentSize.width],
         [self.heightAnchor constraintEqualToConstant:_contentSize.height],
@@ -98,8 +101,8 @@
         [[_datePicker trailingAnchor] constraintEqualToAnchor:self.trailingAnchor],
         [[_datePicker topAnchor] constraintEqualToAnchor:self.topAnchor],
         [[_datePicker bottomAnchor] constraintEqualToSystemSpacingBelowAnchor:[_accessoryView topAnchor] multiplier:1],
-        [[_accessoryView leadingAnchor] constraintEqualToAnchor:self.leadingAnchor],
-        [[_accessoryView trailingAnchor] constraintEqualToAnchor:self.trailingAnchor],
+        [[_accessoryView leadingAnchor] constraintEqualToAnchor:self.leadingAnchor constant:accessoryViewHorizontalMargin],
+        [[_accessoryView trailingAnchor] constraintEqualToAnchor:self.trailingAnchor constant:-accessoryViewHorizontalMargin],
         [[_accessoryView heightAnchor] constraintEqualToConstant:accessoryViewSize.height],
         [[_accessoryView bottomAnchor] constraintEqualToAnchor:[_backgroundView bottomAnchor]],
     ]];
@@ -179,11 +182,16 @@
     RELEASE_ASSERT(hitTestedToAccessoryView);
 }
 
-- (void)dismissDatePicker
+- (void)dismissDatePickerAnimated:(BOOL)animated
 {
-    [self.presentingViewController dismissViewControllerAnimated:YES completion:[strongSelf = retainPtr(self)] {
+    [self.presentingViewController dismissViewControllerAnimated:animated completion:[strongSelf = retainPtr(self)] {
         [strongSelf _dispatchPopoverControllerDidDismissIfNeeded];
     }];
+}
+
+- (void)dismissDatePicker
+{
+    [self dismissDatePickerAnimated:YES];
 }
 
 - (void)viewDidLoad
@@ -223,6 +231,20 @@
     [self _scaleDownToFitHeightIfNeeded];
 }
 
+#if !PLATFORM(MACCATALYST)
+// FIXME: This platform conditional works around the fact that -isBeingPresented is sometimes NO in Catalyst, when presenting
+// a popover. This may cause a crash in the case where this size transition occurs while the popover is appearing.
+
+- (void)viewWillTransitionToSize:(CGSize)size withTransitionCoordinator:(id<UIViewControllerTransitionCoordinator>)coordinator
+{
+    [super viewWillTransitionToSize:size withTransitionCoordinator:coordinator];
+
+    if (!self.isBeingPresented && !self.isBeingDismissed)
+        [self dismissDatePickerAnimated:NO];
+}
+
+#endif // !PLATFORM(MACCATALYST)
+
 - (void)_scaleDownToFitHeightIfNeeded
 {
     auto viewBounds = self.view.bounds;
@@ -259,6 +281,13 @@
     [_transformedContentWidthConstraint setActive:YES];
 }
 
+- (void)viewDidDisappear:(BOOL)animated
+{
+    [super viewDidDisappear:animated];
+
+    [self _dispatchPopoverControllerDidDismissIfNeeded];
+}
+
 - (void)presentInView:(UIView *)view sourceRect:(CGRect)rect completion:(void(^)())completion
 {
     RetainPtr controller = [view _wk_viewControllerForFullScreenPresentation];
@@ -285,13 +314,15 @@
     auto distanceFromTop = CGRectGetMinY(rectInWindow) - CGRectGetMinY(windowBounds);
     auto distanceFromLeft = CGRectGetMinX(rectInWindow) - CGRectGetMinX(windowBounds);
     auto distanceFromRight = CGRectGetMaxX(windowBounds) - CGRectGetMaxX(rectInWindow);
-    auto distanceFromBottom = CGRectGetMaxY(windowBounds) - CGRectGetMaxY(rectInWindow);
     auto estimatedMaximumPopoverSize = [_contentView estimatedMaximumPopoverSize];
 
     auto canContainPopover = [&](CGFloat width, CGFloat height) {
         return estimatedMaximumPopoverSize.width < width && estimatedMaximumPopoverSize.height < height;
     };
 
+    // FIXME: We intentionally avoid presenting below the input element, since UIKit will prefer shrinking
+    // the popover instead of shifting it upwards in the case where the software keyboard is show.
+    // See also: <rdar://121571971>.
     auto presentationController = self.popoverPresentationController;
     UIPopoverArrowDirection permittedDirections = 0;
     if (canContainPopover(CGRectGetWidth(windowBounds), distanceFromTop))
@@ -300,8 +331,6 @@
         permittedDirections |= UIPopoverArrowDirectionRight;
     if (canContainPopover(distanceFromRight, CGRectGetHeight(windowBounds)))
         permittedDirections |= UIPopoverArrowDirectionLeft;
-    if (canContainPopover(CGRectGetWidth(windowBounds), distanceFromBottom))
-        permittedDirections |= UIPopoverArrowDirectionUp;
 
     presentationController.permittedArrowDirections = permittedDirections;
     presentationController.sourceView = view;

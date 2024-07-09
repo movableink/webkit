@@ -31,6 +31,8 @@
 #import "PlatformUtilities.h"
 #import "Test.h"
 #import "TestWKWebView.h"
+#import <WebKit/WKPreferencesPrivate.h>
+#import <WebKit/WKPreferencesRefPrivate.h>
 #import <wtf/RetainPtr.h>
 
 #if PLATFORM(IOS_FAMILY)
@@ -61,6 +63,9 @@ static RetainPtr<NSAttributedString> copyAttributedStringFromHTML(NSString *html
 {
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 400, 400)]);
 
+    auto preferences = (__bridge WKPreferencesRef)[[webView configuration] preferences];
+    WKPreferencesSetWriteRichTextDataWhenCopyingOrDragging(preferences, true);
+
     if (forceDarkMode)
         [webView forceDarkMode];
 
@@ -89,7 +94,7 @@ static void checkColor(PlatformColor *color, CGFloat red, CGFloat green, CGFloat
     [color getRed:&observedRed green:&observedGreen blue:&observedBlue alpha:&observedAlpha];
 
     EXPECT_EQ(red, observedRed);
-    EXPECT_EQ(green, observedRed);
+    EXPECT_EQ(green, observedGreen);
     EXPECT_EQ(blue, observedBlue);
     EXPECT_EQ(alpha, observedAlpha);
 }

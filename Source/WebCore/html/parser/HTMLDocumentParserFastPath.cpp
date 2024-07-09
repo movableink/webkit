@@ -198,7 +198,7 @@ public:
     HTMLFastPathParser(CharacterSpan source, Document& document, ContainerNode& destinationParent)
         : m_document(document)
         , m_destinationParent(destinationParent)
-        , m_parsingBuffer(source.data(), source.size())
+        , m_parsingBuffer(source)
     {
     }
 
@@ -230,7 +230,7 @@ public:
     HTMLFastPathResult parseResult() const { return m_parseResult; }
 
 private:
-    CheckedRef<Document> m_document;
+    Document& m_document; // FIXME: Use a smart pointer.
     WeakRef<ContainerNode, WeakPtrImplWithEventTargetData> m_destinationParent;
 
     StringParsingBuffer<CharacterType> m_parsingBuffer;
@@ -285,9 +285,9 @@ private:
         struct ContainerTag : Tag<T, parents> {
             static constexpr bool isVoid = false;
 
-            static RefPtr<HTMLElement> parseChild(HTMLFastPathParser& self)
+            static RefPtr<HTMLElement> parseChild(ContainerNode& parent, HTMLFastPathParser& self)
             {
-                return self.parseElement<PhrasingContent::No>();
+                return self.parseElement<PhrasingContent::No>(parent);
             }
         };
 
@@ -297,9 +297,9 @@ private:
         struct ContainsPhrasingContentTag : ContainerTag<T, parents> {
             static constexpr bool isVoid = false;
 
-            static RefPtr<HTMLElement> parseChild(HTMLFastPathParser& self)
+            static RefPtr<HTMLElement> parseChild(ContainerNode& parent, HTMLFastPathParser& self)
             {
-                return self.parseElement<PhrasingContent::Yes>();
+                return self.parseElement<PhrasingContent::Yes>(parent);
             }
         };
 
@@ -307,11 +307,11 @@ private:
             static constexpr ElementName tagName = ElementNames::HTML::a;
             static constexpr CharacterType tagNameCharacters[] = { 'a' };
 
-            static RefPtr<HTMLElement> parseChild(HTMLFastPathParser& self)
+            static RefPtr<HTMLElement> parseChild(ContainerNode& parent, HTMLFastPathParser& self)
             {
                 ASSERT(!self.m_insideOfTagA);
                 self.m_insideOfTagA = true;
-                auto result = ContainerTag<HTMLAnchorElement, PermittedParents::FlowContent>::parseChild(self);
+                auto result = ContainerTag<HTMLAnchorElement, PermittedParents::FlowContent>::parseChild(parent, self);
                 self.m_insideOfTagA = false;
                 return result;
             }
@@ -321,11 +321,11 @@ private:
             static constexpr ElementName tagName = ElementNames::HTML::a;
             static constexpr CharacterType tagNameCharacters[] = { 'a' };
 
-            static RefPtr<HTMLElement> parseChild(HTMLFastPathParser& self)
+            static RefPtr<HTMLElement> parseChild(ContainerNode& parent, HTMLFastPathParser& self)
             {
                 ASSERT(!self.m_insideOfTagA);
                 self.m_insideOfTagA = true;
-                auto result = ContainsPhrasingContentTag<HTMLAnchorElement, PermittedParents::PhrasingOrFlowContent>::parseChild(self);
+                auto result = ContainsPhrasingContentTag<HTMLAnchorElement, PermittedParents::PhrasingOrFlowContent>::parseChild(parent, self);
                 self.m_insideOfTagA = false;
                 return result;
             }
@@ -405,7 +405,7 @@ private:
             static constexpr ElementName tagName = ElementNames::HTML::option;
             static constexpr CharacterType tagNameCharacters[] = { 'o', 'p', 't', 'i', 'o', 'n' };
 
-            static RefPtr<HTMLElement> parseChild(HTMLFastPathParser& self)
+            static RefPtr<HTMLElement> parseChild(ContainerNode&, HTMLFastPathParser& self)
             {
                 // <option> can only contain a text content.
                 return self.didFail(HTMLFastPathResult::FailedOptionWithChild, nullptr);
@@ -416,9 +416,9 @@ private:
             static constexpr ElementName tagName = ElementNames::HTML::ol;
             static constexpr CharacterType tagNameCharacters[] = { 'o', 'l' };
 
-            static RefPtr<HTMLElement> parseChild(HTMLFastPathParser& self)
+            static RefPtr<HTMLElement> parseChild(ContainerNode& parent, HTMLFastPathParser& self)
             {
-                return self.parseSpecificElements<Li>();
+                return self.parseSpecificElements<Li>(parent);
             }
         };
 
@@ -431,9 +431,9 @@ private:
             static constexpr ElementName tagName = ElementNames::HTML::select;
             static constexpr CharacterType tagNameCharacters[] = { 's', 'e', 'l', 'e', 'c', 't' };
 
-            static RefPtr<HTMLElement> parseChild(HTMLFastPathParser& self)
+            static RefPtr<HTMLElement> parseChild(ContainerNode& parent, HTMLFastPathParser& self)
             {
-                return self.parseSpecificElements<Option>();
+                return self.parseSpecificElements<Option>(parent);
             }
         };
 
@@ -456,9 +456,9 @@ private:
             static constexpr ElementName tagName = ElementNames::HTML::ul;
             static constexpr CharacterType tagNameCharacters[] = { 'u', 'l' };
 
-            static RefPtr<HTMLElement> parseChild(HTMLFastPathParser& self)
+            static RefPtr<HTMLElement> parseChild(ContainerNode& parent, HTMLFastPathParser& self)
             {
-                return self.parseSpecificElements<Li>();
+                return self.parseSpecificElements<Li>(parent);
             }
         };
     };
@@ -466,7 +466,7 @@ private:
     template<typename ParentTag> void parseCompleteInput()
     {
         parseChildren<ParentTag>(m_destinationParent.get());
-        if (m_parsingBuffer.hasCharactersRemaining())
+        if (UNLIKELY(m_parsingBuffer.hasCharactersRemaining()))
             didFail(HTMLFastPathResult::FailedDidntReachEndOfInput);
     }
 
@@ -476,23 +476,44 @@ private:
     // `LChar` parser.
     String scanText()
     {
+        using UnsignedType = std::make_unsigned_t<CharacterType>;
+        constexpr auto quoteMask = SIMD::splat<UnsignedType>('<');
+        constexpr auto escapeMask = SIMD::splat<UnsignedType>('&');
+        constexpr auto newlineMask = SIMD::splat<UnsignedType>('\r');
+        constexpr auto zeroMask = SIMD::splat<UnsignedType>(0);
+        auto vectorMatch = [&](auto input) ALWAYS_INLINE_LAMBDA {
+            auto quotes = SIMD::equal(input, quoteMask);
+            auto escapes = SIMD::equal(input, escapeMask);
+            auto newlines = SIMD::equal(input, newlineMask);
+            auto zeros = SIMD::equal(input, zeroMask);
+            auto mask = SIMD::bitOr(zeros, quotes, escapes, newlines);
+            return SIMD::findFirstNonZeroIndex(mask);
+        };
+
+        auto scalarMatch = [&](auto character) ALWAYS_INLINE_LAMBDA {
+            return character == '<' || character == '&' || character == '\r' || character == '\0';
+        };
+
         auto* start = m_parsingBuffer.position();
-        while (m_parsingBuffer.hasCharactersRemaining() && *m_parsingBuffer != '<') {
-            // '&' indicates escape sequences, '\r' might require
-            // https://infra.spec.whatwg.org/#normalize-newlines
-            if (*m_parsingBuffer == '&' || *m_parsingBuffer == '\r') {
+        const auto* end = start + m_parsingBuffer.lengthRemaining();
+        auto* cursor = SIMD::find(std::span { start, end }, vectorMatch, scalarMatch);
+        m_parsingBuffer.setPosition(cursor);
+
+        if (cursor != end) {
+            if (UNLIKELY(*cursor == '\0'))
+                return didFail(HTMLFastPathResult::FailedContainsNull, String());
+
+            if (*cursor == '&' || *cursor == '\r') {
                 m_parsingBuffer.setPosition(start);
                 return scanEscapedText();
             }
-            if (UNLIKELY(*m_parsingBuffer == '\0'))
-                return didFail(HTMLFastPathResult::FailedContainsNull, String());
-
-            m_parsingBuffer.advance();
         }
-        unsigned length = m_parsingBuffer.position() - start;
+
+        unsigned length = cursor - start;
         if (UNLIKELY(length >= Text::defaultLengthLimit))
             return didFail(HTMLFastPathResult::FailedBigText, String());
-        return length ? String(start, length) : String();
+
+        return length ? String({ start, length }) : String();
     }
 
     // Slow-path of `scanText()`, which supports escape sequences by copying to a
@@ -540,10 +561,10 @@ private:
                 m_parsingBuffer.advance();
                 m_charBuffer.append(c);
             }
-            if (m_parsingBuffer.atEnd() || !isCharAfterTagNameOrAttribute(*m_parsingBuffer))
+            if (UNLIKELY(m_parsingBuffer.atEnd() || !isCharAfterTagNameOrAttribute(*m_parsingBuffer)))
                 return didFail(HTMLFastPathResult::FailedParsingTagName, ElementName::Unknown);
             skipWhile<isASCIIWhitespace>(m_parsingBuffer);
-            return findHTMLElementName(std::span { m_charBuffer.data(), m_charBuffer.size() });
+            return findHTMLElementName(m_charBuffer.span());
         }
         auto tagName = findHTMLElementName(std::span { start, static_cast<size_t>(m_parsingBuffer.position() - start) });
         skipWhile<isASCIIWhitespace>(m_parsingBuffer);
@@ -585,8 +606,6 @@ private:
             // fails. For example, an image's onload event.
             return nullQName();
         }
-        if (attributeName.size() == 2 && compareCharacters(attributeName.data(), 'i', 's'))
-            return nullQName();
         return HTMLNameCache::makeAttributeQualifiedName(attributeName);
     }
 
@@ -597,23 +616,42 @@ private:
         size_t length = 0;
         if (m_parsingBuffer.hasCharactersRemaining() && isQuoteCharacter(*m_parsingBuffer)) {
             auto quoteChar = m_parsingBuffer.consume();
+
+            using UnsignedType = std::make_unsigned_t<CharacterType>;
+            const auto quoteMask = SIMD::splat<UnsignedType>(quoteChar);
+            constexpr auto escapeMask = SIMD::splat<UnsignedType>('&');
+            constexpr auto newlineMask = SIMD::splat<UnsignedType>('\r');
+            auto vectorMatch = [&](auto input) ALWAYS_INLINE_LAMBDA {
+                auto quotes = SIMD::equal(input, quoteMask);
+                auto escapes = SIMD::equal(input, escapeMask);
+                auto newlines = SIMD::equal(input, newlineMask);
+                auto mask = SIMD::bitOr(quotes, escapes, newlines);
+                return SIMD::findFirstNonZeroIndex(mask);
+            };
+
+            auto scalarMatch = [&](auto character) ALWAYS_INLINE_LAMBDA {
+                return character == quoteChar || character == '&' || character == '\r';
+            };
+
             start = m_parsingBuffer.position();
-            for (; m_parsingBuffer.hasCharactersRemaining() && *m_parsingBuffer != quoteChar; m_parsingBuffer.advance()) {
-                if (*m_parsingBuffer == '&' || *m_parsingBuffer == '\r') {
+            const auto* end = start + m_parsingBuffer.lengthRemaining();
+            auto* cursor = SIMD::find(std::span { start, end }, vectorMatch, scalarMatch);
+            if (UNLIKELY(cursor == end))
+                return didFail(HTMLFastPathResult::FailedParsingQuotedAttributeValue, emptyAtom());
+
+            length = cursor - start;
+            if (UNLIKELY(*cursor != quoteChar)) {
+                if (LIKELY(*cursor == '&' || *cursor == '\r')) {
                     m_parsingBuffer.setPosition(start - 1);
                     return scanEscapedAttributeValue();
                 }
+                return didFail(HTMLFastPathResult::FailedParsingQuotedAttributeValue, emptyAtom());
             }
-            if (m_parsingBuffer.atEnd())
-                return didFail(HTMLFastPathResult::FailedParsingQuotedAttributeValue, emptyAtom());
-
-            length = m_parsingBuffer.position() - start;
-            if (m_parsingBuffer.consume() != quoteChar)
-                return didFail(HTMLFastPathResult::FailedParsingQuotedAttributeValue, emptyAtom());
+            m_parsingBuffer.setPosition(cursor + 1);
         } else {
             skipWhile<isValidUnquotedAttributeValueChar>(m_parsingBuffer);
             length = m_parsingBuffer.position() - start;
-            if (m_parsingBuffer.atEnd() || !isCharAfterUnquotedAttribute(*m_parsingBuffer))
+            if (UNLIKELY(m_parsingBuffer.atEnd() || !isCharAfterUnquotedAttribute(*m_parsingBuffer)))
                 return didFail(HTMLFastPathResult::FailedParsingUnquotedAttributeValue, emptyAtom());
         }
         return HTMLNameCache::makeAttributeValue({ start, length });
@@ -687,8 +725,12 @@ private:
             if (parsingFailed())
                 return;
 
-            if (!text.isNull())
-                parent.parserAppendChild(Text::create(m_document.get(), WTFMove(text)));
+            if (!text.isNull()) {
+                if (!parent.isConnected())
+                    parent.parserAppendChildIntoIsolatedTree(Text::create(m_document, WTFMove(text)));
+                else
+                    parent.parserAppendChild(Text::create(m_document, WTFMove(text)));
+            }
 
             if (m_parsingBuffer.atEnd())
                 return;
@@ -698,14 +740,13 @@ private:
                 // We assume that we found the closing tag. The tagName will be checked by the caller `parseContainerElement()`.
                 return;
             }
-            if (++m_elementDepth == Settings::defaultMaximumHTMLParserDOMTreeDepth)
+            if (UNLIKELY(++m_elementDepth == Settings::defaultMaximumHTMLParserDOMTreeDepth))
                 return didFail(HTMLFastPathResult::FailedMaxDepth);
-            auto child = ParentTag::parseChild(*this);
+            auto child = ParentTag::parseChild(parent, *this);
             --m_elementDepth;
             if (parsingFailed())
                 return;
             ASSERT(child);
-            parent.parserAppendChild(*child);
         }
     }
 
@@ -718,7 +759,7 @@ private:
         while (true) {
             auto attributeName = scanAttributeName();
             if (attributeName == nullQName()) {
-                if (m_parsingBuffer.hasCharactersRemaining()) {
+                if (LIKELY(m_parsingBuffer.hasCharactersRemaining())) {
                     if (*m_parsingBuffer == '>') {
                         m_parsingBuffer.advance();
                         break;
@@ -726,7 +767,7 @@ private:
                     if (*m_parsingBuffer == '/') {
                         m_parsingBuffer.advance();
                         skipWhile<isASCIIWhitespace>(m_parsingBuffer);
-                        if (m_parsingBuffer.atEnd() || m_parsingBuffer.consume() != '>')
+                        if (UNLIKELY(m_parsingBuffer.atEnd() || m_parsingBuffer.consume() != '>'))
                             return didFail(HTMLFastPathResult::FailedParsingAttributes);
                         break;
                     }
@@ -750,25 +791,25 @@ private:
             parent.setHasDuplicateAttribute(true);
     }
 
-    template<typename... Tags> RefPtr<HTMLElement> parseSpecificElements()
+    template<typename... Tags> RefPtr<HTMLElement> parseSpecificElements(ContainerNode& parent)
     {
         auto tagName = scanTagName();
-        return parseSpecificElements<Tags...>(tagName);
+        return parseSpecificElements<Tags...>(tagName, parent);
     }
 
-    template<void* = nullptr> RefPtr<HTMLElement> parseSpecificElements(ElementName)
+    template<void* = nullptr> RefPtr<HTMLElement> parseSpecificElements(ElementName, ContainerNode&)
     {
         return didFail(HTMLFastPathResult::FailedParsingSpecificElements, nullptr);
     }
 
-    template<typename Tag, typename... OtherTags> RefPtr<HTMLElement> parseSpecificElements(ElementName tagName)
+    template<typename Tag, typename... OtherTags> RefPtr<HTMLElement> parseSpecificElements(ElementName tagName, ContainerNode& parent)
     {
         if (tagName == Tag::tagName)
-            return parseElementAfterTagName<Tag>();
-        return parseSpecificElements<OtherTags...>(tagName);
+            return parseElementAfterTagName<Tag>(parent);
+        return parseSpecificElements<OtherTags...>(tagName, parent);
     }
 
-    template<PhrasingContent phrasingContent> RefPtr<HTMLElement> parseElement()
+    template<PhrasingContent phrasingContent> RefPtr<HTMLElement> parseElement(ContainerNode& parent)
     {
         auto tagName = scanTagName();
 
@@ -782,7 +823,7 @@ private:
 #define TAG_CASE(TagName, TagClassName)                                            \
         case ElementNames::HTML::TagName:                                          \
         if constexpr (phrasingContent == PhrasingContent::No ? TagInfo::TagClassName::allowedInFlowContent() : TagInfo::TagClassName::allowedInPhrasingOrFlowContent()) \
-                return parseElementAfterTagName<typename TagInfo::TagClassName>(); \
+                return parseElementAfterTagName<typename TagInfo::TagClassName>(parent); \
             break;
 
         switch (tagName) {
@@ -790,7 +831,7 @@ private:
             // <a> tags must not be nested, because HTML parsing would auto-close
             // the outer one when encountering a nested one.
             if (!m_insideOfTagA)
-                return phrasingContent == PhrasingContent::No ? parseElementAfterTagName<typename TagInfo::A>() : parseElementAfterTagName<typename TagInfo::AWithPhrasingContent>();
+                return phrasingContent == PhrasingContent::No ? parseElementAfterTagName<typename TagInfo::A>(parent) : parseElementAfterTagName<typename TagInfo::AWithPhrasingContent>(parent);
             break;
             TAG_CASE(b, B)
             TAG_CASE(br, Br)
@@ -806,7 +847,7 @@ private:
                     // in such a case.
                     if (!m_insideOfTagLi) {
                         m_insideOfTagLi = true;
-                        auto result = parseElementAfterTagName<typename TagInfo::Li>();
+                        auto result = parseElementAfterTagName<typename TagInfo::Li>(parent);
                         m_insideOfTagLi = false;
                         return result;
                     }
@@ -827,22 +868,26 @@ private:
         return didFail(HTMLFastPathResult::FailedUnsupportedTag, nullptr);
     }
 
-    template<typename Tag> Ref<typename Tag::HTMLElementClass> parseElementAfterTagName()
+    template<typename Tag> Ref<typename Tag::HTMLElementClass> parseElementAfterTagName(ContainerNode& parent)
     {
         if constexpr (Tag::isVoid)
-            return parseVoidElement(Tag::create(m_document.get()));
+            return parseVoidElement(Tag::create(m_document), parent);
         else
-            return parseContainerElement<Tag>(Tag::create(m_document.get()));
+            return parseContainerElement<Tag>(Tag::create(m_document), parent);
     }
 
-    template<typename Tag> Ref<typename Tag::HTMLElementClass> parseContainerElement(Ref<typename Tag::HTMLElementClass>&& element)
+    template<typename Tag> Ref<typename Tag::HTMLElementClass> parseContainerElement(Ref<typename Tag::HTMLElementClass>&& element, ContainerNode& parent)
     {
         parseAttributes(element);
         if (parsingFailed())
             return WTFMove(element);
+        if (!parent.isConnected())
+            parent.parserAppendChildIntoIsolatedTree(element);
+        else
+            parent.parserAppendChild(element);
         element->beginParsingChildren();
         parseChildren<Tag>(element);
-        if (parsingFailed() || m_parsingBuffer.atEnd())
+        if (UNLIKELY(parsingFailed() || m_parsingBuffer.atEnd()))
             return didFail(HTMLFastPathResult::FailedEndOfInputReachedForContainer, element);
 
         // parseChildren<Tag>(element) stops after the (hopefully) closing tag's `<`
@@ -851,25 +896,29 @@ private:
         m_parsingBuffer.advance();
 
         if (UNLIKELY(!skipCharactersExactly(m_parsingBuffer, Tag::tagNameCharacters))) {
-            if (!skipLettersExactlyIgnoringASCIICase(m_parsingBuffer, Tag::tagNameCharacters))
+            if (UNLIKELY(!skipLettersExactlyIgnoringASCIICase(m_parsingBuffer, Tag::tagNameCharacters)))
                 return didFail(HTMLFastPathResult::FailedEndTagNameMismatch, element);
         }
         skipWhile<isASCIIWhitespace>(m_parsingBuffer);
 
-        if (m_parsingBuffer.atEnd() || m_parsingBuffer.consume() != '>')
+        if (UNLIKELY(m_parsingBuffer.atEnd() || m_parsingBuffer.consume() != '>'))
             return didFail(HTMLFastPathResult::FailedUnexpectedTagNameCloseState, element);
 
         element->finishParsingChildren();
         return WTFMove(element);
     }
 
-    template<typename HTMLElementType> Ref<HTMLElementType> parseVoidElement(Ref<HTMLElementType>&& element)
+    template<typename HTMLElementType> Ref<HTMLElementType> parseVoidElement(Ref<HTMLElementType>&& element, ContainerNode& parent)
     {
         parseAttributes(element);
-        if (!parsingFailed()) {
-            element->beginParsingChildren();
-            element->finishParsingChildren();
-        }
+        if (parsingFailed())
+            return WTFMove(element);
+        if (!parent.isConnected())
+            parent.parserAppendChildIntoIsolatedTree(element);
+        else
+            parent.parserAppendChild(element);
+        element->beginParsingChildren();
+        element->finishParsingChildren();
         return WTFMove(element);
     }
 };
@@ -890,7 +939,7 @@ static bool canUseFastPath(Element& contextElement, OptionSet<ParserContentPolic
 }
 
 template<typename CharacterType>
-static bool tryFastParsingHTMLFragmentImpl(const std::span<const CharacterType>& source, Document& document, ContainerNode& destinationParent, Element& contextElement)
+static bool tryFastParsingHTMLFragmentImpl(std::span<const CharacterType> source, Document& document, ContainerNode& destinationParent, Element& contextElement)
 {
     HTMLFastPathParser parser { source, document, destinationParent };
     return parser.parse(contextElement);

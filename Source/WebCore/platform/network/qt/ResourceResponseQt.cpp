@@ -13,8 +13,14 @@ String ResourceResponse::platformSuggestedFilename() const
 {
     // FIXME: Move to base class
     String contentDisposition(httpHeaderField(HTTPHeaderName::ContentDisposition));
-    StringView suggestedFilename = filenameFromHTTPContentDisposition(String::fromUTF8WithLatin1Fallback(contentDisposition.characters8(), contentDisposition.length()));
 
+    if (contentDisposition.isEmpty())
+        return { };
+
+    if (contentDisposition.is8Bit())
+        contentDisposition = String::fromUTF8WithLatin1Fallback(contentDisposition.span8());
+
+    StringView suggestedFilename = filenameFromHTTPContentDisposition(contentDisposition);
     if (!suggestedFilename.isEmpty())
         return suggestedFilename.toString();
 

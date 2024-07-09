@@ -1,0 +1,26 @@
+load("//bazel:skia_rules.bzl", "exports_files_legacy", "skia_filegroup")
+
+package(
+    default_applicable_licenses = ["//:license"],
+)
+
+licenses(["notice"])
+
+exports_files_legacy()
+
+skia_filegroup(
+    name = "hdrs",
+    srcs = [
+        "BentleyOttmann1.h",
+        "BruteForceCrossings.h",
+        "Contour.h",
+        "EventQueue.h",
+        "EventQueueInterface.h",
+        "Int96.h",
+        "Myers.h",
+        "Point.h",
+        "Segment.h",
+        "SweepLine.h",
+    ],
+    visibility = ["//modules/bentleyottmann:__pkg__"],
+)

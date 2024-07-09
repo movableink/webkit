@@ -84,7 +84,6 @@ platform/mac/fast/text/justified-text-rect.html
 
 # https://bugs.webkit.org/show_bug.cgi?id=115274
 # testRunner.setPrivateBrowsingEnabled_DEPRECATED() doesn't work with NetworkProcess and is WebKitLegacy only.
-http/tests/security/appcache-switching-private-browsing.html [ Skip ]
 http/tests/security/cookies/first-party-cookie-allow-xslt.xml [ Skip ]
 http/tests/security/cookies/third-party-cookie-blocking-xslt.xml [ Skip ]
 http/tests/security/cross-origin-plugin-private-browsing-toggled-allowed.html [ Skip ]
@@ -167,8 +166,6 @@ webkit.org/b/149087 http/tests/cache/disk-cache/disk-cache-cancel.html [ Pass Fa
 
 webkit.org/b/141122 editing/selection/programmatic-selection-on-mac-is-directionless.html [ Pass Failure ]
 
-http/tests/appcache/decide-navigation-policy-after-delay.html [ Pass ]
-
 # DatabaseProcess cannot open some of these database filenames (DRT can open the exact same database filenames)
 webkit.org/b/154681 storage/indexeddb/database-odd-names.html
 webkit.org/b/154681 storage/indexeddb/odd-strings.html
@@ -220,14 +217,6 @@ media/modern-media-controls/scrubber-support/scrubber-support-drag.html [ Timeou
 
 # webkit.org/b/221693
 media/encrypted-media/clearKey/clearKey-session-life-cycle.html [ Failure Crash ]
-
-# webkit.org/b/221791
-# fast/canvas/webgl/tex-image-and-sub-image-2d-with-video-rgb565.html [ Failure ]
-# fast/canvas/webgl/tex-image-and-sub-image-2d-with-video-rgba4444.html [ Failure ]
-# fast/canvas/webgl/tex-image-and-sub-image-2d-with-video-rgba5551.html [ Failure ]
-# fast/canvas/webgl/tex-image-and-sub-image-2d-with-video.html [ Failure ]
-# fast/canvas/webgl/texImage2D-mse-flipY-false.html [ Failure ]
-# fast/canvas/webgl/texImage2D-mse-flipY-true.html [ Failure ]
 
 # webkit.org/b/221790
 # webgl/1.0.3/conformance/textures/tex-image-and-sub-image-2d-with-video-rgb565.html [ Failure ]
@@ -688,6 +677,7 @@ webkit.org/b/115274 http/tests/security/contentSecurityPolicy/report-same-origin
 
 # These tests are checking that WebContent is terminated when performing an invalid IPC operation for WK2.
 # They crash in debug (as expected) so we skip them there. <rdar://problem/117742950>
+[ Debug ] ipc/validate-message-check-in-networkconnectiontowebproces-crash.html [ Skip ]
 [ Debug ] ipc/restrictedendpoints/deny-access-testOnlyIPC.html [ Skip ]
 [ Debug ] ipc/restrictedendpoints/deny-access-webGPU.html [ Skip ]
 [ Debug ] ipc/restrictedendpoints/deny-access-attachmentElement.html [ Skip ]
@@ -737,11 +727,6 @@ http/tests/resourceLoadStatistics/grandfathering.html [ Pass ]
 http/tests/resourceLoadStatistics/prune-statistics.html [ Pass ]
 http/tests/resourceLoadStatistics [ Pass ]
 
-# Tests rely on behavior in iOS 16 and macOS Ventura.
-http/tests/resourceLoadStatistics/capped-lifetime-for-cookie-set-in-js-24-hours.html [ Skip ]
-http/tests/resourceLoadStatistics/website-data-removal-for-site-navigated-to-with-link-decoration-js-cookie-checking.html [ Skip ]
-http/tests/resourceLoadStatistics/website-data-removal-for-site-without-user-interaction-js-cookie-checking.html [ Skip ]
-
 # App Bound Domains is for iOS only, so we should skip
 # them here and enable them in the iOS platform specific file.
 http/tests/resourceLoadStatistics/exemptDomains/ [ Skip ]
@@ -752,15 +737,6 @@ http/tests/resourceLoadStatistics/enforce-samesite-strict-based-on-top-frame-uni
 
 # This test is flaky. <rdar://problem/69748720>
 http/tests/resourceLoadStatistics/operating-dates-all-but-cookies-removed-with-user-interaction-7-days-ago.html [ Pass Failure ]
-
-# The CNAME and cookie transform SPIs are only available in macOS Big Sur + iOS 14 and above.
-http/tests/resourceLoadStatistics/cname-cloaking-top-cname-sub-1p-cname.html [ Skip ]
-http/tests/resourceLoadStatistics/cname-cloaking-top-cname-sub-3p-cname.html [ Skip ]
-http/tests/resourceLoadStatistics/cname-cloaking-top-cname-sub-matching-cname.html [ Skip ]
-http/tests/resourceLoadStatistics/cname-cloaking-top-cname-sub-no-cname.html [ Skip ]
-http/tests/resourceLoadStatistics/cname-cloaking-top-no-cname-sub-1p-cname.html [ Skip ]
-http/tests/resourceLoadStatistics/cname-cloaking-top-no-cname-sub-3p-cname.html [ Skip ]
-http/tests/resourceLoadStatistics/cname-cloaking-top-no-cname-sub-no-cname.html [ Skip ]
 
 http/tests/websocket/connection-refusal-in-frame-resource-load-statistics.html [ Pass ]
 # These are only supported behind a compile time flag in macOS High Sierra + iOS 11, and above.
@@ -836,8 +812,6 @@ fullscreen/fullscreen-enter-bottom-padding-animation.html [ Pass ]
 ### (4) Features that are not supported in WebKit2 and likely never will be
 ### (5) Progressions, expected successes that are expected failures in WebKit1.
 
-webkit.org/b/168092 media/track/track-cues-sorted-before-dispatch.html [ Pass Failure ]
-
 webkit.org/b/172662 [ Debug ] http/tests/cache/disk-cache/disk-cache-vary-cookie.html [ Pass Failure ]
 webkit.org/b/172662 [ Debug ] http/tests/cache/disk-cache/redirect-chain-limits.html [ Pass Failure ]
 
@@ -879,7 +853,7 @@ webkit.org/b/260926 imported/w3c/web-platform-tests/html/browsers/browsing-the-w
 
 webkit.org/b/262088 [ Debug ] imported/w3c/web-platform-tests/fetch/private-network-access/iframe.tentative.https.window.html [ Pass Failure ]
 
-webkit.org/b/262157 imported/w3c/web-platform-tests/css/css-contain/content-visibility/content-visibility-video.html [ Pass ImageOnlyFailure Crash ]
+imported/w3c/web-platform-tests/css/css-contain/content-visibility/content-visibility-video.html [ Pass ImageOnlyFailure ]
 
 webkit.org/b/261314 [ Debug ] fast/mediastream/captureStream/canvas3d.html [ Pass Failure ]
 

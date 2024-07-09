@@ -30,10 +30,11 @@
 #include <WebCore/Color.h>
 #include <WebCore/FloatRect.h>
 #include <WebCore/InspectorFrontendClient.h>
-#include <wtf/CheckedPtr.h>
+#include <wtf/FastMalloc.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/RetainPtr.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(MAC)
@@ -64,7 +65,9 @@ class WebView;
 class WebInspectorUIExtensionControllerProxy;
 #endif
 
-class RemoteWebInspectorUIProxyClient : public CanMakeCheckedPtr {
+class RemoteWebInspectorUIProxyClient : public CanMakeWeakPtr<RemoteWebInspectorUIProxyClient>, public CanMakeCheckedPtr<RemoteWebInspectorUIProxyClient> {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RemoteWebInspectorUIProxyClient);
 public:
     virtual ~RemoteWebInspectorUIProxyClient() { }
     virtual void sendMessageToBackend(const String& message) = 0;
@@ -166,8 +169,8 @@ private:
     void platformRevealFileExternally(const String& path);
     void platformShowCertificate(const WebCore::CertificateInfo&);
 
-    CheckedPtr<RemoteWebInspectorUIProxyClient> m_client;
-    CheckedPtr<WebPageProxy> m_inspectorPage;
+    WeakPtr<RemoteWebInspectorUIProxyClient> m_client;
+    WeakPtr<WebPageProxy> m_inspectorPage;
 
 #if ENABLE(INSPECTOR_EXTENSIONS)
     RefPtr<WebInspectorUIExtensionControllerProxy> m_extensionController;

@@ -54,11 +54,12 @@ public:
         WTF::initializeMainThread();
         
         // create temp file
-        FileSystem::PlatformFileHandle handle;
-        m_tempFilePath = FileSystem::openTemporaryFile("tempTestFile"_s, handle);
+        auto result = FileSystem::openTemporaryFile("tempTestFile"_s);
+        m_tempFilePath = result.first;
+        auto handle = result.second;
         ASSERT_NE(handle, FileSystem::invalidPlatformFileHandle);
-        
-        int rc = FileSystem::writeToFile(handle, FileMonitorTestData.utf8().data(), FileMonitorTestData.length());
+
+        int rc = FileSystem::writeToFile(handle, FileMonitorTestData.utf8().span());
         ASSERT_NE(rc, -1);
         
         FileSystem::closeFile(handle);
@@ -100,7 +101,7 @@ static void resetTestState()
 
 static String createCommand(const String& path, const String& payload)
 {
-    return makeString("echo \"", payload, "\" > ", path);
+    return makeString("echo \""_s, payload, "\" > "_s, path);
 }
 
 static String readContentsOfFile(const String& path)
@@ -109,7 +110,7 @@ static String readContentsOfFile(const String& path)
     if (!buffer)
         return emptyString();
 
-    String result(static_cast<const LChar*>(buffer->data()), buffer->size());
+    String result = buffer->span();
     if (result.endsWith('\n'))
         return result.left(result.length() - 1);
 
@@ -122,7 +123,7 @@ TEST_F(FileMonitorTest, DetectChange)
 
     WTF::initializeMainThread();
 
-    auto testQueue = WorkQueue::create("Test Work Queue");
+    auto testQueue = WorkQueue::create("Test Work Queue"_s);
 
     auto monitor = makeUnique<FileMonitor>(tempFilePath(), testQueue.copyRef(), [] (FileMonitor::FileChangeType type) {
         ASSERT(!RunLoop::isMain());
@@ -164,7 +165,7 @@ TEST_F(FileMonitorTest, DetectMultipleChanges)
 
     WTF::initializeMainThread();
 
-    auto testQueue = WorkQueue::create("Test Work Queue");
+    auto testQueue = WorkQueue::create("Test Work Queue"_s);
 
     auto monitor = makeUnique<FileMonitor>(tempFilePath(), testQueue.copyRef(), [] (FileMonitor::FileChangeType type) {
         ASSERT(!RunLoop::isMain());
@@ -224,7 +225,7 @@ TEST_F(FileMonitorTest, DetectDeletion)
 
     WTF::initializeMainThread();
 
-    auto testQueue = WorkQueue::create("Test Work Queue");
+    auto testQueue = WorkQueue::create("Test Work Queue"_s);
 
     auto monitor = makeUnique<FileMonitor>(tempFilePath(), testQueue.copyRef(), [] (FileMonitor::FileChangeType type) {
         ASSERT(!RunLoop::isMain());
@@ -239,7 +240,7 @@ TEST_F(FileMonitorTest, DetectDeletion)
     });
 
     testQueue->dispatch([this] () mutable {
-        auto rc = system(makeString("rm -f ", tempFilePath()).utf8().data());
+        auto rc = system(makeString("rm -f "_s, tempFilePath()).utf8().data());
         ASSERT_NE(rc, -1);
         if (rc == -1)
             didFinish = true;
@@ -259,7 +260,7 @@ TEST_F(FileMonitorTest, DetectChangeAndThenDelete)
 
     WTF::initializeMainThread();
 
-    auto testQueue = WorkQueue::create("Test Work Queue");
+    auto testQueue = WorkQueue::create("Test Work Queue"_s);
 
     auto monitor = makeUnique<FileMonitor>(tempFilePath(), testQueue.copyRef(), [] (FileMonitor::FileChangeType type) {
         ASSERT(!RunLoop::isMain());
@@ -292,7 +293,7 @@ TEST_F(FileMonitorTest, DetectChangeAndThenDelete)
     resetTestState();
 
     testQueue->dispatch([this] () mutable {
-        auto rc = system(makeString("rm -f ", tempFilePath()).utf8().data());
+        auto rc = system(makeString("rm -f "_s, tempFilePath()).utf8().data());
         ASSERT_NE(rc, -1);
         if (rc == -1)
             didFinish = true;
@@ -312,7 +313,7 @@ TEST_F(FileMonitorTest, DetectDeleteButNotSubsequentChange)
 
     WTF::initializeMainThread();
 
-    auto testQueue = WorkQueue::create("Test Work Queue");
+    auto testQueue = WorkQueue::create("Test Work Queue"_s);
 
     auto monitor = makeUnique<FileMonitor>(tempFilePath(), testQueue.copyRef(), [] (FileMonitor::FileChangeType type) {
         ASSERT(!RunLoop::isMain());
@@ -327,7 +328,7 @@ TEST_F(FileMonitorTest, DetectDeleteButNotSubsequentChange)
     });
 
     testQueue->dispatch([this] () mutable {
-        auto rc = system(makeString("rm -f ", tempFilePath()).utf8().data());
+        auto rc = system(makeString("rm -f "_s, tempFilePath()).utf8().data());
         ASSERT_NE(rc, -1);
         if (rc == -1)
             didFinish = true;
@@ -346,7 +347,7 @@ TEST_F(FileMonitorTest, DetectDeleteButNotSubsequentChange)
         auto handle = FileSystem::openFile(tempFilePath(), FileSystem::FileOpenMode::Truncate);
         ASSERT_NE(handle, FileSystem::invalidPlatformFileHandle);
 
-        int rc = FileSystem::writeToFile(handle, FileMonitorTestData.utf8().data(), FileMonitorTestData.length());
+        int rc = FileSystem::writeToFile(handle, FileMonitorTestData.utf8().span());
         ASSERT_NE(rc, -1);
 
         auto firstCommand = createCommand(tempFilePath(), FileMonitorRevisedData);

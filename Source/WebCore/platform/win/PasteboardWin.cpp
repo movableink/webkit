@@ -31,6 +31,7 @@
 #include "CachedImage.h"
 #include "ClipboardUtilitiesWin.h"
 #include "Color.h"
+#include "CommonAtomStrings.h"
 #include "Document.h"
 #include "DocumentFragment.h"
 #include "Editor.h"
@@ -242,7 +243,7 @@ static void addMimeTypesForFormat(ListHashSet<String>& results, const FORMATETC&
     if (format.cfFormat == urlFormat()->cfFormat || format.cfFormat == urlWFormat()->cfFormat)
         results.add("text/uri-list"_s);
     if (format.cfFormat == plainTextWFormat()->cfFormat || format.cfFormat == plainTextFormat()->cfFormat)
-        results.add("text/plain"_s);
+        results.add(textPlainContentTypeAtom());
 }
 
 std::optional<PasteboardCustomData> Pasteboard::readPasteboardCustomData()
@@ -275,9 +276,9 @@ Vector<String> Pasteboard::typesSafeForBindings(const String& origin)
             domPasteboardTypes.add(type);
     }
 
-    domPasteboardTypes.add("text/plain"_s);
+    domPasteboardTypes.add(textPlainContentTypeAtom());
     domPasteboardTypes.add("text/uri-list"_s);
-    domPasteboardTypes.add("text/html"_s);
+    domPasteboardTypes.add(textHTMLContentTypeAtom());
 
     return copyToVector(domPasteboardTypes);
 }
@@ -693,7 +694,7 @@ void Pasteboard::writeURLToDataObject(const URL& kurl, const String& titleStr)
     ASSERT(url.containsOnlyASCII()); // URL::string() is URL encoded.
 
     String fsPath = fileSystemPathFromURLOrTitle(url, titleStr, ".URL"_s, true);
-    String contentString("[InternetShortcut]\r\nURL=" + url + "\r\n");
+    auto contentString = makeString("[InternetShortcut]\r\nURL="_s, url, "\r\n"_s);
     CString content = contentString.latin1();
 
     if (fsPath.length() <= 0)
@@ -807,7 +808,7 @@ void Pasteboard::writeImage(Element& element, const URL&, const String&)
 
     auto coreBitmap = adoptGDIObject(::CreateDIBSection(dc, &bmInfo, DIB_RGB_COLORS, 0, 0, 0));
     HGDIOBJ oldSource = ::SelectObject(sourceDC.get(), coreBitmap.get());
-    image->getHBITMAP(coreBitmap.get());
+    image->adapter().getHBITMAP(coreBitmap.get());
 
     ::BitBlt(compatibleDC.get(), 0, 0, image->width(), image->height(), sourceDC.get(), 0, 0, SRCCOPY);
 
@@ -857,8 +858,8 @@ RefPtr<DocumentFragment> Pasteboard::documentFragment(LocalFrame& frame, const S
         // get data off of clipboard
         HANDLE cbData = ::GetClipboardData(HTMLClipboardFormat);
         if (cbData) {
-            SIZE_T dataSize = ::GlobalSize(cbData);
-            String cfhtml(PAL::UTF8Encoding().decode(static_cast<char*>(GlobalLock(cbData)), dataSize));
+            std::span data { static_cast<uint8_t*>(GlobalLock(cbData)), ::GlobalSize(cbData) };
+            String cfhtml(PAL::UTF8Encoding().decode(data));
             GlobalUnlock(cbData);
             ::CloseClipboard();
 
@@ -977,8 +978,11 @@ static HGLOBAL createGlobalImageFileContent(FragmentedSharedBuffer* data)
         return 0;
     }
 
-    if (data->size())
-        CopyMemory(fileContents, data->makeContiguous()->data(), data->size());
+    if (data->size()) {
+        auto contiguousData = data->makeContiguous();
+        auto span = contiguousData->span();
+        CopyMemory(fileContents, span.data(), span.size());
+    }
 
     GlobalUnlock(memObj);
 
@@ -1029,8 +1033,11 @@ static HGLOBAL createGlobalHDropContent(const URL& url, String& fileName, Fragme
         // Write the data to this temp file.
         DWORD written;
         BOOL tempWriteSucceeded = FALSE;
-        if (data->size())
-            tempWriteSucceeded = WriteFile(tempFileHandle, data->makeContiguous()->data(), data->size(), &written, 0);
+        if (data->size()) {
+            auto contiguousData = data->makeContiguous();
+            auto span = contiguousData->span();
+            tempWriteSucceeded = WriteFile(tempFileHandle, span.data(), span.size(), &written, 0);
+        }
         CloseHandle(tempFileHandle);
         if (!tempWriteSucceeded)
             return 0;
@@ -1155,7 +1162,7 @@ void Pasteboard::writeCustomData(const Vector<PasteboardCustomData>& data)
 
         if (customData.hasSameOriginCustomData() || !customData.origin().isEmpty()) {
             auto sharedBuffer = customData.createSharedBuffer();
-            HGLOBAL cbData = createGlobalData(reinterpret_cast<const uint8_t*>(sharedBuffer->data()), sharedBuffer->size());
+            HGLOBAL cbData = createGlobalData(sharedBuffer->span());
             if (cbData && !::SetClipboardData(CustomDataClipboardFormat, cbData))
                 ::GlobalFree(cbData);
         }

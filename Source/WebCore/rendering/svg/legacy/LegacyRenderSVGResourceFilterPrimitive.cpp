@@ -44,7 +44,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(LegacyRenderSVGResourceFilterPrimitive);
 
 LegacyRenderSVGResourceFilterPrimitive::LegacyRenderSVGResourceFilterPrimitive(SVGFilterPrimitiveStandardAttributes& filterPrimitiveElement, RenderStyle&& style)
-    : LegacyRenderSVGHiddenContainer(Type::SVGResourceFilterPrimitive, filterPrimitiveElement, WTFMove(style))
+    : LegacyRenderSVGHiddenContainer(Type::LegacySVGResourceFilterPrimitive, filterPrimitiveElement, WTFMove(style))
 {
 }
 
@@ -60,42 +60,38 @@ void LegacyRenderSVGResourceFilterPrimitive::styleDidChange(StyleDifference diff
     if (diff == StyleDifference::Equal || !oldStyle)
         return;
 
-    const SVGRenderStyle& newStyle = style().svgStyle();
+    Ref newStyle = style().svgStyle();
     if (is<SVGFEFloodElement>(filterPrimitiveElement()) || is<SVGFEDropShadowElement>(filterPrimitiveElement())) {
-        if (newStyle.floodColor() != oldStyle->svgStyle().floodColor())
+        if (newStyle->floodColor() != oldStyle->svgStyle().floodColor())
             filterPrimitiveElement().primitiveAttributeChanged(SVGNames::flood_colorAttr);
-        if (newStyle.floodOpacity() != oldStyle->svgStyle().floodOpacity())
+        if (newStyle->floodOpacity() != oldStyle->svgStyle().floodOpacity())
             filterPrimitiveElement().primitiveAttributeChanged(SVGNames::flood_opacityAttr);
     } else if (is<SVGFEDiffuseLightingElement>(filterPrimitiveElement()) || is<SVGFESpecularLightingElement>(filterPrimitiveElement())) {
-        if (newStyle.lightingColor() != oldStyle->svgStyle().lightingColor())
+        if (newStyle->lightingColor() != oldStyle->svgStyle().lightingColor())
             filterPrimitiveElement().primitiveAttributeChanged(SVGNames::lighting_colorAttr);
     }
 }
 
 void LegacyRenderSVGResourceFilterPrimitive::markFilterEffectForRepaint(FilterEffect* effect)
 {
-    auto parent = this->parent();
-    if (!is<LegacyRenderSVGResourceFilter>(parent))
+    CheckedPtr parent = dynamicDowncast<LegacyRenderSVGResourceFilter>(this->parent());
+    if (!parent)
         return;
 
-    auto& filterRenderer = downcast<LegacyRenderSVGResourceFilter>(*parent);
-
     if (effect)
-        filterRenderer.markFilterForRepaint(*effect);
+        parent->markFilterForRepaint(*effect);
 
-    filterRenderer.markAllClientLayersForInvalidation();
+    parent->markAllClientLayersForInvalidation();
 }
 
 void LegacyRenderSVGResourceFilterPrimitive::markFilterEffectForRebuild()
 {
-    auto parent = this->parent();
-    if (!is<LegacyRenderSVGResourceFilter>(parent))
+    CheckedPtr parent = dynamicDowncast<LegacyRenderSVGResourceFilter>(this->parent());
+    if (!parent)
         return;
 
-    auto& filterRenderer = downcast<LegacyRenderSVGResourceFilter>(*parent);
-
-    filterRenderer.markFilterForRebuild();
-    filterRenderer.markAllClientLayersForInvalidation();
+    parent->markFilterForRebuild();
+    parent->markAllClientLayersForInvalidation();
 }
 
 } // namespace WebCore

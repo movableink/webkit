@@ -82,6 +82,15 @@
     [_interaction _updateMouseTouches:touches];
 }
 
+#if PLATFORM(MACCATALYST)
+
+- (UIEventButtonMask)_defaultAllowedMouseButtons
+{
+    return UIEventButtonMaskPrimary | UIEventButtonMaskSecondary;
+}
+
+#endif
+
 @end
 
 @implementation WKMouseInteraction {
@@ -206,7 +215,7 @@ inline static String pointerType(UITouchType type)
     if (!type)
         return std::nullopt;
 
-    auto modifiers = WebIOSEventFactory::webEventModifiersForUIKeyModifierFlags(self._activeGesture.modifierFlags);
+    auto modifiers = WebKit::WebIOSEventFactory::webEventModifiersForUIKeyModifierFlags(self._activeGesture.modifierFlags);
     BOOL isRightButton = modifiers.contains(WebKit::WebEventModifier::ControlKey) || (_pressedButtonMask.value_or(0) & UIEventButtonMaskSecondary);
 
     auto button = [&] {

@@ -210,7 +210,7 @@ String generateHTMLContent(unsigned contentLength)
     unsigned baseLength = baseString.length();
 
     StringBuilder builder;
-    builder.append("<html><body>");
+    builder.append("<html><body>"_s);
 
     if (contentLength <= baseLength)
         builder.appendSubstring(baseString, 0, contentLength);
@@ -226,7 +226,7 @@ String generateHTMLContent(unsigned contentLength)
             currentLength = builder.length() - 12;
         }
     }
-    builder.append("</body></html>");
+    builder.append("</body></html>"_s);
 
     return builder.toString();
 }
@@ -378,7 +378,7 @@ static void testWebContextURIScheme(URISchemeTest* test, gconstpointer)
 
     // Torture test time: make sure it still works if we issue a bunch of different requests all at
     // once. Each request should finish and return exactly the same data.
-    int numIterations = 25;
+    static constexpr int numIterations = 25;
     GRefPtr<WebKitWebView> views[numIterations];
     test->m_uriSchemeRequestCallbackUsesTestWebView = false;
     for (int i = 0; i < numIterations; i++) {
@@ -762,7 +762,7 @@ public:
         waitUntilLoadFinished();
         size_t dataSize = 0;
         const char* data = mainResourceData(dataSize);
-        return CString(data, dataSize);
+        return std::span { data, dataSize };
     }
 
     GUniquePtr<char> proxyServerPortAsString()
@@ -865,7 +865,7 @@ static void testWebContextProxySettings(ProxyTest* test, gconstpointer)
         g_assert_nonnull(data);
         auto* test = static_cast<ProxyTest*>(userData);
         GUniquePtr<char> proxyServerPortAsString = test->proxyServerPortAsString();
-        ASSERT_CMP_CSTRING(CString(data.get(), dataSize), ==, proxyServerPortAsString.get());
+        ASSERT_CMP_CSTRING(CString({ data.get(), dataSize }), ==, proxyServerPortAsString.get());
         test->quitMainLoop();
         }, test);
     g_main_loop_run(test->m_mainLoop);

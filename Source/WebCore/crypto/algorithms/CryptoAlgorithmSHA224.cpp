@@ -26,8 +26,6 @@
 #include "config.h"
 #include "CryptoAlgorithmSHA224.h"
 
-#if ENABLE(WEB_CRYPTO)
-
 #include "ScriptExecutionContext.h"
 #include <pal/crypto/CryptoDigest.h>
 
@@ -52,7 +50,7 @@ void CryptoAlgorithmSHA224::digest(Vector<uint8_t>&& message, VectorCallback&& c
     }
 
     workQueue.dispatch([digest = WTFMove(digest), message = WTFMove(message), callback = WTFMove(callback), contextIdentifier = context.identifier()]() mutable {
-        digest->addBytes(message.data(), message.size());
+        digest->addBytes(message.span());
         auto result = digest->computeHash();
         ScriptExecutionContext::postTaskTo(contextIdentifier, [callback = WTFMove(callback), result = WTFMove(result)](auto&) {
             callback(result);
@@ -60,6 +58,4 @@ void CryptoAlgorithmSHA224::digest(Vector<uint8_t>&& message, VectorCallback&& c
     });
 }
 
-}
-
-#endif // ENABLE(WEB_CRYPTO)
+} // namespace WebCore

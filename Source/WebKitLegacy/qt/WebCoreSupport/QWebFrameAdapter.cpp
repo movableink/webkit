@@ -47,7 +47,7 @@
 #include <WebCore/InspectorController.h>
 #include <WebCore/IntRect.h>
 #include <WebCore/IntSize.h>
-#include <WebCore/JSLocalDOMWindow.h>
+#include <WebCore/JSDOMWindow.h>
 #include <WebCore/NavigationScheduler.h>
 #include <WebCore/NetworkingContext.h>
 #include <WebCore/ResourceRequest.h>
@@ -147,11 +147,12 @@ void QWebFrameAdapter::load(const QNetworkRequest& req, QNetworkAccessManager::O
     QList<QByteArray> httpHeaders = req.rawHeaderList();
     for (int i = 0; i < httpHeaders.size(); ++i) {
         const QByteArray &headerName = httpHeaders.at(i);
-        request.addHTTPHeaderField(QByteArrayView(headerName), QByteArrayView(req.rawHeader(headerName)));
+        const QByteArray rawHeaderName = req.rawHeader(headerName);
+        request.addHTTPHeaderField(std::span { headerName.constData(), static_cast<size_t>(headerName.size()) }, std::span { rawHeaderName.constData(), static_cast<size_t>(rawHeaderName.size()) });
     }
 
     if (!body.isEmpty())
-        request.setHTTPBody(WebCore::FormData::create(body.constData(), body.size()));
+        request.setHTTPBody(WebCore::FormData::create(std::span<const uint8_t> { reinterpret_cast<const uint8_t*>(body.constData()), static_cast<size_t>(body.size()) }));
 
     frame->loader().load(WebCore::FrameLoadRequest(*frame, request));
 
@@ -200,7 +201,7 @@ void QWebFrameAdapter::addToJavaScriptWindowObject(const QString& name, QObject*
     if (!pageAdapter->settings->testAttribute(QWebSettings::JavascriptEnabled))
         return;
     JSC::Bindings::QtInstance::ValueOwnership valueOwnership = static_cast<JSC::Bindings::QtInstance::ValueOwnership>(ownership);
-    JSLocalDOMWindow* window = toJSLocalDOMWindow(frame, mainThreadNormalWorld());
+    JSDOMWindow* window = toJSDOMWindow(frame, mainThreadNormalWorld());
     JSC::Bindings::RootObject* root;
     if (valueOwnership == JSC::Bindings::QtInstance::QtOwnership)
         root = frame->script().cacheableBindingRootObject();
@@ -222,7 +223,7 @@ void QWebFrameAdapter::addToJavaScriptWindowObject(const QString& name, QObject*
     JSC::JSObject* runtimeObject = JSC::Bindings::QtInstance::getQtInstance(object, root, valueOwnership)->createRuntimeObject(lexicalGlobalObject);
 
     JSC::PutPropertySlot slot(window);
-    window->methodTable()->put(window, lexicalGlobalObject, JSC::Identifier::fromString(lexicalGlobalObject->vm(), reinterpret_cast_ptr<const UChar*>(name.constData()), name.length()), runtimeObject, slot);
+    window->methodTable()->put(window, lexicalGlobalObject, JSC::Identifier::fromString(lexicalGlobalObject->vm(), std::span { reinterpret_cast_ptr<const UChar*>(name.constData()), static_cast<size_t>(name.length()) }), runtimeObject, slot);
 }
 
 QString QWebFrameAdapter::toHtml() const
@@ -247,7 +248,7 @@ void QWebFrameAdapter::setContent(const QByteArray &data, const QString &mimeTyp
 {
     URL kurl(baseUrl);
     WebCore::ResourceRequest request(kurl);
-    WTF::RefPtr<WebCore::SharedBuffer> buffer = WebCore::SharedBuffer::create(data.constData(), data.length());
+    WTF::RefPtr<WebCore::SharedBuffer> buffer = WebCore::SharedBuffer::create(std::span { data.constData(), static_cast<size_t>(data.length()) });
     QString actualMimeType;
     WTF::StringView encoding;
     if (mimeType.isEmpty())
@@ -267,7 +268,7 @@ void QWebFrameAdapter::setHtml(const QString &html, const QUrl &baseUrl)
     URL kurl(baseUrl);
     WebCore::ResourceRequest request(kurl);
     const QByteArray utf8 = html.toUtf8();
-    WTF::RefPtr<WebCore::SharedBuffer> data = WebCore::SharedBuffer::create(utf8.constData(), utf8.length());
+    WTF::RefPtr<WebCore::SharedBuffer> data = WebCore::SharedBuffer::create(std::span { utf8.constData(), static_cast<size_t>(utf8.length()) });
     WebCore::ResourceResponse response(URL(), "text/html"_s, data->size(), "utf-8"_s);
     // FIXME: visibility?
     WebCore::SubstituteData substituteData(WTFMove(data), URL(), response, SubstituteData::SessionHistoryVisibility::Hidden);
@@ -819,7 +820,7 @@ QWebHitTestResultPrivate::QWebHitTestResultPrivate(const WebCore::HitTestResult 
     boundingRect = (innerNonSharedNode && innerNonSharedNode->renderer())? innerNonSharedNode->renderer()->absoluteBoundingBoxRect() : IntRect();
     WebCore::Image *img = hitTest.image();
     if (img)
-        pixmap = QPixmap::fromImage(img->nativeImageForCurrentFrame()->platformImage());
+        pixmap = QPixmap::fromImage(img->currentNativeImage()->platformImage());
 
     WebCore::LocalFrame *wframe = hitTest.targetFrame();
     if (wframe) {

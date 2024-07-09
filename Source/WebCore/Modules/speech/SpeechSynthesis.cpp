@@ -60,12 +60,12 @@ SpeechSynthesis::SpeechSynthesis(ScriptExecutionContext& context)
     , m_restrictions(NoRestrictions)
     , m_speechSynthesisClient(nullptr)
 {
-    if (context.isDocument()) {
+    if (RefPtr document = dynamicDowncast<Document>(context)) {
 #if PLATFORM(IOS_FAMILY)
-        if (downcast<Document>(context).requiresUserGestureForAudioPlayback())
+        if (document->requiresUserGestureForAudioPlayback())
             m_restrictions = RequireUserGestureForSpeechStartRestriction;
 #endif
-        m_speechSynthesisClient = downcast<Document>(context).frame()->page()->speechSynthesisClient();
+        m_speechSynthesisClient = document->frame()->page()->speechSynthesisClient();
     }
 
     if (m_speechSynthesisClient) {
@@ -337,11 +337,6 @@ void SpeechSynthesis::simulateVoicesListChange()
 
     if (m_platformSpeechSynthesizer)
         voicesDidChange();
-}
-
-const char* SpeechSynthesis::activeDOMObjectName() const
-{
-    return "SpeechSynthesis";
 }
 
 bool SpeechSynthesis::virtualHasPendingActivity() const

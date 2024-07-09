@@ -1,4 +1,4 @@
-# Copyright (C) 2023 Apple Inc. All rights reserved.
+# Copyright (C) 2023-2024 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -20,6 +20,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import re
 import sys
 
 from .command import Command
@@ -32,6 +33,8 @@ from webkitscmpy import log
 class Clone(Command):
     name = 'clone'
     help = 'Clone the radar a bugzilla or commit refers to'
+    UMBRELLA = b'\xe2\x98\x82\xef\xb8\x8f'.decode('utf-8')
+    COMMITTED_RE = re.compile(r'Committed \d+\.?\d+@\S+( \([a-f0-9A-F]+\))? to (?P<branch>\S*) referencing this bug')
 
     @classmethod
     def parser(cls, parser, loggers=None):
@@ -65,17 +68,44 @@ class Clone(Command):
             action='store_true',
         )
         parser.add_argument(
-            '--merge-back',
-            dest='merge_back', default=False,
+            '--merge-back', '--no-merge-back',
+            dest='merge_back', default=None,
             help='Annotate the cloned issue for merge-back',
-            action='store_true',
+            action=arguments.NoAction,
         )
 
     @classmethod
-    def main(cls, args, repository, merge_back=False, **kwargs):
+    def parent(cls, rdar, milestone):
+        radar_user = rdar.me()
+        if not radar_user:
+            sys.stderr.write('Failed to find current radar user\n')
+            return None
+
+        candidates = {}
+        for r in rdar.search(dict(
+            assignee=radar_user.username,
+            milestone=milestone,
+            state='Analyze',
+        )):
+            if 'merge-back' in r.title.lower() and cls.UMBRELLA in r.title:
+                candidates[r.title] = r
+
+        if not candidates:
+            return None
+        if len(candidates) == 1:
+            return list(candidates.values())[0]
+
+        return candidates.get(Terminal.choose(
+            prompt='Multiple umbrella merge-back candidates found',
+            options=list(sorted(candidates.keys())),
+            numbered=True,
+        ), None)
+
+    @classmethod
+    def main(cls, args, repository, merge_back=None, **kwargs):
         rdar = None
-        merge_back = merge_back or args.merge_back
-        prefix = '[merge-back]' if merge_back else ''
+        if args.merge_back is not None:
+            merge_back = args.merge_back
 
         for tracker in Tracker._trackers:
             if isinstance(tracker, radar.Tracker):
@@ -87,12 +117,6 @@ class Clone(Command):
                 sys.stderr.write('This repository does not declare radar as an issue tracker\n')
             else:
                 sys.stderr.write('Radar is not available on this machine\n')
-            return 255
-
-        if not args.reason and args.milestone:
-            args.reason = "Cloning for inclusion in '{}'".format(args.milestone)
-        if not args.reason:
-            sys.stderr.write('No reason for cloning issue has been provided\n')
             return 255
 
         # First, check if we were provided a bug URL
@@ -130,6 +154,40 @@ class Clone(Command):
                     break
         if not isinstance(issue.tracker, radar.Tracker):
             sys.stderr.write("'{}' is not a radar, therefore cannot be cloned\n".format(issue))
+            return 255
+
+        # Attempt to detect if this invocation is likely for merge-back
+        if merge_back is None:
+            on_default_branch = False
+            on_release_branch = False
+
+            branch = None
+            for comment in issue.comments:
+                mtch = cls.COMMITTED_RE.match(comment.content)
+                if mtch:
+                    branch = mtch.group('branch')
+                    if branch == repository.default_branch:
+                        on_default_branch = True
+                        break
+                    else:
+                        on_release_branch = True
+
+            if on_default_branch:
+                merge_back = False
+            elif on_release_branch and (args.prompt or Terminal.choose(
+                prompt='Change is on {} but not {}, would you like to create a merge-back clone?'.format(branch, repository.default_branch),
+                default='Yes',
+            ) == 'Yes'):
+                merge_back = True
+
+        prefix = '[merge-back]' if merge_back else ''
+
+        if not args.reason and merge_back:
+            args.reason = "Cloning for merge-back to {}".format(repository.default_branch)
+        if not args.reason and args.milestone:
+            args.reason = "Cloning for inclusion in '{}'".format(args.milestone)
+        if not args.reason:
+            sys.stderr.write('No reason for cloning issue has been provided\n')
             return 255
 
         milestone = None
@@ -181,6 +239,15 @@ class Clone(Command):
             sys.stderr.write("Failed to find milestone matching '{}'\n".format(args.milestone))
             return 255
 
+        parent = None
+        if merge_back:
+            parent = cls.parent(rdar, milestone.name)
+            if not parent:
+                sys.stderr.write('Failed to find existing Merge-Back umbrella\n')
+                sys.stderr.write(u"Make sure you have a '{} Merge-Back' radar in {} assigned to you\n".format(cls.UMBRELLA, args.milestone))
+                return 255
+            milestone = milestones.get('Internal Tools - {}'.format(milestone.name), milestone)
+
         milestone_association = raw_issue.milestone_associations(milestone)
 
         def pick_attr(name, plural, default=None):
@@ -203,7 +270,7 @@ class Clone(Command):
                 return False
             return value
 
-        category = pick_attr('category', 'categories', 'Escape / Regression in the Build' if merge_back else None)
+        category = pick_attr('category', 'categories', None)
         event = pick_attr('event', 'events')
         tentpole = pick_attr('tentpole', 'tentpoles')
 
@@ -214,6 +281,8 @@ class Clone(Command):
         if args.dry_run:
             print("Cloning into '{}'".format(milestone.name))
             print("    Reason: {}".format(args.reason))
+            if parent:
+                print("    as child of {}".format(parent.link))
             if prefix:
                 print("    with tile '{} {}'".format(prefix, issue.title))
             if category:
@@ -232,42 +301,69 @@ class Clone(Command):
 
         raw_clone = rdar.client.radar_for_id(cloned.id)
 
-        try:
+        result = 0
+        if parent:
+            try:
+                cloned.relate(subtask_of=parent)
+            except rdar.radarclient().exceptions.UnsuccessfulResponseException:
+                sys.stderr.write('Completed clone, but failed to set parent, continuing...\n')
+                result += 1
+
+        def modify_radar(
+            cloned=cloned, raw_clone=raw_clone,
+            raw_issue=raw_issue,
+            prefix=prefix, milestone=milestone,
+            category=category, event=event, tentpole=tentpole,
+            action=lambda: None,
+        ):
             if prefix:
                 raw_clone.title = '{} {}'.format(prefix, raw_issue.title)
-            raw_clone.priority = raw_issue.priority
-            raw_clone.resolution = raw_issue.resolution
-            raw_clone.commit_changes()
-        except rdar.radarclient().exceptions.UnsuccessfulResponseException:
-            sys.stderr.write('Completed clone, but failed to set priority and resolution\n')
-            return 1
+                action()
+
+            try:
+                raw_clone.priority = raw_issue.priority
+                raw_clone.resolution = raw_issue.resolution
+                action()
+            except rdar.radarclient().exceptions.UnsuccessfulResponseException:
+                sys.stderr.write('Completed clone, but failed to set priority and resolution\n')
+                return 1
+
+            try:
+                raw_clone.milestone = milestone
+                raw_clone.category = category
+                raw_clone.event = event
+                raw_clone.tentpole = tentpole
+                action()
+            except rdar.radarclient().exceptions.UnsuccessfulResponseException:
+                sys.stderr.write('Completed clone, but failed to set milestone, category, event and tentpole\n')
+                return 1
+
+            try:
+                raw_clone.state = 'Analyze'
+                if raw_clone.resolution:
+                    raw_clone.substate = 'Prepare'
+                else:
+                    raw_clone.substate = 'Investigate'
+                    sys.stderr.write('{} does not have a resolution\n'.format(issue.link))
+                    sys.stderr.write('Placing {} in {}\n'.format(cloned.link, raw_clone.substate))
+                action()
+            except rdar.radarclient().exceptions.UnsuccessfulResponseException:
+                sys.stderr.write("Completed clone and set milestone, but failed to move to 'Integrate'\n")
+                return 1
+            return 0
 
         try:
-            raw_clone.milestone = milestone
-            raw_clone.category = category
-            raw_clone.event = event
-            raw_clone.tentpole = tentpole
+            modify_rc = modify_radar()
             raw_clone.commit_changes()
         except rdar.radarclient().exceptions.UnsuccessfulResponseException:
-            sys.stderr.write('Completed clone, but failed to set milestone, category, event and tentpole\n')
-            return 1
-
-        try:
-            raw_clone.state = 'Analyze'
-            if raw_clone.resolution:
-                raw_clone.substate = 'Prepare'
-            else:
-                raw_clone.substate = 'Investigate'
-                sys.stderr.write('{} does not have a resolution\n'.format(issue.link))
-                sys.stderr.write('Placing {} in {}\n'.format(cloned.link, raw_clone.substate))
-            raw_clone.commit_changes()
-        except rdar.radarclient().exceptions.UnsuccessfulResponseException:
-            sys.stderr.write("Completed clone and set milestone, but failed to move to 'Integrate'\n")
-            return 1
+            modify_rc = modify_radar(action=lambda raw_clone=raw_clone: raw_clone.commit_changes())
+            if modify_rc:
+                return modify_rc
+        result += modify_rc
 
         print('Moved clone to {} and into {}{}'.format(
             raw_clone.milestone.name,
             raw_clone.state,
             ': {}'.format(raw_clone.substate) if raw_clone.state == 'Analyze' else '',
         ))
-        return 0
+        return result

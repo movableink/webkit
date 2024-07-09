@@ -35,6 +35,8 @@
 
 @implementation WKFrameInfo
 
+WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
+
 - (void)dealloc
 {
     if (WebCoreObjCScheduleDeallocateOnMainRunLoop(WKFrameInfo.class, self))
@@ -112,6 +114,16 @@
 - (BOOL)_isFocused
 {
     return _frameInfo->isFocused();
+}
+
+- (BOOL)_errorOccurred
+{
+    return _frameInfo->errorOccurred();
+}
+
+- (NSString *)_title
+{
+    return _frameInfo->title();
 }
 
 @end

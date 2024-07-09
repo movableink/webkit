@@ -57,7 +57,6 @@ void SVGRootInlineBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffse
     ASSERT(paintInfo.phase == PaintPhase::Foreground || paintInfo.phase == PaintPhase::Selection);
     ASSERT(!paintInfo.context().paintingDisabled());
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (renderer().document().settings().layerBasedSVGEngineEnabled()) {
         auto overflowRect(visualOverflowRect(lineTop, lineBottom));
         flipForWritingMode(overflowRect);
@@ -66,10 +65,6 @@ void SVGRootInlineBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffse
         if (!paintInfo.rect.intersects(overflowRect))
             return;
     }
-#else
-    UNUSED_PARAM(lineTop);
-    UNUSED_PARAM(lineBottom);
-#endif
 
     bool isPrinting = renderSVGText().document().printing();
     bool hasSelection = !isPrinting && selectionState() != RenderObject::HighlightState::None;
@@ -80,14 +75,13 @@ void SVGRootInlineBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffse
 
     if (hasSelection && shouldPaintSelectionHighlight) {
         for (auto* child = firstChild(); child; child = child->nextOnLine()) {
-            if (is<SVGInlineTextBox>(*child))
-                downcast<SVGInlineTextBox>(*child).paintSelectionBackground(childPaintInfo);
-            else if (is<SVGInlineFlowBox>(*child))
-                downcast<SVGInlineFlowBox>(*child).paintSelectionBackground(childPaintInfo);
+            if (auto* textBox = dynamicDowncast<SVGInlineTextBox>(*child))
+                textBox->paintSelectionBackground(childPaintInfo);
+            else if (auto* flowBox = dynamicDowncast<SVGInlineFlowBox>(*child))
+                flowBox->paintSelectionBackground(childPaintInfo);
         }
     }
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (renderer().document().settings().layerBasedSVGEngineEnabled()) {
         for (auto* child = firstChild(); child; child = child->nextOnLine()) {
             if (child->renderer().isRenderText() || !child->boxModelObject()->hasSelfPaintingLayer())
@@ -96,7 +90,6 @@ void SVGRootInlineBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffse
 
         return;
     }
-#endif
 
     SVGRenderingContext renderingContext(renderSVGText(), paintInfo, SVGRenderingContext::SaveGraphicsContext);
     if (renderingContext.isRenderingPrepared()) {
@@ -133,12 +126,12 @@ void SVGRootInlineBox::computePerCharacterLayoutInformation()
 void SVGRootInlineBox::layoutCharactersInTextBoxes(LegacyInlineFlowBox* start, SVGTextLayoutEngine& characterLayout)
 {
     for (auto* child = start->firstChild(); child; child = child->nextOnLine()) {
-        if (is<SVGInlineTextBox>(*child)) {
-            ASSERT(is<RenderSVGInlineText>(child->renderer()));
-            characterLayout.layoutInlineTextBox(downcast<SVGInlineTextBox>(*child));
+        if (auto* textBox = dynamicDowncast<SVGInlineTextBox>(*child)) {
+            ASSERT(is<RenderSVGInlineText>(textBox->renderer()));
+            characterLayout.layoutInlineTextBox(*textBox);
         } else {
             // Skip generated content.
-            Node* node = child->renderer().node();
+            RefPtr node = child->renderer().node();
             if (!node)
                 continue;
 
@@ -165,15 +158,14 @@ void SVGRootInlineBox::layoutChildBoxes(LegacyInlineFlowBox* start, FloatRect* c
 {
     for (auto* child = start->firstChild(); child; child = child->nextOnLine()) {
         FloatRect boxRect;
-        if (is<SVGInlineTextBox>(*child)) {
-            ASSERT(is<RenderSVGInlineText>(child->renderer()));
+        if (auto* textBox = dynamicDowncast<SVGInlineTextBox>(*child)) {
+            ASSERT(is<RenderSVGInlineText>(textBox->renderer()));
 
-            auto& textBox = downcast<SVGInlineTextBox>(*child);
-            boxRect = textBox.calculateBoundaries();
-            textBox.setX(boxRect.x());
-            textBox.setY(boxRect.y());
-            textBox.setLogicalWidth(boxRect.width());
-            textBox.setLogicalHeight(boxRect.height());
+            boxRect = textBox->calculateBoundaries();
+            textBox->setX(boxRect.x());
+            textBox->setY(boxRect.y());
+            textBox->setLogicalWidth(boxRect.width());
+            textBox->setLogicalHeight(boxRect.height());
         } else {
             // Skip generated content.
             if (!child->renderer().node())

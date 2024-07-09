@@ -65,8 +65,8 @@ namespace WebCore {
 
         ~SocketStreamHandleImpl();
 
-        WEBCORE_EXPORT void platformSend(const uint8_t* data, size_t length, Function<void(bool)>&& completionHandler) final;
-        WEBCORE_EXPORT void platformSendHandshake(const uint8_t* data, size_t length, const std::optional<CookieRequestHeaderFieldProxy>&, Function<void(bool, bool)>&&) final;
+        WEBCORE_EXPORT void platformSend(std::span<const uint8_t> data, Function<void(bool)>&& completionHandler) final;
+        WEBCORE_EXPORT void platformSendHandshake(std::span<const uint8_t> data, const std::optional<CookieRequestHeaderFieldProxy>&, Function<void(bool, bool)>&&) final;
         WEBCORE_EXPORT void platformClose() final;
 
     private:
@@ -74,7 +74,7 @@ namespace WebCore {
 
         bool sendPendingData();
         size_t bufferedAmount() final;
-	std::optional<size_t> platformSendInternal(const uint8_t*, size_t);
+	std::optional<size_t> platformSendInternal(std::span<const uint8_t>);
 
         // No authentication for streams per se, but proxy may ask for credentials.
         void didReceiveAuthenticationChallenge(const AuthenticationChallenge&);

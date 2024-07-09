@@ -1621,8 +1621,8 @@ def check_spacing_for_function_call(line, line_number, file_state, error):
     # " (something)[something]"
     # Note that we assume the contents of [] to be short enough that
     # they'll never need to wrap.
-    if (  # Ignore control structures.
-        not search(r'\b(if|for|while|switch|return|new|delete)\b', function_call)
+    if (  # Ignore control structures / c++20 concept constraints.
+        not search(r'\b(if|for|while|switch|return|new|delete|requires)\b', function_call)
         # Ignore lambda functions
         and not regex_for_lambdas_and_blocks(function_call, line_number, file_state, error)
         # Ignore pointers/references to functions.
@@ -1636,7 +1636,8 @@ def check_spacing_for_function_call(line, line_number, file_state, error):
             error(line_number, 'whitespace/parens', 2,
                   'Extra space after (')
         if (search(r'\w\s+\(', function_call)
-            and not match(r'\s*((#|typedef|@property|@interface|@implementation|@synchronized)|} @catch\b)', function_call)):
+                and not match(r'\s*((#|typedef|@property|@interface|@implementation|@synchronized)|} @catch\b)', function_call)
+                and not search(r'(std::function\<|Function\<)', function_call)):
             error(line_number, 'whitespace/parens', 4,
                   'Extra space before ( in function call')
         # If the ) is followed only by a newline or a { + newline, assume it's
@@ -4092,15 +4093,22 @@ def check_identifier_name_in_declaration(filename, line_number, line, file_state
         protector_name = ref_check.group('protector_name')
         protected_name = ref_check.group('protected_name')
         cap_protected_name = protected_name[0].upper() + protected_name[1:]
+
         # Ignore function declarations where cap_protected_name == protected_name indicates a type name.
         if cap_protected_name != protected_name:
             expected_protector_name = 'protected' + cap_protected_name
             if protected_name == 'this' and protector_name != 'protectedThis':
                 error(line_number, 'readability/naming/protected', 4, "\'" + protector_name + "\' is incorrectly named. It should be named \'protectedThis\'.")
-            elif protector_name == expected_protector_name or protector_name == 'protector':
+            elif protected_name == 'this' and protector_name == 'protectedThis':
                 return
+            elif protected_name != 'this' and protector_name == 'protectedThis':
+                error(line_number, 'readability/naming/protected', 4, "Incorrect use of \'protectedThis\'.")
+            elif protector_name.startswith("protected"):
+                error(line_number, 'readability/naming/protected', 4, "\'" + protector_name + "\' is incorrectly named. New variables should not use the \'protected\' prefix.")
+            elif protector_name == 'protector':
+                error(line_number, 'readability/naming/protected', 4, "\'" + protector_name + "\' is incorrectly named. New variables should not be named \'protector\'")
             else:
-                error(line_number, 'readability/naming/protected', 4, "\'" + protector_name + "\' is incorrectly named. It should be named \'protector\' or \'" + expected_protector_name + "\'.")
+                return
 
     # Basically, a declaration is a type name followed by whitespaces
     # followed by an identifier. The type name can be complicated
@@ -4210,6 +4218,7 @@ def check_identifier_name_in_declaration(filename, line_number, line, file_state
                 and not modified_identifier.startswith('Ewk_')
                 and not modified_identifier.startswith('cti_')
                 and not modified_identifier.find('::qt_') >= 0
+                and not modified_identifier.startswith('hb_')
                 and not modified_identifier.find('::_q_') >= 0
                 and not modified_identifier == "const_iterator"
                 and not modified_identifier == "vm_throw"
@@ -4218,6 +4227,7 @@ def check_identifier_name_in_declaration(filename, line_number, line, file_state
                 and not modified_identifier == "WTF_GUARDED_BY_LOCK"
                 and not modified_identifier == "WTF_GUARDED_BY_CAPABILITY"
                 and not modified_identifier.startswith("_AX")
+                and not modified_identifier.startswith("_WK")
                 and not modified_identifier.find('chrono_literals') >= 0):
                 error(line_number, 'readability/naming/underscores', 4, identifier + " is incorrectly named. Don't use underscores in your identifier names.")
 

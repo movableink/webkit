@@ -1,6 +1,4 @@
 
-Harness Error (TIMEOUT), message = null
-
-TIMEOUT event.intercept() should throw if the handler is null Test timed out
-TIMEOUT event.intercept() should not throw if the handler is explicit undefined Test timed out
+PASS event.intercept() should throw if the handler is null
+PASS event.intercept() should not throw if the handler is explicit undefined
 

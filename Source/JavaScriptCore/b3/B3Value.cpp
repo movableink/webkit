@@ -76,23 +76,23 @@ String Value::generateCompilerConstructionSite()
         if (printed > 10)
             return;
         auto name = String::fromUTF8(cName);
-        if (name.contains("JSC::Wasm::B3IRGenerator::emit"_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::add"_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::create"_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::end"_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::set"_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::get"_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::insert"_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::constant("_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::fixup"_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::load"_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::store"_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::atomic"_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::trunc"_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::sanitize"_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::restore"_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::connect"_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::prepare"_s)) {
+        if (name.contains("JSC::Wasm::OMGIRGenerator::emit"_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::add"_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::create"_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::end"_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::set"_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::get"_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::insert"_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::constant("_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::fixup"_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::load"_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::store"_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::atomic"_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::trunc"_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::sanitize"_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::restore"_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::connect"_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::prepare"_s)) {
             if (name.contains(">::add"_s)
                 || name.contains(">::translate"_s)
                 || name.contains(">::inlineEnsure"_s)
@@ -258,9 +258,9 @@ void Value::dumpChildren(CommaPrinter& comma, PrintStream& out) const
 
 void Value::deepDump(const Procedure* proc, PrintStream& out) const
 {
-    out.print(m_type, " ", dumpPrefix, m_index, " = ", m_kind);
+    out.print(m_type, " "_s, dumpPrefix, m_index, " = "_s, m_kind);
 
-    out.print("(");
+    out.print("("_s);
     CommaPrinter comma;
     dumpChildren(comma, out);
 
@@ -282,7 +282,7 @@ void Value::deepDump(const Procedure* proc, PrintStream& out) const
     }
 #endif
 
-    out.print(")");
+    out.print(")"_s);
 }
 
 void Value::dumpSuccessors(const BasicBlock* block, PrintStream& out) const
@@ -842,7 +842,9 @@ Effects Value::effects() const
         result.terminal = true;
         break;
     }
-    if (traps()) {
+    // We check hasTraps() first because most Kinds don't trap and we just switched on the
+    // Kind above. So in most cases the compiler won't bother loading the traps() bit.
+    if (kind().hasTraps() && traps()) {
         result.exitsSideways = true;
         result.reads = HeapRange::top();
     }

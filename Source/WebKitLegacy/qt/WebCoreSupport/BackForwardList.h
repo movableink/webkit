@@ -43,7 +43,7 @@ public:
 
     QWebPageAdapter& page() { return m_page; }
 
-    void addItem(Ref<WebCore::HistoryItem>&&) override;
+    void addItem(WebCore::FrameIdentifier, Ref<WebCore::HistoryItem>&&) override;
     void goBack();
     void goForward();
     void goToItem(WebCore::HistoryItem&) override;

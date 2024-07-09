@@ -81,6 +81,7 @@ list(APPEND WebKitLegacy_SOURCES
     qt/WebCoreSupport/BackForwardList.cpp
     qt/WebCoreSupport/ChromeClientQt.cpp
     qt/WebCoreSupport/ContextMenuClientQt.cpp
+    qt/WebCoreSupport/CryptoClientQt.cpp
     qt/WebCoreSupport/DataListSuggestionPickerQt.cpp
     qt/WebCoreSupport/DragClientQt.cpp
     qt/WebCoreSupport/EditorClientQt.cpp

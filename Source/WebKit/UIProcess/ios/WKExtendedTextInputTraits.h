@@ -28,11 +28,12 @@
 #if PLATFORM(IOS_FAMILY)
 
 #import "UIKitSPI.h"
-#import "WKSEDefinitions.h"
+#import "WKBrowserEngineDefinitions.h"
+#import <pal/spi/ios/BrowserEngineKitSPI.h>
 
 @interface WKExtendedTextInputTraits : NSObject
-#if HAVE(UI_ASYNC_TEXT_INTERACTION)
-    <WKSEExtendedTextInputTraits>
+#if USE(BROWSERENGINEKIT)
+    <BEExtendedTextInputTraits>
 #endif
 
 @property (nonatomic) UITextAutocapitalizationType autocapitalizationType;
@@ -40,20 +41,30 @@
 @property (nonatomic) UITextSpellCheckingType spellCheckingType;
 @property (nonatomic) UITextSmartQuotesType smartQuotesType;
 @property (nonatomic) UITextSmartDashesType smartDashesType;
+#if HAVE(INLINE_PREDICTIONS)
 @property (nonatomic) UITextInlinePredictionType inlinePredictionType;
+#endif
 @property (nonatomic) UIKeyboardType keyboardType;
 @property (nonatomic) UIKeyboardAppearance keyboardAppearance;
 @property (nonatomic) UIReturnKeyType returnKeyType;
 @property (nonatomic, getter=isSecureTextEntry) BOOL secureTextEntry;
 @property (nonatomic, getter=isSingleLineDocument) BOOL singleLineDocument;
-@property (nonatomic) BOOL typingAdaptationDisabled;
+@property (nonatomic, getter=isTypingAdaptationEnabled) BOOL typingAdaptationEnabled;
 @property (nonatomic, copy) UITextContentType textContentType;
+@property (nonatomic, copy) UITextInputPasswordRules *passwordRules;
+@property (nonatomic) UITextSmartInsertDeleteType smartInsertDeleteType;
+@property (nonatomic) BOOL enablesReturnKeyAutomatically;
 
 @property (nonatomic, strong) UIColor *insertionPointColor;
-@property (nonatomic, strong) UIColor *selectionBarColor;
+@property (nonatomic, strong) UIColor *selectionHandleColor;
 @property (nonatomic, strong) UIColor *selectionHighlightColor;
 
+#if ENABLE(WRITING_TOOLS)
+@property UIWritingToolsBehavior writingToolsBehavior;
+#endif
+
 - (void)setSelectionColorsToMatchTintColor:(UIColor *)tintColor;
+- (void)restoreDefaultValues;
 
 @end
 

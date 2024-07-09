@@ -47,6 +47,8 @@ RenderMathMLUnderOver::RenderMathMLUnderOver(MathMLUnderOverElement& element, Re
     ASSERT(isRenderMathMLUnderOver());
 }
 
+RenderMathMLUnderOver::~RenderMathMLUnderOver() = default;
+
 MathMLUnderOverElement& RenderMathMLUnderOver::element() const
 {
     return static_cast<MathMLUnderOverElement&>(nodeForNonAnonymous());
@@ -54,10 +56,11 @@ MathMLUnderOverElement& RenderMathMLUnderOver::element() const
 
 static RenderMathMLOperator* horizontalStretchyOperator(const RenderBox& box)
 {
-    if (!is<RenderMathMLBlock>(box))
+    auto* mathMLBlock = dynamicDowncast<RenderMathMLBlock>(box);
+    if (!mathMLBlock)
         return nullptr;
 
-    auto* renderOperator = downcast<RenderMathMLBlock>(box).unembellishedOperator();
+    auto* renderOperator = mathMLBlock->unembellishedOperator();
     if (!renderOperator)
         return nullptr;
 
@@ -221,10 +224,10 @@ bool RenderMathMLUnderOver::hasAccent(bool accentUnder) const
         return true;
     if (attributeValue == MathMLElement::BooleanValue::False)
         return false;
-    RenderBox& script = accentUnder ? under() : over();
-    if (!is<RenderMathMLBlock>(script))
+    auto* script = dynamicDowncast<RenderMathMLBlock>(accentUnder ? under() : over());
+    if (!script)
         return false;
-    auto* scriptOperator = downcast<RenderMathMLBlock>(script).unembellishedOperator();
+    auto* scriptOperator = script->unembellishedOperator();
     return scriptOperator && scriptOperator->hasOperatorFlag(MathMLOperatorDictionary::Accent);
 }
 
@@ -241,8 +244,8 @@ RenderMathMLUnderOver::VerticalParameters RenderMathMLUnderOver::verticalParamet
     parameters.overExtraAscender = 0;
     parameters.accentBaseHeight = 0;
 
-    const auto& primaryFont = style().fontCascade().primaryFont();
-    auto* mathData = primaryFont.mathData();
+    const Ref primaryFont = style().fontCascade().primaryFont();
+    RefPtr mathData = primaryFont->mathData();
     if (!mathData) {
         // The MATH table specification does not really provide any suggestions, except for some underbar/overbar values and AccentBaseHeight.
         LayoutUnit defaultLineThickness = ruleThicknessFallback();
@@ -250,13 +253,13 @@ RenderMathMLUnderOver::VerticalParameters RenderMathMLUnderOver::verticalParamet
         parameters.overGapMin = 3 * defaultLineThickness;
         parameters.underExtraDescender = defaultLineThickness;
         parameters.overExtraAscender = defaultLineThickness;
-        parameters.accentBaseHeight = style().metricsOfPrimaryFont().xHeight();
+        parameters.accentBaseHeight = style().metricsOfPrimaryFont().xHeight().value_or(0);
         parameters.useUnderOverBarFallBack = true;
         return parameters;
     }
 
-    if (is<RenderMathMLBlock>(base())) {
-        if (auto* baseOperator = downcast<RenderMathMLBlock>(base()).unembellishedOperator()) {
+    if (auto* mathMLBlock = dynamicDowncast<RenderMathMLBlock>(base())) {
+        if (auto* baseOperator = mathMLBlock->unembellishedOperator()) {
             if (baseOperator->hasOperatorFlag(MathMLOperatorDictionary::LargeOp)) {
                 // The base is a large operator so we read UpperLimit/LowerLimit constants from the MATH table.
                 parameters.underGapMin = mathData->getMathConstant(primaryFont, OpenTypeMathData::LowerLimitGapMin);

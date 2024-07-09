@@ -113,7 +113,7 @@ void SocketStreamHandlePrivate::socketReadyRead()
 {
     if (m_streamHandle) {
         QByteArray data = m_socket->read(m_socket->bytesAvailable());
-        m_streamHandle->m_client.didReceiveSocketStreamData(*m_streamHandle, reinterpret_cast<const uint8_t*>(data.constData()), data.size());
+        m_streamHandle->m_client.didReceiveSocketStreamData(*m_streamHandle, std::span { reinterpret_cast<const uint8_t*>(data.constData()), static_cast<size_t>(data.size()) });
     }
 }
 
@@ -201,10 +201,10 @@ SocketStreamHandleImpl::~SocketStreamHandleImpl()
     delete m_p;
 }
 
-std::optional<size_t> SocketStreamHandleImpl::platformSendInternal(const uint8_t* data, size_t length)
+std::optional<size_t> SocketStreamHandleImpl::platformSendInternal(std::span<const uint8_t> span)
 {
     LOG(Network, "SocketStreamHandle %p platformSend", this);
-    return m_p->send(data, length);
+    return m_p->send(span.data(), span.size());
 }
 
 void SocketStreamHandleImpl::platformClose()

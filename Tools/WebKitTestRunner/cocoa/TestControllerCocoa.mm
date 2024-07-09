@@ -41,6 +41,7 @@
 #import <WebKit/WKContextConfigurationRef.h>
 #import <WebKit/WKContextPrivate.h>
 #import <WebKit/WKImageCG.h>
+#import <WebKit/WKPreferencesPrivate.h>
 #import <WebKit/WKPreferencesRefPrivate.h>
 #import <WebKit/WKProcessPoolPrivate.h>
 #import <WebKit/WKStringCF.h>
@@ -59,6 +60,7 @@
 #import <WebKit/_WKWebsiteDataStoreConfiguration.h>
 #import <pal/spi/cocoa/LaunchServicesSPI.h>
 #import <wtf/BlockPtr.h>
+#import <wtf/CompletionHandler.h>
 #import <wtf/MainThread.h>
 #import <wtf/RunLoop.h>
 #import <wtf/UniqueRef.h>
@@ -196,9 +198,9 @@ void TestController::cocoaPlatformInitialize(const Options& options)
     if (!dumpRenderTreeTemp)
         return;
 
-    String resourceLoadStatisticsFolder = makeString(dumpRenderTreeTemp, "/ResourceLoadStatistics");
+    String resourceLoadStatisticsFolder = makeString(String::fromUTF8(dumpRenderTreeTemp), "/ResourceLoadStatistics"_s);
     [[NSFileManager defaultManager] createDirectoryAtPath:resourceLoadStatisticsFolder withIntermediateDirectories:YES attributes:nil error: nil];
-    String fullBrowsingSessionResourceLog = makeString(resourceLoadStatisticsFolder, "/full_browsing_session_resourceLog.plist");
+    String fullBrowsingSessionResourceLog = makeString(resourceLoadStatisticsFolder, "/full_browsing_session_resourceLog.plist"_s);
     NSDictionary *resourceLogPlist = @{ @"version": @(1) };
     if (![resourceLogPlist writeToFile:fullBrowsingSessionResourceLog atomically:YES])
         WTFCrash();
@@ -324,8 +326,9 @@ void TestController::platformCreateWebView(WKPageConfigurationRef, const TestOpt
     }
     
     [copiedConfiguration _setAllowTestOnlyIPC:options.allowTestOnlyIPC()];
+    [copiedConfiguration _setPortsForUpgradingInsecureSchemeForTesting:@[@(options.insecureUpgradePort()), @(options.secureUpgradePort())]];
 
-    m_mainWebView = makeUnique<PlatformWebView>(copiedConfiguration.get(), options);
+    m_mainWebView = makeUnique<PlatformWebView>((__bridge WKPageConfigurationRef)copiedConfiguration.get(), options);
     finishCreatingPlatformWebView(m_mainWebView.get(), options);
 
     if (options.punchOutWhiteBackgroundsInDarkMode())
@@ -338,14 +341,9 @@ void TestController::platformCreateWebView(WKPageConfigurationRef, const TestOpt
     [m_mainWebView->platformView() _setShareSheetCompletesImmediatelyWithResolutionForTesting:YES];
 }
 
-UniqueRef<PlatformWebView> TestController::platformCreateOtherPage(PlatformWebView* parentView, WKPageConfigurationRef, const TestOptions& options)
+UniqueRef<PlatformWebView> TestController::platformCreateOtherPage(PlatformWebView* parentView, WKPageConfigurationRef configuration, const TestOptions& options)
 {
-    auto newConfiguration = adoptNS([globalWebViewConfiguration() copy]);
-    if (parentView)
-        [newConfiguration _setRelatedWebView:static_cast<WKWebView*>(parentView->platformView())];
-    if ([newConfiguration _relatedWebView])
-        [newConfiguration setWebsiteDataStore:[newConfiguration _relatedWebView].configuration.websiteDataStore];
-    auto view = makeUniqueRef<PlatformWebView>(newConfiguration.get(), options);
+    auto view = makeUniqueRef<PlatformWebView>(configuration, options);
     finishCreatingPlatformWebView(view.ptr(), options);
     return view;
 }
@@ -452,7 +450,10 @@ void TestController::cocoaResetStateToConsistentValues(const TestOptions& option
         [platformView _setGrammarCheckingEnabledForTesting:YES];
         [platformView resetInteractionCallbacks];
         [platformView _resetNavigationGestureStateForTesting];
-        [platformView.configuration.preferences setTextInteractionEnabled:options.textInteractionEnabled()];
+
+        auto configuration = platformView.configuration;
+        configuration.preferences.textInteractionEnabled = options.textInteractionEnabled();
+        configuration.preferences._textExtractionEnabled = options.textExtractionEnabled();
     }
 
     [LayoutTestSpellChecker uninstallAndReset];
@@ -460,6 +461,13 @@ void TestController::cocoaResetStateToConsistentValues(const TestOptions& option
     WebCoreTestSupport::setAdditionalSupportedImageTypesForTesting(String::fromLatin1(options.additionalSupportedImageTypes().c_str()));
 
     [globalWebsiteDataStoreDelegateClient() clearReportedWindowProxyAccessDomains];
+}
+
+void TestController::platformSetStatisticsCrossSiteLoadWithLinkDecoration(WKStringRef fromHost, WKStringRef toHost, bool wasFiltered, void* context, SetStatisticsCrossSiteLoadWithLinkDecorationCallBack callback)
+{
+    [m_mainWebView->platformView() _setStatisticsCrossSiteLoadWithLinkDecorationForTesting:toWTFString(fromHost) withToHost:toWTFString(toHost) withWasFiltered:wasFiltered withCompletionHandler:^{
+        callback(context);
+    }];
 }
 
 void TestController::platformWillRunTest(const TestInvocation& testInvocation)
@@ -498,43 +506,12 @@ unsigned TestController::imageCountInGeneralPasteboard() const
     return imagesArray.count;
 }
 
-void TestController::removeAllSessionCredentials()
+void TestController::removeAllSessionCredentials(CompletionHandler<void(WKTypeRef)>&& completionHandler)
 {
     auto types = adoptNS([[NSSet alloc] initWithObjects:_WKWebsiteDataTypeCredentials, nil]);
-    [[globalWebViewConfiguration() websiteDataStore] removeDataOfTypes:types.get() modifiedSince:[NSDate distantPast] completionHandler:^() {
-        m_currentInvocation->didRemoveAllSessionCredentials();
-    }];
-}
-
-void TestController::getAllStorageAccessEntries()
-{
-    auto* parentView = mainWebView();
-    if (!parentView)
-        return;
-
-    [[globalWebViewConfiguration() websiteDataStore] _getAllStorageAccessEntriesFor:parentView->platformView() completionHandler:^(NSArray<NSString *> *domains) {
-        m_currentInvocation->didReceiveAllStorageAccessEntries(makeVector<String>(domains));
-    }];
-}
-
-void TestController::loadedSubresourceDomains()
-{
-    auto* parentView = mainWebView();
-    if (!parentView)
-        return;
-    
-    [[globalWebViewConfiguration() websiteDataStore] _loadedSubresourceDomainsFor:parentView->platformView() completionHandler:^(NSArray<NSString *> *domains) {
-        m_currentInvocation->didReceiveLoadedSubresourceDomains(makeVector<String>(domains));
-    }];
-}
-
-void TestController::clearLoadedSubresourceDomains()
-{
-    auto* parentView = mainWebView();
-    if (!parentView)
-        return;
-
-    [[globalWebViewConfiguration() websiteDataStore] _clearLoadedSubresourceDomainsFor:parentView->platformView()];
+    [[globalWebViewConfiguration() websiteDataStore] removeDataOfTypes:types.get() modifiedSince:[NSDate distantPast] completionHandler:makeBlockPtr([completionHandler = WTFMove(completionHandler)] () mutable {
+        completionHandler(nullptr);
+    }).get()];
 }
 
 bool TestController::didLoadAppInitiatedRequest()
@@ -803,10 +780,10 @@ WKRetainPtr<WKStringRef> TestController::backgroundFetchState(WKStringRef identi
     __block bool isDone = false;
     __block String backgroundFetchState;
     [globalWebViewConfiguration().get().websiteDataStore _getBackgroundFetchState:toWTFString(identifier) completionHandler:^(NSDictionary *state) {
-        backgroundFetchState = makeString("{ ",
-            "\"downloaded\":", [[state valueForKey:@"Downloaded"] unsignedIntegerValue], ",",
-            "\"isPaused\":", [[state valueForKey:@"IsPaused"] boolValue] ? "true" : "false",
-        "}");
+        backgroundFetchState = makeString("{ "_s,
+            "\"downloaded\":"_s, [[state valueForKey:@"Downloaded"] unsignedIntegerValue], ',',
+            "\"isPaused\":"_s, [[state valueForKey:@"IsPaused"] boolValue] ? "true"_s : "false"_s,
+        '}');
         isDone = true;
     }];
     platformRunUntil(isDone, noTimeout);

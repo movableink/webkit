@@ -63,6 +63,7 @@
 #import <JavaScriptCore/InitializeThreading.h>
 #import <JavaScriptCore/JSCConfig.h>
 #import <JavaScriptCore/Options.h>
+#import <JavaScriptCore/RegisterTZoneTypes.h>
 #import <JavaScriptCore/TestRunnerUtils.h>
 #import <WebCore/LogInitialization.h>
 #import <WebCore/NetworkStorageSession.h>
@@ -101,6 +102,7 @@
 #import <wtf/OSObjectPtr.h>
 #import <wtf/ProcessPrivilege.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/TZoneMallocInitialization.h>
 #import <wtf/Threading.h>
 #import <wtf/UniqueArray.h>
 #import <wtf/WTFProcess.h>
@@ -110,6 +112,7 @@
 #import <wtf/cocoa/VectorCocoa.h>
 #import <wtf/text/StringBuilder.h>
 #import <wtf/text/WTFString.h>
+#import <wtf/text/cf/StringConcatenateCF.h>
 
 #if !PLATFORM(IOS_FAMILY)
 #import <Carbon/Carbon.h>
@@ -1311,6 +1314,12 @@ void atexitFunction()
 
 int DumpRenderTreeMain(int argc, const char *argv[])
 {
+#if USE(TZONE_MALLOC)
+    WTF_TZONE_INIT(nullptr);
+    JSC::registerTZoneTypes();
+    WTF_TZONE_REGISTRATION_DONE();
+#endif
+
     atexit(atexitFunction);
 
     WTF::setProcessPrivileges(allPrivileges());
@@ -1435,7 +1444,7 @@ static RetainPtr<NSString> dumpFramesAsText(WebFrame *frame)
     // the result without any conversion.
     if (auto utf8Result = WTF::String(innerText).tryGetUTF8()) {
         auto string = WTFMove(utf8Result.value());
-        [result appendFormat:@"%@\n", String::fromUTF8WithLatin1Fallback(string.data(), string.length()).createCFString().get()];
+        [result appendFormat:@"%@\n", String::fromUTF8WithLatin1Fallback(string.span()).createCFString().get()];
     } else
         [result appendString:@"\n"];
 
@@ -1892,6 +1901,11 @@ static NSURL *computeTestURL(NSString *pathOrURLString, NSString **relativeTestP
 
 static WTR::TestOptions testOptionsForTest(const WTR::TestCommand& command)
 {
+    // hack for cases when useDollarVM will be reset before injectInternalsObject is called in DRT
+    {
+        JSC::Options::AllowUnfinalizedAccessScope scope;
+        JSC::Options::useDollarVM() = true;
+    }
     WTR::TestFeatures features = WTR::TestOptions::defaults();
     WTR::merge(features, WTR::hardcodedFeaturesBasedOnPathForTest(command));
     WTR::merge(features, WTR::featureDefaultsFromTestHeaderForTest(command, WTR::TestOptions::keyTypeMapping()));
@@ -1935,7 +1949,7 @@ static void runTest(const std::string& inputLine)
     if (!testPath)
         testPath = [url absoluteString];
 
-    auto message = makeString("CRASHING TEST: ", testPath.UTF8String);
+    auto message = makeString("CRASHING TEST: "_s, testPath);
     WTF::setCrashLogMessage(message.utf8().data());
 
     auto options = testOptionsForTest(command);
@@ -1952,6 +1966,9 @@ static void runTest(const std::string& inputLine)
     gTestRunner->setLocalhostAliases(localhostAliases);
     gTestRunner->setCustomTimeout(command.timeout.milliseconds());
     gTestRunner->setDumpJSConsoleLogInStdErr(command.dumpJSConsoleLogInStdErr || options.dumpJSConsoleLogInStdErr());
+
+    gTestRunner->setPortsForUpgradingInsecureScheme(options.insecureUpgradePort(), options.secureUpgradePort());
+    [[mainFrame webView] _setPortsForUpgradingInsecureSchemeForTesting:options.insecureUpgradePort() withSecurePort:options.secureUpgradePort()];
 
 #if ENABLE(VIDEO)
     [mainFrame _createCaptionPreferencesTestingModeToken];
@@ -1972,7 +1989,6 @@ static void runTest(const std::string& inputLine)
 
     sizeWebViewForCurrentTest();
     gTestRunner->setIconDatabaseEnabled(false);
-    gTestRunner->clearAllApplicationCaches();
 
     gTestRunner->clearAllDatabases();
     gTestRunner->clearNotificationPermissionState();

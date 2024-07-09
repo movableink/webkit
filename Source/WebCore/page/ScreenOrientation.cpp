@@ -119,7 +119,7 @@ void ScreenOrientation::lock(LockType lockType, Ref<DeferredPromise>&& promise)
 
     if (document->settings().fullscreenRequirementForScreenOrientationLockingEnabled()) {
 #if ENABLE(FULLSCREEN_API)
-        if (!document->fullscreenManager().isFullscreen()) {
+        if (CheckedPtr fullscreenManager = document->fullscreenManagerIfExists(); !fullscreenManager || !fullscreenManager->isFullscreen()) {
 #else
         if (true) {
 #endif
@@ -239,11 +239,6 @@ bool ScreenOrientation::shouldListenForChangeNotification() const
 void ScreenOrientation::screenOrientationDidChange(ScreenOrientationType)
 {
     queueTaskToDispatchEvent(*this, TaskSource::DOMManipulation, Event::create(eventNames().changeEvent, Event::CanBubble::No, Event::IsCancelable::No));
-}
-
-const char* ScreenOrientation::activeDOMObjectName() const
-{
-    return "ScreenOrientation";
 }
 
 void ScreenOrientation::suspend(ReasonForSuspension)

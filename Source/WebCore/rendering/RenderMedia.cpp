@@ -40,13 +40,13 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderMedia);
 
 RenderMedia::RenderMedia(Type type, HTMLMediaElement& element, RenderStyle&& style)
-    : RenderImage(type, element, WTFMove(style))
+    : RenderImage(type, element, WTFMove(style), ReplacedFlag::IsMedia)
 {
     setHasShadowControls(true);
 }
 
 RenderMedia::RenderMedia(Type type, HTMLMediaElement& element, RenderStyle&& style, const IntSize& intrinsicSize)
-    : RenderImage(type, element, WTFMove(style))
+    : RenderImage(type, element, WTFMove(style), ReplacedFlag::IsMedia)
 {
     setIntrinsicSize(intrinsicSize);
     setHasShadowControls(true);
@@ -69,7 +69,7 @@ void RenderMedia::layout()
 void RenderMedia::styleDidChange(StyleDifference difference, const RenderStyle* oldStyle)
 {
     RenderImage::styleDidChange(difference, oldStyle);
-    if (!oldStyle || style().visibility() != oldStyle->visibility())
+    if (!oldStyle || style().usedVisibility() != oldStyle->usedVisibility())
         mediaElement().visibilityDidChange();
 }
 

@@ -33,13 +33,15 @@ namespace WebCore {
 
 struct OrganizationStorageAccessPromptQuirk {
     String organizationName;
-    HashMap<RegistrableDomain, Vector<RegistrableDomain>> domainPairings;
+    HashMap<RegistrableDomain, Vector<RegistrableDomain>> quirkDomains;
+    Vector<URL> triggerPages;
 
     bool isHashTableDeletedValue() const { return organizationName.isHashTableDeletedValue(); }
 
-    OrganizationStorageAccessPromptQuirk(String&& organizationName, HashMap<RegistrableDomain, Vector<RegistrableDomain>>&& domainPairings)
+    OrganizationStorageAccessPromptQuirk(String&& organizationName, HashMap<RegistrableDomain, Vector<RegistrableDomain>>&& quirkDomains, Vector<URL>&& triggerPages)
         : organizationName { WTFMove(organizationName) }
-        , domainPairings { WTFMove(domainPairings) }
+        , quirkDomains { WTFMove(quirkDomains) }
+        , triggerPages { WTFMove(triggerPages) }
         { }
 
     OrganizationStorageAccessPromptQuirk(WTF::HashTableDeletedValueType)
@@ -61,7 +63,7 @@ inline void add(Hasher& hasher, const OrganizationStorageAccessPromptQuirk& quir
 
 struct OrganizationStorageAccessPromptQuirkHashTraits : SimpleClassHashTraits<OrganizationStorageAccessPromptQuirk> {
     static const bool hasIsEmptyValueFunction = true;
-    static const bool emptyValueIsZero = true;
+    static const bool emptyValueIsZero = false;
     static bool isEmptyValue(const OrganizationStorageAccessPromptQuirk& quirk) { return quirk.organizationName.isNull(); }
 };
 

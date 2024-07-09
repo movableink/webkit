@@ -26,7 +26,6 @@
 #include "config.h"
 #include "WKImageCG.h"
 
-#include "ShareableBitmap.h"
 #include "WKSharedAPICast.h"
 #include "WKString.h"
 #include "WebImage.h"
@@ -34,6 +33,7 @@
 #include <WebCore/GraphicsContext.h>
 #include <WebCore/ImageBufferUtilitiesCG.h>
 #include <WebCore/NativeImage.h>
+#include <WebCore/ShareableBitmap.h>
 
 CGImageRef WKImageCreateCGImage(WKImageRef imageRef)
 {
@@ -64,7 +64,7 @@ WKImageRef WKImageCreateFromCGImage(CGImageRef imageRef, WKImageOptions options)
     WebCore::FloatRect rect(WebCore::FloatPoint(0, 0), imageSize);
 
     graphicsContext.clearRect(rect);
-    graphicsContext.drawNativeImage(*nativeImage, imageSize, rect, rect);
+    graphicsContext.drawNativeImage(*nativeImage, rect, rect);
     return toAPI(webImage.leakRef());
 }
 

@@ -69,10 +69,10 @@ public:
         AtomString m_localNameLower;
         mutable AtomString m_localNameUpper;
 
-#if ENABLE(JIT)
-        static ptrdiff_t localNameMemoryOffset() { return OBJECT_OFFSETOF(QualifiedNameImpl, m_localName); }
-        static ptrdiff_t namespaceMemoryOffset() { return OBJECT_OFFSETOF(QualifiedNameImpl, m_namespaceURI); }
-#endif
+        static constexpr ptrdiff_t namespaceMemoryOffset() { return OBJECT_OFFSETOF(QualifiedNameImpl, m_namespace); }
+        static constexpr ptrdiff_t nodeNameMemoryOffset() { return OBJECT_OFFSETOF(QualifiedNameImpl, m_nodeName); }
+        static constexpr ptrdiff_t localNameMemoryOffset() { return OBJECT_OFFSETOF(QualifiedNameImpl, m_localName); }
+        static constexpr ptrdiff_t namespaceURIMemoryOffset() { return OBJECT_OFFSETOF(QualifiedNameImpl, m_namespaceURI); }
 
     private:
         friend class QualifiedName;
@@ -107,7 +107,7 @@ public:
 
     QualifiedNameImpl* impl() const { return m_impl.get(); }
 #if ENABLE(JIT)
-    static ptrdiff_t implMemoryOffset() { return OBJECT_OFFSETOF(QualifiedName, m_impl); }
+    static constexpr ptrdiff_t implMemoryOffset() { return OBJECT_OFFSETOF(QualifiedName, m_impl); }
 #endif
     
     // Init routine for globals
@@ -126,7 +126,7 @@ inline void add(Hasher& hasher, const QualifiedName::QualifiedNameImpl& impl)
 
 inline void add(Hasher& hasher, const QualifiedName& name)
 {
-    add(hasher, *name.impl());
+    add(hasher, bitwise_cast<uintptr_t>(name.impl()));
 }
 
 extern LazyNeverDestroyed<const QualifiedName> anyName;

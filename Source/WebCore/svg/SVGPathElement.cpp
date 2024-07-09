@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2006, 2008 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006, 2007 Rob Buis <buis@kde.org>
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2024 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -41,15 +41,15 @@ class PathSegListCache {
 public:
     static PathSegListCache& singleton();
 
-    const SVGPathByteStream::Data* get(const AtomString& attributeValue) const;
-    void add(const AtomString& attributeValue, const SVGPathByteStream::Data&);
+    std::optional<DataRef<SVGPathByteStream::Data>> get(const AtomString& attributeValue) const;
+    void add(const AtomString& attributeValue, DataRef<SVGPathByteStream::Data>);
     void clear();
 
 private:
     friend class NeverDestroyed<PathSegListCache, MainThreadAccessTraits>;
     PathSegListCache() = default;
 
-    HashMap<AtomString, SVGPathByteStream::Data> m_cache;
+    HashMap<AtomString, DataRef<SVGPathByteStream::Data>> m_cache;
     uint64_t m_sizeInBytes { 0 };
     static constexpr uint64_t maxItemSizeInBytes = 5 * 1024; // 5 Kb.
     static constexpr uint64_t maxCacheSizeInBytes = 150 * 1024; // 150 Kb.
@@ -61,15 +61,14 @@ PathSegListCache& PathSegListCache::singleton()
     return cache;
 }
 
-const SVGPathByteStream::Data* PathSegListCache::get(const AtomString& attributeValue) const
+std::optional<DataRef<SVGPathByteStream::Data>> PathSegListCache::get(const AtomString& attributeValue) const
 {
-    auto iterator = m_cache.find(attributeValue);
-    return iterator != m_cache.end() ? &iterator->value : nullptr;
+    return m_cache.getOptional(attributeValue);
 }
 
-void PathSegListCache::add(const AtomString& attributeValue, const SVGPathByteStream::Data& data)
+void PathSegListCache::add(const AtomString& attributeValue, DataRef<SVGPathByteStream::Data> data)
 {
-    size_t newDataSize = data.size();
+    size_t newDataSize = data->size();
     if (UNLIKELY(newDataSize > maxItemSizeInBytes))
         return;
 
@@ -78,11 +77,11 @@ void PathSegListCache::add(const AtomString& attributeValue, const SVGPathByteSt
         ASSERT(!m_cache.isEmpty());
         auto iteratorToRemove = m_cache.random();
         ASSERT(iteratorToRemove != m_cache.end());
-        ASSERT(m_sizeInBytes >= iteratorToRemove->value.size());
-        m_sizeInBytes -= iteratorToRemove->value.size();
+        ASSERT(m_sizeInBytes >= iteratorToRemove->value->size());
+        m_sizeInBytes -= iteratorToRemove->value->size();
         m_cache.remove(iteratorToRemove);
     }
-    m_cache.add(attributeValue, data);
+    m_cache.add(attributeValue, WTFMove(data));
 }
 
 void PathSegListCache::clear()
@@ -112,13 +111,13 @@ void SVGPathElement::attributeChanged(const QualifiedName& name, const AtomStrin
     if (name == SVGNames::dAttr) {
         auto& cache = PathSegListCache::singleton();
         if (newValue.isEmpty())
-            m_pathSegList->baseVal()->updateByteStreamData({ });
-        else if (auto* data = cache.get(newValue))
-            m_pathSegList->baseVal()->updateByteStreamData(*data);
-        else if (m_pathSegList->baseVal()->parse(newValue))
+            Ref { m_pathSegList }->baseVal()->clearByteStreamData();
+        else if (auto data = cache.get(newValue))
+            Ref { m_pathSegList }->baseVal()->updateByteStreamData(WTFMove(data.value()));
+        else if (Ref { m_pathSegList }->baseVal()->parse(newValue))
             cache.add(newValue, m_pathSegList->baseVal()->existingPathByteStream().data());
         else
-            document().accessSVGExtensions().reportError("Problem parsing d=\"" + newValue + "\"");
+            protectedDocument()->checkedSVGExtensions()->reportError(makeString("Problem parsing d=\""_s, newValue, "\""_s));
     }
 
     SVGGeometryElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
@@ -136,14 +135,14 @@ void SVGPathElement::svgAttributeChanged(const QualifiedName& attrName)
         InstanceInvalidationGuard guard(*this);
         invalidateMPathDependencies();
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
-        if (auto* path = dynamicDowncast<RenderSVGPath>(renderer()))
+        if (CheckedPtr path = dynamicDowncast<RenderSVGPath>(renderer()))
             path->setNeedsShapeUpdate();
-#endif
-        if (auto* path = dynamicDowncast<LegacyRenderSVGPath>(renderer()))
+
+        if (CheckedPtr path = dynamicDowncast<LegacyRenderSVGPath>(renderer()))
             path->setNeedsShapeUpdate();
 
         updateSVGRendererForElementChange();
+        invalidateResourceImageBuffersIfNeeded();
         return;
     }
 
@@ -155,8 +154,8 @@ void SVGPathElement::invalidateMPathDependencies()
     // <mpath> can only reference <path> but this dependency is not handled in
     // markForLayoutAndParentResourceInvalidation so we update any mpath dependencies manually.
     for (auto& element : referencingElements()) {
-        if (is<SVGMPathElement>(element))
-            downcast<SVGMPathElement>(element.get()).targetPathChanged();
+        if (RefPtr mpathElement = dynamicDowncast<SVGMPathElement>(element.get()))
+            mpathElement->targetPathChanged();
     }
 }
 
@@ -195,28 +194,25 @@ unsigned SVGPathElement::getPathSegAtLength(float length) const
 FloatRect SVGPathElement::getBBox(StyleUpdateStrategy styleUpdateStrategy)
 {
     if (styleUpdateStrategy == AllowStyleUpdate)
-        document().updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
+        protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
 
     // FIXME: Eventually we should support getBBox for detached elements.
     // FIXME: If the path is null it means we're calling getBBox() before laying out this element,
     // which is an error.
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
-        if (auto* path = dynamicDowncast<RenderSVGPath>(renderer()); path && path->hasPath())
-            return path->path().boundingRect();
-#endif
-        if (auto* path = dynamicDowncast<LegacyRenderSVGPath>(renderer()); path && path->hasPath())
-            return path->path().boundingRect();
+    if (CheckedPtr path = dynamicDowncast<RenderSVGPath>(renderer()); path && path->hasPath())
+        return path->path().boundingRect();
+
+    if (CheckedPtr path = dynamicDowncast<LegacyRenderSVGPath>(renderer()); path && path->hasPath())
+        return path->path().boundingRect();
 
     return { };
 }
 
 RenderPtr<RenderElement> SVGPathElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (document().settings().layerBasedSVGEngineEnabled())
         return createRenderer<RenderSVGPath>(*this, WTFMove(style));
-#endif
     return createRenderer<LegacyRenderSVGPath>(*this, WTFMove(style));
 }
 

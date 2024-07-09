@@ -29,6 +29,7 @@
 #import "PlatformUtilities.h"
 #import "TestUIDelegate.h"
 #import "TestWKWebView.h"
+#import <wtf/cocoa/VectorCocoa.h>
 #import <wtf/text/StringConcatenateNumbers.h>
 
 #import <pal/cocoa/AVFoundationSoftLink.h>
@@ -39,7 +40,7 @@ namespace TestWebKitAPI {
 
 static String parseUserAgent(const Vector<char>& request)
 {
-    auto headers = String::fromUTF8(request.data(), request.size()).split("\r\n"_s);
+    auto headers = String::fromUTF8(request.span()).split("\r\n"_s);
     auto index = headers.findIf([] (auto& header) { return header.startsWith("User-Agent:"_s); });
     if (index != notFound)
         return headers[index];
@@ -100,13 +101,13 @@ TEST(MediaLoading, UserAgentStringHLS)
                 "#EXT-X-MEDIA-SEQUENCE:0\n"
                 "#EXT-X-PLAYLIST-TYPE:VOD\n"
                 "#EXTINF:6.0272,\n"
-                "http://127.0.0.1:", mediaServerPort, "/main1.ts\n",
-                "#EXT-X-ENDLIST\n"
+                "http://127.0.0.1:"_s, mediaServerPort, "/main1.ts\n"_s,
+                "#EXT-X-ENDLIST\n"_s
             );
 
-            connection.send(makeString("HTTP/1.1 200 OK\r\n",
-                "Content-Length: ", payload.length(), "\r\n",
-                "\r\n",
+            connection.send(makeString("HTTP/1.1 200 OK\r\n"_s,
+                "Content-Length: "_s, payload.length(), "\r\n"_s,
+                "\r\n"_s,
                 payload
             ));
 
@@ -133,10 +134,7 @@ constexpr auto videoPlayTestHTML ="<script>"
 
 static Vector<uint8_t> testVideoBytes()
 {
-    NSData *data = [NSData dataWithContentsOfURL:[[NSBundle mainBundle] URLForResource:@"test" withExtension:@"mp4" subdirectory:@"TestWebKitAPI.resources"]];
-    Vector<uint8_t> vector;
-    vector.append(static_cast<const uint8_t*>(data.bytes), data.length);
-    return vector;
+    return makeVector([NSData dataWithContentsOfURL:[[NSBundle mainBundle] URLForResource:@"test" withExtension:@"mp4" subdirectory:@"TestWebKitAPI.resources"]]);
 }
 
 static void runVideoTest(NSURLRequest *request, const char* expectedMessage)
@@ -205,10 +203,7 @@ TEST(MediaLoading, LockdownModeHLS)
     "<body onload='createVideoElement()'></body>"_s;
 
     auto testTransportStreamBytes = [&] () -> Vector<uint8_t> {
-        NSData *data = [NSData dataWithContentsOfURL:[[NSBundle mainBundle] URLForResource:@"start-offset" withExtension:@"ts" subdirectory:@"TestWebKitAPI.resources"]];
-        Vector<uint8_t> vector;
-        vector.append(static_cast<const uint8_t*>(data.bytes), data.length);
-        return vector;
+        return makeVector([NSData dataWithContentsOfURL:[[NSBundle mainBundle] URLForResource:@"start-offset" withExtension:@"ts" subdirectory:@"TestWebKitAPI.resources"]]);
     };
 
     HTTPServer server({
@@ -217,22 +212,22 @@ TEST(MediaLoading, LockdownModeHLS)
     });
     auto serverPort = server.port();
     auto m3u8Source = makeString(
-        "#EXTM3U\n",
-        "#EXT-X-PLAYLIST-TYPE:EVENT\n",
-        "#EXT-X-VERSION:3\n",
-        "#EXT-X-MEDIA-SEQUENCE:0\n",
-        "#EXT-X-TARGETDURATION:8\n",
-        "#EXT-X-PROGRAM-DATE-TIME:1970-01-01T00:00:00.001Z\n",
-        "#EXTINF:6.0272,\n",
-        "http://127.0.0.1:", serverPort, "/start-offset.ts\n",
-        "#EXTINF:6.0272,\n",
-        "http://127.0.0.1:", serverPort, "/start-offset.ts\n",
-        "#EXTINF:6.0272,\n",
-        "http://127.0.0.1:", serverPort, "/start-offset.ts\n",
-        "#EXTINF:6.0272,\n",
-        "http://127.0.0.1:", serverPort, "/start-offset.ts\n",
-        "#EXTINF:6.0272,\n",
-        "http://127.0.0.1:", serverPort, "/start-offset.ts\n"
+        "#EXTM3U\n"_s,
+        "#EXT-X-PLAYLIST-TYPE:EVENT\n"_s,
+        "#EXT-X-VERSION:3\n"_s,
+        "#EXT-X-MEDIA-SEQUENCE:0\n"_s,
+        "#EXT-X-TARGETDURATION:8\n"_s,
+        "#EXT-X-PROGRAM-DATE-TIME:1970-01-01T00:00:00.001Z\n"_s,
+        "#EXTINF:6.0272,\n"_s,
+        "http://127.0.0.1:"_s, serverPort, "/start-offset.ts\n"_s,
+        "#EXTINF:6.0272,\n"_s,
+        "http://127.0.0.1:"_s, serverPort, "/start-offset.ts\n"_s,
+        "#EXTINF:6.0272,\n"_s,
+        "http://127.0.0.1:"_s, serverPort, "/start-offset.ts\n"_s,
+        "#EXTINF:6.0272,\n"_s,
+        "http://127.0.0.1:"_s, serverPort, "/start-offset.ts\n"_s,
+        "#EXTINF:6.0272,\n"_s,
+        "http://127.0.0.1:"_s, serverPort, "/start-offset.ts\n"_s
     );
     server.addResponse("/video.m3u8"_s, { m3u8Source });
 

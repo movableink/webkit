@@ -197,7 +197,6 @@ enum class FeatureToAnimate {
     return true;
 }
 
-#if HAVE(OS_DARK_MODE_SUPPORT)
 - (NSAppearance *)effectiveAppearanceForScrollerImp:(NSScrollerImp *)scrollerImp
 {
     UNUSED_PARAM(scrollerImp);
@@ -209,7 +208,6 @@ enum class FeatureToAnimate {
         return appearance;
     return [NSAppearance currentDrawingAppearance];
 }
-#endif
 
 - (void)setUpAlphaAnimation:(RetainPtr<WebScrollbarPartAnimationMac>&)scrollbarPartAnimation featureToAnimate:(FeatureToAnimate)featureToAnimate animateAlphaTo:(CGFloat)newAlpha duration:(NSTimeInterval)duration
 {
@@ -423,7 +421,9 @@ void ScrollerMac::visibilityChanged(bool isVisible)
     if (m_isVisible == isVisible)
         return;
     m_isVisible = isVisible;
-    m_pair.node().scrollbarVisibilityDidChange(m_orientation, isVisible);
+
+    if (RefPtr node = m_pair.protectedNode())
+        node->scrollbarVisibilityDidChange(m_orientation, isVisible);
 }
 
 void ScrollerMac::updateMinimumKnobLength(int minimumKnobLength)
@@ -431,13 +431,20 @@ void ScrollerMac::updateMinimumKnobLength(int minimumKnobLength)
     if (m_minimumKnobLength == minimumKnobLength)
         return;
     m_minimumKnobLength = minimumKnobLength;
-    m_pair.node().scrollbarMinimumThumbLengthDidChange(m_orientation, m_minimumKnobLength);
+
+    if (RefPtr node = m_pair.protectedNode())
+        node->scrollbarMinimumThumbLengthDidChange(m_orientation, m_minimumKnobLength);
 }
 
 void ScrollerMac::setScrollerImp(NSScrollerImp *imp)
 {
     m_scrollerImp = imp;
     updateMinimumKnobLength([m_scrollerImp knobMinLength]);
+}
+
+void ScrollerMac::setScrollbarLayoutDirection(UserInterfaceLayoutDirection scrollbarLayoutDirection)
+{
+    [m_scrollerImp setUserInterfaceLayoutDirection: scrollbarLayoutDirection == UserInterfaceLayoutDirection::RTL ? NSUserInterfaceLayoutDirectionRightToLeft : NSUserInterfaceLayoutDirectionLeftToRight];
 }
 
 String ScrollerMac::scrollbarState() const
@@ -459,6 +466,9 @@ String ScrollerMac::scrollbarState() const
 
     if ([m_scrollerImp knobAlpha] > 0)
         result.append(",visible_thumb"_s);
+
+    if ([m_scrollerImp userInterfaceLayoutDirection] == NSUserInterfaceLayoutDirectionRightToLeft)
+        result.append(",RTL"_s);
 
     return result.toString();
 }

@@ -621,12 +621,11 @@ TEST(SOAuthorizationRedirect, InterceptionSucceed1)
     Util::run(&authorizationPerformed);
     checkAuthorizationOptions(false, emptyString(), 0);
     EXPECT_FALSE(policyForAppSSOPerformed); // The delegate isn't registered, so this won't be set.
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) || PLATFORM(IOS)
     EXPECT_TRUE(gAuthorization.enableEmbeddedAuthorizationViewController);
-#elif PLATFORM(IOS) || PLATFORM(VISION)
+#elif PLATFORM(VISION)
     EXPECT_FALSE(gAuthorization.enableEmbeddedAuthorizationViewController);
 #endif
-
     RetainPtr<NSURL> redirectURL = [[NSBundle mainBundle] URLForResource:@"simple2" withExtension:@"html" subdirectory:@"TestWebKitAPI.resources"];
     auto response = adoptNS([[NSHTTPURLResponse alloc] initWithURL:testURL.get() statusCode:302 HTTPVersion:@"HTTP/1.1" headerFields:@{ @"Location" : [redirectURL absoluteString] }]);
     [gDelegate authorization:gAuthorization didCompleteWithHTTPResponse:response.get() httpBody:adoptNS([[NSData alloc] init]).get()];
@@ -1984,7 +1983,7 @@ TEST(SOAuthorizationPopUp, NoInterceptionsSubFrame)
     RetainPtr<NSURL> baseURL = [[NSBundle mainBundle] URLForResource:@"simple2" withExtension:@"html" subdirectory:@"TestWebKitAPI.resources"];
     RetainPtr<NSURL> testURL = [[NSBundle mainBundle] URLForResource:@"simple" withExtension:@"html" subdirectory:@"TestWebKitAPI.resources"];
     auto iframeTestHtml = generateHtml(openerTemplate, testURL.get().absoluteString);
-    auto testHtml = makeString("<iframe style='width:400px;height:400px' srcdoc=\"", iframeTestHtml, "\" />");
+    auto testHtml = makeString("<iframe style='width:400px;height:400px' srcdoc=\""_s, iframeTestHtml, "\" />"_s);
 
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 400, 400)]);
     auto delegate = adoptNS([[TestSOAuthorizationDelegate alloc] init]);
@@ -2403,7 +2402,7 @@ TEST(SOAuthorizationPopUp, InterceptionSucceedNewWindowNavigation)
 
     RetainPtr<NSURL> baseURL = [[NSBundle mainBundle] URLForResource:@"simple2" withExtension:@"html" subdirectory:@"TestWebKitAPI.resources"];
     URL testURL { "http://www.example.com"_str };
-    auto testHtml = generateHtml(openerTemplate, testURL.string(), makeString("newWindow.location = '", baseURL.get().absoluteString.UTF8String, "';")); // Starts a new navigation on the new window.
+    auto testHtml = generateHtml(openerTemplate, testURL.string(), makeString("newWindow.location = '"_s, span(baseURL.get().absoluteString.UTF8String), "';"_s)); // Starts a new navigation on the new window.
 
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
     auto messageHandler = adoptNS([[TestSOAuthorizationScriptMessageHandler alloc] initWithExpectation:@[@"Hello.", @"WindowClosed."]]);
@@ -2986,9 +2985,9 @@ TEST(SOAuthorizationSubFrame, InterceptionErrorWithReferrer)
         });
     });
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
-    auto origin = makeString("http://127.0.0.1:", server.port());
+    auto origin = makeString("http://127.0.0.1:"_s, server.port());
 
-    auto messageHandler = adoptNS([[TestSOAuthorizationScriptMessageHandler alloc] initWithExpectation:@[origin, @"SOAuthorizationDidStart", origin, @"SOAuthorizationDidCancel", origin, @"Hello.", origin, makeString("Referrer: ", origin, "/")]]);
+    auto messageHandler = adoptNS([[TestSOAuthorizationScriptMessageHandler alloc] initWithExpectation:@[origin, @"SOAuthorizationDidStart", origin, @"SOAuthorizationDidCancel", origin, @"Hello.", origin, makeString("Referrer: "_s, origin, '/')]]);
     [[configuration userContentController] addScriptMessageHandler:messageHandler.get() name:@"testHandler"];
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500) configuration:configuration.get()]);
     auto delegate = adoptNS([[TestSOAuthorizationDelegate alloc] init]);

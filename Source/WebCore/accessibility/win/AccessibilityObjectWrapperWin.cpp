@@ -26,8 +26,6 @@
 #include "config.h"
 #include "AccessibilityObjectWrapperWin.h"
 
-#if ENABLE(ACCESSIBILITY)
-
 #include "AXObjectCache.h"
 #include "AccessibilityObject.h"
 #include "BString.h"
@@ -69,7 +67,7 @@ void AccessibilityObjectWrapper::accessibilityAttributeValue(const AtomString& a
         ASSERT(V_VT(result) == VT_EMPTY);
         V_VT(result) = VT_BSTR;
         CharacterRange textRange = m_object->selectedTextRange();
-        String range = makeString('{', textRange.location, ", ", textRange.length, '}');
+        String range = makeString('{', textRange.location, ", "_s, textRange.length, '}');
         V_BSTR(result) = WebCore::BString(range).release();
         return;
     }
@@ -77,5 +75,3 @@ void AccessibilityObjectWrapper::accessibilityAttributeValue(const AtomString& a
 
 
 } // namespace WebCore
-
-#endif // ENABLE(ACCESSIBILITY)

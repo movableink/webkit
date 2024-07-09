@@ -35,6 +35,7 @@
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "GraphicsContext.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
@@ -214,7 +215,7 @@ void RenderThemeQStyle::computeSizeBasedOnStyle(RenderStyle& renderStyle) const
     QSize size(0, 0);
     const QFontMetrics fm(renderStyle.fontCascade().syntheticFont());
 
-    switch (renderStyle.effectiveAppearance()) {
+    switch (renderStyle.usedAppearance()) {
     case StyleAppearance::TextArea:
     case StyleAppearance::SearchField:
     case StyleAppearance::TextField: {
@@ -233,16 +234,16 @@ void RenderThemeQStyle::computeSizeBasedOnStyle(RenderStyle& renderStyle) const
     if (!renderStyle.width().isIntrinsicOrAuto() && !renderStyle.height().isAuto())
         return;
 
-    switch (renderStyle.effectiveAppearance()) {
+    switch (renderStyle.usedAppearance()) {
     case StyleAppearance::Checkbox: {
         int checkBoxWidth = m_qStyle->simplePixelMetric(QStyleFacade::PM_IndicatorWidth, QStyleFacade::State_Small);
-        checkBoxWidth *= renderStyle.effectiveZoom();
+        checkBoxWidth *= renderStyle.usedZoom();
         size = QSize(checkBoxWidth, checkBoxWidth);
         break;
     }
     case StyleAppearance::Radio: {
         int radioWidth = m_qStyle->simplePixelMetric(QStyleFacade::PM_ExclusiveIndicatorWidth, QStyleFacade::State_Small);
-        radioWidth *= renderStyle.effectiveZoom();
+        radioWidth *= renderStyle.usedZoom();
         size = QSize(radioWidth, radioWidth);
         break;
     }
@@ -286,7 +287,7 @@ void RenderThemeQStyle::adjustButtonStyle(RenderStyle& style, const Element* ele
     style.resetBorder();
 
 #ifdef Q_OS_MACOS
-    if (style.effectiveAppearance() == StyleAppearance::PushButton) {
+    if (style.usedAppearance() == StyleAppearance::PushButton) {
         // The Mac ports ignore the specified height for <input type="button"> elements
         // unless a border and/or background CSS property is also specified.
         style.setHeight(Length(LengthType::Auto));
@@ -599,7 +600,7 @@ StyleAppearance RenderThemeQStyle::initializeCommonQStyleOptions(QStyleFacadeOpt
 
     const RenderStyle& style = o.style();
 
-    StyleAppearance result = style.effectiveAppearance();
+    StyleAppearance result = style.usedAppearance();
     if (supportsFocus(result) && isFocused(o)) {
         option.state |= QStyleFacade::State_HasFocus;
         option.state |= QStyleFacade::State_KeyboardFocusChange;

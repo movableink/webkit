@@ -57,6 +57,8 @@ RenderMathMLToken::RenderMathMLToken(Type type, Document& document, RenderStyle&
 {
 }
 
+RenderMathMLToken::~RenderMathMLToken() = default;
+
 MathMLTokenElement& RenderMathMLToken::element()
 {
     return static_cast<MathMLTokenElement&>(nodeForNonAnonymous());
@@ -532,11 +534,11 @@ void RenderMathMLToken::updateMathVariantGlyph()
             return;
     }
 
-    const auto& tokenElement = element();
+    const Ref tokenElement = element();
     if (auto codePoint = MathMLTokenElement::convertToSingleCodePoint(element().textContent())) {
         MathMLElement::MathVariant mathvariant = mathMLStyle().mathVariant();
         if (mathvariant == MathMLElement::MathVariant::None)
-            mathvariant = tokenElement.hasTagName(MathMLNames::miTag) ? MathMLElement::MathVariant::Italic : MathMLElement::MathVariant::Normal;
+            mathvariant = tokenElement->hasTagName(MathMLNames::miTag) ? MathMLElement::MathVariant::Italic : MathMLElement::MathVariant::Normal;
         char32_t transformedCodePoint = mathVariant(codePoint.value(), mathvariant);
         if (transformedCodePoint != codePoint.value()) {
             m_mathVariantCodePoint = mathVariant(codePoint.value(), mathvariant);
@@ -594,6 +596,8 @@ void RenderMathMLToken::layoutBlock(bool relayoutChildren, LayoutUnit pageLogica
     setLogicalWidth(LayoutUnit(mathVariantGlyph.font->widthForGlyph(mathVariantGlyph.glyph)));
     setLogicalHeight(LayoutUnit(mathVariantGlyph.font->boundsForGlyph(mathVariantGlyph.glyph).height()));
 
+    layoutPositionedObjects(relayoutChildren);
+
     updateScrollInfoAfterLayout();
 
     clearNeedsLayout();
@@ -604,7 +608,7 @@ void RenderMathMLToken::paint(PaintInfo& info, const LayoutPoint& paintOffset)
     RenderMathMLBlock::paint(info, paintOffset);
 
     // FIXME: Instead of using DrawGlyph, we may consider using the more general TextPainter so that we can apply mathvariant to strings with an arbitrary number of characters and preserve advanced CSS effects (text-shadow, etc).
-    if (info.context().paintingDisabled() || info.phase != PaintPhase::Foreground || style().visibility() != Visibility::Visible || !m_mathVariantCodePoint)
+    if (info.context().paintingDisabled() || info.phase != PaintPhase::Foreground || style().usedVisibility() != Visibility::Visible || !m_mathVariantCodePoint)
         return;
 
     auto mathVariantGlyph = style().fontCascade().glyphDataForCharacter(m_mathVariantCodePoint.value(), m_mathVariantIsMirrored);

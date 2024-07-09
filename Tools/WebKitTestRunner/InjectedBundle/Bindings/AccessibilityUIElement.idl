@@ -23,9 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-[
-    Conditional=ACCESSIBILITY,
-] interface AccessibilityUIElement {
+interface AccessibilityUIElement {
     boolean isEqual(AccessibilityUIElement otherElement);
     readonly attribute DOMString domIdentifier;
 
@@ -34,6 +32,8 @@
     AccessibilityUIElement childAtIndex(unsigned long index);
     unsigned long indexOfChild(AccessibilityUIElement child);
     AccessibilityUIElement linkedUIElementAtIndex(unsigned long index);
+    readonly attribute AccessibilityUIElement activeElement;
+    object selectedChildren();
     AccessibilityUIElement selectedChildAtIndex(unsigned long index);
     undefined setSelectedChild(AccessibilityUIElement element);
     undefined setSelectedChildAtIndex(unsigned long index);
@@ -41,7 +41,7 @@
     undefined clearSelectedChildren();
     AccessibilityUIElement titleUIElement();
     AccessibilityUIElement parentElement();
-    
+
     readonly attribute DOMString role;
     readonly attribute DOMString subrole;
     readonly attribute DOMString roleDescription;
@@ -51,6 +51,8 @@
     readonly attribute DOMString language;
     readonly attribute DOMString helpText;
     readonly attribute DOMString valueDescription;
+    readonly attribute DOMString brailleLabel;
+    readonly attribute DOMString brailleRoleDescription;
     readonly attribute DOMString url;
     readonly attribute DOMString speakAs;
     readonly attribute DOMString liveRegionRelevant;
@@ -78,10 +80,11 @@
     undefined setValue(DOMString value);
 
     readonly attribute DOMString stringValue;
+    readonly attribute DOMString dateValue;
     readonly attribute long intValue;
     readonly attribute long minValue;
     readonly attribute long maxValue;
-    
+
     readonly attribute boolean isAtomicLiveRegion;
     readonly attribute boolean isBusy;
     readonly attribute boolean isEnabled;
@@ -117,7 +120,6 @@
     readonly attribute boolean isDeletion;
     readonly attribute boolean isFirstItemInSuggestion;
     readonly attribute boolean isLastItemInSuggestion;
-    readonly attribute boolean isInNonNativeTextControl;
 
     readonly attribute long x;
     readonly attribute long y;
@@ -128,7 +130,7 @@
     readonly attribute DOMString lineRectsAndText;
 
     readonly attribute object children;
-    readonly attribute long childrenCount;
+    readonly attribute unsigned long childrenCount;
     readonly attribute long selectedChildrenCount;
     readonly attribute long rowCount;
     readonly attribute long columnCount;
@@ -182,22 +184,23 @@
     readonly attribute DOMString customContent;
     object selectedCells();
 
-    object detailsElements();
-    object errorMessageElements();
-    AccessibilityUIElement ariaOwnsElementAtIndex(unsigned long index);
-    AccessibilityUIElement ariaOwnsReferencingElementAtIndex(unsigned long index);
-    AccessibilityUIElement ariaFlowToElementAtIndex(unsigned long index);
-    AccessibilityUIElement ariaFlowToReferencingElementAtIndex(unsigned long index);
+    // Relationships.
+    AccessibilityUIElement controllerElementAtIndex(unsigned long index);
     AccessibilityUIElement ariaControlsElementAtIndex(unsigned long index);
-    AccessibilityUIElement ariaControlsReferencingElementAtIndex(unsigned long index);
-    AccessibilityUIElement ariaLabelledByElementAtIndex(unsigned long index);
-    AccessibilityUIElement ariaLabelledByReferencingElementAtIndex(unsigned long index);
     AccessibilityUIElement ariaDescribedByElementAtIndex(unsigned long index);
-    AccessibilityUIElement ariaDescribedByReferencingElementAtIndex(unsigned long index);
+    AccessibilityUIElement descriptionForElementAtIndex(unsigned long index);
+    object detailsElements();
     AccessibilityUIElement ariaDetailsElementAtIndex(unsigned long index);
-    AccessibilityUIElement ariaDetailsReferencingElementAtIndex(unsigned long index);
+    AccessibilityUIElement detailsForElementAtIndex(unsigned long index);
+    object errorMessageElements();
     AccessibilityUIElement ariaErrorMessageElementAtIndex(unsigned long index);
-    AccessibilityUIElement ariaErrorMessageReferencingElementAtIndex(unsigned long index);
+    AccessibilityUIElement errorMessageForElementAtIndex(unsigned long index);
+    AccessibilityUIElement flowFromElementAtIndex(unsigned long index);
+    AccessibilityUIElement ariaFlowToElementAtIndex(unsigned long index);
+    AccessibilityUIElement ariaLabelledByElementAtIndex(unsigned long index);
+    AccessibilityUIElement labelForElementAtIndex(unsigned long index);
+    AccessibilityUIElement ownerElementAtIndex(unsigned long index);
+    AccessibilityUIElement ariaOwnsElementAtIndex(unsigned long index);
 
     // Paramaterized attributes.
     DOMString parameterizedAttributeNames();
@@ -209,10 +212,10 @@
     DOMString attributedStringForRange(unsigned long location, unsigned long length);
     DOMString attributedStringForElement();
     boolean attributedStringRangeIsMisspelled(unsigned long location, unsigned long length);
-    [PassContext] unsigned long uiElementCountForSearchPredicate(AccessibilityUIElement startElement, boolean isDirectionNext, object searchKey, DOMString searchText, boolean visibleOnly, boolean immediateDescendantsOnly);
-    [PassContext] AccessibilityUIElement uiElementForSearchPredicate(AccessibilityUIElement startElement, boolean isDirectionNext, object searchKey, DOMString searchText, boolean visibleOnly, boolean immediateDescendantsOnly);
-    [PassContext] DOMString selectTextWithCriteria(DOMString ambiguityResolution, object searchStrings, DOMString replacementString, DOMString activity);
-    [PassContext] object searchTextWithCriteria(object searchStrings, DOMString startFrom, DOMString direction);
+    unsigned long uiElementCountForSearchPredicate(AccessibilityUIElement startElement, boolean isDirectionNext, object searchKey, DOMString searchText, boolean visibleOnly, boolean immediateDescendantsOnly);
+    AccessibilityUIElement uiElementForSearchPredicate(AccessibilityUIElement startElement, boolean isDirectionNext, object searchKey, DOMString searchText, boolean visibleOnly, boolean immediateDescendantsOnly);
+    DOMString selectTextWithCriteria(DOMString ambiguityResolution, object searchStrings, DOMString replacementString, DOMString activity);
+    object searchTextWithCriteria(object searchStrings, DOMString startFrom, DOMString direction);
     boolean setSelectedTextRange(unsigned long location, unsigned long length);
 
     // Scroll area attributes.
@@ -254,6 +257,7 @@
     AccessibilityTextMarker previousTextMarker(AccessibilityTextMarker marker);
     AccessibilityTextMarker nextTextMarker(AccessibilityTextMarker marker);
     AccessibilityUIElement accessibilityElementForTextMarker(AccessibilityTextMarker marker);
+    AccessibilityTextMarkerRange textMarkerRangeForLine(long lineIndex);
     DOMString stringForTextMarkerRange(AccessibilityTextMarkerRange range);
     DOMString rectsForTextMarkerRange(AccessibilityTextMarkerRange range, DOMString searchText);
     DOMString attributedStringForTextMarkerRange(AccessibilityTextMarkerRange range);
@@ -262,6 +266,7 @@
     boolean attributedStringForTextMarkerRangeContainsAttribute(DOMString attr, AccessibilityTextMarkerRange range);
     long indexForTextMarker(AccessibilityTextMarker marker);
     boolean isTextMarkerValid(AccessibilityTextMarker marker);
+    boolean isTextMarkerRangeValid(AccessibilityTextMarkerRange markerRange);
     boolean isTextMarkerNull(AccessibilityTextMarker marker);
     AccessibilityTextMarker textMarkerForIndex(long textIndex);
     readonly attribute AccessibilityTextMarker startTextMarker;
@@ -300,6 +305,7 @@
     // This will simulate the accessibilityDidBecomeFocused API in UIKit.
     undefined assistiveTechnologySimulatedFocus();
     readonly attribute boolean isSearchField;
+    readonly attribute boolean isSwitch;
     readonly attribute boolean isTextArea;
     readonly attribute boolean isMarkAnnotation;
     readonly attribute boolean supportsExpanded;
@@ -309,8 +315,9 @@
     readonly attribute boolean isInDescriptionListDetail;
     readonly attribute boolean isInDescriptionListTerm;
 
-    readonly attribute boolean hasContainedByFieldsetTrait;
     readonly attribute boolean hasTextEntryTrait;
+    readonly attribute boolean hasTabBarTrait;
+    readonly attribute boolean hasMenuItemTrait;
     AccessibilityUIElement fieldsetAncestorElement();
     AccessibilityUIElement focusableAncestor();
     AccessibilityUIElement editableAncestor();

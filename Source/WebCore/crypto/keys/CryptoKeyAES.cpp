@@ -26,8 +26,6 @@
 #include "config.h"
 #include "CryptoKeyAES.h"
 
-#if ENABLE(WEB_CRYPTO)
-
 #include "CryptoAesKeyAlgorithm.h"
 #include "CryptoAlgorithmAesKeyParams.h"
 #include "CryptoAlgorithmRegistry.h"
@@ -75,14 +73,14 @@ RefPtr<CryptoKeyAES> CryptoKeyAES::generate(CryptoAlgorithmIdentifier algorithm,
     return adoptRef(new CryptoKeyAES(algorithm, randomData(lengthBits / 8), extractable, usages));
 }
 
-RefPtr<CryptoKeyAES> CryptoKeyAES::importRaw(CryptoAlgorithmIdentifier algorithm, Vector<uint8_t>&& keyData, bool extractable, CryptoKeyUsageBitmap usages)
+RefPtr<CryptoKeyAES> CryptoKeyAES::importRaw(CryptoAlgorithmIdentifier algorithm, Vector<uint8_t>&& keyData, bool extractable, CryptoKeyUsageBitmap usages, UseCryptoKit)
 {
     if (!lengthIsValid(keyData.size() * 8))
         return nullptr;
     return adoptRef(new CryptoKeyAES(algorithm, WTFMove(keyData), extractable, usages));
 }
 
-RefPtr<CryptoKeyAES> CryptoKeyAES::importJwk(CryptoAlgorithmIdentifier algorithm, JsonWebKey&& keyData, bool extractable, CryptoKeyUsageBitmap usages, CheckAlgCallback&& callback)
+RefPtr<CryptoKeyAES> CryptoKeyAES::importJwk(CryptoAlgorithmIdentifier algorithm, JsonWebKey&& keyData, bool extractable, CryptoKeyUsageBitmap usages, CheckAlgCallback&& callback, UseCryptoKit)
 {
     if (keyData.kty != "oct"_s)
         return nullptr;
@@ -130,5 +128,3 @@ auto CryptoKeyAES::algorithm() const -> KeyAlgorithm
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(WEB_CRYPTO)

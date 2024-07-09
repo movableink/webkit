@@ -40,6 +40,7 @@ class SVGGraphicsElement;
 
 class LegacyRenderSVGShape : public LegacyRenderSVGModelObject {
     WTF_MAKE_ISO_ALLOCATED(LegacyRenderSVGShape);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LegacyRenderSVGShape);
 public:
     friend FloatRect SVGRenderSupport::calculateApproximateStrokeBoundingBox(const RenderElement&);
 
@@ -61,10 +62,10 @@ public:
     virtual ~LegacyRenderSVGShape();
 
     inline SVGGraphicsElement& graphicsElement() const;
+    inline Ref<SVGGraphicsElement> protectedGraphicsElement() const;
 
     void setNeedsShapeUpdate() { m_needsShapeUpdate = true; }
     void setNeedsBoundariesUpdate() final { m_needsBoundariesUpdate = true; }
-    bool needsBoundariesUpdate() final { return m_needsBoundariesUpdate; }
     void setNeedsTransformUpdate() final { m_needsTransformUpdate = true; }
     virtual void fillShape(GraphicsContext&) const;
     virtual void strokeShape(GraphicsContext&) const;
@@ -115,7 +116,6 @@ private:
     const AffineTransform& localToParentTransform() const final { return m_localTransform; }
     AffineTransform localTransform() const final { return m_localTransform; }
 
-    bool isLegacyRenderSVGShape() const final { return true; }
     bool canHaveChildren() const final { return false; }
     ASCIILiteral renderName() const override { return "RenderSVGShape"_s; }
 

@@ -61,7 +61,7 @@ static QUrl toQUrl(const URL& url)
 static inline QByteArray stringToByteArray(const String& string)
 {
     if (string.is8Bit())
-        return QByteArray(reinterpret_cast<const char*>(string.characters8()), string.length());
+        return QByteArray(reinterpret_cast<const char*>(string.span8().data()), static_cast<qsizetype>(string.span8().size()));
     return QString(string).toLatin1();
 }
 

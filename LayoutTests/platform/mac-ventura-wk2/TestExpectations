@@ -6,8 +6,6 @@
 # Platform-specific directories. Skipped globally, then re-enabled here.
 #//////////////////////////////////////////////////////////////////////////////////////////
 
-# Disable Sonoma only test added in rdar://110488738.
-accessibility/mac/attributed-string/attributed-string-has-completion-annotation.html [ Skip ]
 # These tests require compile-time flags in WebKit that are only enabled in Sonoma. They were marked as Skip in
 # https://bugs.webkit.org/show_bug.cgi?id=248545 — re-disable them here.
 fast/images/animations-resume-from-last-displayed-frame.html [ Skip ]
@@ -40,3 +38,14 @@ imported/w3c/web-platform-tests/css/cssom-view/scroll-behavior-smooth-positions.
 
 # This feature was introduced in macOS Sonoma.
 http/tests/paymentrequest/paymentrequest-applePayLaterAvailability.https.html [ Skip ]
+
+# webkit.org/b/263476 [ mac-wk2 ] Some WPTs exercising wheel actions interface timing out on pre-Sonoma macOS after 269632@main
+imported/w3c/web-platform-tests/css/css-overscroll-behavior/overscroll-behavior.html [ Skip ]
+imported/w3c/web-platform-tests/css/css-scroll-snap/input/snap-area-overflow-boundary.html [ Skip ]
+imported/w3c/web-platform-tests/css/css-transforms/scroll-preserve-3d.html [ Skip ]
+imported/w3c/web-platform-tests/dom/events/non-cancelable-when-passive/non-passive-mousewheel-event-listener-on-div.html [ Skip ]
+imported/w3c/web-platform-tests/dom/events/non-cancelable-when-passive/non-passive-wheel-event-listener-on-div.html [ Skip ]
+imported/w3c/web-platform-tests/dom/events/scrolling/iframe-chains.html [ Skip ]
+imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-for-user-scroll.html [ Skip ]
+imported/w3c/web-platform-tests/html/semantics/popovers/popover-light-dismiss-scroll-within.html [ Skip ]
+imported/w3c/web-platform-tests/pointerevents/pointerevent_touch-action-mouse.html [ Skip ]

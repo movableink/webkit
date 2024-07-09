@@ -89,11 +89,11 @@ inline JSCell* CallFrame::codeOwnerCell() const
     return codeBlock();
 }
 
-inline bool CallFrame::isStackOverflowFrame() const
+inline bool CallFrame::isPartiallyInitializedFrame() const
 {
     if (callee().isNativeCallee())
         return false;
-    return jsCallee() == jsCallee()->globalObject()->stackOverflowFrameCallee();
+    return jsCallee() == jsCallee()->globalObject()->partiallyInitializedFrameCallee();
 }
 
 inline bool CallFrame::isNativeCalleeFrame() const
@@ -104,6 +104,11 @@ inline bool CallFrame::isNativeCalleeFrame() const
 inline void CallFrame::setCallee(JSObject* callee)
 {
     static_cast<Register*>(this)[static_cast<int>(CallFrameSlot::callee)] = callee;
+}
+
+inline void CallFrame::setCallee(NativeCallee* callee)
+{
+    reinterpret_cast<uint64_t*>(this)[static_cast<int>(CallFrameSlot::callee)] = CalleeBits::encodeNativeCallee(callee);
 }
 
 inline void CallFrame::setCodeBlock(CodeBlock* codeBlock)

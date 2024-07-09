@@ -33,8 +33,18 @@
 #include <WebCore/WorkerInitializationData.h>
 #include <WebCore/WorkerOptions.h>
 #include <wtf/CheckedRef.h>
+#include <wtf/Identified.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/WeakPtr.h>
+
+namespace WebKit {
+class WebSharedWorker;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebKit::WebSharedWorker> : std::true_type { };
+}
 
 namespace WebCore {
 class RegistrableDomain;
@@ -45,7 +55,7 @@ namespace WebKit {
 class WebSharedWorkerServer;
 class WebSharedWorkerServerToContextConnection;
 
-class WebSharedWorker : public CanMakeWeakPtr<WebSharedWorker>, public CanMakeCheckedPtr {
+class WebSharedWorker : public CanMakeWeakPtr<WebSharedWorker>, public Identified<WebCore::SharedWorkerIdentifier> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     WebSharedWorker(WebSharedWorkerServer&, const WebCore::SharedWorkerKey&, const WebCore::WorkerOptions&);
@@ -53,12 +63,11 @@ public:
 
     static WebSharedWorker* fromIdentifier(WebCore::SharedWorkerIdentifier);
 
-    WebCore::SharedWorkerIdentifier identifier() const { return m_identifier; }
     const WebCore::SharedWorkerKey& key() const { return m_key; }
     const WebCore::WorkerOptions& workerOptions() const { return m_workerOptions; }
     const WebCore::ClientOrigin& origin() const { return m_key.origin; }
     const URL& url() const { return m_key.url; }
-    WebCore::RegistrableDomain registrableDomain() const;
+    WebCore::RegistrableDomain topRegistrableDomain() const;
     WebSharedWorkerServerToContextConnection* contextConnection() const;
 
     void addSharedWorkerObject(WebCore::SharedWorkerObjectIdentifier, const WebCore::TransferredMessagePort&);
@@ -103,7 +112,6 @@ private:
     void resumeIfNeeded();
 
     WebSharedWorkerServer& m_server;
-    WebCore::SharedWorkerIdentifier m_identifier;
     WebCore::SharedWorkerKey m_key;
     WebCore::WorkerOptions m_workerOptions;
     ListHashSet<Object> m_sharedWorkerObjects;

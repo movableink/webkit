@@ -104,7 +104,7 @@ RenderTheme& RenderTheme::singleton()
 // Remove this when SearchFieldPart is style-able in RenderTheme::isControlStyled()
 bool RenderThemeQt::isControlStyled(const RenderStyle& style, const RenderStyle& userAgentStyle) const
 {
-    switch (style.effectiveAppearance()) {
+    switch (style.usedAppearance()) {
     case StyleAppearance::SearchField:
         // Test the style to see if the UA border and background match.
         return (style.border() != userAgentStyle.border()
@@ -122,20 +122,20 @@ String RenderThemeQt::extraDefaultStyleSheet()
     // When no theme factory is provided we default to using our platform independent "Mobile Qt" theme,
     // which requires the following stylesheets.
     if (!themeFactory) {
-        result.append(String(themeQtNoListboxesUserAgentStyleSheet, sizeof(themeQtNoListboxesUserAgentStyleSheet)));
-        result.append(String(mobileThemeQtUserAgentStyleSheet, sizeof(mobileThemeQtUserAgentStyleSheet)));
+        result.append(String(StringImpl::createWithoutCopying(themeQtNoListboxesUserAgentStyleSheet)));
+        result.append(String(StringImpl::createWithoutCopying(mobileThemeQtUserAgentStyleSheet)));
     }
     return result.toString();
 }
 
-bool RenderThemeQt::supportsHover(const RenderStyle&) const
+bool RenderThemeQt::supportsHover() const
 {
     return true;
 }
 
 bool RenderThemeQt::supportsFocusRing(const RenderStyle& style) const
 {
-    switch (style.effectiveAppearance()) {
+    switch (style.usedAppearance()) {
     case StyleAppearance::Checkbox:
     case StyleAppearance::Radio:
     case StyleAppearance::PushButton:
@@ -164,7 +164,7 @@ int RenderThemeQt::baselinePosition(const RenderBox& o) const
     if (!o.isRenderBox())
         return 0;
 
-    if (o.style().effectiveAppearance() == StyleAppearance::Checkbox || o.style().appearance() == StyleAppearance::Radio)
+    if (o.style().usedAppearance() == StyleAppearance::Checkbox || o.style().appearance() == StyleAppearance::Radio)
         return o.marginTop() + o.height() - 2; // Same as in old khtml
     return RenderTheme::baselinePosition(o);
 }
@@ -175,7 +175,7 @@ bool RenderThemeQt::controlSupportsTints(const RenderObject& o) const
         return false;
 
     // Checkboxes only have tint when checked.
-    if (o.style().effectiveAppearance() == StyleAppearance::Checkbox)
+    if (o.style().usedAppearance() == StyleAppearance::Checkbox)
         return isChecked(o);
 
     // For now assume other controls have tint if enabled.
@@ -205,9 +205,9 @@ void RenderThemeQt::computeControlRect(QStyleFacade::ButtonType, FloatRect&) con
 {
 }
 
-void RenderThemeQt::adjustRepaintRect(const RenderObject& o, FloatRect& rect)
+void RenderThemeQt::inflateRectForControlRenderer(const RenderObject& o, FloatRect& rect)
 {
-    switch (o.style().effectiveAppearance()) {
+    switch (o.style().usedAppearance()) {
     case StyleAppearance::Checkbox:
         computeControlRect(QStyleFacade::CheckBox, rect);
         break;
@@ -225,6 +225,14 @@ void RenderThemeQt::adjustRepaintRect(const RenderObject& o, FloatRect& rect)
     default:
         break;
     }
+}
+
+void RenderThemeQt::adjustRepaintRect(const RenderBox& renderer, FloatRect& rect)
+{
+    auto repaintRect = rect;
+    inflateRectForControlRenderer(renderer, repaintRect);
+    renderer.flipForWritingMode(repaintRect);
+    rect = repaintRect;
 }
 
 Color RenderThemeQt::platformActiveSelectionBackgroundColor(OptionSet<StyleColorOptions>) const
@@ -450,8 +458,8 @@ bool RenderThemeQt::paintSearchFieldCancelButton(const RenderBox& box, const Pai
     FloatPoint paintingPos = convertToPaintingPosition(inputBox, box, cancelButtonRect.location(), r.location());
     cancelButtonRect.setLocation(paintingPos);
 
-    static Ref<Image> cancelImage = Image::loadPlatformResource("searchCancelButton");
-    static Ref<Image> cancelPressedImage = Image::loadPlatformResource("searchCancelButtonPressed");
+    static Ref<Image> cancelImage = ImageAdapter::loadPlatformResource("searchCancelButton");
+    static Ref<Image> cancelPressedImage = ImageAdapter::loadPlatformResource("searchCancelButtonPressed");
     pi.context().drawImage(isPressed(box) ? cancelPressedImage : cancelImage, cancelButtonRect);
     return false;
 }
@@ -575,7 +583,7 @@ static bool mediaElementCanPlay(RenderObject& o)
 
     return mediaElement->readyState() > HTMLMediaElement::HAVE_METADATA
            || (mediaElement->readyState() == HTMLMediaElement::HAVE_NOTHING
-               && o.style().effectiveAppearance() == StyleAppearance::MediaPlayButton && mediaElement->preload() == "none");
+               && o.style().usedAppearance() == StyleAppearance::MediaPlayButton && mediaElement->preload() == "none");
 }
 
 QColor RenderThemeQt::getMediaControlForegroundColor(RenderObject& o) const

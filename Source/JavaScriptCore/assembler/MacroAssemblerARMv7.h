@@ -117,7 +117,7 @@ public:
     static JumpLinkType computeJumpType(LinkRecord& record, const uint8_t* from, const uint8_t* to) { return ARMv7Assembler::computeJumpType(record, from, to); }
     static int jumpSizeDelta(JumpType jumpType, JumpLinkType jumpLinkType) { return ARMv7Assembler::jumpSizeDelta(jumpType, jumpLinkType); }
 
-    template <Assembler::CopyFunction copy>
+    template<MachineCodeCopyMode copy>
     ALWAYS_INLINE static void link(LinkRecord& record, uint8_t* from, const uint8_t* fromInstruction, uint8_t* to) { return ARMv7Assembler::link<copy>(record, from, fromInstruction, to); }
 
     struct ArmAddress {
@@ -267,6 +267,13 @@ public:
         add32Impl(imm, address, updateFlags);
     }
 
+    void add8(TrustedImm32 imm, Address address)
+    {
+        load8(address, dataTempRegister);
+        add32(imm, dataTempRegister, dataTempRegister);
+        store8(dataTempRegister, address);
+    }
+
     void getEffectiveAddress(BaseIndex address, RegisterID dest)
     {
         RegisterID scratch = getCachedAddressTempRegisterIDAndInvalidate();
@@ -377,6 +384,14 @@ public:
     void lshift32(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
         m_assembler.lsl(dest, src, imm.m_value & 0x1f);
+    }
+
+    void lshift32(TrustedImm32 imm, RegisterID shiftAmount, RegisterID dest)
+    {
+        // Clamp the shift to the range 0..31
+        m_assembler.ARM_and(dest, shiftAmount, ARMThumbImmediate::makeEncodedImm(0x1f));
+        move(imm, getCachedDataTempRegisterIDAndInvalidate());
+        m_assembler.lsl(dest, dataTempRegister, dest);
     }
 
     void lshift32(RegisterID shiftAmount, RegisterID dest)
@@ -1317,6 +1332,17 @@ public:
         transfer32(src, dest);
     }
 
+    void transfer32(BaseIndex src, BaseIndex dest)
+    {
+        load32(src, dataTempRegister);
+        store32(dataTempRegister, dest);
+    }
+
+    void transferPtr(BaseIndex src, BaseIndex dest)
+    {
+        transfer32(src, dest);
+    }
+
     void storeCond8(RegisterID src, Address addr, RegisterID result)
     {
         ASSERT(!addr.offset);
@@ -1398,6 +1424,34 @@ public:
         // Don't let any more than 12 bits of an instruction word
         // be controlled by an attacker.
         return !immediate.isUInt12();
+    }
+
+    // Popcount (could be implemented via VCNT?)
+
+    static bool supportsCountPopulation() { return false; }
+
+    NO_RETURN_DUE_TO_CRASH void countPopulation32(RegisterID, RegisterID)
+    {
+        ASSERT(!supportsCountPopulation());
+        CRASH();
+    }
+
+    NO_RETURN_DUE_TO_CRASH void countPopulation32(RegisterID, RegisterID, FPRegisterID)
+    {
+        ASSERT(!supportsCountPopulation());
+        CRASH();
+    }
+
+    NO_RETURN_DUE_TO_CRASH void countPopulation64(RegisterID, RegisterID)
+    {
+        ASSERT(!supportsCountPopulation());
+        CRASH();
+    }
+
+    NO_RETURN_DUE_TO_CRASH void countPopulation64(RegisterID, RegisterID, FPRegisterID)
+    {
+        ASSERT(!supportsCountPopulation());
+        CRASH();
     }
 
     // Floating-point operations:
@@ -2434,7 +2488,7 @@ public:
         MacroAssemblerHelpers::load8OnCondition(*this, cond, left, scratch);
         return branch32(cond, scratch, right8);
     }
-    
+
     Jump branch8(RelationalCondition cond, AbsoluteAddress address, TrustedImm32 right)
     {
         // Use addressTempRegister instead of dataTempRegister, since branch32 uses dataTempRegister.
@@ -2443,7 +2497,41 @@ public:
         MacroAssemblerHelpers::load8OnCondition(*this, cond, armAddress, addressTempRegister);
         return branch32(cond, addressTempRegister, right8);
     }
-    
+
+    Jump branch16(RelationalCondition cond, RegisterID left, TrustedImm32 right)
+    {
+        TrustedImm32 right16 = MacroAssemblerHelpers::mask16OnCondition(*this, cond, right);
+        compare32AndSetFlags(left, right16);
+        return Jump(makeBranch(cond));
+    }
+
+    Jump branch16(RelationalCondition cond, Address left, TrustedImm32 right)
+    {
+        // use addressTempRegister incase the branch16 we call uses dataTempRegister. :-/
+        RegisterID scratch = getCachedAddressTempRegisterIDAndInvalidate();
+        TrustedImm32 right16 = MacroAssemblerHelpers::mask16OnCondition(*this, cond, right);
+        MacroAssemblerHelpers::load16OnCondition(*this, cond, left, scratch);
+        return branch16(cond, scratch, right16);
+    }
+
+    Jump branch16(RelationalCondition cond, BaseIndex left, TrustedImm32 right)
+    {
+        // use addressTempRegister incase the branch32 we call uses dataTempRegister. :-/
+        RegisterID scratch = getCachedAddressTempRegisterIDAndInvalidate();
+        TrustedImm32 right16 = MacroAssemblerHelpers::mask16OnCondition(*this, cond, right);
+        MacroAssemblerHelpers::load16OnCondition(*this, cond, left, scratch);
+        return branch32(cond, scratch, right16);
+    }
+
+    Jump branch16(RelationalCondition cond, AbsoluteAddress address, TrustedImm32 right)
+    {
+        // Use addressTempRegister instead of dataTempRegister, since branch32 uses dataTempRegister.
+        TrustedImm32 right16 = MacroAssemblerHelpers::mask16OnCondition(*this, cond, right);
+        ArmAddress armAddress = setupArmAddress(address);
+        MacroAssemblerHelpers::load16OnCondition(*this, cond, armAddress, addressTempRegister);
+        return branch32(cond, addressTempRegister, right16);
+    }
+
     Jump branchTest32(ResultCondition cond, RegisterID reg, RegisterID mask)
     {
         ASSERT(cond == Zero || cond == NonZero || cond == Signed || cond == PositiveOrZero);
@@ -2731,16 +2819,20 @@ public:
         return Call(m_assembler.b(), Call::LinkableNearTail);
     }
 
-    // FIXME: why is this the same than nearCall() in ARM64? is it right?
     ALWAYS_INLINE Call threadSafePatchableNearCall()
     {
         invalidateAllTempRegisters();
-        moveFixedWidthEncoding(TrustedImm32(0), dataTempRegister);
-        return Call(m_assembler.blx(dataTempRegister), Call::LinkableNear);
+        padBeforePatch();
+        m_assembler.alignWithNop(sizeof(int));
+        m_assembler.bl();
+        return Call(m_assembler.labelIgnoringWatchpoints(), Call::LinkableNear);
     }
 
     ALWAYS_INLINE Call threadSafePatchableNearTailCall()
     {
+        invalidateAllTempRegisters();
+        padBeforePatch();
+        m_assembler.alignWithNop(sizeof(int));
         return Call(m_assembler.b(), Call::LinkableNearTail);
     }
 
@@ -2870,6 +2962,18 @@ public:
         m_assembler.mov(dest, ARMThumbImmediate::makeUInt16(0));
     }
 
+    void moveConditionally32(RelationalCondition cond, RegisterID left, TrustedImm32 right, RegisterID thenCase, RegisterID elseCase, RegisterID dest)
+    {
+        auto passCase = branch32(cond, left, right);
+        move(elseCase, dest);
+        auto done = jump();
+
+        passCase.link(this);
+        move(thenCase, dest);
+
+        done.link(this);
+    }
+
     ALWAYS_INLINE DataLabel32 moveWithPatch(TrustedImm32 imm, RegisterID dst)
     {
         padBeforePatch();
@@ -2924,6 +3028,14 @@ public:
     {
         m_makeJumpPatchable = true;
         Jump result = branch8(cond, left, imm);
+        m_makeJumpPatchable = false;
+        return PatchableJump(result);
+    }
+
+    PatchableJump patchableBranch16(RelationalCondition cond, Address left, TrustedImm32 imm)
+    {
+        m_makeJumpPatchable = true;
+        Jump result = branch16(cond, left, imm);
         m_makeJumpPatchable = false;
         return PatchableJump(result);
     }

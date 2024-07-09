@@ -188,12 +188,6 @@ def _CheckCommitMessageFormatting(input_api, output_api):
 def _CheckChangeHasBugField(input_api, output_api):
     """Requires that the changelist have a Bug: field from a known project."""
     bugs = input_api.change.BugsFromDescription()
-    if not bugs:
-        return [
-            output_api.PresubmitError('Please ensure that your description contains:\n'
-                                      '"Bug: angleproject:[bug number]"\n'
-                                      'directly above the Change-Id tag.')
-        ]
 
     # The bug must be in the form of "project:number".  None is also accepted, which is used by
     # rollers as well as in very minor changes.
@@ -205,27 +199,35 @@ def _CheckChangeHasBugField(input_api, output_api):
     ]
     bug_regex = re.compile(r"([a-z]+[:/])(\d+)")
     errors = []
-    extra_help = None
+    extra_help = False
+
+    if not bugs:
+        errors.append('Please ensure that your description contains\n'
+                      'Bug: bugtag\n'
+                      'directly above the Change-Id tag (no empty line in-between)')
+        extra_help = True
 
     for bug in bugs:
         if bug == 'None':
-            errors.append(
-                output_api.PresubmitError('Invalid bug tag "None" in presence of other bug tags.'))
+            errors.append('Invalid bug tag "None" in presence of other bug tags.')
             continue
 
         match = re.match(bug_regex, bug)
         if match == None or bug != match.group(0) or match.group(1) not in projects:
-            errors.append(output_api.PresubmitError('Incorrect bug tag "' + bug + '".'))
-            if not extra_help:
-                extra_help = output_api.PresubmitError('Acceptable format is:\n\n'
-                                                       '    Bug: project:bugnumber\n\n'
-                                                       'Acceptable projects are:\n\n    ' +
-                                                       '\n    '.join(projects))
+            errors.append('Incorrect bug tag "' + bug + '".')
+            extra_help = True
 
     if extra_help:
-        errors.append(extra_help)
+        change_ids = re.findall('^Change-Id:', input_api.change.FullDescriptionText(), re.M)
+        if len(change_ids) > 1:
+            errors.append('Note: multiple Change-Id tags found in description')
 
-    return errors
+        errors.append('''Acceptable bugtags:
+    project:bugnumber - where project is one of ({projects})
+    b/bugnumber - for Buganizer/IssueTracker bugs
+'''.format(projects=', '.join(p[:-1] for p in projects if p != 'b/')))
+
+    return [output_api.PresubmitError('\n\n'.join(errors))] if errors else []
 
 
 def _CheckCodeGeneration(input_api, output_api):
@@ -429,6 +431,69 @@ def _CheckCommentBeforeTestInTestFiles(input_api, output_api):
     return []
 
 
+def _CheckWildcardInTestExpectationFiles(input_api, output_api):
+    """Require wildcard as API tag (i.e. in foo.bar/*) in expectations when no additional feature is
+    enabled."""
+
+    def expectation_files(f):
+        return input_api.FilterSourceFile(
+            f, files_to_check=[r'^src/tests/angle_end2end_tests_expectations.txt$'])
+
+    expectation_pattern = re.compile(r'^.*:\s*[a-zA-Z0-9._*]+\/([^ ]*)\s*=.*$')
+
+    expectations_without_wildcard = []
+    for f in input_api.AffectedSourceFiles(expectation_files):
+        diff = f.GenerateScmDiff()
+        for line in diff.splitlines():
+            # Only look at new lines
+            if not line.startswith('+'):
+                continue
+
+            match = re.match(expectation_pattern, line[1:].strip())
+            if match is None:
+                continue
+
+            tag = match.group(1)
+
+            # The tag is in the following general form:
+            #
+            #     FRONTENDAPI_BACKENDAPI[_FEATURE]*
+            #
+            # Any part of the above may be a wildcard.  Warn about usage of FRONTEND_BACKENDAPI as
+            # the tag.  Instead, the backend should be specified before the : and `*` used as the
+            # tag.  If any additional tags are present, it's a specific expectation that should
+            # remain specific (and not wildcarded).  NoFixture is an exception as X_Y_NoFixture is
+            # the generic form of the tags of tests that don't use the fixture.
+
+            sections = [section for section in tag.split('_') if section != 'NoFixture']
+
+            # Allow '*_...', or 'FRONTENDAPI_*_...'.
+            if '*' in sections[0] or (len(sections) > 1 and '*' in sections[1]):
+                continue
+
+            # Warn if no additional tags are present
+            if len(sections) == 2:
+                expectations_without_wildcard.append(line[1:])
+
+    if expectations_without_wildcard:
+        return [
+            output_api.PresubmitError(
+                'Use wildcard in API tags (after /) in angle_end2end_tests_expectations.txt.',
+                items=expectations_without_wildcard,
+                long_text="""ANGLE prefers end2end expections to use the following form:
+
+1234 MAC OPENGL : Foo.Bar/* = SKIP
+
+instead of:
+
+1234 MAC OPENGL : Foo.Bar/ES2_OpenGL = SKIP
+1234 MAC OPENGL : Foo.Bar/ES3_OpenGL = SKIP
+
+Expectatations that are specific (such as Foo.Bar/ES2_OpenGL_SomeFeature) are allowed.""")
+        ]
+    return []
+
+
 def _CheckShaderVersionInShaderLangHeader(input_api, output_api):
     """Requires an update to ANGLE_SH_VERSION when ShaderLang.h or ShaderVars.h change."""
 
@@ -493,6 +558,7 @@ def CheckChangeOnUpload(input_api, output_api):
     results.extend(_CheckTabsInSourceFiles(input_api, output_api))
     results.extend(_CheckNonAsciiInSourceFiles(input_api, output_api))
     results.extend(_CheckCommentBeforeTestInTestFiles(input_api, output_api))
+    results.extend(_CheckWildcardInTestExpectationFiles(input_api, output_api))
     results.extend(_CheckShaderVersionInShaderLangHeader(input_api, output_api))
     results.extend(_CheckCodeGeneration(input_api, output_api))
     results.extend(_CheckChangeHasBugField(input_api, output_api))

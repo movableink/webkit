@@ -18,19 +18,13 @@ const expected = [
   "get options.smallestUnit",
   "get options.smallestUnit.toString",
   "call options.smallestUnit.toString",
+  // lookup
+  "get this.timeZone.getOffsetNanosecondsFor",
+  "get this.timeZone.getPossibleInstantsFor",
   // GetPlainDateTimeFor on receiver's instant
-  "get this.timeZone.getOffsetNanosecondsFor",
   "call this.timeZone.getOffsetNanosecondsFor",
-  // GetInstantFor on preceding midnight
-  "get this.timeZone.getPossibleInstantsFor",
-  "call this.timeZone.getPossibleInstantsFor",
-  // AddDaysToZonedDateTime
-  "get this.timeZone.getPossibleInstantsFor",
-  "call this.timeZone.getPossibleInstantsFor",
   // InterpretISODateTimeOffset
-  "get this.timeZone.getPossibleInstantsFor",
   "call this.timeZone.getPossibleInstantsFor",
-  "get this.timeZone.getOffsetNanosecondsFor",
   "call this.timeZone.getOffsetNanosecondsFor",
 ];
 const actual = [];
@@ -54,7 +48,7 @@ const instance = new Temporal.ZonedDateTime(
   calendar,
 );
 
-const fallBackTimeZone = TemporalHelpers.oneShiftTimeZone(Temporal.Instant.fromEpochSeconds(1800), -3600_000_000_000);
+const fallBackTimeZone = TemporalHelpers.oneShiftTimeZone(Temporal.Instant.fromEpochMilliseconds(1800_000), -3600_000_000_000);
 const fallBackTimeZoneObserver = TemporalHelpers.timeZoneObserver(actual, "this.timeZone", {
   getOffsetNanosecondsFor: fallBackTimeZone.getOffsetNanosecondsFor.bind(fallBackTimeZone),
   getPossibleInstantsFor: fallBackTimeZone.getPossibleInstantsFor.bind(fallBackTimeZone),
@@ -62,7 +56,7 @@ const fallBackTimeZoneObserver = TemporalHelpers.timeZoneObserver(actual, "this.
 const fallBackInstance = new Temporal.ZonedDateTime(0n, fallBackTimeZoneObserver, calendar);
 const beforeFallBackInstance = new Temporal.ZonedDateTime(-3599_000_000_000n, fallBackTimeZoneObserver, calendar);
 
-const springForwardTimeZone = TemporalHelpers.oneShiftTimeZone(Temporal.Instant.fromEpochSeconds(-1800), 3600_000_000_000);
+const springForwardTimeZone = TemporalHelpers.oneShiftTimeZone(Temporal.Instant.fromEpochMilliseconds(-1800_000), 3600_000_000_000);
 const springForwardTimeZoneObserver = TemporalHelpers.timeZoneObserver(actual, "this.timeZone", {
   getOffsetNanosecondsFor: springForwardTimeZone.getOffsetNanosecondsFor.bind(springForwardTimeZone),
   getPossibleInstantsFor: springForwardTimeZone.getPossibleInstantsFor.bind(springForwardTimeZone),
@@ -85,40 +79,8 @@ beforeFallBackInstance.round(nextHourOptions);
 assert.compareArray(actual, expected, "order of operations with rounding result at repeated wall-clock time");
 actual.splice(0); // clear
 
-const expectedSkippedDateTime = [
-  "get options.roundingIncrement",
-  "get options.roundingIncrement.valueOf",
-  "call options.roundingIncrement.valueOf",
-  "get options.roundingMode",
-  "get options.roundingMode.toString",
-  "call options.roundingMode.toString",
-  "get options.smallestUnit",
-  "get options.smallestUnit.toString",
-  "call options.smallestUnit.toString",
-  // GetPlainDateTimeFor on receiver's instant
-  "get this.timeZone.getOffsetNanosecondsFor",
-  "call this.timeZone.getOffsetNanosecondsFor",
-  // GetInstantFor on preceding midnight
-  "get this.timeZone.getPossibleInstantsFor",
-  "call this.timeZone.getPossibleInstantsFor",
-  // DisambiguatePossibleInstants
-  "get this.timeZone.getOffsetNanosecondsFor",
-  "call this.timeZone.getOffsetNanosecondsFor",
-  "call this.timeZone.getOffsetNanosecondsFor",
-  "get this.timeZone.getPossibleInstantsFor",
-  "call this.timeZone.getPossibleInstantsFor",
-  // AddZonedDateTime
-  "get this.timeZone.getPossibleInstantsFor",
-  "call this.timeZone.getPossibleInstantsFor",
-  // InterpretISODateTimeOffset
-  "get this.timeZone.getPossibleInstantsFor",
-  "call this.timeZone.getPossibleInstantsFor",
-  "get this.timeZone.getOffsetNanosecondsFor",
-  "call this.timeZone.getOffsetNanosecondsFor",
-];
-
 springForwardInstance.round(options);
-assert.compareArray(actual, expectedSkippedDateTime, "order of operations with preceding midnight at skipped wall-clock time");
+assert.compareArray(actual, expected, "order of operations with preceding midnight at skipped wall-clock time");
 actual.splice(0); // clear
 
 const expectedSkippedResult = [
@@ -131,29 +93,16 @@ const expectedSkippedResult = [
   "get options.smallestUnit",
   "get options.smallestUnit.toString",
   "call options.smallestUnit.toString",
+  // lookup
+  "get this.timeZone.getOffsetNanosecondsFor",
+  "get this.timeZone.getPossibleInstantsFor",
   // GetPlainDateTimeFor on receiver's instant
-  "get this.timeZone.getOffsetNanosecondsFor",
   "call this.timeZone.getOffsetNanosecondsFor",
-  // GetInstantFor on preceding midnight
-  "get this.timeZone.getPossibleInstantsFor",
-  "call this.timeZone.getPossibleInstantsFor",
-  // AddDaysToZonedDateTime
-  "get this.timeZone.getPossibleInstantsFor",
-  "call this.timeZone.getPossibleInstantsFor",
-  // DisambiguatePossibleInstants
-  "get this.timeZone.getOffsetNanosecondsFor",
-  "call this.timeZone.getOffsetNanosecondsFor",
-  "call this.timeZone.getOffsetNanosecondsFor",
-  "get this.timeZone.getPossibleInstantsFor",
-  "call this.timeZone.getPossibleInstantsFor",
   // InterpretISODateTimeOffset
-  "get this.timeZone.getPossibleInstantsFor",
   "call this.timeZone.getPossibleInstantsFor",
   // DisambiguatePossibleInstants
-  "get this.timeZone.getOffsetNanosecondsFor",
   "call this.timeZone.getOffsetNanosecondsFor",
   "call this.timeZone.getOffsetNanosecondsFor",
-  "get this.timeZone.getPossibleInstantsFor",
   "call this.timeZone.getPossibleInstantsFor",
 ];
 

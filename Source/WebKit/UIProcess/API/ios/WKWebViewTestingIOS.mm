@@ -221,21 +221,36 @@ static String allowListedClassToString(UIView *view)
     if (allowedClasses.contains(classString))
         return classString;
 
-    return makeString("<class not in allowed list of classes>");
+    return "<class not in allowed list of classes>"_s;
 }
 
 static void dumpUIView(TextStream& ts, UIView *view)
 {
     auto rectToString = [] (auto rect) {
-        return makeString("[x: ", rect.origin.x, " y: ", rect.origin.x, " width: ", rect.size.width, " height: ", rect.size.height, "]");
+        return makeString("[x: "_s, rect.origin.x, " y: "_s, rect.origin.y, " width: "_s, rect.size.width, " height: "_s, rect.size.height, ']');
     };
 
     auto pointToString = [] (auto point) {
-        return makeString("[x: ", point.x, " y: ", point.x, "]");
+        return makeString("[x: "_s, point.x, " y: "_s, point.x, ']');
     };
 
 
     ts << "view [class: " << allowListedClassToString(view) << "]";
+
+#if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
+    if ([view isKindOfClass:[WKBaseScrollView class]]) {
+        ts.dumpProperty("scrolling behavior", makeString([(WKBaseScrollView *)view _scrollingBehavior]));
+
+        auto rects = [(WKBaseScrollView *)view overlayRegionsForTesting];
+        auto overlaysAsStrings = adoptNS([[NSMutableArray alloc] initWithCapacity:rects.size()]);
+        for (auto rect : rects)
+            [overlaysAsStrings addObject:rectToString(CGRect(rect))];
+
+        [overlaysAsStrings sortUsingSelector:@selector(localizedCaseInsensitiveCompare:)];
+        for (NSString *overlayAsString in overlaysAsStrings.get())
+            ts.dumpProperty("overlay region", overlayAsString);
+    }
+#endif
 
     ts.dumpProperty("layer bounds", rectToString(view.layer.bounds));
     
@@ -290,7 +305,7 @@ static void dumpUIView(TextStream& ts, UIView *view)
 
 - (NSDictionary *)_propertiesOfLayerWithID:(unsigned long long)layerID
 {
-    CALayer* layer = downcast<WebKit::RemoteLayerTreeDrawingAreaProxy>(*_page->drawingArea()).layerWithIDForTesting({ ObjectIdentifier<WebCore::PlatformLayerIdentifierType>(layerID), _page->process().coreProcessIdentifier() });
+    CALayer* layer = downcast<WebKit::RemoteLayerTreeDrawingAreaProxy>(*_page->drawingArea()).layerWithIDForTesting({ ObjectIdentifier<WebCore::PlatformLayerIdentifierType>(layerID), _page->legacyMainFrameProcess().coreProcessIdentifier() });
     if (!layer)
         return nil;
 
@@ -447,6 +462,12 @@ static void dumpUIView(TextStream& ts, UIView *view)
         _page->setDeviceHasAGXCompilerServiceForTesting();
 }
 
+- (void)_resetObscuredInsetsForTesting
+{
+    if (self._haveSetObscuredInsets)
+        [self _resetObscuredInsets];
+}
+
 - (BOOL)_hasResizeAssertion
 {
 #if HAVE(UIKIT_RESIZABLE_WINDOWS)
@@ -466,6 +487,13 @@ static void dumpUIView(TextStream& ts, UIView *view)
 #if ENABLE(LOCKDOWN_MODE_API)
     [self _clearLockdownModeWarningNeeded];
 #endif
+}
+
+- (void)_doAfterNextVisibleContentRectAndStablePresentationUpdate:(void (^)(void))updateBlock
+{
+    [self _doAfterNextVisibleContentRectUpdate:makeBlockPtr([strongSelf = retainPtr(self), updateBlock = makeBlockPtr(updateBlock)] {
+        [strongSelf _doAfterNextStablePresentationUpdate:updateBlock.get()];
+    }).get()];
 }
 
 @end

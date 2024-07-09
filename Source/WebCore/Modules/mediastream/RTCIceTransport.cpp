@@ -28,6 +28,7 @@
 
 #if ENABLE(WEB_RTC)
 
+#include "ContextDestructionObserverInlines.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "RTCPeerConnection.h"
@@ -78,8 +79,11 @@ void RTCIceTransport::onStateChanged(RTCIceTransportState state)
             return;
 
         m_transportState = state;
-        if (m_connection)
-            m_connection->processIceTransportStateChange(*this);
+        if (m_transportState == RTCIceTransportState::Failed)
+            m_selectedCandidatePair = { };
+
+        if (auto connection = this->connection())
+            connection->processIceTransportStateChange(*this);
     });
 }
 

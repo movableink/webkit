@@ -31,7 +31,9 @@
 #include <mutex>
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/MallocPtr.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/cf/TypeCastsCF.h>
+#include <wtf/cf/VectorCF.h>
 #include <wtf/text/StringView.h>
 
 namespace WebKit {
@@ -67,6 +69,8 @@ static const uint32_t maximumSessionStateDataSize = 2 * 1024 * 1024;
 #else
 static const uint32_t maximumSessionStateDataSize = std::numeric_limits<uint32_t>::max();
 #endif
+
+static const uint32_t maximumFrameStateTargetLength = 16 * 1024;
 
 template<typename T> void isValidEnum(T);
 
@@ -131,7 +135,7 @@ public:
         *this << length;
 
         *this << static_cast<uint64_t>(length * sizeof(UChar));
-        encodeFixedLengthData(reinterpret_cast<const uint8_t*>(StringView(value).upconvertedCharacters().get()), length * sizeof(UChar), alignof(UChar));
+        encodeFixedLengthData(asBytes(StringView(value).upconvertedCharacters().span()), alignof(UChar));
 
         return *this;
     }
@@ -139,7 +143,7 @@ public:
     HistoryEntryDataEncoder& operator<<(const Vector<uint8_t>& value)
     {
         *this << static_cast<uint64_t>(value.size());
-        encodeFixedLengthData(value.data(), value.size(), 1);
+        encodeFixedLengthData(value.span(), 1);
 
         return *this;
     }
@@ -147,7 +151,7 @@ public:
     HistoryEntryDataEncoder& operator<<(const Vector<char>& value)
     {
         *this << static_cast<uint64_t>(value.size());
-        encodeFixedLengthData(reinterpret_cast<const uint8_t*>(value.data()), value.size(), 1);
+        encodeFixedLengthData(byteCast<uint8_t>(value.span()), 1);
 
         return *this;
     }
@@ -208,17 +212,17 @@ private:
     {
         static_assert(std::is_arithmetic<Type>::value);
 
-        encodeFixedLengthData(reinterpret_cast<uint8_t*>(&value), sizeof(value), sizeof(value));
+        encodeFixedLengthData({ reinterpret_cast<uint8_t*>(&value), sizeof(value) }, sizeof(value));
         return *this;
     }
 
-    void encodeFixedLengthData(const uint8_t* data, size_t size, unsigned alignment)
+    void encodeFixedLengthData(std::span<const uint8_t> data, unsigned alignment)
     {
-        RELEASE_ASSERT(data || !size);
-        ASSERT(!(reinterpret_cast<uintptr_t>(data) % alignment));
+        RELEASE_ASSERT(data.data() || data.empty());
+        ASSERT(!(reinterpret_cast<uintptr_t>(data.data()) % alignment));
 
-        uint8_t* buffer = grow(alignment, size);
-        memcpy(buffer, data, size);
+        uint8_t* buffer = grow(alignment, data.size());
+        memcpy(buffer, data.data(), data.size());
     }
 
     uint8_t* grow(unsigned alignment, size_t size)
@@ -346,7 +350,10 @@ static void encodeFrameStateNode(HistoryEntryDataEncoder& encoder, const FrameSt
     if (frameState.stateObjectData)
         encoder << frameState.stateObjectData.value();
 
-    encoder << frameState.target;
+    if (frameState.target.length() < maximumFrameStateTargetLength)
+        encoder << frameState.target;
+    else
+        encoder << emptyAtom();
 
 #if PLATFORM(IOS_FAMILY)
     // FIXME: iOS should not use the legacy session state encoder.
@@ -428,15 +435,21 @@ static RetainPtr<CFDictionaryRef> encodeSessionHistory(const BackForwardListStat
         auto url = item.pageState.mainFrameState.urlString.createCFString();
         auto title = item.pageState.title.createCFString();
         auto originalURL = item.pageState.mainFrameState.originalURLString.createCFString();
+
+        // We allow the first item to be unlimited in size. We refrain from serializing the data for subsequent items if they would cause us to trip over the maximumSessionStateDataSize limit.
         auto data = totalDataSize <= maximumSessionStateDataSize ? encodeSessionHistoryEntryData(item.pageState.mainFrameState) : nullptr;
+        if (data) {
+            totalDataSize += CFDataGetLength(data.get());
+            if (totalDataSize > maximumSessionStateDataSize && CFArrayGetCount(entries.get()) > 0)
+                data = nullptr;
+        }
+
         auto shouldOpenExternalURLsPolicyValue = static_cast<uint64_t>(item.pageState.shouldOpenExternalURLsPolicy);
         auto shouldOpenExternalURLsPolicy = adoptCF(CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt64Type, &shouldOpenExternalURLsPolicyValue));
 
         RetainPtr<CFDictionaryRef> entryDictionary;
 
         if (data) {
-            totalDataSize += CFDataGetLength(data.get());
-
             entryDictionary = createDictionary({
                 { sessionHistoryEntryURLKey, url.get() },
                 { sessionHistoryEntryTitleKey, title.get() },
@@ -495,7 +508,7 @@ RefPtr<API::Data> encodeLegacySessionState(const SessionState& sessionState)
     if (!CFPropertyListWrite(stateDictionary.get(), writeStream.get(), kCFPropertyListBinaryFormat_v1_0, 0, nullptr))
         return nullptr;
 
-    auto data = adoptCF(static_cast<CFDataRef>(CFWriteStreamCopyProperty(writeStream.get(), kCFStreamPropertyDataWritten)));
+    auto data = adoptCF(checked_cf_cast<CFDataRef>(CFWriteStreamCopyProperty(writeStream.get(), kCFStreamPropertyDataWritten)));
 
     CFIndex length = CFDataGetLength(data.get());
 
@@ -513,16 +526,16 @@ RefPtr<API::Data> encodeLegacySessionState(const SessionState& sessionState)
     // Copy in the actual session state data
     CFDataGetBytes(data.get(), CFRangeMake(0, length), buffer.get() + sizeof(uint32_t));
 
-    return API::Data::createWithoutCopying(buffer.leakPtr(), bufferSize, [] (unsigned char* buffer, const void* context) {
+    return API::Data::createWithoutCopying({ buffer.leakPtr(), bufferSize }, [] (uint8_t* buffer, const void* context) {
         HistoryEntryDataEncoderMalloc::free(buffer);
     }, nullptr);
 }
 
 class HistoryEntryDataDecoder {
 public:
-    HistoryEntryDataDecoder(const uint8_t* buffer, size_t bufferSize)
-        : m_buffer(buffer)
-        , m_bufferEnd(buffer + bufferSize)
+    HistoryEntryDataDecoder(std::span<const uint8_t> buffer)
+        : m_buffer(buffer.data())
+        , m_bufferEnd(buffer.data() + buffer.size())
     {
         // Keep format compatibility by decoding an unused uint64_t here.
         uint64_t value;
@@ -620,7 +633,7 @@ public:
         const uint8_t* data = m_buffer;
         m_buffer += size;
 
-        value.append(data, size);
+        value.append(std::span { data, static_cast<size_t>(size) });
         return *this;
     }
 
@@ -637,7 +650,7 @@ public:
         const uint8_t* data = m_buffer;
         m_buffer += size;
 
-        value.append(data, size);
+        value.append(std::span { data, static_cast<size_t>(size) });
         return *this;
     }
 
@@ -968,9 +981,9 @@ static void decodeBackForwardTreeNode(HistoryEntryDataDecoder& decoder, FrameSta
 #endif
 }
 
-static WARN_UNUSED_RETURN bool decodeSessionHistoryEntryData(const uint8_t* buffer, size_t bufferSize, FrameState& mainFrameState)
+static WARN_UNUSED_RETURN bool decodeSessionHistoryEntryData(std::span<const uint8_t> buffer, FrameState& mainFrameState)
 {
-    HistoryEntryDataDecoder decoder { buffer, bufferSize };
+    HistoryEntryDataDecoder decoder { buffer };
 
     uint32_t version;
     decoder >> version;
@@ -985,7 +998,7 @@ static WARN_UNUSED_RETURN bool decodeSessionHistoryEntryData(const uint8_t* buff
 
 static WARN_UNUSED_RETURN bool decodeSessionHistoryEntryData(CFDataRef historyEntryData, FrameState& mainFrameState)
 {
-    return decodeSessionHistoryEntryData(CFDataGetBytePtr(historyEntryData), static_cast<size_t>(CFDataGetLength(historyEntryData)), mainFrameState);
+    return decodeSessionHistoryEntryData(span(historyEntryData), mainFrameState);
 }
 
 static WARN_UNUSED_RETURN bool decodeSessionHistoryEntry(CFDictionaryRef entryDictionary, BackForwardListItemState& backForwardListItemState)
@@ -1002,10 +1015,6 @@ static WARN_UNUSED_RETURN bool decodeSessionHistoryEntry(CFDictionaryRef entryDi
     if (!originalURLString)
         return false;
 
-    auto historyEntryData = dynamic_cf_cast<CFDataRef>(CFDictionaryGetValue(entryDictionary, sessionHistoryEntryDataKey));
-    if (!historyEntryData)
-        return false;
-
     auto rawShouldOpenExternalURLsPolicy = dynamic_cf_cast<CFNumberRef>(CFDictionaryGetValue(entryDictionary, sessionHistoryEntryShouldOpenExternalURLsPolicyKey));
     WebCore::ShouldOpenExternalURLsPolicy shouldOpenExternalURLsPolicy;
     if (rawShouldOpenExternalURLsPolicy) {
@@ -1015,7 +1024,8 @@ static WARN_UNUSED_RETURN bool decodeSessionHistoryEntry(CFDictionaryRef entryDi
     } else
         shouldOpenExternalURLsPolicy = WebCore::ShouldOpenExternalURLsPolicy::ShouldAllowExternalSchemesButNotAppLinks;
 
-    if (!decodeSessionHistoryEntryData(historyEntryData, backForwardListItemState.pageState.mainFrameState))
+    auto historyEntryData = dynamic_cf_cast<CFDataRef>(CFDictionaryGetValue(entryDictionary, sessionHistoryEntryDataKey));
+    if (historyEntryData && !decodeSessionHistoryEntryData(historyEntryData, backForwardListItemState.pageState.mainFrameState))
         return false;
 
     backForwardListItemState.pageState.title = title;
@@ -1128,11 +1138,13 @@ static WARN_UNUSED_RETURN bool decodeSessionHistory(CFDictionaryRef backForwardL
     return false;
 }
 
-bool decodeLegacySessionState(const uint8_t* bytes, size_t size, SessionState& sessionState)
+bool decodeLegacySessionState(std::span<const uint8_t> data, SessionState& sessionState)
 {
+    auto size = data.size();
     if (size < sizeof(uint32_t))
         return false;
 
+    auto* bytes = data.data();
     uint32_t versionNumber = (bytes[0] << 24) + (bytes[1] << 16) + (bytes[2] << 8) + bytes[3];
 
     if (versionNumber != sessionStateDataVersion)

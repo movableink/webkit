@@ -51,10 +51,11 @@ messages -> RemoteDisplayListRecorder NotRefCounted Stream {
     DrawDisplayListItems(Vector<WebCore::DisplayList::Item> items, WebCore::FloatPoint destination)
     DrawFilteredImageBuffer(std::optional<WebCore::RenderingResourceIdentifier> sourceImageIdentifier, WebCore::FloatRect sourceImageRect, Ref<WebCore::Filter> filter)
     DrawImageBuffer(WebCore::RenderingResourceIdentifier imageBufferIdentifier, WebCore::FloatRect destinationRect, WebCore::FloatRect srcRect, struct WebCore::ImagePaintingOptions options)
-    DrawNativeImage(WebCore::RenderingResourceIdentifier imageIdentifier, WebCore::FloatSize imageSize, WebCore::FloatRect destRect, WebCore::FloatRect srcRect, struct WebCore::ImagePaintingOptions options)
+    DrawNativeImage(WebCore::RenderingResourceIdentifier imageIdentifier, WebCore::FloatRect destRect, WebCore::FloatRect srcRect, struct WebCore::ImagePaintingOptions options)
     DrawSystemImage(Ref<WebCore::SystemImage> systemImage, WebCore::FloatRect destinationRect)
     DrawPattern(WebCore::RenderingResourceIdentifier imageIdentifier, WebCore::FloatRect destRect, WebCore::FloatRect tileRect, WebCore::AffineTransform transform, WebCore::FloatPoint phase, WebCore::FloatSize spacing, struct WebCore::ImagePaintingOptions options)
     BeginTransparencyLayer(float opacity)
+    BeginTransparencyLayerWithCompositeMode(struct WebCore::CompositeMode compositeMode)
     EndTransparencyLayer()
     DrawRect(WebCore::FloatRect rect, float borderThickness)
     DrawLine(WebCore::FloatPoint point1, WebCore::FloatPoint point2)
@@ -67,12 +68,14 @@ messages -> RemoteDisplayListRecorder NotRefCounted Stream {
     FillRect(WebCore::FloatRect rect)
     FillRectWithColor(WebCore::FloatRect rect, WebCore::Color color)
     FillRectWithGradient(WebCore::DisplayList::FillRectWithGradient item)
+    FillRectWithGradientAndSpaceTransform(WebCore::DisplayList::FillRectWithGradientAndSpaceTransform item)
     FillCompositedRect(WebCore::FloatRect rect, WebCore::Color color, enum:uint8_t WebCore::CompositeOperator op, enum:uint8_t WebCore::BlendMode blendMode)
     FillRoundedRect(WebCore::FloatRoundedRect rect, WebCore::Color color, enum:uint8_t WebCore::BlendMode blendMode)
     FillRectWithRoundedHole(WebCore::FloatRect rect, WebCore::FloatRoundedRect roundedHoleRect, WebCore::Color color)
 #if ENABLE(INLINE_PATH_DATA)
     FillLine(struct WebCore::PathDataLine line)
     FillArc(struct WebCore::PathArc arc)
+    FillClosedArc(struct WebCore::PathClosedArc closedArc)
     FillQuadCurve(struct WebCore::PathDataQuadCurve curve)
     FillBezierCurve(struct WebCore::PathDataBezierCurve curve)
 #endif
@@ -87,6 +90,7 @@ messages -> RemoteDisplayListRecorder NotRefCounted Stream {
     StrokeLine(struct WebCore::PathDataLine line) StreamBatched
     StrokeLineWithColorAndThickness(struct WebCore::PathDataLine line, WebCore::DisplayList::SetInlineStroke strokeItem) StreamBatched
     StrokeArc(struct WebCore::PathArc arc) StreamBatched
+    StrokeClosedArc(struct WebCore::PathClosedArc closedArc) StreamBatched
     StrokeQuadCurve(struct WebCore::PathDataQuadCurve curve) StreamBatched
     StrokeBezierCurve(struct WebCore::PathDataBezierCurve curve) StreamBatched
 #endif
@@ -104,7 +108,7 @@ messages -> RemoteDisplayListRecorder NotRefCounted Stream {
 #if PLATFORM(COCOA) && ENABLE(VIDEO)
     PaintVideoFrame(struct WebKit::SharedVideoFrame frame, WebCore::FloatRect rect, bool shouldDiscardAlpha) NotStreamEncodable
     SetSharedVideoFrameSemaphore(IPC::Semaphore semaphore) NotStreamEncodable
-    SetSharedVideoFrameMemory(WebKit::SharedMemory::Handle storageHandle) NotStreamEncodable
+    SetSharedVideoFrameMemory(WebCore::SharedMemory::Handle storageHandle) NotStreamEncodable
 #endif
 }
 

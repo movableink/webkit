@@ -73,6 +73,7 @@
 #include "PannerNode.h"
 #include "PeriodicWave.h"
 #include "PeriodicWaveOptions.h"
+#include "PlatformMediaSessionManager.h"
 #include "ScriptController.h"
 #include "ScriptProcessorNode.h"
 #include "StereoPannerNode.h"
@@ -230,6 +231,7 @@ void BaseAudioContext::setState(State state)
     if (m_state != state) {
         m_state = state;
         queueTaskToDispatchEvent(*this, TaskSource::MediaElement, Event::create(eventNames().statechangeEvent, Event::CanBubble::Yes, Event::IsCancelable::No));
+        PlatformMediaSessionManager::updateNowPlayingInfoIfNecessary();
     }
 
     size_t stateIndex = static_cast<size_t>(state);
@@ -708,6 +710,15 @@ void BaseAudioContext::markForDeletion(AudioNode& node)
     removeAutomaticPullNode(node);
 }
 
+void BaseAudioContext::unmarkForDeletion(AudioNode& node)
+{
+    ASSERT(isGraphOwner());
+    ASSERT_WITH_MESSAGE(node.nodeType() != AudioNode::NodeTypeDestination, "Destination node is owned by the BaseAudioContext");
+
+    m_nodesToDelete.removeFirst(&node);
+    m_nodesMarkedForDeletion.removeFirst(&node);
+}
+
 void BaseAudioContext::scheduleNodeDeletion()
 {
     bool isGood = m_isInitialized && isGraphOwner();
@@ -777,9 +788,9 @@ void BaseAudioContext::removeMarkedSummingJunction(AudioSummingJunction* summing
     m_dirtySummingJunctions.remove(summingJunction);
 }
 
-EventTargetInterface BaseAudioContext::eventTargetInterface() const
+enum EventTargetInterfaceType BaseAudioContext::eventTargetInterface() const
 {
-    return BaseAudioContextEventTargetInterfaceType;
+    return EventTargetInterfaceType::BaseAudioContext;
 }
 
 void BaseAudioContext::markAudioNodeOutputDirty(AudioNodeOutput* output)

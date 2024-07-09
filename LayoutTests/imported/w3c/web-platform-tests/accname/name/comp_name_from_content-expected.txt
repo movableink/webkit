@@ -70,6 +70,23 @@ label
 
 label
 
+Mixed Alternative Text (attr() and strings) for CSS content (previously `alt:`) in pseudo-elements
+
+rendered text should be "before label after"
+
+accessibility label should be "start alt-before end label start alt-after end"
+
+label
+label
+
+label
+
+Empty alternative text for CSS content in pseudo-elements when applied to primitive appearance form controls
+
+
+
+
+
 simple w/ for each child
 
 one two three
@@ -110,14 +127,6 @@ heading ignored link text   ignored link text heading
 heading with two nested links referencing image using aria-labelledby
 
 link1 link2   link3
-
-heading with link referencing image using aria-labelledby, that in turn references text element via aria-labelledby
-
-link
-
-heading with link referencing image using aria-labelledby, that in turn references itself and another element via aria-labelledby
-
-link
 
 simple w/ for each child (w/o spaces and display:inline)
 
@@ -168,15 +177,20 @@ PASS link name from content with ::after
 PASS button name from content with ::before and ::after
 PASS heading name from content with ::before and ::after
 PASS link name from content with ::before and ::after
-FAIL button name from content no space joiners ::before and ::after assert_equals: <button data-expectedlabel="nospacelabelnospace" data-testname="button name from content no space joiners ::before and ::after" class="ex no-space">label</button> expected "nospacelabelnospace" but got "nospace label nospace"
-FAIL heading name from content no space joiners ::before and ::after assert_equals: <h3 data-expectedlabel="nospacelabelnospace" data-testname="heading name from content no space joiners ::before and ::after" class="ex no-space">label</h3> expected "nospacelabelnospace" but got "nospace label nospace"
-FAIL link name from content no space joiners ::before and ::after assert_equals: <a href="#" data-expectedlabel="nospacelabelnospace" data-testname="link name from content no space joiners ::before and ::after" class="ex no-space">label</a> expected "nospacelabelnospace" but got "nospace label nospace"
+PASS button name from content no space joiners ::before and ::after
+PASS heading name from content no space joiners ::before and ::after
+PASS link name from content no space joiners ::before and ::after
 PASS button name from content with ::before and ::after in rtl
 PASS heading name from content with ::before and ::after in rtl
 PASS link name from content with ::before and ::after in rtl
-FAIL button name from fallback content with ::before and ::after assert_equals: <button data-expectedlabel="alt-before label alt-after" data-testname="button name from fallback content with ::before and ::after" class="ex fallback-before fallback-after">label</button> expected "alt-before label alt-after" but got "before label after"
-FAIL heading name from fallback content with ::before and ::after assert_equals: <h3 data-expectedlabel="alt-before label alt-after" data-testname="heading name from fallback content with ::before and ::after" class="ex fallback-before fallback-after">label</h3> expected "alt-before label alt-after" but got "before label after"
-FAIL link name from fallback content with ::before and ::after assert_equals: <a href="#" data-expectedlabel="alt-before label alt-after" data-testname="link name from fallback content with ::before and ::after" class="ex fallback-before fallback-after">label</a> expected "alt-before label alt-after" but got "before label after"
+PASS button name from fallback content with ::before and ::after
+PASS heading name from fallback content with ::before and ::after
+PASS link name from fallback content with ::before and ::after
+PASS button name from fallback content mixing attr() and strings with ::before and ::after
+PASS heading name from fallback content mixing attr() and strings with ::before and ::after
+PASS link name from fallback content mixing attr() and strings with ::before and ::after
+PASS primitive radio input with ::before containing empty alternative text
+PASS primitive radio input with ::before containing empty alternative text for an image
 PASS button name from content for each child
 PASS heading name from content for each child
 PASS link name from content for each child
@@ -196,30 +210,16 @@ FAIL heading name from content for each child including two nested links using a
   </a>
   <a href="#" data-expectedlabel="link2 image link3" data-testname="link name from content for each child including nested image (referenced elsewhere via labelledby)" class="ex">
     link2
-    <img id="nested_image_label2" src="#" alt="image">
+    <img id="nested_image_label2" alt="image" src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==">
     <!-- image skipped in this link (when computing heading text) because it was already referenced by the first link within this heading label recursion cycle. -->
     <!-- but image not skipped when computing the text of the link itself since it has not been referenced in that context -->
     link3
   </a>
 </h3> expected "image link2 link3" but got "image link2 image link3"
 PASS link name from content for each child including nested image (referenced elsewhere via labelledby)
-FAIL heading with link referencing image using aria-labelledby, that in turn references text element via aria-labelledby assert_equals: <h3 data-expectedlabel="image link" data-testname="heading with link referencing image using aria-labelledby, that in turn references text element via aria-labelledby" class="ex">
-  <a href="#" aria-labelledby="nested_image_label3">
-    <span class="note" id="crossref_link">link</span><!-- this text is skipped the first time around because of aria-labelledby on parent element -->
-  </a>
-  <!-- but it's picked up again in inverse order b/c of cross-referencial aria-labelledby edge case -->
-  <img id="nested_image_label_3" src="#" alt="image" aria-labelledby="crossref_link">
-</h3> expected "image link" but got "link link"
-FAIL heading with link referencing image using aria-labelledby, that in turn references itself and another element via aria-labelledby assert_equals: <h3 data-expectedlabel="image link" data-testname="heading with link referencing image using aria-labelledby, that in turn references itself and another element via aria-labelledby" class="ex">
-  <a href="#" aria-labelledby="nested_image_label4">
-    <span class="note" id="crossref_link2">link</span><!-- this text is skipped the first time around because of aria-labelledby on parent element -->
-  </a>
-  <!-- but it's picked up again (after the self-referencial image alt) in inverse order b/c of cross-referencial aria-labelledby edge case -->
-  <img id="nested_image_label4" src="#" alt="image" aria-labelledby="nested_image_label4 crossref_link2">
-</h3> expected "image link" but got "image image link"
-FAIL button name from content for each child (no space, inline) assert_equals: <button data-expectedlabel="onetwothree" data-testname="button name from content for each child (no space, inline)" class="ex"><span>one</span><span>two</span><span>three</span></button> expected "onetwothree" but got "one two three"
-FAIL heading name from content for each child (no space, inline) assert_equals: <h3 data-expectedlabel="onetwothree" data-testname="heading name from content for each child (no space, inline)" class="ex"><span>one</span><span>two</span><span>three</span></h3> expected "onetwothree" but got "one two three"
-FAIL link name from content for each child (no space, inline) assert_equals: <a href="#" data-expectedlabel="onetwothree" data-testname="link name from content for each child (no space, inline)" class="ex"><span>one</span><span>two</span><span>three</span></a> expected "onetwothree" but got "one two three"
+PASS button name from content for each child (no space, inline)
+PASS heading name from content for each child (no space, inline)
+PASS link name from content for each child (no space, inline)
 PASS button name from content for each child (no space, display:block)
 PASS heading name from content for each child (no space, display:block)
 PASS link name from content for each child (no space, display:block)

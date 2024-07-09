@@ -36,9 +36,9 @@
 #include "CSSMediaRule.h"
 #include "CSSNamespaceRule.h"
 #include "CSSPageRule.h"
-#include "CSSParserSelector.h"
 #include "CSSPropertyRule.h"
 #include "CSSScopeRule.h"
+#include "CSSStartingStyleRule.h"
 #include "CSSStyleRule.h"
 #include "CSSSupportsRule.h"
 #include "MediaList.h"
@@ -46,6 +46,7 @@
 #include "StyleProperties.h"
 #include "StylePropertiesInlines.h"
 #include "StyleRuleImport.h"
+#include "StyleSheetContents.h"
 
 namespace WebCore {
 
@@ -83,44 +84,46 @@ template<typename Visitor> constexpr decltype(auto) StyleRuleBase::visitDerived(
 {
     switch (type()) {
     case StyleRuleType::Style:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRule>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRule>(*this));
     case StyleRuleType::StyleWithNesting:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleWithNesting>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleWithNesting>(*this));
     case StyleRuleType::Page:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRulePage>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRulePage>(*this));
     case StyleRuleType::FontFace:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleFontFace>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleFontFace>(*this));
     case StyleRuleType::FontFeatureValues:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleFontFeatureValues>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleFontFeatureValues>(*this));
     case StyleRuleType::FontFeatureValuesBlock:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleFontFeatureValuesBlock>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleFontFeatureValuesBlock>(*this));
     case StyleRuleType::FontPaletteValues:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleFontPaletteValues>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleFontPaletteValues>(*this));
     case StyleRuleType::Media:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleMedia>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleMedia>(*this));
     case StyleRuleType::Supports:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleSupports>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleSupports>(*this));
     case StyleRuleType::Import:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleImport>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleImport>(*this));
     case StyleRuleType::Keyframes:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleKeyframes>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleKeyframes>(*this));
     case StyleRuleType::Namespace:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleNamespace>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleNamespace>(*this));
     case StyleRuleType::Keyframe:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleKeyframe>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleKeyframe>(*this));
     case StyleRuleType::Charset:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleCharset>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleCharset>(*this));
     case StyleRuleType::CounterStyle:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleCounterStyle>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleCounterStyle>(*this));
     case StyleRuleType::LayerBlock:
     case StyleRuleType::LayerStatement:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleLayer>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleLayer>(*this));
     case StyleRuleType::Container:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleContainer>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleContainer>(*this));
     case StyleRuleType::Property:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleProperty>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleProperty>(*this));
     case StyleRuleType::Scope:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleScope>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleScope>(*this));
+    case StyleRuleType::StartingStyle:
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleStartingStyle>(*this));
     case StyleRuleType::Margin:
         break;
     case StyleRuleType::Unknown:
@@ -138,18 +141,18 @@ template<typename Visitor> constexpr decltype(auto) StyleRuleBase::visitDerived(
 
 void StyleRuleBase::operator delete(StyleRuleBase* rule, std::destroying_delete_t)
 {
-    rule->visitDerived([](auto& rule) {
+    rule->visitDerived([]<typename RuleType> (RuleType& rule) {
         std::destroy_at(&rule);
-        std::decay_t<decltype(rule)>::freeAfterDestruction(&rule);
+        RuleType::freeAfterDestruction(&rule);
     });
 }
 
 Ref<StyleRuleBase> StyleRuleBase::copy() const
 {
-    return visitDerived([](auto& rule) -> Ref<StyleRuleBase> {
+    return visitDerived([]<typename RuleType> (RuleType& rule) -> Ref<StyleRuleBase> {
         // Check at compile time for a mistake where this function would call itself, leading to infinite recursion.
         // We can do this with the types of pointers to member functions because they includes the type of the class.
-        static_assert(!std::is_same_v<decltype(&std::decay_t<decltype(rule)>::copy), decltype(&StyleRuleBase::copy)>);
+        static_assert(!std::is_same_v<decltype(&RuleType::copy), decltype(&StyleRuleBase::copy)>);
         return rule.copy();
     });
 }
@@ -211,6 +214,9 @@ Ref<CSSRule> StyleRuleBase::createCSSOMWrapper(CSSStyleSheet* parentSheet, CSSRu
         [&](StyleRuleScope& rule) -> Ref<CSSRule> {
             return CSSScopeRule::create(rule, parentSheet);
         },
+        [&](StyleRuleStartingStyle& rule) -> Ref<CSSRule> {
+            return CSSStartingStyleRule::create(rule, parentSheet);
+        },
         [](StyleRuleCharset&) -> Ref<CSSRule> {
             RELEASE_ASSERT_NOT_REACHED();
         },
@@ -254,6 +260,11 @@ Ref<StyleRule> StyleRule::create(Ref<StyleProperties>&& properties, bool hasDocu
 Ref<StyleRule> StyleRule::copy() const
 {
     return adoptRef(*new StyleRule(*this));
+}
+
+Ref<const StyleProperties> StyleRule::protectedProperties() const
+{
+    return m_properties;
 }
 
 void StyleRule::setProperties(Ref<StyleProperties>&& properties)
@@ -564,6 +575,26 @@ StyleRuleScope::StyleRuleScope(CSSSelectorList&& scopeStart, CSSSelectorList&& s
 }
 
 StyleRuleScope::StyleRuleScope(const StyleRuleScope&) = default;
+
+WeakPtr<const StyleSheetContents> StyleRuleScope::styleSheetContents() const
+{
+    return m_styleSheetOwner;
+}
+
+void StyleRuleScope::setStyleSheetContents(const StyleSheetContents& sheet)
+{
+    m_styleSheetOwner = sheet;
+}
+
+Ref<StyleRuleStartingStyle> StyleRuleStartingStyle::create(Vector<Ref<StyleRuleBase>>&& rules)
+{
+    return adoptRef(*new StyleRuleStartingStyle(WTFMove(rules)));
+}
+
+StyleRuleStartingStyle::StyleRuleStartingStyle(Vector<Ref<StyleRuleBase>>&& rules)
+    : StyleRuleGroup(StyleRuleType::StartingStyle, WTFMove(rules))
+{
+}
 
 StyleRuleCharset::StyleRuleCharset()
     : StyleRuleBase(StyleRuleType::Charset)

@@ -26,8 +26,6 @@
 #include "config.h"
 #include "AccessibilityUIElement.h"
 
-#if ENABLE(ACCESSIBILITY)
-
 #include <WebCore/NotImplemented.h>
 
 namespace WTR {
@@ -53,17 +51,19 @@ bool AccessibilityUIElement::isEqual(AccessibilityUIElement*)
     return false;
 }
 
-void AccessibilityUIElement::getChildren(Vector<RefPtr<AccessibilityUIElement>>&)
+Vector<RefPtr<AccessibilityUIElement>> AccessibilityUIElement::getChildren() const
 {
     notImplemented();
+    return { };
 }
 
-void AccessibilityUIElement::getChildrenWithRange(Vector<RefPtr<AccessibilityUIElement>>&, unsigned, unsigned)
+Vector<RefPtr<AccessibilityUIElement>> AccessibilityUIElement::getChildrenInRange(unsigned, unsigned) const
 {
     notImplemented();
+    return { };
 }
 
-int AccessibilityUIElement::childrenCount()
+unsigned AccessibilityUIElement::childrenCount()
 {
     notImplemented();
     return 0;
@@ -214,25 +214,25 @@ double AccessibilityUIElement::numberAttributeValue(JSStringRef attribute)
     return 0;
 }
 
-JSValueRef AccessibilityUIElement::uiElementArrayAttributeValue(JSStringRef attribute) const
+JSValueRef AccessibilityUIElement::uiElementArrayAttributeValue(JSContextRef, JSStringRef attribute)
 {
     notImplemented();
     return nullptr;
 }
 
-JSValueRef AccessibilityUIElement::rowHeaders() const
+JSValueRef AccessibilityUIElement::rowHeaders(JSContextRef)
 {
     notImplemented();
     return nullptr;
 }
 
-JSValueRef AccessibilityUIElement::columnHeaders() const
+JSValueRef AccessibilityUIElement::columnHeaders(JSContextRef)
 {
     notImplemented();
     return nullptr;
 }
 
-JSValueRef AccessibilityUIElement::selectedCells() const
+JSValueRef AccessibilityUIElement::selectedCells(JSContextRef)
 {
     notImplemented();
     return nullptr;
@@ -728,7 +728,7 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::url()
     return nullptr;
 }
 
-bool AccessibilityUIElement::addNotificationListener(JSValueRef functionCallback)
+bool AccessibilityUIElement::addNotificationListener(JSContextRef, JSValueRef functionCallback)
 {
     notImplemented();
     return false;
@@ -1077,12 +1077,5 @@ bool AccessibilityUIElement::isLastItemInSuggestion() const
     return false;
 }
 
-bool AccessibilityUIElement::isInNonNativeTextControl() const
-{
-    notImplemented();
-    return false;
-}
+} // namespace WTR
 
-} // namespace  WTF
-
-#endif // ENABLE(ACCESSIBILITY)

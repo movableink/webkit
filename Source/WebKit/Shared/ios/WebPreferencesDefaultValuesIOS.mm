@@ -28,6 +28,7 @@
 
 #if PLATFORM(IOS_FAMILY)
 
+#import <WebCore/RuntimeApplicationChecks.h>
 #import <pal/spi/cocoa/FeatureFlagsSPI.h>
 #import <pal/spi/ios/ManagedConfigurationSPI.h>
 #import <pal/system/ios/Device.h>
@@ -56,7 +57,7 @@ static std::optional<bool>& cachedAllowsRequest()
 bool allowsDeprecatedSynchronousXMLHttpRequestDuringUnload()
 {
     if (!cachedAllowsRequest())
-        cachedAllowsRequest() = [[PAL::getMCProfileConnectionClass() sharedConnection] effectiveBoolValueForSetting:@"allowDeprecatedWebKitSynchronousXHRLoads"] == MCRestrictedBoolExplicitYes;
+        cachedAllowsRequest() = [(MCProfileConnection *)[PAL::getMCProfileConnectionClass() sharedConnection] effectiveBoolValueForSetting:@"allowDeprecatedWebKitSynchronousXHRLoads"] == MCRestrictedBoolExplicitYes;
     return *cachedAllowsRequest();
 }
 
@@ -70,41 +71,58 @@ void setAllowsDeprecatedSynchronousXMLHttpRequestDuringUnload(bool allowsRequest
 
 bool defaultMediaSourceEnabled()
 {
+#if PLATFORM(APPLETV)
+    return true;
+#else
     return !PAL::deviceClassIsSmallScreen();
+#endif
 }
 
 #endif
 
-bool defaultUseAsyncUIKitInteractions()
+static bool isAsyncTextInputFeatureFlagEnabled()
 {
     static bool enabled = false;
-#if PLATFORM(IOS) && HAVE(UI_ASYNC_TEXT_INTERACTION)
+#if USE(BROWSERENGINEKIT)
     static std::once_flag flag;
     std::call_once(flag, [] {
-        enabled = PAL::deviceClassIsSmallScreen() && os_feature_enabled(UIKit, async_text_input);
+        if (PAL::deviceClassIsSmallScreen())
+            enabled = os_feature_enabled(UIKit, async_text_input_iphone) || os_feature_enabled(UIKit, async_text_input);
+        else if (PAL::deviceHasIPadCapability())
+            enabled = os_feature_enabled(UIKit, async_text_input_ipad);
     });
 #endif
     return enabled;
 }
 
+bool defaultUseAsyncUIKitInteractions()
+{
+    if (WebCore::CocoaApplication::isIBooks()) {
+        // FIXME: Remove this exception once rdar://119836700 is addressed.
+        return false;
+    }
+    return isAsyncTextInputFeatureFlagEnabled();
+}
+
 bool defaultWriteRichTextDataWhenCopyingOrDragging()
 {
     // While this is keyed off of the same underlying system feature flag as
-    // "Async UIKit Interactions", there are a couple of key differences:
-    // 1. The logic is inverted, since versions of iOS with the requisite support
-    //    for async text input *no longer* require WebKit to write RTF and
-    //    attributed string data.
-    // 2. This is not constrained by the same idiom check as async interactions,
-    //    since underlying system support is present across all PLATFORM(IOS)
-    //    configurations.
-    static bool shouldWrite = true;
-#if PLATFORM(IOS)
-    static std::once_flag flag;
-    std::call_once(flag, [] {
-        shouldWrite = !os_feature_enabled(UIKit, async_text_input);
-    });
+    // "Async UIKit Interactions", the logic is inverted, since versions of
+    // iOS with the requisite support for async text input *no longer* require
+    // WebKit to write RTF and attributed string data.
+    return !isAsyncTextInputFeatureFlagEnabled();
+}
+
+bool defaultAutomaticLiveResizeEnabled()
+{
+#if PLATFORM(VISION)
+    return true;
+#elif USE(BROWSERENGINEKIT)
+    static bool enabled = PAL::deviceHasIPadCapability() && os_feature_enabled(UIKit, async_text_input_ipad);
+    return enabled;
+#else
+    return false;
 #endif
-    return shouldWrite;
 }
 
 } // namespace WebKit

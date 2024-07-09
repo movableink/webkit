@@ -80,6 +80,12 @@ class CommandQueue final : public WrappedObject<id<MTLCommandQueue>>, angle::Non
 
     // Checks whether the last command buffer that uses the given resource has been committed or not
     bool resourceHasPendingWorks(const Resource *resource) const;
+    // Checks whether the last command buffer that uses the given resource (in a render encoder) has
+    // been committed or not
+    bool resourceHasPendingRenderWorks(const Resource *resource) const;
+
+    bool isSerialCompleted(uint64_t serial) const;
+    bool waitUntilSerialCompleted(uint64_t serial, uint64_t timeoutNs) const;
 
     CommandQueue &operator=(id<MTLCommandQueue> metalQueue)
     {
@@ -136,6 +142,7 @@ class CommandQueue final : public WrappedObject<id<MTLCommandQueue>>, angle::Non
     uint64_t mActiveTimeElapsedId = 0;
 
     mutable std::mutex mLock;
+    mutable std::condition_variable mCompletedBufferSerialCv;
 
     void addCommandBufferToTimeElapsedEntry(std::lock_guard<std::mutex> &lg, uint64_t id);
     void recordCommandBufferTimeElapsed(std::lock_guard<std::mutex> &lg,
@@ -162,18 +169,22 @@ class CommandBuffer final : public WrappedObject<id<MTLCommandBuffer>>, angle::N
 
     void present(id<CAMetalDrawable> presentationDrawable);
 
-    void setWriteDependency(const ResourceRef &resource);
-    void setReadDependency(const ResourceRef &resource);
-    void setReadDependency(Resource *resourcePtr);
+    void setWriteDependency(const ResourceRef &resource, bool isRenderCommand);
+    void setReadDependency(const ResourceRef &resource, bool isRenderCommand);
+    void setReadDependency(Resource *resourcePtr, bool isRenderCommand);
 
-    void queueEventSignal(const mtl::SharedEventRef &event, uint64_t value);
-    void serverWaitEvent(const mtl::SharedEventRef &event, uint64_t value);
+#if ANGLE_MTL_EVENT_AVAILABLE
+    // Queues the event and returns the current command buffer queue serial.
+    uint64_t queueEventSignal(id<MTLEvent> event, uint64_t value);
+    void serverWaitEvent(id<MTLEvent> event, uint64_t value);
+#endif  // ANGLE_MTL_EVENT_AVAILABLE
 
     void insertDebugSign(const std::string &marker);
     void pushDebugGroup(const std::string &marker);
     void popDebugGroup();
 
     CommandQueue &cmdQueue() { return mCmdQueue; }
+    const CommandQueue &cmdQueue() const { return mCmdQueue; }
 
     // Private use only
     void setActiveCommandEncoder(CommandEncoder *encoder);
@@ -181,17 +192,25 @@ class CommandBuffer final : public WrappedObject<id<MTLCommandBuffer>>, angle::N
 
     bool needsFlushForDrawCallLimits() const;
 
+    uint64_t getQueueSerial() const;
+
   private:
     void set(id<MTLCommandBuffer> metalBuffer);
+
+    // This function returns either blit/compute encoder (if active) or render encoder.
+    // If both types of encoders are active (blit/compute and render), the former will be returned.
+    CommandEncoder *getPendingCommandEncoder();
+
     void cleanup();
 
     bool readyImpl() const;
     bool commitImpl();
-    void forceEndingCurrentEncoder();
+    void forceEndingAllEncoders();
 
     void setPendingEvents();
-    void setEventImpl(const mtl::SharedEventRef &event, uint64_t value);
-    void waitEventImpl(const mtl::SharedEventRef &event, uint64_t value);
+#if ANGLE_MTL_EVENT_AVAILABLE
+    void setEventImpl(id<MTLEvent> event, uint64_t value);
+#endif  // ANGLE_MTL_EVENT_AVAILABLE
 
     void pushDebugGroupImpl(const std::string &marker);
     void popDebugGroupImpl();
@@ -203,14 +222,27 @@ class CommandBuffer final : public WrappedObject<id<MTLCommandBuffer>>, angle::N
 
     CommandQueue &mCmdQueue;
 
-    CommandEncoder *mActiveCommandEncoder = nullptr;
+    // Note: due to render command encoder being a deferred encoder, it can coexist with
+    // blit/compute encoder. When submitting, blit/compute encoder will be executed before the
+    // render encoder.
+    CommandEncoder *mActiveRenderEncoder        = nullptr;
+    CommandEncoder *mActiveBlitOrComputeEncoder = nullptr;
 
     uint64_t mQueueSerial = 0;
 
     mutable std::mutex mLock;
 
     std::vector<std::string> mPendingDebugSigns;
-    std::vector<std::pair<mtl::SharedEventRef, uint64_t>> mPendingSignalEvents;
+
+#if ANGLE_MTL_EVENT_AVAILABLE
+    struct PendingEvent
+    {
+        AutoObjCPtr<id<MTLEvent>> event;
+        uint64_t signalValue = 0;
+    };
+    std::vector<PendingEvent> mPendingSignalEvents;
+#endif  // ANGLE_MTL_EVENT_AVAILABLE
+
     std::vector<std::string> mDebugGroups;
 
     angle::HashSet<id> mResourceList;
@@ -257,6 +289,8 @@ class CommandEncoder : public WrappedObject<id<MTLCommandEncoder>>, angle::NonCo
     virtual void insertDebugSignImpl(NSString *marker);
 
   private:
+    bool isRenderEncoder() const { return getType() == Type::RENDER; }
+
     const Type mType;
     CommandBuffer &mCmdBuffer;
 };
@@ -396,8 +430,10 @@ class RenderCommandEncoder final : public CommandEncoder
     RenderCommandEncoder &setStencilRefVals(uint32_t frontRef, uint32_t backRef);
     RenderCommandEncoder &setStencilRefVal(uint32_t ref);
 
-    RenderCommandEncoder &setViewport(const MTLViewport &viewport);
-    RenderCommandEncoder &setScissorRect(const MTLScissorRect &rect);
+    RenderCommandEncoder &setViewport(const MTLViewport &viewport,
+                                      id<MTLRasterizationRateMap> map);
+    RenderCommandEncoder &setScissorRect(const MTLScissorRect &rect,
+                                         id<MTLRasterizationRateMap> map);
 
     RenderCommandEncoder &setBlendColor(float r, float g, float b, float a);
 
@@ -546,6 +582,8 @@ class RenderCommandEncoder final : public CommandEncoder
     RenderCommandEncoder &setDepthLoadAction(MTLLoadAction action, double clearValue);
     RenderCommandEncoder &setStencilLoadAction(MTLLoadAction action, uint32_t clearValue);
 
+    RenderCommandEncoder &setRasterizationRateMap(id<MTLRasterizationRateMap> map);
+
     void setLabel(NSString *label);
 
     void pushDebugGroup(NSString *label) override;
@@ -556,6 +594,8 @@ class RenderCommandEncoder final : public CommandEncoder
     bool hasPipelineState() const { return mPipelineStateSet; }
 
     uint64_t getSerial() const { return mSerial; }
+    id<MTLRasterizationRateMap> rasterizationRateMapForPass(id<MTLRasterizationRateMap> map,
+                                                            id<MTLTexture> colorTexture) const;
 
   private:
     // Override CommandEncoder

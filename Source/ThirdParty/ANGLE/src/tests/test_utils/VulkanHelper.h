@@ -8,6 +8,7 @@
 #ifndef ANGLE_TESTS_TESTUTILS_VULKANHELPER_H_
 #define ANGLE_TESTS_TESTUTILS_VULKANHELPER_H_
 
+#include "common/angleutils.h"
 #include "common/vulkan/vk_headers.h"
 #include "vulkan/vulkan_fuchsia_ext.h"
 
@@ -102,6 +103,8 @@ class VulkanHelper
                                         VkImageLayout oldLayout,
                                         VkImageLayout newLayout,
                                         VkSemaphore semaphore);
+    // Just signal the given semaphore
+    void signalSemaphore(VkSemaphore semaphore);
 
     // Performs a queue ownership transfer from VK_QUEUE_FAMILY_EXTERNAL on an
     // image owned by an external instance. The current image layout must be
@@ -152,7 +155,7 @@ class VulkanHelper
         nullptr;
     PFN_vkGetMemoryFdKHR vkGetMemoryFdKHR       = nullptr;
     PFN_vkGetSemaphoreFdKHR vkGetSemaphoreFdKHR = nullptr;
-    PFN_vkGetPhysicalDeviceExternalSemaphorePropertiesKHR
+    ANGLE_MAYBE_UNUSED_PRIVATE_FIELD PFN_vkGetPhysicalDeviceExternalSemaphorePropertiesKHR
         vkGetPhysicalDeviceExternalSemaphorePropertiesKHR                   = nullptr;
     PFN_vkGetMemoryZirconHandleFUCHSIA vkGetMemoryZirconHandleFUCHSIA       = nullptr;
     PFN_vkGetSemaphoreZirconHandleFUCHSIA vkGetSemaphoreZirconHandleFUCHSIA = nullptr;

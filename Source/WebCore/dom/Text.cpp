@@ -46,12 +46,14 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(Text);
 
 Ref<Text> Text::create(Document& document, String&& data)
 {
-    return adoptRef(*new Text(document, WTFMove(data), CreateText));
+    return adoptRef(*new Text(document, WTFMove(data), TEXT_NODE, { }));
 }
 
 Ref<Text> Text::createEditingText(Document& document, String&& data)
 {
-    return adoptRef(*new Text(document, WTFMove(data), CreateEditingText));
+    auto node = adoptRef(*new Text(document, WTFMove(data), TEXT_NODE, { TypeFlag::IsSpecialInternalNode }));
+    ASSERT(node->isEditingText());
+    return node;
 }
 
 Text::~Text() = default;
@@ -154,11 +156,6 @@ String Text::nodeName() const
     return "#text"_s;
 }
 
-Node::NodeType Text::nodeType() const
-{
-    return TEXT_NODE;
-}
-
 Ref<Node> Text::cloneNodeInternal(Document& targetDocument, CloningOperation)
 {
     return create(targetDocument, String { data() });
@@ -215,9 +212,9 @@ static void appendTextRepresentation(StringBuilder& builder, const Text& text)
     
     constexpr size_t maxDumpLength = 30;
     if (value.length() > maxDumpLength)
-        builder.append(" \"", StringView(value).left(maxDumpLength - 10), "...\"");
+        builder.append(" \""_s, StringView(value).left(maxDumpLength - 10), "...\""_s);
     else
-        builder.append(" \"", value, '\"');
+        builder.append(" \""_s, value, '\"');
 }
 
 String Text::description() const

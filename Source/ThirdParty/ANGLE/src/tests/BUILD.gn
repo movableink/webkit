@@ -19,7 +19,7 @@ declare_args() {
   if (!build_with_chromium && is_android) {
     assert(
         !is_official_build,
-        "is_official_build not supported by ANGLE for Android (https://anglebug.com/7381)")
+        "is_official_build not supported by ANGLE for Android (https://anglebug.com/42265853)")
   }
 }
 
@@ -145,6 +145,9 @@ template("angle_common_test_utils") {
     if (angle_enable_vulkan_validation_layers) {
       data_deps += [ "$angle_root/src/common/vulkan:vulkan_validation_layers" ]
     }
+    if (angle_enable_vulkan_api_dump_layer) {
+      data_deps += [ "$angle_root/src/common/vulkan:lunarg_vulkantools" ]
+    }
   }
 }
 
@@ -193,6 +196,10 @@ angle_test("angle_unittests") {
     sources += angle_unittests_gl_sources
   }
 
+  if (angle_enable_wgpu) {
+    sources += angle_unittests_wgsl_sources
+  }
+
   deps = [
     ":angle_test_expectations",
     "$angle_root:angle_json_serializer",
@@ -217,6 +224,10 @@ angle_test("angle_unittests") {
     data_deps = [ ":test_utils_unittest_helper" ]
   }
 
+  if (is_android) {
+    data += [ "$angle_root/src/tests/angle_android_test_runner.py" ]
+  }
+
   if (angle_has_rapidjson) {
     sources += [ "../common/serializer/JsonSerializer_unittest.cpp" ]
   }
@@ -239,6 +250,7 @@ if (is_win || is_linux || is_chromeos || is_android || is_fuchsia || is_apple) {
 
     sources = angle_end2end_tests_sources + [ "angle_end2end_tests_main.cpp" ]
     libs = []
+    defines = []
     configs += [ "${angle_root}:libANGLE_config" ]
 
     if (is_ios) {
@@ -324,6 +336,10 @@ if (is_win || is_linux || is_chromeos || is_android || is_fuchsia || is_apple) {
 
       # Need to bundle the libraries inside the .app.
       deps += [ "$angle_root:angle" ]
+    }
+
+    if (angle_enable_gl_desktop_frontend) {
+      defines += [ "ANGLE_ENABLE_GL_DESKTOP_FRONTEND" ]
     }
   }
 }
@@ -502,7 +518,7 @@ if (build_angle_perftests) {
 
 if (build_angle_trace_tests) {
   angle_test("angle_trace_tests") {
-    # http://anglebug.com/6009: Traces with long shaders are hitting string literal
+    # http://anglebug.com/42264541: Traces with long shaders are hitting string literal
     # limit in MSVC, so only compile them when using clang
     assert(is_clang, "angle trace tests require clang")
 
@@ -1497,16 +1513,12 @@ if (build_angle_deqp_tests && !is_fuchsia) {
   }
 
   _android_mustpass = "$deqp_path/android/cts/main"
-  _aosp_egl_mustpass =
-      "$deqp_path/external/openglcts/data/mustpass/egl/aosp_mustpass/main"
-  _aosp_gles_mustpass =
-      "$deqp_path/external/openglcts/data/mustpass/gles/aosp_mustpass/main"
-  _khronos_gl_mustpass =
-      "$deqp_path/external/openglcts/data/mustpass/gl/khronos_mustpass/main"
-  _khronos_gles_mustpass =
-      "$deqp_path/external/openglcts/data/mustpass/gles/khronos_mustpass/main"
-  _khronos_gles_noctx_mustpass = "$deqp_path/external/openglcts/data/mustpass/gles/khronos_mustpass_noctx/main"
-  _khronos_gles_single_mustpass = "$deqp_path/external/openglcts/data/mustpass/gles/khronos_mustpass_single/main"
+  _aosp_egl_mustpass = "$deqp_path/external/openglcts/data/gl_cts/data/mustpass/egl/aosp_mustpass/main"
+  _aosp_gles_mustpass = "$deqp_path/external/openglcts/data/gl_cts/data/mustpass/gles/aosp_mustpass/main"
+  _khronos_gl_mustpass = "$deqp_path/external/openglcts/data/gl_cts/data/mustpass/gl/khronos_mustpass/main"
+  _khronos_gles_mustpass = "$deqp_path/external/openglcts/data/gl_cts/data/mustpass/gles/khronos_mustpass/main"
+  _khronos_gles_noctx_mustpass = "$deqp_path/external/openglcts/data/gl_cts/data/mustpass/gles/khronos_mustpass_noctx/main"
+  _khronos_gles_single_mustpass = "$deqp_path/external/openglcts/data/gl_cts/data/mustpass/gles/khronos_mustpass_single/main"
 
   angle_deqp_source_set("angle_deqp_gles2_common") {
     sources = deqp_gles2_sources
@@ -1535,7 +1547,7 @@ if (build_angle_deqp_tests && !is_fuchsia) {
   template("angle_deqp_core_gtest") {
     _api = target_name
     forward_variables_from(invoker, [ "mustpass_suffix" ])
-    if (mustpass_suffix != "master") {
+    if (mustpass_suffix != "main") {
       target_name = "${_api}_${mustpass_suffix}"
       target_name = string_replace(target_name, "-", "_")
     }
@@ -1564,14 +1576,14 @@ if (build_angle_deqp_tests && !is_fuchsia) {
     defines = [ "ANGLE_DEQP_GLES2_TESTS" ]
     deps = [ ":angle_deqp_gles2_common" ]
     mustpass_dir = _aosp_gles_mustpass
-    mustpass_suffix = "master"
+    mustpass_suffix = "main"
   }
 
   angle_deqp_core_gtest("gles3") {
     defines = [ "ANGLE_DEQP_GLES3_TESTS" ]
     deps = [ ":angle_deqp_gles3_common" ]
     mustpass_dir = _aosp_gles_mustpass
-    mustpass_suffix = "master"
+    mustpass_suffix = "main"
   }
 
   angle_deqp_core_gtest("gles3") {
@@ -1585,7 +1597,7 @@ if (build_angle_deqp_tests && !is_fuchsia) {
     defines = [ "ANGLE_DEQP_GLES31_TESTS" ]
     deps = [ ":angle_deqp_gles31_common" ]
     mustpass_dir = _aosp_gles_mustpass
-    mustpass_suffix = "master"
+    mustpass_suffix = "main"
   }
 
   angle_deqp_core_gtest("gles31") {
@@ -1599,7 +1611,7 @@ if (build_angle_deqp_tests && !is_fuchsia) {
     defines = [ "ANGLE_DEQP_EGL_TESTS" ]
     sources = deqp_egl_sources
     mustpass_dir = _aosp_egl_mustpass
-    mustpass_suffix = "master"
+    mustpass_suffix = "main"
   }
 
   if (is_android) {
@@ -1665,13 +1677,13 @@ if (build_angle_deqp_tests && !is_fuchsia) {
         data = [ "$root_gen_dir/vk_gl_cts_data/data/gles2/shaders/misc.test" ]
         mustpass_dir = _khronos_gles_mustpass
       } else if (api == "gles3") {
-        data = angle_deqp_external_openglcts_data_gles3
+        data = angle_deqp_external_openglcts_data_gl_cts_data_gles3
         mustpass_dir = _khronos_gles_mustpass
       } else if (api == "gles31") {
-        data = angle_deqp_external_openglcts_data_gles31
+        data = angle_deqp_external_openglcts_data_gl_cts_data_gles31
         mustpass_dir = _khronos_gles_mustpass
       } else if (api == "gles32") {
-        data = angle_deqp_external_openglcts_data_gles32
+        data = angle_deqp_external_openglcts_data_gl_cts_data_gles32
         mustpass_dir = _khronos_gles_mustpass
       } else if (api == "gl46") {
         # Use this as a placeholder, the gl46 test suite does not need data
@@ -1685,32 +1697,32 @@ if (build_angle_deqp_tests && !is_fuchsia) {
 
   angle_deqp_khr_gtest("khr_gles2") {
     defines = [ "ANGLE_DEQP_KHR_GLES2_TESTS" ]
-    mustpass_name = "gles2-khr-master.txt"
+    mustpass_name = "gles2-khr-main.txt"
     api = "gles2"
   }
 
   angle_deqp_khr_gtest("khr_gles3") {
     defines = [ "ANGLE_DEQP_KHR_GLES3_TESTS" ]
-    mustpass_name = "gles3-khr-master.txt"
+    mustpass_name = "gles3-khr-main.txt"
     api = "gles3"
   }
 
   angle_deqp_khr_gtest("khr_gles31") {
     defines = [ "ANGLE_DEQP_KHR_GLES31_TESTS" ]
-    mustpass_name = "gles31-khr-master.txt"
+    mustpass_name = "gles31-khr-main.txt"
     api = "gles31"
   }
 
   angle_deqp_khr_gtest("khr_gles32") {
     defines = [ "ANGLE_DEQP_KHR_GLES32_TESTS" ]
-    mustpass_name = "gles32-khr-master.txt"
+    mustpass_name = "gles32-khr-main.txt"
     api = "gles32"
   }
 
   # The core Desktop GL CTS is in the same category as these KHR tests.
   angle_deqp_khr_gtest("gl46") {
     defines = [ "ANGLE_DEQP_GL_TESTS" ]
-    mustpass_name = "gl46-master.txt"
+    mustpass_name = "gl46-main.txt"
     api = "gl46"
   }
 
@@ -1723,7 +1735,7 @@ if (build_angle_deqp_tests && !is_fuchsia) {
         data = [ "$root_gen_dir/vk_gl_cts_data/data/gles2/shaders/misc.test" ]
         mustpass_dir = _khronos_gles_noctx_mustpass
       } else if (api == "gles32") {
-        data = angle_deqp_external_openglcts_data_gles32
+        data = angle_deqp_external_openglcts_data_gl_cts_data_gles32
         mustpass_dir = _khronos_gles_noctx_mustpass
       } else {
         assert(false)
@@ -1733,13 +1745,13 @@ if (build_angle_deqp_tests && !is_fuchsia) {
 
   angle_deqp_khr_noctx_gtest("khr_noctx_gles2") {
     defines = [ "ANGLE_DEQP_KHR_NOCTX_GLES2_TESTS" ]
-    mustpass_name = "gles2-khr-noctx-master.txt"
+    mustpass_name = "gles2-khr-noctx-main.txt"
     api = "gles2"
   }
 
   angle_deqp_khr_noctx_gtest("khr_noctx_gles32") {
     defines = [ "ANGLE_DEQP_KHR_NOCTX_GLES32_TESTS" ]
-    mustpass_name = "gles32-khr-noctx-master.txt"
+    mustpass_name = "gles32-khr-noctx-main.txt"
     api = "gles32"
   }
 
@@ -1749,7 +1761,7 @@ if (build_angle_deqp_tests && !is_fuchsia) {
       deps = [ ":angle_deqp_khr_common" ]
       deps += angle_deqp_data_copy_targets
       if (api == "gles32") {
-        data = angle_deqp_external_openglcts_data_gles32
+        data = angle_deqp_external_openglcts_data_gl_cts_data_gles32
         mustpass_dir = _khronos_gles_single_mustpass
       } else {
         assert(false)

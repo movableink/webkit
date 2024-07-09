@@ -93,6 +93,11 @@ void webkitURISchemeRequestCancel(WebKitURISchemeRequest* request)
     g_cancellable_cancel(request->priv->cancellable.get());
 }
 
+WebPageProxy& webkitURISchemeRequestGetWebPage(WebKitURISchemeRequest* request)
+{
+    return *request->priv->initiatingPage;
+}
+
 /**
  * webkit_uri_scheme_request_get_scheme:
  * @request: a #WebKitURISchemeRequest
@@ -241,17 +246,17 @@ static void webkitURISchemeRequestReadCallback(GInputStream* inputStream, GAsync
     if (!priv->bytesRead) {
         auto contentType = String::fromLatin1(webKitURISchemeResponseGetContentType(resp).data());
         ResourceResponse response(priv->task->request().url(), extractMIMETypeFromMediaType(contentType), webKitURISchemeResponseGetStreamLength(resp), emptyString());
-        response.setTextEncodingName(extractCharsetFromMediaType(contentType).toAtomString());
+        response.setTextEncodingName(extractCharsetFromMediaType(contentType).toString());
         const CString& statusMessage = webKitURISchemeResponseGetStatusMessage(resp);
         if (statusMessage.isNull()) {
             response.setHTTPStatusCode(200);
             response.setHTTPStatusText("OK"_s);
         } else {
             response.setHTTPStatusCode(webKitURISchemeResponseGetStatusCode(resp));
-            response.setHTTPStatusText(AtomString::fromLatin1(statusMessage.data()));
+            response.setHTTPStatusText(String::fromLatin1(statusMessage.data()));
         }
         if (response.mimeType().isEmpty())
-            response.setMimeType(AtomString { MIMETypeRegistry::mimeTypeForPath(response.url().path()) });
+            response.setMimeType(MIMETypeRegistry::mimeTypeForPath(response.url().path()));
         if (auto* headers = webKitURISchemeResponseGetHeaders(resp))
             response.updateFromSoupMessageHeaders(headers);
         priv->task->didReceiveResponse(response);
@@ -263,7 +268,7 @@ static void webkitURISchemeRequestReadCallback(GInputStream* inputStream, GAsync
         return;
     }
 
-    priv->task->didReceiveData(SharedBuffer::create(priv->readBuffer, bytesRead));
+    priv->task->didReceiveData(SharedBuffer::create(std::span(priv->readBuffer, bytesRead)));
     priv->bytesRead += bytesRead;
     g_input_stream_read_async(inputStream, priv->readBuffer, gReadBufferSize, RunLoopSourcePriority::AsyncIONetwork, priv->cancellable.get(),
         reinterpret_cast<GAsyncReadyCallback>(webkitURISchemeRequestReadCallback), g_object_ref(request.get()));

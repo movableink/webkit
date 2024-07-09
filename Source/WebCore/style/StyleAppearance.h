@@ -25,8 +25,6 @@
 
 #pragma once
 
-#include <wtf/EnumTraits.h>
-
 namespace WTF {
 class TextStream;
 }
@@ -61,7 +59,6 @@ enum class StyleAppearance : uint8_t {
     TextArea,
     TextField,
     // Internal-only Values
-    CapsLockIndicator,
 #if ENABLE(INPUT_TYPE_COLOR)
     ColorWell,
 #endif

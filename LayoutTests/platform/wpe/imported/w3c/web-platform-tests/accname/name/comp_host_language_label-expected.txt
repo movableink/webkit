@@ -57,10 +57,6 @@ HTML table/caption
 table caption label
 a	b	c
 1	2	3
-SVG title
-
-
-
 
 PASS html: input[type=button]
 PASS html: input[type=image]
@@ -104,13 +100,6 @@ FAIL html: select encapsulation assert_equals: <select data-expectedlabel="selec
   </select> expected "select label" but got "select label foo"
 PASS html: img[alt] (non-empty)
 PASS html: picture > img[alt] (non-empty)
-FAIL html: fieldset > legend assert_equals: <fieldset data-expectedlabel="fieldset legend label" data-testname="html: fieldset > legend" class="ex">
-  <legend>fieldset legend label</legend>
-  <input type="text"><br>
-</fieldset> expected "fieldset legend label" but got ""
+PASS html: fieldset > legend
 PASS html: table > caption
-PASS svg: circle > title
-PASS svg: rect > title
-PASS svg: polygon > title
-PASS svg: g > title
 

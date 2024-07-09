@@ -162,8 +162,6 @@ constexpr uint32_t kUBOArgumentBufferBindingIndex = kShadowSamplerCompareModesBi
 
 constexpr uint32_t kStencilMaskAll = 0xff;  // Only 8 bits stencil is supported
 
-static const char *kUnassignedAttributeString = " __unassigned_attribute__";
-
 // This special constant is used to indicate that a particular vertex descriptor's buffer layout
 // index is unused.
 constexpr MTLVertexStepFunction kVertexStepFunctionInvalid =
@@ -405,11 +403,11 @@ inline AutoObjCObj<U> adoptObjCObj(U *NS_RELEASES_ARGUMENT src)
 // NOTE: SharedEvent is only declared on iOS 12.0+ or mac 10.14+
 #if defined(__IPHONE_12_0) || defined(__MAC_10_14)
 #    define ANGLE_MTL_EVENT_AVAILABLE 1
-using SharedEventRef = AutoObjCPtr<id<MTLSharedEvent>>;
 #else
 #    define ANGLE_MTL_EVENT_AVAILABLE 0
-using SharedEventRef = AutoObjCObj<NSObject>;
 #endif
+
+using RasterizationRateMapRef = AutoObjCPtr<id<MTLRasterizationRateMap>>;
 
 // The native image index used by Metal back-end,  the image index uses native mipmap level instead
 // of "virtual" level modified by OpenGL's base level.

@@ -54,7 +54,7 @@ using TrackID = uint64_t;
 class AppendPipeline;
 class MediaSourcePrivateGStreamer;
 
-class SourceBufferPrivateGStreamer final : public SourceBufferPrivate {
+class SourceBufferPrivateGStreamer final : public SourceBufferPrivate, public CanMakeWeakPtr<SourceBufferPrivateGStreamer> {
 public:
     static bool isContentTypeSupported(const ContentType&);
     static Ref<SourceBufferPrivateGStreamer> create(MediaSourcePrivateGStreamer&, const ContentType&, MediaPlayerPrivateGStreamerMSE&);
@@ -83,7 +83,7 @@ public:
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
-    const char* logClassName() const override { return "SourceBufferPrivateGStreamer"; }
+    ASCIILiteral logClassName() const override { return "SourceBufferPrivateGStreamer"_s; }
     const void* logIdentifier() const final { return m_logIdentifier; }
     WTFLogChannel& logChannel() const final;
     const Logger& sourceBufferLogger() const final { return m_logger; }
@@ -103,7 +103,7 @@ private:
     bool m_hasBeenRemovedFromMediaSource { false };
     ContentType m_type;
     MediaPlayerPrivateGStreamerMSE& m_playerPrivate;
-    UniqueRef<AppendPipeline> m_appendPipeline;
+    std::unique_ptr<AppendPipeline> m_appendPipeline;
     StdUnorderedMap<TrackID, RefPtr<MediaSourceTrackGStreamer>> m_tracks;
     std::optional<MediaPromise::Producer> m_appendPromise;
 

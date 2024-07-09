@@ -27,8 +27,10 @@
 
 #if ENABLE(MEDIA_SOURCE) && USE(AVFOUNDATION)
 
+#include "ProcessIdentity.h"
 #include "SourceBufferParser.h"
 #include "SourceBufferPrivate.h"
+#include "WebAVSampleBufferListener.h"
 #include <dispatch/group.h>
 #include <wtf/Box.h>
 #include <wtf/CancellableTask.h>
@@ -50,7 +52,7 @@ OBJC_CLASS AVSampleBufferDisplayLayer;
 OBJC_CLASS NSData;
 OBJC_CLASS NSError;
 OBJC_CLASS NSObject;
-OBJC_CLASS WebAVSampleBufferListener;
+OBJC_PROTOCOL(WebSampleBufferVideoRendering);
 
 typedef struct opaqueCMSampleBuffer *CMSampleBufferRef;
 typedef const struct opaqueCMFormatDescription *CMFormatDescriptionRef;
@@ -68,6 +70,7 @@ class MediaPlayerPrivateMediaSourceAVFObjC;
 class MediaSourcePrivateAVFObjC;
 class TimeRanges;
 class AudioTrackPrivate;
+class VideoMediaSampleRenderer;
 class VideoTrackPrivate;
 class AudioTrackPrivateMediaSourceAVFObjC;
 class VideoTrackPrivateMediaSourceAVFObjC;
@@ -79,14 +82,15 @@ struct TrackInfo;
 class SourceBufferPrivateAVFObjCErrorClient {
 public:
     virtual ~SourceBufferPrivateAVFObjCErrorClient() = default;
-    virtual void layerDidReceiveError(AVSampleBufferDisplayLayer *, NSError *, bool& shouldIgnore) = 0;
+    virtual void videoRendererDidReceiveError(WebSampleBufferVideoRendering *, NSError *, bool& shouldIgnore) = 0;
 ALLOW_NEW_API_WITHOUT_GUARDS_BEGIN
-    virtual void rendererDidReceiveError(AVSampleBufferAudioRenderer *, NSError *, bool& shouldIgnore) = 0;
+    virtual void audioRendererDidReceiveError(AVSampleBufferAudioRenderer *, NSError *, bool& shouldIgnore) = 0;
 ALLOW_NEW_API_WITHOUT_GUARDS_END
 };
 
 class SourceBufferPrivateAVFObjC final
     : public SourceBufferPrivate
+    , public WebAVSampleBufferListenerClient
 {
 public:
     static Ref<SourceBufferPrivateAVFObjC> create(MediaSourcePrivateAVFObjC&, Ref<SourceBufferParser>&&);
@@ -123,18 +127,11 @@ public:
 
     void registerForErrorNotifications(SourceBufferPrivateAVFObjCErrorClient*);
     void unregisterForErrorNotifications(SourceBufferPrivateAVFObjCErrorClient*);
-    void layerDidReceiveError(AVSampleBufferDisplayLayer *, NSError *);
-    void rendererWasAutomaticallyFlushed(AVSampleBufferAudioRenderer *, const CMTime&);
-    void outputObscuredDueToInsufficientExternalProtectionChanged(bool);
-    void layerRequiresFlushToResumeDecodingChanged(AVSampleBufferDisplayLayer *, bool);
-ALLOW_NEW_API_WITHOUT_GUARDS_BEGIN
-    void rendererDidReceiveError(AVSampleBufferAudioRenderer *, NSError *);
-ALLOW_NEW_API_WITHOUT_GUARDS_END
 
-    void setVideoLayer(AVSampleBufferDisplayLayer*);
+    void setVideoRenderer(WebSampleBufferVideoRendering *);
+    void stageVideoRenderer(WebSampleBufferVideoRendering *);
+
     void setDecompressionSession(WebCoreDecompressionSession*);
-
-    void layerReadyForDisplayChanged(AVSampleBufferDisplayLayer *, bool isReadyForDisplay);
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
     SharedBuffer* initData() { return m_initData.get(); }
@@ -142,12 +139,14 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
-    const char* logClassName() const override { return "SourceBufferPrivateAVFObjC"; }
+    ASCIILiteral logClassName() const override { return "SourceBufferPrivateAVFObjC"_s; }
     const void* logIdentifier() const final { return m_logIdentifier; }
     WTFLogChannel& logChannel() const final;
     const Logger& sourceBufferLogger() const final { return m_logger.get(); }
     const void* sourceBufferLogIdentifier() final { return logIdentifier(); }
 #endif
+
+    void setResourceOwner(const ProcessIdentity& resourceOwner) { m_resourceOwner = resourceOwner; }
 
 private:
     explicit SourceBufferPrivateAVFObjC(MediaSourcePrivateAVFObjC&, Ref<SourceBufferParser>&&);
@@ -175,6 +174,14 @@ private:
     void processInitializationSegment(std::optional<InitializationSegment>&&) final;
     void processFormatDescriptionForTrackId(Ref<TrackInfo>&&, TrackID) final;
 
+    // WebAVSampleBufferListenerClient
+    void videoRendererDidReceiveError(WebSampleBufferVideoRendering *, NSError *) final;
+    void audioRendererWasAutomaticallyFlushed(AVSampleBufferAudioRenderer *, const CMTime&) final;
+    void outputObscuredDueToInsufficientExternalProtectionChanged(bool) final;
+    void videoRendererRequiresFlushToResumeDecodingChanged(WebSampleBufferVideoRendering *, bool) final;
+    void videoRendererReadyForDisplayChanged(WebSampleBufferVideoRendering *, bool isReadyForDisplay) final;
+    void audioRendererDidReceiveError(AVSampleBufferAudioRenderer *, NSError *) final;
+
     void processPendingTrackChangeTasks();
     void enqueueSample(Ref<MediaSampleAVFObjC>&&, TrackID);
     void enqueueSampleBuffer(MediaSampleAVFObjC&);
@@ -197,10 +204,13 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
     bool trackIsBlocked(TrackID) const;
 
 #if ENABLE(ENCRYPTED_MEDIA) && HAVE(AVCONTENTKEYSESSION)
-    void keyStatusesChanged();
+    void tryToEnqueueBlockedSamples();
 #endif
 
     void setTrackChangeCallbacks(const InitializationSegment&, bool initialized);
+
+    void configureVideoRenderer(VideoMediaSampleRenderer&);
+    void invalidateVideoRenderer(VideoMediaSampleRenderer&);
 
     StdUnorderedMap<TrackID, RefPtr<VideoTrackPrivate>> m_videoTracks;
     StdUnorderedMap<TrackID, RefPtr<AudioTrackPrivate>> m_audioTracks;
@@ -210,11 +220,12 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
     Vector<Function<void()>> m_pendingTrackChangeTasks;
     Deque<std::pair<TrackID, Ref<MediaSampleAVFObjC>>> m_blockedSamples;
 
-    RetainPtr<AVSampleBufferDisplayLayer> m_displayLayer;
+    RefPtr<VideoMediaSampleRenderer> m_videoRenderer;
+    RefPtr<VideoMediaSampleRenderer> m_expiringVideoRenderer;
 ALLOW_NEW_API_WITHOUT_GUARDS_BEGIN
     StdUnorderedMap<TrackID, RetainPtr<AVSampleBufferAudioRenderer>> m_audioRenderers;
 ALLOW_NEW_API_WITHOUT_GUARDS_END
-    RetainPtr<WebAVSampleBufferListener> m_listener;
+    Ref<WebAVSampleBufferListener> m_listener;
 #if PLATFORM(IOS_FAMILY)
     bool m_displayLayerWasInterrupted { false };
 #endif
@@ -261,6 +272,8 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
     Ref<const Logger> m_logger;
     const void* m_logIdentifier;
 #endif
+
+    ProcessIdentity m_resourceOwner;
 };
 
 } // namespace WebCore

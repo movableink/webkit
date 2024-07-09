@@ -15,6 +15,7 @@ None
 ------------------------------------------------------------------------
 List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/cssom/CSS-namespace-object-class-string.html
+/LayoutTests/imported/w3c/web-platform-tests/css/cssom/CSSConditionRule-conditionText.html
 /LayoutTests/imported/w3c/web-platform-tests/css/cssom/CSSContainerRule.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/css/cssom/CSSCounterStyleRule.html
 /LayoutTests/imported/w3c/web-platform-tests/css/cssom/CSSFontFaceRule.html
@@ -36,6 +37,8 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/cssom/CSSStyleSheet-constructable-disabled-regular-sheet-insertion.html
 /LayoutTests/imported/w3c/web-platform-tests/css/cssom/CSSStyleSheet-constructable-disallow-import.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/css/cssom/CSSStyleSheet-constructable-duplicate.html
+/LayoutTests/imported/w3c/web-platform-tests/css/cssom/CSSStyleSheet-constructable-invalidation.html
+/LayoutTests/imported/w3c/web-platform-tests/css/cssom/CSSStyleSheet-constructable-replace-cssRules.html
 /LayoutTests/imported/w3c/web-platform-tests/css/cssom/CSSStyleSheet-constructable-replace-on-regular-sheet.html
 /LayoutTests/imported/w3c/web-platform-tests/css/cssom/CSSStyleSheet-constructable.html
 /LayoutTests/imported/w3c/web-platform-tests/css/cssom/CSSStyleSheet-modify-after-removal.html
@@ -91,6 +94,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/cssom/cssstyledeclaration-csstext-all-shorthand.html
 /LayoutTests/imported/w3c/web-platform-tests/css/cssom/cssstyledeclaration-csstext-final-delimiter.html
 /LayoutTests/imported/w3c/web-platform-tests/css/cssom/cssstyledeclaration-csstext-important.html
+/LayoutTests/imported/w3c/web-platform-tests/css/cssom/cssstyledeclaration-csstext-setter.window.js
 /LayoutTests/imported/w3c/web-platform-tests/css/cssom/cssstyledeclaration-csstext.html
 /LayoutTests/imported/w3c/web-platform-tests/css/cssom/cssstyledeclaration-custom-properties.html
 /LayoutTests/imported/w3c/web-platform-tests/css/cssom/cssstyledeclaration-mutability.html
@@ -138,6 +142,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/cssom/getComputedStyle-logical-enumeration.html
 /LayoutTests/imported/w3c/web-platform-tests/css/cssom/getComputedStyle-margins-roundtrip.html
 /LayoutTests/imported/w3c/web-platform-tests/css/cssom/getComputedStyle-property-order.html
+/LayoutTests/imported/w3c/web-platform-tests/css/cssom/getComputedStyle-pseudo-with-argument.html
 /LayoutTests/imported/w3c/web-platform-tests/css/cssom/getComputedStyle-pseudo.html
 /LayoutTests/imported/w3c/web-platform-tests/css/cssom/getComputedStyle-resolved-colors.html
 /LayoutTests/imported/w3c/web-platform-tests/css/cssom/getComputedStyle-resolved-min-max-clamping.html

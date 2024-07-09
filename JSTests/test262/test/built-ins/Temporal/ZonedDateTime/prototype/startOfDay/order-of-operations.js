@@ -9,11 +9,12 @@ features: [Temporal]
 ---*/
 
 const expected = [
-  // GetPlainDateTimeFor
+  // lookup
   "get this.timeZone.getOffsetNanosecondsFor",
+  "get this.timeZone.getPossibleInstantsFor",
+  // GetPlainDateTimeFor
   "call this.timeZone.getOffsetNanosecondsFor",
   // GetInstantFor on preceding midnight
-  "get this.timeZone.getPossibleInstantsFor",
   "call this.timeZone.getPossibleInstantsFor",
 ];
 const actual = [];
@@ -25,7 +26,7 @@ const instance = new Temporal.ZonedDateTime(
   calendar,
 );
 
-const fallBackTimeZone = TemporalHelpers.oneShiftTimeZone(Temporal.Instant.fromEpochSeconds(1800), -3600_000_000_000);
+const fallBackTimeZone = TemporalHelpers.oneShiftTimeZone(Temporal.Instant.fromEpochMilliseconds(1800_000), -3600_000_000_000);
 const fallBackInstance = new Temporal.ZonedDateTime(
   0n,
   TemporalHelpers.timeZoneObserver(actual, "this.timeZone", {
@@ -34,7 +35,7 @@ const fallBackInstance = new Temporal.ZonedDateTime(
   }),
   calendar,
 );
-const springForwardTimeZone = TemporalHelpers.oneShiftTimeZone(Temporal.Instant.fromEpochSeconds(-1800), 3600_000_000_000);
+const springForwardTimeZone = TemporalHelpers.oneShiftTimeZone(Temporal.Instant.fromEpochMilliseconds(-1800_000), 3600_000_000_000);
 const springForwardInstance = new Temporal.ZonedDateTime(
   0n,
   TemporalHelpers.timeZoneObserver(actual, "this.timeZone", {
@@ -58,10 +59,8 @@ actual.splice(0); // clear
 springForwardInstance.startOfDay();
 assert.compareArray(actual, expected.concat([
   // DisambiguatePossibleInstants
-  "get this.timeZone.getOffsetNanosecondsFor",
   "call this.timeZone.getOffsetNanosecondsFor",
   "call this.timeZone.getOffsetNanosecondsFor",
-  "get this.timeZone.getPossibleInstantsFor",
   "call this.timeZone.getPossibleInstantsFor",
 ]), "order of operations with preceding midnight at skipped wall-clock time");
 actual.splice(0); // clear

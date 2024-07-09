@@ -31,6 +31,7 @@
 #import "UIKitSPI.h"
 #import "WebCoreArgumentCoders.h"
 #import <WebCore/ElementContext.h>
+#import <pal/spi/ios/BrowserEngineKitSPI.h>
 #import <wtf/cocoa/VectorCocoa.h>
 
 namespace WebKit {
@@ -91,24 +92,25 @@ UIWKDocumentContext *DocumentEditingContext::toLegacyPlatformContext(OptionSet<D
 #endif
 }
 
-WKSETextDocumentContext *DocumentEditingContext::toPlatformContext(OptionSet<DocumentEditingContextRequest::Options> options)
+WKBETextDocumentContext *DocumentEditingContext::toPlatformContext(OptionSet<DocumentEditingContextRequest::Options> options)
 {
 #if HAVE(UI_WK_DOCUMENT_CONTEXT)
-#if SERVICE_EXTENSIONS_TEXT_INPUT_IS_AVAILABLE
-    RetainPtr<WKSETextDocumentContext> platformContext;
+#if USE(BROWSERENGINEKIT)
+    RetainPtr<WKBETextDocumentContext> platformContext;
     if (options.contains(DocumentEditingContextRequest::Options::AttributedText)) {
-        platformContext = adoptNS([[WKSETextDocumentContext alloc] initWithAttributedSelectedText:selectedText.nsAttributedString().get()
+        platformContext = adoptNS([[WKBETextDocumentContext alloc] initWithAttributedSelectedText:selectedText.nsAttributedString().get()
             contextBefore:contextBefore.nsAttributedString().get()
             contextAfter:contextAfter.nsAttributedString().get()
             markedText:markedText.nsAttributedString().get()
             selectedRangeInMarkedText:toNSRange(selectedRangeInMarkedText)]);
-    } else {
-        platformContext = adoptNS([[WKSETextDocumentContext alloc] initWithSelectedText:[selectedText.nsAttributedString() string]
+    } else if (options.contains(DocumentEditingContextRequest::Options::Text)) {
+        platformContext = adoptNS([[WKBETextDocumentContext alloc] initWithSelectedText:[selectedText.nsAttributedString() string]
             contextBefore:[contextBefore.nsAttributedString() string]
             contextAfter:[contextAfter.nsAttributedString() string]
             markedText:[markedText.nsAttributedString() string]
             selectedRangeInMarkedText:toNSRange(selectedRangeInMarkedText)]);
-    }
+    } else
+        ASSERT_NOT_REACHED_WITH_MESSAGE("%s expected at least Options::AttributedText or Options::Text", __PRETTY_FUNCTION__);
     setOptionalEditingContextProperties(*this, platformContext.get(), options);
     return platformContext.autorelease();
 #else

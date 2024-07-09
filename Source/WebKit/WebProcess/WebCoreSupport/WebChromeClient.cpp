@@ -72,7 +72,6 @@
 #include "WebSearchPopupMenu.h"
 #include "WebWorkerClient.h"
 #include <WebCore/AppHighlight.h>
-#include <WebCore/ApplicationCacheStorage.h>
 #include <WebCore/AXObjectCache.h>
 #include <WebCore/ColorChooser.h>
 #include <WebCore/ContentRuleListResults.h>
@@ -102,6 +101,8 @@
 #include <WebCore/Settings.h>
 #include <WebCore/TextIndicator.h>
 #include <WebCore/TextRecognitionOptions.h>
+#include <WebCore/ViewportConfiguration.h>
+#include <WebCore/WindowFeatures.h>
 
 #if HAVE(WEBGPU_IMPLEMENTATION)
 #import <WebCore/WebGPUCreateImpl.h>
@@ -155,6 +156,7 @@
 
 #if PLATFORM(MAC)
 #include "RemoteScrollbarsController.h"
+#include <WebCore/ScrollbarsControllerMock.h>
 #endif
 
 namespace WebKit {
@@ -162,7 +164,7 @@ using namespace WebCore;
 using namespace HTMLNames;
 
 AXRelayProcessSuspendedNotification::AXRelayProcessSuspendedNotification(Ref<WebPage> page, AutomaticallySend automaticallySend)
-    : m_page(page)
+    : m_page(page.get())
     , m_automaticallySend(automaticallySend)
 {
     if (m_automaticallySend == AutomaticallySend::Yes)
@@ -313,18 +315,21 @@ Page* WebChromeClient::createWindow(LocalFrame& frame, const WindowFeatures& win
 
     auto& mouseEventData = navigationAction.mouseEventData();
 
+    RefPtr webFrame = WebFrame::fromCoreFrame(frame);
+
     NavigationActionData navigationActionData {
         navigationAction.type(),
         modifiersForNavigationAction(navigationAction),
         mouseButton(navigationAction),
         syntheticClickType(navigationAction),
-        webProcess.userGestureTokenIdentifier(navigationAction.userGestureToken()),
+        webProcess.userGestureTokenIdentifier(navigationAction.requester()->pageID, navigationAction.userGestureToken()),
         navigationAction.userGestureToken() ? navigationAction.userGestureToken()->authorizationToken() : std::nullopt,
         protectedPage()->canHandleRequest(navigationAction.originalRequest()),
         navigationAction.shouldOpenExternalURLsPolicy(),
         navigationAction.downloadAttribute(),
         mouseEventData ? mouseEventData->locationInRootViewCoordinates : FloatPoint { },
         { }, /* redirectResponse */
+        navigationAction.isRequestFromClientOrUserInput(),
         false, /* treatAsSameOriginNavigation */
         false, /* hasOpenedFrames */
         false, /* openedByDOMWithOpener */
@@ -343,11 +348,15 @@ Page* WebChromeClient::createWindow(LocalFrame& frame, const WindowFeatures& win
 #if PLATFORM(MAC) || HAVE(UIKIT_WITH_MOUSE_SUPPORT)
         std::nullopt, /* webHitTestResultData */
 #endif
+        webFrame->info(), /* originatingFrameInfoData */
+        webFrame->page()->webPageProxyIdentifier(),
+        webFrame->info(), /* frameInfo */
+        0, /* navigationID */
+        navigationAction.originalRequest(), /* originalRequest */
+        navigationAction.originalRequest() /* request */
     };
 
-    auto webFrame = WebFrame::fromCoreFrame(frame);
-
-    auto sendResult = webProcess.parentProcessConnection()->sendSync(Messages::WebPageProxy::CreateNewPage(webFrame->info(), webFrame->page()->webPageProxyIdentifier(), navigationAction.originalRequest(), windowFeatures, navigationActionData), page().identifier(), IPC::Timeout::infinity(), { IPC::SendSyncOption::MaintainOrderingWithAsyncMessages });
+    auto sendResult = webProcess.parentProcessConnection()->sendSync(Messages::WebPageProxy::CreateNewPage(windowFeatures, navigationActionData), page().identifier(), IPC::Timeout::infinity(), { IPC::SendSyncOption::MaintainOrderingWithAsyncMessages });
     if (!sendResult.succeeded())
         return nullptr;
 
@@ -523,7 +532,7 @@ void WebChromeClient::rootFrameRemoved(const WebCore::LocalFrame& frame)
 
 static bool shouldSuppressJavaScriptDialogs(LocalFrame& frame)
 {
-    if (frame.loader().opener() && frame.loader().stateMachine().isDisplayingInitialEmptyDocument() && frame.loader().provisionalDocumentLoader())
+    if (frame.opener() && frame.loader().stateMachine().isDisplayingInitialEmptyDocument() && frame.loader().provisionalDocumentLoader())
         return true;
 
     return false;
@@ -832,31 +841,6 @@ void WebChromeClient::print(LocalFrame& frame, const StringWithDirection& title)
     page->sendSyncWithDelayedReply(Messages::WebPageProxy::PrintFrame(webFrame->frameID(), truncatedTitle.string, pdfFirstPageSize));
 }
 
-void WebChromeClient::reachedMaxAppCacheSize(int64_t)
-{
-    notImplemented();
-}
-
-void WebChromeClient::reachedApplicationCacheOriginQuota(SecurityOrigin& origin, int64_t totalBytesNeeded)
-{
-    auto page = protectedPage();
-    auto securityOrigin = API::SecurityOrigin::createFromString(origin.toString());
-    if (page->injectedBundleUIClient().didReachApplicationCacheOriginQuota(page.ptr(), securityOrigin.ptr(), totalBytesNeeded))
-        return;
-
-    Ref cacheStorage = page->corePage()->applicationCacheStorage();
-    int64_t currentQuota = 0;
-    if (!cacheStorage->calculateQuotaForOrigin(origin, currentQuota))
-        return;
-
-    auto relay = AXRelayProcessSuspendedNotification(page);
-
-    auto sendResult = page->sendSyncWithDelayedReply(Messages::WebPageProxy::ReachedApplicationCacheOriginQuota(origin.data().databaseIdentifier(), currentQuota, totalBytesNeeded));
-    auto [newQuota] = sendResult.takeReplyOr(0);
-
-    cacheStorage->storeUpdatedQuotaForOrigin(&origin, newQuota);
-}
-
 #if ENABLE(INPUT_TYPE_COLOR)
 
 std::unique_ptr<ColorChooser> WebChromeClient::createColorChooser(ColorChooserClient& client, const Color& initialColor)
@@ -988,13 +972,13 @@ WebCore::DisplayRefreshMonitorFactory* WebChromeClient::displayRefreshMonitorFac
 }
 
 #if ENABLE(GPU_PROCESS)
-RefPtr<ImageBuffer> WebChromeClient::createImageBuffer(const FloatSize& size, RenderingPurpose purpose, float resolutionScale, const DestinationColorSpace& colorSpace, PixelFormat pixelFormat, OptionSet<ImageBufferOptions> options) const
+RefPtr<ImageBuffer> WebChromeClient::createImageBuffer(const FloatSize& size, RenderingPurpose purpose, float resolutionScale, const DestinationColorSpace& colorSpace, ImageBufferPixelFormat pixelFormat, OptionSet<ImageBufferOptions> options) const
 {
     if (!WebProcess::singleton().shouldUseRemoteRenderingFor(purpose)) {
         if (purpose != RenderingPurpose::ShareableSnapshot && purpose != RenderingPurpose::ShareableLocalSnapshot)
             return nullptr;
 
-        return ImageBuffer::create<ImageBufferShareableBitmapBackend>(size, resolutionScale, colorSpace, PixelFormat::BGRA8, purpose, { });
+        return ImageBuffer::create<ImageBufferShareableBitmapBackend>(size, resolutionScale, colorSpace, ImageBufferPixelFormat::BGRA8, purpose, { });
     }
 
     return protectedPage()->ensureRemoteRenderingBackendProxy().createImageBuffer(size, purpose, resolutionScale, colorSpace, pixelFormat, options);
@@ -1011,7 +995,7 @@ RefPtr<ImageBuffer> WebChromeClient::sinkIntoImageBuffer(std::unique_ptr<Seriali
 
 std::unique_ptr<WebCore::WorkerClient> WebChromeClient::createWorkerClient(SerialFunctionDispatcher& dispatcher)
 {
-    return makeUnique<WebWorkerClient>(protectedPage().ptr(), dispatcher);
+    return WebWorkerClient::create(*protectedPage()->corePage(), dispatcher).moveToUniquePtr();
 }
 
 #if ENABLE(WEBGL)
@@ -1019,11 +1003,7 @@ RefPtr<GraphicsContextGL> WebChromeClient::createGraphicsContextGL(const Graphic
 {
 #if ENABLE(GPU_PROCESS)
     if (WebProcess::singleton().shouldUseRemoteRenderingForWebGL())
-        return RemoteGraphicsContextGLProxy::create(WebProcess::singleton().ensureGPUProcessConnection().connection(), attributes, protectedPage()->ensureRemoteRenderingBackendProxy()
-#if ENABLE(VIDEO)
-            , WebProcess::singleton().ensureGPUProcessConnection().videoFrameObjectHeapProxy()
-#endif
-        );
+        return RemoteGraphicsContextGLProxy::create(attributes, protectedPage());
 #endif
     return WebCore::createWebProcessGraphicsContextGL(attributes);
 }
@@ -1033,11 +1013,11 @@ RefPtr<GraphicsContextGL> WebChromeClient::createGraphicsContextGL(const Graphic
 RefPtr<WebCore::WebGPU::GPU> WebChromeClient::createGPUForWebGPU() const
 {
 #if ENABLE(GPU_PROCESS)
-    return RemoteGPUProxy::create(WebProcess::singleton().ensureGPUProcessConnection(), WebGPU::DowncastConvertToBackingContext::create(), WebGPUIdentifier::generate(), protectedPage()->ensureRemoteRenderingBackendProxy().ensureBackendCreated());
+    return RemoteGPUProxy::create(WebGPU::DowncastConvertToBackingContext::create(), protectedPage());
 #else
     return WebCore::WebGPU::create([](WebCore::WebGPU::WorkItem&& workItem) {
         callOnMainRunLoop(WTFMove(workItem));
-    });
+    }, nullptr);
 #endif
 }
 #endif
@@ -1047,7 +1027,11 @@ RefPtr<WebCore::ShapeDetection::BarcodeDetector> WebChromeClient::createBarcodeD
 #if ENABLE(GPU_PROCESS)
     auto page = protectedPage();
     auto& remoteRenderingBackendProxy = page->ensureRemoteRenderingBackendProxy();
-    return ShapeDetection::RemoteBarcodeDetectorProxy::create(remoteRenderingBackendProxy.streamConnection(), remoteRenderingBackendProxy.renderingBackendIdentifier(), ShapeDetectionIdentifier::generate(), barcodeDetectorOptions);
+    // FIXME(https://bugs.webkit.org/show_bug.cgi?id=275245): Does not work when GPUP crashes.
+    RefPtr connection = remoteRenderingBackendProxy.connection();
+    if (!connection)
+        return nullptr;
+    return ShapeDetection::RemoteBarcodeDetectorProxy::create(connection.releaseNonNull(), remoteRenderingBackendProxy.renderingBackendIdentifier(), ShapeDetectionIdentifier::generate(), barcodeDetectorOptions);
 #elif HAVE(SHAPE_DETECTION_API_IMPLEMENTATION)
     return WebCore::ShapeDetection::BarcodeDetectorImpl::create(barcodeDetectorOptions);
 #else
@@ -1060,7 +1044,13 @@ void WebChromeClient::getBarcodeDetectorSupportedFormats(CompletionHandler<void(
 #if ENABLE(GPU_PROCESS)
     auto page = protectedPage();
     auto& remoteRenderingBackendProxy = page->ensureRemoteRenderingBackendProxy();
-    ShapeDetection::RemoteBarcodeDetectorProxy::getSupportedFormats(remoteRenderingBackendProxy.streamConnection(), remoteRenderingBackendProxy.renderingBackendIdentifier(), WTFMove(completionHandler));
+    // FIXME(https://bugs.webkit.org/show_bug.cgi?id=275245): Does not work when GPUP crashes.
+    RefPtr connection = remoteRenderingBackendProxy.connection();
+    if (!connection) {
+        completionHandler({ });
+        return;
+    }
+    ShapeDetection::RemoteBarcodeDetectorProxy::getSupportedFormats(connection.releaseNonNull(), remoteRenderingBackendProxy.renderingBackendIdentifier(), WTFMove(completionHandler));
 #elif HAVE(SHAPE_DETECTION_API_IMPLEMENTATION)
     WebCore::ShapeDetection::BarcodeDetectorImpl::getSupportedFormats(WTFMove(completionHandler));
 #else
@@ -1073,7 +1063,11 @@ RefPtr<WebCore::ShapeDetection::FaceDetector> WebChromeClient::createFaceDetecto
 #if ENABLE(GPU_PROCESS)
     auto page = protectedPage();
     auto& remoteRenderingBackendProxy = page->ensureRemoteRenderingBackendProxy();
-    return ShapeDetection::RemoteFaceDetectorProxy::create(remoteRenderingBackendProxy.streamConnection(), remoteRenderingBackendProxy.renderingBackendIdentifier(), ShapeDetectionIdentifier::generate(), faceDetectorOptions);
+    // FIXME(https://bugs.webkit.org/show_bug.cgi?id=275245): Does not work when GPUP crashes.
+    RefPtr connection = remoteRenderingBackendProxy.connection();
+    if (!connection)
+        return nullptr;
+    return ShapeDetection::RemoteFaceDetectorProxy::create(connection.releaseNonNull(), remoteRenderingBackendProxy.renderingBackendIdentifier(), ShapeDetectionIdentifier::generate(), faceDetectorOptions);
 #elif HAVE(SHAPE_DETECTION_API_IMPLEMENTATION)
     return WebCore::ShapeDetection::FaceDetectorImpl::create(faceDetectorOptions);
 #else
@@ -1086,7 +1080,11 @@ RefPtr<WebCore::ShapeDetection::TextDetector> WebChromeClient::createTextDetecto
 #if ENABLE(GPU_PROCESS)
     auto page = protectedPage();
     auto& remoteRenderingBackendProxy = page->ensureRemoteRenderingBackendProxy();
-    return ShapeDetection::RemoteTextDetectorProxy::create(remoteRenderingBackendProxy.streamConnection(), remoteRenderingBackendProxy.renderingBackendIdentifier(), ShapeDetectionIdentifier::generate());
+    // FIXME(https://bugs.webkit.org/show_bug.cgi?id=275245): Does not work when GPUP crashes.
+    RefPtr connection = remoteRenderingBackendProxy.connection();
+    if (!connection)
+        return nullptr;
+    return ShapeDetection::RemoteTextDetectorProxy::create(connection.releaseNonNull(), remoteRenderingBackendProxy.renderingBackendIdentifier(), ShapeDetectionIdentifier::generate());
 #elif HAVE(SHAPE_DETECTION_API_IMPLEMENTATION)
     return WebCore::ShapeDetection::TextDetectorImpl::create();
 #else
@@ -1111,7 +1109,8 @@ void WebChromeClient::attachViewOverlayGraphicsLayer(GraphicsLayer* graphicsLaye
         return;
 
     // FIXME: Support view overlays in iframe processes if needed. <rdar://116202544>
-    drawingArea->attachViewOverlayGraphicsLayer(page->mainWebFrame().frameID(), graphicsLayer);
+    if (page->mainWebFrame().coreLocalFrame())
+        drawingArea->attachViewOverlayGraphicsLayer(page->mainWebFrame().frameID(), graphicsLayer);
 }
 
 void WebChromeClient::setNeedsOneShotDrawingSynchronization()
@@ -1189,22 +1188,31 @@ RefPtr<WebCore::ScrollingCoordinator> WebChromeClient::createScrollingCoordinato
 #endif
 
 #if PLATFORM(MAC)
-std::unique_ptr<ScrollbarsController> WebChromeClient::createScrollbarsController(Page& corePage, ScrollableArea& area) const
+void WebChromeClient::ensureScrollbarsController(Page& corePage, ScrollableArea& area) const
 {
     auto page = protectedPage();
     ASSERT(page->corePage() == &corePage);
-    
-    if (area.mockScrollbarsControllerEnabled())
-        return nullptr;
+    auto* currentScrollbarsController = area.existingScrollbarsController();
+    if (area.mockScrollbarsControllerEnabled()) {
+        ASSERT(!currentScrollbarsController || is<ScrollbarsControllerMock>(currentScrollbarsController));
+        return;
+    }
     
     switch (page->drawingArea()->type()) {
-    case DrawingAreaType::RemoteLayerTree:
-        return makeUnique<RemoteScrollbarsController>(area, corePage.scrollingCoordinator());
-    default:
-        return nullptr;
+    case DrawingAreaType::RemoteLayerTree: {
+        if (!area.usesCompositedScrolling() && (!currentScrollbarsController || is<RemoteScrollbarsController>(currentScrollbarsController)))
+            area.setScrollbarsController(ScrollbarsController::create(area));
+        else if (area.usesCompositedScrolling() && (!currentScrollbarsController || !is<RemoteScrollbarsController>(currentScrollbarsController)))
+            area.setScrollbarsController(makeUnique<RemoteScrollbarsController>(area, corePage.scrollingCoordinator()));
+        return;
     }
-    return nullptr;
+    default: {
+        if (!currentScrollbarsController)
+            area.setScrollbarsController(ScrollbarsController::create(area));
+    }
+    }
 }
+
 #endif
 
 
@@ -1260,9 +1268,9 @@ void WebChromeClient::clearPlaybackControlsManager()
     protectedPage()->playbackSessionManager().clearPlaybackControlsManager();
 }
 
-void WebChromeClient::playbackControlsMediaEngineChanged()
+void WebChromeClient::mediaEngineChanged(WebCore::HTMLMediaElement& mediaElement)
 {
-    protectedPage()->playbackSessionManager().mediaEngineChanged();
+    protectedPage()->playbackSessionManager().mediaEngineChanged(mediaElement);
 }
 
 #endif
@@ -1291,6 +1299,16 @@ void WebChromeClient::exitVideoFullscreenToModeWithoutAnimation(HTMLVideoElement
     protectedPage()->videoPresentationManager().exitVideoFullscreenToModeWithoutAnimation(videoElement, targetMode);
 }
 
+void WebChromeClient::setVideoFullscreenMode(HTMLVideoElement& videoElement, HTMLMediaElementEnums::VideoFullscreenMode mode)
+{
+    protectedPage()->videoPresentationManager().setVideoFullscreenMode(videoElement, mode);
+}
+
+void WebChromeClient::clearVideoFullscreenMode(HTMLVideoElement& videoElement, HTMLMediaElementEnums::VideoFullscreenMode mode)
+{
+    protectedPage()->videoPresentationManager().clearVideoFullscreenMode(videoElement, mode);
+}
+
 #endif
 
 #if ENABLE(FULLSCREEN_API)
@@ -1300,14 +1318,29 @@ bool WebChromeClient::supportsFullScreenForElement(const Element&, bool withKeyb
     return protectedPage()->fullScreenManager()->supportsFullScreen(withKeyboard);
 }
 
-void WebChromeClient::enterFullScreenForElement(Element& element)
+void WebChromeClient::enterFullScreenForElement(Element& element, HTMLMediaElementEnums::VideoFullscreenMode mode)
 {
-    protectedPage()->fullScreenManager()->enterFullScreenForElement(&element);
+    protectedPage()->fullScreenManager()->enterFullScreenForElement(&element, mode);
+#if ENABLE(VIDEO_PRESENTATION_MODE)
+    if (RefPtr videoElement = dynamicDowncast<HTMLVideoElement>(&element); videoElement && mode == HTMLMediaElementEnums::VideoFullscreenModeInWindow)
+        setVideoFullscreenMode(*videoElement, mode);
+#endif
 }
 
 void WebChromeClient::exitFullScreenForElement(Element* element)
 {
+#if ENABLE(VIDEO_PRESENTATION_MODE)
+    bool exitingInWindowFullscreen = false;
+    if (element) {
+        if (RefPtr videoElement = dynamicDowncast<HTMLVideoElement>(*element))
+            exitingInWindowFullscreen = videoElement->fullscreenMode() == HTMLMediaElementEnums::VideoFullscreenModeInWindow;
+    }
+#endif
     protectedPage()->fullScreenManager()->exitFullScreenForElement(element);
+#if ENABLE(VIDEO_PRESENTATION_MODE)
+    if (exitingInWindowFullscreen)
+        clearVideoFullscreenMode(*dynamicDowncast<HTMLVideoElement>(*element), HTMLMediaElementEnums::VideoFullscreenModeInWindow);
+#endif
 }
 
 #endif
@@ -1327,6 +1360,11 @@ FloatSize WebChromeClient::availableScreenSize() const
 FloatSize WebChromeClient::overrideScreenSize() const
 {
     return protectedPage()->overrideScreenSize();
+}
+
+FloatSize WebChromeClient::overrideAvailableScreenSize() const
+{
+    return protectedPage()->overrideAvailableScreenSize();
 }
 
 #endif
@@ -1467,42 +1505,6 @@ void WebChromeClient::handleAutoplayEvent(AutoplayEvent event, OptionSet<Autopla
     protectedPage()->send(Messages::WebPageProxy::HandleAutoplayEvent(event, flags));
 }
 
-#if ENABLE(WEB_CRYPTO)
-
-bool WebChromeClient::wrapCryptoKey(const Vector<uint8_t>& key, Vector<uint8_t>& wrappedKey) const
-{
-    auto sendResult = WebProcess::singleton().parentProcessConnection()->sendSync(Messages::WebPageProxy::WrapCryptoKey(key), page().identifier());
-    if (!sendResult.succeeded())
-        return false;
-
-    bool succeeded;
-    std::tie(succeeded, wrappedKey) = sendResult.takeReply();
-    return succeeded;
-}
-
-bool WebChromeClient::unwrapCryptoKey(const Vector<uint8_t>& wrappedKey, Vector<uint8_t>& key) const
-{
-    auto sendResult = WebProcess::singleton().parentProcessConnection()->sendSync(Messages::WebPageProxy::UnwrapCryptoKey(wrappedKey), page().identifier());
-    if (!sendResult.succeeded())
-        return false;
-
-    bool succeeded;
-    std::tie(succeeded, key) = sendResult.takeReply();
-    return succeeded;
-}
-
-#endif
-
-#if ENABLE(APP_HIGHLIGHTS)
-void WebChromeClient::storeAppHighlight(WebCore::AppHighlight&& highlight) const
-{
-    auto page = protectedPage();
-    highlight.isNewGroup = page->highlightIsNewGroup();
-    highlight.requestOriginatedInApp = page->highlightRequestOriginatedInApp();
-    page->send(Messages::WebPageProxy::StoreAppHighlight(highlight));
-}
-#endif
-
 void WebChromeClient::setTextIndicator(const WebCore::TextIndicatorData& indicatorData) const
 {
     protectedPage()->setTextIndicator(indicatorData);
@@ -1637,7 +1639,7 @@ void WebChromeClient::imageOrMediaDocumentSizeChanged(const IntSize& newSize)
 
 void WebChromeClient::didInvalidateDocumentMarkerRects()
 {
-    protectedPage()->findController().didInvalidateDocumentMarkerRects();
+    protectedPage()->findController().didInvalidateFindRects();
 }
 
 void WebChromeClient::hasStorageAccess(RegistrableDomain&& subFrameDomain, RegistrableDomain&& topFrameDomain, LocalFrame& frame, CompletionHandler<void(bool)>&& completionHandler)
@@ -1698,6 +1700,23 @@ void WebChromeClient::setMockWebAuthenticationConfiguration(const MockWebAuthent
 }
 #endif
 
+#if PLATFORM(PLAYSTATION)
+void WebChromeClient::postAccessibilityNotification(WebCore::AccessibilityObject&, WebCore::AXObjectCache::AXNotification)
+{
+    notImplemented();
+}
+
+void WebChromeClient::postAccessibilityNodeTextChangeNotification(WebCore::AccessibilityObject*, WebCore::AXTextChange, unsigned, const String&)
+{
+    notImplemented();
+}
+
+void WebChromeClient::postAccessibilityFrameLoadingEventNotification(WebCore::AccessibilityObject*, WebCore::AXObjectCache::AXLoadingEvent)
+{
+    notImplemented();
+}
+#endif
+
 void WebChromeClient::animationDidFinishForElement(const Element& element)
 {
     protectedPage()->animationDidFinishForElement(element);
@@ -1729,11 +1748,25 @@ URL WebChromeClient::allowedQueryParametersForAdvancedPrivacyProtections(const U
     return protectedPage()->allowedQueryParametersForAdvancedPrivacyProtections(url);
 }
 
+void WebChromeClient::didAddOrRemoveViewportConstrainedObjects()
+{
+    protectedPage()->didAddOrRemoveViewportConstrainedObjects();
+}
+
 #if ENABLE(TEXT_AUTOSIZING)
 
 void WebChromeClient::textAutosizingUsesIdempotentModeChanged()
 {
     protectedPage()->textAutosizingUsesIdempotentModeChanged();
+}
+
+#endif
+
+#if ENABLE(META_VIEWPORT)
+
+double WebChromeClient::baseViewportLayoutSizeScaleFactor() const
+{
+    return protectedPage()->baseViewportLayoutSizeScaleFactor();
 }
 
 #endif
@@ -1802,6 +1835,71 @@ bool WebChromeClient::isInStableState() const
     // FIXME (255877): Implement this client hook on macOS.
     return true;
 #endif
+}
+
+void WebChromeClient::didAdjustVisibilityWithSelectors(Vector<String>&& selectors)
+{
+    return protectedPage()->didAdjustVisibilityWithSelectors(WTFMove(selectors));
+}
+
+#if ENABLE(GAMEPAD)
+void WebChromeClient::gamepadsRecentlyAccessed()
+{
+    protectedPage()->gamepadsRecentlyAccessed();
+}
+#endif
+
+#if ENABLE(WRITING_TOOLS)
+
+void WebChromeClient::proofreadingSessionShowDetailsForSuggestionWithIDRelativeToRect(const WebCore::WritingTools::Session::ID& sessionID, const WebCore::WritingTools::TextSuggestion::ID& replacementID, WebCore::IntRect selectionBoundsInRootView)
+{
+    protectedPage()->proofreadingSessionShowDetailsForSuggestionWithIDRelativeToRect(sessionID, replacementID, selectionBoundsInRootView);
+}
+
+void WebChromeClient::proofreadingSessionUpdateStateForSuggestionWithID(const WritingTools::Session::ID& sessionID, WritingTools::TextSuggestion::State state, const WritingTools::TextSuggestion::ID& replacementID)
+{
+    protectedPage()->proofreadingSessionUpdateStateForSuggestionWithID(sessionID, state, replacementID);
+}
+
+#endif
+
+#if ENABLE(WRITING_TOOLS_UI)
+
+void WebChromeClient::removeTextAnimationForAnimationID(const WTF::UUID& animationID)
+{
+    protectedPage()->removeTextAnimationForAnimationID(animationID);
+}
+
+void WebChromeClient::removeTransparentMarkersForSessionID(const WritingTools::Session::ID& sessionID)
+{
+    protectedPage()->removeTransparentMarkersForSessionID(sessionID);
+}
+
+void WebChromeClient::removeInitialTextAnimation(const WritingTools::Session::ID& sessionID)
+{
+    protectedPage()->removeInitialTextAnimation(sessionID);
+}
+
+void WebChromeClient::addInitialTextAnimation(const WritingTools::Session::ID& sessionID)
+{
+    protectedPage()->addInitialTextAnimation(sessionID);
+}
+
+void WebChromeClient::addSourceTextAnimation(const WritingTools::Session::ID& sessionID, const CharacterRange& range)
+{
+    protectedPage()->addSourceTextAnimation(sessionID, range);
+}
+
+void WebChromeClient::addDestinationTextAnimation(const WritingTools::Session::ID& sessionID, const CharacterRange& range)
+{
+    protectedPage()->addDestinationTextAnimation(sessionID, range);
+}
+
+#endif
+
+void WebChromeClient::hasActiveNowPlayingSessionChanged(bool hasActiveNowPlayingSession)
+{
+    protectedPage()->hasActiveNowPlayingSessionChanged(hasActiveNowPlayingSession);
 }
 
 } // namespace WebKit

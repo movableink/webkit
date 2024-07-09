@@ -433,11 +433,6 @@ void TestRunnerQt::setAllowFileAccessFromFileURLs(bool enabled)
     m_drt->webPage()->settings()->setAttribute(QWebSettings::LocalContentCanAccessFileUrls, enabled);
 }
 
-void TestRunnerQt::setAppCacheMaximumSize(unsigned long long quota)
-{
-    m_drt->webPage()->settings()->setOfflineWebApplicationCacheQuota(quota);
-}
-
 void TestRunnerQt::setValueForUser(const QWebElement& element, const QString& value)
 {
     DumpRenderTreeSupportQt::setValueForUser(element, value);
@@ -487,11 +482,6 @@ void TestRunnerQt::setXSSAuditorEnabled(bool enable)
     QWebSettings* globalSettings = QWebSettings::globalSettings();
     globalSettings->setAttribute(QWebSettings::XSSAuditingEnabled, enable);
     m_drt->webPage()->settings()->setAttribute(QWebSettings::XSSAuditingEnabled, enable);
-}
-
-void TestRunnerQt::clearAllApplicationCaches()
-{
-    DumpRenderTreeSupportQt::clearAllApplicationCaches();
 }
 
 void TestRunnerQt::setApplicationCacheOriginQuota(unsigned long long quota)
@@ -819,10 +809,6 @@ void TestRunner::addOriginAccessAllowListEntry(JSStringRef sourceOrigin, JSStrin
 {
 }
 
-void TestRunner::clearAllApplicationCaches()
-{
-}
-
 void TestRunner::setTextDirection(JSStringRef directionName)
 {
     QWebPage* webPage = DumpRenderTree::instance()->webPage();
@@ -1085,10 +1071,6 @@ void TestRunner::setDefersLoading(bool flag)
 }
 
 void TestRunner::setCacheModel(int)
-{
-}
-
-void TestRunner::setAppCacheMaximumSize(unsigned long long quota)
 {
 }
 

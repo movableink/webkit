@@ -66,8 +66,6 @@
 #import "WAKWindow.h"
 #import "WKGraphics.h"
 #import "WebCoreThread.h"
-#else
-#import "ThemeMac.h"
 #endif
 
 #import <pal/cocoa/AVFoundationSoftLink.h>
@@ -312,7 +310,7 @@ void PlatformCALayerCocoa::commonInit()
         m_customSublayers = makeUnique<PlatformCALayerList>(tileController->containerLayers());
     }
 
-    if (m_owner && m_owner->platformCALayerUseCSS3DTransformInteroperability() && [m_layer respondsToSelector:@selector(setUsesWebKitBehavior:)]) {
+    if ([m_layer respondsToSelector:@selector(setUsesWebKitBehavior:)]) {
         [m_layer setUsesWebKitBehavior:YES];
         if (m_layerType == PlatformCALayer::LayerType::LayerTypeTransformLayer) {
             [m_layer setSortsSublayers:YES];
@@ -358,6 +356,7 @@ Ref<PlatformCALayer> PlatformCALayerCocoa::clone(PlatformCALayerClient* owner) c
     newLayer->setBackgroundColor(backgroundColor());
     newLayer->setContentsScale(contentsScale());
     newLayer->setCornerRadius(cornerRadius());
+    newLayer->setBackdropRootIsOpaque(backdropRootIsOpaque());
     newLayer->copyFiltersFrom(*this);
     newLayer->updateCustomAppearance(customAppearance());
 
@@ -423,6 +422,14 @@ void PlatformCALayerCocoa::setNeedsDisplayInRect(const FloatRect& dirtyRect)
     BEGIN_BLOCK_OBJC_EXCEPTIONS
     [m_layer setNeedsDisplayInRect:dirtyRect];
     END_BLOCK_OBJC_EXCEPTIONS
+}
+
+bool PlatformCALayerCocoa::needsDisplay() const
+{
+    if (!m_backingStoreAttached)
+        return false;
+
+    return [m_layer needsDisplay];
 }
 
 void PlatformCALayerCocoa::copyContentsFromLayer(PlatformCALayer* layer)
@@ -648,6 +655,16 @@ void PlatformCALayerCocoa::setIsBackdropRoot(bool isBackdropRoot)
     END_BLOCK_OBJC_EXCEPTIONS
 }
 
+bool PlatformCALayerCocoa::backdropRootIsOpaque() const
+{
+    return m_backdropRootIsOpaque;
+}
+
+void PlatformCALayerCocoa::setBackdropRootIsOpaque(bool backdropRootIsOpaque)
+{
+    m_backdropRootIsOpaque = backdropRootIsOpaque;
+}
+
 bool PlatformCALayerCocoa::isHidden() const
 {
     return [m_layer isHidden];
@@ -869,7 +886,7 @@ void PlatformCALayerCocoa::setOpacity(float value)
 
 void PlatformCALayerCocoa::setFilters(const FilterOperations& filters)
 {
-    PlatformCAFilters::setFiltersOnLayer(platformLayer(), filters);
+    PlatformCAFilters::setFiltersOnLayer(platformLayer(), filters, m_backdropRootIsOpaque);
 }
 
 void PlatformCALayerCocoa::copyFiltersFrom(const PlatformCALayer& sourceLayer)
@@ -903,12 +920,10 @@ bool PlatformCALayerCocoa::filtersCanBeComposited(const FilterOperations& filter
     return true;
 }
 
-#if ENABLE(CSS_COMPOSITING)
 void PlatformCALayerCocoa::setBlendMode(BlendMode blendMode)
 {
     PlatformCAFilters::setBlendingFiltersOnLayer(platformLayer(), blendMode);
 }
-#endif
 
 void PlatformCALayerCocoa::setName(const String& value)
 {
@@ -1242,11 +1257,6 @@ void PlatformCALayer::drawLayerContents(GraphicsContext& graphicsContext, WebCor
         }
 
         {
-#if PLATFORM(MAC)
-            // It's important to get the clip from the context, because it may be significantly
-            // smaller than the layer bounds (e.g. tiled layers)
-            ThemeMac::setFocusRingClipRect(graphicsContext.clipBounds());
-#endif
             if (dirtyRects.size() == 1)
                 layerContents->platformCALayerPaintContents(platformCALayer, graphicsContext, dirtyRects[0], layerPaintBehavior);
             else {
@@ -1256,10 +1266,6 @@ void PlatformCALayer::drawLayerContents(GraphicsContext& graphicsContext, WebCor
                     layerContents->platformCALayerPaintContents(platformCALayer, graphicsContext, rect, layerPaintBehavior);
                 }
             }
-
-#if PLATFORM(MAC)
-            ThemeMac::setFocusRingClipRect(FloatRect());
-#endif
         }
     }
 

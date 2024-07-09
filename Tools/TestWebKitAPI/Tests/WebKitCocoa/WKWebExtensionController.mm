@@ -186,6 +186,7 @@ TEST(WKWebExtensionController, BackgroundPageLoading)
 
     EXPECT_NS_EQUAL(testExtension.errors, @[ ]);
 
+    [_WKWebExtensionMatchPattern registerCustomURLScheme:@"test-extension"];
     testContext.baseURL = [NSURL URLWithString:@"test-extension://aaabbbcccddd"];
 
     EXPECT_TRUE([testController loadExtensionContext:testContext error:&error]);
@@ -250,6 +251,233 @@ TEST(WKWebExtensionController, BackgroundPageWithModulesLoading)
     EXPECT_NS_EQUAL(testExtension.errors, @[ ]);
 }
 
+TEST(WKWebExtensionController, BackgroundWithServiceWorkerPreferredEnvironment)
+{
+    auto *manifest = @{
+        @"manifest_version": @3,
+
+        @"name": @"Test",
+        @"description": @"Test",
+        @"version": @"1.0",
+
+        @"background": @{
+            @"preferred_environment": @[ @"service_worker", @"document" ],
+            @"service_worker": @"service_worker.js",
+            @"scripts": @[ @"background.js" ],
+            @"page": @"background.html"
+        }
+    };
+
+    auto *serviceWorkerScript = Util::constructScript(@[
+        @"browser.test.assertTrue('ServiceWorkerGlobalScope' in self && self instanceof ServiceWorkerGlobalScope, 'Global scope should be ServiceWorkerGlobalScope');",
+
+        @"browser.test.notifyPass()"
+    ]);
+
+    auto *backgroundScript = Util::constructScript(@[
+        @"browser.test.notifyFail('This background script should not be used')"
+    ]);
+
+    auto *resources = @{
+        @"service_worker.js": serviceWorkerScript,
+        @"background.js": backgroundScript,
+        @"background.html": @"<script src='background.js'></script>",
+    };
+
+    Util::loadAndRunExtension(manifest, resources);
+}
+
+TEST(WKWebExtensionController, BackgroundWithPageDocumentPreferredEnvironment)
+{
+    auto *manifest = @{
+        @"manifest_version": @3,
+
+        @"name": @"Test",
+        @"description": @"Test",
+        @"version": @"1.0",
+
+        @"background": @{
+            @"preferred_environment": @[ @"document", @"service_worker" ],
+            @"service_worker": @"service_worker.js",
+            @"scripts": @[ @"other-background.js" ],
+            @"page": @"background.html"
+        }
+    };
+
+    auto *serviceWorkerScript = Util::constructScript(@[
+        @"browser.test.notifyFail('Service worker should not be used')"
+    ]);
+
+    auto *notUsedbackgroundScript = Util::constructScript(@[
+        @"browser.test.notifyFail('This background script should not be used')"
+    ]);
+
+    auto *backgroundScript = Util::constructScript(@[
+        @"browser.test.assertTrue('Window' in self && self instanceof Window, 'Global scope should be Window')",
+
+        @"browser.test.notifyPass()"
+    ]);
+
+    auto *resources = @{
+        @"service_worker.js": serviceWorkerScript,
+        @"other-background.js": notUsedbackgroundScript,
+        @"background.js": backgroundScript,
+        @"background.html": @"<script src='background.js'></script>",
+    };
+
+    Util::loadAndRunExtension(manifest, resources);
+}
+
+TEST(WKWebExtensionController, BackgroundWithScriptsDocumentPreferredEnvironment)
+{
+    auto *manifest = @{
+        @"manifest_version": @3,
+
+        @"name": @"Test",
+        @"description": @"Test",
+        @"version": @"1.0",
+
+        @"background": @{
+            @"preferred_environment": @"document",
+            @"scripts": @[ @"background.js" ]
+        }
+    };
+
+    auto *serviceWorkerScript = Util::constructScript(@[
+        @"browser.test.notifyFail('Service worker should not be used')"
+    ]);
+
+    auto *backgroundScript = Util::constructScript(@[
+        @"browser.test.assertTrue('Window' in self && self instanceof Window, 'Global scope should be Window')",
+
+        @"browser.test.notifyPass()"
+    ]);
+
+    auto *resources = @{
+        @"service_worker.js": serviceWorkerScript,
+        @"background.js": backgroundScript,
+    };
+
+    Util::loadAndRunExtension(manifest, resources);
+}
+
+TEST(WKWebExtensionController, BackgroundWithMultipleDocumentModuleScripts)
+{
+    auto *manifest = @{
+        @"manifest_version": @3,
+
+        @"name": @"Test",
+        @"description": @"Test",
+        @"version": @"1.0",
+
+        @"background": @{
+            @"preferred_environment": @"document",
+            @"scripts": @[ @"module1.js", @"module2.js" ],
+            @"type": @"module"
+        }
+    };
+
+    auto *module1 = Util::constructScript(@[
+        @"self.testValue = 'Test value set in Module 1';"
+    ]);
+
+    auto *module2 = Util::constructScript(@[
+        @"import { valueFromModule3 } from './module3.js'",
+
+        @"browser.test.assertEq(self.testValue, 'Test value set in Module 1', 'Module 1 value should be accessible')",
+        @"browser.test.assertEq(valueFromModule3, 'Value from Module 3', 'Value from Module 3 should be accessible')",
+
+        @"browser.test.notifyPass();"
+    ]);
+
+    auto *module3 = Util::constructScript(@[
+        @"export const valueFromModule3 = 'Value from Module 3';"
+    ]);
+
+    auto *resources = @{
+        @"module1.js": module1,
+        @"module2.js": module2,
+        @"module3.js": module3,
+    };
+
+    Util::loadAndRunExtension(manifest, resources);
+}
+
+TEST(WKWebExtensionController, BackgroundWithMultipleServiceWorkerScripts)
+{
+    auto *manifest = @{
+        @"manifest_version": @3,
+
+        @"name": @"Test",
+        @"description": @"Test",
+        @"version": @"1.0",
+
+        @"background": @{
+            @"preferred_environment": @"service_worker",
+            @"scripts": @[ @"script1.js", @"script2.js" ]
+        }
+    };
+
+    auto *script1 = Util::constructScript(@[
+        @"self.testValue = 'Test value set in Script 1'"
+    ]);
+
+    auto *script2 = Util::constructScript(@[
+        @"browser.test.assertEq(self.testValue, 'Test value set in Script 1')",
+
+        @"browser.test.notifyPass()"
+    ]);
+
+    auto *resources = @{
+        @"script1.js": script1,
+        @"script2.js": script2,
+    };
+
+    Util::loadAndRunExtension(manifest, resources);
+}
+
+TEST(WKWebExtensionController, BackgroundWithMultipleServiceWorkerModuleScripts)
+{
+    auto *manifest = @{
+        @"manifest_version": @3,
+
+        @"name": @"Test",
+        @"description": @"Test",
+        @"version": @"1.0",
+
+        @"background": @{
+            @"preferred_environment": @"service_worker",
+            @"scripts": @[ @"module1.js", @"module2.js" ],
+            @"type": @"module"
+        }
+    };
+
+    auto *module1 = Util::constructScript(@[
+        @"self.testValue = 'Test value set in Module 1'"
+    ]);
+
+    auto *module2 = Util::constructScript(@[
+        @"import { valueFromModule3 } from './module3.js'",
+
+        @"browser.test.assertEq(self.testValue, 'Test value set in Module 1')",
+        @"browser.test.assertEq(valueFromModule3, 'Value from Module 3')",
+
+        @"browser.test.notifyPass()"
+    ]);
+
+    auto *module3 = Util::constructScript(@[
+        @"export const valueFromModule3 = 'Value from Module 3'"
+    ]);
+
+    auto *resources = @{
+        @"module1.js": module1,
+        @"module2.js": module2,
+        @"module3.js": module3,
+    };
+
+    Util::loadAndRunExtension(manifest, resources);
+}
+
 TEST(WKWebExtensionController, ContentScriptLoading)
 {
     TestWebKitAPI::HTTPServer server({
@@ -292,6 +520,98 @@ TEST(WKWebExtensionController, ContentScriptLoading)
     webView.get().navigationDelegate = navigationDelegate.get();
 
     [webView loadRequest:server.requestWithLocalhost()];
+
+    [manager loadAndRun];
+}
+
+TEST(WKWebExtensionController, CSSUserOrigin)
+{
+    TestWebKitAPI::HTTPServer server({
+        { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, "<body style='color: red'></body>"_s } },
+    }, TestWebKitAPI::HTTPServer::Protocol::Http);
+
+    auto *manifest = @{
+        @"manifest_version": @3,
+
+        @"name": @"Test",
+        @"description": @"Test",
+        @"version": @"1.0",
+
+        @"content_scripts": @[ @{
+            @"matches": @[ @"*://localhost/*" ],
+            @"css": @[ @"style.css" ],
+            @"js": @[ @"content.js" ],
+            @"css_origin": @"user"
+        } ]
+    };
+
+    auto *styleSheet = @"body { color: green !important }";
+
+    auto *contentScript = Util::constructScript(@[
+        @"let computedColor = window.getComputedStyle(document.body).color",
+        @"browser.test.assertEq(computedColor, 'rgb(0, 128, 0)', 'Color should be green')",
+
+        @"browser.test.notifyPass()",
+    ]);
+
+    auto resources = @{
+        @"style.css": styleSheet,
+        @"content.js": contentScript
+    };
+
+    auto extension = adoptNS([[_WKWebExtension alloc] _initWithManifestDictionary:manifest resources:resources]);
+    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+
+    auto *urlRequest = server.requestWithLocalhost();
+
+    [manager.get().context setPermissionStatus:_WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:urlRequest.URL];
+    [manager.get().defaultTab.mainWebView loadRequest:urlRequest];
+
+    [manager loadAndRun];
+}
+
+TEST(WKWebExtensionController, CSSAuthorOrigin)
+{
+    TestWebKitAPI::HTTPServer server({
+        { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, "<style> body { color: red } </style>"_s } },
+    }, TestWebKitAPI::HTTPServer::Protocol::Http);
+
+    auto *manifest = @{
+        @"manifest_version": @3,
+
+        @"name": @"Test",
+        @"description": @"Test",
+        @"version": @"1.0",
+
+        @"content_scripts": @[ @{
+            @"matches": @[ @"*://localhost/*" ],
+            @"css": @[ @"style.css" ],
+            @"js": @[ @"content.js" ],
+            @"css_origin": @"author"
+        } ]
+    };
+
+    auto *styleSheet = @"body { color: green !important }";
+
+    auto *contentScript = Util::constructScript(@[
+        @"let computedColor = getComputedStyle(document.body).color",
+        @"browser.test.assertEq(computedColor, 'rgb(0, 128, 0)', 'Color should be green')",
+
+        @"browser.test.notifyPass()",
+    ]);
+
+    auto resources = @{
+        @"style.css": styleSheet,
+        @"content.js": contentScript
+    };
+
+    auto extension = adoptNS([[_WKWebExtension alloc] _initWithManifestDictionary:manifest resources:resources]);
+    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+
+    auto *urlRequest = server.requestWithLocalhost();
+
+    [manager.get().context setPermissionStatus:_WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:urlRequest.URL];
+    [manager.get().defaultTab.mainWebView loadRequest:urlRequest];
 
     [manager loadAndRun];
 }

@@ -119,9 +119,7 @@ public:
     WEBCORE_EXPORT void setBackdropFiltersRect(const FloatRoundedRect&) override;
     WEBCORE_EXPORT void setIsBackdropRoot(bool) override;
 
-#if ENABLE(CSS_COMPOSITING)
     WEBCORE_EXPORT void setBlendMode(BlendMode) override;
-#endif
 
     WEBCORE_EXPORT void setNeedsDisplay() override;
     WEBCORE_EXPORT void setNeedsDisplayInRect(const FloatRect&, ShouldClipToLayer = ClipToLayer) override;
@@ -154,6 +152,7 @@ public:
 #endif
     WEBCORE_EXPORT void setContentsToPlatformLayer(PlatformLayer*, ContentsLayerPurpose) override;
     WEBCORE_EXPORT void setContentsToPlatformLayerHost(LayerHostingContextIdentifier) override;
+    WEBCORE_EXPORT void setContentsToRemotePlatformContext(LayerHostingContextIdentifier, ContentsLayerPurpose) override;
     WEBCORE_EXPORT void setContentsToVideoElement(HTMLVideoElement&, ContentsLayerPurpose) override;
     WEBCORE_EXPORT void setContentsDisplayDelegate(RefPtr<GraphicsLayerContentsDisplayDelegate>&&, ContentsLayerPurpose) override;
     WEBCORE_EXPORT PlatformLayerIdentifier setContentsToAsyncDisplayDelegate(RefPtr<GraphicsLayerContentsDisplayDelegate>, ContentsLayerPurpose);
@@ -189,6 +188,7 @@ public:
         bool ancestorHasTransformAnimation { false };
         bool ancestorStartedOrEndedTransformAnimation { false };
         bool ancestorWithTransformAnimationIntersectsCoverageRect { false };
+        bool backdropRootIsOpaque { false };
     };
     bool needsCommit(const CommitState&);
     void recursiveCommitChanges(CommitState&, const TransformState&, float pageScaleFactor = 1, const FloatPoint& positionRelativeToBase = FloatPoint(), bool affectedByPageScale = false);
@@ -206,14 +206,19 @@ public:
 
     WEBCORE_EXPORT RefPtr<GraphicsLayerAsyncContentsDisplayDelegate> createAsyncContentsDisplayDelegate(GraphicsLayerAsyncContentsDisplayDelegate*) override;
 
+    WEBCORE_EXPORT void markFrontBufferVolatileForTesting() override;
 #if ENABLE(THREADED_ANIMATION_RESOLUTION)
     WEBCORE_EXPORT void setAcceleratedEffectsAndBaseValues(AcceleratedEffects&&, AcceleratedEffectValues&&) override;
 #endif
+
+    WEBCORE_EXPORT void purgeFrontBufferForTesting() override;
+    WEBCORE_EXPORT void purgeBackBufferForTesting() override;
 
 private:
     bool isGraphicsLayerCA() const override { return true; }
 
     // PlatformCALayerClient overrides
+    PlatformLayerIdentifier platformCALayerIdentifier() const override { return primaryLayerID(); }
     void platformCALayerLayoutSublayersOfLayer(PlatformCALayer*) override { }
     bool platformCALayerRespondsToLayoutChanges() const override { return false; }
     WEBCORE_EXPORT void platformCALayerCustomSublayersChanged(PlatformCALayer*) override;
@@ -229,6 +234,7 @@ private:
 
     bool platformCALayerContentsOpaque() const override { return contentsOpaque(); }
     bool platformCALayerDrawsContent() const override { return drawsContent(); }
+    bool platformCALayerRenderingIsSuppressedIncludingDescendants() const override { return renderingIsSuppressedIncludingDescendants(); }
     WEBCORE_EXPORT bool platformCALayerDelegatesDisplay(PlatformCALayer*) const override;
     WEBCORE_EXPORT void platformCALayerLayerDisplay(PlatformCALayer*) override;
     void platformCALayerLayerDidDisplay(PlatformCALayer* layer) override { return layerDidDisplay(layer); }
@@ -238,8 +244,9 @@ private:
     WEBCORE_EXPORT bool platformCALayerShouldAggressivelyRetainTiles(PlatformCALayer*) const override;
     WEBCORE_EXPORT bool platformCALayerShouldTemporarilyRetainTileCohorts(PlatformCALayer*) const override;
     WEBCORE_EXPORT bool platformCALayerUseGiantTiles() const override;
-    WEBCORE_EXPORT bool platformCALayerUseCSS3DTransformInteroperability() const override;
+    WEBCORE_EXPORT bool platformCALayerCSSUnprefixedBackdropFilterEnabled() const override;
     WEBCORE_EXPORT void platformCALayerLogFilledVisibleFreshTile(unsigned) override;
+    WEBCORE_EXPORT bool platformCALayerNeedsPlatformContext(const PlatformCALayer*) const override;
     bool platformCALayerContainsBitmapOnly(const PlatformCALayer*) const override { return client().layerContainsBitmapOnly(this); }
     bool platformCALayerShouldPaintUsingCompositeCopy() const override { return shouldPaintUsingCompositeCopy(); }
 
@@ -269,6 +276,7 @@ private:
 
     virtual Ref<PlatformCALayer> createPlatformCALayer(PlatformCALayer::LayerType, PlatformCALayerClient* owner);
     virtual Ref<PlatformCALayer> createPlatformCALayer(PlatformLayer*, PlatformCALayerClient* owner);
+    virtual Ref<PlatformCALayer> createPlatformCALayer(LayerHostingContextIdentifier, PlatformCALayerClient*);
 #if ENABLE(MODEL_ELEMENT)
     virtual Ref<PlatformCALayer> createPlatformCALayer(Ref<WebCore::Model>, PlatformCALayerClient* owner);
 #endif
@@ -337,7 +345,7 @@ private:
 
     WEBCORE_EXPORT void dumpAdditionalProperties(WTF::TextStream&, OptionSet<LayerTreeAsTextOptions>) const override;
     void dumpInnerLayer(WTF::TextStream&, PlatformCALayer*, OptionSet<PlatformLayerTreeAsTextFlags>) const;
-    const char *purposeNameForInnerLayer(PlatformCALayer&) const;
+    ASCIILiteral purposeNameForInnerLayer(PlatformCALayer&) const;
 
     void computePixelAlignment(float contentsScale, const FloatPoint& positionRelativeToBase,
         FloatPoint& position, FloatPoint3D& anchorPoint, FloatSize& alignmentOffset) const;
@@ -480,9 +488,7 @@ private:
     void updateBackdropFiltersRect();
     void updateBackdropRoot();
 
-#if ENABLE(CSS_COMPOSITING)
     void updateBlendMode();
-#endif
 
     void updateVideoGravity();
     void updateShape();
@@ -540,7 +546,7 @@ private:
     bool removeCAAnimationFromLayer(LayerPropertyAnimation&);
     void pauseCAAnimationOnLayer(LayerPropertyAnimation&);
 
-    static void dumpAnimations(WTF::TextStream&, const char* category, const Vector<LayerPropertyAnimation>&);
+    static void dumpAnimations(WTF::TextStream&, ASCIILiteral category, const Vector<LayerPropertyAnimation>&);
 
     enum MoveOrCopy { Move, Copy };
     static void moveOrCopyLayerAnimation(MoveOrCopy, const String& animationIdentifier, std::optional<Seconds> beginTime, PlatformCALayer *fromLayer, PlatformCALayer *toLayer);
@@ -556,7 +562,7 @@ private:
     }
 
     bool appendToUncommittedAnimations(const KeyframeValueList&, const TransformOperation::Type, const Animation*, const String& animationName, const FloatSize& boxSize, unsigned animationIndex, Seconds timeOffset, bool isMatrixAnimation, bool keyframesShouldUseAnimationWideTimingFunction);
-    bool appendToUncommittedAnimations(const KeyframeValueList&, const FilterOperation*, const Animation*, const String& animationName, int animationIndex, Seconds timeOffset, bool keyframesShouldUseAnimationWideTimingFunction);
+    bool appendToUncommittedAnimations(const KeyframeValueList&, const FilterOperation&, const Animation*, const String& animationName, int animationIndex, Seconds timeOffset, bool keyframesShouldUseAnimationWideTimingFunction);
 
     enum LayerChange : uint64_t {
         NoChange                                = 0,
@@ -612,7 +618,7 @@ private:
         BackdropRootChanged                     = 1LLU << 45,
     };
     typedef uint64_t LayerChangeFlags;
-    static const char* layerChangeAsString(LayerChange);
+    static ASCIILiteral layerChangeAsString(LayerChange);
     static void dumpLayerChangeFlags(TextStream&, LayerChangeFlags);
     void addUncommittedChanges(LayerChangeFlags);
     bool hasDescendantsWithUncommittedChanges() const { return m_hasDescendantsWithUncommittedChanges; }

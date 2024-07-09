@@ -35,7 +35,7 @@
 
     - Tests will be imported into a directory tree that mirrors WPT repository in LayoutTests/imported/w3c/web-platform-tests.
 
-    - By default, only reftests and jstest are imported. This can be overridden with a -a or --all
+    - By default, only manual, reftests, jstest and crash tests are imported. This can be overridden with a -a or --all
       argument
 
     - Also by default, if test files by the same name already exist in the destination directory,
@@ -79,6 +79,7 @@ except ImportError:
 
 from webkitpy.common.host import Host
 from webkitpy.common.system.filesystem import FileSystem
+from webkitpy.common.system.executive import ScriptError
 from webkitpy.common.webkit_finder import WebKitFinder
 from webkitpy.port.factory import PortFactory
 from webkitpy.layout_tests.controllers.layout_test_finder_legacy import LayoutTestFinder
@@ -86,8 +87,6 @@ from webkitpy.w3c.common import TEMPLATED_TEST_HEADER, WPT_GH_URL, WPTPaths
 from webkitpy.w3c.test_parser import TestParser
 from webkitpy.w3c.test_converter import convert_for_webkit
 from webkitpy.w3c.test_downloader import TestDownloader
-
-CHANGESET_NOT_AVAILABLE = 'Not Available'
 
 _log = logging.getLogger(__name__)
 
@@ -123,37 +122,43 @@ def configure_logging():
 # FIXME: We should decide whether we want to make this specific to web-platform-tests or to make it generic to any git repository containing tests.
 def parse_args(args):
     description = """
-To import a web-platform-tests test suite named xyz, use: 'import-w3c-tests web-platform-tests/xyz'.
-To import a web-platform-tests suite from a specific folder, use 'import-w3c-tests xyz -s my-folder-containing-web-platform-tests-folder'"""
+To import a web-platform-tests test suite named xyz, use:
+    import-w3c-tests --tip-of-tree web-platform-tests/xyz
+
+To import a web-platform-tests suite from a local copy of web platform tests:
+   1. Your local WPT copy must be in a directory called "web-platform-tests".
+   2. If the local copy is at, for example, "~/dev/web-platform-tests/", use:
+      import-w3c-tests web-platform-tests/xyz --src-dir ~/dev/ --clean-dest-dir"""
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawDescriptionHelpFormatter)
 
     parser.add_argument('-n', '--no-overwrite', dest='overwrite', action='store_false', default=True,
-        help='Flag to prevent duplicate test files from overwriting existing tests. By default, they will be overwritten')
+                        help='Flag to prevent duplicate test files from overwriting existing tests. By default, they will be overwritten')
 
     parser.add_argument('-t', '--tip-of-tree', dest='use_tip_of_tree', action='store_true', default=False,
-        help='Import all tests using the latest repository revision')
+                        help='Import all tests using the latest repository revision')
 
     parser.add_argument('-a', '--all', action='store_true', default=False,
-        help='Import all tests including reftests, JS tests, and manual/pixel tests. By default, only reftests and JS tests are imported')
+                        help='Import all tests. By default, only manual, reftests, JS and crash tests are imported.')
+
     fs = FileSystem()
     parser.add_argument('-d', '--dest-dir', dest='destination', default=fs.join('imported', 'w3c'),
-        help='Import into a specified directory relative to the LayoutTests root. By default, imports into imported/w3c')
+                        help='Import into a specified directory relative to the LayoutTests root. By default, imports into imported/w3c')
 
     parser.add_argument('-s', '--src-dir', dest='source', default=None,
-        help='Import from a specific folder which contains web-platform-tests folder. If not provided, the script will clone the necessary repositories.')
+                        help='Import from a specific folder which contains web-platform-tests folder. If not provided, the script will clone the necessary repositories.')
 
     parser.add_argument('-v', '--verbose', action='store_true', default=False,
-         help='Print maximal log')
+                        help='Print maximal log')
     parser.add_argument('--no-fetch', action='store_false', dest='fetch', default=True,
-         help='Do not fetch the repositories. By default, repositories are fetched if a source directory is not provided')
+                        help='Do not fetch the repositories. By default, repositories are fetched if a source directory is not provided')
     parser.add_argument('--import-all', action='store_true', default=False,
-         help='Ignore the import-expectations.json file. All tests will be imported. This option only applies when tests are downloaded from W3C repository')
+                        help='Ignore the import-expectations.json file. All tests will be imported. This option only applies when tests are downloaded from W3C repository')
 
     parser.add_argument('--clean-dest-dir', action='store_true', dest='clean_destination_directory', default=False,
-        help='Clean destination directory. All files in the destination directory will be deleted except for WebKit specific files (test expectations, .gitignore...) before new tests import. Dangling test expectations (expectation file that is no longer related to a test) are removed after tests import.')
+                        help='Clean destination directory. All files in the destination directory will be deleted except for WebKit specific files (test expectations, .gitignore...) before new tests import. Dangling test expectations (expectation file that is no longer related to a test) are removed after tests import.')
 
     parser.add_argument('test_paths', metavar='web-platform-tests/test_path', nargs='*',
-        help='directories to import')
+                        help='directories to import')
 
     args = parser.parse_args(args)
     return args, args.test_paths
@@ -205,7 +210,14 @@ class TestImporter(object):
         }
 
     def do_import(self):
-        if not self.source_directory:
+        if self.source_directory:
+            source_path = str(Path(self.source_directory) / 'web-platform-tests')
+            try:
+                git = self.test_downloader().git(source_path)
+                self.upstream_revision = git.rev_parse('HEAD')
+            except (OSError, ScriptError):
+                pass
+        else:
             _log.info('Downloading W3C test repositories')
             self.filesystem.maybe_make_directory(self.tests_download_path)
             self.test_downloader().download_tests(self.options.use_tip_of_tree)
@@ -288,7 +300,9 @@ class TestImporter(object):
             if parent in paths_to_skip_new_directories:
                 if parent != rel_path:
                     to_skip = parent / rel_path.relative_to(parent).parts[0]
-                    if not to_skip.is_dir():
+                    full_to_skip = str(self.source_directory / to_skip)
+                    assert self.filesystem.exists(full_to_skip)
+                    if not self.filesystem.isdir(full_to_skip):
                         # Files directly under skip-new-directories _are_ imported.
                         assert rel_path == to_skip
                         return False
@@ -386,14 +400,12 @@ class TestImporter(object):
                 if 'slow' in test_info:
                     self._slow_tests.append(fullpath)
 
-                if 'referencefile' in test_info.keys():
-                    # Skip it since, the corresponding reference test should have a link to this file
-                    continue
-
                 if 'match_reference' in test_info.keys() or 'mismatch_reference' in test_info.keys():
                     reftests += 1
                     total_tests += 1
                     test_basename = self.filesystem.basename(test_info['test'])
+
+                    ref_files = []
 
                     # Add the ref file, following WebKit style.
                     # FIXME: Ideally we'd support reading the metadata
@@ -404,13 +416,15 @@ class TestImporter(object):
                         ref_file = self.filesystem.splitext(test_basename)[0] + '-expected'
                         ref_file += self.filesystem.splitext(test_info['match_reference'])[1]
                         copy_list.append({'src': test_info['match_reference'], 'dest': ref_file, 'reference_support_info': test_info['match_reference_support_info']})
+                        ref_files.append({'src': self.filesystem.split(test_info['match_reference'])[1], 'dest': self.filesystem.split(ref_file)[1]})
 
                     if 'mismatch_reference' in test_info.keys():
                         ref_file = self.filesystem.splitext(test_basename)[0] + '-expected-mismatch'
                         ref_file += self.filesystem.splitext(test_info['mismatch_reference'])[1]
                         copy_list.append({'src': test_info['mismatch_reference'], 'dest': ref_file, 'reference_support_info': test_info['mismatch_reference_support_info']})
+                        ref_files.append({'src': self.filesystem.split(test_info['mismatch_reference'])[1], 'dest': self.filesystem.split(ref_file)[1]})
 
-                    copy_list.append({'src': test_info['test'], 'dest': filename})
+                    copy_list.append({'src': test_info['test'], 'dest': filename, 'reference_file_renames': ref_files})
 
                 elif 'jstest' in test_info.keys():
                     jstests += 1
@@ -568,6 +582,11 @@ class TestImporter(object):
                 else:
                     reference_support_info = None
 
+                if 'reference_file_renames' in file_to_copy.keys() and file_to_copy['reference_file_renames'] != {}:
+                    reference_file_renames = file_to_copy['reference_file_renames']
+                else:
+                    reference_file_renames = []
+
                 if not(self.filesystem.exists(self.filesystem.dirname(new_filepath))):
                     self.filesystem.maybe_make_directory(self.filesystem.dirname(new_filepath))
 
@@ -587,7 +606,7 @@ class TestImporter(object):
                                         and ('html' in str(mimetype[0]) or 'xml' in str(mimetype[0])  or 'css' in str(mimetype[0]) or 'javascript' in str(mimetype[0])):
                     _log.info("Rewriting: %s" % new_filepath)
                     try:
-                        converted_file = convert_for_webkit(new_path, filename=orig_filepath, reference_support_info=reference_support_info, host=self.host, webkit_test_runner_options=self._webkit_test_runner_options(new_filepath))
+                        converted_file = convert_for_webkit(new_path, filename=orig_filepath, reference_support_info=reference_support_info, reference_file_renames=reference_file_renames, host=self.host, webkit_test_runner_options=self._webkit_test_runner_options(new_filepath))
                     except:
                         _log.warn('Failed converting %s', orig_filepath)
                         failed_conversion_files.append(orig_filepath)

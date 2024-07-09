@@ -109,6 +109,55 @@
             "name": "wpe-dev-debug",
             "displayName": "WPE Development Debug",
             "inherits": ["wpe-debug", "dev"]
+        },
+        {
+            "name": "qt",
+            "hidden": true,
+            "generator": "Ninja",
+            "cacheVariables": {
+                "PORT": {
+                    "type": "STRING",
+                    "value": "Qt"
+                },
+                "ENABLE_OPENGL": {
+                    "type": "BOOL",
+                    "value": "OFF"
+                },
+                "ENABLE_INSPECTOR_UI": {
+                    "type": "BOOL",
+                    "value": "ON"
+                },
+                "DEVELOPER_MODE_FATAL_WARNINGS": {
+                    "type": "BOOL",
+                    "value": "OFF"
+                },
+                "ENABLE_WEBKIT": {
+                    "type": "BOOL",
+                    "value": "OFF"
+                }
+            }
+        },
+        {
+            "name": "qt-release",
+            "displayName": "Qt Release",
+            "inherits": ["qt", "release"],
+            "binaryDir": "WebKitBuild/Qt/Release"
+        },
+        {
+            "name": "qt-debug",
+            "displayName": "Qt Debug",
+            "inherits": ["qt", "debug"],
+            "binaryDir": "WebKitBuild/Qt/Debug"
+        },
+        {
+            "name": "qt-dev-release",
+            "displayName": "Qt Development Release",
+            "inherits": ["qt-release", "dev"]
+        },
+        {
+            "name": "qt-dev-debug",
+            "displayName": "Qt Development Debug",
+            "inherits": ["qt-debug", "dev"]
         }
     ],
     "buildPresets": [
@@ -151,6 +200,26 @@
             "name": "wpe-dev-debug",
             "displayName": "WPE Development Debug",
             "configurePreset": "wpe-dev-debug"
+        },
+        {
+            "name": "qt-release",
+            "displayName": "Qt Release",
+            "configurePreset": "qt-release"
+        },
+        {
+            "name": "qt-debug",
+            "displayName": "Qt Debug",
+            "configurePreset": "qt-debug"
+        },
+        {
+            "name": "qt-dev-release",
+            "displayName": "Qt Development Release",
+            "configurePreset": "qt-dev-release"
+        },
+        {
+            "name": "qt-dev-debug",
+            "displayName": "Qt Development Debug",
+            "configurePreset": "qt-dev-debug"
         }
     ]
 }

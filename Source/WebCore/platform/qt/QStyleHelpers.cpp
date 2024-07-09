@@ -100,7 +100,7 @@ String getComputedStyleProperty(Element& element, StringView propertyName)
 
 String getComputedStyleProperty(Element& element, CSSPropertyID propID)
 {
-    return CSSComputedStyleDeclaration::create(element, true)->getPropertyValue(propID);
+    return CSSComputedStyleDeclaration::create(element, CSSComputedStyleDeclaration::AllowVisited::Yes)->getPropertyValue(propID);
 }
 
 void setInlineStyleProperty(Element& element, StringView propertyName, const String& value, bool important)

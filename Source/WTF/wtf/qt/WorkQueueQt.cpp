@@ -92,7 +92,7 @@ QSocketNotifier* WorkQueueBase::registerSocketEventHandler(int socketDescriptor,
     return notifier;
 }
 
-void WorkQueueBase::platformInitialize(const char*, Type, QOS)
+void WorkQueueBase::platformInitialize(ASCIILiteral, Type, QOS)
 {
     m_workThread = new QThread();
     m_workThread->start();
@@ -128,7 +128,7 @@ void WorkQueueBase::dispatchOnTermination(QProcess* process, WTF::Function<void(
 }
 
 WorkQueue::WorkQueue(MainTag)
-    : WorkQueueBase("main", Type::Serial, QOS::Default)
+    : WorkQueueBase("main"_s, Type::Serial, QOS::Default)
 {}
 
 }

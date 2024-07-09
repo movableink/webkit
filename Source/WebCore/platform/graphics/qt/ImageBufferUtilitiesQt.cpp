@@ -62,7 +62,7 @@ Vector<uint8_t> encodeData(const QImage& image, const String& mimeType, std::opt
     if (image.isNull() || !encodeImage(image, mimeType, quality, encodedImage))
         return { };
     size_t imageSize(encodedImage.size());
-    return { reinterpret_cast<const uint8_t*>(encodedImage.constData()), imageSize };
+    return std::span<const uint8_t> { reinterpret_cast<const uint8_t*>(encodedImage.constData()), imageSize };
 }
 
 } // namespace WebCore

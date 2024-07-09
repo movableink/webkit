@@ -26,6 +26,7 @@
 #import "config.h"
 #import "RemoteLayerWithRemoteRenderingBackingStore.h"
 
+#import "PlatformCALayerRemote.h"
 #import "RemoteImageBufferSetProxy.h"
 #import "RemoteLayerBackingStoreCollection.h"
 #import "RemoteLayerTreeContext.h"
@@ -49,6 +50,12 @@ RemoteLayerWithRemoteRenderingBackingStore::RemoteLayerWithRemoteRenderingBackin
     m_bufferSet = collection->layerTreeContext().ensureRemoteRenderingBackendProxy().createRemoteImageBufferSet();
 }
 
+RemoteLayerWithRemoteRenderingBackingStore::~RemoteLayerWithRemoteRenderingBackingStore()
+{
+    if (m_bufferSet)
+        m_bufferSet->close();
+}
+
 bool RemoteLayerWithRemoteRenderingBackingStore::hasFrontBuffer() const
 {
     return m_contentsBufferHandle || !m_cleared;
@@ -61,17 +68,22 @@ bool RemoteLayerWithRemoteRenderingBackingStore::frontBufferMayBeVolatile() cons
     return m_bufferSet->requestedVolatility().contains(BufferInSetType::Front);
 }
 
+void RemoteLayerWithRemoteRenderingBackingStore::prepareToDisplay()
+{
+    m_contentsBufferHandle = std::nullopt;
+}
+
 void RemoteLayerWithRemoteRenderingBackingStore::clearBackingStore()
 {
     m_contentsBufferHandle = std::nullopt;
     m_cleared = true;
 }
 
-Vector<std::unique_ptr<WebCore::ThreadSafeImageBufferFlusher>> RemoteLayerWithRemoteRenderingBackingStore::createFlushers()
+std::unique_ptr<ThreadSafeImageBufferSetFlusher> RemoteLayerWithRemoteRenderingBackingStore::createFlusher(ThreadSafeImageBufferSetFlusher::FlushType flushType)
 {
     if (!m_bufferSet)
         return { };
-    return Vector<std::unique_ptr<WebCore::ThreadSafeImageBufferFlusher>>::from(m_bufferSet->flushFrontBufferAsync());
+    return m_bufferSet->flushFrontBufferAsync(flushType);
 }
 
 void RemoteLayerWithRemoteRenderingBackingStore::createContextAndPaintContents()
@@ -81,7 +93,7 @@ void RemoteLayerWithRemoteRenderingBackingStore::createContextAndPaintContents()
         return;
 
     if (!bufferSet->hasContext()) {
-        ASSERT(m_layer->owner()->platformCALayerDelegatesDisplay(m_layer));
+        // The platform layer delegates display or bufferSet does not have a working connection to GPUP anymore.
         return;
     }
 
@@ -114,6 +126,13 @@ void RemoteLayerWithRemoteRenderingBackingStore::encodeBufferAndBackendInfos(IPC
     encodeBuffer(m_bufferCacheIdentifiers.front);
     encodeBuffer(m_bufferCacheIdentifiers.back);
     encodeBuffer(m_bufferCacheIdentifiers.secondaryBack);
+}
+
+std::optional<RemoteImageBufferSetIdentifier> RemoteLayerWithRemoteRenderingBackingStore::bufferSetIdentifier() const
+{
+    if (!m_bufferSet)
+        return std::nullopt;
+    return m_bufferSet->identifier();
 }
 
 #if ENABLE(RE_DYNAMIC_CONTENT_SCALING)

@@ -38,7 +38,6 @@
 #import <WebCore/HTMLCollection.h>
 #import <WebCore/HTMLNames.h>
 #import <WebCore/JSExecState.h>
-#import <WebCore/NameNodeList.h>
 #import <WebCore/NodeList.h>
 #import <WebCore/ScrollIntoViewOptions.h>
 #import <WebCore/StyleProperties.h>
@@ -282,7 +281,7 @@ DOMElement *kit(WebCore::Element* value)
 - (void)setAttribute:(NSString *)name value:(NSString *)value
 {
     WebCore::JSMainThreadNullState state;
-    raiseOnDOMError(unwrap(*self).setAttribute(name, value));
+    raiseOnDOMError(unwrap(*self).setAttribute(name, AtomString { value }));
 }
 
 - (void)removeAttribute:(NSString *)name
@@ -332,7 +331,7 @@ DOMElement *kit(WebCore::Element* value)
 - (void)setAttributeNS:(NSString *)namespaceURI qualifiedName:(NSString *)qualifiedName value:(NSString *)value
 {
     WebCore::JSMainThreadNullState state;
-    raiseOnDOMError(unwrap(*self).setAttributeNS(namespaceURI, qualifiedName, value));
+    raiseOnDOMError(unwrap(*self).setAttributeNS(namespaceURI, qualifiedName, AtomString { value }));
 }
 
 - (void)removeAttributeNS:(NSString *)namespaceURI localName:(NSString *)localName
@@ -399,18 +398,6 @@ DOMElement *kit(WebCore::Element* value)
 {
     WebCore::JSMainThreadNullState state;
     unwrap(*self).scrollIntoViewIfNeeded(centerIfNeeded);
-}
-
-- (void)scrollByLines:(int)lines
-{
-    WebCore::JSMainThreadNullState state;
-    unwrap(*self).scrollByLines(lines);
-}
-
-- (void)scrollByPages:(int)pages
-{
-    WebCore::JSMainThreadNullState state;
-    unwrap(*self).scrollByPages(pages);
 }
 
 - (DOMNodeList *)getElementsByClassName:(NSString *)name
@@ -509,6 +496,14 @@ DOMElement *kit(WebCore::Element* value)
 - (BOOL)hasAttributeNS:(NSString *)namespaceURI :(NSString *)localName
 {
     return [self hasAttributeNS:namespaceURI localName:localName];
+}
+
+- (void)scrollByLines:(int)lines
+{
+}
+
+- (void)scrollByPages:(int)pages
+{
 }
 
 @end

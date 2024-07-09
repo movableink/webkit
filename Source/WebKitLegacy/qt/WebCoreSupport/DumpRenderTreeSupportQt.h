@@ -121,8 +121,6 @@ public:
     static bool hasDocumentElement(QWebFrameAdapter*);
     static void setWindowsBehaviorAsEditingBehavior(QWebPageAdapter*);
 
-    static void clearAllApplicationCaches();
-
     static void allowListAccessFromOrigin(const QString& sourceOrigin, const QString& destinationProtocol, const QString& destinationHost, bool allowDestinationSubdomains);
     static void removeAllowListAccessFromOrigin(const QString& sourceOrigin, const QString& destinationProtocol, const QString& destinationHost, bool allowDestinationSubdomains);
     static void resetOriginAccessAllowLists();

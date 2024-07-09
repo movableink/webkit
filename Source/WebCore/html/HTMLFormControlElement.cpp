@@ -27,6 +27,8 @@
 
 #include "AXObjectCache.h"
 #include "Autofill.h"
+#include "Document.h"
+#include "DocumentInlines.h"
 #include "ElementInlines.h"
 #include "Event.h"
 #include "EventHandler.h"
@@ -59,7 +61,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLFormControlElement);
 using namespace HTMLNames;
 
 HTMLFormControlElement::HTMLFormControlElement(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
-    : HTMLElement(tagName, document, CreateHTMLFormControlElement)
+    : HTMLElement(tagName, document, { TypeFlag::HasCustomStyleResolveCallbacks, TypeFlag::HasDidMoveToNewDocument } )
     , ValidatedFormListedElement(form)
     , m_isRequired(false)
     , m_valueMatchesRenderer(false)
@@ -121,6 +123,8 @@ Node::InsertedIntoAncestorResult HTMLFormControlElement::insertedIntoAncestor(In
     HTMLElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
     ValidatedFormListedElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
 
+    if (!insertionType.connectedToDocument)
+        return InsertedIntoAncestorResult::Done;
     return InsertedIntoAncestorResult::NeedsPostInsertionCallback;
 }
 
@@ -147,7 +151,7 @@ void HTMLFormControlElement::attributeChanged(const QualifiedName& name, const A
     if (name == requiredAttr) {
         bool newRequired = !newValue.isNull();
         if (m_isRequired != newRequired) {
-            Style::PseudoClassChangeInvalidation requiredInvalidation(*this, { { CSSSelector::PseudoClassType::Required, newRequired }, { CSSSelector::PseudoClassType::Optional, !newRequired } });
+            Style::PseudoClassChangeInvalidation requiredInvalidation(*this, { { CSSSelector::PseudoClass::Required, newRequired }, { CSSSelector::PseudoClass::Optional, !newRequired } });
             m_isRequired = newRequired;
             requiredStateChanged();
         }
@@ -167,8 +171,8 @@ void HTMLFormControlElement::finishParsingChildren()
 void HTMLFormControlElement::disabledStateChanged()
 {
     ValidatedFormListedElement::disabledStateChanged();
-    if (renderer() && renderer()->style().hasEffectiveAppearance())
-        renderer()->theme().stateChanged(*renderer(), ControlStyle::State::Enabled);
+    if (renderer() && renderer()->style().hasUsedAppearance())
+        renderer()->repaint();
 }
 
 void HTMLFormControlElement::readOnlyStateChanged()
@@ -346,7 +350,7 @@ static const AtomString& hideAtom()
 RefPtr<HTMLElement> HTMLFormControlElement::popoverTargetElement() const
 {
     auto canInvokePopovers = [](const HTMLFormControlElement& element) -> bool {
-        if (!element.document().settings().popoverAttributeEnabled() || element.document().quirks().shouldDisablePopoverAttributeQuirk())
+        if (!element.document().settings().popoverAttributeEnabled())
             return false;
         if (auto* inputElement = dynamicDowncast<HTMLInputElement>(element))
             return inputElement->isTextButton() || inputElement->isImageButton();
@@ -406,7 +410,7 @@ void HTMLFormControlElement::handlePopoverTargetAction() const
         target->showPopover(this);
 }
 
-RefPtr<HTMLElement> HTMLFormControlElement::invokeTargetElement() const
+RefPtr<Element> HTMLFormControlElement::invokeTargetElement() const
 {
     auto canInvoke = [](const HTMLFormControlElement& element) -> bool {
         if (!element.document().settings().invokerAttributesEnabled())
@@ -419,21 +423,39 @@ RefPtr<HTMLElement> HTMLFormControlElement::invokeTargetElement() const
     if (!canInvoke(*this))
         return nullptr;
 
-    return dynamicDowncast<HTMLElement>(getElementAttribute(invoketargetAttr));
+    return getElementAttribute(invoketargetAttr);
 }
 
-const AtomString& HTMLFormControlElement::invokeAction() const
+constexpr ASCIILiteral togglePopoverLiteral = "togglepopover"_s;
+constexpr ASCIILiteral showPopoverLiteral = "showpopover"_s;
+constexpr ASCIILiteral hidePopoverLiteral = "hidepopover"_s;
+constexpr ASCIILiteral showModalLiteral = "showmodal"_s;
+constexpr ASCIILiteral closeLiteral = "close"_s;
+InvokeAction HTMLFormControlElement::invokeAction() const
 {
-    const AtomString& value = attributeWithoutSynchronization(HTMLNames::invokeactionAttr);
+    auto action = attributeWithoutSynchronization(HTMLNames::invokeactionAttr);
+    if (action.isNull() || action.isEmpty())
+        return InvokeAction::Auto;
 
-    if (!value || value.isNull() || value.isEmpty())
-        return autoAtom();
-    return value;
-}
+    if (equalLettersIgnoringASCIICase(action, togglePopoverLiteral))
+        return InvokeAction::TogglePopover;
 
-void HTMLFormControlElement::setInvokeAction(const AtomString& value)
-{
-    setAttributeWithoutSynchronization(HTMLNames::invokeactionAttr, value);
+    if (equalLettersIgnoringASCIICase(action, showPopoverLiteral))
+        return InvokeAction::ShowPopover;
+
+    if (equalLettersIgnoringASCIICase(action, hidePopoverLiteral))
+        return InvokeAction::HidePopover;
+
+    if (equalLettersIgnoringASCIICase(action, showModalLiteral))
+        return InvokeAction::ShowModal;
+
+    if (equalLettersIgnoringASCIICase(action, closeLiteral))
+        return InvokeAction::Close;
+
+    if (action.contains('-'))
+        return InvokeAction::Custom;
+
+    return InvokeAction::Invalid;
 }
 
 void HTMLFormControlElement::handleInvokeAction()
@@ -442,20 +464,28 @@ void HTMLFormControlElement::handleInvokeAction()
     if (!invokee)
         return;
 
+    auto actionRaw = attributeWithoutSynchronization(HTMLNames::invokeactionAttr);
     auto action = invokeAction();
+
+    if (action == InvokeAction::Invalid)
+        return;
+
+    if (action != InvokeAction::Custom && !invokee->isValidInvokeAction(action))
+        return;
 
     InvokeEvent::Init init;
     init.bubbles = false;
     init.cancelable = true;
     init.composed = true;
     init.invoker = this;
-    init.action = action;
+    init.action = actionRaw.isNull() ? emptyAtom() : actionRaw;
+
     Ref<InvokeEvent> event = InvokeEvent::create(eventNames().invokeEvent, init,
         InvokeEvent::IsTrusted::Yes);
     invokee->dispatchEvent(event);
 
-    if (!event->defaultPrevented())
-        invokee->handleInvokeInternal(action);
+    if (!event->defaultPrevented() && action != InvokeAction::Custom)
+        invokee->handleInvokeInternal(*this, action);
 }
 
 // FIXME: We should remove the quirk once <rdar://problem/47334655> is fixed.

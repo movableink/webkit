@@ -123,10 +123,15 @@ function CommitSearchBar(onSearchAction = null) {
         }
     });
     const searchHotKeyFunction = (e) => {
-        if (e.key == "f" && ( e.ctrlKey || e.metaKey )) {
-            e.preventDefault();
-            searchInputRef.element.focus();
-        }
+        if (e.key !== "f" || !( e.ctrlKey || e.metaKey ))
+            return;
+
+        const element = searchInputRef.element;
+        if (element.disabled)
+            return;
+
+        e.preventDefault();
+        element.focus();
     };
     const searchInputEventStream = searchInputRef.fromEvent("keyup");
     searchInputEventStream.action((e) => {
@@ -138,8 +143,8 @@ function CommitSearchBar(onSearchAction = null) {
     });
     
     const searchButtonRef = REF.createRef({});
-    const searchButtonClikEventStream = searchButtonRef.fromEvent("click");
-    searchButtonClikEventStream.action((e) => {
+    const searchButtonClickEventStream = searchButtonRef.fromEvent("click");
+    searchButtonClickEventStream.action((e) => {
         const searchValue = searchInputRef.element.value;
         if (onSearchAction)
             onSearchAction(searchValue);
@@ -292,7 +297,10 @@ function ConfigurationSelectors(callback) {
         {'query': 'architecture', 'name': 'Architecture'},
         {'query': 'flavor', 'name': 'Flavor'},
     ];
-    return elements.map(details => {
+    const resetButtonRef = REF.createRef({});
+    const resetEventStream = resetButtonRef.fromEvent('click');
+
+    return `${elements.map(details => {
         const modifier = new QueryModifier(details.query);
 
         let ref = REF.createRef({
@@ -328,9 +336,25 @@ function ConfigurationSelectors(callback) {
                                     return;
                                 child.style.display = isExpanded ? 'block' : 'none';
                             });
+                            resetEventStream.action(resetSwitch);
                         }
-                    }
+                    },
+                    onElementUnmount: () => {
+                        resetEventStream.stopAction(resetSwitch);
+                    },
                 });
+
+                const resetSwitch = () => {
+                    Object.keys(switches).forEach(key => {
+                        if (key === 'All')
+                            switches[key].checked = true;
+                        else
+                            switches[key].checked = false;
+                    });
+                    modifier.remove();
+                    callback();
+                };
+
 
                 DOM.inject(element, `<a class="link-button text medium" ref="${expander}">+</a>
                     ${details.name} <br>
@@ -341,6 +365,7 @@ function ConfigurationSelectors(callback) {
                         else if (option !== 'All' && modifier.current().indexOf(option) >= 0)
                             isChecked = true;
 
+                        
                         let swtch = REF.createRef({
                             onElementMount: (element) => {
                                 switches[option] = element;
@@ -364,8 +389,9 @@ function ConfigurationSelectors(callback) {
                                     }
                                     callback();
                                 };
-                            },
+                            }
                         });
+
 
                         return `<div class="input" ${isExpanded ? '' : `style="display: none;"`}>
                                 <label>${escapeHTML(option)}</label>
@@ -382,7 +408,9 @@ function ConfigurationSelectors(callback) {
         });
 
         return `<div style="font-size: var(--smallSize);" ref="${ref}"></div>`;
-    }).join('')
+    }).join('')}
+    <button class="button" ref="${resetButtonRef}">Reset</button>
+    `;
 }
 
 function CommitRepresentation(callback) {

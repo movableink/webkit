@@ -30,7 +30,6 @@
 #include "RenderingResourceIdentifier.h"
 #include <variant>
 #include <wtf/BitVector.h>
-#include <wtf/CheckedRef.h>
 #include <wtf/Hasher.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/StringHash.h>
@@ -68,6 +67,9 @@ class FontDescription;
 class GlyphPage;
 
 struct GlyphData;
+#if ENABLE(MULTI_REPRESENTATION_HEIC)
+struct MultiRepresentationHEICMetrics;
+#endif
 
 enum FontVariant : uint8_t { AutoVariant, NormalVariant, SmallCapsVariant, EmphasisMarkVariant, BrokenIdeographVariant };
 enum Pitch : uint8_t { UnknownPitch, FixedPitch, VariablePitch };
@@ -95,7 +97,7 @@ struct FontInternalAttributes {
 };
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(Font);
-class Font : public RefCounted<Font>, public CanMakeWeakPtr<Font>, public CanMakeCheckedPtr {
+class Font : public RefCounted<Font>, public CanMakeSingleThreadWeakPtr<Font> {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Font);
 public:
     using Origin = FontOrigin;
@@ -105,6 +107,7 @@ public:
 
     WEBCORE_EXPORT static Ref<Font> create(const FontPlatformData&, Origin = Origin::Local, IsInterstitial = IsInterstitial::No, Visibility = Visibility::Visible, IsOrientationFallback = IsOrientationFallback::No, std::optional<RenderingResourceIdentifier> = std::nullopt);
     WEBCORE_EXPORT static Ref<Font> create(Ref<SharedBuffer>&& fontFaceData, Font::Origin, float fontSize, bool syntheticBold, bool syntheticItalic);
+    WEBCORE_EXPORT static Ref<Font> create(WebCore::FontInternalAttributes&&, WebCore::FontPlatformData&&);
 
     WEBCORE_EXPORT ~Font();
 
@@ -216,6 +219,9 @@ public:
     bool supportsAllSmallCaps() const;
     bool supportsPetiteCaps() const;
     bool supportsAllPetiteCaps() const;
+#if ENABLE(MULTI_REPRESENTATION_HEIC)
+    MultiRepresentationHEICMetrics metricsForMultiRepresentationHEIC() const;
+#endif
 #endif
 
     bool canRenderCombiningCharacterSequence(StringView) const;

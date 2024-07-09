@@ -60,7 +60,7 @@ public:
         teardownBase();
     }
 
-    Ref<RunLoop> createRunLoop(const char* name)
+    Ref<RunLoop> createRunLoop(ASCIILiteral name)
     {
         auto runLoop = RunLoop::create(name, ThreadType::Unknown);
         m_runLoops.append(runLoop);
@@ -72,7 +72,7 @@ protected:
 };
 
 #define LOCAL_STRINGIFY(x) #x
-#define RUN_LOOP_NAME "RunLoop at EventTests.cpp:" LOCAL_STRINGIFY(__LINE__)
+#define RUN_LOOP_NAME "RunLoop at EventTests.cpp:" LOCAL_STRINGIFY(__LINE__) ""_s
 
 TEST_P(EventTestABBA, SerializeAndSignal)
 {
@@ -83,7 +83,6 @@ TEST_P(EventTestABBA, SerializeAndSignal)
         ASSERT_TRUE(openB());
 
         bClient().setAsyncMessageHandler([&] (IPC::Decoder& decoder) -> bool {
-            decoder.decode<uint64_t>();
             auto signal = decoder.decode<IPC::Signal>();
             signal->signal();
 
@@ -108,7 +107,6 @@ TEST_P(EventTestABBA, InterruptOnDestruct)
         ASSERT_TRUE(openB());
 
         bClient().setAsyncMessageHandler([&] (IPC::Decoder& decoder) -> bool {
-            decoder.decode<uint64_t>();
             {
                 auto signal = decoder.decode<IPC::Signal>();
             }

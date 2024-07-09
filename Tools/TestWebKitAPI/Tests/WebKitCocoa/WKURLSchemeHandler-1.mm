@@ -40,9 +40,11 @@
 #import <WebKit/WKURLSchemeHandler.h>
 #import <WebKit/WKURLSchemeTaskPrivate.h>
 #import <WebKit/WKWebViewConfigurationPrivate.h>
+#import <WebKit/WKWebsiteDataStorePrivate.h>
 #import <WebKit/WebKit.h>
 #import <WebKit/_WKFrameHandle.h>
 #import <WebKit/_WKFrameTreeNode.h>
+#import <WebKit/_WKWebsiteDataStoreConfiguration.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/HashMap.h>
 #import <wtf/RetainPtr.h>
@@ -166,6 +168,45 @@ TEST(URLSchemeHandler, Basic)
     EXPECT_EQ([handler.get().startedURLs count], 2u);
     EXPECT_TRUE([[handler.get().startedURLs objectAtIndex:0] isEqual:[NSURL URLWithString:@"testing:main"]]);
     EXPECT_TRUE([[handler.get().startedURLs objectAtIndex:1] isEqual:[NSURL URLWithString:@"testing:image"]]);
+    EXPECT_EQ([handler.get().stoppedURLs count], 0u);
+}
+
+TEST(URLSchemeHandler, BasicWithHTTPS)
+{
+    using namespace TestWebKitAPI;
+
+    done = false;
+
+    HTTPServer httpsServer({
+        { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, String::fromUTF8(mainBytes) } },
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    auto storeConfiguration = adoptNS([[_WKWebsiteDataStoreConfiguration alloc] init]);
+    [storeConfiguration setProxyConfiguration:@{
+        (NSString *)kCFStreamPropertyHTTPSProxyHost: @"127.0.0.1",
+        (NSString *)kCFStreamPropertyHTTPSProxyPort: @(httpsServer.port())
+    }];
+    auto dataStore = adoptNS([[WKWebsiteDataStore alloc] _initWithConfiguration:storeConfiguration.get()]);
+    auto configuration = adoptNS([WKWebViewConfiguration new]);
+    [configuration setWebsiteDataStore:dataStore.get()];
+
+    RetainPtr<SchemeHandler> handler = adoptNS([[SchemeHandler alloc] initWithData:[NSData dataWithBytesNoCopy:(void*)mainBytes length:sizeof(mainBytes) freeWhenDone:NO] mimeType:@"text/html"]);
+    [configuration setURLSchemeHandler:handler.get() forURLScheme:@"testing"];
+
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
+    auto delegate = adoptNS([TestNavigationDelegate new]);
+    [webView setNavigationDelegate:delegate.get()];
+
+    delegate.get().didReceiveAuthenticationChallenge = ^(WKWebView *, NSURLAuthenticationChallenge *challenge, void (^completionHandler)(NSURLSessionAuthChallengeDisposition, NSURLCredential *)) {
+        completionHandler(NSURLSessionAuthChallengeUseCredential, [NSURLCredential credentialForTrust:challenge.protectionSpace.serverTrust]);
+    };
+
+    NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:@"https://site1.example/"]];
+    [webView loadRequest:request];
+    Util::run(&done);
+
+    EXPECT_EQ([handler.get().startedURLs count], 1u);
+    EXPECT_TRUE([[handler.get().startedURLs objectAtIndex:0] isEqual:[NSURL URLWithString:@"testing:image"]]);
     EXPECT_EQ([handler.get().stoppedURLs count], 0u);
 }
 
@@ -761,7 +802,7 @@ TEST(URLSchemeHandler, Threads)
         auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600) configuration:configuration.get()]);
         [handler setStartURLSchemeTaskHandler:^(WKWebView *, id<WKURLSchemeTask> task) {
             theTask.get() = retainPtr(task);
-            theThread = Thread::create("A", [task] {
+            theThread = Thread::create("A"_s, [task] {
                 auto response = adoptNS([[NSURLResponse alloc] initWithURL:task.request.URL MIMEType:@"text/html" expectedContentLength:0 textEncodingName:nil]);
                 [task didReceiveResponse:response.get()];
                 [task didFinish];
@@ -779,7 +820,7 @@ TEST(URLSchemeHandler, Threads)
         theThread = nullptr;
     }
 
-    Thread::create("B", [] {
+    Thread::create("B"_s, [] {
         theTask.get() = nil;
     })->waitForCompletion();
 }
@@ -1271,7 +1312,7 @@ TEST(URLSchemeHandler, AllowedNetworkHostsRedirect)
     TestWebKitAPI::HTTPServer server127001({
         { "/"_s, { 301, {
             { "Access-Control-Allow-Origin"_s, "*"_s },
-            { "Location"_s, makeString("http://localhost:", serverLocalhost.port(), "/redirectTarget") }
+            { "Location"_s, makeString("http://localhost:"_s, serverLocalhost.port(), "/redirectTarget"_s) }
         }}},
     });
 
@@ -1730,4 +1771,35 @@ TEST(URLSchemeHandler, ModulePreload)
     auto webView = adoptNS([[WKWebView alloc] initWithFrame:CGRectZero configuration:configuration.get()]);
     [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"test://webkit.org/main.html"]]];
     TestWebKitAPI::Util::run(&done);
+}
+
+static void runRedirectToHandledSchemeTest(unsigned redirectionCode)
+{
+    TestWebKitAPI::HTTPServer server({
+        { "/redirect.html"_s, { redirectionCode, {{ "Location"_s, "testing://destination.html"_s }}, "redirecting..."_s } }
+    });
+
+    __block bool schemeHandledCalled = false;
+    RetainPtr schemeHandler = adoptNS([TestURLSchemeHandler new]);
+    [schemeHandler setStartURLSchemeTaskHandler:^(WKWebView *, id<WKURLSchemeTask> task) {
+        schemeHandledCalled = true;
+    }];
+
+    RetainPtr configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [configuration setURLSchemeHandler:schemeHandler.get() forURLScheme:@"testing"];
+
+    RetainPtr webView = adoptNS([[WKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600) configuration:configuration.get()]);
+    [webView loadRequest:server.request("/redirect.html"_s)];
+
+    TestWebKitAPI::Util::run(&schemeHandledCalled);
+}
+
+TEST(URLSchemeHandler, Redirect301FromHTTPToHandledScheme)
+{
+    runRedirectToHandledSchemeTest(301);
+}
+
+TEST(URLSchemeHandler, Redirect302FromHTTPToHandledScheme)
+{
+    runRedirectToHandledSchemeTest(302);
 }

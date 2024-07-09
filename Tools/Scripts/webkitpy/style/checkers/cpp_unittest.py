@@ -2358,6 +2358,10 @@ class CppStyleTest(CppStyleTestBase):
         self.assert_lint('foo (Foo::*bar)(',
                          'Extra space before ( in function call'
                          '  [whitespace/parens] [4]')
+        self.assert_lint('void foo(int bar, Function<void (std::optional<double>)>&&);',
+                         '')
+        self.assert_lint('void foo(int bar, std::function<void (dummy)>&&);',
+                         '')
         self.assert_lint('typedef foo (Foo::*bar)(', '')
         self.assert_lint('(foo)(bar)', '')
         self.assert_lint('Foo (*foo)(bar)', '')
@@ -4804,7 +4808,7 @@ class WebKitStyleTest(CppStyleTestBase):
             'foo.cpp')
         self.assert_multi_line_lint(
             'namespace IPC {\n'
-            'Decoder::Decoder(DataReference buffer, BufferDeallocator&& bufferDeallocator, Vector<Attachment>&& attachments)\n'
+            'Decoder::Decoder(std::span<const uint8_t> buffer, BufferDeallocator&& bufferDeallocator, Vector<Attachment>&& attachments)\n'
             '    : m_buffer { buffer }\n'
             '    , m_bufferPosition { m_buffer.begin() }\n'
             '    , m_bufferDeallocator { WTFMove(bufferDeallocator) }\n'
@@ -5013,6 +5017,17 @@ class WebKitStyleTest(CppStyleTestBase):
             'f( a, b );',
             ['Extra space after ( in function call  [whitespace/parens] [4]',
              'Extra space before )  [whitespace/parens] [2]'])
+
+        # Ignore concept constraints.
+        self.assert_multi_line_lint(
+            'template<typename T>\n'
+            'requires (MyConcept<T>)\n'
+            'int f(T a);',
+            '')
+
+        self.assert_multi_line_lint(
+            'int foo(int a, int b) requires (MyConcept<T>) { return a + b; }',
+            '')
 
         # Ignore spacing inside four char code.
         self.assert_multi_line_lint(
@@ -6292,11 +6307,6 @@ class WebKitStyleTest(CppStyleTestBase):
         self.assert_lint('typedef struct _Evas_Object Evas_Object;', '')
         self.assert_lint('typedef struct _Ewk_History_Item Ewk_History_Item;', '')
 
-        # NPAPI functions that start with NPN_, NPP_ or NP_ are allowed.
-        self.assert_lint('void NPN_Status(NPP, const char*)', '')
-        self.assert_lint('NPError NPP_SetWindow(NPP instance, NPWindow *window)', '')
-        self.assert_lint('NPObject* NP_Allocate(NPP, NPClass*)', '')
-
         # const_iterator is allowed as well.
         self.assert_lint('typedef VectorType::const_iterator const_iterator;', '')
 
@@ -6313,66 +6323,72 @@ class WebKitStyleTest(CppStyleTestBase):
         # Valid protector RefPtr/Ref variable names.
         self.assert_lint('RefPtr<Node> protectedThis(this);', '')
         self.assert_lint('Ref<Node> protectedThis(*this);', '')
-        self.assert_lint('RefPtr<Node> protectedNode(node);', '')
-        self.assert_lint('RefPtr<Node> protectedNode(&node);', '')
-        self.assert_lint('RefPtr<Node> protector(node);', '')
-        self.assert_lint('RefPtr<Node> protector(&node);', '')
-        self.assert_lint('Ref<Node> protectedNode(node);', '')
-        self.assert_lint('Ref<Node> protectedNode(*node);', '')
-        self.assert_lint('Ref<Node> protector(node);', '')
-        self.assert_lint('Ref<Node> protector(*node);', '')
-        self.assert_lint('RefPtr<Node> protectedOtherNode(otherNode);', '')
-        self.assert_lint('RefPtr<Node> protectedOtherNode(&otherNode);', '')
-        self.assert_lint('Ref<Node> protectedOtherNode(otherNode);', '')
-        self.assert_lint('Ref<Node> protectedOtherNode(*otherNode);', '')
-        self.assert_lint('RefPtr<Widget> protectedWidget(m_widget);', '')
-        self.assert_lint('RefPtr<Widget> protectedWidget(&m_widget);', '')
-        self.assert_lint('Ref<Widget> protectedWidget(m_widget);', '')
-        self.assert_lint('Ref<Widget> protectedWidget(*m_widget);', '')
-        self.assert_lint('RefPtr<Widget> protector(m_widget);', '')
-        self.assert_lint('RefPtr<Widget> protector(&m_widget);', '')
-        self.assert_lint('Ref<Widget> protector(m_widget);', '')
-        self.assert_lint('Ref<Widget> protector(*m_widget);', '')
         self.assert_lint('RefPtr<SomeNamespace::Node> protectedThis(this);', '')
         self.assert_lint('RefPtr<SomeClass::InternalClass::Node> protectedThis(this);', '')
         self.assert_lint('RefPtr<Node> protectedThis = this;', '')
         self.assert_lint('Ref<Node> protectedThis = *this;', '')
-        self.assert_lint('RefPtr<Node> protectedNode = node;', '')
-        self.assert_lint('RefPtr<Node> protectedNode = &node;', '')
-        self.assert_lint('RefPtr<Node> protector = node;', '')
-        self.assert_lint('RefPtr<Node> protector = &node;', '')
-        self.assert_lint('Ref<Node> protectedNode = node;', '')
-        self.assert_lint('Ref<Node> protectedNode =*node;', '')
-        self.assert_lint('Ref<Node> protector = node;', '')
-        self.assert_lint('Ref<Node> protector = *node;', '')
+        self.assert_lint('RefPtr<Node> nodeRef(node);', '')
+        self.assert_lint('Ref<Node> nodeRef(*node);', '')
+        self.assert_lint('Ref<Node> node(*node);', '')
+        self.assert_lint('Ref<Node> nodeRef = node;', '')
 
         # Invalid protector RefPtr/Ref variable names.
+        self.assert_lint('RefPtr<Node> protectedNode(node);', "'protectedNode' is incorrectly named. New variables should not use the 'protected' prefix.  [readability/naming/protected] [4]")
+        self.assert_lint('RefPtr<Node> protectedNode(&node);', "'protectedNode' is incorrectly named. New variables should not use the 'protected' prefix.  [readability/naming/protected] [4]")
+        self.assert_lint('RefPtr<Node> protector(node);', "'protector' is incorrectly named. New variables should not be named 'protector'  [readability/naming/protected] [4]")
+        self.assert_lint('RefPtr<Node> protector(&node);', "'protector' is incorrectly named. New variables should not be named 'protector'  [readability/naming/protected] [4]")
+        self.assert_lint('Ref<Node> protectedNode(node);', "'protectedNode' is incorrectly named. New variables should not use the 'protected' prefix.  [readability/naming/protected] [4]")
+        self.assert_lint('Ref<Node> protectedNode(*node);', "'protectedNode' is incorrectly named. New variables should not use the 'protected' prefix.  [readability/naming/protected] [4]")
+        self.assert_lint('Ref<Node> protector(node);', "'protector' is incorrectly named. New variables should not be named 'protector'  [readability/naming/protected] [4]")
+        self.assert_lint('Ref<Node> protector(*node);', "'protector' is incorrectly named. New variables should not be named 'protector'  [readability/naming/protected] [4]")
+        self.assert_lint('RefPtr<Node> protectedOtherNode(otherNode);', "'protectedOtherNode' is incorrectly named. New variables should not use the 'protected' prefix.  [readability/naming/protected] [4]")
+        self.assert_lint('RefPtr<Node> protectedOtherNode(&otherNode);', "'protectedOtherNode' is incorrectly named. New variables should not use the 'protected' prefix.  [readability/naming/protected] [4]")
+        self.assert_lint('Ref<Node> protectedOtherNode(otherNode);', "'protectedOtherNode' is incorrectly named. New variables should not use the 'protected' prefix.  [readability/naming/protected] [4]")
+        self.assert_lint('Ref<Node> protectedOtherNode(*otherNode);', "'protectedOtherNode' is incorrectly named. New variables should not use the 'protected' prefix.  [readability/naming/protected] [4]")
+        self.assert_lint('RefPtr<Widget> protectedWidget(m_widget);', "'protectedWidget' is incorrectly named. New variables should not use the 'protected' prefix.  [readability/naming/protected] [4]")
+        self.assert_lint('RefPtr<Widget> protectedWidget(&m_widget);', "'protectedWidget' is incorrectly named. New variables should not use the 'protected' prefix.  [readability/naming/protected] [4]")
+        self.assert_lint('Ref<Widget> protectedWidget(m_widget);', "'protectedWidget' is incorrectly named. New variables should not use the 'protected' prefix.  [readability/naming/protected] [4]")
+        self.assert_lint('Ref<Widget> protectedWidget(*m_widget);', "'protectedWidget' is incorrectly named. New variables should not use the 'protected' prefix.  [readability/naming/protected] [4]")
+        self.assert_lint('RefPtr<Widget> protector(m_widget);', "'protector' is incorrectly named. New variables should not be named 'protector'  [readability/naming/protected] [4]")
+        self.assert_lint('RefPtr<Widget> protector(&m_widget);', "'protector' is incorrectly named. New variables should not be named 'protector'  [readability/naming/protected] [4]")
+        self.assert_lint('Ref<Widget> protector(m_widget);', "'protector' is incorrectly named. New variables should not be named 'protector'  [readability/naming/protected] [4]")
+        self.assert_lint('Ref<Widget> protector(*m_widget);', "'protector' is incorrectly named. New variables should not be named 'protector'  [readability/naming/protected] [4]")
         self.assert_lint('RefPtr<Node> protector(this);', "'protector' is incorrectly named. It should be named 'protectedThis'.  [readability/naming/protected] [4]")
         self.assert_lint('Ref<Node> protector(*this);', "'protector' is incorrectly named. It should be named 'protectedThis'.  [readability/naming/protected] [4]")
         self.assert_lint('RefPtr<Node> protector = this;', "'protector' is incorrectly named. It should be named 'protectedThis'.  [readability/naming/protected] [4]")
         self.assert_lint('Ref<Node> protector = *this;', "'protector' is incorrectly named. It should be named 'protectedThis'.  [readability/naming/protected] [4]")
         self.assert_lint('RefPtr<Node> self(this);', "'self' is incorrectly named. It should be named 'protectedThis'.  [readability/naming/protected] [4]")
         self.assert_lint('Ref<Node> self(*this);', "'self' is incorrectly named. It should be named 'protectedThis'.  [readability/naming/protected] [4]")
-        self.assert_lint('RefPtr<Node> protectedThis(node);', "'protectedThis' is incorrectly named. It should be named 'protector' or 'protectedNode'.  [readability/naming/protected] [4]")
-        self.assert_lint('RefPtr<Node> protectedThis(&node);', "'protectedThis' is incorrectly named. It should be named 'protector' or 'protectedNode'.  [readability/naming/protected] [4]")
-        self.assert_lint('Ref<Node> protectedThis(node);', "'protectedThis' is incorrectly named. It should be named 'protector' or 'protectedNode'.  [readability/naming/protected] [4]")
-        self.assert_lint('Ref<Node> protectedThis(*node);', "'protectedThis' is incorrectly named. It should be named 'protector' or 'protectedNode'.  [readability/naming/protected] [4]")
-        self.assert_lint('RefPtr<Node> protectedNode(otherNode);', "'protectedNode' is incorrectly named. It should be named 'protector' or 'protectedOtherNode'.  [readability/naming/protected] [4]")
-        self.assert_lint('RefPtr<Node> protectedNode(&otherNode);', "'protectedNode' is incorrectly named. It should be named 'protector' or 'protectedOtherNode'.  [readability/naming/protected] [4]")
-        self.assert_lint('Ref<Node> protectedNode(otherNode);', "'protectedNode' is incorrectly named. It should be named 'protector' or 'protectedOtherNode'.  [readability/naming/protected] [4]")
-        self.assert_lint('Ref<Node> protectedNode(*otherNode);', "'protectedNode' is incorrectly named. It should be named 'protector' or 'protectedOtherNode'.  [readability/naming/protected] [4]")
-        self.assert_lint('RefPtr<Node> protectedNode = otherNode;', "'protectedNode' is incorrectly named. It should be named 'protector' or 'protectedOtherNode'.  [readability/naming/protected] [4]")
-        self.assert_lint('RefPtr<Node> protectedNode = &otherNode;', "'protectedNode' is incorrectly named. It should be named 'protector' or 'protectedOtherNode'.  [readability/naming/protected] [4]")
-        self.assert_lint('Ref<Node> protectedNode = otherNode;', "'protectedNode' is incorrectly named. It should be named 'protector' or 'protectedOtherNode'.  [readability/naming/protected] [4]")
-        self.assert_lint('Ref<Node> protectedNode = *otherNode;', "'protectedNode' is incorrectly named. It should be named 'protector' or 'protectedOtherNode'.  [readability/naming/protected] [4]")
-        self.assert_lint('RefPtr<Node> nodeRef(node);', "'nodeRef' is incorrectly named. It should be named 'protector' or 'protectedNode'.  [readability/naming/protected] [4]")
-        self.assert_lint('Ref<Node> nodeRef(*node);', "'nodeRef' is incorrectly named. It should be named 'protector' or 'protectedNode'.  [readability/naming/protected] [4]")
+        self.assert_lint('RefPtr<Node> protectedThis(node);', "Incorrect use of 'protectedThis'.  [readability/naming/protected] [4]")
+        self.assert_lint('RefPtr<Node> protectedThis(&node);', "Incorrect use of 'protectedThis'.  [readability/naming/protected] [4]")
+        self.assert_lint('Ref<Node> protectedThis(node);', "Incorrect use of 'protectedThis'.  [readability/naming/protected] [4]")
+        self.assert_lint('Ref<Node> protectedThis(*node);', "Incorrect use of 'protectedThis'.  [readability/naming/protected] [4]")
+        self.assert_lint('RefPtr<Node> protectedNode(otherNode);', "'protectedNode' is incorrectly named. New variables should not use the 'protected' prefix.  [readability/naming/protected] [4]")
+        self.assert_lint('RefPtr<Node> protectedNode(&otherNode);', "'protectedNode' is incorrectly named. New variables should not use the 'protected' prefix.  [readability/naming/protected] [4]")
+        self.assert_lint('Ref<Node> protectedNode(otherNode);', "'protectedNode' is incorrectly named. New variables should not use the 'protected' prefix.  [readability/naming/protected] [4]")
+        self.assert_lint('Ref<Node> protectedNode(*otherNode);', "'protectedNode' is incorrectly named. New variables should not use the 'protected' prefix.  [readability/naming/protected] [4]")
+        self.assert_lint('RefPtr<Node> protectedNode = otherNode;', "'protectedNode' is incorrectly named. New variables should not use the 'protected' prefix.  [readability/naming/protected] [4]")
+        self.assert_lint('RefPtr<Node> protectedNode = &otherNode;', "'protectedNode' is incorrectly named. New variables should not use the 'protected' prefix.  [readability/naming/protected] [4]")
+        self.assert_lint('Ref<Node> protectedNode = otherNode;', "'protectedNode' is incorrectly named. New variables should not use the 'protected' prefix.  [readability/naming/protected] [4]")
+        self.assert_lint('Ref<Node> protectedNode = *otherNode;', "'protectedNode' is incorrectly named. New variables should not use the 'protected' prefix.  [readability/naming/protected] [4]")
+        self.assert_lint('RefPtr<Node> protectedNode = node;', "'protectedNode' is incorrectly named. New variables should not use the 'protected' prefix.  [readability/naming/protected] [4]")
+        self.assert_lint('RefPtr<Node> protectedNode = &node;', "'protectedNode' is incorrectly named. New variables should not use the 'protected' prefix.  [readability/naming/protected] [4]")
+        self.assert_lint('RefPtr<Node> protector = node;', "'protector' is incorrectly named. New variables should not be named 'protector'  [readability/naming/protected] [4]")
+        self.assert_lint('RefPtr<Node> protector = &node;', "'protector' is incorrectly named. New variables should not be named 'protector'  [readability/naming/protected] [4]")
+        self.assert_lint('Ref<Node> protectedNode = node;', "'protectedNode' is incorrectly named. New variables should not use the 'protected' prefix.  [readability/naming/protected] [4]")
+        self.assert_lint('Ref<Node> protectedNode = *node;', "'protectedNode' is incorrectly named. New variables should not use the 'protected' prefix.  [readability/naming/protected] [4]")
+        self.assert_lint('Ref<Node> protector = node;', "'protector' is incorrectly named. New variables should not be named 'protector'  [readability/naming/protected] [4]")
+        self.assert_lint('Ref<Node> protector = *node;', "'protector' is incorrectly named. New variables should not be named 'protector'  [readability/naming/protected] [4]")
 
         # Lines that look like a protector variable declaration but aren't.
         self.assert_lint('static RefPtr<Widget> doSomethingWith(widget);', '')
         self.assert_lint('RefPtr<Widget> create();', '')
         self.assert_lint('Ref<GeolocationPermissionRequestProxy> createRequest(GeolocationIdentifier);', '')
         self.assert_lint('Ref<TypeName> createSomething(OtherTypeName);', '')
+        self.assert_lint('Ref<Settings> protectedSettings() const;', '')
+        self.assert_lint('RefPtr<Settings> protectedSettings() const;', '')
+        self.assert_lint('RefPtr<Settings> protectedSettings();', '')
+        self.assert_lint('RefPtr<Settings> protectedSettings() { return m_settings.get(); }', '')
 
     def test_parameter_names(self):
         # Leave meaningless variable names out of function declarations.

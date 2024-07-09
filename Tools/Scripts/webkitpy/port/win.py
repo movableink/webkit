@@ -48,14 +48,9 @@ _log = logging.getLogger(__name__)
 
 
 try:
-    import _winreg
-    import win32com.client
+    import winreg
 except ImportError:
-    try:
-        import winreg as _winreg
-        import win32com.client
-    except ImportError:
-        _log.debug("Not running on native Windows.")
+    _log.debug("Not running on native Windows.")
 
 
 class WinPort(ApplePort):
@@ -76,10 +71,10 @@ class WinPort(ApplePort):
         WINDOWS_ERROR_REPORTING_KEY = r'SOFTWARE\Microsoft\Windows\Windows Error Reporting'
         WOW64_WINDOWS_ERROR_REPORTING_KEY = r'SOFTWARE\Wow6432Node\Microsoft\Windows\Windows Error Reporting'
         FILE_SYSTEM_KEY = r'SYSTEM\CurrentControlSet\Control\FileSystem'
-        _HKLM = _winreg.HKEY_LOCAL_MACHINE
-        _HKCU = _winreg.HKEY_CURRENT_USER
-        _REG_DWORD = _winreg.REG_DWORD
-        _REG_SZ = _winreg.REG_SZ
+        _HKLM = winreg.HKEY_LOCAL_MACHINE
+        _HKCU = winreg.HKEY_CURRENT_USER
+        _REG_DWORD = winreg.REG_DWORD
+        _REG_SZ = winreg.REG_SZ
     else:
         POST_MORTEM_DEBUGGER_KEY = "/%s/SOFTWARE/Microsoft/Windows NT/CurrentVersion/AeDebug/%s"
         WOW64_POST_MORTEM_DEBUGGER_KEY = "/%s/SOFTWARE/Wow6432Node/Microsoft/Windows NT/CurrentVersion/AeDebug/%s"
@@ -103,8 +98,11 @@ class WinPort(ApplePort):
         ApplePort.__init__(self, host, port_name, **kwargs)
         if len(port_name.split('-')) > 1:
             self._os_version = VersionNameMap.map(host.platform).from_name(port_name.split('-')[1])[1]
-        else:
+        elif self.host.platform.is_win():
             self._os_version = self.host.platform.os_version
+
+        if not self._os_version:
+            self._os_version = WinPort.VERSION_MAX
 
     def do_text_results_differ(self, expected_text, actual_text):
         # Sanity was restored in WebKitTestRunner, so we don't need this hack there.
@@ -193,9 +191,6 @@ class WinPort(ApplePort):
         return self.host.platform.is_cygwin()
 
     # Note: These are based on the stock XAMPP locations for these files.
-    def _uses_apache(self):
-        return True
-
     def _path_to_apache(self):
         root = os.environ.get('XAMPP_ROOT', 'C:\\xampp')
         path = self._filesystem.join(root, 'apache', 'bin', 'httpd.exe')
@@ -203,12 +198,6 @@ class WinPort(ApplePort):
             return path
         _log.error('Could not find apache in the expected location. (path=%s)' % path)
         return None
-
-    def _path_to_lighttpd(self):
-        return "/usr/sbin/lighttpd"
-
-    def _path_to_lighttpd_modules(self):
-        return "/usr/lib/lighttpd"
 
     def _path_to_default_image_diff(self):
         return self._build_path('ImageDiff.exe')
@@ -265,9 +254,9 @@ class WinPort(ApplePort):
         if sys.platform.startswith('win'):
             _log.debug("Trying to read %s\\%s" % (reg_path, key))
             try:
-                registry_key = _winreg.OpenKey(root, reg_path)
-                value = _winreg.QueryValueEx(registry_key, key)
-                _winreg.CloseKey(registry_key)
+                registry_key = winreg.OpenKey(root, reg_path)
+                value = winreg.QueryValueEx(registry_key, key)
+                winreg.CloseKey(registry_key)
             except WindowsError as ex:
                 _log.debug("Unable to read %s\\%s: %s" % (reg_path, key, str(ex)))
                 return ['', self._REG_SZ]
@@ -293,19 +282,19 @@ class WinPort(ApplePort):
         if sys.platform.startswith('win'):
             _log.debug("Trying to write %s\\%s = %s" % (reg_path, key, value))
             try:
-                registry_key = _winreg.OpenKey(root, reg_path, 0, _winreg.KEY_WRITE)
+                registry_key = winreg.OpenKey(root, reg_path, 0, winreg.KEY_WRITE)
             except WindowsError:
                 try:
                     _log.debug("Key doesn't exist -- must create it.")
-                    registry_key = _winreg.CreateKeyEx(root, reg_path, 0, _winreg.KEY_WRITE)
+                    registry_key = winreg.CreateKeyEx(root, reg_path, 0, winreg.KEY_WRITE)
                 except WindowsError as ex:
                     _log.error(r"Error setting (%s) %s\key: %s to value: %s.  Error=%s." % (arch, root, key, value, str(ex)))
                     _log.error("You many need to adjust permissions on the %s\\%s key." % (reg_path, key))
                     return False
 
             _log.debug("Writing {0} of type {1} to {2}\\{3}".format(value, regType, registry_key, key))
-            _winreg.SetValueEx(registry_key, key, 0, regType, value)
-            _winreg.CloseKey(registry_key)
+            winreg.SetValueEx(registry_key, key, 0, regType, value)
+            winreg.CloseKey(registry_key)
         else:
             registry_key = reg_path % (root, key)
             _log.debug("Writing to %s" % registry_key)
@@ -489,6 +478,7 @@ class WinPort(ApplePort):
 
 class WinCairoPort(WinPort):
     port_name = "wincairo"
+    supports_localhost_aliases = True
 
     DEFAULT_ARCHITECTURE = 'x86_64'
 
@@ -513,7 +503,10 @@ class WinCairoPort(WinPort):
         wk_version = 'wk2' if self.get_option('webkit_test_runner') else 'wk1'
 
         for version in versions:
-            name = self.port_name + '-' + normalize(to_name(version))
+            version_name = to_name(version)
+            if not version_name:
+                continue
+            name = self.port_name + '-' + normalize(version_name)
             paths.append(name + '-' + wk_version)
             paths.append(name)
 

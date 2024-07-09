@@ -68,6 +68,10 @@
 #include "ImageDecoderGStreamer.h"
 #endif
 
+#if USE(APPLE_INTERNAL_SDK)
+#include <WebKitAdditions/MultiRepresentationHEICAdditions.h>
+#endif
+
 namespace WebCore {
 
 static String normalizedImageMIMEType(const String&);
@@ -107,17 +111,11 @@ constexpr ComparableCaseFoldingASCIILiteral supportedImageMIMETypeArray[] = {
     "image/heif",
     "image/heif-sequence",
 #endif
-#if USE(CG) || USE(OPENJPEG)
-    "image/jp2",
-#endif
 #if PLATFORM(IOS_FAMILY)
     "image/jp_",
     "image/jpe_",
 #endif
     "image/jpeg",
-#if !USE(CG) && USE(OPENJPEG)
-    "image/jpeg2000",
-#endif
     "image/jpg",
 #if HAVE(JPEGXL) || USE(JPEGXL)
     "image/jxl",
@@ -140,8 +138,9 @@ constexpr ComparableCaseFoldingASCIILiteral supportedImageMIMETypeArray[] = {
 #if PLATFORM(IOS_FAMILY)
     "image/vnd.switfview-jpeg",
 #endif
-#if HAVE(WEBP) || USE(WEBP)
     "image/webp",
+#if ENABLE(MULTI_REPRESENTATION_HEIC)
+    MULTI_REPRESENTATION_HEIC_MIME_TYPE,
 #endif
 #if PLATFORM(IOS_FAMILY)
     "image/x-bmp",
@@ -491,6 +490,11 @@ std::unique_ptr<MIMETypeRegistryThreadGlobalData> MIMETypeRegistry::createMIMETy
         "image/jpeg"_s,
         "image/gif"_s,
         "image/bmp"_s,
+#elif USE(SKIA)
+        "image/png"_s,
+        "image/jpeg"_s,
+        "image/jpg"_s,
+        "image/webp"_s,
 #endif
     };
 #endif
@@ -651,16 +655,6 @@ bool MIMETypeRegistry::isPDFMIMEType(const String& mimeType)
 {
     static constexpr SortedArraySet set { pdfMIMETypeArray };
     return set.contains(mimeType);
-}
-
-bool MIMETypeRegistry::isPostScriptMIMEType(const String& mimeType)
-{
-    return equalLettersIgnoringASCIICase(mimeType, "application/postscript"_s);
-}
-
-bool MIMETypeRegistry::isPDFOrPostScriptMIMEType(const String& mimeType)
-{
-    return isPDFMIMEType(mimeType) || isPostScriptMIMEType(mimeType);
 }
 
 bool MIMETypeRegistry::canShowMIMEType(const String& mimeType)
@@ -854,4 +848,20 @@ bool MIMETypeRegistry::isJPEGMIMEType(const String& mimeType)
 #endif
 }
 
+bool MIMETypeRegistry::isWebArchiveMIMEType(const String& mimeType)
+{
+    using MIMETypeHashSet = HashSet<String, ASCIICaseInsensitiveHash>;
+    static NeverDestroyed<MIMETypeHashSet> webArchiveMIMETypes {
+        MIMETypeHashSet {
+            "application/x-webarchive"_s,
+            "application/x-mimearchive"_s,
+            "multipart/related"_s,
+#if PLATFORM(GTK)
+            "message/rfc822"_s,
+#endif
+        }
+    };
+
+    return webArchiveMIMETypes.get().isValidValue(mimeType) ? webArchiveMIMETypes.get().contains(mimeType) : false;
+}
 } // namespace WebCore

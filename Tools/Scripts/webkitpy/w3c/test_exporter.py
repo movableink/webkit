@@ -52,7 +52,7 @@ WEBKIT_WPT_DIR = 'LayoutTests/imported/w3c/web-platform-tests'
 WPT_PR_URL = "%s/pull/" % WPT_GH_URL
 WEBKIT_EXPORT_PR_LABEL = 'webkit-export'
 
-EXCLUDED_FILE_SUFFIXES = ['-expected.txt', '-expected.html', '-expected-mismatch.html', '.worker.html', '.any.html', '.any.worker.html', 'w3c-import.log']
+EXCLUDED_FILE_SUFFIXES = ['-expected.txt', '-expected.html', '-expected-mismatch.html', '.worker.html', '.any.html', '.any.worker.html', '.any.serviceworker.html', '.any.sharedworker.html', 'w3c-import.log']
 
 
 class WebPlatformTestExporter(object):
@@ -274,22 +274,6 @@ class WebPlatformTestExporter(object):
             branch_name = ("%s-%s") % (branch_name_prefix, str(counter))
             counter = counter + 1
         return branch_name
-
-    def download_and_commit_patch(self):
-        if self._options.git_commit:
-            return True
-
-        patch_options = ["--no-update", "--no-clean", "--local-commit"]
-        if self._options.attachment_id:
-            patch_options.insert("apply-attachment")
-            patch_options.append(self._options.attachment_id)
-        elif self._options.bug_id:
-            patch_options.insert("apply-from-bug")
-            patch_options.append(self._options.bug_id)
-        else:
-            _log.info("Exporting local changes")
-            return
-        raise TypeError("Retrieval of patch from bugzilla is not yet implemented")
 
     def clean(self):
         _log.info('Cleaning web-platform-tests master branch')

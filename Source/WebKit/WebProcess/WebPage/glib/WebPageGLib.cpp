@@ -61,17 +61,13 @@ void WebPage::platformInitialize(const WebPageCreationParameters&)
     // entry point to the Web process, and send a message to the UI
     // process to connect the two worlds through the accessibility
     // object there specifically placed for that purpose (the socket).
-#if PLATFORM(GTK) && USE(GTK4)
-    // FIXME: we need a way to connect DOM and app a11y tree in GTK4.
-#else
-    if (auto* page = corePage()) {
+    if (RefPtr page = corePage()) {
         m_accessibilityRootObject = AccessibilityRootAtspi::create(*page);
         m_accessibilityRootObject->registerObject([&](const String& plugID) {
             if (!plugID.isEmpty())
                 send(Messages::WebPageProxy::BindAccessibilityTree(plugID));
         });
     }
-#endif
 #endif
 }
 

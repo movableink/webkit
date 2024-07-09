@@ -26,8 +26,6 @@
 #include "config.h"
 #include "CryptoAlgorithmPBKDF2.h"
 
-#if ENABLE(WEB_CRYPTO)
-
 #include "CryptoAlgorithmPbkdf2Params.h"
 #include "CryptoKeyRaw.h"
 #include <JavaScriptCore/JSCJSValueInlines.h>
@@ -58,7 +56,7 @@ void CryptoAlgorithmPBKDF2::deriveBits(const CryptoAlgorithmParameters& paramete
         });
 }
 
-void CryptoAlgorithmPBKDF2::importKey(CryptoKeyFormat format, KeyData&& data, const CryptoAlgorithmParameters& parameters, bool extractable, CryptoKeyUsageBitmap usages, KeyCallback&& callback, ExceptionCallback&& exceptionCallback)
+void CryptoAlgorithmPBKDF2::importKey(CryptoKeyFormat format, KeyData&& data, const CryptoAlgorithmParameters& parameters, bool extractable, CryptoKeyUsageBitmap usages, KeyCallback&& callback, ExceptionCallback&& exceptionCallback, UseCryptoKit)
 {
     if (format != CryptoKeyFormat::Raw) {
         exceptionCallback(ExceptionCode::NotSupportedError);
@@ -82,5 +80,3 @@ ExceptionOr<size_t> CryptoAlgorithmPBKDF2::getKeyLength(const CryptoAlgorithmPar
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(WEB_CRYPTO)

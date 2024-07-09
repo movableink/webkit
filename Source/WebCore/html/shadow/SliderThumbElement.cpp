@@ -50,10 +50,10 @@
 #include "RenderTheme.h"
 #include "ResolvedStyle.h"
 #include "ScriptDisallowedScope.h"
-#include "ShadowPseudoIds.h"
 #include "ShadowRoot.h"
 #include "StepRange.h"
 #include "StyleResolver.h"
+#include "UserAgentParts.h"
 #include <wtf/IsoMallocInlines.h>
 
 #if ENABLE(IOS_TOUCH_EVENTS)
@@ -79,7 +79,7 @@ inline static Decimal sliderPosition(HTMLInputElement& element)
 inline static bool hasVerticalAppearance(HTMLInputElement& input)
 {
     ASSERT(input.renderer());
-    return !input.renderer()->isHorizontalWritingMode() || input.renderer()->style().effectiveAppearance() == StyleAppearance::SliderVertical;
+    return !input.renderer()->isHorizontalWritingMode() || input.renderer()->style().usedAppearance() == StyleAppearance::SliderVertical;
 }
 
 // --------------------------------
@@ -88,6 +88,7 @@ inline static bool hasVerticalAppearance(HTMLInputElement& input)
 // http://webkit.org/b/62535
 class RenderSliderContainer final : public RenderFlexibleBox {
     WTF_MAKE_ISO_ALLOCATED_INLINE(RenderSliderContainer);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSliderContainer);
 public:
     RenderSliderContainer(SliderContainerElement& element, RenderStyle&& style)
         : RenderFlexibleBox(Type::SliderContainer, element, WTFMove(style))
@@ -118,7 +119,7 @@ RenderBox::LogicalExtentComputedValues RenderSliderContainer::computeLogicalHeig
             int tickLength = theme().sliderTickSize().height();
             trackHeight = 2 * (offsetFromCenter + tickLength);
         }
-        float zoomFactor = style().effectiveZoom();
+        float zoomFactor = style().usedZoom();
         if (zoomFactor != 1.0)
             trackHeight *= zoomFactor;
 
@@ -185,12 +186,12 @@ Ref<SliderThumbElement> SliderThumbElement::create(Document& document)
 {
     auto element = adoptRef(*new SliderThumbElement(document));
     ScriptDisallowedScope::EventAllowedScope eventAllowedScope { element };
-    element->setPseudo(ShadowPseudoIds::webkitSliderThumb());
+    element->setUserAgentPart(UserAgentParts::webkitSliderThumb());
     return element;
 }
 
 SliderThumbElement::SliderThumbElement(Document& document)
-    : HTMLDivElement(HTMLNames::divTag, document, CreateSliderThumbElement)
+    : HTMLDivElement(HTMLNames::divTag, document, TypeFlag::HasCustomStyleResolveCallbacks)
 {
 }
 
@@ -563,12 +564,12 @@ std::optional<Style::ResolvedStyle> SliderThumbElement::resolveCustomStyle(const
         return std::nullopt;
 
     auto elementStyle = resolveStyle(resolutionContext);
-    switch (hostStyle->effectiveAppearance()) {
+    switch (hostStyle->usedAppearance()) {
     case StyleAppearance::SliderVertical:
-        elementStyle.style->setEffectiveAppearance(StyleAppearance::SliderThumbVertical);
+        elementStyle.style->setUsedAppearance(StyleAppearance::SliderThumbVertical);
         break;
     case StyleAppearance::SliderHorizontal:
-        elementStyle.style->setEffectiveAppearance(StyleAppearance::SliderThumbHorizontal);
+        elementStyle.style->setUsedAppearance(StyleAppearance::SliderThumbHorizontal);
         break;
     default:
         break;
@@ -585,7 +586,7 @@ Ref<Element> SliderThumbElement::cloneElementWithoutAttributesAndChildren(Docume
 // --------------------------------
 
 inline SliderContainerElement::SliderContainerElement(Document& document)
-    : HTMLDivElement(HTMLNames::divTag, document, CreateSliderContainerElement)
+    : HTMLDivElement(HTMLNames::divTag, document, TypeFlag::HasCustomStyleResolveCallbacks)
 {
 }
 
@@ -593,7 +594,7 @@ Ref<SliderContainerElement> SliderContainerElement::create(Document& document)
 {
     auto element = adoptRef(*new SliderContainerElement(document));
     ScriptDisallowedScope::EventAllowedScope eventAllowedScope { element };
-    element->setPseudo(ShadowPseudoIds::webkitSliderContainer());
+    element->setUserAgentPart(UserAgentParts::webkitSliderContainer());
     return element;
 }
 

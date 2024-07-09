@@ -30,9 +30,9 @@ class Factory(factory.BuildFactory):
     shouldInstallDependencies = True
     shouldUseCrossTargetImage = False
 
-    def __init__(self, platform, configuration, architectures, buildOnly, additionalArguments, device_model):
+    def __init__(self, platform, configuration, architectures, buildOnly, additionalArguments, device_model, triggers=None):
         factory.BuildFactory.__init__(self)
-        self.addStep(ConfigureBuild(platform=platform, configuration=configuration, architecture=" ".join(architectures), buildOnly=buildOnly, additionalArguments=additionalArguments, device_model=device_model))
+        self.addStep(ConfigureBuild(platform=platform, configuration=configuration, architecture=" ".join(architectures), buildOnly=buildOnly, additionalArguments=additionalArguments, device_model=device_model, triggers=triggers))
         self.addStep(PrintConfiguration())
         self.addStep(CheckOutSource())
         self.addStep(CheckOutSpecificRevision())
@@ -57,7 +57,7 @@ class BuildFactory(Factory):
     shouldRunMiniBrowserBundleStep = False
 
     def __init__(self, platform, configuration, architectures, triggers=None, additionalArguments=None, device_model=None):
-        Factory.__init__(self, platform, configuration, architectures, True, additionalArguments, device_model)
+        Factory.__init__(self, platform, configuration, architectures, True, additionalArguments, device_model, triggers=triggers)
 
         if platform == "win" or platform.startswith("playstation"):
             self.addStep(CompileWebKit(timeout=2 * 60 * 60))
@@ -74,13 +74,6 @@ class BuildFactory(Factory):
         if triggers:
             if platform.startswith("gtk"):
                 self.addStep(InstallBuiltProduct())
-
-            self.addStep(ArchiveBuiltProduct())
-            self.addStep(UploadBuiltProduct())
-            if platform.startswith('mac') or platform.startswith('ios-simulator') or platform.startswith('tvos-simulator') or platform.startswith('watchos-simulator'):
-                self.addStep(ArchiveMinifiedBuiltProduct())
-                self.addStep(UploadMinifiedBuiltProduct())
-            self.addStep(TransferToS3())
             self.addStep(trigger.Trigger(schedulerNames=triggers))
 
 
@@ -107,7 +100,7 @@ class TestFactory(Factory):
         if platform == 'wincairo':
             self.addStep(InstallWinCairoDependencies())
 
-        if platform.startswith('mac') or platform.startswith('ios-simulator'):
+        if platform.startswith(('mac', 'ios-simulator', 'visionos-simulator')):
             self.addStep(WaitForCrashCollection())
 
         if self.JSCTestClass:
@@ -122,7 +115,7 @@ class TestFactory(Factory):
             self.addStep(ExtractTestResults())
             self.addStep(SetPermissions())
 
-        if platform.startswith('win') or platform.startswith('mac') or platform.startswith('ios-simulator'):
+        if platform.startswith(('win', 'mac', 'ios-simulator')):
             self.addStep(RunAPITests())
 
         # FIXME: Re-enable these tests for Monterey once webkit.org/b/239463 is resolved.
@@ -134,7 +127,7 @@ class TestFactory(Factory):
         self.addStep(RunBindingsTests())
         self.addStep(RunBuiltinsTests())
 
-        if platform.startswith('mac') or platform.startswith('ios-simulator'):
+        if platform.startswith(('mac', 'ios-simulator', 'visionos-simulator')):
             self.addStep(TriggerCrashLogSubmission())
 
         if platform.startswith("gtk"):
@@ -290,6 +283,13 @@ class DownloadAndPerfTestFactory(Factory):
             self.addStep(RunAndUploadPerfTests())
         if platform in ["gtk", "wpe"]:
             self.addStep(RunBenchmarkTests(timeout=2000))
+
+
+class SmartPointerStaticAnalyzerFactory(Factory):
+    def __init__(self, platform, configuration, architectures, additionalArguments=None, device_model=None, **kwargs):
+        Factory.__init__(self, platform, configuration, architectures, False, additionalArguments, device_model, **kwargs)
+        self.addStep(PrintClangVersion())
+        self.addStep(ScanBuildSmartPointer())
 
 
 class CrossTargetDownloadAndPerfTestFactory(DownloadAndPerfTestFactory):

@@ -77,15 +77,15 @@ TEST(WebKit, PDFLinkReferrer)
         connection.receiveHTTPRequest([=](Vector<char>&& requestBytes) {
             requestBytes.append('\0');
             // Look for a referer header.
-            const auto* currentLine = reinterpret_cast<const char*>(requestBytes.data());
+            const auto* currentLine = byteCast<char>(requestBytes.data());
             while (currentLine) {
                 EXPECT_NE(strncasecmp(currentLine, "referer:", 8), 0);
                 const char* nextLine = strchr(currentLine, '\n');
                 currentLine = nextLine ? nextLine + 1 : 0;
             }
             constexpr auto responseHeader =
-            "HTTP/1.1 200 OK\r\n"
-            "Content-Length: 0\r\n\r\n"_s;
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Length: 0\r\n\r\n"_s;
             connection.send(responseHeader);
         });
     });
@@ -105,6 +105,10 @@ TEST(WebKit, PDFLinkReferrer)
         EXPECT_NULL([action.request valueForHTTPHeaderField:@"Referer"]);
         decisionHandler(WKNavigationActionPolicyAllow);
     };
+
+    // We need to make sure the WKWebView's layout is up to date
+    // or the clicks might get eaten by the PDF's HUD.
+    [webView layoutSubtreeIfNeeded];
     
     [webView sendClicksAtPoint:NSMakePoint(75, 75) numberOfClicks:1];
     [navigationDelegate waitForDidFinishNavigation];

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2013-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -26,13 +27,9 @@
 
 #pragma once
 
-#include "Document.h"
 #include "DocumentFragment.h"
 #include "Element.h"
 #include "StyleScopeOrdinal.h"
-#if ENABLE(PICTURE_IN_PICTURE_API)
-#include "HTMLVideoElement.h"
-#endif
 #include "ShadowRootMode.h"
 #include "SlotAssignmentMode.h"
 #include <wtf/HashMap.h>
@@ -42,22 +39,30 @@ namespace WebCore {
 class HTMLSlotElement;
 class SlotAssignment;
 class StyleSheetList;
+class TrustedHTML;
 class WebAnimation;
 
 enum class ParserContentPolicy : uint8_t;
+
+struct GetHTMLOptions;
+
+namespace Style {
+class Scope;
+}
 
 class ShadowRoot final : public DocumentFragment, public TreeScope {
     WTF_MAKE_ISO_ALLOCATED(ShadowRoot);
 public:
 
     enum class DelegatesFocus : bool { No, Yes };
-    enum class Cloneable : bool { No, Yes };
+    enum class Clonable : bool { No, Yes };
+    enum class Serializable : bool { No, Yes };
     enum class AvailableToElementInternals : bool { No, Yes };
 
     static Ref<ShadowRoot> create(Document& document, ShadowRootMode type, SlotAssignmentMode assignmentMode = SlotAssignmentMode::Named,
-        DelegatesFocus delegatesFocus = DelegatesFocus::No, Cloneable cloneable = Cloneable::No, AvailableToElementInternals availableToElementInternals = AvailableToElementInternals::No)
+        DelegatesFocus delegatesFocus = DelegatesFocus::No, Clonable clonable = Clonable::No, Serializable serializable = Serializable::No, AvailableToElementInternals availableToElementInternals = AvailableToElementInternals::No)
     {
-        return adoptRef(*new ShadowRoot(document, type, assignmentMode, delegatesFocus, cloneable, availableToElementInternals));
+        return adoptRef(*new ShadowRoot(document, type, assignmentMode, delegatesFocus, clonable, serializable, availableToElementInternals));
     }
 
     static Ref<ShadowRoot> create(Document& document, std::unique_ptr<SlotAssignment>&& assignment)
@@ -67,15 +72,8 @@ public:
 
     virtual ~ShadowRoot();
 
-    // Resolve ambiguity for CanMakeCheckedPtr.
-    void incrementPtrCount() const { static_cast<const DocumentFragment*>(this)->incrementPtrCount(); }
-    void decrementPtrCount() const { static_cast<const DocumentFragment*>(this)->decrementPtrCount(); }
-#if CHECKED_POINTER_DEBUG
-    void registerCheckedPtr(const void* pointer) const { static_cast<const DocumentFragment*>(this)->registerCheckedPtr(pointer); }
-    void copyCheckedPtr(const void* source, const void* destination) const { static_cast<const DocumentFragment*>(this)->copyCheckedPtr(source, destination); }
-    void moveCheckedPtr(const void* source, const void* destination) const { static_cast<const DocumentFragment*>(this)->moveCheckedPtr(source, destination); }
-    void unregisterCheckedPtr(const void* pointer) const { static_cast<const DocumentFragment*>(this)->unregisterCheckedPtr(pointer); }
-#endif // CHECKED_POINTER_DEBUG
+    using DocumentFragment::ref;
+    using DocumentFragment::deref;
 
     using TreeScope::getElementById;
     using TreeScope::rootNode;
@@ -88,7 +86,8 @@ public:
     bool containsFocusedElement() const { return m_containsFocusedElement; }
     void setContainsFocusedElement(bool flag) { m_containsFocusedElement = flag; }
 
-    bool isCloneable() const { return m_isCloneable; }
+    bool isClonable() const { return m_isClonable; }
+    bool serializable() const { return m_serializable; }
 
     bool isAvailableToElementInternals() const { return m_availableToElementInternals; }
     void setIsAvailableToElementInternals(bool flag) { m_availableToElementInternals = flag; }
@@ -99,10 +98,11 @@ public:
     RefPtr<Element> protectedHost() const { return m_host.get(); }
     void setHost(WeakPtr<Element, WeakPtrImplWithEventTargetData>&& host) { m_host = WTFMove(host); }
 
-    ExceptionOr<void> setHTMLUnsafe(const String&);
+    ExceptionOr<void> setHTMLUnsafe(std::variant<RefPtr<TrustedHTML>, String>&&);
+    String getHTML(GetHTMLOptions&&) const;
 
     String innerHTML() const;
-    ExceptionOr<void> setInnerHTML(const String&);
+    ExceptionOr<void> setInnerHTML(std::variant<RefPtr<TrustedHTML>, String>&&);
 
     Ref<Node> cloneNodeInternal(Document&, CloningOperation) override;
 
@@ -141,13 +141,13 @@ public:
     void invalidatePartMappings();
 
 #if ENABLE(PICTURE_IN_PICTURE_API)
-    HTMLVideoElement* pictureInPictureElement() const;
+    Element* pictureInPictureElement() const;
 #endif
 
     Vector<RefPtr<WebAnimation>> getAnimations();
 
 private:
-    ShadowRoot(Document&, ShadowRootMode, SlotAssignmentMode, DelegatesFocus, Cloneable, AvailableToElementInternals);
+    ShadowRoot(Document&, ShadowRootMode, SlotAssignmentMode, DelegatesFocus, Clonable, Serializable, AvailableToElementInternals);
     ShadowRoot(Document&, std::unique_ptr<SlotAssignment>&&);
 
     bool childTypeAllowed(NodeType) const override;
@@ -161,7 +161,8 @@ private:
 
     bool m_hasBegunDeletingDetachedChildren : 1 { false };
     bool m_delegatesFocus : 1 { false };
-    bool m_isCloneable : 1 { false };
+    bool m_isClonable : 1 { false };
+    bool m_serializable : 1 { false };
     bool m_containsFocusedElement : 1 { false };
     bool m_availableToElementInternals : 1 { false };
     bool m_isDeclarativeShadowRoot : 1 { false };

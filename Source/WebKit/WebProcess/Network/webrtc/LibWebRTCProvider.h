@@ -33,7 +33,7 @@
 
 #if USE(LIBWEBRTC)
 
-#include <wtf/CheckedRef.h>
+#include <wtf/WeakRef.h>
 
 #if PLATFORM(COCOA)
 #include <WebCore/LibWebRTCProviderCocoa.h>
@@ -70,6 +70,10 @@ private:
 
     rtc::scoped_refptr<webrtc::PeerConnectionInterface> createPeerConnection(WebCore::ScriptExecutionContextIdentifier, webrtc::PeerConnectionObserver&, rtc::PacketSocketFactory*, webrtc::PeerConnectionInterface::RTCConfiguration&&) final;
 
+#if PLATFORM(COCOA) && USE(LIBWEBRTC)
+    bool isSupportingVP9HardwareDecoder() const final;
+    void setVP9HardwareSupportForTesting(std::optional<bool>) final;
+#endif
     void disableNonLocalhostConnections() final;
     void startedNetworkThread() final;
     RefPtr<WebCore::RTCDataChannelRemoteHandlerConnection> createRTCDataChannelRemoteHandlerConnection() final;
@@ -77,7 +81,7 @@ private:
 
     void willCreatePeerConnectionFactory() final;
 
-    CheckedRef<WebPage> m_webPage;
+    WeakRef<WebPage> m_webPage;
 };
 
 inline UniqueRef<LibWebRTCProvider> createLibWebRTCProvider(WebPage& page)

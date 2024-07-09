@@ -64,6 +64,7 @@ typedef id <NSTextFinderAsynchronousDocumentFindMatch> FindMatch;
 
 - (void)findMatchesForString:(NSString *)targetString relativeToMatch:(FindMatch)relativeMatch findOptions:(NSTextFinderAsynchronousDocumentFindOptions)findOptions maxResults:(NSUInteger)maxResults resultCollector:(void (^)(NSArray *matches, BOOL didWrap))resultCollector;
 - (void)replaceMatches:(NSArray<FindMatch> *)matches withString:(NSString *)replacementString inSelectionOnly:(BOOL)selectionOnly resultCollector:(void (^)(NSUInteger replacementCount))resultCollector;
+- (void)selectFindMatch:(id<NSTextFinderAsynchronousDocumentFindMatch>)findMatch completionHandler:(void (^)(void))completionHandler;
 
 @end
 
@@ -150,6 +151,22 @@ TEST(WebKit, FindInPage)
     // Ensure that we cap the number of matches. There are actually 1600, but we only get the first 1000.
     result = findMatches(webView.get(), @" ");
     EXPECT_EQ((NSUInteger)1000, [result.matches count]);
+}
+
+TEST(WebKit, FindInPageSelectMatch)
+{
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 200, 200)]);
+    auto request = [NSURLRequest requestWithURL:[[NSBundle mainBundle] URLForResource:@"lots-of-text" withExtension:@"html" subdirectory:@"TestWebKitAPI.resources"]];
+    [webView _setUsePlatformFindUI:NO];
+    [webView loadRequest:request];
+    [webView _test_waitForDidFinishNavigation];
+
+    auto result = findMatches(webView.get(), @"Birthday");
+    RetainPtr match = [result.matches objectAtIndex:0];
+
+    [webView selectFindMatch:match.get() completionHandler:nil];
+    while (![webView selectionRangeHasStartOffset:19 endOffset:27])
+        TestWebKitAPI::Util::spinRunLoop();
 }
 
 TEST(WebKit, FindInPageWithPlatformPresentation)
@@ -685,6 +702,35 @@ TEST(WebKit, FindInteraction)
 
     [webView setFindInteractionEnabled:NO];
     EXPECT_NULL([webView findInteraction]);
+}
+
+TEST(WebKit, FindAndHighlightDifferentWebViews)
+{
+    auto createAndSetUpWebView = []() {
+        auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);
+        [webView setFindInteractionEnabled:YES];
+        [webView synchronouslyLoadHTMLString:[NSString stringWithFormat:@"<p>Test</p><iframe src='data:text/html,<p>Test</p>'></iframe>"]];
+        return webView;
+    };
+
+    auto webViewForSearch = createAndSetUpWebView();
+    auto ranges = textRangesForQueryString(webViewForSearch.get(), @"Test");
+
+    auto webViewForHighlight = createAndSetUpWebView();
+
+    __block bool retrievedRect = false;
+    [webViewForHighlight _requestRectForFoundTextRange:[ranges objectAtIndex:0] completionHandler:^(CGRect rect) {
+        EXPECT_TRUE(CGRectEqualToRect(rect, CGRectMake(8, 8, 27, 19)));
+        retrievedRect = true;
+    }];
+    TestWebKitAPI::Util::run(&retrievedRect);
+
+    retrievedRect = false;
+    [webViewForHighlight _requestRectForFoundTextRange:[ranges objectAtIndex:1] completionHandler:^(CGRect rect) {
+        EXPECT_TRUE(CGRectEqualToRect(rect, CGRectMake(18, 54, 27, 19)));
+        retrievedRect = true;
+    }];
+    TestWebKitAPI::Util::run(&retrievedRect);
 }
 
 TEST(WebKit, RequestRectForFoundTextRange)

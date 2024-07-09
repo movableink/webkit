@@ -27,7 +27,6 @@
 #include "InjectedBundleRangeHandle.h"
 
 #include "InjectedBundleNodeHandle.h"
-#include "ShareableBitmap.h"
 #include "WebImage.h"
 #include <JavaScriptCore/APICast.h>
 #include <JavaScriptCore/HeapInlines.h>
@@ -43,6 +42,7 @@
 #include <WebCore/Page.h>
 #include <WebCore/Range.h>
 #include <WebCore/RenderView.h>
+#include <WebCore/ShareableBitmap.h>
 #include <WebCore/SimpleRange.h>
 #include <WebCore/TextIterator.h>
 #include <WebCore/VisibleSelection.h>
@@ -57,7 +57,7 @@
 namespace WebKit {
 using namespace WebCore;
 
-using DOMRangeHandleCache = HashMap<SingleThreadWeakRef<WebCore::Range>, CheckedPtr<InjectedBundleRangeHandle>>;
+using DOMRangeHandleCache = HashMap<SingleThreadWeakRef<WebCore::Range>, WeakRef<InjectedBundleRangeHandle>>;
 
 static DOMRangeHandleCache& domRangeHandleCache()
 {
@@ -74,12 +74,13 @@ RefPtr<InjectedBundleRangeHandle> InjectedBundleRangeHandle::getOrCreate(WebCore
 {
     if (!range)
         return nullptr;
-    auto result = domRangeHandleCache().add(*range, nullptr);
-    if (!result.isNewEntry)
-        return result.iterator->value.get();
-    auto rangeHandle = adoptRef(*new InjectedBundleRangeHandle(*range));
-    result.iterator->value = rangeHandle.ptr();
-    return rangeHandle;
+
+    RefPtr<InjectedBundleRangeHandle> newRange;
+    auto result = domRangeHandleCache().ensure(*range, [&] {
+        newRange = adoptRef(*new InjectedBundleRangeHandle(*range));
+        return WeakRef { *newRange };
+    });
+    return newRange ? newRange.releaseNonNull() : Ref { result.iterator->value.get() };
 }
 
 InjectedBundleRangeHandle::InjectedBundleRangeHandle(WebCore::Range& range)
@@ -174,7 +175,7 @@ RefPtr<WebImage> InjectedBundleRangeHandle::renderedImage(SnapshotOptions option
 String InjectedBundleRangeHandle::text() const
 {
     auto range = makeSimpleRange(m_range);
-    range.start.document().updateLayout();
+    range.start.protectedDocument()->updateLayout();
     return plainText(range);
 }
 

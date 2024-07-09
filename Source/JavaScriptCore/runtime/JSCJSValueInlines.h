@@ -58,7 +58,7 @@ inline uint32_t JSValue::toUInt32(JSGlobalObject* globalObject) const
     return toInt32(globalObject);
 }
 
-inline uint32_t JSValue::toIndex(JSGlobalObject* globalObject, const char* errorName) const
+inline uint32_t JSValue::toIndex(JSGlobalObject* globalObject, ASCIILiteral errorName) const
 {
     VM& vm = getVM(globalObject);
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -842,7 +842,7 @@ inline PreferredPrimitiveType toPreferredPrimitiveType(JSGlobalObject* globalObj
         return NoPreference;
     }
 
-    String hintString = asString(value)->value(globalObject);
+    auto hintString = asString(value)->view(globalObject);
     RETURN_IF_EXCEPTION(scope, NoPreference);
 
     if (WTF::equal(hintString, "default"_s))
@@ -1264,7 +1264,7 @@ ALWAYS_INLINE bool JSValue::equalSlowCaseInline(JSGlobalObject* globalObject, JS
         if (s1 || s2) {
             // We are guaranteed that the string is v2 (thanks to the swap above)
             if (v1.isBigInt()) {
-                String v2String = asString(v2)->value(globalObject);
+                auto v2String = asString(v2)->value(globalObject);
                 RETURN_IF_EXCEPTION(scope, false);
                 v2 = JSBigInt::stringToBigInt(globalObject, v2String);
                 RETURN_IF_EXCEPTION(scope, false);
@@ -1434,6 +1434,9 @@ ALWAYS_INLINE bool isThisValueAltered(const PutPropertySlot& slot, JSObject* bas
 // See section 7.2.9: https://tc39.github.io/ecma262/#sec-samevalue
 ALWAYS_INLINE bool sameValue(JSGlobalObject* globalObject, JSValue a, JSValue b)
 {
+    if (a == b)
+        return true;
+
     if (!a.isNumber())
         return JSValue::strictEqual(globalObject, a, b);
     if (!b.isNumber())

@@ -28,6 +28,7 @@
 
 #if PLATFORM(MAC)
 
+#import "CommonAtomStrings.h"
 #import "DragData.h"
 #import "Image.h"
 #import "LegacyNSPasteboardTypes.h"
@@ -129,6 +130,12 @@ void Pasteboard::clear()
 void Pasteboard::write(const PasteboardWebContent& content)
 {
     Vector<String> types;
+    Vector<String> clientTypes;
+    Vector<RefPtr<WebCore::SharedBuffer>> clientData;
+    for (size_t it = 0; it < content.clientTypesAndData.size(); ++it) {
+        clientTypes.append(content.clientTypesAndData[it].first);
+        clientData.append(content.clientTypesAndData[it].second);
+    }
 
     if (content.canSmartCopyOrDelete)
         types.append(WebSmartPastePboardType);
@@ -147,7 +154,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         types.append(String(legacyHTMLPasteboardType()));
     if (!content.dataInStringFormat.isNull())
         types.append(String(legacyStringPasteboardType()));
-    types.appendVector(content.clientTypes);
+    types.appendVector(clientTypes);
     types.append(PasteboardCustomData::cocoaType());
 
     m_changeCount = platformStrategies()->pasteboardStrategy()->setTypes(types, m_pasteboardName, context());
@@ -155,9 +162,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     // FIXME: The following code should be refactored, such that it only requires a single call out to the client layer.
     // In WebKit2, this currently results in many unnecessary synchronous round-trip IPC messages.
 
-    ASSERT(content.clientTypes.size() == content.clientData.size());
-    for (size_t i = 0, size = content.clientTypes.size(); i < size; ++i)
-        m_changeCount = platformStrategies()->pasteboardStrategy()->setBufferForType(content.clientData[i].get(), content.clientTypes[i], m_pasteboardName, context());
+    ASSERT(clientTypes.size() == clientData.size());
+    for (size_t i = 0, size = clientTypes.size(); i < size; ++i)
+        m_changeCount = platformStrategies()->pasteboardStrategy()->setBufferForType(clientData[i].get(), clientTypes[i], m_pasteboardName, context());
     if (content.canSmartCopyOrDelete)
         m_changeCount = platformStrategies()->pasteboardStrategy()->setBufferForType(nullptr, WebSmartPastePboardType, m_pasteboardName, context());
     if (content.dataInWebArchiveFormat) {
@@ -264,7 +271,7 @@ static void writeFileWrapperAsRTFDAttachment(NSFileWrapper *wrapper, const Strin
 
 void Pasteboard::write(const PasteboardImage& pasteboardImage)
 {
-    CFDataRef imageData = pasteboardImage.image->tiffRepresentation();
+    CFDataRef imageData = pasteboardImage.image->adapter().tiffRepresentation();
     if (!imageData)
         return;
 
@@ -670,7 +677,7 @@ void Pasteboard::addHTMLClipboardTypesForCocoaType(ListHashSet<String>& resultTy
 
     // UTI may not do these right, so make sure we get the right, predictable result
     if (cocoaType == String(legacyStringPasteboardType()) || cocoaType == String(NSPasteboardTypeString)) {
-        resultTypes.add("text/plain"_s);
+        resultTypes.add(textPlainContentTypeAtom());
         return;
     }
     if (cocoaType == String(legacyURLPasteboardType())) {
@@ -836,6 +843,44 @@ void Pasteboard::setDragImage(DragImage image, const IntPoint& location)
 bool Pasteboard::canWriteTrustworthyWebURLsPboardType()
 {
     return true;
+}
+
+RefPtr<WebCore::SharedBuffer> Pasteboard::bufferConvertedToPasteboardType(const PasteboardBuffer& pasteboardBuffer, const String& pasteboardType)
+{
+    if (pasteboardBuffer.type == pasteboardType)
+        return pasteboardBuffer.data;
+
+    if (pasteboardType != String(legacyTIFFPasteboardType()))
+        return pasteboardBuffer.data;
+
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+    if (pasteboardBuffer.type == String(kUTTypeTIFF))
+        return pasteboardBuffer.data;
+ALLOW_DEPRECATED_DECLARATIONS_END
+
+    auto sourceData = pasteboardBuffer.data->createCFData();
+    auto sourceType = pasteboardBuffer.type.createCFString();
+
+    const void* key = kCGImageSourceTypeIdentifierHint;
+    const void* value = sourceType.get();
+    auto options = adoptCF(CFDictionaryCreate(kCFAllocatorDefault, &key, &value, 1, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
+
+    auto source = adoptCF(CGImageSourceCreateWithData(sourceData.get(), options.get()));
+    if (!source)
+        return nullptr;
+
+    auto data = adoptCF(CFDataCreateMutable(0, 0));
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+    auto destination = adoptCF(CGImageDestinationCreateWithData(data.get(), kUTTypeTIFF, 1, NULL));
+ALLOW_DEPRECATED_DECLARATIONS_END
+    if (!destination)
+        return nullptr;
+
+    CGImageDestinationAddImageFromSource(destination.get(), source.get(), 0, NULL);
+    if (!CGImageDestinationFinalize(destination.get()))
+        return nullptr;
+
+    return SharedBuffer::create(data.get());
 }
 
 }

@@ -56,6 +56,7 @@ public:
     void fillRect(const FloatRect&) final;
     void fillRect(const FloatRect&, const Color&) final;
     void fillRect(const FloatRect&, Gradient&) final;
+    void fillRect(const FloatRect&, Gradient&, const AffineTransform&) final;
 
     void fillRoundedRectImpl(const FloatRoundedRect&, const Color&) final;
     void fillRectWithRoundedHole(const FloatRect&, const FloatRoundedRect& roundedHoleRect, const Color&) final;
@@ -67,7 +68,7 @@ public:
     void setLineJoin(LineJoin) final;
     void setMiterLimit(float) final;
 
-    void drawNativeImageInternal(NativeImage&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions = { }) final;
+    void drawNativeImageInternal(NativeImage&, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions = { }) final;
     void drawPattern(NativeImage&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions = { }) final;
 
     void clip(const FloatRect&) final;
@@ -108,11 +109,10 @@ public:
     QPainter* painter() const;
 
     void pushTransparencyLayerInternal(const QRect&, qreal, const QImage&);
-private:
-
-    void popTransparencyLayerInternal();
 
     void takeOwnershipOfPlatformContext();
+private:
+    void popTransparencyLayerInternal();
 
     GraphicsContextPlatformPrivate* m_data { nullptr };
 };

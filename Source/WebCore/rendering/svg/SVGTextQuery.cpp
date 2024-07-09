@@ -56,24 +56,21 @@ static inline LegacyInlineFlowBox* flowBoxForRenderer(RenderObject* renderer)
     if (!renderer)
         return nullptr;
 
-    if (is<RenderBlockFlow>(*renderer)) {
+    if (CheckedPtr renderBlock = dynamicDowncast<RenderBlockFlow>(*renderer)) {
         // If we're given a block element, it has to be a RenderSVGText.
-        ASSERT(is<RenderSVGText>(*renderer));
-        RenderBlockFlow& renderBlock = downcast<RenderBlockFlow>(*renderer);
+        ASSERT(is<RenderSVGText>(*renderBlock));
 
         // RenderSVGText only ever contains a single line box.
-        auto flowBox = renderBlock.firstRootBox();
-        ASSERT(flowBox == renderBlock.lastRootBox());
+        auto* flowBox = renderBlock->firstRootBox();
+        ASSERT(flowBox == renderBlock->lastRootBox());
         return flowBox;
     }
 
-    if (is<RenderInline>(*renderer)) {
+    if (CheckedPtr renderInline = dynamicDowncast<RenderInline>(*renderer)) {
         // We're given a RenderSVGInline or objects that derive from it (RenderSVGTSpan / RenderSVGTextPath)
-        RenderInline& renderInline = downcast<RenderInline>(*renderer);
-
         // RenderSVGInline only ever contains a single line box.
-        LegacyInlineFlowBox* flowBox = renderInline.firstLineBox();
-        ASSERT(flowBox == renderInline.lastLineBox());
+        auto* flowBox = renderInline->firstLineBox();
+        ASSERT(flowBox == renderInline->lastLineBox());
         return flowBox;
     }
 
@@ -92,17 +89,17 @@ void SVGTextQuery::collectTextBoxesInFlowBox(LegacyInlineFlowBox* flowBox)
         return;
 
     for (auto* child = flowBox->firstChild(); child; child = child->nextOnLine()) {
-        if (is<LegacyInlineFlowBox>(*child)) {
+        if (auto* flowBox = dynamicDowncast<LegacyInlineFlowBox>(*child)) {
             // Skip generated content.
-            if (!child->renderer().node())
+            if (!flowBox->renderer().element())
                 continue;
 
-            collectTextBoxesInFlowBox(downcast<LegacyInlineFlowBox>(child));
+            collectTextBoxesInFlowBox(flowBox);
             continue;
         }
 
-        if (is<SVGInlineTextBox>(*child))
-            m_textBoxes.append(downcast<SVGInlineTextBox>(child));
+        if (auto* inlineTextBox = dynamicDowncast<SVGInlineTextBox>(*child))
+            m_textBoxes.append(inlineTextBox);
     }
 }
 
@@ -419,7 +416,7 @@ static inline void calculateGlyphBoundaries(SVGTextQuery::Data* queryData, const
     float scalingFactor = queryData->textRenderer->scalingFactor();
     ASSERT(scalingFactor);
 
-    extent.setLocation(FloatPoint(fragment.x, fragment.y - queryData->textRenderer->scaledFont().metricsOfPrimaryFont().floatAscent() / scalingFactor));
+    extent.setLocation(FloatPoint(fragment.x, fragment.y - queryData->textRenderer->scaledFont().metricsOfPrimaryFont().ascent() / scalingFactor));
 
     if (startPosition) {
         SVGTextMetrics metrics = SVGTextMetrics::measureCharacterRange(*queryData->textRenderer, fragment.characterOffset, startPosition);
@@ -445,7 +442,7 @@ static inline FloatRect calculateFragmentBoundaries(const RenderSVGInlineText& t
     float scalingFactor = textRenderer.scalingFactor();
     ASSERT(scalingFactor);
 
-    float baseline = textRenderer.scaledFont().metricsOfPrimaryFont().floatAscent() / scalingFactor;
+    float baseline = textRenderer.scaledFont().metricsOfPrimaryFont().ascent() / scalingFactor;
 
     AffineTransform fragmentTransform;
     FloatRect fragmentRect(fragment.x, fragment.y - baseline, fragment.width, fragment.height);

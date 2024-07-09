@@ -29,6 +29,7 @@
 #import "TestWKWebView.h"
 #import <WebKit/WKSecurityOriginRef.h>
 #import <WebKit/WKString.h>
+#import <WebKit/WKWebViewConfigurationPrivate.h>
 #import <WebKit/WKWebViewPrivate.h>
 #import <wtf/text/StringBuilder.h>
 
@@ -121,7 +122,7 @@ TEST(PermissionsAPI, DataURL)
     </script>";
 
     StringBuilder buffer;
-    buffer.append("data:text/html,");
+    buffer.append("data:text/html,"_s);
     for (size_t cptr = 0; cptr < sizeof(script) - 1; ++cptr)
         urlEncodeIfNeeded(script[cptr], buffer);
 

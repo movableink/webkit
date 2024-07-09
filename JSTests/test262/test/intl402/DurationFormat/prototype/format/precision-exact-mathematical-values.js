@@ -24,7 +24,7 @@ info: |
         7. Let parts be ! PartitionNumberPattern(nf, value).
         ...
 
-locale: [en-US]
+locale: [en]
 includes: [testIntl.js]
 features: [Intl.DurationFormat]
 ---*/
@@ -84,7 +84,7 @@ const durations = [
 const df = new Intl.DurationFormat("en", {style: "digital"});
 
 for (let duration of durations) {
-  let expected = formatDurationFormatPattern(duration, "digital");
+  let expected = formatDurationFormatPattern(df, duration);
   assert.sameValue(
     df.format(duration),
     expected,

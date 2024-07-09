@@ -37,7 +37,6 @@ namespace WTF {
 //     [ Leading Array ][  DerivedClass  ][ Trailing Array ]
 template<typename Derived, typename LeadingType, typename TrailingType>
 class ButterflyArray {
-    WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(ButterflyArray);
     friend class JSC::LLIntOffsetsExtractor;
 protected:
@@ -65,8 +64,8 @@ public:
         return memoryOffsetForDerived(leadingSize) + offsetOfTrailingData() + trailingSize * sizeof(TrailingType);
     }
 
-    static ptrdiff_t offsetOfLeadingSize() { return OBJECT_OFFSETOF(Derived, m_leadingSize); }
-    static ptrdiff_t offsetOfTrailingSize() { return OBJECT_OFFSETOF(Derived, m_trailingSize); }
+    static constexpr ptrdiff_t offsetOfLeadingSize() { return OBJECT_OFFSETOF(Derived, m_leadingSize); }
+    static constexpr ptrdiff_t offsetOfTrailingSize() { return OBJECT_OFFSETOF(Derived, m_trailingSize); }
     static constexpr ptrdiff_t offsetOfTrailingData()
     {
         return WTF::roundUpToMultipleOf<alignof(TrailingType)>(sizeof(Derived));
@@ -79,29 +78,29 @@ public:
 
     std::span<LeadingType> leadingSpan()
     {
-        return std::span { leadingData(), leadingData() + m_leadingSize };
+        return std::span { leadingData(), m_leadingSize };
     }
 
     std::span<const LeadingType> leadingSpan() const
     {
-        return std::span { leadingData(), leadingData() + m_leadingSize };
+        return std::span { leadingData(), m_leadingSize };
     }
 
     std::span<TrailingType> trailingSpan()
     {
-        return std::span { trailingData(), trailingData() + m_trailingSize };
+        return std::span { trailingData(), m_trailingSize };
     }
 
     std::span<const TrailingType> trailingSpan() const
     {
-        return std::span { trailingData(), trailingData() + m_trailingSize };
+        return std::span { trailingData(), m_trailingSize };
     }
 
     void operator delete(ButterflyArray* base, std::destroying_delete_t)
     {
         unsigned leadingSize = base->m_leadingSize;
         std::destroy_at(static_cast<Derived*>(base));
-        Derived::freeAfterDestruction(bitwise_cast<uint8_t*>(static_cast<Derived*>(base)) - memoryOffsetForDerived(leadingSize));
+        fastFree(bitwise_cast<uint8_t*>(static_cast<Derived*>(base)) - memoryOffsetForDerived(leadingSize));
     }
 
     ~ButterflyArray()
@@ -128,7 +127,7 @@ protected:
         return bitwise_cast<TrailingType*>(bitwise_cast<uint8_t*>(static_cast<Derived*>(this)) + offsetOfTrailingData());
     }
 
-    const TrailingType trailingData() const
+    const TrailingType* trailingData() const
     {
         return bitwise_cast<const TrailingType*>(bitwise_cast<const uint8_t*>(static_cast<const Derived*>(this)) + offsetOfTrailingData());
     }

@@ -32,9 +32,12 @@ function testRanges()
 
     testExpected("video.played.length", timeRangeCount);
     
+    // We skip played range at index 0 as it's the value of currentTime following a call to play() immediately followed by pause().
+    // The test assume that currentTime would have progressed by less than 0.01s. Experimentation shows that it could be greater than this value.
+    // Using 0.5s for now.
     for (i = 0; i < timeRangeCount; i++) {
         testExpected("video.played.start(" + (i) + ").toFixed(2)", expectedStartTimes[i]);
-        testExpected("video.played.end("   + (i) + ").toFixed(2)", expectedEndTimes[i]);
+        testExpected("video.played.end("   + (i) + ").toFixed(2) - expectedEndTimes[i] <= 0.5", true);
     }
 }
 
@@ -52,6 +55,8 @@ function nextTest()
 
 function pause(evt)
 {
+    if (video.ended)
+        return;
     currentTime = video.currentTime.toFixed(2);
     
     if (!willExtendAnExistingRange)
@@ -66,6 +71,15 @@ function pause(evt)
 function canplay(event) 
 {
     testRanges();
+    nextTest();
+}
+
+function ended(evt)
+{
+    testExpected('video.currentTime == video.duration', true);
+    testExpected('video.played.length >= 1', true);
+    testExpected('video.played.end(video.played.length -1) == video.duration', true);
+
     nextTest();
 }
 
@@ -143,6 +157,13 @@ function playForMillisecs(milliseconds)
     setTimeout(callPauseIfTimeIsReached, milliseconds + 100);
 }
 
+async function playUntilEnded()
+{
+    run("handlePromise(video.play())");
+
+    await waitFor(video, 'ended');
+}
+
 function videoPlayedMain()
 {
     findMediaElement();
@@ -155,6 +176,7 @@ function videoPlayedMain()
     waitForEvent("loadedmetadata");
     waitForEvent("canplay", canplay); // Will trigger nextTest() which launches the tests.
     waitForEvent("pause", pause);
+    waitForEvent("ended", ended);
     
     video.load();
 }

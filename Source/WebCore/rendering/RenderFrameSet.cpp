@@ -55,7 +55,7 @@ static constexpr auto borderFillColor = SRGBA<uint8_t> { 208, 208, 208 };
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderFrameSet);
 
 RenderFrameSet::RenderFrameSet(HTMLFrameSetElement& frameSet, RenderStyle&& style)
-    : RenderBox(Type::FrameSet, frameSet, WTFMove(style), { })
+    : RenderBox(Type::FrameSet, frameSet, WTFMove(style))
     , m_isResizing(false)
 {
     ASSERT(isRenderFrameSet());
@@ -399,8 +399,8 @@ void RenderFrameSet::computeEdgeInfo()
     for (size_t r = 0; r < rows; ++r) {
         for (size_t c = 0; c < cols; ++c) {
             FrameEdgeInfo edgeInfo;
-            if (is<RenderFrameSet>(*child))
-                edgeInfo = downcast<RenderFrameSet>(*child).edgeInfo();
+            if (auto* frameSet = dynamicDowncast<RenderFrameSet>(*child))
+                edgeInfo = frameSet->edgeInfo();
             else
                 edgeInfo = downcast<RenderFrame>(*child).edgeInfo();
             fillFromEdgeInfo(edgeInfo, r, c);

@@ -39,6 +39,29 @@
 #include <wtf/WeakRef.h>
 
 namespace TestWebKitAPI {
+class Base;
+class Derived;
+struct Int;
+struct Foo;
+class MultipleInheritanceBase1;
+class MultipleInheritanceBase2;
+class MultipleInheritanceDerived;
+class TestType;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<TestWebKitAPI::Base> : std::true_type { };
+template<> struct IsDeprecatedWeakRefSmartPointerException<TestWebKitAPI::Derived> : std::true_type { };
+template<> struct IsDeprecatedWeakRefSmartPointerException<TestWebKitAPI::Foo> : std::true_type { };
+template<> struct IsDeprecatedWeakRefSmartPointerException<TestWebKitAPI::Int> : std::true_type { };
+template<> struct IsDeprecatedWeakRefSmartPointerException<TestWebKitAPI::MultipleInheritanceBase1> : std::true_type { };
+template<> struct IsDeprecatedWeakRefSmartPointerException<TestWebKitAPI::MultipleInheritanceBase2> : std::true_type { };
+template<> struct IsDeprecatedWeakRefSmartPointerException<TestWebKitAPI::MultipleInheritanceDerived> : std::true_type { };
+template<> struct IsDeprecatedWeakRefSmartPointerException<TestWebKitAPI::TestType> : std::true_type { };
+}
+
+namespace TestWebKitAPI {
 
 static unsigned s_baseWeakReferences = 0;
 
@@ -228,7 +251,7 @@ TEST(WTF_WeakPtr, Operators)
 
     WeakPtr<Foo> weakPtr4 = WTFMove(weakPtr);
     EXPECT_EQ(weakPtr4.get(), &f);
-    EXPECT_FALSE(weakPtr);
+    SUPPRESS_USE_AFTER_MOVE EXPECT_FALSE(weakPtr);
 }
 
 TEST(WTF_WeakPtr, Forget)
@@ -333,7 +356,7 @@ TEST(WTF_WeakPtr, DerivedConstructAndAssign)
         WeakPtr<Derived> derivedWeakPtr = makeWeakPtr(derived);
         WeakPtr<Base> baseWeakPtr { WTFMove(derivedWeakPtr) };
         EXPECT_EQ(baseWeakPtr.get(), &derived);
-        EXPECT_NULL(derivedWeakPtr.get());
+        SUPPRESS_USE_AFTER_MOVE EXPECT_NULL(derivedWeakPtr.get());
     }
 
     {
@@ -348,7 +371,7 @@ TEST(WTF_WeakPtr, DerivedConstructAndAssign)
         WeakPtr<Base> baseWeakPtr;
         baseWeakPtr = WTFMove(derivedWeakPtr);
         EXPECT_EQ(baseWeakPtr.get(), &derived);
-        EXPECT_NULL(derivedWeakPtr.get());
+        SUPPRESS_USE_AFTER_MOVE EXPECT_NULL(derivedWeakPtr.get());
     }
 
     {
@@ -367,7 +390,7 @@ TEST(WTF_WeakPtr, DerivedConstructAndAssignConst)
         auto derivedWeakPtr = makeWeakPtr(derived);
         WeakPtr<const Base> baseWeakPtr { WTFMove(derivedWeakPtr) };
         EXPECT_EQ(baseWeakPtr.get(), &derived);
-        EXPECT_NULL(derivedWeakPtr.get());
+        SUPPRESS_USE_AFTER_MOVE EXPECT_NULL(derivedWeakPtr.get());
     }
 
     {
@@ -382,7 +405,7 @@ TEST(WTF_WeakPtr, DerivedConstructAndAssignConst)
         WeakPtr<const Base> baseWeakPtr;
         baseWeakPtr = WTFMove(derivedWeakPtr);
         EXPECT_EQ(baseWeakPtr.get(), &derived);
-        EXPECT_NULL(derivedWeakPtr.get());
+        SUPPRESS_USE_AFTER_MOVE EXPECT_NULL(derivedWeakPtr.get());
     }
 
     {
@@ -2815,7 +2838,7 @@ TEST(WTF_ThreadSafeWeakPtr, UseAfterMoveResistance)
     auto counter = adoptRef(*new ThreadSafeInstanceCounter());
     auto weakPtr = ThreadSafeWeakPtr { counter.get() };
     auto movedTo = WTFMove(weakPtr);
-    EXPECT_NULL(weakPtr.get());
+    SUPPRESS_USE_AFTER_MOVE EXPECT_NULL(weakPtr.get());
     EXPECT_NOT_NULL(movedTo.get());
     ThreadSafeWeakPtr<ThreadSafeInstanceCounter> emptyConstructor;
     EXPECT_NULL(emptyConstructor.get());
@@ -3129,6 +3152,8 @@ TEST(WTF_ThreadSafeWeakPtr, WeakRefInDestructor)
     EXPECT_NULL(shouldBeNull.get());
 }
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DidUpdateRefCountWeakPtrImpl);
+
 class DidUpdateRefCountWeakPtrImpl final {
     WTF_MAKE_NONCOPYABLE(DidUpdateRefCountWeakPtrImpl);
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(DidUpdateRefCountWeakPtrImpl);
@@ -3177,6 +3202,7 @@ private:
     void* m_ptr;
     mutable bool m_didUpdateRefCount { false };
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DidUpdateRefCountWeakPtrImpl);
 
 class TestType : public WTF::CanMakeWeakPtr<TestType, WeakPtrFactoryInitialization::Lazy, DidUpdateRefCountWeakPtrImpl> {
 public:

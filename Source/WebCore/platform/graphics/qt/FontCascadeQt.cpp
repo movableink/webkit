@@ -64,8 +64,8 @@ static inline String toNormalizedQStringImpl(const CharacterType* characters, un
 static const QString toNormalizedQString(const TextRun& run)
 {
     return run.is8Bit()
-        ? toNormalizedQStringImpl(run.characters8(), run.length())
-        : toNormalizedQStringImpl(run.characters16(), run.length());
+        ? toNormalizedQStringImpl(run.span8().data(), run.span8().size())
+        : toNormalizedQStringImpl(run.span16().data(), run.span16().size());
 }
 
 static QTextLine setupLayout(QTextLayout* layout, const TextRun& style)

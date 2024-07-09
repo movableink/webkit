@@ -26,7 +26,6 @@
 #import "config.h"
 #import "Connection.h"
 
-#import "DataReference.h"
 #import "Encoder.h"
 #import "IPCUtilities.h"
 #import "ImportanceAssertion.h"
@@ -196,7 +195,7 @@ void Connection::platformOpen()
     }
 
     // Change the message queue length for the receive port.
-    setMachPortQueueLength(m_receivePort, MACH_PORT_QLIMIT_LARGE);
+    setMachPortQueueLength(m_receivePort, largeOutgoingMessageQueueCountThreshold);
 
     m_receiveSource = adoptOSObject(dispatch_source_create(DISPATCH_SOURCE_TYPE_MACH_RECV, m_receivePort, 0, m_connectionQueue->dispatchQueue()));
     dispatch_source_set_event_handler(m_receiveSource.get(), [this, protectedThis = Ref { *this }] {
@@ -210,7 +209,7 @@ void Connection::platformOpen()
         mach_port_mod_refs(mach_task_self(), receivePort, MACH_PORT_RIGHT_RECEIVE, -1);
     });
 
-    m_connectionQueue->dispatch([strongRef = Ref { *this }, this] {
+    protectedConnectionQueue()->dispatch([strongRef = Ref { *this }, this] {
         dispatch_resume(m_receiveSource.get());
     });
 }
@@ -244,10 +243,16 @@ bool Connection::sendMessage(std::unique_ptr<MachMessage> message)
         // the send right inside the `message`that goes out of scope, and thus we get the NO_SENDERS.
         return false;
 
+#if ENABLE(IPC_TESTING_API)
+    case MACH_SEND_TOO_LARGE:
+        RELEASE_LOG_ERROR(Process, "%" PUBLIC_LOG_STRING "Error MACH_SEND_TOO_LARGE", WTF_PRETTY_FUNCTION);
+        return false;
+#endif
+
     default:
         auto messageName = message->messageName();
-        auto errorMessage = makeString("Unhandled error code 0x", hex(kr), ", message '", description(messageName), "' (", messageName, ')');
-#if !PLATFORM(QT)
+        auto errorMessage = makeString("Unhandled error code 0x"_s, hex(kr), ", message '"_s, description(messageName), "' ("_s, messageName, ')');
+#if !PLATFORM(QT)            
         WebKit::logAndSetCrashLogMessage(errorMessage.utf8().data());
 #endif
         CRASH_WITH_INFO(kr, WTF::enumToUnderlyingType(messageName));
@@ -267,7 +272,7 @@ bool Connection::sendOutgoingMessage(UniqueRef<Encoder>&& encoder)
     auto numberOfPortDescriptors = attachments.size();
 
     bool messageBodyIsOOL = false;
-    auto messageSize = MachMessage::messageSize(encoder->bufferSize(), numberOfPortDescriptors, messageBodyIsOOL);
+    auto messageSize = MachMessage::messageSize(encoder->span().size(), numberOfPortDescriptors, messageBodyIsOOL);
     if (UNLIKELY(messageSize.hasOverflowed()))
         return false;
 
@@ -313,8 +318,9 @@ bool Connection::sendOutgoingMessage(UniqueRef<Encoder>&& encoder)
 
         if (messageBodyIsOOL) {
             auto* descriptor = getDescriptorAndAdvance(messageData, sizeof(mach_msg_ool_descriptor_t));
-            descriptor->out_of_line.address = encoder->buffer();
-            descriptor->out_of_line.size = encoder->bufferSize();
+            auto buffer = encoder->span();
+            descriptor->out_of_line.address = const_cast<uint8_t*>(buffer.data());
+            descriptor->out_of_line.size = buffer.size();
             descriptor->out_of_line.copy = MACH_MSG_VIRTUAL_COPY;
             descriptor->out_of_line.deallocate = false;
             descriptor->out_of_line.type = MACH_MSG_OOL_DESCRIPTOR;
@@ -322,8 +328,10 @@ bool Connection::sendOutgoingMessage(UniqueRef<Encoder>&& encoder)
     }
 
     // Copy the data if it is not being sent out-of-line.
-    if (!messageBodyIsOOL)
-        memcpy(messageData, encoder->buffer(), encoder->bufferSize());
+    if (!messageBodyIsOOL) {
+        auto buffer = encoder->span();
+        memcpy(messageData, buffer.data(), buffer.size());
+    }
 
     return sendMessage(WTFMove(message));
 }
@@ -435,7 +443,7 @@ static std::unique_ptr<Decoder> createMessageDecoder(mach_msg_header_t* header, 
         size_t messageBodySize = descriptor->out_of_line.size;
         descriptor->out_of_line.deallocate = false; // We are taking ownership of the memory.
 
-        return Decoder::create({ messageBody, messageBodySize }, [](DataReference buffer) {
+        return Decoder::create({ messageBody, messageBodySize }, [](auto buffer) {
             // FIXME: <rdar://problem/62086358> bufferDeallocator block ignores mach_msg_ool_descriptor_t->deallocate
             vm_deallocate(mach_task_self(), reinterpret_cast<vm_address_t>(buffer.data()), buffer.size_bytes());
         }, WTFMove(attachments));
@@ -480,7 +488,7 @@ static mach_msg_header_t* readFromMachPort(mach_port_t machPort, ReceiveBuffer& 
     if (kr != MACH_MSG_SUCCESS) {
 #if !PLATFORM(QT)
 #if ASSERT_ENABLED
-        auto errorMessage = makeString("Unhandled error code 0x", hex(kr), " from mach_msg, receive port is 0x", hex(machPort));
+        auto errorMessage = makeString("Unhandled error code 0x"_s, hex(kr), " from mach_msg, receive port is 0x"_s, hex(machPort));
         WebKit::logAndSetCrashLogMessage(errorMessage.utf8().data());
 #endif
 #endif
@@ -489,6 +497,18 @@ static mach_msg_header_t* readFromMachPort(mach_port_t machPort, ReceiveBuffer& 
     }
 
     return header;
+}
+
+static bool shouldLogIncomingMessageHandling()
+{
+    static dispatch_once_t once;
+    static bool shouldLog;
+
+    dispatch_once(&once, ^{
+        shouldLog = !!getenv("WEBKIT_LOG_INCOMING_MESSAGES");
+    });
+
+    return shouldLog;
 }
 
 void Connection::receiveSourceEventHandler()
@@ -525,8 +545,14 @@ void Connection::receiveSourceEventHandler()
     if (decoder->messageName() == MessageName::InitializeConnection) {
         ASSERT(m_isServer);
         ASSERT(!m_sendPort);
-        MachSendRight sendRight;
-        if (m_isConnected || !decoder->decode(sendRight)) {
+        if (m_isConnected) {
+            // The sender sent an invalid message deliberately, close immediately.
+            ASSERT_IS_TESTING_IPC();
+            connectionDidClose();
+            return;
+        }
+        auto sendRight = decoder->decode<MachSendRight>();
+        if (!sendRight) {
             // The sender sent an invalid message deliberately, close immediately.
             ASSERT_IS_TESTING_IPC();
             connectionDidClose();
@@ -535,7 +561,7 @@ void Connection::receiveSourceEventHandler()
 
         m_isConnected = true;
 
-        if (!MACH_PORT_VALID(sendRight.sendRight())) {
+        if (!MACH_PORT_VALID(sendRight->sendRight())) {
             // The InitializeConnection message was valid message. We received MACH_PORT_DEAD
             // because by the time we read the message, the port was already closed.
             // Do not initialize the send source, as there is nobody to send to.
@@ -543,12 +569,15 @@ void Connection::receiveSourceEventHandler()
             // the NO_SENDERS notification.
             return;
         }
-        m_sendPort = sendRight.leakSendRight();
+        m_sendPort = sendRight->leakSendRight();
         initializeSendSource();
         return;
     }
 
-    processIncomingMessage(WTFMove(decoder));
+    if (UNLIKELY(shouldLogIncomingMessageHandling()))
+        RELEASE_LOG(IPCMessages, "Connection::processIncomingMessage(%p) received %" PUBLIC_LOG_STRING " from port 0x%08x", this, description(decoder->messageName()).characters(), m_receivePort);
+
+    processIncomingMessage(makeUniqueRefFromNonNullUniquePtr(WTFMove(decoder)));
 }
 
 IPC::Connection::Identifier Connection::identifier() const
@@ -566,6 +595,7 @@ std::optional<audit_token_t> Connection::getAuditToken()
     return WTFMove(auditToken);
 }
 
+#if !USE(EXTENSIONKIT_PROCESS_TERMINATION)
 bool Connection::kill()
 {
     if (m_xpcConnection) {
@@ -573,9 +603,9 @@ bool Connection::kill()
         m_wasKilled = true;
         return true;
     }
-
     return false;
 }
+#endif
 
 pid_t Connection::remoteProcessID() const
 {

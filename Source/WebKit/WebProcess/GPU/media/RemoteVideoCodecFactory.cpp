@@ -129,8 +129,8 @@ static bool shouldUseLocalDecoder(std::optional<VideoCodecType> type, const Vide
     if (!type)
         return true;
 
-#if PLATFORM(MAC) && CPU(X86_64)
-    if (*type == VideoCodecType::VP9 && config.prefersSoftware)
+#if PLATFORM(MAC)
+    if (*type == VideoCodecType::VP9 && config.decoding == VideoDecoder::HardwareAcceleration::No)
         return true;
 #endif
 
@@ -154,7 +154,7 @@ void RemoteVideoCodecFactory::createDecoder(const String& codec, const VideoDeco
             return;
         }
         if (description.size())
-            WebProcess::singleton().libWebRTCCodecs().setDecoderFormatDescription(*internalDecoder, description.data(), description.size(), width, height);
+            WebProcess::singleton().libWebRTCCodecs().setDecoderFormatDescription(*internalDecoder, description.span(), width, height);
 
         auto callbacks = RemoteVideoDecoderCallbacks::create(WTFMove(outputCallback), WTFMove(postTaskCallback));
         UniqueRef<VideoDecoder> decoder = makeUniqueRef<RemoteVideoDecoder>(*internalDecoder, callbacks.copyRef(), width, height);
@@ -177,8 +177,8 @@ void RemoteVideoCodecFactory::createEncoder(const String& codec, const WebCore::
     std::map<std::string, std::string> parameters;
     if (type == VideoCodecType::H264) {
         if (auto position = codec.find('.');position != notFound && position != codec.length()) {
-            auto profileLevelId = StringView(codec).substring(position + 1);
-            parameters["profile-level-id"] = std::string(reinterpret_cast<const char*>(profileLevelId.characters8()), profileLevelId.length());
+            auto profileLevelId = spanReinterpretCast<const char>(codec.span8().subspan(position + 1));
+            parameters["profile-level-id"] = std::string(profileLevelId.data(), profileLevelId.size());
         }
     }
 
@@ -217,7 +217,7 @@ void RemoteVideoDecoder::decode(EncodedFrame&& frame, DecodeCallback&& callback)
 {
     if (frame.duration)
         m_callbacks->addDuration(frame.timestamp, *frame.duration);
-    WebProcess::singleton().libWebRTCCodecs().decodeFrame(m_internalDecoder, frame.timestamp, frame.data.data(), frame.data.size(), m_width, m_height);
+    WebProcess::singleton().libWebRTCCodecs().decodeFrame(m_internalDecoder, frame.timestamp, frame.data, m_width, m_height);
     callback({ });
 }
 

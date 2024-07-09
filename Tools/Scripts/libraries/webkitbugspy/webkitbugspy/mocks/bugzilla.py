@@ -158,6 +158,15 @@ class Bugzilla(Base, mocks.Requests):
                 issue['component'] = data['component']
             if data.get('version'):
                 issue['version'] = data['version']
+            issue['related'] = {'blocks': [], 'depends_on': [], 'regressions': [], 'regressed_by': []}
+            if data.get('depends_on'):
+                issue['related']['depends_on'] = data['depends_on']
+            if data.get('blocks'):
+                issue['related']['blocks'] = data['blocks']
+            if data.get('regressed_by'):
+                issue['related']['regressed_by'] = data['regressed_by']
+            if data.get('regressions'):
+                issue['related']['regressions'] = data['regressions']
 
             keywords = data.get('keywords', {})
             if keywords:
@@ -183,6 +192,7 @@ class Bugzilla(Base, mocks.Requests):
                     radar_id = RadarMock.top.add(dict(
                         title='{} ({})'.format(issue['description'], issue['id']),
                         timestamp=time.time(),
+                        modified=time.time(),
                         opened=True,
                         creator=candidate,
                         assignee=user,
@@ -201,6 +211,7 @@ class Bugzilla(Base, mocks.Requests):
                 id=id,
                 summary=issue['title'],
                 creation_time=self.time_string(issue['timestamp']),
+                last_change_time=self.time_string(issue['modified' if issue.get('modified') else 'timestamp']),
                 status='REOPENED' if issue['opened'] else 'RESOLVED',
                 resolution='' if issue['opened'] else 'FIXED',
                 dupe_of=issue['original']['id'] if issue.get('original', None) else None,
@@ -208,6 +219,10 @@ class Bugzilla(Base, mocks.Requests):
                 product=issue.get('project'),
                 component=issue.get('component'),
                 version=issue.get('version'),
+                depends_on=issue.get('related')['depends_on'] if issue.get('related') else None,
+                blocks=issue.get('related')['blocks'] if issue.get('related') else None,
+                regressed_by=issue.get('related')['regressed_by'] if issue.get('related') else None,
+                regressions=issue.get('related')['regressions'] if issue.get('related') else None,
                 keywords=issue.get('keywords', []),
                 creator_detail=dict(
                     email=issue['creator'].email,
@@ -356,6 +371,7 @@ class Bugzilla(Base, mocks.Requests):
             id=id,
             title=data['summary'],
             timestamp=int(time.time()),
+            modified=int(time.time()),
             opened=True,
             creator=user,
             assignee=assignee,

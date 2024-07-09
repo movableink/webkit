@@ -612,12 +612,12 @@ window.UIHelper = class UIHelper {
         });
     }
 
-    static async setInlinePrediction(text)
+    static async setInlinePrediction(text, startIndex = 0)
     {
         if (!this.isWebKit2())
             return Promise.resolve();
 
-        return new Promise(resolve => testRunner.runUIScript(`uiController.setInlinePrediction(\`${text}\`)`, resolve));
+        return new Promise(resolve => testRunner.runUIScript(`uiController.setInlinePrediction(\`${text}\`, ${startIndex})`, resolve));
     }
 
     static async acceptInlinePrediction()
@@ -908,11 +908,12 @@ window.UIHelper = class UIHelper {
         if (!this.isWebKit2() || this.isIOSFamily())
             return Promise.resolve();
 
-        if (internals.isUsingUISideCompositing() && (!scroller || scroller.nodeName != "SELECT")) {
-            return new Promise(resolve => {
+            if (internals.isUsingUISideCompositing() && (!scroller || scroller.nodeName != "SELECT")) {
+                var scrollingNodeID = internalFunctions.scrollingNodeIDForNode(scroller);
+                return new Promise(resolve => {
                 testRunner.runUIScript(`(function() {
                     uiController.doAfterNextStablePresentationUpdate(function() {
-                        uiController.uiScriptComplete(uiController.scrollbarStateForScrollingNodeID(${internalFunctions.scrollingNodeIDForNode(scroller)}, ${isVertical}));
+                        uiController.uiScriptComplete(uiController.scrollbarStateForScrollingNodeID(${scrollingNodeID[0]}, ${scrollingNodeID[1]}, ${isVertical}));
                     });
                 })()`, state => {
                     resolve(state);
@@ -1708,6 +1709,36 @@ window.UIHelper = class UIHelper {
         });
     }
 
+    static beginInteractiveObscuredInsetsChange()
+    {
+        if (!this.isWebKit2() || !this.isIOSFamily())
+            return Promise.resolve();
+
+        return new Promise(resolve => {
+            testRunner.runUIScript("uiController.beginInteractiveObscuredInsetsChange()", resolve);
+        });
+    }
+
+    static endInteractiveObscuredInsetsChange()
+    {
+        if (!this.isWebKit2() || !this.isIOSFamily())
+            return Promise.resolve();
+
+        return new Promise(resolve => {
+            testRunner.runUIScript("uiController.endInteractiveObscuredInsetsChange()", resolve);
+        });
+    }
+
+    static setObscuredInsets(top, right, bottom, left)
+    {
+        if (!this.isWebKit2() || !this.isIOSFamily())
+            return Promise.resolve();
+
+        return new Promise(resolve => {
+            testRunner.runUIScript(`uiController.setObscuredInsets(${top}, ${right}, ${bottom}, ${left})`, resolve);
+        });
+    }
+
     static rotateDevice(orientationName, animatedResize = false)
     {
         if (!this.isWebKit2() || !this.isIOSFamily())
@@ -2108,6 +2139,59 @@ window.UIHelper = class UIHelper {
     static getSelectedTextInChromeInputField()
     {
         return new Promise(resolve => testRunner.getSelectedTextInChromeInputField(resolve));
+    }
+
+    static requestTextExtraction(options)
+    {
+        if (!this.isWebKit2())
+            return Promise.resolve();
+
+        return new Promise(resolve => {
+            testRunner.runUIScript(`(() => {
+                uiController.requestTextExtraction(
+                    result => uiController.uiScriptComplete(result),
+                    ${JSON.stringify(options)}
+                );
+            })()`, resolve);
+        });
+    }
+
+    static requestRenderedTextForFrontmostTarget(x, y)
+    {
+        if (!this.isWebKit2())
+            return Promise.resolve();
+
+        return new Promise(resolve => {
+            testRunner.runUIScript(`(() => {
+                uiController.requestRenderedTextForFrontmostTarget(${x}, ${y}, result => uiController.uiScriptComplete(result));
+            })()`, resolve);
+        });
+    }
+
+    static adjustVisibilityForFrontmostTarget(x, y) {
+        if (!this.isWebKit2())
+            return Promise.resolve();
+
+        if (x instanceof HTMLElement) {
+            const point = this.midPointOfRect(x.getBoundingClientRect());
+            x = point.x;
+            y = point.y;
+        }
+
+        return new Promise(resolve => {
+            testRunner.runUIScript(`(() => {
+                uiController.adjustVisibilityForFrontmostTarget(${x}, ${y}, result => uiController.uiScriptComplete(result));
+            })()`, resolve);
+        });
+    }
+
+    static resetVisibilityAdjustments() {
+        if (!this.isWebKit2())
+            return Promise.resolve();
+
+        return new Promise(resolve => {
+            testRunner.runUIScript("uiController.resetVisibilityAdjustments(result => uiController.uiScriptComplete(result));", resolve);
+        });
     }
 }
 

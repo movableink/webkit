@@ -96,13 +96,14 @@ AudioSourceProviderGStreamer::AudioSourceProviderGStreamer(MediaStreamTrackPriva
 {
     initializeAudioSourceProviderDebugCategory();
     registerWebKitGStreamerElements();
-    const char* pipelineNamePrefix = "";
+    auto pipelineNamePrefix = ""_s;
 #if USE(GSTREAMER_WEBRTC)
     if (m_captureSource->source().isIncomingAudioSource())
-        pipelineNamePrefix = "incoming-";
+        pipelineNamePrefix = "incoming-"_s;
 #endif
-    auto pipelineName = makeString(pipelineNamePrefix, "WebAudioProvider_MediaStreamTrack_", source.id());
+    auto pipelineName = makeString(pipelineNamePrefix, "WebAudioProvider_MediaStreamTrack_"_s, source.id());
     m_pipeline = gst_element_factory_make("pipeline", pipelineName.utf8().data());
+    registerActivePipeline(m_pipeline);
     GST_DEBUG_OBJECT(m_pipeline.get(), "MediaStream WebAudio provider created");
 
     m_streamPrivate = MediaStreamPrivate::create(Logger::create(this), { source });
@@ -189,8 +190,10 @@ AudioSourceProviderGStreamer::~AudioSourceProviderGStreamer()
 
     setClient(nullptr);
 #if ENABLE(MEDIA_STREAM)
-    if (m_pipeline)
+    if (m_pipeline) {
+        unregisterPipeline(m_pipeline);
         gst_element_set_state(m_pipeline.get(), GST_STATE_NULL);
+    }
     GST_DEBUG_OBJECT(m_pipeline.get(), "Disposing DONE");
 #endif
 }
@@ -387,7 +390,7 @@ void AudioSourceProviderGStreamer::handleNewDeinterleavePad(GstPad* pad)
         // new_event
         nullptr,
 #endif
-#if GST_CHECK_VERSION(1, 23, 0)
+#if GST_CHECK_VERSION(1, 24, 0)
         // propose_allocation
         nullptr,
 #endif

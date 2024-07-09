@@ -84,7 +84,11 @@ ApplicationCache* ApplicationCacheGroup::cacheForMainRequest(const ResourceReque
     if (!page || page->usesEphemeralSession())
         return nullptr;
 
-    auto* group = page->applicationCacheStorage().cacheGroupForURL(url);
+    auto* applicationCacheStorage = page->applicationCacheStorage();
+    if (!applicationCacheStorage)
+        return nullptr;
+
+    auto* group = applicationCacheStorage->cacheGroupForURL(url);
     if (!group)
         return nullptr;
 
@@ -110,7 +114,11 @@ ApplicationCache* ApplicationCacheGroup::fallbackCacheForMainRequest(const Resou
     URL url(request.url());
     url.removeFragmentIdentifier();
 
-    auto* group = page->applicationCacheStorage().fallbackCacheGroupForURL(url);
+    auto* applicationCacheStorage = page->applicationCacheStorage();
+    if (!applicationCacheStorage)
+        return nullptr;
+
+    auto* group = applicationCacheStorage->fallbackCacheGroupForURL(url);
     if (!group)
         return nullptr;
 
@@ -126,7 +134,7 @@ void ApplicationCacheGroup::selectCache(LocalFrame& frame, const URL& passedMani
     ASSERT(frame.page());
     ASSERT(frame.loader().documentLoader());
 
-    if (!frame.settings().offlineWebApplicationCacheEnabled())
+    if (frame.loader().documentLoader() && !frame.loader().documentLoader()->applicationCacheHost().isApplicationCacheEnabled())
         return;
 
     auto& documentLoader = *frame.loader().documentLoader();
@@ -167,8 +175,8 @@ void ApplicationCacheGroup::selectCache(LocalFrame& frame, const URL& passedMani
 
             bool inStorage = resource.storageID();
             resource.addType(ApplicationCacheResource::Foreign);
-            if (inStorage)
-                frame.page()->applicationCacheStorage().storeUpdatedType(&resource, mainResourceCache);
+            if (inStorage && frame.page()->applicationCacheStorage())
+                frame.page()->applicationCacheStorage()->storeUpdatedType(&resource, mainResourceCache);
 
             // Restart the current navigation from the top of the navigation algorithm, undoing any changes that were made
             // as part of the initial load.
@@ -190,7 +198,11 @@ void ApplicationCacheGroup::selectCache(LocalFrame& frame, const URL& passedMani
     if (!protocolHostAndPortAreEqual(manifestURL, request.url()))
         return;
 
-    auto& group = *frame.page()->applicationCacheStorage().findOrCreateCacheGroup(manifestURL);
+    auto* applicationCacheStorage = frame.page()->applicationCacheStorage();
+    if (!applicationCacheStorage)
+        return;
+
+    auto& group = *(applicationCacheStorage->findOrCreateCacheGroup(manifestURL));
 
     documentLoader.applicationCacheHost().setCandidateApplicationCacheGroup(&group);
     group.m_pendingMasterResourceLoaders.add(&documentLoader);
@@ -202,7 +214,7 @@ void ApplicationCacheGroup::selectCache(LocalFrame& frame, const URL& passedMani
 
 void ApplicationCacheGroup::selectCacheWithoutManifestURL(LocalFrame& frame)
 {
-    if (!frame.settings().offlineWebApplicationCacheEnabled())
+    if (frame.loader().documentLoader() && !frame.loader().documentLoader()->applicationCacheHost().isApplicationCacheEnabled())
         return;
 
     ASSERT(frame.document());
@@ -554,7 +566,7 @@ void ApplicationCacheGroup::didFailLoadingEntry(ApplicationCacheResourceLoader::
     m_pendingEntries.remove(url.string());
 
     if ((type & ApplicationCacheResource::Explicit) || (type & ApplicationCacheResource::Fallback)) {
-        m_frame->document()->addConsoleMessage(MessageSource::AppCache, MessageLevel::Error, makeString("Application Cache update failed, because ", url.stringCenterEllipsizedToLength(), (m_entryLoader && m_entryLoader->hasRedirection() ? " was redirected." : " could not be fetched.")));
+        m_frame->document()->addConsoleMessage(MessageSource::AppCache, MessageLevel::Error, makeString("Application Cache update failed, because "_s, url.stringCenterEllipsizedToLength(), (m_entryLoader && m_entryLoader->hasRedirection() ? " was redirected."_s : " could not be fetched."_s)));
         // Note that cacheUpdateFailed() can cause the cache group to be deleted.
         cacheUpdateFailed();
         return;
@@ -605,7 +617,7 @@ void ApplicationCacheGroup::didFinishLoadingManifest()
         }
     }
     
-    auto manifest = parseApplicationCacheManifest(m_manifestURL, m_manifestResource->response().mimeType(), m_manifestResource->data().makeContiguous()->data(), m_manifestResource->data().size());
+    auto manifest = parseApplicationCacheManifest(m_manifestURL, m_manifestResource->response().mimeType(), m_manifestResource->data().makeContiguous()->span());
     if (!manifest) {
         // At the time of this writing, lack of "CACHE MANIFEST" signature is the only reason for parseManifest to fail.
         m_frame->document()->addConsoleMessage(MessageSource::AppCache, MessageLevel::Error, "Application Cache manifest could not be parsed. Does it start with CACHE MANIFEST?"_s);
@@ -664,12 +676,12 @@ void ApplicationCacheGroup::didFailLoadingManifest(ApplicationCacheResourceLoade
         break;
     case ApplicationCacheResourceLoader::Error::NotFound:
         InspectorInstrumentation::didFailLoading(m_frame.get(), m_frame->loader().documentLoader(), m_currentResourceIdentifier, m_frame->loader().cancelledError(m_manifestLoader->resource()->resourceRequest()));
-        m_frame->document()->addConsoleMessage(MessageSource::AppCache, MessageLevel::Error, makeString("Application Cache manifest could not be fetched, because the manifest had a ", m_manifestLoader->resource()->response().httpStatusCode(), " response."));
+        m_frame->document()->addConsoleMessage(MessageSource::AppCache, MessageLevel::Error, makeString("Application Cache manifest could not be fetched, because the manifest had a "_s, m_manifestLoader->resource()->response().httpStatusCode(), " response."_s));
         manifestNotFound();
         break;
     case ApplicationCacheResourceLoader::Error::NotOK:
         InspectorInstrumentation::didFailLoading(m_frame.get(), m_frame->loader().documentLoader(), m_currentResourceIdentifier, m_frame->loader().cancelledError(m_manifestLoader->resource()->resourceRequest()));
-        m_frame->document()->addConsoleMessage(MessageSource::AppCache, MessageLevel::Error, makeString("Application Cache manifest could not be fetched, because the manifest had a ", m_manifestLoader->resource()->response().httpStatusCode(), " response."));
+        m_frame->document()->addConsoleMessage(MessageSource::AppCache, MessageLevel::Error, makeString("Application Cache manifest could not be fetched, because the manifest had a "_s, m_manifestLoader->resource()->response().httpStatusCode(), " response."_s));
         cacheUpdateFailed();
         break;
     case ApplicationCacheResourceLoader::Error::RedirectForbidden:
@@ -687,7 +699,12 @@ void ApplicationCacheGroup::didReachMaxAppCacheSize()
 {
     ASSERT(m_frame);
     ASSERT(m_cacheBeingUpdated);
-    m_frame->page()->chrome().client().reachedMaxAppCacheSize(m_frame->page()->applicationCacheStorage().spaceNeeded(m_cacheBeingUpdated->estimatedSizeInStorage()));
+
+    auto* applicationCacheStorage = m_frame->page()->applicationCacheStorage();
+    if (!applicationCacheStorage)
+        return;
+
+    m_frame->page()->chrome().client().reachedMaxAppCacheSize(applicationCacheStorage->spaceNeeded(m_cacheBeingUpdated->estimatedSizeInStorage()));
     m_calledReachedMaxAppCacheSize = true;
     checkIfLoadIsComplete();
 }
@@ -711,7 +728,11 @@ void ApplicationCacheGroup::cacheUpdateFailed()
 
 void ApplicationCacheGroup::recalculateAvailableSpaceInQuota()
 {
-    if (!m_frame->page()->applicationCacheStorage().calculateRemainingSizeForOriginExcludingCache(m_origin, m_newestCache.get(), m_availableSpaceInQuota)) {
+    auto* applicationCacheStorage = m_frame->page()->applicationCacheStorage();
+    if (!applicationCacheStorage)
+        return;
+
+    if (!applicationCacheStorage->calculateRemainingSizeForOriginExcludingCache(m_origin, m_newestCache.get(), m_availableSpaceInQuota)) {
         // Failed to determine what is left in the quota. Fallback to allowing anything.
         m_availableSpaceInQuota = ApplicationCacheStorage::noQuota();
     }

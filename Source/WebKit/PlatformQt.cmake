@@ -93,7 +93,6 @@ list(APPEND WebKit_SOURCES
     Shared/qt/ProcessExecutablePathQt.cpp
     Shared/qt/QtNetworkReplyData.cpp
     #Shared/qt/QtNetworkRequestData.cpp
-    Shared/qt/ShareableBitmapQt.cpp
     Shared/qt/WebCoreArgumentCodersQt.cpp
     Shared/qt/WebEventFactoryQt.cpp
     Shared/qt/WebGestureEvent.cpp

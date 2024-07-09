@@ -43,19 +43,19 @@ TEST(WTF, StringImplCreationFromLiteral)
 
     // Constructor taking the size explicitly.
     const char* programmaticStringData = "Explicit Size Literal";
-    auto programmaticString = StringImpl::createWithoutCopying(programmaticStringData, strlen(programmaticStringData));
+    auto programmaticString = StringImpl::createWithoutCopying(span(programmaticStringData));
     ASSERT_EQ(strlen(programmaticStringData), programmaticString->length());
     ASSERT_TRUE(equal(programmaticString.get(), StringView::fromLatin1(programmaticStringData)));
-    ASSERT_EQ(programmaticStringData, reinterpret_cast<const char*>(programmaticString->characters8()));
+    ASSERT_EQ(programmaticStringData, reinterpret_cast<const char*>(programmaticString->span8().data()));
     ASSERT_TRUE(programmaticString->is8Bit());
 
     // AtomStringImpl from createWithoutCopying should use the same underlying string.
     auto atomStringWithTemplate = AtomStringImpl::add(stringWithTemplate.ptr());
     ASSERT_TRUE(atomStringWithTemplate->is8Bit());
-    ASSERT_EQ(atomStringWithTemplate->characters8(), stringWithTemplate->characters8());
+    ASSERT_EQ(atomStringWithTemplate->span8().data(), stringWithTemplate->span8().data());
     auto atomicProgrammaticString = AtomStringImpl::add(programmaticString.ptr());
     ASSERT_TRUE(atomicProgrammaticString->is8Bit());
-    ASSERT_EQ(atomicProgrammaticString->characters8(), programmaticString->characters8());
+    ASSERT_EQ(atomicProgrammaticString->span8().data(), programmaticString->span8().data());
 }
 
 TEST(WTF, StringImplReplaceWithLiteral)
@@ -64,41 +64,41 @@ TEST(WTF, StringImplReplaceWithLiteral)
     ASSERT_TRUE(testStringImpl->is8Bit());
 
     // Cases for 8Bit source.
-    testStringImpl = testStringImpl->replace('2', ""_s, 0);
+    testStringImpl = testStringImpl->replace('2', ""_span);
     ASSERT_TRUE(equal(testStringImpl.get(), "14"_s));
 
     testStringImpl = StringImpl::create("1224"_s);
     ASSERT_TRUE(testStringImpl->is8Bit());
 
-    testStringImpl = testStringImpl->replace('3', "NotFound"_s, 8);
+    testStringImpl = testStringImpl->replace('3', "NotFound"_span);
     ASSERT_TRUE(equal(testStringImpl.get(), "1224"_s));
 
-    testStringImpl = testStringImpl->replace('2', "3"_s, 1);
+    testStringImpl = testStringImpl->replace('2', "3"_span);
     ASSERT_TRUE(equal(testStringImpl.get(), "1334"_s));
 
     testStringImpl = StringImpl::create("1224"_s);
     ASSERT_TRUE(testStringImpl->is8Bit());
-    testStringImpl = testStringImpl->replace('2', "555"_s, 3);
+    testStringImpl = testStringImpl->replace('2', "555"_span);
     ASSERT_TRUE(equal(testStringImpl.get(), "15555554"_s));
 
     // Cases for 16Bit source.
     String testString = String::fromUTF8("résumé");
     ASSERT_FALSE(testString.impl()->is8Bit());
 
-    testStringImpl = testString.impl()->replace('2', "NotFound"_s, 8);
+    testStringImpl = testString.impl()->replace('2', "NotFound"_span);
     ASSERT_TRUE(equal(testStringImpl.get(), String::fromUTF8("résumé").impl()));
 
-    testStringImpl = testString.impl()->replace(UChar(0x00E9 /*U+00E9 is 'é'*/), "e"_s, 1);
+    testStringImpl = testString.impl()->replace(UChar(0x00E9 /*U+00E9 is 'é'*/), "e"_span);
     ASSERT_TRUE(equal(testStringImpl.get(), "resume"_s));
 
     testString = String::fromUTF8("résumé");
     ASSERT_FALSE(testString.impl()->is8Bit());
-    testStringImpl = testString.impl()->replace(UChar(0x00E9 /*U+00E9 is 'é'*/), ""_s, 0);
+    testStringImpl = testString.impl()->replace(UChar(0x00E9 /*U+00E9 is 'é'*/), ""_span);
     ASSERT_TRUE(equal(testStringImpl.get(), "rsum"_s));
 
     testString = String::fromUTF8("résumé");
     ASSERT_FALSE(testString.impl()->is8Bit());
-    testStringImpl = testString.impl()->replace(UChar(0x00E9 /*U+00E9 is 'é'*/), "555"_s, 3);
+    testStringImpl = testString.impl()->replace(UChar(0x00E9 /*U+00E9 is 'é'*/), "555"_span);
     ASSERT_TRUE(equal(testStringImpl.get(), "r555sum555"_s));
 }
 
@@ -108,7 +108,7 @@ TEST(WTF, StringImplEqualIgnoringASCIICaseBasic)
     auto b = StringImpl::create("ABCDEFG"_s);
     auto c = StringImpl::create("abcdefg"_s);
     constexpr auto d = "aBcDeFG"_s;
-    auto empty = StringImpl::create(reinterpret_cast<const LChar*>(""), 0);
+    auto empty = StringImpl::create(""_span);
     auto shorter = StringImpl::create("abcdef"_s);
     auto different = StringImpl::create("abcrefg"_s);
 
@@ -151,8 +151,8 @@ TEST(WTF, StringImplEqualIgnoringASCIICaseWithNull)
 
 TEST(WTF, StringImplEqualIgnoringASCIICaseWithEmpty)
 {
-    auto a = StringImpl::create(reinterpret_cast<const LChar*>(""), 0);
-    auto b = StringImpl::create(reinterpret_cast<const LChar*>(""), 0);
+    auto a = StringImpl::create(""_span);
+    auto b = StringImpl::create(""_span);
     ASSERT_TRUE(equalIgnoringASCIICase(a.ptr(), b.ptr()));
     ASSERT_TRUE(equalIgnoringASCIICase(b.ptr(), a.ptr()));
 }
@@ -330,7 +330,7 @@ TEST(WTF, StringImplFindIgnoringASCIICaseOnNull)
 TEST(WTF, StringImplFindIgnoringASCIICaseOnEmpty)
 {
     auto reference = stringFromUTF8("ABCÉEFG");
-    auto empty = StringImpl::create(reinterpret_cast<const LChar*>(""), 0);
+    auto empty = StringImpl::create(""_span);
     EXPECT_EQ(static_cast<size_t>(0), reference->findIgnoringASCIICase(empty.ptr()));
     EXPECT_EQ(static_cast<size_t>(0), reference->findIgnoringASCIICase(empty.ptr(), 0));
     EXPECT_EQ(static_cast<size_t>(3), reference->findIgnoringASCIICase(empty.ptr(), 3));
@@ -406,14 +406,14 @@ TEST(WTF, StringImplStartsWithIgnoringASCIICaseWithNull)
     auto reference = StringImpl::create("aBcDeFG"_s);
     ASSERT_FALSE(reference->startsWithIgnoringASCIICase(StringView { }));
 
-    auto empty = StringImpl::create(reinterpret_cast<const LChar*>(""), 0);
+    auto empty = StringImpl::create(""_span);
     ASSERT_FALSE(empty->startsWithIgnoringASCIICase(StringView { }));
 }
 
 TEST(WTF, StringImplStartsWithIgnoringASCIICaseWithEmpty)
 {
     auto reference = StringImpl::create("aBcDeFG"_s);
-    auto empty = StringImpl::create(reinterpret_cast<const LChar*>(""), 0);
+    auto empty = StringImpl::create(""_span);
     ASSERT_TRUE(reference->startsWithIgnoringASCIICase(empty.ptr()));
     ASSERT_TRUE(reference->startsWithIgnoringASCIICase(*empty.ptr()));
     ASSERT_TRUE(empty->startsWithIgnoringASCIICase(empty.ptr()));
@@ -495,14 +495,14 @@ TEST(WTF, StringImplEndsWithIgnoringASCIICaseWithNull)
     auto reference = StringImpl::create("aBcDeFG"_s);
     ASSERT_FALSE(reference->endsWithIgnoringASCIICase(StringView { }));
 
-    auto empty = StringImpl::create(reinterpret_cast<const LChar*>(""), 0);
+    auto empty = StringImpl::create(""_span);
     ASSERT_FALSE(empty->endsWithIgnoringASCIICase(StringView { }));
 }
 
 TEST(WTF, StringImplEndsWithIgnoringASCIICaseWithEmpty)
 {
     auto reference = StringImpl::create("aBcDeFG"_s);
-    auto empty = StringImpl::create(reinterpret_cast<const LChar*>(""), 0);
+    auto empty = StringImpl::create(""_span);
     ASSERT_TRUE(reference->endsWithIgnoringASCIICase(empty.ptr()));
     ASSERT_TRUE(reference->endsWithIgnoringASCIICase(*empty.ptr()));
     ASSERT_TRUE(empty->endsWithIgnoringASCIICase(empty.ptr()));
@@ -636,7 +636,7 @@ TEST(WTF, StringImplStaticToAtomString)
     ASSERT_TRUE(original.isStatic());
 
     ASSERT_TRUE(atomic->is8Bit());
-    ASSERT_EQ(atomic->characters8(), original.characters8());
+    ASSERT_EQ(atomic->span8().data(), original.span8().data());
 
     auto result2 = AtomStringImpl::lookUp(&original);
     ASSERT_TRUE(result2);
@@ -726,10 +726,10 @@ TEST(WTF, StaticStringImpl)
 TEST(WTF, DynamicStaticStringImpl)
 {
     // Construct using MAKE_STATIC_STRING_IMPL.
-    String hello = StringImpl::createStaticStringImpl("hello", 5);
-    String world = StringImpl::createStaticStringImpl("world", 5);
-    String longer = StringImpl::createStaticStringImpl("longer", 6);
-    String hello2 = StringImpl::createStaticStringImpl("hello", 5);
+    String hello = StringImpl::createStaticStringImpl("hello"_span);
+    String world = StringImpl::createStaticStringImpl("world"_span);
+    String longer = StringImpl::createStaticStringImpl("longer"_span);
+    String hello2 = StringImpl::createStaticStringImpl("hello"_span);
 
     doStaticStringImplTests(StaticStringImplTestSet::DynamicallyAllocatedImpl, hello, world, longer, hello2);
 }
@@ -758,7 +758,7 @@ TEST(WTF, ExternalStringImplCreate8bit)
     bool freeFunctionCalled = false;
 
     {
-        auto external = ExternalStringImpl::create(buffer, bufferStringLength, [&freeFunctionCalled](ExternalStringImpl* externalStringImpl, void* buffer, unsigned bufferSize) mutable {
+        auto external = ExternalStringImpl::create({ buffer, bufferStringLength }, [&freeFunctionCalled](ExternalStringImpl* externalStringImpl, void* buffer, unsigned bufferSize) mutable {
             freeFunctionCalled = true;
         });
 
@@ -767,7 +767,7 @@ TEST(WTF, ExternalStringImplCreate8bit)
         ASSERT_FALSE(external->isSymbol());
         ASSERT_FALSE(external->isAtom());
         ASSERT_EQ(external->length(), bufferStringLength);
-        ASSERT_EQ(external->characters8(), buffer);
+        ASSERT_EQ(external->span8().data(), buffer);
     }
 
     ASSERT_TRUE(freeFunctionCalled);
@@ -780,7 +780,7 @@ TEST(WTF, ExternalStringImplCreate16bit)
     bool freeFunctionCalled = false;
 
     {
-        auto external = ExternalStringImpl::create(buffer, bufferStringLength, [&freeFunctionCalled](ExternalStringImpl* externalStringImpl, void* buffer, unsigned bufferSize) mutable {
+        auto external = ExternalStringImpl::create({ buffer, bufferStringLength }, [&freeFunctionCalled](ExternalStringImpl* externalStringImpl, void* buffer, unsigned bufferSize) mutable {
             freeFunctionCalled = true;
         });
 
@@ -789,7 +789,7 @@ TEST(WTF, ExternalStringImplCreate16bit)
         ASSERT_FALSE(external->isSymbol());
         ASSERT_FALSE(external->isAtom());
         ASSERT_EQ(external->length(), bufferStringLength);
-        ASSERT_EQ(external->characters16(), buffer);
+        ASSERT_EQ(external->span16().data(), buffer);
     }
 
     ASSERT_TRUE(freeFunctionCalled);
@@ -809,7 +809,7 @@ TEST(WTF, ExternalStringAtom)
     bool freeFunctionCalled = false;
 
     {
-        auto external = ExternalStringImpl::create(buffer, bufferStringLength, [&freeFunctionCalled](ExternalStringImpl* externalStringImpl, void* buffer, unsigned bufferSize) mutable {
+        auto external = ExternalStringImpl::create({ buffer, bufferStringLength }, [&freeFunctionCalled](ExternalStringImpl* externalStringImpl, void* buffer, unsigned bufferSize) mutable {
             freeFunctionCalled = true;
         });    
 
@@ -818,7 +818,7 @@ TEST(WTF, ExternalStringAtom)
         ASSERT_FALSE(external->isSymbol());
         ASSERT_TRUE(external->is8Bit());
         ASSERT_EQ(external->length(), bufferStringLength);
-        ASSERT_EQ(external->characters8(), buffer);
+        ASSERT_EQ(external->span8().data(), buffer);
 
         auto result = AtomStringImpl::lookUp(external.ptr());
         ASSERT_FALSE(result);
@@ -829,7 +829,7 @@ TEST(WTF, ExternalStringAtom)
         ASSERT_FALSE(atomic->isSymbol());
         ASSERT_TRUE(atomic->is8Bit());
         ASSERT_EQ(atomic->length(), external->length());
-        ASSERT_EQ(atomic->characters8(), external->characters8());
+        ASSERT_EQ(atomic->span8().data(), external->span8().data());
 
         auto result2 = AtomStringImpl::lookUp(external.ptr());
         ASSERT_TRUE(result2);
@@ -846,9 +846,9 @@ TEST(WTF, ExternalStringToSymbol)
     bool freeFunctionCalled = false;
 
     {
-        auto external = ExternalStringImpl::create(buffer, bufferStringLength, [&freeFunctionCalled](ExternalStringImpl* externalStringImpl, void* buffer, unsigned bufferSize) mutable {
+        auto external = ExternalStringImpl::create({ buffer, bufferStringLength }, [&freeFunctionCalled](ExternalStringImpl* externalStringImpl, void* buffer, unsigned bufferSize) mutable {
             freeFunctionCalled = true;
-        });    
+        });
 
         ASSERT_TRUE(external->isExternal());
         ASSERT_FALSE(external->isSymbol());

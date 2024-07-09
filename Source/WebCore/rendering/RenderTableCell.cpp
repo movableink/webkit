@@ -98,24 +98,28 @@ RenderTableCell::RenderTableCell(Document& document, RenderStyle&& style)
     ASSERT(isRenderTableCell());
 }
 
-void RenderTableCell::willBeRemovedFromTree(IsInternalMove isInternalMove)
+RenderTableCell::~RenderTableCell() = default;
+
+void RenderTableCell::willBeRemovedFromTree()
 {
-    RenderBlockFlow::willBeRemovedFromTree(isInternalMove);
+    RenderBlockFlow::willBeRemovedFromTree();
     if (!table() || !section())
         return;
     RenderTableSection* section = this->section();
     table()->invalidateCollapsedBorders();
+    section->removeCachedCollapsedBorders(*this);
     section->setNeedsCellRecalc();
 }
 
 unsigned RenderTableCell::parseColSpanFromDOM() const
 {
     ASSERT(element());
-    if (is<HTMLTableCellElement>(*element()))
-        return std::min<unsigned>(downcast<HTMLTableCellElement>(*element()).colSpan(), maxColumnIndex);
+    if (auto* cell = dynamicDowncast<HTMLTableCellElement>(*element()))
+        return std::min<unsigned>(cell->colSpan(), maxColumnIndex);
 #if ENABLE(MATHML)
-    if (element()->hasTagName(MathMLNames::mtdTag))
-        return std::min<unsigned>(downcast<MathMLElement>(*element()).colSpan(), maxColumnIndex);
+    auto* mathMLElement = dynamicDowncast<MathMLElement>(*element());
+    if (mathMLElement && mathMLElement->hasTagName(MathMLNames::mtdTag))
+        return std::min<unsigned>(mathMLElement->colSpan(), maxColumnIndex);
 #endif
     return 1;
 }
@@ -123,11 +127,12 @@ unsigned RenderTableCell::parseColSpanFromDOM() const
 unsigned RenderTableCell::parseRowSpanFromDOM() const
 {
     ASSERT(element());
-    if (is<HTMLTableCellElement>(*element()))
-        return std::min<unsigned>(downcast<HTMLTableCellElement>(*element()).rowSpan(), maxRowIndex);
+    if (auto* cell = dynamicDowncast<HTMLTableCellElement>(*element()))
+        return std::min<unsigned>(cell->rowSpan(), maxRowIndex);
 #if ENABLE(MATHML)
-    if (element()->hasTagName(MathMLNames::mtdTag))
-        return std::min<unsigned>(downcast<MathMLElement>(*element()).rowSpan(), maxRowIndex);
+    auto* mathMLElement = dynamicDowncast<MathMLElement>(*element());
+    if (mathMLElement && mathMLElement->hasTagName(MathMLNames::mtdTag))
+        return std::min<unsigned>(mathMLElement->rowSpan(), maxRowIndex);
 #endif
     return 1;
 }
@@ -230,7 +235,19 @@ void RenderTableCell::computeIntrinsicPadding(LayoutUnit rowHeight)
     LayoutUnit logicalHeightWithoutIntrinsicPadding = logicalHeight() - oldIntrinsicPaddingBefore - oldIntrinsicPaddingAfter;
 
     auto intrinsicPaddingBefore = oldIntrinsicPaddingBefore;
-    switch (style().verticalAlign()) {
+    VerticalAlign alignment = style().verticalAlign();
+    if (auto alignContent = style().alignContent(); !alignContent.isNormal()) {
+        // align-content overrides vertical-align
+        if (alignContent.position() == ContentPosition::Baseline)
+            alignment = VerticalAlign::Baseline;
+        else if (alignContent.isCentered())
+            alignment = VerticalAlign::Middle;
+        else if (alignContent.isStartward())
+            alignment = VerticalAlign::Top;
+        else if (alignContent.isEndward())
+            alignment = VerticalAlign::Bottom;
+    }
+    switch (alignment) {
     case VerticalAlign::Sub:
     case VerticalAlign::Super:
     case VerticalAlign::TextTop:
@@ -460,7 +477,7 @@ void RenderTableCell::styleDidChange(StyleDifference diff, const RenderStyle* ol
 
     // Our intrinsic padding pushes us down to align with the baseline of other cells on the row. If our vertical-align
     // has changed then so will the padding needed to align with other cells - clear it so we can recalculate it from scratch.
-    if (oldStyle && style().verticalAlign() != oldStyle->verticalAlign())
+    if (oldStyle && (style().verticalAlign() != oldStyle->verticalAlign() || style().alignContent() != oldStyle->alignContent()))
         clearIntrinsicPadding();
 
     // If border was changed, notify table.
@@ -1002,6 +1019,23 @@ inline CollapsedBorderValue RenderTableCell::cachedCollapsedBottomBorder(const R
     return styleForCellFlow.isLeftToRightDirection() ? section()->cachedCollapsedBorder(*this, CBSEnd) : section()->cachedCollapsedBorder(*this, CBSStart);
 }
 
+RectEdges<LayoutUnit> RenderTableCell::borderWidths() const
+{
+    RenderTable* table = this->table();
+    if (!table)
+        return RenderBlockFlow::borderWidths();
+
+    if (!table->collapseBorders())
+        return RenderBlockFlow::borderWidths();
+
+    return {
+        borderHalfTop(false),
+        borderHalfRight(false),
+        borderHalfBottom(false),
+        borderHalfLeft(false)
+    };
+}
+
 LayoutUnit RenderTableCell::borderLeft() const
 {
     RenderTable* table = this->table();
@@ -1227,7 +1261,7 @@ void RenderTableCell::paintCollapsedBorders(PaintInfo& paintInfo, const LayoutPo
 {
     ASSERT(paintInfo.phase == PaintPhase::CollapsedTableBorders);
 
-    if (!paintInfo.shouldPaintWithinRoot(*this) || style().visibility() != Visibility::Visible)
+    if (!paintInfo.shouldPaintWithinRoot(*this) || style().usedVisibility() != Visibility::Visible)
         return;
 
     LayoutRect localRepaintRect = paintInfo.rect;
@@ -1300,7 +1334,7 @@ void RenderTableCell::paintBackgroundsBehindCell(PaintInfo& paintInfo, const Lay
     if (!backgroundObject)
         return;
 
-    if (style().visibility() != Visibility::Visible)
+    if (style().usedVisibility() != Visibility::Visible)
         return;
 
     RenderTable* tableElt = table();
@@ -1362,7 +1396,7 @@ void RenderTableCell::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoin
 
 void RenderTableCell::paintMask(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
-    if (style().visibility() != Visibility::Visible || paintInfo.phase != PaintPhase::Mask)
+    if (style().usedVisibility() != Visibility::Visible || paintInfo.phase != PaintPhase::Mask)
         return;
 
     RenderTable* tableElt = table();
@@ -1387,7 +1421,8 @@ void RenderTableCell::scrollbarsChanged(bool horizontalScrollbarChanged, bool ve
         return;
 
     // Shrink our intrinsic padding as much as possible to accommodate the scrollbar.
-    if (style().verticalAlign() == VerticalAlign::Middle) {
+    if ((style().verticalAlign() == VerticalAlign::Middle && style().alignContent().isNormal())
+        || style().alignContent().isCentered()) {
         LayoutUnit totalHeight = logicalHeight();
         LayoutUnit heightWithoutIntrinsicPadding = totalHeight - intrinsicPaddingBefore() - intrinsicPaddingAfter();
         totalHeight -= scrollbarHeight;

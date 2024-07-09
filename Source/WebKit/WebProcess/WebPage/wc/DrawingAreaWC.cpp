@@ -41,7 +41,6 @@
 #include "WebPageInlines.h"
 #include "WebPreferencesKeys.h"
 #include "WebProcess.h"
-#include <RemoteImageBufferSetProxy.h>
 #include <WebCore/ImageBuffer.h>
 #include <WebCore/LocalFrame.h>
 #include <WebCore/LocalFrameView.h>
@@ -53,7 +52,6 @@ using namespace WebCore;
 DrawingAreaWC::DrawingAreaWC(WebPage& webPage, const WebPageCreationParameters& parameters)
     : DrawingArea(DrawingAreaType::WC, parameters.drawingAreaIdentifier, webPage)
     , m_remoteWCLayerTreeHostProxy(makeUniqueWithoutRefCountedCheck<RemoteWCLayerTreeHostProxy>(webPage, parameters.usesOffscreenRendering))
-    , m_flusher(webPage.ensureRemoteRenderingBackendProxy().createRemoteImageBufferSet())
     , m_layerFactory(*this)
     , m_updateRenderingTimer(*this, &DrawingAreaWC::updateRendering)
     , m_commitQueue(WorkQueue::create("DrawingAreaWC CommitQueue"_s))
@@ -101,6 +99,7 @@ void DrawingAreaWC::addRootFrame(WebCore::FrameIdentifier frameID)
     auto layer = GraphicsLayer::create(graphicsLayerFactory(), this->m_rootLayerClient);
     // FIXME: This has an unnecessary string allocation. Adding a StringTypeAdapter for FrameIdentifier or ProcessQualified would remove that.
     layer->setName(makeString("drawing area root "_s, frameID.toString()));
+    layer->setAnchorPoint({ });
     m_rootLayers.append(RootLayerInfo {
         WTFMove(layer),
         nullptr,
@@ -140,9 +139,10 @@ void DrawingAreaWC::setLayerTreeStateIsFrozen(bool isFrozen)
     }
 }
 
-void DrawingAreaWC::updateGeometryWC(uint64_t backingStoreStateID, IntSize viewSize)
+void DrawingAreaWC::updateGeometryWC(uint64_t backingStoreStateID, IntSize viewSize, float deviceScaleFactor)
 {
     m_backingStoreStateID = backingStoreStateID;
+    m_webPage->setDeviceScaleFactor(deviceScaleFactor);
     m_webPage->setSize(viewSize);
 }
 
@@ -194,7 +194,7 @@ void DrawingAreaWC::scroll(const IntRect& scrollRect, const IntSize& scrollDelta
     triggerRenderingUpdate();
 }
 
-void DrawingAreaWC::forceRepaintAsync(WebPage&, CompletionHandler<void()>&& completionHandler)
+void DrawingAreaWC::updateRenderingWithForcedRepaintAsync(WebPage&, CompletionHandler<void()>&& completionHandler)
 {
     m_forceRepaintCompletionHandler = WTFMove(completionHandler);
     m_isForceRepaintCompletionHandlerDeferred = m_waitDidUpdate;
@@ -270,7 +270,10 @@ void DrawingAreaWC::sendUpdateAC()
             size = m_webPage->size();
         else
             size = frame->size();
-        rootLayer.layer->setSize(size);
+        FloatSize viewport { size };
+        viewport.scale(m_webPage->deviceScaleFactor());
+        m_updateInfo.viewport = WebCore::expandedIntSize(viewport);
+        updateRootLayerDeviceScaleFactor(rootLayer.layer);
         rootLayer.layer->flushCompositingStateForThisLayerOnly();
 
         // Because our view-relative overlay root layer is not attached to the FrameView's GraphicsLayer tree, we need to flush it manually.
@@ -278,11 +281,10 @@ void DrawingAreaWC::sendUpdateAC()
         if (rootLayer.viewOverlayRootLayer)
             rootLayer.viewOverlayRootLayer->flushCompositingState(visibleRect);
 
-        auto flusher = m_flusher->flushFrontBufferAsync();
+        auto fence = m_webPage->ensureRemoteRenderingBackendProxy().flushImageBuffers();
 
-        m_commitQueue->dispatch([this, weakThis = WeakPtr(*this), stateID = m_backingStoreStateID, updateInfo = std::exchange(m_updateInfo, { }), flusher = WTFMove(flusher), willCallDisplayDidRefresh]() mutable {
-            if (flusher)
-                flusher->flush();
+        m_commitQueue->dispatch([this, weakThis = WeakPtr(*this), stateID = m_backingStoreStateID, updateInfo = std::exchange(m_updateInfo, { }), fence = WTFMove(fence), willCallDisplayDidRefresh]() mutable {
+            fence();
             RunLoop::main().dispatch([this, weakThis = WTFMove(weakThis), stateID, updateInfo = WTFMove(updateInfo), willCallDisplayDidRefresh]() mutable {
                 if (!weakThis)
                     return;
@@ -300,6 +302,14 @@ void DrawingAreaWC::sendUpdateAC()
             });
         });
     }
+}
+
+void DrawingAreaWC::updateRootLayerDeviceScaleFactor(WebCore::GraphicsLayer& layer)
+{
+    float deviceScaleFactor = m_webPage->deviceScaleFactor();
+    TransformationMatrix m;
+    m.scale(deviceScaleFactor);
+    layer.setTransform(m);
 }
 
 static bool shouldPaintBoundsRect(const IntRect& bounds, const Vector<IntRect, 1>& rects)
@@ -332,9 +342,7 @@ void DrawingAreaWC::sendUpdateNonAC()
     ASSERT(webPage->bounds().contains(bounds));
     IntSize bitmapSize = bounds.size();
     float deviceScaleFactor = webPage->corePage()->deviceScaleFactor();
-    bitmapSize.scale(deviceScaleFactor);
-
-    auto image = createImageBuffer(bitmapSize);
+    auto image = createImageBuffer(bitmapSize, deviceScaleFactor);
     auto rects = m_dirtyRegion.rects();
     if (shouldPaintBoundsRect(bounds, rects)) {
         rects.clear();
@@ -344,7 +352,7 @@ void DrawingAreaWC::sendUpdateNonAC()
 
     UpdateInfo updateInfo;
     updateInfo.viewSize = webPage->size();
-    updateInfo.deviceScaleFactor = webPage->corePage()->deviceScaleFactor();
+    updateInfo.deviceScaleFactor = deviceScaleFactor;
     updateInfo.updateRectBounds = bounds;
     updateInfo.updateRects = rects;
     updateInfo.scrollRect = m_scrollRect;
@@ -353,17 +361,15 @@ void DrawingAreaWC::sendUpdateNonAC()
     m_scrollOffset = { };
 
     auto& graphicsContext = image->context();
-    graphicsContext.applyDeviceScaleFactor(deviceScaleFactor);
     graphicsContext.translate(-bounds.x(), -bounds.y());
     for (const auto& rect : rects)
-        webPage->drawRect(image->context(), rect);
+        webPage->drawRect(graphicsContext, rect);
     image->flushDrawingContextAsync();
 
-    auto flusher = m_flusher->flushFrontBufferAsync();
+    auto fence = m_webPage->ensureRemoteRenderingBackendProxy().flushImageBuffers();
 
-    m_commitQueue->dispatch([this, weakThis = WeakPtr(*this), stateID = m_backingStoreStateID, updateInfo = WTFMove(updateInfo), image = WTFMove(image), flusher = WTFMove(flusher)]() mutable {
-        if (flusher)
-            flusher->flush();
+    m_commitQueue->dispatch([this, weakThis = WeakPtr(*this), stateID = m_backingStoreStateID, updateInfo = WTFMove(updateInfo), image = WTFMove(image), fence = WTFMove(fence)]() mutable {
+        fence();
         RunLoop::main().dispatch([this, weakThis = WTFMove(weakThis), stateID, updateInfo = WTFMove(updateInfo), image = WTFMove(image)]() mutable {
             if (!weakThis)
                 return;
@@ -400,11 +406,11 @@ void DrawingAreaWC::commitLayerUpdateInfo(WCLayerUpdateInfo&& info)
     m_updateInfo.changedLayers.append(WTFMove(info));
 }
 
-RefPtr<ImageBuffer> DrawingAreaWC::createImageBuffer(FloatSize size)
+RefPtr<ImageBuffer> DrawingAreaWC::createImageBuffer(FloatSize size, float deviceScaleFactor)
 {
     if (WebProcess::singleton().shouldUseRemoteRenderingFor(RenderingPurpose::DOM))
-        return Ref { m_webPage.get() }->ensureRemoteRenderingBackendProxy().createImageBuffer(size, RenderingPurpose::DOM, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8, { });
-    return ImageBuffer::create<ImageBufferShareableBitmapBackend>(size, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8, RenderingPurpose::DOM, { });
+        return Ref { m_webPage.get() }->ensureRemoteRenderingBackendProxy().createImageBuffer(size, RenderingPurpose::DOM, deviceScaleFactor, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8, { });
+    return ImageBuffer::create<ImageBufferShareableBitmapBackend>(size, deviceScaleFactor, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8, RenderingPurpose::DOM, { });
 }
 
 void DrawingAreaWC::displayDidRefresh()

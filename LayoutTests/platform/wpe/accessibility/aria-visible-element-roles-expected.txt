@@ -98,18 +98,22 @@ This test ensures ARIA visible elements (e.g. those with both `hidden` and `aria
 
 <dt hidden="" aria-hidden="false" id="dt"></dt>
     AXRole: AXDescriptionTerm
+    computedRoleString: term
 
 <dd hidden="" aria-hidden="false" id="dd"></dd>
     AXRole: AXDescriptionValue
+    computedRoleString: definition
 
 <dl hidden="" aria-hidden="false" id="dl"></dl>
     AXRole: AXDescriptionList
 
 <ol hidden="" aria-hidden="false" id="ol"></ol>
     AXRole: AXGroup
+    computedRoleString: group
 
 <ul hidden="" aria-hidden="false" id="ul"></ul>
     AXRole: AXGroup
+    computedRoleString: group
 
 <figure hidden="" aria-hidden="false" id="figure"></figure>
     AXRole: AXGroup
@@ -123,8 +127,8 @@ This test ensures ARIA visible elements (e.g. those with both `hidden` and `aria
     AXRole: AXLabel
 
 <dfn hidden="" aria-hidden="false" id="dfn"></dfn>
-    AXRole: AXDefinition
-    computedRoleString: definition
+    AXRole: AXDescriptionTerm
+    computedRoleString: term
 
 <div hidden="" aria-hidden="false" id="div"></div>
     AXRole: AXSection
@@ -170,6 +174,7 @@ This test ensures ARIA visible elements (e.g. those with both `hidden` and `aria
 
 <details hidden="" aria-hidden="false" id="details"></details>
     AXRole: AXUnknown
+    computedRoleString: group
 
 <summary hidden="" aria-hidden="false" id="summary"></summary>
     AXRole: AXUnknown
@@ -180,6 +185,7 @@ This test ensures ARIA visible elements (e.g. those with both `hidden` and `aria
 
 <menu hidden="" aria-hidden="false" type="toolbar" id="menu-toolbar"></menu>
     AXRole: AXGroup
+    computedRoleString: group
 
 <hr hidden="" aria-hidden="false" id="hr">
     AXRole: AXSeparator

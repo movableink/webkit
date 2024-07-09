@@ -179,8 +179,12 @@ void ChromeClientQt::focusedFrameChanged(Frame*)
 Page* ChromeClientQt::createWindow(LocalFrame& frame, const WindowFeatures& features, const NavigationAction&)
 {
 #if ENABLE(FULLSCREEN_API)
-    if (frame.document() && frame.document()->fullscreenManager().currentFullscreenElement())
-        frame.document()->fullscreenManager().cancelFullscreen();
+    if (!frame.document())
+        return 0;
+
+    CheckedPtr fullscreenManager = frame.document()->fullscreenManagerIfExists();
+    if (fullscreenManager && fullscreenManager->currentFullscreenElement())
+        fullscreenManager->cancelFullscreen();
 #else
     UNUSED_PARAM(frame);
 #endif
@@ -682,7 +686,7 @@ bool ChromeClientQt::supportsFullScreenForElement(const Element&, bool withKeybo
     return !withKeyboard;
 }
 
-void ChromeClientQt::enterFullScreenForElement(Element& element)
+void ChromeClientQt::enterFullScreenForElement(Element& element, WebCore::HTMLMediaElementEnums::VideoFullscreenMode)
 {
     m_webPage->fullScreenRequested(QWebFullScreenRequest::createEnterRequest(m_webPage, QWebElement(&element)));
 }
@@ -744,21 +748,6 @@ RefPtr<SearchPopupMenu> ChromeClientQt::createSearchPopupMenu(PopupMenuClient& c
 void ChromeClientQt::attachViewOverlayGraphicsLayer(WebCore::GraphicsLayer*)
 {
 }
-
-#if ENABLE(WEB_CRYPTO)
-bool ChromeClientQt::wrapCryptoKey(const Vector<uint8_t>& key, Vector<uint8_t>& wrappedKey) const
-{
-    // This is no-op for Qt port, see GCrypt implementation for more details
-    // This means that we don't need master key
-    return wrapSerializedCryptoKey({ }, key, wrappedKey);
-}
-
-bool ChromeClientQt::unwrapCryptoKey(const Vector<uint8_t>& wrappedKey, Vector<uint8_t>& key) const
-{
-    // This is no-op so we don't need master key
-    return unwrapSerializedCryptoKey({ }, wrappedKey, key);
-}
-#endif
 
 IntPoint ChromeClientQt::accessibilityScreenToRootView(const IntPoint&) const
 {

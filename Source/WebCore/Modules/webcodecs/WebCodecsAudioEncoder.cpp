@@ -30,6 +30,7 @@
 #if ENABLE(WEB_CODECS)
 
 #include "AacEncoderConfig.h"
+#include "ContextDestructionObserverInlines.h"
 #include "DOMException.h"
 #include "Event.h"
 #include "EventNames.h"
@@ -67,9 +68,7 @@ WebCodecsAudioEncoder::WebCodecsAudioEncoder(ScriptExecutionContext& context, In
 {
 }
 
-WebCodecsAudioEncoder::~WebCodecsAudioEncoder()
-{
-}
+WebCodecsAudioEncoder::~WebCodecsAudioEncoder() = default;
 
 static bool isSupportedEncoderCodec(const StringView& codec)
 {
@@ -120,9 +119,7 @@ static ExceptionOr<AudioEncoder::Config> createAudioEncoderConfig(const WebCodec
     if (config.flac)
         flacConfig = { config.flac->blockSize, config.flac->compressLevel };
 
-    std::optional<size_t> sampleRate = config.sampleRate;
-    std::optional<size_t> numberOfChannels = config.numberOfChannels;
-    return AudioEncoder::Config { WTFMove(sampleRate), WTFMove(numberOfChannels), config.bitrate.value_or(0), WTFMove(opusConfig), WTFMove(isAacADTS), WTFMove(flacConfig) };
+    return AudioEncoder::Config { config.sampleRate, config.numberOfChannels, config.bitrate.value_or(0), WTFMove(opusConfig), WTFMove(isAacADTS), WTFMove(flacConfig) };
 }
 
 ExceptionOr<void> WebCodecsAudioEncoder::configure(ScriptExecutionContext&, WebCodecsAudioEncoderConfig&& config)
@@ -156,11 +153,12 @@ ExceptionOr<void> WebCodecsAudioEncoder::configure(ScriptExecutionContext&, WebC
     bool isSupportedCodec = isSupportedEncoderCodec(config.codec);
     queueControlMessageAndProcess([this, config = WTFMove(config), isSupportedCodec, identifier = scriptExecutionContext()->identifier()]() mutable {
         m_isMessageQueueBlocked = true;
-        AudioEncoder::PostTaskCallback postTaskCallback = [weakThis = WeakPtr { *this }, identifier](auto&& task) {
+        AudioEncoder::PostTaskCallback postTaskCallback = [weakThis = ThreadSafeWeakPtr { *this }, identifier](auto&& task) {
             ScriptExecutionContext::postTaskTo(identifier, [weakThis, task = WTFMove(task)](auto&) mutable {
-                if (!weakThis)
+                RefPtr protectedThis = weakThis.get();
+                if (!protectedThis)
                     return;
-                weakThis->queueTaskKeepingObjectAlive(*weakThis, TaskSource::MediaElement, WTFMove(task));
+                protectedThis->queueTaskKeepingObjectAlive(*protectedThis, TaskSource::MediaElement, WTFMove(task));
             });
         };
 
@@ -181,10 +179,7 @@ ExceptionOr<void> WebCodecsAudioEncoder::configure(ScriptExecutionContext&, WebC
 
         m_baseConfiguration = config;
 
-        AudioEncoder::create(config.codec, encoderConfig.releaseReturnValue(), [this, weakThis = WeakPtr { *this }](auto&& result) {
-            if (!weakThis)
-                return;
-
+        AudioEncoder::create(config.codec, encoderConfig.releaseReturnValue(), [this](auto&& result) {
             if (!result.has_value()) {
                 closeEncoder(Exception { ExceptionCode::NotSupportedError, WTFMove(result.error()) });
                 return;
@@ -200,7 +195,7 @@ ExceptionOr<void> WebCodecsAudioEncoder::configure(ScriptExecutionContext&, WebC
             if (m_state != WebCodecsCodecState::Configured)
                 return;
 
-            RefPtr<JSC::ArrayBuffer> buffer = JSC::ArrayBuffer::create(result.data.data(), result.data.size());
+            RefPtr buffer = JSC::ArrayBuffer::create(result.data);
             auto chunk = WebCodecsEncodedAudioChunk::create(WebCodecsEncodedAudioChunk::Init {
                 result.isKeyFrame ? WebCodecsEncodedAudioChunkType::Key : WebCodecsEncodedAudioChunkType::Delta,
                 result.timestamp,
@@ -220,8 +215,8 @@ WebCodecsEncodedAudioChunkMetadata WebCodecsAudioEncoder::createEncodedChunkMeta
     if (m_hasNewActiveConfiguration) {
         m_hasNewActiveConfiguration = false;
         // FIXME: Provide more accurate decoder configuration...
-        auto baseConfigurationSampleRate = m_baseConfiguration.sampleRate.value_or(0);
-        auto baseConfigurationNumberOfChannels = m_baseConfiguration.numberOfChannels.value_or(0);
+        auto baseConfigurationSampleRate = m_baseConfiguration.sampleRate;
+        auto baseConfigurationNumberOfChannels = m_baseConfiguration.numberOfChannels;
         metadata.decoderConfig = WebCodecsAudioDecoderConfig {
             !m_activeConfiguration.codec.isEmpty() ? WTFMove(m_activeConfiguration.codec) : String { m_baseConfiguration.codec },
             { },
@@ -275,14 +270,15 @@ ExceptionOr<void> WebCodecsAudioEncoder::encode(Ref<WebCodecsAudioData>&& frame)
         ++m_beingEncodedQueueSize;
         --m_encodeQueueSize;
         scheduleDequeueEvent();
-        m_internalEncoder->encode({ WTFMove(audioData), timestamp, duration }, [this, weakedThis = WeakPtr { *this }](auto&& result) {
-            if (!weakedThis)
+        m_internalEncoder->encode({ WTFMove(audioData), timestamp, duration }, [this, weakThis = ThreadSafeWeakPtr { *this }](auto&& result) {
+            RefPtr protectedThis = weakThis.get();
+            if (!protectedThis)
                 return;
 
             --m_beingEncodedQueueSize;
             if (!result.isNull()) {
                 if (auto* context = scriptExecutionContext())
-                    context->addConsoleMessage(MessageSource::JS, MessageLevel::Error, makeString("AudioEncoder encode failed: ", result));
+                    context->addConsoleMessage(MessageSource::JS, MessageLevel::Error, makeString("AudioEncoder encode failed: "_s, result));
                 closeEncoder(Exception { ExceptionCode::EncodingError, WTFMove(result) });
                 return;
             }
@@ -301,8 +297,9 @@ void WebCodecsAudioEncoder::flush(Ref<DeferredPromise>&& promise)
     m_pendingFlushPromises.append(WTFMove(promise));
     m_isFlushing = true;
     queueControlMessageAndProcess([this, clearFlushPromiseCount = m_clearFlushPromiseCount]() mutable {
-        m_internalEncoder->flush([this, weakThis = WeakPtr { *this }, clearFlushPromiseCount] {
-            if (!weakThis || clearFlushPromiseCount != m_clearFlushPromiseCount)
+        m_internalEncoder->flush([this, weakThis = ThreadSafeWeakPtr { *this }, clearFlushPromiseCount] {
+            RefPtr protectedThis = weakThis.get();
+            if (!protectedThis || clearFlushPromiseCount != m_clearFlushPromiseCount)
                 return;
 
             m_pendingFlushPromises.takeFirst()->resolve();
@@ -433,11 +430,6 @@ void WebCore::WebCodecsAudioEncoder::suspend(ReasonForSuspension)
 void WebCodecsAudioEncoder::stop()
 {
     // FIXME: Implement.
-}
-
-const char* WebCodecsAudioEncoder::activeDOMObjectName() const
-{
-    return "AudioEncoder";
 }
 
 bool WebCodecsAudioEncoder::virtualHasPendingActivity() const

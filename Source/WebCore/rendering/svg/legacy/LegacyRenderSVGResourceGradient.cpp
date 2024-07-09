@@ -41,6 +41,8 @@ LegacyRenderSVGResourceGradient::LegacyRenderSVGResourceGradient(Type type, SVGG
 {
 }
 
+LegacyRenderSVGResourceGradient::~LegacyRenderSVGResourceGradient() = default;
+
 void LegacyRenderSVGResourceGradient::removeAllClientsFromCacheIfNeeded(bool markForInvalidation, SingleThreadWeakHashSet<RenderObject>* visitedRenderers)
 {
     m_gradientMap.clear();
@@ -217,7 +219,7 @@ void LegacyRenderSVGResourceGradient::postApplyResource(RenderElement& renderer,
         if (m_savedContext) {
             auto gradientData = m_gradientMap.find(&renderer);
             if (gradientData != m_gradientMap.end()) {
-                auto& gradient = *gradientData->value->gradient;
+                Ref gradient = *gradientData->value->gradient;
 
                 // Restore on-screen drawing context
                 context = std::exchange(m_savedContext, nullptr);
@@ -225,7 +227,7 @@ void LegacyRenderSVGResourceGradient::postApplyResource(RenderElement& renderer,
                 FloatRect targetRect;
                 AffineTransform userspaceTransform = clipToTextMask(*context, m_imageBuffer, targetRect, renderer, gradientUnits() == SVGUnitTypes::SVG_UNIT_TYPE_OBJECTBOUNDINGBOX, gradientTransform());
 
-                context->setFillGradient(gradient, userspaceTransform);
+                context->setFillGradient(WTFMove(gradient), userspaceTransform);
                 context->fillRect(targetRect);
 
                 m_imageBuffer = nullptr;

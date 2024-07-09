@@ -44,10 +44,11 @@ from webkitpy.common.system.filesystem_mock import MockFileSystem
 from webkitpy.common.system.systemhost_mock import MockSystemHost
 from webkitpy.common.version_name_map import INTERNAL_TABLE
 from webkitpy.port.base import Port
-from webkitpy.port.config import apple_additions, clear_cached_configuration
+from webkitpy.port.config import apple_additions
 from webkitpy.port.driver import DriverOutput
 from webkitpy.port.image_diff import ImageDiffer, ImageDiffResult
 from webkitpy.port.server_process_mock import MockServerProcess
+from webkitpy.layout_tests.controllers.layout_test_runner import TestShard
 from webkitpy.layout_tests.servers import http_server_base
 from webkitpy.tool.mocktool import MockOptions
 
@@ -126,6 +127,17 @@ class PortTestCase(unittest.TestCase):
         port = self.port_maker(host, port_name, options=options, **kwargs)
         port._config.build_directory = lambda configuration, for_host=False: '/mock-build'
         return port
+
+    def test_sharding_groups(self):
+        port = self.make_port()
+        self.assertEqual(sorted(port.sharding_groups().keys()), [])
+        self.assertEqual(None, port.group_for_shard(TestShard('media/something', [])))
+        self.assertEqual(None, port.group_for_shard(TestShard('webaudio/something', [])))
+        self.assertEqual(None, port.group_for_shard(TestShard('fast/media/something', [])))
+        self.assertEqual(None, port.group_for_shard(TestShard('media-session/something', [])))
+        self.assertEqual(None, port.group_for_shard(TestShard('imported/mediacapture-fromelement/something', [])))
+        self.assertEqual(None, port.group_for_shard(TestShard('something/media', [])))
+        self.assertEqual(None, port.group_for_shard(TestShard('fast/something', [])))
 
     def test_default_timeout_ms(self):
         self.assertEqual(self.make_port(options=MockOptions(configuration='Release')).default_timeout_ms(), 30000)
@@ -518,7 +530,6 @@ class PortTestCase(unittest.TestCase):
             port._filesystem.write_text_file(path, '')
         ordered_dict = port.expectations_dict()
         self.assertEqual(port.path_to_generic_test_expectations_file(), list(ordered_dict.keys())[0])
-        self.assertEqual(port.path_to_test_expectations_file(), list(ordered_dict.keys())[port.test_expectations_file_position()])
 
         options = MockOptions(additional_expectations=['/tmp/foo', '/tmp/bar'])
         port = self.make_port(options=options)
@@ -529,20 +540,6 @@ class PortTestCase(unittest.TestCase):
         ordered_dict = port.expectations_dict()
         self.assertEqual(list(ordered_dict.keys())[-2:], options.additional_expectations)  # pylint: disable=E1101
         self.assertEqual(list(ordered_dict.values())[-2:], ['foo', 'bar'])
-
-    def test_path_to_test_expectations_file(self):
-        port = TestWebKitPort()
-        port._options = MockOptions(webkit_test_runner=False)
-        self.assertEqual(port.path_to_test_expectations_file(), '/mock-checkout/LayoutTests/platform/testwebkitport/TestExpectations')
-
-        port = TestWebKitPort()
-        port._options = MockOptions(webkit_test_runner=True)
-        self.assertEqual(port.path_to_test_expectations_file(), '/mock-checkout/LayoutTests/platform/testwebkitport/TestExpectations')
-
-        port = TestWebKitPort()
-        port.host.filesystem.files['/mock-checkout/LayoutTests/platform/testwebkitport/TestExpectations'] = 'some content'
-        port._options = MockOptions(webkit_test_runner=False)
-        self.assertEqual(port.path_to_test_expectations_file(), '/mock-checkout/LayoutTests/platform/testwebkitport/TestExpectations')
 
     def test_skipped_layout_tests(self):
         self.assertEqual(TestWebKitPort().skipped_layout_tests(), set(['media']))
@@ -731,7 +728,6 @@ MOCK output of child process
         self.assertEqual(port.max_child_processes(), float('inf'))
 
     def test_default_upload_configuration(self):
-        clear_cached_configuration()
         port = self.make_port()
         configuration = port.configuration_for_upload()
         self.assertEqual(configuration['architecture'], port.architecture())
@@ -741,17 +737,14 @@ MOCK output of child process
         self.assertEqual(configuration['version_name'], port.host.platform.os_version_name())
 
     def test_debug_upload_configuration(self):
-        clear_cached_configuration()
         port = self.make_port(options=MockOptions(configuration='Debug'))
         self.assertEqual(port.configuration_for_upload()['style'], 'debug')
 
     def test_asan_upload_configuration(self):
-        clear_cached_configuration()
         port = self.make_port()
         port.host.filesystem.write_text_file('/mock-build/ASan', 'YES')
         self.assertEqual(port.configuration_for_upload()['style'], 'asan')
 
     def test_guard_malloc_configuration(self):
-        clear_cached_configuration()
         port = self.make_port(options=MockOptions(guard_malloc=True))
         self.assertEqual(port.configuration_for_upload()['style'], 'guard-malloc')

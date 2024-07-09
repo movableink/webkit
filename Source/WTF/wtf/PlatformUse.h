@@ -70,7 +70,7 @@
 #define USE_GLIB 1
 #endif
 
-#if PLATFORM(GTK) || PLATFORM(WPE)
+#if ((PLATFORM(GTK) || PLATFORM(WPE)) && !USE(SKIA))
 #define USE_FREETYPE 1
 #endif
 
@@ -80,10 +80,6 @@
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
 #define USE_SOUP 1
-#endif
-
-#if PLATFORM(GTK) || PLATFORM(WPE)
-#define USE_WEBP 1
 #endif
 
 #if PLATFORM(COCOA)
@@ -153,7 +149,7 @@
 
 /* FIXME: This name should be more specific if it is only for use with CallFrame* */
 /* Use __builtin_frame_address(1) to get CallFrame* */
-#if COMPILER(GCC_COMPATIBLE) && (CPU(ARM64) || CPU(X86_64))
+#if CPU(ARM64) || CPU(X86_64)
 #define USE_BUILTIN_FRAME_ADDRESS 1
 #endif
 
@@ -269,7 +265,7 @@
 #define USE_CFNETWORK_CONTENT_ENCODING_SNIFFING_OVERRIDE 1
 #endif
 
-#if PLATFORM(IOS) || PLATFORM(MACCATALYST) || PLATFORM(VISION)
+#if PLATFORM(IOS) || PLATFORM(MACCATALYST) || PLATFORM(VISION) || PLATFORM(APPLETV)
 #define USE_UICONTEXTMENU 1
 #endif
 
@@ -294,12 +290,8 @@
 #define USE_CTFONTHASTABLE 1
 #endif
 
-#if PLATFORM(MAC) \
-    || PLATFORM(MACCATALYST) \
-    || (PLATFORM(IOS) && PLATFORM(IOS_FAMILY_SIMULATOR)) \
-    || (PLATFORM(WATCHOS) && PLATFORM(IOS_FAMILY_SIMULATOR)) \
-    || (PLATFORM(APPLETV) && PLATFORM(IOS_FAMILY_SIMULATOR)) \
-    || PLATFORM(VISION)
+// Use OS(MACOS) to pick up JSCOnly ports on Mac.
+#if OS(MACOS) || PLATFORM(MACCATALYST) || (PLATFORM(IOS_FAMILY) && TARGET_OS_SIMULATOR)
 #if USE(APPLE_INTERNAL_SDK)
 /* Always use the macro on internal builds */
 #define USE_PTHREAD_JIT_PERMISSIONS_API 0 
@@ -337,12 +329,25 @@
 #endif
 
 #if !defined(USE_TZONE_MALLOC)
-#if CPU(ARM64)
+#if CPU(ARM64) && OS(DARWIN)
 // Only MacroAssemblerARM64 is known to build.
 // Building with TZONE_MALLOC currently disabled for all platforms.
 #define USE_TZONE_MALLOC 0
 #else
 #define USE_TZONE_MALLOC 0
+#endif
+#endif
+
+#if OS(DARWIN) && USE(APPLE_INTERNAL_SDK) && USE(TZONE_MALLOC)
+#define USE_DARWIN_TZONE_SEED 1
+#endif
+
+#if !defined(USE_WK_TZONE_MALLOC)
+#if USE(TZONE_MALLOC)
+// Separately control the use of TZone allocation in WebKit
+#define USE_WK_TZONE_MALLOC 1
+#else
+#define USE_WK_TZONE_MALLOC 0
 #endif
 #endif
 
@@ -358,7 +363,12 @@
 #define USE_NSVIEW_SEMANTICCONTEXT 1
 #endif
 
-#if (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 170000) || PLATFORM(VISION)
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 140000)
+#define USE_NSPRESENTATIONSTATE 1
+#endif
+
+#if !defined(USE_MEDIAPARSERD) \
+    && (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 170000) || PLATFORM(VISION)
 #define USE_MEDIAPARSERD 1
 #endif
 
@@ -426,8 +436,11 @@
 #define USE_CORE_TEXT_VARIATIONS_CLAMPING_WORKAROUND 1
 #endif
 
-#if PLATFORM(IOS) && !PLATFORM(IOS_FAMILY_SIMULATOR) && __has_include(<ServiceExtensionsCore/SEMemory_Private.h>)
+#if PLATFORM(IOS) && !PLATFORM(IOS_FAMILY_SIMULATOR) \
+    && __IPHONE_OS_VERSION_MAX_ALLOWED >= 170400
+#if CPU(ARM64)
 #define USE_INLINE_JIT_PERMISSIONS_API 1
+#endif
 #endif
 
 #if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 140000) \
@@ -436,4 +449,20 @@
     || (PLATFORM(APPLETV) && __TV_OS_VERSION_MIN_REQUIRED >= 170000) \
     || PLATFORM(VISION)
 #define USE_SANDBOX_VERSION_3 1
+#endif
+
+#if !defined(USE_EXTENSIONKIT) && PLATFORM(IOS) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 170400
+#define USE_EXTENSIONKIT 1
+#endif
+
+#if !defined(USE_BROWSERENGINEKIT) && PLATFORM(IOS) && __has_include(<BrowserEngineKit/BETextInput.h>)
+#define USE_BROWSERENGINEKIT 1
+#endif
+
+#if !defined(USE_LEGACY_EXTENSIONKIT_SPI) && PLATFORM(IOS_SIMULATOR) && __IPHONE_OS_VERSION_MAX_ALLOWED <= 170400
+#define USE_LEGACY_EXTENSIONKIT_SPI 1
+#endif
+
+#if !USE(EXTENSIONKIT_PROCESS_TERMINATION) && PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 180000
+#define USE_EXTENSIONKIT_PROCESS_TERMINATION 1
 #endif

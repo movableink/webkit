@@ -76,8 +76,8 @@ del[datetime]
 
 dfn
       AXRole: AXGroup
-      AXSubrole: AXDefinition
-      AXRoleDescription: definition
+      AXSubrole: AXTerm
+      AXRoleDescription: term
 
 dl
       AXRole: AXList
@@ -131,7 +131,9 @@ header
       AXRoleDescription: banner
 
 hgroup
-      Could not get AX element.
+      AXRole: AXGroup
+      AXSubrole: AXApplicationGroup
+      AXRoleDescription: group
 
 h1
       AXRole: AXHeading

@@ -28,20 +28,32 @@
 #if ENABLE(EXTENSION_CAPABILITIES)
 
 #include "ExtensionCapability.h"
-#include <WebCore/RegistrableDomain.h>
 #include <wtf/Forward.h>
+#include <wtf/Noncopyable.h>
+#include <wtf/URL.h>
 #include <wtf/WeakPtr.h>
+
+OBJC_CLASS BEMediaEnvironment;
+
+namespace WebKit {
+class MediaCapability;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebKit::MediaCapability> : std::true_type { };
+}
 
 namespace WebKit {
 
 class ExtensionCapabilityGrant;
 
-using WebCore::RegistrableDomain;
-
 class MediaCapability final : public ExtensionCapability, public CanMakeWeakPtr<MediaCapability> {
+    WTF_MAKE_NONCOPYABLE(MediaCapability);
 public:
-    explicit MediaCapability(RegistrableDomain);
-    explicit MediaCapability(const URL&);
+    explicit MediaCapability(URL&&);
+    MediaCapability(MediaCapability&&) = default;
+    MediaCapability& operator=(MediaCapability&&) = default;
 
     enum class State : uint8_t {
         Inactive,
@@ -52,21 +64,19 @@ public:
 
     State state() const { return m_state; }
     void setState(State state) { m_state = state; }
+    bool isActivatingOrActive() const;
 
-    const RegistrableDomain& registrableDomain() const { return m_registrableDomain; }
+    const URL& webPageURL() const { return m_webPageURL; }
 
     // ExtensionCapability
     String environmentIdentifier() const final;
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    RetainPtr<_SECapabilities> platformCapability() const final { return m_platformCapability.get(); }
-    ALLOW_DEPRECATED_DECLARATIONS_END
+
+    BEMediaEnvironment *platformMediaEnvironment() const { return m_mediaEnvironment.get(); }
 
 private:
     State m_state { State::Inactive };
-    RegistrableDomain m_registrableDomain;
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    RetainPtr<_SECapabilities> m_platformCapability;
-    ALLOW_DEPRECATED_DECLARATIONS_END
+    URL m_webPageURL;
+    RetainPtr<BEMediaEnvironment> m_mediaEnvironment;
 };
 
 } // namespace WebKit

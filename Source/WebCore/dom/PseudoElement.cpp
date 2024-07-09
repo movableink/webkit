@@ -49,10 +49,11 @@ const QualifiedName& pseudoElementTagName()
 }
 
 PseudoElement::PseudoElement(Element& host, PseudoId pseudoId)
-    : Element(pseudoElementTagName(), host.document(), CreatePseudoElement)
+    : Element(pseudoElementTagName(), host.document(), TypeFlag::HasCustomStyleResolveCallbacks)
     , m_hostElement(host)
     , m_pseudoId(pseudoId)
 {
+    setEventTargetFlag(EventTargetFlag::IsConnected);
     ASSERT(pseudoId == PseudoId::Before || pseudoId == PseudoId::After);
 }
 
@@ -85,7 +86,7 @@ bool PseudoElement::rendererIsNeeded(const RenderStyle& style)
         return true;
 
     if (RefPtr element = m_hostElement.get()) {
-        if (auto* stack = element->keyframeEffectStack(pseudoId()))
+        if (auto* stack = element->keyframeEffectStack(Style::PseudoElementIdentifier { pseudoId() }))
             return stack->requiresPseudoElement();
     }
     return false;

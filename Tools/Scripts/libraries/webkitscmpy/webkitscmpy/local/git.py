@@ -498,6 +498,9 @@ class Git(Scm):
     def branches(self):
         return self.branches_for()
 
+    def commit_signing_enabled(self, cached=None):
+        return self.config(cached=cached).get('commit.gpgsign', 'false') == 'true'
+
     def tags(self, remote=None):
         if not remote:
             tags = run([self.executable(), 'tag'], cwd=self.root_path, capture_output=True, encoding='utf-8')
@@ -934,7 +937,7 @@ class Git(Scm):
                 branch_point = previous[-1].branch_point
                 identifier = previous[-1].identifier
                 hash = line.split(' ')[-1].rstrip()
-                if hash != previous[-1].hash:
+                if identifier and hash != previous[-1].hash:
                     identifier -= 1
 
                 if not identifier:
@@ -950,7 +953,7 @@ class Git(Scm):
                 commit = Commit(
                     repository_id=self.id,
                     hash=hash,
-                    branch=end.branch if identifier and branch_point else self.default_branch,
+                    branch=end.branch if not include_identifier or (identifier and branch_point) else self.default_branch,
                     identifier=identifier if include_identifier else None,
                     branch_point=branch_point if include_identifier else None,
                     order=0,
@@ -1076,24 +1079,38 @@ class Git(Scm):
                     return None
                 self.config.clear()
             branch = match.group('branch')
-            rc = run(
-                [self.executable(), 'checkout'] + ['-B', branch, '{}/{}'.format(name, branch)] + log_arg,
-                cwd=self.root_path,
-            ).returncode
-            if not rc:
-                return self.commit()
-            if rc == 128:
-                command = [self.executable(), 'fetch', name]
-                if prune is None:
-                    if self.config()['webkitscmpy.auto-prune'] == 'true':
-                        command.append('--prune')
-                    elif name in self.source_remotes() and self.config()['webkitscmpy.auto-prune'] == 'only-source':
-                        command.append('--prune')
-                run(command, cwd=self.root_path)
-            return None if run(
-                [self.executable(), 'checkout'] + ['-B', branch, '{}/{}'.format(name, branch)] + log_arg,
-                cwd=self.root_path,
-            ).returncode else self.commit()
+
+            # The names GitHub provides are often too short. If we are tracking other remotes which start
+            # with this name, we should try those too
+            candidate_remotes = [name]
+            for key in self.config().keys():
+                if key.startswith(f'remote.{name}'):
+                    candidate = key.split('.', 2)[1]
+                    if candidate not in candidate_remotes:
+                        candidate_remotes.append(candidate)
+
+            for remote_name in candidate_remotes:
+                rc = run(
+                    [self.executable(), 'checkout'] + ['-B', branch, 'remotes/{}/{}'.format(remote_name, branch)],
+                    cwd=self.root_path, capture_output=True,
+                ).returncode
+                if not rc:
+                    return self.commit()
+                if rc == 128:
+                    command = [self.executable(), 'fetch', remote_name]
+                    if prune is None:
+                        if self.config()['webkitscmpy.auto-prune'] == 'true':
+                            command.append('--prune')
+                        elif name in self.source_remotes() and self.config()['webkitscmpy.auto-prune'] == 'only-source':
+                            command.append('--prune')
+                    log.info(f'Fetching {remote_name}...')
+                    run(command, cwd=self.root_path, capture_output=True)
+                if not run(
+                    [self.executable(), 'checkout'] + ['-B', branch, '{}/{}'.format(remote_name, branch)] + log_arg,
+                    cwd=self.root_path,
+                ).returncode:
+                    return self.commit()
+            return None
 
         match = self.dev_branches.match(argument)
         branch_remote = self.remote_for(argument)
@@ -1157,17 +1174,34 @@ class Git(Scm):
         base = self._to_git_ref(base)
         head = self._to_git_ref(head)
 
-        code = run([self.executable(), 'rebase', '--onto', target, base or target, head], cwd=self.root_path).returncode
+        need_commit_signature = self.commit_signing_enabled()
+
+        command = [self.executable()]
+        if need_commit_signature:
+            command += ['-c', 'commit.gpgsign=false']
+        code = run(
+            command + ['rebase', '--onto', target, base or target, head],
+            cwd=self.root_path,
+        ).returncode
         if self.cache:
             self.cache.clear(head if head != 'HEAD' else self.branch)
         if code or not recommit:
             return code
-        return run([
+
+        command = [
             self.executable(), 'filter-branch', '-f',
             '--env-filter', "GIT_AUTHOR_DATE='{date}';GIT_COMMITTER_DATE='{date}'".format(
                 date='{} -{}'.format(int(time.time()), self.gmtoffset())
-            ), 'refs/heads/{}...{}'.format(target, head),
-        ], cwd=self.root_path, env={'FILTER_BRANCH_SQUELCH_WARNING': '1'}, capture_output=True).returncode
+            ),
+        ]
+        if need_commit_signature:
+            command += ['--commit-filter', 'git commit-tree -S "$@"']
+        return run(
+            command + ['refs/heads/{}...{}'.format(target, head)],
+            cwd=self.root_path,
+            env={'FILTER_BRANCH_SQUELCH_WARNING': '1'},
+            capture_output=True,
+        ).returncode
 
     def fetch(self, branch, remote=None, prune=None):
         remote = remote or self.default_remote
@@ -1184,11 +1218,16 @@ class Git(Scm):
         remote = remote or self.default_remote
         commit = self.commit() if self.is_svn or branch else None
 
+        need_commit_signature = self.commit_signing_enabled()
+
         code = 0
         if branch and self.branch != branch:
             code = self.fetch(branch=branch, remote=remote, prune=prune)
         if not code:
-            command = [self.executable(), 'pull'] + ([remote, branch] if branch else [])
+            command = [self.executable()]
+            if rebase is not False and need_commit_signature:
+                command += ['-c', 'commit.gpgsign=false']
+            command += ['pull'] + ([remote, branch] if branch else [])
             if rebase is True:
                 command += ['--rebase=True', '--autostash']
             elif rebase is False:
@@ -1200,13 +1239,20 @@ class Git(Scm):
         if not code and branch and rebase:
             result = run([self.executable(), 'rev-parse', 'HEAD'], cwd=self.root_path, capture_output=True, encoding='utf-8')
             if not result.returncode and result.stdout.rstrip() != commit.hash:
-                code = run([
+                command = [
                     self.executable(),
                     'filter-branch', '-f',
                     '--env-filter', "GIT_AUTHOR_DATE='{date}';GIT_COMMITTER_DATE='{date}'".format(
                         date='{} -{}'.format(int(time.time()), self.gmtoffset())
-                    ), 'HEAD...{}'.format('{}/{}'.format(remote, branch)),
-                ], cwd=self.root_path, env={'FILTER_BRANCH_SQUELCH_WARNING': '1'}).returncode
+                    ),
+                ]
+                if need_commit_signature:
+                    command += ['--commit-filter', 'git commit-tree -S "$@"']
+                code = run(
+                    command + ['HEAD...{}'.format('{}/{}'.format(remote, branch))],
+                    cwd=self.root_path,
+                    env={'FILTER_BRANCH_SQUELCH_WARNING': '1'},
+                ).returncode
 
         if not code and self.is_svn and commit.revision:
             return run([
@@ -1248,16 +1294,34 @@ class Git(Scm):
             return staged
         return staged + self.modified(staged=False)
 
-    def diff_lines(self, base, head=None):
-        base = self._to_git_ref(base)
-        head = self._to_git_ref(head)
+    def diff(self, head='HEAD', base=None, include_log=False):
+        head = head if head == 'HEAD' else self._to_git_ref(head)
+        if not base:
+            base = head if head == 'HEAD' else self._to_git_ref('{}~1'.format(head))
+        else:
+            base = self._to_git_ref(base)
+
+        if head == base and head != 'HEAD':
+            sys.stderr.write("'{}' provided as both head and base\n".format(head))
+            return
+
+        if include_log and head == 'HEAD':
+            for line in self.diff(head=head, base='HEAD', include_log=False):
+                yield line
+
+        if head == base:
+            command = [self.executable(), 'diff', '{}'.format(head)]
+        elif include_log:
+            command = [self.executable(), 'format-patch', '{}..{}'.format(base, head), '--stdout']
+        else:
+            command = [self.executable(), 'diff', '{}..{}'.format(base, head)]
 
         kwargs = dict()
         if sys.version_info >= (3, 6):
             kwargs = dict(encoding='utf-8')
         target = '{}..{}'.format(base, head) if head else base
         proc = subprocess.Popen(
-            [self.executable(), 'diff', target],
+            command,
             cwd=self.root_path,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -1266,6 +1330,7 @@ class Git(Scm):
 
         if proc.poll():
             sys.stderr.write("Failed to generate diff for '{}'\n".format(target))
+            return
 
         line = proc.stdout.readline()
         while line:

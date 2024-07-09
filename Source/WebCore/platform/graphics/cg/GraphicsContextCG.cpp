@@ -276,14 +276,18 @@ void GraphicsContextCG::restore(GraphicsContextState::Purpose purpose)
     m_userToDeviceTransformKnownToBeIdentity = false;
 }
 
-void GraphicsContextCG::drawNativeImageInternal(NativeImage& nativeImage, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
+void GraphicsContextCG::drawNativeImageInternal(NativeImage& nativeImage, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
 {
     auto image = nativeImage.platformImage();
+    if (!image)
+        return;
+    auto imageSize = nativeImage.size();
+    if (options.orientation().usesWidthAsHeight())
+        imageSize = imageSize.transposedSize();
     auto imageRect = FloatRect { { }, imageSize };
     auto normalizedSrcRect = normalizeRect(srcRect);
     auto normalizedDestRect = normalizeRect(destRect);
-
-    if (!image || !imageRect.intersects(normalizedSrcRect))
+    if (!imageRect.intersects(normalizedSrcRect))
         return;
 
 #if !LOG_DISABLED
@@ -317,11 +321,6 @@ void GraphicsContextCG::drawNativeImageInternal(NativeImage& nativeImage, const 
         return adoptCF(CGImageCreateWithImageInRect(image, physicalSubimageRect));
     };
 
-    auto imageLogicalSize = [](CGImageRef image, ImagePaintingOptions options) -> FloatSize {
-        FloatSize size = FloatSize(CGImageGetWidth(image), CGImageGetHeight(image));
-        return options.orientation().usesWidthAsHeight() ? size.transposedSize() : size;
-    };
-
     auto context = platformContext();
     CGContextStateSaver stateSaver(context, false);
     auto transform = CGContextGetCTM(context);
@@ -329,7 +328,6 @@ void GraphicsContextCG::drawNativeImageInternal(NativeImage& nativeImage, const 
     convertToDestinationColorSpaceIfNeeded(image);
 
     auto subImage = image;
-    auto currentImageSize = imageLogicalSize(image.get(), options);
 
     auto adjustedDestRect = normalizedDestRect;
 
@@ -348,13 +346,6 @@ void GraphicsContextCG::drawNativeImageInternal(NativeImage& nativeImage, const 
 
             auto subPixelPadding = normalizedSrcRect.location() - subimageRect.location();
             adjustedDestRect = { adjustedDestRect.location() - subPixelPadding * scale, subimageRect.size() * scale };
-
-            // If the image is only partially loaded, then shrink the destination rect that we're drawing
-            // into accordingly.
-            if (currentImageSize.height() < normalizedSrcRect.maxY()) {
-                auto currentSubimageSize = imageLogicalSize(subImage.get(), options);
-                adjustedDestRect.setHeight(currentSubimageSize.height() * scale.height());
-            }
         } else {
             // If the source rect is a subportion of the image, then we compute an inflated destination rect
             // that will hold the entire image and then set a clip to the portion that we want to display.
@@ -366,10 +357,6 @@ void GraphicsContextCG::drawNativeImageInternal(NativeImage& nativeImage, const 
             CGContextClipToRect(context, normalizedDestRect);
         }
     }
-
-    // If the image is only partially loaded, then shrink the destination rect that we're drawing into accordingly.
-    if (subImage == image && currentImageSize.height() < imageSize.height())
-        adjustedDestRect.setHeight(adjustedDestRect.height() * currentImageSize.height() / imageSize.height());
 
 #if PLATFORM(IOS_FAMILY)
     bool wasAntialiased = CGContextGetShouldAntialias(context);
@@ -802,27 +789,8 @@ void GraphicsContextCG::fillRect(const FloatRect& rect)
 {
     CGContextRef context = platformContext();
 
-    if (auto fillGradient = this->fillGradient()) {
-        CGContextStateSaver stateSaver(context);
-        if (hasDropShadow()) {
-            FloatSize layerSize = getCTM().mapSize(rect.size());
-
-            auto layer = adoptCF(CGLayerCreateWithContext(context, layerSize, 0));
-            CGContextRef layerContext = CGLayerGetContext(layer.get());
-
-            CGContextScaleCTM(layerContext, layerSize.width() / rect.width(), layerSize.height() / rect.height());
-            CGContextTranslateCTM(layerContext, -rect.x(), -rect.y());
-            CGContextAddRect(layerContext, rect);
-            CGContextClip(layerContext);
-
-            CGContextConcatCTM(layerContext, fillGradientSpaceTransform());
-            fillGradient->paint(layerContext);
-            CGContextDrawLayerInRect(context, rect, layer.get());
-        } else {
-            CGContextClipToRect(context, rect);
-            CGContextConcatCTM(context, fillGradientSpaceTransform());
-            fillGradient->paint(*this);
-        }
+    if (auto* fillGradient = this->fillGradient()) {
+        fillRect(rect, *fillGradient, fillGradientSpaceTransform());
         return;
     }
 
@@ -842,6 +810,32 @@ void GraphicsContextCG::fillRect(const FloatRect& rect)
     }
 
     CGContextFillRect(context, rect);
+}
+
+void GraphicsContextCG::fillRect(const FloatRect& rect, Gradient& gradient, const AffineTransform& gradientSpaceTransform)
+{
+    CGContextRef context = platformContext();
+
+    CGContextStateSaver stateSaver(context);
+    if (hasDropShadow()) {
+        FloatSize layerSize = getCTM().mapSize(rect.size());
+
+        auto layer = adoptCF(CGLayerCreateWithContext(context, layerSize, 0));
+        CGContextRef layerContext = CGLayerGetContext(layer.get());
+
+        CGContextScaleCTM(layerContext, layerSize.width() / rect.width(), layerSize.height() / rect.height());
+        CGContextTranslateCTM(layerContext, -rect.x(), -rect.y());
+        CGContextAddRect(layerContext, rect);
+        CGContextClip(layerContext);
+
+        CGContextConcatCTM(layerContext, gradientSpaceTransform);
+        gradient.paint(layerContext);
+        CGContextDrawLayerInRect(context, rect, layer.get());
+    } else {
+        CGContextClipToRect(context, rect);
+        CGContextConcatCTM(context, gradientSpaceTransform);
+        gradient.paint(*this);
+    }
 }
 
 void GraphicsContextCG::fillRect(const FloatRect& rect, const Color& color)
@@ -1036,6 +1030,11 @@ void GraphicsContextCG::beginTransparencyLayer(float opacity)
     m_userToDeviceTransformKnownToBeIdentity = false;
 }
 
+void GraphicsContextCG::beginTransparencyLayer(CompositeOperator, BlendMode)
+{
+    beginTransparencyLayer(1);
+}
+
 void GraphicsContextCG::endTransparencyLayer()
 {
     GraphicsContext::endTransparencyLayer();
@@ -1044,31 +1043,6 @@ void GraphicsContextCG::endTransparencyLayer()
     CGContextEndTransparencyLayer(context);
 
     restore(GraphicsContextState::Purpose::TransparencyLayer);
-}
-
-static void applyShadowOffsetWorkaroundIfNeeded(CGContextRef context, CGFloat& xOffset, CGFloat& yOffset)
-{
-#if PLATFORM(IOS_FAMILY)
-    UNUSED_PARAM(context);
-    UNUSED_PARAM(xOffset);
-    UNUSED_PARAM(yOffset);
-#else
-    if (CGContextDrawsWithCorrectShadowOffsets(context))
-        return;
-
-    // Work around <rdar://problem/5539388> by ensuring that the offsets will get truncated
-    // to the desired integer. Also see: <rdar://problem/10056277>
-    static const CGFloat extraShadowOffset = narrowPrecisionToCGFloat(1.0 / 128);
-    if (xOffset > 0)
-        xOffset += extraShadowOffset;
-    else if (xOffset < 0)
-        xOffset -= extraShadowOffset;
-
-    if (yOffset > 0)
-        yOffset += extraShadowOffset;
-    else if (yOffset < 0)
-        yOffset -= extraShadowOffset;
-#endif
 }
 
 void GraphicsContextCG::setCGShadow(const std::optional<GraphicsDropShadow>& shadow, bool shadowsIgnoreTransforms)
@@ -1103,9 +1077,6 @@ void GraphicsContextCG::setCGShadow(const std::optional<GraphicsDropShadow>& sha
 
     // Extreme "blur" values can make text drawing crash or take crazy long times, so clamp
     blurRadius = std::min(blurRadius, narrowPrecisionToCGFloat(1000.0));
-
-    if (renderingMode() != RenderingMode::Accelerated)
-        applyShadowOffsetWorkaroundIfNeeded(context, xOffset, yOffset);
 
     CGContextSetAlpha(context, shadow->opacity);
 
@@ -1430,10 +1401,30 @@ void GraphicsContextCG::drawLinesForText(const FloatPoint& point, float thicknes
         if (!dashWidth)
             dashBounds.append(CGRectMake(bounds.x() + left, bounds.y(), width, bounds.height()));
         else {
-            auto startParticle = static_cast<int>(std::ceil(left / (2 * dashWidth)));
-            auto endParticle = static_cast<int>((left + width) / (2 * dashWidth));
-            for (auto j = startParticle; j < endParticle; ++j)
-                dashBounds.append(CGRectMake(bounds.x() + j * 2 * dashWidth, bounds.y(), dashWidth, bounds.height()));
+            auto doubleWidth = 2 * dashWidth;
+            auto quotient = static_cast<int>(left / doubleWidth);
+            auto startOffset = left - quotient * doubleWidth;
+            auto effectiveLeft = left + startOffset;
+            auto startParticle = static_cast<int>(std::floor(effectiveLeft / doubleWidth));
+            auto endParticle = static_cast<int>(std::ceil((left + width) / doubleWidth));
+
+            for (auto j = startParticle; j < endParticle; ++j) {
+                auto actualDashWidth = dashWidth;
+                auto dashStart = bounds.x() + j * doubleWidth;
+
+                if (j == startParticle && startOffset > 0 && startOffset < dashWidth) {
+                    actualDashWidth -= startOffset;
+                    dashStart += startOffset;
+                }
+
+                if (j == endParticle - 1) {
+                    auto remainingWidth = left + width - (j * doubleWidth);
+                    if (remainingWidth < dashWidth)
+                        actualDashWidth = remainingWidth;
+                }
+
+                dashBounds.append(CGRectMake(dashStart, bounds.y(), actualDashWidth, bounds.height()));
+            }
         }
     }
 
@@ -1541,7 +1532,9 @@ bool GraphicsContextCG::canUseShadowBlur() const
 
 bool GraphicsContextCG::consumeHasDrawn()
 {
-    return std::exchange(m_hasDrawn, false);
+    bool hasDrawn = m_hasDrawn;
+    m_hasDrawn = false;
+    return hasDrawn;
 }
 
 }

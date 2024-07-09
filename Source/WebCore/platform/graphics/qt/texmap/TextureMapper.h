@@ -24,6 +24,7 @@
 #include "IntRect.h"
 #include "IntSize.h"
 #include "TransformationMatrix.h"
+#include <wtf/OptionSet.h>
 
 /*
     TextureMapper is a mechanism that enables hardware acceleration of CSS animations (accelerated compositing) without
@@ -45,9 +46,9 @@ public:
         PaintingMirrored = 1 << 0,
     };
 
-    enum WrapMode {
-        StretchWrap,
-        RepeatWrap
+    enum class WrapMode : uint8_t {
+        Stretch,
+        Repeat
     };
 
     typedef unsigned PaintFlags;
@@ -57,19 +58,12 @@ public:
     explicit TextureMapper();
     virtual ~TextureMapper();
 
-    enum ExposedEdges {
-        NoEdges = 0,
-        LeftEdge = 1 << 0,
-        RightEdge = 1 << 1,
-        TopEdge = 1 << 2,
-        BottomEdge = 1 << 3,
-        AllEdges = LeftEdge | RightEdge | TopEdge | BottomEdge,
-    };
+    enum class AllEdgesExposed : bool { No, Yes };
 
     virtual void drawBorder(const Color&, float borderWidth, const FloatRect&, const TransformationMatrix&) = 0;
     virtual void drawNumber(int number, const Color&, const FloatPoint&, const TransformationMatrix&) = 0;
 
-    virtual void drawTexture(const BitmapTexture&, const FloatRect& target, const TransformationMatrix& modelViewMatrix = TransformationMatrix(), float opacity = 1.0f, unsigned exposedEdges = AllEdges) = 0;
+    virtual void drawTexture(const BitmapTexture&, const FloatRect& target, const TransformationMatrix& modelViewMatrix = TransformationMatrix(), float opacity = 1.0f, AllEdgesExposed = AllEdgesExposed::Yes) = 0;
     virtual void drawSolidColor(const FloatRect&, const TransformationMatrix&, const Color&, bool) = 0;
     virtual void clearColor(const Color&) = 0;
 
@@ -89,7 +83,8 @@ public:
 
     virtual IntSize maxTextureSize() const = 0;
 
-    virtual RefPtr<BitmapTexture> acquireTextureFromPool(const IntSize&, const BitmapTexture::Flags = BitmapTexture::SupportsAlpha);
+    virtual RefPtr<BitmapTexture> acquireTextureFromPool(const IntSize&, OptionSet<BitmapTexture::Flags> = { BitmapTexture::Flags::SupportsAlpha });
+    virtual RefPtr<BitmapTexture> applyFilters(RefPtr<BitmapTexture>&, const FilterOperations&, bool) { return currentSurface(); }
 
     void setPatternTransform(const TransformationMatrix& p) { m_patternTransform = p; }
     void setWrapMode(WrapMode m) { m_wrapMode = m; }
@@ -109,7 +104,7 @@ private:
 
     bool m_isMaskMode { false };
     TransformationMatrix m_patternTransform;
-    WrapMode m_wrapMode { StretchWrap };
+    WrapMode m_wrapMode { WrapMode::Stretch };
 };
 
 }

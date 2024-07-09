@@ -257,32 +257,31 @@ function testInt32Overflow() {
           (array.len)))`).exports.f();
     let maxUint32 = 0xffffffff;
     assert.throws(() => instantiate(f(0, maxUint32)),
-                  WebAssembly.RuntimeError, "Offset + array length would exceed the length of an element segment");
+                  WebAssembly.RuntimeError, "Out of bounds or failed to allocate in array.new_elem");
     assert.throws(() => instantiate(f(1, maxUint32)),
                   WebAssembly.RuntimeError,
-                  "Offset + array length would exceed the length of an element segment");
+                  "Out of bounds or failed to allocate in array.new_elem");
     assert.throws(() => instantiate(f(2, maxUint32)),
                   WebAssembly.RuntimeError,
-                  "Offset + array length would exceed the length of an element segment");
+                  "Out of bounds or failed to allocate in array.new_elem");
     assert.throws(() => instantiate(f(2, maxUint32 - 1)),
                   WebAssembly.RuntimeError,
-                  "Offset + array length would exceed the length of an element segment");
+                  "Out of bounds or failed to allocate in array.new_elem");
     assert.throws(() => instantiate(f(10, maxUint32)),
                   WebAssembly.RuntimeError,
-                  "Offset + array length would exceed the length of an element segment");
+                  "Out of bounds or failed to allocate in array.new_elem");
     assert.throws(() => instantiate(f(maxUint32, maxUint32)),
                   WebAssembly.RuntimeError,
-                  "Offset + array length would exceed the length of an element segment");
+                  "Out of bounds or failed to allocate in array.new_elem");
     assert.throws(() => instantiate(f(maxUint32 - 4, 5)),
                   WebAssembly.RuntimeError,
-                  "Offset + array length would exceed the length of an element segment");
+                  "Out of bounds or failed to allocate in array.new_elem");
     assert.throws(() => instantiate(f(maxUint32, 1)),
                   WebAssembly.RuntimeError,
-                  "Offset + array length would exceed the length of an element segment");
+                  "Out of bounds or failed to allocate in array.new_elem");
     assert.throws(() => instantiate(f(maxUint32 - 1, 2)),
                   WebAssembly.RuntimeError,
-                  "Offset + array length would exceed the length of an element segment");
-
+                  "Out of bounds or failed to allocate in array.new_elem");
 }
 
 // Creating a zero-length array should work, as long as the element segment offset is valid
@@ -306,7 +305,7 @@ function testZeroLengthArray() {
     // zero-length array from zero-length element segment; non-zero offset; should throw
     m = f("", 3);
     assert.throws(() => instantiate(m).exports.f(),
-                  WebAssembly.RuntimeError, "Offset + array length would exceed the length of an element segment");
+                  WebAssembly.RuntimeError, "Out of bounds or failed to allocate in array.new_elem");
     // zero-length array from non-zero-length data segment; non-zero offset
     m = f("(ref.func $f) (ref.func $f)", 1);
     assert.eq(instantiate(m).exports.f(), 0);
@@ -316,7 +315,7 @@ function testZeroLengthArray() {
     assert.eq(instantiate(m).exports.f(), 0);
     // zero-length array from non-zero-length element segment; offset > length; should throw
     m = f("(ref.func $f) (ref.func $f) (ref.func $f)", 4);
-    assert.throws(() => instantiate(m).exports.f(), WebAssembly.RuntimeError, "Offset + array length would exceed the length of an element segment");
+    assert.throws(() => instantiate(m).exports.f(), WebAssembly.RuntimeError, "Out of bounds or failed to allocate in array.new_elem");
 }
 
 function testArrayNewCanonElemSubtype() {
@@ -462,7 +461,7 @@ function testAllElementSegmentKinds() {
          (i32.add (local.get $i) (i32.const 3)))
 
       (table $t 10 funcref)
-      (elem $e (offset (i32.const 4)) $f $g $f $g)
+      (elem $e funcref (ref.func $f) (ref.func $g) (ref.func $f) (ref.func $g))
 
       (func (export "test") (param $i i32) (result funcref)
          (i32.const 0)
@@ -504,7 +503,7 @@ function testAllElementSegmentKinds() {
       (func $g (param $i i32) (result i32)
          (i32.add (local.get $i) (i32.const 3)))
       (table $t 10 funcref)
-      (elem $e (table $t) (offset (i32.const 4)) func $f $g $f $g)
+      (elem $e funcref (ref.func $f) (ref.func $g) (ref.func $f) (ref.func $g))
       (func (export "test") (param $i i32) (result funcref)
          (i32.const 0)
          (i32.const 2)
@@ -525,7 +524,7 @@ function testAllElementSegmentKinds() {
       (func $g (param $i i32) (result i32)
          (i32.add (local.get $i) (i32.const 3)))
       (table $t 10 funcref)
-      (elem declare func $f $g $f $g)
+      (elem funcref (ref.func $f) (ref.func $g) (ref.func $f) (ref.func $g))
       (func (export "test") (param $i i32) (result funcref)
          (i32.const 0)
          (i32.const 2)
@@ -546,7 +545,7 @@ function testAllElementSegmentKinds() {
       (func $g (param $i i32) (result i32)
          (i32.add (local.get $i) (i32.const 3)))
       (table $t 10 funcref)
-      (elem (offset (i32.const 2)) $f $g $f $g)
+      (elem funcref (ref.func $f) (ref.func $g) (ref.func $f) (ref.func $g))
       (func (export "test") (param $i i32) (result funcref)
          (i32.const 0)
          (i32.const 2)
@@ -623,12 +622,14 @@ function testAllElementSegmentKinds() {
          (local.get $i)
          (array.get $a)
          (call_ref $fty)))
-`);
+    `);
 
-    var retVal = m.exports.test(0);
-    assert.eq(retVal, 44);
-    retVal = m.exports.test(1);
-    assert.eq(retVal, 45);
+    // Active element segments are dropped after init so can't be used for array.new_elem
+    assert.throws(
+      () => { m.exports.test(0) },
+      WebAssembly.RuntimeError,
+      "Out of bounds or failed to allocate in array.new_elem"
+    );
 
     m = instantiate(`
     (module
@@ -640,7 +641,7 @@ function testAllElementSegmentKinds() {
          (i32.add (local.get $i) (i32.const 3)))
       (table $t 10 funcref)
       (table $t1 1 funcref)
-      (elem $e (table $t) (offset (i32.const 4)) funcref (ref.func $f) (ref.func $g))
+      (elem $e funcref (ref.func $f) (ref.func $g))
       (func (export "test") (param $i i32) (result i32)
          (i32.const 0)
          (i32.const 0)

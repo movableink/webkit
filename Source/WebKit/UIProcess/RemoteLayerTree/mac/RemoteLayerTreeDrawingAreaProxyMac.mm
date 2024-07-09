@@ -28,6 +28,7 @@
 
 #if PLATFORM(MAC)
 
+#import "APIPageConfiguration.h"
 #import "DrawingArea.h"
 #import "DrawingAreaMessages.h"
 #import "MessageSenderInlines.h"
@@ -56,6 +57,7 @@ static NSString * const transientZoomScrollPositionOverrideAnimationKey = @"wkSc
 class RemoteLayerTreeDisplayLinkClient final : public DisplayLink::Client {
 public:
     WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RemoteLayerTreeDisplayLinkClient);
 public:
     explicit RemoteLayerTreeDisplayLinkClient(WebPageProxyIdentifier pageID)
         : m_pageIdentifier(pageID)
@@ -112,14 +114,14 @@ DisplayLink* RemoteLayerTreeDrawingAreaProxyMac::existingDisplayLink()
     if (!m_displayID)
         return nullptr;
     
-    return m_webPageProxy->process().processPool().displayLinks().existingDisplayLinkForDisplay(*m_displayID);
+    return m_webPageProxy->configuration().processPool().displayLinks().existingDisplayLinkForDisplay(*m_displayID);
 }
 
 DisplayLink& RemoteLayerTreeDrawingAreaProxyMac::displayLink()
 {
     ASSERT(m_displayID);
 
-    auto& displayLinks = m_webPageProxy->process().processPool().displayLinks();
+    auto& displayLinks = m_webPageProxy->configuration().processPool().displayLinks();
     return displayLinks.displayLinkForDisplay(*m_displayID);
 }
 
@@ -182,13 +184,15 @@ void RemoteLayerTreeDrawingAreaProxyMac::didCommitLayerTree(IPC::Connection&, co
         removeTransientZoomFromLayer();
         m_transactionIDAfterEndingTransientZoom = { };
     }
-    if (m_usesOverlayScrollbars != m_webPageProxy->scrollingCoordinatorProxy()->overlayScrollbarsEnabled()) {
-        m_usesOverlayScrollbars = m_webPageProxy->scrollingCoordinatorProxy()->overlayScrollbarsEnabled();
-        WebCore::DeprecatedGlobalSettings::setUsesOverlayScrollbars(m_usesOverlayScrollbars);
+    auto usesOverlayScrollbars = m_webPageProxy->scrollingCoordinatorProxy()->overlayScrollbarsEnabled();
+    auto newScrollbarStyle = usesOverlayScrollbars ? ScrollbarStyle::Overlay : ScrollbarStyle::AlwaysVisible;
+    if (!m_scrollbarStyle || m_scrollbarStyle != newScrollbarStyle) {
+        m_scrollbarStyle = newScrollbarStyle;
+        WebCore::DeprecatedGlobalSettings::setUsesOverlayScrollbars(usesOverlayScrollbars);
         
-        ScrollerStyle::setUseOverlayScrollbars(m_usesOverlayScrollbars);
+        ScrollerStyle::setUseOverlayScrollbars(usesOverlayScrollbars);
         
-        NSScrollerStyle style = m_usesOverlayScrollbars ? NSScrollerStyleOverlay : NSScrollerStyleLegacy;
+        NSScrollerStyle style = usesOverlayScrollbars ? NSScrollerStyleOverlay : NSScrollerStyleLegacy;
         [NSScrollerImpPair _updateAllScrollerImpPairsForNewRecommendedScrollerStyle:style];
     }
 
@@ -444,6 +448,8 @@ void RemoteLayerTreeDrawingAreaProxyMac::windowScreenDidChange(PlatformDisplayID
 
 std::optional<WebCore::FramesPerSecond> RemoteLayerTreeDrawingAreaProxyMac::displayNominalFramesPerSecond()
 {
+    if (!m_displayID)
+        return std::nullopt;
     return displayLink().nominalFramesPerSecond();
 }
 

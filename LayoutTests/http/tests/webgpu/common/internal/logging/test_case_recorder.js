@@ -1,20 +1,19 @@
 /**
- * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
- **/ import { SkipTestCase, UnexpectedPassError } from '../../framework/fixture.js';
-import { globalTestConfig } from '../../framework/test_config.js';
-import { now, assert } from '../../util/util.js';
+* AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
+**/import { SkipTestCase, UnexpectedPassError } from '../../framework/fixture.js';import { globalTestConfig } from '../../framework/test_config.js';import { now, assert } from '../../util/util.js';
 
-import { LogMessageWithStack } from './log_message.js';
-var LogSeverity;
-(function (LogSeverity) {
-  LogSeverity[(LogSeverity['NotRun'] = 0)] = 'NotRun';
-  LogSeverity[(LogSeverity['Skip'] = 1)] = 'Skip';
-  LogSeverity[(LogSeverity['Pass'] = 2)] = 'Pass';
-  LogSeverity[(LogSeverity['Warn'] = 3)] = 'Warn';
-  LogSeverity[(LogSeverity['ExpectFailed'] = 4)] = 'ExpectFailed';
-  LogSeverity[(LogSeverity['ValidationFailed'] = 5)] = 'ValidationFailed';
-  LogSeverity[(LogSeverity['ThrewException'] = 6)] = 'ThrewException';
-})(LogSeverity || (LogSeverity = {}));
+import { LogMessageWithStack } from './log_message.js';var
+
+
+LogSeverity = /*#__PURE__*/function (LogSeverity) {LogSeverity[LogSeverity["NotRun"] = 0] = "NotRun";LogSeverity[LogSeverity["Skip"] = 1] = "Skip";LogSeverity[LogSeverity["Pass"] = 2] = "Pass";LogSeverity[LogSeverity["Warn"] = 3] = "Warn";LogSeverity[LogSeverity["ExpectFailed"] = 4] = "ExpectFailed";LogSeverity[LogSeverity["ValidationFailed"] = 5] = "ValidationFailed";LogSeverity[LogSeverity["ThrewException"] = 6] = "ThrewException";return LogSeverity;}(LogSeverity || {});
+
+
+
+
+
+
+
+
 
 const kMaxLogStacks = 2;
 const kMinSeverityForStack = LogSeverity.Warn;
@@ -36,6 +35,7 @@ function logSeverityToString(status) {
 
 /** Holds onto a LiveTestCaseResult owned by the Logger, and writes the results into it. */
 export class TestCaseRecorder {
+
   nonskippedSubcaseCount = 0;
   inSubCase = false;
   subCaseStatus = LogSeverity.NotRun;
@@ -45,8 +45,6 @@ export class TestCaseRecorder {
   logs = [];
   logLinesAtCurrentSeverity = 0;
   debugging = false;
-  /** Used to dedup log messages which have identical stacks. */
-  messagesForPreviouslySeenStacks = new Map();
 
   constructor(result, debugging) {
     this.result = result;
@@ -143,13 +141,15 @@ export class TestCaseRecorder {
       this.skipped(ex);
       return;
     }
-    this.logImpl(LogSeverity.ThrewException, 'EXCEPTION', ex);
+    // logImpl will discard the original error's ex.name. Preserve it here.
+    const name = ex instanceof Error ? `EXCEPTION: ${ex.name}` : 'EXCEPTION';
+    this.logImpl(LogSeverity.ThrewException, name, ex);
   }
 
   logImpl(level, name, baseException) {
     assert(baseException instanceof Error, 'test threw a non-Error object');
     globalTestConfig.testHeartbeatCallback();
-    const logMessage = new LogMessageWithStack(name, baseException);
+    const logMessage = LogMessageWithStack.wrapError(name, baseException);
 
     // Final case status should be the "worst" of all log entries.
     if (this.inSubCase) {

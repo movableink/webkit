@@ -29,7 +29,7 @@ if (USE_GCRYPT)
     )
 endif ()
 
-if (APPLE AND ENABLE_WEB_CRYPTO)
+if (APPLE)
     list(APPEND PAL_PUBLIC_HEADERS
         spi/cocoa/CommonCryptoSPI.h
     )

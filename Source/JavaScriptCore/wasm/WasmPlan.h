@@ -28,9 +28,9 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "CompilationResult.h"
-#include "WasmB3IRGenerator.h"
 #include "WasmJS.h"
 #include "WasmModuleInformation.h"
+#include "WasmOMGIRGenerator.h"
 #include <wtf/Bag.h>
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/SharedTask.h>
@@ -63,7 +63,7 @@ public:
     void addCompletionTask(VM&, CompletionTask&&);
 
     void setMode(MemoryMode mode) { m_mode = mode; }
-    MemoryMode mode() const { return m_mode; }
+    ALWAYS_INLINE MemoryMode mode() const { return m_mode; }
 
     String errorMessage() const { return crossThreadCopy(m_errorMessage); }
 

@@ -31,12 +31,16 @@
 #include <memory>
 #include <wpe/webkit.h>
 
-#if !USE_GSTREAMER_FULL && (ENABLE_WEB_AUDIO || ENABLE_VIDEO)
-#include <gst/gst.h>
+#if ENABLE_WPE_PLATFORM_HEADLESS
+#include <wpe/headless/wpe-headless.h>
 #endif
 
-#if defined(ENABLE_ACCESSIBILITY) && ENABLE_ACCESSIBILITY
+#if USE_ATK
 #include <atk/atk.h>
+#endif
+
+#if !USE_GSTREAMER_FULL && (ENABLE_WEB_AUDIO || ENABLE_VIDEO)
+#include <gst/gst.h>
 #endif
 
 static const char** uriArguments;
@@ -57,6 +61,7 @@ static gboolean printVersion;
 static GHashTable* openViews;
 #if ENABLE_WPE_PLATFORM
 static gboolean useWPEPlatformAPI;
+static const char* defaultWindowTitle = "WPEWebKit MiniBrowser";
 #endif
 
 static const GOptionEntry commandLineOptions[] =
@@ -129,9 +134,16 @@ static gboolean wpeViewEventCallback(WPEView* view, WPEEvent* event, WebKitWebVi
     auto modifiers = wpe_event_get_modifiers(event);
     auto keyval = wpe_event_keyboard_get_keyval(event);
 
-    if (modifiers & WPE_MODIFIER_KEYBOARD_CONTROL && keyval == WPE_KEY_q) {
-        g_application_quit(g_application_get_default());
-        return TRUE;
+    if (modifiers & WPE_MODIFIER_KEYBOARD_CONTROL) {
+        if (keyval == WPE_KEY_q) {
+            g_application_quit(g_application_get_default());
+            return TRUE;
+        }
+
+        if (keyval == WPE_KEY_r) {
+            webkit_web_view_reload(webView);
+            return TRUE;
+        }
     }
 
     if (modifiers & WPE_MODIFIER_KEYBOARD_ALT) {
@@ -144,17 +156,43 @@ static gboolean wpeViewEventCallback(WPEView* view, WPEEvent* event, WebKitWebVi
             webkit_web_view_go_forward(webView);
             return TRUE;
         }
+
+        if (keyval == WPE_KEY_Up) {
+            if (auto* toplevel = wpe_view_get_toplevel(view)) {
+                if (wpe_toplevel_get_state(toplevel) & WPE_TOPLEVEL_STATE_MAXIMIZED)
+                    wpe_toplevel_unmaximize(toplevel);
+                else
+                    wpe_toplevel_maximize(toplevel);
+                return TRUE;
+            }
+        }
     }
 
     if (keyval == WPE_KEY_F11) {
-        if (wpe_view_get_state(view) & WPE_VIEW_STATE_FULLSCREEN)
-            wpe_view_unfullscreen(view);
-        else
-            wpe_view_fullscreen(view);
-        return TRUE;
+        if (auto* toplevel = wpe_view_get_toplevel(view)) {
+            if (wpe_toplevel_get_state(toplevel) & WPE_TOPLEVEL_STATE_FULLSCREEN)
+                wpe_toplevel_unfullscreen(toplevel);
+            else
+                wpe_toplevel_fullscreen(toplevel);
+            return TRUE;
+        }
     }
 
     return FALSE;
+}
+
+static void webViewTitleChanged(WebKitWebView* webView, GParamSpec*, WPEView* view)
+{
+    const char* title = webkit_web_view_get_title(webView);
+    if (!title)
+        title = defaultWindowTitle;
+    char* privateTitle = nullptr;
+    if (webkit_web_view_is_controlled_by_automation(webView))
+        privateTitle = g_strdup_printf("[Automation] %s", title);
+    else if (webkit_network_session_is_ephemeral(webkit_web_view_get_network_session(webView)))
+        privateTitle = g_strdup_printf("[Private] %s", title);
+    wpe_toplevel_set_title(wpe_view_get_toplevel(view), privateTitle ? privateTitle : title);
+    g_free(privateTitle);
 }
 #endif
 
@@ -235,6 +273,14 @@ static WebKitWebView* createWebView(WebKitWebView* webView, WebKitNavigationActi
         "settings", webkit_web_view_get_settings(webView),
         "user-content-manager", webkit_web_view_get_user_content_manager(webView),
         nullptr));
+
+#if ENABLE_WPE_PLATFORM
+    if (auto* wpeView = webkit_web_view_get_wpe_view(newWebView)) {
+        g_signal_connect(wpeView, "event", G_CALLBACK(wpeViewEventCallback), newWebView);
+        wpe_toplevel_set_title(wpe_view_get_toplevel(wpeView), defaultWindowTitle);
+        g_signal_connect(newWebView, "notify::title", G_CALLBACK(webViewTitleChanged), wpeView);
+    }
+#endif
 
     g_signal_connect(newWebView, "create", G_CALLBACK(createWebView), user_data);
     g_signal_connect(newWebView, "close", G_CALLBACK(webViewClose), user_data);
@@ -351,6 +397,7 @@ static void activate(GApplication* application, WPEToolingBackends::ViewBackend*
         "enable-developer-extras", TRUE,
         "enable-webgl", TRUE,
         "enable-media-stream", TRUE,
+        "enable-webrtc", TRUE,
         "enable-encrypted-media", TRUE,
         nullptr);
 
@@ -388,6 +435,14 @@ static void activate(GApplication* application, WPEToolingBackends::ViewBackend*
         delete static_cast<WPEToolingBackends::ViewBackend*>(data);
     }, backend) : nullptr;
 
+#if ENABLE_WPE_PLATFORM_HEADLESS
+    WPEDisplay* wpeDisplay = headlessMode && useWPEPlatformAPI ? wpe_display_headless_new() : nullptr;
+#endif
+
+    auto* defaultWebsitePolicies = webkit_website_policies_new_with_policies(
+        "autoplay", WEBKIT_AUTOPLAY_ALLOW,
+        nullptr);
+
     auto* webView = WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
         "backend", viewBackend,
         "web-context", webContext,
@@ -397,12 +452,20 @@ static void activate(GApplication* application, WPEToolingBackends::ViewBackend*
         "settings", settings,
         "user-content-manager", userContentManager,
         "is-controlled-by-automation", automationMode,
+        "website-policies", defaultWebsitePolicies,
+#if ENABLE_WPE_PLATFORM_HEADLESS
+        "display", wpeDisplay,
+#endif
         nullptr));
     g_object_unref(settings);
+    g_object_unref(defaultWebsitePolicies);
+#if ENABLE_WPE_PLATFORM_HEADLESS
+    g_clear_object(&wpeDisplay);
+#endif
 
     if (backend) {
         backend->setInputClient(std::make_unique<InputClient>(application, webView));
-#if defined(ENABLE_ACCESSIBILITY) && ENABLE_ACCESSIBILITY
+#if USE_ATK
         auto* accessible = wpe_view_backend_dispatch_get_accessible(backend->backend());
         if (ATK_IS_OBJECT(accessible))
             backend->setAccessibleChild(ATK_OBJECT(accessible));
@@ -410,8 +473,11 @@ static void activate(GApplication* application, WPEToolingBackends::ViewBackend*
     }
 
 #if ENABLE_WPE_PLATFORM
-    if (auto* wpeView = webkit_web_view_get_wpe_view(webView))
+    if (auto* wpeView = webkit_web_view_get_wpe_view(webView)) {
         g_signal_connect(wpeView, "event", G_CALLBACK(wpeViewEventCallback), webView);
+        wpe_toplevel_set_title(wpe_view_get_toplevel(wpeView), defaultWindowTitle);
+        g_signal_connect(webView, "notify::title", G_CALLBACK(webViewTitleChanged), wpeView);
+    }
 #endif
 
     openViews = g_hash_table_new_full(nullptr, nullptr, g_object_unref, nullptr);

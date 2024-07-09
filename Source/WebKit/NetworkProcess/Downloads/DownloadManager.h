@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "DataReference.h"
 #include "DownloadID.h"
 #include "DownloadMap.h"
 #include "NetworkDataTask.h"
@@ -66,9 +65,15 @@ class DownloadManager {
     WTF_MAKE_NONCOPYABLE(DownloadManager);
 
 public:
-    class Client : public CanMakeCheckedPtr {
+    class Client {
     public:
         virtual ~Client() { }
+
+        // CheckedPtr interface
+        virtual uint32_t ptrCount() const = 0;
+        virtual uint32_t ptrCountWithoutThreadCheck() const = 0;
+        virtual void incrementPtrCount() const = 0;
+        virtual void decrementPtrCount() const = 0;
 
         virtual void didCreateDownload() = 0;
         virtual void didDestroyDownload() = 0;
@@ -76,6 +81,8 @@ public:
         virtual IPC::Connection* parentProcessConnectionForDownloads() = 0;
         virtual AuthenticationManager& downloadsAuthenticationManager() = 0;
         virtual NetworkSession* networkSession(PAL::SessionID) const = 0;
+
+        // RefPtr interface
         virtual void ref() const = 0;
         virtual void deref() const = 0;
     };
@@ -87,9 +94,9 @@ public:
     void convertNetworkLoadToDownload(DownloadID, std::unique_ptr<NetworkLoad>&&, ResponseCompletionHandler&&,  Vector<RefPtr<WebCore::BlobDataFileReference>>&&, const WebCore::ResourceRequest&, const WebCore::ResourceResponse&);
     void downloadDestinationDecided(DownloadID, Ref<NetworkDataTask>&&);
 
-    void resumeDownload(PAL::SessionID, DownloadID, const IPC::DataReference& resumeData, const String& path, SandboxExtension::Handle&&, CallDownloadDidStart);
+    void resumeDownload(PAL::SessionID, DownloadID, std::span<const uint8_t> resumeData, const String& path, SandboxExtension::Handle&&, CallDownloadDidStart);
 
-    void cancelDownload(DownloadID, CompletionHandler<void(const IPC::DataReference&)>&&);
+    void cancelDownload(DownloadID, CompletionHandler<void(std::span<const uint8_t>)>&&);
 #if PLATFORM(COCOA)
     void publishDownloadProgress(DownloadID, const URL&, SandboxExtension::Handle&&);
 #endif

@@ -111,15 +111,6 @@ WK_API_AVAILABLE(macos(13.3), ios(16.4))
 - (nullable WKWebView *)mainWebViewForWebExtensionContext:(_WKWebExtensionContext *)context;
 
 /*!
- @abstract Called when the web views for the tab are needed.
- @param context The context in which the web extension is running.
- @return An array of web views for the tab.
- @discussion Defaults to an array containing the main web view if not implemented.
- @seealso mainWebViewForWebExtensionContext:
- */
-- (NSArray<WKWebView *> *)webViewsForWebExtensionContext:(_WKWebExtensionContext *)context;
-
-/*!
  @abstract Called when the title of the tab is needed.
  @param context The context in which the web extension is running.
  @return The title of the tab.
@@ -411,6 +402,16 @@ WK_API_AVAILABLE(macos(13.3), ios(16.4))
  @discussion No action is performed if not implemented.
  */
 - (void)closeForWebExtensionContext:(_WKWebExtensionContext *)context completionHandler:(void (^)(NSError * _Nullable error))completionHandler;
+
+/*!
+ @abstract Called to determine if permissions should be granted for the tab.
+ @param context The context in which the web extension is running.
+ @return `YES` if permissions should be granted to the tab, `NO` otherwise.
+ @discussion This method allows the app to control granting of permissions on a per-tab basis when triggered by a user
+ gesture. Implementing this method enables the app to dynamically manage `activeTab` permissions based on the tab's
+ current state, the content being accessed, or other custom criteria.
+ */
+- (BOOL)shouldGrantTabPermissionsOnUserGestureForWebExtensionContext:(_WKWebExtensionContext *)context;
 
 @end
 

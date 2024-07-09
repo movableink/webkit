@@ -5,7 +5,8 @@
 esid: sec-Intl.DurationFormat.prototype.format
 description: >
   The correct separator is used for numeric hours with zero minutes and non-zero seconds.
-locale: [en-US]
+locale: [en]
+includes: [testIntl.js]
 features: [Intl.DurationFormat]
 ---*/
 
@@ -14,28 +15,31 @@ const df = new Intl.DurationFormat("en", {
   hours: "numeric",
 });
 
-const lf = new Intl.ListFormat("en", {
-  type: "unit",
-  style: "short",
-});
+const durations = [
+  // Test all eight possible combinations for zero and non-zero hours, minutes,
+  // and seconds.
+  {hours: 0, minutes: 0, seconds: 0},
+  {hours: 0, minutes: 0, seconds: 1},
+  {hours: 0, minutes: 1, seconds: 0},
+  {hours: 0, minutes: 1, seconds: 1},
+  {hours: 1, minutes: 0, seconds: 0},
+  {hours: 1, minutes: 0, seconds: 1},
+  {hours: 1, minutes: 1, seconds: 0},
+  {hours: 1, minutes: 1, seconds: 1},
 
-const duration = {
-  hours: 1,
+  // Additionally test when hours is non-zero and a sub-seconds unit is non-zero,
+  // but minutes and seconds are both zero.
+  {hours: 1, minutes: 0, seconds: 0, milliseconds: 1},
+  {hours: 1, minutes: 0, seconds: 0, microseconds: 1},
+  {hours: 1, minutes: 0, seconds: 0, nanoseconds: 1},
+];
 
-  // Minutes is omitted from the output when its value is zero.
-  minutes: 0,
+for (const duration of durations) {
+  const expected = formatDurationFormatPattern(df, duration);
 
-  // Either seconds or sub-seconds must be non-zero.
-  seconds: 3,
-};
-
-const expected = lf.format([
-  new Intl.NumberFormat("en", {minimumIntegerDigits: 1}).format(duration.hours),
-  new Intl.NumberFormat("en", {minimumIntegerDigits: 2}).format(duration.seconds),
-]);
-
-assert.sameValue(
-  df.format(duration),
-  expected,
-  `No time separator is used when minutes is zero`
-);
+  assert.sameValue(
+    df.format(duration),
+    expected,
+    `Duration is ${JSON.stringify(duration)}`
+  );
+}

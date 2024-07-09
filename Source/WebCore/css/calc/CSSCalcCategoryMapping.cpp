@@ -286,12 +286,12 @@ bool hasDoubleValue(CSSUnitType type)
     case CSSUnitType::CustomIdent:
     case CSSUnitType::CSS_ATTR:
     case CSSUnitType::CSS_RGBCOLOR:
-    case CSSUnitType::CSS_COUNTER_NAME:
     case CSSUnitType::CSS_QUIRKY_EM:
     case CSSUnitType::CSS_CALC:
     case CSSUnitType::CSS_CALC_PERCENTAGE_WITH_NUMBER:
     case CSSUnitType::CSS_CALC_PERCENTAGE_WITH_LENGTH:
     case CSSUnitType::CSS_UNRESOLVED_COLOR:
+    case CSSUnitType::CSS_ANCHOR:
     case CSSUnitType::CSS_PROPERTY_ID:
     case CSSUnitType::CSS_VALUE_ID:
         return false;

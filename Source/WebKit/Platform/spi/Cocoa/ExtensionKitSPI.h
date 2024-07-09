@@ -27,10 +27,46 @@
 
 #if USE(EXTENSIONKIT)
 
-#import <Foundation/Foundation.h>
+#import <BrowserEngineKit/BrowserEngineKit.h>
 
-#if __has_include(<ServiceExtensions/SEServiceManager_Private.h>)
-#import <ServiceExtensions/SEServiceManager_Private.h>
+#import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
+
+NS_ASSUME_NONNULL_BEGIN
+
+@interface BEWebContentProcess (ExtensionProcess)
++(void)webContentProcessWithBundleID:(NSString *_Nullable)bundleID interruptionHandler:(void(^)(void) _Nullable)interruptionHandler completion:(void(^)(BEWebContentProcess *_Nullable process, NSError *_Nullable error))completion;
+@end
+
+@interface BENetworkingProcess (ExtensionProcess)
++(void)networkProcessWithBundleID:(NSString *_Nullable)bundleID interruptionHandler:(void(^)(void) _Nullable)interruptionHandler completion:(void(^)(BENetworkingProcess *_Nullable process, NSError *_Nullable error))completion;
+@end
+
+@interface BERenderingProcess (ExtensionProcess)
++(void)renderingProcessWithBundleID:(NSString *_Nullable)bundleID interruptionHandler:(void(^)(void) _Nullable)interruptionHandler completion:(void(^)(BERenderingProcess  *_Nullable process, NSError *_Nullable error))completion;
+@end
+
+NS_ASSUME_NONNULL_END
+
+#if __has_include(<BrowserEngineKit/BELayerHierarchy_Private.h>)
+#import <BrowserEngineKit/BELayerHierarchy_Private.h>
+#else
+#import <BrowserEngineKit/BELayerHierarchy.h>
+@class CAContext;
+
+NS_ASSUME_NONNULL_BEGIN
+
+@interface BELayerHierarchy ()
++ (nullable BELayerHierarchy *)layerHierarchyWithOptions:(NSDictionary *)options error:(NSError **)error NS_REFINED_FOR_SWIFT;
+- (instancetype)initWithContext:(CAContext *)context;
+@end
+
+NS_ASSUME_NONNULL_END
+
+#endif
+
+#if __has_include(<ServiceExtensions/ServiceExtensions_Private.h>)
+#import <ServiceExtensions/ServiceExtensions_Private.h>
 #else
 
 @class _SEContentProcess;
@@ -72,7 +108,7 @@ typedef void(^_SEServiceInteruptionHandler)();
 @property (readonly) BOOL isValid;
 @end
 
-@interface _SECapabilities : NSObject
+@interface _SECapability : NSObject
 @end
 
 NS_REFINED_FOR_SWIFT
@@ -82,7 +118,7 @@ NS_REFINED_FOR_SWIFT
 
 - (void)invalidate;
 
-- (nullable id<_SEGrant>)grantCapabilities:(_SECapabilities *)capabilities error:(NSError * _Nullable *)error;
+- (nullable id<_SEGrant>)grantCapability:(_SECapability *)capability error:(NSError * _Nullable *)error;
 
 @end
 
@@ -104,13 +140,16 @@ NS_ASSUME_NONNULL_END
 
 #endif
 
-@interface _SECapabilities (IPI)
+NS_ASSUME_NONNULL_BEGIN
+
+@interface _SECapability (SPI)
 - (BOOL)setActive:(BOOL)active;
-+ (instancetype)mediaWithWebsite:(NSString*)website;
-+ (instancetype)assertionWithDomain:(NSString *)domain name:(NSString *)name;
++ (instancetype)mediaWithWebsite:(NSString *)website;
 + (instancetype)assertionWithDomain:(NSString *)domain name:(NSString *)name environmentIdentifier:(NSString *)environmentIdentifier;
 + (instancetype)assertionWithDomain:(NSString *)domain name:(NSString *)name environmentIdentifier:(NSString *)environmentIdentifier willInvalidate:(void (^)())willInvalidateBlock didInvalidate:(void (^)())didInvalidateBlock;
 @property (nonatomic, readonly) NSString *mediaEnvironment;
 @end
+
+NS_ASSUME_NONNULL_END
 
 #endif // USE(EXTENSIONKIT)

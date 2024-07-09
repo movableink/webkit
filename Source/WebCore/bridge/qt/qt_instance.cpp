@@ -206,7 +206,7 @@ void QtInstance::getPropertyNames(JSGlobalObject* lexicalGlobalObject, PropertyN
             QMetaMethod method = meta->method(i);
             if (method.access() != QMetaMethod::Private) {
                 QByteArray sig = method.methodSignature();
-                array.add(Identifier::fromString(vm, String(sig.constData(), sig.length())));
+                array.add(Identifier::fromString(vm, std::span { sig.constData(), static_cast<size_t>(sig.length()) }));
             }
         }
     }

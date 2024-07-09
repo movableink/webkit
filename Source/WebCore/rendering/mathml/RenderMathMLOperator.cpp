@@ -39,8 +39,6 @@
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderStyleInlines.h"
 #include "RenderText.h"
-#include "ScaleTransformOperation.h"
-#include "TransformOperations.h"
 #include <cmath>
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/MathExtras.h>
@@ -62,6 +60,8 @@ RenderMathMLOperator::RenderMathMLOperator(Type type, Document& document, Render
     : RenderMathMLToken(type, document, WTFMove(style))
 {
 }
+
+RenderMathMLOperator::~RenderMathMLOperator() = default;
 
 MathMLOperatorElement& RenderMathMLOperator::element() const
 {
@@ -231,6 +231,8 @@ void RenderMathMLOperator::layoutBlock(bool relayoutChildren, LayoutUnit pageLog
             child->layoutIfNeeded();
         setLogicalWidth(leadingSpaceValue + m_mathOperator.width() + trailingSpaceValue);
         setLogicalHeight(m_mathOperator.ascent() + m_mathOperator.descent());
+
+        layoutPositionedObjects(relayoutChildren);
     } else {
         // We first do the normal layout without spacing.
         recomputeLogicalWidth();

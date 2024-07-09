@@ -25,14 +25,13 @@
 
 #pragma once
 
-#include "DataReference.h"
 #include "LegacyCustomProtocolID.h"
 #include "MessageReceiver.h"
 #include "NetworkProcessSupplement.h"
-#include <wtf/CheckedRef.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
+#include <wtf/WeakRef.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
 
@@ -60,7 +59,7 @@ class LegacyCustomProtocolManager : public NetworkProcessSupplement, public IPC:
 public:
     explicit LegacyCustomProtocolManager(NetworkProcess&);
 
-    static const char* supplementName();
+    static ASCIILiteral supplementName();
 
     void registerScheme(const String&);
     void unregisterScheme(const String&);
@@ -88,14 +87,15 @@ private:
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
 
     void didFailWithError(LegacyCustomProtocolID, const WebCore::ResourceError&);
-    void didLoadData(LegacyCustomProtocolID, const IPC::DataReference&);
+    void didLoadData(LegacyCustomProtocolID, std::span<const uint8_t>);
     void didReceiveResponse(LegacyCustomProtocolID, const WebCore::ResourceResponse&, CacheStoragePolicy);
     void didFinishLoading(LegacyCustomProtocolID);
     void wasRedirectedToRequest(LegacyCustomProtocolID, const WebCore::ResourceRequest&, const WebCore::ResourceResponse& redirectResponse);
 
     void registerProtocolClass();
+    Ref<NetworkProcess> protectedNetworkProcess() const;
 
-    CheckedRef<NetworkProcess> m_networkProcess;
+    WeakRef<NetworkProcess> m_networkProcess;
 
     typedef HashMap<LegacyCustomProtocolID, CustomProtocol> CustomProtocolMap;
     CustomProtocolMap m_customProtocolMap WTF_GUARDED_BY_LOCK(m_customProtocolMapLock);

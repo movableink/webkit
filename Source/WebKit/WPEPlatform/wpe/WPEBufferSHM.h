@@ -49,13 +49,15 @@ typedef enum {
     WPE_PIXEL_FORMAT_ARGB8888
 } WPEPixelFormat;
 
-WPE_API WPEBufferSHM  *wpe_buffer_shm_new        (WPEDisplay    *display,
+WPE_API WPEBufferSHM  *wpe_buffer_shm_new        (WPEView       *view,
                                                   int            width,
                                                   int            height,
                                                   WPEPixelFormat format,
-                                                  GBytes        *data);
+                                                  GBytes        *data,
+                                                  guint          stride);
 WPE_API WPEPixelFormat wpe_buffer_shm_get_format (WPEBufferSHM  *buffer);
 WPE_API GBytes        *wpe_buffer_shm_get_data   (WPEBufferSHM  *buffer);
+WPE_API guint          wpe_buffer_shm_get_stride (WPEBufferSHM  *buffer);
 
 G_END_DECLS
 

@@ -276,7 +276,7 @@ NO_RETURN_DUE_TO_ASSERT void DrawFilteredImageBuffer::apply(GraphicsContext&) co
     ASSERT_NOT_REACHED();
 }
 
-void DrawFilteredImageBuffer::apply(GraphicsContext& context, ImageBuffer* sourceImage, FilterResults& results)
+void DrawFilteredImageBuffer::apply(GraphicsContext& context, ImageBuffer* sourceImage, FilterResults& results) const
 {
     context.drawFilteredImageBuffer(sourceImage, m_sourceImageRect, m_filter, results);
 }
@@ -296,7 +296,7 @@ DrawGlyphs::DrawGlyphs(RenderingResourceIdentifier fontIdentifier, PositionedGly
 
 DrawGlyphs::DrawGlyphs(const Font& font, const GlyphBufferGlyph* glyphs, const GlyphBufferAdvance* advances, unsigned count, const FloatPoint& localAnchor, FontSmoothingMode smoothingMode)
     : m_fontIdentifier(font.renderingResourceIdentifier())
-    , m_positionedGlyphs { { glyphs, count }, { advances, count }, localAnchor, smoothingMode }
+    , m_positionedGlyphs { Vector(std::span { glyphs, count }), Vector(std::span { advances, count }), localAnchor, smoothingMode }
 {
 }
 
@@ -370,7 +370,7 @@ void DrawImageBuffer::dump(TextStream& ts, OptionSet<AsTextFlag> flags) const
 
 void DrawNativeImage::apply(GraphicsContext& context, NativeImage& image) const
 {
-    context.drawNativeImageInternal(image, m_imageSize, m_destinationRect, m_srcRect, m_options);
+    context.drawNativeImageInternal(image, m_destinationRect, m_srcRect, m_options);
 }
 
 void DrawNativeImage::dump(TextStream& ts, OptionSet<AsTextFlag> flags) const
@@ -569,13 +569,39 @@ FillRectWithGradient::FillRectWithGradient(FloatRect&& rect, Ref<Gradient>&& gra
 
 void FillRectWithGradient::apply(GraphicsContext& context) const
 {
-    context.fillRect(m_rect, m_gradient.get());
+    context.fillRect(m_rect, m_gradient);
 }
 
 void FillRectWithGradient::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
     // FIXME: log gradient.
     ts.dumpProperty("rect", rect());
+}
+
+FillRectWithGradientAndSpaceTransform::FillRectWithGradientAndSpaceTransform(const FloatRect& rect, Gradient& gradient, const AffineTransform& gradientSpaceTransform)
+    : m_rect(rect)
+    , m_gradient(gradient)
+    , m_gradientSpaceTransform(gradientSpaceTransform)
+{
+}
+
+FillRectWithGradientAndSpaceTransform::FillRectWithGradientAndSpaceTransform(FloatRect&& rect, Ref<Gradient>&& gradient, AffineTransform&& gradientSpaceTransform)
+    : m_rect(WTFMove(rect))
+    , m_gradient(WTFMove(gradient))
+    , m_gradientSpaceTransform(WTFMove(gradientSpaceTransform))
+{
+}
+
+void FillRectWithGradientAndSpaceTransform::apply(GraphicsContext& context) const
+{
+    context.fillRect(m_rect, m_gradient, m_gradientSpaceTransform);
+}
+
+void FillRectWithGradientAndSpaceTransform::dump(TextStream& ts, OptionSet<AsTextFlag>) const
+{
+    // FIXME: log gradient.
+    ts.dumpProperty("rect", rect());
+    ts.dumpProperty("gradient-space-transform", gradientSpaceTransform());
 }
 
 void FillCompositedRect::apply(GraphicsContext& context) const
@@ -633,6 +659,16 @@ void FillArc::apply(GraphicsContext& context) const
 }
 
 void FillArc::dump(TextStream& ts, OptionSet<AsTextFlag>) const
+{
+    ts.dumpProperty("path", path());
+}
+
+void FillClosedArc::apply(GraphicsContext& context) const
+{
+    context.fillPath(path());
+}
+
+void FillClosedArc::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
     ts.dumpProperty("path", path());
 }
@@ -778,6 +814,16 @@ void StrokeArc::dump(TextStream& ts, OptionSet<AsTextFlag>) const
     ts.dumpProperty("path", path());
 }
 
+void StrokeClosedArc::apply(GraphicsContext& context) const
+{
+    context.strokePath(path());
+}
+
+void StrokeClosedArc::dump(TextStream& ts, OptionSet<AsTextFlag>) const
+{
+    ts.dumpProperty("path", path());
+}
+
 void StrokeQuadCurve::apply(GraphicsContext& context) const
 {
     context.strokePath(path());
@@ -836,9 +882,20 @@ void BeginTransparencyLayer::apply(GraphicsContext& context) const
     context.beginTransparencyLayer(m_opacity);
 }
 
+void BeginTransparencyLayerWithCompositeMode::apply(GraphicsContext& context) const
+{
+    context.beginTransparencyLayer(m_compositeMode.operation, m_compositeMode.blendMode);
+}
+
 void BeginTransparencyLayer::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
     ts.dumpProperty("opacity", opacity());
+}
+
+void BeginTransparencyLayerWithCompositeMode::dump(TextStream& ts, OptionSet<AsTextFlag>) const
+{
+    ts.dumpProperty("composite-operator", compositeMode().operation);
+    ts.dumpProperty("blend-mode", compositeMode().blendMode);
 }
 
 void EndTransparencyLayer::apply(GraphicsContext& context) const

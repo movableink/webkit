@@ -4,7 +4,6 @@ PASS align-content
 PASS align-items
 PASS align-self
 PASS alignment-baseline
-PASS alt
 PASS animation-composition
 PASS animation-delay
 PASS animation-direction
@@ -109,6 +108,7 @@ PASS counter-set
 PASS cursor
 PASS cx
 PASS cy
+PASS d
 PASS direction
 PASS display
 PASS dominant-baseline

@@ -48,9 +48,7 @@ public:
 
     constexpr MediaPlatformType platformType() const final { return MediaPlatformType::Mock; }
 
-    MockMediaPlayerMediaSource& player() const { return m_player; }
-
-    MediaTime currentMediaTime() const final;
+    RefPtr<MediaPlayerPrivateInterface> player() const final;
 
     std::optional<VideoPlaybackQualityMetrics> videoPlaybackQualityMetrics();
 
@@ -61,7 +59,7 @@ public:
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
-    const char* logClassName() const override { return "MockMediaSourcePrivate"; }
+    ASCIILiteral logClassName() const override { return "MockMediaSourcePrivate"_s; }
     const void* logIdentifier() const final { return m_logIdentifier; }
     WTFLogChannel& logChannel() const final;
 
@@ -83,7 +81,7 @@ private:
 
     friend class MockSourceBufferPrivate;
 
-    MockMediaPlayerMediaSource& m_player;
+    WeakPtr<MockMediaPlayerMediaSource> m_player;
 
     unsigned m_totalVideoFrames { 0 };
     unsigned m_droppedVideoFrames { 0 };

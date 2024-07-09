@@ -223,11 +223,11 @@ TEST(IPCTestingAPI, CanSendInvalidSyncMessageToUIProcessWithoutTermination)
 
     done = false;
     [webView synchronouslyLoadHTMLString:@"<!DOCTYPE html><script>"
-        "IPC.sendSyncMessage('UI', IPC.webPageProxyID, IPC.messages.WebPageProxy_RunJavaScriptAlert.name, 100, [{type: 'FrameID', value: IPC.frameID}]);"
-        "alert('hi')</script>"];
+        "try{IPC.sendSyncMessage('UI', IPC.webPageProxyID, IPC.messages.WebPageProxy_RunJavaScriptAlert.name, 100, [{type: 'FrameID', value: IPC.frameID}]);}catch(e){alert(e.message)}"
+        "</script>"];
     TestWebKitAPI::Util::run(&done);
 
-    EXPECT_STREQ([alertMessage UTF8String], "hi");
+    EXPECT_STREQ([alertMessage UTF8String], "Failed to successfully deserialize the message");
 }
 
 #if ENABLE(GPU_PROCESS)
@@ -256,9 +256,10 @@ TEST(IPCTestingAPI, CanSendAsyncMessageToGPUProcess)
     [webView setUIDelegate:delegate.get()];
 
     done = false;
-    [webView synchronouslyLoadHTMLString:@"<!DOCTYPE html><script>(async function test() {"
-        "window.result = await IPC.sendMessage('GPU', 0, IPC.messages.RemoteAudioDestinationManager_StartAudioDestination.name, [{type: 'uint64_t', value: 12345}]);"
-        "alert(!!result)"
+    [webView synchronouslyLoadHTMLString:@"<!DOCTYPE html><script>(function test() {"
+        "let c = IPC.connectionForProcessTarget('GPU');"
+        "let cb = (result) => { window.result = result; alert(!!result); };"
+        "c.sendWithAsyncReply(0, IPC.messages.RemoteAudioDestinationManager_StartAudioDestination.name, [{type: 'uint64_t', value: 12345}], cb);"
         "})();</script>"];
     TestWebKitAPI::Util::run(&done);
 
@@ -275,10 +276,11 @@ TEST(IPCTestingAPI, CanSendInvalidAsyncMessageToGPUProcessWithoutTermination)
     [webView setUIDelegate:delegate.get()];
 
     done = false;
-    [webView synchronouslyLoadHTMLString:@"<!DOCTYPE html><script>(async function test() {"
-        "IPC.sendMessage('GPU', 0, IPC.messages.GPUConnectionToWebProcess_CreateRenderingBackend.name, []);"
-        "window.result = await IPC.sendMessage('GPU', 0, IPC.messages.RemoteAudioDestinationManager_StartAudioDestination.name, [{type: 'uint64_t', value: 12345}]);"
-        "alert(!!result)"
+    [webView synchronouslyLoadHTMLString:@"<!DOCTYPE html><script>(function test() {"
+        "let c = IPC.connectionForProcessTarget('GPU');"
+        "c.sendMessage(0, IPC.messages.GPUConnectionToWebProcess_CreateRenderingBackend.name, []);"
+        "let cb = (result) => { window.result = result; alert(!!result); };"
+        "c.sendWithAsyncReply(0, IPC.messages.RemoteAudioDestinationManager_StartAudioDestination.name, [{type: 'uint64_t', value: 12345}], cb);"
         "})();</script>"];
     TestWebKitAPI::Util::run(&done);
 
@@ -363,10 +365,12 @@ TEST(IPCTestingAPI, DecodesReplyArgumentsForAsyncMessage)
     [webView setUIDelegate:delegate.get()];
 
     done = false;
-    promptResult = @"foo";
-    [webView synchronouslyLoadHTMLString:@"<!DOCTYPE html><script>IPC.sendMessage(\"Networking\", 0, IPC.messages.NetworkConnectionToWebProcess_HasStorageAccess.name,"
+    [webView synchronouslyLoadHTMLString:@"<!DOCTYPE html><script>"
+        "let c = IPC.connectionForProcessTarget('Networking');"
+        "let cb = (result) => alert(JSON.stringify(result.arguments));"
+        "c.sendWithAsyncReply(0, IPC.messages.NetworkConnectionToWebProcess_HasStorageAccess.name,"
         "[{type: 'RegistrableDomain', value: 'https://ipctestingapi.com'}, {type: 'RegistrableDomain', value: 'https://webkit.org'}, {type: 'FrameID', value: IPC.frameID},"
-        "{type: 'uint64_t', value: IPC.pageID}]).then((result) => alert(JSON.stringify(result.arguments)));</script>"];
+        "{type: 'uint64_t', value: IPC.pageID}], cb);</script>"];
     TestWebKitAPI::Util::run(&done);
 
     EXPECT_STREQ([alertMessage UTF8String], "[{\"type\":\"bool\",\"value\":false}]");
@@ -426,8 +430,10 @@ TEST(IPCTestingAPI, CanInterceptHasStorageAccess)
     promptResult = @"foo";
     [webView synchronouslyLoadHTMLString:@"<!DOCTYPE html><script>let targetMessage = {}; const messageName = IPC.messages.NetworkConnectionToWebProcess_HasStorageAccess.name;"
         "IPC.addOutgoingMessageListener('Networking', (currentMessage) => { if (currentMessage.name == messageName) targetMessage = currentMessage; });"
-        "IPC.sendMessage('Networking', 0, messageName, [{type: 'RegistrableDomain', value: 'https://ipctestingapi.com'}, {type: 'RegistrableDomain', value: 'https://webkit.org'},"
-        "{type: 'FrameID', value: IPC.frameID}, {type: 'uint64_t', value: IPC.pageID}]).then((result) => alert(JSON.stringify(result.arguments)));</script>"];
+        "let c = IPC.connectionForProcessTarget('Networking');"
+        "let cb = (result) => alert(JSON.stringify(result.arguments));"
+        "c.sendWithAsyncReply(0, messageName, [{type: 'RegistrableDomain', value: 'https://ipctestingapi.com'}, {type: 'RegistrableDomain', value: 'https://webkit.org'},"
+        "{type: 'FrameID', value: IPC.frameID}, {type: 'uint64_t', value: IPC.pageID}], cb);</script>"];
     TestWebKitAPI::Util::run(&done);
 
     EXPECT_STREQ([alertMessage UTF8String], "[{\"type\":\"bool\",\"value\":false}]");
@@ -473,19 +479,26 @@ TEST(IPCTestingAPI, CanInterceptFindString)
     EXPECT_EQ([webView stringByEvaluatingJavaScript:@"args[1].isOptionSet"].boolValue, YES);
     EXPECT_STREQ([webView stringByEvaluatingJavaScript:@"args[2].type"].UTF8String, "uint32_t");
     EXPECT_EQ([webView stringByEvaluatingJavaScript:@"args[2].value"].intValue, 1);
+
     EXPECT_STREQ([webView stringByEvaluatingJavaScript:@"typeof(messages[0].syncRequestID)"].UTF8String, "undefined");
     EXPECT_EQ([webView stringByEvaluatingJavaScript:@"messages[0].destinationID"].intValue,
         [webView stringByEvaluatingJavaScript:@"IPC.webPageProxyID.toString()"].intValue);
 }
 
-static NSSet<NSString *> *splitTypeFromList(NSString *input, bool firstTypeOnly)
+static NSSet<NSString *> *splitTypeFromList(NSString *container, NSString *list)
 {
+    bool firstTypeOnly = [container isEqualToString:@"std::span"]
+        || [container isEqualToString:@"Vector"]
+        || [container isEqualToString:@"std::array"]
+        || [container isEqualToString:@"HashSet"];
+    bool firstTwoTypesOnly = [container isEqualToString:@"HashMap"];
+
     NSMutableSet *set = NSMutableSet.set;
     size_t nestedTypeDepth { 0 };
     bool atComma { false };
     size_t previousTypeEnd { 0 };
-    for (size_t i = 0; i < input.length; i++) {
-        auto c = [input characterAtIndex:i];
+    for (size_t i = 0; i < list.length; i++) {
+        auto c = [list characterAtIndex:i];
         if (c == '<')
             nestedTypeDepth++;
         if (c == '>')
@@ -495,14 +508,16 @@ static NSSet<NSString *> *splitTypeFromList(NSString *input, bool firstTypeOnly)
             continue;
         }
         if (c == ' ' && !nestedTypeDepth && atComma) {
-            [set addObject:[input substringWithRange:NSMakeRange(previousTypeEnd, i - 1 - previousTypeEnd)]];
+            [set addObject:[list substringWithRange:NSMakeRange(previousTypeEnd, i - 1 - previousTypeEnd)]];
             if (firstTypeOnly)
+                return set;
+            if ([set count] == 2 && firstTwoTypesOnly)
                 return set;
             previousTypeEnd = i + 1;
         }
         atComma = false;
     }
-    [set addObject:[input substringWithRange:NSMakeRange(previousTypeEnd, input.length - previousTypeEnd)]];
+    [set addObject:[list substringWithRange:NSMakeRange(previousTypeEnd, list.length - previousTypeEnd)]];
     return set;
 }
 
@@ -514,29 +529,41 @@ static NSMutableSet<NSString *> *extractTypesFromContainers(NSSet<NSString *> *i
         NSArray<NSString *> *containerTypes = @[
             @"Expected",
             @"HashMap",
+            @"MemoryCompactRobinHoodHashMap",
+            @"MemoryCompactLookupOnlyRobinHoodHashSet",
             @"std::pair",
             @"IPC::ArrayReferenceTuple",
-            @"IPC::ArrayReference",
+            @"std::span",
+            @"std::array",
+            @"std::tuple",
             @"std::variant",
             @"std::unique_ptr",
+            @"UniqueRef",
             @"Vector",
             @"HashSet",
             @"Ref",
             @"RefPtr",
             @"std::optional",
             @"OptionSet",
+            @"OptionalTuple",
+            @"KeyValuePair",
+            @"Markable",
             @"RetainPtr",
+            @"HashCountedSet",
+            @"IPC::CoreIPCRetainPtr",
             @"WebCore::RectEdges"
         ];
         for (NSString *container in containerTypes) {
             if ([input hasPrefix:[container stringByAppendingString:@"<"]]
                 && [input hasSuffix:@">"]) {
                 NSString *containedTypes = [input substringWithRange:NSMakeRange(container.length + 1, input.length - container.length - 2)];
-                for (NSString *type : extractTypesFromContainers(splitTypeFromList(containedTypes, [container isEqualToString:@"IPC::ArrayReference"])))
+                for (NSString *type : extractTypesFromContainers(splitTypeFromList(container, containedTypes)))
                     [outputSet addObject:type];
                 foundContainer = YES;
             }
         }
+        if ([input hasPrefix:@"const "])
+            input = [input substringWithRange:NSMakeRange(6, input.length - 6)];
         if (!foundContainer)
             [outputSet addObject:input];
     }
@@ -558,14 +585,20 @@ TEST(IPCTestingAPI, SerializedTypeInfo)
         @"type": @"bool"
     }];
     EXPECT_TRUE([typeInfo[@"WebCore::CacheQueryOptions"] isEqualToArray:expectedArray]);
+
     NSDictionary *expectedDictionary = @{
         @"isOptionSet" : @1,
         @"size" : @1,
         @"validValues" : @[@1, @2]
     };
-
     NSDictionary *enumInfo = [webView objectByEvaluatingJavaScript:@"IPC.serializedEnumInfo"];
     EXPECT_TRUE([enumInfo[@"WebKit::WebsiteDataFetchOption"] isEqualToDictionary:expectedDictionary]);
+    NSDictionary *expectedMouseEventButtonDictionary = @{
+        @"isOptionSet" : @NO,
+        @"size" : @1,
+        @"validValues" : @[@0, @1, @2, @254]
+    };
+    EXPECT_TRUE([enumInfo[@"WebKit::WebMouseEventButton"] isEqualToDictionary:expectedMouseEventButtonDictionary]);
 
     NSArray *objectIdentifiers = [webView objectByEvaluatingJavaScript:@"IPC.objectIdentifiers"];
     EXPECT_TRUE([objectIdentifiers containsObject:@"WebCore::PageIdentifier"]);
@@ -582,6 +615,10 @@ TEST(IPCTestingAPI, SerializedTypeInfo)
             for (NSDictionary *argument in arguments) {
                 if (![argument isKindOfClass:NSDictionary.class])
                     continue;
+                if (NSString *enumName = argument[@"enum"]) {
+                    [typesNeedingDescriptions addObject:enumName];
+                    continue;
+                }
                 [typesNeedingDescriptions addObject:argument[@"type"]];
             }
         }
@@ -601,8 +638,70 @@ TEST(IPCTestingAPI, SerializedTypeInfo)
     for (NSString *objectIdentifier in objectIdentifiers)
         [typesHavingDescriptions addObject:objectIdentifier];
 
-    [typesNeedingDescriptions minusSet:typesHavingDescriptions];
+    NSSet *fundamentalTypes = [NSSet setWithArray:@[
+        @"char",
+        @"char32_t",
+        @"short",
+        @"float",
+        @"bool",
+        @"NSUInteger",
+        @"NSInteger",
+        @"size_t",
+        @"std::nullptr_t",
+        @"uint32_t",
+        @"int32_t",
+        @"uint8_t",
+        @"UInt32",
+        @"long",
+        @"unsigned",
+        @"unsigned long long",
+        @"unsigned long",
+        @"unsigned char",
+        @"unsigned short",
+        @"void",
+        @"double",
+        @"uint16_t",
+        @"int64_t",
+        @"pid_t",
+        @"CGFloat",
+        @"String",
+        @"uint32_t",
+        @"int16_t",
+        @"uint64_t",
+        @"int",
+        @"long long",
+        @"GCGLint",
+        @"GCGLenum",
+        @"OSStatus",
+    ]];
 
+    [typesNeedingDescriptions minusSet:typesHavingDescriptions];
+    [typesNeedingDescriptions minusSet:fundamentalTypes];
+
+    NSSet<NSString *> *expectedTypesNeedingDescriptions = [NSSet setWithArray:@[
+        @"CTFontDescriptorOptions",
+        @"NSObject<NSSecureCoding>",
+        @"PKSecureElementPass",
+        @"GCGLErrorCodeSet",
+        @"NSURLRequest",
+        @"MachSendRight",
+        @"CGBitmapInfo",
+        @"NSParagraphStyle",
+#if ENABLE(DATA_DETECTION) && !HAVE(WK_SECURE_CODING_DATA_DETECTORS)
+        @"DDScannerResult",
+#endif
+#if PLATFORM(MAC)
+#if !HAVE(WK_SECURE_CODING_DATA_DETECTORS)
+        @"WKDDActionContext",
+#endif
+        @"CGDisplayChangeSummaryFlags",
+        @"WebCore::ContextMenuAction"
+#endif
+    ]];
+    if (![expectedTypesNeedingDescriptions isEqual:typesNeedingDescriptions]) {
+        EXPECT_TRUE(false);
+        WTFLogAlways("%@", typesNeedingDescriptions);
+    }
 }
 
 #endif

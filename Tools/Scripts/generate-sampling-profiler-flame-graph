@@ -23,21 +23,13 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 # THE POSSIBILITY OF SUCH DAMAGE.
 
-require 'rubygems'
+require 'json'
 require 'getoptlong'
 
-begin
-    require 'json'
-rescue LoadError
-    $stderr.puts "Error: some required gems are not installed!"
-    $stderr.puts
-    $stderr.puts "Try running:"
-    $stderr.puts
-    $stderr.puts "sudo gem install json"
-    exit 1
-end
-
 $rootDirectory = File.expand_path(File.join(File.dirname(__FILE__), "..", ".."))
+
+$flameGraphTitle = ""
+$flameGraphJSBuiltin = false
 
 def render samples, title
     template = <<-RESULT
@@ -199,30 +191,56 @@ def reconstruct database
         cursor = result
         next if stackTrace["frames"].empty?
         stackTrace["frames"].reverse.map do |frame|
+            jsbuiltin = ""
+            if $flameGraphJSBuiltin
+                flags = frame["flags"]
+                if !flags.nil? && flags & 0b1 != 0
+                    jsbuiltin = "/JSBUILTIN"
+                end
+            end
             hash, category, offset = frame["location"].split(":")
-            cursor = update(cursor, "#{frame["name"]}#{hash}")
+            cursor = update(cursor, "#{frame["name"]}#{hash}#{jsbuiltin}")
         end
         cursor["value"] += 1
     end
     result
 end
 
-$flameGraphTitle = ""
-GetoptLong.new(['--title', '-t', GetoptLong::REQUIRED_ARGUMENT]).each do |opt, arg|
+def usage
+    puts <<-HELP
+Usage:
+
+    --title s:
+        Specify title in generated graph.
+    -h, --help:
+        Show this help.
+    HELP
+    exit(0)
+end
+
+GetoptLong.new(
+    ['--help', '-h', GetoptLong::NO_ARGUMENT],
+    ['--title', '-t', GetoptLong::REQUIRED_ARGUMENT],
+    ['--js-builtin', '-b', GetoptLong::NO_ARGUMENT],
+).each do |opt, arg|
     case opt
+    when '--help'
+        usage
     when '--title'
-      $flameGraphTitle = arg
+        $flameGraphTitle = arg
+    when '--js-builtin'
+        $flameGraphJSBuiltin = true
     end
 end
 
 def main
-  json = nil
-  if ARGV.empty?
-      json = JSON.parse(STDIN.read)
-  else
-      json = JSON::parse(IO::read(ARGV[0]))
-  end
-  puts render(reconstruct(json), $flameGraphTitle)
+    json = nil
+    if ARGV.empty?
+        json = JSON.parse(STDIN.read)
+    else
+        json = JSON::parse(IO::read(ARGV[0]))
+    end
+    puts render(reconstruct(json), $flameGraphTitle)
 end
 
 main

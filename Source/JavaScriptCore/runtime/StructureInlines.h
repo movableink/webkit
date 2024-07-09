@@ -36,6 +36,7 @@
 #include "Structure.h"
 #include "StructureChain.h"
 #include "StructureRareDataInlines.h"
+#include "SymbolPrototype.h"
 #include "Watchpoint.h"
 #include <wtf/CompactRefPtr.h>
 #include <wtf/Threading.h>
@@ -478,6 +479,8 @@ inline PropertyOffset Structure::add(VM& vm, PropertyName propertyName, unsigned
     checkConsistency();
     if (attributes & PropertyAttribute::DontEnum || propertyName.isSymbol())
         setIsQuickPropertyAccessAllowedForEnumeration(false);
+    if (attributes & PropertyAttribute::DontEnum)
+        setHasNonEnumerableProperties(true);
     if (attributes & PropertyAttribute::DontDelete) {
         setHasNonConfigurableProperties(true);
         if (attributes & PropertyAttribute::ReadOnlyOrAccessorOrCustomAccessorOrValue)
@@ -573,8 +576,10 @@ inline PropertyOffset Structure::attributeChange(VM& vm, PropertyName propertyNa
     if (offset == invalidOffset)
         return offset;
 
-    if (attributes & PropertyAttribute::DontEnum)
+    if (attributes & PropertyAttribute::DontEnum) {
+        setHasNonEnumerableProperties(true);
         setIsQuickPropertyAccessAllowedForEnumeration(false);
+    }
     if (attributes & PropertyAttribute::DontDelete) {
         setHasNonConfigurableProperties(true);
         if (attributes & PropertyAttribute::ReadOnlyOrAccessorOrCustomAccessorOrValue)
@@ -630,6 +635,8 @@ ALWAYS_INLINE auto Structure::addOrReplacePropertyWithoutTransition(VM& vm, Prop
     checkConsistency();
     if (newAttributes & PropertyAttribute::DontEnum || propertyName.isSymbol())
         setIsQuickPropertyAccessAllowedForEnumeration(false);
+    if (newAttributes & PropertyAttribute::DontEnum)
+        setHasNonEnumerableProperties(true);
     if (newAttributes & PropertyAttribute::DontDelete) {
         setHasNonConfigurableProperties(true);
         if (newAttributes & PropertyAttribute::ReadOnlyOrAccessorOrCustomAccessorOrValue)

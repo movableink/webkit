@@ -40,7 +40,6 @@ struct IOSurfaceFormatInfo
 constexpr std::array<IOSurfaceFormatInfo, 9> kIOSurfaceFormats = {{
     {GL_RED,      GL_UNSIGNED_BYTE,                1, GL_R8},
     {GL_RED,      GL_UNSIGNED_SHORT,               2, GL_R16_EXT},
-    {GL_R16UI,    GL_UNSIGNED_SHORT,               2, GL_R16UI},
     {GL_RG,       GL_UNSIGNED_BYTE,                2, GL_RG8},
     {GL_RG,       GL_UNSIGNED_SHORT,               4, GL_RG16_EXT},
     {GL_RGB,      GL_UNSIGNED_BYTE,                4, GL_RGBX8_ANGLE},
@@ -68,7 +67,7 @@ int FindIOSurfaceFormatIndex(GLenum internalFormat, GLenum type)
 IOSurfaceSurfaceVkMac::IOSurfaceSurfaceVkMac(const egl::SurfaceState &state,
                                              EGLClientBuffer buffer,
                                              const egl::AttributeMap &attribs,
-                                             RendererVk *renderer)
+                                             vk::Renderer *renderer)
     : OffscreenSurfaceVk(state, renderer), mIOSurface(nullptr), mPlane(0), mFormatIndex(-1)
 {
     // Keep reference to the IOSurface so it doesn't get deleted while the pbuffer exists.
@@ -105,7 +104,7 @@ egl::Error IOSurfaceSurfaceVkMac::initialize(const egl::Display *display)
 
 angle::Result IOSurfaceSurfaceVkMac::initializeImpl(DisplayVk *displayVk)
 {
-    RendererVk *renderer      = displayVk->getRenderer();
+    vk::Renderer *renderer    = displayVk->getRenderer();
     const egl::Config *config = mState.config;
 
     // Should never be > 1
@@ -161,8 +160,8 @@ egl::Error IOSurfaceSurfaceVkMac::bindTexImage(const gl::Context *context,
 {
     IOSurfaceLock(mIOSurface, 0, nullptr);
 
-    ContextVk *contextVk = vk::GetImpl(context);
-    RendererVk *renderer = contextVk->getRenderer();
+    ContextVk *contextVk   = vk::GetImpl(context);
+    vk::Renderer *renderer = contextVk->getRenderer();
 
     size_t width             = IOSurfaceGetWidthOfPlane(mIOSurface, mPlane);
     size_t height            = IOSurfaceGetHeightOfPlane(mIOSurface, mPlane);

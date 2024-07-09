@@ -39,11 +39,13 @@ struct MaskerData {
 
 class LegacyRenderSVGResourceMasker final : public LegacyRenderSVGResourceContainer {
     WTF_MAKE_ISO_ALLOCATED(LegacyRenderSVGResourceMasker);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LegacyRenderSVGResourceMasker);
 public:
     LegacyRenderSVGResourceMasker(SVGMaskElement&, RenderStyle&&);
     virtual ~LegacyRenderSVGResourceMasker();
 
     inline SVGMaskElement& maskElement() const;
+    inline Ref<SVGMaskElement> protectedMaskElement() const;
 
     void removeAllClientsFromCacheIfNeeded(bool markForInvalidation, SingleThreadWeakHashSet<RenderObject>* visitedRenderers) override;
     void removeClientFromCache(RenderElement&, bool markForInvalidation = true) override;
@@ -66,7 +68,7 @@ private:
     void calculateMaskContentRepaintRect(RepaintRectCalculation);
 
     EnumeratedArray<RepaintRectCalculation, FloatRect, RepaintRectCalculation::Accurate> m_maskContentBoundaries;
-    HashMap<RenderObject*, std::unique_ptr<MaskerData>> m_masker;
+    HashMap<SingleThreadWeakRef<RenderObject>, std::unique_ptr<MaskerData>> m_masker;
 };
 
 } // namespace WebCore

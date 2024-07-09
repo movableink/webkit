@@ -29,10 +29,10 @@
 
 namespace WebCore {
 
-bool GlyphPage::fill(UChar* buffer, unsigned bufferLength)
+bool GlyphPage::fill(std::span<const UChar> buffer)
 {
     QRawFont rawFont = font().platformData().rawFont();
-    QString qstring = QString::fromRawData(reinterpret_cast<const QChar*>(buffer), static_cast<int>(bufferLength));
+    QString qstring = QString::fromRawData(reinterpret_cast<const QChar*>(buffer.data()), static_cast<int>(buffer.size()));
     QVector<quint32> indexes = rawFont.glyphIndexesForString(qstring);
     unsigned indexSize = (unsigned)indexes.size();
 

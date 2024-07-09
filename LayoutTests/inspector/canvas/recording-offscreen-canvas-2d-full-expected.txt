@@ -31,7 +31,7 @@ initialState:
     imageSmoothingQuality: "low"
     setPath: [""]
   parameters:
-    0: {"colorSpace":"srgb","desynchronized":false}
+    0: {"colorSpace":"srgb","desynchronized":false,"willReadFrequently":false}
   content: <filtered>
 frames:
   0: (duration)
@@ -789,12 +789,6 @@ frames:
       swizzleTypes: [Number, Number, Number, Number, Array]
       trace:
         0: roundRect
-        1: (anonymous function)
-        2: executeFrameFunction
-  61: (duration)
-    0: commit()
-      trace:
-        0: commit
         1: (anonymous function)
         2: executeFrameFunction
 

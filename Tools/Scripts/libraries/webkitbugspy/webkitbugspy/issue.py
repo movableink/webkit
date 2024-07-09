@@ -20,6 +20,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import sys
+
 from .tracker import Tracker
 from .user import User
 from datetime import datetime
@@ -56,10 +58,12 @@ class Issue(object):
         self.tracker = tracker
         self._original = None
         self._duplicates = None
+        self._related = None
 
         self._link = None
         self._title = None
         self._timestamp = None
+        self._modified = None
         self._creator = None
         self._description = None
         self._opened = None
@@ -75,6 +79,8 @@ class Issue(object):
         self._milestone = None
         self._keywords = None
         self._classification = None
+
+        self._source_changes = None
 
         self.tracker.populate(self, None)
 
@@ -98,6 +104,12 @@ class Issue(object):
         if self._timestamp is None:
             self.tracker.populate(self, 'timestamp')
         return self._timestamp
+
+    @property
+    def modified(self):
+        if self._modified is None:
+            self.tracker.populate(self, 'modified')
+        return self._modified
 
     @property
     def creator(self):
@@ -140,6 +152,15 @@ class Issue(object):
         if self._duplicates is None:
             self.tracker.populate(self, 'duplicates')
         return self._duplicates
+
+    @property
+    def related(self):
+        if self._related is None:
+            self.tracker.populate(self, 'related')
+        return self._related
+
+    def relate(self, **relations):
+        return self.tracker.relate(self, **relations)
 
     @property
     def assignee(self):
@@ -221,6 +242,23 @@ class Issue(object):
         return self._classification
 
     @property
+    def source_changes(self):
+        if self._source_changes is None:
+            self.tracker.populate(self, 'source_changes')
+        return self._source_changes
+
+    def add_source_change(self, line):
+        parts = line.split(', ')
+        parts[-1] = parts[-1][:12]
+        search_for = ', '.join(parts) if parts[-1] else line
+
+        for change in self.source_changes:
+            if change.startswith(search_for):
+                sys.stderr.write("'{}' is already a registered source change\n".format(line))
+                return None
+        return self.tracker.set(self, source_changes=self.source_changes + [line])
+
+    @property
     def _redaction_match(self):
         result = ''
         for member in ('title', 'project', 'component', 'version', 'classification'):
@@ -239,18 +277,30 @@ class Issue(object):
                     reason="is a {}".format(self.tracker.NAME) if key.pattern == '.*' else "matches '{}'".format(key.pattern),
                 )
 
-        match_strings = [match_string]
-        if self.original:
-            match_strings.append(self.original._redaction_match)
-        for dupe in self.duplicates or []:
-            match_strings.append(dupe._redaction_match)
+        match_strings = {self.link: match_string}
+        duplicates = self.duplicates or []
+        originals = [self.original] if self.original else []
+        for related_issue in duplicates + originals:
+            match_string = related_issue._redaction_match
+            for key, value in self.tracker._redact_exemption.items():
+                if key.search(match_string) and value:
+                    match_string = None
+                    break
+            if match_string:
+                match_strings[related_issue.link] = match_string
 
-        for m_string in match_strings:
+        for m_link, m_string in match_strings.items():
             for key, value in self.tracker._redact.items():
                 if key.search(m_string):
+                    if key.pattern == '.*':
+                        reason = "is a {}".format(self.tracker.NAME)
+                    elif m_link != self.link:
+                        reason = "is related to {} which matches '{}'".format(m_link, key.pattern)
+                    else:
+                        reason = "matches '{}'".format(key.pattern)
                     return self.tracker.Redaction(
                         redacted=value,
-                        reason="is a {}".format(self.tracker.NAME) if key.pattern == '.*' else "matches '{}'".format(key.pattern),
+                        reason=reason,
                     )
         return self.tracker.Redaction(redacted=False)
 

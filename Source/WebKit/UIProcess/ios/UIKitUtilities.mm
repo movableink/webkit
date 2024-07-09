@@ -230,6 +230,15 @@ static UIAxis axesForDelta(WebCore::FloatSize delta)
 
 @end
 
+@implementation UIViewController (WebKitInternal)
+
+- (BOOL)_wk_isInFullscreenPresentation
+{
+    return self.activePresentationController && self.modalPresentationStyle == UIModalPresentationFullScreen;
+}
+
+@end
+
 @implementation UIGestureRecognizer (WebKitInternal)
 
 - (BOOL)_wk_isTextInteractionLoupeGesture
@@ -240,6 +249,22 @@ static UIAxis axesForDelta(WebCore::FloatSize delta)
 - (BOOL)_wk_isTextInteractionTapGesture
 {
     return [self.name isEqualToString:@"UITextInteractionNameSingleTap"];
+}
+
+- (BOOL)_wk_hasRecognizedOrEnded
+{
+    switch (self.state) {
+    case UIGestureRecognizerStateBegan:
+    case UIGestureRecognizerStateChanged:
+    case UIGestureRecognizerStateEnded:
+        return YES;
+    case UIGestureRecognizerStatePossible:
+    case UIGestureRecognizerStateCancelled:
+    case UIGestureRecognizerStateFailed:
+        return NO;
+    }
+    ASSERT_NOT_REACHED();
+    return NO;
 }
 
 @end

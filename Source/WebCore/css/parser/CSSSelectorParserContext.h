@@ -38,10 +38,11 @@ struct CSSSelectorParserContext {
     CSSParserMode mode { CSSParserMode::HTMLStandardMode };
     bool cssNestingEnabled { false };
     bool customStateSetEnabled { false };
-    bool focusVisibleEnabled { false };
     bool grammarAndSpellingPseudoElementsEnabled { false };
-    bool hasPseudoClassEnabled { false };
     bool highlightAPIEnabled { false };
+#if ENABLE(SERVICE_CONTROLS)
+    bool imageControlsEnabled { false };
+#endif
     bool popoverAttributeEnabled { false };
     bool thumbAndTrackPseudoElementsEnabled { false };
     bool viewTransitionsEnabled { false };
