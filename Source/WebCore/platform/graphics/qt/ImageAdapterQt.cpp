@@ -94,13 +94,13 @@ static QImage loadResourcePixmap(const char* name)
 
     // Handle "name@2x" and "name@3x"
     if (length > 3 && name[length - 1] == 'x' && name[length - 3] == '@' && isASCIIDigit(name[length - 2])) {
-        CString nameWithoutScale(std::span { name, static_cast<size_t>(length) - 3 });
+        CString nameWithoutScale(std::span<const char> { name, static_cast<size_t>(length) - 3 });
         char digit = name[length - 2];
         size_t scale = digit - '0';
         return loadResourcePixmapForScale(nameWithoutScale, scale);
     }
 
-    return loadResourcePixmapForScale(CString(std::span { name, static_cast<size_t>(length) }), 1);
+    return loadResourcePixmapForScale(CString(std::span<const char> { name, static_cast<size_t>(length) }), 1);
 }
 
 namespace WebCore {
