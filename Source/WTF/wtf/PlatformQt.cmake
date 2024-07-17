@@ -109,6 +109,12 @@ if (USE_GLIB)
         glib/Sandbox.h
         glib/WTFGType.h
     )
+
+    if (USE_GSTREAMER)
+        list(APPEND WTF_PUBLIC_HEADERS
+            glib/GThreadSafeWeakPtr.h
+        )
+    endif ()
 endif ()
 
 if (WIN32)

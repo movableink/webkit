@@ -23,6 +23,7 @@
 #if ENABLE(VIDEO) && USE(GSTREAMER)
 
 #include "GStreamerCommon.h"
+#include "BitmapImage.h"
 
 #include <gst/gst.h>
 #include <gst/video/gstvideometa.h>
@@ -96,7 +97,11 @@ ImageGStreamer::ImageGStreamer(GRefPtr<GstSample>&& sample)
     } else
         surface = QImage(bufferData, width, height, stride, imageFormat);
 
+#if PLATFORM(QT)
+    m_image = QImage(surface);
+#else
     m_image = BitmapImage::create(WTFMove(surface));
+#endif
 
     if (GstVideoCropMeta* cropMeta = gst_buffer_get_video_crop_meta(buffer))
         setCropRect(FloatRect(cropMeta->x, cropMeta->y, cropMeta->width, cropMeta->height));
@@ -104,9 +109,6 @@ ImageGStreamer::ImageGStreamer(GRefPtr<GstSample>&& sample)
 
 ImageGStreamer::~ImageGStreamer()
 {
-    if (m_image)
-        m_image = nullptr;
-
     // We keep the buffer memory mapped until the image is destroyed because the internal
     // QImage was created using the buffer data directly.
     if (m_frameMapped)

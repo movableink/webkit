@@ -342,7 +342,7 @@ protected:
     void loadingFailed(MediaPlayer::NetworkState, MediaPlayer::ReadyState = MediaPlayer::ReadyState::HaveNothing, bool forceNotifications = false);
     void loadStateChanged();
 
-#if USE(TEXTURE_MAPPER) && !PLATFORM(QT)
+#if USE(TEXTURE_MAPPER)
     void updateTextureMapperFlags();
 #endif
 
@@ -389,7 +389,7 @@ protected:
     GRefPtr<GstElement> m_source { nullptr };
     bool m_areVolumeAndMuteInitialized { false };
 
-#if USE(TEXTURE_MAPPER) && !PLATFORM(QT)
+#if USE(TEXTURE_MAPPER)
     OptionSet<TextureMapperFlags> m_textureMapperFlags;
 #endif
 

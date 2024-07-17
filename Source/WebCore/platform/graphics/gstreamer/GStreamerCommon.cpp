@@ -276,7 +276,9 @@ bool ensureGStreamerInitialized()
 {
     // WARNING: Please note this function can be called from any thread, for instance when creating
     // a WebCodec element from a JS Worker.
+#if !PLATFORM(QT)
     RELEASE_ASSERT(isInWebProcess());
+#endif
     static std::once_flag onceFlag;
     static bool isGStreamerInitialized;
     std::call_once(onceFlag, [] {

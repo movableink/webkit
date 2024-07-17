@@ -120,6 +120,10 @@
 #include "TextureMapperPlatformLayerProxyGL.h"
 #endif // USE(TEXTURE_MAPPER)
 
+#if PLATFORM(QT)
+#include "TextureMapperFlags.h"
+#endif
+
 #if USE(TEXTURE_MAPPER_DMABUF)
 #include "DMABufFormat.h"
 #include "DMABufObject.h"
@@ -1992,6 +1996,7 @@ void MediaPlayerPrivateGStreamer::handleMessage(GstMessage* message)
         GstState newState;
         gst_message_parse_state_changed(message, &currentState, &newState, nullptr);
 
+#if USE(GSTREAMER_GL)
         if (isHolePunchRenderingEnabled() && currentState <= GST_STATE_READY && newState >= GST_STATE_READY) {
             // If we didn't create a video sink, store a reference to the created one.
             if (!m_videoSink) {
@@ -2010,6 +2015,7 @@ void MediaPlayerPrivateGStreamer::handleMessage(GstMessage* message)
                 }
             }
         }
+#endif
 
         auto& quirksManager = GStreamerQuirksManager::singleton();
         if (quirksManager.isEnabled() && currentState <= GST_STATE_READY && newState >= GST_STATE_READY) {
@@ -4081,13 +4087,13 @@ bool MediaPlayerPrivateGStreamer::setVideoSourceOrientation(ImageOrientation ori
         return false;
 
     m_videoSourceOrientation = orientation;
-#if USE(TEXTURE_MAPPER) && !PLATFORM(QT)
+#if USE(TEXTURE_MAPPER)
     updateTextureMapperFlags();
 #endif
     return true;
 }
 
-#if USE(TEXTURE_MAPPER) && !PLATFORM(QT)
+#if USE(TEXTURE_MAPPER)
 void MediaPlayerPrivateGStreamer::updateTextureMapperFlags()
 {
     switch (m_videoSourceOrientation.orientation()) {
@@ -4173,6 +4179,12 @@ GstElement* MediaPlayerPrivateGStreamer::createVideoSinkGL()
 }
 #endif // USE(GSTREAMER_GL)
 
+#if PLATFORM(QT)
+bool MediaPlayerPrivateGStreamer::isHolePunchRenderingEnabled() const
+{
+    return false;
+}
+#else
 class GStreamerHolePunchClient : public TextureMapperPlatformLayerBuffer::HolePunchClient {
 public:
     GStreamerHolePunchClient(GRefPtr<GstElement>&& videoSink, RefPtr<GStreamerQuirksManager>&& quirksManagerForTesting)
@@ -4249,6 +4261,7 @@ void MediaPlayerPrivateGStreamer::pushNextHolePunchBuffer()
     proxyOperation(*m_platformLayerProxy);
 #endif
 }
+#endif // !PLATFORM(QT)
 
 bool MediaPlayerPrivateGStreamer::shouldIgnoreIntrinsicSize()
 {
@@ -4297,12 +4310,14 @@ GstElement* MediaPlayerPrivateGStreamer::createVideoSink()
         return m_videoSink.get();
     }
 
+#if USE(GSTREAMER_GL)
     if (isHolePunchRenderingEnabled()) {
         m_videoSink = createHolePunchVideoSink();
         // Do not check the m_videoSink value. The nullptr case will trigger auto-plugging in playbin.
         pushNextHolePunchBuffer();
         return m_videoSink.get();
     }
+#endif
 
 #if USE(TEXTURE_MAPPER_DMABUF)
     if (!m_videoSink && m_canRenderingBeAccelerated)

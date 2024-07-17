@@ -25,7 +25,9 @@
 #if ENABLE(VIDEO) && USE(GSTREAMER)
 
 #include "BitmapImage.h"
+#if USE(GSTREAMER_GL)
 #include "GLContext.h"
+#endif
 #include "GStreamerCommon.h"
 #include "GraphicsContext.h"
 #include "ImageGStreamer.h"
@@ -149,6 +151,19 @@ RefPtr<VideoFrame> VideoFrame::fromNativeImage(NativeImage& image)
     default:
         return nullptr;
     }
+#elif PLATFORM(QT)
+    QImage platformImage = image.platformImage();
+    auto width = platformImage.width();
+    auto height = platformImage.height();
+    strides[0] = platformImage.bytesPerLine();
+    auto size = platformImage.sizeInBytes();
+
+    auto format = G_BYTE_ORDER == G_LITTLE_ENDIAN ? GST_VIDEO_FORMAT_BGRA : GST_VIDEO_FORMAT_ARGB;
+    QImage* imagePtr = new QImage(platformImage);
+    auto buffer = adoptGRef(gst_buffer_new_wrapped_full(GST_MEMORY_FLAG_READONLY, (void *)platformImage.constBits(), size, 0, size, imagePtr, [](gpointer userData) {
+        QImage* imagePtr = static_cast<QImage*>(userData);
+        delete imagePtr;
+    }));
 #endif
 
     gst_buffer_add_video_meta_full(buffer.get(), GST_VIDEO_FRAME_FLAG_NONE, format, width, height, 1, offsets, strides);

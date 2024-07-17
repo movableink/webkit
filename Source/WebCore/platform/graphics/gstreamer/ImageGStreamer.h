@@ -40,14 +40,22 @@ public:
     }
     ~ImageGStreamer();
 
+#if PLATFORM(QT)
+    operator bool() const { return !m_image.isNull(); }
+#else
     operator bool() const { return !!m_image; }
+#endif
 
     PlatformImagePtr image() const { return m_image; }
 
     void setCropRect(FloatRect rect) { m_cropRect = rect; }
     FloatRect rect()
     {
+#if PLATFORM(QT)
+        ASSERT(!m_image.isNull());
+#else
         ASSERT(m_image);
+#endif
         if (!m_cropRect.isEmpty())
             return FloatRect(m_cropRect);
         return FloatRect(0, 0, m_size.width(), m_size.height());
