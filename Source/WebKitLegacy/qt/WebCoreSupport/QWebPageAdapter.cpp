@@ -381,6 +381,9 @@ QWebPageAdapter::~QWebPageAdapter()
 
 void QWebPageAdapter::deletePage()
 {
+    // Prevent xhr event listeners from firing after the loaders are cancelled
+    mainFrameAdapter().frame->document()->domWindow()->stop();
+
     // Before we delete the page, detach the mainframe's loader
     FrameLoader& loader = mainFrameAdapter().frame->loader();
     loader.detachFromParent();
