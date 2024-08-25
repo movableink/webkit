@@ -87,6 +87,7 @@
 #include <WebCore/HitTestResult.h>
 #include <WebCore/InspectorController.h>
 #include <WebCore/LegacySchemeRegistry.h>
+#include <WebCore/LocalDOMWindow.h>
 #include <WebCore/LocalizedStrings.h>
 #include <WebCore/MIMETypeRegistry.h>
 #include <WebCore/MemoryCache.h>
