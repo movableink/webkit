@@ -79,7 +79,7 @@ std::unique_ptr<CryptoDigest> CryptoDigest::create(CryptoDigest::Algorithm algor
 
 void CryptoDigest::addBytes(std::span<const uint8_t> input)
 {
-    m_context->hash.addData(input);
+    m_context->hash.addData(QByteArray::fromRawData(reinterpret_cast<const char*>(input.data()), static_cast<qsizetype>(input.size())));
 }
 
 Vector<uint8_t> CryptoDigest::computeHash()
@@ -92,7 +92,7 @@ Vector<uint8_t> CryptoDigest::computeHash()
 std::optional<Vector<uint8_t>> CryptoDigest::computeHash(Algorithm algorithm, const Vector<uint8_t>& input, UseCryptoKit)
 {
     QCryptographicHash hash(toQtAlgorithm(algorithm));
-    hash.addData(input);
+    hash.addData(QByteArray::fromRawData(reinterpret_cast<const char*>(input.span().data()), static_cast<qsizetype>(input.span().size())));
     QByteArray digest = hash.result();
 
     return Vector<uint8_t>(std::span { reinterpret_cast<const uint8_t*>(digest.constData()), static_cast<size_t>(digest.size()) });
