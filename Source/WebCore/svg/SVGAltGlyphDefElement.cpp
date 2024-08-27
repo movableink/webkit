@@ -91,12 +91,12 @@ bool SVGAltGlyphDefElement::hasValidGlyphElements(Vector<String>& glyphNames) co
     bool fountFirstGlyphRef = false;
     bool foundFirstAltGlyphItem = false;
 
-    for (auto& child : childrenOfType<SVGElement>(*this)) {
-        if (!foundFirstAltGlyphItem && is<SVGGlyphRefElement>(child)) {
+    for (Ref child : childrenOfType<SVGElement>(*this)) {
+        if (RefPtr glyphRef = dynamicDowncast<SVGGlyphRefElement>(child); glyphRef && !foundFirstAltGlyphItem) {
             fountFirstGlyphRef = true;
             String referredGlyphName;
 
-            if (downcast<SVGGlyphRefElement>(child).hasValidGlyphElement(referredGlyphName))
+            if (glyphRef->hasValidGlyphElement(referredGlyphName))
                 glyphNames.append(referredGlyphName);
             else {
                 // As the spec says "If any of the referenced glyphs are unavailable,
@@ -106,13 +106,15 @@ bool SVGAltGlyphDefElement::hasValidGlyphElements(Vector<String>& glyphNames) co
                 glyphNames.clear();
                 return false;
             }
-        } else if (!fountFirstGlyphRef && is<SVGAltGlyphItemElement>(child)) {
-            foundFirstAltGlyphItem = true;
+        } else if (!fountFirstGlyphRef) {
+            if (RefPtr altGlyphItem = dynamicDowncast<SVGAltGlyphItemElement>(WTFMove(child))) {
+                foundFirstAltGlyphItem = true;
 
-            // As the spec says "The first 'altGlyphItem' in which all referenced glyphs
-            // are available is chosen."
-            if (downcast<SVGAltGlyphItemElement>(child).hasValidGlyphElements(glyphNames) && !glyphNames.isEmpty())
-                return true;
+                // As the spec says "The first 'altGlyphItem' in which all referenced glyphs
+                // are available is chosen."
+                if (altGlyphItem->hasValidGlyphElements(glyphNames) && !glyphNames.isEmpty())
+                    return true;
+            }
         }
     }
     return !glyphNames.isEmpty();

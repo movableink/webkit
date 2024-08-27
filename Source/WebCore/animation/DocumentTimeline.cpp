@@ -32,7 +32,6 @@
 #include "CustomAnimationOptions.h"
 #include "CustomEffect.h"
 #include "CustomEffectCallback.h"
-#include "DeclarativeAnimation.h"
 #include "Document.h"
 #include "DocumentTimelinesController.h"
 #include "EventNames.h"
@@ -46,6 +45,7 @@
 #include "RenderElement.h"
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
+#include "StyleOriginatedAnimation.h"
 #include "WebAnimationTypes.h"
 
 #if ENABLE(THREADED_ANIMATION_RESOLUTION)
@@ -149,7 +149,8 @@ std::optional<Seconds> DocumentTimeline::currentTime()
 void DocumentTimeline::animationTimingDidChange(WebAnimation& animation)
 {
     AnimationTimeline::animationTimingDidChange(animation);
-    scheduleAnimationResolution();
+    if (!animation.isEffectInvalidationSuspended())
+        scheduleAnimationResolution();
 }
 
 void DocumentTimeline::removeAnimation(WebAnimation& animation)
@@ -213,6 +214,11 @@ void DocumentTimeline::documentDidUpdateAnimationsAndSendEvents()
         scheduleNextTick();
 }
 
+void DocumentTimeline::styleOriginatedAnimationsWereCreated()
+{
+    scheduleAnimationResolution();
+}
+
 bool DocumentTimeline::animationCanBeRemoved(WebAnimation& animation)
 {
     // https://drafts.csswg.org/web-animations/#removing-replaced-animations
@@ -228,12 +234,11 @@ bool DocumentTimeline::animationCanBeRemoved(WebAnimation& animation)
         return false;
 
     // - has an associated animation effect whose target element is a descendant of doc, and
-    auto* effect = animation.effect();
-    if (!is<KeyframeEffect>(effect))
+    auto* keyframeEffect = dynamicDowncast<KeyframeEffect>(animation.effect());
+    if (!keyframeEffect)
         return false;
 
-    auto& keyframeEffect = downcast<KeyframeEffect>(*effect);
-    auto target = keyframeEffect.targetStyleable();
+    auto target = keyframeEffect->targetStyleable();
     if (!target || !target->element.isDescendantOf(*m_document))
         return false;
 
@@ -252,7 +257,7 @@ IGNORE_GCC_WARNINGS_END
     };
 
     HashSet<AnimatableCSSProperty> propertiesToMatch;
-    for (auto property : keyframeEffect.animatedProperties())
+    for (auto property : keyframeEffect->animatedProperties())
         propertiesToMatch.add(resolvedProperty(property));
 
     auto protectedAnimations = [&]() -> Vector<RefPtr<WebAnimation>> {
@@ -452,6 +457,13 @@ void DocumentTimeline::enqueueAnimationEvent(AnimationEventBase& event)
     m_pendingAnimationEvents.append(event);
     if (m_shouldScheduleAnimationResolutionForNewPendingEvents)
         scheduleAnimationResolution();
+}
+
+bool DocumentTimeline::hasPendingAnimationEventForAnimation(const WebAnimation& animation) const
+{
+    return m_pendingAnimationEvents.containsIf([&](auto& event) {
+        return event->animation() == &animation;
+    });
 }
 
 AnimationEvents DocumentTimeline::prepareForPendingAnimationEventsDispatch()

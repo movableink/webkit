@@ -45,8 +45,6 @@ public:
 
     void setCreatedByParser(bool createdByParser) { m_createdByParser = createdByParser; }
 
-    void finishParsingChildren() override;
-
     const String& localHref() const { return m_localHref; }
     StyleSheet* sheet() const { return m_sheet.get(); }
     RefPtr<StyleSheet> protectedSheet() const;
@@ -61,7 +59,6 @@ private:
     ProcessingInstruction(Document&, String&& target, String&& data);
 
     String nodeName() const override;
-    NodeType nodeType() const override;
     Ref<Node> cloneNodeInternal(Document&, CloningOperation) override;
 
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) override;

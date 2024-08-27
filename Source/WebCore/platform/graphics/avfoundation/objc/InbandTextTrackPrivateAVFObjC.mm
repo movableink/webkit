@@ -42,10 +42,15 @@
 
 #import <pal/cocoa/AVFoundationSoftLink.h>
 
+@class AVMediaSelectionOption;
+@interface AVMediaSelectionOption (WebKitInternal)
+- (id)optionID;
+@end
+
 namespace WebCore {
 
-InbandTextTrackPrivateAVFObjC::InbandTextTrackPrivateAVFObjC(AVFInbandTrackParent* player, AVMediaSelectionGroup *group, AVMediaSelectionOption *selection, InbandTextTrackPrivate::CueFormat format)
-    : InbandTextTrackPrivateAVF(player, format)
+InbandTextTrackPrivateAVFObjC::InbandTextTrackPrivateAVFObjC(AVFInbandTrackParent* player, AVMediaSelectionGroup *group, AVMediaSelectionOption *selection, TrackID trackID, InbandTextTrackPrivate::CueFormat format)
+    : InbandTextTrackPrivateAVF(player, trackID, format)
     , m_mediaSelectionGroup(group)
     , m_mediaSelectionOption(selection)
 {

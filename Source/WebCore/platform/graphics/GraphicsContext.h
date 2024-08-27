@@ -75,7 +75,7 @@ class GraphicsContext {
 public:
     // Indicates if draw operations read the sources such as NativeImage backing stores immediately
     // during draw operations.
-    enum class IsDeferred {
+    enum class IsDeferred : bool {
         No,
         Yes
     };
@@ -162,6 +162,7 @@ public:
 
     bool shadowsIgnoreTransforms() const { return m_state.shadowsIgnoreTransforms(); }
     void setShadowsIgnoreTransforms(bool shadowsIgnoreTransforms) { m_state.setShadowsIgnoreTransforms(shadowsIgnoreTransforms); didUpdateState(m_state); }
+    FloatSize platformShadowOffset(const FloatSize&) const;
 
     bool drawLuminanceMask() const { return m_state.drawLuminanceMask(); }
     void setDrawLuminanceMask(bool drawLuminanceMask) { m_state.setDrawLuminanceMask(drawLuminanceMask); didUpdateState(m_state); }
@@ -223,6 +224,7 @@ public:
 
     virtual void fillRect(const FloatRect&) = 0;
     virtual void fillRect(const FloatRect&, const Color&) = 0;
+    virtual void fillRect(const FloatRect&, Gradient&, const AffineTransform&) = 0;
     WEBCORE_EXPORT virtual void fillRect(const FloatRect&, Gradient&);
     WEBCORE_EXPORT virtual void fillRect(const FloatRect&, const Color&, CompositeOperator, BlendMode = BlendMode::Normal);
     virtual void fillRoundedRectImpl(const FloatRoundedRect&, const Color&) = 0;
@@ -250,7 +252,7 @@ public:
     WEBCORE_EXPORT virtual RefPtr<ImageBuffer> createAlignedImageBuffer(const FloatSize&, const DestinationColorSpace& = DestinationColorSpace::SRGB(), std::optional<RenderingMethod> = std::nullopt) const;
     WEBCORE_EXPORT virtual RefPtr<ImageBuffer> createAlignedImageBuffer(const FloatRect&, const DestinationColorSpace& = DestinationColorSpace::SRGB(), std::optional<RenderingMethod> = std::nullopt) const;
 
-    WEBCORE_EXPORT void drawNativeImage(NativeImage&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions = { });
+    WEBCORE_EXPORT void drawNativeImage(NativeImage&, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions = { });
 
     WEBCORE_EXPORT virtual void drawSystemImage(SystemImage&, const FloatRect&);
 
@@ -270,6 +272,10 @@ public:
     WEBCORE_EXPORT virtual void drawConsumingImageBuffer(RefPtr<ImageBuffer>, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions = { });
 
     WEBCORE_EXPORT virtual void drawFilteredImageBuffer(ImageBuffer* sourceImage, const FloatRect& sourceImageRect, Filter&, FilterResults&);
+
+#if ENABLE(MULTI_REPRESENTATION_HEIC)
+    ImageDrawResult drawMultiRepresentationHEIC(Image&, const Font&, const FloatRect& destination, ImagePaintingOptions = { ImageOrientation::Orientation::FromImage });
+#endif
 
     virtual void drawPattern(NativeImage&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions = { }) = 0;
     WEBCORE_EXPORT virtual void drawPattern(ImageBuffer&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions = { });
@@ -298,7 +304,7 @@ public:
 
     WEBCORE_EXPORT virtual FloatSize drawText(const FontCascade&, const TextRun&, const FloatPoint&, unsigned from = 0, std::optional<unsigned> to = std::nullopt);
     WEBCORE_EXPORT virtual void drawEmphasisMarks(const FontCascade&, const TextRun&, const AtomString& mark, const FloatPoint&, unsigned from = 0, std::optional<unsigned> to = std::nullopt);
-    WEBCORE_EXPORT virtual void drawBidiText(const FontCascade&, const TextRun&, const FloatPoint&, FontCascade::CustomFontNotReadyAction = FontCascade::DoNotPaintIfFontNotReady);
+    WEBCORE_EXPORT virtual void drawBidiText(const FontCascade&, const TextRun&, const FloatPoint&, FontCascade::CustomFontNotReadyAction = FontCascade::CustomFontNotReadyAction::DoNotPaintIfFontNotReady);
 
     virtual void drawGlyphsAndCacheResources(const Font& font, const GlyphBufferGlyph* glyphs, const GlyphBufferAdvance* advances, unsigned numGlyphs, const FloatPoint& point, FontSmoothingMode fontSmoothingMode)
     {
@@ -323,6 +329,7 @@ public:
     // Transparency Layers
 
     WEBCORE_EXPORT virtual void beginTransparencyLayer(float opacity);
+    WEBCORE_EXPORT virtual void beginTransparencyLayer(CompositeOperator, BlendMode = BlendMode::Normal);
     WEBCORE_EXPORT virtual void endTransparencyLayer();
     bool isInTransparencyLayer() const { return (m_transparencyLayerCount > 0); }
 
@@ -372,9 +379,8 @@ public:
     void releaseWindowsContext(HDC, const IntRect&, bool supportAlphaBlend); // The passed in HDC should be the one handed back by getWindowsContext.
 #endif
 
-    IsDeferred deferred() const { return m_isDeferred; }
 private:
-    virtual void drawNativeImageInternal(NativeImage&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions = { }) = 0;
+    virtual void drawNativeImageInternal(NativeImage&, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions = { }) = 0;
 
 protected:
     WEBCORE_EXPORT RefPtr<NativeImage> nativeImageForDrawing(ImageBuffer&);
@@ -389,13 +395,12 @@ protected:
     Vector<FloatPoint> centerLineAndCutOffCorners(bool isVerticalLine, float cornerWidth, FloatPoint point1, FloatPoint point2) const;
 
     GraphicsContextState m_state;
-    const IsDeferred m_isDeferred;
-
 private:
     Vector<GraphicsContextState, 1> m_stack;
 
     unsigned m_transparencyLayerCount { 0 };
-    bool m_contentfulPaintDetected { false };
+    const IsDeferred m_isDeferred : 1; // NOLINT
+    bool m_contentfulPaintDetected : 1 { false };
 };
 
 } // namespace WebCore

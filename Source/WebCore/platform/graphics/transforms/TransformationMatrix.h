@@ -44,6 +44,12 @@ typedef struct CGAffineTransform CGAffineTransform;
 #include <QMatrix4x4>
 #include <QTransform>
 #endif
+#if PLATFORM(COCOA)
+#include <simd/simd.h>
+#endif
+#if USE(SKIA)
+class SkM44;
+#endif
 
 #if PLATFORM(WIN) || (PLATFORM(GTK) && OS(WINDOWS)) || (PLATFORM(QT) && OS(WINDOWS))
 #if COMPILER(MINGW) && !COMPILER(MINGW64)
@@ -74,11 +80,7 @@ class TransformationMatrix {
 public:
 
 #if (PLATFORM(IOS_FAMILY) && CPU(ARM_THUMB2)) || defined(TRANSFORMATION_MATRIX_USE_X86_64_SSE2)
-#if COMPILER(MSVC)
-    __declspec(align(16)) typedef double Matrix4[4][4];
-#else
     typedef double Matrix4[4][4] __attribute__((aligned (16)));
-#endif
 #else
     typedef double Matrix4[4][4];
 #endif
@@ -135,7 +137,7 @@ public:
     static TransformationMatrix fromProjection(double fovUp, double fovDown, double fovLeft, double fovRight, double depthNear, double depthFar);
     static TransformationMatrix fromProjection(double fovy, double aspect, double depthNear, double depthFar);
 
-    static const TransformationMatrix identity;
+    WEBCORE_EXPORT static const TransformationMatrix identity;
 
 #if PLATFORM(QT)
     TransformationMatrix(const QTransform&);
@@ -360,6 +362,11 @@ public:
     // Throw away the non-affine parts of the matrix (lossy!).
     WEBCORE_EXPORT void makeAffine();
 
+    // Sets the 3rd row and column to (0, 0, 1, 0).
+    // Should produce the same results as mapping points into 2d before
+    // applying the next matrix.
+    WEBCORE_EXPORT void flatten();
+
     WEBCORE_EXPORT AffineTransform toAffineTransform() const;
 
     bool operator==(const TransformationMatrix& m2) const
@@ -406,6 +413,14 @@ public:
 #elif PLATFORM(QT)
     operator QTransform() const;
     operator QMatrix4x4() const;
+#endif
+#if PLATFORM(COCOA)
+    WEBCORE_EXPORT TransformationMatrix(const simd_float4x4&);
+    WEBCORE_EXPORT operator simd_float4x4() const;
+#endif
+#if USE(SKIA)
+    TransformationMatrix(const SkM44&);
+    operator SkM44() const;
 #endif
 
 #if PLATFORM(WIN) || (PLATFORM(GTK) && OS(WINDOWS)) || (PLATFORM(QT) && OS(WINDOWS))

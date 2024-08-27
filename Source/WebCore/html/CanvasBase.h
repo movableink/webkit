@@ -30,9 +30,19 @@
 #include "IntSize.h"
 #include "PixelBuffer.h"
 #include "TaskSource.h"
+#include <atomic>
 #include <wtf/HashSet.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/WeakHashSet.h>
+
+namespace WebCore {
+class CanvasDisplayBufferObserver;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::CanvasDisplayBufferObserver> : std::true_type { };
+}
 
 namespace WebCore {
 
@@ -51,6 +61,8 @@ class ScriptExecutionContext;
 class SecurityOrigin;
 class WebCoreOpaqueRoot;
 
+struct CSSParserContext;
+
 enum class ShouldApplyPostProcessingToDirtyRect : bool { No, Yes };
 
 class CanvasDisplayBufferObserver : public CanMakeWeakPtr<CanvasDisplayBufferObserver> {
@@ -64,10 +76,10 @@ class CanvasBase {
 public:
     virtual ~CanvasBase();
 
-    virtual void refCanvasBase() = 0;
-    virtual void derefCanvasBase() = 0;
-    void ref() { refCanvasBase(); }
-    void deref() { derefCanvasBase(); }
+    virtual void refCanvasBase() const = 0;
+    virtual void derefCanvasBase() const = 0;
+    void ref() const { refCanvasBase(); }
+    void deref() const { derefCanvasBase(); }
 
     virtual bool isHTMLCanvasElement() const { return false; }
     virtual bool isOffscreenCanvas() const { return false; }
@@ -81,12 +93,12 @@ public:
 
     virtual void setImageBufferAndMarkDirty(RefPtr<ImageBuffer>&&) { }
 
-    virtual AffineTransform baseTransform() const;
-
-    void makeRenderingResultsAvailable();
+    RefPtr<ImageBuffer> makeRenderingResultsAvailable(ShouldApplyPostProcessingToDirtyRect = ShouldApplyPostProcessingToDirtyRect::Yes);
 
     size_t memoryCost() const;
+#if ENABLE(RESOURCE_USAGE)
     size_t externalMemoryCost() const;
+#endif
 
     void setOriginClean() { m_originClean = true; }
     void setOriginTainted() { m_originClean = false; }
@@ -97,10 +109,12 @@ public:
 
     virtual CanvasRenderingContext* renderingContext() const = 0;
 
+    virtual const CSSParserContext& cssParserContext() const = 0;
+
     void addObserver(CanvasObserver&);
     void removeObserver(CanvasObserver&);
     bool hasObserver(CanvasObserver&) const;
-    void notifyObserversCanvasChanged(const std::optional<FloatRect>&);
+    void notifyObserversCanvasChanged(const FloatRect&);
     void notifyObserversCanvasResized();
     void notifyObserversCanvasDestroyed(); // Must be called in destruction before clearing m_context.
     void addDisplayBufferObserver(CanvasDisplayBufferObserver&);
@@ -110,9 +124,7 @@ public:
 
     HashSet<Element*> cssCanvasClients() const;
 
-    virtual GraphicsContext* drawingContext() const;
-    virtual GraphicsContext* existingDrawingContext() const;
-
+    // !rect means caller knows the full canvas is invalidated previously.
     void didDraw(const std::optional<FloatRect>& rect) { return didDraw(rect, ShouldApplyPostProcessingToDirtyRect::Yes); }
     virtual void didDraw(const std::optional<FloatRect>&, ShouldApplyPostProcessingToDirtyRect);
 
@@ -136,6 +148,10 @@ public:
     void setNoiseInjectionSalt(NoiseInjectionHashSalt salt) { m_canvasNoiseHashSalt = salt; }
     bool havePendingCanvasNoiseInjection() const { return m_canvasNoiseInjection.haveDirtyRects(); }
 
+    // FIXME(https://bugs.webkit.org/show_bug.cgi?id=275100): The image buffer from CanvasBase should be moved to CanvasRenderingContext2DBase.
+    virtual bool hasCreatedImageBuffer() const { return false; }
+    RefPtr<ImageBuffer> allocateImageBuffer() const;
+
 protected:
     explicit CanvasBase(IntSize, const std::optional<NoiseInjectionHashSalt>&);
 
@@ -144,11 +160,9 @@ protected:
     virtual void setSize(const IntSize&);
 
     RefPtr<ImageBuffer> setImageBuffer(RefPtr<ImageBuffer>&&) const;
-    virtual bool hasCreatedImageBuffer() const { return false; }
-    static size_t activePixelMemory();
-
-    RefPtr<ImageBuffer> allocateImageBuffer() const;
     String lastFillText() const { return m_lastFillText; }
+    void addCanvasNeedingPreparationForDisplayOrFlush();
+    void removeCanvasNeedingPreparationForDisplayOrFlush();
 
 private:
     bool shouldInjectNoiseBeforeReadback() const;
@@ -156,15 +170,14 @@ private:
     bool shouldAccelerate(uint64_t area) const;
 
     mutable IntSize m_size;
-    mutable Lock m_imageBufferAssignmentLock;
     mutable RefPtr<ImageBuffer> m_imageBuffer;
-    mutable size_t m_imageBufferCost { 0 };
+    mutable std::atomic<size_t> m_imageBufferMemoryCost { 0 };
     mutable std::unique_ptr<GraphicsContextStateSaver> m_contextStateSaver;
 
     String m_lastFillText;
 
     CanvasNoiseInjection m_canvasNoiseInjection;
-    Markable<NoiseInjectionHashSalt, IntegralMarkableTraits<NoiseInjectionHashSalt>> m_canvasNoiseHashSalt;
+    Markable<NoiseInjectionHashSalt, IntegralMarkableTraits<NoiseInjectionHashSalt, std::numeric_limits<int64_t>::max()>> m_canvasNoiseHashSalt;
     bool m_originClean { true };
 #if ASSERT_ENABLED
     bool m_didNotifyObserversCanvasDestroyed { false };

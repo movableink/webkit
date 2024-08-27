@@ -247,7 +247,7 @@ void FrameLoaderClientQt::transitionToCommittedFromCachedFrame(CachedFrame*)
 {
 }
 
-void FrameLoaderClientQt::transitionToCommittedForNewPage()
+void FrameLoaderClientQt::transitionToCommittedForNewPage(InitializingIframe)
 {
     ASSERT(m_frame);
     ASSERT(m_webFrame);
@@ -425,7 +425,7 @@ void FrameLoaderClientQt::dispatchDidReceiveTitle(const StringWithDirection& tit
     if (!m_webFrame)
         return;
 
-    emit titleChanged(title.string);
+    Q_EMIT titleChanged(title.string);
 }
 
 
@@ -443,13 +443,13 @@ void FrameLoaderClientQt::dispatchDidCommitLoad(std::optional<HasInsecureContent
     // We should assume first the frame has no title. If it has, then the above dispatchDidReceiveTitle()
     // will be called very soon with the correct title.
     // This properly resets the title when we navigate to a URI without a title.
-    emit titleChanged(QString());
+    Q_EMIT titleChanged(QString());
 
     bool isMainFrame = (m_frame == &m_frame->page()->mainFrame());
     if (!isMainFrame)
         return;
 
-    emit m_webFrame->pageAdapter->emitViewportChangeRequested();
+    Q_EMIT m_webFrame->pageAdapter->emitViewportChangeRequested();
 }
 
 
@@ -719,7 +719,7 @@ void FrameLoaderClientQt::didDisplayInsecureContent()
     notImplemented();
 }
 
-void FrameLoaderClientQt::didRunInsecureContent(SecurityOrigin&, const URL&)
+void FrameLoaderClientQt::didRunInsecureContent(SecurityOrigin&)
 {
     if (dumpFrameLoaderCallbacks)
         printf("didRunInsecureContent\n");
@@ -855,14 +855,14 @@ void FrameLoaderClientQt::convertMainResourceLoadToDownload(DocumentLoader* docu
 
     QNetworkReplyHandler* handler = documentLoader->mainResourceLoader()->handle()->getInternal()->m_job;
     if (!handler) {
-        qWarning("Attempted to download unsupported URL %s", request.url().string().characters8());
+        qWarning("Attempted to download unsupported URL %s", request.url().string().span8().data());
         return;
     }
 
     QNetworkReply* reply = handler->release();
     if (reply) {
         if (m_webFrame->pageAdapter->forwardUnsupportedContent) {
-            emit unsupportedContent(reply);
+            Q_EMIT unsupportedContent(reply);
         } else {
             reply->abort();
             reply->deleteLater();
@@ -1023,7 +1023,7 @@ bool FrameLoaderClientQt::callErrorPageExtension(const WebCore::ResourceError& e
     URL failingUrl(option.url);
 
     WebCore::ResourceRequest request(baseUrl);
-    WTF::RefPtr<WebCore::SharedBuffer> buffer = WebCore::SharedBuffer::create(output.content.constData(), output.content.length());
+    WTF::RefPtr<WebCore::SharedBuffer> buffer = WebCore::SharedBuffer::create(std::span { output.content.constData(), static_cast<size_t>(output.content.size()) });
     WebCore::ResourceResponse response(failingUrl, output.contentType, buffer->size(), output.encoding);
     // FIXME: visibility?
     WebCore::SubstituteData substituteData(WTFMove(buffer), failingUrl, response, SubstituteData::SessionHistoryVisibility::Hidden);
@@ -1070,7 +1070,7 @@ WebCore::LocalFrame* FrameLoaderClientQt::dispatchCreatePage(const WebCore::Navi
     return newPage->mainFrameAdapter().frame;
 }
 
-void FrameLoaderClientQt::dispatchDecidePolicyForResponse(const WebCore::ResourceResponse& response, const WebCore::ResourceRequest&, PolicyCheckIdentifier id, const String& downloadAttribute, FramePolicyFunction&& function)
+void FrameLoaderClientQt::dispatchDecidePolicyForResponse(const WebCore::ResourceResponse& response, const WebCore::ResourceRequest&, const String& downloadAttribute, FramePolicyFunction&& function)
 {
     // We need to call directly here.
     switch (response.httpStatusCode()) {
@@ -1078,19 +1078,19 @@ void FrameLoaderClientQt::dispatchDecidePolicyForResponse(const WebCore::Resourc
         // FIXME: a 205 response requires that the requester reset the document view.
         // Fallthrough
     case 204:
-        function(PolicyAction::Ignore, id);
+        function(PolicyAction::Ignore);
         return;
     }
 
     if (WebCore::contentDispositionType(response.httpHeaderField(HTTPHeaderName::ContentDisposition)) == WebCore::ContentDispositionAttachment)
-        function(PolicyAction::Download, id);
+        function(PolicyAction::Download);
     else if (canShowMIMEType(response.mimeType()))
-        function(PolicyAction::Use, id);
+        function(PolicyAction::Use);
     else
-        function(PolicyAction::Download, id);
+        function(PolicyAction::Download);
 }
 
-void FrameLoaderClientQt::dispatchDecidePolicyForNewWindowAction(const WebCore::NavigationAction& action, const WebCore::ResourceRequest& request, FormState*, const WTF::String&, PolicyCheckIdentifier id, FramePolicyFunction&& function)
+void FrameLoaderClientQt::dispatchDecidePolicyForNewWindowAction(const WebCore::NavigationAction& action, const WebCore::ResourceRequest& request, FormState*, const WTF::String&, std::optional<HitTestResult>&&, FramePolicyFunction&& function)
 {
     Q_ASSERT(m_webFrame);
     QNetworkRequest r(request.toNetworkRequest(m_frame->loader().networkingContext()));
@@ -1102,13 +1102,13 @@ void FrameLoaderClientQt::dispatchDecidePolicyForNewWindowAction(const WebCore::
         if (action.type() == NavigationType::LinkClicked && r.url().hasFragment())
             m_frame->loader().activeDocumentLoader()->setLastCheckedRequest(ResourceRequest());
 
-        function(PolicyAction::Ignore, id);
+        function(PolicyAction::Ignore);
         return;
     }
-    function(PolicyAction::Use, id);
+    function(PolicyAction::Use);
 }
 
-void FrameLoaderClientQt::dispatchDecidePolicyForNavigationAction(const WebCore::NavigationAction& action, const WebCore::ResourceRequest& request, const ResourceResponse& redirectResponse, WebCore::FormState*, PolicyDecisionMode, PolicyCheckIdentifier id, FramePolicyFunction&& function)
+void FrameLoaderClientQt::dispatchDecidePolicyForNavigationAction(const WebCore::NavigationAction& action, const WebCore::ResourceRequest& request, const ResourceResponse& redirectResponse, WebCore::FormState*, const String&, uint64_t, std::optional<HitTestResult>&&, bool, WebCore::SandboxFlags, WebCore::PolicyDecisionMode, FramePolicyFunction&& function)
 {
     Q_ASSERT(m_webFrame);
     QNetworkRequest r(request.toNetworkRequest(m_frame->loader().networkingContext()));
@@ -1133,7 +1133,7 @@ void FrameLoaderClientQt::dispatchDecidePolicyForNavigationAction(const WebCore:
             result = PolicyAction::Ignore;
 
         m_webFrame->pageAdapter->acceptNavigationRequest(m_webFrame, r, (int)action.type());
-        function(result, id);
+        function(result);
         return;
     }
 
@@ -1144,10 +1144,10 @@ void FrameLoaderClientQt::dispatchDecidePolicyForNavigationAction(const WebCore:
         if (action.type() == NavigationType::LinkClicked && r.url().hasFragment())
             m_frame->loader().activeDocumentLoader()->setLastCheckedRequest(ResourceRequest());
 
-        function(PolicyAction::Ignore, id);
+        function(PolicyAction::Ignore);
         return;
     }
-    function(PolicyAction::Use, id);
+    function(PolicyAction::Use);
 }
 
 void FrameLoaderClientQt::dispatchUnableToImplementPolicy(const WebCore::ResourceError&)
@@ -1291,7 +1291,7 @@ private:
 };
 
 
-RefPtr<Widget> FrameLoaderClientQt::createPlugin(const IntSize& pluginSize, HTMLPlugInElement& element, const URL& url, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues, const String& mimeType, bool loadManually)
+RefPtr<Widget> FrameLoaderClientQt::createPlugin(HTMLPlugInElement& element, const URL& url, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues, const String& mimeType, bool loadManually)
 {
     // qDebug()<<"------ Creating plugin in FrameLoaderClientQt::createPlugin for "<<url.string() << mimeType;
     // qDebug()<<"------\t url = "<<url.string();

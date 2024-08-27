@@ -34,9 +34,9 @@ namespace TestWebKitAPI {
 
 // Expects hex bytes with optional spaces between them.
 // Returns an empty vector if it encounters non-hex-digit characters.
-static Vector<char> decodeHexTestBytes(const char* input)
+static Vector<uint8_t> decodeHexTestBytes(const char* input)
 {
-    Vector<char> result;
+    Vector<uint8_t> result;
     for (size_t i = 0; input[i]; ) {
         if (!isASCIIHexDigit(input[i]))
             return { };
@@ -55,10 +55,10 @@ static Vector<char> decodeHexTestBytes(const char* input)
 // that is completely unambiguous.
 static const char* escapeNonASCIIPrintableCharacters(StringView string)
 {
-    static char resultBuffer[100];
+    static std::array<char, 100> resultBuffer;
     size_t i = 0;
     auto append = [&i] (char character) {
-        if (i < sizeof(resultBuffer))
+        if (i < resultBuffer.size())
             resultBuffer[i++] = character;
     };
     auto appendNibble = [append] (char nibble) {
@@ -82,7 +82,7 @@ static const char* escapeNonASCIIPrintableCharacters(StringView string)
     if (i == sizeof(resultBuffer))
         return "";
     resultBuffer[i] = '\0';
-    return resultBuffer;
+    return resultBuffer.data();
 }
 
 static const char* testDecode(const char* encodingName, std::initializer_list<const char*> inputs)
@@ -94,9 +94,9 @@ static const char* testDecode(const char* encodingName, std::initializer_list<co
         auto vector = decodeHexTestBytes(inputs.begin()[i]);
         bool last = i == size - 1;
         bool sawError = false;
-        resultBuilder.append(escapeNonASCIIPrintableCharacters(codec->decode(vector.data(), vector.size(), last, false, sawError)));
+        resultBuilder.append(span(escapeNonASCIIPrintableCharacters(codec->decode(vector.span(), last, false, sawError))));
         if (sawError)
-            resultBuilder.append(" ERROR");
+            resultBuilder.append(" ERROR"_s);
     }
     return escapeNonASCIIPrintableCharacters(resultBuilder.toString());
 }

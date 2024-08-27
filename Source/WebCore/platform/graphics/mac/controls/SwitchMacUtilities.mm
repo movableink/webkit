@@ -27,17 +27,15 @@
 
 #if PLATFORM(MAC)
 
-#import "ControlFactoryMac.h"
-#import "FloatRoundedRect.h"
 #import "GraphicsContext.h"
+#import "ImageBuffer.h"
 #import "LocalCurrentGraphicsContext.h"
-#import "LocalDefaultSystemAppearance.h"
 #import <pal/spi/mac/CoreUISPI.h>
 #import <pal/spi/mac/NSAppearanceSPI.h>
 
 namespace WebCore::SwitchMacUtilities {
 
-static IntSize cellSize(NSControlSize controlSize)
+IntSize cellSize(NSControlSize controlSize)
 {
     static const std::array<IntSize, 4> sizes =
     {
@@ -49,7 +47,15 @@ static IntSize cellSize(NSControlSize controlSize)
     return sizes[controlSize];
 }
 
-static IntOutsets cellOutsets(NSControlSize controlSize)
+FloatSize visualCellSize(IntSize size, const ControlStyle& style)
+{
+    if (style.states.contains(ControlStyle::State::VerticalWritingMode))
+        size = size.transposedSize();
+    size.scale(style.zoomFactor);
+    return size;
+}
+
+IntOutsets cellOutsets(NSControlSize controlSize)
 {
     static const IntOutsets margins[] =
     {
@@ -62,13 +68,21 @@ static IntOutsets cellOutsets(NSControlSize controlSize)
     return margins[controlSize];
 }
 
-static FloatRect rectForBounds(const FloatRect& bounds)
+IntOutsets visualCellOutsets(NSControlSize controlSize, bool isVertical)
+{
+    auto outsets = cellOutsets(controlSize);
+    if (isVertical)
+        outsets = { outsets.left(), outsets.top(), outsets.right(), outsets.bottom() };
+    return outsets;
+}
+
+FloatRect rectForBounds(const FloatRect& bounds)
 {
     ASSERT_NOT_IMPLEMENTED_YET();
     return bounds;
 }
 
-static NSString *coreUISizeForControlSize(const NSControlSize controlSize)
+NSString *coreUISizeForControlSize(const NSControlSize controlSize)
 {
     if (controlSize == NSControlSizeMini)
         return (__bridge NSString *)kCUISizeMini;
@@ -77,9 +91,54 @@ static NSString *coreUISizeForControlSize(const NSControlSize controlSize)
     return (__bridge NSString *)kCUISizeRegular;
 }
 
-static float easeInOut(const float progress)
+float easeInOut(const float progress)
 {
     return -2.0f * pow(progress, 3.0f) + 3.0f * pow(progress, 2.0f);
+}
+
+FloatRect rectWithTransposedSize(const FloatRect& rect, bool isVertical)
+{
+    auto logicalRect = rect;
+    if (isVertical)
+        logicalRect.setSize(logicalRect.size().transposedSize());
+    return logicalRect;
+}
+
+FloatRect trackRectForBounds(const FloatRect& bounds, const FloatSize& size)
+{
+    auto offsetY = std::max(((bounds.height() - size.height()) / 2.0f), 0.0f);
+    return { FloatPoint { bounds.x(), bounds.y() + offsetY }, size };
+}
+
+void rotateContextForVerticalWritingMode(GraphicsContext& context, const FloatRect& rect)
+{
+    context.translate(rect.height(), 0);
+    context.translate(rect.location());
+    context.rotate(piOverTwoFloat);
+    context.translate(-rect.location());
+}
+
+RefPtr<ImageBuffer> trackMaskImage(GraphicsContext& context, FloatSize trackRectSize, float deviceScaleFactor, bool isRTL, NSString *coreUISize)
+{
+    auto drawingTrackRect = NSMakeRect(0, 0, trackRectSize.width(), trackRectSize.height());
+    auto maskImage = context.createImageBuffer(trackRectSize, deviceScaleFactor);
+    if (!maskImage)
+        return nullptr;
+
+    auto cgContext = maskImage->context().platformContext();
+
+    auto coreUIDirection = (__bridge NSString *)(isRTL ? kCUIUserInterfaceLayoutDirectionRightToLeft : kCUIUserInterfaceLayoutDirectionLeftToRight);
+
+    CGContextStateSaver stateSaver(cgContext);
+
+    [[NSAppearance currentDrawingAppearance] _drawInRect:drawingTrackRect context:cgContext options:@{
+        (__bridge NSString *)kCUIWidgetKey: (__bridge NSString *)kCUIWidgetSwitchFillMask,
+        (__bridge NSString *)kCUISizeKey: coreUISize,
+        (__bridge NSString *)kCUIUserInterfaceLayoutDirectionKey: coreUIDirection,
+        (__bridge NSString *)kCUIScaleKey: @(deviceScaleFactor),
+    }];
+
+    return maskImage;
 }
 
 } // namespace WebCore::SwitchMacUtilities

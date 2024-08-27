@@ -70,6 +70,13 @@ struct pas_pgm_storage {
     uint16_t mem_to_waste;
     uint16_t page_size;
 
+    /*
+     * Alignment direction within the allocated page, if right_align true then
+     * aligned up to "upper_guard page" so could catch overflow
+     * else left_aligned and will start after "lower_guard page" to catch underflow
+     */
+    bool right_align;
+
     pas_large_heap* large_heap;
 };
 
@@ -97,7 +104,7 @@ extern PAS_API bool pas_probabilistic_guard_malloc_is_initialized;
 extern PAS_API uint16_t pas_probabilistic_guard_malloc_random;
 extern PAS_API uint16_t pas_probabilistic_guard_malloc_counter;
 
-pas_allocation_result pas_probabilistic_guard_malloc_allocate(pas_large_heap* large_heap, size_t size, const pas_heap_config* heap_config, pas_physical_memory_transaction* transaction);
+pas_allocation_result pas_probabilistic_guard_malloc_allocate(pas_large_heap* large_heap, size_t size, pas_allocation_mode allocation_mode, const pas_heap_config* heap_config, pas_physical_memory_transaction* transaction);
 void pas_probabilistic_guard_malloc_deallocate(void* memory);
 
 size_t pas_probabilistic_guard_malloc_get_free_virtual_memory(void);
@@ -120,6 +127,7 @@ static PAS_ALWAYS_INLINE bool pas_probabilistic_guard_malloc_should_call_pgm(voi
 }
 
 extern PAS_API void pas_probabilistic_guard_malloc_initialize_pgm(void);
+extern PAS_API void pas_probabilistic_guard_malloc_initialize_pgm_as_enabled(void);
 pas_large_map_entry pas_probabilistic_guard_malloc_return_as_large_map_entry(uintptr_t mem);
 
 PAS_END_EXTERN_C;

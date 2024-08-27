@@ -34,6 +34,7 @@ namespace WebCore {
 
 class RenderVideo final : public RenderMedia {
     WTF_MAKE_ISO_ALLOCATED(RenderVideo);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderVideo);
 public:
     RenderVideo(HTMLVideoElement&, RenderStyle&&);
     virtual ~RenderVideo();
@@ -85,7 +86,6 @@ private:
     void updatePlayer();
 
     bool foregroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect, unsigned maxDepthToTest) const final;
-    bool inElementOrVideoFullscreen() const;
 
     LayoutSize m_cachedImageSize;
 };

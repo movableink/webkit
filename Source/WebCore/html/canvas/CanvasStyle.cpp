@@ -31,6 +31,7 @@
 
 #include "CSSParser.h"
 #include "CSSPropertyNames.h"
+#include "CSSPropertyParserConsumer+Color.h"
 #include "CanvasGradient.h"
 #include "CanvasPattern.h"
 #include "ColorConversion.h"
@@ -40,7 +41,6 @@
 #include "StyleProperties.h"
 
 #if ENABLE(OFFSCREEN_CANVAS)
-#include "CSSPropertyParserWorkerSafe.h"
 #include "OffscreenCanvas.h"
 #endif
 
@@ -53,57 +53,84 @@
 
 namespace WebCore {
 
-bool isCurrentColorString(const String& colorString)
+class CanvasStyleColorResolutionDelegate final : public CSSUnresolvedColorResolutionDelegate {
+    WTF_MAKE_FAST_ALLOCATED;
+public:
+    static std::unique_ptr<CanvasStyleColorResolutionDelegate> create(Ref<HTMLCanvasElement> canvasElement)
+    {
+        return WTF::makeUnique<CanvasStyleColorResolutionDelegate>(WTFMove(canvasElement));
+    }
+
+    CanvasStyleColorResolutionDelegate(Ref<HTMLCanvasElement> canvasElement)
+        : m_canvasElement { WTFMove(canvasElement) }
+    {
+    }
+
+    Color currentColor() const final
+    {
+        if (!m_canvasElement->isConnected() || !m_canvasElement->inlineStyle())
+            return Color::black;
+
+        auto colorString = m_canvasElement->inlineStyle()->getPropertyValue(CSSPropertyColor);
+        auto color = CSSPropertyParserHelpers::parseColorRaw(WTFMove(colorString), m_canvasElement->cssParserContext(), { });
+        if (!color.isValid())
+            return Color::black;
+        return color;
+    }
+
+    Ref<HTMLCanvasElement> m_canvasElement;
+};
+
+static OptionSet<StyleColor::CSSColorType> allowedColorTypes(ScriptExecutionContext* scriptExecutionContext)
 {
-    return equalLettersIgnoringASCIICase(colorString, "currentcolor"_s);
+    if (scriptExecutionContext && scriptExecutionContext->isDocument())
+        return { StyleColor::CSSColorType::Absolute, StyleColor::CSSColorType::Current, StyleColor::CSSColorType::System };
+
+    // FIXME: All canvas types should support all color types, but currently
+    //        system colors are not thread safe so are disabled for non-document
+    //        based canvases.
+    return { StyleColor::CSSColorType::Absolute, StyleColor::CSSColorType::Current };
+}
+
+static std::pair<CSSPropertyParserHelpers::CSSColorParsingOptions, CSSUnresolvedColorResolutionContext> elementlessColorParsingParameters(ScriptExecutionContext* scriptExecutionContext)
+{
+    return {
+        CSSPropertyParserHelpers::CSSColorParsingOptions {
+            .allowedColorTypes = allowedColorTypes(scriptExecutionContext)
+        },
+        CSSUnresolvedColorResolutionContext {
+            .resolvedCurrentColor = Color::black
+        }
+    };
+}
+
+static std::pair<CSSPropertyParserHelpers::CSSColorParsingOptions, CSSUnresolvedColorResolutionContext> colorParsingParameters(CanvasBase& canvasBase)
+{
+    RefPtr canvasElement = dynamicDowncast<HTMLCanvasElement>(canvasBase);
+    if (!canvasElement)
+        return elementlessColorParsingParameters(canvasBase.scriptExecutionContext());
+
+    return {
+        CSSPropertyParserHelpers::CSSColorParsingOptions { },
+        CSSUnresolvedColorResolutionContext {
+            .delegate = CanvasStyleColorResolutionDelegate::create(canvasElement.releaseNonNull())
+        }
+    };
 }
 
 Color parseColor(const String& colorString, CanvasBase& canvasBase)
 {
-#if ENABLE(OFFSCREEN_CANVAS)
-    if (is<OffscreenCanvas>(canvasBase))
-        return CSSPropertyParserWorkerSafe::parseColor(colorString);
-#endif
-
-    Color color;
-    if (auto* canvas = dynamicDowncast<HTMLCanvasElement>(canvasBase))
-        color = CSSParser::parseColor(colorString, canvas->cssParserContext());
-    else
-        color = CSSParser::parseColorWithoutContext(colorString);
-
-    if (color.isValid())
-        return color;
-    return CSSParser::parseSystemColor(colorString);
+    auto [options, resolutionContext] = colorParsingParameters(canvasBase);
+    return CSSPropertyParserHelpers::parseColorRaw(colorString, canvasBase.cssParserContext(), options, resolutionContext);
 }
 
-Color parseColor(const String& colorString)
+Color parseColor(const String& colorString, ScriptExecutionContext& scriptExecutionContext)
 {
-    Color color = CSSParser::parseColorWithoutContext(colorString);
-    if (color.isValid())
-        return color;
-    return CSSParser::parseSystemColor(colorString);
-}
+    auto [options, resolutionContext] = elementlessColorParsingParameters(&scriptExecutionContext);
 
-Color currentColor(CanvasBase& canvasBase)
-{
-    RefPtr canvas = dynamicDowncast<HTMLCanvasElement>(canvasBase);
-    if (!canvas)
-        return Color::black;
-
-    if (!canvas->isConnected() || !canvas->inlineStyle())
-        return Color::black;
-    Color color = CSSParser::parseColorWithoutContext(canvas->inlineStyle()->getPropertyValue(CSSPropertyColor));
-    if (!color.isValid())
-        return Color::black;
-    return color;
-}
-
-Color parseColorOrCurrentColor(const String& colorString, CanvasBase& canvasBase)
-{
-    if (isCurrentColorString(colorString))
-        return currentColor(canvasBase);
-
-    return parseColor(colorString, canvasBase);
+    // FIXME: Add constructor for CSSParserContext that takes a ScriptExecutionContext to allow preferences to be
+    //        checked correctly.
+    return CSSPropertyParserHelpers::parseColorRaw(colorString, CSSParserContext(HTMLStandardMode), options, resolutionContext);
 }
 
 CanvasStyle::CanvasStyle(Color color)
@@ -117,42 +144,31 @@ CanvasStyle::CanvasStyle(const SRGBA<float>& colorComponents)
 }
 
 CanvasStyle::CanvasStyle(CanvasGradient& gradient)
-    : m_style(&gradient)
+    : m_style(gradient)
 {
 }
 
 CanvasStyle::CanvasStyle(CanvasPattern& pattern)
-    : m_style(&pattern)
+    : m_style(pattern)
 {
 }
 
-inline CanvasStyle::CanvasStyle(CurrentColor color)
-    : m_style(color)
+std::optional<CanvasStyle> CanvasStyle::createFromString(const String& colorString, CanvasBase& canvasBase)
 {
-}
-
-CanvasStyle CanvasStyle::createFromString(const String& colorString, CanvasBase& canvasBase)
-{
-    if (isCurrentColorString(colorString))
-        return CurrentColor { std::nullopt };
-
-    Color color = parseColor(colorString, canvasBase);
+    auto color = parseColor(colorString, canvasBase);
     if (!color.isValid())
         return { };
 
-    return color;
+    return { color };
 }
 
-CanvasStyle CanvasStyle::createFromStringWithOverrideAlpha(const String& colorString, float alpha, CanvasBase& canvasBase)
+std::optional<CanvasStyle> CanvasStyle::createFromStringWithOverrideAlpha(const String& colorString, float alpha, CanvasBase& canvasBase)
 {
-    if (isCurrentColorString(colorString))
-        return CurrentColor { alpha };
-
-    Color color = parseColor(colorString, canvasBase);
+    auto color = parseColor(colorString, canvasBase);
     if (!color.isValid())
         return { };
 
-    return color.colorWithAlpha(alpha);
+    return { color.colorWithAlpha(alpha) };
 }
 
 bool CanvasStyle::isEquivalentColor(const CanvasStyle& other) const
@@ -171,20 +187,14 @@ bool CanvasStyle::isEquivalent(const SRGBA<float>& components) const
 void CanvasStyle::applyStrokeColor(GraphicsContext& context) const
 {
     WTF::switchOn(m_style,
-        [&context] (const Color& color) {
+        [&context](const Color& color) {
             context.setStrokeColor(color);
         },
-        [&context] (const RefPtr<CanvasGradient>& gradient) {
+        [&context](const Ref<CanvasGradient>& gradient) {
             context.setStrokeGradient(gradient->gradient());
         },
-        [&context] (const RefPtr<CanvasPattern>& pattern) {
+        [&context](const Ref<CanvasPattern>& pattern) {
             context.setStrokePattern(pattern->pattern());
-        },
-        [] (const CurrentColor&) {
-            ASSERT_NOT_REACHED();
-        },
-        [] (const Invalid&) {
-            ASSERT_NOT_REACHED();
         }
     );
 }
@@ -192,20 +202,14 @@ void CanvasStyle::applyStrokeColor(GraphicsContext& context) const
 void CanvasStyle::applyFillColor(GraphicsContext& context) const
 {
     WTF::switchOn(m_style,
-        [&context] (const Color& color) {
+        [&context](const Color& color) {
             context.setFillColor(color);
         },
-        [&context] (const RefPtr<CanvasGradient>& gradient) {
+        [&context](const Ref<CanvasGradient>& gradient) {
             context.setFillGradient(gradient->gradient());
         },
-        [&context] (const RefPtr<CanvasPattern>& pattern) {
+        [&context](const Ref<CanvasPattern>& pattern) {
             context.setFillPattern(pattern->pattern());
-        },
-        [] (const CurrentColor&) {
-            ASSERT_NOT_REACHED();
-        },
-        [] (const Invalid&) {
-            ASSERT_NOT_REACHED();
         }
     );
 }

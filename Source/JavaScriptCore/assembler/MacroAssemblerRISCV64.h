@@ -654,6 +654,14 @@ public:
         m_assembler.maskRegister<32>(dest);
     }
 
+    void lshift32(TrustedImm32 imm, RegisterID shiftAmount, RegisterID dest)
+    {
+        auto temp = temps<Data>();
+        move(imm, temp);
+        m_assembler.sllwInsn(dest, temp, shiftAmount);
+        m_assembler.maskRegister<32>(dest);
+    }
+
     void lshift32(Address src, RegisterID shiftAmount, RegisterID dest)
     {
         auto temp = temps<Data>();
@@ -1251,7 +1259,38 @@ public:
         store64(temp.data(), dest);
     }
 
+    void transferVector(Address src, Address dest)
+    {
+        loadVector(src, fpTempRegister);
+        storeVector(fpTempRegister, dest);
+    }
+
     void transferPtr(Address src, Address dest)
+    {
+        transfer64(src, dest);
+    }
+
+    void transfer32(BaseIndex src, BaseIndex dest)
+    {
+        auto temp = temps<Data>();
+        load32(src, temp.data());
+        store32(temp.data(), dest);
+    }
+
+    void transfer64(BaseIndex src, BaseIndex dest)
+    {
+        auto temp = temps<Data>();
+        load64(src, temp.data());
+        store64(temp.data(), dest);
+    }
+
+    void transferVector(BaseIndex src, BaseIndex dest)
+    {
+        loadVector(src, fpTempRegister);
+        storeVector(fpTempRegister, dest);
+    }
+
+    void transferPtr(BaseIndex src, BaseIndex dest)
     {
         transfer64(src, dest);
     }
@@ -2147,6 +2186,13 @@ public:
         compareFinalize(cond, lhs, temp.data(), dest);
     }
 
+    void compare64(RelationalCondition cond, RegisterID lhs, TrustedImm64 imm, RegisterID dest)
+    {
+        auto temp = temps<Data>();
+        loadImmediate(imm, temp.data());
+        compareFinalize(cond, lhs, temp.data(), dest);
+    }
+
     void test8(ResultCondition cond, Address address, TrustedImm32 imm, RegisterID dest)
     {
         auto temp = temps<Data, Memory>();
@@ -2223,6 +2269,24 @@ public:
         auto temp = temps<Data, Memory>();
         loadImmediate(TrustedImmPtr(address.m_ptr), temp.memory());
         m_assembler.lbInsn(temp.memory(), temp.memory(), Imm::I<0>());
+        loadImmediate(imm, temp.data());
+        return makeBranch(cond, temp.memory(), temp.data());
+    }
+
+    Jump branch16(RelationalCondition cond, Address address, TrustedImm32 imm)
+    {
+        auto temp = temps<Data, Memory>();
+        auto resolution = resolveAddress(address, temp.memory());
+        m_assembler.lhInsn(temp.memory(), resolution.base, Imm::I(resolution.offset));
+        loadImmediate(imm, temp.data());
+        return makeBranch(cond, temp.memory(), temp.data());
+    }
+
+    Jump branch16(RelationalCondition cond, AbsoluteAddress address, TrustedImm32 imm)
+    {
+        auto temp = temps<Data, Memory>();
+        loadImmediate(TrustedImmPtr(address.m_ptr), temp.memory());
+        m_assembler.lhInsn(temp.memory(), temp.memory(), Imm::I<0>());
         loadImmediate(imm, temp.data());
         return makeBranch(cond, temp.memory(), temp.data());
     }
@@ -3528,7 +3592,7 @@ public:
         m_assembler.ebreakInsn();
     }
 
-    void breakpoint(uint16_t = 0xc471)
+    void breakpoint(uint16_t = 0)
     {
         m_assembler.ebreakInsn();
     }

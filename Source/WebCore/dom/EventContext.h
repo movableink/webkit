@@ -46,7 +46,7 @@ public:
 
     EventContext(Type, Node*, EventTarget* currentTarget, EventTarget* origin, int closedShadowDepth);
     EventContext(Type, Node&, Node* currentTarget, EventTarget* origin, int closedShadowDepth);
-    ~EventContext();
+    ~EventContext() = default;
 
     Node* node() const { return m_node.get(); }
     RefPtr<Node> protectedNode() const { return m_node; }
@@ -58,6 +58,7 @@ public:
 
     void handleLocalEvents(Event&, EventInvokePhase) const;
 
+    bool isNormalEventContext() const { return m_type == Type::Normal; }
     bool isMouseOrFocusEventContext() const { return m_type == Type::MouseOrFocus; }
     bool isTouchEventContext() const { return m_type == Type::Touch; }
     bool isWindowContext() const { return m_type == Type::Window; }

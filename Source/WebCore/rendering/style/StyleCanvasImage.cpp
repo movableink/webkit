@@ -49,7 +49,8 @@ StyleCanvasImage::~StyleCanvasImage()
 
 bool StyleCanvasImage::operator==(const StyleImage& other) const
 {
-    return is<StyleCanvasImage>(other) && equals(downcast<StyleCanvasImage>(other));
+    auto* otherCanvasImage = dynamicDowncast<StyleCanvasImage>(other);
+    return otherCanvasImage && equals(*otherCanvasImage);
 }
 
 bool StyleCanvasImage::equals(const StyleCanvasImage& other) const
@@ -78,7 +79,7 @@ RefPtr<Image> StyleCanvasImage::image(const RenderElement* renderer, const Float
 
     ASSERT(clients().contains(const_cast<RenderElement&>(*renderer)));
     RefPtr element = this->element(renderer->document());
-    if (!element || !element->buffer())
+    if (!element)
         return nullptr;
     return element->copiedImage();
 }
@@ -108,15 +109,12 @@ void StyleCanvasImage::didRemoveClient(RenderElement& renderer)
         InspectorInstrumentation::didChangeCSSCanvasClientNodes(*element);
 }
 
-void StyleCanvasImage::canvasChanged(CanvasBase& canvasBase, const std::optional<FloatRect>& changedRect)
+void StyleCanvasImage::canvasChanged(CanvasBase& canvasBase, const FloatRect& changedRect)
 {
     ASSERT_UNUSED(canvasBase, is<HTMLCanvasElement>(canvasBase));
     ASSERT_UNUSED(canvasBase, m_element == &downcast<HTMLCanvasElement>(canvasBase));
 
-    if (!changedRect)
-        return;
-
-    auto imageChangeRect = enclosingIntRect(changedRect.value());
+    auto imageChangeRect = enclosingIntRect(changedRect);
     for (auto entry : clients()) {
         auto& client = entry.key;
         client.imageChanged(static_cast<WrappedImagePtr>(this), &imageChangeRect);

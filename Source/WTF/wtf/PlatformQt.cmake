@@ -55,11 +55,11 @@ if (USE_MACH_PORTS)
 endif()
 
 list(APPEND WTF_SYSTEM_INCLUDE_DIRECTORIES
-    ${Qt5Core_INCLUDE_DIRS}
+    ${Qt6Core_INCLUDE_DIRS}
 )
 
 list(APPEND WTF_LIBRARIES
-    ${Qt5Core_LIBRARIES}
+    ${Qt6Core_LIBRARIES}
     Threads::Threads
 )
 
@@ -80,6 +80,9 @@ if (USE_UNIX_DOMAIN_SOCKETS)
         qt/WorkQueueQt.cpp
 
         unix/UniStdExtrasUnix.cpp
+    )
+    list(APPEND WTF_PUBLIC_HEADERS
+       unix/UnixFileDescriptor.h
     )
     QTWEBKIT_GENERATE_MOC_FILES_CPP(WTF qt/WorkQueueQt.cpp)
 endif ()

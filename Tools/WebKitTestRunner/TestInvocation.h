@@ -72,34 +72,6 @@ public:
 
     void notifyDownloadDone();
 
-    void didClearStatisticsInMemoryAndPersistentStore();
-    void didClearStatisticsThroughWebsiteDataRemoval();
-    void didSetShouldDowngradeReferrer();
-    void didSetShouldBlockThirdPartyCookies();
-    void didSetFirstPartyWebsiteDataRemovalMode();
-    void didSetToSameSiteStrictCookies();
-    void didSetFirstPartyHostCNAMEDomain();
-    void didSetThirdPartyCNAMEDomain();
-    void didResetStatisticsToConsistentState();
-    void didSetBlockCookiesForHost();
-    void didSetStatisticsDebugMode();
-    void didSetPrevalentResourceForDebugMode();
-    void didSetLastSeen();
-    void didMergeStatistic();
-    void didSetExpiredStatistic();
-    void didSetPrevalentResource();
-    void didSetVeryPrevalentResource();
-    void didSetHasHadUserInteraction();
-    void didReceiveAllStorageAccessEntries(Vector<String>&& domains);
-    void didReceiveLoadedSubresourceDomains(Vector<String>&& domains);
-    void didRemoveAllCookies();
-
-    void didRemoveAllSessionCredentials();
-
-    void didSetAppBoundDomains();
-
-    void didSetManagedDomains();
-
     void dumpResourceLoadStatistics();
 
     bool canOpenWindows() const { return m_canOpenWindows; }
@@ -107,6 +79,10 @@ public:
     void dumpPrivateClickMeasurement();
 
     void willCreateNewPage();
+
+    void loadTestInCrossOriginIframe();
+
+    void dumpResourceLoadStatisticsIfNecessary();
 
 private:
     WKRetainPtr<WKMutableDictionaryRef> createTestSettingsDictionary();
@@ -169,6 +145,7 @@ private:
     bool m_dumpPixels { false };
     bool m_forceDumpPixels { false };
     bool m_pixelResultIsPending { false };
+    bool m_forceRepaint { true };
     bool m_shouldDumpResourceLoadStatistics { false };
     bool m_canOpenWindows { true };
     bool m_shouldDumpPrivateClickMeasurement { false };

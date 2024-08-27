@@ -1,6 +1,9 @@
+CONSOLE MESSAGE: Unhandled Promise Rejection: [object GeolocationPosition]
 
+
+Harness Error (FAIL), message = Unhandled rejection
 
 FAIL Permissions-Policy header geolocation=() disallows the top-level document. promise_test: Unhandled rejection with value: object "[object GeolocationPosition]"
-FAIL Permissions-Policy header geolocation=() disallows same-origin iframes. assert_false: geolocation expected false got true
-FAIL Permissions-Policy header geolocation=() disallows cross-origin iframes. assert_false: geolocation expected false got true
+TIMEOUT Permissions-Policy header geolocation=() disallows same-origin iframes. Test timed out
+NOTRUN Permissions-Policy header geolocation=() disallows cross-origin iframes.
 

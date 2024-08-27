@@ -48,7 +48,7 @@ using namespace HTMLNames;
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderTableRow);
 
 RenderTableRow::RenderTableRow(Element& element, RenderStyle&& style)
-    : RenderBox(Type::TableRow, element, WTFMove(style), { })
+    : RenderBox(Type::TableRow, element, WTFMove(style))
     , m_rowIndex(unsetRowIndex)
 {
     setInline(false);
@@ -56,16 +56,18 @@ RenderTableRow::RenderTableRow(Element& element, RenderStyle&& style)
 }
 
 RenderTableRow::RenderTableRow(Document& document, RenderStyle&& style)
-    : RenderBox(Type::TableRow, document, WTFMove(style), { })
+    : RenderBox(Type::TableRow, document, WTFMove(style))
     , m_rowIndex(unsetRowIndex)
 {
     setInline(false);
     ASSERT(isRenderTableRow());
 }
 
-void RenderTableRow::willBeRemovedFromTree(IsInternalMove isInternalMove)
+RenderTableRow::~RenderTableRow() = default;
+
+void RenderTableRow::willBeRemovedFromTree()
 {
-    RenderBox::willBeRemovedFromTree(isInternalMove);
+    RenderBox::willBeRemovedFromTree();
 
     section()->setNeedsCellRecalc();
 }
@@ -83,7 +85,7 @@ void RenderTableRow::styleDidChange(StyleDifference diff, const RenderStyle* old
     ASSERT(style().display() == DisplayType::TableRow);
 
     RenderBox::styleDidChange(diff, oldStyle);
-    propagateStyleToAnonymousChildren(PropagateToAllChildren);
+    propagateStyleToAnonymousChildren(StylePropagationType::AllChildren);
 
     if (section() && oldStyle && style().logicalHeight() != oldStyle->logicalHeight())
         section()->rowLogicalHeightChanged(rowIndex());
@@ -221,7 +223,7 @@ void RenderTableRow::paintOutlineForRowIfNeeded(PaintInfo& paintInfo, const Layo
 {
     LayoutPoint adjustedPaintOffset = paintOffset + location();
     PaintPhase paintPhase = paintInfo.phase;
-    if ((paintPhase == PaintPhase::Outline || paintPhase == PaintPhase::SelfOutline) && style().visibility() == Visibility::Visible)
+    if ((paintPhase == PaintPhase::Outline || paintPhase == PaintPhase::SelfOutline) && style().usedVisibility() == Visibility::Visible)
         paintOutline(paintInfo, LayoutRect(adjustedPaintOffset, size()));
 }
 
@@ -242,6 +244,8 @@ void RenderTableRow::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 void RenderTableRow::imageChanged(WrappedImagePtr, const IntRect*)
 {
     // FIXME: Examine cells and repaint only the rect the image paints in.
+    if (!parent())
+        return;
     repaint();
 }
 
@@ -259,7 +263,7 @@ RenderPtr<RenderTableRow> RenderTableRow::createAnonymousWithParentRenderer(cons
 
 bool RenderTableRow::requiresLayer() const
 {
-    return hasNonVisibleOverflow() || hasTransformRelatedProperty() || hasHiddenBackface() || hasClipPath() || createsGroup() || isStickilyPositioned();
+    return hasNonVisibleOverflow() || hasTransformRelatedProperty() || hasHiddenBackface() || hasClipPath() || createsGroup() || isStickilyPositioned() || requiresRenderingConsolidationForViewTransition();
 }
 
 RenderPtr<RenderBox> RenderTableRow::createAnonymousBoxWithSameTypeAs(const RenderBox& renderer) const

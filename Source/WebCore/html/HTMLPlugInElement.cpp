@@ -63,8 +63,8 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLPlugInElement);
 
 using namespace HTMLNames;
 
-HTMLPlugInElement::HTMLPlugInElement(const QualifiedName& tagName, Document& document)
-    : HTMLFrameOwnerElement(tagName, document, CreateHTMLPlugInElement)
+HTMLPlugInElement::HTMLPlugInElement(const QualifiedName& tagName, Document& document, OptionSet<TypeFlag> typeFlags)
+    : HTMLFrameOwnerElement(tagName, document, typeFlags | TypeFlag::HasCustomStyleResolveCallbacks)
     , m_swapRendererTimer(*this, &HTMLPlugInElement::swapRendererTimerFired)
 {
 }
@@ -176,6 +176,21 @@ void HTMLPlugInElement::collectPresentationalHintsForAttribute(const QualifiedNa
     }
 }
 
+Node::InsertedIntoAncestorResult HTMLPlugInElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
+{
+    auto result = HTMLFrameOwnerElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
+    if (insertionType.connectedToDocument)
+        document().didConnectPluginElement();
+    return result;
+}
+
+void HTMLPlugInElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
+{
+    HTMLFrameOwnerElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
+    if (removalType.disconnectedFromDocument)
+        document().didDisconnectPluginElement();
+}
+
 void HTMLPlugInElement::defaultEventHandler(Event& event)
 {
     // Firefox seems to use a fake event listener to dispatch events to plug-in (tested with mouse events only).
@@ -239,7 +254,7 @@ void HTMLPlugInElement::swapRendererTimerFired()
     
     // Create a shadow root, which will trigger the code to add a snapshot container
     // and reattach, thus making a new Renderer.
-    Ref<HTMLPlugInElement> protectedThis(*this);
+    Ref protectedThis { *this };
     ensureUserAgentShadowRoot();
 }
 

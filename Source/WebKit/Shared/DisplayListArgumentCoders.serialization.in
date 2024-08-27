@@ -146,7 +146,6 @@ headers: <WebCore/DisplayListItems.h>
 
 [CustomHeader, AdditionalEncoder=StreamConnectionEncoder] class WebCore::DisplayList::DrawNativeImage {
     WebCore::RenderingResourceIdentifier imageIdentifier();
-    WebCore::FloatSize imageSize();
     WebCore::FloatRect destinationRect();
     WebCore::FloatRect source();
     WebCore::ImagePaintingOptions options();
@@ -174,6 +173,10 @@ headers: <WebCore/DisplayListItems.h>
 
 [CustomHeader, AdditionalEncoder=StreamConnectionEncoder] class WebCore::DisplayList::BeginTransparencyLayer {
     float opacity();
+};
+
+[CustomHeader, AdditionalEncoder=StreamConnectionEncoder] class WebCore::DisplayList::BeginTransparencyLayerWithCompositeMode {
+    WebCore::CompositeMode compositeMode();
 };
 
 [CustomHeader, AdditionalEncoder=StreamConnectionEncoder] class WebCore::DisplayList::EndTransparencyLayer {
@@ -229,6 +232,12 @@ headers: <WebCore/DisplayListItems.h>
     Ref<WebCore::Gradient> gradient();
 };
 
+[CustomHeader, AdditionalEncoder=StreamConnectionEncoder] class WebCore::DisplayList::FillRectWithGradientAndSpaceTransform {
+    WebCore::FloatRect rect();
+    Ref<WebCore::Gradient> gradient();
+    WebCore::AffineTransform gradientSpaceTransform();
+};
+
 [CustomHeader, AdditionalEncoder=StreamConnectionEncoder] class WebCore::DisplayList::FillCompositedRect {
     WebCore::FloatRect rect();
     WebCore::Color color();
@@ -256,6 +265,10 @@ headers: <WebCore/DisplayListItems.h>
 
 [CustomHeader, AdditionalEncoder=StreamConnectionEncoder] class WebCore::DisplayList::FillArc {
     WebCore::PathArc arc();
+};
+
+[CustomHeader, AdditionalEncoder=StreamConnectionEncoder] class WebCore::DisplayList::FillClosedArc {
+    WebCore::PathClosedArc closedArc();
 };
 
 [CustomHeader, AdditionalEncoder=StreamConnectionEncoder] class WebCore::DisplayList::FillQuadCurve {
@@ -303,6 +316,10 @@ headers: <WebCore/DisplayListItems.h>
 
 [CustomHeader, AdditionalEncoder=StreamConnectionEncoder] class WebCore::DisplayList::StrokeArc {
     WebCore::PathArc arc();
+};
+
+[CustomHeader, AdditionalEncoder=StreamConnectionEncoder] class WebCore::DisplayList::StrokeClosedArc {
+    WebCore::PathClosedArc closedArc();
 };
 
 [CustomHeader, AdditionalEncoder=StreamConnectionEncoder] class WebCore::DisplayList::StrokeQuadCurve {

@@ -346,7 +346,7 @@ class PullRequest(Command):
                     break
                 options = ['Yes', 'Retry', 'No']
                 response = Terminal.choose(
-                    '{} failed, continue uploading pull request?\nRetry will amend the commit with your changes.'.format(name),
+                    '{} failed!\nRetry will amend the commit with your changes. Continue uploading pull request?'.format(name),
                     options=(options[0], options[2]) if attempt + 1 == attempts else options,
                     default='No',
                 )
@@ -444,7 +444,11 @@ class PullRequest(Command):
         not_radar = next(iter(filter(lambda issue: not isinstance(issue.tracker, radar.Tracker), issues)), None)
         radar_cc_default = repository.config().get('webkitscmpy.cc-radar', 'true') == 'true'
         if update_issue and radar_issue and not_radar and radar_issue.tracker.radarclient() and (args.cc_radar or (radar_cc_default and args.cc_radar is not False)):
-            not_radar.cc_radar(radar=radar_issue)
+            try:
+                not_radar.cc_radar(radar=radar_issue)
+            except ValueError:
+                sys.stderr.write('Aborting pull request.\n')
+                return 1
 
         redaction_exemption = None
         redacted_issue = None

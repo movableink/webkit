@@ -32,6 +32,7 @@
 #include "ChromeClient.h"
 #include "DOMTimer.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "FullscreenManager.h"
 #include "HTMLIFrameElement.h"
 #include "HTMLImageElement.h"
@@ -53,12 +54,18 @@ static bool isHiddenBehindFullscreenElement(const Node& descendantCandidate)
 {
     // Fullscreen status is propagated on the ancestor document chain all the way to the top document.
     auto& document = descendantCandidate.document();
-    auto* topMostFullScreenElement = document.topDocument().fullscreenManager().fullscreenElement();
+    CheckedPtr fullscreenManager = document.topDocument().fullscreenManagerIfExists();
+    if (!fullscreenManager)
+        return false;
+    auto* topMostFullScreenElement = fullscreenManager->fullscreenElement();
     if (!topMostFullScreenElement)
         return false;
 
     // If the document where the node lives does not have an active fullscreen element, it is a sibling/nephew document -> not a descendant.
-    auto* fullscreenElement = document.fullscreenManager().fullscreenElement();
+    fullscreenManager = document.fullscreenManagerIfExists();
+    if (!fullscreenManager)
+        return false;
+    RefPtr fullscreenElement = fullscreenManager->fullscreenElement();
     if (!fullscreenElement)
         return true;
     return !descendantCandidate.isDescendantOf(*fullscreenElement);
@@ -79,7 +86,7 @@ bool ContentChangeObserver::isVisuallyHidden(const Node& node)
     if (style.display() == DisplayType::None)
         return true;
 
-    if (style.visibility() == Visibility::Hidden)
+    if (style.usedVisibility() == Visibility::Hidden)
         return true;
 
     if (!style.opacity())
@@ -156,10 +163,11 @@ bool ContentChangeObserver::isConsideredActionableContent(const Element& candida
 
         if (auto imageElement = dynamicDowncast<HTMLImageElement>(element)) {
             // This is required to avoid HTMLImageElement's touch callout override logic. See rdar://problem/48937767.
-            return imageElement->willRespondToMouseClickEventsWithEditability(imageElement->computeEditabilityForMouseClickEvents(), HTMLImageElement::IgnoreTouchCallout::Yes);
+            auto* imageRenderer = imageElement->renderer();
+            return imageRenderer && imageElement->willRespondToMouseClickEventsWithEditability(imageElement->computeEditabilityForMouseClickEvents(&imageRenderer->style()), HTMLImageElement::IgnoreTouchCallout::Yes);
         }
         bool hasRenderer = element.renderer();
-        auto willRespondToMouseClickEvents = element.willRespondToMouseClickEvents();
+        auto willRespondToMouseClickEvents = hasRenderer && element.willRespondToMouseClickEvents(&element.renderer()->style());
         if (willRespondToMouseClickEvents || !hasRenderer || hadRenderer == ElementHadRenderer::No)
             return willRespondToMouseClickEvents;
 
@@ -167,7 +175,8 @@ bool ContentChangeObserver::isConsideredActionableContent(const Element& candida
         for (auto& descendant : descendantsOfType<RenderElement>(*element.renderer())) {
             if (!descendant.element())
                 continue;
-            if (descendant.element()->willRespondToMouseClickEvents())
+            auto& element = *descendant.element();
+            if (element.renderer() && element.willRespondToMouseClickEvents(&element.renderer()->style()))
                 return true;
         }
         return false;
@@ -479,7 +488,7 @@ void ContentChangeObserver::elementDidBecomeHidden(const Element& element)
 void ContentChangeObserver::touchEventDidStart(PlatformEvent::Type eventType)
 {
 #if ENABLE(TOUCH_EVENTS)
-    if (!isContentChangeObserverEnabled() || m_document.quirks().shouldDisableContentChangeObserverTouchEventAdjustment())
+    if (!isContentChangeObserverEnabled())
         return;
     if (eventType != PlatformEvent::Type::TouchStart)
         return;

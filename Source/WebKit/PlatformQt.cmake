@@ -93,7 +93,6 @@ list(APPEND WebKit_SOURCES
     Shared/qt/ProcessExecutablePathQt.cpp
     Shared/qt/QtNetworkReplyData.cpp
     #Shared/qt/QtNetworkRequestData.cpp
-    Shared/qt/ShareableBitmapQt.cpp
     Shared/qt/WebCoreArgumentCodersQt.cpp
     Shared/qt/WebEventFactoryQt.cpp
     Shared/qt/WebGestureEvent.cpp
@@ -248,15 +247,15 @@ endif ()
 list(APPEND WebKit_SYSTEM_INCLUDE_DIRECTORIES
     ${GLIB_INCLUDE_DIRS}
     ${GSTREAMER_INCLUDE_DIRS}
-    ${Qt5Quick_INCLUDE_DIRS}
-    ${Qt5Quick_PRIVATE_INCLUDE_DIRS}
+    ${Qt6Quick_INCLUDE_DIRS}
+    ${Qt6Quick_PRIVATE_INCLUDE_DIRS}
     ${SQLITE_INCLUDE_DIR}
 )
 
 list(APPEND WebKit_LIBRARIES
-    ${Qt5Positioning_LIBRARIES}
-    ${Qt5Quick_LIBRARIES}
-    ${Qt5WebChannel_LIBRARIES}
+    ${Qt6Positioning_LIBRARIES}
+    ${Qt6Quick_LIBRARIES}
+    ${Qt6WebChannel_LIBRARIES}
     ${X11_X11_LIB}
 )
 
@@ -287,7 +286,7 @@ endif ()
 
 # FIXME: Allow building without widgets
 list(APPEND WebProcess_LIBRARIES
-    Qt5::Widgets
+    Qt6::Widgets
     WebKitWidgets
 )
 

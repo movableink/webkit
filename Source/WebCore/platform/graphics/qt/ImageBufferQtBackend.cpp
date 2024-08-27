@@ -213,7 +213,7 @@ void ImageBufferQtBackend::getPixelBuffer(const IntRect& srcRect, PixelBuffer& d
 
 void ImageBufferQtBackend::putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
 {
-    ImageBufferBackend::putPixelBuffer(pixelBuffer, srcRect, destPoint, destFormat, const_cast<void*>(reinterpret_cast<const void*>(m_nativeImage->bits())));
+    ImageBufferBackend::putPixelBuffer(pixelBuffer, srcRect, destPoint, destFormat, const_cast<uint8_t *>(reinterpret_cast<const uint8_t *>(m_nativeImage->bits())));
 }
 
 unsigned ImageBufferQtBackend::bytesPerRow() const

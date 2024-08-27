@@ -170,12 +170,6 @@ bool MacApplication::isHRBlock()
     return isHRBlock;
 }
 
-bool MacApplication::isIAdProducer()
-{
-    static bool isIAdProducer = applicationBundleIsEqualTo("com.apple.iAdProducer"_s);
-    return isIAdProducer;
-}
-
 bool MacApplication::isSolidStateNetworksDownloader()
 {
     static bool isSolidStateNetworksDownloader = applicationBundleIsEqualTo("com.solidstatenetworks.awkhost"_s);
@@ -457,7 +451,13 @@ bool IOSApplication::isDOFUSTouch()
     return isDOFUSTouch;
 }
 
-#endif
+bool IOSApplication::isHimalaya()
+{
+    static bool isHimalayaApp = applicationBundleIsEqualTo("com.gemd.iting"_s);
+    return isHimalayaApp;
+}
+
+#endif // PLATFORM(IOS_FAMILY)
 
 } // namespace WebCore
 

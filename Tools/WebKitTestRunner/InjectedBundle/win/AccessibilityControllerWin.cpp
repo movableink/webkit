@@ -26,8 +26,6 @@
 #include "config.h"
 #include "AccessibilityController.h"
 
-#if ENABLE(ACCESSIBILITY)
-
 #include "AccessibilityUIElement.h"
 #include <WebCore/NotImplemented.h>
 
@@ -67,7 +65,7 @@ RefPtr<AccessibilityUIElement> AccessibilityController::focusedElement()
     return nullptr;
 }
 
-bool AccessibilityController::addNotificationListener(JSValueRef)
+bool AccessibilityController::addNotificationListener(JSContextRef, JSValueRef)
 {
     notImplemented();
     return false;
@@ -84,5 +82,3 @@ void AccessibilityController::overrideClient(JSStringRef)
 }
 
 } // namespace WTR
-
-#endif // ENABLE(ACCESSIBILITY)

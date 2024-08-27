@@ -13,6 +13,8 @@ list(REMOVE_ITEM DumpRenderTree_SOURCES
 )
 
 list(APPEND DumpRenderTree_SOURCES
+    qt/AccessibilityControllerQt.cpp
+    qt/AccessibilityUIElementQt.cpp
     qt/DumpRenderTreeMain.cpp
     qt/DumpRenderTreeQt.cpp
     qt/EventSenderQt.cpp
@@ -23,20 +25,20 @@ list(APPEND DumpRenderTree_SOURCES
     qt/UIScriptControllerQt.cpp
 )
 
-qt5_add_resources(DumpRenderTree_SOURCES
+Qt6_add_resources(DumpRenderTree_SOURCES
     qt/DumpRenderTree.qrc
 )
 
 list(APPEND DumpRenderTree_SYSTEM_INCLUDE_DIRECTORIES
     ${ICU_INCLUDE_DIRS}
-    ${Qt5Gui_PRIVATE_INCLUDE_DIRS}
-    ${Qt5Widgets_INCLUDE_DIRS}
+    ${Qt6Gui_PRIVATE_INCLUDE_DIRS}
+    ${Qt6Widgets_INCLUDE_DIRS}
 )
 
 list(APPEND DumpRenderTree_LIBRARIES
-    ${Qt5PrintSupport_LIBRARIES}
-    ${Qt5Test_LIBRARIES}
-    ${Qt5Widgets_LIBRARIES}
+    ${Qt6PrintSupport_LIBRARIES}
+    ${Qt6Test_LIBRARIES}
+    ${Qt6Widgets_LIBRARIES}
     WebKitWidgets
 )
 
@@ -47,10 +49,10 @@ list(APPEND DumpRenderTree_FRAMEWORKS
 
 if (USE_QT_MULTIMEDIA)
     list(APPEND DumpRenderTree_SYSTEM_INCLUDE_DIRECTORIES
-        ${Qt5Multimedia_INCLUDE_DIRS}
+        ${Qt6Multimedia_INCLUDE_DIRS}
     )
     list(APPEND DumpRenderTree_LIBRARIES
-        ${Qt5Multimedia_LIBRARIES}
+        ${Qt6Multimedia_LIBRARIES}
     )
 endif ()
 

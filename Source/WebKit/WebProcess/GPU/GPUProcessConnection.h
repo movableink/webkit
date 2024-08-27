@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,11 +29,16 @@
 
 #include "AudioMediaStreamTrackRendererInternalUnitIdentifier.h"
 #include "Connection.h"
+#include "GPUProcessConnectionIdentifier.h"
+#include "GraphicsContextGLIdentifier.h"
 #include "MediaOverridesForTesting.h"
 #include "MessageReceiverMap.h"
-#include "SharedMemory.h"
+#include "RenderingBackendIdentifier.h"
+#include "StreamServerConnection.h"
+#include "WebGPUIdentifier.h"
 #include <WebCore/AudioSession.h>
 #include <WebCore/PlatformMediaSession.h>
+#include <WebCore/SharedMemory.h>
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
 #include <wtf/ThreadSafeWeakHashSet.h>
@@ -41,6 +46,7 @@
 
 namespace WebCore {
 class CAAudioStreamDescription;
+struct GraphicsContextGLAttributes;
 struct PageIdentifierType;
 using PageIdentifier = ObjectIdentifier<PageIdentifierType>;
 }
@@ -50,9 +56,9 @@ class Semaphore;
 }
 
 namespace WebKit {
-
 class RemoteAudioSourceProviderManager;
 class RemoteMediaPlayerManager;
+class RemoteSharedResourceCacheProxy;
 class SampleBufferDisplayLayerManager;
 class WebPage;
 struct GPUProcessConnectionInfo;
@@ -65,16 +71,19 @@ class RemoteVideoFrameObjectHeapProxy;
 
 class GPUProcessConnection : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<GPUProcessConnection>, public IPC::Connection::Client {
 public:
-    static RefPtr<GPUProcessConnection> create(IPC::Connection& parentConnection);
+    static Ref<GPUProcessConnection> create(Ref<IPC::Connection>&&);
     ~GPUProcessConnection();
-    
+    GPUProcessConnectionIdentifier identifier() const { return m_identifier; }
+
     IPC::Connection& connection() { return m_connection.get(); }
     Ref<IPC::Connection> protectedConnection() { return m_connection; }
     IPC::MessageReceiverMap& messageReceiverMap() { return m_messageReceiverMap; }
 
+    void didBecomeUnresponsive();
 #if HAVE(AUDIT_TOKEN)
     std::optional<audit_token_t> auditToken();
 #endif
+    Ref<RemoteSharedResourceCacheProxy> sharedResourceCache();
 #if PLATFORM(COCOA) && ENABLE(MEDIA_STREAM)
     SampleBufferDisplayLayerManager& sampleBufferDisplayLayerManager();
     void resetAudioMediaStreamTrackRendererInternalUnit(AudioMediaStreamTrackRendererInternalUnitIdentifier);
@@ -90,14 +99,6 @@ public:
 
     void updateMediaConfiguration(bool forceUpdate);
 
-#if ENABLE(VP9)
-    void enableVP9Decoders(bool enableVP8Decoder, bool enableVP9Decoder, bool enableVP9SWDecoder);
-
-    bool isVP8DecoderEnabled() const { return m_enableVP8Decoder; }
-    bool isVP9DecoderEnabled() const { return m_enableVP9Decoder; }
-    bool isVPSWDecoderEnabled() const { return m_enableVP9SWDecoder; }
-#endif
-
 #if HAVE(VISIBILITY_PROPAGATION_VIEW)
     void createVisibilityPropagationContextForPage(WebPage&);
     void destroyVisibilityPropagationContextForPage(WebPage&);
@@ -108,6 +109,15 @@ public:
 #endif
 
     void configureLoggingChannel(const String&, WTFLogChannelState, WTFLogLevel);
+
+    void createRenderingBackend(RenderingBackendIdentifier, IPC::StreamServerConnection::Handle&&);
+    void releaseRenderingBackend(RenderingBackendIdentifier);
+#if ENABLE(WEBGL)
+    void createGraphicsContextGL(GraphicsContextGLIdentifier, const WebCore::GraphicsContextGLAttributes&, RenderingBackendIdentifier, IPC::StreamServerConnection::Handle&&);
+    void releaseGraphicsContextGL(GraphicsContextGLIdentifier);
+#endif
+    void createGPU(WebGPUIdentifier, RenderingBackendIdentifier, IPC::StreamServerConnection::Handle&&);
+    void releaseGPU(WebGPUIdentifier);
 
     class Client {
     public:
@@ -123,7 +133,7 @@ public:
 
     static constexpr Seconds defaultTimeout = 3_s;
 private:
-    GPUProcessConnection(IPC::Connection::Identifier&&);
+    GPUProcessConnection(Ref<IPC::Connection>&&);
     bool waitForDidInitialize();
     void invalidate();
 
@@ -148,7 +158,9 @@ private:
     // The connection from the web process to the GPU process.
     Ref<IPC::Connection> m_connection;
     IPC::MessageReceiverMap m_messageReceiverMap;
+    GPUProcessConnectionIdentifier m_identifier { GPUProcessConnectionIdentifier::generate() };
     bool m_hasInitialized { false };
+    RefPtr<RemoteSharedResourceCacheProxy> m_sharedResourceCache;
 #if HAVE(AUDIT_TOKEN)
     std::optional<audit_token_t> m_auditToken;
 #endif
@@ -160,11 +172,6 @@ private:
 #endif
 #if PLATFORM(COCOA) && ENABLE(WEB_AUDIO)
     RefPtr<RemoteAudioSourceProviderManager> m_audioSourceProviderManager;
-#endif
-#if ENABLE(VP9)
-    bool m_enableVP8Decoder { false };
-    bool m_enableVP9Decoder { false };
-    bool m_enableVP9SWDecoder { false };
 #endif
 
 #if PLATFORM(COCOA)

@@ -40,13 +40,13 @@
 #include "JSCDATASection.h"
 #include "JSComment.h"
 #include "JSDOMBinding.h"
+#include "JSDOMWindowCustom.h"
 #include "JSDocument.h"
 #include "JSDocumentFragment.h"
 #include "JSDocumentType.h"
 #include "JSEventListener.h"
 #include "JSHTMLElement.h"
 #include "JSHTMLElementWrapperFactory.h"
-#include "JSLocalDOMWindowCustom.h"
 #include "JSMathMLElementWrapperFactory.h"
 #include "JSProcessingInstruction.h"
 #include "JSSVGElementWrapperFactory.h"
@@ -67,19 +67,19 @@ namespace WebCore {
 using namespace JSC;
 using namespace HTMLNames;
 
-bool JSNodeOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, AbstractSlotVisitor& visitor, const char** reason)
+bool JSNodeOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, AbstractSlotVisitor& visitor, ASCIILiteral* reason)
 {
     auto& node = jsCast<JSNode*>(handle.slot()->asCell())->wrapped();
     if (!node.isConnected()) {
-        if (GCReachableRefMap::contains(node)) {
+        if (GCReachableRefMap::contains(node) || node.isInCustomElementReactionQueue()) {
             if (UNLIKELY(reason))
-                *reason = "Node is scheduled to be used in an async script invocation)";
+                *reason = "Node is scheduled to be used in an async script invocation)"_s;
             return true;
         }
     }
 
     if (UNLIKELY(reason))
-        *reason = "Connected node";
+        *reason = "Connected node"_s;
 
     return containsWebCoreOpaqueRoot(visitor, node);
 }
@@ -134,7 +134,7 @@ static ALWAYS_INLINE JSValue createWrapperInline(JSGlobalObject* lexicalGlobalOb
             break;
         case Node::DOCUMENT_NODE:
             // we don't want to cache the document itself in the per-document dictionary
-            return toJS(lexicalGlobalObject, globalObject, downcast<Document>(node.get()));
+            return toJS(lexicalGlobalObject, globalObject, uncheckedDowncast<Document>(node.get()));
         case Node::DOCUMENT_TYPE_NODE:
             wrapper = createWrapper<DocumentType>(globalObject, WTFMove(node));
             break;

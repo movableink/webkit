@@ -713,7 +713,7 @@ void VisiblePosition::showTreeForThis() const
 
 String VisiblePositionRange::debugDescription() const
 {
-    return makeString("start: ", start.debugDescription(), ", end: ", end.debugDescription());
+    return makeString("start: "_s, start.debugDescription(), ", end: "_s, end.debugDescription());
 }
 #endif // ENABLE(TREE_DEBUGGING)
 
@@ -837,7 +837,9 @@ VisiblePosition midpoint(const VisiblePositionRange& range)
     RefPtr rootNode = commonInclusiveAncestor(range);
     if (!rootNode)
         return { };
-    RefPtr rootContainerNode = rootNode->isContainerNode() ? downcast<ContainerNode>(WTFMove(rootNode)) : RefPtr { rootNode->parentNode() };
+    RefPtr rootContainerNode = dynamicDowncast<ContainerNode>(rootNode);
+    if (!rootContainerNode)
+        rootContainerNode = rootNode->parentNode();
     if (!rootContainerNode)
         return { };
     auto scope = makeRangeSelectingNodeContents(*rootContainerNode);

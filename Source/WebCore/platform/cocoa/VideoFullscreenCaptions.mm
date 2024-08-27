@@ -31,10 +31,15 @@
 #import <QuartzCore/CATransaction.h>
 
 namespace WebCore {
-    
+
+VideoFullscreenCaptions::~VideoFullscreenCaptions() = default;
+
 void VideoFullscreenCaptions::setTrackRepresentationImage(PlatformImagePtr textTrack)
 {
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
     [m_captionsLayer setContents:(__bridge id)textTrack.get()];
+    [CATransaction commit];
 }
 
 void VideoFullscreenCaptions::setTrackRepresentationContentsScale(float scale)
@@ -61,7 +66,7 @@ void VideoFullscreenCaptions::setCaptionsFrame(const CGRect& frame)
     [captionsLayer() setFrame:frame];
 }
 
-void VideoFullscreenCaptions::setupCaptionsLayer(CALayer* parent, const WebCore::FloatSize& initialSize)
+void VideoFullscreenCaptions::setupCaptionsLayer(CALayer *parent, const WebCore::FloatSize& initialSize)
 {
     [CATransaction begin];
     [CATransaction setDisableActions:YES];

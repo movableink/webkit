@@ -43,7 +43,7 @@ typedef NS_ENUM(NSInteger, _WKElementActionType) {
     _WKElementActionTypeOpen,
     _WKElementActionTypeCopy,
     _WKElementActionTypeSaveImage,
-#if !defined(TARGET_OS_IOS) || TARGET_OS_IOS
+#if TARGET_OS_IOS || (defined(TARGET_OS_VISION) && TARGET_OS_VISION)
     _WKElementActionTypeAddToReadingList,
     _WKElementActionTypeOpenInDefaultBrowser WK_API_AVAILABLE(ios(9.0)),
     _WKElementActionTypeOpenInExternalApplication WK_API_AVAILABLE(ios(9.0)),
@@ -76,6 +76,7 @@ WK_CLASS_AVAILABLE(macos(10.10), ios(8.0))
 
 @property (nonatomic, readonly) _WKElementActionType type;
 @property (nonatomic, readonly) NSString* title;
+@property (nonatomic, readonly) BOOL disabled;
 @property (nonatomic, copy) WKElementActionDismissalHandler dismissalHandler;
 
 @end

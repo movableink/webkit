@@ -46,7 +46,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(Worklet);
 
 Worklet::Worklet(Document& document)
     : ActiveDOMObject(&document)
-    , m_identifier("worklet:" + Inspector::IdentifiersFactory::createIdentifier())
+    , m_identifier(makeString("worklet:"_s, Inspector::IdentifiersFactory::createIdentifier()))
 {
 }
 
@@ -103,11 +103,6 @@ void Worklet::finishPendingTasks(WorkletPendingTasks& tasks)
     ASSERT(m_pendingTasksSet.contains(&tasks));
 
     m_pendingTasksSet.remove(&tasks);
-}
-
-const char* Worklet::activeDOMObjectName() const
-{
-    return "Worklet";
 }
 
 } // namespace WebCore

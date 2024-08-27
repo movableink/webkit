@@ -61,6 +61,7 @@ public:
     void strokePath(const Path&) final;
 
     void beginTransparencyLayer(float opacity) final;
+    void beginTransparencyLayer(CompositeOperator, BlendMode) final;
     void endTransparencyLayer() final;
 
     void applyDeviceScaleFactor(float factor) final;
@@ -69,6 +70,7 @@ public:
     void fillRect(const FloatRect&) final;
     void fillRect(const FloatRect&, const Color&) final;
     void fillRect(const FloatRect&, Gradient&) final;
+    void fillRect(const FloatRect&, Gradient&, const AffineTransform&) final;
     void fillRoundedRectImpl(const FloatRoundedRect&, const Color&) final;
     void fillRectWithRoundedHole(const FloatRect&, const FloatRoundedRect& roundedHoleRect, const Color&) final;
     void clearRect(const FloatRect&) final;
@@ -102,7 +104,7 @@ public:
     void setLineJoin(LineJoin) final;
     void setMiterLimit(float) final;
 
-    void drawNativeImageInternal(NativeImage&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions = { }) final;
+    void drawNativeImageInternal(NativeImage&, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions = { }) final;
     void drawSystemImage(SystemImage&, const FloatRect&) final;
     void drawPattern(NativeImage&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions = { }) final;
     ImageDrawResult drawImage(Image&, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions = { ImageOrientation::Orientation::FromImage }) final;
@@ -131,7 +133,7 @@ public:
     void drawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned numGlyphs, const FloatPoint&, FontSmoothingMode) final;
     void drawDecomposedGlyphs(const Font&, const DecomposedGlyphs&) final;
     void drawEmphasisMarks(const FontCascade&, const TextRun&, const AtomString& mark, const FloatPoint&, unsigned from = 0, std::optional<unsigned> to = std::nullopt) final;
-    void drawBidiText(const FontCascade&, const TextRun&, const FloatPoint&, FontCascade::CustomFontNotReadyAction = FontCascade::DoNotPaintIfFontNotReady) final;
+    void drawBidiText(const FontCascade&, const TextRun&, const FloatPoint&, FontCascade::CustomFontNotReadyAction = FontCascade::CustomFontNotReadyAction::DoNotPaintIfFontNotReady) final;
 
     void drawLinesForText(const FloatPoint&, float thickness, const DashArray& widths, bool printing, bool doubleLines, StrokeStyle) final;
 

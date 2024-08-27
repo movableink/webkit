@@ -26,7 +26,6 @@
 #include "config.h"
 #include "NetworkProcessConnection.h"
 
-#include "DataReference.h"
 #include "LibWebRTCNetwork.h"
 #include "Logging.h"
 #include "NetworkConnectionToWebProcessMessages.h"
@@ -124,7 +123,7 @@ void NetworkProcessConnection::didReceiveMessage(IPC::Connection& connection, IP
         WebProcess::singleton().fileSystemStorageConnection().didReceiveMessage(connection, decoder);
         return;
     }
-    if (decoder.messageReceiverName() == Messages::WebTransportSession::messageReceiverName()) {
+    if (decoder.messageReceiverName() == Messages::WebTransportSession::messageReceiverName() && WebProcess::singleton().isWebTransportEnabled()) {
         if (auto* webTransportSession = WebProcess::singleton().webTransportSession(WebTransportSessionIdentifier(decoder.destinationID())))
             webTransportSession->didReceiveMessage(connection, decoder);
         return;
@@ -276,6 +275,11 @@ void NetworkProcessConnection::allCookiesDeleted()
 }
 #endif
 
+void NetworkProcessConnection::updateCachedCookiesEnabled()
+{
+    WebProcess::singleton().updateCachedCookiesEnabled();
+}
+
 #if ENABLE(SHAREABLE_RESOURCE)
 void NetworkProcessConnection::didCacheResource(const ResourceRequest& request, ShareableResource::Handle&& handle)
 {
@@ -336,10 +340,5 @@ void NetworkProcessConnection::connectToRTCDataChannelRemoteSource(WebCore::RTCD
     callback(RTCDataChannelRemoteManager::sharedManager().connectToRemoteSource(localIdentifier, remoteIdentifier));
 }
 #endif
-
-void NetworkProcessConnection::addAllowedFirstPartyForCookies(WebCore::RegistrableDomain&& firstPartyForCookies)
-{
-    WebProcess::singleton().addAllowedFirstPartyForCookies(WTFMove(firstPartyForCookies));
-}
 
 } // namespace WebKit

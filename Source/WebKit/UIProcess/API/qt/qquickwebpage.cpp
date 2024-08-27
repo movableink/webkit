@@ -87,7 +87,7 @@ void QQuickWebPage::setContentsSize(const QSizeF& size)
 
     d->contentsSize = size;
     d->updateSize();
-    emit d->viewportItem->experimental()->test()->contentsSizeChanged();
+    Q_EMIT d->viewportItem->experimental()->test()->contentsSizeChanged();
 }
 
 const QSizeF& QQuickWebPage::contentsSize() const
@@ -100,7 +100,7 @@ void QQuickWebPage::setContentsScale(qreal scale)
     ASSERT(scale > 0);
     d->contentsScale = scale;
     d->updateSize();
-    emit d->viewportItem->experimental()->test()->contentsScaleChanged();
+    Q_EMIT d->viewportItem->experimental()->test()->contentsScaleChanged();
 }
 
 qreal QQuickWebPage::contentsScale() const

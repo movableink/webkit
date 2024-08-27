@@ -54,6 +54,8 @@ RenderMathMLRoot::RenderMathMLRoot(MathMLRootElement& element, RenderStyle&& sty
     ASSERT(isRenderMathMLRoot());
 }
 
+RenderMathMLRoot::~RenderMathMLRoot() = default;
+
 MathMLRootElement& RenderMathMLRoot::element() const
 {
     return static_cast<MathMLRootElement&>(nodeForNonAnonymous());
@@ -109,8 +111,8 @@ RenderMathMLRoot::HorizontalParameters RenderMathMLRoot::horizontalParameters()
         return parameters;
 
     // We try and read constants to draw the radical from the OpenType MATH and use fallback values otherwise.
-    const auto& primaryFont = style().fontCascade().primaryFont();
-    if (auto* mathData = style().fontCascade().primaryFont().mathData()) {
+    const Ref primaryFont = style().fontCascade().primaryFont();
+    if (RefPtr mathData = primaryFont->mathData()) {
         parameters.kernBeforeDegree = mathData->getMathConstant(primaryFont, OpenTypeMathData::RadicalKernBeforeDegree);
         parameters.kernAfterDegree = mathData->getMathConstant(primaryFont, OpenTypeMathData::RadicalKernAfterDegree);
     } else {
@@ -126,8 +128,8 @@ RenderMathMLRoot::VerticalParameters RenderMathMLRoot::verticalParameters()
 {
     VerticalParameters parameters;
     // We try and read constants to draw the radical from the OpenType MATH and use fallback values otherwise.
-    const auto& primaryFont = style().fontCascade().primaryFont();
-    if (auto* mathData = style().fontCascade().primaryFont().mathData()) {
+    const Ref primaryFont = style().fontCascade().primaryFont();
+    if (RefPtr mathData = primaryFont->mathData()) {
         parameters.ruleThickness = mathData->getMathConstant(primaryFont, OpenTypeMathData::RadicalRuleThickness);
         parameters.verticalGap = mathData->getMathConstant(primaryFont, style().mathStyle() == MathStyle::Normal ? OpenTypeMathData::RadicalDisplayStyleVerticalGap : OpenTypeMathData::RadicalVerticalGap);
         parameters.extraAscender = mathData->getMathConstant(primaryFont, OpenTypeMathData::RadicalExtraAscender);
@@ -141,7 +143,7 @@ RenderMathMLRoot::VerticalParameters RenderMathMLRoot::verticalParameters()
         // RadicalDegreeBottomRaisePercent: Suggested value is 60%.
         parameters.ruleThickness = ruleThicknessFallback();
         if (style().mathStyle() == MathStyle::Normal)
-            parameters.verticalGap = parameters.ruleThickness + style().metricsOfPrimaryFont().xHeight() / 4;
+            parameters.verticalGap = parameters.ruleThickness + style().metricsOfPrimaryFont().xHeight().value_or(0) / 4;
         else
             parameters.verticalGap = 5 * parameters.ruleThickness / 4;
 
@@ -272,7 +274,7 @@ void RenderMathMLRoot::paint(PaintInfo& info, const LayoutPoint& paintOffset)
 {
     RenderMathMLRow::paint(info, paintOffset);
 
-    if (!firstChild() || info.context().paintingDisabled() || style().visibility() != Visibility::Visible || !isValid())
+    if (!firstChild() || info.context().paintingDisabled() || style().usedVisibility() != Visibility::Visible || !isValid())
         return;
 
     // We draw the radical operator.

@@ -48,13 +48,18 @@
 #import <wtf/WeakObjCPtr.h>
 #import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 
+#if ENABLE(WK_WEB_EXTENSIONS) && ENABLE(INSPECTOR_EXTENSIONS)
+#import "WebExtensionController.h"
+#import "_WKWebExtensionController.h"
+#endif
+
 static NSString * const WKInspectorResourceScheme = @"inspector-resource";
 
 @interface WKInspectorViewController () <WKUIDelegate, WKNavigationDelegate, WKInspectorWKWebViewDelegate>
 @end
 
 @implementation WKInspectorViewController {
-    CheckedPtr<WebKit::WebPageProxy> _inspectedPage;
+    WeakPtr<WebKit::WebPageProxy> _inspectedPage;
     RetainPtr<WKInspectorWKWebView> _webView;
     WeakObjCPtr<id <WKInspectorViewControllerDelegate>> _delegate;
     RetainPtr<_WKInspectorConfiguration> _configuration;
@@ -68,7 +73,7 @@ static NSString * const WKInspectorResourceScheme = @"inspector-resource";
     _configuration = adoptNS([configuration copy]);
 
     // The (local) inspected page is nil if the controller is hosting a Remote Web Inspector view.
-    _inspectedPage = inspectedPage;
+    _inspectedPage = inspectedPage.get();
 
     return self;
 }
@@ -123,6 +128,13 @@ static NSString * const WKInspectorResourceScheme = @"inspector-resource";
 
     [inspectorSchemeHandler setAllowedURLSchemesForCSP:allowedURLSchemes.get()];
     [configuration setURLSchemeHandler:inspectorSchemeHandler.get() forURLScheme:WKInspectorResourceScheme];
+
+#if ENABLE(WK_WEB_EXTENSIONS) && ENABLE(INSPECTOR_EXTENSIONS)
+    if (RefPtr page = _inspectedPage.get()) {
+        if (RefPtr webExtensionController = page->webExtensionController())
+            configuration.get()._webExtensionController = webExtensionController->wrapper();
+    }
+#endif
 
     WKPreferences *preferences = configuration.get().preferences;
     preferences._allowFileAccessFromFileURLs = YES;

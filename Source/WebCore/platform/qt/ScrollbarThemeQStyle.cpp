@@ -41,7 +41,7 @@ namespace WebCore {
 
 ScrollbarThemeQStyle::ScrollbarThemeQStyle()
 {
-    m_qStyle = std::unique_ptr<QStyleFacade>(RenderThemeQStyle::styleFactory()(/*page*/ 0));
+    m_qStyle = std::unique_ptr<QStyleFacade>(RenderThemeQStyle::styleFactory()());
 }
 
 ScrollbarThemeQStyle::~ScrollbarThemeQStyle()

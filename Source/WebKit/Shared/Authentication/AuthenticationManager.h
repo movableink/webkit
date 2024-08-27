@@ -34,11 +34,19 @@
 #include <WebCore/AuthenticationChallenge.h>
 #include <WebCore/FrameIdentifier.h>
 #include <WebCore/PageIdentifier.h>
-#include <wtf/CheckedRef.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/WeakPtr.h>
+
+namespace WebKit {
+class AuthenticationManager;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebKit::AuthenticationManager> : std::true_type { };
+}
 
 namespace IPC {
 class MessageSender;
@@ -71,9 +79,9 @@ public:
     explicit AuthenticationManager(NetworkProcess&);
     ~AuthenticationManager();
 
-    static const char* supplementName();
+    static ASCIILiteral supplementName();
 
-    void didReceiveAuthenticationChallenge(PAL::SessionID, WebPageProxyIdentifier, const WebCore::SecurityOriginData* , const WebCore::AuthenticationChallenge&, NegotiatedLegacyTLS, ChallengeCompletionHandler&&);
+    void didReceiveAuthenticationChallenge(PAL::SessionID, WebPageProxyIdentifier, const WebCore::SecurityOriginData*, const WebCore::AuthenticationChallenge&, NegotiatedLegacyTLS, ChallengeCompletionHandler&&);
     void didReceiveAuthenticationChallenge(IPC::MessageSender& download, const WebCore::AuthenticationChallenge&, ChallengeCompletionHandler&&);
 
     void completeAuthenticationChallenge(AuthenticationChallengeIdentifier, AuthenticationChallengeDisposition, WebCore::Credential&&);
@@ -81,7 +89,7 @@ public:
     void negotiatedLegacyTLS(WebPageProxyIdentifier) const;
 
 private:
-    CheckedRef<NetworkProcess> checkedProcess() const;
+    Ref<NetworkProcess> protectedProcess() const;
     struct Challenge {
         WTF_MAKE_STRUCT_FAST_ALLOCATED;
         Challenge(WebPageProxyIdentifier pageID, const WebCore::AuthenticationChallenge& challenge, ChallengeCompletionHandler&& completionHandler)
@@ -107,7 +115,7 @@ private:
 
     Vector<AuthenticationChallengeIdentifier> coalesceChallengesMatching(AuthenticationChallengeIdentifier) const;
 
-    CheckedRef<NetworkProcess> m_process;
+    WeakRef<NetworkProcess> m_process;
 
     HashMap<AuthenticationChallengeIdentifier, UniqueRef<Challenge>> m_challenges;
 };

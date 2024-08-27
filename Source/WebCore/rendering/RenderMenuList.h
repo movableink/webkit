@@ -41,6 +41,7 @@ class RenderText;
 
 class RenderMenuList final : public RenderFlexibleBox, private PopupMenuClient {
     WTF_MAKE_ISO_ALLOCATED(RenderMenuList);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderMenuList);
 public:
     RenderMenuList(HTMLSelectElement&, RenderStyle&&);
     virtual ~RenderMenuList();
@@ -111,7 +112,6 @@ private:
     bool itemIsLabel(unsigned listIndex) const override;
     bool itemIsSelected(unsigned listIndex) const override;
     bool shouldPopOver() const override { return !POPUP_MENU_PULLS_DOWN; }
-    bool valueShouldChangeOnHotTrack() const override { return true; }
     void setTextFromItem(unsigned listIndex) override;
     void listBoxSelectItem(int listIndex, bool allowMultiplySelections, bool shift, bool fireOnChangeNow = true) override;
     bool multiple() const override;

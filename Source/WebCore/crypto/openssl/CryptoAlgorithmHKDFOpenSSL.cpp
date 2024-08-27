@@ -26,8 +26,6 @@
 #include "config.h"
 #include "CryptoAlgorithmHKDF.h"
 
-#if ENABLE(WEB_CRYPTO)
-
 #include "CryptoAlgorithmHkdfParams.h"
 #include "CryptoKeyRaw.h"
 #include "OpenSSLUtilities.h"
@@ -35,7 +33,7 @@
 
 namespace WebCore {
 
-ExceptionOr<Vector<uint8_t>> CryptoAlgorithmHKDF::platformDeriveBits(const CryptoAlgorithmHkdfParams& parameters, const CryptoKeyRaw& key, size_t length)
+ExceptionOr<Vector<uint8_t>> CryptoAlgorithmHKDF::platformDeriveBits(const CryptoAlgorithmHkdfParams& parameters, const CryptoKeyRaw& key, size_t length, UseCryptoKit)
 {
     auto algorithm = digestAlgorithm(parameters.hashIdentifier);
     if (!algorithm)
@@ -49,5 +47,3 @@ ExceptionOr<Vector<uint8_t>> CryptoAlgorithmHKDF::platformDeriveBits(const Crypt
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(WEB_CRYPTO)

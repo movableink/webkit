@@ -145,11 +145,12 @@ Ref<const Shape> makeShapeForShapeOutside(const RenderBox& renderer)
     case ShapeValue::Type::Image: {
         ASSERT(shapeValue.isImageValid());
         auto* styleImage = shapeValue.image();
-        auto imageSize = renderer.calculateImageIntrinsicDimensions(styleImage, boxSize, RenderImage::ScaleByEffectiveZoom);
-        styleImage->setContainerContextForRenderer(renderer, imageSize, style.effectiveZoom());
+        auto imageSize = renderer.calculateImageIntrinsicDimensions(styleImage, boxSize, RenderImage::ScaleByUsedZoom::Yes);
+        styleImage->setContainerContextForRenderer(renderer, imageSize, style.usedZoom());
 
         auto marginRect = getShapeImageMarginRect(renderer, boxSize);
-        auto imageRect = is<RenderImage>(renderer) ? downcast<RenderImage>(renderer).replacedContentRect() : LayoutRect { { }, imageSize };
+        auto* renderImage = dynamicDowncast<RenderImage>(renderer);
+        auto imageRect = renderImage ? renderImage->replacedContentRect() : LayoutRect { { }, imageSize };
 
         ASSERT(!styleImage->isPending());
         RefPtr<Image> image = styleImage->image(const_cast<RenderBox*>(&renderer), imageSize);
@@ -178,7 +179,7 @@ static inline bool checkShapeImageOrigin(Document& document, const StyleImage& s
 
     const URL& url = cachedImage.url();
     String urlString = url.isNull() ? "''"_s : url.stringCenterEllipsizedToLength();
-    document.addConsoleMessage(MessageSource::Security, MessageLevel::Error, "Unsafe attempt to load URL " + urlString + ".");
+    document.addConsoleMessage(MessageSource::Security, MessageLevel::Error, makeString("Unsafe attempt to load URL "_s, urlString, '.'));
 
     return false;
 }

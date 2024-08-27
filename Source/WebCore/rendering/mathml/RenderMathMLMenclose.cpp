@@ -54,6 +54,8 @@ RenderMathMLMenclose::RenderMathMLMenclose(MathMLMencloseElement& element, Rende
     ASSERT(isRenderMathMLMenclose());
 }
 
+RenderMathMLMenclose::~RenderMathMLMenclose() = default;
+
 // This arbitrary thickness value is used for the parameter \xi_8 from the MathML in HTML5 implementation note.
 // For now, we take:
 // - OverbarVerticalGap = UnderbarVerticalGap = 3\xi_8
@@ -213,7 +215,7 @@ void RenderMathMLMenclose::paint(PaintInfo& info, const LayoutPoint& paintOffset
 {
     RenderMathMLRow::paint(info, paintOffset);
 
-    if (info.context().paintingDisabled() || info.phase != PaintPhase::Foreground || style().visibility() != Visibility::Visible)
+    if (info.context().paintingDisabled() || info.phase != PaintPhase::Foreground || style().usedVisibility() != Visibility::Visible)
         return;
 
     LayoutUnit thickness = ruleThickness();

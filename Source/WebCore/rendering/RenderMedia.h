@@ -34,6 +34,7 @@ namespace WebCore {
 
 class RenderMedia : public RenderImage {
     WTF_MAKE_ISO_ALLOCATED(RenderMedia);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderMedia);
 public:
     RenderMedia(Type, HTMLMediaElement&, RenderStyle&&);
     RenderMedia(Type, HTMLMediaElement&, RenderStyle&&, const IntSize& intrinsicSize);
@@ -55,7 +56,6 @@ private:
     bool canHaveChildren() const final { return true; }
 
     ASCIILiteral renderName() const override { return "RenderMedia"_s; }
-    bool isRenderMedia() const final { return true; }
     bool isImage() const final { return false; }
     void paintReplaced(PaintInfo&, const LayoutPoint&) override;
 };

@@ -45,6 +45,7 @@ class Tracker(GenericTracker):
         re.compile(r'<?radar://problem/(?P<id>\d+)>?'),
         re.compile(r'<?rdar:\/\/(?P<id>\d+)>?'),
         re.compile(r'<?radar:\/\/(?P<id>\d+)>?'),
+        re.compile(r'<?https:\/\/rdar\.apple\.com\/(?P<id>\d+)>?'),
     ]
 
     OTHER_BUG = 'Other Bug'
@@ -70,6 +71,8 @@ class Tracker(GenericTracker):
         ENHANCEMENT,
         TASK
     ]
+
+    RELATIONSHIP_TYPES = ['related-to', 'blocked-by', 'blocking', 'parent-of', 'subtask-of', 'cause-of', 'caused-by', 'duplicate-of', 'original-of', 'clone-of', 'cloned-to']
 
     ALWAYS = 'Always'
     SOMETIMES = 'Sometimes'
@@ -102,6 +105,16 @@ class Tracker(GenericTracker):
             return radarclient
         except ImportError:
             return None
+
+    def handle_access_exception(func):
+        def try_func(self, *args, **kwargs):
+            try:
+                return func(self, *args, **kwargs)
+            except self.radarclient().exceptions.RadarAccessDeniedResponseException as e:
+                sys.stderr.write(f'{e.code} Permission Denied\n')
+                sys.stderr.write(f'{e.reason}\n')
+                sys.exit(1)
+        return try_func
 
     def __init__(self, users=None, authentication=None, project=None, projects=None, redact=None, hide_title=None, redact_exemption=None):
         hide_title = True if hide_title is None else hide_title
@@ -184,6 +197,7 @@ class Tracker(GenericTracker):
     def issue(self, id):
         return Issue(id=int(id), tracker=self)
 
+    @handle_access_exception
     def populate(self, issue, member=None):
         issue._link = 'rdar://{}'.format(issue.id)
         issue._labels = []
@@ -194,13 +208,17 @@ class Tracker(GenericTracker):
         if not member or member == 'labels':
             return issue
 
-        radar = self.client.radar_for_id(issue.id)
+        additional_fields = []
+        if member == 'source_changes':
+            additional_fields.append('sourceChanges')
+        radar = self.client.radar_for_id(issue.id, additional_fields=additional_fields)
         if not radar:
             sys.stderr.write("Failed to fetch '{}'\n".format(issue.link))
             return issue
 
         issue._title = radar.title
         issue._timestamp = int(calendar.timegm(radar.createdAt.timetuple()))
+        issue._modified = int(calendar.timegm(radar.lastModifiedAt.timetuple()))
         issue._assignee = self.user(
             name='{} {}'.format(radar.assignee.firstName, radar.assignee.lastName),
             username=radar.assignee.dsid,
@@ -216,6 +234,11 @@ class Tracker(GenericTracker):
             email=radar.originator.email,
         )
         issue._milestone = radar.milestone.name if radar.milestone else ''
+
+        if member == 'source_changes':
+            issue._source_changes = []
+            if radar.sourceChanges is not None:
+                issue._source_changes = radar.sourceChanges.splitlines()
 
         if member == 'keywords':
             issue._keywords = [kw.name for kw in (radar.keywords() or [])]
@@ -280,16 +303,25 @@ class Tracker(GenericTracker):
                 if r.related_radar:
                     issue._duplicates.append(self.issue(r.related_radar.id))
 
+        if member == 'related':
+            issue._related = {r: [] for r in self.RELATIONSHIP_TYPES}
+            for r in radar.relationships():
+                issue._related[r.type].append(self.issue(r.related_radar_id))
+
         return issue
 
-    def set(self, issue, assignee=None, opened=None, why=None, project=None, component=None, version=None, original=None, keywords=None, **properties):
+    @handle_access_exception
+    def set(self, issue, assignee=None, opened=None, why=None, project=None, component=None, version=None, original=None, keywords=None, source_changes=None, **properties):
         if not self.client or not self.library:
             sys.stderr.write('radarclient inaccessible on this machine\n')
             return None
         if properties:
             raise TypeError("'{}' is an invalid property".format(list(properties.keys())[0]))
 
-        radar = self.client.radar_for_id(issue.id)
+        additional_fields = []
+        if source_changes:
+            additional_fields.append('sourceChanges')
+        radar = self.client.radar_for_id(issue.id, additional_fields=additional_fields)
         if not radar:
             sys.stderr.write("Failed to fetch '{}'\n".format(issue.link))
             return None
@@ -382,10 +414,15 @@ class Tracker(GenericTracker):
             did_change = True
             issue._keywords = keywords
 
+        if source_changes:
+            did_change = True
+            radar.sourceChanges = '\n'.join(source_changes)
+
         if did_change:
             radar.commit_changes()
         return self.add_comment(issue, why) if why else issue
 
+    @handle_access_exception
     def add_comment(self, issue, text):
         if not self.client or not self.library:
             sys.stderr.write('radarclient inaccessible on this machine\n')
@@ -412,8 +449,84 @@ class Tracker(GenericTracker):
 
         return result
 
+    @handle_access_exception
+    def create_relationship(self, issue, issue2, relationship):
+        if relationship not in self.RELATIONSHIP_TYPES:
+            sys.stderr.write('{} is not a valid relationship type.'.format(relationship))
+            return None
+
+        radar = self.client.radar_for_id(issue.id)
+        if not radar:
+            sys.stderr.write("Failed to fetch '{}'\n".format(issue.link))
+            return None
+
+        radar2 = self.client.radar_for_id(issue2.id)
+        if not radar2:
+            sys.stderr.write("Failed to fetch '{}'\n".format(issue2.link))
+            return None
+
+        if relationship == self.radarclient().Relationship.TYPE_DUPLICATE_OF:
+            radar.state = 'Verify'
+            radar.resolution = 'Duplicate'
+            radar.duplicateOfProblemID = issue2.id
+            issue._original = issue2
+            radar.commit_changes()
+        elif relationship == self.radarclient().Relationship.TYPE_ORIGINAL_OF:
+            radar2 = self.client.radar_for_id(issue2.id)
+            radar2.state = 'Verify'
+            radar2.resolution = 'Duplicate'
+            radar2.duplicateOfProblemID = issue.id
+            issue2._original = issue
+            radar2.commit_changes()
+        else:
+            new_relationship = self.radarclient().Relationship(relationship, radar, radar2)
+            radar.add_relationship(new_relationship)
+            radar.commit_changes()
+
+        if not issue._related:
+            self.populate(issue, 'related')
+        else:
+            issue._related[relationship].append(issue2)
+
+        return None
+
+    @handle_access_exception
+    def relate(self, issue, related_to=None, blocked_by=None, blocking=None, parent_of=None, subtask_of=None,
+               cause_of=None, caused_by=None, duplicate_of=None, original_of=None, **relations):
+        if relations:
+            raise TypeError("'{}' is an invalid relation".format(list(relations.keys())[0]))
+
+        if not self.client or not self.library:
+            sys.stderr.write('radarclient inaccessible on this machine\n')
+            return None
+
+        try:
+            if related_to:
+                self.create_relationship(issue, related_to, self.radarclient().Relationship.TYPE_RELATED_TO)
+            if blocked_by:
+                self.create_relationship(issue, blocked_by, self.radarclient().Relationship.TYPE_BLOCKED_BY)
+            if blocking:
+                self.create_relationship(issue, blocking, self.radarclient().Relationship.TYPE_BLOCKING)
+            if parent_of:
+                self.create_relationship(issue, parent_of, self.radarclient().Relationship.TYPE_PARENT_OF)
+            if subtask_of:
+                self.create_relationship(issue, subtask_of, self.radarclient().Relationship.TYPE_SUBTASK_OF)
+            if cause_of:
+                self.create_relationship(issue, cause_of, self.radarclient().Relationship.TYPE_CAUSE_OF)
+            if caused_by:
+                self.create_relationship(issue, caused_by, self.radarclient().Relationship.TYPE_CAUSED_BY)
+            if duplicate_of:
+                self.create_relationship(issue, duplicate_of, self.radarclient().Relationship.TYPE_DUPLICATE_OF)
+            if original_of:
+                self.create_relationship(issue, original_of, self.radarclient().Relationship.TYPE_ORIGINAL_OF)
+        except AttributeError:
+            raise AttributeError('Input should be Issue objects.')
+
+        return issue
+
     @property
     @webkitcorepy.decorators.Memoize()
+    @handle_access_exception
     def projects(self):
         result = dict()
         for project in self._projects:
@@ -437,6 +550,7 @@ class Tracker(GenericTracker):
                 result[project]['components'][name]['versions'].append(component.version)
         return result
 
+    @handle_access_exception
     def create(
         self, title, description,
         project=None, component=None, version=None,
@@ -517,6 +631,7 @@ class Tracker(GenericTracker):
         # cc-ing radar is a no-op for radar
         return issue
 
+    @handle_access_exception
     def clone(
         self, issue, reason,
         project=None, component=None, version=None,
@@ -548,7 +663,7 @@ class Tracker(GenericTracker):
             result.assign(self.me())
         return result
 
-    # FIXME: This function is untested because it doesn't have a mock.
+    @handle_access_exception
     def search(self, query):
         if not query or len(query) == 0:
             raise ValueError('Query must be provided')

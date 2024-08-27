@@ -92,7 +92,7 @@ void TestBrowserCookieJar::extractRawCookies()
     QList<QNetworkCookie> cookies = allCookies();
     m_rawCookies.clear();
 
-    foreach (const QNetworkCookie &cookie, cookies) {
+    Q_FOREACH (const QNetworkCookie &cookie, cookies) {
         if (!cookie.isSessionCookie())
             m_rawCookies.append(cookie.toRawForm());
     }
@@ -104,7 +104,7 @@ void TestBrowserCookieJar::saveToDisk()
 
     if (m_file.open(QIODevice::WriteOnly | QIODevice::Text)) {
         QTextStream out(&m_file);
-        foreach (const QByteArray &cookie, m_rawCookies)
+        Q_FOREACH (const QByteArray &cookie, m_rawCookies)
             out << cookie + "\n";
         m_file.close();
     } else

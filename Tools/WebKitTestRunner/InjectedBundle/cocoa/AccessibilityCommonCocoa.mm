@@ -63,20 +63,15 @@ Class webAccessibilityObjectWrapperClass()
     return cls;
 }
 
-static JSObjectRef makeJSArray(JSContextRef context, NSArray *array)
+JSObjectRef makeJSArray(JSContextRef context, NSArray *array)
 {
     NSUInteger count = array.count;
+IGNORE_WARNINGS_BEGIN("vla")
     JSValueRef arguments[count];
+IGNORE_WARNINGS_END
     for (NSUInteger i = 0; i < count; i++)
         arguments[i] = makeValueRefForValue(context, [array objectAtIndex:i]);
     return JSObjectMakeArray(context, count, arguments, nullptr);
-}
-
-JSObjectRef makeJSArray(NSArray *array)
-{
-    WKBundleFrameRef mainFrame = WKBundlePageGetMainFrame(InjectedBundle::singleton().page()->page());
-    JSContextRef context = WKBundleFrameGetJavaScriptContext(mainFrame);
-    return makeJSArray(context, array);
 }
 
 static JSObjectRef makeJSObject(JSContextRef context, NSDictionary *dictionary)

@@ -311,8 +311,8 @@ void Scrollbar::moveThumb(int pos, bool draggingDocument)
         delta = std::max(-thumbPos, delta);
     
     if (delta) {
-        float newPosition = static_cast<float>(thumbPos + delta) * maximum() / (trackLen - thumbLen);
-        m_scrollableArea.scrollToOffsetWithoutAnimation(m_orientation, newPosition);
+        float newOffset = static_cast<float>(thumbPos + delta) * maximum() / (trackLen - thumbLen);
+        m_scrollableArea.scrollToOffsetWithoutAnimation(m_orientation, newOffset);
     }
 }
 
@@ -567,6 +567,14 @@ bool Scrollbar::shouldRegisterScrollbar() const
 int Scrollbar::minimumThumbLength() const
 {
     return m_scrollableArea.scrollbarsController().minimumThumbLength(m_orientation);
+}
+
+void Scrollbar::updateScrollbarThickness()
+{
+    if (!isCustomScrollbar()) {
+        int thickness = ScrollbarTheme::theme().scrollbarThickness(widthStyle());
+        setFrameRect(IntRect(0, 0, thickness, thickness));
+    }
 }
 
 } // namespace WebCore

@@ -64,7 +64,7 @@ class ProgramPipelineState final : angle::NonCopyable
     const Program *getShaderProgram(ShaderType shaderType) const { return mPrograms[shaderType]; }
     const SharedProgramExecutable &getShaderProgramExecutable(ShaderType shaderType) const
     {
-        return mProgramExecutables[shaderType];
+        return mExecutable->mPPOProgramExecutables[shaderType];
     }
 
     bool usesShaderProgram(ShaderProgramID program) const;
@@ -74,6 +74,9 @@ class ProgramPipelineState final : angle::NonCopyable
     void updateExecutableSpecConstUsageBits();
 
   private:
+    SharedProgramExecutable makeNewExecutable(
+        rx::GLImplFactory *factory,
+        ShaderMap<SharedProgramExecutable> &&ppoProgramExecutables);
     void useProgramStage(const Context *context,
                          ShaderType shaderType,
                          Program *shaderProgram,
@@ -90,21 +93,12 @@ class ProgramPipelineState final : angle::NonCopyable
     // The shader programs for each stage.
     ShaderMap<Program *> mPrograms;
 
-    // Installed executables from the programs.  Note that these may be different from the programs'
-    // current executables, because they may have been unsuccessfully relinked.
-    ShaderMap<SharedProgramExecutable> mProgramExecutables;
+    // Mapping from program's UBOs into the program executable's UBOs.
+    ShaderMap<ProgramUniformBlockArray<GLuint>> mUniformBlockMap;
 
     // A list of executables to be garbage collected.  This is populated as the pipeline is
     // notified about program relinks, but cannot immediately destroy the old executables due to
     // lack of access to context.
-    //
-    // TODO: add a test where program is bound to PPO.  Then Program is linked successfully, then
-    // again linked unsuccessfully.  Using the PPO should use the executable from the successful
-    // link.
-    //
-    // TODO: add a test where program is bound to PPO.  Then Program is linked successfully 2x, then
-    // again linked unsuccessfully.  Using the PPO should use the executable from the second
-    // successful link.  This is to make sure we can support discarding an existing
     std::vector<SharedProgramExecutable> mProgramExecutablesToDiscard;
 
     GLboolean mValid;
@@ -173,8 +167,6 @@ class ProgramPipeline final : public RefCountObject<ProgramPipelineID>,
     int getInfoLogLength() const;
     void getInfoLog(GLsizei bufSize, GLsizei *length, char *infoLog) const;
 
-    angle::Result syncState(const Context *context);
-
     // Ensure program pipeline is linked. Inlined to make sure its overhead is as low as possible.
     void resolveLink(const Context *context)
     {
@@ -199,7 +191,6 @@ class ProgramPipeline final : public RefCountObject<ProgramPipelineID>,
     GLboolean isValid() const { return mState.isValid(); }
     bool isLinked() const { return mState.mIsLinked; }
 
-    void onUniformBufferStateChange(size_t uniformBufferIndex);
     // ObserverInterface implementation.
     void onSubjectStateChange(angle::SubjectIndex index, angle::SubjectMessage message) override;
 
@@ -222,7 +213,6 @@ class ProgramPipeline final : public RefCountObject<ProgramPipelineID>,
 
     std::vector<angle::ObserverBinding> mProgramObserverBindings;
     std::vector<angle::ObserverBinding> mProgramExecutableObserverBindings;
-    angle::ObserverBinding mExecutableObserverBinding;
 };
 }  // namespace gl
 

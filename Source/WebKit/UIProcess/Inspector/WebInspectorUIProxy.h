@@ -165,7 +165,7 @@ public:
 
     void showConsole();
     void showResources();
-    void showMainResourceForFrame(WebFrameProxy*);
+    void showMainResourceForFrame(WebCore::FrameIdentifier);
     void openURLExternally(const String& url);
     void revealFileExternally(const String& path);
 
@@ -264,6 +264,7 @@ private:
     void bringInspectedPageToFront();
     void attachAvailabilityChanged(bool);
     void setForcedAppearance(WebCore::InspectorFrontendClient::Appearance);
+    void effectiveAppearanceDidChange(WebCore::InspectorFrontendClient::Appearance);
     void inspectedURLChanged(const String&);
     void showCertificate(const WebCore::CertificateInfo&);
     void setInspectorPageDeveloperExtrasEnabled(bool);
@@ -302,8 +303,8 @@ private:
     void windowReceivedMessage(HWND, UINT, WPARAM, LPARAM) override;
 #endif
 
-    CheckedPtr<WebPageProxy> m_inspectedPage;
-    CheckedPtr<WebPageProxy> m_inspectorPage;
+    WeakPtr<WebPageProxy> m_inspectedPage;
+    WeakPtr<WebPageProxy> m_inspectorPage;
     std::unique_ptr<API::InspectorClient> m_inspectorClient;
     WebPageProxyIdentifier m_inspectedPageIdentifier;
 

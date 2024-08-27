@@ -27,6 +27,7 @@
 
 #import "HTTPServer.h"
 #import "PlatformUtilities.h"
+#import "TestCocoa.h"
 #import "TestNavigationDelegate.h"
 #import "TestProtocol.h"
 #import "TestUIDelegate.h"
@@ -40,15 +41,56 @@
 #import <wtf/Function.h>
 #import <wtf/RetainPtr.h>
 
+#if ENABLE(WK_WEB_EXTENSIONS)
+#import <WebKit/_WKWebExtensionController.h>
+#import <WebKit/_WKWebExtensionMatchPattern.h>
+#endif
+
+@interface SubclassWebViewConfiguration : WKWebViewConfiguration {
+    RetainPtr<NSString> _subclassData;
+}
+@end
+
+@implementation SubclassWebViewConfiguration
+
+- (NSString *)subclassData
+{
+    return _subclassData.get();
+}
+
+- (void)setSubclassData:(NSString *)data
+{
+    _subclassData = data;
+}
+
+- (id)copyWithZone:(NSZone *)zone
+{
+    id copy = [super copyWithZone:zone];
+    [copy setSubclassData:@"copied"];
+    return copy;
+}
+
+@end
+
+TEST(WebKit, ConfigurationSubclass)
+{
+    auto configuration = adoptNS([SubclassWebViewConfiguration new]);
+    [configuration setSubclassData:@"original"];
+    EXPECT_WK_STREQ([configuration subclassData], "original");
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
+    EXPECT_WK_STREQ([(SubclassWebViewConfiguration *)[webView configuration] subclassData], "copied");
+}
+
 TEST(WebKit, InvalidConfiguration)
 {
-    auto shouldThrowExceptionWhenUsed = [](Function<void(WKWebViewConfiguration *)>&& modifier) {
+    auto shouldThrowExceptionWhenUsed = [](Function<void(WKWebViewConfiguration *)>&& modifier, bool expectException) {
         @try {
             auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
             modifier(configuration.get());
             auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
-            EXPECT_TRUE(false);
+            EXPECT_FALSE(expectException);
         } @catch (NSException *exception) {
+            EXPECT_TRUE(expectException);
             EXPECT_WK_STREQ(NSInvalidArgumentException, exception.name);
         }
     };
@@ -56,19 +98,19 @@ TEST(WebKit, InvalidConfiguration)
     IGNORE_NULL_CHECK_WARNINGS_BEGIN
     shouldThrowExceptionWhenUsed([](WKWebViewConfiguration *configuration) {
         [configuration setProcessPool:nil];
-    });
+    }, false);
     shouldThrowExceptionWhenUsed([](WKWebViewConfiguration *configuration) {
         [configuration setPreferences:nil];
-    });
+    }, false);
     shouldThrowExceptionWhenUsed([](WKWebViewConfiguration *configuration) {
         [configuration setUserContentController:nil];
-    });
+    }, false);
     shouldThrowExceptionWhenUsed([](WKWebViewConfiguration *configuration) {
         [configuration setWebsiteDataStore:nil];
-    });
+    }, false);
     shouldThrowExceptionWhenUsed([](WKWebViewConfiguration *configuration) {
         [configuration _setVisitedLinkStore:nil];
-    });
+    }, false);
     IGNORE_NULL_CHECK_WARNINGS_END
 
     // Related WebViews cannot use different data stores.
@@ -77,7 +119,7 @@ TEST(WebKit, InvalidConfiguration)
     auto ephemeralWebView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configurationForEphemeralView.get()]);
     shouldThrowExceptionWhenUsed([&](WKWebViewConfiguration *configuration) {
         [configuration _setRelatedWebView:ephemeralWebView.get()];
-    });
+    }, true);
 }
 
 TEST(WebKit, ConfigurationGroupIdentifierIsCopied)
@@ -203,9 +245,28 @@ TEST(WebKit, ConfigurationMaskedURLSchemes)
     [TestProtocol registerWithScheme:@"https"];
 
     auto configuration = adoptNS([WKWebViewConfiguration new]);
-    EXPECT_EQ([configuration _maskedURLSchemes].count, 0U);
+
+    EXPECT_NS_EQUAL([configuration _maskedURLSchemes], [NSSet set]);
+
+#if ENABLE(WK_WEB_EXTENSIONS)
+    auto extensionController = adoptNS([[_WKWebExtensionController alloc] init]);
+    [configuration _setWebExtensionController:extensionController.get()];
+
+    EXPECT_NS_EQUAL([configuration _maskedURLSchemes], [NSSet setWithObject:@"webkit-extension"]);
+
+    [_WKWebExtensionMatchPattern registerCustomURLScheme:@"test-scheme"];
+
+    EXPECT_NS_EQUAL([configuration _maskedURLSchemes], ([NSSet setWithObjects:@"webkit-extension", @"test-scheme", nil]));
+#endif
+
+    [configuration _setMaskedURLSchemes:[NSSet setWithObject:@"test-scheme"]];
+    EXPECT_NS_EQUAL([configuration _maskedURLSchemes], [NSSet setWithObject:@"test-scheme"]);
+
+    [configuration _setMaskedURLSchemes:[NSSet set]];
+    EXPECT_NS_EQUAL([configuration _maskedURLSchemes], [NSSet set]);
 
     [configuration _setMaskedURLSchemes:[NSSet setWithObjects:@"test-scheme", @"another-scheme", nil]];
+    EXPECT_NS_EQUAL([configuration _maskedURLSchemes], ([NSSet setWithObjects:@"test-scheme", @"another-scheme", nil]));
 
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 100, 100) configuration:configuration.get()]);
     auto delegate = adoptNS([TestUIDelegate new]);
@@ -277,14 +338,14 @@ TEST(WebKit, ConfigurationMaskedURLSchemes)
 
     [[webView configuration].userContentController _addUserScriptImmediately:userScript.get()];
 
-    EXPECT_WK_STREQ([delegate waitForAlert], "global code@webkit-masked-url://hidden/:1:17");
+    EXPECT_WK_STREQ([delegate waitForAlert], "global code@webkit-masked-url://hidden/:1:8");
 
     scriptURL = [NSURL URLWithString:@"https://example.com/foo.js"];
     userScript = adoptNS([[WKUserScript alloc] _initWithSource:@"alert((new Error).stack)" injectionTime:WKUserScriptInjectionTimeAtDocumentStart forMainFrameOnly:YES includeMatchPatternStrings:@[] excludeMatchPatternStrings:@[] associatedURL:scriptURL contentWorld:nil deferRunningUntilNotification:NO]);
 
     [[webView configuration].userContentController _addUserScriptImmediately:userScript.get()];
 
-    EXPECT_WK_STREQ([delegate waitForAlert], "global code@https://example.com/foo.js:1:17");
+    EXPECT_WK_STREQ([delegate waitForAlert], "global code@https://example.com/foo.js:1:8");
 }
 
 TEST(WebKit, ConfigurationWebViewToCloneSessionStorageFrom)

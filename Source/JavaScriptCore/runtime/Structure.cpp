@@ -130,6 +130,13 @@ void Structure::dumpStatistics()
 #if ASSERT_ENABLED
 void Structure::validateFlags()
 {
+    bool hasStaticPropertyTable = false;
+    for (const ClassInfo* ci = classInfoForCells(); ci; ci = ci->parentClass) {
+        if (ci->staticPropHashTable)
+            hasStaticPropertyTable = true;
+    }
+    RELEASE_ASSERT(hasStaticPropertyTable == typeInfo().hasStaticPropertyTable());
+
     const MethodTable& methodTable = m_classInfo->methodTable;
 
     bool overridesGetCallData = methodTable.getCallData != JSCell::getCallData;
@@ -192,12 +199,14 @@ Structure::Structure(VM& vm, JSGlobalObject* globalObject, JSValue prototype, co
     , m_classInfo(classInfo)
     , m_transitionWatchpointSet(IsWatched)
 {
+    bool hasStaticNonEnumerableProperty = m_classInfo->hasStaticPropertyWithAnyOfAttributes(static_cast<uint8_t>(PropertyAttribute::DontEnum));
     bool hasStaticNonConfigurableProperty = m_classInfo->hasStaticPropertyWithAnyOfAttributes(static_cast<uint8_t>(PropertyAttribute::DontDelete));
 
     setDictionaryKind(NoneDictionaryKind);
     setIsPinnedPropertyTable(false);
     setHasAnyKindOfGetterSetterProperties(classInfo->hasStaticPropertyWithAnyOfAttributes(static_cast<uint8_t>(PropertyAttribute::AccessorOrCustomAccessorOrValue)));
     setHasReadOnlyOrGetterSetterPropertiesExcludingProto(hasAnyKindOfGetterSetterProperties() || classInfo->hasStaticPropertyWithAnyOfAttributes(static_cast<uint8_t>(PropertyAttribute::ReadOnly)));
+    setHasNonEnumerableProperties(hasStaticNonEnumerableProperty || typeInfo.overridesGetOwnPropertySlot());
     setHasNonConfigurableProperties(hasStaticNonConfigurableProperty || typeInfo.overridesGetOwnPropertySlot());
     setHasNonConfigurableReadOnlyOrGetterSetterProperties(hasStaticNonConfigurableProperty || (typeInfo.overridesGetOwnPropertySlot() && typeInfo.type() != ArrayType));
     setHasUnderscoreProtoPropertyExcludingOriginalProto(false);
@@ -239,12 +248,14 @@ Structure::Structure(VM& vm, CreatingEarlyCellTag)
     , m_transitionWatchpointSet(IsWatched)
 {
     TypeInfo typeInfo { StructureType, StructureFlags };
+    bool hasStaticNonEnumerableProperty = m_classInfo->hasStaticPropertyWithAnyOfAttributes(static_cast<uint8_t>(PropertyAttribute::DontEnum));
     bool hasStaticNonConfigurableProperty = m_classInfo->hasStaticPropertyWithAnyOfAttributes(static_cast<uint8_t>(PropertyAttribute::DontDelete));
 
     setDictionaryKind(NoneDictionaryKind);
     setIsPinnedPropertyTable(false);
     setHasAnyKindOfGetterSetterProperties(m_classInfo->hasStaticPropertyWithAnyOfAttributes(static_cast<uint8_t>(PropertyAttribute::AccessorOrCustomAccessorOrValue)));
     setHasReadOnlyOrGetterSetterPropertiesExcludingProto(hasAnyKindOfGetterSetterProperties() || m_classInfo->hasStaticPropertyWithAnyOfAttributes(static_cast<uint8_t>(PropertyAttribute::ReadOnly)));
+    setHasNonEnumerableProperties(hasStaticNonEnumerableProperty || typeInfo.overridesGetOwnPropertySlot());
     setHasNonConfigurableProperties(hasStaticNonConfigurableProperty || typeInfo.overridesGetOwnPropertySlot());
     setHasNonConfigurableReadOnlyOrGetterSetterProperties(hasStaticNonConfigurableProperty || (typeInfo.overridesGetOwnPropertySlot() && typeInfo.type() != ArrayType));
     setHasUnderscoreProtoPropertyExcludingOriginalProto(false);
@@ -288,6 +299,7 @@ Structure::Structure(VM& vm, Structure* previous)
     setHasBeenFlattenedBefore(previous->hasBeenFlattenedBefore());
     setHasAnyKindOfGetterSetterProperties(previous->hasAnyKindOfGetterSetterProperties());
     setHasReadOnlyOrGetterSetterPropertiesExcludingProto(previous->hasReadOnlyOrGetterSetterPropertiesExcludingProto());
+    setHasNonEnumerableProperties(previous->hasNonEnumerableProperties());
     setHasNonConfigurableProperties(previous->hasNonConfigurableProperties());
     setHasNonConfigurableReadOnlyOrGetterSetterProperties(previous->hasNonConfigurableReadOnlyOrGetterSetterProperties());
     setHasUnderscoreProtoPropertyExcludingOriginalProto(previous->hasUnderscoreProtoPropertyExcludingOriginalProto());
@@ -672,7 +684,7 @@ Structure* Structure::changePrototypeTransition(VM& vm, Structure* structure, JS
     return transition;
 }
 
-Structure* Structure::attributeChangeTransitionToExistingStructure(Structure* structure, PropertyName propertyName, unsigned attributes, PropertyOffset& offset)
+Structure* Structure::attributeChangeTransitionToExistingStructureImpl(Structure* structure, PropertyName propertyName, unsigned attributes, PropertyOffset& offset)
 {
     ASSERT(structure->isObject());
 
@@ -688,6 +700,18 @@ Structure* Structure::attributeChangeTransitionToExistingStructure(Structure* st
     }
 
     return nullptr;
+}
+
+Structure* Structure::attributeChangeTransitionToExistingStructure(Structure* structure, PropertyName propertyName, unsigned attributes, PropertyOffset& offset)
+{
+    ASSERT(!isCompilationThread());
+    return attributeChangeTransitionToExistingStructureImpl(structure, propertyName, attributes, offset);
+}
+
+Structure* Structure::attributeChangeTransitionToExistingStructureConcurrently(Structure* structure, PropertyName propertyName, unsigned attributes, PropertyOffset& offset)
+{
+    ConcurrentJSLocker locker(structure->m_lock);
+    return attributeChangeTransitionToExistingStructureImpl(structure, propertyName, attributes, offset);
 }
 
 Structure* Structure::attributeChangeTransition(VM& vm, Structure* structure, PropertyName propertyName, unsigned attributes, DeferredStructureTransitionWatchpointFire* deferred)
@@ -830,6 +854,7 @@ Structure* Structure::nonPropertyTransitionSlow(VM& vm, Structure* structure, Tr
     transition->m_blob.setIndexingModeIncludingHistory(indexingModeIncludingHistory);
 
     if (changesIndexingType(transitionKind) && hasAnyArrayStorage(indexingModeIncludingHistory)) {
+        transition->setHasNonEnumerableProperties(true);
         transition->setHasNonConfigurableProperties(true);
         transition->setHasNonConfigurableReadOnlyOrGetterSetterProperties(true);
     }
@@ -840,8 +865,7 @@ Structure* Structure::nonPropertyTransitionSlow(VM& vm, Structure* structure, Tr
     if (transitionKind == TransitionKind::BecomePrototype)
         transition->setMayBePrototype(true);
     
-    if (setsDontDeleteOnAllProperties(transitionKind)
-        || setsReadOnlyOnNonAccessorProperties(transitionKind)) {
+    if (setsDontDeleteOnAllProperties(transitionKind) || setsReadOnlyOnNonAccessorProperties(transitionKind)) {
         // We pin the property table on transitions that do wholesale editing of the property
         // table, since our logic for walking the property transition chain to rematerialize the
         // table doesn't know how to take into account such wholesale edits.
@@ -859,6 +883,7 @@ Structure* Structure::nonPropertyTransitionSlow(VM& vm, Structure* structure, Tr
         else
             table->freeze();
 
+        transition->setHasNonEnumerableProperties(true);
         transition->setHasNonConfigurableProperties(true);
         transition->setHasNonConfigurableReadOnlyOrGetterSetterProperties(true);
     } else {
@@ -1404,39 +1429,41 @@ void Structure::dump(PrintStream& out) const
     
     const_cast<Structure*>(this)->forEachPropertyConcurrently(
         [&] (const PropertyTableEntry& entry) -> bool {
-            out.print(comma, entry.key(), ":", static_cast<int>(entry.offset()));
+            out.print(comma, entry.key(), ":"_s, static_cast<int>(entry.offset()));
             return true;
         });
-    
-    out.print("}, ", IndexingTypeDump(indexingMode()));
-    
+
+    out.print("}, "_s, IndexingTypeDump(indexingMode()));
+
+    out.print(", "_s, TransitionKindDump(transitionKind()));
+
     if (hasPolyProto())
-        out.print(", PolyProto offset:", knownPolyProtoOffset);
+        out.print(", PolyProto offset:"_s, knownPolyProtoOffset);
     else if (m_prototype.get().isCell())
-        out.print(", Proto:", RawPointer(m_prototype.get().asCell()));
+        out.print(", Proto:"_s, RawPointer(m_prototype.get().asCell()));
 
     switch (dictionaryKind()) {
     case NoneDictionaryKind:
         if (hasBeenDictionary())
-            out.print(", Has been dictionary");
+            out.print(", Has been dictionary"_s);
         break;
     case CachedDictionaryKind:
-        out.print(", Dictionary");
+        out.print(", Dictionary"_s);
         break;
     case UncachedDictionaryKind:
-        out.print(", UncacheableDictionary");
+        out.print(", UncacheableDictionary"_s);
         break;
     }
 
     if (transitionWatchpointSetIsStillValid())
-        out.print(", Leaf");
+        out.print(", Leaf"_s);
     else if (transitionWatchpointIsLikelyToBeFired())
-        out.print(", Shady leaf");
+        out.print(", Shady leaf"_s);
     
     if (transitionWatchpointSet().isBeingWatched())
-        out.print(" (Watched)");
+        out.print(" (Watched)"_s);
 
-    out.print("]");
+    out.print("]"_s);
 }
 
 void Structure::dumpInContext(PrintStream& out, DumpContext* context) const
@@ -1597,6 +1624,66 @@ void DeferredStructureTransitionWatchpointFire::fireAllSlow()
 void Structure::finalizeUnconditionally(VM& vm, CollectionScope collectionScope)
 {
     m_transitionTable.finalizeUnconditionally(vm, collectionScope);
+}
+
+void dumpTransitionKind(PrintStream& out, TransitionKind kind)
+{
+    const char* kindName;
+    switch (kind) {
+    case TransitionKind::Unknown:
+        kindName = "Unknown";
+        break;
+    case TransitionKind::PropertyAddition:
+        kindName = "PropertyAddition";
+        break;
+    case TransitionKind::PropertyDeletion:
+        kindName = "PropertyDeletion";
+        break;
+    case TransitionKind::PropertyAttributeChange:
+        kindName = "PropertyAttributeChange";
+        break;
+    case TransitionKind::AllocateUndecided:
+        kindName = "AllocateUndecided";
+        break;
+    case TransitionKind::AllocateInt32:
+        kindName = "AllocateInt32";
+        break;
+    case TransitionKind::AllocateDouble:
+        kindName = "AllocateDouble";
+        break;
+    case TransitionKind::AllocateContiguous:
+        kindName = "AllocateContiguous";
+        break;
+    case TransitionKind::AllocateArrayStorage:
+        kindName = "AllocateArrayStorage";
+        break;
+    case TransitionKind::AllocateSlowPutArrayStorage:
+        kindName = "AllocateSlowPutArrayStorage";
+        break;
+    case TransitionKind::SwitchToSlowPutArrayStorage:
+        kindName = "SwitchToSlowPutArrayStorage";
+        break;
+    case TransitionKind::AddIndexedAccessors:
+        kindName = "AddIndexedAccessors";
+        break;
+    case TransitionKind::PreventExtensions:
+        kindName = "PreventExtensions";
+        break;
+    case TransitionKind::Seal:
+        kindName = "Seal";
+        break;
+    case TransitionKind::Freeze:
+        kindName = "Freeze";
+        break;
+    case TransitionKind::BecomePrototype:
+        kindName = "BecomePrototype";
+        break;
+    case TransitionKind::SetBrand:
+        kindName = "SetBrand";
+        break;
+    }
+
+    out.print(kindName);
 }
 
 } // namespace JSC

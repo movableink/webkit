@@ -30,7 +30,7 @@
 #elif PLATFORM(QT)
 #include <qpainterpath.h>
 typedef QPainterPath PlatformPath;
-#else
+#elif USE(CAIRO)
 #include "RefPtrCairo.h"
 #endif
 
@@ -40,8 +40,11 @@ typedef PlatformPath* PlatformPathPtr;
 #elif PLATFORM(QT)
 /* QPainterPath is valued based */
 typedef const PlatformPath& PlatformPathPtr;
-#else
+#elif USE(CAIRO)
 typedef cairo_t* PlatformPathPtr;
+#elif USE(SKIA)
+class SkPath;
+typedef SkPath* PlatformPathPtr;
 #endif
 
 namespace WebCore {
@@ -52,9 +55,12 @@ using PlatformPathImpl = PathCG;
 #elif PLATFORM(QT)
 class PathQt;
 using PlatformPathImpl = PathQt;
-#else
+#elif USE(CAIRO)
 class PathCairo;
 using PlatformPathImpl = PathCairo;
+#elif USE(SKIA)
+class PathSkia;
+using PlatformPathImpl = PathSkia;
 #endif
 
 } // namespace WebCore

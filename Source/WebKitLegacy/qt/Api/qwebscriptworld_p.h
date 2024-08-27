@@ -21,6 +21,7 @@
 #define _QWEBSCRIPTWORLD_P_H_
 
 #include <wtf/RefPtr.h>
+#include <WebCore/DOMWrapperWorld.h>
 
 namespace WebCore {
     class DOMWrapperWorld;

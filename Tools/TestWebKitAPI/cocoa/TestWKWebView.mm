@@ -28,6 +28,7 @@
 
 #import "ClassMethodSwizzler.h"
 #import "InstanceMethodSwizzler.h"
+#import "PlatformUtilities.h"
 #import "Test.h"
 #import "TestNavigationDelegate.h"
 #import "Utilities.h"
@@ -38,9 +39,11 @@
 #import <WebKit/WKWebViewPrivateForTesting.h>
 #import <WebKit/WebKitPrivate.h>
 #import <WebKit/_WKActivatedElementInfo.h>
+#import <WebKit/_WKFrameTreeNode.h>
 #import <WebKit/_WKProcessPoolConfiguration.h>
 #import <WebKit/_WKTextInputContext.h>
 #import <objc/runtime.h>
+#import <pal/spi/ios/BrowserEngineKitSPI.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/RetainPtr.h>
 
@@ -55,6 +58,11 @@
 #import <wtf/SoftLinking.h>
 SOFT_LINK_FRAMEWORK(UIKit)
 SOFT_LINK_CLASS(UIKit, UIWindow)
+
+#if USE(BROWSERENGINEKIT)
+// FIXME: This workaround can be removed once the fix for rdar://120390585 lands in the SDK.
+SOFT_LINK_CLASS(UIKit, UIKeyEvent)
+#endif
 
 static NSString *overrideBundleIdentifier(id, SEL)
 {
@@ -127,6 +135,12 @@ static NSString *overrideBundleIdentifier(id, SEL)
     [self _test_waitForDidFinishNavigation];
 }
 
+- (void)synchronouslyLoadTestPageNamed:(NSString *)pageName preferences:(WKWebpagePreferences *)preferences
+{
+    [self loadTestPageNamed:pageName];
+    [self _test_waitForDidFinishNavigationWithPreferences:preferences];
+}
+
 - (BOOL)_synchronouslyExecuteEditCommand:(NSString *)command argument:(NSString *)argument
 {
     __block bool done = false;
@@ -160,25 +174,29 @@ static NSString *overrideBundleIdentifier(id, SEL)
 
 - (void)defineSelection
 {
-#if HAVE(UI_ASYNC_TEXT_INTERACTION)
-    if (self.hasAsyncTextInput)
-        return [self define:nil];
+#if USE(BROWSERENGINEKIT)
+    if (self.hasAsyncTextInput) {
+        [self lookup:nil];
+        return;
+    }
 #endif
     [self _lookup:nil];
 }
 
 - (void)shareSelection
 {
-#if HAVE(UI_ASYNC_TEXT_INTERACTION)
-    if (self.hasAsyncTextInput)
-        return [self share:nil];
+#if USE(BROWSERENGINEKIT)
+    if (self.hasAsyncTextInput) {
+        [self share:nil];
+        return;
+    }
 #endif
     [self _share:nil];
 }
 
 - (BOOL)hasAsyncTextInput
 {
-#if HAVE(UI_ASYNC_TEXT_INTERACTION)
+#if USE(BROWSERENGINEKIT)
     return !!self.asyncTextInput;
 #else
     return NO;
@@ -187,8 +205,8 @@ static NSString *overrideBundleIdentifier(id, SEL)
 
 - (CGRect)selectionClipRect
 {
-#if HAVE(UI_ASYNC_TEXT_INTERACTION)
-    if (id<WKSETextInput> asyncTextInput = self.asyncTextInput)
+#if USE(BROWSERENGINEKIT)
+    if (id<BETextInput> asyncTextInput = self.asyncTextInput)
         return asyncTextInput.selectionClipRect;
 #endif
     return self.textInputContentView._selectionClipRect;
@@ -196,66 +214,96 @@ static NSString *overrideBundleIdentifier(id, SEL)
 
 - (void)moveSelectionToStartOfParagraph
 {
-#if HAVE(UI_ASYNC_TEXT_INTERACTION)
-    if (id<WKSETextInput> asyncTextInput = self.asyncTextInput)
-        return [asyncTextInput moveInDirection:UITextStorageDirectionBackward byGranularity:UITextGranularityParagraph];
+#if USE(BROWSERENGINEKIT)
+    if (id<BETextInput> asyncTextInput = self.asyncTextInput) {
+        [asyncTextInput moveInStorageDirection:UITextStorageDirectionBackward byGranularity:UITextGranularityParagraph];
+        return;
+    }
 #endif
     [self.textInputContentView _moveToStartOfParagraph:NO withHistory:nil];
 }
 
 - (void)extendSelectionToStartOfParagraph
 {
-#if HAVE(UI_ASYNC_TEXT_INTERACTION)
-    if (id<WKSETextInput> asyncTextInput = self.asyncTextInput)
-        return [asyncTextInput extendInDirection:UITextStorageDirectionBackward byGranularity:UITextGranularityParagraph];
+#if USE(BROWSERENGINEKIT)
+    if (id<BETextInput> asyncTextInput = self.asyncTextInput) {
+        [asyncTextInput extendInStorageDirection:UITextStorageDirectionBackward byGranularity:UITextGranularityParagraph];
+        return;
+    }
 #endif
     [self.textInputContentView _moveToStartOfParagraph:YES withHistory:nil];
 }
 
 - (void)moveSelectionToEndOfParagraph
 {
-#if HAVE(UI_ASYNC_TEXT_INTERACTION)
-    if (id<WKSETextInput> asyncTextInput = self.asyncTextInput)
-        return [asyncTextInput moveInDirection:UITextStorageDirectionForward byGranularity:UITextGranularityParagraph];
+#if USE(BROWSERENGINEKIT)
+    if (id<BETextInput> asyncTextInput = self.asyncTextInput) {
+        [asyncTextInput moveInStorageDirection:UITextStorageDirectionForward byGranularity:UITextGranularityParagraph];
+        return;
+    }
 #endif
     [self.textInputContentView _moveToEndOfParagraph:NO withHistory:nil];
 }
 
 - (void)extendSelectionToEndOfParagraph
 {
-#if HAVE(UI_ASYNC_TEXT_INTERACTION)
-    if (id<WKSETextInput> asyncTextInput = self.asyncTextInput)
-        return [asyncTextInput extendInDirection:UITextStorageDirectionForward byGranularity:UITextGranularityParagraph];
+#if USE(BROWSERENGINEKIT)
+    if (id<BETextInput> asyncTextInput = self.asyncTextInput) {
+        [asyncTextInput extendInStorageDirection:UITextStorageDirectionForward byGranularity:UITextGranularityParagraph];
+        return;
+    }
 #endif
     [self.textInputContentView _moveToEndOfParagraph:YES withHistory:nil];
 }
 
-#if HAVE(UI_ASYNC_TEXT_INTERACTION)
-
-- (id<WKSETextInput>)asyncTextInput
+- (void)insertTextSuggestion:(UITextSuggestion *)textSuggestion
 {
-    static BOOL conformsToAsyncTextInput = class_conformsToProtocol(NSClassFromString(@"WKContentView"), @protocol(WKSETextInput));
+#if USE(BROWSERENGINEKIT)
+    if (id<BETextInput> asyncTextInput = self.asyncTextInput) {
+        RetainPtr beTextSuggestion = adoptNS([[BETextSuggestion alloc] _initWithUIKitTextSuggestion:textSuggestion]);
+        [asyncTextInput insertTextSuggestion:beTextSuggestion.get()];
+        return;
+    }
+#endif
+    [self.textInputContentView insertTextSuggestion:textSuggestion];
+}
+
+#if USE(BROWSERENGINEKIT)
+
+- (id<BETextInput>)asyncTextInput
+{
+    static BOOL conformsToAsyncTextInput = class_conformsToProtocol(NSClassFromString(@"WKContentView"), @protocol(BETextInput));
     if (!conformsToAsyncTextInput)
         return nil;
 
-    return (id<WKSETextInput>)self.textInputContentView;
+    return (id<BETextInput>)self.textInputContentView;
 }
 
-- (id<WKSEExtendedTextInputTraits>)extendedTextInputTraits
+- (id<BEExtendedTextInputTraits>)extendedTextInputTraits
 {
-    return self.asyncTextInput.extendedTraitsDelegate;
+    return self.asyncTextInput.extendedTextInputTraits;
 }
 
-#endif // HAVE(UI_ASYNC_TEXT_INTERACTION)
+#endif // USE(BROWSERENGINEKIT)
 
 - (std::pair<CGRect, CGRect>)autocorrectionRectsForString:(NSString *)string
 {
     std::pair<CGRect, CGRect> result;
     bool done = false;
-    [self.textInputContentView requestAutocorrectionRectsForString:string withCompletionHandler:[&] (UIWKAutocorrectionRects *rects) {
-        result = { rects.firstRect, rects.lastRect };
-        done = true;
-    }];
+#if USE(BROWSERENGINEKIT)
+    if (auto asyncTextInput = self.asyncTextInput) {
+        [asyncTextInput requestTextRectsForString:string withCompletionHandler:[&](NSArray<UITextSelectionRect *> *rects) {
+            result = { rects.firstObject.rect, rects.lastObject.rect };
+            done = true;
+        }];
+    } else
+#endif
+    {
+        [self.textInputContentView requestAutocorrectionRectsForString:string withCompletionHandler:[&](UIWKAutocorrectionRects *rects) {
+            result = { rects.firstRect, rects.lastRect };
+            done = true;
+        }];
+    }
     TestWebKitAPI::Util::run(&done);
     return result;
 }
@@ -264,29 +312,48 @@ static NSString *overrideBundleIdentifier(id, SEL)
 {
     TestWebKitAPI::AutocorrectionContext result;
     bool done = false;
-    [self.textInputContentView requestAutocorrectionContextWithCompletionHandler:[&] (UIWKAutocorrectionContext *context) {
-        result = { context.contextBeforeSelection, context.selectedText, context.contextAfterSelection };
-        done = true;
-    }];
+#if USE(BROWSERENGINEKIT)
+    if (auto asyncTextInput = self.asyncTextInput) {
+        [asyncTextInput requestTextContextForAutocorrectionWithCompletionHandler:[&](WKBETextDocumentContext *context) {
+            auto uiContext = dynamic_objc_cast<UIWKDocumentContext>(context);
+            if (auto seContext = dynamic_objc_cast<WKBETextDocumentContext>(context))
+                uiContext = seContext._uikitDocumentContext;
+            result = {
+                dynamic_objc_cast<NSString>(uiContext.contextBefore),
+                dynamic_objc_cast<NSString>(uiContext.selectedText),
+                dynamic_objc_cast<NSString>(uiContext.contextAfter),
+                dynamic_objc_cast<NSString>(uiContext.markedText),
+                uiContext.selectedRangeInMarkedText,
+            };
+            done = true;
+        }];
+    } else
+#endif // USE(BROWSERENGINEKIT)
+    {
+        [self.textInputContentView requestAutocorrectionContextWithCompletionHandler:[&](UIWKAutocorrectionContext *context) {
+            result = { context.contextBeforeSelection, context.selectedText, context.contextAfterSelection, context.markedText, context.rangeInMarkedText };
+            done = true;
+        }];
+    }
     TestWebKitAPI::Util::run(&done);
     return result;
 }
 
 - (id<UITextInputTraits_Private>)effectiveTextInputTraits
 {
-#if HAVE(UI_ASYNC_TEXT_INPUT)
+#if USE(BROWSERENGINEKIT)
     if (self.hasAsyncTextInput)
-        return static_cast<id<UITextInputTraits_Private>(self.extendedTextInputTraits);
+        return static_cast<id<UITextInputTraits_Private>>(self.extendedTextInputTraits);
 #endif
     return static_cast<id<UITextInputTraits_Private>>(self.textInputContentView.textInputTraits);
 }
 
 - (void)replaceText:(NSString *)input withText:(NSString *)correction shouldUnderline:(BOOL)shouldUnderline completion:(void(^)())completion
 {
-#if HAVE(UI_ASYNC_TEXT_INPUT)
+#if USE(BROWSERENGINEKIT)
     if (self.hasAsyncTextInput) {
-        auto options = shouldUnderline ? WKSETextReplacementOptionsAddUnderline : WKSETextReplacementOptionsNone;
-        [self.asyncTextInput replaceText:input withText:correction options:options withCompletionHandler:[completion = makeBlockPtr(completion)](NSArray<UITextSelectionRect *> *) {
+        auto options = shouldUnderline ? BETextReplacementOptionsAddUnderline : BETextReplacementOptionsNone;
+        [self.asyncTextInput replaceText:input withText:correction options:options completionHandler:[completion = makeBlockPtr(completion)](NSArray<UITextSelectionRect *> *) {
             completion();
         }];
         return;
@@ -298,29 +365,37 @@ static NSString *overrideBundleIdentifier(id, SEL)
     }];
 }
 
-#if HAVE(UI_ASYNC_TEXT_INPUT)
-
-static RetainPtr<WKSEKeyEvent> wrap(WebEvent *webEvent)
+- (void)insertText:(NSString *)primaryString alternatives:(NSArray<NSString *> *)alternativeStrings
 {
-    auto uiKeyEvent = adoptNS([[UIKeyEvent alloc] initWithWebEvent:event]);
-#if SERVICE_EXTENSIONS_TEXT_INPUT_IS_AVAILABLE
-    return adoptNS([[WKSEKeyEvent alloc] initWithUIKitKeyEvent:uiKeyEvent.get()]);
+    if (!alternativeStrings.count) {
+        [self.textInputContentView insertText:primaryString];
+        return;
+    }
+
+#if USE(BROWSERENGINEKIT)
+    auto nsAlternatives = adoptNS([[NSTextAlternatives alloc] initWithPrimaryString:primaryString alternativeStrings:alternativeStrings]);
+    auto alternatives = adoptNS([[BETextAlternatives alloc] _initWithNSTextAlternatives:nsAlternatives.get()]);
+    [self.asyncTextInput insertTextAlternatives:alternatives.get()];
 #else
-    return uiKeyEvent;
+    [self.textInputContentView insertText:primaryString alternatives:alternativeStrings style:UITextAlternativeStyleNone];
 #endif
 }
 
-static WebEvent *unwrap(WKSEKeyEvent *event)
+#if USE(BROWSERENGINEKIT)
+
+static RetainPtr<BEKeyEntry> wrap(WebEvent *webEvent)
 {
-#if SERVICE_EXTENSIONS_TEXT_INPUT_IS_AVAILABLE
-    RetainPtr uiEvent = event.uikitKeyEvent;
-#else
-    RetainPtr uiEvent = event;
-#endif
+    auto uiKeyEvent = adoptNS([allocUIKeyEventInstance() initWithWebEvent:webEvent]);
+    return adoptNS([[BEKeyEntry alloc] _initWithUIKitKeyEvent:uiKeyEvent.get()]);
+}
+
+static WebEvent *unwrap(BEKeyEntry *event)
+{
+    auto uiEvent = retainPtr(event._uikitKeyEvent);
     return [uiEvent webEvent];
 }
 
-#endif // HAVE(UI_ASYNC_TEXT_INPUT)
+#endif // USE(BROWSERENGINEKIT)
 
 #if HAVE(UI_WK_DOCUMENT_CONTEXT)
 
@@ -330,10 +405,14 @@ static WebEvent *unwrap(WKSEKeyEvent *event)
     auto completion = ^{
         finished = true;
     };
-#if HAVE(UI_ASYNC_TEXT_INPUT)
-    if (self.hasAsyncTextInput)
-        [self.asyncTextInput adjustSelection:WKSEDirectionalTextRange { range.location, range.length } completion:completion];
-    else
+#if USE(BROWSERENGINEKIT)
+    if (self.hasAsyncTextInput) {
+        BEDirectionalTextRange directionalRange {
+            static_cast<NSInteger>(range.location),
+            static_cast<NSInteger>(range.length)
+        };
+        [self.asyncTextInput adjustSelectionByRange:directionalRange completionHandler:completion];
+    } else
 #endif
         [self.textInputContentView adjustSelectionWithDelta:range completionHandler:completion];
     TestWebKitAPI::Util::run(&finished);
@@ -343,9 +422,9 @@ static WebEvent *unwrap(WKSEKeyEvent *event)
 
 - (void)selectTextForContextMenuWithLocationInView:(CGPoint)locationInView completion:(void(^)(BOOL shouldPresent))completion
 {
-#if HAVE(UI_ASYNC_TEXT_INPUT)
+#if USE(BROWSERENGINEKIT)
     if (self.hasAsyncTextInput) {
-        [self.asyncTextInput selectTextForContextMenuWithLocationInView:locationInView completion:[completion = makeBlockPtr(completion)](BOOL shouldPresent, NSString *, NSRange) {
+        [self.asyncTextInput selectTextForEditMenuWithLocationInView:locationInView completionHandler:[completion = makeBlockPtr(completion)](BOOL shouldPresent, NSString *, NSRange) {
             completion(shouldPresent);
         }];
         return;
@@ -358,9 +437,9 @@ static WebEvent *unwrap(WKSEKeyEvent *event)
 
 - (void)handleKeyEvent:(WebEvent *)event completion:(void (^)(WebEvent *theEvent, BOOL handled))completion
 {
-#if HAVE(UI_ASYNC_TEXT_INPUT)
+#if USE(BROWSERENGINEKIT)
     if (self.hasAsyncTextInput) {
-        [self.asyncTextInput handleAsyncKeyEvent:wrap(event).get() completion:[completion = makeBlockPtr(completion)](WKSEKeyEvent *event, BOOL handled) {
+        [self.asyncTextInput handleKeyEntry:wrap(event).get() withCompletionHandler:[completion = makeBlockPtr(completion)](BEKeyEntry *event, BOOL handled) {
             completion(unwrap(event), handled);
         }];
         return;
@@ -388,6 +467,18 @@ static WebEvent *unwrap(WKSEKeyEvent *event)
     __block bool done = false;
     __block RetainPtr<NSString> result;
     [self _getContentsAsStringWithCompletionHandler:^(NSString *contents, NSError *error) {
+        result = contents;
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    return result.autorelease();
+}
+
+- (NSData *)contentsAsWebArchive
+{
+    __block bool done = false;
+    __block RetainPtr<NSData> result;
+    [self createWebArchiveDataWithCompletionHandler:^(NSData *contents, NSError *error) {
         result = contents;
         done = true;
     }];
@@ -441,6 +532,21 @@ static WebEvent *unwrap(WKSEKeyEvent *event)
     bool callbackComplete = false;
     RetainPtr<id> evalResult;
     [self _evaluateJavaScriptWithoutUserGesture:script completionHandler:[&] (id result, NSError *error) {
+        evalResult = result;
+        callbackComplete = true;
+        EXPECT_TRUE(!error);
+        if (error)
+            NSLog(@"Encountered error: %@ while evaluating script: %@", error, script);
+    }];
+    TestWebKitAPI::Util::run(&callbackComplete);
+    return evalResult.autorelease();
+}
+
+- (id)objectByEvaluatingJavaScript:(NSString *)script inFrame:(WKFrameInfo *)frame
+{
+    bool callbackComplete = false;
+    RetainPtr<id> evalResult;
+    [self _evaluateJavaScript:script withSourceURL:nil inFrame:frame inContentWorld:WKContentWorld.pageWorld withUserGesture:NO completionHandler:[&](id result, NSError *error) {
         evalResult = result;
         callbackComplete = true;
         EXPECT_TRUE(!error);
@@ -529,6 +635,20 @@ static WebEvent *unwrap(WKSEKeyEvent *event)
 {
     auto rect = [self elementRectFromSelector:selector];
     return CGPointMake(CGRectGetMidX(rect), CGRectGetMidY(rect));
+}
+
+- (CGImageRef)snapshotAfterScreenUpdates
+{
+    __block RetainPtr<CGImage> result;
+    __block bool done = false;
+    RetainPtr configuration = adoptNS([WKSnapshotConfiguration new]);
+    [configuration setAfterScreenUpdates:YES];
+    [self takeSnapshotWithConfiguration:configuration.get() completionHandler:^(TestWebKitAPI::Util::PlatformImage *snapshot, NSError *) {
+        result = TestWebKitAPI::Util::convertToCGImage(snapshot);
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    return result.autorelease();
 }
 
 @end
@@ -845,10 +965,19 @@ static InputSessionChangeCount nextInputSessionChangeCount()
 - (void)waitForNextPresentationUpdate
 {
     __block bool done = false;
-    [self _doAfterNextPresentationUpdate:^() {
+    [self _doAfterNextPresentationUpdate:^{
         done = true;
     }];
 
+    TestWebKitAPI::Util::run(&done);
+}
+
+- (void)waitForNextVisibleContentRectUpdate
+{
+    __block bool done = false;
+    [self _doAfterNextVisibleContentRectUpdate:^{
+        done = true;
+    }];
     TestWebKitAPI::Util::run(&done);
 }
 
@@ -904,6 +1033,24 @@ static InputSessionChangeCount nextInputSessionChangeCount()
             matches = false;
     }];
     [self evaluateJavaScript:@"window.getSelection().getRangeAt(0).endOffset" completionHandler:^(id result, NSError *error) {
+        if ([(NSNumber *)result intValue] != end)
+            matches = false;
+        isDone = true;
+    }];
+    TestWebKitAPI::Util::run(&isDone);
+
+    return matches;
+}
+
+- (BOOL)selectionRangeHasStartOffset:(int)start endOffset:(int)end inFrame:(WKFrameInfo *)frameInfo
+{
+    __block bool isDone = false;
+    __block bool matches = true;
+    [self evaluateJavaScript:@"window.getSelection().getRangeAt(0).startOffset" inFrame:frameInfo inContentWorld:WKContentWorld.pageWorld completionHandler:^(id result, NSError *error) {
+        if ([(NSNumber *)result intValue] != start)
+            matches = false;
+    }];
+    [self evaluateJavaScript:@"window.getSelection().getRangeAt(0).endOffset" inFrame:frameInfo inContentWorld:WKContentWorld.pageWorld completionHandler:^(id result, NSError *error) {
         if ([(NSNumber *)result intValue] != end)
             matches = false;
         isDone = true;
@@ -1196,13 +1343,30 @@ static WKContentView *recursiveFindWKContentView(UIView *view)
     [self typeCharacter:character modifiers:0];
 }
 
+- (void)sendKey:(NSString *)characters code:(unsigned short)keyCode isDown:(BOOL)isDown modifiers:(NSEventModifierFlags)modifiers
+{
+    NSEvent *event = [NSEvent keyEventWithType:isDown ? NSEventTypeKeyDown : NSEventTypeKeyUp
+        location:NSZeroPoint
+        modifierFlags:modifiers
+        timestamp:self.eventTimestamp
+        windowNumber:[_hostWindow windowNumber]
+        context:nil
+        characters:characters
+        charactersIgnoringModifiers:characters
+        isARepeat:NO
+        keyCode:keyCode];
+
+    if (isDown)
+        [self keyDown:event];
+    else
+        [self keyUp:event];
+}
+
 - (void)typeCharacter:(char)character modifiers:(NSEventModifierFlags)modifiers
 {
-    NSString *characterAsString = [NSString stringWithFormat:@"%c" , character];
-    NSEventType keyDownEventType = NSEventTypeKeyDown;
-    NSEventType keyUpEventType = NSEventTypeKeyUp;
-    [self keyDown:[NSEvent keyEventWithType:keyDownEventType location:NSZeroPoint modifierFlags:modifiers timestamp:self.eventTimestamp windowNumber:[_hostWindow windowNumber] context:nil characters:characterAsString charactersIgnoringModifiers:characterAsString isARepeat:NO keyCode:character]];
-    [self keyUp:[NSEvent keyEventWithType:keyUpEventType location:NSZeroPoint modifierFlags:modifiers timestamp:self.eventTimestamp windowNumber:[_hostWindow windowNumber] context:nil characters:characterAsString charactersIgnoringModifiers:characterAsString isARepeat:NO keyCode:character]];
+    NSString *characters = [NSString stringWithFormat:@"%c", character];
+    for (auto isDown : std::array { YES, NO })
+        [self sendKey:characters code:character isDown:isDown modifiers:modifiers];
 }
 
 // Note: this testing strategy makes a couple of assumptions:
@@ -1269,3 +1433,39 @@ static WKContentView *recursiveFindWKContentView(UIView *view)
 @end
 
 #endif // PLATFORM(IOS_FAMILY)
+
+@implementation TestWKWebView (SiteIsolation)
+
+- (_WKFrameTreeNode *)mainFrame
+{
+    __block RetainPtr<_WKFrameTreeNode> frame;
+    [self _frames:^(_WKFrameTreeNode *mainFrame) {
+        frame = mainFrame;
+    }];
+    while (!frame)
+        TestWebKitAPI::Util::spinRunLoop();
+    return frame.autorelease();
+}
+
+- (_WKFrameTreeNode *)firstChildFrame
+{
+    return [self mainFrame].childFrames.firstObject;
+}
+
+- (void)evaluateJavaScript:(NSString *)string inFrame:(WKFrameInfo *)frame completionHandler:(void(^)(id, NSError *))completionHandler
+{
+    [self evaluateJavaScript:string inFrame:frame inContentWorld:WKContentWorld.pageWorld completionHandler:completionHandler];
+}
+
+- (WKFindResult *)findStringAndWait:(NSString *)string withConfiguration:(WKFindConfiguration *)configuration
+{
+    __block RetainPtr<WKFindResult> findResult;
+    [self findString:string withConfiguration:configuration completionHandler:^(WKFindResult *result) {
+        findResult = result;
+    }];
+    while (!findResult)
+        TestWebKitAPI::Util::spinRunLoop();
+    return findResult.autorelease();
+}
+
+@end

@@ -58,7 +58,7 @@ static std::optional<CString> extractBoundary(const CurlResponse& response)
         if (boundary.isEmpty())
             return std::nullopt;
 
-        return makeString("--", boundary).latin1();
+        return makeString("--"_s, boundary).latin1();
     }
 
     return std::nullopt;
@@ -295,7 +295,7 @@ CurlMultipartHandle::ParseHeadersResult CurlMultipartHandle::parseHeadersIfPossi
     String value;
 
     for (auto p = contentStartPtr; p < end; ++p) {
-        size_t consumedLength = parseHTTPHeader(p, end - p, failureReason, name, value, false);
+        size_t consumedLength = parseHTTPHeader(std::span { p, static_cast<size_t>(end - p) }, failureReason, name, value, false);
         if (!consumedLength)
             break; // No more header to parse.
 
@@ -305,7 +305,7 @@ CurlMultipartHandle::ParseHeadersResult CurlMultipartHandle::parseHeadersIfPossi
         if (name.isEmpty())
             break;
 
-        m_headers.append(makeString(name, ": ", value, "\r\n"));
+        m_headers.append(makeString(name, ": "_s, value, "\r\n"_s));
     }
 
     m_buffer.remove(0, end - contentStartPtr);

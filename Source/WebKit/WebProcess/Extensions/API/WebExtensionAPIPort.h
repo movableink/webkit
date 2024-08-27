@@ -32,6 +32,7 @@
 #include "WebExtensionAPIObject.h"
 #include "WebExtensionMessageSenderParameters.h"
 #include "WebExtensionPortChannelIdentifier.h"
+#include <wtf/WeakPtr.h>
 
 OBJC_CLASS NSDictionary;
 OBJC_CLASS NSObject;
@@ -39,8 +40,8 @@ OBJC_CLASS NSString;
 
 namespace WebKit {
 
-class WebExtensionAPIPort : public WebExtensionAPIObject, public JSWebExtensionWrappable, public CanMakeCheckedPtr {
-    WEB_EXTENSION_DECLARE_JS_WRAPPER_CLASS(WebExtensionAPIPort, port);
+class WebExtensionAPIPort : public WebExtensionAPIObject, public JSWebExtensionWrappable, public CanMakeWeakPtr<WebExtensionAPIPort> {
+    WEB_EXTENSION_DECLARE_JS_WRAPPER_CLASS(WebExtensionAPIPort, port, port);
 
 public:
 #if PLATFORM(COCOA)
@@ -50,11 +51,14 @@ public:
 
     WebExtensionContentWorldType targetContentWorldType() const { return m_targetContentWorldType; }
     WebExtensionPortChannelIdentifier channelIdentifier() const { return m_channelIdentifier; }
+    WebPageProxyIdentifier owningPageProxyIdentifier() const { return m_owningPageProxyIdentifier; }
+    const std::optional<WebExtensionMessageSenderParameters>& senderParameters() const { return m_senderParameters; }
 
-    void postMessage(WebFrame*, NSString *, NSString **outExceptionString);
+    void postMessage(WebFrame&, NSString *, NSString **outExceptionString);
     void disconnect();
 
-    bool disconnected() const { return m_disconnected; }
+    bool isDisconnected() const { return m_disconnected; }
+    bool isQuarantined() const { return !m_channelIdentifier; }
 
     NSString *name();
     NSDictionary *sender();
@@ -65,18 +69,50 @@ public:
     WebExtensionAPIEvent& onMessage();
     WebExtensionAPIEvent& onDisconnect();
 
-    explicit WebExtensionAPIPort(ForMainWorld forMainWorld, WebExtensionAPIRuntimeBase& runtime, WebExtensionContextProxy& context, WebExtensionContentWorldType targetContentWorldType, const String& name)
-        : WebExtensionAPIObject(forMainWorld, runtime, context)
+    virtual ~WebExtensionAPIPort()
+    {
+        // Don't fire the disconnect event, since this port is being finalized
+        // and we can't call into JavaScript during garbage collection.
+        m_disconnected = true;
+
+        remove();
+    }
+
+private:
+    friend class WebExtensionContextProxy;
+
+    explicit WebExtensionAPIPort(const WebExtensionAPIObject& parentObject, const String& name)
+        : WebExtensionAPIObject(parentObject)
+        , m_targetContentWorldType(WebExtensionContentWorldType::Main)
+        , m_name(name)
+    {
+        ASSERT(isQuarantined());
+    }
+
+    explicit WebExtensionAPIPort(const WebExtensionAPIObject& parentObject, WebPage& page, WebExtensionContentWorldType targetContentWorldType, const String& name)
+        : WebExtensionAPIObject(parentObject)
         , m_targetContentWorldType(targetContentWorldType)
+        , m_owningPageProxyIdentifier(page.webPageProxyIdentifier())
         , m_channelIdentifier(WebExtensionPortChannelIdentifier::generate())
         , m_name(name)
     {
         add();
     }
 
-    explicit WebExtensionAPIPort(ForMainWorld forMainWorld, WebExtensionAPIRuntimeBase& runtime, WebExtensionContextProxy& context, WebExtensionContentWorldType targetContentWorldType, const String& name, const WebExtensionMessageSenderParameters& senderParameters)
-        : WebExtensionAPIObject(forMainWorld, runtime, context)
+    explicit WebExtensionAPIPort(WebExtensionContentWorldType contentWorldType, WebExtensionAPIRuntimeBase& runtime, WebExtensionContextProxy& context, WebPage& page, WebExtensionContentWorldType targetContentWorldType, const String& name)
+        : WebExtensionAPIObject(contentWorldType, runtime, context)
         , m_targetContentWorldType(targetContentWorldType)
+        , m_owningPageProxyIdentifier(page.webPageProxyIdentifier())
+        , m_channelIdentifier(WebExtensionPortChannelIdentifier::generate())
+        , m_name(name)
+    {
+        add();
+    }
+
+    explicit WebExtensionAPIPort(const WebExtensionAPIObject& parentObject, WebPage& page, WebExtensionContentWorldType targetContentWorldType, const String& name, const WebExtensionMessageSenderParameters& senderParameters)
+        : WebExtensionAPIObject(parentObject)
+        , m_targetContentWorldType(targetContentWorldType)
+        , m_owningPageProxyIdentifier(page.webPageProxyIdentifier())
         , m_channelIdentifier(WebExtensionPortChannelIdentifier::generate())
         , m_name(name)
         , m_senderParameters(senderParameters)
@@ -84,23 +120,16 @@ public:
         add();
     }
 
-    explicit WebExtensionAPIPort(ForMainWorld forMainWorld, WebExtensionAPIRuntimeBase& runtime, WebExtensionContextProxy& context, WebExtensionContentWorldType targetContentWorldType, WebExtensionPortChannelIdentifier channelIdentifier, const String& name, const WebExtensionMessageSenderParameters& senderParameters)
-        : WebExtensionAPIObject(forMainWorld, runtime, context)
+    explicit WebExtensionAPIPort(const WebExtensionAPIObject& parentObject, WebPage& page, WebExtensionContentWorldType targetContentWorldType, WebExtensionPortChannelIdentifier channelIdentifier, const String& name, const WebExtensionMessageSenderParameters& senderParameters)
+        : WebExtensionAPIObject(parentObject)
         , m_targetContentWorldType(targetContentWorldType)
+        , m_owningPageProxyIdentifier(page.webPageProxyIdentifier())
         , m_channelIdentifier(channelIdentifier)
         , m_name(name)
         , m_senderParameters(senderParameters)
     {
         add();
     }
-
-    virtual ~WebExtensionAPIPort()
-    {
-        remove();
-    }
-
-private:
-    friend class WebExtensionContextProxy;
 
     void add();
     void remove();
@@ -109,6 +138,7 @@ private:
     void fireDisconnectEventIfNeeded();
 
     WebExtensionContentWorldType m_targetContentWorldType;
+    WebPageProxyIdentifier m_owningPageProxyIdentifier;
     WebExtensionPortChannelIdentifier m_channelIdentifier;
     bool m_disconnected { false };
 

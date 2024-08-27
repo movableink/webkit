@@ -26,6 +26,7 @@
 
 #include "CSSFontSelector.h"
 #include "CSSValueKeywords.h"
+#include "DocumentInlines.h"
 #include "Font.h"
 #include "FrameSelection.h"
 #include "HTMLNames.h"
@@ -158,7 +159,7 @@ void RenderTextControlSingleLine::layout()
             if (!inputElement().hasAutoFillStrongPasswordButton())
                 return nullptr;
 
-            CheckedPtr autoFillButtonElement = inputElement().autoFillButtonElement();
+            RefPtr autoFillButtonElement = inputElement().autoFillButtonElement();
             if (!autoFillButtonElement)
                 return nullptr;
 
@@ -487,10 +488,17 @@ HTMLInputElement& RenderTextControlSingleLine::inputElement() const
     return downcast<HTMLInputElement>(RenderTextControl::textFormControlElement());
 }
 
+Ref<HTMLInputElement> RenderTextControlSingleLine::protectedInputElement() const
+{
+    return downcast<HTMLInputElement>(RenderTextControl::textFormControlElement());
+}
+
 RenderTextControlInnerBlock::RenderTextControlInnerBlock(Element& element, RenderStyle&& style)
     : RenderBlockFlow(Type::TextControlInnerBlock, element, WTFMove(style))
 {
     ASSERT(isRenderTextControlInnerBlock());
 }
+
+RenderTextControlInnerBlock::~RenderTextControlInnerBlock() = default;
 
 }

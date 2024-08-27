@@ -30,6 +30,10 @@
 #include "Debugger.h"
 #include "VMTrapsInlines.h"
 
+#if PLATFORM(COCOA)
+#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
+#endif
+
 namespace JSC {
 
 const ClassInfo ProgramExecutable::s_info = { "ProgramExecutable"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(ProgramExecutable) };
@@ -62,6 +66,17 @@ static GlobalPropertyLookUpStatus hasRestrictedGlobalProperty(JSGlobalObject* gl
     if (descriptor.configurable())
         return GlobalPropertyLookUpStatus::Configurable;
     return GlobalPropertyLookUpStatus::NonConfigurable;
+}
+
+static ALWAYS_INLINE bool requiresCanDeclareGlobalFunctionQuirk()
+{
+#if PLATFORM(COCOA)
+    // https://bugs.webkit.org/show_bug.cgi?id=267199
+    static bool requiresQuirk = !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::ThrowIfCanDeclareGlobalFunctionFails);
+    return requiresQuirk;
+#else
+    return false;
+#endif
 }
 
 JSObject* ProgramExecutable::initializeGlobalProperties(VM& vm, JSGlobalObject* globalObject, JSScope* scope)
@@ -104,9 +119,6 @@ JSObject* ProgramExecutable::initializeGlobalProperties(VM& vm, JSGlobalObject* 
         // Check if any new "let"/"const"/"class" will shadow any pre-existing global property names (with configurable = false), or "var"/"let"/"const" variables.
         // It's an error to introduce a shadow.
         for (auto& entry : lexicalDeclarations) {
-            if (globalObject->hasVarDeclaration(entry.key))
-                return createErrorForDuplicateGlobalVariableDeclaration(globalObject, entry.key.get());
-
             if (hasGlobalLexicalDeclarations) {
                 bool hasProperty = globalLexicalEnvironment->hasProperty(globalObject, entry.key.get());
                 throwScope.assertNoExceptionExceptTermination();
@@ -158,8 +170,15 @@ JSObject* ProgramExecutable::initializeGlobalProperties(VM& vm, JSGlobalObject* 
             ASSERT(!unlinkedFunctionExecutable->name().isEmpty());
             bool canDeclare = globalObject->canDeclareGlobalFunction(unlinkedFunctionExecutable->name());
             throwScope.assertNoExceptionExceptTermination();
-            if (!canDeclare)
+            if (!canDeclare) {
+                if (requiresCanDeclareGlobalFunctionQuirk()) {
+                    VM::DeletePropertyModeScope scope(vm, VM::DeletePropertyMode::IgnoreConfigurable);
+                    JSCell::deleteProperty(globalObject, globalObject, unlinkedFunctionExecutable->name());
+                    throwScope.assertNoExceptionExceptTermination();
+                    continue;
+                }
                 return createErrorForInvalidGlobalFunctionDeclaration(globalObject, unlinkedFunctionExecutable->name());
+            }
         }
 
         if (!globalObject->isStructureExtensible()) {

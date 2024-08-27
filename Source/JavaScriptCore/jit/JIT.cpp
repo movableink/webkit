@@ -29,6 +29,7 @@
 
 #include "JIT.h"
 
+#include "BaselineJITPlan.h"
 #include "BytecodeGraph.h"
 #include "CodeBlock.h"
 #include "CodeBlockWithJITType.h"
@@ -48,6 +49,7 @@
 #include "StackAlignment.h"
 #include "ThunkGenerators.h"
 #include "TypeProfilerLog.h"
+#include <wtf/BubbleSort.h>
 #include <wtf/GraphNodeWorklist.h>
 #include <wtf/SimpleStats.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -65,21 +67,19 @@ Seconds totalFTLCompileTime;
 Seconds totalFTLDFGCompileTime;
 Seconds totalFTLB3CompileTime;
 
-JIT::JIT(VM& vm, CodeBlock* codeBlock, BytecodeIndex loopOSREntryBytecodeIndex)
+JIT::JIT(VM& vm, BaselineJITPlan& plan, CodeBlock* codeBlock)
     : JSInterfaceJIT(&vm, nullptr)
+    , m_plan(plan)
     , m_labels(codeBlock ? codeBlock->instructions().size() : 0)
     , m_pcToCodeOriginMapBuilder(vm)
     , m_canBeOptimized(false)
     , m_shouldEmitProfiling(false)
-    , m_loopOSREntryBytecodeIndex(loopOSREntryBytecodeIndex)
     , m_profiledCodeBlock(codeBlock)
     , m_unlinkedCodeBlock(codeBlock->unlinkedCodeBlock())
 {
 }
 
-JIT::~JIT()
-{
-}
+JIT::~JIT() = default;
 
 JITConstantPool::Constant JIT::addToConstantPool(JITConstantPool::Type type, void* payload)
 {
@@ -196,8 +196,6 @@ void JIT::privateCompileMainPass()
     auto& instructions = m_unlinkedCodeBlock->instructions();
     unsigned instructionCount = m_unlinkedCodeBlock->instructions().size();
 
-    m_callLinkInfoIndex = 0;
-
     BytecodeIndex startBytecodeIndex(0);
 
     m_bytecodeCountHavingSlowCase = 0;
@@ -232,7 +230,7 @@ void JIT::privateCompileMainPass()
 #if ASSERT_ENABLED
         if (opcodeID != op_catch) {
             loadPtr(addressFor(CallFrameSlot::codeBlock), regT0);
-            ASSERT(static_cast<ptrdiff_t>(CodeBlock::offsetOfJITData() + sizeof(void*)) == CodeBlock::offsetOfMetadataTable());
+            static_assert(static_cast<ptrdiff_t>(CodeBlock::offsetOfJITData() + sizeof(void*)) == CodeBlock::offsetOfMetadataTable());
             loadPairPtr(Address(regT0, CodeBlock::offsetOfJITData()), regT2, regT1);
             m_consistencyCheckCalls.append(nearCall());
         }
@@ -273,7 +271,6 @@ void JIT::privateCompileMainPass()
         DEFINE_SLOW_OP(typeof_is_object)
         DEFINE_SLOW_OP(strcat)
         DEFINE_SLOW_OP(push_with_scope)
-        DEFINE_SLOW_OP(create_lexical_environment)
         DEFINE_SLOW_OP(put_by_id_with_this)
         DEFINE_SLOW_OP(put_by_val_with_this)
         DEFINE_SLOW_OP(resolve_scope_for_hoisting_func_decl_in_eval)
@@ -285,9 +282,6 @@ void JIT::privateCompileMainPass()
         DEFINE_SLOW_OP(new_array_with_species)
         DEFINE_SLOW_OP(new_array_buffer)
         DEFINE_SLOW_OP(spread)
-        DEFINE_SLOW_OP(create_direct_arguments)
-        DEFINE_SLOW_OP(create_scoped_arguments)
-        DEFINE_SLOW_OP(create_cloned_arguments)
         DEFINE_SLOW_OP(create_rest)
         DEFINE_SLOW_OP(create_promise)
         DEFINE_SLOW_OP(new_promise)
@@ -334,6 +328,7 @@ void JIT::privateCompileMainPass()
         DEFINE_OP(op_has_private_name)
         DEFINE_OP(op_has_private_brand)
         DEFINE_OP(op_get_by_id)
+        DEFINE_OP(op_get_length)
         DEFINE_OP(op_get_by_id_with_this)
         DEFINE_OP(op_get_by_id_direct)
         DEFINE_OP(op_get_by_val)
@@ -414,6 +409,10 @@ void JIT::privateCompileMainPass()
         DEFINE_OP(op_new_regexp)
         DEFINE_OP(op_not)
         DEFINE_OP(op_nstricteq)
+        DEFINE_OP(op_create_lexical_environment)
+        DEFINE_OP(op_create_direct_arguments)
+        DEFINE_OP(op_create_scoped_arguments)
+        DEFINE_OP(op_create_cloned_arguments)
         DEFINE_OP(op_dec)
         DEFINE_OP(op_inc)
         DEFINE_OP(op_profile_type)
@@ -429,6 +428,7 @@ void JIT::privateCompileMainPass()
         DEFINE_OP(op_put_getter_by_val)
         DEFINE_OP(op_put_setter_by_val)
         DEFINE_OP(op_to_property_key)
+        DEFINE_OP(op_to_property_key_or_number)
 
         DEFINE_OP(op_get_internal_field)
         DEFINE_OP(op_put_internal_field)
@@ -467,13 +467,11 @@ void JIT::privateCompileMainPass()
         }
 
         if (UNLIKELY(sizeMarker))
-            m_vm->jitSizeStatistics->markEnd(WTFMove(*sizeMarker), *this);
+            m_vm->jitSizeStatistics->markEnd(WTFMove(*sizeMarker), *this, m_plan);
 
         if (JITInternal::verbose)
             dataLog("At ", bytecodeOffset, ": ", m_slowCases.size(), "\n");
     }
-
-    RELEASE_ASSERT(m_callLinkInfoIndex == m_callCompilationInfo.size());
 
 #ifndef NDEBUG
     // Reset this, in order to guard its use with ASSERTs.
@@ -503,7 +501,6 @@ void JIT::privateCompileSlowCases()
     m_delByValIndex = 0;
     m_instanceOfIndex = 0;
     m_privateBrandAccessIndex = 0;
-    m_callLinkInfoIndex = 0;
 
     unsigned bytecodeCountHavingSlowCase = 0;
     for (Vector<SlowCaseEntry>::iterator iter = m_slowCases.begin(); iter != m_slowCases.end();) {
@@ -539,15 +536,7 @@ void JIT::privateCompileSlowCases()
 
         switch (currentInstruction->opcodeID()) {
         DEFINE_SLOWCASE_OP(op_add)
-        DEFINE_SLOWCASE_OP(op_call)
-        DEFINE_SLOWCASE_OP(op_call_ignore_result)
-        DEFINE_SLOWCASE_OP(op_tail_call)
         DEFINE_SLOWCASE_OP(op_call_direct_eval)
-        DEFINE_SLOWCASE_OP(op_call_varargs)
-        DEFINE_SLOWCASE_OP(op_tail_call_varargs)
-        DEFINE_SLOWCASE_OP(op_tail_call_forward_arguments)
-        DEFINE_SLOWCASE_OP(op_construct_varargs)
-        DEFINE_SLOWCASE_OP(op_construct)
         DEFINE_SLOWCASE_OP(op_eq)
         DEFINE_SLOWCASE_OP(op_try_get_by_id)
         DEFINE_SLOWCASE_OP(op_in_by_id)
@@ -555,6 +544,7 @@ void JIT::privateCompileSlowCases()
         DEFINE_SLOWCASE_OP(op_has_private_name)
         DEFINE_SLOWCASE_OP(op_has_private_brand)
         DEFINE_SLOWCASE_OP(op_get_by_id)
+        DEFINE_SLOWCASE_OP(op_get_length)
         DEFINE_SLOWCASE_OP(op_get_by_id_with_this)
         DEFINE_SLOWCASE_OP(op_get_by_id_direct)
         DEFINE_SLOWCASE_OP(op_get_by_val)
@@ -629,6 +619,7 @@ void JIT::privateCompileSlowCases()
         DEFINE_SLOWCASE_SLOW_OP(get_prototype_of)
         DEFINE_SLOWCASE_SLOW_OP(check_tdz)
         DEFINE_SLOWCASE_SLOW_OP(to_property_key)
+        DEFINE_SLOWCASE_SLOW_OP(to_property_key_or_number)
         DEFINE_SLOWCASE_SLOW_OP(typeof_is_function)
         default:
             RELEASE_ASSERT_NOT_REACHED();
@@ -645,7 +636,7 @@ void JIT::privateCompileSlowCases()
 
         if (UNLIKELY(sizeMarker)) {
             m_bytecodeIndex = BytecodeIndex(m_bytecodeIndex.offset() + currentInstruction->size());
-            m_vm->jitSizeStatistics->markEnd(WTFMove(*sizeMarker), *this);
+            m_vm->jitSizeStatistics->markEnd(WTFMove(*sizeMarker), *this, m_plan);
         }
     }
 
@@ -658,7 +649,6 @@ void JIT::privateCompileSlowCases()
     RELEASE_ASSERT(m_inByIdIndex == m_inByIds.size());
     RELEASE_ASSERT(m_instanceOfIndex == m_instanceOfs.size());
     RELEASE_ASSERT(m_privateBrandAccessIndex == m_privateBrandAccesses.size());
-    RELEASE_ASSERT(m_callLinkInfoIndex == m_callCompilationInfo.size());
 
 #ifndef NDEBUG
     // Reset this, in order to guard its use with ASSERTs.
@@ -674,7 +664,7 @@ void JIT::emitMaterializeMetadataAndConstantPoolRegisters()
 void JIT::emitMaterializeMetadataAndConstantPoolRegisters(CCallHelpers& jit)
 {
     jit.loadPtr(addressFor(CallFrameSlot::codeBlock), s_constantsGPR);
-    ASSERT(static_cast<ptrdiff_t>(CodeBlock::offsetOfJITData() + sizeof(void*)) == CodeBlock::offsetOfMetadataTable());
+    static_assert(static_cast<ptrdiff_t>(CodeBlock::offsetOfJITData() + sizeof(void*)) == CodeBlock::offsetOfMetadataTable());
     jit.loadPairPtr(Address(s_constantsGPR, CodeBlock::offsetOfJITData()), s_constantsGPR, s_metadataGPR);
 }
 
@@ -707,7 +697,7 @@ MacroAssemblerCodeRef<JITThunkPtrTag> JIT::consistencyCheckGenerator(VM&)
         jit.subPtr(TrustedImm32(delta), expectedStackPointerGPR);
 
     jit.loadPtr(addressFor(CallFrameSlot::codeBlock), expectedConstantsGPR);
-    ASSERT(static_cast<ptrdiff_t>(CodeBlock::offsetOfJITData() + sizeof(void*)) == CodeBlock::offsetOfMetadataTable());
+    static_assert(static_cast<ptrdiff_t>(CodeBlock::offsetOfJITData() + sizeof(void*)) == CodeBlock::offsetOfMetadataTable());
     jit.loadPairPtr(Address(expectedConstantsGPR, CodeBlock::offsetOfJITData()), expectedConstantsGPR, expectedMetadataGPR);
 
     auto stackPointerOK = jit.branchPtr(Equal, expectedStackPointerGPR, stackPointerRegister);
@@ -725,7 +715,7 @@ MacroAssemblerCodeRef<JITThunkPtrTag> JIT::consistencyCheckGenerator(VM&)
     jit.ret();
 
     LinkBuffer patchBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::ExtraCTIThunk);
-    return FINALIZE_THUNK(patchBuffer, JITThunkPtrTag, "Baseline: generateConsistencyCheck");
+    return FINALIZE_THUNK(patchBuffer, JITThunkPtrTag, "generateConsistencyCheck"_s, "generateConsistencyCheck");
 }
 
 void JIT::emitConsistencyCheck()
@@ -739,7 +729,7 @@ void JIT::emitConsistencyCheck()
 }
 #endif
 
-std::tuple<std::unique_ptr<LinkBuffer>, RefPtr<BaselineJITCode>> JIT::compileAndLinkWithoutFinalizing(JITCompilationEffort effort)
+RefPtr<BaselineJITCode> JIT::compileAndLinkWithoutFinalizing(JITCompilationEffort effort)
 {
     DFG::CapabilityLevel level = m_profiledCodeBlock->capabilityLevel();
     switch (level) {
@@ -764,7 +754,7 @@ std::tuple<std::unique_ptr<LinkBuffer>, RefPtr<BaselineJITCode>> JIT::compileAnd
             m_stringSwitchJumpTables = FixedVector<StringJumpTable>(m_unlinkedCodeBlock->numberOfUnlinkedStringSwitchJumpTables());
     }
 
-    if (UNLIKELY(Options::dumpDisassembly() || (m_vm->m_perBytecodeProfiler && Options::disassembleBaselineForProfiler()))) {
+    if (UNLIKELY(Options::dumpDisassembly() || Options::dumpBaselineDisassembly() || (m_vm->m_perBytecodeProfiler && Options::disassembleBaselineForProfiler()))) {
         // FIXME: build a disassembler off of UnlinkedCodeBlock.
         m_disassembler = makeUnique<JITDisassembler>(m_profiledCodeBlock);
     }
@@ -833,7 +823,7 @@ std::tuple<std::unique_ptr<LinkBuffer>, RefPtr<BaselineJITCode>> JIT::compileAnd
     RELEASE_ASSERT(!JITCode::isJIT(m_profiledCodeBlock->jitType()));
 
     if (UNLIKELY(sizeMarker))
-        m_vm->jitSizeStatistics->markEnd(WTFMove(*sizeMarker), *this);
+        m_vm->jitSizeStatistics->markEnd(WTFMove(*sizeMarker), *this, m_plan);
 
     privateCompileMainPass();
     privateCompileLinkPass();
@@ -891,9 +881,8 @@ std::tuple<std::unique_ptr<LinkBuffer>, RefPtr<BaselineJITCode>> JIT::compileAnd
         m_disassembler->setEndOfCode(label());
     m_pcToCodeOriginMapBuilder.appendItem(label(), PCToCodeOriginMapBuilder::defaultCodeOrigin());
 
-    auto linkBuffer = makeUnique<LinkBuffer>(*this, m_unlinkedCodeBlock, LinkBuffer::Profile::BaselineJIT, effort);
-    auto jitCode = link(*linkBuffer);
-    return std::tuple { WTFMove(linkBuffer), WTFMove(jitCode) };
+    LinkBuffer linkBuffer(*this, m_profiledCodeBlock, LinkBuffer::Profile::Baseline, effort);
+    return link(linkBuffer);
 }
 
 RefPtr<BaselineJITCode> JIT::link(LinkBuffer& patchBuffer)
@@ -979,7 +968,7 @@ RefPtr<BaselineJITCode> JIT::link(LinkBuffer& patchBuffer)
             jitCodeMapBuilder.append(BytecodeIndex(bytecodeOffset), patchBuffer.locationOf<JSEntryPtrTag>(m_labels[bytecodeOffset]));
     }
 
-    if (UNLIKELY(Options::dumpDisassembly())) {
+    if (UNLIKELY(Options::dumpDisassembly() || Options::dumpBaselineDisassembly())) {
         m_disassembler->dump(patchBuffer);
         patchBuffer.didAlreadyDisassemble();
     }
@@ -996,7 +985,7 @@ RefPtr<BaselineJITCode> JIT::link(LinkBuffer& patchBuffer)
         pcToCodeOriginMap = makeUnique<PCToCodeOriginMap>(WTFMove(m_pcToCodeOriginMapBuilder), patchBuffer);
     
     // FIXME: Make a version of CodeBlockWithJITType that knows about UnlinkedCodeBlock.
-    CodeRef<JSEntryPtrTag> result = FINALIZE_CODE(
+    CodeRef<JSEntryPtrTag> result = FINALIZE_BASELINE_CODE(
         patchBuffer, JSEntryPtrTag,
         "Baseline JIT code for %s", toCString(CodeBlockWithJITType(m_profiledCodeBlock, JITType::BaselineJIT)).data());
     
@@ -1004,8 +993,14 @@ RefPtr<BaselineJITCode> JIT::link(LinkBuffer& patchBuffer)
     auto jitCode = adoptRef(*new BaselineJITCode(result, withArityCheck));
 
     jitCode->m_unlinkedCalls = FixedVector<BaselineUnlinkedCallLinkInfo>(m_unlinkedCalls.size());
-    if (jitCode->m_unlinkedCalls.size())
+    if (jitCode->m_unlinkedCalls.size()) {
         std::move(m_unlinkedCalls.begin(), m_unlinkedCalls.end(), jitCode->m_unlinkedCalls.begin());
+        // It is almost always already sorted.
+        WTF::bubbleSort(jitCode->m_unlinkedCalls.begin(), jitCode->m_unlinkedCalls.end(),
+            [](const auto& lhs, const auto& rhs) {
+                return lhs.bytecodeIndex < rhs.bytecodeIndex;
+            });
+    }
     jitCode->m_unlinkedStubInfos = FixedVector<BaselineUnlinkedStructureStubInfo>(m_unlinkedStubInfos.size());
     if (jitCode->m_unlinkedStubInfos.size())
         std::move(m_unlinkedStubInfos.begin(), m_unlinkedStubInfos.end(), jitCode->m_unlinkedStubInfos.begin());
@@ -1022,14 +1017,14 @@ RefPtr<BaselineJITCode> JIT::link(LinkBuffer& patchBuffer)
     return jitCode;
 }
 
-CompilationResult JIT::finalizeOnMainThread(CodeBlock* codeBlock, LinkBuffer& linkBuffer, RefPtr<BaselineJITCode> jitCode)
+CompilationResult JIT::finalizeOnMainThread(CodeBlock* codeBlock, BaselineJITPlan& plan, RefPtr<BaselineJITCode> jitCode)
 {
     RELEASE_ASSERT(!isCompilationThread());
 
     if (!jitCode)
         return CompilationFailed;
 
-    linkBuffer.runMainThreadFinalizationTasks();
+    plan.runMainThreadFinalizationTasks();
 
     codeBlock->vm().machineCodeBytesPerBytecodeWordForBaselineJIT->add(
         static_cast<double>(jitCode->size()) /
@@ -1040,11 +1035,11 @@ CompilationResult JIT::finalizeOnMainThread(CodeBlock* codeBlock, LinkBuffer& li
     return CompilationSuccessful;
 }
 
-CompilationResult JIT::privateCompile(CodeBlock* codeBlock, JITCompilationEffort effort)
+CompilationResult JIT::compileSync(VM&, CodeBlock* codeBlock, JITCompilationEffort effort)
 {
-    doMainThreadPreparationBeforeCompile(vm());
-    auto [ linkBuffer, jitCode ] = compileAndLinkWithoutFinalizing(effort);
-    return JIT::finalizeOnMainThread(codeBlock, *linkBuffer, WTFMove(jitCode));
+    auto plan = adoptRef(*new BaselineJITPlan(codeBlock));
+    plan->compileSync(effort);
+    return plan->finalize();
 }
 
 void JIT::doMainThreadPreparationBeforeCompile(VM& vm)

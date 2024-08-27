@@ -73,7 +73,7 @@ SourceBufferPrivateGStreamer::SourceBufferPrivateGStreamer(MediaSourcePrivateGSt
     : SourceBufferPrivate(mediaSource)
     , m_type(contentType)
     , m_playerPrivate(playerPrivate)
-    , m_appendPipeline(makeUniqueRef<AppendPipeline>(*this, playerPrivate))
+    , m_appendPipeline(makeUnique<AppendPipeline>(*this, playerPrivate))
 #if !RELEASE_LOG_DISABLED
     , m_logger(mediaSource.logger())
     , m_logIdentifier(mediaSource.nextSourceBufferLogIdentifier())
@@ -98,7 +98,7 @@ Ref<MediaPromise> SourceBufferPrivateGStreamer::appendInternal(Ref<SharedBuffer>
 
     ASSERT(!m_appendPromise);
     m_appendPromise.emplace();
-    gpointer bufferData = const_cast<void*>(static_cast<const void*>(data->data()));
+    gpointer bufferData = const_cast<uint8_t*>(data->span().data());
     auto bufferLength = data->size();
     GRefPtr<GstBuffer> buffer = adoptGRef(gst_buffer_new_wrapped_full(static_cast<GstMemoryFlags>(0), bufferData, bufferLength, 0, bufferLength, &data.leakRef(),
         [](gpointer data)
@@ -113,6 +113,9 @@ Ref<MediaPromise> SourceBufferPrivateGStreamer::appendInternal(Ref<SharedBuffer>
 void SourceBufferPrivateGStreamer::resetParserStateInternal()
 {
     ASSERT(isMainThread());
+    if (!m_appendPipeline)
+        return;
+
     GST_DEBUG_OBJECT(m_playerPrivate.pipeline(), "resetting parser state");
     m_appendPipeline->resetParserState();
 }
@@ -126,6 +129,12 @@ void SourceBufferPrivateGStreamer::removedFromMediaSource()
     m_hasBeenRemovedFromMediaSource = true;
 
     m_appendPipeline->stopParser();
+
+    // Release the resources used by the AppendPipeline. This effectively makes the
+    // SourceBufferPrivate useless. Ideally the entire instance should be destroyed. For now we
+    // explicitely release the AppendPipeline because that's the biggest resource user. In case the
+    // process remains alive, GC might kick in later on and release the SourceBufferPrivate.
+    m_appendPipeline = nullptr;
 
     SourceBufferPrivate::removedFromMediaSource();
 }
@@ -185,8 +194,10 @@ void SourceBufferPrivateGStreamer::notifyClientWhenReadyForMoreSamples(TrackID t
     ASSERT(isMainThread());
     ASSERT(m_tracks.contains(trackId));
     auto track = m_tracks[trackId];
-    track->notifyWhenReadyForMoreSamples([protectedThis = Ref { *this }, this, trackId]() mutable {
-        RunLoop::main().dispatch([protectedThis = WTFMove(protectedThis), this, trackId]() {
+    track->notifyWhenReadyForMoreSamples([weakPtr = WeakPtr { *this }, this, trackId]() mutable {
+        RunLoop::main().dispatch([weakPtr = WTFMove(weakPtr), this, trackId]() {
+            if (!weakPtr)
+                return;
             if (!m_hasBeenRemovedFromMediaSource)
                 provideMediaData(trackId);
         });
@@ -306,7 +317,10 @@ size_t SourceBufferPrivateGStreamer::platformMaximumBufferSize() const
     });
 
     // If any track type size isn't specified, we consider that it has no limit and the values from the
-    // element have to be used. Otherwise, the track limits are accumulative.
+    // element have to be used. Otherwise, the track limits are accumulative. If everything is specified
+    // but there's no track (eg: because we're processing an init segment that we don't know yet which
+    // kind of track(s) is going to generate) we assume that the 3 kind of tracks might appear (audio,
+    // video, text) and use all the accumulated limits at once to make room for any possible outcome.
     do {
         bool hasVideo = false;
         bool hasAudio = false;
@@ -329,19 +343,19 @@ size_t SourceBufferPrivateGStreamer::platformMaximumBufferSize() const
             }
         }
 
-        if (hasVideo) {
+        if (hasVideo || m_tracks.empty()) {
             if (maxBufferSizeVideo)
                 bufferSize += maxBufferSizeVideo;
             else
                 break;
         }
-        if (hasAudio) {
+        if (hasAudio || m_tracks.empty()) {
             if (maxBufferSizeAudio)
                 bufferSize += maxBufferSizeAudio;
             else
                 break;
         }
-        if (hasText) {
+        if (hasText || m_tracks.empty()) {
             if (maxBufferSizeText)
                 bufferSize += maxBufferSizeText;
             else

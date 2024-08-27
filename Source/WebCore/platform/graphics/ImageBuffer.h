@@ -30,6 +30,7 @@
 
 #include "ImageBufferAllocator.h"
 #include "ImageBufferBackend.h"
+#include "ImageBufferPixelFormat.h"
 #include "PlatformScreen.h"
 #include "ProcessIdentity.h"
 #include "RenderingMode.h"
@@ -45,6 +46,14 @@ class QOpenGLContext;
 QT_END_NAMESPACE
 #endif
 
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+#include "DynamicContentScalingResourceCache.h"
+#endif
+
+#if HAVE(IOSURFACE)
+#include "IOSurface.h"
+#endif
+
 namespace WTF {
 class TextStream;
 }
@@ -56,7 +65,6 @@ class DynamicContentScalingDisplayList;
 class Filter;
 class GraphicsClient;
 #if HAVE(IOSURFACE)
-class IOSurface;
 class IOSurfacePool;
 #endif
 class ScriptExecutionContext;
@@ -73,26 +81,29 @@ struct ImageBufferCreationContext {
     IOSurfacePool* surfacePool { nullptr };
     PlatformDisplayID displayID { 0 };
 #endif
-    WebCore::ProcessIdentity resourceOwner;
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+    DynamicContentScalingResourceCache dynamicContentScalingResourceCache;
+#endif
+    ProcessIdentity resourceOwner;
 
-    ImageBufferCreationContext() = default; // To guarantee order in presence of ifdefs, use individual .property to initialize them.
+    ImageBufferCreationContext() = default;
 };
 
 struct ImageBufferParameters {
     FloatSize logicalSize;
     float resolutionScale;
     DestinationColorSpace colorSpace;
-    PixelFormat pixelFormat;
+    ImageBufferPixelFormat pixelFormat;
     RenderingPurpose purpose;
 };
 
 class ImageBuffer : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<ImageBuffer> {
 public:
     using Parameters = ImageBufferParameters;
-    WEBCORE_EXPORT static RefPtr<ImageBuffer> create(const FloatSize&, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, PixelFormat, OptionSet<ImageBufferOptions> = { }, GraphicsClient* graphicsClient = nullptr);
+    WEBCORE_EXPORT static RefPtr<ImageBuffer> create(const FloatSize&, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, ImageBufferPixelFormat, OptionSet<ImageBufferOptions> = { }, GraphicsClient* graphicsClient = nullptr);
 
     template<typename BackendType, typename ImageBufferType = ImageBuffer, typename... Arguments>
-    static RefPtr<ImageBufferType> create(const FloatSize& size, float resolutionScale, const DestinationColorSpace& colorSpace, PixelFormat pixelFormat, RenderingPurpose purpose, const ImageBufferCreationContext& creationContext, Arguments&&... arguments)
+    static RefPtr<ImageBufferType> create(const FloatSize& size, float resolutionScale, const DestinationColorSpace& colorSpace, ImageBufferPixelFormat pixelFormat, RenderingPurpose purpose, const ImageBufferCreationContext& creationContext, Arguments&&... arguments)
     {
         Parameters parameters { size, resolutionScale, colorSpace, pixelFormat, purpose };
         auto backendParameters = ImageBuffer::backendParameters(parameters);
@@ -114,10 +125,8 @@ public:
     {
         return {
             BackendType::renderingMode,
-            BackendType::canMapBackingStore,
-            BackendType::calculateBaseTransform(parameters, BackendType::isOriginAtBottomLeftCorner),
+            ImageBufferBackend::calculateBaseTransform(parameters),
             BackendType::calculateMemoryCost(parameters),
-            BackendType::calculateExternalMemoryCost(parameters)
         };
     }
 
@@ -141,7 +150,6 @@ public:
 
     WEBCORE_EXPORT virtual GraphicsContext& context() const;
 
-    virtual bool prefersPreparationForDisplay() { return false; }
     WEBCORE_EXPORT virtual void flushDrawingContext();
     WEBCORE_EXPORT virtual bool flushDrawingContextAsync();
 
@@ -160,14 +168,12 @@ public:
     DestinationColorSpace colorSpace() const { return m_parameters.colorSpace; }
     
     RenderingPurpose renderingPurpose() const { return m_parameters.purpose; }
-    PixelFormat pixelFormat() const { return m_parameters.pixelFormat; }
+    ImageBufferPixelFormat pixelFormat() const { return m_parameters.pixelFormat; }
     const Parameters& parameters() const { return m_parameters; }
 
     RenderingMode renderingMode() const { return m_backendInfo.renderingMode; }
-    bool canMapBackingStore() const { return m_backendInfo.canMapBackingStore; }
     AffineTransform baseTransform() const { return m_backendInfo.baseTransform; }
     size_t memoryCost() const { return m_backendInfo.memoryCost; }
-    size_t externalMemoryCost() const { return m_backendInfo.externalMemoryCost; }
     const ImageBufferBackend::Info& backendInfo() { return m_backendInfo; }
 
     // Returns NativeImage of the current drawing results. Results in an immutable copy of the current back buffer.
@@ -192,6 +198,8 @@ public:
     WEBCORE_EXPORT virtual std::optional<DynamicContentScalingDisplayList> dynamicContentScalingDisplayList();
 #endif
 
+    RefPtr<GraphicsLayerContentsDisplayDelegate> layerContentsDisplayDelegate();
+
     // Returns NativeImage of the current drawing results. Results in an immutable copy of the current back buffer.
     // Caller is responsible for ensuring that the passed reference is the only reference to the ImageBuffer.
     // Has better performance than:
@@ -200,7 +208,7 @@ public:
     //     auto nativeImage = buffer.copyNativeImage();
     //     buffer = nullptr;
     WEBCORE_EXPORT static RefPtr<NativeImage> sinkIntoNativeImage(RefPtr<ImageBuffer>);
-    static RefPtr<ImageBuffer> sinkIntoBufferForDifferentThread(RefPtr<ImageBuffer>);
+    WEBCORE_EXPORT static RefPtr<ImageBuffer> sinkIntoBufferForDifferentThread(RefPtr<ImageBuffer>);
     static std::unique_ptr<SerializedImageBuffer> sinkIntoSerializedImageBuffer(RefPtr<ImageBuffer>&&);
 
     WEBCORE_EXPORT virtual void convertToLuminanceMask();
@@ -221,6 +229,7 @@ public:
     WEBCORE_EXPORT SetNonVolatileResult setNonVolatile();
     WEBCORE_EXPORT VolatilityState volatilityState() const;
     WEBCORE_EXPORT void setVolatilityState(VolatilityState);
+    WEBCORE_EXPORT void setVolatileAndPurgeForTesting();
     WEBCORE_EXPORT virtual std::unique_ptr<ThreadSafeImageBufferFlusher> createFlusher();
 
     // This value increments when the ImageBuffer gets a new backend, which can happen if, for example, the GPU Process exits.
@@ -246,6 +255,7 @@ protected:
     std::unique_ptr<ImageBufferBackend> m_backend;
     RenderingResourceIdentifier m_renderingResourceIdentifier;
     unsigned m_backendGeneration { 0 };
+    bool m_hasForcedPurgeForTesting { false };
 };
 
 class SerializedImageBuffer {
@@ -256,7 +266,7 @@ public:
     SerializedImageBuffer() = default;
     virtual ~SerializedImageBuffer() = default;
 
-    virtual size_t memoryCost() = 0;
+    virtual size_t memoryCost() const = 0;
 
     WEBCORE_EXPORT static RefPtr<ImageBuffer> sinkIntoImageBuffer(std::unique_ptr<SerializedImageBuffer>, GraphicsClient* = nullptr);
 

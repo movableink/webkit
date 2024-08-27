@@ -74,10 +74,9 @@ static void appendMailtoPostFormDataToURL(URL& url, const FormData& data, const 
         body = PAL::decodeURLEscapeSequences(makeStringByReplacingAll(makeStringByReplacingAll(body, '&', "\r\n"_s), '+', ' '));
     }
 
-    Vector<char> bodyData;
-    bodyData.append("body=", 5);
+    Vector<uint8_t> bodyData(std::span<const char>("body=", static_cast<size_t>(5)));
     FormDataBuilder::encodeStringAsFormData(bodyData, body.utf8());
-    body = makeStringByReplacingAll(String(bodyData.data(), bodyData.size()), '+', "%20"_s);
+    body = makeStringByReplacingAll(bodyData.span(), '+', "%20"_s);
 
     auto query = url.query();
     if (query.isEmpty())
@@ -223,7 +222,7 @@ Ref<FormSubmission> FormSubmission::create(HTMLFormElement& form, HTMLFormContro
 
     if (isMultiPartForm) {
         formData = FormData::createMultiPart(domFormData);
-        boundary = String::fromLatin1(formData->boundary().data());
+        boundary = String(formData->boundary());
     } else {
         formData = FormData::create(domFormData, attributes.method() == Method::Get ? FormData::EncodingType::FormURLEncoded : FormData::parseEncodingType(encodingType));
         if (copiedAttributes.method() == Method::Post && isMailtoForm) {
@@ -251,6 +250,11 @@ URL FormSubmission::requestURL() const
     return requestURL;
 }
 
+RefPtr<Event> FormSubmission::protectedEvent() const
+{
+    return m_event;
+}
+
 void FormSubmission::populateFrameLoadRequest(FrameLoadRequest& frameRequest)
 {
     ASSERT(m_method == Method::Post || m_method == Method::Get);
@@ -269,7 +273,7 @@ void FormSubmission::populateFrameLoadRequest(FrameLoadRequest& frameRequest)
         if (m_boundary.isEmpty())
             frameRequest.resourceRequest().setHTTPContentType(m_contentType);
         else
-            frameRequest.resourceRequest().setHTTPContentType(m_contentType + "; boundary=" + m_boundary);
+            frameRequest.resourceRequest().setHTTPContentType(makeString(m_contentType, "; boundary="_s, m_boundary));
     }
 
     frameRequest.resourceRequest().setURL(requestURL());

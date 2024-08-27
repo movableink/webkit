@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2024 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -26,6 +26,7 @@
 #include "PopupMenuStyle.h"
 #include "ScrollTypes.h"
 #include "StyleColor.h"
+#include "SwitchTrigger.h"
 #include "ThemeTypes.h"
 #include <wtf/HashMap.h>
 
@@ -53,8 +54,7 @@ class Settings;
 class RenderTheme {
 protected:
     RenderTheme();
-
-    virtual ~RenderTheme() = default;
+    virtual ~RenderTheme();
 
 public:
     // This function is to be implemented in platform-specific theme implementations to hand back the
@@ -135,35 +135,29 @@ public:
 
     // Some controls may spill out of their containers (e.g., the check on an OS X checkbox).  When these controls repaint,
     // the theme needs to communicate this inflated rect to the engine so that it can invalidate the whole control.
-    virtual void adjustRepaintRect(const RenderObject&, FloatRect&) { }
-
-    // This method is called whenever a relevant state changes on a particular themed object, e.g., the mouse becomes pressed
-    // or a control becomes disabled.
-    bool stateChanged(const RenderObject&, ControlStyle::State) const;
-
-    // This method is called whenever the theme changes on the system in order to flush cached resources from the
-    // old theme.
-    virtual void themeChanged() { }
+    virtual void inflateRectForControlRenderer(const RenderObject&, FloatRect&) { }
+    virtual void adjustRepaintRect(const RenderBox&, FloatRect&) { }
 
     // A method asking if the theme is able to draw the focus ring.
     virtual bool supportsFocusRing(const RenderStyle&) const;
 
     // A method asking if the theme's controls actually care about redrawing when hovered.
-    virtual bool supportsHover(const RenderStyle&) const { return false; }
+    virtual bool supportsHover() const { return false; }
 
     // A method asking if the platform is able to show datalist suggestions for a given input type.
     virtual bool supportsDataListUI(const AtomString&) const { return false; }
 
     virtual bool supportsBoxShadow(const RenderStyle&) const { return false; }
 
-    virtual bool useFormSemanticContext() const { return false; }
+    bool useFormSemanticContext() const { return m_useFormSemanticContext; }
+    void setUseFormSemanticContext(bool value) { m_useFormSemanticContext = value; }
     virtual bool supportsLargeFormControls() const { return false; }
 
     virtual bool searchFieldShouldAppearAsTextField(const RenderStyle&) const { return false; }
 
     // Text selection colors.
-    Color activeSelectionBackgroundColor(OptionSet<StyleColorOptions>) const;
-    Color inactiveSelectionBackgroundColor(OptionSet<StyleColorOptions>) const;
+    WEBCORE_EXPORT Color activeSelectionBackgroundColor(OptionSet<StyleColorOptions>) const;
+    WEBCORE_EXPORT Color inactiveSelectionBackgroundColor(OptionSet<StyleColorOptions>) const;
     virtual Color transformSelectionBackgroundColor(const Color&, OptionSet<StyleColorOptions>) const;
     Color activeSelectionForegroundColor(OptionSet<StyleColorOptions>) const;
     Color inactiveSelectionForegroundColor(OptionSet<StyleColorOptions>) const;
@@ -207,7 +201,7 @@ public:
 
     virtual LengthBox popupInternalPaddingBox(const RenderStyle&) const { return { 0, 0, 0, 0 }; }
     virtual bool popupOptionSupportsTextIndent() const { return false; }
-    virtual PopupMenuStyle::PopupMenuSize popupMenuSize(const RenderStyle&, IntRect&) const { return PopupMenuStyle::PopupMenuSizeNormal; }
+    virtual PopupMenuStyle::Size popupMenuSize(const RenderStyle&, IntRect&) const { return PopupMenuStyle::Size::Normal; }
 
     virtual ScrollbarWidth scrollbarWidthStyleForPart(StyleAppearance) { return ScrollbarWidth::Auto; }
 
@@ -260,8 +254,9 @@ public:
     virtual void paintSystemPreviewBadge(Image&, const PaintInfo&, const FloatRect&);
 #endif
     virtual Seconds switchAnimationVisuallyOnDuration() const { return 0_s; }
-    virtual Seconds switchAnimationPressedDuration() const { return 0_s; }
+    virtual Seconds switchAnimationHeldDuration() const { return 0_s; }
     float switchPointerTrackingMagnitudeProportion() const { return 0.4f; }
+    virtual bool hasSwitchHapticFeedback(SwitchTrigger) const { return false; }
 
 protected:
     OptionSet<ControlStyle::State> extractControlStyleStatesForRenderer(const RenderObject&) const;
@@ -332,9 +327,6 @@ protected:
     virtual void adjustMeterStyle(RenderStyle&, const Element*) const;
     virtual bool paintMeter(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
 
-    virtual void adjustCapsLockIndicatorStyle(RenderStyle&, const Element*) const { }
-    virtual bool paintCapsLockIndicator(const RenderObject&, const PaintInfo&, const IntRect&) { return false; }
-
 #if ENABLE(APPLE_PAY)
     virtual void adjustApplePayButtonStyle(RenderStyle&, const Element*) const { }
 #endif
@@ -380,14 +372,16 @@ protected:
     virtual void adjustSearchFieldResultsButtonStyle(RenderStyle&, const Element*) const { }
     virtual bool paintSearchFieldResultsButton(const RenderBox&, const PaintInfo&, const IntRect&) { return true; }
 
+    void adjustSwitchStyleDisplay(RenderStyle&) const;
     virtual void adjustSwitchStyle(RenderStyle&, const Element*) const;
+    void adjustSwitchThumbOrSwitchTrackStyle(RenderStyle&) const;
     virtual bool paintSwitchThumb(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
     virtual bool paintSwitchTrack(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
 
 private:
     OptionSet<ControlStyle::State> extractControlStyleStatesForRendererInternal(const RenderObject&) const;
 
-    void adjustButtonOrCheckboxOrColorWellOrInnerSpinButtonOrRadioOrSwitchStyle(RenderStyle&, const Element*) const;
+    void adjustButtonOrCheckboxOrColorWellOrInnerSpinButtonOrRadioStyle(RenderStyle&, const Element*) const;
 
 public:
     bool isWindowActive(const RenderObject&) const;
@@ -451,6 +445,8 @@ private:
     Color grammarMarkerColor(OptionSet<StyleColorOptions>) const;
 
     mutable HashMap<uint8_t, ColorCache, DefaultHash<uint8_t>, WTF::UnsignedWithZeroKeyHashTraits<uint8_t>> m_colorCacheMap;
+
+    bool m_useFormSemanticContext { false };
 };
 
 } // namespace WebCore

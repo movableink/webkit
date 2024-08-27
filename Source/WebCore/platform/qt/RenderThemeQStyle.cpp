@@ -35,14 +35,15 @@
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "GraphicsContext.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "NotImplemented.h"
-#include "Page.h"
 #include "PaintInfo.h"
-#include "QWebPageClient.h"
 #include "RenderBox.h"
+#include "RenderBoxInlines.h"
+#include "RenderStyleSetters.h"
 #include "RenderProgress.h"
 #include "ScrollbarThemeQStyle.h"
 #include "StyleResolver.h"
@@ -110,7 +111,7 @@ void StylePainterQStyle::setupStyleOption()
 
 RenderTheme& RenderThemeQStyle::singleton()
 {
-    static NeverDestroyed<RenderThemeQStyle> theme(nullptr);
+    static NeverDestroyed<RenderThemeQStyle> theme;
     return theme;
 }
 
@@ -126,9 +127,9 @@ QtStyleFactoryFunction RenderThemeQStyle::styleFactory()
     return styleFactoryFunction;
 }
 
-RenderThemeQStyle::RenderThemeQStyle(Page* page)
-    : RenderThemeQt(page)
-    , m_qStyle(styleFactoryFunction(page))
+RenderThemeQStyle::RenderThemeQStyle()
+    : RenderThemeQt()
+    , m_qStyle(styleFactoryFunction())
 {
     int buttonPixelSize = 0;
     m_qStyle->getButtonMetrics(&m_buttonFontFamily, &buttonPixelSize);
@@ -143,11 +144,6 @@ RenderThemeQStyle::~RenderThemeQStyle()
 
 void RenderThemeQStyle::setPaletteFromPageClientIfExists(QPalette& palette) const
 {
-    if (!m_page)
-        return;
-
-    if (QWebPageClient* pageClient = m_page->chrome().client().platformPageClient())
-        palette = pageClient->palette();
 }
 
 QRect RenderThemeQStyle::indicatorRect(QStyleFacade::ButtonType part, const QRect& originalRect) const
@@ -219,7 +215,7 @@ void RenderThemeQStyle::computeSizeBasedOnStyle(RenderStyle& renderStyle) const
     QSize size(0, 0);
     const QFontMetrics fm(renderStyle.fontCascade().syntheticFont());
 
-    switch (renderStyle.appearance()) {
+    switch (renderStyle.usedAppearance()) {
     case StyleAppearance::TextArea:
     case StyleAppearance::SearchField:
     case StyleAppearance::TextField: {
@@ -238,16 +234,16 @@ void RenderThemeQStyle::computeSizeBasedOnStyle(RenderStyle& renderStyle) const
     if (!renderStyle.width().isIntrinsicOrAuto() && !renderStyle.height().isAuto())
         return;
 
-    switch (renderStyle.appearance()) {
+    switch (renderStyle.usedAppearance()) {
     case StyleAppearance::Checkbox: {
         int checkBoxWidth = m_qStyle->simplePixelMetric(QStyleFacade::PM_IndicatorWidth, QStyleFacade::State_Small);
-        checkBoxWidth *= renderStyle.effectiveZoom();
+        checkBoxWidth *= renderStyle.usedZoom();
         size = QSize(checkBoxWidth, checkBoxWidth);
         break;
     }
     case StyleAppearance::Radio: {
         int radioWidth = m_qStyle->simplePixelMetric(QStyleFacade::PM_ExclusiveIndicatorWidth, QStyleFacade::State_Small);
-        radioWidth *= renderStyle.effectiveZoom();
+        radioWidth *= renderStyle.usedZoom();
         size = QSize(radioWidth, radioWidth);
         break;
     }
@@ -285,13 +281,13 @@ void RenderThemeQStyle::computeSizeBasedOnStyle(RenderStyle& renderStyle) const
 
 
 
-void RenderThemeQStyle::adjustButtonStyle(RenderStyle& style, const Element*) const
+void RenderThemeQStyle::adjustButtonStyle(RenderStyle& style, const Element* element) const
 {
     // Ditch the border.
     style.resetBorder();
 
 #ifdef Q_OS_MACOS
-    if (style.appearance() == StyleAppearance::PushButton) {
+    if (style.usedAppearance() == StyleAppearance::PushButton) {
         // The Mac ports ignore the specified height for <input type="button"> elements
         // unless a border and/or background CSS property is also specified.
         style.setHeight(Length(LengthType::Auto));
@@ -313,10 +309,8 @@ void RenderThemeQStyle::adjustButtonStyle(RenderStyle& style, const Element*) co
     families.append(m_buttonFontFamily);
     fontDescription.setFamilies(families);
     style.setFontDescription(WTFMove(fontDescription));
-    // TODO: address no longer having styleResolver reference here
-    // style.fontCascade().update(&styleResolver.document().fontSelector());
+    style.fontCascade().update(&element->document().fontSelector());
     style.setLineHeight(RenderStyle::initialLineHeight());
-    // QTFIXME: setButtonSize() was removed
     setButtonPadding(style);
 }
 
@@ -606,7 +600,7 @@ StyleAppearance RenderThemeQStyle::initializeCommonQStyleOptions(QStyleFacadeOpt
 
     const RenderStyle& style = o.style();
 
-    StyleAppearance result = style.appearance();
+    StyleAppearance result = style.usedAppearance();
     if (supportsFocus(result) && isFocused(o)) {
         option.state |= QStyleFacade::State_HasFocus;
         option.state |= QStyleFacade::State_KeyboardFocusChange;

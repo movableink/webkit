@@ -27,6 +27,7 @@
  */
 
 #include "locationedit.h"
+#include <QPainter>
 
 #ifndef QT_NO_INPUTDIALOG
 
@@ -99,6 +100,7 @@ void LocationEdit::updateInternalGeometry()
 
 void LocationEdit::paintEvent(QPaintEvent* ev)
 {
+    QPainter painter(this);
     QColor backgroundColor = QApplication::palette().color(QPalette::Base);
     QColor progressColor = QColor(120, 180, 240);
     QPalette p = palette();
@@ -111,7 +113,8 @@ void LocationEdit::paintEvent(QPaintEvent* ev)
         gradient.setColorAt(((double) m_progress) / 100, progressColor);
         if (m_progress != 100)
             gradient.setColorAt((double) m_progress / 100 + 0.001, backgroundColor);
-        p.setBrush(QPalette::Base, gradient);
+        p.setBrush(QPalette::Base, QColor(Qt::transparent));
+        painter.fillRect(rect(), gradient);
     }
     setPalette(p);
 

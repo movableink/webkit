@@ -27,15 +27,16 @@
 
 #include "InlineContentBreaker.h"
 #include "InlineDisplayContent.h"
+#include "InlineLevelBox.h"
 #include <wtf/Range.h>
 
 namespace WebCore {
 namespace Layout {
 
 class InlineFormattingContext;
-class InlineLevelBox;
 class Line;
 class LineBox;
+class Rect;
 
 class RubyFormattingContext {
 public:
@@ -50,12 +51,12 @@ public:
     static void applyAnnotationContributionToLayoutBounds(LineBox&, const InlineFormattingContext&);
 
     // Display content building
-    static InlineLayoutUnit baseEndAdditionalVisualWidth(const Box& rubyBaseLayoutBox, const InlineDisplay::Box& baseDisplayBox, InlineLayoutUnit baseContentWidth, const InlineFormattingContext&);
-    static InlineLayoutPoint placeAnnotationBox(const Box& rubyBaseLayoutBox, const Rect& rubyBaseMarginBox, const InlineFormattingContext&);
-    static InlineLayoutSize sizeAnnotationBox(const Box& rubyBaseLayoutBox, const InlineFormattingContext&);
+    static InlineLayoutUnit baseEndAdditionalLogicalWidth(const Box& rubyBaseLayoutBox, const InlineDisplay::Box& baseDisplayBox, InlineLayoutUnit baseContentWidth, const InlineFormattingContext&);
+    static InlineLayoutPoint placeAnnotationBox(const Box& rubyBaseLayoutBox, const Rect& rubyBaseMarginBoxLogicalRect, const InlineFormattingContext&);
+    static InlineLayoutSize sizeAnnotationBox(const Box& rubyBaseLayoutBox, const Rect& rubyBaseMarginBoxLogicalRect, const InlineFormattingContext&);
 
-    static InlineLayoutUnit overhangForAnnotationBefore(const Box& rubyBaseLayoutBox, size_t rubyBaseStart, const InlineDisplay::Boxes&, const InlineFormattingContext&);
-    static InlineLayoutUnit overhangForAnnotationAfter(const Box& rubyBaseLayoutBox, WTF::Range<size_t> rubyBaseRange, const InlineDisplay::Boxes&, const InlineFormattingContext&);
+    static InlineLayoutUnit overhangForAnnotationBefore(const Box& rubyBaseLayoutBox, size_t rubyBaseStart, const InlineDisplay::Boxes&, InlineLayoutUnit lineLogicalHeight, const InlineFormattingContext&);
+    static InlineLayoutUnit overhangForAnnotationAfter(const Box& rubyBaseLayoutBox, WTF::Range<size_t> rubyBaseRange, const InlineDisplay::Boxes&, InlineLayoutUnit lineLogicalHeight, const InlineFormattingContext&);
 
     enum class RubyBasesMayNeedResizing : bool { No, Yes };
     static void applyAlignmentOffsetList(InlineDisplay::Boxes&, const HashMap<const Box*, InlineLayoutUnit>& alignmentOffsetList, RubyBasesMayNeedResizing, InlineFormattingContext&);
@@ -66,7 +67,8 @@ public:
     static bool hasInterCharacterAnnotation(const Box& rubyBaseLayoutBox);
 
 private:
-    static void adjustLayoutBoundsAndStretchAncestorRubyBase(LineBox&, InlineLevelBox& rubyBaseInlineBox, const InlineFormattingContext&);
+    using MaximumLayoutBoundsStretchMap = HashMap<const InlineLevelBox*, InlineLevelBox::AscentAndDescent>;
+    static void adjustLayoutBoundsAndStretchAncestorRubyBase(LineBox&, InlineLevelBox& rubyBaseInlineBox, MaximumLayoutBoundsStretchMap&, const InlineFormattingContext&);
     static size_t applyRubyAlignOnBaseContent(size_t rubyBaseStart, Line&, HashMap<const Box*, InlineLayoutUnit>& alignmentOffsetList, const InlineFormattingContext&);
 };
 

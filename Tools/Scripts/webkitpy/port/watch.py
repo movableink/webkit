@@ -55,9 +55,6 @@ class WatchPort(DevicePort):
             return None
         return VersionNameMap.map(self.host.platform).to_name(self._os_version, platform=WatchPort.port_name)
 
-    def test_expectations_file_position(self):
-        return 4
-
     def default_baseline_search_path(self, **kwargs):
         versions_to_fallback = []
         if self.device_version() == self.CURRENT_VERSION:
@@ -75,7 +72,8 @@ class WatchPort(DevicePort):
         for version in versions_to_fallback:
             if apple_additions():
                 apple_name = VersionNameMap.map(self.host.platform).to_name(version, platform=WatchPort.port_name, table=INTERNAL_TABLE)
-                expectations.append(self._apple_baseline_path('{}-{}'.format(self.port_name, apple_name.lower().replace(' ', ''))))
+                if apple_name:
+                    expectations.append(self._apple_baseline_path('{}-{}'.format(self.port_name, apple_name.lower().replace(' ', ''))))
             expectations.append(self._webkit_baseline_path('{}-{}'.format(self.port_name, version.major)))
 
         if apple_additions():

@@ -56,13 +56,13 @@ static String urlForLoggingTrack(const URL& url)
     
     if (url.string().length() < maximumURLLengthForLogging)
         return url.string();
-    return makeString(StringView(url.string()).left(maximumURLLengthForLogging), "...");
+    return makeString(StringView(url.string()).left(maximumURLLengthForLogging), "..."_s);
 }
 
 #endif
     
 inline HTMLTrackElement::HTMLTrackElement(const QualifiedName& tagName, Document& document)
-    : HTMLElement(tagName, document)
+    : HTMLElement(tagName, document, TypeFlag::HasDidMoveToNewDocument)
     , ActiveDOMObject(document)
     , m_track(LoadableTextTrack::create(*this, attributeWithoutSynchronization(kindAttr).convertToASCIILowercase(), label(), srclang()))
 {
@@ -106,6 +106,12 @@ void HTMLTrackElement::removedFromAncestor(RemovalType removalType, ContainerNod
         if (auto* mediaElement = dynamicDowncast<HTMLMediaElement>(oldParentOfRemovedTree))
             mediaElement->didRemoveTextTrack(*this);
     }
+}
+
+void HTMLTrackElement::didMoveToNewDocument(Document& oldDocument, Document& newDocument)
+{
+    HTMLElement::didMoveToNewDocument(oldDocument, newDocument);
+    ActiveDOMObject::didMoveToNewDocument(newDocument);
 }
 
 void HTMLTrackElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
@@ -312,11 +318,6 @@ void HTMLTrackElement::textTrackModeChanged(TextTrack&)
 RefPtr<HTMLMediaElement> HTMLTrackElement::mediaElement() const
 {
     return dynamicDowncast<HTMLMediaElement>(parentElement());
-}
-
-const char* HTMLTrackElement::activeDOMObjectName() const
-{
-    return "HTMLTrackElement";
 }
 
 void HTMLTrackElement::eventListenersDidChange()

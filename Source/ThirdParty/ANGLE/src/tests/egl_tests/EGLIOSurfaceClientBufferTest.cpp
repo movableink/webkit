@@ -619,23 +619,53 @@ TEST_P(IOSurfaceClientBufferTest, ReadFromR8IOSurface)
     doSampleTest(ioSurface, 1, 1, 0, GL_RED, GL_UNSIGNED_BYTE, &color, sizeof(color), R);
 }
 
+// Test using RG1616 IOSurfaces for rendering
+TEST_P(IOSurfaceClientBufferTest, RenderToRG1616IOSurface)
+{
+    ANGLE_SKIP_TEST_IF(!hasIOSurfaceExt());
+    ANGLE_SKIP_TEST_IF(!IsGLExtensionEnabled("GL_EXT_texture_norm16"));
+
+    ScopedIOSurfaceRef ioSurface = CreateSinglePlaneIOSurface(1, 1, '2C16', 4);
+
+    std::array<uint16_t, 2> color{257, 514};
+    doClearTest(ioSurface, 1, 1, 0, GL_RG, GL_UNSIGNED_SHORT, color);
+}
+
+// Test reading from RG1616 IOSurfaces
+TEST_P(IOSurfaceClientBufferTest, ReadFromRG1616IOSurface)
+{
+    ANGLE_SKIP_TEST_IF(!hasIOSurfaceExt());
+    ANGLE_SKIP_TEST_IF(!IsGLExtensionEnabled("GL_EXT_texture_norm16"));
+
+    ScopedIOSurfaceRef ioSurface = CreateSinglePlaneIOSurface(1, 1, '2C16', 4);
+
+    uint16_t color[2] = {257, 514};
+    doSampleTest(ioSurface, 1, 1, 0, GL_RG, GL_UNSIGNED_SHORT, &color, sizeof(color), R | G);
+}
+
 // Test using R16 IOSurfaces for rendering
 TEST_P(IOSurfaceClientBufferTest, RenderToR16IOSurface)
 {
     ANGLE_SKIP_TEST_IF(!hasIOSurfaceExt());
+    ANGLE_SKIP_TEST_IF(!IsGLExtensionEnabled("GL_EXT_texture_norm16"));
 
-    // This test only works on ES3 since it requires an integer texture.
-    ANGLE_SKIP_TEST_IF(getClientMajorVersion() < 3);
-
-    // HACK(cwallez@chromium.org) 'L016' doesn't seem to be an official pixel format but it works
-    // sooooooo let's test using it
     ScopedIOSurfaceRef ioSurface = CreateSinglePlaneIOSurface(1, 1, 'L016', 2);
 
     std::array<uint16_t, 1> color{257};
-    doClearTest(ioSurface, 1, 1, 0, GL_R16UI, GL_UNSIGNED_SHORT, color);
+    doClearTest(ioSurface, 1, 1, 0, GL_RED, GL_UNSIGNED_SHORT, color);
 }
-// TODO(cwallez@chromium.org): test reading from R16? It returns 0 maybe because samplerRect is
-// only for floating textures?
+
+// Test reading from R16 IOSurfaces
+TEST_P(IOSurfaceClientBufferTest, ReadFromR16IOSurface)
+{
+    ANGLE_SKIP_TEST_IF(!hasIOSurfaceExt());
+    ANGLE_SKIP_TEST_IF(!IsGLExtensionEnabled("GL_EXT_texture_norm16"));
+
+    ScopedIOSurfaceRef ioSurface = CreateSinglePlaneIOSurface(1, 1, 'L016', 2);
+
+    uint16_t color = 257;
+    doSampleTest(ioSurface, 1, 1, 0, GL_RED, GL_UNSIGNED_SHORT, &color, sizeof(color), R);
+}
 
 // Test using BGRA_1010102 IOSurfaces for rendering
 TEST_P(IOSurfaceClientBufferTest, RenderToBGRA1010102IOSurface)
@@ -1261,6 +1291,73 @@ TEST_P(IOSurfaceClientBufferTest, ReadFromBGRX8888IOSurfaceWithTexBaseMaxLevelSe
                                    glTexParameteri(getGLTextureTarget(), GL_TEXTURE_BASE_LEVEL, 0);
                                    glTexParameteri(getGLTextureTarget(), GL_TEXTURE_MAX_LEVEL, 0);
                                });
+}
+
+// Test that the following scenario works:
+// - change IOSurface bound texture's max level to 0.
+// - attach IOSurface bound texture to a FBO 1.
+// - bind FBO 1
+// - clear FBO 1 -> this should trigger render targets initialization in backends.
+// - bind FBO 0.
+// - draw IOSurface bound texture to FBO 0.
+//   -> In the past, this could trigger the texture's render targets invalidation in metal backend.
+//   See https://issues.chromium.org/issues/335353385
+// - bind FBO 1
+// - blit FBO 0 to FBO 1.
+//   -> this will reconstruct render pass descriptor in metal backend.
+// - flush to restart render encoder with new render pass descriptor.
+// - draw.
+TEST_P(IOSurfaceClientBufferTest, SetMaxLevelWouldInvalidateRenderTargetBug)
+{
+    ANGLE_SKIP_TEST_IF(!hasIOSurfaceExt());
+    ANGLE_SKIP_TEST_IF(getClientMajorVersion() < 3);
+
+    ANGLE_GL_PROGRAM(blueProgram, angle::essl1_shaders::vs::Simple(),
+                     angle::essl1_shaders::fs::Blue());
+
+    ScopedIOSurfaceRef ioSurface = CreateSinglePlaneIOSurface(1, 1, 'BGRA', 4);
+
+    GLTexture texture;
+    glBindTexture(getGLTextureTarget(), texture);
+
+    // Bind the IOSurface to a texture.
+    EGLSurface pbuffer;
+    bindIOSurfaceToTexture(ioSurface, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, &pbuffer, &texture);
+
+    // 1. Change the texture's max level to 0.
+    glTexParameteri(getGLTextureTarget(), GL_TEXTURE_MAX_LEVEL, 0);
+    EXPECT_GL_NO_ERROR();
+
+    // 2. Attach IOSurface bound texture to a FBO and clear it.
+    GLFramebuffer fbo;
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    EXPECT_GL_NO_ERROR();
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, getGLTextureTarget(), texture, 0);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_ONE, GL_ONE);
+    glClearColor(1.0f / 255.0f, 2.0f / 255.0f, 3.0f / 255.0f, 4.0f / 255.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    // 3. Draw IOSurface bound texture to default FBO.
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    doSampleTestWithTexture(texture, R | G | B);
+
+    // 3. Draw to custom FBO again
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
+    glClear(GL_COLOR_BUFFER_BIT);
+    // Using a blit is important: it will trigger render pass reconstruction in
+    // metal backend due to DIRTY_BIT_COLOR_BUFFER_CONTENTS_0 dirty bit.
+    glBlitFramebuffer(0, 0, 1, 1, 0, 0, 1, 1, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    glFlush();  // flush so that render encoder will be recreated again in metal backend.
+    glUseProgram(blueProgram);
+    drawQuad(blueProgram, angle::essl1_shaders::PositionAttrib(), 0.5f);
+    glFlush();
+
+    // Expect the final color to be accumulated color
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor(1, 2, 255, 255));
 }
 
 // TODO(cwallez@chromium.org): Test setting width and height to less than the IOSurface's work as

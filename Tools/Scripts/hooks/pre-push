@@ -99,7 +99,7 @@ def security_level_for_remote(remote):
     match = REMOTE_RE.match(remote)
     if not match:
         return None
-    return SECURITY_LEVELS.get('{}:{}'.format(match.group('host'), match.group('path')), None)
+    return SECURITY_LEVELS.get('{}:{}'.format(match.group('host'), match.group('path')).lower(), None)
 
 
 def security_level_for_remotes(remotes, name_to_remote=None):
@@ -143,11 +143,11 @@ def remote_name_mappings():
         **ENCODING_KWARGS
     ).splitlines():
         remote = line.split()
-        if len(remote) < 2:
+        if len(remote) < 2 or remote[1] == 'INVALID':
             continue
-        b[remote[0]] = remote[1]
         match = REMOTE_RE.match(remote[1])
         if match:
+            b[remote[0]] = remote[1]
             a['{}:{}'.format(match.group('host'), match.group('path'))] = remote[0]
     return a, b
 

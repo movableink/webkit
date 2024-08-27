@@ -39,16 +39,27 @@
 #include "ResourceLoadStatisticsClassifierCocoa.h"
 #endif
 
+namespace WebKit {
+class ResourceLoadStatisticsStore;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebKit::ResourceLoadStatisticsStore> : std::true_type { };
+}
+
 namespace WebCore {
 class KeyedDecoder;
 class KeyedEncoder;
 class SQLiteStatement;
 enum class StorageAccessPromptWasShown : bool;
-enum class StorageAccessWasGranted : bool;
+enum class StorageAccessWasGranted : uint8_t;
 struct ResourceLoadStatistics;
 }
 
 namespace WebKit {
+
+enum class DidFilterKnownLinkDecoration : bool;
 
 class OperatingDate {
 public:
@@ -79,6 +90,8 @@ private:
 
 enum class OperatingDatesWindow : uint8_t { Long, Short, ForLiveOnTesting, ForReproTesting };
 enum class CookieAccess : uint8_t { CannotRequest, BasedOnCookiePolicy, OnlyIfGranted };
+enum class CanRequestStorageAccessWithoutUserInteraction : bool { No, Yes };
+enum class DataRemovalFrequency : uint8_t { Never, Short, Long };
 
 // This is always constructed / used / destroyed on the WebResourceLoadStatisticsStore's statistics queue.
 class ResourceLoadStatisticsStore final : public DatabaseUtilities, public CanMakeWeakPtr<ResourceLoadStatisticsStore> {
@@ -112,7 +125,7 @@ public:
     bool isNewResourceLoadStatisticsDatabaseFile() const { return m_isNewResourceLoadStatisticsDatabaseFile; }
     void setIsNewResourceLoadStatisticsDatabaseFile(bool isNewResourceLoadStatisticsDatabaseFile) { m_isNewResourceLoadStatisticsDatabaseFile = isNewResourceLoadStatisticsDatabaseFile; }
 
-    void requestStorageAccessUnderOpener(DomainInNeedOfStorageAccess&&, WebCore::PageIdentifier openerID, OpenerDomain&&);
+    void requestStorageAccessUnderOpener(DomainInNeedOfStorageAccess&&, WebCore::PageIdentifier openerID, OpenerDomain&&, CanRequestStorageAccessWithoutUserInteraction);
     void removeAllStorageAccess(CompletionHandler<void()>&&);
 
     void grandfatherExistingWebsiteData(CompletionHandler<void()>&&);
@@ -168,12 +181,12 @@ public:
     void setManagedDomains(HashSet<RegistrableDomain>&&);
 #endif
 
-    void hasStorageAccess(SubFrameDomain&&, TopFrameDomain&&, std::optional<WebCore::FrameIdentifier>, WebCore::PageIdentifier, CompletionHandler<void(bool)>&&);
-    void requestStorageAccess(SubFrameDomain&&, TopFrameDomain&&, WebCore::FrameIdentifier, WebCore::PageIdentifier, WebCore::StorageAccessScope, CompletionHandler<void(StorageAccessStatus)>&&);
+    void hasStorageAccess(SubFrameDomain&&, TopFrameDomain&&, std::optional<WebCore::FrameIdentifier>, WebCore::PageIdentifier, CanRequestStorageAccessWithoutUserInteraction, CompletionHandler<void(bool)>&&);
+    void requestStorageAccess(SubFrameDomain&&, TopFrameDomain&&, WebCore::FrameIdentifier, WebCore::PageIdentifier, WebCore::StorageAccessScope, CanRequestStorageAccessWithoutUserInteraction, CompletionHandler<void(StorageAccessStatus)>&&);
     void grantStorageAccess(SubFrameDomain&&, TopFrameDomain&&, WebCore::FrameIdentifier, WebCore::PageIdentifier, WebCore::StorageAccessPromptWasShown, WebCore::StorageAccessScope, CompletionHandler<void(WebCore::StorageAccessWasGranted)>&&);
 
     void logFrameNavigation(const NavigatedToDomain&, const TopFrameDomain&, const NavigatedFromDomain&, bool isRedirect, bool isMainFrame, Seconds delayAfterMainFrameDocumentLoad, bool wasPotentiallyInitiatedByUser);
-    void logCrossSiteLoadWithLinkDecoration(const NavigatedFromDomain&, const NavigatedToDomain&);
+    void logCrossSiteLoadWithLinkDecoration(const NavigatedFromDomain&, const NavigatedToDomain&, DidFilterKnownLinkDecoration);
 
     void logUserInteraction(const TopFrameDomain&, CompletionHandler<void()>&&);
     void clearUserInteraction(const RegistrableDomain&, CompletionHandler<void()>&&);
@@ -193,6 +206,7 @@ public:
     const WebResourceLoadStatisticsStore& store() const { return m_store; }
 
     bool domainIDExistsInDatabase(int);
+    bool observedDomainNavigationWithLinkDecoration(int);
     std::optional<Vector<String>> checkForMissingTablesInSchema();
 
     void includeTodayAsOperatingDateIfNecessary();
@@ -224,8 +238,8 @@ private:
     const RegistrableDomain& debugManualPrevalentResource() const { return m_debugManualPrevalentResource; }
     const RegistrableDomain& debugStaticPrevalentResource() const { return m_debugStaticPrevalentResource; }
     void debugBroadcastConsoleMessage(MessageSource, MessageLevel, const String& message);
-    void debugLogDomainsInBatches(const char* action, const RegistrableDomainsToBlockCookiesFor&);
-    bool debugLoggingEnabled() const { return m_debugLoggingEnabled; };
+    void debugLogDomainsInBatches(ASCIILiteral action, const RegistrableDomainsToBlockCookiesFor&);
+    bool debugLoggingEnabled() const { return m_debugLoggingEnabled; }
     bool debugModeEnabled() const { return m_debugModeEnabled; }
     bool shouldExemptFromWebsiteDataDeletion(const RegistrableDomain&) const;
 
@@ -250,7 +264,7 @@ private:
     Vector<RegistrableDomain> domainsToBlockAndDeleteCookiesFor() const;
     Vector<RegistrableDomain> domainsToBlockButKeepCookiesFor() const;
     Vector<RegistrableDomain> domainsWithUserInteractionAsFirstParty() const;
-    HashMap<TopFrameDomain, SubResourceDomain> domainsWithStorageAccess() const;
+    HashMap<TopFrameDomain, Vector<SubResourceDomain>> domainsWithStorageAccess() const;
 
     struct DomainData {
         unsigned domainID;
@@ -259,7 +273,7 @@ private:
         WallTime mostRecentWebPushInteractionTime;
         bool hadUserInteraction;
         bool grandfathered;
-        bool isScheduledForAllButCookieDataRemoval;
+        DataRemovalFrequency dataRemovalFrequency;
         unsigned topFrameUniqueRedirectsToSinceSameSiteStrictEnforcement;
     };
     Vector<DomainData> domains() const;
@@ -279,24 +293,27 @@ private:
     };
     HashMap<unsigned, NotVeryPrevalentResources> findNotVeryPrevalentResources();
 
-    bool predicateValueForDomain(WebCore::SQLiteStatementAutoResetScope&, const RegistrableDomain&) const;
+    int predicateValueForDomain(WebCore::SQLiteStatementAutoResetScope&, const RegistrableDomain&) const;
+    bool predicateBoolValueForDomain(WebCore::SQLiteStatementAutoResetScope&, const RegistrableDomain&) const;
 
-    CookieAccess cookieAccess(const SubResourceDomain&, const TopFrameDomain&);
+    CookieAccess cookieAccess(const SubResourceDomain&, const TopFrameDomain&, CanRequestStorageAccessWithoutUserInteraction);
     void updateCookieBlockingForDomains(RegistrableDomainsToBlockCookiesFor&&, CompletionHandler<void()>&&);
 
     void setPrevalentResource(const RegistrableDomain&, ResourceLoadPrevalence);
     void classifyPrevalentResources();
     unsigned recursivelyFindNonPrevalentDomainsThatRedirectedToThisDomain(unsigned primaryDomainID, StdSet<unsigned>& nonPrevalentRedirectionSources, unsigned numberOfRecursiveCalls);
     void setDomainsAsPrevalent(StdSet<unsigned>&&);
-    void grantStorageAccessInternal(SubFrameDomain&&, TopFrameDomain&&, std::optional<WebCore::FrameIdentifier>, WebCore::PageIdentifier, WebCore::StorageAccessPromptWasShown, WebCore::StorageAccessScope, CompletionHandler<void(WebCore::StorageAccessWasGranted)>&&);
+    void grantStorageAccessInternal(SubFrameDomain&&, TopFrameDomain&&, std::optional<WebCore::FrameIdentifier>, WebCore::PageIdentifier, WebCore::StorageAccessPromptWasShown, WebCore::StorageAccessScope, CanRequestStorageAccessWithoutUserInteraction, CompletionHandler<void(WebCore::StorageAccessWasGranted)>&&);
     void markAsPrevalentIfHasRedirectedToPrevalent();
     
     enum class AddedRecord : bool { No, Yes };
-    std::pair<AddedRecord, std::optional<unsigned>> ensureResourceStatisticsForRegistrableDomain(const RegistrableDomain&) WARN_UNUSED_RETURN;
+    // reason is used for logging purpose.
+    std::pair<AddedRecord, std::optional<unsigned>> ensureResourceStatisticsForRegistrableDomain(const RegistrableDomain&, ASCIILiteral reason) WARN_UNUSED_RETURN;
     bool shouldRemoveAllWebsiteDataFor(const DomainData&, bool shouldCheckForGrandfathering);
     bool shouldRemoveAllButCookiesFor(const DomainData&, bool shouldCheckForGrandfathering);
     bool shouldEnforceSameSiteStrictFor(DomainData&, bool shouldCheckForGrandfathering);
-    void setIsScheduledForAllScriptWrittenStorageRemoval(const RegistrableDomain&, bool value);
+    void setIsScheduledForAllScriptWrittenStorageRemoval(const RegistrableDomain&, DataRemovalFrequency);
+    DataRemovalFrequency dataRemovalFrequency(const RegistrableDomain&) const;
     void clearTopFrameUniqueRedirectsToSinceSameSiteStrictEnforcement(const NavigatedToDomain&, CompletionHandler<void()>&&);
     bool shouldEnforceSameSiteStrictForSpecificDomain(const RegistrableDomain&) const;
     RegistrableDomainsToDeleteOrRestrictWebsiteDataFor registrableDomainsToDeleteOrRestrictWebsiteDataFor();
@@ -370,6 +387,7 @@ private:
     std::unique_ptr<WebCore::SQLiteStatement> m_clearPrevalentResourceStatement;
     mutable std::unique_ptr<WebCore::SQLiteStatement> m_hadUserInteractionStatement;
     std::unique_ptr<WebCore::SQLiteStatement> m_updateGrandfatheredStatement;
+    mutable std::unique_ptr<WebCore::SQLiteStatement> m_isScheduledForAllButCookieDataRemovalStatement;
     mutable std::unique_ptr<WebCore::SQLiteStatement> m_updateIsScheduledForAllButCookieDataRemovalStatement;
     mutable std::unique_ptr<WebCore::SQLiteStatement> m_updateMostRecentWebPushInteractionTimeStatement;
     mutable std::unique_ptr<WebCore::SQLiteStatement> m_isGrandfatheredStatement;

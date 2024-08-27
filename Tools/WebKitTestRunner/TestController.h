@@ -177,9 +177,9 @@ public:
     void terminateWebContentProcess();
     void reattachPageToWebProcess();
 
-    static const char* webProcessName();
-    static const char* networkProcessName();
-    static const char* gpuProcessName();
+    static ASCIILiteral webProcessName();
+    static ASCIILiteral networkProcessName();
+    static ASCIILiteral gpuProcessName();
 
     WorkQueueManager& workQueueManager() { return m_workQueueManager; }
 
@@ -205,6 +205,7 @@ public:
     void setShouldDownloadContentDispositionAttachments(bool shouldDownload) { m_shouldDownloadContentDispositionAttachments = shouldDownload; }
 
     bool isCurrentInvocation(TestInvocation* invocation) const { return invocation == m_currentInvocation.get(); }
+    TestInvocation* currentInvocation() { return m_currentInvocation.get(); }
 
     void setShouldDecideNavigationPolicyAfterDelay(bool value) { m_shouldDecideNavigationPolicyAfterDelay = value; }
     void setShouldDecideResponsePolicyAfterDelay(bool value) { m_shouldDecideResponsePolicyAfterDelay = value; }
@@ -219,20 +220,20 @@ public:
     bool doesStatisticsDomainIDExistInDatabase(unsigned domainID);
     void setStatisticsEnabled(bool value);
     bool isStatisticsEphemeral();
-    void setStatisticsDebugMode(bool value);
-    void setStatisticsPrevalentResourceForDebugMode(WKStringRef hostName);
-    void setStatisticsLastSeen(WKStringRef hostName, double seconds);
-    void setStatisticsMergeStatistic(WKStringRef host, WKStringRef topFrameDomain1, WKStringRef topFrameDomain2, double lastSeen, bool hadUserInteraction, double mostRecentUserInteraction, bool isGrandfathered, bool isPrevalent, bool isVeryPrevalent, int dataRecordsRemoved);
-    void setStatisticsExpiredStatistic(WKStringRef host, unsigned numberOfOperatingDaysPassed, bool hadUserInteraction, bool isScheduledForAllButCookieDataRemoval, bool isPrevalent);
-    void setStatisticsPrevalentResource(WKStringRef hostName, bool value);
-    void setStatisticsVeryPrevalentResource(WKStringRef hostName, bool value);
+    void setStatisticsDebugMode(bool value, CompletionHandler<void(WKTypeRef)>&&);
+    void setStatisticsPrevalentResourceForDebugMode(WKStringRef hostName, CompletionHandler<void(WKTypeRef)>&&);
+    void setStatisticsLastSeen(WKStringRef hostName, double seconds, CompletionHandler<void(WKTypeRef)>&&);
+    void setStatisticsMergeStatistic(WKStringRef host, WKStringRef topFrameDomain1, WKStringRef topFrameDomain2, double lastSeen, bool hadUserInteraction, double mostRecentUserInteraction, bool isGrandfathered, bool isPrevalent, bool isVeryPrevalent, int dataRecordsRemoved, CompletionHandler<void(WKTypeRef)>&&);
+    void setStatisticsExpiredStatistic(WKStringRef host, unsigned numberOfOperatingDaysPassed, bool hadUserInteraction, bool isScheduledForAllButCookieDataRemoval, bool isPrevalent, CompletionHandler<void(WKTypeRef)>&&);
+    void setStatisticsPrevalentResource(WKStringRef hostName, bool value, CompletionHandler<void(WKTypeRef)>&&);
+    void setStatisticsVeryPrevalentResource(WKStringRef hostName, bool value, CompletionHandler<void(WKTypeRef)>&&);
     String dumpResourceLoadStatistics();
     bool isStatisticsPrevalentResource(WKStringRef hostName);
     bool isStatisticsVeryPrevalentResource(WKStringRef hostName);
     bool isStatisticsRegisteredAsSubresourceUnder(WKStringRef subresourceHost, WKStringRef topFrameHost);
     bool isStatisticsRegisteredAsSubFrameUnder(WKStringRef subFrameHost, WKStringRef topFrameHost);
     bool isStatisticsRegisteredAsRedirectingTo(WKStringRef hostRedirectedFrom, WKStringRef hostRedirectedTo);
-    void setStatisticsHasHadUserInteraction(WKStringRef hostName, bool value);
+    void setStatisticsHasHadUserInteraction(WKStringRef hostName, bool value, CompletionHandler<void(WKTypeRef)>&&);
     bool isStatisticsHasHadUserInteraction(WKStringRef hostName);
     bool isStatisticsOnlyInDatabaseOnce(WKStringRef subHost, WKStringRef topHost);
     void setStatisticsGrandfathered(WKStringRef hostName, bool value);
@@ -243,10 +244,14 @@ public:
     void setStatisticsSubresourceUniqueRedirectFrom(WKStringRef host, WKStringRef hostRedirectedFrom);
     void setStatisticsTopFrameUniqueRedirectTo(WKStringRef host, WKStringRef hostRedirectedTo);
     void setStatisticsTopFrameUniqueRedirectFrom(WKStringRef host, WKStringRef hostRedirectedFrom);
-    void setStatisticsCrossSiteLoadWithLinkDecoration(WKStringRef fromHost, WKStringRef toHost);
+    void setStatisticsCrossSiteLoadWithLinkDecoration(WKStringRef fromHost, WKStringRef toHost, bool wasFiltered);
+#if PLATFORM(COCOA)
+    using SetStatisticsCrossSiteLoadWithLinkDecorationCallBack = void(*)(void* functionContext);
+    void platformSetStatisticsCrossSiteLoadWithLinkDecoration(WKStringRef fromHost, WKStringRef toHost, bool wasFiltered, void* context, SetStatisticsCrossSiteLoadWithLinkDecorationCallBack);
+#endif
     void setStatisticsTimeToLiveUserInteraction(double seconds);
     void statisticsProcessStatisticsAndDataRecords();
-    void statisticsUpdateCookieBlocking();
+    void statisticsUpdateCookieBlocking(CompletionHandler<void(WKTypeRef)>&&);
     void setStatisticsNotifyPagesWhenDataRecordsWereScanned(bool);
     void setStatisticsTimeAdvanceForTesting(double);
     void setStatisticsIsRunningTest(bool);
@@ -255,27 +260,28 @@ public:
     void setStatisticsGrandfatheringTime(double seconds);
     void setStatisticsMaxStatisticsEntries(unsigned);
     void setStatisticsPruneEntriesDownTo(unsigned);
-    void statisticsClearInMemoryAndPersistentStore();
-    void statisticsClearInMemoryAndPersistentStoreModifiedSinceHours(unsigned);
-    void statisticsClearThroughWebsiteDataRemoval();
+    void statisticsClearInMemoryAndPersistentStore(CompletionHandler<void(WKTypeRef)>&&);
+    void statisticsClearInMemoryAndPersistentStoreModifiedSinceHours(unsigned hours, CompletionHandler<void(WKTypeRef)>&&);
+    void statisticsClearThroughWebsiteDataRemoval(CompletionHandler<void(WKTypeRef)>&&);
     void statisticsDeleteCookiesForHost(WKStringRef host, bool includeHttpOnlyCookies);
     bool isStatisticsHasLocalStorage(WKStringRef hostName);
     void setStatisticsCacheMaxAgeCap(double seconds);
     bool hasStatisticsIsolatedSession(WKStringRef hostName);
-    void setStatisticsShouldDowngradeReferrer(bool value);
-    void setStatisticsShouldBlockThirdPartyCookies(bool value, bool onlyOnSitesWithoutUserInteraction);
-    void setStatisticsFirstPartyWebsiteDataRemovalMode(bool value);
-    void setStatisticsToSameSiteStrictCookies(WKStringRef hostName);
-    void setStatisticsFirstPartyHostCNAMEDomain(WKStringRef firstPartyURLString, WKStringRef cnameURLString);
-    void setStatisticsThirdPartyCNAMEDomain(WKStringRef cnameURLString);
-    void setAppBoundDomains(WKArrayRef originURLs);
-    void setManagedDomains(WKArrayRef originURLs);
+    void setStatisticsShouldDowngradeReferrer(bool value, CompletionHandler<void(WKTypeRef)>&&);
+    void setStatisticsShouldBlockThirdPartyCookies(bool value, bool onlyOnSitesWithoutUserInteraction, CompletionHandler<void(WKTypeRef)>&&);
+    void setStatisticsFirstPartyWebsiteDataRemovalMode(bool value, CompletionHandler<void(WKTypeRef)>&&);
+    void setStatisticsToSameSiteStrictCookies(WKStringRef hostName, CompletionHandler<void(WKTypeRef)>&&);
+    void setStatisticsFirstPartyHostCNAMEDomain(WKStringRef firstPartyURLString, WKStringRef cnameURLString, CompletionHandler<void(WKTypeRef)>&&);
+    void setStatisticsThirdPartyCNAMEDomain(WKStringRef cnameURLString, CompletionHandler<void(WKTypeRef)>&&);
+    void setAppBoundDomains(WKArrayRef originURLs, CompletionHandler<void(WKTypeRef)>&&);
+    void setManagedDomains(WKArrayRef originURLs, CompletionHandler<void(WKTypeRef)>&&);
     void statisticsResetToConsistentState();
 
-    void removeAllCookies();
+    void removeAllCookies(CompletionHandler<void(WKTypeRef)>&&);
 
-    void getAllStorageAccessEntries();
-    void loadedSubresourceDomains();
+    void getAllStorageAccessEntries(CompletionHandler<void(WKTypeRef)>&&);
+    void setRequestStorageAccessThrowsExceptionUntilReload(bool enabled);
+    void loadedSubresourceDomains(CompletionHandler<void(WKTypeRef)>&&);
     void clearLoadedSubresourceDomains();
     void clearAppBoundSession();
     void reinitializeAppBoundDomains();
@@ -306,7 +312,7 @@ public:
     void resetStoragePersistedState();
     void clearStorage();
 
-    void removeAllSessionCredentials();
+    void removeAllSessionCredentials(CompletionHandler<void(WKTypeRef)>&&);
 
     void clearIndexedDatabases();
     void clearLocalStorage();
@@ -380,10 +386,6 @@ public:
     void markPrivateClickMeasurementsAsExpiredForTesting();
     void setPCMFraudPreventionValuesForTesting(WKStringRef unlinkableToken, WKStringRef secretToken, WKStringRef signature, WKStringRef keyID);
     void setPrivateClickMeasurementAppBundleIDForTesting(WKStringRef);
-
-    void didSetAppBoundDomains() const;
-
-    void didSetManagedDomains() const;
 
     WKURLRef currentTestURL() const;
 
@@ -507,6 +509,9 @@ private:
     // WKPageInjectedBundleClient
     static void didReceivePageMessageFromInjectedBundle(WKPageRef, WKStringRef messageName, WKTypeRef messageBody, const void*);
     static void didReceiveSynchronousPageMessageFromInjectedBundleWithListener(WKPageRef, WKStringRef messageName, WKTypeRef messageBody, WKMessageListenerRef, const void*);
+    static void didReceiveAsyncPageMessageFromInjectedBundleWithListener(WKPageRef, WKStringRef, WKTypeRef, WKMessageListenerRef, const void*);
+    void didReceiveAsyncMessageFromInjectedBundle(WKStringRef, WKTypeRef, WKMessageListenerRef);
+
     void didReceiveMessageFromInjectedBundle(WKStringRef messageName, WKTypeRef messageBody);
     void didReceiveSynchronousMessageFromInjectedBundle(WKStringRef messageName, WKTypeRef messageBody, WKMessageListenerRef);
     WKRetainPtr<WKTypeRef> getInjectedBundleInitializationUserData();

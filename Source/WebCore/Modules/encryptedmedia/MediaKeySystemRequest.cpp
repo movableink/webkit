@@ -49,7 +49,6 @@ Ref<MediaKeySystemRequest> MediaKeySystemRequest::create(Document& document, con
 
 MediaKeySystemRequest::MediaKeySystemRequest(Document& document, const String& keySystem, Ref<DeferredPromise>&& promise)
     : ActiveDOMObject(document)
-    , m_identifier(MediaKeySystemRequestIdentifier::generate())
     , m_keySystem(keySystem)
     , m_promise(WTFMove(promise))
 {
@@ -86,12 +85,14 @@ void MediaKeySystemRequest::start()
     controller->requestMediaKeySystem(*this);
 }
 
-void MediaKeySystemRequest::allow(CompletionHandler<void()>&& completionHandler)
+void MediaKeySystemRequest::allow()
 {
-    queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [this, handler = WTFMove(completionHandler)]() mutable {
-        auto completionHandler = WTFMove(m_allowCompletionHandler);
-        completionHandler(WTFMove(m_promise));
-        handler();
+    if (!scriptExecutionContext())
+        return;
+
+    queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [this] {
+        if (auto allowCompletionHandler = std::exchange(m_allowCompletionHandler, { }))
+            allowCompletionHandler(WTFMove(m_promise));
     });
 }
 
@@ -112,11 +113,6 @@ void MediaKeySystemRequest::stop()
     auto& document = downcast<Document>(*scriptExecutionContext());
     if (auto* controller = MediaKeySystemController::from(document.page()))
         controller->cancelMediaKeySystemRequest(*this);
-}
-
-const char* MediaKeySystemRequest::activeDOMObjectName() const
-{
-    return "MediaKeySystemRequest";
 }
 
 Document* MediaKeySystemRequest::document() const

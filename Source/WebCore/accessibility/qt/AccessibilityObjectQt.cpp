@@ -20,9 +20,11 @@
 #include "config.h"
 #include "AccessibilityObject.h"
 
-#if HAVE(ACCESSIBILITY)
-
 namespace WebCore {
+
+void AccessibilityObject::detachPlatformWrapper(AccessibilityDetachmentType)
+{
+}
 
 bool AccessibilityObject::accessibilityIgnoreAttachment() const
 {
@@ -32,11 +34,9 @@ bool AccessibilityObject::accessibilityIgnoreAttachment() const
 AccessibilityObjectInclusion AccessibilityObject::accessibilityPlatformIncludesObject() const
 {
     if (isMenuListPopup() || isMenuListOption())
-        return IgnoreObject;
+        return AccessibilityObjectInclusion::IgnoreObject;
 
-    return DefaultBehavior;
+    return AccessibilityObjectInclusion::DefaultBehavior;
 }
 
 } // namespace WebCore
-
-#endif // HAVE(ACCESSIBILITY)

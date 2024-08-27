@@ -65,9 +65,11 @@ namespace Style {
 
 class CustomPropertyRegistry;
 class Resolver;
+class RuleSet;
 
-class Scope : public CanMakeWeakPtr<Scope>, public CanMakeCheckedPtr {
+class Scope final : public CanMakeWeakPtr<Scope>, public CanMakeCheckedPtr<Scope> {
     WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(Scope);
 public:
     explicit Scope(Document&);
     explicit Scope(ShadowRoot&);
@@ -128,6 +130,8 @@ public:
     Resolver* resolverIfExists() { return m_resolver.get(); }
     void clearResolver();
     void releaseMemory();
+
+    void clearViewTransitionStyles();
 
     const Document& document() const { return m_document; }
     Document& document() { return m_document; }
@@ -203,13 +207,15 @@ private:
     using MediaQueryViewportState = std::tuple<IntSize, float, bool>;
     static MediaQueryViewportState mediaQueryViewportStateForDocument(const Document&);
 
-    CheckedRef<Document> m_document;
+    Document& m_document; // FIXME: Use a smart pointer.
     ShadowRoot* m_shadowRoot { nullptr };
 
     RefPtr<Resolver> m_resolver;
 
     Vector<RefPtr<StyleSheet>> m_styleSheetsForStyleSheetList;
     Vector<RefPtr<CSSStyleSheet>> m_activeStyleSheets;
+
+    mutable RefPtr<RuleSet> m_dynamicViewTransitionsStyle;
 
     Timer m_pendingUpdateTimer;
 

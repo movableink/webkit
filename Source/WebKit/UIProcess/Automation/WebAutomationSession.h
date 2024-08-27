@@ -31,11 +31,11 @@
 #include "Connection.h"
 #include "MessageReceiver.h"
 #include "MessageSender.h"
-#include "ShareableBitmap.h"
 #include "SimulatedInputDispatcher.h"
 #include "WebEvent.h"
 #include "WebPageProxyIdentifier.h"
 #include <WebCore/FrameIdentifier.h>
+#include <WebCore/ShareableBitmap.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
@@ -259,14 +259,14 @@ private:
 
     // Called by WebAutomationSession messages.
     void didEvaluateJavaScriptFunction(uint64_t callbackID, const String& result, const String& errorType);
-    void didTakeScreenshot(uint64_t callbackID, std::optional<ShareableBitmap::Handle>&&, const String& errorType);
+    void didTakeScreenshot(uint64_t callbackID, std::optional<WebCore::ShareableBitmap::Handle>&&, const String& errorType);
 
     // Platform-dependent implementations.
 #if ENABLE(WEBDRIVER_MOUSE_INTERACTIONS)
     void updateClickCount(MouseButton, const WebCore::IntPoint&, Seconds maxTime = 1_s, int maxDistance = 0);
     void resetClickCount();
     void platformSimulateMouseInteraction(WebPageProxy&, MouseInteraction, MouseButton, const WebCore::IntPoint& locationInViewport, OptionSet<WebEventModifier>, const String& pointerType);
-    static OptionSet<WebEventModifier> platformWebModifiersFromRaw(unsigned modifiers);
+    static OptionSet<WebEventModifier> platformWebModifiersFromRaw(WebPageProxy&, unsigned modifiers);
 #endif
 #if ENABLE(WEBDRIVER_TOUCH_INTERACTIONS)
     // Simulates a single touch point being pressed, moved, and released.
@@ -283,7 +283,7 @@ private:
 #endif // ENABLE(WEBDRIVER_WHEEL_INTERACTIONS)
 
     // Get base64-encoded PNG data from a bitmap.
-    static std::optional<String> platformGetBase64EncodedPNGData(ShareableBitmap::Handle&&);
+    static std::optional<String> platformGetBase64EncodedPNGData(WebCore::ShareableBitmap::Handle&&);
     static std::optional<String> platformGetBase64EncodedPNGData(const ViewSnapshot&);
 
     // Save base64-encoded file contents to a local file path and return the path.
@@ -298,7 +298,7 @@ private:
     std::optional<unichar> charCodeIgnoringModifiersForVirtualKey(Inspector::Protocol::Automation::VirtualKey) const;
 #endif
 
-    CheckedPtr<WebProcessPool> m_processPool;
+    WeakPtr<WebProcessPool> m_processPool;
 
     std::unique_ptr<API::AutomationSessionClient> m_client;
     String m_sessionIdentifier { "Untitled Session"_s };

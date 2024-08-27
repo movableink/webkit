@@ -33,7 +33,7 @@ namespace WebKit {
 
 class RemoteLayerTreeContext;
 
-class GraphicsLayerCARemote final : public WebCore::GraphicsLayerCA {
+class GraphicsLayerCARemote final : public WebCore::GraphicsLayerCA, public CanMakeWeakPtr<GraphicsLayerCARemote> {
 public:
     GraphicsLayerCARemote(Type layerType, WebCore::GraphicsLayerClient&, RemoteLayerTreeContext&);
     virtual ~GraphicsLayerCARemote();
@@ -41,7 +41,6 @@ public:
     bool filtersCanBeComposited(const WebCore::FilterOperations& filters) override;
 
     void moveToContext(RemoteLayerTreeContext&);
-    void clearContext() { m_context = nullptr; }
     LayerMode layerMode() const final;
     
 private:
@@ -49,6 +48,7 @@ private:
 
     Ref<WebCore::PlatformCALayer> createPlatformCALayer(WebCore::PlatformCALayer::LayerType, WebCore::PlatformCALayerClient* owner) override;
     Ref<WebCore::PlatformCALayer> createPlatformCALayer(PlatformLayer*, WebCore::PlatformCALayerClient* owner) override;
+    Ref<WebCore::PlatformCALayer> createPlatformCALayer(WebCore::LayerHostingContextIdentifier, WebCore::PlatformCALayerClient* owner) override;
 #if ENABLE(MODEL_ELEMENT)
     Ref<WebCore::PlatformCALayer> createPlatformCALayer(Ref<WebCore::Model>, WebCore::PlatformCALayerClient* owner) override;
 #endif
@@ -65,7 +65,7 @@ private:
 
     RefPtr<WebCore::GraphicsLayerAsyncContentsDisplayDelegate> createAsyncContentsDisplayDelegate(WebCore::GraphicsLayerAsyncContentsDisplayDelegate*) final;
 
-    RemoteLayerTreeContext* m_context;
+    WeakPtr<RemoteLayerTreeContext> m_context;
 };
 
 } // namespace WebKit

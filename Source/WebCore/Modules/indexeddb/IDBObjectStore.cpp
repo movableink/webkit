@@ -76,11 +76,6 @@ IDBObjectStore::~IDBObjectStore()
     ASSERT(canCurrentThreadAccessThreadLocalData(m_transaction.database().originThread()));
 }
 
-const char* IDBObjectStore::activeDOMObjectName() const
-{
-    return "IDBObjectStore";
-}
-
 bool IDBObjectStore::virtualHasPendingActivity() const
 {
     return m_transaction.hasPendingActivity();
@@ -109,7 +104,7 @@ ExceptionOr<void> IDBObjectStore::setName(const String& name)
         return { };
 
     if (m_transaction.database().info().hasObjectStore(name))
-        return Exception { ExceptionCode::ConstraintError, makeString("Failed set property 'name' on 'IDBObjectStore': The database already has an object store named '", name, "'.") };
+        return Exception { ExceptionCode::ConstraintError, makeString("Failed set property 'name' on 'IDBObjectStore': The database already has an object store named '"_s, name, "'."_s) };
 
     m_transaction.database().renameObjectStore(*this, name);
     m_info.rename(name);
@@ -348,8 +343,8 @@ ExceptionOr<Ref<IDBRequest>> IDBObjectStore::putOrAdd(JSGlobalObject& state, JSV
         return Exception { ExceptionCode::DataCloneError, "Failed to store record in an IDBObjectStore: An object could not be cloned."_s };
 
     bool privateBrowsingEnabled = false;
-    if (is<Document>(*context)) {
-        if (auto* page = downcast<Document>(*context).page())
+    if (auto* document = dynamicDowncast<Document>(*context)) {
+        if (auto* page = document->page())
             privateBrowsingEnabled = page->sessionID().isEphemeral();
     }
 
@@ -767,12 +762,12 @@ void IDBObjectStore::renameReferencedIndex(IDBIndex& index, const String& newNam
     m_referencedIndexes.set(newName, m_referencedIndexes.take(index.info().name()));
 }
 
-void IDBObjectStore::ref()
+void IDBObjectStore::ref() const
 {
     m_transaction.ref();
 }
 
-void IDBObjectStore::deref()
+void IDBObjectStore::deref() const
 {
     m_transaction.deref();
 }

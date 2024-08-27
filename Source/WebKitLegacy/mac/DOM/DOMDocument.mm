@@ -67,9 +67,9 @@
 #import <WebCore/HTMLCollection.h>
 #import <WebCore/HTMLHeadElement.h>
 #import <WebCore/HTMLScriptElement.h>
+#import <WebCore/HitTestSource.h>
 #import <WebCore/JSExecState.h>
 #import <WebCore/LocalDOMWindow.h>
-#import <WebCore/NameNodeList.h>
 #import <WebCore/NativeNodeFilter.h>
 #import <WebCore/NodeIterator.h>
 #import <WebCore/NodeList.h>
@@ -672,13 +672,13 @@ static RefPtr<WebCore::XPathNSResolver> wrap(id <DOMXPathNSResolver> resolver)
 - (DOMElement *)elementFromPoint:(int)x y:(int)y
 {
     WebCore::JSMainThreadNullState state;
-    return kit(WTF::getPtr(IMPL->elementFromPoint(x, y)));
+    return kit(WTF::getPtr(IMPL->elementFromPoint(x, y, WebCore::HitTestSource::User)));
 }
 
 - (DOMRange *)caretRangeFromPoint:(int)x y:(int)y
 {
     WebCore::JSMainThreadNullState state;
-    return kit(WTF::getPtr(IMPL->caretRangeFromPoint(x, y)));
+    return kit(WTF::getPtr(IMPL->caretRangeFromPoint(x, y, WebCore::HitTestSource::User)));
 }
 
 - (DOMCSSStyleDeclaration *)createCSSStyleDeclaration

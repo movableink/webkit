@@ -45,7 +45,10 @@
 #endif
 
 #if USE(EXTENSIONKIT)
-OBJC_CLASS _SEExtensionProcess;
+#include "ExtensionProcess.h"
+OBJC_CLASS BEWebContentProcess;
+OBJC_CLASS BENetworkingProcess;
+OBJC_CLASS BERenderingProcess;
 #endif
 
 #if PLATFORM(QT)
@@ -61,6 +64,19 @@ enum class SandboxPermission {
 };
 #endif
 
+#if USE(EXTENSIONKIT)
+class LaunchGrant : public ThreadSafeRefCounted<LaunchGrant> {
+public:
+    static Ref<LaunchGrant> create(ExtensionProcess&);
+    ~LaunchGrant();
+
+private:
+    explicit LaunchGrant(ExtensionProcess&);
+
+    ExtensionCapabilityGrant m_grant;
+};
+#endif
+
 class ProcessLauncher : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<ProcessLauncher> {
 public:
     class Client {
@@ -72,6 +88,7 @@ public:
         virtual bool isJITEnabled() const { return true; }
         virtual bool shouldEnableSharedArrayBuffer() const { return false; }
         virtual bool shouldEnableLockdownMode() const { return false; }
+        virtual bool shouldDisableJITCage() const { return false; }
 #if PLATFORM(COCOA)
         virtual RefPtr<XPCEventHandler> xpcEventHandler() const { return nullptr; }
 #endif
@@ -86,6 +103,9 @@ public:
 #if ENABLE(BUBBLEWRAP_SANDBOX)
         DBusProxy,
 #endif
+#if ENABLE(MODEL_PROCESS)
+        Model,
+#endif
     };
 
     struct LaunchOptions {
@@ -94,9 +114,6 @@ public:
         HashMap<String, String> extraInitializationData;
         bool nonValidInjectedCodeAllowed { false };
         bool shouldMakeProcessLaunchFailForTesting { false };
-#if USE(EXTENSIONKIT)
-        bool launchAsExtensions { false };
-#endif
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
         HashMap<CString, SandboxPermission> extraSandboxPaths;
@@ -125,17 +142,21 @@ public:
     void invalidate();
 
 #if USE(EXTENSIONKIT)
-    RetainPtr<_SEExtensionProcess> extensionProcess() const { return m_process; }
+    const std::optional<ExtensionProcess>& extensionProcess() const { return m_process; }
+    void setIsRetryingLaunch() { m_isRetryingLaunch = true; }
+    bool isRetryingLaunch() const { return m_isRetryingLaunch; }
+    void releaseLaunchGrant() { m_launchGrant = nullptr; }
 #endif
 
 private:
     ProcessLauncher(Client*, LaunchOptions&&);
 
     void launchProcess();
-    void finishLaunchingProcess(const char* name);
+    void finishLaunchingProcess(ASCIILiteral name);
     void didFinishLaunchingProcess(ProcessID, IPC::Connection::Identifier);
 
     void platformInvalidate();
+    void platformDestroy();
 
 #if PLATFORM(COCOA)
     void terminateXPCConnection();
@@ -148,7 +169,9 @@ private:
 #endif
 
 #if USE(EXTENSIONKIT)
-    RetainPtr<_SEExtensionProcess> m_process;
+    RefPtr<LaunchGrant> m_launchGrant;
+    std::optional<ExtensionProcess> m_process;
+    bool m_isRetryingLaunch { false };
 #endif
 
 #if PLATFORM(WIN)

@@ -20,7 +20,7 @@
 
 #pragma once
 
-#if ENABLE(VIDEO) && USE(GSTREAMER) && USE(TEXTURE_MAPPER)
+#if ENABLE(VIDEO) && USE(GSTREAMER) && USE(TEXTURE_MAPPER) && !PLATFORM(QT)
 
 #include "MediaPlayerPrivateGStreamer.h"
 #include "TextureMapperPlatformLayerBuffer.h"

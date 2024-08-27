@@ -39,6 +39,7 @@
 #include "WebFrame.h"
 #include "WebPage.h"
 #include <WebCore/Document.h>
+#include <WebCore/DocumentInlines.h>
 #include <WebCore/FocusController.h>
 #include <WebCore/FrameLoader.h>
 #include <WebCore/LocalFrame.h>
@@ -54,6 +55,11 @@ WKTypeID WKBundleFrameGetTypeID()
 bool WKBundleFrameIsMainFrame(WKBundleFrameRef frameRef)
 {
     return WebKit::toImpl(frameRef)->isMainFrame();
+}
+
+bool WKBundleFrameIsRemote(WKBundleFrameRef frameRef)
+{
+    return WebKit::toImpl(frameRef)->coreFrame()->frameType() == WebCore::Frame::FrameType::Remote;
 }
 
 WKBundleFrameRef WKBundleFrameGetParentFrame(WKBundleFrameRef frameRef)
@@ -130,11 +136,6 @@ WKStringRef WKBundleFrameCopyCounterValue(WKBundleFrameRef frameRef, JSObjectRef
     return WebKit::toCopiedAPI(WebKit::toImpl(frameRef)->counterValue(element));
 }
 
-WKStringRef WKBundleFrameCopyInnerText(WKBundleFrameRef frameRef)
-{
-    return WebKit::toCopiedAPI(WebKit::toImpl(frameRef)->innerText());
-}
-
 unsigned WKBundleFrameGetPendingUnloadCount(WKBundleFrameRef frameRef)
 {
     return WebKit::toImpl(frameRef)->pendingUnloadCount();
@@ -147,9 +148,8 @@ WKBundlePageRef WKBundleFrameGetPage(WKBundleFrameRef frameRef)
 
 void WKBundleFrameClearOpener(WKBundleFrameRef frameRef)
 {
-    auto* coreFrame = WebKit::toImpl(frameRef)->coreLocalFrame();
-    if (coreFrame)
-        coreFrame->loader().setOpener(nullptr);
+    if (auto* coreFrame = WebKit::toImpl(frameRef)->coreLocalFrame())
+        coreFrame->setOpener(nullptr);
 }
 
 void WKBundleFrameStopLoading(WKBundleFrameRef frameRef)
@@ -287,7 +287,7 @@ void WKBundleFrameFocus(WKBundleFrameRef frameRef)
     if (!coreFrame)
         return;
 
-    CheckedRef(coreFrame->page()->focusController())->setFocusedFrame(coreFrame.get());
+    coreFrame->page()->checkedFocusController()->setFocusedFrame(coreFrame.get());
 }
 
 void _WKBundleFrameGenerateTestReport(WKBundleFrameRef frameRef, WKStringRef message, WKStringRef group)

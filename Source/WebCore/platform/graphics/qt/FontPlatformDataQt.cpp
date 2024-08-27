@@ -75,7 +75,7 @@ void FontPlatformDataPrivate::platformDataInit(FontPlatformData& q, float size, 
     q.updateSize(size);
 }
 
-FontPlatformData::FontPlatformData(const FontDescription& description, const AtomString& familyName, const FontCustomPlatformData* customPlatformData)
+FontPlatformData::FontPlatformData(const FontDescription& description, const AtomString& familyName, const FontCustomPlatformData*)
 {
     QFont font;
     auto requestedSize = description.computedSize();
@@ -97,7 +97,7 @@ FontPlatformData::FontPlatformData(const FontDescription& description, const Ato
     FontPlatformDataPrivate::platformDataInit(*this, size, QRawFont::fromFont(font, QFontDatabase::Any));
 }
 
-FontPlatformData::FontPlatformData(const QRawFont& rawFont, const FontCustomPlatformData* customPlatformData)
+FontPlatformData::FontPlatformData(const QRawFont& rawFont, const FontCustomPlatformData*)
 {
     FontPlatformDataPrivate::platformDataInit(*this, rawFont.pixelSize(), rawFont);
 }
@@ -148,7 +148,7 @@ RefPtr<SharedBuffer> FontPlatformData::openTypeTable(uint32_t table) const
     QByteArray tableData = m_data->rawFont.fontTable(tag);
 
     // TODO: Wrap SharedBuffer around QByteArray when it's possible
-    return SharedBuffer::create(tableData.data(), tableData.size());
+    return SharedBuffer::create(std::span<const uint8_t> { reinterpret_cast<const uint8_t*>(tableData.data()), static_cast<std::size_t>(tableData.size()) });
 }
 
 unsigned FontPlatformData::hash() const

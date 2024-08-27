@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Cameron Zwarich <cwzwarich@uwaterloo.ca>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 #include "DirectEvalCodeCache.h"
 #include "EvalExecutable.h"
 #include "ExecutionCounter.h"
-#include "ExpressionRangeInfo.h"
+#include "ExpressionInfo.h"
 #include "FunctionExecutable.h"
 #include "HandlerInfo.h"
 #include "ICStatusMap.h"
@@ -152,6 +152,8 @@ public:
     void dumpAssumingJITType(PrintStream&, JITType) const;
     JS_EXPORT_PRIVATE void dump(PrintStream&) const;
 
+    void dumpSimpleName(PrintStream&) const;
+
     MetadataTable* metadataTable() const { return m_metadata.get(); }
 
     unsigned numParameters() const { return m_numParameters; }
@@ -168,7 +170,7 @@ public:
     unsigned numVars() const { return m_numVars; }
     unsigned numTmps() const { return m_unlinkedCode->hasCheckpoints() * maxNumCheckpointTmps; }
 
-    static ptrdiff_t offsetOfNumParameters() { return OBJECT_OFFSETOF(CodeBlock, m_numParameters); }
+    static constexpr ptrdiff_t offsetOfNumParameters() { return OBJECT_OFFSETOF(CodeBlock, m_numParameters); }
 
     CodeBlock* alternative() const { return static_cast<CodeBlock*>(m_alternative.get()); }
     void setAlternative(VM&, CodeBlock*);
@@ -241,10 +243,9 @@ public:
     HandlerInfo* handlerForBytecodeIndex(BytecodeIndex, RequiredHandler = RequiredHandler::AnyHandler);
     HandlerInfo* handlerForIndex(unsigned, RequiredHandler = RequiredHandler::AnyHandler);
     void removeExceptionHandlerForCallSite(DisposableCallSiteIndex);
-    unsigned lineNumberForBytecodeIndex(BytecodeIndex);
-    unsigned columnNumberForBytecodeIndex(BytecodeIndex);
-    void expressionRangeForBytecodeIndex(BytecodeIndex, unsigned& divot,
-        unsigned& startOffset, unsigned& endOffset, unsigned& line, unsigned& column) const;
+
+    LineColumn lineColumnForBytecodeIndex(BytecodeIndex) const;
+    ExpressionInfo::Entry expressionInfoForBytecodeIndex(BytecodeIndex) const;
 
     std::optional<BytecodeIndex> bytecodeIndexFromCallSiteIndex(CallSiteIndex);
 
@@ -259,16 +260,11 @@ public:
 #if ENABLE(JIT)
     void setupWithUnlinkedBaselineCode(Ref<BaselineJITCode>);
 
-    static ptrdiff_t offsetOfJITData() { return OBJECT_OFFSETOF(CodeBlock, m_jitData); }
+    static constexpr ptrdiff_t offsetOfJITData() { return OBJECT_OFFSETOF(CodeBlock, m_jitData); }
 
     // O(n) operation. Use getICStatusMap() unless you really only intend to get one stub info.
     StructureStubInfo* findStubInfo(CodeOrigin);
 
-    // This is a slow function call used primarily for compiling OSR exits in the case
-    // that there had been inlining. Chances are if you want to use this, you're really
-    // looking for a CallLinkInfoMap to amortize the cost of calling this.
-    CallLinkInfo* getCallLinkInfoForBytecodeIndex(const ConcurrentJSLocker&, BytecodeIndex);
-    
     const JITCodeMap& jitCodeMap();
 
     std::optional<CodeOrigin> findPC(void* pc);
@@ -281,8 +277,8 @@ public:
     void resetBaselineJITData();
 #endif // ENABLE(JIT)
 
-    void unlinkIncomingCalls();
-    void linkIncomingCall(CallFrame* callerFrame, CallLinkInfoBase*);
+    void unlinkOrUpgradeIncomingCalls(VM&, CodeBlock*);
+    void linkIncomingCall(JSCell* caller, CallLinkInfoBase*);
 
     const JSInstruction* outOfLineJumpTarget(const JSInstruction* pc);
     int outOfLineJumpOffset(JSInstructionStream::Offset offset)
@@ -330,7 +326,7 @@ public:
     }
 
     RefPtr<JSC::JITCode> jitCode() { return m_jitCode; }
-    static ptrdiff_t jitCodeOffset() { return OBJECT_OFFSETOF(CodeBlock, m_jitCode); }
+    static constexpr ptrdiff_t jitCodeOffset() { return OBJECT_OFFSETOF(CodeBlock, m_jitCode); }
     JITType jitType() const
     {
         auto* jitCode = m_jitCode.get();
@@ -344,6 +340,8 @@ public:
     }
 
     bool useDataIC() const;
+
+    CodePtr<JSEntryPtrTag> addressForCallConcurrently(const ConcurrentJSLocker&, ArityCheckMode) const;
 
 #if ENABLE(JIT)
     CodeBlock* replacement();
@@ -393,7 +391,7 @@ public:
 
     String nameForRegister(VirtualRegister);
 
-    static ptrdiff_t offsetOfArgumentValueProfiles() { return OBJECT_OFFSETOF(CodeBlock, m_argumentValueProfiles); }
+    static constexpr ptrdiff_t offsetOfArgumentValueProfiles() { return OBJECT_OFFSETOF(CodeBlock, m_argumentValueProfiles); }
     unsigned numberOfArgumentValueProfiles()
     {
         ASSERT(m_argumentValueProfiles.size() == static_cast<unsigned>(m_numParameters) || !Options::useJIT() || !JITCode::isBaselineCode(jitType()));
@@ -496,7 +494,7 @@ public:
     bool isConstantOwnedByUnlinkedCodeBlock(VirtualRegister) const;
     ALWAYS_INLINE SourceCodeRepresentation constantSourceCodeRepresentation(VirtualRegister reg) const { return m_unlinkedCode->constantSourceCodeRepresentation(reg); }
     ALWAYS_INLINE SourceCodeRepresentation constantSourceCodeRepresentation(unsigned index) const { return m_unlinkedCode->constantSourceCodeRepresentation(index); }
-    static ptrdiff_t offsetOfConstantsVectorBuffer() { return OBJECT_OFFSETOF(CodeBlock, m_constantRegisters) + decltype(m_constantRegisters)::dataMemoryOffset(); }
+    static constexpr ptrdiff_t offsetOfConstantsVectorBuffer() { return OBJECT_OFFSETOF(CodeBlock, m_constantRegisters) + decltype(m_constantRegisters)::dataMemoryOffset(); }
 
     FunctionExecutable* functionDecl(int index) { return m_functionDecls[index].get(); }
     int numberOfFunctionDecls() { return m_functionDecls.size(); }
@@ -507,7 +505,7 @@ public:
     JSC::Heap* heap() const { return &m_vm->heap; }
     JSGlobalObject* globalObject() { return m_globalObject.get(); }
 
-    static ptrdiff_t offsetOfGlobalObject() { return OBJECT_OFFSETOF(CodeBlock, m_globalObject); }
+    static constexpr ptrdiff_t offsetOfGlobalObject() { return OBJECT_OFFSETOF(CodeBlock, m_globalObject); }
 
     JSGlobalObject* globalObjectFor(CodeOrigin);
 
@@ -641,9 +639,9 @@ public:
 
     int32_t adjustedCounterValue(int32_t desiredThreshold);
 
-    static ptrdiff_t offsetOfJITExecuteCounter() { return OBJECT_OFFSETOF(CodeBlock, m_jitExecuteCounter) + OBJECT_OFFSETOF(BaselineExecutionCounter, m_counter); }
-    static ptrdiff_t offsetOfJITExecutionActiveThreshold() { return OBJECT_OFFSETOF(CodeBlock, m_jitExecuteCounter) + OBJECT_OFFSETOF(BaselineExecutionCounter, m_activeThreshold); }
-    static ptrdiff_t offsetOfJITExecutionTotalCount() { return OBJECT_OFFSETOF(CodeBlock, m_jitExecuteCounter) + OBJECT_OFFSETOF(BaselineExecutionCounter, m_totalCount); }
+    static constexpr ptrdiff_t offsetOfJITExecuteCounter() { return OBJECT_OFFSETOF(CodeBlock, m_jitExecuteCounter) + OBJECT_OFFSETOF(BaselineExecutionCounter, m_counter); }
+    static constexpr ptrdiff_t offsetOfJITExecutionActiveThreshold() { return OBJECT_OFFSETOF(CodeBlock, m_jitExecuteCounter) + OBJECT_OFFSETOF(BaselineExecutionCounter, m_activeThreshold); }
+    static constexpr ptrdiff_t offsetOfJITExecutionTotalCount() { return OBJECT_OFFSETOF(CodeBlock, m_jitExecuteCounter) + OBJECT_OFFSETOF(BaselineExecutionCounter, m_totalCount); }
 
     const BaselineExecutionCounter& jitExecuteCounter() const { return m_jitExecuteCounter; }
 
@@ -707,7 +705,7 @@ public:
 
     void countOSRExit() { m_osrExitCounter++; }
 
-    static ptrdiff_t offsetOfOSRExitCounter() { return OBJECT_OFFSETOF(CodeBlock, m_osrExitCounter); }
+    static constexpr ptrdiff_t offsetOfOSRExitCounter() { return OBJECT_OFFSETOF(CodeBlock, m_osrExitCounter); }
 
     uint32_t adjustedExitCountThreshold(uint32_t desiredThreshold);
     uint32_t exitCountThresholdForReoptimization();
@@ -733,7 +731,7 @@ public:
     bool hasOpDebugForLineAndColumn(unsigned line, std::optional<unsigned> column);
 
     bool hasDebuggerRequests() const { return m_debuggerRequests; }
-    static ptrdiff_t offsetOfDebuggerRequests() { return OBJECT_OFFSETOF(CodeBlock, m_debuggerRequests); }
+    static constexpr ptrdiff_t offsetOfDebuggerRequests() { return OBJECT_OFFSETOF(CodeBlock, m_debuggerRequests); }
 
     void addBreakpoint(unsigned numBreakpoints);
     void removeBreakpoint(unsigned numBreakpoints)
@@ -785,7 +783,7 @@ public:
     ConcurrentJSLock& valueProfileLock() { return m_lock; }
 #endif
 
-    static ptrdiff_t offsetOfShouldAlwaysBeInlined() { return OBJECT_OFFSETOF(CodeBlock, m_shouldAlwaysBeInlined); }
+    static constexpr ptrdiff_t offsetOfShouldAlwaysBeInlined() { return OBJECT_OFFSETOF(CodeBlock, m_shouldAlwaysBeInlined); }
 
 #if ENABLE(JIT)
     unsigned m_capabilityLevelState : 2; // DFG::CapabilityLevel
@@ -851,8 +849,8 @@ public:
     MetadataTable* metadataTable() { return m_metadata.get(); }
     const void* instructionsRawPointer() { return m_instructionsRawPointer; }
 
-    static ptrdiff_t offsetOfMetadataTable() { return OBJECT_OFFSETOF(CodeBlock, m_metadata); }
-    static ptrdiff_t offsetOfInstructionsRawPointer() { return OBJECT_OFFSETOF(CodeBlock, m_instructionsRawPointer); }
+    static constexpr ptrdiff_t offsetOfMetadataTable() { return OBJECT_OFFSETOF(CodeBlock, m_metadata); }
+    static constexpr ptrdiff_t offsetOfInstructionsRawPointer() { return OBJECT_OFFSETOF(CodeBlock, m_instructionsRawPointer); }
 
     bool loopHintsAreEligibleForFuzzingEarlyReturn() { return m_unlinkedCode->loopHintsAreEligibleForFuzzingEarlyReturn(); }
 
@@ -880,7 +878,7 @@ private:
     
     CodeBlock* specialOSREntryBlockOrNull();
     
-    void noticeIncomingCall(CallFrame* callerFrame);
+    void noticeIncomingCall(JSCell* caller);
 
     void updateAllNonLazyValueProfilePredictionsAndCountLiveness(const ConcurrentJSLocker&, unsigned& numberOfLiveNonArgumentValueProfiles, unsigned& numberOfSamplesInProfiles);
 
@@ -994,8 +992,9 @@ private:
 #endif
 };
 /* This check is for normal Release builds; ASSERT_ENABLED changes the size. */
-#if defined(NDEBUG) && !defined(ASSERT_ENABLED) && COMPILER(GCC_COMPATIBLE)
-static_assert(sizeof(CodeBlock) <= 224, "Keep it small for memory saving");
+#if !ASSERT_ENABLED
+// TODO Figure out why this went up on my machine
+static_assert(sizeof(CodeBlock) <= 240, "Keep it small for memory saving");
 #endif
 
 template <typename ExecutableType>

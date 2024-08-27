@@ -38,6 +38,12 @@
 
 namespace WebCore {
 
+String formatLocalizedString(const char* format, ...)
+{
+    notImplemented();
+    return String::fromUTF8(format);
+}
+
 String inputElementAltText()
 {
     return QCoreApplication::translate("QWebPage", "Submit", "Submit (input element) alt text for <input> elements with no alt, title, or value");
@@ -101,6 +107,11 @@ String contextMenuItemTagDownloadLinkToDisk()
 String contextMenuItemTagCopyLinkToClipboard()
 {
     return QCoreApplication::translate("QWebPage", "Copy Link", "Copy Link context menu item");
+}
+
+String contextMenuItemTagCopyLinkToHighlight()
+{
+    return QCoreApplication::translate("QWebPage", "Copy Link to Highlight", "Copy Link to Highlight context menu item");
 }
 
 String contextMenuItemTagOpenImageInNewWindow()
@@ -443,6 +454,12 @@ String AXListMarkerText()
     return String();
 }
 
+String AXListItemActionVerb()
+{
+    notImplemented();
+    return String();
+}
+
 String AXImageMapText()
 {
     notImplemented();
@@ -503,13 +520,13 @@ String AXTextFieldActionVerb()
     return String();
 }
 
-String AXCheckedCheckBoxActionVerb()
+String AXCheckedCheckboxActionVerb()
 {
     notImplemented();
     return String();
 }
 
-String AXUncheckedCheckBoxActionVerb()
+String AXUncheckedCheckboxActionVerb()
 {
     notImplemented();
     return String();
@@ -944,7 +961,7 @@ String snapshottedPlugInLabelSubtitle()
 
 String localizedString(const char* key)
 {
-    return String::fromUTF8(key, strlen(key));
+    return String::fromUTF8(key);
 }
 
 #if ENABLE(INPUT_TYPE_WEEK)

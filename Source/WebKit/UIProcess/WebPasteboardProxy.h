@@ -27,8 +27,8 @@
 
 #include "MessageReceiver.h"
 #include "SandboxExtension.h"
-#include "SharedMemory.h"
 #include <WebCore/PageIdentifier.h>
+#include <WebCore/SharedMemory.h>
 #include <wtf/HashMap.h>
 #include <wtf/WeakHashSet.h>
 
@@ -41,6 +41,7 @@ enum class DataOwnerType : uint8_t;
 class Color;
 class PasteboardCustomData;
 class SelectionData;
+struct PasteboardBuffer;
 struct PasteboardImage;
 struct PasteboardItemInfo;
 struct PasteboardURL;
@@ -95,7 +96,7 @@ public:
     void getPasteboardPathnamesForType(IPC::Connection&, const String& pasteboardName, const String& pasteboardType, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(Vector<String>&& pathnames, Vector<SandboxExtension::Handle>&&)>&&);
     void getPasteboardStringForType(IPC::Connection&, const String& pasteboardName, const String& pasteboardType, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(String&&)>&&);
     void getPasteboardStringsForType(IPC::Connection&, const String& pasteboardName, const String& pasteboardType, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(Vector<String>&&)>&&);
-    void getPasteboardBufferForType(IPC::Connection&, const String& pasteboardName, const String& pasteboardType, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(RefPtr<WebCore::SharedBuffer>&&)>&&);
+    void getPasteboardBufferForType(IPC::Connection&, const String& pasteboardName, const String& pasteboardType, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(WebCore::PasteboardBuffer&&)>&&);
     void getPasteboardChangeCount(IPC::Connection&, const String& pasteboardName, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(int64_t)>&&);
     void getPasteboardColor(IPC::Connection&, const String& pasteboardName, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(WebCore::Color&&)>&&);
     void getPasteboardURL(IPC::Connection&, const String& pasteboardName, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(const String&)>&&);
@@ -107,7 +108,7 @@ public:
     void setPasteboardBufferForType(IPC::Connection&, const String& pasteboardName, const String& pasteboardType, RefPtr<WebCore::SharedBuffer>&&, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(int64_t)>&&);
 
 #if ENABLE(IPC_TESTING_API)
-    void testIPCSharedMemory(IPC::Connection&, const String& pasteboardName, const String& pasteboardType, WebKit::SharedMemory::Handle&&, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(int64_t, String)>&&);
+    void testIPCSharedMemory(IPC::Connection&, const String& pasteboardName, const String& pasteboardType, WebCore::SharedMemory::Handle&&, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(int64_t, String)>&&);
 #endif
 
 #endif
@@ -159,6 +160,8 @@ public:
 
 #if PLATFORM(COCOA)
     struct PasteboardAccessInformation {
+        ~PasteboardAccessInformation();
+
         int64_t changeCount { 0 };
         Vector<std::pair<WeakPtr<WebProcessProxy>, PasteboardAccessType>> processes;
 

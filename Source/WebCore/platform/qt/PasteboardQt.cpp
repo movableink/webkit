@@ -42,8 +42,8 @@
 #include <qclipboard.h>
 #include <qdebug.h>
 #include <qguiapplication.h>
+#include <qstringconverter.h>
 #include <qmimedata.h>
-#include <qtextcodec.h>
 #include <qurl.h>
 
 namespace WebCore {
@@ -101,8 +101,8 @@ std::unique_ptr<Pasteboard> Pasteboard::create(const DragData& dragData)
 #endif
 
 Pasteboard::Pasteboard(std::unique_ptr<PasteboardContext>&& context, const QMimeData* readableClipboard, bool isForDragAndDrop)
-    : m_selectionMode(false)
-    , m_context(WTFMove(context))
+    : m_context(WTFMove(context))
+    , m_selectionMode(false)
     , m_readableData(readableClipboard)
     , m_writableData(0)
     , m_isForDragAndDrop(isForDragAndDrop)
@@ -110,8 +110,8 @@ Pasteboard::Pasteboard(std::unique_ptr<PasteboardContext>&& context, const QMime
 }
 
 Pasteboard::Pasteboard(std::unique_ptr<PasteboardContext>&& context)
-    : m_selectionMode(false)
-    , m_context(WTFMove(context))
+    : m_context(WTFMove(context))
+    , m_selectionMode(false)
     , m_readableData(0)
     , m_writableData(0)
 {
@@ -255,7 +255,7 @@ void Pasteboard::writeImage(Element& node, const URL& url, const String& title)
     Image* image = cachedImage->imageForRenderer(node.renderer());
     ASSERT(image);
 
-    QImage nativeImage = image->nativeImageForCurrentFrame()->platformImage();
+    QImage nativeImage = image->currentNativeImage()->platformImage();
     if (nativeImage.isNull())
         return;
     if (!m_writableData)
@@ -333,7 +333,8 @@ String Pasteboard::readString(const String& type)
         return data->text();
 
     QByteArray rawData = data->data(mimeType);
-    QString stringData = QTextCodec::codecForName("UTF-16")->toUnicode(rawData);
+    auto toUtf16 = QStringDecoder(QStringDecoder::Utf8);
+    QString stringData = toUtf16(rawData);
     return stringData;
 }
 
@@ -356,7 +357,7 @@ void Pasteboard::writeString(const String& type, const String& data)
         m_writableData->setHtml(QString(data));
     else {
         // FIXME: we may want to transfer String in UTF8
-        QByteArray array(reinterpret_cast<const char*>(data.characters16()), data.length() * 2);
+        QByteArray array(reinterpret_cast<const char*>(data.span16().data()), data.span16().size());
         m_writableData->setData(QString(mimeType), array);
     }
 }

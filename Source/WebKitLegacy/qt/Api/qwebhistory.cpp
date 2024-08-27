@@ -53,7 +53,7 @@ static const int HistoryStreamVersion = 3;
 
   \table
   \header \li Function      \li Description
-  \row    \li title()       \li The page title.
+  \row    \li title()       \li The page title. (deprecated: returns empty string)
   \row    \li url()         \li The location of the page.
   \row    \li originalUrl() \li The URL used to access the page.
   \row    \li lastVisited() \li The date and time of the user's last visit to the page.
@@ -123,14 +123,12 @@ QUrl QWebHistoryItem::url() const
 
 
 /*!
- Returns the title of the page associated with the history item.
+ Deprecated: title is no longer stored; returns an empty string.
 
  \sa icon(), url(), lastVisited()
 */
 QString QWebHistoryItem::title() const
 {
-    if (d->item)
-        return d->item->title();
     return QString();
 }
 
@@ -294,8 +292,11 @@ void QWebHistory::clear()
     lst->setCapacity(capacity);   //revert capacity
 
     if (current) {
-        lst->addItem(*current); // insert old current item
-        lst->goToItem(*current); // and set it as current again
+        auto page = lst->page().page;
+        if (page) {
+            lst->addItem(page->mainFrame().frameID(), *current); // insert old current item
+            lst->goToItem(*current); // and set it as current again
+        }
     }
 
     d->page()->updateNavigationActions();
@@ -527,8 +528,14 @@ void QWebHistory::loadFromMap(const QVariantMap& map)
         auto item = WebCore::HistoryItem::create(LegacyHistoryItemClient::singleton());
         if (!WebCore::decodeBackForwardTree(decoder, item))
             return false;
-        lst->addItem(WTFMove(item));
-        return true;
+
+        auto page = lst->page().page;
+        if (page) {
+            lst->addItem(page->mainFrame().frameID(), WTFMove(item));
+            return true;
+        } else {
+            return false;
+        }
     });
 
     if (result && !d->lst->entries().isEmpty()) {
@@ -597,7 +604,7 @@ void QWebHistoryPrivate::goToItem(RefPtr<WebCore::HistoryItem>&& item)
         return;
 
     auto page = lst->page().page;
-    page->goToItem(*item, WebCore::FrameLoadType::IndexedBackForward, WebCore::ShouldTreatAsContinuingLoad::No);
+    page->goToItem(page->mainFrame(), *item, WebCore::FrameLoadType::IndexedBackForward, WebCore::ShouldTreatAsContinuingLoad::No);
 }
 
 QWebPageAdapter* QWebHistoryPrivate::page()

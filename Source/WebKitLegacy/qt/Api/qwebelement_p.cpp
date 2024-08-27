@@ -28,6 +28,7 @@
 #include <WebCore/ScriptSourceCode.h>
 #include <WebCore/ScriptController.h>
 #include <WebCore/JSDocument.h>
+#include <WebCore/JSDOMWindow.h>
 #include <WebCore/JSElement.h>
 #include <WebCore/qt_runtime.h>
 #include <QVariant>
@@ -61,7 +62,7 @@ QVariant QWebElementPrivate::evaluateJavaScriptString(const QString& scriptSourc
 
     JSC::JSLockHolder lock(lexicalGlobalObject);
 
-    JSC::JSValue thisValue = toJS(lexicalGlobalObject, toJSLocalDOMWindow(element->document().frame(), currentWorld(*lexicalGlobalObject)), element);
+    JSC::JSValue thisValue = toJS(lexicalGlobalObject, toJSDOMWindow(element->document().frame(), currentWorld(*lexicalGlobalObject)), element);
     if (!thisValue)
 	return QVariant();
 

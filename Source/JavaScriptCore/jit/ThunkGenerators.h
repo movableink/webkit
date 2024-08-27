@@ -42,13 +42,16 @@ MacroAssemblerCodeRef<JITThunkPtrTag> handleExceptionGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> handleExceptionWithCallFrameRollbackGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> popThunkStackPreservesAndHandleExceptionGenerator(VM&);
 
+MacroAssemblerCodeRef<JITThunkPtrTag> throwExceptionFromCallGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> throwExceptionFromCallSlowPathGenerator(VM&);
 
 MacroAssemblerCodeRef<JITThunkPtrTag> checkExceptionGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> returnFromBaselineGenerator(VM&);
 
-MacroAssemblerCodeRef<JITThunkPtrTag> linkCallThunkGenerator(VM&);
-MacroAssemblerCodeRef<JITThunkPtrTag> linkPolymorphicCallThunkGenerator(VM&);
+MacroAssemblerCodeRef<JITThunkPtrTag> polymorphicThunk(VM&);
+MacroAssemblerCodeRef<JITThunkPtrTag> polymorphicThunkForClosure(VM&);
+MacroAssemblerCodeRef<JITThunkPtrTag> polymorphicTopTierThunk(VM&);
+MacroAssemblerCodeRef<JITThunkPtrTag> polymorphicTopTierThunkForClosure(VM&);
 
 MacroAssemblerCodeRef<JITThunkPtrTag> virtualThunkForRegularCall(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> virtualThunkForTailCall(VM&);
@@ -87,6 +90,12 @@ MacroAssemblerCodeRef<JITThunkPtrTag> numberConstructorCallThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> stringConstructorCallThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> boundFunctionCallGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> remoteFunctionCallGenerator(VM&);
+MacroAssemblerCodeRef<JITThunkPtrTag> toIntegerOrInfinityThunkGenerator(VM&);
+MacroAssemblerCodeRef<JITThunkPtrTag> toLengthThunkGenerator(VM&);
+
+#if USE(JSVALUE64)
+MacroAssemblerCodeRef<JITThunkPtrTag> objectIsThunkGenerator(VM&);
+#endif
 
 } // namespace JSC
 #endif // ENABLE(JIT)

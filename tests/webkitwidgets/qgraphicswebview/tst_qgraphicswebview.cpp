@@ -286,12 +286,12 @@ void tst_QGraphicsWebView::microFocusCoordinates()
 
     page->mainFrame()->setFocus();
 
-    QVariant initialMicroFocus = page->inputMethodQuery(Qt::ImMicroFocus);
+    QVariant initialMicroFocus = page->inputMethodQuery(Qt::ImCursorRectangle);
     QVERIFY(initialMicroFocus.isValid());
 
     page->mainFrame()->scroll(0,300);
 
-    QVariant currentMicroFocus = page->inputMethodQuery(Qt::ImMicroFocus);
+    QVariant currentMicroFocus = page->inputMethodQuery(Qt::ImCursorRectangle);
     QVERIFY(currentMicroFocus.isValid());
 
     QCOMPARE(initialMicroFocus.toRect().translated(QPoint(0,-300)), currentMicroFocus.toRect());
@@ -506,30 +506,25 @@ void tst_QGraphicsWebView::renderHints()
     QVERIFY(!(webView.renderHints() & QPainter::Antialiasing));
     QVERIFY(webView.renderHints() & QPainter::TextAntialiasing);
     QVERIFY(webView.renderHints() & QPainter::SmoothPixmapTransform);
-    QVERIFY(!(webView.renderHints() & QPainter::HighQualityAntialiasing));
 
     webView.setRenderHint(QPainter::Antialiasing, true);
     QVERIFY(webView.renderHints() & QPainter::Antialiasing);
     QVERIFY(webView.renderHints() & QPainter::TextAntialiasing);
     QVERIFY(webView.renderHints() & QPainter::SmoothPixmapTransform);
-    QVERIFY(!(webView.renderHints() & QPainter::HighQualityAntialiasing));
 
     webView.setRenderHint(QPainter::Antialiasing, false);
     QVERIFY(!(webView.renderHints() & QPainter::Antialiasing));
     QVERIFY(webView.renderHints() & QPainter::TextAntialiasing);
     QVERIFY(webView.renderHints() & QPainter::SmoothPixmapTransform);
-    QVERIFY(!(webView.renderHints() & QPainter::HighQualityAntialiasing));
 
     webView.setRenderHint(QPainter::SmoothPixmapTransform, true);
     QVERIFY(!(webView.renderHints() & QPainter::Antialiasing));
     QVERIFY(webView.renderHints() & QPainter::TextAntialiasing);
     QVERIFY(webView.renderHints() & QPainter::SmoothPixmapTransform);
-    QVERIFY(!(webView.renderHints() & QPainter::HighQualityAntialiasing));
 
     webView.setRenderHint(QPainter::SmoothPixmapTransform, false);
     QVERIFY(webView.renderHints() & QPainter::TextAntialiasing);
     QVERIFY(!(webView.renderHints() & QPainter::SmoothPixmapTransform));
-    QVERIFY(!(webView.renderHints() & QPainter::HighQualityAntialiasing));
 }
 
 class GraphicsView : public QGraphicsView {
@@ -645,7 +640,7 @@ public Q_SLOTS:
     void receiveResize(int width, int height)
     {
         m_size = QSize(width, height);
-        emit resized();
+        Q_EMIT resized();
     }
 
     QSize size() const

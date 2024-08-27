@@ -40,6 +40,15 @@
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
+namespace WebCore {
+class InspectorCanvasAgent;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::InspectorCanvasAgent> : std::true_type { };
+}
+
 namespace Inspector {
 class InjectedScriptManager;
 }
@@ -83,7 +92,7 @@ public:
 #endif // ENABLE(WEBGL)
 
     // CanvasObserver
-    void canvasChanged(CanvasBase&, const std::optional<FloatRect>&) final;
+    void canvasChanged(CanvasBase&, const FloatRect&) final;
     void canvasResized(CanvasBase&) final { }
     void canvasDestroyed(CanvasBase&) final;
 

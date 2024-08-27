@@ -21,6 +21,7 @@
 #include "Pasteboard.h"
 
 #include "Color.h"
+#include "CommonAtomStrings.h"
 #include "DragData.h"
 #include "Image.h"
 #include "MIMETypeRegistry.h"
@@ -101,9 +102,9 @@ static ClipboardDataType selectionDataTypeFromHTMLClipboardType(const String& ty
 {
     // From the Mac port: Ignore any trailing charset - JS strings are
     // Unicode, which encapsulates the charset issue.
-    if (type == "text/plain"_s)
+    if (type == textPlainContentTypeAtom())
         return ClipboardDataTypeText;
-    if (type == "text/html"_s)
+    if (type == textHTMLContentTypeAtom())
         return ClipboardDataTypeMarkup;
     if (type == "Files"_s || type == "text/uri-list"_s)
         return ClipboardDataTypeURIList;
@@ -288,7 +289,7 @@ void Pasteboard::read(PasteboardWebContentReader& reader, WebContentReadingPolic
     auto types = platformStrategies()->pasteboardStrategy()->types(m_name);
     if (types.contains("text/html"_s)) {
         auto buffer = platformStrategies()->pasteboardStrategy()->readBufferFromClipboard(m_name, "text/html"_s);
-        if (buffer && reader.readHTML(String::fromUTF8(buffer->data(), buffer->size())))
+        if (buffer && reader.readHTML(String::fromUTF8(buffer->span())))
             return;
     }
 
@@ -310,7 +311,7 @@ void Pasteboard::read(PasteboardWebContentReader& reader, WebContentReadingPolic
             return;
     }
 
-    if (types.contains("text/plain"_s) || types.contains("text/plain;charset=utf-8"_s)) {
+    if (types.contains(textPlainContentTypeAtom()) || types.contains("text/plain;charset=utf-8"_s)) {
         auto text = platformStrategies()->pasteboardStrategy()->readTextFromClipboard(m_name);
         if (!text.isNull() && reader.readPlainText(text))
             return;
@@ -349,7 +350,7 @@ Vector<String> Pasteboard::typesSafeForBindings(const String& origin)
 {
     if (m_selectionData) {
         ListHashSet<String> types;
-        if (auto* buffer = m_selectionData->customData()) {
+        if (auto& buffer = m_selectionData->customData()) {
             auto customData = PasteboardCustomData::fromSharedBuffer(*buffer);
             if (customData.origin() == origin) {
                 for (auto& type : customData.orderedTypes())
@@ -358,9 +359,9 @@ Vector<String> Pasteboard::typesSafeForBindings(const String& origin)
         }
 
         if (m_selectionData->hasText())
-            types.add("text/plain"_s);
+            types.add(textPlainContentTypeAtom());
         if (m_selectionData->hasMarkup())
-            types.add("text/html"_s);
+            types.add(textHTMLContentTypeAtom());
         if (m_selectionData->hasURIList())
             types.add("text/uri-list"_s);
 
@@ -377,13 +378,13 @@ Vector<String> Pasteboard::typesForLegacyUnsafeBindings()
 
     Vector<String> types;
     if (m_selectionData->hasText()) {
-        types.append("text/plain"_s);
+        types.append(textPlainContentTypeAtom());
         types.append("Text"_s);
         types.append("text"_s);
     }
 
     if (m_selectionData->hasMarkup())
-        types.append("text/html"_s);
+        types.append(textHTMLContentTypeAtom());
 
     if (m_selectionData->hasURIList()) {
         types.append("text/uri-list"_s);
@@ -396,7 +397,7 @@ Vector<String> Pasteboard::typesForLegacyUnsafeBindings()
 String Pasteboard::readOrigin()
 {
     if (m_selectionData) {
-        if (auto* buffer = m_selectionData->customData())
+        if (auto& buffer = m_selectionData->customData())
             return PasteboardCustomData::fromSharedBuffer(*buffer).origin();
 
         return { };
@@ -416,7 +417,7 @@ String Pasteboard::readString(const String& type)
             return platformStrategies()->pasteboardStrategy()->readTextFromClipboard(m_name);
 
         auto buffer = platformStrategies()->pasteboardStrategy()->readBufferFromClipboard(m_name, type);
-        return buffer ? String::fromUTF8(buffer->data(), buffer->size()) : String();
+        return buffer ? String::fromUTF8(buffer->span()) : String();
     }
 
     switch (selectionDataTypeFromHTMLClipboardType(type)) {
@@ -439,7 +440,7 @@ String Pasteboard::readString(const String& type)
 String Pasteboard::readStringInCustomData(const String& type)
 {
     if (m_selectionData) {
-        if (auto* buffer = m_selectionData->customData())
+        if (auto& buffer = m_selectionData->customData())
             return PasteboardCustomData::fromSharedBuffer(*buffer).readStringInCustomData(type);
 
         return { };

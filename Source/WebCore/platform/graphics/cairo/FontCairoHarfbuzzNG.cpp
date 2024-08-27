@@ -29,9 +29,9 @@
 
 //#if USE(CAIRO)
 
-#include "CharacterProperties.h"
 #include "FontCache.h"
 #include "SurrogatePairAwareTextIterator.h"
+#include <wtf/text/CharacterProperties.h>
 
 namespace WebCore {
 
@@ -105,12 +105,12 @@ const Font* FontCascade::fontForCombiningCharacterSequence(StringView stringView
     // Code below relies on normalizedNFC never narrowing a 16-bit input string into an 8-bit output string.
     // At the time of this writing, the function never does this, but in theory a future version could, and
     // we would then need to add code paths here for the simpler 8-bit case.
-    auto characters = normalizedString.view.characters16();
+    auto characters = normalizedString.view.span16();
     auto length = normalizedString.view.length();
 
     char32_t character;
     unsigned clusterLength = 0;
-    SurrogatePairAwareTextIterator iterator(characters, 0, length, length);
+    SurrogatePairAwareTextIterator iterator(characters, 0, length);
     if (!iterator.consume(character, clusterLength))
         return nullptr;
 
@@ -123,14 +123,14 @@ const Font* FontCascade::fontForCombiningCharacterSequence(StringView stringView
     else if (characters[length - 1] == 0xFE0F)
         preferColoredFont = true;
 
-    CheckedPtr baseFont = glyphDataForCharacter(character, false, NormalVariant).font;
+    RefPtr baseFont = glyphDataForCharacter(character, false, NormalVariant).font.get();
     if (baseFont
         && (clusterLength == length || baseFont->canRenderCombiningCharacterSequence(normalizedString.view))
         && (!preferColoredFont || baseFont->platformData().isColorBitmapFont()))
         return baseFont.get();
 
     for (unsigned i = 0; !fallbackRangesAt(i).isNull(); ++i) {
-        CheckedPtr fallbackFont = fallbackRangesAt(i).fontForCharacter(character);
+        RefPtr fallbackFont = fallbackRangesAt(i).fontForCharacter(character);
         if (!fallbackFont || fallbackFont == baseFont)
             continue;
 
@@ -144,7 +144,7 @@ const Font* FontCascade::fontForCombiningCharacterSequence(StringView stringView
             return systemFallback.get();
 
         // In case of emoji, if fallback font is colored try again without the variation selector character.
-        if (isEmoji && characters[length - 1] == 0xFE0F && systemFallback->platformData().isColorBitmapFont() && systemFallback->canRenderCombiningCharacterSequence({ characters, length - 1 }))
+        if (isEmoji && characters[length - 1] == 0xFE0F && systemFallback->platformData().isColorBitmapFont() && systemFallback->canRenderCombiningCharacterSequence(characters.first(length - 1)))
             return systemFallback.get();
     }
 

@@ -168,7 +168,7 @@
 #endif // QT_VERSION >= QT_VERSION_CHECK(5,8,0)
 
 #include <QtNetwork/qtnetwork-config.h>
-#if !QT_CONFIG(bearermanagement)
+#if QT_VERSION >= QT_VERSION_CHECK(6,0,0) || !QT_CONFIG(bearermanagement)
 #ifndef QT_NO_BEARERMANAGEMENT
 #define QT_NO_BEARERMANAGEMENT
 #endif // QT_NO_BEARERMANAGEMENT
@@ -183,6 +183,6 @@
 #endif // PLATFORM(QT)
 
 /* FIXME: This is used to "turn on a specific feature of WebKit", so should be converted to an ENABLE macro. */
-#if (PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE)) && ENABLE(ACCESSIBILITY)
+#if PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE)
 #define USE_ACCESSIBILITY_CONTEXT_MENUS 1
 #endif

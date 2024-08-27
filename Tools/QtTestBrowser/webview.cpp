@@ -176,7 +176,7 @@ void WebViewGraphicsBased::updateFrameRate()
     int frames = m_fpsTimer.numFrames(interval);
     int current = interval ? frames * 1000 / interval : 0;
 
-    emit currentFPSUpdated(current);
+    Q_EMIT currentFPSUpdated(current);
 
     m_lastConsultTime = now;
 }

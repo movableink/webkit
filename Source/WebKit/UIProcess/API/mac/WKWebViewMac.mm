@@ -30,7 +30,9 @@
 
 #import "AppKitSPI.h"
 #import "WKSafeBrowsingWarning.h"
+#import "WKTextAnimationType.h"
 #import "WKTextFinderClient.h"
+#import "WKWebViewConfigurationPrivate.h"
 #import <WebKit/WKUIDelegatePrivate.h>
 #import "WebBackForwardList.h"
 #import "WebFrameProxy.h"
@@ -40,8 +42,13 @@
 #import "_WKFrameHandleInternal.h"
 #import "_WKHitTestResultInternal.h"
 #import <pal/spi/mac/NSTextFinderSPI.h>
+#import <pal/spi/mac/NSTextInputContextSPI.h>
 #import <pal/spi/mac/NSViewSPI.h>
 #import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
+
+#if USE(APPLE_INTERNAL_SDK)
+#import <WebKitAdditions/WebMultiRepresentationHEICAttachmentAdditions.h>
+#endif
 
 _WKOverlayScrollbarStyle toAPIScrollbarStyle(std::optional<WebCore::ScrollbarOverlayStyle> coreScrollbarStyle)
 {
@@ -666,6 +673,13 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_BEGIN
     _impl->attributedSubstringForProposedRange(nsRange, completionHandlerPtr);
 }
 
+// FIXME: actually return valid information.
+// rdar://130702677
+- (void)unionRectForCharacterRange:(NSRange)range completionHandler:(void(^)(NSRect rect))completionHandler
+{
+    completionHandler(NSZeroRect);
+}
+
 - (void)firstRectForCharacterRange:(NSRange)theRange completionHandler:(void(^)(NSRect firstRect, NSRange actualRange))completionHandlerPtr
 {
     _impl->firstRectForCharacterRange(theRange, completionHandlerPtr);
@@ -679,6 +693,16 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_BEGIN
 - (NSArray *)validAttributesForMarkedText
 {
     return _impl->validAttributesForMarkedText();
+}
+
+- (void)insertTextPlaceholderWithSize:(CGSize)size completionHandler:(void (^)(NSTextPlaceholder *))completionHandler
+{
+    _impl->insertTextPlaceholderWithSize(size, completionHandler);
+}
+
+- (void)removeTextPlaceholder:(NSTextPlaceholder *)placeholder willInsertText:(BOOL)willInsertText completionHandler:(void (^)(void))completionHandler
+{
+    _impl->removeTextPlaceholder(placeholder, willInsertText, completionHandler);
 }
 
 #if ENABLE(DRAG_SUPPORT)
@@ -1057,6 +1081,10 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 
 #endif // HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
 
+#if USE(APPLE_INTERNAL_SDK)
+#import <WebKitAdditions/WKWebViewMacAdditionsAfter.mm>
+#endif
+
 @end
 
 #pragma mark -
@@ -1210,6 +1238,13 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 - (void)_web_didChangeContentSize:(NSSize)newSize
 {
 }
+
+#if ENABLE(WRITING_TOOLS)
+- (BOOL)_web_wantsWritingToolsInlineEditing
+{
+    return [self wantsWritingToolsInlineEditing];
+}
+#endif
 
 #if ENABLE(DRAG_SUPPORT)
 
@@ -1611,6 +1646,11 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     _impl->gestureEventWasNotHandledByWebCoreFromViewOnly(event);
 }
 
+- (double)minimumMagnification
+{
+    return _page->minPageZoomFactor();
+}
+
 - (void)_disableFrameSizeUpdates
 {
     _impl->disableFrameSizeUpdates();
@@ -1724,6 +1764,16 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 - (void)_simulateMouseMove:(NSEvent *)event
 {
     return _impl->mouseMoved(event);
+}
+
+- (void)_createFlagsChangedEventMonitorForTesting
+{
+    _impl->createFlagsChangedEventMonitor();
+}
+
+- (void)_removeFlagsChangedEventMonitorForTesting
+{
+    _impl->removeFlagsChangedEventMonitor();
 }
 
 - (void)_setFont:(NSFont *)font sender:(id)sender

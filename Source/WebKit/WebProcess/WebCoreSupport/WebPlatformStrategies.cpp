@@ -28,7 +28,6 @@
 
 #include "BlobRegistryProxy.h"
 #include "BlockingResponseMap.h"
-#include "DataReference.h"
 #include "HangDetectionDisabler.h"
 #include "NetworkConnectionToWebProcessMessages.h"
 #include "NetworkProcessConnection.h"
@@ -65,10 +64,6 @@
 #include <WebCore/SubframeLoader.h>
 #include <wtf/Atomics.h>
 #include <wtf/URL.h>
-
-#if PLATFORM(MAC)
-#include "StringUtilities.h"
-#endif
 
 #if PLATFORM(GTK)
 #include <WebCore/SelectionData.h>
@@ -150,8 +145,9 @@ RefPtr<WebCore::SharedBuffer> WebPlatformStrategies::bufferForType(const String&
 
     // Fallback to messaging the UI process for native pasteboard content.
     auto sendResult = WebProcess::singleton().parentProcessConnection()->sendSync(Messages::WebPasteboardProxy::GetPasteboardBufferForType(pasteboardName, pasteboardType, pageIdentifier(context)), 0);
-    auto [buffer] = sendResult.takeReplyOr(nullptr);
-    return buffer;
+    auto [pasteboardBuffer] = sendResult.takeReplyOr(WebCore::PasteboardBuffer { });
+
+    return Pasteboard::bufferConvertedToPasteboardType(pasteboardBuffer, pasteboardType);
 }
 
 void WebPlatformStrategies::getPathnamesForType(Vector<String>& pathnames, const String& pasteboardType, const String& pasteboardName, const PasteboardContext* context)

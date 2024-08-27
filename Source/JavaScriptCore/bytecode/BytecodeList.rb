@@ -26,7 +26,7 @@ types [
 
     :BasicBlockLocation,
     :BoundLabel,
-    :BaselineCallLinkInfo,
+    :DataOnlyCallLinkInfo,
     :DebugHookType,
     :ECMAMode,
     :ErrorTypeWithExtension,
@@ -95,7 +95,7 @@ op :tail_call_varargs,
         firstVarArg: int,
     },
     metadata: {
-        callLinkInfo: BaselineCallLinkInfo,
+        callLinkInfo: DataOnlyCallLinkInfo,
     },
     tmps: {
         argCountIncludingThis: unsigned
@@ -116,7 +116,7 @@ op :call_varargs,
         valueProfile: unsigned,
     },
     metadata: {
-        callLinkInfo: BaselineCallLinkInfo,
+        callLinkInfo: DataOnlyCallLinkInfo,
     },
     tmps: {
         argCountIncludingThis: unsigned,
@@ -140,7 +140,7 @@ op :iterator_next,
         valueValueProfile: unsigned,
     },
     metadata: {
-        callLinkInfo: BaselineCallLinkInfo,
+        callLinkInfo: DataOnlyCallLinkInfo,
         doneModeMetadata: GetByIdModeMetadata,
         valueModeMetadata: GetByIdModeMetadata,
         iterableProfile: ArrayProfile,
@@ -166,7 +166,7 @@ op :construct_varargs,
         valueProfile: unsigned,
     },
     metadata: {
-        callLinkInfo: BaselineCallLinkInfo,
+        callLinkInfo: DataOnlyCallLinkInfo,
     },
     tmps: {
         argCountIncludingThis: unsigned
@@ -192,7 +192,7 @@ op :iterator_open,
         nextValueProfile: unsigned,
     },
     metadata: {
-        callLinkInfo: BaselineCallLinkInfo,
+        callLinkInfo: DataOnlyCallLinkInfo,
         modeMetadata: GetByIdModeMetadata,
         arrayProfile: ArrayProfile,
         iterationMetadata: IterationModeMetadata,
@@ -247,7 +247,7 @@ op :construct,
         valueProfile: unsigned,
     },
     metadata: {
-        callLinkInfo: BaselineCallLinkInfo,
+        callLinkInfo: DataOnlyCallLinkInfo,
     }
 
 op :tail_call,
@@ -258,7 +258,7 @@ op :tail_call,
         argv: unsigned,
     },
     metadata: {
-        callLinkInfo: BaselineCallLinkInfo,
+        callLinkInfo: DataOnlyCallLinkInfo,
         arrayProfile: ArrayProfile,
     }
 
@@ -274,7 +274,7 @@ op :call_direct_eval,
         valueProfile: unsigned,
     },
     metadata: {
-        callLinkInfo: BaselineCallLinkInfo,
+        callLinkInfo: DataOnlyCallLinkInfo,
     }
 
 op :tail_call_forward_arguments,
@@ -287,7 +287,7 @@ op :tail_call_forward_arguments,
         firstVarArg: int,
     },
     metadata: {
-        callLinkInfo: BaselineCallLinkInfo,
+        callLinkInfo: DataOnlyCallLinkInfo,
     }
 
 op_group :CreateInternalFieldObjectOp,
@@ -352,6 +352,17 @@ op :get_by_id,
         modeMetadata: GetByIdModeMetadata,
     }
 
+op :get_length,
+    args: {
+        dst: VirtualRegister,
+        base: VirtualRegister,
+        valueProfile: unsigned,
+    },
+    metadata: {
+        modeMetadata: GetByIdModeMetadata,
+        arrayProfile: ArrayProfile,
+    }
+
 op :profile_type,
     args: {
         targetVirtualRegister: VirtualRegister,
@@ -394,7 +405,7 @@ op :call,
         valueProfile: unsigned,
     },
     metadata: {
-        callLinkInfo: BaselineCallLinkInfo,
+        callLinkInfo: DataOnlyCallLinkInfo,
         arrayProfile: ArrayProfile,
     }
 
@@ -405,7 +416,7 @@ op :call_ignore_result,
         argv: unsigned,
     },
     metadata: {
-        callLinkInfo: BaselineCallLinkInfo,
+        callLinkInfo: DataOnlyCallLinkInfo,
         arrayProfile: ArrayProfile,
     }
 
@@ -1012,6 +1023,12 @@ op :to_property_key,
         src: VirtualRegister,
     }
 
+op :to_property_key_or_number,
+    args: {
+        dst: VirtualRegister,
+        src: VirtualRegister,
+    }
+
 op :put_to_arguments,
     args: {
         arguments: VirtualRegister,
@@ -1396,10 +1413,12 @@ op :llint_native_call_trampoline
 op :llint_native_construct_trampoline
 op :llint_internal_function_call_trampoline
 op :llint_internal_function_construct_trampoline
-op :llint_link_call_trampoline
+op :llint_default_call_trampoline
 op :llint_virtual_call_trampoline
 op :llint_virtual_construct_trampoline
 op :llint_virtual_tail_call_trampoline
+op :llint_polymorphic_normal_call_trampoline
+op :llint_polymorphic_closure_call_trampoline
 op :checkpoint_osr_exit_from_inlined_call_trampoline
 op :checkpoint_osr_exit_trampoline
 op :normal_osr_exit_trampoline
@@ -1412,26 +1431,18 @@ op :op_call_ignore_result_return_location
 op :op_construct_return_location
 op :op_call_varargs_return_location
 op :op_construct_varargs_return_location
-op :op_call_varargs_slow_return_location
-op :op_construct_varargs_slow_return_location
 op :op_get_by_id_return_location
+op :op_get_length_return_location
 op :op_get_by_val_return_location
 op :op_put_by_id_return_location
 op :op_put_by_val_return_location
 op :op_iterator_open_return_location
 op :op_iterator_next_return_location
+op :op_call_direct_eval_slow_return_location
+op :wasm_function_prologue_trampoline
 op :wasm_function_prologue
 op :wasm_function_prologue_simd
-
-op :op_call_slow_return_location
-op :op_call_ignore_result_slow_return_location
-op :op_construct_slow_return_location
-op :op_iterator_open_slow_return_location
-op :op_iterator_next_slow_return_location
-op :op_tail_call_slow_return_location
-op :op_tail_call_forward_arguments_slow_return_location
-op :op_tail_call_varargs_slow_return_location
-op :op_call_direct_eval_slow_return_location
+op :js_to_wasm_wrapper_entry
 
 op :js_trampoline_op_call
 op :js_trampoline_op_call_ignore_result
@@ -1440,17 +1451,7 @@ op :js_trampoline_op_call_varargs
 op :js_trampoline_op_construct_varargs
 op :js_trampoline_op_iterator_next
 op :js_trampoline_op_iterator_open
-op :js_trampoline_op_call_slow
-op :js_trampoline_op_call_ignore_result_slow
-op :js_trampoline_op_tail_call_slow
-op :js_trampoline_op_construct_slow
-op :js_trampoline_op_call_varargs_slow
-op :js_trampoline_op_tail_call_varargs_slow
-op :js_trampoline_op_tail_call_forward_arguments_slow
-op :js_trampoline_op_construct_varargs_slow
 op :js_trampoline_op_call_direct_eval_slow
-op :js_trampoline_op_iterator_next_slow
-op :js_trampoline_op_iterator_open_slow
 op :js_trampoline_llint_function_for_call_arity_check_untag
 op :js_trampoline_llint_function_for_call_arity_check_tag
 op :js_trampoline_llint_function_for_construct_arity_check_untag
@@ -1493,36 +1494,6 @@ op :llint_cloop_did_return_from_js_22
 op :llint_cloop_did_return_from_js_23
 op :llint_cloop_did_return_from_js_24
 op :llint_cloop_did_return_from_js_25
-op :llint_cloop_did_return_from_js_26
-op :llint_cloop_did_return_from_js_27
-op :llint_cloop_did_return_from_js_28
-op :llint_cloop_did_return_from_js_29
-op :llint_cloop_did_return_from_js_30
-op :llint_cloop_did_return_from_js_31
-op :llint_cloop_did_return_from_js_32
-op :llint_cloop_did_return_from_js_33
-op :llint_cloop_did_return_from_js_34
-op :llint_cloop_did_return_from_js_35
-op :llint_cloop_did_return_from_js_36
-op :llint_cloop_did_return_from_js_37
-op :llint_cloop_did_return_from_js_38
-op :llint_cloop_did_return_from_js_39
-op :llint_cloop_did_return_from_js_40
-op :llint_cloop_did_return_from_js_41
-op :llint_cloop_did_return_from_js_42
-op :llint_cloop_did_return_from_js_43
-op :llint_cloop_did_return_from_js_44
-op :llint_cloop_did_return_from_js_45
-op :llint_cloop_did_return_from_js_46
-op :llint_cloop_did_return_from_js_47
-op :llint_cloop_did_return_from_js_48
-op :llint_cloop_did_return_from_js_49
-op :llint_cloop_did_return_from_js_50
-op :llint_cloop_did_return_from_js_51
-op :llint_cloop_did_return_from_js_52
-op :llint_cloop_did_return_from_js_53
-op :llint_cloop_did_return_from_js_54
-op :llint_cloop_did_return_from_js_55
 
 end_section :CLoopReturnHelpers
 
@@ -1917,6 +1888,15 @@ op :array_len,
     args: {
         dst: VirtualRegister,
         arrayref: VirtualRegister,
+    }
+
+op :array_fill,
+    args: {
+        arrayref: VirtualRegister,
+        offset: VirtualRegister,
+        value: VirtualRegister,
+        size: VirtualRegister,
+        typeIndex: unsigned,
     }
 
 op :struct_new,

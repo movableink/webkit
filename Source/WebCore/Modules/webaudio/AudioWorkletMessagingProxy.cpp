@@ -60,6 +60,7 @@ static WorkletParameters generateWorkletParameters(AudioWorklet& worklet)
         document->settingsValues(),
         document->referrerPolicy(),
         worklet.audioContext() ? !worklet.audioContext()->isOfflineContext() : false,
+        document->advancedPrivacyProtections(),
         document->noiseInjectionHashSalt()
     };
 }
@@ -77,6 +78,7 @@ AudioWorkletMessagingProxy::AudioWorkletMessagingProxy(AudioWorklet& worklet)
 AudioWorkletMessagingProxy::~AudioWorkletMessagingProxy()
 {
     m_workletThread->stop();
+    m_workletThread->clearProxies();
 }
 
 bool AudioWorkletMessagingProxy::postTaskForModeToWorkletGlobalScope(ScriptExecutionContext::Task&& task, const String& mode)

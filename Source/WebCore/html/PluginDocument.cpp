@@ -64,7 +64,7 @@ private:
     {
     }
 
-    void appendBytes(DocumentWriter&, const uint8_t*, size_t) final;
+    void appendBytes(DocumentWriter&, std::span<const uint8_t>) final;
     void createDocumentStructure();
     static Ref<HTMLStyleElement> createStyleElement(Document&);
 
@@ -93,7 +93,6 @@ void PluginDocumentParser::createDocumentStructure()
 
     auto rootElement = HTMLHtmlElement::create(document);
     document.appendChild(rootElement);
-    rootElement->insertedByParser();
 
     auto headElement = HTMLHeadElement::create(document);
     auto styleElement = createStyleElement(document);
@@ -126,7 +125,7 @@ void PluginDocumentParser::createDocumentStructure()
     document.setHasVisuallyNonEmptyCustomContent();
 }
 
-void PluginDocumentParser::appendBytes(DocumentWriter&, const uint8_t*, size_t)
+void PluginDocumentParser::appendBytes(DocumentWriter&, std::span<const uint8_t>)
 {
     if (m_embedElement)
         return;
@@ -190,6 +189,12 @@ void PluginDocument::detachFromPluginElement()
 {
     // Release the plugin Element so that we don't have a circular reference.
     m_pluginElement = nullptr;
+}
+
+void PluginDocument::releaseMemory()
+{
+    if (RefPtr pluginView = pluginWidget())
+        pluginView->releaseMemory();
 }
 
 }

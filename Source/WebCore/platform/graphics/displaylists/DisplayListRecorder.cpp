@@ -288,19 +288,19 @@ void Recorder::drawConsumingImageBuffer(RefPtr<ImageBuffer> imageBuffer, const F
     drawImageBuffer(*imageBuffer, destRect, srcRect, options);
 }
 
-void Recorder::drawNativeImageInternal(NativeImage& image, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
+void Recorder::drawNativeImageInternal(NativeImage& image, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
 {
     appendStateChangeItemIfNecessary();
     recordResourceUse(image);
-    recordDrawNativeImage(image.renderingResourceIdentifier(), imageSize, destRect, srcRect, options);
+    recordDrawNativeImage(image.renderingResourceIdentifier(), destRect, srcRect, options);
 }
 
 void Recorder::drawSystemImage(SystemImage& systemImage, const FloatRect& destinationRect)
 {
     appendStateChangeItemIfNecessary();
 #if USE(SYSTEM_PREVIEW)
-    if (is<ARKitBadgeSystemImage>(systemImage)) {
-        if (auto image = downcast<ARKitBadgeSystemImage>(systemImage).image()) {
+    if (auto* badgeSystemImage = dynamicDowncast<ARKitBadgeSystemImage>(systemImage)) {
+        if (auto image = badgeSystemImage->image()) {
             auto nativeImage = image->nativeImage();
             if (!nativeImage)
                 return;
@@ -409,6 +409,17 @@ void Recorder::beginTransparencyLayer(float opacity)
     m_stateStack.append(m_stateStack.last().cloneForTransparencyLayer());
 }
 
+void Recorder::beginTransparencyLayer(CompositeOperator compositeOperator, BlendMode blendMode)
+{
+    GraphicsContext::beginTransparencyLayer(compositeOperator, blendMode);
+
+    appendStateChangeItemIfNecessary();
+    recordBeginTransparencyLayer(compositeOperator, blendMode);
+
+    GraphicsContext::save(GraphicsContextState::Purpose::TransparencyLayer);
+    m_stateStack.append(m_stateStack.last().cloneForTransparencyLayer());
+}
+
 void Recorder::endTransparencyLayer()
 {
     GraphicsContext::endTransparencyLayer();
@@ -474,6 +485,12 @@ void Recorder::fillRect(const FloatRect& rect)
     recordFillRect(rect);
 }
 
+void Recorder::fillRect(const FloatRect& rect, Gradient& gradient, const AffineTransform& gradientSpaceTransform)
+{
+    appendStateChangeItemIfNecessary();
+    recordFillRectWithGradientAndSpaceTransform(rect, gradient, gradientSpaceTransform);
+}
+
 void Recorder::fillRect(const FloatRect& rect, const Color& color)
 {
     appendStateChangeItemIfNecessary();
@@ -514,6 +531,8 @@ void Recorder::fillPath(const Path& path)
             recordFillLine(*line);
         else if (auto arc = path.singleArc())
             recordFillArc(*arc);
+        else if (auto closedArc = path.singleClosedArc())
+            recordFillClosedArc(*closedArc);
         else if (auto curve = path.singleQuadCurve())
             recordFillQuadCurve(*curve);
         else if (auto curve = path.singleBezierCurve())
@@ -561,6 +580,8 @@ void Recorder::strokePath(const Path& path)
             recordStrokeLine(*line);
         else if (auto arc = path.singleArc())
             recordStrokeArc(*arc);
+        else if (auto closedArc = path.singleClosedArc())
+            recordStrokeClosedArc(*closedArc);
         else if (auto curve = path.singleQuadCurve())
             recordStrokeQuadCurve(*curve);
         else if (auto curve = path.singleBezierCurve())

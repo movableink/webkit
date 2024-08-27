@@ -184,7 +184,7 @@ int testExecutionTimeLimit()
         timeLimit = 100_ms + tierAdjustment;
         JSContextGroupSetExecutionTimeLimit(contextGroup, timeLimit.seconds(), shouldTerminateCallback, nullptr);
         {
-#if OS(LINUX) && (CPU(MIPS) || CPU(ARM_THUMB2))
+#if OS(LINUX) && CPU(ARM_THUMB2)
             Seconds timeAfterWatchdogShouldHaveFired = 500_ms + tierAdjustment;
 #else
             Seconds timeAfterWatchdogShouldHaveFired = 300_ms + tierAdjustment;
@@ -194,7 +194,7 @@ int testExecutionTimeLimit()
             exception = nullptr;
             JSValueRef* exn = &exception;
             shouldTerminateCallbackWasCalled = false;
-            auto thread = Thread::create("Rogue thread", [=] {
+            auto thread = Thread::create("Rogue thread"_s, [=] {
                 JSEvaluateScript(context, script, nullptr, nullptr, 1, exn);
             });
 
@@ -501,10 +501,10 @@ int testExecutionTimeLimit()
                     "var startTime = currentCPUTime();"
                     "while (true) {"
                         "for (var i = 0; i < 1000; i++);"
-                            "if (currentCPUTime() - startTime > ", timeAfterWatchdogShouldHaveFired.seconds(), ") break;"
+                            "if (currentCPUTime() - startTime > "_s, timeAfterWatchdogShouldHaveFired.seconds(), ") break;"
                     "}"
                 "}"
-                "foo();"
+                "foo();"_s
             ).utf8();
 
             JSStringRef script = JSStringCreateWithUTF8CString(scriptText.data());

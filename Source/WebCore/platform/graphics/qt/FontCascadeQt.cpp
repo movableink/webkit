@@ -64,8 +64,8 @@ static inline String toNormalizedQStringImpl(const CharacterType* characters, un
 static const QString toNormalizedQString(const TextRun& run)
 {
     return run.is8Bit()
-        ? toNormalizedQStringImpl(run.characters8(), run.length())
-        : toNormalizedQStringImpl(run.characters16(), run.length());
+        ? toNormalizedQStringImpl(run.span8().data(), run.span8().size())
+        : toNormalizedQStringImpl(run.span16().data(), run.span16().size());
 }
 
 static QTextLine setupLayout(QTextLayout* layout, const TextRun& style)
@@ -263,7 +263,7 @@ void FontCascade::initFormatForTextLayout(QTextLayout* layout, const TextRun& ru
     // To avoid word-spacing on any leading spaces, we exclude them from FormatRange which
     // word-spacing along with other options would be applied to. This is safe since the other
     // formatting options does not affect spaces.
-    unsigned length = run.length();
+    int length = run.length();
     for (range.start = 0; range.start < length && treatAsSpace(run[range.start]); ++range.start) { }
     range.length = length - range.start;
 
@@ -314,7 +314,7 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const G
 
     float width = 0;
 
-    for (int i = 0; i < numGlyphs; ++i) {
+    for (unsigned i = 0; i < numGlyphs; ++i) {
         Glyph glyph = glyphs[i];
         float advance = advances[i].x();
 
@@ -363,8 +363,8 @@ QFont FontCascade::syntheticFont() const
     QRawFont rawFont(primaryFont().getQtRawFont());
     QFont f(rawFont.familyName());
     if (rawFont.pixelSize())
-        f.setPointSizeF(rawFont.pixelSize());
-    f.setWeight(rawFont.weight());
+        f.setPixelSize(rawFont.pixelSize());
+    f.setWeight(QFont::Weight(rawFont.weight()));
     f.setStyle(rawFont.style());
     if (!m_spacing.letter.isZero())
         f.setLetterSpacing(QFont::AbsoluteSpacing, letterSpacing());

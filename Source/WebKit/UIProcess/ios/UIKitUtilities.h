@@ -49,10 +49,15 @@
 @interface UIGestureRecognizer (WebKitInternal)
 @property (nonatomic, readonly) BOOL _wk_isTextInteractionLoupeGesture;
 @property (nonatomic, readonly) BOOL _wk_isTextInteractionTapGesture;
+@property (nonatomic, readonly) BOOL _wk_hasRecognizedOrEnded;
 @end
 
 @interface UIView (WebKitInternal)
 @property (nonatomic, readonly) UIViewController *_wk_viewControllerForFullScreenPresentation;
+@end
+
+@interface UIViewController (WebKitInternal)
+@property (nonatomic, readonly) BOOL _wk_isInFullscreenPresentation;
 @end
 
 namespace WebKit {

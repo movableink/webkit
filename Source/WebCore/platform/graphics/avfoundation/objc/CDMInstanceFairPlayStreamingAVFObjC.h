@@ -53,6 +53,15 @@ class Logger;
 #endif
 
 namespace WebCore {
+class AVContentKeySessionDelegateClient;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::AVContentKeySessionDelegateClient> : std::true_type { };
+}
+
+namespace WebCore {
 
 class CDMInstanceSessionFairPlayStreamingAVFObjC;
 class CDMPrivateFairPlayStreaming;
@@ -137,6 +146,7 @@ public:
 
     using KeyStatusesChangedObserver = Observer<void()>;
     void addKeyStatusesChangedObserver(const KeyStatusesChangedObserver&);
+    void removeKeyStatusesChangedObserver(const KeyStatusesChangedObserver&);
 
     void sessionKeyStatusesChanged(const CDMInstanceSessionFairPlayStreamingAVFObjC&);
 
@@ -146,7 +156,7 @@ public:
     void setLogIdentifier(const void* logIdentifier) final { m_logIdentifier = logIdentifier; }
     const Logger& logger() const { return m_logger; };
     const void* logIdentifier() const { return m_logIdentifier; }
-    const char* logClassName() const { return "CDMInstanceFairPlayStreamingAVFObjC"; }
+    ASCIILiteral logClassName() const { return "CDMInstanceFairPlayStreamingAVFObjC"_s; }
 #endif
 
 private:
@@ -172,6 +182,10 @@ class CDMInstanceSessionFairPlayStreamingAVFObjC final
     , public AVContentKeySessionDelegateClient
     , private ContentKeyGroupDataSource {
 public:
+    using AVContentKeySessionDelegateClient::weakPtrFactory;
+    using AVContentKeySessionDelegateClient::WeakValueType;
+    using AVContentKeySessionDelegateClient::WeakPtrImplType;
+
     CDMInstanceSessionFairPlayStreamingAVFObjC(Ref<CDMInstanceFairPlayStreamingAVFObjC>&&);
     virtual ~CDMInstanceSessionFairPlayStreamingAVFObjC() = default;
 
@@ -236,11 +250,13 @@ private:
 
     AVContentKey *contentKeyForSample(const MediaSampleAVFObjC&);
 
+    bool requestMatchesRenewingRequest(AVContentKeyRequest *);
+
 #if !RELEASE_LOG_DISABLED
     void setLogIdentifier(const void* logIdentifier) final { m_logIdentifier = logIdentifier; }
     const Logger& logger() const { return m_logger; };
     const void* logIdentifier() const { return m_logIdentifier; }
-    const char* logClassName() const { return "CDMInstanceSessionFairPlayStreamingAVFObjC"; }
+    ASCIILiteral logClassName() const { return "CDMInstanceSessionFairPlayStreamingAVFObjC"_s; }
 #endif
 
     // ContentKeyGroupDataSource

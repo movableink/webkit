@@ -79,7 +79,7 @@ void WheelEventTestMonitor::setTestCallbackAndStartMonitoring(bool expectWheelEn
     LOG_WITH_STREAM(WheelEventTestMonitor, stream << "  WheelEventTestMonitor::setTestCallbackAndStartMonitoring - expect end/cancel " << expectWheelEndOrCancel << ", expect momentum end " << expectMomentumEnd);
 }
 
-void WheelEventTestMonitor::deferForReason(ScrollableAreaIdentifier identifier, OptionSet<DeferReason> reason)
+void WheelEventTestMonitor::deferForReason(ScrollingNodeID identifier, OptionSet<DeferReason> reason)
 {
     Locker locker { m_lock };
 
@@ -92,7 +92,7 @@ void WheelEventTestMonitor::deferForReason(ScrollableAreaIdentifier identifier, 
     LOG_WITH_STREAM(WheelEventTestMonitor, stream << "      (=) WheelEventTestMonitor::deferForReason: id=" << identifier << ", reason=" << reason);
 }
 
-void WheelEventTestMonitor::removeDeferralForReason(ScrollableAreaIdentifier identifier, OptionSet<DeferReason> reason)
+void WheelEventTestMonitor::removeDeferralForReason(ScrollingNodeID identifier, OptionSet<DeferReason> reason)
 {
     Locker locker { m_lock };
 
@@ -131,9 +131,11 @@ void WheelEventTestMonitor::receivedWheelEventWithPhases(PlatformWheelEventPhase
 
 void WheelEventTestMonitor::scheduleCallbackCheck()
 {
-    ensureOnMainThread([weakPage = WeakPtr { m_page }] {
-        if (weakPage)
-            weakPage->scheduleRenderingUpdate(RenderingUpdateStep::WheelEventMonitorCallbacks);
+    ensureOnMainThread([weakThis = ThreadSafeWeakPtr { *this }] {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
+            return;
+        protectedThis->m_page.scheduleRenderingUpdate(RenderingUpdateStep::WheelEventMonitorCallbacks);
     });
 }
 

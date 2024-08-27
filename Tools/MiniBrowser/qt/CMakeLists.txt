@@ -39,18 +39,18 @@ set(MiniBrowser_SOURCES
     ${MiniBrowser_QML_SOURCES}
 )
 
-qt5_add_resources(MiniBrowser_SOURCES
+qt_add_resources(MiniBrowser_SOURCES
     MiniBrowser.qrc
 )
 
 set(MiniBrowser_SYSTEM_INCLUDE_DIRECTORIES
-    ${Qt5Quick_INCLUDE_DIRS}
-    ${Qt5Quick_PRIVATE_INCLUDE_DIRS}
+    ${Qt6Quick_INCLUDE_DIRS}
+    ${Qt6Quick_PRIVATE_INCLUDE_DIRS}
 )
 
 set(MiniBrowser_LIBRARIES
     WebKit
-    ${Qt5Quick_LIBRARIES}
+    ${Qt6Quick_LIBRARIES}
 )
 
 if (SHARED_CORE)

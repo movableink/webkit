@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 55;
 	objects = {
 
 /* Begin PBXAggregateTarget section */
@@ -162,15 +162,36 @@
 		E132AA3A17CD5F1000611DF0 /* WebKitTestRunnerDraggingInfo.mm in Sources */ = {isa = PBXBuildFile; fileRef = E132AA3817CD5F1000611DF0 /* WebKitTestRunnerDraggingInfo.mm */; };
 		E132AA3D17CE776F00611DF0 /* WebKitTestRunnerEvent.mm in Sources */ = {isa = PBXBuildFile; fileRef = E132AA3B17CE776F00611DF0 /* WebKitTestRunnerEvent.mm */; };
 		E1C642C617CBCD4C00D66A3C /* WebKitTestRunnerPasteboard.mm in Sources */ = {isa = PBXBuildFile; fileRef = E1C642C417CBCD4C00D66A3C /* WebKitTestRunnerPasteboard.mm */; };
+		E372BC362C08E29C006DFE67 /* NetworkingExtension.appex in Embed Extensions */ = {isa = PBXBuildFile; fileRef = E372BC352C08E29C006DFE67 /* NetworkingExtension.appex */; platformFilters = (ios, ); settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		E372BC382C08EB01006DFE67 /* GPUExtension.appex in Embed Extensions */ = {isa = PBXBuildFile; fileRef = E372BC372C08EB01006DFE67 /* GPUExtension.appex */; platformFilters = (ios, ); settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		E372BC3A2C08F323006DFE67 /* WebContentExtension.appex in Embed Extensions */ = {isa = PBXBuildFile; fileRef = E372BC392C08F323006DFE67 /* WebContentExtension.appex */; platformFilters = (ios, ); settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		F4010B7E24DA205300A876E2 /* PoseAsClass.mm in Sources */ = {isa = PBXBuildFile; fileRef = F4010B7C24DA204800A876E2 /* PoseAsClass.mm */; };
 		F415C22C27AF52D30028F505 /* UIPasteboardConsistencyEnforcer.h in Headers */ = {isa = PBXBuildFile; fileRef = F415C22A27AF52D30028F505 /* UIPasteboardConsistencyEnforcer.h */; };
 		F415C23527AF5B390028F505 /* UIPasteboardConsistencyEnforcer.mm in Sources */ = {isa = PBXBuildFile; fileRef = F415C22B27AF52D30028F505 /* UIPasteboardConsistencyEnforcer.mm */; };
 		F44A531721B899E200DBB99C /* ClassMethodSwizzler.mm in Sources */ = {isa = PBXBuildFile; fileRef = F44A531421B899DA00DBB99C /* ClassMethodSwizzler.mm */; };
 		F44A531821B899E500DBB99C /* InstanceMethodSwizzler.mm in Sources */ = {isa = PBXBuildFile; fileRef = F44A531621B899DA00DBB99C /* InstanceMethodSwizzler.mm */; };
 		F46240B1217013E500917B16 /* UIScriptControllerCocoa.mm in Sources */ = {isa = PBXBuildFile; fileRef = F46240AF2170128300917B16 /* UIScriptControllerCocoa.mm */; };
+		F474EE3C2B82B65100DE5F41 /* WKTextExtractionTestingHelpers.mm in Sources */ = {isa = PBXBuildFile; fileRef = F474EE3B2B82B65100DE5F41 /* WKTextExtractionTestingHelpers.mm */; };
+		F474EE3D2B82B65100DE5F41 /* WKTextExtractionTestingHelpers.h in Headers */ = {isa = PBXBuildFile; fileRef = F474EE3A2B82B65100DE5F41 /* WKTextExtractionTestingHelpers.h */; };
 		F4C3578C20E8444600FA0748 /* LayoutTestSpellChecker.mm in Sources */ = {isa = PBXBuildFile; fileRef = F4C3578A20E8444000FA0748 /* LayoutTestSpellChecker.mm */; };
 		F4FED324235823A3003C139C /* NSPasteboardAdditions.mm in Sources */ = {isa = PBXBuildFile; fileRef = F4FED3222358215E003C139C /* NSPasteboardAdditions.mm */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXBuildRule section */
+		E372BC2C2C08C74A006DFE67 /* PBXBuildRule */ = {
+			isa = PBXBuildRule;
+			compilerSpec = com.apple.compilers.proxy.script;
+			filePatterns = "*.appex";
+			fileType = pattern.proxy;
+			inputFiles = (
+			);
+			isEditable = 1;
+			outputFiles = (
+				"$(BUILT_PRODUCTS_DIR)/$(EXTENSIONS_FOLDER_PATH)/$(INPUT_FILE_NAME)",
+			);
+			script = "set -e\n\nDESTINATION_PATH=${BUILT_PRODUCTS_DIR}/WebKitTestRunnerApp.app/Extensions/${INPUT_FILE_NAME}\n\nmkdir -p \"${DESTINATION_PATH}\"\nditto \"${BUILT_PRODUCTS_DIR}/${INPUT_FILE_NAME}\" \"${DESTINATION_PATH}\"\n\n/usr/libexec/PlistBuddy -c \"Set :CFBundleIdentifier ${PRODUCT_BUNDLE_IDENTIFIER}.${INPUT_FILE_BASE}\" \"${DESTINATION_PATH}/Info.plist\"\n\nif [[ ${INPUT_FILE_BASE} == \"WebContentExtension\" ]]; then\n    EXTENSION_POINT_ID=\"com.apple.web-browser-engine.content\"\nelif [[ ${INPUT_FILE_BASE} == \"WebContentCaptivePortalExtension\" ]]; then\n    EXTENSION_POINT_ID=\"com.apple.web-browser-engine.content\"\nfi\n\nif [[ -z \"${EXTENSION_POINT_ID}\" ]]; then\n    exit 0\nfi\n\n/usr/libexec/PlistBuddy -c \"Delete :EXAppExtensionAttributes:EXExtensionPointIdentifier dict\" \"${DESTINATION_PATH}/Info.plist\"\n/usr/libexec/PlistBuddy -c \"Add :EXAppExtensionAttributes:EXExtensionPointIdentifier string ${EXTENSION_POINT_ID}\" \"${DESTINATION_PATH}/Info.plist\"\n";
+		};
+/* End PBXBuildRule section */
 
 /* Begin PBXContainerItemProxy section */
 		A115CCB91B9D76BF00E89159 /* PBXContainerItemProxy */ = {
@@ -227,6 +248,19 @@
 				2E34C90018B68808000067BB /* WebKitTestRunnerInjectedBundle.bundle in Copy Plug-Ins */,
 			);
 			name = "Copy Plug-Ins";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E372BC342C08E22D006DFE67 /* Embed Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(EXTENSIONS_FOLDER_PATH)";
+			dstSubfolderSpec = 16;
+			files = (
+				E372BC382C08EB01006DFE67 /* GPUExtension.appex in Embed Extensions */,
+				E372BC362C08E29C006DFE67 /* NetworkingExtension.appex in Embed Extensions */,
+				E372BC3A2C08F323006DFE67 /* WebContentExtension.appex in Embed Extensions */,
+			);
+			name = "Embed Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -440,6 +474,10 @@
 		E1BA671D1742DA5A00C20251 /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = System/Library/Frameworks/Carbon.framework; sourceTree = SDKROOT; };
 		E1C642C417CBCD4C00D66A3C /* WebKitTestRunnerPasteboard.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = WebKitTestRunnerPasteboard.mm; sourceTree = "<group>"; };
 		E1C642C517CBCD4C00D66A3C /* WebKitTestRunnerPasteboard.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WebKitTestRunnerPasteboard.h; sourceTree = "<group>"; };
+		E3660D6A2C2F663800BA7138 /* WebKitTestRunnerApp-visionOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "WebKitTestRunnerApp-visionOS.entitlements"; sourceTree = "<group>"; };
+		E372BC352C08E29C006DFE67 /* NetworkingExtension.appex */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.extensionkit-extension"; path = NetworkingExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		E372BC372C08EB01006DFE67 /* GPUExtension.appex */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.extensionkit-extension"; path = GPUExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		E372BC392C08F323006DFE67 /* WebContentExtension.appex */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.extensionkit-extension"; path = WebContentExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		F4010B7C24DA204800A876E2 /* PoseAsClass.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = PoseAsClass.mm; path = ../TestRunnerShared/cocoa/PoseAsClass.mm; sourceTree = "<group>"; };
 		F4010B7D24DA204800A876E2 /* PoseAsClass.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PoseAsClass.h; path = ../TestRunnerShared/cocoa/PoseAsClass.h; sourceTree = "<group>"; };
 		F415C22A27AF52D30028F505 /* UIPasteboardConsistencyEnforcer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = UIPasteboardConsistencyEnforcer.h; sourceTree = "<group>"; };
@@ -449,6 +487,8 @@
 		F44A531521B899DA00DBB99C /* ClassMethodSwizzler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ClassMethodSwizzler.h; path = ../TestRunnerShared/cocoa/ClassMethodSwizzler.h; sourceTree = "<group>"; };
 		F44A531621B899DA00DBB99C /* InstanceMethodSwizzler.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = InstanceMethodSwizzler.mm; path = ../TestRunnerShared/cocoa/InstanceMethodSwizzler.mm; sourceTree = "<group>"; };
 		F46240AF2170128300917B16 /* UIScriptControllerCocoa.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = UIScriptControllerCocoa.mm; sourceTree = "<group>"; };
+		F474EE3A2B82B65100DE5F41 /* WKTextExtractionTestingHelpers.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WKTextExtractionTestingHelpers.h; sourceTree = "<group>"; };
+		F474EE3B2B82B65100DE5F41 /* WKTextExtractionTestingHelpers.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = WKTextExtractionTestingHelpers.mm; sourceTree = "<group>"; };
 		F4C3578A20E8444000FA0748 /* LayoutTestSpellChecker.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = LayoutTestSpellChecker.mm; path = ../TestRunnerShared/cocoa/LayoutTestSpellChecker.mm; sourceTree = "<group>"; };
 		F4C3578B20E8444000FA0748 /* LayoutTestSpellChecker.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = LayoutTestSpellChecker.h; path = ../TestRunnerShared/cocoa/LayoutTestSpellChecker.h; sourceTree = "<group>"; };
 		F4F2894B2AC4ED290084A38D /* UIKitSPIForTesting.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UIKitSPIForTesting.h; path = ../TestRunnerShared/spi/UIKitSPIForTesting.h; sourceTree = "<group>"; };
@@ -499,6 +539,9 @@
 		08FB7794FE84155DC02AAC07 /* WebKitTestRunner */ = {
 			isa = PBXGroup;
 			children = (
+				E372BC392C08F323006DFE67 /* WebContentExtension.appex */,
+				E372BC372C08EB01006DFE67 /* GPUExtension.appex */,
+				E372BC352C08E29C006DFE67 /* NetworkingExtension.appex */,
 				49AEEF692407278200C87E4C /* Info.plist */,
 				BC952EC511F3C10F003398B4 /* DerivedSources.make */,
 				2EE52CEA1890A9A80010ED21 /* WebKitTestRunnerApp-Info.plist */,
@@ -655,6 +698,8 @@
 				2D058E0822E2EE2200E4C145 /* UIScriptControllerCocoa.h */,
 				F46240AF2170128300917B16 /* UIScriptControllerCocoa.mm */,
 				51998A072810FBD1009D68EB /* WebNotificationProviderCocoa.mm */,
+				F474EE3A2B82B65100DE5F41 /* WKTextExtractionTestingHelpers.h */,
+				F474EE3B2B82B65100DE5F41 /* WKTextExtractionTestingHelpers.mm */,
 			);
 			path = cocoa;
 			sourceTree = "<group>";
@@ -898,6 +943,7 @@
 				57A0062C22976E4D00AD08BD /* WebKitTestRunner.entitlements */,
 				A18510381B9ADF2200744AEB /* WebKitTestRunner.xcconfig */,
 				9B0D132E2036D346008FC8FB /* WebKitTestRunnerApp-iOS.entitlements */,
+				E3660D6A2C2F663800BA7138 /* WebKitTestRunnerApp-visionOS.entitlements */,
 				311183AA212B1AC70077BCE0 /* WebKitTestRunnerApp-watchOS.entitlements */,
 				A18510391B9ADFF800744AEB /* WebKitTestRunnerApp.xcconfig */,
 				BC251A1811D16795002EBC01 /* WebKitTestRunnerLibrary.xcconfig */,
@@ -1016,6 +1062,7 @@
 				F415C22C27AF52D30028F505 /* UIPasteboardConsistencyEnforcer.h in Headers */,
 				2D058E0922E2EE2200E4C145 /* UIScriptControllerCocoa.h in Headers */,
 				2D058E0B22E2EF6D00E4C145 /* UIScriptControllerMac.h in Headers */,
+				F474EE3D2B82B65100DE5F41 /* WKTextExtractionTestingHelpers.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1030,8 +1077,10 @@
 				2EE52CDD1890A9A80010ED21 /* Frameworks */,
 				2EE52CDE1890A9A80010ED21 /* Resources */,
 				CEC209031D36E36A00261596 /* Copy Plug-Ins */,
+				E372BC342C08E22D006DFE67 /* Embed Extensions */,
 			);
 			buildRules = (
+				E372BC2C2C08C74A006DFE67 /* PBXBuildRule */,
 			);
 			dependencies = (
 				A18510361B9ADE6D00744AEB /* PBXTargetDependency */,
@@ -1304,6 +1353,7 @@
 				0F18E6E61D6B9BA20027E547 /* UIScriptControllerShared.cpp in Sources */,
 				A18510431B9AE14500744AEB /* WebNotificationProvider.cpp in Sources */,
 				51998A082810FBD1009D68EB /* WebNotificationProviderCocoa.mm in Sources */,
+				F474EE3C2B82B65100DE5F41 /* WKTextExtractionTestingHelpers.mm in Sources */,
 				A18510441B9AE14A00744AEB /* WorkQueueManager.cpp in Sources */,
 				33558B2E2AF1C22B0041E63F /* WPTFunctions.cpp in Sources */,
 			);

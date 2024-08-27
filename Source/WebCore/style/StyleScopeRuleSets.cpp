@@ -31,6 +31,7 @@
 
 #include "CSSStyleSheet.h"
 #include "CascadeLevel.h"
+#include "DocumentInlines.h"
 #include "ExtensionStyleSheets.h"
 #include "FrameLoader.h"
 #include "HTMLNames.h"
@@ -82,6 +83,11 @@ void ScopeRuleSets::updateUserAgentMediaQueryStyleIfNeeded() const
     builder.addRulesFromSheet(*UserAgentStyle::mediaQueryStyleSheet);
 }
 
+RuleSet* ScopeRuleSets::dynamicViewTransitionsStyle() const
+{
+    return m_dynamicViewTransitionsStyle.get();
+}
+
 RuleSet* ScopeRuleSets::userStyle() const
 {
     if (m_usesSharedUserStyle)
@@ -108,12 +114,12 @@ RuleSet* ScopeRuleSets::styleForCascadeLevel(CascadeLevel level)
 
 void ScopeRuleSets::initializeUserStyle()
 {
-    auto& extensionStyleSheets = m_styleResolver.document().extensionStyleSheets();
+    CheckedRef extensionStyleSheets = m_styleResolver.document().extensionStyleSheets();
     auto& mediaQueryEvaluator = m_styleResolver.mediaQueryEvaluator();
 
     auto userStyle = RuleSet::create();
 
-    if (auto* pageUserSheet = extensionStyleSheets.pageUserSheet()) {
+    if (auto* pageUserSheet = extensionStyleSheets->pageUserSheet()) {
         RuleSetBuilder builder(userStyle, mediaQueryEvaluator, &m_styleResolver);
         builder.addRulesFromSheet(pageUserSheet->contents());
     }
@@ -121,17 +127,17 @@ void ScopeRuleSets::initializeUserStyle()
 #if ENABLE(APP_BOUND_DOMAINS)
     auto* page = m_styleResolver.document().page();
     auto* localMainFrame = page ? dynamicDowncast<LocalFrame>(page->mainFrame()) : nullptr;
-    if (!extensionStyleSheets.injectedUserStyleSheets().isEmpty() && page && localMainFrame && localMainFrame->loader().client().shouldEnableInAppBrowserPrivacyProtections())
+    if (!extensionStyleSheets->injectedUserStyleSheets().isEmpty() && page && localMainFrame && localMainFrame->loader().client().shouldEnableInAppBrowserPrivacyProtections())
         m_styleResolver.document().addConsoleMessage(MessageSource::Security, MessageLevel::Warning, "Ignoring user style sheet for non-app bound domain."_s);
     else {
-        collectRulesFromUserStyleSheets(extensionStyleSheets.injectedUserStyleSheets(), userStyle, mediaQueryEvaluator);
-        if (page && localMainFrame && !extensionStyleSheets.injectedUserStyleSheets().isEmpty())
+        collectRulesFromUserStyleSheets(extensionStyleSheets->injectedUserStyleSheets(), userStyle, mediaQueryEvaluator);
+        if (page && localMainFrame && !extensionStyleSheets->injectedUserStyleSheets().isEmpty())
             localMainFrame->loader().client().notifyPageOfAppBoundBehavior();
     }
 #else
-    collectRulesFromUserStyleSheets(extensionStyleSheets.injectedUserStyleSheets(), userStyle, mediaQueryEvaluator);
+    collectRulesFromUserStyleSheets(extensionStyleSheets->injectedUserStyleSheets(), userStyle, mediaQueryEvaluator);
 #endif
-    collectRulesFromUserStyleSheets(extensionStyleSheets.documentUserStyleSheets(), userStyle, mediaQueryEvaluator);
+    collectRulesFromUserStyleSheets(extensionStyleSheets->documentUserStyleSheets(), userStyle, mediaQueryEvaluator);
 
     if (userStyle->ruleCount() > 0 || userStyle->pageRules().size() > 0)
         m_userStyle = WTFMove(userStyle);
@@ -232,10 +238,21 @@ void ScopeRuleSets::appendAuthorStyleSheets(const Vector<RefPtr<CSSStyleSheet>>&
 {
     RuleSetBuilder builder(*m_authorStyle, *mediaQueryEvaluator, &m_styleResolver, RuleSetBuilder::ShrinkToFit::Enable, RuleSetBuilder::ShouldResolveNesting::Yes);
 
+    RefPtr<CSSStyleSheet> previous;
     for (auto& cssSheet : styleSheets) {
         ASSERT(!cssSheet->disabled());
+        // In some cases, we have many identical <style> tags. To avoid pathological behavior, we check the one-previous <style> and skip adding a new one when
+        // the content is exact same to the previous one.
+        if (previous) {
+            if (&previous->contents() == &cssSheet->contents() && previous->mediaQueries().isEmpty() && cssSheet->mediaQueries().isEmpty()) {
+                inspectorCSSOMWrappers.collectFromStyleSheetIfNeeded(cssSheet.get());
+                continue;
+            }
+        }
+
         builder.addRulesFromSheet(cssSheet->contents(), cssSheet->mediaQueries());
         inspectorCSSOMWrappers.collectFromStyleSheetIfNeeded(cssSheet.get());
+        previous = cssSheet;
     }
 
     collectFeatures();
@@ -270,6 +287,8 @@ void ScopeRuleSets::collectFeatures() const
     m_attributeInvalidationRuleSets.clear();
     m_pseudoClassInvalidationRuleSets.clear();
     m_hasPseudoClassInvalidationRuleSets.clear();
+
+    m_customPropertyNamesInStyleContainerQueries = std::nullopt;
 
     m_cachedHasComplexSelectorsForStyleAttribute = std::nullopt;
 
@@ -336,6 +355,35 @@ const Vector<InvalidationRuleSet>* ScopeRuleSets::pseudoClassInvalidationRuleSet
 const Vector<InvalidationRuleSet>* ScopeRuleSets::hasPseudoClassInvalidationRuleSets(const PseudoClassInvalidationKey& key) const
 {
     return ensureInvalidationRuleSets(key, m_hasPseudoClassInvalidationRuleSets, m_features.hasPseudoClassRules);
+}
+
+const HashSet<AtomString>& ScopeRuleSets::customPropertyNamesInStyleContainerQueries() const
+{
+    if (!m_customPropertyNamesInStyleContainerQueries) {
+        HashSet<AtomString> propertyNames;
+
+        auto collectPropertyNames = [&](auto* ruleSet) {
+            if (!ruleSet)
+                return;
+            for (auto query : ruleSet->containerQueryRules()) {
+                traverseFeatures(query->containerQuery().condition, [&](auto& containerFeature) {
+                    if (isCustomPropertyName(containerFeature.name))
+                        propertyNames.add(containerFeature.name);
+                });
+            }
+        };
+
+        collectPropertyNames(&authorStyle());
+        collectPropertyNames(userStyle());
+
+        m_customPropertyNamesInStyleContainerQueries = propertyNames;
+    }
+    return *m_customPropertyNamesInStyleContainerQueries;
+}
+
+bool ScopeRuleSets::hasSelectorsForStyleAttribute() const
+{
+    return !!attributeInvalidationRuleSets(HTMLNames::styleAttr->localName());
 }
 
 bool ScopeRuleSets::hasComplexSelectorsForStyleAttribute() const

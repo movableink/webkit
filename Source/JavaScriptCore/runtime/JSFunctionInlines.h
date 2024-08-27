@@ -84,6 +84,11 @@ inline bool JSFunction::isHostFunction() const
     return executable()->isHostFunction();
 }
 
+inline bool JSFunction::isNonBoundHostFunction() const
+{
+    return isHostFunction() && !inherits<JSBoundFunction>();
+}
+
 inline Intrinsic JSFunction::intrinsic() const
 {
     return executable()->intrinsic();
@@ -121,14 +126,6 @@ inline TaggedNativeFunction JSFunction::nativeConstructor()
     return static_cast<NativeExecutable*>(executable())->constructor();
 }
 
-inline bool isHostFunction(JSValue value, TaggedNativeFunction nativeFunction)
-{
-    JSFunction* function = jsCast<JSFunction*>(getJSFunction(value));
-    if (!function || !function->isHostFunction())
-        return false;
-    return function->nativeFunction() == nativeFunction;
-}
-
 inline bool isRemoteFunction(JSValue value)
 {
     return value.inherits<JSRemoteFunction>();
@@ -159,7 +156,7 @@ inline double JSFunction::originalLength(VM& vm)
 }
 
 template<typename... StringTypes>
-ALWAYS_INLINE String makeNameWithOutOfMemoryCheck(JSGlobalObject* globalObject, ThrowScope& throwScope, const char* messagePrefix, StringTypes... strings)
+ALWAYS_INLINE String makeNameWithOutOfMemoryCheck(JSGlobalObject* globalObject, ThrowScope& throwScope, ASCIILiteral messagePrefix, StringTypes... strings)
 {
     String name = tryMakeString(strings...);
     if (UNLIKELY(!name)) {
@@ -200,10 +197,10 @@ inline JSString* JSFunction::originalName(JSGlobalObject* globalObject)
         name = ecmaName.string();
 
     if (jsExecutable()->isGetter()) {
-        name = makeNameWithOutOfMemoryCheck(globalObject, scope, "Getter ", "get ", name);
+        name = makeNameWithOutOfMemoryCheck(globalObject, scope, "Getter "_s, "get "_s, name);
         RETURN_IF_EXCEPTION(scope, { });
     } else if (jsExecutable()->isSetter()) {
-        name = makeNameWithOutOfMemoryCheck(globalObject, scope, "Setter ", "set ", name);
+        name = makeNameWithOutOfMemoryCheck(globalObject, scope, "Setter "_s, "set "_s, name);
         RETURN_IF_EXCEPTION(scope, { });
     }
     return jsString(vm, WTFMove(name));
@@ -211,12 +208,10 @@ inline JSString* JSFunction::originalName(JSGlobalObject* globalObject)
 
 inline bool JSFunction::canAssumeNameAndLengthAreOriginal(VM&)
 {
-    if (isHostFunction()) {
-        // Bound functions are not eagerly generating name and length.
-        // Thus, we can use FunctionRareData's tracking. This is useful to optimize func.bind().bind() case.
-        if (!inherits<JSBoundFunction>())
-            return false;
-    }
+    // Bound functions are not eagerly generating name and length.
+    // Thus, we can use FunctionRareData's tracking. This is useful to optimize func.bind().bind() case.
+    if (isNonBoundHostFunction())
+        return false;
     FunctionRareData* rareData = this->rareData();
     if (!rareData)
         return true;
@@ -232,7 +227,7 @@ inline bool JSFunction::mayHaveNonReifiedPrototype()
     return !isHostOrBuiltinFunction() && jsExecutable()->hasPrototypeProperty();
 }
 
-inline bool JSFunction::canUseAllocationProfile()
+inline bool JSFunction::canUseAllocationProfiles()
 {
     if (isHostOrBuiltinFunction()) {
         if (isHostFunction())
@@ -252,9 +247,9 @@ inline bool JSFunction::canUseAllocationProfile()
     return jsExecutable()->hasPrototypeProperty();
 }
 
-inline FunctionRareData* JSFunction::ensureRareDataAndAllocationProfile(JSGlobalObject* globalObject, unsigned inlineCapacity)
+inline FunctionRareData* JSFunction::ensureRareDataAndObjectAllocationProfile(JSGlobalObject* globalObject, unsigned inlineCapacity)
 {
-    ASSERT(canUseAllocationProfile());
+    ASSERT(canUseAllocationProfiles());
     FunctionRareData* rareData = this->rareData();
     if (!rareData)
         return allocateAndInitializeRareData(globalObject, inlineCapacity);

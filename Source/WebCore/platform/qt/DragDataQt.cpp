@@ -56,7 +56,7 @@ bool DragData::containsFiles() const
     if (!m_platformDragData)
         return false;
     QList<QUrl> urls = m_platformDragData->urls();
-    foreach (const QUrl &url, urls) {
+    Q_FOREACH (const QUrl &url, urls) {
         if (!url.toLocalFile().isEmpty())
             return true;
     }
@@ -74,7 +74,7 @@ Vector<String> DragData::asFilenames() const
     if (!m_platformDragData)
         return result;
     QList<QUrl> urls = m_platformDragData->urls();
-    foreach (const QUrl &url, urls) {
+    Q_FOREACH (const QUrl &url, urls) {
         QString file = url.toLocalFile();
         if (!file.isEmpty())
             result.append(file);
@@ -135,7 +135,12 @@ String DragData::asURL(FilenameConversionPolicy filenamePolicy, String*) const
         return String();
 
     QByteArray encodedUrl = urls.first().toEncoded();
-    return String(encodedUrl.constData(), encodedUrl.length());
+    return std::span { encodedUrl.constData(), static_cast<size_t>(encodedUrl.length()) };
+}
+
+bool DragData::shouldMatchStyleOnDrop() const
+{
+    return false;
 }
 
 /*

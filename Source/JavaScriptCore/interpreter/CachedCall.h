@@ -76,6 +76,7 @@ public:
         auto* newCodeBlock = m_vm.interpreter.prepareForCachedCall(*this, function);
         if (UNLIKELY(scope.exception()))
             return;
+        m_numParameters = newCodeBlock->numParameters();
         m_protoCallFrame.init(newCodeBlock, function->globalObject(), function, jsUndefined(), argumentCount + 1, const_cast<EncodedJSValue*>(m_arguments.data()));
     }
 
@@ -105,11 +106,19 @@ public:
     void appendArgument(JSValue v) { m_arguments.append(v); }
     bool hasOverflowedArguments() { return m_arguments.hasOverflowed(); }
 
-    void unlinkImpl(VM&)
+    void unlinkOrUpgradeImpl(VM&, CodeBlock* oldCodeBlock, CodeBlock* newCodeBlock)
     {
-        m_addressForCall = nullptr;
         if (isOnList())
             remove();
+
+        if (newCodeBlock && m_protoCallFrame.codeBlock() == oldCodeBlock) {
+            newCodeBlock->m_shouldAlwaysBeInlined = false;
+            m_addressForCall = newCodeBlock->jitCode()->addressForCall();
+            m_protoCallFrame.setCodeBlock(newCodeBlock);
+            newCodeBlock->linkIncomingCall(nullptr, this);
+            return;
+        }
+        m_addressForCall = nullptr;
     }
 
     void relink()
@@ -121,6 +130,36 @@ public:
         m_protoCallFrame.setCodeBlock(codeBlock);
     }
 
+    template<typename... Args>
+    ALWAYS_INLINE JSValue callWithArguments(JSGlobalObject* globalObject, JSValue thisValue, Args... args)
+    {
+        VM& vm = m_vm;
+        auto scope = DECLARE_THROW_SCOPE(vm);
+
+#if CPU(ARM64) && CPU(ADDRESS64) && !ENABLE(C_LOOP)
+        constexpr unsigned argumentCountIncludingThis = 1 + sizeof...(args);
+        if constexpr (argumentCountIncludingThis <= 4) {
+            if (LIKELY(m_numParameters <= argumentCountIncludingThis)) {
+                JSValue result = m_vm.interpreter.tryCallWithArguments(*this, thisValue, args...);
+                RETURN_IF_EXCEPTION(scope, { });
+                if (result)
+                    return result;
+            }
+        }
+#endif
+
+        clearArguments();
+        setThis(thisValue);
+        (appendArgument(args), ...);
+
+        if (UNLIKELY(hasOverflowedArguments())) {
+            throwOutOfMemoryError(globalObject, scope);
+            return { };
+        }
+
+        RELEASE_AND_RETURN(scope, call());
+    }
+
 private:
     VM& m_vm;
     VMEntryScope m_entryScope;
@@ -129,7 +168,8 @@ private:
 
     FunctionExecutable* m_functionExecutable;
     JSScope* m_scope;
-    void* m_addressForCall;
+    void* m_addressForCall { nullptr };
+    unsigned m_numParameters { 0 };
 #if ASSERT_ENABLED
     bool m_valid { false };
 #endif

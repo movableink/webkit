@@ -54,7 +54,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLOptionElement);
 using namespace HTMLNames;
 
 HTMLOptionElement::HTMLOptionElement(const QualifiedName& tagName, Document& document)
-    : HTMLElement(tagName, document, CreateHTMLOptionElement)
+    : HTMLElement(tagName, document, TypeFlag::HasCustomStyleResolveCallbacks)
 {
     ASSERT(hasTagName(optionTag));
 }
@@ -171,16 +171,16 @@ void HTMLOptionElement::attributeChanged(const QualifiedName& name, const AtomSt
     case AttributeNames::disabledAttr: {
         bool newDisabled = !newValue.isNull();
         if (m_disabled != newDisabled) {
-            Style::PseudoClassChangeInvalidation disabledInvalidation(*this, { { CSSSelector::PseudoClassType::Disabled, newDisabled },  { CSSSelector::PseudoClassType::Enabled, !newDisabled } });
+            Style::PseudoClassChangeInvalidation disabledInvalidation(*this, { { CSSSelector::PseudoClass::Disabled, newDisabled },  { CSSSelector::PseudoClass::Enabled, !newDisabled } });
             m_disabled = newDisabled;
-            if (renderer() && renderer()->style().hasEffectiveAppearance())
-                renderer()->theme().stateChanged(*renderer(), ControlStyle::State::Enabled);
+            if (renderer() && renderer()->style().hasUsedAppearance())
+                renderer()->repaint();
         }
         break;
     }
     case AttributeNames::selectedAttr: {
         // FIXME: Use PseudoClassChangeInvalidation in other elements that implement matchesDefaultPseudoClass().
-        Style::PseudoClassChangeInvalidation defaultInvalidation(*this, CSSSelector::PseudoClassType::Default, !newValue.isNull());
+        Style::PseudoClassChangeInvalidation defaultInvalidation(*this, CSSSelector::PseudoClass::Default, !newValue.isNull());
         m_isDefault = !newValue.isNull();
 
         // FIXME: WebKit still need to implement 'dirtiness'. See: https://bugs.webkit.org/show_bug.cgi?id=258073
@@ -244,12 +244,12 @@ void HTMLOptionElement::setSelectedState(bool selected, AllowStyleInvalidation a
 
     std::optional<Style::PseudoClassChangeInvalidation> checkedInvalidation;
     if (allowStyleInvalidation == AllowStyleInvalidation::Yes)
-        emplace(checkedInvalidation, *this, { { CSSSelector::PseudoClassType::Checked, selected } });
+        emplace(checkedInvalidation, *this, { { CSSSelector::PseudoClass::Checked, selected } });
 
     m_isSelected = selected;
 
-    if (auto* cache = document().existingAXObjectCache())
-        cache->onSelectedChanged(this);
+    if (CheckedPtr cache = document().existingAXObjectCache())
+        cache->onSelectedChanged(*this);
 }
 
 void HTMLOptionElement::childrenChanged(const ChildChange& change)
@@ -314,7 +314,7 @@ String HTMLOptionElement::textIndentedToRespectGroupLabel() const
 {
     RefPtr parent = parentNode();
     if (is<HTMLOptGroupElement>(parent))
-        return "    " + displayLabel();
+        return makeString("    "_s, displayLabel());
     return displayLabel();
 }
 

@@ -882,7 +882,7 @@ String PlatformKeyboardEvent::keyIdentifierForGdkKeyCode(unsigned keyCode)
     case GDK_KEY_Tab:
         return "U+0009"_s;
     default:
-        return makeString("U+", hex(gdk_keyval_to_unicode(gdk_keyval_to_upper(keyCode)), 4));
+        return makeString("U+"_s, hex(gdk_keyval_to_unicode(gdk_keyval_to_upper(keyCode)), 4));
     }
 }
 
@@ -1319,7 +1319,7 @@ String PlatformKeyboardEvent::singleCharacterString(unsigned val)
 
         String retVal;
         if (uchar16)
-            retVal = String((UChar*)uchar16, nwc);
+            retVal = String({ (UChar*)uchar16, static_cast<size_t>(nwc) });
         else
             retVal = String();
 

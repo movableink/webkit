@@ -50,7 +50,7 @@ void QtWebPagePolicyClient::decidePolicyForNavigationAction(const QUrl& url, Qt:
     // NOTE: even though the C API (and the WebKit2 IPC) supports an asynchronous answer, this is not currently working.
     // We are expected to call the listener immediately. See the patch for https://bugs.webkit.org/show_bug.cgi?id=53785.
     QWebNavigationRequest navigationRequest(url, mouseButton, keyboardModifiers, navigationType, isMainFrame);
-    emit m_webView->navigationRequested(&navigationRequest);
+    Q_EMIT m_webView->navigationRequested(&navigationRequest);
 
     switch (navigationRequest.action()) {
     case QQuickWebView::IgnoreRequest:

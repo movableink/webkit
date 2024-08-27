@@ -97,9 +97,9 @@ static Expected<Vector<String>, std::error_code> getDomainList(const JSON::Array
         for (auto& pair : escapeTable)
             domain = makeStringByReplacingAll(domain, pair.first, pair.second);
 
-        const char* protocolRegex = "[a-z][a-z+.-]*:\\/\\/";
-        const char* allowSubdomainsRegex = "([^/]*\\.)*";
-        regexes.append(makeString(protocolRegex, allowSubdomains ? allowSubdomainsRegex : "", domain, "[:/]"));
+        constexpr auto protocolRegex = "[a-z][a-z+.-]*:\\/\\/"_s;
+        constexpr auto allowSubdomainsRegex = "([^/]*\\.)*"_s;
+        regexes.append(makeString(protocolRegex, allowSubdomains ? allowSubdomainsRegex : ""_s, domain, "[:/]"_s));
     }
     return regexes;
 }
@@ -211,7 +211,6 @@ bool isValidCSSSelector(const String& selector)
     // we want to use quirks mode in parsing, but automatic mode when actually applying the content blocker styles.
     // FIXME: rdar://105733691 (Parse/apply content blocker style sheets in both standards and quirks mode lazily).
     WebCore::CSSParserContext context(HTMLQuirksMode);
-    context.hasPseudoClassEnabled = true;
     CSSParser parser(context);
     return !!parser.parseSelectorList(selector);
 }
@@ -219,7 +218,6 @@ bool isValidCSSSelector(const String& selector)
 WebCore::CSSParserContext contentExtensionCSSParserContext()
 {
     WebCore::CSSParserContext context(HTMLStandardMode);
-    context.hasPseudoClassEnabled = true;
     return context;
 }
 

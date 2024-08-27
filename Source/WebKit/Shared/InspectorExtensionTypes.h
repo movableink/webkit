@@ -42,7 +42,13 @@ enum class ExtensionError : uint8_t;
 
 using ExtensionTabID = WTF::String;
 using ExtensionID = WTF::String;
-using ExtensionEvaluationResult = Expected<Expected<RefPtr<API::SerializedScriptValue>, WebCore::ExceptionDetails>, ExtensionError>;
+using ExtensionVoidResult = Expected<void, ExtensionError>;
+using ExtensionEvaluationResult = Expected<Expected<Ref<API::SerializedScriptValue>, WebCore::ExceptionDetails>, ExtensionError>;
+
+enum class ExtensionAppearance : bool {
+    Light,
+    Dark
+};
 
 enum class ExtensionError : uint8_t {
     ContextDestroyed,
@@ -55,20 +61,5 @@ enum class ExtensionError : uint8_t {
 WTF::String extensionErrorToString(ExtensionError);
 
 } // namespace Inspector
-
-namespace WTF {
-
-template<> struct EnumTraits<Inspector::ExtensionError> {
-    using values = EnumValues<
-        Inspector::ExtensionError,
-        Inspector::ExtensionError::ContextDestroyed,
-        Inspector::ExtensionError::InternalError,
-        Inspector::ExtensionError::InvalidRequest,
-        Inspector::ExtensionError::RegistrationFailed,
-        Inspector::ExtensionError::NotImplemented
-    >;
-};
-
-}
 
 #endif // ENABLE(INSPECTOR_EXTENSIONS)

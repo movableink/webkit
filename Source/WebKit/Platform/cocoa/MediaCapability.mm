@@ -28,42 +28,51 @@
 
 #if ENABLE(EXTENSION_CAPABILITIES)
 
-#import "ExtensionKitSoftLink.h"
+#import <BrowserEngineKit/BECapability.h>
+#import <WebCore/SecurityOrigin.h>
+#import <wtf/text/WTFString.h>
 
 namespace WebKit {
 
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-static RetainPtr<_SECapabilities> createPlatformCapability(const RegistrableDomain& registrableDomain)
-ALLOW_DEPRECATED_DECLARATIONS_END
+static RetainPtr<BEMediaEnvironment> createMediaEnvironment(const URL& webPageURL)
 {
-#if USE(EXTENSIONKIT)
-    if ([get_SECapabilitiesClass() respondsToSelector:@selector(mediaWithWebsite:)])
-        return [get_SECapabilitiesClass() mediaWithWebsite:registrableDomain.string()];
-#else
-    UNUSED_PARAM(url);
-#endif
-
-    return nil;
+    NSURL *protocolHostAndPortURL = URL { webPageURL.protocolHostAndPort() };
+    RELEASE_ASSERT(protocolHostAndPortURL);
+    return adoptNS([[BEMediaEnvironment alloc] initWithWebPageURL:protocolHostAndPortURL]);
 }
 
-MediaCapability::MediaCapability(RegistrableDomain registrableDomain)
-    : m_registrableDomain { WTFMove(registrableDomain) }
-    , m_platformCapability { createPlatformCapability(m_registrableDomain) }
+MediaCapability::MediaCapability(URL&& webPageURL)
+    : m_webPageURL { WTFMove(webPageURL) }
+    , m_mediaEnvironment { createMediaEnvironment(m_webPageURL) }
 {
+    setPlatformCapability([BEProcessCapability mediaPlaybackAndCaptureWithEnvironment:m_mediaEnvironment.get()]);
 }
 
-MediaCapability::MediaCapability(const URL& url)
-    : MediaCapability { RegistrableDomain(url) }
+bool MediaCapability::isActivatingOrActive() const
 {
+    switch (m_state) {
+    case State::Inactive:
+    case State::Deactivating:
+        return false;
+    case State::Activating:
+    case State::Active:
+        return true;
+    }
+
+    RELEASE_ASSERT_NOT_REACHED();
+    return false;
 }
 
 String MediaCapability::environmentIdentifier() const
 {
 #if USE(EXTENSIONKIT)
-    return [m_platformCapability mediaEnvironment];
-#else
-    return { };
+    xpc_object_t xpcObject = [m_mediaEnvironment createXPCRepresentation];
+    if (!xpcObject)
+        return emptyString();
+    return String::fromUTF8(xpc_dictionary_get_string(xpcObject, "identifier"));
 #endif
+
+    return { };
 }
 
 } // namespace WebKit

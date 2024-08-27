@@ -46,9 +46,14 @@ class WebFrame;
 class WebPage;
 
 // FIXME: This class doesn't do much now. Roll into RemoteLayerTreeDrawingArea?
-class RemoteLayerTreeContext : public WebCore::GraphicsLayerFactory {
+class RemoteLayerTreeContext : public WebCore::GraphicsLayerFactory,  public RefCounted<RemoteLayerTreeContext>, public CanMakeWeakPtr<RemoteLayerTreeContext> {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit RemoteLayerTreeContext(WebPage&);
+    static Ref<RemoteLayerTreeContext> create(WebPage& webpage)
+    {
+        return adoptRef(*new RemoteLayerTreeContext(webpage));
+    }
+
     ~RemoteLayerTreeContext();
 
     void layerDidEnterContext(PlatformCALayerRemote&, WebCore::PlatformCALayer::LayerType);
@@ -101,6 +106,8 @@ public:
     WebPage& webPage() { return m_webPage; }
 
 private:
+    explicit RemoteLayerTreeContext(WebPage&);
+
     // WebCore::GraphicsLayerFactory
     Ref<WebCore::GraphicsLayer> createGraphicsLayer(WebCore::GraphicsLayer::Type, WebCore::GraphicsLayerClient&) override;
 
@@ -109,13 +116,13 @@ private:
     HashMap<WebCore::PlatformLayerIdentifier, RemoteLayerTreeTransaction::LayerCreationProperties> m_createdLayers;
     Vector<WebCore::PlatformLayerIdentifier> m_destroyedLayers;
 
-    HashMap<WebCore::PlatformLayerIdentifier, CheckedPtr<PlatformCALayerRemote>> m_livePlatformLayers;
-    HashMap<WebCore::PlatformLayerIdentifier, CheckedPtr<PlatformCALayerRemote>> m_layersWithAnimations;
+    HashMap<WebCore::PlatformLayerIdentifier, WeakPtr<PlatformCALayerRemote>> m_livePlatformLayers;
+    HashMap<WebCore::PlatformLayerIdentifier, WeakPtr<PlatformCALayerRemote>> m_layersWithAnimations;
 #if HAVE(AVKIT)
     HashMap<WebCore::PlatformLayerIdentifier, PlaybackSessionContextIdentifier> m_videoLayers;
 #endif
 
-    HashSet<CheckedPtr<GraphicsLayerCARemote>> m_liveGraphicsLayers;
+    HashSet<WeakRef<GraphicsLayerCARemote>> m_liveGraphicsLayers;
 
     std::unique_ptr<RemoteLayerBackingStoreCollection> m_backingStoreCollection;
 

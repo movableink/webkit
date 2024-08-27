@@ -70,8 +70,8 @@ bool ImageInputType::appendFormData(DOMFormData& formData) const
         return true;
     }
 
-    formData.append(makeString(name, ".x"), String::number(m_clickLocation.x()));
-    formData.append(makeString(name, ".y"), String::number(m_clickLocation.y()));
+    formData.append(makeString(name, ".x"_s), String::number(m_clickLocation.x()));
+    formData.append(makeString(name, ".y"_s), String::number(m_clickLocation.y()));
 
     return true;
 }
@@ -84,8 +84,6 @@ void ImageInputType::handleDOMActivateEvent(Event& event)
         return;
 
     Ref<HTMLFormElement> protectedForm(*protectedElement->form());
-
-    protectedElement->setActivatedSubmit(true);
 
     m_clickLocation = IntPoint();
     if (event.underlyingEvent()) {
@@ -103,7 +101,6 @@ void ImageInputType::handleDOMActivateEvent(Event& event)
     if (auto currentForm = protectedElement->form())
         currentForm->submitIfPossible(&event, element()); // Event handlers can run.
 
-    protectedElement->setActivatedSubmit(false);
     event.setDefaultHandled();
 }
 
@@ -146,7 +143,7 @@ void ImageInputType::attach()
         return;
 
     auto& imageResource = renderer->imageResource();
-    imageResource.setCachedImage(imageLoader.image());
+    imageResource.setCachedImage(imageLoader.protectedImage());
 
     // If we have no image at all because we have no src attribute, set
     // image height and width for the alt text instead.
@@ -174,7 +171,7 @@ unsigned ImageInputType::height() const
     ASSERT(element());
     Ref<HTMLInputElement> element(*this->element());
 
-    element->document().updateLayout({ LayoutOptions::ContentVisibilityForceLayout }, element.ptr());
+    element->protectedDocument()->updateLayout({ LayoutOptions::ContentVisibilityForceLayout }, element.ptr());
 
     if (auto* renderer = element->renderer())
         return adjustForAbsoluteZoom(downcast<RenderBox>(*renderer).contentHeight(), *renderer);
@@ -196,7 +193,7 @@ unsigned ImageInputType::width() const
     ASSERT(element());
     Ref<HTMLInputElement> element(*this->element());
 
-    element->document().updateLayout({ LayoutOptions::ContentVisibilityForceLayout }, element.ptr());
+    element->protectedDocument()->updateLayout({ LayoutOptions::ContentVisibilityForceLayout }, element.ptr());
 
     if (auto* renderer = element->renderer())
         return adjustForAbsoluteZoom(downcast<RenderBox>(*renderer).contentWidth(), *renderer);

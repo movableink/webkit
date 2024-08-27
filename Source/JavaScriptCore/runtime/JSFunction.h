@@ -106,6 +106,7 @@ public:
 
     // To call any of these methods include JSFunctionInlines.h
     bool isHostFunction() const;
+    bool isNonBoundHostFunction() const;
     FunctionExecutable* jsExecutable() const;
     Intrinsic intrinsic() const;
 
@@ -121,7 +122,7 @@ public:
     JS_EXPORT_PRIVATE static CallData getConstructData(JSCell*);
     JS_EXPORT_PRIVATE static CallData getCallData(JSCell*);
 
-    static inline ptrdiff_t offsetOfExecutableOrRareData()
+    static constexpr ptrdiff_t offsetOfExecutableOrRareData()
     {
         return OBJECT_OFFSETOF(JSFunction, m_executableOrRareData);
     }
@@ -134,7 +135,7 @@ public:
         return bitwise_cast<FunctionRareData*>(executableOrRareData & ~rareDataTag);
     }
 
-    FunctionRareData* ensureRareDataAndAllocationProfile(JSGlobalObject*, unsigned inlineCapacity);
+    FunctionRareData* ensureRareDataAndObjectAllocationProfile(JSGlobalObject*, unsigned inlineCapacity);
 
     FunctionRareData* rareData() const
     {
@@ -155,14 +156,15 @@ public:
     // Returns the __proto__ for the |this| value if this JSFunction were to be constructed.
     JSObject* prototypeForConstruction(VM&, JSGlobalObject*);
 
-    bool canUseAllocationProfile();
-    bool canUseAllocationProfileNonInline();
+    bool canUseAllocationProfiles();
 
     enum class PropertyStatus {
         Eager,
         Lazy,
         Reified,
     };
+    enum class SetHasModifiedLengthOrName : uint8_t { Yes, No };
+    template <SetHasModifiedLengthOrName set = SetHasModifiedLengthOrName::Yes>
     PropertyStatus reifyLazyPropertyIfNeeded(VM&, JSGlobalObject*, PropertyName);
 
     bool canAssumeNameAndLengthAreOriginal(VM&);

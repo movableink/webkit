@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2012 Google Inc. All rights reserved.
- * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -194,7 +194,6 @@ enum AutoplayPolicy {
 
 [
     ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
-    JSGenerateToJSObject,
 ] dictionary FullscreenInsets {
     double top;
     double left;
@@ -210,6 +209,7 @@ enum HEVCParameterCodec {
 [
     ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
     JSGenerateToJSObject,
+    JSGenerateToNativeObject
 ] dictionary HEVCParameterSet {
     HEVCParameterCodec codec;
     unsigned short generalProfileSpace;
@@ -265,6 +265,7 @@ enum AV1ConfigurationRange {
 
 [
     JSGenerateToJSObject,
+    JSGenerateToNativeObject
 ] dictionary AV1CodecConfigurationRecord {
     DOMString codecName;
     AV1ConfigurationProfile profile;
@@ -282,6 +283,7 @@ enum AV1ConfigurationRange {
 [
     ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
     JSGenerateToJSObject,
+    JSGenerateToNativeObject
 ] dictionary DoViParameterSet {
     DOMString codecName;
     unsigned short bitstreamProfileID;
@@ -345,7 +347,6 @@ enum AV1ConfigurationRange {
 
 [
     ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
-    JSGenerateToJSObject,
 ] dictionary TextIndicatorOptions {
     boolean useBoundingRectAndPaintAllContentForComplexRanges = false;
     boolean computeEstimatedBackgroundColor = false;
@@ -363,7 +364,6 @@ enum AV1ConfigurationRange {
 
 [
     ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
-    JSGenerateToJSObject,
 ] dictionary ImageOverlayText {
     required DOMString text;
     required DOMPointReadOnly topLeft;
@@ -375,7 +375,6 @@ enum AV1ConfigurationRange {
 
 [
     ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
-    JSGenerateToJSObject,
 ] dictionary ImageOverlayLine {
     required DOMPointReadOnly topLeft;
     required DOMPointReadOnly topRight;
@@ -388,7 +387,6 @@ enum AV1ConfigurationRange {
 
 [
     ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
-    JSGenerateToJSObject,
 ] dictionary ImageOverlayBlock {
     required DOMString text;
     required DOMPointReadOnly topLeft;
@@ -399,7 +397,6 @@ enum AV1ConfigurationRange {
 
 [
     ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
-    JSGenerateToJSObject,
 ] dictionary ImageOverlayDataDetector {
     required DOMPointReadOnly topLeft;
     required DOMPointReadOnly topRight;
@@ -417,6 +414,16 @@ enum AV1ConfigurationRange {
     unsigned long attributes;
 };
 
+[
+    ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
+    JSGenerateToJSObject,
+] dictionary PDFAnnotationRect {
+    double x;
+    double y;
+    double width;
+    double height; 
+};
+
 typedef (FetchRequest or FetchResponse) FetchObject;
 
 [
@@ -432,10 +439,13 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     // Animated image pausing testing.
     boolean hasPausedImageAnimations(Element element);
 
+    undefined markFrontBufferVolatile(Element element);
     boolean isFullyActive(Document document);
     // Must be called on an element whose enclosingLayer() is self-painting.
     boolean isPaintingFrequently(Element element);
     undefined incrementFrequentPaintCounter(Element element);
+    undefined purgeFrontBuffer(Element element);
+    undefined purgeBackBuffer(Element element);
 
     DOMString elementRenderTreeAsText(Element element);
     boolean isPreloaded(DOMString url);
@@ -465,8 +475,8 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     Node shadowRoot(Element host);
 
     DOMString shadowRootType(Node root);
-    DOMString shadowPseudoId(Element element);
-    undefined setShadowPseudoId(Element element, [AtomString] DOMString id);
+    DOMString userAgentPart(Element element);
+    undefined setUserAgentPart(Element element, [AtomString] DOMString part);
     Node treeScopeRootNode(Node node);
     Node parentTreeScope(Node node);
 
@@ -501,7 +511,13 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     DOMRect absoluteLineRectFromPoint(long x, long y);
 
     DOMRect absoluteCaretBounds();
+
+    // isCaretBlinkingSuspended() returns whether the frame selection of the context document
+    // is suspended, while the parameterized method returns the state for a particular document
+    // (such as an iFrame, for example).
     boolean isCaretBlinkingSuspended();
+    boolean isCaretBlinkingSuspended(Document document);
+    [Conditional=ACCESSIBILITY_NON_BLINKING_CURSOR] undefined setPrefersNonBlinkingCursor(boolean enabled);
 
     DOMRect boundingBox(Element element);
 
@@ -568,14 +584,14 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     undefined scrollElementToRect(Element element, long x, long y, long w, long h);
 
     Range? rangeFromLocationAndLength(Element scope, unsigned long rangeLocation, unsigned long rangeLength);
-    unsigned long locationFromRange(Element scope, Range range, optional sequence<DOMString> behaviors = []);
-    unsigned long lengthFromRange(Element scope, Range range, optional sequence<DOMString> behaviors = []);
+    unsigned long locationFromRange(Element scope, Range range);
+    unsigned long lengthFromRange(Element scope, Range range);
     DOMString rangeAsText(Range range);
     DOMString rangeAsTextUsingBackwardsTextIterator(Range range);
     Range subrange(Range range, unsigned long rangeLocation, unsigned long rangeLength);
     Range? rangeForDictionaryLookupAtLocation(long x, long y);
     Range? rangeOfStringNearLocation(Range range, DOMString text, long targetOffset);
-    sequence<TextIteratorState> statesOfTextIterator(Range range, optional sequence<DOMString> behaviors = []);
+    sequence<TextIteratorState> statesOfTextIterator(Range range);
 
     undefined setDelegatesScrolling(boolean enabled);
 
@@ -615,6 +631,9 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     boolean hasAutocorrectedMarker(long from, long length);
     boolean hasDictationAlternativesMarker(long from, long length);
     boolean hasCorrectionIndicatorMarker(long from, long length);
+#if defined(ENABLE_WRITING_TOOLS) && ENABLE_WRITING_TOOLS
+    boolean hasWritingToolsTextSuggestionMarker(long from, long length);
+#endif
     undefined setContinuousSpellCheckingEnabled(boolean enabled);
     undefined setAutomaticQuoteSubstitutionEnabled(boolean enabled);
     undefined setAutomaticLinkDetectionEnabled(boolean enabled);
@@ -645,6 +664,8 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     unsigned long imagePendingDecodePromisesCountForTesting(HTMLImageElement element);
     undefined setClearDecoderAfterAsyncFrameRequestForTesting(HTMLImageElement element, boolean enabled);
     unsigned long imageDecodeCount(HTMLImageElement element);
+    unsigned long imageBlankDrawCount(HTMLImageElement element);
+    DOMString imageLastDecodingOptions(HTMLImageElement element);
     unsigned long imageCachedSubimageCreateCount(HTMLImageElement element);
     unsigned long remoteImagesCountForTesting();
     undefined setAsyncDecodingEnabledForTesting(HTMLImageElement element, boolean enabled);
@@ -678,7 +699,7 @@ typedef (FetchRequest or FetchResponse) FetchObject;
 
     unsigned long long layerIDForElement(Element element);
     
-    unsigned long long scrollingNodeIDForNode(optional Node? node = null);
+    sequence<unsigned long long> scrollingNodeIDForNode(optional Node? node = null);
 
     // Flags for platformLayerTreeAsText.
     const unsigned short PLATFORM_LAYER_TREE_DEBUG = 1;
@@ -690,6 +711,8 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     boolean scrollbarUsingDarkAppearance(optional Node? node = null);
     DOMString horizontalScrollbarState(optional Node? node = null);
     DOMString verticalScrollbarState(optional Node? node = null);
+    
+    DOMString scrollbarsControllerTypeForNode(optional Node? node = null);
 
     DOMString scrollingStateTreeAsText();
     DOMString scrollingTreeAsText();
@@ -729,6 +752,8 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     undefined endSimulatedMemoryPressure();
 
     unsigned long numberOfIDBTransactions();
+
+    unsigned long scrollableAreaWidth(Node node);
 
     unsigned long numberOfLiveNodes();
     unsigned long numberOfLiveDocuments();
@@ -775,7 +800,6 @@ typedef (FetchRequest or FetchResponse) FetchObject;
 
     undefined setFullscreenInsets(FullscreenInsets insets);
     undefined setFullscreenAutoHideDuration(double duration);
-    undefined setFullscreenControlsHidden(boolean hidden);
 
     [Conditional=VIDEO] boolean isChangingPresentationMode(HTMLVideoElement element);
     [Conditional=VIDEO_PRESENTATION_MODE] undefined setMockVideoPresentationModeEnabled(boolean enabled);
@@ -854,6 +878,7 @@ typedef (FetchRequest or FetchResponse) FetchObject;
 
     undefined setUsesOverlayScrollbars(boolean enabled);
 
+    undefined forceAXObjectCacheUpdate();
     undefined forceReload(boolean endToEnd);
     undefined reloadExpiredOnly();
 
@@ -870,11 +895,14 @@ typedef (FetchRequest or FetchResponse) FetchObject;
 
     [Conditional=VIDEO] boolean elementShouldBufferData(HTMLMediaElement media);
     [Conditional=VIDEO] DOMString elementBufferingPolicy(HTMLMediaElement media);
+    [Conditional=VIDEO] undefined setMediaElementBufferingPolicy(HTMLMediaElement element, DOMString policy);
     [Conditional=VIDEO] double privatePlayerVolume(HTMLMediaElement media);
     [Conditional=VIDEO] boolean privatePlayerMuted(HTMLMediaElement media);
     [Conditional=VIDEO] boolean isMediaElementHidden(HTMLMediaElement media);
     [Conditional=VIDEO] undefined setOverridePreferredDynamicRangeMode(HTMLMediaElement media, DOMString mode);
     [Conditional=VIDEO] double elementEffectivePlaybackRate(HTMLMediaElement media);
+
+    [Conditional=VIDEO] undefined enableGStreamerHolePunching(HTMLVideoElement element);
 
     undefined setIsPlayingToBluetoothOverride(optional boolean? isPlaying = null);
 
@@ -914,6 +942,7 @@ typedef (FetchRequest or FetchResponse) FetchObject;
 
     [Conditional=MEDIA_SOURCE] undefined initializeMockMediaSource();
     [Conditional=MEDIA_SOURCE] Promise<sequence<DOMString>> bufferedSamplesForTrackId(SourceBuffer buffer, [AtomString] DOMString trackId);
+    [Conditional=MEDIA_SOURCE] Promise<undefined> setMaximumSourceBufferSize(SourceBuffer buffer, unsigned long long maximumSize);
     [Conditional=MEDIA_SOURCE] Promise<sequence<DOMString>> enqueuedSamplesForTrackID(SourceBuffer buffer, [AtomString] DOMString trackID);
     [Conditional=MEDIA_SOURCE] undefined setShouldGenerateTimestamps(SourceBuffer buffer, boolean flag);
     [Conditional=MEDIA_SOURCE] double minimumUpcomingPresentationTimeForTrackID(SourceBuffer buffer, [AtomString] DOMString trackID);
@@ -952,13 +981,13 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     [Conditional=WEB_RTC] undefined stopPeerConnection(RTCPeerConnection connection);
     [Conditional=WEB_RTC] undefined clearPeerConnectionFactory();
     [Conditional=WEB_RTC] undefined setEnableWebRTCEncryption(boolean enabled);
-    [Conditional=WEB_RTC] undefined setUseDTLS10(boolean use);
 
     [Conditional=VIDEO] undefined simulateSystemSleep();
     [Conditional=VIDEO] undefined simulateSystemWake();
     [Conditional=VIDEO] boolean elementIsBlockingDisplaySleep(HTMLMediaElement element);
     [Conditional=VIDEO] boolean isPlayerVisibleInViewport(HTMLMediaElement element);
     [Conditional=VIDEO] boolean isPlayerMuted(HTMLMediaElement element);
+    [Conditional=VIDEO] boolean isPlayerPaused(HTMLMediaElement element);
 
     MockPageOverlay installMockPageOverlay(PageOverlayType type);
     DOMString pageOverlayLayerTreeAsText(optional unsigned short flags = 0);
@@ -1015,6 +1044,8 @@ typedef (FetchRequest or FetchResponse) FetchObject;
 
     boolean hasTransientActivation();
 
+    boolean hasHistoryActionActivation();
+
     GCObservation? observeGC(any observed);
 
     undefined setUserInterfaceLayoutDirection(UserInterfaceLayoutDirection userInterfaceLayoutDirection);
@@ -1050,9 +1081,9 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     [Conditional=WEB_RTC] undefined applyRotationForOutgoingVideoSources(RTCPeerConnection connection);
     [Conditional=WEB_RTC] undefined setWebRTCH265Support(boolean allowed);
     [Conditional=WEB_RTC] undefined setWebRTCVP9Support(boolean supportVP9Profile0, boolean supportVP9Profile2);
-    [Conditional=WEB_RTC] undefined setWebRTCVP9VTBSupport(boolean allowed);
-    [Conditional=WEB_RTC] boolean isSupportingVP9VTB();
-    [Conditional=WEB_RTC] Promise<boolean> isVP9VTBDeccoderUsed(RTCPeerConnection connection);
+    [Conditional=WEB_RTC] undefined disableWebRTCHardwareVP9();
+    [Conditional=WEB_RTC] boolean isSupportingVP9HardwareDecoder();
+    [Conditional=WEB_RTC] Promise<boolean> isVP9HardwareDecoderUsed(RTCPeerConnection connection);
     [Conditional=WEB_RTC] undefined setSFrameCounter(RTCRtpSFrameTransform transform, DOMString counter);
     [Conditional=WEB_RTC] unsigned long long sframeCounter(RTCRtpSFrameTransform transform);
     [Conditional=WEB_RTC] unsigned long long sframeKeyId(RTCRtpSFrameTransform transform);
@@ -1072,8 +1103,11 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     [Conditional=MEDIA_STREAM] undefined setMediaStreamSourceInterrupted(MediaStreamTrack track, boolean interrupted);
     [Conditional=MEDIA_STREAM] boolean isMediaStreamSourceInterrupted(MediaStreamTrack track);
     [Conditional=MEDIA_STREAM] boolean isMediaStreamSourceEnded(MediaStreamTrack track);
+    [Conditional=MEDIA_STREAM] boolean isMediaStreamTrackPowerEfficient(MediaStreamTrack track);
     [Conditional=MEDIA_STREAM] boolean isMockRealtimeMediaSourceCenterEnabled();
     [Conditional=MEDIA_STREAM] boolean shouldAudioTrackPlay(AudioTrack track);
+
+    boolean isHardwareVP9DecoderExpected();
 
     DOMString documentIdentifier(Document document);
     boolean isDocumentAlive(DOMString documentIdentifier);
@@ -1106,7 +1140,7 @@ typedef (FetchRequest or FetchResponse) FetchObject;
 
     undefined updateQuotaBasedOnSpaceUsage();
 
-    undefined setConsoleMessageListener(StringCallback callback);
+    undefined setConsoleMessageListener(StringCallback? callback);
 
     readonly attribute boolean supportsAudioSession;
     AudioSessionCategory audioSessionCategory();
@@ -1122,6 +1156,7 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     Promise<boolean> hasServiceWorkerRegistration(DOMString scopeURL);
     Promise<undefined> terminateServiceWorker(ServiceWorker worker);
     Promise<undefined> whenServiceWorkerIsTerminated(ServiceWorker worker);
+    undefined terminateWebContentProcess();
 
 #if defined(ENABLE_APPLE_PAY) && ENABLE_APPLE_PAY
     [CallWith=CurrentDocument, Conditional=APPLE_PAY] readonly attribute MockPaymentCoordinator mockPaymentCoordinator;
@@ -1143,7 +1178,7 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     [CallWith=CurrentDocument] undefined queueTaskToQueueMicrotask(DOMString source, VoidCallback callback);
     boolean hasSameEventLoopAs(WindowProxy windowProxy);
 
-    DOMString windowLocationHost(LocalDOMWindow window);
+    DOMString windowLocationHost(DOMWindow window);
 
     undefined markContextAsInsecure();
 
@@ -1166,6 +1201,7 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     undefined setCaptureExtraNetworkLoadMetricsEnabled(boolean value);
 
     undefined reloadWithoutContentExtensions();
+    undefined disableContentExtensionsChecks();
 
     undefined setUseSystemAppearance(boolean value);
 
@@ -1233,8 +1269,6 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     long readPreferenceInteger(DOMString domain, DOMString key);
     DOMString encodedPreferenceValue(DOMString domain, DOMString key);
 
-    DOMString getUTIFromTag(DOMString tagClass, DOMString tag, DOMString conformingToUTI);
-
     boolean supportsPictureInPicture();
 
     boolean isRemoteUIAppForAccessibility();
@@ -1292,7 +1326,11 @@ typedef (FetchRequest or FetchResponse) FetchObject;
 
     boolean consumeTransientActivation();
 
+    boolean consumeHistoryActionUserActivation();
+
     SelectorFilterHashCounts selectorFilterHashCounts(DOMString selector);
+
+    undefined setHistoryTotalStateObjectPayloadLimitOverride(unsigned long limit);
 
     readonly attribute boolean isVisuallyNonEmpty;
     
@@ -1301,4 +1339,15 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     boolean readyToRetrieveComputedRoleOrLabel(Element element);
     DOMString getComputedLabel(Element element);
     DOMString getComputedRole(Element element);
+
+    readonly attribute boolean hasScopeBreakingHasSelectors;
+
+    sequence<PDFAnnotationRect> pdfAnnotationRectsForTesting(Element element);
+    undefined registerPDFTest(VoidCallback callback, Element element);
+    undefined setPDFDisplayModeForTesting(Element element, DOMString mode);
+    boolean sendEditingCommandToPDFForTesting(Element element, DOMString commandName, optional DOMString argument = "");
+
+    readonly attribute DOMString defaultSpatialTrackingLabel;
+
+    boolean isEffectivelyMuted(HTMLMediaElement element);
 };

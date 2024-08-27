@@ -1,0 +1,16 @@
+CONSOLE MESSAGE: This requires a TrustedScriptURL value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
+CONSOLE MESSAGE: This requires a TrustedScriptURL value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
+CONSOLE MESSAGE: This requires a TrustedScriptURL value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
+
+PASS Assign string to SVGScriptElement.href.baseVal.
+PASS Assign TrustedScriptURL to SVGScriptElement.href.baseVal.
+PASS Assign string to non-attached SVGScriptElement.href via setAttribute.
+PASS Assign TrustedScriptURL to non-attached SVGScriptElement.href via setAttribute.
+PASS Assign string to attached SVGScriptElement.href via setAttribute.
+PASS Assign TrustedScriptURL to attached SVGScriptElement.href via setAttribute.
+PASS Setup default policy
+PASS Assign String to SVGScriptElement.innerHTML w/ default policy.
+PASS Assign string to SVGScriptElement.href.baseVal  w/ default policy.
+PASS Assign string to non-attached SVGScriptElement.href via setAttribute w/ default policy.
+PASS Assign string to attached SVGScriptElement.href via setAttribute w/ default policy.
+

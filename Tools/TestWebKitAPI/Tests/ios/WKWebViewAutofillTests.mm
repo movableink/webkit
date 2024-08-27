@@ -32,8 +32,16 @@
 #import "TestInputDelegate.h"
 #import "TestWKWebView.h"
 #import "UIKitSPIForTesting.h"
+#import "WKBrowserEngineDefinitions.h"
 #import <WebKit/WKWebViewPrivate.h>
+#import <pal/spi/ios/BrowserEngineKitSPI.h>
 #import <wtf/BlockPtr.h>
+
+@interface CustomTextSuggestion : UITextSuggestion
+@end
+
+@implementation CustomTextSuggestion
+@end
 
 @protocol WKTextInputSuggestionDelegate <UITextInputSuggestionDelegate>
 - (NSArray<UITextSuggestion *> *)suggestions;
@@ -170,6 +178,22 @@ TEST(WKWebViewAutoFillTests, StandalonePasswordField)
     EXPECT_FALSE([webView acceptsAutoFillLoginCredentials]);
 }
 
+TEST(WKWebViewAutoFillTests, StandaloneUsernameField)
+{
+    auto webView = adoptNS([[AutoFillTestView alloc] initWithFrame:CGRectMake(0, 0, 320, 500)]);
+    [webView synchronouslyLoadHTMLString:@"<input id='username' autocomplete='username'>"];
+    [webView evaluateJavaScriptAndWaitForInputSessionToChange:@"username.focus()"];
+    EXPECT_TRUE([webView acceptsAutoFillLoginCredentials]);
+
+    auto credentialSuggestion = [UITextAutofillSuggestion autofillSuggestionWithUsername:@"frederik" password:@"famos"];
+    [[webView _autofillInputView] insertTextSuggestion:credentialSuggestion];
+
+    EXPECT_WK_STREQ("frederik", [webView stringByEvaluatingJavaScript:@"username.value"]);
+
+    [webView evaluateJavaScriptAndWaitForInputSessionToChange:@"document.activeElement.blur()"];
+    EXPECT_FALSE([webView acceptsAutoFillLoginCredentials]);
+}
+
 TEST(WKWebViewAutoFillTests, StandaloneTextField)
 {
     auto webView = adoptNS([[AutoFillTestView alloc] initWithFrame:CGRectMake(0, 0, 320, 500)]);
@@ -231,6 +255,35 @@ TEST(WKWebViewAutoFillTests, AutoFillRequiresInputSession)
 
     EXPECT_FALSE([webView acceptsAutoFillLoginCredentials]);
 }
+
+#if USE(BROWSERENGINEKIT)
+
+TEST(WKWebViewAutoFillTests, AutoFillPreservesTextSuggestion)
+{
+    __block bool doneFocusing = false;
+    auto webView = adoptNS([[AutoFillTestView alloc] initWithFrame:CGRectMake(0, 0, 320, 500)]);
+    auto inputDelegate = static_cast<TestInputDelegate *>([webView _inputDelegate]);
+    [inputDelegate setFocusStartsInputSessionPolicyHandler:^(WKWebView *, id<_WKFocusedElementInfo>) {
+        doneFocusing = true;
+        return _WKFocusStartsInputSessionPolicyAllow;
+    }];
+
+    __block bool insertedSuggestion = false;
+    RetainPtr customSuggestion = [CustomTextSuggestion textSuggestionWithInputText:@"foo"];
+    [inputDelegate setInsertTextSuggestionHandler:^(WKWebView *, UITextSuggestion *suggestion, id<_WKFormInputSession>) {
+        EXPECT_EQ(customSuggestion.get(), suggestion);
+        insertedSuggestion = true;
+    }];
+    [webView synchronouslyLoadHTMLString:@"<input id='user' type='email'>"];
+    [webView stringByEvaluatingJavaScript:@"user.focus()"];
+    Util::run(&doneFocusing);
+
+    auto suggestion = adoptNS([[BETextSuggestion alloc] _initWithUIKitTextSuggestion:customSuggestion.get()]);
+    [[webView asyncTextInput] insertTextSuggestion:suggestion.get()];
+    EXPECT_TRUE(insertedSuggestion);
+}
+
+#endif // USE(BROWSERENGINEKIT)
 
 #if PLATFORM(WATCHOS)
 

@@ -16,6 +16,20 @@ endif ()
 
 if (ENABLE_COG)
     include(ExternalProject)
+    find_program(MESON_EXE NAMES meson)
+    execute_process(
+        COMMAND "${MESON_EXE}" --version
+        OUTPUT_VARIABLE MESON_VERSION
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        COMMAND_ERROR_IS_FATAL ANY
+        ERROR_QUIET
+    )
+    if ("${MESON_VERSION}" VERSION_GREATER 1.1.0)
+        set(MESON_RECONFIGURE flag)
+    else ()
+        set(MESON_RECONFIGURE remove)
+    endif ()
+
     if ("${WPE_COG_PLATFORMS}" STREQUAL "")
         set(WPE_COG_PLATFORMS "drm,headless,gtk4,x11,wayland")
     elseif ("${WPE_COG_PLATFORMS}" STREQUAL "none")
@@ -30,7 +44,7 @@ if (ENABLE_COG)
         set(WPE_COG_REPO "https://github.com/Igalia/cog.git")
     endif ()
     if ("${WPE_COG_TAG}" STREQUAL "")
-        set(WPE_COG_TAG "843f874484d09b9e492683a50f4707e584e3fcb6")
+        set(WPE_COG_TAG "b0b8ddc69b9c1a82f78984168598b51a6fdd748f")
     endif ()
     # TODO Use GIT_REMOTE_UPDATE_STRATEGY with 3.18 to allow switching between
     # conflicting branches without having to delete the repo
@@ -63,7 +77,9 @@ if (ENABLE_COG)
         SOURCE_DIR "${CMAKE_SOURCE_DIR}/Tools/wpe/cog"
         BUILD_IN_SOURCE FALSE
         CONFIGURE_COMMAND
-            meson setup <BINARY_DIR> <SOURCE_DIR>
+            ${CMAKE_SOURCE_DIR}/Tools/wpe/meson-wrapper
+            ${MESON_RECONFIGURE}
+            <BINARY_DIR> <SOURCE_DIR>
             --buildtype ${COG_MESON_BUILDTYPE}
             --pkg-config-path ${WPE_COG_PKG_CONFIG_PATH}
             -Dwpe_api=${WPE_API_VERSION}
@@ -73,4 +89,8 @@ if (ENABLE_COG)
             meson compile -C <BINARY_DIR>
         INSTALL_COMMAND "")
     ExternalProject_Add_StepDependencies(cog build WebKit)
+    ExternalProject_Add_StepDependencies(cog configure
+        "${CMAKE_BINARY_DIR}/cmakeconfig.h"
+        "${WPE_PKGCONFIG_FILE}"
+    )
 endif ()

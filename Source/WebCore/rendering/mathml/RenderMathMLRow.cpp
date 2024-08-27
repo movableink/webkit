@@ -50,6 +50,8 @@ RenderMathMLRow::RenderMathMLRow(Type type, MathMLRowElement& element, RenderSty
     ASSERT(isRenderMathMLRow());
 }
 
+RenderMathMLRow::~RenderMathMLRow() = default;
+
 MathMLRowElement& RenderMathMLRow::element() const
 {
     return static_cast<MathMLRowElement&>(nodeForNonAnonymous());
@@ -66,8 +68,8 @@ std::optional<LayoutUnit> RenderMathMLRow::firstLineBaseline() const
 
 static RenderMathMLOperator* toVerticalStretchyOperator(RenderBox* box)
 {
-    if (is<RenderMathMLBlock>(box)) {
-        auto* renderOperator = downcast<RenderMathMLBlock>(*box).unembellishedOperator();
+    if (auto* mathMLBlock = dynamicDowncast<RenderMathMLBlock>(box)) {
+        auto* renderOperator = mathMLBlock->unembellishedOperator();
         if (renderOperator && renderOperator->isStretchy() && renderOperator->isVertical())
             return renderOperator;
     }

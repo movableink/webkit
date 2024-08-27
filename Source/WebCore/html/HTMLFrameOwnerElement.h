@@ -38,8 +38,10 @@ public:
     virtual ~HTMLFrameOwnerElement();
 
     Frame* contentFrame() const { return m_contentFrame.get(); }
+    RefPtr<Frame> protectedContentFrame() const;
     WEBCORE_EXPORT WindowProxy* contentWindow() const;
     WEBCORE_EXPORT Document* contentDocument() const;
+    RefPtr<Document> protectedContentDocument() const { return contentDocument(); }
 
     WEBCORE_EXPORT void setContentFrame(Frame&);
     void clearContentFrame();
@@ -67,14 +69,13 @@ public:
     virtual bool isLazyLoadObserverActive() const { return false; }
 
 protected:
-    static constexpr auto CreateHTMLFrameOwnerElement = CreateHTMLElement;
-    HTMLFrameOwnerElement(const QualifiedName& tagName, Document&, ConstructionType = CreateHTMLFrameOwnerElement);
+    HTMLFrameOwnerElement(const QualifiedName& tagName, Document&, OptionSet<TypeFlag> = { });
     void setSandboxFlags(SandboxFlags);
     bool isProhibitedSelfReference(const URL&) const;
     bool isKeyboardFocusable(KeyboardEvent*) const override;
 
 private:
-    bool isFrameOwnerElement() const final { return true; }
+    bool isHTMLFrameOwnerElement() const final { return true; }
 
     WeakPtr<Frame> m_contentFrame;
     SandboxFlags m_sandboxFlags { SandboxNone };
@@ -120,5 +121,5 @@ inline RefPtr<HTMLFrameOwnerElement> Frame::protectedOwnerElement() const
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::HTMLFrameOwnerElement)
-    static bool isType(const WebCore::Node& node) { return node.isFrameOwnerElement(); }
+    static bool isType(const WebCore::Node& node) { return node.isHTMLFrameOwnerElement(); }
 SPECIALIZE_TYPE_TRAITS_END()

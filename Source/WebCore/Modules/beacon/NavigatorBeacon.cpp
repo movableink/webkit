@@ -62,12 +62,12 @@ NavigatorBeacon* NavigatorBeacon::from(Navigator& navigator)
     return supplement;
 }
 
-const char* NavigatorBeacon::supplementName()
+ASCIILiteral NavigatorBeacon::supplementName()
 {
-    return "NavigatorBeacon";
+    return "NavigatorBeacon"_s;
 }
 
-void NavigatorBeacon::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&)
+void NavigatorBeacon::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess)
 {
     if (!resource.resourceError().isNull())
         logError(resource.resourceError());

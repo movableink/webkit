@@ -44,6 +44,7 @@
 
 namespace JSC {
 
+class CallLinkInfo;
 #if ENABLE(WEBASSEMBLY)
 namespace Wasm {
 class Callee;
@@ -157,7 +158,7 @@ using JSOrWasmInstruction = std::variant<const JSInstruction*, const WasmInstruc
         NEVER_INLINE void debug(CallFrame*, DebugHookType);
         static String stackTraceAsString(VM&, const Vector<StackFrame>&);
 
-        void getStackTrace(JSCell* owner, Vector<StackFrame>& results, size_t framesToSkip = 0, size_t maxStackSize = std::numeric_limits<size_t>::max(), JSCell* caller = nullptr);
+        void getStackTrace(JSCell* owner, Vector<StackFrame>& results, size_t framesToSkip = 0, size_t maxStackSize = std::numeric_limits<size_t>::max(), JSCell* caller = nullptr, JSCell* ownerOfCallLinkInfo = nullptr, CallLinkInfo* = nullptr);
 
         static JSValue checkVMEntryPermission();
 
@@ -169,6 +170,11 @@ using JSOrWasmInstruction = std::variant<const JSInstruction*, const WasmInstruc
         JSValue executeCachedCall(CachedCall&);
         JSValue executeBoundCall(VM&, JSBoundFunction*, const ArgList&);
         JSValue executeCallImpl(VM&, JSObject*, const CallData&, JSValue, const ArgList&);
+
+#if CPU(ARM64) && CPU(ADDRESS64) && !ENABLE(C_LOOP)
+        template<typename... Args>
+        JSValue tryCallWithArguments(CachedCall&, JSValue, Args...);
+#endif
 
         inline VM& vm();
 #if ENABLE(C_LOOP)

@@ -174,7 +174,7 @@ Q_SIGNALS:
 
 protected:
     bool childMouseEventFilter(QQuickItem*, QEvent*) Q_DECL_OVERRIDE;
-    void geometryChanged(const QRectF&, const QRectF&) Q_DECL_OVERRIDE;
+    void geometryChange(const QRectF&, const QRectF&) Q_DECL_OVERRIDE;
     void componentComplete() Q_DECL_OVERRIDE;
     void keyPressEvent(QKeyEvent*) Q_DECL_OVERRIDE;
     void keyReleaseEvent(QKeyEvent*) Q_DECL_OVERRIDE;
@@ -338,9 +338,9 @@ public:
     QWebNavigationHistory* navigationHistory() const;
     QQuickWebPage* page();
 
-    static QQuickUrlSchemeDelegate* schemeDelegates_At(QQmlListProperty<QQuickUrlSchemeDelegate>*, int index);
+    static QQuickUrlSchemeDelegate* schemeDelegates_At(QQmlListProperty<QQuickUrlSchemeDelegate>*, qsizetype index);
     static void schemeDelegates_Append(QQmlListProperty<QQuickUrlSchemeDelegate>*, QQuickUrlSchemeDelegate*);
-    static int schemeDelegates_Count(QQmlListProperty<QQuickUrlSchemeDelegate>*);
+    static qsizetype schemeDelegates_Count(QQmlListProperty<QQuickUrlSchemeDelegate>*);
     static void schemeDelegates_Clear(QQmlListProperty<QQuickUrlSchemeDelegate>*);
     QQmlListProperty<QQuickUrlSchemeDelegate> schemeDelegates();
     void invokeApplicationSchemeHandler(WTF::Ref<WebKit::QtRefCountedNetworkRequestData>&&);
@@ -372,7 +372,7 @@ public Q_SLOTS:
     void goForwardTo(int index);
     void postMessage(const QString&);
     void evaluateJavaScript(const QString& script, const QJSValue& value = QJSValue());
-    void findText(const QString& string, FindFlags options = 0);
+    void findText(const QString& string, FindFlags options = {});
 
 Q_SIGNALS:
     void loadVisuallyCommitted();

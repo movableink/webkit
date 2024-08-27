@@ -27,6 +27,7 @@
 
 #if ENABLE(VIDEO)
 
+#include "HTMLMediaElement.h"
 #include <variant>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -44,6 +45,7 @@ class HTMLMediaElement;
 class MediaControlTextTrackContainerElement;
 class TextTrack;
 class TextTrackList;
+class TextTrackRepresentation;
 class VoidCallback;
 
 class MediaControlsHost final : public RefCounted<MediaControlsHost>, public CanMakeWeakPtr<MediaControlsHost> {
@@ -73,18 +75,23 @@ public:
     void setSelectedTextTrack(TextTrack*);
     Element* textTrackContainer();
     void updateTextTrackContainer();
+    TextTrackRepresentation* textTrackRepresentation() const;
     bool allowsInlineMediaPlayback() const;
     bool supportsFullscreen() const;
     bool isVideoLayerInline() const;
     bool isInMediaDocument() const;
     bool userGestureRequired() const;
     bool shouldForceControlsDisplay() const;
+    bool supportsSeeking() const;
+    bool inWindowFullscreen() const;
+    bool supportsRewind() const;
 
     enum class ForceUpdate : bool { No, Yes };
     void updateCaptionDisplaySizes(ForceUpdate = ForceUpdate::No);
     void updateTextTrackRepresentationImageIfNeeded();
     void enteredFullscreen();
     void exitedFullscreen();
+    void requiresTextTrackRepresentationChanged();
 
     String externalDeviceDisplayName() const;
 
@@ -104,23 +111,14 @@ public:
     bool showMediaControlsContextMenu(HTMLElement&, String&& optionsJSONString, Ref<VoidCallback>&&);
 #endif // ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
 
-    enum class SourceType : uint8_t {
-        File,
-        HLS,
-        MediaSource,
-        ManagedMediaSource,
-        MediaStream,
-        LiveStream,
-        StoredStream,
-    };
-
+    using SourceType = HTMLMediaElement::SourceType;
     std::optional<SourceType> sourceType() const;
 #endif // ENABLE(MODERN_MEDIA_CONTROLS)
 
 private:
     explicit MediaControlsHost(HTMLMediaElement&);
 
-    WeakPtr<HTMLMediaElement, WeakPtrImplWithEventTargetData> m_mediaElement;
+    WeakPtr<HTMLMediaElement> m_mediaElement;
     RefPtr<MediaControlTextTrackContainerElement> m_textTrackContainer;
 
 #if ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)

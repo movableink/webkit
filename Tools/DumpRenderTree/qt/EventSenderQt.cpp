@@ -34,6 +34,11 @@
 #include <QtTest/QtTest>
 #include <qpa/qwindowsysteminterface.h>
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#include <private/qeventpoint_p.h>
+#include <private/qpointingdevice_p.h>
+#endif
+
 #define KEYCODE_DEL         127
 #define KEYCODE_BACKSPACE   8
 #define KEYCODE_LEFTARROW   0xf702
@@ -73,7 +78,7 @@ EventSender::EventSender(QWebPage* parent)
     startOfQueue = 0;
     m_eventLoop = 0;
     m_currentButton = 0;
-    m_currentDragActionsAllowed = 0;
+    m_currentDragActionsAllowed = { };
     resetClickCount();
     m_page->view()->installEventFilter(this);
     // This is a hack that works because we normally scroll 60 pixels (3*20) per tick, but Apple scrolls 120.
@@ -83,7 +88,7 @@ EventSender::EventSender(QWebPage* parent)
 
 static Qt::KeyboardModifiers getModifiers(const QStringList& modifiers)
 {
-    Qt::KeyboardModifiers modifs = 0;
+    Qt::KeyboardModifiers modifs = { };
     for (int i = 0; i < modifiers.size(); ++i) {
         const QString& m = modifiers.at(i);
         if (m == "ctrlKey")
@@ -107,14 +112,14 @@ void EventSender::mouseDown(int button, const QStringList& modifiers)
         mouseButton = Qt::LeftButton;
         break;
     case 1:
-        mouseButton = Qt::MidButton;
+        mouseButton = Qt::MiddleButton;
         break;
     case 2:
         mouseButton = Qt::RightButton;
         break;
     case 3:
         // fast/events/mouse-click-events expects the 4th button to be treated as the middle button
-        mouseButton = Qt::MidButton;
+        mouseButton = Qt::MiddleButton;
         break;
     default:
         mouseButton = Qt::LeftButton;
@@ -159,14 +164,14 @@ void EventSender::mouseUp(int button)
         mouseButton = Qt::LeftButton;
         break;
     case 1:
-        mouseButton = Qt::MidButton;
+        mouseButton = Qt::MiddleButton;
         break;
     case 2:
         mouseButton = Qt::RightButton;
         break;
     case 3:
         // fast/events/mouse-click-events expects the 4th button to be treated as the middle button
-        mouseButton = Qt::MidButton;
+        mouseButton = Qt::MiddleButton;
         break;
     default:
         mouseButton = Qt::LeftButton;
@@ -225,7 +230,7 @@ void EventSender::beginDragWithFiles(const QStringList& files)
     m_currentDragData.clear();
     QList<QUrl> fileUrls;
     QUrl baseUrl = m_page->mainFrame()->baseUrl();
-    foreach (const QString& file, files) {
+    for (const QString& file : files) {
         QUrl resolvedUrl = baseUrl.resolved(file);
         fileUrls.append(resolvedUrl);
     }
@@ -251,13 +256,20 @@ void EventSender::continuousMouseScrollBy(int x, int y)
 
     // A wheel delta of 120 (in 1/8 degrees) corresponds to one wheel tick, and we scroll tickStep pixels per wheel tick.
     const int tickStep = QApplication::wheelScrollLines() * 20;
+    QPointF globalPosition = QCursor::pos();
+
     if (x) {
         QEvent* event;
         if (isGraphicsBased()) {
             event = createGraphicsSceneWheelEvent(QEvent::GraphicsSceneWheel,
                         m_mousePos, m_mousePos, (x * 120) / tickStep, Qt::NoModifier, Qt::Horizontal);
-        } else
-            event = new QWheelEvent(m_mousePos, m_mousePos, (x * 120) / tickStep, m_mouseButtons, Qt::NoModifier, Qt::Horizontal);
+        } else {
+            QPoint pixelDelta { };
+            QPoint angleDelta { (x * 120) / tickStep, 0 };
+            Qt::ScrollPhase phase = Qt::NoScrollPhase;
+            bool inverted = false;
+            event = new QWheelEvent(m_mousePos, globalPosition, pixelDelta, angleDelta, m_mouseButtons, Qt::NoModifier, phase, inverted);
+        }
 
         sendOrQueueEvent(event);
     }
@@ -266,8 +278,13 @@ void EventSender::continuousMouseScrollBy(int x, int y)
         if (isGraphicsBased()) {
             event = createGraphicsSceneWheelEvent(QEvent::GraphicsSceneWheel,
                         m_mousePos, m_mousePos, (y * 120) / tickStep, Qt::NoModifier, Qt::Vertical);
-        } else
-            event = new QWheelEvent(m_mousePos, m_mousePos, (y * 120) / tickStep, m_mouseButtons, Qt::NoModifier, Qt::Vertical);
+        } else {
+            QPoint pixelDelta { };
+            QPoint angleDelta { 0, (y * 120) / tickStep };
+            Qt::ScrollPhase phase = Qt::NoScrollPhase;
+            bool inverted = false;
+            event = new QWheelEvent(m_mousePos, globalPosition, pixelDelta, angleDelta, m_mouseButtons, Qt::NoModifier, phase, inverted);
+        }
 
         sendOrQueueEvent(event);
     }
@@ -309,7 +326,7 @@ void EventSender::keyDown(const QString& string, const QStringList& modifiers, u
             // position. Allows us to pass emacs-ctrl-o.html
             s = QLatin1String("\n");
             code = '\n';
-            modifs = 0;
+            modifs = { };
             QKeyEvent event(QEvent::KeyPress, code, modifs, s);
             sendEvent(m_page, &event);
             QKeyEvent event2(QEvent::KeyRelease, code, modifs, s);
@@ -325,7 +342,7 @@ void EventSender::keyDown(const QString& string, const QStringList& modifiers, u
         } else if (code == 'a' && modifs == Qt::ControlModifier) {
             s = QString();
             code = Qt::Key_Home;
-            modifs = 0;
+            modifs = { };
         } else if (code == KEYCODE_LEFTARROW) {
             s = QString();
             code = Qt::Key_Left;
@@ -357,7 +374,7 @@ void EventSender::keyDown(const QString& string, const QStringList& modifiers, u
         } else if (code == 'a' && modifs == Qt::ControlModifier) {
             s = QString();
             code = Qt::Key_Home;
-            modifs = 0;
+            modifs = { };
         } else
             code = string.unicode()->toUpper().unicode();
     } else {
@@ -447,11 +464,13 @@ void EventSender::addTouchPoint(int x, int y)
     const int id = m_touchPoints.isEmpty() ? 0 : m_touchPoints.last().id() + 1;
     const QPointF pos(x, y);
     QTouchEvent::TouchPoint point(id);
-    point.setPos(pos);
-    point.setStartPos(pos);
-    point.setState(Qt::TouchPointPressed);
-    if (!m_touchPointRadius.isNull())
-        point.setRect(QRectF(pos - m_touchPointRadius, pos + m_touchPointRadius));
+    QMutableEventPoint::setPosition(point, pos);
+    QMutableEventPoint::setScenePosition(point, pos);
+    QMutableEventPoint::setState(point, QEventPoint::Pressed);
+
+    // FIXME: points no longer have rects?
+    //if (!m_touchPointRadius.isNull())
+    //    point.setRect(QRectF(pos - m_touchPointRadius, pos + m_touchPointRadius));
     m_touchPoints.append(point);
 }
 
@@ -462,10 +481,12 @@ void EventSender::updateTouchPoint(int index, int x, int y)
 
     const QPointF pos(x, y);
     QTouchEvent::TouchPoint &point = m_touchPoints[index];
-    point.setPos(pos);
-    point.setState(Qt::TouchPointMoved);
-    if (!m_touchPointRadius.isNull())
-        point.setRect(QRectF(pos - m_touchPointRadius, pos + m_touchPointRadius));
+    QMutableEventPoint::setPosition(point, pos);
+    QMutableEventPoint::setState(point, QEventPoint::Updated);
+
+    // FIXME: points no longer have rects?
+    //if (!m_touchPointRadius.isNull())
+    //    point.setRect(QRectF(pos - m_touchPointRadius, pos + m_touchPointRadius));
 }
 
 void EventSender::setTouchModifier(const QString &modifier, bool enable)
@@ -508,7 +529,7 @@ void EventSender::touchMove()
 void EventSender::touchEnd()
 {
     for (int i = 0; i < m_touchPoints.count(); ++i)
-        if (m_touchPoints[i].state() != Qt::TouchPointReleased) {
+        if (m_touchPoints[i].state() != QEventPoint::Released) {
             sendTouchEvent(QEvent::TouchUpdate);
             return;
         }
@@ -535,7 +556,7 @@ void EventSender::releaseTouchPoint(int index)
     if (index < 0 || index >= m_touchPoints.count())
         return;
 
-    m_touchPoints[index].setState(Qt::TouchPointReleased);
+    QMutableEventPoint::setState(m_touchPoints[index], QEventPoint::Released);
 }
 
 void EventSender::cancelTouchPoint(int index)
@@ -548,22 +569,24 @@ void EventSender::cancelTouchPoint(int index)
 
 void EventSender::sendTouchEvent(QEvent::Type type)
 {
-    static QTouchDevice* device = 0;
+    static QPointingDevice* device = 0;
     if (!device) {
-        device = new QTouchDevice;
-        device->setType(QTouchDevice::TouchScreen);
-        QWindowSystemInterface::registerTouchDevice(device);
+        QInputDevice::Capabilities capabilities = QInputDevice::Capability::Position
+         | QInputDevice::Capability::Area
+         | QInputDevice::Capability::NormalizedPosition;
+        device = new QPointingDevice(QLatin1String("touchscreen"), 0, QInputDevice::DeviceType::TouchScreen,
+                                     QPointingDevice::PointerType::Finger, capabilities, 5, 1);
+        QWindowSystemInterface::registerInputDevice(device);
     }
 
-    QTouchEvent event(type, device, m_touchModifiers);
-    event.setTouchPoints(m_touchPoints);
+    QTouchEvent event(type, device, m_touchModifiers, m_touchPoints);
     sendEvent(m_page, &event);
     QList<QTouchEvent::TouchPoint>::Iterator it = m_touchPoints.begin();
     while (it != m_touchPoints.end()) {
-        if (it->state() == Qt::TouchPointReleased)
+        if (it->state() == QEventPoint::Released)
             it = m_touchPoints.erase(it);
         else {
-            it->setState(Qt::TouchPointStationary);
+            QMutableEventPoint::setState(*it, QEventPoint::Stationary);
             ++it;
         }
     }

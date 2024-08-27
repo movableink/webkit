@@ -37,7 +37,9 @@ CGImagePixelReader::CGImagePixelReader(CGImageRef image)
     auto bytesPerPixel = 4;
     auto bytesPerRow = bytesPerPixel * CGImageGetWidth(image);
     auto bitsPerComponent = 8;
-    auto bitmapInfo = kCGImageAlphaPremultipliedLast | kCGImageByteOrder32Big;
+IGNORE_WARNINGS_BEGIN("deprecated-enum-enum-conversion")
+    CGBitmapInfo bitmapInfo = kCGImageAlphaPremultipliedLast | kCGImageByteOrder32Big;
+IGNORE_WARNINGS_END
     m_context = adoptCF(CGBitmapContextCreateWithData(nullptr, m_width, m_height, bitsPerComponent, bytesPerRow, colorSpace.get(), bitmapInfo, nullptr, nullptr));
     CGContextDrawImage(m_context.get(), CGRectMake(0, 0, m_width, m_height), image);
 }
@@ -49,7 +51,7 @@ bool CGImagePixelReader::isTransparentBlack(unsigned x, unsigned y) const
 
 Color CGImagePixelReader::at(unsigned x, unsigned y) const
 {
-    auto* data = reinterpret_cast<uint8_t*>(CGBitmapContextGetData(m_context.get()));
+    auto* data = static_cast<uint8_t*>(CGBitmapContextGetData(m_context.get()));
     auto offset = 4 * (width() * y + x);
     return makeFromComponentsClampingExceptAlpha<SRGBA<uint8_t>>(data[offset], data[offset + 1], data[offset + 2], data[offset + 3]);
 }

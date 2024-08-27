@@ -33,7 +33,7 @@
 namespace WebCore {
 namespace Style {
 
-Vector<PseudoClassInvalidationKey, 4> makePseudoClassInvalidationKeys(CSSSelector::PseudoClassType pseudoClass, const Element& element)
+Vector<PseudoClassInvalidationKey, 4> makePseudoClassInvalidationKeys(CSSSelector::PseudoClass pseudoClass, const Element& element)
 {
     Vector<PseudoClassInvalidationKey, 4> keys;
 
@@ -41,9 +41,9 @@ Vector<PseudoClassInvalidationKey, 4> makePseudoClassInvalidationKeys(CSSSelecto
         keys.append(makePseudoClassInvalidationKey(pseudoClass, InvalidationKeyType::Id, element.idForStyleResolution()));
 
     if (element.hasClass()) {
-        auto classCount = element.classNames().size();
-        for (size_t i = 0; i < classCount; ++i)
-            keys.append(makePseudoClassInvalidationKey(pseudoClass, InvalidationKeyType::Class, element.classNames()[i]));
+        keys.appendContainerWithMapping(element.classNames(), [&](auto& className) {
+            return makePseudoClassInvalidationKey(pseudoClass, InvalidationKeyType::Class, className);
+        });
     }
 
     keys.append(makePseudoClassInvalidationKey(pseudoClass, InvalidationKeyType::Tag, element.localNameLowercase()));
@@ -52,13 +52,13 @@ Vector<PseudoClassInvalidationKey, 4> makePseudoClassInvalidationKeys(CSSSelecto
     return keys;
 };
 
-void PseudoClassChangeInvalidation::computeInvalidation(CSSSelector::PseudoClassType pseudoClass, Value value, InvalidationScope invalidationScope)
+void PseudoClassChangeInvalidation::computeInvalidation(CSSSelector::PseudoClass pseudoClass, Value value, InvalidationScope invalidationScope)
 {
     bool shouldInvalidateCurrent = false;
     bool mayAffectStyleInShadowTree = false;
 
     traverseRuleFeatures(m_element, [&] (const RuleFeatureSet& features, bool mayAffectShadowTree) {
-        if (mayAffectShadowTree && features.pseudoClassTypes.contains(pseudoClass))
+        if (mayAffectShadowTree && features.pseudoClasses.contains(pseudoClass))
             mayAffectStyleInShadowTree = true;
         if (m_element.shadowRoot() && features.pseudoClassesAffectingHost.contains(pseudoClass))
             shouldInvalidateCurrent = true;

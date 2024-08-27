@@ -62,9 +62,7 @@ RemotePlayback::RemotePlayback(HTMLMediaElement& element)
 {
 }
 
-RemotePlayback::~RemotePlayback()
-{
-}
+RemotePlayback::~RemotePlayback() = default;
 
 WebCoreOpaqueRoot RemotePlayback::opaqueRootConcurrently() const
 {
@@ -435,11 +433,6 @@ void RemotePlayback::availabilityChanged(bool available)
 void RemotePlayback::invalidate()
 {
     m_mediaElement = nullptr;
-}
-
-const char* RemotePlayback::activeDOMObjectName() const
-{
-    return "RemotePlayback";
 }
 
 #if !RELEASE_LOG_DISABLED

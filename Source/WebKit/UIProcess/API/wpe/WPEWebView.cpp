@@ -30,6 +30,7 @@
 #include "APIViewClient.h"
 #include "AcceleratedBackingStoreDMABuf.h"
 #include "DrawingAreaProxy.h"
+#include "DrawingAreaProxyCoordinatedGraphics.h"
 #include "EditingRange.h"
 #include "EditorState.h"
 #include "NativeWebKeyboardEvent.h"
@@ -44,12 +45,22 @@
 #if ENABLE(GAMEPAD)
 #include <WebCore/GamepadProviderLibWPE.h>
 #endif
-#include <WebCore/RefPtrCairo.h>
-#include <cairo.h>
 #include <wpe/wpe.h>
 #include <wtf/NeverDestroyed.h>
 
+#if USE(CAIRO)
+#include <WebCore/RefPtrCairo.h>
+#include <cairo.h>
+#endif
+
+#if USE(SKIA)
+IGNORE_CLANG_WARNINGS_BEGIN("cast-align")
+#include <skia/core/SkPixmap.h>
+IGNORE_CLANG_WARNINGS_END
+#endif
+
 #if ENABLE(WPE_PLATFORM)
+#include "ScreenManager.h"
 #include <wpe/wpe-platform.h>
 #endif
 
@@ -72,9 +83,8 @@ View::View(struct wpe_view_backend* backend, WPEDisplay* display, const API::Pag
 #if ENABLE(TOUCH_EVENTS)
     , m_touchGestureController(makeUnique<TouchGestureController>())
 #endif
-    , m_pageClient(makeUnique<PageClientImpl>(*this))
+    , m_pageClient(makeUniqueWithoutRefCountedCheck<PageClientImpl>(*this))
     , m_size { 800, 600 }
-    , m_viewStateFlags { WebCore::ActivityState::WindowIsActive, WebCore::ActivityState::IsFocused, WebCore::ActivityState::IsVisible, WebCore::ActivityState::IsInWindow }
     , m_backend(backend)
 {
 #if ENABLE(WPE_PLATFORM)
@@ -83,39 +93,85 @@ View::View(struct wpe_view_backend* backend, WPEDisplay* display, const API::Pag
     ASSERT(m_backend);
 #endif
 
-    auto configuration = baseConfiguration.copy();
-    auto* preferences = configuration->preferences();
-    if (!preferences && configuration->pageGroup()) {
-        preferences = &configuration->pageGroup()->preferences();
-        configuration->setPreferences(preferences);
-    }
-    if (preferences) {
-        preferences->setAcceleratedCompositingEnabled(true);
-        preferences->setForceCompositingMode(true);
-        preferences->setThreadedScrollingEnabled(true);
-    }
+    if (m_backend)
+        m_viewStateFlags = { WebCore::ActivityState::WindowIsActive, WebCore::ActivityState::IsFocused, WebCore::ActivityState::IsVisible, WebCore::ActivityState::IsInWindow };
 
-    auto* pool = configuration->processPool();
-    if (!pool) {
-        auto processPoolConfiguration = API::ProcessPoolConfiguration::create();
-        pool = &WebProcessPool::create(processPoolConfiguration).leakRef();
-        configuration->setProcessPool(pool);
-    }
-    m_pageProxy = pool->createWebPage(*m_pageClient, WTFMove(configuration));
+    auto configuration = baseConfiguration.copy();
+    auto& preferences = configuration->preferences();
+    preferences.setAcceleratedCompositingEnabled(true);
+    preferences.setForceCompositingMode(true);
+    preferences.setThreadedScrollingEnabled(true);
+
+    auto& pool = configuration->processPool();
+    m_pageProxy = pool.createWebPage(*m_pageClient, WTFMove(configuration));
 
 #if ENABLE(WPE_PLATFORM)
     if (display) {
         m_wpeView = adoptGRef(wpe_view_new(display));
+        m_inputMethodFilter.setUseWPEPlatformEvents(true);
         m_size.setWidth(wpe_view_get_width(m_wpeView.get()));
         m_size.setHeight(wpe_view_get_height(m_wpeView.get()));
+        m_pageProxy->setIntrinsicDeviceScaleFactor(wpe_view_get_scale(m_wpeView.get()));
+
+        if (wpe_view_get_mapped(m_wpeView.get()))
+            m_viewStateFlags.add(WebCore::ActivityState::IsVisible);
+        if (auto* toplevel = wpe_view_get_toplevel(m_wpeView.get())) {
+            m_viewStateFlags.add(WebCore::ActivityState::IsInWindow);
+            if (wpe_toplevel_get_state(toplevel) & WPE_TOPLEVEL_STATE_ACTIVE)
+                m_viewStateFlags.add(WebCore::ActivityState::WindowIsActive);
+        }
+
+        if (auto* monitor = wpe_view_get_monitor(m_wpeView.get()))
+            m_displayID = wpe_monitor_get_id(monitor);
+        else
+            m_displayID = ScreenManager::singleton().primaryDisplayID();
+        m_pageProxy->windowScreenDidChange(m_displayID);
+
+        g_signal_connect(m_wpeView.get(), "notify::mapped", G_CALLBACK(+[](WPEView* view, GParamSpec*, gpointer userData) {
+            auto& webView = *reinterpret_cast<View*>(userData);
+
+            OptionSet<WebCore::ActivityState> flagsToUpdate { WebCore::ActivityState::IsVisible };
+            if (wpe_view_get_mapped(view)) {
+                if (webView.m_viewStateFlags.contains(WebCore::ActivityState::IsVisible))
+                    return;
+
+                webView.m_viewStateFlags.add(WebCore::ActivityState::IsVisible);
+            } else {
+                if (!webView.m_viewStateFlags.contains(WebCore::ActivityState::IsVisible))
+                    return;
+
+                webView.m_viewStateFlags.remove(WebCore::ActivityState::IsVisible);
+            }
+            webView.page().activityStateDidChange(flagsToUpdate);
+        }), this);
         g_signal_connect(m_wpeView.get(), "resized", G_CALLBACK(+[](WPEView* view, gpointer userData) {
             auto& webView = *reinterpret_cast<View*>(userData);
             webView.setSize(WebCore::IntSize(wpe_view_get_width(view), wpe_view_get_height(view)));
         }), this);
-        page().setIntrinsicDeviceScaleFactor(wpe_view_get_scale(m_wpeView.get()));
         g_signal_connect(m_wpeView.get(), "notify::scale", G_CALLBACK(+[](WPEView* view, GParamSpec*, gpointer userData) {
             auto& webView = *reinterpret_cast<View*>(userData);
             webView.page().setIntrinsicDeviceScaleFactor(wpe_view_get_scale(view));
+        }), this);
+        g_signal_connect(m_wpeView.get(), "notify::monitor", G_CALLBACK(+[](WPEView*, GParamSpec*, gpointer userData) {
+            auto& webView = *reinterpret_cast<View*>(userData);
+            webView.updateDisplayID();
+        }), this);
+        g_signal_connect(m_wpeView.get(), "notify::toplevel", G_CALLBACK(+[](WPEView* view, GParamSpec*, gpointer userData) {
+            auto& webView = *reinterpret_cast<View*>(userData);
+
+            OptionSet<WebCore::ActivityState> flagsToUpdate { WebCore::ActivityState::IsInWindow };
+            if (wpe_view_get_toplevel(view)) {
+                if (webView.m_viewStateFlags.contains(WebCore::ActivityState::IsInWindow))
+                    return;
+
+                webView.m_viewStateFlags.add(WebCore::ActivityState::IsInWindow);
+            } else {
+                if (!webView.m_viewStateFlags.contains(WebCore::ActivityState::IsInWindow))
+                    return;
+
+                webView.m_viewStateFlags.remove(WebCore::ActivityState::IsInWindow);
+            }
+            webView.page().activityStateDidChange(flagsToUpdate);
         }), this);
         g_signal_connect_after(m_wpeView.get(), "event", G_CALLBACK(+[](WPEView* view, WPEEvent* event, gpointer userData) -> gboolean {
             auto& webView = *reinterpret_cast<View*>(userData);
@@ -143,15 +199,18 @@ View::View(struct wpe_view_backend* backend, WPEDisplay* display, const API::Pag
                     preferences.setResourceUsageOverlayVisible(!preferences.resourceUsageOverlayVisible());
                     return TRUE;
                 }
-                // FIXME: input methods
-                webView.page().handleKeyboardEvent(WebKit::NativeWebKeyboardEvent(event, String(), webView.m_keyAutoRepeatHandler.keyPress(wpe_event_keyboard_get_keycode(event))));
+                auto filterResult = webView.m_inputMethodFilter.filterKeyEvent(event);
+                if (!filterResult.handled)
+                    webView.page().handleKeyboardEvent(WebKit::NativeWebKeyboardEvent(event, filterResult.keyText, webView.m_keyAutoRepeatHandler.keyPress(wpe_event_keyboard_get_keycode(event))));
                 return TRUE;
             }
-            case WPE_EVENT_KEYBOARD_KEY_UP:
-                // FIXME: input methods
+            case WPE_EVENT_KEYBOARD_KEY_UP: {
                 webView.m_keyAutoRepeatHandler.keyRelease();
-                webView.page().handleKeyboardEvent(WebKit::NativeWebKeyboardEvent(event, String(), false));
+                auto filterResult = webView.m_inputMethodFilter.filterKeyEvent(event);
+                if (!filterResult.handled)
+                    webView.page().handleKeyboardEvent(WebKit::NativeWebKeyboardEvent(event, String(), false));
                 return TRUE;
+            }
             case WPE_EVENT_TOUCH_DOWN:
                 // FIXME: gestures
 #if ENABLE(TOUCH_EVENTS)
@@ -163,6 +222,7 @@ View::View(struct wpe_view_backend* backend, WPEDisplay* display, const API::Pag
             case WPE_EVENT_TOUCH_CANCEL: {
                 // FIXME: gestures
 #if ENABLE(TOUCH_EVENTS)
+                webView.m_touchEvents.set(wpe_event_touch_get_sequence_id(event), event);
                 auto points = webView.touchPointsForEvent(event);
                 webView.m_touchEvents.remove(wpe_event_touch_get_sequence_id(event));
                 webView.page().handleTouchEvent(NativeWebTouchEvent(event, WTFMove(points)));
@@ -186,10 +246,6 @@ View::View(struct wpe_view_backend* backend, WPEDisplay* display, const API::Pag
 
             OptionSet<WebCore::ActivityState> flagsToUpdate { WebCore::ActivityState::IsFocused };
             webView.m_viewStateFlags.add(WebCore::ActivityState::IsFocused);
-            if (!webView.m_viewStateFlags.contains(WebCore::ActivityState::WindowIsActive)) {
-                flagsToUpdate.add(WebCore::ActivityState::WindowIsActive);
-                webView.m_viewStateFlags.add(WebCore::ActivityState::WindowIsActive);
-            }
             webView.m_inputMethodFilter.notifyFocusedIn();
             webView.page().activityStateDidChange(flagsToUpdate);
         }), this);
@@ -200,34 +256,48 @@ View::View(struct wpe_view_backend* backend, WPEDisplay* display, const API::Pag
 
             OptionSet<WebCore::ActivityState> flagsToUpdate { WebCore::ActivityState::IsFocused };
             webView.m_viewStateFlags.remove(WebCore::ActivityState::IsFocused);
-            if (webView.m_viewStateFlags.contains(WebCore::ActivityState::WindowIsActive)) {
-                flagsToUpdate.add(WebCore::ActivityState::WindowIsActive);
-                webView.m_viewStateFlags.remove(WebCore::ActivityState::WindowIsActive);
-            }
             webView.m_inputMethodFilter.notifyFocusedOut();
             webView.page().activityStateDidChange(flagsToUpdate);
         }), this);
-        g_signal_connect(m_wpeView.get(), "state-changed", G_CALLBACK(+[](WPEView* view, WPEViewState previousState, gpointer userData) {
+        g_signal_connect(m_wpeView.get(), "toplevel-state-changed", G_CALLBACK(+[](WPEView* view, WPEToplevelState previousState, gpointer userData) {
             auto& webView = *reinterpret_cast<View*>(userData);
-            auto state = wpe_view_get_state(view);
+            auto state = wpe_view_get_toplevel_state(view);
             uint32_t changedMask = state ^ previousState;
-            if (changedMask & WPE_VIEW_STATE_FULLSCREEN) {
+            if (changedMask & WPE_TOPLEVEL_STATE_FULLSCREEN) {
                 switch (webView.m_fullscreenState) {
                 case WebFullScreenManagerProxy::FullscreenState::EnteringFullscreen:
-                    if (state & WPE_VIEW_STATE_FULLSCREEN)
+                    if (state & WPE_TOPLEVEL_STATE_FULLSCREEN)
                         webView.didEnterFullScreen();
                     break;
                 case WebFullScreenManagerProxy::FullscreenState::ExitingFullscreen:
-                    if (!(state & WPE_VIEW_STATE_FULLSCREEN))
+                    if (!(state & WPE_TOPLEVEL_STATE_FULLSCREEN))
                         webView.didExitFullScreen();
                     break;
                 case WebFullScreenManagerProxy::FullscreenState::InFullscreen:
-                    if (!(state & WPE_VIEW_STATE_FULLSCREEN) && webView.isFullScreen())
+                    if (!(state & WPE_TOPLEVEL_STATE_FULLSCREEN) && webView.isFullScreen())
                         webView.requestExitFullScreen();
                     break;
                 case WebFullScreenManagerProxy::FullscreenState::NotInFullscreen:
                     break;
                 }
+            }
+            if (changedMask & WPE_TOPLEVEL_STATE_ACTIVE) {
+                OptionSet<WebCore::ActivityState> flagsToUpdate;
+                constexpr auto flagToCheck { WebCore::ActivityState::WindowIsActive };
+
+                if (state & WPE_TOPLEVEL_STATE_ACTIVE) {
+                    if (!webView.m_viewStateFlags.contains(flagToCheck)) {
+                        flagsToUpdate.add(flagToCheck);
+                        webView.m_viewStateFlags.add(flagToCheck);
+                    }
+                } else {
+                    if (webView.m_viewStateFlags.contains(flagToCheck)) {
+                        flagsToUpdate.add(flagToCheck);
+                        webView.m_viewStateFlags.remove(flagToCheck);
+                    }
+                }
+                if (!flagsToUpdate.isEmpty())
+                    webView.page().activityStateDidChange(flagsToUpdate);
             }
         }), this);
         g_signal_connect(m_wpeView.get(), "preferred-dma-buf-formats-changed", G_CALLBACK(+[](WPEView*, gpointer userData) {
@@ -240,7 +310,7 @@ View::View(struct wpe_view_backend* backend, WPEDisplay* display, const API::Pag
 
 #if ENABLE(MEMORY_SAMPLER)
     if (getenv("WEBKIT_SAMPLE_MEMORY"))
-        pool->startMemorySampler(0);
+        pool.startMemorySampler(0);
 #endif
 
     static struct wpe_view_backend_client s_backendClient = {
@@ -275,10 +345,11 @@ View::View(struct wpe_view_backend* backend, WPEDisplay* display, const API::Pag
         // get_accessible
         [](void* data) -> void*
         {
-#if ENABLE(ACCESSIBILITY)
+#if USE(ATK)
             auto& view = *reinterpret_cast<View*>(data);
             return view.accessible();
 #else
+            UNUSED_PARAM(data);
             return nullptr;
 #endif
         },
@@ -447,7 +518,7 @@ View::View(struct wpe_view_backend* backend, WPEDisplay* display, const API::Pag
         [](void* data)
         {
             auto& view = *reinterpret_cast<View*>(data);
-            view.page().fullScreenManager()->requestRestoreFullScreen();
+            view.page().fullScreenManager()->requestRestoreFullScreen([](bool) { });
         },
         // request_exit_fullscreen
         [](void* data)
@@ -478,8 +549,8 @@ View::~View()
         wpe_view_backend_set_backend_client(m_backend, nullptr, nullptr);
         wpe_view_backend_set_input_client(m_backend, nullptr, nullptr);
         // Although the fullscreen client is used for libwpe 1.11.1 and newer, we cannot
-        // unregister it prior to 1.15.2 (see https://github.com/WebPlatformForEmbedded/libwpe/pull/129).
-#if ENABLE(FULLSCREEN_API) && WPE_CHECK_VERSION(1, 15, 2)
+        // unregister it prior to 1.14.2 (see https://github.com/WebPlatformForEmbedded/libwpe/pull/129).
+#if ENABLE(FULLSCREEN_API) && WPE_CHECK_VERSION(1, 14, 2)
         wpe_view_backend_set_fullscreen_client(m_backend, nullptr, nullptr);
 #endif
     }
@@ -492,7 +563,7 @@ View::~View()
     m_backingStore = nullptr;
 #endif
 
-#if ENABLE(ACCESSIBILITY)
+#if USE(ATK)
     if (m_accessible)
         webkitWebViewAccessibleSetWebView(m_accessible.get(), nullptr);
 #endif
@@ -631,6 +702,11 @@ void View::willEnterFullScreen()
 }
 
 #if ENABLE(WPE_PLATFORM)
+static bool viewToplevelIsFullScreen(WPEToplevel* toplevel)
+{
+    return toplevel && (wpe_toplevel_get_state(toplevel) & WPE_TOPLEVEL_STATE_FULLSCREEN);
+}
+
 void View::enterFullScreen()
 {
     ASSERT(m_fullscreenState == WebFullScreenManagerProxy::FullscreenState::EnteringFullscreen);
@@ -639,14 +715,16 @@ void View::enterFullScreen()
     if (m_client->enterFullScreen(*this))
         return;
 
-    if (wpe_view_get_state(m_wpeView.get()) & WPE_VIEW_STATE_FULLSCREEN) {
+    auto* toplevel = wpe_view_get_toplevel(m_wpeView.get());
+    if (viewToplevelIsFullScreen(toplevel)) {
         m_viewWasAlreadyInFullScreen = true;
         didEnterFullScreen();
         return;
     }
 
     m_viewWasAlreadyInFullScreen = false;
-    wpe_view_fullscreen(m_wpeView.get());
+    if (toplevel)
+        wpe_toplevel_fullscreen(toplevel);
 }
 
 void View::didEnterFullScreen()
@@ -678,12 +756,14 @@ void View::exitFullScreen()
     if (m_client->exitFullScreen(*this))
         return;
 
-    if (!(wpe_view_get_state(m_wpeView.get()) & WPE_VIEW_STATE_FULLSCREEN) || m_viewWasAlreadyInFullScreen) {
+    auto* toplevel = wpe_view_get_toplevel(m_wpeView.get());
+    if (!viewToplevelIsFullScreen(toplevel) || m_viewWasAlreadyInFullScreen) {
         didExitFullScreen();
         return;
     }
 
-    wpe_view_unfullscreen(m_wpeView.get());
+    if (toplevel)
+        wpe_toplevel_unfullscreen(toplevel);
 }
 
 void View::didExitFullScreen()
@@ -726,7 +806,7 @@ bool View::setFullScreen(bool fullScreenState)
 };
 #endif
 
-#if ENABLE(ACCESSIBILITY)
+#if USE(ATK)
 WebKitWebViewAccessible* View::accessible() const
 {
     if (!m_accessible)
@@ -771,6 +851,28 @@ void View::updateAcceleratedSurface(uint64_t surfaceID)
 {
     if (m_backingStore)
         m_backingStore->updateSurfaceID(surfaceID);
+}
+
+RendererBufferFormat View::renderBufferFormat() const
+{
+    if (!m_backingStore)
+        return { };
+
+    return m_backingStore->bufferFormat();
+}
+
+void View::updateDisplayID()
+{
+    auto* monitor = wpe_view_get_monitor(m_wpeView.get());
+    if (!monitor)
+        return;
+
+    auto displayID = wpe_monitor_get_id(monitor);
+    if (displayID == m_displayID)
+        return;
+
+    m_displayID = displayID;
+    m_pageProxy->windowScreenDidChange(m_displayID);
 }
 
 #if ENABLE(TOUCH_EVENTS)
@@ -911,9 +1013,10 @@ void View::setCursor(const WebCore::Cursor& cursor)
         return;
     }
 
+#if USE(CAIRO)
     ASSERT(cursor.type() == WebCore::Cursor::Type::Custom);
     auto image = cursor.image();
-    auto nativeImage = image->nativeImageForCurrentFrame();
+    auto nativeImage = image->currentNativeImage();
     if (!nativeImage)
         return;
 
@@ -927,10 +1030,49 @@ void View::setCursor(const WebCore::Cursor& cursor)
     }, surface.leakRef()));
 
     WebCore::IntPoint hotspot = WebCore::determineHotSpot(image.get(), cursor.hotSpot());
-    wpe_view_set_cursor_from_bytes(m_wpeView.get(), bytes.get(), width, height, hotspot.x(), hotspot.y());
+    wpe_view_set_cursor_from_bytes(m_wpeView.get(), bytes.get(), width, height, stride, hotspot.x(), hotspot.y());
+#elif USE(SKIA)
+    auto nativeImage = cursor.image()->currentNativeImage();
+    if (!nativeImage)
+        return;
+
+    SkPixmap pixmap;
+    auto platformImage = nativeImage->platformImage();
+    ASSERT(platformImage->peekPixels(&pixmap));
+
+    platformImage->ref();
+    GRefPtr<GBytes> bytes = adoptGRef(g_bytes_new_with_free_func(pixmap.addr(), pixmap.computeByteSize(), [](gpointer data) {
+        static_cast<SkImage*>(data)->unref();
+    }, platformImage.get()));
+
+    WebCore::IntPoint hotspot = WebCore::determineHotSpot(cursor.image().get(), cursor.hotSpot());
+    wpe_view_set_cursor_from_bytes(m_wpeView.get(), bytes.get(), pixmap.width(), pixmap.height(), pixmap.rowBytes(), hotspot.x(), hotspot.y());
+#endif
 #else
     UNUSED_PARAM(cursor);
 #endif
+}
+
+void View::callAfterNextPresentationUpdate(CompletionHandler<void()>&& callback)
+{
+#if ENABLE(WPE_PLATFORM)
+    if (m_wpeView) {
+        RELEASE_ASSERT(!m_nextPresentationUpdateCallback);
+        m_nextPresentationUpdateCallback = WTFMove(callback);
+        if (!m_bufferRenderedID) {
+            m_bufferRenderedID = g_signal_connect_after(m_wpeView.get(), "buffer-rendered", G_CALLBACK(+[](WPEView* view, WPEBuffer*, gpointer userData) {
+                auto& webView = *reinterpret_cast<View*>(userData);
+                if (webView.m_nextPresentationUpdateCallback)
+                    webView.m_nextPresentationUpdateCallback();
+            }), this);
+        }
+
+        return;
+    }
+#endif
+
+    RELEASE_ASSERT(m_pageProxy->drawingArea());
+    downcast<DrawingAreaProxyCoordinatedGraphics>(*m_pageProxy->drawingArea()).dispatchAfterEnsuringDrawing(WTFMove(callback));
 }
 
 } // namespace WKWPE

@@ -23,7 +23,6 @@
 
 #pragma once
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "RenderSVGModelObject.h"
 #include "SVGBoundingBoxComputation.h"
 
@@ -33,6 +32,7 @@ class SVGElement;
 
 class RenderSVGContainer : public RenderSVGModelObject {
     WTF_MAKE_ISO_ALLOCATED(RenderSVGContainer);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGContainer);
 public:
     virtual ~RenderSVGContainer();
 
@@ -48,8 +48,8 @@ public:
     FloatRect repaintRectInLocalCoordinates(RepaintRectCalculation = RepaintRectCalculation::Fast) const final { return SVGBoundingBoxComputation::computeRepaintBoundingBox(*this); }
 
 protected:
-    RenderSVGContainer(Type, Document&, RenderStyle&&);
-    RenderSVGContainer(Type, SVGElement&, RenderStyle&&);
+    RenderSVGContainer(Type, Document&, RenderStyle&&, OptionSet<SVGModelObjectFlag> = { });
+    RenderSVGContainer(Type, SVGElement&, RenderStyle&&, OptionSet<SVGModelObjectFlag> = { });
 
     ASCIILiteral renderName() const override { return "RenderSVGContainer"_s; }
     bool canHaveChildren() const final { return true; }
@@ -74,4 +74,3 @@ protected:
 
 SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGContainer, isRenderSVGContainer())
 
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

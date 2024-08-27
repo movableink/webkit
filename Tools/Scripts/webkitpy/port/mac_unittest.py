@@ -177,20 +177,6 @@ class MacTest(darwin_testcase.DarwinTest):
         port = self.make_port()
         self.assertEqual(port.SDK, 'macosx')
 
-    def test_xcrun(self):
-        def throwing_run_command(args):
-            print(args)
-            raise ScriptError("MOCK script error")
-
-        port = self.make_port()
-        port._executive = MockExecutive2(run_command_fn=throwing_run_command)
-        with OutputCapture() as captured:
-            port.xcrun_find('test', 'falling')
-        self.assertEqual(
-            captured.stdout.getvalue(),
-            "['xcrun', '--sdk', 'macosx', '-find', 'test']\n"
-        )
-
     def test_layout_test_searchpath_with_apple_additions(self):
         with port_testcase.bind_mock_apple_additions():
             search_path = self.make_port().default_baseline_search_path()
@@ -201,12 +187,10 @@ class MacTest(darwin_testcase.DarwinTest):
         self.assertEqual(search_path[4], '/additional_testing_path/mac-add-mountainlion-wk1')
         self.assertEqual(search_path[5], '/mock-checkout/LayoutTests/platform/mac-mountainlion-wk1')
 
-    def test_sonoma_baseline_search_path(self):
-        search_path = self.make_port(port_name='macos-sonoma').default_baseline_search_path()
-        self.assertEqual(search_path[0], '/mock-checkout/LayoutTests/platform/mac-sonoma-wk1')
-        self.assertEqual(search_path[1], '/mock-checkout/LayoutTests/platform/mac-sonoma')
-        self.assertEqual(search_path[2], '/mock-checkout/LayoutTests/platform/mac-wk1')
-        self.assertEqual(search_path[3], '/mock-checkout/LayoutTests/platform/mac')
+    def test_sequoia_baseline_search_path(self):
+        search_path = self.make_port(port_name='macos-sequoia').default_baseline_search_path()
+        self.assertEqual(search_path[0], '/mock-checkout/LayoutTests/platform/mac-wk1')
+        self.assertEqual(search_path[1], '/mock-checkout/LayoutTests/platform/mac')
 
     def test_factory_with_future_version(self):
         port = self.make_port(options=MockOptions(webkit_test_runner=True), os_version=MacTest.FUTURE_VERSION, os_name='mac', port_name='mac')

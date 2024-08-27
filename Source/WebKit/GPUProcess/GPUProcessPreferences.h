@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -66,6 +66,16 @@ struct GPUProcessPreferences {
 
 #if HAVE(SC_CONTENT_SHARING_PICKER)
     std::optional<bool> useSCContentSharingPicker;
+#endif
+
+#if ENABLE(EXTENSION_CAPABILITIES)
+    std::optional<bool> mediaCapabilityGrantsEnabled;
+#endif
+
+#if ENABLE(VP9)
+    std::optional<bool> vp8DecoderEnabled;
+    std::optional<bool> vp9DecoderEnabled;
+    bool swVPDecodersAlwaysEnabled { false };
 #endif
 };
 

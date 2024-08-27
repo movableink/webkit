@@ -120,7 +120,8 @@ QNetworkReply* NetworkDataTaskQt::sendNetworkRequest(const ResourceRequest& requ
 
     const QUrl url = m_qRequest.url();
 
-    m_qRequest.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
+    // Qt6: the default is NoLessSafeRedirectPolicy
+    // m_qRequest.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
     if (m_method == QNetworkAccessManager::PostOperation
         && (!url.toLocalFile().isEmpty() || url.scheme() == QLatin1String("data")))
         m_method = QNetworkAccessManager::GetOperation;

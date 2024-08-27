@@ -86,13 +86,14 @@ public:
     QtWebProcess(QObject* parent = 0)
         : QProcess(parent)
     {
+        setChildProcessModifier(&QtWebProcess::processModifier);
     }
 
 protected:
-    void setupChildProcess() final;
+    static void processModifier();
 };
 
-void QtWebProcess::setupChildProcess()
+void QtWebProcess::processModifier()
 {
 #if defined(Q_OS_LINUX)
 #ifndef NDEBUG
@@ -226,7 +227,7 @@ void ProcessLauncher::launchProcess()
         return;
     }
 #if OS(UNIX)
-    setpriority(PRIO_PROCESS, webProcessOrSUIDHelper->pid(), 10);
+    setpriority(PRIO_PROCESS, webProcessOrSUIDHelper->processId(), 10);
 #endif
     m_processObject = webProcessOrSUIDHelper;
     RefPtr<ProcessLauncher> protector(this);

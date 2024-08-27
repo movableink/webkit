@@ -65,16 +65,16 @@ public:
     void SetUp() override
     {
         m_encoder = makeUnique<IPC::Encoder>(EncoderDecoderTest::name(), 0);
-        ASSERT_EQ(m_encoder->bufferSize(), headerSize());
+        ASSERT_EQ(m_encoder->span().size(), headerSize());
     }
 
     IPC::Encoder& encoder() const { return *m_encoder; }
     size_t headerSize() const { return 16; }
-    size_t encoderSize() const { return m_encoder->bufferSize(); }
+    size_t encoderSize() const { return m_encoder->span().size(); }
 
     std::unique_ptr<IPC::Decoder> createDecoder() const
     {
-        return IPC::Decoder::create({ m_encoder->buffer(), m_encoder->bufferSize() }, { });
+        return IPC::Decoder::create(m_encoder->span(), { });
     }
 
 private:
@@ -96,7 +96,7 @@ public:
 
     std::unique_ptr<IPC::Decoder> createDecoder() const
     {
-        auto decoder = makeUnique<IPC::Decoder>(IPC::DataReference { m_impl->buffer.data(), m_impl->buffer.size() }, 0);
+        auto decoder = makeUnique<IPC::Decoder>(std::span { m_impl->buffer.data(), m_impl->buffer.size() }, 0);
         return decoder;
     }
 
@@ -153,6 +153,25 @@ struct EncodingCounter {
 
     CounterValues& m_counterValues;
 };
+
+} // namespace TestWebKitAPI
+
+namespace IPC {
+
+template<> struct ArgumentCoder<TestWebKitAPI::EncodingCounter> {
+    static void encode(Encoder& encoder, const TestWebKitAPI::EncodingCounter& counter)
+    {
+        counter.encode(encoder);
+    }
+    static void encode(Encoder& encoder, TestWebKitAPI::EncodingCounter&& counter)
+    {
+        WTFMove(counter).encode(encoder);
+    }
+};
+
+} // namespace IPC
+
+namespace TestWebKitAPI {
 
 enum class EncodingCounterTestType {
     LValue,
@@ -349,6 +368,26 @@ struct DecodingMoveCounter {
 
     unsigned moveCounter { 0 };
 };
+
+} // namespace TestWebKitAPI
+
+namespace IPC {
+
+template<> struct ArgumentCoder<TestWebKitAPI::DecodingMoveCounter> {
+    template<typename Encoder>
+    static void encode(Encoder& encoder, TestWebKitAPI::DecodingMoveCounter&& counter)
+    {
+        WTFMove(counter).encode(encoder);
+    }
+    static std::optional<TestWebKitAPI::DecodingMoveCounter> decode(Decoder& decoder)
+    {
+        return TestWebKitAPI::DecodingMoveCounter::decode(decoder);
+    }
+};
+
+} // namespace IPC
+
+namespace TestWebKitAPI {
 
 TYPED_TEST_P(ArgumentCoderDecodingMoveCounterTest, DecodeDirectly)
 {

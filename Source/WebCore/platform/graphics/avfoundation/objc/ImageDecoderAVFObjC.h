@@ -77,11 +77,9 @@ public:
 
     IntSize frameSizeAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default) const final;
     bool frameIsCompleteAtIndex(size_t) const final;
-    ImageDecoder::FrameMetadata frameMetadataAtIndex(size_t) const final;
 
     Seconds frameDurationAtIndex(size_t) const final;
     bool frameHasAlphaAtIndex(size_t) const final;
-    bool frameAllowSubsamplingAtIndex(size_t) const final;
     unsigned frameBytesAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default) const final;
 
     WEBCORE_EXPORT PlatformImagePtr createFrameImageAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default, const DecodingOptions& = DecodingOptions(DecodingMode::Synchronous)) final;
@@ -89,7 +87,7 @@ public:
     WEBCORE_EXPORT void setExpectedContentSize(long long) final;
     WEBCORE_EXPORT void setData(const FragmentedSharedBuffer&, bool allDataReceived) final;
     bool isAllDataReceived() const final { return m_isAllDataReceived; }
-    WEBCORE_EXPORT void clearFrameBufferCache(size_t) final;
+    void clearFrameBufferCache(size_t) final { }
 
     bool hasTrack() const { return !!m_track; }
     WEBCORE_EXPORT Vector<ImageDecoder::FrameInfo> frameInfos() const;
@@ -100,7 +98,7 @@ private:
     AVAssetTrack *firstEnabledTrack();
     void readSamples();
     void readTrackMetadata();
-    bool storeSampleBuffer(CMSampleBufferRef);
+    bool createFrameImageFromSampleBuffer(CMSampleBufferRef, CGImageRef *imageOut);
     void advanceCursor();
     void setTrack(AVAssetTrack *);
 

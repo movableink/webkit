@@ -60,7 +60,8 @@ StyleFilterImage::~StyleFilterImage()
 
 bool StyleFilterImage::operator==(const StyleImage& other) const
 {
-    return is<StyleFilterImage>(other) && equals(downcast<StyleFilterImage>(other));
+    auto* otherFilterImage = dynamicDowncast<StyleFilterImage>(other);
+    return otherFilterImage && equals(*otherFilterImage);
 }
 
 bool StyleFilterImage::equals(const StyleFilterImage& other) const
@@ -100,11 +101,9 @@ void StyleFilterImage::load(CachedResourceLoader& cachedResourceLoader, const Re
             m_cachedImage->addClient(*this);
     }
 
-    for (auto& filterOperation : m_filterOperations.operations()) {
-        if (!is<ReferenceFilterOperation>(filterOperation))
-            continue;
-        auto& referenceFilterOperation = downcast<ReferenceFilterOperation>(*filterOperation);
-        referenceFilterOperation.loadExternalDocumentIfNeeded(cachedResourceLoader, options);
+    for (auto& filterOperation : m_filterOperations) {
+        if (RefPtr referenceFilterOperation = dynamicDowncast<ReferenceFilterOperation>(filterOperation))
+            referenceFilterOperation->loadExternalDocumentIfNeeded(cachedResourceLoader, options);
     }
 
     m_inputImageIsReady = true;
@@ -134,7 +133,7 @@ RefPtr<Image> StyleFilterImage::image(const RenderElement* renderer, const Float
 
     cssFilter->setFilterRegion(sourceImageRect);
 
-    auto sourceImage = ImageBuffer::create(size, RenderingPurpose::DOM, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8, bufferOptionsForRendingMode(cssFilter->renderingMode()), renderer->hostWindow());
+    auto sourceImage = ImageBuffer::create(size, RenderingPurpose::DOM, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8, bufferOptionsForRendingMode(cssFilter->renderingMode()), renderer->hostWindow());
     if (!sourceImage)
         return &Image::nullImage();
 

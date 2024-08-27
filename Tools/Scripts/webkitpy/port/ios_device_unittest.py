@@ -22,10 +22,11 @@
 
 import time
 
+from mock import Mock
+
 from webkitcorepy import Version
 
 from webkitpy.common.system.executive_mock import MockExecutive2, ScriptError
-from webkitpy.port.config import clear_cached_configuration
 from webkitpy.port.ios_device import IOSDevicePort
 from webkitpy.port import ios_testcase
 from webkitpy.port import port_testcase
@@ -39,6 +40,11 @@ class IOSDeviceTest(ios_testcase.IOSTest):
     os_version = None
     port_name = 'ios-device'
     port_maker = IOSDevicePort
+
+    def make_port(self, *args, **kwargs):
+        port = super(IOSDeviceTest, self).make_port(*args, **kwargs)
+        port.DEVICE_MANAGER = Mock(INITIALIZED_DEVICES=None)
+        return port
 
     def test_operating_system(self):
         self.assertEqual('ios-device', self.make_port().operating_system())
@@ -113,18 +119,18 @@ class IOSDeviceTest(ios_testcase.IOSTest):
             search_path = self.make_port().default_baseline_search_path()
 
         self.assertEqual(search_path, [
-            '/additional_testing_path/ios-device-add-ios17-wk1',
-            '/mock-checkout/LayoutTests/platform/ios-device-17-wk1',
-            '/additional_testing_path/ios-device-add-ios17',
-            '/mock-checkout/LayoutTests/platform/ios-device-17',
+            '/additional_testing_path/ios-device-add-ios18-wk1',
+            '/mock-checkout/LayoutTests/platform/ios-device-18-wk1',
+            '/additional_testing_path/ios-device-add-ios18',
+            '/mock-checkout/LayoutTests/platform/ios-device-18',
             '/additional_testing_path/ios-device-wk1',
             '/mock-checkout/LayoutTests/platform/ios-device-wk1',
             '/additional_testing_path/ios-device',
             '/mock-checkout/LayoutTests/platform/ios-device',
-            '/additional_testing_path/ios-add-ios17-wk1',
-            '/mock-checkout/LayoutTests/platform/ios-17-wk1',
-            '/additional_testing_path/ios-add-ios17',
-            '/mock-checkout/LayoutTests/platform/ios-17',
+            '/additional_testing_path/ios-add-ios18-wk1',
+            '/mock-checkout/LayoutTests/platform/ios-18-wk1',
+            '/additional_testing_path/ios-add-ios18',
+            '/mock-checkout/LayoutTests/platform/ios-18',
             '/additional_testing_path/ios-wk1',
             '/mock-checkout/LayoutTests/platform/ios-wk1',
             '/additional_testing_path/ios',
@@ -132,46 +138,46 @@ class IOSDeviceTest(ios_testcase.IOSTest):
         ])
 
     def test_layout_test_searchpath_without_apple_additions(self):
-        search_path = self.make_port(port_name='ios-device-wk2', os_version=Version(17)).default_baseline_search_path()
+        search_path = self.make_port(port_name='ios-device-wk2', os_version=Version(18)).default_baseline_search_path()
 
         self.assertEqual(search_path, [
-            '/mock-checkout/LayoutTests/platform/ios-device-17-wk2',
-            '/mock-checkout/LayoutTests/platform/ios-device-17',
+            '/mock-checkout/LayoutTests/platform/ios-device-18-wk2',
+            '/mock-checkout/LayoutTests/platform/ios-device-18',
             '/mock-checkout/LayoutTests/platform/ios-device-wk2',
             '/mock-checkout/LayoutTests/platform/ios-device',
-            '/mock-checkout/LayoutTests/platform/ios-17-wk2',
-            '/mock-checkout/LayoutTests/platform/ios-17',
+            '/mock-checkout/LayoutTests/platform/ios-18-wk2',
+            '/mock-checkout/LayoutTests/platform/ios-18',
             '/mock-checkout/LayoutTests/platform/ios-wk2',
             '/mock-checkout/LayoutTests/platform/ios',
             '/mock-checkout/LayoutTests/platform/wk2',
         ])
 
     def test_layout_searchpath_wih_device_type(self):
-        search_path = self.make_port(port_name='ios-device-wk2', os_version=Version(17)).default_baseline_search_path(DeviceType.from_string('iPhone SE'))
+        search_path = self.make_port(port_name='ios-device-wk2', os_version=Version(18)).default_baseline_search_path(DeviceType.from_string('iPhone SE'))
 
         self.assertEqual(search_path, [
-            '/mock-checkout/LayoutTests/platform/iphone-se-device-17-wk2',
-            '/mock-checkout/LayoutTests/platform/iphone-se-device-17',
+            '/mock-checkout/LayoutTests/platform/iphone-se-device-18-wk2',
+            '/mock-checkout/LayoutTests/platform/iphone-se-device-18',
             '/mock-checkout/LayoutTests/platform/iphone-se-device-wk2',
             '/mock-checkout/LayoutTests/platform/iphone-se-device',
-            '/mock-checkout/LayoutTests/platform/iphone-device-17-wk2',
-            '/mock-checkout/LayoutTests/platform/iphone-device-17',
+            '/mock-checkout/LayoutTests/platform/iphone-device-18-wk2',
+            '/mock-checkout/LayoutTests/platform/iphone-device-18',
             '/mock-checkout/LayoutTests/platform/iphone-device-wk2',
             '/mock-checkout/LayoutTests/platform/iphone-device',
-            '/mock-checkout/LayoutTests/platform/ios-device-17-wk2',
-            '/mock-checkout/LayoutTests/platform/ios-device-17',
+            '/mock-checkout/LayoutTests/platform/ios-device-18-wk2',
+            '/mock-checkout/LayoutTests/platform/ios-device-18',
             '/mock-checkout/LayoutTests/platform/ios-device-wk2',
             '/mock-checkout/LayoutTests/platform/ios-device',
-            '/mock-checkout/LayoutTests/platform/iphone-se-17-wk2',
-            '/mock-checkout/LayoutTests/platform/iphone-se-17',
+            '/mock-checkout/LayoutTests/platform/iphone-se-18-wk2',
+            '/mock-checkout/LayoutTests/platform/iphone-se-18',
             '/mock-checkout/LayoutTests/platform/iphone-se-wk2',
             '/mock-checkout/LayoutTests/platform/iphone-se',
-            '/mock-checkout/LayoutTests/platform/iphone-17-wk2',
-            '/mock-checkout/LayoutTests/platform/iphone-17',
+            '/mock-checkout/LayoutTests/platform/iphone-18-wk2',
+            '/mock-checkout/LayoutTests/platform/iphone-18',
             '/mock-checkout/LayoutTests/platform/iphone-wk2',
             '/mock-checkout/LayoutTests/platform/iphone',
-            '/mock-checkout/LayoutTests/platform/ios-17-wk2',
-            '/mock-checkout/LayoutTests/platform/ios-17',
+            '/mock-checkout/LayoutTests/platform/ios-18-wk2',
+            '/mock-checkout/LayoutTests/platform/ios-18',
             '/mock-checkout/LayoutTests/platform/ios-wk2',
             '/mock-checkout/LayoutTests/platform/ios',
             '/mock-checkout/LayoutTests/platform/wk2',
@@ -181,7 +187,6 @@ class IOSDeviceTest(ios_testcase.IOSTest):
         pass
 
     def test_default_upload_configuration(self):
-        clear_cached_configuration()
         port = self.make_port()
         configuration = port.configuration_for_upload()
         self.assertEqual(configuration['architecture'], port.architecture())

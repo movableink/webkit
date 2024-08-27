@@ -44,8 +44,8 @@ requests = webkitcorepy.CallByNeed(lambda: __import__('requests'))
 class Tracker(GenericTracker):
     ROOT_RE = re.compile(r'\Ahttps?://(?P<domain>\S+)\Z')
     RE_TEMPLATES = [
-        r'\Ahttps?://{}/show_bug.cgi\?id=(?P<id>\d+)\Z',
-        r'\A{}/show_bug.cgi\?id=(?P<id>\d+)\Z',
+        r'\A<?https?://{}/show_bug.cgi\?id=(?P<id>\d+)>?\Z',
+        r'\A<?{}/show_bug.cgi\?id=(?P<id>\d+)>?\Z',
     ]
     NAME = 'Bugzilla'
     DEFAULT_TIMEOUT = 30
@@ -206,19 +206,24 @@ class Tracker(GenericTracker):
         issue._link = '{}/show_bug.cgi?id={}'.format(self.url, issue.id)
         issue._labels = []
         issue._classification = ''  # Bugzilla doesn't have a concept of "classification"
+        issue._source_changes = []  # We need to parse the bug to find any source changes
 
-        if member in ('title', 'timestamp', 'creator', 'opened', 'assignee', 'watchers', 'project', 'component', 'version', 'keywords'):
+        if member in ('title', 'timestamp', 'modified', 'creator', 'opened', 'assignee', 'watchers', 'project', 'component', 'version', 'keywords', 'related'):
             response = self.session.get(
                 '{}/rest/bug/{}{}'.format(self.url, issue.id, self._login_arguments(required=False)),
                 timeout=self.timeout,
             )
             if response.status_code // 100 == 4 and self._logins_left:
                 self._logins_left -= 1
+                if response.json().get('code') == 101:
+                    sys.stderr.write("{}\n".format(response.json().get('message')))
+                    return None
             response = response.json().get('bugs', []) if response.status_code == 200 else None
             if response:
                 response = response[0]
                 issue._title = response['summary']
                 issue._timestamp = int(calendar.timegm(datetime.strptime(response['creation_time'], '%Y-%m-%dT%H:%M:%SZ').timetuple()))
+                issue._modified = int(calendar.timegm(datetime.strptime(response['last_change_time'], '%Y-%m-%dT%H:%M:%SZ').timetuple()))
                 if response.get('creator_detail'):
                     issue._creator = self.user(
                         name=response['creator_detail'].get('real_name'),
@@ -247,7 +252,12 @@ class Tracker(GenericTracker):
                 issue._component = response.get('component', '')
                 issue._version = response.get('version', '')
                 issue._keywords = response.get('keywords', [])
-
+                issue._related = dict(
+                    depends_on=[self.issue(id) for id in response.get('depends_on') or []],
+                    blocks=[self.issue(id) for id in response.get('blocks') or []],
+                    regressions=[self.issue(id) for id in response.get('regressions') or []],
+                    regressed_by=[self.issue(id) for id in response.get('regressed_by') or []]
+                )
             else:
                 sys.stderr.write("Failed to fetch '{}'\n".format(issue.link))
 
@@ -341,7 +351,7 @@ class Tracker(GenericTracker):
 
         return issue
 
-    def set(self, issue, assignee=None, opened=None, why=None, project=None, component=None, version=None, original=None, keywords=None, **properties):
+    def set(self, issue, assignee=None, opened=None, why=None, project=None, component=None, version=None, original=None, keywords=None, source_changes=None, **properties):
         update_dict = dict()
 
         if properties:
@@ -431,6 +441,10 @@ class Tracker(GenericTracker):
             if keywords is not None:
                 issue._keywords = keywords
 
+        if source_changes:
+            sys.stderr.write('Bugzilla does not support source changes at this time\n')
+            return None
+
         return issue
 
     def add_comment(self, issue, text):
@@ -460,6 +474,55 @@ class Tracker(GenericTracker):
         issue._comments.append(result)
 
         return result
+
+    def related_issue_id(self, issue):
+        if isinstance(issue.tracker, Tracker):
+            return issue.id
+        else:
+            raise TypeError('Cannot relate issues of different types.')
+
+    def relate(self, issue, depends_on=None, blocks=None, regressed_by=None, regressions=None, **relations):
+        if relations:
+            raise TypeError("'{}' is an invalid relation".format(list(relations.keys())[0]))
+
+        update_dict = dict()
+        update_dict['ids'] = [issue.id]
+        if depends_on:
+            update_dict['depends_on'] = {'add': [self.related_issue_id(depends_on)]}
+        if blocks:
+            update_dict['blocks'] = {'add': [self.related_issue_id(blocks)]}
+        if regressed_by:
+            update_dict['regressed_by'] = {'add': [self.related_issue_id(regressed_by)]}
+        if regressions:
+            update_dict['regressions'] = {'add': [self.related_issue_id(regressions)]}
+
+        response = None
+        try:
+            response = self.session.put(
+                '{}/rest/bug/{}{}'.format(self.url, issue.id, self._login_arguments(required=True)),
+                json=update_dict,
+                timeout=self.timeout,
+            )
+        except requests.exceptions.RequestException as e:
+            sys.stderr.write('Request Error: {}\n'.format(e))
+        if response and response.status_code // 100 == 4 and self._logins_left:
+            self._logins_left -= 1
+        if not response or response.status_code // 100 != 2:
+            sys.stderr.write("Failed to modify '{}'\n".format(issue))
+            return None
+
+        if not issue._related:
+            self.populate(issue, 'related')
+        else:
+            if depends_on:
+                issue._related['depends_on'].append(depends_on)
+            if blocks:
+                issue._related['blocks'].append(blocks)
+            if regressed_by:
+                issue._related['regressed_by'].append(regressed_by)
+            if regressions:
+                issue._related['regressions'].append(regressions)
+        return issue
 
     @property
     @webkitcorepy.decorators.Memoize()
@@ -592,6 +655,11 @@ class Tracker(GenericTracker):
                     self.radar_importer.name,
                     issue.references[0] if issue.references else '?',
                 ))
+                response = webkitcorepy.Terminal.choose(
+                    'Double-check you have the correct bug. Would you like to continue?', options=('Yes', 'No'), default='Yes',
+                )
+                if response == 'No':
+                    raise ValueError('Radar is tracking a different bug')
 
         did_modify_cc = False
         if user_to_cc or keyword_to_add:

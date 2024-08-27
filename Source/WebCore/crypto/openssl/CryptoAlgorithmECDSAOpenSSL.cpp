@@ -26,15 +26,13 @@
 #include "config.h"
 #include "CryptoAlgorithmECDSA.h"
 
-#if ENABLE(WEB_CRYPTO)
-
 #include "CryptoAlgorithmEcdsaParams.h"
 #include "CryptoKeyEC.h"
 #include "OpenSSLUtilities.h"
 
 namespace WebCore {
 
-ExceptionOr<Vector<uint8_t>> CryptoAlgorithmECDSA::platformSign(const CryptoAlgorithmEcdsaParams& parameters, const CryptoKeyEC& key, const Vector<uint8_t>& data)
+ExceptionOr<Vector<uint8_t>> CryptoAlgorithmECDSA::platformSign(const CryptoAlgorithmEcdsaParams& parameters, const CryptoKeyEC& key, const Vector<uint8_t>& data, UseCryptoKit)
 {
     size_t keySizeInBytes = (key.keySizeInBits() + 7) / 8;
 
@@ -46,7 +44,7 @@ ExceptionOr<Vector<uint8_t>> CryptoAlgorithmECDSA::platformSign(const CryptoAlgo
     if (!digest)
         return Exception { ExceptionCode::OperationError };
 
-    EC_KEY* ecKey = EVP_PKEY_get0_EC_KEY(key.platformKey());
+    EC_KEY* ecKey = EVP_PKEY_get0_EC_KEY(key.platformKey().get());
     if (!ecKey)
         return Exception { ExceptionCode::OperationError };
 
@@ -67,7 +65,7 @@ ExceptionOr<Vector<uint8_t>> CryptoAlgorithmECDSA::platformSign(const CryptoAlgo
     return signature;
 }
 
-ExceptionOr<bool> CryptoAlgorithmECDSA::platformVerify(const CryptoAlgorithmEcdsaParams& parameters, const CryptoKeyEC& key, const Vector<uint8_t>& signature, const Vector<uint8_t>& data)
+ExceptionOr<bool> CryptoAlgorithmECDSA::platformVerify(const CryptoAlgorithmEcdsaParams& parameters, const CryptoKeyEC& key, const Vector<uint8_t>& signature, const Vector<uint8_t>& data, UseCryptoKit)
 {
     size_t keySizeInBytes = (key.keySizeInBits() + 7) / 8;
 
@@ -90,7 +88,7 @@ ExceptionOr<bool> CryptoAlgorithmECDSA::platformVerify(const CryptoAlgorithmEcds
     if (!digest)
         return Exception { ExceptionCode::OperationError };
 
-    EC_KEY* ecKey = EVP_PKEY_get0_EC_KEY(key.platformKey());
+    EC_KEY* ecKey = EVP_PKEY_get0_EC_KEY(key.platformKey().get());
     if (!ecKey)
         return Exception { ExceptionCode::OperationError };
 
@@ -99,5 +97,3 @@ ExceptionOr<bool> CryptoAlgorithmECDSA::platformVerify(const CryptoAlgorithmEcds
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(WEB_CRYPTO)

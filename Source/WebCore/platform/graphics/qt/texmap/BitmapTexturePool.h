@@ -28,6 +28,7 @@
 
 #include "BitmapTexture.h"
 #include <wtf/RunLoop.h>
+#include <wtf/OptionSet.h>
 
 namespace WebCore {
 
@@ -39,7 +40,7 @@ class BitmapTexturePool {
 public:
     BitmapTexturePool();
 
-    RefPtr<BitmapTexture> acquireTexture(const IntSize&, const BitmapTexture::Flags);
+    RefPtr<BitmapTexture> acquireTexture(const IntSize&, OptionSet<BitmapTexture::Flags>);
     void releaseUnusedTexturesTimerFired();
 
 private:
@@ -56,7 +57,7 @@ private:
     };
 
     void scheduleReleaseUnusedTextures();
-    RefPtr<BitmapTexture> createTexture(const BitmapTexture::Flags);
+    RefPtr<BitmapTexture> createTexture(OptionSet<BitmapTexture::Flags>);
 
     Vector<Entry> m_textures;
     RunLoop::Timer m_releaseUnusedTexturesTimer;

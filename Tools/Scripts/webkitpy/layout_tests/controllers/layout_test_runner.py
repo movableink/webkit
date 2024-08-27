@@ -165,18 +165,38 @@ class LayoutTestRunner(object):
             LayoutTestRunner.instance = self
             with TaskPool(
                 workers=num_workers,
+                mutually_exclusive_groups=list(self._port.sharding_groups().keys()),
                 setup=setup_shard, setupkwargs=dict(
                     port=self._port,
                     devices=devices,
                     results_directory=self._results_directory,
                     retrying=self._retrying,
                 ), teardown=teardown_shard,
+                enter_grace_period=300, exit_grace_period=30,
             ) as pool:
+                was_sent = set()
+
+                # Dispatch shards from groups first, so we start dedicated groups running before all our other shards
                 for shard in all_shards:
+                    group = self._port.group_for_shard(shard)
+                    if not group:
+                        continue
+
+                    was_sent.add(shard.name)
+                    pool.do(
+                        run_shard, shard,
+                        callback=lambda value: self._annotate_results_with_additional_failures(value),
+                        group=group,
+                    )
+
+                for shard in all_shards:
+                    if shard.name in was_sent:
+                        continue
                     pool.do(
                         run_shard, shard,
                         callback=lambda value: self._annotate_results_with_additional_failures(value),
                     )
+
                 pool.wait()
 
         except TestRunInterruptedException as e:
@@ -261,10 +281,16 @@ class LayoutTestRunner(object):
                         TestExpectations.EXPECTATION_DESCRIPTION[new_result.type], 'expected' if now_expected else 'unexpected'))
                 self._current_run_results.change_result_to_failure(existing_result, new_result, was_expected, now_expected)
 
+    def _additional_dirs_for_http_server(self):
+        if not self._options.load_in_cross_origin_iframe:
+            return {}
+
+        return {"root": "."}
+
     def start_servers(self):
         if self._needs_http and not self._did_start_http_server and not self._port.is_http_server_running():
             self.printer.write_update('Starting HTTP server ...')
-            self._port.start_http_server()
+            self._port.start_http_server(self._additional_dirs_for_http_server())
             self._did_start_http_server = True
         if self._needs_websockets and not self._did_start_websocket_server and not self._port.is_websocket_server_running():
             self.printer.write_update('Starting WebSocket server ...')
@@ -503,7 +529,7 @@ class TestShard(object):
     def __init__(self, name, test_inputs):
         self.name = name
         self.test_inputs = test_inputs
-        self.needs_servers = test_inputs[0].needs_servers
+        self.needs_servers = test_inputs[0].needs_servers if len(test_inputs) > 0 else False
 
     def shorten(self, string):
         if not string:
@@ -524,7 +550,14 @@ class TestShard(object):
                 expected_image_path=mutation(test_input.test.expected_image_path),
                 expected_checksum_path=mutation(test_input.test.expected_checksum_path),
                 expected_audio_path=mutation(test_input.test.expected_audio_path),
-                reference_files=None if test_input.test.reference_files is None else [mutation(file) for file in test_input.test.reference_files],
+                reference_files=(
+                    None
+                    if test_input.test.reference_files is None
+                    else tuple(
+                        (ref_type, mutation(ref_path))
+                        for ref_type, ref_path in test_input.test.reference_files
+                    )
+                ),
                 is_http_test=test_input.test.is_http_test,
                 is_websocket_test=test_input.test.is_websocket_test,
                 is_wpt_test=test_input.test.is_wpt_test,
@@ -533,7 +566,6 @@ class TestShard(object):
             is_slow=test_input.is_slow,
             needs_servers=test_input.needs_servers,
             should_dump_jsconsolelog_in_stderr=test_input.should_dump_jsconsolelog_in_stderr,
-            reference_files=test_input.reference_files,
             should_run_pixel_test=test_input.should_run_pixel_test,
         )
 

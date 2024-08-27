@@ -47,11 +47,11 @@ void Widget::start()
 
 void Widget::completeTest()
 {
-    QCOMPARE(ui->lbl1->pixmap()->size(), ui->lbl2->size());
-    QCOMPARE(ui->lbl3->size(), ui->lbl4->pixmap()->size());
+    QCOMPARE(ui->lbl1->pixmap().size(), ui->lbl2->size());
+    QCOMPARE(ui->lbl3->size(), ui->lbl4->pixmap().size());
     QCOMPARE(ui->lbl2->size().width(), ui->webView->page()->mainFrame()->findFirstElement("#img1").evaluateJavaScript("this.width").toInt());
     QCOMPARE(ui->lbl3->size().width(), ui->webView->page()->mainFrame()->findFirstElement("#img2").evaluateJavaScript("this.width").toInt());
-    emit testComplete();
+    Q_EMIT testComplete();
 }
 
 void Widget::setPixmap(const QPixmap& p)
@@ -111,13 +111,13 @@ void Widget::compare(const QVariant& a, const QVariant& b)
 void Widget::imageSlot(const QImage& img)
 {
     QCOMPARE(img.size(), ui->lbl3->size());
-    emit pixmapSignal(QPixmap::fromImage(img));
+    Q_EMIT pixmapSignal(QPixmap::fromImage(img));
 }
 
 void Widget::pixmapSlot(const QPixmap& pxm)
 {
     QCOMPARE(pxm.size(), ui->lbl2->size());
-    emit imageSignal(ui->lbl4->pixmap()->toImage());
+    Q_EMIT imageSignal(ui->lbl4->pixmap().toImage());
 }
 
 void Widget::randomSlot(const QPixmap& pxm)

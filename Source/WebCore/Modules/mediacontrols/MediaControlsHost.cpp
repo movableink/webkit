@@ -116,8 +116,10 @@ String MediaControlsHost::layoutTraitsClassName() const
 {
 #if PLATFORM(MAC) || PLATFORM(MACCATALYST)
     return "MacOSLayoutTraits"_s;
-#elif PLATFORM(IOS) || PLATFORM(APPLETV)
+#elif PLATFORM(IOS)
     return "IOSLayoutTraits"_s;
+#elif PLATFORM(APPLETV)
+    return "TVOSLayoutTraits"_s;
 #elif PLATFORM(VISION)
     return "VisionLayoutTraits"_s;
 #elif PLATFORM(WATCHOS)
@@ -228,10 +230,23 @@ void MediaControlsHost::updateTextTrackContainer()
         m_textTrackContainer->updateDisplay();
 }
 
+TextTrackRepresentation* MediaControlsHost::textTrackRepresentation() const
+{
+    if (m_textTrackContainer)
+        return m_textTrackContainer->textTrackRepresentation();
+    return nullptr;
+}
+
 void MediaControlsHost::updateTextTrackRepresentationImageIfNeeded()
 {
     if (m_textTrackContainer)
         m_textTrackContainer->updateTextTrackRepresentationImageIfNeeded();
+}
+
+void MediaControlsHost::requiresTextTrackRepresentationChanged()
+{
+    if (m_textTrackContainer)
+        m_textTrackContainer->requiresTextTrackRepresentationChanged();
 }
 
 void MediaControlsHost::enteredFullscreen()
@@ -282,13 +297,40 @@ bool MediaControlsHost::shouldForceControlsDisplay() const
     return m_mediaElement && m_mediaElement->shouldForceControlsDisplay();
 }
 
+bool MediaControlsHost::supportsSeeking() const
+{
+    return m_mediaElement && m_mediaElement->supportsSeeking();
+}
+
+bool MediaControlsHost::inWindowFullscreen() const
+{
+#if ENABLE(VIDEO_PRESENTATION_MODE)
+    if (!m_mediaElement)
+        return false;
+
+    auto& mediaElement = *m_mediaElement;
+    if (is<HTMLVideoElement>(mediaElement))
+        return downcast<HTMLVideoElement>(mediaElement).webkitPresentationMode() == HTMLVideoElement::VideoPresentationMode::InWindow;
+#endif
+    return false;
+}
+
+bool MediaControlsHost::supportsRewind() const
+{
+#if ENABLE(MODERN_MEDIA_CONTROLS)
+    if (auto sourceType = this->sourceType())
+        return *sourceType == SourceType::HLS || *sourceType == SourceType::File;
+#endif
+    return false;
+}
+
 String MediaControlsHost::externalDeviceDisplayName() const
 {
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
     if (!m_mediaElement)
         return emptyString();
 
-    auto player = m_mediaElement->player();
+    RefPtr player = m_mediaElement->player();
     if (!player) {
         LOG(Media, "MediaControlsHost::externalDeviceDisplayName - returning \"\" because player is NULL");
         return emptyString();
@@ -310,7 +352,7 @@ auto MediaControlsHost::externalDeviceType() const -> DeviceType
     if (!m_mediaElement)
         return DeviceType::None;
 
-    auto player = m_mediaElement->player();
+    RefPtr player = m_mediaElement->player();
     if (!player) {
         LOG(Media, "MediaControlsHost::externalDeviceType - returning \"none\" because player is NULL");
         return DeviceType::None;
@@ -431,12 +473,11 @@ public:
     {
         ASSERT(event.type() == eventNames().contextmenuEvent);
 
-        RefPtr target = event.target();
-        if (!is<Node>(target.get()))
+        RefPtr target = dynamicDowncast<Node>(event.target());
+        if (!target)
             return;
-        Ref node = downcast<Node>(target.releaseNonNull());
 
-        auto* page = node->document().page();
+        auto* page = target->document().page();
         if (!page)
             return;
 
@@ -601,12 +642,8 @@ bool MediaControlsHost::showMediaControlsContextMenu(HTMLElement& target, String
 
                 if (RefPtr cues = textTrack->cues()) {
                     for (unsigned i = 0; i < cues->length(); ++i) {
-                        RefPtr cue = cues->item(i);
-                        if (!is<VTTCue>(cue.get()))
-                            continue;
-
-                        auto& vttCue = downcast<VTTCue>(*cue);
-                        chapterMenuItems.append(createMenuItem(RefPtr { &vttCue }, vttCue.text()));
+                        if (RefPtr vttCue = dynamicDowncast<VTTCue>(cues->item(i)))
+                            chapterMenuItems.append(createMenuItem(vttCue.copyRef(), vttCue->text()));
                     }
                 }
 
@@ -761,29 +798,8 @@ bool MediaControlsHost::showMediaControlsContextMenu(HTMLElement& target, String
 
 auto MediaControlsHost::sourceType() const -> std::optional<SourceType>
 {
-    if (!m_mediaElement)
-        return std::nullopt;
-
-    if (m_mediaElement->hasMediaStreamSource())
-        return SourceType::MediaStream;
-
-#if ENABLE(MEDIA_SOURCE)
-    if (m_mediaElement->hasManagedMediaSource())
-        return SourceType::ManagedMediaSource;
-
-    if (m_mediaElement->hasMediaSource())
-        return SourceType::MediaSource;
-#endif
-
-    switch (m_mediaElement->movieLoadType()) {
-    case HTMLMediaElement::MovieLoadType::Unknown: return std::nullopt;
-    case HTMLMediaElement::MovieLoadType::Download: return SourceType::File;
-    case HTMLMediaElement::MovieLoadType::StoredStream: return SourceType::LiveStream;
-    case HTMLMediaElement::MovieLoadType::LiveStream: return SourceType::StoredStream;
-    case HTMLMediaElement::MovieLoadType::HttpLiveStream: return SourceType::HLS;
-    }
-
-    ASSERT_NOT_REACHED();
+    if (m_mediaElement)
+        return m_mediaElement->sourceType();
     return std::nullopt;
 }
 

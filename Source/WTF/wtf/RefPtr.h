@@ -29,21 +29,6 @@
 
 namespace WTF {
 
-template<typename T> struct DefaultRefDerefTraits {
-    static ALWAYS_INLINE T* refIfNotNull(T* ptr)
-    {
-        if (LIKELY(ptr))
-            ptr->ref();
-        return ptr;
-    }
-
-    static ALWAYS_INLINE void derefIfNotNull(T* ptr)
-    {
-        if (LIKELY(ptr))
-            ptr->deref();
-    }
-};
-
 template<typename T, typename PtrTraits, typename RefDerefTraits> class RefPtr;
 template<typename T, typename PtrTraits = RawPtrTraits<T>, typename RefDerefTraits = DefaultRefDerefTraits<T>> RefPtr<T, PtrTraits, RefDerefTraits> adoptRef(T*);
 
@@ -260,11 +245,11 @@ inline bool is(const RefPtr<ArgType, PtrTraits, RefDerefTraits>& source)
 }
 
 template<typename Target, typename Source, typename PtrTraits, typename RefDerefTraits>
-inline RefPtr<match_constness_t<Source, Target>> checkedDowncast(RefPtr<Source, PtrTraits, RefDerefTraits> source)
+inline RefPtr<match_constness_t<Source, Target>> uncheckedDowncast(RefPtr<Source, PtrTraits, RefDerefTraits> source)
 {
     static_assert(!std::is_same_v<Source, Target>, "Unnecessary cast to same type");
     static_assert(std::is_base_of_v<Source, Target>, "Should be a downcast");
-    RELEASE_ASSERT(!source || is<Target>(*source));
+    ASSERT_WITH_SECURITY_IMPLICATION(!source || is<Target>(*source));
     return static_pointer_cast<match_constness_t<Source, Target>>(WTFMove(source));
 }
 
@@ -273,7 +258,7 @@ inline RefPtr<match_constness_t<Source, Target>> downcast(RefPtr<Source, PtrTrai
 {
     static_assert(!std::is_same_v<Source, Target>, "Unnecessary cast to same type");
     static_assert(std::is_base_of_v<Source, Target>, "Should be a downcast");
-    ASSERT_WITH_SECURITY_IMPLICATION(!source || is<Target>(*source));
+    RELEASE_ASSERT(!source || is<Target>(*source));
     return static_pointer_cast<match_constness_t<Source, Target>>(WTFMove(source));
 }
 
@@ -288,8 +273,12 @@ inline RefPtr<match_constness_t<Source, Target>, TargetPtrTraits, TargetRefDeref
     return static_pointer_cast<match_constness_t<Source, Target>, TargetPtrTraits, TargetRefDerefTraits>(WTFMove(source));
 }
 
+template<typename T>
+using RefPtrAllowingPartiallyDestroyed = RefPtr<T, RawPtrTraits<T>, RefDerefTraitsAllowingPartiallyDestroyed<T>>;
+
 } // namespace WTF
 
 using WTF::RefPtr;
+using WTF::RefPtrAllowingPartiallyDestroyed;
 using WTF::adoptRef;
 using WTF::static_pointer_cast;

@@ -29,8 +29,6 @@
 #include "CryptoAlgorithmParameters.h"
 #include <wtf/Vector.h>
 
-#if ENABLE(WEB_CRYPTO)
-
 namespace WebCore {
 
 class CryptoAlgorithmAesGcmParams final : public CryptoAlgorithmParameters {
@@ -47,7 +45,7 @@ public:
         if (!m_ivVector.isEmpty() || !iv.length())
             return m_ivVector;
 
-        m_ivVector.append(iv.data(), iv.length());
+        m_ivVector.append(iv.span());
         return m_ivVector;
     }
 
@@ -61,7 +59,7 @@ public:
         if (!additionalDataBuffer.length())
             return m_additionalDataVector;
 
-        m_additionalDataVector.append(additionalDataBuffer.data(), additionalDataBuffer.length());
+        m_additionalDataVector.append(additionalDataBuffer.span());
         return m_additionalDataVector;
     }
 
@@ -84,5 +82,3 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_CRYPTO_ALGORITHM_PARAMETERS(AesGcmParams)
-
-#endif // ENABLE(WEB_CRYPTO)

@@ -47,6 +47,8 @@ RenderMathMLFraction::RenderMathMLFraction(MathMLFractionElement& element, Rende
     ASSERT(isRenderMathMLFraction());
 }
 
+RenderMathMLFraction::~RenderMathMLFraction() = default;
+
 bool RenderMathMLFraction::isValid() const
 {
     // Verify whether the list of children is valid:
@@ -72,8 +74,8 @@ RenderBox& RenderMathMLFraction::denominator() const
 
 LayoutUnit RenderMathMLFraction::defaultLineThickness() const
 {
-    const auto& primaryFont = style().fontCascade().primaryFont();
-    if (const auto* mathData = primaryFont.mathData())
+    const Ref primaryFont = style().fontCascade().primaryFont();
+    if (RefPtr mathData = primaryFont->mathData())
         return LayoutUnit(mathData->getMathConstant(primaryFont, OpenTypeMathData::FractionRuleThickness));
     return ruleThicknessFallback();
 }
@@ -99,10 +101,9 @@ RenderMathMLFraction::FractionParameters RenderMathMLFraction::fractionParameter
     LayoutUnit numeratorGapMin, denominatorGapMin, numeratorMinShiftUp, denominatorMinShiftDown;
 
     // We try and read constants to draw the fraction from the OpenType MATH and use fallback values otherwise.
-    const auto& primaryFont = style().fontCascade().primaryFont();
-    const auto* mathData = style().fontCascade().primaryFont().mathData();
     bool display = style().mathStyle() == MathStyle::Normal;
-    if (mathData) {
+    const Ref primaryFont = style().fontCascade().primaryFont();
+    if (RefPtr mathData = primaryFont->mathData()) {
         numeratorGapMin = mathData->getMathConstant(primaryFont, display ? OpenTypeMathData::FractionNumDisplayStyleGapMin : OpenTypeMathData::FractionNumeratorGapMin);
         denominatorGapMin = mathData->getMathConstant(primaryFont, display ? OpenTypeMathData::FractionDenomDisplayStyleGapMin : OpenTypeMathData::FractionDenominatorGapMin);
         numeratorMinShiftUp = mathData->getMathConstant(primaryFont, display ? OpenTypeMathData::FractionNumeratorDisplayStyleShiftUp : OpenTypeMathData::FractionNumeratorShiftUp);
@@ -138,10 +139,9 @@ RenderMathMLFraction::FractionParameters RenderMathMLFraction::stackParameters()
     LayoutUnit gapMin;
     
     // We try and read constants to draw the stack from the OpenType MATH and use fallback values otherwise.
-    const auto& primaryFont = style().fontCascade().primaryFont();
-    const auto* mathData = style().fontCascade().primaryFont().mathData();
     bool display = style().mathStyle() == MathStyle::Normal;
-    if (mathData) {
+    const Ref primaryFont = style().fontCascade().primaryFont();
+    if (RefPtr mathData = primaryFont->mathData()) {
         gapMin = mathData->getMathConstant(primaryFont, display ? OpenTypeMathData::StackDisplayStyleGapMin : OpenTypeMathData::StackGapMin);
         parameters.numeratorShiftUp = mathData->getMathConstant(primaryFont, display ? OpenTypeMathData::StackTopDisplayStyleShiftUp : OpenTypeMathData::StackTopShiftUp);
         parameters.denominatorShiftDown = mathData->getMathConstant(primaryFont, display ? OpenTypeMathData::StackBottomDisplayStyleShiftDown : OpenTypeMathData::StackBottomShiftDown);
@@ -170,10 +170,11 @@ RenderMathMLFraction::FractionParameters RenderMathMLFraction::stackParameters()
 
 RenderMathMLOperator* RenderMathMLFraction::unembellishedOperator() const
 {
-    if (!isValid() || !is<RenderMathMLBlock>(numerator()))
+    if (!isValid())
         return nullptr;
 
-    return downcast<RenderMathMLBlock>(numerator()).unembellishedOperator();
+    auto* mathMLBlock = dynamicDowncast<RenderMathMLBlock>(numerator());
+    return mathMLBlock ? mathMLBlock->unembellishedOperator() : nullptr;
 }
 
 void RenderMathMLFraction::computePreferredLogicalWidths()
@@ -247,6 +248,11 @@ void RenderMathMLFraction::layoutBlock(bool relayoutChildren, LayoutUnit)
     LayoutPoint denominatorLocation(horizontalOffset(denominator(), element().denominatorAlignment()), verticalOffset);
     denominator().setLocation(denominatorLocation);
 
+    if (numerator().isOutOfFlowPositioned())
+        numerator().containingBlock()->insertPositionedObject(numerator());
+    if (denominator().isOutOfFlowPositioned())
+        denominator().containingBlock()->insertPositionedObject(denominator());
+
     verticalOffset += denominator().logicalHeight(); // This is the bottom of our renderer.
     setLogicalHeight(verticalOffset);
 
@@ -261,7 +267,7 @@ void RenderMathMLFraction::paint(PaintInfo& info, const LayoutPoint& paintOffset
 {
     RenderMathMLBlock::paint(info, paintOffset);
     LayoutUnit thickness = lineThickness();
-    if (info.context().paintingDisabled() || info.phase != PaintPhase::Foreground || style().visibility() != Visibility::Visible || !isValid() || !thickness)
+    if (info.context().paintingDisabled() || info.phase != PaintPhase::Foreground || style().usedVisibility() != Visibility::Visible || !isValid() || !thickness)
         return;
 
     IntPoint adjustedPaintOffset = roundedIntPoint(paintOffset + location() + LayoutPoint(0_lu, fractionAscent() - mathAxisHeight()));

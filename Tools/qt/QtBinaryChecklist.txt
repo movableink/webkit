@@ -82,36 +82,36 @@ include/QtWebKitWidgets/qwebframe.h
 include/QtWebKitWidgets/qwebinspector.h
 include/QtWebKitWidgets/qwebpage.h
 include/QtWebKitWidgets/qwebview.h
-lib/cmake/Qt5WebKit/Qt5WebKitConfig.cmake
-lib/cmake/Qt5WebKit/Qt5WebKitConfigVersion.cmake
-lib/cmake/Qt5WebKit/WebKitTargets.cmake
-lib/cmake/Qt5WebKitWidgets/Qt5WebKitWidgetsConfig.cmake
-lib/cmake/Qt5WebKitWidgets/Qt5WebKitWidgetsConfigVersion.cmake
-lib/cmake/Qt5WebKitWidgets/Qt5WebKitWidgetsTargets.cmake
+lib/cmake/Qt6WebKit/Qt6WebKitConfig.cmake
+lib/cmake/Qt6WebKit/Qt6WebKitConfigVersion.cmake
+lib/cmake/Qt6WebKit/WebKitTargets.cmake
+lib/cmake/Qt6WebKitWidgets/Qt6WebKitWidgetsConfig.cmake
+lib/cmake/Qt6WebKitWidgets/Qt6WebKitWidgetsConfigVersion.cmake
+lib/cmake/Qt6WebKitWidgets/Qt6WebKitWidgetsTargets.cmake
 mkspecs/modules/qt_lib_webkit.pri
 mkspecs/modules/qt_lib_webkit_private.pri
 mkspecs/modules/qt_lib_webkitwidgets.pri
 mkspecs/modules/qt_lib_webkitwidgets_private.pri
 
 {% if release %}
-    lib/cmake/Qt5WebKit/WebKitTargets-release.cmake
-    lib/cmake/Qt5WebKitWidgets/Qt5WebKitWidgetsTargets-release.cmake
+    lib/cmake/Qt6WebKit/WebKitTargets-release.cmake
+    lib/cmake/Qt6WebKitWidgets/Qt6WebKitWidgetsTargets-release.cmake
 {% endif %}
 
 {% if os=="linux" %}
     {% if release %}
-        lib/libQt5WebKit.so
-        lib/libQt5WebKit.so.{{major}}
-        lib/libQt5WebKit.so.{{version}}
-        lib/libQt5WebKitWidgets.so
-        lib/libQt5WebKitWidgets.so.{{major}}
-        lib/libQt5WebKitWidgets.so.{{version}}
+        lib/libQt6WebKit.so
+        lib/libQt6WebKit.so.{{major}}
+        lib/libQt6WebKit.so.{{version}}
+        lib/libQt6WebKitWidgets.so
+        lib/libQt6WebKitWidgets.so.{{major}}
+        lib/libQt6WebKitWidgets.so.{{version}}
         libexec/QtWebPluginProcess
     {% endif %}
 
     {% if force_debug_info %}
-        lib/libQt5WebKit.so.{{version}}.debug
-        lib/libQt5WebKitWidgets.so.{{version}}.debug
+        lib/libQt6WebKit.so.{{version}}.debug
+        lib/libQt6WebKitWidgets.so.{{version}}.debug
     {% endif %}
 
 {% elif os=="macos" %}
@@ -228,20 +228,20 @@ mkspecs/modules/qt_lib_webkitwidgets_private.pri
     {% endif %}
 
     {% if release %}
-        bin/Qt5WebKit.dll
-        bin/Qt5WebKitWidgets.dll
+        bin/Qt6WebKit.dll
+        bin/Qt6WebKitWidgets.dll
 
         {% if force_debug_info and toolchain=="msvc" %}
-            bin/Qt5WebKit.pdb
-            bin/Qt5WebKitWidgets.pdb
+            bin/Qt6WebKit.pdb
+            bin/Qt6WebKitWidgets.pdb
         {% endif %}
 
         {% if toolchain=="msvc" %}
-            lib/Qt5WebKit.lib
-            lib/Qt5WebKitWidgets.lib
+            lib/Qt6WebKit.lib
+            lib/Qt6WebKitWidgets.lib
         {% elif toolchain=="mingw" %}
-            lib/libQt5WebKitWidgets.a
-            lib/libQt5WebKit.a
+            lib/libQt6WebKitWidgets.a
+            lib/libQt6WebKit.a
         {% endif %}
 
         qml/QtWebKit/experimental/qmlwebkitexperimentalplugin.dll
@@ -249,22 +249,22 @@ mkspecs/modules/qt_lib_webkitwidgets_private.pri
     {% endif %}
 
     {% if debug %}
-        lib/cmake/Qt5WebKit/WebKitTargets-debug.cmake
-        lib/cmake/Qt5WebKitWidgets/Qt5WebKitWidgetsTargets-debug.cmake
+        lib/cmake/Qt6WebKit/WebKitTargets-debug.cmake
+        lib/cmake/Qt6WebKitWidgets/Qt6WebKitWidgetsTargets-debug.cmake
 
         {% if toolchain=="msvc" %}
-            bin/Qt5WebKitWidgetsd.dll
-            bin/Qt5WebKitd.dll
+            bin/Qt6WebKitWidgetsd.dll
+            bin/Qt6WebKitd.dll
         {% endif %}
 
         {% if force_debug_info and toolchain=="msvc" %}
-            bin/Qt5WebKitd.pdb
-            bin/Qt5WebKitWidgetsd.pdb
+            bin/Qt6WebKitd.pdb
+            bin/Qt6WebKitWidgetsd.pdb
         {% endif %}
 
         {% if toolchain=="msvc" %}
-            lib/Qt5WebKitd.lib
-            lib/Qt5WebKitWidgetsd.lib
+            lib/Qt6WebKitd.lib
+            lib/Qt6WebKitWidgetsd.lib
             qml/QtWebKit/experimental/qmlwebkitexperimentalplugind.dll
             qml/QtWebKit/qmlwebkitplugind.dll
         {% endif %}
@@ -285,6 +285,6 @@ mkspecs/modules/qt_lib_webkitwidgets_private.pri
 {% endif %}
 
 {% if os=="linux" or os=="windows" %}
-    lib/pkgconfig/Qt5WebKit.pc
-    lib/pkgconfig/Qt5WebKitWidgets.pc
+    lib/pkgconfig/Qt6WebKit.pc
+    lib/pkgconfig/Qt6WebKitWidgets.pc
 {% endif %}

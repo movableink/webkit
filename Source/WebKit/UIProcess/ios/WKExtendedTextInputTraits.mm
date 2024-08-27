@@ -33,8 +33,29 @@
 @implementation WKExtendedTextInputTraits {
     RetainPtr<UITextContentType> _textContentType;
     RetainPtr<UIColor> _insertionPointColor;
-    RetainPtr<UIColor> _selectionBarColor;
+    RetainPtr<UIColor> _selectionHandleColor;
     RetainPtr<UIColor> _selectionHighlightColor;
+    RetainPtr<UITextInputPasswordRules> _passwordRules;
+}
+
+- (instancetype)init
+{
+    if (!(self = [super init]))
+        return nil;
+
+    self.typingAdaptationEnabled = YES;
+    self.autocapitalizationType = UITextAutocapitalizationTypeSentences;
+    return self;
+}
+
+- (void)setPasswordRules:(UITextInputPasswordRules *)rules
+{
+    _passwordRules = adoptNS(rules.copy);
+}
+
+- (UITextInputPasswordRules *)passwordRules
+{
+    return adoptNS([_passwordRules copy]).autorelease();
 }
 
 - (void)setTextContentType:(UITextContentType)type
@@ -44,7 +65,7 @@
 
 - (UITextContentType)textContentType
 {
-    return _textContentType.get();
+    return adoptNS([_textContentType copy]).autorelease();
 }
 
 - (void)setInsertionPointColor:(UIColor *)color
@@ -57,14 +78,14 @@
     return _insertionPointColor.get();
 }
 
-- (void)setSelectionBarColor:(UIColor *)color
+- (void)setSelectionHandleColor:(UIColor *)color
 {
-    _selectionBarColor = color;
+    _selectionHandleColor = color;
 }
 
-- (UIColor *)selectionBarColor
+- (UIColor *)selectionHandleColor
 {
-    return _selectionBarColor.get();
+    return _selectionHandleColor.get();
 }
 
 - (void)setSelectionHighlightColor:(UIColor *)color
@@ -82,9 +103,45 @@
     static constexpr auto selectionHighlightAlphaComponent = 0.2;
     BOOL shouldUseTintColor = tintColor && tintColor != UIColor.systemBlueColor;
     self.insertionPointColor = shouldUseTintColor ? tintColor : nil;
-    self.selectionBarColor = shouldUseTintColor ? tintColor : nil;
+    self.selectionHandleColor = shouldUseTintColor ? tintColor : nil;
     self.selectionHighlightColor = shouldUseTintColor ? [tintColor colorWithAlphaComponent:selectionHighlightAlphaComponent] : nil;
 }
+
+- (void)restoreDefaultValues
+{
+    self.typingAdaptationEnabled = YES;
+#if HAVE(INLINE_PREDICTIONS)
+    self.inlinePredictionType = UITextInlinePredictionTypeDefault;
+#endif
+    self.autocapitalizationType = UITextAutocapitalizationTypeSentences;
+    self.autocorrectionType = UITextAutocorrectionTypeDefault;
+    self.spellCheckingType = UITextSpellCheckingTypeDefault;
+    self.smartQuotesType = UITextSmartQuotesTypeDefault;
+    self.smartDashesType = UITextSmartDashesTypeDefault;
+    self.keyboardType = UIKeyboardTypeDefault;
+    self.keyboardAppearance = UIKeyboardAppearanceDefault;
+    self.returnKeyType = UIReturnKeyDefault;
+    self.secureTextEntry = NO;
+    self.singleLineDocument = NO;
+    self.textContentType = nil;
+    self.passwordRules = nil;
+    self.smartInsertDeleteType = UITextSmartInsertDeleteTypeDefault;
+    self.enablesReturnKeyAutomatically = NO;
+    self.insertionPointColor = nil;
+    self.selectionHandleColor = nil;
+    self.selectionHighlightColor = nil;
+
+#if ENABLE(WRITING_TOOLS)
+    [self restoreDefaultWritingToolsBehaviorValue];
+#endif
+}
+
+#if ENABLE(WRITING_TOOLS)
+- (void)restoreDefaultWritingToolsBehaviorValue
+{
+    self.writingToolsBehavior = UIWritingToolsBehaviorLimited;
+}
+#endif
 
 @end
 

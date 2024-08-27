@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "AccessibilityController.h"
 #include "EventSendingController.h"
 #include "GCController.h"
 #include "TestRunner.h"
@@ -34,12 +35,9 @@
 #include <WebKit/WKRetainPtr.h>
 #include <sstream>
 #include <wtf/Forward.h>
+#include <wtf/Function.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
-
-#if ENABLE(ACCESSIBILITY)
-#include "AccessibilityController.h"
-#endif
 
 namespace WTR {
 
@@ -58,9 +56,7 @@ public:
     GCController* gcController() { return m_gcController.get(); }
     EventSendingController* eventSendingController() { return m_eventSendingController.get(); }
     TextInputController* textInputController() { return m_textInputController.get(); }
-#if ENABLE(ACCESSIBILITY)
     AccessibilityController* accessibilityController() { return m_accessibilityController.get(); }
-#endif
 
     InjectedBundlePage* page() const;
     WKBundlePageRef pageRef() const;
@@ -68,7 +64,7 @@ public:
 
     void dumpBackForwardListsForAllPages(StringBuilder&);
 
-    void done();
+    void done(bool forceRepaint);
     void setAudioResult(WKDataRef audioData) { m_audioResult = audioData; }
     void setPixelResult(WKImageRef image) { m_pixelResult = image; m_pixelResultIsPending = false; }
     void setPixelResultIsPending(bool isPending) { m_pixelResultIsPending = isPending; }
@@ -86,13 +82,6 @@ public:
     void outputText(StringView, IsFinalTestOutput = IsFinalTestOutput::No);
     void dumpToStdErr(const String&);
     void postNewBeforeUnloadReturnValue(bool);
-    void postAddChromeInputField();
-    void postRemoveChromeInputField();
-    void postSetTextInChromeInputField(const String&);
-    void postSelectChromeInputField();
-    void postGetSelectedTextInChromeInputField();
-    void postFocusWebView();
-    void postSetBackingScaleFactor(double);
     void postSetWindowIsKey(bool);
     void postSetViewSize(double width, double height);
     void postSimulateWebNotificationClick(WKDataRef notificationID);
@@ -189,9 +178,7 @@ private:
     WKRetainPtr<WKBundleRef> m_bundle;
     Vector<std::unique_ptr<InjectedBundlePage>> m_pages;
 
-#if ENABLE(ACCESSIBILITY)
     RefPtr<AccessibilityController> m_accessibilityController;
-#endif
     RefPtr<TestRunner> m_testRunner;
     RefPtr<GCController> m_gcController;
     RefPtr<EventSendingController> m_eventSendingController;
@@ -282,5 +269,8 @@ template<typename T> void postSynchronousPageMessage(const char* name, const WKR
         WKBundlePagePostSynchronousMessageForTesting(page, toWK(name).get(), value.get(), nullptr);
     }
 }
+
+void postMessageWithAsyncReply(JSContextRef, const char* messageName, JSValueRef callback);
+void postMessageWithAsyncReply(JSContextRef, const char* messageName, WKRetainPtr<WKTypeRef> value, JSValueRef callback);
 
 } // namespace WTR

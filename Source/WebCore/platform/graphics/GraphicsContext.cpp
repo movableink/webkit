@@ -107,6 +107,15 @@ void GraphicsContext::unwindStateStack(unsigned count)
     }
 }
 
+FloatSize GraphicsContext::platformShadowOffset(const FloatSize& shadowOffset) const
+{
+#if USE(CG)
+    if (shadowsIgnoreTransforms())
+        return { shadowOffset.width(), -shadowOffset.height() };
+#endif
+    return shadowOffset;
+}
+
 void GraphicsContext::mergeLastChanges(const GraphicsContextState& state, const std::optional<GraphicsContextState>& lastDrawingState)
 {
     m_state.mergeLastChanges(state, lastDrawingState);
@@ -155,6 +164,11 @@ void GraphicsContext::drawRaisedEllipse(const FloatRect& rect, const Color& elli
 #endif
 
 void GraphicsContext::beginTransparencyLayer(float)
+{
+    ++m_transparencyLayerCount;
+}
+
+void GraphicsContext::beginTransparencyLayer(CompositeOperator, BlendMode)
 {
     ++m_transparencyLayerCount;
 }
@@ -254,7 +268,7 @@ IntSize GraphicsContext::compatibleImageBufferSize(const FloatSize& size) const
 RefPtr<ImageBuffer> GraphicsContext::createImageBuffer(const FloatSize& size, float resolutionScale, const DestinationColorSpace& colorSpace, std::optional<RenderingMode> renderingMode, std::optional<RenderingMethod>) const
 {
     auto bufferOptions = bufferOptionsForRendingMode(renderingMode.value_or(this->renderingMode()));
-    return ImageBuffer::create(size, RenderingPurpose::Unspecified, resolutionScale, colorSpace, PixelFormat::BGRA8, bufferOptions);
+    return ImageBuffer::create(size, RenderingPurpose::Unspecified, resolutionScale, colorSpace, ImageBufferPixelFormat::BGRA8, bufferOptions);
 }
 
 RefPtr<ImageBuffer> GraphicsContext::createScaledImageBuffer(const FloatSize& size, const FloatSize& scale, const DestinationColorSpace& colorSpace, std::optional<RenderingMode> renderingMode, std::optional<RenderingMethod> renderingMethod) const
@@ -310,9 +324,9 @@ RefPtr<ImageBuffer> GraphicsContext::createAlignedImageBuffer(const FloatRect& r
     return createScaledImageBuffer(rect, scaleFactor(), colorSpace, renderingMode(), renderingMethod);
 }
 
-void GraphicsContext::drawNativeImage(NativeImage& image, const FloatSize& imageSize, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions options)
+void GraphicsContext::drawNativeImage(NativeImage& image, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions options)
 {
-    image.draw(*this, imageSize, destination, source, options);
+    image.draw(*this, destination, source, options);
 }
 
 void GraphicsContext::drawSystemImage(SystemImage& systemImage, const FloatRect& destinationRect)
@@ -378,7 +392,7 @@ void GraphicsContext::drawImageBuffer(ImageBuffer& image, const FloatRect& desti
     FloatRect sourceScaled = source;
     sourceScaled.scale(image.resolutionScale());
     if (auto nativeImage = nativeImageForDrawing(image))
-        drawNativeImageInternal(*nativeImage, image.backendSize(), destination, sourceScaled, options);
+        drawNativeImageInternal(*nativeImage, destination, sourceScaled, options);
 }
 
 void GraphicsContext::drawConsumingImageBuffer(RefPtr<ImageBuffer> image, const FloatPoint& destination, ImagePaintingOptions imagePaintingOptions)
@@ -405,9 +419,8 @@ void GraphicsContext::drawConsumingImageBuffer(RefPtr<ImageBuffer> image, const 
     InterpolationQualityMaintainer interpolationQualityForThisScope(*this, options.interpolationQuality());
     FloatRect scaledSource = source;
     scaledSource.scale(image->resolutionScale());
-    auto backendSize = image->backendSize();
     if (auto nativeImage = ImageBuffer::sinkIntoNativeImage(WTFMove(image)))
-        drawNativeImageInternal(*nativeImage, backendSize, destination, scaledSource, options);
+        drawNativeImageInternal(*nativeImage, destination, scaledSource, options);
 }
 
 void GraphicsContext::drawFilteredImageBuffer(ImageBuffer* sourceImage, const FloatRect& sourceImageRect, Filter& filter, FilterResults& results)

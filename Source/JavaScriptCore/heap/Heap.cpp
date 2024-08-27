@@ -179,7 +179,7 @@ SimpleStats& timingStats(const char* name, CollectionScope scope)
 
 class TimingScope {
 public:
-    TimingScope(std::optional<CollectionScope> scope, const char* name)
+    TimingScope(std::optional<CollectionScope> scope, ASCIILiteral name)
         : m_scope(scope)
         , m_name(name)
     {
@@ -187,7 +187,7 @@ public:
             m_before = MonotonicTime::now();
     }
     
-    TimingScope(JSC::Heap& heap, const char* name)
+    TimingScope(JSC::Heap& heap, ASCIILiteral name)
         : TimingScope(heap.collectionScope(), name)
     {
     }
@@ -215,7 +215,7 @@ public:
 private:
     std::optional<CollectionScope> m_scope;
     MonotonicTime m_before;
-    const char* m_name;
+    ASCIILiteral m_name;
 };
 
 } // anonymous namespace
@@ -228,9 +228,9 @@ public:
     {
     }
 
-    const char* name() const final
+    ASCIILiteral name() const final
     {
-        return "JSC Heap Collector Thread";
+        return "JSC Heap Collector Thread"_s;
     }
     
 private:
@@ -363,12 +363,11 @@ Heap::Heap(VM& vm, HeapType heapType)
     // AlignedMemoryAllocators
     , fastMallocAllocator(makeUnique<FastMallocAlignedMemoryAllocator>())
     , primitiveGigacageAllocator(makeUnique<GigacageAlignedMemoryAllocator>(Gigacage::Primitive))
-    , jsValueGigacageAllocator(makeUnique<GigacageAlignedMemoryAllocator>(Gigacage::JSValue))
 
     // Subspaces
     , primitiveGigacageAuxiliarySpace("Primitive Gigacage Auxiliary", *this, auxiliaryHeapCellType, primitiveGigacageAllocator.get()) // Hash:0x3e7cd762
-    , jsValueGigacageAuxiliarySpace("JSValue Gigacage Auxiliary", *this, auxiliaryHeapCellType, jsValueGigacageAllocator.get()) // Hash:0x241e946
-    , immutableButterflyJSValueGigacageAuxiliarySpace("ImmutableButterfly Gigacage JSCellWithIndexingHeader", *this, immutableButterflyHeapCellType, jsValueGigacageAllocator.get()) // Hash:0x7a945300
+    , auxiliarySpace("Auxiliary", *this, auxiliaryHeapCellType, fastMallocAllocator.get()) // Hash:0x241e946
+    , immutableButterflyAuxiliarySpace("ImmutableButterfly JSCellWithIndexingHeader", *this, immutableButterflyHeapCellType, fastMallocAllocator.get()) // Hash:0x7a945300
     , cellSpace("JSCell", *this, cellHeapCellType, fastMallocAllocator.get()) // Hash:0xadfb5a79
     , variableSizedCellSpace("Variable Sized JSCell", *this, cellHeapCellType, fastMallocAllocator.get()) // Hash:0xbcd769cc
     , destructibleObjectSpace("JSDestructibleObject", *this, destructibleObjectHeapCellType, fastMallocAllocator.get()) // Hash:0x4f5ed7a9
@@ -716,10 +715,7 @@ void Heap::finalizeMarkedUnconditionalFinalizers(CellSet& cellSet, CollectionSco
 
 void Heap::finalizeUnconditionalFinalizers()
 {
-    VM& vm = this->vm();
     CollectionScope collectionScope = this->collectionScope().value_or(CollectionScope::Full);
-
-    vm.builtinExecutables()->finalizeUnconditionally(collectionScope);
 
     {
         // We run this before CodeBlock's unconditional finalizer since CodeBlock looks at the owner executable's installed CodeBlock in its finalizeUnconditionally.
@@ -760,8 +756,8 @@ void Heap::finalizeUnconditionalFinalizers()
         finalizeMarkedUnconditionalFinalizers<JSFinalizationRegistry>(*m_finalizationRegistrySpace, collectionScope);
 
 #if ENABLE(WEBASSEMBLY)
-    if (m_webAssemblyModuleSpace)
-        finalizeMarkedUnconditionalFinalizers<JSWebAssemblyModule>(*m_webAssemblyModuleSpace, collectionScope);
+    if (m_webAssemblyInstanceSpace)
+        finalizeMarkedUnconditionalFinalizers<JSWebAssemblyInstance>(*m_webAssemblyInstanceSpace, collectionScope);
 #endif
 }
 
@@ -863,7 +859,7 @@ void Heap::gatherScratchBufferRoots(ConservativeRoots& roots)
 
 void Heap::beginMarking()
 {
-    TimingScope timingScope(*this, "Heap::beginMarking");
+    TimingScope timingScope(*this, "Heap::beginMarking"_s);
     m_jitStubRoutines->clearMarks();
     m_objectSpace.beginMarking();
     vm().beginMarking();
@@ -973,7 +969,8 @@ size_t Heap::extraMemorySize()
     checkedTotal += m_arrayBuffers.size();
     size_t total = UNLIKELY(checkedTotal.hasOverflowed()) ? std::numeric_limits<size_t>::max() : checkedTotal.value();
 
-    ASSERT(m_objectSpace.capacity() >= m_objectSpace.size());
+    // It would be nice to have `ASSERT(m_objectSpace.capacity() >= m_objectSpace.size());` here but `m_objectSpace.size()`
+    // requires having heap access which thread might not. Specifically, we might be called from the resource usage thread.
     return std::min(total, std::numeric_limits<size_t>::max() - m_objectSpace.capacity());
 }
 
@@ -1083,10 +1080,10 @@ void Heap::deleteAllCodeBlocks(DeleteAllCodeEffort effort)
         // points into a CodeBlock that could be dead. The IC will still succeed because
         // it uses a callee check, but then it will call into dead code.
         HeapIterationScope heapIterationScope(*this);
-        if (m_webAssemblyModuleSpace) {
-            m_webAssemblyModuleSpace->forEachLiveCell([&] (HeapCell* cell, HeapCell::Kind kind) {
+        if (m_webAssemblyInstanceSpace) {
+            m_webAssemblyInstanceSpace->forEachLiveCell([&] (HeapCell* cell, HeapCell::Kind kind) {
                 ASSERT_UNUSED(kind, kind == HeapCell::JSCell);
-                static_cast<JSWebAssemblyModule*>(cell)->clearJSCallICs(vm);
+                static_cast<JSWebAssemblyInstance*>(cell)->clearJSCallICs(vm);
             });
         }
     }
@@ -1512,7 +1509,7 @@ NEVER_INLINE bool Heap::runFixpointPhase(GCConductor conn)
             [] (const char* a, const char* b) -> bool {
                 return strcmp(a, b) < 0;
             },
-            ":", " ");
+            ":"_s, " "_s);
         
         dataLog("v=", bytesVisited() / 1024, "kb (", perVisitorDump, ") o=", m_opaqueRoots.size(), " b=", m_barriersExecuted, " ");
     }
@@ -1671,6 +1668,10 @@ NEVER_INLINE bool Heap::runEndPhase(GCConductor conn)
         finalizeUnconditionalFinalizers(); // We rely on these unconditional finalizers running before clearCurrentlyExecuting since CodeBlock's finalizer relies on querying currently executing.
         removeDeadCompilerWorklistEntries();
     }
+
+    // Keep in mind that we may use AtomStringTable, and this is totally OK since the main thread is suspended.
+    // End phase itself can run on main thread or concurrent collector thread. But whenever running this,
+    // mutator is suspended so there is no race condition.
     deleteUnmarkedCompiledCode();
 
     notifyIncrementalSweeper();
@@ -2365,7 +2366,7 @@ void Heap::sweepArrayBuffers()
 
 void Heap::snapshotUnswept()
 {
-    TimingScope timingScope(*this, "Heap::snapshotUnswept");
+    TimingScope timingScope(*this, "Heap::snapshotUnswept"_s);
     m_objectSpace.snapshotUnswept();
 }
 
@@ -2585,6 +2586,11 @@ void Heap::setFullActivityCallback(RefPtr<GCActivityCallback>&& callback)
 void Heap::setEdenActivityCallback(RefPtr<GCActivityCallback>&& callback)
 {
     m_edenActivityCallback = WTFMove(callback);
+}
+
+void Heap::disableStopIfNecessaryTimer()
+{
+    m_stopIfNecessaryTimer->disable();
 }
 
 bool Heap::useGenerationalGC()
@@ -2865,7 +2871,7 @@ void Heap::addCoreConstraints()
             if (shouldNotProduceWork || m_isMarkingForGCVerifier)
                 return;
             
-            TimingScope preConvergenceTimingScope(*this, "Constraint: conservative scan");
+            TimingScope preConvergenceTimingScope(*this, "Constraint: conservative scan"_s);
             m_objectSpace.prepareForConservativeScan();
             m_jitStubRoutines->prepareForConservativeScan();
 
@@ -2884,18 +2890,16 @@ void Heap::addCoreConstraints()
                     m_verifierSlotVisitor->append(conservativeRoots);
                 }
             }
-            if (Options::useJIT()) {
-                // JITStubRoutines must be visited after scanning ConservativeRoots since JITStubRoutines depend on the hook executed during gathering ConservativeRoots.
-                SetRootMarkReasonScope rootScope(visitor, RootMarkReason::JITStubRoutines);
+
+            // JITStubRoutines must be visited after scanning ConservativeRoots since JITStubRoutines depend on the hook executed during gathering ConservativeRoots.
+            SetRootMarkReasonScope rootScope(visitor, RootMarkReason::JITStubRoutines);
+            m_jitStubRoutines->traceMarkedStubRoutines(visitor);
+            if (UNLIKELY(m_verifierSlotVisitor)) {
+                // It's important to cast m_verifierSlotVisitor to an AbstractSlotVisitor here
+                // so that we'll call the AbstractSlotVisitor version of traceMarkedStubRoutines().
+                AbstractSlotVisitor& visitor = *m_verifierSlotVisitor;
                 m_jitStubRoutines->traceMarkedStubRoutines(visitor);
-                if (UNLIKELY(m_verifierSlotVisitor)) {
-                    // It's important to cast m_verifierSlotVisitor to an AbstractSlotVisitor here
-                    // so that we'll call the AbstractSlotVisitor version of traceMarkedStubRoutines().
-                    AbstractSlotVisitor& visitor = *m_verifierSlotVisitor;
-                    m_jitStubRoutines->traceMarkedStubRoutines(visitor);
-                }
             }
-            
             lastVersion = m_phaseVersion;
         })),
         ConstraintVolatility::GreyedByExecution);
@@ -3083,7 +3087,7 @@ void Heap::notifyIsSafeToCollect()
     
     if (Options::collectContinuously()) {
         m_collectContinuouslyThread = Thread::create(
-            "JSC DEBUG Continuous GC",
+            "JSC DEBUG Continuous GC"_s,
             [this] () {
                 MonotonicTime initialTime = MonotonicTime::now();
                 Seconds period = Seconds::fromMilliseconds(Options::collectContinuouslyPeriodMS());

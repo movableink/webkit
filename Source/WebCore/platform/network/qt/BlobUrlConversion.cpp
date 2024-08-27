@@ -42,7 +42,8 @@ static bool appendBlobResolved(Vector<char>& out, const URL& url, const BlobRegi
     for (; it != itend; ++it) {
         const BlobDataItem& blobItem = *it;
         if (blobItem.type() == BlobDataItem::Type::Data) {
-            if (!out.tryAppend(reinterpret_cast<const char*>(blobItem.data()->data()) + blobItem.offset(), blobItem.length()))
+            ASSERT(blobItem.data());
+            if (!out.tryAppend(blobItem.data()->span().subspan(blobItem.offset(), blobItem.length())))
                 return false;
         } else if (blobItem.type() == BlobDataItem::Type::File) {
             // File types are not allowed here, so just ignore it.

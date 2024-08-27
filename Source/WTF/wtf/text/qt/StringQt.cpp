@@ -26,6 +26,7 @@
 #include "config.h"
 
 #include <QString>
+#include <QStringView>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/WTFString.h>
 
@@ -36,14 +37,7 @@ String::String(const QString& qstr)
 {
     if (qstr.isNull())
         return;
-    m_impl = StringImpl::create(reinterpret_cast_ptr<const UChar*>(qstr.constData()), qstr.length());
-}
-
-String::String(const QStringRef& ref)
-{
-    if (!ref.string())
-        return;
-    m_impl = StringImpl::create(reinterpret_cast_ptr<const UChar*>(ref.unicode()), ref.length());
+    m_impl = StringImpl::create({ reinterpret_cast_ptr<const UChar*>(qstr.constData()), static_cast<std::size_t>(qstr.length()) });
 }
 
 String::operator QString() const
@@ -52,11 +46,9 @@ String::operator QString() const
         return QString();
 
     if (is8Bit())
-        return QString::fromLatin1(reinterpret_cast<const char*>(characters8()), length());
+        return QString::fromLatin1(reinterpret_cast<const char*>(span8().data()), span8().size());
 
-    return QString(reinterpret_cast<const QChar*>(characters16()), length());
+    return QString(reinterpret_cast<const QChar*>(span16().data()), span16().size());
 }
 
 }
-
-// vim: ts=4 sw=4 et

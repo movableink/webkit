@@ -28,18 +28,17 @@ namespace WebCore {
 
 class ScrollbarThemeQStyle;
 
-class Page;
 class QStyleFacade;
 struct QStyleFacadeOption;
 
-typedef QStyleFacade* (*QtStyleFactoryFunction)(Page*);
+typedef QStyleFacade* (*QtStyleFactoryFunction)();
 
 class RenderThemeQStyle final : public RenderThemeQt {
 private:
     friend class StylePainterQStyle;
 
 public:
-    RenderThemeQStyle(Page*);
+    RenderThemeQStyle();
     ~RenderThemeQStyle();
 
     static RenderTheme& singleton();

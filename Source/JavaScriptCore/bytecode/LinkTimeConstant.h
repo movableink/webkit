@@ -47,12 +47,15 @@ class JSGlobalObject;
     v(setPrototypeDirect, nullptr) \
     v(setPrototypeDirectOrThrow, nullptr) \
     v(copyDataProperties, nullptr) \
+    v(cloneObject, nullptr) \
     v(enqueueJob, nullptr) \
     v(makeTypeError, nullptr) \
     v(AggregateError, nullptr) \
     v(typedArrayLength, nullptr) \
     v(typedArrayContentType, nullptr) \
     v(typedArrayGetOriginalConstructor, nullptr) \
+    v(toIntegerOrInfinity, nullptr) \
+    v(toLength, nullptr) \
     v(isTypedArrayView, nullptr) \
     v(isSharedTypedArrayView, nullptr) \
     v(isResizableOrGrowableSharedTypedArrayView, nullptr) \
@@ -65,7 +68,6 @@ class JSGlobalObject;
     v(BuiltinDescribe, nullptr) \
     v(RegExp, nullptr) \
     v(min, nullptr) \
-    v(trunc, nullptr) \
     v(Promise, nullptr) \
     v(InternalPromise, nullptr) \
     v(defaultPromiseThen, nullptr) \
@@ -79,16 +81,19 @@ class JSGlobalObject;
     v(Map, nullptr) \
     v(importMapStatus, nullptr) \
     v(importInRealm, nullptr) \
+    v(evalFunction, nullptr) \
     v(evalInRealm, nullptr) \
     v(moveFunctionToRealm, nullptr) \
     v(isConstructor, nullptr) \
     v(sameValue, nullptr) \
     v(regExpProtoFlagsGetter, nullptr) \
     v(regExpProtoGlobalGetter, nullptr) \
+    v(regExpProtoHasIndicesGetter, nullptr) \
     v(regExpProtoIgnoreCaseGetter, nullptr) \
     v(regExpProtoMultilineGetter, nullptr) \
     v(regExpProtoSourceGetter, nullptr) \
     v(regExpProtoStickyGetter, nullptr) \
+    v(regExpProtoDotAllGetter, nullptr) \
     v(regExpProtoUnicodeGetter, nullptr) \
     v(regExpProtoUnicodeSetsGetter, nullptr) \
     v(regExpBuiltinExec, nullptr) \

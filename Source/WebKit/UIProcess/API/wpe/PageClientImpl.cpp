@@ -41,7 +41,7 @@
 #include <WebCore/DOMPasteAccess.h>
 #include <WebCore/NotImplemented.h>
 
-#if ENABLE(ACCESSIBILITY)
+#if USE(ATK)
 #include <atk/atk.h>
 #endif
 
@@ -295,7 +295,7 @@ void PageClientImpl::updateAcceleratedCompositingMode(const LayerTreeContext& co
 #endif
 }
 
-void PageClientImpl::didFinishLoadingDataForCustomContentProvider(const String&, const IPC::DataReference&)
+void PageClientImpl::didFinishLoadingDataForCustomContentProvider(const String&, std::span<const uint8_t>)
 {
 }
 
@@ -433,12 +433,12 @@ void PageClientImpl::beganExitFullScreen(const WebCore::IntRect& /* initialFrame
 
 #endif // ENABLE(FULLSCREEN_API)
 
-void PageClientImpl::requestDOMPasteAccess(WebCore::DOMPasteAccessCategory, const WebCore::IntRect&, const String&, CompletionHandler<void(WebCore::DOMPasteAccessResponse)>&& completionHandler)
+void PageClientImpl::requestDOMPasteAccess(WebCore::DOMPasteAccessCategory, WebCore::DOMPasteRequiresInteraction, const WebCore::IntRect&, const String&, CompletionHandler<void(WebCore::DOMPasteAccessResponse)>&& completionHandler)
 {
     completionHandler(WebCore::DOMPasteAccessResponse::DeniedForGesture);
 }
 
-#if ENABLE(ACCESSIBILITY)
+#if USE(ATK)
 AtkObject* PageClientImpl::accessible()
 {
     return ATK_OBJECT(m_view.accessible());
@@ -468,6 +468,11 @@ void PageClientImpl::selectionDidChange()
 WebKitWebResourceLoadManager* PageClientImpl::webResourceLoadManager()
 {
     return m_view.webResourceLoadManager();
+}
+
+void PageClientImpl::callAfterNextPresentationUpdate(CompletionHandler<void()>&& callback)
+{
+    m_view.callAfterNextPresentationUpdate(WTFMove(callback));
 }
 
 } // namespace WebKit

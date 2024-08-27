@@ -25,6 +25,7 @@
 #include <QMutableListIterator>
 #include <QTouchEvent>
 #include <QWheelEvent>
+#include <private/qeventpoint_p.h>
 #include <qpa/qwindowsysteminterface.h>
 
 using namespace WebKit;
@@ -39,34 +40,32 @@ QWebKitTest::~QWebKitTest()
 {
 }
 
-static QTouchEvent::TouchPoint touchPoint(qreal x, qreal y)
+static QMutableEventPoint touchPoint(qreal x, qreal y)
 {
     QPointF localPos(x, y);
 
-    QTouchEvent::TouchPoint point;
+    QMutableEventPoint point;
     point.setId(1);
-    point.setLastPos(localPos);
-    QRectF touchRect(0, 0, 40, 40);
-    touchRect.moveCenter(localPos);
-    point.setRect(touchRect);
+    point.setEllipseDiameters({40, 40});
+    point.setPosition(localPos);
     point.setPressure(1);
 
     return point;
 }
 
-bool QWebKitTest::sendTouchEvent(QQuickWebView* window, QEvent::Type type, const QList<QTouchEvent::TouchPoint>& points, ulong timestamp)
+bool QWebKitTest::sendTouchEvent(QQuickWebView* window, QEvent::Type type, const QList<QEventPoint>& points, ulong timestamp)
 {
     ASSERT(window);
 
-    static QTouchDevice* device = 0;
+    static QPointingDevice* device = nullptr;
     if (!device) {
-        device = new QTouchDevice;
-        device->setType(QTouchDevice::TouchScreen);
-        QWindowSystemInterface::registerTouchDevice(device);
+        device = new QPointingDevice;
+        device->setType(QInputDevice::DeviceType::TouchScreen);
+        QWindowSystemInterface::registerInputDevice(device);
     }
 
-    Qt::TouchPointStates touchPointStates = 0;
-    foreach (const QTouchEvent::TouchPoint& touchPoint, points)
+    QEventPoint::States touchPointStates{};
+    Q_FOREACH (const QEventPoint& touchPoint, points)
         touchPointStates |= touchPoint.state();
 
     QTouchEvent event(type, device, Qt::NoModifier, touchPointStates, points);
@@ -90,14 +89,13 @@ bool QWebKitTest::touchTap(QObject* item, qreal x, qreal y, int delay)
     // FIXME: implement delay using QTest::qWait() or similar.
     Q_UNUSED(delay);
 
-    QList<QTouchEvent::TouchPoint> points;
-    points.append(touchPoint(x, y));
+    QMutableEventPoint point{touchPoint(x, y)};
 
-    points[0].setState(Qt::TouchPointPressed);
-    sendTouchEvent(window, QEvent::TouchBegin, points, QDateTime::currentMSecsSinceEpoch());
+    point.setState(QEventPoint::State::Pressed);
+    sendTouchEvent(window, QEvent::TouchBegin, {point}, QDateTime::currentMSecsSinceEpoch());
 
-    points[0].setState(Qt::TouchPointReleased);
-    sendTouchEvent(window, QEvent::TouchEnd, points, QDateTime::currentMSecsSinceEpoch());
+    point.setState(QEventPoint::State::Released);
+    sendTouchEvent(window, QEvent::TouchEnd, {point}, QDateTime::currentMSecsSinceEpoch());
 
     return true;
 }
@@ -121,8 +119,20 @@ bool QWebKitTest::wheelEvent(QObject* item, qreal x, qreal y, int delta, Qt::Ori
         qWarning("Wheel event not accepted by receiving item");
         return false;
     }
-
-    QWheelEvent event(QPointF(x, y), delta, Qt::NoButton, Qt::NoModifier, orient);
+    
+    QPointF position{x, y};
+    QPointF globalPosition = QCursor::pos();
+    QPoint pixelDelta{};
+    QPoint angleDelta;
+    if (orient == Qt::Vertical)
+        angleDelta = QPoint(0, delta);
+    else
+        angleDelta = QPoint(delta, 0);
+    Qt::MouseButtons buttons = Qt::NoButton;
+    Qt::KeyboardModifiers modifiers = Qt::NoModifier;
+    Qt::ScrollPhase phase = Qt::NoScrollPhase;
+    bool inverted = false;
+    QWheelEvent event(position, globalPosition, pixelDelta, angleDelta, buttons, modifiers, phase, inverted);
     event.setTimestamp(QDateTime::currentMSecsSinceEpoch());
     event.setAccepted(false);
 

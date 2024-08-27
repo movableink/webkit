@@ -49,7 +49,7 @@ public:
     QQuickWebView* webView() const;
     QQuickWebViewExperimental* webViewExperimental() const;
 
-    void updateVisualMockTouchPoints(const QList<QTouchEvent::TouchPoint>& touchPoints);
+    void updateVisualMockTouchPoints(const QList<QEventPoint>& touchPoints);
 
 public Q_SLOTS:
     BrowserWindow* newWindow(const QString& url = "about:blank");

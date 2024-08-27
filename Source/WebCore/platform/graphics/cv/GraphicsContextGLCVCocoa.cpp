@@ -493,7 +493,7 @@ GraphicsContextGLCVCocoa::GraphicsContextGLCVCocoa(GraphicsContextGLCocoa& owner
 
     const bool useTexture2D = m_owner.drawingBufferTextureTarget() == GL_TEXTURE_2D;
 
-#if PLATFORM(MAC) || PLATFORM(MACCATALYST)
+#if PLATFORM(MAC)
     if (!useTexture2D) {
         GL_RequestExtensionANGLE("GL_ANGLE_texture_rectangle");
         GL_RequestExtensionANGLE("GL_EXT_texture_format_BGRA8888");
@@ -602,7 +602,7 @@ bool GraphicsContextGLCVCocoa::copyVideoSampleToTexture(const VideoFrameCV& vide
         return false;
 
     auto orientation = videoFrame.orientation();
-    TextureContent content { reinterpret_cast<intptr_t>(surface), IOSurfaceGetSeed(surface), level, internalFormat, format, type, unpackFlipY, orientation };
+    TextureContent content { reinterpret_cast<intptr_t>(surface), IOSurfaceGetID(surface), IOSurfaceGetSeed(surface), level, internalFormat, format, type, unpackFlipY, orientation };
     auto it = m_knownContent.find(outputTexture);
     if (it != m_knownContent.end() && it->value == content) {
         // If the texture hasn't been modified since the last time we copied to it, and the

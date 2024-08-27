@@ -21,10 +21,12 @@
 
 #pragma once
 
+#include "AXObjectCache.h"
 #include "Cursor.h"
 #include "DisabledAdaptations.h"
 #include "FocusDirection.h"
 #include "HostWindow.h"
+#include "ImageBufferPixelFormat.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 #include <wtf/FunctionDispatcher.h>
@@ -111,7 +113,7 @@ public:
     void setCursor(const Cursor&) override;
     void setCursorHiddenUntilMouseMoves(bool) override;
 
-    RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, PixelFormat, OptionSet<ImageBufferOptions>) const override;
+    RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, ImageBufferPixelFormat, OptionSet<ImageBufferOptions>) const override;
     RefPtr<WebCore::ImageBuffer> sinkIntoImageBuffer(std::unique_ptr<WebCore::SerializedImageBuffer>) override;
 
 #if ENABLE(WEBGL)
@@ -131,6 +133,7 @@ public:
     FloatSize screenSize() const override;
     FloatSize availableScreenSize() const override;
     FloatSize overrideScreenSize() const override;
+    FloatSize overrideAvailableScreenSize() const override;
 
     void scrollContainingScrollViewsToRevealRect(const IntRect&) const;
     void scrollMainFrameToRevealRect(const IntRect&) const;
@@ -151,7 +154,7 @@ public:
     void focusedElementChanged(Element*);
     void focusedFrameChanged(Frame*);
 
-    WEBCORE_EXPORT Page* createWindow(LocalFrame&, const WindowFeatures&, const NavigationAction&);
+    WEBCORE_EXPORT RefPtr<Page> createWindow(LocalFrame&, const WindowFeatures&, const NavigationAction&);
     WEBCORE_EXPORT void show();
 
     bool canRunModal() const;
@@ -202,10 +205,6 @@ public:
 
     std::unique_ptr<WorkerClient> createWorkerClient(SerialFunctionDispatcher&);
 
-#if ENABLE(APP_HIGHLIGHTS)
-    void storeAppHighlight(AppHighlight&&) const;
-#endif
-
     void runOpenPanel(LocalFrame&, FileChooser&);
     void showShareSheet(ShareDataWithParsedURL&, CompletionHandler<void(bool)>&&);
     void showContactPicker(const ContactsRequestData&, CompletionHandler<void(std::optional<Vector<ContactInfo>>&&)>&&);
@@ -239,11 +238,11 @@ public:
 
 private:
     void notifyPopupOpeningObservers() const;
+    Ref<Page> protectedPage() const;
 
-    Page& m_page;
+    SingleThreadWeakRef<Page> m_page;
     UniqueRef<ChromeClient> m_client;
-    // FIXME: This should be WeakPtr<PopupOpeningObserver>.
-    Vector<PopupOpeningObserver*> m_popupOpeningObservers;
+    Vector<WeakPtr<PopupOpeningObserver>> m_popupOpeningObservers;
 #if PLATFORM(IOS_FAMILY)
     bool m_isDispatchViewportDataDidChangeSuppressed { false };
 #endif

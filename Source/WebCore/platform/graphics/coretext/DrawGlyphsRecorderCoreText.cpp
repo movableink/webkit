@@ -357,7 +357,7 @@ void DrawGlyphsRecorder::recordDrawGlyphs(CGRenderingStateRef, CGGStateRef gstat
     if (font->platformData().orientation() == FontOrientation::Vertical) {
         Vector<CGSize, 256> translations(count);
         CTFontGetVerticalTranslationsForGlyphs(font->platformData().ctFont(), glyphs, translations.data(), count);
-        auto ascentDelta = font->fontMetrics().floatAscent(IdeographicBaseline) - font->fontMetrics().floatAscent();
+        auto ascentDelta = font->fontMetrics().ascent(IdeographicBaseline) - font->fontMetrics().ascent();
         advances = computeVerticalAdvancesFromPositions(translations.data(), positions, count, ascentDelta, textMatrix);
     } else
         advances = computeHorizontalAdvancesFromPositions(positions, count, textMatrix);
@@ -381,7 +381,7 @@ void DrawGlyphsRecorder::recordDrawImage(CGRenderingStateRef, CGGStateRef gstate
     m_owner.scale(FloatSize(1, -1));
 
     auto image = NativeImage::create(cgImage);
-    m_owner.drawNativeImage(*image, image->size(), FloatRect(rect), FloatRect { { }, image->size() }, ImagePaintingOptions { ImageOrientation::Orientation::OriginTopLeft });
+    m_owner.drawNativeImage(*image, FloatRect(rect), FloatRect { { }, image->size() }, ImagePaintingOptions { ImageOrientation::Orientation::OriginTopLeft });
 
     // Undo the above y-flip to restore the context.
     m_owner.scale(FloatSize(1, -1));

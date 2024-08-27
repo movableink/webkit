@@ -123,17 +123,10 @@ if (COMPILER_IS_GCC_OR_CLANG)
     WEBKIT_ADD_TARGET_CXX_FLAGS(WebKitGLibAPITestsCore -Wno-unused-parameter)
 endif ()
 
-add_custom_command(
-    OUTPUT ${TEST_RESOURCES_DIR}/webkitglib-tests-resources.gresource ${TEST_RESOURCES_DIR}/webkitglib-tests-resources.deps
-    DEPENDS ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/resources/webkitglib-tests.gresource.xml
-            ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/resources/link-title.js
-    DEPFILE ${TEST_RESOURCES_DIR}/webkitglib-tests-resources.deps
-    COMMAND glib-compile-resources
-            --target=${TEST_RESOURCES_DIR}/webkitglib-tests-resources.gresource
-            --sourcedir=${CMAKE_SOURCE_DIR}
-            --dependency-file=${TEST_RESOURCES_DIR}/webkitglib-tests-resources.deps
-            ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/resources/webkitglib-tests.gresource.xml
-    VERBATIM
+GLIB_COMPILE_RESOURCES(
+    OUTPUT        ${TEST_RESOURCES_DIR}/webkitglib-tests-resources.gresource
+    RESOURCE_DIRS ${CMAKE_SOURCE_DIR}
+    SOURCE_XML    ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/resources/webkitglib-tests.gresource.xml
 )
 
 add_custom_target(test-gresource-bundle
@@ -146,6 +139,7 @@ ADD_WK2_TEST_WEB_PROCESS_EXTENSION(WebProcessTest ${WebKitGLibAPIWebProcessTests
 ADD_WK2_TEST(TestAuthentication ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestAuthentication.cpp)
 ADD_WK2_TEST(TestAutomationSession ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestAutomationSession.cpp)
 ADD_WK2_TEST(TestBackForwardList ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestBackForwardList.cpp)
+ADD_WK2_TEST(TestConsoleMessage ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestConsoleMessage.cpp)
 ADD_WK2_TEST(TestCookieManager ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestCookieManager.cpp)
 ADD_WK2_TEST(TestDownloads ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestDownloads.cpp)
 ADD_WK2_TEST(TestWebKitFindController ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestWebKitFindController.cpp)
@@ -174,8 +168,6 @@ ADD_WK2_TEST(TestInputMethodContext ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/
 
 if (ENABLE_2022_GLIB_API)
     ADD_WK2_TEST(TestWebKitNetworkSession ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestWebKitNetworkSession.cpp)
-else ()
-    ADD_WK2_TEST(TestConsoleMessage ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestConsoleMessage.cpp)
 endif ()
 
 macro(ADD_WPE_QT_TEST test_name)
@@ -183,12 +175,11 @@ macro(ADD_WPE_QT_TEST test_name)
     set_target_properties(${test_name} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/TestWebKitAPI/WPEQt
         AUTOMOC ON
-        CXX_STANDARD 17
     )
     target_include_directories(${test_name} SYSTEM PRIVATE ${WPEQtAPITests_INCLUDE_DIRECTORIES})
     target_include_directories(${test_name} PRIVATE
         ${CMAKE_CURRENT_BINARY_DIR}
-        ${CMAKE_SOURCE_DIR}/Source/WebKit/UIProcess/API/wpe/qt
+        ${CMAKE_SOURCE_DIR}/Source/WebKit/UIProcess/API/wpe/qt${WPE_MAJOR_QT_VERSION}
     )
     target_compile_definitions(${test_name} PUBLIC
         ${WebKitGLibAPITests_DEFINITIONS}
@@ -204,15 +195,28 @@ if (PORT STREQUAL "WPE" AND ENABLE_WPE_QT_API)
         ${JavaScriptCoreGLib_FRAMEWORK_HEADERS_DIR}
         ${GLIB_INCLUDE_DIRS}
         ${LIBSOUP_INCLUDE_DIRS}
-        ${Qt5Test_INCLUDE_DIRS}
-        ${Qt5_INCLUDE_DIRS}
         ${TOOLS_DIR}/TestWebKitAPI
         ${WEBKIT_DIR}/WPEPlatform
         ${WPEPlatform_DERIVED_SOURCES_DIR}
     )
+
+    if (USE_QT6)
+        set(WPEQtAPITests_INCLUDE_DIRECTORIES
+            ${WPEQtAPITests_INCLUDE_DIRECTORIES}
+            ${Qt6Test_INCLUDE_DIRS}
+            ${Qt6_INCLUDE_DIRS}
+        )
+    else ()
+        set(WPEQtAPITests_INCLUDE_DIRECTORIES
+            ${WPEQtAPITests_INCLUDE_DIRECTORIES}
+            ${Qt5Test_INCLUDE_DIRS}
+            ${Qt5_INCLUDE_DIRS}
+        )
+    endif ()
+
     set(WPEQtAPITest_LIBRARIES
          ${WebKitAPITest_LIBRARIES}
-         Qt5::Test qtwpe
+         Qt${WPE_MAJOR_QT_VERSION}::Test qtwpe
     )
     ADD_WPE_QT_TEST(TestLoad ${TOOLS_DIR}/TestWebKitAPI/Tests/WPEQt/TestLoad.cpp)
     ADD_WPE_QT_TEST(TestLoadHtml ${TOOLS_DIR}/TestWebKitAPI/Tests/WPEQt/TestLoadHtml.cpp)

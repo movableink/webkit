@@ -36,6 +36,16 @@
 #include <WebCore/SampleBufferDisplayLayer.h>
 #include <wtf/MediaTime.h>
 #include <wtf/ThreadAssertions.h>
+#include <wtf/WeakRef.h>
+
+namespace WebKit {
+class RemoteSampleBufferDisplayLayer;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebKit::RemoteSampleBufferDisplayLayer> : std::true_type { };
+}
 
 namespace WebCore {
 class ImageTransferSessionVT;
@@ -46,15 +56,15 @@ enum class VideoFrameRotation : uint16_t;
 namespace WebKit {
 class GPUConnectionToWebProcess;
 
-class RemoteSampleBufferDisplayLayer : public WebCore::SampleBufferDisplayLayer::Client, public IPC::MessageReceiver, private IPC::MessageSender {
+class RemoteSampleBufferDisplayLayer : public WebCore::SampleBufferDisplayLayerClient, public IPC::MessageReceiver, private IPC::MessageSender {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     static std::unique_ptr<RemoteSampleBufferDisplayLayer> create(GPUConnectionToWebProcess&, SampleBufferDisplayLayerIdentifier, Ref<IPC::Connection>&&);
     ~RemoteSampleBufferDisplayLayer();
 
-    using WebCore::SampleBufferDisplayLayer::Client::weakPtrFactory;
-    using WebCore::SampleBufferDisplayLayer::Client::WeakValueType;
-    using WebCore::SampleBufferDisplayLayer::Client::WeakPtrImplType;
+    using WebCore::SampleBufferDisplayLayerClient::weakPtrFactory;
+    using WebCore::SampleBufferDisplayLayerClient::WeakValueType;
+    using WebCore::SampleBufferDisplayLayerClient::WeakPtrImplType;
 
     using LayerInitializationCallback = CompletionHandler<void(std::optional<LayerHostingContextID>)>;
     void initialize(bool hideRootLayer, WebCore::IntSize, bool shouldMaintainAspectRatio, LayerInitializationCallback&&);
@@ -79,24 +89,23 @@ private:
     void enqueueVideoFrame(SharedVideoFrame&&);
     void clearVideoFrames();
     void setSharedVideoFrameSemaphore(IPC::Semaphore&&);
-    void setSharedVideoFrameMemory(SharedMemory::Handle&&);
+    void setSharedVideoFrameMemory(WebCore::SharedMemory::Handle&&);
     void setShouldMaintainAspectRatio(bool shouldMaintainAspectRatio);
 
     // IPC::MessageSender
     IPC::Connection* messageSenderConnection() const final;
     uint64_t messageSenderDestinationID() const final { return m_identifier.toUInt64(); }
 
-    // WebCore::SampleBufferDisplayLayer::Client
+    // WebCore::SampleBufferDisplayLayerClient
     void sampleBufferDisplayLayerStatusDidFail() final;
 
-    GPUConnectionToWebProcess& m_gpuConnection WTF_GUARDED_BY_CAPABILITY(m_consumeThread);
+    ThreadSafeWeakPtr<GPUConnectionToWebProcess> m_gpuConnection WTF_GUARDED_BY_CAPABILITY(m_consumeThread);
     SampleBufferDisplayLayerIdentifier m_identifier;
     Ref<IPC::Connection> m_connection;
     RefPtr<WebCore::LocalSampleBufferDisplayLayer> m_sampleBufferDisplayLayer;
     std::unique_ptr<LayerHostingContext> m_layerHostingContext;
     SharedVideoFrameReader m_sharedVideoFrameReader;
     ThreadLikeAssertion m_consumeThread NO_UNIQUE_ADDRESS;
-
 };
 
 }

@@ -27,18 +27,14 @@
 #include "WPEView.h"
 
 #include "WPEBuffer.h"
-#include "WPEBufferDMABufFormat.h"
+#include "WPEBufferDMABufFormats.h"
 #include "WPEDisplayPrivate.h"
 #include "WPEEnumTypes.h"
 #include "WPEEvent.h"
-#include <wtf/SetForScope.h>
+#include "WPEToplevelPrivate.h"
+#include "WPEViewPrivate.h"
 #include <wtf/glib/GRefPtr.h>
 #include <wtf/glib/WTFGType.h>
-#include <wtf/text/WTFString.h>
-
-#if USE(LIBDRM)
-#include <drm_fourcc.h>
-#endif
 
 /**
  * WPEView:
@@ -46,14 +42,14 @@
  */
 struct _WPEViewPrivate {
     GRefPtr<WPEDisplay> display;
+    GRefPtr<WPEToplevel> toplevel;
     int width;
     int height;
-    bool inResize;
     gdouble scale { 1 };
-    WPEViewState state;
-#if USE(LIBDRM)
-    GList* overridenDMABufFormats;
-#endif
+    WPEToplevelState state;
+    bool closed;
+    bool visible { true };
+    bool mapped;
 
     struct {
         unsigned pressCount { 0 };
@@ -79,9 +75,14 @@ enum {
     PROP_0,
 
     PROP_DISPLAY,
+    PROP_TOPLEVEL,
     PROP_WIDTH,
     PROP_HEIGHT,
     PROP_SCALE,
+    PROP_TOPLEVEL_STATE,
+    PROP_MONITOR,
+    PROP_VISIBLE,
+    PROP_MAPPED,
 
     N_PROPERTIES
 };
@@ -89,12 +90,14 @@ enum {
 static GParamSpec* sObjProperties[N_PROPERTIES] = { nullptr, };
 
 enum {
+    CLOSED,
     RESIZED,
     BUFFER_RENDERED,
+    BUFFER_RELEASED,
     EVENT,
     FOCUS_IN,
     FOCUS_OUT,
-    STATE_CHANGED,
+    TOPLEVEL_STATE_CHANGED,
     PREFERRED_DMA_BUF_FORMATS_CHANGED,
 
     LAST_SIGNAL
@@ -110,14 +113,11 @@ static void wpeViewSetProperty(GObject* object, guint propId, const GValue* valu
     case PROP_DISPLAY:
         view->priv->display = WPE_DISPLAY(g_value_get_object(value));
         break;
-    case PROP_WIDTH:
-        wpe_view_set_width(view, g_value_get_int(value));
+    case PROP_TOPLEVEL:
+        wpe_view_set_toplevel(view, WPE_TOPLEVEL(g_value_get_object(value)));
         break;
-    case PROP_HEIGHT:
-        wpe_view_set_height(view, g_value_get_int(value));
-        break;
-    case PROP_SCALE:
-        wpe_view_set_scale(view, g_value_get_double(value));
+    case PROP_VISIBLE:
+        wpe_view_set_visible(view, g_value_get_boolean(value));
         break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID(object, propId, paramSpec);
@@ -132,6 +132,9 @@ static void wpeViewGetProperty(GObject* object, guint propId, GValue* value, GPa
     case PROP_DISPLAY:
         g_value_set_object(value, wpe_view_get_display(view));
         break;
+    case PROP_TOPLEVEL:
+        g_value_set_object(value, wpe_view_get_toplevel(view));
+        break;
     case PROP_WIDTH:
         g_value_set_int(value, wpe_view_get_width(view));
         break;
@@ -140,6 +143,18 @@ static void wpeViewGetProperty(GObject* object, guint propId, GValue* value, GPa
         break;
     case PROP_SCALE:
         g_value_set_double(value, wpe_view_get_scale(view));
+        break;
+    case PROP_TOPLEVEL_STATE:
+        g_value_set_flags(value, wpe_view_get_toplevel_state(view));
+        break;
+    case PROP_MONITOR:
+        g_value_set_object(value, wpe_view_get_monitor(view));
+        break;
+    case PROP_VISIBLE:
+        g_value_set_boolean(value, wpe_view_get_visible(view));
+        break;
+    case PROP_MAPPED:
+        g_value_set_boolean(value, wpe_view_get_mapped(view));
         break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID(object, propId, paramSpec);
@@ -156,16 +171,12 @@ static void wpeViewConstructed(GObject* object)
     priv->height = 768;
 }
 
-#if USE(LIBDRM)
 static void wpeViewDispose(GObject* object)
 {
-    auto* priv = WPE_VIEW(object)->priv;
-
-    g_clear_list(&priv->overridenDMABufFormats, reinterpret_cast<GDestroyNotify>(wpe_buffer_dma_buf_format_free));
+    wpe_view_set_toplevel(WPE_VIEW(object), nullptr);
 
     G_OBJECT_CLASS(wpe_view_parent_class)->dispose(object);
 }
-#endif
 
 static void wpe_view_class_init(WPEViewClass* viewClass)
 {
@@ -173,9 +184,7 @@ static void wpe_view_class_init(WPEViewClass* viewClass)
     objectClass->set_property = wpeViewSetProperty;
     objectClass->get_property = wpeViewGetProperty;
     objectClass->constructed = wpeViewConstructed;
-#if USE(LIBDRM)
     objectClass->dispose = wpeViewDispose;
-#endif
 
     /**
      * WPEView:display:
@@ -190,28 +199,40 @@ static void wpe_view_class_init(WPEViewClass* viewClass)
             static_cast<GParamFlags>(WEBKIT_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
 
     /**
+     * WPEView:toplevel:
+     *
+     * The #WPEToplevel of the view
+     */
+    sObjProperties[PROP_TOPLEVEL] =
+        g_param_spec_object(
+            "toplevel",
+            nullptr, nullptr,
+            WPE_TYPE_TOPLEVEL,
+            WEBKIT_PARAM_READWRITE);
+
+    /**
      * WPEView:width:
      *
-     * The view width
+     * The view width in logical coordinates
      */
     sObjProperties[PROP_WIDTH] =
         g_param_spec_int(
             "width",
             nullptr, nullptr,
             0, G_MAXINT, 0,
-            WEBKIT_PARAM_READWRITE);
+            WEBKIT_PARAM_READABLE);
 
     /**
      * WPEView:height:
      *
-     * The view height
+     * The view height in logical coordinates
      */
     sObjProperties[PROP_HEIGHT] =
         g_param_spec_int(
             "height",
             nullptr, nullptr,
             0, G_MAXINT, 0,
-            WEBKIT_PARAM_READWRITE);
+            WEBKIT_PARAM_READABLE);
 
     /**
      * WPEView:scale:
@@ -223,9 +244,81 @@ static void wpe_view_class_init(WPEViewClass* viewClass)
             "scale",
             nullptr, nullptr,
             1., G_MAXDOUBLE, 1.,
+            WEBKIT_PARAM_READABLE);
+
+    /**
+     * WPEView:toplevel-state:
+     *
+     * The view's toplevel state
+     */
+    sObjProperties[PROP_TOPLEVEL_STATE] =
+        g_param_spec_flags(
+            "toplevel-state",
+            nullptr, nullptr,
+            WPE_TYPE_TOPLEVEL_STATE,
+            WPE_TOPLEVEL_STATE_NONE,
+            WEBKIT_PARAM_READABLE);
+
+    /**
+     * WPEView:monitor:
+     *
+     * The current #WPEMonitor of the view.
+     */
+    sObjProperties[PROP_MONITOR] =
+        g_param_spec_object(
+            "monitor",
+            nullptr, nullptr,
+            WPE_TYPE_MONITOR,
+            WEBKIT_PARAM_READABLE);
+
+    /**
+     * WPEView:visible:
+     *
+     * Whether the view should be visible or not. This property
+     * can be used to show or hide a view, but setting to %TRUE (which
+     * is the default) doesn't mean it will always be shown, because
+     * the visbility also depends on the status of its toplevel (for
+     * example if the toplevel is minimized the view will be hidden).
+     * To know whether the view is actually visible, you can check
+     * #WPEView:mapped property.
+     */
+    sObjProperties[PROP_VISIBLE] =
+        g_param_spec_boolean(
+            "visible",
+            nullptr, nullptr,
+            TRUE,
             WEBKIT_PARAM_READWRITE);
 
+    /**
+     * WPEView:mapped:
+     *
+     * Whether the view is mapped or not. A view is mapped when #WPEView:visible
+     * is %TRUE and it's not hidden for other reasons, like for example when its
+     * toplevel is minimized. This is a readonly property that can be used to
+     * monitor when a #WPEView is shown or hidden.
+     */
+    sObjProperties[PROP_MAPPED] =
+        g_param_spec_boolean(
+            "mapped",
+            nullptr, nullptr,
+            FALSE,
+            WEBKIT_PARAM_READABLE);
+
     g_object_class_install_properties(objectClass, N_PROPERTIES, sObjProperties);
+
+    /**
+     * WPEView::closed:
+     * @view: a #WPEView
+     *
+     * Emitted when @view has been closed.
+     */
+    signals[CLOSED] = g_signal_new(
+        "closed",
+        G_TYPE_FROM_CLASS(viewClass),
+        G_SIGNAL_RUN_LAST,
+        0, nullptr, nullptr,
+        g_cclosure_marshal_generic,
+        G_TYPE_NONE, 0);
 
     /**
      * WPEView::resized:
@@ -250,6 +343,23 @@ static void wpe_view_class_init(WPEViewClass* viewClass)
      */
     signals[BUFFER_RENDERED] = g_signal_new(
         "buffer-rendered",
+        G_TYPE_FROM_CLASS(viewClass),
+        G_SIGNAL_RUN_LAST,
+        0, nullptr, nullptr,
+        g_cclosure_marshal_generic,
+        G_TYPE_NONE, 1,
+        WPE_TYPE_BUFFER);
+
+    /**
+     * WPEView::buffer-released:
+     * @view: a #WPEView
+     * @buffer: a #WPEBuffer
+     *
+     * Emitted to notify that the buffer is no longer used by the view
+     * and can be destroyed or reused.
+     */
+    signals[BUFFER_RELEASED] = g_signal_new(
+        "buffer-released",
         G_TYPE_FROM_CLASS(viewClass),
         G_SIGNAL_RUN_LAST,
         0, nullptr, nullptr,
@@ -306,20 +416,20 @@ static void wpe_view_class_init(WPEViewClass* viewClass)
         G_TYPE_NONE, 0);
 
     /**
-     * WPEView::state-changed:
+     * WPEView::toplevel-state-changed:
      * @view: a #WPEView
-     * @previous_state: a #WPEViewState
+     * @previous_state: a #WPEToplevelState
      *
-     * Emitted when @view state changes
+     * Emitted when @view's toplevel state changes
      */
-    signals[STATE_CHANGED] = g_signal_new(
-        "state-changed",
+    signals[TOPLEVEL_STATE_CHANGED] = g_signal_new(
+        "toplevel-state-changed",
         G_TYPE_FROM_CLASS(viewClass),
         G_SIGNAL_RUN_LAST,
         0, nullptr, nullptr,
         g_cclosure_marshal_generic,
         G_TYPE_NONE, 1,
-        WPE_TYPE_VIEW_STATE);
+        WPE_TYPE_TOPLEVEL_STATE);
 
     /**
      * WPEView::preferred-dma-buf-formats-changed:
@@ -337,13 +447,43 @@ static void wpe_view_class_init(WPEViewClass* viewClass)
         G_TYPE_NONE, 0);
 }
 
+void wpeViewToplevelStateChanged(WPEView* view, WPEToplevelState state)
+{
+    if (view->priv->state == state)
+        return;
+
+    auto previousState = view->priv->state;
+    view->priv->state = state;
+    g_object_notify_by_pspec(G_OBJECT(view), sObjProperties[PROP_TOPLEVEL_STATE]);
+    g_signal_emit(view, signals[TOPLEVEL_STATE_CHANGED], 0, previousState);
+}
+
+void wpeViewScaleChanged(WPEView* view, double scale)
+{
+    if (view->priv->scale == scale)
+        return;
+
+    view->priv->scale = scale;
+    g_object_notify_by_pspec(G_OBJECT(view), sObjProperties[PROP_SCALE]);
+}
+
+void wpeViewMonitorChanged(WPEView* view)
+{
+    g_object_notify_by_pspec(G_OBJECT(view), sObjProperties[PROP_MONITOR]);
+}
+
+void wpeViewPreferredDMABufFormatsChanged(WPEView* view)
+{
+    g_signal_emit(view, signals[PREFERRED_DMA_BUF_FORMATS_CHANGED], 0);
+}
+
 /**
  * wpe_view_new:
  * @display: a #WPEDisplay
  *
  * Create a new #WPEView for @display
  *
- * Returns: (transfer full) (nullable): a #WPEView, or %NULL
+ * Returns: (transfer full): a #WPEView
  */
 WPEView* wpe_view_new(WPEDisplay* display)
 {
@@ -368,14 +508,66 @@ WPEDisplay* wpe_view_get_display(WPEView* view)
 }
 
 /**
+ * wpe_view_get_toplevel:
+ * @view: a #WPEView
+ *
+ * Get the #WPEToplevel of @view
+ *
+ * Returns: (transfer none) (nullable): a #WPEToplevel
+ */
+WPEToplevel* wpe_view_get_toplevel(WPEView* view)
+{
+    g_return_val_if_fail(WPE_IS_VIEW(view), nullptr);
+
+    return view->priv->toplevel.get();
+}
+
+/**
+ * wpe_view_set_toplevel:
+ * @view: a #WPEView
+ * @toplevel: (nullable): a #WPEToplevel, or %NULL
+ *
+ * Set the current toplevel of @view.
+ * If @toplevel has already reached the maximum number of views (see wpe_toplevel_get_max_views())
+ * this function does nothing.
+ */
+void wpe_view_set_toplevel(WPEView* view, WPEToplevel* toplevel)
+{
+    g_return_if_fail(WPE_IS_VIEW(view));
+    g_return_if_fail(!toplevel || (WPE_IS_TOPLEVEL(toplevel) && wpe_toplevel_get_display(toplevel) == view->priv->display.get()));
+
+    auto* priv = view->priv;
+    if (priv->toplevel == toplevel)
+        return;
+
+    if (toplevel && wpe_toplevel_get_n_views(toplevel) == wpe_toplevel_get_max_views(toplevel))
+        return;
+
+    if (priv->toplevel)
+        wpeToplevelRemoveView(priv->toplevel.get(), view);
+
+    priv->toplevel = toplevel;
+
+    if (priv->toplevel) {
+        wpeToplevelAddView(priv->toplevel.get(), view);
+        wpeViewScaleChanged(view, wpe_toplevel_get_scale(priv->toplevel.get()));
+        wpeViewToplevelStateChanged(view, wpe_toplevel_get_state(priv->toplevel.get()));
+        wpeViewMonitorChanged(view);
+        wpeViewPreferredDMABufFormatsChanged(view);
+    }
+
+    g_object_notify_by_pspec(G_OBJECT(view), sObjProperties[PROP_TOPLEVEL]);
+}
+
+/**
  * wpe_view_get_width:
  * @view: a #WPEView
  *
- * Get the @view width
+ * Get the @view width in logical coordinates
  *
  * Returns: the view width
  */
-int wpe_view_get_width(WPEView *view)
+int wpe_view_get_width(WPEView* view)
 {
     g_return_val_if_fail(WPE_IS_VIEW(view), 0);
 
@@ -386,11 +578,11 @@ int wpe_view_get_width(WPEView *view)
  * wpe_view_get_height:
  * @view: a #WPEView
  *
- * Get the @view height
+ * Get the @view height in logical coordinates
  *
  * Returns: the view height
  */
-int wpe_view_get_height(WPEView *view)
+int wpe_view_get_height(WPEView* view)
 {
     g_return_val_if_fail(WPE_IS_VIEW(view), 0);
 
@@ -398,59 +590,38 @@ int wpe_view_get_height(WPEView *view)
 }
 
 /**
- * wpe_view_set_width:
+ * wpe_view_closed:
  * @view: a #WPEView
- * @width: width to set
  *
- * Set the @view width
+ * Emit #WPEView::closed signal if @view is not already closed.
+ *
+ * This function should only be called by #WPEView derived classes
+ * in platform implementations.
  */
-void wpe_view_set_width(WPEView *view, int width)
+void wpe_view_closed(WPEView* view)
 {
     g_return_if_fail(WPE_IS_VIEW(view));
 
     auto* priv = view->priv;
-    if (priv->width == width)
+    if (priv->closed)
         return;
 
-    priv->width = width;
-    g_object_notify_by_pspec(G_OBJECT(view), sObjProperties[PROP_WIDTH]);
-    if (!priv->inResize)
-        g_signal_emit(view, signals[RESIZED], 0);
+    priv->closed = true;
+    g_signal_emit(view, signals[CLOSED], 0);
 }
 
 /**
- * wpe_view_set_height:
+ * wpe_view_resized:
  * @view: a #WPEView
- * @height: height to set
+ * @width: width in logical coordinates
+ * @height: height in logical coordinates
  *
- * Set the @view height
+ * Update @view size and emit #WPEView::resized if size changed.
+ *
+ * This function should only be called by #WPEView derived classes
+ * in platform implementations.
  */
-void wpe_view_set_height(WPEView *view, int height)
-{
-    g_return_if_fail(WPE_IS_VIEW(view));
-
-    auto* priv = view->priv;
-    if (priv->height == height)
-        return;
-
-    priv->height = height;
-    g_object_notify_by_pspec(G_OBJECT(view), sObjProperties[PROP_HEIGHT]);
-    if (!priv->inResize)
-        g_signal_emit(view, signals[RESIZED], 0);
-}
-
-/**
- * wpe_view_resize:
- * @view: a #WPEView
- * @width: width to set
- * @height: height to set
- *
- * Resize the @view.
- *
- * Note that this method will emit #WPEView::resized only once even if both
- * width and height changed.
- */
-void wpe_view_resize(WPEView *view, int width, int height)
+void wpe_view_resized(WPEView* view, int width, int height)
 {
     g_return_if_fail(WPE_IS_VIEW(view));
 
@@ -458,9 +629,17 @@ void wpe_view_resize(WPEView *view, int width, int height)
     if (priv->width == width && priv->height == height)
         return;
 
-    SetForScope inResize(priv->inResize, true);
-    wpe_view_set_width(view, width);
-    wpe_view_set_height(view, height);
+    g_object_freeze_notify(G_OBJECT(view));
+    if (priv->width != width) {
+        priv->width = width;
+        g_object_notify_by_pspec(G_OBJECT(view), sObjProperties[PROP_WIDTH]);
+    }
+    if (priv->height != height) {
+        priv->height = height;
+        g_object_notify_by_pspec(G_OBJECT(view), sObjProperties[PROP_HEIGHT]);
+    }
+    g_object_thaw_notify(G_OBJECT(view));
+
     g_signal_emit(view, signals[RESIZED], 0);
 }
 
@@ -480,22 +659,110 @@ gdouble wpe_view_get_scale(WPEView* view)
 }
 
 /**
- * wpe_view_set_scale:
+ * wpe_view_get_visible:
  * @view: a #WPEView
- * @scale: the scale to set
  *
- * Set the @view scale
+ * Get the visibility of @view.
+ * This might return %TRUE even if the view is not mapped,
+ * for example when it's minimized.
+ *
+ * Returns: %TRUE if the view is visible, or %FALSE otherwise
  */
-void wpe_view_set_scale(WPEView* view, gdouble scale)
+gboolean wpe_view_get_visible(WPEView* view)
+{
+    g_return_val_if_fail(WPE_IS_VIEW(view), FALSE);
+
+    return view->priv->visible;
+}
+
+/**
+ * wpe_view_set_visible:
+ * @view: a #WPEView
+ * @visible: whether the view should be visible
+ *
+ * Set the visibility of @view. See #WPEView:visible property
+ * for more information.
+ */
+void wpe_view_set_visible(WPEView* view, gboolean visible)
 {
     g_return_if_fail(WPE_IS_VIEW(view));
-    g_return_if_fail(scale > 0);
 
-    if (view->priv->scale == scale)
+    if (view->priv->visible == visible)
         return;
 
-    view->priv->scale = scale;
-    g_object_notify_by_pspec(G_OBJECT(view), sObjProperties[PROP_SCALE]);
+    view->priv->visible = visible;
+    if (view->priv->visible)
+        wpe_view_map(view);
+    else
+        wpe_view_unmap(view);
+    g_object_notify_by_pspec(G_OBJECT(view), sObjProperties[PROP_VISIBLE]);
+}
+
+/**
+ * wpe_view_get_mapped:
+ * @view: a #WPEView
+ *
+ * Get whether @view is mapped. A #WPEView isa mapped if
+ * #WPEView:visible is %TRUE and it's not hidden for other
+ * reasons, like for example when its toplevel is minimized.
+ * You can connect to notify::mapped signal of @view to
+ * monitor the visibility.
+ *
+ * Returns: %TRUE if the view is mapped, or %FALSE otherwise
+ */
+gboolean wpe_view_get_mapped(WPEView* view)
+{
+    g_return_val_if_fail(WPE_IS_VIEW(view), FALSE);
+
+    return view->priv->mapped;
+}
+
+/**
+ * wpe_view_map:
+ * @view: a #WPEView
+ *
+ * Make @view to be mapped. If #WPEView:visible is %TRUE and
+ * the view can be shown (determined by #WPEViewClass::can_be_mapped)
+ * #WPEView:mapped will be set to %TRUE.
+ *
+ * This function should only be called by #WPEView derived classes
+ * in platform implementations.
+ */
+void wpe_view_map(WPEView* view)
+{
+    g_return_if_fail(WPE_IS_VIEW(view));
+
+    if (view->priv->mapped || !view->priv->visible)
+        return;
+
+    auto* viewClass = WPE_VIEW_GET_CLASS(view);
+    if (viewClass->can_be_mapped && !viewClass->can_be_mapped(view))
+        return;
+
+    view->priv->mapped = TRUE;
+    g_object_notify_by_pspec(G_OBJECT(view), sObjProperties[PROP_MAPPED]);
+}
+
+/**
+ * wpe_view_unmap:
+ * @view: a #WPEView
+ *
+ * Make @view to be unmapped. This always sets the #WPEView:mapped
+ * property to %FALSE and the @view is considered to be hidden even
+ * if #WPEView:visible is %TRUE.
+ *
+ * This function should only be called by #WPEView derived classes
+ * in platform implementations.
+ */
+void wpe_view_unmap(WPEView* view)
+{
+    g_return_if_fail(WPE_IS_VIEW(view));
+
+    if (!view->priv->mapped)
+        return;
+
+    view->priv->mapped = FALSE;
+    g_object_notify_by_pspec(G_OBJECT(view), sObjProperties[PROP_MAPPED]);
 }
 
 /**
@@ -521,110 +788,73 @@ void wpe_view_set_cursor_from_name(WPEView* view, const char* name)
  * @bytes: the cursor image data
  * @width: the cursor width
  * @height: the cursor height
+ * @stride: the cursor image data stride
  * @hotspot_x: the cursor hotspot x coordinate
  * @hotspot_y: the cursor hotspot y coordinate
  *
  * Set the @view cursor from the given @bytes. Pixel format must be %WPE_PIXEL_FORMAT_ARGB8888.
  */
-void wpe_view_set_cursor_from_bytes(WPEView* view, GBytes* bytes, guint width, guint height, guint hotspotX, guint hotspotY)
+void wpe_view_set_cursor_from_bytes(WPEView* view, GBytes* bytes, guint width, guint height, guint stride, guint hotspotX, guint hotspotY)
 {
     g_return_if_fail(WPE_IS_VIEW(view));
     g_return_if_fail(bytes);
 
     auto* viewClass = WPE_VIEW_GET_CLASS(view);
     if (viewClass->set_cursor_from_bytes)
-        viewClass->set_cursor_from_bytes(view, bytes, width, height, hotspotX, hotspotY);
+        viewClass->set_cursor_from_bytes(view, bytes, width, height, stride, hotspotX, hotspotY);
 }
 
 /**
- * wpe_view_get_state:
+ * wpe_view_get_toplevel_state:
  * @view: a #WPEView
  *
- * Get the current state of @view
+ * Get the current state of @view's toplevel
  *
- * Returns: the view's state
+ * Returns: the view's toplevel state
  */
-WPEViewState wpe_view_get_state(WPEView* view)
+WPEToplevelState wpe_view_get_toplevel_state(WPEView* view)
 {
-    g_return_val_if_fail(WPE_IS_VIEW(view), WPE_VIEW_STATE_NONE);
+    g_return_val_if_fail(WPE_IS_VIEW(view), WPE_TOPLEVEL_STATE_NONE);
 
     return view->priv->state;
 }
 
 /**
- * wpe_view_set_state:
- * @view: a #WPEView
- * @state: a set of #WPEViewState
- *
- * Set the current state of @view
- */
-void wpe_view_set_state(WPEView* view, WPEViewState state)
-{
-    g_return_if_fail(WPE_IS_VIEW(view));
-
-    if (view->priv->state == state)
-        return;
-
-    auto previousState = view->priv->state;
-    view->priv->state = state;
-    g_signal_emit(view, signals[STATE_CHANGED], 0, previousState);
-}
-
-/**
- * wpe_view_fullscreen:
+ * wpe_view_get_monitor:
  * @view: a #WPEView
  *
- * Request that the @view goes into a fullscreen state.
+ * Get current #WPEMonitor of @view
  *
- * To track the state see #WPEView::state-changed
- *
- * Returns: %TRUE if fullscreen is supported, otherwise %FALSE
+ * Returns: (transfer none) (nullable): a #WPEMonitor, or %NULL
  */
-gboolean wpe_view_fullscreen(WPEView* view)
+WPEMonitor* wpe_view_get_monitor(WPEView* view)
 {
-    g_return_val_if_fail(WPE_IS_VIEW(view), FALSE);
+    g_return_val_if_fail(WPE_IS_VIEW(view), nullptr);
 
-    auto* viewClass = WPE_VIEW_GET_CLASS(view);
-    return viewClass->set_fullscreen ? viewClass->set_fullscreen(view, TRUE) : FALSE;
-}
-
-/**
- * wpe_view_unfullscreen:
- * @view: a #WPEView
- *
- * Request that the @view leaves a fullscreen state.
- *
- * To track the state see #WPEView::state-changed
- *
- * Returns: %TRUE if unfullscreen is supported, otherwise %FALSE
- */
-gboolean wpe_view_unfullscreen(WPEView* view)
-{
-    g_return_val_if_fail(WPE_IS_VIEW(view), FALSE);
-
-    auto* viewClass = WPE_VIEW_GET_CLASS(view);
-    return viewClass->set_fullscreen ? viewClass->set_fullscreen(view, FALSE) : FALSE;
+    return view->priv->toplevel ? wpe_toplevel_get_monitor(view->priv->toplevel.get()) : nullptr;
 }
 
 /**
  * wpe_view_render_buffer:
  * @view: a #WPEView
  * @buffer: a #WPEBuffer to render
+ * @damage_rects: (nullable) (array length=n_damage_rects): damage rectangles
+ * @n_damage_rects: number of rectangles in @damage_rects
  * @error: return location for error or %NULL to ignore
  *
  * Render the given @buffer into @view.
  * If this function returns %TRUE you must call wpe_view_buffer_rendered() when the buffer
- * is rendered.
+ * is rendered and wpe_view_buffer_released() when it's no longer used by the view.
  *
  * Returns: %TRUE if buffer will be rendered, or %FALSE otherwise
  */
-gboolean wpe_view_render_buffer(WPEView* view, WPEBuffer* buffer, GError** error)
+gboolean wpe_view_render_buffer(WPEView* view, WPEBuffer* buffer, const WPERectangle* damageRects, guint nDamageRects, GError** error)
 {
     g_return_val_if_fail(WPE_IS_VIEW(view), FALSE);
     g_return_val_if_fail(WPE_IS_BUFFER(buffer), FALSE);
 
     auto* viewClass = WPE_VIEW_GET_CLASS(view);
-    return viewClass->render_buffer(view, buffer, error);
+    return viewClass->render_buffer(view, buffer, damageRects, nDamageRects, error);
 }
 
 /**
@@ -640,6 +870,22 @@ void wpe_view_buffer_rendered(WPEView* view, WPEBuffer* buffer)
     g_return_if_fail(WPE_IS_BUFFER(buffer));
 
     g_signal_emit(view, signals[BUFFER_RENDERED], 0, buffer);
+}
+
+/**
+ * wpe_view_buffer_released:
+ * @view: a #WPEView
+ * @buffer: a #WPEBuffer
+ *
+ * Emit #WPEView::buffer-released signal to notify that @buffer is no longer used and
+ * can be destroyed or reused.
+ */
+void wpe_view_buffer_released(WPEView* view, WPEBuffer* buffer)
+{
+    g_return_if_fail(WPE_IS_VIEW(view));
+    g_return_if_fail(WPE_IS_BUFFER(buffer));
+
+    g_signal_emit(view, signals[BUFFER_RELEASED], 0, buffer);
 }
 
 /**
@@ -723,44 +969,34 @@ void wpe_view_focus_out(WPEView* view)
  *
  * Get the list of preferred DMA-BUF buffer formats for @view.
  *
- * Returns: (transfer none) (element-type WPEBufferDMABufFormat) (nullable): a #GList of #WPEBufferDMABufFormat
+ * Returns: (transfer none) (nullable): a #WPEBufferDMABufFormats
  */
-GList* wpe_view_get_preferred_dma_buf_formats(WPEView* view)
+WPEBufferDMABufFormats* wpe_view_get_preferred_dma_buf_formats(WPEView* view)
 {
     g_return_val_if_fail(WPE_IS_VIEW(view), nullptr);
 
-#if USE(LIBDRM)
-    if (view->priv->overridenDMABufFormats)
-        return view->priv->overridenDMABufFormats;
+    if (!view->priv->toplevel)
+        return nullptr;
 
-    const char* formatString = getenv("WPE_DMABUF_BUFFER_FORMAT");
-    if (formatString && *formatString) {
-        auto tokens = String::fromUTF8(formatString).split(':');
-        if (!tokens.isEmpty() && tokens[0].length() >= 2 && tokens[0].length() <= 4) {
-            guint32 format = fourcc_code(tokens[0][0], tokens[0][1], tokens[0].length() > 2 ? tokens[0][2] : ' ', tokens[0].length() > 3 ? tokens[0][3] : ' ');
-            guint64 modifier = tokens.size() > 1 ? g_ascii_strtoull(tokens[1].ascii().data(), nullptr, 10) : DRM_FORMAT_MOD_INVALID;
-            GRefPtr<GArray> modifiers = adoptGRef(g_array_sized_new(FALSE, TRUE, sizeof(guint64), 1));
-            g_array_append_val(modifiers.get(), modifier);
-            WPEBufferDMABufFormatUsage usage = WPE_BUFFER_DMA_BUF_FORMAT_USAGE_RENDERING;
-            if (tokens.size() > 2) {
-                if (tokens[2] == "rendering"_s)
-                    usage = WPE_BUFFER_DMA_BUF_FORMAT_USAGE_RENDERING;
-                else if (tokens[2] == "mapping"_s)
-                    usage = WPE_BUFFER_DMA_BUF_FORMAT_USAGE_MAPPING;
-                else if (tokens[2] == "scanout"_s)
-                    usage = WPE_BUFFER_DMA_BUF_FORMAT_USAGE_SCANOUT;
-            }
-            view->priv->overridenDMABufFormats = g_list_prepend(view->priv->overridenDMABufFormats, wpe_buffer_dma_buf_format_new(usage, format, modifiers.get()));
-            return view->priv->overridenDMABufFormats;
-        }
+    return wpe_toplevel_get_preferred_dma_buf_formats(view->priv->toplevel.get());
+}
 
-        WTFLogAlways("Invalid format %s set in WPE_DMABUF_BUFFER_FORMAT, ignoring...", formatString);
-    }
-#endif
+/**
+ * wpe_view_set_opaque_rectangles:
+ * @view: a #WPEView
+ * @rects: (nullable) (array length=n_rects): opaque rectangles in view-local coordinates
+ * @n_rects: the total number of elements in @rects
+ *
+ * Set the rectangles of @view that contain opaque content.
+ * This is an optimization hint that is automatically set by WebKit when the
+ * web view background color is opaque.
+ */
+void wpe_view_set_opaque_rectangles(WPEView* view, WPERectangle* rects, guint rectsCount)
+{
+    g_return_if_fail(WPE_IS_VIEW(view));
+    g_return_if_fail(!rects || rectsCount > 0);
 
     auto* viewClass = WPE_VIEW_GET_CLASS(view);
-    if (viewClass->get_preferred_dma_buf_formats)
-        return viewClass->get_preferred_dma_buf_formats(view);
-
-    return wpe_display_get_preferred_dma_buf_formats(view->priv->display.get());
+    if (viewClass->set_opaque_rectangles)
+        viewClass->set_opaque_rectangles(view, rects, rectsCount);
 }

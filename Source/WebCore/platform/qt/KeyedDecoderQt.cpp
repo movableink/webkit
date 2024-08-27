@@ -32,16 +32,16 @@
 
 namespace WebCore {
 
-std::unique_ptr<KeyedDecoder> KeyedDecoder::decoder(const uint8_t* data, size_t size)
+std::unique_ptr<KeyedDecoder> KeyedDecoder::decoder(std::span<const uint8_t> data)
 {
-    return std::make_unique<KeyedDecoderQt>(data, size);
+    return std::make_unique<KeyedDecoderQt>(data);
 }
 
-KeyedDecoderQt::KeyedDecoderQt(const uint8_t* data, size_t size)
+KeyedDecoderQt::KeyedDecoderQt(std::span<const uint8_t> bytes)
 {
     m_objectStack.append(QVariantMap());
 
-    auto buffer = QByteArray::fromRawData(reinterpret_cast<const char*>(data), size);
+    auto buffer = QByteArray::fromRawData(reinterpret_cast<const char*>(bytes.data()), bytes.size());
     QDataStream stream(&buffer, QIODevice::ReadOnly);
     stream >> m_objectStack.last();
 }
@@ -90,14 +90,13 @@ bool KeyedDecoderQt::decodeNumber(const String& key, T& result, F&& function)
     return ok;
 }
 
-bool KeyedDecoderQt::decodeBytes(const String& key, const uint8_t*& bytes, size_t& size)
+bool KeyedDecoderQt::decodeBytes(const String& key, std::span<const uint8_t>& bytes)
 {
     QByteArray value;
     if (!decodeSimpleValue(key, value))
         return false;
 
-    bytes = reinterpret_cast<const uint8_t*>(value.constData());
-    size = value.size();
+    bytes = std::span<const uint8_t> { reinterpret_cast<const uint8_t*>(value.constData()), static_cast<std::size_t>(value.size()) };
     return true;
 }
 

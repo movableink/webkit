@@ -69,6 +69,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'kill-old-processes',
             'jhbuild',
             'validate-change',
+            'clean-derived-sources',
             'compile-webkit',
             'install-built-product'
         ],
@@ -80,14 +81,16 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'checkout-source',
             'fetch-branch-references',
             'checkout-specific-revision',
+            'get-test-expectations-baseline',
             'show-identifier',
             'apply-patch',
             'checkout-pull-request',
+            'get-updated-test-expectations',
+            'find-modified-layout-tests',
             'jhbuild',
             'download-built-product',
             'extract-built-product',
             'kill-old-processes',
-            'find-modified-layout-tests',
             'run-layout-tests-in-stress-mode',
             'layout-tests',
             'set-build-summary'
@@ -130,14 +133,16 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'checkout-source',
             'fetch-branch-references',
             'checkout-specific-revision',
+            'get-test-expectations-baseline',
             'show-identifier',
             'apply-patch',
             'checkout-pull-request',
+            'get-updated-test-expectations',
+            'find-modified-layout-tests',
             'download-built-product',
             'extract-built-product',
             'wait-for-crash-collection',
             'kill-old-processes',
-            'find-modified-layout-tests',
             'run-layout-tests-in-stress-mode',
             'layout-tests',
             'trigger-crash-log-submission',
@@ -151,20 +156,22 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'checkout-source',
             'fetch-branch-references',
             'checkout-specific-revision',
+            'get-test-expectations-baseline',
             'show-identifier',
             'apply-patch',
             'checkout-pull-request',
+            'get-updated-test-expectations',
+            'find-modified-layout-tests',
             'download-built-product',
             'extract-built-product',
             'wait-for-crash-collection',
             'kill-old-processes',
-            'find-modified-layout-tests',
             'run-layout-tests-in-stress-mode',
             'layout-tests',
             'trigger-crash-log-submission',
             'set-build-summary'
         ],
-        'macOS-AppleSilicon-Sonoma-Debug-Build-EWS': [
+        'macOS-Sonoma-Debug-Build-EWS': [
             'configure-build',
             'check-change-relevance',
             'validate-change',
@@ -180,7 +187,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'validate-change',
             'compile-webkit'
         ],
-        'macOS-AppleSilicon-Sonoma-Debug-WK2-Tests-EWS': [
+        'macOS-Sonoma-Debug-WK2-Tests-EWS': [
             'configure-build',
             'validate-change',
             'configuration',
@@ -188,20 +195,22 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'checkout-source',
             'fetch-branch-references',
             'checkout-specific-revision',
+            'get-test-expectations-baseline',
             'show-identifier',
             'apply-patch',
             'checkout-pull-request',
+            'get-updated-test-expectations',
+            'find-modified-layout-tests',
             'download-built-product',
             'extract-built-product',
             'wait-for-crash-collection',
             'kill-old-processes',
-            'find-modified-layout-tests',
             'run-layout-tests-in-stress-mode',
             'layout-tests',
             'trigger-crash-log-submission',
             'set-build-summary'
         ],
-        'macOS-Monterey-Release-Build-EWS': [
+        'macOS-Ventura-Release-Build-EWS': [
             'configure-build',
             'validate-change',
             'configuration',
@@ -216,7 +225,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'validate-change',
             'compile-webkit'
         ],
-        'macOS-Monterey-Release-WK1-Tests-EWS': [
+        'macOS-Ventura-Release-WK1-Tests-EWS': [
             'configure-build',
             'check-change-relevance',
             'validate-change',
@@ -225,20 +234,22 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'checkout-source',
             'fetch-branch-references',
             'checkout-specific-revision',
+            'get-test-expectations-baseline',
             'show-identifier',
             'apply-patch',
             'checkout-pull-request',
+            'get-updated-test-expectations',
+            'find-modified-layout-tests',
             'download-built-product',
             'extract-built-product',
             'wait-for-crash-collection',
             'kill-old-processes',
-            'find-modified-layout-tests',
             'run-layout-tests-in-stress-mode',
             'layout-tests',
             'trigger-crash-log-submission',
             'set-build-summary'
         ],
-        'macOS-Monterey-Release-WK2-Tests-EWS': [
+        'macOS-Ventura-Release-WK2-Tests-EWS': [
             'configure-build',
             'validate-change',
             'configuration',
@@ -246,14 +257,16 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'checkout-source',
             'fetch-branch-references',
             'checkout-specific-revision',
+            'get-test-expectations-baseline',
             'show-identifier',
             'apply-patch',
             'checkout-pull-request',
+            'get-updated-test-expectations',
+            'find-modified-layout-tests',
             'download-built-product',
             'extract-built-product',
             'wait-for-crash-collection',
             'kill-old-processes',
-            'find-modified-layout-tests',
             'run-layout-tests-in-stress-mode',
             'layout-tests',
             'trigger-crash-log-submission',
@@ -261,7 +274,28 @@ class TestExpectedBuildSteps(unittest.TestCase):
         ],
         'macOS-Release-WK2-Stress-Tests-EWS': [
             'configure-build',
+            'validate-change',
+            'configuration',
+            'clean-up-git-repo',
+            'checkout-source',
+            'fetch-branch-references',
+            'checkout-specific-revision',
+            'get-test-expectations-baseline',
+            'show-identifier',
+            'apply-patch',
+            'checkout-pull-request',
+            'get-updated-test-expectations',
             'find-modified-layout-tests',
+            'download-built-product',
+            'extract-built-product',
+            'wait-for-crash-collection',
+            'kill-old-processes',
+            'run-layout-tests-in-stress-mode',
+            'trigger-crash-log-submission',
+            'set-build-summary'
+        ],
+        'visionOS-1-Build-EWS': [
+            'configure-build',
             'validate-change',
             'configuration',
             'clean-up-git-repo',
@@ -271,11 +305,45 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'show-identifier',
             'apply-patch',
             'checkout-pull-request',
+            'kill-old-processes',
+            'validate-change',
+            'compile-webkit'
+        ],
+        'visionOS-1-Simulator-Build-EWS': [
+            'configure-build',
+            'validate-change',
+            'configuration',
+            'clean-up-git-repo',
+            'checkout-source',
+            'fetch-branch-references',
+            'checkout-specific-revision',
+            'show-identifier',
+            'apply-patch',
+            'checkout-pull-request',
+            'kill-old-processes',
+            'validate-change',
+            'compile-webkit'
+        ],
+        'visionOS-1-Simulator-WK2-Tests-EWS': [
+            'configure-build',
+            'validate-change',
+            'configuration',
+            'clean-up-git-repo',
+            'checkout-source',
+            'fetch-branch-references',
+            'checkout-specific-revision',
+            'get-test-expectations-baseline',
+            'show-identifier',
+            'apply-patch',
+            'checkout-pull-request',
+            'get-updated-test-expectations',
+            'find-modified-layout-tests',
             'download-built-product',
             'extract-built-product',
             'wait-for-crash-collection',
             'kill-old-processes',
             'run-layout-tests-in-stress-mode',
+            'layout-tests',
             'trigger-crash-log-submission',
             'set-build-summary'
         ],
@@ -339,7 +407,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'validate-change',
             'compile-webkit'
         ],
-        'WinCairo-EWS': [
+        'Win-Build-EWS': [
             'configure-build',
             'validate-change',
             'configuration',
@@ -353,6 +421,25 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'kill-old-processes',
             'validate-change',
             'compile-webkit'
+        ],
+        'Win-Tests-EWS': [
+            'configure-build',
+            'validate-change',
+            'configuration',
+            'clean-up-git-repo',
+            'checkout-source',
+            'fetch-branch-references',
+            'checkout-specific-revision',
+            'show-identifier',
+            'apply-patch',
+            'checkout-pull-request',
+            'win-deps',
+            'download-built-product',
+            'extract-built-product',
+            'kill-old-processes',
+            'run-layout-tests-in-stress-mode',
+            'layout-tests',
+            'set-build-summary'
         ],
         'WPE-Build-EWS': [
             'configure-build',
@@ -368,9 +455,10 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'kill-old-processes',
             'jhbuild',
             'validate-change',
+            'clean-derived-sources',
             'compile-webkit'
         ],
-        'WPE-WK2-Tests-EWS': [
+        'WPE-Cairo-Build-EWS': [
             'configure-build',
             'validate-change',
             'configuration',
@@ -381,11 +469,30 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'show-identifier',
             'apply-patch',
             'checkout-pull-request',
+            'kill-old-processes',
+            'jhbuild',
+            'validate-change',
+            'clean-derived-sources',
+            'compile-webkit'
+        ],
+        'WPE-WK2-Tests-EWS': [
+            'configure-build',
+            'validate-change',
+            'configuration',
+            'clean-up-git-repo',
+            'checkout-source',
+            'fetch-branch-references',
+            'checkout-specific-revision',
+            'get-test-expectations-baseline',
+            'show-identifier',
+            'apply-patch',
+            'checkout-pull-request',
+            'get-updated-test-expectations',
+            'find-modified-layout-tests',
             'jhbuild',
             'download-built-product',
             'extract-built-product',
             'kill-old-processes',
-            'find-modified-layout-tests',
             'run-layout-tests-in-stress-mode',
             'layout-tests',
             'set-build-summary'
@@ -457,22 +564,6 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'kill-old-processes',
             'jscore-test'
         ],
-        'JSC-i386-32bits-EWS': [
-            'configure-build',
-            'check-change-relevance',
-            'validate-change',
-            'configuration',
-            'clean-up-git-repo',
-            'checkout-source',
-            'fetch-branch-references',
-            'checkout-specific-revision',
-            'show-identifier',
-            'apply-patch',
-            'checkout-pull-request',
-            'kill-old-processes',
-            'validate-change',
-            'compile-jsc'
-        ],
         'Bindings-Tests-EWS': [
             'configure-build',
             'check-change-relevance',
@@ -501,8 +592,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'apply-patch',
             'checkout-pull-request',
             'validate-change',
-            'webkitpy-tests-python2',
-            'webkitpy-tests-python3',
+            'webkitpy-tests',
             'set-build-summary'
         ],
         'WebKitPerl-Tests-EWS': [
@@ -533,7 +623,8 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'download-built-product',
             'extract-built-product',
             'kill-old-processes',
-            'run-api-tests'
+            'run-api-tests',
+            'set-build-summary'
         ],
         'API-Tests-macOS-EWS': [
             'configure-build',
@@ -549,7 +640,8 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'download-built-product',
             'extract-built-product',
             'kill-old-processes',
-            'run-api-tests'
+            'run-api-tests',
+            'set-build-summary'
         ],
         'API-Tests-GTK-EWS': [
             'configure-build',
@@ -566,7 +658,8 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'download-built-product',
             'extract-built-product',
             'kill-old-processes',
-            'run-api-tests'
+            'run-api-tests',
+            'set-build-summary'
         ],
         'API-Tests-WPE-EWS': [
             'configure-build',
@@ -583,7 +676,8 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'download-built-product',
             'extract-built-product',
             'kill-old-processes',
-            'run-api-tests'
+            'run-api-tests',
+            'set-build-summary'
         ],
         'Services-EWS': [
             'configure-build',
@@ -615,7 +709,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'update-working-directory',
             'show-identifier',
             'install-hooks',
-            'commit-patch',
+            'apply-patch',
             'validate-squashed',
             'add-reviewer-to-commit-message',
             'validate-commit-message',

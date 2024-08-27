@@ -48,9 +48,9 @@ static QByteArray generateWebSocketChallengeResponse(const QByteArray& key)
     SHA1::Digest digest;
     QByteArray toHash("258EAFA5-E914-47DA-95CA-C5AB0DC85B11");
     toHash.prepend(key);
-    sha1.addBytes((uint8_t*)toHash.data(), toHash.size());
+    sha1.addBytes(std::span<const uint8_t> { reinterpret_cast<const uint8_t*>(toHash.data()), static_cast<size_t>(toHash.size()) });
     sha1.computeHash(digest);
-    Vector<uint8_t> encoded = base64EncodeToVector((char*)digest.data(), digest.size());
+    Vector<uint8_t> encoded = base64EncodeToVector(std::span { digest.data(), static_cast<size_t>(digest.size()) });
     return QByteArray(reinterpret_cast<char*>(encoded.data()), encoded.size());
 }
 
@@ -355,7 +355,7 @@ void InspectorServerRequestHandlerQt::webSocketReadyRead()
         
         if (m_inspectorClient) {
             InspectorController& inspectorController = m_inspectorClient->m_inspectedWebPage->page->inspectorController();
-            inspectorController.dispatchMessageFromFrontend(String::fromUTF8(payload.data(), payload.size()));
+            inspectorController.dispatchMessageFromFrontend(String::fromUTF8(std::span { payload.data(), static_cast<size_t>(payload.size()) }));
         }
     }
 }

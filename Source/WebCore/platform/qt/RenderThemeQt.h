@@ -23,7 +23,6 @@
 #define RenderThemeQt_h
 
 #include "QStyleFacade.h"
-#include "StyleResolver.h"
 #include "RenderTheme.h"
 
 #include <QBrush>
@@ -50,14 +49,14 @@ using QtThemeFactoryFunction = std::add_pointer_t<RenderTheme&()>;
 class RenderThemeQt : public RenderTheme {
 
 public:
-    RenderThemeQt(Page*);
+    RenderThemeQt();
 
     static void setCustomTheme(QtThemeFactoryFunction factory, ScrollbarTheme* customScrollbarTheme);
     static ScrollbarTheme* customScrollbarTheme();
 
     String extraDefaultStyleSheet() override;
 
-    bool supportsHover(const RenderStyle&) const override;
+    bool supportsHover() const override;
     bool supportsFocusRing(const RenderStyle&) const override;
 
     int baselinePosition(const RenderBox&) const override;
@@ -68,7 +67,8 @@ public:
     // A general method asking if any control tinting is supported at all.
     bool supportsControlTints() const override;
 
-    void adjustRepaintRect(const RenderObject&, FloatRect&) override;
+    void inflateRectForControlRenderer(const RenderObject&, FloatRect&) final;
+    void adjustRepaintRect(const RenderBox&, FloatRect&) override;
 
     // The platform selection color.
     Color platformActiveSelectionBackgroundColor(OptionSet<StyleColorOptions>) const override;

@@ -67,6 +67,7 @@
 #include "RenderView.h"
 #include "ScriptController.h"
 #include "ScriptExecutionContext.h"
+#include "ServiceWorkerGlobalScope.h"
 #include "WebConsoleAgent.h"
 #include "WebDebuggerAgent.h"
 #include "WebGLRenderingContextBase.h"
@@ -100,18 +101,16 @@ void InspectorInstrumentation::lastFrontendDeleted()
 
 static LocalFrame* frameForScriptExecutionContext(ScriptExecutionContext* context)
 {
-    LocalFrame* frame = nullptr;
-    if (is<Document>(*context))
-        frame = downcast<Document>(*context).frame();
-    return frame;
+    if (RefPtr document = dynamicDowncast<Document>(*context))
+        return document->frame();
+    return nullptr;
 }
 
 static LocalFrame* frameForScriptExecutionContext(ScriptExecutionContext& context)
 {
-    LocalFrame* frame = nullptr;
-    if (is<Document>(context))
-        frame = downcast<Document>(context).frame();
-    return frame;
+    if (RefPtr document = dynamicDowncast<Document>(context))
+        return document->frame();
+    return nullptr;
 }
 
 void InspectorInstrumentation::didClearWindowObjectInWorldImpl(InstrumentingAgents& instrumentingAgents, LocalFrame& frame, DOMWrapperWorld& world)
@@ -328,7 +327,7 @@ bool InspectorInstrumentation::handleMousePressImpl(InstrumentingAgents& instrum
     return false;
 }
 
-bool InspectorInstrumentation::forcePseudoStateImpl(InstrumentingAgents& instrumentingAgents, const Element& element, CSSSelector::PseudoClassType pseudoState)
+bool InspectorInstrumentation::forcePseudoStateImpl(InstrumentingAgents& instrumentingAgents, const Element& element, CSSSelector::PseudoClass pseudoState)
 {
     if (auto* cssAgent = instrumentingAgents.enabledCSSAgent())
         return cssAgent->forcePseudoState(element, pseudoState);
@@ -1363,6 +1362,11 @@ InstrumentingAgents& InspectorInstrumentation::instrumentingAgents(WorkerOrWorkl
     return globalScope.inspectorController().m_instrumentingAgents;
 }
 
+InstrumentingAgents& InspectorInstrumentation::instrumentingAgents(ServiceWorkerGlobalScope& globalScope)
+{
+    return globalScope.inspectorController().m_instrumentingAgents;
+}
+
 InstrumentingAgents& InspectorInstrumentation::instrumentingAgents(Page& page)
 {
     ASSERT(isMainThread());
@@ -1371,10 +1375,11 @@ InstrumentingAgents& InspectorInstrumentation::instrumentingAgents(Page& page)
 
 InstrumentingAgents* InspectorInstrumentation::instrumentingAgents(ScriptExecutionContext& context)
 {
-    if (is<Document>(context))
-        return instrumentingAgents(downcast<Document>(context).page());
-    if (is<WorkerOrWorkletGlobalScope>(context))
-        return &instrumentingAgents(downcast<WorkerOrWorkletGlobalScope>(context));
+    // Using RefPtr makes us hit the m_inRemovedLastRefFunction assert.
+    if (WeakPtr document = dynamicDowncast<Document>(context))
+        return instrumentingAgents(document->protectedPage().get());
+    if (RefPtr workerOrWorkletGlobal = dynamicDowncast<WorkerOrWorkletGlobalScope>(context))
+        return &instrumentingAgents(*workerOrWorkletGlobal);
     return nullptr;
 }
 

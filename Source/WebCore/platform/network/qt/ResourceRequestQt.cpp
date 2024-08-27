@@ -61,7 +61,7 @@ static QUrl toQUrl(const URL& url)
 static inline QByteArray stringToByteArray(const String& string)
 {
     if (string.is8Bit())
-        return QByteArray(reinterpret_cast<const char*>(string.characters8()), string.length());
+        return QByteArray(reinterpret_cast<const char*>(string.span8().data()), static_cast<qsizetype>(string.span8().size()));
     return QString(string).toLatin1();
 }
 
@@ -90,6 +90,8 @@ QNetworkRequest ResourceRequest::toNetworkRequest(NetworkingContext *context) co
     const URL& originalUrl = url();
     request.setUrl(toQUrl(originalUrl));
     request.setOriginatingObject(context ? context->originatingObject() : 0);
+    // Qt6 now defaults to following redirects
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::ManualRedirectPolicy);
 
 #if USE(HTTP2)
     static const bool NegotiateHttp2ForHttps = alpnIsSupported();
@@ -98,7 +100,7 @@ QNetworkRequest ResourceRequest::toNetworkRequest(NetworkingContext *context) co
         static const auto params = createHttp2Configuration();
         request.setHttp2Configuration(params);
 #endif
-        request.setAttribute(QNetworkRequest::HTTP2AllowedAttribute, true);
+        request.setAttribute(QNetworkRequest::Http2AllowedAttribute, true);
     }
 #endif // USE(HTTP2)
 

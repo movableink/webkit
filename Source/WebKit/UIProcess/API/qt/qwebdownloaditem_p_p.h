@@ -33,7 +33,7 @@ class QWebDownloadItemPrivate : public QObject {
 public:
     QWebDownloadItemPrivate(QWebDownloadItem*);
 
-    void didReceiveResponse(QWebDownloadItem* download) { emit receivedResponse(download); }
+    void didReceiveResponse(QWebDownloadItem* download) { Q_EMIT receivedResponse(download); }
 
     QWebDownloadItem* q;
 

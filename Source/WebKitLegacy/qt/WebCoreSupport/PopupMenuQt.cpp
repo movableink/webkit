@@ -86,7 +86,7 @@ void PopupMenuQt::disconnectClient()
     m_popupClient = 0;
 }
 
-void PopupMenuQt::show(const IntRect& rect, LocalFrameView* view, int index)
+void PopupMenuQt::show(const IntRect& rect, LocalFrameView& view, int index)
 {
     if (!m_popupClient)
         return;
@@ -98,7 +98,7 @@ void PopupMenuQt::show(const IntRect& rect, LocalFrameView* view, int index)
     }
 
     QRect geometry(rect);
-    geometry.moveTopLeft(view->contentsToWindow(rect.location()));
+    geometry.moveTopLeft(view.contentsToWindow(rect.location()));
     m_popup->setGeometry(geometry);
     m_popup->setFont(m_popupClient->menuStyle().font().syntheticFont());
 

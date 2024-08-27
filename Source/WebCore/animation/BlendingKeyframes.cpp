@@ -34,8 +34,11 @@
 #include "Element.h"
 #include "KeyframeEffect.h"
 #include "RenderObject.h"
+#include "RenderStyleInlines.h"
 #include "StyleProperties.h"
 #include "StyleResolver.h"
+#include "TransformOperations.h"
+#include "TranslateTransformOperation.h"
 
 namespace WebCore {
 
@@ -72,6 +75,8 @@ void BlendingKeyframes::insert(BlendingKeyframe&& keyframe)
     if (keyframe.offset() < 0 || keyframe.offset() > 1)
         return;
 
+    analyzeKeyframe(keyframe);
+
     bool inserted = false;
     size_t i = 0;
     for (; i < m_keyframes.size(); ++i) {
@@ -94,6 +99,11 @@ void BlendingKeyframes::insert(BlendingKeyframe&& keyframe)
 bool BlendingKeyframes::hasImplicitKeyframes() const
 {
     return size() && (m_keyframes[0].offset() || m_keyframes[size() - 1].offset() != 1);
+}
+
+bool BlendingKeyframes::hasImplicitKeyframeForProperty(AnimatableCSSProperty property) const
+{
+    return hasImplicitKeyframes() && (!m_explicitFromProperties.contains(property) || !m_explicitToProperties.contains(property));
 }
 
 void BlendingKeyframes::copyKeyframes(const BlendingKeyframes& other)
@@ -308,6 +318,61 @@ void BlendingKeyframes::updatePropertiesMetadata(const StyleProperties& properti
                 m_propertiesSetToCurrentColor.add(customPropertyValue->name());
         }
     }
+}
+
+void BlendingKeyframes::analyzeKeyframe(const BlendingKeyframe& keyframe)
+{
+    auto* style = keyframe.style();
+    if (!style)
+        return;
+
+    auto analyzeSizeDependentTransform = [&] {
+        if (m_hasWidthDependentTransform && m_hasHeightDependentTransform)
+            return;
+
+        if (keyframe.animatesProperty(CSSPropertyTransform)) {
+            for (auto& operation : style->transform()) {
+                if (RefPtr translate = dynamicDowncast<TranslateTransformOperation>(operation.get())) {
+                    if (translate->x().isPercent())
+                        m_hasWidthDependentTransform = true;
+                    if (translate->y().isPercent())
+                        m_hasHeightDependentTransform = true;
+                }
+            }
+        }
+
+        if (keyframe.animatesProperty(CSSPropertyTranslate)) {
+            if (auto* translate = style->translate()) {
+                if (translate->x().isPercent())
+                    m_hasWidthDependentTransform = true;
+                if (translate->y().isPercent())
+                    m_hasHeightDependentTransform = true;
+            }
+        }
+    };
+
+    auto analyzeDiscreteTransformInterval = [&] {
+        if (!m_hasDiscreteTransformInterval && keyframe.animatesProperty(CSSPropertyTransform))
+            m_hasDiscreteTransformInterval = style->transform().containsNonInvertibleMatrix({ });
+    };
+
+    auto analyzeExplicitlyInheritedKeyframeProperty = [&] {
+        if (!m_hasExplicitlyInheritedKeyframeProperty)
+            m_hasExplicitlyInheritedKeyframeProperty = style->hasExplicitlyInheritedProperties();
+    };
+
+    auto analyzeKeyframeForExplicitProperties = [&] {
+        auto& properties = keyframe.properties();
+        if (!keyframe.offset())
+            m_explicitFromProperties.add(properties.begin(), properties.end());
+        if (keyframe.offset() == 1)
+            m_explicitToProperties.add(properties.begin(), properties.end());
+    };
+
+    analyzeSizeDependentTransform();
+    analyzeDiscreteTransformInterval();
+    analyzeExplicitlyInheritedKeyframeProperty();
+    analyzeKeyframeForExplicitProperties();
 }
 
 void BlendingKeyframe::addProperty(const AnimatableCSSProperty& property)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -180,7 +180,7 @@ private:
         }
 
         for (const auto& page : m_pages) {
-            int bytesWritten = FileSystem::writeToFile(m_fd, page.buffer(), page.size());
+            int bytesWritten = FileSystem::writeToFile(m_fd, page.span());
             if (bytesWritten == -1) {
                 error = BytecodeCacheError::StandardError(errno);
                 return nullptr;
@@ -225,6 +225,9 @@ private:
 
         uint8_t* buffer() const { return m_buffer.get(); }
         size_t size() const { return static_cast<size_t>(m_offset); }
+
+        std::span<uint8_t> mutableSpan() { return { m_buffer.get(), size() }; }
+        std::span<const uint8_t> span() const { return { m_buffer.get(), size() }; }
 
         bool getOffset(const void* address, ptrdiff_t& result) const
         {
@@ -457,6 +460,29 @@ private:
 };
 
 template<typename T, typename Source = SourceType<T>>
+class CachedArray : public VariableLengthObject<Source*> {
+public:
+    void encode(Encoder& encoder, const Source* array, unsigned size)
+    {
+        if (!size)
+            return;
+        T* dst = this->template allocate<T>(encoder, size);
+        for (unsigned i = 0; i < size; ++i)
+            ::JSC::encode(encoder, dst[i], array[i]);
+    }
+
+    template<typename... Args>
+    void decode(Decoder& decoder, Source* array, unsigned size, Args... args) const
+    {
+        if (!size)
+            return;
+        const T* buffer = this->template buffer<T>();
+        for (unsigned i = 0; i < size; ++i)
+            ::JSC::decode(decoder, buffer[i], array[i], args...);
+    }
+};
+
+template<typename T, typename Source = SourceType<T>>
 class CachedPtr : public VariableLengthObject<Source*> {
     template<typename, typename, typename>
     friend class CachedRefPtr;
@@ -516,7 +542,7 @@ private:
     }
 };
 
-ptrdiff_t CachedPtrOffsets::offsetOffset()
+constexpr ptrdiff_t CachedPtrOffsets::offsetOffset()
 {
     return OBJECT_OFFSETOF(CachedPtr<void>, m_offset);
 }
@@ -582,7 +608,7 @@ private:
     CachedPtr<T, Source> m_ptr;
 };
 
-ptrdiff_t CachedWriteBarrierOffsets::ptrOffset()
+constexpr ptrdiff_t CachedWriteBarrierOffsets::ptrOffset()
 {
     return OBJECT_OFFSETOF(CachedWriteBarrier<void>, m_ptr);
 }
@@ -700,9 +726,9 @@ public:
         unsigned size = m_length;
         const void* payload;
         if (m_is8Bit)
-            payload = impl->characters8();
+            payload = impl->span8().data();
         else {
-            payload = impl->characters16();
+            payload = impl->span16().data();
             size *= 2;
         }
 
@@ -712,22 +738,22 @@ public:
 
     UniquedStringImpl* decode(Decoder& decoder) const
     {
-        auto create = [&](const auto* buffer) -> UniquedStringImpl* {
+        auto create = [&](auto buffer) -> UniquedStringImpl* {
             if (!m_isSymbol)
-                return AtomStringImpl::add(buffer, m_length).leakRef();
+                return AtomStringImpl::add(buffer).leakRef();
 
             SymbolImpl* symbol;
             VM& vm = decoder.vm();
             if (m_isRegistered) {
-                String str(buffer, m_length);
+                String str(buffer);
                 if (m_isPrivate)
                     symbol = static_cast<SymbolImpl*>(&vm.privateSymbolRegistry().symbolForKey(str).leakRef());
                 else
                     symbol = static_cast<SymbolImpl*>(&vm.symbolRegistry().symbolForKey(str).leakRef());
             } else if (m_isWellKnownSymbol)
-                symbol = vm.propertyNames->builtinNames().lookUpWellKnownSymbol(buffer, m_length);
+                symbol = vm.propertyNames->builtinNames().lookUpWellKnownSymbol(buffer);
             else
-                symbol = vm.propertyNames->builtinNames().lookUpPrivateName(buffer, m_length);
+                symbol = vm.propertyNames->builtinNames().lookUpPrivateName(buffer);
             RELEASE_ASSERT(symbol);
             String str = symbol;
             StringImpl* impl = str.releaseImpl().get();
@@ -745,10 +771,11 @@ public:
             return RefPtr { emptyAtom().impl() }.leakRef();
         }
 
-        if (m_is8Bit)
-            return create(this->template buffer<LChar>());
-        return create(this->template buffer<UChar>());
+        return m_is8Bit ? create(span8()) : create(span16());
     }
+
+    std::span<const LChar> span8() const { return { this->template buffer<LChar>(), m_length }; }
+    std::span<const UChar> span16() const { return { this->template buffer<UChar>(), m_length }; }
 
 private:
     bool m_is8Bit : 1;
@@ -939,7 +966,6 @@ public:
         m_exceptionHandlers.encode(encoder, rareData.m_exceptionHandlers);
         m_unlinkedSwitchJumpTables.encode(encoder, rareData.m_unlinkedSwitchJumpTables);
         m_unlinkedStringSwitchJumpTables.encode(encoder, rareData.m_unlinkedStringSwitchJumpTables);
-        m_expressionInfoFatPositions.encode(encoder, rareData.m_expressionInfoFatPositions);
         m_typeProfilerInfoMap.encode(encoder, rareData.m_typeProfilerInfoMap);
         m_opProfileControlFlowBytecodeOffsets.encode(encoder, rareData.m_opProfileControlFlowBytecodeOffsets);
         m_bitVectors.encode(encoder, rareData.m_bitVectors);
@@ -954,7 +980,6 @@ public:
         m_exceptionHandlers.decode(decoder, rareData->m_exceptionHandlers);
         m_unlinkedSwitchJumpTables.decode(decoder, rareData->m_unlinkedSwitchJumpTables);
         m_unlinkedStringSwitchJumpTables.decode(decoder, rareData->m_unlinkedStringSwitchJumpTables);
-        m_expressionInfoFatPositions.decode(decoder, rareData->m_expressionInfoFatPositions);
         m_typeProfilerInfoMap.decode(decoder, rareData->m_typeProfilerInfoMap);
         m_opProfileControlFlowBytecodeOffsets.decode(decoder, rareData->m_opProfileControlFlowBytecodeOffsets);
         m_bitVectors.decode(decoder, rareData->m_bitVectors);
@@ -968,13 +993,36 @@ private:
     CachedVector<UnlinkedHandlerInfo> m_exceptionHandlers;
     CachedVector<CachedSimpleJumpTable> m_unlinkedSwitchJumpTables;
     CachedVector<CachedStringJumpTable> m_unlinkedStringSwitchJumpTables;
-    CachedVector<ExpressionRangeInfo::FatPosition> m_expressionInfoFatPositions;
     CachedHashMap<unsigned, UnlinkedCodeBlock::RareData::TypeProfilerExpressionRange> m_typeProfilerInfoMap;
     CachedVector<JSInstructionStream::Offset> m_opProfileControlFlowBytecodeOffsets;
     CachedVector<CachedBitVector> m_bitVectors;
     CachedVector<CachedHashSet<CachedRefPtr<CachedUniquedStringImpl>, IdentifierRepHash>> m_constantIdentifierSets;
     unsigned m_needsClassFieldInitializer : 1;
     unsigned m_privateBrandRequirement : 1;
+};
+
+class CachedExpressionInfo : public CachedObject<ExpressionInfo> {
+public:
+    void encode(Encoder& encoder, const ExpressionInfo& info)
+    {
+        m_numberOfChapters = info.m_numberOfChapters;
+        m_numberOfEncodedInfo = info.m_numberOfEncodedInfo;
+        m_numberOfEncodedInfoExtensions = info.m_numberOfEncodedInfoExtensions;
+        m_storage.encode(encoder, info.payload(), info.payloadSize());
+    }
+
+    MallocPtr<ExpressionInfo> decode(Decoder& decoder) const
+    {
+        auto info = ExpressionInfo::createUninitialized(m_numberOfChapters, m_numberOfEncodedInfo, m_numberOfEncodedInfoExtensions);
+        m_storage.decode(decoder, info->payload(), info->payloadSize());
+        return info;
+    }
+
+private:
+    unsigned m_numberOfChapters;
+    unsigned m_numberOfEncodedInfo;
+    unsigned m_numberOfEncodedInfoExtensions;
+    CachedArray<unsigned> m_storage;
 };
 
 typedef CachedHashMap<CachedRefPtr<CachedUniquedStringImpl, UniquedStringImpl, WTF::PackedPtrTraits<UniquedStringImpl>>, PrivateNameEntry, IdentifierRepHash, HashTraits<RefPtr<UniquedStringImpl>>, PrivateNameEntryHashTraits> CachedPrivateNameEnvironment;
@@ -1096,42 +1144,19 @@ private:
     CachedPtr<CachedCompactTDZEnvironment> m_environment;
 };
 
-template<typename T, typename Source = SourceType<T>>
-class CachedArray : public VariableLengthObject<Source*> {
-public:
-    void encode(Encoder& encoder, const Source* array, unsigned size)
-    {
-        if (!size)
-            return;
-        T* dst = this->template allocate<T>(encoder, size);
-        for (unsigned i = 0; i < size; ++i)
-            ::JSC::encode(encoder, dst[i], array[i]);
-    }
-
-    template<typename... Args>
-    void decode(Decoder& decoder, Source* array, unsigned size, Args... args) const
-    {
-        if (!size)
-            return;
-        const T* buffer = this->template buffer<T>();
-        for (unsigned i = 0; i < size; ++i)
-            ::JSC::decode(decoder, buffer[i], array[i], args...);
-    }
-};
-
 class CachedScopedArgumentsTable : public CachedObject<ScopedArgumentsTable> {
 public:
     void encode(Encoder& encoder, const ScopedArgumentsTable& scopedArgumentsTable)
     {
         m_length = scopedArgumentsTable.m_length;
-        m_arguments.encode(encoder, scopedArgumentsTable.m_arguments.get(m_length), m_length);
+        m_arguments.encode(encoder, scopedArgumentsTable.m_arguments.get(), m_length);
     }
 
     ScopedArgumentsTable* decode(Decoder& decoder) const
     {
         ScopedArgumentsTable* scopedArgumentsTable = ScopedArgumentsTable::tryCreate(decoder.vm(), m_length);
         RELEASE_ASSERT(scopedArgumentsTable); // We crash here. This is unlikely to continue execution if we hit this condition when decoding UnlinkedCodeBlock.
-        m_arguments.decode(decoder, scopedArgumentsTable->m_arguments.get(m_length), m_length);
+        m_arguments.decode(decoder, scopedArgumentsTable->m_arguments.get(), m_length);
         return scopedArgumentsTable;
     }
 
@@ -1346,8 +1371,9 @@ public:
 
         if (auto* string = jsDynamicCast<JSString*>(cell)) {
             m_type = EncodedType::String;
-            StringImpl* impl = string->tryGetValue().impl();
-            this->allocate<CachedUniquedStringImpl>(encoder)->encode(encoder, *impl);
+            // TODO: This seems wrong? What if this fails.
+            auto str = string->tryGetValue();
+            this->allocate<CachedUniquedStringImpl>(encoder)->encode(encoder, *str.data.impl());
             return;
         }
 
@@ -1747,13 +1773,59 @@ private:
     CachedRefPtr<CachedTDZEnvironmentLink> m_parent;
 };
 
+class CachedJSTextPosition : public CachedObject<JSTextPosition> {
+public:
+    void encode(Encoder&, const JSTextPosition& position)
+    {
+        m_line = position.line;
+        m_offset = position.offset;
+        m_lineStartOffset = position.lineStartOffset;
+    }
+
+    JSTextPosition decode(Decoder&) const
+    {
+        return JSTextPosition { m_line, m_offset, m_lineStartOffset };
+    }
+
+private:
+    int m_line;
+    int m_offset;
+    int m_lineStartOffset;
+};
+
+class CachedClassElementDefinition : public CachedObject<UnlinkedFunctionExecutable::ClassElementDefinition> {
+public:
+    void encode(Encoder& encoder, const UnlinkedFunctionExecutable::ClassElementDefinition& definition)
+    {
+        m_ident.encode(encoder, definition.ident);
+        m_position.encode(encoder, definition.position);
+        m_initializerPosition.encode(encoder, definition.initializerPosition);
+        m_kind = static_cast<uint8_t>(definition.kind);
+    }
+
+    void decode(Decoder& decoder, UnlinkedFunctionExecutable::ClassElementDefinition& definition) const
+    {
+        definition.ident = m_ident.decode(decoder);
+        definition.position = m_position.decode(decoder);
+        definition.initializerPosition = m_initializerPosition.decode(decoder);
+        definition.kind = static_cast<UnlinkedFunctionExecutable::ClassElementDefinition::Kind>(m_kind);
+    }
+
+private:
+    CachedIdentifier m_ident;
+    CachedJSTextPosition m_position;
+    CachedOptional<CachedJSTextPosition> m_initializerPosition;
+    uint8_t m_kind;
+};
+
 class CachedFunctionExecutableRareData : public CachedObject<UnlinkedFunctionExecutable::RareData> {
 public:
     void encode(Encoder& encoder, const UnlinkedFunctionExecutable::RareData& rareData)
     {
         m_classSource.encode(encoder, rareData.m_classSource);
         m_parentScopeTDZVariables.encode(encoder, rareData.m_parentScopeTDZVariables);
-        m_classFieldLocations.encode(encoder, rareData.m_classFieldLocations);
+        m_generatorOrAsyncWrapperFunctionParameterNames.encode(encoder, rareData.m_generatorOrAsyncWrapperFunctionParameterNames);
+        m_classElementDefinitions.encode(encoder, rareData.m_classElementDefinitions);
         m_parentPrivateNameEnvironment.encode(encoder, rareData.m_parentPrivateNameEnvironment);
     }
 
@@ -1762,7 +1834,8 @@ public:
         UnlinkedFunctionExecutable::RareData* rareData = new UnlinkedFunctionExecutable::RareData { };
         m_classSource.decode(decoder, rareData->m_classSource);
         m_parentScopeTDZVariables.decode(decoder, rareData->m_parentScopeTDZVariables);
-        m_classFieldLocations.decode(decoder, rareData->m_classFieldLocations);
+        m_generatorOrAsyncWrapperFunctionParameterNames.decode(decoder, rareData->m_generatorOrAsyncWrapperFunctionParameterNames);
+        m_classElementDefinitions.decode(decoder, rareData->m_classElementDefinitions);
         m_parentPrivateNameEnvironment.decode(decoder, rareData->m_parentPrivateNameEnvironment);
         return rareData;
     }
@@ -1770,7 +1843,8 @@ public:
 private:
     CachedSourceCodeWithoutProvider m_classSource;
     CachedRefPtr<CachedTDZEnvironmentLink> m_parentScopeTDZVariables;
-    CachedVector<JSTextPosition> m_classFieldLocations;
+    CachedVector<CachedIdentifier> m_generatorOrAsyncWrapperFunctionParameterNames;
+    CachedVector<CachedClassElementDefinition> m_classElementDefinitions;
     CachedPrivateNameEnvironment m_parentPrivateNameEnvironment;
 };
 
@@ -1854,17 +1928,17 @@ private:
     CachedWriteBarrier<CachedFunctionCodeBlock, UnlinkedFunctionCodeBlock> m_unlinkedCodeBlockForConstruct;
 };
 
-ptrdiff_t CachedFunctionExecutableOffsets::codeBlockForCallOffset()
+constexpr ptrdiff_t CachedFunctionExecutableOffsets::codeBlockForCallOffset()
 {
     return OBJECT_OFFSETOF(CachedFunctionExecutable, m_unlinkedCodeBlockForCall);
 }
 
-ptrdiff_t CachedFunctionExecutableOffsets::codeBlockForConstructOffset()
+constexpr ptrdiff_t CachedFunctionExecutableOffsets::codeBlockForConstructOffset()
 {
     return OBJECT_OFFSETOF(CachedFunctionExecutable, m_unlinkedCodeBlockForConstruct);
 }
 
-ptrdiff_t CachedFunctionExecutableOffsets::metadataOffset()
+constexpr ptrdiff_t CachedFunctionExecutableOffsets::metadataOffset()
 {
     return OBJECT_OFFSETOF(CachedFunctionExecutable, m_mutableMetadata);
 }
@@ -1963,7 +2037,7 @@ private:
     CachedVector<JSInstructionStream::Offset> m_jumpTargets;
     CachedVector<CachedJSValue> m_constantRegisters;
     CachedVector<SourceCodeRepresentation> m_constantsSourceCodeRepresentation;
-    CachedVector<ExpressionRangeInfo> m_expressionInfo;
+    CachedPtr<CachedExpressionInfo> m_expressionInfo;
     CachedHashMap<JSInstructionStream::Offset, int> m_outOfLineJumpTargets;
 
     CachedVector<CachedIdentifier> m_identifiers;
@@ -2167,7 +2241,7 @@ ALWAYS_INLINE void CachedCodeBlock<CodeBlockType>::decode(Decoder& decoder, Unli
 {
     m_constantRegisters.decode(decoder, codeBlock.m_constantRegisters, &codeBlock);
     m_constantsSourceCodeRepresentation.decode(decoder, codeBlock.m_constantsSourceCodeRepresentation);
-    m_expressionInfo.decode(decoder, codeBlock.m_expressionInfo);
+    codeBlock.m_expressionInfo = m_expressionInfo->decode(decoder);
     m_outOfLineJumpTargets.decode(decoder, codeBlock.m_outOfLineJumpTargets);
     m_jumpTargets.decode(decoder, codeBlock.m_jumpTargets);
     m_identifiers.decode(decoder, codeBlock.m_identifiers);
@@ -2349,7 +2423,7 @@ ALWAYS_INLINE void CachedCodeBlock<CodeBlockType>::encode(Encoder& encoder, cons
     m_instructions.encode(encoder, codeBlock.m_instructions.get());
     m_constantRegisters.encode(encoder, codeBlock.m_constantRegisters);
     m_constantsSourceCodeRepresentation.encode(encoder, codeBlock.m_constantsSourceCodeRepresentation);
-    m_expressionInfo.encode(encoder, codeBlock.m_expressionInfo);
+    m_expressionInfo.encode(encoder, codeBlock.m_expressionInfo.get());
     m_jumpTargets.encode(encoder, codeBlock.m_jumpTargets);
     m_outOfLineJumpTargets.encode(encoder, codeBlock.m_outOfLineJumpTargets);
 
@@ -2393,7 +2467,8 @@ public:
 
 protected:
     GenericCacheEntry(Encoder& encoder, CachedCodeBlockTag tag)
-        : m_tag(tag)
+        : m_cacheVersion(computeJSCBytecodeCacheVersion())
+        , m_tag(tag)
     {
         m_bootSessionUUID.encode(encoder, bootSessionUUIDString());
     }
@@ -2402,7 +2477,7 @@ protected:
 
     bool isUpToDate(Decoder& decoder) const
     {
-        if (m_cacheVersion != JSCBytecodeCacheVersion)
+        if (m_cacheVersion != computeJSCBytecodeCacheVersion())
             return false;
         if (m_bootSessionUUID.decode(decoder) != bootSessionUUIDString())
             return false;
@@ -2410,7 +2485,7 @@ protected:
     }
 
 private:
-    uint32_t m_cacheVersion { JSCBytecodeCacheVersion };
+    uint32_t m_cacheVersion;
     CachedString m_bootSessionUUID;
     CachedCodeBlockTag m_tag;
 };
@@ -2472,10 +2547,7 @@ bool GenericCacheEntry::decode(Decoder& decoder, std::pair<SourceCodeKey, Unlink
         RELEASE_ASSERT_NOT_REACHED();
     }
     RELEASE_ASSERT_NOT_REACHED();
-#if COMPILER(MSVC)
-    // Without this, MSVC will complain that this path does not return a value.
     return false;
-#endif
 }
 
 bool GenericCacheEntry::isStillValid(Decoder& decoder, const SourceCodeKey& key, CachedCodeBlockTag tag) const

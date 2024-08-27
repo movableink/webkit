@@ -25,11 +25,19 @@
 
 #pragma once
 
-#include "DataReference.h"
 #include "DownloadID.h"
 #include "MessageSender.h"
 #include "NetworkLoadClient.h"
 #include "SandboxExtension.h"
+
+namespace WebKit {
+class PendingDownload;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebKit::PendingDownload> : std::true_type { };
+}
 
 namespace IPC {
 class Connection;
@@ -52,7 +60,7 @@ public:
     PendingDownload(IPC::Connection*, NetworkLoadParameters&&, DownloadID, NetworkSession&, const String& suggestedName);
     PendingDownload(IPC::Connection*, std::unique_ptr<NetworkLoad>&&, ResponseCompletionHandler&&, DownloadID, const WebCore::ResourceRequest&, const WebCore::ResourceResponse&);
 
-    void cancel(CompletionHandler<void(const IPC::DataReference&)>&&);
+    void cancel(CompletionHandler<void(std::span<const uint8_t>)>&&);
 
 #if PLATFORM(COCOA)
     void publishProgress(const URL&, SandboxExtension::Handle&&);

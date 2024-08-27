@@ -1,4 +1,4 @@
-get_target_property(RCC_EXECUTABLE ${Qt5Core_RCC_EXECUTABLE} IMPORTED_LOCATION)
+get_target_property(RCC_EXECUTABLE Qt6::rcc IMPORTED_LOCATION)
 
 if (NOT DEFINED InspectorFiles)
     # QTFIXME: Must be kept in sync with CMakeLists.txt; probably a better way?

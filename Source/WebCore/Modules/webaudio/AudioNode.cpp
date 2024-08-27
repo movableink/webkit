@@ -34,6 +34,7 @@
 #include "AudioNodeOptions.h"
 #include "AudioNodeOutput.h"
 #include "AudioParam.h"
+#include "ContextDestructionObserverInlines.h"
 #include "Logging.h"
 #include <wtf/Atomics.h>
 #include <wtf/IsoMallocInlines.h>
@@ -138,7 +139,7 @@ AudioNode::~AudioNode()
     ASSERT(isMainThread());
 #if DEBUG_AUDIONODE_REFERENCES
     --s_nodeCount[nodeType()];
-    fprintf(stderr, "%p: %d: AudioNode::~AudioNode() %d %d\n", this, nodeType(), m_normalRefCount.load(), m_connectionRefCount);
+    fprintf(stderr, "%p: %d: AudioNode::~AudioNode() %d %d\n", this, nodeType(), m_normalRefCount.load(), m_connectionRefCount.load());
 #endif
 }
 
@@ -204,8 +205,9 @@ ExceptionOr<void> AudioNode::connect(AudioNode& destination, unsigned outputInde
     if (!output->numberOfChannels())
         return Exception { ExceptionCode::InvalidAccessError, "Node has zero output channels"_s };
 
-    if (is<AudioContext>(context) && &destination == &context.destination() && !downcast<AudioContext>(context).destination().isConnected())
-        downcast<AudioContext>(context).defaultDestinationWillBecomeConnected();
+    RefPtr audioContext = dynamicDowncast<AudioContext>(context);
+    if (audioContext && &destination == &context.destination() && !audioContext->destination().isConnected())
+        audioContext->defaultDestinationWillBecomeConnected();
 
     input->connect(output);
 
@@ -443,9 +445,9 @@ void AudioNode::initializeDefaultNodeOptions(unsigned count, ChannelCountMode mo
     m_channelInterpretation = interpretation;
 }
 
-EventTargetInterface AudioNode::eventTargetInterface() const
+enum EventTargetInterfaceType AudioNode::eventTargetInterface() const
 {
-    return AudioNodeEventTargetInterfaceType;
+    return EventTargetInterfaceType::AudioNode;
 }
 
 ScriptExecutionContext* AudioNode::scriptExecutionContext() const
@@ -576,8 +578,13 @@ void AudioNode::incrementConnectionCount()
     // In this case, we need to re-enable.
     enableOutputsIfNecessary();
 
+    {
+        Locker locker { context().graphLock() };
+        unmarkNodeForDeletionIfNecessary();
+    }
+
 #if DEBUG_AUDIONODE_REFERENCES
-    fprintf(stderr, "%p: %d: AudioNode::incrementConnectionCount() %d %d\n", this, nodeType(), m_normalRefCount, m_connectionRefCount);
+    fprintf(stderr, "%p: %d: AudioNode::incrementConnectionCount() %d %d\n", this, nodeType(), m_normalRefCount.load(), m_connectionRefCount.load());
 #endif
 }
 
@@ -609,7 +616,7 @@ void AudioNode::decrementConnectionCountWithLock()
     --m_connectionRefCount;
 
 #if DEBUG_AUDIONODE_REFERENCES
-    fprintf(stderr, "%p: %d: AudioNode::decrementConnectionCountWithLock() %d %d\n", this, nodeType(), m_normalRefCount, m_connectionRefCount);
+    fprintf(stderr, "%p: %d: AudioNode::decrementConnectionCountWithLock() %d %d\n", this, nodeType(), m_normalRefCount.load(), m_connectionRefCount.load());
 #endif
 
     if (!m_connectionRefCount && m_normalRefCount)
@@ -638,16 +645,33 @@ void AudioNode::markNodeForDeletionIfNecessary()
     m_isMarkedForDeletion = true;
 }
 
-void AudioNode::ref()
+void AudioNode::unmarkNodeForDeletionIfNecessary()
+{
+    ASSERT(context().isGraphOwner());
+    if (!m_isMarkedForDeletion)
+        return;
+    if (!m_connectionRefCount && !m_normalRefCount)
+        return;
+
+    m_isMarkedForDeletion = false;
+    context().unmarkForDeletion(*this);
+}
+
+void AudioNode::ref() const
 {
     ++m_normalRefCount;
 
+    {
+        Locker locker { context().graphLock() };
+        const_cast<AudioNode*>(this)->unmarkNodeForDeletionIfNecessary();
+    }
+
 #if DEBUG_AUDIONODE_REFERENCES
-    fprintf(stderr, "%p: %d: AudioNode::ref() %d %d\n", this, nodeType(), m_normalRefCount, m_connectionRefCount);
+    fprintf(stderr, "%p: %d: AudioNode::ref() %d %d\n", this, nodeType(), m_normalRefCount.load(), m_connectionRefCount.load());
 #endif
 }
 
-void AudioNode::deref()
+void AudioNode::deref() const
 {
     ASSERT(!context().isAudioThread());
 
@@ -661,10 +685,10 @@ void AudioNode::deref()
     // We can't call in AudioContext::~AudioContext() since it will never be called as long as any AudioNode is alive
     // because AudioNodes keep a reference to the context.
     if (context().isAudioThreadFinished())
-        context().deleteMarkedNodes();
+        const_cast<BaseAudioContext&>(context()).deleteMarkedNodes();
 }
 
-void AudioNode::derefWithLock()
+void AudioNode::derefWithLock() const
 {
     ASSERT(context().isGraphOwner());
     
@@ -672,10 +696,10 @@ void AudioNode::derefWithLock()
     --m_normalRefCount;
     
 #if DEBUG_AUDIONODE_REFERENCES
-    fprintf(stderr, "%p: %d: AudioNode::deref() %d %d\n", this, nodeType(), m_normalRefCount, m_connectionRefCount);
+    fprintf(stderr, "%p: %d: AudioNode::deref() %d %d\n", this, nodeType(), m_normalRefCount.load(), m_connectionRefCount.load());
 #endif
 
-    markNodeForDeletionIfNecessary();
+    const_cast<AudioNode*>(this)->markNodeForDeletionIfNecessary();
 }
 
 ExceptionOr<void> AudioNode::handleAudioNodeOptions(const AudioNodeOptions& options, const DefaultAudioNodeOptions& defaults)

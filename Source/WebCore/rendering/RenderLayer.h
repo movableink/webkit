@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2009, 2012, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2024 Apple Inc. All rights reserved.
  * Copyright (c) 2020 Igalia S.L.
  *
  * Portions are Copyright (C) 1998 Netscape Communications Corporation.
@@ -151,8 +151,9 @@ struct ScrollRectToVisibleOptions {
 
 using ScrollingScope = uint64_t;
 
-class RenderLayer : public CanMakeSingleThreadWeakPtr<RenderLayer>, public CanMakeCheckedPtr {
+class RenderLayer final : public CanMakeSingleThreadWeakPtr<RenderLayer>, public CanMakeCheckedPtr<RenderLayer> {
     WTF_MAKE_ISO_ALLOCATED(RenderLayer);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderLayer);
 public:
     friend class RenderReplica;
     friend class RenderLayerFilters;
@@ -216,6 +217,8 @@ public:
     // Gets the enclosing stacking container for this layer, possibly the layer
     // itself, if it is a stacking container.
     RenderLayer* enclosingStackingContext() { return isStackingContext() ? this : stackingContext(); }
+
+    void forceStackingContextIfNeeded();
 
     RenderLayer* paintOrderParent() const;
 
@@ -411,17 +414,12 @@ public:
     bool descendantDependentFlagsAreDirty() const
     {
         return m_visibleDescendantStatusDirty || m_visibleContentStatusDirty || m_hasSelfPaintingLayerDescendantDirty
-#if ENABLE(CSS_COMPOSITING)
-            || m_hasNotIsolatedBlendingDescendantsStatusDirty
-#endif
-        ;
+            || m_hasNotIsolatedBlendingDescendantsStatusDirty;
     }
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     bool isPaintingSVGResourceLayer() const { return m_isPaintingSVGResourceLayer; }
 
     inline RenderSVGHiddenContainer* enclosingSVGHiddenOrResourceContainer() const;
-#endif
 
     void repaintIncludingDescendants();
 
@@ -500,7 +498,8 @@ public:
     bool canRender3DTransforms() const;
 
     void updateLayerPositionsAfterStyleChange();
-    void updateLayerPositionsAfterLayout(bool isRelayoutingSubtree, bool didFullRepaint);
+    enum class CanUseSimplifiedRepaintPass : uint8_t { No, Yes };
+    void updateLayerPositionsAfterLayout(bool isRelayoutingSubtree, bool didFullRepaint, CanUseSimplifiedRepaintPass);
     void updateLayerPositionsAfterOverflowScroll();
     void updateLayerPositionsAfterDocumentScroll();
 
@@ -515,10 +514,8 @@ public:
 
     void updateTransform();
     
-#if ENABLE(CSS_COMPOSITING)
     void updateBlendMode();
     void willRemoveChildWithBlendMode();
-#endif
 
     const LayoutSize& offsetForInFlowPosition() const { return m_offsetForPosition; }
 
@@ -611,7 +608,7 @@ public:
 
     inline int zIndex() const;
 
-    enum class PaintLayerFlag : uint16_t {
+    enum class PaintLayerFlag : uint32_t {
         HaveTransparency                      = 1 << 0,
         AppliedTransform                      = 1 << 1,
         TemporaryClipRects                    = 1 << 2,
@@ -628,6 +625,7 @@ public:
         PaintingChildClippingMaskPhase        = 1 << 13,
         PaintingSVGClippingMask               = 1 << 14,
         CollectingEventRegion                 = 1 << 15,
+        PaintingSkipDescendantViewTransition  = 1 << 16,
     };
     static constexpr OptionSet<PaintLayerFlag> paintLayerPaintingCompositingAllPhasesFlags() { return { PaintLayerFlag::PaintingCompositingBackgroundPhase, PaintLayerFlag::PaintingCompositingForegroundPhase }; }
 
@@ -695,6 +693,7 @@ public:
         UseFragmentBoxesExcludingCompositing    = 1 << 7,
         UseFragmentBoxesIncludingCompositing    = 1 << 8,
         IncludeRootBackgroundPaintingArea       = 1 << 9,
+        PreserveAncestorFlags                   = 1 << 10,
     };
     static constexpr OptionSet<CalculateLayerBoundsFlag> defaultCalculateLayerBoundsFlags() { return { IncludeSelfTransform, UseLocalClipRectIfPossible, IncludePaintedFilterOutsets, UseFragmentBoxesExcludingCompositing }; }
 
@@ -774,7 +773,6 @@ public:
     bool canBeBackdropRoot() const { return m_canBeBackdropRoot; }
     bool isBackdropRoot() const { return hasBackdropFilterDescendantsWithoutRoot() && canBeBackdropRoot(); }
 
-#if ENABLE(CSS_COMPOSITING)
     inline bool hasBlendMode() const;
     BlendMode blendMode() const { return static_cast<BlendMode>(m_blendMode); }
 
@@ -790,12 +788,6 @@ public:
     // FIXME: We should ASSERT(!m_hasNotIsolatedBlendingDescendantsStatusDirty); here but we hit the same bugs as visible content above.
     bool hasNotIsolatedBlendingDescendants() const { return m_hasNotIsolatedBlendingDescendants; }
     bool hasNotIsolatedBlendingDescendantsStatusDirty() const { return m_hasNotIsolatedBlendingDescendantsStatusDirty; }
-#else
-    bool hasBlendMode() const { return false; }
-    bool isolatesCompositedBlending() const { return false; }
-    bool isolatesBlending() const { return false; }
-    bool hasNotIsolatedBlendingDescendantsStatusDirty() const { return false; }
-#endif
 
     bool isComposited() const { return m_backing != nullptr; }
     bool hasCompositingDescendant() const { return m_hasCompositingDescendant; }
@@ -849,8 +841,6 @@ public:
     void establishesTopLayerWillChange();
     void establishesTopLayerDidChange();
 
-    RenderLayer* enclosingSVGRootLayer() const;
-
     bool isBitmapOnly() const;
 
     enum ViewportConstrainedNotCompositedReason {
@@ -866,7 +856,7 @@ public:
     IndirectCompositingReason indirectCompositingReason() const { return static_cast<IndirectCompositingReason>(m_indirectCompositingReason); }
 
     bool isRenderFragmentedFlow() const { return renderer().isRenderFragmentedFlow(); }
-    bool isInsideFragmentedFlow() const { return renderer().fragmentedFlowState() != RenderObject::NotInsideFragmentedFlow; }
+    bool isInsideFragmentedFlow() const { return renderer().fragmentedFlowState() != RenderObject::FragmentedFlowState::NotInsideFlow; }
     bool isDirtyRenderFragmentedFlow() const
     {
         ASSERT(isRenderFragmentedFlow());
@@ -877,6 +867,9 @@ public:
 
     WEBCORE_EXPORT void simulateFrequentPaint();
     bool paintingFrequently() const { return m_paintFrequencyTracker.paintingFrequently(); }
+    WEBCORE_EXPORT void purgeFrontBufferForTesting();
+    WEBCORE_EXPORT void purgeBackBufferForTesting();
+    WEBCORE_EXPORT void markFrontBufferVolatileForTesting();
 
     WEBCORE_EXPORT bool isTransparentRespectingParentFrames() const;
 
@@ -891,13 +884,14 @@ public:
 
     void setIsHiddenByOverflowTruncation(bool);
 
-    void paintSVGResourceLayer(GraphicsContext&, GraphicsContextStateSaver&, const AffineTransform& contentTransform);
+    void paintSVGResourceLayer(GraphicsContext&, const AffineTransform& contentTransform);
+
+    bool ancestorLayerIsDOMParent(const RenderLayer* ancestor) const;
 
 private:
 
     void setNextSibling(RenderLayer* next) { m_next = next; }
     void setPreviousSibling(RenderLayer* prev) { m_previous = prev; }
-    void setParent(RenderLayer*);
     void setFirstChild(RenderLayer* first) { m_first = first; }
     void setLastChild(RenderLayer* last) { m_last = last; }
 
@@ -978,7 +972,7 @@ private:
     void setRepaintRects(const RenderObject::RepaintRects&);
     void clearRepaintRects();
 
-    LayoutRect clipRectRelativeToAncestor(RenderLayer* ancestor, LayoutSize offsetFromAncestor, const LayoutRect& constrainingRect) const;
+    LayoutRect clipRectRelativeToAncestor(RenderLayer* ancestor, LayoutSize offsetFromAncestor, const LayoutRect& constrainingRect, bool temporaryClipRects = false) const;
 
     void clipToRect(GraphicsContext&, GraphicsContextStateSaver&, RegionContextStateSaver&, const LayerPaintingInfo&, OptionSet<PaintBehavior>, const ClipRect&, BorderRadiusClippingRule = IncludeSelfForBorderRadius);
 
@@ -1004,7 +998,7 @@ private:
     // Returns true if the position changed.
     bool updateLayerPosition(OptionSet<UpdateLayerPositionsFlag>* = nullptr);
 
-    void recursiveUpdateLayerPositions(OptionSet<UpdateLayerPositionsFlag>);
+    void recursiveUpdateLayerPositions(OptionSet<UpdateLayerPositionsFlag>, CanUseSimplifiedRepaintPass = CanUseSimplifiedRepaintPass::No);
 
     enum UpdateLayerPositionsAfterScrollFlag {
         IsOverflowScroll                        = 1 << 0,
@@ -1020,10 +1014,8 @@ private:
     {
         if (auto* box = dynamicDowncast<RenderBox>(renderer()))
             return box->location();
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
         if (auto* svgModelObject = dynamicDowncast<RenderSVGModelObject>(renderer()))
             return svgModelObject->currentSVGLayoutLocation();
-#endif
         return { };
     }
 
@@ -1031,10 +1023,8 @@ private:
     {
         if (auto* box = dynamicDowncast<RenderBox>(renderer()))
             return box->borderBoxRect();
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
         if (auto* svgModelObject = dynamicDowncast<RenderSVGModelObject>(renderer()))
             return svgModelObject->borderBoxRectEquivalent();
-#endif
         return { };
     }
 
@@ -1042,10 +1032,8 @@ private:
     {
         if (auto* box = dynamicDowncast<RenderBox>(renderer()))
             return box->borderBoxRectInFragment(fragment, flags);
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
         if (auto* svgModelObject = dynamicDowncast<RenderSVGModelObject>(renderer()))
             return svgModelObject->borderBoxRectInFragmentEquivalent(fragment, flags);
-#endif
         return { };
     }
 
@@ -1053,10 +1041,8 @@ private:
     {
         if (auto* box = dynamicDowncast<RenderBox>(renderer()))
             return box->visualOverflowRect();
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
         if (auto* svgModelObject = dynamicDowncast<RenderSVGModelObject>(renderer()))
             return svgModelObject->visualOverflowRectEquivalent();
-#endif
         return { };
     }
 
@@ -1064,10 +1050,8 @@ private:
     {
         if (auto* box = dynamicDowncast<RenderBox>(renderer()))
             return box->overflowClipRect(location, fragment, relevancy);
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
         if (auto* svgModelObject = dynamicDowncast<RenderSVGModelObject>(renderer()))
             return svgModelObject->overflowClipRect(location, fragment, relevancy);
-#endif
         return { };
     }
 
@@ -1075,10 +1059,8 @@ private:
     {
         if (auto* box = dynamicDowncast<RenderBox>(renderer()))
             return box->overflowClipRectForChildLayers(location, fragment, relevancy);
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
         if (auto* svgModelObject = dynamicDowncast<RenderSVGModelObject>(renderer()))
             return svgModelObject->overflowClipRectForChildLayers(location, fragment, relevancy);
-#endif
         return { };
     }
 
@@ -1086,10 +1068,8 @@ private:
     {
         if (auto* box = dynamicDowncast<RenderBox>(renderer()))
             return box->hasVisualOverflow();
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
         if (auto* svgModelObject = dynamicDowncast<RenderSVGModelObject>(renderer()))
             return svgModelObject->hasVisualOverflow();
-#endif
         return false;
     }
 
@@ -1131,11 +1111,11 @@ private:
     void collectEventRegionForFragments(const LayerFragments&, GraphicsContext&, const LayerPaintingInfo&, OptionSet<PaintBehavior>);
     void collectAccessibilityRegionsForFragments(const LayerFragments&, GraphicsContext&, const LayerPaintingInfo&, OptionSet<PaintBehavior>);
 
-    RenderLayer* transparentPaintingAncestor();
+    RenderLayer* transparentPaintingAncestor(const LayerPaintingInfo&);
     void beginTransparencyLayers(GraphicsContext&, const LayerPaintingInfo&, const LayoutRect& dirtyRect);
 
     struct HitLayer {
-        RenderLayer* layer;
+        RenderLayer* layer { nullptr };
         double zOffset = 0;
     };
     HitLayer hitTestLayer(RenderLayer* rootLayer, RenderLayer* containerLayer, const HitTestRequest&, HitTestResult&,
@@ -1146,8 +1126,7 @@ private:
         const LayoutSize& translationOffset = LayoutSize());
     HitLayer hitTestList(LayerList, RenderLayer* rootLayer, const HitTestRequest&, HitTestResult&,
         const LayoutRect& hitTestRect, const HitTestLocation&,
-        const HitTestingTransformState*, double* zOffsetForDescendants, double* zOffset,
-        const HitTestingTransformState* unflattenedTransformState, bool depthSortDescendants);
+        const HitTestingTransformState*, double* zOffsetForDescendants, bool depthSortDescendants);
 
     Ref<HitTestingTransformState> createLocalTransformState(RenderLayer* rootLayer, RenderLayer* containerLayer,
         const LayoutRect& hitTestRect, const HitTestLocation&,
@@ -1164,7 +1143,6 @@ private:
     bool shouldBeSelfPaintingLayer() const;
 
     void dirtyAncestorChainVisibleDescendantStatus();
-    void setAncestorChainHasVisibleDescendant();
     
     bool computeHasVisibleContent() const;
 
@@ -1187,10 +1165,8 @@ private:
     void updateFiltersAfterStyleChange(StyleDifference, const RenderStyle* oldStyle);
     void updateFilterPaintingStrategy();
 
-#if ENABLE(CSS_COMPOSITING)
     void updateAncestorChainHasBlendingDescendants();
     void dirtyAncestorChainHasBlendingDescendants();
-#endif
 
     Ref<ClipRects> parentClipRects(const ClipRectsContext&) const;
     ClipRect backgroundClipRect(const ClipRectsContext&) const;
@@ -1273,9 +1249,7 @@ private:
 
     bool m_insideSVGForeignObject : 1;
     bool m_isHiddenByOverflowTruncation : 1 { false };
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     bool m_isPaintingSVGResourceLayer : 1 { false };
-#endif
 
     unsigned m_indirectCompositingReason : 4; // IndirectCompositingReason
     unsigned m_viewportConstrainedNotCompositedReason : 2; // ViewportConstrainedNotCompositedReason
@@ -1284,12 +1258,10 @@ private:
     bool m_layerListMutationAllowed : 1;
 #endif
 
-#if ENABLE(CSS_COMPOSITING)
     unsigned m_blendMode : 5; // BlendMode
     bool m_hasNotIsolatedCompositedBlendingDescendants : 1;
     bool m_hasNotIsolatedBlendingDescendants : 1;
     bool m_hasNotIsolatedBlendingDescendantsStatusDirty : 1;
-#endif
     bool m_repaintRectsValid : 1;
 
     RenderLayerModelObject& m_renderer;
@@ -1337,10 +1309,8 @@ private:
     // Pointer to the enclosing RenderLayer that caused us to be paginated. It is 0 if we are not paginated.
     SingleThreadWeakPtr<RenderLayer> m_enclosingPaginationLayer;
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     // Pointer to the enclosing RenderSVGHiddenContainer or RenderSVGResourceContainer, if present.
     SingleThreadWeakPtr<RenderSVGHiddenContainer> m_enclosingSVGHiddenOrResourceContainer;
-#endif
 
     IntRect m_blockSelectionGapsBounds;
 

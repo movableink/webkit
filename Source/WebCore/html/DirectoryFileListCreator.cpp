@@ -60,7 +60,7 @@ static void appendDirectoryFiles(const String& directory, const String& relative
         if (!fileType)
             continue;
 
-        String childRelativePath = relativePath + "/" + childName;
+        auto childRelativePath = makeString(relativePath, '/', childName);
         if (*fileType == FileSystem::FileType::Directory)
             appendDirectoryFiles(childPath, childRelativePath, files);
         else if (*fileType == FileSystem::FileType::Regular)
@@ -93,7 +93,7 @@ static Ref<FileList> toFileList(Document* document, const Vector<FileInformation
 }
 
 DirectoryFileListCreator::DirectoryFileListCreator(CompletionHandler&& completionHandler)
-    : m_workQueue(WorkQueue::create("DirectoryFileListCreator Work Queue"))
+    : m_workQueue(WorkQueue::create("DirectoryFileListCreator Work Queue"_s))
     , m_completionHandler(WTFMove(completionHandler))
 {
 }

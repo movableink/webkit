@@ -760,7 +760,7 @@ const QImage* prescaleImageIfRequired(QPainter* painter, const QImage* image, QI
     return prescaledImage;
 }
 
-void GraphicsContextQt::drawNativeImageInternal(NativeImage& image, const FloatSize&, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
+void GraphicsContextQt::drawNativeImageInternal(NativeImage& image, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
 {
     painter()->setRenderHint(QPainter::SmoothPixmapTransform, true);
 
@@ -1001,6 +1001,30 @@ void GraphicsContextQt::fillRect(const FloatRect& rect, Gradient& gradient)
 {
     QRectF platformRect(rect);
     QPainter* p = m_data->p();
+    if (hasDropShadow()) {
+        const auto shadow = dropShadow();
+        ASSERT(shadow);
+        if (mustUseShadowBlur()) {
+            ShadowBlur contextShadow(*shadow, shadowsIgnoreTransforms());
+            contextShadow.drawRectShadow(*this, FloatRoundedRect(platformRect));
+        } else {
+            QColor _shadowColor = shadow->color;
+            _shadowColor.setAlphaF(_shadowColor.alphaF() * p->brush().color().alphaF());
+            p->fillRect(platformRect.translated(QPointF(shadow->offset.width(), shadow->offset.height())), _shadowColor);
+        }
+    }
+    gradient.fill(*this, platformRect);
+}
+
+void GraphicsContextQt::fillRect(const FloatRect& rect, Gradient& gradient, const AffineTransform& transform)
+{
+    QRectF platformRect(rect);
+    QPainter* p = m_data->p();
+
+    QBrush brush = p->brush();
+    brush.setTransform(transform);
+    p->setBrush(brush);
+
     if (hasDropShadow()) {
         const auto shadow = dropShadow();
         ASSERT(shadow);

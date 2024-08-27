@@ -29,62 +29,56 @@
 #include "IntPoint.h"
 #include "IntRect.h"
 #include "IntSize.h"
-#include <wtf/RefCounted.h>
+#include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/OptionSet.h>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
 
 class FilterOperations;
 class GraphicsLayer;
-class Image;
+class NativeImage;
 class TextureMapper;
+enum class TextureMapperFlags : uint16_t;
 
 // A 2D texture that can be the target of software or GL rendering.
-class BitmapTexture : public RefCounted<BitmapTexture> {
+class BitmapTexture : public ThreadSafeRefCounted<BitmapTexture> {
 public:
-    enum Flag {
-        NoFlag = 0,
+    enum class Flags : uint8_t {
         SupportsAlpha = 1 << 0,
         DepthBuffer = 1 << 1,
     };
 
-    typedef unsigned Flags;
-
-    BitmapTexture()
-        : m_flags(0)
+    static Ref<BitmapTexture> create(const IntSize& size, OptionSet<Flags> flags = { })
     {
+        return adoptRef(*new BitmapTexture(size, flags));
     }
 
-    virtual ~BitmapTexture() = default;
-    virtual bool isBackedByOpenGL() const { return false; }
+    WEBCORE_EXPORT ~BitmapTexture() = default;
 
-    virtual IntSize size() const = 0;
-    virtual void updateContents(Image*, const IntRect&, const IntPoint& offset) = 0;
+    const IntSize& size() const { return m_size; };
+    OptionSet<Flags> flags() const { return m_flags; }
+    bool isOpaque() const { return !m_flags.contains(Flags::SupportsAlpha); }
+
+    void updateContents(RefPtr<NativeImage>, const IntRect&, const IntPoint& offset) { }
     void updateContents(GraphicsLayer*, const IntRect& target, const IntPoint& offset, float scale = 1);
-    virtual void updateContents(const void*, const IntRect& target, const IntPoint& offset, int bytesPerLine) = 0;
-    virtual bool isValid() const = 0;
-    inline Flags flags() const { return m_flags; }
+    void updateContents(const void*, const IntRect& target, const IntPoint& offset, int bytesPerLine) { }
 
-    virtual int bpp() const { return 32; }
-    void reset(const IntSize& size, Flags flags = 0)
+    void bindAsSurface();
+    void initializeStencil();
+    void initializeDepthBuffer();
+
+    void reset(const IntSize& size, OptionSet<Flags> flags = { })
     {
         m_flags = flags;
-        m_contentSize = size;
-        didReset();
+        m_size = size;
     }
-    virtual void didReset() { }
-
-    inline IntSize contentSize() const { return m_contentSize; }
-    inline int numberOfBytes() const { return size().width() * size().height() * bpp() >> 3; }
-    inline bool isOpaque() const { return !(m_flags & SupportsAlpha); }
-
-    virtual RefPtr<BitmapTexture> applyFilters(TextureMapper&, const FilterOperations&, bool) { return this; }
-
-protected:
-    IntSize m_contentSize;
 
 private:
-    Flags m_flags;
+    BitmapTexture(const IntSize& size, OptionSet<Flags> flags) : m_size(size), m_flags(flags) {}
+
+    IntSize m_size;
+    OptionSet<Flags> m_flags;
 };
 
 }

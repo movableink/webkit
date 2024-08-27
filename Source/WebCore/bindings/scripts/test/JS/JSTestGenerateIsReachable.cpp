@@ -165,12 +165,12 @@ void JSTestGenerateIsReachable::destroy(JSC::JSCell* cell)
 
 JSC_DEFINE_CUSTOM_GETTER(jsTestGenerateIsReachableConstructor, (JSGlobalObject* lexicalGlobalObject, EncodedJSValue thisValue, PropertyName))
 {
-    VM& vm = JSC::getVM(lexicalGlobalObject);
+    auto& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     auto* prototype = jsDynamicCast<JSTestGenerateIsReachablePrototype*>(JSValue::decode(thisValue));
     if (UNLIKELY(!prototype))
         return throwVMTypeError(lexicalGlobalObject, throwScope);
-    return JSValue::encode(JSTestGenerateIsReachable::getConstructor(JSC::getVM(lexicalGlobalObject), prototype->globalObject()));
+    return JSValue::encode(JSTestGenerateIsReachable::getConstructor(vm, prototype->globalObject()));
 }
 
 static inline JSValue jsTestGenerateIsReachable_aSecretAttributeGetter(JSGlobalObject& lexicalGlobalObject, JSTestGenerateIsReachable& thisObject)
@@ -205,12 +205,12 @@ void JSTestGenerateIsReachable::analyzeHeap(JSCell* cell, HeapAnalyzer& analyzer
     Base::analyzeHeap(cell, analyzer);
 }
 
-bool JSTestGenerateIsReachableOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, AbstractSlotVisitor& visitor, const char** reason)
+bool JSTestGenerateIsReachableOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, AbstractSlotVisitor& visitor, ASCIILiteral* reason)
 {
     auto* jsTestGenerateIsReachable = jsCast<JSTestGenerateIsReachable*>(handle.slot()->asCell());
     TestGenerateIsReachable* owner = &jsTestGenerateIsReachable->wrapped();
     if (UNLIKELY(reason))
-        *reason = "Reachable from TestGenerateIsReachable";
+        *reason = "Reachable from TestGenerateIsReachable"_s;
     return containsWebCoreOpaqueRoot(visitor, owner);
 }
 
@@ -218,7 +218,7 @@ void JSTestGenerateIsReachableOwner::finalize(JSC::Handle<JSC::Unknown> handle, 
 {
     auto* jsTestGenerateIsReachable = static_cast<JSTestGenerateIsReachable*>(handle.slot()->asCell());
     auto& world = *static_cast<DOMWrapperWorld*>(context);
-    uncacheWrapper(world, &jsTestGenerateIsReachable->wrapped(), jsTestGenerateIsReachable);
+    uncacheWrapper(world, jsTestGenerateIsReachable->protectedWrapped().ptr(), jsTestGenerateIsReachable);
 }
 
 #if ENABLE(BINDING_INTEGRITY)
@@ -228,14 +228,9 @@ extern "C" { extern void (*const __identifier("??_7TestGenerateIsReachable@WebCo
 #else
 extern "C" { extern void* _ZTVN7WebCore23TestGenerateIsReachableE[]; }
 #endif
-#endif
-
-JSC::JSValue toJSNewlyCreated(JSC::JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<TestGenerateIsReachable>&& impl)
-{
-
-    if constexpr (std::is_polymorphic_v<TestGenerateIsReachable>) {
-#if ENABLE(BINDING_INTEGRITY)
-        const void* actualVTablePointer = getVTablePointer(impl.ptr());
+template<typename T, typename = std::enable_if_t<std::is_same_v<T, TestGenerateIsReachable>, void>> static inline void verifyVTable(TestGenerateIsReachable* ptr) {
+    if constexpr (std::is_polymorphic_v<T>) {
+        const void* actualVTablePointer = getVTablePointer<T>(ptr);
 #if PLATFORM(WIN)
         void* expectedVTablePointer = __identifier("??_7TestGenerateIsReachable@WebCore@@6B@");
 #else
@@ -247,8 +242,14 @@ JSC::JSValue toJSNewlyCreated(JSC::JSGlobalObject*, JSDOMGlobalObject* globalObj
         // to toJS() we currently require TestGenerateIsReachable you to opt out of binding hardening
         // by adding the SkipVTableValidation attribute to the interface IDL definition
         RELEASE_ASSERT(actualVTablePointer == expectedVTablePointer);
-#endif
     }
+}
+#endif
+JSC::JSValue toJSNewlyCreated(JSC::JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<TestGenerateIsReachable>&& impl)
+{
+#if ENABLE(BINDING_INTEGRITY)
+    verifyVTable<TestGenerateIsReachable>(impl.ptr());
+#endif
     return createWrapper<TestGenerateIsReachable>(globalObject, WTFMove(impl));
 }
 

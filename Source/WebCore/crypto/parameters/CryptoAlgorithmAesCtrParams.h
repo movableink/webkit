@@ -29,8 +29,6 @@
 #include "CryptoAlgorithmParameters.h"
 #include <wtf/Vector.h>
 
-#if ENABLE(WEB_CRYPTO)
-
 namespace WebCore {
 
 class CryptoAlgorithmAesCtrParams final : public CryptoAlgorithmParameters {
@@ -45,7 +43,7 @@ public:
         if (!m_counterVector.isEmpty() || !counter.length())
             return m_counterVector;
 
-        m_counterVector.append(counter.data(), counter.length());
+        m_counterVector.append(counter.span());
         return m_counterVector;
     }
 
@@ -66,5 +64,3 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_CRYPTO_ALGORITHM_PARAMETERS(AesCtrParams)
-
-#endif // ENABLE(WEB_CRYPTO)

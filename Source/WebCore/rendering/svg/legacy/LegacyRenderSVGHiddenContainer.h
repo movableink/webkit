@@ -29,14 +29,14 @@ class SVGElement;
 // <defs>, <linearGradient>, <radialGradient> are all good examples
 class LegacyRenderSVGHiddenContainer : public LegacyRenderSVGContainer {
     WTF_MAKE_ISO_ALLOCATED(LegacyRenderSVGHiddenContainer);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LegacyRenderSVGHiddenContainer);
 public:
-    LegacyRenderSVGHiddenContainer(Type, SVGElement&, RenderStyle&&);
+    LegacyRenderSVGHiddenContainer(Type, SVGElement&, RenderStyle&&, OptionSet<SVGModelObjectFlag> = { });
 
 protected:
     void layout() override;
 
 private:
-    bool isLegacyRenderSVGHiddenContainer() const final { return true; }
     ASCIILiteral renderName() const override { return "RenderSVGHiddenContainer"_s; }
 
     void paint(PaintInfo&, const LayoutPoint&) final;

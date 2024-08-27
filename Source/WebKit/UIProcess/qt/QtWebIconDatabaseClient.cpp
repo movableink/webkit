@@ -71,7 +71,7 @@ unsigned QtWebIconDatabaseClient::updateID()
 void QtWebIconDatabaseClient::didChangeIconForPageURL(WKIconDatabaseRef, WKURLRef pageURL, const void* clientInfo)
 {
     ++s_updateId;
-    emit toQtWebIconDatabaseClient(clientInfo)->iconChangedForPageURL(WKURLCopyQString(pageURL));
+    Q_EMIT toQtWebIconDatabaseClient(clientInfo)->iconChangedForPageURL(WKURLCopyQString(pageURL));
 }
 
 QImage QtWebIconDatabaseClient::iconImageForPageURL(const QString& pageURL)

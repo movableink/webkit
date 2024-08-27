@@ -16,20 +16,20 @@
       <dep package="glib"/>
       <dep package="harfbuzz"/>
       <dep package="icu"/>
+      <dep package="libdrm"/>
       <dep package="libepoxy"/>
       <dep package="libgcrypt"/>
       <dep package="libgpg-error"/>
       <dep package="libjxl"/>
+      <dep package="libsoup"/>
       <dep package="libwpe"/>
       <dep package="libxml2"/>
-      <dep package="openjpeg"/>
       <dep package="shared-mime-info"/>
       <dep package="wayland"/>
       <dep package="wayland-protocols"/>
+      <dep package="webkit-gstreamer-testing-dependencies"/>
       <dep package="wpebackend-fdo"/>
       <dep package="xdg-dbus-proxy"/>
-      <dep package="webkit-gstreamer-testing-dependencies"/>
-      <dep package="libsoup"/>
     </dependencies>
   </metamodule>
 
@@ -157,6 +157,16 @@
     </branch>
   </autotools>
 
+  <!-- libdrm required for function 'drmGetFormatName' (defined since 'libdrm-2.4.113') -->
+  <meson id="libdrm" mesonargs="-Dtegra=enabled -Dcairo-tests=disabled -Dman-pages=disabled -Dvalgrind=disabled -Dudev=false -Dtests=false">
+    <pkg-config>libdrm.pc</pkg-config>
+    <branch module="mesa/drm.git"
+            version="2.4.113"
+            tag="libdrm-2.4.113"
+            checkoutdir="libdrm-2.4.113"
+            repo="git.freedesktop.org" />
+  </meson>
+
   <autotools id="pixman"
              autogen-sh="configure"
              autogenargs="--enable-gtk=no">
@@ -251,14 +261,6 @@
       <dep package="glib"/>
     </dependencies>
   </meson>
-
-  <cmake id="openjpeg">
-    <branch repo="github-tarball"
-            module="uclouvain/openjpeg/archive/v${version}.tar.gz"
-            checkoutdir="openjpeg-${version}"
-            version="2.3.0"
-            hash="sha256:3dc787c1bb6023ba846c2a0d9b1f6e179f1cd255172bde9eb75b01f1e6c7d71a"/>
-  </cmake>
 
   <distutils id="meson" python3="1">
     <branch repo="github-tarball"

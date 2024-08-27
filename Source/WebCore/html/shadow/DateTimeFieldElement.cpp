@@ -50,17 +50,12 @@ using namespace HTMLNames;
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(DateTimeFieldElement);
 
-DateTimeFieldElement::FieldOwner::~FieldOwner() = default;
+DateTimeFieldElementFieldOwner::~DateTimeFieldElementFieldOwner() = default;
 
-DateTimeFieldElement::DateTimeFieldElement(Document& document, FieldOwner& fieldOwner)
-    : HTMLDivElement(divTag, document, CreateDateTimeFieldElement)
+DateTimeFieldElement::DateTimeFieldElement(Document& document, DateTimeFieldElementFieldOwner& fieldOwner)
+    : HTMLDivElement(divTag, document, TypeFlag::HasCustomStyleResolveCallbacks)
     , m_fieldOwner(fieldOwner)
 {
-}
-
-void DateTimeFieldElement::initialize(const AtomString& pseudo)
-{
-    setPseudo(pseudo);
 }
 
 std::optional<Style::ResolvedStyle> DateTimeFieldElement::resolveCustomStyle(const Style::ResolutionContext& resolutionContext, const RenderStyle* shadowHostStyle)

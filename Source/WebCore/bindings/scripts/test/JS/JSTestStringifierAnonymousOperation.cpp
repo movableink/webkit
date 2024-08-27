@@ -157,12 +157,12 @@ void JSTestStringifierAnonymousOperation::destroy(JSC::JSCell* cell)
 
 JSC_DEFINE_CUSTOM_GETTER(jsTestStringifierAnonymousOperationConstructor, (JSGlobalObject* lexicalGlobalObject, EncodedJSValue thisValue, PropertyName))
 {
-    VM& vm = JSC::getVM(lexicalGlobalObject);
+    auto& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     auto* prototype = jsDynamicCast<JSTestStringifierAnonymousOperationPrototype*>(JSValue::decode(thisValue));
     if (UNLIKELY(!prototype))
         return throwVMTypeError(lexicalGlobalObject, throwScope);
-    return JSValue::encode(JSTestStringifierAnonymousOperation::getConstructor(JSC::getVM(lexicalGlobalObject), prototype->globalObject()));
+    return JSValue::encode(JSTestStringifierAnonymousOperation::getConstructor(vm, prototype->globalObject()));
 }
 
 static inline JSC::EncodedJSValue jsTestStringifierAnonymousOperationPrototypeFunction_toStringBody(JSC::JSGlobalObject* lexicalGlobalObject, JSC::CallFrame* callFrame, typename IDLOperation<JSTestStringifierAnonymousOperation>::ClassParameter castedThis)
@@ -199,7 +199,7 @@ void JSTestStringifierAnonymousOperation::analyzeHeap(JSCell* cell, HeapAnalyzer
     Base::analyzeHeap(cell, analyzer);
 }
 
-bool JSTestStringifierAnonymousOperationOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, AbstractSlotVisitor& visitor, const char** reason)
+bool JSTestStringifierAnonymousOperationOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, AbstractSlotVisitor& visitor, ASCIILiteral* reason)
 {
     UNUSED_PARAM(handle);
     UNUSED_PARAM(visitor);
@@ -211,7 +211,7 @@ void JSTestStringifierAnonymousOperationOwner::finalize(JSC::Handle<JSC::Unknown
 {
     auto* jsTestStringifierAnonymousOperation = static_cast<JSTestStringifierAnonymousOperation*>(handle.slot()->asCell());
     auto& world = *static_cast<DOMWrapperWorld*>(context);
-    uncacheWrapper(world, &jsTestStringifierAnonymousOperation->wrapped(), jsTestStringifierAnonymousOperation);
+    uncacheWrapper(world, jsTestStringifierAnonymousOperation->protectedWrapped().ptr(), jsTestStringifierAnonymousOperation);
 }
 
 #if ENABLE(BINDING_INTEGRITY)
@@ -221,14 +221,9 @@ extern "C" { extern void (*const __identifier("??_7TestStringifierAnonymousOpera
 #else
 extern "C" { extern void* _ZTVN7WebCore33TestStringifierAnonymousOperationE[]; }
 #endif
-#endif
-
-JSC::JSValue toJSNewlyCreated(JSC::JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<TestStringifierAnonymousOperation>&& impl)
-{
-
-    if constexpr (std::is_polymorphic_v<TestStringifierAnonymousOperation>) {
-#if ENABLE(BINDING_INTEGRITY)
-        const void* actualVTablePointer = getVTablePointer(impl.ptr());
+template<typename T, typename = std::enable_if_t<std::is_same_v<T, TestStringifierAnonymousOperation>, void>> static inline void verifyVTable(TestStringifierAnonymousOperation* ptr) {
+    if constexpr (std::is_polymorphic_v<T>) {
+        const void* actualVTablePointer = getVTablePointer<T>(ptr);
 #if PLATFORM(WIN)
         void* expectedVTablePointer = __identifier("??_7TestStringifierAnonymousOperation@WebCore@@6B@");
 #else
@@ -240,8 +235,14 @@ JSC::JSValue toJSNewlyCreated(JSC::JSGlobalObject*, JSDOMGlobalObject* globalObj
         // to toJS() we currently require TestStringifierAnonymousOperation you to opt out of binding hardening
         // by adding the SkipVTableValidation attribute to the interface IDL definition
         RELEASE_ASSERT(actualVTablePointer == expectedVTablePointer);
-#endif
     }
+}
+#endif
+JSC::JSValue toJSNewlyCreated(JSC::JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<TestStringifierAnonymousOperation>&& impl)
+{
+#if ENABLE(BINDING_INTEGRITY)
+    verifyVTable<TestStringifierAnonymousOperation>(impl.ptr());
+#endif
     return createWrapper<TestStringifierAnonymousOperation>(globalObject, WTFMove(impl));
 }
 

@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2021 Apple Inc. All rights reserved.
+# Copyright (C) 2020-2024 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -40,7 +40,9 @@ from twisted.trial import unittest
 from .steps import *
 
 CURRENT_HOSTNAME = socket.gethostname().strip()
-
+# Workaround for https://github.com/buildbot/buildbot/issues/4669
+FakeBuild.addStepsAfterLastStep = lambda FakeBuild, step_factories: None
+FakeBuild._builderid = 1
 
 class ExpectMasterShellCommand(object):
     def __init__(self, command, workdir=None, env=None, usePTY=0):
@@ -69,7 +71,7 @@ class ExpectMasterShellCommand(object):
         return self
 
     def __repr__(self):
-        return 'ExpectMasterShellCommand({0})'.format(repr(self.args))
+        return f'ExpectMasterShellCommand({repr(self.args)})'
 
 
 class BuildStepMixinAdditions(BuildStepMixin, TestReactorMixin):
@@ -133,7 +135,7 @@ class BuildStepMixinAdditions(BuildStepMixin, TestReactorMixin):
     def _checkSpawnProcess(self, processProtocol, executable, args, env, path, usePTY, **kwargs):
         got = (executable, args, env, path, usePTY)
         if not self._expected_local_commands:
-            self.fail('got local command {0} when no further commands were expected'.format(got))
+            self.fail(f'got local command {got} when no further commands were expected')
         local_command = self._expected_local_commands.pop(0)
         try:
             self.assertEqual(got, (local_command.args[0], local_command.args, local_command.env, local_command.path, local_command.usePTY))
@@ -183,8 +185,8 @@ class TestStepNameShouldBeValidIdentifier(BuildStepMixinAdditions, unittest.Test
         for build_step in build_step_classes:
             if 'name' in vars(build_step[1]):
                 name = build_step[1].name
-                self.assertFalse(' ' in name, 'step name "{}" contain space.'.format(name))
-                self.assertTrue(buildbot_identifiers.ident_re.match(name), 'step name "{}" is not a valid buildbot identifier.'.format(name))
+                self.assertFalse(' ' in name, f'step name "{name}" contain space.')
+                self.assertTrue(buildbot_identifiers.ident_re.match(name), f'step name "{name}" is not a valid buildbot identifier.')
 
 
 class TestRunBindingsTests(BuildStepMixinAdditions, unittest.TestCase):
@@ -403,7 +405,7 @@ class TestCompileWebKit(BuildStepMixinAdditions, unittest.TestCase):
         self.expectRemoteCommands(
             ExpectShell(
                 workdir='wkdir',
-                timeout=1800,
+                timeout=3600,
                 logEnviron=True,
                 command=['perl', 'Tools/Scripts/build-webkit', '--no-fatal-warnings', '--release'],
             ) + 0,
@@ -420,9 +422,9 @@ class TestCompileWebKit(BuildStepMixinAdditions, unittest.TestCase):
         self.expectRemoteCommands(
             ExpectShell(
                 workdir='wkdir',
-                timeout=1800,
+                timeout=3600,
                 logEnviron=True,
-                command=['perl', 'Tools/Scripts/build-webkit', '--no-fatal-warnings', '--release', '--architecture', 'x86_64 arm64', 'WK_VALIDATE_DEPENDENCIES=YES'],
+                command=['/bin/sh', '-c', 'perl Tools/Scripts/build-webkit --no-fatal-warnings --release --architecture "x86_64 arm64" WK_VALIDATE_DEPENDENCIES=YES 2>&1 | perl Tools/Scripts/filter-build-webkit -logfile build-log.txt'],
             ) + 0,
         )
         self.expectOutcome(result=SUCCESS, state_string='compiled')
@@ -435,7 +437,7 @@ class TestCompileWebKit(BuildStepMixinAdditions, unittest.TestCase):
         self.expectRemoteCommands(
             ExpectShell(
                 workdir='wkdir',
-                timeout=1800,
+                timeout=3600,
                 logEnviron=True,
                 command=['perl', 'Tools/Scripts/build-webkit', '--no-fatal-warnings', '--release'],
             ) + 0,
@@ -451,7 +453,7 @@ class TestCompileWebKit(BuildStepMixinAdditions, unittest.TestCase):
         self.expectRemoteCommands(
             ExpectShell(
                 workdir='wkdir',
-                timeout=1800,
+                timeout=3600,
                 logEnviron=True,
                 command=['perl', 'Tools/Scripts/build-webkit', '--no-fatal-warnings', '--release', '--prefix=/app/webkit/WebKitBuild/Release/install', '--gtk'],
             ) + 0,
@@ -467,7 +469,7 @@ class TestCompileWebKit(BuildStepMixinAdditions, unittest.TestCase):
         self.expectRemoteCommands(
             ExpectShell(
                 workdir='wkdir',
-                timeout=1800,
+                timeout=3600,
                 logEnviron=True,
                 command=['perl', 'Tools/Scripts/build-webkit', '--no-fatal-warnings', '--release', '--wpe'],
             ) + 0,
@@ -482,7 +484,7 @@ class TestCompileWebKit(BuildStepMixinAdditions, unittest.TestCase):
         self.expectRemoteCommands(
             ExpectShell(
                 workdir='wkdir',
-                timeout=1800,
+                timeout=3600,
                 logEnviron=True,
                 command=['perl', 'Tools/Scripts/build-webkit', '--no-fatal-warnings', '--debug'],
             ) + 2
@@ -507,7 +509,7 @@ class TestCompileJSCOnly(BuildStepMixinAdditions, unittest.TestCase):
         self.expectRemoteCommands(
             ExpectShell(
                 workdir='wkdir',
-                timeout=1800,
+                timeout=3600,
                 logEnviron=True,
                 command=['perl', 'Tools/Scripts/build-jsc', '--release'],
             ) + 0,
@@ -522,7 +524,7 @@ class TestCompileJSCOnly(BuildStepMixinAdditions, unittest.TestCase):
         self.expectRemoteCommands(
             ExpectShell(
                 workdir='wkdir',
-                timeout=1800,
+                timeout=3600,
                 logEnviron=True,
                 command=['perl', 'Tools/Scripts/build-jsc', '--debug'],
             ) + 2
@@ -1095,12 +1097,14 @@ class TestRunJavaScriptCoreTests(BuildStepMixinAdditions, unittest.TestCase):
 
     def test_success(self):
         self.configureStep(platform='mac', fullPlatform='mac-highsierra', configuration='release')
+        command = ['perl', 'Tools/Scripts/run-javascriptcore-tests', '--no-build', '--no-fail-fast', f'--json-output={self.jsonFileName}', '--release', '--builder-name', 'JSC-Tests', '--build-number', '101', '--buildbot-worker', 'bot100', '--buildbot-master', CURRENT_HOSTNAME, '--report', 'https://results.webkit.org'] + self.commandExtra
         self.expectRemoteCommands(
             ExpectShell(workdir='wkdir',
                         logEnviron=False,
-                        command=['perl', 'Tools/Scripts/run-javascriptcore-tests', '--no-build', '--no-fail-fast', '--json-output={0}'.format(self.jsonFileName), '--release', '--builder-name', 'JSC-Tests', '--build-number', '101', '--buildbot-worker', 'bot100', '--buildbot-master', CURRENT_HOSTNAME, '--report', 'https://results.webkit.org'] + self.commandExtra,
+                        command=['/bin/sh', '-c', ' '.join(command) + ' 2>&1 | python3 Tools/Scripts/filter-test-logs jsc'],
                         logfiles={'json': self.jsonFileName},
-                        env={'RESULTS_SERVER_API_KEY': 'test-api-key'}
+                        env={'RESULTS_SERVER_API_KEY': 'test-api-key'},
+                        timeout=72000,
                         )
             + 0,
         )
@@ -1109,12 +1113,14 @@ class TestRunJavaScriptCoreTests(BuildStepMixinAdditions, unittest.TestCase):
 
     def test_failure(self):
         self.configureStep(platform='mac', fullPlatform='mac-highsierra', configuration='debug')
+        command = ['perl', 'Tools/Scripts/run-javascriptcore-tests', '--no-build', '--no-fail-fast', f'--json-output={self.jsonFileName}', '--debug', '--builder-name', 'JSC-Tests', '--build-number', '101', '--buildbot-worker', 'bot100', '--buildbot-master', CURRENT_HOSTNAME, '--report', 'https://results.webkit.org'] + self.commandExtra
         self.expectRemoteCommands(
             ExpectShell(workdir='wkdir',
                         logEnviron=False,
-                        command=['perl', 'Tools/Scripts/run-javascriptcore-tests', '--no-build', '--no-fail-fast', '--json-output={0}'.format(self.jsonFileName), '--debug', '--builder-name', 'JSC-Tests', '--build-number', '101', '--buildbot-worker', 'bot100', '--buildbot-master', CURRENT_HOSTNAME, '--report', 'https://results.webkit.org'] + self.commandExtra,
+                        command=['/bin/sh', '-c', ' '.join(command) + ' 2>&1 | python3 Tools/Scripts/filter-test-logs jsc'],
                         logfiles={'json': self.jsonFileName},
-                        env={'RESULTS_SERVER_API_KEY': 'test-api-key'}
+                        env={'RESULTS_SERVER_API_KEY': 'test-api-key'},
+                        timeout=72000,
                         )
             + ExpectShell.log('stdio', stdout='Results for JSC stress tests:\n 9 failures found.')
             + 2,
@@ -1133,9 +1139,9 @@ class TestSetPermissions(BuildStepMixinAdditions, unittest.TestCase):
 
     def test_success(self):
         self.setupStep(SetPermissions())
-        self.setProperty('result_directory', 'public_html/results/Apple-Monterey-Release-WK2-Tests/r277034 (2346)')
+        self.setProperty('result_directory', 'public_html/results/Apple-Ventura-Release-WK2-Tests/r277034 (2346)')
         self.expectLocalCommands(
-            ExpectMasterShellCommand(command=['chmod', 'a+rx', 'public_html/results/Apple-Monterey-Release-WK2-Tests/r277034 (2346)'])
+            ExpectMasterShellCommand(command=['chmod', 'a+rx', 'public_html/results/Apple-Ventura-Release-WK2-Tests/r277034 (2346)'])
             + 0,
         )
         self.expectOutcome(result=SUCCESS, state_string='Ran')
@@ -1198,8 +1204,8 @@ class TestPrintConfiguration(BuildStepMixinAdditions, unittest.TestCase):
 
     def test_success_mac(self):
         self.setupStep(PrintConfiguration())
-        self.setProperty('buildername', 'macOS-Monterey-Release-WK2-Tests-EWS')
-        self.setProperty('platform', 'mac-monterey')
+        self.setProperty('buildername', 'macOS-Ventura-Release-WK2-Tests-EWS')
+        self.setProperty('platform', 'mac-ventura')
 
         self.expectRemoteCommands(
             ExpectShell(command=['hostname'], workdir='wkdir', timeout=60, logEnviron=False) + 0
@@ -1307,7 +1313,7 @@ BuildVersion:	20G165'''),
         self.expectRemoteCommands(
             ExpectShell(command=['hostname'], workdir='wkdir', timeout=60, logEnviron=False) + 0
             + ExpectShell.log('stdio', stdout='ews190'),
-            ExpectShell(command=['df', '-hl'], workdir='wkdir', timeout=60, logEnviron=False) + 0
+            ExpectShell(command=['df', '-hl', '--exclude-type=fuse.portal'], workdir='wkdir', timeout=60, logEnviron=False) + 0
             + ExpectShell.log('stdio', stdout='''Filesystem     Size   Used  Avail Capacity iused  ifree %iused  Mounted on
 /dev/disk0s3  119Gi   22Gi   97Gi    19%  337595          4294629684    0%   /'''),
             ExpectShell(command=['date'], workdir='wkdir', timeout=60, logEnviron=False) + 0
@@ -1326,7 +1332,7 @@ BuildVersion:	20G165'''),
 
         self.expectRemoteCommands(
             ExpectShell(command=['hostname'], workdir='wkdir', timeout=60, logEnviron=False) + 0,
-            ExpectShell(command=['df', '-hl'], workdir='wkdir', timeout=60, logEnviron=False) + 0,
+            ExpectShell(command=['df', '-hl', '--exclude-type=fuse.portal'], workdir='wkdir', timeout=60, logEnviron=False) + 0,
             ExpectShell(command=['date'], workdir='wkdir', timeout=60, logEnviron=False) + 0,
             ExpectShell(command=['uname', '-a'], workdir='wkdir', timeout=60, logEnviron=False) + 0,
             ExpectShell(command=['uptime'], workdir='wkdir', timeout=60, logEnviron=False) + 0,
@@ -1622,3 +1628,373 @@ class TestCheckIfNeededUpdateCrossTargetImageSteps(BuildStepMixinAdditions, unit
         rc = self.runStep()
         self.assertTrue(RebootWithUpdatedCrossTargetImage() in self.build.addedStepsAfterCurrentStep)
         return rc
+
+
+class TestRunWebDriverTests(BuildStepMixinAdditions, unittest.TestCase):
+    def setUp(self):
+        self.longMessage = True
+        self.jsonFileName = 'webdriver_tests.json'
+        return self.setUpBuildStep()
+
+    def tearDown(self):
+        return self.tearDownBuildStep()
+
+    def configureStep(self):
+        self.setupStep(RunWebDriverTests())
+        self.setProperty('buildername', 'GTK-Linux-64-bit-Release-WebDriver-Tests')
+        self.setProperty('buildnumber', '101')
+        self.setProperty('workername', 'gtk-linux-bot-14')
+
+    def test_success(self):
+        self.configureStep()
+        self.setProperty('fullPlatform', 'gtk')
+        self.setProperty('configuration', 'release')
+        self.expectRemoteCommands(
+            ExpectShell(
+                workdir='wkdir',
+                logEnviron=True,
+                logfiles={'json': self.jsonFileName},
+                command=['/bin/sh', '-c', 'python3 Tools/Scripts/run-webdriver-tests --json-output=webdriver_tests.json --release > logs.txt 2>&1'],
+                timeout=5400
+            ) + 0,
+        )
+        self.expectOutcome(result=SUCCESS, state_string='webdriver-tests')
+        return self.runStep()
+
+    def test_failure(self):
+        self.configureStep()
+        self.setProperty('fullPlatform', 'gtk')
+        self.setProperty('configuration', 'release')
+        self.expectRemoteCommands(
+            ExpectShell(
+                workdir='wkdir',
+                logEnviron=True,
+                logfiles={'json': self.jsonFileName},
+                command=['/bin/sh', '-c', 'python3 Tools/Scripts/run-webdriver-tests --json-output=webdriver_tests.json --release > logs.txt 2>&1'],
+                timeout=5400
+            ) + 1,
+        )
+        self.expectOutcome(result=FAILURE, state_string='webdriver-tests (failure)')
+        return self.runStep()
+
+
+class current_hostname(object):
+    def __init__(self, hostname):
+        self.hostname = hostname
+        self.saved_hostname = None
+
+    def __enter__(self):
+        from . import steps
+        self.saved_hostname = steps.CURRENT_HOSTNAME
+        steps.CURRENT_HOSTNAME = self.hostname
+
+    def __exit__(self, type, value, tb):
+        from . import steps
+        steps.CURRENT_HOSTNAME = self.saved_hostname
+
+
+class TestGenerateS3URL(BuildStepMixinAdditions, unittest.TestCase):
+    def setUp(self):
+        self.longMessage = True
+        return self.setUpBuildStep()
+
+    def tearDown(self):
+        return self.tearDownBuildStep()
+
+    def configureStep(self, identifier='mac-highsierra-x86_64-release', extension='zip', content_type=None):
+        self.setupStep(GenerateS3URL(identifier, extension=extension, content_type=content_type))
+        self.setProperty('archive_revision', '1234')
+
+    def disabled_test_success(self):
+        # TODO: Figure out how to pass logs to unit-test for MasterShellCommand steps
+        self.configureStep()
+        self.expectLocalCommands(
+            ExpectMasterShellCommand(command=['python3',
+                                              '../Shared/generate-s3-url',
+                                              '--revision', '1234',
+                                              '--identifier', 'mac-highsierra-x86_64-release',
+                                              '--extension', 'zip',
+                                              ])
+            + 0,
+        )
+        self.expectOutcome(result=SUCCESS, state_string='Generated S3 URL')
+        with current_hostname(BUILD_WEBKIT_HOSTNAMES[0]):
+            return self.runStep()
+
+    def test_failure(self):
+        self.configureStep('ios-simulator-16-x86_64-debug')
+        self.expectLocalCommands(
+            ExpectMasterShellCommand(command=['python3',
+                                              '../Shared/generate-s3-url',
+                                              '--revision', '1234',
+                                              '--identifier', 'ios-simulator-16-x86_64-debug',
+                                              '--extension', 'zip',
+                                              ])
+            + 2,
+        )
+        self.expectOutcome(result=FAILURE, state_string='Failed to generate S3 URL')
+
+        try:
+            with current_hostname(BUILD_WEBKIT_HOSTNAMES[0]), open(os.devnull, 'w') as null:
+                sys.stdout = null
+                return self.runStep()
+        finally:
+            sys.stdout = sys.__stdout__
+
+    def test_failure_with_extension(self):
+        self.configureStep('macos-arm64-release-compile-webkit', extension='txt', content_type='text/plain')
+        self.expectLocalCommands(
+            ExpectMasterShellCommand(command=['python3',
+                                              '../Shared/generate-s3-url',
+                                              '--revision', '1234',
+                                              '--identifier', 'macos-arm64-release-compile-webkit',
+                                              '--extension', 'txt',
+                                              '--content-type', 'text/plain',
+                                              ])
+            + 2,
+        )
+        self.expectOutcome(result=FAILURE, state_string='Failed to generate S3 URL')
+
+        try:
+            with current_hostname(BUILD_WEBKIT_HOSTNAMES[0]), open(os.devnull, 'w') as null:
+                sys.stdout = null
+                return self.runStep()
+        finally:
+            sys.stdout = sys.__stdout__
+
+    def test_skipped(self):
+        self.configureStep()
+        self.expectOutcome(result=SKIPPED, state_string='Generated S3 URL (skipped)')
+        with current_hostname('something-other-than-steps.BUILD_WEBKIT_HOSTNAMES'):
+            return self.runStep()
+
+
+class TestUploadFileToS3(BuildStepMixinAdditions, unittest.TestCase):
+    def setUp(self):
+        self.longMessage = True
+        return self.setUpBuildStep()
+
+    def tearDown(self):
+        return self.tearDownBuildStep()
+
+    def configureStep(self, file='WebKitBuild/release.zip', content_type=None):
+        self.setupStep(UploadFileToS3(file, content_type=content_type))
+        self.build.s3url = 'https://test-s3-url'
+
+    def test_success(self):
+        self.configureStep()
+        self.assertEqual(UploadFileToS3.haltOnFailure, True)
+        self.assertEqual(UploadFileToS3.flunkOnFailure, True)
+        self.expectRemoteCommands(
+            ExpectShell(workdir='wkdir',
+                        env=dict(UPLOAD_URL='https://test-s3-url'),
+                        logEnviron=False,
+                        command=['python3', 'Tools/Scripts/upload-file-to-url', '--filename', 'WebKitBuild/release.zip'],
+                        timeout=1860,
+                        )
+            + 0,
+        )
+        self.expectOutcome(result=SUCCESS, state_string='Uploaded WebKitBuild/release.zip to S3')
+        with current_hostname(BUILD_WEBKIT_HOSTNAMES[0]):
+            return self.runStep()
+
+    def test_success_content_type(self):
+        self.configureStep(file='build-log.txt', content_type='text/plain')
+        self.assertEqual(UploadFileToS3.haltOnFailure, True)
+        self.assertEqual(UploadFileToS3.flunkOnFailure, True)
+        self.expectRemoteCommands(
+            ExpectShell(workdir='wkdir',
+                        env=dict(UPLOAD_URL='https://test-s3-url'),
+                        logEnviron=False,
+                        command=['python3', 'Tools/Scripts/upload-file-to-url', '--filename', 'build-log.txt', '--content-type', 'text/plain'],
+                        timeout=1860,
+                        )
+            + 0,
+        )
+        self.expectOutcome(result=SUCCESS, state_string='Uploaded build-log.txt to S3')
+        with current_hostname(BUILD_WEBKIT_HOSTNAMES[0]):
+            return self.runStep()
+
+    def test_failure(self):
+        self.configureStep()
+        self.expectRemoteCommands(
+            ExpectShell(workdir='wkdir',
+                        env=dict(UPLOAD_URL='https://test-s3-url'),
+                        logEnviron=False,
+                        command=['python3', 'Tools/Scripts/upload-file-to-url', '--filename', 'WebKitBuild/release.zip'],
+                        timeout=1860,
+                        )
+            + ExpectShell.log('stdio', stdout='''Uploading WebKitBuild/release.zip
+response: <Response [403]>, 403, Forbidden
+exit 1''')
+            + 2,
+        )
+        self.expectOutcome(result=FAILURE, state_string='Failed to upload WebKitBuild/release.zip to S3. Please inform an admin.')
+        with current_hostname(BUILD_WEBKIT_HOSTNAMES[0]):
+            return self.runStep()
+
+    def test_skipped(self):
+        self.configureStep()
+        self.expectOutcome(result=SKIPPED, state_string='Skipped upload to S3')
+        with current_hostname('something-other-than-steps.BUILD_WEBKIT_HOSTNAMES'):
+            return self.runStep()
+
+
+class TestScanBuildSmartPointer(BuildStepMixinAdditions, unittest.TestCase):
+    WORK_DIR = 'wkdir'
+    EXPECTED_BUILD_COMMAND = ['/bin/sh', '-c', f'Tools/Scripts/build-and-analyze --output-dir wkdir/build/{SCAN_BUILD_OUTPUT_DIR} --only-smart-pointers --analyzer-path=wkdir/llvm-project/build/bin/clang --scan-build-path=../llvm-project/clang/tools/scan-build/bin/scan-build --sdkroot=macosx --preprocessor-additions=CLANG_WEBKIT_BRANCH=1 2>&1 | python3 Tools/Scripts/filter-test-logs scan-build --output build-log.txt']
+
+    def setUp(self):
+        return self.setUpBuildStep()
+
+    def tearDown(self):
+        return self.tearDownBuildStep()
+
+    def configureStep(self):
+        self.setupStep(ScanBuildSmartPointer())
+
+    def test_failure(self):
+        self.configureStep()
+        self.setProperty('builddir', self.WORK_DIR)
+
+        self.expectRemoteCommands(
+            ExpectShell(workdir=self.WORK_DIR,
+                        command=['/bin/sh', '-c', f'/bin/rm -rf wkdir/build/{SCAN_BUILD_OUTPUT_DIR}'],
+                        timeout=2 * 60 * 60) + 0,
+            ExpectShell(workdir=self.WORK_DIR,
+                        command=self.EXPECTED_BUILD_COMMAND,
+                        timeout=2 * 60 * 60)
+            + ExpectShell.log('stdio', stdout='scan-build-static-analyzer: No bugs found.\nTotal issue count: 123\n')
+            + 0
+        )
+        self.expectOutcome(result=FAILURE, state_string='ANALYZE FAILED: scan-build-smart-pointer found 123 issues (failure)')
+        return self.runStep()
+
+    def test_success(self):
+        self.configureStep()
+        self.setProperty('builddir', self.WORK_DIR)
+
+        self.expectRemoteCommands(
+            ExpectShell(workdir=self.WORK_DIR,
+                        command=['/bin/sh', '-c', f'/bin/rm -rf wkdir/build/{SCAN_BUILD_OUTPUT_DIR}'],
+                        timeout=2 * 60 * 60)
+            + 0,
+            ExpectShell(workdir=self.WORK_DIR,
+                        command=self.EXPECTED_BUILD_COMMAND,
+                        timeout=2 * 60 * 60)
+            + ExpectShell.log('stdio', stdout='ANALYZE SUCCEEDED No issues found.\n')
+            + 0
+        )
+        self.expectOutcome(result=SUCCESS, state_string='scan-build-smart-pointer found 0 issues')
+        return self.runStep()
+
+    def test_success_with_issues(self):
+        self.configureStep()
+        self.setProperty('builddir', self.WORK_DIR)
+
+        self.expectRemoteCommands(
+            ExpectShell(workdir=self.WORK_DIR,
+                        command=['/bin/sh', '-c', f'/bin/rm -rf wkdir/build/{SCAN_BUILD_OUTPUT_DIR}'],
+                        timeout=2 * 60 * 60)
+            + 0,
+            ExpectShell(workdir=self.WORK_DIR,
+                        command=self.EXPECTED_BUILD_COMMAND,
+                        timeout=2 * 60 * 60)
+            + ExpectShell.log('stdio', stdout='ANALYZE SUCCEEDED\n Total issue count: 300\n')
+            + 0
+        )
+        self.expectOutcome(result=SUCCESS, state_string='scan-build-smart-pointer found 300 issues')
+        return self.runStep()
+
+
+class TestParseStaticAnalyzerResults(BuildStepMixinAdditions, unittest.TestCase):
+    def setUp(self):
+        return self.setUpBuildStep()
+
+    def tearDown(self):
+        return self.tearDownBuildStep()
+
+    def configureStep(self):
+        self.setupStep(ParseStaticAnalyzerResults())
+
+    def test_success(self):
+        self.configureStep()
+        self.setProperty('builddir', 'wkdir')
+        self.setProperty('buildnumber', 1234)
+
+        self.expectRemoteCommands(
+            ExpectShell(workdir='wkdir',
+                        command=['python3', 'Tools/Scripts/generate-dirty-files', f'wkdir/build/{SCAN_BUILD_OUTPUT_DIR}', '--output-dir', 'wkdir/smart-pointer-result-archive/1234', '--build-dir', 'wkdir/build'])
+            + ExpectShell.log('stdio', stdout='Total (24247) WebKit (327) WebCore (23920)\n')
+            + 0,
+        )
+        self.expectOutcome(result=SUCCESS, state_string=' Issues by project: Total (24247) WebKit (327) WebCore (23920)\n')
+        return self.runStep()
+
+
+class TestCompareStaticAnalyzerResults(BuildStepMixinAdditions, unittest.TestCase):
+    def setUp(self):
+        return self.setUpBuildStep()
+
+    def tearDown(self):
+        return self.tearDownBuildStep()
+
+    def configureStep(self):
+        self.setupStep(CompareStaticAnalyzerResults())
+
+    def test_success_no_issues(self):
+        self.configureStep()
+        self.setProperty('builddir', 'wkdir')
+        self.setProperty('buildnumber', 2)
+
+        self.expectRemoteCommands(
+            ExpectShell(workdir='wkdir',
+                        command=['python3', 'Tools/Scripts/compare-static-analysis-results', 'wkdir/smart-pointer-result-archive/2', '--scan-build-path', '../llvm-project/clang/tools/scan-build/bin/scan-build', '--build-output', SCAN_BUILD_OUTPUT_DIR, '--check-expectations'],)
+            + ExpectShell.log('stdio', stdout='')
+            + 0,
+        )
+        self.expectOutcome(result=SUCCESS, state_string='Found no unexpected results')
+        return self.runStep()
+
+    def test_new_issues(self):
+        self.configureStep()
+        self.setProperty('builddir', 'wkdir')
+        self.setProperty('buildnumber', 1234)
+
+        self.expectRemoteCommands(
+            ExpectShell(workdir='wkdir',
+                        command=['python3', 'Tools/Scripts/compare-static-analysis-results', 'wkdir/smart-pointer-result-archive/1234', '--scan-build-path', '../llvm-project/clang/tools/scan-build/bin/scan-build', '--build-output', SCAN_BUILD_OUTPUT_DIR, '--check-expectations'],)
+            + ExpectShell.log('stdio', stdout='Total unexpected failing files: 123\nTotal unexpected passing files: 456\nTotal unexpected issues: 789\n')
+            + 0,
+        )
+        self.expectOutcome(result=FAILURE, state_string='Unexpected failing files: 123 Unexpected passing files: 456 Unexpected issues: 789 (failure)')
+        return self.runStep()
+
+
+class TestUpdateSmartPointerBaseline(BuildStepMixinAdditions, unittest.TestCase):
+    def setUp(self):
+        return self.setUpBuildStep()
+
+    def tearDown(self):
+        return self.tearDownBuildStep()
+
+    def configureStep(self):
+        self.setupStep(UpdateSmartPointerBaseline())
+
+    def test_success(self):
+        self.configureStep()
+        self.setProperty('builddir', 'wkdir')
+        self.setProperty('buildnumber', 2)
+
+        self.expectRemoteCommands(
+            ExpectShell(workdir='wkdir',
+                        command=['/bin/sh', '-c', 'rm -r wkdir/smart-pointer-result-archive/baseline'],)
+            + ExpectShell.log('stdio', stdout='')
+            + 0,
+            ExpectShell(workdir='wkdir',
+                        command=['/bin/sh', '-c', 'cp -r wkdir/smart-pointer-result-archive/2 wkdir/smart-pointer-result-archive/baseline'],)
+            + ExpectShell.log('stdio', stdout='')
+            + 0,
+        )
+        self.expectOutcome(result=SUCCESS)
+        return self.runStep()

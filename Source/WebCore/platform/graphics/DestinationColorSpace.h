@@ -34,15 +34,19 @@ namespace WebCore {
 class DestinationColorSpace {
 public:
     WEBCORE_EXPORT static const DestinationColorSpace& SRGB();
-#if ENABLE(DESTINATION_COLOR_SPACE_LINEAR_SRGB)
     WEBCORE_EXPORT static const DestinationColorSpace& LinearSRGB();
-#endif
 #if ENABLE(DESTINATION_COLOR_SPACE_DISPLAY_P3)
     WEBCORE_EXPORT static const DestinationColorSpace& DisplayP3();
 #endif
 
     WEBCORE_EXPORT explicit DestinationColorSpace(PlatformColorSpace);
+
+#if USE(SKIA)
+    PlatformColorSpaceValue platformColorSpace() const { return m_platformColorSpace; }
+#else
     PlatformColorSpaceValue platformColorSpace() const { return m_platformColorSpace.get(); }
+#endif
+
     PlatformColorSpace serializableColorSpace() const { return m_platformColorSpace; }
 
     WEBCORE_EXPORT std::optional<DestinationColorSpace> asRGB() const;

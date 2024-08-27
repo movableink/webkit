@@ -33,6 +33,10 @@
 #include "WebGLRenderingContextBase.h"
 #include <wtf/IsoMallocInlines.h>
 
+#if USE(GSTREAMER)
+#include "VideoFrameGStreamer.h"
+#endif
+
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(CanvasCaptureMediaStreamTrack);
@@ -68,11 +72,6 @@ Ref<CanvasCaptureMediaStreamTrack::Source> CanvasCaptureMediaStreamTrack::Source
         source->captureCanvas();
     });
     return source;
-}
-
-const char* CanvasCaptureMediaStreamTrack::activeDOMObjectName() const
-{
-    return "CanvasCaptureMediaStreamTrack";
 }
 
 // FIXME: Give source id and name
@@ -152,13 +151,11 @@ void CanvasCaptureMediaStreamTrack::Source::canvasResized(CanvasBase& canvas)
     setSize(IntSize(m_canvas->width(), m_canvas->height()));
 }
 
-void CanvasCaptureMediaStreamTrack::Source::canvasChanged(CanvasBase& canvas, const std::optional<FloatRect>&)
+void CanvasCaptureMediaStreamTrack::Source::canvasChanged(CanvasBase&, const FloatRect&)
 {
-    ASSERT_UNUSED(canvas, m_canvas == &canvas);
-#if ENABLE(WEBGL)
-    if (m_canvas->renderingContext() && m_canvas->renderingContext()->needsPreparationForDisplay() && m_canvas->hasObserver(m_canvas->document()))
+    // If canvas needs preparation, the capture will be scheduled once document prepares the canvas.
+    if (m_canvas->needsPreparationForDisplay())
         return;
-#endif
     scheduleCaptureCanvas();
 }
 
@@ -203,6 +200,18 @@ void CanvasCaptureMediaStreamTrack::Source::captureCanvas()
     }();
     if (!videoFrame)
         return;
+
+#if USE(GSTREAMER)
+    auto gstVideoFrame = downcast<VideoFrameGStreamer>(videoFrame);
+    if (m_frameRequestRate)
+        gstVideoFrame->setFrameRate(*m_frameRequestRate);
+    else {
+        static const double s_frameRate = 60;
+        gstVideoFrame->setMaxFrameRate(s_frameRate);
+        gstVideoFrame->setPresentationTime(m_presentationTimeStamp);
+        m_presentationTimeStamp = m_presentationTimeStamp + MediaTime::createWithDouble(1.0 / s_frameRate);
+    }
+#endif
 
     VideoFrameTimeMetadata metadata;
     metadata.captureTime = MonotonicTime::now().secondsSinceEpoch();

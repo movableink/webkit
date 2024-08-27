@@ -42,8 +42,8 @@ public:
     QColor currentColor() const { return m_currentColor; }
     QRectF elementRect() const { return m_rect; }
 
-    Q_INVOKABLE void accept(const QColor& color) { emit accepted(color); }
-    Q_INVOKABLE void reject() { emit rejected(); }
+    Q_INVOKABLE void accept(const QColor& color) { Q_EMIT accepted(color); }
+    Q_INVOKABLE void reject() { Q_EMIT rejected(); }
 
 Q_SIGNALS:
     void accepted(const QColor&);

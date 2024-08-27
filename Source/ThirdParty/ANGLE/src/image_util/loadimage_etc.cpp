@@ -83,6 +83,8 @@ struct ETC2Block
     }
 
     // Transcodes  block to BC4
+    // For simplicity, R11 alpha use the same formula as Alpha8 to decode,
+    // the result R8 may have some precision issue like multiplier == 0 case.
     void transcodeAsBC4(uint8_t *dest, size_t x, size_t y, size_t w, size_t h, bool isSigned) const
     {
         static constexpr int kIndexMap[] = {1, 7, 6, 5, 4, 3, 2, 0};
@@ -1139,7 +1141,7 @@ struct ETC2Block
             // From the eigenvalue and eigenvector, choose the axis to project
             // colors on. When projecting colors we want to do integer computations
             // for speed, so we normalize the eigenvector to the [0, 512] range.
-            float magn = std::max(std::max(std::abs(vfr), std::abs(vfg)), std::abs(vfb));
+            float magn = std::max({std::abs(vfr), std::abs(vfg), std::abs(vfb)});
             magn       = kQuantizeRange / magn;
             vr         = static_cast<int>(vfr * magn);
             vg         = static_cast<int>(vfg * magn);
@@ -2143,7 +2145,7 @@ void LoadETC2SRGBA8ToBC3(const ImageLoadContext &context,
                          size_t outputDepthPitch)
 {
     LoadETC2RGBA8ToBC3(context, width, height, depth, input, inputRowPitch, inputDepthPitch, output,
-                       outputRowPitch, outputDepthPitch, false, true);
+                       outputRowPitch, outputDepthPitch, false, false);
 }
 
 void LoadEACR11ToBC4(const ImageLoadContext &context,

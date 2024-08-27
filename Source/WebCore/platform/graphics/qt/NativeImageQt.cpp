@@ -44,6 +44,7 @@
 #include "GraphicsContextQt.h"
 #include "NotImplemented.h"
 
+#include <QColorSpace>
 #include <QPainter>
 #include <QPaintEngine>
 #include <QPixmap>
@@ -53,38 +54,44 @@
 
 namespace WebCore {
 
-IntSize NativeImage::size() const
+IntSize PlatformImageNativeImageBackend::size() const
 {
     return IntSize(m_platformImage.size());
 }
 
-bool NativeImage::hasAlpha() const
+bool PlatformImageNativeImageBackend::hasAlpha() const
 {
     return m_platformImage.hasAlphaChannel();
 }
 
-Color NativeImage::singlePixelSolidColor() const
+DestinationColorSpace PlatformImageNativeImageBackend::colorSpace() const
 {
-    if (size() != IntSize(1, 1))
-        return Color();
+    QColorSpace colorSpace = m_platformImage.colorSpace();
 
-    return QColor::fromRgba(m_platformImage.pixel(0, 0));
-}
-
-DestinationColorSpace NativeImage::colorSpace() const
-{
-    notImplemented();
+    if (colorSpace == QColorSpace::SRgb)
+        return DestinationColorSpace::SRGB();
+#if ENABLE(PREDEFINED_COLOR_SPACE_DISPLAY_P3)
+    if (colorSpace == QColorSpace::DisplayP3)
+        return DestinationColorSpace::DisplayP3();
+#endif
     return DestinationColorSpace::SRGB();
 }
 
+std::optional<Color> NativeImage::singlePixelSolidColor() const
+{
+    if (size() != IntSize(1, 1))
+        return std::nullopt;
+
+    return QColor::fromRgba(platformImage().pixel(0, 0));
+}
 
 void NativeImage::clearSubimages()
 {
 }
 
-void NativeImage::draw(GraphicsContext& context, const FloatSize& imageSize, const FloatRect& destinationRect, const FloatRect& sourceRect, ImagePaintingOptions options)
+void NativeImage::draw(GraphicsContext& context, const FloatRect& destinationRect, const FloatRect& sourceRect, ImagePaintingOptions options)
 {
-    context.drawNativeImageInternal(*this, imageSize, destinationRect, sourceRect, options);
+    context.drawNativeImageInternal(*this, destinationRect, sourceRect, options);
 }
 
 } // namespace WebCore

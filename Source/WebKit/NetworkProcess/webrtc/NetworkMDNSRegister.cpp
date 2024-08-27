@@ -47,6 +47,11 @@ NetworkMDNSRegister::NetworkMDNSRegister(NetworkConnectionToWebProcess& connecti
 
 NetworkMDNSRegister::~NetworkMDNSRegister() = default;
 
+bool NetworkMDNSRegister::hasRegisteredName(const String& name) const
+{
+    return m_registeredNames.contains(name);
+}
+
 #if ENABLE_MDNS
 struct NetworkMDNSRegister::DNSServiceDeallocator {
     void operator()(DNSServiceRef service) const { DNSServiceRefDeallocate(service); }
@@ -55,6 +60,8 @@ struct NetworkMDNSRegister::DNSServiceDeallocator {
 void NetworkMDNSRegister::unregisterMDNSNames(WebCore::ScriptExecutionContextIdentifier documentIdentifier)
 {
     m_services.remove(documentIdentifier);
+    for (auto& name : m_perDocumentRegisteredNames.take(documentIdentifier))
+        m_registeredNames.remove(name);
 }
 
 struct PendingRegistrationRequest {
@@ -108,6 +115,11 @@ void NetworkMDNSRegister::registerMDNSName(WebCore::ScriptExecutionContextIdenti
 {
     auto name = makeString(WTF::UUID::createVersion4(), ".local"_s);
 
+    m_registeredNames.add(name);
+    m_perDocumentRegisteredNames.ensure(documentIdentifier, [] {
+        return Vector<String>();
+    }).iterator->value.append(name);
+
     DNSServiceRef service;
     auto iterator = m_services.find(documentIdentifier);
     if (iterator == m_services.end()) {
@@ -135,7 +147,7 @@ void NetworkMDNSRegister::registerMDNSName(WebCore::ScriptExecutionContextIdenti
     }
 
     auto identifier = PendingRegistrationRequestIdentifier::generate();
-    CheckedRef connection = m_connection;
+    Ref connection = m_connection.get();
     auto pendingRequest = makeUnique<PendingRegistrationRequest>(connection.get(), WTFMove(name), sessionID(), WTFMove(completionHandler));
     auto addResult = pendingRegistrationRequestMap().add(identifier, WTFMove(pendingRequest));
     DNSRecordRef record { nullptr };

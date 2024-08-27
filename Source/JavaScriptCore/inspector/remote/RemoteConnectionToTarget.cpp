@@ -40,9 +40,7 @@ RemoteConnectionToTarget::RemoteConnectionToTarget(RemoteControllableTarget& tar
 {
 }
 
-RemoteConnectionToTarget::~RemoteConnectionToTarget()
-{
-}
+RemoteConnectionToTarget::~RemoteConnectionToTarget() = default;
 
 bool RemoteConnectionToTarget::setup(bool isAutomaticInspection, bool automaticallyPause)
 {
@@ -55,14 +53,12 @@ bool RemoteConnectionToTarget::setup(bool isAutomaticInspection, bool automatica
     if (!m_target || !m_target->remoteControlAllowed()) {
         RemoteInspector::singleton().setupFailed(targetIdentifier);
         m_target = nullptr;
-    } else if (is<RemoteInspectionTarget>(m_target)) {
-        auto target = downcast<RemoteInspectionTarget>(m_target);
+    } else if (auto* target = dynamicDowncast<RemoteInspectionTarget>(m_target)) {
         target->connect(*this, isAutomaticInspection, automaticallyPause);
         m_connected = true;
 
         RemoteInspector::singleton().updateTargetListing(targetIdentifier);
-    } else if (is<RemoteAutomationTarget>(m_target)) {
-        auto target = downcast<RemoteAutomationTarget>(m_target);
+    } else if (auto* target = dynamicDowncast<RemoteAutomationTarget>(m_target)) {
         target->connect(*this);
         m_connected = true;
 

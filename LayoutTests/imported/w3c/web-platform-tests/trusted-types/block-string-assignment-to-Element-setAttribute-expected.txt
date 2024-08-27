@@ -1,0 +1,24 @@
+CONSOLE MESSAGE: This requires a TrustedScriptURL value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
+CONSOLE MESSAGE: This requires a TrustedScriptURL value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
+CONSOLE MESSAGE: This requires a TrustedScriptURL value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
+CONSOLE MESSAGE: This requires a TrustedHTML value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
+CONSOLE MESSAGE: This requires a TrustedHTML value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
+CONSOLE MESSAGE: This requires a TrustedHTML value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
+CONSOLE MESSAGE: This requires a TrustedScript value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
+CONSOLE MESSAGE: This requires a TrustedScript value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
+CONSOLE MESSAGE: This requires a TrustedScriptURL value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
+
+PASS script.src accepts only TrustedScriptURL
+PASS iframe.srcdoc accepts only TrustedHTML
+PASS div.onclick accepts only TrustedScript
+PASS `Script.prototype.setAttribute.SrC = string` throws.
+PASS script.src accepts string and null after default policy was created.
+PASS script.src's mutationobservers receive the default policy's value.
+PASS iframe.srcdoc's mutationobservers receive the default policy's value.
+PASS div.onclick's mutationobservers receive the default policy's value.
+PASS iframe.srcdoc accepts string and null after default policy was created.
+PASS div.onclick accepts string and null after default policy was created.
+PASS a.rel accepts strings
+PASS a.rel accepts null
+PASS `script.src = setAttributeNode(embed.src)` with string works.
+

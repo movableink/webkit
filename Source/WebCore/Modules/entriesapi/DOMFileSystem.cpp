@@ -77,7 +77,7 @@ static ExceptionOr<Vector<Ref<FileSystemEntry>>> toFileSystemEntries(ScriptExecu
         return listedChildren.releaseException();
 
     return WTF::compactMap(listedChildren.returnValue(), [&](auto& child) -> RefPtr<FileSystemEntry> {
-        String virtualPath = parentVirtualPath + "/" + child.filename;
+        auto virtualPath = makeString(parentVirtualPath, '/', child.filename);
         switch (child.type) {
         case FileSystem::FileType::Regular:
             return FileSystemFileEntry::create(context, fileSystem, virtualPath);
@@ -147,7 +147,7 @@ DOMFileSystem::DOMFileSystem(Ref<File>&& file)
     : m_name(createVersion4UUIDString())
     , m_file(WTFMove(file))
     , m_rootPath(FileSystem::parentPath(m_file->path()))
-    , m_workQueue(WorkQueue::create("DOMFileSystem work queue"))
+    , m_workQueue(WorkQueue::create("DOMFileSystem work queue"_s))
 {
     ASSERT(!m_rootPath.endsWith('/'));
 }
@@ -162,8 +162,8 @@ Ref<FileSystemDirectoryEntry> DOMFileSystem::root(ScriptExecutionContext& contex
 Ref<FileSystemEntry> DOMFileSystem::fileAsEntry(ScriptExecutionContext& context)
 {
     if (m_file->isDirectory())
-        return FileSystemDirectoryEntry::create(context, *this, "/" + m_file->name());
-    return FileSystemFileEntry::create(context, *this, "/" + m_file->name());
+        return FileSystemDirectoryEntry::create(context, *this, makeString('/', m_file->name()));
+    return FileSystemFileEntry::create(context, *this, makeString('/', m_file->name()));
 }
 
 static ExceptionOr<String> validatePathIsExpectedType(const String& fullPath, String&& virtualPath, FileSystem::FileType expectedType)
@@ -207,10 +207,8 @@ static String resolveRelativeVirtualPath(StringView baseVirtualPath, StringView 
         return "/"_s;
 
     StringBuilder builder;
-    for (auto& segment : virtualPathSegments) {
-        builder.append('/');
-        builder.append(segment);
-    }
+    for (auto& segment : virtualPathSegments)
+        builder.append('/', segment);
     return builder.toString();
 }
 
@@ -303,6 +301,9 @@ void DOMFileSystem::getEntry(ScriptExecutionContext& context, FileSystemDirector
         return;
     }
 
+    if (m_rootPath.isEmpty())
+        return completionCallback(Exception { ExceptionCode::NotFoundError, "Path does not exist"_s });
+
     m_workQueue->dispatch([protectedThis = Ref { *this }, context = Ref { context }, fullPath = crossThreadCopy(WTFMove(fullPath)), resolvedVirtualPath = crossThreadCopy(WTFMove(resolvedVirtualPath)), completionCallback = WTFMove(completionCallback)]() mutable {
         auto entryType = fileTypeIgnoringHiddenFiles(fullPath);
         callOnMainThread([protectedThis = WTFMove(protectedThis), context = WTFMove(context), resolvedVirtualPath = crossThreadCopy(WTFMove(resolvedVirtualPath)), entryType, completionCallback = WTFMove(completionCallback)]() mutable {
@@ -327,6 +328,8 @@ void DOMFileSystem::getEntry(ScriptExecutionContext& context, FileSystemDirector
 
 void DOMFileSystem::getFile(ScriptExecutionContext& context, FileSystemFileEntry& fileEntry, GetFileCallback&& completionCallback)
 {
+    if (m_rootPath.isEmpty())
+        return completionCallback(Exception { ExceptionCode::NotFoundError, "Path does not exist"_s });
     auto virtualPath = fileEntry.virtualPath();
     auto fullPath = evaluatePath(virtualPath);
     m_workQueue->dispatch([fullPath = crossThreadCopy(WTFMove(fullPath)), virtualPath = crossThreadCopy(WTFMove(virtualPath)), context = Ref { context }, completionCallback = WTFMove(completionCallback)]() mutable {

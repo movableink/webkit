@@ -134,7 +134,7 @@ String localizedString(const wchar_t* key)
 #else
 String localizedString(const char* key)
 {
-    return String::fromUTF8(key, strlen(key));
+    return String::fromUTF8(key);
 }
 #endif
 
@@ -505,6 +505,13 @@ String contextMenuItemTagTranslate(const String& selectedString)
 }
 #endif
 
+#if ENABLE(WRITING_TOOLS)
+String contextMenuItemTagWritingTools()
+{
+    return WEB_UI_STRING("Writing Tools", "Writing Tools context menu item");
+}
+#endif
+
 #if ENABLE(UNIFIED_PDF)
 String contextMenuItemPDFOpenWithPreview()
 {
@@ -532,13 +539,6 @@ String contextMenuItemPDFTwoPagesContinuous()
 {
     return WEB_UI_STRING_WITH_MNEMONIC("Two Pages Continuous", "_Two Pages Continuous", "Two Pages Continuous context menu item");
 }
-#endif
-
-#if ENABLE(PDFJS)
-String contextMenuItemPDFAutoSize()
-{
-    return WEB_UI_STRING_WITH_MNEMONIC("Automatically Resize", "_Automatically Resize", "Automatically Resize context menu item");
-}
 
 String contextMenuItemPDFZoomIn()
 {
@@ -555,6 +555,11 @@ String contextMenuItemPDFActualSize()
     return WEB_UI_STRING_WITH_MNEMONIC("Actual Size", "_Actual Size", "Actual Size context menu item");
 }
 
+String contextMenuItemPDFAutoSize()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Automatically Resize", "_Automatically Resize", "Automatically Resize context menu item");
+}
+
 String contextMenuItemPDFNextPage()
 {
     return WEB_UI_STRING_WITH_MNEMONIC("Next Page", "_Next Page", "Next Page context menu item");
@@ -565,6 +570,7 @@ String contextMenuItemPDFPreviousPage()
     return WEB_UI_STRING_WITH_MNEMONIC("Previous Page", "_Previous Page", "Previous Page context menu item");
 }
 #endif
+
 #endif // ENABLE(CONTEXT_MENUS)
 
 #if !PLATFORM(COCOA)
@@ -732,6 +738,26 @@ String AXDateFieldDayText()
 String AXDateFieldYearText()
 {
     return WEB_UI_STRING("year", "accessibility label for a date field year input.");
+}
+
+String AXTimeFieldHourText()
+{
+    return WEB_UI_STRING("hour", "accessibility label for hour fields.");
+}
+
+String AXTimeFieldMinuteText()
+{
+    return WEB_UI_STRING("minutes", "accessibility label for minutes fields.");
+}
+
+String AXTimeFieldSecondText()
+{
+    return WEB_UI_STRING("seconds", "accessibility label for seconds fields.");
+}
+
+String AXTimeFieldMillisecondText()
+{
+    return WEB_UI_STRING("milliseconds", "accessibility label for milliseconds fields.");
 }
 
 String AXDateTimeFieldText()
@@ -959,11 +985,6 @@ String AXAutoFillLoadingLabel()
 String autoFillStrongPasswordLabel()
 {
     return WEB_UI_STRING("Strong Password", "Label for strong password.");
-}
-
-String AXProcessingPage()
-{
-    return WEB_UI_STRING("Processing page", "Title for the webarea while the accessibility tree is being built.");
 }
 
 String missingPluginText()
@@ -1449,17 +1470,11 @@ String useBlockedPlugInContextMenuTitle()
     return WEB_UI_STRING("Show in blocked plug-in", "Title of the context menu item to show when PDFPlugin was used instead of a blocked plugin");
 }
 
-#if ENABLE(WEB_CRYPTO) && PLATFORM(COCOA)
+#if PLATFORM(COCOA)
 
 String webCryptoMasterKeyKeychainLabel(const String& localizedApplicationName)
 {
-#if PLATFORM(COCOA)
     return WEB_UI_FORMAT_CFSTRING("%@ WebCrypto Master Key", "Name of application's single WebCrypto master key in Keychain", localizedApplicationName.createCFString().get());
-#elif USE(GLIB)
-    return WEB_UI_FORMAT_STRING("%s WebCrypto Master Key", "Name of application's single WebCrypto master key in Keychain", localizedApplicationName.utf8().data());
-#else
-    return makeStringByReplacingAll(WEB_UI_STRING("<application> WebCrypto Master Key", "Name of application's single WebCrypto master key in Keychain"), "<application>"_s, localizedApplicationName);
-#endif
 }
 
 String webCryptoMasterKeyKeychainComment()
@@ -1543,6 +1558,26 @@ String genericTouchIDPromptTitle()
     return WEB_UI_STRING("Continue with Touch ID.", "Continue with Touch ID.");
 }
 #endif // ENABLE(WEB_AUTHN)
+
+String pdfPasswordFormTitle()
+{
+    return WEB_UI_STRING("This document is password protected.", "Title when a PDF needs a password to be unlocked");
+}
+
+String pdfPasswordFormSubtitle()
+{
+    return WEB_UI_STRING("Please enter the password below.", "Subtitle when a PDF needs a password to be unlocked");
+}
+
+String pdfPasswordFormInvalidPasswordSubtitle()
+{
+    return WEB_UI_STRING("Invalid Password", "Message when a PDF fails to unlock with the given password");
+}
+
+String contextMenuItemTagCopyLinkToHighlight()
+{
+    return WEB_UI_STRING("Copy Link to Highlight", "Copy link to highlight context menu item");
+}
 
 } // namespace WebCore
 

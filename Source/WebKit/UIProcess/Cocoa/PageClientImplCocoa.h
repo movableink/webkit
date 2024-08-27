@@ -26,10 +26,11 @@
 #pragma once
 
 #include "PageClient.h"
+#include <WebCore/PlatformTextAlternatives.h>
 #include <wtf/Forward.h>
 #include <wtf/WeakObjCPtr.h>
 
-@class NSTextAlternatives;
+@class PlatformTextAlternatives;
 @class WKWebView;
 
 namespace API {
@@ -45,6 +46,9 @@ struct AppHighlight;
 
 namespace WebKit {
 
+struct TextAnimationData;
+enum class TextAnimationType : uint8_t;
+
 class PageClientImplCocoa : public PageClient {
 public:
     PageClientImplCocoa(WKWebView *);
@@ -57,6 +61,11 @@ public:
 #if ENABLE(GPU_PROCESS)
     void gpuProcessDidFinishLaunching() override;
     void gpuProcessDidExit() override;
+#endif
+
+#if ENABLE(MODEL_PROCESS)
+    void modelProcessDidFinishLaunching() override;
+    void modelProcessDidExit() override;
 #endif
 
     void themeColorWillChange() final;
@@ -80,14 +89,19 @@ public:
     NSSet *serializableFileWrapperClasses() const final;
 #endif
 
-    WebCore::DictationContext addDictationAlternatives(NSTextAlternatives *) final;
-    void replaceDictationAlternatives(NSTextAlternatives *, WebCore::DictationContext) final;
+    WebCore::DictationContext addDictationAlternatives(PlatformTextAlternatives *) final;
+    void replaceDictationAlternatives(PlatformTextAlternatives *, WebCore::DictationContext) final;
     void removeDictationAlternatives(WebCore::DictationContext) final;
     Vector<String> dictationAlternatives(WebCore::DictationContext) final;
-    NSTextAlternatives *platformDictationAlternatives(WebCore::DictationContext) final;
+    PlatformTextAlternatives *platformDictationAlternatives(WebCore::DictationContext) final;
 
 #if ENABLE(APP_HIGHLIGHTS)
     void storeAppHighlight(const WebCore::AppHighlight&) final;
+#endif
+
+#if ENABLE(WRITING_TOOLS_UI)
+    void addTextAnimationForAnimationID(const WTF::UUID&, const WebKit::TextAnimationData&) final;
+    void removeTextAnimationForAnimationID(const WTF::UUID&) final;
 #endif
 
     void microphoneCaptureWillChange() final;
@@ -104,6 +118,21 @@ public:
 
     WindowKind windowKind() final;
 
+#if ENABLE(WRITING_TOOLS)
+    void proofreadingSessionShowDetailsForSuggestionWithIDRelativeToRect(const WebCore::WritingTools::SessionID&, const WebCore::WritingTools::TextSuggestionID&, WebCore::IntRect selectionBoundsInRootView) final;
+
+    void proofreadingSessionUpdateStateForSuggestionWithID(const WebCore::WritingTools::SessionID&, WebCore::WritingTools::TextSuggestionState, const WTF::UUID& replacementUUID) final;
+
+    void writingToolsActiveWillChange() final;
+    void writingToolsActiveDidChange() final;
+#endif
+
+#if ENABLE(GAMEPAD)
+    void setGamepadsRecentlyAccessed(GamepadsRecentlyAccessed) final;
+#endif
+
+    void hasActiveNowPlayingSessionChanged(bool) final;
+
 protected:
     RetainPtr<WKWebView> webView() const { return m_webView.get(); }
 
@@ -111,4 +140,4 @@ protected:
     std::unique_ptr<WebCore::AlternativeTextUIController> m_alternativeTextUIController;
 };
 
-}
+} // namespace WebKit

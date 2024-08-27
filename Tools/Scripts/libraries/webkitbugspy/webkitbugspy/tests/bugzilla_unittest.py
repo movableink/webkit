@@ -96,6 +96,13 @@ class TestBugzilla(unittest.TestCase):
         )
         self.assertEqual(tracker.from_string('http://bugs.other.com/show_bug.cgi?id=1234'), None)
 
+    def test_link_brackets(self):
+        tracker = bugzilla.Tracker(self.URL)
+        self.assertEqual(
+            tracker.from_string('<http://bugs.example.com/show_bug.cgi?id=1234>').link,
+            'https://bugs.example.com/show_bug.cgi?id=1234',
+        )
+
     def test_title(self):
         with mocks.Bugzilla(self.URL.split('://')[1], issues=mocks.ISSUES):
             tracker = bugzilla.Tracker(self.URL)
@@ -105,6 +112,10 @@ class TestBugzilla(unittest.TestCase):
     def test_timestamp(self):
         with mocks.Bugzilla(self.URL.split('://')[1], issues=mocks.ISSUES):
             self.assertEqual(bugzilla.Tracker(self.URL).issue(1).timestamp, 1639510960)
+
+    def test_modified(self):
+        with mocks.Bugzilla(self.URL.split('://')[1], issues=mocks.ISSUES):
+            self.assertEqual(bugzilla.Tracker(self.URL).issue(1).modified, 1710859207)
 
     def test_creator(self):
         with mocks.Bugzilla(self.URL.split('://')[1], issues=mocks.ISSUES):
@@ -455,7 +466,7 @@ What component in 'WebKit' should the bug be associated with?:
             self.assertEqual(tracker.issue(1).redacted, bugzilla.Tracker.Redaction(True, "matches 'component:Text'"))
             self.assertEqual(tracker.issue(2).redacted, False)
             tracker.issue(1).close(original=tracker.issue(2))
-            self.assertEqual(tracker.issue(2).redacted, bugzilla.Tracker.Redaction(True, "matches 'component:Text'"))
+            self.assertEqual(tracker.issue(2).redacted, bugzilla.Tracker.Redaction(True, "is related to https://bugs.example.com/show_bug.cgi?id=1 which matches 'component:Text'"))
 
     def test_redacted_original(self):
         with mocks.Bugzilla(self.URL.split('://')[1], issues=mocks.ISSUES, environment=wkmocks.Environment(
@@ -466,7 +477,7 @@ What component in 'WebKit' should the bug be associated with?:
             self.assertEqual(tracker.issue(1).redacted, bugzilla.Tracker.Redaction(True, "matches 'component:Text'"))
             self.assertEqual(tracker.issue(2).redacted, False)
             tracker.issue(2).close(original=tracker.issue(1))
-            self.assertEqual(tracker.issue(2).redacted, bugzilla.Tracker.Redaction(True, "matches 'component:Text'"))
+            self.assertEqual(tracker.issue(2).redacted, bugzilla.Tracker.Redaction(True, "is related to https://bugs.example.com/show_bug.cgi?id=1 which matches 'component:Text'"))
 
     def test_redaction_exception(self):
         with mocks.Bugzilla(self.URL.split('://')[1], issues=mocks.ISSUES, projects=mocks.PROJECTS):
@@ -590,3 +601,86 @@ What component in 'WebKit' should the bug be associated with?:
             issue.set_keywords(['REGRESSION'])
             self.assertEqual(issue.keywords, ['REGRESSION'])
             self.assertEqual(tracker.issue(1).keywords, ['REGRESSION'])
+
+    def test_relate_simple(self):
+        with mocks.Bugzilla(self.URL.split('://')[1], environment=wkmocks.Environment(
+                BUGS_EXAMPLE_COM_USERNAME='tcontributor@example.com',
+                BUGS_EXAMPLE_COM_PASSWORD='password',
+        ), users=mocks.USERS, issues=mocks.ISSUES):
+            tracker = bugzilla.Tracker(self.URL)
+            issue = tracker.issue(1)
+
+            self.assertEqual(issue.related, {'depends_on': [], 'blocks': [], 'regressions': [], 'regressed_by': []})
+            issue.relate(depends_on=tracker.issue(2))
+            self.assertEqual(issue.related['depends_on'], [tracker.issue(2)])
+            self.assertEqual(issue.related['blocks'], [])
+
+    def test_relate(self):
+        with mocks.Bugzilla(self.URL.split('://')[1], environment=wkmocks.Environment(
+                BUGS_EXAMPLE_COM_USERNAME='tcontributor@example.com',
+                BUGS_EXAMPLE_COM_PASSWORD='password',
+        ), users=mocks.USERS, issues=mocks.ISSUES):
+            tracker = bugzilla.Tracker(self.URL)
+            issue = tracker.issue(1)
+
+            self.assertEqual(issue.related, {'depends_on': [], 'blocks': [], 'regressions': [], 'regressed_by': []})
+            issue.relate(depends_on=tracker.issue(2), blocks=tracker.issue(3))
+            self.assertEqual(issue.related['depends_on'], [tracker.issue(2)])
+            self.assertEqual(issue.related['blocks'], [tracker.issue(3)])
+
+    def test_relate_fail(self):
+        with mocks.Bugzilla(self.URL.split('://')[1], environment=wkmocks.Environment(
+                BUGS_EXAMPLE_COM_USERNAME='tcontributor@example.com',
+                BUGS_EXAMPLE_COM_PASSWORD='password',
+        ), users=mocks.USERS, issues=mocks.ISSUES):
+            tracker = bugzilla.Tracker(self.URL)
+
+            issue = tracker.issue(1)
+
+            self.assertEqual(issue.related, {'depends_on': [], 'blocks': [], 'regressions': [], 'regressed_by': []})
+            with self.assertRaises(TypeError) as c:
+                issue.relate(fake_relation=0)
+            self.assertEqual('\'fake_relation\' is an invalid relation', str(c.exception))
+            self.assertEqual(issue.related, {'depends_on': [], 'blocks': [], 'regressions': [], 'regressed_by': []})
+
+    def test_relate_fail_type(self):
+        with mocks.Bugzilla(self.URL.split('://')[1], environment=wkmocks.Environment(
+                BUGS_EXAMPLE_COM_USERNAME='tcontributor@example.com',
+                BUGS_EXAMPLE_COM_PASSWORD='password',
+        ), users=mocks.USERS, issues=mocks.ISSUES):
+            tracker = bugzilla.Tracker(self.URL)
+
+            issue = tracker.issue(1)
+
+            self.assertEqual(issue.related, {'depends_on': [], 'blocks': [], 'regressions': [], 'regressed_by': []})
+            with self.assertRaises(AttributeError) as c:
+                issue.relate(blocks=17)
+            self.assertEqual('\'int\' object has no attribute \'tracker\'', str(c.exception))
+            self.assertEqual(issue.related, {'depends_on': [], 'blocks': [], 'regressions': [], 'regressed_by': []})
+
+    def test_relate_fail_radar(self):
+        with mocks.Bugzilla(self.URL.split('://')[1], environment=wkmocks.Environment(
+                BUGS_EXAMPLE_COM_USERNAME='tcontributor@example.com',
+                BUGS_EXAMPLE_COM_PASSWORD='password',
+        ), users=mocks.USERS, issues=mocks.ISSUES), mocks.Radar(users=mocks.USERS, issues=mocks.ISSUES, projects=mocks.PROJECTS,):
+            bugzilla_tracker = bugzilla.Tracker(self.URL)
+            radar_tracker = radar.Tracker()
+
+            issue = bugzilla_tracker.issue(1)
+
+            self.assertEqual(issue.related, {'depends_on': [], 'blocks': [], 'regressions': [], 'regressed_by': []})
+            with self.assertRaises(TypeError) as c:
+                issue.relate(blocks=radar_tracker.issue(1))
+            self.assertEqual('Cannot relate issues of different types.', str(c.exception))
+            self.assertEqual(issue.related, {'depends_on': [], 'blocks': [], 'regressions': [], 'regressed_by': []})
+
+    def test_source_changes(self):
+        with OutputCapture() as captured, mocks.Bugzilla(self.URL.split('://')[1], issues=mocks.ISSUES):
+            tracker = bugzilla.Tracker(self.URL)
+            self.assertEqual(tracker.issue(1).source_changes, [])
+            self.assertIsNone(tracker.issue(1).add_source_change('WebKit, merge, a4daad5b9fbd26d557088037f54dc0935a437182'))
+
+        self.assertEqual(
+            captured.stderr.getvalue(),
+            'Bugzilla does not support source changes at this time\n',
+        )

@@ -84,7 +84,7 @@ static RetainPtr<nw_protocol_definition_t> proxyDefinition(HTTPServer::Protocol 
                     break;
                 }
                 case State::DidRequestCredentials:
-                    EXPECT_TRUE(strnstr(reinterpret_cast<const char*>(buffer), "Proxy-Authorization: Basic dGVzdHVzZXI6dGVzdHBhc3N3b3Jk\r\n", bufferLength));
+                    EXPECT_TRUE(strnstr(byteCast<char>(buffer), "Proxy-Authorization: Basic dGVzdHVzZXI6dGVzdHBhc3N3b3Jk\r\n", bufferLength));
                     FALLTHROUGH;
                 case State::WillNotRequestCredentials: {
                     const char* negotiationResponse = ""
@@ -329,7 +329,8 @@ static RetainPtr<dispatch_data_t> dataFromString(String&& s)
 {
     auto impl = s.releaseImpl();
     ASSERT(impl->is8Bit());
-    return adoptNS(dispatch_data_create(impl->characters8(), impl->length(), dispatch_get_main_queue(), ^{
+    auto characters = impl->span8();
+    return adoptNS(dispatch_data_create(characters.data(), characters.size(), dispatch_get_main_queue(), ^{
         (void)impl;
     }));
 }
@@ -348,7 +349,7 @@ static Vector<uint8_t> vectorFromData(dispatch_data_t content)
     ASSERT(content);
     __block Vector<uint8_t> request;
     dispatch_data_apply(content, ^bool(dispatch_data_t, size_t, const void* buffer, size_t size) {
-        request.append(static_cast<const char*>(buffer), size);
+        request.append(std::span { static_cast<const uint8_t*>(buffer), size });
         return true;
     });
     return request;
@@ -356,8 +357,7 @@ static Vector<uint8_t> vectorFromData(dispatch_data_t content)
 
 static void appendUTF8ToVector(Vector<uint8_t>& vector, const String& string)
 {
-    auto utf8 = string.utf8();
-    vector.append(reinterpret_cast<const uint8_t*>(utf8.data()), utf8.length());
+    vector.append(string.utf8().span());
 }
 
 String HTTPServer::parsePath(const Vector<char>& request)
@@ -376,7 +376,7 @@ String HTTPServer::parsePath(const Vector<char>& request)
         pathPrefixLength = strlen(postPathPrefix);
     ASSERT_WITH_MESSAGE(pathPrefixLength, "HTTPServer assumes request is GET or POST");
     size_t pathLength = pathEnd - request.data() - pathPrefixLength;
-    return String(request.data() + pathPrefixLength, pathLength);
+    return request.subspan(pathPrefixLength, pathLength);
 }
 
 String HTTPServer::parseBody(const Vector<char>& request)
@@ -384,7 +384,7 @@ String HTTPServer::parseBody(const Vector<char>& request)
     const char* headerEndBytes = "\r\n\r\n";
     const char* headerEnd = strnstr(request.data(), headerEndBytes, request.size()) + strlen(headerEndBytes);
     size_t headerLength = headerEnd - request.data();
-    return String(headerEnd, request.size() - headerLength);
+    return request.subspan(headerLength);
 }
 
 void HTTPServer::respondToRequests(Connection connection, Ref<RequestData> requestData)
@@ -398,12 +398,16 @@ void HTTPServer::respondToRequests(Connection connection, Ref<RequestData> reque
         ASSERT_WITH_MESSAGE(requestData->requestMap.contains(path), "This HTTPServer does not know how to respond to a request for %s", path.utf8().data());
 
         auto response = requestData->requestMap.get(path);
-        if (response.terminateConnection == HTTPResponse::TerminateConnection::Yes)
+        switch (response.behavior) {
+        case HTTPResponse::Behavior::TerminateConnectionAfterReceivingResponse:
             return connection.terminate();
-
-        connection.send(response.serialize(), [connection, requestData] {
-            respondToRequests(connection, requestData);
-        });
+        case HTTPResponse::Behavior::SendResponseNormally:
+            return connection.send(response.serialize(), [connection, requestData] {
+                respondToRequests(connection, requestData);
+            });
+        case HTTPResponse::Behavior::NeverSendResponse:
+            return respondToRequests(connection, requestData);
+        }
     });
 }
 
@@ -551,13 +555,13 @@ void Connection::webSocketHandshake(CompletionHandler<void()>&& connectionHandle
             const char* keyEnd = strnstr(keyBegin, "\r\n", request.size() + (keyBegin - request.data()));
             ASSERT(keyEnd);
 
-            constexpr auto* webSocketKeyGUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+            const auto webSocketKeyGUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"_span;
             SHA1 sha1;
-            sha1.addBytes(reinterpret_cast<const uint8_t*>(keyBegin), keyEnd - keyBegin);
-            sha1.addBytes(reinterpret_cast<const uint8_t*>(webSocketKeyGUID), strlen(webSocketKeyGUID));
+            sha1.addBytes(byteCast<uint8_t>(std::span { keyBegin, keyEnd }));
+            sha1.addBytes(webSocketKeyGUID);
             SHA1::Digest hash;
             sha1.computeHash(hash);
-            return base64EncodeToString(hash.data(), SHA1::hashSize);
+            return base64EncodeToString(hash);
         };
 
         connection.send(HTTPResponse(101, {
@@ -588,12 +592,12 @@ Vector<uint8_t> HTTPResponse::bodyFromString(const String& string)
 Vector<uint8_t> HTTPResponse::serialize(IncludeContentLength includeContentLength) const
 {
     StringBuilder responseBuilder;
-    responseBuilder.append("HTTP/1.1 ", statusCode, ' ', statusText(statusCode), "\r\n");
+    responseBuilder.append("HTTP/1.1 "_s, statusCode, ' ', statusText(statusCode), "\r\n"_s);
     if (includeContentLength == IncludeContentLength::Yes)
-        responseBuilder.append("Content-Length: ", body.size(), "\r\n");
+        responseBuilder.append("Content-Length: "_s, body.size(), "\r\n"_s);
     for (auto& pair : headerFields)
-        responseBuilder.append(pair.key, ": ", pair.value, "\r\n");
-    responseBuilder.append("\r\n");
+        responseBuilder.append(pair.key, ": "_s, pair.value, "\r\n"_s);
+    responseBuilder.append("\r\n"_s);
     
     Vector<uint8_t> bytesToSend;
     appendUTF8ToVector(bytesToSend, responseBuilder.toString());
@@ -662,7 +666,7 @@ void H2::Connection::receive(CompletionHandler<void(Frame&&)>&& completionHandle
                 + (static_cast<uint32_t>(m_receiveBuffer[7]) << 8)
                 + (static_cast<uint32_t>(m_receiveBuffer[8]) << 0);
             Vector<uint8_t> payload;
-            payload.append(m_receiveBuffer.data() + frameHeaderLength, payloadLength);
+            payload.append(m_receiveBuffer.subspan(frameHeaderLength, payloadLength));
             m_receiveBuffer.remove(0, frameHeaderLength + payloadLength);
             return completionHandler(Frame(type, flags, streamID, WTFMove(payload)));
         }

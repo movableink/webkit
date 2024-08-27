@@ -34,13 +34,13 @@
 
 namespace TestWebKitAPI {
 
-const char* FileSystemTestData = "This is a test";
+constexpr auto FileSystemTestData = "This is a test"_s;
 
 static void createTestFile(const String& path)
 {
     auto fileHandle = FileSystem::openFile(path, FileSystem::FileOpenMode::Truncate);
     EXPECT_TRUE(FileSystem::isHandleValid(fileHandle));
-    FileSystem::writeToFile(fileHandle, FileSystemTestData, strlen(FileSystemTestData));
+    FileSystem::writeToFile(fileHandle, FileSystemTestData.span8());
     FileSystem::closeFile(fileHandle);
 };
 
@@ -52,39 +52,29 @@ public:
         WTF::initializeMainThread();
 
         // create temp file.
-        FileSystem::PlatformFileHandle handle;
-        m_tempFilePath = FileSystem::openTemporaryFile("tempTestFile"_s, handle);
-        FileSystem::writeToFile(handle, FileSystemTestData, strlen(FileSystemTestData));
+        auto result = FileSystem::openTemporaryFile("tempTestFile"_s);
+        m_tempFilePath = result.first;
+        auto handle = result.second;
+        FileSystem::writeToFile(handle, FileSystemTestData.span8());
         FileSystem::closeFile(handle);
 
-        m_tempFileSymlinkPath = FileSystem::openTemporaryFile("tempTestFile-symlink"_s, handle);
-        FileSystem::closeFile(handle);
+        m_tempFileSymlinkPath = FileSystem::createTemporaryFile("tempTestFile-symlink"_s);
         FileSystem::deleteFile(m_tempFileSymlinkPath);
         FileSystem::createSymbolicLink(m_tempFilePath, m_tempFileSymlinkPath);
 
         // Create temp directory.
-        FileSystem::PlatformFileHandle temporaryFile;
-        m_tempEmptyFolderPath = FileSystem::openTemporaryFile("tempEmptyFolder"_s, temporaryFile);
-        FileSystem::closeFile(temporaryFile);
+        m_tempEmptyFolderPath = FileSystem::createTemporaryFile("tempEmptyFolder"_s);
         FileSystem::deleteFile(m_tempEmptyFolderPath);
         FileSystem::makeAllDirectories(m_tempEmptyFolderPath);
 
-        m_tempEmptyFolderSymlinkPath = FileSystem::openTemporaryFile("tempEmptyFolder-symlink"_s, temporaryFile);
-        FileSystem::closeFile(temporaryFile);
+        m_tempEmptyFolderSymlinkPath = FileSystem::createTemporaryFile("tempEmptyFolder-symlink"_s);
         FileSystem::deleteFile(m_tempEmptyFolderSymlinkPath);
         FileSystem::createSymbolicLink(m_tempEmptyFolderPath, m_tempEmptyFolderSymlinkPath);
 
-        m_tempEmptyFilePath = FileSystem::openTemporaryFile("tempEmptyTestFile"_s, handle);
-        FileSystem::closeFile(handle);
-
-        m_spaceContainingFilePath = FileSystem::openTemporaryFile("temp Empty Test File"_s, handle);
-        FileSystem::closeFile(handle);
-
-        m_bangContainingFilePath = FileSystem::openTemporaryFile("temp!Empty!Test!File"_s, handle);
-        FileSystem::closeFile(handle);
-
-        m_quoteContainingFilePath = FileSystem::openTemporaryFile("temp\"Empty\"TestFile"_s, handle);
-        FileSystem::closeFile(handle);
+        m_tempEmptyFilePath = FileSystem::createTemporaryFile("tempEmptyTestFile"_s);
+        m_spaceContainingFilePath = FileSystem::createTemporaryFile("temp Empty Test File"_s);
+        m_bangContainingFilePath = FileSystem::createTemporaryFile("temp!Empty!Test!File"_s);
+        m_quoteContainingFilePath = FileSystem::createTemporaryFile("temp\"Empty\"TestFile"_s);
     }
 
     void TearDown() override
@@ -168,9 +158,7 @@ TEST_F(FileSystemTest, fileType)
     EXPECT_EQ(FileSystem::fileType(symlinkToFileSymlinkPath), FileSystem::FileType::SymbolicLink);
 
     // Symlink to directory symlink case.
-    FileSystem::PlatformFileHandle handle;
-    auto symlinkToDirectorySymlinkPath = FileSystem::openTemporaryFile("tempTestFile-symlink"_s, handle);
-    FileSystem::closeFile(handle);
+    auto symlinkToDirectorySymlinkPath = FileSystem::createTemporaryFile("tempTestFile-symlink"_s);
     FileSystem::deleteFile(symlinkToDirectorySymlinkPath);
     EXPECT_TRUE(FileSystem::createSymbolicLink(tempEmptyFolderSymlinkPath(), symlinkToDirectorySymlinkPath));
     EXPECT_EQ(FileSystem::fileType(symlinkToDirectorySymlinkPath), FileSystem::FileType::SymbolicLink);
@@ -200,9 +188,7 @@ TEST_F(FileSystemTest, fileTypeFollowingSymlinks)
     EXPECT_EQ(FileSystem::fileTypeFollowingSymlinks(symlinkToFileSymlinkPath), FileSystem::FileType::Regular);
 
     // Symlink to directory symlink case.
-    FileSystem::PlatformFileHandle handle;
-    auto symlinkToDirectorySymlinkPath = FileSystem::openTemporaryFile("tempTestFile-symlink"_s, handle);
-    FileSystem::closeFile(handle);
+    auto symlinkToDirectorySymlinkPath = FileSystem::createTemporaryFile("tempTestFile-symlink"_s);
     FileSystem::deleteFile(symlinkToDirectorySymlinkPath);
     EXPECT_TRUE(FileSystem::createSymbolicLink(tempEmptyFolderSymlinkPath(), symlinkToDirectorySymlinkPath));
     EXPECT_EQ(FileSystem::fileTypeFollowingSymlinks(symlinkToDirectorySymlinkPath), FileSystem::FileType::Directory);
@@ -250,7 +236,7 @@ TEST_F(FileSystemTest, openExistingFileTruncate)
     // Check the existing file WAS truncated when the operation succeded.
     EXPECT_EQ(FileSystem::fileSize(tempFilePath()), 0);
     // Write data to it and check the file size grows.
-    FileSystem::writeToFile(handle, FileSystemTestData, strlen(FileSystemTestData));
+    FileSystem::writeToFile(handle, FileSystemTestData.span8());
     EXPECT_EQ(FileSystem::fileSize(tempFilePath()), strlen(FileSystemTestData));
     FileSystem::closeFile(handle);
 }
@@ -270,8 +256,8 @@ TEST_F(FileSystemTest, openExistingFileReadWrite)
     // ReadWrite mode shouldn't truncate the contents of the file.
     EXPECT_EQ(FileSystem::fileSize(tempFilePath()), strlen(FileSystemTestData));
     // Write data to it and check the file size grows.
-    FileSystem::writeToFile(handle, FileSystemTestData, strlen(FileSystemTestData));
-    FileSystem::writeToFile(handle, FileSystemTestData, strlen(FileSystemTestData));
+    FileSystem::writeToFile(handle, FileSystemTestData.span8());
+    FileSystem::writeToFile(handle, FileSystemTestData.span8());
     EXPECT_EQ(FileSystem::fileSize(tempFilePath()), strlen(FileSystemTestData) * 2);
     FileSystem::closeFile(handle);
 }
@@ -362,9 +348,7 @@ TEST_F(FileSystemTest, openNonExistingFileReadOnly)
 
 TEST_F(FileSystemTest, deleteNonEmptyDirectory)
 {
-    FileSystem::PlatformFileHandle temporaryFile;
-    auto temporaryTestFolder = FileSystem::openTemporaryFile("deleteNonEmptyDirectoryTest"_s, temporaryFile);
-    FileSystem::closeFile(temporaryFile);
+    auto temporaryTestFolder = FileSystem::createTemporaryFile("deleteNonEmptyDirectoryTest"_s);
 
     EXPECT_TRUE(FileSystem::deleteFile(temporaryTestFolder));
     EXPECT_TRUE(FileSystem::makeAllDirectories(FileSystem::pathByAppendingComponents(temporaryTestFolder, { "subfolder"_s })));
@@ -466,7 +450,7 @@ TEST_F(FileSystemTest, deleteEmptyDirectoryContainingDSStoreFile)
     // Create .DSStore file.
     auto dsStorePath = FileSystem::pathByAppendingComponent(tempEmptyFolderPath(), ".DS_Store"_s);
     auto dsStoreHandle = FileSystem::openFile(dsStorePath, FileSystem::FileOpenMode::Truncate);
-    FileSystem::writeToFile(dsStoreHandle, FileSystemTestData, strlen(FileSystemTestData));
+    FileSystem::writeToFile(dsStoreHandle, FileSystemTestData.span8());
     FileSystem::closeFile(dsStoreHandle);
     EXPECT_TRUE(FileSystem::fileExists(dsStorePath));
 
@@ -482,14 +466,14 @@ TEST_F(FileSystemTest, deleteEmptyDirectoryOnNonEmptyDirectory)
     // Create .DSStore file.
     auto dsStorePath = FileSystem::pathByAppendingComponent(tempEmptyFolderPath(), ".DS_Store"_s);
     auto dsStoreHandle = FileSystem::openFile(dsStorePath, FileSystem::FileOpenMode::Truncate);
-    FileSystem::writeToFile(dsStoreHandle, FileSystemTestData, strlen(FileSystemTestData));
+    FileSystem::writeToFile(dsStoreHandle, FileSystemTestData.span8());
     FileSystem::closeFile(dsStoreHandle);
     EXPECT_TRUE(FileSystem::fileExists(dsStorePath));
 
     // Create a dummy file.
     auto dummyFilePath = FileSystem::pathByAppendingComponent(tempEmptyFolderPath(), "dummyFile"_s);
     auto dummyFileHandle = FileSystem::openFile(dummyFilePath, FileSystem::FileOpenMode::Truncate);
-    FileSystem::writeToFile(dummyFileHandle, FileSystemTestData, strlen(FileSystemTestData));
+    FileSystem::writeToFile(dummyFileHandle, FileSystemTestData.span8());
     FileSystem::closeFile(dummyFileHandle);
     EXPECT_TRUE(FileSystem::fileExists(dummyFilePath));
 
@@ -551,15 +535,13 @@ TEST_F(FileSystemTest, moveFileOverwritesDestination)
 
 TEST_F(FileSystemTest, moveDirectory)
 {
-    FileSystem::PlatformFileHandle temporaryFile;
-    auto temporaryTestFolder = FileSystem::openTemporaryFile("moveDirectoryTest"_s, temporaryFile);
-    FileSystem::closeFile(temporaryFile);
+    auto temporaryTestFolder = FileSystem::createTemporaryFile("moveDirectoryTest"_s);
 
     EXPECT_TRUE(FileSystem::deleteFile(temporaryTestFolder));
     EXPECT_TRUE(FileSystem::makeAllDirectories(temporaryTestFolder));
     auto testFilePath = FileSystem::pathByAppendingComponent(temporaryTestFolder, "testFile"_s);
     auto fileHandle = FileSystem::openFile(testFilePath, FileSystem::FileOpenMode::Truncate);
-    FileSystem::writeToFile(fileHandle, FileSystemTestData, strlen(FileSystemTestData));
+    FileSystem::writeToFile(fileHandle, FileSystemTestData.span8());
     FileSystem::closeFile(fileHandle);
 
     EXPECT_TRUE(FileSystem::fileExists(testFilePath));
@@ -768,7 +750,7 @@ static void runGetFileModificationTimeTest(const String& path, Function<std::opt
     // Modify the file.
     auto fileHandle = FileSystem::openFile(path, FileSystem::FileOpenMode::ReadWrite);
     EXPECT_TRUE(FileSystem::isHandleValid(fileHandle));
-    FileSystem::writeToFile(fileHandle, "foo", strlen("foo"));
+    FileSystem::writeToFile(fileHandle, "foo"_span);
     FileSystem::closeFile(fileHandle);
 
     auto newModificationTime = fileModificationTime(path);

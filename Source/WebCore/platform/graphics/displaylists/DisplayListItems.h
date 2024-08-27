@@ -486,7 +486,7 @@ public:
     Ref<Filter> filter() const { return m_filter; }
 
     NO_RETURN_DUE_TO_ASSERT void apply(GraphicsContext&) const;
-    WEBCORE_EXPORT void apply(GraphicsContext&, ImageBuffer* sourceImage, FilterResults&);
+    WEBCORE_EXPORT void apply(GraphicsContext&, ImageBuffer* sourceImage, FilterResults&) const;
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
 private:
@@ -591,9 +591,8 @@ class DrawNativeImage {
 public:
     static constexpr char name[] = "draw-native-image";
 
-    DrawNativeImage(RenderingResourceIdentifier imageIdentifier, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
+    DrawNativeImage(RenderingResourceIdentifier imageIdentifier, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
         : m_imageIdentifier(imageIdentifier)
-        , m_imageSize(imageSize)
         , m_destinationRect(destRect)
         , m_srcRect(srcRect)
         , m_options(options)
@@ -601,7 +600,6 @@ public:
     }
 
     RenderingResourceIdentifier imageIdentifier() const { return m_imageIdentifier; }
-    FloatSize imageSize() const { return m_imageSize; }
     const FloatRect& destinationRect() const { return m_destinationRect; }
     const FloatRect& source() const { return m_srcRect; }
     ImagePaintingOptions options() const { return m_options; }
@@ -614,7 +612,6 @@ public:
 
 private:
     RenderingResourceIdentifier m_imageIdentifier;
-    FloatSize m_imageSize;
     FloatRect m_destinationRect;
     FloatRect m_srcRect;
     ImagePaintingOptions m_options;
@@ -687,6 +684,24 @@ public:
 
 private:
     float m_opacity;
+};
+
+class BeginTransparencyLayerWithCompositeMode {
+public:
+    static constexpr char name[] = "begin-transparency-layer-with-composite-mode";
+
+    explicit BeginTransparencyLayerWithCompositeMode(CompositeMode compositeMode)
+        : m_compositeMode(compositeMode)
+    {
+    }
+
+    CompositeMode compositeMode() const { return m_compositeMode; }
+
+    WEBCORE_EXPORT void apply(GraphicsContext&) const;
+    void dump(TextStream&, OptionSet<AsTextFlag>) const;
+
+private:
+    CompositeMode m_compositeMode;
 };
 
 class EndTransparencyLayer {
@@ -950,7 +965,27 @@ public:
 
 private:
     FloatRect m_rect;
-    mutable Ref<Gradient> m_gradient; // FIXME: Make this not mutable
+    Ref<Gradient> m_gradient;
+};
+
+class FillRectWithGradientAndSpaceTransform {
+public:
+    static constexpr char name[] = "fill-rect-with-gradient-and-space-transform";
+
+    WEBCORE_EXPORT FillRectWithGradientAndSpaceTransform(const FloatRect&, Gradient&, const AffineTransform&);
+    WEBCORE_EXPORT FillRectWithGradientAndSpaceTransform(FloatRect&&, Ref<Gradient>&&, AffineTransform&&);
+
+    const FloatRect& rect() const { return m_rect; }
+    const Ref<Gradient>& gradient() const { return m_gradient; }
+    const AffineTransform& gradientSpaceTransform() const { return m_gradientSpaceTransform; }
+
+    WEBCORE_EXPORT void apply(GraphicsContext&) const;
+    void dump(TextStream&, OptionSet<AsTextFlag>) const;
+
+private:
+    FloatRect m_rect;
+    Ref<Gradient> m_gradient;
+    AffineTransform m_gradientSpaceTransform;
 };
 
 class FillCompositedRect {
@@ -1066,6 +1101,25 @@ public:
 
 private:
     PathArc m_arc;
+};
+
+class FillClosedArc {
+public:
+    static constexpr char name[] = "fill-closed-arc";
+
+    FillClosedArc(const PathClosedArc& closedArc)
+        : m_closedArc(closedArc)
+    {
+    }
+
+    const PathClosedArc& closedArc() const { return m_closedArc; };
+    Path path() const { return Path({ PathSegment(m_closedArc) }); }
+
+    WEBCORE_EXPORT void apply(GraphicsContext&) const;
+    void dump(TextStream&, OptionSet<AsTextFlag>) const;
+
+private:
+    PathClosedArc m_closedArc;
 };
 
 class FillQuadCurve {
@@ -1257,6 +1311,25 @@ public:
 
 private:
     PathArc m_arc;
+};
+
+class StrokeClosedArc {
+public:
+    static constexpr char name[] = "stroke-closed-arc";
+
+    StrokeClosedArc(const PathClosedArc& closedArc)
+        : m_closedArc(closedArc)
+    {
+    }
+
+    const PathClosedArc& closedArc() const { return m_closedArc; }
+    Path path() const { return Path({ PathSegment(m_closedArc) }); }
+
+    WEBCORE_EXPORT void apply(GraphicsContext&) const;
+    void dump(TextStream&, OptionSet<AsTextFlag>) const;
+
+private:
+    PathClosedArc m_closedArc;
 };
 
 class StrokeQuadCurve {

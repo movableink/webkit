@@ -132,35 +132,35 @@ endmacro ()
 set(_package_footer_template "
 ####### Expanded from QTWEBKIT_PACKAGE_FOOTER variable #######
 
-set(Qt5@MODULE_NAME@_LIBRARIES Qt5::@MODULE_NAME@)
-set(Qt5@MODULE_NAME@_VERSION_STRING \${Qt5@MODULE_NAME@_VERSION})
-set(Qt5@MODULE_NAME@_EXECUTABLE_COMPILE_FLAGS \"\")
-set(Qt5@MODULE_NAME@_PRIVATE_INCLUDE_DIRS \"\") # FIXME: Support private headers
+set(Qt6@MODULE_NAME@_LIBRARIES Qt6::@MODULE_NAME@)
+set(Qt6@MODULE_NAME@_VERSION_STRING \${Qt6@MODULE_NAME@_VERSION})
+set(Qt6@MODULE_NAME@_EXECUTABLE_COMPILE_FLAGS \"\")
+set(Qt6@MODULE_NAME@_PRIVATE_INCLUDE_DIRS \"\") # FIXME: Support private headers
 
-get_target_property(Qt5@MODULE_NAME@_INCLUDE_DIRS        Qt5::@FULL_MODULE_NAME@ INTERFACE_INCLUDE_DIRECTORIES)
-get_target_property(Qt5@MODULE_NAME@_COMPILE_DEFINITIONS Qt5::@FULL_MODULE_NAME@ INTERFACE_COMPILE_DEFINITIONS)
+get_target_property(Qt6@MODULE_NAME@_INCLUDE_DIRS        Qt6::@FULL_MODULE_NAME@ INTERFACE_INCLUDE_DIRECTORIES)
+get_target_property(Qt6@MODULE_NAME@_COMPILE_DEFINITIONS Qt6::@FULL_MODULE_NAME@ INTERFACE_COMPILE_DEFINITIONS)
 
-foreach (_module_dep \${_Qt5@MODULE_NAME@_MODULE_DEPENDENCIES})
-    list(APPEND Qt5@MODULE_NAME@_INCLUDE_DIRS \${Qt5\${_module_dep}_INCLUDE_DIRS})
-    list(APPEND Qt5@MODULE_NAME@_PRIVATE_INCLUDE_DIRS \${Qt5\${_module_dep}_PRIVATE_INCLUDE_DIRS})
-    list(APPEND Qt5@MODULE_NAME@_DEFINITIONS \${Qt5\${_module_dep}_DEFINITIONS})
-    list(APPEND Qt5@MODULE_NAME@_COMPILE_DEFINITIONS \${Qt5\${_module_dep}_COMPILE_DEFINITIONS})
-    list(APPEND Qt5@MODULE_NAME@_EXECUTABLE_COMPILE_FLAGS \${Qt5\${_module_dep}_EXECUTABLE_COMPILE_FLAGS})
+foreach (_module_dep \${_Qt6@MODULE_NAME@_MODULE_DEPENDENCIES})
+    list(APPEND Qt6@MODULE_NAME@_INCLUDE_DIRS \${Qt6\${_module_dep}_INCLUDE_DIRS})
+    list(APPEND Qt6@MODULE_NAME@_PRIVATE_INCLUDE_DIRS \${Qt6\${_module_dep}_PRIVATE_INCLUDE_DIRS})
+    list(APPEND Qt6@MODULE_NAME@_DEFINITIONS \${Qt6\${_module_dep}_DEFINITIONS})
+    list(APPEND Qt6@MODULE_NAME@_COMPILE_DEFINITIONS \${Qt6\${_module_dep}_COMPILE_DEFINITIONS})
+    list(APPEND Qt6@MODULE_NAME@_EXECUTABLE_COMPILE_FLAGS \${Qt6\${_module_dep}_EXECUTABLE_COMPILE_FLAGS})
 endforeach ()
-list(REMOVE_DUPLICATES Qt5@MODULE_NAME@_INCLUDE_DIRS)
-list(REMOVE_DUPLICATES Qt5@MODULE_NAME@_PRIVATE_INCLUDE_DIRS)
-list(REMOVE_DUPLICATES Qt5@MODULE_NAME@_DEFINITIONS)
-list(REMOVE_DUPLICATES Qt5@MODULE_NAME@_COMPILE_DEFINITIONS)
-list(REMOVE_DUPLICATES Qt5@MODULE_NAME@_EXECUTABLE_COMPILE_FLAGS)
+list(REMOVE_DUPLICATES Qt6@MODULE_NAME@_INCLUDE_DIRS)
+list(REMOVE_DUPLICATES Qt6@MODULE_NAME@_PRIVATE_INCLUDE_DIRS)
+list(REMOVE_DUPLICATES Qt6@MODULE_NAME@_DEFINITIONS)
+list(REMOVE_DUPLICATES Qt6@MODULE_NAME@_COMPILE_DEFINITIONS)
+list(REMOVE_DUPLICATES Qt6@MODULE_NAME@_EXECUTABLE_COMPILE_FLAGS)
 
 # Fixup order of configurations to match behavior of other Qt modules
 # See also https://bugreports.qt.io/browse/QTBUG-29186
-get_target_property(_configurations Qt5::@FULL_MODULE_NAME@ IMPORTED_CONFIGURATIONS)
+get_target_property(_configurations Qt6::@FULL_MODULE_NAME@ IMPORTED_CONFIGURATIONS)
 list(FIND _configurations RELEASE _index)
 if (\${_index} GREATER -1)
     list(REMOVE_AT _configurations \${_index})
     list(INSERT _configurations 0 RELEASE)
-    set_property(TARGET Qt5::@FULL_MODULE_NAME@ PROPERTY IMPORTED_CONFIGURATIONS \"\${_configurations}\")
+    set_property(TARGET Qt6::@FULL_MODULE_NAME@ PROPERTY IMPORTED_CONFIGURATIONS \"\${_configurations}\")
 endif ()
 unset(_configurations)
 unset(_index)
@@ -169,73 +169,73 @@ unset(_index)
 set(MODULE_NAME WebKit)
 set(FULL_MODULE_NAME WebKitLegacy)
 string(CONFIGURE ${_package_footer_template} QTWEBKIT_PACKAGE_FOOTER @ONLY)
-ecm_configure_package_config_file("${CMAKE_CURRENT_SOURCE_DIR}/Qt5WebKitConfig.cmake.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/Qt5WebKitConfig.cmake"
-    INSTALL_DESTINATION "${KDE_INSTALL_CMAKEPACKAGEDIR}/Qt5WebKit"
+ecm_configure_package_config_file("${CMAKE_CURRENT_SOURCE_DIR}/Qt6WebKitConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/Qt6WebKitConfig.cmake"
+    INSTALL_DESTINATION "${KDE_INSTALL_CMAKEPACKAGEDIR}/Qt6WebKit"
 )
 
 set(MODULE_NAME WebKitWidgets)
 set(FULL_MODULE_NAME WebKitWidgets)
 string(CONFIGURE ${_package_footer_template} QTWEBKIT_PACKAGE_FOOTER @ONLY)
-ecm_configure_package_config_file("${CMAKE_CURRENT_SOURCE_DIR}/Qt5WebKitWidgetsConfig.cmake.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/Qt5WebKitWidgetsConfig.cmake"
-    INSTALL_DESTINATION "${KDE_INSTALL_CMAKEPACKAGEDIR}/Qt5WebKitWidgets"
+ecm_configure_package_config_file("${CMAKE_CURRENT_SOURCE_DIR}/Qt6WebKitWidgetsConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/Qt6WebKitWidgetsConfig.cmake"
+    INSTALL_DESTINATION "${KDE_INSTALL_CMAKEPACKAGEDIR}/Qt6WebKitWidgets"
 )
 
 unset(MODULE_NAME)
 unset(FULL_MODULE_NAME)
 unset(QTWEBKIT_PACKAGE_FOOTER)
 
-write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/Qt5WebKitConfigVersion.cmake"
+write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/Qt6WebKitConfigVersion.cmake"
     VERSION ${PROJECT_VERSION}
     COMPATIBILITY AnyNewerVersion)
-write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/Qt5WebKitWidgetsConfigVersion.cmake"
+write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/Qt6WebKitWidgetsConfigVersion.cmake"
     VERSION ${PROJECT_VERSION}
     COMPATIBILITY AnyNewerVersion)
 
 install(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/Qt5WebKitConfig.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/Qt5WebKitConfigVersion.cmake"
-    DESTINATION "${KDE_INSTALL_CMAKEPACKAGEDIR}/Qt5WebKit"
+    "${CMAKE_CURRENT_BINARY_DIR}/Qt6WebKitConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/Qt6WebKitConfigVersion.cmake"
+    DESTINATION "${KDE_INSTALL_CMAKEPACKAGEDIR}/Qt6WebKit"
     COMPONENT Data
 )
 install(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/Qt5WebKitWidgetsConfig.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/Qt5WebKitWidgetsConfigVersion.cmake"
-    DESTINATION "${KDE_INSTALL_CMAKEPACKAGEDIR}/Qt5WebKitWidgets"
+    "${CMAKE_CURRENT_BINARY_DIR}/Qt6WebKitWidgetsConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/Qt6WebKitWidgetsConfigVersion.cmake"
+    DESTINATION "${KDE_INSTALL_CMAKEPACKAGEDIR}/Qt6WebKitWidgets"
     COMPONENT Data
 )
 
 # We need to install separate config files for debug and release, so use "Code" component
 install(EXPORT WebKitTargets
     FILE WebKitTargets.cmake
-    NAMESPACE Qt5::
-    DESTINATION "${KDE_INSTALL_CMAKEPACKAGEDIR}/Qt5WebKit"
+    NAMESPACE Qt6::
+    DESTINATION "${KDE_INSTALL_CMAKEPACKAGEDIR}/Qt6WebKit"
     COMPONENT Code
 )
-install(EXPORT Qt5WebKitWidgetsTargets
-    FILE Qt5WebKitWidgetsTargets.cmake
-    NAMESPACE Qt5::
-    DESTINATION "${KDE_INSTALL_CMAKEPACKAGEDIR}/Qt5WebKitWidgets"
+install(EXPORT Qt6WebKitWidgetsTargets
+    FILE Qt6WebKitWidgetsTargets.cmake
+    NAMESPACE Qt6::
+    DESTINATION "${KDE_INSTALL_CMAKEPACKAGEDIR}/Qt6WebKitWidgets"
     COMPONENT Code
 )
 
 # Documentation
 
-if (NOT TARGET Qt5::qdoc)
-    add_executable(Qt5::qdoc IMPORTED)
+if (NOT TARGET Qt6::qdoc)
+    add_executable(Qt6::qdoc IMPORTED)
     query_qmake(QDOC_EXECUTABLE QT_INSTALL_BINS)
     set(QDOC_EXECUTABLE "${QDOC_EXECUTABLE}/qdoc")
-    set_target_properties(Qt5::qdoc PROPERTIES
+    set_target_properties(Qt6::qdoc PROPERTIES
         IMPORTED_LOCATION ${QDOC_EXECUTABLE}
     )
 endif ()
 
-if (NOT TARGET Qt5::qhelpgenerator)
-    add_executable(Qt5::qhelpgenerator IMPORTED)
+if (NOT TARGET Qt6::qhelpgenerator)
+    add_executable(Qt6::qhelpgenerator IMPORTED)
     query_qmake(QHELPGENERATOR_EXECUTABLE QT_INSTALL_BINS)
     set(QHELPGENERATOR_EXECUTABLE "${QHELPGENERATOR_EXECUTABLE}/qhelpgenerator")
-    set_target_properties(Qt5::qhelpgenerator PROPERTIES
+    set_target_properties(Qt6::qhelpgenerator PROPERTIES
         IMPORTED_LOCATION ${QHELPGENERATOR_EXECUTABLE}
     )
 endif ()
@@ -272,13 +272,13 @@ set(EXPORT_VARS_COMMANDS
 
 add_custom_target(prepare_docs ${NEED_ALL}
     ${EXPORT_VARS_COMMANDS}
-    COMMAND Qt5::qdoc ${QDOC_CONFIG} -prepare -outputdir "${DOC_OUTPUT_DIR}/qtwebkit" -installdir ${DOC_INSTALL_DIR} -indexdir ${QT_INSTALL_DOCS} -no-link-errors
+    COMMAND Qt6::qdoc ${QDOC_CONFIG} -prepare -outputdir "${DOC_OUTPUT_DIR}/qtwebkit" -installdir ${DOC_INSTALL_DIR} -indexdir ${QT_INSTALL_DOCS} -no-link-errors
     VERBATIM
 )
 
 add_custom_target(generate_docs ${NEED_ALL}
     ${EXPORT_VARS_COMMANDS}
-    COMMAND Qt5::qdoc ${QDOC_CONFIG} -generate -outputdir "${DOC_OUTPUT_DIR}/qtwebkit" -installdir ${DOC_INSTALL_DIR} -indexdir ${QT_INSTALL_DOCS}
+    COMMAND Qt6::qdoc ${QDOC_CONFIG} -generate -outputdir "${DOC_OUTPUT_DIR}/qtwebkit" -installdir ${DOC_INSTALL_DIR} -indexdir ${QT_INSTALL_DOCS}
     VERBATIM
 )
 add_dependencies(generate_docs prepare_docs)
@@ -287,7 +287,7 @@ add_custom_target(html_docs)
 add_dependencies(html_docs generate_docs)
 
 add_custom_target(qch_docs ${NEED_ALL}
-    COMMAND Qt5::qhelpgenerator "${DOC_OUTPUT_DIR}/qtwebkit/qtwebkit.qhp" -o "${DOC_OUTPUT_DIR}/qtwebkit.qch"
+    COMMAND Qt6::qhelpgenerator "${DOC_OUTPUT_DIR}/qtwebkit/qtwebkit.qhp" -o "${DOC_OUTPUT_DIR}/qtwebkit.qch"
     VERBATIM
 )
 add_dependencies(qch_docs html_docs)

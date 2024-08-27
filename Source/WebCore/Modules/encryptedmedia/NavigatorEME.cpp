@@ -50,10 +50,10 @@ struct LogArgument<Vector<T>> {
     static String toString(const Vector<T>& value)
     {
         StringBuilder builder;
-        builder.append("[");
+        builder.append('[');
         for (auto item : value)
             builder.append(LogArgument<T>::toString(item));
-        builder.append("]");
+        builder.append(']');
         return builder.toString();
     }
 };
@@ -89,7 +89,7 @@ void NavigatorEME::requestMediaKeySystemAccess(Navigator& navigator, Document& d
 {
     // https://w3c.github.io/encrypted-media/#dom-navigator-requestmediakeysystemaccess
     // W3C Editor's Draft 09 November 2016
-    auto identifier = Logger::LogSiteIdentifier("NavigatorEME", __func__, &navigator);
+    auto identifier = Logger::LogSiteIdentifier("NavigatorEME"_s, __func__, &navigator);
     Ref<Logger> logger = document.logger();
 
     infoLog(logger, identifier, "keySystem(", keySystem, "), supportedConfigurations(", supportedConfigurations, ")");
@@ -104,8 +104,14 @@ void NavigatorEME::requestMediaKeySystemAccess(Navigator& navigator, Document& d
     }
 
     auto request = MediaKeySystemRequest::create(document, keySystem, WTFMove(promise));
-    request->setAllowCallback([keySystem, supportedConfigurations = WTFMove(supportedConfigurations), &document, logger = WTFMove(logger), identifier = WTFMove(identifier)](Ref<DeferredPromise>&& promise) mutable {
-        document.postTask([promise = WTFMove(promise), &document, keySystem, logger = WTFMove(logger), identifier = WTFMove(identifier), supportedConfigurations = WTFMove(supportedConfigurations)] (ScriptExecutionContext&) mutable {
+    request->setAllowCallback([keySystem, supportedConfigurations = WTFMove(supportedConfigurations), weakDocument = WeakPtr { document }, logger = WTFMove(logger), identifier = WTFMove(identifier)](Ref<DeferredPromise>&& promise) mutable {
+        RefPtr document = weakDocument.get();
+        if (!document) {
+            promise->reject(ExceptionCode::InvalidStateError);
+            return;
+        }
+
+        document->postTask([promise = WTFMove(promise), keySystem, logger = WTFMove(logger), identifier = WTFMove(identifier), supportedConfigurations = WTFMove(supportedConfigurations)] (ScriptExecutionContext& context) mutable {
             // 3. Let document be the calling context's Document.
             // 4. Let origin be the origin of document.
             // 5. Let promise be a new promise.
@@ -119,6 +125,7 @@ void NavigatorEME::requestMediaKeySystemAccess(Navigator& navigator, Document& d
             }
 
             // 6.2. Let implementation be the implementation of keySystem.
+            auto& document = downcast<Document>(context);
             auto implementation = CDM::create(document, keySystem);
             tryNextSupportedConfiguration(document, WTFMove(implementation), WTFMove(supportedConfigurations), WTFMove(promise), WTFMove(logger), WTFMove(identifier));
         });

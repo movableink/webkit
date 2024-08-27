@@ -45,7 +45,7 @@ use File::Path qw(make_path mkpath rmtree);
 use File::Spec;
 use File::Temp qw(tempdir);
 use File::stat;
-use List::Util;
+use List::Util qw(first);
 use POSIX;
 use Time::HiRes qw(usleep);
 use Text::ParseWords;
@@ -72,7 +72,6 @@ BEGIN {
        &XcodeStaticAnalyzerOption
        &appDisplayNameFromBundle
        &appendToEnvironmentVariableList
-       &archCommandLineArgumentsForRestrictedEnvironmentVariables
        &architecture
        &architecturesForProducts
        &argumentsForConfiguration
@@ -156,7 +155,6 @@ BEGIN {
        &osXVersion
        &overrideConfiguredXcodeWorkspace
        &parseAvailableXcodeSDKs
-       &passedArchitecture
        &passedConfiguration
        &plistPathFromBundle
        &portName
@@ -174,12 +172,10 @@ BEGIN {
        &runMacWebKitApp
        &runMiniBrowser
        &runSafari
-       &runSvnUpdateAndResolveChangeLogs
        &runWebKitTestRunner
        &safariPath
        &sdkDirectory
        &sdkPlatformDirectory
-       &setArchitecture
        &setBaseProductDir
        &setConfiguration
        &setConfigurationProductDir
@@ -191,6 +187,7 @@ BEGIN {
        &setupWindowsWebKitEnvironment
        &sharedCommandLineOptions
        &sharedCommandLineOptionsUsage
+       &shouldBuild32Bit
        &shouldBuildForCrossTarget
        &shouldUseFlatpak
        &sourceDir
@@ -249,6 +246,7 @@ use constant IOS_DEVELOPMENT_CERTIFICATE_NAME_PREFIX => "iPhone Developer: ";
 our @EXPORT_OK;
 
 my $architecture;
+my $destination;
 my $didUserSpecifyArchitecture = 0;
 my %nativeArchitectureMap = ();
 my $asanIsEnabled;
@@ -555,31 +553,13 @@ sub determineArchitecture
     $architecture = nativeArchitecture([]);
     if (isAppleCocoaWebKit() && $architecture eq "arm64") {
         determineXcodeSDK();
-        if ($xcodeSDK eq "macosx.internal") {
+        if ($xcodeSDK =~ /\.internal$/ && $xcodeSDK !~ /simulator/) {
+            # Device SDKs (macosx.internal, iphoneos.internal, etc.) default to arm64e.
             $architecture = "arm64e";
         }
     }
 
-    if (isAppleCocoaWebKit()) {
-        determineXcodeSDK();
-        if (open ARCHITECTURE, "$baseProductDir/Architecture") {
-            $architecture = <ARCHITECTURE>;
-            close ARCHITECTURE;
-        }
-        if ($architecture) {
-            chomp $architecture;
-        } else {
-            if ($xcodeSDKPlatformName eq 'iphoneos') {
-                $architecture = 'arm64';
-            } elsif ($xcodeSDKPlatformName eq 'watchsimulator') {
-                $architecture = 'i386';
-            } elsif ($xcodeSDKPlatformName eq 'watchos') {
-                $architecture = 'arm64_32 arm64e armv7k';
-            } elsif ($xcodeSDKPlatformName eq 'appletvos') {
-                $architecture = 'arm64';
-            }
-        }
-    } elsif (isCMakeBuild()) {
+    if (isCMakeBuild()) {
         if (isCrossCompilation()) {
             my $compiler = "gcc";
             $compiler = $ENV{'CC'} if (defined($ENV{'CC'}));
@@ -600,6 +580,101 @@ sub determineArchitecture
     $architecture = 'x86_64' if $architecture =~ /amd64/i;
     $architecture = 'arm64' if $architecture =~ /aarch64/i;
 }
+
+sub xcodeBuildRequestsInRecencyOrder
+{
+    determineBaseProductDir();
+    my @buildRequests = sort { -M $a <=> -M $b } <"$baseProductDir/XCBuildData/*.xcbuilddata/build-request.json">;
+
+    return map {
+        open(my $fh, $_) or warn "Can't open previous build request: $!";
+        return decode_json(join '', <$fh>) if $fh;
+    } @buildRequests;
+}
+
+sub determineXcodeDestination
+{
+    return if defined $destination;
+    return if !isAppleCocoaWebKit();
+    determineXcodeSDKPlatformName();
+    determineArchitecture();
+    
+    # Use a generic destination ("Any Mac", etc.) when there are multiple architectures, or when building to
+    # a device.
+    
+    my @architectures = split(' ', $architecture);
+    my $generic = $xcodeSDKPlatformName =~ /os$/ || (scalar @architectures) > 1;
+    
+    if (willUseIOSDeviceSDK()) {
+        $destination .= 'platform=iOS';
+    } elsif (willUseIOSSimulatorSDK()) {
+        $destination .= 'platform=iOS Simulator';
+    } elsif (willUseAppleTVDeviceSDK()) {
+        $destination .= 'platform=tvOS';
+    } elsif (willUseAppleTVSimulatorSDK()) {
+        $destination .= 'platform=tvOS Simulator';
+    } elsif (willUseWatchDeviceSDK()) {
+        $destination .= 'platform=watchOS';
+    } elsif (willUseWatchSimulatorSDK()) {
+        $destination .= 'platform=watchOS Simulator';
+    } elsif (willUseVisionDeviceSDK()) {
+        $destination .= 'platform=visionOS';
+    } elsif (willUseVisionSimulatorSDK()) {
+        $destination .= 'platform=visionOS Simulator';
+    } else {
+        $destination .= 'platform=macOS';
+        $destination .= ',devicetype=' . ($generic ? 'Any Mac' : 'Mac');
+        $destination .= ',arch=' . $architectures[0] unless $generic;
+        $destination .= ',variant=Mac Catalyst' if willUseMacCatalystSDK();
+    }
+        
+    if (!$generic && $xcodeSDKPlatformName =~ /simulator$/) {
+        # Two goals:
+        # 1. Find a simulator device to build for, to avoid building multiple architectures.
+        # 2. Try to pick a simulator that's been used before (either by command-line or IDE builds) to avoid
+        #    unnecessary recompilation.
+        #
+        # Changing the targeted simulator between builds breaks incremental building, because it changes
+        # build settings like TARGET_DEVICE_IDENTIFIER.
+        my $prevBuildRequest = first {
+            $_->{parameters}->{activeRunDestination}->{platform} eq $xcodeSDKPlatformName
+        } xcodeBuildRequestsInRecencyOrder();
+        my $prevUDID = $prevBuildRequest->{parameters}->{overrides}->{synthesized}->{table}->{TARGET_DEVICE_IDENTIFIER} if $prevBuildRequest;
+        if ($prevBuildRequest && !$prevUDID) {
+            warn "Can't find UDID in previous $xcodeSDKPlatformName build request, builds may not be incremental.\n";
+        }
+        
+        # Sort the list of devices to match the ordering in Xcode's UI.
+        my @devices = sort { $a->{name} cmp $b->{name} } iOSSimulatorDevices();
+        my $prevDevice = first { $prevUDID && $_->{UDID} eq $prevUDID } @devices;
+        if ($prevUDID && !$prevDevice) {
+            warn "Simulator with UDID '$prevUDID' not found, falling back to another available simulator. " .
+                "This build may not be incremental.\n";
+        }
+        
+        # If we found the previous device, check that the runtime being built has not changed (e.g. due to a
+        # major SDK update). If it has changed, or if no previous device is available, fall back to the first
+        # eligible device in the list.
+        my $runtime = simulatorRuntime($portName);
+        my $device;
+        if ($prevDevice && $prevDevice->{runtime} eq $runtime) {
+            $device = $prevDevice;
+        } else {
+            $device = first { $_->{runtime} eq $runtime } @devices;
+        }
+        
+        if ($device) {
+            $destination .= ',id=' . $device->{UDID};
+        } else {
+            warn "Unable to find a simulator target for $xcodeSDKPlatformName. " .
+                "Building for a generic device, which may build unwanted additional architectures";
+            $generic = 1;
+        }
+    }
+    
+    $destination = 'generic/' . $destination if $generic;
+}
+
 
 sub readSanitizerConfiguration($)
 {
@@ -697,11 +772,18 @@ sub determineNumberOfCPUs
     if (defined($ENV{NUMBER_OF_PROCESSORS})) {
         $numberOfCPUs = $ENV{NUMBER_OF_PROCESSORS};
     } elsif (isLinux()) {
-        # First try the nproc utility, if it exists. If we get no
-        # results fall back to just interpretting /proc directly.
-        chomp($numberOfCPUs = `nproc --all 2> /dev/null`);
+        use POSIX;
+        $numberOfCPUs = POSIX::sysconf(83); # _SC_NPROCESSORS_ONLN = 83
         if ($numberOfCPUs eq "") {
-            $numberOfCPUs = (grep /processor/, `cat /proc/cpuinfo`);
+            $numberOfCPUs = 0;
+            open CPUINFO, "/proc/cpuinfo";
+            while (<CPUINFO>) {
+                if (/[Pp]rocessor\s/) { $numberOfCPUs++; }
+            }
+            close CPUINFO;
+        }
+        if ($numberOfCPUs == 0) {
+            $numberOfCPUs = 1;
         }
     } elsif (isAnyWindows()) {
         # Assumes cygwin
@@ -772,7 +854,7 @@ sub argumentsForConfiguration()
 sub extractNonMacOSHostConfiguration
 {
     my @args = ();
-    my @extract = ('--device', '--gtk', '--ios', '--platform', '--sdk', '--simulator', '--wincairo', '--tvos', '--watchos', 'SDKROOT', 'ARCHS');
+    my @extract = ('--device', '--gtk', '--ios', '--platform', '--sdk', '--simulator', '--wincairo', '--tvos', '--visionos', '--watchos', 'SDKROOT', 'ARCHS');
     foreach (@{$_[0]}) {
         my $line = $_;
         my $flag = 0;
@@ -877,11 +959,15 @@ sub determineXcodeSDKPlatformName {
     return if defined $xcodeSDKPlatformName;
     my $sdk;
     
-    # The user explicitly specified the sdk, don't assume anything
+    # Mac Catalyst is a platform but not an sdk, so it preempts an
+    # explicitly-provided sdk, unlike other platform flags.
+    if (checkForArgumentAndRemoveFromARGV("--maccatalyst")) {
+        $xcodeSDKPlatformName = "maccatalyst";
+    }
     if (checkForArgumentAndRemoveFromARGVGettingValue("--sdk", \$sdk)) {
         $xcodeSDK = lc $sdk;
-        $xcodeSDKPlatformName = $sdk;
-        $xcodeSDKPlatformName =~ s/\.internal$//;
+        $xcodeSDKPlatformName ||= $sdk;
+        $xcodeSDKPlatformName =~ s/(\d+\.[\d\.]+)?(\.internal)?$//;
         die "Couldn't determine platform name from Xcode SDK" unless isValidXcodeSDKPlatformName($xcodeSDKPlatformName);
         return;
     }
@@ -914,9 +1000,6 @@ sub determineXcodeSDKPlatformName {
     if (checkForArgumentAndRemoveFromARGV("--visionos-simulator")) {
         $xcodeSDKPlatformName ||= "xrsimulator";
     }
-    if (checkForArgumentAndRemoveFromARGV("--maccatalyst")) {
-        $xcodeSDKPlatformName ||= "maccatalyst";
-    }
 
     # Finally, fall back to macOS if no platform is specified.
     $xcodeSDKPlatformName ||= "macosx";
@@ -927,13 +1010,13 @@ sub determineXcodeSDK
     determineXcodeSDKPlatformName();  # This can set $xcodeSDK if --sdk was used.
     return if defined $xcodeSDK;
 
-    $xcodeSDK = $xcodeSDKPlatformName;
+    $xcodeSDK = willUseMacCatalystSDK() ? "macosx" : $xcodeSDKPlatformName;
 
     # Prefer the internal version of an sdk, if it exists.
     my @availableSDKs = availableXcodeSDKs();
 
     foreach my $sdk (@availableSDKs) {
-        next if $sdk ne "$xcodeSDKPlatformName.internal";
+        next if $sdk ne (willUseMacCatalystSDK() ? "macosx.internal" : "$xcodeSDKPlatformName.internal");
         $xcodeSDK = $sdk;
         last;
     }
@@ -1229,7 +1312,7 @@ sub argumentsForXcode()
     return @args;
 }
 
-sub determineConfiguredXcodeWorkspace()
+sub determineConfiguredXcodeWorkspaceOrDefault()
 {
     return if defined $configuredXcodeWorkspace;
     determineBaseProductDir();
@@ -1238,12 +1321,24 @@ sub determineConfiguredXcodeWorkspace()
         $configuredXcodeWorkspace = <WORKSPACE>;
         close WORKSPACE;
         chomp $configuredXcodeWorkspace;
+        return;
     }
+
+    # No configured workspace, time to find the default one.
+    # If we're using an internal SDK use the internal workspace.
+    if (xcodeSDK() =~ /\.internal$/) {
+        my $path = sourceDir() . "/../Internal/Safari.xcworkspace";
+        $configuredXcodeWorkspace = Cwd::realpath($path);
+        die "Using internal SDK but unable to find adjacent Internal directory: $! at $path. SDK: $xcodeSDK" unless (defined $configuredXcodeWorkspace && -e $configuredXcodeWorkspace);
+        return;
+    }
+
+    $configuredXcodeWorkspace = sourceDir() . "/WebKit.xcworkspace";
 }
 
 sub configuredXcodeWorkspace()
 {
-    determineConfiguredXcodeWorkspace();
+    determineConfiguredXcodeWorkspaceOrDefault();
     return $configuredXcodeWorkspace;
 }
 
@@ -1257,6 +1352,7 @@ sub XcodeOptions
     determineBaseProductDir();
     determineConfiguration();
     determineArchitecture();
+    determineXcodeDestination();
     determineASanIsEnabled();
     determineTSanIsEnabled();
     determineUBSanIsEnabled();
@@ -1267,17 +1363,20 @@ sub XcodeOptions
     determineLTOMode();
     if (isAppleCocoaWebKit()) {
       determineXcodeSDK();
-      determineConfiguredXcodeWorkspace();
+      determineConfiguredXcodeWorkspaceOrDefault();
     }
 
     my @options;
     push @options, "-UseSanitizedBuildSystemEnvironment=YES";
     push @options, "-ShowBuildOperationDuration=YES";
     if (!checkForArgumentAndRemoveFromARGV("--no-use-workspace")) {
-        my $workspace = $configuredXcodeWorkspace // sourceDir() . "/WebKit.xcworkspace";
-        push @options, ("-workspace", $workspace) if $workspace;
+        push @options, ("-workspace", $configuredXcodeWorkspace) if $configuredXcodeWorkspace;
     }
     push @options, ("-configuration", $configuration);
+    push @options, ("-destination", $destination) if $destination;
+    # Be mindful of adding build settings here. Any settings which don't
+    # *exactly* line up with build settings already provided by Xcode will
+    # invalidate command line <=> IDE incremental builds.
     push @options, ("ENABLE_ADDRESS_SANITIZER=YES") if $asanIsEnabled;
     push @options, ("ENABLE_THREAD_SANITIZER=YES") if $tsanIsEnabled;
     push @options, ("ENABLE_UNDEFINED_BEHAVIOR_SANITIZER=YES") if $ubsanIsEnabled;
@@ -1287,8 +1386,7 @@ sub XcodeOptions
     push @options, "GCC_OPTIMIZATION_LEVEL=$forceOptimizationLevel" if $forceOptimizationLevel;
     push @options, "WK_LTO_MODE=$ltoMode" if $ltoMode;
     push @options, @baseProductDirOption;
-    push @options, "ARCHS=$architecture" if $architecture;
-    push @options, "ONLY_ACTIVE_ARCH=NO" if $didUserSpecifyArchitecture;
+    push @options, "ARCHS=$architecture" if $didUserSpecifyArchitecture;
     push @options, "SDKROOT=$xcodeSDK" if $xcodeSDK;
     if (xcodeVersion() lt "15.0") {
         push @options, "TAPI_USE_SRCROOT=YES" if $ENV{UseSRCROOTSupportForTAPI};
@@ -1317,7 +1415,7 @@ sub XcodeOptions
 
 sub XcodeOptionString
 {
-    return join " ", XcodeOptions();
+    return join " ", map { /\s/ ? "\"$_\"" : $_ } XcodeOptions();
 }
 
 sub XcodeOptionStringNoConfig
@@ -1327,7 +1425,7 @@ sub XcodeOptionStringNoConfig
 
 sub XcodeCoverageSupportOptions()
 {
-    return ("-xcconfig", sourceDir() . "/Tools/coverage/coverage.xcconfig");
+    return ("CLANG_COVERAGE_MAPPING=YES");
 }
 
 sub XcodeExportCompileCommandsOptions()
@@ -1374,8 +1472,6 @@ sub passedConfiguration
 
 sub setConfiguration
 {
-    setArchitecture();
-
     if (my $config = shift @_) {
         $configuration = $config;
         return;
@@ -1385,33 +1481,6 @@ sub setConfiguration
     $configuration = $passedConfiguration if $passedConfiguration;
 }
 
-
-my $passedArchitecture;
-my $searchedForPassedArchitecture;
-sub determinePassedArchitecture
-{
-    return if $searchedForPassedArchitecture;
-    $searchedForPassedArchitecture = 1;
-
-    $passedArchitecture = undef;
-    if (shouldBuild32Bit()) {
-        if (isAppleCocoaWebKit()) {
-            # PLATFORM_IOS: Don't run `arch` command inside Simulator environment
-            local %ENV = %ENV;
-            delete $ENV{DYLD_ROOT_PATH};
-            delete $ENV{DYLD_FRAMEWORK_PATH};
-
-            $passedArchitecture = `arch`;
-            chomp $passedArchitecture;
-        }
-    }
-}
-
-sub passedArchitecture
-{
-    determinePassedArchitecture();
-    return $passedArchitecture;
-}
 
 sub nativeArchitecture($)
 {
@@ -1426,6 +1495,12 @@ sub architecture()
     return $architecture;
 }
 
+sub xcodeDestination()
+{
+    determineXcodeDestination();
+    return $destination;
+}
+
 sub numberOfCPUs()
 {
     determineNumberOfCPUs();
@@ -1436,17 +1511,6 @@ sub maxCPULoad()
 {
     determineMaxCPULoad();
     return $maxCPULoad;
-}
-
-sub setArchitecture
-{
-    if (my $arch = shift @_) {
-        $architecture = $arch;
-        return;
-    }
-
-    determinePassedArchitecture();
-    $architecture = $passedArchitecture if $passedArchitecture;
 }
 
 # Locate Safari.
@@ -1486,7 +1550,7 @@ sub builtDylibPathForName
         if (isDarwin()) {
             $libraryName = "QtWebKitWidgets";
         } else {
-            $libraryName = "Qt5WebKitWidgets";
+            $libraryName = "Qt6WebKitWidgets";
         }
         my $result;
         if (isDarwin() and -d "$configurationProductDir/lib/$libraryName.framework") {
@@ -1548,7 +1612,7 @@ sub builtDylibPathForName
         return "$configurationProductDir/$libraryName.framework/Versions/A/$libraryName";
     }
     if (isWPE()) {
-        return "$configurationProductDir/lib/libWPEWebKit-1.0.so";
+        return "$configurationProductDir/lib/libWPEWebKit-2.0.so";
     }
 
     die "Unsupported platform, can't determine built library locations.\nTry `build-webkit --help` for more information.\n";
@@ -2770,7 +2834,7 @@ sub generateBuildSystemFromCMakeProject
     push @args, "-DLTO_MODE=$ltoMode" if ltoMode();
 
     if (isPlayStation()) {
-        my $toolChainFile = $ENV{'CMAKE_TOOLCHAIN_FILE'} || "Platform/PlayStation";
+        my $toolChainFile = $ENV{'CMAKE_TOOLCHAIN_FILE'} || "Platform/PlayStation5";
         push @args, '-DCMAKE_TOOLCHAIN_FILE=' . $toolChainFile;
     }
 
@@ -3058,6 +3122,8 @@ sub setupIOSWebKitEnvironment($)
 
     prependToEnvironmentVariableList("DYLD_FRAMEWORK_PATH", $dyldFrameworkPath);
     prependToEnvironmentVariableList("DYLD_LIBRARY_PATH", $dyldFrameworkPath);
+    prependToEnvironmentVariableList("__XPC_DYLD_FRAMEWORK_PATH", $dyldFrameworkPath);
+    prependToEnvironmentVariableList("__XPC_DYLD_LIBRARY_PATH", $dyldFrameworkPath);
     prependToEnvironmentVariableList("METAL_DEVICE_WRAPPER_TYPE", "1");
 
     setUpGuardMallocIfNeeded();
@@ -3208,18 +3274,20 @@ sub iosSimulatorDeviceByUDID($)
     return undef;
 }
 
-sub iosSimulatorRuntime()
+sub iosSimulatorRuntime
 {
-    my $xcodeSDKVersion = xcodeSDKVersion();
-    $xcodeSDKVersion =~ s/\./-/;
-    my $runtime = "com.apple.CoreSimulator.SimRuntime.iOS-$xcodeSDKVersion";
+    return simulatorRuntime(iOS);
+}
 
-    open(TEST, "-|", "xcrun --sdk iphonesimulator simctl list 2>&1") or die "Failed to run find simulator runtime";
-    while ( my $line = <TEST> ) {
-        $runtime = $1 if ($line =~ m/.+ - (com.apple.CoreSimulator.SimRuntime.iOS-\S+)/);
+sub simulatorRuntime($)
+{
+    my $platformName = shift;
+    my $xcodeSDKVersion = xcodeSDKVersion();
+
+    my $output = `xcrun --sdk $xcodeSDK simctl list runtimes $platformName --json` or die "Failed to run find simulator runtime";
+    for my $runtime (@{decode_json($output)->{runtimes}}) {
+        return $runtime->{identifier} if $runtime->{version} eq $xcodeSDKVersion;
     }
-    close(TEST);
-    return $runtime;
 }
 
 sub findOrCreateSimulatorForIOSDevice($)
@@ -3358,15 +3426,10 @@ sub runIOSWebKitApp($)
     die "Not using an iOS SDK."
 }
 
-sub archCommandLineArgumentsForRestrictedEnvironmentVariables()
+sub commandLineArgumentsForRestrictedEnvironmentVariables($)
 {
-    my @arguments = ();
-    foreach my $key (keys(%ENV)) {
-        if ($key =~ /^DYLD_/) {
-            push @arguments, "-e", "$key=$ENV{$key}";
-        }
-    }
-    return @arguments;
+    my $prefix = shift;
+    return map { ($prefix, "$_=$ENV{$_}") } grep { /^DYLD_/ } keys %ENV;
 }
 
 sub runMacWebKitApp($;$)
@@ -3379,12 +3442,24 @@ sub runMacWebKitApp($;$)
     setupMacWebKitEnvironment($productDir);
 
     if (defined($useOpenCommand) && $useOpenCommand == USE_OPEN_COMMAND) {
-        return system("open", "-W", "-a", $appPath, "--args", argumentsForRunAndDebugMacWebKitApp());
+        return system("open", "-W", "-a", $appPath, commandLineArgumentsForRestrictedEnvironmentVariables("--env"), "--args", argumentsForRunAndDebugMacWebKitApp());
     }
     if (architecture()) {
-        return system "arch", "-" . architecture(), archCommandLineArgumentsForRestrictedEnvironmentVariables(), $appPath, argumentsForRunAndDebugMacWebKitApp();
+        return system "arch", "-" . architecture(), commandLineArgumentsForRestrictedEnvironmentVariables("-e"), $appPath, argumentsForRunAndDebugMacWebKitApp();
     }
     return system { $appPath } $appPath, argumentsForRunAndDebugMacWebKitApp();
+}
+
+sub runUnixWebKitApp($)
+{
+    my ($appPath) = @_;
+    my $productDir = productDir();
+    print "Starting @{[basename($appPath)]} with built WebKit in $productDir.\n";
+
+    local %ENV = %ENV;
+    setupUnixWebKitEnvironment($productDir);
+
+    return system { $appPath } $appPath, @ARGV;
 }
 
 sub execMacWebKitAppForDebugging($)
@@ -3419,7 +3494,7 @@ sub execUnixAppForDebugging($)
     my @cmdline = wrapperPrefixIfNeeded();
     push @cmdline, $debuggerPath, "--args", $appPath;
 
-    print "Starting @{[basename($appPath)]} under gdb with build WebKit in $productDir.\n";
+    print "Starting @{[basename($appPath)]} under gdb with built WebKit in $productDir.\n";
     exec @cmdline, @ARGV or die;
 }
 
@@ -3470,6 +3545,8 @@ sub runWebKitTestRunner
 {
     if (isAppleMacWebKit()) {
         return runMacWebKitApp(File::Spec->catfile(productDir(), "WebKitTestRunner"));
+    } elsif (isGtk() or isWPE()) {
+        return runUnixWebKitApp(File::Spec->catfile(productDir(), "bin", "WebKitTestRunner"));
     }
 
     return 1;
@@ -3517,30 +3594,6 @@ sub formatBuildTime($)
         return sprintf("%dh:%02dm:%02ds", $buildHours, $buildMins, $buildSecs);
     }
     return sprintf("%02dm:%02ds", $buildMins, $buildSecs);
-}
-
-sub runSvnUpdateAndResolveChangeLogs(@)
-{
-    my @svnOptions = @_;
-    my $openCommand = "svn update " . join(" ", @svnOptions);
-    open my $update, "$openCommand |" or die "cannot execute command $openCommand";
-    my @conflictedChangeLogs;
-    while (my $line = <$update>) {
-        print $line;
-        $line =~ m/^C\s+(.+?)[\r\n]*$/;
-        if ($1) {
-          my $filename = normalizePath($1);
-          push @conflictedChangeLogs, $filename if basename($filename) eq "ChangeLog";
-        }
-    }
-    close $update or die;
-
-    if (@conflictedChangeLogs) {
-        print "Attempting to merge conflicted ChangeLogs.\n";
-        my $resolveChangeLogsPath = File::Spec->catfile(sourceDir(), "Tools", "Scripts", "resolve-ChangeLogs");
-        (system($resolveChangeLogsPath, "--no-warnings", @conflictedChangeLogs) == 0)
-            or die "Could not open resolve-ChangeLogs script: $!.\n";
-    }
 }
 
 sub runGitUpdate()

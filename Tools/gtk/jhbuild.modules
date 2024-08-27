@@ -27,7 +27,6 @@
       <dep package="libxml2"/>
       <dep package="llvm"/>
       <dep package="manette"/>
-      <dep package="openjpeg"/>
       <dep package="pango"/>
       <dep package="shared-mime-info"/>
       <dep package="webkit-gstreamer-testing-dependencies"/>
@@ -375,12 +374,15 @@
             hash="sha256:cde1d55e8dd70c3cbb3d1ec72f60e60000041579caa1d6a262bd9c35e93723a5"/>
   </autotools>
 
-  <autotools id="libdrm" autogen-sh="configure">
+  <!-- libdrm required for function 'drmGetFormatName' (defined since 'libdrm-2.4.113') -->
+  <meson id="libdrm" mesonargs="-Dtegra=enabled -Dcairo-tests=disabled -Dman-pages=disabled -Dvalgrind=disabled -Dudev=false -Dtests=false">
     <pkg-config>libdrm.pc</pkg-config>
-    <branch module="/libdrm/libdrm-${version}.tar.bz2" version="2.4.100"
-            repo="dri.freedesktop.org"
-            hash="sha256:c77cc828186c9ceec3e56ae202b43ee99eb932b4a87255038a80e8a1060d0a5d"/>
-  </autotools>
+    <branch module="mesa/drm.git"
+            version="2.4.113"
+            tag="libdrm-2.4.113"
+            checkoutdir="libdrm-2.4.113"
+            repo="git.freedesktop.org" />
+  </meson>
 
   <autotools id="mesa"
              autogen-sh="configure"
@@ -475,12 +477,6 @@
     </dependencies>
   </meson>
 
-  <cmake id="openjpeg">
-    <branch repo="github-tarball"
-            module="uclouvain/openjpeg/archive/v${version}.tar.gz"
-            checkoutdir="openjpeg-${version}"
-            version="2.3.0"
-            hash="sha256:3dc787c1bb6023ba846c2a0d9b1f6e179f1cd255172bde9eb75b01f1e6c7d71a"/>
   </cmake>
 
   <!-- Dependencies listed below this point are not thought to affect test results, and are only

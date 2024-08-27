@@ -43,6 +43,7 @@ class ResourceHeap;
 
 class ApplyDeviceScaleFactor;
 class BeginTransparencyLayer;
+class BeginTransparencyLayerWithCompositeMode;
 class ClearRect;
 class ClearDropShadow;
 class Clip;
@@ -78,6 +79,7 @@ class FillPath;
 class FillRect;
 class FillRectWithColor;
 class FillRectWithGradient;
+class FillRectWithGradientAndSpaceTransform;
 class FillRectWithRoundedHole;
 class FillRoundedRect;
 class ResetClip;
@@ -102,9 +104,11 @@ class Translate;
 #if ENABLE(INLINE_PATH_DATA)
 class FillLine;
 class FillArc;
+class FillClosedArc;
 class FillQuadCurve;
 class FillBezierCurve;
 class StrokeArc;
+class StrokeClosedArc;
 class StrokeQuadCurve;
 class StrokeBezierCurve;
 #endif
@@ -119,6 +123,7 @@ class ApplyStrokePattern;
 using Item = std::variant
     < ApplyDeviceScaleFactor
     , BeginTransparencyLayer
+    , BeginTransparencyLayerWithCompositeMode
     , ClearRect
     , ClearDropShadow
     , Clip
@@ -154,6 +159,7 @@ using Item = std::variant
     , FillRect
     , FillRectWithColor
     , FillRectWithGradient
+    , FillRectWithGradientAndSpaceTransform
     , FillRectWithRoundedHole
     , FillRoundedRect
     , ResetClip
@@ -178,9 +184,11 @@ using Item = std::variant
 #if ENABLE(INLINE_PATH_DATA)
     , FillLine
     , FillArc
+    , FillClosedArc
     , FillQuadCurve
     , FillBezierCurve
     , StrokeArc
+    , StrokeClosedArc
     , StrokeQuadCurve
     , StrokeBezierCurve
 #endif

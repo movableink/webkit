@@ -87,7 +87,10 @@ enum PreferredPrimitiveType : uint8_t { NoPreference, PreferNumber, PreferString
 struct CallData;
 
 typedef int64_t EncodedJSValue;
-    
+
+inline void updateEncodedJSValueConcurrent(EncodedJSValue&, EncodedJSValue);
+inline void clearEncodedJSValueConcurrent(EncodedJSValue&);
+
 union EncodedValueDescriptor {
     int64_t asInt64;
 #if USE(JSVALUE32_64)
@@ -134,9 +137,7 @@ enum class SourceCodeRepresentation : uint8_t {
 };
 
 extern JS_EXPORT_PRIVATE const ASCIILiteral SymbolCoercionError;
-#if HAVE(OS_SIGNPOST)
 extern JS_EXPORT_PRIVATE std::atomic<unsigned> activeJSGlobalObjectSignpostIntervalCount;
-#endif
 
 class JSValue {
     friend struct EncodedJSValueHashTraits;
@@ -168,12 +169,18 @@ public:
     static constexpr uint32_t NativeCalleeTag = 0xfffffffa;
     static constexpr uint32_t EmptyValueTag =   0xfffffff9;
     static constexpr uint32_t DeletedValueTag = 0xfffffff8;
+    static constexpr uint32_t InvalidTag      = 0xfffffff7;
 
-    static constexpr uint32_t LowestTag =  DeletedValueTag;
+    static constexpr uint32_t LowestTag =  InvalidTag;
 #endif
 
     static EncodedJSValue encode(JSValue);
     static JSValue decode(EncodedJSValue);
+
+    /* read a JSValue from storage not owned by this thread
+     * on 64-bit ports, or when JIT is not enabled, equivalent to
+     * JSValue::decode(*ptr) */
+    static JSValue decodeConcurrent(const volatile EncodedJSValue *);
 
     enum JSNullTag { JSNull };
     enum JSUndefinedTag { JSUndefined };
@@ -306,7 +313,7 @@ public:
     double toIntegerOrInfinity(JSGlobalObject*) const;
     int32_t toInt32(JSGlobalObject*) const;
     uint32_t toUInt32(JSGlobalObject*) const;
-    uint32_t toIndex(JSGlobalObject*, const char* errorName) const;
+    uint32_t toIndex(JSGlobalObject*, ASCIILiteral errorName) const;
     size_t toTypedArrayIndex(JSGlobalObject*, ASCIILiteral) const;
     uint64_t toLength(JSGlobalObject*) const;
 
@@ -371,8 +378,8 @@ public:
     static constexpr const int64_t notInt52 = static_cast<int64_t>(1) << numberOfInt52Bits;
     static constexpr const unsigned int52ShiftAmount = 12;
     
-    static ptrdiff_t offsetOfPayload() { return OBJECT_OFFSETOF(JSValue, u.asBits.payload); }
-    static ptrdiff_t offsetOfTag() { return OBJECT_OFFSETOF(JSValue, u.asBits.tag); }
+    static constexpr ptrdiff_t offsetOfPayload() { return OBJECT_OFFSETOF(JSValue, u.asBits.payload); }
+    static constexpr ptrdiff_t offsetOfTag() { return OBJECT_OFFSETOF(JSValue, u.asBits.tag); }
 
 #if USE(JSVALUE32_64)
     /*
@@ -414,7 +421,7 @@ public:
      * ranges to encode other values (however there are also other ranges of NaN space that
      * could have been selected).
      *
-     * This range of NaN space is represented by 64-bit numbers begining with the 15-bit
+     * This range of NaN space is represented by 64-bit numbers beginning with the 15-bit
      * hex patterns 0xFFFC and 0xFFFE - we rely on the fact that no valid double-precision
      * numbers will fall in these ranges.
      *
@@ -443,9 +450,9 @@ public:
      *     Null:      0x02
      *
      * These values have the following properties:
-     * - Bit 1 (OtherTag) is set for all four values, allowing real pointers to be
+     * - Bit 1 (0-indexed) is set (OtherTag) for all four values, allowing real pointers to be
      *   quickly distinguished from all immediate values, including these invalid pointers.
-     * - With bit 3 masked out (UndefinedTag), Undefined and Null share the
+     * - With bit 3 (0-indexed) masked out (UndefinedTag), Undefined and Null share the
      *   same value, allowing null & undefined to be quickly detected.
      *
      * No valid JSValue will have the bit pattern 0x0, this is used to represent array
@@ -473,7 +480,7 @@ public:
     static_assert(LowestOfHighBits & NumberTag);
     static_assert(!((LowestOfHighBits>>1) & NumberTag));
 
-    // All non-numeric (bool, null, undefined) immediates have bit 2 set.
+    // All non-numeric (bool, null, undefined) immediates have bit 1 (0-indexed) set.
     static constexpr int32_t OtherTag       = 0x2;
     static constexpr int32_t BoolTag        = 0x4;
     static constexpr int32_t UndefinedTag   = 0x8;
@@ -695,7 +702,6 @@ bool isThisValueAltered(const PutPropertySlot&, JSObject* baseObject);
 // See section 7.2.9: https://tc39.github.io/ecma262/#sec-samevalue
 bool sameValue(JSGlobalObject*, JSValue a, JSValue b);
 
-#if COMPILER(GCC_COMPATIBLE)
 ALWAYS_INLINE void ensureStillAliveHere(JSValue value)
 {
 #if USE(JSVALUE64)
@@ -704,9 +710,6 @@ ALWAYS_INLINE void ensureStillAliveHere(JSValue value)
     asm volatile ("" : : "g"(value.payload()) : "memory");
 #endif
 }
-#else
-JS_EXPORT_PRIVATE void ensureStillAliveHere(JSValue);
-#endif
 
 // Use EnsureStillAliveScope when you have a data structure that includes GC pointers, and you need
 // to remove it from the DOM and then use it in the same scope. For example, a 'once' event listener
@@ -731,5 +734,65 @@ public:
 private:
     JSValue m_value;
 };
+
+#if USE(JSVALUE64) || !ENABLE(CONCURRENT_JS)
+
+inline JSValue JSValue::decodeConcurrent(const volatile EncodedJSValue* encodedJSValue)
+{
+    return JSValue::decode(*encodedJSValue);
+}
+
+inline void updateEncodedJSValueConcurrent(EncodedJSValue& dest, EncodedJSValue value)
+{
+    dest = value;
+}
+
+inline void clearEncodedJSValueConcurrent(EncodedJSValue& dest)
+{
+    dest = JSValue::encode(JSValue());
+}
+
+#elif USE(JSVALUE32_64)
+
+inline JSValue JSValue::decodeConcurrent(const volatile EncodedJSValue *encodedJSValue)
+{
+    for (;;) {
+        auto v = JSValue::decode(reinterpret_cast<const volatile std::atomic<EncodedJSValue>*>(encodedJSValue)->load());
+        if (v.tag() != InvalidTag)
+            return v;
+    }
+}
+
+inline void updateEncodedJSValueConcurrent(EncodedJSValue& dest, EncodedJSValue value)
+{
+    auto destDesc = const_cast<volatile EncodedValueDescriptor*>(reinterpret_cast<EncodedValueDescriptor*>(&dest));
+
+    EncodedValueDescriptor desc;
+    memcpy(&desc, &value, sizeof(value));
+
+    auto destTag = const_cast<volatile int32_t*>(&destDesc->asBits.tag);
+    auto destPayload = const_cast<volatile int32_t*>(&destDesc->asBits.payload);
+
+    *destTag = JSValue::InvalidTag;
+    WTF::storeStoreFence();
+    *destPayload = desc.asBits.payload;
+    WTF::storeStoreFence();
+    *destTag = desc.asBits.tag;
+}
+
+inline void clearEncodedJSValueConcurrent(EncodedJSValue& dest)
+{
+    auto destDesc = const_cast<volatile EncodedValueDescriptor*>(reinterpret_cast<EncodedValueDescriptor*>(&dest));
+    auto destTag = const_cast<volatile int32_t*>(&destDesc->asBits.tag);
+    auto destPayload = const_cast<volatile int32_t*>(&destDesc->asBits.payload);
+
+    *destTag = JSValue::EmptyValueTag;
+    WTF::storeStoreFence();
+    *destPayload = 0;
+}
+
+#else
+#  error "Unsupported configuration"
+#endif
 
 } // namespace JSC

@@ -32,14 +32,23 @@
 #if HAVE(AVCONTENTKEYSESSION)
 
 #include <wtf/Assertions.h>
-#include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
+#include <wtf/WeakPtr.h>
 
 OBJC_CLASS AVContentKey;
 
 namespace WebCore {
+class ContentKeyGroupDataSource;
+}
 
-class ContentKeyGroupDataSource : public CanMakeCheckedPtr {
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::ContentKeyGroupDataSource> : std::true_type { };
+}
+
+namespace WebCore {
+
+class ContentKeyGroupDataSource : public CanMakeWeakPtr<ContentKeyGroupDataSource> {
 public:
     virtual ~ContentKeyGroupDataSource() = default;
 

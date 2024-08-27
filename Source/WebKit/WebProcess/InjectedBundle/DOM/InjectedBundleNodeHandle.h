@@ -29,9 +29,9 @@
 #include "ImageOptions.h"
 #include <JavaScriptCore/JSBase.h>
 #include <WebCore/ActiveDOMObject.h>
-#include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
 #include <wtf/RefPtr.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 class IntRect;
@@ -46,7 +46,7 @@ class InjectedBundleScriptWorld;
 class WebFrame;
 class WebImage;
 
-class InjectedBundleNodeHandle : public API::ObjectImpl<API::Object::Type::BundleNodeHandle>, public WebCore::ActiveDOMObject, public CanMakeCheckedPtr {
+class InjectedBundleNodeHandle : public API::ObjectImpl<API::Object::Type::BundleNodeHandle>, public WebCore::ActiveDOMObject, public CanMakeWeakPtr<InjectedBundleNodeHandle> {
 public:
     static RefPtr<InjectedBundleNodeHandle> getOrCreate(JSContextRef, JSObjectRef);
     static RefPtr<InjectedBundleNodeHandle> getOrCreate(WebCore::Node*);
@@ -91,13 +91,16 @@ public:
     RefPtr<WebFrame> documentFrame();
     RefPtr<WebFrame> htmlIFrameElementContentFrame();
 
+    // ActiveDOMObject.
+    void ref() const final { API::ObjectImpl<API::Object::Type::BundleNodeHandle>::ref(); }
+    void deref() const final { API::ObjectImpl<API::Object::Type::BundleNodeHandle>::deref(); }
+
 private:
     static Ref<InjectedBundleNodeHandle> create(WebCore::Node&);
     InjectedBundleNodeHandle(WebCore::Node&);
 
     // ActiveDOMObject.
     void stop() final;
-    const char* activeDOMObjectName() const final;
 
     RefPtr<WebCore::Node> m_node;
 };

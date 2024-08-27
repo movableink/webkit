@@ -50,6 +50,8 @@ RenderMathMLScripts::RenderMathMLScripts(Type type, MathMLScriptsElement& elemen
 {
 }
 
+RenderMathMLScripts::~RenderMathMLScripts() = default;
+
 MathMLScriptsElement& RenderMathMLScripts::element() const
 {
     return static_cast<MathMLScriptsElement&>(nodeForNonAnonymous());
@@ -62,10 +64,8 @@ MathMLScriptsElement::ScriptType RenderMathMLScripts::scriptType() const
 
 RenderMathMLOperator* RenderMathMLScripts::unembellishedOperator() const
 {
-    auto base = firstChildBox();
-    if (!is<RenderMathMLBlock>(base))
-        return nullptr;
-    return downcast<RenderMathMLBlock>(base)->unembellishedOperator();
+    auto* base = dynamicDowncast<RenderMathMLBlock>(firstChildBox());
+    return base ? base->unembellishedOperator() : nullptr;
 }
 
 std::optional<RenderMathMLScripts::ReferenceChildren> RenderMathMLScripts::validateAndGetReferenceChildren()
@@ -157,16 +157,16 @@ std::optional<RenderMathMLScripts::ReferenceChildren> RenderMathMLScripts::valid
 
 LayoutUnit RenderMathMLScripts::spaceAfterScript()
 {
-    const auto& primaryFont = style().fontCascade().primaryFont();
-    if (auto* mathData = primaryFont.mathData())
+    const Ref primaryFont = style().fontCascade().primaryFont();
+    if (RefPtr mathData = primaryFont->mathData())
         return LayoutUnit(mathData->getMathConstant(primaryFont, OpenTypeMathData::SpaceAfterScript));
     return LayoutUnit(style().fontCascade().size() / 5);
 }
 
 LayoutUnit RenderMathMLScripts::italicCorrection(const ReferenceChildren& reference)
 {
-    if (is<RenderMathMLBlock>(*reference.base)) {
-        if (auto* renderOperator = downcast<RenderMathMLBlock>(*reference.base).unembellishedOperator())
+    if (auto* mathMLBlock = dynamicDowncast<RenderMathMLBlock>(*reference.base)) {
+        if (auto* renderOperator = mathMLBlock->unembellishedOperator())
             return renderOperator->italicCorrection();
     }
     return 0;
@@ -231,8 +231,8 @@ void RenderMathMLScripts::computePreferredLogicalWidths()
 auto RenderMathMLScripts::verticalParameters() const -> VerticalParameters
 {
     VerticalParameters parameters;
-    const auto& primaryFont = style().fontCascade().primaryFont();
-    if (auto* mathData = primaryFont.mathData()) {
+    const Ref primaryFont = style().fontCascade().primaryFont();
+    if (RefPtr mathData = primaryFont->mathData()) {
         parameters.subscriptShiftDown = mathData->getMathConstant(primaryFont, OpenTypeMathData::SubscriptShiftDown);
         parameters.superscriptShiftUp = mathData->getMathConstant(primaryFont, OpenTypeMathData::SuperscriptShiftUp);
         parameters.subscriptBaselineDropMin = mathData->getMathConstant(primaryFont, OpenTypeMathData::SubscriptBaselineDropMin);
@@ -243,14 +243,15 @@ auto RenderMathMLScripts::verticalParameters() const -> VerticalParameters
         parameters.superscriptBottomMaxWithSubscript = mathData->getMathConstant(primaryFont, OpenTypeMathData::SuperscriptBottomMaxWithSubscript);
     } else {
         // Default heuristic values when you do not have a font.
-        parameters.subscriptShiftDown = style().metricsOfPrimaryFont().xHeight() / 3;
-        parameters.superscriptShiftUp = style().metricsOfPrimaryFont().xHeight();
-        parameters.subscriptBaselineDropMin = style().metricsOfPrimaryFont().xHeight() / 2;
-        parameters.superScriptBaselineDropMax = style().metricsOfPrimaryFont().xHeight() / 2;
+        float xHeight = style().metricsOfPrimaryFont().xHeight().value_or(0);
+        parameters.subscriptShiftDown = xHeight / 3;
+        parameters.superscriptShiftUp = xHeight;
+        parameters.subscriptBaselineDropMin = xHeight / 2;
+        parameters.superScriptBaselineDropMax = xHeight / 2;
         parameters.subSuperscriptGapMin = style().fontCascade().size() / 5;
-        parameters.superscriptBottomMin = style().metricsOfPrimaryFont().xHeight() / 4;
-        parameters.subscriptTopMax = 4 * style().metricsOfPrimaryFont().xHeight() / 5;
-        parameters.superscriptBottomMaxWithSubscript = 4 * style().metricsOfPrimaryFont().xHeight() / 5;
+        parameters.superscriptBottomMin = xHeight / 4;
+        parameters.subscriptTopMax = 4 * xHeight / 5;
+        parameters.superscriptBottomMaxWithSubscript = 4 * xHeight / 5;
     }
     return parameters;
 }
@@ -361,8 +362,13 @@ void RenderMathMLScripts::layoutBlock(bool relayoutChildren, LayoutUnit)
     auto& reference = possibleReference.value();
 
     recomputeLogicalWidth();
-    for (auto child = firstChildBox(); child; child = child->nextSiblingBox())
+    for (auto child = firstChildBox(); child; child = child->nextSiblingBox()) {
+        if (child->isOutOfFlowPositioned()) {
+            child->containingBlock()->insertPositionedObject(*child);
+            continue;
+        }
         child->layoutIfNeeded();
+    }
 
     LayoutUnit space = spaceAfterScript();
 

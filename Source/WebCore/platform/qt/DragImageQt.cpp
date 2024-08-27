@@ -62,11 +62,11 @@ DragImageRef dissolveDragImageToFraction(DragImageRef image, float)
 
 DragImageRef createDragImageFromImage(Image* image, ImageOrientation)
 {
-    if (!image/* || !image->nativeImageForCurrentFrame()*/)
+    if (!image/* || !image->currentNativeImage()*/)
         return QImage();
 
-    return image->nativeImageForCurrentFrame()->platformImage();
-//    return new QImage(*image->nativeImageForCurrentFrame());
+    return image->currentNativeImage()->platformImage();
+//    return new QImage(*image->currentNativeImage());
 }
 
 DragImageRef createDragImageIconForCachedImageFilename(const String&)

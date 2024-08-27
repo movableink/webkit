@@ -71,7 +71,7 @@ void UrlLoader::loadNext()
     if (getUrl(qstr)) {
         QUrl url(qstr, QUrl::StrictMode);
         if (url.isValid()) {
-            m_stdOut << "Loading " << qstr << " ......" << ++m_loaded << endl;
+            m_stdOut << "Loading " << qstr << " ......" << ++m_loaded << Qt::endl;
             m_frame->load(url);
         } else
             loadNext();
@@ -82,7 +82,7 @@ void UrlLoader::loadNext()
 void UrlLoader::checkIfFinished()
 {
     if (!m_numFramesLoading)
-        emit pageLoadFinished();
+        Q_EMIT pageLoadFinished();
 }
 
 void UrlLoader::frameLoadStarted()

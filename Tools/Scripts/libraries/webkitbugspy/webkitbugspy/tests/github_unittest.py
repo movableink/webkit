@@ -80,6 +80,17 @@ class TestGitHub(unittest.TestCase):
         )
         self.assertEqual(tracker.from_string('https://github.example.com/Apple/Swift/issues/1234'), None)
 
+    def test_link_brackets(self):
+        tracker = github.Tracker(self.URL)
+        self.assertEqual(
+            tracker.from_string('<http://github.example.com/WebKit/WebKit/issues/1234>').link,
+            'https://github.example.com/WebKit/WebKit/issues/1234',
+        )
+        self.assertEqual(
+            tracker.from_string('<http://api.github.example.com/repos/WebKit/WebKit/issues/1234>').link,
+            'https://github.example.com/WebKit/WebKit/issues/1234',
+        )
+
     def test_title(self):
         with mocks.GitHub(self.URL.split('://')[1], issues=mocks.ISSUES):
             tracker = github.Tracker(self.URL)
@@ -89,6 +100,10 @@ class TestGitHub(unittest.TestCase):
     def test_timestamp(self):
         with mocks.GitHub(self.URL.split('://')[1], issues=mocks.ISSUES):
             self.assertEqual(github.Tracker(self.URL).issue(1).timestamp, 1639510960)
+
+    def test_modified(self):
+        with mocks.GitHub(self.URL.split('://')[1], issues=mocks.ISSUES):
+            self.assertEqual(github.Tracker(self.URL).issue(1).modified, 1710859207)
 
     def test_creator(self):
         with mocks.GitHub(self.URL.split('://')[1], issues=mocks.ISSUES):
@@ -447,3 +462,14 @@ Documentation URL: https://docs.github.com/rest/reference/pulls#create-a-pull-re
         with mocks.GitHub(self.URL.split('://')[1], issues=mocks.ISSUES):
             tracker = github.Tracker(self.URL)
             self.assertEqual(tracker.issue(1).classification, '')
+
+    def test_source_changes(self):
+        with OutputCapture() as captured, mocks.GitHub(self.URL.split('://')[1], issues=mocks.ISSUES):
+            tracker = github.Tracker(self.URL)
+            self.assertEqual(tracker.issue(1).source_changes, [])
+            self.assertIsNone(tracker.issue(1).add_source_change('WebKit, merge, a4daad5b9fbd26d557088037f54dc0935a437182'))
+
+        self.assertEqual(
+            captured.stderr.getvalue(),
+            'GitHub does not support source changes at this time\n',
+        )

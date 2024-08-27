@@ -167,7 +167,7 @@ public:
 
 #if ENABLE(FULLSCREEN_API)
     bool supportsFullScreenForElement(const Element&, bool) final;
-    void enterFullScreenForElement(Element&) final;
+    void enterFullScreenForElement(Element&, WebCore::HTMLMediaElementEnums::VideoFullscreenMode = WebCore::HTMLMediaElementEnums::VideoFullscreenModeStandard) final;
     void exitFullScreenForElement(Element*) final;
 #endif
 
@@ -203,18 +203,13 @@ public:
 
     void attachViewOverlayGraphicsLayer(GraphicsLayer*) final;
 
-#if ENABLE(WEB_CRYPTO)
-    bool wrapCryptoKey(const Vector<uint8_t>&, Vector<uint8_t>&) const final;
-    bool unwrapCryptoKey(const Vector<uint8_t>&, Vector<uint8_t>&) const final;
-#endif
-
     void requestCookieConsent(CompletionHandler<void(WebCore::CookieConsentDecisionResult)>&&) final;
 
     IntPoint accessibilityScreenToRootView(const IntPoint&) const final;
     IntRect rootViewToAccessibilityScreen(const IntRect&) const final;
     void didFinishLoadingImageForElement(HTMLImageElement&) final;
     void intrinsicContentsSizeChanged(const IntSize&) const final;
-    RefPtr<Icon> createIconForFiles(const Vector<WTF::String>&) override;
+    RefPtr<Icon> createIconForFiles(const Vector<WTF::String>&) final;
 
     QWebFullScreenVideoHandler* createFullScreenVideoHandler();
 
