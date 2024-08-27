@@ -52,7 +52,7 @@ public:
     PathQt& operator=(const PathQt&);
     PathQt& operator=(PathQt&& other);
 
-    QPainterPath platformPath() const;
+    PlatformPathPtr platformPath() const;
 
     void addPath(const PathQt&, const AffineTransform&);
 
@@ -67,8 +67,6 @@ public:
 
 private:
     Ref<PathImpl> copy() const final;
-
-    QPainterPath ensurePlatformPath() { return platformPath(); }
 
     void add(PathMoveTo) final;
 
