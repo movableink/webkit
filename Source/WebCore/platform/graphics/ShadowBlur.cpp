@@ -348,7 +348,7 @@ void ShadowBlur::blurLayerImage(std::span<uint8_t> imageData, const IntSize& siz
                     sum += next.front() - prev.front();
                 }
 
-                for (; i < dim && ptr.size() <= stride && prev.size() >= stride; ptr = ptr.subspan(stride), prev = prev.subspan(stride), ++i) {
+                for (; i < dim && ptr.size() >= stride && prev.size() >= stride; ptr = ptr.subspan(stride), prev = prev.subspan(stride), ++i) {
                     ptr[0] = (sum * invCount) >> blurSumShift;
                     sum += alpha2 - prev.front();
                 }
