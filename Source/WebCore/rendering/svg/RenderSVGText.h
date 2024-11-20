@@ -33,7 +33,7 @@ class SVGTextElement;
 class RenderSVGInlineText;
 
 class RenderSVGText final : public RenderSVGBlock {
-    WTF_MAKE_ISO_ALLOCATED(RenderSVGText);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGText);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGText);
 public:
     RenderSVGText(SVGTextElement&, RenderStyle&&);
@@ -105,6 +105,7 @@ private:
     bool m_needsPositioningValuesUpdate : 1 { false };
     bool m_needsTransformUpdate : 1 { true }; // FIXME: [LBSE] Only needed for legacy SVG engine.
     bool m_needsTextMetricsUpdate : 1 { false };
+    bool m_hasPerformedLayout : 1 { false }; // Needed to distinguish between when we perform a full pass of layout and everHadLayout (which can be set be content visibility for skipped content).
     AffineTransform m_localTransform; // FIXME: [LBSE] Only needed for legacy SVG engine.
     SVGTextLayoutAttributesBuilder m_layoutAttributesBuilder;
     Vector<SVGTextLayoutAttributes*> m_layoutAttributes;

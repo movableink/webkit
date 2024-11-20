@@ -25,15 +25,16 @@
 #include "OpenXRUtils.h"
 
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
 namespace PlatformXR {
 
 class OpenXRInputSource {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(OpenXRInputSource);
     WTF_MAKE_NONCOPYABLE(OpenXRInputSource);
 public:
-    using SuggestedBindings = HashMap<const char*, Vector<XrActionSuggestedBinding>>;
+    using SuggestedBindings = UncheckedKeyHashMap<const char*, Vector<XrActionSuggestedBinding>>;
     static std::unique_ptr<OpenXRInputSource> create(XrInstance, XrSession, XRHandedness, InputSourceHandle);
     ~OpenXRInputSource();
 
@@ -75,9 +76,9 @@ private:
     XrSpace m_gripSpace { XR_NULL_HANDLE };
     XrAction m_pointerAction { XR_NULL_HANDLE };
     XrSpace m_pointerSpace { XR_NULL_HANDLE };
-    using OpenXRButtonActionsMap = HashMap<OpenXRButtonType, OpenXRButtonActions, IntHash<OpenXRButtonType>, WTF::StrongEnumHashTraits<OpenXRButtonType>>;
+    using OpenXRButtonActionsMap = UncheckedKeyHashMap<OpenXRButtonType, OpenXRButtonActions, IntHash<OpenXRButtonType>, WTF::StrongEnumHashTraits<OpenXRButtonType>>;
     OpenXRButtonActionsMap m_buttonActions;
-    using OpenXRAxesMap = HashMap<OpenXRAxisType, XrAction, IntHash<OpenXRAxisType>, WTF::StrongEnumHashTraits<OpenXRAxisType>>;
+    using OpenXRAxesMap = UncheckedKeyHashMap<OpenXRAxisType, XrAction, IntHash<OpenXRAxisType>, WTF::StrongEnumHashTraits<OpenXRAxisType>>;
     OpenXRAxesMap m_axisActions;
     Vector<String> m_profiles;
 };

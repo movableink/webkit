@@ -30,6 +30,7 @@
 #include "SVGPropertyAccessorImpl.h"
 #include "SVGPropertyRegistry.h"
 #include <wtf/HashMap.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -62,7 +63,7 @@ struct SVGAttributeHashTranslator {
 
 template<typename OwnerType, typename... BaseTypes>
 class SVGPropertyOwnerRegistry : public SVGPropertyRegistry {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(SVGPropertyOwnerRegistry);
 public:
     SVGPropertyOwnerRegistry(OwnerType& owner)
         : m_owner(owner)
@@ -285,9 +286,9 @@ public:
 
     // Enumerate recursively the SVGMemberAccessors of the OwnerType and all its BaseTypes.
     // Collect all the pairs <AttributeName, String> only for the dirty properties.
-    HashMap<QualifiedName, String> synchronizeAllAttributes() const override
+    UncheckedKeyHashMap<QualifiedName, String> synchronizeAllAttributes() const override
     {
-        HashMap<QualifiedName, String> map;
+        UncheckedKeyHashMap<QualifiedName, String> map;
         enumerateRecursively([&](const auto& entry) -> bool {
             if (auto string = entry.value->synchronize(m_owner))
                 map.add(entry.key, *string);
@@ -342,7 +343,7 @@ public:
 
 private:
     // Singleton map for every OwnerType.
-    using QualifiedNameAccessorHashMap = HashMap<QualifiedName, const SVGMemberAccessor<OwnerType>*, SVGAttributeHashTranslator>;
+    using QualifiedNameAccessorHashMap = UncheckedKeyHashMap<QualifiedName, const SVGMemberAccessor<OwnerType>*, SVGAttributeHashTranslator>;
 
     static QualifiedNameAccessorHashMap& attributeNameToAccessorMap()
     {

@@ -53,15 +53,14 @@ class SecurityOrigin;
 struct PositionOptions;
 
 class Geolocation final : public ScriptWrappable, public RefCounted<Geolocation>, public CanMakeWeakPtr<Geolocation>, public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED_EXPORT(Geolocation, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(Geolocation, WEBCORE_EXPORT);
     friend class GeoNotifier;
 public:
-    static Ref<Geolocation> create(Navigator&);
-    WEBCORE_EXPORT ~Geolocation();
-
-    // ActiveDOMObject.
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
+
+    static Ref<Geolocation> create(Navigator&);
+    WEBCORE_EXPORT ~Geolocation();
 
     WEBCORE_EXPORT void resetAllGeolocationPermission();
     Document* document() const { return downcast<Document>(scriptExecutionContext()); }

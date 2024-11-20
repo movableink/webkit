@@ -29,6 +29,7 @@
 #include <WebCore/ScreenOrientationLockType.h>
 #include <WebCore/ScreenOrientationType.h>
 #include <wtf/CompletionHandler.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 class Exception;
@@ -37,12 +38,14 @@ class Exception;
 namespace WebKit {
 
 class WebPageProxy;
+struct SharedPreferencesForWebProcess;
 
 class WebScreenOrientationManagerProxy final : public IPC::MessageReceiver {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(WebScreenOrientationManagerProxy);
 public:
     WebScreenOrientationManagerProxy(WebPageProxy&, WebCore::ScreenOrientationType);
     ~WebScreenOrientationManagerProxy();
+    std::optional<SharedPreferencesForWebProcess> sharedPreferencesForWebProcess() const;
 
     // IPC::MessageReceiver
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) final;
@@ -61,7 +64,9 @@ private:
     void unlock();
     void setShouldSendChangeNotification(bool);
 
-    WebPageProxy& m_page;
+    Ref<WebPageProxy> protectedPage() const;
+
+    WeakRef<WebPageProxy> m_page;
     WebCore::ScreenOrientationType m_currentOrientation;
     std::optional<WebCore::ScreenOrientationType> m_currentlyLockedOrientation;
     CompletionHandler<void(std::optional<WebCore::Exception>&&)> m_currentLockRequest;

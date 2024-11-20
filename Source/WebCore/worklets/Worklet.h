@@ -42,14 +42,13 @@ class WorkletGlobalScopeProxy;
 class WorkletPendingTasks;
 
 class Worklet : public RefCounted<Worklet>, public ScriptWrappable, public CanMakeWeakPtr<Worklet>, public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(Worklet);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Worklet);
 public:
-    virtual ~Worklet();
-
-    // ActiveDOMOject.
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
-    
+
+    virtual ~Worklet();
+
     virtual void addModule(const String& moduleURL, WorkletOptions&&, DOMPromiseDeferred<void>&&);
 
     void finishPendingTasks(WorkletPendingTasks&);

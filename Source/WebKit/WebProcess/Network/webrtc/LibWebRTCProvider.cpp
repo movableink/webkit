@@ -41,15 +41,19 @@
 #include <WebCore/Page.h>
 #include <WebCore/RegistrableDomain.h>
 #include <WebCore/Settings.h>
+#include <wtf/TZoneMallocInlines.h>
 
-ALLOW_COMMA_BEGIN
-
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
+// See Bug 274508: Disable thread-safety-reference-return warnings in libwebrtc
+IGNORE_CLANG_WARNINGS_BEGIN("thread-safety-reference-return")
 #include <webrtc/pc/peer_connection_factory.h>
-
-ALLOW_COMMA_END
+IGNORE_CLANG_WARNINGS_END
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
 namespace WebKit {
 using namespace WebCore;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LibWebRTCProvider);
 
 LibWebRTCProvider::LibWebRTCProvider(WebPage& webPage)
     : m_webPage(webPage)
@@ -70,7 +74,7 @@ rtc::scoped_refptr<webrtc::PeerConnectionInterface> LibWebRTCProvider::createPee
     LibWebRTCCodecs::initializeIfNeeded();
 #endif
 
-    auto* networkManager = LibWebRTCNetworkManager::getOrCreate(identifier);
+    RefPtr networkManager = LibWebRTCNetworkManager::getOrCreate(identifier);
     if (!networkManager)
         return nullptr;
 
@@ -98,7 +102,7 @@ void LibWebRTCProvider::setVP9HardwareSupportForTesting(std::optional<bool> valu
 #endif
 
 class RTCSocketFactory final : public LibWebRTCProvider::SuspendableSocketFactory {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(RTCSocketFactory);
 public:
     RTCSocketFactory(WebPageProxyIdentifier, String&& userAgent, ScriptExecutionContextIdentifier, bool isFirstParty, RegistrableDomain&&);
 
@@ -121,6 +125,8 @@ private:
     bool m_isRelayDisabled { false };
     RegistrableDomain m_domain;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RTCSocketFactory);
 
 RTCSocketFactory::RTCSocketFactory(WebPageProxyIdentifier pageIdentifier, String&& userAgent, ScriptExecutionContextIdentifier identifier, bool isFirstParty, RegistrableDomain&& domain)
     : m_pageIdentifier(pageIdentifier)

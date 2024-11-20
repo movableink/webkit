@@ -36,12 +36,13 @@
 #include <climits>
 #include <limits>
 #include <wtf/CheckedRef.h>
-#include <wtf/FastMalloc.h>
 #include <wtf/Vector.h>
 
 #if PLATFORM(QT)
 #include <QPointF>
 #endif
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -107,12 +108,12 @@ public:
         add(glyph, font, advance, offsetInString);
     }
 
-    void add(Glyph glyph, const Font& font, GlyphBufferAdvance advance, GlyphBufferStringOffset offsetInString)
+    void add(Glyph glyph, const Font& font, GlyphBufferAdvance advance, GlyphBufferStringOffset offsetInString, FloatPoint origin = { })
     {
         m_fonts.append(&font);
         m_glyphs.append(glyph);
         m_advances.append(advance);
-        m_origins.append(makeGlyphBufferOrigin());
+        m_origins.append(makeGlyphBufferOrigin(origin));
         m_offsetsInString.append(offsetInString);
     }
 
@@ -166,6 +167,16 @@ public:
         ASSERT(index < size());
         auto& lastAdvance = m_advances[index];
         setWidth(lastAdvance, WebCore::width(lastAdvance) + width);
+    }
+
+    void expandAdvanceToLogicalRight(unsigned index, float width)
+    {
+        if (index >= size()) {
+            ASSERT_NOT_REACHED();
+            return;
+        }
+        setWidth(m_advances[index], WebCore::width(m_advances[index]) + width);
+        setX(m_origins[index], x(m_origins[index]) + width);
     }
 
     void expandLastAdvance(GlyphBufferAdvance expansion)
@@ -274,3 +285,5 @@ private:
 };
 
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

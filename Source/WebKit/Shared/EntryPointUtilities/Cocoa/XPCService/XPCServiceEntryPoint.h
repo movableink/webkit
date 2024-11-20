@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,6 +24,8 @@
  */
 
 #pragma once
+
+#include <wtf/Compiler.h>
 
 #import "AuxiliaryProcess.h"
 #import "WebKit2Initialize.h"
@@ -63,7 +65,7 @@ public:
     virtual bool checkEntitlements();
 
     virtual bool getConnectionIdentifier(IPC::Connection::Identifier& identifier);
-    virtual bool getProcessIdentifier(WebCore::ProcessIdentifier&);
+    virtual bool getProcessIdentifier(std::optional<WebCore::ProcessIdentifier>&);
     virtual bool getClientIdentifier(String& clientIdentifier);
     virtual bool getClientBundleIdentifier(String& clientBundleIdentifier);
     virtual bool getClientProcessName(String& clientProcessName);
@@ -88,47 +90,13 @@ void initializeAuxiliaryProcess(AuxiliaryProcessInitializationParameters&& param
 void setOSTransaction(OSObjectPtr<os_transaction_t>&&);
 #endif
 
-template<typename XPCServiceType, typename XPCServiceInitializerDelegateType>
+enum class EnableLockdownMode: bool { No, Yes };
+
+void setJSCOptions(xpc_object_t initializerMessage, EnableLockdownMode, bool isWebContentProcess);
+
+template<typename XPCServiceType, typename XPCServiceInitializerDelegateType, bool isWebContentProcess = false>
 void XPCServiceInitializer(OSObjectPtr<xpc_connection_t> connection, xpc_object_t initializerMessage)
 {
-    if (initializerMessage) {
-        bool optionsChanged = false;
-        if (xpc_dictionary_get_bool(initializerMessage, "configure-jsc-for-testing"))
-            JSC::Config::configureForTesting();
-        if (xpc_dictionary_get_bool(initializerMessage, "enable-captive-portal-mode")) {
-            JSC::Options::initialize();
-            JSC::Options::AllowUnfinalizedAccessScope scope;
-            JSC::ExecutableAllocator::disableJIT();
-            JSC::Options::useGenerationalGC() = false;
-            JSC::Options::useConcurrentGC() = false;
-            JSC::Options::useLLIntICs() = false;
-            JSC::Options::useZombieMode() = true;
-            JSC::Options::allowDoubleShape() = false;
-            JSC::Options::alwaysHaveABadTime() = true;
-            optionsChanged = true;
-        } else if (xpc_dictionary_get_bool(initializerMessage, "disable-jit")) {
-            JSC::Options::initialize();
-            JSC::Options::AllowUnfinalizedAccessScope scope;
-            JSC::ExecutableAllocator::disableJIT();
-            optionsChanged = true;
-        }
-        if (xpc_dictionary_get_bool(initializerMessage, "enable-shared-array-buffer")) {
-            JSC::Options::initialize();
-            JSC::Options::AllowUnfinalizedAccessScope scope;
-            JSC::Options::useSharedArrayBuffer() = true;
-            optionsChanged = true;
-        }
-        // FIXME (276012): Remove this XPC bootstrap message when it's no longer necessary. See rdar://130669638 for more context.
-        if (xpc_dictionary_get_bool(initializerMessage, "disable-jit-cage")) {
-            JSC::Options::initialize();
-            JSC::Options::AllowUnfinalizedAccessScope scope;
-            JSC::Options::useJITCage() = false;
-            optionsChanged = true;
-        }
-        if (optionsChanged)
-            JSC::Options::notifyOptionsChanged();
-    }
-
     XPCServiceInitializerDelegateType delegate(WTFMove(connection), initializerMessage);
 
     // We don't want XPC to be in charge of whether the process should be terminated or not,
@@ -138,12 +106,35 @@ void XPCServiceInitializer(OSObjectPtr<xpc_connection_t> connection, xpc_object_
     setOSTransaction(adoptOSObject(os_transaction_create("WebKit XPC Service")));
 #endif
 
+    AuxiliaryProcessInitializationParameters parameters;
+
+    if (!delegate.getExtraInitializationData(parameters.extraInitializationData))
+        exitProcess(EXIT_FAILURE);
+
+    if (isWebContentProcess)
+        JSC::Options::machExceptionHandlerSandboxPolicy = JSC::Options::SandboxPolicy::Allow;
+    if (initializerMessage) {
+        bool enableLockdownMode = parameters.extraInitializationData.get<HashTranslatorASCIILiteral>("enable-lockdown-mode"_s) == "1"_s;
+        setJSCOptions(initializerMessage, enableLockdownMode ? EnableLockdownMode::Yes : EnableLockdownMode::No, isWebContentProcess);
+    }
+
+    // InitializeWebKit2() calls linkedOnOrAfterSDKWithBehavior(), so SDK-aligned behaviors must be
+    // configured beforehand.
+    SDKAlignedBehaviors clientSDKAlignedBehaviors;
+    delegate.getClientSDKAlignedBehaviors(clientSDKAlignedBehaviors);
+    setSDKAlignedBehaviors(clientSDKAlignedBehaviors);
+
+    // computeSDKAlignedBehaviors() asserts that it is not called in an auxiliary process, so
+    // setAuxiliaryProcessType() should be called before the first call to
+    // linkedOnOrAfterSDKWithBehavior() to ensure the assertion will catch bugs where
+    // setSDKAlignedBehaviors() isn't called at the right time.
+    parameters.processType = XPCServiceType::processType;
+    setAuxiliaryProcessType(parameters.processType);
+
     InitializeWebKit2();
 
     if (!delegate.checkEntitlements())
         exitProcess(EXIT_FAILURE);
-
-    AuxiliaryProcessInitializationParameters parameters;
 
     if (!delegate.getConnectionIdentifier(parameters.connectionIdentifier))
         exitProcess(EXIT_FAILURE);
@@ -153,18 +144,13 @@ void XPCServiceInitializer(OSObjectPtr<xpc_connection_t> connection, xpc_object_
 
     // The host process may not have a bundle identifier (e.g. a command line app), so don't require one.
     delegate.getClientBundleIdentifier(parameters.clientBundleIdentifier);
-    
-    delegate.getClientSDKAlignedBehaviors(parameters.clientSDKAlignedBehaviors);
 
-    WebCore::ProcessIdentifier processIdentifier;
+    std::optional<WebCore::ProcessIdentifier> processIdentifier;
     if (!delegate.getProcessIdentifier(processIdentifier))
         exitProcess(EXIT_FAILURE);
-    parameters.processIdentifier = processIdentifier;
+    parameters.processIdentifier = *processIdentifier;
 
     if (!delegate.getClientProcessName(parameters.uiProcessName))
-        exitProcess(EXIT_FAILURE);
-
-    if (!delegate.getExtraInitializationData(parameters.extraInitializationData))
         exitProcess(EXIT_FAILURE);
 
     // Set the task default voucher to the current value (as propagated by XPC).
@@ -174,8 +160,6 @@ void XPCServiceInitializer(OSObjectPtr<xpc_connection_t> connection, xpc_object_
     if (parameters.extraInitializationData.contains("always-runs-at-background-priority"_s))
         Thread::setGlobalMaxQOSClass(QOS_CLASS_UTILITY);
 #endif
-
-    parameters.processType = XPCServiceType::processType;
 
     initializeAuxiliaryProcess<XPCServiceType>(WTFMove(parameters));
 }

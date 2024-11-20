@@ -39,6 +39,7 @@
 #include "WebPage.h"
 #include "WebPageProxyMessages.h"
 #include <WebCore/AuthenticationChallenge.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebKit {
 using namespace WebCore;
@@ -48,6 +49,8 @@ static bool canCoalesceChallenge(const WebCore::AuthenticationChallenge& challen
     // Do not coalesce server trust evaluation requests because ProtectionSpace comparison does not evaluate server trust (e.g. certificate).
     return challenge.protectionSpace().authenticationScheme() != ProtectionSpace::AuthenticationScheme::ServerTrustEvaluationRequested;
 }
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AuthenticationManager);
 
 ASCIILiteral AuthenticationManager::supplementName()
 {
@@ -61,6 +64,16 @@ AuthenticationManager::AuthenticationManager(NetworkProcess& process)
 }
 
 AuthenticationManager::~AuthenticationManager() = default;
+
+void AuthenticationManager::ref() const
+{
+    return m_process->ref();
+}
+
+void AuthenticationManager::deref() const
+{
+    return m_process->deref();
+}
 
 inline Ref<NetworkProcess> AuthenticationManager::protectedProcess() const
 {
@@ -77,7 +90,7 @@ AuthenticationChallengeIdentifier AuthenticationManager::addChallengeToChallenge
     return challengeID;
 }
 
-bool AuthenticationManager::shouldCoalesceChallenge(WebPageProxyIdentifier pageID, AuthenticationChallengeIdentifier challengeID, const AuthenticationChallenge& challenge) const
+bool AuthenticationManager::shouldCoalesceChallenge(std::optional<WebPageProxyIdentifier> pageID, AuthenticationChallengeIdentifier challengeID, const AuthenticationChallenge& challenge) const
 {
     if (!canCoalesceChallenge(challenge))
         return false;
@@ -111,26 +124,26 @@ Vector<AuthenticationChallengeIdentifier> AuthenticationManager::coalesceChallen
     return challengesToCoalesce;
 }
 
-void AuthenticationManager::didReceiveAuthenticationChallenge(PAL::SessionID sessionID, WebPageProxyIdentifier pageID, const SecurityOriginData* topOrigin, const AuthenticationChallenge& authenticationChallenge, NegotiatedLegacyTLS negotiatedLegacyTLS, ChallengeCompletionHandler&& completionHandler)
+void AuthenticationManager::didReceiveAuthenticationChallenge(PAL::SessionID sessionID, std::optional<WebPageProxyIdentifier> pageID, const SecurityOriginData* topOrigin, const AuthenticationChallenge& authenticationChallenge, NegotiatedLegacyTLS negotiatedLegacyTLS, ChallengeCompletionHandler&& completionHandler)
 {
     if (!pageID)
         return completionHandler(AuthenticationChallengeDisposition::PerformDefaultHandling, { });
 
-    auto challengeID = addChallengeToChallengeMap(makeUniqueRef<Challenge>(pageID, authenticationChallenge, WTFMove(completionHandler)));
+    auto challengeID = addChallengeToChallengeMap(makeUniqueRef<Challenge>(*pageID, authenticationChallenge, WTFMove(completionHandler)));
 
     // Coalesce challenges in the same protection space and in the same page.
-    if (shouldCoalesceChallenge(pageID, challengeID, authenticationChallenge))
+    if (shouldCoalesceChallenge(*pageID, challengeID, authenticationChallenge))
         return;
 
     std::optional<SecurityOriginData> topOriginData;
     if (topOrigin)
         topOriginData = *topOrigin;
-    protectedProcess()->send(Messages::NetworkProcessProxy::DidReceiveAuthenticationChallenge(sessionID, pageID, topOriginData, authenticationChallenge, negotiatedLegacyTLS == NegotiatedLegacyTLS::Yes, challengeID));
+    protectedProcess()->send(Messages::NetworkProcessProxy::DidReceiveAuthenticationChallenge(sessionID, *pageID, topOriginData, authenticationChallenge, negotiatedLegacyTLS == NegotiatedLegacyTLS::Yes, challengeID));
 }
 
 void AuthenticationManager::didReceiveAuthenticationChallenge(IPC::MessageSender& download, const WebCore::AuthenticationChallenge& authenticationChallenge, ChallengeCompletionHandler&& completionHandler)
 {
-    WebPageProxyIdentifier dummyPageID;
+    std::optional<WebPageProxyIdentifier> dummyPageID;
     auto challengeID = addChallengeToChallengeMap(makeUniqueRef<Challenge>(dummyPageID, authenticationChallenge, WTFMove(completionHandler)));
     
     // Coalesce challenges in the same protection space and in the same page.

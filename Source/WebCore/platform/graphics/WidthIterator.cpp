@@ -28,11 +28,17 @@
 #include "GlyphBuffer.h"
 #include "Latin1TextIterator.h"
 #include "SurrogatePairAwareTextIterator.h"
+#include "TextSpacing.h"
 #include <algorithm>
 #include <wtf/MathExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CharacterProperties.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WidthIterator);
 
 using namespace WTF::Unicode;
 
@@ -182,7 +188,7 @@ void WidthIterator::applyInitialAdvance(GlyphBuffer& glyphBuffer, GlyphBufferAdv
 
 bool WidthIterator::hasExtraSpacing() const
 {
-    return (m_font->letterSpacing() || m_font->wordSpacing() || m_expansion) && !m_run->spacingDisabled();
+    return (m_font->letterSpacing() || m_font->wordSpacing() || m_expansion || !m_font->textAutospace().isNoAutospace()) && !m_run->spacingDisabled();
 }
 
 static void resetGlyphBuffer(GlyphBuffer& glyphBuffer, GlyphBufferStringOffset index)
@@ -386,6 +392,21 @@ inline void WidthIterator::advanceInternal(TextIterator& textIterator, GlyphBuff
         return;
 
     auto glyphData = m_font->glyphDataForCharacter(character, false, FontVariant::NormalVariant);
+
+    auto getHalfWidthFontAndSetGlyphDataIfNeeded = [&](GlyphData& glyphData, const TextSpacing::CharactersData& charactersData) {
+        auto halfWidthFont = fontDescription.textSpacingTrim().shouldTrimSpacing(charactersData) ? glyphData.font->halfWidthFont() : nullptr;
+        if (halfWidthFont)
+            glyphData.font = halfWidthFont.get();
+        return halfWidthFont;
+    };
+
+    RefPtr<Font> halfWidthFont;
+    auto shouldProcessTextSpacingTrim = !fontDescription.textSpacingTrim().isSpaceAll();
+    if (shouldProcessTextSpacingTrim) {
+        TextSpacing::CharactersData charactersData = { .currentCharacter = character, .currentCharacterClass = TextSpacing::characterClass(character) };
+        halfWidthFont = getHalfWidthFontAndSetGlyphDataIfNeeded(glyphData, charactersData);
+    }
+
     advanceInternalState.updateFont(glyphData.font ? glyphData.font.get() : primaryFont.ptr());
     auto capitalizedCharacter = capitalized(character);
     if (shouldSynthesizeSmallCaps(smallCapsState.dontSynthesizeSmallCaps, advanceInternalState.font.get(), character, capitalizedCharacter, smallCapsState.fontVariantCaps, smallCapsState.engageAllSmallCapsProcessing))
@@ -415,6 +436,12 @@ inline void WidthIterator::advanceInternal(TextIterator& textIterator, GlyphBuff
         }
 #endif
         auto glyphData = m_font->glyphDataForCharacter(character, false, FontVariant::NormalVariant);
+
+        if (shouldProcessTextSpacingTrim) {
+            TextSpacing::CharactersData charactersData = { .currentCharacter = character, .currentCharacterClass = TextSpacing::characterClass(character) };
+            halfWidthFont = getHalfWidthFontAndSetGlyphDataIfNeeded(glyphData, charactersData);
+        }
+
         advanceInternalState.updateFont(glyphData.font ? glyphData.font.get() : primaryFont.ptr());
         smallCapsState.shouldSynthesizeCharacter = shouldSynthesizeSmallCaps(smallCapsState.dontSynthesizeSmallCaps, advanceInternalState.font.get(), character, capitalizedCharacter, smallCapsState.fontVariantCaps, smallCapsState.engageAllSmallCapsProcessing);
         updateCharacterAndSmallCapsIfNeeded(smallCapsState, capitalizedCharacter, characterToWrite);
@@ -609,7 +636,9 @@ void WidthIterator::applyExtraSpacingAfterShaping(GlyphBuffer& glyphBuffer, unsi
         }
     }
 
+    auto previousCharacterClass = m_run->textSpacingState().lastCharacterClassFromPreviousRun;
     float position = m_run->xPos() + startingRunWidth;
+    const auto& textAutospace = m_font->textAutospace();
     for (auto i = characterStartIndex; i < characterDestinationIndex; ++i) {
         auto& glyphIndexRange = characterIndexToGlyphIndexRange[i];
         if (!glyphIndexRange)
@@ -617,6 +646,18 @@ void WidthIterator::applyExtraSpacingAfterShaping(GlyphBuffer& glyphBuffer, unsi
 
         auto width = calculateAdditionalWidth(glyphBuffer, i, glyphIndexRange->leadingGlyphIndex, glyphIndexRange->trailingGlyphIndex, position);
         applyAdditionalWidth(glyphBuffer, glyphIndexRange.value(), width.left, width.right, width.leftExpansion, width.rightExpansion);
+
+        auto textAutospaceSpacing = 0.f;
+        auto characterClass = TextSpacing::CharacterClass::Undefined;
+        if (!textAutospace.isNoAutospace()) {
+            characterClass = TextSpacing::characterClass(m_run.get()[i]);
+            if (textAutospace.shouldApplySpacing(characterClass, previousCharacterClass)) {
+                textAutospaceSpacing = TextAutospace::textAutospaceSize(glyphBuffer.fontAt(glyphIndexRange->leadingGlyphIndex));
+                glyphBuffer.expandAdvanceToLogicalRight(glyphIndexRange->leadingGlyphIndex, textAutospaceSpacing);
+                m_runWidthSoFar += textAutospaceSpacing;
+            }
+        }
+        previousCharacterClass = characterClass;
 
         m_isAfterExpansion = (ltr() && width.rightExpansion) || (rtl() && width.leftExpansion);
 
@@ -839,3 +880,5 @@ bool WidthIterator::advanceOneCharacter(float& width, GlyphBuffer& glyphBuffer)
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

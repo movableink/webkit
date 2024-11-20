@@ -35,8 +35,11 @@
 #include "RenderTreeBuilder.h"
 #include "RenderView.h"
 #include "StyleChange.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(RenderTreeBuilderFirstLetter, RenderTreeBuilder::FirstLetter);
 
 static std::optional<RenderStyle> styleForFirstLetter(const RenderElement& firstLetterContainer)
 {
@@ -49,7 +52,7 @@ static std::optional<RenderStyle> styleForFirstLetter(const RenderElement& first
 
     // If we have an initial letter drop that is >= 1, then we need to force floating to be on.
     if (firstLetterStyle.initialLetterDrop() >= 1 && !firstLetterStyle.isFloating())
-        firstLetterStyle.setFloating(firstLetterStyle.isLeftToRightDirection() ? Float::Left : Float::Right);
+        firstLetterStyle.setFloating(firstLetterStyle.writingMode().isBidiLTR() ? Float::Left : Float::Right);
 
     // We have to compute the correct font-size for the first-letter if it has an initial letter height set.
     auto* paragraph = firstLetterContainer.isRenderBlockFlow() ? &firstLetterContainer : firstLetterContainer.containingBlock();
@@ -191,7 +194,7 @@ void RenderTreeBuilder::FirstLetter::updateStyle(RenderBlock& firstLetterBlock, 
         // Move the first letter into the new renderer.
         while (RenderObject* child = firstLetter->firstChild()) {
             if (is<RenderText>(*child))
-                downcast<RenderText>(*child).removeAndDestroyTextBoxes();
+                downcast<RenderText>(*child).removeAndDestroyLegacyTextBoxes();
             auto toMove = m_builder.detach(*firstLetter, *child, WillBeDestroyed::No);
             m_builder.attach(*newFirstLetter, WTFMove(toMove));
         }

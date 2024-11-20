@@ -30,6 +30,7 @@
 
 #include "ChromeClient.h"
 #include "CryptoClient.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 
 // Empty client classes for use by WebCore.
@@ -45,7 +46,7 @@ class HTMLImageElement;
 class PageConfiguration;
 
 class EmptyChromeClient : public ChromeClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(EmptyChromeClient);
 
     void chromeDestroyed() override { }
 
@@ -63,7 +64,7 @@ class EmptyChromeClient : public ChromeClient {
     void focusedElementChanged(Element*) final { }
     void focusedFrameChanged(Frame*) final { }
 
-    Page* createWindow(LocalFrame&, const WindowFeatures&, const NavigationAction&) final { return nullptr; }
+    RefPtr<Page> createWindow(LocalFrame&, const String&, const WindowFeatures&, const NavigationAction&) final { return nullptr; }
     void show() final { }
 
     bool canRunModal() const final { return false; }
@@ -103,8 +104,6 @@ class EmptyChromeClient : public ChromeClient {
     RefPtr<PopupMenu> createPopupMenu(PopupMenuClient&) const final;
     RefPtr<SearchPopupMenu> createSearchPopupMenu(PopupMenuClient&) const final;
 
-    void setStatusbarText(const String&) final { }
-
     KeyboardUIMode keyboardUIMode() final { return KeyboardAccessDefault; }
 
     bool hoverSupportedByPrimaryPointingDevice() const final { return false; };
@@ -141,16 +140,16 @@ class EmptyChromeClient : public ChromeClient {
     void reachedApplicationCacheOriginQuota(SecurityOrigin&, int64_t) final { }
 
 #if ENABLE(INPUT_TYPE_COLOR)
-    std::unique_ptr<ColorChooser> createColorChooser(ColorChooserClient&, const Color&) final;
+    RefPtr<ColorChooser> createColorChooser(ColorChooserClient&, const Color&) final;
 #endif
 
 #if ENABLE(DATALIST_ELEMENT)
-    std::unique_ptr<DataListSuggestionPicker> createDataListSuggestionPicker(DataListSuggestionsClient&) final;
+    RefPtr<DataListSuggestionPicker> createDataListSuggestionPicker(DataListSuggestionsClient&) final;
     bool canShowDataListSuggestionLabels() const final { return false; }
 #endif
 
 #if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-    std::unique_ptr<DateTimeChooser> createDateTimeChooser(DateTimeChooserClient&) final;
+    RefPtr<DateTimeChooser> createDateTimeChooser(DateTimeChooserClient&) final;
 #endif
 
     void setTextIndicator(const TextIndicatorData&) const final;
@@ -235,7 +234,7 @@ DiagnosticLoggingClient& emptyDiagnosticLoggingClient();
 WEBCORE_EXPORT PageConfiguration pageConfigurationWithEmptyClients(std::optional<PageIdentifier>, PAL::SessionID);
 
 class EmptyCryptoClient: public CryptoClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(EmptyCryptoClient);
 public:
     EmptyCryptoClient() = default;
     ~EmptyCryptoClient() = default;

@@ -54,14 +54,12 @@ bool WebContextMenuClient::isSpeaking() const
     return m_page->isSpeaking();
 }
 
-void WebContextMenuClient::speak(const String& string)
+void WebContextMenuClient::speak(const String&)
 {
-    m_page->speak(string);
 }
 
 void WebContextMenuClient::stopSpeaking()
 {
-    m_page->stopSpeaking();
 }
 
 void WebContextMenuClient::searchWithGoogle(const LocalFrame* frame)
@@ -78,18 +76,6 @@ void WebContextMenuClient::handleTranslation(const WebCore::TranslationContextMe
 }
 
 #endif // HAVE(TRANSLATION_UI_SERVICES)
-
-#if ENABLE(WRITING_TOOLS)
-
-void WebContextMenuClient::handleWritingTools(WebCore::IntRect selectionBoundsInRootView)
-{
-    if (!m_page)
-        return;
-
-    m_page->send(Messages::WebPageProxy::HandleContextMenuWritingTools(selectionBoundsInRootView));
-}
-
-#endif
 
 } // namespace WebKit
 

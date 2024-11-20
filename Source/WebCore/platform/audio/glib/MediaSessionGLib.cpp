@@ -25,9 +25,13 @@
 #include "MediaSessionManagerGLib.h"
 #include <gio/gio.h>
 #include <wtf/SortedArrayMap.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/glib/GUniquePtr.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaSessionGLib);
 
 #define DBUS_MPRIS_OBJECT_PATH "/org/mpris/MediaPlayer2"
 #define DBUS_MPRIS_PLAYER_INTERFACE "org.mpris.MediaPlayer2.Player"
@@ -226,8 +230,10 @@ bool MediaSessionGLib::ensureMprisSessionRegistered()
         return false;
     }
 
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
     m_playerRegistrationId = g_dbus_connection_register_object(m_connection.get(), DBUS_MPRIS_OBJECT_PATH, mprisInterface->interfaces[1],
         &gInterfaceVTable, this, nullptr, &error.outPtr());
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     if (!m_playerRegistrationId) {
         g_warning("Failed at MPRIS object registration: %s", error->message);
@@ -284,7 +290,8 @@ void MediaSessionGLib::updateNowPlaying(NowPlayingInfo& nowPlayingInfo)
     GVariantBuilder propertiesBuilder;
     g_variant_builder_init(&propertiesBuilder, G_VARIANT_TYPE("a{sv}"));
     g_variant_builder_add(&propertiesBuilder, "{sv}", "Metadata", getMetadataAsGVariant(nowPlayingInfo));
-    emitPropertiesChanged(g_variant_new("(sa{sv}as)", DBUS_MPRIS_PLAYER_INTERFACE, &propertiesBuilder, nullptr));
+    GRefPtr properties = g_variant_new("(sa{sv}as)", DBUS_MPRIS_PLAYER_INTERFACE, &propertiesBuilder, nullptr);
+    emitPropertiesChanged(WTFMove(properties));
     g_variant_builder_clear(&propertiesBuilder);
 }
 
@@ -341,7 +348,7 @@ GVariant* MediaSessionGLib::getPlaybackStatusAsGVariant(std::optional<const Plat
     return nullptr;
 }
 
-void MediaSessionGLib::emitPropertiesChanged(GVariant* parameters)
+void MediaSessionGLib::emitPropertiesChanged(GRefPtr<GVariant>&& parameters)
 {
     if (!m_connection)
         return;
@@ -350,7 +357,7 @@ void MediaSessionGLib::emitPropertiesChanged(GVariant* parameters)
         return;
 
     GUniqueOutPtr<GError> error;
-    if (!g_dbus_connection_emit_signal(m_connection.get(), nullptr, DBUS_MPRIS_OBJECT_PATH, "org.freedesktop.DBus.Properties", "PropertiesChanged", parameters, &error.outPtr()))
+    if (!g_dbus_connection_emit_signal(m_connection.get(), nullptr, DBUS_MPRIS_OBJECT_PATH, "org.freedesktop.DBus.Properties", "PropertiesChanged", parameters.get(), &error.outPtr()))
         g_warning("Failed to emit MPRIS properties changed: %s", error->message);
 }
 
@@ -362,7 +369,8 @@ void MediaSessionGLib::playbackStatusChanged(PlatformMediaSession& platformSessi
     GVariantBuilder builder;
     g_variant_builder_init(&builder, G_VARIANT_TYPE("a{sv}"));
     g_variant_builder_add(&builder, "{sv}", "PlaybackStatus", getPlaybackStatusAsGVariant(&platformSession));
-    emitPropertiesChanged(g_variant_new("(sa{sv}as)", DBUS_MPRIS_PLAYER_INTERFACE, &builder, nullptr));
+    GRefPtr properties = g_variant_new("(sa{sv}as)", DBUS_MPRIS_PLAYER_INTERFACE, &builder, nullptr);
+    emitPropertiesChanged(WTFMove(properties));
     g_variant_builder_clear(&builder);
 }
 

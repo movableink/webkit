@@ -44,9 +44,12 @@
 #include <wtf/DateMath.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/OptionSet.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/unicode/CharacterNames.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -1052,3 +1055,5 @@ CrossOriginResourcePolicy parseCrossOriginResourcePolicyHeader(StringView header
 }
 
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

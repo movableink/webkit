@@ -24,13 +24,14 @@
 
 #pragma once
 
+#include "BlockEllipsis.h"
 #include "Length.h"
 #include "ListStyleType.h"
 #include "RenderStyleConstants.h"
 #include "ScrollbarColor.h"
 #include "StyleColor.h"
 #include "StyleCustomPropertyData.h"
-#include "StyleTextBoxEdge.h"
+#include "StyleTextEdge.h"
 #include "TabSize.h"
 #include "TextUnderlineOffset.h"
 #include "TouchAction.h"
@@ -95,7 +96,8 @@ public:
 
     TextUnderlineOffset textUnderlineOffset;
 
-    TextBoxEdge textBoxEdge;
+    TextEdge textBoxEdge;
+    TextEdge lineFitEdge;
     
     Length wordSpacing;
     float miterLimit;
@@ -122,9 +124,9 @@ public:
     unsigned textEmphasisFill : 1; // TextEmphasisFill
     unsigned textEmphasisMark : 3; // TextEmphasisMark
     unsigned textEmphasisPosition : 4; // TextEmphasisPosition
-    unsigned textOrientation : 2; // TextOrientation
     unsigned textIndentLine : 1; // TextIndentLine
     unsigned textIndentType : 1; // TextIndentType
+    unsigned textUnderlinePosition : 4; // TextUnderlinePosition
     unsigned lineBoxContain: 7; // OptionSet<LineBoxContain>
     // CSS Image Values Level 3
     unsigned imageOrientation : 1; // ImageOrientation
@@ -137,8 +139,9 @@ public:
     unsigned textAlignLast : 3; // TextAlignLast
     unsigned textJustify : 2; // TextJustify
     unsigned textDecorationSkipInk : 2; // TextDecorationSkipInk
-    unsigned textUnderlinePosition : 3; // TextUnderlinePosition
     unsigned rubyPosition : 2; // RubyPosition
+    unsigned rubyAlign : 2; // RubyAlign
+    unsigned rubyOverhang : 1; // RubyOverhang
     unsigned textZoom: 1; // TextZoom
 
 #if PLATFORM(IOS_FAMILY)
@@ -181,7 +184,7 @@ public:
     short hyphenationLimitLines { -1 };
 
 #if ENABLE(DARK_MODE_CSS)
-    StyleColorScheme colorScheme;
+    Style::ColorScheme colorScheme;
 #endif
 
     AtomString textEmphasisCustomMark;
@@ -202,6 +205,8 @@ public:
     ListStyleType listStyleType;
 
     Markable<ScrollbarColor> scrollbarColor;
+
+    BlockEllipsis blockEllipsis;
 
 private:
     StyleRareInheritedData();

@@ -30,7 +30,12 @@
 #include "DNSResolveQueue.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/MainThread.h>
+#include <wtf/RuntimeApplicationChecks.h>
 #include <wtf/URL.h>
+
+#if PLATFORM(IOS_FAMILY)
+#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
+#endif
 
 #if OS(UNIX)
 #include <arpa/inet.h>
@@ -39,6 +44,8 @@
 #if OS(QNX)
 #include <sys/socket.h>
 #endif
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -68,8 +75,15 @@ void stopResolveDNS(uint64_t identifier)
 // FIXME: Temporary fix until we have rdar://63797758
 bool isIPAddressDisallowed(const URL& url)
 {
-    if (auto address = IPAddress::fromString(url.host().toStringWithoutCopying()))
-        return address->containsOnlyZeros();
+#if PLATFORM(IOS_FAMILY)
+    static bool shouldDisallowAddressWithOnlyZeros = linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::BlocksConnectionsToAddressWithOnlyZeros) || !WTF::IOSApplication::isMyRideK12();
+#else
+    static constexpr auto shouldDisallowAddressWithOnlyZeros = true;
+#endif
+    if (shouldDisallowAddressWithOnlyZeros) {
+        if (auto address = IPAddress::fromString(url.host().toStringWithoutCopying()))
+            return address->containsOnlyZeros();
+    }
     return false;
 }
 
@@ -168,3 +182,5 @@ unsigned IPAddress::matchingNetMaskLength(const IPAddress& other) const
 }
 
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

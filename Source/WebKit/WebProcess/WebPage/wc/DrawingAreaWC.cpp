@@ -45,6 +45,7 @@
 #include <WebCore/LocalFrame.h>
 #include <WebCore/LocalFrameView.h>
 #include <WebCore/Page.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebKit {
 using namespace WebCore;
@@ -392,13 +393,13 @@ void DrawingAreaWC::sendUpdateNonAC()
 void DrawingAreaWC::graphicsLayerAdded(GraphicsLayerWC& layer)
 {
     m_liveGraphicsLayers.append(&layer);
-    m_updateInfo.addedLayers.append(layer.primaryLayerID());
+    m_updateInfo.addedLayers.append(*layer.primaryLayerID());
 }
 
 void DrawingAreaWC::graphicsLayerRemoved(GraphicsLayerWC& layer)
 {
     m_liveGraphicsLayers.remove(&layer);
-    m_updateInfo.removedLayers.append(layer.primaryLayerID());
+    m_updateInfo.removedLayers.append(*layer.primaryLayerID());
 }
 
 void DrawingAreaWC::commitLayerUpdateInfo(WCLayerUpdateInfo&& info)

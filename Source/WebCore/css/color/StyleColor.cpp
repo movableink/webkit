@@ -35,7 +35,9 @@
 #include "CSSUnresolvedColor.h"
 #include "HashTools.h"
 #include "RenderTheme.h"
+#include "StyleColorLayers.h"
 #include "StyleColorMix.h"
+#include "StyleContrastColor.h"
 #include "StyleRelativeColor.h"
 #include <wtf/text/TextStream.h>
 
@@ -71,83 +73,93 @@ StyleColor::StyleColor(StyleCurrentColor&& color)
 {
 }
 
+StyleColor::StyleColor(StyleColorLayers&& colorLayers)
+    : m_color { makeIndirectColor(WTFMove(colorLayers)) }
+{
+}
+
 StyleColor::StyleColor(StyleColorMix&& colorMix)
-    : m_color { resolveAbsoluteComponents(WTFMove(colorMix)) }
+    : m_color { makeIndirectColor(WTFMove(colorMix)) }
+{
+}
+
+StyleColor::StyleColor(StyleContrastColor&& contrastColor)
+    : m_color { makeIndirectColor(WTFMove(contrastColor)) }
 {
 }
 
 StyleColor::StyleColor(StyleRelativeColor<RGBFunctionModernRelative>&& relative)
-    : m_color { resolveAbsoluteComponents(WTFMove(relative)) }
+    : m_color { makeIndirectColor(WTFMove(relative)) }
 {
 }
 
 StyleColor::StyleColor(StyleRelativeColor<HSLFunctionModern>&& relative)
-    : m_color { resolveAbsoluteComponents(WTFMove(relative)) }
+    : m_color { makeIndirectColor(WTFMove(relative)) }
 {
 }
 
 StyleColor::StyleColor(StyleRelativeColor<HWBFunction>&& relative)
-    : m_color { resolveAbsoluteComponents(WTFMove(relative)) }
+    : m_color { makeIndirectColor(WTFMove(relative)) }
 {
 }
 
 StyleColor::StyleColor(StyleRelativeColor<LabFunction>&& relative)
-    : m_color { resolveAbsoluteComponents(WTFMove(relative)) }
+    : m_color { makeIndirectColor(WTFMove(relative)) }
 {
 }
 
 StyleColor::StyleColor(StyleRelativeColor<LCHFunction>&& relative)
-    : m_color { resolveAbsoluteComponents(WTFMove(relative)) }
+    : m_color { makeIndirectColor(WTFMove(relative)) }
 {
 }
 
 StyleColor::StyleColor(StyleRelativeColor<OKLabFunction>&& relative)
-    : m_color { resolveAbsoluteComponents(WTFMove(relative)) }
+    : m_color { makeIndirectColor(WTFMove(relative)) }
 {
 }
 
 StyleColor::StyleColor(StyleRelativeColor<OKLCHFunction>&& relative)
-    : m_color { resolveAbsoluteComponents(WTFMove(relative)) }
+    : m_color { makeIndirectColor(WTFMove(relative)) }
 {
 }
 
 StyleColor::StyleColor(StyleRelativeColor<ColorRGBFunction<ExtendedA98RGB<float>>>&& relative)
-    : m_color { resolveAbsoluteComponents(WTFMove(relative)) }
+    : m_color { makeIndirectColor(WTFMove(relative)) }
 {
 }
 
 StyleColor::StyleColor(StyleRelativeColor<ColorRGBFunction<ExtendedDisplayP3<float>>>&& relative)
-    : m_color { resolveAbsoluteComponents(WTFMove(relative)) }
+    : m_color { makeIndirectColor(WTFMove(relative)) }
 {
 }
 
 StyleColor::StyleColor(StyleRelativeColor<ColorRGBFunction<ExtendedProPhotoRGB<float>>>&& relative)
-    : m_color { resolveAbsoluteComponents(WTFMove(relative)) }
+    : m_color { makeIndirectColor(WTFMove(relative)) }
 {
 }
 
 StyleColor::StyleColor(StyleRelativeColor<ColorRGBFunction<ExtendedRec2020<float>>>&& relative)
-    : m_color { resolveAbsoluteComponents(WTFMove(relative)) }
+    : m_color { makeIndirectColor(WTFMove(relative)) }
 {
 }
 
 StyleColor::StyleColor(StyleRelativeColor<ColorRGBFunction<ExtendedSRGBA<float>>>&& relative)
-    : m_color { resolveAbsoluteComponents(WTFMove(relative)) }
+    : m_color { makeIndirectColor(WTFMove(relative)) }
 {
 }
 
 StyleColor::StyleColor(StyleRelativeColor<ColorRGBFunction<ExtendedLinearSRGBA<float>>>&& relative)
-    : m_color { resolveAbsoluteComponents(WTFMove(relative)) }
+    : m_color { makeIndirectColor(WTFMove(relative)) }
 {
 }
 
 StyleColor::StyleColor(StyleRelativeColor<ColorXYZFunction<XYZA<float, WhitePoint::D50>>>&& relative)
-    : m_color { resolveAbsoluteComponents(WTFMove(relative)) }
+    : m_color { makeIndirectColor(WTFMove(relative)) }
 {
 }
 
 StyleColor::StyleColor(StyleRelativeColor<ColorXYZFunction<XYZA<float, WhitePoint::D65>>>&& relative)
-    : m_color { resolveAbsoluteComponents(WTFMove(relative)) }
+    : m_color { makeIndirectColor(WTFMove(relative)) }
 {
 }
 
@@ -184,8 +196,14 @@ decltype(auto) StyleColor::visit(const StyleColor::ColorKind& color, F&&... f)
         [&](const StyleCurrentColor& currentColor) {
             return visitor(currentColor);
         },
+        [&](const UniqueRef<StyleColorLayers>& colorLayers) {
+            return visitor(colorLayers.get());
+        },
         [&](const UniqueRef<StyleColorMix>& colorMix) {
             return visitor(colorMix.get());
+        },
+        [&](const UniqueRef<StyleContrastColor>& contrastColor) {
+            return visitor(contrastColor.get());
         },
         [&]<typename Descriptor>(const UniqueRef<StyleRelativeColor<Descriptor>>& relativeColor) {
             return visitor(relativeColor.get());
@@ -207,8 +225,14 @@ StyleColor::ColorKind StyleColor::copy(const StyleColor::ColorKind& other)
         [] (const StyleCurrentColor&) -> StyleColor::ColorKind {
             return StyleCurrentColor { };
         },
+        [] (const StyleColorLayers& colorLayers) -> StyleColor::ColorKind {
+            return makeUniqueRef<StyleColorLayers>(colorLayers);
+        },
         [] (const StyleColorMix& colorMix) -> StyleColor::ColorKind {
             return makeUniqueRef<StyleColorMix>(colorMix);
+        },
+        [] (const StyleContrastColor& contrastColor) -> StyleColor::ColorKind {
+            return makeUniqueRef<StyleContrastColor>(contrastColor);
         },
         []<typename Descriptor>(const StyleRelativeColor<Descriptor>& relativeColor) -> StyleColor::ColorKind {
             return makeUniqueRef<StyleRelativeColor<Descriptor>>(relativeColor);
@@ -332,6 +356,11 @@ bool StyleColor::isColorMix() const
     return std::holds_alternative<UniqueRef<StyleColorMix>>(m_color);
 }
 
+bool StyleColor::isContrastColor() const
+{
+    return std::holds_alternative<UniqueRef<StyleContrastColor>>(m_color);
+}
+
 bool StyleColor::isRelativeColor() const
 {
     return std::holds_alternative<UniqueRef<StyleRelativeColor<RGBFunctionModernRelative>>>(m_color)
@@ -363,10 +392,8 @@ const Color& StyleColor::absoluteColor() const
 }
 
 template<typename StyleColorType>
-StyleColor::ColorKind StyleColor::resolveAbsoluteComponents(StyleColorType&& colorType)
+StyleColor::ColorKind StyleColor::makeIndirectColor(StyleColorType&& colorType)
 {
-    if (auto absoluteColor = WebCore::resolveAbsoluteComponents(colorType))
-        return { StyleAbsoluteColor { WTFMove(*absoluteColor) } };
     return { makeUniqueRef<StyleColorType>(WTFMove(colorType)) };
 }
 

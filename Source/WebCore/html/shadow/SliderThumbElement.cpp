@@ -54,7 +54,7 @@
 #include "StepRange.h"
 #include "StyleResolver.h"
 #include "UserAgentParts.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(IOS_TOUCH_EVENTS)
 #include "Document.h"
@@ -66,8 +66,8 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SliderThumbElement);
-WTF_MAKE_ISO_ALLOCATED_IMPL(SliderContainerElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SliderThumbElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SliderContainerElement);
 
 inline static Decimal sliderPosition(HTMLInputElement& element)
 {
@@ -87,7 +87,7 @@ inline static bool hasVerticalAppearance(HTMLInputElement& input)
 // FIXME: Find a way to cascade appearance and adjust heights, and get rid of this class.
 // http://webkit.org/b/62535
 class RenderSliderContainer final : public RenderFlexibleBox {
-    WTF_MAKE_ISO_ALLOCATED_INLINE(RenderSliderContainer);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_INLINE(RenderSliderContainer);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSliderContainer);
 public:
     RenderSliderContainer(SliderContainerElement& element, RenderStyle&& style)
@@ -126,7 +126,7 @@ RenderBox::LogicalExtentComputedValues RenderSliderContainer::computeLogicalHeig
         return RenderBox::computeLogicalHeight(trackHeight, logicalTop);
     }
 #endif
-    if (isVertical && style().isHorizontalWritingMode())
+    if (isVertical && writingMode().isHorizontal())
         logicalHeight = RenderSlider::defaultTrackLength;
     return RenderBox::computeLogicalHeight(logicalHeight, logicalTop);
 }
@@ -136,8 +136,8 @@ void RenderSliderContainer::layout()
     ASSERT(element()->shadowHost());
     auto& input = downcast<HTMLInputElement>(*element()->shadowHost());
     bool isVertical = hasVerticalAppearance(input);
-    mutableStyle().setFlexDirection(isVertical && style().isHorizontalWritingMode() ? FlexDirection::Column : FlexDirection::Row);
-    TextDirection oldTextDirection = style().direction();
+    mutableStyle().setFlexDirection(isVertical && writingMode().isHorizontal() ? FlexDirection::Column : FlexDirection::Row);
+    TextDirection oldTextDirection = writingMode().computedTextDirection();
     if (isVertical) {
         // FIXME: Work around rounding issues in RTL vertical sliders. We want them to
         // render identically to LTR vertical sliders. We can remove this work around when
@@ -166,16 +166,20 @@ void RenderSliderContainer::layout()
     LayoutPoint thumbLocation = thumb->location();
     if (isVertical) {
         // appearance: slider-vertical in horizontal writing mode.
-        if (style().isHorizontalWritingMode())
+        if (writingMode().isHorizontal())
             thumbLocation.setY(thumbLocation.y() + track->contentHeight() - thumb->height() - offset);
-        else if (style().isLeftToRightDirection()) // LTR in vertical writing mode.
-            thumbLocation.setY(thumbLocation.y() + offset);
-        else // RTL in vertical writing mode.
-            thumbLocation.setY(thumbLocation.y() - offset);
-    } else if (style().isLeftToRightDirection())
-        thumbLocation.setX(thumbLocation.x() + offset);
-    else
-        thumbLocation.setX(thumbLocation.x() - offset);
+        else {
+            if (writingMode().isInlineTopToBottom())
+                thumbLocation.setY(thumbLocation.y() + offset);
+            else
+                thumbLocation.setY(thumbLocation.y() - offset);
+        }
+    } else {
+        if (writingMode().isInlineLeftToRight())
+            thumbLocation.setX(thumbLocation.x() + offset);
+        else
+            thumbLocation.setX(thumbLocation.x() - offset);
+    }
     thumb->setLocation(thumbLocation);
     thumb->repaint();
 }
@@ -245,7 +249,7 @@ void SliderThumbElement::setPositionFromPoint(const LayoutPoint& absolutePoint)
     // Do all the tracking math relative to the input's renderer's box.
 
     bool isVertical = hasVerticalAppearance(*input);
-    bool isReversedInlineDirection = !thumbRenderer->style().isLeftToRightDirection() || (isVertical && thumbRenderer->style().isHorizontalWritingMode());
+    bool isReversedInlineDirection = thumbRenderer->writingMode().isBidiRTL() || (isVertical && thumbRenderer->writingMode().isHorizontal());
 
     auto offset = inputRenderer->absoluteToLocal(absolutePoint, UseTransforms);
     auto trackBoundingBox = trackRenderer->localToContainerQuad(FloatRect { { }, trackRenderer->size() }, inputRenderer).enclosingBoundingBox();

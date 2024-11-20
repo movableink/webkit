@@ -41,7 +41,9 @@
 #include "WebProcessPool.h"
 #include <wtf/DebugUtilities.h>
 #include <wtf/HexNumber.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebKit {
 using namespace WebCore;
@@ -53,6 +55,8 @@ static WeakHashSet<SuspendedPageProxy>& allSuspendedPages()
     static NeverDestroyed<WeakHashSet<SuspendedPageProxy>> map;
     return map;
 }
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SuspendedPageProxy);
 
 RefPtr<WebProcessProxy> SuspendedPageProxy::findReusableSuspendedPageProcess(WebProcessPool& processPool, const RegistrableDomain& registrableDomain, WebsiteDataStore& dataStore, WebProcessProxy::LockdownMode lockdownMode, const API::PageConfiguration& pageConfiguration)
 {
@@ -96,7 +100,6 @@ static const MessageNameSet& messageNamesToIgnoreWhileSuspended()
         messageNames.get().add(IPC::MessageName::WebPageProxy_EditorStateChanged);
         messageNames.get().add(IPC::MessageName::WebPageProxy_PageExtendedBackgroundColorDidChange);
         messageNames.get().add(IPC::MessageName::WebPageProxy_SetRenderTreeSize);
-        messageNames.get().add(IPC::MessageName::WebPageProxy_SetStatusText);
         messageNames.get().add(IPC::MessageName::WebPageProxy_SetNetworkRequestsInProgress);
     });
 
@@ -113,7 +116,7 @@ SuspendedPageProxy::SuspendedPageProxy(WebPageProxy& page, Ref<WebProcessProxy>&
     , m_shouldDelayClosingUntilFirstLayerFlush(shouldDelayClosingUntilFirstLayerFlush)
     , m_suspensionTimeoutTimer(RunLoop::main(), this, &SuspendedPageProxy::suspensionTimedOut)
 #if USE(RUNNINGBOARD)
-    , m_suspensionActivity(m_process->throttler().backgroundActivity("Page suspension for back/forward cache"_s).moveToUniquePtr())
+    , m_suspensionActivity(m_process->throttler().backgroundActivity("Page suspension for back/forward cache"_s))
 #endif
 #if HAVE(VISIBILITY_PROPAGATION_VIEW)
     , m_contextIDForVisibilityPropagationInWebProcess(page.contextIDForVisibilityPropagationInWebProcess())
@@ -160,7 +163,7 @@ Ref<WebPageProxy> SuspendedPageProxy::protectedPage() const
     return m_page.get();
 }
 
-void SuspendedPageProxy::didDestroyNavigation(uint64_t navigationID)
+void SuspendedPageProxy::didDestroyNavigation(WebCore::NavigationIdentifier navigationID)
 {
     protectedPage()->didDestroyNavigationShared(m_process.copyRef(), navigationID);
 }

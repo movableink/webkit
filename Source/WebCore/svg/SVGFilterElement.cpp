@@ -33,12 +33,12 @@
 #include "SVGFilterPrimitiveStandardAttributes.h"
 #include "SVGNames.h"
 #include "SVGParserUtilities.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFilterElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGFilterElement);
 
 inline SVGFilterElement::SVGFilterElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -126,7 +126,7 @@ void SVGFilterElement::childrenChanged(const ChildChange& change)
         return;
 
     if (document().settings().layerBasedSVGEngineEnabled()) {
-        if (auto* filterRenderer = dynamicDowncast<RenderSVGResourceFilter>(renderer()))
+        if (CheckedPtr filterRenderer = dynamicDowncast<RenderSVGResourceFilter>(renderer()))
             filterRenderer->invalidateFilter();
         return;
     }

@@ -87,7 +87,7 @@
 
 /* --------- Windows port --------- */
 #if PLATFORM(WIN)
-#include <wtf/PlatformEnableWinCairo.h>
+#include <wtf/PlatformEnableWin.h>
 #endif
 
 /* --------- PlayStation port --------- */
@@ -108,6 +108,10 @@
 /* ---------  ENABLE macro defaults --------- */
 
 /* Do not use PLATFORM() tests in this section ! */
+
+#if !defined(ENABLE_CONJECTURE_ASSERT)
+#define ENABLE_CONJECTURE_ASSERT 0
+#endif
 
 #if !defined(ENABLE_ACCESSIBILITY_ANIMATION_CONTROL)
 #define ENABLE_ACCESSIBILITY_ANIMATION_CONTROL 0
@@ -167,10 +171,6 @@
 
 #if !defined(ENABLE_CONTEXT_MENU_EVENT)
 #define ENABLE_CONTEXT_MENU_EVENT 1
-#endif
-
-#if !defined(ENABLE_CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
-#define ENABLE_CSS_TRANSFORM_STYLE_OPTIMIZED_3D 0
 #endif
 
 #if !defined(ENABLE_CUSTOM_CURSOR_SUPPORT)
@@ -293,6 +293,10 @@
 #define ENABLE_INPUT_TYPE_WEEK 0
 #endif
 
+#if !defined(ENABLE_INPUT_TYPE_WEEK_PICKER)
+#define ENABLE_INPUT_TYPE_WEEK_PICKER 0
+#endif
+
 #if !defined(ENABLE_IOS_GESTURE_EVENTS)
 #define ENABLE_IOS_GESTURE_EVENTS 0
 #endif
@@ -342,6 +346,10 @@
 
 #if !defined(ENABLE_MEDIA_RECORDER)
 #define ENABLE_MEDIA_RECORDER 0
+#endif
+
+#if !defined(ENABLE_MEDIA_RECORDER_WEBM)
+#define ENABLE_MEDIA_RECORDER_WEBM 0
 #endif
 
 #if !defined(ENABLE_MEDIA_SOURCE)
@@ -558,6 +566,14 @@
 #define ENABLE_WEBXR_HANDS 0
 #endif
 
+#if !defined(ENABLE_WEBXR_WEBGPU_BY_DEFAULT)
+#define ENABLE_WEBXR_WEBGPU_BY_DEFAULT 0
+#endif
+
+#if !defined(ENABLE_WEBXR_LAYERS)
+#define ENABLE_WEBXR_LAYERS (PLATFORM(VISION) && __VISION_OS_VERSION_MAX_ALLOWED >= 20200)
+#endif
+
 #if !defined(ENABLE_WHEEL_EVENT_LATCHING)
 #define ENABLE_WHEEL_EVENT_LATCHING 0
 #endif
@@ -568,10 +584,6 @@
 
 #if !defined(ENABLE_WRITING_TOOLS)
 #define ENABLE_WRITING_TOOLS 0
-#endif
-
-#if !defined(ENABLE_WRITING_TOOLS_UI)
-#define ENABLE_WRITING_TOOLS_UI 0
 #endif
 
 #if !defined(ENABLE_WKPDFVIEW)
@@ -592,6 +604,16 @@
  */
 #if !defined(ENABLE_MALLOC_HEAP_BREAKDOWN)
 #define ENABLE_MALLOC_HEAP_BREAKDOWN 0
+#endif
+
+// See RefTrackerMixin.h
+#if ASSERT_ENABLED
+#undef ENABLE_REFTRACKER
+#define ENABLE_REFTRACKER 1
+#endif
+
+#if !defined(ENABLE_REFTRACKER)
+#define ENABLE_REFTRACKER 0
 #endif
 
 #if !defined(ENABLE_CFPREFS_DIRECT_MODE)
@@ -687,7 +709,7 @@
 #if !defined(ENABLE_DFG_JIT) && ENABLE(JIT)
 
 /* Enable the DFG JIT on X86 and X86_64. */
-#if CPU(X86_64) && (OS(DARWIN) || OS(LINUX) || OS(FREEBSD) || OS(HURD) || OS(WINDOWS))
+#if CPU(X86_64) && (OS(DARWIN) || OS(LINUX) || OS(FREEBSD) || OS(HAIKU) || OS(HURD) || OS(WINDOWS))
 #define ENABLE_DFG_JIT 1
 #endif
 
@@ -717,20 +739,14 @@
 #define ENABLE_FAST_TLS_JIT 1
 #endif
 
-/* FIXME: This should be turned into an #error invariant */
-/* If the baseline jit is not available, then disable upper tiers as well. */
-#if !ENABLE(JIT)
-#undef ENABLE_DFG_JIT
-#undef ENABLE_FTL_JIT
-#define ENABLE_DFG_JIT 0
-#define ENABLE_FTL_JIT 0
+/* Ensure that upper tiers are disabled if baseline JIT is not available */
+#if !ENABLE(JIT) && (ENABLE(DFG_JIT) || ENABLE(FTL_JIT))
+#error "DFG and FTL JIT require baseline JIT to be enabled"
 #endif
 
-/* FIXME: This should be turned into an #error invariant */
-/* If the DFG jit is not available, then disable upper tiers as well: */
-#if !ENABLE(DFG_JIT)
-#undef ENABLE_FTL_JIT
-#define ENABLE_FTL_JIT 0
+/* Ensure that FTL JIT is disabled if DFG JIT is not available */
+#if !ENABLE(DFG_JIT) && ENABLE(FTL_JIT)
+#error "FTL JIT requires DFG JIT to be enabled"
 #endif
 
 /* This controls whether B3 is built. B3 is needed for FTL JIT and WebAssembly */
@@ -866,24 +882,6 @@
 #define ENABLE_SIGNAL_BASED_VM_TRAPS 1
 #endif
 
-/* The unified Config record feature is not available for Windows because the
-   Windows port puts WTF in a separate DLL, and the offlineasm code accessing
-   the config record expects the config record to be directly accessible like
-   a global variable (and not have to go thru DLL shenanigans). C++ code would
-   resolve these DLL bindings automatically, but offlineasm does not.
-
-   The permanently freezing feature also currently relies on the Config records
-   being unified, and the Windows port also does not currently have an
-   implementation for the freezing mechanism anyway. For simplicity, we just
-   disable both the use of unified Config record and config freezing for the
-   Windows port.
-*/
-#if OS(WINDOWS)
-#define ENABLE_UNIFIED_AND_FREEZABLE_CONFIG_RECORD 0
-#else
-#define ENABLE_UNIFIED_AND_FREEZABLE_CONFIG_RECORD 1
-#endif
-
 #if !defined(ENABLE_MPROTECT_RX_TO_RWX)
 #define ENABLE_MPROTECT_RX_TO_RWX 0
 #endif
@@ -925,6 +923,10 @@
 
 #if CPU(ARM64E)
 #define ENABLE_JIT_SIGN_ASSEMBLER_BUFFER 1
+#endif
+
+#if !defined(ENABLE_JIT_SCAN_ASSEMBLER_BUFFER_FOR_ZEROES) && CPU(X86_64) && PLATFORM(MAC)
+#define ENABLE_JIT_SCAN_ASSEMBLER_BUFFER_FOR_ZEROES 1
 #endif
 
 #if !defined(ENABLE_BINDING_INTEGRITY) && !OS(WINDOWS)
@@ -989,6 +991,10 @@
 #error "ENABLE(WEBXR_HANDS) requires ENABLE(WEBXR)"
 #endif
 
+#if ENABLE(WEBXR_LAYERS) && !ENABLE(WEBXR)
+#error "ENABLE(WEBXR_LAYERS) requires ENABLE(WEBXR)"
+#endif
+
 #if !defined(ENABLE_WEBPROCESS_CACHE)
 #define ENABLE_WEBPROCESS_CACHE 0
 #endif
@@ -1011,6 +1017,6 @@
 #endif
 
 #if !defined(ENABLE_WRITING_SUGGESTIONS) \
-    && (PLATFORM(COCOA) && HAVE(INLINE_PREDICTIONS))
+    && (PLATFORM(COCOA) && HAVE(INLINE_PREDICTIONS) && !PLATFORM(MACCATALYST))
 #define ENABLE_WRITING_SUGGESTIONS 1
 #endif

@@ -36,13 +36,20 @@ class JSGlobalObject;
     JSC_FOREACH_BUILTIN_LINK_TIME_CONSTANT(v) \
     v(throwTypeErrorFunction, nullptr) \
     v(importModule, nullptr) \
-    v(mapBucketHead, nullptr) \
-    v(mapBucketNext, nullptr) \
-    v(mapBucketKey, nullptr) \
-    v(mapBucketValue, nullptr) \
-    v(setBucketHead, nullptr) \
-    v(setBucketNext, nullptr) \
-    v(setBucketKey, nullptr) \
+    v(mapStorage, nullptr) \
+    v(mapIterationNext, nullptr) \
+    v(mapIterationEntry, nullptr) \
+    v(mapIterationEntryKey, nullptr) \
+    v(mapIterationEntryValue, nullptr) \
+    v(mapIteratorNext, nullptr) \
+    v(mapIteratorKey, nullptr) \
+    v(mapIteratorValue, nullptr) \
+    v(setStorage, nullptr) \
+    v(setIterationNext, nullptr) \
+    v(setIterationEntry, nullptr) \
+    v(setIterationEntryKey, nullptr) \
+    v(setIteratorNext, nullptr) \
+    v(setIteratorKey, nullptr) \
     v(setClone, nullptr) \
     v(setPrototypeDirect, nullptr) \
     v(setPrototypeDirectOrThrow, nullptr) \
@@ -67,6 +74,7 @@ class JSGlobalObject;
     v(BuiltinLog, nullptr) \
     v(BuiltinDescribe, nullptr) \
     v(RegExp, nullptr) \
+    v(Iterator, nullptr) \
     v(min, nullptr) \
     v(Promise, nullptr) \
     v(InternalPromise, nullptr) \
@@ -74,7 +82,6 @@ class JSGlobalObject;
     v(repeatCharacter, nullptr) \
     v(isArray, nullptr) \
     v(isArraySlow, nullptr) \
-    v(concatMemcpy, nullptr) \
     v(appendMemcpy, nullptr) \
     v(hostPromiseRejectionTracker, nullptr) \
     v(Set, nullptr) \
@@ -124,7 +131,8 @@ class JSGlobalObject;
     v(sentinelString, nullptr) \
     v(createRemoteFunction, nullptr) \
     v(isRemoteFunction, nullptr) \
-    v(arrayFromFast, nullptr) \
+    v(arrayFromFastFillWithUndefined, nullptr) \
+    v(arrayFromFastFillWithEmpty, nullptr) \
     v(arraySort, nullptr) \
     v(jsonParse, nullptr) \
     v(jsonStringify, nullptr) \
@@ -136,10 +144,15 @@ class JSGlobalObject;
     v(Uint16Array, nullptr) \
     v(Int32Array, nullptr) \
     v(Uint32Array, nullptr) \
+    v(Float16Array, nullptr) \
     v(Float32Array, nullptr) \
     v(Float64Array, nullptr) \
     v(BigInt64Array, nullptr) \
     v(BigUint64Array, nullptr) \
+    v(wrapForValidIteratorCreate, nullptr) \
+    v(asyncFromSyncIteratorCreate, nullptr) \
+    v(regExpStringIteratorCreate, nullptr) \
+    v(iteratorHelperCreate, nullptr) \
 
 
 #define DECLARE_LINK_TIME_CONSTANT(name, code) name,

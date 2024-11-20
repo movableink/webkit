@@ -34,7 +34,9 @@
 #include <WebCore/RealtimeMediaSourceFactory.h>
 #include <WebCore/RealtimeMediaSourceIdentifier.h>
 #include <WebCore/SharedMemory.h>
+#include <wtf/CheckedPtr.h>
 #include <wtf/HashMap.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 class CAAudioStreamDescription;
@@ -46,8 +48,9 @@ class RemoteRealtimeAudioSource;
 class RemoteRealtimeVideoSource;
 class WebProcess;
 
-class UserMediaCaptureManager : public WebProcessSupplement, public IPC::MessageReceiver {
-    WTF_MAKE_FAST_ALLOCATED;
+class UserMediaCaptureManager final : public WebProcessSupplement, public IPC::MessageReceiver, public CanMakeCheckedPtr<UserMediaCaptureManager> {
+    WTF_MAKE_TZONE_ALLOCATED(UserMediaCaptureManager);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(UserMediaCaptureManager);
 public:
     explicit UserMediaCaptureManager(WebProcess&);
     ~UserMediaCaptureManager();
@@ -72,11 +75,11 @@ private:
         void setShouldCaptureInGPUProcess(bool);
 
     private:
-        WebCore::CaptureSourceOrError createAudioCaptureSource(const WebCore::CaptureDevice&, WebCore::MediaDeviceHashSalts&&, const WebCore::MediaConstraints*, WebCore::PageIdentifier) final;
-        WebCore::CaptureDeviceManager& audioCaptureDeviceManager() final { return m_manager.m_noOpCaptureDeviceManager; }
+        WebCore::CaptureSourceOrError createAudioCaptureSource(const WebCore::CaptureDevice&, WebCore::MediaDeviceHashSalts&&, const WebCore::MediaConstraints*, std::optional<WebCore::PageIdentifier>) final;
+        WebCore::CaptureDeviceManager& audioCaptureDeviceManager() final { return m_manager->m_noOpCaptureDeviceManager; }
         const Vector<WebCore::CaptureDevice>& speakerDevices() const final { return m_speakerDevices; }
 
-        UserMediaCaptureManager& m_manager;
+        CheckedRef<UserMediaCaptureManager> m_manager;
         bool m_shouldCaptureInGPUProcess { false };
         Vector<WebCore::CaptureDevice> m_speakerDevices;
     };
@@ -86,10 +89,10 @@ private:
         void setShouldCaptureInGPUProcess(bool);
 
     private:
-        WebCore::CaptureSourceOrError createVideoCaptureSource(const WebCore::CaptureDevice&, WebCore::MediaDeviceHashSalts&&, const WebCore::MediaConstraints*, WebCore::PageIdentifier) final;
-        WebCore::CaptureDeviceManager& videoCaptureDeviceManager() final { return m_manager.m_noOpCaptureDeviceManager; }
+        WebCore::CaptureSourceOrError createVideoCaptureSource(const WebCore::CaptureDevice&, WebCore::MediaDeviceHashSalts&&, const WebCore::MediaConstraints*, std::optional<WebCore::PageIdentifier>) final;
+        WebCore::CaptureDeviceManager& videoCaptureDeviceManager() final { return m_manager->m_noOpCaptureDeviceManager; }
 
-        UserMediaCaptureManager& m_manager;
+        CheckedRef<UserMediaCaptureManager> m_manager;
         bool m_shouldCaptureInGPUProcess { false };
     };
     class DisplayFactory : public WebCore::DisplayCaptureFactory {
@@ -98,10 +101,10 @@ private:
         void setShouldCaptureInGPUProcess(bool);
 
     private:
-        WebCore::CaptureSourceOrError createDisplayCaptureSource(const WebCore::CaptureDevice&, WebCore::MediaDeviceHashSalts&&, const WebCore::MediaConstraints*, WebCore::PageIdentifier) final;
-        WebCore::DisplayCaptureManager& displayCaptureDeviceManager() final { return m_manager.m_noOpCaptureDeviceManager; }
+        WebCore::CaptureSourceOrError createDisplayCaptureSource(const WebCore::CaptureDevice&, WebCore::MediaDeviceHashSalts&&, const WebCore::MediaConstraints*, std::optional<WebCore::PageIdentifier>) final;
+        WebCore::DisplayCaptureManager& displayCaptureDeviceManager() final { return m_manager->m_noOpCaptureDeviceManager; }
 
-        UserMediaCaptureManager& m_manager;
+        CheckedRef<UserMediaCaptureManager> m_manager;
         bool m_shouldCaptureInGPUProcess { false };
     };
 

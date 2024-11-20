@@ -31,7 +31,7 @@
 #include "LayoutElementBox.h"
 #include "LayoutUnit.h"
 #include "TextBreakingPositionContext.h"
-#include "TextDirection.h"
+#include "WritingMode.h"
 #include <wtf/Range.h>
 
 namespace WebCore {
@@ -47,8 +47,6 @@ InlineInvalidation::InlineInvalidation(InlineDamage& inlineDamage, const InlineI
 bool InlineInvalidation::rootStyleWillChange(const ElementBox& formattingContextRoot, const RenderStyle& newStyle)
 {
     ASSERT(formattingContextRoot.establishesInlineFormattingContext());
-
-    m_inlineDamage.setDamageReason(InlineDamage::Reason::StyleChange);
 
     if (m_inlineDamage.isInlineItemListDirty())
         return true;
@@ -70,7 +68,7 @@ bool InlineInvalidation::rootStyleWillChange(const ElementBox& formattingContext
         if ((newFirstLineStyle && newFirstLineStyle->fontCascade() != oldStyle.fontCascade()) || (oldFirstLineStyle && oldFirstLineStyle->fontCascade() != newStyle.fontCascade()))
             return true;
 
-        if (oldStyle.direction() != newStyle.direction() || oldStyle.unicodeBidi() != newStyle.unicodeBidi() || oldStyle.tabSize() != newStyle.tabSize() || oldStyle.textSecurity() != newStyle.textSecurity())
+        if (oldStyle.writingMode().bidiDirection() != newStyle.writingMode().bidiDirection() || oldStyle.unicodeBidi() != newStyle.unicodeBidi() || oldStyle.tabSize() != newStyle.tabSize() || oldStyle.textSecurity() != newStyle.textSecurity())
             return true;
 
         return false;
@@ -82,9 +80,12 @@ bool InlineInvalidation::rootStyleWillChange(const ElementBox& formattingContext
     return true;
 }
 
-bool InlineInvalidation::styleWillChange(const Box& layoutBox, const RenderStyle& newStyle)
+bool InlineInvalidation::styleWillChange(const Box& layoutBox, const RenderStyle& newStyle, StyleDifference diff)
 {
-    m_inlineDamage.setDamageReason(InlineDamage::Reason::StyleChange);
+    if (diff == StyleDifference::Layout) {
+        m_inlineDamage.resetLayoutPosition();
+        m_inlineDamage.setDamageReason(InlineDamage::Reason::StyleChange);
+    }
 
     if (m_inlineDamage.isInlineItemListDirty())
         return true;
@@ -108,7 +109,7 @@ bool InlineInvalidation::styleWillChange(const Box& layoutBox, const RenderStyle
         if (contentMayNeedNewBreakingPositionsAndMeasuring)
             return true;
 
-        auto bidiContextChanged = oldStyle.unicodeBidi() != newStyle.unicodeBidi() || oldStyle.direction() != newStyle.direction();
+        auto bidiContextChanged = oldStyle.unicodeBidi() != newStyle.unicodeBidi() || oldStyle.writingMode().bidiDirection() != newStyle.writingMode().bidiDirection();
         if (bidiContextChanged)
             return true;
 
@@ -118,6 +119,13 @@ bool InlineInvalidation::styleWillChange(const Box& layoutBox, const RenderStyle
     if (inlineItemListNeedsUpdate())
         m_inlineDamage.setInlineItemListDirty();
 
+    return true;
+}
+
+bool InlineInvalidation::inlineLevelBoxContentWillChange(const Box&)
+{
+    // FIXME: Add support for partial layout when inline box content change may trigger size change.
+    m_inlineDamage.resetLayoutPosition();
     return true;
 }
 
@@ -459,6 +467,11 @@ bool InlineInvalidation::setFullLayoutIfNeeded(const Box& layoutBox)
 
     if (m_inlineItemList.isEmpty()) {
         // We must be under memory pressure.
+        m_inlineDamage.resetLayoutPosition();
+        return true;
+    }
+
+    if (m_inlineDamage.reasons().contains(InlineDamage::Reason::StyleChange)) {
         m_inlineDamage.resetLayoutPosition();
         return true;
     }

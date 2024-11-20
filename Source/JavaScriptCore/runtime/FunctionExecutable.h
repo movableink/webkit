@@ -55,7 +55,7 @@ public:
         return executable;
     }
     static FunctionExecutable* fromGlobalCode(
-        const Identifier& name, JSGlobalObject*, const SourceCode&, 
+        const Identifier& name, JSGlobalObject*, const SourceCode&, LexicallyScopedFeatures,
         JSObject*& exception, int overrideLineNumber, std::optional<int> functionConstructorParametersEndPosition);
 
     static void destroy(JSCell*);
@@ -82,7 +82,7 @@ public:
 
     FunctionCodeBlock* codeBlockForCall() const
     {
-        return bitwise_cast<FunctionCodeBlock*>(m_codeBlockForCall.get());
+        return std::bit_cast<FunctionCodeBlock*>(m_codeBlockForCall.get());
     }
 
     bool isGeneratedForConstruct() const
@@ -92,7 +92,7 @@ public:
 
     FunctionCodeBlock* codeBlockForConstruct() const
     {
-        return bitwise_cast<FunctionCodeBlock*>(m_codeBlockForConstruct.get());
+        return std::bit_cast<FunctionCodeBlock*>(m_codeBlockForConstruct.get());
     }
         
     bool isGeneratedFor(CodeSpecializationKind kind)

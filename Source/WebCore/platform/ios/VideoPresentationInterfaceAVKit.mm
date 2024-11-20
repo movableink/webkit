@@ -43,6 +43,7 @@
 #import <pal/spi/cocoa/AVKitSPI.h>
 #import <pal/spi/ios/UIKitSPI.h>
 #import <wtf/BlockPtr.h>
+#import <wtf/TZoneMallocInlines.h>
 #import <wtf/WeakObjCPtr.h>
 
 #if HAVE(PIP_CONTROLLER)
@@ -360,7 +361,7 @@ NS_ASSUME_NONNULL_BEGIN
 #endif
 - (void)setWebKitOverrideRouteSharingPolicy:(NSUInteger)routeSharingPolicy routingContextUID:(NSString *)routingContextUID;
 #if !RELEASE_LOG_DISABLED
-@property (readonly, nonatomic) const void* logIdentifier;
+@property (readonly, nonatomic) uint64_t logIdentifier;
 @property (readonly, nonatomic) const Logger* loggerPtr;
 @property (readonly, nonatomic) WTFLogChannel* logChannel;
 #endif
@@ -738,11 +739,11 @@ static const NSTimeInterval startPictureInPictureTimeInterval = 5.0;
 }
 
 #if !RELEASE_LOG_DISABLED
-- (const void*)logIdentifier
+- (uint64_t)logIdentifier
 {
     if (auto fullscreenInterface = _fullscreenInterface.get())
         return fullscreenInterface->logIdentifier();
-    return nullptr;
+    return 0;
 }
 
 - (const Logger*)loggerPtr
@@ -760,6 +761,8 @@ static const NSTimeInterval startPictureInPictureTimeInterval = 5.0;
 @end
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(VideoPresentationInterfaceAVKit);
 
 Ref<VideoPresentationInterfaceAVKit> VideoPresentationInterfaceAVKit::create(PlaybackSessionInterfaceIOS& playbackSessionInterface)
 {
@@ -794,6 +797,8 @@ void VideoPresentationInterfaceAVKit::setupFullscreen(UIView& videoView, const F
 {
     [playerController() setContentDimensions:videoDimensions];
     VideoPresentationInterfaceIOS::setupFullscreen(videoView, initialRect, videoDimensions, parentView, mode, allowsPictureInPicturePlayback, standby, blocksReturnToFullscreenFromPictureInPicture);
+    if (playerLayer().captionsLayer != captionsLayer())
+        playerLayer().captionsLayer = captionsLayer();
 }
 
 void VideoPresentationInterfaceAVKit::updateRouteSharingPolicy()
@@ -918,6 +923,16 @@ bool supportsPictureInPicture()
 #else
     return false;
 #endif
+}
+
+void VideoPresentationInterfaceAVKit::setupCaptionsLayer(CALayer *, const WebCore::FloatSize&)
+{
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
+    [captionsLayer() removeFromSuperlayer];
+    playerLayer().captionsLayer = captionsLayer();
+    [playerLayer() layoutSublayers];
+    [CATransaction commit];
 }
 
 } // namespace WebCore

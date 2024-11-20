@@ -29,9 +29,11 @@
 
 #if !PLATFORM(QT)
 
+#include "DateComponents.h"
 #include "IntSize.h"
 #include "NotImplemented.h"
 #include <wtf/MathExtras.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/TextBreakIterator.h>
 #include <wtf/unicode/CharacterNames.h>
 
@@ -1533,6 +1535,17 @@ String datePickerYearLabelTitle()
 
 #endif
 
+#if ENABLE(INPUT_TYPE_WEEK_PICKER)
+
+String inputWeekLabel(const DateComponents& dateComponents)
+{
+    int week = dateComponents.week();
+    int year = dateComponents.fullYear();
+    return WEB_UI_FORMAT_STRING("Week %1$d, %2$d", "Week of year input type label with week number and year", week, year);
+}
+
+#endif
+
 #if USE(SOUP)
 String unacceptableTLSCertificate()
 {
@@ -1574,10 +1587,17 @@ String pdfPasswordFormInvalidPasswordSubtitle()
     return WEB_UI_STRING("Invalid Password", "Message when a PDF fails to unlock with the given password");
 }
 
-String contextMenuItemTagCopyLinkToHighlight()
+String contextMenuItemTagCopyLinkWithHighlight()
 {
-    return WEB_UI_STRING("Copy Link to Highlight", "Copy link to highlight context menu item");
+    return WEB_UI_STRING("Copy Link with Highlight", "Copy link with highlight context menu item");
 }
+
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+String fullscreenControllerViewSpatial()
+{
+    return WEB_UI_STRING("View Spatial", "Title for View Spatial action button while in fullscreen");
+}
+#endif
 
 } // namespace WebCore
 

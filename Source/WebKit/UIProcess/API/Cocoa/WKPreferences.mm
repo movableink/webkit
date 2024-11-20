@@ -596,6 +596,11 @@ static _WKStorageBlockingPolicy toAPI(WebCore::StorageBlockingPolicy policy)
     [self _setEnabled:value forFeature:feature];
 }
 
+- (void)_disableRichJavaScriptFeatures
+{
+    _preferences->disableRichJavaScriptFeatures();
+}
+
 - (BOOL)_applePayCapabilityDisclosureAllowed
 {
 #if ENABLE(APPLE_PAY)
@@ -702,14 +707,14 @@ static _WKStorageBlockingPolicy toAPI(WebCore::StorageBlockingPolicy policy)
     _preferences->setMediaCaptureRequiresSecureConnection(requiresSecureConnection);
 }
 
-- (double)_inactiveMediaCaptureSteamRepromptIntervalInMinutes
+- (double)_inactiveMediaCaptureStreamRepromptIntervalInMinutes
 {
-    return _preferences->inactiveMediaCaptureSteamRepromptIntervalInMinutes();
+    return _preferences->inactiveMediaCaptureStreamRepromptIntervalInMinutes();
 }
 
-- (void)_setInactiveMediaCaptureSteamRepromptIntervalInMinutes:(double)interval
+- (void)_setInactiveMediaCaptureStreamRepromptIntervalInMinutes:(double)interval
 {
-    _preferences->setInactiveMediaCaptureSteamRepromptIntervalInMinutes(interval);
+    _preferences->setInactiveMediaCaptureStreamRepromptIntervalInMinutes(interval);
 }
 
 - (BOOL)_interruptAudioOnPageVisibilityChangeEnabled
@@ -1647,6 +1652,53 @@ static WebCore::EditableLinkBehavior toEditableLinkBehavior(_WKEditableLinkBehav
     _preferences->setMediaCapabilityGrantsEnabled(mediaCapabilityGrantsEnabled);
 }
 
+- (void)_setAllowPrivacySensitiveOperationsInNonPersistentDataStores:(BOOL)allowPrivacySensitiveOperationsInNonPersistentDataStores
+{
+    _preferences->setAllowPrivacySensitiveOperationsInNonPersistentDataStores(allowPrivacySensitiveOperationsInNonPersistentDataStores);
+}
+
+- (BOOL)_allowPrivacySensitiveOperationsInNonPersistentDataStores
+{
+    return _preferences->allowPrivacySensitiveOperationsInNonPersistentDataStores();
+}
+
+- (void)_setVideoFullscreenRequiresElementFullscreen:(BOOL)videoFullscreenRequiresElementFullscreen
+{
+    _preferences->setVideoFullscreenRequiresElementFullscreen(videoFullscreenRequiresElementFullscreen);
+}
+
+- (BOOL)_videoFullscreenRequiresElementFullscreen
+{
+    return _preferences->videoFullscreenRequiresElementFullscreen();
+}
+
+- (void)_setCSSTransformStyleSeparatedEnabled:(BOOL)enabled
+{
+    _preferences->setCSSTransformStyleSeparatedEnabled(enabled);
+}
+
+- (BOOL)_cssTransformStyleSeparatedEnabled
+{
+    return _preferences->cssTransformStyleSeparatedEnabled();
+}
+
+- (void)_setSpatialVideoEnabled:(BOOL)enabled
+{
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+    _preferences->setSpatialVideoEnabled(enabled);
+#else
+    UNUSED_PARAM(enabled);
+#endif
+}
+
+- (BOOL)_spatialVideoEnabled
+{
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+    return _preferences->spatialVideoEnabled();
+#else
+    return NO;
+#endif
+}
 @end
 
 @implementation WKPreferences (WKDeprecated)

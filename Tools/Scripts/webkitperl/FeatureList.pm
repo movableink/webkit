@@ -39,7 +39,6 @@ use warnings;
 
 use FindBin;
 use lib $FindBin::Bin;
-use autouse 'webkitdirs' => qw(prohibitUnknownPort);
 
 BEGIN {
    use Exporter   ();
@@ -164,6 +163,7 @@ my (
     $webdriverTouchInteractionsSupport,
     $webdriverWheelInteractionsSupport,
     $webglSupport,
+    $webGpuSwift,
     $webXRSupport,
     $wirelessPlaybackTargetSupport,
     $woff2Support,
@@ -446,6 +446,9 @@ my @features = (
     { option => "webgl", desc => "Toggle WebGL support",
       define => "ENABLE_WEBGL", value => \$webglSupport },
 
+    { option => "webGpuSwift", desc => "Toggle WebGpu Swift Implementation",
+      define => "ENABLE_WEBGPU_SWIFT", value => \$webGpuSwift },
+
     { option => "webxr", desc => "Toggle WebXR support",
       define => "ENABLE_WEBXR", value => \$webXRSupport },
 
@@ -472,9 +475,6 @@ my @features = (
 
     { option => "avif", desc => "Toggle support for AVIF images",
       define => "USE_AVIF", value => \$avifSupport },
-
-    { option => "gstreamer-gl", desc => "Toggle GStreamer GL support",
-      define => "USE_GSTREAMER_GL", value => \$gstreamerGLSupport },
 
     { option => "iso-malloc", desc => "Toggle IsoMalloc support",
       define => "USE_ISO_MALLOC", value => \$isoMallocSupport },

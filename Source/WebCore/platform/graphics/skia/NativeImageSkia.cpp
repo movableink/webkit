@@ -27,10 +27,9 @@
 #include "NativeImage.h"
 
 #if USE(SKIA)
-
 #include "GLContext.h"
+#include "GLFence.h"
 #include "GraphicsContextSkia.h"
-#include "NotImplemented.h"
 #include "PlatformDisplay.h"
 #include <skia/core/SkData.h>
 #include <skia/core/SkImage.h>
@@ -40,6 +39,35 @@ IGNORE_CLANG_WARNINGS_BEGIN("cast-align")
 IGNORE_CLANG_WARNINGS_END
 
 namespace WebCore {
+
+void PlatformImageNativeImageBackend::finishAcceleratedRenderingAndCreateFence()
+{
+    auto* glContext = PlatformDisplay::sharedDisplay().skiaGLContext();
+    if (!glContext || !glContext->makeContextCurrent())
+        return;
+
+    auto* grContext = PlatformDisplay::sharedDisplay().skiaGrContext();
+    RELEASE_ASSERT(grContext);
+
+    grContext->flush(m_platformImage);
+
+    if (GLFence::isSupported()) {
+        grContext->submit(GrSyncCpu::kNo);
+        m_fence = GLFence::create();
+    }
+
+    if (!m_fence)
+        grContext->submit(GrSyncCpu::kYes);
+}
+
+void PlatformImageNativeImageBackend::waitForAcceleratedRenderingFenceCompletion()
+{
+    if (!m_fence)
+        return;
+
+    m_fence->serverWait();
+    m_fence = nullptr;
+}
 
 IntSize PlatformImageNativeImageBackend::size() const
 {
@@ -67,6 +95,11 @@ DestinationColorSpace PlatformImageNativeImageBackend::colorSpace() const
     return DestinationColorSpace::SRGB();
 }
 
+Headroom PlatformImageNativeImageBackend::headroom() const
+{
+    return Headroom::None;
+}
+
 std::optional<Color> NativeImage::singlePixelSolidColor() const
 {
     if (size() != IntSize(1, 1))
@@ -74,10 +107,10 @@ std::optional<Color> NativeImage::singlePixelSolidColor() const
 
     auto platformImage = this->platformImage();
     if (platformImage->isTextureBacked()) {
-        if (!PlatformDisplay::sharedDisplayForCompositing().skiaGLContext()->makeContextCurrent())
+        if (!PlatformDisplay::sharedDisplay().skiaGLContext()->makeContextCurrent())
             return std::nullopt;
 
-        GrDirectContext* grContext = PlatformDisplay::sharedDisplayForCompositing().skiaGrContext();
+        GrDirectContext* grContext = PlatformDisplay::sharedDisplay().skiaGrContext();
         const auto& imageInfo = platformImage->imageInfo();
         uint32_t pixel;
         SkPixmap pixmap(imageInfo, &pixel, imageInfo.minRowBytes());

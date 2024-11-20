@@ -33,6 +33,7 @@
 #import <WebCore/WebAuthenticationConstants.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/RunLoop.h>
+#import <wtf/TZoneMallocInlines.h>
 #import <wtf/cocoa/SpanCocoa.h>
 
 #import "AppAttestInternalSoftLink.h"
@@ -55,6 +56,13 @@ static inline String bundleName()
 }
 #endif
 } // namespace
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LocalConnection);
+
+Ref<LocalConnection> LocalConnection::create()
+{
+    return adoptRef(*new LocalConnection);
+}
 
 LocalConnection::~LocalConnection()
 {
@@ -173,7 +181,7 @@ RetainPtr<SecKeyRef> LocalConnection::createCredentialPrivateKey(LAContext *cont
     RetainPtr privateKeyAttributes = @{
         (id)kSecAttrAccessControl: (id)accessControlRef,
         (id)kSecAttrIsPermanent: @YES,
-        (id)kSecAttrAccessGroup: @(LocalAuthenticatorAccessGroup),
+        (id)kSecAttrAccessGroup: LocalAuthenticatorAccessGroup,
         (id)kSecAttrLabel: secAttrLabel,
         (id)kSecAttrApplicationTag: secAttrApplicationTag,
     };
@@ -209,7 +217,7 @@ RetainPtr<NSArray> LocalConnection::getExistingCredentials(const String& rpId)
         (id)kSecClass: (id)kSecClassKey,
         (id)kSecAttrKeyClass: (id)kSecAttrKeyClassPrivate,
         (id)kSecAttrSynchronizable: (id)kSecAttrSynchronizableAny,
-        (id)kSecAttrAccessGroup: @(LocalAuthenticatorAccessGroup),
+        (id)kSecAttrAccessGroup: LocalAuthenticatorAccessGroup,
         (id)kSecAttrLabel: rpId,
         (id)kSecReturnAttributes: @YES,
         (id)kSecMatchLimit: (id)kSecMatchLimitAll,

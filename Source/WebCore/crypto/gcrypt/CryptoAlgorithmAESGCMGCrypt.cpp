@@ -170,14 +170,16 @@ static std::optional<Vector<uint8_t>> gcryptDecrypt(const Vector<uint8_t>& key, 
             return std::nullopt;
         }
 
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
         if (constantTimeMemcmp(tag.data(), cipherText.data() + cipherLength, tagLength))
             return std::nullopt;
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     }
 
     return output;
 }
 
-ExceptionOr<Vector<uint8_t>> CryptoAlgorithmAESGCM::platformEncrypt(const CryptoAlgorithmAesGcmParams& parameters, const CryptoKeyAES& key, const Vector<uint8_t>& plainText, UseCryptoKit)
+ExceptionOr<Vector<uint8_t>> CryptoAlgorithmAESGCM::platformEncrypt(const CryptoAlgorithmAesGcmParams& parameters, const CryptoKeyAES& key, const Vector<uint8_t>& plainText)
 {
     auto output = gcryptEncrypt(key.key(), parameters.ivVector(), plainText, parameters.additionalDataVector(), parameters.tagLength.value_or(0) / 8);
     if (!output)

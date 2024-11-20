@@ -32,13 +32,15 @@
 #include <span>
 #include <string.h>
 #include <wtf/CheckedArithmetic.h>
-#include <wtf/FastMalloc.h>
+#include <wtf/TZoneMallocInlines.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
 template<typename T>
 class AudioArray {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(AudioArray);
 public:
     AudioArray() = default;
     explicit AudioArray(size_t n)
@@ -150,5 +152,7 @@ typedef AudioArray<float> AudioFloatArray;
 typedef AudioArray<double> AudioDoubleArray;
 
 } // WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // AudioArray_h

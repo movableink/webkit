@@ -36,6 +36,8 @@
 #include <iterator>
 #include <wtf/Vector.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WTF {
 
 template<typename T, size_t inlineCapacity> class DequeIteratorBase;
@@ -116,6 +118,10 @@ public:
 
     template<typename Predicate> iterator findIf(const Predicate&);
     template<typename Predicate> const_iterator findIf(const Predicate&) const;
+    template<typename Predicate> bool containsIf(const Predicate& predicate) const
+    {
+        return findIf(predicate) != end();
+    }
 
 private:
     friend class DequeIteratorBase<T, inlineCapacity>;
@@ -810,3 +816,5 @@ inline T* DequeIteratorBase<T, inlineCapacity>::before() const
 }
 
 } // namespace WTF
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

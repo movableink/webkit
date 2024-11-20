@@ -37,14 +37,14 @@
 #include "RenderMultiColumnSpannerPlaceholder.h"
 #include "RenderView.h"
 #include "StyleScope.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/unicode/CharacterNames.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderListMarker);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderListMarker);
 
 constexpr int cMarkerPadding = 7;
 
@@ -57,10 +57,8 @@ RenderListMarker::RenderListMarker(RenderListItem& listItem, RenderStyle&& style
     ASSERT(isRenderListMarker());
 }
 
-RenderListMarker::~RenderListMarker()
-{
-    // Do not add any code here. Add it to willBeDestroyed() instead.
-}
+// Do not add any code in below destructor. Add it to willBeDestroyed() instead.
+RenderListMarker::~RenderListMarker() = default;
 
 void RenderListMarker::willBeDestroyed()
 {
@@ -69,14 +67,24 @@ void RenderListMarker::willBeDestroyed()
     RenderBox::willBeDestroyed();
 }
 
+static StyleDifference adjustedStyleDifference(StyleDifference diff, const RenderStyle& oldStyle, const RenderStyle& newStyle)
+{
+    if (diff >= StyleDifference::Layout)
+        return diff;
+    // FIXME: Preferably we do this at RenderStyle::changeRequiresLayout but checking against pseudo(::marker) is not sufficient.
+    auto needsLayout = oldStyle.listStylePosition() != newStyle.listStylePosition() || oldStyle.listStyleType() != newStyle.listStyleType() || oldStyle.isDisplayInlineType() != newStyle.isDisplayInlineType();
+    return needsLayout ? StyleDifference::Layout : diff;
+}
+
+void RenderListMarker::styleWillChange(StyleDifference diff, const RenderStyle& newStyle)
+{
+    RenderBox::styleWillChange(adjustedStyleDifference(diff, style(), newStyle), newStyle);
+}
+
 void RenderListMarker::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
-    if (oldStyle && diff < StyleDifference::Layout) {
-        auto& style = this->style();
-        // FIXME: Preferably we do this at RenderStyle::changeRequiresLayout but checking against pseudo(::marker) is not sufficient.
-        auto needsLayout = style.listStylePosition() != oldStyle->listStylePosition() || style.listStyleType() != oldStyle->listStyleType() || style.isDisplayInlineType() != oldStyle->isDisplayInlineType();
-        diff = needsLayout ? StyleDifference::Layout : diff;
-    }
+    if (oldStyle)
+        diff = adjustedStyleDifference(diff, *oldStyle, style());
     RenderBox::styleDidChange(diff, oldStyle);
 
     if (m_image != style().listStyleImage()) {
@@ -103,10 +111,10 @@ static String reversed(StringView string)
     auto length = string.length();
     if (length <= 1)
         return string.toString();
-    UChar* characters;
+    std::span<UChar> characters;
     auto result = String::createUninitialized(length, characters);
     for (unsigned i = 0; i < length; ++i)
-        *characters++ = string[length - i - 1];
+        characters[i] = string[length - i - 1];
     return result;
 }
 
@@ -124,12 +132,12 @@ auto RenderListMarker::textRun() const -> TextRunWithUnderlyingString
     // We use u_charDirection to figure out if the marker text is RTL and assume the suffix matches the surrounding direction.
     String textForRun;
     if (m_textIsLeftToRightDirection) {
-        if (style().isLeftToRightDirection())
+        if (writingMode().isBidiLTR())
             textForRun = m_textWithSuffix;
         else
             textForRun = makeString(reversed(StringView(m_textWithSuffix).substring(m_textWithoutSuffixLength)), m_textWithSuffix.left(m_textWithoutSuffixLength));
     } else {
-        if (!style().isLeftToRightDirection())
+        if (!writingMode().isBidiLTR())
             textForRun = reversed(m_textWithSuffix);
         else
             textForRun = makeString(reversed(StringView(m_textWithSuffix).left(m_textWithoutSuffixLength)), m_textWithSuffix.substring(m_textWithoutSuffixLength));
@@ -207,7 +215,7 @@ void RenderListMarker::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffse
         return;
 
     GraphicsContextStateSaver stateSaver(context, false);
-    if (!style().isHorizontalWritingMode()) {
+    if (!writingMode().isHorizontal()) {
         markerRect.moveBy(-boxOrigin);
         markerRect = markerRect.transposedRect();
         markerRect.moveBy(FloatPoint(box.x(), box.y() - logicalHeight()));
@@ -218,7 +226,7 @@ void RenderListMarker::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffse
     }
 
     FloatPoint textOrigin = FloatPoint(markerRect.x(), markerRect.y() + style().metricsOfPrimaryFont().intAscent());
-    textOrigin = roundPointToDevicePixels(LayoutPoint(textOrigin), document().deviceScaleFactor(), style().isLeftToRightDirection());
+    textOrigin = roundPointToDevicePixels(LayoutPoint(textOrigin), document().deviceScaleFactor(), writingMode().isLogicalLeftInlineStart());
     context.drawText(style().fontCascade(), textRun(), textOrigin);
 }
 
@@ -242,7 +250,7 @@ void RenderListMarker::layout()
         blockOffset += ancestor->logicalTop();
 
     m_lineLogicalOffsetForListItem = m_listItem->logicalLeftOffsetForLine(blockOffset, 0_lu);
-    m_lineOffsetForListItem = style().isLeftToRightDirection() ? m_lineLogicalOffsetForListItem : m_listItem->logicalRightOffsetForLine(blockOffset, 0_lu);
+    m_lineOffsetForListItem = writingMode().isLogicalLeftInlineStart() ? m_lineLogicalOffsetForListItem : m_listItem->logicalRightOffsetForLine(blockOffset, 0_lu);
 
     if (isImage()) {
         updateMarginsAndContent();
@@ -302,21 +310,29 @@ void RenderListMarker::updateContent()
         return;
     }
 
+    auto isLeftToRightDirectionContent = [&](auto content) {
+        // FIXME: Depending on the string value, we may need the real bidi algorithm. (rdar://106139180)
+        // Also we may need to start checking for the entire content for directionality (and whether we need to check for additional
+        // directionality characters like U_RIGHT_TO_LEFT_EMBEDDING).
+        auto bidiCategory = u_charDirection(content[0]);
+        return bidiCategory != U_RIGHT_TO_LEFT && bidiCategory != U_RIGHT_TO_LEFT_ARABIC;
+    };
+
     auto styleType = style().listStyleType();
     switch (styleType.type) {
-    case ListStyleType::Type::String:
+    case ListStyleType::Type::String: {
         m_textWithSuffix = styleType.identifier;
         m_textWithoutSuffixLength = m_textWithSuffix.length();
-        // FIXME: Depending on the string value, we may need the real bidi algorithm. (rdar://106139180)
-        m_textIsLeftToRightDirection = u_charDirection(m_textWithSuffix[0]) != U_RIGHT_TO_LEFT;
+        m_textIsLeftToRightDirection = isLeftToRightDirectionContent(m_textWithSuffix);
         break;
+    }
     case ListStyleType::Type::CounterStyle: {
         auto counter = counterStyle();
         ASSERT(counter);
-        auto text = makeString(counter->prefix().text, counter->text(m_listItem->value(), { style().blockFlowDirection(), style().direction() }));
+        auto text = makeString(counter->prefix().text, counter->text(m_listItem->value(), writingMode()));
         m_textWithSuffix = makeString(text, counter->suffix().text);
         m_textWithoutSuffixLength = text.length();
-        m_textIsLeftToRightDirection = u_charDirection(text[0]) != U_RIGHT_TO_LEFT;
+        m_textIsLeftToRightDirection = isLeftToRightDirectionContent(text);
         break;
     }
     case ListStyleType::Type::None:
@@ -334,7 +350,7 @@ void RenderListMarker::computePreferredLogicalWidths()
 
     if (isImage()) {
         LayoutSize imageSize = LayoutSize(m_image->imageSize(this, style().usedZoom()));
-        m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = style().isHorizontalWritingMode() ? imageSize.width() : imageSize.height();
+        m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = writingMode().isHorizontal() ? imageSize.width() : imageSize.height();
         setPreferredLogicalWidthsDirty(false);
         updateMargins();
         return;
@@ -436,7 +452,7 @@ FloatRect RenderListMarker::relativeMarkerRect()
         relativeRect = FloatRect(0, 0, font.width(textRun()), font.metricsOfPrimaryFont().intHeight());
     }
 
-    if (!style().isHorizontalWritingMode()) {
+    if (!writingMode().isHorizontal()) {
         relativeRect = relativeRect.transposedRect();
         relativeRect.setX(width() - relativeRect.x() - relativeRect.width());
     }

@@ -49,14 +49,16 @@
 #include <SourceBufferParserWebM.h>
 #include <limits>
 #include <wtf/CheckedArithmetic.h>
-#include <wtf/FastMalloc.h>
 #include <wtf/Function.h>
 #include <wtf/NativePromise.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/Scope.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 #include <pal/cf/AudioToolboxSoftLink.h>
 #include <pal/cf/CoreMediaSoftLink.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -128,7 +130,7 @@ private:
 };
 
 class AudioFileReaderWebMData {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(AudioFileReaderWebMData);
 
 public:
     Ref<SharedBuffer> m_buffer;
@@ -413,13 +415,13 @@ OSStatus AudioFileReader::readProc(void* clientData, SInt64 position, UInt32 req
     auto* audioFileReader = static_cast<AudioFileReader*>(clientData);
 
     auto dataSize = audioFileReader->dataSize();
-    auto* data = audioFileReader->data();
+    auto dataSpan = audioFileReader->span();
     size_t bytesToRead = 0;
 
     if (static_cast<UInt64>(position) < dataSize) {
         size_t bytesAvailable = dataSize - static_cast<size_t>(position);
         bytesToRead = requestCount <= bytesAvailable ? requestCount : bytesAvailable;
-        memcpy(buffer, static_cast<const uint8_t*>(data) + position, bytesToRead);
+        memcpy(buffer, dataSpan.subspan(position).data(), bytesToRead);
     }
 
     if (actualCount)
@@ -659,5 +661,7 @@ WTFLogChannel& AudioFileReader::logChannel() const
 #endif
 
 } // WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

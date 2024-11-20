@@ -33,11 +33,14 @@
 #include "FontCache.h"
 #include "FontCascade.h"
 #include "GlyphPage.h"
+#include <wtf/TZoneMallocInlines.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
 class MixedFontGlyphPage {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(MixedFontGlyphPage);
 public:
     MixedFontGlyphPage(const GlyphPage* initialPage)
     {
@@ -179,7 +182,7 @@ static FontRanges realizeNextFallback(const FontCascadeDescription& description,
                 return FontRanges(WTFMove(font));
             return FontRanges();
         }, [&](const FontFamilyPlatformSpecification& fontFamilySpecification) -> FontRanges {
-            return { fontFamilySpecification.fontRanges(description), true };
+            return { fontFamilySpecification.fontRanges(description), IsGenericFontFamily::Yes };
         });
         const auto& currentFamily = description.effectiveFamilyAt(index++);
         auto ranges = std::visit(visitor, currentFamily);
@@ -573,3 +576,5 @@ void FontCascadeFonts::pruneSystemFallbacks()
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

@@ -38,6 +38,7 @@
 #include "PlatformLayer.h"
 #include "RenderingMode.h"
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
 #if USE(CAIRO)
@@ -82,7 +83,7 @@ enum class VolatilityState : uint8_t {
 };
 
 class ThreadSafeImageBufferFlusher {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ThreadSafeImageBufferFlusher);
     WTF_MAKE_NONCOPYABLE(ThreadSafeImageBufferFlusher);
 public:
     ThreadSafeImageBufferFlusher() = default;
@@ -130,6 +131,11 @@ public:
 
 #if USE(CAIRO)
     virtual RefPtr<cairo_surface_t> createCairoSurface() { return nullptr; }
+#endif
+
+#if USE(SKIA)
+    virtual void finishAcceleratedRenderingAndCreateFence() { }
+    virtual void waitForAcceleratedRenderingFenceCompletion() { }
 #endif
 
     virtual bool isInUse() const { return false; }

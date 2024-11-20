@@ -106,7 +106,7 @@ void AXObjectCache::postPlatformNotification(AccessibilityObject& object, AXNoti
         return;
 
     auto notificationName = stringNotification.createNSString();
-    [object.wrapper() accessibilityOverrideProcessNotification:notificationName.get()];
+    [object.wrapper() accessibilityOverrideProcessNotification:notificationName.get() notificationData:nil];
 
     // To simulate AX notifications for LayoutTests on the simulator, call
     // the wrapper's accessibilityPostedNotification.
@@ -159,12 +159,12 @@ void AXObjectCache::frameLoadingEventPlatformNotification(AccessibilityObject* a
         postPlatformNotification(*axFrameObject, AXLoadComplete);
 }
 
-void AXObjectCache::platformHandleFocusedUIElementChanged(Node*, Node* newNode)
+void AXObjectCache::platformHandleFocusedUIElementChanged(Element*, Element* newElement)
 {
-    postNotification(newNode, AXFocusedUIElementChanged);
+    postNotification(newElement, AXFocusedUIElementChanged);
 }
 
-void AXObjectCache::handleScrolledToAnchor(const Node*)
+void AXObjectCache::handleScrolledToAnchor(const Node&)
 {
 }
 

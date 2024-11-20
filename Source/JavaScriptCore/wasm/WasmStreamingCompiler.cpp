@@ -26,6 +26,7 @@
 #include "config.h"
 #include "WasmStreamingCompiler.h"
 
+#include "DeferredWorkTimerInlines.h"
 #include "JSBigInt.h"
 #include "JSWebAssembly.h"
 #include "JSWebAssemblyCompileError.h"
@@ -47,11 +48,11 @@ StreamingCompiler::StreamingCompiler(VM& vm, CompilerMode compilerMode, JSGlobal
     , m_info(Wasm::ModuleInformation::create())
     , m_parser(m_info.get(), *this)
 {
-    Vector<Weak<JSCell>> dependencies;
-    dependencies.append(Weak<JSCell>(globalObject));
+    Vector<JSCell*> dependencies;
+    dependencies.append(globalObject);
     if (importObject)
-        dependencies.append(Weak<JSCell>(importObject));
-    m_ticket = vm.deferredWorkTimer->addPendingWork(vm, promise, WTFMove(dependencies));
+        dependencies.append(importObject);
+    m_ticket = vm.deferredWorkTimer->addPendingWork(DeferredWorkTimer::WorkType::AtSomePoint, vm, promise, WTFMove(dependencies));
     ASSERT(vm.deferredWorkTimer->hasPendingWork(m_ticket));
     ASSERT(vm.deferredWorkTimer->hasDependencyInPendingWork(m_ticket, globalObject));
     ASSERT(!importObject || vm.deferredWorkTimer->hasDependencyInPendingWork(m_ticket, importObject));
@@ -61,7 +62,7 @@ StreamingCompiler::~StreamingCompiler()
 {
     if (m_ticket) {
         auto ticket = std::exchange(m_ticket, nullptr);
-        m_vm.deferredWorkTimer->scheduleWorkSoon(ticket, [](DeferredWorkTimer::Ticket) mutable { });
+        m_vm.deferredWorkTimer->scheduleWorkSoon(ticket, [](DeferredWorkTimer::Ticket) { });
     }
 }
 
@@ -70,7 +71,7 @@ Ref<StreamingCompiler> StreamingCompiler::create(VM& vm, CompilerMode compilerMo
     return adoptRef(*new StreamingCompiler(vm, compilerMode, globalObject, promise, importObject));
 }
 
-bool StreamingCompiler::didReceiveFunctionData(unsigned functionIndex, const Wasm::FunctionData&)
+bool StreamingCompiler::didReceiveFunctionData(FunctionCodeIndex functionIndex, const Wasm::FunctionData&)
 {
     if (!m_plan) {
         m_plan = adoptRef(*new LLIntPlan(m_vm, m_info.copyRef(), m_compilerMode, Plan::dontFinalize()));
@@ -141,7 +142,7 @@ void StreamingCompiler::didComplete()
     case CompilerMode::Validation: {
         m_vm.deferredWorkTimer->scheduleWorkSoon(ticket, [result = WTFMove(result)](DeferredWorkTimer::Ticket ticket) mutable {
             JSPromise* promise = jsCast<JSPromise*>(ticket->target());
-            JSGlobalObject* globalObject = jsCast<JSGlobalObject*>(ticket->dependencies()[0].get());
+            JSGlobalObject* globalObject = jsCast<JSGlobalObject*>(ticket->dependencies()[0]);
             VM& vm = globalObject->vm();
             auto scope = DECLARE_THROW_SCOPE(vm);
 
@@ -162,8 +163,8 @@ void StreamingCompiler::didComplete()
     case CompilerMode::FullCompile: {
         m_vm.deferredWorkTimer->scheduleWorkSoon(ticket, [result = WTFMove(result)](DeferredWorkTimer::Ticket ticket) mutable {
             JSPromise* promise = jsCast<JSPromise*>(ticket->target());
-            JSGlobalObject* globalObject = jsCast<JSGlobalObject*>(ticket->dependencies()[0].get());
-            JSObject* importObject = jsCast<JSObject*>(ticket->dependencies()[1].get());
+            JSGlobalObject* globalObject = jsCast<JSGlobalObject*>(ticket->dependencies()[0]);
+            JSObject* importObject = jsCast<JSObject*>(ticket->dependencies()[1]);
             VM& vm = globalObject->vm();
             auto scope = DECLARE_THROW_SCOPE(vm);
 

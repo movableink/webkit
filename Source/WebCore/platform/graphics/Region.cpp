@@ -27,6 +27,7 @@
 #include "Region.h"
 
 #include <stdio.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 // A region class based on the paper "Scanline Coherent Shape Algebra"
@@ -35,9 +36,13 @@
 // This implementation uses two vectors instead of linked list, and
 // also compresses regions when possible.
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WebCore {
 
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(Region);
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(RegionShape, Region::Shape);
 
 Region::Region()
 {
@@ -689,3 +694,5 @@ TextStream& operator<<(TextStream& ts, const Region& region)
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

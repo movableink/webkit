@@ -34,12 +34,16 @@
 #import <WebCore/EventRegion.h>
 #import <WebCore/LengthFunctions.h>
 #import <WebCore/Model.h>
-#import <WebCore/RuntimeApplicationChecks.h>
 #import <WebCore/TimingFunction.h>
+#import <wtf/RuntimeApplicationChecks.h>
+#import <wtf/TZoneMallocInlines.h>
 #import <wtf/text/CString.h>
+#import <wtf/text/MakeString.h>
 #import <wtf/text/TextStream.h>
 
 namespace WebKit {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteLayerTreeTransaction);
 
 RemoteLayerTreeTransaction::RemoteLayerTreeTransaction(RemoteLayerTreeTransaction&&) = default;
 
@@ -51,14 +55,12 @@ RemoteLayerTreeTransaction::~RemoteLayerTreeTransaction() = default;
 
 void RemoteLayerTreeTransaction::setRootLayerID(WebCore::PlatformLayerIdentifier rootLayerID)
 {
-    ASSERT_ARG(rootLayerID, rootLayerID);
-
     m_rootLayerID = rootLayerID;
 }
 
 void RemoteLayerTreeTransaction::layerPropertiesChanged(PlatformCALayerRemote& remoteLayer)
 {
-    ASSERT(WebCore::isInWebProcess());
+    ASSERT(isInWebProcess());
     m_changedLayers.changedLayers.add(remoteLayer);
 }
 
@@ -235,6 +237,8 @@ static void dumpChangedLayers(TextStream& ts, const LayerPropertiesMap& changedL
             ts.dumpProperty("isDescendentOfSeparatedPortal", layerProperties.isDescendentOfSeparatedPortal);
 #endif
 #endif
+        if (layerProperties.changedProperties & LayerChange::ContentsFormatChanged)
+            ts.dumpProperty("contentsFormat", layerProperties.contentsFormat);
 
         if (layerProperties.changedProperties & LayerChange::VideoGravityChanged)
             ts.dumpProperty("videoGravity", layerProperties.videoGravity);
@@ -338,19 +342,19 @@ bool RemoteLayerTreeTransaction::hasAnyLayerChanges() const
 
 HashSet<Ref<PlatformCALayerRemote>>& RemoteLayerTreeTransaction::changedLayers()
 {
-    ASSERT(WebCore::isInWebProcess());
+    ASSERT(isInWebProcess());
     return m_changedLayers.changedLayers;
 }
 
 const LayerPropertiesMap& RemoteLayerTreeTransaction::changedLayerProperties() const
 {
-    ASSERT(!WebCore::isInAuxiliaryProcess());
+    ASSERT(!isInAuxiliaryProcess());
     return m_changedLayers.changedLayerProperties;
 }
 
 LayerPropertiesMap& RemoteLayerTreeTransaction::changedLayerProperties()
 {
-    ASSERT(!WebCore::isInAuxiliaryProcess());
+    ASSERT(!isInAuxiliaryProcess());
     return m_changedLayers.changedLayerProperties;
 }
 
@@ -373,7 +377,7 @@ auto RemoteLayerTreeTransaction::LayerCreationProperties::operator=(LayerCreatio
 
 RemoteLayerBackingStoreOrProperties::~RemoteLayerBackingStoreOrProperties() = default;
 
-RemoteLayerTreeTransaction::LayerCreationProperties::LayerCreationProperties(WebCore::PlatformLayerIdentifier layerID, WebCore::PlatformCALayer::LayerType type, std::optional<RemoteLayerTreeTransaction::LayerCreationProperties::VideoElementData>&& videoElementData, RemoteLayerTreeTransaction::LayerCreationProperties::AdditionalData&& additionalData)
+RemoteLayerTreeTransaction::LayerCreationProperties::LayerCreationProperties(Markable<WebCore::PlatformLayerIdentifier> layerID, WebCore::PlatformCALayer::LayerType type, std::optional<RemoteLayerTreeTransaction::LayerCreationProperties::VideoElementData>&& videoElementData, RemoteLayerTreeTransaction::LayerCreationProperties::AdditionalData&& additionalData)
     : layerID(layerID)
     , type(type)
     , videoElementData(WTFMove(videoElementData))
@@ -415,7 +419,7 @@ void ArgumentCoder<WebKit::ChangedLayers>::encode(Encoder& encoder, const WebKit
 {
     // Although the data is not stored as a LayerPropertiesMap in the web content process, we want it to
     // decode as a LayerPropertiesMap in the UI process without doing any unnecessary transformations or allocations.
-    ASSERT(WebCore::isInWebProcess());
+    ASSERT(isInWebProcess());
     encoder << instance.changedLayers.size();
     for (const auto& layer : instance.changedLayers) {
         encoder << layer->layerID();
@@ -435,7 +439,7 @@ void ArgumentCoder<WebKit::RemoteLayerBackingStoreOrProperties>::encode(Encoder&
 {
     // The web content process has a std::unique_ptr<RemoteLayerBackingStore> but we want it to decode
     // in the UI process as a std::unique_ptr<RemoteLayerBackingStoreProperties>.
-    ASSERT(WebCore::isInWebProcess());
+    ASSERT(isInWebProcess());
     bool hasFrontBuffer = instance.store && instance.store->hasFrontBuffer();
     encoder << hasFrontBuffer;
     if (hasFrontBuffer)

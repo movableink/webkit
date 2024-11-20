@@ -44,14 +44,17 @@
 #include <WebCore/SQLiteFileSystem.h>
 #include <WebCore/StorageEstimate.h>
 #include <wtf/FileSystem.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebKit {
 
 static constexpr auto originFileName = "origin"_s;
 enum class OriginStorageManager::StorageBucketMode : bool { BestEffort, Persistent };
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(OriginStorageManager);
+
 class OriginStorageManager::StorageBucket {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(OriginStorageManager::StorageBucket);
 public:
     enum class StorageType : uint8_t {
         FileSystem,
@@ -108,7 +111,7 @@ private:
     String m_rootPath;
     String m_identifier;
     StorageBucketMode m_mode { StorageBucketMode::BestEffort };
-    std::unique_ptr<FileSystemStorageManager> m_fileSystemStorageManager;
+    RefPtr<FileSystemStorageManager> m_fileSystemStorageManager;
     std::unique_ptr<LocalStorageManager> m_localStorageManager;
     String m_customLocalStoragePath;
     String m_resolvedLocalStoragePath;
@@ -116,13 +119,15 @@ private:
     std::unique_ptr<IDBStorageManager> m_idbStorageManager;
     String m_customIDBStoragePath;
     String m_resolvedIDBStoragePath;
-    std::unique_ptr<CacheStorageManager> m_cacheStorageManager;
+    RefPtr<CacheStorageManager> m_cacheStorageManager;
     String m_customCacheStoragePath;
     String m_resolvedCacheStoragePath;
     UnifiedOriginStorageLevel m_level;
-    std::unique_ptr<BackgroundFetchStoreManager> m_backgroundFetchManager;
+    RefPtr<BackgroundFetchStoreManager> m_backgroundFetchManager;
     std::unique_ptr<ServiceWorkerStorageManager> m_serviceWorkerStorageManager;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(OriginStorageManagerStorageBucket, OriginStorageManager::StorageBucket);
 
 OriginStorageManager::StorageBucket::StorageBucket(const String& rootPath, const String& identifier, const String& localStoragePath, const String& idbStoragePath, const String& cacheStoragePath, UnifiedOriginStorageLevel level)
     : m_rootPath(rootPath)
@@ -136,8 +141,8 @@ OriginStorageManager::StorageBucket::StorageBucket(const String& rootPath, const
 
 void OriginStorageManager::StorageBucket::connectionClosed(IPC::Connection::UniqueID connection)
 {
-    if (m_fileSystemStorageManager)
-        m_fileSystemStorageManager->connectionClosed(connection);
+    if (RefPtr fileSystemStorageManager = m_fileSystemStorageManager)
+        fileSystemStorageManager->connectionClosed(connection);
 
     if (m_localStorageManager)
         m_localStorageManager->connectionClosed(connection);
@@ -145,8 +150,8 @@ void OriginStorageManager::StorageBucket::connectionClosed(IPC::Connection::Uniq
     if (m_sessionStorageManager)
         m_sessionStorageManager->connectionClosed(connection);
 
-    if (m_cacheStorageManager)
-        m_cacheStorageManager->connectionClosed(connection);
+    if (RefPtr manager = m_cacheStorageManager)
+        manager->connectionClosed(connection);
 }
 
 std::optional<OriginStorageManager::StorageBucket::StorageType> OriginStorageManager::StorageBucket::toStorageType(WebsiteDataType websiteDataType) const
@@ -210,7 +215,7 @@ String OriginStorageManager::StorageBucket::typeStoragePath(StorageType type) co
 FileSystemStorageManager& OriginStorageManager::StorageBucket::fileSystemStorageManager(FileSystemStorageHandleRegistry& registry, FileSystemStorageManager::QuotaCheckFunction&& quotaCheckFunction)
 {
     if (!m_fileSystemStorageManager)
-        m_fileSystemStorageManager = makeUnique<FileSystemStorageManager>(typeStoragePath(StorageType::FileSystem), registry, WTFMove(quotaCheckFunction));
+        m_fileSystemStorageManager = FileSystemStorageManager::create(typeStoragePath(StorageType::FileSystem), registry, WTFMove(quotaCheckFunction));
 
     return *m_fileSystemStorageManager;
 }
@@ -245,7 +250,7 @@ CacheStorageManager& OriginStorageManager::StorageBucket::cacheStorageManager(Ca
         std::optional<WebCore::ClientOrigin> optionalOrigin;
         if (m_level < UnifiedOriginStorageLevel::Standard)
             optionalOrigin = origin;
-        m_cacheStorageManager = makeUnique<CacheStorageManager>(resolvedCacheStoragePath(), registry, optionalOrigin, WTFMove(quotaCheckFunction), WTFMove(queue));
+        m_cacheStorageManager = CacheStorageManager::create(resolvedCacheStoragePath(), registry, optionalOrigin, WTFMove(quotaCheckFunction), WTFMove(queue));
     }
 
     return *m_cacheStorageManager;
@@ -254,7 +259,7 @@ CacheStorageManager& OriginStorageManager::StorageBucket::cacheStorageManager(Ca
 BackgroundFetchStoreManager& OriginStorageManager::StorageBucket::backgroundFetchManager(Ref<WorkQueue>&& queue, BackgroundFetchStoreManager::QuotaCheckFunction&& quotaCheckFunction)
 {
     if (!m_backgroundFetchManager)
-        m_backgroundFetchManager = makeUnique<BackgroundFetchStoreManager>(resolvedBackgroundFetchStoragePath(), WTFMove(queue), WTFMove(quotaCheckFunction));
+        m_backgroundFetchManager = BackgroundFetchStoreManager::create(resolvedBackgroundFetchStoragePath(), WTFMove(queue), WTFMove(quotaCheckFunction));
 
     return *m_backgroundFetchManager;
 }
@@ -273,7 +278,8 @@ bool OriginStorageManager::StorageBucket::isActive() const
 {
     // We cannot remove the bucket if it has in-memory data, otherwise session
     // data may be lost.
-    return (m_fileSystemStorageManager && m_fileSystemStorageManager->isActive())
+    RefPtr fileSystemStorageManager = m_fileSystemStorageManager;
+    return (fileSystemStorageManager && fileSystemStorageManager->isActive())
         || (m_localStorageManager && m_localStorageManager->isActive())
         || (m_sessionStorageManager && m_sessionStorageManager->isActive())
         || (m_idbStorageManager && m_idbStorageManager->isActive())
@@ -451,8 +457,8 @@ void OriginStorageManager::StorageBucket::deleteIDBStorageData(WallTime time)
 
 void OriginStorageManager::StorageBucket::deleteCacheStorageData(WallTime time)
 {
-    if (m_cacheStorageManager)
-        m_cacheStorageManager->reset();
+    if (RefPtr manager = m_cacheStorageManager)
+        manager->reset();
 
     FileSystem::deleteAllFilesModifiedSince(resolvedCacheStoragePath(), time);
 }
@@ -671,6 +677,11 @@ OriginStorageManager::StorageBucket& OriginStorageManager::defaultBucket()
 }
 
 OriginQuotaManager& OriginStorageManager::quotaManager()
+{
+    return m_quotaManager.get();
+}
+
+Ref<OriginQuotaManager> OriginStorageManager::protectedQuotaManager()
 {
     return m_quotaManager.get();
 }

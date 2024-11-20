@@ -26,6 +26,7 @@
 
 #include "BitmapTexture.h"
 #include "FilterOperations.h"
+#include "FloatPolygon.h"
 #include "FloatQuad.h"
 #include "FloatRoundedRect.h"
 #include "GLContext.h"
@@ -39,6 +40,7 @@
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/SetForScope.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if USE(CAIRO)
 #include "CairoUtilities.h"
@@ -49,8 +51,10 @@
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TextureMapper);
+
 class TextureMapperGLData {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(TextureMapperGLData);
 public:
     explicit TextureMapperGLData(void*);
     ~TextureMapperGLData();
@@ -101,7 +105,7 @@ private:
     private:
         friend class TextureMapperGLData;
 
-        using GLContextDataMap = HashMap<void*, SharedGLData*>;
+        using GLContextDataMap = UncheckedKeyHashMap<void*, SharedGLData*>;
         static GLContextDataMap& contextDataMap()
         {
             static NeverDestroyed<GLContextDataMap> map;
@@ -110,11 +114,11 @@ private:
 
         SharedGLData() = default;
 
-        HashMap<unsigned, RefPtr<TextureMapperShaderProgram>> m_programs;
+        UncheckedKeyHashMap<unsigned, RefPtr<TextureMapperShaderProgram>> m_programs;
     };
 
     Ref<SharedGLData> m_sharedGLData;
-    HashMap<const void*, GLuint> m_vbos;
+    UncheckedKeyHashMap<const void*, GLuint> m_vbos;
     GLuint m_vao { 0 };
 };
 
@@ -181,7 +185,7 @@ TextureMapper::TextureMapper()
 {
 }
 
-RefPtr<BitmapTexture> TextureMapper::acquireTextureFromPool(const IntSize& size, OptionSet<BitmapTexture::Flags> flags)
+Ref<BitmapTexture> TextureMapper::acquireTextureFromPool(const IntSize& size, OptionSet<BitmapTexture::Flags> flags)
 {
     return m_texturePool.acquireTexture(size, flags);
 }
@@ -211,7 +215,9 @@ void TextureMapper::beginPainting(FlipY flipY, BitmapTexture* surface)
     data().didModifyStencil = false;
     glGetIntegerv(GL_VIEWPORT, data().viewport);
     glGetIntegerv(GL_SCISSOR_BOX, data().previousScissor);
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib/Win port
     m_clipStack.reset(IntRect(0, 0, data().viewport[2], data().viewport[3]), flipY == FlipY::Yes ? ClipStack::YAxisMode::Default : ClipStack::YAxisMode::Inverted);
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &data().targetFrameBuffer);
     data().flipY = flipY;
     bindSurface(surface);
@@ -227,7 +233,9 @@ void TextureMapper::endPainting()
 
     glUseProgram(data().previousProgram);
 
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib/Win port
     glScissor(data().previousScissor[0], data().previousScissor[1], data().previousScissor[2], data().previousScissor[3]);
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     if (data().previousScissorState)
         glEnable(GL_SCISSOR_TEST);
     else
@@ -285,11 +293,11 @@ void TextureMapper::drawNumber(int number, const Color& color, const FloatPoint&
     IntRect sourceRect(IntPoint::zero(), size);
     IntRect targetRect(roundedIntPoint(targetPoint), size);
 
-    RefPtr<BitmapTexture> texture = m_texturePool.acquireTexture(size, { BitmapTexture::Flags::SupportsAlpha });
+    auto texture = m_texturePool.acquireTexture(size, { BitmapTexture::Flags::SupportsAlpha });
     const unsigned char* bits = cairo_image_surface_get_data(surface);
     int stride = cairo_image_surface_get_stride(surface);
-    texture->updateContents(bits, sourceRect, IntPoint::zero(), stride);
-    drawTexture(*texture, targetRect, modelViewMatrix, 1.0f, AllEdgesExposed::Yes);
+    texture->updateContents(bits, sourceRect, IntPoint::zero(), stride, PixelFormat::BGRA8);
+    drawTexture(texture.get(), targetRect, modelViewMatrix, 1.0f, AllEdgesExposed::Yes);
 
     cairo_surface_destroy(surface);
     cairo_destroy(cr);
@@ -364,7 +372,9 @@ static int computeGaussianKernel(float radius, std::array<float, SimplifiedGauss
     unsigned kernelHalfSize = blurRadiusToKernelHalfSize(radius);
     RELEASE_ASSERT(kernelHalfSize <= GaussianKernelMaxHalfSize);
 
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib/Win port
     float fullKernel[GaussianKernelMaxHalfSize];
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     fullKernel[0] = 1; // gauss(0, radius);
     float sum = fullKernel[0];
@@ -1188,8 +1198,10 @@ TextureMapper::~TextureMapper()
 void TextureMapper::bindDefaultSurface()
 {
     glBindFramebuffer(GL_FRAMEBUFFER, data().targetFrameBuffer);
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib/Win port
     auto& viewport = data().viewport;
     glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     glDisable(GL_DEPTH_TEST);
     m_clipStack.apply();
     data().currentSurface = nullptr;
@@ -1317,6 +1329,68 @@ void TextureMapper::beginClip(const TransformationMatrix& modelViewMatrix, const
     clipStack().applyIfNeeded();
 }
 
+void TextureMapper::beginClip(const TransformationMatrix& modelViewMatrix, const FloatPolygon& polygon)
+{
+    clipStack().push();
+    data().initializeStencil();
+
+    Ref<TextureMapperShaderProgram> program = data().getShaderProgram(TextureMapperShaderProgram::SolidColor);
+
+    glUseProgram(program->programID());
+    glEnableVertexAttribArray(program->vertexLocation());
+
+    unsigned numberOfVertices = polygon.numberOfVertices();
+    Vector<GLfloat> polygonVertices;
+    polygonVertices.reserveCapacity(numberOfVertices * 2);
+    for (unsigned i = 0; i < numberOfVertices; i++) {
+        auto v = polygon.vertexAt(i);
+        polygonVertices.append(v.x());
+        polygonVertices.append(v.y());
+    }
+
+    int stencilIndex = clipStack().getStencilIndex();
+
+    glEnable(GL_STENCIL_TEST);
+
+    // Make sure we don't do any actual drawing.
+    glStencilFunc(GL_NEVER, stencilIndex, stencilIndex);
+
+    // Operate only on the stencilIndex and above.
+    glStencilMask(0xff & ~(stencilIndex - 1));
+
+    // First clear the entire buffer at the current index.
+    static const TransformationMatrix fullProjectionMatrix = TransformationMatrix::rectToRect(FloatRect(0, 0, 1, 1), FloatRect(-1, -1, 2, 2));
+    const GLfloat unitRect[] = { 0, 0, 1, 0, 1, 1, 0, 1 };
+    GLuint vbo = data().getStaticVBO(GL_ARRAY_BUFFER, sizeof(GLfloat) * 8, unitRect);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glVertexAttribPointer(program->vertexLocation(), 2, GL_FLOAT, false, 0, 0);
+    program->setMatrix(program->projectionMatrixLocation(), fullProjectionMatrix);
+    program->setMatrix(program->modelViewMatrixLocation(), TransformationMatrix());
+    glStencilOp(GL_ZERO, GL_ZERO, GL_ZERO);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+    // Now apply the current index to the new polygon.
+    GLuint polygonVBO;
+    glGenBuffers(1, &polygonVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, polygonVBO);
+    glBufferData(GL_ARRAY_BUFFER, polygonVertices.size() * sizeof(GLfloat), polygonVertices.data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(program->vertexLocation(), 2, GL_FLOAT, false, 0, 0);
+    glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
+    program->setMatrix(program->projectionMatrixLocation(), data().projectionMatrix);
+    program->setMatrix(program->modelViewMatrixLocation(), modelViewMatrix);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, polygonVertices.size() / 2);
+    glDeleteBuffers(1, &polygonVBO);
+
+    // Clear the state.
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glDisableVertexAttribArray(program->vertexLocation());
+    glStencilMask(0);
+
+    // Increase stencilIndex and apply stencil testing.
+    clipStack().setStencilIndex(stencilIndex * 2);
+    clipStack().applyIfNeeded();
+}
+
 void TextureMapper::endClip()
 {
     clipStack().pop();
@@ -1335,6 +1409,11 @@ void TextureMapper::setDepthRange(double zNear, double zFar)
     updateProjectionMatrix();
 }
 
+std::pair<double, double> TextureMapper::depthRange() const
+{
+    return { data().zNear, data().zFar };
+}
+
 void TextureMapper::updateProjectionMatrix()
 {
     bool flipY;
@@ -1343,7 +1422,9 @@ void TextureMapper::updateProjectionMatrix()
         size = data().currentSurface->size();
         flipY = true;
     } else {
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib/Win port
         size = IntSize(data().viewport[2], data().viewport[3]);
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         flipY = data().flipY == FlipY::Yes;
     }
     data().projectionMatrix = createProjectionMatrix(size, flipY, data().zNear, data().zFar);

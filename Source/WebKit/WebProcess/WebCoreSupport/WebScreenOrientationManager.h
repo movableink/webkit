@@ -27,14 +27,16 @@
 
 #include "MessageReceiver.h"
 #include <WebCore/ScreenOrientationManager.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakHashSet.h>
+#include <wtf/WeakRef.h>
 
 namespace WebKit {
 
 class WebPage;
 
 class WebScreenOrientationManager final : public WebCore::ScreenOrientationManager, public IPC::MessageReceiver {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(WebScreenOrientationManager);
 public:
     explicit WebScreenOrientationManager(WebPage&);
     ~WebScreenOrientationManager();
@@ -52,7 +54,9 @@ private:
     void addObserver(WebCore::ScreenOrientationManagerObserver&) final;
     void removeObserver(WebCore::ScreenOrientationManagerObserver&) final;
 
-    WebPage& m_page;
+    Ref<WebPage> protectedPage() const;
+
+    WeakRef<WebPage> m_page;
     WeakHashSet<WebCore::ScreenOrientationManagerObserver> m_observers;
     mutable std::optional<WebCore::ScreenOrientationType> m_currentOrientation;
 };

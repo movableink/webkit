@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,36 +27,28 @@
 
 #if ENABLE(WK_WEB_EXTENSIONS)
 
+#include "APIData.h"
 #include "APIObject.h"
-#include "CocoaImage.h"
 #include "WebExtensionContentWorldType.h"
 #include "WebExtensionMatchPattern.h"
+#include <WebCore/FloatSize.h>
+#include <WebCore/Icon.h>
 #include <WebCore/UserStyleSheetTypes.h>
 #include <wtf/Forward.h>
 #include <wtf/HashSet.h>
+#include <wtf/JSONValues.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/spi/cocoa/SecuritySPI.h>
 
-OBJC_CLASS NSArray;
 OBJC_CLASS NSBundle;
 OBJC_CLASS NSData;
 OBJC_CLASS NSDictionary;
 OBJC_CLASS NSError;
-OBJC_CLASS NSLocale;
-OBJC_CLASS NSMutableArray;
-OBJC_CLASS NSMutableDictionary;
-OBJC_CLASS NSString;
 OBJC_CLASS NSURL;
-OBJC_CLASS UTType;
-OBJC_CLASS _WKWebExtension;
+OBJC_CLASS WKWebExtension;
 OBJC_CLASS _WKWebExtensionLocalization;
-OBJC_CLASS _WKWebExtensionMatchPattern;
-
-#ifdef __OBJC__
-#include "_WKWebExtensionPermission.h"
-#endif
 
 namespace API {
 class Data;
@@ -68,26 +60,29 @@ class WebExtension : public API::ObjectImpl<API::Object::Type::WebExtension>, pu
     WTF_MAKE_NONCOPYABLE(WebExtension);
 
 public:
+    using IconCacheEntry = std::variant<RefPtr<WebCore::Icon>, Vector<double>>;
+    using IconsCache = HashMap<String, IconCacheEntry>;
+    using Resources = HashMap<String, Ref<API::Data>>;
+
     template<typename... Args>
     static Ref<WebExtension> create(Args&&... args)
     {
         return adoptRef(*new WebExtension(std::forward<Args>(args)...));
     }
 
-    explicit WebExtension(NSBundle *appExtensionBundle, NSError ** = nullptr);
-    explicit WebExtension(NSURL *resourceBaseURL, NSError ** = nullptr);
-    explicit WebExtension(NSDictionary *manifest, NSDictionary *resources);
-    explicit WebExtension(NSDictionary *resources);
+    explicit WebExtension(NSBundle *appExtensionBundle, NSURL *resourceURL, RefPtr<API::Error>&);
+    explicit WebExtension(NSDictionary *manifest, Resources&& = { });
+    explicit WebExtension(Resources&& = { });
 
     ~WebExtension() { }
 
     enum class CacheResult : bool { No, Yes };
-    enum class SuppressNotification : bool { No, Yes };
     enum class SuppressNotFoundErrors : bool { No, Yes };
 
     enum class Error : uint8_t {
         Unknown = 1,
         ResourceNotFound,
+        InvalidArchive,
         InvalidResourceCodeSignature,
         InvalidManifest,
         UnsupportedManifestVersion,
@@ -99,6 +94,7 @@ public:
         InvalidContentScripts,
         InvalidContentSecurityPolicy,
         InvalidDeclarativeNetRequest,
+        InvalidDefaultLocale,
         InvalidDescription,
         InvalidExternallyConnectable,
         InvalidIcon,
@@ -107,6 +103,19 @@ public:
         InvalidURLOverrides,
         InvalidVersion,
         InvalidWebAccessibleResources,
+    };
+
+    // Keep in sync with WKWebExtensionError values.
+    enum class APIError : uint8_t {
+        Unknown = 1,
+        ResourceNotFound,
+        InvalidResourceCodeSignature,
+        InvalidManifest,
+        UnsupportedManifestVersion,
+        InvalidManifestEntry,
+        InvalidDeclarativeNetRequestEntry,
+        InvalidBackgroundPersistence,
+        InvalidArchive,
     };
 
     enum class InjectionTime : uint8_t {
@@ -118,6 +127,11 @@ public:
     enum class Environment : bool {
         Document,
         ServiceWorker,
+    };
+
+    enum class ColorScheme : uint8_t {
+        Light = 1 << 0,
+        Dark  = 1 << 1
     };
 
     using PermissionsSet = HashSet<String>;
@@ -161,14 +175,14 @@ public:
         WebExtensionContentWorldType contentWorldType { WebExtensionContentWorldType::ContentScript };
         WebCore::UserStyleLevel styleLevel { WebCore::UserStyleLevel::Author };
 
-        RetainPtr<NSArray> scriptPaths;
-        RetainPtr<NSArray> styleSheetPaths;
+        Vector<String> scriptPaths;
+        Vector<String> styleSheetPaths;
 
-        RetainPtr<NSArray> includeGlobPatternStrings;
-        RetainPtr<NSArray> excludeGlobPatternStrings;
+        Vector<String> includeGlobPatternStrings;
+        Vector<String> excludeGlobPatternStrings;
 
-        NSArray *expandedIncludeMatchPatternStrings() const;
-        NSArray *expandedExcludeMatchPatternStrings() const;
+        Vector<String> expandedIncludeMatchPatternStrings() const;
+        Vector<String> expandedExcludeMatchPatternStrings() const;
     };
 
     struct WebAccessibleResourceData {
@@ -182,6 +196,12 @@ public:
         String jsonPath;
     };
 
+    struct LocaleComponents {
+        String languageCode;
+        String scriptCode;
+        String countryCode;
+    };
+
     using CommandsVector = Vector<CommandData>;
     using InjectedContentVector = Vector<InjectedContentData>;
     using WebAccessibleResourcesVector = Vector<WebAccessibleResourceData>;
@@ -193,6 +213,7 @@ public:
 
     bool manifestParsedSuccessfully();
     NSDictionary *manifest();
+    RefPtr<const JSON::Object> manifestObject() { return manifestParsedSuccessfully() ? m_manifestJSON->asObject() : nullptr; }
     Ref<API::Data> serializeManifest();
 
     double manifestVersion();
@@ -200,6 +221,7 @@ public:
 
     Ref<API::Data> serializeLocalization();
 
+    NSBundle *bundle() const { return m_bundle.get(); }
     SecStaticCodeRef bundleStaticCode() const;
     NSData *bundleHash() const;
 
@@ -209,56 +231,74 @@ public:
 
     bool isWebAccessibleResource(const URL& resourceURL, const URL& pageURL);
 
-    NSURL *resourceFileURLForPath(NSString *);
+    String resourceMIMETypeForPath(const String&);
 
-    UTType *resourceTypeForPath(NSString *);
-
-    NSString *resourceStringForPath(NSString *, CacheResult = CacheResult::No, SuppressNotFoundErrors = SuppressNotFoundErrors::No);
-    NSData *resourceDataForPath(NSString *, CacheResult = CacheResult::No, SuppressNotFoundErrors = SuppressNotFoundErrors::No);
+    String resourceStringForPath(const String&, RefPtr<API::Error>&, CacheResult = CacheResult::No, SuppressNotFoundErrors = SuppressNotFoundErrors::No);
+    RefPtr<API::Data> resourceDataForPath(const String&, RefPtr<API::Error>&, CacheResult = CacheResult::No, SuppressNotFoundErrors = SuppressNotFoundErrors::No);
 
     _WKWebExtensionLocalization *localization();
-    NSLocale *defaultLocale();
 
-    NSString *displayName();
-    NSString *displayShortName();
-    NSString *displayVersion();
-    NSString *displayDescription();
-    NSString *version();
+    const Vector<String>& supportedLocales();
+    const String& defaultLocale();
+    String bestMatchLocale();
 
-    NSString *contentSecurityPolicy();
+    const String& displayName();
+    const String& displayShortName();
+    const String& displayVersion();
+    const String& displayDescription();
+    const String& version();
 
-    CocoaImage *icon(CGSize idealSize);
+    const String& contentSecurityPolicy();
 
-    CocoaImage *actionIcon(CGSize idealSize);
-    NSString *displayActionLabel();
-    NSString *actionPopupPath();
+    RefPtr<WebCore::Icon> icon(WebCore::FloatSize idealSize);
+
+    RefPtr<WebCore::Icon> actionIcon(WebCore::FloatSize idealSize);
+    const String& displayActionLabel();
+    const String& actionPopupPath();
 
     bool hasAction();
     bool hasBrowserAction();
     bool hasPageAction();
 
-    CocoaImage *imageForPath(NSString *);
+#if ENABLE(WK_WEB_EXTENSIONS_SIDEBAR)
+    bool hasSidebarAction();
+    bool hasSidePanel();
+    bool hasAnySidebar();
+    RefPtr<WebCore::Icon> sidebarIcon(WebCore::FloatSize idealSize);
+    const Sring& sidebarDocumentPath();
+    const String& sidebarTitle();
+#endif
 
-    NSString *pathForBestImageInIconsDictionary(NSDictionary *, size_t idealPixelSize);
-    CocoaImage *bestImageInIconsDictionary(NSDictionary *, size_t idealPointSize);
-    CocoaImage *bestImageForIconsDictionaryManifestKey(NSDictionary *, NSString *manifestKey, CGSize idealSize, RetainPtr<CocoaImage>& cacheLocation, Error, NSString *customLocalizedDescription);
+    RefPtr<WebCore::Icon> iconForPath(const String&, RefPtr<API::Error>&, WebCore::FloatSize sizeForResizing = { });
+
+    size_t bestIconSize(const JSON::Object&, size_t idealPixelSize);
+    String pathForBestImage(const JSON::Object&, size_t idealPixelSize);
+
+    RefPtr<WebCore::Icon> bestIcon(RefPtr<JSON::Object>, WebCore::FloatSize idealSize, const Function<void(Ref<API::Error>)>&);
+    RefPtr<WebCore::Icon> bestIconForManifestKey(const JSON::Object&, const String& manifestKey, WebCore::FloatSize idealSize, IconsCache& cacheLocation, Error, const String& customLocalizedDescription);
+
+#if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
+    RefPtr<JSON::Object> bestIconVariantJSONObject(RefPtr<JSON::Array>, size_t idealPixelSize, ColorScheme);
+    RefPtr<WebCore::Icon> bestIconVariant(RefPtr<JSON::Array>, WebCore::FloatSize idealSize, const Function<void(Ref<API::Error>)>&);
+    RefPtr<WebCore::Icon> bestIconVariantForManifestKey(const JSON::Object&, const String& manifestKey, WebCore::FloatSize idealSize, IconsCache& cacheLocation, Error, const String& customLocalizedDescription);
+#endif
 
     bool hasBackgroundContent();
     bool backgroundContentIsPersistent();
     bool backgroundContentUsesModules();
     bool backgroundContentIsServiceWorker();
 
-    NSString *backgroundContentPath();
-    NSString *generatedBackgroundContent();
+    const String& backgroundContentPath();
+    const String& generatedBackgroundContent();
 
     bool hasInspectorBackgroundPage();
-    NSString *inspectorBackgroundPagePath();
+    const String& inspectorBackgroundPagePath();
 
     bool hasOptionsPage();
     bool hasOverrideNewTabPage();
 
-    NSString *optionsPagePath();
-    NSString *overrideNewTabPagePath();
+    const String& optionsPagePath();
+    const String& overrideNewTabPagePath();
 
     const CommandsVector& commands();
     bool hasCommands();
@@ -268,7 +308,7 @@ public:
     bool hasContentModificationRules() { return !declarativeNetRequestRulesets().isEmpty(); }
 
     const InjectedContentVector& staticInjectedContents();
-    bool hasStaticInjectedContentForURL(NSURL *);
+    bool hasStaticInjectedContentForURL(const URL&);
     bool hasStaticInjectedContent();
 
     // Permissions requested by the extension in their manifest.
@@ -276,7 +316,7 @@ public:
     const PermissionsSet& requestedPermissions();
     const PermissionsSet& optionalPermissions();
 
-    bool hasRequestedPermission(NSString *) const;
+    bool hasRequestedPermission(String);
 
     // Match patterns requested by the extension in their manifest.
     // These are not the currently allowed permission patterns.
@@ -290,21 +330,25 @@ public:
     // Combined pattern set that includes permission patterns and injected content patterns from the manifest.
     MatchPatternSet allRequestedMatchPatterns();
 
-    NSError *createError(Error, NSString *customLocalizedDescription = nil, NSError *underlyingError = nil);
+    Ref<API::Error> createError(Error error, const String& customLocalizedDescription = { }, RefPtr<API::Error> underlyingError = nullptr);
+    void recordError(Ref<API::Error>);
+    void recordErrorIfNeeded(RefPtr<API::Error> error)
+    {
+        if (error)
+            recordError(*error);
+    }
 
-    // If an error can't be synchronously determined by one of the populate methods in the errors() getter,
-    // then the caller of recordError() should pass SuppressNotification::No.
-    void recordError(NSError *, SuppressNotification = SuppressNotification::Yes);
-    void removeError(Error, SuppressNotification = SuppressNotification::No);
-
-    NSArray *errors();
+    Vector<Ref<API::Error>> errors();
 
 #ifdef __OBJC__
-    _WKWebExtension *wrapper() const { return (_WKWebExtension *)API::ObjectImpl<API::Object::Type::WebExtension>::wrapper(); }
+    WKWebExtension *wrapper() const { return (WKWebExtension *)API::ObjectImpl<API::Object::Type::WebExtension>::wrapper(); }
 #endif
 
 private:
     bool parseManifest(NSData *);
+
+    void parseWebAccessibleResourcesVersion3();
+    void parseWebAccessibleResourcesVersion2();
 
     void populateDisplayStringsIfNeeded();
     void populateActionPropertiesIfNeeded();
@@ -318,8 +362,15 @@ private:
     void populateCommandsIfNeeded();
     void populateDeclarativeNetRequestPropertiesIfNeeded();
     void populateExternallyConnectableIfNeeded();
+#if ENABLE(WK_WEB_EXTENSIONS_SIDEBAR)
+    void populateSidebarPropertiesIfNeeded();
+    void populateSidebarActionProperties(RetainPtr<NSDictionary>);
+    void populateSidePanelProperties(RetainPtr<NSDictionary>);
+#endif
 
-    std::optional<WebExtension::DeclarativeNetRequestRulesetData> parseDeclarativeNetRequestRulesetDictionary(NSDictionary *, NSError **);
+    URL resourceFileURLForPath(const String&);
+
+    std::optional<WebExtension::DeclarativeNetRequestRulesetData> parseDeclarativeNetRequestRulesetDictionary(NSDictionary *, RefPtr<API::Error>&);
 
     InjectedContentVector m_staticInjectedContents;
     WebAccessibleResourcesVector m_webAccessibleResources;
@@ -336,41 +387,53 @@ private:
 
     RetainPtr<NSBundle> m_bundle;
     mutable RetainPtr<SecStaticCodeRef> m_bundleStaticCode;
-    RetainPtr<NSURL> m_resourceBaseURL;
+    URL m_resourceBaseURL;
     RetainPtr<NSDictionary> m_manifest;
-    RetainPtr<NSMutableDictionary> m_resources;
+    Ref<const JSON::Value> m_manifestJSON;
+    Resources m_resources;
 
-    RetainPtr<NSLocale> m_defaultLocale;
+    String m_defaultLocale;
+    Vector<String> m_supportedLocales;
     RetainPtr<_WKWebExtensionLocalization> m_localization;
 
-    RetainPtr<NSMutableArray> m_errors;
+    Vector<Ref<API::Error>> m_errors;
 
-    RetainPtr<NSString> m_displayName;
-    RetainPtr<NSString> m_displayShortName;
-    RetainPtr<NSString> m_displayVersion;
-    RetainPtr<NSString> m_displayDescription;
-    RetainPtr<NSString> m_version;
+    String m_displayName;
+    String m_displayShortName;
+    String m_displayVersion;
+    String m_displayDescription;
+    String m_version;
 
-    RetainPtr<CocoaImage> m_icon;
+    IconsCache m_iconsCache;
 
-    RetainPtr<NSDictionary> m_actionDictionary;
-    RetainPtr<CocoaImage> m_actionIcon;
-    RetainPtr<NSString> m_displayActionLabel;
-    RetainPtr<NSString> m_actionPopupPath;
+    RefPtr<JSON::Object> m_actionObject;
+    IconsCache m_actionIconsCache;
+    RefPtr<WebCore::Icon> m_defaultActionIcon;
+    String m_displayActionLabel;
+    String m_actionPopupPath;
 
-    RetainPtr<NSString> m_contentSecurityPolicy;
+#if ENABLE(WK_WEB_EXTENSIONS_SIDEBAR)
+    IconsCache m_sidebarIconsCache;
+    String m_sidebarDocumentPath;
+    String m_sidebarTitle;
+#endif
 
-    RetainPtr<NSArray> m_backgroundScriptPaths;
-    RetainPtr<NSString> m_backgroundPagePath;
-    RetainPtr<NSString> m_backgroundServiceWorkerPath;
-    RetainPtr<NSString> m_generatedBackgroundContent;
+    String m_contentSecurityPolicy;
+
+    Vector<String> m_backgroundScriptPaths;
+    String m_backgroundPagePath;
+    String m_backgroundServiceWorkerPath;
+    String m_generatedBackgroundContent;
     Environment m_backgroundContentEnvironment { Environment::Document };
 
-    RetainPtr<NSString> m_inspectorBackgroundPagePath;
+    String m_inspectorBackgroundPagePath;
 
-    RetainPtr<NSString> m_optionsPagePath;
-    RetainPtr<NSString> m_overrideNewTabPagePath;
+    String m_optionsPagePath;
+    String m_overrideNewTabPagePath;
 
+#if PLATFORM(MAC)
+    bool m_shouldValidateResourceData : 1 { true };
+#endif
     bool m_backgroundContentIsPersistent : 1 { false };
     bool m_backgroundContentUsesModules : 1 { false };
     bool m_parsedManifest : 1 { false };
@@ -386,6 +449,9 @@ private:
     bool m_parsedManifestCommands : 1 { false };
     bool m_parsedManifestDeclarativeNetRequestRulesets : 1 { false };
     bool m_parsedExternallyConnectable : 1 { false };
+#if ENABLE(WK_WEB_EXTENSIONS_SIDEBAR)
+    bool m_parsedManifestSidebarProperties : 1 { false };
+#endif
 };
 
 } // namespace WebKit

@@ -47,6 +47,7 @@
 #include "VoidCallback.h"
 #include <JavaScriptCore/InspectorFrontendRouter.h>
 #include <wtf/JSONValues.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -54,6 +55,8 @@ namespace WebCore {
 using namespace Inspector;
 
 using ExecuteSQLCallback = Inspector::DatabaseBackendDispatcherHandler::ExecuteSQLCallback;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(InspectorDatabaseAgent);
 
 namespace {
 
@@ -72,6 +75,8 @@ public:
     {
         return adoptRef(*new StatementCallback(context, WTFMove(requestCallback)));
     }
+
+    bool hasCallback() const final { return true; }
 
 private:
     StatementCallback(ScriptExecutionContext* context, Ref<ExecuteSQLCallback>&& requestCallback)
@@ -111,6 +116,8 @@ public:
         return adoptRef(*new StatementErrorCallback(context, WTFMove(requestCallback)));
     }
 
+    bool hasCallback() const final { return true; }
+
 private:
     StatementErrorCallback(ScriptExecutionContext* context, Ref<ExecuteSQLCallback>&& requestCallback)
         : SQLStatementErrorCallback(context)
@@ -133,6 +140,8 @@ public:
     {
         return adoptRef(*new TransactionCallback(context, sqlStatement, WTFMove(requestCallback)));
     }
+
+    bool hasCallback() const final { return true; }
 
 private:
     TransactionCallback(ScriptExecutionContext* context, const String& sqlStatement, Ref<ExecuteSQLCallback>&& requestCallback)
@@ -164,6 +173,8 @@ public:
         return adoptRef(*new TransactionErrorCallback(context, WTFMove(requestCallback)));
     }
 
+    bool hasCallback() const final { return true; }
+
 private:
     TransactionErrorCallback(ScriptExecutionContext* context, Ref<ExecuteSQLCallback>&& requestCallback)
         : SQLTransactionErrorCallback(context)
@@ -188,6 +199,8 @@ public:
     }
 
     CallbackResult<void> handleEvent() final { return { }; }
+
+    bool hasCallback() const final { return true; }
 
 private:
     TransactionSuccessCallback(ScriptExecutionContext* context)

@@ -38,6 +38,7 @@ class RenderLayerCompositor;
 class RenderLayoutState;
 class RenderCounter;
 class RenderQuote;
+class RenderViewTransitionRoot;
 
 namespace Layout {
 class InitialContainingBlock;
@@ -45,7 +46,7 @@ class LayoutState;
 }
 
 class RenderView final : public RenderBlockFlow {
-    WTF_MAKE_ISO_ALLOCATED(RenderView);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderView);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderView);
 public:
     RenderView(Document&, RenderStyle&&);
@@ -74,8 +75,8 @@ public:
 
     float zoomFactor() const;
 
-    LocalFrameView& frameView() const { return m_frameView; }
-    Ref<LocalFrameView> protectedFrameView() const { return m_frameView; }
+    LocalFrameView& frameView() const { return m_frameView.get(); }
+    Ref<LocalFrameView> protectedFrameView() const { return m_frameView.get(); }
 
     Layout::InitialContainingBlock& initialContainingBlock() { return m_initialContainingBlock.get(); }
     const Layout::InitialContainingBlock& initialContainingBlock() const { return m_initialContainingBlock.get(); }
@@ -200,9 +201,6 @@ public:
         bool m_wasAccumulatingRepaintRegion { false };
     };
 
-    void layerChildrenChangedDuringStyleChange(RenderLayer&);
-    RenderLayer* takeStyleChangeLayerTreeMutationRoot();
-
     void registerBoxWithScrollSnapPositions(const RenderBox&);
     void unregisterBoxWithScrollSnapPositions(const RenderBox&);
     const SingleThreadWeakHashSet<const RenderBox>& boxesWithScrollSnapPositions() { return m_boxesWithScrollSnapPositions; }
@@ -211,8 +209,12 @@ public:
     void unregisterContainerQueryBox(const RenderBox&);
     const SingleThreadWeakHashSet<const RenderBox>& containerQueryBoxes() const { return m_containerQueryBoxes; }
 
-    SingleThreadWeakPtr<RenderElement> viewTransitionRoot() const;
-    void setViewTransitionRoot(RenderElement& renderer);
+    void registerAnchor(const RenderBoxModelObject&);
+    void unregisterAnchor(const RenderBoxModelObject&);
+    const SingleThreadWeakHashSet<const RenderBoxModelObject>& anchors() const { return m_anchors; }
+
+    SingleThreadWeakPtr<RenderViewTransitionRoot> viewTransitionRoot() const;
+    void setViewTransitionRoot(RenderViewTransitionRoot& renderer);
 
 private:
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
@@ -235,7 +237,7 @@ private:
 
     void updateInitialContainingBlockSize();
 
-    LocalFrameView& m_frameView;
+    CheckedRef<LocalFrameView> m_frameView;
 
     // Include this RenderView.
     uint64_t m_rendererCount { 1 };
@@ -246,8 +248,6 @@ private:
 
     mutable std::unique_ptr<Region> m_accumulatedRepaintRegion;
     RenderSelection m_selection;
-
-    SingleThreadWeakPtr<RenderLayer> m_styleChangeLayerMutationRoot;
 
     // FIXME: Only used by embedded WebViews inside AppKit NSViews.  Find a way to remove.
     struct LegacyPrinting {
@@ -283,8 +283,9 @@ private:
 
     SingleThreadWeakHashSet<const RenderBox> m_boxesWithScrollSnapPositions;
     SingleThreadWeakHashSet<const RenderBox> m_containerQueryBoxes;
+    SingleThreadWeakHashSet<const RenderBoxModelObject> m_anchors;
 
-    SingleThreadWeakPtr<RenderElement> m_viewTransitionRoot;
+    SingleThreadWeakPtr<RenderViewTransitionRoot> m_viewTransitionRoot;
 };
 
 } // namespace WebCore

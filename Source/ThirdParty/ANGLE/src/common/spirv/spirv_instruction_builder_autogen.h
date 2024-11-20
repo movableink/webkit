@@ -58,7 +58,10 @@ void WriteCapability(Blob *blob, spv::Capability capability);
 void WriteTypeVoid(Blob *blob, IdResult idResult1);
 void WriteTypeBool(Blob *blob, IdResult idResult1);
 void WriteTypeInt(Blob *blob, IdResult idResult1, LiteralInteger width, LiteralInteger signedness);
-void WriteTypeFloat(Blob *blob, IdResult idResult1, LiteralInteger width);
+void WriteTypeFloat(Blob *blob,
+                    IdResult idResult1,
+                    LiteralInteger width,
+                    const spv::FPEncoding *floatingPointEncoding);
 void WriteTypeVector(Blob *blob,
                      IdResult idResult1,
                      IdRef componentType,
@@ -1123,48 +1126,8 @@ void WritePtrNotEqual(Blob *blob,
                       IdResult idResult2,
                       IdRef operand1,
                       IdRef operand2);
-void WriteSDot(Blob *blob,
-               IdResultType idResultType1,
-               IdResult idResult2,
-               IdRef vector1,
-               IdRef vector2,
-               const spv::PackedVectorFormat *packedVectorFormat);
-void WriteUDot(Blob *blob,
-               IdResultType idResultType1,
-               IdResult idResult2,
-               IdRef vector1,
-               IdRef vector2,
-               const spv::PackedVectorFormat *packedVectorFormat);
-void WriteSUDot(Blob *blob,
-                IdResultType idResultType1,
-                IdResult idResult2,
-                IdRef vector1,
-                IdRef vector2,
-                const spv::PackedVectorFormat *packedVectorFormat);
-void WriteSDotAccSat(Blob *blob,
-                     IdResultType idResultType1,
-                     IdResult idResult2,
-                     IdRef vector1,
-                     IdRef vector2,
-                     IdRef accumulator,
-                     const spv::PackedVectorFormat *packedVectorFormat);
-void WriteUDotAccSat(Blob *blob,
-                     IdResultType idResultType1,
-                     IdResult idResult2,
-                     IdRef vector1,
-                     IdRef vector2,
-                     IdRef accumulator,
-                     const spv::PackedVectorFormat *packedVectorFormat);
-void WriteSUDotAccSat(Blob *blob,
-                      IdResultType idResultType1,
-                      IdResult idResult2,
-                      IdRef vector1,
-                      IdRef vector2,
-                      IdRef accumulator,
-                      const spv::PackedVectorFormat *packedVectorFormat);
 void WriteBeginInvocationInterlockEXT(Blob *blob);
 void WriteEndInvocationInterlockEXT(Blob *blob);
-void WriteDemoteToHelperInvocation(Blob *blob);
 
 }  // namespace spirv
 }  // namespace angle

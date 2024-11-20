@@ -28,32 +28,13 @@
 
 #include "CSSColorMixResolver.h"
 #include "CSSColorMixSerialization.h"
+#include "CSSPrimitiveNumericTypes+Serialization.h"
 #include "ColorSerialization.h"
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
 // MARK: Resolve
-
-std::optional<Color> resolveAbsoluteComponents(const StyleColorMix& colorMix)
-{
-    if (containsNonAbsoluteColor(colorMix))
-        return std::nullopt;
-
-    return mix(
-        CSSColorMixResolver {
-            colorMix.colorInterpolationMethod,
-            CSSColorMixResolver::Component {
-                colorMix.mixComponents1.color.absoluteColor(),
-                colorMix.mixComponents1.percentage
-            },
-            CSSColorMixResolver::Component {
-                colorMix.mixComponents2.color.absoluteColor(),
-                colorMix.mixComponents2.percentage
-            }
-        }
-    );
-}
 
 Color resolveColor(const StyleColorMix& colorMix, const Color& currentColor)
 {

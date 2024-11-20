@@ -86,6 +86,7 @@ context_messages_template = (
     template_preamble
     + """#if ENABLE(GPU_PROCESS) && ENABLE(WEBGL)
 
+[EnabledBy=WebGLEnabled && UseGPUProcessForWebGLEnabled]
 messages -> RemoteGraphicsContextGL NotRefCounted Stream {{
     void Reshape(int32_t width, int32_t height)
 #if PLATFORM(COCOA)
@@ -95,7 +96,7 @@ messages -> RemoteGraphicsContextGL NotRefCounted Stream {{
     void PrepareForDisplay() -> (std::optional<WebKit::WCContentBufferIdentifier> contentBuffer) Synchronous
 #endif
 #if USE(GBM)
-    void PrepareForDisplay() -> (WebCore::DMABufObject dmabufObject) Synchronous NotStreamEncodableReply
+    void PrepareForDisplay() -> (uint64_t bufferID, struct std::optional<WebCore::DMABufBufferAttributes> dmabufAttributes, UnixFileDescriptor fenceFD) Synchronous NotStreamEncodableReply
 #endif
 #if !PLATFORM(COCOA) && !USE(GRAPHICS_LAYER_WC) && !USE(GBM)
     void PrepareForDisplay() -> () Synchronous
@@ -242,6 +243,9 @@ class cpp_type_container(cpp_type):
     def is_dynamic_span(self) -> bool:
         return (self.container_name == "std::span" and self.arity is None) or self.container_name == "GCGLSpanTuple"
 
+    def is_array(self) -> bool:
+        return self.container_name == "std::array"
+
     def get_container_name(self):
         return self.container_name
 
@@ -381,8 +385,14 @@ def cpp_implicit_cast(expr: cpp_expr, type: cpp_type) -> cpp_expr:
 
 
 def cpp_array_reinterpret_cast_conversion(expr: cpp_expr, type: cpp_type_container) -> cpp_expr:
-    element_pointer_type = type.get_contained_type().get_pointer_type()
-    return cpp_expr(type, f"{str(type)}(reinterpret_cast<{element_pointer_type}>({str(expr)}.data()), {str(expr)}.size())")
+    target_value_type = type.get_contained_type().get_decay_type()
+    target_arity = f", {type.arity}" if type.arity else ""
+    source_value_type = expr.type.get_contained_type().get_decay_type()
+    source_arity = f", {expr.type.arity}" if expr.type.arity else ""
+    if expr.type.is_array():
+        return cpp_expr(type, f"spanReinterpretCast<const {target_value_type}{target_arity}>(std::span<const {source_value_type}{source_arity}>({str(expr)}))")
+    else:
+        return cpp_expr(type, f"spanReinterpretCast<const {target_value_type}{target_arity}>({str(expr)}.span())")
 
 
 def cpp_move_expr(expr: cpp_expr) -> cpp_expr:
@@ -878,7 +888,7 @@ class webkit_ipc_cpp_impl(object):
         in_exprs = ", ".join(str(e) for e in self.in_exprs)
         is_async = len(self.out_exprs) == 0
 
-        call_expr = f"m_context->{self.name}({in_exprs})"
+        call_expr = f"protectedContext()->{self.name}({in_exprs})"
         if not self.return_value_expr:
             self.call_stmts += [f"{call_expr};"]
         else:

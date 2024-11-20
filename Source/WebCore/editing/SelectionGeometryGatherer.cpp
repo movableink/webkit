@@ -34,8 +34,12 @@
 #include "LocalFrame.h"
 #include "RenderView.h"
 #include "ServicesOverlayController.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SelectionGeometryGatherer);
+WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(SelectionGeometryGathererNotifier, SelectionGeometryGatherer::Notifier);
 
 SelectionGeometryGatherer::SelectionGeometryGatherer(RenderView& renderView)
     : m_renderView(renderView)
@@ -72,7 +76,7 @@ SelectionGeometryGatherer::Notifier::~Notifier()
     if (!page)
         return;
 
-    page->servicesOverlayController().selectionRectsDidChange(m_gatherer.boundingRects(), m_gatherer.m_gapRects, m_gatherer.isTextOnly());
+    page->protectedServicesOverlayController()->selectionRectsDidChange(m_gatherer.boundingRects(), m_gatherer.m_gapRects, m_gatherer.isTextOnly());
     page->imageOverlayController().selectionQuadsDidChange(m_gatherer.m_renderView->frame(), m_gatherer.m_quads);
 }
 

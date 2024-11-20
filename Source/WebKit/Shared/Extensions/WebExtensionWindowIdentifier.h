@@ -85,19 +85,17 @@ inline std::optional<WebExtensionWindowIdentifier> toWebExtensionWindowIdentifie
         return std::nullopt;
     }
 
-    WebExtensionWindowIdentifier result { static_cast<uint64_t>(identifier) };
-    if (!result.isValid()) {
+    auto identifierAsUInt64 = static_cast<uint64_t>(identifier);
+    if (!WebExtensionWindowIdentifier::isValidIdentifier(identifierAsUInt64)) {
         ASSERT_NOT_REACHED();
         return WebExtensionWindowConstants::NoneIdentifier;
     }
 
-    return result;
+    return WebExtensionWindowIdentifier { identifierAsUInt64 };
 }
 
 inline double toWebAPI(const WebExtensionWindowIdentifier& identifier)
 {
-    ASSERT(identifier.isValid());
-
     if (isNone(identifier))
         return WebExtensionWindowConstants::None;
 

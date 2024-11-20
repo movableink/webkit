@@ -36,7 +36,7 @@
 #include <wtf/CheckedPtr.h>
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/text/StringConcatenate.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebKit {
 
@@ -55,22 +55,26 @@ Ref<WebPageGroup> WebPageGroup::create(const String& identifier)
 
 static WebPageGroupData pageGroupData(const String& identifier)
 {
-    WebPageGroupData data;
-
     static NeverDestroyed<HashMap<String, PageGroupIdentifier>> map;
-    if (HashMap<String, PageGroupIdentifier>::isValidKey(identifier)) {
-        data.pageGroupID = map.get().ensure(identifier, [] {
-            return PageGroupIdentifier::generate();
-        }).iterator->value;
-    } else
-        data.pageGroupID = PageGroupIdentifier::generate();
+    auto pageGroupID = [&] {
+        if (HashMap<String, PageGroupIdentifier>::isValidKey(identifier)) {
+            return map.get().ensure(identifier, [] {
+                return PageGroupIdentifier::generate();
+            }).iterator->value;
+        }
+        return PageGroupIdentifier::generate();
+    }();
 
+    String validIdentifier;
     if (!identifier.isEmpty())
-        data.identifier = identifier;
+        validIdentifier = identifier;
     else
-        data.identifier = makeString("__uniquePageGroupID-"_s, data.pageGroupID.toUInt64());
+        validIdentifier = makeString("__uniquePageGroupID-"_s, pageGroupID.toUInt64());
 
-    return data;
+    return {
+        WTFMove(validIdentifier),
+        pageGroupID
+    };
 }
 
 // FIXME: Why does the WebPreferences object here use ".WebKit2" instead of "WebKit2." which all the other constructors use.
@@ -89,7 +93,12 @@ WebPageGroup::~WebPageGroup()
 
 WebPreferences& WebPageGroup::preferences() const
 {
-    return *m_preferences;
+    return m_preferences;
+}
+
+Ref<WebPreferences> WebPageGroup::protectedPreferences() const
+{
+    return m_preferences;
 }
 
 } // namespace WebKit

@@ -49,9 +49,11 @@
 #include "TextIterator.h"
 #include "VisibleUnits.h"
 #include "markup.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AlternativeTextController);
 
 #if USE(DICTATION_ALTERNATIVES) || USE(AUTOCORRECTION_PANEL)
 
@@ -319,8 +321,6 @@ void AlternativeTextController::timerFired()
         if (!m_rangeWithAlternative)
             return;
         auto dictationContext = std::get<DictationContext>(m_details);
-        if (!dictationContext)
-            return;
         auto boundingBox = rootViewRectForRange(*m_rangeWithAlternative);
         m_isActive = true;
         if (!boundingBox.isEmpty()) {
@@ -743,10 +743,10 @@ Vector<String> AlternativeTextController::dictationAlternativesForMarker(const D
 void AlternativeTextController::applyDictationAlternative(const String& alternativeString)
 {
 #if USE(DICTATION_ALTERNATIVES)
-    auto document = protectedDocument();
-    auto& editor = document->editor();
-    auto selection = editor.selectedRange();
-    if (!selection || !editor.shouldInsertText(alternativeString, *selection, EditorInsertAction::Pasted))
+    Ref document = m_document.get();
+    Ref editor = document->editor();
+    auto selection = editor->selectedRange();
+    if (!selection || !editor->shouldInsertText(alternativeString, *selection, EditorInsertAction::Pasted))
         return;
     for (auto& marker : selection->startContainer().document().markers().markersInRange(*selection, DocumentMarker::Type::DictationAlternatives))
         removeDictationAlternativesForMarker(*marker);

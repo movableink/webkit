@@ -32,7 +32,7 @@
 #include <wtf/FixedVector.h>
 #include <wtf/HashSet.h>
 #include <wtf/RefPtr.h>
-#include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/Vector.h>
 
 namespace JSC {
@@ -46,36 +46,48 @@ class DeferredWorkTimer final : public JSRunLoopTimer {
 public:
     using Base = JSRunLoopTimer;
 
-    class TicketData : public CanMakeWeakPtr<TicketData>, public ThreadSafeRefCounted<TicketData>  {
+    enum class WorkType : uint8_t {
+        ImminentlyScheduled,
+        AtSomePoint,
+    };
+
+    class TicketData : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<TicketData>  {
     private:
         WTF_MAKE_TZONE_ALLOCATED(TicketData);
         WTF_MAKE_NONCOPYABLE(TicketData);
     public:
-        inline TicketData(JSGlobalObject*, JSObject* scriptExecutionOwner, Vector<Weak<JSCell>>&& dependencies);
-        inline static Ref<TicketData> create(JSGlobalObject*, JSObject* scriptExecutionOwner, Vector<Weak<JSCell>>&& dependencies);
+        inline static Ref<TicketData> create(WorkType, JSObject* scriptExecutionOwner, Vector<JSCell*>&& dependencies);
 
+        WorkType type() const { return m_type; }
         inline VM& vm();
         JSObject* target();
-        inline bool hasValidTarget() const;
-        inline FixedVector<Weak<JSCell>>& dependencies();
+        bool isTargetObject();
+        inline const FixedVector<JSCell*>& dependencies(bool mayBeCancelled = false);
         inline JSObject* scriptExecutionOwner();
-        inline JSGlobalObject* globalObject();
 
         inline void cancel();
-        bool isCancelled() const { return !m_scriptExecutionOwner.get() || !m_globalObject.get() || !hasValidTarget(); }
+        // We should not modify dependencies unless it is legitimate to do so during the end of GC.
+        inline void cancelAndClear();
+        bool isCancelled() const { return m_isCancelled; }
 
     private:
-        FixedVector<Weak<JSCell>> m_dependencies;
-        Weak<JSObject> m_scriptExecutionOwner;
-        Weak<JSGlobalObject> m_globalObject;
+        inline TicketData(WorkType, JSObject* scriptExecutionOwner, Vector<JSCell*>&& dependencies);
+
+        WorkType m_type;
+        FixedVector<JSCell*> m_dependencies;
+        JSObject* m_scriptExecutionOwner { nullptr };
+        bool m_isCancelled { false };
     };
 
     using Ticket = TicketData*;
 
     void doWork(VM&) final;
 
-    JS_EXPORT_PRIVATE Ticket addPendingWork(VM&, JSObject* target, Vector<Weak<JSCell>>&& dependencies);
-    bool hasAnyPendingWork() const;
+    JS_EXPORT_PRIVATE Ticket addPendingWork(WorkType, VM&, JSObject* target, Vector<JSCell*>&& dependencies);
+    void cancelPendingWork(VM&);
+
+    JS_EXPORT_PRIVATE bool hasAnyPendingWork() const;
+    JS_EXPORT_PRIVATE bool hasImminentlyScheduledWork() const;
     bool hasPendingWork(Ticket);
     bool hasDependencyInPendingWork(Ticket, JSCell* dependency);
     bool cancelPendingWork(Ticket);
@@ -107,31 +119,22 @@ private:
 
 inline JSObject* DeferredWorkTimer::TicketData::target()
 {
-    ASSERT(!isCancelled());
-    return jsCast<JSObject*>(m_dependencies.last().get());
+    ASSERT(!isCancelled() && isTargetObject());
+    // This function can be triggered on the main thread with a GC end phase
+    // and a sweeping state. So, jsCast is not wanted here.
+    return std::bit_cast<JSObject*>(m_dependencies.last());
 }
 
-inline bool DeferredWorkTimer::TicketData::hasValidTarget() const
+inline const FixedVector<JSCell*>& DeferredWorkTimer::TicketData::dependencies(bool mayBeCancelled)
 {
-    return !m_dependencies.isEmpty() && !!m_dependencies.last().get();
-}
-
-inline FixedVector<Weak<JSCell>>& DeferredWorkTimer::TicketData::dependencies()
-{
-    ASSERT(!isCancelled());
+    ASSERT_UNUSED(mayBeCancelled, mayBeCancelled || !isCancelled());
     return m_dependencies;
 }
 
 inline JSObject* DeferredWorkTimer::TicketData::scriptExecutionOwner()
 {
     ASSERT(!isCancelled());
-    return m_scriptExecutionOwner.get();
-}
-
-inline JSGlobalObject* DeferredWorkTimer::TicketData::globalObject()
-{
-    ASSERT(!isCancelled());
-    return m_globalObject.get();
+    return m_scriptExecutionOwner;
 }
 
 } // namespace JSC

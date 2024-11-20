@@ -36,12 +36,17 @@
 #include "AudioContext.h"
 #include "AudioFileReader.h"
 #include "AudioUtilities.h"
+#include "ScriptWrappableInlines.h"
 #include "WebCoreOpaqueRoot.h"
 #include <JavaScriptCore/JSCInlines.h>
 #include <JavaScriptCore/TypedArrayInlines.h>
 #include <wtf/CheckedArithmetic.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WebCore {
+
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(AudioBuffer);
 
 RefPtr<AudioBuffer> AudioBuffer::create(unsigned numberOfChannels, size_t numberOfFrames, float sampleRate, LegacyPreventDetaching preventDetaching)
 {
@@ -187,7 +192,7 @@ ExceptionOr<JSC::JSValue> AudioBuffer::getChannelData(JSDOMGlobalObject& globalO
 
     if (globalObject.worldIsNormal()) {
         if (!m_channelWrappers[channelIndex])
-            m_channelWrappers[channelIndex].setWeakly(constructJSArray());
+            m_channelWrappers[channelIndex].set(globalObject.vm(), wrapper(), constructJSArray());
         return m_channelWrappers[channelIndex].getValue();
     }
     return constructJSArray();
@@ -358,5 +363,7 @@ void AudioBuffer::applyNoiseIfNeeded()
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

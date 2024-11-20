@@ -37,15 +37,16 @@ using namespace JSC;
 
 JSTestCallbackFunctionWithThisObject::JSTestCallbackFunctionWithThisObject(JSObject* callback, JSDOMGlobalObject* globalObject)
     : TestCallbackFunctionWithThisObject(globalObject->scriptExecutionContext())
-    , m_data(new JSCallbackDataStrong(callback, globalObject, this))
+    , m_data(new JSCallbackData(callback, globalObject, this))
 {
 }
 
 JSTestCallbackFunctionWithThisObject::~JSTestCallbackFunctionWithThisObject()
 {
-    ScriptExecutionContext* context = scriptExecutionContext();
+    SUPPRESS_UNCOUNTED_LOCAL ScriptExecutionContext* context = scriptExecutionContext();
     // When the context is destroyed, all tasks with a reference to a callback
     // should be deleted. So if the context is 0, we are on the context thread.
+    // We can't use RefPtr here since ScriptExecutionContext is not thread safe ref counted.
     if (!context || context->isContextThread())
         delete m_data;
     else
@@ -55,7 +56,7 @@ JSTestCallbackFunctionWithThisObject::~JSTestCallbackFunctionWithThisObject()
 #endif
 }
 
-CallbackResult<typename IDLUndefined::ImplementationType> JSTestCallbackFunctionWithThisObject::handleEvent(typename IDLInterface<TestNode>::ParameterType thisObject, typename IDLSequence<IDLInterface<TestNode>>::ParameterType parameter)
+CallbackResult<typename IDLUndefined::CallbackReturnType> JSTestCallbackFunctionWithThisObject::handleEvent(typename IDLInterface<TestNode>::ParameterType thisObject, typename IDLSequence<IDLInterface<TestNode>>::ParameterType parameter)
 {
     if (!canInvokeCallback())
         return CallbackResultType::UnableToExecute;
@@ -63,7 +64,7 @@ CallbackResult<typename IDLUndefined::ImplementationType> JSTestCallbackFunction
     Ref<JSTestCallbackFunctionWithThisObject> protectedThis(*this);
 
     auto& globalObject = *m_data->globalObject();
-    auto& vm = globalObject.vm();
+    SUPPRESS_UNCOUNTED_LOCAL auto& vm = globalObject.vm();
 
     JSLockHolder lock(vm);
     auto& lexicalGlobalObject = globalObject;
@@ -81,6 +82,16 @@ CallbackResult<typename IDLUndefined::ImplementationType> JSTestCallbackFunction
      }
 
     return { };
+}
+
+void JSTestCallbackFunctionWithThisObject::visitJSFunction(JSC::AbstractSlotVisitor& visitor)
+{
+    m_data->visitJSFunction(visitor);
+}
+
+void JSTestCallbackFunctionWithThisObject::visitJSFunction(JSC::SlotVisitor& visitor)
+{
+    m_data->visitJSFunction(visitor);
 }
 
 JSC::JSValue toJS(TestCallbackFunctionWithThisObject& impl)

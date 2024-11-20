@@ -28,7 +28,10 @@
 #include "CSSSelector.h"
 #include <iterator>
 #include <memory>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueArray.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -36,7 +39,7 @@ class MutableCSSSelector;
 using MutableCSSSelectorList = Vector<std::unique_ptr<MutableCSSSelector>>;
 
 class CSSSelectorList {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(CSSSelectorList);
 public:
     CSSSelectorList() = default;
     CSSSelectorList(const CSSSelectorList&);
@@ -108,3 +111,5 @@ inline const CSSSelector* CSSSelectorList::next(const CSSSelector* current)
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

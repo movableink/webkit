@@ -34,6 +34,7 @@
 #import <pal/spi/cocoa/AVFoundationSPI.h>
 #import <pal/spi/cocoa/AudioToolboxSPI.h>
 #import <wtf/SortedArrayMap.h>
+#import <wtf/text/MakeString.h>
 
 #import <pal/cf/AudioToolboxSoftLink.h>
 #import <pal/cf/CoreMediaSoftLink.h>
@@ -122,11 +123,6 @@ bool AVAssetMIMETypeCache::canDecodeExtendedType(const ContentType& typeParamete
     if ([PAL::getAVURLAssetClass() isPlayableExtendedMIMEType:type.raw()])
         return true;
 
-#if ENABLE(WEBM_FORMAT_READER)
-    if (SourceBufferParserWebM::isContentTypeSupported(type) == MediaPlayerEnums::SupportsType::IsSupported)
-        return true;
-#endif
-
 #endif // ENABLE(VIDEO) && USE(AVFOUNDATION)
 
     return false;
@@ -204,13 +200,6 @@ void AVAssetMIMETypeCache::initializeCache(HashSet<String>& cache)
 
     for (NSString *type in [PAL::getAVURLAssetClass() audiovisualMIMETypes])
         cache.add(type);
-
-#if ENABLE(WEBM_FORMAT_READER)
-    if (SourceBufferParserWebM::isWebMFormatReaderAvailable()) {
-        auto types = SourceBufferParserWebM::supportedMIMETypes();
-        cache.add(types.begin(), types.end());
-    }
-#endif
 
     if (m_cacheTypeCallback)
         m_cacheTypeCallback(copyToVector(cache));

@@ -31,7 +31,9 @@
 #include "WebPageProxyMessageReceiverRegistration.h"
 #include "WebProcessProxy.h"
 #include <WebCore/FrameIdentifier.h>
+#include <WebCore/NavigationIdentifier.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -54,7 +56,7 @@ using LayerHostingContextID = uint32_t;
 enum class ShouldDelayClosingUntilFirstLayerFlush : bool { No, Yes };
 
 class SuspendedPageProxy final: public IPC::MessageReceiver, public CanMakeCheckedPtr<SuspendedPageProxy> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(SuspendedPageProxy);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SuspendedPageProxy);
 public:
     SuspendedPageProxy(WebPageProxy&, Ref<WebProcessProxy>&&, Ref<WebFrameProxy>&& mainFrame, Ref<BrowsingContextGroup>&&, ShouldDelayClosingUntilFirstLayerFlush);
@@ -65,6 +67,7 @@ public:
     WebPageProxy& page() const;
     WebCore::PageIdentifier webPageID() const { return m_webPageID; }
     WebProcessProxy& process() const { return m_process.get(); }
+    Ref<WebProcessProxy> protectedProcess() const { return process(); }
     WebFrameProxy& mainFrame() { return m_mainFrame.get(); }
     BrowsingContextGroup& browsingContextGroup() { return m_browsingContextGroup.get(); }
 
@@ -97,7 +100,7 @@ private:
     void suspensionTimedOut();
 
     void close();
-    void didDestroyNavigation(uint64_t navigationID);
+    void didDestroyNavigation(WebCore::NavigationIdentifier);
 
     // IPC::MessageReceiver
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) final;
@@ -119,7 +122,7 @@ private:
     CompletionHandler<void(SuspendedPageProxy*)> m_readyToUnsuspendHandler;
     RunLoop::Timer m_suspensionTimeoutTimer;
 #if USE(RUNNINGBOARD)
-    std::unique_ptr<ProcessThrottler::BackgroundActivity> m_suspensionActivity;
+    RefPtr<ProcessThrottler::BackgroundActivity> m_suspensionActivity;
 #endif
 #if HAVE(VISIBILITY_PROPAGATION_VIEW)
     LayerHostingContextID m_contextIDForVisibilityPropagationInWebProcess { 0 };

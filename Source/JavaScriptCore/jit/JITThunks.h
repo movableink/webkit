@@ -72,7 +72,6 @@ class NativeExecutable;
     macro(PolymorphicTopTierThunk, polymorphicTopTierThunk) \
     macro(PolymorphicTopTierThunkForClosure, polymorphicTopTierThunkForClosure) \
     macro(ReturnFromBaseline, returnFromBaselineGenerator) \
-    macro(ArityFixup, arityFixupGenerator) \
     macro(GetByIdLoadOwnPropertyHandler, getByIdLoadOwnPropertyHandler) \
     macro(GetByIdLoadPrototypePropertyHandler, getByIdLoadPrototypePropertyHandler) \
     macro(GetByIdMissHandler, getByIdMissHandler) \
@@ -193,7 +192,7 @@ private:
         PackedRefPtr<ExecutableMemoryHandle> handle;
         bool needsCrossModifyingCodeFence;
     };
-    using CTIStubMap = HashMap<ThunkGenerator, Entry>;
+    using CTIStubMap = UncheckedKeyHashMap<ThunkGenerator, Entry>;
 
     using HostFunctionKey = std::tuple<TaggedNativeFunction, TaggedNativeFunction, ImplementationVisibility, String>;
 

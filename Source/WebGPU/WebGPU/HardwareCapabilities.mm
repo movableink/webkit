@@ -49,7 +49,11 @@ static constexpr auto multipleOf4(auto input)
 }
 static uint64_t maxBufferSize(id<MTLDevice> device)
 {
+#if PLATFORM(MAC) || PLATFORM(MACCATALYST)
+    auto result = std::max<uint64_t>(std::min<uint64_t>(device.maxBufferLength, GB), std::min<uint64_t>(INT_MAX, device.maxBufferLength / 10));
+#else
     auto result = std::max<uint64_t>(defaultMaxBufferSize, std::min<uint64_t>(INT_MAX, device.maxBufferLength / 10));
+#endif
     return multipleOf4(result);
 }
 
@@ -76,8 +80,6 @@ static HardwareCapabilities::BaseCapabilities baseCapabilities(id<MTLDevice> dev
         else if ([counterSet.name isEqualToString:MTLCommonCounterSetStatistic])
             statisticCounterSet = counterSet;
     }
-
-    timestampCounterSet = nil;
 
     return {
         .argumentBuffersTier = [device argumentBuffersSupport],
@@ -115,6 +117,9 @@ static Vector<WGPUFeatureName> baseFeatures(id<MTLDevice> device, const Hardware
     if (device.supports32BitFloatFiltering)
         features.append(WGPUFeatureName_Float32Filterable);
 #endif
+
+    if (baseCapabilities.timestampCounterSet)
+        features.append(WGPUFeatureName_TimestampQuery);
 
     return features;
 }
@@ -376,8 +381,8 @@ static WGPULimits mergeLimits(const WGPULimits& previous, const WGPULimits& next
 
 static Vector<WGPUFeatureName> mergeFeatures(const Vector<WGPUFeatureName>& previous, const Vector<WGPUFeatureName>& next)
 {
-    ASSERT(WTF::isSortedConstExpr(previous.begin(), previous.end()));
-    ASSERT(WTF::isSortedConstExpr(next.begin(), next.end()));
+    ASSERT(std::is_sorted(previous.begin(), previous.end()));
+    ASSERT(std::is_sorted(next.begin(), next.end()));
 
     Vector<WGPUFeatureName> result(previous.size() + next.size());
     auto end = mergeDeduplicatedSorted(previous.begin(), previous.end(), next.begin(), next.end(), result.begin());
@@ -507,7 +512,7 @@ bool anyLimitIsBetterThan(const WGPULimits& target, const WGPULimits& reference)
 
 bool includesUnsupportedFeatures(const Vector<WGPUFeatureName>& target, const Vector<WGPUFeatureName>& reference)
 {
-    ASSERT(WTF::isSortedConstExpr(reference.begin(), reference.end()));
+    ASSERT(std::is_sorted(reference.begin(), reference.end()));
     for (auto feature : target) {
         if (!std::binary_search(reference.begin(), reference.end(), feature))
             return true;

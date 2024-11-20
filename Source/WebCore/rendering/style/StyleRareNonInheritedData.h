@@ -2,7 +2,7 @@
  * Copyright (C) 2000 Lars Knoll (knoll@kde.org)
  *           (C) 2000 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2003-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Graham Dennis (graham.dennis@gmail.com)
  *
  * This library is free software; you can redistribute it and/or
@@ -45,13 +45,18 @@
 #include "StyleContentAlignmentData.h"
 #include "StyleScrollSnapPoints.h"
 #include "StyleSelfAlignmentData.h"
+#include "StyleTextEdge.h"
 #include "TextDecorationThickness.h"
+#include "TimelineScope.h"
 #include "TouchAction.h"
 #include "TranslateTransformOperation.h"
 #include "ViewTimeline.h"
+#include "ViewTransitionName.h"
+#include "WebAnimationTypes.h"
 #include "WillChangeData.h"
 #include <memory>
 #include <wtf/DataRef.h>
+#include <wtf/Markable.h>
 #include <wtf/OptionSet.h>
 #include <wtf/Vector.h>
 
@@ -77,11 +82,11 @@ struct StyleMarqueeData;
 // Page size type.
 // StyleRareNonInheritedData::pageSize is meaningful only when
 // StyleRareNonInheritedData::pageSizeType is PAGE_SIZE_RESOLVED.
-enum PageSizeType : uint8_t {
-    PAGE_SIZE_AUTO, // size: auto
-    PAGE_SIZE_AUTO_LANDSCAPE, // size: landscape
-    PAGE_SIZE_AUTO_PORTRAIT, // size: portrait
-    PAGE_SIZE_RESOLVED // Size is fully resolved.
+enum class PageSizeType : uint8_t {
+    Auto, // size: auto
+    AutoLandscape, // size: landscape
+    AutoPortrait, // size: portrait
+    Resolved // Size is fully resolved.
 };
 
 // This struct is for rarely used non-inherited CSS3, CSS2, and WebKit-specific properties.
@@ -103,14 +108,18 @@ public:
 
     OptionSet<Containment> usedContain() const;
 
-    std::optional<Length> containIntrinsicWidth;
-    std::optional<Length> containIntrinsicHeight;
+    Markable<Length> containIntrinsicWidth;
+    Markable<Length> containIntrinsicHeight;
 
     Length perspectiveOriginX;
     Length perspectiveOriginY;
 
     LineClampValue lineClamp; // An Apple extension.
     
+    size_t maxLines { 0 };
+
+    OverflowContinue overflowContinue { OverflowContinue::Auto };
+
     IntSize initialLetter;
 
     DataRef<StyleMarqueeData> marquee; // Marquee properties
@@ -153,7 +162,9 @@ public:
     RefPtr<PathOperation> offsetPath;
 
     Vector<Style::ScopedName> containerNames;
-    std::optional<Style::ScopedName> viewTransitionName;
+
+    Vector<Style::ScopedName> viewTransitionClasses;
+    Style::ViewTransitionName viewTransitionName;
 
     GapLength columnGap;
     GapLength rowGap;
@@ -181,6 +192,8 @@ public:
     Vector<ScrollAxis> viewTimelineAxes;
     Vector<ViewTimelineInsets> viewTimelineInsets;
     Vector<AtomString> viewTimelineNames;
+
+    TimelineScope timelineScope;
 
     ScrollbarGutter scrollbarGutter;
     ScrollbarWidth scrollbarWidth { ScrollbarWidth::Auto };
@@ -234,6 +247,8 @@ public:
     unsigned overflowAnchor : 1; // Scroll Anchoring- OverflowAnchor
 
     bool hasClip : 1;
+
+    unsigned positionTryOrder : 3; // Style::PositionTryOrder; 5 values so 3 bits.
 
     FieldSizing fieldSizing { FieldSizing::Fixed };
 

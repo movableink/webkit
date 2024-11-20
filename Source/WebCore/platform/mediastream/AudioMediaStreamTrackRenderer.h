@@ -29,6 +29,7 @@
 
 #include <wtf/Function.h>
 #include <wtf/LoggerHelper.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WTF {
 class MediaTime;
@@ -41,7 +42,7 @@ class LibWebRTCAudioModule;
 class PlatformAudioData;
 
 class WEBCORE_EXPORT AudioMediaStreamTrackRenderer : public LoggerHelper {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(AudioMediaStreamTrackRenderer, WEBCORE_EXPORT);
 public:
     struct Init {
         Function<void()>&& crashCallback;
@@ -50,7 +51,7 @@ public:
 #endif
 #if !RELEASE_LOG_DISABLED
         const Logger& logger;
-        const void* logIdentifier;
+        uint64_t logIdentifier;
 #endif
     };
     static std::unique_ptr<AudioMediaStreamTrackRenderer> create(Init&&);
@@ -72,7 +73,7 @@ protected:
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final;
-    const void* logIdentifier() const final;
+    uint64_t logIdentifier() const final;
 
     ASCIILiteral logClassName() const final;
     WTFLogChannel& logChannel() const final;
@@ -95,7 +96,7 @@ private:
 
 #if !RELEASE_LOG_DISABLED
     Ref<const Logger> m_logger;
-    const void* m_logIdentifier;
+    const uint64_t m_logIdentifier;
 #endif
 };
 

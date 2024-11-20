@@ -39,7 +39,8 @@ class HTMLSourceElement final
     , public AttachmentAssociatedElement
 #endif
     , public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(HTMLSourceElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLSourceElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLSourceElement);
 public:
     static Ref<HTMLSourceElement> create(Document&);
     static Ref<HTMLSourceElement> create(const QualifiedName&, Document&);
@@ -62,7 +63,7 @@ private:
 
     bool isURLAttribute(const Attribute&) const final;
     bool attributeContainsURL(const Attribute&) const final;
-    Attribute replaceURLsInAttributeValue(const Attribute&, const HashMap<String, String>&) const override;
+    Attribute replaceURLsInAttributeValue(const Attribute&, const UncheckedKeyHashMap<String, String>&) const override;
     void addCandidateSubresourceURLs(ListHashSet<URL>&) const override;
 
     // ActiveDOMObject.

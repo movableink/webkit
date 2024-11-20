@@ -36,11 +36,15 @@
 #include <WebCore/MediaDecodingConfiguration.h>
 #include <WebCore/MediaEncodingConfiguration.h>
 #include <WebCore/MediaEngineConfigurationFactory.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebKit {
 using namespace WebCore;
 
-RemoteMediaEngineConfigurationFactory::RemoteMediaEngineConfigurationFactory(WebProcess&)
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteMediaEngineConfigurationFactory);
+
+RemoteMediaEngineConfigurationFactory::RemoteMediaEngineConfigurationFactory(WebProcess& webProcess)
+    : m_webProcess(webProcess)
 {
 }
 

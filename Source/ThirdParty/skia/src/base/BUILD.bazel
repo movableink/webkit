@@ -1,6 +1,5 @@
 load(
     "//bazel:skia_rules.bzl",
-    "exports_files_legacy",
     "generate_cpp_files_for_headers",
     "skia_cc_library",
     "skia_filegroup",
@@ -11,11 +10,6 @@ package(
 )
 
 licenses(["notice"])
-
-exports_files_legacy(
-    label_list = ["SkBitmaskEnum.h"],
-    visibility = ["//tools/skui:__pkg__"],
-)
 
 # Headers with no corresponding .cpp files
 IWYU_HDRS = [
@@ -62,10 +56,6 @@ skia_filegroup(
         "SkUtils.h",
         "SkVx.h",  # Causes IWYU to crash when compiling.
     ],
-    visibility = [
-        "//src:__pkg__",
-        "//src/opts:__pkg__",
-    ],
 )
 
 # In a separate file group because these files are exported to sksl.gni:skslc_deps.
@@ -104,9 +94,6 @@ skia_filegroup(
         "SkTime.cpp",
         ":skslc_srcs",
     ],
-    visibility = [
-        "//src:__pkg__",
-    ],
 )
 
 skia_cc_library(
@@ -122,6 +109,7 @@ skia_cc_library(
     features = ["layering_check"],
     visibility = [
         "//bench:__subpackages__",
+        "//experimental/rust_png:__subpackages__",
         "//modules:__subpackages__",
         "//src:__subpackages__",
         "//tests:__subpackages__",

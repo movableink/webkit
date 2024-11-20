@@ -33,8 +33,13 @@
 #include "ZeroPole.h"
 
 #include "DenormalDisabler.h"
+#include <wtf/TZoneMallocInlines.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ZeroPole);
 
 void ZeroPole::process(const float *source, float *destination, unsigned framesToProcess)
 {
@@ -70,5 +75,7 @@ void ZeroPole::process(const float *source, float *destination, unsigned framesT
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

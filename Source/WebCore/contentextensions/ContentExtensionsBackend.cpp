@@ -49,9 +49,15 @@
 #include <wtf/URL.h>
 #include "UserContentController.h"
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/MakeString.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore::ContentExtensions {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ContentExtensionsBackend);
 
 #if USE(APPLE_INTERNAL_SDK)
 #import <WebKitAdditions/ContentRuleListAdditions.mm>
@@ -121,6 +127,8 @@ auto ContentExtensionsBackend::actionsFromContentRuleList(const ContentExtension
             return topURLActions.contains(actionAndFlags);
         case ActionCondition::IfFrameURL:
             return !frameURLActions.contains(actionAndFlags);
+        case ActionCondition::UnlessFrameURL:
+            return frameURLActions.contains(actionAndFlags);
         }
         ASSERT_NOT_REACHED();
         return false;
@@ -377,7 +385,7 @@ void applyResultsToRequest(ContentRuleListResults&& results, Page* page, Resourc
 
     if (results.summary.madeHTTPS) {
         ASSERT(!request.url().port() || WTF::isDefaultPortForProtocol(request.url().port().value(), request.url().protocol()));
-        request.upgradeToHTTPS();
+        request.upgradeInsecureRequest();
     }
 
     std::sort(results.summary.modifyHeadersActions.begin(), results.summary.modifyHeadersActions.end(),
@@ -385,7 +393,7 @@ void applyResultsToRequest(ContentRuleListResults&& results, Page* page, Resourc
         return a.priority > b.priority;
     });
 
-    HashMap<String, ModifyHeadersAction::ModifyHeadersOperationType> headerNameToFirstOperationApplied;
+    UncheckedKeyHashMap<String, ModifyHeadersAction::ModifyHeadersOperationType> headerNameToFirstOperationApplied;
     for (auto& action : results.summary.modifyHeadersActions)
         action.applyToRequest(request, headerNameToFirstOperationApplied);
 
@@ -401,5 +409,7 @@ void applyResultsToRequest(ContentRuleListResults&& results, Page* page, Resourc
 }
     
 } // namespace WebCore::ContentExtensions
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(CONTENT_EXTENSIONS)

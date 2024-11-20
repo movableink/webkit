@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,11 +47,13 @@
 #include "SharedBuffer.h"
 #include "WritableStream.h"
 #include <wtf/EnumTraits.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RTCRtpSFrameTransform);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RTCRtpSFrameTransform);
 
 Ref<RTCRtpSFrameTransform> RTCRtpSFrameTransform::create(ScriptExecutionContext& context, Options options)
 {
@@ -116,8 +118,6 @@ static RTCRtpSFrameTransformErrorEvent::Type errorTypeFromInformation(const RTCR
         return RTCRtpSFrameTransformErrorEvent::Type::Authentication;
     case RTCRtpSFrameTransformer::Error::Syntax:
         return RTCRtpSFrameTransformErrorEvent::Type::Syntax;
-    case RTCRtpSFrameTransformer::Error::Other:
-        return RTCRtpSFrameTransformErrorEvent::Type::Other;
     default:
         RELEASE_ASSERT_NOT_REACHED();
     }
@@ -290,5 +290,7 @@ bool RTCRtpSFrameTransform::virtualHasPendingActivity() const
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_RTC)

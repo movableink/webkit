@@ -38,11 +38,12 @@
 #include <WebCore/SubresourceLoader.h>
 #include <wtf/MainThread.h>
 #include <wtf/SetForScope.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
 #include <wtf/text/CString.h>
 
 #if PLATFORM(IOS_FAMILY)
-#include <WebCore/RuntimeApplicationChecks.h>
+#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #endif
 
 // Match the parallel connection count used by the networking layer.
@@ -60,6 +61,8 @@ WebResourceLoadScheduler& webResourceLoadScheduler()
 {
     return static_cast<WebResourceLoadScheduler&>(*platformStrategies()->loaderStrategy());
 }
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebResourceLoadScheduler);
 
 auto WebResourceLoadScheduler::hostForURL(const URL& url, CreateHostPolicy createHostPolicy) -> CheckedPtr<HostInformation>
 {
@@ -282,7 +285,7 @@ void WebResourceLoadScheduler::servePendingRequests(CheckedRef<HostInformation>&
             requestsPending.removeFirst();
             host->addLoadInProgress(resourceLoader.get());
 #if PLATFORM(IOS_FAMILY)
-            if (!IOSApplication::isWebProcess()) {
+            if (!WTF::IOSApplication::isWebProcess()) {
                 resourceLoader->startLoading();
                 return;
             }
@@ -320,6 +323,8 @@ void WebResourceLoadScheduler::requestTimerFired()
 {
     servePendingRequests();
 }
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(WebResourceLoadSchedulerHostInformation, WebResourceLoadScheduler::HostInformation);
 
 WebResourceLoadScheduler::HostInformation::HostInformation(const String& name, unsigned maxRequestsInFlight)
     : m_name(name)

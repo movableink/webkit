@@ -40,10 +40,13 @@
 #include <wtf/FileSystem.h>
 #include <wtf/HashSet.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/Base64.h>
 #include <wtf/text/CString.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SoupNetworkSession);
 
 static CString& initialAcceptLanguages()
 {
@@ -245,6 +248,7 @@ void SoupNetworkSession::clearHSTSCache(WallTime modifiedSince)
 #endif
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
 static inline bool stringIsNumeric(const char* str)
 {
     while (*str) {
@@ -254,6 +258,7 @@ static inline bool stringIsNumeric(const char* str)
     }
     return true;
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 // Old versions of WebKit created this cache.
 void SoupNetworkSession::clearOldSoupCache(const String& cacheDirectory)
@@ -268,8 +273,10 @@ void SoupNetworkSession::clearOldSoupCache(const String& cacheDirectory)
         return;
 
     while (const char* name = g_dir_read_name(dir.get())) {
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
         if (!g_str_has_prefix(name, "soup.cache") && !stringIsNumeric(name))
             continue;
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
         GUniquePtr<gchar> filename(g_build_filename(cachePath.data(), name, nullptr));
         if (g_file_test(filename.get(), G_FILE_TEST_IS_REGULAR))

@@ -102,15 +102,15 @@ void RemoteRenderingBackendProxy::ensureGPUProcessConnection()
 {
     if (m_connection)
         return;
-    static constexpr auto connectionBufferSizeLog2 = 21;
-    auto connectionPair = IPC::StreamClientConnection::create(connectionBufferSizeLog2);
+    constexpr unsigned connectionBufferSizeLog2 = 21u;
+    auto connectionPair = IPC::StreamClientConnection::create(connectionBufferSizeLog2, WebProcess::singleton().gpuProcessTimeoutDuration());
     if (!connectionPair)
         CRASH();
     auto [streamConnection, serverHandle] = WTFMove(*connectionPair);
-    m_connection = WTFMove(streamConnection);
+    m_connection = streamConnection.ptr();
     // RemoteRenderingBackendProxy behaves as the dispatcher for the connection to obtain isolated state for its
     // connection. This prevents waits on RemoteRenderingBackendProxy to process messages from other connections.
-    m_connection->open(*this, *this);
+    streamConnection->open(*this, *this);
     m_isResponsive = true;
     callOnMainRunLoopAndWait([&, serverHandle = WTFMove(serverHandle)]() mutable {
         auto& gpuProcessConnection = WebProcess::singleton().ensureGPUProcessConnection();
@@ -119,13 +119,14 @@ void RemoteRenderingBackendProxy::ensureGPUProcessConnection()
         m_sharedResourceCache = gpuProcessConnection.sharedResourceCache();
     });
 }
+
 template<typename T, typename U, typename V, typename W>
 auto RemoteRenderingBackendProxy::send(T&& message, ObjectIdentifierGeneric<U, V, W> destination)
 {
     RefPtr connection = this->connection();
     if (UNLIKELY(!connection))
         return IPC::Error::InvalidConnection;
-    auto result = connection->send(std::forward<T>(message), destination, defaultTimeout);
+    auto result = connection->send(std::forward<T>(message), destination);
     if (UNLIKELY(result != IPC::Error::NoError)) {
         RELEASE_LOG(RemoteLayerBuffers, "[renderingBackend=%" PRIu64 "] RemoteRenderingBackendProxy::send - failed, name:%" PUBLIC_LOG_STRING ", error:%" PUBLIC_LOG_STRING, m_identifier.toUInt64(), IPC::description(T::name()).characters(), IPC::errorAsString(result).characters());
         didBecomeUnresponsive();
@@ -139,12 +140,39 @@ auto RemoteRenderingBackendProxy::sendSync(T&& message, ObjectIdentifierGeneric<
     RefPtr connection = this->connection();
     if (!connection)
         return IPC::StreamClientConnection::SendSyncResult<T> { IPC::Error::InvalidConnection };
-    auto result = connection->sendSync(std::forward<T>(message), destination, defaultTimeout);
+    auto result = connection->sendSync(std::forward<T>(message), destination);
     if (UNLIKELY(!result.succeeded())) {
         RELEASE_LOG(RemoteLayerBuffers, "[renderingBackend=%" PRIu64 "] RemoteRenderingBackendProxy::sendSync - failed, name:%" PUBLIC_LOG_STRING ", error:%" PUBLIC_LOG_STRING,  m_identifier.toUInt64(), IPC::description(T::name()).characters(), IPC::errorAsString(result.error()).characters());
         didBecomeUnresponsive();
     }
     return result;
+}
+
+template<typename T, typename C, typename U, typename V, typename W>
+auto RemoteRenderingBackendProxy::sendWithAsyncReply(T&& message, C&& callback, ObjectIdentifierGeneric<U, V, W> destination)
+{
+    RefPtr connection = this->connection();
+    if (UNLIKELY(!connection))
+        return IPC::Error::InvalidConnection;
+    auto replyID = connection->sendWithAsyncReply(std::forward<T>(message), std::forward<C>(callback), destination);
+    if (UNLIKELY(!replyID)) {
+        RELEASE_LOG(RemoteLayerBuffers, "[renderingBackend=%" PRIu64 "] RemoteRenderingBackendProxy::sendWithAsyncReply - failed, name:%" PUBLIC_LOG_STRING, m_identifier.toUInt64(), IPC::description(T::name()).characters());
+        didBecomeUnresponsive();
+        return IPC::Error::Unspecified;
+    }
+    return IPC::Error::NoError;
+}
+
+void RemoteRenderingBackendProxy::dispatch(Function<void()>&& function)
+{
+    if (RefPtr dispatcher = m_dispatcher.get())
+        dispatcher->dispatch(WTFMove(function));
+}
+
+bool RemoteRenderingBackendProxy::isCurrent() const
+{
+    RefPtr dispatcher = m_dispatcher.get();
+    return dispatcher && dispatcher->isCurrent();
 }
 
 void RemoteRenderingBackendProxy::didClose(IPC::Connection&)
@@ -182,7 +210,7 @@ void RemoteRenderingBackendProxy::disconnectGPUProcess()
     m_getPixelBufferSharedMemory = nullptr;
     m_renderingUpdateID = { };
     m_didRenderingUpdateID = { };
-    m_connection->invalidate();
+    protectedConnection()->invalidate();
     m_connection = nullptr;
     m_isResponsive = false;
     m_gpuProcessConnection = nullptr;
@@ -350,7 +378,7 @@ void RemoteRenderingBackendProxy::cacheFont(const WebCore::Font::Attributes& fon
 void RemoteRenderingBackendProxy::cacheFontCustomPlatformData(Ref<const FontCustomPlatformData>&& customPlatformData)
 {
     Ref<FontCustomPlatformData> data = adoptRef(const_cast<FontCustomPlatformData&>(customPlatformData.leakRef()));
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) || USE(SKIA)
     send(Messages::RemoteRenderingBackend::CacheFontCustomPlatformData(data->serializedData()));
 #else
     send(Messages::RemoteRenderingBackend::CacheFontCustomPlatformData(WTFMove(data)));
@@ -409,7 +437,7 @@ Vector<SwapBuffersDisplayRequirement> RemoteRenderingBackendProxy::prepareImageB
 
         // Using the  will mark buffers as non-volatile and
         // we don't know exactly which. Assume they all are non-volatile.
-        perLayerData.bufferSet->clearVolatilityUntilAfter(m_currentVolatilityRequest);
+        perLayerData.bufferSet->clearVolatility();
         perLayerData.bufferSet->willPrepareForDisplay();
 
         return ImageBufferSetPrepareBufferForDisplayInputData {
@@ -459,7 +487,6 @@ void RemoteRenderingBackendProxy::markSurfacesVolatile(Vector<std::pair<Ref<Remo
 
 void RemoteRenderingBackendProxy::didMarkLayersAsVolatile(MarkSurfacesAsVolatileRequestIdentifier requestIdentifier, Vector<std::pair<RemoteImageBufferSetIdentifier, OptionSet<BufferInSetType>>> markedBufferSets, bool didMarkAllLayersAsVolatile)
 {
-    ASSERT(requestIdentifier);
     auto completionHandler = m_markAsVolatileRequests.take(requestIdentifier);
     if (!completionHandler)
         return;
@@ -469,7 +496,7 @@ void RemoteRenderingBackendProxy::didMarkLayersAsVolatile(MarkSurfacesAsVolatile
         if (!bufferSet)
             continue;
 
-        bufferSet->setConfirmedVolatility(requestIdentifier, bufferSetIdentifierAndType.second);
+        bufferSet->setConfirmedVolatility(bufferSetIdentifierAndType.second);
     }
 
     completionHandler(didMarkAllLayersAsVolatile);
@@ -527,8 +554,10 @@ RefPtr<IPC::StreamClientConnection> RemoteRenderingBackendProxy::connection()
     ensureGPUProcessConnection();
     if (!m_isResponsive)
         return nullptr;
-    if (UNLIKELY(!m_connection->hasSemaphores())) {
-        auto error = m_connection->waitForAndDispatchImmediately<Messages::RemoteRenderingBackendProxy::DidInitialize>(renderingBackendIdentifier(), defaultTimeout);
+
+    RefPtr connection = m_connection;
+    if (UNLIKELY(!connection->hasSemaphores())) {
+        auto error = connection->waitForAndDispatchImmediately<Messages::RemoteRenderingBackendProxy::DidInitialize>(renderingBackendIdentifier());
         if (error != IPC::Error::NoError) {
             RELEASE_LOG(RemoteLayerBuffers, "[renderingBackend=%" PRIu64 "] RemoteRenderingBackendProxy::connection() - waitForAndDispatchImmediately returned error: %" PUBLIC_LOG_STRING, renderingBackendIdentifier().toUInt64(), IPC::errorAsString(error).characters());
             didBecomeUnresponsive();
@@ -536,16 +565,17 @@ RefPtr<IPC::StreamClientConnection> RemoteRenderingBackendProxy::connection()
     }
     if (!m_isResponsive)
         return nullptr;
-    return m_connection;
+    return connection;
 }
 
 void RemoteRenderingBackendProxy::didInitialize(IPC::Semaphore&& wakeUp, IPC::Semaphore&& clientWait)
 {
-    if (!m_connection) {
+    RefPtr connection = m_connection;
+    if (!connection) {
         ASSERT_NOT_REACHED();
         return;
     }
-    m_connection->setSemaphores(WTFMove(wakeUp), WTFMove(clientWait));
+    connection->setSemaphores(WTFMove(wakeUp), WTFMove(clientWait));
 }
 
 bool RemoteRenderingBackendProxy::isCached(const ImageBuffer& imageBuffer) const
@@ -571,12 +601,17 @@ Function<bool()> RemoteRenderingBackendProxy::flushImageBuffers()
             return false;
         };
     }
-    return [flushSemaphore = WTFMove(flushSemaphore)]() mutable {
-        return flushSemaphore.waitFor(RemoteRenderingBackendProxy::defaultTimeout);
+    return [flushSemaphore = WTFMove(flushSemaphore), timeoutDuration = m_connection->defaultTimeoutDuration()]() mutable {
+        return flushSemaphore.waitFor(timeoutDuration);
     };
 }
 
 #endif // USE(GRAPHICS_LAYER_WC)
+
+void RemoteRenderingBackendProxy::getImageBufferResourceLimitsForTesting(CompletionHandler<void(ImageBufferResourceLimits)>&& callback)
+{
+    sendWithAsyncReply(Messages::RemoteRenderingBackend::GetImageBufferResourceLimitsForTesting(), WTFMove(callback));
+}
 
 } // namespace WebKit
 

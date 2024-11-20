@@ -174,10 +174,11 @@ static unsigned libWPEMouseButtonToWPEButton(MouseButton button)
 void WebAutomationSession::platformSimulateMouseInteraction(WebPageProxy& page, MouseInteraction interaction, MouseButton button, const WebCore::IntPoint& locationInView, OptionSet<WebEventModifier> keyModifiers, const String& pointerType)
 {
     UNUSED_PARAM(pointerType);
+
     auto location = deviceScaleLocationInView(page, locationInView);
 
     if (page.viewBackend()) {
-        platformSimulateMouseInteractionLibWPE(page, interaction, button, locationInView, keyModifiers, pointerType, m_currentModifiers);
+        platformSimulateMouseInteractionLibWPE(page, interaction, button, location, keyModifiers, pointerType, m_currentModifiers);
         return;
     }
 

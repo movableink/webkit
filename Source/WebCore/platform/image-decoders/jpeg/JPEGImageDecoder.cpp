@@ -40,7 +40,11 @@
 #include "config.h"
 #include "JPEGImageDecoder.h"
 
-#include "PlatformDisplay.h"
+#if USE(LCMS)
+#include "LCMSUniquePtr.h"
+#endif
+
+#include <wtf/TZoneMallocInlines.h>
 
 extern "C" {
 #include <setjmp.h>
@@ -111,6 +115,7 @@ struct decoder_source_mgr {
     JPEGImageReader* decoder;
 };
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 static unsigned readUint16(JOCTET* data, bool isBigEndian)
 {
     if (isBigEndian)
@@ -242,9 +247,10 @@ static RefPtr<SharedBuffer> readICCProfile(jpeg_decompress_struct* info)
     return buffer.takeAsContiguous();
 }
 #endif
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 class JPEGImageReader {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(JPEGImageReader);
 public:
     JPEGImageReader(JPEGImageDecoder* decoder)
         : m_decoder(decoder)
@@ -309,10 +315,12 @@ public:
 
     void skipBytes(long numBytes)
     {
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         decoder_source_mgr* src = (decoder_source_mgr*)m_info.src;
         long bytesToSkip = std::min(numBytes, (long)src->pub.bytes_in_buffer);
         src->pub.bytes_in_buffer -= (size_t)bytesToSkip;
         src->pub.next_input_byte += bytesToSkip;
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
         m_bytesToSkip = std::max(numBytes - bytesToSkip, static_cast<long>(0));
     }
@@ -581,7 +589,9 @@ bool JPEGImageDecoder::setFailed()
 template <J_COLOR_SPACE colorSpace>
 void setPixel(ScalableImageDecoderFrame& buffer, uint32_t* currentAddress, JSAMPARRAY samples, int column)
 {
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     JSAMPLE* jsample = *samples + column * (colorSpace == JCS_RGB ? 3 : 4);
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     switch (colorSpace) {
     case JCS_RGB:
@@ -619,11 +629,13 @@ bool JPEGImageDecoder::outputScanlines(ScalableImageDecoderFrame& buffer)
             return false;
 
         auto* row = buffer.backingStore()->pixelAt(0, sourceY);
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         auto* currentAddress = row;
         for (int x = 0; x < width; ++x) {
             setPixel<colorSpace>(buffer, currentAddress, samples, x);
             ++currentAddress;
         }
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #if USE(LCMS)
         if (m_iccTransform)
@@ -723,14 +735,11 @@ void JPEGImageDecoder::setICCProfile(RefPtr<SharedBuffer>&& buffer)
 
     auto span = buffer->span();
     auto iccProfile = LCMSProfilePtr(cmsOpenProfileFromMem(span.data(), span.size()));
-    if (!iccProfile)
+    if (!iccProfile || cmsGetColorSpace(iccProfile.get()) != cmsSigRgbData)
         return;
 
-    auto* displayProfile = PlatformDisplay::sharedDisplay().colorProfile();
-    if (cmsGetColorSpace(iccProfile.get()) != cmsSigRgbData || cmsGetColorSpace(displayProfile) != cmsSigRgbData)
-        return;
-
-    m_iccTransform = LCMSTransformPtr(cmsCreateTransform(iccProfile.get(), TYPE_BGRA_8, displayProfile, TYPE_BGRA_8, INTENT_RELATIVE_COLORIMETRIC, 0));
+    auto srgbProfile = LCMSProfilePtr(cmsCreate_sRGBProfile());
+    m_iccTransform = LCMSTransformPtr(cmsCreateTransform(iccProfile.get(), TYPE_BGRA_8, srgbProfile.get(), TYPE_BGRA_8, INTENT_RELATIVE_COLORIMETRIC, 0));
 }
 #endif
 

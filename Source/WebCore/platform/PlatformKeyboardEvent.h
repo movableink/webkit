@@ -29,6 +29,7 @@
 #include "CompositionUnderline.h"
 #include "KeypressCommand.h"
 #include "PlatformEvent.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WindowsExtras.h>
 #include <wtf/text/WTFString.h>
 
@@ -50,7 +51,7 @@ QT_END_NAMESPACE
 namespace WebCore {
 
     class PlatformKeyboardEvent : public PlatformEvent {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_TZONE_ALLOCATED(PlatformKeyboardEvent);
     public:
         PlatformKeyboardEvent()
             : PlatformEvent(PlatformEvent::Type::KeyDown)

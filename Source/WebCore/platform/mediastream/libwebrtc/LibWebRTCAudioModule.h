@@ -30,8 +30,10 @@
 #include "LibWebRTCMacros.h"
 #include "Timer.h"
 #include <wtf/MonotonicTime.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WorkQueue.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 ALLOW_UNUSED_PARAMETERS_BEGIN
 ALLOW_COMMA_BEGIN
 
@@ -39,6 +41,7 @@ ALLOW_COMMA_BEGIN
 
 ALLOW_UNUSED_PARAMETERS_END
 ALLOW_COMMA_END
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 namespace WebCore {
 class BaseAudioMediaStreamTrackRendererUnit;
@@ -46,7 +49,7 @@ class IncomingAudioMediaStreamTrackRendererUnit;
 
 // LibWebRTCAudioModule is pulling streamed data to ensure audio data is passed to the audio track.
 class LibWebRTCAudioModule : public webrtc::AudioDeviceModule {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(LibWebRTCAudioModule);
 public:
     LibWebRTCAudioModule();
     ~LibWebRTCAudioModule();

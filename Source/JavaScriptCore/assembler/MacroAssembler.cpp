@@ -33,8 +33,12 @@
 #include "ProbeContext.h"
 #include <wtf/PrintStream.h>
 #include <wtf/ScopedLambda.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MacroAssembler);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MacroAssemblerBase);
 
 const double MacroAssembler::twoToThe32 = (double)0x100000000ull;
 
@@ -56,6 +60,11 @@ static void SYSV_ABI stdFunctionCallback(Probe::Context& context)
 void MacroAssembler::probeDebug(Function<void(Probe::Context&)> func)
 {
     probe(tagCFunction<JITProbePtrTag>(stdFunctionCallback), new Function<void(Probe::Context&)>(WTFMove(func)));
+}
+
+void MacroAssembler::probeDebugSIMD(Function<void(Probe::Context&)> func)
+{
+    probe(tagCFunction<JITProbePtrTag>(stdFunctionCallback), new Function<void(Probe::Context&)>(WTFMove(func)), Probe::SavedFPWidth::SaveVectors);
 }
 
 } // namespace JSC

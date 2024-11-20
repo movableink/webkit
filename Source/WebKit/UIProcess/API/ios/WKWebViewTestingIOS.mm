@@ -30,6 +30,7 @@
 
 #import "RemoteLayerTreeDrawingAreaProxy.h"
 #import "RemoteLayerTreeViews.h"
+#import "RemoteScrollingCoordinatorProxy.h"
 #import "SystemPreviewController.h"
 #import "UIKitSPI.h"
 #import "WKContentViewInteraction.h"
@@ -44,6 +45,7 @@
 #import <WebCore/ElementContext.h>
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
 #import <wtf/SortedArrayMap.h>
+#import <wtf/text/MakeString.h>
 #import <wtf/text/TextStream.h>
 
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
@@ -205,7 +207,6 @@ static String allowListedClassToString(UIView *view)
         "WKCompositingView",
         "WKContentView",
         "WKModelView",
-        "WKRemoteView",
         "WKScrollView",
         "WKSeparatedModelView",
         "WKShapeView",
@@ -297,6 +298,23 @@ static void dumpUIView(TextStream& ts, UIView *view)
     return ts.release();
 }
 
+- (NSString *)_scrollbarState:(unsigned long long)rawScrollingNodeID processID:(unsigned long long)processID isVertical:(bool)isVertical
+{
+    std::optional<WebCore::ScrollingNodeID> scrollingNodeID;
+    if (ObjectIdentifier<WebCore::ProcessIdentifierType>::isValidIdentifier(processID) && ObjectIdentifier<WebCore::ScrollingNodeIDType>::isValidIdentifier(rawScrollingNodeID))
+        scrollingNodeID = WebCore::ScrollingNodeID(ObjectIdentifier<WebCore::ScrollingNodeIDType>(rawScrollingNodeID), ObjectIdentifier<WebCore::ProcessIdentifierType>(processID));
+
+    if (_page->scrollingCoordinatorProxy()->rootScrollingNodeID() == scrollingNodeID) {
+        TextStream ts(TextStream::LineMode::MultipleLine);
+        {
+            TextStream::GroupScope scope(ts);
+            ts << ([_scrollView showsHorizontalScrollIndicator] ? ""_s : "none"_s);
+        }
+        return ts.release();
+    }
+    return _page->scrollbarStateForScrollingNodeID(scrollingNodeID, isVertical);
+}
+
 - (NSNumber *)_stableStateOverride
 {
     // For subclasses to override.
@@ -305,6 +323,8 @@ static void dumpUIView(TextStream& ts, UIView *view)
 
 - (NSDictionary *)_propertiesOfLayerWithID:(unsigned long long)layerID
 {
+    if (!layerID)
+        return nil;
     CALayer* layer = downcast<WebKit::RemoteLayerTreeDrawingAreaProxy>(*_page->drawingArea()).layerWithIDForTesting({ ObjectIdentifier<WebCore::PlatformLayerIdentifierType>(layerID), _page->legacyMainFrameProcess().coreProcessIdentifier() });
     if (!layer)
         return nil;

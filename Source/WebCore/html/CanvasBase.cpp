@@ -38,8 +38,10 @@
 #include "ImageBuffer.h"
 #include "InspectorInstrumentation.h"
 #include "IntRect.h"
-#include "StyleCanvasImage.h"
+#include "NoiseInjectionPolicy.h"
 #include "RenderElement.h"
+#include "ScriptTelemetryCategory.h"
+#include "StyleCanvasImage.h"
 #include "WebCoreOpaqueRoot.h"
 #include "WorkerClient.h"
 #include "WorkerGlobalScope.h"
@@ -47,15 +49,26 @@
 #include <JavaScriptCore/JSLock.h>
 #include <atomic>
 #include <wtf/Vector.h>
+#include <wtf/WeakRandom.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
 constexpr InterpolationQuality defaultInterpolationQuality = InterpolationQuality::Low;
 static std::optional<size_t> maxCanvasAreaForTesting;
 
-CanvasBase::CanvasBase(IntSize size, const std::optional<NoiseInjectionHashSalt>& noiseHashSalt)
-    : m_size(size)
-    , m_canvasNoiseHashSalt(noiseHashSalt)
+static std::optional<uint64_t> canvasNoiseHashSaltIfNeeded(ScriptExecutionContext& context)
+{
+    auto policies = context.noiseInjectionPolicies();
+    if (policies.contains(NoiseInjectionPolicy::Minimal)
+        || (policies.contains(NoiseInjectionPolicy::Enhanced) && context.requiresScriptExecutionTelemetry(ScriptTelemetryCategory::Canvas)))
+        return context.noiseInjectionHashSalt();
+    return { };
+}
+
+CanvasBase::CanvasBase(IntSize size, ScriptExecutionContext& context)
+    : m_size { size }
+    , m_canvasNoiseHashSalt { canvasNoiseHashSaltIfNeeded(context) }
 {
 }
 
@@ -269,7 +282,7 @@ bool CanvasBase::shouldAccelerate(const IntSize& size) const
 
 bool CanvasBase::shouldAccelerate(uint64_t area) const
 {
-#if USE(IOSURFACE_CANVAS_BACKING_STORE) || USE(SKIA)
+#if USE(CA) || USE(SKIA)
     if (!scriptExecutionContext()->settingsValues().canvasUsesAcceleratedDrawing)
         return false;
     if (area < scriptExecutionContext()->settingsValues().minimumAccelerated2DContextArea)
@@ -352,6 +365,29 @@ bool CanvasBase::postProcessPixelBufferResults(Ref<PixelBuffer>&& pixelBuffer) c
     if (m_canvasNoiseHashSalt)
         return m_canvasNoiseInjection.postProcessPixelBufferResults(std::forward<Ref<PixelBuffer>>(pixelBuffer), *m_canvasNoiseHashSalt);
     return false;
+}
+
+RefPtr<ImageBuffer> CanvasBase::createImageForNoiseInjection() const
+{
+    RefPtr context = canvasBaseScriptExecutionContext();
+    if (!context)
+        return { };
+
+    auto seed = static_cast<unsigned>(context->noiseInjectionHashSalt().value_or(0));
+    auto buffer = ImageBuffer::create(size(), RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
+    if (!buffer)
+        return { };
+
+    auto componentValues = WeakRandom { seed }.getUint32();
+    auto fillColor = SRGBA<uint8_t> {
+        static_cast<uint8_t>((componentValues >> 24) & 0xFF),
+        static_cast<uint8_t>((componentValues >> 16) & 0xFF),
+        static_cast<uint8_t>((componentValues >> 8) & 0xFF),
+        static_cast<uint8_t>(componentValues & 0xFF),
+    };
+    buffer->context().setFillColor(fillColor);
+    buffer->context().fillRect({ IntPoint { }, size() });
+    return buffer;
 }
 
 void CanvasBase::resetGraphicsContextState() const

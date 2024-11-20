@@ -50,10 +50,12 @@ enum class StyleColorOptions : uint8_t {
     UseElevatedUserInterfaceLevel = 1 << 3
 };
 
-// StyleColorMix and StyleRelativeColor are forward declared and stored in
+// The following style color kinds are forward declared and stored in
 // UniqueRefs to avoid unnecessarily growing the size of StyleColor for the
 // uncommon case of un-resolvability due to currentColor.
+struct StyleColorLayers;
 struct StyleColorMix;
+struct StyleContrastColor;
 template<typename Descriptor>
 struct StyleRelativeColor;
 
@@ -69,7 +71,9 @@ public:
 
     StyleColor(StyleAbsoluteColor&&);
     StyleColor(StyleCurrentColor&&);
+    StyleColor(StyleColorLayers&&);
     StyleColor(StyleColorMix&&);
+    StyleColor(StyleContrastColor&&);
     StyleColor(StyleRelativeColor<RGBFunctionModernRelative>&&);
     StyleColor(StyleRelativeColor<HSLFunctionModern>&&);
     StyleColor(StyleRelativeColor<HWBFunction>&&);
@@ -121,6 +125,7 @@ public:
     bool containsCurrentColor() const;
     bool isCurrentColor() const;
     bool isColorMix() const;
+    bool isContrastColor() const;
     bool isRelativeColor() const;
     bool isAbsoluteColor() const;
     const Color& absoluteColor() const;
@@ -137,7 +142,9 @@ private:
     using ColorKind = std::variant<
         StyleAbsoluteColor,
         StyleCurrentColor,
+        UniqueRef<StyleColorLayers>,
         UniqueRef<StyleColorMix>,
+        UniqueRef<StyleContrastColor>,
         UniqueRef<StyleRelativeColor<RGBFunctionModernRelative>>,
         UniqueRef<StyleRelativeColor<HSLFunctionModern>>,
         UniqueRef<StyleRelativeColor<HWBFunction>>,
@@ -160,7 +167,7 @@ private:
     static decltype(auto) visit(const ColorKind&, F&&...);
 
     template<typename StyleColorType>
-    static ColorKind resolveAbsoluteComponents(StyleColorType&&);
+    static ColorKind makeIndirectColor(StyleColorType&&);
 
     static ColorKind copy(const ColorKind&);
 

@@ -34,17 +34,29 @@
 #include "ScriptExecutionContext.h"
 #include "SerializedScriptValue.h"
 #include <JavaScriptCore/JSCJSValueInlines.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(NavigationHistoryEntry);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(NavigationHistoryEntry);
 
-NavigationHistoryEntry::NavigationHistoryEntry(ScriptExecutionContext* context, Ref<HistoryItem>&& historyItem)
+NavigationHistoryEntry::NavigationHistoryEntry(ScriptExecutionContext* context, Ref<HistoryItem>&& historyItem, String urlString, WTF::UUID key, RefPtr<SerializedScriptValue>&& state, WTF::UUID id)
     : ContextDestructionObserver(context)
-    , m_id(WTF::UUID::createVersion4())
+    , m_urlString(urlString)
+    , m_key(key)
+    , m_id(id)
+    , m_state(state)
     , m_associatedHistoryItem(WTFMove(historyItem))
 {
+}
+
+Ref<NavigationHistoryEntry> NavigationHistoryEntry::create(ScriptExecutionContext* context, const NavigationHistoryEntry& other)
+{
+    Ref historyItem = other.m_associatedHistoryItem;
+    RefPtr state = historyItem->navigationAPIStateObject();
+    if (!state)
+        state = other.m_state;
+    return adoptRef(*new NavigationHistoryEntry(context, WTFMove(historyItem), other.m_urlString, other.m_key, WTFMove(state), other.m_id));
 }
 
 ScriptExecutionContext* NavigationHistoryEntry::scriptExecutionContext() const
@@ -62,7 +74,7 @@ const String& NavigationHistoryEntry::url() const
     RefPtr document = dynamicDowncast<Document>(scriptExecutionContext());
     if (!document || !document->isFullyActive())
         return nullString();
-    return m_associatedHistoryItem->urlString();
+    return m_urlString;
 }
 
 String NavigationHistoryEntry::key() const
@@ -70,7 +82,7 @@ String NavigationHistoryEntry::key() const
     RefPtr document = dynamicDowncast<Document>(scriptExecutionContext());
     if (!document || !document->isFullyActive())
         return nullString();
-    return m_associatedHistoryItem->uuidIdentifier().toString();
+    return m_key.toString();
 }
 
 String NavigationHistoryEntry::id() const
@@ -109,15 +121,15 @@ JSC::JSValue NavigationHistoryEntry::getState(JSDOMGlobalObject& globalObject) c
     if (!document || !document->isFullyActive())
         return JSC::jsUndefined();
 
-    auto stateObject = m_associatedHistoryItem->navigationAPIStateObject();
-    if (!stateObject)
+    if (!m_state)
         return JSC::jsUndefined();
 
-    return stateObject->deserialize(globalObject, &globalObject, SerializationErrorMode::Throwing);
+    return m_state->deserialize(globalObject, &globalObject, SerializationErrorMode::Throwing);
 }
 
 void NavigationHistoryEntry::setState(RefPtr<SerializedScriptValue>&& state)
 {
+    m_state = state;
     m_associatedHistoryItem->setNavigationAPIStateObject(WTFMove(state));
 }
 

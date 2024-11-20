@@ -89,7 +89,7 @@ public:
     NSSet *serializableFileWrapperClasses() const final;
 #endif
 
-    WebCore::DictationContext addDictationAlternatives(PlatformTextAlternatives *) final;
+    std::optional<WebCore::DictationContext> addDictationAlternatives(PlatformTextAlternatives *) final;
     void replaceDictationAlternatives(PlatformTextAlternatives *, WebCore::DictationContext) final;
     void removeDictationAlternatives(WebCore::DictationContext) final;
     Vector<String> dictationAlternatives(WebCore::DictationContext) final;
@@ -97,11 +97,6 @@ public:
 
 #if ENABLE(APP_HIGHLIGHTS)
     void storeAppHighlight(const WebCore::AppHighlight&) final;
-#endif
-
-#if ENABLE(WRITING_TOOLS_UI)
-    void addTextAnimationForAnimationID(const WTF::UUID&, const WebKit::TextAnimationData&) final;
-    void removeTextAnimationForAnimationID(const WTF::UUID&) final;
 #endif
 
     void microphoneCaptureWillChange() final;
@@ -119,19 +114,34 @@ public:
     WindowKind windowKind() final;
 
 #if ENABLE(WRITING_TOOLS)
-    void proofreadingSessionShowDetailsForSuggestionWithIDRelativeToRect(const WebCore::WritingTools::SessionID&, const WebCore::WritingTools::TextSuggestionID&, WebCore::IntRect selectionBoundsInRootView) final;
+    void proofreadingSessionShowDetailsForSuggestionWithIDRelativeToRect(const WebCore::WritingTools::TextSuggestionID&, WebCore::IntRect selectionBoundsInRootView) final;
 
-    void proofreadingSessionUpdateStateForSuggestionWithID(const WebCore::WritingTools::SessionID&, WebCore::WritingTools::TextSuggestionState, const WTF::UUID& replacementUUID) final;
+    void proofreadingSessionUpdateStateForSuggestionWithID(WebCore::WritingTools::TextSuggestionState, const WTF::UUID& replacementUUID) final;
 
     void writingToolsActiveWillChange() final;
     void writingToolsActiveDidChange() final;
+
+    void didEndPartialIntelligenceTextAnimation() final;
+    bool writingToolsTextReplacementsFinished() final;
+
+    void addTextAnimationForAnimationID(const WTF::UUID&, const WebCore::TextAnimationData&) final;
+    void removeTextAnimationForAnimationID(const WTF::UUID&) final;
 #endif
 
 #if ENABLE(GAMEPAD)
     void setGamepadsRecentlyAccessed(GamepadsRecentlyAccessed) final;
+#if PLATFORM(VISION)
+    void gamepadsConnectedStateChanged() final;
+#endif
 #endif
 
     void hasActiveNowPlayingSessionChanged(bool) final;
+
+    void videoControlsManagerDidChange() override;
+
+    CocoaWindow *platformWindow() const final;
+
+    void processDidUpdateThrottleState() final;
 
 protected:
     RetainPtr<WKWebView> webView() const { return m_webView.get(); }

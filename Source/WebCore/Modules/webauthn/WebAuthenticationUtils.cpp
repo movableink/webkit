@@ -34,15 +34,20 @@
 #include "WebAuthenticationConstants.h"
 #include <pal/crypto/CryptoDigest.h>
 #include <wtf/JSONValues.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/Base64.h>
 #include <wtf/text/WTFString.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WebCore {
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 Vector<uint8_t> convertBytesToVector(const uint8_t byteArray[], const size_t length)
 {
     return { std::span { byteArray, length } };
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 Vector<uint8_t> produceRpIdHash(const String& rpId)
 {
@@ -138,7 +143,7 @@ cbor::CBORValue::MapValue buildAttestationMap(Vector<uint8_t>&& authData, String
     if (attestation == AttestationConveyancePreference::None) {
         const size_t aaguidOffset = rpIdHashLength + flagsLength + signCounterLength;
         if (authData.size() >= aaguidOffset + aaguidLength && shouldZero == ShouldZeroAAGUID::Yes)
-            memset(authData.data() + aaguidOffset, 0, aaguidLength);
+            memsetSpan(authData.mutableSpan().subspan(aaguidOffset, aaguidLength), 0);
         format = String::fromLatin1(noneAttestationValue);
         statementMap.clear();
     }
@@ -157,9 +162,9 @@ Vector<uint8_t> buildAttestationObject(Vector<uint8_t>&& authData, String&& form
     return *attestationObject;
 }
 
-// FIXME(181948): Add token binding ID.
 Ref<ArrayBuffer> buildClientDataJson(ClientDataType type, const BufferSource& challenge, const SecurityOrigin& origin, WebAuthn::Scope scope, const String& topOrigin)
 {
+    // https://www.w3.org/TR/webauthn-2/#clientdatajson-verification
     auto object = JSON::Object::create();
     switch (type) {
     case ClientDataType::Create:
@@ -171,12 +176,12 @@ Ref<ArrayBuffer> buildClientDataJson(ClientDataType type, const BufferSource& ch
     }
     object->setString("challenge"_s, base64URLEncodeToString(challenge.span()));
     object->setString("origin"_s, origin.toRawString());
-    
-    if (!topOrigin.isNull())
-        object->setString("topOrigin"_s, topOrigin);
-    
+
     if (scope != WebAuthn::Scope::SameOrigin)
         object->setBoolean("crossOrigin"_s, scope != WebAuthn::Scope::SameOrigin);
+
+    if (!topOrigin.isNull())
+        object->setString("topOrigin"_s, topOrigin);
 
     return ArrayBuffer::create(object->toJSONString().utf8().span());
 }
@@ -246,5 +251,7 @@ std::optional<AuthenticatorTransport> convertStringToAuthenticatorTransport(cons
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUTHN)

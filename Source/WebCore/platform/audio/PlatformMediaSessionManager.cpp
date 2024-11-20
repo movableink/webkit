@@ -31,17 +31,17 @@
 #include "Logging.h"
 #include "NowPlayingInfo.h"
 #include "PlatformMediaSession.h"
+#include <wtf/TZoneMallocInlines.h>
+
 #if PLATFORM(COCOA)
 #include "VP9UtilitiesCocoa.h"
 #endif
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WebCore {
 
-#if ENABLE(VIDEO) || ENABLE(WEB_AUDIO)
-
-#if ENABLE(WEBM_FORMAT_READER)
-bool PlatformMediaSessionManager::m_webMFormatReaderEnabled;
-#endif
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PlatformMediaSessionManager);
 
 #if ENABLE(VORBIS)
 bool PlatformMediaSessionManager::m_vorbisDecoderEnabled;
@@ -75,7 +75,7 @@ static std::unique_ptr<PlatformMediaSessionManager>& sharedPlatformMediaSessionM
     return platformMediaSessionManager.get();
 }
 
-PlatformMediaSessionManager& PlatformMediaSessionManager::sharedManager()
+PlatformMediaSessionManager& PlatformMediaSessionManager::singleton()
 {
     auto& manager = sharedPlatformMediaSessionManager();
     if (!manager) {
@@ -85,7 +85,7 @@ PlatformMediaSessionManager& PlatformMediaSessionManager::sharedManager()
     return *manager;
 }
 
-PlatformMediaSessionManager* PlatformMediaSessionManager::sharedManagerIfExists()
+PlatformMediaSessionManager* PlatformMediaSessionManager::singletonIfExists()
 {
     return sharedPlatformMediaSessionManager().get();
 }
@@ -99,13 +99,13 @@ std::unique_ptr<PlatformMediaSessionManager> PlatformMediaSessionManager::create
 
 void PlatformMediaSessionManager::updateNowPlayingInfoIfNecessary()
 {
-    if (auto existingManager = PlatformMediaSessionManager::sharedManagerIfExists())
+    if (RefPtr existingManager = PlatformMediaSessionManager::singletonIfExists())
         existingManager->scheduleSessionStatusUpdate();
 }
 
 void PlatformMediaSessionManager::updateAudioSessionCategoryIfNecessary()
 {
-    if (auto existingManager = PlatformMediaSessionManager::sharedManagerIfExists())
+    if (RefPtr existingManager = PlatformMediaSessionManager::singletonIfExists())
         existingManager->scheduleUpdateSessionState();
 }
 
@@ -115,6 +115,11 @@ PlatformMediaSessionManager::PlatformMediaSessionManager()
     , m_logger(AggregateLogger::create(this))
 #endif
 {
+}
+
+PlatformMediaSessionManager::~PlatformMediaSessionManager()
+{
+    m_taskGroup.cancel();
 }
 
 static inline unsigned indexFromMediaType(PlatformMediaSession::MediaType type)
@@ -139,12 +144,16 @@ bool PlatformMediaSessionManager::has(PlatformMediaSession::MediaType type) cons
 
 bool PlatformMediaSessionManager::activeAudioSessionRequired() const
 {
+#if ENABLE(VIDEO) || ENABLE(WEB_AUDIO)
     if (anyOfSessions([] (auto& session) { return session.activeAudioSessionRequired(); }))
         return true;
 
     return WTF::anyOf(m_audioCaptureSources, [](auto& source) {
         return source.isCapturingAudio();
     });
+#else
+    return false;
+#endif
 }
 
 bool PlatformMediaSessionManager::hasActiveAudioSession() const
@@ -194,9 +203,11 @@ void PlatformMediaSessionManager::beginInterruption(PlatformMediaSession::Interr
     ALWAYS_LOG(LOGIDENTIFIER);
 
     m_currentInterruption = type;
+#if ENABLE(VIDEO) || ENABLE(WEB_AUDIO)
     forEachSession([type] (auto& session) {
         session.beginInterruption(type);
     });
+#endif
     scheduleUpdateSessionState();
 }
 
@@ -205,17 +216,21 @@ void PlatformMediaSessionManager::endInterruption(PlatformMediaSession::EndInter
     ALWAYS_LOG(LOGIDENTIFIER);
 
     m_currentInterruption = { };
+#if ENABLE(VIDEO) || ENABLE(WEB_AUDIO)
     forEachSession([flags] (auto& session) {
         session.endInterruption(flags);
     });
+#endif
 }
 
 void PlatformMediaSessionManager::addSession(PlatformMediaSession& session)
 {
     ALWAYS_LOG(LOGIDENTIFIER, session.logIdentifier());
     m_sessions.append(session);
+#if ENABLE(VIDEO) || ENABLE(WEB_AUDIO)
     if (m_currentInterruption)
         session.beginInterruption(*m_currentInterruption);
+#endif
 
 #if !RELEASE_LOG_DISABLED
     m_logger->addLogger(session.logger());
@@ -268,6 +283,7 @@ bool PlatformMediaSessionManager::sessionWillBeginPlayback(PlatformMediaSession&
 {
     setCurrentSession(session);
 
+#if ENABLE(VIDEO) || ENABLE(WEB_AUDIO)
     auto sessionType = session.mediaType();
     auto restrictions = this->restrictions(sessionType);
     if (session.state() == PlatformMediaSession::State::Interrupted && restrictions & InterruptedPlaybackNotPermitted) {
@@ -294,6 +310,9 @@ bool PlatformMediaSessionManager::sessionWillBeginPlayback(PlatformMediaSession&
     }
     ALWAYS_LOG(LOGIDENTIFIER, session.logIdentifier(), " returning true");
     return true;
+#else
+    return false;
+#endif
 }
     
 void PlatformMediaSessionManager::sessionWillEndPlayback(PlatformMediaSession& session, DelayCallingUpdateNowPlaying)
@@ -492,7 +511,7 @@ void PlatformMediaSessionManager::sessionCanProduceAudioChanged()
         return;
 
     m_alreadyScheduledSessionStatedUpdate = true;
-    callOnMainThread([this] {
+    enqueueTaskOnMainThread([this] {
         m_alreadyScheduledSessionStatedUpdate = false;
         maybeActivateAudioSession();
         updateSessionState();
@@ -535,7 +554,7 @@ void PlatformMediaSessionManager::processSystemDidWake()
     });
 }
 
-void PlatformMediaSessionManager::pauseAllMediaPlaybackForGroup(MediaSessionGroupIdentifier mediaSessionGroupIdentifier)
+void PlatformMediaSessionManager::pauseAllMediaPlaybackForGroup(std::optional<MediaSessionGroupIdentifier> mediaSessionGroupIdentifier)
 {
     forEachSessionInGroup(mediaSessionGroupIdentifier, [](auto& session) {
         session.pauseSession();
@@ -543,7 +562,7 @@ void PlatformMediaSessionManager::pauseAllMediaPlaybackForGroup(MediaSessionGrou
 }
 
 
-bool PlatformMediaSessionManager::mediaPlaybackIsPaused(MediaSessionGroupIdentifier mediaSessionGroupIdentifier)
+bool PlatformMediaSessionManager::mediaPlaybackIsPaused(std::optional<MediaSessionGroupIdentifier> mediaSessionGroupIdentifier)
 {
     bool mediaPlaybackIsPaused = false;
     forEachSessionInGroup(mediaSessionGroupIdentifier, [&mediaPlaybackIsPaused](auto& session) {
@@ -560,28 +579,28 @@ void PlatformMediaSessionManager::stopAllMediaPlaybackForProcess()
     });
 }
 
-void PlatformMediaSessionManager::suspendAllMediaPlaybackForGroup(MediaSessionGroupIdentifier mediaSessionGroupIdentifier)
+void PlatformMediaSessionManager::suspendAllMediaPlaybackForGroup(std::optional<MediaSessionGroupIdentifier> mediaSessionGroupIdentifier)
 {
     forEachSessionInGroup(mediaSessionGroupIdentifier, [](auto& session) {
         session.beginInterruption(PlatformMediaSession::InterruptionType::PlaybackSuspended);
     });
 }
 
-void PlatformMediaSessionManager::resumeAllMediaPlaybackForGroup(MediaSessionGroupIdentifier mediaSessionGroupIdentifier)
+void PlatformMediaSessionManager::resumeAllMediaPlaybackForGroup(std::optional<MediaSessionGroupIdentifier> mediaSessionGroupIdentifier)
 {
     forEachSessionInGroup(mediaSessionGroupIdentifier, [](auto& session) {
         session.endInterruption(PlatformMediaSession::EndInterruptionFlags::MayResumePlaying);
     });
 }
 
-void PlatformMediaSessionManager::suspendAllMediaBufferingForGroup(MediaSessionGroupIdentifier mediaSessionGroupIdentifier)
+void PlatformMediaSessionManager::suspendAllMediaBufferingForGroup(std::optional<MediaSessionGroupIdentifier> mediaSessionGroupIdentifier)
 {
     forEachSessionInGroup(mediaSessionGroupIdentifier, [](auto& session) {
         session.suspendBuffering();
     });
 }
 
-void PlatformMediaSessionManager::resumeAllMediaBufferingForGroup(MediaSessionGroupIdentifier mediaSessionGroupIdentifier)
+void PlatformMediaSessionManager::resumeAllMediaBufferingForGroup(std::optional<MediaSessionGroupIdentifier> mediaSessionGroupIdentifier)
 {
     forEachSessionInGroup(mediaSessionGroupIdentifier, [](auto& session) {
         session.resumeBuffering();
@@ -607,12 +626,12 @@ void PlatformMediaSessionManager::forEachMatchingSession(const Function<bool(con
     }
 }
 
-void PlatformMediaSessionManager::forEachSessionInGroup(MediaSessionGroupIdentifier mediaSessionGroupIdentifier, const Function<void(PlatformMediaSession&)>& callback)
+void PlatformMediaSessionManager::forEachSessionInGroup(std::optional<MediaSessionGroupIdentifier> mediaSessionGroupIdentifier, const Function<void(PlatformMediaSession&)>& callback)
 {
     if (!mediaSessionGroupIdentifier)
         return;
 
-    forEachMatchingSession([mediaSessionGroupIdentifier](auto& session) {
+    forEachMatchingSession([mediaSessionGroupIdentifier = *mediaSessionGroupIdentifier](auto& session) {
         return session.client().mediaSessionGroupIdentifier() == mediaSessionGroupIdentifier;
     }, [&callback](auto& session) {
         callback(session);
@@ -656,7 +675,7 @@ void PlatformMediaSessionManager::scheduleUpdateSessionState()
         return;
 
     m_hasScheduledSessionStateUpdate = true;
-    callOnMainThread([this] {
+    enqueueTaskOnMainThread([this] {
         updateSessionState();
         m_hasScheduledSessionStateUpdate = false;
     });
@@ -703,24 +722,6 @@ bool PlatformMediaSessionManager::shouldDeactivateAudioSession()
 void PlatformMediaSessionManager::setShouldDeactivateAudioSession(bool deactivate)
 {
     deactivateAudioSession() = deactivate;
-}
-
-bool PlatformMediaSessionManager::webMFormatReaderEnabled()
-{
-#if ENABLE(WEBM_FORMAT_READER)
-    return m_webMFormatReaderEnabled;
-#else
-    return false;
-#endif
-}
-
-void PlatformMediaSessionManager::setWebMFormatReaderEnabled(bool enabled)
-{
-#if ENABLE(WEBM_FORMAT_READER)
-    m_webMFormatReaderEnabled = enabled;
-#else
-    UNUSED_PARAM(enabled);
-#endif
 }
 
 bool PlatformMediaSessionManager::vorbisDecoderEnabled()
@@ -830,15 +831,6 @@ bool PlatformMediaSessionManager::swVPDecodersAlwaysEnabled()
 }
 #endif // ENABLE(VP9)
 
-#else // ENABLE(VIDEO) || ENABLE(WEB_AUDIO)
-
-void PlatformMediaSessionManager::updateNowPlayingInfoIfNecessary()
-{
-
-}
-
-#endif // ENABLE(VIDEO) || ENABLE(WEB_AUDIO)
-
 #if ENABLE(EXTENSION_CAPABILITIES)
 bool PlatformMediaSessionManager::mediaCapabilityGrantsEnabled()
 {
@@ -892,7 +884,7 @@ void PlatformMediaSessionManager::nowPlayingMetadataChanged(const NowPlayingMeta
     });
 }
 
-bool PlatformMediaSessionManager::hasActiveNowPlayingSessionInGroup(MediaSessionGroupIdentifier mediaSessionGroupIdentifier)
+bool PlatformMediaSessionManager::hasActiveNowPlayingSessionInGroup(std::optional<MediaSessionGroupIdentifier> mediaSessionGroupIdentifier)
 {
     bool hasActiveNowPlayingSession = false;
 
@@ -901,6 +893,13 @@ bool PlatformMediaSessionManager::hasActiveNowPlayingSessionInGroup(MediaSession
     });
 
     return hasActiveNowPlayingSession;
+}
+
+void PlatformMediaSessionManager::enqueueTaskOnMainThread(Function<void()>&& task)
+{
+    callOnMainThread(CancellableTask(m_taskGroup, [task = WTFMove(task)] () mutable {
+        task();
+    }));
 }
 
 #if !RELEASE_LOG_DISABLED
@@ -923,7 +922,7 @@ void PlatformMediaSessionManager::dumpSessionStates()
     StringBuilder builder;
 
     forEachSession([&](auto& session) {
-        builder.append('(', hex(reinterpret_cast<uintptr_t>(session.logIdentifier())), "): "_s, session.description(), "\n"_s);
+        builder.append('(', hex(session.logIdentifier()), "): "_s, session.description(), "\n"_s);
     });
 
     ALWAYS_LOG(LOGIDENTIFIER, " Sessions:\n", builder.toString());
@@ -931,3 +930,5 @@ void PlatformMediaSessionManager::dumpSessionStates()
 #endif
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

@@ -33,8 +33,15 @@
 #if ENABLE(WEB_AUTHN)
 
 #include <algorithm>
+#include <wtf/TZoneMallocInlines.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace fido {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FidoHidPacket);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FidoHidInitPacket);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FidoHidContinuationPacket);
 
 FidoHidPacket::FidoHidPacket(Vector<uint8_t>&& data, uint32_t channelId)
     : m_data(WTFMove(data))
@@ -153,5 +160,7 @@ Vector<uint8_t> FidoHidContinuationPacket::getSerializedData() const
 }
 
 } // namespace fido
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUTHN)

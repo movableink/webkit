@@ -15,6 +15,7 @@
 
 #include "angle_gl.h"
 #include "common/android_util.h"
+#include "common/hash_containers.h"
 #include "libANGLE/Caps.h"
 #include "libANGLE/Config.h"
 #include "libANGLE/Error.h"
@@ -525,11 +526,6 @@ bool ValidES3InternalFormat(GLenum internalFormat);
 bool ValidES3Format(GLenum format);
 bool ValidES3Type(GLenum type);
 bool ValidES3FormatCombination(GLenum format, GLenum type, GLenum internalFormat);
-
-// Implemented in format_map_desktop.cpp
-bool ValidDesktopFormat(GLenum format);
-bool ValidDesktopType(GLenum type);
-bool ValidDesktopFormatCombination(GLenum format, GLenum type, GLenum internalFormat);
 
 // Implemented in es3_copy_conversion_table_autogen.cpp
 bool ValidES3CopyConversion(GLenum textureFormat, GLenum framebufferFormat);

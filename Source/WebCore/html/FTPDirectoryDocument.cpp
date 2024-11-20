@@ -39,16 +39,18 @@
 #include "SharedBuffer.h"
 #include "Text.h"
 #include <wtf/GregorianDateTime.h>
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/unicode/CharacterNames.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(FTPDirectoryDocument);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(FTPDirectoryDocument);
 
 using namespace HTMLNames;
     
@@ -245,14 +247,9 @@ static String processFileDateString(const FTPTime& fileTime)
     if (month < 0 || month > 11)
         month = 12;
 
-    String dateString;
-
     if (fileTime.tm_year > -1)
-        dateString = makeString(months[month], ' ', fileTime.tm_mday, ", "_s, fileTime.tm_year);
-    else
-        dateString = makeString(months[month], ' ', fileTime.tm_mday, ", "_s, now.year());
-
-    return dateString + timeOfDay;
+        return makeString(months[month], ' ', fileTime.tm_mday, ", "_s, fileTime.tm_year, timeOfDay);
+    return makeString(months[month], ' ', fileTime.tm_mday, ", "_s, now.year(), timeOfDay);
 }
 
 void FTPDirectoryDocumentParser::parseAndAppendOneLine(const String& inputLine)
@@ -437,5 +434,7 @@ Ref<DocumentParser> FTPDirectoryDocument::createParser()
 }
 
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(FTPDIR)

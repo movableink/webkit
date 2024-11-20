@@ -66,7 +66,7 @@
 #include "StyleImageSet.h"
 #include "StyleNamedImage.h"
 #include "StylePaintImage.h"
-#include "TransformFunctions.h"
+#include "TransformOperationsBuilder.h"
 
 namespace WebCore {
 namespace Style {
@@ -76,12 +76,12 @@ BuilderState::BuilderState(Builder& builder, RenderStyle& style, BuilderContext&
     , m_styleMap(*this)
     , m_style(style)
     , m_context(WTFMove(context))
-    , m_cssToLengthConversionData(style, m_context)
+    , m_cssToLengthConversionData(style, *this)
 {
 }
 
 // SVG handles zooming in a different way compared to CSS. The whole document is scaled instead
-// of each individual length value in the render style / tree. CSSPrimitiveValue::computeLength*()
+// of each individual length value in the render style / tree. CSSPrimitiveValue::resolveAsLength*()
 // multiplies each resolved length with the zoom multiplier - so for SVG we need to disable that.
 // Though all CSS values that can be applied to outermost <svg> elements (width/height/border/padding...)
 // need to respect the scaling. RenderBox (the parent class of LegacyRenderSVGRoot) grabs values like
@@ -98,7 +98,7 @@ bool BuilderState::useSVGZoomRulesForLength() const
     return is<SVGElement>(element()) && !(is<SVGSVGElement>(*element()) && element()->parentNode());
 }
 
-RefPtr<StyleImage> BuilderState::createStyleImage(const CSSValue& value)
+RefPtr<StyleImage> BuilderState::createStyleImage(const CSSValue& value) const
 {
     if (auto* imageValue = dynamicDowncast<CSSImageValue>(value))
         return imageValue->createStyleImage(*this);
@@ -114,26 +114,14 @@ RefPtr<StyleImage> BuilderState::createStyleImage(const CSSValue& value)
         return crossfadeValue->createStyleImage(*this);
     if (auto* filterImageValue = dynamicDowncast<CSSFilterImageValue>(value))
         return filterImageValue->createStyleImage(*this);
-    if (auto* linearGradientValue = dynamicDowncast<CSSLinearGradientValue>(value))
-        return linearGradientValue->createStyleImage(*this);
-    if (auto* linearGradientValue = dynamicDowncast<CSSPrefixedLinearGradientValue>(value))
-        return linearGradientValue->createStyleImage(*this);
-    if (auto* linearGradientValue = dynamicDowncast<CSSDeprecatedLinearGradientValue>(value))
-        return linearGradientValue->createStyleImage(*this);
-    if (auto* radialGradientvalue = dynamicDowncast<CSSRadialGradientValue>(value))
-        return radialGradientvalue->createStyleImage(*this);
-    if (auto* radialGradientvalue = dynamicDowncast<CSSPrefixedRadialGradientValue>(value))
-        return radialGradientvalue->createStyleImage(*this);
-    if (auto* radialGradientvalue = dynamicDowncast<CSSDeprecatedRadialGradientValue>(value))
-        return radialGradientvalue->createStyleImage(*this);
-    if (auto conicGradientValue = dynamicDowncast<CSSConicGradientValue>(value))
-        return conicGradientValue->createStyleImage(*this);
+    if (auto* gradientValue = dynamicDowncast<CSSGradientValue>(value))
+        return gradientValue->createStyleImage(*this);
     if (auto* paintImageValue = dynamicDowncast<CSSPaintImageValue>(value))
         return paintImageValue->createStyleImage(*this);
     return nullptr;
 }
 
-std::optional<FilterOperations> BuilderState::createFilterOperations(const CSSValue& inValue)
+FilterOperations BuilderState::createFilterOperations(const CSSValue& inValue) const
 {
     return WebCore::Style::createFilterOperations(document(), m_style, m_cssToLengthConversionData, inValue);
 }
@@ -147,7 +135,7 @@ StyleColor BuilderState::colorFromPrimitiveValue(const CSSPrimitiveValue& value,
 {
     if (!element() || !element()->isLink())
         forVisitedLink = ForVisitedLink::No;
-    return { WebCore::Style::colorFromPrimitiveValue(document(), m_style, value, forVisitedLink) };
+    return { WebCore::Style::colorFromPrimitiveValue(document(), m_style, m_cssToLengthConversionData, value, forVisitedLink) };
 }
 
 void BuilderState::registerContentAttribute(const AtomString& attributeLocalName)
@@ -158,12 +146,12 @@ void BuilderState::registerContentAttribute(const AtomString& attributeLocalName
 
 void BuilderState::adjustStyleForInterCharacterRuby()
 {
-    if (m_style.rubyPosition() != RubyPosition::InterCharacter || !element() || !element()->hasTagName(HTMLNames::rtTag))
+    if (!m_style.isInterCharacterRubyPosition() || !element() || !element()->hasTagName(HTMLNames::rtTag))
         return;
 
     m_style.setTextAlign(TextAlignMode::Center);
-    if (m_style.isHorizontalWritingMode())
-        m_style.setWritingMode(WritingMode::VerticalLr);
+    if (!m_style.writingMode().isVerticalTypographic())
+        m_style.setWritingMode(StyleWritingMode::VerticalLr);
 }
 
 void BuilderState::updateFont()
@@ -273,7 +261,22 @@ void BuilderState::updateFontForOrientationChange()
 void BuilderState::setFontSize(FontCascadeDescription& fontDescription, float size)
 {
     fontDescription.setSpecifiedSize(size);
-    fontDescription.setComputedSize(Style::computedFontSizeFromSpecifiedSize(size, fontDescription.isAbsoluteSize(), useSVGZoomRules(), &style(), document()));
+    fontDescription.setComputedSize(Style::computedFontSizeFromSpecifiedSize(size, fontDescription.isAbsoluteSize(), false, &style(), document()));
+}
+
+CSSPropertyID BuilderState::cssPropertyID() const
+{
+    return m_currentProperty ? m_currentProperty->id : CSSPropertyInvalid;
+}
+
+bool BuilderState::isCurrentPropertyInvalidAtComputedValueTime() const
+{
+    return m_invalidAtComputedValueTimeProperties.get(cssPropertyID());
+}
+
+void BuilderState::setCurrentPropertyInvalidAtComputedValueTime()
+{
+    m_invalidAtComputedValueTimeProperties.set(cssPropertyID());
 }
 
 }

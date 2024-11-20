@@ -23,12 +23,15 @@
 #include "ShadowData.h"
 
 #include <wtf/PointerComparison.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ShadowData);
+
 ShadowData::ShadowData(const ShadowData& o)
-    : m_location(o.m_location.x(), o.m_location.y())
+    : m_location(o.m_location.x, o.m_location.y)
     , m_spread(o.m_spread)
     , m_radius(o.m_radius)
     , m_color(o.m_color)

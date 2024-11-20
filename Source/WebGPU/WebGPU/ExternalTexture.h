@@ -28,8 +28,11 @@
 #import "Device.h"
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
+#import <wtf/TZoneMalloc.h>
 #import <wtf/WeakHashSet.h>
 #import <wtf/WeakPtr.h>
+
+using CVPixelBufferRef = struct __CVBuffer*;
 
 struct WGPUExternalTextureImpl {
 };
@@ -39,7 +42,7 @@ namespace WebGPU {
 class CommandEncoder;
 
 class ExternalTexture : public WGPUExternalTextureImpl, public RefCounted<ExternalTexture>, public CanMakeWeakPtr<ExternalTexture> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ExternalTexture);
 public:
     static Ref<ExternalTexture> create(CVPixelBufferRef pixelBuffer, WGPUColorSpace colorSpace, Device& device)
     {
@@ -61,10 +64,14 @@ public:
     bool isDestroyed() const;
 
     bool isValid() const;
+    void update(CVPixelBufferRef);
+    size_t openCommandEncoderCount() const;
 
 private:
     ExternalTexture(CVPixelBufferRef, WGPUColorSpace, Device&);
     ExternalTexture(Device&);
+
+    Ref<Device> protectedDevice() const { return m_device; }
 
     RetainPtr<CVPixelBufferRef> m_pixelBuffer;
     WGPUColorSpace m_colorSpace;

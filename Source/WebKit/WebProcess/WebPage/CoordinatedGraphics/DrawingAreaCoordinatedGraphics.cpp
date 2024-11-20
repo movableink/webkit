@@ -52,6 +52,10 @@
 #include <wtf/glib/RunLoopSourcePriority.h>
 #endif
 
+#if USE(GRAPHICS_LAYER_TEXTURE_MAPPER)
+#include "LayerTreeHostTextureMapper.h"
+#endif
+
 namespace WebKit {
 using namespace WebCore;
 
@@ -103,7 +107,6 @@ void DrawingAreaCoordinatedGraphics::scroll(const IntRect& scrollRect, const Int
         ASSERT(m_scrollRect.isEmpty());
         ASSERT(m_scrollOffset.isEmpty());
         ASSERT(m_dirtyRegion.isEmpty());
-        m_layerTreeHost->scrollNonCompositedContents(scrollRect);
         return;
     }
 
@@ -209,6 +212,10 @@ void DrawingAreaCoordinatedGraphics::setLayerTreeStateIsFrozen(bool isFrozen)
 void DrawingAreaCoordinatedGraphics::updatePreferences(const WebPreferencesStore& store)
 {
     Settings& settings = m_webPage->corePage()->settings();
+#if PLATFORM(GTK)
+    if (settings.acceleratedCompositingEnabled())
+        WebProcess::singleton().initializePlatformDisplayIfNeeded();
+#endif
     settings.setForceCompositingMode(store.getBoolValueForKey(WebPreferencesKey::forceCompositingModeKey()));
     // Fixed position elements need to be composited and create stacking contexts
     // in order to be scrolled by the ScrollingCoordinator.
@@ -233,23 +240,11 @@ void DrawingAreaCoordinatedGraphics::updatePreferences(const WebPreferencesStore
     }
 }
 
-void DrawingAreaCoordinatedGraphics::mainFrameContentSizeChanged(WebCore::FrameIdentifier, const IntSize& size)
-{
-    if (m_layerTreeHost)
-        m_layerTreeHost->contentsSizeChanged(size);
-}
-
 #if USE(COORDINATED_GRAPHICS) || USE(TEXTURE_MAPPER)
 void DrawingAreaCoordinatedGraphics::deviceOrPageScaleFactorChanged()
 {
     if (m_layerTreeHost)
         m_layerTreeHost->deviceOrPageScaleFactorChanged();
-}
-
-void DrawingAreaCoordinatedGraphics::didChangeViewportAttributes(ViewportAttributes&& attrs)
-{
-    if (m_layerTreeHost)
-        m_layerTreeHost->didChangeViewportAttributes(WTFMove(attrs));
 }
 
 bool DrawingAreaCoordinatedGraphics::enterAcceleratedCompositingModeIfNeeded()

@@ -39,26 +39,26 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-AccessibilityTableRow::AccessibilityTableRow(RenderObject& renderer)
-    : AccessibilityRenderObject(renderer)
+AccessibilityTableRow::AccessibilityTableRow(AXID axID, RenderObject& renderer)
+    : AccessibilityRenderObject(axID, renderer)
 {
 }
 
-AccessibilityTableRow::AccessibilityTableRow(Node& node)
-    : AccessibilityRenderObject(node)
+AccessibilityTableRow::AccessibilityTableRow(AXID axID, Node& node)
+    : AccessibilityRenderObject(axID, node)
 {
 }
 
 AccessibilityTableRow::~AccessibilityTableRow() = default;
 
-Ref<AccessibilityTableRow> AccessibilityTableRow::create(RenderObject& renderer)
+Ref<AccessibilityTableRow> AccessibilityTableRow::create(AXID axID, RenderObject& renderer)
 {
-    return adoptRef(*new AccessibilityTableRow(renderer));
+    return adoptRef(*new AccessibilityTableRow(axID, renderer));
 }
 
-Ref<AccessibilityTableRow> AccessibilityTableRow::create(Node& node)
+Ref<AccessibilityTableRow> AccessibilityTableRow::create(AXID axID, Node& node)
 {
-    return adoptRef(*new AccessibilityTableRow(node));
+    return adoptRef(*new AccessibilityTableRow(axID, node));
 }
 
 AccessibilityRole AccessibilityTableRow::determineAccessibilityRole()
@@ -84,7 +84,7 @@ AccessibilityObject* AccessibilityTableRow::observableObject() const
     return parentTable();
 }
     
-bool AccessibilityTableRow::computeAccessibilityIsIgnored() const
+bool AccessibilityTableRow::computeIsIgnored() const
 {    
     AccessibilityObjectInclusion decision = defaultObjectInclusion();
     if (decision == AccessibilityObjectInclusion::IncludeObject)
@@ -93,19 +93,16 @@ bool AccessibilityTableRow::computeAccessibilityIsIgnored() const
         return true;
     
     if (!isTableRow())
-        return AccessibilityRenderObject::computeAccessibilityIsIgnored();
+        return AccessibilityRenderObject::computeIsIgnored();
 
-    if (ignoredFromPresentationalRole())
-        return true;
-
-    return false;
+    return isDOMHidden() || ignoredFromPresentationalRole();
 }
     
 AccessibilityTable* AccessibilityTableRow::parentTable() const
 {
     // The parent table might not be the direct ancestor of the row unfortunately. ARIA states that role="grid" should
     // only have "row" elements, but if not, we still should handle it gracefully by finding the right table.
-    for (AccessibilityObject* parent = parentObject(); parent; parent = parent->parentObject()) {
+    for (RefPtr parent = parentObject(); parent; parent = parent->parentObject()) {
         // If this is a non-anonymous table object, but not an accessibility table, we should stop because we don't want to
         // choose another ancestor table as this row's table.
         if (auto* parentTable = dynamicDowncast<AccessibilityTable>(*parent)) {
@@ -132,7 +129,7 @@ void AccessibilityTableRow::setRowIndex(unsigned rowIndex)
 
 AXCoreObject* AccessibilityTableRow::rowHeader()
 {
-    const auto& rowChildren = children();
+    const auto& rowChildren = unignoredChildren();
     if (rowChildren.isEmpty())
         return nullptr;
     
@@ -172,7 +169,7 @@ void AccessibilityTableRow::addChildren()
         return;
 
     unsigned index = 0;
-    for (const auto& cell : children()) {
+    for (const auto& cell : unignoredChildren()) {
         if (auto* tableCell = dynamicDowncast<AccessibilityTableCell>(cell.get()))
             tableCell->setAXColIndexFromRow(colIndex + index);
         index++;

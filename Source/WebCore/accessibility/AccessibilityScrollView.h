@@ -37,22 +37,23 @@ class ScrollView;
     
 class AccessibilityScrollView final : public AccessibilityObject {
 public:
-    static Ref<AccessibilityScrollView> create(ScrollView*);
+    static Ref<AccessibilityScrollView> create(AXID, ScrollView&);
     AccessibilityRole determineAccessibilityRole() final { return AccessibilityRole::ScrollArea; }
     ScrollView* scrollView() const override { return currentScrollView(); }
 
     virtual ~AccessibilityScrollView();
 
     AccessibilityObject* webAreaObject() const override;
+    void setNeedsToUpdateChildren() override { m_childrenDirty = true; }
 
 private:
-    explicit AccessibilityScrollView(ScrollView*);
+    explicit AccessibilityScrollView(AXID, ScrollView&);
     void detachRemoteParts(AccessibilityDetachmentType) override;
 
     ScrollView* currentScrollView() const;
     ScrollableArea* getScrollableAreaIfScrollable() const override { return currentScrollView(); }
     void scrollTo(const IntPoint&) const override;
-    bool computeAccessibilityIsIgnored() const override;
+    bool computeIsIgnored() const override;
     bool isAccessibilityScrollViewInstance() const override { return true; }
     bool isEnabled() const override { return true; }
     bool hasRemoteFrameChild() const final { return m_remoteFrame; }
@@ -66,7 +67,6 @@ private:
     void clearChildren() override;
     AccessibilityObject* accessibilityHitTest(const IntPoint&) const override;
     void updateChildrenIfNecessary() override;
-    void setNeedsToUpdateChildren() override { m_childrenDirty = true; }
     void updateScrollbars();
     void setFocused(bool) override;
     bool canSetFocusAttribute() const override;
@@ -77,7 +77,6 @@ private:
     LocalFrameView* documentFrameView() const override;
     LayoutRect elementRect() const override;
     AccessibilityObject* parentObject() const override;
-    AccessibilityObject* parentObjectIfExists() const override { return parentObject(); }
 
     AccessibilityObject* firstChild() const override { return webAreaObject(); }
     AccessibilityScrollbar* addChildScrollbar(Scrollbar*);

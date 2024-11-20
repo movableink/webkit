@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,14 +33,16 @@
 #if ENABLE(WK_WEB_EXTENSIONS)
 
 #import "CocoaHelpers.h"
+#import "FoundationSPI.h"
+#import "WKWebExtensionControllerDelegatePrivate.h"
+#import "WKWebExtensionMessagePortInternal.h"
+#import "WKWebExtensionTabConfigurationInternal.h"
 #import "WKWebViewInternal.h"
 #import "WebExtensionContextProxyMessages.h"
 #import "WebExtensionMessagePort.h"
 #import "WebExtensionMessageSenderParameters.h"
 #import "WebExtensionUtilities.h"
 #import "WebPageProxy.h"
-#import "_WKWebExtensionControllerDelegatePrivate.h"
-#import "_WKWebExtensionTabCreationOptionsInternal.h"
 #import <wtf/BlockPtr.h>
 #import <wtf/CallbackAggregator.h>
 
@@ -65,7 +67,7 @@ void WebExtensionContext::runtimeOpenOptionsPage(CompletionHandler<void(Expected
     auto delegate = extensionController()->delegate();
 
     bool respondsToOpenOptionsPage = [delegate respondsToSelector:@selector(webExtensionController:openOptionsPageForExtensionContext:completionHandler:)];
-    bool respondsToOpenNewTab = [delegate respondsToSelector:@selector(webExtensionController:openNewTabWithOptions:forExtensionContext:completionHandler:)];
+    bool respondsToOpenNewTab = [delegate respondsToSelector:@selector(webExtensionController:openNewTabUsingConfiguration:forExtensionContext:completionHandler:)];
     if (!respondsToOpenOptionsPage && !respondsToOpenNewTab) {
         completionHandler(toWebExtensionError(apiName, nil, @"it is not implemented"));
         return;
@@ -89,14 +91,14 @@ void WebExtensionContext::runtimeOpenOptionsPage(CompletionHandler<void(Expected
 
     auto frontmostWindow = this->frontmostWindow();
 
-    auto *creationOptions = [[_WKWebExtensionTabCreationOptions alloc] _init];
-    creationOptions.shouldActivate = YES;
-    creationOptions.shouldSelect = YES;
-    creationOptions.desiredWindow = frontmostWindow ? frontmostWindow->delegate() : nil;
-    creationOptions.desiredIndex = frontmostWindow ? frontmostWindow->tabs().size() : 0;
-    creationOptions.desiredURL = optionsPageURL();
+    auto *configuration = [[WKWebExtensionTabConfiguration alloc] _init];
+    configuration.shouldBeActive = YES;
+    configuration.shouldAddToSelection = YES;
+    configuration.window = frontmostWindow ? frontmostWindow->delegate() : nil;
+    configuration.index = frontmostWindow ? frontmostWindow->tabs().size() : 0;
+    configuration.url = optionsPageURL();
 
-    [delegate webExtensionController:extensionController()->wrapper() openNewTabWithOptions:creationOptions forExtensionContext:wrapper() completionHandler:makeBlockPtr([completionHandler = WTFMove(completionHandler)](id<_WKWebExtensionTab> newTab, NSError *error) mutable {
+    [delegate webExtensionController:extensionController()->wrapper() openNewTabUsingConfiguration:configuration forExtensionContext:wrapper() completionHandler:makeBlockPtr([completionHandler = WTFMove(completionHandler)](id<WKWebExtensionTab> newTab, NSError *error) mutable {
         if (error) {
             RELEASE_LOG_ERROR(Extensions, "Error opening options page in new tab: %{public}@", privacyPreservingDescription(error));
             completionHandler(toWebExtensionError(apiName, nil, error.localizedDescription));
@@ -107,8 +109,6 @@ void WebExtensionContext::runtimeOpenOptionsPage(CompletionHandler<void(Expected
             completionHandler(toWebExtensionError(apiName, nil, @"the options page cound not be opened"));
             return;
         }
-
-        THROW_UNLESS([newTab conformsToProtocol:@protocol(_WKWebExtensionTab)], @"Object returned by webExtensionController:openNewTabWithOptions:forExtensionContext:completionHandler: does not conform to the _WKWebExtensionTab protocol");
 
         completionHandler({ });
     }).get()];
@@ -202,11 +202,19 @@ void WebExtensionContext::runtimeConnect(const String& extensionID, WebExtension
 
         for (auto& process : mainWorldProcesses) {
             process->sendWithAsyncReply(Messages::WebExtensionContextProxy::DispatchRuntimeConnectEvent(targetContentWorldType, channelIdentifier, name, std::nullopt, completeSenderParameters), [=, this, protectedThis = Ref { *this }, &handledCount](HashCountedSet<WebPageProxyIdentifier>&& addedPortCounts) mutable {
+                // Flip target and source worlds since we're adding the opposite side of the port connection, sending from target back to source.
                 addPorts(targetContentWorldType, sourceContentWorldType, channelIdentifier, WTFMove(addedPortCounts));
-                fireQueuedPortMessageEventsIfNeeded(process, targetContentWorldType, channelIdentifier);
+
+                fireQueuedPortMessageEventsIfNeeded(targetContentWorldType, channelIdentifier);
+                fireQueuedPortMessageEventsIfNeeded(sourceContentWorldType, channelIdentifier);
+
                 firePortDisconnectEventIfNeeded(sourceContentWorldType, targetContentWorldType, channelIdentifier);
-                if (++handledCount >= totalExpected)
-                    clearQueuedPortMessages(targetContentWorldType, channelIdentifier);
+
+                if (++handledCount < totalExpected)
+                    return;
+
+                clearQueuedPortMessages(targetContentWorldType, channelIdentifier);
+                clearQueuedPortMessages(sourceContentWorldType, channelIdentifier);
             }, identifier());
         }
 
@@ -214,22 +222,105 @@ void WebExtensionContext::runtimeConnect(const String& extensionID, WebExtension
     });
 }
 
-void WebExtensionContext::runtimeSendNativeMessage(const String& applicationID, const String& messageJSON, CompletionHandler<void(Expected<String, WebExtensionError>&&)>&& completionHandler)
+void WebExtensionContext::sendNativeMessage(const String& applicationID, id message, CompletionHandler<void(Expected<RetainPtr<id>, WebExtensionError>&&)>&& completionHandler)
 {
     static NSString * const apiName = @"runtime.sendNativeMessage()";
 
-    id message = parseJSON(messageJSON, JSONOptions::FragmentsAllowed);
-
     auto delegate = extensionController()->delegate();
-    if (![delegate respondsToSelector:@selector(webExtensionController:sendMessage:toApplicationIdentifier:forExtensionContext:replyHandler:)]) {
-        // FIXME: <https://webkit.org/b/262081> Implement default native messaging with NSExtension.
-        completionHandler(toWebExtensionError(apiName, nil, @"native messaging is not supported"));
+    if (![delegate respondsToSelector:@selector(webExtensionController:sendMessage:toApplicationWithIdentifier:forExtensionContext:replyHandler:)]) {
+        // Fallback to sending the native message via NSExtension. This is only supported for
+        // extensions loaded from an app extension bundle.
+
+        // These counts are static since NSExtension has a per-app limit of 200.
+        static constexpr size_t maximumActiveRequestCount = 150;
+        static size_t activeRequestCount = 0;
+
+        // This must stay in sync with SafariServices's SFExtensionMessageKey.
+        static auto * const messageKey = @"message";
+
+        auto *bundle = extension().bundle();
+        if (!bundle) {
+            completionHandler(toWebExtensionError(apiName, nil, @"native messaging is not supported"));
+            return;
+        }
+
+        if (activeRequestCount >= maximumActiveRequestCount) {
+            RELEASE_LOG_INFO(Extensions, "Dropping native message due to too many active native messages");
+            completionHandler(toWebExtensionError(apiName, nil, @"there are too many active native message requests"));
+            return;
+        }
+
+        // Make an NSExtension each time, since each instance has context specific blocks.
+        NSError *error;
+        auto *nativeExtension = [NSExtension extensionWithIdentifier:bundle.bundleIdentifier error:&error];
+        if (!nativeExtension || error) {
+            RELEASE_LOG_ERROR(Extensions, "Error creating NSExtension: %{public}@", privacyPreservingDescription(error));
+            completionHandler(toWebExtensionError(apiName, nil, @"native messaging is not supported"));
+            return;
+        }
+
+        Ref callbackAggregator = EagerCallbackAggregator<void(Expected<RetainPtr<id>, WebExtensionError>&&)>::create(WTFMove(completionHandler), { });
+
+        nativeExtension.requestCancellationBlock = makeBlockPtr([callbackAggregator](id<NSCopying> requestIdentifier, NSError *error) {
+            RELEASE_LOG_ERROR(Extensions, "NSExtension request with identifier %{public}@ was canceled: %{public}@", requestIdentifier, privacyPreservingDescription(error));
+
+            dispatch_async(dispatch_get_main_queue(), makeBlockPtr([callbackAggregator] {
+                --activeRequestCount;
+
+                callbackAggregator.get()(toWebExtensionError(apiName, nil, @"the native extension canceled the request or encountered an error"));
+            }).get());
+        }).get();
+
+        nativeExtension.requestInterruptionBlock = makeBlockPtr([callbackAggregator, nativeExtension = WeakObjCPtr { nativeExtension }](id<NSCopying> requestIdentifier) {
+            RELEASE_LOG_ERROR(Extensions, "NSExtension request with identifier %{public}@ was interrupted", requestIdentifier);
+
+            dispatch_async(dispatch_get_main_queue(), makeBlockPtr([callbackAggregator] {
+                --activeRequestCount;
+
+                callbackAggregator.get()(toWebExtensionError(apiName, nil, @"the native extension was interrupted or crashed"));
+            }).get());
+
+            // NSExtension does not release the interrupted request and assertions unless we cancel it. See: rdar://80093371
+            [nativeExtension cancelExtensionRequestWithIdentifier:requestIdentifier];
+        }).get();
+
+        nativeExtension.requestCompletionBlock = ^(id<NSCopying> requestIdentifier, NSArray<NSExtensionItem *> *items) {
+            id replyMessage = items.firstObject.userInfo[messageKey];
+
+            dispatch_async(dispatch_get_main_queue(), makeBlockPtr([callbackAggregator, replyMessage = RetainPtr { replyMessage }] {
+                --activeRequestCount;
+
+                callbackAggregator.get()({ replyMessage.get() });
+            }).get());
+        };
+
+        auto *messageItem = [[NSExtensionItem alloc] init];
+        messageItem.userInfo = @{ messageKey: message };
+
+        ++activeRequestCount;
+
+        [nativeExtension beginExtensionRequestWithInputItems:@[ messageItem ] completion:makeBlockPtr([callbackAggregator, nativeExtension = RetainPtr { nativeExtension }](id<NSCopying> requestIdentifier, NSError *error) {
+            if (!error)
+                return;
+
+            RELEASE_LOG_ERROR(Extensions, "NSExtension request with identifier %{public}@ failed: %{public}@", requestIdentifier, privacyPreservingDescription(error));
+
+            dispatch_async(dispatch_get_main_queue(), makeBlockPtr([callbackAggregator, nativeExtension, requestIdentifier = RetainPtr { requestIdentifier }] {
+                --activeRequestCount;
+
+                callbackAggregator.get()(toWebExtensionError(apiName, nil, @"the native extension encountered an unknown error"));
+
+                // NSExtension does not release the failed request and assertions unless we cancel it. See: rdar://80093371
+                [nativeExtension cancelExtensionRequestWithIdentifier:requestIdentifier.get()];
+            }).get());
+        }).get()];
+
         return;
     }
 
     auto *applicationIdentifier = !applicationID.isNull() ? (NSString *)applicationID : nil;
 
-    [delegate webExtensionController:extensionController()->wrapper() sendMessage:message toApplicationIdentifier:applicationIdentifier forExtensionContext:wrapper() replyHandler:makeBlockPtr([completionHandler = WTFMove(completionHandler)](id replyMessage, NSError *error) mutable {
+    [delegate webExtensionController:extensionController()->wrapper() sendMessage:message toApplicationWithIdentifier:applicationIdentifier forExtensionContext:wrapper() replyHandler:makeBlockPtr([completionHandler = WTFMove(completionHandler)](id replyMessage, NSError *error) mutable {
         if (error) {
             completionHandler(toWebExtensionError(apiName, nil, error.localizedDescription));
             return;
@@ -240,8 +331,20 @@ void WebExtensionContext::runtimeSendNativeMessage(const String& applicationID, 
             return;
         }
 
-        completionHandler(String(encodeJSONString(replyMessage, JSONOptions::FragmentsAllowed)));
+        completionHandler({ replyMessage });
     }).get()];
+}
+
+void WebExtensionContext::runtimeSendNativeMessage(const String& applicationID, const String& messageJSON, CompletionHandler<void(Expected<String, WebExtensionError>&&)>&& completionHandler)
+{
+    sendNativeMessage(applicationID, parseJSON(messageJSON, JSONOptions::FragmentsAllowed), [completionHandler = WTFMove(completionHandler)](auto&& result) mutable {
+        if (!result) {
+            completionHandler(makeUnexpected(result.error()));
+            return;
+        }
+
+        completionHandler(String(encodeJSONString(result.value().get(), JSONOptions::FragmentsAllowed)));
+    });
 }
 
 void WebExtensionContext::runtimeConnectNative(const String& applicationID, WebExtensionPortChannelIdentifier channelIdentifier, WebPageProxyIdentifier pageProxyIdentifier, CompletionHandler<void(Expected<void, WebExtensionError>&&)>&& completionHandler)
@@ -254,12 +357,45 @@ void WebExtensionContext::runtimeConnectNative(const String& applicationID, WebE
     // Add 1 for the starting port here so disconnect will balance with a decrement.
     addPorts(sourceContentWorldType, targetContentWorldType, channelIdentifier, { pageProxyIdentifier });
 
-    auto nativePort = WebExtensionMessagePort::create(*this, applicationID, channelIdentifier);
+    Ref nativePort = WebExtensionMessagePort::create(*this, applicationID, channelIdentifier);
 
     auto delegate = extensionController()->delegate();
     if (![delegate respondsToSelector:@selector(webExtensionController:connectUsingMessagePort:forExtensionContext:completionHandler:)]) {
-        // FIXME: <https://webkit.org/b/262081> Implement default native messaging with NSExtension.
-        completionHandler(toWebExtensionError(apiName, nil, @"native messaging is not supported"));
+        // Fallback to sending single native messages for each port message.
+        // Weak reference the native port to prevent a reference cycle.
+
+        nativePort->wrapper().messageHandler = makeBlockPtr([this, protectedThis = Ref { *this }, weakNativePort = WeakPtr { nativePort.get() }](id message, NSError *error) {
+            RefPtr nativePort = weakNativePort.get();
+            if (!nativePort)
+                return;
+
+            if (error) {
+                nativePort->disconnect(toWebExtensionMessagePortError(error));
+                return;
+            }
+
+            sendNativeMessage(nativePort->applicationIdentifier(), message, [weakNativePort](auto&& result) {
+                RefPtr nativePort = weakNativePort.get();
+                if (!nativePort)
+                    return;
+
+                if (!result) {
+                    nativePort->disconnect();
+                    return;
+                }
+
+                // Send the reply back to the port.
+                nativePort->sendMessage(result.value().get());
+            });
+        }).get();
+
+        addNativePort(nativePort);
+
+        completionHandler({ });
+
+        sendQueuedNativePortMessagesIfNeeded(channelIdentifier);
+        firePortDisconnectEventIfNeeded(sourceContentWorldType, targetContentWorldType, channelIdentifier);
+        clearQueuedPortMessages(targetContentWorldType, channelIdentifier);
         return;
     }
 
@@ -298,7 +434,7 @@ void WebExtensionContext::runtimeWebPageSendMessage(const String& extensionID, c
     completeSenderParameters.tabParameters = tab->parameters();
 
     auto url = completeSenderParameters.url;
-    auto validMatchPatterns = destinationExtension->extension().externallyConnectableMatchPatterns();
+    auto validMatchPatterns = destinationExtension->protectedExtension()->externallyConnectableMatchPatterns();
     if (!hasPermission(url, tab.get()) || !WebExtensionMatchPattern::patternsMatchURL(validMatchPatterns, url)) {
         callAfterRandomDelay([completionHandler = WTFMove(completionHandler)]() mutable {
             completionHandler({ });
@@ -354,7 +490,7 @@ void WebExtensionContext::runtimeWebPageConnect(const String& extensionID, WebEx
     completeSenderParameters.tabParameters = tab->parameters();
 
     auto url = completeSenderParameters.url;
-    auto validMatchPatterns = destinationExtension->extension().externallyConnectableMatchPatterns();
+    auto validMatchPatterns = destinationExtension->protectedExtension()->externallyConnectableMatchPatterns();
     if (!hasPermission(url, tab.get()) || !WebExtensionMatchPattern::patternsMatchURL(validMatchPatterns, url)) {
         callAfterRandomDelay([=, this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)]() mutable {
             completionHandler({ });
@@ -382,11 +518,19 @@ void WebExtensionContext::runtimeWebPageConnect(const String& extensionID, WebEx
 
         for (auto& process : mainWorldProcesses) {
             process->sendWithAsyncReply(Messages::WebExtensionContextProxy::DispatchRuntimeConnectEvent(targetContentWorldType, channelIdentifier, name, std::nullopt, completeSenderParameters), [=, this, protectedThis = Ref { *this }, &handledCount](HashCountedSet<WebPageProxyIdentifier>&& addedPortCounts) mutable {
+                // Flip target and source worlds since we're adding the opposite side of the port connection, sending from target back to source.
                 addPorts(targetContentWorldType, sourceContentWorldType, channelIdentifier, WTFMove(addedPortCounts));
-                fireQueuedPortMessageEventsIfNeeded(process, targetContentWorldType, channelIdentifier);
+
+                fireQueuedPortMessageEventsIfNeeded(targetContentWorldType, channelIdentifier);
+                fireQueuedPortMessageEventsIfNeeded(sourceContentWorldType, channelIdentifier);
+
                 firePortDisconnectEventIfNeeded(sourceContentWorldType, targetContentWorldType, channelIdentifier);
-                if (++handledCount >= totalExpected)
-                    clearQueuedPortMessages(targetContentWorldType, channelIdentifier);
+
+                if (++handledCount < totalExpected)
+                    return;
+
+                clearQueuedPortMessages(targetContentWorldType, channelIdentifier);
+                clearQueuedPortMessages(sourceContentWorldType, channelIdentifier);
             }, identifier());
         }
 

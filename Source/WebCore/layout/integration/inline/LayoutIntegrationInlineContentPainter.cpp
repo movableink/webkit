@@ -50,7 +50,7 @@ InlineContentPainter::InlineContentPainter(PaintInfo& paintInfo, const LayoutPoi
 
 void InlineContentPainter::paintEllipsis(size_t lineIndex)
 {
-    if (m_paintInfo.phase != PaintPhase::Foreground || root().style().usedVisibility() != Visibility::Visible)
+    if ((m_paintInfo.phase != PaintPhase::Foreground && m_paintInfo.phase != PaintPhase::TextClip) || root().style().usedVisibility() != Visibility::Visible)
         return;
 
     auto lineBox = InlineIterator::LineBox { InlineIterator::LineBoxIteratorModernPath { m_inlineContent, lineIndex } };
@@ -93,7 +93,7 @@ void InlineContentPainter::paintDisplayBox(const InlineDisplay::Box& box)
         if (!hasVisibleDamage)
             return;
 
-        ModernTextBoxPainter { m_inlineContent, box, m_paintInfo, m_paintOffset }.paint();
+        TextBoxPainter { m_inlineContent, box, box.style(), m_paintInfo, m_paintOffset }.paint();
         return;
     }
 
@@ -152,7 +152,7 @@ void InlineContentPainter::paint()
 
 LayoutPoint InlineContentPainter::flippedContentOffsetIfNeeded(const RenderBox& childRenderer) const
 {
-    if (root().style().isFlippedBlocksWritingMode())
+    if (root().writingMode().isBlockFlipped())
         return root().flipForWritingModeForChild(childRenderer, m_paintOffset);
     return m_paintOffset;
 }

@@ -44,6 +44,9 @@
 
 - (id)initWithWebView:(WKWebView *)webView;
 - (void)enterFullScreen:(CGSize)mediaDimensions;
+#if ENABLE(QUICKLOOK_FULLSCREEN)
+- (void)updateImageSource;
+#endif
 - (void)beganEnterFullScreenWithInitialFrame:(CGRect)initialFrame finalFrame:(CGRect)finalFrame;
 - (void)requestRestoreFullScreen:(CompletionHandler<void(bool)>&&)completionHandler;
 - (void)requestExitFullScreen;
@@ -54,7 +57,6 @@
 - (void)close;
 - (void)webViewDidRemoveFromSuperviewWhileInFullscreen;
 - (void)videoControlsManagerDidChange;
-- (void)didExitFullscreen;
 - (void)didCleanupFullscreen;
 
 #if PLATFORM(VISION)

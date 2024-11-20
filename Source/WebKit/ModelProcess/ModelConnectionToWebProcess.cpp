@@ -51,7 +51,7 @@
 #include "IPCTesterMessages.h"
 #endif
 
-#define MESSAGE_CHECK(assertion) MESSAGE_CHECK_BASE(assertion, (&connection()))
+#define MESSAGE_CHECK(assertion) MESSAGE_CHECK_BASE(assertion, connection())
 
 namespace WebKit {
 using namespace WebCore;
@@ -62,7 +62,7 @@ Ref<ModelConnectionToWebProcess> ModelConnectionToWebProcess::create(ModelProces
 }
 
 ModelConnectionToWebProcess::ModelConnectionToWebProcess(ModelProcess& modelProcess, WebCore::ProcessIdentifier webProcessIdentifier, PAL::SessionID sessionID, IPC::Connection::Handle&& connectionHandle, ModelProcessConnectionParameters&& parameters)
-    : m_modelProcessModelPlayerManagerProxy(makeUniqueRef<ModelProcessModelPlayerManagerProxy>(*this))
+    : m_modelProcessModelPlayerManagerProxy(ModelProcessModelPlayerManagerProxy::create(*this))
     , m_connection(IPC::Connection::createClientConnection(IPC::Connection::Identifier { WTFMove(connectionHandle) }))
     , m_modelProcess(modelProcess)
     , m_webProcessIdentifier(webProcessIdentifier)
@@ -71,6 +71,7 @@ ModelConnectionToWebProcess::ModelConnectionToWebProcess(ModelProcess& modelProc
 #if HAVE(AUDIT_TOKEN)
     , m_presentingApplicationAuditToken(parameters.presentingApplicationAuditToken ? std::optional(parameters.presentingApplicationAuditToken->auditToken()) : std::nullopt)
 #endif
+    , m_sharedPreferencesForWebProcess(WTFMove(parameters.sharedPreferencesForWebProcess))
 {
     RELEASE_ASSERT(RunLoop::isMain());
 
@@ -156,19 +157,20 @@ Logger& ModelConnectionToWebProcess::logger()
 {
     if (!m_logger) {
         m_logger = Logger::create(this);
-        m_logger->setEnabled(this, m_sessionID.isAlwaysOnLoggingAllowed());
+        m_logger->setEnabled(this, isAlwaysOnLoggingAllowed());
     }
 
     return *m_logger;
 }
 
-void ModelConnectionToWebProcess::didReceiveInvalidMessage(IPC::Connection& connection, IPC::MessageName messageName)
+void ModelConnectionToWebProcess::didReceiveInvalidMessage(IPC::Connection& connection, IPC::MessageName messageName, int32_t)
 {
 #if ENABLE(IPC_TESTING_API)
     if (connection.ignoreInvalidMessageForTesting())
         return;
 #endif
     RELEASE_LOG_FAULT(IPC, "Received an invalid message '%" PUBLIC_LOG_STRING "' from WebContent process %" PRIu64 ".", description(messageName).characters(), m_webProcessIdentifier.toUInt64());
+    m_modelProcess->parentProcessConnection()->send(Messages::ModelProcessProxy::TerminateWebProcess(m_webProcessIdentifier), 0);
 }
 
 void ModelConnectionToWebProcess::lowMemoryHandler(Critical critical, Synchronous synchronous)
@@ -205,6 +207,11 @@ bool ModelConnectionToWebProcess::dispatchSyncMessage(IPC::Connection& connectio
     }
 #endif
     return messageReceiverMap().dispatchSyncMessage(connection, decoder, replyEncoder);
+}
+
+bool ModelConnectionToWebProcess::isAlwaysOnLoggingAllowed() const
+{
+    return m_sessionID.isAlwaysOnLoggingAllowed() || m_sharedPreferencesForWebProcess.allowPrivacySensitiveOperationsInNonPersistentDataStores;
 }
 
 } // namespace WebKit

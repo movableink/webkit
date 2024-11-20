@@ -33,15 +33,21 @@
 #include "WebRTCResolver.h"
 #include <WebCore/LibWebRTCSocketIdentifier.h>
 #include <wtf/FunctionDispatcher.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
+#include <wtf/WeakRef.h>
 
 namespace WebKit {
+class WebProcess;
 
-class LibWebRTCNetwork : private FunctionDispatcher, private IPC::MessageReceiver {
-    WTF_MAKE_FAST_ALLOCATED;
+class LibWebRTCNetwork final : private FunctionDispatcher, public IPC::MessageReceiver {
+    WTF_MAKE_TZONE_ALLOCATED(LibWebRTCNetwork);
 public:
-    static UniqueRef<LibWebRTCNetwork> create() { return UniqueRef { *new LibWebRTCNetwork() }; }
+    explicit LibWebRTCNetwork(WebProcess&);
     ~LibWebRTCNetwork();
+
+    void ref() const;
+    void deref() const;
 
     IPC::Connection* connection() { return m_connection.get(); }
     void setConnection(RefPtr<IPC::Connection>&&);
@@ -61,16 +67,16 @@ public:
 
 #if ENABLE(WEB_RTC)
     WebMDNSRegister& mdnsRegister() { return m_mdnsRegister; }
+    Ref<WebMDNSRegister> protectedMDNSRegister() { return m_mdnsRegister; }
 #endif
 
     void setAsActive();
 
 private:
-    LibWebRTCNetwork() = default;
 #if USE(LIBWEBRTC)
     void setSocketFactoryConnection();
 
-    void signalReadPacket(WebCore::LibWebRTCSocketIdentifier, std::span<const uint8_t>, const RTCNetwork::IPAddress&, uint16_t port, int64_t);
+    void signalReadPacket(WebCore::LibWebRTCSocketIdentifier, std::span<const uint8_t>, const RTCNetwork::IPAddress&, uint16_t port, int64_t, RTC::Network::EcnMarking);
     void signalSentPacket(WebCore::LibWebRTCSocketIdentifier, int64_t, int64_t);
     void signalAddressReady(WebCore::LibWebRTCSocketIdentifier, const RTCNetwork::SocketAddress&);
     void signalConnect(WebCore::LibWebRTCSocketIdentifier);
@@ -85,6 +91,8 @@ private:
     // IPC::MessageReceiver
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) final;
 #endif
+
+    WeakRef<WebProcess> m_webProcess;
 
 #if USE(LIBWEBRTC)
     LibWebRTCSocketFactory m_socketFactory;

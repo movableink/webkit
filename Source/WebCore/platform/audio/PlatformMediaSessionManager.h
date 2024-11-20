@@ -31,6 +31,8 @@
 #include "RemoteCommandListener.h"
 #include "Timer.h"
 #include <wtf/AggregateLogger.h>
+#include <wtf/CancellableTask.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
@@ -47,10 +49,14 @@ class PlatformMediaSessionManager
     : private LoggerHelper
 #endif
 {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PlatformMediaSessionManager);
 public:
-    WEBCORE_EXPORT static PlatformMediaSessionManager* sharedManagerIfExists();
-    WEBCORE_EXPORT static PlatformMediaSessionManager& sharedManager();
+    WEBCORE_EXPORT static PlatformMediaSessionManager* singletonIfExists();
+    WEBCORE_EXPORT static PlatformMediaSessionManager& singleton();
+
+    // Do nothing since this is a singleton.
+    void ref() const { }
+    void deref() const { }
 
     static void updateNowPlayingInfoIfNecessary();
     static void updateAudioSessionCategoryIfNecessary();
@@ -58,8 +64,6 @@ public:
     WEBCORE_EXPORT static void setShouldDeactivateAudioSession(bool);
     WEBCORE_EXPORT static bool shouldDeactivateAudioSession();
 
-    WEBCORE_EXPORT static void setWebMFormatReaderEnabled(bool);
-    WEBCORE_EXPORT static bool webMFormatReaderEnabled();
     WEBCORE_EXPORT static void setVorbisDecoderEnabled(bool);
     WEBCORE_EXPORT static bool vorbisDecoderEnabled();
     WEBCORE_EXPORT static void setOpusDecoderEnabled(bool);
@@ -83,7 +87,7 @@ public:
     WEBCORE_EXPORT static void setMediaCapabilityGrantsEnabled(bool);
 #endif
 
-    virtual ~PlatformMediaSessionManager() = default;
+    virtual ~PlatformMediaSessionManager();
 
     virtual void scheduleSessionStatusUpdate() { }
 
@@ -98,7 +102,7 @@ public:
     virtual String lastUpdatedNowPlayingTitle() const { return emptyString(); }
     virtual double lastUpdatedNowPlayingDuration() const { return NAN; }
     virtual double lastUpdatedNowPlayingElapsedTime() const { return NAN; }
-    virtual MediaUniqueIdentifier lastUpdatedNowPlayingInfoUniqueIdentifier() const { return { }; }
+    virtual std::optional<MediaUniqueIdentifier> lastUpdatedNowPlayingInfoUniqueIdentifier() const { return std::nullopt; }
     virtual bool registeredAsNowPlayingApplication() const { return false; }
     virtual bool haveEverRegisteredAsNowPlayingApplication() const { return false; }
     virtual void prepareToSendUserMediaPermissionRequest() { }
@@ -116,14 +120,14 @@ public:
     WEBCORE_EXPORT void processWillSuspend();
     WEBCORE_EXPORT void processDidResume();
 
-    bool mediaPlaybackIsPaused(MediaSessionGroupIdentifier);
-    void pauseAllMediaPlaybackForGroup(MediaSessionGroupIdentifier);
+    bool mediaPlaybackIsPaused(std::optional<MediaSessionGroupIdentifier>);
+    void pauseAllMediaPlaybackForGroup(std::optional<MediaSessionGroupIdentifier>);
     WEBCORE_EXPORT void stopAllMediaPlaybackForProcess();
 
-    void suspendAllMediaPlaybackForGroup(MediaSessionGroupIdentifier);
-    void resumeAllMediaPlaybackForGroup(MediaSessionGroupIdentifier);
-    void suspendAllMediaBufferingForGroup(MediaSessionGroupIdentifier);
-    void resumeAllMediaBufferingForGroup(MediaSessionGroupIdentifier);
+    void suspendAllMediaPlaybackForGroup(std::optional<MediaSessionGroupIdentifier>);
+    void resumeAllMediaPlaybackForGroup(std::optional<MediaSessionGroupIdentifier>);
+    void suspendAllMediaBufferingForGroup(std::optional<MediaSessionGroupIdentifier>);
+    void resumeAllMediaBufferingForGroup(std::optional<MediaSessionGroupIdentifier>);
 
     enum SessionRestrictionFlags {
         NoRestrictions = 0,
@@ -172,6 +176,7 @@ public:
 
     WEBCORE_EXPORT void addAudioCaptureSource(AudioCaptureSource&);
     WEBCORE_EXPORT void removeAudioCaptureSource(AudioCaptureSource&);
+    void audioCaptureSourceStateChanged() { updateSessionState(); }
     bool hasAudioCaptureSource(AudioCaptureSource& source) const { return m_audioCaptureSources.contains(source); }
 
     WEBCORE_EXPORT void processDidReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType, const PlatformMediaSession::RemoteCommandArgument&);
@@ -196,7 +201,7 @@ public:
     WEBCORE_EXPORT void addNowPlayingMetadataObserver(const NowPlayingMetadataObserver&);
     WEBCORE_EXPORT void removeNowPlayingMetadataObserver(const NowPlayingMetadataObserver&);
 
-    bool hasActiveNowPlayingSessionInGroup(MediaSessionGroupIdentifier);
+    bool hasActiveNowPlayingSessionInGroup(std::optional<MediaSessionGroupIdentifier>);
 
 protected:
     friend class PlatformMediaSession;
@@ -207,7 +212,7 @@ protected:
     virtual void removeSession(PlatformMediaSession&);
 
     void forEachSession(const Function<void(PlatformMediaSession&)>&);
-    void forEachSessionInGroup(MediaSessionGroupIdentifier, const Function<void(PlatformMediaSession&)>&);
+    void forEachSessionInGroup(std::optional<MediaSessionGroupIdentifier>, const Function<void(PlatformMediaSession&)>&);
     bool anyOfSessions(const Function<bool(const PlatformMediaSession&)>&) const;
 
     void maybeDeactivateAudioSession();
@@ -215,7 +220,7 @@ protected:
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger; }
-    const void* logIdentifier() const final { return nullptr; }
+    uint64_t logIdentifier() const final { return 0; }
     ASCIILiteral logClassName() const override { return "PlatformMediaSessionManager"_s; }
     WTFLogChannel& logChannel() const final;
 #endif
@@ -227,6 +232,7 @@ protected:
     std::optional<bool> supportsSpatialAudioPlayback() { return m_supportsSpatialAudioPlayback; }
 
     void nowPlayingMetadataChanged(const NowPlayingMetadata&);
+    void enqueueTaskOnMainThread(Function<void()>&&);
 
 private:
     friend class Internals;
@@ -260,10 +266,8 @@ private:
     bool m_hasScheduledSessionStateUpdate { false };
 
     WeakHashSet<NowPlayingMetadataObserver> m_nowPlayingMetadataObservers;
+    TaskCancellationGroup m_taskGroup;
 
-#if ENABLE(WEBM_FORMAT_READER)
-    static bool m_webMFormatReaderEnabled;
-#endif
 #if ENABLE(VORBIS)
     static bool m_vorbisDecoderEnabled;
 #endif

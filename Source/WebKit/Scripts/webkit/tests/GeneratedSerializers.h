@@ -91,6 +91,7 @@ class ScrollingStateFrameHostingNodeWithStuffAfterTuple;
 #if USE(APPKIT)
 class AppKitControlSystemImage;
 #endif
+template<typename> class RectEdges;
 struct Amazing;
 }
 
@@ -102,6 +103,7 @@ class LayerProperties;
 class CoreIPCAVOutputContext;
 #endif
 class CoreIPCNSSomeFoundationType;
+class CoreIPCclass NSSomeOtherFoundationType;
 #if ENABLE(DATA_DETECTION)
 class CoreIPCDDScannerResult;
 #endif
@@ -305,6 +307,11 @@ template<> struct ArgumentCoder<WebKit::CoreIPCNSSomeFoundationType> {
     static std::optional<WebKit::CoreIPCNSSomeFoundationType> decode(Decoder&);
 };
 
+template<> struct ArgumentCoder<WebKit::CoreIPCclass NSSomeOtherFoundationType> {
+    static void encode(Encoder&, const WebKit::CoreIPCclass NSSomeOtherFoundationType&);
+    static std::optional<WebKit::CoreIPCclass NSSomeOtherFoundationType> decode(Decoder&);
+};
+
 #if ENABLE(DATA_DETECTION)
 template<> struct ArgumentCoder<WebKit::CoreIPCDDScannerResult> {
     static void encode(Encoder&, const WebKit::CoreIPCDDScannerResult&);
@@ -397,6 +404,11 @@ template<> struct ArgumentCoder<WebCore::AppKitControlSystemImage> {
     static std::optional<Ref<WebCore::AppKitControlSystemImage>> decode(Decoder&);
 };
 #endif
+
+template<> struct ArgumentCoder<WebCore::RectEdges<bool>> {
+    static void encode(Encoder&, const WebCore::RectEdges<bool>&);
+    static std::optional<WebCore::RectEdges<bool>> decode(Decoder&);
+};
 
 } // namespace IPC
 

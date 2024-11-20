@@ -30,6 +30,8 @@
 
 #if ENABLE(CONTENT_EXTENSIONS)
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WebCore {
 namespace ContentExtensions {
 
@@ -106,7 +108,7 @@ SerializedNFA::SerializedNFA(FileSystem::MappedFileData&& file, Metadata&& metad
 template<typename T>
 const T* SerializedNFA::pointerAtOffsetInFile(size_t offset) const
 {
-    return reinterpret_cast<const T*>(static_cast<const uint8_t*>(m_file.data()) + offset);
+    return reinterpret_cast<const T*>(m_file.span().subspan(offset).data());
 }
 
 auto SerializedNFA::nodes() const -> const Range<ImmutableNFANode>
@@ -136,5 +138,7 @@ auto SerializedNFA::actions() const -> const Range<uint64_t>
 
 } // namespace ContentExtensions
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(CONTENT_EXTENSIONS)

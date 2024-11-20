@@ -28,7 +28,10 @@
 #import "config.h"
 #import "PlatformWritingToolsUtilities.h"
 
+#import <SoftLinking/WeakLinking.h>
 #import <WebCore/WritingToolsTypes.h>
+
+WEAK_IMPORT_OBJC_CLASS(WTContext);
 
 namespace WebKit {
 
@@ -49,6 +52,11 @@ PlatformWritingToolsBehavior convertToPlatformWritingToolsBehavior(WebCore::Writ
     case WebCore::WritingTools::Behavior::Complete:
         return PlatformWritingToolsBehaviorComplete;
     }
+}
+
+WTRequestedTool convertToPlatformRequestedTool(WebCore::WritingTools::RequestedTool tool)
+{
+    return static_cast<WTRequestedTool>(tool);
 }
 
 WTTextSuggestionState convertToPlatformTextSuggestionState(WebCore::WritingTools::TextSuggestion::State state)
@@ -87,6 +95,11 @@ WebCore::WritingTools::Behavior convertToWebWritingToolsBehavior(PlatformWriting
     case PlatformWritingToolsBehaviorComplete:
         return WebCore::WritingTools::Behavior::Complete;
     }
+}
+
+WebCore::WritingTools::RequestedTool convertToWebRequestedTool(WTRequestedTool tool)
+{
+    return static_cast<WebCore::WritingTools::RequestedTool>(tool);
 }
 
 WebCore::WritingTools::TextSuggestion::State convertToWebTextSuggestionState(WTTextSuggestionState state)
@@ -135,6 +148,9 @@ WebCore::WritingTools::Session::CompositionType convertToWebCompositionSessionTy
     switch (type) {
     case WTCompositionSessionTypeNone:
         return WebCore::WritingTools::Session::CompositionType::None;
+
+    case WTCompositionSessionTypeCompose:
+        return WebCore::WritingTools::Session::CompositionType::Compose;
 
     case WTCompositionSessionTypeSmartReply:
         return WebCore::WritingTools::Session::CompositionType::SmartReply;

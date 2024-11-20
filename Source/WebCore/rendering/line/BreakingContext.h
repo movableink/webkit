@@ -46,6 +46,8 @@
 #include <wtf/text/StringView.h>
 #include <wtf/unicode/CharacterNames.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WebCore {
 
 // We don't let our line box tree for a single line get any deeper than this.
@@ -75,7 +77,6 @@ public:
         , m_includeEndWidth(true)
         , m_autoWrap(false)
         , m_autoWrapWasEverTrueOnLine(false)
-        , m_floatsFitOnLine(true)
         , m_collapseWhiteSpace(false)
         , m_allowImagesToBreak(!block.document().inQuirksMode() || !block.isRenderTableCell() || !m_blockStyle.logicalWidth().isIntrinsicOrAuto())
         , m_atEnd(false)
@@ -169,7 +170,6 @@ private:
     bool m_includeEndWidth;
     bool m_autoWrap;
     bool m_autoWrapWasEverTrueOnLine;
-    bool m_floatsFitOnLine;
     bool m_collapseWhiteSpace;
     bool m_allowImagesToBreak;
     bool m_atEnd;
@@ -827,3 +827,5 @@ inline LegacyInlineIterator BreakingContext::handleEndOfLine()
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

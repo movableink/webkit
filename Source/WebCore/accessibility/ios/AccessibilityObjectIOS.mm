@@ -38,6 +38,7 @@
 #import "WebAccessibilityObjectWrapperIOS.h"
 #import <wtf/SoftLinking.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
+#import <wtf/text/MakeString.h>
 
 SOFT_LINK_CONSTANT(AXRuntime, UIAccessibilityTokenBlockquoteLevel, NSString *);
 #define AccessibilityTokenBlockquoteLevel getUIAccessibilityTokenBlockquoteLevel()
@@ -155,7 +156,7 @@ void AccessibilityObject::setLastPresentedTextPrediction(Node& previousCompositi
         if (wordStart)
             previousCompositionNodeText = previousCompositionNodeText.substring(wordStart);
 
-        m_lastPresentedTextPredictionComplete = { previousCompositionNodeText + m_lastPresentedTextPrediction.text, wordStart };
+        m_lastPresentedTextPredictionComplete = { makeString(previousCompositionNodeText, m_lastPresentedTextPrediction.text), wordStart };
 
         // Reset last presented prediction since a candidate was accepted.
         m_lastPresentedTextPrediction.reset();
@@ -271,10 +272,10 @@ static void attributedStringSetCompositionAttributes(NSMutableAttributedString *
 #endif // HAVE(INLINE_PREDICTIONS)
 }
 
-RetainPtr<NSAttributedString> attributedStringCreate(Node* node, StringView text, const SimpleRange&, AXCoreObject::SpellCheck)
+RetainPtr<NSAttributedString> attributedStringCreate(Node& node, StringView text, const SimpleRange&, AXCoreObject::SpellCheck)
 {
     // Skip invisible text.
-    auto* renderer = node->renderer();
+    CheckedPtr renderer = node.renderer();
     if (!renderer)
         return nil;
 
@@ -282,10 +283,10 @@ RetainPtr<NSAttributedString> attributedStringCreate(Node* node, StringView text
     NSRange range = NSMakeRange(0, [result length]);
 
     // Set attributes.
-    attributeStringSetStyle(result.get(), renderer, range);
-    attributeStringSetBlockquoteLevel(result.get(), renderer, range);
-    attributeStringSetLanguage(result.get(), renderer, range);
-    attributedStringSetCompositionAttributes(result.get(), renderer);
+    attributeStringSetStyle(result.get(), renderer.get(), range);
+    attributeStringSetBlockquoteLevel(result.get(), renderer.get(), range);
+    attributeStringSetLanguage(result.get(), renderer.get(), range);
+    attributedStringSetCompositionAttributes(result.get(), renderer.get());
 
     return result;
 }

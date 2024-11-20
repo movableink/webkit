@@ -30,6 +30,7 @@
 #import "FontPlatformData.h"
 #import <CoreGraphics/CoreGraphics.h>
 #import <variant>
+#import <wtf/Markable.h>
 #import <wtf/RefPtr.h>
 #import <wtf/WeakPtr.h>
 
@@ -53,7 +54,7 @@ void attributedStringSetNumber(NSMutableAttributedString *, NSString *, NSNumber
 void attributedStringSetFont(NSMutableAttributedString *, CTFontRef, const NSRange&);
 void attributedStringSetSpelling(NSMutableAttributedString *, Node&, StringView, const NSRange&);
 void attributedStringSetNeedsSpellCheck(NSMutableAttributedString *, Node&);
-RetainPtr<NSAttributedString> attributedStringCreate(Node*, StringView, const SimpleRange&, AXCoreObject::SpellCheck);
+RetainPtr<NSAttributedString> attributedStringCreate(Node&, StringView, const SimpleRange&, AXCoreObject::SpellCheck);
 }
 
 @interface WebAccessibilityObjectWrapperBase : NSObject {
@@ -65,7 +66,7 @@ RetainPtr<NSAttributedString> attributedStringCreate(Node*, StringView, const Si
     bool m_isolatedObjectInitialized;
 #endif
 
-    WebCore::AXID _identifier;
+    Markable<WebCore::AXID> _identifier;
 }
 
 - (id)initWithAccessibilityObject:(WebCore::AccessibilityObject&)axObject;
@@ -79,7 +80,7 @@ RetainPtr<NSAttributedString> attributedStringCreate(Node*, StringView, const Si
 - (void)detachIsolatedObject:(WebCore::AccessibilityDetachmentType)detachmentType;
 #endif
 
-@property (nonatomic, assign) WebCore::AXID identifier;
+@property (nonatomic, assign) Markable<WebCore::AXID> identifier;
 
 // FIXME: unified these two methods into one.
 #if PLATFORM(MAC)
@@ -118,7 +119,7 @@ RetainPtr<NSAttributedString> attributedStringCreate(Node*, StringView, const Si
 
 - (NSDictionary<NSString *, id> *)baseAccessibilityResolvedEditingStyles;
 
-extern WebCore::AccessibilitySearchCriteria accessibilitySearchCriteriaForSearchPredicateParameterizedAttribute(const NSDictionary *);
+extern WebCore::AccessibilitySearchCriteria accessibilitySearchCriteriaForSearchPredicate(WebCore::AXCoreObject&, const NSDictionary *);
 
 extern NSArray *makeNSArray(const WebCore::AXCoreObject::AccessibilityChildrenVector&);
 extern NSRange makeNSRange(std::optional<WebCore::SimpleRange>);

@@ -32,6 +32,7 @@
 #include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/TextPosition.h>
 
@@ -79,10 +80,10 @@ enum class ReasonForCallingCanExecuteScripts : uint8_t {
 using ValueOrException = Expected<JSC::JSValue, ExceptionDetails>;
 
 class ScriptController final : public CanMakeWeakPtr<ScriptController>, public CanMakeCheckedPtr<ScriptController> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ScriptController);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ScriptController);
 
-    using RootObjectMap = HashMap<void*, Ref<JSC::Bindings::RootObject>>;
+    using RootObjectMap = UncheckedKeyHashMap<void*, Ref<JSC::Bindings::RootObject>>;
 
 public:
     explicit ScriptController(LocalFrame&);

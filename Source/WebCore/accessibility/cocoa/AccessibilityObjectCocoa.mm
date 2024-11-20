@@ -196,21 +196,22 @@ RetainPtr<NSArray> AccessibilityObject::contentForRange(const SimpleRange& range
     auto result = adoptNS([[NSMutableArray alloc] init]);
 
     // Iterate over the range to build the AX attributed strings.
-    for (TextIterator it(range); !it.atEnd(); it.advance()) {
+    TextIterator it = textIteratorIgnoringFullSizeKana(range);
+    for (; !it.atEnd(); it.advance()) {
         Node& node = it.range().start.container;
 
         // Non-zero length means textual node, zero length means replaced node (AKA "attachments" in AX).
         if (it.text().length()) {
             auto listMarkerText = listMarkerTextForNodeAndPosition(&node, makeContainerOffsetPosition(it.range().start));
             if (!listMarkerText.isEmpty()) {
-                if (auto attrString = attributedStringCreate(&node, listMarkerText, it.range(), SpellCheck::No))
+                if (auto attrString = attributedStringCreate(node, listMarkerText, it.range(), SpellCheck::No))
                     [result addObject:attrString.get()];
             }
 
-            if (auto attrString = attributedStringCreate(&node, it.text(), it.range(), spellCheck))
+            if (auto attrString = attributedStringCreate(node, it.text(), it.range(), spellCheck))
                 [result addObject:attrString.get()];
         } else {
-            if (Node* replacedNode = it.node()) {
+            if (RefPtr replacedNode = it.node()) {
                 auto* cache = axObjectCache();
                 if (auto* object = cache ? cache->getOrCreate(replacedNode->renderer()) : nullptr)
                     addObjectWrapperToArray(*object, result.get());

@@ -97,14 +97,6 @@ public:
     static bool attachmentElementEnabled() { return shared().m_isAttachmentElementEnabled; }
 #endif
 
-#if ENABLE(WEB_RTC)
-    static bool webRTCH264LowLatencyEncoderEnabled() { return shared().m_isWebRTCH264LowLatencyEncoderEnabled; }
-    static void setWebRTCH264LowLatencyEncoderEnabled(bool isEnabled) { shared().m_isWebRTCH264LowLatencyEncoderEnabled = isEnabled; }
-    static bool webRTCPlatformTCPSocketsEnabled() { return shared().m_isWebRTCPlatformTCPSocketsEnabled; }
-    static void setWebRTCPlatformTCPSocketsEnabled(bool isEnabled) { shared().m_isWebRTCPlatformTCPSocketsEnabled = isEnabled; }
-    static bool webRTCPlatformUDPSocketsEnabled() { return shared().m_isWebRTCPlatformUDPSocketsEnabled; }
-    static void setWebRTCPlatformUDPSocketsEnabled(bool isEnabled) { shared().m_isWebRTCPlatformUDPSocketsEnabled = isEnabled; }
-#endif
     static bool webRTCAudioLatencyAdaptationEnabled() { return shared().m_isWebRTCAudioLatencyAdaptationEnabled; }
     static void setWebRTCAudioLatencyAdaptationEnabled(bool isEnabled) { shared().m_isWebRTCAudioLatencyAdaptationEnabled = isEnabled; }
 
@@ -116,13 +108,13 @@ public:
     static bool isAccessibilityIsolatedTreeEnabled() { return shared().m_accessibilityIsolatedTree; }
 #endif
 
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    static void setAccessibilityThreadTextApisEnabled(bool isEnabled) { shared().m_accessibilityThreadTextApis = isEnabled; }
+    static bool accessibilityThreadTextApisEnabled() { return shared().m_accessibilityThreadTextApis; }
+#endif
+
     static void setArePDFImagesEnabled(bool isEnabled) { shared().m_arePDFImagesEnabled = isEnabled; }
     static bool arePDFImagesEnabled() { return shared().m_arePDFImagesEnabled; }
-
-#if ENABLE(WEBM_FORMAT_READER)
-    static void setWebMFormatReaderEnabled(bool isEnabled) { shared().m_webMFormatReaderEnabled = isEnabled; }
-    static bool webMFormatReaderEnabled() { return shared().m_webMFormatReaderEnabled; }
-#endif
 
 #if ENABLE(MEDIA_SOURCE)
     static void setWebMParserEnabled(bool isEnabled) { shared().m_webMParserEnabled = isEnabled; }
@@ -139,14 +131,9 @@ public:
     static bool opusDecoderEnabled() { return shared().m_opusDecoderEnabled; }
 #endif
 
-#if ENABLE(MEDIA_SOURCE) && (HAVE(AVSAMPLEBUFFERVIDEOOUTPUT) || USE(GSTREAMER))
-    WEBCORE_EXPORT static void setMediaSourceInlinePaintingEnabled(bool);
-    static bool mediaSourceInlinePaintingEnabled() { return shared().m_mediaSourceInlinePaintingEnabled; }
-#endif
-
-#if ENABLE(BUILT_IN_NOTIFICATIONS)
+#if ENABLE(WEB_PUSH_NOTIFICATIONS)
     static void setBuiltInNotificationsEnabled(bool isEnabled) { shared().m_builtInNotificationsEnabled = isEnabled; }
-    static bool builtInNotificationsEnabled() { return shared().m_builtInNotificationsEnabled; }
+    WEBCORE_EXPORT static bool builtInNotificationsEnabled();
 #endif
 
 #if ENABLE(MODEL_ELEMENT)
@@ -191,11 +178,6 @@ private:
     bool m_isAttachmentElementEnabled { false };
 #endif
 
-#if ENABLE(WEB_RTC)
-    bool m_isWebRTCH264LowLatencyEncoderEnabled { false };
-    bool m_isWebRTCPlatformTCPSocketsEnabled { false };
-    bool m_isWebRTCPlatformUDPSocketsEnabled { false };
-#endif
     bool m_isWebRTCAudioLatencyAdaptationEnabled { true };
 
     bool m_isReadableByteStreamAPIEnabled { false };
@@ -204,11 +186,11 @@ private:
     bool m_accessibilityIsolatedTree { false };
 #endif
 
-    bool m_arePDFImagesEnabled { true };
-
-#if ENABLE(WEBM_FORMAT_READER)
-    bool m_webMFormatReaderEnabled { false };
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    bool m_accessibilityThreadTextApis { false };
 #endif
+
+    bool m_arePDFImagesEnabled { true };
 
 #if ENABLE(MEDIA_SOURCE)
     bool m_webMParserEnabled { false };
@@ -222,11 +204,7 @@ private:
     bool m_opusDecoderEnabled { false };
 #endif
 
-#if ENABLE(MEDIA_SOURCE) && (HAVE(AVSAMPLEBUFFERVIDEOOUTPUT) || USE(GSTREAMER))
-    bool m_mediaSourceInlinePaintingEnabled { false };
-#endif
-
-#if ENABLE(BUILT_IN_NOTIFICATIONS)
+#if ENABLE(WEB_PUSH_NOTIFICATIONS)
     bool m_builtInNotificationsEnabled { false };
 #endif
 

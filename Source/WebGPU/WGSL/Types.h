@@ -27,6 +27,7 @@
 
 #include "ASTForward.h"
 #include "WGSLEnums.h"
+#include <array>
 #include <functional>
 #include <wtf/FixedVector.h>
 #include <wtf/HashMap.h>
@@ -147,6 +148,8 @@ struct Array {
     bool isRuntimeSized() const { return std::holds_alternative<std::monostate>(size); }
     bool isCreationFixed() const { return std::holds_alternative<unsigned>(size); }
     bool isOverrideSized() const { return std::holds_alternative<AST::Expression*>(size); }
+
+    size_t stride() const;
 };
 
 struct Struct {
@@ -202,11 +205,11 @@ public:
         static constexpr SortedArrayMap map { mapEntries };
     };
 
-    static constexpr SortedArrayMap<std::pair<ComparableASCIILiteral, unsigned>[2]> keys[] {
+    static constexpr auto keys = std::to_array<SortedArrayMap<std::pair<ComparableASCIILiteral, unsigned>[2]>>({
         FrexpResult::map,
         ModfResult::map,
         AtomicCompareExchangeResult::map,
-    };
+    });
 
     String name;
     Kind kind;
@@ -317,7 +320,7 @@ public:
     unsigned length() const { return m_string.length(); }
     bool is8Bit() const { return m_string.is8Bit(); }
     template<typename CharacterType>
-    void writeTo(CharacterType* destination) const
+    void writeTo(std::span<CharacterType> destination) const
     {
         StringView { m_string }.getCharacters(destination);
         WTF_STRINGTYPEADAPTER_COPIED_WTF_STRING();

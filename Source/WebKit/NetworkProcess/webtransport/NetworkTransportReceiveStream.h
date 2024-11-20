@@ -25,18 +25,49 @@
 
 #pragma once
 
+#include <wtf/ObjectIdentifier.h>
+#include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
+
+#if PLATFORM(COCOA)
+#include <Network/Network.h>
+#include <wtf/RetainPtr.h>
+#endif
+
+namespace WebKit {
+struct WebTransportStreamIdentifierType;
+using WebTransportStreamIdentifier = ObjectIdentifier<WebTransportStreamIdentifierType>;
+}
 
 namespace WebKit {
 
 class NetworkTransportSession;
 
-class NetworkTransportReceiveStream {
-    WTF_MAKE_FAST_ALLOCATED;
+class NetworkTransportReceiveStream : public RefCounted<NetworkTransportReceiveStream>, public CanMakeWeakPtr<NetworkTransportReceiveStream> {
+    WTF_MAKE_TZONE_ALLOCATED(NetworkTransportReceiveStream);
 public:
-    NetworkTransportReceiveStream(NetworkTransportSession&);
+    template<typename... Args> static Ref<NetworkTransportReceiveStream> create(Args&&... args) { return adoptRef(*new NetworkTransportReceiveStream(std::forward<Args>(args)...)); }
+
+    virtual ~NetworkTransportReceiveStream();
+
+    WebTransportStreamIdentifier identifier() const { return m_identifier; }
+
+protected:
+#if PLATFORM(COCOA)
+    NetworkTransportReceiveStream(NetworkTransportSession&, nw_connection_t);
+#else
+    NetworkTransportReceiveStream();
+#endif
+
 private:
+    void receiveLoop();
+
+    const WebTransportStreamIdentifier m_identifier;
     WeakPtr<NetworkTransportSession> m_session;
+#if PLATFORM(COCOA)
+    const RetainPtr<nw_connection_t> m_connection;
+#endif
 };
 
 }

@@ -34,26 +34,26 @@
 
 namespace WebCore {
     
-AccessibilityARIAGridRow::AccessibilityARIAGridRow(RenderObject& renderer)
-    : AccessibilityTableRow(renderer)
+AccessibilityARIAGridRow::AccessibilityARIAGridRow(AXID axID, RenderObject& renderer)
+    : AccessibilityTableRow(axID, renderer)
 {
 }
 
-AccessibilityARIAGridRow::AccessibilityARIAGridRow(Node& node)
-    : AccessibilityTableRow(node)
+AccessibilityARIAGridRow::AccessibilityARIAGridRow(AXID axID, Node& node)
+    : AccessibilityTableRow(axID, node)
 {
 }
 
 AccessibilityARIAGridRow::~AccessibilityARIAGridRow() = default;
 
-Ref<AccessibilityARIAGridRow> AccessibilityARIAGridRow::create(RenderObject& renderer)
+Ref<AccessibilityARIAGridRow> AccessibilityARIAGridRow::create(AXID axID, RenderObject& renderer)
 {
-    return adoptRef(*new AccessibilityARIAGridRow(renderer));
+    return adoptRef(*new AccessibilityARIAGridRow(axID, renderer));
 }
 
-Ref<AccessibilityARIAGridRow> AccessibilityARIAGridRow::create(Node& node)
+Ref<AccessibilityARIAGridRow> AccessibilityARIAGridRow::create(AXID axID, Node& node)
 {
-    return adoptRef(*new AccessibilityARIAGridRow(node));
+    return adoptRef(*new AccessibilityARIAGridRow(axID, node));
 }
 
 bool AccessibilityARIAGridRow::isARIATreeGridRow() const
@@ -124,13 +124,6 @@ AXCoreObject* AccessibilityARIAGridRow::disclosedByRow() const
     return nullptr;
 }
 
-AccessibilityObject* AccessibilityARIAGridRow::parentObjectUnignored() const
-{
-    if (auto* table = parentTable())
-        return table;
-    return AccessibilityTableRow::parentObjectUnignored();
-}
-
 AccessibilityTable* AccessibilityARIAGridRow::parentTable() const
 {
     // The parent table might not be the direct ancestor of the row unfortunately. ARIA states that role="grid" should
@@ -147,7 +140,7 @@ AccessibilityTable* AccessibilityARIAGridRow::parentTable() const
 
 AXCoreObject* AccessibilityARIAGridRow::rowHeader()
 {
-    for (const auto& child : children()) {
+    for (const auto& child : unignoredChildren()) {
         if (child->roleValue() == AccessibilityRole::RowHeader)
             return child.get();
     }

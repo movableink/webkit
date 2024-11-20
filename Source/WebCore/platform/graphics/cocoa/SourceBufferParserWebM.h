@@ -36,11 +36,12 @@
 #include <pal/spi/cf/CoreMediaSPI.h>
 #include <variant>
 #include <webm/callback.h>
+#include <webm/common/vp9_header_parser.h>
 #include <webm/status.h>
-#include <webm/vp9_header_parser.h>
 #include <wtf/Deque.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/MediaTime.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/Vector.h>
 
@@ -58,7 +59,7 @@ struct TrackInfo;
 class WebMParser
     : private webm::Callback
     , private LoggerHelper {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(WebMParser, WEBCORE_EXPORT);
 public:
     class Callback {
     public:
@@ -85,7 +86,7 @@ public:
 
     void provideMediaData(MediaSamplesBlock&&);
 
-    WEBCORE_EXPORT void setLogger(const Logger&, const void* identifier);
+    WEBCORE_EXPORT void setLogger(const Logger&, uint64_t identifier);
     WTFLogChannel& logChannel() const final;
 
     enum class ErrorCode : int32_t {
@@ -125,7 +126,7 @@ public:
     using ConsumeFrameDataResult = std::variant<MediaTime, webm::Status>;
 
     class TrackData {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_TZONE_ALLOCATED(TrackData);
     public:
         static auto create(CodecType codecType, const webm::TrackEntry& trackEntry, WebMParser& parser) -> UniqueRef<TrackData>
         {
@@ -209,6 +210,7 @@ public:
     };
 
     class VideoTrackData : public TrackData {
+        WTF_MAKE_TZONE_ALLOCATED(VideoTrackData);
     public:
         static auto create(CodecType codecType, const webm::TrackEntry& trackEntry, WebMParser& parser) -> UniqueRef<VideoTrackData>
         {
@@ -237,6 +239,7 @@ public:
     };
 
     class AudioTrackData : public TrackData {
+        WTF_MAKE_TZONE_ALLOCATED(AudioTrackData);
     public:
         static auto create(CodecType codecType, const webm::TrackEntry& trackEntry, WebMParser& parser) -> UniqueRef<AudioTrackData>
         {
@@ -288,7 +291,7 @@ private:
 
     const Logger* loggerPtr() const { return m_logger.get(); }
     const Logger& logger() const final { ASSERT(m_logger); return *m_logger.get(); }
-    const void* logIdentifier() const final { return m_logIdentifier; }
+    uint64_t logIdentifier() const final { return m_logIdentifier; }
     ASCIILiteral logClassName() const final { return "WebMParser"_s; }
 
     std::unique_ptr<SourceBufferParser::InitializationSegment> m_initializationSegment;
@@ -311,7 +314,7 @@ private:
     std::optional<uint64_t> m_rewindToPosition;
 
     RefPtr<const Logger> m_logger;
-    const void* m_logIdentifier { nullptr };
+    uint64_t m_logIdentifier { 0 };
     uint64_t m_nextChildIdentifier { 0 };
     Callback& m_callback;
     bool m_createByteRangeSamples { false };
@@ -321,9 +324,8 @@ class SourceBufferParserWebM
     : public SourceBufferParser
     , public WebMParser::Callback
     , private LoggerHelper {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(SourceBufferParserWebM);
 public:
-    static bool isWebMFormatReaderAvailable();
     static MediaPlayerEnums::SupportsType isContentTypeSupported(const ContentType&);
     static std::span<const ASCIILiteral> supportedMIMETypes();
     WEBCORE_EXPORT static RefPtr<SourceBufferParserWebM> create();
@@ -347,7 +349,7 @@ public:
     void flushPendingAudioSamples();
     void setMinimumAudioSampleDuration(float);
 
-    WEBCORE_EXPORT void setLogger(const Logger&, const void* identifier) final;
+    WEBCORE_EXPORT void setLogger(const Logger&, uint64_t identifier) final;
 
 private:
     SourceBufferParserWebM();
@@ -363,7 +365,7 @@ private:
 
     const Logger* loggerPtr() const { return m_logger.get(); }
     const Logger& logger() const final { ASSERT(m_logger); return *m_logger.get(); }
-    const void* logIdentifier() const final { return m_logIdentifier; }
+    uint64_t logIdentifier() const final { return m_logIdentifier; }
     ASCIILiteral logClassName() const final { return "SourceBufferParserWebM"_s; }
     WTFLogChannel& logChannel() const final;
 
@@ -378,7 +380,7 @@ private:
     MediaTime m_queuedAudioDuration;
     bool m_audioDiscontinuity { true };
     RefPtr<const Logger> m_logger;
-    const void* m_logIdentifier { nullptr };
+    uint64_t m_logIdentifier { 0 };
 };
 
 }

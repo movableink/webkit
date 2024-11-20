@@ -41,6 +41,7 @@
 #import <pal/spi/cocoa/AVKitSPI.h>
 #import <pal/spi/mac/PIPSPI.h>
 #import <wtf/RunLoop.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #import <pal/cf/CoreMediaSoftLink.h>
 
@@ -376,6 +377,8 @@ enum class PIPState {
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(VideoPresentationInterfaceMac);
+
 VideoPresentationInterfaceMac::VideoPresentationInterfaceMac(PlaybackSessionInterfaceMac& playbackSessionInterface)
     : m_playbackSessionInterface(playbackSessionInterface)
 {
@@ -625,7 +628,7 @@ bool VideoPresentationInterfaceMac::isPlayingVideoInEnhancedFullscreen() const
 }
 
 #if !RELEASE_LOG_DISABLED
-const void* VideoPresentationInterfaceMac::logIdentifier() const
+uint64_t VideoPresentationInterfaceMac::logIdentifier() const
 {
     return m_playbackSessionInterface->logIdentifier();
 }

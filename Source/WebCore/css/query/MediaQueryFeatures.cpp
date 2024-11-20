@@ -264,14 +264,14 @@ const FeatureSchema& colorGamut()
         "color-gamut"_s,
         FixedVector { CSSValueSRGB, CSSValueP3, CSSValueRec2020 },
         [](auto& context) {
-            Ref frame = *context.document->frame();
-
             // FIXME: At some point we should start detecting displays that support more colors.
             MatchingIdentifiers identifiers { CSSValueSRGB };
-            if (RefPtr localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame())) {
-                if (screenSupportsExtendedColor(localFrame->protectedView().get()))
-                    identifiers.append(CSSValueP3);
-            }
+#if HAVE(IOSURFACE_RGB10)
+            if (screenContentsFormat(context.document->protectedFrame()->mainFrame().protectedVirtualView().get()) == ContentsFormat::RGBA10)
+                identifiers.append(CSSValueP3);
+#else
+            UNUSED_PARAM(context);
+#endif
             return identifiers;
         }
     };
@@ -462,6 +462,9 @@ const FeatureSchema& orientation()
         "orientation"_s,
         FixedVector { CSSValueLandscape, CSSValuePortrait },
         [](auto& context) {
+            if (context.document->quirks().shouldPreventOrientationMediaQueryFromEvaluatingToLandscape())
+                return MatchingIdentifiers { CSSValuePortrait };
+
             Ref view = *context.document->view();
             // Square viewport is portrait.
             bool isPortrait = view->layoutHeight() >= view->layoutWidth();
@@ -479,16 +482,10 @@ const FeatureSchema& pointer()
         [](auto& context) {
             RefPtr page = context.document->frame()->page();
             auto pointerCharacteristics = page ? page->chrome().client().pointerCharacteristicsOfPrimaryPointingDevice() : OptionSet<PointerCharacteristics>();
-#if ENABLE(TOUCH_EVENTS)
-            if (pointerCharacteristics.contains(PointerCharacteristics::Coarse)) {
-                if (context.document->quirks().shouldPreventPointerMediaQueryFromEvaluatingToCoarse())
-                    pointerCharacteristics = PointerCharacteristics::Fine;
-            }
-#endif
             MatchingIdentifiers identifiers;
             if (pointerCharacteristics.contains(PointerCharacteristics::Fine))
                 identifiers.append(CSSValueFine);
-            if (pointerCharacteristics.contains(PointerCharacteristics::Coarse))
+            if (pointerCharacteristics.contains(PointerCharacteristics::Coarse) && !context.document->quirks().shouldHideCoarsePointerCharacteristics())
                 identifiers.append(CSSValueCoarse);
             if (identifiers.isEmpty())
                 identifiers.append(CSSValueNone);

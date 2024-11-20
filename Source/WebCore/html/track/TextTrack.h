@@ -44,8 +44,11 @@ class TextTrackCueList;
 class VTTRegionList;
 
 class TextTrack : public TrackBase, public EventTarget, public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(TextTrack);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(TextTrack);
 public:
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     static Ref<TextTrack> create(ScriptExecutionContext*, const AtomString& kind, TrackID, const AtomString& label, const AtomString& language);
     static Ref<TextTrack> create(ScriptExecutionContext*, const AtomString& kind, const AtomString& id, const AtomString& label, const AtomString& language);
     virtual ~TextTrack();
@@ -127,10 +130,6 @@ public:
     virtual bool isInband() const { return false; }
 
     virtual MediaTime startTimeVariance() const { return MediaTime::zeroTime(); }
-
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
 
     const std::optional<Vector<String>>& styleSheets() const { return m_styleSheets; }
 

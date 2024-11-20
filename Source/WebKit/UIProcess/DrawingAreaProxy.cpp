@@ -31,6 +31,7 @@
 #include "WebPageProxy.h"
 #include "WebProcessProxy.h"
 #include <WebCore/ScrollView.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if PLATFORM(COCOA)
 #include "MessageSenderInlines.h"
@@ -39,6 +40,8 @@
 
 namespace WebKit {
 using namespace WebCore;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DrawingAreaProxy);
 
 DrawingAreaProxy::DrawingAreaProxy(DrawingAreaType type, WebPageProxy& webPageProxy, WebProcessProxy& webProcessProxy)
     : m_type(type)
@@ -56,6 +59,11 @@ DrawingAreaProxy::~DrawingAreaProxy() = default;
 Ref<WebPageProxy> DrawingAreaProxy::protectedWebPageProxy() const
 {
     return m_webPageProxy.get();
+}
+
+Ref<WebProcessProxy> DrawingAreaProxy::protectedWebProcessProxy() const
+{
+    return m_webProcessProxy.get();
 }
 
 void DrawingAreaProxy::startReceivingMessages(WebProcessProxy& process)
@@ -78,17 +86,17 @@ std::span<IPC::ReceiverName> DrawingAreaProxy::messageReceiverNames() const
 
 IPC::Connection* DrawingAreaProxy::messageSenderConnection() const
 {
-    return m_webProcessProxy->connection();
+    return &m_webProcessProxy->connection();
 }
 
 bool DrawingAreaProxy::sendMessage(UniqueRef<IPC::Encoder>&& encoder, OptionSet<IPC::SendOption> sendOptions)
 {
-    return m_webProcessProxy->sendMessage(WTFMove(encoder), sendOptions);
+    return protectedWebProcessProxy()->sendMessage(WTFMove(encoder), sendOptions);
 }
 
 bool DrawingAreaProxy::sendMessageWithAsyncReply(UniqueRef<IPC::Encoder>&& encoder, AsyncReplyHandler handler, OptionSet<IPC::SendOption> sendOptions)
 {
-    return m_webProcessProxy->sendMessage(WTFMove(encoder), sendOptions, WTFMove(handler));
+    return protectedWebProcessProxy()->sendMessage(WTFMove(encoder), sendOptions, WTFMove(handler));
 }
 
 uint64_t DrawingAreaProxy::messageSenderDestinationID() const
@@ -127,7 +135,7 @@ MachSendRight DrawingAreaProxy::createFence()
 #if PLATFORM(MAC)
 void DrawingAreaProxy::didChangeViewExposedRect()
 {
-    if (!m_webPageProxy->hasRunningProcess())
+    if (!protectedWebPageProxy()->hasRunningProcess())
         return;
 
     if (!m_viewExposedRectChangedTimer.isActive())
@@ -136,10 +144,11 @@ void DrawingAreaProxy::didChangeViewExposedRect()
 
 void DrawingAreaProxy::viewExposedRectChangedTimerFired()
 {
-    if (!m_webPageProxy->hasRunningProcess())
+    Ref webPageProxy = m_webPageProxy.get();
+    if (!webPageProxy->hasRunningProcess())
         return;
 
-    auto viewExposedRect = m_webPageProxy->viewExposedRect();
+    auto viewExposedRect = webPageProxy->viewExposedRect();
     if (viewExposedRect == m_lastSentViewExposedRect)
         return;
 

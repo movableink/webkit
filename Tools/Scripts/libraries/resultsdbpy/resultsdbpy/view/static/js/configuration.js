@@ -115,15 +115,26 @@ class Configuration {
             return '';
         if (['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].includes(match[2]))
             return match[2];
-        if (['J', 'N', 'R'].includes(match[2]))
-            return 'A';
-        if (['K', 'S'].includes(match[2])) {
+        if (['J', 'N', 'R'].includes(match[2])) {
+            const count = parseInt(match[3]);
+            if (count < 500)
+                return 'A';
+            if (count < 700)
+                return 'B';
+            if (count < 800)
+                return 'C';
+            return 'D';
+        }
+        if (['K'].includes(match[2])) {
             const count = parseInt(match[3]);
             if (count < 200)
                 return 'B';
             if (count < 500)
-                return 'C'
+                return 'C';
             return 'D';
+        }
+        if (['S'].includes(match[2])) {
+            return 'C';
         }
         if (['L', 'O', 'T'].includes(match[2])) {
             const count = parseInt(match[3]);
@@ -131,6 +142,8 @@ class Configuration {
                 return 'E'
             return 'F';
         }
+        if (['M'].includes(match[2]) && Number(match[1]) >= 23)
+            return 'A';
         if (['M', 'U'].includes(match[2]))
             return 'G';
 

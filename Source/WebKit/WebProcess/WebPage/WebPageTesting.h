@@ -27,6 +27,7 @@
 
 #include "MessageReceiver.h"
 #include <WebCore/PageIdentifier.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace IPC {
 class Connection;
@@ -38,7 +39,7 @@ namespace WebKit {
 class WebPage;
 
 class WebPageTesting : public IPC::MessageReceiver {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(WebPageTesting);
     WTF_MAKE_NONCOPYABLE(WebPageTesting);
 public:
     explicit WebPageTesting(WebPage&);
@@ -52,16 +53,20 @@ private:
     void isLayerTreeFrozen(CompletionHandler<void(bool)>&&);
     void setPermissionLevel(const String& origin, bool allowed);
     void isEditingCommandEnabled(const String& commandName, CompletionHandler<void(bool)>&&);
+    void resetStateBetweenTests();
+    void clearCachedBackForwardListCounts(CompletionHandler<void()>&&);
+    void setTracksRepaints(bool, CompletionHandler<void()>&&);
+    void displayAndTrackRepaints(CompletionHandler<void()>&&);
 
 #if ENABLE(NOTIFICATIONS)
     void clearNotificationPermissionState();
 #endif
 
+    void setTopContentInset(float, CompletionHandler<void()>&&);
+
     void clearWheelEventTestMonitor();
+    Ref<WebPage> protectedPage() const;
 
-    void flushDeferredDidReceiveMouseEvent(CompletionHandler<void()>&&);
-
-    const WebCore::PageIdentifier m_identifier;
     WeakRef<WebPage> m_page;
 };
 

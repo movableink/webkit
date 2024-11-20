@@ -40,6 +40,8 @@
 
 namespace WebKit {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DrawingAreaProxyWC);
+
 DrawingAreaProxyWC::DrawingAreaProxyWC(WebPageProxy& webPageProxy, WebProcessProxy& webProcessProxy)
     : DrawingAreaProxy(DrawingAreaType::WC, webPageProxy, webProcessProxy)
 {
@@ -55,9 +57,10 @@ void DrawingAreaProxyWC::paint(PlatformPaintContextPtr context, const WebCore::I
     unpaintedRegion.subtract(WebCore::IntRect({ }, m_backingStore->size()));
 }
 
-void DrawingAreaProxyWC::deviceScaleFactorDidChange()
+void DrawingAreaProxyWC::deviceScaleFactorDidChange(CompletionHandler<void()>&& completionHandler)
 {
     sizeDidChange();
+    completionHandler();
 }
 
 void DrawingAreaProxyWC::sizeDidChange()

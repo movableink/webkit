@@ -30,12 +30,15 @@
 #include "SWServerWorker.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-SWServerToContextConnection::SWServerToContextConnection(SWServer& server, RegistrableDomain&& registrableDomain, std::optional<ScriptExecutionContextIdentifier> serviceWorkerPageIdentifier)
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SWServerToContextConnection);
+
+SWServerToContextConnection::SWServerToContextConnection(SWServer& server, Site&& site, std::optional<ScriptExecutionContextIdentifier> serviceWorkerPageIdentifier)
     : m_server(server)
-    , m_registrableDomain(WTFMove(registrableDomain))
+    , m_site(WTFMove(site))
     , m_serviceWorkerPageIdentifier(serviceWorkerPageIdentifier)
 {
 }
@@ -90,13 +93,15 @@ void SWServerToContextConnection::workerTerminated(ServiceWorkerIdentifier servi
         worker->contextTerminated();
 }
 
-void SWServerToContextConnection::matchAll(uint64_t requestIdentifier, ServiceWorkerIdentifier serviceWorkerIdentifier, const ServiceWorkerClientQueryOptions& options)
+void SWServerToContextConnection::matchAll(ServiceWorkerIdentifier serviceWorkerIdentifier, const ServiceWorkerClientQueryOptions& options, CompletionHandler<void(Vector<WebCore::ServiceWorkerClientData>&&)>&& callback)
 {
-    if (RefPtr worker = SWServerWorker::existingWorkerForIdentifier(serviceWorkerIdentifier)) {
-        worker->matchAll(options, [&] (auto&& data) {
-            worker->contextConnection()->matchAllCompleted(requestIdentifier, data);
-        });
+    RefPtr worker = SWServerWorker::existingWorkerForIdentifier(serviceWorkerIdentifier);
+    if (!worker) {
+        callback({ });
+        return;
     }
+
+    worker->matchAll(options, WTFMove(callback));
 }
 
 void SWServerToContextConnection::findClientByVisibleIdentifier(ServiceWorkerIdentifier serviceWorkerIdentifier, const String& clientIdentifier, CompletionHandler<void(std::optional<WebCore::ServiceWorkerClientData>&&)>&& callback)
@@ -138,7 +143,7 @@ void SWServerToContextConnection::terminateWhenPossible()
 
     bool hasServiceWorkerWithPendingEvents = false;
     protectedServer()->forEachServiceWorker([&](auto& worker) {
-        if (worker.isRunning() && worker.topRegistrableDomain() == m_registrableDomain && worker.hasPendingEvents()) {
+        if (worker.isRunning() && worker.topRegistrableDomain() == m_site.domain() && worker.hasPendingEvents()) {
             hasServiceWorkerWithPendingEvents = true;
             return false;
         }

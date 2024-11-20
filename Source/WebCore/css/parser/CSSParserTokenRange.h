@@ -30,7 +30,10 @@
 #pragma once
 
 #include "CSSParserToken.h"
+#include "CSSTokenizer.h"
 #include <wtf/Forward.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -87,7 +90,7 @@ public:
 
     void consumeWhitespace()
     {
-        while (peek().type() == WhitespaceToken)
+        while (CSSTokenizer::isWhitespace(peek().type()))
             ++m_first;
     }
 
@@ -114,3 +117,5 @@ private:
 };
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

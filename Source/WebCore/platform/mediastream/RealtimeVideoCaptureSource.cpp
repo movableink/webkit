@@ -37,7 +37,7 @@
 
 namespace WebCore {
 
-RealtimeVideoCaptureSource::RealtimeVideoCaptureSource(const CaptureDevice& device, MediaDeviceHashSalts&& hashSalts, PageIdentifier pageIdentifier)
+RealtimeVideoCaptureSource::RealtimeVideoCaptureSource(const CaptureDevice& device, MediaDeviceHashSalts&& hashSalts, std::optional<PageIdentifier> pageIdentifier)
     : RealtimeMediaSource(device, WTFMove(hashSalts), pageIdentifier)
 {
 }
@@ -413,11 +413,6 @@ void RealtimeVideoCaptureSource::dispatchVideoFrameToObservers(VideoFrame& video
     videoFrameAvailable(videoFrame, metadata);
 }
 
-void RealtimeVideoCaptureSource::clientUpdatedSizeFrameRateAndZoom(std::optional<int> width, std::optional<int> height, std::optional<double> frameRate, std::optional<double> zoom)
-{
-    setSizeFrameRateAndZoom({ width, height, frameRate, zoom });
-}
-
 std::optional<RealtimeVideoCaptureSource::CaptureSizeFrameRateAndZoom> RealtimeVideoCaptureSource::bestSupportedSizeFrameRateAndZoomConsideringObservers(const VideoPresetConstraints& constraints)
 {
     auto& settings = this->settings();
@@ -450,11 +445,21 @@ void RealtimeVideoCaptureSource::setSizeFrameRateAndZoom(const VideoPresetConstr
     m_currentPreset = match->encodingPreset;
     auto newSize = match->encodingPreset->size();
 
-    startApplyingConstraints();
-    setFrameRateAndZoomWithPreset(match->requestedFrameRate, match->requestedZoom, WTFMove(match->encodingPreset));
+    applyFrameRateAndZoomWithPreset(match->requestedFrameRate, match->requestedZoom, WTFMove(match->encodingPreset));
     setSize(newSize);
     setFrameRate(match->requestedFrameRate);
     setZoom(match->requestedZoom);
+}
+
+void RealtimeVideoCaptureSource::setSizeFrameRateAndZoomForPhoto(CaptureSizeFrameRateAndZoom&& preset)
+{
+    ASSERT(preset.encodingPreset);
+
+    m_currentPreset = preset.encodingPreset;
+    auto newSize = preset.encodingPreset->size();
+    startApplyingConstraints();
+    applyFrameRateAndZoomWithPreset(preset.requestedFrameRate, preset.requestedZoom, WTFMove(preset.encodingPreset));
+    setSize(newSize);
     endApplyingConstraints();
 }
 
@@ -513,12 +518,7 @@ auto RealtimeVideoCaptureSource::takePhoto(PhotoSettings&& photoSettings) -> Ref
             m_mutedForPhotoCapture = true;
         }
 
-        m_currentPreset = newPresetForPhoto->encodingPreset;
-        auto newSize = newPresetForPhoto->encodingPreset->size();
-        startApplyingConstraints();
-        setFrameRateAndZoomWithPreset(newPresetForPhoto->requestedFrameRate, newPresetForPhoto->requestedZoom, WTFMove(newPresetForPhoto->encodingPreset));
-        setSize(newSize);
-        endApplyingConstraints();
+        setSizeFrameRateAndZoomForPhoto(WTFMove(*newPresetForPhoto));
     }
 
     return takePhotoInternal(WTFMove(photoSettings))->whenSettled(RunLoop::main(), [this, protectedThis = Ref { *this }, configurationToRestore = WTFMove(configurationToRestore)] (auto&& result) mutable {
@@ -526,12 +526,7 @@ auto RealtimeVideoCaptureSource::takePhoto(PhotoSettings&& photoSettings) -> Ref
         ASSERT(isMainThread());
 
         if (configurationToRestore) {
-            m_currentPreset = configurationToRestore->encodingPreset;
-            auto newSize = configurationToRestore->encodingPreset->size();
-            startApplyingConstraints();
-            setFrameRateAndZoomWithPreset(configurationToRestore->requestedFrameRate, configurationToRestore->requestedZoom, WTFMove(configurationToRestore->encodingPreset));
-            setSize(newSize);
-            endApplyingConstraints();
+            setSizeFrameRateAndZoomForPhoto(WTFMove(*configurationToRestore));
 
             if (m_mutedForPhotoCapture) {
                 m_mutedForPhotoCapture = false;
@@ -593,6 +588,12 @@ String SizeFrameRateAndZoom::toJSONString() const
     return toJSONObject()->toJSONString();
 }
 #endif
+
+bool RealtimeVideoCaptureSource::canBePowerEfficient()
+{
+    return anyOf(presets(), [] (auto& preset) { return preset.isEfficient(); }) && anyOf(presets(), [] (auto& preset) { return !preset.isEfficient(); });
+}
+
 
 } // namespace WebCore
 

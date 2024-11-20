@@ -406,6 +406,12 @@ Vector<SerializedTypeInfo> allSerializedTypes()
         { "NSSomeFoundationType"_s, {
             { "WebKit::CoreIPCNSSomeFoundationType"_s, "wrapper"_s }
         } },
+        { "WebKit::CoreIPCclass NSSomeOtherFoundationType"_s, {
+            { "RetainPtr<NSDictionary>"_s , "DictionaryKey"_s },
+        } },
+        { "class NSSomeOtherFoundationType"_s, {
+            { "WebKit::CoreIPCclass NSSomeOtherFoundationType"_s, "wrapper"_s }
+        } },
 #if ENABLE(DATA_DETECTION)
         { "WebKit::CoreIPCDDScannerResult"_s, {
             { "RetainPtr<NSString>"_s , "StringKey"_s },
@@ -489,6 +495,24 @@ Vector<SerializedTypeInfo> allSerializedTypes()
             },
         } },
 #endif // USE(APPKIT)
+        { "WebCore::RectEdges<bool>"_s, {
+            {
+                "bool"_s,
+                "top()"_s
+            },
+            {
+                "bool"_s,
+                "right()"_s
+            },
+            {
+                "bool"_s,
+                "bottom()"_s
+            },
+            {
+                "bool"_s,
+                "left()"_s
+            },
+        } },
 #if USE(PASSKIT)
         { "PKPaymentMethod"_s, {
             { "WebKit::CoreIPCPKPaymentMethod"_s, "wrapper"_s }

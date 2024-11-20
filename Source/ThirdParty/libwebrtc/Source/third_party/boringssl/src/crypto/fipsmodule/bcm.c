@@ -168,8 +168,6 @@ static void BORINGSSL_maybe_set_module_text_permissions(int permission) {}
 
 static void __attribute__((constructor))
 BORINGSSL_bcm_power_on_self_test(void) {
-  CRYPTO_library_init();
-
 #if !defined(OPENSSL_ASAN)
   // Integrity tests cannot run under ASAN because it involves reading the full
   // .text section, which triggers the global-buffer overflow detection.
@@ -211,7 +209,7 @@ int BORINGSSL_integrity_test(void) {
 #endif
 
   assert_within(rodata_start, kPrimes, rodata_end);
-  assert_within(rodata_start, kP256Params, rodata_end);
+  assert_within(rodata_start, kP256Field, rodata_end);
   assert_within(rodata_start, kPKCS1SigPrefixes, rodata_end);
 
   uint8_t result[SHA256_DIGEST_LENGTH];
@@ -263,6 +261,11 @@ int BORINGSSL_integrity_test(void) {
   OPENSSL_cleanse(result, sizeof(result)); // FIPS 140-3, AS05.10.
   return 1;
 }
+
+const uint8_t* FIPS_module_hash(void) {
+  return BORINGSSL_bcm_text_hash;
+}
+
 #endif  // OPENSSL_ASAN
 
 void BORINGSSL_FIPS_abort(void) {

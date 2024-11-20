@@ -37,17 +37,19 @@
 #include "ContextDestructionObserverInlines.h"
 #include "Logging.h"
 #include <wtf/Atomics.h>
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if DEBUG_AUDIONODE_REFERENCES
 #include <stdio.h>
 #endif
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(AudioNode);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(AudioNode);
 
 String convertEnumerationToString(AudioNode::NodeType enumerationValue)
 {
@@ -737,9 +739,9 @@ const BaseAudioContext& AudioNode::context() const
     });
 }
 
-NoiseInjectionPolicy AudioNode::noiseInjectionPolicy() const
+OptionSet<NoiseInjectionPolicy> AudioNode::noiseInjectionPolicies() const
 {
-    return context().noiseInjectionPolicy();
+    return context().noiseInjectionPolicies();
 }
 
 #if DEBUG_AUDIONODE_REFERENCES
@@ -770,5 +772,7 @@ WTFLogChannel& AudioNode::logChannel() const
 #endif
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

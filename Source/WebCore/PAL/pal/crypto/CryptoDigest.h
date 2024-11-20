@@ -25,18 +25,19 @@
 
 #pragma once
 
+#include <wtf/HexNumber.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
 namespace PAL {
 
 struct CryptoDigestContext;
-enum class UseCryptoKit : bool { No, Yes };
 
 class CryptoDigest {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(CryptoDigest);
     WTF_MAKE_NONCOPYABLE(CryptoDigest);
-    WTF_MAKE_FAST_ALLOCATED;
 public:
     enum class Algorithm {
         SHA_1,
@@ -50,12 +51,16 @@ public:
 
     PAL_EXPORT void addBytes(std::span<const uint8_t>);
     PAL_EXPORT Vector<uint8_t> computeHash();
-    PAL_EXPORT String toHexString();
-    PAL_EXPORT static std::optional<Vector<uint8_t>> computeHash(Algorithm, const Vector<uint8_t>&, UseCryptoKit);
+    String toHexString();
     PAL_EXPORT CryptoDigest();
 
 private:
     std::unique_ptr<CryptoDigestContext> m_context;
 };
+
+inline String CryptoDigest::toHexString()
+{
+    return WTF::toHexString(computeHash());
+}
 
 } // namespace PAL

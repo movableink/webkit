@@ -38,9 +38,12 @@
 #include <WebCore/ResourceResponse.h>
 #include <WebCore/SWContextManager.h>
 #include <wtf/RunLoop.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebKit {
 using namespace WebCore;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(WebServiceWorkerFetchTaskClientBlobLoader, WebServiceWorkerFetchTaskClient::BlobLoader);
 
 WebServiceWorkerFetchTaskClient::WebServiceWorkerFetchTaskClient(Ref<IPC::Connection>&& connection, WebCore::ServiceWorkerIdentifier serviceWorkerIdentifier, WebCore::SWServerConnectionIdentifier serverConnectionIdentifier, FetchIdentifier fetchIdentifier, bool needsContinueDidReceiveResponseMessage)
     : m_connection(WTFMove(connection))
@@ -50,6 +53,8 @@ WebServiceWorkerFetchTaskClient::WebServiceWorkerFetchTaskClient(Ref<IPC::Connec
     , m_needsContinueDidReceiveResponseMessage(needsContinueDidReceiveResponseMessage)
 {
 }
+
+WebServiceWorkerFetchTaskClient::~WebServiceWorkerFetchTaskClient() = default;
 
 void WebServiceWorkerFetchTaskClient::didReceiveRedirection(const WebCore::ResourceResponse& response)
 {
@@ -142,10 +147,10 @@ void WebServiceWorkerFetchTaskClient::didReceiveFormDataAndFinishInternal(Ref<Fo
             return;
         }
 
-        m_blobLoader.emplace(*this);
+        m_blobLoader = makeUnique<BlobLoader>(*this);
         auto loader = serviceWorkerThreadProxy->createBlobLoader(*m_blobLoader, blobURL);
         if (!loader) {
-            m_blobLoader = std::nullopt;
+            m_blobLoader = nullptr;
             didFail(internalError(blobURL));
             return;
         }
@@ -170,7 +175,7 @@ void WebServiceWorkerFetchTaskClient::didFinishBlobLoading()
 {
     didFinish({ });
 
-    std::exchange(m_blobLoader, std::nullopt);
+    std::exchange(m_blobLoader, nullptr);
 }
 
 void WebServiceWorkerFetchTaskClient::didFail(const ResourceError& error)
@@ -242,7 +247,7 @@ void WebServiceWorkerFetchTaskClient::didNotHandleInternal()
     cleanup();
 }
 
-void WebServiceWorkerFetchTaskClient::cancel()
+void WebServiceWorkerFetchTaskClient::doCancel()
 {
     Locker lock(m_connectionLock);
 
@@ -331,7 +336,7 @@ void WebServiceWorkerFetchTaskClient::contextIsStopping()
         return;
     }
 
-    m_connection->send(Messages::ServiceWorkerFetchTask::ContextClosed { }, m_fetchIdentifier);
+    m_connection->send(Messages::ServiceWorkerFetchTask::WorkerClosed { }, m_fetchIdentifier);
     cleanup();
 }
 

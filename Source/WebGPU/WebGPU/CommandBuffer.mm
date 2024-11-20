@@ -27,13 +27,17 @@
 #import "CommandBuffer.h"
 
 #import "APIConversions.h"
+#import <wtf/TZoneMallocInlines.h>
 
 namespace WebGPU {
 
-CommandBuffer::CommandBuffer(id<MTLCommandBuffer> commandBuffer, id<MTLSharedEvent> event, Device& device)
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CommandBuffer);
+
+CommandBuffer::CommandBuffer(id<MTLCommandBuffer> commandBuffer, Device& device, id<MTLSharedEvent> sharedEvent, uint64_t sharedEventSignalValue)
     : m_commandBuffer(commandBuffer)
-    , m_abortEvent(event)
     , m_device(device)
+    , m_sharedEvent(sharedEvent)
+    , m_sharedEventSignalValue(sharedEventSignalValue)
 {
 }
 
@@ -42,7 +46,10 @@ CommandBuffer::CommandBuffer(Device& device)
 {
 }
 
-CommandBuffer::~CommandBuffer() = default;
+CommandBuffer::~CommandBuffer()
+{
+    m_device->protectedQueue()->removeMTLCommandBuffer(m_commandBuffer);
+}
 
 void CommandBuffer::setLabel(String&& label)
 {
@@ -54,14 +61,16 @@ void CommandBuffer::makeInvalid(NSString* lastError)
     if (!m_commandBuffer || m_commandBuffer.status >= MTLCommandBufferStatusCommitted)
         return;
 
-    [m_abortEvent setSignaledValue:1];
     m_lastErrorString = lastError;
-    m_device->getQueue().commitMTLCommandBuffer(m_commandBuffer);
+    m_device->protectedQueue()->removeMTLCommandBuffer(m_commandBuffer);
     m_commandBuffer = nil;
 }
 
 void CommandBuffer::makeInvalidDueToCommit(NSString* lastError)
 {
+    if (m_sharedEvent)
+        [m_commandBuffer encodeSignalEvent:m_sharedEvent value:m_sharedEventSignalValue];
+
     m_cachedCommandBuffer = m_commandBuffer;
     [m_commandBuffer addCompletedHandler:[protectedThis = Ref { *this }](id<MTLCommandBuffer>) {
         protectedThis->m_commandBufferComplete.signal();
@@ -76,22 +85,14 @@ NSString* CommandBuffer::lastError() const
     return m_lastErrorString;
 }
 
-void CommandBuffer::setBufferMapCount(int bufferMapCount)
-{
-    m_bufferMapCount = bufferMapCount;
-}
-
-int CommandBuffer::bufferMapCount() const
-{
-    return m_bufferMapCount;
-}
-
-void CommandBuffer::waitForCompletion()
+bool CommandBuffer::waitForCompletion()
 {
     auto status = [m_cachedCommandBuffer status];
-    constexpr auto commandBufferSubmissionTimeout = 5000_ms;
+    constexpr auto commandBufferSubmissionTimeout = 500_ms;
     if (status == MTLCommandBufferStatusCommitted || status == MTLCommandBufferStatusScheduled)
-        m_commandBufferComplete.waitFor(commandBufferSubmissionTimeout);
+        return m_commandBufferComplete.waitFor(commandBufferSubmissionTimeout);
+
+    return true;
 }
 
 } // namespace WebGPU
@@ -110,5 +111,5 @@ void wgpuCommandBufferRelease(WGPUCommandBuffer commandBuffer)
 
 void wgpuCommandBufferSetLabel(WGPUCommandBuffer commandBuffer, const char* label)
 {
-    WebGPU::fromAPI(commandBuffer).setLabel(WebGPU::fromAPI(label));
+    WebGPU::protectedFromAPI(commandBuffer)->setLabel(WebGPU::fromAPI(label));
 }

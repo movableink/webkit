@@ -84,7 +84,9 @@ GstElement* GStreamerVideoCapturer::createSource()
 GstElement* GStreamerVideoCapturer::createConverter()
 {
     if (isCapturingDisplay()) {
-        gst_caps_set_features(m_caps.get(), 0, gst_caps_features_new("memory:DMABuf", nullptr));
+#if USE(GBM)
+        m_caps = buildDMABufCaps();
+#endif
         return makeGStreamerElement("identity", nullptr);
     }
 
@@ -278,8 +280,8 @@ void GStreamerVideoCapturer::reconfigure()
         return;
 
     struct MimeTypeSelector {
-        const char* mimeType = "video/x-raw";
-        const char* format = nullptr;
+        String mimeType = "video/x-raw"_s;
+        String format;
         int maxWidth = 0;
         int maxHeight = 0;
         double maxFrameRate = 0;
@@ -293,11 +295,8 @@ void GStreamerVideoCapturer::reconfigure()
 
     // If nothing has been specified by the user, we target at least an arbitrary resolution of 1920x1080@24fps.
     const GstStructure* capsStruct = gst_caps_get_structure(m_caps.get(), 0);
-    if (!gst_structure_get_int(capsStruct, "width", &selector.stopCondition.width))
-        selector.stopCondition.width = 1920;
-
-    if (!gst_structure_get_int(capsStruct, "height", &selector.stopCondition.height))
-        selector.stopCondition.height = 1080;
+    selector.stopCondition.width = gstStructureGet<int>(capsStruct, "width"_s).value_or(1920);
+    selector.stopCondition.height = gstStructureGet<int>(capsStruct, "height"_s).value_or(1080);
 
     int numerator = 0;
     int denominator = 1;
@@ -329,11 +328,10 @@ void GStreamerVideoCapturer::reconfigure()
                 selector->maxWidth = *width;
                 selector->maxHeight = *height;
                 selector->maxFrameRate = *frameRate;
-                selector->mimeType = gst_structure_get_name(structure);
-                selector->format = nullptr;
+                selector->mimeType = gstStructureGetName(structure).toString();
                 if (gst_structure_has_name(structure, "video/x-raw")) {
                     if (gst_structure_has_field(structure, "format"))
-                        selector->format = gst_structure_get_string(structure, "format");
+                        selector->format = makeString(gstStructureGetString(structure, "format"_s));
                     else
                         return TRUE;
                 }
@@ -344,11 +342,10 @@ void GStreamerVideoCapturer::reconfigure()
                 selector->maxWidth = *width;
                 selector->maxHeight = *height;
                 selector->maxFrameRate = *frameRate;
-                selector->mimeType = gst_structure_get_name(structure);
-                selector->format = nullptr;
+                selector->mimeType = gstStructureGetName(structure).toString();
                 if (gst_structure_has_name(structure, "video/x-raw")) {
                     if (gst_structure_has_field(structure, "format"))
-                        selector->format = gst_structure_get_string(structure, "format");
+                        selector->format = makeString(gstStructureGetString(structure, "format"_s));
                     else
                         return TRUE;
                 }
@@ -357,12 +354,12 @@ void GStreamerVideoCapturer::reconfigure()
             return TRUE;
         }), &selector);
 
-    auto caps = adoptGRef(gst_caps_new_simple(selector.mimeType, "width", G_TYPE_INT, selector.maxWidth,
+    auto caps = adoptGRef(gst_caps_new_simple(selector.mimeType.ascii().data(), "width", G_TYPE_INT, selector.maxWidth,
         "height", G_TYPE_INT, selector.maxHeight, nullptr));
 
     // Workaround for https://gitlab.freedesktop.org/pipewire/pipewire/-/issues/1793.
-    if (selector.format)
-        gst_caps_set_simple(caps.get(), "format", G_TYPE_STRING, selector.format, nullptr);
+    if (!selector.format.isEmpty())
+        gst_caps_set_simple(caps.get(), "format", G_TYPE_STRING, selector.format.ascii().data(), nullptr);
 
     GST_INFO_OBJECT(m_pipeline.get(), "Setting video capture device caps to %" GST_PTR_FORMAT, caps.get());
     g_object_set(m_videoSrcMIMETypeFilter.get(), "caps", caps.get(), nullptr);

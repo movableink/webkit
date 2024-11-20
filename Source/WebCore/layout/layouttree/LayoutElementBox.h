@@ -26,18 +26,19 @@
 #pragma once
 
 #include "LayoutBox.h"
-#include <wtf/IsoMalloc.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
 
 class CachedImage;
+class RenderElement;
 class RenderStyle;
 
 namespace Layout {
 
 class ElementBox : public Box {
-    WTF_MAKE_ISO_ALLOCATED(ElementBox);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ElementBox);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ElementBox);
 public:
     ElementBox(ElementAttributes&&, RenderStyle&&, std::unique_ptr<RenderStyle>&& firstLineStyle = nullptr, OptionSet<BaseTypeFlag> = { ElementBoxFlag });
@@ -61,9 +62,11 @@ public:
     const Box* firstChild() const { return m_firstChild.get(); }
     const Box* firstInFlowChild() const;
     const Box* firstInFlowOrFloatingChild() const;
+    const Box* firstOutOfFlowChild() const;
     const Box* lastChild() const { return m_lastChild.get(); }
     const Box* lastInFlowChild() const;
     const Box* lastInFlowOrFloatingChild() const;
+    const Box* lastOutOfFlowChild() const;
 
     // FIXME: This is currently needed for style updates.
     Box* firstChild() { return m_firstChild.get(); }
@@ -96,6 +99,8 @@ public:
 
     // FIXME: This doesn't belong.
     CachedImage* cachedImage() const { return m_replacedData ? m_replacedData->cachedImage : nullptr; }
+
+    RenderElement* rendererForIntegration() const;
 
 private:
     friend class Box;

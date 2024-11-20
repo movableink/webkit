@@ -28,6 +28,7 @@
 #include "ActiveDOMCallback.h"
 #include "CallbackResult.h"
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -35,11 +36,13 @@ class Report;
 class ReportingObserver;
 
 class ReportingObserverCallback : public RefCounted<ReportingObserverCallback>, public ActiveDOMCallback {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(ReportingObserverCallback);
 public:
     using ActiveDOMCallback::ActiveDOMCallback;
 
     virtual CallbackResult<void> handleEvent(const Vector<Ref<Report>>&, ReportingObserver&) = 0;
+
+    virtual bool hasCallback() const = 0;
 };
 
 } // namespace WebCore

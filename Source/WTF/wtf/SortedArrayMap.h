@@ -28,6 +28,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <wtf/text/StringView.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WTF {
 
 // SortedArrayMap is a map like HashMap, but it's read-only. It uses much less memory than HashMap.
@@ -45,9 +47,12 @@ protected:
     static constexpr size_t binarySearchThreshold = 20;
 };
 
+template<typename T>
+using ArrayElementType = std::remove_reference_t<decltype(*std::begin(std::declval<T&>()))>;
+
 template<typename ArrayType> class SortedArrayMap : public SortedArrayBase {
 public:
-    using ElementType = typename std::remove_extent_t<ArrayType>;
+    using ElementType = ArrayElementType<ArrayType>;
     using ValueType = typename ElementType::second_type;
 
     constexpr SortedArrayMap(const ArrayType&);
@@ -159,7 +164,7 @@ template<ASCIISubset subset, typename CharacterType> constexpr std::make_unsigne
 template<ASCIISubset subset> template<unsigned size> constexpr ComparableASCIISubsetLiteral<subset>::ComparableASCIISubsetLiteral(const char (&characters)[size])
     : literal { ASCIILiteral::fromLiteralUnsafe(characters) }
 {
-    ASSERT_UNDER_CONSTEXPR_CONTEXT(allOfConstExpr(&characters[0], &characters[size - 1], [] (char character) {
+    ASSERT_UNDER_CONSTEXPR_CONTEXT(std::all_of(&characters[0], &characters[size - 1], [] (char character) {
         return isInSubset<subset>(character);
     }));
     ASSERT_UNDER_CONSTEXPR_CONTEXT(!characters[size - 1]);
@@ -168,7 +173,7 @@ template<ASCIISubset subset> template<unsigned size> constexpr ComparableASCIISu
 template<typename ArrayType> constexpr SortedArrayMap<ArrayType>::SortedArrayMap(const ArrayType& array)
     : m_array { array }
 {
-    ASSERT_UNDER_CONSTEXPR_CONTEXT(isSortedConstExpr(std::begin(array), std::end(array), [] (auto& a, auto b) {
+    ASSERT_UNDER_CONSTEXPR_CONTEXT(std::is_sorted(std::begin(array), std::end(array), [] (auto& a, auto b) {
         return a.first < b.first;
     }));
 }
@@ -210,7 +215,7 @@ template<typename ArrayType> template<typename KeyArgument> inline bool SortedAr
 template<typename ArrayType> constexpr SortedArraySet<ArrayType>::SortedArraySet(const ArrayType& array)
     : m_array { array }
 {
-    ASSERT_UNDER_CONSTEXPR_CONTEXT(isSortedConstExpr(std::begin(array), std::end(array)));
+    ASSERT_UNDER_CONSTEXPR_CONTEXT(std::is_sorted(std::begin(array), std::end(array)));
 }
 
 template<typename ArrayType> template<typename KeyArgument> inline bool SortedArraySet<ArrayType>::contains(const KeyArgument& key) const
@@ -424,3 +429,5 @@ using WTF::PackedLettersLiteral;
 using WTF::SortedArrayMap;
 using WTF::SortedArraySet;
 using WTF::makeOptionalFromPointer;
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

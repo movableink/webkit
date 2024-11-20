@@ -132,9 +132,6 @@
         "CustomPreventExtensions": {
             "contextsAllowed": ["interface"]
         },
-        "CustomPushEventHandlerScope": {
-            "contextsAllowed": ["interface"]
-        },
         "CustomPut": {
             "contextsAllowed": ["interface"]
         },
@@ -234,7 +231,7 @@
             "values": ["*"]
         },
         "GenerateIsReachable": {
-            "contextsAllowed": ["interface"],
+            "contextsAllowed": ["interface", "callback-function"],
             "values": ["", "Impl", "ImplWebGLRenderingContext", "ImplCanvasBase", "ImplDocument", "ImplElementRoot", "ImplOwnerNodeRoot", "ImplScriptExecutionContext", "ReachableFromDOMWindow", "ReachableFromNavigator"]
         },
         "Global": {
@@ -268,9 +265,6 @@
         },
         "IsImmutablePrototypeExoticObjectOnPrototype": {
             "contextsAllowed": ["interface"]
-        },
-        "IsWeakCallback": {
-            "contextsAllowed": ["callback-function", "interface"]
         },
         "JSBuiltin": {
             "contextsAllowed": ["interface", "attribute", "operation"]

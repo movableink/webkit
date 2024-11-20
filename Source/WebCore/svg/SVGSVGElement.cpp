@@ -24,7 +24,6 @@
 #include "config.h"
 #include "SVGSVGElement.h"
 
-#include "CSSHelper.h"
 #include "DOMMatrix2DInit.h"
 #include "DOMWrapperWorld.h"
 #include "ElementIterator.h"
@@ -54,11 +53,11 @@
 #include "StaticNodeList.h"
 #include "TreeScopeInlines.h"
 #include "TypedElementDescendantIteratorInlines.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGSVGElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGSVGElement);
 
 inline SVGSVGElement::SVGSVGElement(const QualifiedName& tagName, Document& document)
     : SVGGraphicsElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this), TypeFlag::HasDidMoveToNewDocument)
@@ -91,7 +90,7 @@ SVGSVGElement::~SVGSVGElement()
 {
     if (RefPtr viewSpec = m_viewSpec)
         viewSpec->resetContextElement();
-    RefAllowingPartiallyDestroyed<Document> document = this->document();
+    Ref<Document> document = this->document();
     document->unregisterForDocumentSuspensionCallbacks(*this);
     document->checkedSVGExtensions()->removeTimeContainer(*this);
 }
@@ -501,7 +500,7 @@ Node::InsertedIntoAncestorResult SVGSVGElement::insertedIntoAncestor(InsertionTy
 void SVGSVGElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
 {
     if (removalType.disconnectedFromDocument) {
-        RefAllowingPartiallyDestroyed<Document> document = this->document();
+        Ref<Document> document = this->document();
         document->checkedSVGExtensions()->removeTimeContainer(*this);
         pauseAnimations();
     }

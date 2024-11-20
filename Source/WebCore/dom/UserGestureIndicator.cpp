@@ -34,8 +34,11 @@
 #include "SecurityOrigin.h"
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(UserGestureIndicator);
 
 static RefPtr<UserGestureToken>& currentToken()
 {
@@ -180,10 +183,11 @@ bool UserGestureIndicator::processingUserGesture(const Document* document)
     if (!isMainThread())
         return false;
 
-    if (!currentToken() || !currentToken()->processingUserGesture())
+    RefPtr token = currentToken();
+    if (!token || !token->processingUserGesture())
         return false;
 
-    return !document || currentToken()->isValidForDocument(*document);
+    return !document || token->isValidForDocument(*document);
 }
 
 bool UserGestureIndicator::processingUserGestureForMedia()
@@ -191,7 +195,8 @@ bool UserGestureIndicator::processingUserGestureForMedia()
     if (!isMainThread())
         return false;
 
-    return currentToken() ? currentToken()->processingUserGestureForMedia() : false;
+    RefPtr token = currentToken();
+    return token ? token->processingUserGestureForMedia() : false;
 }
 
 std::optional<WTF::UUID> UserGestureIndicator::authorizationToken() const
@@ -199,7 +204,8 @@ std::optional<WTF::UUID> UserGestureIndicator::authorizationToken() const
     if (!isMainThread())
         return std::nullopt;
 
-    return currentToken() ? currentToken()->authorizationToken() : std::nullopt;
+    RefPtr token = currentToken();
+    return token ? token->authorizationToken() : std::nullopt;
 }
 
 }

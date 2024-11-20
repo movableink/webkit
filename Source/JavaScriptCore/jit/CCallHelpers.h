@@ -89,7 +89,7 @@ public:
     }
 
     template<typename RegType, unsigned NumberOfRegisters>
-    ALWAYS_INLINE void shuffleRegisters(std::array<RegType, NumberOfRegisters> destinations, std::array<RegType, NumberOfRegisters> sources)
+    ALWAYS_INLINE void shuffleRegisters(std::array<RegType, NumberOfRegisters> sources, std::array<RegType, NumberOfRegisters> destinations)
     {
         if (ASSERT_ENABLED) {
             RegisterSetBuilder set;
@@ -191,6 +191,28 @@ public:
                 return pair.first == pair.second;
             });
         }
+    }
+
+    template<unsigned NumberOfJSRs>
+    ALWAYS_INLINE void shuffleJSRs(std::array<JSValueRegs, NumberOfJSRs> sources, std::array<JSValueRegs, NumberOfJSRs> destinations)
+    {
+#if USE(JSVALUE64)
+        constexpr unsigned NumberOfRegisters = NumberOfJSRs;
+#else
+        constexpr unsigned NumberOfRegisters = NumberOfJSRs * 2;
+#endif
+        std::array<GPRReg, NumberOfRegisters> sourceRegs;
+        std::array<GPRReg, NumberOfRegisters> destinationRegs;
+
+        for (unsigned i = 0; i < NumberOfJSRs; ++i) {
+            sourceRegs[i] = sources[i].payloadGPR();
+            destinationRegs[i] = destinations[i].payloadGPR();
+#if !USE(JSVALUE64)
+            sourceRegs[i + NumberOfJSRs] = sources[i].tagGPR();
+            destinationRegs[i + NumberOfJSRs] = destinations[i].tagGPR();
+#endif
+        }
+        shuffleRegisters<GPRReg, NumberOfRegisters>(sourceRegs, destinationRegs);
     }
 
 private:
@@ -669,10 +691,10 @@ private:
         static_assert(gprArgsCount<TraitsType>(std::make_index_sequence<TraitsType::arity>()) == numGPRArgs);
         static_assert(fprArgsCount<TraitsType>(std::make_index_sequence<TraitsType::arity>()) == numFPRArgs);
 
-        shuffleRegisters<GPRReg, numGPRSources>(clampArrayToSize<numGPRSources, GPRReg>(argSourceRegs.gprDestinations), clampArrayToSize<numGPRSources, GPRReg>(argSourceRegs.gprSources));
+        shuffleRegisters<GPRReg, numGPRSources>(clampArrayToSize<numGPRSources, GPRReg>(argSourceRegs.gprSources), clampArrayToSize<numGPRSources, GPRReg>(argSourceRegs.gprDestinations));
         static_assert(!numCrossSources, "shouldn't be used on this architecture.");
 
-        shuffleRegisters<FPRReg, numFPRSources>(clampArrayToSize<numFPRSources, FPRReg>(argSourceRegs.fprDestinations), clampArrayToSize<numFPRSources, FPRReg>(argSourceRegs.fprSources));
+        shuffleRegisters<FPRReg, numFPRSources>(clampArrayToSize<numFPRSources, FPRReg>(argSourceRegs.fprSources), clampArrayToSize<numFPRSources, FPRReg>(argSourceRegs.fprDestinations));
     }
 
     template<typename OperationType, unsigned numGPRArgs, unsigned numGPRSources, unsigned numFPRArgs, unsigned numFPRSources, unsigned numCrossSources, unsigned extraGPRArgs, unsigned nonArgGPRs, unsigned extraPoke, typename... Args>
@@ -763,19 +785,38 @@ public:
         farJump(GPRInfo::regT1, ExceptionHandlerPtrTag);
     }
 
+#if USE(JSVALUE64)
     template<typename T>
     requires (isExceptionOperationResult<T>)
     static constexpr GPRReg operationExceptionRegister()
     {
+        static_assert(assertNotOperationSignature<T>);
         if (std::is_floating_point_v<typename T::ResultType> || std::is_same_v<typename T::ResultType, void>)
             return GPRInfo::returnValueGPR;
         return GPRInfo::returnValueGPR2;
     }
+#else
+    template<typename T>
+    requires (isExceptionOperationResult<T>)
+    static constexpr GPRReg operationExceptionRegister()
+    {
+        static_assert(assertNotOperationSignature<T>);
+        if (std::is_same_v<T, ExceptionOperationResult<void>>)
+            return GPRInfo::returnValueGPR;
+        return GPRInfo::returnValueGPR2;
+    }
+#endif
 
     template<typename T>
     requires (!isExceptionOperationResult<T>)
-    static constexpr GPRReg operationExceptionRegister() { return InvalidGPRReg; }
+    static constexpr GPRReg operationExceptionRegister()
+    {
+        static_assert(assertNotOperationSignature<T>);
+        return InvalidGPRReg;
+    }
 
+    template<auto operation>
+    static constexpr GPRReg operationExceptionRegister() { return operationExceptionRegister<OperationReturnType<typename FunctionTraits<decltype(operation)>::ResultType>>(); }
 
     void prepareForTailCallSlow(RegisterSet preserved = { })
     {
@@ -902,11 +943,11 @@ public:
         storeWasmCalleeCallee(scratchRegister());
     }
 
-    DataLabelPtr storeWasmCalleeCalleePatchable()
+    DataLabelPtr storeWasmCalleeCalleePatchable(int offset = 0)
     {
         JIT_COMMENT(*this, "Store Callee's wasm callee (patchable)");
         auto patch = moveWithPatch(TrustedImmPtr(nullptr), scratchRegister());
-        auto addr = CCallHelpers::addressOfCalleeCalleeFromCallerPerspective(0);
+        auto addr = CCallHelpers::addressOfCalleeCalleeFromCallerPerspective(offset);
 #if USE(JSVALUE64)
         storePtr(scratchRegister(), addr);
 #elif USE(JSVALUE32_64)

@@ -50,11 +50,10 @@ class AudioSampleDataSource;
 class AudioSampleBufferList;
 class CAAudioStreamDescription;
 
-class AudioMediaStreamTrackRendererUnit : public BaseAudioMediaStreamTrackRendererUnit, public CanMakeWeakPtr<AudioMediaStreamTrackRendererUnit, WeakPtrFactoryInitialization::Eager>, AudioMediaStreamTrackRendererInternalUnit::Client {
+class AudioMediaStreamTrackRendererUnit : public BaseAudioMediaStreamTrackRendererUnit, public AudioMediaStreamTrackRendererInternalUnit::Client {
 public:
     WEBCORE_EXPORT static AudioMediaStreamTrackRendererUnit& singleton();
 
-    AudioMediaStreamTrackRendererUnit();
     ~AudioMediaStreamTrackRendererUnit();
 
     // AudioMediaStreamTrackRendererInternalUnit
@@ -70,18 +69,22 @@ public:
     void addResetObserver(ResetObserver& observer) final { m_resetObservers.add(observer); }
 
 private:
+    AudioMediaStreamTrackRendererUnit();
+
     void start();
     void stop();
 
     void createAudioUnitIfNeeded();
     void updateRenderSourcesIfNecessary();
 
+    Ref<AudioMediaStreamTrackRendererInternalUnit> protectedInternalUnit() { return m_internalUnit; }
+
     HashSet<Ref<AudioSampleDataSource>> m_sources;
     Vector<Ref<AudioSampleDataSource>> m_pendingRenderSources WTF_GUARDED_BY_LOCK(m_pendingRenderSourcesLock);
     Vector<Ref<AudioSampleDataSource>> m_renderSources;
     bool m_hasPendingRenderSources WTF_GUARDED_BY_LOCK(m_pendingRenderSourcesLock) { false };
     Lock m_pendingRenderSourcesLock;
-    UniqueRef<AudioMediaStreamTrackRendererInternalUnit> m_internalUnit;
+    Ref<AudioMediaStreamTrackRendererInternalUnit> m_internalUnit;
     WeakHashSet<ResetObserver> m_resetObservers;
 };
 

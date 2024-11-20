@@ -45,12 +45,15 @@
 #include <wtf/Algorithms.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/StdList.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/darwin/WeakLinking.h>
 #include <wtf/spi/darwin/OSVariantSPI.h>
 
 #include "CoreVideoSoftLink.h"
 
 WTF_WEAK_LINK_FORCE_IMPORT(webm::swap);
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WTF {
 
@@ -233,6 +236,12 @@ template<> struct LogArgument<webm::Id> {
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebMParser);
+WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(WebMParserTrackData, WebMParser::TrackData);
+WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(WebMParserVideoTrackData, WebMParser::VideoTrackData);
+WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(WebMParserAudioTrackData, WebMParser::AudioTrackData);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SourceBufferParserWebM);
+
 // FIXME: Remove this once kCMVideoCodecType_VP9 is added to CMFormatDescription.h
 constexpr CMVideoCodecType kCMVideoCodecType_VP9 { 'vp09' };
 
@@ -253,8 +262,10 @@ static Status segmentReadErrorToWebmStatus(SourceBufferParser::Segment::ReadErro
     }
 }
 
+typedef WebMParser::SegmentReader WebMParserSegmentReader;
+
 class WebMParser::SegmentReader final : public webm::Reader {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(WebMParserSegmentReader);
 public:
     void appendSegment(SourceBufferParser::Segment&& segment)
     {
@@ -352,23 +363,9 @@ public:
                 advanceToNextSegment();
                 continue;
             }
-            RefPtr<SharedBuffer> sharedBuffer = currentSegment.getSharedBuffer();
-            RefPtr<SharedBuffer> rawBlockBuffer;
-            if (!sharedBuffer) {
-                // We could potentially allocate more memory than needed if the read is partial.
-                Vector<uint8_t> buffer;
-                if (!buffer.tryReserveInitialCapacity(numToRead))
-                    return Status(Status::kNotEnoughMemory);
-                buffer.grow(numToRead);
-                auto readResult = currentSegment.read(buffer.mutableSpan(), m_positionWithinSegment);
-                if (!readResult.has_value())
-                    return segmentReadErrorToWebmStatus(readResult.error());
-                buffer.shrink(readResult.value());
-                rawBlockBuffer = SharedBuffer::create(WTFMove(buffer));
-            } else
-                rawBlockBuffer = sharedBuffer->getContiguousData(m_positionWithinSegment, numToRead);
+            auto rawBlockBuffer = currentSegment.getData(m_positionWithinSegment, numToRead);
             auto lastRead = rawBlockBuffer->size();
-            outputBuffer.append(*rawBlockBuffer);
+            outputBuffer.append(rawBlockBuffer);
             m_position += lastRead;
             *numActuallyRead += lastRead;
             m_positionWithinSegment += lastRead;
@@ -440,7 +437,7 @@ private:
 };
 
 class MediaDescriptionWebM final : public MediaDescription {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(MediaDescriptionWebM);
 public:
     static Ref<MediaDescriptionWebM> create(webm::TrackEntry&& track)
     {
@@ -500,22 +497,6 @@ std::span<const ASCIILiteral> SourceBufferParserWebM::supportedMIMETypes()
     };
     return types;
 #endif
-}
-
-static bool canLoadFormatReader()
-{
-#if !ENABLE(WEBM_FORMAT_READER)
-    return false;
-#elif USE(APPLE_INTERNAL_SDK)
-    return true;
-#else
-    // FIXME (rdar://72320419): If WebKit was built with ad-hoc code-signing,
-    // CoreMedia will only load the format reader plug-in when a user default
-    // is set on Apple internal OSs. That means we cannot currently support WebM
-    // in public SDK builds on customer OSs.
-    static bool allowsInternalSecurityPolicies = os_variant_allows_internal_security_policies("com.apple.WebKit");
-    return allowsInternalSecurityPolicies;
-#endif // !USE(APPLE_INTERNAL_SDK)
 }
 
 WebMParser::WebMParser(Callback& callback)
@@ -600,7 +581,7 @@ ExceptionOr<int> WebMParser::parse(SourceBufferParser::Segment&& segment)
     return m_status.code;
 }
 
-void WebMParser::setLogger(const Logger& newLogger, const void* newLogIdentifier)
+void WebMParser::setLogger(const Logger& newLogger, uint64_t newLogIdentifier)
 {
     m_logger = &newLogger;
     m_logIdentifier = newLogIdentifier;
@@ -1096,13 +1077,13 @@ WebMParser::ConsumeFrameDataResult WebMParser::VideoTrackData::consumeFrameData(
 
         if (m_headerParser.key()) {
             isKey = true;
-            setFormatDescription(createVideoInfoFromVP9HeaderParser(m_headerParser, track().video.value().colour));
+            setFormatDescription(createVideoInfoFromVP9HeaderParser(m_headerParser, track().video.value()));
         }
     } else if (codec() == CodecType::VP8) {
         auto header = parseVP8FrameHeader(segmentHeaderData);
         if (header && header->keyframe) {
             isKey = true;
-            setFormatDescription(createVideoInfoFromVP8Header(*header, track().video.value().colour));
+            setFormatDescription(createVideoInfoFromVP8Header(*header, track().video.value()));
         }
     }
 
@@ -1359,11 +1340,6 @@ SourceBufferParserWebM::~SourceBufferParserWebM()
     ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER);
 }
 
-bool SourceBufferParserWebM::isWebMFormatReaderAvailable()
-{
-    return PlatformMediaSessionManager::webMFormatReaderEnabled() && canLoadFormatReader() && isWebmParserAvailable();
-}
-
 MediaPlayerEnums::SupportsType SourceBufferParserWebM::isContentTypeSupported(const ContentType& type)
 {
 #if ENABLE(VP9) || ENABLE(VORBIS) || ENABLE(OPUS)
@@ -1612,7 +1588,7 @@ void SourceBufferParserWebM::invalidate()
     m_parser.invalidate();
 }
 
-void SourceBufferParserWebM::setLogger(const Logger& newLogger, const void* newLogIdentifier)
+void SourceBufferParserWebM::setLogger(const Logger& newLogger, uint64_t newLogIdentifier)
 {
     m_logger = &newLogger;
     m_logIdentifier = newLogIdentifier;
@@ -1633,5 +1609,7 @@ void SourceBufferParserWebM::setMinimumAudioSampleDuration(float duration)
 }
 
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(MEDIA_SOURCE)

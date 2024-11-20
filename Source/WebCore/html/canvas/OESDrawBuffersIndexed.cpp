@@ -28,11 +28,13 @@
 #if ENABLE(WEBGL)
 #include "OESDrawBuffersIndexed.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(OESDrawBuffersIndexed);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(OESDrawBuffersIndexed);
 
 OESDrawBuffersIndexed::OESDrawBuffersIndexed(WebGLRenderingContextBase& context)
     : WebGLExtension(context, WebGLExtensionName::OESDrawBuffersIndexed)
@@ -111,5 +113,7 @@ void OESDrawBuffersIndexed::colorMaskiOES(GCGLuint buf, GCGLboolean red, GCGLboo
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEBGL)

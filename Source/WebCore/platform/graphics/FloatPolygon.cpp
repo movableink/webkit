@@ -32,9 +32,11 @@
 
 #include <wtf/HexNumber.h>
 #include <wtf/MathExtras.h>
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL_TEMPLATE(EdgeIntervalTree);
 
 namespace FloatPolygonInternal {
 static inline float determinant(const FloatSize& a, const FloatSize& b)

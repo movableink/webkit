@@ -52,11 +52,12 @@
 #import <WebCore/LocalizedStrings.h>
 #import <WebCore/Page.h>
 #import <WebCore/RenderBoxInlines.h>
-#import <WebCore/RuntimeApplicationChecks.h>
 #import <WebCore/SharedBuffer.h>
 #import <WebCore/SimpleRange.h>
 #import <WebKitLegacy/DOMPrivate.h>
 #import <pal/spi/mac/NSSharingServicePickerSPI.h>
+#import <wtf/RuntimeApplicationChecks.h>
+#import <wtf/TZoneMallocInlines.h>
 #import <wtf/URL.h>
 
 using namespace WebCore;
@@ -66,6 +67,8 @@ using namespace WebCore;
 - (void)speakString:(NSString *)string;
 - (void)stopSpeaking:(id)sender;
 @end
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebContextMenuClient);
 
 WebContextMenuClient::WebContextMenuClient(WebView *webView)
 #if ENABLE(SERVICE_CONTROLS)
@@ -142,14 +145,6 @@ bool WebContextMenuClient::clientFloatRectForNode(Node& node, FloatRect& rect) c
 void WebContextMenuClient::handleTranslation(const TranslationContextMenuInfo& info)
 {
     [m_webView _handleContextMenuTranslation:info];
-}
-
-#endif
-
-#if ENABLE(WRITING_TOOLS)
-
-void WebContextMenuClient::handleWritingTools(IntRect selectionBoundsInRootView)
-{
 }
 
 #endif

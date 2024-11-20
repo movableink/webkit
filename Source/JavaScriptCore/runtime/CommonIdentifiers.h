@@ -44,6 +44,7 @@
     macro(Function) \
     macro(Infinity) \
     macro(Intl) \
+    macro(Iterator) \
     macro(ListFormat) \
     macro(Loader) \
     macro(Locale) \
@@ -72,6 +73,7 @@
     macro(__lookupSetter__) \
     macro(add) \
     macro(additionalJettisonReason) \
+    macro(alphabet) \
     macro(anonymous) \
     macro(arguments) \
     macro(as) \
@@ -127,6 +129,7 @@
     macro(exports) \
     macro(fallback) \
     macro(flags) \
+    macro(firstDayOfWeek) \
     macro(forEach) \
     macro(formatMatcher) \
     macro(formatToParts) \
@@ -183,6 +186,7 @@
     macro(language) \
     macro(languageDisplay) \
     macro(largestUnit) \
+    macro(lastChunkHandling) \
     macro(lastIndex) \
     macro(length) \
     macro(line) \
@@ -221,6 +225,7 @@
     macro(numberingSystem) \
     macro(numeric) \
     macro(of) \
+    macro(omitPadding) \
     macro(opcode) \
     macro(origin) \
     macro(osrExitSites) \
@@ -234,6 +239,7 @@
     macro(propertyIsEnumerable) \
     macro(prototype) \
     macro(raw) \
+    macro(read) \
     macro(region) \
     macro(replace) \
     macro(resizable) \
@@ -270,6 +276,7 @@
     macro(timeStyle) \
     macro(timeZone) \
     macro(timeZoneName) \
+    macro(toArray) \
     macro(toExponential) \
     macro(toFixed) \
     macro(toISOString) \
@@ -295,6 +302,7 @@
     macro(weeks) \
     macro(weeksDisplay) \
     macro(writable) \
+    macro(written) \
     macro(year) \
     macro(years) \
     macro(yearsDisplay)

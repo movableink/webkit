@@ -33,13 +33,16 @@
 #include <memory>
 #include <span>
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
 // An AudioChannel represents a buffer of non-interleaved floating-point audio samples.
 // The PCM samples are normally assumed to be in a nominal range -1.0 -> +1.0
 class AudioChannel final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(AudioChannel);
     WTF_MAKE_NONCOPYABLE(AudioChannel);
 public:
     // Memory can be externally referenced, or can be internally allocated with an AudioFloatArray.
@@ -136,5 +139,7 @@ private:
 };
 
 } // WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // AudioChannel_h

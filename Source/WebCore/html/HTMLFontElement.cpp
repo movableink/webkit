@@ -32,13 +32,15 @@
 #include "MutableStyleProperties.h"
 #include "NodeName.h"
 #include "StyleProperties.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLFontElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLFontElement);
 
 using namespace HTMLNames;
 
@@ -214,3 +216,5 @@ void HTMLFontElement::collectPresentationalHintsForAttribute(const QualifiedName
 }
 
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

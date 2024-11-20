@@ -29,12 +29,18 @@
 #include <gst/video/video-info.h>
 #include <wtf/Logger.h>
 #include <wtf/MediaTime.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
 namespace WebCore {
 
 class IntSize;
 class SharedBuffer;
+
+using TrackID = uint64_t;
+
+template<typename MappedArg>
+using TrackIDHashMap = HashMap<TrackID, MappedArg, WTF::IntHash<TrackID>, WTF::UnsignedWithZeroKeyHashTraits<TrackID>>;
 
 inline bool webkitGstCheckVersion(guint major, guint minor, guint micro)
 {
@@ -67,7 +73,10 @@ bool getVideoSizeAndFormatFromCaps(const GstCaps*, WebCore::IntSize&, GstVideoFo
 std::optional<FloatSize> getVideoResolutionFromCaps(const GstCaps*);
 bool getSampleVideoInfo(GstSample*, GstVideoInfo&);
 #endif
-const char* capsMediaType(const GstCaps*);
+StringView capsMediaType(const GstCaps*);
+std::optional<TrackID> getStreamIdFromPad(const GRefPtr<GstPad>&);
+std::optional<TrackID> getStreamIdFromStream(const GRefPtr<GstStream>&);
+std::optional<TrackID> parseStreamId(StringView stringId);
 bool doCapsHaveType(const GstCaps*, const char*);
 bool areEncryptedCaps(const GstCaps*);
 Vector<String> extractGStreamerOptionsFromCommandLine();
@@ -204,7 +213,7 @@ private:
 };
 
 class GstMappedFrame {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(GstMappedFrame);
     WTF_MAKE_NONCOPYABLE(GstMappedFrame);
 public:
     GstMappedFrame(GstBuffer*, GstVideoInfo*, GstMapFlags);
@@ -273,29 +282,17 @@ GstElement* makeGStreamerElement(const char* factoryName, const char* name);
 GstElement* makeGStreamerBin(const char* description, bool ghostUnlinkedPads);
 
 template<typename T>
-inline std::optional<T> gstStructureGet(const GstStructure* structure, ASCIILiteral key)
-{
-    static_assert(std::is_same_v<T, int> || std::is_same_v<T, int64_t> || std::is_same_v<T, unsigned> || std::is_same_v<T, uint64_t> || std::is_same_v<T, double>);
+std::optional<T> gstStructureGet(const GstStructure*, ASCIILiteral key);
+template<typename T>
+std::optional<T> gstStructureGet(const GstStructure*, StringView key);
 
-    T value;
-    if constexpr(std::is_same_v<T, int>) {
-        if (gst_structure_get_int(structure, key.characters(), &value))
-            return value;
-    } else if constexpr(std::is_same_v<T, int64_t>) {
-        if (gst_structure_get_int64(structure, key.characters(), &value))
-            return value;
-    } else if constexpr(std::is_same_v<T, unsigned>) {
-        if (gst_structure_get_uint(structure, key.characters(), &value))
-            return value;
-    } else if constexpr(std::is_same_v<T, uint64_t>) {
-        if (gst_structure_get_uint64(structure, key.characters(), &value))
-            return value;
-    } else if constexpr(std::is_same_v<T, double>) {
-        if (gst_structure_get_double(structure, key.characters(), &value))
-            return value;
-    }
-    return std::nullopt;
-}
+StringView gstStructureGetString(const GstStructure*, ASCIILiteral key);
+StringView gstStructureGetString(const GstStructure*, StringView key);
+
+StringView gstStructureGetName(const GstStructure*);
+
+template<typename T>
+Vector<T> gstStructureGetArray(const GstStructure*, ASCIILiteral key);
 
 String gstStructureToJSONString(const GstStructure*);
 
@@ -316,11 +313,13 @@ bool gstObjectHasProperty(GstPad*, const char* name);
 
 GRefPtr<GstBuffer> wrapSpanData(const std::span<const uint8_t>&);
 
+std::optional<unsigned> gstGetAutoplugSelectResult(ASCIILiteral);
+
 void registerActivePipeline(const GRefPtr<GstElement>&);
 void unregisterPipeline(const GRefPtr<GstElement>&);
 
 class WebCoreLogObserver : public Logger::Observer {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(WebCoreLogObserver);
     WTF_MAKE_NONCOPYABLE(WebCoreLogObserver);
     friend NeverDestroyed<WebCoreLogObserver>;
 public:
@@ -336,6 +335,22 @@ public:
 private:
     Atomic<uint64_t> m_totalObservers;
 };
+
+#if GST_CHECK_VERSION(1, 25, 0)
+using GstId = const GstIdStr*;
+#else
+using GstId = GQuark;
+#endif
+
+bool gstStructureForeach(const GstStructure*, Function<bool(GstId, const GValue*)>&&);
+void gstStructureIdSetValue(GstStructure*, GstId, const GValue*);
+bool gstStructureMapInPlace(GstStructure*, Function<bool(GstId, GValue*)>&&);
+StringView gstIdToString(GstId);
+void gstStructureFilterAndMapInPlace(GstStructure*, Function<bool(GstId, GValue*)>&&);
+
+#if USE(GBM)
+WARN_UNUSED_RETURN GRefPtr<GstCaps> buildDMABufCaps();
+#endif
 
 } // namespace WebCore
 

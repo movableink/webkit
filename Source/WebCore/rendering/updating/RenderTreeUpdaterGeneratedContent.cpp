@@ -42,8 +42,11 @@
 #include "RenderView.h"
 #include "StyleTreeResolver.h"
 #include "WritingSuggestionData.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(RenderTreeUpdaterGeneratedContent, RenderTreeUpdater::GeneratedContent);
 
 RenderTreeUpdater::GeneratedContent::GeneratedContent(RenderTreeUpdater& updater)
     : m_updater(updater)
@@ -318,9 +321,13 @@ void RenderTreeUpdater::GeneratedContent::updateWritingSuggestionsRenderer(Rende
 
     auto textWithoutSuggestion = nodeBeforeWritingSuggestionsTextRenderer->text();
 
-    auto offset = writingSuggestionData->offset();
-    auto prefix = textWithoutSuggestion.substring(0, offset);
-    auto suffix = textWithoutSuggestion.substring(offset);
+    auto [prefix, suffix] = [&] -> std::pair<String, String> {
+        if (!writingSuggestionData->supportsSuffix())
+            return { textWithoutSuggestion, emptyString() };
+
+        auto offset = writingSuggestionData->offset();
+        return { textWithoutSuggestion.substring(0, offset), textWithoutSuggestion.substring(offset) };
+    }();
 
     nodeBeforeWritingSuggestionsTextRenderer->setText(prefix);
 

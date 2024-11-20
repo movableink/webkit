@@ -31,10 +31,13 @@
 #include <pal/text/DecodeEscapeSequences.h>
 #include <pal/text/TextEncoding.h>
 #include <wtf/MainThread.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/RunLoop.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
 #include <wtf/WorkQueue.h>
 #include <wtf/text/Base64.h>
+#include <wtf/text/MakeString.h>
 
 #if PLATFORM(COCOA)
 #include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
@@ -62,8 +65,8 @@ static bool shouldRemoveFragmentIdentifier(const String& mediaType)
 
 static WorkQueue& decodeQueue()
 {
-    static auto& queue = WorkQueue::create("org.webkit.DataURLDecoder"_s, WorkQueue::QOS::UserInitiated).leakRef();
-    return queue;
+    static NeverDestroyed<Ref<WorkQueue>> queue(WorkQueue::create("org.webkit.DataURLDecoder"_s, WorkQueue::QOS::UserInitiated));
+    return queue.get();
 }
 
 static Result parseMediaType(const String& mediaType)
@@ -74,7 +77,7 @@ static Result parseMediaType(const String& mediaType)
 }
 
 struct DecodeTask {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(DecodeTask);
 public:
     DecodeTask(const URL& url, const ScheduleContext& scheduleContext, ShouldValidatePadding shouldValidatePadding, DecodeCompletionHandler&& completionHandler)
         : url(url.isolatedCopy())

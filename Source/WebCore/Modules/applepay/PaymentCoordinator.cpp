@@ -43,6 +43,7 @@
 #include "PaymentSession.h"
 #include "UserContentProvider.h"
 #include <wtf/CompletionHandler.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
 
 #define PAYMENT_COORDINATOR_RELEASE_LOG_ERROR(fmt, ...) RELEASE_LOG_ERROR(ApplePay, "%p - PaymentCoordinator::" fmt, this, ##__VA_ARGS__)
@@ -50,9 +51,17 @@
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PaymentCoordinator);
+
+Ref<PaymentCoordinator> PaymentCoordinator::create(UniqueRef<PaymentCoordinatorClient>&& client)
+{
+    return adoptRef(*new PaymentCoordinator(WTFMove(client)));
+}
+
 PaymentCoordinator::PaymentCoordinator(UniqueRef<PaymentCoordinatorClient>&& client)
     : m_client(WTFMove(client))
 {
+    m_client->setPaymentCoordinator(*this);
 }
 
 PaymentCoordinator::~PaymentCoordinator() = default;

@@ -75,6 +75,10 @@
         "active-view-transition": {
             "settings-flag": "viewTransitionsEnabled"
         },
+        "active-view-transition-type": {
+            "argument": "required",
+            "settings-flag": "viewTransitionTypesEnabled"
+        },
         "any-link": {
             "aliases": [
                 "-webkit-any-link"
@@ -212,8 +216,7 @@
             "conditional": "ENABLE(VIDEO)"
         },
         "state": {
-            "argument": "required",
-            "settings-flag": "customStateSetEnabled"
+            "argument": "required"
         },
         "single-button": {
             "comment": "For scrollbar styling.",
@@ -351,6 +354,11 @@
             "user-agent-part": true
         },
         "-webkit-list-button": {
+            "status": "non-standard",
+            "user-agent-part": true
+        },
+        "-webkit-media-controls": {
+            "comment": "For needsChromeMediaControlsPseudoElement quirk",
             "status": "non-standard",
             "user-agent-part": true
         },
@@ -514,6 +522,11 @@
             "conditional": "ENABLE(VIDEO)",
             "user-agent-part-string": true
         },
+        "-internal-cue-background": {
+            "conditional": "ENABLE(VIDEO)",
+            "status": "non-standard",
+            "user-agent-part": true
+        },
         "file-selector-button": {
             "aliases": [
                 "-webkit-file-upload-button"
@@ -526,12 +539,9 @@
         "first-line": {
             "supports-single-colon-for-compatibility": true
         },
-        "grammar-error": {
-            "settings-flag": "grammarAndSpellingPseudoElementsEnabled"
-        },
+        "grammar-error": {},
         "highlight": {
-            "argument": "required",
-            "settings-flag": "highlightAPIEnabled"
+            "argument": "required"
         },
         "marker": {},
         "part": {
@@ -547,8 +557,9 @@
         "slotted": {
             "argument": "required"
         },
-        "spelling-error": {
-            "settings-flag": "grammarAndSpellingPseudoElementsEnabled"
+        "spelling-error": {},
+        "target-text": {
+            "settings-flag": "targetTextPseudoElementEnabled"
         },
         "thumb": {
             "settings-flag": "thumbAndTrackPseudoElementsEnabled",

@@ -49,9 +49,15 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Scope.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/WorkQueue.h>
+#include <wtf/text/MakeString.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(BlobRegistryImpl);
 
 BlobRegistryImpl::~BlobRegistryImpl() = default;
 
@@ -140,7 +146,7 @@ static FileSystem::MappedFileData storeInMappedFileData(const String& path, std:
         return { };
     FileSystem::deleteFile(path);
 
-    memcpy(const_cast<void*>(mappedFileData.data()), data.data(), data.size());
+    memcpySpan(mappedFileData.mutableSpan(), data);
 
     FileSystem::finalizeMappedFileData(mappedFileData, data.size());
     return mappedFileData;
@@ -325,8 +331,8 @@ unsigned long long BlobRegistryImpl::blobSize(const URL& url)
 
 static WorkQueue& blobUtilityQueue()
 {
-    static auto& queue = WorkQueue::create("org.webkit.BlobUtility"_s, WorkQueue::QOS::Utility).leakRef();
-    return queue;
+    static NeverDestroyed<Ref<WorkQueue>> queue(WorkQueue::create("org.webkit.BlobUtility"_s, WorkQueue::QOS::Utility));
+    return queue.get();
 }
 
 bool BlobRegistryImpl::populateBlobsForFileWriting(const Vector<String>& blobURLs, Vector<BlobForFileWriting>& blobsForWriting)
@@ -368,7 +374,7 @@ static bool writeFilePathsOrDataBuffersToFile(const Vector<std::pair<String, Ref
 
     for (auto& part : filePathsOrDataBuffers) {
         if (part.second) {
-            int length = part.second->size();
+            int64_t length = part.second->size();
             if (FileSystem::writeToFile(file, part.second->span()) != length) {
                 LOG_ERROR("Failed writing a Blob to temporary file");
                 return false;
@@ -464,3 +470,5 @@ void BlobRegistryImpl::unregisterBlobURLHandle(const URL& url, const std::option
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

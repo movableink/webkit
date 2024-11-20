@@ -31,8 +31,13 @@
 #include "PixelBuffer.h"
 #include <wtf/MathExtras.h>
 #include <wtf/ParallelJobs.h>
+#include <wtf/TZoneMallocInlines.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FETurbulenceSoftwareApplier);
 
 // The turbulence calculation code is an adapted version of what appears in the SVG 1.1 specification:
 // http://www.w3.org/TR/SVG11/filters.html#feTurbulence
@@ -365,5 +370,7 @@ bool FETurbulenceSoftwareApplier::apply(const Filter& filter, const FilterImageV
     applyPlatform(result.absoluteImageRect(), filter.filterScale(), *destinationPixelBuffer, paintingData, stitchData);
     return true;
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 } // namespace WebCore

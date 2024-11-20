@@ -197,7 +197,6 @@ static Atspi::Role atspiRole(AccessibilityRole role)
         return Atspi::Role::Menu;
     case AccessibilityRole::MenuListOption:
     case AccessibilityRole::MenuItem:
-    case AccessibilityRole::MenuButton:
         return Atspi::Role::MenuItem;
     case AccessibilityRole::MenuItemCheckbox:
         return Atspi::Role::CheckMenuItem;
@@ -354,15 +353,11 @@ static Atspi::Role atspiRole(AccessibilityRole role)
     case AccessibilityRole::Details:
     case AccessibilityRole::Emphasis:
     case AccessibilityRole::Ignored:
-    case AccessibilityRole::Incrementor:
     case AccessibilityRole::LineBreak:
     case AccessibilityRole::Model:
     case AccessibilityRole::Presentational:
     case AccessibilityRole::RowGroup:
-    case AccessibilityRole::RubyBase:
-    case AccessibilityRole::RubyBlock:
     case AccessibilityRole::RubyInline:
-    case AccessibilityRole::RubyRun:
     case AccessibilityRole::RubyText:
     case AccessibilityRole::SliderThumb:
     case AccessibilityRole::SpinButtonPart:
@@ -444,8 +439,10 @@ GDBusInterfaceVTable AccessibilityObjectAtspi::s_accessibleFunctions = {
             return g_variant_new_string(atspiObject->description().data());
         if (!g_strcmp0(propertyName, "Locale"))
             return g_variant_new_string(atspiObject->locale().utf8().data());
-        if (!g_strcmp0(propertyName, "AccessibleId"))
-            return g_variant_new_string(atspiObject->m_coreObject ? String::number(atspiObject->m_coreObject->objectID().toUInt64()).utf8().data() : "");
+        if (!g_strcmp0(propertyName, "AccessibleId")) {
+            auto objectID = atspiObject->m_coreObject->objectID();
+            return g_variant_new_string(atspiObject->m_coreObject ? String::number(objectID.toUInt64()).utf8().data() : "");
+        }
         if (!g_strcmp0(propertyName, "Parent"))
             return atspiObject->parentReference();
         if (!g_strcmp0(propertyName, "ChildCount"))
@@ -531,7 +528,7 @@ void AccessibilityObjectAtspi::setParent(std::optional<AccessibilityObjectAtspi*
         return;
 
     m_parent = atspiParent;
-    if (!m_coreObject || m_coreObject->accessibilityIsIgnored())
+    if (!m_coreObject || m_coreObject->isIgnored())
         return;
 
     AccessibilityAtspi::singleton().parentChanged(*this);
@@ -729,7 +726,7 @@ OptionSet<Atspi::State> AccessibilityObjectAtspi::states() const
         return states;
     }
 
-    auto* liveObject = dynamicDowncast<AccessibilityObject>(m_coreObject);
+    auto* liveObject = dynamicDowncast<AccessibilityObject>(m_coreObject.get());
 
     if (m_coreObject->isEnabled()) {
         states.add(Atspi::State::Enabled);
@@ -848,9 +845,9 @@ String AccessibilityObjectAtspi::id() const
     return { };
 }
 
-HashMap<String, String> AccessibilityObjectAtspi::attributes() const
+UncheckedKeyHashMap<String, String> AccessibilityObjectAtspi::attributes() const
 {
-    HashMap<String, String> map;
+    UncheckedKeyHashMap<String, String> map;
 #if PLATFORM(GTK)
     map.add("toolkit"_s, "WebKitGTK"_s);
 #elif PLATFORM(WPE)
@@ -891,13 +888,12 @@ HashMap<String, String> AccessibilityObjectAtspi::attributes() const
     if (columnIndex != -1)
         map.add("colindex"_s, String::number(columnIndex));
 
-    if (is<AccessibilityTableCell>(m_coreObject)) {
-        auto& cell = downcast<AccessibilityTableCell>(*m_coreObject);
-        int rowSpan = cell.axRowSpan();
+    if (auto* cell = dynamicDowncast<AccessibilityTableCell>(m_coreObject.get())) {
+        int rowSpan = cell->axRowSpan();
         if (rowSpan != -1)
             map.add("rowspan"_s, String::number(rowSpan));
 
-        int columnSpan = cell.axColumnSpan();
+        int columnSpan = cell->axColumnSpan();
         if (columnSpan != -1)
             map.add("colspan"_s, String::number(columnSpan));
     }
@@ -922,7 +918,7 @@ HashMap<String, String> AccessibilityObjectAtspi::attributes() const
         map.add("setsize"_s, String::number(m_coreObject->setSize()));
 
     // The Core AAM states that an explicitly-set value should be exposed, including "none".
-    if (static_cast<AccessibilityObject*>(m_coreObject)->hasAttribute(HTMLNames::aria_sortAttr)) {
+    if (static_cast<AccessibilityObject*>(m_coreObject.get())->hasAttribute(HTMLNames::aria_sortAttr)) {
         switch (m_coreObject->sortDirection()) {
         case AccessibilitySortDirection::Invalid:
             break;
@@ -954,7 +950,7 @@ HashMap<String, String> AccessibilityObjectAtspi::attributes() const
     // In the case of ATSPI, the mechanism to do so is an object attribute pair (xml-roles:"string").
     // We cannot use the computedRoleString for this purpose because it is not limited to elements
     // with ARIA roles, and it might not contain the actual ARIA role value (e.g. DPub ARIA).
-    String roleString = static_cast<AccessibilityObject*>(m_coreObject)->getAttribute(HTMLNames::roleAttr);
+    String roleString = static_cast<AccessibilityObject*>(m_coreObject.get())->getAttribute(HTMLNames::roleAttr);
     if (!roleString.isEmpty())
         map.add("xml-roles"_s, roleString);
 
@@ -974,7 +970,7 @@ HashMap<String, String> AccessibilityObjectAtspi::attributes() const
     if (!roleDescription.isEmpty())
         map.add("roledescription"_s, roleDescription);
 
-    String dropEffect = static_cast<AccessibilityObject*>(m_coreObject)->getAttribute(HTMLNames::aria_dropeffectAttr);
+    String dropEffect = static_cast<AccessibilityObject*>(m_coreObject.get())->getAttribute(HTMLNames::aria_dropeffectAttr);
     if (!dropEffect.isEmpty())
         map.add("dropeffect"_s, dropEffect);
 
@@ -1047,7 +1043,7 @@ RelationMap AccessibilityObjectAtspi::relationMap() const
                 ariaLabelledByElements.append(m_coreObject->axObjectCache()->getOrCreate(renderFieldset));
         }
     } else {
-        auto* liveObject = dynamicDowncast<AccessibilityObject>(m_coreObject);
+        auto* liveObject = dynamicDowncast<AccessibilityObject>(m_coreObject.get());
         if (liveObject && !liveObject->controlForLabelElement())
             ariaLabelledByElements = m_coreObject->labeledByObjects();
     }
@@ -1152,7 +1148,7 @@ void AccessibilityObjectAtspi::childAdded(AccessibilityObjectAtspi& child)
     if (!m_isRegistered)
         return;
 
-    if (!m_coreObject || m_coreObject->accessibilityIsIgnored())
+    if (!m_coreObject || m_coreObject->isIgnored())
         return;
 
     AccessibilityAtspi::singleton().childrenChanged(*this, child, AccessibilityAtspi::ChildrenChanged::Added);
@@ -1358,7 +1354,7 @@ void AccessibilityObjectAtspi::updateBackingStore()
 
 bool AccessibilityObjectAtspi::isIgnored() const
 {
-    return m_coreObject ? m_coreObject->accessibilityIsIgnored() : true;
+    return m_coreObject ? m_coreObject->isIgnored() : true;
 }
 
 void AccessibilityObject::detachPlatformWrapper(AccessibilityDetachmentType detachmentType)

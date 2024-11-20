@@ -42,6 +42,7 @@
 
 namespace JSC {
 class JSGlobalObject;
+class JSValue;
 }
 
 namespace WebCore {
@@ -109,10 +110,9 @@ enum class ShadowRootSerializable : bool { No, Yes };
 enum class VisibilityAdjustment : uint8_t;
 
 // https://github.com/whatwg/html/pull/9841
-enum class InvokeAction: uint8_t {
+enum class CommandType: uint8_t {
     Invalid,
 
-    Auto,
     Custom,
 
     TogglePopover,
@@ -137,7 +137,7 @@ struct SecurityPolicyViolationEventInit;
 struct ShadowRootInit;
 
 using ElementName = NodeName;
-using ExplicitlySetAttrElementsMap = HashMap<QualifiedName, Vector<WeakPtr<Element, WeakPtrImplWithEventTargetData>>>;
+using ExplicitlySetAttrElementsMap = UncheckedKeyHashMap<QualifiedName, Vector<WeakPtr<Element, WeakPtrImplWithEventTargetData>>>;
 using TrustedTypeOrString = std::variant<RefPtr<TrustedHTML>, RefPtr<TrustedScript>, RefPtr<TrustedScriptURL>, AtomString>;
 
 // https://drafts.csswg.org/css-contain/#relevant-to-the-user
@@ -157,7 +157,8 @@ struct ResolvedStyle;
 }
 
 class Element : public ContainerNode {
-    WTF_MAKE_ISO_ALLOCATED(Element);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Element);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(Element);
 public:
     static Ref<Element> create(const QualifiedName&, Document&);
     virtual ~Element();
@@ -185,6 +186,9 @@ public:
     WEBCORE_EXPORT void setElementsArrayAttribute(const QualifiedName& attributeName, std::optional<Vector<Ref<Element>>>&& value);
     static bool isElementReflectionAttribute(const Settings&, const QualifiedName&);
     static bool isElementsArrayReflectionAttribute(const QualifiedName&);
+
+    WEBCORE_EXPORT void setUserInfo(JSC::JSGlobalObject&, JSC::JSValue);
+    WEBCORE_EXPORT String userInfo() const;
 
     // Call this to get the value of an attribute that is known not to be the style
     // attribute or one of the SVG animatable attributes.
@@ -398,7 +402,7 @@ public:
     WEBCORE_EXPORT ExceptionOr<ShadowRoot&> attachShadow(const ShadowRootInit&);
     ExceptionOr<ShadowRoot&> attachDeclarativeShadow(ShadowRootMode, ShadowRootDelegatesFocus, ShadowRootClonable, ShadowRootSerializable);
 
-    ShadowRoot* userAgentShadowRoot() const;
+    WEBCORE_EXPORT ShadowRoot* userAgentShadowRoot() const;
     RefPtr<ShadowRoot> protectedUserAgentShadowRoot() const;
     WEBCORE_EXPORT ShadowRoot& ensureUserAgentShadowRoot();
     WEBCORE_EXPORT ShadowRoot& createUserAgentShadowRoot();
@@ -502,7 +506,7 @@ public:
     virtual bool attributeContainsURL(const Attribute& attribute) const { return isURLAttribute(attribute); }
     String resolveURLStringIfNeeded(const String& urlString, ResolveURLs = ResolveURLs::Yes, const URL& base = URL()) const;
     virtual String completeURLsInAttributeValue(const URL& base, const Attribute&, ResolveURLs = ResolveURLs::Yes) const;
-    virtual Attribute replaceURLsInAttributeValue(const Attribute&, const HashMap<String, String>&) const;
+    virtual Attribute replaceURLsInAttributeValue(const Attribute&, const UncheckedKeyHashMap<String, String>&) const;
     virtual bool isHTMLContentAttribute(const Attribute&) const { return false; }
 
     WEBCORE_EXPORT URL getURLAttribute(const QualifiedName&) const;
@@ -585,7 +589,6 @@ public:
 
     virtual bool isFormListedElement() const { return false; }
     virtual bool isValidatedFormListedElement() const { return false; }
-    virtual bool isFormControlElement() const { return false; }
     virtual bool isMaybeFormAssociatedCustomElement() const { return false; }
     virtual bool isSpinButtonElement() const { return false; }
     virtual bool isTextFormControlElement() const { return false; }
@@ -655,8 +658,8 @@ public:
     void clearPopoverData();
     bool isPopoverShowing() const;
 
-    virtual bool isValidInvokeAction(const InvokeAction action) { return action == InvokeAction::Auto; }
-    virtual bool handleInvokeInternal(const HTMLFormControlElement&, const InvokeAction&) { return false; }
+    virtual bool isValidCommandType(const CommandType) { return false; }
+    virtual bool handleCommandInternal(const HTMLFormControlElement&, const CommandType&) { return false; }
 
     ExceptionOr<void> setPointerCapture(int32_t);
     ExceptionOr<void> releasePointerCapture(int32_t);
@@ -760,6 +763,7 @@ public:
     void invalidateStyleForSubtreeInternal();
     void invalidateForQueryContainerSizeChange();
     void invalidateForResumingQueryContainerResolution();
+    void invalidateForResumingAnchorPositionedElementResolution();
 
     bool needsUpdateQueryContainerDependentStyle() const;
     void clearNeedsUpdateQueryContainerDependentStyle();
@@ -815,6 +819,15 @@ public:
 
     bool hasCustomState(const AtomString& state) const;
     CustomStateSet& ensureCustomStateSet();
+
+    bool hasValidTextDirectionState() const;
+    bool hasAutoTextDirectionState() const;
+
+    void updateEffectiveTextDirection();
+    void updateEffectiveTextDirectionIfNeeded();
+
+    AtomString viewTransitionCapturedName(const std::optional<Style::PseudoElementIdentifier>&) const;
+    void setViewTransitionCapturedName(const std::optional<Style::PseudoElementIdentifier>&, AtomString);
 
 protected:
     Element(const QualifiedName&, Document&, OptionSet<TypeFlag>);
@@ -941,6 +954,8 @@ private:
 #if ASSERT_ENABLED
     WEBCORE_EXPORT bool fastAttributeLookupAllowed(const QualifiedName&) const;
 #endif
+
+    void dirAttributeChanged(const AtomString& newValue);
 
     bool hasEffectiveLangState() const;
     void updateEffectiveLangState();

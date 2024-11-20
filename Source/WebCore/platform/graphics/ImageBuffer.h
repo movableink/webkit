@@ -38,6 +38,7 @@
 #include <wtf/Function.h>
 #include <wtf/OptionSet.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeWeakPtr.h>
 
 #if PLATFORM(QT)
@@ -98,6 +99,7 @@ struct ImageBufferParameters {
 };
 
 class ImageBuffer : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<ImageBuffer> {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(ImageBuffer, WEBCORE_EXPORT);
 public:
     using Parameters = ImageBufferParameters;
     WEBCORE_EXPORT static RefPtr<ImageBuffer> create(const FloatSize&, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, ImageBufferPixelFormat, OptionSet<ImageBufferOptions> = { }, GraphicsClient* graphicsClient = nullptr);
@@ -194,6 +196,13 @@ public:
     WEBCORE_EXPORT RefPtr<cairo_surface_t> createCairoSurface();
 #endif
 
+#if USE(SKIA)
+    // During DisplayList recording a fence is created, so that we can wait until the SkSurface finished rendering
+    // before we attempt to access the GPU resource from a secondary thread during replay (in threaded GPU painting mode).
+    void finishAcceleratedRenderingAndCreateFence();
+    void waitForAcceleratedRenderingFenceCompletion();
+#endif
+
 #if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
     WEBCORE_EXPORT virtual std::optional<DynamicContentScalingDisplayList> dynamicContentScalingDisplayList();
 #endif
@@ -209,6 +218,9 @@ public:
     //     buffer = nullptr;
     WEBCORE_EXPORT static RefPtr<NativeImage> sinkIntoNativeImage(RefPtr<ImageBuffer>);
     WEBCORE_EXPORT static RefPtr<ImageBuffer> sinkIntoBufferForDifferentThread(RefPtr<ImageBuffer>);
+#if USE(SKIA)
+    static RefPtr<ImageBuffer> sinkIntoImageBufferForCrossThreadTransfer(RefPtr<ImageBuffer>);
+#endif
     static std::unique_ptr<SerializedImageBuffer> sinkIntoSerializedImageBuffer(RefPtr<ImageBuffer>&&);
 
     WEBCORE_EXPORT virtual void convertToLuminanceMask();
@@ -259,8 +271,8 @@ protected:
 };
 
 class SerializedImageBuffer {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(SerializedImageBuffer, WEBCORE_EXPORT);
     WTF_MAKE_NONCOPYABLE(SerializedImageBuffer);
-    WTF_MAKE_FAST_ALLOCATED;
 public:
 
     SerializedImageBuffer() = default;

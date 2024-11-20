@@ -36,8 +36,13 @@
 #include "AudioUtilities.h"
 #include <wtf/MathExtras.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DynamicsCompressor);
 
 using namespace AudioUtilities;
     
@@ -184,5 +189,7 @@ void DynamicsCompressor::setNumberOfChannels(unsigned numberOfChannels)
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

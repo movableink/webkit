@@ -43,6 +43,7 @@
 #include "StreamClientConnection.h"
 #include "ThreadSafeObjectHeap.h"
 #include "WorkQueueMessageReceiver.h"
+#include <WebCore/ImageBufferResourceLimits.h>
 #include <WebCore/RenderingResourceIdentifier.h>
 #include <WebCore/SharedMemory.h>
 #include <WebCore/Timer.h>
@@ -51,15 +52,6 @@
 #include <wtf/HashMap.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/WorkQueue.h>
-
-namespace WebKit {
-class TimerAlignment;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebKit::RemoteRenderingBackendProxy> : std::true_type { };
-}
 
 namespace WebCore {
 
@@ -86,6 +78,8 @@ class RemoteImageBufferSetProxy;
 
 class RemoteRenderingBackendProxy
     : public IPC::Connection::Client, SerialFunctionDispatcher {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RemoteRenderingBackendProxy);
 public:
     static std::unique_ptr<RemoteRenderingBackendProxy> create(WebPage&);
     static std::unique_ptr<RemoteRenderingBackendProxy> create(SerialFunctionDispatcher&);
@@ -125,6 +119,7 @@ public:
     void markSurfacesVolatile(Vector<std::pair<Ref<RemoteImageBufferSetProxy>, OptionSet<BufferInSetType>>>&&, CompletionHandler<void(bool madeAllVolatile)>&&, bool forcePurge);
     RefPtr<RemoteImageBufferSetProxy> createRemoteImageBufferSet();
     void releaseRemoteImageBufferSet(RemoteImageBufferSetProxy&);
+    void getImageBufferResourceLimitsForTesting(CompletionHandler<void(WebCore::ImageBufferResourceLimits)>&&);
 
 #if USE(GRAPHICS_LAYER_WC)
     Function<bool()> flushImageBuffers();
@@ -166,7 +161,7 @@ public:
 
     RefPtr<IPC::StreamClientConnection> connection();
 
-    SerialFunctionDispatcher& dispatcher() { return m_dispatcher; }
+    bool isCurrent() const final;
     Ref<WorkQueue> workQueue() { return m_queue; }
 
     void didBecomeUnresponsive();
@@ -179,10 +174,12 @@ private:
     template<typename T> auto send(T&& message) { return send(std::forward<T>(message), renderingBackendIdentifier()); }
     template<typename T, typename U, typename V, typename W> auto sendSync(T&& message, ObjectIdentifierGeneric<U, V, W>);
     template<typename T> auto sendSync(T&& message) { return sendSync(std::forward<T>(message), renderingBackendIdentifier()); }
+    template<typename T, typename C, typename U, typename V, typename W> auto sendWithAsyncReply(T&& message, C&& callback, ObjectIdentifierGeneric<U, V, W>);
+    template<typename T, typename C> auto sendWithAsyncReply(T&& message, C&& callback) { return sendWithAsyncReply(std::forward<T>(message), std::forward<C>(callback), renderingBackendIdentifier()); }
 
     // Connection::Client
     void didClose(IPC::Connection&) final;
-    void didReceiveInvalidMessage(IPC::Connection&, IPC::MessageName) final { }
+    void didReceiveInvalidMessage(IPC::Connection&, IPC::MessageName, int32_t indexOfObjectFailingDecoding) final { }
     void disconnectGPUProcess();
     void ensureGPUProcessConnection();
 
@@ -200,10 +197,11 @@ private:
     void didMarkLayersAsVolatile(MarkSurfacesAsVolatileRequestIdentifier, Vector<std::pair<RemoteImageBufferSetIdentifier, OptionSet<BufferInSetType>>>, bool didMarkAllLayerAsVolatile);
 
     // SerialFunctionDispatcher
-    void dispatch(Function<void()>&& function) final { m_dispatcher.dispatch(WTFMove(function)); }
-    bool isCurrent() const final { return m_dispatcher.isCurrent(); }
+    void dispatch(Function<void()>&&) final;
 
-    SerialFunctionDispatcher& m_dispatcher;
+    RefPtr<IPC::StreamClientConnection> protectedConnection() const { return m_connection; }
+
+    ThreadSafeWeakPtr<SerialFunctionDispatcher> m_dispatcher;
     WeakPtr<GPUProcessConnection> m_gpuProcessConnection; // Only for main thread operation.
     RefPtr<IPC::StreamClientConnection> m_connection;
     RefPtr<RemoteSharedResourceCacheProxy> m_sharedResourceCache;
@@ -211,7 +209,6 @@ private:
     RemoteResourceCacheProxy m_remoteResourceCacheProxy { *this };
     RefPtr<WebCore::SharedMemory> m_getPixelBufferSharedMemory;
     WebCore::Timer m_destroyGetPixelBufferSharedMemoryTimer { *this, &RemoteRenderingBackendProxy::destroyGetPixelBufferSharedMemory };
-    MarkSurfacesAsVolatileRequestIdentifier m_currentVolatilityRequest;
     HashMap<MarkSurfacesAsVolatileRequestIdentifier, CompletionHandler<void(bool)>> m_markAsVolatileRequests;
     HashMap<RemoteImageBufferSetIdentifier, WeakPtr<RemoteImageBufferSetProxy>> m_bufferSets;
     Ref<WorkQueue> m_queue;

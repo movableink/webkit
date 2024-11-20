@@ -34,7 +34,7 @@ namespace WebCore {
 class TextMetrics;
 
 class CanvasRenderingContext2D final : public CanvasRenderingContext2DBase {
-    WTF_MAKE_ISO_ALLOCATED(CanvasRenderingContext2D);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CanvasRenderingContext2D);
 public:
     static std::unique_ptr<CanvasRenderingContext2D> create(CanvasBase&, CanvasRenderingContext2DSettings&&, bool usesCSSCompatibilityParseMode);
 
@@ -56,7 +56,6 @@ public:
 private:
     CanvasRenderingContext2D(CanvasBase&, CanvasRenderingContext2DSettings&&, bool usesCSSCompatibilityParseMode);
 
-    bool is2d() const final { return true; }
     const FontProxy* fontProxy() final;
 
     std::optional<FilterOperations> setFilterStringWithoutUpdatingStyle(const String&) override;

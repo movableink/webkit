@@ -58,18 +58,18 @@ public:
     float scrollableOverflowBottom() const { return line().scrollableOverflow().maxY(); }
 
     bool hasEllipsis() const { return line().hasEllipsis(); }
-    FloatRect ellipsisVisualRectIgnoringBlockDirection() const { return *line().ellipsisVisualRect(); }
-    TextRun ellipsisText() const { return line().ellipsisText(); }
+    FloatRect ellipsisVisualRectIgnoringBlockDirection() const { return line().ellipsis()->visualRect; }
+    TextRun ellipsisText() const { return TextRun { line().ellipsis()->text.string() }; }
 
     float contentLogicalTopAdjustedForPrecedingLineBox() const
     {
-        if (isFlippedLinesWritingMode(formattingContextRoot().style().writingMode()) || !m_lineIndex)
+        if (formattingContextRoot().style().writingMode().isLineInverted() || !m_lineIndex)
             return contentLogicalTop();
         return LineBoxIteratorModernPath { *m_inlineContent, m_lineIndex - 1 }.contentLogicalBottom();
     }
     float contentLogicalBottomAdjustedForFollowingLineBox() const
     {
-        if (!isFlippedLinesWritingMode(formattingContextRoot().style().writingMode()) || m_lineIndex == lines().size() - 1)
+        if (!formattingContextRoot().style().writingMode().isLineInverted() || m_lineIndex == lines().size() - 1)
             return contentLogicalBottom();
         return LineBoxIteratorModernPath { *m_inlineContent, m_lineIndex + 1 }.contentLogicalTop();
     }

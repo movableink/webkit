@@ -3135,7 +3135,7 @@ bool RemoteGraphicsContextGLProxy::addFoveation(WebCore::IntSize physicalSizeLef
     return returnValue;
 }
 
-void RemoteGraphicsContextGLProxy::enableFoveation(GCGLuint arg0)
+void RemoteGraphicsContextGLProxy::enableFoveation(PlatformGLObject arg0)
 {
     if (isContextLost())
         return;
@@ -3162,6 +3162,17 @@ void RemoteGraphicsContextGLProxy::framebufferDiscard(GCGLenum target, std::span
     if (isContextLost())
         return;
     auto sendResult = send(Messages::RemoteGraphicsContextGL::FramebufferDiscard(target, attachments));
+    if (sendResult != IPC::Error::NoError) {
+        markContextLost();
+        return;
+    }
+}
+
+void RemoteGraphicsContextGLProxy::framebufferResolveRenderbuffer(GCGLenum target, GCGLenum attachment, GCGLenum renderbuffertarget, PlatformGLObject arg3)
+{
+    if (isContextLost())
+        return;
+    auto sendResult = send(Messages::RemoteGraphicsContextGL::FramebufferResolveRenderbuffer(target, attachment, renderbuffertarget, arg3));
     if (sendResult != IPC::Error::NoError) {
         markContextLost();
         return;

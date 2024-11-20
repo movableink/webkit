@@ -33,6 +33,7 @@
 #include "PlatformMediaSessionManager.h"
 #include "RemoteCommandListener.h"
 #include <wtf/RunLoop.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -44,7 +45,7 @@ class MediaSessionManagerCocoa
     : public PlatformMediaSessionManager
     , private NowPlayingManagerClient
     , private AudioHardwareListener::Client {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(MediaSessionManagerCocoa);
 public:
     MediaSessionManagerCocoa();
     
@@ -55,7 +56,7 @@ public:
     String lastUpdatedNowPlayingTitle() const final { return m_lastUpdatedNowPlayingTitle; }
     double lastUpdatedNowPlayingDuration() const final { return m_lastUpdatedNowPlayingDuration; }
     double lastUpdatedNowPlayingElapsedTime() const final { return m_lastUpdatedNowPlayingElapsedTime; }
-    MediaUniqueIdentifier lastUpdatedNowPlayingInfoUniqueIdentifier() const final { return m_lastUpdatedNowPlayingInfoUniqueIdentifier; }
+    std::optional<MediaUniqueIdentifier> lastUpdatedNowPlayingInfoUniqueIdentifier() const final { return m_lastUpdatedNowPlayingInfoUniqueIdentifier; }
     bool registeredAsNowPlayingApplication() const final { return m_registeredAsNowPlayingApplication; }
     bool haveEverRegisteredAsNowPlayingApplication() const final { return m_haveEverRegisteredAsNowPlayingApplication; }
 
@@ -63,21 +64,14 @@ public:
 
     std::optional<NowPlayingInfo> nowPlayingInfo() const final { return m_nowPlayingInfo; }
     static WEBCORE_EXPORT void clearNowPlayingInfo();
-    static WEBCORE_EXPORT void setNowPlayingInfo(bool setAsNowPlayingApplication, const NowPlayingInfo&);
+    static WEBCORE_EXPORT void setNowPlayingInfo(bool setAsNowPlayingApplication, bool shouldUpdateNowPlayingSuppression, const NowPlayingInfo&);
 
     static WEBCORE_EXPORT void updateMediaUsage(PlatformMediaSession&);
 
     static void ensureCodecsRegistered();
 
-#if ENABLE(MEDIA_SOURCE) && HAVE(AVSAMPLEBUFFERVIDEOOUTPUT)
-    static WEBCORE_EXPORT void setMediaSourceInlinePaintingEnabled(bool);
-    static WEBCORE_EXPORT bool mediaSourceInlinePaintingEnabled();
-#endif
-
-#if HAVE(AVCONTENTKEYSPECIFIER)
-    static WEBCORE_EXPORT void setSampleBufferContentKeySessionSupportEnabled(bool);
-    static WEBCORE_EXPORT bool sampleBufferContentKeySessionSupportEnabled();
-#endif
+    static WEBCORE_EXPORT void setShouldUseModernAVContentKeySession(bool);
+    static WEBCORE_EXPORT bool shouldUseModernAVContentKeySession();
 
     static String audioTimePitchAlgorithmForMediaPlayerPitchCorrectionAlgorithm(MediaPlayerPitchCorrectionAlgorithm, bool preservesPitch, double rate);
 
@@ -124,6 +118,10 @@ private:
 
     std::optional<bool> supportsSpatialAudioPlaybackForConfiguration(const MediaConfiguration&) final;
 
+#if USE(NOW_PLAYING_ACTIVITY_SUPPRESSION)
+    static void updateNowPlayingSuppression(const NowPlayingInfo*);
+#endif
+
     bool m_nowPlayingActive { false };
     bool m_registeredAsNowPlayingApplication { false };
     bool m_haveEverRegisteredAsNowPlayingApplication { false };
@@ -132,7 +130,7 @@ private:
     String m_lastUpdatedNowPlayingTitle;
     double m_lastUpdatedNowPlayingDuration { NAN };
     double m_lastUpdatedNowPlayingElapsedTime { NAN };
-    MediaUniqueIdentifier m_lastUpdatedNowPlayingInfoUniqueIdentifier;
+    Markable<MediaUniqueIdentifier> m_lastUpdatedNowPlayingInfoUniqueIdentifier;
     std::optional<NowPlayingInfo> m_nowPlayingInfo;
 
     const std::unique_ptr<NowPlayingManager> m_nowPlayingManager;

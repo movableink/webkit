@@ -33,8 +33,11 @@
 #import "WebPage.h"
 #import "WebProcessProxy.h"
 #import "_WKRemoteObjectRegistryInternal.h"
+#import <wtf/TZoneMallocInlines.h>
 
 namespace WebKit {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteObjectRegistry);
 
 RemoteObjectRegistry::RemoteObjectRegistry(_WKRemoteObjectRegistry *remoteObjectRegistry)
     : m_remoteObjectRegistry(remoteObjectRegistry)
@@ -45,8 +48,13 @@ RemoteObjectRegistry::~RemoteObjectRegistry() = default;
 
 template<typename M> void RemoteObjectRegistry::send(M&& message)
 {
-    WTF::switchOn(messageSender(), [&] (auto sender) {
-        sender.get().send(WTFMove(message), messageDestinationID());
+    auto messageSender = this->messageSender();
+    auto messageDestinationID = this->messageDestinationID();
+    if (!messageSender || !messageDestinationID)
+        return;
+
+    WTF::switchOn(*messageSender, [&] (auto sender) {
+        sender.get().send(WTFMove(message), *messageDestinationID);
     });
 }
 

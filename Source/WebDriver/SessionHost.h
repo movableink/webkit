@@ -28,6 +28,8 @@
 #include "Capabilities.h"
 #include <wtf/HashMap.h>
 #include <wtf/JSONValues.h>
+#include <wtf/Observer.h>
+#include <wtf/text/WTFString.h>
 
 #if USE(GLIB)
 #include <wtf/glib/GRefPtr.h>
@@ -43,18 +45,27 @@ namespace WebDriver {
 
 struct ConnectToBrowserAsyncData;
 
-class SessionHost
+class SessionHost final
+    : public RefCounted<SessionHost>
 #if USE(INSPECTOR_SOCKET_SERVER)
-    : public Inspector::RemoteInspectorConnectionClient
+    , public Inspector::RemoteInspectorConnectionClient
 #endif
 {
     WTF_MAKE_FAST_ALLOCATED(SessionHost);
 public:
-    explicit SessionHost(Capabilities&& capabilities)
-        : m_capabilities(WTFMove(capabilities))
+
+    static Ref<SessionHost> create(Capabilities&& capabilities)
     {
+        return adoptRef(*new SessionHost(WTFMove(capabilities)));
     }
+
     ~SessionHost();
+
+#if ENABLE(WEBDRIVER_BIDI)
+    using BrowserTerminatedObserver = WTF::Observer<void(const String&)>;
+    static void addBrowserTerminatedObserver(const BrowserTerminatedObserver&);
+    static void removeBrowserTerminatedObserver(const BrowserTerminatedObserver&);
+#endif
 
     void setHostAddress(const String& ip, uint16_t port) { m_targetIp = ip; m_targetPort = port; }
     bool isConnected() const;
@@ -65,6 +76,8 @@ public:
     void connectToBrowser(Function<void (std::optional<String> error)>&&);
     void startAutomationSession(Function<void (bool, std::optional<String>)>&&);
 
+    bool isRemoteBrowser() const;
+
     struct CommandResponse {
         RefPtr<JSON::Object> responseObject;
         bool isError { false };
@@ -72,6 +85,12 @@ public:
     long sendCommandToBackend(const String&, RefPtr<JSON::Object>&& parameters, Function<void (CommandResponse&&)>&&);
 
 private:
+
+    explicit SessionHost(Capabilities&& capabilities)
+        : m_capabilities(WTFMove(capabilities))
+    {
+    }
+
     struct Target {
         uint64_t id { 0 };
         CString name;

@@ -33,6 +33,8 @@
 #include "RenderText.h"
 #include "RenderTheme.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WebCore {
 
 static void computeStyleForPseudoElementStyle(StyledMarkedText::Style& style, const RenderStyle* pseudoElementStyle, const PaintInfo& paintInfo)
@@ -40,7 +42,7 @@ static void computeStyleForPseudoElementStyle(StyledMarkedText::Style& style, co
     if (!pseudoElementStyle)
         return;
 
-    style.backgroundColor = pseudoElementStyle->colorResolvingCurrentColor(pseudoElementStyle->backgroundColor());
+    style.backgroundColor = pseudoElementStyle->visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor, paintInfo.paintBehavior);
     style.textStyles.fillColor = pseudoElementStyle->computedStrokeColor();
     style.textStyles.strokeColor = pseudoElementStyle->computedStrokeColor();
     style.textStyles.hasExplicitlySetFillColor = pseudoElementStyle->hasExplicitlySetColor();
@@ -94,6 +96,11 @@ static StyledMarkedText resolveStyleForMarkedText(const MarkedText& markedText, 
         break;
     }
     case MarkedText::Type::FragmentHighlight: {
+        if (CheckedPtr renderStyle = renderer.targetTextPseudoStyle()) {
+            computeStyleForPseudoElementStyle(style, renderStyle.get(), paintInfo);
+            break;
+        }
+
         OptionSet<StyleColorOptions> styleColorOptions = { StyleColorOptions::UseSystemAppearance };
         style.backgroundColor = renderer.theme().annotationHighlightColor(styleColorOptions);
         break;
@@ -212,7 +219,7 @@ static void orderHighlights(const ListHashSet<AtomString>& markedTextsNames, Vec
     if (markedTexts.isEmpty())
         return;
 
-    HashMap<AtomString, int> markedTextsNamesPriority;
+    UncheckedKeyHashMap<AtomString, int> markedTextsNamesPriority;
     int index = 0;
     for (auto& highlightName : markedTextsNames) {
         markedTextsNamesPriority.add(highlightName, index);
@@ -340,3 +347,5 @@ Vector<StyledMarkedText> StyledMarkedText::coalesceAdjacentWithEqualDecorations(
     });
 }
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

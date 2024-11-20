@@ -31,6 +31,7 @@ WTF_EXTERN_C_END
 
 #if USE(APPLE_INTERNAL_SDK)
 
+#import <Foundation/NSGeometry.h>
 #import <UIKit/NSParagraphStyle_Private.h>
 #import <UIKit/NSTextAlternatives.h>
 #import <UIKit/NSTextAttachment_Private.h>
@@ -42,7 +43,6 @@ WTF_EXTERN_C_END
 #import <UIKit/UIFont_Private.h>
 #import <UIKit/UIInterface_Private.h>
 #import <UIKit/UIPasteboard_Private.h>
-#import <UIKit/UIResponder_Private.h>
 #import <UIKit/UIScreen_Private.h>
 #import <UIKit/UITextEffectsWindow.h>
 #import <UIKit/UIViewController_Private.h>
@@ -63,6 +63,8 @@ WTF_EXTERN_C_END
 #if ENABLE(DRAG_SUPPORT)
 #import <UIKit/NSItemProvider+UIKitAdditions.h>
 #endif
+
+typedef NS_ENUM(NSInteger, NSRectEdge);
 
 typedef NS_ENUM(NSInteger, UIApplicationSceneClassicMode) {
     UIApplicationSceneClassicModeOriginalPad = 4,
@@ -228,6 +230,7 @@ typedef NS_ENUM(NSUInteger, NSTextTabType) {
 
 @interface NSTextTab ()
 - (id)initWithType:(NSTextTabType)type location:(CGFloat)loc;
+- (instancetype)initWithTextAlignment:(NSTextAlignment)alignment location:(CGFloat)loc options:(NSDictionary<NSTextTabOptionKey, id> *)options;
 @end
 
 @interface NSTextBlock : NSObject
@@ -235,7 +238,12 @@ typedef NS_ENUM(NSUInteger, NSTextTabType) {
 - (void)setBackgroundColor:(UIColor *)color;
 - (UIColor *)backgroundColor;
 - (void)setBorderColor:(UIColor *)color; // Convenience method sets all edges at once
+- (void)setBorderColor:(UIColor *)color forEdge:(NSRectEdge)edge;
 - (void)setVerticalAlignment:(NSTextBlockVerticalAlignment)alignment;
+- (void)setWidth:(CGFloat)val type:(NSTextBlockValueType)type forLayer:(NSTextBlockLayer)layer edge:(NSRectEdge)edge;
+- (CGFloat)valueForDimension:(NSTextBlockDimension)dimension;
+- (CGFloat)widthForLayer:(NSTextBlockLayer)layer edge:(NSRectEdge)edge;
+- (NSTextBlockVerticalAlignment)verticalAlignment;
 @end
 
 @interface NSTextBlock (Internal)
@@ -243,15 +251,20 @@ typedef NS_ENUM(NSUInteger, NSTextTabType) {
 @end
 
 @interface NSTextTable : NSTextBlock
+- (NSColor *)borderColorForEdge:(NSRectEdge)edge;
+- (NSTextTableLayoutAlgorithm)layoutAlgorithm;
 - (void)setNumberOfColumns:(NSUInteger)numCols;
 - (void)setCollapsesBorders:(BOOL)flag;
 - (void)setHidesEmptyCells:(BOOL)flag;
 - (void)setLayoutAlgorithm:(NSTextTableLayoutAlgorithm)algorithm;
 - (NSUInteger)numberOfColumns;
 - (void)release;
+- (BOOL)collapsesBorders;
+- (BOOL)hidesEmptyCells;
 @end
 
 @interface NSTextTableBlock : NSTextBlock
+- (NSColor *)borderColorForEdge:(NSRectEdge)edge;
 - (id)initWithTable:(NSTextTable *)table startingRow:(NSInteger)row rowSpan:(NSInteger)rowSpan startingColumn:(NSInteger)col columnSpan:(NSInteger)colSpan; // Designated initializer
 - (NSTextTable *)table;
 - (NSInteger)startingColumn;

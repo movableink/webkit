@@ -32,11 +32,13 @@ class RenderProgress;
     
 class AccessibilityProgressIndicator final : public AccessibilityRenderObject {
 public:
-    static Ref<AccessibilityProgressIndicator> create(RenderObject&);
+    static Ref<AccessibilityProgressIndicator> create(AXID, RenderObject&);
 
     bool isIndeterminate() const final;
 
 private:
+    explicit AccessibilityProgressIndicator(AXID, RenderObject&);
+
     AccessibilityRole determineAccessibilityRole() final;
 
     String valueDescription() const override;
@@ -45,11 +47,10 @@ private:
     float maxValueForRange() const override;
     float minValueForRange() const override;
 
-    explicit AccessibilityProgressIndicator(RenderObject&);
     HTMLProgressElement* progressElement() const;
     HTMLMeterElement* meterElement() const;
     
-    bool computeAccessibilityIsIgnored() const override;
+    bool computeIsIgnored() const override;
 };
 
 } // namespace WebCore

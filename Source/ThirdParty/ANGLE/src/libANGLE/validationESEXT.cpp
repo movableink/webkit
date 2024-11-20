@@ -319,6 +319,13 @@ bool ValidateClearTexImageCommon(const Context *context,
             const ImageIndex index = it.next();
             TextureTarget target   = index.getTarget();
             const Extents extents  = tex->getExtents(target, level);
+
+            if (!tex->getState().getImageDesc(index).format.valid())
+            {
+                ANGLE_VALIDATION_ERROR(GL_INVALID_OPERATION, kDestinationLevelNotDefined);
+                return false;
+            }
+
             if (area.has_value() &&
                 (area->x + area->width > extents.width || area->y + area->height > extents.height))
             {
@@ -337,6 +344,13 @@ bool ValidateClearTexImageCommon(const Context *context,
     {
         TextureTarget target  = NonCubeTextureTypeToTarget(tex->getType());
         const Extents extents = tex->getExtents(target, level);
+
+        if (!tex->getState().getImageDesc(target, level).format.valid())
+        {
+            ANGLE_VALIDATION_ERROR(GL_INVALID_OPERATION, kDestinationLevelNotDefined);
+            return false;
+        }
+
         if (area.has_value() &&
             (area->x + area->width > extents.width || area->y + area->height > extents.height ||
              area->z + area->depth > extents.depth))
@@ -4459,6 +4473,29 @@ bool ValidateLogicOpANGLE(const PrivateState &state,
     }
 
     return ValidateLogicOpCommon(state, errors, entryPoint, opcodePacked);
+}
+
+// GL_WEBKIT_explicit_resolve_target
+bool ValidateFramebufferResolveRenderbufferWEBKIT(const Context *context,
+                                                  angle::EntryPoint entryPoint,
+                                                  GLenum target,
+                                                  GLenum attachment,
+                                                  GLenum renderbuffertarget,
+                                                  RenderbufferID renderbuffer)
+{
+#if ANGLE_WEBKIT_EXPLICIT_RESOLVE_TARGET_ENABLED
+    if (!context->getExtensions().explicitResolveTargetWEBKIT)
+    {
+        ANGLE_VALIDATION_ERROR(GL_INVALID_OPERATION, kExtensionNotEnabled);
+        return false;
+    }
+
+    return ValidateFramebufferRenderbufferBase(context, entryPoint, target, attachment,
+                                               renderbuffertarget, renderbuffer);
+#else
+    UNIMPLEMENTED();
+    return false;
+#endif
 }
 
 bool ValidateFramebufferFoveationConfigQCOM(const Context *context,

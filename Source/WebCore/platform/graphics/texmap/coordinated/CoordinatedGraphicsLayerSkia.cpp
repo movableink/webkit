@@ -27,106 +27,92 @@
 #include "CoordinatedGraphicsLayer.h"
 
 #if USE(COORDINATED_GRAPHICS) && USE(SKIA)
+#include "CoordinatedTileBuffer.h"
 #include "DisplayListDrawingContext.h"
 #include "GLContext.h"
 #include "GraphicsContextSkia.h"
-#include "NicosiaBuffer.h"
 #include "PlatformDisplay.h"
-#include "SkiaAcceleratedBufferPool.h"
+#include "SkiaThreadedPaintingPool.h"
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 #include <skia/core/SkCanvas.h>
 #include <skia/core/SkColorSpace.h>
-#include <skia/gpu/GrBackendSurface.h>
+#include <skia/gpu/ganesh/GrBackendSurface.h>
 #include <skia/gpu/ganesh/SkSurfaceGanesh.h>
 #include <skia/gpu/ganesh/gl/GrGLBackendSurface.h>
 #include <skia/gpu/ganesh/gl/GrGLDirectContext.h>
-#include <skia/gpu/gl/GrGLInterface.h>
-#include <skia/gpu/gl/GrGLTypes.h>
-#include <wtf/FastMalloc.h>
+#include <skia/gpu/ganesh/gl/GrGLInterface.h>
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 #include <wtf/RunLoop.h>
+#include <wtf/SystemTracing.h>
 #include <wtf/Vector.h>
-#include <wtf/WorkerPool.h>
 
 namespace WebCore {
 
-Ref<Nicosia::Buffer> CoordinatedGraphicsLayer::paintTile(const IntRect& tileRect, const IntRect& mappedTileRect, float contentsScale)
+void CoordinatedGraphicsLayer::paintIntoGraphicsContext(GraphicsContext& context, const IntRect& dirtyRect) const
 {
-    auto paintIntoGraphicsContext = [&](GraphicsContext& context) {
-        IntRect initialClip(IntPoint::zero(), tileRect.size());
-        context.clip(initialClip);
+    IntRect initialClip(IntPoint::zero(), dirtyRect.size());
+    context.clip(initialClip);
 
-        if (!contentsOpaque()) {
-            context.setCompositeOperation(CompositeOperator::Copy);
-            context.fillRect(initialClip, Color::transparentBlack);
-            context.setCompositeOperation(CompositeOperator::SourceOver);
-        }
+    if (!contentsOpaque()) {
+        context.setCompositeOperation(CompositeOperator::Copy);
+        context.fillRect(initialClip, Color::transparentBlack);
+        context.setCompositeOperation(CompositeOperator::SourceOver);
+    }
 
-        context.translate(-tileRect.x(), -tileRect.y());
-        context.scale({ contentsScale, contentsScale });
-        paintGraphicsLayerContents(context, mappedTileRect);
-    };
+    auto scale = effectiveContentsScale();
+    FloatRect clipRect(dirtyRect);
+    clipRect.scale(1 / scale);
 
-    auto paintBuffer = [&](Nicosia::Buffer& buffer) {
+    context.translate(-dirtyRect.x(), -dirtyRect.y());
+    context.scale(scale);
+    paintGraphicsLayerContents(context, clipRect);
+}
+
+Ref<CoordinatedTileBuffer> CoordinatedGraphicsLayer::paintTile(const IntRect& dirtyRect)
+{
+    auto paintBuffer = [&](CoordinatedTileBuffer& buffer) {
         buffer.beginPainting();
 
-        RELEASE_ASSERT(buffer.surface());
-        if (auto* canvas = buffer.surface()->getCanvas()) {
+        if (auto* canvas = buffer.canvas()) {
+            canvas->save();
+            canvas->clear(SkColors::kTransparent);
+
             GraphicsContextSkia context(*canvas, buffer.isBackedByOpenGL() ? RenderingMode::Accelerated : RenderingMode::Unaccelerated, RenderingPurpose::LayerBacking);
-            paintIntoGraphicsContext(context);
+            paintIntoGraphicsContext(context, dirtyRect);
+
+            canvas->restore();
         }
 
         buffer.completePainting();
     };
 
     // Skia/GPU - accelerated rendering.
-    if (auto* acceleratedBufferPool = m_coordinator->skiaAcceleratedBufferPool()) {
-        PlatformDisplay::sharedDisplayForCompositing().skiaGLContext()->makeContextCurrent();
-        if (auto buffer = acceleratedBufferPool->acquireBuffer(tileRect.size(), !contentsOpaque())) {
-            paintBuffer(*buffer);
-            return Ref { *buffer };
-        }
-    }
+    auto* skiaGLContext = PlatformDisplay::sharedDisplay().skiaGLContext();
+    if (auto* acceleratedBitmapTexturePool = m_coordinator->skiaAcceleratedBitmapTexturePool(); acceleratedBitmapTexturePool && skiaGLContext->makeContextCurrent()) {
+        OptionSet<BitmapTexture::Flags> textureFlags;
+        if (!contentsOpaque())
+            textureFlags.add(BitmapTexture::Flags::SupportsAlpha);
 
-    // Skia/CPU - unaccelerated rendering.
-    auto buffer = Nicosia::UnacceleratedBuffer::create(tileRect.size(), contentsOpaque() ? Nicosia::Buffer::NoFlags : Nicosia::Buffer::SupportsAlpha);
-
-    // Non-blocking, multi-threaded variant.
-    if (auto* workerPool = m_coordinator->skiaUnacceleratedThreadedRenderingPool()) {
-        // Threaded rendering: record display lists, and asynchronously replay them using dedicated worker threads.
-        buffer->beginPainting();
-
-        auto recordingContext = makeUnique<DisplayList::DrawingContext>(tileRect.size());
-        paintIntoGraphicsContext(recordingContext->context());
-
-        workerPool->postTask([buffer = Ref { buffer }, recordingContext = WTFMove(recordingContext)] {
-            RELEASE_ASSERT(buffer->surface());
-            if (auto* canvas = buffer->surface()->getCanvas()) {
-                GraphicsContextSkia context(*canvas, RenderingMode::Unaccelerated, RenderingPurpose::LayerBacking);
-                recordingContext->replayDisplayList(context);
-            }
-            buffer->completePainting();
-        });
+        auto buffer = CoordinatedAcceleratedTileBuffer::create(acceleratedBitmapTexturePool->acquireTexture(dirtyRect.size(), textureFlags));
+        WTFBeginSignpost(this, PaintTile, "Skia accelerated, dirty region %ix%i+%i+%i", dirtyRect.x(), dirtyRect.y(), dirtyRect.width(), dirtyRect.height());
+        paintBuffer(buffer.get());
+        WTFEndSignpost(this, PaintTile);
 
         return buffer;
     }
 
-    // Blocking, single-thread variant.
-    paintBuffer(buffer.get());
-    return buffer;
-}
+    auto buffer = CoordinatedUnacceleratedTileBuffer::create(dirtyRect.size(), contentsOpaque() ? CoordinatedTileBuffer::NoFlags : CoordinatedTileBuffer::SupportsAlpha);
 
-Ref<Nicosia::Buffer> CoordinatedGraphicsLayer::paintImage(Image& image)
-{
-    // FIXME: can we just get the image texture if accelerated or upload the pixels if not acclerated instead of painting?.
-    // Always render unaccelerated here for now.
-    auto buffer = Nicosia::UnacceleratedBuffer::create(IntSize(image.size()), !image.currentFrameKnownToBeOpaque() ? Nicosia::Buffer::SupportsAlpha : Nicosia::Buffer::NoFlags);
-    buffer->beginPainting();
-    RELEASE_ASSERT(buffer->surface());
-    if (auto* canvas = buffer->surface()->getCanvas()) {
-        GraphicsContextSkia context(*canvas, RenderingMode::Unaccelerated, RenderingPurpose::LayerBacking);
-        IntRect rect { IntPoint::zero(), IntSize { image.size() } };
-        context.drawImage(image, rect, rect, ImagePaintingOptions(CompositeOperator::Copy));
+    // Skia/CPU - threaded unaccelerated rendering.
+    if (auto* workerPool = m_coordinator->skiaThreadedPaintingPool()) {
+        workerPool->postPaintingTask(buffer, *this, dirtyRect);
+        return buffer;
     }
-    buffer->completePainting();
+
+    // Blocking, single-thread variant.
+    WTFBeginSignpost(this, PaintTile, "Skia unaccelerated, dirty region %ix%i+%i+%i", dirtyRect.x(), dirtyRect.y(), dirtyRect.width(), dirtyRect.height());
+    paintBuffer(buffer.get());
+    WTFEndSignpost(this, PaintTile);
     return buffer;
 }
 

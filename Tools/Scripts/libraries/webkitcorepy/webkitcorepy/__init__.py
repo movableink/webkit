@@ -22,8 +22,8 @@
 
 import sys
 
-if sys.version_info < (3, 6):
-    raise ImportError("webkitcorepy requires Python 3.6 or above")
+if sys.version_info < (3, 9):  # noqa: UP036
+    raise ImportError("webkitcorepy requires Python 3.9 or above")
 
 import logging
 import platform
@@ -52,11 +52,11 @@ from webkitcorepy.null_context import NullContext
 from webkitcorepy.filtered_call import filtered_call
 from webkitcorepy.partial_proxy import PartialProxy
 
-version = Version(1, 0, 0)
+version = Version(1, 0, 1)
 
 from webkitcorepy.autoinstall import Package, AutoInstall
 if sys.version_info > (3, 0):
-    AutoInstall.register(Package('mock', Version(4)))
+    AutoInstall.register(Package('mock', Version(5, 1, 0), wheel=True))
 else:
     AutoInstall.register(Package('mock', Version(3, 0, 5)))
     if platform.system() == 'Windows':
@@ -64,6 +64,8 @@ else:
 
 if sys.version_info >= (3, 12):
     AutoInstall.register(Package('setuptools', Version(68, 1, 2)))
+elif sys.version_info >= (3, 9):
+    AutoInstall.register(Package('setuptools', Version(59, 8, 0)))
 elif sys.version_info >= (3, 0):
     AutoInstall.register(Package('setuptools', Version(56, 0, 0)))
 else:
@@ -75,7 +77,7 @@ else:
     AutoInstall.register(Package('certifi', Version(2021, 10, 8)))
 
 AutoInstall.register(Package('chardet', Version(3, 0, 4)))
-AutoInstall.register(Package('dateutil', Version(2, 8, 1), pypi_name='python-dateutil'))
+AutoInstall.register(Package('dateutil', Version(2, 8, 1), pypi_name='python-dateutil', wheel=True))
 AutoInstall.register(Package('entrypoints', Version(0, 3, 0)))
 AutoInstall.register(Package('funcsigs', Version(1, 0, 2)))
 AutoInstall.register(Package('idna', Version(2, 10)))
@@ -101,7 +103,7 @@ AutoInstall.register(Package('tblib', Version(1, 7, 0)))
 AutoInstall.register(Package('urllib3', Version(1, 26, 17)))
 
 AutoInstall.register(Package('wheel', Version(0, 35, 1)))
-AutoInstall.register(Package('cffi', Version(1, 15, 1)))
+AutoInstall.register(Package('cffi', Version(1, 17, 1)))
 
 if sys.version_info > (3, 0):
     if sys.version_info >= (3, 9):

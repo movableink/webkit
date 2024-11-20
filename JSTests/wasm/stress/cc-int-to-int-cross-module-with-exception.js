@@ -1,5 +1,5 @@
 //@ skip unless $isWasmPlatform
-//@ runDefaultWasm("-m", "--webAssemblyFunctionIndexRangeToCompile=0:5", "--useOMGJIT=0", "--useInterpretedJSEntryWrappers=1")
+//@ runDefaultWasm("-m", "--wasmFunctionIndexRangeToCompile=0:5", "--useOMGJIT=0")
 
 import { instantiate } from "../wabt-wrapper.js"
 import * as assert from "../assert.js"
@@ -229,7 +229,7 @@ async function test() {
 
     tbl.set(0, functionA)
 
-    for (let i = 0; i < 5; ++i) {
+    for (let i = 0; i < 50; ++i) {
         doTest(setupA, setupB, functionB)
     }
 }

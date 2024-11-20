@@ -182,43 +182,6 @@ String quoteAndEscapeNonPrintables(StringView s)
     return result.toString();
 }
 
-static inline bool isRenderInlineEmpty(const RenderInline& inlineRenderer)
-{
-    if (isEmptyInline(inlineRenderer))
-        return true;
-
-    for (auto& child : childrenOfType<RenderObject>(inlineRenderer)) {
-        if (child.isFloatingOrOutOfFlowPositioned())
-            continue;
-        auto isChildEmpty = false;
-        if (auto* renderInline = dynamicDowncast<RenderInline>(child))
-            isChildEmpty = isRenderInlineEmpty(*renderInline);
-        else if (auto* text = dynamicDowncast<RenderText>(child))
-            isChildEmpty = !text->linesBoundingBox().height();
-        if (!isChildEmpty)
-            return false;
-    }
-    return true;
-}
-
-static inline bool hasNonEmptySibling(const RenderInline& inlineRenderer)
-{
-    auto* parent = inlineRenderer.parent();
-    if (!parent)
-        return false;
-
-    for (auto& sibling : childrenOfType<RenderObject>(*parent)) {
-        if (&sibling == &inlineRenderer || sibling.isFloatingOrOutOfFlowPositioned())
-            continue;
-        auto* siblingRendererInline = dynamicDowncast<RenderInline>(sibling);
-        if (!siblingRendererInline)
-            return true;
-        if (siblingRendererInline->mayAffectLayout() || !isRenderInlineEmpty(*siblingRendererInline))
-            return true;
-    }
-    return false;
-}
-
 inline bool shouldEnableSubpixelPrecisionForTextDump(const Document& document)
 {
     // If LBSE is activated and the document contains outermost <svg> elements, generate the text
@@ -327,15 +290,19 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
         bool overridden = o.style().borderImage().overridesBorderWidths();
         if (box->isFieldset()) {
             const auto& block = downcast<RenderBlock>(*box);
-            if (o.style().blockFlowDirection() == BlockFlowDirection::TopToBottom)
+            switch (o.writingMode().blockDirection()) {
+            case FlowDirection::TopToBottom:
                 borderTop -= block.intrinsicBorderForFieldset();
-            else if (o.style().blockFlowDirection() == BlockFlowDirection::BottomToTop)
+                break;
+            case FlowDirection::BottomToTop:
                 borderBottom -= block.intrinsicBorderForFieldset();
-            else if (o.style().blockFlowDirection() == BlockFlowDirection::LeftToRight)
+                break;
+            case FlowDirection::LeftToRight:
                 borderLeft -= block.intrinsicBorderForFieldset();
-            else if (o.style().blockFlowDirection() == BlockFlowDirection::RightToLeft)
+                break;
+            case FlowDirection::RightToLeft:
                 borderRight -= block.intrinsicBorderForFieldset();
-            
+            }
         }
         if (borderTop || borderRight || borderBottom || borderLeft) {
             ts << " [border:";
@@ -722,6 +689,7 @@ static void writeLayers(TextStream& ts, const RenderLayer& rootLayer, RenderLaye
         paintDirtyRect.setWidth(std::max<LayoutUnit>(paintDirtyRect.width(), rootLayer.renderBox()->layoutOverflowRect().maxX()));
         paintDirtyRect.setHeight(std::max<LayoutUnit>(paintDirtyRect.height(), rootLayer.renderBox()->layoutOverflowRect().maxY()));
         layer.setSize(layer.size().expandedTo(snappedIntSize(maxLayoutOverflow(layer.renderBox()), LayoutPoint(0, 0))));
+        layer.setNeedsPositionUpdate();
     }
     
     // Calculate the clip rects we should use.

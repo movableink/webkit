@@ -48,7 +48,10 @@
 #include "TextIterator.h"
 #include "VisibleSelection.h"
 #include <unicode/ubrk.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/TextBreakIterator.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -1994,3 +1997,5 @@ std::pair<VisiblePosition, WithinWordBoundary> wordBoundaryForPositionWithoutCro
 }
 
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

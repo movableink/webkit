@@ -37,15 +37,21 @@ public:
     ScriptExecutionContext* scriptExecutionContext() const { return ContextDestructionObserver::scriptExecutionContext(); }
 
     ~JSTestCallbackFunctionRethrow() final;
-    JSCallbackDataStrong* callbackData() { return m_data; }
+    JSCallbackData* callbackData() { return m_data; }
 
     // Functions
-    CallbackResult<typename IDLDOMString::ImplementationType> handleEvent(typename IDLSequence<IDLLong>::ParameterType argument) override;
+    CallbackResult<typename IDLDOMString::CallbackReturnType> handleEventRethrowingException(typename IDLSequence<IDLLong>::ParameterType argument) override;
 
 private:
     JSTestCallbackFunctionRethrow(JSC::JSObject*, JSDOMGlobalObject*);
 
-    JSCallbackDataStrong* m_data;
+    bool hasCallback() const final { return m_data && m_data->callback(); }
+
+    void visitJSFunction(JSC::AbstractSlotVisitor&) override;
+
+    void visitJSFunction(JSC::SlotVisitor&) override;
+
+    JSCallbackData* m_data;
 };
 
 JSC::JSValue toJS(TestCallbackFunctionRethrow&);

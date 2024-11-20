@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Alexander Kellett <lypanov@kde.org>
  * Copyright (C) 2006 Oliver Hunt <ojh16@student.canterbury.ac.nz>
  * Copyright (C) 2007 Nikolas Zimmermann <zimmermann@kde.org>
@@ -53,12 +53,12 @@
 #include "SVGVisitedRendererTracking.h"
 #include "TransformState.h"
 #include "VisiblePosition.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGText);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGText);
 
 RenderSVGText::RenderSVGText(SVGTextElement& element, RenderStyle&& style)
     : RenderSVGBlock(Type::SVGText, element, WTFMove(style))
@@ -83,7 +83,12 @@ Ref<SVGTextElement> RenderSVGText::protectedTextElement() const
 
 bool RenderSVGText::isChildAllowed(const RenderObject& child, const RenderStyle&) const
 {
-    return child.isInline();
+    auto isEmptySVGInlineText = [](const RenderObject* object) {
+        const auto svgInlineText = dynamicDowncast<RenderSVGInlineText>(object);
+        return svgInlineText && svgInlineText->hasEmptyText();
+    };
+
+    return child.isInline() && !isEmptySVGInlineText(&child);
 }
 
 RenderSVGText* RenderSVGText::locateRenderSVGTextAncestor(RenderObject& start)
@@ -137,7 +142,7 @@ static inline bool findPreviousAndNextAttributes(RenderElement& start, RenderSVG
 
 inline bool RenderSVGText::shouldHandleSubtreeMutations() const
 {
-    if (beingDestroyed() || !everHadLayout()) {
+    if (beingDestroyed() || !m_hasPerformedLayout) {
         ASSERT(m_layoutAttributes.isEmpty());
         ASSERT(!m_layoutAttributesBuilder.numberOfTextPositioningElements());
         return false;
@@ -266,7 +271,7 @@ void RenderSVGText::subtreeTextDidChange(RenderSVGInlineText* text)
 {
     ASSERT(text);
     ASSERT(!beingDestroyed());
-    if (!everHadLayout()) {
+    if (!m_hasPerformedLayout) {
         ASSERT(m_layoutAttributes.isEmpty());
         ASSERT(!m_layoutAttributesBuilder.numberOfTextPositioningElements());
         return;
@@ -319,7 +324,7 @@ void RenderSVGText::layout()
         updateCachedBoundariesInParents = true;
     }
 
-    if (!everHadLayout()) {
+    if (!m_hasPerformedLayout) {
         // When laying out initially, collect all layout attributes, build the character data map,
         // and propogate resulting SVGLayoutAttributes to all RenderSVGInlineText children in the subtree.
         ASSERT(m_layoutAttributes.isEmpty());
@@ -377,7 +382,7 @@ void RenderSVGText::layout()
     }
 
     // FIXME: We need to find a way to only layout the child boxes, if needed.
-    auto layoutChanged = everHadLayout() && selfNeedsLayout();
+    auto layoutChanged = m_hasPerformedLayout && selfNeedsLayout();
     auto oldBoundaries = objectBoundingBox();
 
     if (!firstChild()) {
@@ -422,6 +427,7 @@ void RenderSVGText::layout()
 
     repainter.repaintAfterLayout();
     clearNeedsLayout();
+    m_hasPerformedLayout = true;
 }
 
 bool RenderSVGText::nodeAtFloatPoint(const HitTestRequest& request, HitTestResult& result, const FloatPoint& pointInParent, HitTestAction hitTestAction)
@@ -493,13 +499,11 @@ void RenderSVGText::applyTransform(TransformationMatrix& transform, const Render
 
 VisiblePosition RenderSVGText::positionForPoint(const LayoutPoint& pointInContents, HitTestSource source, const RenderFragmentContainer* fragment)
 {
-    LegacyRootInlineBox* rootBox = firstRootBox();
+    auto* rootBox = legacyRootBox();
     if (!rootBox)
         return createVisiblePosition(0, Affinity::Downstream);
 
-    ASSERT(!rootBox->nextRootBox());
     ASSERT(childrenInline());
-
     LegacyInlineBox* closestBox = downcast<SVGRootInlineBox>(*rootBox).closestLeafChildForPosition(pointInContents);
     if (!closestBox)
         return createVisiblePosition(0, Affinity::Downstream);

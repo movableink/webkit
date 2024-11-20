@@ -135,6 +135,11 @@ namespace FullScreenTri_vert
 constexpr size_t kArrayLen = 0x00000001;
 }  // namespace FullScreenTri_vert
 
+namespace GenerateFragmentShadingRate_comp
+{
+constexpr size_t kArrayLen = 0x00000001;
+}  // namespace GenerateFragmentShadingRate_comp
+
 namespace GenerateMipmap_comp
 {
 enum MaxSupportedDest
@@ -181,27 +186,36 @@ constexpr size_t kArrayLen = 0x00000030;
 
 namespace ImageCopy_frag
 {
-enum SrcType
+enum DstFormat
 {
-    kSrcIs2D      = 0x00000000,
-    kSrcIs2DArray = 0x00000001,
-    kSrcIs3D      = 0x00000002,
-    kSrcIsYUV     = 0x00000003,
-};
-enum DestFormat
-{
-    kDestIsFloat = 0x00000000,
-    kDestIsSint  = 0x00000004,
-    kDestIsUint  = 0x00000008,
+    kDstIsFloat = 0x00000000,
+    kDstIsSint  = 0x00000001,
+    kDstIsUint  = 0x00000002,
 };
 enum SrcFormat
 {
     kSrcIsFloat = 0x00000000,
-    kSrcIsSint  = 0x00000010,
-    kSrcIsUint  = 0x00000020,
+    kSrcIsSint  = 0x00000004,
+    kSrcIsUint  = 0x00000008,
 };
-constexpr size_t kArrayLen = 0x0000002C;
+enum SrcType
+{
+    kSrcIs2D      = 0x00000000,
+    kSrcIs2DArray = 0x00000010,
+    kSrcIs3D      = 0x00000020,
+};
+constexpr size_t kArrayLen = 0x0000002B;
 }  // namespace ImageCopy_frag
+
+namespace ImageCopyFloat_frag
+{
+enum SrcType
+{
+    kSrcIsYUV  = 0x00000000,
+    kSrcIs2DMS = 0x00000001,
+};
+constexpr size_t kArrayLen = 0x00000002;
+}  // namespace ImageCopyFloat_frag
 
 namespace OverlayDraw_frag
 {
@@ -256,6 +270,9 @@ class ShaderLibrary final : angle::NonCopyable
     angle::Result getFullScreenTri_vert(Context *context,
                                         uint32_t shaderFlags,
                                         RefCounted<ShaderModule> **shaderOut);
+    angle::Result getGenerateFragmentShadingRate_comp(Context *context,
+                                                      uint32_t shaderFlags,
+                                                      RefCounted<ShaderModule> **shaderOut);
     angle::Result getGenerateMipmap_comp(Context *context,
                                          uint32_t shaderFlags,
                                          RefCounted<ShaderModule> **shaderOut);
@@ -265,6 +282,9 @@ class ShaderLibrary final : angle::NonCopyable
     angle::Result getImageCopy_frag(Context *context,
                                     uint32_t shaderFlags,
                                     RefCounted<ShaderModule> **shaderOut);
+    angle::Result getImageCopyFloat_frag(Context *context,
+                                         uint32_t shaderFlags,
+                                         RefCounted<ShaderModule> **shaderOut);
     angle::Result getOverlayDraw_frag(Context *context,
                                       uint32_t shaderFlags,
                                       RefCounted<ShaderModule> **shaderOut);
@@ -292,10 +312,14 @@ class ShaderLibrary final : angle::NonCopyable
         mExportStencil_frag_shaders[InternalShader::ExportStencil_frag::kArrayLen];
     RefCounted<ShaderModule>
         mFullScreenTri_vert_shaders[InternalShader::FullScreenTri_vert::kArrayLen];
+    RefCounted<ShaderModule> mGenerateFragmentShadingRate_comp_shaders
+        [InternalShader::GenerateFragmentShadingRate_comp::kArrayLen];
     RefCounted<ShaderModule>
         mGenerateMipmap_comp_shaders[InternalShader::GenerateMipmap_comp::kArrayLen];
     RefCounted<ShaderModule> mImageClear_frag_shaders[InternalShader::ImageClear_frag::kArrayLen];
     RefCounted<ShaderModule> mImageCopy_frag_shaders[InternalShader::ImageCopy_frag::kArrayLen];
+    RefCounted<ShaderModule>
+        mImageCopyFloat_frag_shaders[InternalShader::ImageCopyFloat_frag::kArrayLen];
     RefCounted<ShaderModule> mOverlayDraw_frag_shaders[InternalShader::OverlayDraw_frag::kArrayLen];
     RefCounted<ShaderModule> mOverlayDraw_vert_shaders[InternalShader::OverlayDraw_vert::kArrayLen];
 };

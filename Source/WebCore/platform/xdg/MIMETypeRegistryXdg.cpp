@@ -26,6 +26,8 @@
 #include "config.h"
 #include "MIMETypeRegistry.h"
 
+#include <wtf/text/MakeString.h>
+
 #define XDG_PREFIX _wk_xdg
 #include "xdgmime.h"
 
@@ -38,7 +40,7 @@ String MIMETypeRegistry::mimeTypeForExtension(StringView string)
         return String();
 
     // Build any filename with the given extension.
-    String filename = makeString("a."_s, string);
+    auto filename = makeString("a."_s, string);
     if (const char* mimeType = xdg_mime_get_mime_type_from_file_name(filename.utf8().data())) {
         if (mimeType != XDG_MIME_TYPE_UNKNOWN)
             return String::fromUTF8(mimeType);
@@ -60,6 +62,7 @@ String MIMETypeRegistry::preferredExtensionForMIMEType(const String& mimeType)
     if (mimeType.startsWith("text/plain"_s))
         return String();
 
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
     String returnValue;
     char* extension;
     if (xdg_mime_get_simple_globs(mimeType.utf8().data(), &extension, 1)) {
@@ -67,6 +70,7 @@ String MIMETypeRegistry::preferredExtensionForMIMEType(const String& mimeType)
             returnValue = String::fromUTF8(extension + 1);
         free(extension);
     }
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     return returnValue;
 }
 
@@ -75,6 +79,7 @@ Vector<String> MIMETypeRegistry::extensionsForMIMEType(const String& mimeType)
     if (mimeType.isEmpty())
         return { };
 
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
     Vector<String> returnValue;
     char* extensions[MAX_EXTENSION_COUNT];
     int n = xdg_mime_get_simple_globs(mimeType.utf8().data(), extensions, MAX_EXTENSION_COUNT);
@@ -82,6 +87,7 @@ Vector<String> MIMETypeRegistry::extensionsForMIMEType(const String& mimeType)
         returnValue.append(String::fromUTF8(extensions[i]));
         free(extensions[i]);
     }
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     return returnValue;
 }
 

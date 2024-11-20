@@ -59,13 +59,12 @@ public:
 
     RefPtr<AudioBus> createBus(float sampleRate, bool mixToMono); // Returns nullptr on error
 
-    const uint8_t* data() const { return m_data.data(); }
     size_t dataSize() const { return m_data.size(); }
     std::span<const uint8_t> span() const { return m_data; }
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
-    const void* logIdentifier() const final { return m_logIdentifier; }
+    uint64_t logIdentifier() const final { return m_logIdentifier; }
     WTFLogChannel& logChannel() const final;
     ASCIILiteral logClassName() const final { return "AudioFileReaderCocoa"_s; }
 #endif
@@ -92,7 +91,7 @@ private:
 
 #if !RELEASE_LOG_DISABLED
     const Ref<Logger> m_logger;
-    const void* m_logIdentifier;
+    const uint64_t m_logIdentifier;
 #endif
 
 };

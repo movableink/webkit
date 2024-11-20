@@ -47,15 +47,18 @@
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
 #include <wtf/StdMap.h>
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 
 GST_DEBUG_CATEGORY(webkit_webrtcenc_debug);
 #define GST_CAT_DEFAULT webkit_webrtcenc_debug
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(GStreamerVideoEncoderFactory);
+
 class GStreamerEncodedImageBuffer : public webrtc::EncodedImageBufferInterface {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(x);
 
 public:
     static rtc::scoped_refptr<GStreamerEncodedImageBuffer> create(GRefPtr<GstSample>&& sample)
@@ -84,7 +87,7 @@ protected:
 };
 
 class GStreamerVideoEncoder : public webrtc::VideoEncoder {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(GStreamerVideoEncoder);
 public:
     GStreamerVideoEncoder(const webrtc::SdpVideoFormat&)
         : GStreamerVideoEncoder()
@@ -379,7 +382,7 @@ std::unique_ptr<webrtc::VideoEncoder> GStreamerVideoEncoderFactory::Create(const
         return webrtc::CreateVp8Encoder(environment);
     }
 
-    if (format == webrtc::SdpVideoFormat::H264()) {
+    if (format.name == "H264") {
 #if WEBKIT_LIBWEBRTC_OPENH264_ENCODER
         GST_INFO("Using OpenH264 libwebrtc encoder.");
         return webrtc::CreateH264Encoder(environment, webrtc::H264EncoderSettings::Parse(format));

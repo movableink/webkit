@@ -32,8 +32,11 @@
 #include "ScrollAnimator.h"
 #include "ScrollTypes.h"
 #include <wtf/SortedArrayMap.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(KeyboardScrollingAnimator);
 
 KeyboardScrollingAnimator::KeyboardScrollingAnimator(ScrollableArea& scrollableArea)
     : m_scrollableArea(scrollableArea)
@@ -166,7 +169,7 @@ float KeyboardScrollingAnimator::scrollDistance(ScrollDirection direction, Scrol
     return step;
 }
 
-RectEdges<bool> KeyboardScrollingAnimator::rubberbandableDirections() const
+RectEdges<bool> KeyboardScrollingAnimator::scrollingDirections() const
 {
     RectEdges<bool> edges;
 
@@ -211,7 +214,7 @@ bool KeyboardScrollingAnimator::beginKeyboardScrollGesture(ScrollDirection direc
     if (m_scrollTriggeringKeyIsPressed)
         return true;
 
-    if (!rubberbandableDirections().at(boxSideForDirection(direction)))
+    if (!scrollingDirections().at(boxSideForDirection(direction)))
         return false;
 
     if (granularity == ScrollGranularity::Document || (!isKeyRepeat && granularity == ScrollGranularity::Page)) {

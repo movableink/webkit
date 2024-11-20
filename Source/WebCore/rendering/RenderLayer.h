@@ -63,6 +63,8 @@ namespace WTF {
 class TextStream;
 }
 
+void outputLayerPositionTreeRecursive(TextStream&, const WebCore::RenderLayer&, unsigned);
+
 namespace WebCore {
 
 class CSSFilter;
@@ -152,7 +154,7 @@ struct ScrollRectToVisibleOptions {
 using ScrollingScope = uint64_t;
 
 class RenderLayer final : public CanMakeSingleThreadWeakPtr<RenderLayer>, public CanMakeCheckedPtr<RenderLayer> {
-    WTF_MAKE_ISO_ALLOCATED(RenderLayer);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderLayer);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderLayer);
 public:
     friend class RenderReplica;
@@ -160,6 +162,7 @@ public:
     friend class RenderLayerBacking;
     friend class RenderLayerCompositor;
     friend class RenderLayerScrollableArea;
+    friend void ::outputLayerPositionTreeRecursive(TextStream&, const WebCore::RenderLayer&, unsigned);
 
     explicit RenderLayer(RenderLayerModelObject&);
     ~RenderLayer();
@@ -179,7 +182,7 @@ public:
     RenderLayer* firstChild() const { return m_first; }
     RenderLayer* lastChild() const { return m_last; }
     bool isDescendantOf(const RenderLayer&) const;
-    RenderLayer* commonAncestorWithLayer(const RenderLayer&) const;
+    WEBCORE_EXPORT RenderLayer* commonAncestorWithLayer(const RenderLayer&) const;
 
     // This does an ancestor tree walk. Avoid it!
     const RenderLayer* root() const
@@ -193,12 +196,8 @@ public:
     void addChild(RenderLayer& newChild, RenderLayer* beforeChild = nullptr);
     void removeChild(RenderLayer&);
 
-    enum class LayerChangeTiming {
-        StyleChange,
-        RenderTreeConstruction,
-    };
-    void insertOnlyThisLayer(LayerChangeTiming);
-    void removeOnlyThisLayer(LayerChangeTiming);
+    void insertOnlyThisLayer();
+    void removeOnlyThisLayer();
 
     bool isNormalFlowOnly() const { return m_isNormalFlowOnly; }
 
@@ -227,6 +226,7 @@ public:
     void dirtyNormalFlowList();
     void dirtyZOrderLists();
     void dirtyStackingContextZOrderLists();
+    void dirtyHiddenStackingContextAncestorZOrderLists();
 
     bool normalFlowListDirty() const { return m_normalFlowListDirty; }
     bool zOrderListsDirty() const { return m_zOrderListsDirty; }
@@ -240,6 +240,23 @@ public:
 
     // Convert a point in absolute coords into layer coords, taking transforms into account
     LayoutPoint absoluteToContents(const LayoutPoint&) const;
+
+    void setNeedsPositionUpdate();
+    void setSelfAndChildrenNeedPositionUpdate();
+    void setSelfAndDescendantsNeedPositionUpdate();
+
+private:
+    enum class LayerPositionUpdates {
+        NeedsPositionUpdate  = 1 << 0,
+        DescendantNeedsPositionUpdate = 1 << 1,
+        AllChildrenNeedPositionUpdate = 1 << 2,
+        AllDescendantsNeedPositionUpdate = 1 << 3,
+    };
+
+    bool needsPositionUpdate() const;
+    void clearLayerPositionDirtyBits() { m_layerPositionDirtyBits = { }; }
+
+    OptionSet<LayerPositionUpdates> m_layerPositionDirtyBits;
 
 protected:
     void destroy();
@@ -414,7 +431,7 @@ public:
     bool descendantDependentFlagsAreDirty() const
     {
         return m_visibleDescendantStatusDirty || m_visibleContentStatusDirty || m_hasSelfPaintingLayerDescendantDirty
-            || m_hasNotIsolatedBlendingDescendantsStatusDirty;
+            || m_hasNotIsolatedBlendingDescendantsStatusDirty || m_hasAlwaysIncludedInZOrderListsDescendantsStatusDirty;
     }
 
     bool isPaintingSVGResourceLayer() const { return m_isPaintingSVGResourceLayer; }
@@ -444,13 +461,13 @@ public:
     RenderLayer* reflectionLayer() const;
     bool isReflectionLayer(const RenderLayer&) const;
 
-    const LayoutPoint& location() const { return m_topLeft; }
+    inline const LayoutPoint& location() const;
     void setLocation(const LayoutPoint& p) { m_topLeft = p; }
 
-    const IntSize& size() const { return m_layerSize; }
+    inline const IntSize& size() const;
     void setSize(const IntSize& size) { m_layerSize = size; } // Only public for RenderTreeAsText.
 
-    LayoutRect rect() const { return LayoutRect(location(), size()); }
+    inline LayoutRect rect() const;
 
     IntSize visibleSize() const;
 
@@ -499,7 +516,7 @@ public:
 
     void updateLayerPositionsAfterStyleChange();
     enum class CanUseSimplifiedRepaintPass : uint8_t { No, Yes };
-    void updateLayerPositionsAfterLayout(bool isRelayoutingSubtree, bool didFullRepaint, CanUseSimplifiedRepaintPass);
+    void updateLayerPositionsAfterLayout(RenderElement::LayoutIdentifier, bool didFullRepaint, CanUseSimplifiedRepaintPass);
     void updateLayerPositionsAfterOverflowScroll();
     void updateLayerPositionsAfterDocumentScroll();
 
@@ -558,6 +575,8 @@ public:
         RequestState hasPaintedContent { RequestState::Unknown };
     };
 
+    bool isVisibilityHiddenOrOpacityZero() const;
+
     // Returns true if this layer has visible content (ignoring any child layers).
     bool isVisuallyNonEmpty(PaintedContentRequest* = nullptr) const;
     // True if this layer container renderers that paint.
@@ -574,7 +593,7 @@ public:
     RenderLayer* enclosingAncestorForPosition(PositionType) const;
     
     RenderLayer* enclosingLayerInContainingBlockOrder() const;
-    RenderLayer* enclosingContainingBlockLayer(CrossFrameBoundaries) const;
+    WEBCORE_EXPORT RenderLayer* enclosingContainingBlockLayer(CrossFrameBoundaries) const;
     RenderLayer* enclosingFrameRenderLayer() const;
 
     // The layer relative to which clipping rects for this layer are computed.
@@ -618,7 +637,7 @@ public:
         PaintingCompositingForegroundPhase    = 1 << 6,
         PaintingCompositingMaskPhase          = 1 << 7,
         PaintingCompositingClipPathPhase      = 1 << 8,
-        PaintingCompositingScrollingPhase     = 1 << 9,
+        PaintingOverflowContainer             = 1 << 9,
         PaintingOverflowContents              = 1 << 10,
         PaintingRootBackgroundOnly            = 1 << 11,
         PaintingSkipRootBackground            = 1 << 12,
@@ -645,7 +664,7 @@ public:
         IncludeOverlayScrollbarSize = 1 << 1,
     };
 
-    static constexpr OptionSet<ClipRectsOption> clipRectOptionsForPaintingOverflowControls = { };
+    static constexpr OptionSet<ClipRectsOption> clipRectOptionsForPaintingOverflowContents = { };
     static constexpr OptionSet<ClipRectsOption> clipRectDefaultOptions = { ClipRectsOption::RespectOverflowClip };
 
     struct ClipRectsContext {
@@ -653,13 +672,16 @@ public:
             : rootLayer(inRootLayer)
             , clipRectsType(inClipRectsType)
             , options(inOptions)
-        { }
+        {
+            if (inClipRectsType == RootRelativeClipRects)
+                options.add(ClipRectsOption::IncludeOverlayScrollbarSize);
+        }
         const RenderLayer* rootLayer;
         ClipRectsType clipRectsType;
         OptionSet<ClipRectsOption> options;
-        
+
         bool respectOverflowClip() const { return options.contains(ClipRectsOption::RespectOverflowClip); }
-        OverlayScrollbarSizeRelevancy overlayScrollbarSizeRelevancy() const { return options.contains(ClipRectsOption::IncludeOverlayScrollbarSize) ? IncludeOverlayScrollbarSize : IgnoreOverlayScrollbarSize; }
+        OverlayScrollbarSizeRelevancy overlayScrollbarSizeRelevancy() const { return options.contains(ClipRectsOption::IncludeOverlayScrollbarSize) ? OverlayScrollbarSizeRelevancy::IncludeOverlayScrollbarSize : OverlayScrollbarSizeRelevancy::IgnoreOverlayScrollbarSize; }
     };
 
     // This method figures out our layerBounds in coordinates relative to
@@ -675,7 +697,12 @@ public:
         
     LayoutRect childrenClipRect() const; // Returns the foreground clip rect of the layer in the document's coordinate space.
     LayoutRect selfClipRect() const; // Returns the background clip rect of the layer in the document's coordinate space.
-    LayoutRect localClipRect(bool& clipExceedsBounds) const; // Returns the background clip rect of the layer in the local coordinate space.
+
+    enum class LocalClipRectMode {
+        IncludeCompositingState,
+        ExcludeCompositingState,
+    };
+    LayoutRect localClipRect(bool& clipExceedsBounds, LocalClipRectMode = LocalClipRectMode::IncludeCompositingState) const; // Returns the background clip rect of the layer in the local coordinate space.
 
     bool clipCrossesPaintingBoundary() const;
 
@@ -683,17 +710,18 @@ public:
     bool intersectsDamageRect(const LayoutRect& layerBounds, const LayoutRect& damageRect, const RenderLayer* rootLayer, const LayoutSize& offsetFromRoot, const std::optional<LayoutRect>& cachedBoundingBox = std::nullopt) const;
 
     enum CalculateLayerBoundsFlag {
-        IncludeSelfTransform                    = 1 << 0,
-        UseLocalClipRectIfPossible              = 1 << 1,
-        IncludeFilterOutsets                    = 1 << 2,
-        IncludePaintedFilterOutsets             = 1 << 3,
-        ExcludeHiddenDescendants                = 1 << 4,
-        DontConstrainForMask                    = 1 << 5,
-        IncludeCompositedDescendants            = 1 << 6,
-        UseFragmentBoxesExcludingCompositing    = 1 << 7,
-        UseFragmentBoxesIncludingCompositing    = 1 << 8,
-        IncludeRootBackgroundPaintingArea       = 1 << 9,
-        PreserveAncestorFlags                   = 1 << 10,
+        IncludeSelfTransform                           = 1 << 0,
+        UseLocalClipRectIfPossible                     = 1 << 1,
+        IncludeFilterOutsets                           = 1 << 2,
+        IncludePaintedFilterOutsets                    = 1 << 3,
+        ExcludeHiddenDescendants                       = 1 << 4,
+        DontConstrainForMask                           = 1 << 5,
+        IncludeCompositedDescendants                   = 1 << 6,
+        UseFragmentBoxesExcludingCompositing           = 1 << 7,
+        UseFragmentBoxesIncludingCompositing           = 1 << 8,
+        IncludeRootBackgroundPaintingArea              = 1 << 9,
+        PreserveAncestorFlags                          = 1 << 10,
+        UseLocalClipRectExcludingCompositingIfPossible = 1 << 11,
     };
     static constexpr OptionSet<CalculateLayerBoundsFlag> defaultCalculateLayerBoundsFlags() { return { IncludeSelfTransform, UseLocalClipRectIfPossible, IncludePaintedFilterOutsets, UseFragmentBoxesExcludingCompositing }; }
 
@@ -727,6 +755,7 @@ public:
     void setRepaintStatus(RepaintStatus status) { m_repaintStatus = status; }
     RepaintStatus repaintStatus() const { return m_repaintStatus; }
     bool needsFullRepaint() const { return m_repaintStatus == RepaintStatus::NeedsFullRepaint || m_repaintStatus == RepaintStatus::NeedsFullRepaintForPositionedMovementLayout; }
+    void setIsSimplifiedLayoutRoot() { m_isSimplifiedLayoutRoot = true; }
 
     LayoutUnit staticInlinePosition() const { return m_offsetForPosition.width(); }
     LayoutUnit staticBlockPosition() const { return m_offsetForPosition.height(); }
@@ -757,6 +786,10 @@ public:
     bool has3DTransform() const { return m_transform && !m_transform->isAffine(); }
     bool hasTransformedAncestor() const { return m_hasTransformedAncestor; }
     bool participatesInPreserve3D() const;
+
+    std::optional<LayoutSize> snapshottedScrollOffsetForAnchorPositioning() const { return m_snapshottedScrollOffsetForAnchorPositioning; };
+    void setSnapshottedScrollOffsetForAnchorPositioning(LayoutSize);
+    void clearSnapshottedScrollOffsetForAnchorPositioning();
 
     bool hasFixedContainingBlockAncestor() const { return m_hasFixedContainingBlockAncestor; }
 
@@ -793,6 +826,10 @@ public:
     bool hasCompositingDescendant() const { return m_hasCompositingDescendant; }
     bool hasCompositedMask() const;
     bool hasCompositedNonContainedDescendants() const { return m_hasCompositedNonContainedDescendants; }
+
+    bool hasDescendantNeedingEventRegionUpdate() const { return m_hasDescendantNeedingEventRegionUpdate; }
+    void setAncestorsHaveDescendantNeedingEventRegionUpdate();
+    void clearHasDescendantNeedingEventRegionUpdate() { m_hasDescendantNeedingEventRegionUpdate = false; }
 
     // If non-null, a non-ancestor composited layer that this layer paints into (it is sharing its backing store with this layer).
     RenderLayer* backingProviderLayer() const { return m_backingProviderLayer.get(); }
@@ -916,7 +953,7 @@ private:
     void updateZOrderLists();
     void rebuildZOrderLists();
     void rebuildZOrderLists(std::unique_ptr<Vector<RenderLayer*>>&, std::unique_ptr<Vector<RenderLayer*>>&, OptionSet<Compositing>&);
-    void collectLayers(bool includeHiddenLayers, std::unique_ptr<Vector<RenderLayer*>>&, std::unique_ptr<Vector<RenderLayer*>>&, OptionSet<Compositing>&);
+    void collectLayers(std::unique_ptr<Vector<RenderLayer*>>&, std::unique_ptr<Vector<RenderLayer*>>&, OptionSet<Compositing>&);
     void clearZOrderLists();
 
     void updateNormalFlowList();
@@ -969,10 +1006,12 @@ private:
     void computeRepaintRects(const RenderLayerModelObject* repaintContainer);
     void computeRepaintRectsIncludingDescendants();
 
+    void compositingStatusChanged(LayoutUpToDate);
+
     void setRepaintRects(const RenderObject::RepaintRects&);
     void clearRepaintRects();
 
-    LayoutRect clipRectRelativeToAncestor(RenderLayer* ancestor, LayoutSize offsetFromAncestor, const LayoutRect& constrainingRect, bool temporaryClipRects = false) const;
+    LayoutRect clipRectRelativeToAncestor(const RenderLayer* ancestor, LayoutSize offsetFromAncestor, const LayoutRect& constrainingRect, bool temporaryClipRects = false) const;
 
     void clipToRect(GraphicsContext&, GraphicsContextStateSaver&, RegionContextStateSaver&, const LayerPaintingInfo&, OptionSet<PaintBehavior>, const ClipRect&, BorderRadiusClippingRule = IncludeSelfForBorderRadius);
 
@@ -992,13 +1031,31 @@ private:
         SeenTransformedLayer                = 1 << 6,
         Seen3DTransformedLayer              = 1 << 7,
         SeenCompositedScrollingLayer        = 1 << 8,
+        SubtreeNeedsUpdate                  = 1 << 9,
     };
     static OptionSet<UpdateLayerPositionsFlag> flagsForUpdateLayerPositions(RenderLayer& startingLayer);
 
-    // Returns true if the position changed.
-    bool updateLayerPosition(OptionSet<UpdateLayerPositionsFlag>* = nullptr);
+    // UpdateLayerPositionsFlags that describe changes to the layer tree
+    static constexpr OptionSet<UpdateLayerPositionsFlag> invalidationLayerPositionsFlags()
+    {
+        return {
+            UpdateLayerPositionsFlag::NeedsFullRepaintInBacking,
+            UpdateLayerPositionsFlag::ContainingClippingLayerChangedSize,
+            UpdateLayerPositionsFlag::SubtreeNeedsUpdate,
+        };
+    }
 
-    void recursiveUpdateLayerPositions(OptionSet<UpdateLayerPositionsFlag>, CanUseSimplifiedRepaintPass = CanUseSimplifiedRepaintPass::No);
+    enum UpdateLayerPositionsMode {
+        Write,
+        Verify,
+    };
+
+    // Returns true if the position changed.
+    bool updateLayerPosition(OptionSet<UpdateLayerPositionsFlag>* = nullptr, UpdateLayerPositionsMode = Write);
+
+    template<UpdateLayerPositionsMode = Write>
+    void recursiveUpdateLayerPositions(RenderElement::LayoutIdentifier, OptionSet<UpdateLayerPositionsFlag>, CanUseSimplifiedRepaintPass = CanUseSimplifiedRepaintPass::No);
+    bool ancestorLayerPositionStateChanged(OptionSet<UpdateLayerPositionsFlag>);
 
     enum UpdateLayerPositionsAfterScrollFlag {
         IsOverflowScroll                        = 1 << 0,
@@ -1028,7 +1085,7 @@ private:
         return { };
     }
 
-    LayoutRect rendererBorderBoxRectInFragment(RenderFragmentContainer* fragment, RenderBox::RenderBoxFragmentInfoFlags flags = RenderBox::CacheRenderBoxFragmentInfo) const
+    LayoutRect rendererBorderBoxRectInFragment(RenderFragmentContainer* fragment, RenderBox::RenderBoxFragmentInfoFlags flags = RenderBox::RenderBoxFragmentInfoFlags::CacheRenderBoxFragmentInfo) const
     {
         if (auto* box = dynamicDowncast<RenderBox>(renderer()))
             return box->borderBoxRectInFragment(fragment, flags);
@@ -1146,13 +1203,16 @@ private:
     
     bool computeHasVisibleContent() const;
 
-    bool has3DTransformedDescendant() const { return m_has3DTransformedDescendant; }
+    bool has3DTransformedDescendant() const { ASSERT(!m_3DTransformedDescendantStatusDirty); return m_has3DTransformedDescendant; }
     bool has3DTransformedAncestor() const { return m_has3DTransformedAncestor; }
+
+    bool hasFixedAncestor() const { return m_hasFixedAncestor; }
+    bool hasPaginatedAncestor() const { return m_hasPaginatedAncestor; }
 
     void dirty3DTransformedDescendantStatus();
     // Both updates the status, and returns true if descendants of this have 3d.
     bool update3DTransformedDescendantStatus();
-    
+
     bool isInsideSVGForeignObject() const { return m_insideSVGForeignObject; }
 
     void createReflection();
@@ -1168,6 +1228,14 @@ private:
     void updateAncestorChainHasBlendingDescendants();
     void dirtyAncestorChainHasBlendingDescendants();
 
+    void updateAncestorChainHasAlwaysIncludedInZOrderListsDescendants();
+    void dirtyAncestorChainHasAlwaysIncludedInZOrderListsDescendants();
+
+    bool alwaysIncludedInZOrderLists() const { return m_alwaysIncludedInZOrderLists; }
+    bool hasAlwaysIncludedInZOrderListsDescendants() const { return m_hasAlwaysIncludedInZOrderListsDescendants; }
+    void setIntrinsicallyComposited(bool);
+    void updateAlwaysIncludedInZOrderLists();
+
     Ref<ClipRects> parentClipRects(const ClipRectsContext&) const;
     ClipRect backgroundClipRect(const ClipRectsContext&) const;
 
@@ -1176,6 +1244,14 @@ private:
     inline bool hasNonOpacityTransparency() const;
 
     void updatePagination();
+
+    void setWasOmittedFromZOrderTree();
+    void setWasIncludedInZOrderTree() { m_wasOmittedFromZOrderTree = false; }
+    void removeSelfFromCompositor();
+    void removeDescendantsFromCompositor();
+
+    void verifyClipRects();
+    void verifyClipRect(const ClipRectsContext&);
 
     void setHasCompositingDescendant(bool b)  { m_hasCompositingDescendant = b; }
     void setHasCompositedNonContainedDescendants(bool value) { m_hasCompositedNonContainedDescendants = value; }
@@ -1247,9 +1323,14 @@ private:
     bool m_hasTransformedAncestor : 1;
     bool m_has3DTransformedAncestor : 1;
 
+    bool m_hasFixedAncestor : 1 { false };
+    bool m_hasPaginatedAncestor : 1 { false };
+
     bool m_insideSVGForeignObject : 1;
     bool m_isHiddenByOverflowTruncation : 1 { false };
     bool m_isPaintingSVGResourceLayer : 1 { false };
+
+    bool m_hasDescendantNeedingEventRegionUpdate : 1 { false };
 
     unsigned m_indirectCompositingReason : 4; // IndirectCompositingReason
     unsigned m_viewportConstrainedNotCompositedReason : 2; // ViewportConstrainedNotCompositedReason
@@ -1264,6 +1345,15 @@ private:
     bool m_hasNotIsolatedBlendingDescendantsStatusDirty : 1;
     bool m_repaintRectsValid : 1;
 
+    bool m_intrinsicallyComposited : 1 { false };
+    bool m_alwaysIncludedInZOrderLists : 1 { false };
+    bool m_hasAlwaysIncludedInZOrderListsDescendants : 1 { false };
+    bool m_hasAlwaysIncludedInZOrderListsDescendantsStatusDirty : 1 { true };
+
+    bool m_wasOmittedFromZOrderTree : 1 { false };
+
+    bool m_isSimplifiedLayoutRoot : 1 { false };
+
     RenderLayerModelObject& m_renderer;
 
     RenderLayer* m_parent { nullptr };
@@ -1273,6 +1363,10 @@ private:
     RenderLayer* m_last { nullptr };
 
     SingleThreadWeakPtr<RenderLayer> m_backingProviderLayer;
+
+#if ASSERT_ENABLED || ENABLE(CONJECTURE_ASSERT)
+    SingleThreadWeakPtr<RenderObject> m_repaintContainer;
+#endif
 
     // For layers that establish stacking contexts, m_posZOrderList holds a sorted list of all the
     // descendant layers within the stacking context that have z-indices of 0 or greater
@@ -1302,7 +1396,9 @@ private:
     Markable<ScrollingScope, IntegralMarkableTraits<ScrollingScope, 0>> m_contentsScrollingScope;
 
     std::unique_ptr<TransformationMatrix> m_transform;
-    
+
+    std::optional<LayoutSize> m_snapshottedScrollOffsetForAnchorPositioning;
+
     // May ultimately be extended to many replicas (with their own paint order).
     RenderPtr<RenderReplica> m_reflection;
 
@@ -1355,6 +1451,7 @@ inline void RenderLayer::setIsHiddenByOverflowTruncation(bool isHidden)
         return;
     m_isHiddenByOverflowTruncation = isHidden;
     m_visibleContentStatusDirty = true;
+    setNeedsPositionUpdate();
 }
 
 #if ASSERT_ENABLED
@@ -1387,6 +1484,7 @@ WTF::TextStream& operator<<(WTF::TextStream&, const RenderLayer&);
 WTF::TextStream& operator<<(WTF::TextStream&, const RenderLayer::ClipRectsContext&);
 WTF::TextStream& operator<<(WTF::TextStream&, IndirectCompositingReason);
 WTF::TextStream& operator<<(WTF::TextStream&, PaintBehavior);
+WTF::TextStream& operator<<(WTF::TextStream&, RenderLayer::PaintLayerFlag);
 
 } // namespace WebCore
 
@@ -1396,5 +1494,6 @@ void showLayerTree(const WebCore::RenderLayer*);
 void showLayerTree(const WebCore::RenderObject*);
 void showPaintOrderTree(const WebCore::RenderLayer*);
 void showPaintOrderTree(const WebCore::RenderObject*);
+void showLayerPositionTree(const WebCore::RenderLayer*);
 #endif
 

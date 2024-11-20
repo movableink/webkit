@@ -36,19 +36,23 @@
 
 #if USE(LIBWEBRTC)
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 ALLOW_UNUSED_PARAMETERS_BEGIN
 ALLOW_COMMA_BEGIN
 
 #include <webrtc/api/video/video_frame.h>
-#include <webrtc/sdk/WebKit/WebKitUtilities.h>
+#include <webrtc/webkit_sdk/WebKit/WebKitUtilities.h>
 
 ALLOW_UNUSED_PARAMETERS_END
 ALLOW_COMMA_END
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // USE(LIBWEBRTC)
 
 #include <pal/cf/CoreMediaSoftLink.h>
 #include "CoreVideoSoftLink.h"
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -165,19 +169,19 @@ std::optional<SharedVideoFrameInfo> SharedVideoFrameInfo::decode(std::span<const
     return info;
 }
 
-static const uint8_t* copyToCVPixelBufferPlane(CVPixelBufferRef pixelBuffer, size_t planeIndex, const uint8_t* source, size_t height, uint32_t bytesPerRowSource)
+static std::span<const uint8_t> copyToCVPixelBufferPlane(CVPixelBufferRef pixelBuffer, size_t planeIndex, std::span<const uint8_t> source, size_t height, uint32_t bytesPerRowSource)
 {
     auto* destination = static_cast<uint8_t*>(CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, planeIndex));
     uint32_t bytesPerRowDestination = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, planeIndex);
     for (unsigned i = 0; i < height; ++i) {
-        std::memcpy(destination, source, std::min(bytesPerRowSource, bytesPerRowDestination));
-        source += bytesPerRowSource;
+        std::memcpy(destination, source.data(), std::min(bytesPerRowSource, bytesPerRowDestination));
+        source = source.subspan(bytesPerRowSource);
         destination += bytesPerRowDestination;
     }
     return source;
 }
 
-RetainPtr<CVPixelBufferRef> SharedVideoFrameInfo::createPixelBufferFromMemory(const uint8_t* data, CVPixelBufferPoolRef bufferPool)
+RetainPtr<CVPixelBufferRef> SharedVideoFrameInfo::createPixelBufferFromMemory(std::span<const uint8_t> data, CVPixelBufferPoolRef bufferPool)
 {
     ASSERT(isReadWriteSupported());
     CVPixelBufferRef rawPixelBuffer = nullptr;
@@ -304,5 +308,7 @@ bool SharedVideoFrameInfo::writeVideoFrameBuffer(webrtc::VideoFrameBuffer& frame
 #endif
 
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(MEDIA_STREAM) && PLATFORM(COCOA)

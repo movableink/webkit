@@ -27,24 +27,28 @@
 
 #include "WebPageProxy.h"
 #include "WebProcessProxy.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebKit {
 
 class RemotePageVisitedLinkStoreRegistration {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(RemotePageVisitedLinkStoreRegistration);
 public:
     RemotePageVisitedLinkStoreRegistration(WebPageProxy& page, WebProcessProxy& process)
         : m_page(page)
         , m_process(process)
     {
-        m_process->addVisitedLinkStoreUser(page.visitedLinkStore(), page.identifier());
+        protectedProcess()->addVisitedLinkStoreUser(page.visitedLinkStore(), page.identifier());
     }
     ~RemotePageVisitedLinkStoreRegistration()
     {
-        if (m_page)
-            m_process->removeVisitedLinkStoreUser(m_page->visitedLinkStore(), m_page->identifier());
+        if (RefPtr page = m_page.get())
+            protectedProcess()->removeVisitedLinkStoreUser(page->visitedLinkStore(), page->identifier());
     }
+
 private:
+    Ref<WebProcessProxy> protectedProcess() const { return m_process; }
+
     WeakPtr<WebPageProxy> m_page;
     Ref<WebProcessProxy> m_process;
 };

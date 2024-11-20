@@ -37,6 +37,8 @@
 #include "CSSValuePool.h"
 #include "CachedResourceLoader.h"
 #include "ChangeListTypeCommand.h"
+#include "Chrome.h"
+#include "ChromeClient.h"
 #include "ClipboardEvent.h"
 #include "CommonAtomStrings.h"
 #include "CompositionEvent.h"
@@ -131,6 +133,8 @@
 #include <pal/text/KillRing.h>
 #include <wtf/Scope.h>
 #include <wtf/SetForScope.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/unicode/CharacterNames.h>
 
 #if PLATFORM(MAC)
@@ -142,6 +146,10 @@
 #endif
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TemporarySelectionChange);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(IgnoreSelectionChangeForScope);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Editor);
 
 static bool dispatchBeforeInputEvent(Element& element, const AtomString& inputType, IsInputMethodComposing isInputMethodComposing, const String& data = { },
     RefPtr<DataTransfer>&& dataTransfer = nullptr, const Vector<RefPtr<StaticRange>>& targetRanges = { }, Event::IsCancelable cancelable = Event::IsCancelable::Yes)
@@ -640,7 +648,7 @@ void Editor::pasteAsPlainText(const String& pastingText, bool smartReplace)
         return;
     auto sanitizedText = pastingText;
     Ref document = protectedDocument();
-    if (auto* page = document->page())
+    if (RefPtr page = document->page())
         sanitizedText = page->applyLinkDecorationFiltering(sanitizedText, LinkDecorationFilteringTrigger::Paste);
     target->dispatchEvent(TextEvent::createForPlainTextPaste(document->windowProxy(), WTFMove(sanitizedText), smartReplace));
 }
@@ -1192,6 +1200,13 @@ static void dispatchInputEvents(RefPtr<Element> startRoot, RefPtr<Element> endRo
 
 bool Editor::willApplyEditing(CompositeEditCommand& command, Vector<RefPtr<StaticRange>>&& targetRanges)
 {
+#if ENABLE(WRITING_TOOLS)
+    if (suppressEditingForWritingTools()) {
+        RELEASE_LOG(Editing, "Editor %p suppressed editing for Writing Tools", this);
+        return false;
+    }
+#endif
+
     m_hasHandledAnyEditing = true;
 
     if (!command.shouldDispatchInputEvents())
@@ -1264,6 +1279,7 @@ void Editor::appliedEditing(CompositeEditCommand& command)
 
 bool Editor::willUnapplyEditing(const EditCommandComposition& composition) const
 {
+    TypingCommand::closeTyping(protectedDocument());
     return dispatchBeforeInputEvents(composition.startingRootEditableElement(), composition.endingRootEditableElement(), "historyUndo"_s, IsInputMethodComposing::No);
 }
 
@@ -1308,7 +1324,8 @@ void Editor::reappliedEditing(EditCommandComposition& composition)
     updateEditorUINowIfScheduled();
 
 #if ENABLE(WRITING_TOOLS)
-    protectedDocument()->page()->respondToReappliedWritingToolsEditing(&composition);
+    if (RefPtr page = document().page())
+        page->respondToReappliedWritingToolsEditing(&composition);
 #endif
 
     m_lastEditCommand = nullptr;
@@ -1320,9 +1337,9 @@ void Editor::reappliedEditing(EditCommandComposition& composition)
 Editor::Editor(Document& document)
     : m_client(document.page() ? &document.page()->editorClient() : nullptr)
     , m_document(document)
-    , m_killRing(makeUnique<PAL::KillRing>())
-    , m_spellChecker(makeUnique<SpellChecker>(document))
-    , m_alternativeTextController(makeUnique<AlternativeTextController>(document))
+    , m_killRing(makeUniqueRef<PAL::KillRing>())
+    , m_spellChecker(makeUniqueRefWithoutRefCountedCheck<SpellChecker>(*this))
+    , m_alternativeTextController(makeUniqueRef<AlternativeTextController>(document))
     , m_editorUIUpdateTimer(*this, &Editor::editorUIUpdateTimerFired)
 #if ENABLE(TELEPHONE_NUMBER_DETECTION) && !PLATFORM(IOS_FAMILY)
     , m_telephoneNumberDetectionUpdateTimer(*this, &Editor::scanSelectionForTelephoneNumbers, 0_s)
@@ -1331,6 +1348,16 @@ Editor::Editor(Document& document)
 }
 
 Editor::~Editor() = default;
+
+void Editor::ref() const
+{
+    m_document->ref();
+}
+
+void Editor::deref() const
+{
+    m_document->deref();
+}
 
 void Editor::clear()
 {
@@ -1425,7 +1452,7 @@ bool Editor::insertTextWithoutSendingTextEvent(const String& text, bool selectIn
             // then this code should conditionalize revealing selection on whether the ignoreSelectionChanges() bit
             // is set for the newly focused frame.
             if (client() && client()->shouldRevealCurrentSelectionAfterInsertion()) {
-                if (auto* page = document->page())
+                if (RefPtr page = document->page())
                     page->revealCurrentSelection();
             }
         }
@@ -1719,7 +1746,7 @@ void Editor::copyURL(const URL& url, const String& title)
 void Editor::copyURL(const URL& url, const String& title, Pasteboard& pasteboard)
 {
     auto sanitizedURL = url;
-    if (auto* page = document().page())
+    if (RefPtr page = document().page())
         sanitizedURL = page->applyLinkDecorationFiltering(url, LinkDecorationFilteringTrigger::Copy);
 
     PasteboardURL pasteboardURL;
@@ -2052,7 +2079,7 @@ void Editor::setBaseWritingDirection(WritingDirection direction)
     }
 
     auto style = MutableStyleProperties::create();
-    style->setProperty(CSSPropertyDirection, direction == WritingDirection::LeftToRight ? "ltr"_s : direction == WritingDirection::RightToLeft ? "rtl"_s : "inherit"_s, false);
+    style->setProperty(CSSPropertyDirection, direction == WritingDirection::LeftToRight ? "ltr"_s : direction == WritingDirection::RightToLeft ? "rtl"_s : "inherit"_s);
     applyParagraphStyleToSelection(style.ptr(), EditAction::SetBlockWritingDirection);
 }
 
@@ -2077,7 +2104,7 @@ WritingDirection Editor::baseWritingDirectionForSelectionStart() const
             return result;
     }
 
-    switch (renderer->style().direction()) {
+    switch (renderer->writingMode().bidiDirection()) {
     case TextDirection::LTR:
         return WritingDirection::LeftToRight;
     case TextDirection::RTL:
@@ -2267,6 +2294,11 @@ void Editor::setComposition(const String& text, SetCompositionMode mode)
     }
 }
 
+void Editor::closeTyping()
+{
+    TypingCommand::closeTyping(m_document);
+}
+
 RenderInline* Editor::writingSuggestionRenderer() const
 {
     return m_writingSuggestionRenderer.get();
@@ -2277,6 +2309,7 @@ void Editor::setWritingSuggestionRenderer(RenderInline& renderer)
     m_writingSuggestionRenderer = renderer;
 }
 
+#if PLATFORM(COCOA)
 void Editor::setWritingSuggestion(const String& fullTextWithPrediction, const CharacterRange& selection)
 {
     Ref document = protectedDocument();
@@ -2289,6 +2322,18 @@ void Editor::setWritingSuggestion(const String& fullTextWithPrediction, const Ch
     if (!selectedElement->hasEditableStyle())
         return;
 
+    auto range = document->selection().selection().firstRange();
+    if (!range)
+        return;
+
+    if (!range->collapsed())
+        return;
+
+    if (!is<Text>(range->startContainer()))
+        return;
+
+    range->start.offset = 0;
+
     m_isHandlingAcceptedCandidate = true;
 
     auto newText = fullTextWithPrediction.substring(0, selection.location);
@@ -2296,20 +2341,25 @@ void Editor::setWritingSuggestion(const String& fullTextWithPrediction, const Ch
 
     auto currentText = m_writingSuggestionData ? m_writingSuggestionData->currentText() : emptyString();
 
-    ASSERT(newText.startsWith(currentText));
-    auto textDelta = newText.substring(currentText.length());
+    ASSERT(newText.isEmpty() || newText.startsWith(currentText));
+    auto textDelta = newText.isEmpty() ? emptyString() : newText.substring(currentText.length());
 
-    auto range = document->selection().selection().firstRange();
-    if (!range)
-        return;
-
-    range->start.offset = 0;
-    auto offset = WebCore::characterCount(*range);
+    auto offset = range->endOffset();
     auto offsetWithDelta = currentText.isEmpty() ? offset : offset + textDelta.length();
 
-    if (!suggestionText.isEmpty())
-        m_writingSuggestionData = makeUnique<WritingSuggestionData>(WTFMove(suggestionText), WTFMove(newText), WTFMove(offsetWithDelta));
-    else
+    if (!suggestionText.isEmpty()) {
+        String originalPrefix;
+        String originalSuffix;
+        if (m_writingSuggestionData) {
+            originalPrefix = m_writingSuggestionData->originalPrefix();
+            originalSuffix = m_writingSuggestionData->originalSuffix();
+        } else {
+            originalPrefix = WebCore::plainTextReplacingNoBreakSpace(*range);
+            originalSuffix = suggestionText;
+        }
+
+        m_writingSuggestionData = makeUnique<WritingSuggestionData>(WTFMove(suggestionText), WTFMove(newText), WTFMove(offsetWithDelta), WTFMove(originalPrefix), WTFMove(originalSuffix), Editor::writingSuggestionsSupportsSuffix());
+    } else
         m_writingSuggestionData = nullptr;
 
     if (!currentText.isEmpty()) {
@@ -2318,6 +2368,7 @@ void Editor::setWritingSuggestion(const String& fullTextWithPrediction, const Ch
     } else
         selectedElement->invalidateStyleAndRenderersForSubtree();
 }
+#endif
 
 void Editor::setComposition(const String& text, const Vector<CompositionUnderline>& underlines, const Vector<CompositionHighlight>& highlights, const HashMap<String, Vector<CharacterRange>>& annotations, unsigned selectionStart, unsigned selectionEnd)
 {
@@ -3644,7 +3695,15 @@ RefPtr<TextPlaceholderElement> Editor::insertTextPlaceholder(const IntSize& size
     if (!placeholder->parentNode())
         return nullptr;
 
+    document->selection().addCaretVisibilitySuppressionReason(CaretVisibilitySuppressionReason::TextPlaceholderIsShowing);
+
     document->selection().setSelection(VisibleSelection { positionInParentBeforeNode(placeholder.ptr()) }, FrameSelection::defaultSetSelectionOptions(UserTriggered::Yes));
+
+#if ENABLE(WRITING_TOOLS)
+    // For Writing Tools, we need the snapshot of the last inserted placeholder.
+    if (auto placeholderRange = makeRangeSelectingNode(placeholder.get()))
+        protectedDocument()->page()->chrome().client().saveSnapshotOfTextPlaceholderForAnimation(*placeholderRange);
+#endif
 
     return placeholder;
 }
@@ -3665,6 +3724,8 @@ void Editor::removeTextPlaceholder(TextPlaceholderElement& placeholder)
     // To match the Legacy WebKit implementation, set the text insertion point to be before where the placeholder used to be.
     if (document->selection().isFocusedAndActive() && document->focusedElement() == savedRootEditableElement)
         document->selection().setSelection(VisibleSelection { savedPositionBeforePlaceholder }, FrameSelection::defaultSetSelectionOptions(UserTriggered::Yes));
+
+    document->selection().removeCaretVisibilitySuppressionReason(CaretVisibilitySuppressionReason::TextPlaceholderIsShowing);
 }
 
 static inline void collapseCaretWidth(IntRect& rect)
@@ -3974,6 +4035,41 @@ void Editor::respondToChangedSelection(const VisibleSelection&, OptionSet<FrameS
 #endif
 
     Ref document = protectedDocument();
+
+#if PLATFORM(IOS_FAMILY)
+    auto continueDisplayingSuggestion = [&] {
+        if (!m_writingSuggestionData)
+            return false;
+
+        auto newSelection = document->selection().selection();
+
+        auto range = newSelection.firstRange();
+        if (!range)
+            return false;
+
+        range->start.offset = 0;
+
+        auto completion = makeString(m_writingSuggestionData->originalPrefix(), m_writingSuggestionData->originalSuffix());
+        auto content = plainTextReplacingNoBreakSpace(*range);
+
+        auto currentFullText = makeString(content, m_writingSuggestionData->content());
+
+        if (completion == content)
+            return false;
+
+        if (completion != currentFullText)
+            return false;
+
+        if (content.length() <= m_writingSuggestionData->originalPrefix().length())
+            return false;
+
+        return completion.startsWith(content);
+    }();
+
+    if (m_writingSuggestionData && !continueDisplayingSuggestion)
+        removeWritingSuggestionIfNeeded();
+#endif
+
     if (client())
         client()->respondToChangedSelection(document->frame());
 
@@ -4048,8 +4144,8 @@ void Editor::scanSelectionForTelephoneNumbers()
     m_detectedTelephoneNumberRanges.clear();
     
     auto notifyController = makeScopeExit([&] {
-        if (auto* page = document().page())
-            page->servicesOverlayController().selectedTelephoneNumberRangesChanged();
+        if (RefPtr page = document().page())
+            page->protectedServicesOverlayController()->selectedTelephoneNumberRangesChanged();
     });
 
     auto selection = document().selection().selection();
@@ -4202,7 +4298,43 @@ bool Editor::selectionStartHasMarkerFor(DocumentMarker::Type markerType, int fro
     }
 
     return false;
-}       
+}
+
+void Editor::selectionStartSetMarkerForTesting(DocumentMarker::Type markerType, int from, int length, const String& data)
+{
+    RefPtr node = findFirstMarkable(document().selection().selection().start().protectedDeprecatedNode().get());
+    if (!node)
+        return;
+
+    RefPtr text = dynamicDowncast<Text>(node);
+    if (!text)
+        return;
+
+    CheckedRef markers = document().checkedMarkers();
+
+    unsigned unsignedFrom = static_cast<unsigned>(from);
+    unsigned unsignedLength = static_cast<unsigned>(length);
+
+    switch (markerType) {
+    case DocumentMarker::Type::TransparentContent:
+        markers->addMarker(*text, unsignedFrom, unsignedLength, markerType, DocumentMarker::TransparentContentData { node, WTF::UUID { 0 } });
+        return;
+
+    case DocumentMarker::Type::DraggedContent:
+        markers->addMarker(*text, unsignedFrom, unsignedLength, markerType, node);
+        return;
+
+    case DocumentMarker::Type::Grammar:
+    case DocumentMarker::Type::Spelling:
+    case DocumentMarker::Type::Replacement:
+        markers->addMarker(*text, unsignedFrom, unsignedLength, markerType, data);
+        return;
+
+    default:
+        // FIXME: Support more marker types in this testing utility function.
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+}
 
 OptionSet<TextCheckingType> Editor::resolveTextCheckingTypeMask(const Node& rootEditableElement, OptionSet<TextCheckingType> textCheckingOptions)
 {

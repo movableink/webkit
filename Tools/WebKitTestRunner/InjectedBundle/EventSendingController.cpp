@@ -235,9 +235,32 @@ void EventSendingController::mouseMoveTo(int x, int y, JSStringRef pointerType)
     m_position = WKPointMake(x, y);
     postSynchronousPageMessage("EventSender", body);
 
+    WKBundlePageFlushDeferredDidReceiveMouseEventForTesting(InjectedBundle::singleton().pageRef());
     auto waitForDidReceiveEventBody = adoptWK(WKMutableDictionaryCreate());
     setValue(waitForDidReceiveEventBody, "SubMessage", "WaitForDeferredMouseEvents");
     postSynchronousPageMessage("EventSender", waitForDidReceiveEventBody);
+}
+
+void EventSendingController::asyncMouseDown(JSContextRef context, int button, JSValueRef modifierArray, JSStringRef pointerType, JSValueRef completionHandler)
+{
+    postMessageWithAsyncReply(context, "EventSender", createMouseMessageBody(MouseDown, button, parseModifierArray(context, modifierArray), pointerType), completionHandler);
+}
+
+void EventSendingController::asyncMouseUp(JSContextRef context, int button, JSValueRef modifierArray, JSStringRef pointerType, JSValueRef completionHandler)
+{
+    postMessageWithAsyncReply(context, "EventSender", createMouseMessageBody(MouseUp, button, parseModifierArray(context, modifierArray), pointerType), completionHandler);
+}
+
+void EventSendingController::asyncMouseMoveTo(JSContextRef context, int x, int y, JSStringRef pointerType, JSValueRef completionHandler)
+{
+    auto body = adoptWK(WKMutableDictionaryCreate());
+    setValue(body, "SubMessage", "MouseMoveTo");
+    setValue(body, "X", adoptWK(WKDoubleCreate(x)));
+    setValue(body, "Y", adoptWK(WKDoubleCreate(y)));
+    if (pointerType)
+        setValue(body, "PointerType", pointerType);
+    m_position = WKPointMake(x, y);
+    postMessageWithAsyncReply(context, "EventSender", body, completionHandler);
 }
 
 void EventSendingController::mouseForceClick()
@@ -492,12 +515,6 @@ void EventSendingController::zoomPageOut()
     setValue(body, "SubMessage", "SetPageZoom");
     setValue(body, "ZoomFactor", zoomFactor);
     postSynchronousPageMessage("EventSender", body);
-}
-
-void EventSendingController::scalePageBy(double scale, double x, double y)
-{
-    WKPoint origin = { x, y };
-    WKBundlePageSetScaleAtOrigin(InjectedBundle::singleton().page()->page(), scale, origin);
 }
 
 MonitorWheelEventsOptions* toMonitorWheelEventsOptions(JSContextRef context, JSValueRef argument)

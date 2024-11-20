@@ -276,7 +276,7 @@ RegisterSet RegisterSetBuilder::ftlCalleeSaveRegisters()
 {
     RegisterSet result;
 #if ENABLE(FTL_JIT)
-#if CPU(X86_64) && !OS(WINDOWS)
+#if CPU(X86_64)
     result.add(GPRInfo::regCS0, IgnoreVectors);
     result.add(GPRInfo::regCS1, IgnoreVectors);
     static_assert(GPRInfo::regCS2 == GPRInfo::jitDataRegister);
@@ -342,12 +342,22 @@ RegisterSet RegisterSetBuilder::ftlCalleeSaveRegisters()
     return result;
 }
 
-RegisterSet RegisterSetBuilder::argumentGPRS()
+RegisterSet RegisterSetBuilder::argumentGPRs()
 {
     RegisterSet result;
 #if NUMBER_OF_ARGUMENT_REGISTERS
     for (unsigned i = 0; i < GPRInfo::numberOfArgumentRegisters; i++)
         result.add(GPRInfo::toArgumentRegister(i), IgnoreVectors);
+#endif
+    return result;
+}
+
+RegisterSet RegisterSetBuilder::argumentFPRs()
+{
+    RegisterSet result;
+#if NUMBER_OF_ARGUMENT_REGISTERS
+    for (unsigned i = 0; i < FPRInfo::numberOfArgumentRegisters; i++)
+        result.add(FPRInfo::toArgumentRegister(i), IgnoreVectors);
 #endif
     return result;
 }

@@ -30,16 +30,19 @@
 #include <memory>
 #include <wtf/Expected.h>
 #include <wtf/RetainPtr.h>
+#include <wtf/TZoneMalloc.h>
 
 typedef struct AudioFormatVorbisModeInfo AudioFormatVorbisModeInfo;
 typedef const struct opaqueCMFormatDescription* CMFormatDescriptionRef;
 typedef struct opaqueCMSampleBuffer* CMSampleBufferRef;
+typedef struct __CVBuffer* CVPixelBufferRef;
 
 namespace WebCore {
 
 class MediaSamplesBlock;
 class SharedBuffer;
 struct AudioInfo;
+struct PlatformVideoColorSpace;
 struct TrackInfo;
 
 WEBCORE_EXPORT RetainPtr<CMFormatDescriptionRef> createFormatDescriptionFromTrackInfo(const TrackInfo&);
@@ -47,8 +50,10 @@ WEBCORE_EXPORT RetainPtr<CMFormatDescriptionRef> createFormatDescriptionFromTrac
 // is set it will be used, otherwise it will be created from the MediaSamplesBlock's TrackInfo.
 WEBCORE_EXPORT Expected<RetainPtr<CMSampleBufferRef>, CString> toCMSampleBuffer(MediaSamplesBlock&&, CMFormatDescriptionRef = nullptr);
 
+WEBCORE_EXPORT void attachColorSpaceToPixelBuffer(const PlatformVideoColorSpace&, CVPixelBufferRef);
+
 class PacketDurationParser final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PacketDurationParser);
 public:
     explicit PacketDurationParser(const AudioInfo&);
     ~PacketDurationParser();

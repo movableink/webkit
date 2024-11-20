@@ -23,11 +23,9 @@
 #include <wtf/text/StringView.h>
 #include <wtf/text/WTFString.h>
 
-namespace WebCore {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
-// FIXME: This should not start with "k".
-// FIXME: This is a shared tokenizer concept, not a SegmentedString concept, but this is the only common header for now.
-constexpr LChar kEndOfFileMarker = 0;
+namespace WebCore {
 
 class SegmentedString {
 public:
@@ -348,3 +346,5 @@ inline void SegmentedString::updateAdvanceFunctionPointers()
 }
 
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

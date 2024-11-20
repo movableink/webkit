@@ -27,6 +27,8 @@
 
 #if ENABLE(IPC_TESTING_API)
 
+#include <wtf/Compiler.h>
+
 #include "Decoder.h"
 #include "HandleMessage.h"
 #include <JavaScriptCore/JSArray.h>

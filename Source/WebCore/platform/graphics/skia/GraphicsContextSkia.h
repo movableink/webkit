@@ -28,8 +28,10 @@
 #if USE(SKIA)
 
 #include "GraphicsContext.h"
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 #include <skia/core/SkCanvas.h>
 #include <skia/effects/SkDashPathEffect.h>
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 #include <wtf/CompletionHandler.h>
 
 namespace WebCore {
@@ -52,9 +54,9 @@ public:
     void setMiterLimit(float) final;
 
     using GraphicsContext::fillRect;
-    void fillRect(const FloatRect&) final;
+    void fillRect(const FloatRect&, RequiresClipToRect = RequiresClipToRect::Yes) final;
     void fillRect(const FloatRect&, const Color&) final;
-    void fillRect(const FloatRect&, Gradient&, const AffineTransform&) final;
+    void fillRect(const FloatRect&, Gradient&, const AffineTransform&, RequiresClipToRect = RequiresClipToRect::Yes) final;
     void fillRoundedRectImpl(const FloatRoundedRect&, const Color&) final;
     void fillRectWithRoundedHole(const FloatRect&, const FloatRoundedRect&, const Color&) final;
     void fillPath(const Path&) final;

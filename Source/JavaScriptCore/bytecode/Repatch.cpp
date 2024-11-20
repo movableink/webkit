@@ -59,7 +59,6 @@
 #include "LinkBuffer.h"
 #include "MaxFrameExtentForSlowPathCall.h"
 #include "ModuleNamespaceAccessCase.h"
-#include "ProxyObjectAccessCase.h"
 #include "ScopedArguments.h"
 #include "ScratchRegisterAllocator.h"
 #include "StackAlignment.h"
@@ -111,7 +110,7 @@ CodePtr<JSEntryPtrTag> jsToWasmICCodePtr(CodeSpecializationKind kind, JSObject* 
     if (kind != CodeForCall)
         return nullptr;
     if (auto* wasmFunction = jsDynamicCast<WebAssemblyFunction*>(callee))
-        return wasmFunction->jsCallEntrypoint();
+        return wasmFunction->jsCallICEntrypoint();
 #else
     UNUSED_PARAM(kind);
     UNUSED_PARAM(callee);
@@ -168,7 +167,7 @@ void linkPolymorphicCall(VM& vm, JSCell* owner, CallFrame* callFrame, CallLinkIn
     // If we are over the limit, just use a normal virtual call.
     unsigned maxPolymorphicCallVariantListSize;
     if (isWebAssembly)
-        maxPolymorphicCallVariantListSize = Options::maxPolymorphicCallVariantListSizeForWebAssemblyToJS();
+        maxPolymorphicCallVariantListSize = Options::maxPolymorphicCallVariantListSizeForWasmToJS();
     else if (callerCodeBlock->jitType() == JITCode::topTierJIT())
         maxPolymorphicCallVariantListSize = Options::maxPolymorphicCallVariantListSizeForTopTier();
     else
@@ -444,7 +443,6 @@ static InlineCacheAction tryCacheGetBy(JSGlobalObject* globalObject, CodeBlock* 
                 if (stubInfo.cacheType() == CacheType::Unset
                     && slot.slotBase() == baseCell
                     && InlineAccess::isCacheableArrayLength(stubInfo, jsCast<JSArray*>(baseCell))) {
-
                     bool generatedCodeInline = InlineAccess::generateArrayLength(stubInfo, jsCast<JSArray*>(baseCell));
                     if (generatedCodeInline) {
                         repatchSlowPathCall(codeBlock, stubInfo, appropriateGetByOptimizeFunction(kind));
@@ -488,12 +486,12 @@ static InlineCacheAction tryCacheGetBy(JSGlobalObject* globalObject, CodeBlock* 
             case GetByKind::ById:
             case GetByKind::ByIdWithThis: {
                 propertyName.ensureIsCell(vm);
-                newCase = ProxyObjectAccessCase::create(vm, codeBlock, AccessCase::ProxyObjectLoad, propertyName);
+                newCase = AccessCase::create(vm, codeBlock, AccessCase::ProxyObjectLoad, propertyName);
                 break;
             }
             case GetByKind::ByVal:
             case GetByKind::ByValWithThis: {
-                newCase = ProxyObjectAccessCase::create(vm, codeBlock, AccessCase::IndexedProxyObjectLoad, nullptr);
+                newCase = AccessCase::create(vm, codeBlock, AccessCase::IndexedProxyObjectLoad, nullptr);
                 break;
             }
             default:
@@ -746,6 +744,8 @@ static InlineCacheAction tryCacheArrayGetByVal(JSGlobalObject* globalObject, Cod
             accessType = AccessCase::IndexedScopedArgumentsLoad;
         else if (base->type() == StringType)
             accessType = AccessCase::IndexedStringLoad;
+        else if (base->type() == ProxyObjectType)
+            accessType = AccessCase::IndexedProxyObjectLoad;
         else if (isTypedView(base->type())) {
             auto* typedArray = jsCast<JSArrayBufferView*>(base);
 #if USE(JSVALUE32_64)
@@ -773,6 +773,11 @@ static InlineCacheAction tryCacheArrayGetByVal(JSGlobalObject* globalObject, Cod
                 break;
             case Uint32ArrayType:
                 accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayUint32Load : AccessCase::IndexedTypedArrayUint32Load;
+                break;
+            case Float16ArrayType:
+                if (!CCallHelpers::supportsFloat16())
+                    return GiveUpOnCache;
+                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayFloat16Load : AccessCase::IndexedTypedArrayFloat16Load;
                 break;
             case Float32ArrayType:
                 accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayFloat32Load : AccessCase::IndexedTypedArrayFloat32Load;
@@ -1191,8 +1196,28 @@ static InlineCacheAction tryCachePutBy(JSGlobalObject* globalObject, CodeBlock* 
                     vm, codeBlock, AccessCase::Setter, oldStructure, propertyName, offset, conditionSet, WTFMove(prototypeAccessChain), isGlobalProxy);
             }
         } else if (!propertyName.isPrivateName() && isProxyObject) {
-            propertyName.ensureIsCell(vm);
-            newCase = ProxyObjectAccessCase::create(vm, codeBlock, AccessCase::ProxyObjectStore, propertyName);
+            switch (putByKind) {
+            case PutByKind::ByIdStrict:
+            case PutByKind::ByIdSloppy: {
+                propertyName.ensureIsCell(vm);
+                newCase = AccessCase::create(vm, codeBlock, AccessCase::ProxyObjectStore, propertyName);
+                break;
+            }
+            case PutByKind::ByValStrict:
+            case PutByKind::ByValSloppy: {
+                newCase = AccessCase::create(vm, codeBlock, AccessCase::IndexedProxyObjectStore, nullptr);
+                break;
+            }
+            case PutByKind::DefinePrivateNameById:
+            case PutByKind::DefinePrivateNameByVal:
+            case PutByKind::ByIdDirectStrict:
+            case PutByKind::ByIdDirectSloppy:
+            case PutByKind::ByValDirectStrict:
+            case PutByKind::ByValDirectSloppy:
+            case PutByKind::SetPrivateNameById:
+            case PutByKind::SetPrivateNameByVal:
+                return GiveUpOnCache;
+            }
         }
 
         LOG_IC((vm, ICEvent::PutByAddAccessCase, oldStructure->classInfoForCells(), ident, slot.base() == baseValue));
@@ -1255,10 +1280,22 @@ static InlineCacheAction tryCacheArrayPutByVal(JSGlobalObject* globalObject, Cod
     AccessGenerationResult result;
 
     {
+        GCSafeConcurrentJSLocker locker(codeBlock->m_lock, globalObject->vm());
+
         JSCell* base = baseValue.asCell();
 
-        AccessCase::AccessType accessType;
-        if (isTypedView(base->type())) {
+        RefPtr<AccessCase> newCase;
+        AccessCase::AccessType accessType = AccessCase::IndexedInt32Store;
+        if (base->type() == ProxyObjectType) {
+            switch (putByKind) {
+            case PutByKind::ByValStrict:
+            case PutByKind::ByValSloppy:
+                accessType = AccessCase::IndexedProxyObjectStore;
+                break;
+            default:
+                return RetryCacheLater;
+            }
+        } else if (isTypedView(base->type())) {
             auto* typedArray = jsCast<JSArrayBufferView*>(base);
 #if USE(JSVALUE32_64)
             if (typedArray->isResizableOrGrowableShared())
@@ -1285,6 +1322,11 @@ static InlineCacheAction tryCacheArrayPutByVal(JSGlobalObject* globalObject, Cod
                 break;
             case Uint32ArrayType:
                 accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayUint32Store : AccessCase::IndexedTypedArrayUint32Store;
+                break;
+            case Float16ArrayType:
+                if (!CCallHelpers::supportsFloat16())
+                    return GiveUpOnCache;
+                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayFloat16Store : AccessCase::IndexedTypedArrayFloat16Store;
                 break;
             case Float32ArrayType:
                 accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayFloat32Store : AccessCase::IndexedTypedArrayFloat32Store;
@@ -1321,8 +1363,10 @@ static InlineCacheAction tryCacheArrayPutByVal(JSGlobalObject* globalObject, Cod
             }
         }
 
-        GCSafeConcurrentJSLocker locker(codeBlock->m_lock, globalObject->vm());
-        result = stubInfo.addAccessCase(locker, globalObject, codeBlock, ecmaModeFor(putByKind), nullptr, AccessCase::create(vm, codeBlock, accessType, nullptr));
+        if (!newCase)
+            newCase = AccessCase::create(vm, codeBlock, accessType, nullptr);
+
+        result = stubInfo.addAccessCase(locker, globalObject, codeBlock, ecmaModeFor(putByKind), nullptr, WTFMove(newCase));
 
         if (result.generatedSomeCode())
             LOG_IC((vm, ICEvent::PutByReplaceWithJump, baseValue.classInfoOrNull(), Identifier()));
@@ -1508,8 +1552,19 @@ static InlineCacheAction tryCacheInBy(
         RefPtr<PolyProtoAccessChain> prototypeAccessChain;
         ObjectPropertyConditionSet conditionSet;
         if ((kind == InByKind::ById || kind == InByKind::ByVal) && !propertyName.isPrivateName() && base->inherits<ProxyObject>()) {
-            propertyName.ensureIsCell(vm);
-            newCase = ProxyObjectAccessCase::create(vm, codeBlock, AccessCase::ProxyObjectHas, propertyName);
+            switch (kind) {
+            case InByKind::ById: {
+                propertyName.ensureIsCell(vm);
+                newCase = AccessCase::create(vm, codeBlock, AccessCase::ProxyObjectIn, propertyName);
+                break;
+            }
+            case InByKind::ByVal: {
+                newCase = AccessCase::create(vm, codeBlock, AccessCase::IndexedProxyObjectIn, nullptr);
+                break;
+            }
+            default:
+                break;
+            }
         } else if (wasFound) {
             if (!structure->propertyAccessesAreCacheable())
                 return GiveUpOnCache;
@@ -1839,6 +1894,8 @@ static InlineCacheAction tryCacheArrayInByVal(JSGlobalObject* globalObject, Code
             accessType = AccessCase::IndexedScopedArgumentsInHit;
         else if (base->type() == StringType)
             accessType = AccessCase::IndexedStringInHit;
+        else if (base->type() == ProxyObjectType)
+            accessType = AccessCase::IndexedProxyObjectIn;
         else if (isTypedView(base->type())) {
             auto* typedArray = jsCast<JSArrayBufferView*>(base);
 #if USE(JSVALUE32_64)
@@ -1847,31 +1904,36 @@ static InlineCacheAction tryCacheArrayInByVal(JSGlobalObject* globalObject, Code
 #endif
             switch (typedArray->type()) {
             case Int8ArrayType:
-                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayInt8InHit : AccessCase::IndexedTypedArrayInt8InHit;
+                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayInt8In : AccessCase::IndexedTypedArrayInt8In;
                 break;
             case Uint8ArrayType:
-                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayUint8InHit : AccessCase::IndexedTypedArrayUint8InHit;
+                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayUint8In : AccessCase::IndexedTypedArrayUint8In;
                 break;
             case Uint8ClampedArrayType:
-                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayUint8ClampedInHit : AccessCase::IndexedTypedArrayUint8ClampedInHit;
+                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayUint8ClampedIn : AccessCase::IndexedTypedArrayUint8ClampedIn;
                 break;
             case Int16ArrayType:
-                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayInt16InHit : AccessCase::IndexedTypedArrayInt16InHit;
+                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayInt16In : AccessCase::IndexedTypedArrayInt16In;
                 break;
             case Uint16ArrayType:
-                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayUint16InHit : AccessCase::IndexedTypedArrayUint16InHit;
+                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayUint16In : AccessCase::IndexedTypedArrayUint16In;
                 break;
             case Int32ArrayType:
-                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayInt32InHit : AccessCase::IndexedTypedArrayInt32InHit;
+                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayInt32In : AccessCase::IndexedTypedArrayInt32In;
                 break;
             case Uint32ArrayType:
-                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayUint32InHit : AccessCase::IndexedTypedArrayUint32InHit;
+                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayUint32In : AccessCase::IndexedTypedArrayUint32In;
+                break;
+            case Float16ArrayType:
+                if (!CCallHelpers::supportsFloat16())
+                    return GiveUpOnCache;
+                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayFloat16In : AccessCase::IndexedTypedArrayFloat16In;
                 break;
             case Float32ArrayType:
-                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayFloat32InHit : AccessCase::IndexedTypedArrayFloat32InHit;
+                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayFloat32In : AccessCase::IndexedTypedArrayFloat32In;
                 break;
             case Float64ArrayType:
-                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayFloat64InHit : AccessCase::IndexedTypedArrayFloat64InHit;
+                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayFloat64In : AccessCase::IndexedTypedArrayFloat64In;
                 break;
             // FIXME: Optimize BigInt64Array / BigUint64Array in IC
             // https://bugs.webkit.org/show_bug.cgi?id=221183

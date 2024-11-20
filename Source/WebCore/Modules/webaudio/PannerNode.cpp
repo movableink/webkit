@@ -37,12 +37,14 @@
 #include "HRTFDatabaseLoader.h"
 #include "HRTFPanner.h"
 #include "ScriptExecutionContext.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/MathExtras.h>
+#include <wtf/TZoneMallocInlines.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(PannerNode);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PannerNode);
 
 static void fixNANs(double &x)
 {
@@ -590,5 +592,7 @@ void PannerNode::invalidateCachedPropertiesIfNecessary()
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

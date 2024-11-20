@@ -95,6 +95,8 @@ public:
         : m_storage(other.isEmpty() ? nullptr : Storage::createFromVector(other).moveToUniquePtr())
     { }
 
+    // FIXME: Should we remove this now that it's not required for HashTable::add? This assignment is non-trivial and
+    // should probably go through the explicit constructor.
     template<size_t inlineCapacity, typename OverflowHandler>
     FixedVector& operator=(const Vector<T, inlineCapacity, OverflowHandler>& other)
     {
@@ -109,6 +111,8 @@ public:
         m_storage = target.isEmpty() ? nullptr : Storage::createFromVector(WTFMove(target)).moveToUniquePtr();
     }
 
+    // FIXME: Should we remove this now that it's not required for HashTable::add? This assignment is non-trivial and
+    // should probably go through the explicit constructor.
     template<size_t inlineCapacity, typename OverflowHandler>
     FixedVector& operator=(Vector<T, inlineCapacity, OverflowHandler>&& other)
     {
@@ -124,7 +128,7 @@ public:
     }
 
     template<std::invocable<size_t> Generator>
-    static FixedVector createWithSizeFromGenerator(size_t size, Generator&& generator)
+    static FixedVector createWithSizeFromGenerator(size_t size, NOESCAPE Generator&& generator)
     {
         return FixedVector<T> { Storage::createWithSizeFromGenerator(size, std::forward<Generator>(generator)) };
     }
@@ -190,8 +194,8 @@ public:
 
     Storage* storage() { return m_storage.get(); }
 
-    std::span<const T> span() const { return { m_storage ? m_storage->data() : nullptr, size() }; }
-    std::span<T> mutableSpan() { return { m_storage ? m_storage->data() : nullptr, size() }; }
+    std::span<const T> span() const { return m_storage ? m_storage->span() : std::span<const T> { }; }
+    std::span<T> mutableSpan() { return m_storage ? m_storage->span() : std::span<T> { }; }
 
     Vector<T> subvector(size_t offset, size_t length = std::dynamic_extent) const
     {

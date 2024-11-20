@@ -96,8 +96,8 @@ class CachedRawResource;
 
         void didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse&);
         void didReceiveData(ResourceLoaderIdentifier, const SharedBuffer&);
-        void didFinishLoading(ResourceLoaderIdentifier, const NetworkLoadMetrics&);
-        void didFail(ResourceLoaderIdentifier, const ResourceError&);
+        void didFinishLoading(std::optional<ResourceLoaderIdentifier>, const NetworkLoadMetrics&);
+        void didFail(std::optional<ResourceLoaderIdentifier>, const ResourceError&);
         void makeCrossOriginAccessRequest(ResourceRequest&&);
         void makeSimpleCrossOriginAccessRequest(ResourceRequest&&);
         void makeCrossOriginAccessRequestWithPreflight(ResourceRequest&&);
@@ -109,6 +109,7 @@ class CachedRawResource;
         bool isAllowedByContentSecurityPolicy(const URL&, ContentSecurityPolicy::RedirectResponseReceived, const URL& preRedirectURL = URL());
         bool isResponseAllowedByContentSecurityPolicy(const ResourceResponse&);
 
+        Ref<SecurityOrigin> topOrigin() const;
         SecurityOrigin& securityOrigin() const;
         Ref<SecurityOrigin> protectedSecurityOrigin() const;
         const ContentSecurityPolicy& contentSecurityPolicy() const;

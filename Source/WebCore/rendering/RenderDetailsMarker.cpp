@@ -29,13 +29,13 @@
 #include "PaintInfo.h"
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderDetailsMarker);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderDetailsMarker);
 
 RenderDetailsMarker::RenderDetailsMarker(DetailsMarkerControl& element, RenderStyle&& style)
     : RenderBlockFlow(Type::DetailsMarker, element, WTFMove(style))
@@ -45,7 +45,7 @@ RenderDetailsMarker::RenderDetailsMarker(DetailsMarkerControl& element, RenderSt
 
 RenderDetailsMarker::~RenderDetailsMarker() = default;
 
-static Path createPath(const FloatPoint* path)
+static Path createPath(std::span<const FloatPoint, 4> path)
 {
     Path result;
     result.moveTo(FloatPoint(path[0].x(), path[0].y()));
@@ -56,45 +56,45 @@ static Path createPath(const FloatPoint* path)
 
 static Path createDownArrowPath()
 {
-    FloatPoint points[4] = { FloatPoint(0.0f, 0.07f), FloatPoint(0.5f, 0.93f), FloatPoint(1.0f, 0.07f), FloatPoint(0.0f, 0.07f) };
+    std::array points { FloatPoint(0.0f, 0.07f), FloatPoint(0.5f, 0.93f), FloatPoint(1.0f, 0.07f), FloatPoint(0.0f, 0.07f) };
     return createPath(points);
 }
 
 static Path createUpArrowPath()
 {
-    FloatPoint points[4] = { FloatPoint(0.0f, 0.93f), FloatPoint(0.5f, 0.07f), FloatPoint(1.0f, 0.93f), FloatPoint(0.0f, 0.93f) };
+    std::array points { FloatPoint(0.0f, 0.93f), FloatPoint(0.5f, 0.07f), FloatPoint(1.0f, 0.93f), FloatPoint(0.0f, 0.93f) };
     return createPath(points);
 }
 
 static Path createLeftArrowPath()
 {
-    FloatPoint points[4] = { FloatPoint(1.0f, 0.0f), FloatPoint(0.14f, 0.5f), FloatPoint(1.0f, 1.0f), FloatPoint(1.0f, 0.0f) };
+    std::array points { FloatPoint(1.0f, 0.0f), FloatPoint(0.14f, 0.5f), FloatPoint(1.0f, 1.0f), FloatPoint(1.0f, 0.0f) };
     return createPath(points);
 }
 
 static Path createRightArrowPath()
 {
-    FloatPoint points[4] = { FloatPoint(0.0f, 0.0f), FloatPoint(0.86f, 0.5f), FloatPoint(0.0f, 1.0f), FloatPoint(0.0f, 0.0f) };
+    std::array points { FloatPoint(0.0f, 0.0f), FloatPoint(0.86f, 0.5f), FloatPoint(0.0f, 1.0f), FloatPoint(0.0f, 0.0f) };
     return createPath(points);
 }
 
 RenderDetailsMarker::Orientation RenderDetailsMarker::orientation() const
 {
-    switch (style().blockFlowDirection()) {
-    case BlockFlowDirection::TopToBottom:
-        if (style().isLeftToRightDirection())
+    switch (writingMode().blockDirection()) {
+    case FlowDirection::TopToBottom:
+        if (writingMode().isInlineLeftToRight())
             return isOpen() ? Down : Right;
         return isOpen() ? Down : Left;
-    case BlockFlowDirection::RightToLeft:
-        if (style().isLeftToRightDirection())
+    case FlowDirection::RightToLeft:
+        if (writingMode().isInlineTopToBottom())
             return isOpen() ? Left : Down;
         return isOpen() ? Left : Up;
-    case BlockFlowDirection::LeftToRight:
-        if (style().isLeftToRightDirection())
+    case FlowDirection::LeftToRight:
+        if (writingMode().isInlineTopToBottom())
             return isOpen() ? Right : Down;
         return isOpen() ? Right : Up;
-    case BlockFlowDirection::BottomToTop:
-        if (style().isLeftToRightDirection())
+    case FlowDirection::BottomToTop:
+        if (writingMode().isInlineLeftToRight())
             return isOpen() ? Up : Right;
         return isOpen() ? Up : Left;
     }

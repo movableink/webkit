@@ -38,6 +38,7 @@
 #include <wtf/ArgumentCoder.h>
 #include <wtf/OptionSet.h>
 #include <wtf/Ref.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -48,7 +49,7 @@ class RenderObject;
 class RenderStyle;
 
 class EventRegionContext final : public RegionContext {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(EventRegionContext, WEBCORE_EXPORT);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(EventRegionContext);
 public:
     WEBCORE_EXPORT explicit EventRegionContext(EventRegion&);
@@ -73,12 +74,13 @@ private:
 
 #if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
     Vector<InteractionRegion> m_interactionRegions;
-    HashMap<IntRect, InteractionRegion::ContentHint> m_interactionRectsAndContentHints;
+    UncheckedKeyHashMap<IntRect, InteractionRegion::ContentHint> m_interactionRectsAndContentHints;
     HashSet<IntRect> m_occlusionRects;
-    HashSet<IntRect> m_elementGuardRects;
+    enum class Inflated : bool { No, Yes };
+    UncheckedKeyHashMap<IntRect, Inflated> m_guardRects;
     HashSet<ElementIdentifier> m_containerRemovalCandidates;
     HashSet<ElementIdentifier> m_containersToRemove;
-    HashMap<ElementIdentifier, Vector<InteractionRegion>> m_discoveredRegionsByElement;
+    UncheckedKeyHashMap<ElementIdentifier, Vector<InteractionRegion>> m_discoveredRegionsByElement;
 #endif
 };
 
@@ -98,6 +100,9 @@ public:
 #endif
 #if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
     , Vector<WebCore::InteractionRegion>
+#endif
+#if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
+    , WebCore::Region
 #endif
     );
 
@@ -142,12 +147,19 @@ public:
     void clearInteractionRegions();
 #endif
 
+#if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
+    const Region& scrollOverlayRegion() const { return m_scrollOverlayRegion; }
+#endif
+
 private:
     friend struct IPC::ArgumentCoder<EventRegion, void>;
 #if ENABLE(TOUCH_ACTION_REGIONS)
     void uniteTouchActions(const Region&, OptionSet<TouchAction>);
 #endif
     void uniteEventListeners(const Region&, OptionSet<EventListenerRegionType>);
+#if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
+    void uniteScrollOverlayRegion(const Region&, const RenderStyle&);
+#endif
 
     Region m_region;
 #if ENABLE(TOUCH_ACTION_REGIONS)
@@ -162,6 +174,9 @@ private:
 #endif
 #if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
     Vector<InteractionRegion> m_interactionRegions;
+#endif
+#if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
+    Region m_scrollOverlayRegion;
 #endif
 };
 

@@ -36,11 +36,14 @@
 #include <float.h>
 #include <wtf/Assertions.h>
 #include <wtf/MathExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 #if CPU(X86_64)
 #include <emmintrin.h>
 #endif
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -65,6 +68,8 @@ namespace WebCore {
 // | m_matrix[0][1] m_matrix[1][1] m_matrix[2][1] m_matrix[3][1] |
 // | m_matrix[0][2] m_matrix[1][2] m_matrix[2][2] m_matrix[3][2] |
 // | m_matrix[0][3] m_matrix[1][3] m_matrix[2][3] m_matrix[3][3] |
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TransformationMatrix);
 
 typedef double Vector4[4];
 typedef double Vector3[3];
@@ -352,7 +357,7 @@ static bool decompose2(const TransformationMatrix::Matrix4& matrix, Transformati
 static bool decompose4(const TransformationMatrix::Matrix4& mat, TransformationMatrix::Decomposed4Type& result)
 {
     TransformationMatrix::Matrix4 localMatrix;
-    memcpy(localMatrix, mat, sizeof(TransformationMatrix::Matrix4));
+    memcpySpan(std::span { localMatrix }, std::span { mat });
 
     // Normalize the matrix.
     if (localMatrix[3][3] == 0)
@@ -366,7 +371,7 @@ static bool decompose4(const TransformationMatrix::Matrix4& mat, TransformationM
     // perspectiveMatrix is used to solve for perspective, but it also provides
     // an easy way to test for singularity of the upper 3x3 component.
     TransformationMatrix::Matrix4 perspectiveMatrix;
-    memcpy(perspectiveMatrix, localMatrix, sizeof(TransformationMatrix::Matrix4));
+    memcpySpan(std::span { perspectiveMatrix }, std::span { localMatrix });
     for (i = 0; i < 3; i++)
         perspectiveMatrix[i][3] = 0;
     perspectiveMatrix[3][3] = 1;
@@ -1527,7 +1532,7 @@ TransformationMatrix& TransformationMatrix::multiply(const TransformationMatrix&
     tmp[3][3] = (mat.m_matrix[3][0] * m_matrix[0][3] + mat.m_matrix[3][1] * m_matrix[1][3]
                + mat.m_matrix[3][2] * m_matrix[2][3] + mat.m_matrix[3][3] * m_matrix[3][3]);
 
-    memcpy(&m_matrix[0][0], &tmp[0][0], sizeof(Matrix4));
+    memcpySpan(std::span { m_matrix }, std::span { tmp });
 #endif
     return *this;
 }
@@ -1810,7 +1815,7 @@ void TransformationMatrix::recompose2(const Decomposed2Type& decomp)
     m_matrix[1][0] = decomp.m21;
     m_matrix[1][1] = decomp.m22;
 
-    translate3d(decomp.translateX, decomp.translateY, 0);
+    translateRight(decomp.translateX, decomp.translateY);
     rotate(decomp.angle);
     scale3d(decomp.scaleX, decomp.scaleY, 1);
 }
@@ -1925,6 +1930,13 @@ bool TransformationMatrix::isBackFaceVisible() const
     return zComponentOfTransformedNormal < 0;
 }
 
+TransformationMatrix TransformationMatrix::transpose() const
+{
+    TransformationMatrix transpose;
+    transposeMatrix4(m_matrix, transpose.m_matrix);
+    return transpose;
+}
+
 TextStream& operator<<(TextStream& ts, const TransformationMatrix& transform)
 {
     TextStream::IndentScope indentScope(ts);
@@ -1937,3 +1949,5 @@ TextStream& operator<<(TextStream& ts, const TransformationMatrix& transform)
 }
 
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

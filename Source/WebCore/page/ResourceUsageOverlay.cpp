@@ -34,8 +34,11 @@
 #include "Page.h"
 #include "PageOverlayController.h"
 #include "PlatformMouseEvent.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ResourceUsageOverlay);
 
 ResourceUsageOverlay::ResourceUsageOverlay(Page& page)
     : m_page(page)
@@ -58,16 +61,10 @@ ResourceUsageOverlay::~ResourceUsageOverlay()
 
 void ResourceUsageOverlay::initialize()
 {
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page.mainFrame());
-    if (!localMainFrame)
+    auto* frameView = m_page.mainFrame().virtualView();
+    if (!frameView)
         return;
-
-    if (!localMainFrame->view())
-        return;
-
-    auto& frameView = *localMainFrame->view();
-
-    IntRect initialRect(frameView.width() / 2 - normalWidth / 2, frameView.height() - normalHeight - 20, normalWidth, normalHeight);
+    IntRect initialRect(frameView->width() / 2 - normalWidth / 2, frameView->height() - normalHeight - 20, normalWidth, normalHeight);
 
 #if PLATFORM(IOS_FAMILY)
     // FIXME: The overlay should be stuck to the viewport instead of moving along with the page.

@@ -30,6 +30,7 @@
 #import <wtf/HashMap.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
+#import <wtf/TZoneMalloc.h>
 #import <wtf/Vector.h>
 #import <wtf/WeakPtr.h>
 
@@ -49,7 +50,7 @@ struct BindableResources;
 
 // https://gpuweb.github.io/gpuweb/#gpucomputepassencoder
 class ComputePassEncoder : public WGPUComputePassEncoderImpl, public RefCounted<ComputePassEncoder>, public CommandsMixin {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ComputePassEncoder);
 public:
     static Ref<ComputePassEncoder> create(id<MTLComputeCommandEncoder> computeCommandEncoder, const WGPUComputePassDescriptor& descriptor, CommandEncoder& parentEncoder, Device& device)
     {
@@ -69,7 +70,7 @@ public:
     void popDebugGroup();
     void pushDebugGroup(String&& groupLabel);
 
-    void setBindGroup(uint32_t groupIndex, const BindGroup&, uint32_t dynamicOffsetCount, const uint32_t* dynamicOffsets);
+    void setBindGroup(uint32_t groupIndex, const BindGroup&, std::span<const uint32_t> dynamicOffsets);
     void setPipeline(const ComputePipeline&);
     void setLabel(String&&);
 
@@ -88,12 +89,11 @@ private:
     void executePreDispatchCommands(const Buffer* = nullptr);
     id<MTLBuffer> runPredispatchIndirectCallValidation(const Buffer&, uint64_t);
 
+    Ref<CommandEncoder> protectedParentEncoder() { return m_parentEncoder; }
+    Ref<Device> protectedDevice() const { return m_device; }
+
     id<MTLComputeCommandEncoder> m_computeCommandEncoder { nil };
 
-    struct PendingTimestampWrites {
-        Ref<QuerySet> querySet;
-        uint32_t queryIndex;
-    };
     uint64_t m_debugGroupStackSize { 0 };
 
     const Ref<Device> m_device;

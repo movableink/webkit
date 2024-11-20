@@ -146,7 +146,7 @@ public:
     void setCustomUserAgent(JSStringRef);
 
     // Special DOM functions.
-    void clearBackForwardList();
+    void clearBackForwardList(JSContextRef, JSValueRef callback);
     void execCommand(JSStringRef name, JSStringRef showUI, JSStringRef value);
     bool isCommandEnabled(JSStringRef name);
     unsigned windowCount();
@@ -155,7 +155,7 @@ public:
     void testRepaint() { m_testRepaint = true; }
     void repaintSweepHorizontally() { m_testRepaintSweepHorizontally = true; }
     void display();
-    void displayAndTrackRepaints();
+    void displayAndTrackRepaints(JSContextRef, JSValueRef callback);
     void displayOnLoadFinish() { m_displayOnLoadFinish = true; }
     bool shouldDisplayOnLoadFinish() { return m_displayOnLoadFinish; }
     void dontForceRepaint() { m_forceRepaint = false; }
@@ -211,7 +211,7 @@ public:
     void setWhatToDump(WhatToDump);
 
     bool shouldDumpAllFrameScrollPositions() const { return m_shouldDumpAllFrameScrollPositions; }
-    bool shouldDumpBackForwardListsForAllWindows() const { return m_shouldDumpBackForwardListsForAllWindows; }
+    bool shouldDumpBackForwardListsForAllWindows() const;
     bool shouldDumpEditingCallbacks() const { return m_dumpEditingCallbacks; }
     bool shouldDumpMainFrameScrollPosition() const { return whatToDump() == WhatToDump::RenderTree; }
     bool shouldDumpStatusCallbacks() const { return m_dumpStatusCallbacks; }
@@ -370,6 +370,7 @@ public:
     void setShouldDecideResponsePolicyAfterDelay(bool);
     void setNavigationGesturesEnabled(bool);
     void setIgnoresViewportScaleLimits(bool);
+    void setUseDarkAppearanceForTesting(bool);
     void setShouldDownloadUndisplayableMIMETypes(bool);
     void setShouldAllowDeviceOrientationAndMotionAccess(bool);
     void stopLoading();
@@ -411,12 +412,8 @@ public:
     bool doesStatisticsDomainIDExistInDatabase(unsigned domainID);
     void setStatisticsEnabled(bool value);
     bool isStatisticsEphemeral();
-    void installStatisticsDidModifyDataRecordsCallback(JSContextRef, JSValueRef callback);
-    void installStatisticsDidScanDataRecordsCallback(JSContextRef, JSValueRef callback);
-    void statisticsDidModifyDataRecordsCallback();
-    void statisticsDidScanDataRecordsCallback();
-    bool statisticsNotifyObserver();
-    void statisticsProcessStatisticsAndDataRecords();
+    void statisticsNotifyObserver(JSContextRef, JSValueRef completionHandler);
+    void statisticsProcessStatisticsAndDataRecords(JSContextRef, JSValueRef completionHandler);
     void statisticsUpdateCookieBlocking(JSContextRef, JSValueRef completionHandler);
     void setStatisticsDebugMode(JSContextRef, bool value, JSValueRef completionHandler);
     void setStatisticsPrevalentResourceForDebugMode(JSContextRef, JSStringRef hostName, JSValueRef completionHandler);
@@ -443,7 +440,6 @@ public:
     void setStatisticsTopFrameUniqueRedirectFrom(JSStringRef hostName, JSStringRef hostNameRedirectedFrom);
     void setStatisticsCrossSiteLoadWithLinkDecoration(JSStringRef fromHost, JSStringRef toHost, bool wasFiltered);
     void setStatisticsTimeToLiveUserInteraction(double seconds);
-    void setStatisticsNotifyPagesWhenDataRecordsWereScanned(bool);
     void setStatisticsTimeAdvanceForTesting(double);
     void setStatisticsIsRunningTest(bool);
     void setStatisticsShouldClassifyResourcesBeforeDataRecordsRemoval(bool);
@@ -454,7 +450,7 @@ public:
     void statisticsClearInMemoryAndPersistentStore(JSContextRef, JSValueRef callback);
     void statisticsClearInMemoryAndPersistentStoreModifiedSinceHours(JSContextRef, unsigned hours, JSValueRef callback);
     void statisticsClearThroughWebsiteDataRemoval(JSContextRef, JSValueRef callback);
-    void statisticsDeleteCookiesForHost(JSStringRef hostName, bool includeHttpOnlyCookies);
+    void statisticsDeleteCookiesForHost(JSContextRef, JSStringRef hostName, bool includeHttpOnlyCookies, JSValueRef callback);
     bool isStatisticsHasLocalStorage(JSStringRef hostName);
     void setStatisticsCacheMaxAgeCap(double seconds);
     bool hasStatisticsIsolatedSession(JSStringRef hostName);
@@ -512,6 +508,7 @@ public:
     bool isMockRealtimeMediaSourceCenterEnabled();
     void setMockCaptureDevicesInterrupted(bool isCameraInterrupted, bool isMicrophoneInterrupted);
     void triggerMockCaptureConfigurationChange(bool forMicrophone, bool forDisplay);
+    void setCaptureState(bool cameraState, bool microphoneState, bool displayState);
 
     bool hasAppBoundSession();
     void clearAppBoundSession();
@@ -563,6 +560,10 @@ public:
 
     void getAndClearReportedWindowProxyAccessDomains(JSContextRef, JSValueRef);
 
+    void setTopContentInset(JSContextRef, double, JSValueRef);
+
+    void setPageScaleFactor(JSContextRef, double scaleFactor, long x, long y, JSValueRef callback);
+
 private:
     TestRunner();
 
@@ -588,7 +589,6 @@ private:
 
     unsigned m_renderTreeDumpOptions { 0 };
     bool m_shouldDumpAllFrameScrollPositions { false };
-    bool m_shouldDumpBackForwardListsForAllWindows { false };
     bool m_shouldAllowEditing { true };
 
     bool m_dumpEditingCallbacks { false };

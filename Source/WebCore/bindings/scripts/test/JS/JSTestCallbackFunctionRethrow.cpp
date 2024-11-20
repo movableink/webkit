@@ -36,15 +36,16 @@ using namespace JSC;
 
 JSTestCallbackFunctionRethrow::JSTestCallbackFunctionRethrow(JSObject* callback, JSDOMGlobalObject* globalObject)
     : TestCallbackFunctionRethrow(globalObject->scriptExecutionContext())
-    , m_data(new JSCallbackDataStrong(callback, globalObject, this))
+    , m_data(new JSCallbackData(callback, globalObject, this))
 {
 }
 
 JSTestCallbackFunctionRethrow::~JSTestCallbackFunctionRethrow()
 {
-    ScriptExecutionContext* context = scriptExecutionContext();
+    SUPPRESS_UNCOUNTED_LOCAL ScriptExecutionContext* context = scriptExecutionContext();
     // When the context is destroyed, all tasks with a reference to a callback
     // should be deleted. So if the context is 0, we are on the context thread.
+    // We can't use RefPtr here since ScriptExecutionContext is not thread safe ref counted.
     if (!context || context->isContextThread())
         delete m_data;
     else
@@ -54,7 +55,7 @@ JSTestCallbackFunctionRethrow::~JSTestCallbackFunctionRethrow()
 #endif
 }
 
-CallbackResult<typename IDLDOMString::ImplementationType> JSTestCallbackFunctionRethrow::handleEvent(typename IDLSequence<IDLLong>::ParameterType argument)
+CallbackResult<typename IDLDOMString::CallbackReturnType> JSTestCallbackFunctionRethrow::handleEventRethrowingException(typename IDLSequence<IDLLong>::ParameterType argument)
 {
     if (!canInvokeCallback())
         return CallbackResultType::UnableToExecute;
@@ -62,7 +63,7 @@ CallbackResult<typename IDLDOMString::ImplementationType> JSTestCallbackFunction
     Ref<JSTestCallbackFunctionRethrow> protectedThis(*this);
 
     auto& globalObject = *m_data->globalObject();
-    auto& vm = globalObject.vm();
+    SUPPRESS_UNCOUNTED_LOCAL auto& vm = globalObject.vm();
 
     JSLockHolder lock(vm);
     auto& lexicalGlobalObject = globalObject;
@@ -84,6 +85,16 @@ CallbackResult<typename IDLDOMString::ImplementationType> JSTestCallbackFunction
     if (UNLIKELY(returnValue.hasException(throwScope)))
         return CallbackResultType::ExceptionThrown;
     return { returnValue.releaseReturnValue() };
+}
+
+void JSTestCallbackFunctionRethrow::visitJSFunction(JSC::AbstractSlotVisitor& visitor)
+{
+    m_data->visitJSFunction(visitor);
+}
+
+void JSTestCallbackFunctionRethrow::visitJSFunction(JSC::SlotVisitor& visitor)
+{
+    m_data->visitJSFunction(visitor);
 }
 
 JSC::JSValue toJS(TestCallbackFunctionRethrow& impl)

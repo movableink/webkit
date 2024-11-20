@@ -32,20 +32,26 @@
 #include "IntSize.h"
 #include "PlatformImage.h"
 #include "RenderingResource.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
 
-class GraphicsContext;
+#if USE(SKIA)
+class GLFence;
+#endif
 
+class GraphicsContext;
 class NativeImageBackend;
 
 class NativeImage final : public RenderingResource {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(NativeImage);
 public:
     static WEBCORE_EXPORT RefPtr<NativeImage> create(PlatformImagePtr&&, RenderingResourceIdentifier = RenderingResourceIdentifier::generate());
     // Creates a NativeImage that is intended to be drawn once or only few times. Signals the platform to avoid generating any caches for the image.
     static WEBCORE_EXPORT RefPtr<NativeImage> createTransient(PlatformImagePtr&&, RenderingResourceIdentifier = RenderingResourceIdentifier::generate());
+
+    virtual ~NativeImage();
 
     WEBCORE_EXPORT const PlatformImagePtr& platformImage() const;
 
@@ -53,6 +59,7 @@ public:
     bool hasAlpha() const;
     std::optional<Color> singlePixelSolidColor() const;
     WEBCORE_EXPORT DestinationColorSpace colorSpace() const;
+    Headroom headroom() const;
 
     void draw(GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions);
     void clearSubimages();
@@ -76,7 +83,13 @@ public:
     virtual IntSize size() const = 0;
     virtual bool hasAlpha() const = 0;
     virtual DestinationColorSpace colorSpace() const = 0;
+    virtual Headroom headroom() const = 0;
     WEBCORE_EXPORT virtual bool isRemoteNativeImageBackendProxy() const;
+
+#if USE(SKIA)
+    virtual void finishAcceleratedRenderingAndCreateFence() { }
+    virtual void waitForAcceleratedRenderingFenceCompletion() { }
+#endif
 };
 
 class PlatformImageNativeImageBackend final : public NativeImageBackend {
@@ -87,8 +100,17 @@ public:
     WEBCORE_EXPORT IntSize size() const final;
     WEBCORE_EXPORT bool hasAlpha() const final;
     WEBCORE_EXPORT DestinationColorSpace colorSpace() const final;
+    WEBCORE_EXPORT Headroom headroom() const final;
+
+#if USE(SKIA)
+    void finishAcceleratedRenderingAndCreateFence() final;
+    void waitForAcceleratedRenderingFenceCompletion() final;
+#endif
 private:
     PlatformImagePtr m_platformImage;
+#if USE(SKIA)
+    std::unique_ptr<GLFence> m_fence;
+#endif
 };
 
 } // namespace WebCore

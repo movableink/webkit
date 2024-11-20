@@ -68,6 +68,7 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/URLParser.h>
 #include <wtf/glib/GRefPtr.h>
 #include <wtf/glib/GUniquePtr.h>
@@ -177,14 +178,14 @@ private:
             return;
 
         GRefPtr<WebKitURISchemeRequest> request = adoptGRef(webkitURISchemeRequestCreate(m_context, page, task));
-        auto addResult = m_requests.add({ task.resourceLoaderID(), task.pageProxyID() }, WTFMove(request));
+        auto addResult = m_requests.add({ task.resourceLoaderID(), *task.pageProxyID() }, WTFMove(request));
         ASSERT(addResult.isNewEntry);
         m_callback(addResult.iterator->value.get(), m_userData);
     }
 
     void platformStopTask(WebPageProxy&, WebURLSchemeTask& task) final
     {
-        auto it = m_requests.find({ task.resourceLoaderID(), task.pageProxyID() });
+        auto it = m_requests.find({ task.resourceLoaderID(), *task.pageProxyID() });
         if (it == m_requests.end())
             return;
 
@@ -194,7 +195,7 @@ private:
 
     void platformTaskCompleted(WebURLSchemeTask& task) final
     {
-        m_requests.remove({ task.resourceLoaderID(), task.pageProxyID() });
+        m_requests.remove({ task.resourceLoaderID(), *task.pageProxyID() });
     }
 
     WebKitWebContext* m_context { nullptr };
@@ -208,7 +209,7 @@ typedef HashMap<String, RefPtr<WebKitURISchemeHandler> > URISchemeHandlerMap;
 
 #if ENABLE(REMOTE_INSPECTOR)
 class WebKitAutomationClient final : Inspector::RemoteInspector::Client {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(WebKitAutomationClient);
 public:
     explicit WebKitAutomationClient(WebKitWebContext* context)
         : m_webContext(context)
@@ -322,6 +323,7 @@ void WebKitAutomationClient::requestAutomationSession(const String& sessionIdent
 
 void webkitWebContextWillCloseAutomationSession(WebKitWebContext* webContext)
 {
+    g_signal_emit_by_name(webContext->priv->automationSession.get(), "will-close");
     webContext->priv->processPool->setAutomationSession(nullptr);
     webContext->priv->automationSession = nullptr;
 }
@@ -335,11 +337,9 @@ void webkitWebContextWillCloseAutomationSession(WebKitWebContext* webContext)
 
 static const char* injectedBundleDirectory()
 {
-#if ENABLE(DEVELOPER_MODE)
     const char* bundleDirectory = g_getenv("WEBKIT_INJECTED_BUNDLE_PATH");
     if (bundleDirectory && g_file_test(bundleDirectory, G_FILE_TEST_IS_DIR))
         return bundleDirectory;
-#endif
 
     static const char* injectedBundlePath = PKGLIBDIR G_DIR_SEPARATOR_S "injected-bundle" G_DIR_SEPARATOR_S;
     return injectedBundlePath;
@@ -433,9 +433,11 @@ static void webkitWebContextConstructed(GObject* object)
     API::ProcessPoolConfiguration configuration;
     configuration.setInjectedBundlePath(FileSystem::stringFromFileSystemRepresentation(bundleFilename.get()));
     configuration.setUsesWebProcessCache(true);
-#if PLATFORM(GTK) && !USE(GTK4) && USE(CAIRO)
+#if PLATFORM(GTK) && !USE(GTK4)
     configuration.setProcessSwapsOnNavigation(priv->psonEnabled);
+#if USE(CAIRO)
     configuration.setUseSystemAppearanceForScrollbars(priv->useSystemAppearanceForScrollbars);
+#endif
 #else
     configuration.setProcessSwapsOnNavigation(true);
 #endif
@@ -1523,7 +1525,7 @@ gboolean webkit_web_context_get_spell_checking_enabled(WebKitWebContext* context
     g_return_val_if_fail(WEBKIT_IS_WEB_CONTEXT(context), FALSE);
 
 #if ENABLE(SPELLCHECK)
-    return TextChecker::state().isContinuousSpellCheckingEnabled;
+    return TextChecker::state().contains(TextCheckerState::ContinuousSpellCheckingEnabled);
 #else
     return false;
 #endif

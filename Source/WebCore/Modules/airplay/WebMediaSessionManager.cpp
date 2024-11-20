@@ -34,6 +34,8 @@
 #include "WebMediaSessionManagerClient.h"
 #include <wtf/Algorithms.h>
 #include <wtf/Logger.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -43,7 +45,7 @@ static const Seconds taskDelayInterval { 100_ms };
 #define ALWAYS_LOG_MEDIASESSIONMANAGER logger().logAlways
 
 struct ClientState {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED_INLINE(ClientState);
 
     explicit ClientState(WebMediaSessionManagerClient& client, PlaybackTargetClientContextIdentifier contextId)
         : client(client)
@@ -100,7 +102,7 @@ String mediaProducerStateString(MediaProducerMediaStateFlags flags)
 
 class WebMediaSessionLogger {
     WTF_MAKE_NONCOPYABLE(WebMediaSessionLogger);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(WebMediaSessionLogger);
 public:
 
     static std::unique_ptr<WebMediaSessionLogger> create(WebMediaSessionManager& manager)
@@ -120,7 +122,7 @@ public:
     template<typename... Arguments>
     inline void logAlways(const char* methodName, const Arguments&... arguments) const
     {
-        if (!m_manager.alwaysOnLoggingAllowed())
+        if (!m_manager->alwaysOnLoggingAllowed())
             return;
 
         m_logger->logAlways(LogMedia, makeString("WebMediaSessionManager::"_s, span(methodName), ' '), arguments...);
@@ -134,7 +136,7 @@ private:
     {
     }
 
-    WebMediaSessionManager& m_manager;
+    CheckedRef<WebMediaSessionManager> m_manager;
     Ref<Logger> m_logger;
 };
 
@@ -198,12 +200,12 @@ WebMediaSessionManager::WebMediaSessionManager()
 
 WebMediaSessionManager::~WebMediaSessionManager() = default;
 
-PlaybackTargetClientContextIdentifier WebMediaSessionManager::addPlaybackTargetPickerClient(WebMediaSessionManagerClient& client, PlaybackTargetClientContextIdentifier contextId)
+std::optional<PlaybackTargetClientContextIdentifier> WebMediaSessionManager::addPlaybackTargetPickerClient(WebMediaSessionManagerClient& client, PlaybackTargetClientContextIdentifier contextId)
 {
     size_t index = find(&client, contextId);
     ASSERT(index == notFound);
     if (index != notFound)
-        return { };
+        return std::nullopt;
 
     ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, contextId.toUInt64());
     m_clientState.append(makeUnique<ClientState>(client, contextId));

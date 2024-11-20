@@ -32,6 +32,8 @@
 #include "MessageSender.h"
 #include "UpdateInfo.h"
 #include "WCLayerTreeHostIdentifier.h"
+#include <wtf/TZoneMalloc.h>
+#include <wtf/WeakRef.h>
 
 namespace WebKit {
 
@@ -41,7 +43,7 @@ class RemoteWCLayerTreeHostProxy
     : private IPC::MessageSender
     , private GPUProcessConnection::Client
     , public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<RemoteWCLayerTreeHostProxy> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(RemoteWCLayerTreeHostProxy);
 public:
     RemoteWCLayerTreeHostProxy(WebPage&, bool usesOffscreenRendering);
     ~RemoteWCLayerTreeHostProxy();
@@ -66,7 +68,7 @@ private:
 
     ThreadSafeWeakPtr<GPUProcessConnection> m_gpuProcessConnection;
     WCLayerTreeHostIdentifier m_wcLayerTreeHostIdentifier { WCLayerTreeHostIdentifier::generate() };
-    WebPage& m_page;
+    WeakRef<WebPage> m_page;
     bool m_usesOffscreenRendering { false };
 };
 

@@ -21,6 +21,7 @@
 #include "config.h"
 #include "RenderTheme.h"
 
+#include "BorderShape.h"
 #include "ButtonPart.h"
 #include "CSSValueKeywords.h"
 #include "ColorBlending.h"
@@ -78,7 +79,6 @@
 #include <wtf/FileSystem.h>
 #include <wtf/Language.h>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/text/StringConcatenateNumbers.h>
 
 #if ENABLE(SERVICE_CONTROLS)
 #include "ImageControlsMac.h"
@@ -193,7 +193,7 @@ void RenderTheme::adjustStyle(RenderStyle& style, const Element* element, const 
     auto autoAppearance = autoAppearanceForElement(style, element);
     auto appearance = adjustAppearanceForElement(style, element, autoAppearance);
 
-    if (appearance == StyleAppearance::None)
+    if (appearance == StyleAppearance::None || appearance == StyleAppearance::Base)
         return;
 
     // Force inline and table display styles to be inline-block (except for table- which is block)
@@ -338,7 +338,7 @@ StyleAppearance RenderTheme::autoAppearanceForElement(RenderStyle& style, const 
 #endif
 
         if (input->isRangeControl())
-            return style.isHorizontalWritingMode() ? StyleAppearance::SliderHorizontal : StyleAppearance::SliderVertical;
+            return style.writingMode().isHorizontal() ? StyleAppearance::SliderHorizontal : StyleAppearance::SliderVertical;
 
         if (input->isTextField())
             return StyleAppearance::TextField;
@@ -485,11 +485,15 @@ static void updateSliderTrackPartForRenderer(SliderTrackPart& sliderTrackPart, c
         trackBounds.moveBy(-sliderBounds.location());
     }
 
+    double minimum = input.minimum();
+    double maximum = input.maximum();
+    double thumbPosition = 0;
+    if (maximum > minimum)
+        thumbPosition = (input.valueAsNumber() - minimum) / (maximum - minimum);
+
     Vector<double> tickRatios;
 #if ENABLE(DATALIST_ELEMENT)
     if (auto dataList = input.dataList()) {
-        double minimum = input.minimum();
-        double maximum = input.maximum();
 
         for (auto& optionElement : dataList->suggestions()) {
             auto optionValue = input.listOptionValueAsDouble(optionElement);
@@ -503,6 +507,7 @@ static void updateSliderTrackPartForRenderer(SliderTrackPart& sliderTrackPart, c
 
     sliderTrackPart.setThumbSize(thumbSize);
     sliderTrackPart.setTrackBounds(trackBounds);
+    sliderTrackPart.setThumbPosition(thumbPosition);
     sliderTrackPart.setTickRatios(WTFMove(tickRatios));
 }
 
@@ -531,6 +536,7 @@ RefPtr<ControlPart> RenderTheme::createControlPart(const RenderObject& renderer)
     switch (appearance) {
     case StyleAppearance::None:
     case StyleAppearance::Auto:
+    case StyleAppearance::Base:
         break;
 
     case StyleAppearance::Checkbox:
@@ -703,7 +709,7 @@ OptionSet<ControlStyle::State> RenderTheme::extractControlStyleStatesForRenderer
             states.add(ControlStyle::State::ListButtonPressed);
     }
 #endif
-    if (!renderer.style().isHorizontalWritingMode())
+    if (!renderer.writingMode().isHorizontal())
         states.add(ControlStyle::State::VerticalWritingMode);
     return states;
 }
@@ -743,7 +749,7 @@ ControlStyle RenderTheme::extractControlStyleForRenderer(const RenderObject& ren
         extractControlStyleStatesForRendererInternal(*renderer),
         renderer->style().computedFontSize(),
         renderer->style().usedZoom(),
-        renderer->style().usedAccentColor(),
+        renderer->style().usedAccentColor(renderObject.styleColorOptions()),
         renderer->style().visitedDependentColorWithColorFilter(CSSPropertyColor),
         renderer->style().borderWidth()
     };
@@ -767,11 +773,11 @@ bool RenderTheme::paint(const RenderBox& box, ControlPart& part, const PaintInfo
 
     float deviceScaleFactor = box.document().deviceScaleFactor();
     auto zoomedRect = snapRectToDevicePixels(rect, deviceScaleFactor);
-    auto borderRect = FloatRoundedRect(box.style().getRoundedBorderFor(LayoutRect(zoomedRect)));
+    auto borderShape = BorderShape::shapeForBorderRect(box.style(), LayoutRect(zoomedRect));
     auto controlStyle = extractControlStyleForRenderer(box);
     auto& context = paintInfo.context();
 
-    context.drawControlPart(part, borderRect, deviceScaleFactor, controlStyle);
+    context.drawControlPart(part, borderShape.deprecatedPixelSnappedRoundedRect(deviceScaleFactor), deviceScaleFactor, controlStyle);
     return false;
 }
 
@@ -798,22 +804,6 @@ bool RenderTheme::paint(const RenderBox& box, const PaintInfo& paintInfo, const 
     FloatRect devicePixelSnappedRect = snapRectToDevicePixels(rect, deviceScaleFactor);
 
     switch (appearance) {
-#if USE(THEME_ADWAITA)
-    case StyleAppearance::Checkbox:
-    case StyleAppearance::Radio:
-    case StyleAppearance::PushButton:
-    case StyleAppearance::SquareButton:
-#if ENABLE(INPUT_TYPE_COLOR)
-    case StyleAppearance::ColorWell:
-#endif
-    case StyleAppearance::DefaultButton:
-    case StyleAppearance::Button:
-    case StyleAppearance::InnerSpinButton: {
-        auto states = extractControlStyleStatesForRenderer(box);
-        Theme::singleton().paint(appearance, states, paintInfo.context(), devicePixelSnappedRect, box.useDarkAppearance(), box.style().usedAccentColor());
-        return false;
-    }
-#else // !USE(THEME_ADWAITA)
     case StyleAppearance::Checkbox:
         return paintCheckbox(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::Radio:
@@ -827,7 +817,6 @@ bool RenderTheme::paint(const RenderBox& box, const PaintInfo& paintInfo, const 
     case StyleAppearance::DefaultButton:
     case StyleAppearance::Button:
         return paintButton(box, paintInfo, integralSnappedRect);
-#endif // !USE(THEME_ADWAITA)
     case StyleAppearance::Menulist:
         return paintMenuList(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::Meter:
@@ -888,7 +877,7 @@ bool RenderTheme::paintBorderOnly(const RenderBox& box, const PaintInfo& paintIn
 
 #if PLATFORM(IOS_FAMILY)
     UNUSED_PARAM(rect);
-    return box.style().usedAppearance() != StyleAppearance::None;
+    return box.style().usedAppearance() != StyleAppearance::None && box.style().usedAppearance() != StyleAppearance::Base;
 #else
     FloatRect devicePixelSnappedRect = snapRectToDevicePixels(rect, box.document().deviceScaleFactor());
     // Call the appropriate paint method based off the appearance value.
@@ -1273,7 +1262,7 @@ void RenderTheme::adjustButtonOrCheckboxOrColorWellOrInnerSpinButtonOrRadioStyle
             || appearance == StyleAppearance::PushButton;
     };
     // Transpose for vertical writing mode:
-    if (!style.isHorizontalWritingMode() && supportsVerticalWritingMode(appearance))
+    if (!style.writingMode().isHorizontal() && supportsVerticalWritingMode(appearance))
         borderBox = LengthBox(borderBox.left().value(), borderBox.top().value(), borderBox.right().value(), borderBox.bottom().value());
 
     if (borderBox.top().value() != static_cast<int>(style.borderTopWidth())) {
@@ -1471,7 +1460,7 @@ void RenderTheme::paintSliderTicks(const RenderObject& renderer, const PaintInfo
     }
     GraphicsContextStateSaver stateSaver(paintInfo.context());
     paintInfo.context().setFillColor(renderer.style().visitedDependentColorWithColorFilter(CSSPropertyColor));
-    bool isReversedInlineDirection = (!isHorizontal && renderer.style().isHorizontalWritingMode()) || !renderer.style().isLeftToRightDirection();
+    bool isReversedInlineDirection = (!isHorizontal && renderer.writingMode().isHorizontal()) || !renderer.style().isLeftToRightDirection();
     for (auto& optionElement : dataList->suggestions()) {
         if (auto optionValue = input->listOptionValueAsDouble(optionElement)) {
             double tickFraction = (*optionValue - min) / (max - min);

@@ -43,34 +43,45 @@
 #include <mach/mach_time.h>
 #include <wtf/Deque.h>
 #include <wtf/Identified.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebKit {
 
-class AudioMediaStreamTrackRendererInternalUnitManagerProxy final : public WebCore::AudioMediaStreamTrackRendererInternalUnit, public CanMakeWeakPtr<AudioMediaStreamTrackRendererInternalUnitManagerProxy>, public Identified<AudioMediaStreamTrackRendererInternalUnitIdentifier> {
-    WTF_MAKE_FAST_ALLOCATED;
+class AudioMediaStreamTrackRendererInternalUnitManagerProxy final : public WebCore::AudioMediaStreamTrackRendererInternalUnit, public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<AudioMediaStreamTrackRendererInternalUnitManagerProxy>, public Identified<AudioMediaStreamTrackRendererInternalUnitIdentifier> {
+    WTF_MAKE_TZONE_ALLOCATED(AudioMediaStreamTrackRendererInternalUnitManagerProxy);
 public:
-    explicit AudioMediaStreamTrackRendererInternalUnitManagerProxy(Client&);
+    static Ref<AudioMediaStreamTrackRendererInternalUnitManagerProxy> create(Client& client)
+    {
+        return adoptRef(*new AudioMediaStreamTrackRendererInternalUnitManagerProxy(client));
+    }
+
     ~AudioMediaStreamTrackRendererInternalUnitManagerProxy();
+
+    void ref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::ref(); }
+    void deref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::deref(); }
 
     enum class IsClosed : bool { No, Yes };
     void reset(IsClosed);
 
 private:
+    explicit AudioMediaStreamTrackRendererInternalUnitManagerProxy(Client&);
+
     // AudioMediaStreamTrackRendererUnit::InternalUnit API.
     void start() final;
     void stop() final;
     void retrieveFormatDescription(CompletionHandler<void(std::optional<WebCore::CAAudioStreamDescription>)>&&) final;
     void setAudioOutputDevice(const String&) final;
+    const String& audioOutputDeviceID() const final { return m_deviceId; }
 
     void initialize(const WebCore::CAAudioStreamDescription&, size_t frameChunkSize);
-    void storageChanged(SharedMemory*, const WebCore::CAAudioStreamDescription&, size_t);
+    void storageChanged(WebCore::SharedMemory*, const WebCore::CAAudioStreamDescription&, size_t);
 
     void stopThread();
     void startThread();
     void createRemoteUnit();
 
-    Client& m_client;
-    AudioMediaStreamTrackRendererInternalUnitIdentifier m_identifier;
+    ThreadSafeWeakPtr<Client> m_client;
 
     Deque<CompletionHandler<void(std::optional<WebCore::CAAudioStreamDescription>)>> m_descriptionCallbacks;
 
@@ -90,6 +101,8 @@ private:
     bool m_didClose { false };
 };
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AudioMediaStreamTrackRendererInternalUnitManager);
+
 void AudioMediaStreamTrackRendererInternalUnitManager::add(AudioMediaStreamTrackRendererInternalUnitManagerProxy& proxy)
 {
     m_proxies.add(proxy.identifier(), proxy);
@@ -100,23 +113,28 @@ void AudioMediaStreamTrackRendererInternalUnitManager::remove(AudioMediaStreamTr
     m_proxies.remove(proxy.identifier());
 }
 
-UniqueRef<WebCore::AudioMediaStreamTrackRendererInternalUnit> createRemoteAudioMediaStreamTrackRendererInternalUnitProxy(WebCore::AudioMediaStreamTrackRendererInternalUnit::Client& client)
+Ref<WebCore::AudioMediaStreamTrackRendererInternalUnit> createRemoteAudioMediaStreamTrackRendererInternalUnitProxy(WebCore::AudioMediaStreamTrackRendererInternalUnit::Client& client)
 {
-    return makeUniqueRef<AudioMediaStreamTrackRendererInternalUnitManagerProxy>(client);
+    return AudioMediaStreamTrackRendererInternalUnitManagerProxy::create(client);
 }
 
 void AudioMediaStreamTrackRendererInternalUnitManager::reset(AudioMediaStreamTrackRendererInternalUnitIdentifier identifier)
 {
-    if (auto proxy = m_proxies.get(identifier))
+    auto weakProxy = m_proxies.get(identifier);
+    if (RefPtr proxy = weakProxy.get())
         proxy->reset(AudioMediaStreamTrackRendererInternalUnitManagerProxy::IsClosed::No);
 }
 
 void AudioMediaStreamTrackRendererInternalUnitManager::restartAllUnits()
 {
     auto proxies = std::exchange(m_proxies, { });
-    for (auto proxy : proxies.values())
-        proxy->reset(AudioMediaStreamTrackRendererInternalUnitManagerProxy::IsClosed::Yes);
+    for (auto weakProxy : proxies.values()) {
+        if (RefPtr proxy = weakProxy.get())
+            proxy->reset(AudioMediaStreamTrackRendererInternalUnitManagerProxy::IsClosed::Yes);
+    }
 }
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AudioMediaStreamTrackRendererInternalUnitManagerProxy);
 
 AudioMediaStreamTrackRendererInternalUnitManagerProxy::AudioMediaStreamTrackRendererInternalUnitManagerProxy(Client& client)
     : m_client(client)
@@ -136,9 +154,9 @@ AudioMediaStreamTrackRendererInternalUnitManagerProxy::~AudioMediaStreamTrackRen
 
 void AudioMediaStreamTrackRendererInternalUnitManagerProxy::createRemoteUnit()
 {
-    WebProcess::singleton().ensureGPUProcessConnection().connection().sendWithAsyncReply(Messages::RemoteAudioMediaStreamTrackRendererInternalUnitManager::CreateUnit { identifier() }, [weakThis = WeakPtr { *this }](auto&& description, auto frameChunkSize) {
-        if (weakThis && description && frameChunkSize)
-            weakThis->initialize(*description, frameChunkSize);
+    WebProcess::singleton().ensureGPUProcessConnection().connection().sendWithAsyncReply(Messages::RemoteAudioMediaStreamTrackRendererInternalUnitManager::CreateUnit { identifier() }, [weakThis = ThreadSafeWeakPtr { *this }](auto&& description, auto frameChunkSize) {
+        if (RefPtr protectedThis = weakThis.get(); protectedThis && description && frameChunkSize)
+            protectedThis->initialize(*description, frameChunkSize);
     }, 0);
 }
 
@@ -227,26 +245,33 @@ void AudioMediaStreamTrackRendererInternalUnitManagerProxy::startThread()
 {
     ASSERT(!m_thread);
     m_shouldStopThread = false;
-    auto threadLoop = [this]() mutable {
-        m_writeOffset = 0;
+    auto threadLoop = [weakThis = ThreadSafeWeakPtr { *this }] mutable {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
+            return;
+        RefPtr client = protectedThis->m_client.get();
+        if (!client)
+            return;
+
+        protectedThis->m_writeOffset = 0;
         do {
             // If wait fails, the semaphore on the other side was probably destroyed and we should just exit here and wait to launch a new thread.
-            if (!m_semaphore->wait())
+            if (!protectedThis->m_semaphore->wait())
                 break;
-            if (m_shouldStopThread)
+            if (protectedThis->m_shouldStopThread)
                 break;
 
-            auto& bufferList = *m_buffer->list();
+            auto& bufferList = *protectedThis->m_buffer->list();
 
             AudioUnitRenderActionFlags flags = 0;
-            m_client.render(m_frameChunkSize, bufferList, m_writeOffset, mach_absolute_time(), flags);
+            client->render(protectedThis->m_frameChunkSize, bufferList, protectedThis->m_writeOffset, mach_absolute_time(), flags);
 
             if (flags == kAudioUnitRenderAction_OutputIsSilence)
-                WebCore::AudioSampleBufferList::zeroABL(bufferList, static_cast<size_t>(m_frameChunkSize * m_description->bytesPerFrame()));
+                WebCore::AudioSampleBufferList::zeroABL(bufferList, static_cast<size_t>(protectedThis->m_frameChunkSize * protectedThis->m_description->bytesPerFrame()));
 
-            m_ringBuffer->store(&bufferList, m_frameChunkSize, m_writeOffset);
-            m_writeOffset += m_frameChunkSize;
-        } while (!m_shouldStopThread);
+            protectedThis->m_ringBuffer->store(&bufferList, protectedThis->m_frameChunkSize, protectedThis->m_writeOffset);
+            protectedThis->m_writeOffset += protectedThis->m_frameChunkSize;
+        } while (!protectedThis->m_shouldStopThread);
     };
     m_thread = Thread::create("AudioMediaStreamTrackRendererInternalUnit thread"_s, WTFMove(threadLoop), ThreadType::Audio, Thread::QOS::UserInteractive);
 }
@@ -255,7 +280,9 @@ void AudioMediaStreamTrackRendererInternalUnitManagerProxy::reset(IsClosed isClo
 {
     stopThread();
     m_didClose = isClosed == IsClosed::Yes;
-    m_client.reset();
+
+    if (RefPtr client = m_client.get())
+        client->reset();
     if (m_isPlaying)
         start();
 }

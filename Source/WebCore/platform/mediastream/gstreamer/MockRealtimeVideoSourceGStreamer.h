@@ -31,11 +31,13 @@ namespace WebCore {
 
 class MockRealtimeVideoSourceGStreamer final : public MockRealtimeVideoSource, GStreamerCapturerObserver {
 public:
-    MockRealtimeVideoSourceGStreamer(String&& deviceID, AtomString&& name, MediaDeviceHashSalts&&, PageIdentifier);
+    MockRealtimeVideoSourceGStreamer(String&& deviceID, AtomString&& name, MediaDeviceHashSalts&&, std::optional<PageIdentifier>);
     ~MockRealtimeVideoSourceGStreamer();
 
     // GStreamerCapturerObserver
     void captureEnded() final;
+
+    std::pair<GstClockTime, GstClockTime> queryCaptureLatency() const final;
 
 private:
     friend class MockRealtimeVideoSource;

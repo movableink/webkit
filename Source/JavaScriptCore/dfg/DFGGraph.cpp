@@ -58,6 +58,8 @@
 #include <wtf/CommaPrinter.h>
 #include <wtf/ListDump.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC { namespace DFG {
 
 static constexpr bool dumpOSRAvailabilityData = false;
@@ -249,6 +251,8 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
         out.print(comma, "id"_s, node->identifierNumber(), "{"_s, identifiers()[node->identifierNumber()], "}"_s);
     if (node->hasCacheableIdentifier() && node->cacheableIdentifier())
         out.print(comma, "cachable-id {"_s, node->cacheableIdentifier(), "}"_s);
+    if (node->hasCacheType())
+        out.print(comma, node->cacheType());
     if (node->hasPromotedLocationDescriptor())
         out.print(comma, node->promotedLocationDescriptor());
     if (node->hasClassInfo())
@@ -1142,7 +1146,7 @@ bool Graph::watchGlobalProperty(JSGlobalObject* globalObject, unsigned identifie
 
 FullBytecodeLiveness& Graph::livenessFor(CodeBlock* codeBlock)
 {
-    HashMap<CodeBlock*, std::unique_ptr<FullBytecodeLiveness>>::iterator iter = m_bytecodeLiveness.find(codeBlock);
+    UncheckedKeyHashMap<CodeBlock*, std::unique_ptr<FullBytecodeLiveness>>::iterator iter = m_bytecodeLiveness.find(codeBlock);
     if (iter != m_bytecodeLiveness.end())
         return *iter->value;
     
@@ -1555,7 +1559,7 @@ void Graph::visitChildren(SlotVisitor& visitor) { visitChildrenImpl(visitor); }
 
 FrozenValue* Graph::freeze(JSValue value)
 {
-    RELEASE_ASSERT(!m_frozenValuesAreFinalized);
+    RELEASE_ASSERT(!m_plan.isInSafepoint());
     if (UNLIKELY(!value))
         return FrozenValue::emptySingleton();
 
@@ -1813,8 +1817,13 @@ MethodOfGettingAValueProfile Graph::methodOfGettingAValueProfileFor(Node* curren
                 }
                 case op_call_ignore_result:
                     return { };
-                default:
+                default: {
+                    auto* valueProfile = profiledBlock->tryGetValueProfileForBytecodeIndex(node->origin.semantic.bytecodeIndex());
+                    if (!valueProfile)
+                        return { };
+
                     return MethodOfGettingAValueProfile::bytecodeValueProfile(node->origin.semantic);
+                }
                 }
             }
 
@@ -2064,5 +2073,7 @@ void Prefix::dump(PrintStream& out) const
 }
 
 } } // namespace JSC::DFG
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(DFG_JIT)

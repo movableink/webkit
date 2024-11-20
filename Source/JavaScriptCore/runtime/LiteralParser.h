@@ -30,8 +30,11 @@
 #include "Identifier.h"
 #include "JSCJSValue.h"
 #include <array>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -106,9 +109,9 @@ public:
     String getErrorMessage()
     { 
         if (!m_lexer.getErrorMessage().isEmpty())
-            return "JSON Parse error: "_s + m_lexer.getErrorMessage();
+            return makeString("JSON Parse error: "_s, m_lexer.getErrorMessage());
         if (!m_parseErrorMessage.isEmpty())
-            return "JSON Parse error: "_s + m_parseErrorMessage;
+            return makeString("JSON Parse error: "_s, m_parseErrorMessage);
         return "JSON Parse error: Unable to parse JSON string"_s;
     }
     
@@ -225,3 +228,5 @@ private:
 };
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

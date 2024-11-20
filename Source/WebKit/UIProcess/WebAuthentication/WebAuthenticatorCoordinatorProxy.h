@@ -34,6 +34,7 @@
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
 
 #if HAVE(WEB_AUTHN_AS_MODERN)
 OBJC_CLASS _WKASDelegate;
@@ -61,30 +62,24 @@ OBJC_CLASS ASCAgentProxy;
 #endif
 
 namespace WebKit {
-class WebAuthenticatorCoordinatorProxy;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebKit::WebAuthenticatorCoordinatorProxy> : std::true_type { };
-}
-
-namespace WebKit {
 
 class WebPageProxy;
 
 struct FrameInfoData;
+struct SharedPreferencesForWebProcess;
 struct WebAuthenticationRequestData;
 
 using CapabilitiesCompletionHandler = CompletionHandler<void(Vector<KeyValuePair<String, bool>>&&)>;
 using RequestCompletionHandler = CompletionHandler<void(const WebCore::AuthenticatorResponseData&, WebCore::AuthenticatorAttachment, const WebCore::ExceptionData&)>;
 
-class WebAuthenticatorCoordinatorProxy : public IPC::MessageReceiver {
-    WTF_MAKE_FAST_ALLOCATED;
+class WebAuthenticatorCoordinatorProxy : public IPC::MessageReceiver, public RefCounted<WebAuthenticatorCoordinatorProxy> {
+    WTF_MAKE_TZONE_ALLOCATED(WebAuthenticatorCoordinatorProxy);
     WTF_MAKE_NONCOPYABLE(WebAuthenticatorCoordinatorProxy);
 public:
-    explicit WebAuthenticatorCoordinatorProxy(WebPageProxy&);
+    static Ref<WebAuthenticatorCoordinatorProxy> create(WebPageProxy&);
     ~WebAuthenticatorCoordinatorProxy();
+
+    std::optional<SharedPreferencesForWebProcess> sharedPreferencesForWebProcess() const;
 
 #if HAVE(WEB_AUTHN_AS_MODERN)
     static WeakPtr<WebAuthenticatorCoordinatorProxy>& activeConditionalMediationProxy();
@@ -94,6 +89,8 @@ public:
 #endif
 
 private:
+    explicit WebAuthenticatorCoordinatorProxy(WebPageProxy&);
+
     using QueryCompletionHandler = CompletionHandler<void(bool)>;
 
     // IPC::MessageReceiver.
@@ -109,10 +106,11 @@ private:
 
     void handleRequest(WebAuthenticationRequestData&&, RequestCompletionHandler&&);
 
-    WebPageProxy& m_webPageProxy;
+    WeakPtr<WebPageProxy> m_webPageProxy;
 
-#if HAVE(UNIFIED_ASC_AUTH_UI)
+#if HAVE(UNIFIED_ASC_AUTH_UI) || HAVE(WEB_AUTHN_AS_MODERN)
     bool isASCAvailable();
+#endif
 
 #if HAVE(WEB_AUTHN_AS_MODERN)
     RetainPtr<ASAuthorizationController> constructASController(const WebAuthenticationRequestData&);
@@ -122,8 +120,8 @@ private:
 
     void performRequest(WebAuthenticationRequestData&&, RequestCompletionHandler&&);
 
-    RetainPtr<ASCCredentialRequestContext> contextForRequest(WebAuthenticationRequestData&&);
 #if HAVE(UNIFIED_ASC_AUTH_UI)
+    RetainPtr<ASCCredentialRequestContext> contextForRequest(WebAuthenticationRequestData&&);
     void performRequestLegacy(RetainPtr<ASCCredentialRequestContext>, RequestCompletionHandler&&);
 #endif
 
@@ -135,10 +133,11 @@ private:
     bool m_isConditionalMediation { false };
 #endif
 
+#if HAVE(UNIFIED_ASC_AUTH_UI)
     RetainPtr<ASCAuthorizationRemotePresenter> m_presenter;
     RetainPtr<ASCAgentProxy> m_proxy;
-    CompletionHandler<void()> m_cancelHandler;
 #endif // HAVE(UNIFIED_ASC_AUTH_UI)
+    CompletionHandler<void()> m_cancelHandler;
 };
 
 } // namespace WebKit

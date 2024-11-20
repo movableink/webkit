@@ -195,6 +195,7 @@ class CommandBuffer : public WrappedObject<CommandBuffer, VkCommandBuffer>
     void beginQuery(const QueryPool &queryPool, uint32_t query, VkQueryControlFlags flags);
 
     void beginRenderPass(const VkRenderPassBeginInfo &beginInfo, VkSubpassContents subpassContents);
+    void beginRendering(const VkRenderingInfo &beginInfo);
 
     void bindDescriptorSets(const PipelineLayout &layout,
                             VkPipelineBindPoint pipelineBindPoint,
@@ -289,6 +290,7 @@ class CommandBuffer : public WrappedObject<CommandBuffer, VkCommandBuffer>
     VkResult end();
     void endQuery(const QueryPool &queryPool, uint32_t query);
     void endRenderPass();
+    void endRendering();
     void executeCommands(uint32_t commandBufferCount, const CommandBuffer *commandBuffers);
 
     void getMemoryUsageStats(size_t *usedMemoryOut, size_t *allocatedMemoryOut) const;
@@ -302,6 +304,8 @@ class CommandBuffer : public WrappedObject<CommandBuffer, VkCommandBuffer>
                       VkPipelineStageFlags dstStageMask,
                       const VkImageMemoryBarrier &imageMemoryBarrier);
 
+    void imageBarrier2(const VkImageMemoryBarrier2 &imageMemoryBarrier2);
+
     void imageWaitEvent(const VkEvent &event,
                         VkPipelineStageFlags srcStageMask,
                         VkPipelineStageFlags dstStageMask,
@@ -313,6 +317,8 @@ class CommandBuffer : public WrappedObject<CommandBuffer, VkCommandBuffer>
                        VkPipelineStageFlags dstStageMask,
                        const VkMemoryBarrier &memoryBarrier);
 
+    void memoryBarrier2(const VkMemoryBarrier2 &memoryBarrier2);
+
     void pipelineBarrier(VkPipelineStageFlags srcStageMask,
                          VkPipelineStageFlags dstStageMask,
                          VkDependencyFlags dependencyFlags,
@@ -322,6 +328,14 @@ class CommandBuffer : public WrappedObject<CommandBuffer, VkCommandBuffer>
                          const VkBufferMemoryBarrier *bufferMemoryBarriers,
                          uint32_t imageMemoryBarrierCount,
                          const VkImageMemoryBarrier *imageMemoryBarriers);
+
+    void pipelineBarrier2(VkDependencyFlags dependencyFlags,
+                          uint32_t memoryBarrierCount,
+                          const VkMemoryBarrier2 *memoryBarriers2,
+                          uint32_t bufferMemoryBarrierCount,
+                          const VkBufferMemoryBarrier2 *bufferMemoryBarriers2,
+                          uint32_t imageMemoryBarrierCount,
+                          const VkImageMemoryBarrier2 *imageMemoryBarriers2);
 
     void pushConstants(const PipelineLayout &layout,
                        VkShaderStageFlags flag,
@@ -346,6 +360,8 @@ class CommandBuffer : public WrappedObject<CommandBuffer, VkCommandBuffer>
     void setLogicOp(VkLogicOp logicOp);
     void setPrimitiveRestartEnable(VkBool32 primitiveRestartEnable);
     void setRasterizerDiscardEnable(VkBool32 rasterizerDiscardEnable);
+    void setRenderingAttachmentLocations(const VkRenderingAttachmentLocationInfoKHR *info);
+    void setRenderingInputAttachmentIndicates(const VkRenderingInputAttachmentIndexInfoKHR *info);
     void setScissor(uint32_t firstScissor, uint32_t scissorCount, const VkRect2D *scissors);
     void setStencilCompareMask(uint32_t compareFrontMask, uint32_t compareBackMask);
     void setStencilOp(VkStencilFaceFlags faceMask,
@@ -384,6 +400,10 @@ class CommandBuffer : public WrappedObject<CommandBuffer, VkCommandBuffer>
     void writeTimestamp(VkPipelineStageFlagBits pipelineStage,
                         const QueryPool &queryPool,
                         uint32_t query);
+
+    void writeTimestamp2(VkPipelineStageFlagBits2 pipelineStage,
+                         const QueryPool &queryPool,
+                         uint32_t query);
 
     // VK_EXT_transform_feedback
     void beginTransformFeedback(uint32_t firstCounterBuffer,
@@ -801,6 +821,20 @@ ANGLE_INLINE void CommandBuffer::memoryBarrier(VkPipelineStageFlags srcStageMask
                          nullptr);
 }
 
+ANGLE_INLINE void CommandBuffer::memoryBarrier2(const VkMemoryBarrier2 &memoryBarrier2)
+{
+    ASSERT(valid());
+    VkDependencyInfo pDependencyInfo         = {};
+    pDependencyInfo.sType                    = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    pDependencyInfo.memoryBarrierCount       = 1;
+    pDependencyInfo.pMemoryBarriers          = &memoryBarrier2;
+    pDependencyInfo.bufferMemoryBarrierCount = 0;
+    pDependencyInfo.pBufferMemoryBarriers    = nullptr;
+    pDependencyInfo.imageMemoryBarrierCount  = 0;
+    pDependencyInfo.pImageMemoryBarriers     = nullptr;
+    vkCmdPipelineBarrier2KHR(mHandle, &pDependencyInfo);
+}
+
 ANGLE_INLINE void CommandBuffer::pipelineBarrier(VkPipelineStageFlags srcStageMask,
                                                  VkPipelineStageFlags dstStageMask,
                                                  VkDependencyFlags dependencyFlags,
@@ -817,6 +851,29 @@ ANGLE_INLINE void CommandBuffer::pipelineBarrier(VkPipelineStageFlags srcStageMa
                          imageMemoryBarrierCount, imageMemoryBarriers);
 }
 
+ANGLE_INLINE void CommandBuffer::pipelineBarrier2(
+    VkDependencyFlags dependencyFlags,
+    uint32_t memoryBarrierCount,
+    const VkMemoryBarrier2 *memoryBarriers2,
+    uint32_t bufferMemoryBarrierCount,
+    const VkBufferMemoryBarrier2 *bufferMemoryBarriers2,
+    uint32_t imageMemoryBarrierCount,
+    const VkImageMemoryBarrier2 *imageMemoryBarriers2)
+{
+    ASSERT(valid());
+    VkDependencyInfo dependencyInfo         = {};
+    dependencyInfo.sType                    = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    dependencyInfo.pNext                    = nullptr;
+    dependencyInfo.dependencyFlags          = dependencyFlags;
+    dependencyInfo.memoryBarrierCount       = memoryBarrierCount;
+    dependencyInfo.pMemoryBarriers          = memoryBarriers2;
+    dependencyInfo.bufferMemoryBarrierCount = bufferMemoryBarrierCount;
+    dependencyInfo.pBufferMemoryBarriers    = bufferMemoryBarriers2;
+    dependencyInfo.imageMemoryBarrierCount  = imageMemoryBarrierCount;
+    dependencyInfo.pImageMemoryBarriers     = imageMemoryBarriers2;
+    vkCmdPipelineBarrier2KHR(mHandle, &dependencyInfo);
+}
+
 ANGLE_INLINE void CommandBuffer::imageBarrier(VkPipelineStageFlags srcStageMask,
                                               VkPipelineStageFlags dstStageMask,
                                               const VkImageMemoryBarrier &imageMemoryBarrier)
@@ -824,6 +881,21 @@ ANGLE_INLINE void CommandBuffer::imageBarrier(VkPipelineStageFlags srcStageMask,
     ASSERT(valid());
     vkCmdPipelineBarrier(mHandle, srcStageMask, dstStageMask, 0, 0, nullptr, 0, nullptr, 1,
                          &imageMemoryBarrier);
+}
+
+ANGLE_INLINE void CommandBuffer::imageBarrier2(const VkImageMemoryBarrier2 &imageMemoryBarrier2)
+{
+    ASSERT(valid());
+
+    VkDependencyInfo pDependencyInfo         = {};
+    pDependencyInfo.sType                    = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    pDependencyInfo.memoryBarrierCount       = 0;
+    pDependencyInfo.pMemoryBarriers          = nullptr;
+    pDependencyInfo.bufferMemoryBarrierCount = 0;
+    pDependencyInfo.pBufferMemoryBarriers    = nullptr;
+    pDependencyInfo.imageMemoryBarrierCount  = 1;
+    pDependencyInfo.pImageMemoryBarriers     = &imageMemoryBarrier2;
+    vkCmdPipelineBarrier2KHR(mHandle, &pDependencyInfo);
 }
 
 ANGLE_INLINE void CommandBuffer::imageWaitEvent(const VkEvent &event,
@@ -936,10 +1008,22 @@ ANGLE_INLINE void CommandBuffer::beginRenderPass(const VkRenderPassBeginInfo &be
     vkCmdBeginRenderPass(mHandle, &beginInfo, subpassContents);
 }
 
+ANGLE_INLINE void CommandBuffer::beginRendering(const VkRenderingInfo &beginInfo)
+{
+    ASSERT(valid());
+    vkCmdBeginRenderingKHR(mHandle, &beginInfo);
+}
+
 ANGLE_INLINE void CommandBuffer::endRenderPass()
 {
-    ASSERT(mHandle != VK_NULL_HANDLE);
+    ASSERT(valid());
     vkCmdEndRenderPass(mHandle);
+}
+
+ANGLE_INLINE void CommandBuffer::endRendering()
+{
+    ASSERT(valid());
+    vkCmdEndRenderingKHR(mHandle);
 }
 
 ANGLE_INLINE void CommandBuffer::bindIndexBuffer(const Buffer &buffer,
@@ -1086,6 +1170,20 @@ ANGLE_INLINE void CommandBuffer::setRasterizerDiscardEnable(VkBool32 rasterizerD
     vkCmdSetRasterizerDiscardEnableEXT(mHandle, rasterizerDiscardEnable);
 }
 
+ANGLE_INLINE void CommandBuffer::setRenderingAttachmentLocations(
+    const VkRenderingAttachmentLocationInfoKHR *info)
+{
+    ASSERT(valid());
+    vkCmdSetRenderingAttachmentLocationsKHR(mHandle, info);
+}
+
+ANGLE_INLINE void CommandBuffer::setRenderingInputAttachmentIndicates(
+    const VkRenderingInputAttachmentIndexInfoKHR *info)
+{
+    ASSERT(valid());
+    vkCmdSetRenderingInputAttachmentIndicesKHR(mHandle, info);
+}
+
 ANGLE_INLINE void CommandBuffer::setScissor(uint32_t firstScissor,
                                             uint32_t scissorCount,
                                             const VkRect2D *scissors)
@@ -1216,6 +1314,14 @@ ANGLE_INLINE void CommandBuffer::writeTimestamp(VkPipelineStageFlagBits pipeline
 {
     ASSERT(valid());
     vkCmdWriteTimestamp(mHandle, pipelineStage, queryPool.getHandle(), query);
+}
+
+ANGLE_INLINE void CommandBuffer::writeTimestamp2(VkPipelineStageFlagBits2 pipelineStage,
+                                                 const QueryPool &queryPool,
+                                                 uint32_t query)
+{
+    ASSERT(valid());
+    vkCmdWriteTimestamp2KHR(mHandle, pipelineStage, queryPool.getHandle(), query);
 }
 
 ANGLE_INLINE void CommandBuffer::draw(uint32_t vertexCount,

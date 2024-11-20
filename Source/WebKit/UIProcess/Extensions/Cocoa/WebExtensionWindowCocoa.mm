@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,16 +34,19 @@
 
 #import "CocoaHelpers.h"
 #import "Logging.h"
+#import "WKWebExtensionTab.h"
+#import "WKWebExtensionWindow.h"
 #import "WebExtensionContext.h"
 #import "WebExtensionTabQueryParameters.h"
 #import "WebExtensionUtilities.h"
-#import "_WKWebExtensionTab.h"
-#import "_WKWebExtensionWindow.h"
 #import <wtf/BlockPtr.h>
+#import <wtf/TZoneMallocInlines.h>
 
 namespace WebKit {
 
-WebExtensionWindow::WebExtensionWindow(const WebExtensionContext& context, _WKWebExtensionWindow* delegate)
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebExtensionWindow);
+
+WebExtensionWindow::WebExtensionWindow(const WebExtensionContext& context, WKWebExtensionWindow* delegate)
     : m_extensionContext(context)
     , m_delegate(delegate)
     , m_respondsToTabs([delegate respondsToSelector:@selector(tabsForWebExtensionContext:)])
@@ -51,14 +54,15 @@ WebExtensionWindow::WebExtensionWindow(const WebExtensionContext& context, _WKWe
     , m_respondsToWindowType([delegate respondsToSelector:@selector(windowTypeForWebExtensionContext:)])
     , m_respondsToWindowState([delegate respondsToSelector:@selector(windowStateForWebExtensionContext:)])
     , m_respondsToSetWindowState([delegate respondsToSelector:@selector(setWindowState:forWebExtensionContext:completionHandler:)])
-    , m_respondsToIsUsingPrivateBrowsing([delegate respondsToSelector:@selector(isUsingPrivateBrowsingForWebExtensionContext:)])
+    , m_respondsToIsPrivate([delegate respondsToSelector:@selector(isPrivateForWebExtensionContext:)])
     , m_respondsToFrame([delegate respondsToSelector:@selector(frameForWebExtensionContext:)])
     , m_respondsToSetFrame([delegate respondsToSelector:@selector(setFrame:forWebExtensionContext:completionHandler:)])
+#if PLATFORM(MAC)
     , m_respondsToScreenFrame([delegate respondsToSelector:@selector(screenFrameForWebExtensionContext:)])
+#endif
     , m_respondsToFocus([delegate respondsToSelector:@selector(focusForWebExtensionContext:completionHandler:)])
     , m_respondsToClose([delegate respondsToSelector:@selector(closeForWebExtensionContext:completionHandler:)])
 {
-    ASSERT([delegate conformsToProtocol:@protocol(_WKWebExtensionWindow)]);
 }
 
 WebExtensionContext* WebExtensionWindow::extensionContext() const
@@ -129,7 +133,7 @@ bool WebExtensionWindow::matches(const WebExtensionTabQueryParameters& parameter
     if (!extensionHasAccess())
         return false;
 
-    if (parameters.windowIdentifier && identifier() != parameters.windowIdentifier.value())
+    if (parameters.windowIdentifier && identifier() != parameters.windowIdentifier.value() && !isCurrent(parameters.windowIdentifier.value()))
         return false;
 
     if (parameters.windowType && !matches(parameters.windowType.value()))
@@ -138,7 +142,7 @@ bool WebExtensionWindow::matches(const WebExtensionTabQueryParameters& parameter
     if (parameters.frontmostWindow && isFrontmost() != parameters.frontmostWindow.value())
         return false;
 
-    if (parameters.currentWindow) {
+    if (parameters.currentWindow || isCurrent(parameters.windowIdentifier)) {
         auto currentWindow = extensionContext()->getWindow(WebExtensionWindowConstants::CurrentIdentifier, webPageProxyIdentifier);
         if (!currentWindow)
             return false;
@@ -153,34 +157,31 @@ bool WebExtensionWindow::matches(const WebExtensionTabQueryParameters& parameter
 bool WebExtensionWindow::extensionHasAccess() const
 {
     bool isPrivate = this->isPrivate();
-    return !isPrivate || (isPrivate && extensionContext()->hasAccessInPrivateBrowsing());
+    return !isPrivate || (isPrivate && extensionContext()->hasAccessToPrivateData());
 }
 
 WebExtensionWindow::TabVector WebExtensionWindow::tabs(SkipValidation skipValidation) const
 {
-    TabVector result;
-
     if (!isValid() || !m_respondsToTabs || !m_respondsToActiveTab)
-        return result;
+        return { };
 
     auto *tabs = [m_delegate tabsForWebExtensionContext:m_extensionContext->wrapper()];
     THROW_UNLESS([tabs isKindOfClass:NSArray.class], @"Object returned by tabsForWebExtensionContext: is not an array");
 
     if (!tabs.count)
-        return result;
+        return { };
 
+    TabVector result;
     result.reserveInitialCapacity(tabs.count);
 
-    for (id<_WKWebExtensionTab> tab in tabs) {
-        THROW_UNLESS([tab conformsToProtocol:@protocol(_WKWebExtensionTab)], @"Object in array returned by tabsForWebExtensionContext: does not conform to the _WKWebExtensionTab protocol");
+    for (id tab in tabs)
         result.append(m_extensionContext->getOrCreateTab(tab));
-    }
 
     if (skipValidation == SkipValidation::No) {
         // SkipValidation::Yes is needed to avoid reentry, since activeTab() calls tabs().
         RefPtr activeTab = this->activeTab(SkipValidation::Yes);
         if (!activeTab || !result.contains(*activeTab)) {
-            RELEASE_LOG_ERROR(Extensions, "Array returned by tabsForWebExtensionContext: does not contain the active tab; %{public}@ not in %{public}@", activeTab ? activeTab->delegate() : nil, tabs);
+            RELEASE_LOG_ERROR(Extensions, "Array returned by tabsForWebExtensionContext: does not contain the active tab; %{sensitive}@ not in %{sensitive}@", activeTab ? activeTab->delegate() : nil, tabs);
             ASSERT_NOT_REACHED();
             return { };
         }
@@ -198,15 +199,13 @@ RefPtr<WebExtensionTab> WebExtensionWindow::activeTab(SkipValidation skipValidat
     if (!activeTab)
         return nullptr;
 
-    THROW_UNLESS([activeTab conformsToProtocol:@protocol(_WKWebExtensionTab)], @"Object returned by activeTabForWebExtensionContext: does not conform to the _WKWebExtensionTab protocol");
-
     Ref result = m_extensionContext->getOrCreateTab(activeTab);
 
     if (skipValidation == SkipValidation::No) {
         // SkipValidation::Yes is needed to avoid reentry, since tabs() calls activeTab().
         auto tabs = this->tabs(SkipValidation::Yes);
         if (!tabs.contains(result)) {
-            RELEASE_LOG_ERROR(Extensions, "Array returned by tabsForWebExtensionContext: does not contain the active tab; %{public}@ not in %{public}@", result->delegate(), [m_delegate tabsForWebExtensionContext:m_extensionContext->wrapper()] ?: @[ ]);
+            RELEASE_LOG_ERROR(Extensions, "Array returned by tabsForWebExtensionContext: does not contain the active tab; %{sensitive}@ not in %{sensitive}@", result->delegate(), [m_delegate tabsForWebExtensionContext:m_extensionContext->wrapper()] ?: @[ ]);
             ASSERT_NOT_REACHED();
             return nullptr;
         }
@@ -215,25 +214,25 @@ RefPtr<WebExtensionTab> WebExtensionWindow::activeTab(SkipValidation skipValidat
     return result;
 }
 
-_WKWebExtensionWindowType toAPI(WebExtensionWindow::Type type)
+WKWebExtensionWindowType toAPI(WebExtensionWindow::Type type)
 {
     switch (type) {
     case WebExtensionWindow::Type::Normal:
-        return _WKWebExtensionWindowTypeNormal;
+        return WKWebExtensionWindowTypeNormal;
     case WebExtensionWindow::Type::Popup:
-        return _WKWebExtensionWindowTypePopup;
+        return WKWebExtensionWindowTypePopup;
     }
 
     ASSERT_NOT_REACHED();
-    return _WKWebExtensionWindowTypeNormal;
+    return WKWebExtensionWindowTypeNormal;
 }
 
-static inline WebExtensionWindow::Type toImpl(_WKWebExtensionWindowType type)
+static inline WebExtensionWindow::Type toImpl(WKWebExtensionWindowType type)
 {
     switch (type) {
-    case _WKWebExtensionWindowTypeNormal:
+    case WKWebExtensionWindowTypeNormal:
         return WebExtensionWindow::Type::Normal;
-    case _WKWebExtensionWindowTypePopup:
+    case WKWebExtensionWindowTypePopup:
         return WebExtensionWindow::Type::Popup;
     }
 
@@ -249,16 +248,16 @@ WebExtensionWindow::Type WebExtensionWindow::type() const
     return toImpl([m_delegate windowTypeForWebExtensionContext:m_extensionContext->wrapper()]);
 }
 
-static inline WebExtensionWindow::State toImpl(_WKWebExtensionWindowState state)
+static inline WebExtensionWindow::State toImpl(WKWebExtensionWindowState state)
 {
     switch (state) {
-    case _WKWebExtensionWindowStateNormal:
+    case WKWebExtensionWindowStateNormal:
         return WebExtensionWindow::State::Normal;
-    case _WKWebExtensionWindowStateMinimized:
+    case WKWebExtensionWindowStateMinimized:
         return WebExtensionWindow::State::Minimized;
-    case _WKWebExtensionWindowStateMaximized:
+    case WKWebExtensionWindowStateMaximized:
         return WebExtensionWindow::State::Maximized;
-    case _WKWebExtensionWindowStateFullscreen:
+    case WKWebExtensionWindowStateFullscreen:
         return WebExtensionWindow::State::Fullscreen;
     }
 
@@ -274,21 +273,21 @@ WebExtensionWindow::State WebExtensionWindow::state() const
     return toImpl([m_delegate windowStateForWebExtensionContext:m_extensionContext->wrapper()]);
 }
 
-_WKWebExtensionWindowState toAPI(WebExtensionWindow::State state)
+WKWebExtensionWindowState toAPI(WebExtensionWindow::State state)
 {
     switch (state) {
     case WebExtensionWindow::State::Normal:
-        return _WKWebExtensionWindowStateNormal;
+        return WKWebExtensionWindowStateNormal;
     case WebExtensionWindow::State::Minimized:
-        return _WKWebExtensionWindowStateMinimized;
+        return WKWebExtensionWindowStateMinimized;
     case WebExtensionWindow::State::Maximized:
-        return _WKWebExtensionWindowStateMaximized;
+        return WKWebExtensionWindowStateMaximized;
     case WebExtensionWindow::State::Fullscreen:
-        return _WKWebExtensionWindowStateFullscreen;
+        return WKWebExtensionWindowStateFullscreen;
     }
 
     ASSERT_NOT_REACHED();
-    return _WKWebExtensionWindowStateNormal;
+    return WKWebExtensionWindowStateNormal;
 }
 
 void WebExtensionWindow::setState(WebExtensionWindow::State state, CompletionHandler<void(Expected<void, WebExtensionError>&&)>&& completionHandler)
@@ -357,11 +356,11 @@ bool WebExtensionWindow::isPrivate() const
     if (m_cachedPrivate)
         return m_private;
 
-    if (!isValid() || !m_respondsToIsUsingPrivateBrowsing)
+    if (!isValid() || !m_respondsToIsPrivate)
         return false;
 
     // Private can't change after the fact, so cache it for quick access and to ensure it does not change.
-    m_private = [m_delegate isUsingPrivateBrowsingForWebExtensionContext:m_extensionContext->wrapper()];
+    m_private = [m_delegate isPrivateForWebExtensionContext:m_extensionContext->wrapper()];
     m_cachedPrivate = true;
 
     return m_private;
@@ -419,6 +418,7 @@ void WebExtensionWindow::setFrame(CGRect frame, CompletionHandler<void(Expected<
     }).get()];
 }
 
+#if PLATFORM(MAC)
 CGRect WebExtensionWindow::screenFrame() const
 {
     if (!isValid() || !m_respondsToScreenFrame)
@@ -426,6 +426,7 @@ CGRect WebExtensionWindow::screenFrame() const
 
     return CGRectStandardize([m_delegate screenFrameForWebExtensionContext:m_extensionContext->wrapper()]);
 }
+#endif
 
 void WebExtensionWindow::close(CompletionHandler<void(Expected<void, WebExtensionError>&&)>&& completionHandler)
 {

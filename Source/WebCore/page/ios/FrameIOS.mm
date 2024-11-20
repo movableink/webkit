@@ -79,6 +79,8 @@ using namespace WTF::Unicode;
 
 using JSC::JSLockHolder;
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WebCore {
 
 // Create <html><body (style="...")></body></html> doing minimal amount of work.
@@ -709,8 +711,8 @@ VisibleSelection LocalFrame::rangedSelectionInitialExtent() const
 void LocalFrame::recursiveSetUpdateAppearanceEnabled(bool enabled)
 {
     selection().setUpdateAppearanceEnabled(enabled);
-    for (auto* child = tree().firstChild(); child; child = child->tree().nextSibling()) {
-        auto* localChild = dynamicDowncast<LocalFrame>(child);
+    for (RefPtr child = tree().firstChild(); child; child = child->tree().nextSibling()) {
+        auto* localChild = dynamicDowncast<LocalFrame>(child.get());
         if (!localChild)
             continue;
         localChild->recursiveSetUpdateAppearanceEnabled(enabled);
@@ -838,8 +840,8 @@ void LocalFrame::resetAllGeolocationPermission()
     if (document()->domWindow())
         document()->domWindow()->resetAllGeolocationPermission();
 
-    for (auto* child = tree().firstChild(); child; child = child->tree().nextSibling()) {
-        auto* localChild = dynamicDowncast<LocalFrame>(child);
+    for (RefPtr child = tree().firstChild(); child; child = child->tree().nextSibling()) {
+        auto* localChild = dynamicDowncast<LocalFrame>(child.get());
         if (!localChild)
             continue;
         localChild->resetAllGeolocationPermission();
@@ -847,5 +849,7 @@ void LocalFrame::resetAllGeolocationPermission()
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // PLATFORM(IOS_FAMILY)

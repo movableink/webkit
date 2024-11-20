@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -94,7 +94,7 @@
 #include <wtf/UniqueRef.h>
 #include <wtf/WTFProcess.h>
 #include <wtf/text/CString.h>
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/MakeString.h>
 
 #if PLATFORM(COCOA)
 #include <WebKit/WKContextPrivateMac.h>
@@ -107,6 +107,7 @@
 
 #if PLATFORM(WIN)
 #include <direct.h>
+#include <shlwapi.h>
 #define getcwd _getcwd
 #define PATH_MAX _MAX_PATH
 #else
@@ -134,6 +135,24 @@ static WKDataRef copyWebCryptoMasterKey(WKPageRef, const void*)
 {
     // Any 128 bit key would do, all we need for testing is to implement the callback.
     return WKDataCreate((const uint8_t*)"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f", 16);
+}
+
+static std::string testPath(WKURLRef url)
+{
+    auto scheme = adoptWK(WKURLCopyScheme(url));
+    if (WKStringIsEqualToUTF8CStringIgnoringCase(scheme.get(), "file")) {
+        auto path = adoptWK(WKURLCopyPath(url));
+        auto buffer = std::vector<char>(WKStringGetMaximumUTF8CStringSize(path.get()));
+        auto length = WKStringGetUTF8CString(path.get(), buffer.data(), buffer.size());
+        RELEASE_ASSERT(length > 0);
+#if OS(WINDOWS)
+        // Remove the first '/' if it starts with something like "/C:/".
+        if (length >= 4 && buffer[0] == '/' && buffer[2] == ':' && buffer[3] == '/')
+            return std::string(buffer.data() + 1, length - 1);
+#endif
+        return std::string(buffer.data(), length - 1);
+    }
+    return std::string();
 }
 
 void TestController::navigationDidBecomeDownloadShared(WKDownloadRef download, const void* clientInfo)
@@ -1052,6 +1071,7 @@ void TestController::ensureViewSupportsOptionsForTest(const TestInvocation& test
         m_createdOtherPage = false;
     }
 
+    platformEnsureGPUProcessConfiguredForOptions(options);
     createWebViewWithOptions(options);
 
     if (!resetStateToConsistentValues(options, ResetStage::BeforeTest))
@@ -1073,8 +1093,9 @@ void TestController::resetPreferencesToConsistentValues(const TestOptions& optio
         if (enableAllExperimentalFeatures) {
             WKPreferencesEnableAllExperimentalFeatures(preferences);
             WKPreferencesSetExperimentalFeatureForKey(preferences, false, toWK("SiteIsolationEnabled").get());
-            WKPreferencesSetExperimentalFeatureForKey(preferences, false, toWK("CFNetworkNetworkLoaderEnabled").get());
             WKPreferencesSetExperimentalFeatureForKey(preferences, true, toWK("WebGPUEnabled").get());
+            WKPreferencesSetExperimentalFeatureForKey(preferences, false, toWK("HTTPSByDefaultEnabled").get());
+            WKPreferencesSetExperimentalFeatureForKey(preferences, false, toWK("WebRTCL4SEnabled").get()); // FIXME: Remove this once L4S SDP negotation is supported.
         }
 
         WKPreferencesResetAllInternalDebugFeatures(preferences);
@@ -1082,7 +1103,9 @@ void TestController::resetPreferencesToConsistentValues(const TestOptions& optio
         WKPreferencesSetProcessSwapOnNavigationEnabled(preferences, options.shouldEnableProcessSwapOnNavigation());
         WKPreferencesSetStorageBlockingPolicy(preferences, kWKAllowAllStorage); // FIXME: We should be testing the default.
         WKPreferencesSetMinimumFontSize(preferences, 0);
-    
+
+        WKPreferencesSetBoolValueForKeyForTesting(preferences, options.allowTestOnlyIPC(), toWK("AllowTestOnlyIPC").get());
+
         for (const auto& [key, value] : options.boolWebPreferenceFeatures())
             WKPreferencesSetBoolValueForKeyForTesting(preferences, value, toWK(key).get());
 
@@ -1175,6 +1198,8 @@ bool TestController::resetStateToConsistentValues(const TestOptions& options, Re
 
     WKPageClearUserMediaState(m_mainWebView->page());
 
+    setTracksRepaints(false);
+
     // Reset notification permissions
     m_webNotificationProvider.reset();
     m_notificationOriginsToDenyOnPrompt.clear();
@@ -1252,7 +1277,7 @@ bool TestController::resetStateToConsistentValues(const TestOptions& options, Re
 
     WKPageDispatchActivityStateUpdateForTesting(m_mainWebView->page());
 
-    WKPageResetProcessState(m_mainWebView->page());
+    WKPageResetStateBetweenTests(m_mainWebView->page());
 
     m_didReceiveServerRedirectForProvisionalNavigation = false;
     m_serverTrustEvaluationCallbackCallsCount = 0;
@@ -1276,7 +1301,9 @@ bool TestController::resetStateToConsistentValues(const TestOptions& options, Re
             return false;
         }
     }
-    
+
+    WKPageClearBackForwardListForTesting(TestController::singleton().mainWebView()->page(), nullptr, [](void*) { });
+
     if (resetStage == ResetStage::AfterTest) {
         updateLiveDocumentsAfterTest();
 #if PLATFORM(COCOA)
@@ -1481,19 +1508,19 @@ WKURLRef TestController::createTestURL(const char* pathOrURL)
         return 0;
 
     if (length >= 7 && strstr(pathOrURL, "file://")) {
-        if (!m_usingServerMode && !WTF::FileSystemImpl::fileExists(String({ pathOrURL + 7, length - 7 }))) {
+        auto url = adoptWK(WKURLCreateWithUTF8CString(pathOrURL));
+        auto path = testPath(url.get());
+        if (!m_usingServerMode && !WTF::FileSystemImpl::fileExists(String(std::span { path }))) {
             printf("Failed: File for URL ‘%s’ was not found or is inaccessible\n", pathOrURL);
             return 0;
         }
-        return WKURLCreateWithUTF8CString(pathOrURL);
+        return url.leakRef();
     }
 
     // Creating from filesytem path.
 
 #if PLATFORM(WIN)
-    bool isAbsolutePath = false;
-    if (length >= 3 && pathOrURL[1] == ':' && pathOrURL[2] == pathSeparator)
-        isAbsolutePath = true;
+    bool isAbsolutePath = !PathIsRelativeA(pathOrURL);
 #else
     bool isAbsolutePath = pathOrURL[0] == pathSeparator;
 #endif
@@ -1516,11 +1543,13 @@ WKURLRef TestController::createTestURL(const char* pathOrURL)
     }
 
     auto cPath = buffer.get();
-    if (!m_usingServerMode && !WTF::FileSystemImpl::fileExists(String({ cPath + 7, strlen(cPath) - 7 }))) {
+    auto url = adoptWK(WKURLCreateWithUTF8CString(cPath));
+    auto path = testPath(url.get());
+    if (!m_usingServerMode && !WTF::FileSystemImpl::fileExists(String(std::span { path }))) {
         printf("Failed: File ‘%s’ was not found or is inaccessible\n", pathOrURL);
         return 0;
     }
-    return WKURLCreateWithUTF8CString(cPath);
+    return url.leakRef();
 }
 
 TestOptions TestController::testOptionsForTest(const TestCommand& command) const
@@ -1577,24 +1606,6 @@ static void contentExtensionStoreCallback(WKUserContentFilterRef filter, uint32_
     context->filter = filter ? adoptWK(filter) : nullptr;
     context->done = true;
     context->testController.notifyDone();
-}
-
-static std::string testPath(WKURLRef url)
-{
-    auto scheme = adoptWK(WKURLCopyScheme(url));
-    if (WKStringIsEqualToUTF8CStringIgnoringCase(scheme.get(), "file")) {
-        auto path = adoptWK(WKURLCopyPath(url));
-        auto buffer = std::vector<char>(WKStringGetMaximumUTF8CStringSize(path.get()));
-        auto length = WKStringGetUTF8CString(path.get(), buffer.data(), buffer.size());
-        RELEASE_ASSERT(length > 0);
-#if OS(WINDOWS)
-        // Remove the first '/' if it starts with something like "/C:/".
-        if (length >= 4 && buffer[0] == '/' && buffer[2] == ':' && buffer[3] == '/')
-            return std::string(buffer.data() + 1, length - 1);
-#endif
-        return std::string(buffer.data(), length - 1);
-    }
-    return std::string();
 }
 
 static std::string contentExtensionJSONPath(WKURLRef url)
@@ -1966,8 +1977,35 @@ void TestController::didReceiveAsyncMessageFromInjectedBundle(WKStringRef messag
         WKMessageListenerSendReply(listener.get(), reply);
     };
 
+    if (WKStringIsEqualToUTF8CString(messageName, "EventSender")) {
+        auto dictionary = dictionaryValue(messageBody);
+        auto subMessageName = stringValue(dictionary, "SubMessage");
+
+        if (WKStringIsEqualToUTF8CString(subMessageName, "MouseDown"))
+            m_eventSenderProxy->mouseDown(uint64Value(dictionary, "Button"), uint64Value(dictionary, "Modifiers"), stringValue(dictionary, "PointerType"));
+        else if (WKStringIsEqualToUTF8CString(subMessageName, "MouseUp"))
+            m_eventSenderProxy->mouseUp(uint64Value(dictionary, "Button"), uint64Value(dictionary, "Modifiers"), stringValue(dictionary, "PointerType"));
+        else if (WKStringIsEqualToUTF8CString(subMessageName, "MouseMoveTo"))
+            m_eventSenderProxy->mouseMoveTo(doubleValue(dictionary, "X"), doubleValue(dictionary, "Y"), stringValue(dictionary, "PointerType"));
+        else {
+            ASSERT_NOT_REACHED();
+            return completionHandler(nullptr);
+        }
+
+        m_eventSenderProxy->waitForPendingMouseEvents();
+        return completionHandler(nullptr);
+    }
+
     if (WKStringIsEqualToUTF8CString(messageName, "FlushConsoleLogs"))
         return completionHandler(nullptr);
+
+    if (WKStringIsEqualToUTF8CString(messageName, "SetPageScaleFactor")) {
+        auto messageBodyDictionary = dictionaryValue(messageBody);
+        auto scaleFactor = doubleValue(messageBodyDictionary, "scaleFactor");
+        auto x = doubleValue(messageBodyDictionary, "x");
+        auto y = doubleValue(messageBodyDictionary, "y");
+        return setPageScaleFactor(static_cast<float>(scaleFactor), static_cast<int>(x), static_cast<int>(y), WTFMove(completionHandler));
+    }
 
     if (WKStringIsEqualToUTF8CString(messageName, "GetAllStorageAccessEntries"))
         return getAllStorageAccessEntries(WTFMove(completionHandler));
@@ -2093,6 +2131,16 @@ void TestController::didReceiveAsyncMessageFromInjectedBundle(WKStringRef messag
         return completionHandler(nullptr);
     }
 
+    if (WKStringIsEqualToUTF8CString(messageName, "StatisticsDeleteCookiesForHost")) {
+        auto messageBodyDictionary = dictionaryValue(messageBody);
+        auto hostName = stringValue(messageBodyDictionary, "HostName");
+        auto includeHttpOnlyCookies = booleanValue(messageBodyDictionary, "IncludeHttpOnlyCookies");
+        return TestController::singleton().statisticsDeleteCookiesForHost(hostName, includeHttpOnlyCookies, WTFMove(completionHandler));
+    }
+
+    if (WKStringIsEqualToUTF8CString(messageName, "StatisticsProcessStatisticsAndDataRecords"))
+        return TestController::singleton().statisticsProcessStatisticsAndDataRecords(WTFMove(completionHandler));
+
     if (WKStringIsEqualToUTF8CString(messageName, "AddChromeInputField")) {
         mainWebView()->addChromeInputField();
         return completionHandler(nullptr);
@@ -2138,12 +2186,21 @@ void TestController::didReceiveAsyncMessageFromInjectedBundle(WKStringRef messag
         return setAppBoundDomains(arrayValue(messageBody), WTFMove(completionHandler));
 
     if (WKStringIsEqualToUTF8CString(messageName, "SetBackingScaleFactor")) {
-        WKPageSetCustomBackingScaleFactor(TestController::singleton().mainWebView()->page(), doubleValue(messageBody));
-        return completionHandler(nullptr);
+        WKPageSetCustomBackingScaleFactorWithCallback(TestController::singleton().mainWebView()->page(), doubleValue(messageBody), completionHandler.leak(), adoptAndCallCompletionHandler);
+        return;
     }
 
     if (WKStringIsEqualToUTF8CString(messageName, "RemoveAllSessionCredentials"))
         return TestController::singleton().removeAllSessionCredentials(WTFMove(completionHandler));
+
+    if (WKStringIsEqualToUTF8CString(messageName, "SetTopContentInset"))
+        return WKPageSetTopContentInsetForTesting(TestController::singleton().mainWebView()->page(), static_cast<float>(doubleValue(messageBody)), completionHandler.leak(), adoptAndCallCompletionHandler);
+
+    if (WKStringIsEqualToUTF8CString(messageName, "ClearBackForwardList"))
+        return WKPageClearBackForwardListForTesting(TestController::singleton().mainWebView()->page(), completionHandler.leak(), adoptAndCallCompletionHandler);
+
+    if (WKStringIsEqualToUTF8CString(messageName, "DisplayAndTrackRepaints"))
+        return WKPageDisplayAndTrackRepaintsForTesting(TestController::singleton().mainWebView()->page(), completionHandler.leak(), adoptAndCallCompletionHandler);
 
     ASSERT_NOT_REACHED();
 }
@@ -2191,10 +2248,8 @@ void TestController::didReceiveSynchronousMessageFromInjectedBundle(WKStringRef 
             return completionHandler(nullptr);
         }
 
-        if (WKStringIsEqualToUTF8CString(subMessageName, "WaitForDeferredMouseEvents")) {
-            WKPageFlushDeferredDidReceiveMouseEventForTesting(mainWebView()->page());
+        if (WKStringIsEqualToUTF8CString(subMessageName, "WaitForDeferredMouseEvents"))
             return completionHandler(nullptr);
-        }
 
 #if PLATFORM(MAC)
         if (WKStringIsEqualToUTF8CString(subMessageName, "MouseForceClick")) {
@@ -2703,27 +2758,22 @@ void TestController::downloadDidStart(WKDownloadRef download)
 
 WKStringRef TestController::decideDestinationWithSuggestedFilename(WKDownloadRef download, WKStringRef filename)
 {
-    String suggestedFilename = toWTFString(filename);
+    auto suggestedFilename = toWTFString(filename);
 
-    if (m_shouldLogDownloadCallbacks) {
-        StringBuilder builder;
-        builder.append("Downloading URL with suggested filename \""_s);
-        builder.append(suggestedFilename);
-        builder.append("\"\n"_s);
-        m_currentInvocation->outputText(builder.toString());
-    }
+    if (m_shouldLogDownloadCallbacks)
+        m_currentInvocation->outputText(makeString("Downloading URL with suggested filename \""_s, suggestedFilename, "\"\n"_s));
 
     const char* dumpRenderTreeTemp = libraryPathForTesting();
     if (!dumpRenderTreeTemp)
         return nullptr;
 
-    String temporaryFolder = String::fromUTF8(dumpRenderTreeTemp);
+    auto temporaryFolder = String::fromUTF8(dumpRenderTreeTemp);
     if (suggestedFilename.isEmpty())
         suggestedFilename = "Unknown"_s;
     
-    String destination = temporaryFolder + pathSeparator + suggestedFilename;
+    auto destination = makeString(temporaryFolder, pathSeparator, suggestedFilename);
     if (auto downloadIndex = m_downloadIndex++)
-        destination = destination + downloadIndex;
+        destination = makeString(destination, downloadIndex);
     if (FileSystem::fileExists(destination))
         FileSystem::deleteFile(destination);
 
@@ -2788,6 +2838,9 @@ void TestController::downloadDidWriteData(WKDownloadRef download, long long byte
 
 void TestController::webProcessDidTerminate(WKProcessTerminationReason reason)
 {
+    if (m_currentInvocation->options().shouldIgnoreWebProcessTermination())
+        return;
+
     // This function can be called multiple times when crash logs are being saved on Windows, so
     // ensure we only print the crashed message once.
     if (!m_didPrintWebProcessCrashedMessage) {
@@ -3394,6 +3447,11 @@ void TestController::setIgnoresViewportScaleLimits(bool ignoresViewportScaleLimi
     WKPageSetIgnoresViewportScaleLimits(m_mainWebView->page(), ignoresViewportScaleLimits);
 }
 
+void TestController::setUseDarkAppearanceForTesting(bool useDarkAppearance)
+{
+    WKPageSetUseDarkAppearanceForTesting(m_mainWebView->page(), useDarkAppearance);
+}
+
 void TestController::terminateGPUProcess()
 {
     WKContextTerminateGPUProcess(platformContext());
@@ -3463,6 +3521,11 @@ void TestController::clearAppPrivacyReportTestingData()
 }
 
 #endif // !PLATFORM(COCOA)
+
+void TestController::setPageScaleFactor(float scaleFactor, int x, int y, CompletionHandler<void(WKTypeRef)>&& completionHandler)
+{
+    WKPageSetPageScaleFactorForTesting(mainWebView()->page(), scaleFactor, WKPointMake(x, y), completionHandler.leak(), adoptAndCallCompletionHandler);
+}
 
 void TestController::getAllStorageAccessEntries(CompletionHandler<void(WKTypeRef)>&& completionHandler)
 {
@@ -3934,21 +3997,14 @@ void TestController::setStatisticsTimeToLiveUserInteraction(double seconds)
     runUntil(context.done, noTimeout);
 }
 
-void TestController::statisticsProcessStatisticsAndDataRecords()
+void TestController::statisticsProcessStatisticsAndDataRecords(CompletionHandler<void(WKTypeRef)>&& completionHandler)
 {
-    ResourceStatisticsCallbackContext context(*this);
-    WKWebsiteDataStoreStatisticsProcessStatisticsAndDataRecords(websiteDataStore(), &context, resourceStatisticsVoidResultCallback);
-    runUntil(context.done, noTimeout);
+    WKWebsiteDataStoreStatisticsProcessStatisticsAndDataRecords(websiteDataStore(), completionHandler.leak(), adoptAndCallCompletionHandler);
 }
 
 void TestController::statisticsUpdateCookieBlocking(CompletionHandler<void(WKTypeRef)>&& completionHandler)
 {
     WKWebsiteDataStoreStatisticsUpdateCookieBlocking(websiteDataStore(), completionHandler.leak(), adoptAndCallCompletionHandler);
-}
-
-void TestController::setStatisticsNotifyPagesWhenDataRecordsWereScanned(bool value)
-{
-    WKWebsiteDataStoreSetStatisticsNotifyPagesWhenDataRecordsWereScanned(websiteDataStore(), value);
 }
 
 void TestController::setStatisticsTimeAdvanceForTesting(double value)
@@ -4005,11 +4061,9 @@ void TestController::statisticsClearThroughWebsiteDataRemoval(CompletionHandler<
     WKWebsiteDataStoreStatisticsClearThroughWebsiteDataRemoval(websiteDataStore(), completionHandler.leak(), adoptAndCallCompletionHandler);
 }
 
-void TestController::statisticsDeleteCookiesForHost(WKStringRef host, bool includeHttpOnlyCookies)
+void TestController::statisticsDeleteCookiesForHost(WKStringRef host, bool includeHttpOnlyCookies, CompletionHandler<void(WKTypeRef)>&& completionHandler)
 {
-    ResourceStatisticsCallbackContext context(*this);
-    WKWebsiteDataStoreStatisticsDeleteCookiesForTesting(websiteDataStore(), host, includeHttpOnlyCookies, &context, resourceStatisticsVoidResultCallback);
-    runUntil(context.done, noTimeout);
+    WKWebsiteDataStoreStatisticsDeleteCookiesForTesting(websiteDataStore(), host, includeHttpOnlyCookies, completionHandler.leak(), adoptAndCallCompletionHandler);
 }
 
 bool TestController::isStatisticsHasLocalStorage(WKStringRef host)
@@ -4132,6 +4186,11 @@ void TestController::triggerMockCaptureConfigurationChange(bool forMicrophone, b
     WKPageTriggerMockCaptureConfigurationChange(m_mainWebView->page(), forMicrophone, forDisplay);
 }
 
+void TestController::setCaptureState(bool cameraState, bool microphoneState, bool displayState)
+{
+    WKPageSetMuted(m_mainWebView->page(), (cameraState ? kWKMediaCameraCaptureUnmuted : kWKMediaCameraCaptureMuted) | (microphoneState ? kWKMediaMicrophoneCaptureUnmuted : kWKMediaMicrophoneCaptureMuted) | (displayState ? kWKMediaScreenCaptureUnmuted : kWKMediaScreenCaptureMuted));
+}
+
 struct InAppBrowserPrivacyCallbackContext {
     explicit InAppBrowserPrivacyCallbackContext(TestController& controller)
         : testController(controller)
@@ -4218,6 +4277,10 @@ bool TestController::keyExistsInKeychain(const String&, const String&)
 void TestController::setAllowedMenuActions(const Vector<String>&)
 {
 }
+
+void TestController::platformEnsureGPUProcessConfiguredForOptions(const TestOptions&)
+{
+}
 #endif
 
 #if !PLATFORM(COCOA) && !PLATFORM(GTK) && !PLATFORM(WPE)
@@ -4237,6 +4300,13 @@ WKRetainPtr<WKArrayRef> TestController::getAndClearReportedWindowProxyAccessDoma
 void TestController::setServiceWorkerFetchTimeoutForTesting(double seconds)
 {
     WKWebsiteDataStoreSetServiceWorkerFetchTimeoutForTesting(websiteDataStore(), seconds);
+}
+
+void TestController::setTracksRepaints(bool trackRepaints)
+{
+    GenericVoidContext context(*this);
+    WKPageSetTracksRepaintsForTesting(TestController::singleton().mainWebView()->page(), &context, trackRepaints, genericVoidCallback);
+    runUntil(context.done, noTimeout);
 }
 
 struct PrivateClickMeasurementStringResultCallbackContext {

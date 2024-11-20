@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2006 Oliver Hunt <ojh16@student.canterbury.ac.nz>
- * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2015 Google Inc. All rights reserved.
  * Copyright (C) 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2008 Rob Buis <buis@kde.org>
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
@@ -27,6 +28,7 @@
 #include "CSSFontSelector.h"
 #include "FloatConversion.h"
 #include "FloatQuad.h"
+#include "InlineIteratorSVGTextBox.h"
 #include "InlineRunAndOffset.h"
 #include "LegacyRenderSVGRoot.h"
 #include "RenderAncestorIterator.h"
@@ -41,11 +43,11 @@
 #include "StyleFontSizeFunctions.h"
 #include "StyleResolver.h"
 #include "VisiblePosition.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGInlineText);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGInlineText);
 
 static String applySVGWhitespaceRules(const String& string, bool preserveWhiteSpace)
 {
@@ -129,8 +131,8 @@ std::unique_ptr<LegacyInlineTextBox> RenderSVGInlineText::createTextBox()
 FloatRect RenderSVGInlineText::floatLinesBoundingBox() const
 {
     FloatRect boundingBox;
-    for (auto* box = firstTextBox(); box; box = box->nextTextBox())
-        boundingBox.unite(box->calculateBoundaries());
+    for (auto& box : InlineIterator::svgTextBoxesFor(*this))
+        boundingBox.unite(box.calculateBoundariesIncludingSVGTransform());
 
     return boundingBox;
 }
@@ -153,12 +155,12 @@ bool RenderSVGInlineText::characterStartsNewTextChunk(int position) const
     if (it == m_layoutAttributes.characterDataMap().end())
         return false;
 
-    return it->value.x != SVGTextLayoutAttributes::emptyValue() || it->value.y != SVGTextLayoutAttributes::emptyValue();
+    return !SVGTextLayoutAttributes::isEmptyValue(it->value.x) || !SVGTextLayoutAttributes::isEmptyValue(it->value.y);
 }
 
 VisiblePosition RenderSVGInlineText::positionForPoint(const LayoutPoint& point, HitTestSource, const RenderFragmentContainer*)
 {
-    if (!firstTextBox() || text().isEmpty())
+    if (!InlineIterator::firstTextBoxFor(*this) || text().isEmpty())
         return createVisiblePosition(0, Affinity::Downstream);
 
     float baseline = m_scaledFont.metricsOfPrimaryFont().ascent();
@@ -173,11 +175,11 @@ VisiblePosition RenderSVGInlineText::positionForPoint(const LayoutPoint& point, 
     float closestDistance = std::numeric_limits<float>::max();
     float closestDistancePosition = 0;
     const SVGTextFragment* closestDistanceFragment = nullptr;
-    SVGInlineTextBox* closestDistanceBox = nullptr;
+    const SVGInlineTextBox* closestDistanceBox = nullptr;
 
     AffineTransform fragmentTransform;
-    for (auto* box = firstTextBox(); box; box = box->nextTextBox()) {
-        Vector<SVGTextFragment>& fragments = box->textFragments();
+    for (auto& box : InlineIterator::svgTextBoxesFor(*this)) {
+        auto& fragments = box.textFragments();
 
         unsigned textFragmentsSize = fragments.size();
         for (unsigned i = 0; i < textFragmentsSize; ++i) {
@@ -192,7 +194,7 @@ VisiblePosition RenderSVGInlineText::positionForPoint(const LayoutPoint& point, 
 
             if (distance < closestDistance) {
                 closestDistance = distance;
-                closestDistanceBox = box;
+                closestDistanceBox = downcast<SVGInlineTextBox>(box.legacyInlineBox());
                 closestDistanceFragment = &fragment;
                 closestDistancePosition = fragmentRect.x();
             }
@@ -225,16 +227,19 @@ bool RenderSVGInlineText::computeNewScaledFontForStyle(const RenderObject& rende
 {
     // Alter font-size to the right on-screen value to avoid scaling the glyphs themselves, except when GeometricPrecision is specified
     scalingFactor = computeScalingFactorForRenderer(renderer);
-    if (!scalingFactor || style.fontDescription().textRenderingMode() == TextRenderingMode::GeometricPrecision) {
+    if (!scalingFactor) {
         scalingFactor = 1;
         scaledFont = style.fontCascade();
         return false;
     }
 
+    if (style.fontDescription().textRenderingMode() == TextRenderingMode::GeometricPrecision)
+        scalingFactor = 1;
+
     auto fontDescription = style.fontDescription();
 
     // FIXME: We need to better handle the case when we compute very small fonts below (below 1pt).
-    fontDescription.setComputedSize(Style::computedFontSizeFromSpecifiedSizeForSVGInlineText(fontDescription.computedSize(), fontDescription.isAbsoluteSize(), scalingFactor, renderer.protectedDocument()));
+    fontDescription.setComputedSize(Style::computedFontSizeFromSpecifiedSizeForSVGInlineText(fontDescription.specifiedSize(), fontDescription.isAbsoluteSize(), scalingFactor, renderer.protectedDocument()));
 
     // SVG controls its own glyph orientation, so don't allow writing-mode
     // to affect it.
@@ -244,11 +249,6 @@ bool RenderSVGInlineText::computeNewScaledFontForStyle(const RenderObject& rende
     scaledFont = FontCascade(WTFMove(fontDescription));
     scaledFont.update(renderer.document().protectedFontSelector().ptr());
     return true;
-}
-
-SVGInlineTextBox* RenderSVGInlineText::firstTextBox() const
-{
-    return downcast<SVGInlineTextBox>(RenderText::firstTextBox());
 }
 
 }

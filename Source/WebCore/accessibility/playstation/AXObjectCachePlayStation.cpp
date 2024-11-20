@@ -125,21 +125,18 @@ void AXObjectCache::frameLoadingEventPlatformNotification(AccessibilityObject* o
     client.postAccessibilityFrameLoadingEventNotification(object, loadingEvent);
 }
 
-void AXObjectCache::handleScrolledToAnchor(const Node* scrolledToNode)
+void AXObjectCache::handleScrolledToAnchor(const Node& scrolledToNode)
 {
-    if (!scrolledToNode)
-        return;
-
-    if (RefPtr object = AccessibilityObject::firstAccessibleObjectFromNode(scrolledToNode))
+    if (RefPtr object = AccessibilityObject::firstAccessibleObjectFromNode(&scrolledToNode))
         postPlatformNotification(*object, AXScrolledToAnchor);
 }
 
-void AXObjectCache::platformHandleFocusedUIElementChanged(Node*, Node* newFocusedNode)
+void AXObjectCache::platformHandleFocusedUIElementChanged(Element*, Element* newFocus)
 {
-    if (!newFocusedNode)
+    if (!newFocus)
         return;
 
-    Page* page = newFocusedNode->document().page();
+    Page* page = newFocus->document().page();
     if (!page || !page->chrome().platformPageClient())
         return;
 

@@ -31,6 +31,7 @@
 #include "CachedImage.h"
 #include "DocumentInlines.h"
 #include "Editor.h"
+#include "ElementChildIteratorInlines.h"
 #include "ElementInlines.h"
 #include "HTMLBodyElement.h"
 #include "HTMLDListElement.h"
@@ -341,7 +342,7 @@ TextDirection directionOfEnclosingBlock(const Position& position)
     auto renderer = block->renderer();
     if (!renderer)
         return TextDirection::LTR;
-    return renderer->style().direction();
+    return renderer->writingMode().bidiDirection();
 }
 
 // This method is used to create positions in the DOM. It returns the maximum valid offset
@@ -877,7 +878,16 @@ int caretMinOffset(const Node& node)
 {
     auto* renderer = node.renderer();
     ASSERT(!node.isCharacterDataNode() || !renderer || renderer->isRenderText());
-    return renderer ? renderer->caretMinOffset() : 0;
+
+    if (renderer && renderer->isRenderText())
+        return renderer->caretMinOffset();
+
+    if (RefPtr pictureElement = dynamicDowncast<HTMLPictureElement>(node)) {
+        if (RefPtr firstImage = childrenOfType<HTMLImageElement>(*pictureElement).first())
+            return firstImage->computeNodeIndex();
+    }
+
+    return 0;
 }
 
 // If a node can contain candidates for VisiblePositions, return the offset of the last candidate, otherwise 

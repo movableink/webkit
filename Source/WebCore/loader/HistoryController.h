@@ -94,12 +94,14 @@ public:
 
     void setDefersLoading(bool);
 
+    Ref<HistoryItem> createItemWithLoader(HistoryItemClient&, DocumentLoader*);
+
 private:
     friend class Page;
     bool shouldStopLoadingForHistoryItem(HistoryItem&) const;
     void goToItem(HistoryItem&, FrameLoadType, ShouldTreatAsContinuingLoad);
 
-    void initializeItem(HistoryItem&);
+    void initializeItem(HistoryItem&, RefPtr<DocumentLoader>);
     Ref<HistoryItem> createItem(HistoryItemClient&);
     Ref<HistoryItem> createItemTree(HistoryItemClient&, LocalFrame& targetFrame, bool clipAtTarget);
 
@@ -112,6 +114,7 @@ private:
     bool itemsAreClones(HistoryItem&, HistoryItem*) const;
     void updateBackForwardListClippedAtTarget(bool doClip);
     void updateCurrentItem();
+    bool isFrameLoadComplete() const { return m_frameLoadComplete; }
 
     Ref<Frame> protectedFrame() const;
 

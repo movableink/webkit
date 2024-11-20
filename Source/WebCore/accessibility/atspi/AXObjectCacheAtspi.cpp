@@ -262,19 +262,19 @@ void AXObjectCache::frameLoadingEventPlatformNotification(AccessibilityObject* c
     }
 }
 
-void AXObjectCache::platformHandleFocusedUIElementChanged(Node* oldFocusedNode, Node* newFocusedNode)
+void AXObjectCache::platformHandleFocusedUIElementChanged(Element* oldFocus, Element* newFocus)
 {
-    if (auto* axObject = get(oldFocusedNode)) {
+    if (auto* axObject = get(oldFocus)) {
         if (auto* wrapper = axObject->wrapper())
             wrapper->stateChanged("focused", false);
     }
-    if (auto* axObject = getOrCreate(newFocusedNode)) {
+    if (auto* axObject = getOrCreate(newFocus)) {
         if (auto* wrapper = axObject->wrapper())
             wrapper->stateChanged("focused", true);
     }
 }
 
-void AXObjectCache::handleScrolledToAnchor(const Node*)
+void AXObjectCache::handleScrolledToAnchor(const Node&)
 {
 }
 

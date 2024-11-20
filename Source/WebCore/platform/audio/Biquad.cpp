@@ -37,6 +37,7 @@
 #include <algorithm>
 #include <stdio.h>
 #include <wtf/MathExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if USE(ACCELERATE)
 // Work around a bug where VForce.h forward declares std::complex in a way that's incompatible with libc++ complex.
@@ -44,7 +45,11 @@
 #include <Accelerate/Accelerate.h>
 #endif
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Biquad);
 
 #if USE(ACCELERATE)
 constexpr int kBufferSize = 1024;
@@ -891,5 +896,7 @@ double Biquad::tailFrame(size_t coefIndex, double maxFrame)
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

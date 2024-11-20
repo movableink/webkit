@@ -22,6 +22,9 @@
 
 #if ENABLE(WEBXR) && USE(OPENXR)
 
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
+
 constexpr auto OPENXR_INPUT_HAND_PATH { "/user/hand/"_s };
 constexpr auto OPENXR_INPUT_GRIP_PATH { "/input/grip/pose"_s };
 constexpr auto OPENXR_INPUT_AIM_PATH { "/input/aim/pose"_s };
@@ -29,6 +32,8 @@ constexpr auto OPENXR_INPUT_AIM_PATH { "/input/aim/pose"_s };
 using namespace WebCore;
 
 namespace PlatformXR {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(OpenXRInputSource);
 
 std::unique_ptr<OpenXRInputSource> OpenXRInputSource::create(XrInstance instance, XrSession session, XRHandedness handeness, InputSourceHandle handle)
 {

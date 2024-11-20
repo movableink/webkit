@@ -39,7 +39,7 @@
 #include <variant>
 #include <wtf/CheckedPtr.h>
 #include <wtf/Forward.h>
-#include <wtf/IsoMalloc.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
 namespace JSC {
@@ -55,7 +55,8 @@ class EventTarget;
 class JSEventListener;
 
 struct EventTargetData {
-    WTF_MAKE_NONCOPYABLE(EventTargetData); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(EventTargetData);
+    WTF_MAKE_NONCOPYABLE(EventTargetData);
 public:
     EventTargetData() = default;
 
@@ -80,7 +81,7 @@ private:
 };
 
 class EventTarget : public ScriptWrappable, public CanMakeWeakPtrWithBitField<EventTarget, WeakPtrFactoryInitialization::Lazy, WeakPtrImplWithEventTargetData> {
-    WTF_MAKE_ISO_ALLOCATED(EventTarget);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(EventTarget);
 public:
     static Ref<EventTarget> create(ScriptExecutionContext&);
 
@@ -115,6 +116,7 @@ public:
 
     bool hasEventListeners() const;
     bool hasEventListeners(const AtomString& eventType) const;
+    bool hasAnyEventListeners(Vector<AtomString> eventTypes) const;
     bool hasCapturingEventListeners(const AtomString& eventType);
     bool hasActiveEventListeners(const AtomString& eventType) const;
 
@@ -240,6 +242,17 @@ inline bool EventTarget::hasEventListeners(const AtomString& eventType) const
 {
     auto* data = eventTargetData();
     return data && data->eventListenerMap.contains(eventType);
+}
+
+inline bool EventTarget::hasAnyEventListeners(Vector<AtomString> eventTypes) const
+{
+    if (auto* data = eventTargetData()) {
+        for (const auto& eventType : eventTypes) {
+            if (data->eventListenerMap.contains(eventType))
+                return true;
+        }
+    }
+    return false;
 }
 
 inline bool EventTarget::hasCapturingEventListeners(const AtomString& eventType)

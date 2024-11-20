@@ -31,9 +31,14 @@
 #include "config.h"
 #include "FileStream.h"
 
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/WTFString.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FileStream);
 
 FileStream::FileStream()
     : m_handle(FileSystem::invalidPlatformFileHandle)
@@ -115,3 +120,5 @@ int FileStream::read(void* buffer, int bufferSize)
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

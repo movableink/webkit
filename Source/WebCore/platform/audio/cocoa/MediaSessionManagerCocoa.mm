@@ -44,18 +44,31 @@
 #import <wtf/BlockObjCExceptions.h>
 #import <wtf/Function.h>
 #import <wtf/MathExtras.h>
+#import <wtf/TZoneMallocInlines.h>
 
 #import "MediaRemoteSoftLink.h"
 #include <pal/cocoa/AVFoundationSoftLink.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 static const size_t kLowPowerVideoBufferSize = 4096;
 
+#if USE(NOW_PLAYING_ACTIVITY_SUPPRESSION)
+// FIXME (135444366): Remove staging code once -suppressPresentationOverBundleIdentifiers: is available in SDKs
+@protocol WKStagedNowPlayingActivityUIControllable <MRNowPlayingActivityUIControllable>
+@optional
+- (void)suppressPresentationOverBundleIdentifiers:(NSSet *)bundleIdentifiers;
+@end
+#endif
+
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaSessionManagerCocoa);
 
 #if PLATFORM(MAC)
 std::unique_ptr<PlatformMediaSessionManager> PlatformMediaSessionManager::create()
 {
-    return makeUnique<MediaSessionManagerCocoa>();
+    return makeUniqueWithoutRefCountedCheck<MediaSessionManagerCocoa>();
 }
 #endif // !PLATFORM(MAC)
 
@@ -83,32 +96,16 @@ void MediaSessionManagerCocoa::ensureCodecsRegistered()
 #endif
 }
 
-#if ENABLE(MEDIA_SOURCE) && HAVE(AVSAMPLEBUFFERVIDEOOUTPUT)
-static bool s_mediaSourceInlinePaintingEnabled = false;
-void MediaSessionManagerCocoa::setMediaSourceInlinePaintingEnabled(bool enabled)
+static bool s_shouldUseModernAVContentKeySession;
+void MediaSessionManagerCocoa::setShouldUseModernAVContentKeySession(bool enabled)
 {
-    s_mediaSourceInlinePaintingEnabled = enabled;
+    s_shouldUseModernAVContentKeySession = enabled;
 }
 
-bool MediaSessionManagerCocoa::mediaSourceInlinePaintingEnabled()
+bool MediaSessionManagerCocoa::shouldUseModernAVContentKeySession()
 {
-    return s_mediaSourceInlinePaintingEnabled;
+    return s_shouldUseModernAVContentKeySession;
 }
-#endif
-
-#if HAVE(AVCONTENTKEYSPECIFIER)
-static bool s_sampleBufferContentKeySessionSupportEnabled = false;
-void MediaSessionManagerCocoa::setSampleBufferContentKeySessionSupportEnabled(bool enabled)
-{
-    s_sampleBufferContentKeySessionSupportEnabled = enabled;
-}
-
-bool MediaSessionManagerCocoa::sampleBufferContentKeySessionSupportEnabled()
-{
-    return s_sampleBufferContentKeySessionSupportEnabled;
-}
-#endif
-
 
 void MediaSessionManagerCocoa::updateSessionState()
 {
@@ -119,6 +116,7 @@ void MediaSessionManagerCocoa::updateSessionState()
     int webAudioCount = 0;
     int audioMediaStreamTrackCount = 0;
     int captureCount = countActiveAudioCaptureSources();
+
     bool hasAudibleAudioOrVideoMediaType = false;
     bool hasAudibleVideoMediaType = false;
     bool isPlayingAudio = false;
@@ -203,7 +201,7 @@ void MediaSessionManagerCocoa::updateSessionState()
     else if (webAudioCount)
         category = AudioSession::CategoryType::AmbientSound;
 
-    if (category == AudioSession::CategoryType::None && m_previousCategory != AudioSession::CategoryType::None) {
+    if (category == AudioSession::CategoryType::None && m_previousCategory != AudioSession::CategoryType::None && m_previousCategory != AudioSession::CategoryType::PlayAndRecord) {
         if (!m_delayCategoryChangeTimer.isActive()) {
             m_delayCategoryChangeTimer.startOneShot(delayBeforeSettingCategoryNone);
             ALWAYS_LOG(LOGIDENTIFIER, "setting timer");
@@ -270,7 +268,7 @@ String MediaSessionManagerCocoa::audioTimePitchAlgorithmForMediaPlayerPitchCorre
 
 void MediaSessionManagerCocoa::scheduleSessionStatusUpdate()
 {
-    callOnMainThread([this] () mutable {
+    enqueueTaskOnMainThread([this] () mutable {
         m_nowPlayingManager->setSupportsSeeking(computeSupportsSeeking());
         updateNowPlayingInfo();
 
@@ -329,7 +327,7 @@ void MediaSessionManagerCocoa::sessionWillEndPlayback(PlatformMediaSession& sess
 {
     PlatformMediaSessionManager::sessionWillEndPlayback(session, delayCallingUpdateNowPlaying);
 
-    callOnMainThread([weakSession = WeakPtr { session }] {
+    enqueueTaskOnMainThread([weakSession = WeakPtr { session }] {
         if (weakSession)
             weakSession->updateMediaUsageIfChanged();
     });
@@ -337,7 +335,7 @@ void MediaSessionManagerCocoa::sessionWillEndPlayback(PlatformMediaSession& sess
     if (delayCallingUpdateNowPlaying == DelayCallingUpdateNowPlaying::No)
         updateNowPlayingInfo();
     else {
-        callOnMainThread([this] {
+        enqueueTaskOnMainThread([this] {
             updateNowPlayingInfo();
         });
     }
@@ -404,12 +402,23 @@ void MediaSessionManagerCocoa::clearNowPlayingInfo()
             WTFLogAlways("MRMediaRemoteSetNowPlayingApplicationPlaybackStateForOrigin(stopped) failed with error %d", error);
 #endif
     });
+
+#if USE(NOW_PLAYING_ACTIVITY_SUPPRESSION)
+    updateNowPlayingSuppression(nullptr);
+#endif
 }
 
-void MediaSessionManagerCocoa::setNowPlayingInfo(bool setAsNowPlayingApplication, const NowPlayingInfo& nowPlayingInfo)
+void MediaSessionManagerCocoa::setNowPlayingInfo(bool setAsNowPlayingApplication, bool shouldUpdateNowPlayingSuppression, const NowPlayingInfo& nowPlayingInfo)
 {
     if (!isMediaRemoteFrameworkAvailable())
         return;
+
+#if USE(NOW_PLAYING_ACTIVITY_SUPPRESSION)
+    if (shouldUpdateNowPlayingSuppression)
+        updateNowPlayingSuppression(&nowPlayingInfo);
+#else
+    ASSERT_UNUSED(shouldUpdateNowPlayingSuppression, !shouldUpdateNowPlayingSuppression);
+#endif
 
     if (setAsNowPlayingApplication)
         MRMediaRemoteSetCanBeNowPlayingApplication(true);
@@ -431,7 +440,7 @@ void MediaSessionManagerCocoa::setNowPlayingInfo(bool setAsNowPlayingApplication
 
     // FIXME: This is a workaround Control Center not updating the artwork when refreshed.
     // We force the identifier to be reloaded to the new artwork if available.
-    auto lastUpdatedNowPlayingInfoUniqueIdentifier = nowPlayingInfo.metadata.artwork ? nowPlayingInfo.metadata.artwork->src.hash() : nowPlayingInfo.uniqueIdentifier.toUInt64();
+    auto lastUpdatedNowPlayingInfoUniqueIdentifier = nowPlayingInfo.metadata.artwork ? nowPlayingInfo.metadata.artwork->src.hash() : (nowPlayingInfo.uniqueIdentifier ? nowPlayingInfo.uniqueIdentifier->toUInt64() : 0);
     auto cfIdentifier = adoptCF(CFNumberCreate(kCFAllocatorDefault, kCFNumberLongLongType, &lastUpdatedNowPlayingInfoUniqueIdentifier));
     CFDictionarySetValue(info.get(), kMRMediaRemoteNowPlayingInfoUniqueIdentifier, cfIdentifier.get());
 
@@ -505,7 +514,8 @@ void MediaSessionManagerCocoa::updateNowPlayingInfo()
         m_lastUpdatedNowPlayingTitle = emptyString();
         m_lastUpdatedNowPlayingDuration = NAN;
         m_lastUpdatedNowPlayingElapsedTime = NAN;
-        m_lastUpdatedNowPlayingInfoUniqueIdentifier = { };
+        m_lastUpdatedNowPlayingInfoUniqueIdentifier = std::nullopt;
+        m_nowPlayingInfo = std::nullopt;
 
         updateActiveNowPlayingSession(nullptr);
         return;
@@ -521,7 +531,7 @@ void MediaSessionManagerCocoa::updateNowPlayingInfo()
         String src = nowPlayingInfo->metadata.artwork ? nowPlayingInfo->metadata.artwork->src : String();
         String title = nowPlayingInfo->metadata.title;
 #endif
-        ALWAYS_LOG(LOGIDENTIFIER, "title = \"", title, "\", isPlaying = ", nowPlayingInfo->isPlaying, ", duration = ", nowPlayingInfo->duration, ", now = ", nowPlayingInfo->currentTime, ", id = ", nowPlayingInfo->uniqueIdentifier.toUInt64(), ", registered = ", m_registeredAsNowPlayingApplication, ", src = \"", src, "\"");
+        ALWAYS_LOG(LOGIDENTIFIER, "title = \"", title, "\", isPlaying = ", nowPlayingInfo->isPlaying, ", duration = ", nowPlayingInfo->duration, ", now = ", nowPlayingInfo->currentTime, ", id = ", (nowPlayingInfo->uniqueIdentifier ? nowPlayingInfo->uniqueIdentifier->toUInt64() : 0), ", registered = ", m_registeredAsNowPlayingApplication, ", src = \"", src, "\"");
     }
     if (!m_registeredAsNowPlayingApplication) {
         m_registeredAsNowPlayingApplication = true;
@@ -606,6 +616,32 @@ std::optional<bool> MediaSessionManagerCocoa::supportsSpatialAudioPlaybackForCon
 }
 #endif
 
+#if USE(NOW_PLAYING_ACTIVITY_SUPPRESSION)
+
+static id<WKStagedNowPlayingActivityUIControllable> nowPlayingActivityController()
+{
+    static id<MRNowPlayingActivityUIControllable> controller = RetainPtr([getMRUIControllerProviderClass() nowPlayingActivityController]).leakRef();
+
+    // FIXME (135444366): Remove staging code once -suppressPresentationOverBundleIdentifiers: is available in SDKs
+    return (id<WKStagedNowPlayingActivityUIControllable>)controller;
+}
+
+void MediaSessionManagerCocoa::updateNowPlayingSuppression(const NowPlayingInfo* nowPlayingInfo)
+{
+    // FIXME (135444366): Remove staging code once -suppressPresentationOverBundleIdentifiers: is available in SDKs
+    if (![nowPlayingActivityController() respondsToSelector:@selector(suppressPresentationOverBundleIdentifiers:)])
+        return;
+
+    if (!nowPlayingInfo || !nowPlayingInfo->isVideo)
+        [nowPlayingActivityController() suppressPresentationOverBundleIdentifiers:nil];
+    else
+        [nowPlayingActivityController() suppressPresentationOverBundleIdentifiers:[NSSet setWithArray:@[nowPlayingInfo->metadata.sourceApplicationIdentifier]]];
+}
+
+#endif // USE(NOW_PLAYING_ACTIVITY_SUPPRESSION)
+
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // USE(AUDIO_SESSION) && PLATFORM(COCOA)

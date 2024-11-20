@@ -26,7 +26,6 @@
 #include "config.h"
 #include "WebPreferencesDefaultValues.h"
 
-#include <WebCore/RuntimeApplicationChecks.h>
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(COCOA)
@@ -62,7 +61,7 @@ bool defaultPassiveTouchListenersAsDefaultOnDocument()
 
 bool defaultCSSOMViewScrollingAPIEnabled()
 {
-    static bool result = WebCore::IOSApplication::isIMDb() && !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::NoIMDbCSSOMViewScrollingQuirk);
+    static bool result = WTF::IOSApplication::isIMDb() && !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::NoIMDbCSSOMViewScrollingQuirk);
     return !result;
 }
 
@@ -77,6 +76,10 @@ bool defaultAlternateFormControlDesignEnabled()
     return PAL::currentUserInterfaceIdiomIsVision();
 }
 
+#endif
+
+#if ENABLE(FULLSCREEN_API)
+
 bool defaultVideoFullscreenRequiresElementFullscreen()
 {
 #if USE(APPLE_INTERNAL_SDK)
@@ -84,7 +87,12 @@ bool defaultVideoFullscreenRequiresElementFullscreen()
         return true;
 #endif
 
-    return PAL::currentUserInterfaceIdiomIsVision();
+#if PLATFORM(IOS_FAMILY)
+    if (PAL::currentUserInterfaceIdiomIsVision())
+        return true;
+#endif
+
+    return false;
 }
 
 #endif
@@ -129,7 +137,7 @@ bool defaultDisallowSyncXHRDuringPageDismissalEnabled()
 
 bool defaultAppleMailPaginationQuirkEnabled()
 {
-    return WebCore::MacApplication::isAppleMail();
+    return WTF::MacApplication::isAppleMail();
 }
 
 #endif
@@ -140,7 +148,7 @@ bool defaultCaptureAudioInGPUProcessEnabled()
 {
 #if HAVE(REQUIRE_MICROPHONE_CAPTURE_IN_UIPROCESS)
     // Newer versions can capture microphone in GPUProcess.
-    if (!WebCore::MacApplication::isSafari())
+    if (!WTF::MacApplication::isSafari())
         return false;
 #endif
 
@@ -164,7 +172,7 @@ bool defaultManageCaptureStatusBarInGPUProcessEnabled()
 {
 #if PLATFORM(IOS_FAMILY)
     // FIXME: Enable by default for all applications.
-    return !WebCore::IOSApplication::isMobileSafari() && !WebCore::IOSApplication::isSafariViewService();
+    return !WTF::IOSApplication::isMobileSafari() && !WTF::IOSApplication::isSafariViewService();
 #else
     return false;
 #endif
@@ -200,7 +208,7 @@ bool defaultMediaSessionCoordinatorEnabled()
     static dispatch_once_t onceToken;
     static bool enabled { false };
     dispatch_once(&onceToken, ^{
-        if (WebCore::isInWebProcess())
+        if (isInWebProcess())
             enabled = WebProcess::singleton().parentProcessHasEntitlement("com.apple.developer.group-session.urlactivity"_s);
         else
             enabled = WTF::processHasEntitlement("com.apple.developer.group-session.urlactivity"_s);
@@ -252,7 +260,7 @@ bool defaultLiveRangeSelectionEnabled()
 {
 #if PLATFORM(IOS_FAMILY)
     static bool enableForAllApps = linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::LiveRangeSelectionEnabledForAllApps);
-    if (!enableForAllApps && WebCore::IOSApplication::isGmail())
+    if (!enableForAllApps && WTF::IOSApplication::isGmail())
         return false;
 #endif
     return true;
@@ -284,7 +292,7 @@ bool defaultShouldEnableScreenOrientationAPI()
 #if PLATFORM(MAC)
     return true;
 #elif PLATFORM(IOS_FAMILY)
-    static bool shouldEnableScreenOrientationAPI = linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::ScreenOrientationAPIEnabled) || WebCore::IOSApplication::isHoYoLAB();
+    static bool shouldEnableScreenOrientationAPI = linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::ScreenOrientationAPIEnabled) || WTF::IOSApplication::isHoYoLAB();
     return shouldEnableScreenOrientationAPI;
 #else
     return false;
@@ -325,16 +333,6 @@ bool defaultUseGPUProcessForDOMRenderingEnabled()
 #endif
 
     return false;
-}
-
-bool defaultSearchInputIncrementalAttributeAndSearchEventEnabled()
-{
-#if PLATFORM(COCOA)
-    static bool newSDK = linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::NoSearchInputIncrementalAttributeAndSearchEvent);
-    return !newSDK;
-#else
-    return false;
-#endif
 }
 
 } // namespace WebKit

@@ -48,11 +48,6 @@ namespace WebCore {
 class PeerConnectionBackend;
 }
 
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::PeerConnectionBackend> : std::true_type { };
-}
-
 namespace WebCore {
 
 class DeferredPromise;
@@ -73,6 +68,7 @@ class RTCSctpTransportBackend;
 class RTCSessionDescription;
 class RTCStatsReport;
 class ScriptExecutionContext;
+class WeakPtrImplWithEventTargetData;
 
 struct MediaEndpointConfiguration;
 struct RTCAnswerOptions;
@@ -128,7 +124,8 @@ public:
     virtual ExceptionOr<Ref<RTCRtpSender>> addTrack(MediaStreamTrack&, FixedVector<String>&&);
     virtual void removeTrack(RTCRtpSender&) { }
 
-    virtual ExceptionOr<Ref<RTCRtpTransceiver>> addTransceiver(const String&, const RTCRtpTransceiverInit&);
+    enum class IgnoreNegotiationNeededFlag : bool { No, Yes };
+    virtual ExceptionOr<Ref<RTCRtpTransceiver>> addTransceiver(const String&, const RTCRtpTransceiverInit&, IgnoreNegotiationNeededFlag);
     virtual ExceptionOr<Ref<RTCRtpTransceiver>> addTransceiver(Ref<MediaStreamTrack>&&, const RTCRtpTransceiverInit&);
 
     void markAsNeedingNegotiation(uint32_t);
@@ -168,7 +165,7 @@ public:
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
-    const void* logIdentifier() const final { return m_logIdentifier; }
+    uint64_t logIdentifier() const final { return m_logIdentifier; }
     ASCIILiteral logClassName() const override { return "PeerConnectionBackend"_s; }
     WTFLogChannel& logChannel() const final;
 #endif
@@ -223,6 +220,9 @@ public:
     virtual void startGatheringStatLogs(Function<void(String&&)>&&) { }
     virtual void stopGatheringStatLogs() { }
 
+    WEBCORE_EXPORT void ref() const;
+    WEBCORE_EXPORT void deref() const;
+
 protected:
     void doneGatheringCandidates();
 
@@ -240,16 +240,6 @@ protected:
 
     void validateSDP(const String&) const;
 
-    struct PendingTrackEvent {
-        Ref<RTCRtpReceiver> receiver;
-        Ref<MediaStreamTrack> track;
-        Vector<Ref<MediaStream>> streams;
-        RefPtr<RTCRtpTransceiver> transceiver;
-    };
-    void addPendingTrackEvent(PendingTrackEvent&&);
-
-    void dispatchTrackEvent(PendingTrackEvent&);
-
 private:
     virtual void doCreateOffer(RTCOfferOptions&&) = 0;
     virtual void doCreateAnswer(RTCAnswerOptions&&) = 0;
@@ -259,7 +249,8 @@ private:
     virtual void doStop() = 0;
 
 protected:
-    RTCPeerConnection& m_peerConnection;
+    Ref<RTCPeerConnection> protectedPeerConnection() const;
+    WeakRef<RTCPeerConnection, WeakPtrImplWithEventTargetData> m_peerConnection;
 
 private:
     CreateCallback m_offerAnswerCallback;
@@ -267,11 +258,9 @@ private:
 
     bool m_shouldFilterICECandidates { true };
 
-    Vector<PendingTrackEvent> m_pendingTrackEvents;
-
 #if !RELEASE_LOG_DISABLED
     Ref<const Logger> m_logger;
-    const void* m_logIdentifier;
+    const uint64_t m_logIdentifier;
 #endif
     bool m_finishedGatheringCandidates { false };
     bool m_isProcessingLocalDescriptionAnswer { false };

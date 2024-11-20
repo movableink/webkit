@@ -53,8 +53,11 @@ headers: "NetworkProcessCreationParameters.h" "AuxiliaryProcessCreationParameter
 
     bool enablePrivateClickMeasurement
     bool ftpEnabled
-#if ENABLE(BUILT_IN_NOTIFICATIONS)
+#if ENABLE(WEB_PUSH_NOTIFICATIONS)
     bool builtInNotificationsEnabled
+#endif
+#if PLATFORM(COCOA)
+    bool enableModernDownloadProgress
 #endif
 
     Vector<WebKit::WebsiteDataStoreParameters> websiteDataStoreParameters
@@ -70,3 +73,4 @@ enum class WebKit::PrivateRelayed : bool
 enum class WebKit::ContentAsStringIncludesChildFrames : bool
 enum class WebKit::CallDownloadDidStart : bool
 enum class WebKit::AllowOverwrite : bool
+enum class WebKit::UseDownloadPlaceholder : bool

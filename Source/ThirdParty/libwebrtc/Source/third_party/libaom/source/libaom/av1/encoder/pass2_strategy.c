@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Alliance for Open Media. All rights reserved
+ * Copyright (c) 2019, Alliance for Open Media. All rights reserved.
  *
  * This source code is subject to the terms of the BSD 2 Clause License and
  * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
@@ -18,8 +18,10 @@
 /*! @} - end defgroup gf_group_algo */
 
 #include <assert.h>
+#include <limits.h>
 #include <stdint.h>
 
+#include "aom_dsp/aom_dsp_common.h"
 #include "aom_mem/aom_mem.h"
 #include "config/aom_config.h"
 #include "config/aom_scale_rtcd.h"
@@ -944,7 +946,10 @@ static void allocate_gf_group_bits(GF_GROUP *gf_group,
       case ARF_UPDATE:
       case INTNL_ARF_UPDATE:
         arf_extra_bits = layer_extra_bits[gf_group->layer_depth[idx]];
-        gf_group->bit_allocation[idx] = base_frame_bits + arf_extra_bits;
+        gf_group->bit_allocation[idx] =
+            (base_frame_bits > INT_MAX - arf_extra_bits)
+                ? INT_MAX
+                : (base_frame_bits + arf_extra_bits);
         break;
       case INTNL_OVERLAY_UPDATE:
       case OVERLAY_UPDATE: gf_group->bit_allocation[idx] = 0; break;
@@ -3408,9 +3413,7 @@ static int get_section_target_bandwidth(AV1_COMP *cpi) {
     section_target_bandwidth = rc->avg_frame_bandwidth;
   else {
     section_target_bandwidth = twopass->bits_left / frames_left;
-    section_target_bandwidth = (section_target_bandwidth < INT_MAX)
-                                   ? section_target_bandwidth
-                                   : INT_MAX;
+    section_target_bandwidth = AOMMIN(section_target_bandwidth, INT_MAX);
   }
   return (int)section_target_bandwidth;
 }
@@ -4136,7 +4139,12 @@ void av1_twopass_postencode_update(AV1_COMP *cpi) {
   }
 
   // Target vs actual bits for this arf group.
-  twopass->rolling_arf_group_target_bits += rc->base_frame_target;
+  if (twopass->rolling_arf_group_target_bits >
+      INT_MAX - rc->base_frame_target) {
+    twopass->rolling_arf_group_target_bits = INT_MAX;
+  } else {
+    twopass->rolling_arf_group_target_bits += rc->base_frame_target;
+  }
   twopass->rolling_arf_group_actual_bits += rc->projected_frame_size;
 
   // Calculate the pct rc error.

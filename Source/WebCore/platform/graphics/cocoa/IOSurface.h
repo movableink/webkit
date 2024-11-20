@@ -31,11 +31,8 @@
 #include "IntSize.h"
 #include "ProcessIdentity.h"
 #include <CoreGraphics/CoreGraphics.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/spi/cocoa/IOSurfaceSPI.h>
-
-#if PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST) && !PLATFORM(IOS_FAMILY_SIMULATOR)
-#define HAVE_IOSURFACE_RGB10 1
-#endif
 
 namespace WTF {
 class MachSendRight;
@@ -53,7 +50,7 @@ using IOSurfaceSeed = uint32_t;
 using PlatformDisplayID = uint32_t;
 
 class IOSurface final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(IOSurface, WEBCORE_EXPORT);
 public:
     enum class Name : uint8_t {
         Default,
@@ -68,6 +65,7 @@ public:
         Snapshot,
         ShareableSnapshot,
         ShareableLocalSnapshot,
+        WebGPU,
     };
 
     enum class Format {
@@ -80,6 +78,9 @@ public:
 #endif
         RGBA, // NOLINT
         RGBX, // NOLINT
+#if HAVE(HDR_SUPPORT)
+        RGBA16F,
+#endif
     };
 
     enum class AccessMode : uint32_t {

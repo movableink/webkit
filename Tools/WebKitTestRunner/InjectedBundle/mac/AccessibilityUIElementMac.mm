@@ -178,6 +178,7 @@ static id attributeValue(id element, NSString *attribute)
         @"AXErrorMessageFor",
         @"AXFlowFrom",
         @"AXIsInCell",
+        @"_AXIsInTable",
         @"AXIsInDescriptionListDetail",
         @"AXIsInDescriptionListTerm",
         @"AXIsIndeterminate",
@@ -340,6 +341,42 @@ static NSDictionary *searchTextParameterizedAttributeForCriteria(JSContextRef co
         [parameterizedAttribute setObject:[NSString stringWithJSStringRef:direction] forKey:@"AXSearchTextDirection"];
 
     return parameterizedAttribute;
+}
+
+static NSDictionary *textOperationParameterizedAttribute(JSContextRef context, JSStringRef operationType, JSValueRef markerRanges, JSValueRef replacementStrings, bool shouldSmartReplace)
+{
+    NSMutableDictionary *attributeParameters = [NSMutableDictionary dictionary];
+
+    if (operationType)
+        [attributeParameters setObject:[NSString stringWithJSStringRef:operationType] forKey:@"AXTextOperationType"];
+
+    if (markerRanges) {
+        JSObjectRef markerRangesArray = JSValueToObject(context, markerRanges, nullptr);
+        unsigned markerRangesArrayLength = arrayLength(context, markerRangesArray);
+        NSMutableArray *platformRanges = [NSMutableArray array];
+        for (unsigned i = 0; i < markerRangesArrayLength; ++i) {
+            auto propertyAtIndex = JSObjectGetPropertyAtIndex(context, markerRangesArray, i, nullptr);
+            auto markerRangeRef = toTextMarkerRange(JSValueToObject(context, propertyAtIndex, nullptr));
+            [platformRanges addObject:markerRangeRef->platformTextMarkerRange()];
+        }
+        [attributeParameters setObject:platformRanges forKey:@"AXTextOperationMarkerRanges"];
+    }
+
+    if (JSValueIsString(context, replacementStrings))
+        [attributeParameters setObject:toWTFString(context, replacementStrings) forKey:@"AXTextOperationReplacementString"];
+    else {
+        NSMutableArray *individualReplacementStringsParameter = [NSMutableArray array];
+        JSObjectRef replacementStringsArray = JSValueToObject(context, replacementStrings, nullptr);
+        unsigned replacementStringsArrayLength = arrayLength(context, replacementStringsArray);
+        for (unsigned i = 0; i < replacementStringsArrayLength; ++i)
+            [individualReplacementStringsParameter addObject:toWTFString(context, JSObjectGetPropertyAtIndex(context, replacementStringsArray, i, nullptr))];
+
+        [attributeParameters setObject:individualReplacementStringsParameter forKey:@"AXTextOperationIndividualReplacementStrings"];
+    }
+
+    [attributeParameters setObject:[NSNumber numberWithBool:shouldSmartReplace] forKey:@"AXTextOperationSmartReplace"];
+
+    return attributeParameters;
 }
 
 static NSDictionary *misspellingSearchParameterizedAttributeForCriteria(AccessibilityTextMarkerRange* start, bool forward)
@@ -1412,24 +1449,29 @@ bool AccessibilityUIElement::attributedStringRangeIsMisspelled(unsigned location
 unsigned AccessibilityUIElement::uiElementCountForSearchPredicate(JSContextRef context, AccessibilityUIElement *startElement, bool isDirectionNext, JSValueRef searchKey, JSStringRef searchText, bool visibleOnly, bool immediateDescendantsOnly)
 {
     BEGIN_AX_OBJC_EXCEPTIONS
-    NSDictionary *parameterizedAttribute = searchPredicateParameterizedAttributeForSearchCriteria(context, startElement, isDirectionNext, UINT_MAX, searchKey, searchText, visibleOnly, immediateDescendantsOnly);
-    auto value = attributeValueForParameter(@"AXUIElementsForSearchPredicate", parameterizedAttribute);
+    NSDictionary *parameter = searchPredicateForSearchCriteria(context, startElement, nullptr, isDirectionNext, UINT_MAX, searchKey, searchText, visibleOnly, immediateDescendantsOnly);
+    auto value = attributeValueForParameter(@"AXUIElementsForSearchPredicate", parameter);
     if ([value isKindOfClass:[NSArray class]])
         return [value count];
     END_AX_OBJC_EXCEPTIONS
-    
+
     return 0;
 }
 
 RefPtr<AccessibilityUIElement> AccessibilityUIElement::uiElementForSearchPredicate(JSContextRef context, AccessibilityUIElement *startElement, bool isDirectionNext, JSValueRef searchKey, JSStringRef searchText, bool visibleOnly, bool immediateDescendantsOnly)
 {
     BEGIN_AX_OBJC_EXCEPTIONS
-    NSDictionary *parameterizedAttribute = searchPredicateParameterizedAttributeForSearchCriteria(context, startElement, isDirectionNext, 1, searchKey, searchText, visibleOnly, immediateDescendantsOnly);
-    auto searchResults = attributeValueForParameter(@"AXUIElementsForSearchPredicate", parameterizedAttribute);
-    if ([searchResults isKindOfClass:[NSArray class]]) {
-        if (id lastResult = [searchResults lastObject])
-            return AccessibilityUIElement::create(lastResult);
+    NSDictionary *parameter = searchPredicateForSearchCriteria(context, startElement, nullptr, isDirectionNext, 1, searchKey, searchText, visibleOnly, immediateDescendantsOnly);
+    auto searchResults = attributeValueForParameter(@"AXUIElementsForSearchPredicate", parameter);
+    if (![searchResults isKindOfClass:[NSArray class]] || ![searchResults count])
+        return nullptr;
+
+    id result = [searchResults firstObject];
+    if ([result isKindOfClass:NSDictionary.class]) {
+        RELEASE_ASSERT([result objectForKey:@"AXSearchResultElement"]);
+        return AccessibilityUIElement::create([result objectForKey:@"AXSearchResultElement"]);
     }
+    return AccessibilityUIElement::create(result);
     END_AX_OBJC_EXCEPTIONS
 
     return nullptr;
@@ -1455,6 +1497,18 @@ JSValueRef AccessibilityUIElement::searchTextWithCriteria(JSContextRef context, 
     auto result = attributeValueForParameter(@"AXSearchTextWithCriteria", parameterizedAttribute);
     if ([result isKindOfClass:[NSArray class]])
         return makeJSArray(context, makeVector<RefPtr<AccessibilityTextMarkerRange>>(result.get()));
+    END_AX_OBJC_EXCEPTIONS
+
+    return nullptr;
+}
+
+JSValueRef AccessibilityUIElement::performTextOperation(JSContextRef context, JSStringRef operationType, JSValueRef markerRanges, JSValueRef replacementStrings, bool shouldSmartReplace)
+{
+    BEGIN_AX_OBJC_EXCEPTIONS
+    NSDictionary *parameterizedAttribute = textOperationParameterizedAttribute(context, operationType, markerRanges, replacementStrings, shouldSmartReplace);
+    auto result = attributeValueForParameter(@"AXTextOperation", parameterizedAttribute);
+    if ([result isKindOfClass:[NSArray class]])
+        return makeValueRefForValue(context, result.get());
     END_AX_OBJC_EXCEPTIONS
 
     return nullptr;
@@ -1980,6 +2034,11 @@ bool AccessibilityUIElement::isInCell() const
     return boolAttributeValueNS(@"AXIsInCell");
 }
 
+bool AccessibilityUIElement::isInTable() const
+{
+    return boolAttributeValueNS(@"_AXIsInTable");
+}
+
 void AccessibilityUIElement::takeFocus()
 {
     setAttributeValue(m_element.getAutoreleased(), NSAccessibilityFocusedAttribute, @YES);
@@ -2068,6 +2127,26 @@ int AccessibilityUIElement::lineIndexForTextMarker(AccessibilityTextMarker* mark
     END_AX_OBJC_EXCEPTIONS
 
     return -1;
+}
+
+RefPtr<AccessibilityTextMarkerRange> AccessibilityUIElement::textMarkerRangeForSearchPredicate(JSContextRef context, AccessibilityTextMarkerRange *startRange, bool forward, JSValueRef searchKey, JSStringRef searchText, bool visibleOnly, bool immediateDescendantsOnly)
+{
+    BEGIN_AX_OBJC_EXCEPTIONS
+    NSDictionary *parameter = searchPredicateForSearchCriteria(context, nullptr, startRange, forward, 1, searchKey, searchText, visibleOnly, immediateDescendantsOnly);
+    auto searchResults = attributeValueForParameter(@"AXRangesForSearchPredicate", parameter);
+    if (![searchResults isKindOfClass:[NSArray class]] || ![searchResults count])
+        return nullptr;
+
+    id result = [searchResults firstObject];
+    if (![result isKindOfClass:NSDictionary.class])
+        return nullptr;
+
+    id rangeRef = [result objectForKey:@"AXSearchResultRange"];
+    if (rangeRef && CFGetTypeID((__bridge CFTypeRef)rangeRef) == AXTextMarkerRangeGetTypeID())
+        return AccessibilityTextMarkerRange::create(rangeRef);
+    END_AX_OBJC_EXCEPTIONS
+
+    return nullptr;
 }
 
 RefPtr<AccessibilityTextMarkerRange> AccessibilityUIElement::misspellingTextMarkerRange(AccessibilityTextMarkerRange* start, bool forward)

@@ -30,6 +30,7 @@
 #include "LengthBox.h"
 #include "LengthPoint.h"
 #include "StyleColor.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -38,12 +39,12 @@ enum class ShadowStyle : uint8_t { Normal, Inset };
 // This class holds information about shadows for the text-shadow and box-shadow properties.
 
 class ShadowData {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ShadowData);
 public:
     ShadowData() = default;
 
     ShadowData(const LengthPoint& location, Length radius, Length spread, ShadowStyle style, bool isWebkitBoxShadow, const StyleColor& color)
-        : m_location(location.x(), location.y())
+        : m_location(location.x, location.y)
         , m_spread(spread)
         , m_radius(radius)
         , m_color(color)
@@ -61,8 +62,8 @@ public:
 
     bool operator==(const ShadowData& o) const;
     
-    const Length& x() const { return m_location.x(); }
-    const Length& y() const { return m_location.y(); }
+    const Length& x() const { return m_location.x; }
+    const Length& y() const { return m_location.y; }
     const LengthPoint& location() const { return m_location; }
     const Length& radius() const { return m_radius; }
 

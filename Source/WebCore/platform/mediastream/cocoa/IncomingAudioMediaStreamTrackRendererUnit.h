@@ -29,10 +29,10 @@
 
 #include "BaseAudioMediaStreamTrackRendererUnit.h"
 #include "CAAudioStreamDescription.h"
-#include <wtf/FastMalloc.h>
 #include <wtf/Forward.h>
 #include <wtf/HashSet.h>
 #include <wtf/LoggerHelper.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
 namespace WTF {
@@ -53,7 +53,7 @@ class IncomingAudioMediaStreamTrackRendererUnit : public BaseAudioMediaStreamTra
     , public LoggerHelper
 #endif
 {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(IncomingAudioMediaStreamTrackRendererUnit);
 public:
     explicit IncomingAudioMediaStreamTrackRendererUnit(LibWebRTCAudioModule&);
     ~IncomingAudioMediaStreamTrackRendererUnit();
@@ -77,7 +77,7 @@ private:
     const Logger& logger() const final;
     ASCIILiteral logClassName() const final { return "IncomingAudioMediaStreamTrackRendererUnit"_s; }
     WTFLogChannel& logChannel() const final;
-    const void* logIdentifier() const final;
+    uint64_t logIdentifier() const final;
 #endif
 
     // Main thread variables.
@@ -96,7 +96,7 @@ private:
 
 #if !RELEASE_LOG_DISABLED
     RefPtr<const Logger> m_logger;
-    const void* m_logIdentifier;
+    const uint64_t m_logIdentifier;
 #endif
 };
 

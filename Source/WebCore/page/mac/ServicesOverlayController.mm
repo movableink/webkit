@@ -48,9 +48,14 @@
 #import "Settings.h"
 #import "TextIterator.h"
 #import <QuartzCore/QuartzCore.h>
+#import <wtf/TZoneMallocInlines.h>
 #import <pal/mac/DataDetectorsSoftLink.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ServicesOverlayController);
 
 ServicesOverlayController::ServicesOverlayController(Page& page)
     : m_page(page)
@@ -60,6 +65,16 @@ ServicesOverlayController::ServicesOverlayController(Page& page)
 }
 
 ServicesOverlayController::~ServicesOverlayController() = default;
+
+void ServicesOverlayController::ref() const
+{
+    m_page->ref();
+}
+
+void ServicesOverlayController::deref() const
+{
+    m_page->deref();
+}
 
 void ServicesOverlayController::willMoveToPage(PageOverlay&, Page* page)
 {
@@ -680,5 +695,7 @@ RefPtr<GraphicsLayer> ServicesOverlayController::createGraphicsLayer(GraphicsLay
 #endif
 
 } // namespace WebKit
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // (ENABLE(SERVICE_CONTROLS) || ENABLE(TELEPHONE_NUMBER_DETECTION)) && PLATFORM(MAC)

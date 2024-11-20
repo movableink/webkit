@@ -27,20 +27,21 @@
 
 #include <wtf/RunLoop.h>
 #include <wtf/Seconds.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace PAL {
 
-static const Seconds defaultHysteresisDuration { 5_s };
+static constexpr Seconds defaultHysteresisDuration { 5_s };
 
 enum class HysteresisState : bool { Started, Stopped };
 
 class HysteresisActivity {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(HysteresisActivity);
 public:
     explicit HysteresisActivity(Function<void(HysteresisState)>&& callback = [](HysteresisState) { }, Seconds hysteresisSeconds = defaultHysteresisDuration)
         : m_callback(WTFMove(callback))
         , m_hysteresisSeconds(hysteresisSeconds)
-        , m_timer(RunLoop::main(), this, &HysteresisActivity::hysteresisTimerFired)
+        , m_timer(RunLoop::main(), [this] { m_callback(HysteresisState::Stopped); })
     {
     }
 
@@ -93,12 +94,6 @@ public:
     }
     
 private:
-    void hysteresisTimerFired()
-    {
-        m_timer.stop();
-        m_callback(HysteresisState::Stopped);
-    }
-
     Function<void(HysteresisState)> m_callback;
     Seconds m_hysteresisSeconds;
     RunLoop::Timer m_timer;

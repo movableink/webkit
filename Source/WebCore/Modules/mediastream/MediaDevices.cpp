@@ -53,11 +53,11 @@
 #include "UserMediaController.h"
 #include "UserMediaRequest.h"
 #include <wtf/CryptographicallyRandomNumber.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(MediaDevices);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MediaDevices);
 
 inline MediaDevices::MediaDevices(Document& document)
     : ActiveDOMObject(document)
@@ -78,7 +78,7 @@ void MediaDevices::stop()
     if (m_deviceChangeToken) {
         auto* controller = UserMediaController::from(document()->page());
         if (controller)
-            controller->removeDeviceChangeObserver(m_deviceChangeToken);
+            controller->removeDeviceChangeObserver(*m_deviceChangeToken);
     }
     m_scheduledEventTimer.stop();
 }
@@ -283,7 +283,7 @@ void MediaDevices::getDisplayMedia(DisplayMediaStreamConstraints&& constraints, 
     }
 
     // FIXME: We use hidden while the spec is using focus, let's revisit when when spec is made clearer.
-    if (!document->isFullyActive() || document->topDocument().hidden()) {
+    if (!document->isFullyActive() || document->hidden()) {
         promise.reject(Exception { ExceptionCode::InvalidStateError, "Document is not fully active or does not have focus"_s });
         return;
     }

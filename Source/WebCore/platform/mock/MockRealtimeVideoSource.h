@@ -50,15 +50,15 @@ enum class VideoFrameRotation : uint16_t;
 
 class MockRealtimeVideoSource : public RealtimeVideoCaptureSource, private OrientationNotifier::Observer {
 public:
-    static CaptureSourceOrError create(String&& deviceID, AtomString&& name, MediaDeviceHashSalts&&, const MediaConstraints*, PageIdentifier);
-    ~MockRealtimeVideoSource();
+    static CaptureSourceOrError create(String&& deviceID, AtomString&& name, MediaDeviceHashSalts&&, const MediaConstraints*, std::optional<PageIdentifier>);
+    virtual ~MockRealtimeVideoSource();
 
     static void setIsInterrupted(bool);
 
     ImageBuffer* imageBuffer();
 
 protected:
-    MockRealtimeVideoSource(String&& deviceID, AtomString&& name, MediaDeviceHashSalts&&, PageIdentifier);
+    MockRealtimeVideoSource(String&& deviceID, AtomString&& name, MediaDeviceHashSalts&&, std::optional<PageIdentifier>);
 
     virtual void updateSampleBuffer() = 0;
 
@@ -87,7 +87,7 @@ private:
     CaptureDevice::DeviceType deviceType() const final { return mockCamera() ? CaptureDevice::DeviceType::Camera : CaptureDevice::DeviceType::Screen; }
     bool supportsSizeFrameRateAndZoom(const VideoPresetConstraints&) final;
     void setSizeFrameRateAndZoom(const VideoPresetConstraints&) override;
-    void setFrameRateAndZoomWithPreset(double, double, std::optional<VideoPreset>&&) final;
+    void applyFrameRateAndZoomWithPreset(double, double, std::optional<VideoPreset>&&) final;
 
     bool isMockSource() const final { return true; }
 
@@ -157,6 +157,7 @@ private:
     MonotonicTime m_delayUntil;
 
     unsigned m_frameNumber { 0 };
+    Ref<RunLoop> m_runLoop;
     RunLoop::Timer m_emitFrameTimer;
     std::optional<RealtimeMediaSourceCapabilities> m_capabilities;
     std::optional<RealtimeMediaSourceSettings> m_currentSettings;

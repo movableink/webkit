@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,11 +32,11 @@
 
 #if ENABLE(WK_WEB_EXTENSIONS)
 
+#import "WKWebExtensionControllerInternal.h"
 #import "WKWebViewInternal.h"
 #import "WebExtensionController.h"
 #import "WebPageProxy.h"
 #import "WebProcessProxy.h"
-#import "_WKWebExtensionControllerInternal.h"
 #import <wtf/EnumTraits.h>
 
 namespace WebKit {
@@ -49,7 +49,7 @@ void WebExtensionContext::addListener(WebPageProxyIdentifier identifier, WebExte
 
     RELEASE_LOG_DEBUG(Extensions, "Registered event listener for type %{public}hhu in %{public}@ world", enumToUnderlyingType(type), (NSString *)toDebugString(contentWorldType));
 
-    if (!extension().backgroundContentIsPersistent() && isBackgroundPage(identifier))
+    if (!protectedExtension()->backgroundContentIsPersistent() && isBackgroundPage(identifier))
         m_backgroundContentEventListeners.add(type);
 
     auto result = m_eventListenerPages.add({ type, contentWorldType }, WeakPageCountedSet { });
@@ -66,7 +66,7 @@ void WebExtensionContext::removeListener(WebPageProxyIdentifier identifier, WebE
 
     RELEASE_LOG_DEBUG(Extensions, "Unregistered %{public}zu event listener(s) for type %{public}hhu in %{public}@ world", removedCount, enumToUnderlyingType(type), (NSString *)toDebugString(contentWorldType));
 
-    if (!extension().backgroundContentIsPersistent() && isBackgroundPage(identifier)) {
+    if (!protectedExtension()->backgroundContentIsPersistent() && isBackgroundPage(identifier)) {
         for (size_t i = 0; i < removedCount; ++i)
             m_backgroundContentEventListeners.remove(type);
     }

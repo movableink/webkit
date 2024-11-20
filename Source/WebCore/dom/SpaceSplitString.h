@@ -21,13 +21,16 @@
 #pragma once
 
 #include <wtf/MainThread.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/AtomString.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
 class SpaceSplitStringData {
+    WTF_MAKE_TZONE_ALLOCATED(SpaceSplitStringData);
     WTF_MAKE_NONCOPYABLE(SpaceSplitStringData);
-    WTF_MAKE_FAST_ALLOCATED;
 public:
     static RefPtr<SpaceSplitStringData> create(const AtomString&);
 
@@ -150,3 +153,5 @@ inline SpaceSplitString::SpaceSplitString(const AtomString& string, ShouldFoldCa
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

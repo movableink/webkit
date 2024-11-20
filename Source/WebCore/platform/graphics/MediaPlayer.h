@@ -49,6 +49,7 @@
 #include <wtf/HashSet.h>
 #include <wtf/Logger.h>
 #include <wtf/MediaTime.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/URL.h>
 #include <wtf/WallTime.h>
@@ -161,6 +162,21 @@ enum class MediaPlatformType {
     Remote
 };
 
+enum class MediaPlayerType {
+    Null,
+    Mock,
+    MockMSE,
+    MediaFoundation,
+    AVFObjC,
+    AVFObjCMSE,
+    AVFObjCMediaStream,
+    CocoaWebM,
+    GStreamer,
+    GStreamerMSE,
+    HolePunch,
+    Remote
+};
+
 using TrackID = uint64_t;
 
 class MediaPlayerClient : public CanMakeWeakPtr<MediaPlayerClient> {
@@ -233,6 +249,9 @@ public:
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
     virtual RefPtr<ArrayBuffer> mediaPlayerCachedKeyForKeyId(const String&) const = 0;
     virtual void mediaPlayerKeyNeeded(const SharedBuffer&) { }
+#endif
+
+#if ENABLE(LEGACY_ENCRYPTED_MEDIA) || ENABLE(ENCRYPTED_MEDIA)
     virtual String mediaPlayerMediaKeysStorageDirectory() const { return emptyString(); }
 #endif
 
@@ -258,7 +277,7 @@ public:
     virtual bool mediaPlayerPlatformVolumeConfigurationRequired() const { return false; }
     virtual bool mediaPlayerIsLooping() const { return false; }
     virtual CachedResourceLoader* mediaPlayerCachedResourceLoader() { return nullptr; }
-    virtual RefPtr<PlatformMediaResourceLoader> mediaPlayerCreateResourceLoader() = 0;
+    virtual Ref<PlatformMediaResourceLoader> mediaPlayerCreateResourceLoader() = 0;
     virtual bool doesHaveAttribute(const AtomString&, AtomString* = nullptr) const { return false; }
     virtual bool mediaPlayerShouldUsePersistentCache() const { return true; }
     virtual const String& mediaPlayerMediaCacheDirectory() const { return emptyString(); }
@@ -329,16 +348,21 @@ public:
 
     virtual PlatformVideoTarget mediaPlayerVideoTarget() const { return nullptr; }
 
-    virtual MediaPlayerClientIdentifier mediaPlayerClientIdentifier() const { return { WTF::HashTableDeletedValue }; }
+    virtual std::optional<MediaPlayerClientIdentifier> mediaPlayerClientIdentifier() const { return std::nullopt; }
 
 #if !RELEASE_LOG_DISABLED
-    virtual const void* mediaPlayerLogIdentifier() { return nullptr; }
+    virtual uint64_t mediaPlayerLogIdentifier() { return 0; }
     virtual const Logger& mediaPlayerLogger() = 0;
+#endif
+
+#if PLATFORM(IOS_FAMILY)
+    virtual bool canShowWhileLocked() const { return false; }
 #endif
 };
 
 class WEBCORE_EXPORT MediaPlayer : public MediaPlayerEnums, public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<MediaPlayer, WTF::DestructionThread::Main> {
-    WTF_MAKE_NONCOPYABLE(MediaPlayer); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(MediaPlayer, WEBCORE_EXPORT);
+    WTF_MAKE_NONCOPYABLE(MediaPlayer);
 public:
     static Ref<MediaPlayer> create(MediaPlayerClient&);
     static Ref<MediaPlayer> create(MediaPlayerClient&, MediaPlayerEnums::MediaEngineIdentifier);
@@ -429,7 +453,7 @@ public:
     // This is different from the asynchronous MediaKeyError.
     enum MediaKeyException { NoError, InvalidPlayerState, KeySystemNotSupported };
 
-    std::unique_ptr<LegacyCDMSession> createSession(const String& keySystem, LegacyCDMSessionClient&);
+    RefPtr<LegacyCDMSession> createSession(const String& keySystem, LegacyCDMSessionClient&);
     void setCDM(LegacyCDM*);
     void setCDMSession(LegacyCDMSession*);
     void keyAdded();
@@ -509,23 +533,8 @@ public:
     bool hasClosedCaptions() const;
     void setClosedCaptionsVisible(bool closedCaptionsVisible);
 
-    void paint(GraphicsContext&, const FloatRect&);
-
-    // copyVideoTextureToPlatformTexture() is used to do the GPU-GPU textures copy without a readback to system memory.
-    // The first five parameters denote the corresponding GraphicsContext, destination texture, requested level, requested type and the required internalFormat for destination texture.
-    // The last two parameters premultiplyAlpha and flipY denote whether addtional premultiplyAlpha and flip operation are required during the copy.
-    // It returns true on success and false on failure.
-
-    // In the GPU-GPU textures copy, the source texture(Video texture) should have valid target, internalFormat and size, etc.
-    // The destination texture may need to be resized to to the dimensions of the source texture or re-defined to the required internalFormat.
-    // The current restrictions require that format shoud be RGB or RGBA, type should be UNSIGNED_BYTE and level should be 0. It may be lifted in the future.
-#if !USE(AVFOUNDATION)
-    bool copyVideoTextureToPlatformTexture(GraphicsContextGL*, PlatformGLObject texture, GCGLenum target, GCGLint level, GCGLenum internalFormat, GCGLenum format, GCGLenum type, bool premultiplyAlpha, bool flipY);
-#endif
-
-#if PLATFORM(COCOA) && !HAVE(AVSAMPLEBUFFERDISPLAYLAYER_COPYDISPLAYEDPIXELBUFFER)
-    void willBeAskedToPaintGL();
-#endif
+    void paint(GraphicsContext&, const FloatRect& destination);
+    void paintCurrentFrameInContext(GraphicsContext&, const FloatRect& destination);
 
     RefPtr<VideoFrame> videoFrameForCurrentTime();
     RefPtr<NativeImage> nativeImageForCurrentTime();
@@ -631,7 +640,7 @@ public:
     String elementId() const;
 
     CachedResourceLoader* cachedResourceLoader();
-    RefPtr<PlatformMediaResourceLoader> createResourceLoader();
+    Ref<PlatformMediaResourceLoader> mediaResourceLoader();
 
     void addAudioTrack(AudioTrackPrivate&);
     void addTextTrack(InbandTextTrackPrivate&);
@@ -700,7 +709,7 @@ public:
 
 #if !RELEASE_LOG_DISABLED
     const Logger& mediaPlayerLogger();
-    const void* mediaPlayerLogIdentifier() { return client().mediaPlayerLogIdentifier(); }
+    uint64_t mediaPlayerLogIdentifier() { return client().mediaPlayerLogIdentifier(); }
 #endif
 
     void applicationWillResignActive();
@@ -737,6 +746,7 @@ public:
 
     const MediaPlayerPrivateInterface* playerPrivate() const;
     MediaPlayerPrivateInterface* playerPrivate();
+    RefPtr<MediaPlayerPrivateInterface> protectedPlayerPrivate();
 
     DynamicRangeMode preferredDynamicRangeMode() const { return m_preferredDynamicRangeMode; }
     void setPreferredDynamicRangeMode(DynamicRangeMode);
@@ -745,7 +755,7 @@ public:
     String audioOutputDeviceIdOverride() const;
     void audioOutputDeviceChanged();
 
-    MediaPlayerIdentifier identifier() const;
+    std::optional<MediaPlayerIdentifier> identifier() const;
     bool hasMediaEngine() const;
 
     std::optional<VideoFrameMetadata> videoFrameMetadata();
@@ -781,10 +791,14 @@ public:
     bool isInFullscreenOrPictureInPicture() const;
 
     PlatformVideoTarget videoTarget() const { return client().mediaPlayerVideoTarget(); }
-    MediaPlayerClientIdentifier clientIdentifier() const { return client().mediaPlayerClientIdentifier(); }
+    std::optional<MediaPlayerClientIdentifier> clientIdentifier() const { return client().mediaPlayerClientIdentifier(); }
 
 #if ENABLE(LINEAR_MEDIA_PLAYER)
     bool supportsLinearMediaPlayer() const;
+#endif
+
+#if PLATFORM(IOS_FAMILY)
+    bool canShowWhileLocked() const;
 #endif
 
 private:
@@ -822,6 +836,7 @@ private:
     bool m_initializingMediaEngine { false };
     DynamicRangeMode m_preferredDynamicRangeMode;
     PitchCorrectionAlgorithm m_pitchCorrectionAlgorithm { PitchCorrectionAlgorithm::BestAllAround };
+    RefPtr<PlatformMediaResourceLoader> m_mediaResourceLoader;
 
 #if ENABLE(MEDIA_SOURCE)
     ThreadSafeWeakPtr<MediaSourcePrivateClient> m_mediaSource;
@@ -847,7 +862,7 @@ private:
 };
 
 class MediaPlayerFactory : public CanMakeWeakPtr<MediaPlayerFactory> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(MediaPlayerFactory, WEBCORE_EXPORT);
 public:
     MediaPlayerFactory() = default;
     virtual ~MediaPlayerFactory() = default;

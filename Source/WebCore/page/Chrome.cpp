@@ -58,6 +58,7 @@
 #include "WorkerClient.h"
 #include <JavaScriptCore/VM.h>
 #include <wtf/SetForScope.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 
 #if ENABLE(INPUT_TYPE_COLOR)
@@ -73,6 +74,8 @@
 #endif
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Chrome);
 
 using namespace HTMLNames;
 
@@ -205,9 +208,9 @@ void Chrome::focusedFrameChanged(Frame* frame)
     m_client->focusedFrameChanged(frame);
 }
 
-RefPtr<Page> Chrome::createWindow(LocalFrame& frame, const WindowFeatures& features, const NavigationAction& action)
+RefPtr<Page> Chrome::createWindow(LocalFrame& frame, const String& openedMainFrameName, const WindowFeatures& features, const NavigationAction& action)
 {
-    RefPtr newPage = m_client->createWindow(frame, features, action);
+    RefPtr newPage = m_client->createWindow(frame, openedMainFrameName, features, action);
     if (!newPage)
         return nullptr;
 
@@ -345,19 +348,12 @@ bool Chrome::runJavaScriptPrompt(LocalFrame& frame, const String& prompt, const 
     return ok;
 }
 
-void Chrome::setStatusbarText(LocalFrame& frame, const String& status)
-{
-    m_client->setStatusbarText(frame.displayStringModifiedByEncoding(status));
-}
-
 void Chrome::mouseDidMoveOverElement(const HitTestResult& result, OptionSet<PlatformEventModifier> modifiers)
 {
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
-    if (!localMainFrame)
-        return;
-
-    if (result.innerNode() && result.innerNode()->document().isDNSPrefetchEnabled())
-        localMainFrame->checkedLoader()->client().prefetchDNS(result.absoluteLinkURL().host().toString());
+    if (RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame())) {
+        if (result.innerNode() && result.innerNode()->document().isDNSPrefetchEnabled())
+            localMainFrame->protectedLoader()->client().prefetchDNS(result.absoluteLinkURL().host().toString());
+    }
 
     String toolTip;
     TextDirection toolTipDirection;
@@ -381,7 +377,7 @@ void Chrome::getToolTip(const HitTestResult& result, String& toolTip, TextDirect
                     if (RefPtr form = input->form()) {
                         toolTip = form->action();
                         if (form->renderer())
-                            toolTipDirection = form->renderer()->style().direction();
+                            toolTipDirection = form->renderer()->writingMode().computedTextDirection();
                         else
                             toolTipDirection = TextDirection::LTR;
                     }
@@ -426,7 +422,7 @@ bool Chrome::print(LocalFrame& frame)
 {
     // FIXME: This should have PageGroupLoadDeferrer, like runModal() or runJavaScriptAlert(), because it's no different from those.
 
-    if (frame.document()->isSandboxed(SandboxModals)) {
+    if (frame.document()->isSandboxed(SandboxFlag::Modals)) {
         frame.document()->protectedWindow()->printErrorMessage("Use of window.print is not allowed in a sandboxed frame when the allow-modals flag is not set."_s);
         return false;
     }
@@ -447,7 +443,7 @@ void Chrome::disableSuddenTermination()
 
 #if ENABLE(INPUT_TYPE_COLOR)
 
-std::unique_ptr<ColorChooser> Chrome::createColorChooser(ColorChooserClient& client, const Color& initialColor)
+RefPtr<ColorChooser> Chrome::createColorChooser(ColorChooserClient& client, const Color& initialColor)
 {
 #if PLATFORM(IOS_FAMILY)
     UNUSED_PARAM(client);
@@ -463,7 +459,7 @@ std::unique_ptr<ColorChooser> Chrome::createColorChooser(ColorChooserClient& cli
 
 #if ENABLE(DATALIST_ELEMENT)
 
-std::unique_ptr<DataListSuggestionPicker> Chrome::createDataListSuggestionPicker(DataListSuggestionsClient& client)
+RefPtr<DataListSuggestionPicker> Chrome::createDataListSuggestionPicker(DataListSuggestionsClient& client)
 {
     notifyPopupOpeningObservers();
     return m_client->createDataListSuggestionPicker(client);
@@ -473,7 +469,7 @@ std::unique_ptr<DataListSuggestionPicker> Chrome::createDataListSuggestionPicker
 
 #if ENABLE(DATE_AND_TIME_INPUT_TYPES)
 
-std::unique_ptr<DateTimeChooser> Chrome::createDateTimeChooser(DateTimeChooserClient& client)
+RefPtr<DateTimeChooser> Chrome::createDateTimeChooser(DateTimeChooserClient& client)
 {
 #if PLATFORM(IOS_FAMILY)
     UNUSED_PARAM(client);

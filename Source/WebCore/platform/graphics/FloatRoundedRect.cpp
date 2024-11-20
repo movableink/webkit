@@ -31,9 +31,13 @@
 #include "FloatRoundedRect.h"
 
 #include <algorithm>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FloatRoundedRect);
+WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(FloatRoundedRectRadii, FloatRoundedRect::Radii);
 
 FloatRoundedRect::FloatRoundedRect(const RoundedRect& rect)
     : m_rect(rect.rect())
@@ -118,6 +122,19 @@ void FloatRoundedRect::Radii::expand(float topWidth, float bottomWidth, float le
         m_bottomRight.setWidth(std::max<float>(0, m_bottomRight.width() + rightWidth));
         m_bottomRight.setHeight(std::max<float>(0, m_bottomRight.height() + bottomWidth));
     }
+}
+
+void FloatRoundedRect::Radii::expandEvenIfZero(float size)
+{
+    auto expand = [&](auto& corner) {
+        corner.setWidth(std::max(0.f, corner.width() + size));
+        corner.setHeight(std::max(0.f, corner.height() + size));
+    };
+
+    expand(m_topLeft);
+    expand(m_topRight);
+    expand(m_bottomLeft);
+    expand(m_bottomRight);
 }
 
 static inline float cornerRectIntercept(float y, const FloatRect& cornerRect)

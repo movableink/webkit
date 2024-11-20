@@ -54,7 +54,6 @@
 #include "Quirks.h"
 #include "RenderMedia.h"
 #include "RenderView.h"
-#include "RuntimeApplicationChecks.h"
 #include "ScriptController.h"
 #include "Settings.h"
 #include "SourceBuffer.h"
@@ -63,6 +62,8 @@
 #include "VideoTrack.h"
 #include "VideoTrackConfiguration.h"
 #include "VideoTrackList.h"
+#include <wtf/RuntimeApplicationChecks.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 #if ENABLE(MEDIA_SESSION)
@@ -75,11 +76,14 @@
 
 #if PLATFORM(IOS_FAMILY)
 #include "AudioSession.h"
-#include "RuntimeApplicationChecks.h"
 #include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #endif
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaElementSession);
 
 static const Seconds clientDataBufferingTimerThrottleDelay { 100_ms };
 static const Seconds elementMainContentCheckInterval { 250_ms };
@@ -132,7 +136,7 @@ static bool pageExplicitlyAllowsElementToAutoplayInline(const HTMLMediaElement& 
 
 #if ENABLE(MEDIA_SESSION)
 class MediaElementSessionObserver : public MediaSessionObserver {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(MediaElementSessionObserver);
 
 public:
     MediaElementSessionObserver(MediaElementSession& session, const Ref<MediaSession>& mediaSession)
@@ -171,7 +175,7 @@ private:
 #endif
 
 MediaElementSession::MediaElementSession(HTMLMediaElement& element)
-    : PlatformMediaSession(PlatformMediaSessionManager::sharedManager(), element)
+    : PlatformMediaSession(PlatformMediaSessionManager::singleton(), element)
     , m_element(element)
     , m_restrictions(NoRestrictions)
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
@@ -308,7 +312,7 @@ void MediaElementSession::isVisibleInViewportChanged()
         m_elementIsHiddenUntilVisibleInViewport = false;
 
 #if PLATFORM(COCOA) && !HAVE(CGS_FIX_FOR_RADAR_97530095)
-    PlatformMediaSessionManager::sharedManager().scheduleSessionStatusUpdate();
+    PlatformMediaSessionManager::singleton().scheduleSessionStatusUpdate();
 #endif
 }
 
@@ -333,7 +337,7 @@ void MediaElementSession::clientDataBufferingTimerFired()
     if (state() != PlatformMediaSession::State::Playing || !m_element.elementIsHidden())
         return;
 
-    PlatformMediaSessionManager::SessionRestrictions restrictions = PlatformMediaSessionManager::sharedManager().restrictions(mediaType());
+    PlatformMediaSessionManager::SessionRestrictions restrictions = PlatformMediaSessionManager::singleton().restrictions(mediaType());
     if ((restrictions & PlatformMediaSessionManager::BackgroundTabPlaybackRestricted) == PlatformMediaSessionManager::BackgroundTabPlaybackRestricted)
         pauseSession();
 }
@@ -346,7 +350,7 @@ void MediaElementSession::updateClientDataBuffering()
     m_element.setBufferingPolicy(preferredBufferingPolicy());
 
 #if PLATFORM(IOS_FAMILY)
-    PlatformMediaSessionManager::sharedManager().configureWirelessTargetMonitoring();
+    PlatformMediaSessionManager::singleton().configureWirelessTargetMonitoring();
 #endif
 }
 
@@ -580,7 +584,7 @@ bool MediaElementSession::canShowControlsManager(PlaybackControlsPurpose purpose
     if (client().presentationType() == MediaType::Audio && purpose == PlaybackControlsPurpose::NowPlaying) {
         if (!m_element.hasSource()
             || m_element.error()
-            || (!isLongEnoughForMainContent() && !PlatformMediaSessionManager::sharedManager().registeredAsNowPlayingApplication())) {
+            || (!isLongEnoughForMainContent() && !PlatformMediaSessionManager::singleton().registeredAsNowPlayingApplication())) {
             INFO_LOG(LOGIDENTIFIER, "returning FALSE: audio too short for NowPlaying");
             return false;
         }
@@ -793,7 +797,7 @@ void MediaElementSession::setHasPlaybackTargetAvailabilityListeners(bool hasList
 
 #if PLATFORM(IOS_FAMILY)
     m_hasPlaybackTargetAvailabilityListeners = hasListeners;
-    PlatformMediaSessionManager::sharedManager().configureWirelessTargetMonitoring();
+    PlatformMediaSessionManager::singleton().configureWirelessTargetMonitoring();
 #else
     UNUSED_PARAM(hasListeners);
     m_element.document().playbackTargetPickerClientStateDidChange(*this, m_element.mediaState());
@@ -899,7 +903,7 @@ bool MediaElementSession::requiresFullscreenForVideoPlayback() const
         return false;
 
 #if PLATFORM(IOS_FAMILY)
-    if (CocoaApplication::isIBooks())
+    if (WTF::CocoaApplication::isIBooks())
         return !m_element.hasAttributeWithoutSynchronization(HTMLNames::webkit_playsinlineAttr) && !m_element.hasAttributeWithoutSynchronization(HTMLNames::playsinlineAttr);
     if (!linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::UnprefixedPlaysInlineAttribute))
         return !m_element.hasAttributeWithoutSynchronization(HTMLNames::webkit_playsinlineAttr);
@@ -1271,8 +1275,10 @@ std::optional<NowPlayingInfo> MediaElementSession::computeNowPlayingInfo() const
         return { };
 
     RefPtr page = m_element.document().page();
+    if (!page)
+        return { };
 
-    bool allowsNowPlayingControlsVisibility = page && !page->isVisibleAndActive();
+    bool allowsNowPlayingControlsVisibility = !page->isVisibleAndActive();
     bool isPlaying = state() == PlatformMediaSession::State::Playing;
 
     bool supportsSeeking = m_element.supportsSeeking();
@@ -1304,8 +1310,15 @@ std::optional<NowPlayingInfo> MediaElementSession::computeNowPlayingInfo() const
         supportsSeeking,
         m_element.mediaUniqueIdentifier(),
         isPlaying,
-        allowsNowPlayingControlsVisibility
+        allowsNowPlayingControlsVisibility,
+        m_element.isVideo()
     };
+
+    if (page->usesEphemeralSession() && !m_element.document().settings().allowPrivacySensitiveOperationsInNonPersistentDataStores()) {
+        info.metadata = { };
+        return info;
+    }
+
 #if ENABLE(MEDIA_SESSION)
     if (RefPtr session = mediaSession())
         session->updateNowPlayingInfo(info);
@@ -1494,5 +1507,7 @@ String MediaElementSession::description() const
 #endif
 
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(VIDEO)

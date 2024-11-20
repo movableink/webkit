@@ -36,7 +36,6 @@
 #include "Gradient.h"
 #include "GraphicsContext.h"
 #include "Image.h"
-#include "MediaPlayerIdentifier.h"
 #include "PositionedGlyphs.h"
 #include "RenderingResourceIdentifier.h"
 #include "SharedBuffer.h"
@@ -49,6 +48,7 @@ class TextStream;
 
 namespace WebCore {
 
+class ControlFactory;
 struct ImagePaintingOptions;
 
 namespace DisplayList {
@@ -394,22 +394,22 @@ class ClipToImageBuffer {
 public:
     static constexpr char name[] = "clip-to-image-buffer";
 
-    ClipToImageBuffer(RenderingResourceIdentifier imageBufferIdentifier, const FloatRect& destinationRect)
+    ClipToImageBuffer(std::optional<RenderingResourceIdentifier> imageBufferIdentifier, const FloatRect& destinationRect)
         : m_imageBufferIdentifier(imageBufferIdentifier)
         , m_destinationRect(destinationRect)
     {
     }
 
-    RenderingResourceIdentifier imageBufferIdentifier() const { return m_imageBufferIdentifier; }
+    RenderingResourceIdentifier imageBufferIdentifier() const { return *m_imageBufferIdentifier; }
     FloatRect destinationRect() const { return m_destinationRect; }
 
-    bool isValid() const { return m_imageBufferIdentifier.isValid(); }
+    bool isValid() const { return !!m_imageBufferIdentifier; }
 
     WEBCORE_EXPORT void apply(GraphicsContext&, ImageBuffer&) const;
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
 private:
-    RenderingResourceIdentifier m_imageBufferIdentifier;
+    Markable<RenderingResourceIdentifier> m_imageBufferIdentifier;
     FloatRect m_destinationRect;
 };
 
@@ -548,7 +548,7 @@ public:
     const Vector<Item>& items() const { return m_items; }
     FloatPoint destination() const { return m_destination; }
 
-    WEBCORE_EXPORT void apply(GraphicsContext&, const ResourceHeap&) const;
+    WEBCORE_EXPORT void apply(GraphicsContext&, const ResourceHeap&, ControlFactory&) const;
     NO_RETURN_DUE_TO_ASSERT void apply(GraphicsContext&) const;
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
@@ -569,19 +569,19 @@ public:
     {
     }
 
-    RenderingResourceIdentifier imageBufferIdentifier() const { return m_imageBufferIdentifier; }
+    RenderingResourceIdentifier imageBufferIdentifier() const { return *m_imageBufferIdentifier; }
     FloatRect source() const { return m_srcRect; }
     FloatRect destinationRect() const { return m_destinationRect; }
     ImagePaintingOptions options() const { return m_options; }
 
     // FIXME: We might want to validate ImagePaintingOptions.
-    bool isValid() const { return m_imageBufferIdentifier.isValid(); }
+    bool isValid() const { return !!m_imageBufferIdentifier; }
 
     WEBCORE_EXPORT void apply(GraphicsContext&, ImageBuffer&) const;
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
 private:
-    RenderingResourceIdentifier m_imageBufferIdentifier;
+    Markable<RenderingResourceIdentifier> m_imageBufferIdentifier;
     FloatRect m_destinationRect;
     FloatRect m_srcRect;
     ImagePaintingOptions m_options;
@@ -599,19 +599,19 @@ public:
     {
     }
 
-    RenderingResourceIdentifier imageIdentifier() const { return m_imageIdentifier; }
+    RenderingResourceIdentifier imageIdentifier() const { return *m_imageIdentifier; }
     const FloatRect& destinationRect() const { return m_destinationRect; }
     const FloatRect& source() const { return m_srcRect; }
     ImagePaintingOptions options() const { return m_options; }
 
     // FIXME: We might want to validate ImagePaintingOptions.
-    bool isValid() const { return m_imageIdentifier.isValid(); }
+    bool isValid() const { return !!m_imageIdentifier; }
 
     WEBCORE_EXPORT void apply(GraphicsContext&, NativeImage&) const;
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
 private:
-    RenderingResourceIdentifier m_imageIdentifier;
+    Markable<RenderingResourceIdentifier> m_imageIdentifier;
     FloatRect m_destinationRect;
     FloatRect m_srcRect;
     ImagePaintingOptions m_options;
@@ -644,7 +644,7 @@ public:
 
     WEBCORE_EXPORT DrawPattern(RenderingResourceIdentifier, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions = { });
 
-    RenderingResourceIdentifier imageIdentifier() const { return m_imageIdentifier; }
+    RenderingResourceIdentifier imageIdentifier() const { return *m_imageIdentifier; }
     FloatRect destRect() const { return m_destination; }
     FloatRect tileRect() const { return m_tileRect; }
     const AffineTransform& patternTransform() const { return m_patternTransform; }
@@ -653,13 +653,13 @@ public:
     ImagePaintingOptions options() const { return m_options; }
 
     // FIXME: We might want to validate ImagePaintingOptions.
-    bool isValid() const { return m_imageIdentifier.isValid(); }
+    bool isValid() const { return !!m_imageIdentifier; }
 
     WEBCORE_EXPORT void apply(GraphicsContext&, SourceImage&) const;
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
 private:
-    RenderingResourceIdentifier m_imageIdentifier;
+    Markable<RenderingResourceIdentifier> m_imageIdentifier;
     FloatRect m_destination;
     FloatRect m_tileRect;
     AffineTransform m_patternTransform;
@@ -758,12 +758,9 @@ class DrawLinesForText {
 public:
     static constexpr char name[] = "draw-lines-for-text";
 
-    WEBCORE_EXPORT DrawLinesForText(const FloatPoint& blockLocation, const FloatSize& localAnchor, const DashArray& widths, float thickness, bool printing, bool doubleLines, StrokeStyle);
+    WEBCORE_EXPORT DrawLinesForText(const FloatPoint&, const DashArray& widths, float thickness, bool printing, bool doubleLines, StrokeStyle);
 
-    void setBlockLocation(const FloatPoint& blockLocation) { m_blockLocation = blockLocation; }
-    const FloatPoint& blockLocation() const { return m_blockLocation; }
-    const FloatSize& localAnchor() const { return m_localAnchor; }
-    FloatPoint point() const { return m_blockLocation + m_localAnchor; }
+    FloatPoint point() const { return m_point; }
     float thickness() const { return m_thickness; }
     const DashArray& widths() const { return m_widths; }
     bool isPrinting() const { return m_printing; }
@@ -774,8 +771,7 @@ public:
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
 private:
-    FloatPoint m_blockLocation;
-    FloatSize m_localAnchor;
+    FloatPoint m_point;
     DashArray m_widths;
     float m_thickness;
     bool m_printing;
@@ -915,18 +911,21 @@ class FillRect {
 public:
     static constexpr char name[] = "fill-rect";
 
-    FillRect(const FloatRect& rect)
+    FillRect(const FloatRect& rect, GraphicsContext::RequiresClipToRect requiresClipToRect)
         : m_rect(rect)
+        , m_requiresClipToRect(requiresClipToRect)
     {
     }
 
     const FloatRect& rect() const { return m_rect; }
+    GraphicsContext::RequiresClipToRect requiresClipToRect() const { return m_requiresClipToRect; }
 
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
 private:
     FloatRect m_rect;
+    GraphicsContext::RequiresClipToRect m_requiresClipToRect;
 };
 
 class FillRectWithColor {
@@ -972,12 +971,13 @@ class FillRectWithGradientAndSpaceTransform {
 public:
     static constexpr char name[] = "fill-rect-with-gradient-and-space-transform";
 
-    WEBCORE_EXPORT FillRectWithGradientAndSpaceTransform(const FloatRect&, Gradient&, const AffineTransform&);
-    WEBCORE_EXPORT FillRectWithGradientAndSpaceTransform(FloatRect&&, Ref<Gradient>&&, AffineTransform&&);
+    WEBCORE_EXPORT FillRectWithGradientAndSpaceTransform(const FloatRect&, Gradient&, const AffineTransform&, GraphicsContext::RequiresClipToRect);
+    WEBCORE_EXPORT FillRectWithGradientAndSpaceTransform(FloatRect&&, Ref<Gradient>&&, AffineTransform&&, GraphicsContext::RequiresClipToRect);
 
     const FloatRect& rect() const { return m_rect; }
     const Ref<Gradient>& gradient() const { return m_gradient; }
     const AffineTransform& gradientSpaceTransform() const { return m_gradientSpaceTransform; }
+    GraphicsContext::RequiresClipToRect requiresClipToRect() const { return m_requiresClipToRect; }
 
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
@@ -986,6 +986,7 @@ private:
     FloatRect m_rect;
     Ref<Gradient> m_gradient;
     AffineTransform m_gradientSpaceTransform;
+    GraphicsContext::RequiresClipToRect m_requiresClipToRect;
 };
 
 class FillCompositedRect {
@@ -1222,27 +1223,6 @@ private:
     FloatRect m_rect;
 };
 
-#if ENABLE(VIDEO)
-class PaintFrameForMedia {
-public:
-    static constexpr char name[] = "paint-frame-for-media";
-
-    WEBCORE_EXPORT PaintFrameForMedia(MediaPlayerIdentifier, const FloatRect& destination);
-
-    MediaPlayerIdentifier identifier() const { return m_identifier; }
-    const FloatRect& destination() const { return m_destination; }
-
-    bool isValid() const { return m_identifier.isValid(); }
-
-    NO_RETURN_DUE_TO_ASSERT void apply(GraphicsContext&) const;
-    void dump(TextStream&, OptionSet<AsTextFlag>) const;
-
-private:
-    MediaPlayerIdentifier m_identifier;
-    FloatRect m_destination;
-};
-#endif
-
 class StrokeRect {
 public:
     static constexpr char name[] = "stroke-rect";
@@ -1462,7 +1442,7 @@ public:
     const ControlStyle& style() const { return m_style; }
     StyleAppearance type() const { return m_part->type(); }
 
-    WEBCORE_EXPORT void apply(GraphicsContext&) const;
+    WEBCORE_EXPORT void apply(GraphicsContext&, ControlFactory&) const;
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
 private:

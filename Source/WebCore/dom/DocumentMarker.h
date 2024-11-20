@@ -27,6 +27,7 @@
 #include <wtf/OptionSet.h>
 #include <wtf/UUID.h>
 #include <wtf/WeakPtr.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(IOS_FAMILY)
@@ -124,10 +125,15 @@ public:
             Rejected
         };
 
+        enum class Decoration: uint8_t {
+            None,
+            Underline,
+        };
+
         String originalText;
         WritingTools::TextSuggestionID suggestionID;
-        WritingTools::SessionID sessionID;
         State state { State::Accepted };
+        Decoration decoration { Decoration::None };
     };
 #endif
 

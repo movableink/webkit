@@ -77,6 +77,12 @@ mailing address.
 
 #include <string.h>
 #include "GIFImageDecoder.h"
+#include <wtf/TZoneMallocInlines.h>
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(GIFLZWContext);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(GIFLZWBlock);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(GIFFrameContext);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(GIFImageReader);
 
 using WebCore::GIFImageDecoder;
 
@@ -392,6 +398,8 @@ bool GIFImageReader::decode(GIFImageDecoder::GIFQuery query, unsigned haltAtFram
 // Return false if a fatal error is encountered.
 bool GIFImageReader::parse(size_t dataPosition, size_t len, bool parseSizeOnly)
 {
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
     if (!len) {
         // No new data has come in since the last call, just ignore this call.
         return true;
@@ -772,6 +780,8 @@ bool GIFImageReader::parse(size_t dataPosition, size_t len, bool parseSizeOnly)
 
     setRemainingBytes(len);
     return true;
+
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 void GIFImageReader::setRemainingBytes(size_t remainingBytes)

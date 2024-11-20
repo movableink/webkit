@@ -94,8 +94,6 @@ var sdeCPUs = []string{
 	"clx", // Cascade Lake
 	"cpx", // Cooper Lake
 	"icx", // Ice Lake server
-	"knl", // Knights landing
-	"knm", // Knights mill
 	"tgl", // Tiger Lake
 }
 
@@ -310,12 +308,7 @@ func (t test) envMsg() string {
 }
 
 func (t test) getGTestShards() ([]test, error) {
-	if *numWorkers == 1 || len(t.Cmd) != 1 {
-		return []test{t}, nil
-	}
-
-	// Only shard the three GTest-based tests.
-	if t.Cmd[0] != "crypto/crypto_test" && t.Cmd[0] != "ssl/ssl_test" && t.Cmd[0] != "decrepit/decrepit_test" {
+	if *numWorkers == 1 || !t.Shard {
 		return []test{t}, nil
 	}
 
@@ -403,15 +396,15 @@ func main() {
 			fmt.Printf("%s\n", test.longName())
 			fmt.Printf("%s failed to complete: %s\n", args[0], testResult.Error)
 			failed = append(failed, test)
-			testOutput.AddResult(test.longName(), "CRASH")
+			testOutput.AddResult(test.longName(), "CRASH", testResult.Error)
 		} else if !testResult.Passed {
 			fmt.Printf("%s\n", test.longName())
 			fmt.Printf("%s failed to print PASS on the last line.\n", args[0])
 			failed = append(failed, test)
-			testOutput.AddResult(test.longName(), "FAIL")
+			testOutput.AddResult(test.longName(), "FAIL", nil)
 		} else {
 			fmt.Printf("%s\n", test.shortName())
-			testOutput.AddResult(test.longName(), "PASS")
+			testOutput.AddResult(test.longName(), "PASS", nil)
 		}
 	}
 
@@ -436,5 +429,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("\nAll tests passed!\n")
+	fmt.Printf("All unit tests passed!\n")
 }

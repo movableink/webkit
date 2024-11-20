@@ -34,12 +34,17 @@
 #import <CoreAudio/AudioHardware.h>
 #import <wtf/LoggerHelper.h>
 #import <wtf/MainThread.h>
+#import <wtf/TZoneMallocInlines.h>
 #import <wtf/UniqueArray.h>
 #import <wtf/text/WTFString.h>
 
 #import <pal/cocoa/AVFoundationSoftLink.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AudioSessionMac);
 
 static AudioDeviceID defaultDeviceWithoutCaching()
 {
@@ -49,13 +54,7 @@ static AudioDeviceID defaultDeviceWithoutCaching()
     AudioObjectPropertyAddress defaultOutputDeviceAddress = {
         kAudioHardwarePropertyDefaultOutputDevice,
         kAudioObjectPropertyScopeGlobal,
-#if HAVE(AUDIO_OBJECT_PROPERTY_ELEMENT_MAIN)
         kAudioObjectPropertyElementMain
-#else
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        kAudioObjectPropertyElementMaster
-ALLOW_DEPRECATED_DECLARATIONS_END
-#endif
     };
     OSStatus result = AudioObjectGetPropertyData(kAudioObjectSystemObject, &defaultOutputDeviceAddress, 0, 0, &infoSize, (void*)&deviceID);
     if (result)
@@ -74,13 +73,7 @@ static float defaultDeviceTransportIsBluetooth()
     static const AudioObjectPropertyAddress audioDeviceTransportTypeProperty = {
         kAudioDevicePropertyTransportType,
         kAudioObjectPropertyScopeGlobal,
-#if HAVE(AUDIO_OBJECT_PROPERTY_ELEMENT_MAIN)
         kAudioObjectPropertyElementMain
-#else
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        kAudioObjectPropertyElementMaster,
-ALLOW_DEPRECATED_DECLARATIONS_END
-#endif
     };
     UInt32 transportType = kAudioDeviceTransportTypeUnknown;
     UInt32 transportSize = sizeof(transportType);
@@ -90,6 +83,11 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     return transportType == kAudioDeviceTransportTypeBluetooth || transportType == kAudioDeviceTransportTypeBluetoothLE;
 }
 #endif
+
+Ref<AudioSessionMac> AudioSessionMac::create()
+{
+    return adoptRef(*new AudioSessionMac);
+}
 
 void AudioSessionMac::removePropertyListenersForDefaultDevice() const
 {
@@ -143,13 +141,7 @@ const AudioObjectPropertyAddress& AudioSessionMac::defaultOutputDeviceAddress()
     static const AudioObjectPropertyAddress defaultOutputDeviceAddress = {
         kAudioHardwarePropertyDefaultOutputDevice,
         kAudioObjectPropertyScopeGlobal,
-#if HAVE(AUDIO_OBJECT_PROPERTY_ELEMENT_MAIN)
         kAudioObjectPropertyElementMain
-#else
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        kAudioObjectPropertyElementMaster
-ALLOW_DEPRECATED_DECLARATIONS_END
-#endif
     };
     return defaultOutputDeviceAddress;
 }
@@ -168,13 +160,7 @@ const AudioObjectPropertyAddress& AudioSessionMac::nominalSampleRateAddress()
     static const AudioObjectPropertyAddress nominalSampleRateAddress = {
         kAudioDevicePropertyNominalSampleRate,
         kAudioObjectPropertyScopeGlobal,
-#if HAVE(AUDIO_OBJECT_PROPERTY_ELEMENT_MAIN)
         kAudioObjectPropertyElementMain
-#else
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        kAudioObjectPropertyElementMaster
-ALLOW_DEPRECATED_DECLARATIONS_END
-#endif
     };
     return nominalSampleRateAddress;
 }
@@ -218,13 +204,7 @@ const AudioObjectPropertyAddress& AudioSessionMac::bufferSizeAddress()
     static const AudioObjectPropertyAddress bufferSizeAddress = {
         kAudioDevicePropertyBufferFrameSize,
         kAudioObjectPropertyScopeGlobal,
-#if HAVE(AUDIO_OBJECT_PROPERTY_ELEMENT_MAIN)
         kAudioObjectPropertyElementMain
-#else
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        kAudioObjectPropertyElementMaster
-ALLOW_DEPRECATED_DECLARATIONS_END
-#endif
     };
     return bufferSizeAddress;
 }
@@ -412,13 +392,7 @@ size_t AudioSessionMac::maximumNumberOfOutputChannels() const
     AudioObjectPropertyAddress sizeAddress = {
         kAudioDevicePropertyStreamConfiguration,
         kAudioObjectPropertyScopeOutput,
-#if HAVE(AUDIO_OBJECT_PROPERTY_ELEMENT_MAIN)
         kAudioObjectPropertyElementMain
-#else
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        kAudioObjectPropertyElementMaster
-ALLOW_DEPRECATED_DECLARATIONS_END
-#endif
     };
 
     UInt32 size = 0;
@@ -461,13 +435,7 @@ void AudioSessionMac::setPreferredBufferSize(size_t bufferSize)
     AudioObjectPropertyAddress bufferSizeRangeAddress = {
         kAudioDevicePropertyBufferFrameSizeRange,
         kAudioObjectPropertyScopeGlobal,
-#if HAVE(AUDIO_OBJECT_PROPERTY_ELEMENT_MAIN)
         kAudioObjectPropertyElementMain
-#else
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        kAudioObjectPropertyElementMaster
-ALLOW_DEPRECATED_DECLARATIONS_END
-#endif
     };
     OSStatus result = AudioObjectGetPropertyData(defaultDevice(), &bufferSizeRangeAddress, 0, 0, &bufferSizeRangeSize, &bufferSizeRange);
     if (result)
@@ -501,13 +469,7 @@ bool AudioSessionMac::isMuted() const
     AudioObjectPropertyAddress muteAddress = {
         kAudioDevicePropertyMute,
         kAudioDevicePropertyScopeOutput,
-#if HAVE(AUDIO_OBJECT_PROPERTY_ELEMENT_MAIN)
         kAudioObjectPropertyElementMain
-#else
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        kAudioObjectPropertyElementMaster
-ALLOW_DEPRECATED_DECLARATIONS_END
-#endif
     };
     AudioObjectGetPropertyData(defaultDevice(), &muteAddress, 0, nullptr, &muteSize, &mute);
     
@@ -548,13 +510,7 @@ const AudioObjectPropertyAddress& AudioSessionMac::muteAddress()
     static const AudioObjectPropertyAddress muteAddress = {
         kAudioDevicePropertyMute,
         kAudioDevicePropertyScopeOutput,
-#if HAVE(AUDIO_OBJECT_PROPERTY_ELEMENT_MAIN)
         kAudioObjectPropertyElementMain
-#else
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        kAudioObjectPropertyElementMaster
-ALLOW_DEPRECATED_DECLARATIONS_END
-#endif
     };
     return muteAddress;
 }
@@ -600,16 +556,18 @@ WTFLogChannel& AudioSessionMac::logChannel() const
     return LogMedia;
 }
 
-const void* AudioSessionMac::logIdentifier() const
+uint64_t AudioSessionMac::logIdentifier() const
 {
 #if ENABLE(ROUTING_ARBITRATION)
     if (m_routingArbitrationClient)
         return m_routingArbitrationClient->logIdentifier();
 #endif
 
-    return nullptr;
+    return 0;
 }
 
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // USE(AUDIO_SESSION) && PLATFORM(MAC)

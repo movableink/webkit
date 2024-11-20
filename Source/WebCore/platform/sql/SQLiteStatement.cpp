@@ -33,7 +33,10 @@
 #include <variant>
 #include <wtf/Assertions.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringView.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 // SQLite 3.6.16 makes sqlite3_prepare_v2 automatically retry preparing the statement
 // once if the database scheme has changed. We rely on this behavior.
@@ -42,6 +45,8 @@
 #endif
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SQLiteStatement);
 
 SQLiteStatement::SQLiteStatement(SQLiteDatabase& db, sqlite3_stmt* statement)
     : m_database(db)
@@ -108,13 +113,13 @@ int SQLiteStatement::bindBlob(int index, const String& text)
     // treats as a null, so we supply a non-null pointer for that case.
     auto upconvertedCharacters = StringView(text).upconvertedCharacters();
     UChar anyCharacter = 0;
-    std::span<const UChar> characters;
+    const UChar* characters;
     if (text.isEmpty() && !text.isNull())
-        characters = span(anyCharacter);
+        characters = &anyCharacter;
     else
-        characters = upconvertedCharacters.span();
+        characters = upconvertedCharacters;
 
-    return bindBlob(index, asBytes(characters));
+    return bindBlob(index, std::span(reinterpret_cast<const uint8_t*>(characters), text.length() * sizeof(UChar)));
 }
 
 int SQLiteStatement::bindText(int index, StringView text)
@@ -325,3 +330,5 @@ bool SQLiteStatement::isReadOnly()
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

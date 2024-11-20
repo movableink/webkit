@@ -79,6 +79,7 @@ public:
     WTF_EXPORT_PRIVATE TextStream& operator<<(ASCIILiteral);
     WTF_EXPORT_PRIVATE TextStream& operator<<(StringView);
     WTF_EXPORT_PRIVATE TextStream& operator<<(const HexNumberBuffer&);
+    WTF_EXPORT_PRIVATE TextStream& operator<<(const FormattedCSSNumber&);
     // Deprecated. Use the NumberRespectingIntegers FormattingFlag instead.
     WTF_EXPORT_PRIVATE TextStream& operator<<(const FormatNumberRespectingIntegers&);
 
@@ -308,8 +309,17 @@ TextStream& operator<<(TextStream& ts, const Ref<T>& item)
     return ts << item.get();
 }
 
+template<typename T>
+TextStream& operator<<(TextStream& ts, const CheckedPtr<T>& item)
+{
+    if (item)
+        return ts << *item;
+
+    return ts << "null";
+}
+
 template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg>
-TextStream& operator<<(TextStream& ts, const HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg>& map)
+TextStream& operator<<(TextStream& ts, const UncheckedKeyHashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg>& map)
 {
     ts << "{";
 
@@ -361,7 +371,7 @@ template<typename ValueArg, typename HashArg, typename TraitsArg>
 struct supports_text_stream_insertion<HashSet<ValueArg, HashArg, TraitsArg>> : supports_text_stream_insertion<ValueArg> { };
 
 template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg>
-struct supports_text_stream_insertion<HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg>> : std::conjunction<supports_text_stream_insertion<KeyArg>, supports_text_stream_insertion<MappedArg>> { };
+struct supports_text_stream_insertion<UncheckedKeyHashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg>> : std::conjunction<supports_text_stream_insertion<KeyArg>, supports_text_stream_insertion<MappedArg>> { };
 
 template<typename T, typename Traits>
 struct supports_text_stream_insertion<Markable<T, Traits>> : supports_text_stream_insertion<T> { };

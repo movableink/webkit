@@ -60,6 +60,7 @@ public:
     bool operator==(const StyleMiscNonInheritedData&) const;
 
     bool hasOpacity() const { return opacity < 1; }
+    bool hasZeroOpacity() const { return !opacity; }
     bool hasFilters() const;
     bool contentDataEquivalent(const StyleMiscNonInheritedData&) const;
 
@@ -97,6 +98,7 @@ public:
 #endif
     unsigned hasExplicitlySetDirection : 1 { false };
     unsigned hasExplicitlySetWritingMode : 1 { false };
+    unsigned tableLayout : 1; // TableLayoutType
     unsigned aspectRatioType : 2; // AspectRatioType
     unsigned appearance : appearanceBitWidth; // EAppearance
     unsigned usedAppearance : appearanceBitWidth; // EAppearance

@@ -40,13 +40,9 @@
 #import <PDFKit/PDFPagePriv.h>
 #import <PDFKit/PDFSelectionPriv.h>
 
-#if __has_include(<PDFKit/PDFActionPriv.h>)
+#if HAVE(PDFKIT_WITH_NEXT_ACTIONS)
 #import <PDFKit/PDFActionPriv.h>
-#else
-@interface PDFAction(SPI)
-- (NSArray *) nextActions;
-@end
-#endif // __has_include(PDFKIT/PDFActionPriv.h)
+#endif
 
 #endif // HAVE(PDFKIT)
 
@@ -96,9 +92,18 @@
 - (void)drawForPage:(PDFPage *)page withBox:(CGPDFBox)box active:(BOOL)active inContext:(CGContextRef)context;
 - (PDFPoint)firstCharCenter;
 - (/*nullable*/ NSString *)html;
-- (/*nullable*/ NSData *)webArchive;
 - (NSAttributedString *)attributedStringScaled:(CGFloat)scale;
 - (BOOL)isEmpty;
+@end
+
+#if HAVE(PDFDOCUMENT_ANNOTATIONS_FOR_FIELD_NAME)
+@interface PDFDocument (PDFDocumentPriv)
+- (NSArray *)annotationsForFieldName:(NSString *)fieldname;
+@end
+#endif
+
+@interface PDFAction (PDFActionPriv)
+- (NSArray *)nextActions;
 @end
 
 #endif // HAVE(PDFKIT)
@@ -117,7 +122,6 @@
 #if ENABLE(UNIFIED_PDF)
 @interface PDFDocument (IPI)
 - (PDFDestination *)namedDestination:(NSString *)name;
-- (NSArray *)annotationsForFieldName:(NSString *)fieldname;
 @end
 
 #if HAVE(COREGRAPHICS_WITH_PDF_AREA_OF_INTEREST_SUPPORT)
@@ -175,6 +179,15 @@ typedef NS_ENUM(NSUInteger, PDFSelectionGranularity);
 
 @interface PDFSelection (Staging_125426369)
 - (void)enumerateRectsAndTransformsForPage:(PDFPage *)page usingBlock:(void (^)(CGRect rect, CGAffineTransform transform))block;
+@end
+
+#endif
+
+#if HAVE(PDFSELECTION_HTMLDATA_RTFDATA)
+
+@interface PDFSelection (Staging_136075998)
+- (/*nullable*/ NSData *)htmlData;
+- (/*nullable*/ NSData *)rtfData;
 @end
 
 #endif

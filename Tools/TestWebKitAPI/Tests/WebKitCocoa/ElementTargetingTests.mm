@@ -63,6 +63,9 @@
 - (BOOL)adjustVisibilityForTargets:(NSArray<_WKTargetedElementInfo *> *)targets;
 - (BOOL)resetVisibilityAdjustmentsForTargets:(NSArray<_WKTargetedElementInfo *> *)elements;
 - (void)expectSingleTargetedSelector:(NSString *)expectedSelector at:(CGPoint)point;
+#if PLATFORM(VISION)
+- (NSArray<NSArray<_WKTargetedElementInfo *> *> *)allTargetableElementsWithHitTestInterval:(CGFloat)hitTestInterval;
+#endif
 
 @property (nonatomic, readonly) NSUInteger numberOfVisibilityAdjustmentRects;
 
@@ -143,6 +146,20 @@
     NSString *preferredSelector = [elements firstObject].selectors.firstObject;
     EXPECT_WK_STREQ(preferredSelector, expectedSelector);
 }
+
+#if PLATFORM(VISION)
+- (NSArray<NSArray<_WKTargetedElementInfo *> *> *)allTargetableElementsWithHitTestInterval:(CGFloat)hitTestInterval
+{
+    __block RetainPtr<NSArray<NSArray<_WKTargetedElementInfo *> *>> result;
+    __block bool done = false;
+    [self _requestAllTargetableElementsInfo:hitTestInterval completionHandler:^(NSArray<NSArray<_WKTargetedElementInfo *> *> *elements) {
+        result = elements;
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    return result.autorelease();
+}
+#endif // PLATFORM(VISION)
 
 @end
 
@@ -400,6 +417,7 @@ TEST(ElementTargeting, RequestElementsFromSelectors)
     EXPECT_EQ(1U, [targets count]);
     EXPECT_WK_STREQ("DIV.absolute.bottom-right", [target selectorsIncludingShadowHosts].firstObject.firstObject);
     EXPECT_TRUE([target isInVisibilityAdjustmentSubtree]);
+    EXPECT_WK_STREQ("Bottom Right", [target renderedText]);
 
     didAdjustVisibility = false;
 
@@ -434,6 +452,22 @@ TEST(ElementTargeting, SnapshotElementWithVisibilityAdjustment)
     checkPixelColor(reader.width() - 10, 10);
     checkPixelColor(reader.width() - 10, reader.height() - 10);
     checkPixelColor(10, reader.height() - 10);
+}
+
+TEST(ElementTargeting, SkipSnapshotForNonReplacedElementWithoutChildren)
+{
+    auto webViewFrame = CGRectMake(0, 0, 800, 600);
+
+    auto viewAndWindow = setUpWebViewForSnapshotting(webViewFrame);
+    auto [webView, window] = viewAndWindow;
+    [webView synchronouslyLoadTestPageNamed:@"element-targeting-10"];
+
+    RetainPtr targets = [webView targetedElementInfoWithSelectors:@[ [NSSet setWithObject:@"DIV.fixed"] ]];
+
+    EXPECT_EQ([targets count], 1U);
+    [webView adjustVisibilityForTargets:targets.get()];
+
+    EXPECT_NULL([[targets firstObject] takeSnapshot]);
 }
 
 TEST(ElementTargeting, AdjustVisibilityFromPseudoSelectors)
@@ -580,6 +614,9 @@ TEST(ElementTargeting, RequestTargetedElementsBySearchableText)
     RetainPtr targetFromSearchText = [[webView targetedElementInfoWithText:searchableText] firstObject];
     EXPECT_TRUE([targetFromSearchText isSameElement:targetFromHitTest.get()]);
     EXPECT_WK_STREQ("sunset-in-cupertino-200px.png", [[[targetFromSearchText mediaAndLinkURLs] anyObject] lastPathComponent]);
+
+    [webView adjustVisibilityForTargets:@[ targetFromSearchText.get() ]];
+    EXPECT_TRUE([targetFromSearchText isSameElement:[[webView targetedElementInfoWithText:searchableText] firstObject]]);
 }
 
 TEST(ElementTargeting, AdjustVisibilityAfterRecreatingElement)
@@ -613,5 +650,116 @@ TEST(ElementTargeting, TargetedElementWithLargeImage)
     EXPECT_EQ([[element screenReaderText] length], 0U);
     EXPECT_TRUE([element hasLargeReplacedDescendant]);
 }
+
+TEST(ElementTargeting, CountVisibilityAdjustmentsAfterNavigatingBack)
+{
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600)]);
+    [webView synchronouslyLoadTestPageNamed:@"element-targeting-1"];
+
+    Util::waitForConditionWithLogging([&] {
+        return [[webView objectByEvaluatingJavaScript:@"window.subframeLoaded"] boolValue];
+    }, 5, @"Timed out waiting for subframes to finish loading.");
+
+    RetainPtr element = [[webView targetedElementInfoAt:CGPointMake(150, 150)] firstObject];
+    EXPECT_WK_STREQ("DIV.fixed.container", [[[element selectorsIncludingShadowHosts] firstObject] firstObject]);
+    [webView adjustVisibilityForTargets:@[ element.get() ]];
+    EXPECT_EQ(1U, [webView numberOfVisibilityAdjustmentRects]);
+
+    [webView synchronouslyLoadTestPageNamed:@"element-targeting-2"];
+    EXPECT_EQ(0U, [webView numberOfVisibilityAdjustmentRects]);
+
+    [webView synchronouslyGoBack];
+    EXPECT_EQ(1U, [webView numberOfVisibilityAdjustmentRects]);
+
+    [webView synchronouslyGoForward];
+    EXPECT_EQ(0U, [webView numberOfVisibilityAdjustmentRects]);
+}
+
+#if PLATFORM(VISION)
+TEST(ElementTargeting, RequestAllVisibleElements)
+{
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600)]);
+    [webView synchronouslyLoadTestPageNamed:@"element-targeting-11"];
+
+    RetainPtr elements = [webView allTargetableElementsWithHitTestInterval:CGFloat(40.0)];
+    EXPECT_EQ([elements count], 4U);
+    {
+        auto subelements = [elements objectAtIndex: 0];
+        EXPECT_EQ([subelements count], 4U);
+        {
+            auto subelement = [subelements objectAtIndex: 0];
+            EXPECT_TRUE([subelement.renderedText containsString:@"Top box"]);
+            EXPECT_EQ(subelement.renderedText.length, 7U);
+            EXPECT_EQ(subelement.childFrames.count, 0U);
+        }
+        {
+            auto subelement = [subelements objectAtIndex: 1];
+            EXPECT_TRUE([subelement.renderedText containsString:@"the crazy ones"]);
+            EXPECT_EQ(subelement.renderedText.length, 64U);
+            EXPECT_EQ(subelement.childFrames.count, 0U);
+        }
+        {
+            auto subelement = [subelements objectAtIndex: 2];
+            EXPECT_TRUE([subelement.renderedText containsString:@"Lorem ipsum"]);
+            EXPECT_EQ(subelement.renderedText.length, 896U);
+            EXPECT_EQ(subelement.childFrames.count, 0U);
+        }
+        {
+            auto subelement = [subelements objectAtIndex: 3];
+            EXPECT_TRUE([subelement.renderedText containsString:@"Occluded box"]);
+            EXPECT_EQ(subelement.renderedText.length, 12U);
+            EXPECT_EQ(subelement.childFrames.count, 0U);
+        }
+    }
+    {
+        auto subelements = [elements objectAtIndex: 1];
+        EXPECT_EQ([subelements count], 3U);
+        {
+            auto subelement = [subelements objectAtIndex: 0];
+            EXPECT_TRUE([subelement.renderedText containsString:@"Occluded box"]);
+            EXPECT_EQ(subelement.renderedText.length, 12U);
+            EXPECT_EQ(subelement.childFrames.count, 0U);
+        }
+        {
+            auto subelement = [subelements objectAtIndex: 1];
+            EXPECT_TRUE([subelement.renderedText containsString:@"the crazy ones"]);
+            EXPECT_EQ(subelement.renderedText.length, 64U);
+            EXPECT_EQ(subelement.childFrames.count, 0U);
+        }
+        {
+            auto subelement = [subelements objectAtIndex: 2];
+            EXPECT_TRUE([subelement.renderedText containsString:@"Lorem ipsum"]);
+            EXPECT_EQ(subelement.renderedText.length, 896U);
+            EXPECT_EQ(subelement.childFrames.count, 0U);
+        }
+    }
+    {
+        auto subelements = [elements objectAtIndex: 2];
+        EXPECT_EQ([subelements count], 2U);
+        {
+            auto subelement = [subelements objectAtIndex: 0];
+            EXPECT_TRUE([subelement.renderedText containsString:@"the crazy ones"]);
+            EXPECT_EQ(subelement.renderedText.length, 64U);
+            EXPECT_EQ(subelement.childFrames.count, 0U);
+        }
+        {
+            auto subelement = [subelements objectAtIndex: 1];
+            EXPECT_TRUE([subelement.renderedText containsString:@"Lorem ipsum"]);
+            EXPECT_EQ(subelement.renderedText.length, 896U);
+            EXPECT_EQ(subelement.childFrames.count, 0U);
+        }
+    }
+    {
+        auto subelements = [elements objectAtIndex: 3];
+        EXPECT_EQ([subelements count], 1U);
+        {
+            auto subelement = [subelements objectAtIndex: 0];
+            EXPECT_TRUE([subelement.renderedText containsString:@"Lorem ipsum"]);
+            EXPECT_EQ(subelement.renderedText.length, 896U);
+            EXPECT_EQ(subelement.childFrames.count, 0U);
+        }
+    }
+}
+#endif // PLATFORM(VISION)
 
 } // namespace TestWebKitAPI

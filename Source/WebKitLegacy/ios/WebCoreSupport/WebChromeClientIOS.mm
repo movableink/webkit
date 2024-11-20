@@ -57,12 +57,13 @@
 #import <WebCore/PlatformScreen.h>
 #import <WebCore/RenderBox.h>
 #import <WebCore/RenderObject.h>
-#import <WebCore/RuntimeApplicationChecks.h>
 #import <WebCore/ScrollingConstraints.h>
 #import <WebCore/WAKWindow.h>
 #import <WebCore/WebCoreThreadMessage.h>
 #import <wtf/HashMap.h>
 #import <wtf/RefPtr.h>
+#import <wtf/RuntimeApplicationChecks.h>
+#import <wtf/TZoneMallocInlines.h>
 #import <wtf/cocoa/VectorCocoa.h>
 
 NSString * const WebOpenPanelConfigurationAllowMultipleFilesKey = @"WebOpenPanelConfigurationAllowMultipleFilesKey";
@@ -89,6 +90,8 @@ static WebMediaCaptureType webMediaCaptureType(MediaCaptureType type)
 }
 
 #endif
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebChromeClientIOS);
 
 void WebChromeClientIOS::setWindowRect(const WebCore::FloatRect& r)
 {

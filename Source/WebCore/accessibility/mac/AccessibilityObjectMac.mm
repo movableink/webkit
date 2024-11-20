@@ -77,7 +77,7 @@ void AccessibilityObject::overrideAttachmentParent(AccessibilityObject* parent)
     
     id parentWrapper = nil;
     if (parent) {
-        if (parent->accessibilityIsIgnored())
+        if (parent->isIgnored())
             parent = parent->parentObjectUnignored();
         parentWrapper = parent->wrapper();
     }
@@ -214,7 +214,7 @@ static bool isEmptyGroup(AccessibilityObject& object)
         return false;
 
     return [object.rolePlatformString() isEqual:NSAccessibilityGroupRole]
-        && object.children().isEmpty()
+        && object.unignoredChildren().isEmpty()
         && ![renderWidgetChildren(object) count];
 }
 
@@ -422,14 +422,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         return "AXSubscriptStyleGroup"_s;
 
     switch (role) {
-    case AccessibilityRole::RubyBase:
-        return "AXRubyBase"_s;
-    case AccessibilityRole::RubyBlock:
-        return "AXRubyBlock"_s;
     case AccessibilityRole::RubyInline:
         return "AXRubyInline"_s;
-    case AccessibilityRole::RubyRun:
-        return "AXRubyRun"_s;
     case AccessibilityRole::RubyText:
         return "AXRubyText"_s;
     default:
@@ -645,9 +639,10 @@ static void attributedStringSetHeadingLevel(NSMutableAttributedString *attrStrin
 
     // Sometimes there are objects between the text and the heading.
     // In those cases the parent hierarchy should be queried to see if there is a heading ancestor.
-    RefPtr parent = renderer->document().axObjectCache()->getOrCreate(renderer->parent());
-    for (; parent; parent = parent->parentObject()) {
-        if (unsigned level = parent->headingLevel()) {
+    auto* cache = renderer->document().axObjectCache();
+    RefPtr ancestor = cache ? cache->getOrCreate(renderer->parent()) : nullptr;
+    for (; ancestor; ancestor = ancestor->parentObject()) {
+        if (unsigned level = ancestor->headingLevel()) {
             [attrString addAttribute:@"AXHeadingLevel" value:@(level) range:range];
             return;
         }
@@ -659,7 +654,8 @@ static void attributedStringSetBlockquoteLevel(NSMutableAttributedString *attrSt
     if (!renderer || !attributedStringContainsRange(attrString, range))
         return;
 
-    RefPtr object = renderer->document().axObjectCache()->getOrCreate(*renderer);
+    auto* cache = renderer->document().axObjectCache();
+    RefPtr object = cache ? cache->getOrCreate(*renderer) : nullptr;
     if (!object)
         return;
 
@@ -673,8 +669,9 @@ static void attributedStringSetExpandedText(NSMutableAttributedString *attrStrin
     if (!renderer || !attributedStringContainsRange(attrString, range))
         return;
 
-    RefPtr object = renderer->document().axObjectCache()->getOrCreate(*renderer);
-    if (object->supportsExpandedTextValue())
+    auto* cache = renderer->document().axObjectCache();
+    RefPtr object = cache ? cache->getOrCreate(*renderer) : nullptr;
+    if (object && object->supportsExpandedTextValue())
         [attrString addAttribute:NSAccessibilityExpandedTextValueAttribute value:object->expandedTextValue() range:range];
 }
 
@@ -732,7 +729,8 @@ static void attributedStringSetCompositionAttributes(NSMutableAttributedString *
 static bool shouldHaveAnySpellCheckAttribute(Node& node)
 {
     // If this node is not inside editable content, do not run the spell checker on the text.
-    return node.document().axObjectCache()->rootAXEditableElement(&node);
+    auto* cache = node.document().axObjectCache();
+    return cache && cache->rootAXEditableElement(&node);
 }
 
 void attributedStringSetNeedsSpellCheck(NSMutableAttributedString *attributedString, Node& node)
@@ -779,13 +777,13 @@ void attributedStringSetSpelling(NSMutableAttributedString *attrString, Node& no
     }
 }
 
-RetainPtr<NSAttributedString> attributedStringCreate(Node* node, StringView text, const SimpleRange& textRange, AXCoreObject::SpellCheck spellCheck)
+RetainPtr<NSAttributedString> attributedStringCreate(Node& node, StringView text, const SimpleRange& textRange, AXCoreObject::SpellCheck spellCheck)
 {
-    if (!node || !text.length())
+    if (!text.length())
         return nil;
 
     // Skip invisible text.
-    WeakPtr renderer = node->renderer();
+    CheckedPtr renderer = node.renderer();
     if (!renderer)
         return nil;
 
@@ -798,13 +796,13 @@ RetainPtr<NSAttributedString> attributedStringCreate(Node* node, StringView text
     attributedStringSetBlockquoteLevel(result.get(), renderer.get(), range);
     attributedStringSetExpandedText(result.get(), renderer.get(), range);
     attributedStringSetElement(result.get(), NSAccessibilityLinkTextAttribute, AccessibilityObject::anchorElementForNode(node), range);
-    attributedStringSetCompositionAttributes(result.get(), *node, textRange);
+    attributedStringSetCompositionAttributes(result.get(), node, textRange);
     // Do spelling last because it tends to break up the range.
     if (spellCheck == AXCoreObject::SpellCheck::Yes) {
         if (AXObjectCache::shouldSpellCheck())
-            attributedStringSetSpelling(result.get(), *node, text, range);
+            attributedStringSetSpelling(result.get(), node, text, range);
         else
-            attributedStringSetNeedsSpellCheck(result.get(), *node);
+            attributedStringSetNeedsSpellCheck(result.get(), node);
     }
 
     return result;
@@ -826,7 +824,7 @@ void AXRemoteFrame::initializePlatformElementWithRemoteToken(std::span<const uin
     m_processIdentifier = processIdentifier;
     if ([wrapper() respondsToSelector:@selector(accessibilitySetPresenterProcessIdentifier:)])
         [(id)wrapper() accessibilitySetPresenterProcessIdentifier:processIdentifier];
-    m_remoteFramePlatformElement = adoptNS([[NSAccessibilityRemoteUIElement alloc] initWithRemoteToken:toNSData(token).get()]);
+    m_remoteFramePlatformElement = adoptNS([[NSAccessibilityRemoteUIElement alloc] initWithRemoteToken:toNSData(BufferSource { token }).get()]);
 
     if (auto* cache = axObjectCache())
         cache->onRemoteFrameInitialized(*this);
@@ -852,7 +850,6 @@ PlatformRoleMap createPlatformRoleMap()
         { AccessibilityRole::TextArea, NSAccessibilityTextAreaRole },
         { AccessibilityRole::ScrollArea, NSAccessibilityScrollAreaRole },
         { AccessibilityRole::PopUpButton, NSAccessibilityPopUpButtonRole },
-        { AccessibilityRole::MenuButton, NSAccessibilityMenuButtonRole },
         { AccessibilityRole::Table, NSAccessibilityTableRole },
         { AccessibilityRole::Application, NSAccessibilityApplicationRole },
         { AccessibilityRole::Group, NSAccessibilityGroupRole },
@@ -872,7 +869,6 @@ PlatformRoleMap createPlatformRoleMap()
         { AccessibilityRole::Toolbar, NSAccessibilityToolbarRole },
         { AccessibilityRole::ProgressIndicator, NSAccessibilityProgressIndicatorRole },
         { AccessibilityRole::Meter, NSAccessibilityLevelIndicatorRole },
-        { AccessibilityRole::Incrementor, NSAccessibilityIncrementorRole },
         { AccessibilityRole::ComboBox, NSAccessibilityComboBoxRole },
         { AccessibilityRole::DateTime, @"AXDateTimeArea" },
         { AccessibilityRole::Splitter, NSAccessibilitySplitterRole },
@@ -947,10 +943,7 @@ PlatformRoleMap createPlatformRoleMap()
         { AccessibilityRole::Switch, NSAccessibilityCheckBoxRole },
         { AccessibilityRole::SearchField, NSAccessibilityTextFieldRole },
         { AccessibilityRole::Pre, NSAccessibilityGroupRole },
-        { AccessibilityRole::RubyBase, NSAccessibilityGroupRole },
-        { AccessibilityRole::RubyBlock, NSAccessibilityGroupRole },
         { AccessibilityRole::RubyInline, NSAccessibilityGroupRole },
-        { AccessibilityRole::RubyRun, NSAccessibilityGroupRole },
         { AccessibilityRole::RubyText, NSAccessibilityGroupRole },
         { AccessibilityRole::Details, NSAccessibilityGroupRole },
         { AccessibilityRole::Summary, NSAccessibilityDisclosureTriangleRole },

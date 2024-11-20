@@ -35,21 +35,28 @@
 #include "CoreAudioCaptureDeviceManager.h"
 #include "Logging.h"
 #include <Accelerate/Accelerate.h>
+#include <pal/spi/cocoa/AudioToolboxSPI.h>
+#include <wtf/Lock.h>
+#include <wtf/RefCounted.h>
+#include <wtf/TZoneMallocInlines.h>
+
 #include <pal/cf/AudioToolboxSoftLink.h>
 #include <pal/cf/CoreMediaSoftLink.h>
-#include <pal/spi/cocoa/AudioToolboxSPI.h>
-#include <wtf/FastMalloc.h>
-#include <wtf/Lock.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
-class LocalAudioMediaStreamTrackRendererInternalUnit final : public AudioMediaStreamTrackRendererInternalUnit {
-    WTF_MAKE_FAST_ALLOCATED;
+class LocalAudioMediaStreamTrackRendererInternalUnit final : public AudioMediaStreamTrackRendererInternalUnit, public RefCounted<LocalAudioMediaStreamTrackRendererInternalUnit>  {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(LocalAudioMediaStreamTrackRendererInternalUnit);
 public:
-    static UniqueRef<AudioMediaStreamTrackRendererInternalUnit> create(Client& client)
+    static Ref<AudioMediaStreamTrackRendererInternalUnit> create(Client& client)
     {
-        return UniqueRef<LocalAudioMediaStreamTrackRendererInternalUnit> { *new LocalAudioMediaStreamTrackRendererInternalUnit { client } };
+        return adoptRef(*new LocalAudioMediaStreamTrackRendererInternalUnit(client));
     }
+
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
 private:
     explicit LocalAudioMediaStreamTrackRendererInternalUnit(Client&);
@@ -60,11 +67,12 @@ private:
     void stop() final;
     void retrieveFormatDescription(CompletionHandler<void(std::optional<CAAudioStreamDescription>)>&&) final;
     void setAudioOutputDevice(const String&) final;
+    const String& audioOutputDeviceID() const final { return m_audioOutputDeviceID; }
 
     OSStatus render(AudioUnitRenderActionFlags*, const AudioTimeStamp*, UInt32 sampleCount, AudioBufferList*);
     static OSStatus renderingCallback(void*, AudioUnitRenderActionFlags*, const AudioTimeStamp*, UInt32 inBusNumber, UInt32 sampleCount, AudioBufferList*);
 
-    Client& m_client;
+    ThreadSafeWeakPtr<Client> m_client;
     std::optional<CAAudioStreamDescription> m_outputDescription;
     AudioComponentInstance m_remoteIOUnit { nullptr };
     bool m_isStarted { false };
@@ -72,6 +80,7 @@ private:
 #if PLATFORM(MAC)
     uint32_t m_deviceID { 0 };
 #endif
+    String m_audioOutputDeviceID;
 };
 
 
@@ -95,6 +104,8 @@ void LocalAudioMediaStreamTrackRendererInternalUnit::setAudioOutputDevice(const 
         RELEASE_LOG(WebRTC, "AudioMediaStreamTrackRendererInternalUnit::setAudioOutputDeviceId - did not find device");
         return;
     }
+
+    m_audioOutputDeviceID = deviceID;
 
     auto audioUnitDeviceID = device ? device->deviceID() : 0;
     if (m_deviceID == audioUnitDeviceID)
@@ -212,7 +223,7 @@ void LocalAudioMediaStreamTrackRendererInternalUnit::createAudioUnitIfNeeded()
             return;
         }
 
-        outputDescription.mSampleRate = AudioSession::sharedSession().sampleRate();
+        outputDescription.mSampleRate = AudioSession::protectedSharedSession()->sampleRate();
         m_outputDescription = outputDescription;
     }
     error = PAL::AudioUnitSetProperty(remoteIOUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &m_outputDescription->streamDescription(), sizeof(m_outputDescription->streamDescription()));
@@ -266,13 +277,17 @@ static void clipAudioBufferList(AudioBufferList& list, AudioStreamDescription::P
 
 OSStatus LocalAudioMediaStreamTrackRendererInternalUnit::render(AudioUnitRenderActionFlags* actionFlags, const AudioTimeStamp* timeStamp, UInt32 sampleCount, AudioBufferList* ioData)
 {
+    RefPtr client = m_client.get();
+    if (!client)
+        return kAudio_ParamError;
+
     auto sampleTime = timeStamp->mSampleTime;
     // If we observe an irregularity in the timeline, we trigger a reset.
     if (m_sampleTime && (m_sampleTime + 2 * sampleCount < sampleTime || sampleTime <= m_sampleTime))
-        m_client.reset();
+        client->reset();
     m_sampleTime = sampleTime < std::numeric_limits<Float64>::max() - sampleCount ? sampleTime : 0;
 
-    auto result = m_client.render(sampleCount, *ioData, sampleTime, timeStamp->mHostTime, *actionFlags);
+    auto result = client->render(sampleCount, *ioData, sampleTime, timeStamp->mHostTime, *actionFlags);
     // FIXME: We should probably introduce a limiter to limit the amount of clipping.
     clipAudioBufferList(*ioData, m_outputDescription->format());
     return result;
@@ -291,11 +306,13 @@ void AudioMediaStreamTrackRendererInternalUnit::setCreateFunction(CreateFunction
     createInternalUnit = function;
 }
 
-UniqueRef<AudioMediaStreamTrackRendererInternalUnit> AudioMediaStreamTrackRendererInternalUnit::create(Client& client)
+Ref<AudioMediaStreamTrackRendererInternalUnit> AudioMediaStreamTrackRendererInternalUnit::create(Client& client)
 {
     return createInternalUnit(client);
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(MEDIA_STREAM)

@@ -32,13 +32,14 @@
 
 #include "ScalableImageDecoder.h"
 #include <stdint.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 // This class decodes a BMP image. It is used in the BMP and ICO decoders,
 // which wrap it in the appropriate code to read file headers, etc.
 class BMPImageReader {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(BMPImageReader);
 public:
     // Read a value from |data[offset]|, converting from little to native
     // endianness.
@@ -224,13 +225,17 @@ private:
     // in the given pixel data.
     inline unsigned getComponent(uint32_t pixel, int component) const
     {
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         return ((pixel & m_bitMasks[component]) >> m_bitShiftsRight[component]) << m_bitShiftsLeft[component];
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     }
 
     inline unsigned getAlpha(uint32_t pixel) const
     {
         // For images without alpha, return alpha of 0xff.
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         return m_bitMasks[3] ? getComponent(pixel, 3) : 0xff;
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     }
 
     // Sets the current pixel to the color given by |colorIndex|. This also

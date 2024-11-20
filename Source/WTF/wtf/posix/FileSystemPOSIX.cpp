@@ -43,12 +43,15 @@
 #include <wtf/EnumTraits.h>
 #include <wtf/SafeStrerror.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
 
 #if USE(GLIB)
 #include <glib.h>
 #endif
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WTF {
 
@@ -61,7 +64,7 @@ PlatformFileHandle openFile(const String& path, FileOpenMode mode, FileAccessPer
     if (fsRep.isNull())
         return invalidPlatformFileHandle;
 
-    int platformFlag = 0;
+    int platformFlag = O_CLOEXEC;
     switch (mode) {
     case FileOpenMode::Read:
         platformFlag |= O_RDONLY;
@@ -270,7 +273,7 @@ std::pair<String, PlatformFileHandle> openTemporaryFile(StringView prefix, Strin
     if (snprintf(buffer, PATH_MAX, "%s/%sXXXXXX", temporaryFileDirectory(), prefix.utf8().data()) >= PATH_MAX)
         goto end;
 
-    handle = mkstemp(buffer);
+    handle = mkostemp(buffer, O_CLOEXEC);
     if (handle < 0)
         goto end;
 
@@ -374,3 +377,5 @@ String pathByAppendingComponents(StringView path, const Vector<StringView>& comp
 
 } // namespace FileSystemImpl
 } // namespace WTF
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

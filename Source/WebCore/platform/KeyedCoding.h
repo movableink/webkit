@@ -28,13 +28,16 @@
 #include <functional>
 #include <wtf/Deque.h>
 #include <wtf/Forward.h>
+#include <wtf/TZoneMallocInlines.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
 class SharedBuffer;
 
 class KeyedDecoder {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(KeyedDecoder);
 public:
     WEBCORE_EXPORT static std::unique_ptr<KeyedDecoder> decoder(std::span<const uint8_t> data);
 
@@ -142,7 +145,7 @@ private:
 };
 
 class KeyedEncoder {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(KeyedEncoder);
 public:
     WEBCORE_EXPORT static std::unique_ptr<KeyedEncoder> encoder();
 
@@ -213,3 +216,5 @@ private:
 };
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

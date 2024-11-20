@@ -32,24 +32,24 @@
 #include "NetworkTransportReceiveStream.h"
 #include "NetworkTransportSendStream.h"
 #include "WebTransportSessionMessages.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebKit {
 
-void NetworkTransportSession::initialize(NetworkConnectionToWebProcess& connection, URL&&, CompletionHandler<void(std::unique_ptr<NetworkTransportSession>&&)>&& completionHandler)
-{
-    completionHandler(makeUnique<NetworkTransportSession>(connection));
-}
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NetworkTransportSession);
 
-NetworkTransportSession::NetworkTransportSession(NetworkConnectionToWebProcess& connection)
-    : m_connection(connection)
+#if !PLATFORM(COCOA)
+void NetworkTransportSession::initialize(NetworkConnectionToWebProcess&, URL&&, CompletionHandler<void(RefPtr<NetworkTransportSession>&&)>&& completionHandler)
 {
+    completionHandler(nullptr);
 }
+#endif
 
 NetworkTransportSession::~NetworkTransportSession() = default;
 
 IPC::Connection* NetworkTransportSession::messageSenderConnection() const
 {
-    return m_connection ? &m_connection->connection() : nullptr;
+    return m_connectionToWebProcess ? &m_connectionToWebProcess->connection() : nullptr;
 }
 
 uint64_t NetworkTransportSession::messageSenderDestinationID() const
@@ -57,11 +57,12 @@ uint64_t NetworkTransportSession::messageSenderDestinationID() const
     return identifier().toUInt64();
 }
 
+#if !PLATFORM(COCOA)
 void NetworkTransportSession::sendDatagram(std::span<const uint8_t>, CompletionHandler<void()>&& completionHandler)
 {
-    // FIXME: Implement.
     completionHandler();
 }
+#endif
 
 void NetworkTransportSession::sendStreamSendBytes(WebTransportStreamIdentifier identifier, std::span<const uint8_t> bytes, bool withFin, CompletionHandler<void()>&& completionHandler)
 {
@@ -72,28 +73,24 @@ void NetworkTransportSession::sendStreamSendBytes(WebTransportStreamIdentifier i
 
 void NetworkTransportSession::streamSendBytes(WebTransportStreamIdentifier identifier, std::span<const uint8_t> bytes, bool withFin, CompletionHandler<void()>&& completionHandler)
 {
-    if (auto* stream = m_bidirectionalStreams.get(identifier))
+    if (RefPtr stream = m_bidirectionalStreams.get(identifier))
         stream->sendBytes(bytes, withFin);
     else if (auto* stream = m_sendStreams.get(identifier))
         stream->sendBytes(bytes, withFin);
     completionHandler();
 }
 
+#if !PLATFORM(COCOA)
 void NetworkTransportSession::createOutgoingUnidirectionalStream(CompletionHandler<void(std::optional<WebTransportStreamIdentifier>)>&& completionHandler)
 {
-    auto identifier = WebTransportStreamIdentifier::generate();
-    ASSERT(!m_sendStreams.contains(identifier));
-    m_sendStreams.set(identifier, makeUniqueRef<NetworkTransportSendStream>());
-    completionHandler(identifier);
+    completionHandler(std::nullopt);
 }
 
 void NetworkTransportSession::createBidirectionalStream(CompletionHandler<void(std::optional<WebTransportStreamIdentifier>)>&& completionHandler)
 {
-    auto identifier = WebTransportStreamIdentifier::generate();
-    ASSERT(!m_bidirectionalStreams.contains(identifier));
-    m_bidirectionalStreams.set(identifier, makeUniqueRef<NetworkTransportBidirectionalStream>(*this));
-    completionHandler(identifier);
+    completionHandler(std::nullopt);
 }
+#endif
 
 void NetworkTransportSession::destroyOutgoingUnidirectionalStream(WebTransportStreamIdentifier identifier)
 {
@@ -114,7 +111,6 @@ void NetworkTransportSession::terminate(uint32_t, CString&&)
 
 void NetworkTransportSession::receiveDatagram(std::span<const uint8_t> datagram)
 {
-    // FIXME: Implement something that calls this.
     send(Messages::WebTransportSession::ReceiveDatagram(datagram));
 }
 
@@ -126,20 +122,20 @@ void NetworkTransportSession::streamReceiveBytes(WebTransportStreamIdentifier id
 
 void NetworkTransportSession::receiveIncomingUnidirectionalStream()
 {
-    // FIXME: Implement something that calls this.
-    auto identifier = WebTransportStreamIdentifier::generate();
-    ASSERT(!m_receiveStreams.contains(identifier));
-    m_receiveStreams.set(identifier, makeUniqueRef<NetworkTransportReceiveStream>(*this));
-    send(Messages::WebTransportSession::ReceiveIncomingUnidirectionalStream(identifier));
+    // FIXME: Implement and send Messages::WebTransportSession::ReceiveIncomingUnidirectionalStream.
 }
 
 void NetworkTransportSession::receiveBidirectionalStream()
 {
-    // FIXME: Implement something that calls this.
-    auto identifier = WebTransportStreamIdentifier::generate();
-    ASSERT(!m_bidirectionalStreams.contains(identifier));
-    m_bidirectionalStreams.set(identifier, makeUniqueRef<NetworkTransportBidirectionalStream>(*this));
-    send(Messages::WebTransportSession::ReceiveBidirectionalStream(identifier));
+    // FIXME: Implement and send Messages::WebTransportSession::ReceiveBidirectionalStream.
+}
+
+std::optional<SharedPreferencesForWebProcess> NetworkTransportSession::sharedPreferencesForWebProcess() const
+{
+    if (auto connectionToWebProcess = m_connectionToWebProcess.get())
+        return connectionToWebProcess->sharedPreferencesForWebProcess();
+
+    return std::nullopt;
 }
 
 }

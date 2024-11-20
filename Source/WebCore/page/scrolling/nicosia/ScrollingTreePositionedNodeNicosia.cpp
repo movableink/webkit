@@ -33,6 +33,7 @@
 
 #include "Logging.h"
 #include "ScrollingStatePositionedNode.h"
+#include "ScrollingTree.h"
 
 namespace WebCore {
 
@@ -54,10 +55,8 @@ bool ScrollingTreePositionedNodeNicosia::commitStateBeforeChildren(const Scrolli
         return false;
 
     const ScrollingStatePositionedNode& positionedStateNode = downcast<ScrollingStatePositionedNode>(stateNode);
-    if (positionedStateNode.hasChangedProperty(ScrollingStateNode::Property::Layer)) {
-        auto* layer = static_cast<Nicosia::PlatformLayer*>(positionedStateNode.layer());
-        m_layer = downcast<Nicosia::CompositionLayer>(layer);
-    }
+    if (positionedStateNode.hasChangedProperty(ScrollingStateNode::Property::Layer))
+        m_layer = static_cast<Nicosia::CompositionLayer*>(positionedStateNode.layer());
 
     return ScrollingTreePositionedNode::commitStateBeforeChildren(stateNode);
 }

@@ -30,6 +30,7 @@
 #include "MessageReceiver.h"
 #include <WebCore/FloatRect.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
 
 OBJC_CLASS WKContentView;
 OBJC_CLASS UIScrollView;
@@ -39,7 +40,7 @@ namespace WebKit {
 class WebPageProxy;
 
 class SmartMagnificationController : private IPC::MessageReceiver {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(SmartMagnificationController);
     WTF_MAKE_NONCOPYABLE(SmartMagnificationController);
 public:
     SmartMagnificationController(WKContentView *);
@@ -58,7 +59,7 @@ private:
     void scrollToRect(WebCore::FloatPoint origin, WebCore::FloatRect targetRect);
     std::tuple<WebCore::FloatRect, double, double> smartMagnificationTargetRectAndZoomScales(WebCore::FloatRect targetRect, double minimumScale, double maximumScale, bool addMagnificationPadding);
 
-    WebPageProxy& m_webPageProxy;
+    WeakRef<WebPageProxy> m_webPageProxy;
     WKContentView *m_contentView;
 };
     

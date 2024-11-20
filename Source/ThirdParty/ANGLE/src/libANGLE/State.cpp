@@ -332,17 +332,15 @@ ANGLE_INLINE void ActiveTexturesCache::set(size_t textureIndex, Texture *texture
     mTextures[textureIndex] = texture;
 }
 
-PrivateState::PrivateState(const EGLenum clientType,
-                           const Version &clientVersion,
-                           EGLint profileMask,
+PrivateState::PrivateState(const Version &clientVersion,
                            bool debug,
                            bool bindGeneratesResourceCHROMIUM,
                            bool clientArraysEnabled,
                            bool robustResourceInit,
-                           bool programBinaryCacheEnabled)
-    : mClientType(clientType),
-      mProfileMask(profileMask),
-      mClientVersion(clientVersion),
+                           bool programBinaryCacheEnabled,
+                           bool isExternal)
+    : mClientVersion(clientVersion),
+      mIsExternal(isExternal),
       mDepthClearValue(0),
       mStencilClearValue(0),
       mScissorTest(false),
@@ -476,9 +474,7 @@ void PrivateState::initialize(Context *context)
     mNoUnclampedBlendColor = context->getLimitations().noUnclampedBlendColor;
 
     // GLES1 emulation: Initialize state for GLES1 if version applies
-    // TODO(http://anglebug.com/42262402): When on desktop client only do this in compatibility
-    // profile
-    if (context->getClientVersion() < Version(2, 0) || mClientType == EGL_OPENGL_API)
+    if (context->getClientVersion() < Version(2, 0))
     {
         mGLES1State.initialize(context, this);
     }
@@ -1765,7 +1761,7 @@ void PrivateState::getBooleanv(GLenum pname, GLboolean *params) const
             *params = mIsSampleShadingEnabled;
             break;
         case GL_PRIMITIVE_RESTART_FOR_PATCHES_SUPPORTED:
-            *params = isPrimitiveRestartEnabled() && getExtensions().tessellationShaderAny();
+            *params = mCaps.primitiveRestartForPatchesSupported ? GL_TRUE : GL_FALSE;
             break;
         case GL_ROBUST_FRAGMENT_SHADER_OUTPUT_ANGLE:
             *params = mExtensions.robustFragmentShaderOutputANGLE ? GL_TRUE : GL_FALSE;
@@ -2225,9 +2221,7 @@ State::State(const State *shareContextState,
              SemaphoreManager *shareSemaphores,
              egl::ContextMutex *contextMutex,
              const OverlayType *overlay,
-             const EGLenum clientType,
              const Version &clientVersion,
-             EGLint profileMask,
              bool debug,
              bool bindGeneratesResourceCHROMIUM,
              bool clientArraysEnabled,
@@ -2235,7 +2229,8 @@ State::State(const State *shareContextState,
              bool programBinaryCacheEnabled,
              EGLenum contextPriority,
              bool hasRobustAccess,
-             bool hasProtectedContent)
+             bool hasProtectedContent,
+             bool isExternal)
     : mID({gIDCounter++}),
       mContextPriority(contextPriority),
       mHasRobustAccess(hasRobustAccess),
@@ -2268,14 +2263,13 @@ State::State(const State *shareContextState,
       mDisplayTextureShareGroup(shareTextures != nullptr),
       mMaxShaderCompilerThreads(std::numeric_limits<GLuint>::max()),
       mOverlay(overlay),
-      mPrivateState(clientType,
-                    clientVersion,
-                    profileMask,
+      mPrivateState(clientVersion,
                     debug,
                     bindGeneratesResourceCHROMIUM,
                     clientArraysEnabled,
                     robustResourceInit,
-                    programBinaryCacheEnabled)
+                    programBinaryCacheEnabled,
+                    isExternal)
 {}
 
 State::~State() {}
@@ -3456,6 +3450,15 @@ void State::getPointerv(const Context *context, GLenum pname, void **params) con
                                           context->vertexArrayIndex(ParamToVertexArrayType(pname))),
                                       GL_VERTEX_ATTRIB_ARRAY_POINTER, params);
             return;
+        case GL_BLOB_CACHE_GET_FUNCTION_ANGLE:
+            *params = reinterpret_cast<void *>(getBlobCacheCallbacks().getFunction);
+            break;
+        case GL_BLOB_CACHE_SET_FUNCTION_ANGLE:
+            *params = reinterpret_cast<void *>(getBlobCacheCallbacks().setFunction);
+            break;
+        case GL_BLOB_CACHE_USER_PARAM_ANGLE:
+            *params = const_cast<void *>(getBlobCacheCallbacks().userParam);
+            break;
         case GL_METAL_RASTERIZATION_RATE_MAP_BINDING_ANGLE:
             *params = privateState().getVariableRasterizationRateMap();
             break;

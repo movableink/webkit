@@ -52,6 +52,8 @@
 #include <wtf/text/Base64.h>
 #include <wtf/text/CString.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WebCore {
 
 using HTMLNames::bodyTag;
@@ -88,7 +90,7 @@ void DOMPatchSupport::patchDocument(const String& markup)
     if (newDocument->isHTMLDocument())
         parser = HTMLDocumentParser::create(static_cast<HTMLDocument&>(*newDocument));
     else
-        parser = XMLDocumentParser::create(*newDocument, nullptr);
+        parser = XMLDocumentParser::create(*newDocument, XMLDocumentParser::IsInFrameView::No);
     parser->insert(markup); // Use insert() so that the parser will not yield.
     parser->finish();
     parser->detach();
@@ -234,7 +236,7 @@ DOMPatchSupport::diff(const Vector<std::unique_ptr<Digest>>& oldList, const Vect
         newMap[newIndex].second = oldIndex;
     }
 
-    typedef HashMap<String, Vector<size_t>> DiffTable;
+    using DiffTable = HashMap<String, Vector<size_t>>;
     DiffTable newTable;
     DiffTable oldTable;
 
@@ -516,3 +518,5 @@ void DOMPatchSupport::dumpMap(const ResultMap& map, const String& name)
 #endif
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

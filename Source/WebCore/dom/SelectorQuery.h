@@ -32,6 +32,7 @@
 #include "SecurityOriginData.h"
 #include "SelectorCompiler.h"
 #include <wtf/HashMap.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/text/AtomStringHash.h>
 
@@ -97,8 +98,8 @@ private:
 };
 
 class SelectorQuery {
+    WTF_MAKE_TZONE_ALLOCATED(SelectorQuery);
     WTF_MAKE_NONCOPYABLE(SelectorQuery);
-    WTF_MAKE_FAST_ALLOCATED;
 
 public:
     explicit SelectorQuery(CSSSelectorList&&);
@@ -116,7 +117,7 @@ private:
 };
 
 class SelectorQueryCache {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(SelectorQueryCache);
 public:
     static SelectorQueryCache& singleton();
 
@@ -125,7 +126,7 @@ public:
 
 private:
     using Key = std::tuple<String, CSSSelectorParserContext, SecurityOriginData>;
-    HashMap<Key, std::unique_ptr<SelectorQuery>> m_entries;
+    UncheckedKeyHashMap<Key, std::unique_ptr<SelectorQuery>> m_entries;
 };
 
 inline bool SelectorQuery::matches(Element& element) const

@@ -35,6 +35,7 @@
 #include <wtf/MonotonicTime.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/RunLoop.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
 #if PLATFORM(COCOA)
@@ -91,24 +92,16 @@ typedef void* PlatformScrollEvent;
 #endif
 
 namespace WebKit {
-class ViewGestureController;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebKit::ViewGestureController> : std::true_type { };
-}
-
-namespace WebKit {
 
 class ViewSnapshot;
 class WebBackForwardListItem;
 class WebPageProxy;
 class WebProcessProxy;
 
-class ViewGestureController : public IPC::MessageReceiver {
-    WTF_MAKE_FAST_ALLOCATED;
+class ViewGestureController final : public IPC::MessageReceiver, public CanMakeCheckedPtr<ViewGestureController> {
+    WTF_MAKE_TZONE_ALLOCATED(ViewGestureController);
     WTF_MAKE_NONCOPYABLE(ViewGestureController);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ViewGestureController);
 public:
 
     static constexpr double defaultMinMagnification { 1 };
@@ -222,6 +215,8 @@ private:
 
     static ViewGestureController* controllerForGesture(WebPageProxyIdentifier, GestureID);
 
+    Ref<WebPageProxy> protectedWebPageProxy() const;
+
     static GestureID takeNextGestureID();
     void willBeginGesture(ViewGestureType);
     void didEndGesture();
@@ -229,7 +224,9 @@ private:
 
     void didStartProvisionalOrSameDocumentLoadForMainFrame();
 
-    class SnapshotRemovalTracker {
+    class SnapshotRemovalTracker : public CanMakeCheckedPtr<SnapshotRemovalTracker> {
+        WTF_MAKE_FAST_ALLOCATED;
+        WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SnapshotRemovalTracker);
     public:
         enum Event : uint8_t {
             VisuallyNonEmptyLayout = 1 << 0,
@@ -329,6 +326,9 @@ private:
         void setShouldIgnorePinnedState(bool ignore) { m_shouldIgnorePinnedState = ignore; }
 
     private:
+        CheckedRef<ViewGestureController> checkedViewGestureController() const;
+        Ref<WebPageProxy> protectedWebPageProxy() const;
+
         bool tryToStartSwipe(PlatformScrollEvent);
         bool scrollEventCanBecomeSwipe(PlatformScrollEvent, SwipeDirection&);
 
@@ -350,8 +350,8 @@ private:
 
         bool m_shouldIgnorePinnedState { false };
 
-        ViewGestureController& m_viewGestureController;
-        WebPageProxy& m_webPageProxy;
+        WeakRef<ViewGestureController> m_viewGestureController;
+        WeakRef<WebPageProxy> m_webPageProxy;
     };
 #endif
 
@@ -359,7 +359,7 @@ private:
     GRefPtr<GtkStyleContext> createStyleContext(const char*);
 #endif
 
-    WebPageProxy& m_webPageProxy;
+    WeakRef<WebPageProxy> m_webPageProxy;
     ViewGestureType m_activeGestureType { ViewGestureType::None };
 
     bool m_swipeGestureEnabled { true };
@@ -468,8 +468,8 @@ private:
         float m_endProgress { 0 };
         bool m_cancelled { false };
 
-        ViewGestureController& m_viewGestureController;
-        WebPageProxy& m_webPageProxy;
+        CheckedRef<ViewGestureController> m_viewGestureController;
+        WeakRef<WebPageProxy> m_webPageProxy;
     };
 
     SwipeProgressTracker m_swipeProgressTracker;

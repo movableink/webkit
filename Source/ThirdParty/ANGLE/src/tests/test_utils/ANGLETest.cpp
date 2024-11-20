@@ -15,7 +15,7 @@
 #include "common/PackedEnums.h"
 #include "common/platform.h"
 #include "gpu_info_util/SystemInfo.h"
-#include "test_utils/runner/TestSuite.h"
+#include "test_expectations/GPUTestConfig.h"
 #include "util/EGLWindow.h"
 #include "util/OSWindow.h"
 #include "util/random_utils.h"
@@ -24,6 +24,10 @@
 #if defined(ANGLE_PLATFORM_WINDOWS)
 #    include <VersionHelpers.h>
 #endif  // defined(ANGLE_PLATFORM_WINDOWS)
+
+#if defined(ANGLE_HAS_RAPIDJSON)
+#    include "test_utils/runner/TestSuite.h"
+#endif  // defined(ANGLE_HAS_RAPIDJSON)
 
 namespace angle
 {
@@ -165,8 +169,16 @@ const char *GetColorName(GLColorRGB color)
 // Always re-use displays when using --bot-mode in the test runner.
 bool gReuseDisplays = false;
 
-bool ShouldAlwaysForceNewDisplay()
+bool ShouldAlwaysForceNewDisplay(const PlatformParameters &params)
 {
+    // When running WebGPU tests on linux always force a new display. The underlying vulkan swap
+    // chain appears to fail to get a new image after swapping when rapidly creating new swap chains
+    // for an existing window.
+    if (params.isWebGPU() && IsLinux())
+    {
+        return true;
+    }
+
     if (gReuseDisplays)
         return false;
 
@@ -469,7 +481,7 @@ ANGLETestBase::ANGLETestBase(const PlatformParameters &params)
       m2DTexturedQuadProgram(0),
       m3DTexturedQuadProgram(0),
       mDeferContextInit(false),
-      mAlwaysForceNewDisplay(ShouldAlwaysForceNewDisplay()),
+      mAlwaysForceNewDisplay(ShouldAlwaysForceNewDisplay(params)),
       mForceNewDisplay(mAlwaysForceNewDisplay),
       mSetUpCalled(false),
       mTearDownCalled(false),
@@ -566,8 +578,7 @@ void ANGLETestBase::initOSWindow()
         case GLESDriverType::ZinkEGL:
         {
             mFixture->eglWindow =
-                EGLWindow::New(mCurrentParams->clientType, mCurrentParams->majorVersion,
-                               mCurrentParams->minorVersion, mCurrentParams->profileMask);
+                EGLWindow::New(mCurrentParams->majorVersion, mCurrentParams->minorVersion);
             break;
         }
 
@@ -641,6 +652,9 @@ void ANGLETestBase::ANGLETestSetUp()
     fullTestNameStr << testInfo->test_suite_name() << "." << testInfo->name();
     std::string fullTestName = fullTestNameStr.str();
 
+    // TODO(b/279980674): TestSuite depends on rapidjson which we don't have in aosp builds,
+    // for now disable both TestSuite and expectations.
+#if defined(ANGLE_HAS_RAPIDJSON)
     TestSuite *testSuite = TestSuite::GetInstance();
     int32_t testExpectation =
         testSuite->getTestExpectationWithConfigAndUpdateTimeout(testConfig, fullTestName);
@@ -649,6 +663,7 @@ void ANGLETestBase::ANGLETestSetUp()
     {
         GTEST_SKIP() << "Test skipped on this config";
     }
+#endif
 
     if (IsWindows())
     {

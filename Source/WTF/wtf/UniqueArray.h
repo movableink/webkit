@@ -29,6 +29,8 @@
 #include <wtf/FastMalloc.h>
 #include <wtf/Vector.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WTF {
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(UniqueArray);
@@ -91,7 +93,7 @@ struct UniqueArrayMaker<false, T> {
         struct Deleter {
             void operator()(T* pointer)
             {
-                delete [] bitwise_cast<UniqueArrayElement*>(pointer);
+                delete [] std::bit_cast<UniqueArrayElement*>(pointer);
             };
         };
 
@@ -105,7 +107,7 @@ struct UniqueArrayMaker<false, T> {
 
     static ResultType make(size_t size)
     {
-        return ResultType(bitwise_cast<T*>(new UniqueArrayElement[size]()));
+        return ResultType(std::bit_cast<T*>(new UniqueArrayElement[size]()));
     }
 };
 
@@ -123,3 +125,5 @@ UniqueArray<T> makeUniqueArray(size_t size)
 
 using WTF::UniqueArray;
 using WTF::makeUniqueArray;
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

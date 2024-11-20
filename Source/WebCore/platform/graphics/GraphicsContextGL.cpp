@@ -41,6 +41,8 @@
 #include "PixelBuffer.h"
 #include "VideoFrame.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WebCore {
 
 static GraphicsContextGL::DataFormat getDataFormat(GCGLenum destinationFormat, GCGLenum destinationType)
@@ -577,6 +579,13 @@ void GraphicsContextGL::framebufferDiscard(GCGLenum, std::span<const GCGLenum>)
     notImplemented();
 }
 
+#if ENABLE(WEBXR)
+void GraphicsContextGL::framebufferResolveRenderbuffer(GCGLenum, GCGLenum, GCGLenum, PlatformGLObject)
+{
+    notImplemented();
+}
+#endif
+
 void GraphicsContextGL::setDrawingBufferColorSpace(const DestinationColorSpace&)
 {
 }
@@ -625,11 +634,13 @@ RefPtr<Image> GraphicsContextGL::videoFrameToImage(VideoFrame& frame)
     auto imageBuffer = ImageBuffer::create(size, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
     if (!imageBuffer)
         return { };
-    imageBuffer->context().paintVideoFrame(frame, { { }, size }, true);
+    imageBuffer->context().drawVideoFrame(frame, { { }, size }, ImageOrientation::Orientation::None, true);
     return BitmapImage::create(ImageBuffer::sinkIntoNativeImage(WTFMove(imageBuffer)));
 }
 #endif
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEBGL)

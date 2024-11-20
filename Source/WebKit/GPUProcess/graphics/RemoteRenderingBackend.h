@@ -37,6 +37,7 @@
 #include "RemoteImageBufferSetIdentifier.h"
 #include "RemoteResourceCache.h"
 #include "RemoteSerializedImageBufferIdentifier.h"
+#include "RemoteSharedResourceCache.h"
 #include "RenderingBackendIdentifier.h"
 #include "RenderingUpdateID.h"
 #include "ScopedActiveMessageReceiveQueue.h"
@@ -46,7 +47,6 @@
 #include "StreamMessageReceiver.h"
 #include "StreamServerConnection.h"
 #include <WebCore/ImageBufferPixelFormat.h>
-#include <WebCore/MediaPlayerIdentifier.h>
 #include <WebCore/ProcessIdentity.h>
 #include <WebCore/RenderingResourceIdentifier.h>
 #include <wtf/HashMap.h>
@@ -74,15 +74,14 @@ struct FaceDetectorOptions;
 
 namespace WebKit {
 
-
 class GPUConnectionToWebProcess;
 class RemoteDisplayListRecorder;
 class RemoteImageBuffer;
 class RemoteImageBufferSet;
-class RemoteSharedResourceCache;
 struct BufferIdentifierSet;
 struct ImageBufferSetPrepareBufferForDisplayInputData;
 struct ImageBufferSetPrepareBufferForDisplayOutputData;
+struct SharedPreferencesForWebProcess;
 enum class SwapBuffersDisplayRequirement : uint8_t;
 
 namespace ShapeDetection {
@@ -95,8 +94,11 @@ public:
     virtual ~RemoteRenderingBackend();
     void stopListeningForIPC();
 
+    std::optional<SharedPreferencesForWebProcess> sharedPreferencesForWebProcess() const;
+
     RemoteResourceCache& remoteResourceCache() { return m_remoteResourceCache; }
     RemoteSharedResourceCache& sharedResourceCache() { return m_sharedResourceCache; }
+    Ref<RemoteSharedResourceCache> protectedSharedResourceCache() { return m_sharedResourceCache; }
 
     void didReceiveStreamMessage(IPC::StreamServerConnection&, IPC::Decoder&) final;
 
@@ -105,13 +107,13 @@ public:
 
     IPC::StreamServerConnection& streamConnection() const { return m_streamConnection.get(); }
 
-
     GPUConnectionToWebProcess& gpuConnectionToWebProcess() { return m_gpuConnectionToWebProcess.get(); }
 
     void setSharedMemoryForGetPixelBuffer(RefPtr<WebCore::SharedMemory> memory) { m_getPixelBufferSharedMemory = WTFMove(memory); }
     RefPtr<WebCore::SharedMemory> sharedMemoryForGetPixelBuffer() const { return m_getPixelBufferSharedMemory; }
 
     IPC::StreamConnectionWorkQueue& workQueue() const { return m_workQueue; }
+    Ref<IPC::StreamConnectionWorkQueue> protectedWorkQueue() const { return m_workQueue; }
 
     RefPtr<WebCore::ImageBuffer> imageBuffer(WebCore::RenderingResourceIdentifier);
     RefPtr<WebCore::ImageBuffer> takeImageBuffer(WebCore::RenderingResourceIdentifier);
@@ -143,7 +145,7 @@ private:
     void cacheGradient(Ref<WebCore::Gradient>&&);
     void cacheFilter(Ref<WebCore::Filter>&&);
     void cacheFont(const WebCore::Font::Attributes&, WebCore::FontPlatformDataAttributes, std::optional<WebCore::RenderingResourceIdentifier>);
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) || USE(SKIA)
     void cacheFontCustomPlatformData(WebCore::FontCustomPlatformSerializedData&&);
 #else
     void cacheFontCustomPlatformData(Ref<WebCore::FontCustomPlatformData>&&);
@@ -180,9 +182,13 @@ private:
     void createDisplayListRecorder(RefPtr<WebCore::ImageBuffer>, WebCore::RenderingResourceIdentifier);
     void releaseDisplayListRecorder(WebCore::RenderingResourceIdentifier);
 
-#if PLATFORM(COCOA)
+    Ref<ShapeDetection::ObjectHeap> protectedShapeDetectionObjectHeap() const;
+
+#if PLATFORM(COCOA) || USE(SKIA)
     bool shouldUseLockdownFontParser() const;
 #endif
+
+    void getImageBufferResourceLimitsForTesting(CompletionHandler<void(WebCore::ImageBufferResourceLimits)>&&);
 
     Ref<IPC::StreamConnectionWorkQueue> m_workQueue;
     Ref<IPC::StreamServerConnection> m_streamConnection;

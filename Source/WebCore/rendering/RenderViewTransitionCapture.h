@@ -30,7 +30,7 @@
 namespace WebCore {
 
 class RenderViewTransitionCapture final : public RenderReplaced {
-    WTF_MAKE_ISO_ALLOCATED(RenderViewTransitionCapture);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderViewTransitionCapture);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderViewTransitionCapture);
 public:
     RenderViewTransitionCapture(Type, Document&, RenderStyle&&);
@@ -49,10 +49,16 @@ public:
     // Rect covered by the captured contents, in RenderLayer coordinates of the captured renderer
     LayoutRect captureOverflowRect() const { return m_overflowRect; }
 
+    LayoutRect captureLocalOverflowRect() const { return m_localOverflowRect; }
+
     // Inset of the scaled capture from the visualOverflowRect()
     LayoutPoint captureContentInset() const;
 
     bool canUseExistingLayers() const { return !hasNonVisibleOverflow(); }
+
+    bool paintsContent() const final;
+
+    RefPtr<ImageBuffer> image() { return m_oldImage; }
 
 private:
     ASCIILiteral renderName() const override { return "RenderViewTransitionCapture"_s; }

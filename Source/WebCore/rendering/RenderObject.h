@@ -40,7 +40,7 @@
 #include "StyleImage.h"
 #include "TextAffinity.h"
 #include <wtf/CheckedPtr.h>
-#include <wtf/IsoMalloc.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WTF {
 class TextStream;
@@ -101,8 +101,8 @@ enum class RepaintOutlineBounds : bool { No, Yes };
 enum class RequiresFullRepaint : bool { No, Yes };
 
 // Base class for all rendering tree objects.
-class RenderObject : public CachedImageClient, public CanMakeCheckedPtr<RenderObject> {
-    WTF_MAKE_COMPACT_ISO_ALLOCATED(RenderObject);
+class RenderObject : public CachedImageClient {
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderObject);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderObject);
     friend class RenderBlock;
     friend class RenderBlockFlow;
@@ -167,6 +167,7 @@ public:
         Video,
         View,
         ViewTransitionCapture,
+        ViewTransitionRoot,
 #if ENABLE(MATHML)
         MathMLBlock,
         MathMLFenced,
@@ -388,7 +389,7 @@ public:
 
     WEBCORE_EXPORT RenderBox& enclosingBox() const;
     RenderBoxModelObject& enclosingBoxModelObject() const;
-    RenderBox* enclosingScrollableContainerForSnapping() const;
+    RenderBox* enclosingScrollableContainer() const;
 
     // Return our enclosing flow thread if we are contained inside one. Follows the containing block chain.
     RenderFragmentedFlow* enclosingFragmentedFlow() const;
@@ -460,9 +461,11 @@ public:
 #endif
     bool isRenderFragmentContainer() const { return isRenderBlockFlow() && m_typeSpecificFlags.blockFlowFlags().contains(BlockFlowFlag::IsFragmentContainer); }
     bool isRenderViewTransitionContainer() const { return isRenderBlockFlow() && m_typeSpecificFlags.blockFlowFlags().contains(BlockFlowFlag::IsViewTransitionContainer); }
+    bool isRenderViewTransitionRoot() const { return type() == Type::ViewTransitionRoot; }
     bool isRenderReplica() const { return type() == Type::Replica; }
 
     bool isRenderSlider() const { return type() == Type::Slider; }
+    bool isRenderSliderContainer() const { return type() == Type::SliderContainer; }
     bool isRenderTable() const;
     bool isRenderTableCell() const { return type() == Type::TableCell; }
     bool isRenderTableCol() const { return type() == Type::TableCol; }
@@ -473,6 +476,7 @@ public:
     bool isRenderTextControlSingleLine() const { return isRenderTextControl() && !isRenderTextControlMultiLine(); }
     bool isRenderSearchField() const { return type() == Type::SearchField; }
     bool isRenderTextControlInnerBlock() const { return type() == Type::TextControlInnerBlock; }
+    bool isRenderTextControlInnerContainer() const { return type() == Type::TextControlInnerContainer; }
     bool isRenderVideo() const { return type() == Type::Video; }
     bool isRenderViewTransitionCapture() const { return isRenderReplaced() && m_typeSpecificFlags.replacedFlags().contains(ReplacedFlag::IsViewTransitionCapture); }
     bool isRenderWidget() const { return isRenderReplaced() && m_typeSpecificFlags.replacedFlags().contains(ReplacedFlag::IsWidget); }
@@ -565,6 +569,7 @@ public:
     bool isRenderSVGPath() const { return type() == Type::SVGPath; }
     bool isRenderSVGShape() const { return isRenderSVGModelObject() && m_typeSpecificFlags.svgFlags().contains(SVGModelObjectFlag::IsShape); }
     bool isLegacyRenderSVGShape() const { return isLegacyRenderSVGModelObject() && m_typeSpecificFlags.svgFlags().contains(SVGModelObjectFlag::IsShape); }
+    bool isLegacyRenderSVGRect() const { return type() == Type::LegacySVGRect; }
     bool isRenderSVGText() const { return type() == Type::SVGText; }
     bool isRenderSVGTextPath() const { return type() == Type::SVGTextPath; }
     bool isRenderSVGTSpan() const { return type() == Type::SVGTSpan; }
@@ -599,7 +604,7 @@ public:
     bool isRenderOrLegacyRenderSVGModelObject() const { return isRenderSVGModelObject() || isLegacyRenderSVGModelObject(); }
     bool isRenderOrLegacyRenderSVGResourceFilterPrimitive() const { return isRenderSVGResourceFilterPrimitive() || isLegacyRenderSVGResourceFilterPrimitive(); }
     bool isSVGLayerAwareRenderer() const { return isRenderSVGRoot() || isRenderSVGModelObject() || isRenderSVGText() || isRenderSVGInline() || isRenderSVGForeignObject(); }
-    bool isSVGRenderer() const { return isRenderOrLegacyRenderSVGRoot() || isLegacyRenderSVGModelObject() || isRenderSVGModelObject() || isRenderSVGBlock() || isRenderSVGInline(); }
+    bool isSVGRenderer() const { return isRenderOrLegacyRenderSVGRoot() || isRenderOrLegacyRenderSVGModelObject() || isRenderSVGBlock() || isRenderSVGInline(); }
 
     // FIXME: Those belong into a SVG specific base-class for all renderers (see above)
     // Unfortunately we don't have such a class yet, because it's not possible for all renderers
@@ -885,6 +890,8 @@ public:
 
     const RenderStyle& style() const;
     const RenderStyle& firstLineStyle() const;
+    WritingMode writingMode() const { return style().writingMode(); }
+    // writingMode().isHorizontal() is cached by isHorizontalWritingMode() above.
 
     // Anonymous blocks that are part of of a continuation chain will return their inline continuation's outline style instead.
     // This is typically only relevant when repainting.
@@ -1184,7 +1191,8 @@ private:
 #if PLATFORM(IOS_FAMILY)
     struct SelectionGeometries {
         Vector<SelectionGeometry> geometries;
-        int maxLineNumber;
+        int maxLineNumber { 0 };
+        bool hasAnyRightToLeftText { false };
     };
     WEBCORE_EXPORT static SelectionGeometries collectSelectionGeometriesInternal(const SimpleRange&);
 #endif
@@ -1299,7 +1307,7 @@ private:
 
     // FIXME: This should be RenderElementRareData.
     class RenderObjectRareData {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_TZONE_ALLOCATED(RenderObjectRareData);
     public:
         RenderObjectRareData();
         ~RenderObjectRareData();
@@ -1320,7 +1328,7 @@ private:
     RenderObjectRareData& ensureRareData();
     void removeRareData();
     
-    using RareDataMap = HashMap<SingleThreadWeakRef<const RenderObject>, std::unique_ptr<RenderObjectRareData>>;
+    using RareDataMap = UncheckedKeyHashMap<SingleThreadWeakRef<const RenderObject>, std::unique_ptr<RenderObjectRareData>>;
 
     static RareDataMap& rareDataMap();
 
@@ -1528,7 +1536,7 @@ inline RenderObject::SetLayoutNeededForbiddenScope::SetLayoutNeededForbiddenScop
 
 inline void Node::setRenderer(RenderObject* renderer)
 {
-    m_rendererWithStyleFlags.setPointer(renderer);
+    m_renderer = renderer;
 
     if (UNLIKELY(InspectorInstrumentationPublic::hasFrontends()))
         notifyInspectorOfRendererChange();
@@ -1567,6 +1575,9 @@ inline bool RenderObject::isRenderMathMLRow() const
     case Type::MathMLPadded:
     case Type::MathMLRoot:
     case Type::MathMLRow:
+    case Type::MathMLFraction:
+    case Type::MathMLScripts:
+    case Type::MathMLUnderOver:
         return true;
     default:
         break;
@@ -1598,6 +1609,7 @@ inline bool RenderObject::usesBoundaryCaching() const
 }
 
 WTF::TextStream& operator<<(WTF::TextStream&, const RenderObject&);
+WTF::TextStream& operator<<(WTF::TextStream&, const RenderObject::RepaintRects&);
 
 #if ENABLE(TREE_DEBUGGING)
 void printPaintOrderTreeForLiveDocuments();

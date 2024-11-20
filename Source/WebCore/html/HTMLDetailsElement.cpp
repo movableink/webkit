@@ -39,12 +39,12 @@
 #include "Text.h"
 #include "ToggleEvent.h"
 #include "TypedElementDescendantIteratorInlines.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLDetailsElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLDetailsElement);
 
 using namespace HTMLNames;
 
@@ -94,6 +94,8 @@ HTMLDetailsElement::HTMLDetailsElement(const QualifiedName& tagName, Document& d
 {
     ASSERT(hasTagName(detailsTag));
 }
+
+HTMLDetailsElement::~HTMLDetailsElement() = default;
 
 RenderPtr<RenderElement> HTMLDetailsElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
@@ -188,8 +190,9 @@ void HTMLDetailsElement::didFinishInsertingNode()
 Vector<RefPtr<HTMLDetailsElement>> HTMLDetailsElement::otherElementsInNameGroup()
 {
     Vector<RefPtr<HTMLDetailsElement>> otherElementsInNameGroup;
+    const auto& detailElementName = attributeWithoutSynchronization(nameAttr);
     for (auto& element : descendantsOfType<HTMLDetailsElement>(rootNode())) {
-        if (&element != this && element.attributeWithoutSynchronization(nameAttr) == attributeWithoutSynchronization(nameAttr))
+        if (&element != this && element.attributeWithoutSynchronization(nameAttr) == detailElementName)
             otherElementsInNameGroup.append(&element);
     }
     return otherElementsInNameGroup;

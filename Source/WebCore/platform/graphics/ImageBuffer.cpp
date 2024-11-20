@@ -38,7 +38,9 @@
 #include "MIMETypeRegistry.h"
 #include "ProcessCapabilities.h"
 #include "TransparencyLayerContextSwitcher.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/Base64.h>
+#include <wtf/text/MakeString.h>
 
 #if USE(CG)
 #include "ImageBufferUtilitiesCG.h"
@@ -65,6 +67,9 @@
 #endif
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ImageBuffer);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SerializedImageBuffer);
 
 static const float MaxClampedLength = 4096;
 static const float MaxClampedArea = MaxClampedLength * MaxClampedLength;
@@ -139,6 +144,7 @@ RefPtr<ImageBuffer> SerializedImageBuffer::sinkIntoImageBuffer(std::unique_ptr<S
 // The default serialization of an ImageBuffer just assumes that we can
 // pass it as-is, as long as this is the only reference.
 class DefaultSerializedImageBuffer : public SerializedImageBuffer {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(DefaultSerializedImageBuffer);
 public:
     DefaultSerializedImageBuffer(ImageBuffer* image)
         : m_buffer(image)
@@ -208,15 +214,19 @@ FloatRect ImageBuffer::clampedRect(const FloatRect& rect)
     return FloatRect(rect.location(), clampedSize(rect.size()));
 }
 
-static RefPtr<ImageBuffer> copyImageBuffer(Ref<ImageBuffer> source, PreserveResolution preserveResolution)
+static RefPtr<ImageBuffer> copyImageBuffer(Ref<ImageBuffer> source, PreserveResolution preserveResolution, std::optional<RenderingMode> renderingMode = std::nullopt)
 {
     if (source->resolutionScale() == 1 || preserveResolution == PreserveResolution::Yes) {
-        if (source->hasOneRef())
+        if (source->hasOneRef()
+#if USE(SKIA)
+            && (!renderingMode || *renderingMode == source->renderingMode())
+#endif
+        )
             return source;
     }
     auto copySize = source->logicalSize();
     auto copyScale = preserveResolution == PreserveResolution::Yes ? source->resolutionScale() : 1.f;
-    auto copyBuffer = source->context().createImageBuffer(copySize, copyScale, source->colorSpace());
+    auto copyBuffer = source->context().createImageBuffer(copySize, copyScale, source->colorSpace(), renderingMode);
     if (!copyBuffer)
         return nullptr;
     if (source->hasOneRef())
@@ -324,6 +334,16 @@ RefPtr<ImageBuffer> ImageBuffer::sinkIntoBufferForDifferentThread(RefPtr<ImageBu
     return buffer->sinkIntoBufferForDifferentThread();
 }
 
+#if USE(SKIA)
+RefPtr<ImageBuffer> ImageBuffer::sinkIntoImageBufferForCrossThreadTransfer(RefPtr<ImageBuffer> buffer)
+{
+    if (!buffer || buffer->renderingMode() != RenderingMode::Accelerated)
+        return buffer;
+    // FIXME: Try avoiding GPU-to-CPU data transfer by creating accelerated clone that would e.g. leverage underlying GL texture.
+    return copyImageBuffer(const_cast<ImageBuffer&>(*buffer), PreserveResolution::Yes, RenderingMode::Unaccelerated);
+}
+#endif
+
 RefPtr<ImageBuffer> ImageBuffer::sinkIntoBufferForDifferentThread()
 {
     ASSERT(hasOneRef());
@@ -396,6 +416,20 @@ RefPtr<cairo_surface_t> ImageBuffer::createCairoSurface()
     });
 
     return surface;
+}
+#endif
+
+#if USE(SKIA)
+void ImageBuffer::finishAcceleratedRenderingAndCreateFence()
+{
+    if (auto* backend = ensureBackend())
+        backend->finishAcceleratedRenderingAndCreateFence();
+}
+
+void ImageBuffer::waitForAcceleratedRenderingFenceCompletion()
+{
+    if (auto* backend = ensureBackend())
+        backend->waitForAcceleratedRenderingFenceCompletion();
 }
 #endif
 

@@ -36,6 +36,7 @@
 #include "IntRect.h"
 #include "NotImplemented.h"
 #include "PlatformDisplay.h"
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 #include <skia/core/SkColorFilter.h>
 #include <skia/core/SkImage.h>
 #include <skia/core/SkPath.h>
@@ -45,15 +46,14 @@
 #include <skia/core/SkPoint3.h>
 #include <skia/core/SkRRect.h>
 #include <skia/core/SkRegion.h>
-IGNORE_CLANG_WARNINGS_BEGIN("cast-align")
 #include <skia/core/SkSurface.h>
-IGNORE_CLANG_WARNINGS_END
 #include <skia/core/SkTileMode.h>
 #include <skia/effects/SkImageFilters.h>
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 #include <wtf/MathExtras.h>
 
 #if USE(THEME_ADWAITA)
-#include "ThemeAdwaita.h"
+#include "Adwaita.h"
 #endif
 
 namespace WebCore {
@@ -99,7 +99,7 @@ bool GraphicsContextSkia::makeGLContextCurrentIfNeeded() const
     if (m_renderingMode == RenderingMode::Unaccelerated || m_renderingPurpose != RenderingPurpose::Canvas)
         return true;
 
-    return PlatformDisplay::sharedDisplayForCompositing().skiaGLContext()->makeContextCurrent();
+    return PlatformDisplay::sharedDisplay().skiaGLContext()->makeContextCurrent();
 }
 
 void GraphicsContextSkia::save(GraphicsContextState::Purpose purpose)
@@ -285,16 +285,17 @@ void GraphicsContextSkia::drawNativeImageInternal(NativeImage& nativeImage, cons
     paint.setAlphaf(alpha());
     paint.setBlendMode(toSkiaBlendMode(options.compositeOperator(), options.blendMode()));
     bool inExtraTransparencyLayer = false;
+    auto clampingConstraint = options.strictImageClamping() == StrictImageClamping::Yes ? SkCanvas::kStrict_SrcRectConstraint : SkCanvas::kFast_SrcRectConstraint;
     if (hasDropShadow()) {
         if (image->isTextureBacked() && renderingMode() == RenderingMode::Unaccelerated) {
             // When drawing GPU-backed image on CPU-backed canvas with filter, we need to convert image to CPU-backed one.
             image = image->makeRasterImage();
         }
         inExtraTransparencyLayer = drawOutsetShadow(paint, [&](const SkPaint& paint) {
-            m_canvas.drawImageRect(image, normalizedSrcRect, normalizedDestRect, toSkSamplingOptions(m_state.imageInterpolationQuality()), &paint, { });
+            m_canvas.drawImageRect(image, normalizedSrcRect, normalizedDestRect, toSkSamplingOptions(m_state.imageInterpolationQuality()), &paint, clampingConstraint);
         });
     }
-    m_canvas.drawImageRect(image, normalizedSrcRect, normalizedDestRect, toSkSamplingOptions(m_state.imageInterpolationQuality()), &paint, { });
+    m_canvas.drawImageRect(image, normalizedSrcRect, normalizedDestRect, toSkSamplingOptions(m_state.imageInterpolationQuality()), &paint, clampingConstraint);
     if (inExtraTransparencyLayer)
         endTransparencyLayer();
 
@@ -541,7 +542,7 @@ void GraphicsContextSkia::drawSkiaRect(const SkRect& boundaries, SkPaint& paint)
         endTransparencyLayer();
 }
 
-void GraphicsContextSkia::fillRect(const FloatRect& boundaries)
+void GraphicsContextSkia::fillRect(const FloatRect& boundaries, RequiresClipToRect)
 {
     if (!makeGLContextCurrentIfNeeded())
         return;
@@ -561,7 +562,7 @@ void GraphicsContextSkia::fillRect(const FloatRect& boundaries, const Color& fil
     drawSkiaRect(boundaries, paint);
 }
 
-void GraphicsContextSkia::fillRect(const FloatRect& boundaries, Gradient& gradient, const AffineTransform& gradientSpaceTransform)
+void GraphicsContextSkia::fillRect(const FloatRect& boundaries, Gradient& gradient, const AffineTransform& gradientSpaceTransform, RequiresClipToRect)
 {
     if (!makeGLContextCurrentIfNeeded())
         return;
@@ -609,7 +610,7 @@ void GraphicsContextSkia::clipToImageBuffer(ImageBuffer& buffer, const FloatRect
 void GraphicsContextSkia::drawFocusRing(const Path& path, float, const Color& color)
 {
 #if USE(THEME_ADWAITA)
-    ThemeAdwaita::paintFocus(*this, path, color);
+    Adwaita::paintFocus(*this, path, color);
 #else
     notImplemented();
     UNUSED_PARAM(path);
@@ -620,7 +621,7 @@ void GraphicsContextSkia::drawFocusRing(const Path& path, float, const Color& co
 void GraphicsContextSkia::drawFocusRing(const Vector<FloatRect>& rects, float, float, const Color& color)
 {
 #if USE(THEME_ADWAITA)
-    ThemeAdwaita::paintFocus(*this, rects, color);
+    Adwaita::paintFocus(*this, rects, color);
 #else
     notImplemented();
     UNUSED_PARAM(rects);

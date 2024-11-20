@@ -29,17 +29,20 @@
 #include <WebCore/SharedBuffer.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/FastMalloc.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/glib/GRefPtr.h>
 
 #if USE(CAIRO)
 #include <WebCore/RefPtrCairo.h>
 #elif USE(SKIA)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // Skia port
 #include <skia/core/SkCanvas.h>
 #include <skia/core/SkDocument.h>
 #include <skia/core/SkPicture.h>
 #include <skia/core/SkPictureRecorder.h>
 #include <skia/core/SkStream.h>
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 #endif
 
 typedef struct _GtkPrintSettings GtkPrintSettings;
@@ -54,7 +57,7 @@ class ResourceError;
 namespace WebKit {
 
 class WebPrintOperationGtk {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(WebPrintOperationGtk);
 public:
     explicit WebPrintOperationGtk(const PrintInfo&);
     ~WebPrintOperationGtk();

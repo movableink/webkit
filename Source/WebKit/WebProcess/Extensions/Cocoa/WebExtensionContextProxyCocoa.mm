@@ -43,6 +43,7 @@
 #import <wtf/HashMap.h>
 #import <wtf/NeverDestroyed.h>
 #import <wtf/ObjectIdentifier.h>
+#import <wtf/text/MakeString.h>
 
 namespace WebKit {
 
@@ -178,12 +179,12 @@ WebCore::DOMWrapperWorld& WebExtensionContextProxy::toDOMWrapperWorld(WebExtensi
 #if ENABLE(INSPECTOR_EXTENSIONS)
     case WebExtensionContentWorldType::Inspector:
 #endif
-        return mainWorld();
+        return mainWorldSingleton();
     case WebExtensionContentWorldType::ContentScript:
         return contentScriptWorld();
     case WebExtensionContentWorldType::Native:
         ASSERT_NOT_REACHED();
-        return mainWorld();
+        return mainWorldSingleton();
     }
 }
 

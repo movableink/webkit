@@ -34,6 +34,9 @@ OBJC_CLASS WKDisplayLinkHandler;
 namespace WebKit {
 
 class RemoteLayerTreeDrawingAreaProxyIOS final : public RemoteLayerTreeDrawingAreaProxy {
+    WTF_MAKE_TZONE_ALLOCATED(RemoteLayerTreeDrawingAreaProxyIOS);
+    WTF_MAKE_NONCOPYABLE(RemoteLayerTreeDrawingAreaProxyIOS);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RemoteLayerTreeDrawingAreaProxyIOS);
 public:
     RemoteLayerTreeDrawingAreaProxyIOS(WebPageProxy&, WebProcessProxy&);
     virtual ~RemoteLayerTreeDrawingAreaProxyIOS();
@@ -48,7 +51,7 @@ private:
 
     std::unique_ptr<RemoteScrollingCoordinatorProxy> createScrollingCoordinatorProxy() const override;
 
-    void setPreferredFramesPerSecond(WebCore::FramesPerSecond) override;
+    void setPreferredFramesPerSecond(IPC::Connection&, WebCore::FramesPerSecond) override;
     void scheduleDisplayRefreshCallbacks() override;
     void pauseDisplayRefreshCallbacks() override;
 

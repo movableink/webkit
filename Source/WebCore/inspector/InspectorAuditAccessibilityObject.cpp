@@ -178,8 +178,8 @@ ExceptionOr<std::optional<InspectorAuditAccessibilityObject::ComputedProperties>
         computedProperties.headingLevel = axObject->headingLevel();
         computedProperties.hidden = axObject->isHidden();
         computedProperties.hierarchicalLevel = axObject->hierarchicalLevel();
-        computedProperties.ignored = axObject->accessibilityIsIgnored();
-        computedProperties.ignoredByDefault = axObject->accessibilityIsIgnoredByDefault();
+        computedProperties.ignored = axObject->isIgnored();
+        computedProperties.ignoredByDefault = axObject->isIgnoredByDefault();
 
         String invalidValue = axObject->invalidStatus();
         if (invalidValue == "false"_s)
@@ -276,8 +276,10 @@ ExceptionOr<RefPtr<Node>> InspectorAuditAccessibilityObject::getMouseEventNode(N
 {
     ERROR_IF_NO_ACTIVE_AUDIT();
 
-    if (auto* accessibilityNodeObject = dynamicDowncast<AccessibilityNodeObject>(accessibilityObjectForNode(node)))
-        return accessibilityNodeObject->mouseButtonListener(MouseButtonListenerResultFilter::IncludeBodyElement);
+    if (auto* axObject = accessibilityObjectForNode(node)) {
+        if (auto* clickableObject = axObject->clickableSelfOrAncestor(ClickHandlerFilter::IncludeBody))
+            return clickableObject->node();
+    }
 
     return nullptr;
 }

@@ -32,10 +32,12 @@
 #import "RemoteScrollingCoordinatorProxyIOS.h"
 #import "WebPageProxy.h"
 #import "WebPreferences.h"
+#import "WebProcessProxy.h"
 #import <QuartzCore/CADisplayLink.h>
 #import <WebCore/LocalFrameView.h>
 #import <WebCore/ScrollView.h>
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
+#import <wtf/TZoneMallocInlines.h>
 
 constexpr WebCore::FramesPerSecond DisplayLinkFramesPerSecond = 60;
 
@@ -181,6 +183,8 @@ namespace WebKit {
 using namespace IPC;
 using namespace WebCore;
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteLayerTreeDrawingAreaProxyIOS);
+
 RemoteLayerTreeDrawingAreaProxyIOS::RemoteLayerTreeDrawingAreaProxyIOS(WebPageProxy& pageProxy, WebProcessProxy& webProcessProxy)
     : RemoteLayerTreeDrawingAreaProxy(pageProxy, webProcessProxy)
 {
@@ -208,8 +212,11 @@ WKDisplayLinkHandler *RemoteLayerTreeDrawingAreaProxyIOS::displayLinkHandler()
     return m_displayLinkHandler.get();
 }
 
-void RemoteLayerTreeDrawingAreaProxyIOS::setPreferredFramesPerSecond(FramesPerSecond preferredFramesPerSecond)
+void RemoteLayerTreeDrawingAreaProxyIOS::setPreferredFramesPerSecond(IPC::Connection& connection, FramesPerSecond preferredFramesPerSecond)
 {
+    if (!m_webProcessProxy->hasConnection(connection))
+        return;
+
     [displayLinkHandler() setPreferredFramesPerSecond:preferredFramesPerSecond];
 }
 

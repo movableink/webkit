@@ -31,6 +31,9 @@ messages -> WebPageTesting NotRefCounted {
 #endif
 
     ClearWheelEventTestMonitor()
-
-    FlushDeferredDidReceiveMouseEvent() -> () Synchronous
+    ResetStateBetweenTests()
+    SetTopContentInset(float contentInset) -> ()
+    ClearCachedBackForwardListCounts() -> ()
+    SetTracksRepaints(bool trackRepaints) -> ()
+    DisplayAndTrackRepaints() -> ()
 }

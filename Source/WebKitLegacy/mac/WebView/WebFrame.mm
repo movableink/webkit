@@ -111,7 +111,6 @@
 #import <WebCore/RenderWidget.h>
 #import <WebCore/RenderedDocumentMarker.h>
 #import <WebCore/ReportingScope.h>
-#import <WebCore/RuntimeApplicationChecks.h>
 #import <WebCore/ScriptController.h>
 #import <WebCore/SecurityOrigin.h>
 #import <WebCore/SmartReplace.h>
@@ -122,6 +121,7 @@
 #import <WebCore/markup.h>
 #import <pal/spi/cg/CoreGraphicsSPI.h>
 #import <pal/text/TextEncoding.h>
+#import <wtf/RuntimeApplicationChecks.h>
 #import <wtf/cocoa/VectorCocoa.h>
 
 #if PLATFORM(IOS_FAMILY)
@@ -309,9 +309,14 @@ WebView *getWebView(WebFrame *webFrame)
     WebView *webView = kit(&page);
 
     RetainPtr<WebFrame> frame = adoptNS([[self alloc] _initWithWebFrameView:frameView webView:webView]);
-    auto coreFrame = WebCore::LocalFrame::createSubframe(page, [frame] (auto&) {
-        return makeUniqueRef<WebFrameLoaderClient>(frame.get());
-    }, WebCore::FrameIdentifier::generate(), ownerElement);
+
+    auto effectiveSandboxFlags = ownerElement.sandboxFlags();
+    if (RefPtr parentLocalFrame = ownerElement.document().frame())
+        effectiveSandboxFlags.add(parentLocalFrame->effectiveSandboxFlags());
+
+    auto coreFrame = WebCore::LocalFrame::createSubframe(page, [frame] (auto&, auto& frameLoader) {
+        return makeUniqueRefWithoutRefCountedCheck<WebFrameLoaderClient>(frameLoader, frame.get());
+    }, WebCore::FrameIdentifier::generate(), effectiveSandboxFlags, ownerElement);
     frame->_private->coreFrame = coreFrame.ptr();
 
     coreFrame.get().tree().setSpecifiedName(name);
@@ -1408,7 +1413,7 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
     WebCore::LocalFrame *frame = core(self);
     if (!frame || !frame->view())
         return 0;
-    return frame->view()->layoutContext().layoutCount();
+    return frame->view()->layoutUpdateCount();
 }
 
 - (BOOL)isTelephoneNumberParsingAllowed
@@ -2201,7 +2206,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 - (void)_clearOpener
 {
     if (auto coreFrame = _private->coreFrame)
-        coreFrame->setOpener(nullptr);
+        coreFrame->disownOpener();
 }
 
 - (BOOL)hasRichlyEditableDragCaret
@@ -2233,8 +2238,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         return @[];
 
     const auto& documentRect = root->documentRect();
-    float printWidth = root->style().isHorizontalWritingMode() ? static_cast<float>(documentRect.width()) / printScaleFactor : pageSize.width;
-    float printHeight = root->style().isHorizontalWritingMode() ? pageSize.height : static_cast<float>(documentRect.height()) / printScaleFactor;
+    float printWidth = root->writingMode().isHorizontal() ? static_cast<float>(documentRect.width()) / printScaleFactor : pageSize.width;
+    float printHeight = root->writingMode().isHorizontal() ? pageSize.height : static_cast<float>(documentRect.height()) / printScaleFactor;
 
     WebCore::PrintContext printContext(_private->coreFrame);
     printContext.computePageRectsWithPageSize(WebCore::FloatSize(printWidth, printHeight), true);

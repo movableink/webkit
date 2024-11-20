@@ -32,10 +32,13 @@
 #include "AudioSessionRoutingArbitratorProxyMessages.h"
 #include "WebProcess.h"
 #include <wtf/LoggerHelper.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebKit {
 
 using namespace WebCore;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AudioSessionRoutingArbitrator);
 
 AudioSessionRoutingArbitrator::AudioSessionRoutingArbitrator(WebProcess& process)
     : m_observer([this] (AudioSession& session) { session.setRoutingArbitrationClient(*this); })
@@ -45,11 +48,6 @@ AudioSessionRoutingArbitrator::AudioSessionRoutingArbitrator(WebProcess& process
 }
 
 AudioSessionRoutingArbitrator::~AudioSessionRoutingArbitrator() = default;
-
-ASCIILiteral AudioSessionRoutingArbitrator::supplementName()
-{
-    return "AudioSessionRoutingArbitrator"_s;
-}
 
 void AudioSessionRoutingArbitrator::beginRoutingArbitrationWithCategory(AudioSession::CategoryType category, CompletionHandler<void(RoutingArbitrationError, DefaultRouteChanged)>&& callback)
 {

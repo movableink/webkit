@@ -56,8 +56,10 @@
 #include <wtf/URL.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/AtomStringHash.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
+#ifndef GST_DISABLE_GST_DEBUG
 static const char* dumpReadyState(WebCore::MediaPlayer::ReadyState readyState)
 {
     switch (readyState) {
@@ -69,6 +71,7 @@ static const char* dumpReadyState(WebCore::MediaPlayer::ReadyState readyState)
     default: return "(unknown)";
     }
 }
+#endif // GST_DISABLE_GST_DEBUG
 
 GST_DEBUG_CATEGORY(webkit_mse_debug);
 #define GST_CAT_DEFAULT webkit_mse_debug
@@ -106,7 +109,7 @@ static Vector<RefPtr<MediaSourceTrackGStreamer>> filterOutRepeatingTracks(const 
     uniqueTracks.reserveInitialCapacity(tracks.size());
 
     for (const auto& track : tracks) {
-        if (!uniqueTracks.containsIf([&track](const auto& current) { return track->stringId() == current->stringId(); }))
+        if (!uniqueTracks.containsIf([&track](const auto& current) { return track->id() == current->id(); }))
             uniqueTracks.append(track);
     }
 
@@ -145,7 +148,12 @@ void MediaPlayerPrivateGStreamerMSE::load(const URL& url, const ContentType&, Me
 {
     auto mseBlobURI = makeString("mediasource"_s, url.string().isEmpty() ? "blob://"_s : url.string());
     GST_DEBUG("Loading %s", mseBlobURI.ascii().data());
-    m_mediaSourcePrivate = MediaSourcePrivateGStreamer::open(mediaSource, *this);
+    if (RefPtr mediaSourcePrivate = downcast<MediaSourcePrivateGStreamer>(mediaSource.mediaSourcePrivate())) {
+        mediaSourcePrivate->setPlayer(this);
+        m_mediaSourcePrivate = WTFMove(mediaSourcePrivate);
+        mediaSource.reOpen();
+    } else
+        m_mediaSourcePrivate = MediaSourcePrivateGStreamer::open(mediaSource, *this);
 
     MediaPlayerPrivateGStreamer::load(mseBlobURI);
 }
@@ -198,7 +206,7 @@ void MediaPlayerPrivateGStreamerMSE::checkPlayingConsistency()
     }
 }
 
-#ifndef GST_DISABLE_DEBUG
+#ifndef GST_DISABLE_GST_DEBUG
 void MediaPlayerPrivateGStreamerMSE::setShouldDisableSleep(bool shouldDisableSleep)
 {
     // This method is useful only for logging purpose. The actual sleep disabler is managed by HTMLMediaElement.
@@ -211,7 +219,7 @@ MediaTime MediaPlayerPrivateGStreamerMSE::duration() const
     if (UNLIKELY(!m_pipeline || m_didErrorOccur))
         return MediaTime();
 
-    return m_mediaTimeDuration;
+    return m_mediaTimeDuration.isValid() ? m_mediaTimeDuration : MediaTime::zeroTime();
 }
 
 void MediaPlayerPrivateGStreamerMSE::seekToTarget(const SeekTarget& target)
@@ -423,6 +431,11 @@ void MediaPlayerPrivateGStreamerMSE::updateStates()
             GST_ERROR_OBJECT(pipeline(), "Setting the pipeline to PAUSED failed");
 
         shouldUpdatePlaybackState = result == ChangePipelineStateResult::Ok;
+    } else if (m_isEosWithNoBuffers) {
+        if (auto player = m_player.get()) {
+            // Trigger playback end detection in HTMLMediaElement.
+            player->timeChanged();
+        }
     }
 
     if (!shouldUpdatePlaybackState)
@@ -476,6 +489,23 @@ void MediaPlayerPrivateGStreamerMSE::startSource(const Vector<RefPtr<MediaSource
 {
     m_tracks = filterOutRepeatingTracks(tracks);
     webKitMediaSrcEmitStreams(WEBKIT_MEDIA_SRC(m_source.get()), m_tracks);
+}
+
+void MediaPlayerPrivateGStreamerMSE::setEosWithNoBuffers(bool eosWithNoBuffers)
+{
+    m_isEosWithNoBuffers = eosWithNoBuffers;
+    // Parsebin will trigger an error, instruct MediaPlayerPrivateGStreamer to ignore it.
+    if (eosWithNoBuffers) {
+        // On GStreamer 1.18.6, EOS with no buffers causes a parsebin error here:
+        // https://github.com/GStreamer/gst-plugins-base/blob/1.18.6/gst/playback/gstparsebin.c#L3495
+        // On GStreamer 1.24 (at least) that doesn't happen. Let's play safe and protect against the
+        // error in lower versions.
+        if (!webkitGstCheckVersion(1, 24, 0))
+            m_ignoreErrors = true;
+        changePipelineState(GST_STATE_READY);
+        if (!webkitGstCheckVersion(1, 24, 0))
+            m_ignoreErrors = false;
+    }
 }
 
 void MediaPlayerPrivateGStreamerMSE::getSupportedTypes(HashSet<String>& types)

@@ -27,6 +27,8 @@
 
 #if ENABLE(PDF_PLUGIN)
 
+#include "PDFPluginIdentifier.h"
+#include "WebFoundTextRange.h"
 #include <WebCore/FindOptions.h>
 #include <WebCore/PluginViewBase.h>
 #include <WebCore/ResourceResponse.h>
@@ -34,6 +36,7 @@
 #include <WebCore/TextIndicator.h>
 #include <WebCore/Timer.h>
 #include <memory>
+#include <wtf/CompletionHandler.h>
 #include <wtf/RunLoop.h>
 
 OBJC_CLASS NSDictionary;
@@ -53,6 +56,7 @@ namespace WebKit {
 class PDFPluginBase;
 class WebFrame;
 class WebPage;
+struct FrameInfoData;
 struct WebHitTestResultData;
 
 class PluginView final : public WebCore::PluginViewBase {
@@ -86,6 +90,9 @@ public:
     void setPageScaleFactor(double, std::optional<WebCore::IntPoint> origin);
     double pageScaleFactor() const;
     void pluginScaleFactorDidChange();
+#if PLATFORM(IOS_FAMILY)
+    void pluginDidInstallPDFDocument(double initialScaleFactor);
+#endif
 
     void topContentInsetDidChange();
 
@@ -99,6 +106,11 @@ public:
     Vector<WebCore::FloatRect> rectsForTextMatchesInRect(const WebCore::IntRect&) const;
     bool drawsFindOverlay() const;
     RefPtr<WebCore::TextIndicator> textIndicatorForCurrentSelection(OptionSet<WebCore::TextIndicatorOption>, WebCore::TextIndicatorPresentationTransition);
+
+    Vector<WebFoundTextRange::PDFData> findTextMatches(const String& target, WebCore::FindOptions);
+    Vector<WebCore::FloatRect> rectsForTextMatch(const WebFoundTextRange::PDFData&);
+    RefPtr<WebCore::TextIndicator> textIndicatorForTextMatch(const WebFoundTextRange::PDFData&, WebCore::TextIndicatorPresentationTransition);
+    void scrollToRevealTextMatch(const WebFoundTextRange::PDFData&);
 
     String selectionString() const;
 
@@ -117,7 +129,13 @@ public:
 
     void windowActivityDidChange();
 
+    void didChangeIsInWindow();
+
     void didSameDocumentNavigationForFrame(WebFrame&);
+
+    PDFPluginIdentifier pdfPluginIdentifier() const;
+
+    void openWithPreview(CompletionHandler<void(const String&, FrameInfoData&&, std::span<const uint8_t>, const String&)>&&);
 
 private:
     PluginView(WebCore::HTMLPlugInElement&, const URL&, const String& contentType, bool shouldUseManualLoader, WebPage&);
@@ -160,7 +178,7 @@ private:
 
     WebCore::ScrollableArea* scrollableArea() const final;
     bool usesAsyncScrolling() const final;
-    WebCore::ScrollingNodeID scrollingNodeID() const final;
+    std::optional<WebCore::ScrollingNodeID> scrollingNodeID() const final;
     void willAttachScrollingNode() final;
     void didAttachScrollingNode() final;
 
@@ -210,7 +228,9 @@ private:
     bool sendEditingCommandToPDFForTesting(const String& commandName, const String& argument) final;
     void setPDFDisplayModeForTesting(const String&) final;
     Vector<WebCore::FloatRect> pdfAnnotationRectsForTesting() const override;
-    void registerPDFTestCallback(RefPtr<WebCore::VoidCallback> &&) final;
+    void unlockPDFDocumentForTesting(const String& password) final;
+    void setPDFTextAnnotationValueForTesting(unsigned pageIndex, unsigned annotationIndex, const String& value) final;
+    void registerPDFTestCallback(RefPtr<WebCore::VoidCallback>&&) final;
 };
 
 } // namespace WebKit

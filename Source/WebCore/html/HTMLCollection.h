@@ -27,11 +27,13 @@
 #include "HTMLNames.h"
 #include "LiveNodeList.h"
 #include <wtf/HashMap.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 class CollectionNamedElementCache {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(CollectionNamedElementCache);
 public:
     inline const Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>>* findElementsWithId(const AtomString& id) const;
     inline const Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>>* findElementsWithName(const AtomString& name) const;
@@ -44,7 +46,7 @@ public:
     inline size_t memoryCost() const;
 
 private:
-    typedef HashMap<AtomStringImpl*, Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>>> StringToElementsMap;
+    typedef UncheckedKeyHashMap<AtomStringImpl*, Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>>> StringToElementsMap;
 
     inline const Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>>* find(const StringToElementsMap&, const AtomString& key) const;
     inline void append(StringToElementsMap&, const AtomString& key, Element&);
@@ -60,7 +62,7 @@ private:
 
 // HTMLCollection subclasses NodeList to maintain legacy ObjC API compatibility.
 class HTMLCollection : public NodeList {
-    WTF_MAKE_ISO_ALLOCATED_EXPORT(HTMLCollection, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(HTMLCollection, WEBCORE_EXPORT);
 public:
     WEBCORE_EXPORT virtual ~HTMLCollection();
 
@@ -99,7 +101,7 @@ protected:
 
     void invalidateNamedElementCache(Document&) const;
 
-    enum RootType { IsRootedAtNode, IsRootedAtTreeScope };
+    enum class RootType : bool { AtNode, AtTreeScope };
     static RootType rootTypeFromCollectionType(CollectionType);
 
     mutable Lock m_namedElementCacheAssignmentLock;

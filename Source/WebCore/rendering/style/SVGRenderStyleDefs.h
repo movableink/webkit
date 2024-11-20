@@ -28,11 +28,11 @@
 
 #pragma once
 
-#include "BasicShapes.h"
 #include "Length.h"
 #include "SVGLengthValue.h"
 #include "ShadowData.h"
 #include "StyleColor.h"
+#include "StylePathData.h"
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 
@@ -209,22 +209,6 @@ private:
     StyleStopData(const StyleStopData&);
 };
 
-DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleTextData);
-class StyleTextData : public RefCounted<StyleTextData> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleTextData);
-public:
-    static Ref<StyleTextData> create() { return adoptRef(*new StyleTextData); }
-    Ref<StyleTextData> copy() const;
-    
-    bool operator==(const StyleTextData& other) const;
-
-    SVGLengthValue kerning;
-
-private:
-    StyleTextData();
-    StyleTextData(const StyleTextData&);
-};
-
 // Note: the rule for this class is, *no inheritance* of these props
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleMiscData);
 class StyleMiscData : public RefCounted<StyleMiscData> {
@@ -239,7 +223,6 @@ public:
     StyleColor floodColor;
     StyleColor lightingColor;
 
-    // non-inherited text stuff lives here not in StyleTextData.
     SVGLengthValue baselineShiftValue;
 
 private:
@@ -299,7 +282,7 @@ public:
     Length ry;
     Length x;
     Length y;
-    RefPtr<BasicShapePath> d;
+    RefPtr<StylePathData> d;
 
 private:
     StyleLayoutData();
@@ -323,7 +306,6 @@ WTF::TextStream& operator<<(WTF::TextStream&, VectorEffect);
 WTF::TextStream& operator<<(WTF::TextStream&, const StyleFillData&);
 WTF::TextStream& operator<<(WTF::TextStream&, const StyleStrokeData&);
 WTF::TextStream& operator<<(WTF::TextStream&, const StyleStopData&);
-WTF::TextStream& operator<<(WTF::TextStream&, const StyleTextData&);
 WTF::TextStream& operator<<(WTF::TextStream&, const StyleMiscData&);
 WTF::TextStream& operator<<(WTF::TextStream&, const StyleShadowSVGData&);
 WTF::TextStream& operator<<(WTF::TextStream&, const StyleInheritedResourceData&);

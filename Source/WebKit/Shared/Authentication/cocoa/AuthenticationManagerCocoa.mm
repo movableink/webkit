@@ -51,9 +51,9 @@ void AuthenticationManager::initializeConnection(IPC::Connection* connection)
     // The following xpc event handler overwrites the boostrap event handler and is only used
     // to capture client certificate credential.
     xpc_connection_set_event_handler(connection->xpcConnection(), ^(xpc_object_t event) {
-
+#if USE(EXIT_XPC_MESSAGE_WORKAROUND)
         handleXPCExitMessage(event);
-
+#endif
         callOnMainRunLoop([event = OSObjectPtr(event), weakThis = weakThis] {
             RELEASE_ASSERT(isMainRunLoop());
 
@@ -90,7 +90,7 @@ void AuthenticationManager::initializeConnection(IPC::Connection* connection)
                 certificates = [NSMutableArray arrayWithCapacity:total];
                 for (size_t i = 0; i < total; i++) {
                     auto certificateData = xpc_array_get_value(certificateDataArray, i);
-                    auto cfData = adoptCF(CFDataCreate(nullptr, reinterpret_cast<const UInt8*>(xpc_data_get_bytes_ptr(certificateData)), xpc_data_get_length(certificateData)));
+                    auto cfData = adoptCF(CFDataCreate(nullptr, static_cast<const UInt8*>(xpc_data_get_bytes_ptr(certificateData)), xpc_data_get_length(certificateData)));
                     auto certificate = adoptCF(SecCertificateCreateWithData(nullptr, cfData.get()));
                     if (!certificate)
                         return;

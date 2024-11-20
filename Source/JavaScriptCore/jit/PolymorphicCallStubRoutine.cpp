@@ -33,6 +33,8 @@
 #include "JSCJSValueInlines.h"
 #include "LinkBuffer.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 void PolymorphicCallNode::unlinkOrUpgradeImpl(VM& vm, CodeBlock* oldCodeBlock, CodeBlock* newCodeBlock)
@@ -60,7 +62,7 @@ void PolymorphicCallNode::clear()
 
 PolymorphicCallStubRoutine* PolymorphicCallNode::owner()
 {
-    return bitwise_cast<PolymorphicCallStubRoutine*>(this - m_index + m_totalSize);
+    return std::bit_cast<PolymorphicCallStubRoutine*>(this - m_index + m_totalSize);
 }
 
 void PolymorphicCallCase::dump(PrintStream& out) const
@@ -73,7 +75,6 @@ PolymorphicCallStubRoutine::PolymorphicCallStubRoutine(unsigned headerSize, unsi
     , ButterflyArray<PolymorphicCallStubRoutine, PolymorphicCallNode, CallSlot>(headerSize, trailingSize)
     , m_callLinkInfo(&callLinkInfo)
     , m_notUsingCounting(notUsingCounting)
-    , m_isDataIC(m_callLinkInfo->isDataIC())
     , m_isClosureCall(isClosureCall)
 {
     for (unsigned index = 0; index < callSlots.size(); ++index) {
@@ -98,10 +99,6 @@ PolymorphicCallStubRoutine::PolymorphicCallStubRoutine(unsigned headerSize, unsi
 
 bool PolymorphicCallStubRoutine::upgradeIfPossible(VM&, CodeBlock* oldCodeBlock, CodeBlock* newCodeBlock, uint8_t index)
 {
-    // Not DataIC.
-    if (!m_isDataIC)
-        return false;
-
     // It is possible that we can just upgrade the CallSlot and continue using this PolymorphicCallStubRoutine instead of unlinking CallLinkInfo.
     auto& callNode = leadingSpan()[index];
     auto& slot = trailingSpan()[index];
@@ -192,3 +189,5 @@ void PolymorphicCallStubRoutine::destroy(PolymorphicCallStubRoutine* derived)
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

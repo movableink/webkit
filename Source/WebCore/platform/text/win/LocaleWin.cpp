@@ -39,13 +39,14 @@
 #include <wtf/DateMath.h>
 #include <wtf/HashMap.h>
 #include <wtf/Language.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/win/WCharStringExtras.h>
 
 namespace WebCore {
 
-typedef HashMap<String, LCID, ASCIICaseInsensitiveHash> NameToLCIDMap;
+typedef UncheckedKeyHashMap<String, LCID, ASCIICaseInsensitiveHash> NameToLCIDMap;
 
 static String extractLanguageCode(const String& locale)
 {

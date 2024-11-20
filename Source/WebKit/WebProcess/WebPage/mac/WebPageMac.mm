@@ -47,7 +47,7 @@
 #import "WebFrame.h"
 #import "WebHitTestResultData.h"
 #import "WebImage.h"
-#import "WebInspector.h"
+#import "WebInspectorInternal.h"
 #import "WebKeyboardEvent.h"
 #import "WebMouseEvent.h"
 #import "WebPageOverlay.h"
@@ -76,6 +76,7 @@
 #import <WebCore/HTMLPlugInImageElement.h>
 #import <WebCore/HitTestResult.h>
 #import <WebCore/ImageOverlay.h>
+#import <WebCore/ImmediateActionStage.h>
 #import <WebCore/KeyboardEvent.h>
 #import <WebCore/LocalFrame.h>
 #import <WebCore/LocalFrameView.h>
@@ -93,15 +94,16 @@
 #import <WebCore/RenderObject.h>
 #import <WebCore/RenderStyle.h>
 #import <WebCore/RenderView.h>
-#import <WebCore/RuntimeApplicationChecks.h>
 #import <WebCore/ScrollView.h>
 #import <WebCore/StyleInheritedData.h>
 #import <WebCore/TextIterator.h>
 #import <WebCore/VisibleUnits.h>
 #import <WebCore/WindowsKeyboardCodes.h>
+#import <WebCore/markup.h>
 #import <pal/spi/cocoa/LaunchServicesSPI.h>
 #import <pal/spi/cocoa/NSAccessibilitySPI.h>
 #import <pal/spi/mac/NSApplicationSPI.h>
+#import <wtf/RuntimeApplicationChecks.h>
 #import <wtf/SetForScope.h>
 #import <wtf/SortedArrayMap.h>
 #import <wtf/cocoa/VectorCocoa.h>
@@ -125,11 +127,11 @@ void WebPage::platformInitializeAccessibility()
     [NSApplication _accessibilityInitialize];
 
     // Get the pid for the starting process.
-    pid_t pid = WebCore::presentingApplicationPID();
+    pid_t pid = presentingApplicationPID();
     createMockAccessibilityElement(pid);
     RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
     if (localMainFrame)
-        accessibilityTransferRemoteToken(accessibilityRemoteTokenData(), localMainFrame->frameID());
+        accessibilityTransferRemoteToken(accessibilityRemoteTokenData());
 
     // Close Mach connection to Launch Services.
 #if HAVE(LS_SERVER_CONNECTION_STATUS_RELEASE_NOTIFICATIONS_MASK)
@@ -156,7 +158,7 @@ void WebPage::platformReinitialize()
     RefPtr frame = m_page->focusController().focusedOrMainFrame();
     if (!frame)
         return;
-    accessibilityTransferRemoteToken(accessibilityRemoteTokenData(), frame->frameID());
+    accessibilityTransferRemoteToken(accessibilityRemoteTokenData());
 }
 
 RetainPtr<NSData> WebPage::accessibilityRemoteTokenData() const
@@ -426,9 +428,9 @@ bool WebPage::performNonEditingBehaviorForSelector(const String& selector, Keybo
     }
 
     if (selector == "moveToLeftEndOfLine:"_s)
-        didPerformAction = m_userInterfaceLayoutDirection == WebCore::UserInterfaceLayoutDirection::LTR ? m_page->backForward().goBack() : m_page->backForward().goForward();
+        didPerformAction = m_userInterfaceLayoutDirection == WebCore::UserInterfaceLayoutDirection::LTR ? m_page->checkedBackForward()->goBack() : m_page->checkedBackForward()->goForward();
     else if (selector == "moveToRightEndOfLine:"_s)
-        didPerformAction = m_userInterfaceLayoutDirection == WebCore::UserInterfaceLayoutDirection::LTR ? m_page->backForward().goForward() : m_page->backForward().goBack();
+        didPerformAction = m_userInterfaceLayoutDirection == WebCore::UserInterfaceLayoutDirection::LTR ? m_page->checkedBackForward()->goForward() : m_page->checkedBackForward()->goBack();
 
     return didPerformAction;
 }
@@ -761,7 +763,7 @@ void WebPage::handleSelectionServiceClick(FrameSelection& selection, const Vecto
     if (!range)
         return;
 
-    auto selectionString = attributedString(*range);
+    auto selectionString = attributedString(*range, IgnoreUserSelectNone::Yes);
     if (selectionString.isNull())
         return;
 
@@ -1084,8 +1086,13 @@ bool WebPage::shouldAvoidComputingPostLayoutDataForEditorState() const
         return false;
     }
 
-    if (!m_requiresUserActionForEditingControlsManager || m_hasEverFocusedElementDueToUserInteractionSincePageTransition) {
+    if (!m_requiresUserActionForEditingControlsManager || !m_userInteractionsSincePageTransition.isEmpty()) {
         // Text editing controls on the touch bar depend on having post-layout editor state data.
+        return false;
+    }
+
+    if (m_hasEverDisplayedContextMenu) {
+        // Some context menu items (like Writing Tools) depend on having post-layout editor state data.
         return false;
     }
 
@@ -1136,10 +1143,12 @@ void WebPage::savePDF(PDFPluginIdentifier identifier, CompletionHandler<void(con
 
 void WebPage::openPDFWithPreview(PDFPluginIdentifier identifier, CompletionHandler<void(const String&, FrameInfoData&&, std::span<const uint8_t>, const String&)>&& completionHandler)
 {
-    auto pdfPlugin = m_pdfPlugInsWithHUD.get(identifier);
-    if (!pdfPlugin)
-        return completionHandler({ }, { }, { }, { });
-    pdfPlugin->openWithPreview(WTFMove(completionHandler));
+    for (auto& pluginView : m_pluginViews) {
+        if (pluginView.pdfPluginIdentifier() == identifier)
+            return pluginView.openWithPreview(WTFMove(completionHandler));
+    }
+
+    completionHandler({ }, { }, { }, { });
 }
 
 void WebPage::createPDFHUD(PDFPluginBase& plugin, const IntRect& boundingBox)

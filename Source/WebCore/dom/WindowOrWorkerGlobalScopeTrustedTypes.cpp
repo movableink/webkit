@@ -31,15 +31,17 @@
 #include "LocalDOMWindowProperty.h"
 #include "LocalFrame.h"
 #include "Page.h"
-#include "Supplementable.h"
-#include <wtf/text/ASCIILiteral.h>
 #include "TrustedTypePolicyFactory.h"
 #include "WorkerGlobalScope.h"
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/ASCIILiteral.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WorkerGlobalScopeTrustedTypes);
+
 class DOMWindowTrustedTypes : public Supplement<LocalDOMWindow>, public LocalDOMWindowProperty {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(DOMWindowTrustedTypes);
 public:
     explicit DOMWindowTrustedTypes(LocalDOMWindow&);
     virtual ~DOMWindowTrustedTypes() = default;
@@ -84,22 +86,6 @@ TrustedTypePolicyFactory* WindowOrWorkerGlobalScopeTrustedTypes::trustedTypes(DO
     return DOMWindowTrustedTypes::from(*localWindow)->trustedTypes();
 }
 
-class WorkerGlobalScopeTrustedTypes : public Supplement<WorkerGlobalScope> {
-    WTF_MAKE_FAST_ALLOCATED;
-public:
-    explicit WorkerGlobalScopeTrustedTypes(WorkerGlobalScope&);
-    virtual ~WorkerGlobalScopeTrustedTypes() = default;
-
-    static WorkerGlobalScopeTrustedTypes* from(WorkerGlobalScope&);
-    TrustedTypePolicyFactory* trustedTypes() const;
-
-private:
-    static ASCIILiteral supplementName() { return WindowOrWorkerGlobalScopeTrustedTypes::workerGlobalSupplementName(); }
-
-    WorkerGlobalScope& m_scope;
-    mutable RefPtr<TrustedTypePolicyFactory> m_trustedTypes;
-};
-
 WorkerGlobalScopeTrustedTypes::WorkerGlobalScopeTrustedTypes(WorkerGlobalScope& scope)
     : m_scope(scope)
 {
@@ -116,10 +102,18 @@ WorkerGlobalScopeTrustedTypes* WorkerGlobalScopeTrustedTypes::from(WorkerGlobalS
     return supplement;
 }
 
+WorkerGlobalScopeTrustedTypes::~WorkerGlobalScopeTrustedTypes() = default;
+
+void WorkerGlobalScopeTrustedTypes::prepareForDestruction()
+{
+    m_trustedTypes = nullptr;
+    m_scope = nullptr;
+}
+
 TrustedTypePolicyFactory* WorkerGlobalScopeTrustedTypes::trustedTypes() const
 {
-    if (!m_trustedTypes)
-        m_trustedTypes = TrustedTypePolicyFactory::create(m_scope);
+    if (!m_trustedTypes && m_scope)
+        m_trustedTypes = TrustedTypePolicyFactory::create(Ref { *m_scope });
     return m_trustedTypes.get();
 }
 
