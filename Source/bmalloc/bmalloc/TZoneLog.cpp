@@ -75,9 +75,13 @@ extern void TZoneLog::log(const char* format, ...)
 
     va_list argList;
     va_start(argList, format);
+#if BUSE(OS_LOG)
     if (m_logDest == LogDestination::OSLog)
         osLogWithLineBuffer(format, argList);
     else if (m_logDest == LogDestination::Stderr)
+#else
+    if (m_logDest == LogDestination::Stderr)
+#endif
         vfprintf(stderr, format, argList);
     va_end(argList);
 }
