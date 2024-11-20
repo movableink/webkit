@@ -79,6 +79,7 @@ public:
 #elif PLATFORM(QT)
     FontCustomPlatformData(FontPlatformData::CreationData&& creationData)
         : creationData(WTFMove(creationData))
+        , m_renderingResourceIdentifier(RenderingResourceIdentifier::generate())
     {
     }
 #elif USE(CORE_TEXT)

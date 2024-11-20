@@ -95,7 +95,7 @@ Ref<Font> FontCache::lastResortFallbackFont(const FontDescription& fontDescripti
     return fontForPlatformData(platformData);
 }
 
-std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomString& family, const FontCreationContext&)
+std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomString& family, const FontCreationContext&, OptionSet<FontLookupOptions>)
 {
     QFontDatabase db;
     if (!db.hasFamily(family.string()))

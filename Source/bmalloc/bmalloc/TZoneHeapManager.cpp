@@ -141,7 +141,7 @@ void TZoneHeapManager::init()
     }
 #endif
 
-#if BOS(DARWIN)
+#if BOS(DARWIN) && !BPLATFORM(QT)
     // Use the boot UUID and the process' name to seed the key.
     static const size_t rawSeedLength = 128;
     char rawSeed[rawSeedLength] = { };

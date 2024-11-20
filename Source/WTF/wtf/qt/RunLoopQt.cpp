@@ -179,8 +179,8 @@ void RunLoop::TimerBase::timerFired(RunLoop* runLoop, int ID)
     timer->fired();
 }
 
-RunLoop::TimerBase::TimerBase(RunLoop& runLoop)
-    : m_runLoop(runLoop)
+RunLoop::TimerBase::TimerBase(Ref<RunLoop>&& runLoop)
+    : m_runLoop(WTFMove(runLoop))
     , m_ID(0)
     , m_isRepeating(false)
 {

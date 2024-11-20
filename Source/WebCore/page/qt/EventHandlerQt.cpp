@@ -89,19 +89,19 @@ bool EventHandler::passWheelEventToWidget(const PlatformWheelEvent& event, Widge
     return downcast<LocalFrameView>(widget).frame().eventHandler().handleWheelEvent(event, { }).wasHandled();
 }
 
-bool EventHandler::passMousePressEventToSubframe(MouseEventWithHitTestResults& mev, LocalFrame& subframe)
+HandleUserInputEventResult EventHandler::passMousePressEventToSubframe(MouseEventWithHitTestResults& mev, LocalFrame& subframe)
 {
     subframe.eventHandler().handleMousePressEvent(mev.event());
     return true;
 }
 
-bool EventHandler::passMouseMoveEventToSubframe(MouseEventWithHitTestResults& mev, LocalFrame& subframe, HitTestResult* hoveredNode)
+HandleUserInputEventResult EventHandler::passMouseMoveEventToSubframe(MouseEventWithHitTestResults& mev, LocalFrame& subframe, HitTestResult* hoveredNode)
 {
     subframe.eventHandler().handleMouseMoveEvent(mev.event(), hoveredNode);
     return true;
 }
 
-bool EventHandler::passMouseReleaseEventToSubframe(MouseEventWithHitTestResults& mev, LocalFrame& subframe)
+HandleUserInputEventResult EventHandler::passMouseReleaseEventToSubframe(MouseEventWithHitTestResults& mev, LocalFrame& subframe)
 {
     subframe.eventHandler().handleMouseReleaseEvent(mev.event());
     return true;

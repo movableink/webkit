@@ -72,7 +72,7 @@ static QUrl resolveBlobUrl(const URL& url, const BlobRegistryImpl& blobRegistry)
 
     std::span<unsigned char> base64;
     std::span<const std::byte> bytes { reinterpret_cast<const std::byte*>(data.data()), static_cast<size_t>(data.size()) };
-    WTF::base64Encode(bytes, base64, WTF::Base64EncodeMode::URL);
+    WTF::base64Encode(bytes, base64, Base64EncodeOption::URL);
     if (base64.empty() || base64.size() > maxBase64Size) {
         qWarning("Failed to convert blob data to base64: data is too large");
         return QUrl();

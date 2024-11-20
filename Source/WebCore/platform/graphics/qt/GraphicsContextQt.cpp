@@ -896,7 +896,7 @@ static inline void drawRepeatPattern(QPainter* p, const Pattern& pattern, const 
         p->setClipping(false);
 }
 
-void GraphicsContextQt::fillRect(const FloatRect& rect)
+void GraphicsContextQt::fillRect(const FloatRect& rect, RequiresClipToRect)
 {
     QPainter* p = m_data->p();
     QRectF normalizedRect = rect.normalized();
@@ -1016,7 +1016,7 @@ void GraphicsContextQt::fillRect(const FloatRect& rect, Gradient& gradient)
     gradient.fill(*this, platformRect);
 }
 
-void GraphicsContextQt::fillRect(const FloatRect& rect, Gradient& gradient, const AffineTransform& transform)
+void GraphicsContextQt::fillRect(const FloatRect& rect, Gradient& gradient, const AffineTransform& transform, RequiresClipToRect)
 {
     QRectF platformRect(rect);
     QPainter* p = m_data->p();

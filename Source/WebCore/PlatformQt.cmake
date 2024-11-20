@@ -449,7 +449,6 @@ if (USE_COMMONCRYPTO)
         crypto/cocoa/CryptoAlgorithmHKDFMac.cpp
         crypto/cocoa/CryptoAlgorithmHMACMac.cpp
         crypto/cocoa/CryptoAlgorithmPBKDF2Mac.cpp
-        crypto/cocoa/CryptoAlgorithmRSAES_PKCS1_v1_5Mac.cpp
         crypto/cocoa/CryptoAlgorithmRSASSA_PKCS1_v1_5Mac.cpp
         crypto/cocoa/CryptoAlgorithmRSA_OAEPMac.cpp
         crypto/cocoa/CryptoAlgorithmRSA_PSSMac.cpp
