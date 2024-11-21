@@ -38,6 +38,7 @@
 #include <QObject>
 #include <QString>
 #include <wtf/Forward.h>
+#include <wtf/TZoneMallocInlines.h>
 
 class QWebPageAdapter;
 class QWebPage;
@@ -49,7 +50,7 @@ class InspectorServerRequestHandlerQt;
 class Page;
 
 class InspectorClientQt : public InspectorClient, public Inspector::FrontendChannel {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(InspectorClientQt);
 public:
     explicit InspectorClientQt(QWebPageAdapter*);
 

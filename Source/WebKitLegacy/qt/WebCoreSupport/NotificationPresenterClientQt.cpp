@@ -45,6 +45,7 @@
 #include <WebCore/ScriptExecutionContext.h>
 #include <WebCore/FrameDestructionObserverInlines.h>
 #include <wtf/UUID.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -66,6 +67,8 @@ NotificationPresenterClientQt* NotificationPresenterClientQt::notificationPresen
 }
 
 #endif
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NotificationWrapper);
 
 NotificationWrapper::NotificationWrapper(NotificationData&& notification)
     : m_notification(WTFMove(notification))

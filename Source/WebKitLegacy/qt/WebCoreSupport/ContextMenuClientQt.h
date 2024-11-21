@@ -28,12 +28,13 @@
 
 #include <WebCore/ContextMenuClient.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 class ContextMenu;
 
 class ContextMenuClientQt final : public ContextMenuClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ContextMenuClientQt);
 
 public:
     void downloadURL(const URL&) final;

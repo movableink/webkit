@@ -31,6 +31,15 @@ class QWebFrameAdapter;
 class QWebPageClient;
 
 namespace WebCore {
+class TextureMapperLayerClientQt;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedTimerSmartPointerException;
+template<> struct IsDeprecatedTimerSmartPointerException<WebCore::TextureMapperLayerClientQt> : std::true_type { };
+}
+
+namespace WebCore {
 
 class TextureMapperLayer;
 

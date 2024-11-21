@@ -26,8 +26,11 @@
 #include "ContextMenuClientQt.h"
 
 #include <WebCore/NotImplemented.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ContextMenuClientQt);
 
 void ContextMenuClientQt::downloadURL(const URL&)
 {

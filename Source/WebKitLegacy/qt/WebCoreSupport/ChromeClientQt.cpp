@@ -60,6 +60,7 @@
 #include <WebCore/SerializedCryptoKeyWrap.h>
 #include <WebCore/WindowFeatures.h>
 #include <wtf/WallTime.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if USE(TILED_BACKING_STORE)
 #include "TiledBackingStore.h"
@@ -75,6 +76,8 @@
 #endif
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ChromeClientQt);
 
 bool ChromeClientQt::dumpVisitedLinksCallbacks = false;
 
@@ -519,7 +522,7 @@ void ChromeClientQt::reachedApplicationCacheOriginQuota(SecurityOrigin& origin, 
 }
 
 #if ENABLE(INPUT_TYPE_COLOR)
-std::unique_ptr<ColorChooser> ChromeClientQt::createColorChooser(ColorChooserClient& client, const Color& color)
+RefPtr<ColorChooser> ChromeClientQt::createColorChooser(ColorChooserClient& client, const Color& color)
 {
     const QColor selectedColor = m_webPage->colorSelectionRequested(QColor(color));
     client.didChooseColor(selectedColor);
@@ -529,7 +532,7 @@ std::unique_ptr<ColorChooser> ChromeClientQt::createColorChooser(ColorChooserCli
 #endif
 
 #if ENABLE(DATALIST_ELEMENT)
-std::unique_ptr<DataListSuggestionPicker> ChromeClientQt::createDataListSuggestionPicker(DataListSuggestionsClient&)
+RefPtr<DataListSuggestionPicker> ChromeClientQt::createDataListSuggestionPicker(DataListSuggestionsClient&)
 {
     // QTFIXME: Implement DataListSuggestionPickerQt
     return nullptr;

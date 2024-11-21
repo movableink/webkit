@@ -37,9 +37,14 @@ class QWebPageAdapter;
 
 namespace WebKit {
 
-class DataListSuggestionPickerQt final : public WebCore::DataListSuggestionPicker {
+class DataListSuggestionPickerQt final : public WebCore::DataListSuggestionPicker, public RefCounted<DataListSuggestionPickerQt> {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(DataListSuggestionPicker);
 public:
     DataListSuggestionPickerQt(QWebPageAdapter&, WebCore::DataListSuggestionsClient&);
+    ~DataListSuggestionPickerQt();
+
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     void handleKeydownWithIdentifier(const String&) final;
     void close() final;
