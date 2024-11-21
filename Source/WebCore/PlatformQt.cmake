@@ -33,6 +33,7 @@ list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/platform/network/qt"
     "${WEBCORE_DIR}/platform/network/glib"
     "${WEBCORE_DIR}/platform/text/qt"
+    "${WEBCORE_DIR}/platform/video-codecs"
     "${WEBCORE_DIR}/platform/win"
     "${WEBCORE_DIR}/platform/graphics/x11"
 )
