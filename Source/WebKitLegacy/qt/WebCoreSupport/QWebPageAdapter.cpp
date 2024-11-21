@@ -776,13 +776,15 @@ void QWebPageAdapter::inputMethodEvent(QInputMethodEvent *ev)
             break;
         }
         case QInputMethodEvent::Cursor: {
-            frame->selection().setCaretVisible(a.length); // if length is 0 cursor is invisible
             if (a.length > 0) {
+                frame->selection().removeCaretVisibilitySuppressionReason(CaretVisibilitySuppressionReason::IsNotFocusedOrActive);
                 RenderObject* caretRenderer = frame->selection().caretRendererWithoutUpdatingLayout();
                 if (caretRenderer) {
                     QColor qcolor = a.value.value<QColor>();
 //                    caretRenderer->style().setColor(qcolor);
                 }
+            } else {
+                frame->selection().addCaretVisibilitySuppressionReason(CaretVisibilitySuppressionReason::IsNotFocusedOrActive);
             }
             break;
         }
