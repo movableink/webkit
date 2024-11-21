@@ -42,6 +42,7 @@ using namespace WebCore;
 BackForwardList::BackForwardList(QWebPageAdapter& page)
     : m_page(page)
     , m_current(NoCurrentItemIndex)
+    , m_provisional(NoCurrentItemIndex)
     , m_capacity(DefaultCapacity)
     , m_closed(true)
     , m_enabled(true)
@@ -111,6 +112,18 @@ void BackForwardList::goToItem(HistoryItem& item)
     if (index < m_entries.size()) {
         m_current = index;
     }
+}
+
+void BackForwardList::goToProvisionalItem(const HistoryItem& item)
+{
+    m_provisional = m_current;
+    goToItem(const_cast<HistoryItem&>(item));
+}
+
+void BackForwardList::clearProvisionalItem(const HistoryItem&)
+{
+    if (m_provisional != NoCurrentItemIndex)
+        m_current = std::exchange(m_provisional, NoCurrentItemIndex);
 }
 
 RefPtr<HistoryItem> BackForwardList::backItem()
@@ -206,7 +219,7 @@ unsigned BackForwardList::forwardListCount() const
     return m_current == NoCurrentItemIndex ? 0 : m_entries.size() - m_current - 1;
 }
 
-RefPtr<HistoryItem> BackForwardList::itemAtIndex(int index)
+RefPtr<HistoryItem> BackForwardList::itemAtIndex(int index, WebCore::FrameIdentifier)
 {
     // Do range checks without doing math on index to avoid overflow.
     if (index < -static_cast<int>(m_current))
