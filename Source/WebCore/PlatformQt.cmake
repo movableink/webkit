@@ -468,7 +468,7 @@ endif ()
 # Build the include path with duplicates removed
 list(REMOVE_DUPLICATES WebCore_SYSTEM_INCLUDE_DIRECTORIES)
 
-list(APPEND WebCoreTestSupport_LIBRARIES
+list(APPEND WebCoreTestSupport_LIBRARIES PRIVATE
     WebCore
 )
 
