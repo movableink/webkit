@@ -897,8 +897,6 @@ static QString dumpHistoryItem(const QWebHistoryItem& item, int indent, bool cur
     if (!target.isEmpty())
         result.append(QString(QLatin1String(" (in frame \"%1\")")).arg(target));
 
-    if (DumpRenderTreeSupportQt::isTargetItem(item))
-        result.append(QLatin1String("  **nav target**"));
     result.append(QLatin1String("\n"));
 
     QMap<QString, QWebHistoryItem> children = DumpRenderTreeSupportQt::getChildHistoryItems(item);
