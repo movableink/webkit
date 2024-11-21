@@ -291,9 +291,12 @@ void QWebPageAdapter::initializeWebCorePage()
         BackForwardList::create(*this),
         CookieJar::create(storageProvider.copyRef()),
         makeUniqueRef<ProgressTrackerClientQt>(this),
-        CompletionHandler<UniqueRef<WebCore::LocalFrameLoaderClient>(WebCore::LocalFrame&)> { [] (auto&) {
-            return makeUniqueRef<FrameLoaderClientQt>();
-        } },
+        WebCore::PageConfiguration::LocalMainFrameCreationParameters {
+          CompletionHandler<UniqueRef<WebCore::LocalFrameLoaderClient>(WebCore::LocalFrame&, WebCore::FrameLoader&)> { [] (auto&, auto& frameLoader) {
+              return makeUniqueRefWithoutRefCountedCheck<FrameLoaderClientQt>(frameLoader);
+          } },
+          WebCore::SandboxFlags { } // Set by updateSandboxFlags after instantiation.
+        },
         WebCore::FrameIdentifier::generate(),
         nullptr, // Opener may be set by setOpenerForWebKitLegacy after instantiation.
         makeUniqueRef<WebCore::DummySpeechRecognitionProvider>(),

@@ -69,7 +69,7 @@ Q_SIGNALS:
     void unsupportedContent(QNetworkReply*);
 
 public:
-    FrameLoaderClientQt();
+    FrameLoaderClientQt(WebCore::FrameLoader&);
     ~FrameLoaderClientQt();
 
     void setFrame(QWebFrameAdapter*, LocalFrame*);
@@ -218,7 +218,8 @@ public:
 
     void sendH2Ping(const URL&, CompletionHandler<void(Expected<Seconds, ResourceError>&&)>&&) override;
 
-    void broadcastMainFrameURLChangeToOtherProcesses(const URL&) override { };
+    void updateSandboxFlags(WebCore::SandboxFlags) override { }
+    void updateOpener(const WebCore::Frame&) override { }
 
     static bool dumpFrameLoaderCallbacks;
     static bool dumpUserGestureInFrameLoaderCallbacks;

@@ -195,8 +195,9 @@ static const char* navigationTypeToString(NavigationType type)
     return "illegal value";
 }
 
-FrameLoaderClientQt::FrameLoaderClientQt()
-    : m_frame(0)
+FrameLoaderClientQt::FrameLoaderClientQt(WebCore::FrameLoader& frameLoader)
+    : WebCore::LocalFrameLoaderClient(frameLoader)
+    , m_frame(0)
     , m_webFrame(0)
     , m_isOriginatingLoad(false)
     , m_isDisplayingErrorPage(false)
