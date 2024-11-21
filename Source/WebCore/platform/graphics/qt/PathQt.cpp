@@ -105,6 +105,15 @@ PathQt& PathQt::operator=(PathQt&& other)
     return *this;
 }
 
+bool PathQt::definitelyEqual(const PathImpl& other) const
+{
+    const PathQt* otherPath = downcast<PathQt>(&other);
+    if (!otherPath)
+        return false;
+
+    return m_path == otherPath->m_path;
+}
+
 Ref<PathImpl> PathQt::copy() const
 {
     return create(m_path);

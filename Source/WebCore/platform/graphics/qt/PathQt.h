@@ -56,6 +56,7 @@ public:
 
     void addPath(const PathQt&, const AffineTransform&);
 
+    bool definitelyEqual(const PathImpl&) const final;
     bool applyElements(const PathElementApplier&) const final;
 
     bool transform(const AffineTransform&);
