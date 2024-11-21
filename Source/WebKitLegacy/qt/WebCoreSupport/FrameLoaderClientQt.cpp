@@ -264,13 +264,9 @@ void FrameLoaderClientQt::transitionToCommittedForNewPage(InitializingIframe)
     bool hLock = hScrollbar != ScrollbarMode::Auto;
     bool vLock = vScrollbar != ScrollbarMode::Auto;
 
-    // The HistoryController will update the scroll position later if needed.
-    IntRect currentVisibleContentRect = m_frame->view() ? IntRect(IntPoint::zero(), m_frame->view()->fixedVisibleContentRect().size()) : IntRect();
-
     m_frame->createView(qWebPage->property("viewportSize").toSize(),
         Color(backgroundColor),
         preferredLayoutSize.isValid() ? IntSize(preferredLayoutSize) : IntSize(),
-        currentVisibleContentRect,
         preferredLayoutSize.isValid(),
         hScrollbar, hLock,
         vScrollbar, vLock);

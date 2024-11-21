@@ -201,7 +201,6 @@ public:
     // FrameView related functions
     QSize customLayoutSize() const;
     void setCustomLayoutSize(const QSize&);
-    void setFixedVisibleContentRect(const QRect&);
     void setViewportSize(const QSize&);
     void setPaintsEntireContents(bool /*resizesToContents*/);
     void setDelegatesScrolling(bool /*resizesToContents*/);

@@ -938,14 +938,6 @@ void QWebFrameAdapter::setCustomLayoutSize(const QSize& size)
     view->layoutContext().layout();
 }
 
-void QWebFrameAdapter::setFixedVisibleContentRect(const QRect& rect)
-{
-    ASSERT(&pageAdapter->mainFrameAdapter() == this);
-    LocalFrameView* view = frame->view();
-    ASSERT(view);
-    view->setFixedVisibleContentRect(rect);
-}
-
 void QWebFrameAdapter::setViewportSize(const QSize& size)
 {
     ASSERT(&pageAdapter->mainFrameAdapter() == this);
