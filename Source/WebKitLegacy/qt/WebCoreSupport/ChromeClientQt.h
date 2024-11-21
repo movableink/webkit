@@ -81,7 +81,7 @@ public:
     void focusedElementChanged(Element*) final;
     void focusedFrameChanged(Frame*) final;
 
-    Page* createWindow(LocalFrame&, const WindowFeatures&, const NavigationAction&) final;
+    RefPtr<Page> createWindow(LocalFrame&, const String&, const WindowFeatures&, const NavigationAction&) final;
     void show() final;
 
     bool canRunModal() const final;
@@ -111,8 +111,6 @@ public:
     void runJavaScriptAlert(LocalFrame&, const String&) final;
     bool runJavaScriptConfirm(LocalFrame&, const String&) final;
     bool runJavaScriptPrompt(LocalFrame&, const String& message, const String& defaultValue, String& result) final;
-
-    void setStatusbarText(const String&) final;
 
     void rootFrameAdded(const LocalFrame&) final { }
     void rootFrameRemoved(const LocalFrame&) final { }

@@ -155,7 +155,6 @@ public:
     static QString viewportAsText(QWebPageAdapter*, int deviceDPI, const QSize& deviceSize, const QSize& availableSize);
 
     static QMap<QString, QWebHistoryItem> getChildHistoryItems(const QWebHistoryItem&);
-    static bool isTargetItem(const QWebHistoryItem&);
     static QString historyItemTarget(const QWebHistoryItem&);
 
     static bool shouldClose(QWebFrameAdapter*);

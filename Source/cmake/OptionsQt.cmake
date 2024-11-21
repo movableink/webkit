@@ -469,7 +469,7 @@ endif ()
 
 find_package(LibXml2 2.8.0 REQUIRED)
 if (ENABLE_XSLT)
-    find_package(LibXslt 1.1.7 REQUIRED)
+    find_package(LibXslt 1.1.13 REQUIRED)
 endif ()
 
 if (UNIX AND NOT APPLE AND CMAKE_OBJCOPY AND NOT SKIP_DWZ)

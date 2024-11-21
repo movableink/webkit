@@ -31,7 +31,6 @@
 #include "InitWebCoreQt.h"
 #include "InspectorClientQt.h"
 #include "InspectorServerQt.h"
-#include <WebCore/MediaRecorderProvider.h>
 #include "NotificationPresenterClientQt.h"
 #include "PluginInfoProviderQt.h"
 #include "ProgressTrackerClientQt.h"
@@ -98,6 +97,7 @@
 #include <WebCore/PageIdentifier.h>
 #include <WebCore/PlatformKeyboardEvent.h>
 #include <WebCore/PlatformMouseEvent.h>
+#include <WebCore/ProcessSyncClient.h>
 #include <WebCore/ProgressTracker.h>
 #include <WebCore/QWebPageClient.h>
 #include <WebCore/RemoteFrameClient.h>
@@ -224,7 +224,7 @@ static void openNewWindow(const QUrl& url, LocalFrame& frame)
         WindowFeatures features;
         NavigationAction action;
         FrameLoadRequest request = frameLoadRequest(url, frame);
-        if (auto newPage = oldPage->chrome().createWindow(frame, features, action)) {
+        if (auto newPage = oldPage->chrome().createWindow(frame, { }, features, action)) {
             WebCore::LocalFrame* newFrame = dynamicDowncast<WebCore::LocalFrame>(newPage->mainFrame());
             newFrame->loader().loadFrameRequest(WTFMove(request), /*event*/ nullptr, /*FormState*/ nullptr);
             newPage->chrome().show();
@@ -295,9 +295,8 @@ void QWebPageAdapter::initializeWebCorePage()
             return makeUniqueRef<FrameLoaderClientQt>();
         } },
         WebCore::FrameIdentifier::generate(),
-        nullptr,
+        nullptr, // Opener may be set by setOpenerForWebKitLegacy after instantiation.
         makeUniqueRef<WebCore::DummySpeechRecognitionProvider>(),
-        makeUniqueRef<WebCore::MediaRecorderProvider>(),
         WebBroadcastChannelRegistry::getOrCreate(isPrivateBrowsingEnabled),
         makeUniqueRef<WebCore::DummyStorageProvider>(),
         makeUniqueRef<WebCore::DummyModelPlayerProvider>(),
@@ -307,7 +306,8 @@ void QWebPageAdapter::initializeWebCorePage()
         makeUniqueRef<ContextMenuClientQt>(),
 #endif
         makeUniqueRef<ChromeClientQt>(this),
-        makeUniqueRef<CryptoClientQt>()
+        makeUniqueRef<CryptoClientQt>(),
+        makeUniqueRef<WebCore::ProcessSyncClient>()
     };
     pageConfiguration.applicationCacheStorage = ApplicationCacheStorage::create({ }, { }); // QTFIXME
     pageConfiguration.dragClient = makeUnique<DragClientQt>(pageConfiguration.chromeClient.ptr());

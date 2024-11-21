@@ -870,7 +870,7 @@ void FrameLoaderClientQt::convertMainResourceLoadToDownload(DocumentLoader* docu
     }
 }
 
-void FrameLoaderClientQt::assignIdentifierToInitialRequest(WebCore::ResourceLoaderIdentifier identifier, WebCore::DocumentLoader*, const WebCore::ResourceRequest& request)
+void FrameLoaderClientQt::assignIdentifierToInitialRequest(WebCore::ResourceLoaderIdentifier identifier, WebCore::IsMainResourceLoad, WebCore::DocumentLoader*, const WebCore::ResourceRequest& request)
 {
     if (dumpResourceLoadCallbacks)
         dumpAssignedUrls[identifier.toUInt64()] = drtDescriptionSuitableForTestResult(request.url());
@@ -978,14 +978,14 @@ void FrameLoaderClientQt::dispatchDidReceiveContentLength(WebCore::DocumentLoade
 {
 }
 
-void FrameLoaderClientQt::dispatchDidFinishLoading(WebCore::DocumentLoader*, WebCore::ResourceLoaderIdentifier identifier)
+void FrameLoaderClientQt::dispatchDidFinishLoading(WebCore::DocumentLoader*, WebCore::IsMainResourceLoad, WebCore::ResourceLoaderIdentifier identifier)
 {
     if (dumpResourceLoadCallbacks)
         printf("%s - didFinishLoading\n",
             (dumpAssignedUrls.contains(identifier.toUInt64()) ? qPrintable(dumpAssignedUrls[identifier.toUInt64()]) : "<unknown>"));
 }
 
-void FrameLoaderClientQt::dispatchDidFailLoading(WebCore::DocumentLoader* loader, WebCore::ResourceLoaderIdentifier identifier, const WebCore::ResourceError& error)
+void FrameLoaderClientQt::dispatchDidFailLoading(WebCore::DocumentLoader* loader, WebCore::IsMainResourceLoad, WebCore::ResourceLoaderIdentifier identifier, const WebCore::ResourceError& error)
 {
     if (dumpResourceLoadCallbacks)
         printf("%s - didFailLoadingWithError: %s\n",
@@ -1108,7 +1108,7 @@ void FrameLoaderClientQt::dispatchDecidePolicyForNewWindowAction(const WebCore::
     function(PolicyAction::Use);
 }
 
-void FrameLoaderClientQt::dispatchDecidePolicyForNavigationAction(const WebCore::NavigationAction& action, const WebCore::ResourceRequest& request, const ResourceResponse& redirectResponse, WebCore::FormState*, const String&, uint64_t, std::optional<HitTestResult>&&, bool, WebCore::SandboxFlags, WebCore::PolicyDecisionMode, FramePolicyFunction&& function)
+void FrameLoaderClientQt::dispatchDecidePolicyForNavigationAction(const WebCore::NavigationAction& action, const WebCore::ResourceRequest& request, const ResourceResponse& redirectResponse, WebCore::FormState*, const String&, std::optional<NavigationIdentifier>, std::optional<HitTestResult>&&, bool, IsPerformingHTTPFallback, WebCore::SandboxFlags, WebCore::PolicyDecisionMode, FramePolicyFunction&& function)
 {
     Q_ASSERT(m_webFrame);
     QNetworkRequest r(request.toNetworkRequest(m_frame->loader().networkingContext()));
@@ -1155,7 +1155,7 @@ void FrameLoaderClientQt::dispatchUnableToImplementPolicy(const WebCore::Resourc
     notImplemented();
 }
 
-void FrameLoaderClientQt::startDownload(const WebCore::ResourceRequest& request, const String& /* suggestedName */)
+void FrameLoaderClientQt::startDownload(const WebCore::ResourceRequest& request, const String& /* suggestedName */, FromDownloadAttribute)
 {
     if (!m_webFrame)
         return;

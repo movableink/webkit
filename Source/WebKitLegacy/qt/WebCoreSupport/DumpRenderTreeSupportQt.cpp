@@ -534,14 +534,6 @@ int DumpRenderTreeSupportQt::numberOfPendingGeolocationPermissionRequests(QWebPa
 #endif
 }
 
-bool DumpRenderTreeSupportQt::isTargetItem(const QWebHistoryItem& historyItem)
-{
-    QWebHistoryItem it = historyItem;
-    if (QWebHistoryItemPrivate::core(&it)->isTargetItem())
-        return true;
-    return false;
-}
-
 QString DumpRenderTreeSupportQt::historyItemTarget(const QWebHistoryItem& historyItem)
 {
     QWebHistoryItem it = historyItem;
@@ -641,7 +633,7 @@ QString DumpRenderTreeSupportQt::responseMimeType(QWebFrameAdapter* adapter)
 void DumpRenderTreeSupportQt::clearOpener(QWebFrameAdapter* adapter)
 {
     WebCore::LocalFrame* coreFrame = adapter->frame;
-    coreFrame->setOpener(nullptr);
+    coreFrame->setOpenerForWebKitLegacy(nullptr);
 }
 
 void DumpRenderTreeSupportQt::addURLToRedirect(const QString& origin, const QString& destination)

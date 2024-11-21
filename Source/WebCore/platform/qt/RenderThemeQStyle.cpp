@@ -606,7 +606,7 @@ StyleAppearance RenderThemeQStyle::initializeCommonQStyleOptions(QStyleFacadeOpt
         option.state |= QStyleFacade::State_KeyboardFocusChange;
     }
 
-    if (style.direction() == TextDirection::RTL)
+    if (style.writingMode().isBidiRTL())
         option.direction = Qt::RightToLeft;
 
     switch (result) {

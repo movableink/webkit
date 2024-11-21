@@ -585,10 +585,6 @@ bool EditorClientQt::isEditing() const
     return m_editing;
 }
 
-void EditorClientQt::willSetInputMethodState()
-{
-}
-
 void EditorClientQt::setInputMethodState(WebCore::Element* element)
 {
     bool active = element && element->shouldUseInputMethod();

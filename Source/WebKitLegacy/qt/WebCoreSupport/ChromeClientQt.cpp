@@ -176,11 +176,11 @@ void ChromeClientQt::focusedFrameChanged(Frame*)
 {
 }
 
-Page* ChromeClientQt::createWindow(LocalFrame& frame, const WindowFeatures& features, const NavigationAction&)
+RefPtr<Page> ChromeClientQt::createWindow(LocalFrame& frame,  const String& openedMainFrameName, const WindowFeatures& features, const NavigationAction&)
 {
 #if ENABLE(FULLSCREEN_API)
     if (!frame.document())
-        return 0;
+        return nullptr;
 
     CheckedPtr fullscreenManager = frame.document()->fullscreenManagerIfExists();
     if (fullscreenManager && fullscreenManager->currentFullscreenElement())
@@ -191,9 +191,11 @@ Page* ChromeClientQt::createWindow(LocalFrame& frame, const WindowFeatures& feat
 
     QWebPageAdapter* newPage = m_webPage->createWindow(features.dialog.value_or(false));
     if (!newPage)
-        return 0;
+        return nullptr;
 
-    return newPage->page.get();
+    newPage->page->mainFrame().tree().setSpecifiedName(AtomString(openedMainFrameName));
+
+    return newPage->page;
 }
 
 void ChromeClientQt::show()
@@ -360,12 +362,6 @@ bool ChromeClientQt::runJavaScriptPrompt(LocalFrame& f, const String& message, c
         result = x;
 
     return rc;
-}
-
-void ChromeClientQt::setStatusbarText(const String& msg)
-{
-    QString x = msg;
-    QMetaObject::invokeMethod(m_webPage->handle(), "statusBarMessage", Q_ARG(QString, x));
 }
 
 KeyboardUIMode ChromeClientQt::keyboardUIMode()

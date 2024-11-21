@@ -111,7 +111,7 @@ void setInlineStyleProperty(Element& element, StringView propertyName, const Str
 
     if (!is<StyledElement>(element))
         return;
-    downcast<StyledElement>(element).setInlineStyleProperty(propID, value, important);
+    downcast<StyledElement>(element).setInlineStyleProperty(propID, value, important ? IsImportant::Yes : IsImportant::No);
 }
 
 } // namespace QStyleHelpers
