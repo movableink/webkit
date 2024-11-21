@@ -64,6 +64,8 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/qt/ImageBufferQtBackend.h
     platform/graphics/qt/ImageBufferUtilitiesQt.h
     platform/graphics/qt/GraphicsContextQt.h
+    platform/graphics/qt/TransparencyLayer.h
+    platform/graphics/qt/NativeImageQt.h
 
     platform/mock/GeolocationClientMock.h
 

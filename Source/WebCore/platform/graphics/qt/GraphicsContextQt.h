@@ -30,7 +30,48 @@
 
 #include "GraphicsContext.h"
 
+#include "TransparencyLayer.h"
+#include <QPainter>
+#include <QStack>
+
 namespace WebCore {
+
+class GraphicsContextPlatformPrivate {
+    WTF_MAKE_NONCOPYABLE(GraphicsContextPlatformPrivate); WTF_MAKE_FAST_ALLOCATED;
+public:
+    GraphicsContextPlatformPrivate(QPainter*, const QColor& initialSolidColor);
+    ~GraphicsContextPlatformPrivate();
+
+    inline QPainter* p() const
+    {
+        if (layers.isEmpty())
+            return painter;
+        return &layers.top()->painter;
+    }
+
+    bool antiAliasingForRectsAndLines;
+
+    QStack<TransparencyLayer*> layers;
+    // Counting real layers. Required by isInTransparencyLayer() calls
+    // For example, layers with valid alphaMask are not real layers
+    int layerCount;
+
+    // reuse this brush for solid color (to prevent expensive QBrush construction)
+    QBrush solidColor;
+
+    bool initialSmoothPixmapTransformHint;
+
+    QRectF clipBoundingRect() const
+    {
+        return p()->clipBoundingRect();
+    }
+
+    void takeOwnershipOfPlatformContext() { platformContextIsOwned = true; }
+
+private:
+    QPainter* painter;
+    bool platformContextIsOwned;
+};
 
 class WEBCORE_EXPORT GraphicsContextQt final : public GraphicsContext {
 public:

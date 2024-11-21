@@ -64,6 +64,11 @@ bool PlatformImageNativeImageBackend::hasAlpha() const
     return m_platformImage.hasAlphaChannel();
 }
 
+Headroom PlatformImageNativeImageBackend::headroom() const
+{
+    return Headroom::None;
+}
+
 DestinationColorSpace PlatformImageNativeImageBackend::colorSpace() const
 {
     QColorSpace colorSpace = m_platformImage.colorSpace();

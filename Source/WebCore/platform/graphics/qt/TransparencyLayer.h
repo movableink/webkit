@@ -41,6 +41,7 @@
 #include <QPixmap>
 #include <wtf/FastMalloc.h>
 #include <wtf/Noncopyable.h>
+#include "NativeImageQt.h"
 
 namespace WebCore {
 
