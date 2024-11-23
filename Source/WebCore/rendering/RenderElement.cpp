@@ -101,6 +101,7 @@
 #include <wtf/MathExtras.h>
 #include <wtf/StackStats.h>
 #include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/TextStream.h>
 
 #if ENABLE(CONTENT_CHANGE_OBSERVER)
 #include "ContentChangeObserver.h"
@@ -178,7 +179,6 @@ bool RenderElement::isContentDataSupported(const ContentData& contentData)
 
 RenderPtr<RenderElement> RenderElement::createFor(Element& element, RenderStyle&& style, OptionSet<ConstructBlockLevelRendererFor> rendererTypeOverride)
 {
-
     const ContentData* contentData = style.contentData();
     if (!rendererTypeOverride && contentData && isContentDataSupported(*contentData) && !element.isPseudoElement()) {
         Style::loadPendingResources(style, element.document(), &element);
@@ -528,8 +528,19 @@ void RenderElement::setStyle(RenderStyle&& style, StyleDifference minimalStyleDi
 
     StyleDifference diff = StyleDifference::Equal;
     OptionSet<StyleDifferenceContextSensitiveProperty> contextSensitiveProperties;
-    if (m_hasInitializedStyle)
+    if (m_hasInitializedStyle) {
         diff = m_style.diff(style, contextSensitiveProperties);
+
+#if !LOG_DISABLED
+        if (LogStyle.state == WTFLogChannelState::On) {
+            TextStream diffStream(TextStream::LineMode::MultipleLine, TextStream::Formatting::NumberRespectingIntegers);
+            diffStream.increaseIndent(2);
+            m_style.dumpDifferences(diffStream, style);
+            if (!diffStream.isEmpty())
+                LOG_WITH_STREAM(Style, stream << *this << " style diff " << diff << " (context sensitive changes " << contextSensitiveProperties << "):\n" << diffStream.release());
+        }
+#endif
+    }
 
     diff = std::max(diff, minimalStyleDifference);
 
@@ -889,7 +900,7 @@ void RenderElement::styleWillChange(StyleDifference diff, const RenderStyle& new
         if (wasVisible != willBeVisible) {
             if (CheckedPtr layer = enclosingLayer()) {
                 if (willBeVisible) {
-                    if (m_style.hasSkippedContent() && isSkippedContentRoot())
+                    if (m_style.hasSkippedContent() && isSkippedContentRoot(*this))
                         layer->dirtyVisibleContentStatus();
                     else
                         layer->setHasVisibleContent();
@@ -2527,11 +2538,6 @@ void RenderElement::markRendererDirtyAfterTopLayerChange(RenderElement* renderer
     renderBox->setNeedsLayout();
 }
 
-bool RenderElement::isSkippedContentRoot() const
-{
-    return WebCore::isSkippedContentRoot(style(), element()) && !view().frameView().layoutContext().needsSkippedContentLayout();
-}
-
 bool RenderElement::hasEligibleContainmentForSizeQuery() const
 {
     switch (style().containerType()) {
@@ -2557,7 +2563,7 @@ void RenderElement::layoutIfNeeded()
 {
     if (!needsLayout())
         return;
-    if (isSkippedContentForLayout()) {
+    if (layoutContext().isSkippedContentForLayout(*this)) {
         clearNeedsLayoutForSkippedContent();
         return;
     }

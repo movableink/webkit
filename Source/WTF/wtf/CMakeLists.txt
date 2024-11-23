@@ -350,6 +350,8 @@ set(WTF_PUBLIC_HEADERS
     UniqueRefVector.h
     VMTags.h
     ValueCheck.h
+    VariantList.h
+    VariantListOperations.h
     Vector.h
     VectorHash.h
     VectorTraits.h

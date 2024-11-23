@@ -26,20 +26,13 @@
 #include "config.h"
 #include "URLPatternTokenizer.h"
 
+#include "URLPatternParser.h"
 #include <unicode/utf16.h>
 #include <unicode/utf8.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 namespace URLPatternUtilities {
-
-// https://urlpattern.spec.whatwg.org/#is-a-valid-name-code-point
-static bool isValidNameCodepoint(UChar codepoint, bool first)
-{
-    if (first)
-        return u_isIDStart(codepoint);
-
-    return u_isIDPart(codepoint);
-}
 
 bool Token::isNull() const
 {
@@ -91,10 +84,10 @@ void Tokenizer::addToken(TokenType currentType)
 }
 
 // https://urlpattern.spec.whatwg.org/#process-a-tokenizing-error
-ExceptionOr<void> Tokenizer::processTokenizingError(size_t nextPosition, size_t valuePosition)
+ExceptionOr<void> Tokenizer::processTokenizingError(size_t nextPosition, size_t valuePosition, const String& callerErrorInfo)
 {
     if (m_policy == TokenizePolicy::Strict)
-        return Exception { ExceptionCode::TypeError, "Invalid token provided to URLPattern tokenizer with strict tokenize policy."_s };
+        return Exception { ExceptionCode::TypeError, callerErrorInfo };
 
     ASSERT(m_policy == TokenizePolicy::Lenient);
 
@@ -132,7 +125,7 @@ ExceptionOr<Vector<Token>> Tokenizer::tokenize()
 
         if (m_codepoint == '\\') {
             if (m_index == m_input.length() - 1) {
-                maybeException = processTokenizingError(m_nextIndex, m_index);
+                maybeException = processTokenizingError(m_nextIndex, m_index, "No character is provided after escape."_s);
                 continue;
             }
 
@@ -160,7 +153,7 @@ ExceptionOr<Vector<Token>> Tokenizer::tokenize()
             while (namePosition < m_input.length()) {
                 seekNextCodePoint(namePosition);
 
-                bool isValidCodepoint = isValidNameCodepoint(m_codepoint, namePosition == nameStart);
+                bool isValidCodepoint = isValidNameCodepoint(m_codepoint, namePosition == nameStart ? IsFirst::Yes : IsFirst::No);
 
                 if (!isValidCodepoint)
                     break;
@@ -169,7 +162,7 @@ ExceptionOr<Vector<Token>> Tokenizer::tokenize()
             }
 
             if (namePosition <= nameStart) {
-                maybeException = processTokenizingError(nameStart, m_index);
+                maybeException = processTokenizingError(nameStart, m_index, makeString("Name position "_s, String::number(namePosition), " is less than name start "_s,  String::number(nameStart)));
                 continue;
             }
 
@@ -187,20 +180,20 @@ ExceptionOr<Vector<Token>> Tokenizer::tokenize()
                 seekNextCodePoint(regexPosition);
 
                 if (!isASCII(m_codepoint)) {
-                    maybeException = processTokenizingError(regexStart, m_index);
+                    maybeException = processTokenizingError(regexStart, m_index, "Current codepoint is not ascii"_s);
                     hasError = true;
                     break;
                 }
 
                 if (regexPosition == regexStart && m_codepoint == '?') {
-                    maybeException = processTokenizingError(regexStart, m_index);
+                    maybeException = processTokenizingError(regexStart, m_index, "Regex cannot start with modifier."_s);
                     hasError = true;
                     break;
                 }
 
                 if (m_codepoint == '\\') {
                     if (m_index == m_input.length() - 1) {
-                        maybeException = processTokenizingError(regexStart, m_index);
+                        maybeException = processTokenizingError(regexStart, m_index, "No character is provided after escape."_s);
                         hasError = true;
                         break;
                     }
@@ -208,7 +201,7 @@ ExceptionOr<Vector<Token>> Tokenizer::tokenize()
                     getNextCodePoint();
 
                     if (!isASCII(m_codepoint)) {
-                        maybeException = processTokenizingError(regexStart, m_index);
+                        maybeException = processTokenizingError(regexStart, m_index, "Current codepoint is not ascii"_s);
                         hasError = true;
                         break;
                     }
@@ -230,7 +223,7 @@ ExceptionOr<Vector<Token>> Tokenizer::tokenize()
                     depth = depth + 1;
 
                     if (m_index == m_input.length() - 1) {
-                        maybeException = processTokenizingError(regexStart, m_index);
+                        maybeException = processTokenizingError(regexStart, m_index, "No closing token is provided by end of string."_s);
                         hasError = true;
                         break;
                     }
@@ -239,7 +232,7 @@ ExceptionOr<Vector<Token>> Tokenizer::tokenize()
                     getNextCodePoint();
 
                     if (m_codepoint != '?') {
-                        maybeException = processTokenizingError(regexStart, m_index);
+                        maybeException = processTokenizingError(regexStart, m_index, "Required OtherModifier token is not provided in regex."_s);
                         hasError = true;
                         break;
                     }
@@ -254,14 +247,14 @@ ExceptionOr<Vector<Token>> Tokenizer::tokenize()
                 continue;
 
             if (depth) {
-                maybeException = processTokenizingError(regexStart, m_index);
+                maybeException = processTokenizingError(regexStart, m_index, "Current open token does not have a corresponding close token."_s);
                 continue;
             }
 
             auto regexLength = regexPosition - regexStart - 1;
 
             if (!regexLength)
-                maybeException = processTokenizingError(regexStart, m_index);
+                maybeException = processTokenizingError(regexStart, m_index, "Regex length is zero."_s);
 
             addToken(TokenType::Regexp, regexPosition, regexStart, regexLength);
             continue;

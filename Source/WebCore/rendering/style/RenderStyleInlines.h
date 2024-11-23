@@ -73,7 +73,7 @@ inline const StyleSelfAlignmentData& RenderStyle::alignSelf() const { return m_n
 constexpr auto RenderStyle::allTransformOperations() -> OptionSet<TransformOperationOption> { return { TransformOperationOption::TransformOrigin, TransformOperationOption::Translate, TransformOperationOption::Rotate, TransformOperationOption::Scale, TransformOperationOption::Offset }; }
 inline const AnimationList* RenderStyle::animations() const { return m_nonInheritedData->miscData->animations.get(); }
 inline AnimationList* RenderStyle::animations() { return m_nonInheritedData->miscData->animations.get(); }
-inline const Vector<AtomString>& RenderStyle::anchorNames() const { return m_nonInheritedData->rareData->anchorNames; }
+inline const Vector<Style::ScopedName>& RenderStyle::anchorNames() const { return m_nonInheritedData->rareData->anchorNames; }
 inline StyleAppearance RenderStyle::appearance() const { return static_cast<StyleAppearance>(m_nonInheritedData->miscData->appearance); }
 inline const FilterOperations& RenderStyle::appleColorFilter() const { return m_rareInheritedData->appleColorFilter->operations; }
 inline double RenderStyle::aspectRatioHeight() const { return m_nonInheritedData->miscData->aspectRatioHeight; }
@@ -330,14 +330,14 @@ inline const NamedGridLinesMap& RenderStyle::implicitNamedGridColumnLines() cons
 inline const NamedGridLinesMap& RenderStyle::implicitNamedGridRowLines() const { return m_nonInheritedData->rareData->grid->implicitNamedGridRowLines; }
 constexpr auto RenderStyle::individualTransformOperations() -> OptionSet<TransformOperationOption> { return { TransformOperationOption::Translate, TransformOperationOption::Rotate, TransformOperationOption::Scale, TransformOperationOption::Offset }; }
 inline const StyleCustomPropertyData& RenderStyle::inheritedCustomProperties() const { return m_rareInheritedData->customProperties.get(); }
-inline Vector<AtomString> RenderStyle::initialAnchorNames() { return { }; }
+inline Vector<Style::ScopedName> RenderStyle::initialAnchorNames() { return { }; }
 constexpr StyleAppearance RenderStyle::initialAppearance() { return StyleAppearance::None; }
 inline FilterOperations RenderStyle::initialAppleColorFilter() { return { }; }
 constexpr AspectRatioType RenderStyle::initialAspectRatioType() { return AspectRatioType::Auto; }
 constexpr BackfaceVisibility RenderStyle::initialBackfaceVisibility() { return BackfaceVisibility::Visible; }
 inline StyleColor RenderStyle::initialBackgroundColor() { return Color::transparentBlack; }
 inline BlockEllipsis RenderStyle::initialBlockEllipsis() { return { }; }
-constexpr BlockStepInsert RenderStyle::initialBlockStepInsert() { return BlockStepInsert::Margin; }
+constexpr BlockStepInsert RenderStyle::initialBlockStepInsert() { return BlockStepInsert::MarginBox; }
 inline std::optional<Length> RenderStyle::initialBlockStepSize() { return std::nullopt; }
 constexpr BorderCollapse RenderStyle::initialBorderCollapse() { return BorderCollapse::Separate; }
 inline LengthSize RenderStyle::initialBorderRadius() { return { zeroLength(), zeroLength() }; }
@@ -448,7 +448,7 @@ inline Length RenderStyle::initialPerspectiveOriginX() { return { 50.0f, LengthT
 inline Length RenderStyle::initialPerspectiveOriginY() { return { 50.0f, LengthType::Percent }; }
 constexpr PointerEvents RenderStyle::initialPointerEvents() { return PointerEvents::Auto; }
 constexpr PositionType RenderStyle::initialPosition() { return PositionType::Static; }
-inline const AtomString& RenderStyle::initialPositionAnchor() { return nullAtom(); }
+inline std::optional<Style::ScopedName> RenderStyle::initialPositionAnchor() { return { }; }
 constexpr Style::PositionTryOrder RenderStyle::initialPositionTryOrder() { return Style::PositionTryOrder::Normal; }
 constexpr PrintColorAdjust RenderStyle::initialPrintColorAdjust() { return PrintColorAdjust::Economy; }
 constexpr Order RenderStyle::initialRTLOrdering() { return Order::Logical; }
@@ -671,7 +671,7 @@ inline float RenderStyle::perspective() const { return m_nonInheritedData->rareD
 inline LengthPoint RenderStyle::perspectiveOrigin() const { return m_nonInheritedData->rareData->perspectiveOrigin(); }
 inline const Length& RenderStyle::perspectiveOriginX() const { return m_nonInheritedData->rareData->perspectiveOriginX; }
 inline const Length& RenderStyle::perspectiveOriginY() const { return m_nonInheritedData->rareData->perspectiveOriginY; }
-inline const AtomString& RenderStyle::positionAnchor() const { return m_nonInheritedData->rareData->positionAnchor; }
+inline const std::optional<Style::ScopedName>& RenderStyle::positionAnchor() const { return m_nonInheritedData->rareData->positionAnchor; }
 inline Style::PositionTryOrder RenderStyle::positionTryOrder() const { return static_cast<Style::PositionTryOrder>(m_nonInheritedData->rareData->positionTryOrder); }
 inline bool RenderStyle::preserveNewline() const { return preserveNewline(whiteSpace()); }
 inline bool RenderStyle::preserves3D() const { return usedTransformStyle3D() == TransformStyle3D::Preserve3D; }
@@ -990,32 +990,6 @@ constexpr bool RenderStyle::preserveNewline(WhiteSpace mode)
     return mode != WhiteSpace::Normal && mode != WhiteSpace::NoWrap;
 }
 
-inline bool isSkippedContentRoot(const RenderStyle& style, const Element* element)
-{
-    if (style.contentVisibility() == ContentVisibility::Visible)
-        return false;
-
-    auto doesContentVisibilityApply = [&] {
-        // content-visibility applies to elements for which size containment can apply (https://drafts.csswg.org/css-contain/#content-visibility)
-
-        // https://drafts.csswg.org/css-contain-2/#containment-size
-        // Giving an element size containment has no effect if any of the following are true:
-        // if the element does not generate a principal box (as is the case with display: contents or display: none)
-        // if its inner display type is table
-        // if its principal box is an internal table box
-        // if its principal box is an internal ruby box or a non-atomic inline-level box
-        auto displayType = style.display();
-        auto doesNotApply = displayType == DisplayType::None || displayType == DisplayType::Contents || displayType == DisplayType::Table || displayType == DisplayType::InlineTable || style.isInternalTableBox() || style.isRubyContainerOrInternalRubyBox();
-        return !doesNotApply;
-    };
-    if (!doesContentVisibilityApply())
-        return false;
-    if (style.contentVisibility() == ContentVisibility::Hidden)
-        return true;
-    ASSERT(style.contentVisibility() == ContentVisibility::Auto);
-    return element && !element->isRelevantToUser();
-}
-
 inline float adjustFloatForAbsoluteZoom(float value, const RenderStyle& style)
 {
     return value / style.usedZoom();
@@ -1081,6 +1055,109 @@ inline bool pseudoElementRendererIsNeeded(const RenderStyle* style)
 inline bool isVisibleToHitTesting(const RenderStyle& style, const HitTestRequest& request)
 {
     return (request.userTriggered() ? style.usedVisibility() : style.visibility()) == Visibility::Visible;
+}
+
+inline bool shouldApplyLayoutContainment(const RenderStyle& style, const Element& element)
+{
+    // content-visibility hidden and auto turns on layout containment.
+    auto hasContainment = style.containsLayout() || style.contentVisibility() == ContentVisibility::Hidden || style.contentVisibility() == ContentVisibility::Auto;
+    if (!hasContainment)
+        return false;
+    // Giving an element layout containment has no effect if any of the following are true:
+    //   if the element does not generate a principal box (as is the case with display: contents or display: none)
+    //   if its principal box is an internal table box other than table-cell
+    //   if its principal box is an internal ruby box or a non-atomic inline-level box
+    if (style.display() == DisplayType::None || style.display() == DisplayType::Contents)
+        return false;
+    if (style.isInternalTableBox() && style.display() != DisplayType::TableCell)
+        return false;
+    if (style.isRubyContainerOrInternalRubyBox() || (style.display() == DisplayType::Inline && !element.isReplaced(style)))
+        return false;
+    return true;
+}
+
+inline bool shouldApplySizeContainment(const RenderStyle& style, const Element& element)
+{
+    auto hasContainment = style.containsSize() || style.contentVisibility() == ContentVisibility::Hidden || (style.contentVisibility() == ContentVisibility::Auto && !element.isRelevantToUser());
+    if (!hasContainment)
+        return false;
+    // Giving an element size containment has no effect if any of the following are true:
+    //   if the element does not generate a principal box (as is the case with display: contents or display: none)
+    //   if its inner display type is table
+    //   if its principal box is an internal table box
+    //   if its principal box is an internal ruby box or a non-atomic inline-level box
+    if (style.display() == DisplayType::None || style.display() == DisplayType::Contents)
+        return false;
+    if (style.display() == DisplayType::Table || style.display() == DisplayType::InlineTable)
+        return false;
+    if (style.isInternalTableBox())
+        return false;
+    if (style.isRubyContainerOrInternalRubyBox() || (style.display() == DisplayType::Inline && !element.isReplaced(style)))
+        return false;
+    return true;
+}
+
+inline bool shouldApplyInlineSizeContainment(const RenderStyle& style, const Element& element)
+{
+    if (!style.containsInlineSize())
+        return false;
+    // Giving an element inline-size containment has no effect if any of the following are true:
+    //   if the element does not generate a principal box (as is the case with display: contents or display: none)
+    //   if its inner display type is table
+    //   if its principal box is an internal table box
+    //   if its principal box is an internal ruby box or a non-atomic inline-level box
+    if (style.display() == DisplayType::None || style.display() == DisplayType::Contents)
+        return false;
+    if (style.display() == DisplayType::Table || style.display() == DisplayType::InlineTable)
+        return false;
+    if (style.isInternalTableBox())
+        return false;
+    if (style.isRubyContainerOrInternalRubyBox() || (style.display() == DisplayType::Inline && !element.isReplaced(style)))
+        return false;
+    return true;
+}
+
+inline bool shouldApplyStyleContainment(const RenderStyle& style, const Element&)
+{
+    // content-visibility hidden and auto turns on style containment.
+    return style.containsStyle() || style.contentVisibility() == ContentVisibility::Hidden || style.contentVisibility() == ContentVisibility::Auto;
+}
+
+inline bool shouldApplyPaintContainment(const RenderStyle& style, const Element& element)
+{
+    // content-visibility hidden and auto turns on paint containment.
+    auto hasContainment = style.containsPaint() || style.contentVisibility() == ContentVisibility::Hidden || style.contentVisibility() == ContentVisibility::Auto;
+    if (!hasContainment)
+        return false;
+    // Giving an element paint containment has no effect if any of the following are true:
+    //   if the element does not generate a principal box (as is the case with display: contents or display: none)
+    //   if its principal box is an internal table box other than table-cell
+    //   if its principal box is an internal ruby box or a non-atomic inline-level box
+    if (style.display() == DisplayType::None || style.display() == DisplayType::Contents)
+        return false;
+    if (style.isInternalTableBox() && style.display() != DisplayType::TableCell)
+        return false;
+    if (style.isRubyContainerOrInternalRubyBox() || (style.display() == DisplayType::Inline && !element.isReplaced(style)))
+        return false;
+    return true;
+}
+
+inline bool isSkippedContentRoot(const RenderStyle& style, const Element& element)
+{
+    if (!shouldApplySizeContainment(style, element))
+        return false;
+
+    switch (style.contentVisibility()) {
+    case ContentVisibility::Visible:
+        return false;
+    case ContentVisibility::Hidden:
+        return true;
+    case ContentVisibility::Auto:
+        return !element.isRelevantToUser();
+    default:
+        ASSERT_NOT_REACHED();
+        return false;
+    }
 }
 
 } // namespace WebCore

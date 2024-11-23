@@ -116,6 +116,12 @@ AcceleratedSurfaceDMABuf::RenderTarget::~RenderTarget()
     WebProcess::singleton().parentProcessConnection()->send(Messages::AcceleratedBackingStoreDMABuf::DidDestroyBuffer(m_id), m_surfaceID);
 }
 
+void AcceleratedSurfaceDMABuf::RenderTarget::addDamage(const WebCore::Damage& damage)
+{
+    if (!m_damage.isInvalid())
+        m_damage.add(damage);
+}
+
 std::unique_ptr<WebCore::GLFence> AcceleratedSurfaceDMABuf::RenderTarget::createRenderingFence(bool useExplicitSync) const
 {
     if (useExplicitSync && supportsExplicitSync()) {
@@ -303,6 +309,7 @@ AcceleratedSurfaceDMABuf::RenderTargetSHMImage::RenderTargetSHMImage(uint64_t su
 
 void AcceleratedSurfaceDMABuf::RenderTargetSHMImage::didRenderFrame()
 {
+    RenderTarget::didRenderFrame();
     glReadPixels(0, 0, m_bitmap->size().width(), m_bitmap->size().height(), GL_BGRA, GL_UNSIGNED_BYTE, m_bitmap->mutableSpan().data());
 }
 
@@ -421,6 +428,8 @@ void AcceleratedSurfaceDMABuf::SwapChain::setupBufferFormat(const Vector<DMABufR
     BufferFormat dmabufFormat;
     const auto& supportedFormats = WebCore::PlatformDisplay::sharedDisplay().dmabufFormats();
     for (const auto& bufferFormat : preferredFormats) {
+
+        auto matchesOpacity = false;
         for (const auto& format : supportedFormats) {
             auto index = bufferFormat.formats.findIf([&](const auto& item) {
                 return format.fourcc == item.fourcc;
@@ -428,7 +437,7 @@ void AcceleratedSurfaceDMABuf::SwapChain::setupBufferFormat(const Vector<DMABufR
             if (index != notFound) {
                 const auto& preferredFormat = bufferFormat.formats[index];
 
-                bool matchesOpacity = isOpaqueFormat(preferredFormat.fourcc) == isOpaque;
+                matchesOpacity = isOpaqueFormat(preferredFormat.fourcc) == isOpaque;
                 if (!matchesOpacity && dmabufFormat.fourcc)
                     continue;
 
@@ -450,7 +459,7 @@ void AcceleratedSurfaceDMABuf::SwapChain::setupBufferFormat(const Vector<DMABufR
             }
         }
 
-        if (dmabufFormat.fourcc)
+        if (dmabufFormat.fourcc && matchesOpacity)
             break;
     }
 
@@ -537,6 +546,14 @@ void AcceleratedSurfaceDMABuf::SwapChain::reset()
 void AcceleratedSurfaceDMABuf::SwapChain::releaseUnusedBuffers()
 {
     m_freeTargets.clear();
+}
+
+void AcceleratedSurfaceDMABuf::SwapChain::addDamage(const WebCore::Damage& damage)
+{
+    for (auto& renderTarget : m_freeTargets)
+        renderTarget->addDamage(damage);
+    for (auto& renderTarget : m_lockedTargets)
+        renderTarget->addDamage(damage);
 }
 
 #if PLATFORM(WPE) && USE(GBM) && ENABLE(WPE_PLATFORM)
@@ -657,6 +674,12 @@ void AcceleratedSurfaceDMABuf::didRenderFrame(WebCore::Region&& damage)
 
     m_target->didRenderFrame();
     WebProcess::singleton().parentProcessConnection()->send(Messages::AcceleratedBackingStoreDMABuf::Frame(m_target->id(), WTFMove(damage), WTFMove(renderingFence)), m_id);
+}
+
+const WebCore::Damage& AcceleratedSurfaceDMABuf::addDamage(const WebCore::Damage& damage)
+{
+    m_swapChain.addDamage(damage);
+    return m_target ? m_target->damage() : WebCore::Damage::invalid();
 }
 
 void AcceleratedSurfaceDMABuf::releaseBuffer(uint64_t targetID, UnixFileDescriptor&& releaseFence)

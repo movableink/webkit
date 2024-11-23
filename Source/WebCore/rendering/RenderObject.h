@@ -58,6 +58,7 @@ class HitTestRequest;
 class HitTestResult;
 class HostWindow;
 class LegacyInlineBox;
+class LocalFrameViewLayoutContext;
 class Path;
 class Position;
 class ReferencedSVGResources;
@@ -729,7 +730,7 @@ public:
     inline bool hasTransformOrPerspective() const;
 
     bool capturedInViewTransition() const { return m_stateBitfields.hasFlag(StateFlag::CapturedInViewTransition); }
-    void setCapturedInViewTransition(bool);
+    bool setCapturedInViewTransition(bool);
 
     // When the document element is captured, the captured contents uses the RenderView
     // instead. Returns the capture state with this adjustment applied.
@@ -739,6 +740,7 @@ public:
 
     RenderView& view() const { return *document().renderView(); }
     CheckedRef<RenderView> checkedView() const;
+    inline const LocalFrameViewLayoutContext& layoutContext() const;
 
     HostWindow* hostWindow() const;
 
@@ -1144,9 +1146,6 @@ public:
     void addPDFURLRect(const PaintInfo&, const LayoutPoint&) const;
 
     bool isSkippedContent() const;
-
-    bool isSkippedContentRoot() const;
-    bool isSkippedContentForLayout() const;
 
     PointerEvents usedPointerEvents() const;
 

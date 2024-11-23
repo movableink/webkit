@@ -282,8 +282,9 @@
         },
         "block-step-insert": {
             "values": [
-                "margin",
-                "padding"
+                "margin-box",
+                "padding-box",
+                "content-box"
             ],
             "codegen-properties": {
                 "settings-flag": "cssRhythmicSizingEnabled",
@@ -9415,7 +9416,7 @@
         },
         "position-anchor": {
             "codegen-properties": {
-                "converter": "StringOrAutoAtom",
+                "converter": "PositionAnchor",
                 "parser-grammar": "auto | <dashed-ident>",
                 "settings-flag": "cssAnchorPositioningEnabled"
             },

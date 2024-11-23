@@ -922,17 +922,6 @@ imported/w3c/web-platform-tests/html/rendering/replaced-elements/attributes-for-
 webkit.org/b/252594 imported/w3c/web-platform-tests/html/rendering/replaced-elements/attributes-for-embedded-content-and-images/video-inline-size-containment-no-crash.html [ Skip ]
 imported/w3c/web-platform-tests/html/rendering/replaced-elements/embedded-content/cross-domain-iframe.sub.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/html/rendering/replaced-elements/embedded-content/tall-cross-domain-iframe-in-scrolled.sub.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/html/rendering/the-details-element/details-page-break-after-1-print.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/html/rendering/the-details-element/details-page-break-after-2-print.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/html/rendering/the-details-element/details-page-break-before-1-print.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/html/rendering/the-details-element/details-page-break-before-2-print.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/html/rendering/the-details-element/details-display-type-001.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/html/rendering/the-details-element/details-display-type-002.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/html/rendering/the-details-element/details-pseudo-elements-001.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/html/rendering/the-details-element/details-pseudo-elements-002.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/html/rendering/the-details-element/details-pseudo-elements-003.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/html/rendering/the-details-element/details-pseudo-elements-004.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/html/rendering/the-details-element/details-pseudo-elements-005.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/html/rendering/widgets/the-select-element/option-empty-label-to-empty-string.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/html/rendering/widgets/the-select-element/option-empty-label.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/adopt-from-image-document.html [ ImageOnlyFailure ]
@@ -958,6 +947,10 @@ imported/w3c/web-platform-tests/html/canvas/element/manual/filters/tentative/can
 imported/w3c/web-platform-tests/html/rendering/widgets/appearance/appearance-animation-002.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/html/rendering/widgets/appearance/appearance-transition-003.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/html/semantics/interactive-elements/the-dialog-element/modal-dialog-selection.html [ Pass Failure ]
+
+# Needs support for chaining pseudo-elements after ::details-content.
+imported/w3c/web-platform-tests/html/rendering/the-details-element/details-pseudo-elements-004.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/html/rendering/the-details-element/details-pseudo-elements-005.html [ ImageOnlyFailure ]
 
 # Cross-Origin-Embedder-Policy: credentialless is not supported.
 imported/w3c/web-platform-tests/html/cross-origin-embedder-policy/credentialless
@@ -3357,6 +3350,8 @@ webkit.org/b/3652 http/tests/misc/prefetch-purpose.html [ Skip ]
 
 # First-party-only cookie policy only supported on Cocoa platforms.
 http/tests/cookies/only-accept-first-party-cookies.html [ Skip ]
+# Enable on appropriate platforms: rdar://140222322
+http/tests/cookies/accept-partitioned-first-and-third-party-cookies.https.html [ Skip ]
 
 # Disabled WPT tests
 webkit.org/b/185939 imported/w3c/web-platform-tests/css/WOFF2 [ Skip ]
@@ -5617,7 +5612,6 @@ imported/w3c/web-platform-tests/css/css-contain/contain-layout-button-002.tentat
 imported/w3c/web-platform-tests/css/css-contain/contain-style-counters-002.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-contain/contain-style-counters-004.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-contain/contain-style-counters-005.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-contain/content-visibility/content-visibility-095.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-contain/content-visibility/content-visibility-vs-scrollIntoView-001.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-contain/content-visibility/content-visibility-vs-scrollIntoView-002.html [ ImageOnlyFailure ]
 
@@ -7365,9 +7359,6 @@ imported/w3c/web-platform-tests/dom/events/scrolling/input-text-scroll-event-whe
 # webkit.org/b/263870 [scroll-animations] some WPT tests are timing out
 imported/w3c/web-platform-tests/css/css-contain/content-visibility/content-visibility-animation-with-scroll-timeline-in-auto-subtree.html [ Skip ]
 imported/w3c/web-platform-tests/scroll-animations/css/deferred-timeline-composited.html [ Skip ]
-imported/w3c/web-platform-tests/scroll-animations/css/scroll-timeline-range-animation.html [ Skip ]
-imported/w3c/web-platform-tests/scroll-animations/css/view-timeline-range-animation.html [ Skip ]
-imported/w3c/web-platform-tests/scroll-animations/scroll-timelines/animation-with-root-scroller.html [ Skip ]
 imported/w3c/web-platform-tests/scroll-animations/scroll-timelines/constructor-no-document.html [ Skip ]
 imported/w3c/web-platform-tests/scroll-animations/scroll-timelines/updating-the-finished-state.html [ Skip ]
 
@@ -7437,17 +7428,6 @@ imported/w3c/web-platform-tests/navigation-api/ordering-and-transition/navigate-
 # General flakes, almost exclusively on mac-wk2-stress.
 imported/w3c/web-platform-tests/navigation-api/navigation-methods/return-value/back-204-205-download.html [ Failure Pass ]
 imported/w3c/web-platform-tests/navigation-api/ordering-and-transition/navigate-204-205-download-then-same-document.html [ Failure Pass ]
-
-# beforeunload event listeners are not allowed on subframes.
-imported/w3c/web-platform-tests/navigation-api/navigate-event/navigate-navigation-back-cross-document.html [ Skip ]
-imported/w3c/web-platform-tests/navigation-api/navigation-methods/return-value/back-beforeunload.html [ Skip ]
-imported/w3c/web-platform-tests/navigation-api/navigation-methods/return-value/forward-beforeunload.html [ Skip ]
-imported/w3c/web-platform-tests/navigation-api/navigation-methods/return-value/navigate-beforeunload.html [ Skip ]
-imported/w3c/web-platform-tests/navigation-api/navigation-methods/return-value/navigate-rejection-order-beforeunload-unserializablestate.html [ Skip ]
-imported/w3c/web-platform-tests/navigation-api/navigation-methods/return-value/navigate-rejection-order-invalidurl-beforeunload.html [ Skip ]
-imported/w3c/web-platform-tests/navigation-api/navigation-methods/return-value/reload-beforeunload.html [ Skip ]
-imported/w3c/web-platform-tests/navigation-api/navigation-methods/return-value/reload-rejection-order-beforeunload-unserializablestate.html [ Skip ]
-imported/w3c/web-platform-tests/navigation-api/navigation-methods/return-value/traverseTo-beforeunload.html [ Skip ]
 
 webkit.org/b/282758 [ Debug ] imported/w3c/web-platform-tests/navigation-api/navigate-event/navigate-navigation-back-same-document-in-iframe.html [ Crash ]
 webkit.org/b/282758 [ Debug ] imported/w3c/web-platform-tests/navigation-api/navigate-event/navigate-navigation-back-same-document.html [ Crash ]
@@ -7944,7 +7924,6 @@ imported/w3c/web-platform-tests/css/css-ruby/ruby-base-different-size.html [ Ima
 imported/blink/fast/ruby/ruby-first-letter.html [ ImageOnlyFailure ]
 # <rb> <rbc> inline boxes are not recognized as ruby base boxes.
 imported/w3c/web-platform-tests/css/css-ruby/ruby-line-breaking-003.html [ ImageOnlyFailure ]
-webkit.org/b/276007 [ Debug ] fast/ruby/ruby-with-continuation-crash.html [ Skip ]
 
 imported/w3c/web-platform-tests/css/css-ruby/break-within-bases/basic.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-ruby/break-within-bases/no-break-opportunity-at-end.html [ ImageOnlyFailure ]

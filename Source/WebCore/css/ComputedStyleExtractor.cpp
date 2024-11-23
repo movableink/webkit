@@ -3201,16 +3201,15 @@ static Ref<CSSValue> valueForScrollTimelineName(const Vector<AtomString>& names)
     return CSSValueList::createCommaSeparated(WTFMove(list));
 }
 
-static Ref<CSSValue> valueForAnchorName(const Vector<AtomString>& names)
+static Ref<CSSValue> valueForAnchorName(const Vector<Style::ScopedName>& scopedNames)
 {
-    if (names.isEmpty())
+    if (scopedNames.isEmpty())
         return CSSPrimitiveValue::create(CSSValueNone);
 
     CSSValueListBuilder list;
-    for (auto& name : names) {
-        ASSERT(!name.isNull());
-        list.append(CSSPrimitiveValue::createCustomIdent(name));
-    }
+    for (auto& scopedName : scopedNames)
+        list.append(valueForScopedName(scopedName));
+
     return CSSValueList::createCommaSeparated(WTFMove(list));
 }
 
@@ -3607,7 +3606,17 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
         }
         return CSSPrimitiveValue::create(CSSValueNone);
     case CSSPropertyBlockStepInsert:
-        return style.blockStepInsert() == BlockStepInsert::Margin ? CSSPrimitiveValue::create(CSSValueMargin) : CSSPrimitiveValue::create(CSSValuePadding);
+        switch (style.blockStepInsert()) {
+        case BlockStepInsert::MarginBox:
+            return CSSPrimitiveValue::create(CSSValueMarginBox);
+        case BlockStepInsert::PaddingBox:
+            return CSSPrimitiveValue::create(CSSValuePaddingBox);
+        case BlockStepInsert::ContentBox:
+            return CSSPrimitiveValue::create(CSSValueContentBox);
+        default:
+            ASSERT_NOT_REACHED();
+            return CSSPrimitiveValue::create(CSSValueNone);
+        }
     case CSSPropertyBlockStepSize: {
         auto blockStepSize = style.blockStepSize();
         if (!blockStepSize)
@@ -4884,9 +4893,9 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
     case CSSPropertyAnchorName:
         return valueForAnchorName(style.anchorNames());
     case CSSPropertyPositionAnchor:
-        if (style.positionAnchor().isNull())
+        if (!style.positionAnchor())
             return CSSPrimitiveValue::create(CSSValueAuto);
-        return CSSPrimitiveValue::createCustomIdent(style.positionAnchor());
+        return valueForScopedName(*style.positionAnchor());
     case CSSPropertyPositionTryOrder: {
         switch (style.positionTryOrder()) {
         case Style::PositionTryOrder::Normal:

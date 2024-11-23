@@ -384,10 +384,6 @@ void RenderBox::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle
     bool isBodyRenderer = isBody();
 
     if (isDocElementRenderer || isBodyRenderer) {
-#if ENABLE(DARK_MODE_CSS)
-        view().frameView().recalculateBaseBackgroundColor();
-#endif
-
         view().frameView().recalculateScrollbarOverlayStyle();
         
         if (diff != StyleDifference::Equal)
@@ -1855,7 +1851,7 @@ bool RenderBox::foregroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect, u
     if (!maxDepthToTest)
         return false;
 
-    if (isSkippedContentRoot())
+    if (isSkippedContentRoot(*this))
         return false;
 
     for (auto& childBox : childrenOfType<RenderBox>(*this)) {
@@ -5840,7 +5836,7 @@ std::optional<LayoutUnit> RenderBox::explicitIntrinsicInnerWidth() const
     if (style().containIntrinsicWidthType() == ContainIntrinsicSizeType::None)
         return std::nullopt;
 
-    if (element() && style().containIntrinsicWidthHasAuto() && WebCore::isSkippedContentRoot(style(), element())) {
+    if (element() && style().containIntrinsicWidthHasAuto() && isSkippedContentRoot(*this)) {
         if (auto width = isHorizontalWritingMode() ? element()->lastRememberedLogicalWidth() : element()->lastRememberedLogicalHeight())
             return width;
     }
@@ -5859,7 +5855,7 @@ std::optional<LayoutUnit> RenderBox::explicitIntrinsicInnerHeight() const
     if (style().containIntrinsicHeightType() == ContainIntrinsicSizeType::None)
         return std::nullopt;
 
-    if (element() && style().containIntrinsicHeightHasAuto() && WebCore::isSkippedContentRoot(style(), element())) {
+    if (element() && style().containIntrinsicHeightHasAuto() && isSkippedContentRoot(*this)) {
         if (auto height = isHorizontalWritingMode() ? element()->lastRememberedLogicalHeight() : element()->lastRememberedLogicalWidth())
             return height;
     }

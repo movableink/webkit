@@ -958,7 +958,9 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     css/values/primitives/CSSNone.h
     css/values/primitives/CSSPosition.h
     css/values/primitives/CSSPrimitiveNumericRange.h
+    css/values/primitives/CSSPrimitiveNumericTypes+EvaluateCalc.h
     css/values/primitives/CSSPrimitiveNumericTypes.h
+    css/values/primitives/CSSSymbol.h
     css/values/primitives/CSSUnevaluatedCalc.h
 
     css/values/shapes/CSSBasicShape.h
@@ -1426,7 +1428,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
 
     layout/formattingContexts/inline/text/TextUtil.h
 
-    layout/integration/LayoutIntegrationBoxTree.h
+    layout/integration/LayoutIntegrationBoxTreeUpdater.h
 
     layout/integration/flex/LayoutIntegrationFlexLayout.h
 
@@ -2339,6 +2341,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/mediastream/WebAudioSourceProvider.h
     platform/mediastream/WebRTCProvider.h
 
+    platform/mediastream/libwebrtc/LibWebRTCAudioModule.h
     platform/mediastream/libwebrtc/LibWebRTCMacros.h
     platform/mediastream/libwebrtc/LibWebRTCProvider.h
     platform/mediastream/libwebrtc/LibWebRTCSocketIdentifier.h

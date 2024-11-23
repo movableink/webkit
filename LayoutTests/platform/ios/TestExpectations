@@ -145,9 +145,6 @@ media/media-source/media-source-vp8-webm-error-offscreen.html [ Pass ]
 
 webkit.org/b/269897 media/media-source/media-managedmse-poster.html [ Skip ]
 
-webkit.org/b/282969 media/media-video-fullrange.html [ Timeout Pass ]
-webkit.org/b/282969 media/media-video-videorange.html [ Timeout Pass ]
-
 fast/images/text-recognition [ Pass ]
 fast/images/text-recognition/ios [ Pass ]
 fast/images/text-recognition/mac [ Skip ]
@@ -2463,8 +2460,6 @@ webkit.org/b/153656 displaylists/layer-dispay-list.html [ Pass Failure ]
 
 webkit.org/b/153311 fast/replaced/preferred-widths.html [ Pass Failure ]
 
-webkit.org/b/153336 imported/w3c/web-platform-tests/xhr/open-url-multi-window-4.htm [ Pass Failure ]
-
 webkit.org/b/153803 perf/show-hide-table-rows.html [ Pass Failure ]
 
 webkit.org/b/152306 fast/forms/input-user-input-sanitization.html [ Skip ]
@@ -3722,6 +3717,9 @@ webkit.org/b/242273 fast/events/ios/dragstart-on-image-by-long-pressing.html [ P
 # Requires platform support (see rdar://94324932).
 http/tests/media/media-source/mediasource-rvfc.html [ Skip ]
 
+webkit.org/b/283448 media/media-rvfc-paused-mp4.html [ Failure ]
+webkit.org/b/283448 media/media-rvfc-paused-offscreen-mp4.html [ Failure ]
+
 webkit.org/b/242825 editing/selection/ios/hide-selection-in-tiny-contenteditable.html [ Pass Failure ]
 
 webkit.org/b/242840 fast/text/international/system-language/han-text-style.html [ ImageOnlyFailure ]
@@ -4384,8 +4382,6 @@ webkit.org/b/251876 editing/selection/selection-scrolling-in-multiple-nested-sub
 webkit.org/b/251889 imported/w3c/web-platform-tests/content-security-policy/reporting-api/reporting-api-works-on-frame-ancestors.https.sub.html [ Failure ]
 
 webkit.org/b/251875 fast/dynamic/create-renderer-for-whitespace-only-text.html [ Pass Failure ]
-
-webkit.org/b/257832 imported/w3c/web-platform-tests/html/rendering/the-details-element/summary-text-decoration.html [ ImageOnlyFailure ]
 
 http/wpt/service-workers/basic-fetch-with-contentfilter-allow-after-adding-data.html [ Pass ]
 http/wpt/service-workers/basic-fetch-with-contentfilter.https.html [ Pass ]

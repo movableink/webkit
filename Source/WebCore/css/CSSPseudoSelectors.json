@@ -341,10 +341,6 @@
             "status": "non-standard",
             "user-agent-part": true
         },
-        "-webkit-details-marker": {
-            "status": "non-standard",
-            "user-agent-part": true
-        },
         "-webkit-generic-cue-root": {
             "status": "non-standard",
             "user-agent-part": true
@@ -521,6 +517,9 @@
             "argument": "optional",
             "conditional": "ENABLE(VIDEO)",
             "user-agent-part-string": true
+        },
+        "details-content": {
+            "user-agent-part": true
         },
         "-internal-cue-background": {
             "conditional": "ENABLE(VIDEO)",
