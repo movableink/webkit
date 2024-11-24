@@ -42,7 +42,6 @@
 #include "OrientationNotifier.h"
 #include "PageConsoleClient.h"
 #include "RealtimeMediaSource.h"
-#include "RenderingMode.h"
 #include "SleepDisabler.h"
 #include "TextIndicator.h"
 #include "VP9Utilities.h"
@@ -1518,9 +1517,6 @@ public:
 #if ENABLE(VIDEO)
     bool isEffectivelyMuted(const HTMLMediaElement&);
 #endif
-
-    using RenderingMode = WebCore::RenderingMode;
-    std::optional<RenderingMode> getEffectiveRenderingModeOfNewlyCreatedAcceleratedImageBuffer();
 
     using ImageBufferResourceLimits = WebCore::ImageBufferResourceLimits;
     using ImageBufferResourceLimitsPromise = DOMPromiseDeferred<IDLDictionary<ImageBufferResourceLimits>>;

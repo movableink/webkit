@@ -7709,20 +7709,6 @@ bool Internals::isEffectivelyMuted(const HTMLMediaElement& element)
 }
 #endif
 
-std::optional<RenderingMode> Internals::getEffectiveRenderingModeOfNewlyCreatedAcceleratedImageBuffer()
-{
-    RefPtr document = contextDocument();
-    if (!document || !document->page())
-        return std::nullopt;
-
-    if (RefPtr imageBuffer = ImageBuffer::create({ 100, 100 }, RenderingPurpose::DOM, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8, ImageBufferOptions::Accelerated, &document->page()->chrome())) {
-        imageBuffer->ensureBackendCreated();
-        if (imageBuffer->hasBackend())
-            return imageBuffer->renderingMode();
-    }
-    return std::nullopt;
-}
-
 void Internals::getImageBufferResourceLimits(ImageBufferResourceLimitsPromise&& promise)
 {
     RefPtr document = contextDocument();

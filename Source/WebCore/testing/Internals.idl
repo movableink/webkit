@@ -461,11 +461,6 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     unsigned long long imageBufferForCanvasLimit;
 };
 
-enum RenderingMode {
-    "Unaccelerated",
-    "Accelerated"
-};
-
 [
     ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
     LegacyNoInterfaceObject,
@@ -1414,7 +1409,6 @@ enum RenderingMode {
 
     [Conditional=VIDEO] boolean isEffectivelyMuted(HTMLMediaElement element);
 
-    RenderingMode? getEffectiveRenderingModeOfNewlyCreatedAcceleratedImageBuffer();
     Promise<ImageBufferResourceLimits> getImageBufferResourceLimits();
 
     undefined setTopDocumentURLForQuirks(DOMString urlString);
