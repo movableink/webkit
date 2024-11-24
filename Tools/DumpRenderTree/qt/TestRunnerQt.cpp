@@ -214,6 +214,16 @@ void TestRunnerQt::grantWebNotificationPermission(const QString& origin)
     m_drt->webPage()->setFeaturePermission(frame, QWebPage::Notifications, QWebPage::PermissionGrantedByUser);
 }
 
+void TestRunner::setTopContentInset(double inset)
+{
+    // QTFIXME
+}
+
+void TestRunner::setPageScaleFactor(double scaleFactor, long x, long y)
+{
+    DumpRenderTreeSupportQt::scalePageBy(DumpRenderTree::instance()->mainFrameAdapter(), 1, QPoint(0, 0));
+}
+
 void TestRunnerQt::ignoreLegacyWebNotificationPermissionRequests()
 {
     m_ignoreDesktopNotification = true;
@@ -637,6 +647,30 @@ void TestRunnerQt::execCommand(const QString& name, const QString& value)
 bool TestRunnerQt::isCommandEnabled(const QString& name) const
 {
     return DumpRenderTreeSupportQt::isCommandEnabled(m_drt->pageAdapter(), name);
+}
+
+JSValueRef TestRunner::alwaysResolvePromise(JSContextRef context)
+{
+    JSGlobalContextRef globalContext = JSContextGetGlobalContext(context);
+    JSObjectRef globalObject = JSContextGetGlobalObject(globalContext);
+
+    JSStringRef promiseName = JSStringCreateWithUTF8CString("Promise");
+    JSObjectRef promiseConstructor = JSValueToObject(
+        globalContext,
+        JSObjectGetProperty(globalContext, globalObject, promiseName, nullptr),
+        nullptr);
+    JSStringRelease(promiseName);
+
+    auto executor = JSObjectMakeFunctionWithCallback(globalContext, nullptr,
+        [](JSContextRef ctx, JSObjectRef, JSObjectRef, size_t argc, const JSValueRef args[], JSValueRef*) -> JSValueRef {
+            if (argc > 0) {
+                JSObjectCallAsFunction(ctx, JSValueToObject(ctx, args[0], nullptr), nullptr, 0, nullptr, nullptr);
+            }
+            return JSValueMakeUndefined(ctx);
+        });
+
+    JSValueRef promiseArgs[] = { executor };
+    return JSObjectCallAsConstructor(globalContext, promiseConstructor, 1, promiseArgs, nullptr);
 }
 
 bool TestRunner::findString(JSContextRef context, JSStringRef string, JSObjectRef optionsArray)
