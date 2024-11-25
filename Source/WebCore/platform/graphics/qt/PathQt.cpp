@@ -110,7 +110,7 @@ Ref<PathImpl> PathQt::copy() const
     return create(m_path);
 }
 
-QPainterPath PathQt::platformPath() const
+PlatformPathPtr PathQt::platformPath() const
 {
     return m_path;
 }
