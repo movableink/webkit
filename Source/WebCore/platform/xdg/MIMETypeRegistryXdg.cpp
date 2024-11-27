@@ -79,7 +79,7 @@ Vector<String> MIMETypeRegistry::extensionsForMIMEType(const String& mimeType)
         return { };
 
     Vector<String> returnValue;
-    std::array <char*, MAX_EXTENSION_COUNT> extensions;
+    std::array<char*, MAX_EXTENSION_COUNT> extensions;
     int n = xdg_mime_get_simple_globs(mimeType.utf8().data(), extensions.data(), MAX_EXTENSION_COUNT);
     for (int i = 0; i < n; ++i) {
         returnValue.append(String::fromUTF8(extensions[i]));
