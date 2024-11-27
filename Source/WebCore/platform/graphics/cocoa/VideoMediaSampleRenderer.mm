@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -125,26 +125,31 @@ bool VideoMediaSampleRenderer::areSamplesQueuesReadyForMoreMediaData(size_t wate
 
 void VideoMediaSampleRenderer::maybeBecomeReadyForMoreMediaData()
 {
-    RetainPtr renderer = rendererOrDisplayLayer();
-    if (renderer && ![renderer isReadyForMoreMediaData]) {
-        if (m_decompressionSession) {
-            ThreadSafeWeakPtr weakThis { *this };
-            [renderer requestMediaDataWhenReadyOnQueue:dispatchQueue() usingBlock:^{
-                if (RefPtr protectedThis = weakThis.get()) {
-                    [protectedThis->rendererOrDisplayLayer() stopRequestingMediaData];
-                    protectedThis->maybeBecomeReadyForMoreMediaData();
-                }
-            }];
+    ensureOnDispatcher([weakThis = ThreadSafeWeakPtr { *this }, this] {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
+            return;
+        RetainPtr renderer = rendererOrDisplayLayer();
+        if (renderer && ![renderer isReadyForMoreMediaData]) {
+            if (m_decompressionSession) {
+                ThreadSafeWeakPtr weakThis { *this };
+                [renderer requestMediaDataWhenReadyOnQueue:dispatchQueue() usingBlock:^{
+                    if (RefPtr protectedThis = weakThis.get()) {
+                        [protectedThis->rendererOrDisplayLayer() stopRequestingMediaData];
+                        protectedThis->maybeBecomeReadyForMoreMediaData();
+                    }
+                }];
+            }
+            return;
         }
-        return;
-    }
 
-    if (!areSamplesQueuesReadyForMoreMediaData(SampleQueueLowWaterMark))
-        return;
+        if (!areSamplesQueuesReadyForMoreMediaData(SampleQueueLowWaterMark))
+            return;
 
-    callOnMainThread([weakThis = ThreadSafeWeakPtr { *this }] {
-        if (RefPtr protectedThis = weakThis.get(); protectedThis && protectedThis->m_readyForMoreSampleFunction)
-            protectedThis->m_readyForMoreSampleFunction();
+        callOnMainThread([weakThis = ThreadSafeWeakPtr { *this }] {
+            if (RefPtr protectedThis = weakThis.get(); protectedThis && protectedThis->m_readyForMoreSampleFunction)
+                protectedThis->m_readyForMoreSampleFunction();
+        });
     });
 }
 
