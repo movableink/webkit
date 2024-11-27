@@ -131,14 +131,14 @@ static auto textRunForContent(ListMarkerTextContent textContent, const RenderSty
     String textForRun;
     if (textContent.textDirection == TextDirection::LTR) {
         if (style.writingMode().isBidiLTR())
-            textForRun = textContent.textWithSuffix();
+            textForRun = textContent.textWithSuffix;
         else
-            textForRun = makeString(reversed(textContent.suffix), textContent.textWithoutSuffix);
+            textForRun = makeString(reversed(textContent.suffix()), textContent.textWithoutSuffix());
     } else {
         if (!style.writingMode().isBidiLTR())
-            textForRun = reversed(textContent.textWithSuffix());
+            textForRun = reversed(textContent.textWithSuffix);
         else
-            textForRun = makeString(reversed(textContent.textWithoutSuffix), textContent.suffix);
+            textForRun = makeString(reversed(textContent.textWithoutSuffix()), textContent.suffix());
     }
     auto textRun = RenderBlock::constructTextRun(textForRun, style);
     return { WTFMove(textRun), WTFMove(textForRun) };
@@ -302,14 +302,16 @@ void RenderListMarker::updateContent()
         LayoutSize imageSize = calculateImageIntrinsicDimensions(m_image.get(), defaultBulletSize, ScaleByUsedZoom::No);
         m_image->setContainerContextForRenderer(*this, imageSize, style().usedZoom());
         m_textContent = {
-            .textWithoutSuffix = emptyString(),
-            .suffix = emptyString(),
+            .textWithSuffix = emptyString(),
+            .textWithoutSuffixLength = 0,
             .textDirection = TextDirection::LTR,
         };
         return;
     }
 
     auto contentTextDirection = [&](auto content) {
+        if (!content.length())
+            return TextDirection::LTR;
         // FIXME: Depending on the string value, we may need the real bidi algorithm. (rdar://106139180)
         // Also we may need to start checking for the entire content for directionality (and whether we need to check for additional
         // directionality characters like U_RIGHT_TO_LEFT_EMBEDDING).
@@ -323,8 +325,8 @@ void RenderListMarker::updateContent()
     switch (styleType.type) {
     case ListStyleType::Type::String: {
         m_textContent = {
-            .textWithoutSuffix = styleType.identifier,
-            .suffix = emptyString(),
+            .textWithSuffix = styleType.identifier,
+            .textWithoutSuffixLength = styleType.identifier.length(),
             .textDirection = contentTextDirection(StringView { styleType.identifier }),
         };
         break;
@@ -335,16 +337,16 @@ void RenderListMarker::updateContent()
 
         auto text = makeString(counter->prefix().text, counter->text(m_listItem->value(), writingMode()));
         m_textContent = {
-            .textWithoutSuffix = text,
-            .suffix = counter->suffix().text,
+            .textWithSuffix = makeString(text, counter->suffix().text),
+            .textWithoutSuffixLength = text.length(),
             .textDirection = contentTextDirection(text),
         };
         break;
     }
     case ListStyleType::Type::None:
         m_textContent = {
-            .textWithoutSuffix = emptyString(),
-            .suffix = " "_s,
+            .textWithSuffix = " "_s,
+            .textWithoutSuffixLength = 0,
             .textDirection = TextDirection::LTR,
         };
         break;

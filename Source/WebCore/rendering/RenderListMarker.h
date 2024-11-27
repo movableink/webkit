@@ -31,17 +31,22 @@ class RenderListItem;
 class StyleRuleCounterStyle;
 
 struct ListMarkerTextContent {
-    String textWithoutSuffix;
-    String suffix;
+    String textWithSuffix;
+    uint32_t textWithoutSuffixLength { 0 };
     TextDirection textDirection { TextDirection::LTR };
     bool isEmpty() const
     {
-        return textWithoutSuffix.isEmpty() && suffix.isEmpty();
+        return textWithSuffix.isEmpty();
     }
 
-    String textWithSuffix() const
+    StringView textWithoutSuffix() const
     {
-        return makeString(textWithoutSuffix, suffix);
+        return StringView { textWithSuffix }.left(textWithoutSuffixLength);
+    }
+
+    StringView suffix() const
+    {
+        return StringView { textWithSuffix }.substring(textWithoutSuffixLength);
     }
 };
 
@@ -54,8 +59,8 @@ public:
     RenderListMarker(RenderListItem&, RenderStyle&&);
     virtual ~RenderListMarker();
 
-    String textWithoutSuffix() const { return m_textContent.textWithoutSuffix; };
-    String textWithSuffix() const { return m_textContent.textWithSuffix(); };
+    String textWithoutSuffix() const { return m_textContent.textWithoutSuffix().toString(); };
+    String textWithSuffix() const { return m_textContent.textWithSuffix; };
 
     bool isInside() const;
 
