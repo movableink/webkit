@@ -281,8 +281,8 @@ private:
 #if !RELEASE_LOG_DISABLED
     Ref<const Logger> m_logger;
     const uint64_t m_logIdentifier;
-    String m_logIdentifierString;
 #endif
+    String m_logIdentifierString;
     bool m_finishedGatheringCandidates { false };
     bool m_isProcessingLocalDescriptionAnswer { false };
 

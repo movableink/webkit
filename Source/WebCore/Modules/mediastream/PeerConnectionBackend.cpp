@@ -165,6 +165,10 @@ PeerConnectionBackend::PeerConnectionBackend(RTCPeerConnection& peerConnection)
         m_shouldFilterICECandidates = page->webRTCProvider().isSupportingMDNS();
 #endif
 
+#if RELEASE_LOG_DISABLED
+    m_logIdentifierString = makeString(hex(reinterpret_cast<uintptr_t>(this)));
+#endif
+
 #if !RELEASE_LOG_DISABLED && (PLATFORM(WPE) || PLATFORM(GTK))
     m_jsonFilePath = String::fromUTF8(getenv("WEBKIT_WEBRTC_JSON_EVENTS_FILE"));
     if (!m_jsonFilePath.isEmpty())
