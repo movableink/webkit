@@ -739,7 +739,6 @@ html/HTMLFrameOwnerElement.cpp
 html/HTMLImageElement.cpp
 html/HTMLImageLoader.cpp
 html/HTMLInputElement.cpp
-html/HTMLLIElement.cpp
 html/HTMLLabelElement.cpp
 html/HTMLMapElement.cpp
 html/HTMLMediaElement.cpp
