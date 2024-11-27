@@ -2767,7 +2767,7 @@ const RenderStyle& RenderBlock::outlineStyleForRepaint() const
     return RenderElement::outlineStyleForRepaint();
 }
 
-void RenderBlock::updateHitTestResult(HitTestResult& result, const LayoutPoint& point)
+void RenderBlock::updateHitTestResult(HitTestResult& result, const LayoutPoint& point) const
 {
     if (result.innerNode())
         return;

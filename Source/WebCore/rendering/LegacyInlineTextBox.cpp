@@ -227,26 +227,6 @@ bool LegacyInlineTextBox::isLineBreak() const
     return renderer().style().preserveNewline() && len() == 1 && renderer().text()[start()] == '\n';
 }
 
-bool LegacyInlineTextBox::nodeAtPoint(const HitTestRequest& request, HitTestResult& result, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit /* lineTop */, LayoutUnit /*lineBottom*/,
-    HitTestAction /*hitTestAction*/)
-{
-    if (!renderer().parent()->visibleToHitTesting(request))
-        return false;
-
-    if (isLineBreak())
-        return false;
-
-    FloatRect rect(locationIncludingFlipping(), size());
-    rect.moveBy(accumulatedOffset);
-
-    if (locationInContainer.intersects(rect)) {
-        renderer().updateHitTestResult(result, flipForWritingMode(locationInContainer.point() - toLayoutSize(accumulatedOffset)));
-        if (result.addNodeToListBasedTestResult(renderer().protectedNodeForHitTest().get(), request, locationInContainer, rect) == HitTestProgress::Stop)
-            return true;
-    }
-    return false;
-}
-
 TextBoxSelectableRange LegacyInlineTextBox::selectableRange() const
 {
     // Fix up the offset if we are combined text because we manage these embellishments.

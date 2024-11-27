@@ -215,41 +215,4 @@ FloatRect SVGInlineTextBox::calculateBoundaries() const
     return textRect;
 }
 
-bool SVGInlineTextBox::nodeAtPoint(const HitTestRequest& request, HitTestResult& result, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit, LayoutUnit, HitTestAction)
-{
-    // FIXME: integrate with LegacyInlineTextBox::nodeAtPoint better.
-    ASSERT(!isLineBreak());
-
-    PointerEventsHitRules hitRules(PointerEventsHitRules::HitTestingTargetType::SVGText, request, renderer().usedPointerEvents());
-    if (isVisibleToHitTesting(renderer().style(), request) || !hitRules.requireVisible) {
-        if ((hitRules.canHitStroke && (renderer().style().svgStyle().hasStroke() || !hitRules.requireStroke))
-            || (hitRules.canHitFill && (renderer().style().svgStyle().hasFill() || !hitRules.requireFill))) {
-            FloatRect rect(topLeft(), FloatSize(logicalWidth(), logicalHeight()));
-            rect.moveBy(accumulatedOffset);
-            if (locationInContainer.intersects(rect)) {
-
-                float scalingFactor = renderer().scalingFactor();
-                ASSERT(scalingFactor);
-                
-                float baseline = renderer().scaledFont().metricsOfPrimaryFont().ascent() / scalingFactor;
-
-                AffineTransform fragmentTransform;
-                for (auto& fragment : m_textFragments) {
-                    FloatQuad fragmentQuad(FloatRect(fragment.x, fragment.y - baseline, fragment.width, fragment.height));
-                    fragment.buildFragmentTransform(fragmentTransform);
-                    if (!fragmentTransform.isIdentity())
-                        fragmentQuad = fragmentTransform.mapQuad(fragmentQuad);
-                    
-                    if (fragmentQuad.containsPoint(locationInContainer.point())) {
-                        renderer().updateHitTestResult(result, locationInContainer.point() - toLayoutSize(accumulatedOffset));
-                        if (result.addNodeToListBasedTestResult(renderer().protectedNodeForHitTest().get(), request, locationInContainer, rect) == HitTestProgress::Stop)
-                            return true;
-                    }
-                }
-             }
-        }
-    }
-    return false;
-}
-
 } // namespace WebCore

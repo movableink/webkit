@@ -327,45 +327,6 @@ void LegacyInlineFlowBox::setOverflowFromLogicalRects(const LayoutRect& logicalV
     setVisualOverflow(visualOverflow, lineTop, lineBottom);
 }
 
-bool LegacyInlineFlowBox::nodeAtPoint(const HitTestRequest& request, HitTestResult& result, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom, HitTestAction hitTestAction)
-{
-    if (hitTestAction != HitTestForeground)
-        return false;
-
-    LayoutRect overflowRect(visualOverflowRect(lineTop, lineBottom));
-    flipForWritingMode(overflowRect);
-    overflowRect.moveBy(accumulatedOffset);
-    if (!locationInContainer.intersects(overflowRect))
-        return false;
-
-    // Check children first.
-    for (auto* child = lastChild(); child; child = child->previousOnLine()) {
-        if (is<RenderText>(child->renderer()) || !child->boxModelObject()->hasSelfPaintingLayer()) {
-            if (child->nodeAtPoint(request, result, locationInContainer, accumulatedOffset, lineTop, lineBottom, hitTestAction)) {
-                renderer().updateHitTestResult(result, locationInContainer.point() - toLayoutSize(accumulatedOffset));
-                return true;
-            }
-        }
-    }
-
-    // Now check ourselves. Pixel snap hit testing.
-    if (!renderer().visibleToHitTesting(request))
-        return false;
-
-    // Move x/y to our coordinates.
-    FloatRect rect(frameRect());
-    flipForWritingMode(rect);
-    rect.moveBy(accumulatedOffset);
-
-    if (locationInContainer.intersects(rect)) {
-        renderer().updateHitTestResult(result, flipForWritingMode(locationInContainer.point() - toLayoutSize(accumulatedOffset))); // Don't add in m_x or m_y here, we want coords in the containing block's space.
-        if (result.addNodeToListBasedTestResult(renderer().protectedNodeForHitTest().get(), request, locationInContainer, rect) == HitTestProgress::Stop)
-            return true;
-    }
-
-    return false;
-}
-
 LegacyInlineBox* LegacyInlineFlowBox::firstLeafDescendant() const
 {
     LegacyInlineBox* leaf = nullptr;

@@ -32,6 +32,7 @@
 #include "GraphicsContext.h"
 #include "HitTestRequest.h"
 #include "HitTestResult.h"
+#include "InlineIteratorBoxInlines.h"
 #include "InlineIteratorSVGTextBox.h"
 #include "LayoutIntegrationLineLayout.h"
 #include "LayoutRepainter.h"
@@ -490,6 +491,62 @@ bool RenderSVGText::nodeAtPoint(const HitTestRequest& request, HitTestResult& re
 
             return RenderBlock::nodeAtPoint(request, result, locationInContainer, accumulatedOffset, hitTestAction);
         }
+    }
+
+    return false;
+}
+
+bool RenderSVGText::hitTestInlineChildren(const HitTestRequest& request, HitTestResult& result, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction)
+{
+    auto hitTestInlineBoxes = [&] {
+        for (auto& box : InlineIterator::boxesFor(*this)) {
+            auto* textBox = dynamicDowncast<InlineIterator::SVGTextBox>(box);
+            if (!textBox)
+                continue;
+
+            PointerEventsHitRules hitRules(PointerEventsHitRules::HitTestingTargetType::SVGText, request, usedPointerEvents());
+
+            auto& renderer = textBox->renderer();
+            if (!isVisibleToHitTesting(renderer.style(), request) && hitRules.requireVisible)
+                continue;
+
+            bool hitsStroke = hitRules.canHitStroke && (renderer.style().svgStyle().hasStroke() || !hitRules.requireStroke);
+            bool hitsFill = hitRules.canHitFill && (renderer.style().svgStyle().hasFill() || !hitRules.requireFill);
+            if (!hitsStroke && !hitsFill)
+                continue;
+
+            FloatRect rect = textBox->logicalRectIgnoringInlineDirection();
+            rect.moveBy(accumulatedOffset);
+            if (!locationInContainer.intersects(rect))
+                continue;
+
+            float scalingFactor = renderer.scalingFactor();
+            ASSERT(scalingFactor);
+
+            float baseline = renderer.scaledFont().metricsOfPrimaryFont().ascent() / scalingFactor;
+
+            AffineTransform fragmentTransform;
+            for (auto& fragment : textBox->textFragments()) {
+                FloatQuad fragmentQuad(FloatRect(fragment.x, fragment.y - baseline, fragment.width, fragment.height));
+                fragment.buildFragmentTransform(fragmentTransform);
+                if (!fragmentTransform.isIdentity())
+                    fragmentQuad = fragmentTransform.mapQuad(fragmentQuad);
+
+                if (!fragmentQuad.containsPoint(locationInContainer.point()))
+                    continue;
+
+                renderer.updateHitTestResult(result, locationInContainer.point() - toLayoutSize(accumulatedOffset));
+                if (result.addNodeToListBasedTestResult(renderer.protectedNodeForHitTest().get(), request, locationInContainer, rect) == HitTestProgress::Stop)
+                    return true;
+            }
+        }
+        return false;
+    };
+
+
+    if (hitTestInlineBoxes()) {
+        updateHitTestResult(result, locationInContainer.point() - toLayoutSize(accumulatedOffset));
+        return true;
     }
 
     return false;

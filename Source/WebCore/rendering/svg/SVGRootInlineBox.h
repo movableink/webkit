@@ -43,8 +43,6 @@ public:
 
     LegacyInlineBox* closestLeafChildForPosition(const LayoutPoint&);
 
-    bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom, HitTestAction) final;
-
 private:
     RenderSVGText& renderSVGText() const;
 

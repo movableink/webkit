@@ -67,8 +67,6 @@ private:
 
     TextRun constructTextRun(const RenderStyle&, const SVGTextFragment&) const;
 
-    bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom, HitTestAction) override;
-
 private:
     float m_logicalHeight { 0 };
     unsigned m_startsNewTextChunk : 1;

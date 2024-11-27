@@ -1961,7 +1961,7 @@ RefPtr<Node> RenderObject::protectedNodeForHitTest() const
     return nodeForHitTest();
 }
 
-void RenderObject::updateHitTestResult(HitTestResult& result, const LayoutPoint& point)
+void RenderObject::updateHitTestResult(HitTestResult& result, const LayoutPoint& point) const
 {
     if (result.innerNode())
         return;

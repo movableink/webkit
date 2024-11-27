@@ -186,25 +186,12 @@ LegacyInlineBox* SVGRootInlineBox::closestLeafChildForPosition(const LayoutPoint
             continue;
         if (point.y() > leaf->y() + leaf->virtualLogicalHeight())
             continue;
-
         closestLeaf = leaf;
         if (point.x() < leaf->left() + leaf->logicalWidth())
             return leaf;
     }
 
     return closestLeaf ? closestLeaf : lastLeaf;
-}
-
-bool SVGRootInlineBox::nodeAtPoint(const HitTestRequest& request, HitTestResult& result, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom, HitTestAction hitTestAction)
-{
-    for (auto* leaf = firstLeafDescendant(); leaf; leaf = leaf->nextLeafOnLine()) {
-        if (!leaf->isSVGInlineTextBox())
-            continue;
-        if (leaf->nodeAtPoint(request, result, locationInContainer, accumulatedOffset, lineTop, lineBottom, hitTestAction))
-            return true;
-    }
-
-    return false;
 }
 
 static inline void swapItemsInLayoutAttributes(SVGTextLayoutAttributes* firstAttributes, SVGTextLayoutAttributes* lastAttributes, unsigned firstPosition, unsigned lastPosition)

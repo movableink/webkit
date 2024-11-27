@@ -97,9 +97,6 @@ public:
     virtual LayoutRect localSelectionRect(unsigned startPos, unsigned endPos) const;
     std::pair<unsigned, unsigned> selectionStartEnd() const;
 
-protected:
-    bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom, HitTestAction) override;
-
 private:
     void deleteLine() final;
     void extractLine() final;

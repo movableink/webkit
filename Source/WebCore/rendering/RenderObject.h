@@ -821,7 +821,7 @@ public:
     bool hitTest(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestFilter = HitTestAll);
     virtual Node* nodeForHitTest() const;
     RefPtr<Node> protectedNodeForHitTest() const;
-    virtual void updateHitTestResult(HitTestResult&, const LayoutPoint&);
+    virtual void updateHitTestResult(HitTestResult&, const LayoutPoint&) const;
 
     virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction);
 
