@@ -373,7 +373,6 @@ webkit.org/b/142258 fast/css/object-fit/object-fit-canvas.html [ Pass ImageOnlyF
 
 # --- Compositing ----
 css3/filters/composited-during-transition-layertree.html
-webkit.org/b/95622 css3/filters/composited-during-animation-layertree.html [ Pass Failure ]
 
 platform/mac/fast/text/combining-character-sequence-fallback.html [ Pass Failure ]
 
