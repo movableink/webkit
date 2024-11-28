@@ -752,7 +752,7 @@ WebPage::WebPage(PageIdentifier pageID, WebPageCreationParameters&& parameters)
         makeUniqueRef<WebContextMenuClient>(this),
 #endif
 #if ENABLE(APPLE_PAY)
-        makeUniqueRef<WebPaymentCoordinator>(*this),
+        WebPaymentCoordinator::create(*this),
 #endif
         makeUniqueRef<WebChromeClient>(*this),
         makeUniqueRef<WebCryptoClient>(this->identifier()),
