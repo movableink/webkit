@@ -39,18 +39,12 @@ public:
     float virtualLogicalHeight() const override { return m_logicalHeight; }
     void setLogicalHeight(float height) { m_logicalHeight = height; }
 
-    void computePerCharacterLayoutInformation();
-
     LegacyInlineBox* closestLeafChildForPosition(const LayoutPoint&);
 
 private:
     RenderSVGText& renderSVGText() const;
 
     bool isSVGRootInlineBox() const override { return true; }
-    void reorderValueListsToLogicalOrder(Vector<SVGTextLayoutAttributes*>&);
-    void layoutCharactersInTextBoxes(LegacyInlineFlowBox*, SVGTextLayoutEngine&);
-    FloatRect layoutChildBoxes(LegacyInlineFlowBox* start, SVGTextFragmentMap&);
-    void layoutRootBox(const FloatRect&);
 
     float m_logicalHeight;
 };

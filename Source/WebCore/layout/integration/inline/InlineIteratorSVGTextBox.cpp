@@ -29,6 +29,7 @@
 #include "LayoutIntegrationLineLayout.h"
 #include "RenderSVGText.h"
 #include "SVGInlineTextBox.h"
+#include "SVGRootInlineBox.h"
 #include "SVGTextFragment.h"
 
 namespace WebCore {

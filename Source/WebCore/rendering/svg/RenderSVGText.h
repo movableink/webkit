@@ -24,13 +24,15 @@
 #include "AffineTransform.h"
 #include "RenderSVGBlock.h"
 #include "SVGBoundingBoxComputation.h"
+#include "SVGTextChunk.h"
 #include "SVGTextLayoutAttributesBuilder.h"
 
 namespace WebCore {
 
 class RenderSVGInlineText;
+class SVGRootInlineBox;
 class SVGTextElement;
-class RenderSVGInlineText;
+class SVGTextLayoutEngine;
 
 class RenderSVGText final : public RenderSVGBlock {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGText);
@@ -69,6 +71,8 @@ public:
 
     void updatePositionAndOverflow(const FloatRect&);
 
+    SVGRootInlineBox* legacyRootBox() const;
+
 private:
     void graphicsElement() const = delete;
 
@@ -91,6 +95,12 @@ private:
     }
 
     void layout() override;
+
+    void computePerCharacterLayoutInformation();
+    void layoutCharactersInTextBoxes(LegacyInlineFlowBox*, SVGTextLayoutEngine&);
+    FloatRect layoutChildBoxes(LegacyInlineFlowBox*, SVGTextFragmentMap&);
+    void layoutRootBox(const FloatRect&);
+    void reorderValueListsToLogicalOrder();
 
     void willBeDestroyed() override;
 
