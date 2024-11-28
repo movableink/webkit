@@ -275,7 +275,11 @@ rtc::scoped_refptr<LibWebRTCStatsCollector> LibWebRTCMediaEndpoint::createStatsC
         if (protectedThis->isStopped())
             return;
 
-        promise->resolve<IDLInterface<RTCStatsReport>>(LibWebRTCStatsCollector::createReport(rtcReport));
+        Ref peerConnectionBackend = protectedThis->m_peerConnectionBackend.get();
+        Ref peerConnection = peerConnectionBackend->connection();
+        peerConnection->queueTaskKeepingObjectAlive(peerConnection.get(), TaskSource::Networking, [promise = WTFMove(promise), rtcReport = WTFMove(rtcReport)] {
+            promise->resolve<IDLInterface<RTCStatsReport>>(LibWebRTCStatsCollector::createReport(rtcReport));
+        });
     });
 }
 
