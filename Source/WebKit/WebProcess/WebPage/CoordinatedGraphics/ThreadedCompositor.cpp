@@ -96,17 +96,6 @@ ThreadedCompositor::ThreadedCompositor(LayerTreeHost& layerTreeHost, ThreadedDis
     m_attributes.needsResize = !m_attributes.viewportSize.isEmpty();
     m_attributes.scaleFactor = scaleFactor;
 
-#if ENABLE(WPE_PLATFORM) || PLATFORM(GTK)
-    auto& webPage = layerTreeHost.webPage();
-    m_damagePropagation = ([](const WebCore::Settings& settings) {
-        if (!settings.propagateDamagingInformation())
-            return DamagePropagation::None;
-        if (settings.unifyDamagedRegions())
-            return DamagePropagation::Unified;
-        return DamagePropagation::Region;
-    })(webPage.corePage()->settings());
-#endif
-
 #if !HAVE(DISPLAY_LINK)
     m_display.displayID = displayID;
     m_display.displayUpdate = { 0, c_defaultRefreshRate / 1000 };
@@ -122,13 +111,7 @@ ThreadedCompositor::ThreadedCompositor(LayerTreeHost& layerTreeHost, ThreadedDis
         m_display.updateTimer->startOneShot(Seconds { 1.0 / m_display.displayUpdate.updatesPerSecond });
 #endif
 
-#if ENABLE(WPE_PLATFORM) || PLATFORM(GTK)
-        const auto propagateDamage = (m_damagePropagation == DamagePropagation::None)
-            ? WebCore::Damage::ShouldPropagate::No : WebCore::Damage::ShouldPropagate::Yes;
-        m_scene = adoptRef(new CoordinatedGraphicsScene(this, propagateDamage));
-#else
         m_scene = adoptRef(new CoordinatedGraphicsScene(this));
-#endif
 
         // GLNativeWindowType depends on the EGL implementation: reinterpret_cast works
         // for pointers (only if they are 64-bit wide and not for other cases), and static_cast for
@@ -248,8 +231,13 @@ void ThreadedCompositor::updateViewport()
     m_compositingRunLoop->scheduleUpdate();
 }
 
-#if ENABLE(WPE_PLATFORM) || PLATFORM(GTK)
-const WebCore::Damage& ThreadedCompositor::addSurfaceDamage(const WebCore::Damage& damage)
+#if ENABLE(DAMAGE_TRACKING)
+void ThreadedCompositor::setDamagePropagation(WebCore::Damage::Propagation damagePropagation)
+{
+    m_scene->setDamagePropagation(damagePropagation);
+}
+
+const Damage& ThreadedCompositor::addSurfaceDamage(const Damage& damage)
 {
     return m_surface->addDamage(damage);
 }
@@ -330,52 +318,15 @@ void ThreadedCompositor::renderLayerTree()
     WTFEndSignpost(this, ApplyStateChanges);
 
     WTFBeginSignpost(this, PaintToGLContext);
-#if ENABLE(WPE_PLATFORM) || PLATFORM(GTK)
-    m_scene->paintToCurrentGLContext(viewportTransform, FloatRect { FloatPoint { }, viewportSize }, m_damagePropagation == DamagePropagation::Unified, m_flipY);
-#else
     m_scene->paintToCurrentGLContext(viewportTransform, FloatRect { FloatPoint { }, viewportSize }, m_flipY);
-#endif
     WTFEndSignpost(this, PaintToGLContext);
 
     WTFEmitSignpost(this, DidRenderFrame, "compositionResponseID %i", compositionRequestID);
 
-#if ENABLE(WPE_PLATFORM) || PLATFORM(GTK)
-    auto damageRegion = [&]() -> WebCore::Region {
-        // FIXME: find a way to know if main frame scrolled since last frame to return early here.
-
-        const auto& damage = m_scene->lastDamage();
-        if (m_damagePropagation == DamagePropagation::None || damage.isInvalid())
-            return { };
-
-        WebCore::Damage boundsDamage;
-        const auto& region = [&] -> WebCore::Region {
-            if (m_damagePropagation == DamagePropagation::Unified) {
-                boundsDamage.add(damage.bounds());
-                if (boundsDamage.isInvalid() || boundsDamage.isEmpty())
-                    return { };
-
-                return boundsDamage.region();
-            }
-            if (damage.isEmpty())
-                return { };
-
-            return damage.region();
-        }();
-
-        if (region.isRect() && region.contains(IntRect({ }, viewportSize)))
-            return { };
-
-        return region;
-    }();
-#endif
-
     m_context->swapBuffers();
 
-#if ENABLE(WPE_PLATFORM) || PLATFORM(GTK)
-    m_surface->didRenderFrame(WTFMove(damageRegion));
-#else
     m_surface->didRenderFrame();
-#endif
+
 #if HAVE(DISPLAY_LINK)
     m_compositionResponseID = compositionRequestID;
     if (!m_didRenderFrameTimer.isActive())

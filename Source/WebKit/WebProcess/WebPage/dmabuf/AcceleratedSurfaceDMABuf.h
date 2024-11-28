@@ -31,6 +31,7 @@
 
 #include "DMABufRendererBufferFormat.h"
 #include "MessageReceiver.h"
+#include <WebCore/Damage.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RunLoop.h>
 #include <wtf/TZoneMalloc.h>
@@ -84,7 +85,7 @@ private:
     void didCreateGLContext() override;
     void willDestroyGLContext() override;
     void willRenderFrame() override;
-    void didRenderFrame(WebCore::Region&&) override;
+    void didRenderFrame() override;
 
     const WebCore::Damage& addDamage(const WebCore::Damage&) override;
 
@@ -269,6 +270,7 @@ private:
     RenderTarget* m_target { nullptr };
     bool m_isVisible { false };
     bool m_useExplicitSync { false };
+    WebCore::Damage m_frameDamage;
     std::unique_ptr<RunLoop::Timer> m_releaseUnusedBuffersTimer;
 };
 

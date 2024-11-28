@@ -416,7 +416,7 @@ void CoordinatedGraphicsLayer::setContentsOpaque(bool b)
     if (!m_needsDisplay.completeLayer) {
         m_needsDisplay.completeLayer = true;
         m_needsDisplay.rects.clear();
-#if ENABLE(WPE_PLATFORM) || PLATFORM(GTK)
+#if ENABLE(DAMAGE_TRACKING)
         m_nicosia.delta.damageChanged = true;
 #endif
 
@@ -513,7 +513,7 @@ void CoordinatedGraphicsLayer::setContentsNeedsDisplay()
     addRepaintRect(contentsRect());
 }
 
-#if ENABLE(WPE_PLATFORM) || PLATFORM(GTK)
+#if ENABLE(DAMAGE_TRACKING)
 void CoordinatedGraphicsLayer::markDamageRectsUnreliable()
 {
     if (m_damagedRectsAreUnreliable)
@@ -711,7 +711,7 @@ void CoordinatedGraphicsLayer::setNeedsDisplay()
 
     m_needsDisplay.completeLayer = true;
     m_needsDisplay.rects.clear();
-#if ENABLE(WPE_PLATFORM) || PLATFORM(GTK)
+#if ENABLE(DAMAGE_TRACKING)
     m_nicosia.delta.damageChanged = true;
 #endif
 
@@ -738,7 +738,7 @@ void CoordinatedGraphicsLayer::setNeedsDisplayInRect(const FloatRect& initialRec
         return;
 
     rects.append(rect);
-#if ENABLE(WPE_PLATFORM) || PLATFORM(GTK)
+#if ENABLE(DAMAGE_TRACKING)
     m_nicosia.delta.damageChanged = true;
 #endif
 
@@ -976,7 +976,7 @@ void CoordinatedGraphicsLayer::flushCompositingStateForThisLayerOnly()
 #endif
                 if (localDelta.eventRegionChanged)
                     state.eventRegion = eventRegion();
-#if ENABLE(WPE_PLATFORM) || PLATFORM(GTK)
+#if ENABLE(DAMAGE_TRACKING)
                 if (localDelta.damageChanged) {
                     state.damage = Damage();
                     if (m_needsDisplay.completeLayer)

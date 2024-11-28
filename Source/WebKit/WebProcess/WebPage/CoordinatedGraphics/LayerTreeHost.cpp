@@ -44,6 +44,7 @@
 #include <WebCore/PageOverlayController.h>
 #include <WebCore/RenderLayerBacking.h>
 #include <WebCore/RenderView.h>
+#include <WebCore/Settings.h>
 #include <WebCore/ThreadedScrollingTree.h>
 #include <wtf/SetForScope.h>
 #include <wtf/SystemTracing.h>
@@ -100,6 +101,16 @@ LayerTreeHost::LayerTreeHost(WebPage& webPage, WebCore::PlatformDisplayID displa
     m_compositor = ThreadedCompositor::create(*this, m_webPage.deviceScaleFactor());
 #else
     m_compositor = ThreadedCompositor::create(*this, *this, m_webPage.deviceScaleFactor(), displayID);
+#endif
+#if ENABLE(DAMAGE_TRACKING)
+    auto damagePropagation = ([](const Settings& settings) {
+        if (!settings.propagateDamagingInformation())
+            return Damage::Propagation::None;
+        if (settings.unifyDamagedRegions())
+            return Damage::Propagation::Unified;
+        return Damage::Propagation::Region;
+    })(webPage.corePage()->settings());
+    m_compositor->setDamagePropagation(damagePropagation);
 #endif
     m_layerTreeContext.contextID = m_compositor->surfaceID();
 }

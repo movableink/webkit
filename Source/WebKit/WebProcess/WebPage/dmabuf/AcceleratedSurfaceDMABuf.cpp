@@ -657,7 +657,7 @@ void AcceleratedSurfaceDMABuf::willRenderFrame()
         WTFLogAlways("AcceleratedSurfaceDMABuf was unable to construct a complete framebuffer");
 }
 
-void AcceleratedSurfaceDMABuf::didRenderFrame(WebCore::Region&& damage)
+void AcceleratedSurfaceDMABuf::didRenderFrame()
 {
     TraceScope traceScope(WaitForCompositionCompletionStart, WaitForCompositionCompletionEnd);
 
@@ -673,11 +673,13 @@ void AcceleratedSurfaceDMABuf::didRenderFrame(WebCore::Region&& damage)
         glFlush();
 
     m_target->didRenderFrame();
-    WebProcess::singleton().parentProcessConnection()->send(Messages::AcceleratedBackingStoreDMABuf::Frame(m_target->id(), WTFMove(damage), WTFMove(renderingFence)), m_id);
+    WebProcess::singleton().parentProcessConnection()->send(Messages::AcceleratedBackingStoreDMABuf::Frame(m_target->id(), m_frameDamage.region(), WTFMove(renderingFence)), m_id);
+    m_frameDamage = WebCore::Damage();
 }
 
 const WebCore::Damage& AcceleratedSurfaceDMABuf::addDamage(const WebCore::Damage& damage)
 {
+    m_frameDamage = damage;
     m_swapChain.addDamage(damage);
     return m_target ? m_target->damage() : WebCore::Damage::invalid();
 }

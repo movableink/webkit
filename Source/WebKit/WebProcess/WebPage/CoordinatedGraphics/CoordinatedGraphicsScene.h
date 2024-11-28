@@ -21,7 +21,6 @@
 #pragma once
 
 #if USE(COORDINATED_GRAPHICS)
-
 #include <WebCore/Damage.h>
 #include <WebCore/NicosiaPlatformLayer.h>
 #include <WebCore/NicosiaScene.h>
@@ -46,31 +45,18 @@ class CoordinatedGraphicsSceneClient {
 public:
     virtual ~CoordinatedGraphicsSceneClient() { }
     virtual void updateViewport() = 0;
-#if ENABLE(WPE_PLATFORM) || PLATFORM(GTK)
+#if ENABLE(DAMAGE_TRACKING)
     virtual const WebCore::Damage& addSurfaceDamage(const WebCore::Damage&) = 0;
 #endif
 };
 
-class CoordinatedGraphicsScene : public ThreadSafeRefCounted<CoordinatedGraphicsScene>, public WebCore::TextureMapperPlatformLayerProxy::Compositor
-#if ENABLE(WPE_PLATFORM) || PLATFORM(GTK)
-    , public WebCore::TextureMapperLayerDamageVisitor {
-#else
-{
-#endif
+class CoordinatedGraphicsScene : public ThreadSafeRefCounted<CoordinatedGraphicsScene>, public WebCore::TextureMapperPlatformLayerProxy::Compositor {
 public:
-#if ENABLE(WPE_PLATFORM) || PLATFORM(GTK)
-    CoordinatedGraphicsScene(CoordinatedGraphicsSceneClient*, WebCore::Damage::ShouldPropagate);
-#else
-    CoordinatedGraphicsScene(CoordinatedGraphicsSceneClient*);
-#endif
+    explicit CoordinatedGraphicsScene(CoordinatedGraphicsSceneClient*);
     virtual ~CoordinatedGraphicsScene();
 
     void applyStateChanges(const Vector<RefPtr<Nicosia::Scene>>&);
-#if ENABLE(WPE_PLATFORM) || PLATFORM(GTK)
-    void paintToCurrentGLContext(const WebCore::TransformationMatrix&, const WebCore::FloatRect&, bool unifyDamagedRegions, bool flipY = false);
-#else
     void paintToCurrentGLContext(const WebCore::TransformationMatrix&, const WebCore::FloatRect&, bool flipY = false);
-#endif
     void updateSceneState();
     void detach();
 
@@ -81,9 +67,8 @@ public:
     bool isActive() const { return m_isActive; }
     void setActive(bool active) { m_isActive = active; }
 
-#if ENABLE(WPE_PLATFORM) || PLATFORM(GTK)
-    const WebCore::Damage& lastDamage() const { return m_damage; }
-    void recordDamage(const WebCore::FloatRect&) override;
+#if ENABLE(DAMAGE_TRACKING)
+    void setDamagePropagation(WebCore::Damage::Propagation damagePropagation) { m_damagePropagation = damagePropagation; }
 #endif
 
 private:
@@ -110,9 +95,8 @@ private:
     CoordinatedGraphicsSceneClient* m_client;
     bool m_isActive { false };
 
-#if ENABLE(WPE_PLATFORM) || PLATFORM(GTK)
-    WebCore::Damage::ShouldPropagate m_propagateDamage;
-    WebCore::Damage m_damage;
+#if ENABLE(DAMAGE_TRACKING)
+    WebCore::Damage::Propagation m_damagePropagation { WebCore::Damage::Propagation::None };
 #endif
 
     std::unique_ptr<WebCore::TextureMapperLayer> m_rootLayer;

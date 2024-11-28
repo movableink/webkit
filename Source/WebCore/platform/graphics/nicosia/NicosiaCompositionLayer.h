@@ -88,7 +88,7 @@ public:
                     bool debugBorderChanged : 1;
                     bool scrollingNodeChanged : 1;
                     bool eventRegionChanged : 1;
-#if ENABLE(WPE_PLATFORM) || PLATFORM(GTK)
+#if ENABLE(DAMAGE_TRACKING)
                     bool damageChanged : 1;
 #endif
                 };
@@ -128,7 +128,7 @@ public:
         WebCore::FloatSize contentsTilePhase;
         WebCore::FloatSize contentsTileSize;
         WebCore::FloatRoundedRect contentsClippingRect;
-#if ENABLE(WPE_PLATFORM) || PLATFORM(GTK)
+#if ENABLE(DAMAGE_TRACKING)
         WebCore::Damage damage;
 #endif
 
@@ -240,7 +240,7 @@ public:
             staging.imageBacking = pending.imageBacking;
         if (pending.delta.animatedBackingStoreClientChanged)
             staging.animatedBackingStoreClient = pending.animatedBackingStoreClient;
-#if ENABLE(WPE_PLATFORM) || PLATFORM(GTK)
+#if ENABLE(DAMAGE_TRACKING)
         if (pending.delta.damageChanged)
             staging.damage = pending.damage;
 #endif

@@ -25,8 +25,7 @@
 
 #pragma once
 
-#if ENABLE(WPE_PLATFORM) || PLATFORM(GTK)
-
+#if ENABLE(DAMAGE_TRACKING)
 #include "FloatRect.h"
 #include "Region.h"
 #include <wtf/ForbidHeapAllocation.h>
@@ -39,9 +38,10 @@ class Damage {
 public:
     using Rects = Vector<IntRect, 1>;
 
-    enum class ShouldPropagate : bool {
-        No,
-        Yes,
+    enum class Propagation : uint8_t {
+        None,
+        Region,
+        Unified,
     };
 
     Damage() = default;
@@ -64,6 +64,7 @@ public:
     void invalidate()
     {
         m_invalid = true;
+        m_region = Region();
     }
 
     ALWAYS_INLINE void add(const Region& region)
@@ -94,7 +95,7 @@ public:
     }
 
 private:
-    bool m_invalid;
+    bool m_invalid { false };
     Region m_region;
 
     // From RenderView.cpp::repaintViewRectangle():
@@ -108,9 +109,8 @@ private:
             m_region = Region(m_region.bounds());
     }
 
-    explicit Damage(bool invalid, Region&& region = { })
+    explicit Damage(bool invalid)
         : m_invalid(invalid)
-        , m_region(WTFMove(region))
     {
     }
 
@@ -126,4 +126,4 @@ static inline WTF::TextStream& operator<<(WTF::TextStream& ts, const Damage& dam
 
 };
 
-#endif // ENABLE(WPE_PLATFORM) || PLATFORM(GTK)
+#endif // ENABLE(DAMAGE_TRACKING)
