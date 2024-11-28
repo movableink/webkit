@@ -789,7 +789,7 @@ void TextureMapperLayer::computeOverlapRegions(ComputeOverlapRegionData& data, c
     FloatRect localBoundingRect;
     if (isFlattened() && !m_isBackdrop)
         localBoundingRect = m_flattenedLayer->layerRect();
-    else if (m_backingStore || m_state.masksToBounds || m_state.maskLayer || hasFilters())
+    else if (m_backingStore || m_state.masksToBounds || m_state.maskLayer || hasFilters() || hasBackdrop())
         localBoundingRect = layerRect();
     else if (m_contentsLayer || m_state.solidColor.isVisible())
         localBoundingRect = m_state.contentsRect;
@@ -932,8 +932,7 @@ void TextureMapperLayer::paintIntoSurface(TextureMapperPaintOptions& options)
         SetForScope scopedTransform(options.transform, TransformationMatrix());
         SetForScope scopedReplicaLayer(options.replicaLayer, nullptr);
         SetForScope scopedBackdropLayer(options.backdropLayer, this);
-
-        rootLayer().paintSelfAndChildren(options);
+        backdropRootLayer().paintSelfAndChildren(options);
     } else
         paintSelfAndChildren(options);
 
@@ -965,6 +964,7 @@ void TextureMapperLayer::paintWithIntermediateSurface(TextureMapperPaintOptions&
         SetForScope scopedOpacity(options.opacity, 1);
 
         options.textureMapper.bindSurface(options.surface.get());
+
         paintSelfChildrenReplicaFilterAndMask(options);
     }
 

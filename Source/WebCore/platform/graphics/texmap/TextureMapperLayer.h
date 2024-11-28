@@ -125,14 +125,19 @@ public:
     FloatRect effectiveLayerRect() const;
 
 private:
-    TextureMapperLayer& rootLayer() const
+    TextureMapperLayer& backdropRootLayer() const
     {
         if (m_effectTarget)
-            return m_effectTarget->rootLayer();
+            return m_effectTarget->backdropRootLayer();
         if (m_parent) {
-            if (m_parent->flattensAsLeafOf3DSceneOr3DPerspective())
+            if (m_parent->flattensAsLeafOf3DSceneOr3DPerspective()
+                || m_parent->m_state.opacity < 1
+                || m_parent->hasMask()
+                || m_parent->hasFilters()) {
                 return *m_parent;
-            return m_parent->rootLayer();
+            }
+
+            return m_parent->backdropRootLayer();
         }
         return const_cast<TextureMapperLayer&>(*this);
     }
@@ -192,6 +197,8 @@ private:
 
     bool preserves3D() const { return m_state.preserves3D; }
     bool isFlattened() const { return !!m_flattenedLayer; }
+    bool hasMask() const { return !!m_state.maskLayer; }
+    bool hasBackdrop() const  { return !!m_state.backdropLayer; }
 
     inline FloatRect layerRect() const
     {
