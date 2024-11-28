@@ -1309,7 +1309,7 @@ void LocalFrameView::didLayout(SingleThreadWeakPtr<RenderElement> layoutRoot, bo
 
 #if PLATFORM(COCOA) || PLATFORM(WIN) || PLATFORM(GTK)
     if (CheckedPtr cache = document->existingAXObjectCache())
-        cache->postNotification(layoutRoot.get(), AXNotification::AXLayoutComplete);
+        cache->postNotification(layoutRoot.get(), AXNotification::LayoutComplete);
 #else
     UNUSED_PARAM(layoutRoot);
 #endif

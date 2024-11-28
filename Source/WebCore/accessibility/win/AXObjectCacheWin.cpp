@@ -61,7 +61,7 @@ void AXObjectCache::handleScrolledToAnchor(const Node& anchorNode)
     // The anchor node may not be accessible. Post the notification for the
     // first accessible object.
     if (RefPtr object = AccessibilityObject::firstAccessibleObjectFromNode(&anchorNode))
-        postPlatformNotification(*object, AXNotification::AXScrolledToAnchor);
+        postPlatformNotification(*object, AXNotification::ScrolledToAnchor);
 }
 
 void AXObjectCache::postPlatformNotification(AccessibilityObject& object, AXNotification notification)
@@ -76,38 +76,38 @@ void AXObjectCache::postPlatformNotification(AccessibilityObject& object, AXNoti
 
     DWORD msaaEvent;
     switch (notification) {
-        case AXNotification::AXCheckedStateChanged:
-            msaaEvent = EVENT_OBJECT_STATECHANGE;
-            break;
+    case AXNotification::CheckedStateChanged:
+        msaaEvent = EVENT_OBJECT_STATECHANGE;
+        break;
 
-        case AXNotification::AXFocusedUIElementChanged:
-        case AXNotification::AXActiveDescendantChanged:
-            msaaEvent = EVENT_OBJECT_FOCUS;
-            break;
+    case AXNotification::FocusedUIElementChanged:
+    case AXNotification::ActiveDescendantChanged:
+        msaaEvent = EVENT_OBJECT_FOCUS;
+        break;
 
-        case AXNotification::AXScrolledToAnchor:
-            msaaEvent = EVENT_SYSTEM_SCROLLINGSTART;
-            break;
+    case AXNotification::ScrolledToAnchor:
+        msaaEvent = EVENT_SYSTEM_SCROLLINGSTART;
+        break;
 
-        case AXNotification::AXLayoutComplete:
-            msaaEvent = EVENT_OBJECT_REORDER;
-            break;
+    case AXNotification::LayoutComplete:
+        msaaEvent = EVENT_OBJECT_REORDER;
+        break;
 
-        case AXNotification::AXLoadComplete:
-            msaaEvent = IA2_EVENT_DOCUMENT_LOAD_COMPLETE;
-            break;
+    case AXNotification::LoadComplete:
+        msaaEvent = IA2_EVENT_DOCUMENT_LOAD_COMPLETE;
+        break;
 
-        case AXNotification::AXValueChanged:
-        case AXNotification::AXMenuListValueChanged:
-            msaaEvent = EVENT_OBJECT_VALUECHANGE;
-            break;
+    case AXNotification::ValueChanged:
+    case AXNotification::MenuListValueChanged:
+        msaaEvent = EVENT_OBJECT_VALUECHANGE;
+        break;
 
-        case AXNotification::AXMenuListItemSelected:
-            msaaEvent = EVENT_OBJECT_SELECTION;
-            break;
+    case AXNotification::MenuListItemSelected:
+        msaaEvent = EVENT_OBJECT_SELECTION;
+        break;
 
-        default:
-            return;
+    default:
+        return;
     }
 
     // Windows will end up calling get_accChild() on the root accessible
@@ -156,7 +156,7 @@ void AXObjectCache::platformHandleFocusedUIElementChanged(Element*, Element* new
 
     if (RefPtr focusedObject = focusedObjectForPage(page)) {
         ASSERT(!focusedObject->isIgnored());
-        postPlatformNotification(*focusedObject, AXNotification::AXFocusedUIElementChanged);
+        postPlatformNotification(*focusedObject, AXNotification::FocusedUIElementChanged);
     }
 }
 

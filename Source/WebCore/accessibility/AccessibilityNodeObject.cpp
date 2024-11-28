@@ -1353,7 +1353,7 @@ void AccessibilityNodeObject::setNodeValue(StepAction stepAction, float value)
 
     if (didSet) {
         if (auto* cache = axObjectCache())
-            cache->postNotification(this, document(), AXNotification::AXValueChanged);
+            cache->postNotification(this, document(), AXNotification::ValueChanged);
     } else
         postKeyboardKeysForValueChange(stepAction);
 }

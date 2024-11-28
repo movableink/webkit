@@ -72,25 +72,25 @@ void AXObjectCache::postPlatformNotification(AccessibilityObject& coreObject, AX
         return;
 
     switch (notification) {
-    case AXNotification::AXCheckedStateChanged:
+    case AXNotification::CheckedStateChanged:
         if (coreObject.isCheckboxOrRadio() || coreObject.isSwitch())
             wrapper->stateChanged("checked", coreObject.isChecked());
         break;
-    case AXNotification::AXSelectedStateChanged:
+    case AXNotification::SelectedStateChanged:
         wrapper->stateChanged("selected", coreObject.isSelected());
         break;
-    case AXNotification::AXMenuListItemSelected: {
+    case AXNotification::MenuListItemSelected: {
         // Menu list popup items are handled by AXSelectedStateChanged.
         auto* parent = coreObject.parentObjectUnignored();
         if (parent && !parent->isMenuListPopup())
             wrapper->stateChanged("selected", coreObject.isSelected());
         break;
     }
-    case AXNotification::AXSelectedCellsChanged:
-    case AXNotification::AXSelectedChildrenChanged:
+    case AXNotification::SelectedCellsChanged:
+    case AXNotification::SelectedChildrenChanged:
         wrapper->selectionChanged();
         break;
-    case AXNotification::AXMenuListValueChanged: {
+    case AXNotification::MenuListValueChanged: {
         const auto& children = coreObject.children();
         if (children.size() == 1) {
             if (auto* childWrapper = children[0]->wrapper())
@@ -98,47 +98,47 @@ void AXObjectCache::postPlatformNotification(AccessibilityObject& coreObject, AX
         }
         break;
     }
-    case AXNotification::AXValueChanged:
+    case AXNotification::ValueChanged:
         if (wrapper->interfaces().contains(AccessibilityObjectAtspi::Interface::Value))
             wrapper->valueChanged(coreObject.valueForRange());
         break;
-    case AXNotification::AXInvalidStatusChanged:
+    case AXNotification::InvalidStatusChanged:
         wrapper->stateChanged("invalid-entry", coreObject.invalidStatus() != "false"_s);
         break;
-    case AXNotification::AXElementBusyChanged:
+    case AXNotification::ElementBusyChanged:
         wrapper->stateChanged("busy", coreObject.isBusy());
         break;
-    case AXNotification::AXCurrentStateChanged:
+    case AXNotification::CurrentStateChanged:
         wrapper->stateChanged("active", coreObject.currentState() != AccessibilityCurrentState::False);
         break;
-    case AXNotification::AXRowExpanded:
+    case AXNotification::RowExpanded:
         wrapper->stateChanged("expanded", true);
         break;
-    case AXNotification::AXRowCollapsed:
+    case AXNotification::RowCollapsed:
         wrapper->stateChanged("expanded", false);
         break;
-    case AXNotification::AXExpandedChanged:
+    case AXNotification::ExpandedChanged:
         wrapper->stateChanged("expanded", coreObject.isExpanded());
         break;
-    case AXNotification::AXDisabledStateChanged: {
+    case AXNotification::DisabledStateChanged: {
         bool enabledState = coreObject.isEnabled();
         wrapper->stateChanged("enabled", enabledState);
         wrapper->stateChanged("sensitive", enabledState);
         break;
     }
-    case AXNotification::AXPressedStateChanged:
+    case AXNotification::PressedStateChanged:
         wrapper->stateChanged("pressed", coreObject.isPressed());
         break;
-    case AXNotification::AXReadOnlyStatusChanged:
+    case AXNotification::ReadOnlyStatusChanged:
         wrapper->stateChanged("read-only", !coreObject.canSetValueAttribute());
         break;
-    case AXNotification::AXRequiredStatusChanged:
+    case AXNotification::RequiredStatusChanged:
         wrapper->stateChanged("required", coreObject.isRequired());
         break;
-    case AXNotification::AXActiveDescendantChanged:
+    case AXNotification::ActiveDescendantChanged:
         wrapper->activeDescendantChanged();
         break;
-    case AXNotification::AXChildrenChanged:
+    case AXNotification::ChildrenChanged:
         coreObject.updateChildrenIfNecessary();
         break;
     default:

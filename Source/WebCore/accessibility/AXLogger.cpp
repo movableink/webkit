@@ -598,8 +598,8 @@ TextStream& operator<<(TextStream& stream, AXNotification notification)
 {
     switch (notification) {
 #define WEBCORE_LOG_AXNOTIFICATION(name) \
-    case AXNotification::AX##name: \
-        stream << "AX" #name; \
+    case AXNotification::name: \
+        stream << #name; \
         break;
     WEBCORE_AXNOTIFICATION_KEYS(WEBCORE_LOG_AXNOTIFICATION)
 #undef WEBCORE_LOG_AXNOTIFICATION
