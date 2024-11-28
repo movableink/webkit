@@ -1532,7 +1532,6 @@ public:
 
 #if PLATFORM(COCOA)
     void performDictionaryLookupAtLocation(const WebCore::FloatPoint&);
-    void performDictionaryLookupOfCurrentSelection();
 #endif
 
     enum class WillContinueLoadInNewProcess : bool { No, Yes };

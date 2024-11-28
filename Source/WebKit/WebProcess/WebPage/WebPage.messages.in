@@ -246,7 +246,6 @@ GenerateSyntheticEditingCommand(enum:uint8_t WebKit::SyntheticEditingCommandType
 
 #if PLATFORM(COCOA)
     # Dictionary support.
-    PerformDictionaryLookupOfCurrentSelection()
     PerformDictionaryLookupAtLocation(WebCore::FloatPoint point)
 #endif
 

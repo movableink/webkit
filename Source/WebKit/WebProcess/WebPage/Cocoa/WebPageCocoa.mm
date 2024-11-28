@@ -241,15 +241,6 @@ void WebPage::performDictionaryLookupForSelection(LocalFrame& frame, const Visib
     performDictionaryLookupForRange(frame, *range, presentationTransition);
 }
 
-void WebPage::performDictionaryLookupOfCurrentSelection()
-{
-    RefPtr frame = m_page->checkedFocusController()->focusedOrMainFrame();
-    if (!frame)
-        return;
-
-    performDictionaryLookupForSelection(*frame, frame->selection().selection(), TextIndicatorPresentationTransition::BounceAndCrossfade);
-}
-
 void WebPage::performDictionaryLookupForRange(LocalFrame& frame, const SimpleRange& range, TextIndicatorPresentationTransition presentationTransition)
 {
     send(Messages::WebPageProxy::DidPerformDictionaryLookup(dictionaryPopupInfoForRange(frame, range, presentationTransition)));
