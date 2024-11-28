@@ -168,7 +168,7 @@ void RemoteCDMFactoryProxy::removeInstance(const RemoteCDMInstanceIdentifier& id
     m_instances.remove(identifier);
     auto connection = m_gpuConnectionToWebProcess.get();
     if (connection && allowsExitUnderMemoryPressure())
-        connection->gpuProcess().tryExitIfUnusedAndUnderMemoryPressure();
+        connection->protectedGPUProcess()->tryExitIfUnusedAndUnderMemoryPressure();
 }
 
 RemoteCDMInstanceProxy* RemoteCDMFactoryProxy::getInstance(const RemoteCDMInstanceIdentifier& identifier)

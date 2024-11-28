@@ -166,7 +166,7 @@ NetworkSession::NetworkSession(NetworkProcess& networkProcess, const NetworkSess
     , m_inspectionForServiceWorkersAllowed(parameters.inspectionForServiceWorkersAllowed)
     , m_storageManager(createNetworkStorageManager(networkProcess, parameters))
 #if ENABLE(WEB_PUSH_NOTIFICATIONS)
-    , m_notificationManager(parameters.sessionID.isEphemeral() ? String { } : parameters.webPushMachServiceName, configurationWithHostAuditToken(networkProcess, parameters.webPushDaemonConnectionConfiguration))
+    , m_notificationManager(NetworkNotificationManager::create(parameters.sessionID.isEphemeral() ? String { } : parameters.webPushMachServiceName, configurationWithHostAuditToken(networkProcess, parameters.webPushDaemonConnectionConfiguration)))
 #endif
 {
     if (!m_sessionID.isEphemeral()) {
@@ -892,5 +892,12 @@ CheckedRef<PrefetchCache> NetworkSession::checkedPrefetchCache()
 {
     return m_prefetchCache;
 }
+
+#if ENABLE(WEB_PUSH_NOTIFICATIONS)
+Ref<NetworkNotificationManager> NetworkSession::protectedNotificationManager()
+{
+    return m_notificationManager.get();
+}
+#endif
 
 } // namespace WebKit

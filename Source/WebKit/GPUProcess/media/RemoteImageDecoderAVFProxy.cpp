@@ -93,7 +93,7 @@ void RemoteImageDecoderAVFProxy::deleteDecoder(ImageDecoderIdentifier identifier
     if (!connection)
         return;
     if (allowsExitUnderMemoryPressure())
-        connection->gpuProcess().tryExitIfUnusedAndUnderMemoryPressure();
+        connection->protectedGPUProcess()->tryExitIfUnusedAndUnderMemoryPressure();
 }
 
 void RemoteImageDecoderAVFProxy::encodedDataStatusChanged(ImageDecoderIdentifier identifier)

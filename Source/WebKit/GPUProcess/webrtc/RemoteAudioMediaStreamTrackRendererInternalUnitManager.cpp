@@ -139,7 +139,7 @@ void RemoteAudioMediaStreamTrackRendererInternalUnitManager::deleteUnit(AudioMed
 
     if (m_units.isEmpty()) {
         if (auto connection = m_gpuConnectionToWebProcess.get())
-            connection->gpuProcess().tryExitIfUnusedAndUnderMemoryPressure();
+            connection->protectedGPUProcess()->tryExitIfUnusedAndUnderMemoryPressure();
     }
 }
 

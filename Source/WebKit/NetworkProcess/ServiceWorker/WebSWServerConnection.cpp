@@ -141,7 +141,7 @@ void WebSWServerConnection::resolveUnregistrationJobInClient(ServiceWorkerJobIde
         }
 
         auto scopeURL = registrationKey.scope();
-        session()->notificationManager().unsubscribeFromPushService(WTFMove(scopeURL), std::nullopt, [completionHandler = WTFMove(completionHandler), unregistrationResult](auto&&) mutable {
+        session()->protectedNotificationManager()->unsubscribeFromPushService(WTFMove(scopeURL), std::nullopt, [completionHandler = WTFMove(completionHandler), unregistrationResult](auto&&) mutable {
             completionHandler(unregistrationResult);
         });
 
@@ -622,7 +622,7 @@ void WebSWServerConnection::subscribeToPushService(WebCore::ServiceWorkerRegistr
         return;
     }
 
-    session()->notificationManager().subscribeToPushService(registration->scopeURLWithoutFragment(), WTFMove(applicationServerKey), [weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler), registrableDomain = RegistrableDomain(registration->data().scopeURL)] (Expected<PushSubscriptionData, ExceptionData>&& result) mutable {
+    session()->protectedNotificationManager()->subscribeToPushService(registration->scopeURLWithoutFragment(), WTFMove(applicationServerKey), [weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler), registrableDomain = RegistrableDomain(registration->data().scopeURL)] (Expected<PushSubscriptionData, ExceptionData>&& result) mutable {
         if (auto resourceLoadStatistics = weakThis && weakThis->session() ? weakThis->session()->resourceLoadStatistics() : nullptr; result && resourceLoadStatistics) {
             return resourceLoadStatistics->setMostRecentWebPushInteractionTime(WTFMove(registrableDomain), [result = WTFMove(result), completionHandler = WTFMove(completionHandler)] () mutable {
                 completionHandler(WTFMove(result));
@@ -658,7 +658,7 @@ void WebSWServerConnection::unsubscribeFromPushService(WebCore::ServiceWorkerReg
         return;
     }
 
-    session()->notificationManager().unsubscribeFromPushService(registration->scopeURLWithoutFragment(), subscriptionIdentifier, WTFMove(completionHandler));
+    session()->protectedNotificationManager()->unsubscribeFromPushService(registration->scopeURLWithoutFragment(), subscriptionIdentifier, WTFMove(completionHandler));
 #endif
 }
 
@@ -686,7 +686,7 @@ void WebSWServerConnection::getPushSubscription(WebCore::ServiceWorkerRegistrati
         return;
     }
 
-    session()->notificationManager().getPushSubscription(registration->scopeURLWithoutFragment(), WTFMove(completionHandler));
+    session()->protectedNotificationManager()->getPushSubscription(registration->scopeURLWithoutFragment(), WTFMove(completionHandler));
 #endif
 }
 
@@ -714,7 +714,7 @@ void WebSWServerConnection::getPushPermissionState(WebCore::ServiceWorkerRegistr
         return;
     }
 
-    session()->notificationManager().getPermissionState(SecurityOriginData::fromURL( registration->scopeURLWithoutFragment()), [completionHandler = WTFMove(completionHandler)](WebCore::PushPermissionState state) mutable {
+    session()->protectedNotificationManager()->getPermissionState(SecurityOriginData::fromURL( registration->scopeURLWithoutFragment()), [completionHandler = WTFMove(completionHandler)](WebCore::PushPermissionState state) mutable {
         completionHandler(static_cast<uint8_t>(state));
     });
 #endif
@@ -944,7 +944,7 @@ void WebSWServerConnection::getNotifications(const URL& registrationURL, const S
         return;
     }
 
-    session()->notificationManager().getNotifications(registrationURL, tag, WTFMove(completionHandler));
+    session()->protectedNotificationManager()->getNotifications(registrationURL, tag, WTFMove(completionHandler));
 }
 #endif
 
