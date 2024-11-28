@@ -61,8 +61,8 @@ public:
     void log(const AXCoreObject&);
     void log(RefPtr<AXCoreObject>);
     void log(const Vector<Ref<AXCoreObject>>&);
-    void log(const std::pair<Ref<AccessibilityObject>, AXObjectCache::AXNotification>&);
-    void log(const std::pair<RefPtr<AXCoreObject>, AXObjectCache::AXNotification>&);
+    void log(const std::pair<Ref<AccessibilityObject>, AXNotification>&);
+    void log(const std::pair<RefPtr<AXCoreObject>, AXNotification>&);
     void log(const AccessibilitySearchCriteria&);
     void log(AccessibilityObjectInclusion);
     void log(AXRelationType);

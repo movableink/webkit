@@ -55,13 +55,13 @@ bool AccessibilityMenuList::press()
 
 #if !PLATFORM(IOS_FAMILY)
     RefPtr element = this->element();
-    AXObjectCache::AXNotification notification = AXObjectCache::AXPressDidFail;
+    auto notification = AXNotification::AXPressDidFail;
     if (CheckedPtr menuList = dynamicDowncast<RenderMenuList>(renderer()); menuList && element && !element->isDisabledFormControl()) {
         if (menuList->popupIsVisible())
             menuList->hidePopup();
         else
             menuList->showPopup();
-        notification = AXObjectCache::AXPressDidSucceed;
+        notification = AXNotification::AXPressDidSucceed;
     }
     if (CheckedPtr cache = axObjectCache())
         cache->postNotification(element.get(), notification);

@@ -690,7 +690,7 @@ void HTMLTextFormControlElement::setInnerTextValue(String&& value)
             }
 #endif
             if (AXObjectCache* cache = document().existingAXObjectCache())
-                cache->postNotification(this, AXObjectCache::AXValueChanged, PostTarget::ObservableParent);
+                cache->postNotification(this, AXNotification::AXValueChanged, PostTarget::ObservableParent);
         }
 #endif
 

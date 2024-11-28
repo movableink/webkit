@@ -1762,7 +1762,7 @@ void WebChromeClient::setMockWebAuthenticationConfiguration(const MockWebAuthent
 #endif
 
 #if PLATFORM(PLAYSTATION)
-void WebChromeClient::postAccessibilityNotification(WebCore::AccessibilityObject&, WebCore::AXObjectCache::AXNotification)
+void WebChromeClient::postAccessibilityNotification(WebCore::AccessibilityObject&, WebCore::AXNotification)
 {
     notImplemented();
 }

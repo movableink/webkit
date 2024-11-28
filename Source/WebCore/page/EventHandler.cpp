@@ -2491,15 +2491,15 @@ bool EventHandler::dispatchDragEvent(const AtomString& eventType, Element& dragT
     if (CheckedPtr cache = frame->document()->existingAXObjectCache()) {
         auto& eventNames = WebCore::eventNames();
         if (eventType == eventNames.dragstartEvent)
-            cache->postNotification(&dragTarget, AXObjectCache::AXDraggingStarted);
+            cache->postNotification(&dragTarget, AXNotification::AXDraggingStarted);
         else if (eventType == eventNames.dragendEvent)
-            cache->postNotification(&dragTarget, AXObjectCache::AXDraggingEnded);
+            cache->postNotification(&dragTarget, AXNotification::AXDraggingEnded);
         else if (eventType == eventNames.dragenterEvent)
-            cache->postNotification(&dragTarget, AXObjectCache::AXDraggingEnteredDropZone);
+            cache->postNotification(&dragTarget, AXNotification::AXDraggingEnteredDropZone);
         else if (eventType == eventNames.dragleaveEvent)
-            cache->postNotification(&dragTarget, AXObjectCache::AXDraggingExitedDropZone);
+            cache->postNotification(&dragTarget, AXNotification::AXDraggingExitedDropZone);
         else if (eventType == eventNames.dropEvent)
-            cache->postNotification(&dragTarget, AXObjectCache::AXDraggingDropped);
+            cache->postNotification(&dragTarget, AXNotification::AXDraggingDropped);
     }
 
     return dragEvent->defaultPrevented();

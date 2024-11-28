@@ -256,6 +256,12 @@ protected:
     WEBCORE_AXNOTIFICATION_KEYS_DEFAULT(macro)
 #endif
 
+enum class AXNotification {
+#define WEBCORE_DEFINE_AXNOTIFICATION_ENUM(name) AX##name,
+WEBCORE_AXNOTIFICATION_KEYS(WEBCORE_DEFINE_AXNOTIFICATION_ENUM)
+#undef WEBCORE_DEFINE_AXNOTIFICATION_ENUM
+};
+
 #if !PLATFORM(COCOA)
 enum AXTextChange { AXTextInserted, AXTextDeleted, AXTextAttributesChanged };
 #endif
@@ -505,12 +511,6 @@ public:
     
     // Index
     CharacterOffset characterOffsetForIndex(int, const AXCoreObject*);
-
-    enum AXNotification {
-#define WEBCORE_DEFINE_AXNOTIFICATION_ENUM(name) AX##name,
-    WEBCORE_AXNOTIFICATION_KEYS(WEBCORE_DEFINE_AXNOTIFICATION_ENUM)
-#undef WEBCORE_DEFINE_AXNOTIFICATION_ENUM
-    };
 
     void postNotification(RenderObject*, AXNotification, PostTarget = PostTarget::Element);
     void postNotification(Node*, AXNotification, PostTarget = PostTarget::Element);
@@ -947,6 +947,6 @@ bool isNodeFocused(Node&);
 
 bool isDOMHidden(const RenderStyle*);
 
-WTF::TextStream& operator<<(WTF::TextStream&, AXObjectCache::AXNotification);
+WTF::TextStream& operator<<(WTF::TextStream&, AXNotification);
 
 } // namespace WebCore

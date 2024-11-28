@@ -61,7 +61,7 @@ void AXObjectCache::handleScrolledToAnchor(const Node& anchorNode)
     // The anchor node may not be accessible. Post the notification for the
     // first accessible object.
     if (RefPtr object = AccessibilityObject::firstAccessibleObjectFromNode(&anchorNode))
-        postPlatformNotification(*object, AXScrolledToAnchor);
+        postPlatformNotification(*object, AXNotification::AXScrolledToAnchor);
 }
 
 void AXObjectCache::postPlatformNotification(AccessibilityObject& object, AXNotification notification)
@@ -76,33 +76,33 @@ void AXObjectCache::postPlatformNotification(AccessibilityObject& object, AXNoti
 
     DWORD msaaEvent;
     switch (notification) {
-        case AXCheckedStateChanged:
+        case AXNotification::AXCheckedStateChanged:
             msaaEvent = EVENT_OBJECT_STATECHANGE;
             break;
 
-        case AXFocusedUIElementChanged:
-        case AXActiveDescendantChanged:
+        case AXNotification::AXFocusedUIElementChanged:
+        case AXNotification::AXActiveDescendantChanged:
             msaaEvent = EVENT_OBJECT_FOCUS;
             break;
 
-        case AXScrolledToAnchor:
+        case AXNotification::AXScrolledToAnchor:
             msaaEvent = EVENT_SYSTEM_SCROLLINGSTART;
             break;
 
-        case AXLayoutComplete:
+        case AXNotification::AXLayoutComplete:
             msaaEvent = EVENT_OBJECT_REORDER;
             break;
 
-        case AXLoadComplete:
+        case AXNotification::AXLoadComplete:
             msaaEvent = IA2_EVENT_DOCUMENT_LOAD_COMPLETE;
             break;
 
-        case AXValueChanged:
-        case AXMenuListValueChanged:
+        case AXNotification::AXValueChanged:
+        case AXNotification::AXMenuListValueChanged:
             msaaEvent = EVENT_OBJECT_VALUECHANGE;
             break;
 
-        case AXMenuListItemSelected:
+        case AXNotification::AXMenuListItemSelected:
             msaaEvent = EVENT_OBJECT_SELECTION;
             break;
 
@@ -156,7 +156,7 @@ void AXObjectCache::platformHandleFocusedUIElementChanged(Element*, Element* new
 
     if (RefPtr focusedObject = focusedObjectForPage(page)) {
         ASSERT(!focusedObject->isIgnored());
-        postPlatformNotification(*focusedObject, AXFocusedUIElementChanged);
+        postPlatformNotification(*focusedObject, AXNotification::AXFocusedUIElementChanged);
     }
 }
 

@@ -3925,11 +3925,11 @@ void Document::implicitClose()
 
         axObjectCache()->getOrCreate(renderView());
         if (this == &topDocument())
-            axObjectCache()->postNotification(renderView(), AXObjectCache::AXNewDocumentLoadComplete);
+            axObjectCache()->postNotification(renderView(), AXNotification::AXNewDocumentLoadComplete);
         else {
             // AXLoadComplete can only be posted on the top document, so if it's a document
             // in an iframe that just finished loading, post AXLayoutComplete instead.
-            axObjectCache()->postNotification(renderView(), AXObjectCache::AXLayoutComplete);
+            axObjectCache()->postNotification(renderView(), AXNotification::AXLayoutComplete);
         }
     }
 #endif

@@ -153,8 +153,8 @@ void AccessibilityMenuListPopup::didUpdateActiveOption(int optionIndex)
         return;
 
     auto& child = downcast<AccessibilityObject>(children[optionIndex].get());
-    cache->postNotification(&child, document(), AXObjectCache::AXFocusedUIElementChanged);
-    cache->postNotification(&child, document(), AXObjectCache::AXMenuListItemSelected);
+    cache->postNotification(&child, document(), AXNotification::AXFocusedUIElementChanged);
+    cache->postNotification(&child, document(), AXNotification::AXMenuListItemSelected);
 }
 
 } // namespace WebCore

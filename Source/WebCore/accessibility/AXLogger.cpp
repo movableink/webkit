@@ -153,7 +153,7 @@ void AXLogger::log(const Vector<Ref<AXCoreObject>>& objects)
     }
 }
 
-void AXLogger::log(const std::pair<Ref<AccessibilityObject>, AXObjectCache::AXNotification>& notification)
+void AXLogger::log(const std::pair<Ref<AccessibilityObject>, AXNotification>& notification)
 {
     if (shouldLog()) {
         TextStream stream(TextStream::LineMode::MultipleLine);
@@ -163,7 +163,7 @@ void AXLogger::log(const std::pair<Ref<AccessibilityObject>, AXObjectCache::AXNo
     }
 }
 
-void AXLogger::log(const std::pair<RefPtr<AXCoreObject>, AXObjectCache::AXNotification>& notification)
+void AXLogger::log(const std::pair<RefPtr<AXCoreObject>, AXNotification>& notification)
 {
     if (shouldLog()) {
         TextStream stream(TextStream::LineMode::MultipleLine);
@@ -594,11 +594,11 @@ TextStream& operator<<(WTF::TextStream& stream, const TextUnderElementMode& mode
     return stream;
 }
 
-TextStream& operator<<(TextStream& stream, AXObjectCache::AXNotification notification)
+TextStream& operator<<(TextStream& stream, AXNotification notification)
 {
     switch (notification) {
 #define WEBCORE_LOG_AXNOTIFICATION(name) \
-    case AXObjectCache::AXNotification::AX##name: \
+    case AXNotification::AX##name: \
         stream << "AX" #name; \
         break;
     WEBCORE_AXNOTIFICATION_KEYS(WEBCORE_LOG_AXNOTIFICATION)

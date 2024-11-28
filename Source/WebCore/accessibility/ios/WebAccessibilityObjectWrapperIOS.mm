@@ -1648,7 +1648,7 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
     BOOL result = self.axBackingObject->scrollByPage(scrollDirection);
 
     if (result) {
-        auto notificationName = AXObjectCache::notificationPlatformName(AXObjectCache::AXNotification::AXPageScrolled).createNSString();
+        auto notificationName = AXObjectCache::notificationPlatformName(AXNotification::AXPageScrolled).createNSString();
         [self accessibilityOverrideProcessNotification:notificationName.get() notificationData:nil];
 
         CGPoint scrollPos = [self _accessibilityScrollPosition];
