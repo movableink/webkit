@@ -22,13 +22,10 @@
 
 #pragma once
 
-#include "CaretRectComputation.h"
 #include "FloatingObjects.h"
 #include "LegacyLineLayout.h"
 #include "LineWidth.h"
 #include "RenderBlock.h"
-#include "RenderLineBoxList.h"
-#include "TrailingObjects.h"
 #include <memory>
 #include <wtf/TZoneMalloc.h>
 
@@ -43,6 +40,7 @@ template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::RenderBlockF
 
 namespace WebCore {
 
+class FloatingObjects;
 class LineBreaker;
 class RenderMultiColumnFlow;
 

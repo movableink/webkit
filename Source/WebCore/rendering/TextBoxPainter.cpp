@@ -25,6 +25,7 @@
 #include "config.h"
 #include "TextBoxPainter.h"
 
+#include "CaretRectComputation.h"
 #include "CompositionHighlight.h"
 #include "DocumentInlines.h"
 #include "DocumentMarkerController.h"

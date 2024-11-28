@@ -26,7 +26,6 @@
 #pragma once
 
 #include "CachedImageClient.h"
-#include "Element.h"
 #include "FloatQuad.h"
 #include "FrameDestructionObserverInlines.h"
 #include "HTMLNames.h"

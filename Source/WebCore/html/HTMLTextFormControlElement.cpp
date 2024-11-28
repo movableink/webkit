@@ -28,6 +28,7 @@
 
 #include "AXObjectCache.h"
 #include "CSSPrimitiveValueMappings.h"
+#include "CaretRectComputation.h"
 #include "ChromeClient.h"
 #include "CommonAtomStrings.h"
 #include "DocumentInlines.h"
