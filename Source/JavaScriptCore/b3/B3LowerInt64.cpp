@@ -79,7 +79,7 @@ public:
                     // not an identity, so do the (trivial) lowering here.
                     lo = insert<Value>(m_index + 1, Phi, Int32, m_value->origin());
                     hi = insert<Value>(m_index + 1, Phi, Int32, m_value->origin());
-                } else if (m_value->type() == Int64 || (m_value->opcode() == Upsilon && m_value->child(0)->type() == Int64)) {
+                } else if (m_value->type() == Int64) {
                     lo = insert<Value>(m_index + 1, Identity, m_value->origin(), m_zero);
                     hi = insert<Value>(m_index + 1, Identity, m_value->origin(), m_zero);
                 } else
@@ -107,6 +107,9 @@ public:
             for (size_t index = 0; index < block->size(); ++index) {
                 Value* value = block->at(index);
                 if ((value->opcode() == Identity) && value->child(0) == m_zero)
+                    value->replaceWithBottom(dropSynthetic, index);
+                // The upsilons feeding this will go away, so we had better not need it.
+                if (value->opcode() == Phi && value->type() == Int64)
                     value->replaceWithBottom(dropSynthetic, index);
             }
             dropSynthetic.execute(block);
@@ -362,8 +365,7 @@ private:
             lo->setPhi(phi.first);
             UpsilonValue* hi = insert<UpsilonValue>(m_index, m_origin, input.second);
             hi->setPhi(phi.second);
-            setMapping(m_value, lo, hi);
-            valueReplaced();
+            m_value->replaceWithNop();
             return;
         }
         case CCall: {
@@ -598,8 +600,10 @@ private:
                 return;
             std::pair<Value*, Value*> input = getMapping(m_value->child(0));
             Value* testValue = insert<Value>(m_index, BitOr, m_origin, input.first, input.second);
-            Value* branchValue = insert<Value>(m_index, Branch, m_origin, testValue);
-            m_value->replaceWithIdentity(branchValue);
+            insert<Value>(m_index, Branch, m_origin, testValue);
+            ASSERT(m_block->last() == m_value);
+            m_block->removeLast(m_proc);
+            m_value = nullptr;
             return;
         }
         case Equal:
