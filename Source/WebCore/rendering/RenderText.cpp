@@ -163,6 +163,29 @@ static constexpr UChar convertNoBreakSpaceToSpace(UChar character)
     return character == noBreakSpace ? ' ' : character;
 }
 
+static inline bool capitalizeCharacter(UChar characterToCapitalize, StringBuilder& output)
+{
+    // FIXME: Add support for non-BMP content.
+    UChar capitalizedCharacter;
+    UErrorCode status = U_ZERO_ERROR;
+    auto realLength = u_strToTitle(&capitalizedCharacter, 1, &characterToCapitalize, 1, nullptr, "", &status);
+    if (U_SUCCESS(status) && realLength == 1) {
+        output.append(capitalizedCharacter);
+        return true;
+    }
+
+    // Decomposed ligatures may need more space.
+    std::span<UChar> capitalizedStringData;
+    auto capitalizedString = String::createUninitialized(realLength, capitalizedStringData);
+    status = U_ZERO_ERROR;
+    u_strToTitle(capitalizedStringData.data(), capitalizedStringData.size(), &characterToCapitalize, 1, nullptr, "", &status);
+    if (U_SUCCESS(status)) {
+        output.append(capitalizedString);
+        return true;
+    }
+    return false;
+}
+
 String capitalize(const String& string, UChar previousCharacter)
 {
     // FIXME: Change this to use u_strToTitle instead of u_totitle and to consider locale.
@@ -190,8 +213,9 @@ String capitalize(const String& string, UChar previousCharacter)
     for (endOfWord = ubrk_next(breakIterator); endOfWord != UBRK_DONE; startOfWord = endOfWord, endOfWord = ubrk_next(breakIterator)) {
         // Do not append the first character, since it's the previous character, not from this string.
         if (startOfWord) {
-            char32_t lastCharacter = u_totitle(stringImpl[startOfWord - 1]);
-            result.append(lastCharacter);
+            auto characterToCapitalize = stringWithPrevious[startOfWord];
+            if (!capitalizeCharacter(characterToCapitalize, result))
+                result.append(characterToCapitalize);
         }
         for (int i = startOfWord + 1; i < endOfWord; i++)
             result.append(stringImpl[i - 1]);
