@@ -317,7 +317,8 @@ std::optional<RTCIceCandidate::Fields> parseIceCandidateSDP(const String& sdp)
     String relatedAddress;
     guint16 relatedPort = 0;
     String usernameFragment;
-    StringView view(sdp.convertToASCIILowercase().substring(10));
+    String lowercasedSDP = sdp.convertToASCIILowercase();
+    StringView view = StringView(lowercasedSDP).substring(10);
     unsigned i = 0;
     NextSDPField nextSdpField { NextSDPField::None };
 
