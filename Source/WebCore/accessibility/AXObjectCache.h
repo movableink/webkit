@@ -945,7 +945,8 @@ bool hasAccNameAttribute(Element&);
 
 bool isNodeFocused(Node&);
 
-bool isDOMHidden(const RenderStyle*);
+bool isRenderHidden(const RenderStyle*);
+bool isRenderHidden(const RenderStyle&);
 
 WTF::TextStream& operator<<(WTF::TextStream&, AXNotification);
 

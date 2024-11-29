@@ -2992,9 +2992,17 @@ const RenderStyle* AccessibilityObject::style() const
     if (auto* renderer = this->renderer())
         return &renderer->style();
 
-    if (auto* element = this->element())
-        return element->computedStyle();
-    return nullptr;
+    auto* element = this->element();
+    return element ? element->computedStyle() : nullptr;
+}
+
+const RenderStyle* AccessibilityObject::existingStyle() const
+{
+    if (auto* renderer = this->renderer())
+        return &renderer->style();
+
+    auto* element = this->element();
+    return element ? element->existingComputedStyle() : nullptr;
 }
 
 bool AccessibilityObject::isValueAutofillAvailable() const
@@ -3964,9 +3972,9 @@ bool AccessibilityObject::isAXHidden() const
     }) != nullptr;
 }
 
-bool AccessibilityObject::isDOMHidden() const
+bool AccessibilityObject::isRenderHidden() const
 {
-    return WebCore::isDOMHidden(style());
+    return WebCore::isRenderHidden(style());
 }
 
 bool AccessibilityObject::isShowingValidationMessage() const
@@ -4005,6 +4013,10 @@ AccessibilityObjectInclusion AccessibilityObject::defaultObjectInclusion() const
 
     bool ignoreARIAHidden = isFocused();
     if (Accessibility::findAncestor<AccessibilityObject>(*this, false, [&] (const auto& object) {
+        const auto* style = object.existingStyle();
+        if (style && WebCore::isRenderHidden(*style))
+            return true;
+
         return (!ignoreARIAHidden && object.isARIAHidden()) || object.ariaRoleHasPresentationalChildren() || !object.canHaveChildren();
     }))
         return AccessibilityObjectInclusion::IgnoreObject;
