@@ -3131,6 +3131,8 @@ webkit.org/b/279434 fast/mediastream/media-stream-video-track-interrupted.html [
 webkit.org/b/279434 fast/transforms/interleaved-2d-transforms-with-gpu-process.html [ Skip ]
 webkit.org/b/279434 webgl/offscreen-webgl-errors-to-console.html [ Skip ]
 webkit.org/b/279434 webgl/webgl-and-dom-in-gpup.html [ Skip ]
+webkit.org/b/279434 fast/mediastream/video-created-while-interrupted.html [ Skip ]
+webkit.org/b/279434 fast/text/glyph-display-lists/glyph-display-list-gpu-process-crash.html [ Skip ]
 
 #////////////////////////////////////////////////////////////////////////////////////////
 # End of UNSUPPORTED tests.
