@@ -55,6 +55,7 @@
 #include "SVGElementTypeHelpers.h"
 #include "SVGInlineTextBox.h"
 #include "Settings.h"
+#include "SurrogatePairAwareTextIterator.h"
 #include "Text.h"
 #include "TextResourceDecoder.h"
 #include "TextTransform.h"
@@ -163,27 +164,49 @@ static constexpr UChar convertNoBreakSpaceToSpace(UChar character)
     return character == noBreakSpace ? ' ' : character;
 }
 
-static inline bool capitalizeCharacter(UChar characterToCapitalize, StringBuilder& output)
+static inline size_t capitalizeCharacter(String textContent, unsigned startCharacterOffset, StringBuilder& output)
 {
-    // FIXME: Add support for non-BMP content.
-    UChar capitalizedCharacter;
-    UErrorCode status = U_ZERO_ERROR;
-    auto realLength = u_strToTitle(&capitalizedCharacter, 1, &characterToCapitalize, 1, nullptr, "", &status);
-    if (U_SUCCESS(status) && realLength == 1) {
-        output.append(capitalizedCharacter);
-        return true;
+    if (startCharacterOffset >= textContent.length()) {
+        ASSERT_NOT_REACHED();
+        return 0;
     }
 
-    // Decomposed ligatures may need more space.
-    std::span<UChar> capitalizedStringData;
-    auto capitalizedString = String::createUninitialized(realLength, capitalizedStringData);
-    status = U_ZERO_ERROR;
-    u_strToTitle(capitalizedStringData.data(), capitalizedStringData.size(), &characterToCapitalize, 1, nullptr, "", &status);
-    if (U_SUCCESS(status)) {
-        output.append(capitalizedString);
-        return true;
+    auto capitalize = [&](const UChar* contentToCapitalize, size_t length) -> size_t {
+        UChar capitalizedCharacter;
+        UErrorCode status = U_ZERO_ERROR;
+        auto realLength = u_strToTitle(&capitalizedCharacter, 1, contentToCapitalize, length, nullptr, "", &status);
+        if (U_SUCCESS(status) && realLength == 1) {
+            output.append(capitalizedCharacter);
+            return realLength;
+        }
+
+        // Decomposed ligatures may need more space.
+        std::span<UChar> capitalizedStringData;
+        auto capitalizedString = String::createUninitialized(realLength, capitalizedStringData);
+        status = U_ZERO_ERROR;
+        u_strToTitle(capitalizedStringData.data(), capitalizedStringData.size(), contentToCapitalize, length, nullptr, "", &status);
+        if (U_SUCCESS(status)) {
+            output.append(capitalizedString);
+            return length;
+        }
+        return 0;
+    };
+
+    if (textContent.is8Bit()) {
+        auto characterToCapitalize = textContent[startCharacterOffset];
+        return capitalize(&characterToCapitalize, 1);
     }
-    return false;
+
+    auto content = textContent.span16().subspan(startCharacterOffset);
+    auto contentIterator = SurrogatePairAwareTextIterator { content, startCharacterOffset, textContent.length() };
+    unsigned capitalizedContentLength = 0;
+    char32_t currentCharacter = 0;
+    contentIterator.consume(currentCharacter, capitalizedContentLength);
+    if (startCharacterOffset + capitalizedContentLength > textContent.length()) {
+        ASSERT_NOT_REACHED();
+        return 0;
+    }
+    return capitalize(content.data(), capitalizedContentLength);
 }
 
 String capitalize(const String& string, UChar previousCharacter)
@@ -213,12 +236,13 @@ String capitalize(const String& string, UChar previousCharacter)
     for (endOfWord = ubrk_next(breakIterator); endOfWord != UBRK_DONE; startOfWord = endOfWord, endOfWord = ubrk_next(breakIterator)) {
         // Do not append the first character, since it's the previous character, not from this string.
         if (startOfWord) {
-            auto characterToCapitalize = stringWithPrevious[startOfWord];
-            if (!capitalizeCharacter(characterToCapitalize, result))
-                result.append(characterToCapitalize);
+            auto capitalizedContentLength = capitalizeCharacter(string, startOfWord - 1, result);
+            for (int i = startOfWord + capitalizedContentLength; i < endOfWord; ++i)
+                result.append(stringImpl[i - 1]);
+        } else {
+            for (int i = startOfWord + 1; i < endOfWord; ++i)
+                result.append(stringImpl[i - 1]);
         }
-        for (int i = startOfWord + 1; i < endOfWord; i++)
-            result.append(stringImpl[i - 1]);
     }
 
     return result == string ? string : result.toString();
