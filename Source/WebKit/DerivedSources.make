@@ -881,6 +881,7 @@ BINDINGS_SCRIPTS = \
     $(WebCorePrivateHeaders)/IDLParser.pm \
     $(WebCorePrivateHeaders)/CodeGenerator.pm \
     $(EXTENSIONS_SCRIPTS_DIR)/CodeGeneratorExtensions.pm \
+    $(EXTENSIONS_SCRIPTS_DIR)/GenerateImports.pl \
 #
 
 EXTENSION_INTERFACES = \
@@ -927,7 +928,11 @@ JS%.h JS%.mm : %.idl $(BINDINGS_SCRIPTS) $(IDL_ATTRIBUTES_FILE) $(FEATURE_AND_PL
 	@echo Generating bindings for $*...
 	$(PERL) -I $(WebCorePrivateHeaders) -I $(EXTENSIONS_SCRIPTS_DIR) $(WebCorePrivateHeaders)/generate-bindings.pl --defines "$(FEATURE_AND_PLATFORM_DEFINES)" --outputDir . --generator Extensions --idlAttributesFile $(IDL_ATTRIBUTES_FILE) --idlFileNamesList $(IDL_FILE_NAMES_LIST) $<
 
-all : $(EXTENSION_INTERFACES:%=JS%.h) $(EXTENSION_INTERFACES:%=JS%.mm)
+JSWebExtensionAPIUnified.mm: $(BINDINGS_SCRIPTS) $(EXTENSION_INTERFACES:%=JS%.mm)
+	@echo "Generating $@..."
+	$(PERL) $(EXTENSIONS_SCRIPTS_DIR)/GenerateImports.pl $@ $(EXTENSION_INTERFACES:%=JS%.mm)
+
+all : JSWebExtensionAPIUnified.mm $(EXTENSION_INTERFACES:%=JS%.h) $(EXTENSION_INTERFACES:%=JS%.mm)
 
 module.private.modulemap : $(WK_MODULEMAP_PRIVATE_FILE)
 	unifdef $(addprefix -D, $(FEATURE_AND_PLATFORM_DEFINES)) $(addprefix -U, $(FEATURE_AND_PLATFORM_UNDEFINES)) -o $@ $< || [ $$? -eq 1 ]
