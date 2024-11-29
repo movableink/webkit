@@ -35,7 +35,7 @@
 #import "WebExtensionContextMessages.h"
 #import "WebExtensionTabIdentifier.h"
 #import "WebExtensionWindowIdentifier.h"
-#import "WebPageProxy.h"
+#import "WebFrame.h"
 #import "WebProcess.h"
 #import "_WKWebExtensionWebRequestFilter.h"
 
@@ -63,7 +63,7 @@ void WebExtensionAPIWebRequestEvent::invokeListenersWithArgument(NSDictionary *a
     }
 }
 
-void WebExtensionAPIWebRequestEvent::addListener(WebFrame& frame, RefPtr<WebExtensionCallbackHandler> listener, NSDictionary *filter, id extraInfoSpec, NSString **outExceptionString)
+void WebExtensionAPIWebRequestEvent::addListener(WebCore::FrameIdentifier frameIdentifier, RefPtr<WebExtensionCallbackHandler> listener, NSDictionary *filter, id extraInfoSpec, NSString **outExceptionString)
 {
     _WKWebExtensionWebRequestFilter *parsedFilter;
     if (filter) {
@@ -72,13 +72,13 @@ void WebExtensionAPIWebRequestEvent::addListener(WebFrame& frame, RefPtr<WebExte
             return;
     }
 
-    m_frameIdentifier = frame.frameID();
+    m_frameIdentifier = frameIdentifier;
     m_listeners.append({ listener, parsedFilter });
 
     WebProcess::singleton().send(Messages::WebExtensionContext::AddListener(*m_frameIdentifier, m_type, contentWorldType()), extensionContext().identifier());
 }
 
-void WebExtensionAPIWebRequestEvent::removeListener(WebFrame& frame, RefPtr<WebExtensionCallbackHandler> listener)
+void WebExtensionAPIWebRequestEvent::removeListener(WebCore::FrameIdentifier frameIdentifier, RefPtr<WebExtensionCallbackHandler> listener)
 {
     auto removedCount = m_listeners.removeAllMatching([&](auto& entry) {
         return entry.first->callbackFunction() == listener->callbackFunction();
@@ -87,7 +87,7 @@ void WebExtensionAPIWebRequestEvent::removeListener(WebFrame& frame, RefPtr<WebE
     if (!removedCount)
         return;
 
-    ASSERT(frame.frameID() == m_frameIdentifier);
+    ASSERT(frameIdentifier == m_frameIdentifier);
 
     WebProcess::singleton().send(Messages::WebExtensionContext::RemoveListener(*m_frameIdentifier, m_type, contentWorldType(), removedCount), extensionContext().identifier());
 }

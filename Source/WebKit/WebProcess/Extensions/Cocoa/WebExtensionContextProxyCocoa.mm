@@ -38,6 +38,7 @@
 #import "WebExtensionContextMessages.h"
 #import "WebExtensionContextProxyMessages.h"
 #import "WebExtensionControllerProxy.h"
+#import "WebPage.h"
 #import "WebProcess.h"
 #import "_WKWebExtensionLocalization.h"
 #import <wtf/HashMap.h>

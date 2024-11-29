@@ -49,8 +49,8 @@ public:
 
     const ListenerVector& listeners() const { return m_listeners; }
 
-    void addListener(WebFrame&, RefPtr<WebExtensionCallbackHandler>);
-    void removeListener(WebFrame&, RefPtr<WebExtensionCallbackHandler>);
+    void addListener(WebCore::FrameIdentifier, RefPtr<WebExtensionCallbackHandler>);
+    void removeListener(WebCore::FrameIdentifier, RefPtr<WebExtensionCallbackHandler>);
     bool hasListener(RefPtr<WebExtensionCallbackHandler>);
 
     void removeAllListeners();
