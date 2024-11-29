@@ -209,22 +209,28 @@ static inline size_t capitalizeCharacter(String textContent, unsigned startChara
     return capitalize(content.data(), capitalizedContentLength);
 }
 
-String capitalize(const String& string, UChar previousCharacter)
+String capitalize(const String& string)
 {
-    // FIXME: Change this to use u_strToTitle instead of u_totitle and to consider locale.
+    Vector<UChar> previousCharacter(1, ' ');
+    return capitalize(string, previousCharacter);
+}
 
-    unsigned length = string.length();
+String capitalize(const String& string, Vector<UChar> previousCharacter)
+{
+    int32_t length = string.length();
+    int32_t previousCharacterLength = previousCharacter.size();
     auto& stringImpl = *string.impl();
 
     static_assert(String::MaxLength < std::numeric_limits<unsigned>::max(), "Must be able to add one without overflowing unsigned");
 
     // Replace NO BREAK SPACE with a normal spaces since ICU does not treat it as a word separator.
-    Vector<UChar> stringWithPrevious(length + 1);
-    stringWithPrevious[0] = convertNoBreakSpaceToSpace(previousCharacter);
-    for (unsigned i = 1; i < length + 1; i++)
-        stringWithPrevious[i] = convertNoBreakSpaceToSpace(stringImpl[i - 1]);
+    Vector<UChar> stringWithPrevious(previousCharacterLength + length);
+    for (int32_t i = 0; i < previousCharacterLength; ++i)
+        stringWithPrevious[i] = convertNoBreakSpaceToSpace(previousCharacter[i]);
+    for (int32_t i = previousCharacterLength; i < length + previousCharacterLength; ++i)
+        stringWithPrevious[i] = convertNoBreakSpaceToSpace(stringImpl[i - previousCharacterLength]);
 
-    auto* breakIterator = WTF::wordBreakIterator(stringWithPrevious.span().first(length + 1));
+    auto* breakIterator = WTF::wordBreakIterator(stringWithPrevious.span());
     if (!breakIterator)
         return string;
 
@@ -232,19 +238,21 @@ String capitalize(const String& string, UChar previousCharacter)
     result.reserveCapacity(length);
 
     int32_t startOfWord = ubrk_first(breakIterator);
-    int32_t endOfWord;
-    for (endOfWord = ubrk_next(breakIterator); endOfWord != UBRK_DONE; startOfWord = endOfWord, endOfWord = ubrk_next(breakIterator)) {
-        // Do not append the first character, since it's the previous character, not from this string.
-        if (startOfWord) {
-            auto capitalizedContentLength = capitalizeCharacter(string, startOfWord - 1, result);
-            for (int i = startOfWord + capitalizedContentLength; i < endOfWord; ++i)
-                result.append(stringImpl[i - 1]);
+    for (int32_t endOfWord = ubrk_next(breakIterator); endOfWord != UBRK_DONE; startOfWord = endOfWord, endOfWord = ubrk_next(breakIterator)) {
+        // Do not try to titlecase the previous content.
+        if (startOfWord >= previousCharacterLength) {
+            auto capitalizedContentLength = capitalizeCharacter(string, startOfWord - previousCharacterLength, result);
+            for (int32_t i = startOfWord + capitalizedContentLength; i < endOfWord; ++i)
+                result.append(stringImpl[i - previousCharacterLength]);
         } else {
-            for (int i = startOfWord + 1; i < endOfWord; ++i)
-                result.append(stringImpl[i - 1]);
+            // This is previous and continous non-titlecased current content. Only append current content.
+            for (int32_t i = startOfWord; i < endOfWord; ++i) {
+                if (i < previousCharacterLength)
+                    continue;
+                result.append(stringImpl[i - previousCharacterLength]);
+            }
         }
     }
-
     return result == string ? string : result.toString();
 }
 
@@ -1517,7 +1525,7 @@ static inline bool isInlineFlowOrEmptyText(const RenderObject& renderer)
     return textRenderer && textRenderer->text().isEmpty();
 }
 
-UChar RenderText::previousCharacter() const
+Vector<UChar> RenderText::previousCharacter() const
 {
     const RenderObject* previousText = this;
     while ((previousText = previousText->previousInPreOrder())) {
@@ -1527,10 +1535,32 @@ UChar RenderText::previousCharacter() const
             break;
     }
     auto* renderText = dynamicDowncast<RenderText>(previousText);
+    Vector<UChar> previous;
     if (!renderText)
-        return ' ';
-    auto& previousString = renderText->text();
-    return previousString[previousString.length() - 1];
+        previous.append(' ');
+    else {
+        auto& previousString = renderText->text();
+        if (previousString.is8Bit())
+            previous.append(previousString[previousString.length() - 1]);
+        else {
+            auto previousCharacterLength = [&] {
+                auto contentIterator = SurrogatePairAwareTextIterator { previousString.span16(), 0, previousString.length() };
+                unsigned characterLength = 0;
+                char32_t currentCharacter = 0;
+                while (contentIterator.consume(currentCharacter, characterLength))
+                    contentIterator.advance(characterLength);
+                return characterLength;
+            }();
+
+            if (previousCharacterLength > previousString.length()) {
+                ASSERT_NOT_REACHED();
+                return previous;
+            }
+            for (size_t i = previousString.length() - previousCharacterLength; i < previousString.length(); ++i)
+                previous.append(previousString[i]);
+        }
+    }
+    return previous;
 }
 
 static String convertToFullSizeKana(const String& string)
@@ -1621,7 +1651,13 @@ static String convertToFullSizeKana(const String& string)
     return result.toString();
 }
 
-String applyTextTransform(const RenderStyle& style, const String& text, UChar previousCharacter)
+String applyTextTransform(const RenderStyle& style, const String& text)
+{
+    Vector<UChar> previousCharacter(1, ' ');
+    return applyTextTransform(style, text, previousCharacter);
+}
+
+String applyTextTransform(const RenderStyle& style, const String& text, Vector<UChar> previousCharacter)
 {
     auto transform = style.textTransform();
 
