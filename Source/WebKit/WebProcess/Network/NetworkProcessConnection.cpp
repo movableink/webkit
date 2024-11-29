@@ -346,7 +346,7 @@ void NetworkProcessConnection::loadCancelledDownloadRedirectRequestInFrame(WebCo
 #if ENABLE(WEB_RTC)
 void NetworkProcessConnection::connectToRTCDataChannelRemoteSource(WebCore::RTCDataChannelIdentifier localIdentifier, WebCore::RTCDataChannelIdentifier remoteIdentifier, CompletionHandler<void(std::optional<bool>)>&& callback)
 {
-    callback(RTCDataChannelRemoteManager::sharedManager().connectToRemoteSource(localIdentifier, remoteIdentifier));
+    callback(RTCDataChannelRemoteManager::singleton().connectToRemoteSource(localIdentifier, remoteIdentifier));
 }
 #endif
 

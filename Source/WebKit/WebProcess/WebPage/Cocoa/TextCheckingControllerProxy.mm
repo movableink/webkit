@@ -69,6 +69,16 @@ TextCheckingControllerProxy::~TextCheckingControllerProxy()
     WebProcess::singleton().removeMessageReceiver(Messages::TextCheckingControllerProxy::messageReceiverName(), m_page->identifier());
 }
 
+void TextCheckingControllerProxy::ref() const
+{
+    m_page->ref();
+}
+
+void TextCheckingControllerProxy::deref() const
+{
+    m_page->deref();
+}
+
 static OptionSet<DocumentMarkerType> relevantMarkerTypes()
 {
     return { DocumentMarkerType::PlatformTextChecking, DocumentMarkerType::Spelling, DocumentMarkerType::Grammar };

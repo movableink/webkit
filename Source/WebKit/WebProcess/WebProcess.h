@@ -147,6 +147,7 @@ class WebCookieJar;
 class WebFileSystemStorageConnection;
 class WebFrame;
 class WebLoaderStrategy;
+class WebNotificationManager;
 class WebPage;
 class WebPageGroupProxy;
 class WebProcessSupplement;
@@ -177,9 +178,9 @@ class LayerHostingContext;
 class SpeechRecognitionRealtimeMediaSourceManager;
 #endif
 
-class WebProcess final : public AuxiliaryProcess
-{
+class WebProcess final : public AuxiliaryProcess {
     WTF_MAKE_TZONE_ALLOCATED(WebProcess);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WebProcess);
 public:
     using TopFrameDomain = WebCore::RegistrableDomain;
     using SubResourceDomain = WebCore::RegistrableDomain;
@@ -371,6 +372,8 @@ public:
     WebCookieJar& cookieJar() { return m_cookieJar.get(); }
     Ref<WebCookieJar> protectedCookieJar();
     WebSocketChannelManager& webSocketChannelManager() { return m_webSocketChannelManager; }
+
+    Ref<WebNotificationManager> protectedNotificationManager();
 
 #if PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
     float backlightLevel() const { return m_backlightLevel; }

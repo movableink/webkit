@@ -2489,7 +2489,7 @@ private:
 #endif
 
 #if ENABLE(PLATFORM_DRIVEN_TEXT_CHECKING)
-    UniqueRef<TextCheckingControllerProxy> m_textCheckingControllerProxy;
+    const UniqueRef<TextCheckingControllerProxy> m_textCheckingControllerProxy;
 #endif
 
 #if PLATFORM(COCOA) || PLATFORM(GTK)
