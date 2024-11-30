@@ -66,6 +66,7 @@
 #include "WebMediaKeyStorageManager.h"
 #include "WebMemorySampler.h"
 #include "WebMessagePortChannelProvider.h"
+#include "WebNotificationManager.h"
 #include "WebPage.h"
 #include "WebPageCreationParameters.h"
 #include "WebPageGroupProxy.h"
