@@ -591,8 +591,10 @@ void WebAnimation::setPlaybackRate(double newPlaybackRate)
     if (previousTime)
         setCurrentTime(previousTime);
 
-    if (m_effect)
+    if (m_effect) {
         m_effect->animationDidChangeTimingProperties();
+        m_effect->animationPlaybackRateDidChange();
+    }
 }
 
 void WebAnimation::updatePlaybackRate(double newPlaybackRate)
@@ -668,6 +670,9 @@ void WebAnimation::applyPendingPlaybackRate()
 
     // 3. Clear animation's pending playback rate.
     m_pendingPlaybackRate = std::nullopt;
+
+    if (m_effect)
+        m_effect->animationPlaybackRateDidChange();
 }
 
 void WebAnimation::setBindingsFrameRate(std::variant<FramesPerSecond, AnimationFrameRatePreset>&& frameRate)
@@ -746,7 +751,7 @@ auto WebAnimation::playState() const -> PlayState
     // animation's effective playback rate > 0 and current time ≥ target effect end; or
     // animation's effective playback rate < 0 and current time ≤ 0,
     // → finished
-    if (animationCurrentTime && ((effectivePlaybackRate() > 0 && (*animationCurrentTime + animationCurrentTime->matchingEpsilon()) >= effectEndTime()) || (effectivePlaybackRate() < 0 && (*animationCurrentTime - animationCurrentTime->matchingEpsilon()) <= zeroTime())))
+    if (animationCurrentTime && ((effectivePlaybackRate() > 0 && (*animationCurrentTime + animationCurrentTime->matchingEpsilon()) >= effectEndTime()) || (effectivePlaybackRate() < 0 && (*animationCurrentTime - animationCurrentTime->matchingEpsilon()) <= animationCurrentTime->matchingZero())))
         return PlayState::Finished;
 
     // Otherwise → running
@@ -1002,7 +1007,7 @@ void WebAnimation::updateFinishedState(DidSeek didSeek, SynchronouslyNotify sync
     //    - animation does not have a pending play task or a pending pause task,
     if (unconstrainedCurrentTime && m_startTime && !pending()) {
         // then update animation's hold time based on the first matching condition for animation from below, if any:
-        if (m_playbackRate > 0 && unconstrainedCurrentTime >= endTime) {
+        if (m_playbackRate > 0 && *unconstrainedCurrentTime >= endTime) {
             // If animation playback rate > 0 and unconstrained current time is greater than or equal to target effect end,
             // If did seek is true, let the hold time be the value of unconstrained current time.
             if (didSeek == DidSeek::Yes)
@@ -1012,7 +1017,7 @@ void WebAnimation::updateFinishedState(DidSeek didSeek, SynchronouslyNotify sync
                 m_holdTime = endTime;
             else
                 m_holdTime = std::max(m_previousCurrentTime.value(), endTime);
-        } else if (m_playbackRate < 0 && unconstrainedCurrentTime <= zeroTime()) {
+        } else if (m_playbackRate < 0 && *unconstrainedCurrentTime <= unconstrainedCurrentTime->matchingZero()) {
             // If animation playback rate < 0 and unconstrained current time is less than or equal to 0,
             // If did seek is true, let the hold time be the value of unconstrained current time.
             if (didSeek == DidSeek::Yes)
@@ -1021,7 +1026,7 @@ void WebAnimation::updateFinishedState(DidSeek didSeek, SynchronouslyNotify sync
             else if (!m_previousCurrentTime)
                 m_holdTime = zeroTime();
             else
-                m_holdTime = std::min(m_previousCurrentTime.value(), zeroTime());
+                m_holdTime = std::min(*m_previousCurrentTime, m_previousCurrentTime->matchingZero());
         } else if (m_playbackRate && m_timeline && m_timeline->currentTime()) {
             // If animation playback rate ≠ 0, and animation is associated with an active timeline,
             // Perform the following steps:
@@ -1849,7 +1854,7 @@ std::optional<double> WebAnimation::overallProgress() const
     //     - If animation's current time is negative, animation's overallProgress is zero.
     //     - Otherwise, animation's overallProgress is one.
     if (endTime.isZero())
-        return *currentTime < zeroTime() ? 0 : 1;
+        return *currentTime < endTime.matchingZero() ? 0 : 1;
 
     // If animation's associated effect end is infinite, animation's overallProgress is zero.
     if (endTime.isInfinity())
