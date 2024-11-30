@@ -288,6 +288,9 @@ WebProcess& WebProcess::singleton()
 
 WebProcess::WebProcess()
     : m_eventDispatcher(*this)
+#if PLATFORM(IOS_FAMILY)
+    , m_viewUpdateDispatcher(*this)
+#endif
     , m_webInspectorInterruptDispatcher(*this)
     , m_webLoaderStrategy(makeUniqueRefWithoutRefCountedCheck<WebLoaderStrategy>(*this))
 #if PLATFORM(COCOA) && USE(LIBWEBRTC) && ENABLE(WEB_CODECS)
@@ -317,7 +320,7 @@ WebProcess::WebProcess()
     // FIXME: This should moved to where WebProcess::initialize is called,
     // so that ports have a chance to customize, and ifdefs in this file are
     // limited.
-    addSupplement<WebGeolocationManager>();
+    addSupplementWithoutRefCountedCheck<WebGeolocationManager>();
 
 #if ENABLE(NOTIFICATIONS)
     addSupplement<WebNotificationManager>();
@@ -1962,7 +1965,7 @@ void WebProcess::setEnabledServices(bool hasImageServices, bool hasSelectionServ
 
 void WebProcess::ensureAutomationSessionProxy(const String& sessionIdentifier)
 {
-    m_automationSessionProxy = makeUnique<WebAutomationSessionProxy>(sessionIdentifier);
+    m_automationSessionProxy = WebAutomationSessionProxy::create(sessionIdentifier);
 }
 
 void WebProcess::destroyAutomationSessionProxy()
@@ -2027,7 +2030,7 @@ void WebProcess::establishRemoteWorkerContextConnectionToNetworkProcess(RemoteWo
         SWContextManager::singleton().connection()->establishConnection(WTFMove(completionHandler));
         break;
     case RemoteWorkerType::SharedWorker:
-        SharedWorkerContextManager::singleton().setConnection(makeUnique<WebSharedWorkerContextManagerConnection>(WTFMove(ipcConnection), WTFMove(site), pageGroupID, webPageProxyID, pageID, store, WTFMove(initializationData)));
+        SharedWorkerContextManager::singleton().setConnection(WebSharedWorkerContextManagerConnection::create(WTFMove(ipcConnection), WTFMove(site), pageGroupID, webPageProxyID, pageID, store, WTFMove(initializationData)));
         SharedWorkerContextManager::singleton().connection()->establishConnection(WTFMove(completionHandler));
         break;
     }

@@ -41,13 +41,14 @@ class Region;
 
 namespace WebKit {
 
+class ThreadedCompositor;
 class WebPage;
 
 class AcceleratedSurface {
     WTF_MAKE_NONCOPYABLE(AcceleratedSurface);
     WTF_MAKE_TZONE_ALLOCATED(AcceleratedSurface);
 public:
-    static std::unique_ptr<AcceleratedSurface> create(WebPage&, Function<void()>&& frameCompleteHandler);
+    static std::unique_ptr<AcceleratedSurface> create(ThreadedCompositor&, WebPage&, Function<void()>&& frameCompleteHandler);
     virtual ~AcceleratedSurface() = default;
 
     virtual uint64_t window() const { ASSERT_NOT_REACHED(); return 0; }

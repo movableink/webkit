@@ -79,7 +79,7 @@ ThreadedCompositor::ThreadedCompositor(LayerTreeHost& layerTreeHost, float scale
 ThreadedCompositor::ThreadedCompositor(LayerTreeHost& layerTreeHost, ThreadedDisplayRefreshMonitor::Client& displayRefreshMonitorClient, float scaleFactor, PlatformDisplayID displayID)
 #endif
     : m_layerTreeHost(&layerTreeHost)
-    , m_surface(AcceleratedSurface::create(layerTreeHost.webPage(), [this] { frameComplete(); }))
+    , m_surface(AcceleratedSurface::create(*this, layerTreeHost.webPage(), [this] { frameComplete(); }))
     , m_flipY(m_surface->shouldPaintMirrored())
     , m_compositingRunLoop(makeUnique<CompositingRunLoop>([this] { renderLayerTree(); }))
 #if HAVE(DISPLAY_LINK)

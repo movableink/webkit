@@ -30,6 +30,7 @@
 
 #include "AcceleratedBackingStoreDMABufMessages.h"
 #include "AcceleratedSurfaceDMABufMessages.h"
+#include "ThreadedCompositor.h"
 #include "WebPage.h"
 #include "WebProcess.h"
 #include <WebCore/GLFence.h>
@@ -62,9 +63,19 @@ static uint64_t generateID()
     return ++identifier;
 }
 
-std::unique_ptr<AcceleratedSurfaceDMABuf> AcceleratedSurfaceDMABuf::create(WebPage& webPage, Function<void()>&& frameCompleteHandler)
+std::unique_ptr<AcceleratedSurfaceDMABuf> AcceleratedSurfaceDMABuf::create(ThreadedCompositor& compositor, WebPage& webPage, Function<void()>&& frameCompleteHandler)
 {
-    return std::unique_ptr<AcceleratedSurfaceDMABuf>(new AcceleratedSurfaceDMABuf(webPage, WTFMove(frameCompleteHandler)));
+    return std::unique_ptr<AcceleratedSurfaceDMABuf>(new AcceleratedSurfaceDMABuf(compositor, webPage, WTFMove(frameCompleteHandler)));
+}
+
+void AcceleratedSurfaceDMABuf::ref() const
+{
+    m_compositor->ref();
+}
+
+void AcceleratedSurfaceDMABuf::deref() const
+{
+    m_compositor->deref();
 }
 
 static bool useExplicitSync()
@@ -74,8 +85,9 @@ static bool useExplicitSync()
     return extensions.ANDROID_native_fence_sync && (display.eglCheckVersion(1, 5) || extensions.KHR_fence_sync);
 }
 
-AcceleratedSurfaceDMABuf::AcceleratedSurfaceDMABuf(WebPage& webPage, Function<void()>&& frameCompleteHandler)
+AcceleratedSurfaceDMABuf::AcceleratedSurfaceDMABuf(ThreadedCompositor& compositor, WebPage& webPage, Function<void()>&& frameCompleteHandler)
     : AcceleratedSurface(webPage, WTFMove(frameCompleteHandler))
+    , m_compositor(compositor)
     , m_id(generateID())
     , m_swapChain(m_id)
     , m_isVisible(webPage.activityState().contains(WebCore::ActivityState::IsVisible))

@@ -775,7 +775,7 @@ private:
     HashSet<String> m_dnsPrefetchedHosts;
     PAL::HysteresisActivity m_dnsPrefetchHystereris;
 
-    std::unique_ptr<WebAutomationSessionProxy> m_automationSessionProxy;
+    RefPtr<WebAutomationSessionProxy> m_automationSessionProxy;
 
 #if ENABLE(SERVICE_CONTROLS)
     bool m_hasImageServices { false };

@@ -93,7 +93,7 @@ void SharedWorkerContextManager::stopAllSharedWorkers()
         stopSharedWorker(m_workerMap.begin()->key);
 }
 
-void SharedWorkerContextManager::setConnection(std::unique_ptr<Connection>&& connection)
+void SharedWorkerContextManager::setConnection(RefPtr<Connection>&& connection)
 {
     ASSERT(!m_connection || m_connection->isClosed());
     m_connection = WTFMove(connection);

@@ -54,6 +54,7 @@ UserMediaCaptureManager::UserMediaCaptureManager(WebProcess& process)
     , m_audioFactory(*this)
     , m_videoFactory(*this)
     , m_displayFactory(*this)
+    , m_remoteCaptureSampleManager(*this)
 {
     process.addMessageReceiver(Messages::UserMediaCaptureManager::messageReceiverName(), *this);
 }

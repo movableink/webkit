@@ -2415,7 +2415,7 @@ private:
     LayerHostingMode m_layerHostingMode;
     RefPtr<DrawingArea> m_drawingArea;
 
-    std::unique_ptr<WebPageTesting> m_webPageTesting;
+    RefPtr<WebPageTesting> m_webPageTesting;
 
     Ref<WebFrame> m_mainFrame;
 
@@ -2908,7 +2908,7 @@ private:
 #endif
 
 #if ENABLE(GPU_PROCESS)
-    std::unique_ptr<RemoteRenderingBackendProxy> m_remoteRenderingBackendProxy;
+    RefPtr<RemoteRenderingBackendProxy> m_remoteRenderingBackendProxy;
 #endif
 
 #if ENABLE(IMAGE_ANALYSIS)

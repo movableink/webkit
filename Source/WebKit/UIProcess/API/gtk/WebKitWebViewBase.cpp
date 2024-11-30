@@ -351,7 +351,7 @@ struct _WebKitWebViewBasePrivate {
     std::unique_ptr<PAL::SleepDisabler> sleepDisabler;
 #endif
 
-    std::unique_ptr<AcceleratedBackingStore> acceleratedBackingStore;
+    RefPtr<AcceleratedBackingStore> acceleratedBackingStore;
 
 #if ENABLE(DRAG_SUPPORT)
     std::unique_ptr<DragSource> dragSource;

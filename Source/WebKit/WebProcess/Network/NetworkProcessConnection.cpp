@@ -142,7 +142,7 @@ bool NetworkProcessConnection::dispatchMessage(IPC::Connection& connection, IPC:
     if (decoder.messageReceiverName() == Messages::WebRTCResolver::messageReceiverName()) {
         auto& network = WebProcess::singleton().libWebRTCNetwork();
         if (network.isActive())
-            network.resolver(AtomicObjectIdentifier<LibWebRTCResolverIdentifierType>(decoder.destinationID())).didReceiveMessage(connection, decoder);
+            network.resolver(AtomicObjectIdentifier<LibWebRTCResolverIdentifierType>(decoder.destinationID()))->didReceiveMessage(connection, decoder);
         else
             RELEASE_LOG_ERROR(WebRTC, "Received WebRTCResolver message while libWebRTCNetwork is not active");
         return true;

@@ -63,7 +63,7 @@ public:
 
     void disableNonLocalhostConnections() { socketFactory().disableNonLocalhostConnections(); }
 
-    WebRTCResolver resolver(LibWebRTCResolverIdentifier identifier) { return WebRTCResolver(socketFactory(), identifier); }
+    Ref<WebRTCResolver> resolver(LibWebRTCResolverIdentifier identifier) { return WebRTCResolver::create(socketFactory(), identifier); }
 #endif
 
 #if ENABLE(WEB_RTC)

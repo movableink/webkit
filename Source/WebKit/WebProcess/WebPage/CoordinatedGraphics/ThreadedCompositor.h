@@ -48,9 +48,10 @@ namespace WebKit {
 class AcceleratedSurface;
 class LayerTreeHost;
 
-class ThreadedCompositor : public CoordinatedGraphicsSceneClient, public ThreadSafeRefCounted<ThreadedCompositor> {
+class ThreadedCompositor : public CoordinatedGraphicsSceneClient, public ThreadSafeRefCounted<ThreadedCompositor>, public CanMakeThreadSafeCheckedPtr<ThreadedCompositor> {
     WTF_MAKE_TZONE_ALLOCATED(ThreadedCompositor);
     WTF_MAKE_NONCOPYABLE(ThreadedCompositor);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ThreadedCompositor);
 public:
     enum class DamagePropagation : uint8_t {
         None,

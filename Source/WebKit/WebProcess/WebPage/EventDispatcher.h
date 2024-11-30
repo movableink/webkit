@@ -36,12 +36,12 @@
 #include <WebCore/ScrollingCoordinatorTypes.h>
 #include <WebCore/WheelEventDeltaFilter.h>
 #include <memory>
+#include <wtf/CheckedRef.h>
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefPtr.h>
 #include <wtf/ThreadingPrimitives.h>
-#include <wtf/WeakRef.h>
 #include <wtf/WorkQueue.h>
 
 #if ENABLE(MAC_GESTURE_EVENTS)
@@ -159,7 +159,7 @@ private:
 
     void pageScreenDidChange(WebCore::PageIdentifier, WebCore::PlatformDisplayID, std::optional<unsigned> nominalFramesPerSecond);
 
-    WeakRef<WebProcess> m_process;
+    CheckedRef<WebProcess> m_process;
     Ref<WorkQueue> m_queue;
 
 #if ENABLE(ASYNC_SCROLLING) && ENABLE(SCROLLING_THREAD)
