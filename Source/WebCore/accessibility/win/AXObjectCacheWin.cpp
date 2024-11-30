@@ -139,9 +139,9 @@ void AXObjectCache::frameLoadingEventPlatformNotification(AccessibilityObject* o
     if (!page)
         return;
 
-    if (notification == AXLoadingStarted)
+    if (notification == AXLoadingEvent::Started)
         page->chrome().client().AXStartFrameLoad();
-    else if (notification == AXLoadingFinished)
+    else if (notification == AXLoadingEvent::Finished)
         page->chrome().client().AXFinishFrameLoad();
 }
 

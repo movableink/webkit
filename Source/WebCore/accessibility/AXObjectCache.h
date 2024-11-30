@@ -262,6 +262,13 @@ WEBCORE_AXNOTIFICATION_KEYS(WEBCORE_DEFINE_AXNOTIFICATION_ENUM)
 #undef WEBCORE_DEFINE_AXNOTIFICATION_ENUM
 };
 
+enum class AXLoadingEvent : uint8_t {
+    Started,
+    Reloaded,
+    Failed,
+    Finished
+};
+
 #if !PLATFORM(COCOA)
 enum AXTextChange { AXTextInserted, AXTextDeleted, AXTextAttributesChanged };
 #endif
@@ -537,13 +544,6 @@ public:
     void postTextStateChangeNotification(Node*, const AXTextStateChangeIntent&, const VisibleSelection&);
     void postTextStateChangeNotification(const Position&, const AXTextStateChangeIntent&, const VisibleSelection&);
     void postLiveRegionChangeNotification(AccessibilityObject&);
-
-    enum AXLoadingEvent {
-        AXLoadingStarted,
-        AXLoadingReloaded,
-        AXLoadingFailed,
-        AXLoadingFinished
-    };
 
     void frameLoadingEventNotification(LocalFrame*, AXLoadingEvent);
 

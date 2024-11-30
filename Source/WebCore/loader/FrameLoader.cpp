@@ -1379,7 +1379,7 @@ void FrameLoader::prepareForLoadStart()
 
     if (AXObjectCache::accessibilityEnabled()) {
         if (CheckedPtr cache = m_frame->document()->existingAXObjectCache()) {
-            AXObjectCache::AXLoadingEvent loadingEvent = loadType() == FrameLoadType::Reload ? AXObjectCache::AXLoadingReloaded : AXObjectCache::AXLoadingStarted;
+            auto loadingEvent = loadType() == FrameLoadType::Reload ? AXLoadingEvent::Reloaded : AXLoadingEvent::Started;
             cache->frameLoadingEventNotification(protectedFrame().ptr(), loadingEvent);
         }
     }
@@ -2908,11 +2908,11 @@ void FrameLoader::checkLoadCompleteForThisFrame(LoadWillContinueInAnotherProcess
         Ref documentLoader = *m_documentLoader;
         auto& error = documentLoader->mainDocumentError();
 
-        auto loadingEvent = AXObjectCache::AXLoadingFailed;
+        auto loadingEvent = AXLoadingEvent::Failed;
         if (!error.isNull()) {
             FRAMELOADER_RELEASE_LOG(ResourceLoading, "checkLoadCompleteForThisFrame: Finished frame load with error (isTimeout = %d, isCancellation = %d, errorCode = %d)", error.isTimeout(), error.isCancellation(), error.errorCode());
             m_client->dispatchDidFailLoad(error);
-            loadingEvent = AXObjectCache::AXLoadingFailed;
+            loadingEvent = AXLoadingEvent::Failed;
             m_errorOccurredInLoading = true;
         } else {
             FRAMELOADER_RELEASE_LOG(ResourceLoading, "checkLoadCompleteForThisFrame: Finished frame load");
@@ -2934,7 +2934,7 @@ void FrameLoader::checkLoadCompleteForThisFrame(LoadWillContinueInAnotherProcess
             }
 #endif
             m_client->dispatchDidFinishLoad();
-            loadingEvent = AXObjectCache::AXLoadingFinished;
+            loadingEvent = AXLoadingEvent::Finished;
         }
 
         // Notify accessibility.

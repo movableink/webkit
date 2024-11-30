@@ -514,7 +514,7 @@ public:
 #if PLATFORM(PLAYSTATION)
     virtual void postAccessibilityNotification(AccessibilityObject&, AXNotification) = 0;
     virtual void postAccessibilityNodeTextChangeNotification(AccessibilityObject*, AXTextChange, unsigned, const String&) = 0;
-    virtual void postAccessibilityFrameLoadingEventNotification(AccessibilityObject*, AXObjectCache::AXLoadingEvent) = 0;
+    virtual void postAccessibilityFrameLoadingEventNotification(AccessibilityObject*, AXLoadingEvent) = 0;
 #endif
 
     virtual bool selectItemWritingDirectionIsNatural() = 0;

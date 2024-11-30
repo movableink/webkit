@@ -1772,7 +1772,7 @@ void WebChromeClient::postAccessibilityNodeTextChangeNotification(WebCore::Acces
     notImplemented();
 }
 
-void WebChromeClient::postAccessibilityFrameLoadingEventNotification(WebCore::AccessibilityObject*, WebCore::AXObjectCache::AXLoadingEvent)
+void WebChromeClient::postAccessibilityFrameLoadingEventNotification(WebCore::AccessibilityObject*, WebCore::AXLoadingEvent)
 {
     notImplemented();
 }

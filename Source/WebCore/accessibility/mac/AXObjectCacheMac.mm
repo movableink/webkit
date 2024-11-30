@@ -711,7 +711,7 @@ void AXObjectCache::frameLoadingEventPlatformNotification(AccessibilityObject* a
     if (!axFrameObject)
         return;
 
-    if (loadingEvent == AXLoadingFinished) {
+    if (loadingEvent == AXLoadingEvent::Finished) {
         if (axFrameObject->document() == axFrameObject->topDocument())
             postNotification(axFrameObject, axFrameObject->document(), AXNotification::LoadComplete);
         else

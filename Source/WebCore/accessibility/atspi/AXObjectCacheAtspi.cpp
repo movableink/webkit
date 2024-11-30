@@ -244,18 +244,18 @@ void AXObjectCache::frameLoadingEventPlatformNotification(AccessibilityObject* c
         return;
 
     switch (loadingEvent) {
-    case AXObjectCache::AXLoadingStarted:
+    case AXLoadingEvent::Started:
         wrapper->stateChanged("busy", true);
         break;
-    case AXObjectCache::AXLoadingReloaded:
+    case AXLoadingEvent::Reloaded:
         wrapper->stateChanged("busy", true);
         wrapper->loadEvent("Reload");
         break;
-    case AXObjectCache::AXLoadingFailed:
+    case AXLoadingEvent::Failed:
         wrapper->stateChanged("busy", false);
         wrapper->loadEvent("LoadStopped");
         break;
-    case AXObjectCache::AXLoadingFinished:
+    case AXLoadingEvent::Finished:
         wrapper->stateChanged("busy", false);
         wrapper->loadEvent("LoadComplete");
         break;
