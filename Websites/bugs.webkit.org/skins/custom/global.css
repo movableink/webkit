@@ -2219,7 +2219,7 @@ form .field-container {
     max-width: 50%;
 }
 .attachment-controls .statusBubble iframe {
-    max-width: 50rem;
+    max-width: 75rem;
     min-height: 10rem;
     border: none;
 }
