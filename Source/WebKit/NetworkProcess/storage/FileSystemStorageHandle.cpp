@@ -103,7 +103,7 @@ bool FileSystemStorageHandle::isSameEntry(WebCore::FileSystemHandleIdentifier id
 
 static bool isValidFileName(const String& directory, const String& name)
 {
-    // https://wicg.github.io/file-system-access/#valid-file-name
+    // https://fs.spec.whatwg.org/#valid-file-name
     if (name.isEmpty() || (name == "."_s) || (name == ".."_s) || name.contains(pathSeparator))
         return false;
 
