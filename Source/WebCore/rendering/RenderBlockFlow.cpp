@@ -2,8 +2,8 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2007 David Smith (catfish.man@gmail.com)
- * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
- * Copyright (C) 2014-2015 Google Inc. All rights reserved.
+ * Copyright (C) 2003-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2016 Google Inc. All rights reserved.
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -237,11 +237,12 @@ void RenderBlockFlow::rebuildFloatingObjectSetFromIntrudingFloats()
         return;
 
     // First add in floats from the parent. Self-collapsing blocks let their parent track any floats that intrude into
-    // them (as opposed to floats they contain themselves) so check for those here too.
+    // them (as opposed to floats they contain themselves) so check for those here too. If margin collapsing has moved
+    // us up past the top a previous sibling then we need to check for floats from the parent too.
     bool parentHasFloats = false;
     RenderBlockFlow* previousBlock = previousSiblingWithOverhangingFloats(parentHasFloats);
     LayoutUnit logicalTopOffset = logicalTop();
-    bool parentHasIntrudingFloats = !parentHasFloats && (!previousBlock  || (previousBlock->isSelfCollapsingBlock() && parentBlock->lowestFloatLogicalBottom() > logicalTopOffset));
+    bool parentHasIntrudingFloats = !parentHasFloats && (!previousBlock  || previousBlock->isSelfCollapsingBlock() || previousBlock->logicalTop() > logicalTopOffset) && parentBlock->lowestFloatLogicalBottom() > logicalTopOffset;
     if (parentHasFloats || parentHasIntrudingFloats)
         addIntrudingFloats(parentBlock.get(), parentBlock.get(), parentBlock->logicalLeftOffsetForContent(), logicalTopOffset);
 
