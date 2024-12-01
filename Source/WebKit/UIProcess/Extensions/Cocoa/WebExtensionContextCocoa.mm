@@ -81,7 +81,6 @@
 #import "WebUserContentControllerProxy.h"
 #import "_WKWebExtensionDeclarativeNetRequestSQLiteStore.h"
 #import "_WKWebExtensionDeclarativeNetRequestTranslator.h"
-#import "_WKWebExtensionLocalization.h"
 #import "_WKWebExtensionRegisteredScriptsSQLiteStore.h"
 #import "_WKWebExtensionStorageSQLiteStore.h"
 #import <UniformTypeIdentifiers/UTType.h>
@@ -617,11 +616,11 @@ void WebExtensionContext::setUniqueIdentifier(String&& uniqueIdentifier)
     m_uniqueIdentifier = uniqueIdentifier;
 }
 
-_WKWebExtensionLocalization *WebExtensionContext::localization()
+RefPtr<WebExtensionLocalization> WebExtensionContext::localization()
 {
     if (!m_localization)
-        m_localization = [[_WKWebExtensionLocalization alloc] initWithLocalizedDictionary:protectedExtension()->localization().localizationDictionary uniqueIdentifier:baseURL().host().toString()];
-    return m_localization.get();
+        m_localization = WebExtensionLocalization::create(protectedExtension()->localization()->localizationJSON(), baseURL().host().toString());
+    return m_localization;
 }
 
 RefPtr<API::Data> WebExtensionContext::localizedResourceData(const RefPtr<API::Data>& resourceData, const String& mimeType)
@@ -644,11 +643,11 @@ String WebExtensionContext::localizedResourceString(const String& resourceConten
     if (!equalLettersIgnoringASCIICase(mimeType, "text/css"_s) || resourceContents.isEmpty() || !resourceContents.contains("__MSG_"_s))
         return resourceContents;
 
-    auto* localization = this->localization();
+    RefPtr localization = this->localization();
     if (!localization)
         return resourceContents;
 
-    return [localization localizedStringForString:resourceContents];
+    return localization->localizedStringForString(resourceContents);
 }
 
 void WebExtensionContext::setInspectable(bool inspectable)
