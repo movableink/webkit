@@ -3223,8 +3223,9 @@ HandleUserInputEventResult EventHandler::handleWheelEventInternal(const Platform
     determineWheelEventTarget(event, element, scrollableArea, isOverWidget);
 
 #if PLATFORM(COCOA) || PLATFORM(WIN)
+    std::unique_ptr<WheelEventTestMonitorCompletionDeferrer> deferrer;
     if (scrollableArea)
-        auto deferrer = WheelEventTestMonitorCompletionDeferrer { monitor.get(), scrollableArea->scrollingNodeIDForTesting(), WheelEventTestMonitor::DeferReason::HandlingWheelEventOnMainThread };
+        deferrer = makeUnique<WheelEventTestMonitorCompletionDeferrer>(monitor.get(), scrollableArea->scrollingNodeIDForTesting(), WheelEventTestMonitor::DeferReason::HandlingWheelEventOnMainThread);
 #endif
 
     if (element) {
