@@ -1591,7 +1591,7 @@ RefPtr<API::Navigation> WebPageProxy::launchProcessForReload()
     return navigation;
 }
 
-void WebPageProxy::setDrawingArea(std::unique_ptr<DrawingAreaProxy>&& drawingArea)
+void WebPageProxy::setDrawingArea(RefPtr<DrawingAreaProxy>&& drawingArea)
 {
 #if ENABLE(ASYNC_SCROLLING) && PLATFORM(COCOA)
     // The scrolling coordinator needs to do cleanup before the drawing area goes away.
