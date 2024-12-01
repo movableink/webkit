@@ -507,6 +507,7 @@ fast/dom/ParentNode-append-fragments.html [ ImageOnlyFailure ]
 fast/flexbox/line-clamp-with-float.html [ ImageOnlyFailure ]
 fast/forms/auto-fill-button/input-strong-password-viewable-baseline-alignment.html [ ImageOnlyFailure ]
 fast/forms/auto-fill-button/input-strong-password-viewable-taller-button-height.html [ ImageOnlyFailure ]
+fast/text/capitalize-content-with-outside-bmp-previous-characters.html [ ImageOnlyFailure ]
 fast/text/capitalize-decomposed-ligatures.html [ ImageOnlyFailure ]
 fast/text/complex-text-selection.html [ ImageOnlyFailure ]
 fast/text/incorrect-baseline-with-nested-inline-box.html [ ImageOnlyFailure ]
@@ -1036,6 +1037,8 @@ imported/w3c/web-platform-tests/scroll-animations/scroll-timelines/animation-wit
 
 webkit.org/b/263870 imported/w3c/web-platform-tests/scroll-animations/css/animation-range-ignored.html [ Skip ]
 webkit.org/b/263870 imported/w3c/web-platform-tests/scroll-animations/scroll-timelines/scroll-timeline-range.html [ Skip ]
+
+imported/w3c/web-platform-tests/scroll-animations/scroll-timelines/progress-based-effect-delay.tentative.html [ ImageOnlyFailure ]
 
 #//////////////////////////////////////////////////////////////////////////////////////////
 # Compositing
