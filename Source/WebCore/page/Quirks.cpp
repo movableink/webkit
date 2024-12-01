@@ -51,6 +51,7 @@
 #include "MouseEvent.h"
 #include "NamedNodeMap.h"
 #include "NetworkStorageSession.h"
+#include "NodeRenderStyle.h"
 #include "OrganizationStorageAccessPromptQuirk.h"
 #include "PlatformMouseEvent.h"
 #include "RegistrableDomain.h"
@@ -442,6 +443,13 @@ bool Quirks::isESPN() const
     return *m_quirksData.isESPN;
 }
 
+bool Quirks::isSpotifyPlayer() const
+{
+    if (!m_quirksData.isSpotify)
+        m_quirksData.isSpotify = topDocumentURL().host() == "open.spotify.com"_s;
+    return *m_quirksData.isSpotify;
+}
+
 bool Quirks::isGoogleMaps() const
 {
     if (!m_quirksData.isGoogleMaps) {
@@ -763,13 +771,7 @@ bool Quirks::needsScrollbarWidthThinDisabledQuirk() const
 // spotify.com rdar://138918575
 bool Quirks::needsBodyScrollbarWidthNoneDisabledQuirk() const
 {
-    if (!needsQuirks())
-        return false;
-
-    if (!m_quirksData.needsBodyScrollbarWidthNoneDisabledQuirk)
-        m_quirksData.needsBodyScrollbarWidthNoneDisabledQuirk = m_document->url().host() == "open.spotify.com"_s;
-
-    return *m_quirksData.needsBodyScrollbarWidthNoneDisabledQuirk;
+    return needsQuirks() && isSpotifyPlayer();
 }
 
 // gizmodo.com rdar://102227302
@@ -2158,6 +2160,25 @@ bool Quirks::needsBingGestureEventQuirk(EventTarget* target) const
         return element->hasClassName(mapClass.get());
     }
 
+    return false;
+}
+
+// spotify.com rdar://140707449
+bool Quirks::shouldAvoidStartingSelectionOnMouseDown(const Node& target) const
+{
+#if PLATFORM(MAC)
+    if (!needsQuirks())
+        return false;
+
+    if (isSpotifyPlayer()) {
+        if (CheckedPtr style = target.renderStyle()) {
+            if (style->usedTouchActions().contains(TouchAction::None) && style->cursor() == CursorType::Pointer)
+                return true;
+        }
+    }
+#else
+    UNUSED_PARAM(target);
+#endif
     return false;
 }
 

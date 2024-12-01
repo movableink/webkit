@@ -796,6 +796,9 @@ bool EventHandler::canMouseDownStartSelect(const MouseEventWithHitTestResults& e
     if (!node || !node->renderer())
         return true;
 
+    if (node->protectedDocument()->quirks().shouldAvoidStartingSelectionOnMouseDown(*node))
+        return false;
+
     if (ImageOverlay::isOverlayText(*node))
         return node->renderer()->style().usedUserSelect() != UserSelect::None;
 

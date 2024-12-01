@@ -33,13 +33,13 @@ struct WEBCORE_EXPORT QuirksData {
     std::optional<bool> isGoogleMaps;
     std::optional<bool> isNetflix;
     std::optional<bool> isSoundCloud;
+    std::optional<bool> isSpotify;
     std::optional<bool> isVimeo;
     std::optional<bool> isYouTube;
     std::optional<bool> isZoom;
 
     std::optional<bool> implicitMuteWhenVolumeSetToZero;
     std::optional<bool> needsBingGestureEventQuirk;
-    std::optional<bool> needsBodyScrollbarWidthNoneDisabledQuirk;
     std::optional<bool> needsCanPlayAfterSeekedQuirk;
     std::optional<bool> needsChromeMediaControlsPseudoElementQuirk;
     std::optional<bool> needsDisableDOMPasteAccessQuirk;

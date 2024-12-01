@@ -232,6 +232,8 @@ public:
 
     bool needsBingGestureEventQuirk(EventTarget*) const;
 
+    bool shouldAvoidStartingSelectionOnMouseDown(const Node&) const;
+
 #if PLATFORM(IOS)
     bool hideForbesVolumeSlider() const;
     bool hideIGNVolumeSlider() const;
@@ -244,6 +246,7 @@ private:
     bool isEmbedDomain(const String&) const;
     bool isYoutubeEmbedDomain() const;
     bool isYahooMail() const;
+    bool isSpotifyPlayer() const;
 
     bool isAmazon() const;
     bool isESPN() const;
