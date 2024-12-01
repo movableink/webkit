@@ -2352,6 +2352,11 @@ WebPage* WebPage::fromCorePage(Page& page)
     return client.isEmptyChromeClient() ? nullptr : &static_cast<WebChromeClient&>(client).page();
 }
 
+RefPtr<WebCore::Page> WebPage::protectedCorePage() const
+{
+    return corePage();
+}
+
 void WebPage::setSize(const WebCore::IntSize& viewSize)
 {
     if (m_viewSize == viewSize)

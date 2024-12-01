@@ -38,6 +38,7 @@
 #include "WKData.h"
 #include "WebFrame.h"
 #include "WebPage.h"
+#include <WebCore/AXObjectCache.h>
 #include <WebCore/Document.h>
 #include <WebCore/DocumentInlines.h>
 #include <WebCore/FocusController.h>
