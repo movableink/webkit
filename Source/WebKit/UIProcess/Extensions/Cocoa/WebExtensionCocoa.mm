@@ -278,7 +278,7 @@ bool WebExtension::parseManifest(NSData *manifestData)
         return false;
     }
 
-    localization->localizedJSONforJSON(manifestJSON->asObject());
+    manifestJSON = localization->localizedJSONforJSON(manifestJSON->asObject());
 
     m_localization = localization;
 
