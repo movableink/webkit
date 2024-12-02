@@ -1026,6 +1026,15 @@ private:
             valueReplaced();
             return;
         }
+        case Opaque:
+        case Depend: {
+            if (m_value->type() != Int64)
+                return;
+            auto input = getMapping(m_value->child(0));
+            setMapping(m_value, insert<Value>(m_index, m_value->kind(), m_origin, input.first), insert<Value>(m_index, m_value->kind(), m_origin, input.second));
+            valueReplaced();
+            return;
+        }
         case Select: {
             Value* selector = m_value->child(0);
             if (selector->type() == Int64) {
