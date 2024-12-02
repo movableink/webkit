@@ -172,7 +172,7 @@ static bool appendColorInterpolationMethod(StringBuilder& builder, CSS::Gradient
             }
             return false;
         },
-        [&]<typename MethodColorSpace> (const MethodColorSpace& methodColorSpace) {
+        [&]<typename MethodColorSpace>(const MethodColorSpace& methodColorSpace) {
             builder.append(needsLeadingSpace ? " "_s : ""_s, "in "_s, serializationForCSS(methodColorSpace.interpolationColorSpace));
             if constexpr (hasHueInterpolationMethod<MethodColorSpace>)
                 serializationForCSS(builder, methodColorSpace.hueInterpolationMethod);
@@ -209,7 +209,7 @@ void Serialize<LinearGradient>::operator()(StringBuilder& builder, const LinearG
             wroteSomething = true;
         },
         [&](const Vertical& vertical) {
-            if (std::holds_alternative<Bottom>(vertical))
+            if (std::holds_alternative<Keyword::Bottom>(vertical))
                 return;
 
             builder.append("to "_s);
@@ -266,7 +266,7 @@ void Serialize<RadialGradient::Ellipse>::operator()(StringBuilder& builder, cons
             serializationForCSS(builder, size);
         },
         [&](const RadialGradient::Extent& extent) {
-            if (!std::holds_alternative<FarthestCorner>(extent))
+            if (!std::holds_alternative<Keyword::FarthestCorner>(extent))
                 serializationForCSS(builder, extent);
         }
     );
@@ -290,7 +290,7 @@ void Serialize<RadialGradient::Circle>::operator()(StringBuilder& builder, const
             serializationForCSS(builder, length);
         },
         [&](const RadialGradient::Extent& extent) {
-            if (!std::holds_alternative<FarthestCorner>(extent)) {
+            if (!std::holds_alternative<Keyword::FarthestCorner>(extent)) {
                 builder.append("circle "_s);
                 serializationForCSS(builder, extent);
             } else
@@ -352,7 +352,7 @@ void Serialize<PrefixedRadialGradient::Circle>::operator()(StringBuilder& builde
         builder.append("center"_s);
 
     builder.append(", circle "_s);
-    serializationForCSS(builder, circle.size.value_or(PrefixedRadialGradient::Extent { CSS::Cover { } }));
+    serializationForCSS(builder, circle.size.value_or(PrefixedRadialGradient::Extent { CSS::Keyword::Cover { } }));
 }
 
 void Serialize<PrefixedRadialGradient>::operator()(StringBuilder& builder, const PrefixedRadialGradient& gradient)

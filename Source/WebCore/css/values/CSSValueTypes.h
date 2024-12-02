@@ -57,13 +57,6 @@ template<class> inline constexpr bool TreatAsTypeWrapper = false;
     template<> inline constexpr bool TreatAsTypeWrapper<t> = true; \
     template<size_t> const auto& get(const t& value) { return value.name; }
 
-// Helper type used to represent a known constant identifier.
-template<CSSValueID C> struct Constant {
-    static constexpr auto value = C;
-
-    constexpr bool operator==(const Constant<C>&) const = default;
-};
-
 // Helper type used to represent an arbitrary constant identifier.
 struct CustomIdentifier {
     AtomString value;

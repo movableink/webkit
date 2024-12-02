@@ -39,27 +39,16 @@ struct Path;
 // <coordinate-pair> = <length-percentage>{2}
 using CoordinatePair  = Point<LengthPercentage<>>;
 
-using By              = CSS::By;
-using To              = CSS::To;
 using CommandAffinity = CSS::CommandAffinity;
-
-using Cw              = CSS::Cw;
-using Ccw             = CSS::Ccw;
 using ArcSweep        = CSS::ArcSweep;
-
-using Large           = CSS::Large;
-using Small           = CSS::Small;
 using ArcSize         = CSS::ArcSize;
 
 // <control-point-anchor> = start | end | origin
-using Start           = CSS::Start;
-using End             = CSS::End;
-using Origin          = CSS::Origin;
 using ControlPointAnchor = CSS::ControlPointAnchor;
 
 // <to-position> = to <position>
 struct ToPosition {
-    static constexpr CommandAffinity affinity = Style::To { };
+    static constexpr CommandAffinity affinity = CSS::Keyword::To { };
 
     Position offset;
 
@@ -70,7 +59,7 @@ DEFINE_CSS_STYLE_MAPPING(CSS::ToPosition, ToPosition)
 
 // <by-coordinate-pair> = by <coordinate-pair>
 struct ByCoordinatePair {
-    static constexpr CommandAffinity affinity = Style::By { };
+    static constexpr CommandAffinity affinity = CSS::Keyword::By { };
 
     CoordinatePair offset;
 
@@ -83,7 +72,7 @@ DEFINE_CSS_STYLE_MAPPING(CSS::ByCoordinatePair, ByCoordinatePair)
 // Specified https://github.com/w3c/csswg-drafts/issues/10649#issuecomment-2412816773
 struct RelativeControlPoint {
     using Anchor = ControlPointAnchor;
-    static constexpr auto defaultAnchor = Anchor { Start { } };
+    static constexpr auto defaultAnchor = Anchor { CSS::Keyword::Start { } };
 
     CoordinatePair offset;
     std::optional<Anchor> anchor;
@@ -108,7 +97,7 @@ template<> struct Blending<RelativeControlPoint> {
 // Specified https://github.com/w3c/csswg-drafts/issues/10649#issuecomment-2412816773
 struct AbsoluteControlPoint {
     using Anchor = ControlPointAnchor;
-    static constexpr auto defaultAnchor = Anchor { Origin { } };
+    static constexpr auto defaultAnchor = Anchor { CSS::Keyword::Origin { } };
 
     Position offset;
     std::optional<Anchor> anchor;
@@ -169,14 +158,14 @@ DEFINE_CSS_STYLE_MAPPING(CSS::LineCommand, LineCommand)
 struct HLineCommand {
     static constexpr auto name = CSSValueHline;
     struct To {
-        static constexpr CommandAffinity affinity = Style::To { };
+        static constexpr CommandAffinity affinity = CSS::Keyword::To { };
 
         TwoComponentPositionHorizontal offset;
 
         bool operator==(const To&) const = default;
     };
     struct By {
-        static constexpr CommandAffinity affinity = Style::By { };
+        static constexpr CommandAffinity affinity = CSS::Keyword::By { };
 
         LengthPercentage<> offset;
 
@@ -201,14 +190,14 @@ DEFINE_CSS_STYLE_MAPPING(CSS::HLineCommand, HLineCommand)
 struct VLineCommand {
     static constexpr auto name = CSSValueVline;
     struct To {
-        static constexpr CommandAffinity affinity = Style::To { };
+        static constexpr CommandAffinity affinity = CSS::Keyword::To { };
 
         TwoComponentPositionVertical offset;
 
         bool operator==(const To&) const = default;
     };
     struct By {
-        static constexpr CommandAffinity affinity = Style::By { };
+        static constexpr CommandAffinity affinity = CSS::Keyword::By { };
 
         LengthPercentage<> offset;
 
@@ -234,7 +223,7 @@ DEFINE_CSS_STYLE_MAPPING(CSS::VLineCommand, VLineCommand)
 struct CurveCommand {
     static constexpr auto name = CSSValueCurve;
     struct To {
-        static constexpr CommandAffinity affinity = Style::To { };
+        static constexpr CommandAffinity affinity = CSS::Keyword::To { };
 
         Position offset;
         AbsoluteControlPoint controlPoint1;
@@ -243,7 +232,7 @@ struct CurveCommand {
         bool operator==(const To&) const = default;
     };
     struct By {
-        static constexpr CommandAffinity affinity = Style::By { };
+        static constexpr CommandAffinity affinity = CSS::Keyword::By { };
 
         CoordinatePair offset;
         RelativeControlPoint controlPoint1;
@@ -288,7 +277,7 @@ DEFINE_CSS_STYLE_MAPPING(CSS::CurveCommand::By, CurveCommand::By)
 struct SmoothCommand {
     static constexpr auto name = CSSValueSmooth;
     struct To {
-        static constexpr CommandAffinity affinity = Style::To { };
+        static constexpr CommandAffinity affinity = CSS::Keyword::To { };
 
         Position offset;
         std::optional<AbsoluteControlPoint> controlPoint;
@@ -296,7 +285,7 @@ struct SmoothCommand {
         bool operator==(const To&) const = default;
     };
     struct By {
-        static constexpr CommandAffinity affinity = Style::By { };
+        static constexpr CommandAffinity affinity = CSS::Keyword::By { };
 
         CoordinatePair offset;
         std::optional<RelativeControlPoint> controlPoint;
@@ -372,7 +361,7 @@ template<> struct Blending<ArcCommand> {
 
 // <close> = close
 // https://drafts.csswg.org/css-shapes-2/#valdef-shape-close
-using CloseCommand = Constant<CSSValueClose>;
+using CloseCommand = CSS::Keyword::Close;
 
 // MARK: - Shape Command (variant)
 

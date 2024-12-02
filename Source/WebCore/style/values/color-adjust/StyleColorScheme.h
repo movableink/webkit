@@ -37,11 +37,9 @@
 namespace WebCore {
 namespace Style {
 
-using Only = CSS::Only;
-
 struct ColorScheme {
     SpaceSeparatedVector<CustomIdentifier> schemes;
-    std::optional<Only> only;
+    std::optional<CSS::Keyword::Only> only;
 
     // As an optimization, if `schemes` is empty, that indicates the
     // entire value should be considered `normal`.

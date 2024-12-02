@@ -40,17 +40,10 @@ namespace Style {
 
 // MARK: - Common Types
 
-using DeprecatedGradientPosition = SpaceSeparatedArray<NumberOrPercentage<>, 2>;
+using DeprecatedGradientPosition   = SpaceSeparatedArray<NumberOrPercentage<>, 2>;
 
-using Horizontal     = CSS::Horizontal;
-using Vertical       = CSS::Vertical;
-
-using ClosestCorner  = CSS::ClosestCorner;
-using ClosestSide    = CSS::ClosestSide;
-using FarthestCorner = CSS::FarthestCorner;
-using FarthestSide   = CSS::FarthestSide;
-using Contain        = CSS::Contain;
-using Cover          = CSS::Cover;
+using Horizontal                   = CSS::Horizontal;
+using Vertical                     = CSS::Vertical;
 
 using RadialGradientExtent         = CSS::RadialGradientExtent;
 using PrefixedRadialGradientExtent = CSS::PrefixedRadialGradientExtent;

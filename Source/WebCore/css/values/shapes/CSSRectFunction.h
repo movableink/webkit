@@ -31,12 +31,10 @@
 namespace WebCore {
 namespace CSS {
 
-using Auto = Constant<CSSValueAuto>;
-
 // <rect()> = rect( [ <length-percentage> | auto ]{4} [ round <'border-radius'> ]? )
 // https://drafts.csswg.org/css-shapes-1/#funcdef-basic-shape-rect
 struct Rect {
-    using Edge = std::variant<LengthPercentage<>, Auto>;
+    using Edge = std::variant<LengthPercentage<>, Keyword::Auto>;
 
     RectEdges<Edge> edges;
     BorderRadius radii;

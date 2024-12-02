@@ -37,29 +37,20 @@ using CoordinatePair = Point<LengthPercentage<>>;
 // <by-to> = by | to
 // https://drafts.csswg.org/css-shapes-2/#typedef-shape-by-to
 // Indicates if a command is relative or absolute.
-using By              = Constant<CSSValueBy>;
-using To              = Constant<CSSValueTo>;
-using CommandAffinity = std::variant<By, To>;
+using CommandAffinity = std::variant<Keyword::By, Keyword::To>;
 
 // <arc-sweep> = cw | ccw
-using Cw              = Constant<CSSValueCw>;
-using Ccw             = Constant<CSSValueCcw>;
-using ArcSweep        = std::variant<Cw, Ccw>;
+using ArcSweep        = std::variant<Keyword::Cw, Keyword::Ccw>;
 
 // <arc-size> = large | small
-using Large           = Constant<CSSValueLarge>;
-using Small           = Constant<CSSValueSmall>;
-using ArcSize         = std::variant<Large, Small>;
+using ArcSize         = std::variant<Keyword::Large, Keyword::Small>;
 
 // <control-point-anchor> = start | end | origin
-using Start           = Constant<CSSValueStart>;
-using End             = Constant<CSSValueEnd>;
-using Origin          = Constant<CSSValueOrigin>;
-using ControlPointAnchor = std::variant<CSS::Start, CSS::End, CSS::Origin>;
+using ControlPointAnchor = std::variant<Keyword::Start, Keyword::End, Keyword::Origin>;
 
 // <to-position> = to <position>
 struct ToPosition {
-    static constexpr auto affinity = CSS::To { };
+    static constexpr auto affinity = Keyword::To { };
 
     Position offset;
 
@@ -71,7 +62,7 @@ template<> struct Serialize<ToPosition> { void operator()(StringBuilder&, const 
 
 // <by-coordinate-pair> = by <coordinate-pair>
 struct ByCoordinatePair {
-    static constexpr auto affinity = CSS::By { };
+    static constexpr auto affinity = Keyword::By { };
 
     CoordinatePair offset;
 
@@ -156,14 +147,14 @@ struct HLineCommand {
     static constexpr auto name = CSSValueHline;
 
     struct To {
-        static constexpr auto affinity = CSS::To { };
+        static constexpr auto affinity = Keyword::To { };
 
         TwoComponentPositionHorizontal offset;
 
         bool operator==(const To&) const = default;
     };
     struct By {
-        static constexpr auto affinity = CSS::By { };
+        static constexpr auto affinity = Keyword::By { };
 
         LengthPercentage<> offset;
 
@@ -187,14 +178,14 @@ template<> struct Serialize<HLineCommand> { void operator()(StringBuilder&, cons
 struct VLineCommand {
     static constexpr auto name = CSSValueVline;
     struct To {
-        static constexpr auto affinity = CSS::To { };
+        static constexpr auto affinity = Keyword::To { };
 
         TwoComponentPositionVertical offset;
 
         bool operator==(const To&) const = default;
     };
     struct By {
-        static constexpr auto affinity = CSS::By { };
+        static constexpr auto affinity = Keyword::By { };
 
         LengthPercentage<> offset;
 
@@ -219,7 +210,7 @@ template<> struct Serialize<VLineCommand> { void operator()(StringBuilder&, cons
 struct CurveCommand {
     static constexpr auto name = CSSValueCurve;
     struct To {
-        static constexpr auto affinity = CSS::To { };
+        static constexpr auto affinity = Keyword::To { };
 
         Position offset;
         AbsoluteControlPoint controlPoint1;
@@ -228,7 +219,7 @@ struct CurveCommand {
         bool operator==(const To&) const = default;
     };
     struct By {
-        static constexpr auto affinity = CSS::By { };
+        static constexpr auto affinity = Keyword::By { };
 
         CoordinatePair offset;
         RelativeControlPoint controlPoint1;
@@ -271,7 +262,7 @@ template<> struct Serialize<CurveCommand> { void operator()(StringBuilder&, cons
 struct SmoothCommand {
     static constexpr auto name = CSSValueSmooth;
     struct To {
-        static constexpr auto affinity = CSS::To { };
+        static constexpr auto affinity = Keyword::To { };
 
         Position offset;
         std::optional<AbsoluteControlPoint> controlPoint;
@@ -279,7 +270,7 @@ struct SmoothCommand {
         bool operator==(const To&) const = default;
     };
     struct By {
-        static constexpr auto affinity = CSS::By { };
+        static constexpr auto affinity = Keyword::By { };
 
         CoordinatePair offset;
         std::optional<RelativeControlPoint> controlPoint;
@@ -345,7 +336,7 @@ template<> struct Serialize<ArcCommand> { void operator()(StringBuilder&, const 
 
 // <close> = close
 // https://drafts.csswg.org/css-shapes-2/#valdef-shape-close
-using CloseCommand = Constant<CSSValueClose>;
+using CloseCommand = Keyword::Close;
 
 // <shape-command> = <move-command> | <line-command> | <hv-line-command> | <curve-command> | <smooth-command> | <arc-command> | close
 // https://drafts.csswg.org/css-shapes-2/#typedef-shape-command

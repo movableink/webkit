@@ -30,12 +30,6 @@
 namespace WebCore {
 namespace Style {
 
-using Left   = CSS::Left;
-using Right  = CSS::Right;
-using Top    = CSS::Top;
-using Bottom = CSS::Bottom;
-using Center = CSS::Center;
-
 struct TwoComponentPositionHorizontal {
     LengthPercentage<> offset;
 

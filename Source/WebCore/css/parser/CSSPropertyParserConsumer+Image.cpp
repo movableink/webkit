@@ -385,14 +385,14 @@ template<CSSValueID Name> static RefPtr<CSSValue> consumePrefixedLinearGradient(
     // see https://www.w3.org/TR/2011/WD-css3-images-20110217/#linear-gradients.
 
     static constexpr std::pair<CSSValueID, CSS::Vertical> verticalMappings[] {
-        { CSSValueTop, CSS::Vertical { CSS::Top { } } },
-        { CSSValueBottom, CSS::Vertical { CSS::Bottom { } } },
+        { CSSValueTop, CSS::Vertical { CSS::Keyword::Top { } } },
+        { CSSValueBottom, CSS::Vertical { CSS::Keyword::Bottom { } } },
     };
     static constexpr SortedArrayMap verticalMap { verticalMappings };
 
     static constexpr std::pair<CSSValueID, CSS::Horizontal> horizontalMappings[] {
-        { CSSValueLeft, CSS::Horizontal { CSS::Left { } } },
-        { CSSValueRight, CSS::Horizontal { CSS::Right { } } },
+        { CSSValueLeft, CSS::Horizontal { CSS::Keyword::Left { } } },
+        { CSSValueRight, CSS::Horizontal { CSS::Keyword::Right { } } },
     };
     static constexpr SortedArrayMap horizontalMap { horizontalMappings };
 
@@ -412,16 +412,16 @@ template<CSSValueID Name> static RefPtr<CSSValue> consumePrefixedLinearGradient(
         switch (range.peek().id()) {
         case CSSValueLeft:
             range.consumeIncludingWhitespace();
-            return consumeKeywordGradientLineKnownHorizontal(range, CSS::Horizontal { CSS::Left { } });
+            return consumeKeywordGradientLineKnownHorizontal(range, CSS::Horizontal { CSS::Keyword::Left { } });
         case CSSValueRight:
             range.consumeIncludingWhitespace();
-            return consumeKeywordGradientLineKnownHorizontal(range, CSS::Horizontal { CSS::Right { } });
+            return consumeKeywordGradientLineKnownHorizontal(range, CSS::Horizontal { CSS::Keyword::Right { } });
         case CSSValueTop:
             range.consumeIncludingWhitespace();
-            return consumeKeywordGradientLineKnownVertical(range, CSS::Vertical { CSS::Top { } });
+            return consumeKeywordGradientLineKnownVertical(range, CSS::Vertical { CSS::Keyword::Top { } });
         case CSSValueBottom:
             range.consumeIncludingWhitespace();
-            return consumeKeywordGradientLineKnownVertical(range, CSS::Vertical { CSS::Bottom { } });
+            return consumeKeywordGradientLineKnownVertical(range, CSS::Vertical { CSS::Keyword::Bottom { } });
         default:
             return { };
         }
@@ -453,7 +453,7 @@ template<CSSValueID Name> static RefPtr<CSSValue> consumePrefixedLinearGradient(
         CSS::FunctionNotation<Name, CSS::PrefixedLinearGradient> {
             .parameters = {
                 .colorInterpolationMethod = CSS::GradientColorInterpolationMethod::legacyMethod(AlphaPremultiplication::Premultiplied),
-                .gradientLine = gradientLine.value_or(CSS::Vertical { CSS::Top { } }),
+                .gradientLine = gradientLine.value_or(CSS::Vertical { CSS::Keyword::Top { } }),
                 .stops = WTFMove(*stops)
             }
         }
@@ -484,12 +484,12 @@ template<CSSValueID Name> static RefPtr<CSSValue> consumePrefixedRadialGradient(
     static constexpr SortedArrayMap shapeMap { shapeMappings };
 
     static constexpr std::pair<CSSValueID, CSS::PrefixedRadialGradient::Extent> extentMappings[] {
-        { CSSValueContain, CSS::PrefixedRadialGradient::Extent { CSS::Contain { } } },
-        { CSSValueCover, CSS::PrefixedRadialGradient::Extent { CSS::Cover { } } },
-        { CSSValueClosestSide, CSS::PrefixedRadialGradient::Extent { CSS::ClosestSide { } } },
-        { CSSValueClosestCorner, CSS::PrefixedRadialGradient::Extent { CSS::ClosestCorner { } } },
-        { CSSValueFarthestSide, CSS::PrefixedRadialGradient::Extent { CSS::FarthestSide { } } },
-        { CSSValueFarthestCorner, CSS::PrefixedRadialGradient::Extent { CSS::FarthestCorner { } } },
+        { CSSValueContain, CSS::PrefixedRadialGradient::Extent { CSS::Keyword::Contain { } } },
+        { CSSValueCover, CSS::PrefixedRadialGradient::Extent { CSS::Keyword::Cover { } } },
+        { CSSValueClosestSide, CSS::PrefixedRadialGradient::Extent { CSS::Keyword::ClosestSide { } } },
+        { CSSValueClosestCorner, CSS::PrefixedRadialGradient::Extent { CSS::Keyword::ClosestCorner { } } },
+        { CSSValueFarthestSide, CSS::PrefixedRadialGradient::Extent { CSS::Keyword::FarthestSide { } } },
+        { CSSValueFarthestCorner, CSS::PrefixedRadialGradient::Extent { CSS::Keyword::FarthestCorner { } } },
     };
     static constexpr SortedArrayMap extentMap { extentMappings };
 
@@ -609,14 +609,14 @@ template<CSSValueID Name> static RefPtr<CSSValue> consumeLinearGradient(CSSParse
     // )
 
     static constexpr std::pair<CSSValueID, CSS::Vertical> verticalMappings[] {
-        { CSSValueTop, CSS::Vertical { CSS::Top { } } },
-        { CSSValueBottom, CSS::Vertical { CSS::Bottom { } } },
+        { CSSValueTop, CSS::Vertical { CSS::Keyword::Top { } } },
+        { CSSValueBottom, CSS::Vertical { CSS::Keyword::Bottom { } } },
     };
     static constexpr SortedArrayMap verticalMap { verticalMappings };
 
     static constexpr std::pair<CSSValueID, CSS::Horizontal> horizontalMappings[] {
-        { CSSValueLeft, CSS::Horizontal { CSS::Left { } } },
-        { CSSValueRight, CSS::Horizontal { CSS::Right { } } },
+        { CSSValueLeft, CSS::Horizontal { CSS::Keyword::Left { } } },
+        { CSSValueRight, CSS::Horizontal { CSS::Keyword::Right { } } },
     };
     static constexpr SortedArrayMap horizontalMap { horizontalMappings };
 
@@ -639,16 +639,16 @@ template<CSSValueID Name> static RefPtr<CSSValue> consumeLinearGradient(CSSParse
         switch (range.peek().id()) {
         case CSSValueLeft:
             range.consumeIncludingWhitespace();
-            return consumeKeywordGradientLineKnownHorizontal(range, CSS::Horizontal { CSS::Left { } });
+            return consumeKeywordGradientLineKnownHorizontal(range, CSS::Horizontal { CSS::Keyword::Left { } });
         case CSSValueRight:
             range.consumeIncludingWhitespace();
-            return consumeKeywordGradientLineKnownHorizontal(range, CSS::Horizontal { CSS::Right { } });
+            return consumeKeywordGradientLineKnownHorizontal(range, CSS::Horizontal { CSS::Keyword::Right { } });
         case CSSValueTop:
             range.consumeIncludingWhitespace();
-            return consumeKeywordGradientLineKnownVertical(range, CSS::Vertical { CSS::Top { } });
+            return consumeKeywordGradientLineKnownVertical(range, CSS::Vertical { CSS::Keyword::Top { } });
         case CSSValueBottom:
             range.consumeIncludingWhitespace();
-            return consumeKeywordGradientLineKnownVertical(range, CSS::Vertical { CSS::Bottom { } });
+            return consumeKeywordGradientLineKnownVertical(range, CSS::Vertical { CSS::Keyword::Bottom { } });
         default:
             return { };
         }
@@ -700,7 +700,7 @@ template<CSSValueID Name> static RefPtr<CSSValue> consumeLinearGradient(CSSParse
         CSS::FunctionNotation<Name, CSS::LinearGradient> {
             .parameters = {
                 .colorInterpolationMethod = computedColorInterpolationMethod,
-                .gradientLine = gradientLine.value_or(CSS::Vertical { CSS::Bottom { } }),
+                .gradientLine = gradientLine.value_or(CSS::Vertical { CSS::Keyword::Bottom { } }),
                 .stops = WTFMove(*stops)
             }
         }
@@ -724,14 +724,14 @@ template<CSSValueID Name> static RefPtr<CSSValue> consumeRadialGradient(CSSParse
     static constexpr SortedArrayMap shapeMap { shapeMappings };
 
     static constexpr std::pair<CSSValueID, CSS::RadialGradient::Extent> extentMappings[] {
-        { CSSValueClosestSide, CSS::RadialGradient::Extent { CSS::ClosestSide { } } },
-        { CSSValueClosestCorner, CSS::RadialGradient::Extent { CSS::ClosestCorner { } } },
-        { CSSValueFarthestSide, CSS::RadialGradient::Extent { CSS::FarthestSide { } } },
-        { CSSValueFarthestCorner, CSS::RadialGradient::Extent { CSS::FarthestCorner { } } },
+        { CSSValueClosestSide, CSS::RadialGradient::Extent { CSS::Keyword::ClosestSide { } } },
+        { CSSValueClosestCorner, CSS::RadialGradient::Extent { CSS::Keyword::ClosestCorner { } } },
+        { CSSValueFarthestSide, CSS::RadialGradient::Extent { CSS::Keyword::FarthestSide { } } },
+        { CSSValueFarthestCorner, CSS::RadialGradient::Extent { CSS::Keyword::FarthestCorner { } } },
     };
     static constexpr SortedArrayMap extentMap { extentMappings };
 
-    static constexpr auto defaultExtent = CSS::RadialGradient::Extent { CSS::FarthestCorner { } };
+    static constexpr auto defaultExtent = CSS::RadialGradient::Extent { CSS::Keyword::FarthestCorner { } };
 
     std::optional<ColorInterpolationMethod> colorInterpolationMethod;
 

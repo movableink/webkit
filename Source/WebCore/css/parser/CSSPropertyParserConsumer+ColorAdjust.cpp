@@ -61,7 +61,7 @@ std::optional<CSS::ColorScheme> consumeUnresolvedColorScheme(CSSParserTokenRange
     if (range.peek().id() == CSSValueOnly) {
         range.consumeIncludingWhitespace();
 
-        result->only = CSS::Only { };
+        result->only = CSS::Keyword::Only { };
     }
 
     while (!range.atEnd()) {
@@ -83,7 +83,7 @@ std::optional<CSS::ColorScheme> consumeUnresolvedColorScheme(CSSParserTokenRange
             if (result->only)
                 return { };
             range.consumeIncludingWhitespace();
-            result->only = CSS::Only { };
+            result->only = CSS::Keyword::Only { };
 
             if (!range.atEnd())
                 return { };

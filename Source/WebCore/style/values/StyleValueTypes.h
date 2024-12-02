@@ -100,9 +100,6 @@ template<typename CSSType> using PrimaryCSSType = typename ToPrimaryCSSTypeMappi
 
 // MARK: Common Types.
 
-// Helper type used to represent a known constant identifier.
-template<CSSValueID C> using Constant = CSS::Constant<C>;
-
 // Specialize `TreatAsNonConverting` for `Constant<C>`, to indicate that its type does not change from the CSS representation.
 template<CSSValueID C> inline constexpr bool TreatAsNonConverting<Constant<C>> = true;
 
