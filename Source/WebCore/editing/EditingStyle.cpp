@@ -28,6 +28,7 @@
 #include "EditingStyle.h"
 
 #include "ApplyStyleCommand.h"
+#include "CSSColorValue.h"
 #include "CSSComputedStyleDeclaration.h"
 #include "CSSFontStyleWithAngleValue.h"
 #include "CSSParser.h"
@@ -57,6 +58,7 @@
 #include "RenderElement.h"
 #include "RenderStyle.h"
 #include "SimpleRange.h"
+#include "StyleColor.h"
 #include "StyleFontSizeFunctions.h"
 #include "StyleResolver.h"
 #include "StyleRule.h"
@@ -472,15 +474,15 @@ EditingStyle::EditingStyle(CSSPropertyID propertyID, CSSValueID value)
 
 EditingStyle::~EditingStyle() = default;
 
-static Color cssValueToColor(CSSValue* colorValue)
+static Color cssValueToColor(CSSValue* value)
 {
-    if (!is<CSSPrimitiveValue>(colorValue))
+    if (!value)
         return Color::transparentBlack;
-    
-    if (colorValue->isColor())
-        return colorValue->color();
-    
-    return CSSParser::parseColorWithoutContext(colorValue->cssText());
+
+    auto color = CSSColorValue::absoluteColor(*value);
+    if (!color.isValid())
+        return Color::transparentBlack;
+    return color;
 }
 
 template<typename T>
@@ -1994,7 +1996,9 @@ static bool isTransparentColorValue(CSSValue* value)
 {
     if (!value)
         return true;
-    return value->isColor() ? !value->color().isVisible() : value->valueID() == CSSValueTransparent;
+    if (value->valueID() == CSSValueTransparent)
+        return true;
+    return !cssValueToColor(value).isVisible();
 }
 
 bool hasTransparentBackgroundColor(StyleProperties* style)

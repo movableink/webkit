@@ -159,7 +159,7 @@ public:
 
     RefPtr<PathOperation> clipPath;
 
-    StyleColor textDecorationColor;
+    Style::Color textDecorationColor;
 
     DataRef<StyleCustomPropertyData> customProperties;
     HashSet<AtomString> customPaintWatchedProperties;

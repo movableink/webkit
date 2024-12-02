@@ -27,6 +27,7 @@
 
 #include "CSSCalcSymbolTable.h"
 #include "CSSCanvasValue.h"
+#include "CSSColor.h"
 #include "CSSCrossfadeValue.h"
 #include "CSSCursorImageValue.h"
 #include "CSSFilterImageValue.h"
@@ -101,11 +102,11 @@ static std::optional<CSS::DeprecatedGradientPosition> consumeDeprecatedGradientP
     return { { WTFMove(*horizontal), WTFMove(*vertical) } };
 }
 
-static RefPtr<CSSPrimitiveValue> consumeDeprecatedGradientStopColor(CSSParserTokenRange& range, const CSSParserContext& context)
+static std::optional<CSS::Color> consumeDeprecatedGradientStopColor(CSSParserTokenRange& range, const CSSParserContext& context)
 {
     if (range.peek().id() == CSSValueCurrentcolor)
-        return nullptr;
-    return consumeColor(range, context);
+        return std::nullopt;
+    return consumeUnresolvedColor(range, context);
 }
 
 static std::optional<CSS::GradientDeprecatedColorStop> consumeDeprecatedGradientColorStop(CSSParserTokenRange& range, const CSSParserContext& context)
@@ -149,7 +150,7 @@ static std::optional<CSS::GradientDeprecatedColorStop> consumeDeprecatedGradient
         return std::nullopt;
 
     return CSS::GradientDeprecatedColorStop {
-        .color = WTFMove(color),
+        .color = WTFMove(*color),
         .position = WTFMove(*position)
     };
 }
@@ -266,6 +267,11 @@ static RefPtr<CSSValue> consumeDeprecatedGradient(CSSParserTokenRange& range, co
 
 enum class SupportsColorHints : bool { No, Yes };
 
+static std::optional<CSS::Color> consumeStopColor(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    return consumeUnresolvedColor(range, context);
+}
+
 template<SupportsColorHints supportsColorHints, typename Stop, typename Consumer> static std::optional<CSS::GradientColorStopList<Stop>> consumeColorStopList(CSSParserTokenRange& range, const CSSParserContext& context, Consumer&& consumeStopPosition)
 {
     typename CSS::GradientColorStopList<Stop>::Vector stops;
@@ -273,7 +279,7 @@ template<SupportsColorHints supportsColorHints, typename Stop, typename Consumer
     // The first color stop cannot be a color hint.
     bool previousStopWasColorHint = true;
     do {
-        Stop stop { consumeColor(range, context), consumeStopPosition(range) };
+        Stop stop { consumeStopColor(range, context), consumeStopPosition(range) };
         if (!stop.color && !stop.position)
             return std::nullopt;
 
@@ -331,6 +337,16 @@ template<SupportsColorHints supportsColorHints> static std::optional<CSS::Gradie
     });
 }
 
+static bool stopColorIs8Bit(const CSS::Color& color)
+{
+    return color.isKeyword() || color.absoluteColor().tryGetAsSRGBABytes();
+}
+
+static bool stopColorIs8Bit(const Markable<CSS::Color>& color)
+{
+    return !color || stopColorIs8Bit(*color);
+}
+
 template<typename Stop> static CSS::GradientColorInterpolationMethod computeGradientColorInterpolationMethod(std::optional<ColorInterpolationMethod> parsedColorInterpolationMethod, const CSS::GradientColorStopList<Stop>& stops)
 {
     // We detect whether stops use legacy vs. non-legacy CSS color syntax using the following rules:
@@ -342,11 +358,7 @@ template<typename Stop> static CSS::GradientColorInterpolationMethod computeGrad
 
     auto defaultColorInterpolationMethod = CSS::GradientColorInterpolationMethod::Default::SRGB;
     for (auto& stop : stops) {
-        if (!stop.color)
-            continue;
-        if (stop.color->isValueID())
-            continue;
-        if (stop.color->isColor() && stop.color->color().tryGetAsSRGBABytes())
+        if (stopColorIs8Bit(stop.color))
             continue;
 
         defaultColorInterpolationMethod = CSS::GradientColorInterpolationMethod::Default::OKLab;

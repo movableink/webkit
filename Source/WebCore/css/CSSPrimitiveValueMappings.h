@@ -81,6 +81,11 @@ public:
         return downcast<CSSPrimitiveValue>(m_value);
     }
 
+    operator const CSSValue&() const
+    {
+        return m_value;
+    }
+
     operator unsigned short() const
     {
         return numericValue().resolveAsNumber<unsigned short>(m_builderState.cssToLengthConversionData());

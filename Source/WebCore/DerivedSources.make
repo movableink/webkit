@@ -1040,14 +1040,14 @@ JS_BINDING_IDLS := \
     $(WebCore)/css/typedom/CSSUnitValue.idl \
     $(WebCore)/css/typedom/CSSUnparsedValue.idl \
     $(WebCore)/css/typedom/CSSOMVariableReferenceValue.idl \
-    $(WebCore)/css/typedom/color/CSSColor.idl \
-    $(WebCore)/css/typedom/color/CSSColorValue.idl \
     $(WebCore)/css/typedom/color/CSSHSL.idl \
     $(WebCore)/css/typedom/color/CSSHWB.idl \
     $(WebCore)/css/typedom/color/CSSLCH.idl \
     $(WebCore)/css/typedom/color/CSSLab.idl \
     $(WebCore)/css/typedom/color/CSSOKLCH.idl \
     $(WebCore)/css/typedom/color/CSSOKLab.idl \
+    $(WebCore)/css/typedom/color/CSSOMColor.idl \
+    $(WebCore)/css/typedom/color/CSSOMColorValue.idl \
     $(WebCore)/css/typedom/color/CSSRGB.idl \
     $(WebCore)/css/typedom/numeric/CSSMathClamp.idl \
     $(WebCore)/css/typedom/numeric/CSSMathInvert.idl \

@@ -59,6 +59,10 @@ template<typename CSSType> struct StyleImageIsUncacheable<std::optional<CSSType>
     bool operator()(const auto& value) { return value && styleImageIsUncacheable(*value); }
 };
 
+template<typename CSSType> struct StyleImageIsUncacheable<Markable<CSSType>> {
+    bool operator()(const auto& value) { return value && styleImageIsUncacheable(*value); }
+};
+
 template<CSSValueID C, typename CSSType> struct StyleImageIsUncacheable<FunctionNotation<C, CSSType>> {
     bool operator()(const auto& value) { return styleImageIsUncacheable(value.parameters); }
 };
@@ -119,15 +123,8 @@ template<> struct StyleImageIsUncacheable<GradientColorInterpolationMethod> {
     constexpr bool operator()(const auto&) { return false; }
 };
 
-template<typename CSSType> struct StyleImageIsUncacheable<GradientColorStop<CSSType>> {
-    bool operator()(const auto& value)
-    {
-        if (styleImageIsUncacheable(value.position))
-            return true;
-        if (value.color && Style::BuilderState::isColorFromPrimitiveValueDerivedFromElement(*value.color))
-            return true;
-        return false;
-    }
+template<> struct StyleImageIsUncacheable<Color> {
+    bool operator()(const auto& value) { return containsCurrentColor(value) || containsColorSchemeDependentColor(value); }
 };
 
 template<typename CSSType> requires (TreatAsTupleLike<CSSType>) struct StyleImageIsUncacheable<CSSType> {

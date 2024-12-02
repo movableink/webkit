@@ -521,8 +521,8 @@ RefPtr<CSSCustomPropertyValue> CSSPropertyParser::parseTypedCustomPropertyValue(
             return { CSSCustomPropertyValue::NumericSyntaxValue { doubleValue, CSSUnitType::CSS_DPPX } };
         }
         case CSSCustomPropertySyntax::Type::Color: {
-            auto color = builderState.colorFromPrimitiveValue(downcast<CSSPrimitiveValue>(value), Style::ForVisitedLink::No);
-            return { color };
+            auto color = builderState.createStyleColor(value, Style::ForVisitedLink::No);
+            return { WTFMove(color) };
         }
         case CSSCustomPropertySyntax::Type::Image: {
             auto styleImage = builderState.createStyleImage(value);

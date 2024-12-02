@@ -713,7 +713,7 @@ RefPtr<CSSValue> ComputedStyleExtractor::lineClampShorthandValue(const RenderSty
     return { };
 }
 
-Ref<CSSPrimitiveValue> ComputedStyleExtractor::currentColorOrValidColor(const RenderStyle& style, const StyleColor& color)
+Ref<CSSColorValue> ComputedStyleExtractor::currentColorOrValidColor(const RenderStyle& style, const Style::Color& color)
 {
     // This function does NOT look at visited information, so that computed style doesn't expose that.
     return CSSValuePool::singleton().createColorValue(style.colorResolvingCurrentColor(color));

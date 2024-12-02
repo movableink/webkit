@@ -59,33 +59,11 @@ template<CSSValueID Name, typename T> static constexpr bool isRepeating(const Fu
 
 // MARK: - Conversion: Style -> CSS
 
-static RefPtr<CSSPrimitiveValue> toCSSColorStopColor(const std::optional<StyleColor>& color, const RenderStyle& style)
-{
-    if (!color)
-        return nullptr;
-    return ComputedStyleExtractor::currentColorOrValidColor(style, *color);
-}
-
-static auto toCSSColorStopPosition(const GradientLinearColorStop::Position& position, const RenderStyle& style) -> CSS::GradientLinearColorStopPosition
-{
-    return toCSS(position, style);
-}
-
-static auto toCSSColorStopPosition(const GradientAngularColorStop::Position& position, const RenderStyle& style) -> CSS::GradientAngularColorStopPosition
-{
-    return toCSS(position, style);
-}
-
-static auto toCSSColorStopPosition(const GradientDeprecatedColorStop::Position& position, const RenderStyle& style) -> CSS::GradientDeprecatedColorStopPosition
-{
-    return toCSS(position, style);
-}
-
 template<typename CSSStop, typename StyleStop> static auto toCSSColorStop(const StyleStop& stop, const RenderStyle& style) -> CSSStop
 {
     return CSSStop {
-        toCSSColorStopColor(stop.color, style),
-        toCSSColorStopPosition(stop.position, style)
+        toCSS(stop.color, style),
+        toCSS(stop.position, style)
     };
 }
 
@@ -106,17 +84,10 @@ auto ToCSS<GradientDeprecatedColorStop>::operator()(const GradientDeprecatedColo
 
 // MARK: - Conversion: CSS -> Style
 
-static auto toStyleStopColor(const RefPtr<CSSPrimitiveValue>& color, const BuilderState& state, const CSSCalcSymbolTable&) -> std::optional<StyleColor>
-{
-    if (!color)
-        return std::nullopt;
-    return state.colorFromPrimitiveValue(*color);
-}
-
 template<typename T> decltype(auto) toStyleColorStop(const T& stop, const BuilderState& state, const CSSCalcSymbolTable& symbolTable)
 {
     return GradientColorStop {
-        toStyleStopColor(stop.color, state, symbolTable),
+        toStyle(stop.color, state, symbolTable),
         toStyle(stop.position, state, symbolTable)
     };
 }
@@ -138,14 +109,18 @@ auto ToStyle<CSS::GradientDeprecatedColorStop>::operator()(const CSS::GradientDe
 
 // MARK: - Platform Gradient Resolution
 
-static Color resolveColorStopColor(const std::optional<StyleColor>& styleColor, const RenderStyle& style, bool hasColorFilter)
+static WebCore::Color resolveColorStopColor(const Color& styleColor, const RenderStyle& style, bool hasColorFilter)
+{
+    if (hasColorFilter)
+        return style.colorWithColorFilter(styleColor);
+    return style.colorResolvingCurrentColor(styleColor);
+}
+
+static WebCore::Color resolveColorStopColor(const Markable<Color>& styleColor, const RenderStyle& style, bool hasColorFilter)
 {
     if (!styleColor)
         return { };
-
-    if (hasColorFilter)
-        return style.colorWithColorFilter(*styleColor);
-    return style.colorResolvingCurrentColor(*styleColor);
+    return resolveColorStopColor(*styleColor, style, hasColorFilter);
 }
 
 static std::optional<float> resolveColorStopPosition(const GradientLinearColorStop::Position& position, float gradientLength)
@@ -194,7 +169,7 @@ static float resolveColorStopPosition(const GradientDeprecatedColorStop::Positio
 }
 
 struct ResolvedGradientStop {
-    Color color;
+    WebCore::Color color;
     std::optional<float> offset;
 
     bool isSpecified() const { return offset.has_value(); }
@@ -490,8 +465,8 @@ template<typename GradientAdapter, typename StyleGradient> GradientColorStops co
 
         // Find previous and next color so we know what to interpolate between.
         // We already know they have a color since we checked for that earlier.
-        Color color1 = stops[x - 1].color;
-        Color color2 = stops[x + 1].color;
+        auto color1 = stops[x - 1].color;
+        auto color2 = stops[x + 1].color;
         // Likewise find the position of previous and next color stop.
         float offset1 = *stops[x - 1].offset;
         float offset2 = *stops[x + 1].offset;
@@ -1211,10 +1186,20 @@ Ref<WebCore::Gradient> createPlatformGradient(const Gradient& gradient, const Fl
 
 // MARK: - stopsAreCacheable
 
+static bool stopColorIsCacheable(const Color& stopColor)
+{
+    return !containsCurrentColor(stopColor);
+}
+
+static bool stopColorIsCacheable(const Markable<Color>& stopColor)
+{
+    return !stopColor || stopColorIsCacheable(*stopColor);
+}
+
 template<typename Gradient> static bool stopsAreCacheable(const Gradient& gradient)
 {
     return std::ranges::none_of(gradient.parameters.stops, [](auto& stop) {
-        return stop.color && stop.color->containsCurrentColor();
+        return stopColorIsCacheable(stop.color);
     });
 }
 

@@ -44,13 +44,14 @@ namespace CSS {
 
 // MARK: - Gradient Color Stop
 
-template<typename T> static void colorStopSerializationForCSS(StringBuilder& builder, const GradientColorStop<T>& stop)
+template<typename C, typename P> static void colorStopSerializationForCSS(StringBuilder& builder, const GradientColorStop<C, P>& stop)
 {
     if (stop.color && stop.position) {
-        builder.append(stop.protectedColor()->cssText(), ' ');
+        serializationForCSS(builder, *stop.color);
+        builder.append(' ');
         serializationForCSS(builder, *stop.position);
     } else if (stop.color)
-        builder.append(stop.protectedColor()->cssText());
+        serializationForCSS(builder, *stop.color);
     else if (stop.position)
         serializationForCSS(builder, *stop.position);
 }
@@ -68,19 +69,29 @@ void Serialize<GradientLinearColorStop>::operator()(StringBuilder& builder, cons
 void Serialize<GradientDeprecatedColorStop>::operator()(StringBuilder& builder, const GradientDeprecatedColorStop& stop)
 {
     auto appendRaw = [&](const auto& color, NumberRaw<> raw) {
-        if (!raw.value)
-            builder.append("from("_s, color->cssText(), ')');
-        else if (raw.value == 1)
-            builder.append("to("_s, color->cssText(), ')');
-        else {
+        if (!raw.value) {
+            builder.append("from("_s);
+            serializationForCSS(builder, color);
+            builder.append(')');
+        } else if (raw.value == 1) {
+            builder.append("to("_s);
+            serializationForCSS(builder, color);
+            builder.append(')');
+        } else {
             builder.append("color-stop("_s);
             serializationForCSS(builder, raw);
-            builder.append(", "_s, color->cssText(), ')');
+            builder.append(", "_s);
+            serializationForCSS(builder, color);
+            builder.append(')');
         }
     };
 
-    auto appendCalc = [&](const auto& calc) {
-        builder.append("color-stop("_s, calc.protectedCalc()->cssText(), ", "_s, stop.protectedColor()->cssText(), ')');
+    auto appendCalc = [&](const auto& color, const auto& calc) {
+        builder.append("color-stop("_s);
+        serializationForCSS(builder, calc);
+        builder.append(", "_s);
+        serializationForCSS(builder, color);
+        builder.append(')');
     };
 
     WTF::switchOn(stop.position,
@@ -90,7 +101,7 @@ void Serialize<GradientDeprecatedColorStop>::operator()(StringBuilder& builder, 
                     appendRaw(stop.color, raw);
                 },
                 [&](const UnevaluatedCalc<NumberRaw<>>& calc) {
-                    appendCalc(calc);
+                    appendCalc(stop.color, calc);
                 }
             );
         },
@@ -100,57 +111,11 @@ void Serialize<GradientDeprecatedColorStop>::operator()(StringBuilder& builder, 
                     appendRaw(stop.color, { raw.value / 100.0 });
                 },
                 [&](const UnevaluatedCalc<PercentageRaw<>>& calc) {
-                    appendCalc(calc);
+                    appendCalc(stop.color, calc);
                 }
             );
         }
     );
-}
-
-template<typename T> static void collectComputedStyleDependenciesOnStop(ComputedStyleDependencies& dependencies, const GradientColorStop<T>& stop)
-{
-    if (RefPtr color = stop.color)
-        color->collectComputedStyleDependencies(dependencies);
-    collectComputedStyleDependencies(dependencies, stop.position);
-}
-
-void ComputedStyleDependenciesCollector<GradientAngularColorStop>::operator()(ComputedStyleDependencies& dependencies, const GradientAngularColorStop& stop)
-{
-    collectComputedStyleDependenciesOnStop(dependencies, stop);
-}
-
-void ComputedStyleDependenciesCollector<GradientLinearColorStop>::operator()(ComputedStyleDependencies& dependencies, const GradientLinearColorStop& stop)
-{
-    collectComputedStyleDependenciesOnStop(dependencies, stop);
-}
-
-void ComputedStyleDependenciesCollector<GradientDeprecatedColorStop>::operator()(ComputedStyleDependencies& dependencies, const GradientDeprecatedColorStop& stop)
-{
-    collectComputedStyleDependenciesOnStop(dependencies, stop);
-}
-
-template<typename T> static IterationStatus visitCSSValueChildrenOnColorStop(const Function<IterationStatus(CSSValue&)>& func, const GradientColorStop<T>& stop)
-{
-    if (RefPtr color = stop.color) {
-        if (func(*color) == IterationStatus::Done)
-            return IterationStatus::Done;
-    }
-    return visitCSSValueChildren(func, stop.position);
-}
-
-IterationStatus CSSValueChildrenVisitor<GradientAngularColorStop>::operator()(const Function<IterationStatus(CSSValue&)>& func, const GradientAngularColorStop& stop)
-{
-    return visitCSSValueChildrenOnColorStop(func, stop);
-}
-
-IterationStatus CSSValueChildrenVisitor<GradientLinearColorStop>::operator()(const Function<IterationStatus(CSSValue&)>& func, const GradientLinearColorStop& stop)
-{
-    return visitCSSValueChildrenOnColorStop(func, stop);
-}
-
-IterationStatus CSSValueChildrenVisitor<GradientDeprecatedColorStop>::operator()(const Function<IterationStatus(CSSValue&)>& func, const GradientDeprecatedColorStop& stop)
-{
-    return visitCSSValueChildrenOnColorStop(func, stop);
 }
 
 // MARK: - Gradient Color Interpolation

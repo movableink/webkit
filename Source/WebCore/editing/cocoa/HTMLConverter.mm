@@ -27,6 +27,7 @@
 #import "HTMLConverter.h"
 
 #import "ArchiveResource.h"
+#import "CSSColorValue.h"
 #import "CSSComputedStyleDeclaration.h"
 #import "CSSParser.h"
 #import "CSSPrimitiveValue.h"
@@ -812,12 +813,12 @@ Color HTMLConverterCaches::colorPropertyValueForNode(Node& node, CSSPropertyID p
     bool ignoreDefaultColor = propertyId == CSSPropertyColor;
 
     if (auto value = computedStylePropertyForElement(*element, propertyId); value && value->isColor())
-        return normalizedColor(value->color(), ignoreDefaultColor, *element);
+        return normalizedColor(CSSColorValue::absoluteColor(*value), ignoreDefaultColor, *element);
 
     bool inherit = false;
     if (auto value = inlineStylePropertyForElement(*element, propertyId)) {
         if (value->isColor())
-            return normalizedColor(value->color(), ignoreDefaultColor, *element);
+            return normalizedColor(CSSColorValue::absoluteColor(*value), ignoreDefaultColor, *element);
         if (isValueID(*value, CSSValueInherit))
             inherit = true;
     }

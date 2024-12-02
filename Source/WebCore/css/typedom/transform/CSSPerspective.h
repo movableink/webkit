@@ -39,7 +39,7 @@ class CSSPerspective : public CSSTransformComponent {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSPerspective);
 public:
     static ExceptionOr<Ref<CSSPerspective>> create(CSSPerspectiveValue);
-    static ExceptionOr<Ref<CSSPerspective>> create(CSSFunctionValue&);
+    static ExceptionOr<Ref<CSSPerspective>> create(Ref<const CSSFunctionValue>);
 
     virtual ~CSSPerspective();
 

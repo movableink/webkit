@@ -897,7 +897,6 @@ css/CSSFontStyleRangeValue.h
 css/CSSFontStyleWithAngleValue.cpp
 css/CSSFontValue.cpp
 css/CSSFontVariationValue.cpp
-css/CSSGradientValue.cpp
 css/CSSGridIntegerRepeatValue.cpp
 css/CSSGridLineValue.cpp
 css/CSSGroupingRule.cpp
@@ -968,7 +967,6 @@ css/StyleRuleImport.cpp
 css/StyleRuleImport.h
 css/StyleSheetContents.cpp
 css/StyleSheetList.cpp
-css/color/CSSUnresolvedLightDark.cpp
 css/parser/CSSParserImpl.cpp
 css/parser/CSSPropertyParser.cpp
 css/parser/CSSPropertyParserConsumer+Grid.cpp

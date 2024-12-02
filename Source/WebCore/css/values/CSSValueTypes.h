@@ -363,6 +363,16 @@ template<typename CSSType> struct Serialize<std::optional<CSSType>> {
     }
 };
 
+// Specialization for `Markable`.
+template<typename CSSType> struct Serialize<Markable<CSSType>> {
+    void operator()(StringBuilder& builder, const Markable<CSSType>& value)
+    {
+        if (!value)
+            return;
+        serializationForCSS(builder, *value);
+    }
+};
+
 // Specialization for `std::variant`.
 template<typename... CSSTypes> struct Serialize<std::variant<CSSTypes...>> {
     void operator()(StringBuilder& builder, const std::variant<CSSTypes...>& value)
@@ -562,6 +572,16 @@ template<typename CSSType> struct ComputedStyleDependenciesCollector<std::option
     }
 };
 
+// Specialization for `Markable`.
+template<typename CSSType> struct ComputedStyleDependenciesCollector<Markable<CSSType>> {
+    void operator()(ComputedStyleDependencies& dependencies, const Markable<CSSType>& value)
+    {
+        if (!value)
+            return;
+        collectComputedStyleDependencies(dependencies, *value);
+    }
+};
+
 // Specialization for `std::variant`.
 template<typename... CSSTypes> struct ComputedStyleDependenciesCollector<std::variant<CSSTypes...>> {
     void operator()(ComputedStyleDependencies& dependencies, const std::variant<CSSTypes...>& value)
@@ -729,6 +749,14 @@ template<typename CSSType> requires (TreatAsTypeWrapper<CSSType>) struct CSSValu
 // Specialization for `std::optional`.
 template<typename CSSType> struct CSSValueChildrenVisitor<std::optional<CSSType>> {
     IterationStatus operator()(const Function<IterationStatus(CSSValue&)>& func, const std::optional<CSSType>& value)
+    {
+        return value ? visitCSSValueChildren(func, *value) : IterationStatus::Continue;
+    }
+};
+
+// Specialization for `Markable`.
+template<typename CSSType> struct CSSValueChildrenVisitor<Markable<CSSType>> {
+    IterationStatus operator()(const Function<IterationStatus(CSSValue&)>& func, const Markable<CSSType>& value)
     {
         return value ? visitCSSValueChildren(func, *value) : IterationStatus::Continue;
     }

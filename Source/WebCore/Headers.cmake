@@ -851,6 +851,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     crypto/WrappedCryptoKey.h
 
     css/CSSAttrValue.h
+    css/CSSColorValue.h
     css/CSSConditionRule.h
     css/CSSCounterStyle.h
     css/CSSCounterStyleDescriptors.h
@@ -919,11 +920,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     css/calc/CSSCalcType.h
     css/calc/CSSCalcValue.h
 
-    css/color/CSSColorDescriptors.h
-    css/color/StyleAbsoluteColor.h
-    css/color/StyleColor.h
-    css/color/StyleCurrentColor.h
-
     css/parser/CSSParser.h
     css/parser/CSSParserContext.h
     css/parser/CSSParserEnum.h
@@ -949,6 +945,13 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
 
     css/values/backgrounds/CSSBorderRadius.h
     css/values/backgrounds/CSSMinimallySerializingRectEdges.h
+
+    css/values/color/CSSColor.h
+    css/values/color/CSSColorDescriptors.h
+    css/values/color/CSSColorType.h
+    css/values/color/CSSHexColor.h
+    css/values/color/CSSKeywordColor.h
+    css/values/color/CSSResolvedColor.h
 
     css/values/color-adjust/CSSColorScheme.h
 
@@ -2606,6 +2609,11 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
 
     style/values/backgrounds/StyleBorderRadius.h
     style/values/backgrounds/StyleMinimallySerializingRectEdges.h
+
+    style/values/color/StyleColor.h
+    style/values/color/StyleColorOptions.h
+    style/values/color/StyleCurrentColor.h
+    style/values/color/StyleResolvedColor.h
 
     style/values/color-adjust/StyleColorScheme.h
 

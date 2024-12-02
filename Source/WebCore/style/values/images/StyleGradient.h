@@ -58,27 +58,41 @@ template<> inline constexpr bool TreatAsNonConverting<GradientColorInterpolation
 
 template<typename Stop> using GradientColorStopList = CommaSeparatedVector<Stop, 2>;
 
-template<typename T> struct GradientColorStop {
-    using Position = T;
-    using List = GradientColorStopList<GradientColorStop<T>>;
+template<typename C, typename P> struct GradientColorStop {
+    using Color = C;
+    using Position = P;
+    using List = GradientColorStopList<GradientColorStop<C, P>>;
 
-    std::optional<StyleColor> color;
+    Color color;
     Position position;
 
-    bool operator==(const GradientColorStop<T>&) const = default;
+    bool operator==(const GradientColorStop<C, P>&) const = default;
 };
-template<typename T> GradientColorStop(auto color, T position) -> GradientColorStop<T>;
+template<typename C, typename P> GradientColorStop(C color, P position) -> GradientColorStop<C, P>;
 
+template<typename C, typename P> inline constexpr bool TreatAsTupleLike<GradientColorStop<C, P>> = true;
+
+template<size_t I, typename C, typename P> const auto& get(const GradientColorStop<C, P>& stop)
+{
+    if constexpr (!I)
+        return stop.color;
+    else if constexpr (I == 1)
+        return stop.position;
+}
+
+using GradientAngularColorStopColor = Markable<Color>;
 using GradientAngularColorStopPosition = std::optional<AnglePercentage<>>;
-using GradientAngularColorStop = GradientColorStop<GradientAngularColorStopPosition>;
+using GradientAngularColorStop = GradientColorStop<GradientAngularColorStopColor, GradientAngularColorStopPosition>;
 using GradientAngularColorStopList = GradientColorStopList<GradientAngularColorStop>;
 
+using GradientLinearColorStopColor = Markable<Color>;
 using GradientLinearColorStopPosition = std::optional<LengthPercentage<>>;
-using GradientLinearColorStop = GradientColorStop<GradientLinearColorStopPosition>;
+using GradientLinearColorStop = GradientColorStop<GradientLinearColorStopColor, GradientLinearColorStopPosition>;
 using GradientLinearColorStopList = GradientColorStopList<GradientLinearColorStop>;
 
+using GradientDeprecatedColorStopColor = Color;
 using GradientDeprecatedColorStopPosition = NumberOrPercentageResolvedToNumber<>;
-using GradientDeprecatedColorStop = GradientColorStop<GradientDeprecatedColorStopPosition>;
+using GradientDeprecatedColorStop = GradientColorStop<GradientDeprecatedColorStopColor, GradientDeprecatedColorStopPosition>;
 using GradientDeprecatedColorStopList = GradientColorStopList<GradientDeprecatedColorStop>;
 
 template<> struct ToCSS<GradientAngularColorStop> { auto operator()(const GradientAngularColorStop&, const RenderStyle&) -> CSS::GradientAngularColorStop; };
@@ -399,3 +413,13 @@ STYLE_TUPLE_LIKE_CONFORMANCE(DeprecatedRadialGradient::GradientBox, 4)
 STYLE_TUPLE_LIKE_CONFORMANCE(DeprecatedRadialGradient, 3)
 STYLE_TUPLE_LIKE_CONFORMANCE(ConicGradient::GradientBox, 2)
 STYLE_TUPLE_LIKE_CONFORMANCE(ConicGradient, 3)
+
+namespace std {
+
+template<typename C, typename P> class tuple_size<WebCore::Style::GradientColorStop<C, P>> : public std::integral_constant<size_t, 2> { };
+template<size_t I, typename C, typename P> class tuple_element<I, WebCore::Style::GradientColorStop<C, P>> {
+public:
+    using type = decltype(WebCore::Style::get<I>(std::declval<WebCore::Style::GradientColorStop<C, P>>()));
+};
+
+} // namespace std

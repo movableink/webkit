@@ -404,6 +404,18 @@ template<typename StyleType> struct ToCSS<std::optional<StyleType>> {
     }
 };
 
+// Specialization for `Markable`.
+template<typename StyleType> struct ToCSS<Markable<StyleType>> {
+    using Result = Markable<CSSType<StyleType>>;
+
+    Result operator()(const Markable<StyleType>& value, const RenderStyle& style)
+    {
+        if (value)
+            return toCSS(*value, style);
+        return std::nullopt;
+    }
+};
+
 // Specialization for `std::variant`.
 template<typename... StyleTypes> struct ToCSS<std::variant<StyleTypes...>> {
     decltype(auto) operator()(const std::variant<StyleTypes...>& value, const RenderStyle& style)
@@ -611,6 +623,30 @@ template<typename CSSType> struct ToStyle<std::optional<CSSType>> {
     decltype(auto) operator()(const std::optional<CSSType>& value, NoConversionDataRequiredToken, const CSSCalcSymbolTable& symbolTable)
     {
         return value ? std::make_optional(toStyleNoConversionDataRequired(*value, symbolTable)) : std::nullopt;
+    }
+};
+
+// Specialization for `Markable`.
+template<typename CSSType> struct ToStyle<Markable<CSSType>> {
+    using Result = Markable<StyleType<CSSType>>;
+
+    Result operator()(const Markable<CSSType>& value, const CSSToLengthConversionData& conversionData, const CSSCalcSymbolTable& symbolTable)
+    {
+        if (value)
+            return toStyle(*value, conversionData, symbolTable);
+        return std::nullopt;
+    }
+    Result operator()(const Markable<CSSType>& value, const BuilderState& builderState, const CSSCalcSymbolTable& symbolTable)
+    {
+        if (value)
+            return toStyle(*value, builderState, symbolTable);
+        return std::nullopt;
+    }
+    Result operator()(const Markable<CSSType>& value, NoConversionDataRequiredToken, const CSSCalcSymbolTable& symbolTable)
+    {
+        if (value)
+            return toStyleNoConversionDataRequired(*value, symbolTable);
+        return std::nullopt;
     }
 };
 
@@ -876,6 +912,24 @@ template<typename StyleType> struct Blending<std::optional<StyleType>> {
         return false;
     }
     auto blend(const std::optional<StyleType>& a, const std::optional<StyleType>& b, const BlendingContext& context) -> std::optional<StyleType>
+    {
+        if (a && b)
+            return WebCore::Style::blend(*a, *b, context);
+        return std::nullopt;
+    }
+};
+
+// Specialization for `Markable`.
+template<typename StyleType> struct Blending<Markable<StyleType>> {
+    auto canBlend(const Markable<StyleType>& a, const Markable<StyleType>& b) -> bool
+    {
+        if (a && b)
+            return WebCore::Style::canBlend(*a, *b);
+        if (!a && !b)
+            return true;
+        return false;
+    }
+    auto blend(const Markable<StyleType>& a, const Markable<StyleType>& b, const BlendingContext& context) -> Markable<StyleType>
     {
         if (a && b)
             return WebCore::Style::blend(*a, *b, context);
