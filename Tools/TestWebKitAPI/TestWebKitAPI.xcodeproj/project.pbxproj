@@ -134,6 +134,8 @@
 		33B767682CC066E400E4314F /* notEncrypted.pdf in Copy Resources */ = {isa = PBXBuildFile; fileRef = 33B767672CC066E400E4314F /* notEncrypted.pdf */; };
 		33BE5AF9137B5AAE00705813 /* MouseMoveAfterCrash_Bundle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 33BE5AF8137B5AAE00705813 /* MouseMoveAfterCrash_Bundle.cpp */; };
 		33C2C9C12651F5B900E407F6 /* SmallSet.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 33C2C9C02651F5B900E407F6 /* SmallSet.cpp */; };
+		33DB57432CFD46700045C37C /* metalSpecTOC.pdf in Copy Resources */ = {isa = PBXBuildFile; fileRef = 33DB57422CFD46700045C37C /* metalSpecTOC.pdf */; };
+		33DB57462CFD9D100045C37C /* WKWebViewForTestingImmediateActions.mm in Sources */ = {isa = PBXBuildFile; fileRef = 33DB57452CFD9D100045C37C /* WKWebViewForTestingImmediateActions.mm */; };
 		33DC89141419579F00747EF7 /* LoadCanceledNoServerRedirectCallback_Bundle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 33DC89131419579F00747EF7 /* LoadCanceledNoServerRedirectCallback_Bundle.cpp */; };
 		3545E58927E2AD1300F1910E /* WritingModeTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3545E58827E2AD1200F1910E /* WritingModeTests.cpp */; };
 		374B7A611DF371CF00ACCB6C /* BundleEditingDelegatePlugIn.mm in Sources */ = {isa = PBXBuildFile; fileRef = 374B7A5F1DF36EEE00ACCB6C /* BundleEditingDelegatePlugIn.mm */; };
@@ -1889,6 +1891,7 @@
 				A17C46D32C98E54B0023F3C7 /* mediastreamtrack-detached.html in Copy Resources */,
 				A17C46812C98E4D20023F3C7 /* MemoryCacheDisableWithinResourceLoadDelegate.html in Copy Resources */,
 				A17C46822C98E4D20023F3C7 /* MemoryCachePruneWithinResourceLoadDelegate.html in Copy Resources */,
+				33DB57432CFD46700045C37C /* metalSpecTOC.pdf in Copy Resources */,
 				A17C46D42C98E54B0023F3C7 /* missingTopFrameUniqueRedirectSameSiteStrictTableSchema.db in Copy Resources */,
 				A17C46D52C98E54B0023F3C7 /* modal-alerts-in-new-about-blank-window.html in Copy Resources */,
 				A17C46D62C98E54B0023F3C7 /* mouse-button-listener.html in Copy Resources */,
@@ -2423,6 +2426,9 @@
 		33BE5AF8137B5AAE00705813 /* MouseMoveAfterCrash_Bundle.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MouseMoveAfterCrash_Bundle.cpp; sourceTree = "<group>"; };
 		33C2C9C02651F5B900E407F6 /* SmallSet.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SmallSet.cpp; sourceTree = "<group>"; };
 		33C39CFF2B07D4B9008FA14B /* WKWebExtensionAPIDeclarativeNetRequest.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = WKWebExtensionAPIDeclarativeNetRequest.mm; sourceTree = "<group>"; };
+		33DB57422CFD46700045C37C /* metalSpecTOC.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = metalSpecTOC.pdf; sourceTree = "<group>"; };
+		33DB57442CFD9D100045C37C /* WKWebViewForTestingImmediateActions.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WKWebViewForTestingImmediateActions.h; sourceTree = "<group>"; };
+		33DB57452CFD9D100045C37C /* WKWebViewForTestingImmediateActions.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = WKWebViewForTestingImmediateActions.mm; sourceTree = "<group>"; };
 		33DC890E1419539300747EF7 /* simple-iframe.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = "simple-iframe.html"; sourceTree = "<group>"; };
 		33DC8910141953A300747EF7 /* LoadCanceledNoServerRedirectCallback.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LoadCanceledNoServerRedirectCallback.cpp; sourceTree = "<group>"; };
 		33DC89131419579F00747EF7 /* LoadCanceledNoServerRedirectCallback_Bundle.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LoadCanceledNoServerRedirectCallback_Bundle.cpp; sourceTree = "<group>"; };
@@ -5218,6 +5224,7 @@
 				7A33FF2F27C82F0B00D7E03E /* LockdownModePDF.html */,
 				0794742C25CB33B000C597EB /* media-remote.html */,
 				0794742C25CB33B000C597AA /* media-session-capture.html */,
+				33DB57422CFD46700045C37C /* metalSpecTOC.pdf */,
 				9B59F12920340854009E63D5 /* mso-list-compat-mode.html */,
 				9BCD4119206D5ED7001D71BE /* mso-list-on-h4.html */,
 				9BF356CC202D44F200F71160 /* mso-list.html */,
@@ -6011,6 +6018,8 @@
 				1A7BFC0A171A0BDB00BC5F64 /* WillSendSubmitEvent.mm */,
 				A5E2027215B2181900C13E14 /* WindowlessWebViewWithMedia.mm */,
 				F425831524F07CA5006B985D /* WKWebViewCoders.mm */,
+				33DB57442CFD9D100045C37C /* WKWebViewForTestingImmediateActions.h */,
+				33DB57452CFD9D100045C37C /* WKWebViewForTestingImmediateActions.mm */,
 				F4FA917F1E61849B007B8C1D /* WKWebViewMacEditingTests.mm */,
 				E520A36A25AFB76C00526CB9 /* WKWebViewTitlebarSeparatorTests.mm */,
 			);
@@ -7335,6 +7344,7 @@
 				B68735A32AA78E620006FB3A /* WKWebExtensionAPILocalization.mm in Sources */,
 				514958BE1F7427AC00E87BAD /* WKWebViewAutofillTests.mm in Sources */,
 				F425831624F07CA5006B985D /* WKWebViewCoders.mm in Sources */,
+				33DB57462CFD9D100045C37C /* WKWebViewForTestingImmediateActions.mm in Sources */,
 				A17191AD2CD2DB090088944E /* WKWebViewLogging.mm in Sources */,
 				F4FA91811E61849B007B8C1D /* WKWebViewMacEditingTests.mm in Sources */,
 				1CACADA1230620AE0007D54C /* WKWebViewOpaque.mm in Sources */,
