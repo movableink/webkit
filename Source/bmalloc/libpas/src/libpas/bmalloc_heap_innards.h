@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-#ifndef BMALLOC_HEAP_INNARDS_H
-#define BMALLOC_HEAP_INNARDS_H
+#pragma once
 
 #include "bmalloc_type.h"
 #include "pas_config.h"
@@ -45,6 +44,3 @@ PAS_API extern pas_allocator_counts bmalloc_allocator_counts;
 PAS_END_EXTERN_C;
 
 #endif /* PAS_ENABLE_BMALLOC */
-
-#endif /* BMALLOC_HEAP_INNARDS_h */
-
