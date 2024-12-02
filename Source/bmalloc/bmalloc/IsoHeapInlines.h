@@ -26,6 +26,10 @@
 #pragma once
 
 #include "BPlatform.h"
+#include "DeferredDecommitInlines.h"
+#include "DeferredTriggerInlines.h"
+#include "EligibilityResultInlines.h"
+#include "FreeListInlines.h"
 #include "IsoAllocatorInlines.h"
 #include "IsoDeallocatorInlines.h"
 #include "IsoDirectoryInlines.h"

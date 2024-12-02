@@ -29,7 +29,6 @@
 
 #include "IsoMallocFallback.h"
 #include "bmalloc_heap_inlines.h"
-#include "bmalloc_heap_internal.h"
 #include "pas_allocation_mode.h"
 
 namespace bmalloc { namespace api {
