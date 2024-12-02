@@ -26,8 +26,8 @@
 #pragma once
 
 #include "MessageReceiver.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/Ref.h>
-#include <wtf/WeakRef.h>
 
 namespace WTF {
 class WorkQueue;
@@ -53,7 +53,7 @@ private:
     
     void notifyNeedDebuggerBreak();
     
-    WeakRef<WebProcess> m_process;
+    CheckedRef<WebProcess> m_process;
     Ref<WTF::WorkQueue> m_queue;
 };
 
