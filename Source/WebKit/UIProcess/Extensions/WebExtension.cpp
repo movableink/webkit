@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2024 Igalia S.L. All rights reserved.
+ * Copyright (C) 2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,6 +37,8 @@
 #include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebKit {
+
+static constexpr auto defaultLocaleManifestKey = "default_locale"_s;
 
 static constexpr auto iconsManifestKey = "icons"_s;
 
@@ -135,13 +138,78 @@ static constexpr auto sidePanelPathManifestKey = "default_path"_s;
 
 static const size_t maximumNumberOfShortcutCommands = 4;
 
-bool WebExtension::manifestParsedSuccessfully()
+WebExtension::WebExtension(Resources&& resources)
+    : m_manifestJSON(JSON::Value::null())
+    , m_resources(WTFMove(resources))
+{
+}
+
+bool WebExtension::parseManifest(StringView manifestString)
+{
+    RefPtr manifestValue = JSON::Value::parseJSON(manifestString);
+    if (!manifestValue) {
+        recordError(createError(Error::InvalidManifest));
+        return false;
+    }
+
+    RefPtr manifestObject = manifestValue->asObject();
+    if (!manifestObject) {
+        recordError(createError(Error::InvalidManifest));
+        return false;
+    }
+
+    // Set to the unlocalized manifest for now so calls to manifestParsedSuccessfully() during this will be true.
+    // This is needed for WebExtensionLocalization to properly get the defaultLocale() while we are mid-parse.
+    m_manifestJSON = *manifestObject;
+
+    if (auto defaultLocale = manifestObject->getString(defaultLocaleManifestKey); !defaultLocale.isNull()) {
+        auto parsedLocale = parseLocale(manifestObject->getString(defaultLocaleManifestKey));
+        if (!parsedLocale.languageCode.isEmpty()) {
+            if (supportedLocales().contains(defaultLocale))
+                m_defaultLocale = defaultLocale;
+            else
+                recordError(createError(Error::InvalidDefaultLocale, WEB_UI_STRING("Unable to find `default_locale` in “_locales” folder.", "Error description for missing default_locale")));
+        } else
+            recordError(createError(Error::InvalidDefaultLocale));
+    }
+
+    m_localization = WebExtensionLocalization::create(*this);
+
+    RefPtr localizedManifestObject = m_localization->localizedJSONforJSON(manifestObject);
+    if (!localizedManifestObject) {
+        m_manifestJSON = JSON::Value::null();
+        recordError(createError(Error::InvalidManifest));
+        return false;
+    }
+
+    m_manifestJSON = localizedManifestObject.releaseNonNull();
+
+    return true;
+}
+
+RefPtr<const JSON::Object> WebExtension::manifestObject()
 {
     if (m_parsedManifest)
-        return !!m_manifestJSON->asObject();
+        return m_manifestJSON->asObject();
 
-    // If we haven't parsed yet, trigger a parse by calling the getter.
-    return !!manifest() && !!manifestObject();
+    m_parsedManifest = true;
+
+    RefPtr<API::Error> error;
+    auto manifestString = resourceStringForPath("manifest.json"_s, error);
+    if (error) {
+        recordErrorIfNeeded(error);
+        return nullptr;
+    }
+
+    if (!parseManifest(manifestString))
+        return nullptr;
+
+    return m_manifestJSON->asObject();
+}
+
+bool WebExtension::manifestParsedSuccessfully()
+{
+    return !!manifestObject();
 }
 
 double WebExtension::manifestVersion()
@@ -155,6 +223,14 @@ double WebExtension::manifestVersion()
         return *value;
 
     return 0;
+}
+
+RefPtr<API::Data> WebExtension::serializeManifest()
+{
+    if (!m_manifestJSON)
+        return nullptr;
+
+    return API::Data::create(m_manifestJSON->toJSONString().utf8().span());
 }
 
 RefPtr<API::Data> WebExtension::serializeLocalization()

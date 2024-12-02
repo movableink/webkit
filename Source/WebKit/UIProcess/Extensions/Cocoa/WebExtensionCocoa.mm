@@ -32,28 +32,19 @@
 
 #if ENABLE(WK_WEB_EXTENSIONS)
 
-#import "APIData.h"
 #import "CocoaHelpers.h"
 #import "FoundationSPI.h"
 #import "Logging.h"
-#import "WKNSError.h"
 #import "WKWebExtensionInternal.h"
 #import "WebExtensionConstants.h"
 #import "WebExtensionPermission.h"
 #import "WebExtensionUtilities.h"
-#import "_WKWebExtensionLocalization.h"
 #import <CoreFoundation/CFBundle.h>
 #import <WebCore/LocalizedStrings.h>
-#import <wtf/BlockPtr.h>
 #import <wtf/FileSystem.h>
-#import <wtf/HashSet.h>
-#import <wtf/Language.h>
-#import <wtf/NeverDestroyed.h>
 #import <wtf/Scope.h>
 #import <wtf/cf/TypeCastsCF.h>
-#import <wtf/cocoa/VectorCocoa.h>
 #import <wtf/text/MakeString.h>
-#import <wtf/text/WTFString.h>
 
 #if PLATFORM(MAC)
 #import <pal/spi/mac/NSImageSPI.h>
@@ -70,8 +61,6 @@ SOFT_LINK(CoreSVG, CGSVGDocumentRelease, void, (CGSVGDocumentRef document), (doc
 #endif
 
 namespace WebKit {
-
-static NSString * const defaultLocaleManifestKey = @"default_locale";
 
 static NSString * const generatedBackgroundPageFilename = @"_generated_background_page.html";
 static NSString * const generatedBackgroundServiceWorkerFilename = @"_generated_service_worker.js";
@@ -234,91 +223,13 @@ WebExtension::WebExtension(NSDictionary *manifest, Resources&& resources)
     m_resources.set("manifest.json"_s, API::Data::createWithoutCopying(manifestData));
 }
 
-WebExtension::WebExtension(Resources&& resources)
-    : m_manifestJSON(JSON::Value::null())
-    , m_resources(WTFMove(resources))
+NSDictionary *WebExtension::manifestDictionary()
 {
-}
-
-bool WebExtension::parseManifest(NSData *manifestData)
-{
-    NSError *parseError;
-    m_manifest = parseJSON(manifestData, { }, &parseError);
-    if (!m_manifest) {
-        if (parseError)
-            recordError(createError(Error::InvalidManifest, { }, API::Error::create(parseError)));
-        else
-            recordError(createError(Error::InvalidManifest));
-        return false;
-    }
-
-    // Set to an empty object for now so calls to manifestParsedSuccessfully() during this will be true.
-    // This is needed for localization to properly get the defaultLocale() while we are mid-parse.
-    m_manifestJSON = JSON::Object::create();
-
-    if (id defaultLocaleValue = m_manifest.get()[defaultLocaleManifestKey]) {
-        if (auto *defaultLocale = dynamic_objc_cast<NSString>(defaultLocaleValue)) {
-            auto parsedLocale = parseLocale(defaultLocale);
-            if (!parsedLocale.languageCode.isEmpty()) {
-                if (supportedLocales().contains(String(defaultLocale)))
-                    m_defaultLocale = defaultLocale;
-                else
-                    recordError(createError(Error::InvalidDefaultLocale, WEB_UI_STRING("Unable to find `default_locale` in “_locales” folder.", "WKWebExtensionErrorInvalidManifestEntry description for missing default_locale")));
-            } else
-                recordError(createError(Error::InvalidDefaultLocale));
-        } else
-            recordError(createError(Error::InvalidDefaultLocale));
-    }
-
-    RefPtr localization = WebExtensionLocalization::create(*this);
-    RefPtr manifestJSON = JSON::Value::parseJSON(String(encodeJSONString(m_manifest.get())));
-    if (!manifestJSON || !manifestJSON->asObject()) {
-        m_manifestJSON = JSON::Value::null();
-        recordError(createError(Error::InvalidManifest));
-        return false;
-    }
-
-    manifestJSON = localization->localizedJSONforJSON(manifestJSON->asObject());
-
-    m_localization = localization;
-
-    auto *cocoaLocalization = [[_WKWebExtensionLocalization alloc] initWithWebExtension:*this];
-
-    m_manifest = [cocoaLocalization localizedDictionaryForDictionary:m_manifest.get()];
-    if (!m_manifest) {
-        m_manifestJSON = JSON::Value::null();
-        recordError(createError(Error::InvalidManifest));
-        return false;
-    }
-
-    m_manifestJSON = *manifestJSON;
-
-    return true;
-}
-
-NSDictionary *WebExtension::manifest()
-{
-    if (m_parsedManifest)
-        return m_manifest.get();
-
-    m_parsedManifest = true;
-
-    RefPtr<API::Error> error;
-    RefPtr manifestData = resourceDataForPath("manifest.json"_s, error);
-    if (!manifestData || error) {
-        recordErrorIfNeeded(error);
-        return nil;
-    }
-
-    if (!parseManifest(static_cast<NSData *>(manifestData->wrapper())))
+    RefPtr manifestObject = this->manifestObject();
+    if (!manifestObject)
         return nil;
 
-    return m_manifest.get();
-}
-
-Ref<API::Data> WebExtension::serializeManifest()
-{
-    return API::Data::createWithoutCopying(encodeJSONData(manifest()));
+    return parseJSON(manifestObject->toJSONString());
 }
 
 SecStaticCodeRef WebExtension::bundleStaticCode() const
@@ -736,16 +647,18 @@ void WebExtension::populateDeclarativeNetRequestPropertiesIfNeeded()
         return;
     }
 
-    auto *declarativeNetRequestManifestDictionary = objectForKey<NSDictionary>(m_manifest, declarativeNetRequestManifestKey);
+    auto *manifest = manifestDictionary();
+
+    auto *declarativeNetRequestManifestDictionary = objectForKey<NSDictionary>(manifest, declarativeNetRequestManifestKey);
     if (!declarativeNetRequestManifestDictionary) {
-        if ([m_manifest objectForKey:declarativeNetRequestManifestKey])
+        if ([manifest objectForKey:declarativeNetRequestManifestKey])
             recordError(createError(Error::InvalidDeclarativeNetRequest));
         return;
     }
 
-    NSArray<NSDictionary *> *declarativeNetRequestRulesets = objectForKey<NSArray>(declarativeNetRequestManifestDictionary, declarativeNetRequestRulesManifestKey, false, NSDictionary.class);
+    auto *declarativeNetRequestRulesets = objectForKey<NSArray>(declarativeNetRequestManifestDictionary, declarativeNetRequestRulesManifestKey, false, NSDictionary.class);
     if (!declarativeNetRequestRulesets) {
-        if ([m_manifest objectForKey:declarativeNetRequestManifestKey])
+        if ([manifest objectForKey:declarativeNetRequestManifestKey])
             recordError(createError(Error::InvalidDeclarativeNetRequest));
         return;
     }

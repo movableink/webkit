@@ -237,24 +237,23 @@ String WebExtensionLocalization::localizedStringForString(String sourceString)
     return localizedString;
 }
 
-RefPtr<JSON::Object> WebExtensionLocalization::localizationJSONForWebExtension(WebExtension& webExtension, const String& withLocale)
+RefPtr<JSON::Object> WebExtensionLocalization::localizationJSONForWebExtension(WebExtension& webExtension, const String& locale)
 {
     StringBuilder pathBuilder;
     pathBuilder.append("_locales/"_s);
-    pathBuilder.append(withLocale);
+    pathBuilder.append(locale);
     pathBuilder.append("/messages.json"_s);
 
     auto path = pathBuilder.toString();
 
     RefPtr<API::Error> error;
-    RefPtr data = webExtension.resourceDataForPath(path, error, WebExtension::CacheResult::No, WebExtension::SuppressNotFoundErrors::Yes);
-    if (!data || error) {
+    auto jsonString = webExtension.resourceStringForPath(path, error, WebExtension::CacheResult::No, WebExtension::SuppressNotFoundErrors::Yes);
+    if (error) {
         webExtension.recordErrorIfNeeded(error);
         return nullptr;
     }
 
-    auto json = JSON::Value::parseJSON(String::fromUTF8(data->span()));
-
+    RefPtr json = JSON::Value::parseJSON(jsonString);
     return json ? json->asObject() : nullptr;
 }
 
