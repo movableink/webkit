@@ -406,7 +406,7 @@ bool Quirks::shouldDisableElementFullscreenQuirk() const
     // (Ref: rdar://116531089)
     // Instagram.com stories flow under the notch and status bar
     // (Ref: rdar://121014613)
-    // Twitter.com video embeds have controls that are too tiny and
+    // x.com (Twitter) video embeds have controls that are too tiny and
     // show page behind fullscreen.
     // (Ref: rdar://121473410)
     // YouTube.com does not provide AirPlay controls in fullscreen
@@ -416,7 +416,7 @@ bool Quirks::shouldDisableElementFullscreenQuirk() const
             || isDomain("instagram.com"_s)
             || (PAL::currentUserInterfaceIdiomIsSmallScreen() && isDomain("digitaltrends.com"_s))
             || (PAL::currentUserInterfaceIdiomIsSmallScreen() && isDomain("as.com"_s))
-            || isEmbedDomain("twitter.com"_s)
+            || isEmbedDomain("x.com"_s)
             || (PAL::currentUserInterfaceIdiomIsSmallScreen() && (isYouTube() || isYoutubeEmbedDomain()));
     }
 
@@ -864,14 +864,14 @@ bool Quirks::shouldSilenceWindowResizeEvents() const
         return false;
 
     // We silence window resize events during the 'homing out' snapshot sequence when on nytimes.com
-    // to address <rdar://problem/59763843>, and on twitter.com to address <rdar://problem/58804852> &
+    // to address <rdar://problem/59763843>, and on x.com (twitter) to address <rdar://problem/58804852> &
     // <rdar://problem/61731801>.
     auto* page = m_document->page();
     if (!page || !page->isTakingSnapshotsForApplicationSuspension())
         return false;
 
     if (!m_quirksData.shouldSilenceWindowResizeEvents)
-        m_quirksData.shouldSilenceWindowResizeEvents = isDomain("nytimes.com"_s) || isDomain("twitter.com"_s) || isDomain("zillow.com"_s) || isDomain("365scores.com"_s);
+        m_quirksData.shouldSilenceWindowResizeEvents = isDomain("nytimes.com"_s) || isDomain("x.com"_s) || isDomain("zillow.com"_s) || isDomain("365scores.com"_s);
 
     return *m_quirksData.shouldSilenceWindowResizeEvents;
 #else
@@ -885,14 +885,14 @@ bool Quirks::shouldSilenceMediaQueryListChangeEvents() const
     if (!needsQuirks())
         return false;
 
-    // We silence MediaQueryList's change events during the 'homing out' snapshot sequence when on twitter.com
+    // We silence MediaQueryList's change events during the 'homing out' snapshot sequence when on x.com (twitter)
     // to address <rdar://problem/58804852> & <rdar://problem/61731801>.
     auto* page = m_document->page();
     if (!page || !page->isTakingSnapshotsForApplicationSuspension())
         return false;
 
     if (!m_quirksData.shouldSilenceMediaQueryListChangeEvents)
-        m_quirksData.shouldSilenceMediaQueryListChangeEvents = isDomain("twitter.com"_s);
+        m_quirksData.shouldSilenceMediaQueryListChangeEvents = isDomain("x.com"_s);
 
     return *m_quirksData.shouldSilenceMediaQueryListChangeEvents;
 #else
@@ -1402,7 +1402,7 @@ bool Quirks::needsVP9FullRangeFlagQuirk() const
 bool Quirks::requiresUserGestureToPauseInPictureInPicture() const
 {
 #if ENABLE(VIDEO_PRESENTATION_MODE)
-    // Facebook, Twitter, and Reddit will naively pause a <video> element that has scrolled out of the viewport,
+    // Facebook, X (twitter), and Reddit will naively pause a <video> element that has scrolled out of the viewport,
     // regardless of whether that element is currently in PiP mode.
     // We should remove the quirk once <rdar://problem/67273166>, <rdar://problem/73369869>, and <rdar://problem/80645747> have been fixed.
     if (!needsQuirks())
@@ -1410,7 +1410,7 @@ bool Quirks::requiresUserGestureToPauseInPictureInPicture() const
 
     if (!m_quirksData.requiresUserGestureToPauseInPictureInPictureQuirk) {
         auto domain = RegistrableDomain(topDocumentURL()).string();
-        m_quirksData.requiresUserGestureToPauseInPictureInPictureQuirk = isDomain("facebook.com"_s) || isDomain("twitter.com"_s) || isDomain("reddit.com"_s) || isDomain("forbes.com"_s);
+        m_quirksData.requiresUserGestureToPauseInPictureInPictureQuirk = isDomain("facebook.com"_s) || isDomain("x.com"_s) || isDomain("reddit.com"_s) || isDomain("forbes.com"_s);
     }
 
     return *m_quirksData.requiresUserGestureToPauseInPictureInPictureQuirk;
@@ -1433,14 +1433,14 @@ bool Quirks::returnNullPictureInPictureElementDuringFullscreenChange() const
 bool Quirks::requiresUserGestureToLoadInPictureInPicture() const
 {
 #if ENABLE(VIDEO_PRESENTATION_MODE)
-    // Twitter will remove the "src" attribute of a <video> element that has scrolled out of the viewport and
+    // X (Twitter) will remove the "src" attribute of a <video> element that has scrolled out of the viewport and
     // load the <video> element with an empty "src" regardless of whether that element is currently in PiP mode.
     // We should remove the quirk once <rdar://problem/73369869> has been fixed.
     if (!needsQuirks())
         return false;
 
     if (!m_quirksData.requiresUserGestureToLoadInPictureInPictureQuirk)
-        m_quirksData.requiresUserGestureToLoadInPictureInPictureQuirk = isDomain("twitter.com"_s);
+        m_quirksData.requiresUserGestureToLoadInPictureInPictureQuirk = isDomain("x.com"_s);
 
     return *m_quirksData.requiresUserGestureToLoadInPictureInPictureQuirk;
 #else
