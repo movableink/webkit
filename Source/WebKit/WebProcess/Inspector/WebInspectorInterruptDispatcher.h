@@ -44,8 +44,8 @@ public:
     
     void initializeConnection(IPC::Connection&);
 
-    void ref() const;
-    void deref() const;
+    void ref() const final;
+    void deref() const final;
     
 private:
     // IPC::MessageReceiver overrides.

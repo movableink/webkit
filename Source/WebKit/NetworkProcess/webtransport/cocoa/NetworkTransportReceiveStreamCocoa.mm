@@ -60,8 +60,8 @@ void NetworkTransportReceiveStream::receiveLoop()
             return;
         if (error)
             return; // FIXME: Pipe this error to JS.
-        if (strongThis->m_session)
-            strongThis->m_session->streamReceiveBytes(strongThis->m_identifier, vectorFromData(content).span(), withFin);
+        if (RefPtr session = strongThis->m_session.get())
+            session->streamReceiveBytes(strongThis->m_identifier, vectorFromData(content).span(), withFin);
         strongThis->receiveLoop();
     }).get());
 }

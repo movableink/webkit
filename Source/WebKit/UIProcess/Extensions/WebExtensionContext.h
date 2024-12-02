@@ -151,6 +151,9 @@ public:
         return adoptRef(*new WebExtensionContext(std::forward<Args>(args)...));
     }
 
+    void ref() const final { API::ObjectImpl<API::Object::Type::WebExtensionContext>::ref(); }
+    void deref() const final { API::ObjectImpl<API::Object::Type::WebExtensionContext>::deref(); }
+
     static String plistFileName() { return "State.plist"_s; };
     static NSMutableDictionary *readStateFromPath(const String&);
     static bool readLastBaseURLFromState(const String& filePath, URL& outLastBaseURL);
@@ -309,6 +312,7 @@ public:
     WebExtension& extension() const { return *m_extension; }
     Ref<WebExtension> protectedExtension() const { return extension(); }
     WebExtensionController* extensionController() const { return m_extensionController.get(); }
+    RefPtr<WebExtensionController> protectedExtensionController() const { return m_extensionController.get(); }
 
     const URL& baseURL() const { return m_baseURL; }
     void setBaseURL(URL&&);

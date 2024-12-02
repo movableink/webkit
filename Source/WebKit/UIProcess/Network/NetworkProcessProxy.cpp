@@ -1415,7 +1415,7 @@ WebsiteDataStore* NetworkProcessProxy::websiteDataStoreFromSessionID(PAL::Sessio
 #if ENABLE(CONTENT_EXTENSIONS)
 void NetworkProcessProxy::contentExtensionRules(UserContentControllerIdentifier identifier)
 {
-    if (auto* webUserContentControllerProxy = WebUserContentControllerProxy::get(identifier)) {
+    if (RefPtr webUserContentControllerProxy = WebUserContentControllerProxy::get(identifier)) {
         m_webUserContentControllerProxies.add(*webUserContentControllerProxy);
         webUserContentControllerProxy->addNetworkProcess(*this);
 

@@ -85,6 +85,9 @@ public:
     static Ref<WebExtensionController> create(Ref<WebExtensionControllerConfiguration> configuration) { return adoptRef(*new WebExtensionController(configuration)); }
     static WebExtensionController* get(WebExtensionControllerIdentifier);
 
+    void ref() const final { API::ObjectImpl<API::Object::Type::WebExtensionController>::ref(); }
+    void deref() const final { API::ObjectImpl<API::Object::Type::WebExtensionController>::deref(); }
+
     explicit WebExtensionController(Ref<WebExtensionControllerConfiguration>);
     ~WebExtensionController();
 

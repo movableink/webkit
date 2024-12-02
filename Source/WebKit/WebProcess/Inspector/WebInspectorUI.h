@@ -62,6 +62,9 @@ public:
     static Ref<WebInspectorUI> create(WebPage&);
     virtual ~WebInspectorUI();
 
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     // Implemented in generated WebInspectorUIMessageReceiver.cpp
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
 

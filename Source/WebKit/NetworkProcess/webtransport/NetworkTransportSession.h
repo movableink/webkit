@@ -58,6 +58,9 @@ public:
 
     ~NetworkTransportSession();
 
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     void sendDatagram(std::span<const uint8_t>, CompletionHandler<void()>&&);
     void createOutgoingUnidirectionalStream(CompletionHandler<void(std::optional<WebTransportStreamIdentifier>)>&&);
     void createBidirectionalStream(CompletionHandler<void(std::optional<WebTransportStreamIdentifier>)>&&);

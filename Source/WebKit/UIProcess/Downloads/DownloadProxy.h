@@ -72,6 +72,9 @@ public:
     }
     ~DownloadProxy();
 
+    void ref() const final { API::ObjectImpl<API::Object::Type::Download>::ref(); }
+    void deref() const final { API::ObjectImpl<API::Object::Type::Download>::deref(); }
+
     DownloadID downloadID() const { return m_downloadID; }
     const WebCore::ResourceRequest& request() const { return m_request; }
     API::Data* legacyResumeData() const { return m_legacyResumeData.get(); }

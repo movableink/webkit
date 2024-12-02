@@ -9224,6 +9224,11 @@ RemoteRenderingBackendProxy& WebPage::ensureRemoteRenderingBackendProxy()
         m_remoteRenderingBackendProxy = RemoteRenderingBackendProxy::create(*this);
     return *m_remoteRenderingBackendProxy;
 }
+
+Ref<RemoteRenderingBackendProxy> WebPage::ensureProtectedRemoteRenderingBackendProxy()
+{
+    return ensureRemoteRenderingBackendProxy();
+}
 #endif
 
 Vector<Ref<SandboxExtension>> WebPage::consumeSandboxExtensions(Vector<SandboxExtension::Handle>&& sandboxExtensions)
