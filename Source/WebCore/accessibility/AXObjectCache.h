@@ -270,7 +270,7 @@ enum class AXLoadingEvent : uint8_t {
 };
 
 #if !PLATFORM(COCOA)
-enum AXTextChange { AXTextInserted, AXTextDeleted, AXTextAttributesChanged };
+enum class AXTextChange : uint8_t { Inserted, Deleted, AttributesChanged };
 #endif
 
 enum class PostTarget { Element, ObservableParent };

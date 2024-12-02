@@ -5350,19 +5350,19 @@ AXTextChange AXObjectCache::textChangeForEditType(AXTextEditType type)
     switch (type) {
     case AXTextEditTypeCut:
     case AXTextEditTypeDelete:
-        return AXTextDeleted;
+        return AXTextChange::Deleted;
     case AXTextEditTypeInsert:
     case AXTextEditTypeDictation:
     case AXTextEditTypeTyping:
     case AXTextEditTypePaste:
-        return AXTextInserted;
+        return AXTextChange::Inserted;
     case AXTextEditTypeAttributesChange:
-        return AXTextAttributesChanged;
+        return AXTextChange::AttributesChanged;
     case AXTextEditTypeUnknown:
         break;
     }
     ASSERT_NOT_REACHED();
-    return AXTextInserted;
+    return AXTextChange::Inserted;
 }
 #endif
 
