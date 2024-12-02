@@ -33,7 +33,6 @@
 "testCheckSubImm",
 "testCSEStoreWithLoop",
 "testInfiniteLoopDoesntCauseBadHoisting",
-"testInterpreter",
 "testLateRegister",
 "testPinRegisters",
 "testSimplePatchpoint",
