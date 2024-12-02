@@ -34,7 +34,7 @@
 #include "XRHandedness.h"
 #include "XRTargetRayMode.h"
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
@@ -53,7 +53,7 @@ class XRInputSourceEvent;
 class WebXRHand;
 class WebXRInputSpace;
 
-class WebXRInputSource : public RefCounted<WebXRInputSource>, public CanMakeWeakPtr<WebXRInputSource> {
+class WebXRInputSource : public RefCountedAndCanMakeWeakPtr<WebXRInputSource> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebXRInputSource);
 public:
     using InputSource = PlatformXR::FrameData::InputSource;

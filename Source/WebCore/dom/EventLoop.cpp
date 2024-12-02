@@ -28,6 +28,7 @@
 
 #include "Microtasks.h"
 #include "ScriptExecutionContext.h"
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -36,7 +37,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(EventLoopTask);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(EventLoopTimerHandle);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(EventLoopTaskGroup);
 
-class EventLoopTimer final : public RefCounted<EventLoopTimer>, public TimerBase, public CanMakeWeakPtr<EventLoopTimer> {
+class EventLoopTimer final : public RefCountedAndCanMakeWeakPtr<EventLoopTimer>, public TimerBase {
     WTF_MAKE_TZONE_ALLOCATED_INLINE(EventLoopTimer);
 public:
     enum class Type : bool { OneShot, Repeating };

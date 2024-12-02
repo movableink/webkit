@@ -27,7 +27,7 @@
 
 #include "FontRanges.h"
 #include <wtf/Forward.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
@@ -47,7 +47,7 @@ public:
     virtual bool isLoading() const = 0;
 };
 
-class FontSelector : public RefCounted<FontSelector>, public CanMakeWeakPtr<FontSelector> {
+class FontSelector : public RefCountedAndCanMakeWeakPtr<FontSelector> {
 public:
     virtual ~FontSelector() = default;
 

@@ -28,7 +28,7 @@
 #include "ExceptionOr.h"
 #include "JSDOMGlobalObject.h"
 #include <JavaScriptCore/Strong.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -37,7 +37,7 @@ class InternalWritableStream;
 class JSDOMGlobalObject;
 class WritableStreamSink;
 
-class WritableStream : public RefCounted<WritableStream>, public CanMakeWeakPtr<WritableStream> {
+class WritableStream : public RefCountedAndCanMakeWeakPtr<WritableStream> {
 public:
     static ExceptionOr<Ref<WritableStream>> create(JSC::JSGlobalObject&, std::optional<JSC::Strong<JSC::JSObject>>&&, std::optional<JSC::Strong<JSC::JSObject>>&&);
     static ExceptionOr<Ref<WritableStream>> create(JSDOMGlobalObject&, Ref<WritableStreamSink>&&);

@@ -26,9 +26,8 @@
 #pragma once
 
 #include <wtf/ObjectIdentifier.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/TZoneMalloc.h>
-#include <wtf/WeakPtr.h>
 
 #if PLATFORM(COCOA)
 #include <Network/Network.h>
@@ -44,7 +43,7 @@ namespace WebKit {
 
 class NetworkTransportSession;
 
-class NetworkTransportReceiveStream : public RefCounted<NetworkTransportReceiveStream>, public CanMakeWeakPtr<NetworkTransportReceiveStream> {
+class NetworkTransportReceiveStream : public RefCountedAndCanMakeWeakPtr<NetworkTransportReceiveStream> {
     WTF_MAKE_TZONE_ALLOCATED(NetworkTransportReceiveStream);
 public:
     template<typename... Args> static Ref<NetworkTransportReceiveStream> create(Args&&... args) { return adoptRef(*new NetworkTransportReceiveStream(std::forward<Args>(args)...)); }

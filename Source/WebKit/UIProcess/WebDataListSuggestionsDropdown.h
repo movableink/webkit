@@ -28,15 +28,14 @@
 #if ENABLE(DATALIST_ELEMENT)
 
 #include <WebCore/DataListSuggestionPicker.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/RefPtr.h>
-#include <wtf/WeakPtr.h>
 
 namespace WebKit {
 
 class WebPageProxy;
 
-class WebDataListSuggestionsDropdown : public RefCounted<WebDataListSuggestionsDropdown>, public CanMakeWeakPtr<WebDataListSuggestionsDropdown> {
+class WebDataListSuggestionsDropdown : public RefCountedAndCanMakeWeakPtr<WebDataListSuggestionsDropdown> {
 public:
     virtual ~WebDataListSuggestionsDropdown();
 

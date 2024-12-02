@@ -33,6 +33,7 @@
 #include "IDLTypes.h"
 #include <wtf/Deque.h>
 #include <wtf/FileSystem.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -40,7 +41,7 @@ namespace WebCore {
 class FileSystemFileHandle;
 template<typename> class DOMPromiseDeferred;
 
-class FileSystemSyncAccessHandle : public ActiveDOMObject, public RefCounted<FileSystemSyncAccessHandle>, public CanMakeWeakPtr<FileSystemSyncAccessHandle> {
+class FileSystemSyncAccessHandle : public RefCountedAndCanMakeWeakPtr<FileSystemSyncAccessHandle>, public ActiveDOMObject {
 public:
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }

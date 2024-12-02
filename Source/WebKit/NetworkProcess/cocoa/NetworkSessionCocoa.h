@@ -45,6 +45,7 @@ OBJC_CLASS NSURLCredentialStorage;
 #include <WebCore/NetworkLoadMetrics.h>
 #include <WebCore/RegistrableDomain.h>
 #include <wtf/HashMap.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/Seconds.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -82,7 +83,7 @@ public:
     WallTime lastUsed;
 };
 
-struct SessionSet : public RefCounted<SessionSet>, public CanMakeWeakPtr<SessionSet> {
+struct SessionSet : public RefCountedAndCanMakeWeakPtr<SessionSet> {
 public:
     static Ref<SessionSet> create()
     {

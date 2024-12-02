@@ -63,6 +63,7 @@
 #include <WebCore/ScriptController.h>
 #include <WebCore/SharedMemory.h>
 #include <wtf/PageBlock.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/Scope.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -196,7 +197,7 @@ private:
     Ref<IPC::Connection> m_testedConnection;
 };
 
-class JSIPCStreamClientConnection : public RefCounted<JSIPCStreamClientConnection>, public CanMakeWeakPtr<JSIPCStreamClientConnection> {
+class JSIPCStreamClientConnection : public RefCountedAndCanMakeWeakPtr<JSIPCStreamClientConnection> {
 public:
     static Ref<JSIPCStreamClientConnection> create(JSIPC& jsIPC, RefPtr<IPC::StreamClientConnection> connection)
     {
@@ -391,7 +392,7 @@ private:
     JSObjectRef m_callback;
 };
 
-class JSIPC : public RefCounted<JSIPC>, public CanMakeWeakPtr<JSIPC> {
+class JSIPC : public RefCountedAndCanMakeWeakPtr<JSIPC> {
 public:
     static Ref<JSIPC> create(WebPage& webPage, WebFrame& webFrame)
     {
