@@ -189,10 +189,11 @@ inline RefCountedBase::~RefCountedBase()
     ASSERT(m_deletionHasBegun);
     ASSERT(!m_adoptionIsRequired);
 
-    // FIXME: Test performance, then add a RELEASE_ASSERT for this too.
     if (m_refCount != 1)
         printRefDuringDestructionLogAndCrash(this);
 #endif
+
+    RELEASE_ASSERT(m_refCount == 1);
 }
 
 template<typename T> class RefCounted : public RefCountedBase {
