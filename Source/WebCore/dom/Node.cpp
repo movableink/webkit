@@ -460,9 +460,12 @@ Node::~Node()
     }
 #endif
 
-    // FIXME: Test performance, then add a RELEASE_ASSERT for this too.
+// refCount() is 1 during Node destruction (see Node::deref()) but can be 0 during Document destruction (see Document::removedLastRef()).
+#if CHECK_REF_COUNTED_LIFECYCLE
     if (refCount() > 1)
         WTF::RefCountedBase::printRefDuringDestructionLogAndCrash(this);
+#endif
+    RELEASE_ASSERT(refCount() <= 1);
 }
 
 void Node::willBeDeletedFrom(Document& document)
