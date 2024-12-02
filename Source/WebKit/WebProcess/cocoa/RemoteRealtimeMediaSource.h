@@ -85,6 +85,7 @@ private:
     // RealtimeMediaSource
     void startProducingData() final { m_proxy.startProducingData(*pageIdentifier()); }
     void stopProducingData() final { m_proxy.stopProducingData(); }
+    void endProducingData() final { m_proxy.endProducingData(); }
     bool isCaptureSource() const final { return true; }
     void applyConstraints(const WebCore::MediaConstraints&, ApplyConstraintsHandler&&) final;
     void didEnd() final;

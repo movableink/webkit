@@ -81,6 +81,7 @@ private:
     bool isCaptureSource() const final { return true; }
     void startProducingData() final;
     void stopProducingData() final;
+    void endProducingData() final;
 
     void delaySamples(Seconds) final;
 #if PLATFORM(IOS_FAMILY)
