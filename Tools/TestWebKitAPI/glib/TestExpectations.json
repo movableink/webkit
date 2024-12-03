@@ -144,9 +144,6 @@
     },
     "TestWebKitWebContext": {
         "subtests": {
-            "/webkit/WebKitWebContext/memory-pressure": {
-                "expected": {"gtk": {"status": ["FAIL", "TIMEOUT"], "bug": "webkit.org/b/274345"}}
-            },
             "/webkit/WebKitWebContext/uri-scheme": {
                 "expected": {"gtk": {"status": ["PASS", "TIMEOUT"], "bug": "webkit.org/b/279204"}}
             },
