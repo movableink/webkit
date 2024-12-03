@@ -225,8 +225,8 @@ PASS Missing algorithm name: importKey(jwk(private), {}, true, deriveBits)
 PASS Missing algorithm name: importKey(jwk(private), {}, false, deriveBits)
 PASS Invalid 'kty' field: importKey(jwk(private), {name: X25519}, true, [deriveKey, deriveBits])
 PASS Invalid 'kty' field: importKey(jwk (public) , {name: X25519}, true, [])
-FAIL Import from a non-extractable: importKey(jwk(private), {name: X25519}, true, [deriveKey, deriveBits]) assert_equals: Operation succeeded, but should not have. expected (undefined) undefined but got (object) object "[object CryptoKey]"
-FAIL Import from a non-extractable: importKey(jwk (public) , {name: X25519}, true, []) assert_equals: Operation succeeded, but should not have. expected (undefined) undefined but got (object) object "[object CryptoKey]"
+PASS Import from a non-extractable: importKey(jwk(private), {name: X25519}, true, [deriveKey, deriveBits])
+PASS Import from a non-extractable: importKey(jwk (public) , {name: X25519}, true, [])
 PASS Invalid 'use' field: importKey(jwk(private), {name: X25519}, true, [deriveKey, deriveBits])
 PASS Invalid 'crv' field: importKey(jwk(private), {name: X25519}, true, [deriveKey, deriveBits])
 PASS Invalid 'crv' field: importKey(jwk (public) , {name: X25519}, true, [])
