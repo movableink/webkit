@@ -473,6 +473,8 @@ public:
         if (!m_parent || !m_isObserving)
             return;
 
+        updateFirstVideoSampleSeenFlag();
+
         auto videoFrameSize = videoFrame.presentationSize();
         IntSize captureSize(videoFrameSize.width(), videoFrameSize.height());
 
@@ -532,6 +534,9 @@ public:
         if (!m_track)
             return;
 
+        if (receivedAudioSampleBeforeVideo())
+            return;
+
         const auto& data = static_cast<const GStreamerAudioData&>(audioData);
         if (m_track->enabled()) {
             GRefPtr<GstSample> sample = data.getSample();
@@ -574,6 +579,9 @@ public:
     bool isEnded() const { return m_isEnded; }
 
     GstStream* stream() const { return m_stream.get(); }
+
+    void updateFirstVideoSampleSeenFlag();
+    bool receivedAudioSampleBeforeVideo();
 
 private:
     // CheckedPtr interface
@@ -705,6 +713,7 @@ struct _WebKitMediaStreamSrcPrivate {
     Atomic<unsigned> audioPadCounter;
     Atomic<unsigned> videoPadCounter;
     unsigned groupId;
+    bool firstVideoSampleSeen { false };
 };
 
 enum {
@@ -712,6 +721,27 @@ enum {
     PROP_IS_LIVE,
     PROP_LAST
 };
+
+void InternalSource::updateFirstVideoSampleSeenFlag()
+{
+    auto src = WEBKIT_MEDIA_STREAM_SRC_CAST(m_parent);
+    src->priv->firstVideoSampleSeen = true;
+}
+
+bool InternalSource::receivedAudioSampleBeforeVideo()
+{
+    auto src = WEBKIT_MEDIA_STREAM_SRC_CAST(m_parent);
+
+    if (src->priv->firstVideoSampleSeen)
+        return false;
+
+    for (auto& track : src->priv->tracks) {
+        if (track->isVideo())
+            return true;
+    }
+
+    return false;
+}
 
 void WebKitMediaStreamObserver::activeStatusChanged()
 {
