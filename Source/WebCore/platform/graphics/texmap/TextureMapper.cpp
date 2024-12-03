@@ -73,8 +73,8 @@ public:
     bool didModifyStencil { false };
     GLint previousScissorState { 0 };
     GLint previousDepthState { 0 };
-    GLint viewport[4] { 0, };
-    GLint previousScissor[4] { 0, };
+    std::array<GLint, 4> viewport { };
+    std::array<GLint, 4> previousScissor { };
     double zNear { 0 };
     double zFar { 0 };
     RefPtr<BitmapTexture> currentSurface;
@@ -214,11 +214,9 @@ void TextureMapper::beginPainting(FlipY flipY, BitmapTexture* surface)
     glDepthFunc(GL_LEQUAL);
     glEnable(GL_SCISSOR_TEST);
     data().didModifyStencil = false;
-    glGetIntegerv(GL_VIEWPORT, data().viewport);
-    glGetIntegerv(GL_SCISSOR_BOX, data().previousScissor);
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib/Win port
+    glGetIntegerv(GL_VIEWPORT, data().viewport.data());
+    glGetIntegerv(GL_SCISSOR_BOX, data().previousScissor.data());
     m_clipStack.reset(IntRect(0, 0, data().viewport[2], data().viewport[3]), flipY == FlipY::Yes ? ClipStack::YAxisMode::Default : ClipStack::YAxisMode::Inverted);
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &data().targetFrameBuffer);
     data().flipY = flipY;
     bindSurface(surface);
@@ -234,9 +232,7 @@ void TextureMapper::endPainting()
 
     glUseProgram(data().previousProgram);
 
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib/Win port
     glScissor(data().previousScissor[0], data().previousScissor[1], data().previousScissor[2], data().previousScissor[3]);
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     if (data().previousScissorState)
         glEnable(GL_SCISSOR_TEST);
     else
