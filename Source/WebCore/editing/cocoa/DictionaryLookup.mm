@@ -413,7 +413,7 @@ NSString *DictionaryLookup::stringForPDFSelection(PDFSelection *selection)
 
     NSString *selectionString = selection.string;
 
-    auto extractedStringMatchesSelection = [](auto selection, auto extracted) -> bool {
+    auto extractedStringMatchesSelection = [](NSString *selection, NSString *extracted) -> bool {
         return selection ? [selection isEqualToString:extracted] : !extracted.length;
     };
     ASSERT_UNUSED(extractedStringMatchesSelection, extractedStringMatchesSelection(selectionString, [fullPlainTextString substringWithRange:extractedRange]));
