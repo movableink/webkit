@@ -7561,3 +7561,7 @@ webkit.org/b/283993 imported/w3c/web-platform-tests/css/css-contain/content-visi
 # webkit.org/b/283994 ([ iOS ] 2 imported CSS content visibility scroll tests are flakily failing (image).)
 imported/w3c/web-platform-tests/css/css-contain/content-visibility/content-visibility-animation-and-scroll.html [ Pass ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-contain/content-visibility/content-visibility-auto-nested-scroll.html [ Pass ImageOnlyFailure ]
+
+# webkit.org/b/283995 (New Test (286367@main): [ iOS ] 2 CSS grid sizing tests are constantly failing (image).)
+imported/w3c/web-platform-tests/css/css-sizing/aspect-ratio/grid-aspect-ratio-align-items-center.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/css-grid/masonry/tentative/intrinsic-sizing/masonry-intrinsic-sizing-rows-005.html [ ImageOnlyFailure ]
