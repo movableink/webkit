@@ -1206,6 +1206,23 @@ static WKDragSessionContext *ensureLocalDragSessionContext(id <UIDragSession> se
     return _page->preferences().selectionHonorsOverflowScrolling();
 }
 
+- (ScopeExit<Function<void()>>)makeTextSelectionViewsNonInteractiveForScope
+{
+    Vector<RetainPtr<UIView>> viewsToRestore;
+    for (UIView *view in [_textInteractionWrapper managedTextSelectionViews]) {
+        if (!view.userInteractionEnabled)
+            continue;
+
+        viewsToRestore.append(view);
+        view.userInteractionEnabled = NO;
+    }
+
+    return makeScopeExit(Function<void()> { [viewsToRestore = WTFMove(viewsToRestore)] {
+        for (RetainPtr view : viewsToRestore)
+            [view setUserInteractionEnabled:YES];
+    } });
+}
+
 - (BOOL)_shouldUseUIContextMenuAsyncConfiguration
 {
 #if USE(BROWSERENGINEKIT)
