@@ -7557,3 +7557,7 @@ webkit.org/b/283668 imported/w3c/web-platform-tests/html/semantics/interactive-e
 webkit.org/b/283991 imported/w3c/web-platform-tests/css/css-anchor-position/anchor-scroll-position-try-009.html [ Pass Failure ]
 
 webkit.org/b/283993 imported/w3c/web-platform-tests/css/css-contain/content-visibility/content-visibility-070.html [ Pass Failure ]
+
+# webkit.org/b/283994 ([ iOS ] 2 imported CSS content visibility scroll tests are flakily failing (image).)
+imported/w3c/web-platform-tests/css/css-contain/content-visibility/content-visibility-animation-and-scroll.html [ Pass ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/css-contain/content-visibility/content-visibility-auto-nested-scroll.html [ Pass ImageOnlyFailure ]
