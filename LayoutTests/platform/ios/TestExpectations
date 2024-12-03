@@ -7553,3 +7553,5 @@ webkit.org/b/283740 [ Debug ] http/wpt/webauthn/public-key-credential-get-succes
 
 # uncategorized dialog element failures
 webkit.org/b/283668 imported/w3c/web-platform-tests/html/semantics/interactive-elements/the-dialog-element/dialog-closedby.tentative.html [ Skip ]
+
+webkit.org/b/283991 imported/w3c/web-platform-tests/css/css-anchor-position/anchor-scroll-position-try-009.html [ Pass Failure ]
