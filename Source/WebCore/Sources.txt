@@ -1603,6 +1603,7 @@ html/HTMLWBRElement.cpp
 html/HiddenInputType.cpp
 html/ImageBitmap.cpp
 html/ImageData.cpp
+html/ImageDataArray.cpp
 html/ImageDocument.cpp
 html/ImageInputType.cpp
 html/InputMode.cpp
