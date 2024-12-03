@@ -94,7 +94,7 @@ private:
 
     ExceptionOr<void> closeEncoder(Exception&&);
     ExceptionOr<void> resetEncoder(const Exception&);
-    void setInternalEncoder(UniqueRef<VideoEncoder>&&);
+    void setInternalEncoder(Ref<VideoEncoder>&&);
     void scheduleDequeueEvent();
 
     void queueControlMessageAndProcess(WebCodecsControlMessage<WebCodecsVideoEncoder>&&);
@@ -106,7 +106,7 @@ private:
     size_t m_encodeQueueSize { 0 };
     Ref<WebCodecsEncodedVideoChunkOutputCallback> m_output;
     Ref<WebCodecsErrorCallback> m_error;
-    std::unique_ptr<VideoEncoder> m_internalEncoder;
+    RefPtr<VideoEncoder> m_internalEncoder;
     bool m_dequeueEventScheduled { false };
     Deque<Ref<DeferredPromise>> m_pendingFlushPromises;
     size_t m_clearFlushPromiseCount { 0 };

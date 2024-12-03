@@ -212,7 +212,8 @@ ExceptionOr<void> WebCodecsVideoDecoder::decode(Ref<WebCodecsEncodedVideoChunk>&
         --m_decodeQueueSize;
         scheduleDequeueEvent();
 
-        protectedScriptExecutionContext()->enqueueTaskWhenSettled(m_internalDecoder->decode({ chunk->span(), chunk->type() == WebCodecsEncodedVideoChunkType::Key, chunk->timestamp(), chunk->duration() }), TaskSource::MediaElement, [weakThis = ThreadSafeWeakPtr { * this }, pendingActivity = makePendingActivity(*this)] (auto&& result) {
+        Ref internalDecoder = *m_internalDecoder;
+        protectedScriptExecutionContext()->enqueueTaskWhenSettled(internalDecoder->decode({ chunk->span(), chunk->type() == WebCodecsEncodedVideoChunkType::Key, chunk->timestamp(), chunk->duration() }), TaskSource::MediaElement, [weakThis = ThreadSafeWeakPtr { * this }, pendingActivity = makePendingActivity(*this)] (auto&& result) {
             RefPtr protectedThis = weakThis.get();
             if (!protectedThis || !!result)
                 return;
@@ -231,7 +232,8 @@ ExceptionOr<void> WebCodecsVideoDecoder::flush(Ref<DeferredPromise>&& promise)
     m_isKeyChunkRequired = true;
     m_pendingFlushPromises.append(WTFMove(promise));
     queueControlMessageAndProcess({ *this, [this, clearFlushPromiseCount = m_clearFlushPromiseCount] {
-        protectedScriptExecutionContext()->enqueueTaskWhenSettled(m_internalDecoder->flush(), TaskSource::MediaElement, [weakThis = ThreadSafeWeakPtr { *this }, clearFlushPromiseCount, pendingActivity = makePendingActivity(*this)] (auto&&) {
+        Ref internalDecoder = *m_internalDecoder;
+        protectedScriptExecutionContext()->enqueueTaskWhenSettled(internalDecoder->flush(), TaskSource::MediaElement, [weakThis = ThreadSafeWeakPtr { *this }, clearFlushPromiseCount, pendingActivity = makePendingActivity(*this)] (auto&&) {
             RefPtr protectedThis = weakThis.get();
             if (!protectedThis)
                 return;
@@ -292,8 +294,8 @@ ExceptionOr<void> WebCodecsVideoDecoder::resetDecoder(const Exception& exception
         return Exception { ExceptionCode::InvalidStateError, "VideoDecoder is closed"_s };
 
     m_state = WebCodecsCodecState::Unconfigured;
-    if (m_internalDecoder)
-        m_internalDecoder->reset();
+    if (RefPtr internalDecoder = std::exchange(m_internalDecoder, { }))
+        internalDecoder->reset();
     m_controlMessageQueue.clear();
     if (m_decodeQueueSize) {
         m_decodeQueueSize = 0;
@@ -319,9 +321,9 @@ void WebCodecsVideoDecoder::scheduleDequeueEvent()
     });
 }
 
-void WebCodecsVideoDecoder::setInternalDecoder(UniqueRef<VideoDecoder>&& internalDecoder)
+void WebCodecsVideoDecoder::setInternalDecoder(Ref<VideoDecoder>&& internalDecoder)
 {
-    m_internalDecoder = internalDecoder.moveToUniquePtr();
+    m_internalDecoder = WTFMove(internalDecoder);
 }
 
 void WebCodecsVideoDecoder::queueControlMessageAndProcess(WebCodecsControlMessage<WebCodecsVideoDecoder>&& message)

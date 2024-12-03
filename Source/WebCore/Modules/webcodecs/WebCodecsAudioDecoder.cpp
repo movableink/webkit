@@ -165,7 +165,7 @@ ExceptionOr<void> WebCodecsAudioDecoder::decode(Ref<WebCodecsEncodedAudioChunk>&
         --m_decodeQueueSize;
         scheduleDequeueEvent();
 
-        protectedScriptExecutionContext()->enqueueTaskWhenSettled(m_internalDecoder->decode({ chunk->span(), chunk->type() == WebCodecsEncodedAudioChunkType::Key, chunk->timestamp(), chunk->duration() }), TaskSource::MediaElement, [weakThis = ThreadSafeWeakPtr { *this }, pendingActivity = makePendingActivity(*this)] (auto&& result) {
+        protectedScriptExecutionContext()->enqueueTaskWhenSettled(Ref { *m_internalDecoder }->decode({ chunk->span(), chunk->type() == WebCodecsEncodedAudioChunkType::Key, chunk->timestamp(), chunk->duration() }), TaskSource::MediaElement, [weakThis = ThreadSafeWeakPtr { *this }, pendingActivity = makePendingActivity(*this)] (auto&& result) {
             RefPtr protectedThis = weakThis.get();
             if (!protectedThis || !!result)
                 return;
@@ -184,7 +184,7 @@ ExceptionOr<void> WebCodecsAudioDecoder::flush(Ref<DeferredPromise>&& promise)
     m_isKeyChunkRequired = true;
     m_pendingFlushPromises.append(WTFMove(promise));
     queueControlMessageAndProcess({ *this, [this, clearFlushPromiseCount = m_clearFlushPromiseCount] {
-        protectedScriptExecutionContext()->enqueueTaskWhenSettled(m_internalDecoder->flush(), TaskSource::MediaElement, [weakThis = ThreadSafeWeakPtr { *this }, clearFlushPromiseCount, pendingActivity = makePendingActivity(*this)] (auto&&) {
+        protectedScriptExecutionContext()->enqueueTaskWhenSettled(Ref { *m_internalDecoder }->flush(), TaskSource::MediaElement, [weakThis = ThreadSafeWeakPtr { *this }, clearFlushPromiseCount, pendingActivity = makePendingActivity(*this)] (auto&&) {
             RefPtr protectedThis = weakThis.get();
             if (!protectedThis)
                 return;
@@ -245,8 +245,8 @@ ExceptionOr<void> WebCodecsAudioDecoder::resetDecoder(const Exception& exception
         return Exception { ExceptionCode::InvalidStateError, "AudioDecoder is closed"_s };
 
     m_state = WebCodecsCodecState::Unconfigured;
-    if (m_internalDecoder)
-        m_internalDecoder->reset();
+    if (RefPtr internalDecoder = std::exchange(m_internalDecoder, { }))
+        internalDecoder->reset();
     m_controlMessageQueue.clear();
     if (m_decodeQueueSize) {
         m_decodeQueueSize = 0;
@@ -272,9 +272,9 @@ void WebCodecsAudioDecoder::scheduleDequeueEvent()
     });
 }
 
-void WebCodecsAudioDecoder::setInternalDecoder(UniqueRef<AudioDecoder>&& internalDecoder)
+void WebCodecsAudioDecoder::setInternalDecoder(Ref<AudioDecoder>&& internalDecoder)
 {
-    m_internalDecoder = internalDecoder.moveToUniquePtr();
+    m_internalDecoder = WTFMove(internalDecoder);
 }
 
 void WebCodecsAudioDecoder::queueControlMessageAndProcess(WebCodecsControlMessage<WebCodecsAudioDecoder>&& message)

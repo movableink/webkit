@@ -103,8 +103,8 @@ void GStreamerAudioEncoder::create(const String& codecName, const AudioEncoder::
         }
         element = gst_element_factory_create(lookupResult.factory.get(), nullptr);
     }
-    auto encoder = makeUniqueRef<GStreamerAudioEncoder>(WTFMove(descriptionCallback), WTFMove(outputCallback), WTFMove(element));
-    auto internalEncoder = encoder->m_internalEncoder;
+    Ref encoder = adoptRef(*new GStreamerAudioEncoder(WTFMove(descriptionCallback), WTFMove(outputCallback), WTFMove(element)));
+    Ref internalEncoder = encoder->m_internalEncoder;
     auto error = internalEncoder->initialize(codecName, config);
     if (!error.isEmpty()) {
         GST_WARNING("Error creating encoder: %s", error.ascii().data());
@@ -114,7 +114,7 @@ void GStreamerAudioEncoder::create(const String& codecName, const AudioEncoder::
     gstEncoderWorkQueue().dispatch([callback = WTFMove(callback), encoder = WTFMove(encoder)]() mutable {
         auto internalEncoder = encoder->m_internalEncoder;
         GST_DEBUG("Encoder created");
-        callback(UniqueRef<AudioEncoder> { WTFMove(encoder) });
+        callback(Ref<AudioEncoder> { WTFMove(encoder) });
     });
 }
 

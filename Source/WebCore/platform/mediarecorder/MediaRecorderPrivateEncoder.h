@@ -166,7 +166,7 @@ private:
     std::optional<uint8_t> m_videoTrackIndex WTF_GUARDED_BY_CAPABILITY(queueSingleton());
     RefPtr<VideoInfo> m_videoTrackInfo WTF_GUARDED_BY_CAPABILITY(queueSingleton());
     RetainPtr<CMFormatDescriptionRef> m_videoFormatDescription WTF_GUARDED_BY_CAPABILITY(queueSingleton());
-    std::unique_ptr<VideoEncoder> m_videoEncoder WTF_GUARDED_BY_CAPABILITY(queueSingleton());
+    RefPtr<VideoEncoder> m_videoEncoder WTF_GUARDED_BY_CAPABILITY(queueSingleton());
     Deque<std::pair<Ref<VideoFrame>, MediaTime>> m_pendingVideoFrames WTF_GUARDED_BY_CAPABILITY(queueSingleton());
     Deque<Ref<MediaSample>> m_encodedVideoFrames WTF_GUARDED_BY_CAPABILITY(queueSingleton());
     bool m_firstVideoFrameProcessed WTF_GUARDED_BY_CAPABILITY(queueSingleton()) { false };

@@ -449,8 +449,8 @@ void MediaRecorderPrivateEncoder::appendVideoFrame(const MediaTime& audioTime, R
         promise->whenSettled(queueSingleton(), [weakThis = ThreadSafeWeakPtr { *this }, this](auto&& result) {
             assertIsCurrent(queueSingleton());
             if (RefPtr protectedThis = weakThis.get(); protectedThis && result) {
-                m_videoEncoder = result.value().moveToUniquePtr();
-                m_videoEncoder->setRates(videoBitRate(), 0);
+                m_videoEncoder = WTFMove(*result);
+                Ref { *m_videoEncoder }->setRates(videoBitRate(), 0);
                 m_videoEncoderCreationPromise = nullptr;
                 return encodePendingVideoFrames();
             }
@@ -605,7 +605,7 @@ Ref<GenericPromise> MediaRecorderPrivateEncoder::encodePendingVideoFrames()
             m_needKeyFrame = false;
         }
         LOG(MediaStream, "encodePendingVideoFrames:encoding video frame:%f (us:%lld) kf:%d", frame.second.toDouble(), frame.second.toMicroseconds(), needVideoKeyframe);
-        return m_videoEncoder->encode({ WTFMove(frame.first), frame.second.toMicroseconds(), { } }, needVideoKeyframe);
+        return Ref { *m_videoEncoder }->encode({ WTFMove(frame.first), frame.second.toMicroseconds(), { } }, needVideoKeyframe);
     } };
     VideoEncoder::EncodePromise::all(WTFMove(promises))->chainTo(WTFMove(producer));
 
@@ -882,7 +882,7 @@ void MediaRecorderPrivateEncoder::stopRecording()
         return flushPendingData(MediaTime::positiveInfiniteTime())->whenSettled(queueSingleton(), [protectedThis, this] {
             assertIsCurrent(queueSingleton());
             if (m_videoEncoder)
-                m_videoEncoder->close();
+                Ref { *m_videoEncoder }->close();
 
             flushAllEncodedQueues();
 
@@ -930,7 +930,7 @@ Ref<GenericPromise> MediaRecorderPrivateEncoder::flushPendingData(const MediaTim
     promises.reserveInitialCapacity(size_t(!!m_videoEncoder) + size_t(!!m_audioCompressor) + 1);
     promises.append(encodePendingVideoFrames());
     if (m_videoEncoder)
-        promises.append(m_videoEncoder->flush());
+        promises.append(Ref { *m_videoEncoder }->flush());
     if (RefPtr compressor = audioCompressor())
         promises.append(m_isPaused ? compressor->drain() : compressor->flush());
 

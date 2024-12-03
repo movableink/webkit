@@ -103,8 +103,8 @@ void GStreamerVideoDecoder::create(const String& codecName, const Config& config
     }
 
     GRefPtr<GstElement> element = gst_element_factory_create(lookupResult.factory.get(), nullptr);
-    auto decoder = makeUniqueRef<GStreamerVideoDecoder>(codecName, config, WTFMove(outputCallback), WTFMove(element));
-    auto internalDecoder = decoder->m_internalDecoder;
+    Ref decoder = adoptRef(*new GStreamerVideoDecoder(codecName, config, WTFMove(outputCallback), WTFMove(element)));
+    Ref internalDecoder = decoder->m_internalDecoder;
     if (!internalDecoder->isConfigured()) {
         GST_WARNING("Internal video decoder failed to configure for codec %s", codecName.utf8().data());
         callback(makeUnexpected(makeString("Internal video decoder failed to configure for codec "_s, codecName)));
@@ -114,7 +114,7 @@ void GStreamerVideoDecoder::create(const String& codecName, const Config& config
     gstDecoderWorkQueue().dispatch([callback = WTFMove(callback), decoder = WTFMove(decoder)]() mutable {
         auto internalDecoder = decoder->m_internalDecoder;
         GST_DEBUG_OBJECT(decoder->m_internalDecoder->harnessedElement(), "Video decoder created");
-        callback(UniqueRef<VideoDecoder> { WTFMove(decoder) });
+        callback(Ref<VideoDecoder> { WTFMove(decoder) });
     });
 }
 
