@@ -32,6 +32,7 @@
 #import "ClientCertificateAuthenticationXPCConstants.h"
 #import "Connection.h"
 #import "XPCUtilities.h"
+#import <WebCore/Credential.h>
 #import <pal/spi/cocoa/NSXPCConnectionSPI.h>
 #import <pal/spi/cocoa/SecKeyProxySPI.h>
 #import <wtf/MainThread.h>

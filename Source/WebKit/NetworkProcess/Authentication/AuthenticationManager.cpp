@@ -44,6 +44,18 @@
 namespace WebKit {
 using namespace WebCore;
 
+struct AuthenticationManager::Challenge {
+    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    Challenge(std::optional<WebPageProxyIdentifier> pageID, const WebCore::AuthenticationChallenge& challenge, ChallengeCompletionHandler&& completionHandler)
+        : pageID(pageID)
+        , challenge(challenge)
+        , completionHandler(WTFMove(completionHandler)) { }
+
+    Markable<WebPageProxyIdentifier> pageID;
+    WebCore::AuthenticationChallenge challenge;
+    ChallengeCompletionHandler completionHandler;
+};
+
 static bool canCoalesceChallenge(const WebCore::AuthenticationChallenge& challenge)
 {
     // Do not coalesce server trust evaluation requests because ProtectionSpace comparison does not evaluate server trust (e.g. certificate).
@@ -145,11 +157,11 @@ void AuthenticationManager::didReceiveAuthenticationChallenge(IPC::MessageSender
 {
     std::optional<WebPageProxyIdentifier> dummyPageID;
     auto challengeID = addChallengeToChallengeMap(makeUniqueRef<Challenge>(dummyPageID, authenticationChallenge, WTFMove(completionHandler)));
-    
+
     // Coalesce challenges in the same protection space and in the same page.
     if (shouldCoalesceChallenge(dummyPageID, challengeID, authenticationChallenge))
         return;
-    
+
     download.send(Messages::DownloadProxy::DidReceiveAuthenticationChallenge(authenticationChallenge, challengeID));
 }
 

@@ -25,15 +25,10 @@
 
 #pragma once
 
-#include "DownloadID.h"
 #include "IdentifierTypes.h"
 #include "MessageReceiver.h"
 #include "NetworkProcessSupplement.h"
 #include "WebPageProxyIdentifier.h"
-#include "WebProcessSupplement.h"
-#include <WebCore/AuthenticationChallenge.h>
-#include <WebCore/FrameIdentifier.h>
-#include <WebCore/PageIdentifier.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
@@ -85,23 +80,13 @@ public:
 
 private:
     Ref<NetworkProcess> protectedProcess() const;
-    struct Challenge {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
-        Challenge(std::optional<WebPageProxyIdentifier> pageID, const WebCore::AuthenticationChallenge& challenge, ChallengeCompletionHandler&& completionHandler)
-            : pageID(pageID)
-            , challenge(challenge)
-            , completionHandler(WTFMove(completionHandler)) { }
-        
-        Markable<WebPageProxyIdentifier> pageID;
-        WebCore::AuthenticationChallenge challenge;
-        ChallengeCompletionHandler completionHandler;
-    };
+    struct Challenge;
 
 #if HAVE(SEC_KEY_PROXY)
     // NetworkProcessSupplement
     void initializeConnection(IPC::Connection*) final;
 #endif
-    
+
     // IPC::MessageReceiver
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
 

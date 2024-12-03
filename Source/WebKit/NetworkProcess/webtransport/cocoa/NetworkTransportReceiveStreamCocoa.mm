@@ -27,7 +27,8 @@
 #import "NetworkTransportReceiveStream.h"
 
 #import "NetworkTransportSession.h"
-#include <wtf/cocoa/SpanCocoa.h>
+#import <wtf/BlockPtr.h>
+#import <wtf/cocoa/SpanCocoa.h>
 
 namespace WebKit {
 

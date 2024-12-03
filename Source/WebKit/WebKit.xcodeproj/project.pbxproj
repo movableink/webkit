@@ -1289,7 +1289,6 @@
 		518ACAEA12AEE6BB00B04B83 /* WKProtectionSpaceTypes.h in Headers */ = {isa = PBXBuildFile; fileRef = 518ACAE912AEE6BB00B04B83 /* WKProtectionSpaceTypes.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		518ACF1112B015F800B04B83 /* WKCredentialTypes.h in Headers */ = {isa = PBXBuildFile; fileRef = 518ACF1012B015F800B04B83 /* WKCredentialTypes.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		518D2CAE12D5153B003BB93B /* WebBackForwardListItem.h in Headers */ = {isa = PBXBuildFile; fileRef = 518D2CAC12D5153B003BB93B /* WebBackForwardListItem.h */; };
-		518E8EF916B2091C00E91429 /* AuthenticationManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 518E8EF416B2091C00E91429 /* AuthenticationManager.h */; };
 		51909C5E2C801B5A009D2E0E /* _WKWebPushActionInternal.h in Headers */ = {isa = PBXBuildFile; fileRef = 51909C5D2C801B5A009D2E0E /* _WKWebPushActionInternal.h */; };
 		519261782950EA3F00A975D1 /* WKSecurityOriginPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 519261772950EA3E00A975D1 /* WKSecurityOriginPrivate.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		5192DDB92AB54ED700E88DE7 /* WebPushMessageCocoa.mm in Sources */ = {isa = PBXBuildFile; fileRef = 517B5F98275EC600002DC22D /* WebPushMessageCocoa.mm */; };
@@ -5696,9 +5695,6 @@
 		518ACF1012B015F800B04B83 /* WKCredentialTypes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WKCredentialTypes.h; sourceTree = "<group>"; };
 		518D2CAB12D5153B003BB93B /* WebBackForwardListItem.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WebBackForwardListItem.cpp; sourceTree = "<group>"; };
 		518D2CAC12D5153B003BB93B /* WebBackForwardListItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WebBackForwardListItem.h; sourceTree = "<group>"; };
-		518E8EF316B2091C00E91429 /* AuthenticationManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AuthenticationManager.cpp; sourceTree = "<group>"; };
-		518E8EF416B2091C00E91429 /* AuthenticationManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AuthenticationManager.h; sourceTree = "<group>"; };
-		518E8EF516B2091C00E91429 /* AuthenticationManager.messages.in */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = AuthenticationManager.messages.in; sourceTree = "<group>"; };
 		51909C5D2C801B5A009D2E0E /* _WKWebPushActionInternal.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = _WKWebPushActionInternal.h; sourceTree = "<group>"; };
 		519261772950EA3E00A975D1 /* WKSecurityOriginPrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WKSecurityOriginPrivate.h; sourceTree = "<group>"; };
 		51933DEB1965EB24008AC3EA /* MenuUtilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MenuUtilities.h; sourceTree = "<group>"; };
@@ -6026,7 +6022,6 @@
 		57A9FF15252C6AEF006A2040 /* libWTF.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libWTF.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		57AC8F4E217FEED90055438C /* HidConnection.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = HidConnection.h; sourceTree = "<group>"; };
 		57AC8F4F217FEED90055438C /* HidConnection.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = HidConnection.mm; sourceTree = "<group>"; };
-		57B4B45D20B504AB00D4AD79 /* AuthenticationManagerCocoa.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AuthenticationManagerCocoa.mm; sourceTree = "<group>"; };
 		57B4B45E20B504AB00D4AD79 /* ClientCertificateAuthenticationXPCConstants.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ClientCertificateAuthenticationXPCConstants.h; sourceTree = "<group>"; };
 		57B826402304EB3E00B72EB0 /* NearFieldSPI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NearFieldSPI.h; sourceTree = "<group>"; };
 		57B826422304F14000B72EB0 /* NearFieldSoftLink.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NearFieldSoftLink.h; sourceTree = "<group>"; };
@@ -8326,6 +8321,10 @@
 		F6113E27126CE19B0057D0A7 /* WKUserContentURLPattern.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WKUserContentURLPattern.h; sourceTree = "<group>"; };
 		F634445512A885C8000612D8 /* APISecurityOrigin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = APISecurityOrigin.h; sourceTree = "<group>"; };
 		F6A90811133C1F3D0082C3F4 /* WebCookieManagerMac.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = WebCookieManagerMac.mm; sourceTree = "<group>"; };
+		FA07D6912CFFB09700915660 /* AuthenticationManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AuthenticationManager.h; sourceTree = "<group>"; };
+		FA07D6922CFFB09700915660 /* AuthenticationManager.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AuthenticationManager.cpp; sourceTree = "<group>"; };
+		FA07D6932CFFB09700915660 /* AuthenticationManager.messages.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = AuthenticationManager.messages.in; sourceTree = "<group>"; };
+		FA07D6952CFFB0C100915660 /* AuthenticationManagerCocoa.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AuthenticationManagerCocoa.mm; sourceTree = "<group>"; };
 		FA13529B2C7E70140049C1BC /* NetworkTransportSessionCocoa.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = NetworkTransportSessionCocoa.mm; sourceTree = "<group>"; };
 		FA1473272B06EE6200765CC1 /* SandboxExtension.serialization.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = SandboxExtension.serialization.in; sourceTree = "<group>"; };
 		FA1ED3F32B76B90700C90F3B /* CoreIPCCFType.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = CoreIPCCFType.mm; sourceTree = "<group>"; };
@@ -12384,6 +12383,7 @@
 		510CC7DA16138E0100D03ED3 /* NetworkProcess */ = {
 			isa = PBXGroup;
 			children = (
+				FA07D6902CFFB06B00915660 /* Authentication */,
 				E489D2821A0A2BE80078C06A /* cache */,
 				7A843A1D21E41FD900DEF663 /* Classifier */,
 				7EC4F0F818E4A922008056AF /* cocoa */,
@@ -12657,9 +12657,6 @@
 				57B4B45C20B5048B00D4AD79 /* cocoa */,
 				5CADDE0D2151AA010067D309 /* AuthenticationChallengeDisposition.h */,
 				2D9BECF22B30925300D0AE99 /* AuthenticationChallengeDisposition.serialization.in */,
-				518E8EF316B2091C00E91429 /* AuthenticationManager.cpp */,
-				518E8EF416B2091C00E91429 /* AuthenticationManager.h */,
-				518E8EF516B2091C00E91429 /* AuthenticationManager.messages.in */,
 			);
 			path = Authentication;
 			sourceTree = "<group>";
@@ -12909,7 +12906,6 @@
 			children = (
 				41A5F7B9226ECF7C00671764 /* AuthenticationChallengeDispositionCocoa.h */,
 				41A5F7BA226ECF7C00671764 /* AuthenticationChallengeDispositionCocoa.mm */,
-				57B4B45D20B504AB00D4AD79 /* AuthenticationManagerCocoa.mm */,
 				44A481C621F2D27B00F2F919 /* ClientCertificateAuthenticationXPCConstants.cpp */,
 				57B4B45E20B504AB00D4AD79 /* ClientCertificateAuthenticationXPCConstants.h */,
 			);
@@ -16031,6 +16027,25 @@
 			path = mac;
 			sourceTree = "<group>";
 		};
+		FA07D6902CFFB06B00915660 /* Authentication */ = {
+			isa = PBXGroup;
+			children = (
+				FA07D6942CFFB0AC00915660 /* cocoa */,
+				FA07D6922CFFB09700915660 /* AuthenticationManager.cpp */,
+				FA07D6912CFFB09700915660 /* AuthenticationManager.h */,
+				FA07D6932CFFB09700915660 /* AuthenticationManager.messages.in */,
+			);
+			path = Authentication;
+			sourceTree = "<group>";
+		};
+		FA07D6942CFFB0AC00915660 /* cocoa */ = {
+			isa = PBXGroup;
+			children = (
+				FA07D6952CFFB0C100915660 /* AuthenticationManagerCocoa.mm */,
+			);
+			path = cocoa;
+			sourceTree = "<group>";
+		};
 		FA13529A2C7E6FC00049C1BC /* cocoa */ = {
 			isa = PBXGroup;
 			children = (
@@ -16400,7 +16415,6 @@
 				BCEE966D112FAF57006BCC24 /* Attachment.h in Headers */,
 				512F589712A8838800629530 /* AuthenticationChallengeProxy.h in Headers */,
 				512F589912A8838800629530 /* AuthenticationDecisionListener.h in Headers */,
-				518E8EF916B2091C00E91429 /* AuthenticationManager.h in Headers */,
 				512F58A312A883AD00629530 /* AuthenticationManagerMessages.h in Headers */,
 				57FABB122581827C0059DC95 /* AuthenticationServicesCoreSoftLink.h in Headers */,
 				57FABB0F25817CF00059DC95 /* AuthenticationServicesCoreSPI.h in Headers */,
