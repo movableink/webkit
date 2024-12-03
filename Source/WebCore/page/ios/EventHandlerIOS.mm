@@ -123,9 +123,9 @@ bool EventHandler::wheelEvent(WebEvent *event)
             processingSteps = { WheelEventProcessingSteps::SynchronousScrolling, WheelEventProcessingSteps::NonBlockingDOMEventDispatch };
     }
 
-    bool eventWasHandled = handleWheelEvent(wheelEvent, processingSteps).wasHandled();
-    event.wasHandled = eventWasHandled;
-    return eventWasHandled;
+    auto [result, _] = handleWheelEvent(wheelEvent, processingSteps);
+    event.wasHandled = result.wasHandled();
+    return event.wasHandled;
 }
 
 #if ENABLE(IOS_TOUCH_EVENTS)

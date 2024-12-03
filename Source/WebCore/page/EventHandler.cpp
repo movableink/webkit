@@ -3156,7 +3156,7 @@ bool EventHandler::completeWidgetWheelEvent(const PlatformWheelEvent& event, con
     return platformCompletePlatformWidgetWheelEvent(event, *widget.get(), scrollableArea);
 }
 
-HandleUserInputEventResult EventHandler::handleWheelEvent(const PlatformWheelEvent& wheelEvent, OptionSet<WheelEventProcessingSteps> processingSteps)
+std::pair<HandleUserInputEventResult, OptionSet<EventHandling>> EventHandler::handleWheelEvent(const PlatformWheelEvent& wheelEvent, OptionSet<WheelEventProcessingSteps> processingSteps)
 {
     Ref frame = m_frame.get();
 #if ENABLE(KINETIC_SCROLLING)
@@ -3168,7 +3168,7 @@ HandleUserInputEventResult EventHandler::handleWheelEvent(const PlatformWheelEve
     auto handleWheelEventResult = handleWheelEventInternal(wheelEvent, processingSteps, handling);
     // wheelEventWasProcessedByMainThread() may have already been called via performDefaultWheelEventHandling(), but this ensures that it's always called if that code path doesn't run.
     wheelEventWasProcessedByMainThread(wheelEvent, handling);
-    return handleWheelEventResult;
+    return { handleWheelEventResult, handling };
 }
 
 HandleUserInputEventResult EventHandler::handleWheelEventInternal(const PlatformWheelEvent& event, OptionSet<WheelEventProcessingSteps> processingSteps, OptionSet<EventHandling>& handling)
@@ -5286,7 +5286,8 @@ bool EventHandler::passWheelEventToWidget(const PlatformWheelEvent& event, Widge
     if (!frameView)
         return false;
 
-    return frameView->frame().eventHandler().handleWheelEvent(event, processingSteps).wasHandled();
+    auto [result, _] = frameView->frame().eventHandler().handleWheelEvent(event, processingSteps);
+    return result.wasHandled();
 }
 
 bool EventHandler::passWidgetMouseDownEventToWidget(RenderWidget* renderWidget)

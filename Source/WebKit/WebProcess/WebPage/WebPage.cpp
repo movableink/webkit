@@ -3642,7 +3642,7 @@ void WebPage::handleWheelEvent(FrameIdentifier frameID, const WebWheelEvent& eve
     UNUSED_PARAM(willStartSwipe);
 #endif
 
-    auto handleWheelEventResult = wheelEvent(frameID, event, processingSteps);
+    auto [handleWheelEventResult, _] = wheelEvent(frameID, event, processingSteps);
 #if ENABLE(ASYNC_SCROLLING)
     if (remoteScrollingCoordinator) {
         auto gestureInfo = remoteScrollingCoordinator->takeCurrentWheelGestureInfo();
@@ -3653,7 +3653,7 @@ void WebPage::handleWheelEvent(FrameIdentifier frameID, const WebWheelEvent& eve
     completionHandler({ }, { }, handleWheelEventResult.wasHandled(), handleWheelEventResult.remoteUserInputEventData());
 }
 
-HandleUserInputEventResult WebPage::wheelEvent(const FrameIdentifier& frameID, const WebWheelEvent& wheelEvent, OptionSet<WheelEventProcessingSteps> processingSteps)
+std::pair<HandleUserInputEventResult, OptionSet<EventHandling>> WebPage::wheelEvent(const FrameIdentifier& frameID, const WebWheelEvent& wheelEvent, OptionSet<WheelEventProcessingSteps> processingSteps)
 {
     m_userActivity.impulse();
 
@@ -3662,15 +3662,15 @@ HandleUserInputEventResult WebPage::wheelEvent(const FrameIdentifier& frameID, c
     auto dispatchWheelEvent = [&](const WebWheelEvent& wheelEvent, OptionSet<WheelEventProcessingSteps> processingSteps) {
         auto* frame = WebProcess::singleton().webFrame(frameID);
         if (!frame || !frame->coreLocalFrame() || !frame->coreLocalFrame()->view())
-            return HandleUserInputEventResult { false };
+            return std::pair { HandleUserInputEventResult { false }, OptionSet<EventHandling> { } };
 
         auto platformWheelEvent = platform(wheelEvent);
         return frame->coreLocalFrame()->eventHandler().handleWheelEvent(platformWheelEvent, processingSteps);
     };
 
-    auto handleWheelEventResult = dispatchWheelEvent(wheelEvent, processingSteps);
-    LOG_WITH_STREAM(WheelEvents, stream << "WebPage::wheelEvent - processing steps " << processingSteps << " handled " << handleWheelEventResult.wasHandled());
-    return handleWheelEventResult;
+    auto [result, handling] = dispatchWheelEvent(wheelEvent, processingSteps);
+    LOG_WITH_STREAM(WheelEvents, stream << "WebPage::wheelEvent - processing steps " << processingSteps << " handled " << result.wasHandled());
+    return { result, handling };
 }
 
 #if PLATFORM(IOS_FAMILY)
@@ -3683,9 +3683,9 @@ void WebPage::dispatchWheelEventWithoutScrolling(FrameIdentifier frameID, const 
 #else
     bool isCancelable = true;
 #endif
-    bool handled = this->wheelEvent(frameID, wheelEvent, { isCancelable ? WheelEventProcessingSteps::BlockingDOMEventDispatch : WheelEventProcessingSteps::NonBlockingDOMEventDispatch }).wasHandled();
+    auto [result, handling] = this->wheelEvent(frameID, wheelEvent, { isCancelable ? WheelEventProcessingSteps::BlockingDOMEventDispatch : WheelEventProcessingSteps::NonBlockingDOMEventDispatch });
     // The caller of dispatchWheelEventWithoutScrolling never cares about DidReceiveEvent being sent back.
-    completionHandler(handled);
+    completionHandler(result.wasHandled() && handling.contains(EventHandling::DefaultPrevented));
 }
 #endif
 
