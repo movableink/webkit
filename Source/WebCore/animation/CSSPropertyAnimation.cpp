@@ -4133,6 +4133,7 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         CSSPropertyBorder,
         CSSPropertyBorderImage,
         CSSPropertyBorderSpacing,
+        CSSPropertyBlockStep,
         CSSPropertyColumns,
         CSSPropertyFlex,
         CSSPropertyFlexFlow,

@@ -675,6 +675,27 @@ static Ref<CSSValue> valueForTextEdge(CSSPropertyID property, const TextEdge& te
         createConvertingToCSSValueID(textEdge.under));
 }
 
+static RefPtr<CSSValue> blockStepShorthandValue(const RenderStyle& style)
+{
+    CSSValueListBuilder list;
+    if (style.blockStepSize())
+        list.append(ComputedStyleExtractor::zoomAdjustedPixelValueForLength(*style.blockStepSize(), style));
+
+    if (style.blockStepInsert() != RenderStyle::initialBlockStepInsert())
+        list.append(createConvertingToCSSValueID(style.blockStepInsert()));
+
+    if (style.blockStepAlign() != RenderStyle::initialBlockStepAlign())
+        list.append(createConvertingToCSSValueID(style.blockStepAlign()));
+
+    if (style.blockStepRound() != RenderStyle::initialBlockStepRound())
+        list.append(createConvertingToCSSValueID(style.blockStepRound()));
+
+    if (!list.isEmpty())
+        return CSSValueList::createSpaceSeparated(list);
+
+    return CSSPrimitiveValue::create(CSSValueNone);
+}
+
 RefPtr<CSSValue> ComputedStyleExtractor::textBoxShorthandValue(const RenderStyle& style) const
 {
     auto textBoxTrim = style.textBoxTrim();
@@ -3582,6 +3603,8 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
             ASSERT_NOT_REACHED();
         }
         return CSSPrimitiveValue::create(CSSValueNone);
+    case CSSPropertyBlockStep:
+        return blockStepShorthandValue(style);
     case CSSPropertyBlockStepAlign:
         return createConvertingToCSSValueID(style.blockStepAlign());
     case CSSPropertyBlockStepInsert:
