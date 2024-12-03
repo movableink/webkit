@@ -43,6 +43,13 @@ PASS background-origin: "padding-box" onto "content-box"
 PASS background-repeat (type: discrete) has testAccumulation function
 PASS background-repeat: "round" onto "space"
 PASS background-repeat: "space" onto "round"
+PASS block-step-align (type: discrete) has testAccumulation function
+PASS block-step-align: "center" onto "auto"
+PASS block-step-align: "auto" onto "center"
+PASS block-step-align: "start" onto "end"
+PASS block-step-align: "end" onto "start"
+PASS block-step-align: "center" onto "start"
+PASS block-step-align: "start" onto "center"
 PASS block-step-insert (type: discrete) has testAccumulation function
 PASS block-step-insert: "padding-box" onto "margin-box"
 PASS block-step-insert: "margin-box" onto "padding-box"

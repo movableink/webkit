@@ -116,6 +116,7 @@ enum class AutoRepeatType : uint8_t;
 enum class BackfaceVisibility : uint8_t;
 enum class BlendMode : uint8_t;
 enum class FlowDirection : uint8_t;
+enum class BlockStepAlign : uint8_t;
 enum class BlockStepInsert : uint8_t;
 enum class BorderCollapse : bool;
 enum class BorderStyle : uint8_t;
@@ -2254,6 +2255,10 @@ public:
     static inline std::optional<Length> initialBlockStepSize();
     inline std::optional<Length> blockStepSize() const;
     inline void setBlockStepSize(std::optional<Length>);
+
+    static constexpr BlockStepAlign initialBlockStepAlign();
+    inline BlockStepAlign blockStepAlign() const;
+    inline void setBlockStepAlign(BlockStepAlign);
 
     static constexpr BlockStepInsert initialBlockStepInsert();
     inline BlockStepInsert blockStepInsert() const;

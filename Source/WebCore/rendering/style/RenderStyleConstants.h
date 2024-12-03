@@ -1197,7 +1197,13 @@ enum class ContentVisibility : uint8_t {
     Hidden,
 };
 
-// Stored as unsigned : 2 in StyleRareNonInheritedData
+enum class BlockStepAlign : uint8_t {
+    Auto,
+    Center,
+    Start,
+    End
+};
+
 enum class BlockStepInsert : uint8_t {
     MarginBox,
     PaddingBox,
@@ -1218,6 +1224,7 @@ WTF::TextStream& operator<<(WTF::TextStream&, AnimationPlayState);
 WTF::TextStream& operator<<(WTF::TextStream&, AspectRatioType);
 WTF::TextStream& operator<<(WTF::TextStream&, AutoRepeatType);
 WTF::TextStream& operator<<(WTF::TextStream&, BackfaceVisibility);
+WTF::TextStream& operator<<(WTF::TextStream&, BlockStepAlign);
 WTF::TextStream& operator<<(WTF::TextStream&, BlockStepInsert);
 WTF::TextStream& operator<<(WTF::TextStream&, BorderCollapse);
 WTF::TextStream& operator<<(WTF::TextStream&, BorderStyle);

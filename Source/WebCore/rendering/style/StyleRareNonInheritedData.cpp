@@ -101,6 +101,7 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , anchorNames(RenderStyle::initialAnchorNames())
     , positionAnchor(RenderStyle::initialPositionAnchor())
     , blockStepSize(RenderStyle::initialBlockStepSize())
+    , blockStepAlign(static_cast<unsigned>(RenderStyle::initialBlockStepAlign()))
     , blockStepInsert(static_cast<unsigned>(RenderStyle::initialBlockStepInsert()))
     , overscrollBehaviorX(static_cast<unsigned>(RenderStyle::initialOverscrollBehaviorX()))
     , overscrollBehaviorY(static_cast<unsigned>(RenderStyle::initialOverscrollBehaviorY()))
@@ -198,6 +199,7 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , anchorNames(o.anchorNames)
     , positionAnchor(o.positionAnchor)
     , blockStepSize(o.blockStepSize)
+    , blockStepAlign(o.blockStepAlign)
     , blockStepInsert(o.blockStepInsert)
     , overscrollBehaviorX(o.overscrollBehaviorX)
     , overscrollBehaviorY(o.overscrollBehaviorY)
@@ -300,6 +302,7 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && anchorNames == o.anchorNames
         && positionAnchor == o.positionAnchor
         && blockStepSize == o.blockStepSize
+        && blockStepAlign == o.blockStepAlign
         && blockStepInsert == o.blockStepInsert
         && overscrollBehaviorX == o.overscrollBehaviorX
         && overscrollBehaviorY == o.overscrollBehaviorY
@@ -451,10 +454,11 @@ void StyleRareNonInheritedData::dumpDifferences(TextStream& ts, const StyleRareN
 
     LOG_IF_DIFFERENT(blockStepSize);
 
+    LOG_IF_DIFFERENT_WITH_CAST(BlockStepAlign, blockStepAlign);
     LOG_IF_DIFFERENT_WITH_CAST(BlockStepInsert, blockStepInsert);
 
     LOG_IF_DIFFERENT_WITH_CAST(OverscrollBehavior, overscrollBehaviorX);
-    LOG_IF_DIFFERENT_WITH_CAST(BlockStepInsert, overscrollBehaviorY);
+    LOG_IF_DIFFERENT_WITH_CAST(OverscrollBehavior, overscrollBehaviorY);
 
     LOG_IF_DIFFERENT_WITH_CAST(PageSizeType, pageSizeType);
 

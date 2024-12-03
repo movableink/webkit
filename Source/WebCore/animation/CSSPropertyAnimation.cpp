@@ -3939,6 +3939,7 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
 
         new TabSizePropertyWrapper,
 
+        new DiscretePropertyWrapper<BlockStepAlign>(CSSPropertyBlockStepAlign, &RenderStyle::blockStepAlign, &RenderStyle::setBlockStepAlign),
         new DiscretePropertyWrapper<BlockStepInsert>(CSSPropertyBlockStepInsert, &RenderStyle::blockStepInsert, &RenderStyle::setBlockStepInsert),
         new OptionalLengthPropertyWrapper(CSSPropertyBlockStepSize, &RenderStyle::blockStepSize, &RenderStyle::setBlockStepSize, { OptionalLengthPropertyWrapper::Flags::NegativeLengthsAreInvalid }),
 

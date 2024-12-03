@@ -3582,6 +3582,20 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
             ASSERT_NOT_REACHED();
         }
         return CSSPrimitiveValue::create(CSSValueNone);
+    case CSSPropertyBlockStepAlign:
+        switch (style.blockStepAlign()) {
+        case BlockStepAlign::Auto:
+            return CSSPrimitiveValue::create(CSSValueAuto);
+        case BlockStepAlign::Center:
+            return CSSPrimitiveValue::create(CSSValueCenter);
+        case BlockStepAlign::Start:
+            return CSSPrimitiveValue::create(CSSValueStart);
+        case BlockStepAlign::End:
+            return CSSPrimitiveValue::create(CSSValueEnd);
+        default:
+            ASSERT_NOT_REACHED();
+            return CSSPrimitiveValue::create(CSSValueAuto);
+        }
     case CSSPropertyBlockStepInsert:
         switch (style.blockStepInsert()) {
         case BlockStepInsert::MarginBox:
@@ -3592,7 +3606,7 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
             return CSSPrimitiveValue::create(CSSValueContentBox);
         default:
             ASSERT_NOT_REACHED();
-            return CSSPrimitiveValue::create(CSSValueNone);
+            return CSSPrimitiveValue::create(CSSValueMarginBox);
         }
     case CSSPropertyBlockStepSize: {
         auto blockStepSize = style.blockStepSize();

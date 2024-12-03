@@ -107,6 +107,17 @@ TextStream& operator<<(TextStream& ts, BackfaceVisibility visibility)
     return ts;
 }
 
+TextStream& operator<<(TextStream& ts, BlockStepAlign blockStepAlign)
+{
+    switch (blockStepAlign) {
+    case BlockStepAlign::Auto: ts << "auto"; break;
+    case BlockStepAlign::Center: ts << "center"; break;
+    case BlockStepAlign::Start: ts << "start"; break;
+    case BlockStepAlign::End: ts << "end"; break;
+    }
+    return ts;
+}
+
 TextStream& operator<<(TextStream& ts, BlockStepInsert blockStepInsert)
 {
     switch (blockStepInsert) {
