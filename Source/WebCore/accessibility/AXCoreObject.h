@@ -1176,7 +1176,6 @@ public:
     virtual Path elementPath() const = 0;
     virtual bool supportsPath() const = 0;
 
-    bool shouldReturnEmptySelectedText() const { return isSecureField(); }
     virtual CharacterRange selectedTextRange() const = 0;
     virtual int insertionPointLineNumber() const = 0;
 
