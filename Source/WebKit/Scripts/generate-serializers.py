@@ -527,19 +527,11 @@ def one_argument_coder_declaration(type, template_argument):
         name_with_template = name_with_template + '<' + template_argument.namespace + '::' + template_argument.name + '>'
     result.append('template<> struct ArgumentCoder<' + name_with_template + '> {')
     for encoder in type.encoders:
-        if type.cf_type is not None:
-            result.append('    static void encode(' + encoder + '&, ' + name_with_template + ');')
-            result.append('    static void encode(' + encoder + '& encoder, const RetainPtr<' + name_with_template + '>& retainPtr)')
-            result.append('    {')
-            result.append('        ArgumentCoder<' + name_with_template + '>::encode(encoder, retainPtr.get());')
-            result.append('    }')
-        elif type.rvalue:
+        if type.rvalue:
             result.append('    static void encode(' + encoder + '&, ' + name_with_template + '&&);')
         else:
             result.append('    static void encode(' + encoder + '&, const ' + name_with_template + '&);')
-    if type.cf_type is not None:
-        result.append('    static std::optional<RetainPtr<' + name_with_template + '>> decode(Decoder&);')
-    elif type.return_ref:
+    if type.return_ref:
         result.append('    static std::optional<Ref<' + name_with_template + '>> decode(Decoder&);')
     else:
         result.append('    static std::optional<' + name_with_template + '> decode(Decoder&);')
@@ -843,7 +835,6 @@ def decode_cf_type(type):
     result.append('    auto result = decoder.decode<' + type.cf_wrapper_type() + '>();')
     result.append('    if (UNLIKELY(!decoder.isValid()))')
     result.append('        return std::nullopt;')
-    cf_method = 'toCF'
     if type.to_cf_method is not None:
         result.append('    return ' + type.to_cf_method + ';')
     else:
