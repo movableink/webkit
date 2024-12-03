@@ -66,6 +66,7 @@ private:
     using CloseCallback = CompletionHandler<void(ExceptionOr<void>&&)>;
     enum class ShouldNotifyBackend : bool { No, Yes };
     void closeInternal(ShouldNotifyBackend);
+    bool requestSpaceForNewSize(uint64_t newSize);
     bool requestSpaceForWrite(uint64_t writeOffset, uint64_t writeLength);
 
     // ActiveDOMObject.
