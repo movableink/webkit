@@ -49,7 +49,7 @@ namespace CSSPropertyParserHelpers {
 
 template<CSSValueID Name, typename T> CSS::BasicShape toBasicShape(T&& parameters)
 {
-    return CSS::BasicShape { CSS::FunctionNotation<Name, T> { WTFMove(parameters) } };
+    return CSS::BasicShape { FunctionNotation<Name, T> { WTFMove(parameters) } };
 }
 
 template<CSSValueID Name, typename T> std::optional<CSS::BasicShape> toBasicShape(std::optional<T>&& parameters)
@@ -288,15 +288,15 @@ static std::optional<CSS::Ellipse> consumeBasicShapeEllipseFunctionParameters(CS
     // <radial-extent>  = closest-corner | closest-side | farthest-corner | farthest-side
     // Default to `closest-side closest-side` if no radial-size is provided.
 
-    auto consumeRadialSizePair = [&] -> std::optional<CSS::SpaceSeparatedPair<CSS::Ellipse::RadialSize>> {
+    auto consumeRadialSizePair = [&] -> std::optional<SpaceSeparatedPair<CSS::Ellipse::RadialSize>> {
         if (auto radiusX = consumeEllipseRadialSize(args, context)) {
             auto radiusY = consumeEllipseRadialSize(args, context);
             if (!radiusY)
                 return std::nullopt;
-            return CSS::SpaceSeparatedPair<CSS::Ellipse::RadialSize> { WTFMove(*radiusX), WTFMove(*radiusY) };
+            return SpaceSeparatedPair<CSS::Ellipse::RadialSize> { WTFMove(*radiusX), WTFMove(*radiusY) };
         }
 
-        return CSS::SpaceSeparatedPair<CSS::Ellipse::RadialSize> {
+        return SpaceSeparatedPair<CSS::Ellipse::RadialSize> {
             CSS::Ellipse::RadialSize { CSS::Ellipse::Extent { CSS::Keyword::ClosestSide { } } },
             CSS::Ellipse::RadialSize { CSS::Ellipse::Extent { CSS::Keyword::ClosestSide { } } }
         };
@@ -887,7 +887,7 @@ static std::optional<CSS::Rect::Edge> consumeBasicShapeRectEdge(CSSParserTokenRa
     return { };
 }
 
-static std::optional<RectEdges<CSS::Rect::Edge>> consumeBasicShapeRectEdges(CSSParserTokenRange& args, const CSSParserContext& context)
+static std::optional<SpaceSeparatedRectEdges<CSS::Rect::Edge>> consumeBasicShapeRectEdges(CSSParserTokenRange& args, const CSSParserContext& context)
 {
     // <rect-edges> = <rect-edge>{4}
 
@@ -903,7 +903,7 @@ static std::optional<RectEdges<CSS::Rect::Edge>> consumeBasicShapeRectEdges(CSSP
     auto left = consumeBasicShapeRectEdge(args, context);
     if (!left)
         return { };
-    return RectEdges<CSS::Rect::Edge> { WTFMove(*top), WTFMove(*right), WTFMove(*bottom), WTFMove(*left) };
+    return SpaceSeparatedRectEdges<CSS::Rect::Edge> { WTFMove(*top), WTFMove(*right), WTFMove(*bottom), WTFMove(*left) };
 }
 
 static std::optional<CSS::Rect> consumeBasicShapeRectFunctionParameters(CSSParserTokenRange& args, const CSSParserContext& context)

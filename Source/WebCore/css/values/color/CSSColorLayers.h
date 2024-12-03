@@ -41,7 +41,7 @@ struct ColorLayers {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
 
     BlendMode blendMode;
-    Vector<CSS::Color> colors;
+    CommaSeparatedVector<Color> colors;
 
     bool operator==(const ColorLayers&) const = default;
 };

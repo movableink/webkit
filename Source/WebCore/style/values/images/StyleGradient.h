@@ -70,8 +70,6 @@ template<typename C, typename P> struct GradientColorStop {
 };
 template<typename C, typename P> GradientColorStop(C color, P position) -> GradientColorStop<C, P>;
 
-template<typename C, typename P> inline constexpr bool TreatAsTupleLike<GradientColorStop<C, P>> = true;
-
 template<size_t I, typename C, typename P> const auto& get(const GradientColorStop<C, P>& stop)
 {
     if constexpr (!I)
@@ -125,7 +123,7 @@ template<size_t I> const auto& get(const LinearGradient& gradient)
         return gradient.stops;
 }
 
-DEFINE_CSS_STYLE_MAPPING(CSS::LinearGradient, LinearGradient)
+DEFINE_TYPE_MAPPING(CSS::LinearGradient, LinearGradient)
 
 // MARK: - PrefixedLinearGradient
 
@@ -149,7 +147,7 @@ template<size_t I> const auto& get(const PrefixedLinearGradient& gradient)
         return gradient.stops;
 }
 
-DEFINE_CSS_STYLE_MAPPING(CSS::PrefixedLinearGradient, PrefixedLinearGradient)
+DEFINE_TYPE_MAPPING(CSS::PrefixedLinearGradient, PrefixedLinearGradient)
 
 // MARK: - DeprecatedLinearGradient
 
@@ -173,7 +171,7 @@ template<size_t I> const auto& get(const DeprecatedLinearGradient& gradient)
         return gradient.stops;
 }
 
-DEFINE_CSS_STYLE_MAPPING(CSS::DeprecatedLinearGradient, DeprecatedLinearGradient)
+DEFINE_TYPE_MAPPING(CSS::DeprecatedLinearGradient, DeprecatedLinearGradient)
 
 // MARK: - RadialGradient
 
@@ -226,9 +224,9 @@ template<size_t I> const auto& get(const RadialGradient& gradient)
         return gradient.stops;
 }
 
-DEFINE_CSS_STYLE_MAPPING(CSS::RadialGradient::Ellipse, RadialGradient::Ellipse)
-DEFINE_CSS_STYLE_MAPPING(CSS::RadialGradient::Circle, RadialGradient::Circle)
-DEFINE_CSS_STYLE_MAPPING(CSS::RadialGradient, RadialGradient)
+DEFINE_TYPE_MAPPING(CSS::RadialGradient::Ellipse, RadialGradient::Ellipse)
+DEFINE_TYPE_MAPPING(CSS::RadialGradient::Circle, RadialGradient::Circle)
+DEFINE_TYPE_MAPPING(CSS::RadialGradient, RadialGradient)
 
 // MARK: - PrefixedRadialGradient
 
@@ -280,9 +278,9 @@ template<size_t I> const auto& get(const PrefixedRadialGradient& gradient)
         return gradient.stops;
 }
 
-DEFINE_CSS_STYLE_MAPPING(CSS::PrefixedRadialGradient::Ellipse, PrefixedRadialGradient::Ellipse)
-DEFINE_CSS_STYLE_MAPPING(CSS::PrefixedRadialGradient::Circle, PrefixedRadialGradient::Circle)
-DEFINE_CSS_STYLE_MAPPING(CSS::PrefixedRadialGradient, PrefixedRadialGradient)
+DEFINE_TYPE_MAPPING(CSS::PrefixedRadialGradient::Ellipse, PrefixedRadialGradient::Ellipse)
+DEFINE_TYPE_MAPPING(CSS::PrefixedRadialGradient::Circle, PrefixedRadialGradient::Circle)
+DEFINE_TYPE_MAPPING(CSS::PrefixedRadialGradient, PrefixedRadialGradient)
 
 // MARK: - DeprecatedRadialGradient
 
@@ -325,8 +323,8 @@ template<size_t I> const auto& get(const DeprecatedRadialGradient& gradient)
         return gradient.stops;
 }
 
-DEFINE_CSS_STYLE_MAPPING(CSS::DeprecatedRadialGradient::GradientBox, DeprecatedRadialGradient::GradientBox)
-DEFINE_CSS_STYLE_MAPPING(CSS::DeprecatedRadialGradient, DeprecatedRadialGradient)
+DEFINE_TYPE_MAPPING(CSS::DeprecatedRadialGradient::GradientBox, DeprecatedRadialGradient::GradientBox)
+DEFINE_TYPE_MAPPING(CSS::DeprecatedRadialGradient, DeprecatedRadialGradient)
 
 // MARK: - ConicGradient
 
@@ -363,8 +361,8 @@ template<size_t I> const auto& get(const ConicGradient& gradient)
         return gradient.stops;
 }
 
-DEFINE_CSS_STYLE_MAPPING(CSS::ConicGradient::GradientBox, ConicGradient::GradientBox)
-DEFINE_CSS_STYLE_MAPPING(CSS::ConicGradient, ConicGradient)
+DEFINE_TYPE_MAPPING(CSS::ConicGradient::GradientBox, ConicGradient::GradientBox)
+DEFINE_TYPE_MAPPING(CSS::ConicGradient, ConicGradient)
 
 // MARK: - Gradient (variant)
 
@@ -413,6 +411,8 @@ STYLE_TUPLE_LIKE_CONFORMANCE(DeprecatedRadialGradient::GradientBox, 4)
 STYLE_TUPLE_LIKE_CONFORMANCE(DeprecatedRadialGradient, 3)
 STYLE_TUPLE_LIKE_CONFORMANCE(ConicGradient::GradientBox, 2)
 STYLE_TUPLE_LIKE_CONFORMANCE(ConicGradient, 3)
+
+template<typename C, typename P> inline constexpr bool WebCore::TreatAsTupleLike<WebCore::Style::GradientColorStop<C, P>> = true;
 
 namespace std {
 

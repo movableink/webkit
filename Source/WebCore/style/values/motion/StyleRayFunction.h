@@ -61,7 +61,7 @@ template<size_t I> const auto& get(const Ray& value)
         return value.position;
 }
 
-DEFINE_CSS_STYLE_MAPPING(CSS::Ray, Ray)
+DEFINE_TYPE_MAPPING(CSS::Ray, Ray)
 
 } // namespace Style
 } // namespace WebCore

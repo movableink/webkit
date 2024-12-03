@@ -36,7 +36,7 @@ namespace CSS {
 struct Rect {
     using Edge = std::variant<LengthPercentage<>, Keyword::Auto>;
 
-    RectEdges<Edge> edges;
+    SpaceSeparatedRectEdges<Edge> edges;
     BorderRadius radii;
 
     bool operator==(const Rect&) const = default;

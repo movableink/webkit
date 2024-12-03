@@ -77,7 +77,6 @@ template<typename C, typename P> struct GradientColorStop {
 
     bool operator==(const GradientColorStop<C, P>&) const = default;
 };
-template<typename C, typename P> inline constexpr bool TreatAsTupleLike<GradientColorStop<C, P>> = true;
 
 template<size_t I, typename C, typename P> const auto& get(const GradientColorStop<C, P>& stop)
 {
@@ -407,6 +406,8 @@ CSS_TUPLE_LIKE_CONFORMANCE(DeprecatedRadialGradient::GradientBox, 4)
 CSS_TUPLE_LIKE_CONFORMANCE(DeprecatedRadialGradient, 3)
 CSS_TUPLE_LIKE_CONFORMANCE(ConicGradient::GradientBox, 2)
 CSS_TUPLE_LIKE_CONFORMANCE(ConicGradient, 3)
+
+template<typename C, typename P> inline constexpr bool WebCore::TreatAsTupleLike<WebCore::CSS::GradientColorStop<C, P>> = true;
 
 namespace std {
 

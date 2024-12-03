@@ -3085,48 +3085,55 @@ header: <WebCore/StylePrimitiveNumericTypes.h>
 using WebCore::Style::LengthPercentageNonnegative = WebCore::Style::LengthPercentage<WebCore::CSS::Nonnegative>;
 using WebCore::Style::LengthPercentageAll = WebCore::Style::LengthPercentage<WebCore::CSS::All>;
 
-[CustomHeader, Nested] struct WebCore::Style::SpaceSeparatedPair<WebCore::Style::LengthPercentageNonnegative> {
+[CustomHeader, Nested] struct WebCore::SpaceSeparatedPair<WebCore::Style::LengthPercentageNonnegative> {
     std::array<WebCore::Style::LengthPercentageNonnegative, 2> value;
 };
-[CustomHeader, Nested] struct WebCore::Style::SpaceSeparatedPair<WebCore::Style::LengthPercentageAll> {
+[CustomHeader, Nested] struct WebCore::SpaceSeparatedPair<WebCore::Style::LengthPercentageAll> {
     std::array<WebCore::Style::LengthPercentageAll, 2> value;
 };
-[CustomHeader, Nested] struct WebCore::Style::SpaceSeparatedPair<WebCore::Style::CoordinatePair> {
+[CustomHeader, Nested] struct WebCore::SpaceSeparatedPair<WebCore::Style::CoordinatePair> {
     std::array<WebCore::Style::CoordinatePair, 2> value;
 };
 
-[CustomHeader, Nested] struct WebCore::Style::Size<WebCore::Style::LengthPercentageNonnegative> {
-    WebCore::Style::SpaceSeparatedPair<WebCore::Style::LengthPercentageNonnegative> value;
+[CustomHeader, Nested] struct WebCore::SpaceSeparatedSize<WebCore::Style::LengthPercentageNonnegative> {
+    WebCore::SpaceSeparatedPair<WebCore::Style::LengthPercentageNonnegative> value;
 };
-[CustomHeader, Nested] struct WebCore::Style::Size<WebCore::Style::LengthPercentageAll> {
-    WebCore::Style::SpaceSeparatedPair<WebCore::Style::LengthPercentageAll> value;
-};
-
-[CustomHeader, Nested] struct WebCore::Style::Point<WebCore::Style::LengthPercentageNonnegative> {
-    WebCore::Style::SpaceSeparatedPair<WebCore::Style::LengthPercentageNonnegative> value;
-};
-[CustomHeader, Nested] struct WebCore::Style::Point<WebCore::Style::LengthPercentageAll> {
-    WebCore::Style::SpaceSeparatedPair<WebCore::Style::LengthPercentageAll> value;
+[CustomHeader, Nested] struct WebCore::SpaceSeparatedSize<WebCore::Style::LengthPercentageAll> {
+    WebCore::SpaceSeparatedPair<WebCore::Style::LengthPercentageAll> value;
 };
 
-using WebCore::Style::LengthPercentagePointAll = WebCore::Style::Point<WebCore::Style::LengthPercentageAll>;
-using WebCore::Style::LengthPercentagePointNonnegative = WebCore::Style::Point<WebCore::Style::LengthPercentageNonnegative>;
-
-[CustomHeader, Nested] struct WebCore::Style::CommaSeparatedVector<WebCore::Style::LengthPercentagePointAll> {
-    Vector<WebCore::Style::LengthPercentagePointAll> value;
+[CustomHeader, Nested] struct WebCore::SpaceSeparatedPoint<WebCore::Style::LengthPercentageNonnegative> {
+    WebCore::SpaceSeparatedPair<WebCore::Style::LengthPercentageNonnegative> value;
 };
-[CustomHeader, Nested] struct WebCore::Style::CommaSeparatedVector<WebCore::Style::LengthPercentagePointNonnegative> {
-    Vector<WebCore::Style::LengthPercentagePointNonnegative> value;
+[CustomHeader, Nested] struct WebCore::SpaceSeparatedPoint<WebCore::Style::LengthPercentageAll> {
+    WebCore::SpaceSeparatedPair<WebCore::Style::LengthPercentageAll> value;
+};
+
+using WebCore::Style::LengthPercentageSpaceSeparatedPointAll = WebCore::SpaceSeparatedPoint<WebCore::Style::LengthPercentageAll>;
+using WebCore::Style::LengthPercentageSpaceSeparatedPointNonnegative = WebCore::SpaceSeparatedPoint<WebCore::Style::LengthPercentageNonnegative>;
+
+[CustomHeader, Nested] struct WebCore::CommaSeparatedVector<WebCore::Style::LengthPercentageSpaceSeparatedPointAll> {
+    Vector<WebCore::Style::LengthPercentageSpaceSeparatedPointAll> value;
+};
+[CustomHeader, Nested] struct WebCore::CommaSeparatedVector<WebCore::Style::LengthPercentageSpaceSeparatedPointNonnegative> {
+    Vector<WebCore::Style::LengthPercentageSpaceSeparatedPointNonnegative> value;
+};
+
+[CustomHeader, Nested] struct WebCore::MinimallySerializingSpaceSeparatedRectEdges<WebCore::Style::LengthPercentageAll> {
+    WebCore::Style::LengthPercentageAll top();
+    WebCore::Style::LengthPercentageAll right();
+    WebCore::Style::LengthPercentageAll bottom();
+    WebCore::Style::LengthPercentageAll left();
 };
 
 using WebCore::Style::ShapeCommand = std::variant<WebCore::Style::MoveCommand, WebCore::Style::LineCommand, WebCore::Style::HLineCommand, WebCore::Style::VLineCommand, WebCore::Style::CurveCommand, WebCore::Style::SmoothCommand, WebCore::Style::ArcCommand, WebCore::Style::CloseCommand>;
-[CustomHeader, Nested] struct WebCore::Style::CommaSeparatedVector<WebCore::Style::ShapeCommand> {
+[CustomHeader, Nested] struct WebCore::CommaSeparatedVector<WebCore::Style::ShapeCommand> {
     Vector<WebCore::Style::ShapeCommand> value;
 };
 
 header: <WebCore/StylePosition.h>
 [CustomHeader, Nested] struct WebCore::Style::Position {
-    WebCore::Style::Point<WebCore::Style::LengthPercentageAll> value;
+    WebCore::SpaceSeparatedPoint<WebCore::Style::LengthPercentageAll> value;
 };
 [CustomHeader, Nested] struct WebCore::Style::TwoComponentPositionHorizontal {
     WebCore::Style::LengthPercentageAll offset;
@@ -3165,7 +3172,7 @@ header: <WebCore/StyleEllipseFunction.h>
 
 using WebCore::Style::Ellipse::Extent = std::variant<WebCore::CSS::Keyword::ClosestCorner, WebCore::CSS::Keyword::ClosestSide, WebCore::CSS::Keyword::FarthestCorner, WebCore::CSS::Keyword::FarthestSide>;
 using WebCore::Style::Ellipse::RadialSize = std::variant<WebCore::Style::LengthPercentage<WebCore::CSS::Nonnegative>, WebCore::Style::Ellipse::Extent>;
-[CustomHeader, Nested] struct WebCore::Style::SpaceSeparatedPair<WebCore::Style::Ellipse::RadialSize> {
+[CustomHeader, Nested] struct WebCore::SpaceSeparatedPair<WebCore::Style::Ellipse::RadialSize> {
     std::array<WebCore::Style::Ellipse::RadialSize, 2> value;
 };
 
@@ -3173,7 +3180,7 @@ using WebCore::Style::Ellipse::RadialSize = std::variant<WebCore::Style::LengthP
     WebCore::Style::Ellipse parameters;
 };
 [CustomHeader, Nested] struct WebCore::Style::Ellipse {
-    WebCore::Style::SpaceSeparatedPair<WebCore::Style::Ellipse::RadialSize> radii;
+    WebCore::SpaceSeparatedPair<WebCore::Style::Ellipse::RadialSize> radii;
     std::optional<WebCore::Style::Position> position;
 };
 
@@ -3182,7 +3189,7 @@ header: <WebCore/StyleInsetFunction.h>
     WebCore::Style::Inset parameters;
 };
 [CustomHeader, Nested] struct WebCore::Style::Inset {
-    WebCore::Style::MinimallySerializingRectEdges<WebCore::Style::LengthPercentageAll> insets;
+    WebCore::MinimallySerializingSpaceSeparatedRectEdges<WebCore::Style::LengthPercentageAll> insets;
     WebCore::Style::BorderRadius radii;
 };
 
@@ -3205,7 +3212,7 @@ header: <WebCore/StylePolygonFunction.h>
 };
 [CustomHeader, Nested] struct WebCore::Style::Polygon {
     std::optional<WebCore::Style::FillRule> fillRule;
-    WebCore::Style::CommaSeparatedVector<WebCore::Style::LengthPercentagePointAll> vertices;
+    WebCore::CommaSeparatedVector<WebCore::Style::LengthPercentageSpaceSeparatedPointAll> vertices;
 };
 
 header: <WebCore/StyleFillRule.h>
@@ -3218,7 +3225,7 @@ using WebCore::CSS::Keyword::Evenodd = WebCore::Constant<WebCore::CSSValueEvenod
 using WebCore::Style::FillRule = std::variant<WebCore::CSS::Keyword::Nonzero, WebCore::CSS::Keyword::Evenodd>;
 
 header: <WebCore/StyleShapeFunction.h>
-using WebCore::Style::CoordinatePair = WebCore::Style::Point<WebCore::Style::LengthPercentageAll>;
+using WebCore::Style::CoordinatePair = WebCore::SpaceSeparatedPoint<WebCore::Style::LengthPercentageAll>;
 using WebCore::Style::CommandAffinity = std::variant<WebCore::CSS::Keyword::By, WebCore::CSS::Keyword::To>;
 using WebCore::CSS::Keyword::By = WebCore::Constant<WebCore::CSSValueBy>;
 using WebCore::CSS::Keyword::To = WebCore::Constant<WebCore::CSSValueTo>;
@@ -3274,7 +3281,7 @@ using WebCore::Style::CloseCommand = WebCore::Constant<WebCore::CSSValueClose>;
 [CustomHeader, Nested] struct WebCore::Style::Shape {
     std::optional<WebCore::Style::FillRule> fillRule;
     WebCore::Style::Position startingPoint;
-    WebCore::Style::CommaSeparatedVector<WebCore::Style::ShapeCommand> commands;
+    WebCore::CommaSeparatedVector<WebCore::Style::ShapeCommand> commands;
 };
 [CustomHeader, Nested] struct WebCore::Style::MoveCommand {
     std::variant<WebCore::Style::ToPosition, WebCore::Style::ByCoordinatePair> toBy;
@@ -3326,34 +3333,22 @@ using WebCore::Style::CloseCommand = WebCore::Constant<WebCore::CSSValueClose>;
 };
 [CustomHeader, Nested] struct WebCore::Style::ArcCommand {
     std::variant<WebCore::Style::ToPosition, WebCore::Style::ByCoordinatePair> toBy;
-    WebCore::Style::LengthPercentageSizeAll size;
+    WebCore::Style::LengthPercentageSpaceSeparatedSizeAll size;
     std::variant<WebCore::CSS::Keyword::Cw, WebCore::CSS::Keyword::Ccw> arcSweep;
     std::variant<WebCore::CSS::Keyword::Large, WebCore::CSS::Keyword::Small> arcSize;
     WebCore::Style::Angle<WebCore::CSS::All> rotation;
 };
-using WebCore::Style::LengthPercentageSizeAll = WebCore::Style::Size<WebCore::Style::LengthPercentageAll>
+using WebCore::Style::LengthPercentageSpaceSeparatedSizeAll = WebCore::SpaceSeparatedSize<WebCore::Style::LengthPercentageAll>
 
 header: <WebCore/StyleBorderRadius.h>
 [CustomHeader, Nested] struct WebCore::Style::BorderRadius {
-    WebCore::Style::Size<WebCore::Style::LengthPercentageNonnegative> topLeft;
-    WebCore::Style::Size<WebCore::Style::LengthPercentageNonnegative> topRight;
-    WebCore::Style::Size<WebCore::Style::LengthPercentageNonnegative> bottomRight;
-    WebCore::Style::Size<WebCore::Style::LengthPercentageNonnegative> bottomLeft;
+    WebCore::SpaceSeparatedSize<WebCore::Style::LengthPercentageNonnegative> topLeft;
+    WebCore::SpaceSeparatedSize<WebCore::Style::LengthPercentageNonnegative> topRight;
+    WebCore::SpaceSeparatedSize<WebCore::Style::LengthPercentageNonnegative> bottomRight;
+    WebCore::SpaceSeparatedSize<WebCore::Style::LengthPercentageNonnegative> bottomLeft;
 };
-
-header: <WebCore/StyleMinimallySerializingRectEdges.h>
-[CustomHeader, Nested] struct WebCore::Style::MinimallySerializingRectEdges<WebCore::Style::LengthPercentageAll> {
-    WebCore::RectEdges<WebCore::Style::LengthPercentageAll> value;
-};
-[CustomHeader, Nested] class WebCore::RectEdges<WebCore::Style::LengthPercentageAll> {
-    WebCore::Style::LengthPercentageAll top();
-    WebCore::Style::LengthPercentageAll right();
-    WebCore::Style::LengthPercentageAll bottom();
-    WebCore::Style::LengthPercentageAll left();
-}
 
 header: <WebCore/StyleRayFunction.h>
-
 using WebCore::CSS::Keyword::Sides = WebCore::Constant<WebCore::CSSValueSides>;
 [CustomHeader, Nested] struct WebCore::Constant<WebCore::CSSValueSides> {
 };

@@ -34,14 +34,14 @@ struct TwoComponentPositionHorizontal {
 
     bool operator==(const TwoComponentPositionHorizontal&) const = default;
 };
-DEFINE_CSS_TYPE_WRAPPER(TwoComponentPositionHorizontal, offset);
+DEFINE_TYPE_WRAPPER(TwoComponentPositionHorizontal, offset);
 
 struct TwoComponentPositionVertical {
     std::variant<Keyword::Top, Keyword::Bottom, Keyword::Center, LengthPercentage<>> offset;
 
     bool operator==(const TwoComponentPositionVertical&) const = default;
 };
-DEFINE_CSS_TYPE_WRAPPER(TwoComponentPositionVertical, offset);
+DEFINE_TYPE_WRAPPER(TwoComponentPositionVertical, offset);
 
 using TwoComponentPosition              = SpaceSeparatedTuple<TwoComponentPositionHorizontal, TwoComponentPositionVertical>;
 
@@ -79,7 +79,7 @@ struct Position {
 
     std::variant<TwoComponentPosition, FourComponentPosition> value;
 };
-DEFINE_CSS_TYPE_WRAPPER(Position, value);
+DEFINE_TYPE_WRAPPER(Position, value);
 
 bool isCenterPosition(const Position&);
 
@@ -101,3 +101,7 @@ template<class... F> ALWAYS_INLINE auto switchOn(WebCore::CSS::Position&& positi
 }
 
 } // namespace WTF
+
+CSS_TUPLE_LIKE_CONFORMANCE(TwoComponentPositionHorizontal, 1)
+CSS_TUPLE_LIKE_CONFORMANCE(TwoComponentPositionVertical, 1)
+CSS_TUPLE_LIKE_CONFORMANCE(Position, 1)

@@ -42,9 +42,9 @@ Color toStyleColor(const CSS::ColorLayers& unresolved, ColorResolutionState& sta
 {
     ColorResolutionStateNester nester { state };
 
-    auto colors = unresolved.colors.map([&](auto& color) -> Color {
+    auto colors = CommaSeparatedVector<Color> { unresolved.colors.map([&](auto& color) -> Color {
         return toStyleColor(color, state);
-    });
+    }) };
 
     if (std::ranges::any_of(colors, [](auto& color) { return color.isResolvedColor(); })) {
         // If the any of the layer's colors are not resolved, we cannot fully resolve the
@@ -86,7 +86,7 @@ WebCore::Color resolveColor(const ColorLayers& colorLayers, const WebCore::Color
 
 bool containsCurrentColor(const ColorLayers& colorLayers)
 {
-    return colorLayers.colors.containsIf([&](auto& color) {
+    return std::ranges::any_of(colorLayers.colors, [&](auto& color) {
         return WebCore::Style::containsCurrentColor(color);
     });
 }

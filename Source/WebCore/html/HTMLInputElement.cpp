@@ -2340,7 +2340,7 @@ ExceptionOr<void> HTMLInputElement::setSelectionRangeForBindings(unsigned start,
 static Ref<StyleGradientImage> autoFillStrongPasswordMaskImage()
 {
     return StyleGradientImage::create(
-        Style::FunctionNotation<CSSValueLinearGradient, Style::LinearGradient> {
+        FunctionNotation<CSSValueLinearGradient, Style::LinearGradient> {
             .parameters = {
                 .colorInterpolationMethod = Style::GradientColorInterpolationMethod::legacyMethod(AlphaPremultiplication::Unpremultiplied),
                 .gradientLine = { Style::Angle<> { 90 } },

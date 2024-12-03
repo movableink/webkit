@@ -943,8 +943,10 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     css/typedom/numeric/CSSNumericBaseType.h
     css/typedom/numeric/CSSNumericType.h
 
+    css/values/CSSValueAggregates.h
+    css/values/CSSValueTypes.h
+
     css/values/backgrounds/CSSBorderRadius.h
-    css/values/backgrounds/CSSMinimallySerializingRectEdges.h
 
     css/values/color/CSSColor.h
     css/values/color/CSSColorDescriptors.h
@@ -977,8 +979,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     css/values/shapes/CSSRectFunction.h
     css/values/shapes/CSSShapeFunction.h
     css/values/shapes/CSSXywhFunction.h
-
-    css/values/CSSValueTypes.h
 
     cssjit/CompiledSelector.h
 
@@ -2608,7 +2608,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     style/Styleable.h
 
     style/values/backgrounds/StyleBorderRadius.h
-    style/values/backgrounds/StyleMinimallySerializingRectEdges.h
 
     style/values/color/StyleColor.h
     style/values/color/StyleColorOptions.h

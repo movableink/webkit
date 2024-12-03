@@ -58,7 +58,7 @@ template<size_t I> const auto& get(const ColorScheme& colorScheme)
         return colorScheme.only;
 }
 
-DEFINE_CSS_STYLE_MAPPING(CSS::ColorScheme, ColorScheme)
+DEFINE_TYPE_MAPPING(CSS::ColorScheme, ColorScheme)
 
 TextStream& operator<<(TextStream&, const ColorScheme&);
 
