@@ -29,7 +29,7 @@
 
 #include "Connection.h"
 #include "MessageReceiverMap.h"
-#include <wtf/AbstractRefCounted.h>
+#include <wtf/AbstractThreadSafeRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
@@ -68,11 +68,9 @@ public:
 
     void configureLoggingChannel(const String&, WTFLogChannelState, WTFLogLevel);
 
-    class Client : public AbstractRefCounted {
+    class Client : public AbstractThreadSafeRefCountedAndCanMakeWeakPtr {
     public:
         virtual ~Client() = default;
-
-        virtual ThreadSafeWeakPtrControlBlock& controlBlock() const = 0;
 
         virtual void modelProcessConnectionDidClose(ModelProcessConnection&) { }
     };
