@@ -29,6 +29,10 @@
 #include <wtf/Forward.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 
+namespace WTF {
+class TextStream;
+}
+
 namespace WebCore {
 
 class FontCache;
@@ -66,5 +70,7 @@ public:
     virtual unsigned uniqueId() const = 0;
     virtual unsigned version() const = 0;
 };
+
+WTF::TextStream& operator<<(WTF::TextStream&, const FontSelector&);
 
 }

@@ -38,6 +38,10 @@
 #include "WebCoreThread.h"
 #endif
 
+namespace WTF {
+class TextStream;
+}
+
 namespace WebCore {
 
 class FontPlatformData;
@@ -67,6 +71,8 @@ public:
     bool isLoadingCustomFonts() const;
 
     FontSelector* fontSelector() { return m_fontSelector.get(); }
+    const FontSelector* fontSelector() const { return m_fontSelector.get(); }
+
     // FIXME: It should be possible to combine fontSelectorVersion and generation.
     unsigned fontSelectorVersion() const { return m_fontSelectorVersion; }
     unsigned generation() const { return m_generation; }
@@ -169,6 +175,8 @@ inline const Font& FontCascadeFonts::primaryFont(const FontCascadeDescription& d
     return *m_cachedPrimaryFont;
 }
 
-}
+WTF::TextStream& operator<<(WTF::TextStream&, const FontCascadeFonts&);
+
+} // namespace WebCore
 
 #endif
