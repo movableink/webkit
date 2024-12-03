@@ -57,6 +57,13 @@ PASS block-step-insert: "content-box" onto "margin-box"
 PASS block-step-insert: "margin-box" onto "content-box"
 PASS block-step-insert: "content-box" onto "padding-box"
 PASS block-step-insert: "padding-box" onto "content-box"
+PASS block-step-round (type: discrete) has testAddition function
+PASS block-step-round: "down" onto "up"
+PASS block-step-round: "up" onto "down"
+PASS block-step-round: "nearest" onto "down"
+PASS block-step-round: "down" onto "nearest"
+PASS block-step-round: "up" onto "nearest"
+PASS block-step-round: "nearest" onto "up"
 PASS block-step-size (type: length) has testAddition function
 PASS block-step-size: length
 PASS block-step-size: length of rem

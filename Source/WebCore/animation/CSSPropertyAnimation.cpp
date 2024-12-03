@@ -3941,6 +3941,7 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
 
         new DiscretePropertyWrapper<BlockStepAlign>(CSSPropertyBlockStepAlign, &RenderStyle::blockStepAlign, &RenderStyle::setBlockStepAlign),
         new DiscretePropertyWrapper<BlockStepInsert>(CSSPropertyBlockStepInsert, &RenderStyle::blockStepInsert, &RenderStyle::setBlockStepInsert),
+        new DiscretePropertyWrapper<BlockStepRound>(CSSPropertyBlockStepRound, &RenderStyle::blockStepRound, &RenderStyle::setBlockStepRound),
         new OptionalLengthPropertyWrapper(CSSPropertyBlockStepSize, &RenderStyle::blockStepSize, &RenderStyle::setBlockStepSize, { OptionalLengthPropertyWrapper::Flags::NegativeLengthsAreInvalid }),
 
         new ContainIntrinsicLengthPropertyWrapper(CSSPropertyContainIntrinsicWidth, &RenderStyle::containIntrinsicWidth, &RenderStyle::setContainIntrinsicWidth, &RenderStyle::containIntrinsicWidthType, &RenderStyle::setContainIntrinsicWidthType),

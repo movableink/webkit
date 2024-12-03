@@ -1210,6 +1210,12 @@ enum class BlockStepInsert : uint8_t {
     ContentBox
 };
 
+enum class BlockStepRound : uint8_t {
+    Up,
+    Down,
+    Nearest
+};
+
 enum class FieldSizing : bool {
     Fixed,
     Content
@@ -1226,6 +1232,7 @@ WTF::TextStream& operator<<(WTF::TextStream&, AutoRepeatType);
 WTF::TextStream& operator<<(WTF::TextStream&, BackfaceVisibility);
 WTF::TextStream& operator<<(WTF::TextStream&, BlockStepAlign);
 WTF::TextStream& operator<<(WTF::TextStream&, BlockStepInsert);
+WTF::TextStream& operator<<(WTF::TextStream&, BlockStepRound);
 WTF::TextStream& operator<<(WTF::TextStream&, BorderCollapse);
 WTF::TextStream& operator<<(WTF::TextStream&, BorderStyle);
 WTF::TextStream& operator<<(WTF::TextStream&, BoxAlignment);

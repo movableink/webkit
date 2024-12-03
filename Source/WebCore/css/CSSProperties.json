@@ -301,6 +301,22 @@
             },
             "status": "in development"
         },
+        "block-step-round": {
+            "values": [
+                "up",
+                "down",
+                "nearest"
+            ],
+            "codegen-properties": {
+                "settings-flag": "cssRhythmicSizingEnabled",
+                "parser-grammar": "<<values>>"
+            },
+            "specification": {
+                "category": "css-rhythm",
+                "url": "https://drafts.csswg.org/css-rhythm/#block-step-round"
+            },
+            "status": "in development"
+        },
         "block-step-size": {
             "codegen-properties": {
                 "settings-flag": "cssRhythmicSizingEnabled",

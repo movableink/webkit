@@ -103,6 +103,7 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , blockStepSize(RenderStyle::initialBlockStepSize())
     , blockStepAlign(static_cast<unsigned>(RenderStyle::initialBlockStepAlign()))
     , blockStepInsert(static_cast<unsigned>(RenderStyle::initialBlockStepInsert()))
+    , blockStepRound(static_cast<unsigned>(RenderStyle::initialBlockStepRound()))
     , overscrollBehaviorX(static_cast<unsigned>(RenderStyle::initialOverscrollBehaviorX()))
     , overscrollBehaviorY(static_cast<unsigned>(RenderStyle::initialOverscrollBehaviorY()))
     , pageSizeType(static_cast<unsigned>(PageSizeType::Auto))
@@ -201,6 +202,7 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , blockStepSize(o.blockStepSize)
     , blockStepAlign(o.blockStepAlign)
     , blockStepInsert(o.blockStepInsert)
+    , blockStepRound(o.blockStepRound)
     , overscrollBehaviorX(o.overscrollBehaviorX)
     , overscrollBehaviorY(o.overscrollBehaviorY)
     , pageSizeType(o.pageSizeType)
@@ -304,6 +306,7 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && blockStepSize == o.blockStepSize
         && blockStepAlign == o.blockStepAlign
         && blockStepInsert == o.blockStepInsert
+        && blockStepRound == o.blockStepRound
         && overscrollBehaviorX == o.overscrollBehaviorX
         && overscrollBehaviorY == o.overscrollBehaviorY
         && pageSizeType == o.pageSizeType
@@ -456,6 +459,7 @@ void StyleRareNonInheritedData::dumpDifferences(TextStream& ts, const StyleRareN
 
     LOG_IF_DIFFERENT_WITH_CAST(BlockStepAlign, blockStepAlign);
     LOG_IF_DIFFERENT_WITH_CAST(BlockStepInsert, blockStepInsert);
+    LOG_IF_DIFFERENT_WITH_CAST(BlockStepRound, blockStepRound);
 
     LOG_IF_DIFFERENT_WITH_CAST(OverscrollBehavior, overscrollBehaviorX);
     LOG_IF_DIFFERENT_WITH_CAST(OverscrollBehavior, overscrollBehaviorY);

@@ -186,6 +186,12 @@ DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
 #undef TYPE
 #undef FOR_EACH
 
+#define TYPE BlockStepRound
+#define FOR_EACH(CASE) CASE(Up) CASE(Down) CASE(Nearest)
+DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
+#undef TYPE
+#undef FOR_EACH
+
 
 constexpr CSSValueID toCSSValueID(BorderStyle e)
 {

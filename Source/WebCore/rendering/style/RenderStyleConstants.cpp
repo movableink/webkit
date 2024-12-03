@@ -128,6 +128,16 @@ TextStream& operator<<(TextStream& ts, BlockStepInsert blockStepInsert)
     return ts;
 }
 
+TextStream& operator<<(TextStream& ts, BlockStepRound blockStepRound)
+{
+    switch (blockStepRound) {
+    case BlockStepRound::Up: ts << "up"; break;
+    case BlockStepRound::Down: ts << "down"; break;
+    case BlockStepRound::Nearest: ts << "nearest"; break;
+    }
+    return ts;
+}
+
 TextStream& operator<<(TextStream& ts, BorderCollapse collapse)
 {
     switch (collapse) {
