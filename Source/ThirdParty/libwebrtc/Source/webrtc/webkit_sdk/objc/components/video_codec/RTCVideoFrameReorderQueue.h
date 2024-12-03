@@ -63,7 +63,7 @@ public:
     uint8_t reorderSize() const;
     void setReorderSize(uint8_t);
     void append(RTCVideoFrame*, uint8_t);
-    RTCVideoFrame *takeIfAvailable(bool& moreFramesAvailable);
+    RTCVideoFrame *takeIfAvailable();
     RTCVideoFrame *takeIfAny();
 
 private:

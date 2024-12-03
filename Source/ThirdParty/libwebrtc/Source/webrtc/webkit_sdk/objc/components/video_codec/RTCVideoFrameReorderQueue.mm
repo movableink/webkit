@@ -39,14 +39,12 @@ void RTCVideoFrameReorderQueue::append(RTCVideoFrame* frame, uint8_t reorderSize
     });
 }
 
-RTCVideoFrame* RTCVideoFrameReorderQueue::takeIfAvailable(bool& moreFramesAvailable)
+RTCVideoFrame* RTCVideoFrameReorderQueue::takeIfAvailable()
 {
     webrtc::MutexLock lock(&_reorderQueueLock);
-    auto areFramesAvailable = [&] -> bool { return _reorderQueue.size() && _reorderQueue.size() > _reorderQueue.front()->reorderSize; };
-    if (areFramesAvailable()) {
+    if (_reorderQueue.size() && _reorderQueue.size() > _reorderQueue.front()->reorderSize) {
         auto *frame = _reorderQueue.front()->take();
         _reorderQueue.pop_front();
-        moreFramesAvailable = areFramesAvailable();
         return frame;
     }
     return nil;

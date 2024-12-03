@@ -500,14 +500,10 @@ CMSampleBufferRef H265BufferToCMSampleBuffer(const uint8_t* buffer, size_t buffe
   bool hasCalledCallback = false;
   if (!_reorderQueue.isEmpty() || reorderSize) {
     _reorderQueue.append(decodedFrame, reorderSize);
-
-    bool moreFramesAvailable;
-    while (auto *frame = _reorderQueue.takeIfAvailable(moreFramesAvailable)) {
+    while (auto *frame = _reorderQueue.takeIfAvailable()) {
       hasCalledCallback = true;
-      _callback(frame, moreFramesAvailable);
+      _callback(frame, frame != decodedFrame);
     }
-    RTC_DCHECK(!moreFramesAvailable);
-
     if (!hasCalledCallback) {
       _callback(nil, true);
     }
