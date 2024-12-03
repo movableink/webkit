@@ -432,6 +432,7 @@ UniqueRef<LineContent> LineBuilder::placeInlineAndFloatContent(const InlineItemR
     if (!layoutPreviouslySuspendedFloats()) {
         // Couldn't even manage to place all suspended floats from previous line(s). -which also means we can't fit any inline content at this vertical position.
         lineContent->range = { needsLayoutRange.start, needsLayoutRange.start };
+        m_candidateContentMaximumHeight = m_lineLogicalRect.height();
         return lineContent;
     }
 
