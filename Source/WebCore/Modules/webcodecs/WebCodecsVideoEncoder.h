@@ -108,8 +108,7 @@ private:
     Ref<WebCodecsErrorCallback> m_error;
     RefPtr<VideoEncoder> m_internalEncoder;
     bool m_dequeueEventScheduled { false };
-    Deque<Ref<DeferredPromise>> m_pendingFlushPromises;
-    size_t m_clearFlushPromiseCount { 0 };
+    Vector<Ref<DeferredPromise>> m_pendingFlushPromises;
     bool m_isKeyChunkRequired { false };
     Deque<WebCodecsControlMessage<WebCodecsVideoEncoder>> m_controlMessageQueue;
     bool m_isMessageQueueBlocked { false };

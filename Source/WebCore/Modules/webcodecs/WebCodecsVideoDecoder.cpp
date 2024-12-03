@@ -230,18 +230,13 @@ ExceptionOr<void> WebCodecsVideoDecoder::flush(Ref<DeferredPromise>&& promise)
         return Exception { ExceptionCode::InvalidStateError, "VideoDecoder is not configured"_s };
 
     m_isKeyChunkRequired = true;
-    m_pendingFlushPromises.append(WTFMove(promise));
-    queueControlMessageAndProcess({ *this, [this, clearFlushPromiseCount = m_clearFlushPromiseCount] {
+    m_pendingFlushPromises.append(promise);
+    queueControlMessageAndProcess({ *this, [this, promise = WTFMove(promise)]() mutable {
         Ref internalDecoder = *m_internalDecoder;
-        protectedScriptExecutionContext()->enqueueTaskWhenSettled(internalDecoder->flush(), TaskSource::MediaElement, [weakThis = ThreadSafeWeakPtr { *this }, clearFlushPromiseCount, pendingActivity = makePendingActivity(*this)] (auto&&) {
-            RefPtr protectedThis = weakThis.get();
-            if (!protectedThis)
-                return;
-
-            if (clearFlushPromiseCount != protectedThis->m_clearFlushPromiseCount)
-                return;
-
-            protectedThis->m_pendingFlushPromises.takeFirst()->resolve();
+        protectedScriptExecutionContext()->enqueueTaskWhenSettled(internalDecoder->flush(), TaskSource::MediaElement, [weakThis = ThreadSafeWeakPtr { *this }, pendingActivity = makePendingActivity(*this), promise = WTFMove(promise)] (auto&&) {
+            promise->resolve();
+            if (RefPtr protectedThis = weakThis.get())
+                protectedThis->m_pendingFlushPromises.removeFirstMatching([&](auto& flushPromise) { return promise.ptr() == flushPromise.ptr(); });
         });
     } });
     return { };
@@ -301,10 +296,10 @@ ExceptionOr<void> WebCodecsVideoDecoder::resetDecoder(const Exception& exception
         m_decodeQueueSize = 0;
         scheduleDequeueEvent();
     }
-    ++m_clearFlushPromiseCount;
 
-    while (!m_pendingFlushPromises.isEmpty())
-        m_pendingFlushPromises.takeFirst()->reject(exception);
+    auto promises = std::exchange(m_pendingFlushPromises, { });
+    for (auto& promise : promises)
+        promise->reject(exception);
 
     return { };
 }

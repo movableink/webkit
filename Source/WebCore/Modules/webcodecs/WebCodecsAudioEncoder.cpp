@@ -296,14 +296,12 @@ void WebCodecsAudioEncoder::flush(Ref<DeferredPromise>&& promise)
         return;
     }
 
-    m_pendingFlushPromises.append(WTFMove(promise));
-    queueControlMessageAndProcess({ *this, [this, clearFlushPromiseCount = m_clearFlushPromiseCount]() mutable {
-        protectedScriptExecutionContext()->enqueueTaskWhenSettled(Ref { *m_internalEncoder }->flush(), TaskSource::MediaElement, [weakThis = ThreadSafeWeakPtr { *this }, clearFlushPromiseCount, pendingActivity = makePendingActivity(*this)] (auto&&) {
-            RefPtr protectedThis = weakThis.get();
-            if (!protectedThis || clearFlushPromiseCount != protectedThis->m_clearFlushPromiseCount)
-                return;
-
-            protectedThis->m_pendingFlushPromises.takeFirst()->resolve();
+    m_pendingFlushPromises.append(promise);
+    queueControlMessageAndProcess({ *this, [this, promise = WTFMove(promise)]() mutable {
+        protectedScriptExecutionContext()->enqueueTaskWhenSettled(Ref { *m_internalEncoder }->flush(), TaskSource::MediaElement, [weakThis = ThreadSafeWeakPtr { *this }, pendingActivity = makePendingActivity(*this), promise = WTFMove(promise)] (auto&&) {
+            promise->resolve();
+            if (RefPtr protectedThis = weakThis.get())
+                protectedThis->m_pendingFlushPromises.removeFirstMatching([&](auto& flushPromise) { return promise.ptr() == flushPromise.ptr(); });
         });
     } });
 }
@@ -368,9 +366,10 @@ ExceptionOr<void> WebCodecsAudioEncoder::resetEncoder(const Exception& exception
         m_encodeQueueSize = 0;
         scheduleDequeueEvent();
     }
-    ++m_clearFlushPromiseCount;
-    while (!m_pendingFlushPromises.isEmpty())
-        m_pendingFlushPromises.takeFirst()->reject(exception);
+
+    auto promises = std::exchange(m_pendingFlushPromises, { });
+    for (auto& promise : promises)
+        promise->reject(exception);
 
     return { };
 }
