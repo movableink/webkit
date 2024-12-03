@@ -262,7 +262,7 @@ void BuilderState::updateFontForOrientationChange()
 void BuilderState::setFontSize(FontCascadeDescription& fontDescription, float size)
 {
     fontDescription.setSpecifiedSize(size);
-    fontDescription.setComputedSize(Style::computedFontSizeFromSpecifiedSize(size, fontDescription.isAbsoluteSize(), false, &style(), document()));
+    fontDescription.setComputedSize(Style::computedFontSizeFromSpecifiedSize(size, fontDescription.isAbsoluteSize(), useSVGZoomRules(), &style(), document()));
 }
 
 CSSPropertyID BuilderState::cssPropertyID() const
