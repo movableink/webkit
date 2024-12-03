@@ -333,7 +333,7 @@ struct FrameData {
 
     struct InputSource {
         InputSourceHandle handle { 0 };
-        XRHandedness handeness { XRHandedness::None };
+        XRHandedness handedness { XRHandedness::None };
         XRTargetRayMode targetRayMode { XRTargetRayMode::Gaze };
         Vector<String> profiles;
         InputSourcePose pointerOrigin;
