@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "CSSKeywordValue.h"
 #include "CSSNumericValue.h"
 #include "CSSTransformComponent.h"
 
@@ -32,7 +33,6 @@ namespace WebCore {
 
 template<typename> class ExceptionOr;
 class CSSFunctionValue;
-class CSSKeywordValue;
 using CSSPerspectiveValue = std::variant<RefPtr<CSSNumericValue>, String, RefPtr<CSSKeywordValue>>;
 
 class CSSPerspective : public CSSTransformComponent {
