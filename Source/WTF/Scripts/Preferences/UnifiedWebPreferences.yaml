@@ -7658,6 +7658,7 @@ UseAVCaptureDeviceRotationCoordinatorAPI:
   defaultValue:
     WebKit:
       default: true
+  sharedPreferenceForWebProcess: true
 
 UseAsyncUIKitInteractions:
   type: bool
