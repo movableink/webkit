@@ -11779,6 +11779,7 @@ static BOOL applicationIsKnownToIgnoreMouseEvents(const char* &warningVersion)
 
     if ([self _currentPositionInformationIsValidForRequest:interactionInformationRequest]) {
         _lastPointerRegion = [self pointerRegionForPositionInformation:_positionInformation point:request.location];
+        [_webView _setPointerTouchCompatibilitySimulatorEnabled:_positionInformation.needsPointerTouchCompatibilityQuirk];
         _pointerInteractionRegionNeedsUpdate = NO;
         return;
     }
@@ -11805,6 +11806,7 @@ static BOOL applicationIsKnownToIgnoreMouseEvents(const char* &warningVersion)
 
         strongSelf->_pointerInteractionRegionNeedsUpdate = NO;
         strongSelf->_lastPointerRegion = [strongSelf pointerRegionForPositionInformation:information point:location];
+        [strongSelf->_webView _setPointerTouchCompatibilitySimulatorEnabled:information.needsPointerTouchCompatibilityQuirk];
         [strongSelf->_pointerInteraction invalidate];
     } forRequest:interactionInformationRequest];
 }

@@ -226,6 +226,7 @@ public:
 #if PLATFORM(IOS_FAMILY)
     WEBCORE_EXPORT bool shouldIgnoreContentObservationForClick(const Node&) const;
     WEBCORE_EXPORT bool shouldSynthesizeTouchEventsAfterNonSyntheticClick(const Element&) const;
+    WEBCORE_EXPORT bool needsPointerTouchCompatibility(const Element&) const;
 #endif
 
     bool needsMozillaFileTypeForDataTransfer() const;

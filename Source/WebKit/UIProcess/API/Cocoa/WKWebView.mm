@@ -452,8 +452,7 @@ static uint32_t convertSystemLayoutDirection(NSUserInterfaceLayoutDirection dire
 #endif
 
 #if PLATFORM(IOS_FAMILY)
-    if (WebKit::PointerTouchCompatibilitySimulator::requiresPointerTouchCompatibility())
-        _pointerTouchCompatibilitySimulator = WTF::makeUnique<WebKit::PointerTouchCompatibilitySimulator>(self);
+    _pointerTouchCompatibilitySimulator = WTF::makeUnique<WebKit::PointerTouchCompatibilitySimulator>(self);
 #endif
 }
 

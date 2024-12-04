@@ -2189,8 +2189,8 @@ static WebCore::FloatPoint constrainContentOffset(WebCore::FloatPoint contentOff
 
 - (void)scrollView:(WKBaseScrollView *)scrollView handleScrollUpdate:(WKBEScrollViewScrollUpdate *)update completion:(void (^)(BOOL handled))completion
 {
-    if (_pointerTouchCompatibilitySimulator)
-        _pointerTouchCompatibilitySimulator->handleScrollUpdate(scrollView, update);
+    if (_pointerTouchCompatibilitySimulator->handleScrollUpdate(scrollView, update))
+        return completion(YES);
 
     BOOL isHandledByDefault = !scrollView.scrollEnabled;
 
@@ -3816,7 +3816,22 @@ static bool isLockdownModeWarningNeeded()
     [self _scheduleVisibleContentRectUpdate];
 }
 
+- (void)_setPointerTouchCompatibilitySimulatorEnabled:(BOOL)enabled
+{
+    _pointerTouchCompatibilitySimulator->setEnabled(enabled);
+}
+
+- (BOOL)_isSimulatingCompatibilityPointerTouches
+{
+    return _pointerTouchCompatibilitySimulator->isSimulatingTouches();
+}
+
 #pragma mark - WKBaseScrollViewDelegate
+
+- (BOOL)shouldAllowPanGestureRecognizerToReceiveTouchesInScrollView:(WKBaseScrollView *)scrollView
+{
+    return !self._isSimulatingCompatibilityPointerTouches;
+}
 
 - (UIAxis)axesToPreventScrollingForPanGestureInScrollView:(WKBaseScrollView *)scrollView
 {

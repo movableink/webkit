@@ -39,6 +39,7 @@
 #include "ElementTargetingTypes.h"
 #include "EventNames.h"
 #include "FrameLoader.h"
+#include "HTMLArticleElement.h"
 #include "HTMLBodyElement.h"
 #include "HTMLCollection.h"
 #include "HTMLDivElement.h"
@@ -65,6 +66,7 @@
 #include "Settings.h"
 #include "SpaceSplitString.h"
 #include "TrustedFonts.h"
+#include "TypedElementDescendantIteratorInlines.h"
 #include "UserAgent.h"
 #include "UserContentTypes.h"
 #include "UserScript.h"
@@ -2184,6 +2186,37 @@ bool Quirks::shouldAvoidStartingSelectionOnMouseDown(const Node& target) const
 #endif
     return false;
 }
+
+#if PLATFORM(IOS_FAMILY)
+
+bool Quirks::needsPointerTouchCompatibility(const Element& target) const
+{
+    if (!needsQuirks())
+        return false;
+
+    if (WTF::IOSApplication::isFeedly()) {
+        RefPtr pageContainer = [&target] -> const HTMLElement* {
+            for (Ref ancestor : lineageOfType<HTMLElement>(target)) {
+                if (ancestor->hasClassName("PageContainer"_s))
+                    return ancestor.ptr();
+            }
+            return nullptr;
+        }();
+        if (pageContainer) {
+            if (RefPtr article = descendantsOfType<HTMLArticleElement>(*pageContainer).first())
+                return article->hasClassName("MobileFullEntry"_s);
+        }
+    } else if (WTF::IOSApplication::isAmazon()) {
+        for (Ref ancestor : lineageOfType<HTMLElement>(target)) {
+            if (ancestor->hasClassName("a-gesture-horizontal"_s))
+                return true;
+        }
+    }
+
+    return false;
+}
+
+#endif
 
 #if PLATFORM(IOS)
 // forbes.com rdar://117093458
