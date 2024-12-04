@@ -1805,7 +1805,7 @@ void Heap::stopThePeriphery(GCConductor conn)
     
     m_mutatorDidRun = false;
 
-    suspendCompilerThreads();
+    m_isCompilerThreadsSuspended = suspendCompilerThreads();
     m_worldIsStopped = true;
 
     forEachSlotVisitor(
@@ -1874,8 +1874,9 @@ NEVER_INLINE void Heap::resumeThePeriphery()
     
     for (SlotVisitor* visitor : visitorsToUpdate)
         visitor->updateMutatorIsStopped();
-    
-    resumeCompilerThreads();
+
+    if (std::exchange(m_isCompilerThreadsSuspended, false))
+        resumeCompilerThreads();
 }
 
 bool Heap::stopTheMutator()
@@ -2293,15 +2294,20 @@ void Heap::sweepInFinalize()
 #endif
 }
 
-void Heap::suspendCompilerThreads()
+bool Heap::suspendCompilerThreads()
 {
 #if ENABLE(JIT)
     // We ensure the worklists so that it's not possible for the mutator to start a new worklist
     // after we have suspended the ones that he had started before. That's not very expensive since
     // the worklists use AutomaticThreads anyway.
     if (!Options::useJIT())
-        return;
+        return false;
+    if (!vm().numberOfActiveJITPlans())
+        return false;
     JITWorklist::ensureGlobalWorklist().suspendAllThreads();
+    return true;
+#else
+    return false;
 #endif
 }
 
@@ -2508,8 +2514,6 @@ void Heap::didFinishCollection()
 void Heap::resumeCompilerThreads()
 {
 #if ENABLE(JIT)
-    if (!Options::useJIT())
-        return;
     JITWorklist::ensureGlobalWorklist().resumeAllThreads();
 #endif
 }
