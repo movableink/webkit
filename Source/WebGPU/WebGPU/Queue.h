@@ -77,7 +77,7 @@ public:
     void makeInvalid();
     void setCommittedSignalEvent(id<MTLSharedEvent>, size_t frameIndex);
 
-    const Device& device() const SWIFT_RETURNS_INDEPENDENT_VALUE;
+    const Device& device() const;
     void clearTextureIfNeeded(const WGPUImageCopyTexture&, NSUInteger);
     id<MTLCommandBuffer> commandBufferWithDescriptor(MTLCommandBufferDescriptor*);
     void commitMTLCommandBuffer(id<MTLCommandBuffer>);
@@ -110,8 +110,9 @@ private:
     id<MTLCommandQueue> m_commandQueue { nil };
     id<MTLCommandBuffer> m_commandBuffer { nil };
     id<MTLBlitCommandEncoder> m_blitCommandEncoder { nil };
+private PUBLIC_IN_WEBGPU_SWIFT:
     ThreadSafeWeakPtr<Device> m_device; // The only kind of queues that exist right now are default queues, which are owned by Devices.
-
+private:
     uint64_t m_submittedCommandBufferCount { 0 };
     uint64_t m_completedCommandBufferCount { 0 };
     uint64_t m_scheduledCommandBufferCount { 0 };
@@ -121,17 +122,17 @@ private:
     HashMap<uint64_t, OnSubmittedWorkDoneCallbacks, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_onSubmittedWorkDoneCallbacks;
     NSMutableOrderedSet<id<MTLCommandBuffer>> *m_createdNotCommittedBuffers { nil };
     NSMapTable<id<MTLCommandBuffer>, id<MTLCommandEncoder>> *m_openCommandEncoders;
-} SWIFT_SHARED_REFERENCE(retainQueue, releaseQueue);
+} SWIFT_SHARED_REFERENCE(refQueue, derefQueue);
 
 } // namespace WebGPU
 
-inline void retainQueue(WebGPU::Queue* obj)
+inline void refQueue(WebGPU::Queue* obj)
 {
-    WTF::retainThreadSafeRefCounted(obj);
+    WTF::ref(obj);
 }
 
-inline void releaseQueue(WebGPU::Queue* obj)
+inline void derefQueue(WebGPU::Queue* obj)
 {
-    WTF::releaseThreadSafeRefCounted(obj);
+    WTF::deref(obj);
 }
 

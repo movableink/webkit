@@ -127,6 +127,7 @@ public:
     bool isValid() const { return m_device; }
     bool isLost() const { return m_isLost; }
     const WGPULimits& limits() const { return m_capabilities.limits; }
+    const WGPULimits limitsCopy() const { return m_capabilities.limits; }
     const Vector<WGPUFeatureName>& features() const { return m_capabilities.features; }
     const HardwareCapabilities::BaseCapabilities& baseCapabilities() const { return m_capabilities.baseCapabilities; }
 
@@ -273,16 +274,16 @@ private:
     NSMapTable<id<MTLCommandBuffer>, NSMutableArray<id<MTLBuffer>>*>* m_resolvedSampleCounterBuffers;
     id<MTLSharedEvent> m_resolveTimestampsSharedEvent { nil };
     bool m_supressAllErrors { false };
-} SWIFT_SHARED_REFERENCE(retainDevice, releaseDevice);
+} SWIFT_SHARED_REFERENCE(refDevice, derefDevice);
 
 } // namespace WebGPU
 
-inline void retainDevice(WebGPU::Device* obj)
+inline void refDevice(WebGPU::Device* obj)
 {
-    WTF::retainThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr(obj);
+    WTF::ref(obj);
 }
 
-inline void releaseDevice(WebGPU::Device* obj)
+inline void derefDevice(WebGPU::Device* obj)
 {
-    WTF::releaseThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr(obj);
+    WTF::deref(obj);
 }

@@ -213,19 +213,15 @@ protected:
 };
 
 template<typename T>
-inline void retainRefCounted(T* obj)
+inline void ref(T* obj)
 {
-    RELEASE_ASSERT(obj != nullptr);
-    static_assert(std::derived_from<T, WTF::RefCounted<T>>);
-    static_cast<WTF::RefCounted<T>*>(obj)->ref();
+    obj->ref();
 }
 
 template<typename T>
-inline void releaseRefCounted(T* obj)
+inline void deref(T* obj)
 {
-    RELEASE_ASSERT(obj != nullptr);
-    static_assert(std::derived_from<T, WTF::RefCounted<T>>);
-    static_cast<WTF::RefCounted<T>*>(obj)->deref();
+    obj->deref();
 }
 
 } // namespace WTF

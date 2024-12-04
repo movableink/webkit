@@ -307,22 +307,6 @@ private:
     mutable Atomic<uintptr_t> m_bits { refIncrement + strongOnlyFlag };
 };
 
-template<typename T>
-inline void retainThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr(T* obj)
-{
-    RELEASE_ASSERT(obj != nullptr);
-    static_assert(std::derived_from<T, ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<T>>);
-    static_cast<ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<T>*>(obj)->ref();
-}
-
-template<typename T>
-inline void releaseThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr(T* obj)
-{
-    RELEASE_ASSERT(obj != nullptr);
-    static_assert(std::derived_from<T, ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<T>>);
-    static_cast<ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<T>*>(obj)->deref();
-}
-
 template<typename T, typename TaggingTraits /* = NoTaggingTraits<T> */>
 class ThreadSafeWeakPtr {
 public:

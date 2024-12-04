@@ -162,16 +162,16 @@ private:
     bool m_mappedAtCreation { false };
 #endif
     bool m_didReadOOB { false };
-} SWIFT_SHARED_REFERENCE(retainBuffer, releaseBuffer);
+} SWIFT_SHARED_REFERENCE(refBuffer, derefBuffer);
 
 } // namespace WebGPU
 
-inline void retainBuffer(WebGPU::Buffer* obj)
+inline void refBuffer(WebGPU::Buffer* obj)
 {
-    WTF::retainThreadSafeRefCounted(obj);
+    WTF::ref(obj);
 }
 
-inline void releaseBuffer(WebGPU::Buffer* obj)
+inline void derefBuffer(WebGPU::Buffer* obj)
 {
-    WTF::releaseThreadSafeRefCounted(obj);
+    WTF::deref(obj);
 }

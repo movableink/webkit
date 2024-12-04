@@ -100,16 +100,16 @@ private:
     };
     mutable WeakHashSet<CommandEncoder> m_commandEncoders;
     bool m_destroyed { false };
-} SWIFT_SHARED_REFERENCE(retainQuerySet, releaseQuerySet);
+} SWIFT_SHARED_REFERENCE(refQuerySet, derefQuerySet);
 
 } // namespace WebGPU
 
-inline void retainQuerySet(WebGPU::QuerySet* obj)
+inline void refQuerySet(WebGPU::QuerySet* obj)
 {
-    WTF::retainRefCounted(obj);
+    WTF::ref(obj);
 }
 
-inline void releaseQuerySet(WebGPU::QuerySet* obj)
+inline void derefQuerySet(WebGPU::QuerySet* obj)
 {
-    WTF::releaseRefCounted(obj);
+    WTF::deref(obj);
 }

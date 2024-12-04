@@ -26,11 +26,19 @@
 #pragma once
 
 #include "SwiftCXXThunk.h"
-#include <span>
+#include "WebGPU.h"
+#include <Metal/Metal.h>
 #include <cstdint>
+#include <span>
 
 using SpanConstUInt8 = std::span<const uint8_t>;
 using SpanUInt8 = std::span<uint8_t>;
+
+// FIXME: rdar://140819194
+constexpr unsigned long int WGPU_COPY_STRIDE_UNDEFINED_ = WGPU_COPY_STRIDE_UNDEFINED;
+
+// FIXME: rdar://140819448
+constexpr auto MTLBlitOptionNone_ = MTLBlitOptionNone;
 
 #ifndef __swift__
 #include "WebGPUSwift-Generated.h"
