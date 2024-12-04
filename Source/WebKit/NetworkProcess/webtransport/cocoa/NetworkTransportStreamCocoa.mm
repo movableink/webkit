@@ -24,25 +24,39 @@
  */
 
 #import "config.h"
-#import "NetworkTransportReceiveStream.h"
+#import "NetworkTransportStream.h"
 
 #import "NetworkTransportSession.h"
 #import <wtf/BlockPtr.h>
 #import <wtf/cocoa/SpanCocoa.h>
+#import <wtf/cocoa/VectorCocoa.h>
 
 namespace WebKit {
 
-NetworkTransportReceiveStream::NetworkTransportReceiveStream(NetworkTransportSession& session, nw_connection_t connection)
+NetworkTransportStream::NetworkTransportStream(NetworkTransportSession& session, nw_connection_t connection, NetworkTransportStreamType streamType)
     : m_identifier(WebTransportStreamIdentifier::generate())
     , m_session(session)
     , m_connection(connection)
+    , m_streamType(streamType)
 {
     ASSERT(m_connection);
-    receiveLoop();
+    ASSERT(m_session);
+    if (m_streamType != NetworkTransportStreamType::OutgoingUnidirectional)
+        receiveLoop();
 }
 
-void NetworkTransportReceiveStream::receiveLoop()
+void NetworkTransportStream::sendBytes(std::span<const uint8_t> data, bool)
 {
+    ASSERT(m_streamType != NetworkTransportStreamType::IncomingUnidirectional);
+    nw_connection_send(m_connection.get(), makeDispatchData(Vector(data)).get(), NW_CONNECTION_DEFAULT_MESSAGE_CONTEXT, true, ^(nw_error_t error) {
+        // FIXME: Pipe any error to JS.
+        // FIXME: sendBytes should probably have a completion handler.
+    });
+}
+
+void NetworkTransportStream::receiveLoop()
+{
+    ASSERT(m_streamType != NetworkTransportStreamType::OutgoingUnidirectional);
     nw_connection_receive(m_connection.get(), 1, std::numeric_limits<uint32_t>::max(), makeBlockPtr([weakThis = WeakPtr { *this }] (dispatch_data_t content, nw_content_context_t, bool withFin, nw_error_t error) {
 
         // FIXME: Not only is this an unnecessary string copy, but it's also something that should probably be in WTF or FragmentedSharedBuffer.
@@ -63,7 +77,8 @@ void NetworkTransportReceiveStream::receiveLoop()
             return; // FIXME: Pipe this error to JS.
         if (RefPtr session = strongThis->m_session.get())
             session->streamReceiveBytes(strongThis->m_identifier, vectorFromData(content).span(), withFin);
-        strongThis->receiveLoop();
+        if (!withFin)
+            strongThis->receiveLoop();
     }).get());
 }
 }

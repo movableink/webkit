@@ -207,10 +207,8 @@ NetworkProcess/cache/PrefetchCache.cpp
 NetworkProcess/webrtc/NetworkMDNSRegister.cpp
 NetworkProcess/webrtc/RTCDataChannelRemoteManagerProxy.cpp
 
-NetworkProcess/webtransport/NetworkTransportBidirectionalStream.cpp
-NetworkProcess/webtransport/NetworkTransportSendStream.cpp
 NetworkProcess/webtransport/NetworkTransportSession.cpp
-NetworkProcess/webtransport/NetworkTransportReceiveStream.cpp
+NetworkProcess/webtransport/NetworkTransportStream.cpp
 
 Platform/IPC/DaemonCoders.cpp
 

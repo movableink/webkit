@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,21 +24,24 @@
  */
 
 #include "config.h"
-#include "NetworkTransportReceiveStream.h"
+#include "NetworkTransportStream.h"
 
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebKit {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL(NetworkTransportReceiveStream);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NetworkTransportStream);
 
 #if !PLATFORM(COCOA)
-NetworkTransportReceiveStream::NetworkTransportReceiveStream()
+NetworkTransportStream::NetworkTransportStream()
     : m_identifier(WebTransportStreamIdentifier::generate())
+    , m_streamType(NetworkTransportStreamType::Bidirectional)
+{
+}
+
+void NetworkTransportStream::sendBytes(std::span<const uint8_t>, bool)
 {
 }
 #endif
-
-NetworkTransportReceiveStream::~NetworkTransportReceiveStream() = default;
 
 }

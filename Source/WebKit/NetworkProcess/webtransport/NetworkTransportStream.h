@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,10 @@
 #pragma once
 
 #include <span>
-#include <wtf/Forward.h>
+#include <wtf/ObjectIdentifier.h>
+#include <wtf/RefCounted.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/WeakPtr.h>
 
 #if PLATFORM(COCOA)
 #include <Network/Network.h>
@@ -35,18 +37,37 @@
 #endif
 
 namespace WebKit {
+struct WebTransportStreamIdentifierType;
+using WebTransportStreamIdentifier = ObjectIdentifier<WebTransportStreamIdentifierType>;
+enum class NetworkTransportStreamType : uint8_t { Bidirectional, OutgoingUnidirectional, IncomingUnidirectional };
 
-class NetworkTransportSendStream {
-    WTF_MAKE_TZONE_ALLOCATED(NetworkTransportSendStream);
+class NetworkTransportSession;
+
+class NetworkTransportStream : public RefCounted<NetworkTransportStream>, public CanMakeWeakPtr<NetworkTransportStream> {
+    WTF_MAKE_TZONE_ALLOCATED(NetworkTransportStream);
 public:
-#if PLATFORM(COCOA)
-    NetworkTransportSendStream(nw_connection_t);
-#endif
+    template<typename... Args> static Ref<NetworkTransportStream> create(Args&&... args) { return adoptRef(*new NetworkTransportStream(std::forward<Args>(args)...)); }
+
+    WebTransportStreamIdentifier identifier() const { return m_identifier; }
+
     void sendBytes(std::span<const uint8_t>, bool withFin);
+
+protected:
+#if PLATFORM(COCOA)
+    NetworkTransportStream(NetworkTransportSession&, nw_connection_t, NetworkTransportStreamType);
+#else
+    NetworkTransportStream();
+#endif
+
 private:
+    void receiveLoop();
+
+    const WebTransportStreamIdentifier m_identifier;
+    WeakPtr<NetworkTransportSession> m_session;
 #if PLATFORM(COCOA)
     const RetainPtr<nw_connection_t> m_connection;
 #endif
+    const NetworkTransportStreamType m_streamType;
 };
 
 }
