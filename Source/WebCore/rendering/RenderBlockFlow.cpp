@@ -93,6 +93,13 @@ static_assert(sizeof(RenderBlockFlow::MarginInfo) == sizeof(SameSizeAsMarginInfo
 
 namespace BlockStepSizing {
 
+static bool childHasSupportedStyle(const RenderStyle& childStyle)
+{
+    return childStyle.blockStepInsert() == BlockStepInsert::MarginBox
+        && childStyle.blockStepAlign() == BlockStepAlign::Auto
+        && childStyle.blockStepRound() == BlockStepRound::Up;
+}
+
 static LayoutUnit computeExtraSpace(LayoutUnit stepSize, LayoutUnit boxOuterSize)
 {
     if (!stepSize)
@@ -944,12 +951,7 @@ void RenderBlockFlow::layoutInlineChildren(bool relayoutChildren, LayoutUnit& re
 
 void RenderBlockFlow::performBlockStepSizing(RenderBox& child, LayoutUnit blockStepSizeForChild) const
 {
-    auto& childStyle = child.style();
-
-    if (childStyle.blockStepAlign() != BlockStepAlign::Auto || childStyle.blockStepRound() != BlockStepRound::Up) {
-        ASSERT_NOT_IMPLEMENTED_YET();
-        return;
-    }
+    ASSERT(BlockStepSizing::childHasSupportedStyle(child.style()));
 
     auto extraSpace = BlockStepSizing::computeExtraSpace(blockStepSizeForChild, logicalMarginBoxHeightForChild(child));
     if (!extraSpace)
@@ -1025,7 +1027,8 @@ void RenderBlockFlow::layoutBlockChild(RenderBox& child, MarginInfo& marginInfo,
     if (childNeededLayout)
         child.layout();
 
-    if (auto blockStepSizeForChild = child.style().blockStepSize())
+    auto& childStyle = child.style();
+    if (auto blockStepSizeForChild = childStyle.blockStepSize(); blockStepSizeForChild && BlockStepSizing::childHasSupportedStyle(childStyle))
         performBlockStepSizing(child, LayoutUnit(blockStepSizeForChild->value()));
 
     // Cache if we are at the top of the block right now.
