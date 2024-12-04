@@ -377,7 +377,7 @@ private:
 
     URL resourceFileURLForPath(const String&);
 
-    std::optional<WebExtension::DeclarativeNetRequestRulesetData> parseDeclarativeNetRequestRulesetDictionary(NSDictionary *, RefPtr<API::Error>&);
+    std::optional<WebExtension::DeclarativeNetRequestRulesetData> parseDeclarativeNetRequestRulesetObject(const JSON::Object&, RefPtr<API::Error>&);
 
     InjectedContentVector m_staticInjectedContents;
     WebAccessibleResourcesVector m_webAccessibleResources;

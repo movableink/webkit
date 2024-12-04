@@ -36,7 +36,6 @@
 #import "FoundationSPI.h"
 #import "Logging.h"
 #import "WKWebExtensionInternal.h"
-#import "WebExtensionConstants.h"
 #import "WebExtensionPermission.h"
 #import "WebExtensionUtilities.h"
 #import <CoreFoundation/CFBundle.h>
@@ -64,12 +63,6 @@ namespace WebKit {
 
 static NSString * const generatedBackgroundPageFilename = @"_generated_background_page.html";
 static NSString * const generatedBackgroundServiceWorkerFilename = @"_generated_service_worker.js";
-
-static NSString * const declarativeNetRequestManifestKey = @"declarative_net_request";
-static NSString * const declarativeNetRequestRulesManifestKey = @"rule_resources";
-static NSString * const declarativeNetRequestRulesetIDManifestKey = @"id";
-static NSString * const declarativeNetRequestRuleEnabledManifestKey = @"enabled";
-static NSString * const declarativeNetRequestRulePathManifestKey = @"path";
 
 static String convertChromeExtensionToTemporaryZipFile(const String& inputFilePath)
 {
@@ -584,138 +577,6 @@ RefPtr<WebCore::Icon> WebExtension::bestIconVariant(RefPtr<JSON::Array> variants
 #endif // not USE(APPKIT)
 }
 #endif // ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
-
-std::optional<WebExtension::DeclarativeNetRequestRulesetData> WebExtension::parseDeclarativeNetRequestRulesetDictionary(NSDictionary *rulesetDictionary, RefPtr<API::Error>& error)
-{
-    NSArray *requiredKeysInRulesetDictionary = @[
-        declarativeNetRequestRulesetIDManifestKey,
-        declarativeNetRequestRuleEnabledManifestKey,
-        declarativeNetRequestRulePathManifestKey,
-    ];
-
-    NSDictionary *keyToExpectedValueTypeInRulesetDictionary = @{
-        declarativeNetRequestRulesetIDManifestKey: NSString.class,
-        declarativeNetRequestRuleEnabledManifestKey: @YES.class,
-        declarativeNetRequestRulePathManifestKey: NSString.class,
-    };
-
-    error = nullptr;
-
-    NSString *exceptionString;
-    bool isRulesetDictionaryValid = validateDictionary(rulesetDictionary, nil, requiredKeysInRulesetDictionary, keyToExpectedValueTypeInRulesetDictionary, &exceptionString);
-    if (!isRulesetDictionaryValid) {
-        error = createError(WebExtension::Error::InvalidDeclarativeNetRequest, exceptionString);
-        return std::nullopt;
-    }
-
-    NSString *rulesetID = objectForKey<NSString>(rulesetDictionary, declarativeNetRequestRulesetIDManifestKey);
-    if (!rulesetID.length) {
-        error = createError(WebExtension::Error::InvalidDeclarativeNetRequest, WEB_UI_STRING("Empty `declarative_net_request` ruleset id.", "WKWebExtensionErrorInvalidDeclarativeNetRequestEntry description for empty ruleset id"));
-        return std::nullopt;
-    }
-
-    NSString *jsonPath = objectForKey<NSString>(rulesetDictionary, declarativeNetRequestRulePathManifestKey);
-    if (!jsonPath.length) {
-        error = createError(WebExtension::Error::InvalidDeclarativeNetRequest, WEB_UI_STRING("Empty `declarative_net_request` JSON path.", "WKWebExtensionErrorInvalidDeclarativeNetRequestEntry description for empty JSON path"));
-        return std::nullopt;
-
-    }
-
-    DeclarativeNetRequestRulesetData rulesetData = {
-        rulesetID,
-        (bool)objectForKey<NSNumber>(rulesetDictionary, declarativeNetRequestRuleEnabledManifestKey).boolValue,
-        jsonPath
-    };
-
-    return std::optional { WTFMove(rulesetData) };
-}
-
-void WebExtension::populateDeclarativeNetRequestPropertiesIfNeeded()
-{
-    if (!manifestParsedSuccessfully())
-        return;
-
-    if (m_parsedManifestDeclarativeNetRequestRulesets)
-        return;
-
-    m_parsedManifestDeclarativeNetRequestRulesets = true;
-
-    // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/manifest.json/declarative_net_request
-
-    if (!supportedPermissions().contains(WebExtensionPermission::declarativeNetRequest()) && !supportedPermissions().contains(WebExtensionPermission::declarativeNetRequestWithHostAccess())) {
-        recordError(createError(Error::InvalidDeclarativeNetRequest, WEB_UI_STRING("Manifest has no `declarativeNetRequest` permission.", "WKWebExtensionErrorInvalidDeclarativeNetRequestEntry description for missing declarativeNetRequest permission")));
-        return;
-    }
-
-    auto *manifest = manifestDictionary();
-
-    auto *declarativeNetRequestManifestDictionary = objectForKey<NSDictionary>(manifest, declarativeNetRequestManifestKey);
-    if (!declarativeNetRequestManifestDictionary) {
-        if ([manifest objectForKey:declarativeNetRequestManifestKey])
-            recordError(createError(Error::InvalidDeclarativeNetRequest));
-        return;
-    }
-
-    auto *declarativeNetRequestRulesets = objectForKey<NSArray>(declarativeNetRequestManifestDictionary, declarativeNetRequestRulesManifestKey, false, NSDictionary.class);
-    if (!declarativeNetRequestRulesets) {
-        if ([manifest objectForKey:declarativeNetRequestManifestKey])
-            recordError(createError(Error::InvalidDeclarativeNetRequest));
-        return;
-    }
-
-    if (declarativeNetRequestRulesets.count > webExtensionDeclarativeNetRequestMaximumNumberOfStaticRulesets)
-        recordError(createError(Error::InvalidDeclarativeNetRequest, WEB_UI_STRING("Exceeded maximum number of `declarative_net_request` rulesets. Ignoring extra rulesets.", "WKWebExtensionErrorInvalidDeclarativeNetRequestEntry description for too many rulesets")));
-
-    NSUInteger rulesetCount = 0;
-    NSUInteger enabledRulesetCount = 0;
-    bool recordedTooManyRulesetsManifestError = false;
-    HashSet<String> seenRulesetIDs;
-    for (NSDictionary *rulesetDictionary in declarativeNetRequestRulesets) {
-        if (rulesetCount >= webExtensionDeclarativeNetRequestMaximumNumberOfStaticRulesets)
-            continue;
-
-        RefPtr<API::Error> error;
-        auto optionalRuleset = parseDeclarativeNetRequestRulesetDictionary(rulesetDictionary, error);
-        if (!optionalRuleset) {
-            if (error)
-                recordError(createError(Error::InvalidDeclarativeNetRequest, { }, error));
-            continue;
-        }
-
-        auto ruleset = optionalRuleset.value();
-        if (seenRulesetIDs.contains(ruleset.rulesetID)) {
-            recordError(createError(Error::InvalidDeclarativeNetRequest, WEB_UI_FORMAT_STRING("`declarative_net_request` ruleset with id \"%@\" is invalid. Ruleset id must be unique.", "WKWebExtensionErrorInvalidDeclarativeNetRequestEntry description for duplicate ruleset id", (NSString *)ruleset.rulesetID)));
-            continue;
-        }
-
-        if (ruleset.enabled && ++enabledRulesetCount > webExtensionDeclarativeNetRequestMaximumNumberOfEnabledRulesets && !recordedTooManyRulesetsManifestError) {
-            recordError(createError(Error::InvalidDeclarativeNetRequest, WEB_UI_FORMAT_STRING("Exceeded maximum number of enabled `declarative_net_request` static rulesets. The first %lu will be applied, the remaining will be ignored.", "WKWebExtensionErrorInvalidDeclarativeNetRequestEntry description for too many enabled static rulesets", webExtensionDeclarativeNetRequestMaximumNumberOfEnabledRulesets)));
-            recordedTooManyRulesetsManifestError = true;
-            continue;
-        }
-
-        seenRulesetIDs.add(ruleset.rulesetID);
-        ++rulesetCount;
-
-        m_declarativeNetRequestRulesets.append(ruleset);
-    }
-}
-
-const WebExtension::DeclarativeNetRequestRulesetVector& WebExtension::declarativeNetRequestRulesets()
-{
-    populateDeclarativeNetRequestPropertiesIfNeeded();
-    return m_declarativeNetRequestRulesets;
-}
-
-std::optional<WebExtension::DeclarativeNetRequestRulesetData> WebExtension::declarativeNetRequestRuleset(const String& identifier)
-{
-    for (auto& ruleset : declarativeNetRequestRulesets()) {
-        if (ruleset.rulesetID == identifier)
-            return ruleset;
-    }
-
-    return std::nullopt;
-}
 
 } // namespace WebKit
 
