@@ -38,6 +38,7 @@
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(CredentialRequestCoordinator);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CredentialRequestCoordinatorClient);
 
 CredentialRequestCoordinator::CredentialRequestCoordinator(std::unique_ptr<CredentialRequestCoordinatorClient>&& client)
     : m_client(WTFMove(client))

@@ -618,6 +618,7 @@ animation/ViewTimeline.cpp
 animation/WebAnimation.cpp
 animation/WebAnimationTime.cpp
 animation/WebAnimationUtilities.cpp
+bindings/js/BindingsJSTZoneImpls.cpp
 bindings/js/CachedModuleScriptLoader.cpp
 bindings/js/CachedScriptFetcher.cpp
 bindings/js/CommonVM.cpp
@@ -820,6 +821,7 @@ contentextensions/SerializedNFA.cpp
 contentextensions/URLFilterParser.cpp
 crypto/CryptoAlgorithm.cpp
 crypto/CryptoAlgorithmRegistry.cpp
+crypto/CryptoAlgorithmTZoneImpls.cpp
 crypto/CryptoKey.cpp
 crypto/SubtleCrypto.cpp
 crypto/algorithms/CryptoAlgorithmAESCBC.cpp

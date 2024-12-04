@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008, 2009, 2013 Apple Inc.
+ * Copyright (C) 2007-2024 Apple Inc.
  * Copyright (C) 2010, 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -184,7 +184,7 @@ static bool hasTransparentBackgroundColor(StyleProperties*);
 static RefPtr<CSSValue> backgroundColorInEffect(Node*);
 
 class HTMLElementEquivalent {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(HTMLElementEquivalent);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLElementEquivalent);
 public:
     HTMLElementEquivalent(CSSPropertyID, CSSValueID primitiveValue, const QualifiedName& tagName);
     virtual ~HTMLElementEquivalent() = default;
@@ -202,6 +202,8 @@ protected:
     const RefPtr<CSSPrimitiveValue> m_primitiveValue;
     const QualifiedName* m_tagName { nullptr }; // We can store a pointer because HTML tag names are const global.
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLElementEquivalent);
 
 HTMLElementEquivalent::HTMLElementEquivalent(CSSPropertyID id)
     : m_propertyID(id)

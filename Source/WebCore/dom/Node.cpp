@@ -111,7 +111,7 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Node);
 using namespace HTMLNames;
 
 struct SameSizeAsNode : EventTarget, CanMakeCheckedPtr<SameSizeAsNode> {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(SameSizeAsNode);
+    WTF_MAKE_TZONE_ALLOCATED(SameSizeAsNode);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SameSizeAsNode);
 public:
 #if ASSERT_ENABLED
@@ -129,6 +129,8 @@ public:
     void* renderer;
     uint8_t rareDataWithBitfields[8];
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SameSizeAsNode);
 
 static_assert(sizeof(Node) == sizeof(SameSizeAsNode), "Node should stay small");
 

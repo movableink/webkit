@@ -343,7 +343,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AXIsolatedTree);
 class AXIsolatedTree : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<AXIsolatedTree>
     , public AXTreeStore<AXIsolatedTree> {
     WTF_MAKE_NONCOPYABLE(AXIsolatedTree);
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AXIsolatedTree);
+    WTF_MAKE_TZONE_ALLOCATED(AXIsolatedTree);
     friend WTF::TextStream& operator<<(WTF::TextStream&, AXIsolatedTree&);
     friend void streamIsolatedSubtreeOnMainThread(TextStream&, const AXIsolatedTree&, AXID, const OptionSet<AXStreamOptions>&);
 public:

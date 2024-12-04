@@ -423,11 +423,13 @@ static const Seconds maxIntervalForUserGestureForwardingAfterMediaFinishesPlayin
 
 // Defined here to avoid including GCReachableRef.h in Document.h
 struct Document::PendingScrollEventTargetList {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(PendingScrollEventTargetList);
+    WTF_MAKE_TZONE_ALLOCATED(PendingScrollEventTargetList);
 
 public:
     Vector<GCReachableRef<ContainerNode>> targets;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(Document, PendingScrollEventTargetList);
 
 static const Seconds intersectionObserversInitialUpdateDelay { 2000_ms };
 
