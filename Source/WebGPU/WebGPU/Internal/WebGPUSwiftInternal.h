@@ -30,9 +30,11 @@
 #include <Metal/Metal.h>
 #include <cstdint>
 #include <span>
+#include <wtf/StdLibExtras.h>
 
 using SpanConstUInt8 = std::span<const uint8_t>;
 using SpanUInt8 = std::span<uint8_t>;
+inline unsigned long roundUpToMultipleOfNonPowerOfTwoCheckedUInt32UnsignedLong(Checked<uint32_t> x, unsigned long y) { return WTF::roundUpToMultipleOfNonPowerOfTwo<unsigned long int, Checked<uint32_t>>(x, y); }
 
 // FIXME: rdar://140819194
 constexpr unsigned long int WGPU_COPY_STRIDE_UNDEFINED_ = WGPU_COPY_STRIDE_UNDEFINED;
