@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 55;
+	objectVersion = 60;
 	objects = {
 
 /* Begin PBXAggregateTarget section */
@@ -164,11 +164,8 @@
 		410B3601292B6EDB0003E515 /* aom_mem_intrnl.h in Headers */ = {isa = PBXBuildFile; fileRef = 410B3600292B6ED80003E515 /* aom_mem_intrnl.h */; };
 		410B3605292B6F090003E515 /* aom_scale_rtcd.c in Sources */ = {isa = PBXBuildFile; fileRef = 410B3602292B6F080003E515 /* aom_scale_rtcd.c */; };
 		410B3606292B6F090003E515 /* yv12config.h in Headers */ = {isa = PBXBuildFile; fileRef = 410B3603292B6F080003E515 /* yv12config.h */; };
-		410B3607292B6F090003E515 /* aom_scale.h in Headers */ = {isa = PBXBuildFile; fileRef = 410B3604292B6F090003E515 /* aom_scale.h */; };
 		410B360D292B6F270003E515 /* yv12extend.c in Sources */ = {isa = PBXBuildFile; fileRef = 410B3609292B6F250003E515 /* yv12extend.c */; };
-		410B360E292B6F270003E515 /* gen_scalers.c in Sources */ = {isa = PBXBuildFile; fileRef = 410B360A292B6F260003E515 /* gen_scalers.c */; };
 		410B360F292B6F270003E515 /* yv12config.c in Sources */ = {isa = PBXBuildFile; fileRef = 410B360B292B6F260003E515 /* yv12config.c */; };
-		410B3610292B6F270003E515 /* aom_scale.c in Sources */ = {isa = PBXBuildFile; fileRef = 410B360C292B6F260003E515 /* aom_scale.c */; };
 		410B3616292B6F3B0003E515 /* aom_thread.h in Headers */ = {isa = PBXBuildFile; fileRef = 410B3611292B6F3A0003E515 /* aom_thread.h */; };
 		410B3617292B6F3B0003E515 /* aom_thread.c in Sources */ = {isa = PBXBuildFile; fileRef = 410B3612292B6F3A0003E515 /* aom_thread.c */; };
 		410B3618292B6F3B0003E515 /* debug_util.c in Sources */ = {isa = PBXBuildFile; fileRef = 410B3613292B6F3A0003E515 /* debug_util.c */; };
@@ -2998,7 +2995,6 @@
 		41CBAF9C212E039300DE1E1D /* treereader.h in Headers */ = {isa = PBXBuildFile; fileRef = 4105EBB6212E035D008C0C20 /* treereader.h */; };
 		41CDC66D28F6FC2C00603E59 /* RTCWrappedNativeVideoDecoder.mm in Sources */ = {isa = PBXBuildFile; fileRef = 41795403216985200028266B /* RTCWrappedNativeVideoDecoder.mm */; };
 		41D0118D2B1DE49100B05388 /* aarch64_cpudetect.c in Sources */ = {isa = PBXBuildFile; fileRef = 41D0118B2B1DE48700B05388 /* aarch64_cpudetect.c */; };
-		41D011B02B1DE56400B05388 /* masked_sad4d_neon.c in Sources */ = {isa = PBXBuildFile; fileRef = 41D011AB2B1DE56300B05388 /* masked_sad4d_neon.c */; };
 		41D011B12B1DE56400B05388 /* aom_convolve8_neon.c in Sources */ = {isa = PBXBuildFile; fileRef = 41D011AC2B1DE56300B05388 /* aom_convolve8_neon.c */; };
 		41D011B22B1DE56400B05388 /* sadxd_neon.c in Sources */ = {isa = PBXBuildFile; fileRef = 41D011AD2B1DE56300B05388 /* sadxd_neon.c */; };
 		41D011B32B1DE56400B05388 /* blk_sse_sum_neon.c in Sources */ = {isa = PBXBuildFile; fileRef = 41D011AE2B1DE56300B05388 /* blk_sse_sum_neon.c */; };
@@ -6026,7 +6022,6 @@
 		410B35E5292B6EBF0003E515 /* bitdepth_conversion_avx2.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = bitdepth_conversion_avx2.h; sourceTree = "<group>"; };
 		410B35E6292B6EC00003E515 /* lpf_common_sse2.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lpf_common_sse2.h; sourceTree = "<group>"; };
 		410B35E7292B6EC00003E515 /* highbd_quantize_intrin_sse2.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = highbd_quantize_intrin_sse2.c; sourceTree = "<group>"; };
-		410B35E8292B6EC20003E515 /* masked_sad4d_ssse3.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = masked_sad4d_ssse3.c; sourceTree = "<group>"; };
 		410B35E9292B6EC20003E515 /* obmc_intrinsic_sse4.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = obmc_intrinsic_sse4.h; sourceTree = "<group>"; };
 		410B35EA292B6EC20003E515 /* obmc_intrinsic_ssse3.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = obmc_intrinsic_ssse3.h; sourceTree = "<group>"; };
 		410B35EB292B6EC20003E515 /* obmc_sad_sse4.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = obmc_sad_sse4.c; sourceTree = "<group>"; };
@@ -6050,11 +6045,8 @@
 		410B3600292B6ED80003E515 /* aom_mem_intrnl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = aom_mem_intrnl.h; sourceTree = "<group>"; };
 		410B3602292B6F080003E515 /* aom_scale_rtcd.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = aom_scale_rtcd.c; sourceTree = "<group>"; };
 		410B3603292B6F080003E515 /* yv12config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = yv12config.h; sourceTree = "<group>"; };
-		410B3604292B6F090003E515 /* aom_scale.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = aom_scale.h; sourceTree = "<group>"; };
 		410B3609292B6F250003E515 /* yv12extend.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = yv12extend.c; sourceTree = "<group>"; };
-		410B360A292B6F260003E515 /* gen_scalers.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = gen_scalers.c; sourceTree = "<group>"; };
 		410B360B292B6F260003E515 /* yv12config.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = yv12config.c; sourceTree = "<group>"; };
-		410B360C292B6F260003E515 /* aom_scale.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = aom_scale.c; sourceTree = "<group>"; };
 		410B3611292B6F3A0003E515 /* aom_thread.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = aom_thread.h; sourceTree = "<group>"; };
 		410B3612292B6F3A0003E515 /* aom_thread.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = aom_thread.c; sourceTree = "<group>"; };
 		410B3613292B6F3A0003E515 /* debug_util.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = debug_util.c; sourceTree = "<group>"; };
@@ -9148,7 +9140,6 @@
 		41CBAFA9212E03AD00DE1E1D /* firstpass.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = firstpass.c; sourceTree = "<group>"; };
 		41CBAFAA212E03AD00DE1E1D /* pickinter.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = pickinter.c; sourceTree = "<group>"; };
 		41D0118B2B1DE48700B05388 /* aarch64_cpudetect.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = aarch64_cpudetect.c; sourceTree = "<group>"; };
-		41D011AB2B1DE56300B05388 /* masked_sad4d_neon.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = masked_sad4d_neon.c; sourceTree = "<group>"; };
 		41D011AC2B1DE56300B05388 /* aom_convolve8_neon.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = aom_convolve8_neon.c; sourceTree = "<group>"; };
 		41D011AD2B1DE56300B05388 /* sadxd_neon.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sadxd_neon.c; sourceTree = "<group>"; };
 		41D011AE2B1DE56300B05388 /* blk_sse_sum_neon.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = blk_sse_sum_neon.c; sourceTree = "<group>"; };
@@ -11915,7 +11906,6 @@
 				41D011CB2B1DE59700B05388 /* highbd_variance_neon_dotprod.c */,
 				410B3594292B6E6A0003E515 /* intrapred_neon.c */,
 				410B359E292B6E720003E515 /* loopfilter_neon.c */,
-				41D011AB2B1DE56300B05388 /* masked_sad4d_neon.c */,
 				4119278E2A3771BA007C09F6 /* masked_sad_neon.c */,
 				410B3599292B6E6F0003E515 /* mem_neon.h */,
 				41D011AF2B1DE56400B05388 /* obmc_sad_neon.c */,
@@ -12010,7 +12000,6 @@
 				410B35DA292B6EBA0003E515 /* loopfilter_avx2.c */,
 				410B35FE292B6ED50003E515 /* loopfilter_sse2.c */,
 				410B35E6292B6EC00003E515 /* lpf_common_sse2.h */,
-				410B35E8292B6EC20003E515 /* masked_sad4d_ssse3.c */,
 				410B35DC292B6EBB0003E515 /* masked_sad_intrin_avx2.c */,
 				410B35DD292B6EBB0003E515 /* masked_sad_intrin_ssse3.c */,
 				410B35D2292B6EB00003E515 /* masked_sad_intrin_ssse3.h */,
@@ -12038,8 +12027,6 @@
 		410B3608292B6F0D0003E515 /* generic */ = {
 			isa = PBXGroup;
 			children = (
-				410B360C292B6F260003E515 /* aom_scale.c */,
-				410B360A292B6F260003E515 /* gen_scalers.c */,
 				410B360B292B6F260003E515 /* yv12config.c */,
 				410B3609292B6F250003E515 /* yv12extend.c */,
 			);
@@ -15803,7 +15790,6 @@
 			isa = PBXGroup;
 			children = (
 				410B3608292B6F0D0003E515 /* generic */,
-				410B3604292B6F090003E515 /* aom_scale.h */,
 				410B3602292B6F080003E515 /* aom_scale_rtcd.c */,
 				410B3603292B6F080003E515 /* yv12config.h */,
 			);
@@ -20981,7 +20967,6 @@
 				410B34FE292B6DE00003E515 /* aom_integer.h in Headers */,
 				410B35F9292B6ECB0003E515 /* aom_mem.h in Headers */,
 				410B3601292B6EDB0003E515 /* aom_mem_intrnl.h in Headers */,
-				410B3607292B6F090003E515 /* aom_scale.h in Headers */,
 				41D0122A2B1DE74600B05388 /* aom_scale_rtcd.h in Headers */,
 				410B357C292B6E400003E515 /* aom_simd.h in Headers */,
 				410B355E292B6E400003E515 /* aom_simd_inline.h in Headers */,
@@ -25211,7 +25196,6 @@
 				410B34ED292B6DCA0003E515 /* aom_image.c in Sources */,
 				410B34EF292B6DCA0003E515 /* aom_integer.c in Sources */,
 				410B35F8292B6ECB0003E515 /* aom_mem.c in Sources */,
-				410B3610292B6F270003E515 /* aom_scale.c in Sources */,
 				410B3605292B6F090003E515 /* aom_scale_rtcd.c in Sources */,
 				41A473BC2C53D65400C8F7DF /* aom_scaled_convolve8_neon.c in Sources */,
 				410B3617292B6F3B0003E515 /* aom_thread.c in Sources */,
@@ -25308,7 +25292,6 @@
 				410B3819292B71090003E515 /* frame_buffers.c in Sources */,
 				410B354B292B6E400003E515 /* fwd_txfm.c in Sources */,
 				410B38DB292BAA610003E515 /* fwd_txfm_neon.c in Sources */,
-				410B360E292B6F270003E515 /* gen_scalers.c in Sources */,
 				410B3720292B706A0003E515 /* gop_structure.c in Sources */,
 				410B3688292B6FF70003E515 /* grain_synthesis.c in Sources */,
 				410B3555292B6E400003E515 /* grain_table.c in Sources */,
@@ -25335,7 +25318,6 @@
 				410B3741292B706B0003E515 /* lookahead.c in Sources */,
 				410B357F292B6E400003E515 /* loopfilter.c in Sources */,
 				410B38D5292BAA610003E515 /* loopfilter_neon.c in Sources */,
-				41D011B02B1DE56400B05388 /* masked_sad4d_neon.c in Sources */,
 				411927912A3771BA007C09F6 /* masked_sad_neon.c in Sources */,
 				410B378F292B706C0003E515 /* mcomp.c in Sources */,
 				410B3783292B706B0003E515 /* ml.c in Sources */,
