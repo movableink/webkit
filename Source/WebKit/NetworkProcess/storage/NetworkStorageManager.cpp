@@ -1259,6 +1259,30 @@ void NetworkStorageManager::syncLocalStorage(CompletionHandler<void()>&& complet
     });
 }
 
+void NetworkStorageManager::fetchLocalStorage(CompletionHandler<void(HashMap<WebCore::ClientOrigin, HashMap<String, String>>&&)>&& completionHandler)
+{
+    ASSERT(RunLoop::isMain());
+    ASSERT(!m_closed);
+
+    protectedWorkQueue()->dispatch([this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)]() mutable {
+        assertIsCurrent(workQueue());
+
+        HashMap<WebCore::ClientOrigin, HashMap<String, String>> localStorageMap;
+
+        for (auto& origin : getAllOrigins()) {
+            auto& localStorageManager = originStorageManager(origin, ShouldWriteOriginFile::No).localStorageManager(*m_storageAreaRegistry);
+            auto storageMap = localStorageManager.fetchStorageMap();
+
+            if (!storageMap.isEmpty())
+                localStorageMap.add(origin, storageMap);
+        }
+
+        RunLoop::protectedMain()->dispatch([completionHandler = WTFMove(completionHandler), localStorageMap = crossThreadCopy(WTFMove(localStorageMap))] mutable {
+            completionHandler(WTFMove(localStorageMap));
+        });
+    });
+}
+
 void NetworkStorageManager::registerTemporaryBlobFilePaths(IPC::Connection& connection, const Vector<String>& filePaths)
 {
     ASSERT(RunLoop::isMain());
