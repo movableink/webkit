@@ -101,6 +101,7 @@ public:
     uint32_t dynamicOffset(uint32_t bindingIndex, const Vector<uint32_t>*) const;
     void rebindSamplersIfNeeded() const;
     bool updateExternalTextures(const ExternalTexture&);
+    bool makeSubmitInvalid(ShaderStage) const;
 
 private:
     BindGroup(id<MTLBuffer> vertexArgumentBuffer, id<MTLBuffer> fragmentArgumentBuffer, id<MTLBuffer> computeArgumentBuffer, Vector<BindableResources>&&, const BindGroupLayout&, DynamicBuffersContainer&&, SamplersContainer&&, ShaderStageArray<ExternalTextureIndices>&&, Device&);
