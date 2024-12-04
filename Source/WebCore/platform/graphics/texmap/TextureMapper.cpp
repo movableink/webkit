@@ -62,7 +62,6 @@ public:
 
     void initializeStencil();
     GLuint getStaticVBO(GLenum target, GLsizeiptr, const void* data);
-    GLuint getVAO();
     Ref<TextureMapperShaderProgram> getShaderProgram(TextureMapperShaderProgram::Options);
 
     TransformationMatrix projectionMatrix;
@@ -120,7 +119,6 @@ private:
 
     Ref<SharedGLData> m_sharedGLData;
     UncheckedKeyHashMap<const void*, GLuint> m_vbos;
-    GLuint m_vao { 0 };
 };
 
 TextureMapperGLData::TextureMapperGLData(void* platformContext)
@@ -160,11 +158,6 @@ GLuint TextureMapperGLData::getStaticVBO(GLenum target, GLsizeiptr size, const v
             return vbo;
         });
     return addResult.iterator->value;
-}
-
-GLuint TextureMapperGLData::getVAO()
-{
-    return m_vao;
 }
 
 Ref<TextureMapperShaderProgram> TextureMapperGLData::getShaderProgram(TextureMapperShaderProgram::Options options)
