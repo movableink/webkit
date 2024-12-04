@@ -1878,7 +1878,11 @@ webkit.org/b/264680 imported/w3c/web-platform-tests/html/semantics/embedded-cont
 webkit.org/b/264680 imported/w3c/web-platform-tests/html/semantics/embedded-content/media-elements/autoplay-disabled-by-feature-policy.https.sub.html [ Crash Failure Pass ]
 webkit.org/b/264680 imported/w3c/web-platform-tests/media-source/mediasource-seek-during-pending-seek.html [ Crash Failure Pass Timeout ]
 webkit.org/b/264680 inspector/heap/getPreview.html [ Failure Pass ]
-webkit.org/b/264680 media/video-seek-past-end-playing.html [ Pass Timeout ]
+webkit.org/b/264680 media/no-fullscreen-when-hidden.html [ Timeout Pass ]
+webkit.org/b/264680 media/video-background-tab-playback.html [ Timeout Pass ]
+webkit.org/b/264680 media/video-muted-holds-sleep-assertion.html [ Timeout Pass ]
+webkit.org/b/264680 media/video-seek-past-end-playing.html [ Timeout Pass ]
+webkit.org/b/264680 media/video-unmuted-after-play-holds-sleep-assertion.html [ Timeout Pass ]
 webkit.org/b/264680 scrollbars/scrollbar-selectors.html [ Pass Timeout ]
 webkit.org/b/264680 webrtc/peer-connection-audio-mute2.html [ Failure Pass Timeout ]
 
@@ -1939,3 +1943,5 @@ editing/spelling/spelling-marker-includes-hyphen.html [ ImageOnlyFailure ]
 http/tests/cookies/same-site/fetch-after-navigating-iframe-in-cross-origin-page.html [ Failure ]
 http/tests/cookies/same-site/fetch-in-cross-origin-service-worker.html [ Failure ]
 http/tests/cookies/same-site/popup-cross-site-post.html [ Failure ]
+
+imported/w3c/web-platform-tests/css/css-view-transitions/element-is-grouping-during-animation.html [ ImageOnlyFailure Pass ]
