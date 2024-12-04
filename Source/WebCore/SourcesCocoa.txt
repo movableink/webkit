@@ -274,6 +274,7 @@ platform/audio/cocoa/AudioUtilitiesCocoa.cpp
 platform/audio/cocoa/CAAudioStreamDescription.cpp
 platform/audio/cocoa/CARingBuffer.cpp
 platform/audio/cocoa/MediaSessionManagerCocoa.mm
+platform/audio/cocoa/PlatformRawAudioDataCocoa.cpp
 platform/audio/cocoa/WebAudioBufferList.cpp
 platform/audio/ios/AudioOutputUnitAdaptorIOS.cpp @no-unify
 platform/audio/ios/AudioSessionIOS.mm @no-unify
