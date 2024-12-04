@@ -215,6 +215,7 @@
 		5159F267260D43E300B2DA3C /* NowPlayingInfoTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5159F266260D43E300B2DA3C /* NowPlayingInfoTests.cpp */; };
 		516281252325C18000BB7E42 /* TestPDFDocument.mm in Sources */ = {isa = PBXBuildFile; fileRef = 516281242325C17B00BB7E42 /* TestPDFDocument.mm */; };
 		516404382AB1D9BC0042B1C3 /* NativePromise.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 516404372AB1D9BB0042B1C3 /* NativePromise.cpp */; };
+		516B289E2CFEA5BC003C544C /* AudioSampleFormat.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 516B289D2CFEA5BC003C544C /* AudioSampleFormat.cpp */; };
 		5175C7A226F876230003AF5C /* BundlePageConsoleMessage.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5175C7A126F876230003AF5C /* BundlePageConsoleMessage.mm */; };
 		51820A4D22F4EE7F00DF0A01 /* JavascriptURLNavigation.mm in Sources */ = {isa = PBXBuildFile; fileRef = 51820A4C22F4EE7700DF0A01 /* JavascriptURLNavigation.mm */; };
 		518EE51920A78CE500E024F3 /* DoubleDefersLoadingPlugin.mm in Sources */ = {isa = PBXBuildFile; fileRef = 518EE51720A78CDF00E024F3 /* DoubleDefersLoadingPlugin.mm */; };
@@ -2645,6 +2646,7 @@
 		516281282325C45400BB7E42 /* PDFKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PDFKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/System/Library/Frameworks/PDFKit.framework; sourceTree = DEVELOPER_DIR; };
 		516404372AB1D9BB0042B1C3 /* NativePromise.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NativePromise.cpp; sourceTree = "<group>"; };
 		5165FE03201EE617009F7EC3 /* MessagePortProviders.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = MessagePortProviders.mm; sourceTree = "<group>"; };
+		516B289D2CFEA5BC003C544C /* AudioSampleFormat.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AudioSampleFormat.cpp; sourceTree = "<group>"; };
 		51714EB21CF8C761004723C4 /* WebProcessKillIDBCleanup-1.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = "WebProcessKillIDBCleanup-1.html"; sourceTree = "<group>"; };
 		51714EB31CF8C761004723C4 /* WebProcessKillIDBCleanup-2.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = "WebProcessKillIDBCleanup-2.html"; sourceTree = "<group>"; };
 		51714EB61CF8C7A4004723C4 /* WebProcessKillIDBCleanup.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = WebProcessKillIDBCleanup.mm; sourceTree = "<group>"; };
@@ -4648,6 +4650,7 @@
 				6354F4D01F7C3AB500D89DF3 /* ApplicationManifestParser.cpp */,
 				DF6580922722168900B3F1C1 /* ASN1Utilities.cpp */,
 				DF6580932722168900B3F1C1 /* ASN1Utilities.h */,
+				516B289D2CFEA5BC003C544C /* AudioSampleFormat.cpp */,
 				07C046C91E42573E007201E7 /* CARingBufferTest.cpp */,
 				57303BC220071E2200355965 /* CBORReaderTest.cpp */,
 				57303BAC2006C56000355965 /* CBORValueTest.cpp */,
@@ -6882,6 +6885,7 @@
 				7CCE7EB41A411A7E00447C4C /* AttributedString.mm in Sources */,
 				F4FA2A4F24D1F05700618A46 /* AttributedSubstringForProposedRange.mm in Sources */,
 				A17C57E12C9A5365009DD0B5 /* AttributedSubstringForProposedRangeWithImage.mm in Sources */,
+				516B289E2CFEA5BC003C544C /* AudioSampleFormat.cpp in Sources */,
 				CDC8E48D1BC5CB4500594FEC /* AudioSessionCategoryIOS.mm in Sources */,
 				7BE876032919457B00B15289 /* AudioStreamDescriptionCocoa.mm in Sources */,
 				F42D634422A1729F00D2FB3A /* AutocorrectionTestsIOS.mm in Sources */,
