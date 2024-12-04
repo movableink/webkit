@@ -26,6 +26,9 @@
 #pragma once
 
 #import "Instance.h"
+#import "SwiftCXXThunk.h"
+#import "WebGPU.h"
+#import "WebGPUExt.h"
 #import <Metal/Metal.h>
 #import <utility>
 #import <wtf/CompletionHandler.h>

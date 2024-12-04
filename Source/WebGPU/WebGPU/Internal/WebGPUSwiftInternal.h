@@ -25,9 +25,15 @@
 
 #pragma once
 
-#include "SwiftCXXThunk.h"
+#include "APIConversions.h"
+#include "Buffer.h"
+#include "CommandEncoder.h"
+#include "CommandsMixin.h"
+#include "Device.h"
+#include "QuerySet.h"
+#include "Queue.h"
+#include "Texture.h"
 #include "WebGPU.h"
-#include <Metal/Metal.h>
 #include <cstdint>
 #include <span>
 #include <wtf/StdLibExtras.h>
