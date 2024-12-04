@@ -91,6 +91,37 @@ struct SameSizeAsMarginInfo {
 static_assert(sizeof(MarginValues) == sizeof(LayoutUnit[4]), "MarginValues should stay small");
 static_assert(sizeof(RenderBlockFlow::MarginInfo) == sizeof(SameSizeAsMarginInfo), "MarginInfo should stay small");
 
+namespace BlockStepSizing {
+
+static LayoutUnit computeExtraSpace(LayoutUnit stepSize, LayoutUnit boxOuterSize)
+{
+    if (!stepSize)
+        return { };
+
+    if (auto remainder = intMod(boxOuterSize, stepSize))
+        return stepSize - remainder;
+    return { };
+}
+
+static void distributeExtraSpaceToChildMargins(RenderBox& child, LayoutUnit extraSpace, WritingMode containingBlockWritingMode)
+{
+    auto halfExtraSpace = extraSpace / 2;
+    child.setMarginBefore(child.marginBefore(containingBlockWritingMode) + halfExtraSpace);
+    child.setMarginAfter(child.marginAfter(containingBlockWritingMode) + halfExtraSpace);
+}
+
+NO_RETURN_DUE_TO_ASSERT static void distributeExtraSpaceToChildPadding(RenderBox& /* child */, LayoutUnit /* extraSpace */, WritingMode /* containingBlockWritingMode */)
+{
+    ASSERT_NOT_IMPLEMENTED_YET();
+}
+
+NO_RETURN_DUE_TO_ASSERT static void distributeExtraSpaceToChildContentArea(RenderBox& /* child */, LayoutUnit /* extraSpace */, WritingMode /* containingBlockWritingMode */)
+{
+    ASSERT_NOT_IMPLEMENTED_YET();
+}
+
+};
+
 RenderBlockFlowRareData::RenderBlockFlowRareData(const RenderBlockFlow& block)
     : m_margins(positiveMarginBeforeDefault(block), negativeMarginBeforeDefault(block), positiveMarginAfterDefault(block), negativeMarginAfterDefault(block))
     , m_lineBreakToAvoidWidow(-1)
@@ -908,21 +939,30 @@ void RenderBlockFlow::layoutInlineChildren(bool relayoutChildren, LayoutUnit& re
     m_previousInlineLayoutContentTopAndBottomIncludingInkOverflow = { };
 }
 
-static LayoutUnit computeExtraSpaceForBlockStepSizing(LayoutUnit stepSize, LayoutUnit boxOuterSize)
+void RenderBlockFlow::performBlockStepSizing(RenderBox& child, LayoutUnit blockStepSizeForChild) const
 {
-    if (!stepSize)
-        return { };
+    auto& childStyle = child.style();
 
-    if (auto remainder = intMod(boxOuterSize, stepSize))
-        return stepSize - remainder;
-    return { };
-}
+    if (childStyle.blockStepAlign() != BlockStepAlign::Auto || childStyle.blockStepRound() != BlockStepRound::Up) {
+        ASSERT_NOT_IMPLEMENTED_YET();
+        return;
+    }
 
-void RenderBlockFlow::distributeExtraBlockStepSizingSpaceToChild(RenderBox& child, LayoutUnit extraSpace) const
-{
-    auto halfExtraSpace = extraSpace / 2;
-    setMarginBeforeForChild(child, marginBeforeForChild(child) + halfExtraSpace);
-    setMarginAfterForChild(child, marginAfterForChild(child) + halfExtraSpace);
+    auto extraSpace = BlockStepSizing::computeExtraSpace(blockStepSizeForChild, logicalMarginBoxHeightForChild(child));
+    if (!extraSpace)
+        return;
+
+    switch (child.style().blockStepInsert()) {
+    case BlockStepInsert::MarginBox:
+        BlockStepSizing::distributeExtraSpaceToChildMargins(child, extraSpace, writingMode());
+        break;
+    case BlockStepInsert::ContentBox:
+        BlockStepSizing::distributeExtraSpaceToChildContentArea(child, extraSpace, writingMode());
+        break;
+    case BlockStepInsert::PaddingBox:
+        BlockStepSizing::distributeExtraSpaceToChildPadding(child, extraSpace, writingMode());
+        break;
+    }
 }
 
 void RenderBlockFlow::layoutBlockChild(RenderBox& child, MarginInfo& marginInfo, LayoutUnit& previousFloatLogicalBottom, LayoutUnit& maxFloatLogicalBottom)
@@ -982,11 +1022,8 @@ void RenderBlockFlow::layoutBlockChild(RenderBox& child, MarginInfo& marginInfo,
     if (childNeededLayout)
         child.layout();
 
-    if (auto blockStepSizeForChild = child.style().blockStepSize()) {
-        auto extraSpace = computeExtraSpaceForBlockStepSizing(LayoutUnit(blockStepSizeForChild->value()), logicalMarginBoxHeightForChild(child));
-        if (extraSpace)
-            distributeExtraBlockStepSizingSpaceToChild(child, extraSpace);
-    }
+    if (auto blockStepSizeForChild = child.style().blockStepSize())
+        performBlockStepSizing(child, LayoutUnit(blockStepSizeForChild->value()));
 
     // Cache if we are at the top of the block right now.
     bool atBeforeSideOfBlock = marginInfo.atBeforeSideOfBlock();
