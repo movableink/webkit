@@ -182,6 +182,7 @@ private:
 #endif
 
     void donateToSKAdNetwork(WebCore::PrivateClickMeasurement&&) final;
+    void notifyAdAttributionKitOfSessionTermination() final;
 
     Vector<WebCore::SecurityOriginData> hostNamesWithAlternativeServices() const override;
     void deleteAlternativeServicesForHostNames(const Vector<String>&) override;
@@ -223,6 +224,9 @@ private:
     bool m_fastServerTrustEvaluationEnabled { false };
     String m_dataConnectionServiceType;
     bool m_preventsSystemHTTPProxyAuthentication { false };
+#if HAVE(AD_ATTRIBUTION_KIT_PRIVATE_BROWSING)
+    Markable<WTF::UUID> m_donatedEphemeralImpressionSessionID;
+#endif
 
     class BlobDataTaskClient;
     HashMap<DataTaskIdentifier, Ref<BlobDataTaskClient>> m_blobDataTasksForAPI;
