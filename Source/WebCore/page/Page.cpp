@@ -570,6 +570,23 @@ uint64_t Page::renderTreeSize() const
     return total;
 }
 
+void Page::destroyRenderTrees()
+{
+    // When closing or entering back/forward cache, tear down the render tree before setting the in-cache flag.
+    // This maintains the invariant that render trees are never present in the back/forward cache or outliving the page.
+    // Note that destruction happens bottom-up so that the main frame's tree dies last.
+    for (RefPtr frame = m_mainFrame->tree().traversePrevious(CanWrap::Yes); frame; frame = frame->tree().traversePrevious(CanWrap::No)) {
+        RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
+        if (!localFrame)
+            continue;
+        if (!localFrame->document())
+            continue;
+        Ref document = *localFrame->document();
+        if (document->hasLivingRenderTree())
+            document->destroyRenderTree();
+    }
+}
+
 OptionSet<DisabledAdaptations> Page::disabledAdaptations() const
 {
     auto* localMainFrame = dynamicDowncast<LocalFrame>(mainFrame());

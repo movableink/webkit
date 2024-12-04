@@ -1924,6 +1924,8 @@ void WebPage::close()
         protectedDrawingArea()->unregisterScrollingTree();
 #endif
 
+    m_page->destroyRenderTrees();
+
     m_drawingArea = nullptr;
     m_webPageTesting = nullptr;
     m_page = nullptr;

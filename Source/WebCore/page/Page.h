@@ -348,6 +348,7 @@ public:
     std::optional<PageIdentifier> identifier() const { return m_identifier; }
 
     WEBCORE_EXPORT uint64_t renderTreeSize() const;
+    WEBCORE_EXPORT void destroyRenderTrees();
 
     WEBCORE_EXPORT void setNeedsRecalcStyleInAllFrames();
 
