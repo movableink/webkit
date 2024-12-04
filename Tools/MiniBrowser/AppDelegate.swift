@@ -28,14 +28,15 @@ import SwiftUI
     @nonobjc private static let windowSize = NSSize(width: 800, height: 600)
 
     @MainActor @objc public func createSwiftUIWindow(_ sender: Any?) {
-#if compiler(>=6.0)
-        let hostingController = NSHostingController(rootView: MiniBrowserView())
+        // FIXME: Replace this with a more useful view
+        let rootView = Color.indigo
+
+        let hostingController = NSHostingController(rootView: rootView)
 
         let window = NSWindow(contentViewController: hostingController)
         window.setContentSize(Self.windowSize)
 
         let controller = NSWindowController(window: window)
         controller.showWindow(sender)
-#endif
     }
 }

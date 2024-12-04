@@ -39,7 +39,7 @@ public class WebPage_v0 {
     }
 
     public var title: String {
-        self.access(keyPath: \.title)
+        self.access(keyPath: \.url)
 
         // The title property is annotated as optional in WKWebView, but is never actually `nil`.
         return backingWebView.title!
@@ -97,10 +97,7 @@ public class WebPage_v0 {
     private var observations = KeyValueObservations()
 
     @ObservationIgnored
-    var isBoundToWebView = false
-
-    @ObservationIgnored
-    lazy var backingWebView: WKWebView = {
+    private lazy var backingWebView: WKWebView = {
         let webView = WKWebView(frame: .zero)
         webView.navigationDelegate = backingNavigationDelegate
         return webView
