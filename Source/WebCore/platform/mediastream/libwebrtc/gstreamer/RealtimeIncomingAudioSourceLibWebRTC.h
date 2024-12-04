@@ -31,6 +31,8 @@
 
 #include "RealtimeIncomingAudioSource.h"
 
+#include <wtf/MediaTime.h>
+
 namespace WebCore {
 
 class RealtimeIncomingAudioSourceLibWebRTC final : public RealtimeIncomingAudioSource {
