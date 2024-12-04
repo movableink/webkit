@@ -5783,7 +5783,7 @@ void WebPage::callAfterPendingSyntheticClick(CompletionHandler<void(SyntheticCli
 
 #if ENABLE(IOS_TOUCH_EVENTS)
 
-void WebPage::didSwallowClickEvent(const PlatformMouseEvent& event, Node& node)
+void WebPage::didDispatchClickEvent(const PlatformMouseEvent& event, Node& node)
 {
     if (!m_userIsInteracting)
         return;
@@ -5794,16 +5794,16 @@ void WebPage::didSwallowClickEvent(const PlatformMouseEvent& event, Node& node)
     if (event.syntheticClickType() != SyntheticClickType::NoTap)
         return;
 
-    RefPtr element = dynamicDowncast<Element>(node);
+    RefPtr element = dynamicDowncast<Element>(node) ?: node.parentElementInComposedTree();
     if (!element)
         return;
 
     Ref document = node.document();
-    if (!document->quirks().shouldSynthesizeTouchEventsAfterNonSyntheticClick(node))
+    if (!document->quirks().shouldSynthesizeTouchEventsAfterNonSyntheticClick(*element))
         return;
 
     bool isReplaced = false;
-    auto bounds = node.absoluteBoundingRect(&isReplaced);
+    auto bounds = element->absoluteBoundingRect(&isReplaced);
     if (bounds.isEmpty())
         return;
 

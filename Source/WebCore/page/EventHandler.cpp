@@ -2325,13 +2325,12 @@ bool EventHandler::swallowAnyClickEvent(const PlatformMouseEvent& platformMouseE
     // The click event should only be fired for the primary pointer button.
 
     auto& eventName = isPrimaryPointerButton ? eventNames().clickEvent : eventNames().auxclickEvent;
-    if (dispatchMouseEvent(eventName, nodeToClick.get(), m_clickCount, platformMouseEvent, FireMouseOverOut::Yes))
-        return false;
+    bool swallowed = !dispatchMouseEvent(eventName, nodeToClick.get(), m_clickCount, platformMouseEvent, FireMouseOverOut::Yes);
 
     if (RefPtr page = m_frame->protectedPage())
-        page->chrome().client().didSwallowClickEvent(platformMouseEvent, *nodeToClick);
+        page->chrome().client().didDispatchClickEvent(platformMouseEvent, *nodeToClick);
 
-    return true;
+    return swallowed;
 }
 
 HandleUserInputEventResult EventHandler::handleMouseReleaseEvent(const PlatformMouseEvent& platformMouseEvent)

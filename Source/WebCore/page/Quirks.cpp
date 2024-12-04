@@ -34,6 +34,7 @@
 #include "DocumentInlines.h"
 #include "DocumentLoader.h"
 #include "DocumentStorageAccess.h"
+#include "ElementAncestorIteratorInlines.h"
 #include "ElementInlines.h"
 #include "ElementTargetingTypes.h"
 #include "EventNames.h"
@@ -249,13 +250,7 @@ bool Quirks::hasBrokenEncryptedMediaAPISupportQuirk() const
 bool Quirks::isTouchBarUpdateSuppressedForHiddenContentEditable() const
 {
 #if PLATFORM(MAC)
-    if (!needsQuirks())
-        return false;
-
-    if (!m_quirksData.isTouchBarUpdateSuppressedForHiddenContentEditableQuirk)
-        m_quirksData.isTouchBarUpdateSuppressedForHiddenContentEditableQuirk = topDocumentURL().host() == "docs.google.com"_s;
-
-    return *m_quirksData.isTouchBarUpdateSuppressedForHiddenContentEditableQuirk;
+    return needsQuirks() && isGoogleDocs();
 #else
     return false;
 #endif
@@ -303,15 +298,7 @@ bool Quirks::isNeverRichlyEditableForTouchBar() const
 bool Quirks::shouldSuppressAutocorrectionAndAutocapitalizationInHiddenEditableAreas() const
 {
 #if PLATFORM(IOS_FAMILY)
-    if (!needsQuirks())
-        return false;
-
-    if (!m_quirksData.shouldSuppressAutocorrectionAndAutocapitalizationInHiddenEditableAreasQuirk) {
-        auto host = topDocumentURL().host();
-        m_quirksData.shouldSuppressAutocorrectionAndAutocapitalizationInHiddenEditableAreasQuirk = host == "docs.google.com"_s;
-    }
-
-    return *m_quirksData.shouldSuppressAutocorrectionAndAutocapitalizationInHiddenEditableAreasQuirk;
+    return needsQuirks() && isGoogleDocs();
 #else
     return false;
 #endif
@@ -434,6 +421,21 @@ bool Quirks::isAmazon() const
     return *m_quirksData.isAmazon;
 }
 
+bool Quirks::isCBSSports() const
+{
+    if (!m_quirksData.isCBSSports)
+        m_quirksData.isCBSSports = isDomain("cbssports.com"_s);
+
+    return *m_quirksData.isCBSSports;
+}
+
+bool Quirks::isGoogleDocs() const
+{
+    if (!m_quirksData.isGoogleDocs)
+        m_quirksData.isGoogleDocs = topDocumentURL().host() == "docs.google.com"_s;
+
+    return *m_quirksData.isGoogleDocs;
+}
 
 bool Quirks::isESPN() const
 {
@@ -681,15 +683,7 @@ bool Quirks::needsDeferKeyDownAndKeyPressTimersUntilNextEditingCommand() const
     if (m_document->settings().needsDeferKeyDownAndKeyPressTimersUntilNextEditingCommandQuirk())
         return true;
 
-    if (!needsQuirks())
-        return false;
-
-    if (!m_quirksData.needsDeferKeyDownAndKeyPressTimersUntilNextEditingCommandQuirk) {
-        auto url = topDocumentURL();
-        m_quirksData.needsDeferKeyDownAndKeyPressTimersUntilNextEditingCommandQuirk = url.host() == "docs.google.com"_s && startsWithLettersIgnoringASCIICase(url.path(), "/spreadsheets/"_s);
-    }
-
-    return *m_quirksData.needsDeferKeyDownAndKeyPressTimersUntilNextEditingCommandQuirk;
+    return needsQuirks() && isGoogleDocs();
 #else
     return false;
 #endif
@@ -2087,19 +2081,28 @@ bool Quirks::needsChromeMediaControlsPseudoElement() const
 }
 
 #if PLATFORM(IOS_FAMILY)
-// Remove this once rdar://139478801 is resolved.
-bool Quirks::shouldSynthesizeTouchEventsAfterNonSyntheticClick(const Node& target) const
+// cbssports.com <rdar://139478801>.
+// docs.google.com <rdar://59402637>.
+bool Quirks::shouldSynthesizeTouchEventsAfterNonSyntheticClick(const Element& target) const
 {
     if (!needsQuirks())
         return false;
 
-    if (!m_quirksData.shouldSynthesizeTouchEventsAfterNonSyntheticClickQuirk)
-        m_quirksData.shouldSynthesizeTouchEventsAfterNonSyntheticClickQuirk = isDomain("cbssports.com"_s);
+    if (isCBSSports())
+        return target.nodeName() == "AVIA-BUTTON"_s;
 
-    if (!m_quirksData.shouldSynthesizeTouchEventsAfterNonSyntheticClickQuirk.value())
-        return false;
+    if (isGoogleDocs()) {
+        unsigned numberOfAncestorsToCheck = 3;
+        for (Ref ancestor : lineageOfType<HTMLElement>(target)) {
+            if (ancestor->hasClassName("docs-ml-promotion-action-container"_s))
+                return true;
 
-    return target.nodeName() == "AVIA-BUTTON"_s;
+            if (!--numberOfAncestorsToCheck)
+                break;
+        }
+    }
+
+    return false;
 }
 
 bool Quirks::shouldIgnoreContentObservationForClick(const Node& targetNode) const

@@ -1867,7 +1867,7 @@ public:
 
     void callAfterPendingSyntheticClick(CompletionHandler<void(WebCore::SyntheticClickResult)>&&);
 
-    void didSwallowClickEvent(const WebCore::PlatformMouseEvent&, WebCore::Node&);
+    void didDispatchClickEvent(const WebCore::PlatformMouseEvent&, WebCore::Node&);
 
 private:
     WebPage(WebCore::PageIdentifier, WebPageCreationParameters&&);
@@ -2960,7 +2960,7 @@ inline void WebPage::prepareToRunModalJavaScriptDialog() { }
 #endif
 
 #if !ENABLE(IOS_TOUCH_EVENTS)
-inline void WebPage::didSwallowClickEvent(const WebCore::PlatformMouseEvent&, WebCore::Node&) { }
+inline void WebPage::didDispatchClickEvent(const WebCore::PlatformMouseEvent&, WebCore::Node&) { }
 #endif
 
 #if !PLATFORM(MAC)
