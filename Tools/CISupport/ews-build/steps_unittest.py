@@ -9197,6 +9197,7 @@ class TestFindUnexpectedStaticAnalyzerResults(BuildStepMixinAdditions, unittest.
     command = ['python3', 'Tools/Scripts/compare-static-analysis-results', 'wkdir/build/new', '--build-output', SCAN_BUILD_OUTPUT_DIR, '--archived-dir', 'wkdir/build/baseline', '--scan-build-path', '../llvm-project/clang/tools/scan-build/bin/scan-build', '--delete-results']
     upload_options = ['--builder-name', 'Safer-CPP-Checks', '--build-number', 1234, '--buildbot-worker', 'ews123', '--buildbot-master', EWS_BUILD_HOSTNAMES[0], '--report', 'https://results.webkit.org/']
     configuration = ['--architecture', 'arm64', '--platform', 'mac', '--version', '14.6.1', '--version-name', 'Sonoma', '--style', 'release', '--sdk', '23G93']
+    jsonFileName = f'{SCAN_BUILD_OUTPUT_DIR}/unexpected_results.json'
 
     def setUp(self):
         os.environ['RESULTS_SERVER_API_KEY'] = 'test-api-key'
@@ -9205,8 +9206,8 @@ class TestFindUnexpectedStaticAnalyzerResults(BuildStepMixinAdditions, unittest.
     def tearDown(self):
         return self.tearDownBuildStep()
 
-    def configureStep(self, expectations):
-        self.setupStep(FindUnexpectedStaticAnalyzerResults(expectations=expectations))
+    def configureStep(self, use_expectations, was_filtered=False):
+        self.setupStep(FindUnexpectedStaticAnalyzerResults(use_expectations=use_expectations, was_filtered=was_filtered))
         self.setProperty('builddir', 'wkdir')
         self.setProperty('buildnumber', 1234)
         self.setProperty('architecture', 'arm64')
@@ -9221,6 +9222,7 @@ class TestFindUnexpectedStaticAnalyzerResults(BuildStepMixinAdditions, unittest.
         self.setProperty('workername', 'ews123')
         self.setProperty('builddir', 'wkdir')
         self.setProperty('buildnumber', 1234)
+        self.setProperty('change_id', 1234)
 
     def test_success_no_issues(self):
         self.configureStep(False)
@@ -9228,6 +9230,7 @@ class TestFindUnexpectedStaticAnalyzerResults(BuildStepMixinAdditions, unittest.
         self.expectRemoteCommands(
             ExpectShell(workdir='wkdir',
                         logEnviron=False,
+                        logfiles={'json': self.jsonFileName},
                         command=self.command + self.upload_options + self.configuration,
                         env={'RESULTS_SERVER_API_KEY': 'test-api-key'})
             + ExpectShell.log('stdio', stdout='')
@@ -9243,6 +9246,7 @@ class TestFindUnexpectedStaticAnalyzerResults(BuildStepMixinAdditions, unittest.
         self.expectRemoteCommands(
             ExpectShell(workdir='wkdir',
                         logEnviron=False,
+                        logfiles={'json': self.jsonFileName},
                         command=self.command + self.upload_options + self.configuration,
                         env={'RESULTS_SERVER_API_KEY': 'test-api-key'})
             + ExpectShell.log('stdio', stdout='Total new issues: 19\nTotal fixed files: 3\n')
@@ -9252,12 +9256,15 @@ class TestFindUnexpectedStaticAnalyzerResults(BuildStepMixinAdditions, unittest.
         with current_hostname(EWS_BUILD_HOSTNAMES[0]):
             return self.runStep()
 
-    def test_with_expectations(self):
+    def test_with_expectations_results_failure(self):
         self.configureStep(True)
-
+        FindUnexpectedStaticAnalyzerResults.filter_results_using_results_db = lambda self, logText: False
+        next_steps = []
+        self.patch(self.build, 'addStepsAfterCurrentStep', lambda s: next_steps.extend(s))
         self.expectRemoteCommands(
             ExpectShell(workdir='wkdir',
                         logEnviron=False,
+                        logfiles={'json': self.jsonFileName},
                         command=['python3', 'Tools/Scripts/compare-static-analysis-results', 'wkdir/build/new', '--build-output', SCAN_BUILD_OUTPUT_DIR, '--check-expectations'],
                         env={'RESULTS_SERVER_API_KEY': 'test-api-key'})
             + ExpectShell.log('stdio', stdout='Total new issues: 19\nTotal fixed files: 3\n')
@@ -9265,7 +9272,50 @@ class TestFindUnexpectedStaticAnalyzerResults(BuildStepMixinAdditions, unittest.
         )
         self.expectOutcome(result=SUCCESS, state_string='19 new issues 3 fixed files')
         with current_hostname(EWS_BUILD_HOSTNAMES[0]):
-            return self.runStep()
+            rc = self.runStep()
+        self.assertEqual([ValidateChange(verifyBugClosed=False, addURLs=False), RevertAppliedChanges(exclude=['new*', 'scan-build-output*']), ScanBuildWithoutChange()], next_steps)
+        return rc
+
+    def test_with_expectations_results_success_unexpected(self):
+        self.configureStep(True, was_filtered=True)
+        FindUnexpectedStaticAnalyzerResults.filter_results_using_results_db = lambda self, logText: True
+        FindUnexpectedStaticAnalyzerResults.write_unexpected_results_file_to_master = lambda self: None
+        next_steps = []
+        self.patch(self.build, 'addStepsAfterCurrentStep', lambda s: next_steps.extend(s))
+        self.expectRemoteCommands(
+            ExpectShell(workdir='wkdir',
+                        logEnviron=False,
+                        logfiles={'json': self.jsonFileName},
+                        command=['python3', 'Tools/Scripts/compare-static-analysis-results', 'wkdir/build/new', '--build-output', SCAN_BUILD_OUTPUT_DIR, '--check-expectations'],
+                        env={'RESULTS_SERVER_API_KEY': 'test-api-key'})
+            + ExpectShell.log('stdio', stdout='Total new issues: 19\nTotal new files: 3\n')
+            + 0,
+        )
+        self.expectOutcome(result=SUCCESS, state_string='3 failing files ')
+        with current_hostname(EWS_BUILD_HOSTNAMES[0]):
+            rc = self.runStep()
+        self.assertEqual([DownloadUnexpectedResultsFromMaster(), DeleteStaticAnalyzerResults(results_dir='StaticAnalyzerUnexpectedRegressions'), GenerateSaferCPPResultsIndex(), DeleteStaticAnalyzerResults(), ArchiveStaticAnalyzerResults(), UploadStaticAnalyzerResults(), ExtractStaticAnalyzerTestResults(), DisplaySaferCPPResults()], next_steps)
+        return rc
+
+    def test_with_expectations_results_success_without_unexpected(self):
+        self.configureStep(True)
+        FindUnexpectedStaticAnalyzerResults.filter_results_using_results_db = lambda self, logText: True
+        next_steps = []
+        self.patch(self.build, 'addStepsAfterCurrentStep', lambda s: next_steps.extend(s))
+        self.expectRemoteCommands(
+            ExpectShell(workdir='wkdir',
+                        logEnviron=False,
+                        logfiles={'json': self.jsonFileName},
+                        command=['python3', 'Tools/Scripts/compare-static-analysis-results', 'wkdir/build/new', '--build-output', SCAN_BUILD_OUTPUT_DIR, '--check-expectations'],
+                        env={'RESULTS_SERVER_API_KEY': 'test-api-key'})
+            + ExpectShell.log('stdio', stdout='Total new issues: 19\nTotal fixed files: 3\n')
+            + 0,
+        )
+        self.expectOutcome(result=SUCCESS, state_string='19 new issues 3 fixed files')
+        with current_hostname(EWS_BUILD_HOSTNAMES[0]):
+            rc = self.runStep()
+        self.assertEqual([GenerateSaferCPPResultsIndex(), DeleteStaticAnalyzerResults(), ArchiveStaticAnalyzerResults(), UploadStaticAnalyzerResults(), ExtractStaticAnalyzerTestResults(), DisplaySaferCPPResults()], next_steps)
+        return rc
 
 
 class TestDownloadUnexpectedResultsfromMaster(BuildStepMixinAdditions, unittest.TestCase):
@@ -9422,7 +9472,7 @@ class TestDisplaySaferCPPResults(BuildStepMixinAdditions, unittest.TestCase):
 
     def test_success_preexisting_failures(self):
         self.configureStep()
-        self.setProperty('unexpected_new_issues', 10)
+        self.setProperty('num_unexpected_issues', 10)
         next_steps = []
         self.patch(self.build, 'addStepsAfterCurrentStep', lambda s: next_steps.extend(s))
 
@@ -9435,7 +9485,7 @@ class TestDisplaySaferCPPResults(BuildStepMixinAdditions, unittest.TestCase):
 
     def test_success_only_fixes(self):
         self.configureStep()
-        self.setProperty('unexpected_passing_files', 1)
+        self.setProperty('num_passing_files', 1)
         next_steps = []
         self.patch(self.build, 'addStepsAfterCurrentStep', lambda s: next_steps.extend(s))
 
@@ -9451,8 +9501,8 @@ class TestDisplaySaferCPPResults(BuildStepMixinAdditions, unittest.TestCase):
 
     def test_failure_new_failures(self):
         self.configureStep()
-        self.setProperty('unexpected_new_issues', 10)
-        self.setProperty('unexpected_failing_files', 1)
+        self.setProperty('num_unexpected_issues', 10)
+        self.setProperty('num_failing_files', 1)
         next_steps = []
         self.patch(self.build, 'addStepsAfterCurrentStep', lambda s: next_steps.extend(s))
 
@@ -9467,9 +9517,9 @@ class TestDisplaySaferCPPResults(BuildStepMixinAdditions, unittest.TestCase):
 
     def test_failure_mixed(self):
         self.configureStep()
-        self.setProperty('unexpected_new_issues', 10)
-        self.setProperty('unexpected_passing_files', 1)
-        self.setProperty('unexpected_failing_files', 1)
+        self.setProperty('num_unexpected_issues', 10)
+        self.setProperty('num_passing_files', 1)
+        self.setProperty('num_failing_files', 1)
         next_steps = []
         self.patch(self.build, 'addStepsAfterCurrentStep', lambda s: next_steps.extend(s))
 
