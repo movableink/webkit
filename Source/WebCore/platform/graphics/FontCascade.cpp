@@ -147,6 +147,7 @@ bool FontCascade::isCurrent(const FontSelector& fontSelector) const
 
 void FontCascade::updateFonts(Ref<FontCascadeFonts>&& fonts) const
 {
+    // FIXME: Ideally we'd only update m_generation if the fonts changed.
     m_fonts = WTFMove(fonts);
     m_generation = ++lastFontCascadeGeneration;
 }

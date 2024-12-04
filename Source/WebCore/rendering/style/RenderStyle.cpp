@@ -2759,6 +2759,14 @@ TextAutospace RenderStyle::textAutospace() const
     return fontDescription().textAutospace();
 }
 
+void RenderStyle::setFontCascade(FontCascade&& fontCascade)
+{
+    if (fontCascade == this->fontCascade())
+        return;
+
+    m_inheritedData.access().fontCascade = fontCascade;
+}
+
 bool RenderStyle::setFontDescription(FontCascadeDescription&& description)
 {
     if (fontDescription() == description)

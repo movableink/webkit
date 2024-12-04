@@ -18,8 +18,7 @@
  *
  */
 
-#ifndef FontCascadeFonts_h
-#define FontCascadeFonts_h
+#pragma once
 
 #include "Font.h"
 #include "FontCascadeDescription.h"
@@ -126,8 +125,8 @@ private:
 
     WidthCache m_widthCache;
 
-    unsigned m_fontSelectorVersion;
-    unsigned short m_generation;
+    unsigned m_fontSelectorVersion { 0 };
+    unsigned short m_generation { 0 };
     Pitch m_pitch { UnknownPitch };
     bool m_isForPlatformFont { false };
     TriState m_canTakeFixedPitchFastContentMeasuring : 2 { TriState::Indeterminate };
@@ -178,5 +177,3 @@ inline const Font& FontCascadeFonts::primaryFont(const FontCascadeDescription& d
 WTF::TextStream& operator<<(WTF::TextStream&, const FontCascadeFonts&);
 
 } // namespace WebCore
-
-#endif
