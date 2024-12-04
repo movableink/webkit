@@ -671,7 +671,7 @@ void WebProcessPool::establishRemoteWorkerContextConnectionToNetworkProcess(Remo
 
     // Prioritize the requesting WebProcess for running the service worker.
     if (!remoteWorkerProcessProxy && !s_useSeparateServiceWorkerProcess && requestingProcess) {
-        if (requestingProcess->websiteDataStore() == websiteDataStore && requestingProcess->isMatchingRegistrableDomain(site.domain()))
+        if (requestingProcess->websiteDataStore() == websiteDataStore && requestingProcess->site() == site)
             useProcessForRemoteWorkers(*requestingProcess);
     }
 
@@ -681,7 +681,7 @@ void WebProcessPool::establishRemoteWorkerContextConnectionToNetworkProcess(Remo
                 continue;
             if (process->websiteDataStore() != websiteDataStore)
                 continue;
-            if (!process->isMatchingRegistrableDomain(site.domain()))
+            if (process->site() != site)
                 continue;
             if (process->lockdownMode() != lockdownMode)
                 continue;
@@ -2148,7 +2148,7 @@ std::tuple<Ref<WebProcessProxy>, RefPtr<SuspendedPageProxy>, ASCIILiteral> WebPr
         return { WTFMove(sourceProcess), nullptr, "Navigation is same-site"_s };
 
     if (sourceURL.protocolIsAbout()) {
-        if (sourceProcess->registrableDomain().matches(targetURL))
+        if (sourceProcess->site() && sourceProcess->site()->domain().matches(targetURL))
             return { WTFMove(sourceProcess), nullptr, "Navigation is treated as same-site"_s };
         // With site isolation enabled, this condition is not enough to indicate the web process can be reused;
         // we may also need to consider whether the process is used or in use by other sites.

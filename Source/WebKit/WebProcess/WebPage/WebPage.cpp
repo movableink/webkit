@@ -1954,10 +1954,12 @@ void WebPage::close()
 
     stopObservingNowPlayingMetadata();
 
+    String processDisplayName = m_processDisplayName;
+
     // The WebPage can be destroyed by this call.
     WebProcess::singleton().removeWebPage(m_identifier);
 
-    WebProcess::singleton().updateActivePages(m_processDisplayName);
+    WebProcess::singleton().updateActivePages(processDisplayName);
 
     if (isRunningModal)
         RunLoop::main().stop();
