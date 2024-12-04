@@ -7773,6 +7773,19 @@ UseGiantTiles:
     WebCore:
       default: false
 
+UseIFCForSVGText:
+  type: bool
+  status: internal
+  humanReadableName: "Use IFC for SVG text"
+  humanReadableDescription: "Use IFC for SVG text rendering"
+  defaultValue:
+    WebCore:
+      default: false
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+
 UseImageDocumentForSubframePDF:
   type: bool
   status: embedder

@@ -23,14 +23,12 @@
 #pragma once
 
 #include "LegacyInlineTextBox.h"
-#include "LegacyRenderSVGResource.h"
-#include "SVGTextFragment.h"
 
 namespace WebCore {
 
-class LegacyRenderSVGResource;
 class RenderSVGInlineText;
 class SVGRootInlineBox;
+struct SVGTextFragment;
 
 class SVGInlineTextBox final : public LegacyInlineTextBox {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGInlineTextBox);
@@ -49,7 +47,7 @@ public:
     FloatRect calculateBoundaries() const;
 
     const Vector<SVGTextFragment>& textFragments() const { return m_textFragments; }
-    void setTextFragments(Vector<SVGTextFragment>&& fragments) { m_textFragments = WTFMove(fragments); }
+    void setTextFragments(Vector<SVGTextFragment>&&);
 
     void dirtyOwnLineBoxes() override;
     void dirtyLineBoxes() override;

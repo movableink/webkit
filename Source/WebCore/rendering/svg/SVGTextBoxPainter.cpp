@@ -46,6 +46,13 @@ LegacySVGTextBoxPainter::LegacySVGTextBoxPainter(const SVGInlineTextBox& textBox
 {
 }
 
+
+ModernSVGTextBoxPainter::ModernSVGTextBoxPainter(const LayoutIntegration::InlineContent& inlineContent, size_t boxIndex, PaintInfo& paintInfo, const LayoutPoint& paintOffset)
+    : SVGTextBoxPainter(InlineIterator::BoxModernPath { inlineContent, boxIndex }, paintInfo, paintOffset)
+{
+}
+
+
 template<typename TextBoxPath>
 SVGTextBoxPainter<TextBoxPath>::SVGTextBoxPainter(TextBoxPath&& textBox, PaintInfo& paintInfo, const LayoutPoint& paintOffset)
     : m_textBox(WTFMove(textBox))

@@ -86,4 +86,9 @@ public:
     LegacySVGTextBoxPainter(const SVGInlineTextBox&, PaintInfo&, const LayoutPoint& paintOffset);
 };
 
+class ModernSVGTextBoxPainter : public SVGTextBoxPainter<InlineIterator::BoxModernPath> {
+public:
+    ModernSVGTextBoxPainter(const LayoutIntegration::InlineContent&, size_t boxIndex, PaintInfo&, const LayoutPoint& paintOffset);
+};
+
 }

@@ -2586,6 +2586,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     rendering/svg/legacy/LegacyRenderSVGModelObject.h
     rendering/svg/RenderSVGModelObject.h
     rendering/svg/SVGBoundingBoxComputation.h
+    rendering/svg/SVGInlineTextBox.h
     rendering/svg/SVGRenderSupport.h
 
     storage/Storage.h

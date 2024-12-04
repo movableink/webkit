@@ -43,6 +43,7 @@
 #include "SVGRenderingContext.h"
 #include "SVGResourcesCache.h"
 #include "SVGRootInlineBox.h"
+#include "SVGTextFragment.h"
 #include "TextBoxSelectableRange.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -213,6 +214,11 @@ FloatRect SVGInlineTextBox::calculateBoundaries() const
     }
 
     return textRect;
+}
+
+void SVGInlineTextBox::setTextFragments(Vector<SVGTextFragment>&& fragments)
+{
+    m_textFragments = WTFMove(fragments);
 }
 
 } // namespace WebCore

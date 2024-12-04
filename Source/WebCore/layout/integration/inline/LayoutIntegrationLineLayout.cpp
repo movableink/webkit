@@ -667,6 +667,26 @@ void LineLayout::updateRenderTreePositions(const Vector<LineAdjustment>& lineAdj
     }
 }
 
+void LineLayout::applySVGTextFragments(SVGTextFragmentMap&& fragmentMap)
+{
+    auto& boxes = m_inlineContent->displayContent().boxes;
+    auto& fragments = m_inlineContent->svgTextFragmentsForBoxes();
+    fragments.resize(m_inlineContent->displayContent().boxes.size());
+
+    for (size_t i = 0; i < boxes.size(); ++i) {
+        auto textBox = InlineIterator::svgTextBoxFor(*m_inlineContent, i);
+        if (!textBox)
+            continue;
+
+        auto it = fragmentMap.find(makeKey(*textBox));
+        if (it != fragmentMap.end())
+            fragments[i] = WTFMove(it->value);
+
+        auto boundaries = textBox->calculateBoundariesIncludingSVGTransform();
+        boxes[i].setRect(boundaries, boundaries);
+    }
+}
+
 void LineLayout::preparePlacedFloats()
 {
     auto& placedFloats = m_blockFormattingState.placedFloats();

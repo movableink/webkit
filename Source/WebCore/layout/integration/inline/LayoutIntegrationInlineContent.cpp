@@ -169,6 +169,12 @@ const Vector<size_t>& InlineContent::nonRootInlineBoxIndexesForLayoutBox(const L
     return it->value;
 }
 
+const Vector<SVGTextFragment>& InlineContent::svgTextFragments(size_t index) const
+{
+    RELEASE_ASSERT(m_svgTextFragmentsForBoxes.size() > index);
+    return m_svgTextFragmentsForBoxes[index];
+}
+
 void InlineContent::releaseCaches()
 {
     m_firstBoxIndexCache = { };

@@ -42,19 +42,30 @@ SVGTextBox::SVGTextBox(PathVariant&& path)
 
 FloatRect SVGTextBox::calculateBoundariesIncludingSVGTransform() const
 {
-    if (auto* svgText = dynamicDowncast<SVGInlineTextBox>(legacyInlineBox()))
-        return svgText->calculateBoundaries();
-    return visualRectIgnoringBlockDirection();
+    FloatRect textRect;
+
+    float scalingFactor = renderer().scalingFactor();
+    ASSERT(scalingFactor);
+
+    float baseline = renderer().scaledFont().metricsOfPrimaryFont().ascent() / scalingFactor;
+    for (auto& fragment : textFragments()) {
+        auto fragmentRect = FloatRect { fragment.x, fragment.y - baseline, fragment.width, fragment.height };
+
+        AffineTransform fragmentTransform;
+        fragment.buildFragmentTransform(fragmentTransform);
+        if (!fragmentTransform.isIdentity())
+            fragmentRect = fragmentTransform.mapRect(fragmentRect);
+
+        textRect.unite(fragmentRect);
+    }
+    return textRect;
 }
 
 const Vector<SVGTextFragment>& SVGTextBox::textFragments() const
 {
-    if (auto* svgText = dynamicDowncast<SVGInlineTextBox>(legacyInlineBox()))
-        return svgText->textFragments();
-
-    // FIXME: Implement.
-    static NeverDestroyed<Vector<SVGTextFragment>> emptyFragments;
-    return emptyFragments;
+    return WTF::switchOn(m_pathVariant, [&](auto& path) -> const Vector<SVGTextFragment>& {
+        return path.svgTextFragments();
+    });
 }
 
 const SVGInlineTextBox* SVGTextBox::legacyInlineBox() const
@@ -88,6 +99,14 @@ BoxRange<SVGTextBoxIterator> svgTextBoxesFor(const RenderSVGInlineText& text)
 SVGTextBoxIterator svgTextBoxFor(const SVGInlineTextBox* box)
 {
     return { BoxLegacyPath { box } };
+}
+
+SVGTextBoxIterator svgTextBoxFor(const LayoutIntegration::InlineContent& inlineContent, size_t boxIndex)
+{
+    auto& box = inlineContent.displayContent().boxes[boxIndex];
+    if (!box.isText() || !box.layoutBox().rendererForIntegration()->isRenderSVGInlineText())
+        return { };
+    return { BoxModernPath { inlineContent, boxIndex } };
 }
 
 SVGTextBox::Key makeKey(const SVGTextBox& textBox)

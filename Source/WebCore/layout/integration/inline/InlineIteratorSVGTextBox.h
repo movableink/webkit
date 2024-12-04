@@ -68,6 +68,7 @@ private:
 SVGTextBoxIterator firstSVGTextBoxFor(const RenderSVGInlineText&);
 BoxRange<SVGTextBoxIterator> svgTextBoxesFor(const RenderSVGInlineText&);
 SVGTextBoxIterator svgTextBoxFor(const SVGInlineTextBox*);
+SVGTextBoxIterator svgTextBoxFor(const LayoutIntegration::InlineContent&, size_t boxIndex);
 
 BoxRange<BoxIterator> boxesFor(const RenderSVGText&);
 
