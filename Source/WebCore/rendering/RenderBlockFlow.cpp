@@ -98,6 +98,9 @@ static LayoutUnit computeExtraSpace(LayoutUnit stepSize, LayoutUnit boxOuterSize
     if (!stepSize)
         return { };
 
+    if (!boxOuterSize)
+        return stepSize;
+
     if (auto remainder = intMod(boxOuterSize, stepSize))
         return stepSize - remainder;
     return { };
