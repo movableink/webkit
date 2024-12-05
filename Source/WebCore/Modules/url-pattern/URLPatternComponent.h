@@ -35,6 +35,7 @@ class VM;
 
 namespace WebCore {
 
+class ScriptExecutionContext;
 enum class EncodingCallbackType : uint8_t;
 template<typename> class ExceptionOr;
 
