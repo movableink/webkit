@@ -31,6 +31,7 @@
 #include "CredentialRequestCoordinatorClient.h"
 #include "CredentialRequestOptions.h"
 #include "Document.h"
+#include "FrameDestructionObserverInlines.h"
 #include "JSDOMPromiseDeferred.h"
 #include <wtf/Logger.h>
 #include <wtf/TZoneMallocInlines.h>

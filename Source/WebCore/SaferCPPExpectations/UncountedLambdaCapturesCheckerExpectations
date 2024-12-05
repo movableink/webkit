@@ -84,6 +84,7 @@ JSFileSystemFileEntry.cpp
 JSFileSystemFileHandle.cpp
 JSFileSystemHandle.cpp
 JSFileSystemSyncAccessHandle.cpp
+JSFileSystemWritableFileStream.cpp
 JSFontFace.cpp
 JSFontFaceSet.cpp
 JSGPU.cpp

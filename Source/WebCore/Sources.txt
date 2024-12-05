@@ -141,6 +141,8 @@ Modules/filesystemaccess/FileSystemDirectoryHandle.cpp
 Modules/filesystemaccess/FileSystemFileHandle.cpp
 Modules/filesystemaccess/FileSystemHandle.cpp
 Modules/filesystemaccess/FileSystemSyncAccessHandle.cpp
+Modules/filesystemaccess/FileSystemWritableFileStream.cpp
+Modules/filesystemaccess/FileSystemWritableFileStreamSink.cpp
 Modules/filesystemaccess/WorkerFileSystemStorageConnection.cpp
 Modules/geolocation/GeoNotifier.cpp
 Modules/geolocation/Geolocation.cpp
@@ -3784,6 +3786,7 @@ JSFileSystemFileEntry.cpp
 JSFileSystemFileHandle.cpp
 JSFileSystemHandle.cpp
 JSFileSystemSyncAccessHandle.cpp
+JSFileSystemWritableFileStream.cpp
 JSFillMode.cpp
 JSFillLightMode.cpp
 JSFlacEncoderConfig.cpp

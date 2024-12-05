@@ -8724,3 +8724,10 @@ struct WebCore::ImageBufferResourceLimits {
     size_t imageBufferForCanvasCount;
     size_t imageBufferForCanvasLimit;
 };
+
+header: <WebCore/FileSystemWriteCommandType.h>
+enum class WebCore::FileSystemWriteCommandType : uint8_t {
+    Write,
+    Seek,
+    Truncate
+};

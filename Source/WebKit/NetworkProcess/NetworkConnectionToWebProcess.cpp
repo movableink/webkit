@@ -1673,6 +1673,13 @@ bool NetworkConnectionToWebProcess::isAlwaysOnLoggingAllowed() const
     return m_sessionID.isAlwaysOnLoggingAllowed() || m_sharedPreferencesForWebProcess.allowPrivacySensitiveOperationsInNonPersistentDataStores;
 }
 
+void NetworkConnectionToWebProcess::updateSharedPreferencesForWebProcess(SharedPreferencesForWebProcess&& sharedPreferencesForWebProcess)
+{
+    m_sharedPreferencesForWebProcess = WTFMove(sharedPreferencesForWebProcess);
+    if (CheckedPtr session = networkSession())
+        session->protectedStorageManager()->updateSharedPreferencesForConnection(connection(), m_sharedPreferencesForWebProcess);
+}
+
 } // namespace WebKit
 
 #undef CONNECTION_RELEASE_LOG

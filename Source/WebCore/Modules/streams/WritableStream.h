@@ -43,7 +43,7 @@ public:
     static ExceptionOr<Ref<WritableStream>> create(JSDOMGlobalObject&, Ref<WritableStreamSink>&&);
     static Ref<WritableStream> create(Ref<InternalWritableStream>&&);
 
-    ~WritableStream();
+    virtual ~WritableStream();
 
     void lock();
     bool locked() const;

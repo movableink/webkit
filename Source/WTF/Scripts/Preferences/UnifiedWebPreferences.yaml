@@ -2991,6 +2991,22 @@ FileSystemAccessEnabled:
       default: false
   disableInLockdownMode: true
 
+FileSystemWritableStreamEnabled:
+  type: bool
+  status: testable
+  category: dom
+  humanReadableName: "File System WritableStream"
+  humanReadableDescription: "Enable File System WritableStream API"
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+  disableInLockdownMode: true
+  sharedPreferenceForWebProcess: true
+
 FilterLinkDecorationByDefaultEnabled:
   type: bool
   status: stable
