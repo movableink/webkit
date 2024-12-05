@@ -30,6 +30,7 @@
 #include <WebCore/DataListSuggestionPicker.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/RefPtr.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebKit {
 
