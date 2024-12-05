@@ -495,8 +495,7 @@ Page::~Page()
     m_validationMessageClient = nullptr;
     m_diagnosticLoggingClient = nullptr;
     m_performanceLoggingClient = nullptr;
-    if (RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_mainFrame))
-        localMainFrame->setView(nullptr);
+    m_mainFrame->disconnectView();
     setGroupName(String());
     allPages().remove(*this);
     if (!isUtilityPage()) {
