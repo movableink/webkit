@@ -26,6 +26,7 @@
 #include "config.h"
 #include "URLPatternComponent.h"
 
+#include "ScriptExecutionContext.h"
 #include "URLPatternCanonical.h"
 #include "URLPatternParser.h"
 #include <JavaScriptCore/JSString.h>
