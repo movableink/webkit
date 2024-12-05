@@ -124,7 +124,6 @@ webkit.org/b/204115 imported/w3c/web-platform-tests/pointerevents/pointerevent_r
 webkit.org/b/204115 imported/w3c/web-platform-tests/pointerevents/pointerevent_touch-action-auto-css_touch.html [ Skip ]
 webkit.org/b/204115 imported/w3c/web-platform-tests/pointerevents/pointerevent_touch-action-inherit_highest-parent-none_touch.html [ Skip ]
 webkit.org/b/204115 imported/w3c/web-platform-tests/pointerevents/pointerevent_touch-action-pan-x-pan-y_touch.html [ Skip ]
-webkit.org/b/204115 imported/w3c/web-platform-tests/pointerevents/pointerevent_pointerout_pen.html [ Skip ]
 imported/w3c/web-platform-tests/pointerevents/capturing_boundary_event_handler_at_ua_shadowdom.html?touch [ Skip ]
 imported/w3c/web-platform-tests/pointerevents/coalesced_events_attributes.https.html?touch [ Skip ]
 imported/w3c/web-platform-tests/pointerevents/coalesced_events_attributes_under_load.https.optional.html?touch [ Skip ]
@@ -240,9 +239,6 @@ webkit.org/b/212083 loader/navigation-policy/should-open-external-urls/user-gest
 webkit.org/b/212083 loader/navigation-policy/should-open-external-urls/user-gesture-window-open-with-flag.html
 webkit.org/b/212083 loader/navigation-policy/should-open-external-urls/user-gesture-window-open-without-flag-from-subframe.html
 webkit.org/b/212083 loader/navigation-policy/should-open-external-urls/user-gesture-window-open-without-flag.html
-
-webkit.org/b/212145 http/tests/navigation/no-referrer-reset.html [ Skip ] # Timeout.
-webkit.org/b/212145 http/tests/navigation/no-referrer-target-blank.html [ Skip ] # Timeout.
 
 # Mediastream
 webkit.org/b/213202 fast/mediastream/getUserMedia-grant-persistency3.html [ Failure ]
@@ -505,10 +501,6 @@ fast/events/ondrop-text-html.html
 fast/events/wheel/wheelevent-direction-inverted-from-device.html
 css3/scroll-snap/resnap-after-layout.html [ Skip ]
 
-# These are failures that will be enabled once the relevant parts of implementation land.
-webkit.org/b/133122 crypto/workers/subtle/aes-indexeddb.html [ Skip ]
-webkit.org/b/133122 crypto/workers/subtle/ec-postMessage-worker.html [ Skip ]
-
 # User-installed font infrastructure is ony present on certain OSes.
 webkit.org/b/180062 fast/text/user-installed-fonts/ [ Skip ]
 
@@ -609,8 +601,6 @@ webkit.org/b/214300 imported/w3c/web-platform-tests/css/css-fonts/font-language-
 webkit.org/b/217370 fast/events/setDragImage-element-non-nullable.html [ Failure ]
 Bug(WPE) fast/events/selectstart-by-drag.html [ Failure ]
 
-webkit.org/b/256310 imported/w3c/web-platform-tests/css/css-fonts/parsing/font-face-src-tech.html [ Skip ]
-
 # @font-face: missing integration between size-adjust and optical-size
 webkit.org/b/256457 imported/w3c/web-platform-tests/css/css-fonts/variations/variable-opsz-size-adjust.html [ ImageOnlyFailure ]
 
@@ -694,13 +684,6 @@ http/tests/security [ Skip ]
 Bug(WPE) fast/dom/DeviceMotion [ Skip ]
 Bug(WPE) fast/dom/DeviceOrientation [ Skip ]
 Bug(WPE) fast/dom/Geolocation [ Skip ]
-
-Bug(WPE) js/navigator-set-geolocation.html [ Skip ]
-Bug(WPE) fast/history/page-cache-geolocation-active-oneshot.html [ Skip ]
-Bug(WPE) fast/history/page-cache-geolocation-active-watcher.html [ Skip ]
-Bug(WPE) fast/history/page-cache-geolocation.html [ Skip ]
-
-Bug(WPE) fast/history/page-cache-notification-suspendable.html [ Skip ]
 
 Bug(WPE) fast/dom/HTMLAnchorElement [ Skip ]
 
@@ -1150,7 +1133,6 @@ webkit.org/b/266630 imported/w3c/web-platform-tests/trusted-types/WorkerGlobalSc
 webkit.org/b/266630 imported/w3c/web-platform-tests/trusted-types/WorkerGlobalScope-importScripts.html [ Failure ]
 
 # The GPU process should not be used in layout tests yet
-webkit.org/b/280604 fast/mediastream/video-background-with-canvas.html [ Skip ]
 webkit.org/b/280604 webgl/webgl-worker.html [ Skip ]
 webkit.org/b/280604 webgl/webgl-fail-platform-context-creation-no-crash.html [ Skip ]
 
@@ -1558,7 +1540,6 @@ webkit.org/b/266671 http/wpt/webcodecs/videoFrame-rect.html [ Failure ]
 # [WPE] Missing implementation of TestController::setHidden()
 webkit.org/b/268470 fast/mediastream/device-change-event-2.html [ Timeout ]
 
-[ Debug ] fast/media/mq-resolution.html [ Crash ]
 
 webrtc/captureCanvas-webrtc-with-video-scaling-adaptation.html [ Failure Timeout ]
 
