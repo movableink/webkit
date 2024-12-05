@@ -25,6 +25,8 @@
 
 #import "WKPreferencesPrivate.h"
 
+#import <wtf/Platform.h>
+
 #ifdef __cplusplus
 
 #import "WKObject.h"
