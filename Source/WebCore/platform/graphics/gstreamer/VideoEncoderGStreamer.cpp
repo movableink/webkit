@@ -43,7 +43,11 @@ GST_DEBUG_CATEGORY(webkit_video_encoder_debug);
 
 static WorkQueue& gstEncoderWorkQueue()
 {
-    static NeverDestroyed<Ref<WorkQueue>> queue(WorkQueue::create("GStreamer VideoEncoder Queue"_s));
+    static std::once_flag onceKey;
+    static LazyNeverDestroyed<Ref<WorkQueue>> queue;
+    std::call_once(onceKey, [] {
+        queue.construct(WorkQueue::create("GStreamer VideoEncoder queue"_s));
+    });
     return queue.get();
 }
 

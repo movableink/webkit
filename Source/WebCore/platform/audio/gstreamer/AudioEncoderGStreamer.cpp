@@ -41,7 +41,11 @@ GST_DEBUG_CATEGORY(webkit_audio_encoder_debug);
 
 static WorkQueue& gstEncoderWorkQueue()
 {
-    static NeverDestroyed<Ref<WorkQueue>> queue(WorkQueue::create("GStreamer AudioEncoder Queue"_s));
+    static std::once_flag onceKey;
+    static LazyNeverDestroyed<Ref<WorkQueue>> queue;
+    std::call_once(onceKey, [] {
+        queue.construct(WorkQueue::create("GStreamer AudioEncoder queue"_s));
+    });
     return queue.get();
 }
 
