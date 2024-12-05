@@ -172,6 +172,16 @@ static inline size_t capitalizeCharacter(String textContent, unsigned startChara
     }
 
     auto capitalize = [&](const UChar* contentToCapitalize, size_t length) -> size_t {
+        if (length == 1) {
+            if ((*contentToCapitalize >= 'A' && *contentToCapitalize <= 'Z') || *contentToCapitalize == ' ')
+                return 0;
+            if (*contentToCapitalize <= 'z') {
+                char32_t lastCharacter = u_totitle(*contentToCapitalize);
+                output.append(lastCharacter);
+                return 1;
+            }
+        }
+
         UChar capitalizedCharacter;
         UErrorCode status = U_ZERO_ERROR;
         auto realLength = u_strToTitle(&capitalizedCharacter, 1, contentToCapitalize, length, nullptr, "", &status);
