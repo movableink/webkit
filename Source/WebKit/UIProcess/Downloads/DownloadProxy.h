@@ -56,6 +56,7 @@ class ResourceResponse;
 namespace WebKit {
 
 class DownloadProxyMap;
+class ProcessAssertion;
 class WebPageProxy;
 
 enum class AllowOverwrite : bool;
@@ -124,6 +125,7 @@ public:
 #if HAVE(MODERN_DOWNLOADPROGRESS)
     void didReceivePlaceholderURL(const URL&, std::span<const uint8_t> bookmarkData, WebKit::SandboxExtensionHandle&&, CompletionHandler<void()>&&);
     void didReceiveFinalURL(const URL&, std::span<const uint8_t> bookmarkData, WebKit::SandboxExtensionHandle&&);
+    void didStartUpdatingProgress();
 #endif
     void willSendRequest(WebCore::ResourceRequest&& redirectRequest, const WebCore::ResourceResponse& redirectResponse, CompletionHandler<void(WebCore::ResourceRequest&&)>&&);
     void decideDestinationWithSuggestedFilename(const WebCore::ResourceResponse&, String&& suggestedFilename, DecideDestinationCallback&&);
@@ -159,6 +161,9 @@ private:
     CompletionHandler<void(DownloadProxy*)> m_didStartCallback;
 #if PLATFORM(COCOA)
     RetainPtr<NSProgress> m_progress;
+#endif
+#if HAVE(MODERN_DOWNLOADPROGRESS)
+    RefPtr<ProcessAssertion> m_assertion;
 #endif
 };
 
