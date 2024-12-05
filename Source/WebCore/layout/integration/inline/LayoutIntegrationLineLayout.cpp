@@ -58,6 +58,7 @@
 #include "RenderLayoutState.h"
 #include "RenderLineBreak.h"
 #include "RenderView.h"
+#include "SVGTextFragment.h"
 #include "Settings.h"
 #include "ShapeOutsideInfo.h"
 #include "TextBreakingPositionCache.h"

@@ -29,6 +29,7 @@
 #include "InlineIteratorBox.h"
 #include "LayoutIntegrationLineLayout.h"
 #include "RenderStyleInlines.h"
+#include "SVGTextFragment.h"
 #include "TextPainter.h"
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN

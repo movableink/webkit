@@ -25,6 +25,8 @@
 #include "config.h"
 #include "CSSColorValue.h"
 
+#include "CSSPrimitiveValue.h"
+
 namespace WebCore {
 
 Ref<CSSColorValue> CSSColorValue::create(CSS::Color color)

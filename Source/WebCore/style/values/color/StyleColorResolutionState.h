@@ -25,9 +25,10 @@
 
 #pragma once
 
+#include "CSSToLengthConversionData.h"
+
 namespace WebCore {
 
-class CSSToLengthConversionData;
 class Document;
 class RenderStyle;
 

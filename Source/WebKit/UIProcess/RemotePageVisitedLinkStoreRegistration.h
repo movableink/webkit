@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "VisitedLinkStore.h"
 #include "WebPageProxy.h"
 #include "WebProcessProxy.h"
 #include <wtf/TZoneMallocInlines.h>

@@ -31,6 +31,7 @@
 #include "StyleBuilderState.h"
 
 #include "CSSCanvasValue.h"
+#include "CSSColorValue.h"
 #include "CSSCrossfadeValue.h"
 #include "CSSCursorImageValue.h"
 #include "CSSFilterImageValue.h"
