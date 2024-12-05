@@ -1291,7 +1291,7 @@ void FrameLoader::loadInSameDocument(URL url, RefPtr<SerializedScriptValue> stat
 
     auto navigationType = determineNavigationType(m_loadType, historyHandling);
     if (document->settings().navigationAPIEnabled() && document->domWindow() && m_frame->checkedHistory()->currentItem())
-        document->protectedWindow()->navigation().updateForNavigation(*m_frame->checkedHistory()->currentItem(), navigationType);
+        document->protectedWindow()->navigation().updateForNavigation(*m_frame->checkedHistory()->currentItem(), navigationType, ShouldCopyStateObjectFromCurrentEntry::Yes);
 
     // If we were in the autoscroll/panScroll mode we want to stop it before following the link to the anchor
     if (hashChange)
