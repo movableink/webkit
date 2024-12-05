@@ -268,8 +268,8 @@ String capitalize(const String& string, Vector<UChar> previousCharacter)
 
 static LayoutRect selectionRectForTextBox(const InlineIterator::TextBox& textBox, unsigned rangeStart, unsigned rangeEnd)
 {
-    if (auto* svgInlineTextBox = dynamicDowncast<SVGInlineTextBox>(textBox.legacyInlineBox()))
-        return svgInlineTextBox->localSelectionRect(rangeStart, rangeEnd);
+    if (auto* svgTextBox = dynamicDowncast<InlineIterator::SVGTextBox>(textBox))
+        return svgTextBox->localSelectionRect(rangeStart, rangeEnd);
 
     bool isCaretCase = rangeStart == rangeEnd;
 
@@ -555,7 +555,7 @@ void RenderText::collectSelectionGeometries(Vector<SelectionGeometry>& rects, un
 
         bool isFixed = false;
         auto absoluteQuad = localToAbsoluteQuad(FloatRect(rect), UseTransforms, &isFixed);
-        bool boxIsHorizontal = !is<SVGInlineTextBox>(textBox->legacyInlineBox()) ? textBox->isHorizontal() : !writingMode().isVertical();
+        bool boxIsHorizontal = !is<InlineIterator::SVGTextBoxIterator>(textBox) ? textBox->isHorizontal() : !writingMode().isVertical();
 
         rects.append(SelectionGeometry(absoluteQuad, HTMLElement::selectionRenderingBehavior(textNode()), textBox->direction(), extentsRect.x(), extentsRect.maxX(), extentsRect.maxY(), 0, textBox->isLineBreak(), isFirstOnLine, isLastOnLine, containsStart, containsEnd, boxIsHorizontal, isFixed, view().pageNumberForBlockProgressionOffset(absoluteQuad.enclosingBoundingBox().x())));
     }
@@ -643,7 +643,7 @@ static Vector<LayoutRect> characterRects(const InlineIterator::TextBox& run, uns
     if (clampedStart >= clampedEnd)
         return { };
 
-    if (auto* svgTextBox = dynamicDowncast<SVGInlineTextBox>(run.legacyInlineBox())) {
+    if (auto* svgTextBox = dynamicDowncast<InlineIterator::SVGTextBox>(run)) {
         return Vector<LayoutRect>(clampedEnd - clampedStart, [&, clampedStart = clampedStart](size_t i) {
             size_t index = clampedStart + i;
             return svgTextBox->localSelectionRect(index, index + 1);

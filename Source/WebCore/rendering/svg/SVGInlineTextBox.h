@@ -40,8 +40,6 @@ public:
     float virtualLogicalHeight() const override { return m_logicalHeight; }
     void setLogicalHeight(float height) { m_logicalHeight = height; }
 
-    LayoutRect localSelectionRect(unsigned startPosition, unsigned endPosition) const override;
-
     bool mapStartEndPositionsIntoFragmentCoordinates(const SVGTextFragment&, unsigned& startPosition, unsigned& endPosition) const;
 
     FloatRect calculateBoundaries() const;
@@ -52,22 +50,13 @@ public:
     void dirtyOwnLineBoxes() override;
     void dirtyLineBoxes() override;
 
-    bool startsNewTextChunk() const { return m_startsNewTextChunk; }
-    void setStartsNewTextChunk(bool newTextChunk) { m_startsNewTextChunk = newTextChunk; }
-
-    int offsetForPositionInFragment(const SVGTextFragment&, float position) const;
-    FloatRect selectionRectForTextFragment(const SVGTextFragment&, unsigned fragmentStartPosition, unsigned fragmentEndPosition, const RenderStyle&) const;
-
     inline SVGInlineTextBox* nextTextBox() const;
     
 private:
     bool isSVGInlineTextBox() const override { return true; }
 
-    TextRun constructTextRun(const RenderStyle&, const SVGTextFragment&) const;
-
 private:
     float m_logicalHeight { 0 };
-    unsigned m_startsNewTextChunk : 1;
 
     Vector<SVGTextFragment> m_textFragments;
 };

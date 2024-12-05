@@ -41,6 +41,7 @@ public:
     SVGTextBox(PathVariant&&);
 
     FloatRect calculateBoundariesIncludingSVGTransform() const;
+    LayoutRect localSelectionRect(unsigned start, unsigned end) const;
     const Vector<SVGTextFragment>& textFragments() const;
 
     const RenderSVGInlineText& renderer() const { return downcast<RenderSVGInlineText>(TextBox::renderer()); }

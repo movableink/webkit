@@ -30,6 +30,7 @@
 #include "RenderSVGText.h"
 #include "SVGInlineTextBox.h"
 #include "SVGRootInlineBox.h"
+#include "SVGTextBoxPainter.h"
 #include "SVGTextFragment.h"
 
 namespace WebCore {
@@ -61,6 +62,37 @@ FloatRect SVGTextBox::calculateBoundariesIncludingSVGTransform() const
     return textRect;
 }
 
+LayoutRect SVGTextBox::localSelectionRect(unsigned start, unsigned end) const
+{
+    auto [clampedStart, clampedEnd] = selectableRange().clamp(start, end);
+
+    if (clampedStart >= clampedEnd)
+        return LayoutRect();
+
+    auto& style = renderer().style();
+
+    AffineTransform fragmentTransform;
+    FloatRect selectionRect;
+    unsigned fragmentStartPosition = 0;
+    unsigned fragmentEndPosition = 0;
+
+    for (auto& fragment : textFragments()) {
+        fragmentStartPosition = clampedStart;
+        fragmentEndPosition = clampedEnd;
+        if (!mapStartEndPositionsIntoFragmentCoordinates(this->start(), fragment, fragmentStartPosition, fragmentEndPosition))
+            continue;
+
+        FloatRect fragmentRect = selectionRectForTextFragment(renderer(), direction(), fragment, fragmentStartPosition, fragmentEndPosition, style);
+        fragment.buildFragmentTransform(fragmentTransform);
+        if (!fragmentTransform.isIdentity())
+            fragmentRect = fragmentTransform.mapRect(fragmentRect);
+
+        selectionRect.unite(fragmentRect);
+    }
+
+    return enclosingIntRect(selectionRect);
+}
+
 const Vector<SVGTextFragment>& SVGTextBox::textFragments() const
 {
     return WTF::switchOn(m_pathVariant, [&](auto& path) -> const Vector<SVGTextFragment>& {
@@ -85,8 +117,12 @@ SVGTextBoxIterator::SVGTextBoxIterator(const Box& box)
 
 SVGTextBoxIterator firstSVGTextBoxFor(const RenderSVGInlineText& text)
 {
-    if (auto* lineLayout = LayoutIntegration::LineLayout::containing(text))
-        return { *lineLayout->textBoxesFor(text) };
+    if (auto* lineLayout = LayoutIntegration::LineLayout::containing(text)) {
+        auto box = lineLayout->textBoxesFor(text);
+        if (!box)
+            return { };
+        return { *box };
+    }
 
     return { BoxLegacyPath { text.firstLegacyTextBox() } };
 }
