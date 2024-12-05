@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -20,48 +20,18 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #pragma once
-
-#include "DFGBasicBlock.h"
-#include "DFGGraph.h"
 
 #if ENABLE(DFG_JIT)
 
 namespace JSC { namespace DFG {
 
-inline Node* BasicBlock::cloneAndAppend(Graph& graph, const Node* node)
-{
-    Node* result = graph.cloneAndAdd(*node);
-    append(result);
-    return result;
-}
+class Graph;
 
-template<typename... Params>
-Node* BasicBlock::appendNode(Graph& graph, SpeculatedType type, Params... params)
-{
-    Node* result = graph.addNode(type, params...);
-    append(result);
-    return result;
-}
-
-template<typename... Params>
-Node* BasicBlock::appendNonTerminal(Graph& graph, SpeculatedType type, Params... params)
-{
-    Node* result = graph.addNode(type, params...);
-    insertBeforeTerminal(result);
-    return result;
-}
-
-template<typename... Params>
-Node* BasicBlock::replaceTerminal(Graph& graph, SpeculatedType type, Params... params)
-{
-    Node* result = graph.addNode(type, params...);
-    replaceTerminal(graph, result);
-    return result;
-}
+bool performLoopUnrolling(Graph&);
 
 } } // namespace JSC::DFG
 
