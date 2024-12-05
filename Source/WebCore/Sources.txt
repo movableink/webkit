@@ -2753,6 +2753,7 @@ rendering/AutoTableLayout.cpp
 rendering/BackgroundPainter.cpp
 rendering/BaselineAlignment.cpp
 rendering/BidiRun.cpp
+rendering/BlockStepSizing.cpp
 rendering/BorderEdge.cpp
 rendering/BorderPainter.cpp
 rendering/BorderShape.cpp

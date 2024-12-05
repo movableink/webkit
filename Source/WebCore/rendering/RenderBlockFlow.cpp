@@ -25,6 +25,7 @@
 #include "config.h"
 #include "RenderBlockFlow.h"
 
+#include "BlockStepSizing.h"
 #include "Editor.h"
 #include "ElementInlines.h"
 #include "FloatingObjects.h"
@@ -90,47 +91,6 @@ struct SameSizeAsMarginInfo {
 
 static_assert(sizeof(MarginValues) == sizeof(LayoutUnit[4]), "MarginValues should stay small");
 static_assert(sizeof(RenderBlockFlow::MarginInfo) == sizeof(SameSizeAsMarginInfo), "MarginInfo should stay small");
-
-namespace BlockStepSizing {
-
-static bool childHasSupportedStyle(const RenderStyle& childStyle)
-{
-    return childStyle.blockStepInsert() == BlockStepInsert::MarginBox
-        && childStyle.blockStepAlign() == BlockStepAlign::Auto
-        && childStyle.blockStepRound() == BlockStepRound::Up;
-}
-
-static LayoutUnit computeExtraSpace(LayoutUnit stepSize, LayoutUnit boxOuterSize)
-{
-    if (!stepSize)
-        return { };
-
-    if (!boxOuterSize)
-        return stepSize;
-
-    if (auto remainder = intMod(boxOuterSize, stepSize))
-        return stepSize - remainder;
-    return { };
-}
-
-static void distributeExtraSpaceToChildMargins(RenderBox& child, LayoutUnit extraSpace, WritingMode containingBlockWritingMode)
-{
-    auto halfExtraSpace = extraSpace / 2;
-    child.setMarginBefore(child.marginBefore(containingBlockWritingMode) + halfExtraSpace);
-    child.setMarginAfter(child.marginAfter(containingBlockWritingMode) + halfExtraSpace);
-}
-
-NO_RETURN_DUE_TO_ASSERT static void distributeExtraSpaceToChildPadding(RenderBox& /* child */, LayoutUnit /* extraSpace */, WritingMode /* containingBlockWritingMode */)
-{
-    ASSERT_NOT_IMPLEMENTED_YET();
-}
-
-NO_RETURN_DUE_TO_ASSERT static void distributeExtraSpaceToChildContentArea(RenderBox& /* child */, LayoutUnit /* extraSpace */, WritingMode /* containingBlockWritingMode */)
-{
-    ASSERT_NOT_IMPLEMENTED_YET();
-}
-
-};
 
 RenderBlockFlowRareData::RenderBlockFlowRareData(const RenderBlockFlow& block)
     : m_margins(positiveMarginBeforeDefault(block), negativeMarginBeforeDefault(block), positiveMarginAfterDefault(block), negativeMarginAfterDefault(block))
