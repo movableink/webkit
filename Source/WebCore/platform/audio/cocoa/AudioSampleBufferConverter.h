@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,7 +39,7 @@ namespace WebCore {
 
 class WebAudioBufferList;
 
-class AudioSampleBufferCompressor : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<AudioSampleBufferCompressor> {
+class AudioSampleBufferConverter : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<AudioSampleBufferConverter> {
 public:
     struct Options {
         AudioFormatID format { kAudioFormatMPEG4AAC };
@@ -47,8 +47,8 @@ public:
         std::optional<unsigned> outputBitRate;
         bool generateTimestamp { true };
     };
-    static RefPtr<AudioSampleBufferCompressor> create(CMBufferQueueTriggerCallback, void* callbackObject, const Options&);
-    ~AudioSampleBufferCompressor();
+    static RefPtr<AudioSampleBufferConverter> create(CMBufferQueueTriggerCallback, void* callbackObject, const Options&);
+    ~AudioSampleBufferConverter();
 
     bool isEmpty() const;
     Ref<GenericPromise> finish() { return flushInternal(true); }
@@ -61,7 +61,7 @@ public:
     unsigned bitRate() const;
 
 private:
-    AudioSampleBufferCompressor(const Options&);
+    AudioSampleBufferConverter(const Options&);
     bool initialize(CMBufferQueueTriggerCallback, void* callbackObject);
     UInt32 defaultOutputBitRate(const AudioStreamBasicDescription&) const;
 
@@ -71,7 +71,7 @@ private:
     bool initAudioConverterForSourceFormatDescription(CMFormatDescriptionRef, AudioFormatID);
     void attachPrimingTrimsIfNeeded(CMSampleBufferRef);
     RetainPtr<NSNumber> gradualDecoderRefreshCount();
-    Expected<RetainPtr<CMSampleBufferRef>, int> sampleBuffer(const WebAudioBufferList&, uint32_t numSamples);
+    Expected<RetainPtr<CMSampleBufferRef>, OSStatus> sampleBuffer(const WebAudioBufferList&, uint32_t numSamples);
     void processSampleBuffers();
     OSStatus provideSourceDataNumOutputPackets(UInt32*, AudioBufferList*, AudioStreamPacketDescription**);
     Ref<GenericPromise> flushInternal(bool isFinished);
@@ -84,7 +84,7 @@ private:
 
     RetainPtr<CMBufferQueueRef> m_outputBufferQueue; // initialized on the caller's thread once, never modified after that.
     RetainPtr<CMBufferQueueRef> m_inputBufferQueue; // initialized on the caller's thread once, never modified after that.
-    bool m_isEncoding WTF_GUARDED_BY_CAPABILITY(queue().get()) { false };
+    bool m_isEncoding WTF_GUARDED_BY_CAPABILITY(queue().get()) { true };
     bool m_isDraining WTF_GUARDED_BY_CAPABILITY(queue().get()) { false };
 
     AudioConverterRef m_converter WTF_GUARDED_BY_CAPABILITY(queue().get()) { nullptr };
@@ -104,7 +104,7 @@ private:
     CMBufferQueueTriggerToken m_triggerToken;
     RetainPtr<CMBlockBufferRef> m_blockBuffer WTF_GUARDED_BY_CAPABILITY(queue().get());
     Vector<AudioStreamPacketDescription> m_packetDescriptions WTF_GUARDED_BY_CAPABILITY(queue().get());
-    int m_lastError WTF_GUARDED_BY_CAPABILITY(queue().get()) { 0 };
+    OSStatus m_lastError WTF_GUARDED_BY_CAPABILITY(queue().get()) { 0 };
     const AudioFormatID m_outputCodecType;
     const std::optional<unsigned> m_outputBitRate;
     const bool m_generateTimestamp { true };
