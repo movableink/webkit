@@ -41,7 +41,7 @@ FrameProcess::FrameProcess(WebProcessProxy& process, BrowsingContextGroup& group
 {
     if (preferences.siteIsolationEnabled()) {
         group.addFrameProcess(*this);
-        process.didStartUsingProcessForSiteIsolation(site);
+        process.markAsUsedForSiteIsolation();
     } else
         m_browsingContextGroup = nullptr;
 }

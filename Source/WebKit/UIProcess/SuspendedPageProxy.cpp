@@ -63,7 +63,7 @@ RefPtr<WebProcessProxy> SuspendedPageProxy::findReusableSuspendedPageProcess(Web
     for (Ref suspendedPage : allSuspendedPages()) {
         Ref process = suspendedPage->process();
         if (&process->processPool() == &processPool
-            && process->site() && process->site()->domain() == registrableDomain
+            && process->registrableDomain() == registrableDomain
             && process->websiteDataStore() == &dataStore
             && process->crossOriginMode() != CrossOriginMode::Isolated
             && process->lockdownMode() == lockdownMode
