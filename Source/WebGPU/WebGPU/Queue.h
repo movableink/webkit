@@ -53,13 +53,13 @@ class TextureView;
 class Queue : public WGPUQueueImpl, public ThreadSafeRefCounted<Queue> {
     WTF_MAKE_TZONE_ALLOCATED(Queue);
 public:
-    static Ref<Queue> create(id<MTLCommandQueue> commandQueue, Device& device)
+    static Ref<Queue> create(id<MTLCommandQueue> commandQueue, Adapter& adapter, Device& device)
     {
-        return adoptRef(*new Queue(commandQueue, device));
+        return adoptRef(*new Queue(commandQueue, adapter, device));
     }
-    static Ref<Queue> createInvalid(Device& device)
+    static Ref<Queue> createInvalid(Adapter& adapter, Device& device)
     {
-        return adoptRef(*new Queue(device));
+        return adoptRef(*new Queue(adapter, device));
     }
 
     ~Queue();
@@ -94,8 +94,8 @@ public:
     // This can be called on a background thread.
     void scheduleWork(Instance::WorkItem&&);
 private:
-    Queue(id<MTLCommandQueue>, Device&);
-    Queue(Device&);
+    Queue(id<MTLCommandQueue>, Adapter&, Device&);
+    Queue(Adapter&, Device&);
 
     NSString* errorValidatingSubmit(const Vector<Ref<WebGPU::CommandBuffer>>&) const;
     bool validateWriteBuffer(const Buffer&, uint64_t bufferOffset, size_t) const;
@@ -122,6 +122,7 @@ private:
     HashMap<uint64_t, OnSubmittedWorkDoneCallbacks, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_onSubmittedWorkDoneCallbacks;
     NSMutableOrderedSet<id<MTLCommandBuffer>> *m_createdNotCommittedBuffers { nil };
     NSMapTable<id<MTLCommandBuffer>, id<MTLCommandEncoder>> *m_openCommandEncoders;
+    const ThreadSafeWeakPtr<Instance> m_instance;
 } SWIFT_SHARED_REFERENCE(refQueue, derefQueue);
 
 } // namespace WebGPU
