@@ -73,6 +73,7 @@ class WebPageProxy;
 class WebProcessPool;
 class WebsiteDataStore;
 struct WebExtensionControllerParameters;
+struct WebExtensionFrameParameters;
 
 #if ENABLE(INSPECTOR_EXTENSIONS)
 class WebInspectorUIProxy;
@@ -210,10 +211,10 @@ private:
     String stateFilePath(const String& uniqueIdentifier) const;
     _WKWebExtensionStorageSQLiteStore* sqliteStore(const String& storageDirectory, WebExtensionDataType, RefPtr<WebExtensionContext>);
 
-    void didStartProvisionalLoadForFrame(WebPageProxyIdentifier, WebExtensionFrameIdentifier, WebExtensionFrameIdentifier parentFrameID, const URL&, WallTime);
-    void didCommitLoadForFrame(WebPageProxyIdentifier, WebExtensionFrameIdentifier, WebExtensionFrameIdentifier parentFrameID, const URL&, WallTime);
-    void didFinishLoadForFrame(WebPageProxyIdentifier, WebExtensionFrameIdentifier, WebExtensionFrameIdentifier parentFrameID, const URL&, WallTime);
-    void didFailLoadForFrame(WebPageProxyIdentifier, WebExtensionFrameIdentifier, WebExtensionFrameIdentifier parentFrameID, const URL&, WallTime);
+    void didStartProvisionalLoadForFrame(WebPageProxyIdentifier, const WebExtensionFrameParameters&, WallTime);
+    void didCommitLoadForFrame(WebPageProxyIdentifier, const WebExtensionFrameParameters&, WallTime);
+    void didFinishLoadForFrame(WebPageProxyIdentifier, const WebExtensionFrameParameters&, WallTime);
+    void didFailLoadForFrame(WebPageProxyIdentifier, const WebExtensionFrameParameters&, WallTime);
 
     void purgeOldMatchedRules();
 

@@ -50,6 +50,7 @@ class WebExtensionMatchPattern;
 class WebFrame;
 
 struct WebExtensionAlarmParameters;
+struct WebExtensionFrameParameters;
 struct WebExtensionTabParameters;
 struct WebExtensionWindowParameters;
 
@@ -203,7 +204,7 @@ private:
     void dispatchTabsRemovedEvent(WebExtensionTabIdentifier, WebExtensionWindowIdentifier, WebExtensionContext::WindowIsClosing);
 
     // Web Navigation
-    void dispatchWebNavigationEvent(WebExtensionEventListenerType, WebExtensionTabIdentifier, WebExtensionFrameIdentifier, WebExtensionFrameIdentifier parentFrameID, const URL&, WallTime);
+    void dispatchWebNavigationEvent(WebExtensionEventListenerType, WebExtensionTabIdentifier, const WebExtensionFrameParameters&, WallTime);
 
     // Web Request
     void resourceLoadDidSendRequest(WebExtensionTabIdentifier, WebExtensionWindowIdentifier, const WebCore::ResourceRequest&, const ResourceLoadInfo&);

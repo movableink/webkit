@@ -1716,7 +1716,7 @@ WebExtensionContext::PermissionState WebExtensionContext::permissionState(const 
             return cacheResultAndReturn(PermissionState::RequestedImplicitly);
     }
 
-    if (hasPermission(WKWebExtensionPermissionWebNavigation, tab, options))
+    if (hasPermission(WebExtensionPermission::webNavigation(), tab, options))
         return cacheResultAndReturn(PermissionState::RequestedImplicitly);
 
     if (hasPermission(WebExtensionPermission::declarativeNetRequestFeedback(), tab, options))
@@ -2569,24 +2569,33 @@ void WebExtensionContext::didChangeTabProperties(WebExtensionTab& tab, OptionSet
     }).get());
 }
 
-void WebExtensionContext::didStartProvisionalLoadForFrame(WebPageProxyIdentifier pageID, WebExtensionFrameIdentifier frameID, WebExtensionFrameIdentifier parentFrameID, const URL& targetURL, WallTime timestamp)
+void WebExtensionContext::didStartProvisionalLoadForFrame(WebPageProxyIdentifier pageID, const WebExtensionFrameParameters& frameParameters, WallTime timestamp)
 {
+    ASSERT(frameParameters.url);
+
     RefPtr tab = getTab(pageID);
+    auto& frameURL = *frameParameters.url;
 
     // Dispatch webNavigation events.
-    if (tab && hasPermission(WKWebExtensionPermissionWebNavigation, tab.get()) && hasPermission(targetURL, tab.get())) {
+    if (tab && hasPermission(WebExtensionPermission::webNavigation(), tab.get()) && hasPermission(frameURL, tab.get())) {
         constexpr auto eventType = WebExtensionEventListenerType::WebNavigationOnBeforeNavigate;
         wakeUpBackgroundContentIfNecessaryToFireEvents({ eventType }, [=, this, protectedThis = Ref { *this }] {
-            sendToProcessesForEvent(eventType, Messages::WebExtensionContextProxy::DispatchWebNavigationEvent(eventType, tab->identifier(), frameID, parentFrameID, targetURL, timestamp));
+            sendToProcessesForEvent(eventType, Messages::WebExtensionContextProxy::DispatchWebNavigationEvent(eventType, tab->identifier(), frameParameters, timestamp));
         });
     }
 }
 
-void WebExtensionContext::didCommitLoadForFrame(WebPageProxyIdentifier pageID, WebExtensionFrameIdentifier frameID, WebExtensionFrameIdentifier parentFrameID, const URL& frameURL, WallTime timestamp)
+void WebExtensionContext::didCommitLoadForFrame(WebPageProxyIdentifier pageID, const WebExtensionFrameParameters& frameParameters, WallTime timestamp)
 {
+    ASSERT(frameParameters.url);
+    ASSERT(frameParameters.frameIdentifier);
+
     RefPtr page = WebProcessProxy::webPage(pageID);
     if (!page)
         return;
+
+    auto& frameURL = *frameParameters.url;
+    auto& frameID = *frameParameters.frameIdentifier;
 
     RefPtr tab = getTab(pageID);
 
@@ -2614,39 +2623,45 @@ void WebExtensionContext::didCommitLoadForFrame(WebPageProxyIdentifier pageID, W
     }
 
     // Dispatch webNavigation events.
-    if (tab && hasPermission(WKWebExtensionPermissionWebNavigation, tab.get()) && hasPermission(frameURL, tab.get())) {
+    if (tab && hasPermission(WebExtensionPermission::webNavigation(), tab.get()) && hasPermission(frameURL, tab.get())) {
         constexpr auto committedEventType = WebExtensionEventListenerType::WebNavigationOnCommitted;
         constexpr auto contentEventType = WebExtensionEventListenerType::WebNavigationOnDOMContentLoaded;
 
         wakeUpBackgroundContentIfNecessaryToFireEvents({ committedEventType, contentEventType }, [=, this, protectedThis = Ref { *this }] {
-            sendToProcessesForEvent(committedEventType, Messages::WebExtensionContextProxy::DispatchWebNavigationEvent(committedEventType, tab->identifier(), frameID, parentFrameID, frameURL, timestamp));
-            sendToProcessesForEvent(contentEventType, Messages::WebExtensionContextProxy::DispatchWebNavigationEvent(contentEventType, tab->identifier(), frameID, parentFrameID, frameURL, timestamp));
+            sendToProcessesForEvent(committedEventType, Messages::WebExtensionContextProxy::DispatchWebNavigationEvent(committedEventType, tab->identifier(), frameParameters, timestamp));
+            sendToProcessesForEvent(contentEventType, Messages::WebExtensionContextProxy::DispatchWebNavigationEvent(contentEventType, tab->identifier(), frameParameters, timestamp));
         });
     }
 }
 
-void WebExtensionContext::didFinishLoadForFrame(WebPageProxyIdentifier pageID, WebExtensionFrameIdentifier frameID, WebExtensionFrameIdentifier parentFrameID, const URL& frameURL, WallTime timestamp)
+void WebExtensionContext::didFinishLoadForFrame(WebPageProxyIdentifier pageID, const WebExtensionFrameParameters& frameParameters, WallTime timestamp)
 {
+    ASSERT(frameParameters.url);
+
     RefPtr tab = getTab(pageID);
+    auto& frameURL = *frameParameters.url;
 
     // Dispatch webNavigation events.
-    if (tab && hasPermission(WKWebExtensionPermissionWebNavigation, tab.get()) && hasPermission(frameURL, tab.get())) {
+    if (tab && hasPermission(WebExtensionPermission::webNavigation(), tab.get()) && hasPermission(frameURL, tab.get())) {
         constexpr auto eventType = WebExtensionEventListenerType::WebNavigationOnCompleted;
         wakeUpBackgroundContentIfNecessaryToFireEvents({ eventType }, [=, this, protectedThis = Ref { *this }] {
-            sendToProcessesForEvent(eventType, Messages::WebExtensionContextProxy::DispatchWebNavigationEvent(eventType, tab->identifier(), frameID, parentFrameID, frameURL, timestamp));
+            sendToProcessesForEvent(eventType, Messages::WebExtensionContextProxy::DispatchWebNavigationEvent(eventType, tab->identifier(), frameParameters, timestamp));
         });
     }
 }
 
-void WebExtensionContext::didFailLoadForFrame(WebPageProxyIdentifier pageID, WebExtensionFrameIdentifier frameID, WebExtensionFrameIdentifier parentFrameID, const URL& frameURL, WallTime timestamp)
+void WebExtensionContext::didFailLoadForFrame(WebPageProxyIdentifier pageID, const WebExtensionFrameParameters& frameParameters, WallTime timestamp)
 {
+    ASSERT(frameParameters.url);
+
     RefPtr tab = getTab(pageID);
+    auto& frameURL = *frameParameters.url;
 
     // Dispatch webNavigation events.
-    if (tab && hasPermission(WKWebExtensionPermissionWebNavigation, tab.get()) && hasPermission(frameURL, tab.get())) {
+    if (tab && hasPermission(WebExtensionPermission::webNavigation(), tab.get()) && hasPermission(frameURL, tab.get())) {
         constexpr auto eventType = WebExtensionEventListenerType::WebNavigationOnErrorOccurred;
         wakeUpBackgroundContentIfNecessaryToFireEvents({ eventType }, [=, this, protectedThis = Ref { *this }] {
-            sendToProcessesForEvent(eventType, Messages::WebExtensionContextProxy::DispatchWebNavigationEvent(eventType, tab->identifier(), frameID, parentFrameID, frameURL, timestamp));
+            sendToProcessesForEvent(eventType, Messages::WebExtensionContextProxy::DispatchWebNavigationEvent(eventType, tab->identifier(), frameParameters, timestamp));
         });
     }
 }
