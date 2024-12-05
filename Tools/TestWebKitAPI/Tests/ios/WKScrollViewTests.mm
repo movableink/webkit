@@ -337,7 +337,7 @@ TEST(WKScrollViewTests, AsynchronousWheelEventHandling)
     EXPECT_FALSE(scrollingPrevented);
 }
 
-TEST(WKScrollViewTests, OverscrollBehaviorShouldNotPreventScrolling)
+TEST(WKScrollViewTests, OverscrollBehaviorAndOverflowHiddenOnRootShouldNotPreventScrolling)
 {
     RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500)]);
     [webView synchronouslyLoadHTMLString:@"<!DOCTYPE html>"
@@ -345,7 +345,7 @@ TEST(WKScrollViewTests, OverscrollBehaviorShouldNotPreventScrolling)
         "<meta name='viewport' content='width=device-width, initial-scale=1'>"
         "<head>"
         "    <style>"
-        "    body, html { width: 100%; height: 100%; margin: 0; overscroll-behavior: contain; }"
+        "    body, html { width: 100%; height: 100%; margin: 0; overscroll-behavior: contain; overflow: hidden; }"
         "    .scroller { width: 100%; height: 100%; overflow: scroll; }"
         "    .tall { width: 1px; height: 5000px; }"
         "    </style>"

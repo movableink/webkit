@@ -916,6 +916,8 @@ FOR_EACH_PRIVATE_WKCONTENTVIEW_ACTION(DECLARE_WKCONTENTVIEW_ACTION_FOR_WEB_VIEW)
 - (BOOL)_shouldIgnoreTouchEvent:(UIEvent *)event;
 - (void)_touchEventsRecognized;
 
+- (BOOL)_hasEnclosingScrollView:(UIView *)firstView matchingCriteria:(Function<BOOL(UIScrollView *)>&&)matchFunction;
+
 - (ScopeExit<Function<void()>>)makeTextSelectionViewsNonInteractiveForScope;
 
 @property (nonatomic, readonly) BOOL shouldUseAsyncInteractions;
