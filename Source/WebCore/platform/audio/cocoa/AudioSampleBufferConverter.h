@@ -43,8 +43,8 @@ class AudioSampleBufferConverter : public ThreadSafeRefCountedAndCanMakeThreadSa
 public:
     struct Options {
         AudioFormatID format { kAudioFormatMPEG4AAC };
-        std::optional<AudioStreamBasicDescription> description;
-        std::optional<unsigned> outputBitRate;
+        std::optional<AudioStreamBasicDescription> description { };
+        std::optional<unsigned> outputBitRate { };
         bool generateTimestamp { true };
     };
     static RefPtr<AudioSampleBufferConverter> create(CMBufferQueueTriggerCallback, void* callbackObject, const Options&);
