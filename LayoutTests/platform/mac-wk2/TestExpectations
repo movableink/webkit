@@ -1936,8 +1936,6 @@ webkit.org/b/283210 http/wpt/mediarecorder/MediaRecorder-AV-audio-video-dataavai
 
 webkit.org/b/283596 [ Sequoia+ Debug ] ipc/cfnetwork-crashes-with-string-to-string-http-headers.html [ Skip ]
 
-webkit.org/b/283740 [ Debug ] http/wpt/webauthn/public-key-credential-get-success-u2f.https.html [ Skip ]
-
 # webkit.org/b/283999 REGRESSION(286110@main?): [macOS] http/tests/workers/service/shownotification-allowed.html is a constant failure (flaky in EWS) 
 [ Ventura+ ] http/tests/workers/service/shownotification-allowed.html [ Failure ]
 
