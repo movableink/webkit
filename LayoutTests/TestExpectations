@@ -8076,6 +8076,8 @@ webanimations/scroll-timeline-clamped-current-time-while-rubber-banding-ios.html
 # macOS-only test.
 media/webkit-media-controls-not-visible-after-exiting-fullscreen.html [ Skip ]
 
+webkit.org/b/279297 fast/block/float/float-avoider-with-negative-margin.html [ ImageOnlyFailure ]
+
 # webkit.org/b/280685 imported/w3c/web-platform-tests/css/selectors/featureless-004/5.html are failures.
 imported/w3c/web-platform-tests/css/selectors/featureless-004.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/selectors/featureless-005.html [ ImageOnlyFailure ]
