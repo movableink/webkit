@@ -112,7 +112,7 @@ class Package(object):
                             file.write(data)
                     return
                 except (IOError, URLError) as e:
-                    if count > (AutoInstall.times_to_retry or 0):
+                    if count == (AutoInstall.times_to_retry or 0):
                         raise
                     else:
                         AutoInstall.log(str(e))
@@ -121,6 +121,8 @@ class Package(object):
                     if response:
                         response.close()
                     count += 1
+            # This is unreachable because the raise in the above loop should always return or raise.
+            raise RuntimeError("unreachable")
 
         def unpack(self, target):
             if not os.path.isfile(self.path):
