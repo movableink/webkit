@@ -34,28 +34,36 @@
 
 
 namespace Messages {
-namespace TestWithStreamBatched {
+namespace TestWithDispatchedFromAndTo {
 
 static inline IPC::ReceiverName messageReceiverName()
 {
-    return IPC::ReceiverName::TestWithStreamBatched;
+#if ASSERT_ENABLED
+    static std::once_flag onceFlag;
+    std::call_once(
+        onceFlag,
+        [&] {
+            ASSERT(!isInAuxiliaryProcess());
+        }
+    );
+#endif
+    return IPC::ReceiverName::TestWithDispatchedFromAndTo;
 }
 
-class SendString {
+class AlwaysEnabled {
 public:
     using Arguments = std::tuple<String>;
 
-    static IPC::MessageName name() { return IPC::MessageName::TestWithStreamBatched_SendString; }
+    static IPC::MessageName name() { return IPC::MessageName::TestWithDispatchedFromAndTo_AlwaysEnabled; }
     static constexpr bool isSync = false;
     static constexpr bool canDispatchOutOfOrder = false;
     static constexpr bool replyCanDispatchOutOfOrder = false;
     static constexpr bool deferSendingIfSuspended = false;
-    static constexpr bool isStreamEncodable = true;
-    static constexpr bool isStreamBatched = true;
 
-    explicit SendString(const String& url)
+    explicit AlwaysEnabled(const String& url)
         : m_arguments(url)
     {
+        ASSERT(isInWebProcess());
     }
 
     auto&& arguments()
@@ -67,5 +75,5 @@ private:
     std::tuple<const String&> m_arguments;
 };
 
-} // namespace TestWithStreamBatched
+} // namespace TestWithDispatchedFromAndTo
 } // namespace Messages

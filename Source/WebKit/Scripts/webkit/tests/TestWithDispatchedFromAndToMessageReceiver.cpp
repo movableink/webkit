@@ -22,50 +22,43 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "config.h"
+#include "TestWithDispatchedFromAndTo.h"
 
-#include "ArgumentCoders.h"
-#include "Connection.h"
-#include "MessageNames.h"
-#include <wtf/Forward.h>
-#include <wtf/RuntimeApplicationChecks.h>
-#include <wtf/ThreadSafeRefCounted.h>
-#include <wtf/text/WTFString.h>
+#include "ArgumentCoders.h" // NOLINT
+#include "Decoder.h" // NOLINT
+#include "HandleMessage.h" // NOLINT
+#include "TestWithDispatchedFromAndToMessages.h" // NOLINT
+#include <wtf/text/WTFString.h> // NOLINT
 
+#if ENABLE(IPC_TESTING_API)
+#include "JSIPCBinding.h"
+#endif
 
-namespace Messages {
-namespace TestWithStreamBatched {
+namespace WebKit {
 
-static inline IPC::ReceiverName messageReceiverName()
+void TestWithDispatchedFromAndTo::didReceiveMessage(IPC::Connection& connection, IPC::Decoder& decoder)
 {
-    return IPC::ReceiverName::TestWithStreamBatched;
+    Ref protectedThis { *this };
+    if (decoder.messageName() == Messages::TestWithDispatchedFromAndTo::AlwaysEnabled::name())
+        return IPC::handleMessage<Messages::TestWithDispatchedFromAndTo::AlwaysEnabled>(connection, decoder, this, &TestWithDispatchedFromAndTo::alwaysEnabled);
+    UNUSED_PARAM(connection);
+    RELEASE_LOG_ERROR(IPC, "Unhandled message %s to %" PRIu64, IPC::description(decoder.messageName()).characters(), decoder.destinationID());
+    decoder.markInvalid();
 }
 
-class SendString {
-public:
-    using Arguments = std::tuple<String>;
+} // namespace WebKit
 
-    static IPC::MessageName name() { return IPC::MessageName::TestWithStreamBatched_SendString; }
-    static constexpr bool isSync = false;
-    static constexpr bool canDispatchOutOfOrder = false;
-    static constexpr bool replyCanDispatchOutOfOrder = false;
-    static constexpr bool deferSendingIfSuspended = false;
-    static constexpr bool isStreamEncodable = true;
-    static constexpr bool isStreamBatched = true;
+#if ENABLE(IPC_TESTING_API)
 
-    explicit SendString(const String& url)
-        : m_arguments(url)
-    {
-    }
+namespace IPC {
 
-    auto&& arguments()
-    {
-        return WTFMove(m_arguments);
-    }
+template<> std::optional<JSC::JSValue> jsValueForDecodedMessage<MessageName::TestWithDispatchedFromAndTo_AlwaysEnabled>(JSC::JSGlobalObject* globalObject, Decoder& decoder)
+{
+    return jsValueForDecodedArguments<Messages::TestWithDispatchedFromAndTo::AlwaysEnabled::Arguments>(globalObject, decoder);
+}
 
-private:
-    std::tuple<const String&> m_arguments;
-};
+}
 
-} // namespace TestWithStreamBatched
-} // namespace Messages
+#endif
+
