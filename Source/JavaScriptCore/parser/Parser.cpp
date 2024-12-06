@@ -3675,6 +3675,7 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseImportDeclara
     next();
 
     auto specifierList = context.createImportSpecifierList();
+    auto type = ImportDeclarationNode::ImportType::Normal;
 
     if (match(STRING)) {
         // import ModuleSpecifier ;
@@ -3690,11 +3691,24 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseImportDeclara
         }
 
         failIfFalse(autoSemiColon(), "Expected a ';' following a targeted import declaration");
-        return context.createImportDeclaration(importLocation, specifierList, moduleName, attributesList);
+        return context.createImportDeclaration(importLocation, type, specifierList, moduleName, attributesList);
     }
 
     bool isFinishedParsingImport = false;
-    if (matchSpecIdentifier()) {
+    bool hasImportDefer = false;
+    if (UNLIKELY(Options::useImportDefer() && matchContextualKeyword(m_vm.propertyNames->deferKeyword))) {
+        SavePoint deferSavePoint = createSavePoint(context);
+        next();
+        if (match(TIMES)) {
+            // import defer NameSpaceImport FromClause ;
+            type = ImportDeclarationNode::ImportType::Deferred;
+            hasImportDefer = true;
+        } else
+            // import defer FromClause ;
+            restoreSavePoint(context, deferSavePoint);
+    }
+
+    if (matchSpecIdentifier() && !hasImportDefer) {
         // ImportedDefaultBinding :
         // ImportedBinding
         auto specifier = parseImportClauseItem(context, ImportSpecifierType::DefaultImport);
@@ -3749,7 +3763,7 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseImportDeclara
 
     failIfFalse(autoSemiColon(), "Expected a ';' following a targeted import declaration");
 
-    return context.createImportDeclaration(importLocation, specifierList, moduleName, attributesList);
+    return context.createImportDeclaration(importLocation, type, specifierList, moduleName, attributesList);
 }
 
 template <typename LexerType>
