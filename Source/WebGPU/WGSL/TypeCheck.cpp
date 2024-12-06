@@ -407,9 +407,7 @@ TypeChecker::TypeChecker(ShaderModule& shaderModule)
     introduceValue(AST::Identifier::make("write"_s), m_types.accessModeType());
     introduceValue(AST::Identifier::make("read_write"_s), m_types.accessModeType());
 
-    if (m_shaderModule.hasFeature("bgra8unorm-storage"_s))
-        introduceValue(AST::Identifier::make("bgra8unorm"_s), m_types.texelFormatType());
-
+    introduceValue(AST::Identifier::make("bgra8unorm"_s), m_types.texelFormatType());
     introduceValue(AST::Identifier::make("r32float"_s), m_types.texelFormatType());
     introduceValue(AST::Identifier::make("r32sint"_s), m_types.texelFormatType());
     introduceValue(AST::Identifier::make("r32uint"_s), m_types.texelFormatType());
