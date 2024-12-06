@@ -151,23 +151,8 @@ if (ENABLE_REMOTE_INSPECTOR)
 endif ()
 
 if (USE_CAIRO)
-    list(APPEND WebKit_SOURCES
-        Shared/API/c/cairo/WKImageCairo.cpp
-
-        UIProcess/Automation/cairo/WebAutomationSessionCairo.cpp
-    )
-    list(APPEND WebKit_PRIVATE_INCLUDE_DIRECTORIES
-        "${WEBKIT_DIR}/UIProcess/API/C/cairo"
-    )
-    list(APPEND WebKit_PUBLIC_FRAMEWORK_HEADERS
-        Shared/API/c/cairo/WKImageCairo.h
-    )
-    list(APPEND WebKit_SERIALIZATION_IN_FILES
-        Shared/cairo/WebCoreFontCairo.serialization.in
-    )
-endif ()
-
-if (USE_SKIA)
+    include(Platform/Cairo.cmake)
+elseif (USE_SKIA)
     include(Platform/Skia.cmake)
 
     list(APPEND WebKit_PUBLIC_FRAMEWORK_HEADERS
