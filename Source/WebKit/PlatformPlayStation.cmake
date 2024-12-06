@@ -133,11 +133,13 @@ if (USE_CAIRO)
     list(APPEND WebKit_SOURCES
         Shared/API/c/cairo/WKImageCairo.cpp
 
-        Shared/freetype/WebCoreArgumentCodersFreeType.cpp
-
         UIProcess/Automation/cairo/WebAutomationSessionCairo.cpp
 
         UIProcess/cairo/BackingStoreCairo.cpp
+    )
+
+    list(APPEND WebKit_SERIALIZATION_IN_FILES
+        Shared/cairo/WebCoreFontCairo.serialization.in
     )
 
     list(APPEND WebKit_PRIVATE_INCLUDE_DIRECTORIES

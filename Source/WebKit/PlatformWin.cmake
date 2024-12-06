@@ -32,7 +32,6 @@ list(APPEND WebKit_SOURCES
     Shared/win/NativeWebMouseEventWin.cpp
     Shared/win/NativeWebTouchEventWin.cpp
     Shared/win/NativeWebWheelEventWin.cpp
-    Shared/win/WebCoreArgumentCodersWin.cpp
     Shared/win/WebEventFactory.cpp
 
     UIProcess/API/C/WKViewportAttributes.cpp
@@ -162,6 +161,9 @@ if (USE_CAIRO)
     )
     list(APPEND WebKit_PUBLIC_FRAMEWORK_HEADERS
         Shared/API/c/cairo/WKImageCairo.h
+    )
+    list(APPEND WebKit_SERIALIZATION_IN_FILES
+        Shared/cairo/WebCoreFontCairo.serialization.in
     )
 endif ()
 

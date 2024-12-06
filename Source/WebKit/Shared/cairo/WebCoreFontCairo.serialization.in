@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Apple Inc. All rights reserved.
+# Copyright (C) 2024 Sony Interactive Entertainment Inc.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -20,43 +20,32 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-using WebCore::FontPlatformData::IPCData = std::variant<WebCore::FontPlatformSerializedData, WebCore::FontPlatformSerializedCreationData>;
+#if USE(CAIRO)
 
-[RefCounted] class WebCore::Font {
-    WebCore::FontInternalAttributes attributes();
-    WebCore::FontPlatformData platformData();
-}
-
-[CreateUsing=fromIPCData] class WebCore::FontPlatformData {
-    float size();
-    WebCore::FontOrientation orientation();
-    WebCore::FontWidthVariant widthVariant();
-    WebCore::TextRenderingMode textRenderingMode();
-    bool syntheticBold();
-    bool syntheticOblique();
-    WebCore::FontPlatformData::IPCData toIPCData();
-}
+#if PLATFORM(WIN)
+headers: "CoreIPCLOGFONT.h"
+[Wrapper=WebKit::CoreIPCLOGFONT, CreateUsing=create, Alias=struct LOGFONTW, Nested] alias LOGFONT {
+    std::span<const LOGFONT, 1> data();
+};
+#endif
 
 header: <WebCore/FontPlatformData.h>
-[CustomHeader] struct WebCore::FontPlatformDataAttributes {
-    float m_size;
-    WebCore::FontOrientation m_orientation;
-    WebCore::FontWidthVariant m_widthVariant;
-    WebCore::TextRenderingMode m_textRenderingMode;
-    bool m_syntheticBold;
-    bool m_syntheticOblique;
-#if PLATFORM(WIN) && USE(CAIRO)
-    LOGFONT m_font;
-#endif
-#if USE(CORE_TEXT)
-    RetainPtr<CFDictionaryRef> m_attributes;
-    CTFontDescriptorOptions m_options;
-    RetainPtr<CFStringRef> m_url;
-    RetainPtr<CFStringRef> m_psName;
-#endif
-#if USE(SKIA)
-    SkString m_familyName;
-    SkFontStyle m_style;
-    Vector<hb_feature_t> m_features;
+[CustomHeader] struct WebCore::FontPlatformSerializedCreationData {
+    Vector<uint8_t> fontFaceData;
+    String itemInCollection;
+};
+
+[CustomHeader] struct WebCore::FontPlatformSerializedData {
+#if PLATFORM(WIN)
+    LOGFONT logFont;
 #endif
 };
+
+header: <WebCore/FontCustomPlatformData.h>
+[CustomHeader] struct WebCore::FontCustomPlatformSerializedData {
+    Vector<uint8_t> fontFaceData;
+    String itemInCollection;
+    WebCore::RenderingResourceIdentifier renderingResourceIdentifier;
+};
+
+#endif

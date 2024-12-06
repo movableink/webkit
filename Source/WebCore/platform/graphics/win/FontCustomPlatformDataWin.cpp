@@ -97,6 +97,21 @@ bool FontCustomPlatformData::supportsTechnology(const FontTechnology& tech)
     }
 }
 
+std::optional<Ref<FontCustomPlatformData>> FontCustomPlatformData::tryMakeFromSerializationData(FontCustomPlatformSerializedData&& data, bool)
+{
+    auto buffer = SharedBuffer::create(WTFMove(data.fontFaceData));
+    RefPtr fontCustomPlatformData = FontCustomPlatformData::create(buffer, data.itemInCollection);
+    if (!fontCustomPlatformData)
+        return std::nullopt;
+    fontCustomPlatformData->m_renderingResourceIdentifier = data.renderingResourceIdentifier;
+    return fontCustomPlatformData.releaseNonNull();
+}
+
+FontCustomPlatformSerializedData FontCustomPlatformData::serializedData() const
+{
+    return FontCustomPlatformSerializedData { { creationData.fontFaceData->span() }, creationData.itemInCollection, m_renderingResourceIdentifier };
+}
+
 } // namespace WebCore
 
 #endif // PLATFORM(WIN)

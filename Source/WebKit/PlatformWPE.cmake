@@ -462,6 +462,10 @@ if (USE_CAIRO)
 
         UIProcess/Automation/cairo/WebAutomationSessionCairo.cpp
     )
+
+    list(APPEND WebKit_SERIALIZATION_IN_FILES
+        Shared/cairo/WebCoreFontCairo.serialization.in
+    )
 endif ()
 
 if (ENABLE_BUBBLEWRAP_SANDBOX)

@@ -467,6 +467,7 @@ set(WebKit_SERIALIZATION_IN_FILES
     Shared/WebBackForwardListCounts.serialization.in
     Shared/WebContextMenuItemData.serialization.in
     Shared/WebCoreArgumentCoders.serialization.in
+    Shared/WebCoreFont.serialization.in
     Shared/WebCompiledContentRuleListData.serialization.in
     Shared/WebEvent.serialization.in
     Shared/WebFindOptions.serialization.in

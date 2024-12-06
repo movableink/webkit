@@ -373,7 +373,6 @@ void RemoteRenderingBackend::cacheFont(const Font::Attributes& fontAttributes, F
     m_remoteResourceCache.cacheFont(WTFMove(font));
 }
 
-#if PLATFORM(COCOA) || USE(SKIA)
 void RemoteRenderingBackend::cacheFontCustomPlatformData(WebCore::FontCustomPlatformSerializedData&& fontCustomPlatformSerializedData)
 {
     ASSERT(!RunLoop::isMain());
@@ -383,13 +382,6 @@ void RemoteRenderingBackend::cacheFontCustomPlatformData(WebCore::FontCustomPlat
 
     m_remoteResourceCache.cacheFontCustomPlatformData(WTFMove(customPlatformData.value()));
 }
-#else
-void RemoteRenderingBackend::cacheFontCustomPlatformData(Ref<FontCustomPlatformData>&& customPlatformData)
-{
-    ASSERT(!RunLoop::isMain());
-    m_remoteResourceCache.cacheFontCustomPlatformData(WTFMove(customPlatformData));
-}
-#endif
 
 void RemoteRenderingBackend::cacheDecomposedGlyphs(Ref<DecomposedGlyphs>&& decomposedGlyphs)
 {
@@ -622,7 +614,7 @@ bool RemoteRenderingBackend::shouldUseLockdownFontParser() const
 {
     return m_gpuConnectionToWebProcess->isLockdownSafeFontParserEnabled() && m_gpuConnectionToWebProcess->isLockdownModeEnabled() && PAL::canLoad_CoreText_CTFontManagerCreateMemorySafeFontDescriptorFromData();
 }
-#elif USE(SKIA)
+#elif USE(CAIRO) || USE(SKIA)
 bool RemoteRenderingBackend::shouldUseLockdownFontParser() const
 {
     return false;

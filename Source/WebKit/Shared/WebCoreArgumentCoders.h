@@ -28,7 +28,6 @@
 #include "ArgumentCoders.h"
 #include "Decoder.h"
 #include "Encoder.h"
-#include <WebCore/FontPlatformData.h>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/EnumTraits.h>
 
@@ -37,35 +36,7 @@
 class SkString;
 #endif
 
-namespace WebCore {
-
-class Font;
-class FontPlatformData;
-
-} // namespace WebCore
-
 namespace IPC {
-
-#if !USE(CORE_TEXT) && !USE(SKIA)
-template<> struct ArgumentCoder<WebCore::Font> {
-    static void encode(Encoder&, const WebCore::Font&);
-    static std::optional<Ref<WebCore::Font>> decode(Decoder&);
-    static void encodePlatformData(Encoder&, const WebCore::Font&);
-    static std::optional<WebCore::FontPlatformData> decodePlatformData(Decoder&);
-};
-
-template<> struct ArgumentCoder<WebCore::FontPlatformDataAttributes> {
-    static void encode(Encoder&, const WebCore::FontPlatformDataAttributes&);
-    static std::optional<WebCore::FontPlatformDataAttributes> decode(Decoder&);
-    static void encodePlatformData(Encoder&, const WebCore::FontPlatformDataAttributes&);
-    static WARN_UNUSED_RETURN bool decodePlatformData(Decoder&, WebCore::FontPlatformDataAttributes&);
-};
-
-template<> struct ArgumentCoder<WebCore::FontCustomPlatformData> {
-    static void encode(Encoder&, const WebCore::FontCustomPlatformData&);
-    static std::optional<Ref<WebCore::FontCustomPlatformData>> decode(Decoder&);
-};
-#endif
 
 #if USE(SKIA)
 template<> struct ArgumentCoder<SkString> {
