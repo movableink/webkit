@@ -428,15 +428,19 @@ class Package(object):
                     'version': str(archive.version),
                 }
 
+                AutoInstall.log('Installed {}!'.format(archive))
+            except Exception:
+                if self.name in AutoInstall.manifest:
+                    del AutoInstall.manifest[self.name]
+
+                AutoInstall.log('Failed to install {}!'.format(archive), level=logging.CRITICAL)
+                raise
+            finally:
                 manifest = os.path.join(AutoInstall.directory, AutoInstall.MANIFEST_JSON)
                 with open(manifest, 'w') as file:
                     json.dump(AutoInstall.manifest, file, indent=4)
                 AutoInstall.userspace_should_own(manifest)
 
-                AutoInstall.log('Installed {}!'.format(archive))
-            except Exception:
-                AutoInstall.log('Failed to install {}!'.format(archive), level=logging.CRITICAL)
-                raise
 
 
 def _default_pypi_index():
