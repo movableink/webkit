@@ -530,8 +530,6 @@ bool Quirks::shouldDispatchSimulatedMouseEvents(const EventTarget* target) const
             return startsWithLettersIgnoringASCIICase(url.path(), "/website/templates/"_s) ? QuirksData::ShouldDispatchSimulatedMouseEvents::No : QuirksData::ShouldDispatchSimulatedMouseEvents::Yes;
         }
 
-        if (isDomain("trello.com"_s))
-            return QuirksData::ShouldDispatchSimulatedMouseEvents::Yes;
         if (isDomain("airtable.com"_s))
             return QuirksData::ShouldDispatchSimulatedMouseEvents::Yes;
         if (isDomain("flipkart.com"_s))
