@@ -4432,8 +4432,6 @@ imported/w3c/web-platform-tests/html/dom/elements/global-attributes/dir_auto-tex
 fast/block/transparent-outline-with-and-without-border-radius.html [ Pass ImageOnlyFailure ]
 imported/w3c/web-platform-tests/html/dom/elements/global-attributes/dir_auto-textarea-mixed.html [ Pass ImageOnlyFailure ]
 
-webkit.org/b/259228 [ Release ] fast/dom/lazy-image-loading-document-leak.html [ Pass Failure ]
-
 # These tests require compile-time flags in WebKit that are only enabled in iOS17. They were marked as Skip in
 # https://bugs.webkit.org/show_bug.cgi?id=248545 — re-enable them here.
 fast/images/animations-resume-from-last-displayed-frame.html [ Pass ]
