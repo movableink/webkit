@@ -385,7 +385,11 @@ static inline void moveDisplayBoxToClampedLine(auto& displayLines, auto clampedL
     displayBox.setLeft(clampedLine.ellipsis()->visualRect.maxX() + horizontalOffset + legacyMatchingLinkBoxOffset);
     // Assume baseline alignment here.
     displayBox.moveVertically((clampedLine.top() + clampedLine.baseline()) - (displayLines.last().top() + displayLines.last().baseline()));
+
+    auto& originalLine = displayLines[displayBox.lineIndex()];
+    originalLine.setBoxCount(originalLine.boxCount() - 1);
     displayBox.moveToLine(clampedLineIndex);
+    clampedLine.setBoxCount(clampedLine.boxCount() + 1);
 }
 
 void InlineDisplayLineBuilder::addLegacyLineClampTrailingLinkBoxIfApplicable(const InlineFormattingContext& inlineFormattingContext, const InlineLayoutState& inlineLayoutState, InlineDisplay::Content& displayContent)
