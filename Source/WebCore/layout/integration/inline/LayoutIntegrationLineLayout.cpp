@@ -759,6 +759,22 @@ bool LineLayout::isPaginated() const
     return m_inlineContent && m_inlineContent->isPaginated;
 }
 
+bool LineLayout::hasEllipsisInBlockDirectionOnLastFormattedLine() const
+{
+    if (!m_inlineContent)
+        return false;
+
+    for (auto& line : makeReversedRange(m_inlineContent->displayContent().lines)) {
+        if (line.boxCount() == 1) {
+            // Out-of-flow content could initiate a line with no inline content.
+            continue;
+        }
+        auto lastFormattedLineEllipsis = line.ellipsis();
+        return lastFormattedLineEllipsis && lastFormattedLineEllipsis->type == InlineDisplay::Line::Ellipsis::Type::Block;
+    }
+    return false;
+}
+
 std::optional<LayoutUnit> LineLayout::clampedContentLogicalHeight() const
 {
     if (!m_inlineContent)

@@ -284,7 +284,7 @@ static float truncateOverflowingDisplayBoxes(InlineDisplay::Boxes& boxes, size_t
     return truncateLeft.value_or(left(boxes.first())) - ellipsisWidth;
 }
 
-static std::optional<FloatRect> trailingEllipsisVisualRectAfterTruncation(LineEndingTruncationPolicy lineEndingTruncationPolicy, String ellipsisText, const InlineDisplay::Line& displayLine, InlineDisplay::Boxes& displayBoxes, bool isLastLineWithInlineContent)
+static std::optional<FloatRect> trailingEllipsisVisualRectAfterTruncation(LineEndingTruncationPolicy lineEndingTruncationPolicy, String ellipsisText, const InlineDisplay::Line& displayLine, InlineDisplay::Boxes& displayBoxes)
 {
     ASSERT(lineEndingTruncationPolicy != LineEndingTruncationPolicy::NoTruncation);
     if (displayBoxes.isEmpty())
@@ -294,7 +294,9 @@ static std::optional<FloatRect> trailingEllipsisVisualRectAfterTruncation(LineEn
         if (lineEndingTruncationPolicy == LineEndingTruncationPolicy::WhenContentOverflowsInInlineDirection)
             return displayLine.contentLogicalWidth() && displayLine.contentLogicalWidth() > displayLine.lineBoxLogicalRect().width();
         ASSERT(lineEndingTruncationPolicy == LineEndingTruncationPolicy::WhenContentOverflowsInBlockDirection);
-        return !isLastLineWithInlineContent;
+        // We consider even the last line as overflow in block direction due to the propagated nature of line-clamp where clamping is shared
+        // across sibling IFCs. If this IFC has the last formatted line (in which case the last line needs no ellipsis) the parent BFC reissues a layout with no clamping.
+        return true;
     };
     if (!needsEllipsis())
         return { };
@@ -409,8 +411,12 @@ void InlineDisplayLineBuilder::addLegacyLineClampTrailingLinkBoxIfApplicable(con
     if (!clampedLineIndex)
         return;
     auto& displayLines = displayContent.lines;
-    if (*clampedLineIndex >= displayLines.size() || !displayLines[*clampedLineIndex].hasEllipsis()) {
+    if (displayLines.isEmpty() || *clampedLineIndex >= displayLines.size() || !displayLines[*clampedLineIndex].hasEllipsis()) {
         ASSERT_NOT_REACHED();
+        return;
+    }
+    if (*clampedLineIndex == displayLines.size() - 1) {
+        // No need to link-box line clamp the last line.
         return;
     }
 
@@ -464,7 +470,7 @@ void InlineDisplayLineBuilder::addLegacyLineClampTrailingLinkBoxIfApplicable(con
     clampedLine.setHasContentAfterEllipsisBox();
 }
 
-void InlineDisplayLineBuilder::applyEllipsisIfNeeded(LineEndingTruncationPolicy truncationPolicy, InlineDisplay::Line& displayLine, InlineDisplay::Boxes& displayBoxes, bool isLastLineWithInlineContent, bool isLegacyLineClamp)
+void InlineDisplayLineBuilder::applyEllipsisIfNeeded(LineEndingTruncationPolicy truncationPolicy, InlineDisplay::Line& displayLine, InlineDisplay::Boxes& displayBoxes, bool isLegacyLineClamp)
 {
     if (truncationPolicy == LineEndingTruncationPolicy::NoTruncation || !displayBoxes.size())
         return;
@@ -485,7 +491,7 @@ void InlineDisplayLineBuilder::applyEllipsisIfNeeded(LineEndingTruncationPolicy 
     if (ellipsisText.isNull())
         return;
 
-    if (auto ellipsisRect = trailingEllipsisVisualRectAfterTruncation(truncationPolicy, ellipsisText, displayLine, displayBoxes, isLastLineWithInlineContent))
+    if (auto ellipsisRect = trailingEllipsisVisualRectAfterTruncation(truncationPolicy, ellipsisText, displayLine, displayBoxes))
         displayLine.setEllipsis({ truncationPolicy == LineEndingTruncationPolicy::WhenContentOverflowsInInlineDirection ? InlineDisplay::Line::Ellipsis::Type::Inline : InlineDisplay::Line::Ellipsis::Type::Block, *ellipsisRect, ellipsisText });
 }
 

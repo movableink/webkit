@@ -413,7 +413,7 @@ InlineRect InlineFormattingContext::createDisplayContentForInlineContent(const L
     auto isCurrentLineContentful = boxes.size() > 1;
     numberOfPreviousLContentfulLines += (isCurrentLineContentful ? 1 : 0);
     auto truncationPolicy = InlineFormattingUtils::lineEndingTruncationPolicy(root().style(), numberOfPreviousLContentfulLines, numberOfVisibleLinesAllowed, isCurrentLineContentful);
-    InlineDisplayLineBuilder::applyEllipsisIfNeeded(truncationPolicy, displayLine, boxes, lineLayoutResult.isFirstLast.isLastLineWithInlineContent, isLegacyLineClamp);
+    InlineDisplayLineBuilder::applyEllipsisIfNeeded(truncationPolicy, displayLine, boxes, isLegacyLineClamp);
     auto lineHasLegacyLineClamp = isLegacyLineClamp && displayLine.hasEllipsis() && truncationPolicy == LineEndingTruncationPolicy::WhenContentOverflowsInBlockDirection;
     if (lineHasLegacyLineClamp)
         layoutState().setLegacyClampedLineIndex(lineBox.lineIndex());
