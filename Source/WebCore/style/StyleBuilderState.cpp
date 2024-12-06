@@ -200,7 +200,7 @@ void BuilderState::updateFontForTextSizeAdjust()
     else
         newFontDescription.setComputedSize(newFontDescription.specifiedSize());
 
-    m_style.setFontDescription(WTFMove(newFontDescription));
+    m_style.setFontDescriptionWithoutUpdate(WTFMove(newFontDescription));
 }
 #endif
 
@@ -213,7 +213,7 @@ void BuilderState::updateFontForZoomChange()
     auto newFontDescription = childFont;
     setFontSize(newFontDescription, childFont.specifiedSize());
 
-    m_style.setFontDescription(WTFMove(newFontDescription));
+    m_style.setFontDescriptionWithoutUpdate(WTFMove(newFontDescription));
 }
 
 void BuilderState::updateFontForGenericFamilyChange()
@@ -243,7 +243,7 @@ void BuilderState::updateFontForGenericFamilyChange()
 
     auto newFontDescription = childFont;
     setFontSize(newFontDescription, size);
-    m_style.setFontDescription(WTFMove(newFontDescription));
+    m_style.setFontDescriptionWithoutUpdate(WTFMove(newFontDescription));
 }
 
 void BuilderState::updateFontForOrientationChange()
@@ -257,7 +257,7 @@ void BuilderState::updateFontForOrientationChange()
     auto newFontDescription = fontDescription;
     newFontDescription.setNonCJKGlyphOrientation(glyphOrientation);
     newFontDescription.setOrientation(fontOrientation);
-    m_style.setFontDescription(WTFMove(newFontDescription));
+    m_style.setFontDescriptionWithoutUpdate(WTFMove(newFontDescription));
 }
 
 void BuilderState::setFontSize(FontCascadeDescription& fontDescription, float size)

@@ -2735,12 +2735,10 @@ private:
         if (!context.isDiscrete)
             blendedFontItalic = blendFunc(fromFontItalic, toFontItalic, context);
 
-        auto* currentFontSelector = destination.fontCascade().fontSelector();
         auto description = destination.fontDescription();
         description.setItalic(blendedFontItalic);
         description.setFontStyleAxis(blendedStyleAxis);
         destination.setFontDescription(WTFMove(description));
-        destination.fontCascade().update(currentFontSelector);
     }
 };
 
@@ -3281,12 +3279,10 @@ private:
     void blend(RenderStyle& destination, const RenderStyle& from, const RenderStyle& to, const CSSPropertyBlendingContext& context) const override
     {
         ASSERT(!context.progress || context.progress == 1.0);
-        FontSelector* currentFontSelector = destination.fontCascade().fontSelector();
         auto destinationDescription = destination.fontDescription();
         auto& sourceDescription = (context.progress ? to : from).fontDescription();
         setPropertiesInFontDescription(sourceDescription, destinationDescription);
         destination.setFontDescription(WTFMove(destinationDescription));
-        destination.fontCascade().update(currentFontSelector);
     }
 
 #if !LOG_DISABLED

@@ -1323,8 +1323,7 @@ void RenderTheme::adjustButtonOrCheckboxOrColorWellOrInnerSpinButtonOrRadioStyle
     if (auto themeFont = Theme::singleton().controlFont(appearance, style.fontCascade(), style.usedZoom())) {
         // If overriding the specified font with the theme font, also override the line height with the standard line height.
         style.setLineHeight(RenderStyle::initialLineHeight());
-        if (style.setFontDescription(WTFMove(themeFont.value())))
-            style.fontCascade().update(nullptr);
+        style.setFontDescription(WTFMove(themeFont.value()));
     }
 
     // Special style that tells enabled default buttons in active windows to use the ActiveButtonText color.

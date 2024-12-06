@@ -1269,7 +1269,8 @@ public:
     void setFieldSizing(FieldSizing);
 
     void setFontCascade(FontCascade&&);
-    WEBCORE_EXPORT bool setFontDescription(FontCascadeDescription&&);
+    WEBCORE_EXPORT void setFontDescription(FontCascadeDescription&&);
+    bool setFontDescriptionWithoutUpdate(FontCascadeDescription&&);
 
     // Only used for blending font sizes when animating, for MathML anonymous blocks, and for text autosizing.
     void setFontSize(float);

@@ -4447,7 +4447,7 @@ void Page::recomputeTextAutoSizingInAllFrames()
                 if (RefPtr element = renderer.element()) {
                     if (auto adjustment = Style::Adjuster::adjustmentForTextAutosizing(renderer.style(), *element)) {
                         auto newStyle = RenderStyle::clone(renderer.style());
-                        Style::Adjuster::adjustForTextAutosizing(newStyle, *element, adjustment);
+                        Style::Adjuster::adjustForTextAutosizing(newStyle, adjustment);
                         renderer.setStyle(WTFMove(newStyle));
                     }
                 }

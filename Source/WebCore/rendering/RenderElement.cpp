@@ -530,7 +530,7 @@ static void logStyleDifference(const RenderElement& renderer, const RenderStyle&
     diffStream.increaseIndent(2);
     style1.dumpDifferences(diffStream, style2);
     if (!diffStream.isEmpty())
-        LOG_WITH_STREAM(Style, stream << renderer << " style diff " << diff << " (context sensitive changes " << contextSensitiveProperties << "):\n" << diffStream.release());
+        LOG_WITH_STREAM(Style, stream << renderer << " style diff [" << diff << "] (context sensitive changes " << contextSensitiveProperties << "):\n" << diffStream.release());
 }
 #endif
 
