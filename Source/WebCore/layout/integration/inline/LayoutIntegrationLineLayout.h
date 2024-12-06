@@ -140,7 +140,7 @@ public:
     bool hasDetachedContent() const { return m_lineDamage && m_lineDamage->hasDetachedContent(); }
 #endif
 
-    void applySVGTextFragments(SVGTextFragmentMap&&);
+    FloatRect applySVGTextFragments(SVGTextFragmentMap&&);
 
 private:
     void preparePlacedFloats();

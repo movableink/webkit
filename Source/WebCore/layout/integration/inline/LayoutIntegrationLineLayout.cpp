@@ -668,16 +668,40 @@ void LineLayout::updateRenderTreePositions(const Vector<LineAdjustment>& lineAdj
     }
 }
 
-void LineLayout::applySVGTextFragments(SVGTextFragmentMap&& fragmentMap)
+FloatRect LineLayout::applySVGTextFragments(SVGTextFragmentMap&& fragmentMap)
 {
     auto& boxes = m_inlineContent->displayContent().boxes;
     auto& fragments = m_inlineContent->svgTextFragmentsForBoxes();
     fragments.resize(m_inlineContent->displayContent().boxes.size());
 
+    FloatRect fullBoundaries;
+
+    struct Parent {
+        size_t index;
+        FloatRect boundaries;
+    };
+    Vector<Parent, 8> parentStack;
+
+    auto popParent = [&](const Layout::Box* parent) {
+        while (!parentStack.isEmpty() && &boxes[parentStack.last().index].layoutBox() != parent) {
+            auto boundaries = parentStack.last().boundaries;
+            boxes[parentStack.last().index].setRect(boundaries, boundaries);
+            parentStack.removeLast();
+            if (!parentStack.isEmpty())
+                parentStack.last().boundaries.unite(boundaries);
+            else
+                fullBoundaries = boundaries;
+        }
+    };
+
     for (size_t i = 0; i < boxes.size(); ++i) {
+        popParent(&boxes[i].layoutBox().parent());
+
         auto textBox = InlineIterator::svgTextBoxFor(*m_inlineContent, i);
-        if (!textBox)
+        if (!textBox) {
+            parentStack.append({ i, { } });
             continue;
+        }
 
         auto it = fragmentMap.find(makeKey(*textBox));
         if (it != fragmentMap.end())
@@ -685,7 +709,18 @@ void LineLayout::applySVGTextFragments(SVGTextFragmentMap&& fragmentMap)
 
         auto boundaries = textBox->calculateBoundariesIncludingSVGTransform();
         boxes[i].setRect(boundaries, boundaries);
+        parentStack.last().boundaries.unite(boundaries);
     }
+
+    popParent(nullptr);
+
+    // Move so the top-left text box is at (0, 0).
+    for (auto& box : boxes) {
+        box.moveHorizontally(-fullBoundaries.x());
+        box.moveVertically(-fullBoundaries.y());
+    }
+
+    return fullBoundaries;
 }
 
 void LineLayout::preparePlacedFloats()

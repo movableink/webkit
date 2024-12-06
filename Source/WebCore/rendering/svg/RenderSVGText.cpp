@@ -471,13 +471,8 @@ void RenderSVGText::computePerCharacterLayoutInformation()
     }
 
     if (inlineLayout()) {
-        inlineLayout()->applySVGTextFragments(WTFMove(fragmentMap));
-
-        FloatRect childRect;
-        for (auto& box : InlineIterator::boxesFor(*this))
-            childRect.unite(box.visualRectIgnoringBlockDirection());
-
-        updatePositionAndOverflow(childRect);
+        auto boundaries = inlineLayout()->applySVGTextFragments(WTFMove(fragmentMap));
+        updatePositionAndOverflow(boundaries);
     }
 }
 
