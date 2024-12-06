@@ -77,10 +77,13 @@ public:
 
     IntRect layerRect() const { return m_rect; }
 
-    bool needsUpdate() const { return m_textures.isEmpty(); }
+    bool needsUpdate() const { return m_needsUpdate; }
 
     void update(TextureMapperPaintOptions& options, const std::function<void(TextureMapperPaintOptions&)>& paintFunction)
     {
+        if (!m_needsUpdate)
+            return;
+
         auto [prevZNear, prevZFar] =  options.textureMapper.depthRange();
         options.textureMapper.setDepthRange(m_zNear, m_zFar);
 
@@ -95,6 +98,7 @@ public:
                 SetForScope scopedOpacity(options.opacity, 1);
 
                 options.textureMapper.bindSurface(options.surface.get());
+
                 paintFunction(options);
 
                 // If paintFunction applies filters to flattened surface then surface object might have
@@ -107,6 +111,8 @@ public:
 
         options.textureMapper.bindSurface(options.surface.get());
         options.textureMapper.setDepthRange(prevZNear, prevZFar);
+
+        m_needsUpdate = false;
     }
 
     void paintToTextureMapper(TextureMapper& textureMapper, const FloatRect& targetRect, TransformationMatrix& modelViewMatrix, float opacity)
@@ -140,6 +146,7 @@ private:
     double m_zNear;
     double m_zFar;
     Vector<RefPtr<BitmapTexture>> m_textures;
+    bool m_needsUpdate { true };
 };
 
 TextureMapperLayer::TextureMapperLayer() = default;
