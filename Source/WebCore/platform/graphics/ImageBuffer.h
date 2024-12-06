@@ -67,11 +67,6 @@ class IOSurfacePool;
 #endif
 class ScriptExecutionContext;
 
-enum class ImageBufferOptions : uint8_t {
-    Accelerated     = 1 << 0,
-    AvoidBackendSizeCheckForTesting = 1 << 1,
-};
-
 class SerializedImageBuffer;
 
 struct ImageBufferCreationContext {
@@ -99,7 +94,7 @@ class ImageBuffer : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<Image
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(ImageBuffer, WEBCORE_EXPORT);
 public:
     using Parameters = ImageBufferParameters;
-    WEBCORE_EXPORT static RefPtr<ImageBuffer> create(const FloatSize&, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, ImageBufferPixelFormat, OptionSet<ImageBufferOptions> = { }, GraphicsClient* graphicsClient = nullptr);
+    WEBCORE_EXPORT static RefPtr<ImageBuffer> create(const FloatSize&, RenderingMode, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, ImageBufferPixelFormat, GraphicsClient* = nullptr);
 
     template<typename BackendType, typename ImageBufferType = ImageBuffer, typename... Arguments>
     static RefPtr<ImageBufferType> create(const FloatSize& size, float resolutionScale, const DestinationColorSpace& colorSpace, ImageBufferPixelFormat pixelFormat, RenderingPurpose purpose, const ImageBufferCreationContext& creationContext, Arguments&&... arguments)
@@ -290,13 +285,6 @@ public:
 protected:
     virtual RefPtr<ImageBuffer> sinkIntoImageBuffer() = 0;
 };
-
-inline OptionSet<ImageBufferOptions> bufferOptionsForRendingMode(RenderingMode renderingMode)
-{
-    if (renderingMode == RenderingMode::Accelerated)
-        return { ImageBufferOptions::Accelerated };
-    return { };
-}
 
 WEBCORE_EXPORT TextStream& operator<<(TextStream&, const ImageBuffer&);
 

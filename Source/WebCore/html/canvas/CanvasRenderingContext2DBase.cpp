@@ -3031,21 +3031,17 @@ bool CanvasRenderingContext2DBase::willReadFrequently() const
     return m_settings.willReadFrequently;
 }
 
-OptionSet<ImageBufferOptions> CanvasRenderingContext2DBase::adjustImageBufferOptionsForTesting(OptionSet<ImageBufferOptions> bufferOptions)
+std::optional<RenderingMode> CanvasRenderingContext2DBase::renderingModeForTesting() const
 {
     if (!m_settings.renderingModeForTesting)
-        return bufferOptions;
+        return std::nullopt;
     switch (*m_settings.renderingModeForTesting) {
     case CanvasRenderingContext2DSettings::RenderingMode::Unaccelerated:
-        bufferOptions.remove(ImageBufferOptions::Accelerated);
-        bufferOptions.add(ImageBufferOptions::AvoidBackendSizeCheckForTesting);
-        break;
+        return RenderingMode::Unaccelerated;
     case CanvasRenderingContext2DSettings::RenderingMode::Accelerated:
-        bufferOptions.add(ImageBufferOptions::Accelerated);
-        bufferOptions.add(ImageBufferOptions::AvoidBackendSizeCheckForTesting);
-        break;
+        return RenderingMode::Accelerated;
     }
-    return bufferOptions;
+    return std::nullopt;
 }
 
 std::optional<CanvasRenderingContext2DBase::RenderingMode> CanvasRenderingContext2DBase::getEffectiveRenderingModeForTesting()

@@ -70,33 +70,41 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(SerializedImageBuffer);
 static const float MaxClampedLength = 4096;
 static const float MaxClampedArea = MaxClampedLength * MaxClampedLength;
 
-RefPtr<ImageBuffer> ImageBuffer::create(const FloatSize& size, RenderingPurpose purpose, float resolutionScale, const DestinationColorSpace& colorSpace, ImageBufferPixelFormat pixelFormat, OptionSet<ImageBufferOptions> options, GraphicsClient* graphicsClient)
+RefPtr<ImageBuffer> ImageBuffer::create(const FloatSize& size, RenderingMode renderingMode, RenderingPurpose purpose, float resolutionScale, const DestinationColorSpace& colorSpace, ImageBufferPixelFormat pixelFormat, GraphicsClient* graphicsClient)
 {
     RefPtr<ImageBuffer> imageBuffer;
 
     if (graphicsClient) {
-        if (auto imageBuffer = graphicsClient->createImageBuffer(size, purpose, resolutionScale, colorSpace, pixelFormat, options))
+        if (auto imageBuffer = graphicsClient->createImageBuffer(size, renderingMode, purpose, resolutionScale, colorSpace, pixelFormat))
             return imageBuffer;
     }
 
+    switch (renderingMode) {
+    case RenderingMode::Accelerated:
 #if HAVE(IOSURFACE)
-    if (options.contains(ImageBufferOptions::Accelerated) && ProcessCapabilities::canUseAcceleratedBuffers()) {
-        ImageBufferCreationContext creationContext;
-        if (graphicsClient)
-            creationContext.displayID = graphicsClient->displayID();
-        if (auto imageBuffer = ImageBuffer::create<ImageBufferIOSurfaceBackend>(size, resolutionScale, colorSpace, pixelFormat, purpose, creationContext))
-            return imageBuffer;
-    }
-#endif
-
-#if USE(SKIA)
-    if (options.contains(ImageBufferOptions::Accelerated)) {
+        if (ProcessCapabilities::canUseAcceleratedBuffers()) {
+            ImageBufferCreationContext creationContext;
+            if (graphicsClient)
+                creationContext.displayID = graphicsClient->displayID();
+            if (auto imageBuffer = ImageBuffer::create<ImageBufferIOSurfaceBackend>(size, resolutionScale, colorSpace, pixelFormat, purpose, creationContext))
+                return imageBuffer;
+        }
+#elif USE(SKIA)
         if (auto imageBuffer = ImageBuffer::create<ImageBufferSkiaAcceleratedBackend>(size, resolutionScale, colorSpace, pixelFormat, purpose, { }))
             return imageBuffer;
-    }
 #endif
+        [[fallthrough]];
 
-    return create<ImageBufferPlatformBitmapBackend>(size, resolutionScale, colorSpace, pixelFormat, purpose, { });
+    case RenderingMode::Unaccelerated:
+        return create<ImageBufferPlatformBitmapBackend>(size, resolutionScale, colorSpace, pixelFormat, purpose, { });
+
+    case RenderingMode::PDFDocument:
+    case RenderingMode::DisplayList:
+        return nullptr;
+    }
+
+    ASSERT_NOT_REACHED();
+    return nullptr;
 }
 
 ImageBuffer::ImageBuffer(Parameters parameters, const ImageBufferBackend::Info& backendInfo, const WebCore::ImageBufferCreationContext&, std::unique_ptr<ImageBufferBackend>&& backend, RenderingResourceIdentifier renderingResourceIdentifier)

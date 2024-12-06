@@ -1791,7 +1791,12 @@ struct WebCore::NavigationPreloadState {
     String headerValue;
 };
 
-enum class WebCore::RenderingMode : bool
+enum class WebCore::RenderingMode : uint8_t {
+    Unaccelerated,
+    Accelerated,
+    PDFDocument,
+    DisplayList,
+};
 
 enum class WebCore::RenderingPurpose : uint8_t {
     Unspecified,

@@ -3266,7 +3266,7 @@ RefPtr<TextIndicator> UnifiedPDFPlugin::textIndicatorForSelection(PDFSelection *
 
     float deviceScaleFactor = this->deviceScaleFactor();
 
-    auto buffer = ImageBuffer::create(rectInRootViewCoordinates.size(), RenderingPurpose::ShareableSnapshot, deviceScaleFactor, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8, { }, nullptr);
+    auto buffer = ImageBuffer::create(rectInRootViewCoordinates.size(), RenderingMode::Unaccelerated, RenderingPurpose::ShareableSnapshot, deviceScaleFactor, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
     if (!buffer)
         return nullptr;
 

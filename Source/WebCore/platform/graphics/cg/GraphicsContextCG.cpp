@@ -196,6 +196,8 @@ static RenderingMode renderingModeForCGContext(CGContextRef cgContext, GraphicsC
     auto type = CGContextGetType(cgContext);
     if (type == kCGContextTypeIOSurface || (source == GraphicsContextCG::CGContextFromCALayer && type == kCGContextTypeUnknown))
         return RenderingMode::Accelerated;
+    if (type == kCGContextTypePDF)
+        return RenderingMode::PDFDocument;
     return RenderingMode::Unaccelerated;
 }
 

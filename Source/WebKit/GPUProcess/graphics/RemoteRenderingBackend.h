@@ -62,7 +62,7 @@ class DestinationColorSpace;
 class FloatSize;
 class MediaPlayer;
 class NativeImage;
-enum class RenderingMode : bool;
+enum class RenderingMode : uint8_t;
 struct FontCustomPlatformSerializedData;
 
 namespace ShapeDetection {

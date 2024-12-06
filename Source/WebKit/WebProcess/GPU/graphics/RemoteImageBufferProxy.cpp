@@ -233,7 +233,7 @@ RefPtr<ImageBuffer> RemoteImageBufferProxy::sinkIntoBufferForDifferentThread()
 {
     ASSERT(hasOneRef());
     // We can't use these on a different thread, so make a local clone instead.
-    auto copyBuffer = ImageBuffer::create(logicalSize(), renderingPurpose(), resolutionScale(), colorSpace(), pixelFormat());
+    auto copyBuffer = ImageBuffer::create(logicalSize(), RenderingMode::Unaccelerated, renderingPurpose(), resolutionScale(), colorSpace(), pixelFormat());
     if (!copyBuffer)
         return nullptr;
 
