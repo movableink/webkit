@@ -1939,3 +1939,9 @@ webkit.org/b/283740 [ Debug ] http/wpt/webauthn/public-key-credential-get-succes
 
 # webkit.org/b/283999 REGRESSION(286110@main?): [macOS] http/tests/workers/service/shownotification-allowed.html is a constant failure (flaky in EWS) 
 [ Ventura+ ] http/tests/workers/service/shownotification-allowed.html [ Failure ]
+
+# webkit.org/b/284113 REGRESSION(287390@main?): [macOS Release] 4x imported/w3c/web-platform-tests/fs tests are flaky (Failure in EWS)
+[ Release ] imported/w3c/web-platform-tests/fs/FileSystemBaseHandle-postMessage-Error.https.window.html [ Pass Failure ]
+[ Release ] imported/w3c/web-platform-tests/fs/FileSystemFileHandle-getFile.https.any.worker.html [ Pass Failure ]
+[ Release ] imported/w3c/web-platform-tests/fs/FileSystemWritableFileStream-piped.https.any.worker.html [ Pass Failure ]
+[ Release ] imported/w3c/web-platform-tests/fs/FileSystemDirectoryHandle-removeEntry.https.any.worker.html [ Pass Failure ]
