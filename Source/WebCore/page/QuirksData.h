@@ -66,7 +66,6 @@ struct WEBCORE_EXPORT QuirksData {
     std::optional<bool> shouldIgnorePlaysInlineRequirementQuirk;
     std::optional<bool> shouldLayOutAtMinimumWindowWidthWhenIgnoringScalingConstraintsQuirk;
     std::optional<bool> shouldPreventOrientationMediaQueryFromEvaluatingToLandscapeQuirk;
-    std::optional<bool> shouldStarBePermissionsPolicyDefaultValueQuirk;
     std::optional<bool> shouldUseLegacySelectPopoverDismissalBehaviorInDataActivationQuirk;
 
 #if PLATFORM(IOS_FAMILY)

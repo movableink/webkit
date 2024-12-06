@@ -201,7 +201,6 @@ public:
 
     bool needsResettingTransitionCancelsRunningTransitionQuirk() const;
 
-    bool shouldStarBePermissionsPolicyDefaultValue() const;
     bool shouldDisableDataURLPaddingValidation() const;
 
     bool needsDisableDOMPasteAccessQuirk() const;

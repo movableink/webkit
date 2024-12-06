@@ -1691,19 +1691,6 @@ bool Quirks::needsResettingTransitionCancelsRunningTransitionQuirk() const
 #endif
 }
 
-bool Quirks::shouldStarBePermissionsPolicyDefaultValue() const
-{
-    if (!needsQuirks())
-        return false;
-
-    if (!m_quirksData.shouldStarBePermissionsPolicyDefaultValueQuirk) {
-        auto domain = m_document->securityOrigin().domain();
-        m_quirksData.shouldStarBePermissionsPolicyDefaultValueQuirk = domain == "jsfiddle.net"_s;
-    }
-
-    return *m_quirksData.shouldStarBePermissionsPolicyDefaultValueQuirk;
-}
-
 // Microsoft office online generates data URLs with incorrect padding on Safari only (rdar://114573089).
 bool Quirks::shouldDisableDataURLPaddingValidation() const
 {
