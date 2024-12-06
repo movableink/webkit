@@ -732,7 +732,7 @@ WebPageProxy::Internals::~Internals() = default;
 #endif
 
 WebPageProxy::WebPageProxy(PageClient& pageClient, WebProcessProxy& process, Ref<API::PageConfiguration>&& configuration)
-    : m_internals(makeUniqueRef<Internals>(*this))
+    : m_internals(makeUniqueRefWithoutRefCountedCheck<Internals>(*this))
     , m_identifier(Identifier::generate())
     , m_webPageID(PageIdentifier::generate())
     , m_pageClient(pageClient)
