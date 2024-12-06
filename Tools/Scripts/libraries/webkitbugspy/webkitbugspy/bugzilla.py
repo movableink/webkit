@@ -667,13 +667,18 @@ class Tracker(GenericTracker):
             if user_to_cc:
                 keyword_to_add = 'InRadar'
             elif comment_to_make:
+                tracked_bug = issue.references[0] if issue.references else '?'
                 sys.stderr.write("{} already CCed '{}' and tracking a different bug\n".format(
                     self.radar_importer.name,
-                    issue.references[0] if issue.references else '?',
+                    tracked_bug,
                 ))
                 response = webkitcorepy.Terminal.choose(
-                    'Double-check you have the correct bug. Would you like to continue?', options=('Yes', 'No'), default='Yes',
+                    f'Double-check you have the correct bug ({issue.link}).\nWould you like to overwrite {tracked_bug.link} with {radar.link}?',
+                    options=('Yes', 'Skip CC', 'Exit'), default='Exit',
                 )
+                if response == 'Skip CC':
+                    print(f'Skipping CC for {issue.link}')
+                    return None
                 if response == 'No':
                     raise ValueError('Radar is tracking a different bug')
                 user_to_cc = True  # Ensure that the user override is respected even if 'InRadar' is applied
