@@ -24,22 +24,52 @@
 #if ENABLE_SWIFTUI && compiler(>=6.0)
 
 import Foundation
-internal import WebKit_Internal
 
 extension WebPage_v0 {
     @MainActor
     @_spi(Private)
-    public struct FrameInfo: Sendable {
-        public var isMainFrame: Bool { wrapped.isMainFrame }
+    public struct BackForwardList: Equatable, Sendable {
+        @MainActor
+        public struct Item: Equatable, Identifiable, Sendable {
+            public struct ID: Hashable {
+                private let value = UUID()
+            }
 
-        public var request: URLRequest { wrapped.request }
+            init(_ wrapped: WKBackForwardListItem) {
+                self.wrapped = wrapped
+            }
 
-        public var securityOrigin: WKSecurityOrigin { wrapped.securityOrigin }
+            nonisolated public let id: ID = ID()
 
-        var wrapped: WKFrameInfo
+            public var title: String? { wrapped.title }
 
-        init(_ wrapped: WKFrameInfo) {
+            public var url: URL { wrapped.url }
+
+            public var initialURL: URL { wrapped.initialURL }
+
+            let wrapped: WKBackForwardListItem
+        }
+
+        init(_ wrapped: WKBackForwardList? = nil) {
             self.wrapped = wrapped
+        }
+
+        public var backList: [Item] {
+            wrapped?.backList.map(Item.init(_:)) ?? []
+        }
+
+        public var currentItem: Item? {
+            wrapped?.currentItem.map(Item.init(_:))
+        }
+
+        public var forwardList: [Item] {
+            wrapped?.forwardList.map(Item.init(_:)) ?? []
+        }
+
+        private var wrapped: WKBackForwardList? = nil
+
+        public subscript(_ index: Int) -> Item? {
+            wrapped?.item(at: index).map(Item.init(_:))
         }
     }
 }

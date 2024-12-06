@@ -25,9 +25,7 @@
 
 import Observation
 import Testing
-import WebKit
-@_spi(Private) import WebKit
-@_spi(Testing) import WebKit
+@_spi(Private) @_spi(Testing) import WebKit
 
 extension WebPage_v0.NavigationEvent.Kind: @retroactive Equatable {
     public static func == (lhs: Self, rhs: Self) -> Bool {

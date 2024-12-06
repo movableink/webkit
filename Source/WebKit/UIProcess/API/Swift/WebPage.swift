@@ -43,6 +43,7 @@ public class WebPage_v0 {
         navigations = Navigations(source: stream)
 
         backingNavigationDelegate = WKNavigationDelegateAdapter(navigationProgressContinuation: continuation)
+        backingNavigationDelegate.owner = self
 
         observations.contents = [
             createObservation(for: \.url, backedBy: \.url),
@@ -59,6 +60,8 @@ public class WebPage_v0 {
     public let navigations: Navigations
 
     public let configuration: Configuration
+
+    public internal(set) var backForwardList: BackForwardList = BackForwardList()
 
     public var url: URL? {
         self.access(keyPath: \.url)
@@ -184,6 +187,11 @@ public class WebPage_v0 {
 
         let navigation = backingWebView.loadSimulatedRequest(request, responseHTML: responseHTML) as WKNavigation?
         return navigation.map(NavigationID.init(_:))
+    }
+
+    @discardableResult
+    public func load(backForwardItem: BackForwardList.Item) -> NavigationID? {
+        backingWebView.go(to: backForwardItem.wrapped).map(NavigationID.init(_:))
     }
 
     @discardableResult

@@ -26,44 +26,31 @@
 import SwiftUI
 @_spi(Private) import WebKit
 
-fileprivate struct UnifiedBar: View {
-    @Environment(BrowserViewModel.self) private var viewModel
+fileprivate struct ToolbarBackForwardMenuView: View {
+    struct LabelConfiguration {
+        let text: String
+        let systemImage: String
+    }
 
-    @FocusState private var urlFieldIsFocused: Bool
+    let list: [WebPage_v0.BackForwardList.Item]
+    let label: LabelConfiguration
+    let navigateToItem: (WebPage_v0.BackForwardList.Item) -> Void
 
     var body: some View {
-        @Bindable var viewModel = viewModel
-
-        VStack(spacing: 0) {
-            TextField("URL", text: $viewModel.displayedURL)
-                .textContentType(.URL)
-                .onSubmit {
-                    urlFieldIsFocused = false
-                    viewModel.navigateToSubmittedURL()
+        Menu {
+            ForEach(list) { item in
+                Button(item.title ?? item.url.absoluteString) {
+                    navigateToItem(item)
                 }
-                .textFieldStyle(.roundedBorder)
-                .focused($urlFieldIsFocused)
-
-            ProgressView(value: viewModel.page.estimatedProgress, total: 1.0)
-                .padding(.horizontal, 2)
-                .padding(.top, -4)
-                .padding(.bottom, -8)
-        }
-        .frame(minWidth: 300)
-
-        if viewModel.page.isLoading {
-            Button {
-                viewModel.page.stopLoading()
-            } label: {
-                Image(systemName: "xmark")
             }
-        } else {
-            Button {
-                viewModel.page.reload()
-            } label: {
-                Image(systemName: "arrow.clockwise")
-            }
+        } label: {
+            Label(label.text, systemImage: label.systemImage)
+                .labelStyle(.iconOnly)
+        } primaryAction: {
+            navigateToItem(list.first!)
         }
+        .menuIndicator(.hidden)
+        .disabled(list.isEmpty)
     }
 }
 
@@ -85,12 +72,57 @@ struct ContentView: View {
                 viewModel.displayedURL = defaultURL
                 viewModel.navigateToSubmittedURL()
             }
+            .navigationTitle(viewModel.page.title)
             .toolbar {
+                ToolbarItemGroup(placement: .navigation) {
+                    ToolbarBackForwardMenuView(
+                        list: viewModel.page.backForwardList.backList.reversed(),
+                        label: .init(text: "Backward", systemImage: "chevron.backward")
+                    ) {
+                        viewModel.page.load(backForwardItem: $0)
+                    }
+
+                    ToolbarBackForwardMenuView(
+                        list: viewModel.page.backForwardList.forwardList,
+                        label: .init(text: "Forward", systemImage: "chevron.forward")
+                    ) {
+                        viewModel.page.load(backForwardItem: $0)
+                    }
+                }
+
                 ToolbarItemGroup(placement: .principal) {
-                    UnifiedBar()
+                    VStack(spacing: 0) {
+                        @Bindable var viewModel = viewModel
+
+                        TextField("URL", text: $viewModel.displayedURL)
+                            .textContentType(.URL)
+                            .onSubmit {
+                                viewModel.navigateToSubmittedURL()
+                            }
+                            .textFieldStyle(.roundedBorder)
+
+                        ProgressView(value: viewModel.page.estimatedProgress, total: 1.0)
+                            .padding(.horizontal, 2)
+                            .padding(.top, -4)
+                            .padding(.bottom, -8)
+                    }
+                    .frame(minWidth: 300)
+
+                    if viewModel.page.isLoading {
+                         Button {
+                             viewModel.page.stopLoading()
+                         } label: {
+                             Image(systemName: "xmark")
+                         }
+                    } else {
+                        Button {
+                            viewModel.page.reload()
+                        } label: {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                    }
                 }
             }
-            .navigationTitle(viewModel.page.title)
     }
 }
 

@@ -56,7 +56,7 @@ public protocol URLSchemeHandler_v0 {
 // MARK: Adapters
 
 final class WKURLSchemeHandlerAdapter: NSObject, WKURLSchemeHandler {
-    init(wrapping wrapped: any URLSchemeHandler_v0) {
+    init(_ wrapped: any URLSchemeHandler_v0) {
         self.wrapped = wrapped
     }
 
