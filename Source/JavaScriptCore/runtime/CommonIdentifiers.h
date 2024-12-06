@@ -285,6 +285,7 @@
     macro(toJSON) \
     macro(toLocaleString) \
     macro(toPrecision) \
+    macro(toReversed) \
     macro(toString) \
     macro(toTemporalInstant) \
     macro(toWellFormed) \
