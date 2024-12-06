@@ -77,6 +77,7 @@ inline bool isInModelProcess()
 using WTF::checkAuxiliaryProcessType;
 using WTF::isInAuxiliaryProcess;
 using WTF::isInGPUProcess;
+using WTF::isInModelProcess;
 using WTF::isInNetworkProcess;
 using WTF::isInWebProcess;
 using WTF::presentingApplicationPID;
