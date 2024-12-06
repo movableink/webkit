@@ -1946,3 +1946,6 @@ webkit.org/b/283740 [ Debug ] http/wpt/webauthn/public-key-credential-get-succes
 [ Release ] imported/w3c/web-platform-tests/fs/FileSystemFileHandle-getFile.https.any.worker.html [ Pass Failure ]
 [ Release ] imported/w3c/web-platform-tests/fs/FileSystemWritableFileStream-piped.https.any.worker.html [ Pass Failure ]
 [ Release ] imported/w3c/web-platform-tests/fs/FileSystemDirectoryHandle-removeEntry.https.any.worker.html [ Pass Failure ]
+
+webkit.org/b/284190 [ Sequoia+ ] http/tests/privateClickMeasurement/send-attribution-conversion-request.https.html [ Failure ]
+
