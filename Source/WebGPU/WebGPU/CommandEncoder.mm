@@ -102,6 +102,7 @@ static MTLStoreAction storeAction(WGPUStoreOp storeOp, bool hasResolveTarget = f
 
 DEFINE_SWIFTCXX_THUNK(WebGPU::CommandEncoder, copyBufferToTexture, void, const WGPUImageCopyBuffer&, const WGPUImageCopyTexture&, const WGPUExtent3D&);
 DEFINE_SWIFTCXX_THUNK(WebGPU::CommandEncoder, copyTextureToBuffer, void, const WGPUImageCopyTexture&, const WGPUImageCopyBuffer&, const WGPUExtent3D&);
+DEFINE_SWIFTCXX_THUNK(WebGPU::CommandEncoder, copyTextureToTexture, void, const WGPUImageCopyTexture&, const WGPUImageCopyTexture&, const WGPUExtent3D&);
 #endif
 
 
@@ -1653,15 +1654,15 @@ static bool areCopyCompatible(WGPUTextureFormat format1, WGPUTextureFormat forma
     return Texture::removeSRGBSuffix(format1) == Texture::removeSRGBSuffix(format2);
 }
 
-static NSString* errorValidatingCopyTextureToTexture(const WGPUImageCopyTexture& source, const WGPUImageCopyTexture& destination, const WGPUExtent3D& copySize, const CommandEncoder& commandEncoder)
+NSString* CommandEncoder::errorValidatingCopyTextureToTexture(const WGPUImageCopyTexture& source, const WGPUImageCopyTexture& destination, const WGPUExtent3D& copySize) const
 {
 #define ERROR_STRING(x) [NSString stringWithFormat:@"GPUCommandEncoder.copyTextureToTexture: %@", x]
     Ref sourceTexture = fromAPI(source.texture);
-    if (!isValidToUseWith(sourceTexture, commandEncoder))
+    if (!isValidToUseWith(sourceTexture, *this))
         return ERROR_STRING(@"source texture is not valid to use with this GPUCommandEncoder");
 
     Ref destinationTexture = fromAPI(destination.texture);
-    if (!isValidToUseWith(destinationTexture, commandEncoder))
+    if (!isValidToUseWith(destinationTexture, *this))
         return ERROR_STRING(@"desintation texture is not valid to use with this GPUCommandEncoder");
 
     if (NSString* error = Texture::errorValidatingImageCopyTexture(source, copySize))
@@ -1731,6 +1732,7 @@ static NSString* errorValidatingCopyTextureToTexture(const WGPUImageCopyTexture&
     return nil;
 }
 
+#if !ENABLE(WEBGPU_SWIFT)
 void CommandEncoder::copyTextureToTexture(const WGPUImageCopyTexture& source, const WGPUImageCopyTexture& destination, const WGPUExtent3D& copySize)
 {
     if (source.nextInChain || destination.nextInChain)
@@ -1743,7 +1745,7 @@ void CommandEncoder::copyTextureToTexture(const WGPUImageCopyTexture& source, co
         return;
     }
 
-    if (NSString* error = errorValidatingCopyTextureToTexture(source, destination, copySize, *this)) {
+    if (NSString* error = errorValidatingCopyTextureToTexture(source, destination, copySize)) {
         makeInvalid(error);
         return;
     }
@@ -1885,6 +1887,7 @@ void CommandEncoder::copyTextureToTexture(const WGPUImageCopyTexture& source, co
         return;
     }
 }
+#endif
 
 bool CommandEncoder::validateClearBuffer(const Buffer& buffer, uint64_t offset, uint64_t size)
 {

@@ -1592,6 +1592,7 @@ webkit.org/b/261356 [ Debug ] fast/mediastream/device-change-event-2.html [ Pass
 webkit.org/b/263396 css3/color/text.html [ Skip ]
 
 # WebGPU
+[ Release ] http/tests/webgpu/webgpu/api/validation/encoding/cmds/copyTextureToTexture.html
 
 # skipped outside of macOS Sequoia due to crash in failed allocation
 [ Ventura Sonoma ] fast/webgpu/nocrash/fuzz-279086.html [ Skip ]
