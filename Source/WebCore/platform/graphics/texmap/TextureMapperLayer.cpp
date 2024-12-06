@@ -1060,7 +1060,7 @@ void TextureMapperLayer::paintFlattened(TextureMapperPaintOptions& options)
 void TextureMapperLayer::paintWith3DRenderingContext(TextureMapperPaintOptions& options)
 {
     Vector<TextureMapperLayer*> layers;
-    collect3DSceneLayers(layers);
+    collect3DRenderingContextLayers(layers);
 
     TextureMapperLayer3DRenderingContext context;
     context.paint(layers, [&](TextureMapperLayer* layer, const FloatPolygon& clipArea) {
@@ -1077,20 +1077,26 @@ void TextureMapperLayer::paintWith3DRenderingContext(TextureMapperPaintOptions& 
     });
 }
 
-void TextureMapperLayer::collect3DSceneLayers(Vector<TextureMapperLayer*>& layers)
+void TextureMapperLayer::collect3DRenderingContextLayers(Vector<TextureMapperLayer*>& layers)
 {
-    bool isLeafOf3DScene = !m_state.preserves3D && (m_parent && m_parent->preserves3D());
-    if (preserves3D() || isLeafOf3DScene) {
-        if (m_state.visible)
+    bool isLeafOf3DRenderingContext = !m_state.preserves3D && (m_parent && m_parent->preserves3D());
+    if (preserves3D() || isLeafOf3DRenderingContext) {
+        bool hasVisualContent = m_backingStore || m_contentsLayer
+            || (m_state.backgroundColor.isValid() && m_state.backgroundColor.isVisible())
+            || (m_state.solidColor.isValid() && m_state.solidColor.isVisible())
+            || hasFilters() || hasBackdrop();
+
+        // Add layers to 3d rendering context only if they get actually painted.
+        if (isVisible() && (hasVisualContent || (isLeafOf3DRenderingContext && !m_children.isEmpty())))
             layers.append(this);
 
-        // Stop recursion on scene leaf
-        if (isLeafOf3DScene)
+        // Stop recursion on 3d rendering context leaf
+        if (isLeafOf3DRenderingContext)
             return;
     }
 
     for (auto* child : m_children)
-        child->collect3DSceneLayers(layers);
+        child->collect3DRenderingContextLayers(layers);
 }
 
 void TextureMapperLayer::setChildren(const Vector<TextureMapperLayer*>& newChildren)
