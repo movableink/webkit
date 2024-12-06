@@ -70,6 +70,7 @@
 #import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #import <wtf/cocoa/SpanCocoa.h>
 #import <wtf/cocoa/VectorCocoa.h>
+#import <wtf/persistence/PersistentEncoder.h>
 
 #if HAVE(NW_PROXY_CONFIG)
 #import <Network/Network.h>
