@@ -56,7 +56,7 @@ messages -> NetworkConnectionToWebProcess WantsDispatchMessage {
     SetCookieFromDOMAsync(URL firstParty, struct WebCore::SameSiteInfo sameSiteInfo, URL url, std::optional<WebCore::FrameIdentifier> frameID, std::optional<WebCore::PageIdentifier> pageID, enum:bool WebCore::ApplyTrackingPrevention applyTrackingPrevention, struct WebCore::Cookie cookie, enum:bool WebCore::ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking) -> (bool setSuccessfully)
 
 #if HAVE(COOKIE_CHANGE_LISTENER_API)
-    SubscribeToCookieChangeNotifications(String host) AllowedWhenWaitingForSyncReply
+    SubscribeToCookieChangeNotifications(URL url, URL firstParty, WebCore::FrameIdentifier frameID, WebCore::PageIdentifier pageID, enum:bool WebCore::ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking) -> (bool result) AllowedWhenWaitingForSyncReply
     UnsubscribeFromCookieChangeNotifications(String host) AllowedWhenWaitingForSyncReply
 #endif
 

@@ -212,7 +212,7 @@ public:
     WEBCORE_EXPORT Vector<Cookie> domCookiesForHost(const String& host);
 
 #if HAVE(COOKIE_CHANGE_LISTENER_API)
-    WEBCORE_EXPORT void startListeningForCookieChangeNotifications(CookieChangeObserver&, const String& host);
+    WEBCORE_EXPORT bool startListeningForCookieChangeNotifications(CookieChangeObserver&, const URL&, const URL& firstParty, FrameIdentifier, PageIdentifier, ShouldRelaxThirdPartyCookieBlocking);
     WEBCORE_EXPORT void stopListeningForCookieChangeNotifications(CookieChangeObserver&, const HashSet<String>& hosts);
 #endif
     WEBCORE_EXPORT void addCookiesEnabledStateObserver(CookiesEnabledStateObserver&);

@@ -728,23 +728,28 @@ void NetworkStorageSession::unregisterCookieChangeListenersIfNecessary()
     m_didRegisterCookieListeners = false;
 }
 
-void NetworkStorageSession::startListeningForCookieChangeNotifications(CookieChangeObserver& observer, const String& host)
+bool NetworkStorageSession::startListeningForCookieChangeNotifications(CookieChangeObserver& observer, const URL& url, const URL& firstParty, FrameIdentifier frameID, PageIdentifier pageID, ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking)
 {
+    if (shouldBlockCookies(firstParty, url, frameID, pageID, shouldRelaxThirdPartyCookieBlocking))
+        return false;
+
     registerCookieChangeListenersIfNecessary();
 
+    auto host = url.host().toString();
     auto& observers = m_cookieChangeObservers.ensure(host, [] {
         return WeakHashSet<CookieChangeObserver> { };
     }).iterator->value;
-    ASSERT(!observers.contains(observer));
+
     observers.add(observer);
 
     if (!m_subscribedDomainsForCookieChanges)
         m_subscribedDomainsForCookieChanges = adoptNS([[NSMutableSet alloc] init]);
     else if ([m_subscribedDomainsForCookieChanges containsObject:(NSString *)host])
-        return;
+        return true;
 
     [m_subscribedDomainsForCookieChanges addObject:(NSString *)host];
     [nsCookieStorage() _setSubscribedDomainsForCookieChanges:m_subscribedDomainsForCookieChanges.get()];
+    return true;
 }
 
 void NetworkStorageSession::stopListeningForCookieChangeNotifications(CookieChangeObserver& observer, const HashSet<String>& hosts)

@@ -902,13 +902,17 @@ void NetworkConnectionToWebProcess::domCookiesForHost(const URL& url, Completion
 
 #if HAVE(COOKIE_CHANGE_LISTENER_API)
 
-void NetworkConnectionToWebProcess::subscribeToCookieChangeNotifications(const String& host)
+void NetworkConnectionToWebProcess::subscribeToCookieChangeNotifications(const URL& url, const URL& firstParty, WebCore::FrameIdentifier frameID, WebCore::PageIdentifier pageID, WebCore::ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking, CompletionHandler<void(bool)>&& completionHandler)
 {
-    ASSERT(!m_hostsWithCookieListeners.contains(host));
-    m_hostsWithCookieListeners.add(host);
+    MESSAGE_CHECK_COMPLETION(protectedNetworkProcess()->allowsFirstPartyForCookies(m_webProcessIdentifier, firstParty), completionHandler(false));
 
-    if (auto* networkStorageSession = storageSession())
-        networkStorageSession->startListeningForCookieChangeNotifications(*this, host);
+    bool startedListening = false;
+    if (CheckedPtr networkStorageSession = storageSession())
+        startedListening = networkStorageSession->startListeningForCookieChangeNotifications(*this, url, firstParty, frameID, pageID, shouldRelaxThirdPartyCookieBlocking);
+
+    if (startedListening)
+        m_hostsWithCookieListeners.add(url.host().toString());
+    completionHandler(startedListening);
 }
 
 void NetworkConnectionToWebProcess::unsubscribeFromCookieChangeNotifications(const String& host)
