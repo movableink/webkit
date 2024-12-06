@@ -1589,12 +1589,6 @@ bool WebProcessProxy::canBeAddedToWebProcessCache() const
         return false;
     }
 
-    if (m_usedForSiteIsolation) {
-        // FIXME: The WebProcessCache is organized by RegistrableDomain not Site, and it is only set when the main frame loads a URL with that domain,
-        // so processes used for iframes are not correctly reused. Implement this in a way that doesn't break PLT.
-        return false;
-    }
-
     if (WebKit::isInspectorProcessPool(protectedProcessPool()))
         return false;
 
@@ -2234,8 +2228,18 @@ void WebProcessProxy::didStartProvisionalLoadForMainFrame(const URL& url)
         return;
     }
 
-    // Associate the process with this site.
-    m_site = WTFMove(site);
+    if (m_sharedPreferencesForWebProcess.siteIsolationEnabled)
+        ASSERT(m_site == site);
+    else {
+        // Associate the process with this site.
+        m_site = WTFMove(site);
+    }
+}
+
+void WebProcessProxy::didStartUsingProcessForSiteIsolation(const WebCore::Site& site)
+{
+    ASSERT(!m_site || m_site == site);
+    m_site = site;
 }
 
 void WebProcessProxy::addSuspendedPageProxy(SuspendedPageProxy& suspendedPage)

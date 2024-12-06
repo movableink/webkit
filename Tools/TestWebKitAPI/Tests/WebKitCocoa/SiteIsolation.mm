@@ -3600,9 +3600,11 @@ TEST(SiteIsolation, ProcessReuse)
     [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
     [navigationDelegate waitForDidFinishNavigation];
 
+    pid_t initialIframePID = [webView firstChildFrame]._processIdentifier;
     [webView objectByEvaluatingJavaScript:@"var frame = document.getElementById('onlyiframe'); frame.parentNode.removeChild(frame);1"];
     [webView evaluateJavaScript:@"var iframe = document.createElement('iframe');iframe.src = 'https://webkit.org/iframe_with_alert';document.body.appendChild(iframe)" completionHandler:nil];
     EXPECT_WK_STREQ([webView _test_waitForAlert], "loaded");
+    EXPECT_EQ(initialIframePID, [webView firstChildFrame]._processIdentifier);
 }
 
 }
