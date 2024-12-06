@@ -206,6 +206,7 @@ public:
 
     bool isCurrentInvocation(TestInvocation* invocation) const { return invocation == m_currentInvocation.get(); }
     TestInvocation* currentInvocation() { return m_currentInvocation.get(); }
+    RefPtr<TestInvocation> protectedCurrentInvocation();
 
     void setShouldDecideNavigationPolicyAfterDelay(bool value) { m_shouldDecideNavigationPolicyAfterDelay = value; }
     void setShouldDecideResponsePolicyAfterDelay(bool value) { m_shouldDecideResponsePolicyAfterDelay = value; }
@@ -631,7 +632,7 @@ private:
     void setTracksRepaints(bool);
 
     WKRetainPtr<WKURLRef> m_mainResourceURL;
-    std::unique_ptr<TestInvocation> m_currentInvocation;
+    RefPtr<TestInvocation> m_currentInvocation;
 #if PLATFORM(COCOA)
     std::unique_ptr<ClassMethodSwizzler> m_calendarSwizzler;
     std::pair<RetainPtr<NSString>, RetainPtr<NSString>> m_overriddenCalendarAndLocaleIdentifiers;
