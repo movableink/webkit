@@ -217,6 +217,7 @@
 #include <WebCore/FrameLoaderClient.h>
 #include <WebCore/GlobalFrameIdentifier.h>
 #include <WebCore/GlobalWindowIdentifier.h>
+#include <WebCore/ImageBuffer.h>
 #include <WebCore/LengthBox.h>
 #include <WebCore/LinkDecorationFilteringData.h>
 #include <WebCore/MIMETypeRegistry.h>
