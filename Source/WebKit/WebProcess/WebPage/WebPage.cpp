@@ -1184,10 +1184,8 @@ void WebPage::didFinishLoadInAnotherProcess(WebCore::FrameIdentifier frameID)
 void WebPage::frameWasRemovedInAnotherProcess(WebCore::FrameIdentifier frameID)
 {
     RefPtr frame = WebProcess::singleton().webFrame(frameID);
-    if (!frame) {
-        ASSERT_NOT_REACHED();
+    if (!frame)
         return;
-    }
     ASSERT(frame->page() == this);
     frame->removeFromTree();
 }

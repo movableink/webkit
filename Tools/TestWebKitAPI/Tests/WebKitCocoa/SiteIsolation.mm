@@ -1323,6 +1323,40 @@ TEST(SiteIsolation, RemoveFrames)
     });
 }
 
+TEST(SiteIsolation, RemoveFrameFromRemoteFrame)
+{
+    HTTPServer server({
+        { "/main"_s, { "<iframe src='https://webkit.org/child'></iframe>"_s } },
+        { "/child"_s, { "<iframe src='https://example.com/grandchild' id=grandchildframe></iframe>"_s } },
+        { "/grandchild"_s, { "hi"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(server);
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/main"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+
+    checkFrameTreesInProcesses(webView.get(), {
+        { "https://example.com"_s,
+            { { RemoteFrame, { { "https://example.com"_s } } } }
+        }, { RemoteFrame,
+            { { "https://webkit.org"_s, { { RemoteFrame } } } }
+        }
+    });
+
+    [webView objectByEvaluatingJavaScript:@"grandchildframe.parentNode.removeChild(grandchildframe);1" inFrame:[webView firstChildFrame]];
+
+    checkFrameTreesInProcesses(webView.get(), {
+        { "https://example.com"_s,
+            // FIXME: This example.com iframe should have been removed in this process too.
+            // WebProcessProxy::didDestroyFrame doesn't handle this case correctly.
+            { { RemoteFrame, { { "https://example.com"_s } } } }
+        }, { RemoteFrame,
+            { { "https://webkit.org"_s } }
+        }
+    });
+}
+
 TEST(SiteIsolation, ProvisionalLoadFailure)
 {
     HTTPServer server({
