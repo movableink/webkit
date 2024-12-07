@@ -71,6 +71,7 @@
 #include "WebPageGroupProxy.h"
 #include "WebPageInlines.h"
 #include "WebPageProxy.h"
+#include "WebPageProxyMessages.h"
 #include "WebPaymentCoordinator.h"
 #include "WebPermissionController.h"
 #include "WebPlatformStrategies.h"
@@ -1020,10 +1021,12 @@ void WebProcess::addWebFrame(FrameIdentifier frameID, WebFrame* frame)
     m_frameMap.set(frameID, frame);
 }
 
-void WebProcess::removeWebFrame(FrameIdentifier frameID, std::optional<WebPageProxyIdentifier> pageID)
+void WebProcess::removeWebFrame(FrameIdentifier frameID, WebPage* page)
 {
-    auto frame = m_frameMap.take(frameID);
-    if (frame && frame->coreLocalFrame() && m_networkProcessConnection)
+    RefPtr frame = m_frameMap.take(frameID).get();
+    if (!frame)
+        return;
+    if (frame->coreLocalFrame() && m_networkProcessConnection)
         m_networkProcessConnection->connection().send(Messages::NetworkConnectionToWebProcess::ClearFrameLoadRecordsForStorageAccess(frameID), 0);
 
     // We can end up here after our connection has closed when WebCore's frame life-support timer
@@ -1032,10 +1035,13 @@ void WebProcess::removeWebFrame(FrameIdentifier frameID, std::optional<WebPagePr
     if (!parentProcessConnection())
         return;
 
-    if (!pageID)
+    if (!page)
         return;
 
-    parentProcessConnection()->send(Messages::WebProcessProxy::DidDestroyFrame(frameID, *pageID), 0);
+    if (frame->wasRemovedInAnotherProcess() || page->isClosed())
+        return;
+
+    page->send(Messages::WebPageProxy::DidDestroyFrame(frameID));
 }
 
 WebPageGroupProxy* WebProcess::webPageGroup(const WebPageGroupData& pageGroupData)

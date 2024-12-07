@@ -1348,9 +1348,7 @@ TEST(SiteIsolation, RemoveFrameFromRemoteFrame)
 
     checkFrameTreesInProcesses(webView.get(), {
         { "https://example.com"_s,
-            // FIXME: This example.com iframe should have been removed in this process too.
-            // WebProcessProxy::didDestroyFrame doesn't handle this case correctly.
-            { { RemoteFrame, { { "https://example.com"_s } } } }
+            { { RemoteFrame } }
         }, { RemoteFrame,
             { { "https://webkit.org"_s } }
         }

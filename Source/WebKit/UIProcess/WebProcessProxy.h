@@ -570,7 +570,6 @@ private:
 
     // IPC message handlers.
     void updateBackForwardItem(Ref<FrameState>&&);
-    void didDestroyFrame(IPC::Connection&, WebCore::FrameIdentifier, WebPageProxyIdentifier);
     void didDestroyUserGestureToken(WebCore::PageIdentifier, WebCore::UserGestureTokenIdentifier);
 
     bool canBeAddedToWebProcessCache() const;

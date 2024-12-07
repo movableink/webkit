@@ -1902,6 +1902,8 @@ public:
 
     void didDispatchClickEvent(const WebCore::PlatformMouseEvent&, WebCore::Node&);
 
+    bool isClosed() const { return m_isClosed; }
+
 private:
     WebPage(WebCore::PageIdentifier, WebPageCreationParameters&&);
 
