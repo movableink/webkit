@@ -2010,7 +2010,7 @@ Ref<CommandBuffer> CommandEncoder::finish(const WGPUCommandBufferDescriptor& des
     }
 #endif
 
-    auto result = CommandBuffer::create(commandBuffer, m_device, m_sharedEvent, m_sharedEventSignalValue);
+    auto result = CommandBuffer::create(commandBuffer, m_device, m_sharedEvent, m_sharedEventSignalValue, *this);
     m_sharedEvent = nil;
     m_cachedCommandBuffer = result;
     m_cachedCommandBuffer->setBufferMapCount(m_bufferMapCount);

@@ -1394,11 +1394,11 @@ bool BindGroup::updateExternalTextures(const ExternalTexture& externalTexture)
         [argumentEncoder setTexture:texture0 atIndex:index++];
         [argumentEncoder setTexture:texture1 atIndex:index++];
 
-        auto* uvRemapAddress = static_cast<simd::float3x2*>([argumentEncoder constantDataAtIndex:index++]);
-        *uvRemapAddress = textureData.uvRemappingMatrix;
+        if (auto* uvRemapAddress = static_cast<simd::float3x2*>([argumentEncoder constantDataAtIndex:index++]))
+            *uvRemapAddress = textureData.uvRemappingMatrix;
 
-        auto* cscMatrixAddress = static_cast<simd::float4x3*>([argumentEncoder constantDataAtIndex:index++]);
-        *cscMatrixAddress = textureData.colorSpaceConversionMatrix;
+        if (auto* cscMatrixAddress = static_cast<simd::float4x3*>([argumentEncoder constantDataAtIndex:index++]))
+            *cscMatrixAddress = textureData.colorSpaceConversionMatrix;
     }
 
     return true;
