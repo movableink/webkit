@@ -374,7 +374,7 @@ bool RenderBundleEncoder::executePreDrawCommands(bool passWasSplit, uint32_t fir
     UNUSED_PARAM(passWasSplit);
 #endif
 
-    for (auto& [_, group] : m_bindGroups) {
+    for (RefPtr group : m_bindGroups.values()) {
         if (group && (group->makeSubmitInvalid(ShaderStage::Vertex) || group->makeSubmitInvalid(ShaderStage::Fragment)))
             m_makeSubmitInvalid = true;
     }

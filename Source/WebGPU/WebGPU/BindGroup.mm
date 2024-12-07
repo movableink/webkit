@@ -1411,11 +1411,11 @@ bool BindGroup::makeSubmitInvalid(ShaderStage stage) const
 
     switch (stage) {
     case ShaderStage::Vertex:
-        return m_bindGroupLayout->encodedLength(ShaderStage::Vertex) != m_vertexArgumentBuffer.length;
+        return protectedBindGroupLayout()->encodedLength(ShaderStage::Vertex) != m_vertexArgumentBuffer.length;
     case ShaderStage::Fragment:
-        return m_bindGroupLayout->encodedLength(ShaderStage::Fragment) != m_fragmentArgumentBuffer.length;
+        return protectedBindGroupLayout()->encodedLength(ShaderStage::Fragment) != m_fragmentArgumentBuffer.length;
     case ShaderStage::Compute:
-        return m_bindGroupLayout->encodedLength(ShaderStage::Compute) != m_computeArgumentBuffer.length;
+        return protectedBindGroupLayout()->encodedLength(ShaderStage::Compute) != m_computeArgumentBuffer.length;
     case ShaderStage::Undefined:
         return true;
     }
