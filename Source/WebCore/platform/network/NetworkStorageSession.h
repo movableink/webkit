@@ -82,7 +82,6 @@ namespace WTF {
 template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
 template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::CookieChangeObserver> : std::true_type { };
 template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::CookiesEnabledStateObserver> : std::true_type { };
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::NetworkStorageSession> : std::true_type { };
 }
 
 namespace WebCore {
@@ -111,8 +110,8 @@ enum class ScriptWrittenCookiesOnly : bool { No, Yes };
 class CookieChangeObserver : public CanMakeWeakPtr<CookieChangeObserver> {
 public:
     virtual ~CookieChangeObserver() { }
-    virtual void cookiesAdded(const String& host, const Vector<WebCore::Cookie>&) = 0;
-    virtual void cookiesDeleted(const String& host, const Vector<WebCore::Cookie>&) = 0;
+    virtual void cookiesAdded(const String& host, const Vector<Cookie>&) = 0;
+    virtual void cookiesDeleted(const String& host, const Vector<Cookie>&) = 0;
     virtual void allCookiesDeleted() = 0;
 };
 #endif
@@ -130,8 +129,8 @@ class NetworkStorageSession
     WTF_MAKE_NONCOPYABLE(NetworkStorageSession);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(NetworkStorageSession);
 public:
-    using TopFrameDomain = WebCore::RegistrableDomain;
-    using SubResourceDomain = WebCore::RegistrableDomain;
+    using TopFrameDomain = RegistrableDomain;
+    using SubResourceDomain = RegistrableDomain;
 
     WEBCORE_EXPORT static void permitProcessToUseCookieAPI(bool);
     WEBCORE_EXPORT static bool processMayUseCookieAPI();
@@ -338,7 +337,7 @@ private:
 #if ENABLE(JS_COOKIE_CHECKING)
     std::optional<Seconds> m_ageCapForClientSideCookiesForLinkDecorationTargetPage;
 #endif
-    HashMap<WebCore::PageIdentifier, RegistrableDomain> m_navigatedToWithLinkDecorationByPrevalentResource;
+    HashMap<PageIdentifier, RegistrableDomain> m_navigatedToWithLinkDecorationByPrevalentResource;
     bool m_navigationWithLinkDecorationTestMode = false;
     ThirdPartyCookieBlockingMode m_thirdPartyCookieBlockingMode { ThirdPartyCookieBlockingMode::All };
     HashSet<RegistrableDomain> m_appBoundDomains;
