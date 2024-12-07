@@ -1,0 +1,13 @@
+popover 2
+
+PASS normal opening
+PASS showPopover(unrelated)
+FAIL showPopover(popover) assert_true: popovers should be related to each other expected true got false
+FAIL showPopover(contained) assert_true: popovers should be related to each other expected true got false
+PASS togglePopover(true)
+PASS togglePopover({force})
+PASS togglePopover(unrelated)
+FAIL togglePopover(popover) assert_true: popovers should be related to each other expected true got false
+FAIL togglePopover({force, popover}) assert_true: popovers should be related to each other expected true got false
+FAIL null isn't a valid Element assert_throws_js: showPopover(null) function "() => popover2.showPopover({source: null})" did not throw
+
