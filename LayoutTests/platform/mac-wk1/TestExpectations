@@ -2979,3 +2979,5 @@ webkit.org/b/283013 [ Sequoia+ ] imported/w3c/web-platform-tests/css/css-color/r
 # Skipping as this test was added for a fix only intended for WK2.
 webkit.org/b/284068 [ Sequoia+ ] http/tests/download/anchor-download-redirect-cross-origin.html [ Skip ]
 
+webkit.org/b/284200 [ Sequoia+ ] http/tests/websocket/tests/hybi/websocket-allowed-setting-cookie-as-third-party.https.html [ Failure ]
+webkit.org/b/284200 [ Sequoia+ ] http/tests/websocket/tests/hybi/websocket-cookie-overwrite-behavior.https.html [ Failure ]
