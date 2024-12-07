@@ -41,11 +41,4 @@ header: <WebCore/FontPlatformData.h>
 #endif
 };
 
-header: <WebCore/FontCustomPlatformData.h>
-[CustomHeader] struct WebCore::FontCustomPlatformSerializedData {
-    Vector<uint8_t> fontFaceData;
-    String itemInCollection;
-    WebCore::RenderingResourceIdentifier renderingResourceIdentifier;
-};
-
 #endif

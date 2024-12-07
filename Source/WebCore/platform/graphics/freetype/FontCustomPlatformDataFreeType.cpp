@@ -221,7 +221,7 @@ std::optional<Ref<FontCustomPlatformData>> FontCustomPlatformData::tryMakeFromSe
 FontCustomPlatformSerializedData FontCustomPlatformData::serializedData() const
 {
     ASSERT_NOT_REACHED();
-    return FontCustomPlatformSerializedData { { creationData.fontFaceData->span() }, creationData.itemInCollection, m_renderingResourceIdentifier };
+    return FontCustomPlatformSerializedData { creationData.fontFaceData, creationData.itemInCollection, m_renderingResourceIdentifier };
 }
 
 }

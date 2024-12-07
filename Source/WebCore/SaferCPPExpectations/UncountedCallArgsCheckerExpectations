@@ -1652,7 +1652,6 @@ platform/graphics/coreimage/FEComponentTransferCoreImageApplier.mm
 platform/graphics/coreimage/FilterImageCoreImage.mm
 platform/graphics/coretext/ComplexTextControllerCoreText.mm
 platform/graphics/coretext/FontCascadeCoreText.cpp
-platform/graphics/coretext/FontCustomPlatformDataCoreText.cpp
 platform/graphics/coretext/FontPlatformDataCoreText.cpp
 platform/graphics/cv/GraphicsContextGLCVCocoa.mm
 platform/graphics/displaylists/DisplayListItem.cpp

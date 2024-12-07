@@ -58,7 +58,7 @@ template <typename T> class FontTaggedSettings;
 typedef FontTaggedSettings<int> FontFeatureSettings;
 
 struct FontCustomPlatformSerializedData {
-    Vector<uint8_t> fontFaceData;
+    Ref<SharedBuffer> fontFaceData;
     String itemInCollection;
     RenderingResourceIdentifier renderingResourceIdentifier;
 };

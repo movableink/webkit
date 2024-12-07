@@ -60,3 +60,10 @@ header: <WebCore/FontPlatformData.h>
     Vector<hb_feature_t> m_features;
 #endif
 };
+
+header: <WebCore/FontCustomPlatformData.h>
+[CustomHeader] struct WebCore::FontCustomPlatformSerializedData {
+    Ref<WebCore::SharedBuffer> fontFaceData;
+    String itemInCollection;
+    WebCore::RenderingResourceIdentifier renderingResourceIdentifier;
+};
