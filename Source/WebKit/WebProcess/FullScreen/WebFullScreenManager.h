@@ -54,6 +54,7 @@ class RenderImage;
 namespace WebKit {
 
 class WebPage;
+struct FullScreenMediaDetails;
 
 class WebFullScreenManager final : public WebCore::EventListener {
 public:

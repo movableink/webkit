@@ -29,6 +29,7 @@
 #if ENABLE(FULLSCREEN_API)
 
 #include "Connection.h"
+#include "FullScreenMediaDetails.h"
 #include "Logging.h"
 #include "WebFrame.h"
 #include "WebFullScreenManagerProxyMessages.h"
