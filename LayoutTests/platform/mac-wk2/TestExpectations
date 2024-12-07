@@ -1947,3 +1947,5 @@ webkit.org/b/283596 [ Sequoia+ Debug ] ipc/cfnetwork-crashes-with-string-to-stri
 
 webkit.org/b/284190 [ Sequoia+ ] http/tests/privateClickMeasurement/send-attribution-conversion-request.https.html [ Failure ]
 
+# webkit.org/b/284186 [macOS Debug] media/media-vp8-hiddenframes.html is timing out (flaky in EWS)
+[ Debug ] media/media-vp8-hiddenframes.html [ Pass Timeout ]
