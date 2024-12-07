@@ -2102,6 +2102,10 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSOESVertexArrayObject.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSOESVertexArrayObject.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSObservable.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSObservable.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSObservableInspector.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSObservableInspector.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSObservableInspectorAbortCallback.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSObservableInspectorAbortCallback.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSObserver.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSOfflineAudioCompletionEvent.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSOfflineAudioCompletionEvent.h
