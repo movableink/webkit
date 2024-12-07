@@ -50,11 +50,12 @@ static bool setCommandEncoder(auto& buffer, auto& renderPassEncoder)
     return !!renderPassEncoder->renderCommandEncoder();
 }
 
-- (instancetype)initWithICB:(id<MTLIndirectCommandBuffer>)icb containerBuffer:(id<MTLBuffer>)containerBuffer pipelineState:(id<MTLRenderPipelineState>)pipelineState depthStencilState:(id<MTLDepthStencilState>)depthStencilState cullMode:(MTLCullMode)cullMode frontFace:(MTLWinding)frontFace depthClipMode:(MTLDepthClipMode)depthClipMode depthBias:(float)depthBias depthBiasSlopeScale:(float)depthBiasSlopeScale depthBiasClamp:(float)depthBiasClamp fragmentDynamicOffsetsBuffer:(id<MTLBuffer>)fragmentDynamicOffsetsBuffer pipeline:(const WebGPU::RenderPipeline*)pipeline minVertexCounts:(WebGPU::RenderBundle::MinVertexCountsContainer*)minVertexCounts
+- (instancetype)initWithICB:(id<MTLIndirectCommandBuffer>)icb containerBuffer:(id<MTLBuffer>)containerBuffer pipelineState:(id<MTLRenderPipelineState>)pipelineState depthStencilState:(id<MTLDepthStencilState>)depthStencilState cullMode:(MTLCullMode)cullMode frontFace:(MTLWinding)frontFace depthClipMode:(MTLDepthClipMode)depthClipMode depthBias:(float)depthBias depthBiasSlopeScale:(float)depthBiasSlopeScale depthBiasClamp:(float)depthBiasClamp fragmentDynamicOffsetsBuffer:(id<MTLBuffer>)fragmentDynamicOffsetsBuffer pipeline:(const WebGPU::RenderPipeline*)pipeline minVertexCounts:(WebGPU::RenderBundle::MinVertexCountsContainer*)minVertexCounts outOfBoundsReadFlag:(id<MTLBuffer>)outOfBoundsReadFlag
 {
     if (!(self = [super init]))
         return nil;
 
+    _outOfBoundsReadFlag = outOfBoundsReadFlag;
     _indirectCommandBuffer = icb;
     _indirectCommandBufferContainer = containerBuffer;
     _currentPipelineState = pipelineState;
@@ -135,7 +136,7 @@ static RenderBundleICBWithResources* makeRenderBundleICBWithResources(id<MTLIndi
     [argumentEncoder setBuffer:outOfBoundsRead offset:0 atIndex:0];
     [argumentEncoder setIndirectCommandBuffer:icb atIndex:1];
 
-    RenderBundleICBWithResources* renderBundle = [[RenderBundleICBWithResources alloc] initWithICB:icb containerBuffer:container pipelineState:renderPipelineState depthStencilState:depthStencilState cullMode:cullMode frontFace:frontFace depthClipMode:depthClipMode depthBias:depthBias depthBiasSlopeScale:depthBiasSlopeScale depthBiasClamp:depthBiasClamp fragmentDynamicOffsetsBuffer:fragmentDynamicOffsetsBuffer pipeline:pipeline minVertexCounts:&vertexCountContainer];
+    RenderBundleICBWithResources* renderBundle = [[RenderBundleICBWithResources alloc] initWithICB:icb containerBuffer:container pipelineState:renderPipelineState depthStencilState:depthStencilState cullMode:cullMode frontFace:frontFace depthClipMode:depthClipMode depthBias:depthBias depthBiasSlopeScale:depthBiasSlopeScale depthBiasClamp:depthBiasClamp fragmentDynamicOffsetsBuffer:fragmentDynamicOffsetsBuffer pipeline:pipeline minVertexCounts:&vertexCountContainer outOfBoundsReadFlag:outOfBoundsRead];
 
     for (size_t stage = 0; stage < maxStageValue; ++stage) {
         for (size_t i = 0; i < maxResourceUsageValue; ++i) {

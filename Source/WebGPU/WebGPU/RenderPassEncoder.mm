@@ -1075,6 +1075,8 @@ void RenderPassEncoder::executeBundles(Vector<Ref<RenderBundle>>&& bundles)
                     [commandEncoder setVertexBytes:&data.indexData length:sizeof(data.indexData) atIndex:0];
                     [commandEncoder setVertexBuffer:indirectCommandBufferContainer offset:0 atIndex:1];
                     [commandEncoder useResource:indexBuffer->buffer() usage:MTLResourceUsageRead stages:MTLRenderStageVertex];
+                    [commandEncoder useResource:icb.indirectCommandBuffer usage:MTLResourceUsageRead | MTLResourceUsageWrite stages:MTLRenderStageVertex];
+                    [commandEncoder useResource:icb.outOfBoundsReadFlag usage:MTLResourceUsageWrite stages:MTLRenderStageVertex];
                     [commandEncoder drawPrimitives:MTLPrimitiveTypePoint vertexStart:0 vertexCount:data.indexData.indexCount];
 
                     [protectedParentEncoder()->commandBuffer() addCompletedHandler:[protectedDevice = Ref { m_device }, firstIndex, indexCount, baseVertex, minVertexCount, indexType, refIndexBuffer = Ref { *indexBuffer }, icb](id<MTLCommandBuffer>) {
