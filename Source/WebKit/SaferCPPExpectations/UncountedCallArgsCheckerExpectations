@@ -374,7 +374,6 @@ WebProcess/FullScreen/WebFullScreenManager.cpp
 WebProcess/GPU/graphics/ImageBufferShareableBitmapBackend.cpp
 WebProcess/GPU/graphics/RemoteNativeImageBackendProxy.cpp
 WebProcess/GPU/graphics/RemoteResourceCacheProxy.cpp
-WebProcess/GPU/graphics/WebGPU/RemoteComputePassEncoderProxy.cpp
 WebProcess/GPU/graphics/cocoa/ImageBufferShareableMappedIOSurfaceBackend.cpp
 WebProcess/GPU/graphics/cocoa/ImageBufferShareableMappedIOSurfaceBitmapBackend.cpp
 WebProcess/GPU/media/AudioTrackPrivateRemote.cpp
