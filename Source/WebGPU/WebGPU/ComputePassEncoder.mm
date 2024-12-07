@@ -184,7 +184,7 @@ void ComputePassEncoder::executePreDispatchCommands(const Buffer* indirectBuffer
             return;
         }
         auto group = kvp.value;
-        if (group->makeSubmitInvalid(ShaderStage::Compute)) {
+        if (group->makeSubmitInvalid(ShaderStage::Compute, pipelineLayout->optionalBindGroupLayout(bindGroupIndex))) {
             protectedParentEncoder()->makeSubmitInvalid();
             return;
         }

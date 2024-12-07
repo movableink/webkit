@@ -1404,18 +1404,22 @@ bool BindGroup::updateExternalTextures(const ExternalTexture& externalTexture)
     return true;
 }
 
-bool BindGroup::makeSubmitInvalid(ShaderStage stage) const
+bool BindGroup::makeSubmitInvalid(ShaderStage stage, const BindGroupLayout* pipelineLayout) const
 {
+    if (!pipelineLayout)
+        return false;
+
     if (!m_bindGroupLayout)
         return true;
 
+    Ref pipelineBindGroupLayout = Ref { *pipelineLayout };
     switch (stage) {
     case ShaderStage::Vertex:
-        return protectedBindGroupLayout()->encodedLength(ShaderStage::Vertex) != m_vertexArgumentBuffer.length;
+        return m_vertexArgumentBuffer.length != pipelineBindGroupLayout->encodedLength(stage);
     case ShaderStage::Fragment:
-        return protectedBindGroupLayout()->encodedLength(ShaderStage::Fragment) != m_fragmentArgumentBuffer.length;
+        return m_fragmentArgumentBuffer.length != pipelineBindGroupLayout->encodedLength(stage);
     case ShaderStage::Compute:
-        return protectedBindGroupLayout()->encodedLength(ShaderStage::Compute) != m_computeArgumentBuffer.length;
+        return m_computeArgumentBuffer.length != pipelineBindGroupLayout->encodedLength(stage);
     case ShaderStage::Undefined:
         return true;
     }

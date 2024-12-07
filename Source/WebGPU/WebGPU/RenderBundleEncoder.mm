@@ -322,14 +322,15 @@ bool RenderBundleEncoder::executePreDrawCommands(bool passWasSplit, uint32_t fir
         return false;
     }
 
-    auto vertexDynamicOffsetSum = checkedSum<uint64_t>(m_vertexDynamicOffset, sizeof(uint32_t) * m_pipeline->protectedPipelineLayout()->sizeOfVertexDynamicOffsets());
+    auto pipelineLayout = m_pipeline->protectedPipelineLayout();
+    auto vertexDynamicOffsetSum = checkedSum<uint64_t>(m_vertexDynamicOffset, sizeof(uint32_t) * pipelineLayout->sizeOfVertexDynamicOffsets());
     if (vertexDynamicOffsetSum.hasOverflowed()) {
         makeInvalid(@"Invalid vertexDynamicOffset");
         return false;
     }
     m_vertexDynamicOffset = vertexDynamicOffsetSum.value();
 
-    auto fragmentDynamicOffsetSum = checkedSum<uint64_t>(m_fragmentDynamicOffset, sizeof(uint32_t) * m_pipeline->protectedPipelineLayout()->sizeOfFragmentDynamicOffsets());
+    auto fragmentDynamicOffsetSum = checkedSum<uint64_t>(m_fragmentDynamicOffset, sizeof(uint32_t) * pipelineLayout->sizeOfFragmentDynamicOffsets());
     if (fragmentDynamicOffsetSum.hasOverflowed()) {
         makeInvalid(@"Invalid fragmentDynamicOffset");
         return false;
@@ -375,8 +376,10 @@ bool RenderBundleEncoder::executePreDrawCommands(bool passWasSplit, uint32_t fir
     UNUSED_PARAM(passWasSplit);
 #endif
 
-    for (RefPtr group : m_bindGroups.values()) {
-        if (group && (group->makeSubmitInvalid(ShaderStage::Vertex) || group->makeSubmitInvalid(ShaderStage::Fragment)))
+    for (auto& [groupIndex, group] : m_bindGroups) {
+        RefPtr protectedGroup = group;
+        auto pipelineOptionalBindGroupLayout = pipelineLayout->optionalBindGroupLayout(groupIndex);
+        if (protectedGroup && (protectedGroup->makeSubmitInvalid(ShaderStage::Vertex, pipelineOptionalBindGroupLayout) || protectedGroup->makeSubmitInvalid(ShaderStage::Fragment, pipelineOptionalBindGroupLayout)))
             m_makeSubmitInvalid = true;
     }
 

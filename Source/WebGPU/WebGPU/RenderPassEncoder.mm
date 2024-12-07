@@ -514,7 +514,8 @@ bool RenderPassEncoder::executePreDrawCommands(uint32_t firstInstance, uint32_t 
         return false;
 
     auto pipeline = m_pipeline;
-    if (NSString* error = pipeline->protectedPipelineLayout()->errorValidatingBindGroupCompatibility(m_bindGroups)) {
+    Ref pipelineLayout = pipeline->protectedPipelineLayout();
+    if (NSString* error = pipelineLayout->errorValidatingBindGroupCompatibility(m_bindGroups)) {
         makeInvalid(error);
         return false;
     }
@@ -560,7 +561,7 @@ bool RenderPassEncoder::executePreDrawCommands(uint32_t firstInstance, uint32_t 
             makeInvalid(error);
             return false;
         }
-        if (group->makeSubmitInvalid(ShaderStage::Vertex) || group->makeSubmitInvalid(ShaderStage::Fragment)) {
+        if (group->makeSubmitInvalid(ShaderStage::Vertex, pipelineLayout->optionalBindGroupLayout(groupIndex)) || group->makeSubmitInvalid(ShaderStage::Fragment, pipelineLayout->optionalBindGroupLayout(groupIndex))) {
             protectedParentEncoder()->makeSubmitInvalid();
             return false;
         }
@@ -581,7 +582,6 @@ bool RenderPassEncoder::executePreDrawCommands(uint32_t firstInstance, uint32_t 
     m_queryBufferIndicesToClear.remove(m_visibilityResultBufferOffset);
 
     for (auto& kvp : m_bindGroupDynamicOffsets) {
-        Ref pipelineLayout = m_pipeline->pipelineLayout();
         auto bindGroupIndex = kvp.key;
 
         auto* pvertexOffsets = pipelineLayout->vertexOffsets(bindGroupIndex, kvp.value);
