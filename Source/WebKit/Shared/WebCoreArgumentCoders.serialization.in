@@ -2441,7 +2441,7 @@ header: <WebCore/ScreenProperties.h>
     WebCore::DestinationColorSpace colorSpace;
     int screenDepth;
     int screenDepthPerComponent;
-    WebCore::ContentsFormat screenContentsFormat;
+    bool screenSupportsExtendedColor;
     bool screenHasInvertedColors;
     bool screenSupportsHighDynamicRange;
 #if PLATFORM(MAC)
