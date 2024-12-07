@@ -42,6 +42,7 @@
 #import "WebPaymentCoordinator.h"
 #import "WebProcess.h"
 #import "WebRemoteObjectRegistry.h"
+#import <WebCore/ChromeClient.h>
 #import <WebCore/DeprecatedGlobalSettings.h>
 #import <WebCore/DictionaryLookup.h>
 #import <WebCore/DocumentInlines.h>
