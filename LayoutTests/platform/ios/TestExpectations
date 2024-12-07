@@ -4566,11 +4566,10 @@ http/tests/site-isolation/mouse-events/ [ Skip ]
 webkit.org/b/257904 http/tests/site-isolation/draw-after-navigation.html [ Skip ]
 webkit.org/b/257904 http/tests/site-isolation/draw-with-size-after-same-origin-navigation.html [ Skip ]
 webkit.org/b/257904 http/tests/site-isolation/page-zoom.html [ Skip ]
-webkit.org/b/257904 http/tests/site-isolation/selection-focus.html [ Skip ]
 
 webkit.org/b/269550 http/tests/site-isolation/scrolling/ [ Skip ]
 
-# This test can't be enabled on iOS until EventSenderProxyIOS::keyDown() is implemented.
+# This test can't be enabled on iOS until EventSenderProxy::keyDown() is implemented on iOS.
 http/tests/site-isolation/key-events.html [ Skip ]
 
 # Initial css/compositing test import
@@ -7442,9 +7441,6 @@ imported/w3c/web-platform-tests/css/css-view-transitions/capture-with-opacity-ze
 
 webkit.org/b/279295 fast/inline/list-marker-inside-container-with-margin.html [ ImageOnlyFailure ]
 
-# webkit.org/b/279477 REGRESSION (283102@main?): [macOS iOS wk2 Debug EWS ] ASSERTION FAILED: WebKit::WebPageProxy::startNetworkRequestsForPageLoadTiming(WebCore::FrameIdentifier) result of http/tests/site-isolation/window-open-with-name-cross-site.html to crash
-[ Debug ] http/tests/site-isolation/window-open-with-name-cross-site.html [ Skip ]
-
 # webkit.org/b/279704 [ iOS wk2 EWS ] 5x fast/events/iOS/* are false positive on EWS.
 fast/events/ios/keyboard-scrolling-distance.html [ Failure Timeout ]
 [ Release ] fast/events/ios/keydown-keyup-arrow-keys-in-non-editable-element.html [ Pass Timeout ]
@@ -7492,7 +7488,7 @@ webanimations/scroll-timeline-clamped-current-time-while-rubber-banding-ios.html
 # webkit.org/b/277908 NEW TEST (284866@main): [ macOS iOS ] imported/w3c/web-platform-tests/html/cross-origin-opener-policy/tentative/noopener/coop-noopener-allow-popups.https.html is a flaky failure.
 imported/w3c/web-platform-tests/html/cross-origin-opener-policy/tentative/noopener/coop-noopener-allow-popups.https.html [ Pass Failure ]
 
-# webkit.org/b/282046 REGRESSION(285592@main): [ macOS iOS wk2 ] http/tests/site-isolation/l oad-event.html are near constant failures.
+# webkit.org/b/282046 REGRESSION(285592@main): [ macOS iOS wk2 ] http/tests/site-isolation/load-event.html are near constant failures.
 http/tests/site-isolation/load-event.html [ Pass Failure ]
 
 # webkit.org/b/282051 REGRESSION(285577@main): [ macOS iOS wk2 ] imported/w3c/web-platform-tests/navigation-api/navigation-methods/return-value/back-204-205-download.html is a constant timeout
