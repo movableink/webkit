@@ -292,11 +292,9 @@ def main(name, remote):
         if not match:
             print_error("'{}' does not conform to a recognized target remote".format(remote))
             return 255
-        name = remote_to_name.get('{}:{}'.format(match.group('host'), match.group('path')), None)
-        if not name:
+        name = remote_to_name.get('{}:{}'.format(match.group('host'), match.group('path')), remote)
+        if name not in name_to_remote:
             print_error("Failed to map '{}' to an existing remote".format(remote))
-            return 1
-
 
     remotes_with = {}
     for from_ref, to_ref in to_push:
