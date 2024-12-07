@@ -931,6 +931,11 @@ String LineDecorationStyle::debugDescription() const
     );
 }
 
+String AXCoreObject::infoStringForTesting() const
+{
+    return makeString("Role: "_s, rolePlatformString(), ", Value: "_s, stringValue());
+}
+
 namespace Accessibility {
 
 bool inRenderTreeOrStyleUpdate(const Document& document)

@@ -1506,6 +1506,11 @@ void WebChromeClient::isAnyAnimationAllowedToPlayDidChange(bool anyAnimationCanP
 }
 #endif
 
+void WebChromeClient::resolveAccessibilityHitTestForTesting(FrameIdentifier frameID, const IntPoint& point, CompletionHandler<void(String)>&& callback)
+{
+    protectedPage()->sendWithAsyncReply(Messages::WebPageProxy::ResolveAccessibilityHitTestForTesting(frameID, point), WTFMove(callback));
+}
+
 void WebChromeClient::isPlayingMediaDidChange(MediaProducerMediaStateFlags state)
 {
     protectedPage()->isPlayingMediaDidChange(state);

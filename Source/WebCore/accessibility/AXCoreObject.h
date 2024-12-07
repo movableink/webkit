@@ -765,6 +765,7 @@ struct AttributedStringStyle {
 
 enum class AXDebugStringOption {
     Ignored,
+    IsRemoteFrame,
     RelativeFrame,
     RemoteFrameOffset
 };
@@ -1441,6 +1442,8 @@ public:
 #if PLATFORM(COCOA) && ENABLE(MODEL_ELEMENT)
     virtual Vector<RetainPtr<id>> modelElementChildren() = 0;
 #endif
+
+    String infoStringForTesting() const;
 
 protected:
     AXCoreObject() = delete;

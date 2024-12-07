@@ -84,6 +84,7 @@
 #import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/cocoa/VectorCocoa.h>
 #import <wtf/text/MakeString.h>
+#import <wtf/text/WTFString.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -2347,6 +2348,12 @@ id attributeValueForTesting(const RefPtr<AXCoreObject>& backingObject, NSString 
         return [NSNumber numberWithBool:!!table];
     }
 
+    if ([attributeName isEqualToString:@"AXIsRemoteFrame"])
+        return [NSNumber numberWithBool:backingObject->isRemoteFrame()];
+
+    if ([attributeName isEqualToString:@"AXInfoStringForTesting"])
+        return backingObject->infoStringForTesting();
+
     return nil;
 }
 
@@ -2433,6 +2440,11 @@ id parameterizedAttributeValueForTesting(const RefPtr<AXCoreObject>& backingObje
 
 - (id)accessibilityHitTest:(NSPoint)point
 {
+    return [self _accessibilityHitTest:point returnPlatformElements:YES];
+}
+
+- (id)_accessibilityHitTest:(NSPoint)point returnPlatformElements:(BOOL)returnPlatformElements
+{
     RefPtr<AXCoreObject> backingObject = self.updateObjectBackingStore;
     if (!backingObject)
         return nil;
@@ -2445,11 +2457,11 @@ id parameterizedAttributeValueForTesting(const RefPtr<AXCoreObject>& backingObje
         if (axObject->isAttachment()) {
             if (id attachmentView = [axObject->wrapper() attachmentView])
                 return attachmentView;
-        } else if (axObject->isRemoteFrame())
-            return axObject->remoteFramePlatformElement().get();
-
-        // Only call out to the main-thread if this object has a backing widget to query.
-        if (axObject->isWidget()) {
+        } else if (axObject->isRemoteFrame()) {
+            if (returnPlatformElements)
+                return axObject->remoteFramePlatformElement().get();
+        } else if (axObject->isWidget()) {
+            // Only call out to the main-thread if this object has a backing widget to query.
             hit = Accessibility::retrieveAutoreleasedValueFromMainThread<id>([&axObject, &point] () -> RetainPtr<id> {
                 auto* widget = axObject->widget();
                 if (is<PluginViewBase>(widget))
@@ -2464,6 +2476,44 @@ id parameterizedAttributeValueForTesting(const RefPtr<AXCoreObject>& backingObje
         hit = self;
 
     return NSAccessibilityUnignoredAncestor(hit);
+
+}
+
+- (void)_accessibilityHitTestResolvingRemoteFrame:(NSPoint)point callback:(void(^)(NSString *))callback
+{
+    if (!AXObjectCache::clientIsInTestMode()) {
+        callback(@"");
+        return;
+    }
+
+    id hitTestResult = [self accessibilityHitTest:point];
+    if (!hitTestResult) {
+        callback(@"");
+        return;
+    }
+
+    if ([hitTestResult isKindOfClass:[NSAccessibilityRemoteUIElement class]]) {
+        RefPtr<AXCoreObject> backingObject = self.updateObjectBackingStore;
+        if (!backingObject)
+            return;
+
+        auto* axObject = backingObject->accessibilityHitTest(IntPoint(point));
+        if (axObject && axObject->isRemoteFrame()) {
+            RefPtr page = backingObject ? backingObject->page() : nullptr;
+            AXRemoteFrame* axRemoteFrame = dynamicDowncast<AXRemoteFrame>(axObject);
+            if (page && axRemoteFrame) {
+                auto clientCallback = [callback = makeBlockPtr(callback)] (String result) {
+                    callback(nsStringNilIfEmpty(result));
+                };
+
+                page->chrome().client().resolveAccessibilityHitTestForTesting(*axRemoteFrame->frameID(), IntPoint(point), WTFMove(clientCallback));
+            }
+        }
+    } else {
+        ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+        callback([hitTestResult accessibilityAttributeValue:@"AXInfoStringForTesting"]);
+        ALLOW_DEPRECATED_DECLARATIONS_END
+    }
 }
 
 ALLOW_DEPRECATED_IMPLEMENTATIONS_BEGIN

@@ -1366,6 +1366,9 @@ imported/w3c/web-platform-tests/css/css-view-transitions/navigation/pageswap-pus
 # Needs special fuzziness on iOS.
 imported/w3c/web-platform-tests/css/css-view-transitions/rotated-cat-off-top-edge.html [ ImageOnlyFailure ]
 
+# Site isolation testing infrastructure for accessibility doesn't exist on iOS.
+http/tests/site-isolation/accessibility/ [ Skip ]
+
 ###
 # Known failures
 ##

@@ -89,6 +89,9 @@ public:
     JSRetainPtr<JSStringRef> domIdentifier() const;
 
     RefPtr<AccessibilityUIElement> elementAtPoint(int x, int y);
+    RefPtr<AccessibilityUIElement> elementAtPointWithRemoteElementForTesting(int x, int y);
+    void elementAtPointResolvingRemoteFrameForTesting(JSContextRef, int x, int y, JSValueRef callback);
+
     JSValueRef children(JSContextRef);
     RefPtr<AccessibilityUIElement> childAtIndex(unsigned);
     unsigned indexOfChild(AccessibilityUIElement*);
@@ -417,6 +420,7 @@ public:
     bool isDeletion() const;
     bool isFirstItemInSuggestion() const;
     bool isLastItemInSuggestion() const;
+    bool isRemoteFrame() const;
     
     bool isMarkAnnotation() const;
 private:

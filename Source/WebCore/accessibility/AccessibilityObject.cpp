@@ -32,6 +32,7 @@
 
 #include "AXLogger.h"
 #include "AXObjectCache.h"
+#include "AXRemoteFrame.h"
 #include "AXSearchManager.h"
 #include "AXTextMarker.h"
 #include "AccessibilityMockObject.h"
@@ -148,6 +149,9 @@ String AccessibilityObject::dbgInternal(bool verbose, OptionSet<AXDebugStringOpt
 
     if (verbose || debugOptions & AXDebugStringOption::RemoteFrameOffset)
         result.append(", remoteFrameOffset ("_s, remoteFrameOffset().x(), ", "_s, remoteFrameOffset().y(), ")"_s);
+
+    if (verbose || debugOptions & AXDebugStringOption::IsRemoteFrame)
+        result.append(isRemoteFrame() ? ", remote frame"_s : emptyString());
 
     if (auto* renderer = this->renderer())
         result.append(", "_s, renderer->debugDescription());
@@ -3141,14 +3145,24 @@ bool AccessibilityObject::supportsARIAAttributes() const
 }
     
 AccessibilityObject* AccessibilityObject::elementAccessibilityHitTest(const IntPoint& point) const
-{ 
+{
     // Send the hit test back into the sub-frame if necessary.
     if (isAttachment()) {
         Widget* widget = widgetForAttachmentView();
         // Normalize the point for the widget's bounds.
         if (widget && widget->isLocalFrameView()) {
-            if (AXObjectCache* cache = axObjectCache())
+            if (CheckedPtr cache = axObjectCache())
                 return cache->getOrCreate(*widget)->accessibilityHitTest(IntPoint(point - widget->frameRect().location()));
+        }
+
+        if (widget && widget->isRemoteFrameView()) {
+            if (CheckedPtr cache = axObjectCache()) {
+                if (RefPtr remoteHostWidget = cache->getOrCreate(*widget)) {
+                    remoteHostWidget->updateChildrenIfNecessary();
+                    RefPtr scrollView = dynamicDowncast<AccessibilityScrollView>(*remoteHostWidget);
+                    return scrollView ? scrollView->remoteFrame().get() : nullptr;
+                }
+            }
         }
     }
     

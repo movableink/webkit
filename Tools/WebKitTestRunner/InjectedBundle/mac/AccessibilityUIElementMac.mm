@@ -103,6 +103,9 @@ typedef void (*AXPostedNotificationCallback)(id element, NSString* notification,
 - (void)_accessibilityScrollToMakeVisibleWithSubFocus:(NSRect)rect;
 - (void)_accessibilityScrollToGlobalPoint:(NSPoint)point;
 - (void)_accessibilitySetValue:(id)value forAttribute:(NSString*)attributeName;
+// For site-isolation testing use only.
+- (id)_accessibilityHitTest:(NSPoint)point returnPlatformElements:(BOOL)returnPlatformElements;
+- (void)_accessibilityHitTestResolvingRemoteFrame:(NSPoint)point callback:(void(^)(NSString *))callback;
 @end
 
 namespace WTR {
@@ -184,6 +187,7 @@ static id attributeValue(id element, NSString *attribute)
         @"AXIsIndeterminate",
         @"AXIsMultiSelectable",
         @"AXIsOnScreen",
+        @"AXIsRemoteFrame",
         @"AXLabelFor",
         @"AXLabelledBy",
         @"AXLineRectsAndText",
@@ -540,6 +544,36 @@ RefPtr<AccessibilityUIElement> AccessibilityUIElement::elementAtPoint(int x, int
         return nullptr;
 
     return AccessibilityUIElement::create(element.get());
+}
+
+RefPtr<AccessibilityUIElement>  AccessibilityUIElement::elementAtPointWithRemoteElementForTesting(int x, int y)
+{
+    RetainPtr<id> element;
+    s_controller->executeOnAXThreadAndWait([&x, &y, &element, this] {
+        element = [m_element _accessibilityHitTest:NSMakePoint(x, y) returnPlatformElements:NO];
+    });
+
+    if (!element)
+        return nullptr;
+
+    return AccessibilityUIElement::create(element.get());
+}
+
+void AccessibilityUIElement::elementAtPointResolvingRemoteFrameForTesting(JSContextRef context, int x, int y, JSValueRef jsCallback)
+{
+    JSValueProtect(context, jsCallback);
+    s_controller->executeOnAXThreadAndWait([x, y, protectedThis = Ref { *this }, jsCallback = WTFMove(jsCallback), context = JSRetainPtr { JSContextGetGlobalContext(context) }] () mutable {
+        auto callback = [jsCallback = WTFMove(jsCallback), context = WTFMove(context)](NSString *result) {
+            s_controller->executeOnMainThread([result = WTFMove(result), jsCallback = WTFMove(jsCallback), context = WTFMove(context)] () {
+                JSValueRef arguments[1];
+                arguments[0] = makeValueRefForValue(context.get(), result);
+                JSObjectCallAsFunction(context.get(), const_cast<JSObjectRef>(jsCallback), 0, 1, arguments, 0);
+                JSValueUnprotect(context.get(), jsCallback);
+            });
+        };
+
+        [protectedThis->m_element _accessibilityHitTestResolvingRemoteFrame:NSMakePoint(x, y) callback:WTFMove(callback)];
+    });
 }
 
 unsigned AccessibilityUIElement::indexOfChild(AccessibilityUIElement* element)
@@ -2860,6 +2894,16 @@ bool AccessibilityUIElement::isFirstItemInSuggestion() const
 
 bool AccessibilityUIElement::isLastItemInSuggestion() const
 {
+    return false;
+}
+
+bool AccessibilityUIElement::isRemoteFrame() const
+{
+    BEGIN_AX_OBJC_EXCEPTIONS
+    auto value = attributeValue(@"AXIsRemoteFrame");
+    if ([value isKindOfClass:[NSNumber class]])
+        return [value boolValue];
+    END_AX_OBJC_EXCEPTIONS
     return false;
 }
 

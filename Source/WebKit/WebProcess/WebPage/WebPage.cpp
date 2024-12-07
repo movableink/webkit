@@ -1634,6 +1634,10 @@ void WebPage::bindRemoteAccessibilityFrames(int, WebCore::FrameIdentifier, Vecto
 {
 }
 
+void WebPage::resolveAccessibilityHitTestForTesting(const WebCore::IntPoint&, CompletionHandler<void(String)>&&)
+{
+}
+
 void WebPage::updateRemotePageAccessibilityOffset(WebCore::FrameIdentifier, WebCore::IntPoint)
 {
 }

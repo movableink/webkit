@@ -473,6 +473,22 @@ void WebPage::bindRemoteAccessibilityFrames(int processIdentifier, WebCore::Fram
     completionHandler({ span(accessibilityRemoteTokenData().get()) }, getpid());
 }
 
+void WebPage::resolveAccessibilityHitTestForTesting(const WebCore::IntPoint& point, CompletionHandler<void(String)>&& completionHandler)
+{
+#if PLATFORM(MAC)
+    if (id coreObject = [m_mockAccessibilityElement accessibilityRootObjectWrapper]) {
+        if (id hitTestResult = [coreObject accessibilityHitTest:point]) {
+            ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+            completionHandler([hitTestResult accessibilityAttributeValue:@"AXInfoStringForTesting"]);
+            ALLOW_DEPRECATED_DECLARATIONS_END
+            return;
+        }
+    }
+#endif
+    UNUSED_PARAM(point);
+    completionHandler(makeString("NULL"_s));
+}
+
 #if ENABLE(APPLE_PAY)
 WebPaymentCoordinator* WebPage::paymentCoordinator()
 {
