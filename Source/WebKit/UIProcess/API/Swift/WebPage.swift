@@ -239,11 +239,13 @@ public class WebPage_v0 {
     }
 
     private func createObservation<Value, BackingValue>(for keyPath: KeyPath<WebPage_v0, Value>, backedBy backingKeyPath: KeyPath<WKWebView, BackingValue>) -> NSKeyValueObservation {
+        let boxed = UncheckedSendableKeyPathBox(keyPath: keyPath)
+
         return backingWebView.observe(backingKeyPath, options: [.prior, .old, .new]) { [_$observationRegistrar, unowned self] _, change in
             if change.isPrior {
-                _$observationRegistrar.willSet(self, keyPath: keyPath)
+                _$observationRegistrar.willSet(self, keyPath: boxed.keyPath)
             } else {
-                _$observationRegistrar.didSet(self, keyPath: keyPath)
+                _$observationRegistrar.didSet(self, keyPath: boxed.keyPath)
             }
         }
     }
@@ -259,6 +261,12 @@ extension WebPage_v0 {
             }
         }
     }
+}
+
+/// The key path used within `createObservation` must be Sendable.
+/// This is safe as long as it is not used for object subscripting and isn't created with captured subscript key paths.
+fileprivate struct UncheckedSendableKeyPathBox<Root, Value>: @unchecked Sendable {
+    let keyPath: KeyPath<Root, Value>
 }
 
 #endif

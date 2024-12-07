@@ -31,7 +31,7 @@ extension WebPage_v0 {
     public struct BackForwardList: Equatable, Sendable {
         @MainActor
         public struct Item: Equatable, Identifiable, Sendable {
-            public struct ID: Hashable {
+            public struct ID: Hashable, Sendable {
                 private let value = UUID()
             }
 
