@@ -1,8 +1,6 @@
 list(APPEND WebKit_SOURCES
     Shared/API/c/skia/WKImageSkia.cpp
 
-    Shared/skia/WebCoreArgumentCodersSkia.cpp
-
     UIProcess/Automation/skia/WebAutomationSessionSkia.cpp
 )
 
@@ -15,6 +13,8 @@ list(APPEND WebKit_SERIALIZATION_IN_FILES
 
     Shared/skia/CoreIPCSkColorSpace.serialization.in
     Shared/skia/CoreIPCSkData.serialization.in
+    Shared/skia/CoreIPCSkFontStyleSlant.serialization.in
+    Shared/skia/CoreIPCSkString.serialization.in
     Shared/skia/Skia.serialization.in
     Shared/skia/WebCoreArgumentCodersSkia.serialization.in
 )

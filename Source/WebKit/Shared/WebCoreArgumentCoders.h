@@ -30,24 +30,3 @@
 #include "Encoder.h"
 #include <wtf/ArgumentCoder.h>
 #include <wtf/EnumTraits.h>
-
-#if USE(SKIA)
-#include <skia/core/SkFontStyle.h>
-class SkString;
-#endif
-
-namespace IPC {
-
-#if USE(SKIA)
-template<> struct ArgumentCoder<SkString> {
-    static void encode(Encoder&, const SkString&);
-    static std::optional<SkString> decode(Decoder&);
-};
-
-template<> struct ArgumentCoder<SkFontStyle::Slant> {
-    static void encode(Encoder&, const SkFontStyle::Slant&);
-    static std::optional<SkFontStyle::Slant> decode(Decoder&);
-};
-#endif
-
-} // namespace IPC
