@@ -5686,27 +5686,23 @@ void WebPage::computeEnclosingLayerID(EditorState& state, const VisibleSelection
     if (!state.isContentEditable && selection.isCaret())
         return;
 
-    RefPtr startContainer = selection.start().containerNode();
-    if (!startContainer)
-        return;
+    auto findEnclosingLayer = [](const Position& position) -> RenderLayer* {
+        RefPtr container = position.containerNode();
+        if (!container)
+            return nullptr;
 
-    RefPtr endContainer = selection.end().containerNode();
-    if (!endContainer)
-        return;
+        CheckedPtr renderer = container->renderer();
+        if (!renderer)
+            return nullptr;
 
-    CheckedPtr startRenderer = startContainer->renderer();
-    if (!startRenderer)
-        return;
+        return renderer->enclosingLayer();
+    };
 
-    CheckedPtr endRenderer = startContainer->renderer();
-    if (!endRenderer)
-        return;
-
-    CheckedPtr startLayer = startRenderer->enclosingLayer();
+    CheckedPtr startLayer = findEnclosingLayer(selection.start());
     if (!startLayer)
         return;
 
-    CheckedPtr endLayer = endRenderer->enclosingLayer();
+    CheckedPtr endLayer = findEnclosingLayer(selection.end());
     if (!endLayer)
         return;
 
@@ -5736,7 +5732,7 @@ void WebPage::computeEnclosingLayerID(EditorState& state, const VisibleSelection
         return layer.enclosingScrollableLayer(includeSelf, CrossFrameBoundaries::Yes);
     };
 
-    for (CheckedPtr layer = nextScroller(*enclosingLayer, IncludeSelfOrNot::IncludeSelf); layer; layer = nextScroller(*layer, IncludeSelfOrNot::ExcludeSelf)) {
+    auto scrollPositionAndNodeIDForLayer = [](RenderLayer* layer) -> std::pair<ScrollPosition, std::optional<ScrollingNodeID>> {
         CheckedRef renderer = layer->renderer();
         WeakPtr scrollableArea = [&] -> ScrollableArea* {
             if (renderer->isRenderView())
@@ -5746,16 +5742,44 @@ void WebPage::computeEnclosingLayerID(EditorState& state, const VisibleSelection
         }();
 
         if (!scrollableArea)
-            continue;
+            return { };
 
         auto scrollingNodeID = scrollableArea->scrollingNodeID();
         if (!scrollingNodeID)
-            continue;
+            return { };
 
-        state.visualData->enclosingScrollPosition = scrollableArea->scrollPosition();
-        state.visualData->enclosingScrollingNodeID = WTFMove(scrollingNodeID);
-        break;
+        return { scrollableArea->scrollPosition(), WTFMove(scrollingNodeID) };
+    };
+
+    CheckedPtr<RenderLayer> scrollableLayer;
+    for (CheckedPtr layer = nextScroller(*enclosingLayer, IncludeSelfOrNot::IncludeSelf); layer; layer = nextScroller(*layer, IncludeSelfOrNot::ExcludeSelf)) {
+        if (auto [scrollPosition, scrollingNodeID] = scrollPositionAndNodeIDForLayer(layer.get()); scrollingNodeID) {
+            state.visualData->enclosingScrollPosition = scrollPosition;
+            state.visualData->enclosingScrollingNodeID = WTFMove(scrollingNodeID);
+            scrollableLayer = WTFMove(layer);
+            break;
+        }
     }
+
+    if (!state.visualData->enclosingScrollingNodeID)
+        return;
+
+    if (selection.isCaret()) {
+        state.visualData->scrollingNodeIDAtStart = state.visualData->enclosingScrollingNodeID;
+        state.visualData->scrollingNodeIDAtEnd = state.visualData->enclosingScrollingNodeID;
+        return;
+    }
+
+    auto scrollingNodeIDForEndpoint = [&](RenderLayer* endpointLayer) {
+        for (CheckedPtr layer = endpointLayer; layer && layer != scrollableLayer; layer = nextScroller(*layer, IncludeSelfOrNot::ExcludeSelf)) {
+            if (auto scrollingNodeID = scrollPositionAndNodeIDForLayer(layer.get()).second)
+                return scrollingNodeID;
+        }
+        return state.visualData->enclosingScrollingNodeID;
+    };
+
+    state.visualData->scrollingNodeIDAtStart = scrollingNodeIDForEndpoint(startLayer.get());
+    state.visualData->scrollingNodeIDAtEnd = scrollingNodeIDForEndpoint(endLayer.get());
 }
 
 void WebPage::invokePendingSyntheticClickCallback(SyntheticClickResult result)

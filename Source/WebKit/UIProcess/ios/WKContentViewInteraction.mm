@@ -1886,9 +1886,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     return _lastInteractionLocation;
 }
 
-- (BOOL)shouldHideSelectionWhenScrolling
+- (BOOL)shouldHideSelectionInFixedPositionWhenScrolling
 {
-    if (_page->preferences().selectionHonorsOverflowScrolling())
+    if (self.selectionHonorsOverflowScrolling)
         return NO;
 
     if (_isEditable)
@@ -2689,7 +2689,7 @@ static inline WebCore::FloatSize tapHighlightBorderRadius(WebCore::FloatSize bor
 
 - (void)_scrollingNodeScrollingWillBegin:(std::optional<WebCore::ScrollingNodeID>)scrollingNodeID
 {
-    [_textInteractionWrapper willStartScrollingOverflow];
+    [_textInteractionWrapper willStartScrollingOverflow:[self _scrollViewForScrollingNodeID:scrollingNodeID]];
 }
 
 - (void)_scrollingNodeScrollingDidEnd:(std::optional<WebCore::ScrollingNodeID>)scrollingNodeID
@@ -2703,11 +2703,7 @@ static inline WebCore::FloatSize tapHighlightBorderRadius(WebCore::FloatSize bor
     [self _updateChangedSelection];
     [_textInteractionWrapper didEndScrollingOverflow];
 
-    UIScrollView *targetScrollView = nil;
-    if (auto* scrollingCoordinator = downcast<WebKit::RemoteScrollingCoordinatorProxyIOS>(_page->scrollingCoordinatorProxy()))
-        targetScrollView = scrollingCoordinator->scrollViewForScrollingNodeID(scrollingNodeID);
-
-    [_webView _didFinishScrolling:targetScrollView];
+    [_webView _didFinishScrolling:[self _scrollViewForScrollingNodeID:scrollingNodeID]];
 }
 
 - (BOOL)shouldShowAutomaticKeyboardUI
@@ -5929,6 +5925,8 @@ static void logTextInteraction(const char* methodName, UIGestureRecognizer *loup
 #if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
     [self uninstallImageAnalysisInteraction];
 #endif
+
+    [_textInteractionWrapper reset];
 }
 
 - (void)_nextAccessoryTabForWebView:(id)sender
@@ -8480,10 +8478,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         return;
 
     auto scrollingNodeID = state.visualData->enclosingScrollingNodeID;
-    if (!scrollingNodeID)
-        return;
-
-    RetainPtr scroller = [self _scrollViewForScrollingNodeID:*scrollingNodeID];
+    RetainPtr scroller = [self _scrollViewForScrollingNodeID:scrollingNodeID];
     if (!scroller)
         return;
 
@@ -9044,7 +9039,7 @@ static bool canUseQuickboardControllerFor(UITextContentType type)
     [self _updateChangedSelection:NO];
 }
 
-- (UIScrollView *)_scrollViewForScrollingNodeID:(WebCore::ScrollingNodeID)scrollingNodeID
+- (UIScrollView *)_scrollViewForScrollingNodeID:(std::optional<WebCore::ScrollingNodeID>)scrollingNodeID
 {
     if (WeakPtr coordinator = downcast<WebKit::RemoteScrollingCoordinatorProxyIOS>(_page->scrollingCoordinatorProxy()))
         return coordinator->scrollViewForScrollingNodeID(scrollingNodeID);
@@ -9932,7 +9927,7 @@ static WebCore::DataOwnerType coreDataOwnerType(_UIDataOwner platformType)
 - (void)_updateTargetedPreviewScrollViewUsingContainerScrollingNodeID:(std::optional<WebCore::ScrollingNodeID>)scrollingNodeID
 {
     if (scrollingNodeID) {
-        if (RetainPtr scrollViewForScrollingNode = [self _scrollViewForScrollingNodeID:*scrollingNodeID])
+        if (RetainPtr scrollViewForScrollingNode = [self _scrollViewForScrollingNodeID:scrollingNodeID])
             _scrollViewForTargetedPreview = scrollViewForScrollingNode.get();
     }
 
@@ -10525,8 +10520,7 @@ static NSArray<NSItemProvider *> *extractItemProvidersFromDropSession(id <UIDrop
     if (!_shouldRestoreEditMenuAfterDrop)
         return;
 
-    // FIXME: This SPI should be renamed in UIKit to reflect a more general purpose of revealing hidden interaction assistant controls.
-    [_textInteractionWrapper didEndScrollingOverflow];
+    [_textInteractionWrapper didConcludeDrop];
     _shouldRestoreEditMenuAfterDrop = NO;
 }
 
@@ -10770,8 +10764,7 @@ static Vector<WebCore::IntSize> sizesOfPlaceholderElementsToInsertWhenDroppingIt
     if (_dragDropInteractionState.anyActiveDragSourceContainsSelection()) {
         [self cancelActiveTextInteractionGestures];
         if (!_shouldRestoreEditMenuAfterDrop) {
-            // FIXME: This SPI should be renamed in UIKit to reflect a more general purpose of hiding interaction assistant controls.
-            [_textInteractionWrapper willStartScrollingOverflow];
+            [_textInteractionWrapper willBeginDragLift];
             _shouldRestoreEditMenuAfterDrop = YES;
         }
     }
@@ -13716,6 +13709,37 @@ static inline WKTextAnimationType toWKTextAnimationType(WebCore::TextAnimationTy
         return self;
 
     return layerTreeNode->uiView() ?: self;
+}
+
+- (BOOL)_shouldHideSelectionDuringOverflowScroll:(UIScrollView *)scrollView
+{
+    if (!self.selectionHonorsOverflowScrolling)
+        return YES;
+
+    auto& state = _page->editorState();
+    if (!state.hasVisualData())
+        return NO;
+
+    auto enclosingScrollingNodeID = state.visualData->enclosingScrollingNodeID;
+    RetainPtr enclosingScroller = [self _scrollViewForScrollingNodeID:enclosingScrollingNodeID];
+    if (!enclosingScroller || ![enclosingScroller _wk_isAncestorOf:scrollView])
+        return NO;
+
+    auto isInSeparateScrollView = [&](std::optional<WebCore::ScrollingNodeID> endpointScrollingNodeID) -> bool {
+        if (endpointScrollingNodeID == enclosingScrollingNodeID)
+            return false;
+
+        RetainPtr endpointScroller = [self _scrollViewForScrollingNodeID:endpointScrollingNodeID];
+        return endpointScroller == scrollView || [scrollView _wk_isAncestorOf:endpointScroller.get()];
+    };
+
+    if (isInSeparateScrollView(state.visualData->scrollingNodeIDAtStart))
+        return YES;
+
+    if (isInSeparateScrollView(state.visualData->scrollingNodeIDAtEnd))
+        return YES;
+
+    return NO;
 }
 
 @end
