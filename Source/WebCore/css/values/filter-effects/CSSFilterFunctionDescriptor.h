@@ -33,7 +33,7 @@
 
 namespace WebCore {
 
-template<CSSValueID FilterFunction> struct CSSFilterFunctionDescriptor;
+template<auto FilterFunction> struct CSSFilterFunctionDescriptor;
 
 // https://drafts.fxtf.org/filter-effects/#funcdef-filter-blur
 template<> struct CSSFilterFunctionDescriptor<CSSValueBlur> {
@@ -120,7 +120,7 @@ template<> struct CSSFilterFunctionDescriptor<CSSValueInvert> {
     static constexpr auto operationType = FilterOperation::Type::Invert;
 };
 
-// https://drafts.fxtf.org/filter-effects/#funcdef-filter-invert
+// https://drafts.fxtf.org/filter-effects/#funcdef-filter-opacity
 template<> struct CSSFilterFunctionDescriptor<CSSValueOpacity> {
     static constexpr bool isPixelFilterFunction = true;
     static constexpr bool isColorFilterFunction = true;
@@ -164,32 +164,32 @@ template<> struct CSSFilterFunctionDescriptor<CSSValueAppleInvertLightness> {
     static constexpr auto operationType = FilterOperation::Type::AppleInvertLightness;
 };
 
-template<CSSValueID filterFunction> static constexpr bool isPixelFilterFunction()
+template<auto filterFunction> static constexpr bool isPixelFilterFunction()
 {
     return CSSFilterFunctionDescriptor<filterFunction>::isPixelFilterFunction;
 }
 
-template<CSSValueID filterFunction> static constexpr bool isColorFilterFunction()
+template<auto filterFunction> static constexpr bool isColorFilterFunction()
 {
     return CSSFilterFunctionDescriptor<filterFunction>::isColorFilterFunction;
 }
 
-template<CSSValueID filterFunction> static constexpr bool filterFunctionAllowsValuesGreaterThanOne()
+template<auto filterFunction> static constexpr bool filterFunctionAllowsValuesGreaterThanOne()
 {
     return CSSFilterFunctionDescriptor<filterFunction>::allowsValuesGreaterThanOne;
 }
 
-template<CSSValueID filterFunction> static constexpr decltype(auto) filterFunctionDefaultValue()
+template<auto filterFunction> static constexpr decltype(auto) filterFunctionDefaultValue()
 {
     return CSSFilterFunctionDescriptor<filterFunction>::defaultValue;
 }
 
-template<CSSValueID filterFunction> static constexpr decltype(auto) filterFunctionInitialValueForInterpolation()
+template<auto filterFunction> static constexpr decltype(auto) filterFunctionInitialValueForInterpolation()
 {
     return CSSFilterFunctionDescriptor<filterFunction>::initialValueForInterpolation;
 }
 
-template<CSSValueID filterFunction> static constexpr decltype(auto) filterFunctionOperationType()
+template<auto filterFunction> static constexpr decltype(auto) filterFunctionOperationType()
 {
     return CSSFilterFunctionDescriptor<filterFunction>::operationType;
 }

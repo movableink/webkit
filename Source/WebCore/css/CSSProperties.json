@@ -6930,7 +6930,7 @@
                 "comment": "Implementation does not actually differ from box-shadow as described in status."
             },
             "status": {
-                "comment": "Differs from box-shadow in its treatement of blur radii > 8px. Let -webkit-box-shadow blur, radius be w_r and box-shadow blur radius be b_r. For w_r > 8px, b_r = 8 + 4 * sqrt((w_r - 8) / 2)."
+                "comment": "Differs from box-shadow in its treatment of blur radii > 8px. Let -webkit-box-shadow blur, radius be w_r and box-shadow blur radius be b_r. For w_r > 8px, b_r = 8 + 4 * sqrt((w_r - 8) / 2)."
             }
         },
         "-webkit-column-axis": {
@@ -7264,8 +7264,7 @@
                     "-webkit-filter"
                 ],
                 "converter": "FilterOperations",
-                "parser-function": "consumeFilterValueListOrNone",
-                "parser-function-requires-additional-parameters": ["AllowedFilterFunctions::PixelFilters"],
+                "parser-function": "consumeFilter",
                 "parser-grammar-unused": "none | <filter-value-list>",
                 "parser-grammar-unused-reason": "Needs support for functional syntax groupings and '+' multipliers."
             },
@@ -7278,10 +7277,9 @@
             "inherited": true,
             "codegen-properties": {
                 "settings-flag": "colorFilterEnabled",
-                "converter": "FilterOperations",
-                "parser-function": "consumeFilterValueListOrNone",
-                "parser-function-requires-additional-parameters": ["AllowedFilterFunctions::ColorFilters"],
-                "parser-grammar-unused": "none | <color-filter-value-list>",
+                "converter": "AppleColorFilterOperations",
+                "parser-function": "consumeAppleColorFilter",
+                "parser-grammar-unused": "none | <-apple-color-filter-value-list>",
                 "parser-grammar-unused-reason": "Needs support for functional syntax groupings and '+' multipliers."
             },
             "status": {
@@ -7530,8 +7528,7 @@
             "codegen-properties": {
                 "cascade-alias": "backdrop-filter",
                 "skip-builder": true,
-                "parser-function": "consumeFilterValueListOrNone",
-                "parser-function-requires-additional-parameters": ["AllowedFilterFunctions::PixelFilters"],
+                "parser-function": "consumeFilter",
                 "parser-grammar-unused": "none | <filter-value-list>",
                 "parser-grammar-unused-reason": "Needs support for functional syntax groupings and '+' multipliers."
             },
@@ -7546,8 +7543,7 @@
         "backdrop-filter": {
             "codegen-properties": {
                 "converter": "FilterOperations",
-                "parser-function": "consumeFilterValueListOrNone",
-                "parser-function-requires-additional-parameters": ["AllowedFilterFunctions::PixelFilters"],
+                "parser-function": "consumeFilter",
                 "parser-grammar-unused": "none | <filter-value-list>",
                 "parser-grammar-unused-reason": "Needs support for functional syntax groupings and '+' multipliers.",
                 "settings-flag": "cssUnprefixedBackdropFilterEnabled"

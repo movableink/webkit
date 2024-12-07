@@ -1150,7 +1150,6 @@ style/ChildChangeInvalidation.cpp
 style/ClassChangeInvalidation.cpp
 style/CustomPropertyRegistry.cpp
 style/ElementRuleCollector.cpp
-style/FilterOperationsBuilder.cpp
 style/HasSelectorFilter.cpp
 style/IdChangeInvalidation.cpp
 style/InspectorCSSOMWrappers.cpp

@@ -38,6 +38,7 @@
 #include "ImageBuffer.h"
 #include "NullGraphicsContext.h"
 #include "RenderElement.h"
+#include "StyleFilterProperty.h"
 #include <wtf/PointerComparison.h>
 
 namespace WebCore {
@@ -76,7 +77,10 @@ bool StyleFilterImage::equalInputImages(const StyleFilterImage& other) const
 
 Ref<CSSValue> StyleFilterImage::computedStyleValue(const RenderStyle& style) const
 {
-    return CSSFilterImageValue::create(m_image ? m_image->computedStyleValue(style) : static_reference_cast<CSSValue>(CSSPrimitiveValue::create(CSSValueNone)), ComputedStyleExtractor::valueForFilter(style, m_filterOperations));
+    return CSSFilterImageValue::create(
+        m_image ? m_image->computedStyleValue(style) : static_reference_cast<CSSValue>(CSSPrimitiveValue::create(CSSValueNone)),
+        Style::toCSSFilterProperty(m_filterOperations, style)
+    );
 }
 
 bool StyleFilterImage::isPending() const

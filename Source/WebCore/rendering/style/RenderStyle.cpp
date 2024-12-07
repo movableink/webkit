@@ -2964,7 +2964,7 @@ void RenderStyle::setFontPalette(const FontPalette& value)
     setFontDescription(WTFMove(description));
 }
 
-void RenderStyle::getShadowHorizontalExtent(const ShadowData* shadow, LayoutUnit &left, LayoutUnit &right)
+void RenderStyle::getShadowHorizontalExtent(const ShadowData* shadow, LayoutUnit& left, LayoutUnit& right)
 {
     left = 0;
     right = 0;
@@ -2973,13 +2973,13 @@ void RenderStyle::getShadowHorizontalExtent(const ShadowData* shadow, LayoutUnit
         if (shadow->style() == ShadowStyle::Inset)
             continue;
 
-        auto extentAndSpread = shadow->paintingExtent() + LayoutUnit(shadow->spread().value());
-        left = std::min<LayoutUnit>(left, LayoutUnit(shadow->x().value()) - extentAndSpread);
-        right = std::max<LayoutUnit>(right, LayoutUnit(shadow->x().value()) + extentAndSpread);
+        auto extentAndSpread = shadow->paintingExtent() + LayoutUnit(shadow->spread().value);
+        left = std::min<LayoutUnit>(left, LayoutUnit(shadow->x().value) - extentAndSpread);
+        right = std::max<LayoutUnit>(right, LayoutUnit(shadow->x().value) + extentAndSpread);
     }
 }
 
-void RenderStyle::getShadowVerticalExtent(const ShadowData* shadow, LayoutUnit &top, LayoutUnit &bottom)
+void RenderStyle::getShadowVerticalExtent(const ShadowData* shadow, LayoutUnit& top, LayoutUnit& bottom)
 {
     top = 0;
     bottom = 0;
@@ -2988,9 +2988,9 @@ void RenderStyle::getShadowVerticalExtent(const ShadowData* shadow, LayoutUnit &
         if (shadow->style() == ShadowStyle::Inset)
             continue;
 
-        auto extentAndSpread = shadow->paintingExtent() + LayoutUnit(shadow->spread().value());
-        top = std::min<LayoutUnit>(top, LayoutUnit(shadow->y().intValue()) - extentAndSpread);
-        bottom = std::max<LayoutUnit>(bottom, LayoutUnit(shadow->y().intValue()) + extentAndSpread);
+        auto extentAndSpread = shadow->paintingExtent() + LayoutUnit(shadow->spread().value);
+        top = std::min<LayoutUnit>(top, LayoutUnit(static_cast<int>(shadow->y().value)) - extentAndSpread);
+        bottom = std::max<LayoutUnit>(bottom, LayoutUnit(static_cast<int>(shadow->y().value)) + extentAndSpread);
     }
 }
 

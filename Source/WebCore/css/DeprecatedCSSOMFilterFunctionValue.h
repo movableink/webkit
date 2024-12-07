@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc.  All rights reserved.
+ * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -16,7 +16,6 @@
  * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
@@ -25,20 +24,26 @@
 
 #pragma once
 
-#include "FilterOperations.h"
-#include <optional>
+#include "CSSFilterFunction.h"
+#include "DeprecatedCSSOMValue.h"
 
 namespace WebCore {
 
-class CSSToLengthConversionData;
-class CSSValue;
-class Document;
-class RenderStyle;
+// This class is needed to maintain compatibility with the historical CSSOM representation of the `filter` related properties.
+// It should be used only as an element in a DeprecatedCSSOMValueList created by CSSAppleColorFilterPropertyValue or CSSFilterPropertyValue.
+class DeprecatedCSSOMFilterFunctionValue final : public DeprecatedCSSOMValue {
+public:
+    static Ref<DeprecatedCSSOMFilterFunctionValue> create(CSS::FilterFunction, CSSStyleDeclaration&);
 
-namespace Style {
+    String cssText() const;
+    unsigned short cssValueType() const { return CSS_CUSTOM; }
 
-FilterOperations createFilterOperations(const Document&, RenderStyle&, const CSSToLengthConversionData&, const CSSValue&);
+private:
+    DeprecatedCSSOMFilterFunctionValue(CSS::FilterFunction&&, CSSStyleDeclaration&);
 
-} // namespace Style
+    CSS::FilterFunction m_filter;
+};
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_CSSOM_VALUE(DeprecatedCSSOMFilterFunctionValue, isFilterFunctionValue())

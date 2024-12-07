@@ -472,7 +472,7 @@ static bool stringFromCSSValue(CSSValue& value, String& result)
                 return true;
             }
         }
-    } else if (value.isValueList()) {
+    } else if (value.isValueList() || value.isAppleColorFilterPropertyValue() || value.isFilterPropertyValue() || value.isTextShadowPropertyValue() || value.isBoxShadowPropertyValue()) {
         result = value.cssText();
         return true;
     }
