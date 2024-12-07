@@ -34,7 +34,6 @@
 #include "RemoteRenderingBackendProxy.h"
 #include "SharedVideoFrame.h"
 #include "StreamClientConnection.h"
-#include "WebCoreArgumentCoders.h"
 #include "WebProcess.h"
 #include <WebCore/DisplayList.h>
 #include <WebCore/DisplayListDrawingContext.h>

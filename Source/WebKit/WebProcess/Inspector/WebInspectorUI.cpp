@@ -26,7 +26,6 @@
 #include "config.h"
 #include "WebInspectorUI.h"
 
-#include "WebCoreArgumentCoders.h"
 #include "WebInspectorMessages.h"
 #include "WebInspectorUIProxyMessages.h"
 #include "WebPage.h"

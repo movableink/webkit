@@ -63,7 +63,6 @@
 #import "WKWebpagePreferencesPrivate.h"
 #import "WKWebsiteDataStorePrivate.h"
 #import "WKWindowFeaturesPrivate.h"
-#import "WebCoreArgumentCoders.h"
 #import "WebExtensionAction.h"
 #import "WebExtensionConstants.h"
 #import "WebExtensionContextProxyMessages.h"

@@ -30,7 +30,6 @@
 
 #include "Connection.h"
 #include "Logging.h"
-#include "WebCoreArgumentCoders.h"
 #include "WebFrame.h"
 #include "WebFullScreenManagerProxyMessages.h"
 #include "WebPage.h"

@@ -827,13 +827,6 @@ def argument_coder_headers_for_type(type):
     for type in header_infos_and_types['types']:
         if type in special_cases:
             headers.append(special_cases[type])
-            continue
-
-        split = type.split('::')
-        if len(split) < 2:
-            continue
-        if split[0] == 'WebCore':
-            headers.append('"WebCoreArgumentCoders.h"')
 
     return headers
 

@@ -28,7 +28,6 @@
 #if ENABLE(GPU_PROCESS)
 
 #include "SharedPreferencesForWebProcess.h"
-#include "WebCoreArgumentCoders.h"
 #include <WebCore/ProcessIdentity.h>
 #include <wtf/MachSendRight.h>
 

@@ -60,7 +60,6 @@
 #include "RemoteSharedResourceCache.h"
 #include "RemoteSharedResourceCacheMessages.h"
 #include "ScopedRenderingResourcesRequest.h"
-#include "WebCoreArgumentCoders.h"
 #include "WebErrors.h"
 #include "WebGPUObjectHeap.h"
 #include "WebProcessMessages.h"

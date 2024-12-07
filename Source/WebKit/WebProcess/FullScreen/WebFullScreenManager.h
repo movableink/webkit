@@ -27,7 +27,6 @@
 
 #if ENABLE(FULLSCREEN_API)
 
-#include "WebCoreArgumentCoders.h"
 #include <WebCore/EventListener.h>
 #include <WebCore/HTMLMediaElement.h>
 #include <WebCore/HTMLMediaElementEnums.h>

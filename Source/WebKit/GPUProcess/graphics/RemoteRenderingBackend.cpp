@@ -53,7 +53,6 @@
 #include "RemoteTextDetectorMessages.h"
 #include "ShapeDetectionObjectHeap.h"
 #include "SwapBuffersDisplayRequirement.h"
-#include "WebCoreArgumentCoders.h"
 #include "WebPageProxy.h"
 #if PLATFORM(COCOA)
 #include <pal/cf/CoreTextSoftLink.h>
