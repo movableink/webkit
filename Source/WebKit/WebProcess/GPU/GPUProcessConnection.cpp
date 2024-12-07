@@ -55,6 +55,7 @@
 #include "WebProcess.h"
 #include "WebProcessProxyMessages.h"
 #include <WebCore/PlatformMediaSessionManager.h>
+#include <WebCore/RenderingMode.h>
 #include <WebCore/SharedBuffer.h>
 
 #if ENABLE(ENCRYPTED_MEDIA)
