@@ -459,7 +459,7 @@ static AXIsolatedObject* findObjectWithRuns(AXIsolatedObject& start, AXDirection
                 return nullptr;
 
             if (searchObject->hasTextRuns())
-                return dynamicDowncast<AXIsolatedObject>(searchObject);
+                return dynamicDowncast<AXIsolatedObject>(searchObject).get();
 
             appendChildren(searchObject, isForward, nullptr, searchStack);
         }

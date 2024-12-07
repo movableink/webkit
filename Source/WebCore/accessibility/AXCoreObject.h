@@ -61,6 +61,7 @@ typedef const struct __AXTextMarker* AXTextMarkerRef;
 typedef const struct __AXTextMarkerRange* AXTextMarkerRangeRef;
 typedef const struct __CTFont* CTFontRef;
 OBJC_CLASS NSAttributedString;
+OBJC_CLASS NSMutableAttributedString;
 #elif USE(ATSPI)
 
 namespace WebCore {
@@ -1120,11 +1121,13 @@ public:
 #if PLATFORM(COCOA)
     enum class SpellCheck : bool { No, Yes };
     virtual RetainPtr<NSAttributedString> attributedStringForTextMarkerRange(AXTextMarkerRange&&, SpellCheck) const = 0;
-    // Creates an attributed string for the given text (which should be the full or partial text belonging to `this`, depending on the
-    // calling context) based on the style of `this`.
-    RetainPtr<NSAttributedString> createAttributedString(String&& text) const;
     virtual AttributedStringStyle stylesForAttributedString() const = 0;
 #endif
+
+#if PLATFORM(MAC)
+    RetainPtr<NSMutableAttributedString> createAttributedString(StringView text, SpellCheck) const;
+#endif
+
     virtual const String placeholderValue() const = 0;
 
     // Abbreviations
@@ -1424,13 +1427,14 @@ public:
     virtual bool hasClickHandler() const = 0;
     virtual AXCoreObject* clickableSelfOrAncestor(ClickHandlerFilter = ClickHandlerFilter::ExcludeBody) const = 0;
     virtual AXCoreObject* focusableAncestor() = 0;
-    virtual AXCoreObject* editableAncestor() = 0;
+    virtual AXCoreObject* editableAncestor() const = 0;
     virtual AXCoreObject* highestEditableAncestor() = 0;
     virtual AXCoreObject* exposedTableAncestor(bool includeSelf = false) const = 0;
 
     virtual AccessibilityChildrenVector documentLinks() = 0;
 
     virtual bool hasBodyTag() const = 0;
+    virtual bool hasMarkTag() const = 0;
     virtual String innerHTML() const = 0;
     virtual String outerHTML() const = 0;
 
@@ -1469,6 +1473,13 @@ inline Vector<AXID> axIDs(const AXCoreObject::AccessibilityChildrenVector& objec
         return object->objectID();
     });
 }
+
+#if PLATFORM(MAC)
+void attributedStringSetExpandedText(NSMutableAttributedString *, const AXCoreObject&, const NSRange&);
+void attributedStringSetBlockquoteLevel(NSMutableAttributedString *, const AXCoreObject&, const NSRange&);
+void attributedStringSetNeedsSpellCheck(NSMutableAttributedString *, const AXCoreObject&);
+void attributedStringSetElement(NSMutableAttributedString *, NSString *attribute, const AXCoreObject&, const NSRange&);
+#endif // PLATFORM(MAC)
 
 #if PLATFORM(COCOA)
 inline bool AXCoreObject::shouldComputeDescriptionAttributeValue() const
@@ -1605,7 +1616,7 @@ T* clickableSelfOrAncestor(const T& startObject, const F& shouldStop)
 }
 
 template<typename T>
-T* editableAncestor(T& startObject)
+T* editableAncestor(const T& startObject)
 {
     return findAncestor<T>(startObject, false, [] (const auto& ancestor) {
         return ancestor.isTextControl();

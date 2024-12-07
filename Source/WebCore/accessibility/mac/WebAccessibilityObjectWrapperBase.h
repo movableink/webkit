@@ -56,7 +56,6 @@ void attributedStringSetColor(NSMutableAttributedString *attrString, NSString *a
 void attributedStringSetNumber(NSMutableAttributedString *, NSString *, NSNumber *, const NSRange&);
 void attributedStringSetFont(NSMutableAttributedString *, CTFontRef, const NSRange&);
 void attributedStringSetSpelling(NSMutableAttributedString *, Node&, StringView, const NSRange&);
-void attributedStringSetNeedsSpellCheck(NSMutableAttributedString *, Node&);
 RetainPtr<NSAttributedString> attributedStringCreate(Node&, StringView, const SimpleRange&, AXCoreObject::SpellCheck);
 }
 
