@@ -35,14 +35,14 @@ public class WebPage_v0 {
         WKWebView.handlesURLScheme(scheme)
     }
 
-    public init(configuration: Configuration = Configuration()) {
+    private init(configuration: Configuration, _navigationDecider navigationDecider: (any NavigationDeciding)?) {
         self.configuration = configuration
 
         // FIXME: Consider whether we want to have a single value here or if the getter for `navigations` should return a fresh sequence every time.
         let (stream, continuation) = AsyncStream.makeStream(of: NavigationEvent.self)
         navigations = Navigations(source: stream)
 
-        backingNavigationDelegate = WKNavigationDelegateAdapter(navigationProgressContinuation: continuation)
+        backingNavigationDelegate = WKNavigationDelegateAdapter(navigationProgressContinuation: continuation, navigationDecider: navigationDecider)
         backingNavigationDelegate.owner = self
 
         observations.contents = [
@@ -55,6 +55,14 @@ public class WebPage_v0 {
             createObservation(for: \.isWritingToolsActive, backedBy: \.isWritingToolsActive),
             createObservation(for: \.themeColor, backedBy: \.themeColor),
         ]
+    }
+
+    public convenience init(configuration: Configuration = Configuration(), navigationDecider: some NavigationDeciding) {
+        self.init(configuration: configuration, _navigationDecider: navigationDecider)
+    }
+
+    public convenience init(configuration: Configuration = Configuration()) {
+        self.init(configuration: configuration, _navigationDecider: nil)
     }
 
     public let navigations: Navigations
@@ -204,7 +212,7 @@ public class WebPage_v0 {
         backingWebView.stopLoading()
     }
 
-    public func callAsyncJavaScript(_ functionBody: String, arguments: [String : Any] = [:], in frame: FrameInfo? = nil, contentWorld: WKContentWorld = .defaultClient) async throws -> Any? {
+    public func callAsyncJavaScript(_ functionBody: String, arguments: [String : Any] = [:], in frame: FrameInfo? = nil, contentWorld: WKContentWorld = .page) async throws -> Any? {
         try await backingWebView.callAsyncJavaScript(functionBody, arguments: arguments, in: frame?.wrapped, contentWorld: contentWorld)
     }
 

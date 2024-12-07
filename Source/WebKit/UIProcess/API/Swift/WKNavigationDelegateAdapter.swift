@@ -26,15 +26,20 @@
 import Foundation
 internal import WebKit_Private
 
+fileprivate struct DefaultNavigationDecider: NavigationDeciding {
+}
+
 @MainActor
 final class WKNavigationDelegateAdapter: NSObject, WKNavigationDelegate {
-    init(navigationProgressContinuation: AsyncStream<WebPage_v0.NavigationEvent>.Continuation) {
+    init(navigationProgressContinuation: AsyncStream<WebPage_v0.NavigationEvent>.Continuation, navigationDecider: (any NavigationDeciding)?) {
         self.navigationProgressContinuation = navigationProgressContinuation
+        self.navigationDecider = navigationDecider ?? DefaultNavigationDecider()
     }
 
     weak var owner: WebPage_v0? = nil
 
     private let navigationProgressContinuation: AsyncStream<WebPage_v0.NavigationEvent>.Continuation
+    private let navigationDecider: any NavigationDeciding
 
     // MARK: Navigation progress reporting
 
@@ -72,6 +77,27 @@ final class WKNavigationDelegateAdapter: NSObject, WKNavigationDelegate {
     @objc(_webView:backForwardListItemAdded:removed:)
     func _webView(_ webView: WKWebView!, backForwardListItemAdded itemAdded: WKBackForwardListItem!, removed itemsRemoved: [WKBackForwardListItem]!) {
         owner?.backForwardList = .init(webView.backForwardList)
+    }
+
+    // MARK: Navigation decisions
+
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, preferences: WKWebpagePreferences) async -> (WKNavigationActionPolicy, WKWebpagePreferences) {
+        let convertedAction = WebPage_v0.NavigationAction(navigationAction)
+        var convertedPreferences = WebPage_v0.NavigationPreferences(preferences)
+
+        let result = await navigationDecider.decidePolicy(for: convertedAction, preferences: &convertedPreferences)
+        let newPreferences = WKWebpagePreferences(convertedPreferences)
+
+        return (result, newPreferences)
+    }
+
+    func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse) async -> WKNavigationResponsePolicy {
+        let convertedResponse = WebPage_v0.NavigationResponse(navigationResponse)
+        return await navigationDecider.decidePolicy(for: convertedResponse)
+    }
+
+    func webView(_ webView: WKWebView, respondTo challenge: URLAuthenticationChallenge) async -> (URLSession.AuthChallengeDisposition, URLCredential?) {
+        await navigationDecider.decideAuthenticationChallengeDisposition(for: challenge)
     }
 }
 

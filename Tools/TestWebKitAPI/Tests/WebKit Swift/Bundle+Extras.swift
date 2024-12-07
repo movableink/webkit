@@ -18,34 +18,20 @@
 // SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
 // INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
 // CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
-// THE POSSIBILITY OF SUCH DAMAGE.
+// ARISING IN ANY WAY OUT OF THE USE
 
-#if canImport(Testing) && compiler(>=6.0)
+import Foundation
 
-import Testing
-import WebKit
+extension Bundle {
+    static var testResources: Bundle {
+        guard let url = Bundle.main.url(forResource: "TestWebKitAPIResources", withExtension: "bundle") else {
+            fatalError()
+        }
 
-@MainActor
-struct WKWebViewSwiftOverlayTests {
-    @Test
-    func evaluateJavaScriptYieldsExpectedResponse() async throws {
-        let webView = WKWebView()
+        guard let bundle = Bundle(url: url) else {
+            fatalError()
+        }
 
-        let response = try await webView.evaluateJavaScript("1 + 2") as! Int
-        #expect(response == 3)
-    }
-
-    @Test(
-        .disabled("This test currently crashes due to the associated bug."),
-        .bug("https://bugs.webkit.org/show_bug.cgi?id=282918")
-    )
-    func evaluateJavaScriptWithNilResponse() async throws {
-        let webView = WKWebView()
-        
-        let response: Any? = try await webView.evaluateJavaScript("console.log('hello')")
-        #expect(response == nil)
+        return bundle
     }
 }
-
-#endif
