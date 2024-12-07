@@ -689,6 +689,16 @@ WebSampleBufferVideoRendering *VideoMediaSampleRenderer::renderer() const
 #endif
 }
 
+template <>
+AVSampleBufferVideoRenderer* VideoMediaSampleRenderer::as() const
+{
+#if HAVE(AVSAMPLEBUFFERVIDEORENDERER)
+    return m_renderer.get();
+#else
+    return nil;
+#endif
+}
+
 WebSampleBufferVideoRendering *VideoMediaSampleRenderer::rendererOrDisplayLayer() const
 {
 #if HAVE(AVSAMPLEBUFFERVIDEORENDERER)
