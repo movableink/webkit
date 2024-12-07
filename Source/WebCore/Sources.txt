@@ -1278,6 +1278,7 @@ dom/InternalObserverFind.cpp
 dom/InternalObserverFirst.cpp
 dom/InternalObserverForEach.cpp
 dom/InternalObserverFromScript.cpp
+dom/InternalObserverInspect.cpp
 dom/InternalObserverLast.cpp
 dom/InternalObserverMap.cpp
 dom/InternalObserverSome.cpp
@@ -4211,6 +4212,8 @@ JSOESTextureHalfFloat.cpp
 JSOESTextureHalfFloatLinear.cpp
 JSOESVertexArrayObject.cpp
 JSObservable.cpp
+JSObservableInspector.cpp
+JSObservableInspectorAbortCallback.cpp
 JSOfflineAudioCompletionEvent.cpp
 JSOfflineAudioCompletionEventInit.cpp
 JSOfflineAudioContext.cpp
