@@ -1,6 +1,6 @@
 Button   Button
 
-FAIL clicking a popover nested inside a button should not re-invoke the popover assert_true: Should still be open expected true got false
+PASS clicking a popover nested inside a button should not re-invoke the popover
 PASS corner case: invoker that is also a popover
-FAIL invoker inside popover still works, even with weird nesting assert_true: descendant doesn't close popover expected true got false
+PASS invoker inside popover still works, even with weird nesting
 

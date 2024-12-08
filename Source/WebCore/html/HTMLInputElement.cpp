@@ -1362,7 +1362,7 @@ void HTMLInputElement::defaultEventHandler(Event& event)
         if (commandForElement())
             handleCommand();
         else
-            handlePopoverTargetAction();
+            handlePopoverTargetAction(event.target());
         if (event.defaultHandled())
             return;
     }
