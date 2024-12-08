@@ -22,6 +22,7 @@
 #include "TextureMapperLayer.h"
 
 #include "BitmapTexture.h"
+#include "ClipPath.h"
 #include "FloatQuad.h"
 #include "Region.h"
 #include "TextureMapper.h"
@@ -1063,16 +1064,16 @@ void TextureMapperLayer::paintWith3DRenderingContext(TextureMapperPaintOptions& 
     collect3DRenderingContextLayers(layers);
 
     TextureMapperLayer3DRenderingContext context;
-    context.paint(layers, [&](TextureMapperLayer* layer, const FloatPolygon& clipArea) {
-        if (!clipArea.isEmpty())
-            options.textureMapper.beginClip(layer->toSurfaceTransform(), clipArea);
+    context.paint(options.textureMapper, layers, [&](TextureMapperLayer* layer, const ClipPath& clipPath) {
+        if (!clipPath.isEmpty())
+            options.textureMapper.beginClip(layer->toSurfaceTransform(), clipPath);
 
         if (layer->preserves3D())
             layer->paintSelf(options);
         else
             layer->paintRecursive(options);
 
-        if (!clipArea.isEmpty())
+        if (!clipPath.isEmpty())
             options.textureMapper.endClip();
     });
 }

@@ -27,55 +27,32 @@
 
 #pragma once
 
-#include "FloatPolygon3D.h"
+#include "FloatPoint.h"
+#include "FloatRect.h"
 #include <wtf/TZoneMalloc.h>
+#include <wtf/Vector.h>
 
 namespace WebCore {
 
-class ClipPath;
-class FloatPlane3D;
-class TextureMapper;
-class TextureMapperLayer;
-
-class TextureMapperLayer3DRenderingContext final {
-    WTF_MAKE_TZONE_ALLOCATED(TextureMapperLayerPreserves3DContext);
+class ClipPath final {
+    WTF_MAKE_TZONE_ALLOCATED(ClipPath);
 public:
-    void paint(TextureMapper&, const Vector<TextureMapperLayer*>&,
-        const std::function<void(TextureMapperLayer*, const ClipPath&)>&);
+    ClipPath(Vector<FloatPoint>&& vertices, unsigned bufferID, unsigned bufferOffsetInBytes);
+
+    bool isEmpty() const { return m_vertices.isEmpty(); }
+    unsigned bufferID() const { return m_bufferID; }
+    const void* bufferDataOffsetAsPtr() const;
+    unsigned numberOfVertices() const { return m_vertices.size(); }
+
+    FloatRect bounds() const { return m_bounds; }
 
 private:
-    enum class PolygonPosition {
-        InFront,
-        Behind,
-        Coplanar,
-        Intersecting
-    };
 
-    struct TextureMapperLayerPolygon final {
-        FloatPolygon3D geometry;
-        TextureMapperLayer* layer = { nullptr };
-        bool isSplitted = { false };
-        unsigned clipVertexBufferOffset { 0 };
-    };
+    const Vector<FloatPoint> m_vertices;
+    unsigned m_bufferID;
+    unsigned m_bufferOffsetInBytes;
 
-    struct TextureMapperLayerNode final {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
-
-        explicit TextureMapperLayerNode(TextureMapperLayerPolygon&& polygon)
-        {
-            polygons.append(WTFMove(polygon));
-        }
-
-        const TextureMapperLayerPolygon& firstPolygon() const  { return polygons[0]; }
-
-        Vector<TextureMapperLayerPolygon> polygons;
-        std::unique_ptr<TextureMapperLayerNode> frontNode;
-        std::unique_ptr<TextureMapperLayerNode> backNode;
-    };
-
-    void buildTree(TextureMapperLayerNode&, Deque<TextureMapperLayerPolygon>&);
-    void traverseTree(TextureMapperLayerNode&, const std::function<void(TextureMapperLayerNode&)>&);
-    static PolygonPosition classifyPolygon(const TextureMapperLayerPolygon&, const FloatPlane3D&);
+    FloatRect m_bounds;
 };
 
 } // namespace WebCore
