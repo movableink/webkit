@@ -51,7 +51,6 @@
 #include "CSSPrimitiveValue.h"
 #include "CSSPrimitiveValueMappings.h"
 #include "CSSPropertyParserConsumer+Font.h"
-#include "CSSPropertyParserHelpers.h"
 #include "CSSRayValue.h"
 #include "CSSReflectValue.h"
 #include "CSSSubgridValue.h"
@@ -171,12 +170,13 @@ public:
     static std::optional<float> convertPerspective(const BuilderState&, const CSSValue&);
     static std::optional<WebCore::Length> convertMarqueeIncrement(const BuilderState&, const CSSValue&);
     static FilterOperations convertFilterOperations(const BuilderState&, const CSSValue&);
+    static FilterOperations convertAppleColorFilterOperations(const BuilderState&, const CSSValue&);
     static ListStyleType convertListStyleType(const BuilderState&, const CSSValue&);
 #if PLATFORM(IOS_FAMILY)
     static bool convertTouchCallout(const BuilderState&, const CSSValue&);
 #endif
 #if ENABLE(TOUCH_EVENTS)
-    static StyleColor convertTapHighlightColor(const BuilderState&, const CSSValue&);
+    static Color convertTapHighlightColor(const BuilderState&, const CSSValue&);
 #endif
     static OptionSet<TouchAction> convertTouchAction(const BuilderState&, const CSSValue&);
 #if ENABLE(OVERFLOW_SCROLLING_TOUCH)
@@ -1123,8 +1123,8 @@ inline std::optional<ScrollbarColor> BuilderConverter::convertScrollbarColor(con
     auto& pair = downcast<CSSValuePair>(value);
 
     return ScrollbarColor {
-        builderState.colorFromPrimitiveValue(downcast<CSSPrimitiveValue>(pair.first())),
-        builderState.colorFromPrimitiveValue(downcast<CSSPrimitiveValue>(pair.second()))
+        builderState.createStyleColor(pair.first()),
+        builderState.createStyleColor(pair.second()),
     };
 }
 
@@ -1532,6 +1532,11 @@ inline FilterOperations BuilderConverter::convertFilterOperations(const BuilderS
     return builderState.createFilterOperations(value);
 }
 
+inline FilterOperations BuilderConverter::convertAppleColorFilterOperations(const BuilderState& builderState, const CSSValue& value)
+{
+    return builderState.createAppleColorFilterOperations(value);
+}
+
 // The input value needs to parsed and valid, this function returns std::nullopt if the input was "normal".
 inline std::optional<FontSelectionValue> BuilderConverter::convertFontStyleFromValue(const BuilderState& builderState, const CSSValue& value)
 {
@@ -1571,9 +1576,9 @@ inline bool BuilderConverter::convertTouchCallout(const BuilderState&, const CSS
 #endif
 
 #if ENABLE(TOUCH_EVENTS)
-inline StyleColor BuilderConverter::convertTapHighlightColor(const BuilderState& builderState, const CSSValue& value)
+inline Color BuilderConverter::convertTapHighlightColor(const BuilderState& builderState, const CSSValue& value)
 {
-    return builderState.colorFromPrimitiveValue(downcast<CSSPrimitiveValue>(value));
+    return builderState.createStyleColor(value);
 }
 #endif
 

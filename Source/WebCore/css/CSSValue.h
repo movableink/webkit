@@ -36,9 +36,7 @@ namespace WebCore {
 class CSSPrimitiveValue;
 class CSSStyleDeclaration;
 class CSSToLengthConversionData;
-class CSSUnresolvedColor;
 class CachedResource;
-class Color;
 class DeprecatedCSSOMValue;
 class Quad;
 class Rect;
@@ -64,14 +62,17 @@ public:
 
     WEBCORE_EXPORT String cssText() const;
 
+    bool isAppleColorFilterPropertyValue() const { return m_classType == ClassType::AppleColorFilterProperty; }
     bool isAttrValue() const { return m_classType == ClassType::Attr; }
     bool isAspectRatioValue() const { return m_classType == ClassType::AspectRatio; }
     bool isBackgroundRepeatValue() const { return m_classType == ClassType::BackgroundRepeat; }
     bool isBasicShape() const { return m_classType == ClassType::BasicShape; }
     bool isBorderImageSliceValue() const { return m_classType == ClassType::BorderImageSlice; }
     bool isBorderImageWidthValue() const { return m_classType == ClassType::BorderImageWidth; }
+    bool isBoxShadowPropertyValue() const { return m_classType == ClassType::BoxShadowProperty; }
     bool isCalcValue() const { return m_classType == ClassType::Calculation; }
     bool isCanvasValue() const { return m_classType == ClassType::Canvas; }
+    bool isColor() const { return m_classType == ClassType::Color; }
 #if ENABLE(DARK_MODE_CSS)
     bool isColorScheme() const { return m_classType == ClassType::ColorScheme; }
 #endif
@@ -82,6 +83,7 @@ public:
     bool isCursorImageValue() const { return m_classType == ClassType::CursorImage; }
     bool isCustomPropertyValue() const { return m_classType == ClassType::CustomProperty; }
     bool isFilterImageValue() const { return m_classType == ClassType::FilterImage; }
+    bool isFilterPropertyValue() const { return m_classType == ClassType::FilterProperty; }
     bool isFontFaceSrcLocalValue() const { return m_classType == ClassType::FontFaceSrcLocal; }
     bool isFontFaceSrcResourceValue() const { return m_classType == ClassType::FontFaceSrcResource; }
     bool isFontFeatureValue() const { return m_classType == ClassType::FontFeature; }
@@ -114,10 +116,10 @@ public:
     bool isRect() const { return m_classType == ClassType::Rect; }
     bool isReflectValue() const { return m_classType == ClassType::Reflect; }
     bool isScrollValue() const { return m_classType == ClassType::Scroll; }
-    bool isShadowValue() const { return m_classType == ClassType::Shadow; }
     bool isSpringTimingFunctionValue() const { return m_classType == ClassType::SpringTimingFunction; }
     bool isStepsTimingFunctionValue() const { return m_classType == ClassType::StepsTimingFunction; }
     bool isSubgridValue() const { return m_classType == ClassType::Subgrid; }
+    bool isTextShadowPropertyValue() const { return m_classType == ClassType::TextShadowProperty; }
     bool isTransformListValue() const { return m_classType == ClassType::TransformList; }
     bool isUnicodeRangeValue() const { return m_classType == ClassType::UnicodeRange; }
     bool isValueList() const { return m_classType == ClassType::ValueList; }
@@ -167,9 +169,6 @@ public:
     static constexpr size_t ValueSeparatorBits = 2;
     enum ValueSeparator : uint8_t { SpaceSeparator, CommaSeparator, SlashSeparator };
 
-    inline bool isColor() const;
-    inline const Color& color() const;
-
     inline bool isCustomIdent() const;
     inline String customIdent() const;
 
@@ -218,19 +217,23 @@ protected:
         StepsTimingFunction,
 
         // Other non-list classes.
+        AppleColorFilterProperty,
         AspectRatio,
         Attr,
         BackgroundRepeat,
         BasicShape,
         BorderImageSlice,
         BorderImageWidth,
+        BoxShadowProperty,
         Calculation,
+        Color,
 #if ENABLE(DARK_MODE_CSS)
         ColorScheme,
 #endif
         ContentDistribution,
         Counter,
         CustomProperty,
+        FilterProperty,
         Font,
         FontFaceSrcLocal,
         FontFaceSrcResource,
@@ -252,7 +255,7 @@ protected:
         Rect,
         Reflect,
         Scroll,
-        Shadow,
+        TextShadowProperty,
         UnicodeRange,
         ValuePair,
         VariableReference,

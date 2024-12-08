@@ -28,7 +28,6 @@ import argparse
 import logging
 import os
 import json
-import sys
 
 from webkitcorepy import string_utils
 
@@ -41,10 +40,7 @@ from webkitpy.w3c.wpt_linter import WPTLinter
 from webkitpy.w3c.common import WPT_GH_ORG, WPT_GH_REPO_NAME, WPT_GH_URL, WPTPaths
 from webkitpy.common.memoized import memoized
 
-if sys.version_info > (3, 0):
-    from urllib.error import HTTPError
-else:
-    from urllib2 import HTTPError
+from urllib.error import HTTPError
 
 _log = logging.getLogger(__name__)
 
@@ -413,8 +409,8 @@ def parse_args(args):
     - As a dry run, one can start by running the script without -c. This will only create the branch on the user public GitHub repository.
     - By default, the script will create an https remote URL that will require a password-based authentication to GitHub. If you are using an SSH key, please use the --remote-url option.
     FIXME:
-    - The script is not yet able to update an existing pull request
-    - Need a way to monitor the progress of the pul request so that status of all pending pull requests can be done at import time.
+    - The script is not yet able to update an existing pull request.
+    - Need a way to monitor the progress of the pull request so that status of all pending pull requests can be done at import time.
     """ % {"wpt_name": WPT_GH_REPO_NAME, "wpt_url": WPT_GH_URL}
     parser = argparse.ArgumentParser(prog='export-w3c-test-changes ...', description=description, formatter_class=argparse.RawDescriptionHelpFormatter)
 

@@ -96,7 +96,7 @@ PageClientImpl::~PageClientImpl()
 {
 }
 
-std::unique_ptr<DrawingAreaProxy> PageClientImpl::createDrawingAreaProxy(WebProcessProxy& webProcessProxy)
+Ref<DrawingAreaProxy> PageClientImpl::createDrawingAreaProxy(WebProcessProxy& webProcessProxy)
 {
     return [contentView() _createDrawingAreaProxy:webProcessProxy];
 }
@@ -1134,6 +1134,11 @@ void PageClientImpl::handleAsynchronousCancelableScrollEvent(WKBaseScrollView *s
     [webView() scrollView:scrollView handleScrollUpdate:update completion:completion];
 }
 #endif
+
+bool PageClientImpl::isSimulatingCompatibilityPointerTouches() const
+{
+    return [webView() _isSimulatingCompatibilityPointerTouches];
+}
 
 void PageClientImpl::runModalJavaScriptDialog(CompletionHandler<void()>&& callback)
 {

@@ -35,8 +35,6 @@
 #include "ShadowData.h"
 #include "TextRun.h"
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 /*
@@ -123,24 +121,23 @@ static DashArray translateIntersectionPointsToSkipInkBoundaries(const DashArray&
     
     // Step 1: Make pairs so we can sort based on range starting-point. We dilate the ranges in this step as well.
     Vector<std::pair<float, float>> tuples;
-    for (auto i = intersections.begin(); i != intersections.end(); i++, i++)
-        tuples.append(std::make_pair(*i - dilationAmount, *(i + 1) + dilationAmount));
+    for (size_t i = 0; i < intersections.size(); i += 2)
+        tuples.append(std::pair { intersections[i] - dilationAmount, intersections[i + 1] + dilationAmount });
     std::sort(tuples.begin(), tuples.end(), &compareTuples);
 
     // Step 2: Deal with intersecting ranges.
     Vector<std::pair<float, float>> intermediateTuples;
     if (tuples.size() >= 2) {
-        intermediateTuples.append(*tuples.begin());
-        for (auto i = tuples.begin() + 1; i != tuples.end(); i++) {
+        intermediateTuples.append(tuples.first());
+        for (size_t i = 1; i < tuples.size(); ++i) {
+            auto [secondStart, secondEnd] = tuples[i];
             float& firstEnd = intermediateTuples.last().second;
-            float secondStart = i->first;
-            float secondEnd = i->second;
             if (secondStart <= firstEnd && secondEnd <= firstEnd) {
                 // Ignore this range completely
             } else if (secondStart <= firstEnd)
                 firstEnd = secondEnd;
             else
-                intermediateTuples.append(*i);
+                intermediateTuples.append(std::pair { secondStart, secondEnd });
         }
     } else {
         // XXX(274780): A plain assignment or move here makes Clang generate bad code in LTO builds.
@@ -250,8 +247,8 @@ void TextDecorationPainter::paintBackgroundDecorations(const RenderStyle& style,
             auto shadowExtent = shadow->paintingExtent();
             auto shadowRect = clipRect;
             shadowRect.inflate(shadowExtent);
-            auto shadowX = m_isHorizontal ? shadow->x().value() : shadow->y().value();
-            auto shadowY = m_isHorizontal ? shadow->y().value() : -shadow->x().value();
+            auto shadowX = m_isHorizontal ? shadow->x().value : shadow->y().value;
+            auto shadowY = m_isHorizontal ? shadow->y().value : -shadow->x().value;
             shadowRect.move(shadowX, shadowY);
             clipRect.unite(shadowRect);
             extraOffset = std::max(extraOffset, std::max(0.f, shadowY) + shadowExtent);
@@ -284,9 +281,9 @@ void TextDecorationPainter::paintBackgroundDecorations(const RenderStyle& style,
             if (m_shadowColorFilter)
                 m_shadowColorFilter->transformColor(shadowColor);
 
-            auto shadowX = m_isHorizontal ? shadow->x().value() : shadow->y().value();
-            auto shadowY = m_isHorizontal ? shadow->y().value() : -shadow->x().value();
-            m_context.setDropShadow({ { shadowX, shadowY - extraOffset }, shadow->radius().value(), shadowColor, ShadowRadiusMode::Default });
+            auto shadowX = m_isHorizontal ? shadow->x().value : shadow->y().value;
+            auto shadowY = m_isHorizontal ? shadow->y().value : -shadow->x().value;
+            m_context.setDropShadow({ { shadowX, shadowY - extraOffset }, shadow->radius().value, shadowColor, ShadowRadiusMode::Default });
             shadow = shadow->next();
         };
         applyShadowIfNeeded();
@@ -424,5 +421,3 @@ OptionSet<TextDecorationLine> TextDecorationPainter::textDecorationsInEffectForS
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

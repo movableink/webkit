@@ -34,7 +34,6 @@
 #include "RemoteRenderingBackendProxy.h"
 #include "SharedVideoFrame.h"
 #include "StreamClientConnection.h"
-#include "WebCoreArgumentCoders.h"
 #include "WebProcess.h"
 #include <WebCore/DisplayList.h>
 #include <WebCore/DisplayListDrawingContext.h>
@@ -93,7 +92,7 @@ ALWAYS_INLINE void RemoteDisplayListRecorderProxy::send(T&& message)
 
 ALWAYS_INLINE RefPtr<IPC::StreamClientConnection> RemoteDisplayListRecorderProxy::connection() const
 {
-    auto* backend = m_renderingBackend.get();
+    RefPtr backend = m_renderingBackend.get();
     if (UNLIKELY(!backend))
         return nullptr;
     return backend->connection();
@@ -101,7 +100,7 @@ ALWAYS_INLINE RefPtr<IPC::StreamClientConnection> RemoteDisplayListRecorderProxy
 
 void RemoteDisplayListRecorderProxy::didBecomeUnresponsive() const
 {
-    auto* backend = m_renderingBackend.get();
+    RefPtr backend = m_renderingBackend.get();
     if (UNLIKELY(!backend))
         return;
     backend->didBecomeUnresponsive();
@@ -572,15 +571,16 @@ bool RemoteDisplayListRecorderProxy::recordResourceUse(NativeImage& image)
 
 bool RemoteDisplayListRecorderProxy::recordResourceUse(ImageBuffer& imageBuffer)
 {
-    if (UNLIKELY(!m_renderingBackend)) {
+    RefPtr renderingBackend = m_renderingBackend.get();
+    if (UNLIKELY(!renderingBackend)) {
         ASSERT_NOT_REACHED();
         return false;
     }
 
-    if (!m_renderingBackend->isCached(imageBuffer))
+    if (!renderingBackend->isCached(imageBuffer))
         return false;
 
-    m_renderingBackend->remoteResourceCacheProxy().recordImageBufferUse(imageBuffer);
+    renderingBackend->remoteResourceCacheProxy().recordImageBufferUse(imageBuffer);
     return true;
 }
 
@@ -641,7 +641,8 @@ bool RemoteDisplayListRecorderProxy::recordResourceUse(Filter& filter)
 
 RefPtr<ImageBuffer> RemoteDisplayListRecorderProxy::createImageBuffer(const FloatSize& size, float resolutionScale, const DestinationColorSpace& colorSpace, std::optional<RenderingMode> renderingMode, std::optional<RenderingMethod> renderingMethod) const
 {
-    if (UNLIKELY(!m_renderingBackend)) {
+    RefPtr renderingBackend = m_renderingBackend.get();
+    if (UNLIKELY(!renderingBackend)) {
         ASSERT_NOT_REACHED();
         return nullptr;
     }
@@ -651,11 +652,7 @@ RefPtr<ImageBuffer> RemoteDisplayListRecorderProxy::createImageBuffer(const Floa
 
     // FIXME: Ideally we'd plumb the purpose through for callers of GraphicsContext::createImageBuffer().
     RenderingPurpose purpose = RenderingPurpose::Unspecified;
-    // FIXME: Use purpose to decide the acceleration status and remove this.
-    OptionSet<ImageBufferOptions> options;
-    if (renderingMode.value_or(this->renderingMode()) == RenderingMode::Accelerated)
-        options.add(ImageBufferOptions::Accelerated);
-    return m_renderingBackend->createImageBuffer(size, purpose, resolutionScale, colorSpace, ImageBufferPixelFormat::BGRA8, options);
+    return renderingBackend->createImageBuffer(size, renderingMode.value_or(this->renderingMode()), purpose, resolutionScale, colorSpace, ImageBufferPixelFormat::BGRA8);
 }
 
 RefPtr<ImageBuffer> RemoteDisplayListRecorderProxy::createAlignedImageBuffer(const FloatSize& size, const DestinationColorSpace& colorSpace, std::optional<RenderingMethod> renderingMethod) const

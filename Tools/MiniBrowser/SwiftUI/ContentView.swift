@@ -21,20 +21,48 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
-#if compiler(>=6.0)
+#if ENABLE_SWIFTUI && compiler(>=6.0)
 
 import SwiftUI
 @_spi(Private) import WebKit
 
+fileprivate struct ToolbarBackForwardMenuView: View {
+    struct LabelConfiguration {
+        let text: String
+        let systemImage: String
+    }
+
+    let list: [WebPage_v0.BackForwardList.Item]
+    let label: LabelConfiguration
+    let navigateToItem: (WebPage_v0.BackForwardList.Item) -> Void
+
+    var body: some View {
+        Menu {
+            ForEach(list) { item in
+                Button(item.title ?? item.url.absoluteString) {
+                    navigateToItem(item)
+                }
+            }
+        } label: {
+            Label(label.text, systemImage: label.systemImage)
+                .labelStyle(.iconOnly)
+        } primaryAction: {
+            navigateToItem(list.first!)
+        }
+        .menuIndicator(.hidden)
+        .disabled(list.isEmpty)
+    }
+}
+
 struct ContentView: View {
     @Environment(BrowserViewModel.self) private var viewModel
-
-    @FocusState private var urlFieldIsFocused: Bool
 
     @AppStorage("DefaultURL") private var defaultURL = "https://www.webkit.org"
 
     var body: some View {
         WebView_v0(viewModel.page)
+            .webViewAllowsBackForwardNavigationGestures()
+            .webViewAllowsTabFocusingLinks()
             .task {
                 for await event in viewModel.page.navigations {
                     viewModel.didReceiveNavigationEvent(event)
@@ -44,7 +72,24 @@ struct ContentView: View {
                 viewModel.displayedURL = defaultURL
                 viewModel.navigateToSubmittedURL()
             }
+            .navigationTitle(viewModel.page.title)
             .toolbar {
+                ToolbarItemGroup(placement: .navigation) {
+                    ToolbarBackForwardMenuView(
+                        list: viewModel.page.backForwardList.backList.reversed(),
+                        label: .init(text: "Backward", systemImage: "chevron.backward")
+                    ) {
+                        viewModel.page.load(backForwardItem: $0)
+                    }
+
+                    ToolbarBackForwardMenuView(
+                        list: viewModel.page.backForwardList.forwardList,
+                        label: .init(text: "Forward", systemImage: "chevron.forward")
+                    ) {
+                        viewModel.page.load(backForwardItem: $0)
+                    }
+                }
+
                 ToolbarItemGroup(placement: .principal) {
                     VStack(spacing: 0) {
                         @Bindable var viewModel = viewModel
@@ -52,11 +97,9 @@ struct ContentView: View {
                         TextField("URL", text: $viewModel.displayedURL)
                             .textContentType(.URL)
                             .onSubmit {
-                                self.urlFieldIsFocused = false
-                                self.viewModel.navigateToSubmittedURL()
+                                viewModel.navigateToSubmittedURL()
                             }
                             .textFieldStyle(.roundedBorder)
-                            .focused($urlFieldIsFocused)
 
                         ProgressView(value: viewModel.page.estimatedProgress, total: 1.0)
                             .padding(.horizontal, 2)
@@ -64,9 +107,22 @@ struct ContentView: View {
                             .padding(.bottom, -8)
                     }
                     .frame(minWidth: 300)
+
+                    if viewModel.page.isLoading {
+                         Button {
+                             viewModel.page.stopLoading()
+                         } label: {
+                             Image(systemName: "xmark")
+                         }
+                    } else {
+                        Button {
+                            viewModel.page.reload()
+                        } label: {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                    }
                 }
             }
-            .navigationTitle(self.viewModel.page.title)
     }
 }
 

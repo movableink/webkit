@@ -53,13 +53,13 @@ class TextureView;
 class Queue : public WGPUQueueImpl, public ThreadSafeRefCounted<Queue> {
     WTF_MAKE_TZONE_ALLOCATED(Queue);
 public:
-    static Ref<Queue> create(id<MTLCommandQueue> commandQueue, Device& device)
+    static Ref<Queue> create(id<MTLCommandQueue> commandQueue, Adapter& adapter, Device& device)
     {
-        return adoptRef(*new Queue(commandQueue, device));
+        return adoptRef(*new Queue(commandQueue, adapter, device));
     }
-    static Ref<Queue> createInvalid(Device& device)
+    static Ref<Queue> createInvalid(Adapter& adapter, Device& device)
     {
-        return adoptRef(*new Queue(device));
+        return adoptRef(*new Queue(adapter, device));
     }
 
     ~Queue();
@@ -91,9 +91,11 @@ public:
     id<MTLBlitCommandEncoder> ensureBlitCommandEncoder();
     void finalizeBlitCommandEncoder();
 
+    // This can be called on a background thread.
+    void scheduleWork(Instance::WorkItem&&);
 private:
-    Queue(id<MTLCommandQueue>, Device&);
-    Queue(Device&);
+    Queue(id<MTLCommandQueue>, Adapter&, Device&);
+    Queue(Adapter&, Device&);
 
     NSString* errorValidatingSubmit(const Vector<Ref<WebGPU::CommandBuffer>>&) const;
     bool validateWriteBuffer(const Buffer&, uint64_t bufferOffset, size_t) const;
@@ -103,15 +105,14 @@ private:
     bool isSchedulingIdle() const { return m_submittedCommandBufferCount == m_scheduledCommandBufferCount; }
     void removeMTLCommandBufferInternal(id<MTLCommandBuffer>);
 
-    // This can be called on a background thread.
-    void scheduleWork(Instance::WorkItem&&);
     NSString* errorValidatingWriteTexture(const WGPUImageCopyTexture&, const WGPUTextureDataLayout&, const WGPUExtent3D&, size_t, const Texture&) const;
 
     id<MTLCommandQueue> m_commandQueue { nil };
     id<MTLCommandBuffer> m_commandBuffer { nil };
     id<MTLBlitCommandEncoder> m_blitCommandEncoder { nil };
+private PUBLIC_IN_WEBGPU_SWIFT:
     ThreadSafeWeakPtr<Device> m_device; // The only kind of queues that exist right now are default queues, which are owned by Devices.
-
+private:
     uint64_t m_submittedCommandBufferCount { 0 };
     uint64_t m_completedCommandBufferCount { 0 };
     uint64_t m_scheduledCommandBufferCount { 0 };
@@ -121,17 +122,18 @@ private:
     HashMap<uint64_t, OnSubmittedWorkDoneCallbacks, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_onSubmittedWorkDoneCallbacks;
     NSMutableOrderedSet<id<MTLCommandBuffer>> *m_createdNotCommittedBuffers { nil };
     NSMapTable<id<MTLCommandBuffer>, id<MTLCommandEncoder>> *m_openCommandEncoders;
-} SWIFT_SHARED_REFERENCE(retainQueue, releaseQueue);
+    const ThreadSafeWeakPtr<Instance> m_instance;
+} SWIFT_SHARED_REFERENCE(refQueue, derefQueue);
 
 } // namespace WebGPU
 
-inline void retainQueue(WebGPU::Queue* obj)
+inline void refQueue(WebGPU::Queue* obj)
 {
-    WTF::retainThreadSafeRefCounted(obj);
+    WTF::ref(obj);
 }
 
-inline void releaseQueue(WebGPU::Queue* obj)
+inline void derefQueue(WebGPU::Queue* obj)
 {
-    WTF::releaseThreadSafeRefCounted(obj);
+    WTF::deref(obj);
 }
 

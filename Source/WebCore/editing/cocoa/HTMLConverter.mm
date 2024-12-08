@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #import "HTMLConverter.h"
 
 #import "ArchiveResource.h"
+#import "CSSColorValue.h"
 #import "CSSComputedStyleDeclaration.h"
 #import "CSSParser.h"
 #import "CSSPrimitiveValue.h"
@@ -134,7 +135,7 @@ static const CGFloat defaultFontSize = 12;
 static const CGFloat minimumFontSize = 1;
 
 class HTMLConverterCaches {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(HTMLConverterCaches);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLConverterCaches);
 public:
     String propertyValueForNode(Node&, CSSPropertyID );
     bool floatPropertyValueForNode(Node&, CSSPropertyID, float&);
@@ -153,6 +154,8 @@ private:
     UncheckedKeyHashMap<Element*, std::unique_ptr<ComputedStyleExtractor>> m_computedStyles;
     HashSet<Ref<Node>> m_ancestorsUnderCommonAncestor;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLConverterCaches);
 
 @interface NSTextList (WebCoreNSTextListDetails)
 + (NSDictionary *)_standardMarkerAttributesForAttributes:(NSDictionary *)attrs;
@@ -469,7 +472,7 @@ static bool stringFromCSSValue(CSSValue& value, String& result)
                 return true;
             }
         }
-    } else if (value.isValueList()) {
+    } else if (value.isValueList() || value.isAppleColorFilterPropertyValue() || value.isFilterPropertyValue() || value.isTextShadowPropertyValue() || value.isBoxShadowPropertyValue()) {
         result = value.cssText();
         return true;
     }
@@ -812,12 +815,12 @@ Color HTMLConverterCaches::colorPropertyValueForNode(Node& node, CSSPropertyID p
     bool ignoreDefaultColor = propertyId == CSSPropertyColor;
 
     if (auto value = computedStylePropertyForElement(*element, propertyId); value && value->isColor())
-        return normalizedColor(value->color(), ignoreDefaultColor, *element);
+        return normalizedColor(CSSColorValue::absoluteColor(*value), ignoreDefaultColor, *element);
 
     bool inherit = false;
     if (auto value = inlineStylePropertyForElement(*element, propertyId)) {
         if (value->isColor())
-            return normalizedColor(value->color(), ignoreDefaultColor, *element);
+            return normalizedColor(CSSColorValue::absoluteColor(*value), ignoreDefaultColor, *element);
         if (isValueID(*value, CSSValueInherit))
             inherit = true;
     }
@@ -2152,7 +2155,7 @@ void HTMLConverter::_processText(Text& text)
     if (outputString.length()) {
         String textTransform = _caches->propertyValueForNode(text, CSSPropertyTextTransform);
         if (textTransform == "capitalize"_s)
-            outputString = capitalize(outputString, ' '); // FIXME: Needs to take locale into account to work correctly.
+            outputString = capitalize(outputString); // FIXME: Needs to take locale into account to work correctly.
         else if (textTransform == "uppercase"_s)
             outputString = outputString.convertToUppercaseWithoutLocale(); // FIXME: Needs locale to work correctly.
         else if (textTransform == "lowercase"_s)

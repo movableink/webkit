@@ -327,7 +327,7 @@ public:
 
     JS_EXPORT_PRIVATE void enableSamplingProfiler();
     JS_EXPORT_PRIVATE void disableSamplingProfiler();
-    JS_EXPORT_PRIVATE RefPtr<JSON::Value> takeSamplingProfilerSamplesAsJSON();
+    JS_EXPORT_PRIVATE String takeSamplingProfilerSamplesAsJSONString();
 #endif
 
     FuzzerAgent* fuzzerAgent() const { return m_fuzzerAgent.get(); }
@@ -1007,6 +1007,13 @@ public:
     template<typename Func>
     void forEachDebugger(const Func&);
 
+    void changeNumberOfActiveJITPlans(int64_t value)
+    {
+        m_numberOfActiveJITPlans.fetch_add(value, std::memory_order_relaxed);
+    }
+
+    int64_t numberOfActiveJITPlans() const { return m_numberOfActiveJITPlans.load(std::memory_order_relaxed); }
+
     Ref<Waiter> syncWaiter();
 
     void notifyDebuggerHookInjected() { m_isDebuggerHookInjected = true; }
@@ -1134,6 +1141,8 @@ private:
     UncheckedKeyHashMap<const JSInstruction*, std::pair<unsigned, std::unique_ptr<uintptr_t>>> m_loopHintExecutionCounts;
 
     Ref<Waiter> m_syncWaiter;
+
+    std::atomic<int64_t> m_numberOfActiveJITPlans { 0 };
 
     Vector<Function<void()>> m_didPopListeners;
 

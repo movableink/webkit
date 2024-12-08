@@ -32,6 +32,7 @@
 #include "CSSValueList.h"
 #include "IntRect.h"
 #include "NodeRenderStyle.h"
+#include "RenderStyleDifference.h"
 #include "SVGElement.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/TextStream.h>
@@ -131,7 +132,7 @@ void SVGRenderStyle::copyNonInheritedFrom(const SVGRenderStyle& other)
     m_layoutData = other.m_layoutData;
 }
 
-static bool colorChangeRequiresRepaint(const StyleColor& a, const StyleColor& b, bool currentColorDiffers)
+static bool colorChangeRequiresRepaint(const Style::Color& a, const Style::Color& b, bool currentColorDiffers)
 {
     if (a != b)
         return true;

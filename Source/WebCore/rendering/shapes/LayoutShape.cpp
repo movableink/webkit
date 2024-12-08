@@ -95,8 +95,8 @@ static inline FloatSize physicalSizeToLogical(const FloatSize& size, WritingMode
 Ref<const LayoutShape> LayoutShape::createShape(const Style::BasicShape& basicShape, const LayoutPoint& borderBoxOffset, const LayoutSize& logicalBoxSize, WritingMode writingMode, float margin)
 {
     bool horizontalWritingMode = writingMode.isHorizontal();
-    auto boxWidth = horizontalWritingMode ? logicalBoxSize.width() : logicalBoxSize.height();
-    auto boxHeight = horizontalWritingMode ? logicalBoxSize.height() : logicalBoxSize.width();
+    float boxWidth = horizontalWritingMode ? logicalBoxSize.width() : logicalBoxSize.height();
+    float boxHeight = horizontalWritingMode ? logicalBoxSize.height() : logicalBoxSize.width();
 
     auto shape = WTF::switchOn(basicShape,
         [&](const Style::CircleFunction& circle) -> Ref<LayoutShape> {
@@ -179,7 +179,7 @@ Ref<const LayoutShape> LayoutShape::createRasterShape(Image* image, float thresh
     IntRect marginRect = snappedIntRect(marginR);
     auto intervals = makeUnique<RasterShapeIntervals>(marginRect.height(), -marginRect.y());
     // FIXME (149420): This buffer should not be unconditionally unaccelerated.
-    auto imageBuffer = ImageBuffer::create(imageRect.size(), RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
+    auto imageBuffer = ImageBuffer::create(imageRect.size(), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
 
     auto createShape = [&]() {
         auto rasterShape = adoptRef(*new RasterLayoutShape(WTFMove(intervals), marginRect.size()));

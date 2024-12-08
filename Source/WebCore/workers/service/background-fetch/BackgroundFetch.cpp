@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,12 +37,13 @@
 #include "SWServerRegistration.h"
 #include "WebCorePersistentCoders.h"
 #include <wtf/TZoneMallocInlines.h>
-#include <wtf/persistence/PersistentCoders.h>
+#include <wtf/persistence/PersistentDecoder.h>
+#include <wtf/persistence/PersistentEncoder.h>
 
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(BackgroundFetch);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(BackgroundFetchRecord, BackgroundFetch::Record);
+WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(BackgroundFetch, Record);
 
 static const unsigned backgroundFetchCurrentVersion = 1;
 

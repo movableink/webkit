@@ -354,8 +354,8 @@ public:
 
     const String& uiProcessBundleIdentifier() const;
 
-    void ref() const override { ThreadSafeRefCounted<NetworkProcess>::ref(); }
-    void deref() const override { ThreadSafeRefCounted<NetworkProcess>::deref(); }
+    void ref() const final { ThreadSafeRefCounted<NetworkProcess>::ref(); }
+    void deref() const final { ThreadSafeRefCounted<NetworkProcess>::deref(); }
 
     void storePrivateClickMeasurement(PAL::SessionID, WebCore::PrivateClickMeasurement&&);
     void dumpPrivateClickMeasurement(PAL::SessionID, CompletionHandler<void(String)>&&);
@@ -457,6 +457,8 @@ public:
     void allowFileAccessFromWebProcess(WebCore::ProcessIdentifier, const String&, CompletionHandler<void()>&&);
 
     bool enableModernDownloadProgress() const { return m_enableModernDownloadProgress; }
+
+    void fetchLocalStorage(PAL::SessionID, CompletionHandler<void(HashMap<WebCore::ClientOrigin, HashMap<String, String>>&&)>&&);
 
 private:
     void platformInitializeNetworkProcess(const NetworkProcessCreationParameters&);

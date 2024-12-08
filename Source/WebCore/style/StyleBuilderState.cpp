@@ -30,10 +30,13 @@
 #include "config.h"
 #include "StyleBuilderState.h"
 
+#include "CSSAppleColorFilterPropertyValue.h"
 #include "CSSCanvasValue.h"
+#include "CSSColorValue.h"
 #include "CSSCrossfadeValue.h"
 #include "CSSCursorImageValue.h"
 #include "CSSFilterImageValue.h"
+#include "CSSFilterPropertyValue.h"
 #include "CSSFontSelector.h"
 #include "CSSFunctionValue.h"
 #include "CSSGradientValue.h"
@@ -41,12 +44,9 @@
 #include "CSSImageValue.h"
 #include "CSSNamedImageValue.h"
 #include "CSSPaintImageValue.h"
-#include "CSSShadowValue.h"
-#include "ColorFromPrimitiveValue.h"
 #include "Document.h"
 #include "DocumentInlines.h"
 #include "ElementInlines.h"
-#include "FilterOperationsBuilder.h"
 #include "FontCache.h"
 #include "HTMLElement.h"
 #include "RenderStyleSetters.h"
@@ -54,12 +54,15 @@
 #include "SVGElementTypeHelpers.h"
 #include "SVGSVGElement.h"
 #include "Settings.h"
+#include "StyleAppleColorFilterProperty.h"
 #include "StyleBuilder.h"
 #include "StyleCachedImage.h"
 #include "StyleCanvasImage.h"
+#include "StyleColor.h"
 #include "StyleCrossfadeImage.h"
 #include "StyleCursorImage.h"
 #include "StyleFilterImage.h"
+#include "StyleFilterProperty.h"
 #include "StyleFontSizeFunctions.h"
 #include "StyleGeneratedImage.h"
 #include "StyleGradientImage.h"
@@ -121,21 +124,49 @@ RefPtr<StyleImage> BuilderState::createStyleImage(const CSSValue& value) const
     return nullptr;
 }
 
-FilterOperations BuilderState::createFilterOperations(const CSSValue& inValue) const
+FilterOperations BuilderState::createFilterOperations(const CSS::FilterProperty& value) const
 {
-    return WebCore::Style::createFilterOperations(document(), m_style, m_cssToLengthConversionData, inValue);
+    return WebCore::Style::createFilterOperations(value, document(), m_style, m_cssToLengthConversionData);
 }
 
-bool BuilderState::isColorFromPrimitiveValueDerivedFromElement(const CSSPrimitiveValue& value)
+FilterOperations BuilderState::createFilterOperations(const CSSValue& value) const
 {
-    return StyleColor::containsCurrentColor(value) || StyleColor::containsColorSchemeDependentColor(value);
+    if (RefPtr primitive = dynamicDowncast<CSSPrimitiveValue>(value)) {
+        ASSERT(primitive->valueID() == CSSValueNone);
+        return { };
+    }
+
+    Ref filterValue = downcast<CSSFilterPropertyValue>(value);
+    return createFilterOperations(filterValue->filter());
 }
 
-StyleColor BuilderState::colorFromPrimitiveValue(const CSSPrimitiveValue& value, ForVisitedLink forVisitedLink) const
+FilterOperations BuilderState::createAppleColorFilterOperations(const CSS::AppleColorFilterProperty& value) const
+{
+    return WebCore::Style::createAppleColorFilterOperations(value, document(), m_style, m_cssToLengthConversionData);
+}
+
+FilterOperations BuilderState::createAppleColorFilterOperations(const CSSValue& value) const
+{
+    if (RefPtr primitive = dynamicDowncast<CSSPrimitiveValue>(value)) {
+        ASSERT(primitive->valueID() == CSSValueNone);
+        return { };
+    }
+
+    Ref filterValue = downcast<CSSAppleColorFilterPropertyValue>(value);
+    return createAppleColorFilterOperations(filterValue->filter());
+}
+
+Color BuilderState::createStyleColor(const CSSValue& value, ForVisitedLink forVisitedLink) const
 {
     if (!element() || !element()->isLink())
         forVisitedLink = ForVisitedLink::No;
-    return { WebCore::Style::colorFromPrimitiveValue(document(), m_style, m_cssToLengthConversionData, value, forVisitedLink) };
+
+    // FIXME: Figure out an extensible way to pass additional information, like ForVisitedLink, to toStyle() so we can use the normal override.
+    // FIXME: Alternatively, add ForVisitedLink state to BuilderState and push/pop on entry.
+
+    if (RefPtr color = dynamicDowncast<CSSColorValue>(value))
+        return toStyleColor(color->color(), document(), m_style, m_cssToLengthConversionData, forVisitedLink);
+    return toStyleColor(CSS::Color { CSS::KeywordColor { value.valueID() } }, document(), m_style, m_cssToLengthConversionData, forVisitedLink);
 }
 
 void BuilderState::registerContentAttribute(const AtomString& attributeLocalName)
@@ -198,7 +229,7 @@ void BuilderState::updateFontForTextSizeAdjust()
     else
         newFontDescription.setComputedSize(newFontDescription.specifiedSize());
 
-    m_style.setFontDescription(WTFMove(newFontDescription));
+    m_style.setFontDescriptionWithoutUpdate(WTFMove(newFontDescription));
 }
 #endif
 
@@ -211,7 +242,7 @@ void BuilderState::updateFontForZoomChange()
     auto newFontDescription = childFont;
     setFontSize(newFontDescription, childFont.specifiedSize());
 
-    m_style.setFontDescription(WTFMove(newFontDescription));
+    m_style.setFontDescriptionWithoutUpdate(WTFMove(newFontDescription));
 }
 
 void BuilderState::updateFontForGenericFamilyChange()
@@ -241,7 +272,7 @@ void BuilderState::updateFontForGenericFamilyChange()
 
     auto newFontDescription = childFont;
     setFontSize(newFontDescription, size);
-    m_style.setFontDescription(WTFMove(newFontDescription));
+    m_style.setFontDescriptionWithoutUpdate(WTFMove(newFontDescription));
 }
 
 void BuilderState::updateFontForOrientationChange()
@@ -255,13 +286,13 @@ void BuilderState::updateFontForOrientationChange()
     auto newFontDescription = fontDescription;
     newFontDescription.setNonCJKGlyphOrientation(glyphOrientation);
     newFontDescription.setOrientation(fontOrientation);
-    m_style.setFontDescription(WTFMove(newFontDescription));
+    m_style.setFontDescriptionWithoutUpdate(WTFMove(newFontDescription));
 }
 
 void BuilderState::setFontSize(FontCascadeDescription& fontDescription, float size)
 {
     fontDescription.setSpecifiedSize(size);
-    fontDescription.setComputedSize(Style::computedFontSizeFromSpecifiedSize(size, fontDescription.isAbsoluteSize(), false, &style(), document()));
+    fontDescription.setComputedSize(Style::computedFontSizeFromSpecifiedSize(size, fontDescription.isAbsoluteSize(), useSVGZoomRules(), &style(), document()));
 }
 
 CSSPropertyID BuilderState::cssPropertyID() const

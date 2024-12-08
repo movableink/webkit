@@ -50,10 +50,12 @@ class VisiblePosition;
 // functions are implemented in AccessibilityObjectCocoa.mm. Additional helper
 // functions are implemented in AccessibilityObjectMac or IOS .mm respectively.
 bool attributedStringContainsRange(NSAttributedString *, const NSRange&);
+#if PLATFORM(MAC)
+void attributedStringSetColor(NSMutableAttributedString *attrString, NSString *attribute, NSColor *, const NSRange&);
+#endif // PLATFORM(MAC)
 void attributedStringSetNumber(NSMutableAttributedString *, NSString *, NSNumber *, const NSRange&);
 void attributedStringSetFont(NSMutableAttributedString *, CTFontRef, const NSRange&);
 void attributedStringSetSpelling(NSMutableAttributedString *, Node&, StringView, const NSRange&);
-void attributedStringSetNeedsSpellCheck(NSMutableAttributedString *, Node&);
 RetainPtr<NSAttributedString> attributedStringCreate(Node&, StringView, const SimpleRange&, AXCoreObject::SpellCheck);
 }
 

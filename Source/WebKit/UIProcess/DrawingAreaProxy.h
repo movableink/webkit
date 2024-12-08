@@ -35,6 +35,7 @@
 #include <WebCore/IntSize.h>
 #include <WebCore/ProcessIdentifier.h>
 #include <stdint.h>
+#include <wtf/AbstractRefCounted.h>
 #include <wtf/Identified.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RunLoop.h>
@@ -129,7 +130,7 @@ public:
     virtual bool shouldCoalesceVisualEditorStateUpdates() const { return false; }
     virtual bool shouldSendWheelEventsToEventDispatcher() const { return false; }
 
-    WebPageProxy& page() const;
+    WebPageProxy* page() const;
     virtual void viewWillStartLiveResize() { };
     virtual void viewWillEndLiveResize() { };
 
@@ -150,11 +151,11 @@ public:
 protected:
     DrawingAreaProxy(DrawingAreaType, WebPageProxy&, WebProcessProxy&);
 
-    Ref<WebPageProxy> protectedWebPageProxy() const;
+    RefPtr<WebPageProxy> protectedWebPageProxy() const;
     Ref<WebProcessProxy> protectedWebProcessProxy() const;
 
     DrawingAreaType m_type;
-    WeakRef<WebPageProxy> m_webPageProxy;
+    WeakPtr<WebPageProxy> m_webPageProxy;
     Ref<WebProcessProxy> m_webProcessProxy;
 
     WebCore::IntSize m_size;

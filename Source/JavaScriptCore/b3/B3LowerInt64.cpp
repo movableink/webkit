@@ -40,6 +40,7 @@
 #include "B3Procedure.h"
 #include "B3StackmapGenerationParams.h"
 #include "B3Value.h"
+#include "B3Variable.h"
 #include <wtf/CheckedArithmetic.h>
 
 namespace JSC {
@@ -64,6 +65,13 @@ public:
     {
         const Vector<BasicBlock*> blocksInPreOrder = m_proc.blocksInPreOrder();
 
+        Vector<Variable*> int64Variables;
+        for (Variable* variable : m_proc.variables()) {
+            if (variable->type() == Int64)
+                int64Variables.append(variable);
+        }
+        for (Variable* variable : int64Variables)
+            m_variableMapping.add(variable, std::pair<Variable*, Variable*> { m_proc.addVariable(Int32), m_proc.addVariable(Int32) });
         // Create 2 Int32 Identity Values for every Int64 value, so we always
         // have the replacement of an Int64 available. We can then change what
         // the Identity references in the lowering loop below.
@@ -79,7 +87,7 @@ public:
                     // not an identity, so do the (trivial) lowering here.
                     lo = insert<Value>(m_index + 1, Phi, Int32, m_value->origin());
                     hi = insert<Value>(m_index + 1, Phi, Int32, m_value->origin());
-                } else if (m_value->type() == Int64 || (m_value->opcode() == Upsilon && m_value->child(0)->type() == Int64)) {
+                } else if (m_value->type() == Int64) {
                     lo = insert<Value>(m_index + 1, Identity, m_value->origin(), m_zero);
                     hi = insert<Value>(m_index + 1, Identity, m_value->origin(), m_zero);
                 } else
@@ -108,6 +116,9 @@ public:
                 Value* value = block->at(index);
                 if ((value->opcode() == Identity) && value->child(0) == m_zero)
                     value->replaceWithBottom(dropSynthetic, index);
+                // The upsilons feeding this will go away, so we had better not need it.
+                if (value->opcode() == Phi && value->type() == Int64)
+                    value->replaceWithBottom(dropSynthetic, index);
             }
             dropSynthetic.execute(block);
         }
@@ -116,6 +127,8 @@ public:
             m_proc.resetReachability();
             m_proc.invalidateCFG();
         }
+        for (Variable* variable : int64Variables)
+            m_proc.deleteVariable(variable);
         return m_changed;
     }
 private:
@@ -362,8 +375,7 @@ private:
             lo->setPhi(phi.first);
             UpsilonValue* hi = insert<UpsilonValue>(m_index, m_origin, input.second);
             hi->setPhi(phi.second);
-            setMapping(m_value, lo, hi);
-            valueReplaced();
+            m_value->replaceWithNop();
             return;
         }
         case CCall: {
@@ -371,6 +383,8 @@ private:
                 return;
             Vector<Value*> args;
             size_t gprCount = 0;
+            size_t fprCount = 0;
+            size_t stackOffset = 0;
             for (size_t index = 1; index < m_value->numChildren(); ++index) {
                 Value* child = m_value->child(index);
                 if (child->type() == Int32 || child->type() == Int64) {
@@ -380,6 +394,21 @@ private:
                         args.append(insert<Const32Value>(m_index, m_origin, 0));
                         ++gprCount;
                     }
+
+                    if (gprCount < GPRInfo::numberOfArgumentRegisters)
+                        gprCount += Air::cCallArgumentRegisterCount(child->type());
+                    else {
+                        // This argument goes on the stack.
+                        size_t modulo = 0;
+                        if (stackOffset)
+                            modulo = stackOffset % sizeofType(child->type());
+                        if (modulo) {
+                            RELEASE_ASSERT(modulo == 4);
+                            args.append(insert<Const32Value>(m_index, m_origin, 0));
+                            stackOffset += 4;
+                        }
+                        stackOffset += sizeofType(child->type());
+                    }
                     if (child->type() == Int32)
                         args.append(child);
                     else {
@@ -388,8 +417,11 @@ private:
                         args.append(childParts.first);
                         args.append(childParts.second);
                     }
-                    gprCount += Air::cCallArgumentRegisterCount(child->type());
                 } else {
+                    if (fprCount < FPRInfo::numberOfArgumentRegisters)
+                        fprCount += Air::cCallArgumentRegisterCount(child->type());
+                    else
+                        stackOffset += sizeofType(child->type());
                     args.append(child);
                 }
             }
@@ -578,8 +610,10 @@ private:
                 return;
             std::pair<Value*, Value*> input = getMapping(m_value->child(0));
             Value* testValue = insert<Value>(m_index, BitOr, m_origin, input.first, input.second);
-            Value* branchValue = insert<Value>(m_index, Branch, m_origin, testValue);
-            m_value->replaceWithIdentity(branchValue);
+            insert<Value>(m_index, Branch, m_origin, testValue);
+            ASSERT(m_block->last() == m_value);
+            m_block->removeLast(m_proc);
+            m_value = nullptr;
             return;
         }
         case Equal:
@@ -959,6 +993,24 @@ private:
         case Jump:
         case Nop:
             return;
+        case Set: {
+            if (m_value->child(0)->type() != Int64)
+                return;
+            auto input = getMapping(m_value->child(0));
+            auto variables = m_variableMapping.get(m_value->child(1)->as<VariableValue>()->variable());
+            insert<VariableValue>(m_index, Set, m_origin, variables.first, input.first);
+            insert<VariableValue>(m_index, Set, m_origin, variables.second, input.second);
+            valueReplaced();
+            return;
+        }
+        case Get: {
+            if (m_value->type() != Int64)
+                return;
+            auto variables = m_variableMapping.get(m_value->child(0)->as<VariableValue>()->variable());
+            setMapping(m_value, insert<VariableValue>(m_index, Get, m_origin, variables.first), insert<VariableValue>(m_index, Get, m_origin, variables.second));
+            valueReplaced();
+            return;
+        }
         case BitwiseCast: {
             if (m_value->type() == Int64) {
                 setMapping(m_value, valueLo(m_value, m_index + 1), valueHi(m_value, m_index + 1));
@@ -999,6 +1051,15 @@ private:
                 return;
             auto input = getMapping(m_value->child(0));
             setMapping(m_value, input.first, input.second);
+            valueReplaced();
+            return;
+        }
+        case Opaque:
+        case Depend: {
+            if (m_value->type() != Int64)
+                return;
+            auto input = getMapping(m_value->child(0));
+            setMapping(m_value, insert<Value>(m_index, m_value->kind(), m_origin, input.first), insert<Value>(m_index, m_value->kind(), m_origin, input.second));
             valueReplaced();
             return;
         }
@@ -1225,6 +1286,7 @@ private:
     UncheckedKeyHashMap<Value*, Value*> m_rewrittenTupleResults;
     UncheckedKeyHashMap<Value*, std::pair<Value*, Value*>> m_mapping;
     HashSet<Value*> m_syntheticValues;
+    UncheckedKeyHashMap<Variable*, std::pair<Variable*, Variable*>> m_variableMapping;
 };
 
 } // anonymous namespace

@@ -994,7 +994,13 @@ Ref<BindGroup> Device::createBindGroup(const WGPUBindGroupDescriptor& descriptor
                 }
                 Ref apiBuffer = WebGPU::protectedFromAPI(entry.buffer);
                 id<MTLBuffer> buffer = apiBuffer->buffer();
-                auto entryOffset = apiBuffer->isDestroyed() ? 0 : entry.offset;
+                bool isDestroyed = apiBuffer->isDestroyed();
+                if (isDestroyed) {
+                    argumentEncoder[stage] = nil;
+                    argumentBuffer[stage] = nil;
+                }
+
+                auto entryOffset = isDestroyed ? 0 : entry.offset;
                 auto bufferLengthMinusOffset = buffer.length > entryOffset ? (buffer.length - entryOffset) : 0;
                 auto entrySize = entry.size == WGPU_WHOLE_MAP_SIZE ? bufferLengthMinusOffset : entry.size;
                 if (layoutBinding->hasDynamicOffset && !appendedBufferToDynamicBuffers) {
@@ -1003,7 +1009,7 @@ Ref<BindGroup> Device::createBindGroup(const WGPUBindGroupDescriptor& descriptor
                 }
 
                 if (!apiBuffer->isValid() || &apiBuffer->device() != this) {
-                    if (!apiBuffer->isDestroyed())
+                    if (!isDestroyed)
                         VALIDATION_ERROR(@"Buffer is invalid or created from a different device");
                     return BindGroup::createInvalid(*this);
                 }
@@ -1048,7 +1054,8 @@ Ref<BindGroup> Device::createBindGroup(const WGPUBindGroupDescriptor& descriptor
                     [argumentEncoder[stage] setBuffer:buffer offset:entryOffset atIndex:index];
                     if (bufferSizeArgumentBufferIndex) {
                         argumentIndices[stage].remove(*bufferSizeArgumentBufferIndex);
-                        *(uint32_t*)[argumentEncoder[stage] constantDataAtIndex:*bufferSizeArgumentBufferIndex] = std::min<uint32_t>(entrySize, buffer.length);
+                        if (auto* lengthAddress = (uint32_t*)[argumentEncoder[stage] constantDataAtIndex:*bufferSizeArgumentBufferIndex])
+                            *lengthAddress = std::min<uint32_t>(entrySize, buffer.length);
                     }
                 }
                 if (buffer) {
@@ -1132,6 +1139,9 @@ Ref<BindGroup> Device::createBindGroup(const WGPUBindGroupDescriptor& descriptor
                         VALIDATION_ERROR(@"Can not create bind group with filterable 32bpp floating point texture as float32-filterable feature is not enabled");
                         return BindGroup::createInvalid(*this);
                     }
+                } else {
+                    argumentEncoder[stage] = nil;
+                    argumentBuffer[stage] = nil;
                 }
 
                 if (stage != ShaderStage::Undefined) {
@@ -1175,12 +1185,12 @@ Ref<BindGroup> Device::createBindGroup(const WGPUBindGroupDescriptor& descriptor
                     [argumentEncoder[stage] setTexture:texture1 atIndex:index++];
 
                     argumentIndices[stage].remove(index);
-                    auto* uvRemapAddress = static_cast<simd::float3x2*>([argumentEncoder[stage] constantDataAtIndex:index++]);
-                    *uvRemapAddress = textureData.uvRemappingMatrix;
+                    if (auto* uvRemapAddress = static_cast<simd::float3x2*>([argumentEncoder[stage] constantDataAtIndex:index++]))
+                        *uvRemapAddress = textureData.uvRemappingMatrix;
 
                     argumentIndices[stage].remove(index);
-                    auto* cscMatrixAddress = static_cast<simd::float4x3*>([argumentEncoder[stage] constantDataAtIndex:index++]);
-                    *cscMatrixAddress = textureData.colorSpaceConversionMatrix;
+                    if (auto* cscMatrixAddress = static_cast<simd::float4x3*>([argumentEncoder[stage] constantDataAtIndex:index++]))
+                        *cscMatrixAddress = textureData.colorSpaceConversionMatrix;
                 }
             }
         }
@@ -1384,11 +1394,34 @@ bool BindGroup::updateExternalTextures(const ExternalTexture& externalTexture)
         [argumentEncoder setTexture:texture0 atIndex:index++];
         [argumentEncoder setTexture:texture1 atIndex:index++];
 
-        auto* uvRemapAddress = static_cast<simd::float3x2*>([argumentEncoder constantDataAtIndex:index++]);
-        *uvRemapAddress = textureData.uvRemappingMatrix;
+        if (auto* uvRemapAddress = static_cast<simd::float3x2*>([argumentEncoder constantDataAtIndex:index++]))
+            *uvRemapAddress = textureData.uvRemappingMatrix;
 
-        auto* cscMatrixAddress = static_cast<simd::float4x3*>([argumentEncoder constantDataAtIndex:index++]);
-        *cscMatrixAddress = textureData.colorSpaceConversionMatrix;
+        if (auto* cscMatrixAddress = static_cast<simd::float4x3*>([argumentEncoder constantDataAtIndex:index++]))
+            *cscMatrixAddress = textureData.colorSpaceConversionMatrix;
+    }
+
+    return true;
+}
+
+bool BindGroup::makeSubmitInvalid(ShaderStage stage, const BindGroupLayout* pipelineLayout) const
+{
+    if (!pipelineLayout)
+        return false;
+
+    if (!m_bindGroupLayout)
+        return true;
+
+    Ref pipelineBindGroupLayout = Ref { *pipelineLayout };
+    switch (stage) {
+    case ShaderStage::Vertex:
+        return m_vertexArgumentBuffer.length != pipelineBindGroupLayout->encodedLength(stage);
+    case ShaderStage::Fragment:
+        return m_fragmentArgumentBuffer.length != pipelineBindGroupLayout->encodedLength(stage);
+    case ShaderStage::Compute:
+        return m_computeArgumentBuffer.length != pipelineBindGroupLayout->encodedLength(stage);
+    case ShaderStage::Undefined:
+        return true;
     }
 
     return true;

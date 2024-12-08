@@ -41,6 +41,7 @@
 #include "DiagnosticLoggingClient.h"
 #include "DragClient.h"
 #include "EditorClient.h"
+#include "Frame.h"
 #include "HistoryItem.h"
 #include "InspectorClient.h"
 #include "LocalFrameLoaderClient.h"
@@ -98,7 +99,7 @@ PageConfiguration::PageConfiguration(
     UniqueRef<ContextMenuClient>&& contextMenuClient,
 #endif
 #if ENABLE(APPLE_PAY)
-    UniqueRef<PaymentCoordinatorClient>&& paymentCoordinatorClient,
+    Ref<PaymentCoordinatorClient>&& paymentCoordinatorClient,
 #endif
     UniqueRef<ChromeClient>&& chromeClient,
     UniqueRef<CryptoClient>&& cryptoClient,

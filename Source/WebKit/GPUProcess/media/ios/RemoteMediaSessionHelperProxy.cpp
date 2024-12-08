@@ -32,7 +32,6 @@
 #include "GPUConnectionToWebProcess.h"
 #include "MediaPlaybackTargetContextSerialized.h"
 #include "RemoteMediaSessionHelperMessages.h"
-#include "WebCoreArgumentCoders.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebKit {
@@ -50,6 +49,16 @@ RemoteMediaSessionHelperProxy::~RemoteMediaSessionHelperProxy()
 {
     stopMonitoringWirelessRoutes();
     MediaSessionHelper::sharedHelper().removeClient(*this);
+}
+
+void RemoteMediaSessionHelperProxy::ref() const
+{
+    m_gpuConnection.get()->ref();
+}
+
+void RemoteMediaSessionHelperProxy::deref() const
+{
+    m_gpuConnection.get()->deref();
 }
 
 void RemoteMediaSessionHelperProxy::startMonitoringWirelessRoutes()

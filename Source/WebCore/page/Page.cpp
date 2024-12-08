@@ -495,8 +495,7 @@ Page::~Page()
     m_validationMessageClient = nullptr;
     m_diagnosticLoggingClient = nullptr;
     m_performanceLoggingClient = nullptr;
-    if (RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_mainFrame))
-        localMainFrame->setView(nullptr);
+    m_mainFrame->disconnectView();
     setGroupName(String());
     allPages().remove(*this);
     if (!isUtilityPage()) {
@@ -568,6 +567,23 @@ uint64_t Page::renderTreeSize() const
             total += renderView->rendererCount();
     });
     return total;
+}
+
+void Page::destroyRenderTrees()
+{
+    // When closing or entering back/forward cache, tear down the render tree before setting the in-cache flag.
+    // This maintains the invariant that render trees are never present in the back/forward cache or outliving the page.
+    // Note that destruction happens bottom-up so that the main frame's tree dies last.
+    for (RefPtr frame = m_mainFrame->tree().traversePrevious(CanWrap::Yes); frame; frame = frame->tree().traversePrevious(CanWrap::No)) {
+        RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
+        if (!localFrame)
+            continue;
+        if (!localFrame->document())
+            continue;
+        Ref document = *localFrame->document();
+        if (document->hasLivingRenderTree())
+            document->destroyRenderTree();
+    }
 }
 
 OptionSet<DisabledAdaptations> Page::disabledAdaptations() const
@@ -1251,7 +1267,7 @@ void Page::unmarkAllTextMatches()
 {
     forEachDocument([] (Document& document) {
         if (CheckedPtr markers = document.markersIfExists())
-            markers->removeMarkers(DocumentMarker::Type::TextMatch);
+            markers->removeMarkers(DocumentMarkerType::TextMatch);
     });
 }
 
@@ -4431,7 +4447,7 @@ void Page::recomputeTextAutoSizingInAllFrames()
                 if (RefPtr element = renderer.element()) {
                     if (auto adjustment = Style::Adjuster::adjustmentForTextAutosizing(renderer.style(), *element)) {
                         auto newStyle = RenderStyle::clone(renderer.style());
-                        Style::Adjuster::adjustForTextAutosizing(newStyle, *element, adjustment);
+                        Style::Adjuster::adjustForTextAutosizing(newStyle, adjustment);
                         renderer.setStyle(WTFMove(newStyle));
                     }
                 }

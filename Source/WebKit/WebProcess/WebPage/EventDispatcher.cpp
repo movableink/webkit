@@ -62,8 +62,9 @@
 namespace WebKit {
 using namespace WebCore;
 
-EventDispatcher::EventDispatcher()
-    : m_queue(WorkQueue::create("com.apple.WebKit.EventDispatcher"_s, WorkQueue::QOS::UserInteractive))
+EventDispatcher::EventDispatcher(WebProcess& process)
+    : m_process(process)
+    , m_queue(WorkQueue::create("com.apple.WebKit.EventDispatcher"_s, WorkQueue::QOS::UserInteractive))
     , m_recentWheelEventDeltaFilter(WheelEventDeltaFilter::create())
 #if ENABLE(MOMENTUM_EVENT_DISPATCHER)
     , m_momentumEventDispatcher(WTF::makeUnique<MomentumEventDispatcher>(*this))
@@ -75,6 +76,16 @@ EventDispatcher::EventDispatcher()
 EventDispatcher::~EventDispatcher()
 {
     ASSERT_NOT_REACHED();
+}
+
+void EventDispatcher::ref() const
+{
+    m_process->ref();
+}
+
+void EventDispatcher::deref() const
+{
+    m_process->deref();
 }
 
 #if ENABLE(ASYNC_SCROLLING) && ENABLE(SCROLLING_THREAD)
@@ -282,8 +293,10 @@ void EventDispatcher::dispatchWheelEvent(PageIdentifier pageID, const WebWheelEv
         return;
 
     bool handled = false;
-    if (webPage->mainFrame())
-        handled = webPage->wheelEvent(webPage->mainFrame()->frameID(), wheelEvent, processingSteps).wasHandled();
+    if (webPage->mainFrame()) {
+        auto [result, _] = webPage->wheelEvent(webPage->mainFrame()->frameID(), wheelEvent, processingSteps);
+        handled = result.wasHandled();
+    }
 
     if (processingSteps.contains(WheelEventProcessingSteps::SynchronousScrolling) && wheelEventOrigin == EventDispatcher::WheelEventOrigin::UIProcess)
         sendDidReceiveEvent(pageID, wheelEvent.type(), handled);

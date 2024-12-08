@@ -592,8 +592,6 @@ std::unique_ptr<RenderStyle> Resolver::defaultStyleForElement(const Element* ele
     fontDescription.setShouldAllowUserInstalledFonts(settings().shouldAllowUserInstalledFonts() ? AllowUserInstalledFonts::Yes : AllowUserInstalledFonts::No);
     style->setFontDescription(WTFMove(fontDescription));
 
-    style->fontCascade().update(&document().fontSelector());
-
     return style;
 }
 
@@ -696,7 +694,7 @@ void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResu
 
         if (!inheritedStyleEqual) {
             includedProperties.add(PropertyCascade::PropertyType::Inherited);
-            // FIXME: See colorFromPrimitiveValueWithResolvedCurrentColor().
+            // FIXME: See toStyleColorWithResolvedCurrentColor().
             bool mayContainResolvedCurrentcolor = style.disallowsFastPathInheritance() && hasExplicitlyInherited;
             if (mayContainResolvedCurrentcolor && parentStyle.color() != cacheEntry->parentRenderStyle->color())
                 includedProperties.add(PropertyCascade::PropertyType::NonInherited);

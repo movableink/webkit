@@ -66,7 +66,7 @@ public:
     
 private:
     // PageClient
-    std::unique_ptr<DrawingAreaProxy> createDrawingAreaProxy(WebProcessProxy&) override;
+    Ref<DrawingAreaProxy> createDrawingAreaProxy(WebProcessProxy&) override;
     void setViewNeedsDisplay(const WebCore::Region&) override;
     void requestScroll(const WebCore::FloatPoint& scrollPosition, const WebCore::IntPoint& scrollOrigin, WebCore::ScrollIsAnimated) override;
     WebCore::FloatPoint viewScrollPosition() override;
@@ -328,6 +328,8 @@ private:
     void handleAsynchronousCancelableScrollEvent(WKBaseScrollView *, WKBEScrollViewScrollUpdate *, void (^completion)(BOOL handled)) final;
 #endif
 
+    bool isSimulatingCompatibilityPointerTouches() const final;
+
     WebCore::Color contentViewBackgroundColor() final;
     WebCore::Color insertionPointColor() final;
     bool isScreenBeingCaptured() final;
@@ -351,9 +353,7 @@ private:
     void didCleanupFullscreen() final;
 #endif
 
-#if PLATFORM(IOS_FAMILY)
     UIViewController *presentingViewController() const final;
-#endif
 
     bool isPotentialTapInProgress() const final;
 

@@ -1344,20 +1344,19 @@ webkit.org/b/240821 webgl/max-active-contexts-webglcontextlost-prevent-default.h
 
 webkit.org/b/241265 [ Debug ] imported/w3c/web-platform-tests/html/rendering/replaced-elements/svg-embedded-sizing/svg-in-object-percentage.html [ Pass Crash ]
 
-# NOTIFICATION_EVENT is Ventura+
-[ Ventura+ ] http/tests/workers/service/shownotification-allowed-document.html [ Pass ]
-[ Ventura+ ] http/tests/workers/service/shownotification-allowed.html [ Pass ]
-[ Ventura+ ] http/tests/workers/service/shownotification-invalid-data.html [ Pass ]
-[ Ventura+ ] http/wpt/push-api/pushEvent.any.serviceworker.html [ Pass ]
-[ Ventura+ ] imported/w3c/web-platform-tests/notifications/idlharness.https.any.html [ Pass ]
-[ Ventura+ ] imported/w3c/web-platform-tests/notifications/idlharness.https.any.serviceworker.html [ Pass ]
-[ Ventura+ ] imported/w3c/web-platform-tests/notifications/idlharness.https.any.worker.html [ Pass ]
-[ Ventura+ ] http/tests/workers/service/getnotifications-stop.html [ Pass ]
-[ Ventura+ ] http/tests/workers/service/getnotifications.html [ Pass ]
-[ Ventura+ ] http/wpt/service-workers/push-console-messages-no-showNotification.https.html [ Pass ]
-[ Ventura+ ] http/wpt/service-workers/push-console-messages-showNotification-async.https.html [ Pass ]
-[ Ventura+ ] http/wpt/service-workers/push-console-messages-showNotification-late.https.html [ Pass ]
-[ Ventura+ ] http/wpt/service-workers/push-console-messages-showNotification-sync.https.html [ Pass ]
+http/tests/workers/service/shownotification-allowed-document.html [ Pass ]
+http/tests/workers/service/shownotification-allowed.html [ Pass ]
+http/tests/workers/service/shownotification-invalid-data.html [ Pass ]
+http/wpt/push-api/pushEvent.any.serviceworker.html [ Pass ]
+imported/w3c/web-platform-tests/notifications/idlharness.https.any.html [ Pass ]
+imported/w3c/web-platform-tests/notifications/idlharness.https.any.serviceworker.html [ Pass ]
+imported/w3c/web-platform-tests/notifications/idlharness.https.any.worker.html [ Pass ]
+http/tests/workers/service/getnotifications-stop.html [ Pass ]
+http/tests/workers/service/getnotifications.html [ Pass ]
+http/wpt/service-workers/push-console-messages-no-showNotification.https.html [ Pass ]
+http/wpt/service-workers/push-console-messages-showNotification-async.https.html [ Pass ]
+http/wpt/service-workers/push-console-messages-showNotification-late.https.html [ Pass ]
+http/wpt/service-workers/push-console-messages-showNotification-sync.https.html [ Pass ]
 
 webkit.org/b/242164 imported/w3c/web-platform-tests/service-workers/service-worker/navigation-timing.https.html [ Failure ]
 
@@ -1593,6 +1592,7 @@ webkit.org/b/261356 [ Debug ] fast/mediastream/device-change-event-2.html [ Pass
 webkit.org/b/263396 css3/color/text.html [ Skip ]
 
 # WebGPU
+[ Release ] http/tests/webgpu/webgpu/api/validation/encoding/cmds/copyTextureToTexture.html
 
 # skipped outside of macOS Sequoia due to crash in failed allocation
 [ Ventura Sonoma ] fast/webgpu/nocrash/fuzz-279086.html [ Skip ]
@@ -1600,6 +1600,11 @@ webkit.org/b/263396 css3/color/text.html [ Skip ]
 [ Release arm64 ] http/tests/webgpu/webgpu/api [ Pass Failure Timeout ]
 [ Release arm64 ] http/tests/webgpu/webgpu/shader [ Pass Failure Timeout ]
 [ Release arm64 ] http/tests/webgpu/webgpu/web_platform [ Pass Failure Timeout ]
+
+# timeout on Intel Macs due to difference in handling infinite loops
+[ x86_64 ] fast/webgpu/regression/repro_283595-for.html [ Skip ]
+[ x86_64 ] fast/webgpu/regression/repro_283595-loop.html [ Skip ]
+[ x86_64 ] fast/webgpu/regression/repro_283595-while.html [ Skip ]
 
 # pixel differences on Intel Macs
 [ x86_64 ] fast/webgpu/regression/repro_275345.html [ ImageOnlyFailure ]
@@ -1723,8 +1728,6 @@ webkit.org/b/274382 media/media-source/media-source-video-play-holds-sleep-asser
 webkit.org/b/274709 imported/w3c/web-platform-tests/pointerevents/pointer-events-none-skip-scroll-in-iframe.html [ Pass Failure ]
 webkit.org/b/274709 imported/w3c/web-platform-tests/pointerevents/pointer-events-none-skip-scroll-will-change-in-iframe.html [ Pass Failure ]
 
-webkit.org/b/274766 http/wpt/webauthn/public-key-credential-get-success-u2f.https.html [ Failure ]
-
 webkit.org/b/258228 [ Sonoma+ Debug ] accessibility/mac/text-input-session-notifications.html [ Skip ]
 
 # rdar://129424261 (REGRESSION (279443@main): [ Sonoma Release ] WindowServer watchdog timeout on Intel machine)
@@ -1837,9 +1840,6 @@ editing/input/scroll-viewport-page-up-down.html [ Pass Failure ]
 [ Sequoia+ arm64 Release ] http/tests/resourceLoadStatistics/prune-statistics.html [ Pass Failure ] 
 [ Sequoia+ arm64 Release ] http/tests/resourceLoadStatistics/remove-website-data-for-origin-deletes-link-decoration.html [ Pass Failure ]
 
-# webkit.org/b/280556 [ macOS iOS wk2 release ] webrtc/stats-timestamp-increases.html is a flaky failure.
-[ Release ] webrtc/stats-timestamp-increases.html  [ Pass Failure ]
-
 # webkit.org/b/280728 [ Ventura wk2 ] imported/w3c/web-platform-tests/screen-orientation/active-lock.html is a flaky failure.
 [ Ventura ] imported/w3c/web-platform-tests/screen-orientation/active-lock.html [ Pass Failure ]
 
@@ -1934,5 +1934,15 @@ webkit.org/b/283210 http/wpt/mediarecorder/MediaRecorder-AV-audio-video-dataavai
 # webkit.org/b/283368 [macOS Debug ] fast/css/view-transitions-hide-under-page-background-color.html is a flaky crash (flaky in EWS)
 [ Sonoma+ Debug ] fast/css/view-transitions-hide-under-page-background-color.html [ Pass Crash ]
 
-# webkit.org/b/283596 REGRESSION(286883@main): [Sequoia Debug] ipc/create-connection-and-s end-async.html is a constant crash (flaky failure in EWS)
-[ Sequoia+ Debug ] ipc/create-connection-and-send-async.html [ Skip ]
+webkit.org/b/283596 [ Sequoia+ Debug ] ipc/cfnetwork-crashes-with-string-to-string-http-headers.html [ Skip ]
+
+# webkit.org/b/284113 REGRESSION(287390@main?): [macOS Release] 4x imported/w3c/web-platform-tests/fs tests are flaky (Failure in EWS)
+[ Release ] imported/w3c/web-platform-tests/fs/FileSystemBaseHandle-postMessage-Error.https.window.html [ Pass Failure ]
+[ Release ] imported/w3c/web-platform-tests/fs/FileSystemFileHandle-getFile.https.any.worker.html [ Pass Failure ]
+[ Release ] imported/w3c/web-platform-tests/fs/FileSystemWritableFileStream-piped.https.any.worker.html [ Pass Failure ]
+[ Release ] imported/w3c/web-platform-tests/fs/FileSystemDirectoryHandle-removeEntry.https.any.worker.html [ Pass Failure ]
+
+webkit.org/b/284190 [ Sequoia+ ] http/tests/privateClickMeasurement/send-attribution-conversion-request.https.html [ Failure ]
+
+# webkit.org/b/284186 [macOS Debug] media/media-vp8-hiddenframes.html is timing out (flaky in EWS)
+[ Debug ] media/media-vp8-hiddenframes.html [ Pass Timeout ]

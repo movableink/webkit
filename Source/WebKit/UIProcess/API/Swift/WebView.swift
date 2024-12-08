@@ -23,6 +23,7 @@
 
 #if ENABLE_SWIFTUI && compiler(>=6.0)
 
+internal import WebKit_Internal
 public import SwiftUI
 
 #if canImport(UIKit)
@@ -33,11 +34,11 @@ fileprivate typealias PlatformView = NSView
 
 @_spi(Private)
 public struct WebView_v0: View {
-    fileprivate let page: WebPage_v0
-
     public init(_ page: WebPage_v0) {
         self.page = page
     }
+
+    fileprivate let page: WebPage_v0
 
     public var body: some View {
         WebViewRepresentable(owner: self)
@@ -103,7 +104,16 @@ fileprivate struct WebViewRepresentable {
     }
 
     func updatePlatformView(_ platformView: WebViewWrapper, context: Context) {
-        platformView.webView = owner.page.backingWebView
+        let webView = owner.page.backingWebView
+        let environment = context.environment
+
+        platformView.webView = webView
+
+        webView.allowsBackForwardNavigationGestures = environment.webViewAllowsBackForwardNavigationGestures
+        webView.allowsLinkPreview = environment.webViewAllowsLinkPreview
+
+        webView.configuration.preferences.isTextInteractionEnabled = environment.webViewAllowsTextInteraction
+        webView.configuration.preferences.tabFocusesLinks = environment.webViewAllowsTabFocusingLinks
     }
 }
 

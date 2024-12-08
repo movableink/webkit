@@ -22,7 +22,6 @@
 
 messages -> WebProcessProxy WantsDispatchMessage {
     UpdateBackForwardItem(Ref<WebKit::FrameState> mainFrameState)
-    DidDestroyFrame(WebCore::FrameIdentifier frameID, WebKit::WebPageProxyIdentifier pageID) 
 
     DidDestroyUserGestureToken(WebCore::PageIdentifier pageID, WebCore::UserGestureTokenIdentifier userGestureTokenID)
 

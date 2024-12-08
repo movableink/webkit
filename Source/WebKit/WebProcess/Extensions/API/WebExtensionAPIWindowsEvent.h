@@ -45,12 +45,14 @@ public:
     using FilterAndCallbackPair = std::pair<RefPtr<WebExtensionCallbackHandler>, OptionSet<WindowTypeFilter>>;
     using ListenerVector = Vector<FilterAndCallbackPair>;
 
+#if PLATFORM(COCOA)
     void invokeListenersWithArgument(id argument, OptionSet<WindowTypeFilter>);
+#endif
 
     const ListenerVector& listeners() const { return m_listeners; }
 
-    void addListener(WebFrame&, RefPtr<WebExtensionCallbackHandler>, NSDictionary *filter, NSString **outExceptionString);
-    void removeListener(WebFrame&, RefPtr<WebExtensionCallbackHandler>);
+    void addListener(WebCore::FrameIdentifier, RefPtr<WebExtensionCallbackHandler>, NSDictionary *filter, NSString **outExceptionString);
+    void removeListener(WebCore::FrameIdentifier, RefPtr<WebExtensionCallbackHandler>);
     bool hasListener(RefPtr<WebExtensionCallbackHandler>);
 
     void removeAllListeners();

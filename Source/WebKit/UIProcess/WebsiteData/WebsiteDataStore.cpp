@@ -2713,4 +2713,9 @@ void WebsiteDataStore::setRestrictedOpenerTypeForDomainForTesting(const WebCore:
     m_restrictedOpenerTypesForTesting.set(domain, type);
 }
 
+void WebsiteDataStore::fetchLocalStorage(CompletionHandler<void(HashMap<WebCore::ClientOrigin, HashMap<String, String>>)>&& completionHandler)
+{
+    protectedNetworkProcess()->fetchLocalStorage(m_sessionID, WTFMove(completionHandler));
+}
+
 } // namespace WebKit

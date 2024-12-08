@@ -34,7 +34,6 @@
 #include "RemoteMediaPlayerManagerProxyMessages.h"
 #include "RemoteMediaPlayerProxyConfiguration.h"
 #include "SampleBufferDisplayLayerManager.h"
-#include "WebCoreArgumentCoders.h"
 #include "WebProcess.h"
 #include "WebProcessCreationParameters.h"
 #include <WebCore/ContentTypeUtilities.h>
@@ -279,6 +278,11 @@ GPUProcessConnection& RemoteMediaPlayerManager::gpuProcessConnection()
     }
 
     return *gpuProcessConnection;
+}
+
+Ref<GPUProcessConnection> RemoteMediaPlayerManager::protectedGPUProcessConnection()
+{
+    return gpuProcessConnection();
 }
 
 void RemoteMediaPlayerManager::gpuProcessConnectionDidClose(GPUProcessConnection& connection)

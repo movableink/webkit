@@ -59,7 +59,9 @@ typedef WebAccessibilityObjectWrapper AccessibilityObjectWrapper;
 typedef struct _NSRange NSRange;
 typedef const struct __AXTextMarker* AXTextMarkerRef;
 typedef const struct __AXTextMarkerRange* AXTextMarkerRangeRef;
+typedef const struct __CTFont* CTFontRef;
 OBJC_CLASS NSAttributedString;
+OBJC_CLASS NSMutableAttributedString;
 #elif USE(ATSPI)
 
 namespace WebCore {
@@ -726,8 +728,44 @@ struct AccessibilityIsIgnoredFromParentData {
     bool isNull() const { return !parent; }
 };
 
+struct LineDecorationStyle {
+    bool hasUnderline { false };
+    Color underlineColor;
+    bool hasLinethrough { false };
+    Color linethroughColor;
+
+    LineDecorationStyle() = default;
+    explicit LineDecorationStyle(RenderObject& renderer);
+    explicit LineDecorationStyle(bool hasUnderline, Color underlineColor, bool hasLinethrough, Color linethroughColor)
+        : hasUnderline(hasUnderline)
+        , underlineColor(underlineColor)
+        , hasLinethrough(hasLinethrough)
+        , linethroughColor(linethroughColor)
+    { }
+
+    String debugDescription() const;
+};
+
+struct AttributedStringStyle {
+#if PLATFORM(COCOA)
+    RetainPtr<CTFontRef> font { nil };
+#endif
+    Color textColor;
+    Color backgroundColor;
+    bool isSubscript { false };
+    bool isSuperscript { false };
+    bool hasTextShadow { false };
+    LineDecorationStyle lineStyle;
+
+    bool hasUnderline() const { return lineStyle.hasUnderline; }
+    Color underlineColor() const { return lineStyle.underlineColor; }
+    bool hasLinethrough() const { return lineStyle.hasLinethrough; }
+    Color linethroughColor() const { return lineStyle.linethroughColor; }
+};
+
 enum class AXDebugStringOption {
     Ignored,
+    IsRemoteFrame,
     RelativeFrame,
     RemoteFrameOffset
 };
@@ -747,7 +785,7 @@ public:
     void detach(AccessibilityDetachmentType);
     virtual bool isDetached() const = 0;
 
-    typedef Vector<RefPtr<AXCoreObject>> AccessibilityChildrenVector;
+    typedef Vector<Ref<AXCoreObject>> AccessibilityChildrenVector;
 
     virtual bool isAccessibilityObject() const = 0;
     virtual bool isAccessibilityRenderObject() const = 0;
@@ -816,7 +854,7 @@ public:
     virtual bool isExposedTableCell() const = 0;
     virtual bool isColumnHeader() const { return false; }
     virtual bool isRowHeader() const { return false; }
-    bool isTableCellInSameRowGroup(AXCoreObject*);
+    bool isTableCellInSameRowGroup(AXCoreObject&);
     bool isTableCellInSameColGroup(AXCoreObject*);
     virtual std::optional<AXID> rowGroupAncestorID() const { return std::nullopt; }
     virtual String cellScope() const { return { }; }
@@ -1084,7 +1122,13 @@ public:
 #if PLATFORM(COCOA)
     enum class SpellCheck : bool { No, Yes };
     virtual RetainPtr<NSAttributedString> attributedStringForTextMarkerRange(AXTextMarkerRange&&, SpellCheck) const = 0;
+    virtual AttributedStringStyle stylesForAttributedString() const = 0;
 #endif
+
+#if PLATFORM(MAC)
+    RetainPtr<NSMutableAttributedString> createAttributedString(StringView text, SpellCheck) const;
+#endif
+
     virtual const String placeholderValue() const = 0;
 
     // Abbreviations
@@ -1136,7 +1180,6 @@ public:
     virtual Path elementPath() const = 0;
     virtual bool supportsPath() const = 0;
 
-    bool shouldReturnEmptySelectedText() const { return isSecureField(); }
     virtual CharacterRange selectedTextRange() const = 0;
     virtual int insertionPointLineNumber() const = 0;
 
@@ -1225,8 +1268,8 @@ public:
     virtual void setSelectedChildren(const AccessibilityChildrenVector&) = 0;
     virtual AccessibilityChildrenVector visibleChildren() = 0;
     AccessibilityChildrenVector tabChildren();
-    bool isDescendantOfObject(const AXCoreObject*) const;
-    bool isAncestorOfObject(const AXCoreObject*) const;
+    bool isDescendantOfObject(const AXCoreObject&) const;
+    bool isAncestorOfObject(const AXCoreObject&) const;
 
     virtual String nameAttribute() const = 0;
 
@@ -1385,19 +1428,22 @@ public:
     virtual bool hasClickHandler() const = 0;
     virtual AXCoreObject* clickableSelfOrAncestor(ClickHandlerFilter = ClickHandlerFilter::ExcludeBody) const = 0;
     virtual AXCoreObject* focusableAncestor() = 0;
-    virtual AXCoreObject* editableAncestor() = 0;
+    virtual AXCoreObject* editableAncestor() const = 0;
     virtual AXCoreObject* highestEditableAncestor() = 0;
     virtual AXCoreObject* exposedTableAncestor(bool includeSelf = false) const = 0;
 
     virtual AccessibilityChildrenVector documentLinks() = 0;
 
     virtual bool hasBodyTag() const = 0;
+    virtual bool hasMarkTag() const = 0;
     virtual String innerHTML() const = 0;
     virtual String outerHTML() const = 0;
 
 #if PLATFORM(COCOA) && ENABLE(MODEL_ELEMENT)
     virtual Vector<RetainPtr<id>> modelElementChildren() = 0;
 #endif
+
+    String infoStringForTesting() const;
 
 protected:
     AXCoreObject() = delete;
@@ -1432,6 +1478,13 @@ inline Vector<AXID> axIDs(const AXCoreObject::AccessibilityChildrenVector& objec
         return object->objectID();
     });
 }
+
+#if PLATFORM(MAC)
+void attributedStringSetExpandedText(NSMutableAttributedString *, const AXCoreObject&, const NSRange&);
+void attributedStringSetBlockquoteLevel(NSMutableAttributedString *, const AXCoreObject&, const NSRange&);
+void attributedStringSetNeedsSpellCheck(NSMutableAttributedString *, const AXCoreObject&);
+void attributedStringSetElement(NSMutableAttributedString *, NSString *attribute, const AXCoreObject&, const NSRange&);
+#endif // PLATFORM(MAC)
 
 #if PLATFORM(COCOA)
 inline bool AXCoreObject::shouldComputeDescriptionAttributeValue() const
@@ -1568,7 +1621,7 @@ T* clickableSelfOrAncestor(const T& startObject, const F& shouldStop)
 }
 
 template<typename T>
-T* editableAncestor(T& startObject)
+T* editableAncestor(const T& startObject)
 {
     return findAncestor<T>(startObject, false, [] (const auto& ancestor) {
         return ancestor.isTextControl();
@@ -1629,7 +1682,7 @@ T* findUnignoredChild(T& object, F&& matches)
 {
     for (auto child : object.unignoredChildren()) {
         if (matches(child))
-            return downcast<T>(child.get());
+            return downcast<T>(child.ptr());
     }
     return nullptr;
 }
@@ -1651,7 +1704,7 @@ void enumerateDescendantsIncludingIgnored(T& object, bool includeSelf, const F& 
         lambda(object);
 
     for (const auto& child : object.childrenIncludingIgnored())
-        enumerateDescendantsIncludingIgnored(*child, true, lambda);
+        enumerateDescendantsIncludingIgnored(child.get(), true, lambda);
 }
 
 template<typename T, typename F>
@@ -1660,10 +1713,8 @@ void enumerateUnignoredDescendants(T& object, bool includeSelf, const F& lambda)
     if (includeSelf)
         lambda(object);
 
-    for (const auto& child : object.unignoredChildren()) {
-        if (child)
-            enumerateUnignoredDescendants(*child, true, lambda);
-    }
+    for (const auto& child : object.unignoredChildren())
+        enumerateUnignoredDescendants(child.get(), true, lambda);
 }
 
 template<typename U> inline void performFunctionOnMainThreadAndWait(U&& lambda)
@@ -1704,16 +1755,16 @@ bool inRenderTreeOrStyleUpdate(const Document&);
 
 } // namespace Accessibility
 
-inline bool AXCoreObject::isDescendantOfObject(const AXCoreObject* axObject) const
+inline bool AXCoreObject::isDescendantOfObject(const AXCoreObject& axObject) const
 {
-    return axObject && Accessibility::findAncestor<AXCoreObject>(*this, false, [axObject] (const AXCoreObject& object) {
-        return &object == axObject;
+    return Accessibility::findAncestor<AXCoreObject>(*this, false, [&axObject] (const AXCoreObject& object) {
+        return &object == &axObject;
     }) != nullptr;
 }
 
-inline bool AXCoreObject::isAncestorOfObject(const AXCoreObject* axObject) const
+inline bool AXCoreObject::isAncestorOfObject(const AXCoreObject& axObject) const
 {
-    return axObject && (this == axObject || axObject->isDescendantOfObject(this));
+    return this == &axObject || axObject.isDescendantOfObject(*this);
 }
 
 inline AXCoreObject* AXCoreObject::axScrollView() const

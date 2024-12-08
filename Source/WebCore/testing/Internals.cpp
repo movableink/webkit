@@ -424,8 +424,6 @@ using JSC::PropertySlot;
 using JSC::ScriptExecutable;
 using JSC::StackVisitor;
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(Internals);
@@ -497,47 +495,47 @@ void InspectorStubFrontend::sendMessageToFrontend(const String& message)
     frontendAPIDispatcher().dispatchMessageAsync(message);
 }
 
-static bool markerTypeFrom(const String& markerType, DocumentMarker::Type& result)
+static bool markerTypeFrom(const String& markerType, DocumentMarkerType& result)
 {
     if (equalLettersIgnoringASCIICase(markerType, "spelling"_s))
-        result = DocumentMarker::Type::Spelling;
+        result = DocumentMarkerType::Spelling;
     else if (equalLettersIgnoringASCIICase(markerType, "grammar"_s))
-        result = DocumentMarker::Type::Grammar;
+        result = DocumentMarkerType::Grammar;
     else if (equalLettersIgnoringASCIICase(markerType, "textmatch"_s))
-        result = DocumentMarker::Type::TextMatch;
+        result = DocumentMarkerType::TextMatch;
     else if (equalLettersIgnoringASCIICase(markerType, "replacement"_s))
-        result = DocumentMarker::Type::Replacement;
+        result = DocumentMarkerType::Replacement;
     else if (equalLettersIgnoringASCIICase(markerType, "correctionindicator"_s))
-        result = DocumentMarker::Type::CorrectionIndicator;
+        result = DocumentMarkerType::CorrectionIndicator;
     else if (equalLettersIgnoringASCIICase(markerType, "rejectedcorrection"_s))
-        result = DocumentMarker::Type::RejectedCorrection;
+        result = DocumentMarkerType::RejectedCorrection;
     else if (equalLettersIgnoringASCIICase(markerType, "autocorrected"_s))
-        result = DocumentMarker::Type::Autocorrected;
+        result = DocumentMarkerType::Autocorrected;
     else if (equalLettersIgnoringASCIICase(markerType, "spellcheckingexemption"_s))
-        result = DocumentMarker::Type::SpellCheckingExemption;
+        result = DocumentMarkerType::SpellCheckingExemption;
     else if (equalLettersIgnoringASCIICase(markerType, "deletedautocorrection"_s))
-        result = DocumentMarker::Type::DeletedAutocorrection;
+        result = DocumentMarkerType::DeletedAutocorrection;
     else if (equalLettersIgnoringASCIICase(markerType, "dictationalternatives"_s))
-        result = DocumentMarker::Type::DictationAlternatives;
+        result = DocumentMarkerType::DictationAlternatives;
 #if ENABLE(TELEPHONE_NUMBER_DETECTION)
     else if (equalLettersIgnoringASCIICase(markerType, "telephonenumber"_s))
-        result = DocumentMarker::Type::TelephoneNumber;
+        result = DocumentMarkerType::TelephoneNumber;
 #endif
 #if ENABLE(WRITING_TOOLS)
     else if (equalLettersIgnoringASCIICase(markerType, "writingtoolstextsuggestion"_s))
-        result = DocumentMarker::Type::WritingToolsTextSuggestion;
+        result = DocumentMarkerType::WritingToolsTextSuggestion;
 #endif
     else if (equalLettersIgnoringASCIICase(markerType, "transparentcontent"_s))
-        result = DocumentMarker::Type::TransparentContent;
+        result = DocumentMarkerType::TransparentContent;
     else
         return false;
 
     return true;
 }
 
-static bool markerTypesFrom(const String& markerType, OptionSet<DocumentMarker::Type>& result)
+static bool markerTypesFrom(const String& markerType, OptionSet<DocumentMarkerType>& result)
 {
-    DocumentMarker::Type singularResult;
+    DocumentMarkerType singularResult;
 
     if (markerType.isEmpty() || equalLettersIgnoringASCIICase(markerType, "all"_s))
         result = DocumentMarker::allMarkers();
@@ -748,7 +746,7 @@ Internals::Internals(Document& document)
 #if ENABLE(APPLE_PAY)
     auto* frame = document.frame();
     if (frame && frame->page() && frame->isMainFrame()) {
-        auto mockPaymentCoordinator = makeUniqueRefWithoutRefCountedCheck<MockPaymentCoordinator>(*frame->page());
+        auto mockPaymentCoordinator = MockPaymentCoordinator::create(*frame->page());
         frame->page()->setPaymentCoordinator(PaymentCoordinator::create(WTFMove(mockPaymentCoordinator)));
     }
 #endif
@@ -2026,7 +2024,7 @@ ExceptionOr<unsigned> Internals::inspectorPaintRectCount()
 
 ExceptionOr<unsigned> Internals::markerCountForNode(Node& node, const String& markerType)
 {
-    OptionSet<DocumentMarker::Type> markerTypes;
+    OptionSet<DocumentMarkerType> markerTypes;
     if (!markerTypesFrom(markerType, markerTypes))
         return Exception { ExceptionCode::SyntaxError };
 
@@ -2038,7 +2036,7 @@ ExceptionOr<RenderedDocumentMarker*> Internals::markerAt(Node& node, const Strin
 {
     node.document().updateLayout(LayoutOptions::IgnorePendingStylesheets);
 
-    OptionSet<DocumentMarker::Type> markerTypes;
+    OptionSet<DocumentMarkerType> markerTypes;
     if (!markerTypesFrom(markerType, markerTypes))
         return Exception { ExceptionCode::SyntaxError };
 
@@ -2074,7 +2072,7 @@ ExceptionOr<String> Internals::markerDescriptionForNode(Node& node, const String
 
 ExceptionOr<String> Internals::dumpMarkerRects(const String& markerTypeString)
 {
-    DocumentMarker::Type markerType;
+    DocumentMarkerType markerType;
     if (!markerTypeFrom(markerTypeString, markerType))
         return Exception { ExceptionCode::SyntaxError };
 
@@ -2277,8 +2275,8 @@ ExceptionOr<void> Internals::setViewBaseBackgroundColor(const String& colorValue
 
 using LazySlowPathColorParsingParameters = std::tuple<
     CSSPropertyParserHelpers::CSSColorParsingOptions,
-    CSSUnresolvedColorResolutionState,
-    std::optional<CSSUnresolvedColorResolutionDelegate>
+    CSS::PlatformColorResolutionState,
+    std::optional<CSS::PlatformColorResolutionDelegate>
 >;
 
 ExceptionOr<void> Internals::setUnderPageBackgroundColorOverride(const String& colorValue)
@@ -2827,7 +2825,7 @@ void Internals::updateEditorUINowIfScheduled()
     }
 }
 
-bool Internals::hasMarkerFor(DocumentMarker::Type type, int from, int length)
+bool Internals::hasMarkerFor(DocumentMarkerType type, int from, int length)
 {
     Document* document = contextDocument();
     if (!document || !document->frame())
@@ -2840,7 +2838,7 @@ bool Internals::hasMarkerFor(DocumentMarker::Type type, int from, int length)
 
 ExceptionOr<void> Internals::setMarkerFor(const String& markerTypeString, int from, int length, const String& data)
 {
-    DocumentMarker::Type markerType;
+    DocumentMarkerType markerType;
     if (!markerTypeFrom(markerTypeString, markerType))
         return Exception { ExceptionCode::SyntaxError };
 
@@ -2856,39 +2854,39 @@ ExceptionOr<void> Internals::setMarkerFor(const String& markerTypeString, int fr
 
 bool Internals::hasSpellingMarker(int from, int length)
 {
-    return hasMarkerFor(DocumentMarker::Type::Spelling, from, length);
+    return hasMarkerFor(DocumentMarkerType::Spelling, from, length);
 }
 
 bool Internals::hasGrammarMarker(int from, int length)
 {
-    return hasMarkerFor(DocumentMarker::Type::Grammar, from, length);
+    return hasMarkerFor(DocumentMarkerType::Grammar, from, length);
 }
 
 bool Internals::hasAutocorrectedMarker(int from, int length)
 {
-    return hasMarkerFor(DocumentMarker::Type::Autocorrected, from, length);
+    return hasMarkerFor(DocumentMarkerType::Autocorrected, from, length);
 }
 
 bool Internals::hasDictationAlternativesMarker(int from, int length)
 {
-    return hasMarkerFor(DocumentMarker::Type::DictationAlternatives, from, length);
+    return hasMarkerFor(DocumentMarkerType::DictationAlternatives, from, length);
 }
 
 bool Internals::hasCorrectionIndicatorMarker(int from, int length)
 {
-    return hasMarkerFor(DocumentMarker::Type::CorrectionIndicator, from, length);
+    return hasMarkerFor(DocumentMarkerType::CorrectionIndicator, from, length);
 }
 
 #if ENABLE(WRITING_TOOLS)
 bool Internals::hasWritingToolsTextSuggestionMarker(int from, int length)
 {
-    return hasMarkerFor(DocumentMarker::Type::WritingToolsTextSuggestion, from, length);
+    return hasMarkerFor(DocumentMarkerType::WritingToolsTextSuggestion, from, length);
 }
 #endif
 
 bool Internals::hasTransparentContentMarker(int from, int length)
 {
-    return hasMarkerFor(DocumentMarker::Type::TransparentContent, from, length);
+    return hasMarkerFor(DocumentMarkerType::TransparentContent, from, length);
 }
 
 void Internals::setContinuousSpellCheckingEnabled(bool enabled)
@@ -6265,6 +6263,11 @@ void Internals::setMediaStreamSourceInterrupted(MediaStreamTrack& track, bool in
     track.source().setInterruptedForTesting(interrupted);
 }
 
+const String& Internals::mediaStreamTrackPersistentId(const MediaStreamTrack& track)
+{
+    return track.source().persistentID();
+}
+
 bool Internals::isMediaStreamSourceInterrupted(MediaStreamTrack& track) const
 {
     return track.source().interrupted();
@@ -7063,7 +7066,7 @@ String Internals::windowLocationHost(DOMWindow& window)
 String Internals::systemColorForCSSValue(const String& cssValue, bool useDarkModeAppearance, bool useElevatedUserInterfaceLevel)
 {
     CSSValueID id = cssValueKeywordID(cssValue);
-    RELEASE_ASSERT(StyleColor::isSystemColorKeyword(id));
+    RELEASE_ASSERT(CSS::isSystemColorKeyword(id));
 
     OptionSet<StyleColorOptions> options;
     if (useDarkModeAppearance)
@@ -7715,7 +7718,7 @@ std::optional<RenderingMode> Internals::getEffectiveRenderingModeOfNewlyCreatedA
     if (!document || !document->page())
         return std::nullopt;
 
-    if (RefPtr imageBuffer = ImageBuffer::create({ 100, 100 }, RenderingPurpose::DOM, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8, ImageBufferOptions::Accelerated, &document->page()->chrome())) {
+    if (RefPtr imageBuffer = ImageBuffer::create({ 100, 100 }, RenderingMode::Accelerated, RenderingPurpose::DOM, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8,  &document->page()->chrome())) {
         imageBuffer->ensureBackendCreated();
         if (imageBuffer->hasBackend())
             return imageBuffer->renderingMode();
@@ -7760,5 +7763,3 @@ void Internals::setTopDocumentURLForQuirks(const String& urlString)
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

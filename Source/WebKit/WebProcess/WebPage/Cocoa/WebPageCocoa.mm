@@ -42,6 +42,7 @@
 #import "WebPaymentCoordinator.h"
 #import "WebProcess.h"
 #import "WebRemoteObjectRegistry.h"
+#import <WebCore/ChromeClient.h>
 #import <WebCore/DeprecatedGlobalSettings.h>
 #import <WebCore/DictionaryLookup.h>
 #import <WebCore/DocumentInlines.h>
@@ -241,15 +242,6 @@ void WebPage::performDictionaryLookupForSelection(LocalFrame& frame, const Visib
     performDictionaryLookupForRange(frame, *range, presentationTransition);
 }
 
-void WebPage::performDictionaryLookupOfCurrentSelection()
-{
-    RefPtr frame = m_page->checkedFocusController()->focusedOrMainFrame();
-    if (!frame)
-        return;
-
-    performDictionaryLookupForSelection(*frame, frame->selection().selection(), TextIndicatorPresentationTransition::BounceAndCrossfade);
-}
-
 void WebPage::performDictionaryLookupForRange(LocalFrame& frame, const SimpleRange& range, TextIndicatorPresentationTransition presentationTransition)
 {
     send(Messages::WebPageProxy::DidPerformDictionaryLookup(dictionaryPopupInfoForRange(frame, range, presentationTransition)));
@@ -383,7 +375,7 @@ void WebPage::addDictationAlternative(const String& text, DictationContext conte
         return;
     }
 
-    document->markers().addMarker(matchRange, DocumentMarker::Type::DictationAlternatives, { DocumentMarker::DictationData { context, text } });
+    document->markers().addMarker(matchRange, DocumentMarkerType::DictationAlternatives, { DocumentMarker::DictationData { context, text } });
     completion(true);
 }
 
@@ -406,7 +398,7 @@ void WebPage::dictationAlternativesAtSelection(CompletionHandler<void(Vector<Dic
         return;
     }
 
-    auto markers = document->markers().markersInRange(*expandedSelectionRange, DocumentMarker::Type::DictationAlternatives);
+    auto markers = document->markers().markersInRange(*expandedSelectionRange, DocumentMarkerType::DictationAlternatives);
     auto contexts = WTF::compactMap(markers, [](auto& marker) -> std::optional<DictationContext> {
         if (std::holds_alternative<DocumentMarker::DictationData>(marker->data()))
             return std::get<DocumentMarker::DictationData>(marker->data()).context;
@@ -435,7 +427,7 @@ void WebPage::clearDictationAlternatives(Vector<DictationContext>&& contexts)
         if (!std::holds_alternative<DocumentMarker::DictationData>(marker.data()))
             return FilterMarkerResult::Keep;
         return setOfContextsToRemove.contains(std::get<WebCore::DocumentMarker::DictationData>(marker.data()).context) ? FilterMarkerResult::Remove : FilterMarkerResult::Keep;
-    }, DocumentMarker::Type::DictationAlternatives);
+    }, DocumentMarkerType::DictationAlternatives);
 }
 
 void WebPage::accessibilityTransferRemoteToken(RetainPtr<NSData> remoteToken)
@@ -480,6 +472,22 @@ void WebPage::bindRemoteAccessibilityFrames(int processIdentifier, WebCore::Fram
 
     // Get our remote token data and send back to the RemoteFrame.
     completionHandler({ span(accessibilityRemoteTokenData().get()) }, getpid());
+}
+
+void WebPage::resolveAccessibilityHitTestForTesting(const WebCore::IntPoint& point, CompletionHandler<void(String)>&& completionHandler)
+{
+#if PLATFORM(MAC)
+    if (id coreObject = [m_mockAccessibilityElement accessibilityRootObjectWrapper]) {
+        if (id hitTestResult = [coreObject accessibilityHitTest:point]) {
+            ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+            completionHandler([hitTestResult accessibilityAttributeValue:@"AXInfoStringForTesting"]);
+            ALLOW_DEPRECATED_DECLARATIONS_END
+            return;
+        }
+    }
+#endif
+    UNUSED_PARAM(point);
+    completionHandler(makeString("NULL"_s));
 }
 
 #if ENABLE(APPLE_PAY)
@@ -1042,16 +1050,6 @@ void WebPage::createTextIndicatorForTextAnimationID(const WTF::UUID& uuid, Compl
 void WebPage::updateUnderlyingTextVisibilityForTextAnimationID(const WTF::UUID& uuid, bool visible, CompletionHandler<void()>&& completionHandler)
 {
     m_textAnimationController->updateUnderlyingTextVisibilityForTextAnimationID(uuid, visible, WTFMove(completionHandler));
-}
-
-void WebPage::enableSourceTextAnimationAfterElementWithID(const String& elementID)
-{
-    m_textAnimationController->enableSourceTextAnimationAfterElementWithID(elementID);
-}
-
-void WebPage::enableTextAnimationTypeForElementWithID(const String& elementID)
-{
-    m_textAnimationController->enableTextAnimationTypeForElementWithID(elementID);
 }
 
 void WebPage::proofreadingSessionSuggestionTextRectsInRootViewCoordinates(const WebCore::CharacterRange& enclosingRangeRelativeToSessionRange, CompletionHandler<void(Vector<FloatRect>&&)>&& completionHandler) const

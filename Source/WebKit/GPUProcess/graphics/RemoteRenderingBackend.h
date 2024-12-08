@@ -62,7 +62,8 @@ class DestinationColorSpace;
 class FloatSize;
 class MediaPlayer;
 class NativeImage;
-enum class RenderingMode : bool;
+enum class RenderingMode : uint8_t;
+struct FontCustomPlatformSerializedData;
 
 namespace ShapeDetection {
 struct BarcodeDetectorOptions;
@@ -106,8 +107,10 @@ public:
     void dispatch(Function<void()>&&);
 
     IPC::StreamServerConnection& streamConnection() const { return m_streamConnection.get(); }
+    Ref<IPC::StreamServerConnection> protectedStreamConnection() const { return m_streamConnection; }
 
     GPUConnectionToWebProcess& gpuConnectionToWebProcess() { return m_gpuConnectionToWebProcess.get(); }
+    Ref<GPUConnectionToWebProcess> protectedGPUConnectionToWebProcess();
 
     void setSharedMemoryForGetPixelBuffer(RefPtr<WebCore::SharedMemory> memory) { m_getPixelBufferSharedMemory = WTFMove(memory); }
     RefPtr<WebCore::SharedMemory> sharedMemoryForGetPixelBuffer() const { return m_getPixelBufferSharedMemory; }
@@ -145,11 +148,7 @@ private:
     void cacheGradient(Ref<WebCore::Gradient>&&);
     void cacheFilter(Ref<WebCore::Filter>&&);
     void cacheFont(const WebCore::Font::Attributes&, WebCore::FontPlatformDataAttributes, std::optional<WebCore::RenderingResourceIdentifier>);
-#if PLATFORM(COCOA) || USE(SKIA)
     void cacheFontCustomPlatformData(WebCore::FontCustomPlatformSerializedData&&);
-#else
-    void cacheFontCustomPlatformData(Ref<WebCore::FontCustomPlatformData>&&);
-#endif
     void releaseAllDrawingResources();
     void releaseAllImageResources();
     void releaseRenderingResource(WebCore::RenderingResourceIdentifier);
@@ -184,15 +183,13 @@ private:
 
     Ref<ShapeDetection::ObjectHeap> protectedShapeDetectionObjectHeap() const;
 
-#if PLATFORM(COCOA) || USE(SKIA)
     bool shouldUseLockdownFontParser() const;
-#endif
 
     void getImageBufferResourceLimitsForTesting(CompletionHandler<void(WebCore::ImageBufferResourceLimits)>&&);
 
-    Ref<IPC::StreamConnectionWorkQueue> m_workQueue;
-    Ref<IPC::StreamServerConnection> m_streamConnection;
-    Ref<GPUConnectionToWebProcess> m_gpuConnectionToWebProcess;
+    const Ref<IPC::StreamConnectionWorkQueue> m_workQueue;
+    const Ref<IPC::StreamServerConnection> m_streamConnection;
+    const Ref<GPUConnectionToWebProcess> m_gpuConnectionToWebProcess;
     Ref<RemoteSharedResourceCache> m_sharedResourceCache;
     RemoteResourceCache m_remoteResourceCache;
     WebCore::ProcessIdentity m_resourceOwner;

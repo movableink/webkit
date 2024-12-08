@@ -37,7 +37,6 @@
 #include "PrivateRelayed.h"
 #include "ServiceWorkerNavigationPreloader.h"
 #include "SharedBufferReference.h"
-#include "WebCoreArgumentCoders.h"
 #include "WebResourceLoaderMessages.h"
 #include "WebSWContextManagerConnectionMessages.h"
 #include "WebSWServerConnection.h"
@@ -138,10 +137,11 @@ ServiceWorkerFetchTask::~ServiceWorkerFetchTask()
 
 template<typename Message> bool ServiceWorkerFetchTask::sendToServiceWorker(Message&& message)
 {
-    if (!m_serviceWorkerConnection)
+    RefPtr serviceWorkerConnection = m_serviceWorkerConnection.get();
+    if (!serviceWorkerConnection)
         return false;
 
-    return m_serviceWorkerConnection->protectedIPCConnection()->send(std::forward<Message>(message), 0) == IPC::Error::NoError;
+    return serviceWorkerConnection->protectedIPCConnection()->send(std::forward<Message>(message), 0) == IPC::Error::NoError;
 }
 
 template<typename Message> bool ServiceWorkerFetchTask::sendToClient(Message&& message)
@@ -452,7 +452,7 @@ void ServiceWorkerFetchTask::timeoutTimerFired()
 
     cannotHandle();
 
-    if (CheckedPtr swServerConnection = m_swServerConnection.get())
+    if (RefPtr swServerConnection = m_swServerConnection.get())
         swServerConnection->fetchTaskTimedOut(*serviceWorkerIdentifier());
 }
 
@@ -462,10 +462,13 @@ void ServiceWorkerFetchTask::softUpdateIfNeeded()
     if (!m_shouldSoftUpdate)
         return;
     Ref loader = *m_loader;
-    CheckedPtr swConnection = loader->connectionToWebProcess().swConnection();
+    RefPtr swConnection = loader->protectedConnectionToWebProcess()->swConnection();
     if (!swConnection)
         return;
-    if (RefPtr registration = swConnection->protectedServer()->getRegistration(*m_serviceWorkerRegistrationIdentifier))
+    RefPtr server = swConnection->server();
+    if (!server)
+        return;
+    if (RefPtr registration = server->getRegistration(*m_serviceWorkerRegistrationIdentifier))
         registration->scheduleSoftUpdate(loader->isAppInitiated() ? WebCore::IsAppInitiated::Yes : WebCore::IsAppInitiated::No);
 }
 
@@ -559,7 +562,8 @@ void ServiceWorkerFetchTask::cancelPreloadIfNecessary()
 
 NetworkSession* ServiceWorkerFetchTask::session()
 {
-    return m_swServerConnection ? m_swServerConnection->session() : nullptr;
+    RefPtr swServerConnection = m_swServerConnection.get();
+    return swServerConnection ? swServerConnection->session() : nullptr;
 }
 
 bool ServiceWorkerFetchTask::convertToDownload(DownloadManager& manager, DownloadID downloadID, const ResourceRequest& request, const ResourceResponse& response)
@@ -568,7 +572,11 @@ bool ServiceWorkerFetchTask::convertToDownload(DownloadManager& manager, Downloa
         return m_preloader->convertToDownload(manager, downloadID, request, response);
 
     CheckedPtr session = this->session();
-    if (!session || !m_serviceWorkerConnection)
+    if (!session)
+        return false;
+
+    RefPtr serviceWorkerConnection = m_serviceWorkerConnection.get();
+    if (!serviceWorkerConnection)
         return false;
 
     m_isDone = true;
@@ -576,7 +584,7 @@ bool ServiceWorkerFetchTask::convertToDownload(DownloadManager& manager, Downloa
     // FIXME: We might want to keep the service worker alive until the download ends.
     RefPtr<ServiceWorkerDownloadTask> serviceWorkerDownloadTask;
     auto serviceWorkerDownloadLoad = NetworkLoad::create(*protectedLoader(), *session, [&](auto& client) {
-        serviceWorkerDownloadTask =  ServiceWorkerDownloadTask::create(*session, client, *m_serviceWorkerConnection, *m_serviceWorkerIdentifier, *m_serverConnectionIdentifier, m_fetchIdentifier, request, response, downloadID);
+        serviceWorkerDownloadTask =  ServiceWorkerDownloadTask::create(*session, client, *serviceWorkerConnection, *m_serviceWorkerIdentifier, *m_serverConnectionIdentifier, m_fetchIdentifier, request, response, downloadID);
         return serviceWorkerDownloadTask.copyRef();
     });
 

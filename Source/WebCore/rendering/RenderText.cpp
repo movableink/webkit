@@ -55,6 +55,7 @@
 #include "SVGElementTypeHelpers.h"
 #include "SVGInlineTextBox.h"
 #include "Settings.h"
+#include "SurrogatePairAwareTextIterator.h"
 #include "Text.h"
 #include "TextResourceDecoder.h"
 #include "TextTransform.h"
@@ -163,22 +164,83 @@ static constexpr UChar convertNoBreakSpaceToSpace(UChar character)
     return character == noBreakSpace ? ' ' : character;
 }
 
-String capitalize(const String& string, UChar previousCharacter)
+static inline size_t capitalizeCharacter(String textContent, unsigned startCharacterOffset, StringBuilder& output)
 {
-    // FIXME: Change this to use u_strToTitle instead of u_totitle and to consider locale.
+    if (startCharacterOffset >= textContent.length()) {
+        ASSERT_NOT_REACHED();
+        return 0;
+    }
 
-    unsigned length = string.length();
+    auto capitalize = [&](const UChar* contentToCapitalize, size_t length) -> size_t {
+        if (length == 1) {
+            if ((*contentToCapitalize >= 'A' && *contentToCapitalize <= 'Z') || *contentToCapitalize == ' ')
+                return 0;
+            if (*contentToCapitalize <= 'z') {
+                char32_t lastCharacter = u_totitle(*contentToCapitalize);
+                output.append(lastCharacter);
+                return 1;
+            }
+        }
+
+        UChar capitalizedCharacter;
+        UErrorCode status = U_ZERO_ERROR;
+        auto realLength = u_strToTitle(&capitalizedCharacter, 1, contentToCapitalize, length, nullptr, "", &status);
+        if (U_SUCCESS(status) && realLength == 1) {
+            output.append(capitalizedCharacter);
+            return realLength;
+        }
+
+        // Decomposed ligatures may need more space.
+        std::span<UChar> capitalizedStringData;
+        auto capitalizedString = String::createUninitialized(realLength, capitalizedStringData);
+        status = U_ZERO_ERROR;
+        u_strToTitle(capitalizedStringData.data(), capitalizedStringData.size(), contentToCapitalize, length, nullptr, "", &status);
+        if (U_SUCCESS(status)) {
+            output.append(capitalizedString);
+            return length;
+        }
+        return 0;
+    };
+
+    if (textContent.is8Bit()) {
+        auto characterToCapitalize = textContent[startCharacterOffset];
+        return capitalize(&characterToCapitalize, 1);
+    }
+
+    auto content = textContent.span16().subspan(startCharacterOffset);
+    auto contentIterator = SurrogatePairAwareTextIterator { content, startCharacterOffset, textContent.length() };
+    unsigned capitalizedContentLength = 0;
+    char32_t currentCharacter = 0;
+    contentIterator.consume(currentCharacter, capitalizedContentLength);
+    if (startCharacterOffset + capitalizedContentLength > textContent.length()) {
+        ASSERT_NOT_REACHED();
+        return 0;
+    }
+    return capitalize(content.data(), capitalizedContentLength);
+}
+
+String capitalize(const String& string)
+{
+    Vector<UChar> previousCharacter(1, ' ');
+    return capitalize(string, previousCharacter);
+}
+
+String capitalize(const String& string, Vector<UChar> previousCharacter)
+{
+    int32_t length = string.length();
+    int32_t previousCharacterLength = previousCharacter.size();
     auto& stringImpl = *string.impl();
 
     static_assert(String::MaxLength < std::numeric_limits<unsigned>::max(), "Must be able to add one without overflowing unsigned");
 
     // Replace NO BREAK SPACE with a normal spaces since ICU does not treat it as a word separator.
-    Vector<UChar> stringWithPrevious(length + 1);
-    stringWithPrevious[0] = convertNoBreakSpaceToSpace(previousCharacter);
-    for (unsigned i = 1; i < length + 1; i++)
-        stringWithPrevious[i] = convertNoBreakSpaceToSpace(stringImpl[i - 1]);
+    Vector<UChar> stringWithPrevious(previousCharacterLength + length);
+    for (int32_t i = 0; i < previousCharacterLength; ++i)
+        stringWithPrevious[i] = convertNoBreakSpaceToSpace(previousCharacter[i]);
+    for (int32_t i = previousCharacterLength; i < length + previousCharacterLength; ++i)
+        stringWithPrevious[i] = convertNoBreakSpaceToSpace(stringImpl[i - previousCharacterLength]);
 
-    auto* breakIterator = WTF::wordBreakIterator(stringWithPrevious.span().first(length + 1));
+    auto* breakIterator = WTF::wordBreakIterator(stringWithPrevious.span());
     if (!breakIterator)
         return string;
 
@@ -186,24 +248,28 @@ String capitalize(const String& string, UChar previousCharacter)
     result.reserveCapacity(length);
 
     int32_t startOfWord = ubrk_first(breakIterator);
-    int32_t endOfWord;
-    for (endOfWord = ubrk_next(breakIterator); endOfWord != UBRK_DONE; startOfWord = endOfWord, endOfWord = ubrk_next(breakIterator)) {
-        // Do not append the first character, since it's the previous character, not from this string.
-        if (startOfWord) {
-            char32_t lastCharacter = u_totitle(stringImpl[startOfWord - 1]);
-            result.append(lastCharacter);
+    for (int32_t endOfWord = ubrk_next(breakIterator); endOfWord != UBRK_DONE; startOfWord = endOfWord, endOfWord = ubrk_next(breakIterator)) {
+        // Do not try to titlecase the previous content.
+        if (startOfWord >= previousCharacterLength) {
+            auto capitalizedContentLength = capitalizeCharacter(string, startOfWord - previousCharacterLength, result);
+            for (int32_t i = startOfWord + capitalizedContentLength; i < endOfWord; ++i)
+                result.append(stringImpl[i - previousCharacterLength]);
+        } else {
+            // This is previous and continous non-titlecased current content. Only append current content.
+            for (int32_t i = startOfWord; i < endOfWord; ++i) {
+                if (i < previousCharacterLength)
+                    continue;
+                result.append(stringImpl[i - previousCharacterLength]);
+            }
         }
-        for (int i = startOfWord + 1; i < endOfWord; i++)
-            result.append(stringImpl[i - 1]);
     }
-
     return result == string ? string : result.toString();
 }
 
 static LayoutRect selectionRectForTextBox(const InlineIterator::TextBox& textBox, unsigned rangeStart, unsigned rangeEnd)
 {
-    if (auto* svgInlineTextBox = dynamicDowncast<SVGInlineTextBox>(textBox.legacyInlineBox()))
-        return svgInlineTextBox->localSelectionRect(rangeStart, rangeEnd);
+    if (auto* svgTextBox = dynamicDowncast<InlineIterator::SVGTextBox>(textBox))
+        return svgTextBox->localSelectionRect(rangeStart, rangeEnd);
 
     bool isCaretCase = rangeStart == rangeEnd;
 
@@ -386,6 +452,9 @@ void RenderText::styleDidChange(StyleDifference diff, const RenderStyle* oldStyl
     auto needsLayoutBoxStyleUpdate = layoutBox() && (diff >= StyleDifference::Repaint || (&style() != &firstLineStyle()));
     if (needsLayoutBoxStyleUpdate)
         LayoutIntegration::LineLayout::updateStyle(*this);
+
+    if (CheckedPtr cache = document().existingAXObjectCache())
+        cache->onStyleChange(*this, diff, oldStyle, newStyle);
 }
 
 void RenderText::removeAndDestroyLegacyTextBoxes()
@@ -486,7 +555,7 @@ void RenderText::collectSelectionGeometries(Vector<SelectionGeometry>& rects, un
 
         bool isFixed = false;
         auto absoluteQuad = localToAbsoluteQuad(FloatRect(rect), UseTransforms, &isFixed);
-        bool boxIsHorizontal = !is<SVGInlineTextBox>(textBox->legacyInlineBox()) ? textBox->isHorizontal() : !writingMode().isVertical();
+        bool boxIsHorizontal = !is<InlineIterator::SVGTextBoxIterator>(textBox) ? textBox->isHorizontal() : !writingMode().isVertical();
 
         rects.append(SelectionGeometry(absoluteQuad, HTMLElement::selectionRenderingBehavior(textNode()), textBox->direction(), extentsRect.x(), extentsRect.maxX(), extentsRect.maxY(), 0, textBox->isLineBreak(), isFirstOnLine, isLastOnLine, containsStart, containsEnd, boxIsHorizontal, isFixed, view().pageNumberForBlockProgressionOffset(absoluteQuad.enclosingBoundingBox().x())));
     }
@@ -574,7 +643,7 @@ static Vector<LayoutRect> characterRects(const InlineIterator::TextBox& run, uns
     if (clampedStart >= clampedEnd)
         return { };
 
-    if (auto* svgTextBox = dynamicDowncast<SVGInlineTextBox>(run.legacyInlineBox())) {
+    if (auto* svgTextBox = dynamicDowncast<InlineIterator::SVGTextBox>(run)) {
         return Vector<LayoutRect>(clampedEnd - clampedStart, [&, clampedStart = clampedStart](size_t i) {
             size_t index = clampedStart + i;
             return svgTextBox->localSelectionRect(index, index + 1);
@@ -1418,7 +1487,7 @@ bool RenderText::containsOnlyCSSWhitespace(unsigned from, unsigned length) const
     return containsOnlyPossiblyCollapsibleWhitespace(text().span16().subspan(from, length));
 }
 
-Vector<std::pair<unsigned, unsigned>> RenderText::contentRangesBetweenOffsetsForType(DocumentMarker::Type type, unsigned startOffset, unsigned endOffset) const
+Vector<std::pair<unsigned, unsigned>> RenderText::contentRangesBetweenOffsetsForType(DocumentMarkerType type, unsigned startOffset, unsigned endOffset) const
 {
     if (!textNode())
         return { };
@@ -1469,7 +1538,7 @@ static inline bool isInlineFlowOrEmptyText(const RenderObject& renderer)
     return textRenderer && textRenderer->text().isEmpty();
 }
 
-UChar RenderText::previousCharacter() const
+Vector<UChar> RenderText::previousCharacter() const
 {
     const RenderObject* previousText = this;
     while ((previousText = previousText->previousInPreOrder())) {
@@ -1479,10 +1548,32 @@ UChar RenderText::previousCharacter() const
             break;
     }
     auto* renderText = dynamicDowncast<RenderText>(previousText);
+    Vector<UChar> previous;
     if (!renderText)
-        return ' ';
-    auto& previousString = renderText->text();
-    return previousString[previousString.length() - 1];
+        previous.append(' ');
+    else {
+        auto& previousString = renderText->text();
+        if (previousString.is8Bit())
+            previous.append(previousString[previousString.length() - 1]);
+        else {
+            auto previousCharacterLength = [&] {
+                auto contentIterator = SurrogatePairAwareTextIterator { previousString.span16(), 0, previousString.length() };
+                unsigned characterLength = 0;
+                char32_t currentCharacter = 0;
+                while (contentIterator.consume(currentCharacter, characterLength))
+                    contentIterator.advance(characterLength);
+                return characterLength;
+            }();
+
+            if (previousCharacterLength > previousString.length()) {
+                ASSERT_NOT_REACHED();
+                return previous;
+            }
+            for (size_t i = previousString.length() - previousCharacterLength; i < previousString.length(); ++i)
+                previous.append(previousString[i]);
+        }
+    }
+    return previous;
 }
 
 static String convertToFullSizeKana(const String& string)
@@ -1573,7 +1664,13 @@ static String convertToFullSizeKana(const String& string)
     return result.toString();
 }
 
-String applyTextTransform(const RenderStyle& style, const String& text, UChar previousCharacter)
+String applyTextTransform(const RenderStyle& style, const String& text)
+{
+    Vector<UChar> previousCharacter(1, ' ');
+    return applyTextTransform(style, text, previousCharacter);
+}
+
+String applyTextTransform(const RenderStyle& style, const String& text, Vector<UChar> previousCharacter)
 {
     auto transform = style.textTransform();
 

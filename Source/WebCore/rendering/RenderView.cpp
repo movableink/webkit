@@ -61,7 +61,6 @@
 #include "RenderSVGRoot.h"
 #include "RenderStyleInlines.h"
 #include "RenderTreeBuilder.h"
-#include "RenderViewTransitionRoot.h"
 #include "RenderWidget.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGImage.h"
@@ -782,7 +781,7 @@ Node* RenderView::nodeForHitTest() const
     return document().documentElement();
 }
 
-void RenderView::updateHitTestResult(HitTestResult& result, const LayoutPoint& point)
+void RenderView::updateHitTestResult(HitTestResult& result, const LayoutPoint& point) const
 {
     if (result.innerNode())
         return;
@@ -1111,14 +1110,29 @@ SingleThreadWeakHashSet<RenderCounter> RenderView::takeCountersNeedingUpdate()
     return std::exchange(m_countersNeedingUpdate, { });
 }
 
-SingleThreadWeakPtr<RenderViewTransitionRoot> RenderView::viewTransitionRoot() const
+SingleThreadWeakPtr<RenderElement> RenderView::viewTransitionRoot() const
 {
     return m_viewTransitionRoot;
 }
 
-void RenderView::setViewTransitionRoot(RenderViewTransitionRoot& renderer)
+void RenderView::setViewTransitionRoot(RenderElement& renderer)
 {
     m_viewTransitionRoot = renderer;
+}
+
+void RenderView::addViewTransitionGroup(const AtomString& name, RenderElement& group)
+{
+    m_viewTransitionGroups.set(name, &group);
+}
+
+void RenderView::removeViewTransitionGroup(const AtomString& name)
+{
+    m_viewTransitionGroups.remove(name);
+}
+
+RenderElement* RenderView::viewTransitionGroupForName(const AtomString& name)
+{
+    return m_viewTransitionGroups.get(name).get();
 }
 
 } // namespace WebCore

@@ -449,7 +449,7 @@ void MediaPlayerPrivateWebM::seekInternal()
                 auto trackId = trackBufferPair.first;
 
                 trackBuffer.setNeedsReenqueueing(true);
-                reenqueueMediaForTime(trackBuffer, trackId, m_lastSeekTime);
+                reenqueueMediaForTime(trackBuffer, trackId, m_lastSeekTime, NeedsFlush::No);
             }
 
             maybeCompleteSeek();
@@ -1985,6 +1985,20 @@ void MediaPlayerPrivateWebM::isInFullscreenOrPictureInPictureChanged(bool isInFu
 #else
     UNUSED_PARAM(isInFullscreenOrPictureInPicture);
 #endif
+}
+
+std::optional<VideoPlaybackQualityMetrics> MediaPlayerPrivateWebM::videoPlaybackQualityMetrics()
+{
+    if (!m_videoRenderer)
+        return std::nullopt;
+
+    return VideoPlaybackQualityMetrics {
+        m_videoRenderer->totalVideoFrames(),
+        m_videoRenderer->droppedVideoFrames(),
+        m_videoRenderer->corruptedVideoFrames(),
+        m_videoRenderer->totalFrameDelay().toDouble(),
+        m_videoRenderer->totalDisplayedFrames()
+    };
 }
 
 } // namespace WebCore

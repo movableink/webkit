@@ -33,7 +33,6 @@
 #include "RemoteImageDecoderAVFManagerMessages.h"
 #include "RemoteImageDecoderAVFProxyMessages.h"
 #include "SharedBufferReference.h"
-#include "WebCoreArgumentCoders.h"
 #include <CoreGraphics/CGImage.h>
 #include <WebCore/GraphicsContext.h>
 #include <WebCore/ImageDecoderAVFObjC.h>
@@ -48,6 +47,16 @@ RemoteImageDecoderAVFProxy::RemoteImageDecoderAVFProxy(GPUConnectionToWebProcess
     : m_connectionToWebProcess(connectionToWebProcess)
     , m_resourceOwner(connectionToWebProcess.webProcessIdentity())
 {
+}
+
+void RemoteImageDecoderAVFProxy::ref() const
+{
+    m_connectionToWebProcess.get()->ref();
+}
+
+void RemoteImageDecoderAVFProxy::deref() const
+{
+    m_connectionToWebProcess.get()->deref();
 }
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteImageDecoderAVFProxy);
@@ -83,7 +92,7 @@ void RemoteImageDecoderAVFProxy::deleteDecoder(ImageDecoderIdentifier identifier
     if (!connection)
         return;
     if (allowsExitUnderMemoryPressure())
-        connection->gpuProcess().tryExitIfUnusedAndUnderMemoryPressure();
+        connection->protectedGPUProcess()->tryExitIfUnusedAndUnderMemoryPressure();
 }
 
 void RemoteImageDecoderAVFProxy::encodedDataStatusChanged(ImageDecoderIdentifier identifier)

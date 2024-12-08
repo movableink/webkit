@@ -897,7 +897,6 @@ css/CSSFontStyleRangeValue.h
 css/CSSFontStyleWithAngleValue.cpp
 css/CSSFontValue.cpp
 css/CSSFontVariationValue.cpp
-css/CSSGradientValue.cpp
 css/CSSGridIntegerRepeatValue.cpp
 css/CSSGridLineValue.cpp
 css/CSSGroupingRule.cpp
@@ -926,8 +925,6 @@ css/CSSScrollValue.cpp
 css/CSSScrollValue.h
 css/CSSSegmentedFontFace.cpp
 css/CSSSelector.cpp
-css/CSSShadowValue.cpp
-css/CSSShadowValue.h
 css/CSSStyleRule.cpp
 css/CSSStyleSheet.cpp
 css/CSSStyleSheetObservableArray.cpp
@@ -968,7 +965,6 @@ css/StyleRuleImport.cpp
 css/StyleRuleImport.h
 css/StyleSheetContents.cpp
 css/StyleSheetList.cpp
-css/color/CSSUnresolvedLightDark.cpp
 css/parser/CSSParserImpl.cpp
 css/parser/CSSPropertyParser.cpp
 css/parser/CSSPropertyParserConsumer+Grid.cpp
@@ -1546,6 +1542,7 @@ platform/audio/Reverb.cpp
 platform/audio/ReverbConvolver.cpp
 platform/audio/cocoa/AudioDestinationCocoa.cpp
 platform/audio/cocoa/AudioFileReaderCocoa.cpp
+platform/audio/cocoa/AudioSampleBufferConverter.mm
 platform/audio/cocoa/AudioSampleDataSource.mm
 platform/audio/cocoa/AudioSessionCocoa.mm
 platform/audio/cocoa/MediaSessionManagerCocoa.mm
@@ -1563,7 +1560,6 @@ platform/graphics/BitmapImage.cpp
 platform/graphics/BitmapImage.h
 platform/graphics/BitmapImageDescriptor.cpp
 platform/graphics/BitmapImageSource.cpp
-platform/graphics/ByteArrayPixelBuffer.cpp
 platform/graphics/Color.cpp
 platform/graphics/Color.h
 platform/graphics/ComplexTextController.cpp
@@ -1654,7 +1650,6 @@ platform/graphics/coreimage/FEComponentTransferCoreImageApplier.mm
 platform/graphics/coreimage/FilterImageCoreImage.mm
 platform/graphics/coretext/ComplexTextControllerCoreText.mm
 platform/graphics/coretext/FontCascadeCoreText.cpp
-platform/graphics/coretext/FontCustomPlatformDataCoreText.cpp
 platform/graphics/coretext/FontPlatformDataCoreText.cpp
 platform/graphics/cv/GraphicsContextGLCVCocoa.mm
 platform/graphics/displaylists/DisplayListItem.cpp
@@ -1680,8 +1675,6 @@ platform/mac/VideoPresentationInterfaceMac.mm
 platform/mediarecorder/MediaRecorderPrivate.h
 platform/mediarecorder/MediaRecorderPrivateAVFImpl.cpp
 platform/mediarecorder/MediaRecorderPrivateMock.cpp
-platform/mediarecorder/cocoa/AudioSampleBufferCompressor.mm
-platform/mediastream/AudioTrackPrivateMediaStream.cpp
 platform/mediastream/MediaStreamTrackDataHolder.cpp
 platform/mediastream/MediaStreamTrackPrivate.cpp
 platform/mediastream/RealtimeMediaSourceCenter.cpp
@@ -1897,7 +1890,6 @@ style/ChildChangeInvalidation.cpp
 style/ChildChangeInvalidation.h
 style/ClassChangeInvalidation.cpp
 style/ElementRuleCollector.cpp
-style/FilterOperationsBuilder.cpp
 style/IdChangeInvalidation.cpp
 style/InspectorCSSOMWrappers.cpp
 style/MatchedDeclarationsCache.cpp

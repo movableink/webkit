@@ -35,7 +35,6 @@
 #import "WKWebExtensionControllerInternal.h"
 #import "WKWebViewInternal.h"
 #import "WebExtensionController.h"
-#import "WebPageProxy.h"
 #import "WebProcessProxy.h"
 #import <wtf/EnumTraits.h>
 

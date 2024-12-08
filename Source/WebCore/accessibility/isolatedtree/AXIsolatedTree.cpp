@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,10 +39,13 @@
 #include <wtf/MonotonicTime.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/SetForScope.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
+
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AXIsolatedTree);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AXIsolatedTree);
 
 static const Seconds CreationFeedbackInterval { 3_s };
 
@@ -210,7 +213,7 @@ void AXIsolatedTree::reportLoadingProgress(double processingProgress)
             { AXPropertyName::TitleAttributeValue, WTFMove(title) },
         });
         if (cache)
-            cache->postPlatformNotification(*axWebArea, AXObjectCache::AXNotification::AXLayoutComplete);
+            cache->postPlatformNotification(*axWebArea, AXNotification::LayoutComplete);
     }
 }
 
@@ -450,13 +453,13 @@ void AXIsolatedTree::collectNodeChangesForSubtree(AccessibilityObject& axObject)
         Vector<AXID> axChildrenIDs;
         axChildrenIDs.reserveInitialCapacity(axChildrenCopy.size());
         for (const auto& axChild : axChildrenCopy) {
-            if (!axChild || axChild.get() == &axObject) {
+            if (axChild.ptr() == &axObject) {
                 ASSERT_NOT_REACHED();
                 continue;
             }
 
             axChildrenIDs.append(axChild->objectID());
-            collectNodeChangesForSubtree(downcast<AccessibilityObject>(*axChild));
+            collectNodeChangesForSubtree(downcast<AccessibilityObject>(axChild.get()));
         }
         axChildrenIDs.shrinkToFit();
 
@@ -478,11 +481,11 @@ void AXIsolatedTree::collectNodeChangesForSubtree(AccessibilityObject& axObject)
         iterator->value.parentID = parentID;
 
         for (const auto& axChild : axChildrenCopy) {
-            if (!axChild || axChild.get() == &axObject) {
+            if (axChild.ptr() == &axObject) {
                 ASSERT_NOT_REACHED();
                 continue;
             }
-            collectNodeChangesForSubtree(downcast<AccessibilityObject>(*axChild));
+            collectNodeChangesForSubtree(downcast<AccessibilityObject>(axChild.get()));
         }
     }
 }
@@ -572,7 +575,7 @@ void AXIsolatedTree::updatePropertiesForSelfAndDescendants(AccessibilityObject& 
     });
 }
 
-void AXIsolatedTree::updateNodeProperties(AXCoreObject& axObject, const AXPropertyNameSet& properties)
+void AXIsolatedTree::updateNodeProperties(AccessibilityObject& axObject, const AXPropertyNameSet& properties)
 {
     AXTRACE("AXIsolatedTree::updateNodeProperties"_s);
     AXLOG(makeString("Updating properties for objectID "_s, axObject.objectID().loggingString(), ": "_s));
@@ -626,7 +629,7 @@ void AXIsolatedTree::updateNodeProperties(AXCoreObject& axObject, const AXProper
             propertyMap.set(AXPropertyName::Cells, axIDs(axObject.cells()));
             break;
         case AXPropertyName::CellSlots:
-            propertyMap.set(AXPropertyName::CellSlots, dynamicDowncast<AccessibilityObject>(axObject)->cellSlots());
+            propertyMap.set(AXPropertyName::CellSlots, axObject.cellSlots());
             break;
         case AXPropertyName::ColumnIndex:
             propertyMap.set(AXPropertyName::ColumnIndex, axObject.columnIndex());
@@ -766,10 +769,40 @@ void AXIsolatedTree::updateNodeProperties(AXCoreObject& axObject, const AXProper
             break;
         }
 #if ENABLE(AX_THREAD_TEXT_APIS)
-        case AXPropertyName::TextRuns:
-            propertyMap.set(AXPropertyName::TextRuns, dynamicDowncast<AccessibilityObject>(axObject)->textRuns());
+        case AXPropertyName::BackgroundColor:
+            propertyMap.set(AXPropertyName::BackgroundColor, axObject.backgroundColor());
             break;
-#endif
+        case AXPropertyName::Font:
+            propertyMap.set(AXPropertyName::Font, axObject.font());
+            break;
+        case AXPropertyName::HasLinethrough:
+            propertyMap.set(AXPropertyName::HasLinethrough, axObject.lineDecorationStyle().hasLinethrough);
+            break;
+        case AXPropertyName::HasTextShadow:
+            propertyMap.set(AXPropertyName::HasTextShadow, axObject.hasTextShadow());
+            break;
+        case AXPropertyName::HasUnderline:
+            propertyMap.set(AXPropertyName::HasUnderline, axObject.lineDecorationStyle().hasUnderline);
+            break;
+        case AXPropertyName::IsSubscript:
+            propertyMap.set(AXPropertyName::IsSubscript, axObject.isSubscript());
+            break;
+        case AXPropertyName::IsSuperscript:
+            propertyMap.set(AXPropertyName::IsSuperscript, axObject.isSuperscript());
+            break;
+        case AXPropertyName::LinethroughColor:
+            propertyMap.set(AXPropertyName::LinethroughColor, axObject.lineDecorationStyle().linethroughColor);
+            break;
+        case AXPropertyName::TextColor:
+            propertyMap.set(AXPropertyName::TextColor, axObject.textColor());
+            break;
+        case AXPropertyName::TextRuns:
+            propertyMap.set(AXPropertyName::TextRuns, axObject.textRuns());
+            break;
+        case AXPropertyName::UnderlineColor:
+            propertyMap.set(AXPropertyName::UnderlineColor, axObject.lineDecorationStyle().underlineColor);
+            break;
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
         case AXPropertyName::Title:
             propertyMap.set(AXPropertyName::Title, axObject.title().isolatedCopy());
             break;
@@ -807,15 +840,11 @@ void AXIsolatedTree::updateDependentProperties(AccessibilityObject& axObject)
     ASSERT(isMainThread());
 
     auto updateRelatedObjects = [this] (const AccessibilityObject& object) {
-        for (const auto& labeledObject : object.labelForObjects()) {
-            if (RefPtr axObject = downcast<AccessibilityObject>(labeledObject.get()))
-                queueNodeUpdate(axObject->objectID(), NodeUpdateOptions::nodeUpdate());
-        }
+        for (const auto& labeledObject : object.labelForObjects())
+            queueNodeUpdate(labeledObject->objectID(), NodeUpdateOptions::nodeUpdate());
 
-        for (const auto& describedByObject : object.descriptionForObjects()) {
-            if (RefPtr axObject = downcast<AccessibilityObject>(describedByObject.get()))
-                queueNodeUpdate(axObject->objectID(), { { AXPropertyName::AccessibilityText, AXPropertyName::ExtendedDescription } });
-        }
+        for (const auto& describedByObject : object.descriptionForObjects())
+            queueNodeUpdate(describedByObject->objectID(), { { AXPropertyName::AccessibilityText, AXPropertyName::ExtendedDescription } });
     };
     updateRelatedObjects(axObject);
 
@@ -894,7 +923,7 @@ void AXIsolatedTree::updateChildren(AccessibilityObject& axObject, ResolveNodeCh
         // can cause this objects children to be invalidated as we iterate.
         auto childrenCopy = axObject.children();
         for (auto& child : childrenCopy) {
-            Ref liveChild = downcast<AccessibilityObject>(*child);
+            Ref liveChild = downcast<AccessibilityObject>(child.get());
             if (liveChild->childrenInitialized())
                 continue;
 
@@ -942,7 +971,7 @@ void AXIsolatedTree::updateChildren(AccessibilityObject& axObject, ResolveNodeCh
             childrenChanged = true;
             AXLOG(makeString("AXID "_s, axAncestor->objectID().loggingString(), " gaining new subtree, starting at ID "_s, newChildren[i]->objectID().loggingString(), ':'));
             AXLOG(newChildren[i]);
-            collectNodeChangesForSubtree(downcast<AccessibilityObject>(*newChildren[i]));
+            collectNodeChangesForSubtree(downcast<AccessibilityObject>(newChildren[i].get()));
         }
     }
     m_nodeMap.set(axAncestor->objectID(), ParentChildrenIDs { oldIDs.parentID, WTFMove(newChildrenIDs) });

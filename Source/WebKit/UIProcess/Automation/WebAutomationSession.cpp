@@ -432,13 +432,7 @@ Inspector::Protocol::ErrorStringOr<void> WebAutomationSession::closeBrowsingCont
     if (!page)
         SYNC_FAIL_WITH_PREDEFINED_ERROR(WindowNotFound);
 
-#if PLATFORM(WIN) // FIXME: also PLATFORM(PLAYSTATION) should be added
-    // We don't have to close page/window/application, but want to disconnect to automation frontend.
-    terminate();
-#else
     page->closePage();
-#endif
-
     return { };
 }
 
@@ -683,7 +677,8 @@ void WebAutomationSession::exitFullscreenWindowForPage(WebPageProxy& page, WTF::
 {
 #if ENABLE(FULLSCREEN_API)
     ASSERT(!m_windowStateTransitionCallback);
-    if (!page.fullScreenManager() || !page.fullScreenManager()->isFullScreen()) {
+    RefPtr fullScreenManager = page.fullScreenManager();
+    if (!fullScreenManager || !fullScreenManager->isFullScreen()) {
         completionHandler();
         return;
     }
@@ -698,7 +693,7 @@ void WebAutomationSession::exitFullscreenWindowForPage(WebPageProxy& page, WTF::
         completionHandler();
     } };
     
-    page.fullScreenManager()->requestExitFullScreen();
+    fullScreenManager->requestExitFullScreen();
 #else
     completionHandler();
 #endif

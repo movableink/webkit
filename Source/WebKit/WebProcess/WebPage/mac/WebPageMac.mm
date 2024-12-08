@@ -42,7 +42,6 @@
 #import "PrintInfo.h"
 #import "UserData.h"
 #import "WKAccessibilityWebPageObjectMac.h"
-#import "WebCoreArgumentCoders.h"
 #import "WebEventConversion.h"
 #import "WebFrame.h"
 #import "WebHitTestResultData.h"
@@ -237,13 +236,13 @@ static String commandNameForSelectorName(const String& selectorName)
     // Map selectors into Editor command names.
     // This is not needed for any selectors that have the same name as the Editor command.
     static constexpr std::pair<ComparableASCIILiteral, ASCIILiteral> selectorExceptions[] = {
-        { "insertNewlineIgnoringFieldEditor:", "InsertNewline"_s },
-        { "insertParagraphSeparator:", "InsertNewline"_s },
-        { "insertTabIgnoringFieldEditor:", "InsertTab"_s },
-        { "pageDown:", "MovePageDown"_s },
-        { "pageDownAndModifySelection:", "MovePageDownAndModifySelection"_s },
-        { "pageUp:", "MovePageUp"_s },
-        { "pageUpAndModifySelection:", "MovePageUpAndModifySelection"_s },
+        { "insertNewlineIgnoringFieldEditor:"_s, "InsertNewline"_s },
+        { "insertParagraphSeparator:"_s, "InsertNewline"_s },
+        { "insertTabIgnoringFieldEditor:"_s, "InsertTab"_s },
+        { "pageDown:"_s, "MovePageDown"_s },
+        { "pageDownAndModifySelection:"_s, "MovePageDownAndModifySelection"_s },
+        { "pageUp:"_s, "MovePageUp"_s },
+        { "pageUpAndModifySelection:"_s, "MovePageUpAndModifySelection"_s },
     };
     static constexpr SortedArrayMap map { selectorExceptions };
     if (auto commandName = map.tryGet(selectorName))
@@ -697,17 +696,14 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     CGAffineTransform transform = CGContextGetCTM(context);
 
     for (PDFAnnotation *annotation in [pdfPage annotations]) {
-        if (![annotation isKindOfClass:getPDFAnnotationLinkClass()])
+        if (![[annotation valueForAnnotationKey:get_PDFKit_PDFAnnotationKeySubtype()] isEqualToString:get_PDFKit_PDFAnnotationSubtypeLink()])
             continue;
 
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        PDFAnnotationLink *linkAnnotation = (PDFAnnotationLink *)annotation;
-ALLOW_DEPRECATED_DECLARATIONS_END
-        NSURL *url = [linkAnnotation URL];
+        NSURL *url = annotation.URL;
         if (!url)
             continue;
 
-        CGRect urlRect = NSRectToCGRect([linkAnnotation bounds]);
+        CGRect urlRect = NSRectToCGRect(annotation.bounds);
         CGRect transformedRect = CGRectApplyAffineTransform(urlRect, transform);
         CGPDFContextSetURLForRect(context, (CFURLRef)url, transformedRect);
     }

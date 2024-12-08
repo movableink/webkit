@@ -418,7 +418,9 @@ void CoordinatedGraphicsLayer::setContentsOpaque(bool b)
     if (!m_needsDisplay.completeLayer) {
         m_needsDisplay.completeLayer = true;
         m_needsDisplay.rects.clear();
+#if ENABLE(DAMAGE_TRACKING)
         m_nicosia.delta.damageChanged = true;
+#endif
 
         addRepaintRect({ { }, m_size });
     }
@@ -513,6 +515,7 @@ void CoordinatedGraphicsLayer::setContentsNeedsDisplay()
     addRepaintRect(contentsRect());
 }
 
+#if ENABLE(DAMAGE_TRACKING)
 void CoordinatedGraphicsLayer::markDamageRectsUnreliable()
 {
     if (m_damagedRectsAreUnreliable)
@@ -521,6 +524,7 @@ void CoordinatedGraphicsLayer::markDamageRectsUnreliable()
     m_damagedRectsAreUnreliable = true;
     m_nicosia.delta.damageChanged = true;
 }
+#endif
 
 void CoordinatedGraphicsLayer::setContentsToPlatformLayer(PlatformLayer* platformLayer, ContentsLayerPurpose)
 {
@@ -709,7 +713,9 @@ void CoordinatedGraphicsLayer::setNeedsDisplay()
 
     m_needsDisplay.completeLayer = true;
     m_needsDisplay.rects.clear();
+#if ENABLE(DAMAGE_TRACKING)
     m_nicosia.delta.damageChanged = true;
+#endif
 
     notifyFlushRequired();
     addRepaintRect({ { }, m_size });
@@ -734,7 +740,9 @@ void CoordinatedGraphicsLayer::setNeedsDisplayInRect(const FloatRect& initialRec
         return;
 
     rects.append(rect);
+#if ENABLE(DAMAGE_TRACKING)
     m_nicosia.delta.damageChanged = true;
+#endif
 
     notifyFlushRequired();
     addRepaintRect(rect);
@@ -970,6 +978,7 @@ void CoordinatedGraphicsLayer::flushCompositingStateForThisLayerOnly()
 #endif
                 if (localDelta.eventRegionChanged)
                     state.eventRegion = eventRegion();
+#if ENABLE(DAMAGE_TRACKING)
                 if (localDelta.damageChanged) {
                     state.damage = Damage();
                     if (m_needsDisplay.completeLayer)
@@ -981,6 +990,7 @@ void CoordinatedGraphicsLayer::flushCompositingStateForThisLayerOnly()
                     if (m_damagedRectsAreUnreliable)
                         state.damage.invalidate();
                 }
+#endif
             });
         m_nicosia.performLayerSync = !!m_nicosia.delta.value;
         m_nicosia.delta = { };

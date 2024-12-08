@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include "CSSBoxShadowPropertyValue.h"
 #include "CSSCalcSymbolTable.h"
 #include "CSSCounterStyleRegistry.h"
 #include "CSSCounterStyleRule.h"
@@ -36,10 +37,9 @@
 #include "CSSGradientValue.h"
 #include "CSSGridTemplateAreasValue.h"
 #include "CSSPropertyParserConsumer+Font.h"
-#include "CSSPropertyParserHelpers.h"
 #include "CSSRectValue.h"
 #include "CSSRegisteredCustomProperty.h"
-#include "CSSShadowValue.h"
+#include "CSSTextShadowPropertyValue.h"
 #include "CounterContent.h"
 #include "CursorList.h"
 #include "ElementAncestorIteratorInlines.h"
@@ -47,6 +47,8 @@
 #include "HTMLElement.h"
 #include "LocalFrame.h"
 #include "SVGElement.h"
+#include "ShadowData.h"
+#include "StyleBoxShadow.h"
 #include "StyleBuilderConverter.h"
 #include "StyleBuilderStateInlines.h"
 #include "StyleCachedImage.h"
@@ -57,6 +59,7 @@
 #include "StyleImageSet.h"
 #include "StyleResolver.h"
 #include "StyleScope.h"
+#include "StyleTextShadow.h"
 #include "TextSizeAdjustment.h"
 
 namespace WebCore {
@@ -162,9 +165,6 @@ public:
 
 private:
     static void resetUsedZoom(BuilderState&);
-
-    template <CSSPropertyID id>
-    static void applyTextOrBoxShadowValue(BuilderState&, CSSValue&);
 
     enum CounterBehavior { Increment, Reset, Set };
     template <CounterBehavior counterBehavior>
@@ -566,18 +566,17 @@ inline void BuilderCustom::applyInheritCaretColor(BuilderState& builderState)
 
 inline void BuilderCustom::applyValueCaretColor(BuilderState& builderState, CSSValue& value)
 {
-    auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
     if (builderState.applyPropertyToRegularStyle()) {
-        if (primitiveValue.valueID() == CSSValueAuto)
+        if (value.valueID() == CSSValueAuto)
             builderState.style().setHasAutoCaretColor();
         else
-            builderState.style().setCaretColor(builderState.colorFromPrimitiveValue(primitiveValue, ForVisitedLink::No));
+            builderState.style().setCaretColor(builderState.createStyleColor(value, ForVisitedLink::No));
     }
     if (builderState.applyPropertyToVisitedLinkStyle()) {
-        if (primitiveValue.valueID() == CSSValueAuto)
+        if (value.valueID() == CSSValueAuto)
             builderState.style().setHasVisitedLinkAutoCaretColor();
         else
-            builderState.style().setVisitedLinkCaretColor(builderState.colorFromPrimitiveValue(primitiveValue, ForVisitedLink::Yes));
+            builderState.style().setVisitedLinkCaretColor(builderState.createStyleColor(value, ForVisitedLink::Yes));
     }
 }
 
@@ -669,40 +668,6 @@ inline void BuilderCustom::applyValueColorScheme(BuilderState& builderState, CSS
 }
 #endif
 
-template<CSSPropertyID property>
-inline void BuilderCustom::applyTextOrBoxShadowValue(BuilderState& builderState, CSSValue& value)
-{
-    if (value.valueID() == CSSValueNone) {
-        if (property == CSSPropertyTextShadow)
-            builderState.style().setTextShadow(nullptr);
-        else
-            builderState.style().setBoxShadow(nullptr);
-        return;
-    }
-
-    bool isFirstEntry = true;
-    for (auto& item : downcast<CSSValueList>(value)) {
-        auto& shadowValue = downcast<CSSShadowValue>(item);
-        auto& conversionData = builderState.cssToLengthConversionData();
-        auto x = shadowValue.x->resolveAsLength<WebCore::Length>(conversionData);
-        auto y = shadowValue.y->resolveAsLength<WebCore::Length>(conversionData);
-        auto blur = shadowValue.blur ? shadowValue.blur->resolveAsLength<WebCore::Length>(conversionData) : WebCore::Length(0, LengthType::Fixed);
-        auto spread = shadowValue.spread ? shadowValue.spread->resolveAsLength<WebCore::Length>(conversionData) : WebCore::Length(0, LengthType::Fixed);
-        ShadowStyle shadowStyle = shadowValue.style && shadowValue.style->valueID() == CSSValueInset ? ShadowStyle::Inset : ShadowStyle::Normal;
-        // If no color value is specified, the color is currentColor
-        auto color = StyleColor::currentColor();
-        if (shadowValue.color)
-            color = builderState.colorFromPrimitiveValue(*shadowValue.color);
-
-        auto shadowData = makeUnique<ShadowData>(LengthPoint(x, y), blur, spread, shadowStyle, shadowValue.isWebkitBoxShadow, color);
-        if (property == CSSPropertyTextShadow)
-            builderState.style().setTextShadow(WTFMove(shadowData), !isFirstEntry); // add to the list if this is not the first entry
-        else
-            builderState.style().setBoxShadow(WTFMove(shadowData), !isFirstEntry); // add to the list if this is not the first entry
-        isFirstEntry = false;
-    }
-}
-
 inline void BuilderCustom::applyInitialTextShadow(BuilderState& builderState)
 {
     builderState.style().setTextShadow(nullptr);
@@ -715,7 +680,26 @@ inline void BuilderCustom::applyInheritTextShadow(BuilderState& builderState)
 
 inline void BuilderCustom::applyValueTextShadow(BuilderState& builderState, CSSValue& value)
 {
-    applyTextOrBoxShadowValue<CSSPropertyTextShadow>(builderState, value);
+    if (RefPtr primitive = dynamicDowncast<CSSPrimitiveValue>(value)) {
+        ASSERT(primitive->valueID() == CSSValueNone);
+        builderState.style().setTextShadow(nullptr);
+        return;
+    }
+
+    Ref shadow = downcast<CSSTextShadowPropertyValue>(value);
+
+    WTF::switchOn(shadow->shadow(),
+        [&](CSS::Keyword::None) {
+            builderState.style().setTextShadow(nullptr);
+        },
+        [&](const auto& list) {
+            bool isFirstEntry = true;
+            for (const auto& shadow : list) {
+                builderState.style().setTextShadow(makeUnique<ShadowData>(Style::toStyle(shadow, builderState)), !isFirstEntry); // add to the list if this is not the first entry
+                isFirstEntry = false;
+            }
+        }
+    );
 }
 
 inline void BuilderCustom::applyInitialBoxShadow(BuilderState& builderState)
@@ -730,7 +714,26 @@ inline void BuilderCustom::applyInheritBoxShadow(BuilderState& builderState)
 
 inline void BuilderCustom::applyValueBoxShadow(BuilderState& builderState, CSSValue& value)
 {
-    applyTextOrBoxShadowValue<CSSPropertyBoxShadow>(builderState, value);
+    if (RefPtr primitive = dynamicDowncast<CSSPrimitiveValue>(value)) {
+        ASSERT(primitive->valueID() == CSSValueNone);
+        builderState.style().setBoxShadow(nullptr);
+        return;
+    }
+
+    Ref shadow = downcast<CSSBoxShadowPropertyValue>(value);
+
+    WTF::switchOn(shadow->shadow(),
+        [&](CSS::Keyword::None) {
+            builderState.style().setBoxShadow(nullptr);
+        },
+        [&](const auto& list) {
+            bool isFirstEntry = true;
+            for (const auto& shadow : list) {
+                builderState.style().setBoxShadow(makeUnique<ShadowData>(Style::toStyle(shadow, builderState)), !isFirstEntry); // add to the list if this is not the first entry
+                isFirstEntry = false;
+            }
+        }
+    );
 }
 
 inline void BuilderCustom::applyInitialFontFamily(BuilderState& builderState)
@@ -1150,24 +1153,25 @@ inline void BuilderCustom::applyValueCursor(BuilderState& builderState, CSSValue
     }
 }
 
-inline std::pair<StyleColor, SVGPaintType> colorAndSVGPaintType(BuilderState& builderState, const CSSPrimitiveValue& localValue, String& url)
+inline std::pair<Color, SVGPaintType> colorAndSVGPaintType(BuilderState& builderState, const CSSValue& localValue, String& url)
 {
-    StyleColor color;
-    auto paintType = SVGPaintType::RGBColor;
-    if (localValue.isURI()) {
-        paintType = SVGPaintType::URI;
-        url = localValue.stringValue();
-    } else if (localValue.isValueID() && localValue.valueID() == CSSValueNone)
-        paintType = url.isEmpty() ? SVGPaintType::None : SVGPaintType::URINone;
-    else if (StyleColor::isCurrentColor(localValue)) {
-        color = StyleColor::currentColor();
-        paintType = url.isEmpty() ? SVGPaintType::CurrentColor : SVGPaintType::URICurrentColor;
-        builderState.style().setDisallowsFastPathInheritance();
-    } else {
-        color = builderState.colorFromPrimitiveValue(localValue);
-        paintType = url.isEmpty() ? SVGPaintType::RGBColor : SVGPaintType::URIRGBColor;
+    if (RefPtr localPrimitiveValue = dynamicDowncast<CSSPrimitiveValue>(localValue)) {
+        if (localPrimitiveValue->isURI()) {
+            url = localPrimitiveValue->stringValue();
+            return { Color::currentColor(), SVGPaintType::URI };
+        }
+
+        auto valueID = localPrimitiveValue->valueID();
+
+        if (valueID == CSSValueNone)
+            return { Color::currentColor(), url.isEmpty() ? SVGPaintType::None : SVGPaintType::URINone };
+        if (valueID == CSSValueCurrentcolor) {
+            builderState.style().setDisallowsFastPathInheritance();
+            return { Color::currentColor(), url.isEmpty() ? SVGPaintType::CurrentColor : SVGPaintType::URICurrentColor };
+        }
     }
-    return { color, paintType };
+
+    return { builderState.createStyleColor(localValue), url.isEmpty() ? SVGPaintType::RGBColor : SVGPaintType::URIRGBColor };
 }
 
 inline void BuilderCustom::applyInitialFill(BuilderState& builderState)
@@ -1186,11 +1190,11 @@ inline void BuilderCustom::applyInheritFill(BuilderState& builderState)
 inline void BuilderCustom::applyValueFill(BuilderState& builderState, CSSValue& value)
 {
     auto& svgStyle = builderState.style().accessSVGStyle();
-    const auto* localValue = dynamicDowncast<CSSPrimitiveValue>(value);
+    RefPtr<const CSSValue> localValue = &value;
     String url;
-    if (auto* list = dynamicDowncast<CSSValueList>(value)) {
+    if (RefPtr list = dynamicDowncast<CSSValueList>(value)) {
         url = downcast<CSSPrimitiveValue>(list->item(0))->stringValue();
-        localValue = downcast<CSSPrimitiveValue>(list->item(1));
+        localValue = list->protectedItem(1);
     }
 
     if (!localValue)
@@ -1216,11 +1220,11 @@ inline void BuilderCustom::applyInheritStroke(BuilderState& builderState)
 inline void BuilderCustom::applyValueStroke(BuilderState& builderState, CSSValue& value)
 {
     auto& svgStyle = builderState.style().accessSVGStyle();
-    const auto* localValue = dynamicDowncast<CSSPrimitiveValue>(value);
+    RefPtr<const CSSValue> localValue = &value;
     String url;
-    if (auto* list = dynamicDowncast<CSSValueList>(value)) {
+    if (RefPtr list = dynamicDowncast<CSSValueList>(value)) {
         url = downcast<CSSPrimitiveValue>(list->item(0))->stringValue();
-        localValue = downcast<CSSPrimitiveValue>(list->item(1));
+        localValue = list->protectedItem(1);
     }
 
     if (!localValue)
@@ -1703,25 +1707,22 @@ inline void BuilderCustom::applyValueStrokeWidth(BuilderState& builderState, CSS
 
 inline void BuilderCustom::applyValueStrokeColor(BuilderState& builderState, CSSValue& value)
 {
-    auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
     if (builderState.applyPropertyToRegularStyle())
-        builderState.style().setStrokeColor(builderState.colorFromPrimitiveValue(primitiveValue, ForVisitedLink::No));
+        builderState.style().setStrokeColor(builderState.createStyleColor(value, ForVisitedLink::No));
     if (builderState.applyPropertyToVisitedLinkStyle())
-        builderState.style().setVisitedLinkStrokeColor(builderState.colorFromPrimitiveValue(primitiveValue, ForVisitedLink::Yes));
+        builderState.style().setVisitedLinkStrokeColor(builderState.createStyleColor(value, ForVisitedLink::Yes));
     builderState.style().setHasExplicitlySetStrokeColor(true);
 }
 
 // For the color property, "currentcolor" is actually the inherited computed color.
 inline void BuilderCustom::applyValueColor(BuilderState& builderState, CSSValue& value)
 {
-    auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
-
     if (builderState.applyPropertyToRegularStyle()) {
-        auto color = builderState.colorFromPrimitiveValue(primitiveValue, ForVisitedLink::No);
+        auto color = builderState.createStyleColor(value, ForVisitedLink::No);
         builderState.style().setColor(color.resolveColor(builderState.parentStyle().color()));
     }
     if (builderState.applyPropertyToVisitedLinkStyle()) {
-        auto color = builderState.colorFromPrimitiveValue(primitiveValue, ForVisitedLink::Yes);
+        auto color = builderState.createStyleColor(value, ForVisitedLink::Yes);
         builderState.style().setVisitedLinkColor(color.resolveColor(builderState.parentStyle().visitedLinkColor()));
     }
 

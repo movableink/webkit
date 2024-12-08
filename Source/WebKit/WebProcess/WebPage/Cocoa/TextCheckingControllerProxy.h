@@ -55,6 +55,9 @@ public:
     TextCheckingControllerProxy(WebPage&);
     ~TextCheckingControllerProxy();
 
+    void ref() const final;
+    void deref() const final;
+
     static WebCore::AttributedString annotatedSubstringBetweenPositions(const WebCore::VisiblePosition&, const WebCore::VisiblePosition&);
 
 private:

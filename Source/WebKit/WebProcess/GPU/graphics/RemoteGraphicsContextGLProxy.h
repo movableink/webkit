@@ -36,7 +36,6 @@
 #include "RenderingBackendIdentifier.h"
 #include "SharedVideoFrame.h"
 #include "StreamClientConnection.h"
-#include "WebCoreArgumentCoders.h"
 #include <WebCore/GCGLSpan.h>
 #include <WebCore/GraphicsContextGL.h>
 #include <WebCore/NotImplemented.h>
@@ -63,6 +62,9 @@ class RemoteGraphicsContextGLProxy : public IPC::Connection::Client, public WebC
 public:
     static RefPtr<RemoteGraphicsContextGLProxy> create(const WebCore::GraphicsContextGLAttributes&, WebPage&);
     static RefPtr<RemoteGraphicsContextGLProxy> create(const WebCore::GraphicsContextGLAttributes&, RemoteRenderingBackendProxy&, SerialFunctionDispatcher&);
+
+    void ref() const final { WebCore::GraphicsContextGL::ref(); }
+    void deref() const final { WebCore::GraphicsContextGL::deref(); }
 
     ~RemoteGraphicsContextGLProxy();
 

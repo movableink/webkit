@@ -91,9 +91,9 @@ void WebExtensionAPIEvent::invokeListenersWithArgument(id argument1, id argument
         listener->call(argument1, argument2, argument3);
 }
 
-void WebExtensionAPIEvent::addListener(WebFrame& frame, RefPtr<WebExtensionCallbackHandler> listener)
+void WebExtensionAPIEvent::addListener(WebCore::FrameIdentifier frameIdentifier, RefPtr<WebExtensionCallbackHandler> listener)
 {
-    m_frameIdentifier = frame.frameID();
+    m_frameIdentifier = frameIdentifier;
     m_listeners.append(listener);
 
     if (!hasExtensionContext())
@@ -102,7 +102,7 @@ void WebExtensionAPIEvent::addListener(WebFrame& frame, RefPtr<WebExtensionCallb
     WebProcess::singleton().send(Messages::WebExtensionContext::AddListener(*m_frameIdentifier, m_type, contentWorldType()), extensionContext().identifier());
 }
 
-void WebExtensionAPIEvent::removeListener(WebFrame& frame, RefPtr<WebExtensionCallbackHandler> listener)
+void WebExtensionAPIEvent::removeListener(WebCore::FrameIdentifier frameIdentifier, RefPtr<WebExtensionCallbackHandler> listener)
 {
     auto removedCount = m_listeners.removeAllMatching([&](auto& entry) {
         return entry->callbackFunction() == listener->callbackFunction();
@@ -111,7 +111,7 @@ void WebExtensionAPIEvent::removeListener(WebFrame& frame, RefPtr<WebExtensionCa
     if (!removedCount)
         return;
 
-    ASSERT(frame.frameID() == m_frameIdentifier);
+    ASSERT(frameIdentifier == m_frameIdentifier);
 
     if (!hasExtensionContext())
         return;

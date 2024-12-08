@@ -129,7 +129,7 @@ public:
     public:
         virtual ~Client() { }
         
-        virtual void didFinishLaunching(ProcessLauncher*, IPC::Connection::Identifier) = 0;
+        virtual void didFinishLaunching(ProcessLauncher*, IPC::Connection::Identifier&&) = 0;
         virtual bool shouldConfigureJSCForTesting() const { return false; }
         virtual bool isJITEnabled() const { return true; }
         virtual bool shouldEnableSharedArrayBuffer() const { return false; }
@@ -173,7 +173,7 @@ private:
 
     void launchProcess();
     void finishLaunchingProcess(ASCIILiteral name);
-    void didFinishLaunchingProcess(ProcessID, IPC::Connection::Identifier);
+    void didFinishLaunchingProcess(ProcessID, IPC::Connection::Identifier&&);
 
     void platformInvalidate();
     void platformDestroy();

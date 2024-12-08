@@ -53,10 +53,7 @@ class Branch(Command):
             action=arguments.NoAction,
         )
 
-        if sys.version_info > (3, 0):
-            has_radar = bool(radar.Tracker.radarclient())
-        else:
-            has_radar = bool(radar.Tracker().radarclient())
+        has_radar = bool(radar.Tracker.radarclient())
         if has_radar:
             parser.add_argument(
                 '--cc-radar', '--no-cc-radar',
@@ -91,13 +88,7 @@ class Branch(Command):
 
     @classmethod
     def to_branch_name(cls, value):
-        result = ''
-        for c in string_utils.decode(value):
-            if c in [u'-', u' ', u'\n', u'\t', u'.']:
-                result += u'-'
-            elif c.isalnum() or c == u'_':
-                result += c
-        return string_utils.encode(result, target_type=str)
+        return string_utils.encode(re.sub(r'\W+', '-', string_utils.decode(value)).strip('-'), target_type=str)
 
     @classmethod
     def cc_radar(cls, args, repository, issue, rdar=None):

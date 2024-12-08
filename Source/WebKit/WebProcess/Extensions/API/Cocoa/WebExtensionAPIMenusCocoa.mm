@@ -44,7 +44,9 @@
 #import "WebExtensionMenuItemParameters.h"
 #import "WebExtensionTabParameters.h"
 #import "WebExtensionUtilities.h"
+#import "WebFrame.h"
 #import "WebProcess.h"
+#import <WebCore/LocalFrame.h>
 #import <wtf/cocoa/VectorCocoa.h>
 
 static NSString * const checkedKey = @"checked";

@@ -24,7 +24,6 @@
 #if ENABLE_SWIFTUI && compiler(>=6.0)
 
 import Foundation
-import SwiftUI
 
 extension WebPage_v0 {
     public struct NavigationID: Sendable, Hashable, Equatable {
@@ -51,15 +50,15 @@ extension WebPage_v0 {
             case failed(underlyingError: any Error)
         }
 
-        public let kind: Kind
-
-        public let navigationID: NavigationID
-
         @_spi(Testing)
         public init(kind: Kind, navigationID: NavigationID) {
             self.kind = kind
             self.navigationID = navigationID
         }
+
+        public let kind: Kind
+
+        public let navigationID: NavigationID
     }
 
     @_spi(Private)
@@ -70,11 +69,11 @@ extension WebPage_v0 {
 
         public typealias Failure = Never
 
-        private let source: AsyncStream<Element>
-
         init(source: AsyncStream<Element>) {
             self.source = source
         }
+
+        private let source: AsyncStream<Element>
         
         public func makeAsyncIterator() -> AsyncIterator {
             Iterator(source: source.makeAsyncIterator())
@@ -89,11 +88,11 @@ extension WebPage_v0.Navigations {
 
         public typealias Failure = Never
 
-        private var source: AsyncStream<Element>.AsyncIterator
-
         init(source: AsyncStream<Element>.AsyncIterator) {
             self.source = source
         }
+
+        private var source: AsyncStream<Element>.AsyncIterator
         
         public mutating func next() async -> Element? {
             await source.next()

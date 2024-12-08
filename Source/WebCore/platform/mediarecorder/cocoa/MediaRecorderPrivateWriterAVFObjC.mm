@@ -36,6 +36,7 @@
 #import <pal/spi/cocoa/AVAssetWriterSPI.h>
 #import <wtf/BlockObjCExceptions.h>
 #import <wtf/BlockPtr.h>
+#import <wtf/NativePromise.h>
 #import <wtf/TZoneMallocInlines.h>
 #import <wtf/cocoa/SpanCocoa.h>
 
@@ -139,6 +140,9 @@ bool MediaRecorderPrivateWriterAVFObjC::allTracksAdded()
     // AVFileTypeProfileMPEG4AppleHLS allows muxed audio and video inputs
     // AVFileTypeProfileMPEG4CMAFCompliant allows only a single audio or video input
     [m_writer setOutputFileTypeProfile:m_currentTrackIndex > 1 ? AVFileTypeProfileMPEG4AppleHLS : AVFileTypeProfileMPEG4CMAFCompliant];
+#if PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
+    [m_writer setRequiresInProcessOperation:YES];
+#endif
 
     BEGIN_BLOCK_OBJC_EXCEPTIONS
     if (![m_writer startWriting]) {

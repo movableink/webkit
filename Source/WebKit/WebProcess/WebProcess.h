@@ -147,6 +147,7 @@ class WebCookieJar;
 class WebFileSystemStorageConnection;
 class WebFrame;
 class WebLoaderStrategy;
+class WebNotificationManager;
 class WebPage;
 class WebPageGroupProxy;
 class WebProcessSupplement;
@@ -177,9 +178,9 @@ class LayerHostingContext;
 class SpeechRecognitionRealtimeMediaSourceManager;
 #endif
 
-class WebProcess final : public AuxiliaryProcess
-{
+class WebProcess final : public AuxiliaryProcess {
     WTF_MAKE_TZONE_ALLOCATED(WebProcess);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WebProcess);
 public:
     using TopFrameDomain = WebCore::RegistrableDomain;
     using SubResourceDomain = WebCore::RegistrableDomain;
@@ -207,8 +208,8 @@ public:
 
     // ref() & deref() do nothing since WebProcess is a singleton object.
     // This is for objects owned by the WebProcess to forward their refcounting to their owner.
-    void ref() const { }
-    void deref() const { }
+    void ref() const final { }
+    void deref() const final { }
 
     WebPage* webPage(WebCore::PageIdentifier) const;
     void createWebPage(WebCore::PageIdentifier, WebPageCreationParameters&&);
@@ -244,7 +245,7 @@ public:
 
     WebFrame* webFrame(std::optional<WebCore::FrameIdentifier>) const;
     void addWebFrame(WebCore::FrameIdentifier, WebFrame*);
-    void removeWebFrame(WebCore::FrameIdentifier, std::optional<WebPageProxyIdentifier>);
+    void removeWebFrame(WebCore::FrameIdentifier, WebPage*);
 
     WebPageGroupProxy* webPageGroup(const WebPageGroupData&);
 
@@ -257,6 +258,8 @@ public:
     EventDispatcher& eventDispatcher() { return m_eventDispatcher; }
 
     NetworkProcessConnection& ensureNetworkProcessConnection();
+    Ref<NetworkProcessConnection> ensureProtectedNetworkProcessConnection();
+
     void networkProcessConnectionClosed(NetworkProcessConnection*);
     NetworkProcessConnection* existingNetworkProcessConnection() { return m_networkProcessConnection.get(); }
     WebLoaderStrategy& webLoaderStrategy();
@@ -268,6 +271,7 @@ public:
 
 #if ENABLE(GPU_PROCESS)
     GPUProcessConnection& ensureGPUProcessConnection();
+    Ref<GPUProcessConnection> ensureProtectedGPUProcessConnection();
     GPUProcessConnection* existingGPUProcessConnection() { return m_gpuProcessConnection.get(); }
     // Returns timeout duration for GPU process connections. Thread-safe.
     Seconds gpuProcessTimeoutDuration() const;
@@ -371,6 +375,8 @@ public:
     WebCookieJar& cookieJar() { return m_cookieJar.get(); }
     Ref<WebCookieJar> protectedCookieJar();
     WebSocketChannelManager& webSocketChannelManager() { return m_webSocketChannelManager; }
+
+    Ref<WebNotificationManager> protectedNotificationManager();
 
 #if PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
     float backlightLevel() const { return m_backlightLevel; }
@@ -772,7 +778,7 @@ private:
     HashSet<String> m_dnsPrefetchedHosts;
     PAL::HysteresisActivity m_dnsPrefetchHystereris;
 
-    std::unique_ptr<WebAutomationSessionProxy> m_automationSessionProxy;
+    RefPtr<WebAutomationSessionProxy> m_automationSessionProxy;
 
 #if ENABLE(SERVICE_CONTROLS)
     bool m_hasImageServices { false };

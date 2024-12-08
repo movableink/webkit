@@ -35,7 +35,7 @@
 #import "WebExtensionAPIWindows.h"
 #import "WebExtensionContextMessages.h"
 #import "WebExtensionUtilities.h"
-#import "WebPageProxy.h"
+#import "WebFrame.h"
 #import "WebProcess.h"
 
 #if ENABLE(WK_WEB_EXTENSIONS)
@@ -58,19 +58,19 @@ void WebExtensionAPIWindowsEvent::invokeListenersWithArgument(id argument, Optio
     }
 }
 
-void WebExtensionAPIWindowsEvent::addListener(WebFrame& frame, RefPtr<WebExtensionCallbackHandler> listener, NSDictionary *filter, NSString **outExceptionString)
+void WebExtensionAPIWindowsEvent::addListener(WebCore::FrameIdentifier frameIdentifier, RefPtr<WebExtensionCallbackHandler> listener, NSDictionary *filter, NSString **outExceptionString)
 {
     OptionSet<WindowTypeFilter> windowTypeFilter;
     if (!WebExtensionAPIWindows::parseWindowTypesFilter(filter, windowTypeFilter, @"filters", outExceptionString))
         return;
 
-    m_frameIdentifier = frame.frameID();
+    m_frameIdentifier = frameIdentifier;
     m_listeners.append({ listener, windowTypeFilter });
 
     WebProcess::singleton().send(Messages::WebExtensionContext::AddListener(*m_frameIdentifier, m_type, contentWorldType()), extensionContext().identifier());
 }
 
-void WebExtensionAPIWindowsEvent::removeListener(WebFrame& frame, RefPtr<WebExtensionCallbackHandler> listener)
+void WebExtensionAPIWindowsEvent::removeListener(WebCore::FrameIdentifier frameIdentifier, RefPtr<WebExtensionCallbackHandler> listener)
 {
     auto removedCount = m_listeners.removeAllMatching([&](auto& entry) {
         return entry.first->callbackFunction() == listener->callbackFunction();
@@ -79,7 +79,7 @@ void WebExtensionAPIWindowsEvent::removeListener(WebFrame& frame, RefPtr<WebExte
     if (!removedCount)
         return;
 
-    ASSERT(frame.frameID() == m_frameIdentifier);
+    ASSERT(frameIdentifier == m_frameIdentifier);
 
     WebProcess::singleton().send(Messages::WebExtensionContext::RemoveListener(*m_frameIdentifier, m_type, contentWorldType(), removedCount), extensionContext().identifier());
 }

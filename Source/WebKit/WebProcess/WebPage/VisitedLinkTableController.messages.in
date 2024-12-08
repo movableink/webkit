@@ -23,6 +23,6 @@
 messages -> VisitedLinkTableController {
     SetVisitedLinkTable(WebCore::SharedMemory::Handle handle)
     VisitedLinkStateChanged(Vector<WebCore::SharedStringHash> linkHashes)
-    AllVisitedLinkStateChanged()
-    RemoveAllVisitedLinks()
+    [DeferSendingIfSuspended] AllVisitedLinkStateChanged()
+    [DeferSendingIfSuspended] RemoveAllVisitedLinks()
 }

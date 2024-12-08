@@ -28,6 +28,7 @@
 #include "MessageReceiver.h"
 #include "WebPageProxyIdentifier.h"
 #include <WebCore/NotificationDirection.h>
+#include <wtf/AbstractRefCounted.h>
 #include <wtf/UUID.h>
 
 namespace WebCore {

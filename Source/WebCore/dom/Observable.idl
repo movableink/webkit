@@ -24,6 +24,7 @@
  */
 // https://github.com/WICG/observable
 typedef (SubscriptionObserverCallback or SubscriptionObserver) ObserverUnion;
+typedef (SubscriptionObserverCallback or ObservableInspector) ObservableInspectorUnion;
 
 [
   Exposed=(Window,Worker),
@@ -41,6 +42,8 @@ interface Observable {
   [CallWith=CurrentScriptExecutionContext] Observable take(unsigned long long amount);
 
   [CallWith=CurrentScriptExecutionContext] Observable drop(unsigned long long amount);
+
+  [CallWith=CurrentScriptExecutionContext] Observable inspect(optional ObservableInspectorUnion inspectorUnion = {});
 
   // Promise-returning operators.
 

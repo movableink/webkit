@@ -211,8 +211,6 @@
 #include "MediaSessionCoordinator.h"
 #endif
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WTF {
 template <>
 struct LogArgument<URL> {
@@ -257,7 +255,7 @@ using namespace HTMLNames;
 
 String convertEnumerationToString(HTMLMediaElement::ReadyState enumerationValue)
 {
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 5> values {
         MAKE_STATIC_STRING_IMPL("HAVE_NOTHING"),
         MAKE_STATIC_STRING_IMPL("HAVE_METADATA"),
         MAKE_STATIC_STRING_IMPL("HAVE_CURRENT_DATA"),
@@ -275,7 +273,7 @@ String convertEnumerationToString(HTMLMediaElement::ReadyState enumerationValue)
 
 String convertEnumerationToString(HTMLMediaElement::NetworkState enumerationValue)
 {
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 4> values {
         MAKE_STATIC_STRING_IMPL("NETWORK_EMPTY"),
         MAKE_STATIC_STRING_IMPL("NETWORK_IDLE"),
         MAKE_STATIC_STRING_IMPL("NETWORK_LOADING"),
@@ -291,7 +289,7 @@ String convertEnumerationToString(HTMLMediaElement::NetworkState enumerationValu
 
 String convertEnumerationToString(HTMLMediaElement::AutoplayEventPlaybackState enumerationValue)
 {
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 4> values {
         MAKE_STATIC_STRING_IMPL("None"),
         MAKE_STATIC_STRING_IMPL("PreventedAutoplay"),
         MAKE_STATIC_STRING_IMPL("StartedWithUserGesture"),
@@ -307,7 +305,7 @@ String convertEnumerationToString(HTMLMediaElement::AutoplayEventPlaybackState e
 
 String convertEnumerationToString(HTMLMediaElement::TextTrackVisibilityCheckType enumerationValue)
 {
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 2> values {
         MAKE_STATIC_STRING_IMPL("CheckTextTrackVisibility"),
         MAKE_STATIC_STRING_IMPL("AssumeTextTrackVisibilityChanged"),
     };
@@ -319,7 +317,7 @@ String convertEnumerationToString(HTMLMediaElement::TextTrackVisibilityCheckType
 
 String convertEnumerationToString(HTMLMediaElement::SpeechSynthesisState enumerationValue)
 {
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 4> values {
         MAKE_STATIC_STRING_IMPL("None"),
         MAKE_STATIC_STRING_IMPL("Speaking"),
         MAKE_STATIC_STRING_IMPL("CompletingExtendedDescription"),
@@ -336,7 +334,7 @@ String convertEnumerationToString(HTMLMediaElement::SpeechSynthesisState enumera
 String convertEnumerationToString(HTMLMediaElement::ControlsState enumerationValue)
 {
     // None, Initializing, Ready, PartiallyDeinitialized
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 4> values {
         MAKE_STATIC_STRING_IMPL("None"),
         MAKE_STATIC_STRING_IMPL("Initializing"),
         MAKE_STATIC_STRING_IMPL("Ready"),
@@ -3765,6 +3763,10 @@ void HTMLMediaElement::seekWithTolerance(const SeekTarget& target, bool fromDOM)
     refreshCachedTime();
     MediaTime now = currentMediaTime();
 
+    // Needed to detect a special case in updatePlayState().
+    if (now >= durationMediaTime())
+        m_seekAfterPlaybackEnded = true;
+
     // 3 - If the element's seeking IDL attribute is true, then another instance of this algorithm is
     // already running. Abort that other instance of the algorithm without waiting for the step that
     // it is running to complete.
@@ -3952,6 +3954,8 @@ void HTMLMediaElement::finishSeek()
 #endif
     if (wasPlayingBeforeSeeking)
         playInternal();
+
+    m_seekAfterPlaybackEnded = false;
 }
 
 HTMLMediaElement::ReadyState HTMLMediaElement::readyState() const
@@ -4397,8 +4401,10 @@ void HTMLMediaElement::playInternal()
     if (!m_player || m_networkState == NETWORK_EMPTY)
         selectMediaResource();
 
-    if (endedPlayback())
+    if (endedPlayback()) {
+        m_seekAfterPlaybackEnded = true;
         seekInternal(MediaTime::zeroTime());
+    }
 
     if (RefPtr mediaController = m_mediaController)
         mediaController->bringElementUpToSpeed(*this);
@@ -6423,7 +6429,17 @@ void HTMLMediaElement::updatePlayState()
     if (shouldBePlaying) {
         invalidateCachedTime();
 
-        if (playerPaused) {
+        // Play is always allowed, except when seeking (to avoid unpausing the video by mistake until the
+        // target time is reached). However, there are some exceptional situations when we allow playback
+        // during seek. This is because GStreamer-based implementation have a design limitation that doesn't
+        // allow initial seeks (seeking before going to playing state), and these exceptions make things
+        // work for those platforms.
+        bool isLooping = loop() && m_lastSeekTime == MediaTime::zeroTime();
+        bool playExceptionsWhenSeeking = m_seeking && (m_firstTimePlaying
+            || isLooping || m_isResumingPlayback || m_seekAfterPlaybackEnded);
+        bool allowPlay = !m_seeking || playExceptionsWhenSeeking;
+
+        if (playerPaused && allowPlay) {
             mediaSession().clientWillBeginPlayback();
 
             // Set rate, muted and volume before calling play in case they were set before the media engine was set up.
@@ -7978,6 +7994,9 @@ void HTMLMediaElement::createMediaPlayer() WTF_IGNORES_THREAD_SAFETY_ANALYSIS
     RefPtr page = document().page();
     player->setPageIsVisible(!m_elementIsHidden);
     player->setVisibleInViewport(isVisibleInViewport());
+#if USE(AVFOUNDATION) && ENABLE(MEDIA_SOURCE)
+    player->setDecompressionSessionPreferences(document().settings().mediaSourcePrefersDecompressionSession(), document().settings().mediaSourceCanFallbackToDecompressionSession());
+#endif
     schedulePlaybackControlsManagerUpdate();
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA) && ENABLE(ENCRYPTED_MEDIA)
     updateShouldContinueAfterNeedKey();
@@ -8982,8 +9001,11 @@ void HTMLMediaElement::resumeAutoplaying()
 void HTMLMediaElement::mayResumePlayback(bool shouldResume)
 {
     ALWAYS_LOG(LOGIDENTIFIER, "paused = ", paused());
-    if (!ended() && paused() && shouldResume)
+    if (!ended() && paused() && shouldResume) {
+        m_isResumingPlayback = true;
         play();
+        m_isResumingPlayback = false;
+    }
 }
 
 String HTMLMediaElement::mediaSessionTitle() const
@@ -10009,7 +10031,5 @@ void HTMLMediaElement::invalidateBufferingStopwatch()
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(VIDEO)

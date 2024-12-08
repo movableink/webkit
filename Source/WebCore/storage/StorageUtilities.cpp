@@ -31,14 +31,13 @@
 #include <pal/crypto/CryptoDigest.h>
 #include <wtf/FileSystem.h>
 #include <wtf/Scope.h>
-#include <wtf/persistence/PersistentCoders.h>
+#include <wtf/persistence/PersistentDecoder.h>
+#include <wtf/persistence/PersistentEncoder.h>
 #include <wtf/text/Base64.h>
 
 #if ASSERT_ENABLED
 #include <wtf/RunLoop.h>
 #endif
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 namespace StorageUtilities {
@@ -62,7 +61,7 @@ std::optional<ClientOrigin> readOriginFromFile(const String& filePath)
     if (!originContent)
         return std::nullopt;
 
-    WTF::Persistence::Decoder decoder({ originContent->data(), originContent->size() });
+    WTF::Persistence::Decoder decoder(originContent->span());
     std::optional<ClientOrigin> origin;
     decoder >> origin;
     return origin;
@@ -101,5 +100,3 @@ String encodeSecurityOriginForFileName(FileSystem::Salt salt, const SecurityOrig
 
 } // namespace StorageUtilities
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

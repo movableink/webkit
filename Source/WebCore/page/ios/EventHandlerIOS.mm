@@ -36,6 +36,7 @@
 #import "DragState.h"
 #import "EventNames.h"
 #import "FocusController.h"
+#import "FrameLoader.h"
 #import "HandleUserInputEventResult.h"
 #import "KeyboardEvent.h"
 #import "LocalFrame.h"
@@ -46,6 +47,7 @@
 #import "PlatformEventFactoryIOS.h"
 #import "PlatformKeyboardEvent.h"
 #import "RenderWidget.h"
+#import "ScrollingCoordinatorTypes.h"
 #import "WAKView.h"
 #import "WAKWindow.h"
 #import "WebEvent.h"
@@ -121,9 +123,9 @@ bool EventHandler::wheelEvent(WebEvent *event)
             processingSteps = { WheelEventProcessingSteps::SynchronousScrolling, WheelEventProcessingSteps::NonBlockingDOMEventDispatch };
     }
 
-    bool eventWasHandled = handleWheelEvent(wheelEvent, processingSteps).wasHandled();
-    event.wasHandled = eventWasHandled;
-    return eventWasHandled;
+    auto [result, _] = handleWheelEvent(wheelEvent, processingSteps);
+    event.wasHandled = result.wasHandled();
+    return event.wasHandled;
 }
 
 #if ENABLE(IOS_TOUCH_EVENTS)
@@ -142,30 +144,6 @@ void EventHandler::touchEvent(WebEvent *event)
     event.wasHandled = handleTouchEvent(PlatformEventFactory::createPlatformTouchEvent(event)).wasHandled();
 }
 #endif
-
-bool EventHandler::tabsToAllFormControls(KeyboardEvent* event) const
-{
-    RefPtr page = m_frame->page();
-    if (!page)
-        return false;
-
-    KeyboardUIMode keyboardUIMode = page->chrome().client().keyboardUIMode();
-    bool handlingOptionTab = event && isKeyboardOptionTab(*event);
-
-    // If tab-to-links is off, option-tab always highlights all controls.
-    if ((keyboardUIMode & KeyboardAccessTabsToLinks) == 0 && handlingOptionTab)
-        return true;
-
-    // If system preferences say to include all controls, we always include all controls.
-    if (keyboardUIMode & KeyboardAccessFull)
-        return true;
-
-    // Otherwise tab-to-links includes all controls, unless the sense is flipped via option-tab.
-    if (keyboardUIMode & KeyboardAccessTabsToLinks)
-        return !handlingOptionTab;
-
-    return handlingOptionTab;
-}
 
 bool EventHandler::keyEvent(WebEvent *event)
 {

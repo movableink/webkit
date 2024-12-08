@@ -3284,7 +3284,7 @@ class GenerateStyleBuilderGenerated:
 
     def _generate_color_property_initial_value_setter(self, to, property):
         if property.codegen_properties.initial == "currentColor":
-            initial_function = "StyleColor::currentColor"
+            initial_function = "Style::Color::currentColor"
         else:
             initial_function = "RenderStyle::" + property.codegen_properties.initial
         to.write(f"if (builderState.applyPropertyToRegularStyle())")
@@ -3300,9 +3300,9 @@ class GenerateStyleBuilderGenerated:
 
     def _generate_color_property_value_setter(self, to, property, value):
         to.write(f"if (builderState.applyPropertyToRegularStyle())")
-        to.write(f"    builderState.style().{property.codegen_properties.setter}(builderState.colorFromPrimitiveValue({value}, ForVisitedLink::No));")
+        to.write(f"    builderState.style().{property.codegen_properties.setter}(builderState.createStyleColor({value}, ForVisitedLink::No));")
         to.write(f"if (builderState.applyPropertyToVisitedLinkStyle())")
-        to.write(f"    builderState.style().setVisitedLink{property.name_for_methods}(builderState.colorFromPrimitiveValue({value}, ForVisitedLink::Yes));")
+        to.write(f"    builderState.style().setVisitedLink{property.name_for_methods}(builderState.createStyleColor({value}, ForVisitedLink::Yes));")
 
     # Animation property setters.
 
@@ -3515,7 +3515,7 @@ class GenerateStyleBuilderGenerated:
                 elif property.codegen_properties.conditional_converter:
                     return f"WTFMove(convertedValue.value())"
                 elif property.codegen_properties.color_property and not property.codegen_properties.visited_link_color_support:
-                    return f"builderState.colorFromPrimitiveValue(downcast<CSSPrimitiveValue>(value), ForVisitedLink::No)"
+                    return f"builderState.createStyleColor(value, ForVisitedLink::No)"
                 else:
                     return "fromCSSValueDeducingType(builderState, value)"
 
@@ -3932,16 +3932,25 @@ class GenerateCSSPropertyParsing:
                     "CSSPropertyParser.h",
                     "CSSPropertyParserConsumer+Align.h",
                     "CSSPropertyParserConsumer+Angle.h",
+                    "CSSPropertyParserConsumer+Animations.h",
+                    "CSSPropertyParserConsumer+Attr.h",
                     "CSSPropertyParserConsumer+Background.h",
+                    "CSSPropertyParserConsumer+Box.h",
                     "CSSPropertyParserConsumer+Color.h",
                     "CSSPropertyParserConsumer+ColorAdjust.h",
+                    "CSSPropertyParserConsumer+Conditional.h",
+                    "CSSPropertyParserConsumer+Contain.h",
+                    "CSSPropertyParserConsumer+Content.h",
                     "CSSPropertyParserConsumer+CounterStyles.h",
+                    "CSSPropertyParserConsumer+Display.h",
                     "CSSPropertyParserConsumer+Filter.h",
                     "CSSPropertyParserConsumer+Font.h",
                     "CSSPropertyParserConsumer+Grid.h",
                     "CSSPropertyParserConsumer+Ident.h",
-                    "CSSPropertyParserConsumer+Integer.h",
                     "CSSPropertyParserConsumer+Image.h",
+                    "CSSPropertyParserConsumer+Inline.h",
+                    "CSSPropertyParserConsumer+Inset.h",
+                    "CSSPropertyParserConsumer+Integer.h",
                     "CSSPropertyParserConsumer+Length.h",
                     "CSSPropertyParserConsumer+LengthPercentage.h",
                     "CSSPropertyParserConsumer+List.h",
@@ -3949,18 +3958,33 @@ class GenerateCSSPropertyParsing:
                     "CSSPropertyParserConsumer+Masking.h",
                     "CSSPropertyParserConsumer+Motion.h",
                     "CSSPropertyParserConsumer+Number.h",
+                    "CSSPropertyParserConsumer+Overflow.h",
+                    "CSSPropertyParserConsumer+Page.h",
                     "CSSPropertyParserConsumer+Percentage.h",
+                    "CSSPropertyParserConsumer+PointerEvents.h",
                     "CSSPropertyParserConsumer+Position.h",
                     "CSSPropertyParserConsumer+Primitives.h",
                     "CSSPropertyParserConsumer+Resolution.h",
+                    "CSSPropertyParserConsumer+Ruby.h",
+                    "CSSPropertyParserConsumer+SVG.h",
+                    "CSSPropertyParserConsumer+ScrollSnap.h",
+                    "CSSPropertyParserConsumer+Scrollbars.h",
                     "CSSPropertyParserConsumer+Shapes.h",
+                    "CSSPropertyParserConsumer+Sizing.h",
+                    "CSSPropertyParserConsumer+Speech.h",
                     "CSSPropertyParserConsumer+String.h",
+                    "CSSPropertyParserConsumer+Syntax.h",
+                    "CSSPropertyParserConsumer+Text.h",
+                    "CSSPropertyParserConsumer+TextDecoration.h",
                     "CSSPropertyParserConsumer+Time.h",
                     "CSSPropertyParserConsumer+Timeline.h",
                     "CSSPropertyParserConsumer+TimingFunction.h",
                     "CSSPropertyParserConsumer+Transform.h",
+                    "CSSPropertyParserConsumer+Transitions.h",
+                    "CSSPropertyParserConsumer+UI.h",
                     "CSSPropertyParserConsumer+URL.h",
                     "CSSPropertyParserConsumer+ViewTransition.h",
+                    "CSSPropertyParserConsumer+WillChange.h",
                     "CSSValuePool.h",
                     "DeprecatedGlobalSettings.h",
                 ]

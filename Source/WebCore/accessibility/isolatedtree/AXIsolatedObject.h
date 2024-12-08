@@ -64,8 +64,10 @@ public:
     bool isDetached() const final;
     bool isTable() const final { return boolAttributeValue(AXPropertyName::IsTable); }
     bool isExposable() const final { return boolAttributeValue(AXPropertyName::IsExposable); }
-    bool hasBodyTag() const final { return boolAttributeValue(AXPropertyName::HasBodyTag); }
     bool hasClickHandler() const final { return boolAttributeValue(AXPropertyName::HasClickHandler); }
+
+    bool hasBodyTag() const final { return boolAttributeValue(AXPropertyName::HasBodyTag); }
+    bool hasMarkTag() const final { return boolAttributeValue(AXPropertyName::HasMarkTag); }
 
     const AccessibilityChildrenVector& children(bool updateChildrenIfNeeded = true) final;
 #if ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
@@ -76,7 +78,7 @@ public:
     AXIsolatedObject* parentObjectUnignored() const final { return tree()->objectForID(parent()).get(); }
 #endif // ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
     AXIsolatedObject* clickableSelfOrAncestor(ClickHandlerFilter filter = ClickHandlerFilter::ExcludeBody) const final { return Accessibility::clickableSelfOrAncestor(*this, filter); };
-    AXIsolatedObject* editableAncestor() final { return Accessibility::editableAncestor(*this); };
+    AXIsolatedObject* editableAncestor() const final { return Accessibility::editableAncestor(*this); };
     bool canSetFocusAttribute() const final { return boolAttributeValue(AXPropertyName::CanSetFocusAttribute); }
 
 #if ENABLE(AX_THREAD_TEXT_APIS)
@@ -277,7 +279,7 @@ private:
     Vector<String> determineDropEffects() const final;
     AXIsolatedObject* accessibilityHitTest(const IntPoint&) const final;
     AXIsolatedObject* focusedUIElement() const final;
-    AXCoreObject* internalLinkElement() const final { return objectAttributeValue(AXPropertyName::InternalLinkElement); }
+    AXIsolatedObject* internalLinkElement() const final { return objectAttributeValue(AXPropertyName::InternalLinkElement); }
     AccessibilityChildrenVector radioButtonGroup() const final { return tree()->objectsForIDs(vectorAttributeValue<AXID>(AXPropertyName::RadioButtonGroup)); }
     AXIsolatedObject* scrollBar(AccessibilityOrientation) final;
     const String placeholderValue() const final { return stringAttributeValue(AXPropertyName::PlaceholderValue); }
@@ -503,6 +505,7 @@ private:
     unsigned textLength() const final;
 #if PLATFORM(COCOA)
     RetainPtr<NSAttributedString> attributedStringForTextMarkerRange(AXTextMarkerRange&&, SpellCheck) const final;
+    AttributedStringStyle stylesForAttributedString() const final;
 #endif
     AXObjectCache* axObjectCache() const final;
     Element* actionElement() const final;
@@ -555,7 +558,7 @@ private:
     Markable<AXID> m_parentID;
     bool m_childrenDirty { true };
     Vector<AXID> m_childrenIDs;
-    Vector<RefPtr<AXCoreObject>> m_children;
+    Vector<Ref<AXCoreObject>> m_children;
     AXPropertyMap m_propertyMap;
     OptionSet<AXPropertyFlag> m_propertyFlags;
     // Some objects (e.g. display:contents) form their geometry through their children.

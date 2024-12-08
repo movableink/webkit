@@ -56,7 +56,6 @@
 #include "WebCacheStorageProvider.h"
 #include "WebChromeClient.h"
 #include "WebCookieJar.h"
-#include "WebCoreArgumentCoders.h"
 #include "WebFileSystemStorageConnection.h"
 #include "WebFrame.h"
 #include "WebGamepadProvider.h"
@@ -66,11 +65,13 @@
 #include "WebMediaKeyStorageManager.h"
 #include "WebMemorySampler.h"
 #include "WebMessagePortChannelProvider.h"
+#include "WebNotificationManager.h"
 #include "WebPage.h"
 #include "WebPageCreationParameters.h"
 #include "WebPageGroupProxy.h"
 #include "WebPageInlines.h"
 #include "WebPageProxy.h"
+#include "WebPageProxyMessages.h"
 #include "WebPaymentCoordinator.h"
 #include "WebPermissionController.h"
 #include "WebPlatformStrategies.h"
@@ -286,7 +287,12 @@ WebProcess& WebProcess::singleton()
 }
 
 WebProcess::WebProcess()
-    : m_webLoaderStrategy(makeUniqueRefWithoutRefCountedCheck<WebLoaderStrategy>(*this))
+    : m_eventDispatcher(*this)
+#if PLATFORM(IOS_FAMILY)
+    , m_viewUpdateDispatcher(*this)
+#endif
+    , m_webInspectorInterruptDispatcher(*this)
+    , m_webLoaderStrategy(makeUniqueRefWithoutRefCountedCheck<WebLoaderStrategy>(*this))
 #if PLATFORM(COCOA) && USE(LIBWEBRTC) && ENABLE(WEB_CODECS)
     , m_remoteVideoCodecFactory(*this)
 #endif
@@ -314,7 +320,7 @@ WebProcess::WebProcess()
     // FIXME: This should moved to where WebProcess::initialize is called,
     // so that ports have a chance to customize, and ifdefs in this file are
     // limited.
-    addSupplement<WebGeolocationManager>();
+    addSupplementWithoutRefCountedCheck<WebGeolocationManager>();
 
 #if ENABLE(NOTIFICATIONS)
     addSupplement<WebNotificationManager>();
@@ -1015,10 +1021,12 @@ void WebProcess::addWebFrame(FrameIdentifier frameID, WebFrame* frame)
     m_frameMap.set(frameID, frame);
 }
 
-void WebProcess::removeWebFrame(FrameIdentifier frameID, std::optional<WebPageProxyIdentifier> pageID)
+void WebProcess::removeWebFrame(FrameIdentifier frameID, WebPage* page)
 {
-    auto frame = m_frameMap.take(frameID);
-    if (frame && frame->coreLocalFrame() && m_networkProcessConnection)
+    RefPtr frame = m_frameMap.take(frameID).get();
+    if (!frame)
+        return;
+    if (frame->coreLocalFrame() && m_networkProcessConnection)
         m_networkProcessConnection->connection().send(Messages::NetworkConnectionToWebProcess::ClearFrameLoadRecordsForStorageAccess(frameID), 0);
 
     // We can end up here after our connection has closed when WebCore's frame life-support timer
@@ -1027,10 +1035,13 @@ void WebProcess::removeWebFrame(FrameIdentifier frameID, std::optional<WebPagePr
     if (!parentProcessConnection())
         return;
 
-    if (!pageID)
+    if (!page)
         return;
 
-    parentProcessConnection()->send(Messages::WebProcessProxy::DidDestroyFrame(frameID, *pageID), 0);
+    if (frame->wasRemovedInAnotherProcess() || page->isClosed())
+        return;
+
+    page->send(Messages::WebPageProxy::DidDestroyFrame(frameID));
 }
 
 WebPageGroupProxy* WebProcess::webPageGroup(const WebPageGroupData& pageGroupData)
@@ -1246,6 +1257,11 @@ NetworkProcessConnection& WebProcess::ensureNetworkProcessConnection()
     return *m_networkProcessConnection;
 }
 
+Ref<NetworkProcessConnection> WebProcess::ensureProtectedNetworkProcessConnection()
+{
+    return ensureNetworkProcessConnection();
+}
+
 void WebProcess::logDiagnosticMessageForNetworkProcessCrash()
 {
     WebCore::Page* page = nullptr;
@@ -1363,6 +1379,11 @@ GPUProcessConnection& WebProcess::ensureGPUProcessConnection()
         }
     }
     return *m_gpuProcessConnection;
+}
+
+Ref<GPUProcessConnection> WebProcess::ensureProtectedGPUProcessConnection()
+{
+    return ensureGPUProcessConnection();
 }
 
 Seconds WebProcess::gpuProcessTimeoutDuration() const
@@ -1959,7 +1980,7 @@ void WebProcess::setEnabledServices(bool hasImageServices, bool hasSelectionServ
 
 void WebProcess::ensureAutomationSessionProxy(const String& sessionIdentifier)
 {
-    m_automationSessionProxy = makeUnique<WebAutomationSessionProxy>(sessionIdentifier);
+    m_automationSessionProxy = WebAutomationSessionProxy::create(sessionIdentifier);
 }
 
 void WebProcess::destroyAutomationSessionProxy()
@@ -2024,7 +2045,7 @@ void WebProcess::establishRemoteWorkerContextConnectionToNetworkProcess(RemoteWo
         SWContextManager::singleton().connection()->establishConnection(WTFMove(completionHandler));
         break;
     case RemoteWorkerType::SharedWorker:
-        SharedWorkerContextManager::singleton().setConnection(makeUnique<WebSharedWorkerContextManagerConnection>(WTFMove(ipcConnection), WTFMove(site), pageGroupID, webPageProxyID, pageID, store, WTFMove(initializationData)));
+        SharedWorkerContextManager::singleton().setConnection(WebSharedWorkerContextManagerConnection::create(WTFMove(ipcConnection), WTFMove(site), pageGroupID, webPageProxyID, pageID, store, WTFMove(initializationData)));
         SharedWorkerContextManager::singleton().connection()->establishConnection(WTFMove(completionHandler));
         break;
     }
@@ -2350,7 +2371,7 @@ bool WebProcess::shouldUseRemoteRenderingForWebGL() const
 SpeechRecognitionRealtimeMediaSourceManager& WebProcess::ensureSpeechRecognitionRealtimeMediaSourceManager()
 {
     if (!m_speechRecognitionRealtimeMediaSourceManager)
-        m_speechRecognitionRealtimeMediaSourceManager = makeUnique<SpeechRecognitionRealtimeMediaSourceManager>(Ref { *parentProcessConnection() });
+        m_speechRecognitionRealtimeMediaSourceManager = makeUniqueWithoutRefCountedCheck<SpeechRecognitionRealtimeMediaSourceManager>(*this);
 
     return *m_speechRecognitionRealtimeMediaSourceManager;
 }
@@ -2386,6 +2407,11 @@ RemoteMediaEngineConfigurationFactory& WebProcess::mediaEngineConfigurationFacto
     return *supplement<RemoteMediaEngineConfigurationFactory>();
 }
 #endif
+
+Ref<WebNotificationManager> WebProcess::protectedNotificationManager()
+{
+    return *supplement<WebNotificationManager>();
+}
 
 WebTransportSession* WebProcess::webTransportSession(WebTransportSessionIdentifier identifier)
 {

@@ -377,10 +377,6 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSAnimation.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSAnimation.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSAnimationEvent.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSAnimationEvent.h
-$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSColor.cpp
-$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSColor.h
-$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSColorValue.cpp
-$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSColorValue.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSConditionRule.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSConditionRule.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSContainerRule.cpp
@@ -455,6 +451,10 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSOKLCH.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSOKLCH.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSOKLab.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSOKLab.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSOMColor.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSOMColor.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSOMColorValue.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSOMColorValue.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSOMVariableReferenceValue.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSOMVariableReferenceValue.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSPageRule.cpp
@@ -577,6 +577,10 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCanvasTransform.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCanvasTransform.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCanvasUserInterface.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCanvasUserInterface.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCaretPosition.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCaretPosition.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCaretPositionFromPointOptions.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCaretPositionFromPointOptions.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSChannelCountMode.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSChannelCountMode.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSChannelInterpretation.cpp
@@ -869,6 +873,8 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSDistanceModelType.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSDistanceModelType.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSDocument+CSSOMView.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSDocument+CSSOMView.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSDocument+CaretPositionFromPoint.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSDocument+CaretPositionFromPoint.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSDocument+Fullscreen.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSDocument+Fullscreen.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSDocument+HTML.cpp
@@ -1089,6 +1095,8 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSFileSystemHandle.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSFileSystemHandle.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSFileSystemSyncAccessHandle.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSFileSystemSyncAccessHandle.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSFileSystemWritableFileStream.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSFileSystemWritableFileStream.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSFillLightMode.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSFillLightMode.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSFillMode.cpp
@@ -1703,6 +1711,8 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSImageData.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSImageData.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSImageDataSettings.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSImageDataSettings.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSImageDataStorageFormat.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSImageDataStorageFormat.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSImageResource.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSImageResource.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSImageSmoothingQuality.cpp
@@ -2092,6 +2102,10 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSOESVertexArrayObject.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSOESVertexArrayObject.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSObservable.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSObservable.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSObservableInspector.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSObservableInspector.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSObservableInspectorAbortCallback.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSObservableInspectorAbortCallback.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSObserver.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSOfflineAudioCompletionEvent.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSOfflineAudioCompletionEvent.h

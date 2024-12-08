@@ -1,16 +1,15 @@
 
 TESTS = \
     TestWithCVPixelBuffer \
-    TestWithWantsDispatch \
-    TestWithWantsDispatchNoSyncMessages \
-    TestWithWantsAsyncDispatch \
+    TestWithDeferSendingOption \
+    TestWithDispatchedFromAndTo \
     TestWithEnabledBy \
     TestWithEnabledByAndConjunction \
     TestWithEnabledByOrConjunction \
-    TestWithEnabledIf \
     TestWithIfMessage \
     TestWithImageData \
     TestWithLegacyReceiver \
+    TestWithMultiLineExtendedAttributes \
     TestWithoutAttributes \
     TestWithoutUsingIPCConnection \
     TestWithSemaphore \
@@ -21,6 +20,10 @@ TESTS = \
     TestWithSuperclass \
     TestWithSuperclassAndWantsAsyncDispatch \
     TestWithSuperclassAndWantsDispatch \
+    TestWithValidator \
+    TestWithWantsAsyncDispatch \
+    TestWithWantsDispatch \
+    TestWithWantsDispatchNoSyncMessages \
 #
 
 all:

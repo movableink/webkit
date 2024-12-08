@@ -36,7 +36,6 @@
 #include "RemoteImageBufferProxyMessages.h"
 #include "RemoteRenderingBackendProxy.h"
 #include "RemoteSharedResourceCacheMessages.h"
-#include "WebCoreArgumentCoders.h"
 #include "WebPage.h"
 #include "WebWorkerClient.h"
 #include <WebCore/Document.h>
@@ -66,14 +65,15 @@ RemoteImageBufferProxy::RemoteImageBufferProxy(Parameters parameters, const Imag
 
 RemoteImageBufferProxy::~RemoteImageBufferProxy()
 {
-    if (!m_remoteRenderingBackendProxy || m_remoteRenderingBackendProxy->isGPUProcessConnectionClosed()) {
+    RefPtr remoteRenderingBackendProxy = m_remoteRenderingBackendProxy.get();
+    if (!remoteRenderingBackendProxy || remoteRenderingBackendProxy->isGPUProcessConnectionClosed()) {
         m_needsFlush = false;
         return;
     }
 
     flushDrawingContextAsync();
-    m_remoteRenderingBackendProxy->remoteResourceCacheProxy().forgetImageBuffer(renderingResourceIdentifier());
-    m_remoteRenderingBackendProxy->releaseImageBuffer(renderingResourceIdentifier());
+    remoteRenderingBackendProxy->remoteResourceCacheProxy().forgetImageBuffer(renderingResourceIdentifier());
+    remoteRenderingBackendProxy->releaseImageBuffer(renderingResourceIdentifier());
 }
 
 void RemoteImageBufferProxy::assertDispatcherIsCurrent() const
@@ -112,7 +112,7 @@ ALWAYS_INLINE auto RemoteImageBufferProxy::sendSync(T&& message)
 
 ALWAYS_INLINE RefPtr<IPC::StreamClientConnection> RemoteImageBufferProxy::connection() const
 {
-    auto* backend = m_remoteRenderingBackendProxy.get();
+    RefPtr backend = m_remoteRenderingBackendProxy.get();
     if (UNLIKELY(!backend))
         return nullptr;
     return backend->connection();
@@ -120,7 +120,7 @@ ALWAYS_INLINE RefPtr<IPC::StreamClientConnection> RemoteImageBufferProxy::connec
 
 void RemoteImageBufferProxy::didBecomeUnresponsive() const
 {
-    auto* backend = m_remoteRenderingBackendProxy.get();
+    RefPtr backend = m_remoteRenderingBackendProxy.get();
     if (UNLIKELY(!backend))
         return;
     backend->didBecomeUnresponsive();
@@ -165,8 +165,9 @@ void RemoteImageBufferProxy::didCreateBackend(std::optional<ImageBufferBackendHa
     }
     if (!backend) {
         m_remoteDisplayList.disconnect();
-        m_remoteRenderingBackendProxy->remoteResourceCacheProxy().forgetImageBuffer(renderingResourceIdentifier());
-        m_remoteRenderingBackendProxy->releaseImageBuffer(renderingResourceIdentifier());
+        RefPtr remoteRenderingBackendProxy = m_remoteRenderingBackendProxy.get();
+        remoteRenderingBackendProxy->remoteResourceCacheProxy().forgetImageBuffer(renderingResourceIdentifier());
+        remoteRenderingBackendProxy->releaseImageBuffer(renderingResourceIdentifier());
         m_remoteRenderingBackendProxy = nullptr;
         return;
     }
@@ -200,10 +201,11 @@ RefPtr<NativeImage> RemoteImageBufferProxy::copyNativeImage() const
         const_cast<RemoteImageBufferProxy*>(this)->flushDrawingContext();
         return ImageBuffer::copyNativeImage();
     }
-    if (UNLIKELY(!m_remoteRenderingBackendProxy))
+    RefPtr remoteRenderingBackendProxy = m_remoteRenderingBackendProxy.get();
+    if (UNLIKELY(!remoteRenderingBackendProxy))
         return { };
 
-    auto bitmap = m_remoteRenderingBackendProxy->getShareableBitmap(m_renderingResourceIdentifier, PreserveResolution::Yes);
+    auto bitmap = remoteRenderingBackendProxy->getShareableBitmap(m_renderingResourceIdentifier, PreserveResolution::Yes);
     if (!bitmap)
         return { };
     return NativeImage::create(bitmap->createPlatformImage(DontCopyBackingStore));
@@ -230,7 +232,7 @@ RefPtr<ImageBuffer> RemoteImageBufferProxy::sinkIntoBufferForDifferentThread()
 {
     ASSERT(hasOneRef());
     // We can't use these on a different thread, so make a local clone instead.
-    auto copyBuffer = ImageBuffer::create(logicalSize(), renderingPurpose(), resolutionScale(), colorSpace(), pixelFormat());
+    auto copyBuffer = ImageBuffer::create(logicalSize(), RenderingMode::Unaccelerated, renderingPurpose(), resolutionScale(), colorSpace(), pixelFormat());
     if (!copyBuffer)
         return nullptr;
 
@@ -267,8 +269,8 @@ RefPtr<PixelBuffer> RemoteImageBufferProxy::getPixelBuffer(const PixelBufferForm
     auto pixelBuffer = allocator.createPixelBuffer(destinationFormat, sourceRect.size());
     if (UNLIKELY(!pixelBuffer))
         return nullptr;
-    if (LIKELY(m_remoteRenderingBackendProxy)) {
-        if (m_remoteRenderingBackendProxy->getPixelBufferForImageBuffer(m_renderingResourceIdentifier, destinationFormat, sourceRect, pixelBuffer->bytes()))
+    if (RefPtr remoteRenderingBackendProxy = m_remoteRenderingBackendProxy.get()) {
+        if (remoteRenderingBackendProxy->getPixelBufferForImageBuffer(m_renderingResourceIdentifier, destinationFormat, sourceRect, pixelBuffer->bytes()))
             return pixelBuffer;
     }
     pixelBuffer->zeroFill();
@@ -301,13 +303,14 @@ void RemoteImageBufferProxy::putPixelBuffer(const PixelBuffer& pixelBuffer, cons
         return;
     }
 
-    if (UNLIKELY(!m_remoteRenderingBackendProxy))
+    RefPtr remoteRenderingBackendProxy = m_remoteRenderingBackendProxy.get();
+    if (UNLIKELY(!remoteRenderingBackendProxy))
         return;
     // The math inside PixelBuffer::create() doesn't agree with the math inside ImageBufferBackend::putPixelBuffer() about how m_resolutionScale interacts with the data in the ImageBuffer.
     // This means that putPixelBuffer() is only called when resolutionScale() == 1.
     ASSERT(resolutionScale() == 1);
     backingStoreWillChange();
-    m_remoteRenderingBackendProxy->putPixelBufferForImageBuffer(m_renderingResourceIdentifier, pixelBuffer, srcRect, destPoint, destFormat);
+    remoteRenderingBackendProxy->putPixelBufferForImageBuffer(m_renderingResourceIdentifier, pixelBuffer, srcRect, destPoint, destFormat);
 }
 
 void RemoteImageBufferProxy::convertToLuminanceMask()
@@ -359,7 +362,8 @@ std::unique_ptr<SerializedImageBuffer> RemoteImageBufferProxy::sinkIntoSerialize
     flushDrawingContext();
     m_remoteDisplayList.disconnect();
 
-    if (!m_remoteRenderingBackendProxy)
+    RefPtr remoteRenderingBackendProxy = m_remoteRenderingBackendProxy.get();
+    if (!remoteRenderingBackendProxy)
         return nullptr;
 
     prepareForBackingStoreChange();
@@ -367,7 +371,7 @@ std::unique_ptr<SerializedImageBuffer> RemoteImageBufferProxy::sinkIntoSerialize
     if (!ensureBackend())
         return nullptr;
 
-    m_remoteRenderingBackendProxy->remoteResourceCacheProxy().forgetImageBuffer(m_renderingResourceIdentifier);
+    remoteRenderingBackendProxy->remoteResourceCacheProxy().forgetImageBuffer(m_renderingResourceIdentifier);
 
     auto result = makeUnique<RemoteSerializedImageBufferProxy>(parameters(), backendInfo(), m_renderingResourceIdentifier, *m_remoteRenderingBackendProxy);
 

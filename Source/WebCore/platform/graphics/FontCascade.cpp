@@ -42,6 +42,7 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/AtomStringHash.h>
 #include <wtf/text/StringBuilder.h>
+#include <wtf/text/TextStream.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -146,6 +147,7 @@ bool FontCascade::isCurrent(const FontSelector& fontSelector) const
 
 void FontCascade::updateFonts(Ref<FontCascadeFonts>&& fonts) const
 {
+    // FIXME: Ideally we'd only update m_generation if the fonts changed.
     m_fonts = WTFMove(fonts);
     m_generation = ++lastFontCascadeGeneration;
 }
@@ -480,40 +482,40 @@ bool FontCascade::hasValidAverageCharWidth() const
 #endif
 
     static constexpr ComparableASCIILiteral names[] = {
-        "#GungSeo",
-        "#HeadLineA",
-        "#PCMyungjo",
-        "#PilGi",
-        "American Typewriter",
-        "Apple Braille",
-        "Apple LiGothic",
-        "Apple LiSung",
-        "Apple Symbols",
-        "AppleGothic",
-        "AppleMyungjo",
-        "Arial Hebrew",
-        "Chalkboard",
-        "Cochin",
-        "Corsiva Hebrew",
-        "Courier",
-        "Euphemia UCAS",
-        "Geneva",
-        "Gill Sans",
-        "Hei",
-        "Helvetica",
-        "Hoefler Text",
-        "InaiMathi",
-        "Kai",
-        "Lucida Grande",
-        "Marker Felt",
-        "Monaco",
-        "Mshtakan",
-        "New Peninim MT",
-        "Osaka",
-        "Raanana",
-        "STHeiti",
-        "Symbol",
-        "Times",
+        "#GungSeo"_s,
+        "#HeadLineA"_s,
+        "#PCMyungjo"_s,
+        "#PilGi"_s,
+        "American Typewriter"_s,
+        "Apple Braille"_s,
+        "Apple LiGothic"_s,
+        "Apple LiSung"_s,
+        "Apple Symbols"_s,
+        "AppleGothic"_s,
+        "AppleMyungjo"_s,
+        "Arial Hebrew"_s,
+        "Chalkboard"_s,
+        "Cochin"_s,
+        "Corsiva Hebrew"_s,
+        "Courier"_s,
+        "Euphemia UCAS"_s,
+        "Geneva"_s,
+        "Gill Sans"_s,
+        "Hei"_s,
+        "Helvetica"_s,
+        "Hoefler Text"_s,
+        "InaiMathi"_s,
+        "Kai"_s,
+        "Lucida Grande"_s,
+        "Marker Felt"_s,
+        "Monaco"_s,
+        "Mshtakan"_s,
+        "New Peninim MT"_s,
+        "Osaka"_s,
+        "Raanana"_s,
+        "STHeiti"_s,
+        "Symbol"_s,
+        "Times"_s,
     };
     static constexpr SortedArraySet set { names };
     return !set.contains(family);
@@ -1902,6 +1904,19 @@ std::optional<char32_t> capitalized(char32_t baseCharacter)
     return std::nullopt;
 }
 
+TextStream& operator<<(TextStream& ts, const FontCascade& fontCascade)
+{
+    ts << fontCascade.fontDescription();
+
+    if (fontCascade.fonts()) {
+        ts << ", font selector " << fontCascade.fonts()->fontSelector();
+        ts << ", font selector version " << fontCascade.fonts()->fontSelectorVersion();
+        ts << ", generation " << fontCascade.fonts()->generation();
+    }
+
+    return ts;
 }
+
+} // namespace WebCore
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

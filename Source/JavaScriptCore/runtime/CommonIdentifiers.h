@@ -128,6 +128,7 @@
     macro(exitKind) \
     macro(exports) \
     macro(fallback) \
+    macro(fill) \
     macro(flags) \
     macro(firstDayOfWeek) \
     macro(forEach) \
@@ -235,6 +236,7 @@
     macro(parse) \
     macro(parseInt) \
     macro(parseFloat) \
+    macro(pluralCategories) \
     macro(profiledBytecodes) \
     macro(propertyIsEnumerable) \
     macro(prototype) \
@@ -283,6 +285,7 @@
     macro(toJSON) \
     macro(toLocaleString) \
     macro(toPrecision) \
+    macro(toReversed) \
     macro(toString) \
     macro(toTemporalInstant) \
     macro(toWellFormed) \
@@ -320,6 +323,7 @@
     macro(continue) \
     macro(debugger) \
     macro(default) \
+    macro(defer) \
     macro(delete) \
     macro(do) \
     macro(else) \

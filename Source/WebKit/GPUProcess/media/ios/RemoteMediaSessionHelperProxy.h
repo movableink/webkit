@@ -50,6 +50,9 @@ public:
     void overridePresentingApplicationPIDIfNeeded();
     std::optional<SharedPreferencesForWebProcess> sharedPreferencesForWebProcess() const;
 
+    void ref() const final;
+    void deref() const final;
+
 private:
     // IPC::MessageReceiver
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) final;

@@ -39,7 +39,7 @@ AccessibilityMenuList::AccessibilityMenuList(AXID axID, RenderMenuList& renderer
 {
     m_popup->setParent(this);
 
-    addChild(m_popup.ptr());
+    addChild(m_popup.get());
     m_childrenInitialized = true;
 }
 
@@ -55,13 +55,13 @@ bool AccessibilityMenuList::press()
 
 #if !PLATFORM(IOS_FAMILY)
     RefPtr element = this->element();
-    AXObjectCache::AXNotification notification = AXObjectCache::AXPressDidFail;
+    auto notification = AXNotification::PressDidFail;
     if (CheckedPtr menuList = dynamicDowncast<RenderMenuList>(renderer()); menuList && element && !element->isDisabledFormControl()) {
         if (menuList->popupIsVisible())
             menuList->hidePopup();
         else
             menuList->showPopup();
-        notification = AXObjectCache::AXPressDidSucceed;
+        notification = AXNotification::PressDidSucceed;
     }
     if (CheckedPtr cache = axObjectCache())
         cache->postNotification(element.get(), notification);
@@ -123,7 +123,7 @@ void AccessibilityMenuList::didUpdateActiveOption(int optionIndex)
     const auto& childObjects = unignoredChildren();
     if (!childObjects.isEmpty()) {
         ASSERT(childObjects.size() == 1);
-        ASSERT(is<AccessibilityMenuListPopup>(*childObjects[0]));
+        ASSERT(is<AccessibilityMenuListPopup>(childObjects[0].get()));
 
         // We might be calling this method in situations where the renderers for list items
         // associated to the menu list have not been created (e.g. they might be rendered
@@ -133,7 +133,8 @@ void AccessibilityMenuList::didUpdateActiveOption(int optionIndex)
         // You can reproduce the issue in the GTK+ port by removing this check and running
         // accessibility/insert-selected-option-into-select-causes-crash.html (will crash).
         int popupChildrenSize = static_cast<int>(childObjects[0]->unignoredChildren().size());
-        if (RefPtr accessibilityMenuListPopup = dynamicDowncast<AccessibilityMenuListPopup>(*childObjects[0]); accessibilityMenuListPopup && optionIndex >= 0 && optionIndex < popupChildrenSize)
+        RefPtr accessibilityMenuListPopup = dynamicDowncast<AccessibilityMenuListPopup>(childObjects[0].get());
+        if (accessibilityMenuListPopup && optionIndex >= 0 && optionIndex < popupChildrenSize)
             accessibilityMenuListPopup->didUpdateActiveOption(optionIndex);
     }
 

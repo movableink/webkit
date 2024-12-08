@@ -32,20 +32,19 @@
 
 #include "CSSAbsoluteColorResolver.h"
 #include "CSSFunctionValue.h"
+#include "CSSKeywordColor.h"
 #include "CSSParserContext.h"
 #include "CSSParserIdioms.h"
 #include "CSSPrimitiveNumericTypes.h"
 #include "CSSPrimitiveValue.h"
 #include "CSSProperty.h"
 #include "CSSPropertyParser.h"
-#include "CSSPropertyParserHelpers.h"
 #include "CSSPropertyParsing.h"
 #include "CSSTransformListValue.h"
 #include "CSSValueList.h"
 #include "CSSValuePool.h"
 #include "ColorConversion.h"
 #include "HashTools.h"
-#include "StyleColor.h"
 #include "StylePropertyShorthand.h"
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
@@ -692,7 +691,7 @@ static RefPtr<CSSValue> parseColor(StringView string, const CSSParserContext& co
 {
     ASSERT(!string.isEmpty());
     auto valueID = cssValueKeywordID(string);
-    if (StyleColor::isColorKeyword(valueID)) {
+    if (CSS::isColorKeyword(valueID)) {
         if (!isColorKeywordAllowedInMode(valueID, context.mode))
             return nullptr;
         return CSSPrimitiveValue::create(valueID);

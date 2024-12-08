@@ -49,7 +49,6 @@
 #include "RemoteVideoTrackProxy.h"
 #include "TextTrackPrivateRemoteConfiguration.h"
 #include "TrackPrivateRemoteConfiguration.h"
-#include "WebCoreArgumentCoders.h"
 #include <JavaScriptCore/Uint8Array.h>
 #include <WebCore/LayoutRect.h>
 #include <WebCore/MediaPlayer.h>
@@ -202,7 +201,12 @@ void RemoteMediaPlayerProxy::loadMediaSource(URL&& url, const WebCore::ContentTy
         m_mediaSourceProxy = adoptRef(*new RemoteMediaSourceProxy(*manager, mediaSourceIdentifier, webMParserEnabled, *this));
 
     RefPtr player = m_player;
+#if USE(AVFOUNDATION) && ENABLE(MEDIA_SOURCE)
+    if (auto preferences = sharedPreferencesForWebProcess())
+        player->setDecompressionSessionPreferences(preferences->mediaSourcePrefersDecompressionSession, preferences->mediaSourceCanFallbackToDecompressionSession);
+#endif
     player->load(url, contentType, *protectedMediaSourceProxy());
+
     if (reattached)
         protectedMediaSourceProxy()->setMediaPlayers(*this, player->protectedPlayerPrivate().get());
     getConfiguration(configuration);

@@ -329,14 +329,14 @@ WebProcessProxy::WebProcessProxy(WebProcessPool& processPool, WebsiteDataStore* 
     , m_visiblePageCounter([this](RefCounterEvent) { updateBackgroundResponsivenessTimer(); })
     , m_websiteDataStore(websiteDataStore)
 #if PLATFORM(COCOA) && ENABLE(MEDIA_STREAM)
-    , m_userMediaCaptureManagerProxy(makeUnique<UserMediaCaptureManagerProxy>(makeUniqueRef<UIProxyForCapture>(*this)))
+    , m_userMediaCaptureManagerProxy(UserMediaCaptureManagerProxy::create(makeUniqueRef<UIProxyForCapture>(*this)))
 #endif
     , m_isPrewarmed(isPrewarmed == IsPrewarmed::Yes)
     , m_lockdownMode(lockdownMode)
     , m_crossOriginMode(crossOriginMode)
     , m_shutdownPreventingScopeCounter([this](RefCounterEvent event) { if (event == RefCounterEvent::Decrement) maybeShutDown(); })
     , m_webLockRegistry(websiteDataStore ? makeUniqueWithoutRefCountedCheck<WebLockRegistryProxy>(*this) : nullptr)
-    , m_webPermissionController(makeUnique<WebPermissionControllerProxy>(*this))
+    , m_webPermissionController(makeUniqueRefWithoutRefCountedCheck<WebPermissionControllerProxy>(*this))
 {
     RELEASE_ASSERT(isMainThreadOrCheckDisabled());
     WEBPROCESSPROXY_RELEASE_LOG(Process, "constructor:");
@@ -1110,7 +1110,8 @@ bool WebProcessProxy::isAllowedToUpdateBackForwardItem(WebBackForwardListItem& i
     if (hasProvisionalPageWithID(item.pageID()))
         return true;
 
-    if (item.suspendedPage() && item.suspendedPage()->page().identifier() == item.pageID() && &item.suspendedPage()->process() == this)
+    RefPtr suspendedPage = item.suspendedPage();
+    if (suspendedPage && suspendedPage->page() && suspendedPage->page()->identifier() == item.pageID() && &suspendedPage->process() == this)
         return true;
 
     return false;
@@ -1275,6 +1276,13 @@ void WebProcessProxy::didClose(IPC::Connection& connection)
     processDidTerminateOrFailedToLaunch(ProcessTerminationReason::Crash);
 }
 
+#if PLATFORM(COCOA) && ENABLE(MEDIA_STREAM)
+Ref<UserMediaCaptureManagerProxy> WebProcessProxy::protectedUserMediaCaptureManagerProxy()
+{
+    return m_userMediaCaptureManagerProxy.get();
+}
+#endif
+
 void WebProcessProxy::processDidTerminateOrFailedToLaunch(ProcessTerminationReason reason)
 {
     WEBPROCESSPROXY_RELEASE_LOG_ERROR(Process, "processDidTerminateOrFailedToLaunch: reason=%" PUBLIC_LOG_STRING, processTerminationReasonToString(reason).characters());
@@ -1409,15 +1417,16 @@ void WebProcessProxy::setIgnoreInvalidMessageForTesting()
 }
 #endif
 
-void WebProcessProxy::didFinishLaunching(ProcessLauncher* launcher, IPC::Connection::Identifier connectionIdentifier)
+void WebProcessProxy::didFinishLaunching(ProcessLauncher* launcher, IPC::Connection::Identifier&& connectionIdentifier)
 {
     WEBPROCESSPROXY_RELEASE_LOG(Process, "didFinishLaunching:");
     RELEASE_ASSERT(isMainThreadOrCheckDisabled());
 
     Ref protectedThis { *this };
-    AuxiliaryProcessProxy::didFinishLaunching(launcher, connectionIdentifier);
+    bool didTerminate = !connectionIdentifier;
+    AuxiliaryProcessProxy::didFinishLaunching(launcher, WTFMove(connectionIdentifier));
 
-    if (!connectionIdentifier) {
+    if (didTerminate) {
         WEBPROCESSPROXY_RELEASE_LOG_ERROR(Process, "didFinishLaunching: Invalid connection identifier (web process failed to launch)");
         processDidTerminateOrFailedToLaunch(ProcessTerminationReason::Crash);
         return;
@@ -1455,12 +1464,6 @@ void WebProcessProxy::didFinishLaunching(ProcessLauncher* launcher, IPC::Connect
 #endif
 
     beginResponsivenessChecks();
-}
-
-void WebProcessProxy::didDestroyFrame(IPC::Connection& connection, FrameIdentifier frameID, WebPageProxyIdentifier pageID)
-{
-    if (RefPtr page = m_pageMap.get(pageID))
-        page->didDestroyFrame(connection, frameID);
 }
 
 auto WebProcessProxy::visiblePageToken() const -> VisibleWebPageToken
@@ -1578,12 +1581,6 @@ bool WebProcessProxy::canBeAddedToWebProcessCache() const
 
     if (m_crossOriginMode == CrossOriginMode::Isolated) {
         WEBPROCESSPROXY_RELEASE_LOG(Process, "canBeAddedToWebProcessCache: Not adding to process cache because the process is cross-origin isolated");
-        return false;
-    }
-
-    if (m_usedForSiteIsolation) {
-        // FIXME: The WebProcessCache is organized by RegistrableDomain not Site, and it is only set when the main frame loads a URL with that domain,
-        // so processes used for iframes are not correctly reused. Implement this in a way that doesn't break PLT.
         return false;
     }
 
@@ -2226,8 +2223,18 @@ void WebProcessProxy::didStartProvisionalLoadForMainFrame(const URL& url)
         return;
     }
 
-    // Associate the process with this site.
-    m_site = WTFMove(site);
+    if (m_sharedPreferencesForWebProcess.siteIsolationEnabled)
+        ASSERT(m_site == site);
+    else {
+        // Associate the process with this site.
+        m_site = WTFMove(site);
+    }
+}
+
+void WebProcessProxy::didStartUsingProcessForSiteIsolation(const WebCore::Site& site)
+{
+    ASSERT(!m_site || m_site == site);
+    m_site = site;
 }
 
 void WebProcessProxy::addSuspendedPageProxy(SuspendedPageProxy& suspendedPage)
@@ -2246,7 +2253,8 @@ void WebProcessProxy::removeSuspendedPageProxy(SuspendedPageProxy& suspendedPage
     auto suspendedPageCount = this->suspendedPageCount();
     WEBPROCESSPROXY_RELEASE_LOG(Process, "removeSuspendedPageProxy: suspendedPageCount=%u", suspendedPageCount);
     if (!suspendedPageCount) {
-        reportProcessDisassociatedWithPageIfNecessary(suspendedPage.page().identifier());
+        if (RefPtr page = suspendedPage.page())
+            reportProcessDisassociatedWithPageIfNecessary(page->identifier());
         send(Messages::WebProcess::SetHasSuspendedPageProxy(false), 0);
         maybeShutDown();
     }
@@ -2269,8 +2277,8 @@ bool WebProcessProxy::isAssociatedWithPage(WebPageProxyIdentifier pageID) const
         if (provisionalPage->page() && provisionalPage->page()->identifier() == pageID)
             return true;
     }
-    for (auto& suspendedPage : m_suspendedPages) {
-        if (suspendedPage.page().identifier() == pageID)
+    for (Ref suspendedPage : m_suspendedPages) {
+        if (suspendedPage->page() && suspendedPage->page()->identifier() == pageID)
             return true;
     }
     return false;
@@ -2444,10 +2452,15 @@ SpeechRecognitionRemoteRealtimeMediaSourceManager& WebProcessProxy::ensureSpeech
 {
     if (!m_speechRecognitionRemoteRealtimeMediaSourceManager) {
         m_speechRecognitionRemoteRealtimeMediaSourceManager = makeUniqueWithoutRefCountedCheck<SpeechRecognitionRemoteRealtimeMediaSourceManager>(*this);
-        addMessageReceiver(Messages::SpeechRecognitionRemoteRealtimeMediaSourceManager::messageReceiverName(), *m_speechRecognitionRemoteRealtimeMediaSourceManager);
+        addMessageReceiver(Messages::SpeechRecognitionRemoteRealtimeMediaSourceManager::messageReceiverName(), *protectedSpeechRecognitionRemoteRealtimeMediaSourceManager());
     }
 
     return *m_speechRecognitionRemoteRealtimeMediaSourceManager;
+}
+
+RefPtr<SpeechRecognitionRemoteRealtimeMediaSourceManager> WebProcessProxy::protectedSpeechRecognitionRemoteRealtimeMediaSourceManager()
+{
+    return m_speechRecognitionRemoteRealtimeMediaSourceManager.get();
 }
 
 void WebProcessProxy::muteCaptureInPagesExcept(WebCore::PageIdentifier pageID)
@@ -3014,3 +3027,4 @@ const WebCore::ProcessIdentity& WebProcessProxy::processIdentity()
 #undef MESSAGE_CHECK_COMPLETION
 #undef WEBPROCESSPROXY_RELEASE_LOG
 #undef WEBPROCESSPROXY_RELEASE_LOG_ERROR
+

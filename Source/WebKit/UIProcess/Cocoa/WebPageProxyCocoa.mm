@@ -402,14 +402,6 @@ void WebPageProxy::performDictionaryLookupAtLocation(const WebCore::FloatPoint& 
     protectedLegacyMainFrameProcess()->send(Messages::WebPage::PerformDictionaryLookupAtLocation(point), webPageIDInMainFrameProcess());
 }
 
-void WebPageProxy::performDictionaryLookupOfCurrentSelection()
-{
-    if (!hasRunningProcess())
-        return;
-    
-    protectedLegacyMainFrameProcess()->send(Messages::WebPage::PerformDictionaryLookupOfCurrentSelection(), webPageIDInMainFrameProcess());
-}
-
 void WebPageProxy::insertDictatedTextAsync(const String& text, const EditingRange& replacementRange, const Vector<TextAlternativeWithRange>& dictationAlternativesWithRange, InsertTextOptions&& options)
 {
     if (!hasRunningProcess())
@@ -1316,22 +1308,6 @@ void WebPageProxy::decorateTextReplacementsForActiveWritingToolsSession(const We
 void WebPageProxy::setSelectionForActiveWritingToolsSession(const WebCore::CharacterRange& rangeRelativeToSessionRange, CompletionHandler<void()>&& completionHandler)
 {
     protectedLegacyMainFrameProcess()->sendWithAsyncReply(Messages::WebPage::SetSelectionForActiveWritingToolsSession(rangeRelativeToSessionRange), WTFMove(completionHandler), webPageIDInMainFrameProcess());
-}
-
-void WebPageProxy::enableSourceTextAnimationAfterElementWithID(const String& elementID)
-{
-    if (!hasRunningProcess())
-        return;
-
-    protectedLegacyMainFrameProcess()->send(Messages::WebPage::EnableSourceTextAnimationAfterElementWithID(elementID), webPageIDInMainFrameProcess());
-}
-
-void WebPageProxy::enableTextAnimationTypeForElementWithID(const String& elementID)
-{
-    if (!hasRunningProcess())
-        return;
-
-    protectedLegacyMainFrameProcess()->send(Messages::WebPage::EnableTextAnimationTypeForElementWithID(elementID), webPageIDInMainFrameProcess());
 }
 
 void WebPageProxy::addTextAnimationForAnimationID(IPC::Connection& connection, const WTF::UUID& uuid, const WebCore::TextAnimationData& styleData, const WebCore::TextIndicatorData& indicatorData)

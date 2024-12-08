@@ -115,7 +115,7 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Node);
 using namespace HTMLNames;
 
 struct SameSizeAsNode : EventTarget, CanMakeCheckedPtr<SameSizeAsNode> {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(SameSizeAsNode);
+    WTF_MAKE_TZONE_ALLOCATED(SameSizeAsNode);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SameSizeAsNode);
 public:
 #if ASSERT_ENABLED
@@ -133,6 +133,8 @@ public:
     void* renderer;
     uint8_t rareDataWithBitfields[8];
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SameSizeAsNode);
 
 static_assert(sizeof(Node) == sizeof(SameSizeAsNode), "Node should stay small");
 
@@ -464,9 +466,12 @@ Node::~Node()
     }
 #endif
 
-    // FIXME: Test performance, then add a RELEASE_ASSERT for this too.
+// refCount() is 1 during Node destruction (see Node::deref()) but can be 0 during Document destruction (see Document::removedLastRef()).
+#if CHECK_REF_COUNTED_LIFECYCLE
     if (refCount() > 1)
         WTF::RefCountedBase::printRefDuringDestructionLogAndCrash(this);
+#endif
+    RELEASE_ASSERT(refCount() <= 1);
 }
 
 void Node::willBeDeletedFrom(Document& document)

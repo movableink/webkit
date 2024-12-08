@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Eric Seidel <eric@webkit.org>
- * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
  * Copyright (C) Research In Motion Limited 2011. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,6 +42,7 @@
 #include "DataListSuggestionPicker.h"
 #include "DatabaseProvider.h"
 #include "DiagnosticLoggingClient.h"
+#include "DisplayRefreshMonitor.h"
 #include "DisplayRefreshMonitorFactory.h"
 #include "DocumentFragment.h"
 #include "DocumentLoader.h"
@@ -60,6 +61,7 @@
 #include "IDBConnectionToServer.h"
 #include "IDBIndexIdentifier.h"
 #include "IDBObjectStoreIdentifier.h"
+#include "Icon.h"
 #include "InspectorClient.h"
 #include "LocalFrame.h"
 #include "LocalFrameLoaderClient.h"
@@ -69,9 +71,11 @@
 #include "PageConfiguration.h"
 #include "PaymentCoordinatorClient.h"
 #include "PluginInfoProvider.h"
+#include "PopupMenu.h"
 #include "ProcessSyncClient.h"
 #include "ProgressTrackerClient.h"
 #include "RemoteFrameClient.h"
+#include "SearchPopupMenu.h"
 #include "SecurityOriginData.h"
 #include "SocketProvider.h"
 #include "StorageArea.h"
@@ -103,6 +107,7 @@
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DummyStorageProvider);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(EmptyChromeClient);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(EmptyCryptoClient);
 
@@ -429,8 +434,20 @@ class EmptyInspectorClient final : public InspectorClient {
 
 #if ENABLE(APPLE_PAY)
 
-class EmptyPaymentCoordinatorClient final : public PaymentCoordinatorClient {
+class EmptyPaymentCoordinatorClient final : public PaymentCoordinatorClient, public RefCounted<EmptyPaymentCoordinatorClient> {
     WTF_MAKE_TZONE_ALLOCATED_INLINE(EmptyPaymentCoordinatorClient);
+public:
+    static Ref<EmptyPaymentCoordinatorClient> create()
+    {
+        return adoptRef(*new EmptyPaymentCoordinatorClient);
+    }
+
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
+private:
+    EmptyPaymentCoordinatorClient() = default;
+
     std::optional<String> validatedPaymentNetwork(const String&) const final { return std::nullopt; }
     bool canMakePayments() final { return false; }
     void canMakePaymentsWithActiveCard(const String&, const String&, CompletionHandler<void(bool)>&& completionHandler) final { callOnMainThread([completionHandler = WTFMove(completionHandler)]() mutable { completionHandler(false); }); }
@@ -599,6 +616,13 @@ void EmptyChromeClient::requestCookieConsent(CompletionHandler<void(CookieConsen
 {
     completion(CookieConsentDecisionResult::NotSupported);
 }
+
+RefPtr<Icon> EmptyChromeClient::createIconForFiles(const Vector<String>& /* filenames */)
+{
+    return nullptr;
+}
+
+// MARK: -
 
 void EmptyFrameLoaderClient::dispatchDecidePolicyForNewWindowAction(const NavigationAction&, const ResourceRequest&, FormState*, const String&, std::optional<HitTestResult>&&, FramePolicyFunction&&)
 {
@@ -1233,7 +1257,7 @@ PageConfiguration pageConfigurationWithEmptyClients(std::optional<PageIdentifier
         makeUniqueRef<EmptyContextMenuClient>(),
 #endif
 #if ENABLE(APPLE_PAY)
-        makeUniqueRef<EmptyPaymentCoordinatorClient>(),
+        EmptyPaymentCoordinatorClient::create(),
 #endif
         makeUniqueRef<EmptyChromeClient>(),
         makeUniqueRef<EmptyCryptoClient>(),

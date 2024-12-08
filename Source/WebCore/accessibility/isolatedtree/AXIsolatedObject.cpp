@@ -104,8 +104,14 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
     auto& object = axObject.get();
 
     // These properties are cached for all objects, ignored and unignored.
-    setProperty(AXPropertyName::HasBodyTag, object.hasBodyTag());
     setProperty(AXPropertyName::HasClickHandler, object.hasClickHandler());
+    auto tag = object.tagName();
+    if (tag == bodyTag)
+        setProperty(AXPropertyName::HasBodyTag, true);
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    else if (tag == markTag)
+        setProperty(AXPropertyName::HasMarkTag, true);
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
 
 #if ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
     if (object.includeIgnoredInCoreTree()) {
@@ -190,7 +196,9 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
     setProperty(AXPropertyName::HasBoldFont, object.hasBoldFont());
     setProperty(AXPropertyName::HasItalicFont, object.hasItalicFont());
     setProperty(AXPropertyName::HasPlainText, object.hasPlainText());
+#if !ENABLE(AX_THREAD_TEXT_APIS)
     setProperty(AXPropertyName::HasUnderline, object.hasUnderline());
+#endif
     setProperty(AXPropertyName::IsKeyboardFocusable, object.isKeyboardFocusable());
     setProperty(AXPropertyName::BrailleRoleDescription, object.brailleRoleDescription().isolatedCopy());
     setProperty(AXPropertyName::BrailleLabel, object.brailleLabel().isolatedCopy());
@@ -613,6 +621,7 @@ void AXIsolatedObject::setProperty(AXPropertyName propertyName, AXPropertyValueV
         },
 #if ENABLE(AX_THREAD_TEXT_APIS)
         [](AXTextRuns& runs) { return !runs.size(); },
+        [](RetainPtr<CTFontRef>& typedValue) { return !typedValue; },
 #endif
         [] (WallTime& time) { return !time; },
         [] (DateComponentsType& typedValue) { return typedValue == DateComponentsType::Invalid; },
@@ -673,9 +682,9 @@ const AXCoreObject::AccessibilityChildrenVector& AXIsolatedObject::children(bool
         updateBackingStore();
 
         if (m_childrenDirty) {
-            m_children = WTF::compactMap(m_childrenIDs, [&](auto& childID) -> std::optional<RefPtr<AXCoreObject>> {
+            m_children = WTF::compactMap(m_childrenIDs, [&](auto& childID) -> std::optional<Ref<AXCoreObject>> {
                 if (RefPtr child = tree()->objectForID(childID))
-                    return child;
+                    return child.releaseNonNull();
                 return std::nullopt;
             });
             m_childrenDirty = false;
@@ -701,7 +710,7 @@ std::optional<AXCoreObject::AccessibilityChildrenVector> AXIsolatedObject::selec
 
 void AXIsolatedObject::setSelectedChildren(const AccessibilityChildrenVector& selectedChildren)
 {
-    ASSERT(selectedChildren.isEmpty() || (selectedChildren[0] && selectedChildren[0]->isAXIsolatedObjectInstance()));
+    ASSERT(selectedChildren.isEmpty() || selectedChildren[0]->isAXIsolatedObjectInstance());
 
     auto childrenIDs = axIDs(selectedChildren);
     performFunctionOnMainThread([selectedChildrenIDs = WTFMove(childrenIDs), protectedThis = Ref { *this }] (auto* object) {
@@ -779,7 +788,7 @@ void AXIsolatedObject::mathPostscripts(AccessibilityMathMultiscriptPairs& pairs)
 std::optional<AXCoreObject::AccessibilityChildrenVector> AXIsolatedObject::mathRadicand()
 {
     if (m_propertyMap.contains(AXPropertyName::MathRadicand)) {
-        Vector<RefPtr<AXCoreObject>> radicand;
+        Vector<Ref<AXCoreObject>> radicand;
         fillChildrenVectorForProperty(AXPropertyName::MathRadicand, radicand);
         return { radicand };
     }
@@ -1238,7 +1247,7 @@ void AXIsolatedObject::fillChildrenVectorForProperty(AXPropertyName propertyName
     children.reserveCapacity(childIDs.size());
     for (const auto& childID : childIDs) {
         if (RefPtr object = tree()->objectForID(childID))
-            children.append(object);
+            children.append(object.releaseNonNull());
     }
 }
 
@@ -2066,27 +2075,26 @@ AXCoreObject::AccessibilityChildrenVector AXIsolatedObject::rowHeaders()
         auto rowsCopy = rows();
         for (const auto& row : rowsCopy) {
             if (auto* header = row->rowHeader())
-                headers.append(header);
+                headers.append(*header);
         }
     } else if (isExposedTableCell()) {
-        auto* parent = exposedTableAncestor();
+        RefPtr parent = exposedTableAncestor();
         if (!parent)
             return { };
 
         auto rowRange = rowIndexRange();
         auto colRange = columnIndexRange();
         for (unsigned column = 0; column < colRange.first; column++) {
-            auto* tableCell = parent->cellForColumnAndRow(column, rowRange.first);
-            if (!tableCell || tableCell == this || headers.contains(tableCell))
+            RefPtr tableCell = parent->cellForColumnAndRow(column, rowRange.first);
+            if (!tableCell || tableCell == this || headers.contains(Ref { *tableCell }))
                 continue;
 
-            if (tableCell->cellScope() == "rowgroup"_s && isTableCellInSameRowGroup(tableCell))
-                headers.append(tableCell);
+            if (tableCell->cellScope() == "rowgroup"_s && isTableCellInSameRowGroup(*tableCell))
+                headers.append(tableCell.releaseNonNull());
             else if (tableCell->isRowHeader())
-                headers.append(tableCell);
+                headers.append(tableCell.releaseNonNull());
         }
     }
-
     return headers;
 }
 

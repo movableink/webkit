@@ -31,7 +31,6 @@
 #include "WebAutomationDOMWindowObserver.h"
 #include "WebAutomationSessionProxyMessages.h"
 #include "WebAutomationSessionProxyScriptSource.h"
-#include "WebCoreArgumentCoders.h"
 #include "WebFrame.h"
 #include "WebImage.h"
 #include "WebPage.h"
@@ -113,6 +112,11 @@ static inline JSValueRef callPropertyFunction(JSContextRef context, JSObjectRef 
 }
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(WebAutomationSessionProxy);
+
+Ref<WebAutomationSessionProxy> WebAutomationSessionProxy::create(const String& sessionIdentifier)
+{
+    return adoptRef(*new WebAutomationSessionProxy(sessionIdentifier));
+}
 
 WebAutomationSessionProxy::WebAutomationSessionProxy(const String& sessionIdentifier)
     : m_sessionIdentifier(sessionIdentifier)

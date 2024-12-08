@@ -35,7 +35,6 @@
 #include "NetworkSession.h"
 #include "ServiceWorkerFetchTask.h"
 #include "ServiceWorkerFetchTaskMessages.h"
-#include "WebCoreArgumentCoders.h"
 #include "WebSWContextManagerConnectionMessages.h"
 #include "WebSWServerConnection.h"
 #include <WebCore/NotificationData.h>
@@ -148,7 +147,7 @@ uint64_t WebSWServerToContextConnection::messageSenderDestinationID() const
 void WebSWServerToContextConnection::postMessageToServiceWorkerClient(const ScriptExecutionContextIdentifier& destinationIdentifier, const MessageWithMessagePorts& message, ServiceWorkerIdentifier sourceIdentifier, const String& sourceOrigin)
 {
     RefPtr server = this->server();
-    if (CheckedPtr connection = server ? server->connection(destinationIdentifier.processIdentifier()) : nullptr)
+    if (RefPtr connection = server ? server->connection(destinationIdentifier.processIdentifier()) : nullptr)
         connection->postMessageToServiceWorkerClient(destinationIdentifier, message, sourceIdentifier, sourceOrigin);
 }
 
@@ -204,7 +203,7 @@ void WebSWServerToContextConnection::fireNotificationEvent(ServiceWorkerIdentifi
         if (!protectedThis || !protectedThis->m_connection)
             return callback(wasProcessed);
 
-        CheckedPtr session = protectedThis->m_connection->networkSession();
+        CheckedPtr session = protectedThis->protectedConnection()->networkSession();
         if (auto* resourceLoadStatistics = session ? session->resourceLoadStatistics() : nullptr; resourceLoadStatistics && wasProcessed && eventType == NotificationEventType::Click) {
             return resourceLoadStatistics->setMostRecentWebPushInteractionTime(RegistrableDomain(protectedThis->registrableDomain()), [callback = WTFMove(callback), wasProcessed] () mutable {
                 callback(wasProcessed);
@@ -386,7 +385,7 @@ void WebSWServerToContextConnection::unregisterDownload(ServiceWorkerDownloadTas
 void WebSWServerToContextConnection::focus(ScriptExecutionContextIdentifier clientIdentifier, CompletionHandler<void(std::optional<WebCore::ServiceWorkerClientData>&&)>&& callback)
 {
     RefPtr server = this->server();
-    CheckedPtr connection = server ? server->connection(clientIdentifier.processIdentifier()) : nullptr;
+    RefPtr connection = server ? server->connection(clientIdentifier.processIdentifier()) : nullptr;
     if (!connection) {
         callback({ });
         return;

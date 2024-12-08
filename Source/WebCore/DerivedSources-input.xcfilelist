@@ -486,6 +486,7 @@ $(PROJECT_DIR)/Modules/filesystemaccess/FileSystemDirectoryHandle.idl
 $(PROJECT_DIR)/Modules/filesystemaccess/FileSystemFileHandle.idl
 $(PROJECT_DIR)/Modules/filesystemaccess/FileSystemHandle.idl
 $(PROJECT_DIR)/Modules/filesystemaccess/FileSystemSyncAccessHandle.idl
+$(PROJECT_DIR)/Modules/filesystemaccess/FileSystemWritableFileStream.idl
 $(PROJECT_DIR)/Modules/filesystemaccess/StorageManager+FileSystemAccess.idl
 $(PROJECT_DIR)/Modules/gamepad/Gamepad.idl
 $(PROJECT_DIR)/Modules/gamepad/GamepadButton.idl
@@ -1341,14 +1342,14 @@ $(PROJECT_DIR)/css/typedom/CSSUnitValue.idl
 $(PROJECT_DIR)/css/typedom/CSSUnparsedValue.idl
 $(PROJECT_DIR)/css/typedom/StylePropertyMap.idl
 $(PROJECT_DIR)/css/typedom/StylePropertyMapReadOnly.idl
-$(PROJECT_DIR)/css/typedom/color/CSSColor.idl
-$(PROJECT_DIR)/css/typedom/color/CSSColorValue.idl
 $(PROJECT_DIR)/css/typedom/color/CSSHSL.idl
 $(PROJECT_DIR)/css/typedom/color/CSSHWB.idl
 $(PROJECT_DIR)/css/typedom/color/CSSLCH.idl
 $(PROJECT_DIR)/css/typedom/color/CSSLab.idl
 $(PROJECT_DIR)/css/typedom/color/CSSOKLCH.idl
 $(PROJECT_DIR)/css/typedom/color/CSSOKLab.idl
+$(PROJECT_DIR)/css/typedom/color/CSSOMColor.idl
+$(PROJECT_DIR)/css/typedom/color/CSSOMColorValue.idl
 $(PROJECT_DIR)/css/typedom/color/CSSRGB.idl
 $(PROJECT_DIR)/css/typedom/numeric/CSSMathClamp.idl
 $(PROJECT_DIR)/css/typedom/numeric/CSSMathInvert.idl
@@ -1384,6 +1385,8 @@ $(PROJECT_DIR)/dom/Attr.idl
 $(PROJECT_DIR)/dom/BeforeUnloadEvent.idl
 $(PROJECT_DIR)/dom/BroadcastChannel.idl
 $(PROJECT_DIR)/dom/CDATASection.idl
+$(PROJECT_DIR)/dom/CaretPosition.idl
+$(PROJECT_DIR)/dom/CaretPositionFromPointOptions.idl
 $(PROJECT_DIR)/dom/CharacterData.idl
 $(PROJECT_DIR)/dom/CheckVisibilityOptions.idl
 $(PROJECT_DIR)/dom/ChildNode.idl
@@ -1418,6 +1421,7 @@ $(PROJECT_DIR)/dom/DeviceMotionEvent.idl
 $(PROJECT_DIR)/dom/DeviceOrientationEvent.idl
 $(PROJECT_DIR)/dom/DeviceOrientationOrMotionEvent.idl
 $(PROJECT_DIR)/dom/DeviceOrientationOrMotionPermissionState.idl
+$(PROJECT_DIR)/dom/Document+CaretPositionFromPoint.idl
 $(PROJECT_DIR)/dom/Document+CSSOMView.idl
 $(PROJECT_DIR)/dom/Document+Fullscreen.idl
 $(PROJECT_DIR)/dom/Document+HTML.idl
@@ -1490,6 +1494,8 @@ $(PROJECT_DIR)/dom/NodeList.idl
 $(PROJECT_DIR)/dom/NonDocumentTypeChildNode.idl
 $(PROJECT_DIR)/dom/NonElementParentNode.idl
 $(PROJECT_DIR)/dom/Observable.idl
+$(PROJECT_DIR)/dom/ObservableInspector.idl
+$(PROJECT_DIR)/dom/ObservableInspectorAbortCallback.idl
 $(PROJECT_DIR)/dom/PageRevealEvent.idl
 $(PROJECT_DIR)/dom/PageSwapEvent.idl
 $(PROJECT_DIR)/dom/PageTransitionEvent.idl
@@ -1661,6 +1667,7 @@ $(PROJECT_DIR)/html/ImageBitmap.idl
 $(PROJECT_DIR)/html/ImageBitmapOptions.idl
 $(PROJECT_DIR)/html/ImageData.idl
 $(PROJECT_DIR)/html/ImageDataSettings.idl
+$(PROJECT_DIR)/html/ImageDataStorageFormat.idl
 $(PROJECT_DIR)/html/InvokerElement.idl
 $(PROJECT_DIR)/html/MediaController.idl
 $(PROJECT_DIR)/html/MediaEncryptedEvent.idl

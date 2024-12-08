@@ -42,15 +42,17 @@ class WebExtensionAPIEvent : public WebExtensionAPIObject, public JSWebExtension
 public:
     using ListenerVector = Vector<RefPtr<WebExtensionCallbackHandler>>;
 
+#if PLATFORM(COCOA)
     void invokeListeners();
     void invokeListenersWithArgument(id argument);
     void invokeListenersWithArgument(id argument1, id argument2);
     void invokeListenersWithArgument(id argument1, id argument2, id argument3);
+#endif
 
     const ListenerVector& listeners() const { return m_listeners; }
 
-    void addListener(WebFrame&, RefPtr<WebExtensionCallbackHandler>);
-    void removeListener(WebFrame&, RefPtr<WebExtensionCallbackHandler>);
+    void addListener(WebCore::FrameIdentifier, RefPtr<WebExtensionCallbackHandler>);
+    void removeListener(WebCore::FrameIdentifier, RefPtr<WebExtensionCallbackHandler>);
     bool hasListener(RefPtr<WebExtensionCallbackHandler>);
 
     void removeAllListeners();

@@ -28,7 +28,6 @@
 
 #include "APIUIClient.h"
 #include "MessageSenderInlines.h"
-#include "WebCoreArgumentCoders.h"
 #include "WebFullScreenManagerProxy.h"
 #include "WebPageProxy.h"
 #include "WebProcessProxy.h"
@@ -40,6 +39,11 @@
 namespace WebKit {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(WebScreenOrientationManagerProxy);
+
+Ref<WebScreenOrientationManagerProxy> WebScreenOrientationManagerProxy::create(WebPageProxy& page, WebCore::ScreenOrientationType orientation)
+{
+    return adoptRef(*new WebScreenOrientationManagerProxy(page, orientation));
+}
 
 WebScreenOrientationManagerProxy::WebScreenOrientationManagerProxy(WebPageProxy& page, WebCore::ScreenOrientationType orientation)
     : m_page(page)

@@ -27,6 +27,7 @@
 
 #import <Foundation/NSRange.h>
 #if PLATFORM(MAC)
+#import "AXIsolatedObject.h"
 #import "WebAccessibilityObjectWrapperMac.h"
 #import <pal/spi/mac/HIServicesSPI.h>
 #else // PLATFORM(IOS_FAMILY)
@@ -65,6 +66,31 @@ RetainPtr<PlatformTextMarkerData> AXTextMarker::platformData() const
     return [NSData dataWithBytes:&m_data length:sizeof(m_data)];
 #endif
 }
+
+#if ENABLE(AX_THREAD_TEXT_APIS)
+RetainPtr<NSAttributedString> AXTextMarkerRange::toAttributedString() const
+{
+    RELEASE_ASSERT(!isMainThread());
+
+    auto start = m_start.toTextRunMarker();
+    if (!start.isValid())
+        return nil;
+    auto end = m_end.toTextRunMarker();
+    if (!end.isValid())
+        return nil;
+
+    if (start.isolatedObject() == end.isolatedObject()) {
+        size_t minOffset = std::min(start.offset(), end.offset());
+        size_t maxOffset = std::max(start.offset(), end.offset());
+        // FIXME: createAttributedString takes a StringView, but we create a full-fledged String. Could we create a
+        // new substringView method that returns a StringView?
+        // FIXME: Should we be passing SpellCheck::Yes? Maybe we need to take `SpellCheck` as a function parameter?
+        return start.isolatedObject()->createAttributedString(start.runs()->substring(minOffset, maxOffset - minOffset), AXCoreObject::SpellCheck::No).autorelease();
+    }
+    // FIXME: Handle ranges that span multiple objects.
+    return nil;
+}
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
 
 #if PLATFORM(MAC)
 

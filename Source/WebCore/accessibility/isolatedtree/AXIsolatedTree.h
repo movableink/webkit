@@ -93,6 +93,7 @@ enum class AXPropertyName : uint16_t {
     ActionVerb,
     AncestorFlags,
     AutoCompleteValue,
+    BackgroundColor,
     BlockquoteLevel,
     BrailleLabel,
     BrailleRoleDescription,
@@ -126,14 +127,23 @@ enum class AXPropertyName : uint16_t {
     EmbeddedImageDescription,
     ExpandedTextValue,
     ExtendedDescription,
+#if PLATFORM(COCOA)
+    Font,
+#endif
+    TextColor,
     HasApplePDFAnnotationAttribute,
     HasBoldFont,
     HasBodyTag,
     HasClickHandler,
     HasHighlighting,
     HasItalicFont,
+    HasLinethrough,
+    HasMarkTag,
     HasPlainText,
     HasRemoteFrameChild,
+    IsSubscript,
+    IsSuperscript,
+    HasTextShadow,
     HasUnderline,
     HeaderContainer,
     HeadingLevel,
@@ -197,6 +207,7 @@ enum class AXPropertyName : uint16_t {
     IsWidget,
     KeyShortcuts,
     Language,
+    LinethroughColor,
     LiveRegionAtomic,
     LiveRegionRelevant,
     LiveRegionStatus,
@@ -268,6 +279,7 @@ enum class AXPropertyName : uint16_t {
     Title,
     TitleAttributeValue,
     URL,
+    UnderlineColor,
     ValueAutofillButtonType,
     ValueDescription,
     ValueForRange,
@@ -286,6 +298,7 @@ using AXPropertyValueVariant = std::variant<std::nullptr_t, Markable<AXID>, Stri
     , RetainPtr<id>
 #endif
 #if ENABLE(AX_THREAD_TEXT_APIS)
+    , RetainPtr<CTFontRef>
     , AXTextRuns
 #endif
 >;
@@ -331,7 +344,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AXIsolatedTree);
 class AXIsolatedTree : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<AXIsolatedTree>
     , public AXTreeStore<AXIsolatedTree> {
     WTF_MAKE_NONCOPYABLE(AXIsolatedTree);
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AXIsolatedTree);
+    WTF_MAKE_TZONE_ALLOCATED(AXIsolatedTree);
     friend WTF::TextStream& operator<<(WTF::TextStream&, AXIsolatedTree&);
     friend void streamIsolatedSubtreeOnMainThread(TextStream&, const AXIsolatedTree&, AXID, const OptionSet<AXStreamOptions>&);
 public:
@@ -354,7 +367,7 @@ public:
     WEBCORE_EXPORT RefPtr<AXIsolatedObject> focusedNode();
 
     RefPtr<AXIsolatedObject> objectForID(std::optional<AXID>) const;
-    template<typename U> Vector<RefPtr<AXCoreObject>> objectsForIDs(const U&);
+    template<typename U> Vector<Ref<AXCoreObject>> objectsForIDs(const U&);
 
     void generateSubtree(AccessibilityObject&);
     bool shouldCreateNodeChange(AccessibilityObject&);
@@ -362,8 +375,8 @@ public:
     enum class ResolveNodeChanges : bool { No, Yes };
     void updateChildren(AccessibilityObject&, ResolveNodeChanges = ResolveNodeChanges::Yes);
     void updateChildrenForObjects(const ListHashSet<Ref<AccessibilityObject>>&);
-    void updateNodeProperty(AXCoreObject& object, AXPropertyName property) { updateNodeProperties(object, { property }); }
-    void updateNodeProperties(AXCoreObject&, const AXPropertyNameSet&);
+    void updateNodeProperty(AccessibilityObject& object, AXPropertyName property) { updateNodeProperties(object, { property }); }
+    void updateNodeProperties(AccessibilityObject&, const AXPropertyNameSet&);
     void updateNodeProperties(AccessibilityObject* axObject, const AXPropertyNameSet& properties)
     {
         if (axObject)
@@ -592,16 +605,15 @@ inline RefPtr<AXIsolatedTree> AXIsolatedTree::treeForPageID(std::optional<PageId
 }
 
 template<typename U>
-inline Vector<RefPtr<AXCoreObject>> AXIsolatedTree::objectsForIDs(const U& axIDs)
+inline Vector<Ref<AXCoreObject>> AXIsolatedTree::objectsForIDs(const U& axIDs)
 {
     ASSERT(!isMainThread());
 
-    Vector<RefPtr<AXCoreObject>> result;
+    Vector<Ref<AXCoreObject>> result;
     result.reserveInitialCapacity(axIDs.size());
     for (const auto& axID : axIDs) {
-        RefPtr object = objectForID(axID);
-        if (object)
-            result.append(WTFMove(object));
+        if (RefPtr object = objectForID(axID))
+            result.append(object.releaseNonNull());
     }
     result.shrinkToFit();
     return result;

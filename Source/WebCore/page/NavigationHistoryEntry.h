@@ -30,6 +30,7 @@
 #include "EventHandler.h"
 #include "EventTarget.h"
 #include "HistoryItem.h"
+#include "ReferrerPolicy.h"
 #include <wtf/RefCounted.h>
 
 namespace JSC {
@@ -57,11 +58,19 @@ public:
     JSC::JSValue getState(JSDOMGlobalObject&) const;
 
     void setState(RefPtr<SerializedScriptValue>&&);
+    SerializedScriptValue* state() const { return m_state.get(); }
 
     HistoryItem& associatedHistoryItem() const { return m_associatedHistoryItem; }
 
 private:
-    NavigationHistoryEntry(ScriptExecutionContext*, Ref<HistoryItem>&&, String urlString, WTF::UUID key, RefPtr<SerializedScriptValue>&& state = { }, WTF::UUID = WTF::UUID::createVersion4());
+    struct DocumentState {
+        static DocumentState fromContext(ScriptExecutionContext*);
+
+        std::optional<ScriptExecutionContextIdentifier> identifier;
+        ReferrerPolicy referrerPolicy { ReferrerPolicy::Default };
+    };
+
+    NavigationHistoryEntry(ScriptExecutionContext*, const DocumentState&, Ref<HistoryItem>&&, String urlString, WTF::UUID key, RefPtr<SerializedScriptValue>&& state = { }, WTF::UUID = WTF::UUID::createVersion4());
 
     enum EventTargetInterfaceType eventTargetInterface() const final;
     ScriptExecutionContext* scriptExecutionContext() const final;
@@ -73,6 +82,7 @@ private:
     const WTF::UUID m_id;
     RefPtr<SerializedScriptValue> m_state;
     Ref<HistoryItem> m_associatedHistoryItem;
+    DocumentState m_originalDocumentState;
 };
 
 } // namespace WebCore
