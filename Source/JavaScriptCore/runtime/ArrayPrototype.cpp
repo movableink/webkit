@@ -1931,7 +1931,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncToReversed, (JSGlobalObject* globalObject
     auto thisValue = callFrame->thisValue().toThis(globalObject, ECMAMode::strict());
     RETURN_IF_EXCEPTION(scope, { });
     if (UNLIKELY(thisValue.isUndefinedOrNull()))
-        return throwVMTypeError(globalObject, scope, "Array.prototype.fill requires that |this| not be null or undefined"_s);
+        return throwVMTypeError(globalObject, scope, "Array.prototype.toReversed requires that |this| not be null or undefined"_s);
     auto* thisObject = thisValue.toObject(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
@@ -1945,8 +1945,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncToReversed, (JSGlobalObject* globalObject
 
     if (isJSArray(thisObject)) {
         JSArray* thisArray = jsCast<JSArray*>(thisObject);
-        auto fastResult = thisArray->fastToReversed(globalObject, length);
-        if (fastResult)
+        if (auto fastResult = thisArray->fastToReversed(globalObject, length))
             return JSValue::encode(fastResult);
     }
 
@@ -1956,7 +1955,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncToReversed, (JSGlobalObject* globalObject
         return { };
     }
 
-    for (unsigned k = 0; k < length; k++) {
+    for (uint32_t k = 0; k < length; k++) {
         auto fromValue = thisObject->getIndex(globalObject, length - k - 1);
         RETURN_IF_EXCEPTION(scope, { });
         result->putDirectIndex(globalObject, k, fromValue, 0, PutDirectIndexShouldThrow);
