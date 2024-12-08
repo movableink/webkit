@@ -65,7 +65,7 @@ public:
         RightToLeft
     };
 
-#if PLATFORM(COCOA)
+#if PLATFORM(GTK) || PLATFORM(WPE) || PLATFORM(COCOA)
     // Returns the default writing direction for the specified locale.
     virtual WritingDirection defaultWritingDirection() const = 0;
 #endif

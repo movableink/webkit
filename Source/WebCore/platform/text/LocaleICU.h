@@ -47,6 +47,8 @@ public:
     explicit LocaleICU(const char*);
     virtual ~LocaleICU();
 
+    Locale::WritingDirection defaultWritingDirection() const override;
+
 #if ENABLE(DATE_AND_TIME_INPUT_TYPES)
     String dateFormat() override;
     String monthFormat() override;

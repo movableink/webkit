@@ -29,15 +29,25 @@
 
 #if ENABLE(WK_WEB_EXTENSIONS)
 
+#include "Logging.h"
+
 #include "WebExtensionConstants.h"
 #include "WebExtensionPermission.h"
 #include "WebExtensionUtilities.h"
 #include <WebCore/LocalizedStrings.h>
+#include <WebCore/MIMETypeRegistry.h>
 #include <WebCore/TextResourceDecoder.h>
+#include <wtf/FileSystem.h>
 #include <wtf/Language.h>
+#include <wtf/NeverDestroyed.h>
+#include <wtf/text/MakeString.h>
+#include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringToIntegerConversion.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebKit {
+
+using namespace WebCore;
 
 static constexpr auto defaultLocaleManifestKey = "default_locale"_s;
 

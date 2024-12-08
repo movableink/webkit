@@ -107,7 +107,7 @@
 #include <WebCore/FullscreenManager.h>
 #endif
 
-#if ENABLE(WK_WEB_EXTENSIONS)
+#if ENABLE(WK_WEB_EXTENSIONS) && PLATFORM(COCOA)
 #include "WebExtensionControllerProxy.h"
 #endif
 
@@ -576,7 +576,7 @@ void WebLocalFrameLoaderClient::dispatchDidStartProvisionalLoad()
     auto& url = provisionalLoader->url();
     auto& unreachableURL = provisionalLoader->unreachableURL();
 
-#if ENABLE(WK_WEB_EXTENSIONS)
+#if ENABLE(WK_WEB_EXTENSIONS) && PLATFORM(COCOA)
     // Notify the extensions controller.
     if (RefPtr extensionControllerProxy = webPage->webExtensionControllerProxy())
         extensionControllerProxy->didStartProvisionalLoadForFrame(*webPage, m_frame, url);
@@ -634,7 +634,7 @@ void WebLocalFrameLoaderClient::dispatchDidCommitLoad(std::optional<HasInsecureC
     });
     hasInsecureContent = hasInsecureContent ? *hasInsecureContent : (certificateInfo.containsNonRootSHA1SignedCertificate() ? HasInsecureContent::Yes : HasInsecureContent::No);
 
-#if ENABLE(WK_WEB_EXTENSIONS)
+#if ENABLE(WK_WEB_EXTENSIONS) && PLATFORM(COCOA)
     // Notify the extensions controller.
     if (RefPtr extensionControllerProxy = webPage->webExtensionControllerProxy())
         extensionControllerProxy->didCommitLoadForFrame(*webPage, m_frame, m_frame->url());
@@ -666,7 +666,7 @@ void WebLocalFrameLoaderClient::dispatchDidFailProvisionalLoad(const ResourceErr
     // Notify the bundle client.
     webPage->injectedBundleLoaderClient().didFailProvisionalLoadWithErrorForFrame(*webPage, m_frame, error, userData);
 
-#if ENABLE(WK_WEB_EXTENSIONS)
+#if ENABLE(WK_WEB_EXTENSIONS) && PLATFORM(COCOA)
     // Notify the extensions controller.
     if (RefPtr extensionControllerProxy = webPage->webExtensionControllerProxy())
         extensionControllerProxy->didFailLoadForFrame(*webPage, m_frame, m_localFrame->loader().provisionalLoadErrorBeingHandledURL());
@@ -711,7 +711,7 @@ void WebLocalFrameLoaderClient::dispatchDidFailLoad(const ResourceError& error)
     // Notify the bundle client.
     webPage->injectedBundleLoaderClient().didFailLoadWithErrorForFrame(*webPage, m_frame, error, userData);
 
-#if ENABLE(WK_WEB_EXTENSIONS)
+#if ENABLE(WK_WEB_EXTENSIONS) && PLATFORM(COCOA)
     // Notify the extensions controller.
     if (RefPtr extensionControllerProxy = webPage->webExtensionControllerProxy())
         extensionControllerProxy->didFailLoadForFrame(*webPage, m_frame, m_frame->url());
@@ -754,7 +754,7 @@ void WebLocalFrameLoaderClient::dispatchDidFinishLoad()
     // Notify the bundle client.
     webPage->injectedBundleLoaderClient().didFinishLoadForFrame(*webPage, m_frame, userData);
 
-#if ENABLE(WK_WEB_EXTENSIONS)
+#if ENABLE(WK_WEB_EXTENSIONS) && PLATFORM(COCOA)
     // Notify the extensions controller.
     if (RefPtr extensionControllerProxy = webPage->webExtensionControllerProxy())
         extensionControllerProxy->didFinishLoadForFrame(*webPage, m_frame, m_frame->url());
@@ -1733,7 +1733,7 @@ void WebLocalFrameLoaderClient::dispatchGlobalObjectAvailable(DOMWrapperWorld& w
     if (!webPage)
         return;
 
-#if ENABLE(WK_WEB_EXTENSIONS)
+#if ENABLE(WK_WEB_EXTENSIONS) && PLATFORM(COCOA)
     if (RefPtr extensionControllerProxy = webPage->webExtensionControllerProxy())
         extensionControllerProxy->globalObjectIsAvailableForFrame(*webPage, m_frame, world);
 #endif
@@ -1747,7 +1747,7 @@ void WebLocalFrameLoaderClient::dispatchServiceWorkerGlobalObjectAvailable(DOMWr
     if (!webPage)
         return;
 
-#if ENABLE(WK_WEB_EXTENSIONS)
+#if ENABLE(WK_WEB_EXTENSIONS) && PLATFORM(COCOA)
     if (RefPtr extensionControllerProxy = webPage->webExtensionControllerProxy())
         extensionControllerProxy->serviceWorkerGlobalObjectIsAvailableForFrame(*webPage, m_frame, world);
 #endif
