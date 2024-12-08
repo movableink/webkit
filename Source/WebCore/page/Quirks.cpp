@@ -46,10 +46,12 @@
 #include "HTMLMetaElement.h"
 #include "HTMLNames.h"
 #include "HTMLObjectElement.h"
+#include "HTMLTextAreaElement.h"
 #include "HTMLVideoElement.h"
 #include "JSEventListener.h"
 #include "LayoutUnit.h"
 #include "LocalDOMWindow.h"
+#include "LocalFrameView.h"
 #include "MouseEvent.h"
 #include "NamedNodeMap.h"
 #include "NetworkStorageSession.h"
@@ -445,6 +447,14 @@ bool Quirks::isESPN() const
         m_quirksData.isESPN = isDomain("espn.com"_s);
 
     return *m_quirksData.isESPN;
+}
+
+bool Quirks::isFacebook() const
+{
+    if (!m_quirksData.isFacebook)
+        m_quirksData.isFacebook = isDomain("facebook.com"_s);
+
+    return *m_quirksData.isFacebook;
 }
 
 bool Quirks::isSpotifyPlayer() const
@@ -1404,7 +1414,7 @@ bool Quirks::requiresUserGestureToPauseInPictureInPicture() const
 
     if (!m_quirksData.requiresUserGestureToPauseInPictureInPictureQuirk) {
         auto domain = RegistrableDomain(topDocumentURL()).string();
-        m_quirksData.requiresUserGestureToPauseInPictureInPictureQuirk = isDomain("facebook.com"_s) || isDomain("x.com"_s) || isDomain("reddit.com"_s) || isDomain("forbes.com"_s);
+        m_quirksData.requiresUserGestureToPauseInPictureInPictureQuirk = isFacebook() || isDomain("x.com"_s) || isDomain("reddit.com"_s) || isDomain("forbes.com"_s);
     }
 
     return *m_quirksData.requiresUserGestureToPauseInPictureInPictureQuirk;
@@ -2092,6 +2102,11 @@ bool Quirks::shouldSynthesizeTouchEventsAfterNonSyntheticClick(const Element& ta
     return false;
 }
 
+static AccessibilityRole accessibilityRole(const Element& element)
+{
+    return AccessibilityObject::ariaRoleToWebCoreRole(element.attributeWithoutSynchronization(HTMLNames::roleAttr));
+}
+
 bool Quirks::shouldIgnoreContentObservationForClick(const Node& targetNode) const
 {
     if (!needsQuirks())
@@ -2102,10 +2117,6 @@ bool Quirks::shouldIgnoreContentObservationForClick(const Node& targetNode) cons
 
     if (!m_quirksData.mayNeedToIgnoreContentObservation.value())
         return false;
-
-    auto accessibilityRole = [](const Element& element) {
-        return AccessibilityObject::ariaRoleToWebCoreRole(element.getAttribute(HTMLNames::roleAttr));
-    };
 
     RefPtr target = dynamicDowncast<Element>(targetNode);
     if (!target || accessibilityRole(*target) != AccessibilityRole::Button)
@@ -2215,6 +2226,58 @@ bool Quirks::hideIGNVolumeSlider() const
     return needsQuirks() && !PAL::currentUserInterfaceIdiomIsSmallScreen() && m_document->url().host() == "www.ign.com"_s;
 }
 #endif // PLATFORM(IOS)
+
+// facebook.com rdar://141103350
+bool Quirks::needsFacebookStoriesCreationFormQuirk(const Element& element, const RenderStyle& computedStyle) const
+{
+#if PLATFORM(IOS_FAMILY)
+    if (!needsQuirks())
+        return false;
+
+    if (!isFacebook())
+        return false;
+
+    if (!topDocumentURL().path().startsWith("/stories/create"_s)) {
+        m_facebookStoriesCreationFormContainer = { };
+        return false;
+    }
+
+    Ref document = element.document();
+    RefPtr loader = document->loader();
+    if (UNLIKELY(!loader))
+        return false;
+
+    if (loader->metaViewportPolicy() != MetaViewportPolicy::Ignore)
+        return false;
+
+    RefPtr view = document->view();
+    if (UNLIKELY(!view))
+        return false;
+
+    float width = view->sizeForCSSDefaultViewportUnits().width();
+    if (width < 800 || width > 900)
+        return false;
+
+    if (m_facebookStoriesCreationFormContainer)
+        return m_facebookStoriesCreationFormContainer.get() == &element;
+
+    if (computedStyle.display() != DisplayType::None)
+        return false;
+
+    if (accessibilityRole(element) != AccessibilityRole::LandmarkNavigation)
+        return false;
+
+    if (!descendantsOfType<HTMLTextAreaElement>(element).first())
+        return false;
+
+    m_facebookStoriesCreationFormContainer = element;
+    return true;
+#else
+    UNUSED_PARAM(element);
+    UNUSED_PARAM(computedStyle);
+    return false;
+#endif
+}
 
 URL Quirks::topDocumentURL() const
 {

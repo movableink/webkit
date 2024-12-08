@@ -31,6 +31,7 @@ struct WEBCORE_EXPORT QuirksData {
     std::optional<bool> isAmazon;
     std::optional<bool> isCBSSports;
     std::optional<bool> isESPN;
+    std::optional<bool> isFacebook;
     std::optional<bool> isGoogleDocs;
     std::optional<bool> isGoogleMaps;
     std::optional<bool> isNetflix;
