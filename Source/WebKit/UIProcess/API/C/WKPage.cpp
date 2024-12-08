@@ -3232,10 +3232,10 @@ void WKPageSetPrivateClickMeasurementAppBundleIDForTesting(WKPageRef pageRef, WK
     });
 }
 
-void WKPageSetMockCameraOrientation(WKPageRef pageRef, uint64_t orientation)
+void WKPageSetMockCameraOrientationForTesting(WKPageRef pageRef, uint64_t rotation, WKStringRef persistentId)
 {
     CRASH_IF_SUSPENDED;
-    toImpl(pageRef)->setOrientationForMediaCapture(orientation);
+    toImpl(pageRef)->setMediaCaptureRotationForTesting(rotation, toWTFString(persistentId));
 }
 
 bool WKPageIsMockRealtimeMediaSourceCenterEnabled(WKPageRef)

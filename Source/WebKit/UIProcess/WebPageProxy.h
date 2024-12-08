@@ -2178,6 +2178,7 @@ public:
     void getProcessDisplayName(CompletionHandler<void(String&&)>&&);
 
     void setOrientationForMediaCapture(WebCore::IntDegrees);
+    void setMediaCaptureRotationForTesting(WebCore::IntDegrees, const String&);
 
 #if ENABLE(MEDIA_STREAM) && USE(GSTREAMER)
     void setMockCaptureDevicesInterrupted(bool isCameraInterrupted, bool isMicrophoneInterrupted);
