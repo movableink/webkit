@@ -3082,7 +3082,6 @@ webkit.org/b/214290 imported/w3c/web-platform-tests/css/css-text/text-indent/tex
 webkit.org/b/240837 imported/w3c/web-platform-tests/css/css-text/text-indent/anonymous-flex-item-001.html [ ImageOnlyFailure ]
 webkit.org/b/240837 imported/w3c/web-platform-tests/css/css-text/text-indent/anonymous-grid-item-001.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-text/text-transform/text-transform-capitalize-026.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-text/text-transform/text-transform-capitalize-028.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-text/text-transform/text-transform-tailoring-001.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-text/text-transform/text-transform-upperlower-006.html [ ImageOnlyFailure ]
 webkit.org/b/195275 imported/w3c/web-platform-tests/css/css-text/text-transform/text-transform-shaping-003.html [ ImageOnlyFailure ]
