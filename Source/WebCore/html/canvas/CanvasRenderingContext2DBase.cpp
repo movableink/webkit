@@ -345,7 +345,13 @@ String CanvasRenderingContext2DBase::State::fontString() const
 
     auto italic = font.italic() ? "italic "_s : ""_s;
     auto smallCaps = font.variantCaps() == FontVariantCaps::Small ? "small-caps "_s : ""_s;
-    serializedFont.append(italic, smallCaps, font.computedSize(), "px"_s);
+    serializedFont.append(italic, smallCaps);
+    auto weight = static_cast<int>(font.weight());
+    if (weight == boldWeightValue())
+        serializedFont.append("bold "_s);
+    else if (weight != normalWeightValue())
+        serializedFont.append(weight, " "_s);
+    serializedFont.append(font.computedSize(), "px"_s);
 
     for (unsigned i = 0; i < font.familyCount(); ++i) {
         StringView family = font.familyAt(i);
