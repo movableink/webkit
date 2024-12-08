@@ -1344,19 +1344,19 @@ webkit.org/b/240821 webgl/max-active-contexts-webglcontextlost-prevent-default.h
 
 webkit.org/b/241265 [ Debug ] imported/w3c/web-platform-tests/html/rendering/replaced-elements/svg-embedded-sizing/svg-in-object-percentage.html [ Pass Crash ]
 
-# NOTIFICATION_EVENT is Ventura+
-[ Ventura+ ] http/tests/workers/service/shownotification-allowed-document.html [ Pass ]
-[ Ventura+ ] http/tests/workers/service/shownotification-invalid-data.html [ Pass ]
-[ Ventura+ ] http/wpt/push-api/pushEvent.any.serviceworker.html [ Pass ]
-[ Ventura+ ] imported/w3c/web-platform-tests/notifications/idlharness.https.any.html [ Pass ]
-[ Ventura+ ] imported/w3c/web-platform-tests/notifications/idlharness.https.any.serviceworker.html [ Pass ]
-[ Ventura+ ] imported/w3c/web-platform-tests/notifications/idlharness.https.any.worker.html [ Pass ]
-[ Ventura+ ] http/tests/workers/service/getnotifications-stop.html [ Pass ]
-[ Ventura+ ] http/tests/workers/service/getnotifications.html [ Pass ]
-[ Ventura+ ] http/wpt/service-workers/push-console-messages-no-showNotification.https.html [ Pass ]
-[ Ventura+ ] http/wpt/service-workers/push-console-messages-showNotification-async.https.html [ Pass ]
-[ Ventura+ ] http/wpt/service-workers/push-console-messages-showNotification-late.https.html [ Pass ]
-[ Ventura+ ] http/wpt/service-workers/push-console-messages-showNotification-sync.https.html [ Pass ]
+http/tests/workers/service/shownotification-allowed-document.html [ Pass ]
+http/tests/workers/service/shownotification-allowed.html [ Pass ]
+http/tests/workers/service/shownotification-invalid-data.html [ Pass ]
+http/wpt/push-api/pushEvent.any.serviceworker.html [ Pass ]
+imported/w3c/web-platform-tests/notifications/idlharness.https.any.html [ Pass ]
+imported/w3c/web-platform-tests/notifications/idlharness.https.any.serviceworker.html [ Pass ]
+imported/w3c/web-platform-tests/notifications/idlharness.https.any.worker.html [ Pass ]
+http/tests/workers/service/getnotifications-stop.html [ Pass ]
+http/tests/workers/service/getnotifications.html [ Pass ]
+http/wpt/service-workers/push-console-messages-no-showNotification.https.html [ Pass ]
+http/wpt/service-workers/push-console-messages-showNotification-async.https.html [ Pass ]
+http/wpt/service-workers/push-console-messages-showNotification-late.https.html [ Pass ]
+http/wpt/service-workers/push-console-messages-showNotification-sync.https.html [ Pass ]
 
 webkit.org/b/242164 imported/w3c/web-platform-tests/service-workers/service-worker/navigation-timing.https.html [ Failure ]
 
@@ -1935,9 +1935,6 @@ webkit.org/b/283210 http/wpt/mediarecorder/MediaRecorder-AV-audio-video-dataavai
 [ Sonoma+ Debug ] fast/css/view-transitions-hide-under-page-background-color.html [ Pass Crash ]
 
 webkit.org/b/283596 [ Sequoia+ Debug ] ipc/cfnetwork-crashes-with-string-to-string-http-headers.html [ Skip ]
-
-# webkit.org/b/283999 REGRESSION(286110@main?): [macOS] http/tests/workers/service/shownotification-allowed.html is a constant failure (flaky in EWS) 
-[ Ventura+ ] http/tests/workers/service/shownotification-allowed.html [ Failure ]
 
 # webkit.org/b/284113 REGRESSION(287390@main?): [macOS Release] 4x imported/w3c/web-platform-tests/fs tests are flaky (Failure in EWS)
 [ Release ] imported/w3c/web-platform-tests/fs/FileSystemBaseHandle-postMessage-Error.https.window.html [ Pass Failure ]
