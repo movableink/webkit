@@ -49,6 +49,7 @@ JSCSSMatrixComponent.cpp
 JSCSSNestedDeclarations.cpp
 JSCSSNumericArray.cpp
 JSCSSPageRule.cpp
+JSCSSPositionTryRule.cpp
 JSCSSRotate.cpp
 JSCSSRuleList.cpp
 JSCSSSkew.cpp

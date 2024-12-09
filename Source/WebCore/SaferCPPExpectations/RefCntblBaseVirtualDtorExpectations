@@ -45,6 +45,7 @@ css/CSSOffsetRotateValue.h
 css/CSSPaintImageValue.h
 css/CSSPathValue.h
 css/CSSPendingSubstitutionValue.h
+css/CSSPositionTryRule.h
 css/CSSPrimitiveValue.h
 css/CSSQuadValue.h
 css/CSSRayValue.h
