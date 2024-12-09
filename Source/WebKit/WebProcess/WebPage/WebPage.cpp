@@ -3586,6 +3586,11 @@ void WebPage::mouseEvent(FrameIdentifier frameID, const WebMouseEvent& mouseEven
     }
 
     send(Messages::WebPageProxy::DidReceiveEvent(mouseEvent.type(), handled, std::nullopt));
+
+#if PLATFORM(IOS_FAMILY)
+    if (mouseEvent.type() == WebEventType::MouseUp)
+        removeTextInteractionSources(TextInteractionSource::Mouse);
+#endif
 }
 
 void WebPage::setLastKnownMousePosition(WebCore::FrameIdentifier frameID, IntPoint eventPoint, IntPoint globalPoint)
@@ -3823,8 +3828,9 @@ HandleUserInputEventResult WebPage::dispatchTouchEvent(FrameIdentifier frameID, 
     return handleTouchEventResult;
 }
 
-void WebPage::resetPotentialTapSecurityOrigin()
+void WebPage::didBeginTouchPoint()
 {
+    m_hasAnyActiveTouchPoints = true;
     m_potentialTapSecurityOrigin = nullptr;
 }
 
@@ -7726,6 +7732,8 @@ void WebPage::didCommitLoad(WebFrame* frame)
     WebProcess::singleton().eventDispatcher().takeQueuedTouchEventsForPage(*this, queuedEvents);
     cancelAsynchronousTouchEvents(WTFMove(queuedEvents));
 #endif
+    m_hasAnyActiveTouchPoints = false;
+    m_activeTextInteractionSources = { };
 #endif // PLATFORM(IOS_FAMILY)
 
     RefPtr coreFrame = frame->coreLocalFrame();

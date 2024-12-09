@@ -1935,13 +1935,55 @@ void WebPage::clearSelectionAfterTappingSelectionHighlightIfNeeded(WebCore::Floa
         clearSelection();
 }
 
-void WebPage::setShouldDrawVisuallyContiguousBidiSelection(bool value)
+bool WebPage::shouldDrawVisuallyContiguousBidiSelection() const
 {
-    if (m_shouldDrawVisuallyContiguousBidiSelection == value)
+    return m_page->settings().visuallyContiguousBidiTextSelectionEnabled() && m_activeTextInteractionSources;
+}
+
+void WebPage::addTextInteractionSources(OptionSet<TextInteractionSource> sources)
+{
+    if (sources.isEmpty())
         return;
 
-    m_shouldDrawVisuallyContiguousBidiSelection = value;
-    scheduleFullEditorStateUpdate();
+    bool wasEmpty = m_activeTextInteractionSources.isEmpty();
+    m_activeTextInteractionSources.add(sources);
+    if (!wasEmpty)
+        return;
+
+    if (m_page->settings().visuallyContiguousBidiTextSelectionEnabled())
+        scheduleFullEditorStateUpdate();
+}
+
+void WebPage::removeTextInteractionSources(OptionSet<TextInteractionSource> sources)
+{
+    if (m_activeTextInteractionSources.isEmpty())
+        return;
+
+    m_activeTextInteractionSources.remove(sources);
+
+    if (!m_activeTextInteractionSources.isEmpty())
+        return;
+
+    if (!m_page->settings().visuallyContiguousBidiTextSelectionEnabled())
+        return;
+
+    RefPtr frame = m_page->checkedFocusController()->focusedOrMainFrame();
+    if (!frame)
+        return;
+
+    auto originalSelection = frame->selection().selection();
+    if (!originalSelection.isNonOrphanedRange())
+        return;
+
+    auto originalSelectedRange = originalSelection.toNormalizedRange();
+    if (!originalSelectedRange)
+        return;
+
+    auto adjustedRange = adjustToVisuallyContiguousRange(*originalSelectedRange);
+    if (originalSelectedRange == adjustedRange)
+        return;
+
+    frame->selection().setSelectedRange(adjustedRange, originalSelection.affinity(), FrameSelection::ShouldCloseTyping::Yes, UserTriggered::Yes);
 }
 
 void WebPage::updateSelectionWithTouches(const IntPoint& point, SelectionTouch selectionTouch, bool baseIsStart, CompletionHandler<void(const WebCore::IntPoint&, SelectionTouch, OptionSet<SelectionFlags>)>&& completionHandler)
@@ -1950,23 +1992,8 @@ void WebPage::updateSelectionWithTouches(const IntPoint& point, SelectionTouch s
     if (!frame)
         return;
 
-    bool shouldExpandBidiSelection = false;
-    if (m_page->settings().visuallyContiguousBidiTextSelectionEnabled()) {
-        switch (selectionTouch) {
-        case SelectionTouch::Started:
-            setShouldDrawVisuallyContiguousBidiSelection(true);
-            break;
-        case SelectionTouch::Moved:
-            break;
-        case SelectionTouch::Ended:
-        case SelectionTouch::EndedMovingForward:
-        case SelectionTouch::EndedMovingBackward:
-        case SelectionTouch::EndedNotMoving:
-            shouldExpandBidiSelection = true;
-            setShouldDrawVisuallyContiguousBidiSelection(false);
-            break;
-        }
-    }
+    if (selectionTouch == SelectionTouch::Started)
+        addTextInteractionSources(TextInteractionSource::Touch);
 
     IntPoint pointInDocument = RefPtr(frame->view())->rootViewToContents(point);
     VisiblePosition position = frame->visiblePositionForPoint(pointInDocument);
@@ -2002,15 +2029,21 @@ void WebPage::updateSelectionWithTouches(const IntPoint& point, SelectionTouch s
         break;
     }
 
-    if (shouldExpandBidiSelection) {
-        range = range ?: frame->selection().selection().toNormalizedRange();
-        if (range)
-            range = adjustToVisuallyContiguousRange(*range);
-    }
-
     if (range)
         frame->selection().setSelectedRange(range, position.affinity(), WebCore::FrameSelection::ShouldCloseTyping::Yes, UserTriggered::Yes);
-    
+
+    switch (selectionTouch) {
+    case SelectionTouch::Started:
+    case SelectionTouch::Moved:
+        break;
+    case SelectionTouch::Ended:
+    case SelectionTouch::EndedMovingForward:
+    case SelectionTouch::EndedMovingBackward:
+    case SelectionTouch::EndedNotMoving:
+        removeTextInteractionSources(TextInteractionSource::Touch);
+        break;
+    }
+
     if (selectionFlipped == SelectionWasFlipped::Yes)
         flags = SelectionFlags::SelectionFlipped;
 
@@ -2579,7 +2612,7 @@ void WebPage::beginSelectionInDirection(WebCore::SelectionDirection direction, C
     completionHandler(m_selectionAnchor == Start);
 }
 
-void WebPage::updateSelectionWithExtentPointAndBoundary(const WebCore::IntPoint& point, WebCore::TextGranularity granularity, bool isInteractingWithFocusedElement, CompletionHandler<void(bool)>&& callback)
+void WebPage::updateSelectionWithExtentPointAndBoundary(const WebCore::IntPoint& point, WebCore::TextGranularity granularity, bool isInteractingWithFocusedElement, TextInteractionSource source, CompletionHandler<void(bool)>&& callback)
 {
     RefPtr frame = m_page->checkedFocusController()->focusedOrMainFrame();
     if (!frame)
@@ -2590,6 +2623,8 @@ void WebPage::updateSelectionWithExtentPointAndBoundary(const WebCore::IntPoint&
     
     if (position.isNull() || !m_initialSelection || !newRange)
         return callback(false);
+
+    addTextInteractionSources(source);
 
     auto initialSelectionStartPosition = makeDeprecatedLegacyPosition(m_initialSelection->start);
     auto initialSelectionEndPosition = makeDeprecatedLegacyPosition(m_initialSelection->end);
@@ -2603,6 +2638,12 @@ void WebPage::updateSelectionWithExtentPointAndBoundary(const WebCore::IntPoint&
 
     if (auto range = makeSimpleRange(selectionStart, selectionEnd))
         frame->selection().setSelectedRange(range, Affinity::Upstream, WebCore::FrameSelection::ShouldCloseTyping::Yes, UserTriggered::Yes);
+
+    if (!m_hasAnyActiveTouchPoints) {
+        // Ensure that `Touch` doesn't linger around in `m_activeTextInteractionSources` after
+        // the user has ended all active touches.
+        removeTextInteractionSources(TextInteractionSource::Touch);
+    }
 
     callback(selectionStart == initialSelectionStartPosition);
 }
@@ -2655,6 +2696,12 @@ void WebPage::updateSelectionWithExtentPoint(const WebCore::IntPoint& point, boo
         frame->selection().setSelectedRange(range, Affinity::Upstream, WebCore::FrameSelection::ShouldCloseTyping::Yes, UserTriggered::Yes);
 
     callback(m_selectionAnchor == Start);
+}
+
+void WebPage::didReleaseAllTouchPoints()
+{
+    m_hasAnyActiveTouchPoints = false;
+    removeTextInteractionSources(TextInteractionSource::Touch);
 }
 
 #if ENABLE(REVEAL)

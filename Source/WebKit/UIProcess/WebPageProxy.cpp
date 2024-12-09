@@ -4399,12 +4399,12 @@ void WebPageProxy::handlePreventableTouchEvent(NativeWebTouchEvent& event)
     sendPreventableTouchEvent(m_mainFrame->frameID(), event);
 }
 
-void WebPageProxy::resetPotentialTapSecurityOrigin()
+void WebPageProxy::didBeginTouchPoint()
 {
     if (!hasRunningProcess())
         return;
 
-    send(Messages::WebPage::ResetPotentialTapSecurityOrigin());
+    send(Messages::WebPage::DidBeginTouchPoint());
 }
 
 void WebPageProxy::sendUnpreventableTouchEvent(WebCore::FrameIdentifier frameID, const NativeWebTouchEvent& event)
