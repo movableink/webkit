@@ -28,14 +28,14 @@
 #if PLATFORM(COCOA)
 
 #include <wtf/RefPtr.h>
-#include <wtf/Seconds.h>
+#include <wtf/Vector.h>
 
 struct AudioStreamBasicDescription;
 
 namespace WebCore {
 
-class SharedBuffer;
 struct AudioInfo;
+class SharedBuffer;
 
 WEBCORE_EXPORT bool isVorbisDecoderAvailable();
 WEBCORE_EXPORT bool registerVorbisDecoderIfNeeded();
@@ -71,4 +71,4 @@ Vector<uint8_t> createOpusPrivateData(const AudioStreamBasicDescription&);
 
 }
 
-#endif // PLATFORM(COCOA)
+#endif // && PLATFORM(COCOA)

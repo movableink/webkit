@@ -3227,7 +3227,9 @@ JSC_DEFINE_HOST_FUNCTION(functionSamplingProfilerStackTraces, (JSGlobalObject* g
     if (!vm.samplingProfiler())
         return JSValue::encode(throwException(globalObject, scope, createError(globalObject, "Sampling profiler was never started"_s)));
 
-    EncodedJSValue result = JSValue::encode(JSONParse(globalObject, vm.samplingProfiler()->stackTracesAsJSONString()));
+    auto json = vm.samplingProfiler()->stackTracesAsJSON();
+    auto jsonString = json->toJSONString();
+    EncodedJSValue result = JSValue::encode(JSONParse(globalObject, WTFMove(jsonString)));
     scope.releaseAssertNoException();
     return result;
 }

@@ -27,6 +27,8 @@
 
 #include "ProfilerBytecode.h"
 #include <wtf/Vector.h>
+#include <wtf/text/CString.h>
+#include <wtf/text/WTFString.h>
 
 namespace JSC {
 

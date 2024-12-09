@@ -38,8 +38,7 @@
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
 #include "SWRegistrationDatabase.h"
-#include <wtf/persistence/PersistentDecoder.h>
-#include <wtf/persistence/PersistentEncoder.h>
+#include <wtf/persistence/PersistentCoders.h>
 
 #if PLATFORM(COCOA)
 #include <wtf/cf/VectorCF.h>

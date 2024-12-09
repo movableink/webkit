@@ -94,9 +94,7 @@
 #include <wtf/MainThread.h>
 #include <wtf/MathExtras.h>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/Seconds.h>
 #include <wtf/ThreadingPrimitives.h>
-#include <wtf/WallTime.h>
 
 namespace WTF {
 

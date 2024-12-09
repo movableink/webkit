@@ -40,8 +40,7 @@
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
 #include "ViolationReportType.h"
-#include <wtf/persistence/PersistentDecoder.h>
-#include <wtf/persistence/PersistentEncoder.h>
+#include <wtf/persistence/PersistentCoders.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {

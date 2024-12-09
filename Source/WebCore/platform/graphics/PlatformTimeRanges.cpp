@@ -391,12 +391,3 @@ size_t PlatformTimeRanges::findLastRangeIndexBefore(const MediaTime& start, cons
 }
 
 }
-
-namespace WTF {
-
-String LogArgument<WebCore::PlatformTimeRanges>::toString(const WebCore::PlatformTimeRanges& ranges)
-{
-    return ranges.toString();
-}
-
-}

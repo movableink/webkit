@@ -327,7 +327,7 @@ public:
 
     JS_EXPORT_PRIVATE void enableSamplingProfiler();
     JS_EXPORT_PRIVATE void disableSamplingProfiler();
-    JS_EXPORT_PRIVATE String takeSamplingProfilerSamplesAsJSONString();
+    JS_EXPORT_PRIVATE RefPtr<JSON::Value> takeSamplingProfilerSamplesAsJSON();
 #endif
 
     FuzzerAgent* fuzzerAgent() const { return m_fuzzerAgent.get(); }

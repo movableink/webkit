@@ -508,11 +508,15 @@ JSStringRef JSContextGroupTakeSamplesFromSamplingProfiler(JSContextGroupRef grou
     JSLockHolder locker(&vm);
 
 #if ENABLE(SAMPLING_PROFILER)
-    auto samples = vm.takeSamplingProfilerSamplesAsJSONString();
-    if (samples.isNull())
+    auto json = vm.takeSamplingProfilerSamplesAsJSON();
+    if (UNLIKELY(!json))
         return nullptr;
 
-    return OpaqueJSString::tryCreate(WTFMove(samples)).leakRef();
+    auto jsonData = json->toJSONString();
+    if (UNLIKELY(jsonData.isNull()))
+        return nullptr;
+
+    return OpaqueJSString::tryCreate(WTFMove(jsonData)).leakRef();
 #else
     return nullptr;
 #endif
