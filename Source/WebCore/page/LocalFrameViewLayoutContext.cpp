@@ -322,6 +322,55 @@ void LocalFrameViewLayoutContext::flushPostLayoutTasks()
     runPostLayoutTasks();
 }
 
+void LocalFrameViewLayoutContext::didLayout(bool didRunSimplifiedLayout, bool canDeferUpdateLayerPositions)
+{
+    m_layoutUpdateCount++;
+
+    auto updateLayerPositions = UpdateLayerPositions { layoutIdentifier(), needsFullRepaint(), didRunSimplifiedLayout };
+    if (m_pendingUpdateLayerPositions)
+        m_pendingUpdateLayerPositions->merge(updateLayerPositions);
+    else
+        m_pendingUpdateLayerPositions = updateLayerPositions;
+
+    if (!canDeferUpdateLayerPositions)
+        flushUpdateLayerPositions();
+
+    m_updateCompositingLayersIsPending = true;
+}
+
+void LocalFrameViewLayoutContext::flushUpdateLayerPositions()
+{
+    if (!m_pendingUpdateLayerPositions)
+        return;
+
+    auto updateLayerPositions = *std::exchange(m_pendingUpdateLayerPositions, std::nullopt);
+
+    if (CheckedPtr view = renderView()) {
+        view->layer()->updateLayerPositionsAfterLayout(updateLayerPositions.layoutIdentifier, updateLayerPositions.needsFullRepaint, updateLayerPositions.didRunSimplifiedLayout ? RenderLayer::CanUseSimplifiedRepaintPass::Yes : RenderLayer::CanUseSimplifiedRepaintPass::No);
+        m_renderLayerPositionUpdateCount++;
+    }
+}
+
+void LocalFrameViewLayoutContext::updateCompositingLayersAfterLayout()
+{
+    auto* renderView = this->renderView();
+    if (!renderView)
+        return;
+
+    renderView->compositor().updateCompositingLayers(CompositingUpdateType::AfterLayout);
+    m_updateCompositingLayersIsPending = false;
+}
+
+bool LocalFrameViewLayoutContext::updateCompositingLayersAfterLayoutIfNeeded()
+{
+    if (m_updateCompositingLayersIsPending) {
+        updateCompositingLayersAfterLayout();
+        return true;
+    }
+
+    return false;
+}
+
 void LocalFrameViewLayoutContext::reset()
 {
     m_layoutPhase = LayoutPhase::OutsideLayout;
@@ -341,7 +390,7 @@ bool LocalFrameViewLayoutContext::needsLayout(OptionSet<LayoutOptions> layoutOpt
     if (layoutOptions.contains(LayoutOptions::CanDeferUpdateLayerPositions))
         return false;
 
-    return protectedView()->hasPendingUpdateLayerPositions();
+    return hasPendingUpdateLayerPositions();
 }
 
 bool LocalFrameViewLayoutContext::needsLayoutInternal() const

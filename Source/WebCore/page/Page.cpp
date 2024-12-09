@@ -1497,7 +1497,7 @@ void Page::setPageScaleFactor(float scale, const IntPoint& origin, bool inStable
 
         if (mainFrameView && mainFrameView->scrollPosition() != origin && !delegatesScaling() && mainDocument->renderView() && mainDocument->renderView()->needsLayout() && mainFrameView->didFirstLayout()) {
             mainFrameView->layoutContext().layout();
-            mainFrameView->updateCompositingLayersAfterLayoutIfNeeded();
+            mainFrameView->layoutContext().updateCompositingLayersAfterLayoutIfNeeded();
         }
     }
 
