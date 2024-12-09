@@ -91,11 +91,6 @@ private:
         protectedCallback()->visitJSFunction(visitor);
     }
 
-    void visitAdditionalChildren(JSC::SlotVisitor& visitor) const final
-    {
-        protectedCallback()->visitJSFunction(visitor);
-    }
-
     Ref<DeferredPromise> protectedPromise() const { return m_promise; }
     Ref<VisitorCallback> protectedCallback() const { return m_callback; }
 

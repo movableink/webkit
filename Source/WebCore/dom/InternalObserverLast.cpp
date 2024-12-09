@@ -77,10 +77,6 @@ private:
     {
     }
 
-    void visitAdditionalChildren(JSC::SlotVisitor&) const final
-    {
-    }
-
     InternalObserverLast(ScriptExecutionContext& context, Ref<DeferredPromise>&& promise)
         : InternalObserver(context)
         , m_promise(WTFMove(promise))

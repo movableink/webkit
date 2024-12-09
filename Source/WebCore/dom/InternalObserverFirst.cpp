@@ -71,10 +71,6 @@ private:
     {
     }
 
-    void visitAdditionalChildren(JSC::SlotVisitor&) const final
-    {
-    }
-
     Ref<DeferredPromise> protectedPromise() const { return m_promise; }
 
     InternalObserverFirst(ScriptExecutionContext& context, Ref<AbortSignal>&& signal, Ref<DeferredPromise>&& promise)

@@ -173,8 +173,7 @@ private:
         protectedSubscriber()->complete();
     }
 
-    template<typename VisitorType>
-    void visitAdditionalChildrenInternal(VisitorType& visitor) const
+    void visitAdditionalChildren(JSC::AbstractSlotVisitor& visitor) const final
     {
         protectedSubscriber()->visitAdditionalChildren(visitor);
         if (RefPtr next = m_inspector.next)
@@ -187,16 +186,6 @@ private:
             subscribe->visitJSFunction(visitor);
         if (RefPtr abort = m_inspector.abort)
             abort->visitJSFunction(visitor);
-    }
-
-    void visitAdditionalChildren(JSC::AbstractSlotVisitor& visitor) const final
-    {
-        visitAdditionalChildrenInternal(visitor);
-    }
-
-    void visitAdditionalChildren(JSC::SlotVisitor& visitor) const final
-    {
-        visitAdditionalChildrenInternal(visitor);
     }
 
     void removeAbortHandler()
