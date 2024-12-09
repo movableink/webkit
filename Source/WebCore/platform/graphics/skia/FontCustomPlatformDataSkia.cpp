@@ -94,7 +94,7 @@ FontPlatformData FontCustomPlatformData::fontPlatformData(const FontDescription&
 
     auto size = description.adjustedSizeForFontFace(fontCreationContext.sizeAdjust());
     auto features = FontCache::computeFeatures(description, fontCreationContext);
-    FontPlatformData platformData(WTFMove(typeface), size, bold, italic, description.orientation(), description.widthVariant(), description.textRenderingMode(), WTFMove(features));
+    FontPlatformData platformData(WTFMove(typeface), size, bold, italic, description.orientation(), description.widthVariant(), description.textRenderingMode(), WTFMove(features), this);
     platformData.updateSizeWithFontSizeAdjust(description.fontSizeAdjust(), description.computedSize());
     return platformData;
 }
