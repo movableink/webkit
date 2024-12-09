@@ -114,6 +114,7 @@ fileprivate struct WebViewRepresentable {
 
         webView.configuration.preferences.isTextInteractionEnabled = environment.webViewAllowsTextInteraction
         webView.configuration.preferences.tabFocusesLinks = environment.webViewAllowsTabFocusingLinks
+        webView.configuration.preferences.isElementFullscreenEnabled = environment.webViewAllowsElementFullscreen
     }
 }
 

@@ -75,6 +75,7 @@ struct ContentView: View {
             WebView_v0(viewModel.page)
                 .webViewAllowsBackForwardNavigationGestures()
                 .webViewAllowsTabFocusingLinks()
+                .webViewAllowsElementFullscreen()
                 .task {
                     for await event in viewModel.page.navigations {
                         viewModel.didReceiveNavigationEvent(event)

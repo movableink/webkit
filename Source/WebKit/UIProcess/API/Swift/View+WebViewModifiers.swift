@@ -34,6 +34,8 @@ extension EnvironmentValues {
     @Entry var webViewAllowsTabFocusingLinks = false
 
     @Entry var webViewAllowsTextInteraction = true
+
+    @Entry var webViewAllowsElementFullscreen = false
 }
 
 extension View {
@@ -55,6 +57,11 @@ extension View {
     @_spi(Private)
     public func webViewAllowsTextInteraction(_ value: Bool = true) -> some View {
         environment(\.webViewAllowsTextInteraction, value)
+    }
+
+    @_spi(Private)
+    public func webViewAllowsElementFullscreen(_ value: Bool = true) -> some View {
+        environment(\.webViewAllowsElementFullscreen, value)
     }
 }
 
