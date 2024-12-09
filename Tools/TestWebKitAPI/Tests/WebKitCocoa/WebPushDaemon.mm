@@ -614,48 +614,50 @@ self.addEventListener("message", (event) => {
     }
 });
 
-self.addEventListener("pushnotification", async (event) => {
-    // If the tag is empty, do nothing
-    if (!event.proposedNotification.tag)
-        return;
-
-    var optionsFromTag = event.proposedNotification.tag.split(" ");
-    var newTitle;
-    var newBadge;
-    var newActionURL;
-    if (optionsFromTag[0] == "titleandbadge") {
-        newTitle = optionsFromTag[1];
-        newBadge = optionsFromTag[2];
-    } else if (optionsFromTag[0] == "title")
-        newTitle = optionsFromTag[1];
-    else if (optionsFromTag[0] == "badge")
-        newBadge = optionsFromTag[1];
-    else if (optionsFromTag[0] == "datatotitle")
-        newTitle = event.proposedNotification.data;
-    else if (optionsFromTag[0] == "defaultactionurl")
-        newActionURL = optionsFromTag[1];
-    else if (optionsFromTag[0] == "emptydefaultactionurl") {
-        self.registration.showNotification("Missing default action").then((value) => {
-            globalPort.postMessage("showNotification succeeded");
-        }, (exception) => {
-            globalPort.postMessage("showNotification failed: " + exception);
-        });
-    }
-
-    if (newTitle || newActionURL) {
-        if (!newTitle)
-            newTitle = event.proposedNotification.title;
-        if (!newActionURL)
-            newActionURL = event.proposedNotification.defaultAction;
-
-        self.registration.showNotification(newTitle, { "defaultAction": newActionURL });
-    }
-
-    if (newBadge)
-        navigator.setAppBadge(newBadge);
-});
-
 self.addEventListener("push", async (event) => {
+    if (event.notification) {
+        // If the tag is empty, do nothing
+        if (!event.notification.tag)
+            return;
+
+        var optionsFromTag = event.notification.tag.split(" ");
+        var newTitle;
+        var newBadge;
+        var newActionURL;
+        if (optionsFromTag[0] == "titleandbadge") {
+            newTitle = optionsFromTag[1];
+            newBadge = optionsFromTag[2];
+        } else if (optionsFromTag[0] == "title")
+            newTitle = optionsFromTag[1];
+        else if (optionsFromTag[0] == "badge")
+            newBadge = optionsFromTag[1];
+        else if (optionsFromTag[0] == "datatotitle")
+            newTitle = event.notification.data;
+        else if (optionsFromTag[0] == "defaultactionurl")
+            newActionURL = optionsFromTag[1];
+        else if (optionsFromTag[0] == "emptydefaultactionurl") {
+            self.registration.showNotification("Missing default action").then((value) => {
+                globalPort.postMessage("showNotification succeeded");
+            }, (exception) => {
+                globalPort.postMessage("showNotification failed: " + exception);
+            });
+        }
+
+        if (newTitle || newActionURL) {
+            if (!newTitle)
+                newTitle = event.notification.title;
+            if (!newActionURL)
+                newActionURL = event.notification.navigate;
+
+            self.registration.showNotification(newTitle, { "navigate": newActionURL });
+        }
+
+        if (newBadge)
+            navigator.setAppBadge(newBadge);
+
+        return;
+    }
+
     try {
         if (showNotifications) {
             await self.registration.showNotification("notification");
@@ -940,11 +942,11 @@ public:
 
 
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-    void injectDeclarativePushMessage(ASCIILiteral json, ASCIILiteral url = "https://example.com"_s)
+    void injectDeclarativePushMessage(ASCIILiteral json)
     {
         WebKit::WebPushD::PushMessageForTesting message;
         message.targetAppCodeSigningIdentifier = "com.apple.WebKit.TestWebKitAPI"_s;
-        message.registrationURL = URL(url);
+        message.registrationURL = URL("https://example.com"_s);
         message.disposition = WebKit::WebPushD::PushMessageDisposition::Notification;
         message.payload = json;
 
@@ -2801,7 +2803,6 @@ public:
 
         if (![recentTitle isEqualToString:title])
             NSLog(@"Most recent title: %@\nExpected title: %@", recentTitle, title);
-
     }
 
     void checkLastNotificationDefaultActionURL(NSString *actionURL)

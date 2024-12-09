@@ -26,6 +26,8 @@
 #pragma once
 
 #include "ExtendableEvent.h"
+#include "Notification.h"
+#include "NotificationData.h"
 #include "PushEventInit.h"
 
 namespace WebCore {
@@ -37,14 +39,32 @@ class PushEvent final : public ExtendableEvent {
 public:
     static Ref<PushEvent> create(const AtomString&, PushEventInit&&, IsTrusted = IsTrusted::No);
     static Ref<PushEvent> create(const AtomString&, ExtendableEventInit&&, std::optional<Vector<uint8_t>>&&, IsTrusted);
+    static Ref<PushEvent> create(const AtomString&, ExtendableEventInit&&, Ref<Notification>, std::optional<uint64_t> appBadge, IsTrusted);
     ~PushEvent();
 
     PushMessageData* data() { return m_data.get(); }
+    Notification* notification();
+    std::optional<uint64_t> appBadge();
+
+    Notification* proposedNotification() const { return m_proposedNotification.get(); }
+    std::optional<uint64_t> proposedAppBadge() const { return m_proposedAppBadge; }
+
+    void setUpdatedNotification(Notification* notification) { m_updatedNotification = notification; }
+    std::optional<NotificationData> updatedNotificationData() const;
+
+    void setUpdatedAppBadge(std::optional<uint64_t>&& updatedAppBadge) { m_updatedAppBadge = WTFMove(updatedAppBadge); }
+    const std::optional<std::optional<uint64_t>>& updatedAppBadge() const { return m_updatedAppBadge; }
 
 private:
-    PushEvent(const AtomString&, ExtendableEventInit&&, std::optional<Vector<uint8_t>>&&, IsTrusted);
+    PushEvent(const AtomString&, ExtendableEventInit&&, std::optional<Vector<uint8_t>>&&, RefPtr<Notification>, std::optional<uint64_t> appBadge, IsTrusted);
 
     RefPtr<PushMessageData> m_data;
+
+    RefPtr<Notification> m_proposedNotification;
+    std::optional<uint64_t> m_proposedAppBadge;
+
+    RefPtr<Notification> m_updatedNotification;
+    std::optional<std::optional<uint64_t>> m_updatedAppBadge;
 };
 
 } // namespace WebCore
