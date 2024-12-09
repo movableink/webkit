@@ -885,11 +885,8 @@ WKRetainPtr<WKTypeRef> TestInvocation::didReceiveSynchronousMessageFromInjectedB
         return nullptr;
     }
 
-    if (WKStringIsEqualToUTF8CString(messageName, "SetMockCameraRotation")) {
-        auto messageBodyDictionary = dictionaryValue(messageBody);
-        auto rotation = uint64Value(messageBodyDictionary, "Rotation");
-        auto persistentID = stringValue(messageBodyDictionary, "PersistentID");
-        TestController::singleton().setMockCameraOrientation(rotation, persistentID);
+    if (WKStringIsEqualToUTF8CString(messageName, "SetMockCameraOrientation")) {
+        TestController::singleton().setMockCameraOrientation(uint64Value(messageBody));
         return nullptr;
     }
 

@@ -1667,12 +1667,9 @@ void TestRunner::resetMockMediaDevices()
     postSynchronousMessage("ResetMockMediaDevices");
 }
 
-void TestRunner::setMockCameraOrientation(unsigned rotation, JSStringRef persistentId)
+void TestRunner::setMockCameraOrientation(unsigned orientation)
 {
-    postSynchronousMessage("SetMockCameraRotation", createWKDictionary({
-        { "Rotation", adoptWK(WKUInt64Create(rotation)) },
-        { "PersistentID", toWK(persistentId) },
-    }));
+    postSynchronousMessage("SetMockCameraOrientation", orientation);
 }
 
 bool TestRunner::isMockRealtimeMediaSourceCenterEnabled()

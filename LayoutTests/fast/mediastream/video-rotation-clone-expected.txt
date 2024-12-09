@@ -1,4 +1,0 @@
-
-
-PASS Stopping a track clone should not prevent rotation handling
-
