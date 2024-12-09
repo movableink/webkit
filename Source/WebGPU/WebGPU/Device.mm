@@ -948,7 +948,7 @@ id<MTLFunction> Device::icbCommandClampFunction(MTLIndexType indexType)
 
         device const IndexDataUint& data = *indexData;
         uint32_t k = (data.primitiveType == primitive_type::triangle_strip || data.primitiveType == primitive_type::line_strip) ? 1 : 0;
-        uint32_t vertexIndex = data.indexBuffer[indexId] + k;
+        uint32_t vertexIndex = data.indexBuffer[indexId + data.firstIndex] + k;
         if (data.baseVertex + vertexIndex >= data.minVertexCount + k) {
             *icb_container->outOfBoundsRead = 1;
             render_command cmd(icb_container->commandBuffer, data.renderCommand);
@@ -967,7 +967,7 @@ id<MTLFunction> Device::icbCommandClampFunction(MTLIndexType indexType)
 
         device const IndexDataUshort& data = *indexData;
         uint32_t k = (data.primitiveType == primitive_type::triangle_strip || data.primitiveType == primitive_type::line_strip) ? 1 : 0;
-        ushort vertexIndex = data.indexBuffer[indexId] + k;
+        ushort vertexIndex = data.indexBuffer[indexId + data.firstIndex] + k;
         if (data.baseVertex + vertexIndex >= data.minVertexCount + k) {
             *icb_container->outOfBoundsRead = 1;
             render_command cmd(icb_container->commandBuffer, data.renderCommand);
