@@ -33,8 +33,6 @@
 
 #include "LocaleToScriptMapping.h"
 #include "LocalizedStrings.h"
-#include <hb-icu.h>
-#include <hb.h>
 #include <limits>
 #include <unicode/udatpg.h>
 #include <unicode/uloc.h>
@@ -43,6 +41,11 @@
 #include <wtf/text/StringBuffer.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/unicode/icu/ICUHelpers.h>
+
+#if USE(HARFBUZZ)
+#include <hb-icu.h>
+#include <hb.h>
+#endif
 
 
 namespace WebCore {
@@ -72,6 +75,7 @@ LocaleICU::~LocaleICU()
 
 Locale::WritingDirection LocaleICU::defaultWritingDirection() const
 {
+#if USE(HARFBUZZ)
     UScriptCode icuScript = localeToScriptCodeForFontSelection(m_locale.span());
     hb_script_t script = hb_icu_script_to_script(icuScript);
 
@@ -83,6 +87,9 @@ Locale::WritingDirection LocaleICU::defaultWritingDirection() const
     default:
         return WritingDirection::Default;
     }
+#else
+    return WritingDirection::Default;
+#endif
 }
 
 #if !UCONFIG_NO_FORMATTING
