@@ -852,9 +852,8 @@ void RenderBlock::markFixedPositionObjectForLayoutIfNeeded(RenderBox& positioned
         if (newLeft != positionedChild.logicalLeft())
             positionedChild.setChildNeedsLayout(MarkOnlyThis);
     } else if (hasStaticBlockPosition) {
-        LayoutUnit oldTop = positionedChild.logicalTop();
-        positionedChild.updateLogicalHeight();
-        if (positionedChild.logicalTop() != oldTop)
+        auto logicalTop = positionedChild.logicalTop();
+        if (logicalTop != positionedChild.computeLogicalHeight(positionedChild.logicalHeight(), logicalTop).m_position)
             positionedChild.setChildNeedsLayout(MarkOnlyThis);
     }
 }
