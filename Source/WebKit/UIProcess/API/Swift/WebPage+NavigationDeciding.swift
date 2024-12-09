@@ -24,7 +24,6 @@
 #if ENABLE_SWIFTUI && compiler(>=6.0)
 
 import Foundation
-public import SwiftUI
 
 // MARK: Supporting types
 
@@ -52,8 +51,6 @@ extension WebPage_v0 {
         public var buttonNumber: Int { wrapped.buttonNumber }
 #endif
 
-        public var modifierFlags: EventModifiers { EventModifiers(wrapped.modifierFlags) }
-
         var wrapped: WKNavigationAction
     }
 
@@ -72,36 +69,6 @@ extension WebPage_v0 {
 
         var wrapped: WKNavigationResponse
     }
-}
-
-// MARK: Adapters
-
-fileprivate extension EventModifiers {
-#if canImport(UIKit)
-    init(_ wrapped: UIKeyModifierFlags) {
-        self = switch wrapped {
-        case .alphaShift: .capsLock
-        case .command: .command
-        case .control: .control
-        case .numericPad: .numericPad
-        case .alternate: .option
-        case .shift: .shift
-        default: []
-        }
-    }
-#else
-    init(_ wrapped: NSEvent.ModifierFlags) {
-        self = switch wrapped {
-        case .capsLock: .capsLock
-        case .command: .command
-        case .control: .control
-        case .numericPad: .numericPad
-        case .option: .option
-        case .shift: .shift
-        default: []
-        }
-    }
-#endif
 }
 
 // MARK: NavigationDeciding protocol

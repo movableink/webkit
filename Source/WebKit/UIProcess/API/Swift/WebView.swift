@@ -24,7 +24,7 @@
 #if ENABLE_SWIFTUI && compiler(>=6.0)
 
 internal import WebKit_Internal
-public import SwiftUI
+public import SwiftUI // FIXME: (283455) Do not import SwiftUI in WebKit proper.
 
 #if canImport(UIKit)
 fileprivate typealias PlatformView = UIView

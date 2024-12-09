@@ -146,9 +146,7 @@
 		0744DA552CE05FE400AACC81 /* WebKitInternal.h in Headers */ = {isa = PBXBuildFile; fileRef = 0744DA542CE05FE400AACC81 /* WebKitInternal.h */; };
 		074879B92373A90900F5678E /* AppKitSoftLink.h in Headers */ = {isa = PBXBuildFile; fileRef = 074879B72373A90900F5678E /* AppKitSoftLink.h */; };
 		074E75FE1DF2211900D318EC /* UserMediaProcessManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 074E75FB1DF1FD1300D318EC /* UserMediaProcessManager.h */; };
-		074E87DF2CF8E9F30059E469 /* WebPage+FrameInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 074E87DE2CF8E9F30059E469 /* WebPage+FrameInfo.swift */; };
 		074E87E12CF8EA3D0059E469 /* WebPage+NavigationDeciding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 074E87E02CF8EA3D0059E469 /* WebPage+NavigationDeciding.swift */; };
-		074E87E32CF8EABE0059E469 /* WebPage+NavigationPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 074E87E22CF8EABE0059E469 /* WebPage+NavigationPreferences.swift */; };
 		074F34812CC5F7D500CA5301 /* WKIntelligenceTextEffectCoordinator.h in Headers */ = {isa = PBXBuildFile; fileRef = 074F34802CC5F7D500CA5301 /* WKIntelligenceTextEffectCoordinator.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		075A9CF326169BAB006DFA3A /* MediaSessionCoordinatorProxyPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 077BA570260E8F630072F19F /* MediaSessionCoordinatorProxyPrivate.h */; };
 		076CEF0C2CEEE79900E4ABD6 /* WebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 076CEF0B2CEEE79900E4ABD6 /* WebView.swift */; };
@@ -164,6 +162,8 @@
 		0792314B239CBCB8009598E2 /* RemoteMediaPlayerManagerProxyMessageReceiver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 07923145239CBCB7009598E2 /* RemoteMediaPlayerManagerProxyMessageReceiver.cpp */; };
 		0792314C239CBCB8009598E2 /* RemoteMediaPlayerManagerProxyMessages.h in Headers */ = {isa = PBXBuildFile; fileRef = 07923146239CBCB7009598E2 /* RemoteMediaPlayerManagerProxyMessages.h */; };
 		079D1D9A26960CD300883577 /* SystemStatusSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = 079D1D9926960CD300883577 /* SystemStatusSPI.h */; };
+		07A58C882D068CAE00CAB4ED /* WebPage+SwiftUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07A58C872D068CAE00CAB4ED /* WebPage+SwiftUI.swift */; };
+		07A58C912D06905800CAB4ED /* WebPage+NavigationDecidingSwiftUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07A58C902D06905800CAB4ED /* WebPage+NavigationDecidingSwiftUI.swift */; };
 		07A5EBBC1C7BA43E00B9CA69 /* WKFrameHandleRef.h in Headers */ = {isa = PBXBuildFile; fileRef = 07A5EBBA1C7BA43E00B9CA69 /* WKFrameHandleRef.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		07CB79962CE9435700199C49 /* WebPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07CB79952CE9435700199C49 /* WebPage.swift */; };
 		07CB79982CE943E400199C49 /* WKNavigationDelegateAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07CB79972CE943E400199C49 /* WKNavigationDelegateAdapter.swift */; };
@@ -3172,9 +3172,7 @@
 		074E75FC1DF2002400D318EC /* UserMediaProcessManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = UserMediaProcessManager.cpp; sourceTree = "<group>"; };
 		074E76001DF7075D00D318EC /* MediaDeviceSandboxExtensions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MediaDeviceSandboxExtensions.cpp; sourceTree = "<group>"; };
 		074E76011DF7075D00D318EC /* MediaDeviceSandboxExtensions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MediaDeviceSandboxExtensions.h; sourceTree = "<group>"; };
-		074E87DE2CF8E9F30059E469 /* WebPage+FrameInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WebPage+FrameInfo.swift"; sourceTree = "<group>"; };
 		074E87E02CF8EA3D0059E469 /* WebPage+NavigationDeciding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WebPage+NavigationDeciding.swift"; sourceTree = "<group>"; };
-		074E87E22CF8EABE0059E469 /* WebPage+NavigationPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WebPage+NavigationPreferences.swift"; sourceTree = "<group>"; };
 		074F34802CC5F7D500CA5301 /* WKIntelligenceTextEffectCoordinator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WKIntelligenceTextEffectCoordinator.h; sourceTree = "<group>"; };
 		076CEF0B2CEEE79900E4ABD6 /* WebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebView.swift; sourceTree = "<group>"; };
 		076E884D1A13CADF005E90FC /* APIContextMenuClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = APIContextMenuClient.h; sourceTree = "<group>"; };
@@ -3199,6 +3197,8 @@
 		0794B4AF24452A2C0001B9C4 /* MediaUsageManagerCocoa.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MediaUsageManagerCocoa.h; sourceTree = "<group>"; };
 		079D1D9926960CD300883577 /* SystemStatusSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SystemStatusSPI.h; sourceTree = "<group>"; };
 		079D1D9C2698DBD000883577 /* cocoa */ = {isa = PBXFileReference; lastKnownFileType = folder; path = cocoa; sourceTree = "<group>"; };
+		07A58C872D068CAE00CAB4ED /* WebPage+SwiftUI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WebPage+SwiftUI.swift"; sourceTree = "<group>"; };
+		07A58C902D06905800CAB4ED /* WebPage+NavigationDecidingSwiftUI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WebPage+NavigationDecidingSwiftUI.swift"; sourceTree = "<group>"; };
 		07A5EBB91C7BA43E00B9CA69 /* WKFrameHandleRef.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WKFrameHandleRef.cpp; sourceTree = "<group>"; };
 		07A5EBBA1C7BA43E00B9CA69 /* WKFrameHandleRef.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WKFrameHandleRef.h; sourceTree = "<group>"; };
 		07A6E5E3260E411400959478 /* RemoteMediaSessionCoordinatorProxyMessageReceiver.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = RemoteMediaSessionCoordinatorProxyMessageReceiver.cpp; sourceTree = "<group>"; };
@@ -8799,7 +8799,9 @@
 				078B04B32CF1A27F00B453A6 /* WebPage+FrameInfo.swift */,
 				07FAA74A2CE947AA00128360 /* WebPage+Navigation.swift */,
 				074E87E02CF8EA3D0059E469 /* WebPage+NavigationDeciding.swift */,
+				07A58C902D06905800CAB4ED /* WebPage+NavigationDecidingSwiftUI.swift */,
 				078B049F2CF18EAB00B453A6 /* WebPage+NavigationPreferences.swift */,
+				07A58C872D068CAE00CAB4ED /* WebPage+SwiftUI.swift */,
 				07CB79952CE9435700199C49 /* WebPage.swift */,
 				076CEF0B2CEEE79900E4ABD6 /* WebView.swift */,
 				07CB79972CE943E400199C49 /* WKNavigationDelegateAdapter.swift */,
@@ -20160,7 +20162,9 @@
 				078B04B42CF1A27F00B453A6 /* WebPage+FrameInfo.swift in Sources */,
 				07FAA74B2CE947AA00128360 /* WebPage+Navigation.swift in Sources */,
 				074E87E12CF8EA3D0059E469 /* WebPage+NavigationDeciding.swift in Sources */,
+				07A58C912D06905800CAB4ED /* WebPage+NavigationDecidingSwiftUI.swift in Sources */,
 				078B04A02CF18EAB00B453A6 /* WebPage+NavigationPreferences.swift in Sources */,
+				07A58C882D068CAE00CAB4ED /* WebPage+SwiftUI.swift in Sources */,
 				07CB79962CE9435700199C49 /* WebPage.swift in Sources */,
 				C0CE72A01247E71D00BC0EC4 /* WebPageMessageReceiver.cpp in Sources */,
 				BCBD3914125BB1A800D2C29F /* WebPageProxyMessageReceiver.cpp in Sources */,

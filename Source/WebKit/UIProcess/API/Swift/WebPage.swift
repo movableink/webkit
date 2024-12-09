@@ -24,8 +24,7 @@
 #if ENABLE_SWIFTUI && compiler(>=6.0)
 
 import Foundation
-internal import Observation
-public import SwiftUI // FIXME: (283455) Do not import SwiftUI in WebKit proper.
+import Observation
 
 @_spi(Private)
 @MainActor
@@ -44,17 +43,6 @@ public class WebPage_v0 {
 
         backingNavigationDelegate = WKNavigationDelegateAdapter(navigationProgressContinuation: continuation, navigationDecider: navigationDecider)
         backingNavigationDelegate.owner = self
-
-        observations.contents = [
-            createObservation(for: \.url, backedBy: \.url),
-            createObservation(for: \.title, backedBy: \.title),
-            createObservation(for: \.estimatedProgress, backedBy: \.estimatedProgress),
-            createObservation(for: \.isLoading, backedBy: \.isLoading),
-            createObservation(for: \.serverTrust, backedBy: \.serverTrust),
-            createObservation(for: \.hasOnlySecureContent, backedBy: \.hasOnlySecureContent),
-            createObservation(for: \.isWritingToolsActive, backedBy: \.isWritingToolsActive),
-            createObservation(for: \.themeColor, backedBy: \.themeColor),
-        ]
     }
 
     public convenience init(configuration: Configuration = Configuration(), navigationDecider: some NavigationDeciding) {
@@ -72,51 +60,34 @@ public class WebPage_v0 {
     public internal(set) var backForwardList: BackForwardList = BackForwardList()
 
     public var url: URL? {
-        self.access(keyPath: \.url)
-        return backingWebView.url
+        backingProperty(\.url, backedBy: \.url)
     }
 
     public var title: String {
-        self.access(keyPath: \.title)
-
-        // The title property is annotated as optional in WKWebView, but is never actually `nil`.
-        return backingWebView.title!
+        backingProperty(\.title, backedBy: \.title) { backingValue in
+            // The title property is annotated as optional in WKWebView, but is never actually `nil`.
+            backingValue!
+        }
     }
 
     public var estimatedProgress: Double {
-        self.access(keyPath: \.estimatedProgress)
-        return backingWebView.estimatedProgress
+        backingProperty(\.estimatedProgress, backedBy: \.estimatedProgress)
     }
 
     public var isLoading: Bool {
-        self.access(keyPath: \.isLoading)
-        return backingWebView.isLoading
+        backingProperty(\.isLoading, backedBy: \.isLoading)
     }
 
     public var serverTrust: SecTrust? {
-        self.access(keyPath: \.serverTrust)
-        return backingWebView.serverTrust
+        backingProperty(\.serverTrust, backedBy: \.serverTrust)
     }
 
     public var hasOnlySecureContent: Bool {
-        self.access(keyPath: \.hasOnlySecureContent)
-        return backingWebView.hasOnlySecureContent
+        backingProperty(\.hasOnlySecureContent, backedBy: \.hasOnlySecureContent)
     }
 
     public var isWritingToolsActive: Bool {
-        self.access(keyPath: \.isWritingToolsActive)
-        return backingWebView.isWritingToolsActive
-    }
-
-    public var themeColor: Color? {
-        self.access(keyPath: \.themeColor)
-
-        // The themeColor property is a UIColor/NSColor in WKWebView.
-#if canImport(UIKit)
-        return backingWebView.themeColor.map(Color.init(uiColor:))
-#else
-        return backingWebView.themeColor.map(Color.init(nsColor:))
-#endif
+        backingProperty(\.isWritingToolsActive, backedBy: \.isWritingToolsActive)
     }
 
     public var mediaType: String? {
@@ -249,14 +220,29 @@ public class WebPage_v0 {
             }
         }
     }
+
+    func backingProperty<Value, BackingValue>(_ keyPath: KeyPath<WebPage_v0, Value>, backedBy backingKeyPath: KeyPath<WKWebView, BackingValue>, _ transform: (BackingValue) -> Value) -> Value {
+        if observations.contents[keyPath] == nil {
+            observations.contents[keyPath] = createObservation(for: keyPath, backedBy: backingKeyPath)
+        }
+
+        self.access(keyPath: keyPath)
+
+        let backingValue = backingWebView[keyPath: backingKeyPath]
+        return transform(backingValue)
+    }
+
+    func backingProperty<Value>(_ keyPath: KeyPath<WebPage_v0, Value>, backedBy backingKeyPath: KeyPath<WKWebView, Value>) -> Value {
+        backingProperty(keyPath, backedBy: backingKeyPath) { $0 }
+    }
 }
 
 extension WebPage_v0 {
     private struct KeyValueObservations: ~Copyable {
-        var contents: Set<NSKeyValueObservation> = []
+        var contents: [PartialKeyPath<WebPage_v0> : NSKeyValueObservation] = [:]
 
         deinit {
-            for observation in contents {
+            for (_, observation) in contents {
                 observation.invalidate()
             }
         }
