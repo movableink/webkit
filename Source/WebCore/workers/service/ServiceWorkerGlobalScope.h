@@ -49,7 +49,7 @@ class ServiceWorkerThread;
 class WorkerClient;
 
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-class DeclarativePushEvent;
+class PushNotificationEvent;
 #endif
 
 enum class NotificationEventType : bool;
@@ -93,9 +93,9 @@ public:
     PushEvent* pushEvent() { return m_pushEvent.get(); }
 
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-    void dispatchDeclarativePushEvent(PushEvent&);
-    PushEvent* declarativePushEvent() { return m_declarativePushEvent.get(); }
-    void clearDeclarativePushEvent();
+    void dispatchPushNotificationEvent(PushNotificationEvent&);
+    PushNotificationEvent* pushNotificationEvent() { return m_pushNotificationEvent.get(); }
+    void clearPushNotificationEvent();
 #endif
 
     bool hasPendingSilentPushEvent() const { return m_hasPendingSilentPushEvent; }
@@ -150,7 +150,7 @@ private:
     Timer m_userGestureTimer;
     RefPtr<PushEvent> m_pushEvent;
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-    RefPtr<PushEvent> m_declarativePushEvent;
+    RefPtr<PushNotificationEvent> m_pushNotificationEvent;
 #endif
     MonotonicTime m_lastPushEventTime;
     bool m_consoleMessageReportingEnabled { false };

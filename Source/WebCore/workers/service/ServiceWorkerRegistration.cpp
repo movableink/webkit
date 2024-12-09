@@ -42,6 +42,7 @@
 #include "NotificationClient.h"
 #include "NotificationPermission.h"
 #include "PushEvent.h"
+#include "PushNotificationEvent.h"
 #include "ServiceWorker.h"
 #include "ServiceWorkerContainer.h"
 #include "ServiceWorkerGlobalScope.h"
@@ -310,18 +311,18 @@ void ServiceWorkerRegistration::showNotification(ScriptExecutionContext& context
 
     RefPtr serviceWorkerGlobalScope = dynamicDowncast<ServiceWorkerGlobalScope>(context);
 
-    // If we're handling a DeclarativePushEvent, this Notification will override the proposed notification
+    // If we're handling a PushNotificationEvent, this Notification will override the proposed notification
     // instead of being shown directly.
     if (serviceWorkerGlobalScope) {
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-        if (RefPtr declarativePushEvent = serviceWorkerGlobalScope->declarativePushEvent()) {
+        if (RefPtr pushNotificationEvent = serviceWorkerGlobalScope->pushNotificationEvent()) {
             auto notification = notificationResult.releaseReturnValue();
-            if (!notification->navigate().isValid()) {
+            if (!notification->defaultAction().isValid()) {
                 promise->reject(Exception { ExceptionCode::TypeError, "Call to showNotification() while handling a `pushnotification` event did not include NotificationOptions that specify a valid defaultAction url"_s });
                 return;
             }
 
-            declarativePushEvent->setUpdatedNotification(notification.ptr());
+            pushNotificationEvent->setUpdatedNotificationData(notification->data());
             return;
         }
 #endif

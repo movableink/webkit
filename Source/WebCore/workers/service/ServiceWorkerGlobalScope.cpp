@@ -38,6 +38,7 @@
 #include "Logging.h"
 #include "NotificationEvent.h"
 #include "PushEvent.h"
+#include "PushNotificationEvent.h"
 #include "SWContextManager.h"
 #include "SWServer.h"
 #include "ServiceWorker.h"
@@ -87,7 +88,7 @@ ServiceWorkerGlobalScope::~ServiceWorkerGlobalScope()
 void ServiceWorkerGlobalScope::dispatchPushEvent(PushEvent& pushEvent)
 {
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-    ASSERT(!m_declarativePushEvent && !m_pushEvent);
+    ASSERT(!m_pushNotificationEvent && !m_pushEvent);
 #else
     ASSERT(!m_pushEvent);
 #endif
@@ -99,18 +100,18 @@ void ServiceWorkerGlobalScope::dispatchPushEvent(PushEvent& pushEvent)
 }
 
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-void ServiceWorkerGlobalScope::dispatchDeclarativePushEvent(PushEvent& event)
+void ServiceWorkerGlobalScope::dispatchPushNotificationEvent(PushNotificationEvent& event)
 {
-    ASSERT(!m_declarativePushEvent && !m_pushEvent);
-    m_declarativePushEvent = &event;
+    ASSERT(!m_pushNotificationEvent && !m_pushEvent);
+    m_pushNotificationEvent = &event;
     m_lastPushEventTime = MonotonicTime::now();
     dispatchEvent(event);
 }
 
-void ServiceWorkerGlobalScope::clearDeclarativePushEvent()
+void ServiceWorkerGlobalScope::clearPushNotificationEvent()
 {
-    ASSERT(m_declarativePushEvent);
-    m_declarativePushEvent = nullptr;
+    ASSERT(m_pushNotificationEvent);
+    m_pushNotificationEvent = nullptr;
 }
 #endif
 

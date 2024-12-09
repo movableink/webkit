@@ -57,13 +57,13 @@ NotificationPayload NotificationPayload::fromNotificationData(const Notification
 {
     NotificationOptionsPayload options { data.direction, data.language, data.body, data.tag, data.iconURL, { }, data.silent };
 
-    return { data.navigateURL, data.title, std::nullopt, WTFMove(options), false };
+    return { data.defaultActionURL, data.title, std::nullopt, WTFMove(options), false };
 }
 
 NotificationData NotificationPayload::toNotificationData() const
 {
     NotificationData data;
-    data.navigateURL = defaultActionURL;
+    data.defaultActionURL = defaultActionURL;
     data.title = title;
 
     if (options) {

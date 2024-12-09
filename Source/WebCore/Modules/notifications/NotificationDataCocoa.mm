@@ -101,7 +101,7 @@ std::optional<NotificationData> NotificationData::fromDictionary(NSDictionary *d
 NSDictionary *NotificationData::dictionaryRepresentation() const
 {
     NSMutableDictionary *result = @{
-        WebNotificationDefaultActionURLKey : (NSString *)navigateURL.string(),
+        WebNotificationDefaultActionURLKey : (NSString *)defaultActionURL.string(),
         WebNotificationTitleKey : (NSString *)title,
         WebNotificationBodyKey : (NSString *)body,
         WebNotificationIconURLKey : (NSString *)iconURL,
