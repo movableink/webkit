@@ -286,6 +286,61 @@ WASM_IPINT_EXTERN_CPP_DECL(retrieve_and_clear_exception, CallFrame* callFrame, I
     WASM_RETURN_TWO(nullptr, nullptr);
 }
 
+WASM_IPINT_EXTERN_CPP_DECL(retrieve_clear_and_push_exception, CallFrame* callFrame, IPIntStackEntry* stackPointer, IPIntLocal* pl)
+{
+    VM& vm = instance->vm();
+    auto throwScope = DECLARE_THROW_SCOPE(vm);
+    RELEASE_ASSERT(!!throwScope.exception());
+
+    Wasm::IPIntCallee* callee = IPINT_CALLEE(callFrame);
+    if (callee->rethrowSlots()) {
+        RELEASE_ASSERT(vm.targetTryDepthForThrow <= callee->rethrowSlots());
+        pl[callee->localSizeToAlloc() + vm.targetTryDepthForThrow - 1].i64 = std::bit_cast<uint64_t>(throwScope.exception()->value());
+    }
+
+    Exception* exception = throwScope.exception();
+    stackPointer[0].ref = JSValue::encode(exception->value());
+
+    // We want to clear the exception here rather than in the catch prologue
+    // JIT code because clearing it also entails clearing a bit in an Atomic
+    // bit field in VMTraps.
+    throwScope.clearException();
+
+    WASM_RETURN_TWO(nullptr, nullptr);
+}
+
+WASM_IPINT_EXTERN_CPP_DECL(retrieve_clear_and_push_exception_and_arguments, CallFrame* callFrame, IPIntStackEntry* stackPointer, IPIntLocal* pl)
+{
+    VM& vm = instance->vm();
+    auto throwScope = DECLARE_THROW_SCOPE(vm);
+    RELEASE_ASSERT(!!throwScope.exception());
+
+    Wasm::IPIntCallee* callee = IPINT_CALLEE(callFrame);
+    if (callee->rethrowSlots()) {
+        RELEASE_ASSERT(vm.targetTryDepthForThrow <= callee->rethrowSlots());
+        pl[callee->localSizeToAlloc() + vm.targetTryDepthForThrow - 1].i64 = std::bit_cast<uint64_t>(throwScope.exception()->value());
+    }
+
+    Exception* exception = throwScope.exception();
+    auto* wasmException = jsSecureCast<JSWebAssemblyException*>(exception->value());
+
+    ASSERT(wasmException->payload().size() == wasmException->tag().parameterCount());
+    uint64_t size = wasmException->payload().size();
+
+    stackPointer[0].ref = JSValue::encode(exception->value());
+
+    // We only have a stack pointer if we're doing a catch_ref not a catch_all_ref
+    for (unsigned i = 0; i < size; ++i)
+        stackPointer[size - i].i64 = wasmException->payload()[i];
+
+    // We want to clear the exception here rather than in the catch prologue
+    // JIT code because clearing it also entails clearing a bit in an Atomic
+    // bit field in VMTraps.
+    throwScope.clearException();
+
+    WASM_RETURN_TWO(nullptr, nullptr);
+}
+
 WASM_IPINT_EXTERN_CPP_DECL(throw_exception, CallFrame* callFrame, IPIntStackEntry* arguments, unsigned exceptionIndex)
 {
     VM& vm = instance->vm();
@@ -311,7 +366,7 @@ WASM_IPINT_EXTERN_CPP_DECL(throw_exception, CallFrame* callFrame, IPIntStackEntr
     WASM_RETURN_TWO(vm.targetMachinePCForThrow, nullptr);
 }
 
-WASM_IPINT_EXTERN_CPP_DECL(rethrow_exception, CallFrame* callFrame, uint64_t* pl, unsigned tryDepth)
+WASM_IPINT_EXTERN_CPP_DECL(rethrow_exception, CallFrame* callFrame, IPIntStackEntry* pl, unsigned tryDepth)
 {
     SlowPathFrameTracer tracer(instance->vm(), callFrame);
 
@@ -321,7 +376,29 @@ WASM_IPINT_EXTERN_CPP_DECL(rethrow_exception, CallFrame* callFrame, uint64_t* pl
 
     Wasm::IPIntCallee* callee = IPINT_CALLEE(callFrame);
     RELEASE_ASSERT(tryDepth <= callee->rethrowSlots());
-    JSWebAssemblyException* exception = reinterpret_cast<JSWebAssemblyException**>(pl)[callee->localSizeToAlloc() + tryDepth - 1];
+#if CPU(ADDRESS64)
+    JSWebAssemblyException* exception = std::bit_cast<JSWebAssemblyException*>(pl[callee->localSizeToAlloc() + tryDepth - 1].i64);
+#else
+    JSWebAssemblyException* exception = std::bit_cast<JSWebAssemblyException*>(pl[callee->localSizeToAlloc() + tryDepth - 1].i32);
+#endif
+    RELEASE_ASSERT(exception);
+    throwException(globalObject, throwScope, exception);
+
+    genericUnwind(vm, callFrame);
+    ASSERT(!!vm.callFrameForCatch);
+    ASSERT(!!vm.targetMachinePCForThrow);
+    WASM_RETURN_TWO(vm.targetMachinePCForThrow, nullptr);
+}
+
+WASM_IPINT_EXTERN_CPP_DECL(throw_ref, CallFrame* callFrame, EncodedJSValue exnref)
+{
+    SlowPathFrameTracer tracer(instance->vm(), callFrame);
+
+    JSGlobalObject* globalObject = instance->globalObject();
+    VM& vm = globalObject->vm();
+    auto throwScope = DECLARE_THROW_SCOPE(vm);
+
+    auto* exception = jsSecureCast<JSWebAssemblyException*>(JSValue::decode(exnref));
     RELEASE_ASSERT(exception);
     throwException(globalObject, throwScope, exception);
 
