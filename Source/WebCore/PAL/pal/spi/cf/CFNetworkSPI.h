@@ -60,6 +60,10 @@
 #endif
 #endif
 
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES) && !defined(CFN_HAS_ALLOW_ONLY_PARTITIONED_COOKIES)
+#undef HAVE_ALLOW_ONLY_PARTITIONED_COOKIES
+#endif
+
 #else // !USE(APPLE_INTERNAL_SDK)
 
 #include <Network/Network.h>
