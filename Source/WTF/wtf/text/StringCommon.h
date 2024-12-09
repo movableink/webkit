@@ -65,6 +65,11 @@ inline std::span<const char> span(const char* string)
     return unsafeMakeSpan(string, string ? strlen(string) : 0);
 }
 
+inline std::span<const char> spanIncludingNullTerminator(const char* string)
+{
+    return unsafeMakeSpan(string, string ? strlen(string) + 1 : 0);
+}
+
 inline std::span<const LChar> span(const LChar* string)
 {
     return unsafeMakeSpan(string, string ? strlen(byteCast<char>(string)) : 0);
@@ -1216,6 +1221,7 @@ using WTF::equalLettersIgnoringASCIICase;
 using WTF::equalLettersIgnoringASCIICaseWithLength;
 using WTF::isLatin1;
 using WTF::span;
+using WTF::spanIncludingNullTerminator;
 using WTF::span8;
 using WTF::span8IncludingNullTerminator;
 using WTF::charactersContain;
