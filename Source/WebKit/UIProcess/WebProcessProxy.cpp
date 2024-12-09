@@ -312,6 +312,11 @@ private:
         return dummy.get();
     }
 
+    std::optional<SharedPreferencesForWebProcess> sharedPreferencesForWebProcess() const
+    {
+        return m_process->sharedPreferencesForWebProcess();
+    }
+
     Ref<WebProcessProxy> protectedProcess() const { return m_process.get(); }
 
     WeakRef<WebProcessProxy> m_process;

@@ -817,6 +817,12 @@ bool UserMediaCaptureManagerProxy::hasSourceProxies() const
     return !m_proxies.isEmpty();
 }
 
+std::optional<SharedPreferencesForWebProcess> UserMediaCaptureManagerProxy::sharedPreferencesForWebProcess() const
+{
+    auto& connectionProxy = m_connectionProxy;
+    return connectionProxy->sharedPreferencesForWebProcess();
+}
+
 }
 
 #undef MESSAGE_CHECK_COMPLETION

@@ -269,6 +269,14 @@ private:
         m_process.get()->stopMonitoringCaptureDeviceRotation(pageIdentifier, persistentId);
     }
 
+    std::optional<SharedPreferencesForWebProcess> sharedPreferencesForWebProcess() const
+    {
+        if (RefPtr connectionToWebProcess = m_process.get())
+            return connectionToWebProcess->sharedPreferencesForWebProcess();
+
+        return std::nullopt;
+    }
+
     ThreadSafeWeakPtr<GPUConnectionToWebProcess> m_process;
 };
 
@@ -296,7 +304,7 @@ GPUConnectionToWebProcess::GPUConnectionToWebProcess(GPUProcess& gpuProcess, Web
 #endif
     , m_sessionID(sessionID)
 #if PLATFORM(COCOA) && ENABLE(MEDIA_STREAM)
-    , m_sampleBufferDisplayLayerManager(RemoteSampleBufferDisplayLayerManager::create(*this))
+    , m_sampleBufferDisplayLayerManager(RemoteSampleBufferDisplayLayerManager::create(*this, parameters.sharedPreferencesForWebProcess))
 #endif
 #if ENABLE(MEDIA_STREAM)
     , m_captureOrigin(SecurityOrigin::createOpaque())
@@ -1250,6 +1258,10 @@ void GPUConnectionToWebProcess::updateSharedPreferencesForWebProcess(SharedPrefe
 #if PLATFORM(COCOA) && USE(LIBWEBRTC)
     protectedLibWebRTCCodecsProxy()->updateSharedPreferencesForWebProcess(m_sharedPreferencesForWebProcess);
 #endif
+#if PLATFORM(COCOA) && ENABLE(MEDIA_STREAM)
+    protectedSampleBufferDisplayLayerManager()->updateSharedPreferencesForWebProcess(m_sharedPreferencesForWebProcess);
+#endif
+
     enableMediaPlaybackIfNecessary();
 }
 
