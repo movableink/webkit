@@ -13,10 +13,8 @@ frame "<!--frame1-->" - didFailProvisionalLoadWithError
 frame "<!--frame1-->" - didStartProvisionalLoadForFrame
 frame "<!--frame1-->" - didCommitLoadForFrame
 frame "<!--frame1-->" - didFinishDocumentLoadForFrame
-frame "<!--frame1-->" - willPerformClientRedirectToURL: x-apple-content-filter://mock-unblock
 frame "<!--frame1-->" - didHandleOnloadEventsForFrame
 frame "<!--frame1-->" - didFinishLoadForFrame
-frame "<!--frame1-->" - didCancelClientRedirectForFrame
 
 
 --------
@@ -25,8 +23,6 @@ Frame: '<!--frame1-->'
 PASS
 
 ============== Back Forward List ==============
-        (file test):contentfiltering/block-after-response-then-deny-unblock.html
+curr->  (file test):contentfiltering/block-after-will-send-request.html
             about:blank (in frame "<!--frame1-->")
-curr->  (file test):contentfiltering/block-after-response-then-deny-unblock.html
-            (file test):contentfiltering/resources/fail.html (in frame "<!--frame1-->")
 ===============================================
