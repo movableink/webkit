@@ -21,36 +21,42 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
-#if ENABLE_SWIFTUI && compiler(>=6.0)
+import SwiftUI
 
-import Foundation
-import os
-import Observation
-@_spi(Private) import WebKit
+struct GeneralSettingsView: View {
+    @AppStorage(AppStorageKeys.homepage) private var homepage = "https://www.webkit.org"
 
-@Observable
-@MainActor
-final class BrowserViewModel {
-    typealias WebPage = WebPage_v0
+    let currentURL: URL?
 
-    private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: String(describing: BrowserViewModel.self))
+    var body: some View {
+        Form {
+            TextField("Homepage", text: $homepage)
 
-    let page = WebPage()
-
-    var displayedURL: String = ""
-
-    func didReceiveNavigationEvent(_ event: WebPage.NavigationEvent) {
-        Self.logger.info("Did receive navigation event \(String(describing: event.kind)) for navigation \(String(describing: event.navigationID))")
-    }
-
-    func navigateToSubmittedURL() {
-        guard let url = URL(string: displayedURL) else {
-            return
+            Button("Set to Current Page") {
+                if let currentURL {
+                    homepage = currentURL.absoluteString
+                } else {
+                    fatalError()
+                }
+            }
         }
-
-        let request = URLRequest(url: url)
-        self.page.load(request)
     }
 }
 
-#endif
+struct SettingsView: View {
+    let currentURL: URL?
+
+    var body: some View {
+        TabView {
+            Tab("General", systemImage: "gear") {
+                GeneralSettingsView(currentURL: currentURL)
+            }
+        }
+        .scenePadding()
+        .frame(maxWidth: 350, minHeight: 100)
+    }
+}
+
+#Preview {
+    SettingsView(currentURL: URL(string: "https://www.apple.com"))
+}

@@ -21,21 +21,40 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
-#if ENABLE_SWIFTUI && compiler(>=6.0)
-
 import SwiftUI
+@_spi(Private) import WebKit
 
-struct MiniBrowserView: View {
-    @State private var viewModel = BrowserViewModel()
+@main
+struct SwiftBrowserApp: App {
+    @FocusedValue(BrowserViewModel.self) var focusedBrowserViewModel
 
-    var body: some View {
-        ContentView()
-            .environment(viewModel)
+    @State private var mostRecentURL: URL? = nil
+
+    var body: some Scene {
+        WindowGroup {
+            BrowserView(url: $mostRecentURL)
+        }
+        .commands {
+            CommandGroup(after: .sidebar) {
+                Button("Reload Page") {
+                    focusedBrowserViewModel!.page.reload()
+                }
+                .keyboardShortcut("r")
+                .disabled(focusedBrowserViewModel == nil)
+            }
+
+            CommandGroup(replacing: .importExport) {
+                Button("Export as PDF…") {
+                    focusedBrowserViewModel!.exportAsPDF()
+                }
+                .disabled(focusedBrowserViewModel == nil)
+            }
+        }
+
+        #if os(macOS)
+        Settings {
+            SettingsView(currentURL: mostRecentURL)
+        }
+        #endif
     }
 }
-
-#Preview {
-    MiniBrowserView()
-}
-
-#endif
