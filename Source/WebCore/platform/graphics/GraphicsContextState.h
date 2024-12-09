@@ -64,6 +64,13 @@ public:
     };
     using ChangeFlags = OptionSet<Change>;
 
+    struct ChangeIndex {
+        Change toChange() { return static_cast<Change>(1 << value); }
+
+        uint32_t value;
+    };
+    static constexpr ChangeIndex toIndex(GraphicsContextState::Change change) { return { WTF::ctzConstexpr(enumToUnderlyingType(change)) }; }
+
     static constexpr ChangeFlags basicChangeFlags { Change::StrokeThickness, Change::StrokeBrush, Change::FillBrush };
     static constexpr ChangeFlags strokeChangeFlags { Change::StrokeThickness, Change::StrokeBrush };
 
@@ -145,6 +152,7 @@ public:
     bool containsOnlyInlineChanges() const;
     bool containsOnlyInlineStrokeChanges() const;
     void mergeLastChanges(const GraphicsContextState&, const std::optional<GraphicsContextState>& lastDrawingState = std::nullopt);
+    void mergeSingleChange(const GraphicsContextState&, ChangeIndex, const std::optional<GraphicsContextState>& lastDrawingState = std::nullopt);
     void mergeAllChanges(const GraphicsContextState&);
 
     Purpose purpose() const { return m_purpose; }
