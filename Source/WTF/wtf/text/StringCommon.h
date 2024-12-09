@@ -1173,7 +1173,7 @@ ALWAYS_INLINE bool charactersContain(std::span<const CharacterType> span)
     if (length >= stride) {
         size_t index = 0;
         BulkType accumulated { };
-        for (; index + (stride - 1) < length; index += stride)
+        for (; index + stride <= length; index += stride)
             accumulated = SIMD::bitOr(accumulated, SIMD::equal<characters...>(SIMD::load(std::bit_cast<const UnsignedType*>(data + index))));
 
         if (index < length)
@@ -1188,6 +1188,22 @@ ALWAYS_INLINE bool charactersContain(std::span<const CharacterType> span)
             return true;
     }
     return false;
+}
+
+template<typename CharacterType>
+inline size_t countMatchedCharacters(std::span<const CharacterType> span, CharacterType character)
+{
+    using UnsignedType = std::make_unsigned_t<CharacterType>;
+    auto mask = SIMD::splat<UnsignedType>(character);
+    auto vectorMatch = [&](auto input) ALWAYS_INLINE_LAMBDA {
+        return SIMD::equal(input, mask);
+    };
+
+    auto scalarMatch = [&](auto input) ALWAYS_INLINE_LAMBDA {
+        return input == character;
+    };
+
+    return SIMD::count(span, vectorMatch, scalarMatch);
 }
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
