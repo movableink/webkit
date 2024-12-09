@@ -310,6 +310,9 @@ GPUConnectionToWebProcess::GPUConnectionToWebProcess(GPUProcess& gpuProcess, Web
 #if HAVE(AUDIT_TOKEN)
     , m_presentingApplicationAuditToken(parameters.presentingApplicationAuditToken ? std::optional(parameters.presentingApplicationAuditToken->auditToken()) : std::nullopt)
 #endif
+#if PLATFORM(COCOA)
+    , m_applicationBundleIdentifier(parameters.applicationBundleIdentifier)
+#endif
     , m_isLockdownModeEnabled(parameters.isLockdownModeEnabled)
 #if ENABLE(IPC_TESTING_API)
     , m_ipcTester(IPCTester::create())

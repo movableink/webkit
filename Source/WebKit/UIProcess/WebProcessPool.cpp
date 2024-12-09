@@ -571,6 +571,9 @@ void WebProcessPool::createGPUProcessConnection(WebProcessProxy& webProcessProxy
 #if HAVE(AUDIT_TOKEN)
     parameters.presentingApplicationAuditToken = configuration().presentingApplicationProcessToken();
 #endif
+#if PLATFORM(COCOA)
+    parameters.applicationBundleIdentifier = applicationBundleIdentifier();
+#endif
     ensureProtectedGPUProcess()->createGPUProcessConnection(webProcessProxy, WTFMove(connectionIdentifier), WTFMove(parameters));
 }
 #endif // ENABLE(GPU_PROCESS)
