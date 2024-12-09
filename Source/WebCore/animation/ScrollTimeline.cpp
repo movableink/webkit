@@ -202,6 +202,8 @@ AnimationTimelinesController* ScrollTimeline::controller() const
 
 void ScrollTimeline::cacheCurrentTime()
 {
+    auto previousMaxScrollOffset = m_cachedCurrentTimeData.maxScrollOffset;
+
     m_cachedCurrentTimeData = [&] -> CurrentTimeData {
         RefPtr source = this->source();
         if (!source)
@@ -217,6 +219,11 @@ void ScrollTimeline::cacheCurrentTime()
             scrollOffset = std::clamp(scrollOffset, 0.f, maxScrollOffset);
         return { scrollOffset, maxScrollOffset };
     }();
+
+    if (previousMaxScrollOffset != m_cachedCurrentTimeData.maxScrollOffset) {
+        for (auto& animation : m_animations)
+            animation->progressBasedTimelineSourceDidChangeMetrics();
+    }
 }
 
 AnimationTimeline::ShouldUpdateAnimationsAndSendEvents ScrollTimeline::documentWillUpdateAnimationsAndSendEvents()
@@ -256,22 +263,43 @@ TimelineRange ScrollTimeline::defaultRange() const
     return TimelineRange::defaultForScrollTimeline();
 }
 
-ScrollTimeline::Data ScrollTimeline::computeTimelineData(const TimelineRange& range) const
+ScrollTimeline::Data ScrollTimeline::computeTimelineData() const
 {
     if (!m_cachedCurrentTimeData.scrollOffset && !m_cachedCurrentTimeData.maxScrollOffset)
         return { };
-    if ((range.start.name != SingleTimelineRange::Name::Normal && range.start.name != SingleTimelineRange::Name::Omitted) || (range.end.name != SingleTimelineRange::Name::Normal && range.end.name != SingleTimelineRange::Name::Omitted))
-        return { };
-    return { m_cachedCurrentTimeData.scrollOffset, floatValueForOffset(range.start.offset, m_cachedCurrentTimeData.maxScrollOffset), floatValueForOffset(range.end.offset, m_cachedCurrentTimeData.maxScrollOffset) };
+    return {
+        m_cachedCurrentTimeData.scrollOffset,
+        0.f,
+        m_cachedCurrentTimeData.maxScrollOffset
+    };
 }
 
-std::optional<WebAnimationTime> ScrollTimeline::currentTime(const TimelineRange& timelineRange)
+std::pair<WebAnimationTime, WebAnimationTime> ScrollTimeline::intervalForAttachmentRange(const TimelineRange& attachmentRange) const
+{
+    auto maxScrollOffset = m_cachedCurrentTimeData.maxScrollOffset;
+    if (!maxScrollOffset)
+        return { WebAnimationTime::fromPercentage(0), WebAnimationTime::fromPercentage(100) };
+
+    auto attachmentRangeOrDefault = attachmentRange.isDefault() ? defaultRange() : attachmentRange;
+
+    auto computedPercentageIfNecessary = [&](const Length& length) {
+        if (length.isPercent())
+            return length.value();
+        return floatValueForOffset(length, maxScrollOffset) / maxScrollOffset * 100;
+    };
+
+    return {
+        WebAnimationTime::fromPercentage(computedPercentageIfNecessary(attachmentRangeOrDefault.start.offset)),
+        WebAnimationTime::fromPercentage(computedPercentageIfNecessary(attachmentRangeOrDefault.end.offset))
+    };
+}
+
+std::optional<WebAnimationTime> ScrollTimeline::currentTime()
 {
     // https://drafts.csswg.org/scroll-animations-1/#scroll-timeline-progress
     // Progress (the current time) for a scroll progress timeline is calculated as:
     // scroll offset ÷ (scrollable overflow size − scroll container size)
-    auto timelineRangeOrDefault = timelineRange.isDefault() ? defaultRange() : timelineRange;
-    auto data = computeTimelineData(timelineRangeOrDefault);
+    auto data = computeTimelineData();
     auto range = data.rangeEnd - data.rangeStart;
     if (!range)
         return std::nullopt;

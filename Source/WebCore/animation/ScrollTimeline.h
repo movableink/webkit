@@ -65,11 +65,13 @@ public:
 
     AnimationTimelinesController* controller() const override;
 
-    std::optional<WebAnimationTime> currentTime(const TimelineRange&) override;
+    std::optional<WebAnimationTime> currentTime() override;
     TimelineRange defaultRange() const override;
     WeakPtr<Element, WeakPtrImplWithEventTargetData> timelineScopeDeclaredElement() const { return m_timelineScopeElement; }
     void setTimelineScopeElement(const Element&);
     void clearTimelineScopeDeclaredElement() { m_timelineScopeElement = nullptr; }
+
+    virtual std::pair<WebAnimationTime, WebAnimationTime> intervalForAttachmentRange(const TimelineRange&) const;
 
 protected:
     explicit ScrollTimeline(const AtomString&, ScrollAxis);
@@ -80,7 +82,7 @@ protected:
         float rangeEnd { 0 };
     };
     static float floatValueForOffset(const Length&, float);
-    virtual Data computeTimelineData(const TimelineRange&) const;
+    virtual Data computeTimelineData() const;
 
     static ScrollableArea* scrollableAreaForSourceRenderer(const RenderElement*, Document&);
 

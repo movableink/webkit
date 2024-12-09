@@ -7199,6 +7199,8 @@ webkit.org/b/283366 imported/w3c/web-platform-tests/scroll-animations/view-timel
 webkit.org/b/283367 imported/w3c/web-platform-tests/scroll-animations/scroll-timelines/animation-with-display-none.html [ ImageOnlyFailure ]
 webkit.org/b/283367 imported/w3c/web-platform-tests/scroll-animations/scroll-timelines/animation-with-animatable-interface.html [ ImageOnlyFailure ]
 
+webkit.org/b/284300 imported/w3c/web-platform-tests/scroll-animations/view-timelines/view-timeline-root-source.html [ Pass Failure ]
+
 webkit.org/b/269506 fast/forms/ios/autocapitalize-words.html [ Pass Failure ]
 
 # webkit.org/b/271850 [iOS] 10 fast/forms/switch/click-animation*.html layout tests are passing.
