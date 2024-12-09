@@ -145,7 +145,12 @@ public class WebPage_v0 {
     }
 
     @discardableResult
-    public func load(_ request: URLRequest, allowingReadAccessTo readAccessURL: URL) -> NavigationID? {
+    public func load(fileURL url: URL, allowingReadAccessTo readAccessURL: URL) -> NavigationID? {
+        backingWebView.loadFileURL(url, allowingReadAccessTo: readAccessURL).map(NavigationID.init(_:))
+    }
+
+    @discardableResult
+    public func load(fileRequest request: URLRequest, allowingReadAccessTo readAccessURL: URL) -> NavigationID? {
         // `WKWebView` annotates this method as returning non-nil, but it may return nil.
 
         let navigation = backingWebView.loadFileRequest(request, allowingReadAccessTo: readAccessURL) as WKNavigation?
@@ -153,7 +158,7 @@ public class WebPage_v0 {
     }
 
     @discardableResult
-    public func loadSimulatedRequest(_ request: URLRequest, response: URLResponse, responseData: Data) -> NavigationID? {
+    public func load(simulatedRequest request: URLRequest, response: URLResponse, responseData: Data) -> NavigationID? {
         // `WKWebView` annotates this method as returning non-nil, but it may return nil.
 
         let navigation = backingWebView.loadSimulatedRequest(request, response: response, responseData: responseData) as WKNavigation?
@@ -161,7 +166,7 @@ public class WebPage_v0 {
     }
 
     @discardableResult
-    public func loadSimulatedRequest(_ request: URLRequest, responseHTML: String) -> NavigationID? {
+    public func load(simulatedRequest request: URLRequest, responseHTML: String) -> NavigationID? {
         // `WKWebView` annotates this method as returning non-nil, but it may return nil.
 
         let navigation = backingWebView.loadSimulatedRequest(request, responseHTML: responseHTML) as WKNavigation?
