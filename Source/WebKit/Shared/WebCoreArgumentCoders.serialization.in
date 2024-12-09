@@ -2622,9 +2622,6 @@ headers: <wtf/unix/UnixFileDescriptor.h> "ArgumentCodersUnix.h"
 #if OS(DARWIN)
 header: <wtf/MachSendRight.h>
 #endif
-#if OS(WINDOWS)
-headers: <wtf/win/Win32Handle.h> "ArgumentCodersWin.h"
-#endif
 
 [CustomHeader, RValue] class WebCore::SharedMemoryHandle {
 #if USE(UNIX_DOMAIN_SOCKETS)

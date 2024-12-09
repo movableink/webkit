@@ -18,7 +18,6 @@ list(APPEND WebKit_SOURCES
 
     NetworkProcess/Classifier/WebResourceLoadStatisticsStore.cpp
 
-    Platform/IPC/win/ArgumentCodersWin.cpp
     Platform/IPC/win/ConnectionWin.cpp
     Platform/IPC/win/IPCSemaphoreWin.cpp
 
@@ -83,6 +82,10 @@ list(APPEND WebKit_SOURCES
     WebProcess/win/WebProcessWin.cpp
 
     win/WebKitDLL.cpp
+)
+
+list(APPEND WebKit_SERIALIZATION_IN_FILES
+    Shared/win/WTFArgumentCodersWin.serialization.in
 )
 
 list(APPEND WebKit_PRIVATE_INCLUDE_DIRECTORIES
