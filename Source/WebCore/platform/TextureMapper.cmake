@@ -68,6 +68,7 @@ if (USE_COORDINATED_GRAPHICS)
         platform/graphics/texmap/coordinated/CoordinatedPlatformLayerBufferRGB.cpp
         platform/graphics/texmap/coordinated/CoordinatedPlatformLayerBufferYUV.cpp
         platform/graphics/texmap/coordinated/CoordinatedTileBuffer.cpp
+        platform/graphics/texmap/coordinated/GraphicsContextGLTextureMapperANGLECoordinated.cpp
     )
     list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
         platform/graphics/texmap/coordinated/CoordinatedAnimatedBackingStoreClient.h
