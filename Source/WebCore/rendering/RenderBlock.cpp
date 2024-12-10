@@ -356,6 +356,16 @@ bool RenderBlock::contentBoxLogicalWidthChanged(const RenderStyle& oldStyle, con
         || scrollbarWidthDidChange(oldStyle, newStyle, ScrollbarOrientation::Horizontal);
 }
 
+bool RenderBlock::paddingBoxLogicaHeightChanged(const RenderStyle& oldStyle, const RenderStyle& newStyle)
+{
+    auto scrollbarHeightDidChange = [&] (auto orientation) {
+        return (orientation == ScrollbarOrientation::Vertical ? includeVerticalScrollbarSize() : includeHorizontalScrollbarSize()) && oldStyle.scrollbarWidth() != newStyle.scrollbarWidth();
+    };
+    if (newStyle.writingMode().isHorizontal())
+        return oldStyle.borderTopWidth() != newStyle.borderTopWidth() || oldStyle.borderBottomWidth() != newStyle.borderBottomWidth() || scrollbarHeightDidChange(ScrollbarOrientation::Horizontal);
+    return oldStyle.borderLeftWidth() != newStyle.borderLeftWidth() || oldStyle.borderRightWidth() != newStyle.borderRightWidth() || scrollbarHeightDidChange(ScrollbarOrientation::Vertical);
+}
+
 void RenderBlock::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
     RenderBox::styleDidChange(diff, oldStyle);
@@ -367,7 +377,12 @@ void RenderBlock::styleDidChange(StyleDifference diff, const RenderStyle* oldSty
 
     // It's possible for our border/padding to change, but for the overall logical width of the block to
     // end up being the same. We keep track of this change so in layoutBlock, we can know to set relayoutChildren=true.
-    setShouldForceRelayoutChildren(oldStyle && diff == StyleDifference::Layout && needsLayout() && contentBoxLogicalWidthChanged(*oldStyle, style()));
+    auto shouldForceRelayoutChildren = false;
+    if (oldStyle && diff == StyleDifference::Layout && needsLayout()) {
+        // Out-of-flow boxes anchored to the padding box.
+        shouldForceRelayoutChildren = contentBoxLogicalWidthChanged(*oldStyle, style()) || (positionedObjects() && paddingBoxLogicaHeightChanged(*oldStyle, style()));
+    }
+    setShouldForceRelayoutChildren(shouldForceRelayoutChildren);
 }
 
 RenderPtr<RenderBlock> RenderBlock::clone() const
