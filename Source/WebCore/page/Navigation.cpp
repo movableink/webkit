@@ -379,7 +379,7 @@ RefPtr<NavigationAPIMethodTracker> Navigation::maybeSetUpcomingNonTraversalTrack
 }
 
 // https://html.spec.whatwg.org/multipage/nav-history-apis.html#add-an-upcoming-traverse-api-method-tracker
-RefPtr<NavigationAPIMethodTracker> Navigation::addUpcomingTrarveseAPIMethodTracker(Ref<DeferredPromise>&& committed, Ref<DeferredPromise>&& finished, const String& key, JSC::JSValue info)
+RefPtr<NavigationAPIMethodTracker> Navigation::addUpcomingTraverseAPIMethodTracker(Ref<DeferredPromise>&& committed, Ref<DeferredPromise>&& finished, const String& key, JSC::JSValue info)
 {
     RefPtr apiMethodTracker = NavigationAPIMethodTracker::create(WTFMove(committed), WTFMove(finished), WTFMove(info), nullptr);
     apiMethodTracker->key = key;
@@ -488,7 +488,7 @@ Navigation::Result Navigation::performTraversal(const String& key, Navigation::O
     if (auto existingMethodTracker = m_upcomingTraverseMethodTrackers.getOptional(key))
         return apiMethodTrackerDerivedResult(*existingMethodTracker);
 
-    RefPtr apiMethodTracker = addUpcomingTrarveseAPIMethodTracker(WTFMove(committed), WTFMove(finished), key, options.info);
+    RefPtr apiMethodTracker = addUpcomingTraverseAPIMethodTracker(WTFMove(committed), WTFMove(finished), key, options.info);
 
     // FIXME: 11. Let sourceSnapshotParams be the result of snapshotting source snapshot params given document.
     frame()->protectedNavigationScheduler()->scheduleHistoryNavigationByKey(key, [apiMethodTracker] (ScheduleHistoryNavigationResult result) {
@@ -627,17 +627,24 @@ void Navigation::updateForNavigation(Ref<HistoryItem>&& item, NavigationNavigati
 
     Vector<NavigationHistoryEntryWrapper> disposedEntries;
 
-    if (navigationType == NavigationNavigationType::Traverse) {
+    switch (navigationType) {
+    case NavigationNavigationType::Traverse:
         m_currentEntryIndex = getEntryIndexOfHistoryItem(m_entries, item);
         if (!m_currentEntryIndex)
             return;
-    } else if (navigationType == NavigationNavigationType::Push) {
+        break;
+    case NavigationNavigationType::Push:
         m_currentEntryIndex = *m_currentEntryIndex + 1;
         for (size_t i = *m_currentEntryIndex; i < m_entries.size(); i++)
             disposedEntries.append(m_entries[i]);
         m_entries.resize(*m_currentEntryIndex + 1);
-    } else if (navigationType == NavigationNavigationType::Replace)
+        break;
+    case NavigationNavigationType::Replace:
         disposedEntries.append(*oldCurrentEntry);
+        break;
+    default:
+        break;
+    }
 
     if (navigationType == NavigationNavigationType::Push || navigationType == NavigationNavigationType::Replace) {
         m_entries[*m_currentEntryIndex] = NavigationHistoryEntry::create(protectedScriptExecutionContext().get(), WTFMove(item));
