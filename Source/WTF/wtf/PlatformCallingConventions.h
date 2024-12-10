@@ -65,7 +65,7 @@
 #if !OS(WINDOWS)
 #define CDECL
 #else
-#define CDECL __attribute__ ((__cdecl))
+#define CDECL __attribute__ ((cdecl))
 #endif
 #endif
 
