@@ -261,21 +261,21 @@ String InternalAudioDecoderCocoa::initialize(const String& codecName, const Audi
 
         mIsAAC = codec == kAudioFormatMPEG4AAC || codec == kAudioFormatMPEG4AAC_HE || codec == kAudioFormatMPEG4AAC_LD || codec == kAudioFormatMPEG4AAC_HE_V2 || codec == kAudioFormatMPEG4AAC_ELD;
 
-        AudioStreamBasicDescription absd { };
-        absd.mFormatID = codec;
+        AudioStreamBasicDescription asbd { };
+        asbd.mFormatID = codec;
         // Attempt to create description with provided cookie.
         bool succeeded = false;
         if (config.description.size()) {
-            UInt32 size = sizeof(absd);
-            succeeded = PAL::AudioFormatGetProperty(kAudioFormatProperty_FormatInfo, config.description.size(), config.description.data(), &size, &absd) == noErr;
+            UInt32 size = sizeof(asbd);
+            succeeded = PAL::AudioFormatGetProperty(kAudioFormatProperty_FormatInfo, config.description.size(), config.description.data(), &size, &asbd) == noErr;
         }
         if (!succeeded) {
-            absd.mSampleRate = double(config.sampleRate);
-            absd.mChannelsPerFrame = uint32_t(config.numberOfChannels);
+            asbd.mSampleRate = double(config.sampleRate);
+            asbd.mChannelsPerFrame = uint32_t(config.numberOfChannels);
         } else
             m_codecDescription = config.description;
 
-        m_inputDescription = absd;
+        m_inputDescription = asbd;
     } else
         m_inputDescription = CAAudioStreamDescription { double(config.sampleRate), uint32_t(config.numberOfChannels), *format, CAAudioStreamDescription::IsInterleaved::Yes };
 
