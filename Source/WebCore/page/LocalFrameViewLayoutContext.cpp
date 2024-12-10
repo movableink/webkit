@@ -344,12 +344,19 @@ void LocalFrameViewLayoutContext::flushUpdateLayerPositions()
     if (!m_pendingUpdateLayerPositions)
         return;
 
-    auto updateLayerPositions = *std::exchange(m_pendingUpdateLayerPositions, std::nullopt);
+    CheckedPtr view = renderView();
+    if (!view)
+        return;
 
-    if (CheckedPtr view = renderView()) {
-        view->layer()->updateLayerPositionsAfterLayout(updateLayerPositions.layoutIdentifier, updateLayerPositions.needsFullRepaint, updateLayerPositions.didRunSimplifiedLayout ? RenderLayer::CanUseSimplifiedRepaintPass::Yes : RenderLayer::CanUseSimplifiedRepaintPass::No);
-        m_renderLayerPositionUpdateCount++;
-    }
+    auto repaintRectEnvironment = RepaintRectEnvironment { view->page().deviceScaleFactor(), document()->printing() };
+    bool environmentChanged = repaintRectEnvironment != m_lastRepaintRectEnvironment;
+
+    auto updateLayerPositions = *std::exchange(m_pendingUpdateLayerPositions, std::nullopt);
+    auto canUseSimplifiedRepaint = updateLayerPositions.didRunSimplifiedLayout ? RenderLayer::CanUseSimplifiedRepaintPass::Yes : RenderLayer::CanUseSimplifiedRepaintPass::No;
+    view->layer()->updateLayerPositionsAfterLayout(updateLayerPositions.layoutIdentifier, updateLayerPositions.needsFullRepaint, environmentChanged, canUseSimplifiedRepaint);
+
+    m_renderLayerPositionUpdateCount++;
+    m_lastRepaintRectEnvironment = WTFMove(repaintRectEnvironment);
 }
 
 void LocalFrameViewLayoutContext::updateCompositingLayersAfterLayout()

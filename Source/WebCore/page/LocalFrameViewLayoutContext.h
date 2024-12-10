@@ -240,6 +240,14 @@ private:
         bool didRunSimplifiedLayout { true };
     };
     std::optional<UpdateLayerPositions> m_pendingUpdateLayerPositions;
+
+    struct RepaintRectEnvironment {
+        float m_deviceScaleFactor { 0 };
+        bool m_printing { false };
+
+        bool operator==(const RepaintRectEnvironment&) const = default;
+    };
+    RepaintRectEnvironment m_lastRepaintRectEnvironment;
 };
 
 } // namespace WebCore
