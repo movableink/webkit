@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Sony Interactive Entertainment Inc.
+ * Copyright (C) 2024 Red Hat Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,37 +25,24 @@
 
 #pragma once
 
-#if USE(SKIA)
-
-WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
-#include <skia/core/SkString.h>
-WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
-
 #include <wtf/StdLibExtras.h>
 
-namespace WebKit {
+#if USE(SKIA)
 
-class CoreIPCSkString {
-public:
-    CoreIPCSkString(const SkString& string)
-        : m_string(string)
-    {
-    }
+namespace WebCore {
 
-    static SkString create(std::span<const char> span)
-    {
-        return { span.data(), span.size() };
-    }
+inline std::span<const uint8_t> span(SkData* data)
+{
+    return unsafeMakeSpan<const uint8_t>(data->bytes(), data->size());
+}
 
-    std::span<const char> data() const
-    {
-        return unsafeMakeSpan(m_string.data(), m_string.size());
-    }
+inline std::span<const uint8_t> span(const sk_sp<SkData>& data)
+{
+    return span(data.get());
+}
 
-private:
-    const SkString& m_string;
-};
+} // namespace WebCore
 
-} // namespace WebKit
+using WebCore::span;
 
 #endif // USE(SKIA)
