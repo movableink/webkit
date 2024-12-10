@@ -417,7 +417,7 @@ void HTMLFormControlElement::handlePopoverTargetAction(const EventTarget* eventT
     if (shouldHide)
         popover->hidePopover();
     else if (shouldShow)
-        popover->showPopover(this);
+        popover->showPopoverInternal(this);
 }
 
 RefPtr<Element> HTMLFormControlElement::commandForElement() const
