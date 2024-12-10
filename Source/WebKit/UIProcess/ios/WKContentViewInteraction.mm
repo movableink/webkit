@@ -2154,7 +2154,7 @@ typedef NS_ENUM(NSInteger, EndEditingReason) {
         _layerTreeTransactionIdAtLastInteractionStart = downcast<WebKit::RemoteLayerTreeDrawingAreaProxy>(*_page->drawingArea()).lastCommittedMainFrameLayerTreeTransactionID();
 
 #if ENABLE(TOUCH_EVENTS)
-        _page->didBeginTouchPoint();
+        _page->didBeginTouchPoint(lastTouchEvent.locationInRootViewCoordinates);
 #endif
 
         WebKit::InteractionInformationRequest positionInformationRequest { WebCore::IntPoint(_lastInteractionLocation) };

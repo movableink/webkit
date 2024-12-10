@@ -3830,10 +3830,11 @@ HandleUserInputEventResult WebPage::dispatchTouchEvent(FrameIdentifier frameID, 
     return handleTouchEventResult;
 }
 
-void WebPage::didBeginTouchPoint()
+void WebPage::didBeginTouchPoint(FloatPoint locationInRootView)
 {
     m_hasAnyActiveTouchPoints = true;
     m_potentialTapSecurityOrigin = nullptr;
+    m_lastTouchLocationBeforeTap = locationInRootView;
 }
 
 void WebPage::updatePotentialTapSecurityOrigin(const WebTouchEvent& touchEvent, bool wasHandled)
@@ -7734,6 +7735,7 @@ void WebPage::didCommitLoad(WebFrame* frame)
     WebProcess::singleton().eventDispatcher().takeQueuedTouchEventsForPage(*this, queuedEvents);
     cancelAsynchronousTouchEvents(WTFMove(queuedEvents));
 #endif
+    m_lastTouchLocationBeforeTap = { };
     m_hasAnyActiveTouchPoints = false;
     m_activeTextInteractionSources = { };
 #endif // PLATFORM(IOS_FAMILY)
