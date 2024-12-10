@@ -2241,7 +2241,8 @@ fast/webgpu/regression [ Pass ]
 fast/webgpu/regression/repro_275108.html [ Pass Failure Timeout ]
 
 [ Debug ] fast/webgpu/nocrash [ Skip ]
-[ Release ] fast/webgpu/nocrash [ Pass Failure Timeout ]
+[ Release ] fast/webgpu/nocrash [ Pass Failure ]
+fast/webgpu/nocrash/fuzz-282052.html [ Pass Failure Slow ]
 [ Debug ] fast/webgpu/regression/repro_275624.html [ Skip ]
 [ Debug ] fast/webgpu/texture-supports-blending.html [ Pass Crash ]
 
