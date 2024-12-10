@@ -51,4 +51,5 @@ interface Observable {
   [CallWith=CurrentScriptExecutionContext] Promise<any> find(PredicateCallback callback, optional SubscribeOptions options = {});
   [CallWith=CurrentScriptExecutionContext] Promise<boolean> every(PredicateCallback callback, optional SubscribeOptions options = {});
   [CallWith=CurrentScriptExecutionContext] Promise<boolean> some(PredicateCallback callback, optional SubscribeOptions options = {});
+  [CallWith=CurrentScriptExecutionContext] Promise<any> reduce(ReducerCallback callback, optional any initialValue, optional SubscribeOptions options = {});
 };

@@ -2515,6 +2515,8 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSReadableStreamSource.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSReadableStreamSource.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSRedEyeReduction.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSRedEyeReduction.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSReducerCallback.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSReducerCallback.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSRegistrationResponseJSON.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSRegistrationResponseJSON.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSRemotePlayback.cpp

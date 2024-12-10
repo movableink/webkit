@@ -1289,6 +1289,7 @@ dom/InternalObserverFromScript.cpp
 dom/InternalObserverInspect.cpp
 dom/InternalObserverLast.cpp
 dom/InternalObserverMap.cpp
+dom/InternalObserverReduce.cpp
 dom/InternalObserverSome.cpp
 dom/InternalObserverTake.cpp
 dom/KeyboardEvent.cpp
@@ -4354,6 +4355,7 @@ JSPushSubscriptionJSON.cpp
 JSPushSubscriptionOptions.cpp
 JSPushSubscriptionOptionsInit.cpp
 JSRedEyeReduction.cpp
+JSReducerCallback.cpp
 JSRTCAnswerOptions.cpp
 JSRTCLogsCallback.cpp
 JSRTCCertificate.cpp

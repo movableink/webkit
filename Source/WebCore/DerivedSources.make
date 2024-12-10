@@ -1204,6 +1204,7 @@ JS_BINDING_IDLS := \
     $(WebCore)/dom/Range+CSSOMView.idl \
     $(WebCore)/dom/Range+DOMParsing.idl \
     $(WebCore)/dom/Range.idl \
+    $(WebCore)/dom/ReducerCallback.idl \
     $(WebCore)/dom/RequestAnimationFrameCallback.idl \
     $(WebCore)/dom/SecurityPolicyViolationEvent.idl \
     $(WebCore)/dom/SecurityPolicyViolationEventDisposition.idl \

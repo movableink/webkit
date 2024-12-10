@@ -1190,6 +1190,7 @@ set(WebCore_NON_SVG_IDL_FILES
     dom/Range+CSSOMView.idl
     dom/Range+DOMParsing.idl
     dom/Range.idl
+    dom/ReducerCallback.idl
     dom/RequestAnimationFrameCallback.idl
     dom/SecurityPolicyViolationEvent.idl
     dom/SecurityPolicyViolationEventDisposition.idl

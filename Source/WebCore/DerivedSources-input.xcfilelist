@@ -1511,6 +1511,7 @@ $(PROJECT_DIR)/dom/PromiseRejectionEvent.idl
 $(PROJECT_DIR)/dom/Range+CSSOMView.idl
 $(PROJECT_DIR)/dom/Range+DOMParsing.idl
 $(PROJECT_DIR)/dom/Range.idl
+$(PROJECT_DIR)/dom/ReducerCallback.idl
 $(PROJECT_DIR)/dom/RequestAnimationFrameCallback.idl
 $(PROJECT_DIR)/dom/SecurityPolicyViolationEvent.idl
 $(PROJECT_DIR)/dom/SecurityPolicyViolationEventDisposition.idl
