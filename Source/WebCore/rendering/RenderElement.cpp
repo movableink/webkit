@@ -1019,8 +1019,10 @@ void RenderElement::styleDidChange(StyleDifference diff, const RenderStyle* oldS
     auto registerImages = [this](auto* style, auto* oldStyle) {
         if (!style && !oldStyle)
             return;
-        updateFillImages(oldStyle ? &oldStyle->protectedBackgroundLayers().get() : nullptr, style ? &style->protectedBackgroundLayers().get() : nullptr);
-        updateFillImages(oldStyle ? &oldStyle->protectedMaskLayers().get() : nullptr, style ? &style->protectedMaskLayers().get() : nullptr);
+        if ((style && style->backgroundLayers().hasImage()) || (oldStyle && oldStyle->backgroundLayers().hasImage()))
+            updateFillImages(oldStyle ? &oldStyle->protectedBackgroundLayers().get() : nullptr, style ? &style->protectedBackgroundLayers().get() : nullptr);
+        if ((style && style->maskLayers().hasImage()) || (oldStyle && oldStyle->maskLayers().hasImage()))
+            updateFillImages(oldStyle ? &oldStyle->protectedMaskLayers().get() : nullptr, style ? &style->protectedMaskLayers().get() : nullptr);
         updateImage(oldStyle ? oldStyle->borderImage().protectedImage().get() : nullptr, style ? style->borderImage().protectedImage().get() : nullptr);
         updateImage(oldStyle ? oldStyle->maskBorder().protectedImage().get() : nullptr, style ? style->maskBorder().protectedImage().get() : nullptr);
         updateShapeImage(oldStyle ? oldStyle->protectedShapeOutside().get() : nullptr, style ? style->protectedShapeOutside().get() : nullptr);
