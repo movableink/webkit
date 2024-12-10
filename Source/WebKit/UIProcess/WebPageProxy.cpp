@@ -1928,6 +1928,10 @@ void WebPageProxy::prepareToLoadWebPage(WebProcessProxy& process, LoadParameters
     if (NetworkIssueReporter::isEnabled())
         m_networkIssueReporter = makeUnique<NetworkIssueReporter>();
 #endif
+
+#if ENABLE(SCREEN_TIME)
+    m_pageClient->installScreenTimeWebpageController();
+#endif
 }
 
 #if !PLATFORM(COCOA)

@@ -6332,6 +6332,20 @@ ScreenOrientationLockingAPIEnabled:
     WebCore:
       default: false
 
+ScreenTimeEnabled:
+  type: bool
+  status: unstable
+  condition: ENABLE(SCREEN_TIME)
+  humanReadableName: "Screen Time"
+  humanReadableDescription: "Enable Screen Time"
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+
 ScreenWakeLockAPIEnabled:
   type: bool
   status: stable

@@ -374,6 +374,7 @@ OBJC_CLASS NSString;
 OBJC_CLASS NSView;
 OBJC_CLASS NSWindow;
 OBJC_CLASS QLPreviewPanel;
+OBJC_CLASS STWebpageController;
 OBJC_CLASS SYNotesActivationObserver;
 OBJC_CLASS WKQLThumbnailLoadOperation;
 OBJC_CLASS WKQuickLookPreviewController;
