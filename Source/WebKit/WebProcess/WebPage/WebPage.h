@@ -50,8 +50,6 @@
 #include "WebUndoStepID.h"
 #include "WebsitePoliciesData.h"
 #include <JavaScriptCore/InspectorFrontendChannel.h>
-#include <WebCore/AppHighlight.h>
-#include <WebCore/DictationContext.h>
 #include <WebCore/DictionaryPopupInfo.h>
 #include <WebCore/DisabledAdaptations.h>
 #include <WebCore/DragActions.h>
@@ -275,10 +273,7 @@ enum class WheelEventProcessingSteps : uint8_t;
 enum class WritingDirection : uint8_t;
 enum class PaginationMode : uint8_t;
 
-using MediaProducerMediaStateFlags = OptionSet<MediaProducerMediaState>;
-using MediaProducerMutedStateFlags = OptionSet<MediaProducerMutedState>;
-using PlatformDisplayID = uint32_t;
-
+struct AppHighlight;
 struct AttributedString;
 struct CharacterRange;
 struct CompositionHighlight;
@@ -287,6 +282,7 @@ struct ContactInfo;
 struct ContactsRequestData;
 struct DataDetectorElementInfo;
 struct DictationAlternative;
+struct DictationContextType;
 struct ElementContext;
 struct ExceptionDetails;
 struct FontAttributes;
@@ -312,6 +308,11 @@ struct TextCheckingResult;
 struct TextRecognitionOptions;
 struct TextRecognitionResult;
 struct ViewportArguments;
+
+using DictationContext = ObjectIdentifier<DictationContextType>;
+using MediaProducerMediaStateFlags = OptionSet<MediaProducerMediaState>;
+using MediaProducerMutedStateFlags = OptionSet<MediaProducerMutedState>;
+using PlatformDisplayID = uint32_t;
 
 #if ENABLE(ATTACHMENT_ELEMENT)
 class HTMLAttachmentElement;
@@ -1731,8 +1732,8 @@ public:
 #endif
 
 #if ENABLE(APP_HIGHLIGHTS)
-    WebCore::CreateNewGroupForHighlight highlightIsNewGroup() const { return m_highlightIsNewGroup; }
-    WebCore::HighlightRequestOriginatedInApp highlightRequestOriginatedInApp() const { return m_highlightRequestOriginatedInApp; }
+    WebCore::CreateNewGroupForHighlight highlightIsNewGroup() const;
+    WebCore::HighlightRequestOriginatedInApp highlightRequestOriginatedInApp() const;
     WebCore::HighlightVisibility appHighlightsVisiblility() const { return m_appHighlightsVisible; }
 
     bool createAppHighlightInSelectedRange(WebCore::CreateNewGroupForHighlight, WebCore::HighlightRequestOriginatedInApp, CompletionHandler<void(WebCore::AppHighlight&&)>&&);
@@ -2448,6 +2449,9 @@ private:
 
     void frameNameWasChangedInAnotherProcess(WebCore::FrameIdentifier, const String& frameName);
 
+    struct Internals;
+    UniqueRef<Internals> m_internals;
+
     const WebCore::PageIdentifier m_identifier;
 
     RefPtr<WebCore::Page> m_page;
@@ -2502,11 +2506,6 @@ private:
 #endif
 #if ENABLE(APP_BOUND_DOMAINS)
     bool m_needsInAppBrowserPrivacyQuirks { false };
-#endif
-
-#if ENABLE(APP_HIGHLIGHTS)
-    WebCore::CreateNewGroupForHighlight m_highlightIsNewGroup { WebCore::CreateNewGroupForHighlight::No };
-    WebCore::HighlightRequestOriginatedInApp m_highlightRequestOriginatedInApp { WebCore::HighlightRequestOriginatedInApp::No };
 #endif
 
 #if PLATFORM(COCOA)
@@ -2784,7 +2783,6 @@ private:
 
     std::optional<WebCore::SimpleRange> m_initialSelection;
     std::optional<WebCore::WeakSimpleRange> m_lastSelectedReplacementRange;
-    WebCore::VisibleSelection m_storedSelectionForAccessibility { WebCore::VisibleSelection() };
     WebCore::IntDegrees m_deviceOrientation { 0 };
     bool m_keyboardIsAttached { false };
     bool m_inDynamicSizeUpdate { false };

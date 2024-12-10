@@ -59,6 +59,7 @@
 #import "WebEventConversion.h"
 #import "WebFrame.h"
 #import "WebImage.h"
+#import "WebPageInternals.h"
 #import "WebPageMessages.h"
 #import "WebPageProxyMessages.h"
 #import "WebPreviewLoaderClient.h"
@@ -2393,7 +2394,7 @@ void WebPage::getRectsForGranularityWithSelectionOffset(WebCore::TextGranularity
     if (!frame)
         return completionHandler({ });
 
-    auto selection = m_storedSelectionForAccessibility.isNone() ? frame->selection().selection() : m_storedSelectionForAccessibility;
+    auto selection = m_internals->storedSelectionForAccessibility.isNone() ? frame->selection().selection() : m_internals->storedSelectionForAccessibility;
     auto position = visiblePositionForPositionWithOffset(selection.visibleStart(), offset);
     auto direction = offset < 0 ? SelectionDirection::Backward : SelectionDirection::Forward;
     auto range = enclosingTextUnitOfGranularity(position, granularity, direction);
@@ -2411,10 +2412,10 @@ void WebPage::getRectsForGranularityWithSelectionOffset(WebCore::TextGranularity
 void WebPage::storeSelectionForAccessibility(bool shouldStore)
 {
     if (!shouldStore)
-        m_storedSelectionForAccessibility = VisibleSelection();
+        m_internals->storedSelectionForAccessibility = VisibleSelection();
     else {
         if (RefPtr frame = m_page->checkedFocusController()->focusedOrMainFrame())
-            m_storedSelectionForAccessibility = frame->selection().selection();
+            m_internals->storedSelectionForAccessibility = frame->selection().selection();
     }
 }
 
@@ -2435,7 +2436,7 @@ void WebPage::getRectsAtSelectionOffsetWithText(int32_t offset, const String& te
     RefPtr frame = m_page->checkedFocusController()->focusedOrMainFrame();
     if (!frame)
         return completionHandler({ });
-    auto& selection = m_storedSelectionForAccessibility.isNone() ? frame->selection().selection() : m_storedSelectionForAccessibility;
+    auto& selection = m_internals->storedSelectionForAccessibility.isNone() ? frame->selection().selection() : m_internals->storedSelectionForAccessibility;
     auto startPosition = visiblePositionForPositionWithOffset(selection.visibleStart(), offset);
     auto range = makeSimpleRange(startPosition, visiblePositionForPositionWithOffset(startPosition, text.length()));
     if (!range || range->collapsed()) {
