@@ -3218,7 +3218,8 @@ ExceptionOr<void> WebGLRenderingContextBase::texImageSource(TexImageFunctionID f
     if (m_unpackFlipY)
         adjustedSourceImageRect.setY(source.height() - adjustedSourceImageRect.maxY());
 
-    std::span imageData { source.data().data(), source.data().byteLength() };
+    Ref uint8Data = source.data().asUint8ClampedArray();
+    std::span imageData = uint8Data->typedSpan();
     Vector<uint8_t> data;
 
     // The data from ImageData is always of format RGBA8.

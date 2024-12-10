@@ -1235,7 +1235,6 @@ html/HTMLVideoElement.cpp
 html/HTMLVideoElement.h
 html/HiddenInputType.cpp
 html/ImageBitmap.cpp
-html/ImageData.cpp
 html/ImageDocument.cpp
 html/ImageInputType.cpp
 html/InputType.cpp
