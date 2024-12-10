@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		07A4CE9F2D08C06400764F5E /* Empty.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07A4CE9E2D08C06400764F5E /* Empty.swift */; };
 		07A58BED2D04013100CAB4ED /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 07A58BE82D04013100CAB4ED /* Assets.xcassets */; };
 		07A58BEE2D04013100CAB4ED /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07A58BE92D04013100CAB4ED /* ContentView.swift */; };
 		07A58BEF2D04013100CAB4ED /* SwiftBrowser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07A58BEB2D04013100CAB4ED /* SwiftBrowser.swift */; };
@@ -18,6 +19,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		07A4CE9E2D08C06400764F5E /* Empty.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Empty.swift; sourceTree = "<group>"; };
 		07A58BD42D0400B300CAB4ED /* SwiftBrowser.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SwiftBrowser.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		07A58BE82D04013100CAB4ED /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		07A58BE92D04013100CAB4ED /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -83,6 +85,7 @@
 				07A58C012D04111900CAB4ED /* BrowserView.swift */,
 				07A58BFF2D040E3400CAB4ED /* BrowserViewModel.swift */,
 				07A58BE92D04013100CAB4ED /* ContentView.swift */,
+				07A4CE9E2D08C06400764F5E /* Empty.swift */,
 				07A58C492D0567A100CAB4ED /* SettingsView.swift */,
 				07A58BEB2D04013100CAB4ED /* SwiftBrowser.swift */,
 			);
@@ -200,6 +203,7 @@
 				07A58C022D04111900CAB4ED /* BrowserView.swift in Sources */,
 				07A58C002D040E3400CAB4ED /* BrowserViewModel.swift in Sources */,
 				07A58BEE2D04013100CAB4ED /* ContentView.swift in Sources */,
+				07A4CE9F2D08C06400764F5E /* Empty.swift in Sources */,
 				07A58C4A2D0567A100CAB4ED /* SettingsView.swift in Sources */,
 				07A58BEF2D04013100CAB4ED /* SwiftBrowser.swift in Sources */,
 			);

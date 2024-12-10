@@ -21,31 +21,5 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "../../../Configurations/CommonBase.xcconfig"
-
-CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = YES;
-
-SUPPORTED_PLATFORMS = iphoneos iphonesimulator macosx xros xrsimulator;
-SUPPORTS_MACCATALYST = NO;
-
-FRAMEWORK_SEARCH_PATHS[sdk=macos*] = $(inherited) $(WK_QUOTED_OVERRIDE_FRAMEWORKS_DIR);
-
-SDKROOT = macosx.internal;
-ADDITIONAL_SDKS = $(WK_ADDITIONAL_SDKS);
-
-CODE_SIGN_IDENTITY = -;
-
-SWIFT_VERSION = 6.0;
-SWIFT_VERSION[sdk=macosx13*] = 5.0;
-SWIFT_VERSION[sdk=macosx14*] = 5.0;
-
-ENABLE_DEBUG_DYLIB_OVERRIDE = YES;
-
-SWIFT_OPTIMIZATION_LEVEL = -O;
-SWIFT_OPTIMIZATION_LEVEL[config=Debug] = -Onone;
-
-EXCLUDED_SOURCE_FILE_NAMES = $(EXCLUDED_SOURCE_FILE_NAMES_$(ENABLE_SWIFTBROWSER));
-EXCLUDED_SOURCE_FILE_NAMES_ = *;
-EXCLUDED_SOURCE_FILE_NAMES_YES = ;
-
-INCLUDED_SOURCE_FILE_NAMES = SwiftBrowser/Empty.swift;
+// This file is intentionally empty so that this target can build in configurations
+// where all other files are excluded.
