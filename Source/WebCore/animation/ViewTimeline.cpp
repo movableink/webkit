@@ -43,9 +43,11 @@
 #include "RenderBox.h"
 #include "RenderBoxInlines.h"
 #include "RenderInline.h"
+#include "RenderLayerScrollableArea.h"
 #include "RenderSVGModelObject.h"
 #include "ScrollAnchoringController.h"
 #include "StyleBuilderConverter.h"
+#include "WebAnimation.h"
 
 namespace WebCore {
 

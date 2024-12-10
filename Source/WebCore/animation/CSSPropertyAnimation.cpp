@@ -158,17 +158,6 @@ static inline LengthPoint blendFunc(const LengthPoint& from, const LengthPoint& 
     return blend(from, to, context);
 }
 
-static inline ShadowStyle blendFunc(ShadowStyle from, ShadowStyle to, const CSSPropertyBlendingContext& context)
-{
-    if (from == to)
-        return to;
-
-    double fromVal = from == ShadowStyle::Normal ? 1 : 0;
-    double toVal = to == ShadowStyle::Normal ? 1 : 0;
-    double result = blendFunc(fromVal, toVal, context);
-    return result > 0 ? ShadowStyle::Normal : ShadowStyle::Inset;
-}
-
 static inline std::unique_ptr<ShadowData> blendFunc(const ShadowData* from, const ShadowData* to, const RenderStyle& fromStyle, const RenderStyle& toStyle, const CSSPropertyBlendingContext& context)
 {
     ASSERT(from && to);
