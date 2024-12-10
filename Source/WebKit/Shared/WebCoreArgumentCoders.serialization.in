@@ -2504,10 +2504,6 @@ enum class WebCore::SelectionRenderingBehavior : bool;
 #endif
 
 #if PLATFORM(IOS_FAMILY)
-enum class WebCore::TextDirection : bool;
-#endif
-
-#if PLATFORM(IOS_FAMILY)
 class WebCore::SelectionGeometry {
     WebCore::FloatQuad quad();
     WebCore::SelectionRenderingBehavior behavior();
@@ -4101,8 +4097,6 @@ header: <WebCore/SVGFilterExpression.h>
     WebCore::SVGPreserveAspectRatioValue::SVGPreserveAspectRatioType m_align;
     WebCore::SVGPreserveAspectRatioValue::SVGMeetOrSliceType m_meetOrSlice;
 };
-
-enum class WebCore::HasInsecureContent : bool
 
 header: <WebCore/ModalContainerTypes.h>
 [CustomHeader] enum class WebCore::ModalContainerDecision : uint8_t {
@@ -8733,3 +8727,5 @@ enum class WebCore::FileSystemWriteCommandType : uint8_t {
     Seek,
     Truncate
 };
+
+[Nested] enum class WebCore::ResourceError::IsSanitized : bool
