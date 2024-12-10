@@ -10,6 +10,12 @@ body, html {
     margin: 0;
 }
 
+#start {
+    width: 100%;
+    height: 120px;
+    border: 1px solid orange;
+}
+
 #target {
     padding: 4px;
     border: 1px solid tomato;
@@ -41,7 +47,7 @@ addEventListener("load", async () => {
     getSelection().setPosition(document.body, 0);
 
     console.log("1. Focusing editor");
-    await UIHelper.activateAndWaitForInputSessionAt(10, 10);
+    await UIHelper.activateElementAndWaitForInputSession(document.getElementById("start"));
 
     console.log("2. Typing in editor");
     for (let character of [..."i want to c"]) {
@@ -78,7 +84,7 @@ addEventListener("load", async () => {
 </script>
 </head>
 <body contenteditable>
-    <div><br></div>
+    <div id="start"><br></div>
     <p id="description"></p>
     <div id="target"><br></div>
 </body>
