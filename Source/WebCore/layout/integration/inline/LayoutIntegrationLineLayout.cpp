@@ -671,6 +671,7 @@ void LineLayout::updateRenderTreePositions(const Vector<LineAdjustment>& lineAdj
 FloatRect LineLayout::applySVGTextFragments(SVGTextFragmentMap&& fragmentMap)
 {
     auto& boxes = m_inlineContent->displayContent().boxes;
+    auto& lines = m_inlineContent->displayContent().lines;
     auto& fragments = m_inlineContent->svgTextFragmentsForBoxes();
     fragments.resize(m_inlineContent->displayContent().boxes.size());
 
@@ -719,6 +720,9 @@ FloatRect LineLayout::applySVGTextFragments(SVGTextFragmentMap&& fragmentMap)
         box.moveHorizontally(-fullBoundaries.x());
         box.moveVertically(-fullBoundaries.y());
     }
+
+    if (lines.size())
+        lines[0].setLineBoxRectForSVGText(FloatRect { { }, fullBoundaries.size() });
 
     return fullBoundaries;
 }

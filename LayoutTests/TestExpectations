@@ -2345,6 +2345,7 @@ imported/w3c/web-platform-tests/svg/text/reftests/text-complex-001.svg [ ImageOn
 imported/w3c/web-platform-tests/svg/text/reftests/text-complex-002.svg [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/svg/text/reftests/text-inline-size-001.svg [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/svg/text/reftests/text-inline-size-002.svg [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/svg/text/reftests/text-inline-size-003.svg [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/svg/text/reftests/text-inline-size-005.svg [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/svg/text/reftests/text-inline-size-006.svg [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/svg/text/reftests/text-inline-size-007.svg [ ImageOnlyFailure ]
