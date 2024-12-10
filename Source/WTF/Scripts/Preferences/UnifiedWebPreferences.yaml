@@ -2843,26 +2843,28 @@ ExperimentalSandboxEnabled:
 
 ExposeSpeakersEnabled:
   type: bool
-  status: testable
+  status: internal
   category: media
   humanReadableName: "Allow speaker device selection"
   humanReadableDescription: "Allow speaker device selection"
   condition: ENABLE(MEDIA_STREAM)
   defaultValue:
     WebKit:
+      "PLATFORM(MAC)": true
       default: false
     WebCore:
       default: false
 
 ExposeSpeakersWithoutMicrophoneEnabled:
   type: bool
-  status: testable
+  status: internal
   category: media
   humanReadableName: "Allow selection of speaker device without related microphone"
   humanReadableDescription: "Allow selection of speaker device without related microphone"
   condition: ENABLE(MEDIA_STREAM)
   defaultValue:
     WebKit:
+      "PLATFORM(MAC)": true
       default: false
     WebCore:
       default: false
@@ -5674,13 +5676,14 @@ PeerConnectionVideoScalingAdaptationDisabled:
 # FIXME: Is this implemented for WebKitLegacy? If not, this should be excluded from WebKitLegacy entirely.
 PerElementSpeakerSelectionEnabled:
   type: bool
-  status: testable
+  status: internal
   category: media
   humanReadableName: "Allow per media element speaker device selection"
   humanReadableDescription: "Allow per media element speaker device selection"
   condition: ENABLE(MEDIA_STREAM)
   defaultValue:
     WebKit:
+      "PLATFORM(MAC)": true
       default: false
     WebCore:
       default: false
