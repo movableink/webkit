@@ -482,7 +482,10 @@ JSEntrypointCallee::JSEntrypointCallee(TypeIndex typeIndex, bool usesSIMD)
     if (false) {
 #endif
         if (Options::useWasmIPInt())
-            m_wasmFunctionPrologue = LLInt::inPlaceInterpreterEntryThunk().code().retagged<WasmEntryPtrTag>();
+            if (usesSIMD)
+                m_wasmFunctionPrologue = LLInt::inPlaceInterpreterSIMDEntryThunk().code().retagged<WasmEntryPtrTag>();
+            else
+                m_wasmFunctionPrologue = LLInt::inPlaceInterpreterEntryThunk().code().retagged<WasmEntryPtrTag>();
         else {
             if (usesSIMD)
                 m_wasmFunctionPrologue = LLInt::wasmFunctionEntryThunkSIMD().code().retagged<WasmEntryPtrTag>();

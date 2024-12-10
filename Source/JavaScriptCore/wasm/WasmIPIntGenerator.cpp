@@ -533,6 +533,11 @@ public:
     void willParseExtendedOpcode() { }
     void didParseOpcode()
     {
+        // IPInt doesn't support SIMD yet, but we end up with validation errors if we parse a SIMD
+        // function, since we're not updating the stack height in the generator. We're never going
+        // to run the code, so we don't care.
+        if (m_usesSIMD)
+            return;
         if (!m_parser->unreachableBlocks())
             ASSERT(m_parser->getStackHeightInValues() == m_stackSize.value());
     }
@@ -2332,8 +2337,7 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addCatchAllToUnreachable(Contro
         0
     });
 
-    // IPInt stack entries are 16 bytes to keep the stack aligned. With the exception of locals, which are only 8 bytes.
-    uint32_t stackSizeInV128 = m_stackSize.value() + roundUpToMultipleOf<2>(m_metadata->m_numLocals) / 2;
+    uint32_t stackSizeInV128 = m_stackSize.value() + roundUpToMultipleOf<2>(m_metadata->m_numLocals);
     IPInt::CatchMetadata mdCatch {
         .stackSizeInV128 = stackSizeInV128
     };

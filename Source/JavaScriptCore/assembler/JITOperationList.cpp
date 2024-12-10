@@ -187,6 +187,8 @@ static LLIntOperations llintOperations()
             LLINT_ROUTINE(wasm_to_js_wrapper_entry)
             LLINT_ROUTINE(ipint_trampoline)
             LLINT_ROUTINE(ipint_entry)
+            LLINT_ROUTINE(ipint_function_prologue_simd_trampoline)
+            LLINT_ROUTINE(ipint_function_prologue_simd)
 
             LLINT_OP(op_catch)
             LLINT_OP(wasm_catch)

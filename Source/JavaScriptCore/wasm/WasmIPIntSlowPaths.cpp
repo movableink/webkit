@@ -162,6 +162,87 @@ static inline Wasm::JITCallee* jitCompileAndSetHeuristics(Wasm::IPIntCallee* cal
     return getReplacement();
 }
 
+static inline Expected<Wasm::JITCallee*, Wasm::Plan::Error> jitCompileSIMDFunction(Wasm::IPIntCallee* callee, JSWebAssemblyInstance* instance)
+{
+    Wasm::IPIntTierUpCounter& tierUpCounter = callee->tierUpCounter();
+
+    MemoryMode memoryMode = instance->memory()->mode();
+    Wasm::CalleeGroup& calleeGroup = *instance->calleeGroup();
+    {
+        Locker locker { calleeGroup.m_lock };
+        if (auto* replacement = calleeGroup.replacement(locker, callee->index()))  {
+            dataLogLnIf(Options::verboseOSR(), "\tSIMD code was already compiled.");
+            return replacement;
+        }
+    }
+
+    bool compile = false;
+    while (!compile) {
+        Locker locker { tierUpCounter.m_lock };
+        switch (tierUpCounter.compilationStatus(memoryMode)) {
+        case Wasm::IPIntTierUpCounter::CompilationStatus::NotCompiled:
+            compile = true;
+            tierUpCounter.setCompilationStatus(memoryMode, Wasm::IPIntTierUpCounter::CompilationStatus::Compiling);
+            break;
+        case Wasm::IPIntTierUpCounter::CompilationStatus::Compiling:
+            Thread::yield();
+            continue;
+        case Wasm::IPIntTierUpCounter::CompilationStatus::Compiled: {
+            // We can't hold a tierUpCounter lock while holding the calleeGroup lock since calleeGroup could reset our counter while releasing BBQ code.
+            // Besides we're outside the critical section.
+            locker.unlockEarly();
+            {
+                Locker locker { calleeGroup.m_lock };
+                auto* replacement = calleeGroup.replacement(locker, callee->index());
+                RELEASE_ASSERT(replacement);
+                return replacement;
+            }
+        }
+        }
+    }
+
+    Wasm::FunctionCodeIndex functionIndex = callee->functionIndex();
+    ASSERT(instance->module().moduleInformation().usesSIMD(functionIndex));
+    auto plan = Wasm::BBQPlan::create(instance->vm(), const_cast<Wasm::ModuleInformation&>(instance->module().moduleInformation()), functionIndex, callee->hasExceptionHandlers(), Ref(*instance->calleeGroup()), Wasm::Plan::dontFinalize());
+    Wasm::ensureWorklist().enqueue(plan.get());
+    plan->waitForCompletion();
+    if (plan->failed())
+        return makeUnexpected(plan->error());
+
+    {
+        Locker locker { tierUpCounter.m_lock };
+        RELEASE_ASSERT(tierUpCounter.compilationStatus(memoryMode) == Wasm::IPIntTierUpCounter::CompilationStatus::Compiled);
+    }
+
+    Locker locker { calleeGroup.m_lock };
+    auto* replacement = calleeGroup.replacement(locker, callee->index());
+    RELEASE_ASSERT(replacement);
+    return replacement;
+}
+
+WASM_IPINT_EXTERN_CPP_DECL(simd_go_straight_to_bbq, CallFrame* cfr)
+{
+    auto* callee = IPINT_CALLEE(cfr);
+
+    if (!Options::useWasmSIMD())
+        RELEASE_ASSERT_NOT_REACHED();
+    RELEASE_ASSERT(shouldJIT(callee));
+
+    dataLogLnIf(Options::verboseOSR(), *callee, ": Entered simd_go_straight_to_bbq_osr with tierUpCounter = ", callee->tierUpCounter());
+
+    auto result = jitCompileSIMDFunction(callee, instance);
+    if (LIKELY(result.has_value()))
+        WASM_RETURN_TWO(result.value()->entrypoint().taggedPtr(), nullptr);
+
+    switch (result.error()) {
+    case Wasm::Plan::Error::OutOfMemory:
+        IPINT_THROW(Wasm::ExceptionType::OutOfMemory);
+    default:
+        break;
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
 WASM_IPINT_EXTERN_CPP_DECL(prologue_osr, CallFrame* callFrame)
 {
     Wasm::IPIntCallee* callee = IPINT_CALLEE(callFrame);
