@@ -60,10 +60,6 @@
 #endif
 #endif
 
-#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES) && !defined(CFN_HAS_ALLOW_ONLY_PARTITIONED_COOKIES)
-#undef HAVE_ALLOW_ONLY_PARTITIONED_COOKIES
-#endif
-
 #else // !USE(APPLE_INTERNAL_SDK)
 
 #include <Network/Network.h>
@@ -277,9 +273,6 @@ typedef CF_ENUM(int, CFURLCredentialPersistence)
 #endif
 #if HAVE(ALLOW_PRIVATE_ACCESS_TOKENS_FOR_THIRD_PARTY)
 @property (setter=_setAllowPrivateAccessTokensForThirdParty:) BOOL _allowPrivateAccessTokensForThirdParty;
-#endif
-#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
-@property (setter=_setAllowOnlyPartitionedCookies:) BOOL _allowOnlyPartitionedCookies;
 #endif
 @end
 

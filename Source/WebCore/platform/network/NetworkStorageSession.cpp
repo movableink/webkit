@@ -162,31 +162,19 @@ ThirdPartyCookieBlockingDecision NetworkStorageSession::thirdPartyCookieBlocking
     if (hasStorageAccess(resourceDomain, firstPartyDomain, frameID, pageID))
         return ThirdPartyCookieBlockingDecision::None;
 
-#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
-    const auto decideThirdPartyCookieBlocking = [isOptInCookiePartitioningEnabled = isOptInCookiePartitioningEnabled()] (bool shouldAllowUnpartitionedCookies) {
-        if (shouldAllowUnpartitionedCookies)
-            return ThirdPartyCookieBlockingDecision::None;
-        return isOptInCookiePartitioningEnabled ? ThirdPartyCookieBlockingDecision::AllExceptPartitioned : ThirdPartyCookieBlockingDecision::All;
-    };
-#else
-    const auto decideThirdPartyCookieBlocking = [] (bool shouldAllowUnpartitionedCookies) {
-        return shouldAllowUnpartitionedCookies ? ThirdPartyCookieBlockingDecision::None : ThirdPartyCookieBlockingDecision::All;
-    };
-#endif
-
     switch (m_thirdPartyCookieBlockingMode) {
     case ThirdPartyCookieBlockingMode::All:
         return ThirdPartyCookieBlockingDecision::All;
     case ThirdPartyCookieBlockingMode::AllExceptBetweenAppBoundDomains:
-        return decideThirdPartyCookieBlocking(shouldExemptDomainPairFromThirdPartyCookieBlocking(firstPartyDomain, resourceDomain));
+        return shouldExemptDomainPairFromThirdPartyCookieBlocking(firstPartyDomain, resourceDomain) ? ThirdPartyCookieBlockingDecision::None : ThirdPartyCookieBlockingDecision::All;
     case ThirdPartyCookieBlockingMode::AllExceptManagedDomains:
         return m_managedDomains.contains(firstPartyDomain) ? ThirdPartyCookieBlockingDecision::None : ThirdPartyCookieBlockingDecision::All;
     case ThirdPartyCookieBlockingMode::AllOnSitesWithoutUserInteraction:
         if (!hasHadUserInteractionAsFirstParty(firstPartyDomain))
-            return decideThirdPartyCookieBlocking(false);
+            return ThirdPartyCookieBlockingDecision::All;
         FALLTHROUGH;
     case ThirdPartyCookieBlockingMode::OnlyAccordingToPerDomainPolicy:
-        return decideThirdPartyCookieBlocking(!shouldBlockThirdPartyCookies(resourceDomain));
+        return shouldBlockThirdPartyCookies(resourceDomain) ? ThirdPartyCookieBlockingDecision::All : ThirdPartyCookieBlockingDecision::None;
     }
 
     ASSERT_NOT_REACHED();
@@ -412,12 +400,10 @@ void NetworkStorageSession::setThirdPartyCookieBlockingMode(ThirdPartyCookieBloc
     m_thirdPartyCookieBlockingMode = blockingMode;
 }
 
-#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
 void NetworkStorageSession::setOptInCookiePartitioningEnabled(bool enabled)
 {
     m_isOptInCookiePartitioningEnabled = enabled;
 }
-#endif
 
 #if ENABLE(APP_BOUND_DOMAINS)
 void NetworkStorageSession::setAppBoundDomains(HashSet<RegistrableDomain>&& domains)

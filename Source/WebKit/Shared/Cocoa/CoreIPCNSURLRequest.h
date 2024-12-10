@@ -145,7 +145,6 @@ struct CoreIPCNSURLRequestData {
     bool blockTrackers { false };
     bool failInsecureLoadWithHTTPSDNSRecord { false };
     bool isWebSearchContent { false };
-    bool allowOnlyPartitionedCookies { false };
     std::optional<Vector<CoreIPCNumber>> contentDispositionEncodingFallbackArray;
 };
 

@@ -141,7 +141,6 @@ header: "CoreIPCNSURLRequest.h"
     bool blockTrackers;
     bool failInsecureLoadWithHTTPSDNSRecord;
     bool isWebSearchContent;
-    bool allowOnlyPartitionedCookies;
     std::optional<Vector<WebKit::CoreIPCNumber>> contentDispositionEncodingFallbackArray;
 }
 

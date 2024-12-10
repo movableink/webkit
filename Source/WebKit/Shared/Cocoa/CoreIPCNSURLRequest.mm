@@ -202,7 +202,6 @@ CoreIPCNSURLRequest::CoreIPCNSURLRequest(NSURLRequest *request)
     SET_NSURLREQUESTDATA_PRIMITIVE(blockTrackers, NSNumber, bool);
     SET_NSURLREQUESTDATA_PRIMITIVE(failInsecureLoadWithHTTPSDNSRecord, NSNumber, bool);
     SET_NSURLREQUESTDATA_PRIMITIVE(isWebSearchContent, NSNumber, bool);
-    SET_NSURLREQUESTDATA_PRIMITIVE(allowOnlyPartitionedCookies, NSNumber, bool);
 
     NSArray *contentDispositionEncodingFallbackArray = dict[@"contentDispositionEncodingFallbackArray"];
     if ([contentDispositionEncodingFallbackArray isKindOfClass:[NSArray class]]) {
@@ -319,7 +318,6 @@ RetainPtr<id> CoreIPCNSURLRequest::toID() const
     SET_DICT_FROM_PRIMITIVE(blockTrackers, NSInteger, Bool);
     SET_DICT_FROM_PRIMITIVE(failInsecureLoadWithHTTPSDNSRecord, NSInteger, Bool);
     SET_DICT_FROM_PRIMITIVE(isWebSearchContent, NSInteger, Bool);
-    SET_DICT_FROM_PRIMITIVE(allowOnlyPartitionedCookies, NSInteger, Bool);
 
     if (m_data.contentDispositionEncodingFallbackArray) {
         auto array = adoptNS([[NSMutableArray alloc] initWithCapacity:m_data.contentDispositionEncodingFallbackArray->size()]);
