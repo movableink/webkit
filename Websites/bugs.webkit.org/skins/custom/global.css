@@ -408,6 +408,15 @@ input[type=submit]:active {
     background-color: var(--link-color);
 }
 
+.button-primary[disabled],
+.bz_query_remember input[type=submit][disabled],
+.bz_query_buttons input[type=submit][disabled],
+#submitbug[disabled] {
+    opacity: 0.8;
+    background-color: var(--submit-background-active-color);
+}
+
+
 a.button.small {
     padding: 0.3rem 1rem;
     font-size: var(--font-size-small);
