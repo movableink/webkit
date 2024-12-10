@@ -224,11 +224,11 @@ Vector<String> WebProcessPool::urlSchemesWithCustomProtocolHandlers()
 }
 
 #if ENABLE(WEB_PROCESS_SUSPENSION_DELAY)
-static Seconds criticalMemoryPressureCheckInterval()
+static Seconds memoryPressureCheckInterval()
 {
     static Seconds interval = []() {
-        auto value = CFPreferencesGetAppIntegerValue(CFSTR("DebugWebProcessCriticalMemoryPressureCheckInterval"), kCFPreferencesCurrentApplication, nullptr);
-        return value > 0 ? Seconds(value) : 30_min;
+        auto value = CFPreferencesGetAppIntegerValue(CFSTR("DebugWebProcessMemoryPressureCheckInterval"), kCFPreferencesCurrentApplication, nullptr);
+        return value > 0 ? Seconds(value) : 8_min;
     }();
     return interval;
 }
@@ -264,7 +264,7 @@ WebProcessPool::WebProcessPool(API::ProcessPoolConfiguration& configuration)
     , m_audibleActivityTimer(RunLoop::main(), this, &WebProcessPool::clearAudibleActivity)
     , m_webProcessWithMediaStreamingCounter([this](RefCounterEvent) { updateMediaStreamingActivity(); })
 #if ENABLE(WEB_PROCESS_SUSPENSION_DELAY)
-    , m_lastCriticalMemoryPressureStatusTime(ApproximateTime::now() - criticalMemoryPressureCheckInterval())
+    , m_lastMemoryPressureStatusTime(ApproximateTime::now() - memoryPressureCheckInterval())
     , m_checkMemoryPressureStatusTimer(RunLoop::main(), this, &WebProcessPool::checkMemoryPressureStatus)
 #endif
 #if ENABLE(IPC_TESTING_API)
@@ -2514,44 +2514,71 @@ void WebProcessPool::observeScriptTelemetryUpdatesIfNeeded()
 
 #if ENABLE(WEB_PROCESS_SUSPENSION_DELAY)
 
-static bool isSystemUnderCriticalMemoryPressure()
+static ASCIILiteral systemMemoryPressureStatusDescription(SystemMemoryPressureStatus status)
 {
-    static ApproximateTime lastCheckTime;
-    static constexpr Seconds checkInterval { 1_s };
-    static bool isSystemUnderCriticalMemoryPressure;
-
-    auto now = ApproximateTime::now();
-    if (lastCheckTime + checkInterval < now) {
-        lastCheckTime = now;
-
-        int level;
-        size_t length = sizeof(level);
-        sysctlbyname("kern.memorystatus_vm_pressure_level", &level, &length, nullptr, 0);
-
-        isSystemUnderCriticalMemoryPressure = (level == DISPATCH_MEMORYPRESSURE_CRITICAL);
+    switch (status) {
+    case SystemMemoryPressureStatus::Normal:
+        return "normal"_s;
+    case SystemMemoryPressureStatus::Warning:
+        return "warning"_s;
+    case SystemMemoryPressureStatus::Critical:
+        return "critical"_s;
+    default:
+        return "unknown"_s;
     }
+}
 
-    return isSystemUnderCriticalMemoryPressure;
+static SystemMemoryPressureStatus systemMemoryPressureStatus()
+{
+    int level = DISPATCH_MEMORYPRESSURE_NORMAL;
+    size_t length = sizeof(level);
+    sysctlbyname("kern.memorystatus_vm_pressure_level", &level, &length, nullptr, 0);
+
+    switch (level) {
+    case DISPATCH_MEMORYPRESSURE_WARN:
+        return SystemMemoryPressureStatus::Warning;
+    case DISPATCH_MEMORYPRESSURE_CRITICAL:
+        return SystemMemoryPressureStatus::Critical;
+    default:
+        return SystemMemoryPressureStatus::Normal;
+    }
+}
+
+static bool shouldSuspendAggressivelyBasedOnSystemMemoryPressureStatus(SystemMemoryPressureStatus status)
+{
+    static int threshold = []() {
+        auto value = CFPreferencesGetAppIntegerValue(CFSTR("DebugWebProcessMemoryPressureThresholdForAggressiveSuspension"), kCFPreferencesCurrentApplication, nullptr);
+        return value ? value : DISPATCH_MEMORYPRESSURE_WARN;
+    }();
+
+    if (status == SystemMemoryPressureStatus::Warning)
+        return threshold >= DISPATCH_MEMORYPRESSURE_WARN;
+    if (status == SystemMemoryPressureStatus::Critical)
+        return threshold >= DISPATCH_MEMORYPRESSURE_CRITICAL;
+    return false;
 }
 
 void WebProcessPool::checkMemoryPressureStatus()
 {
     auto now = ApproximateTime::now();
 
-    // Typically a WebContent process receiving a critical memory pressure notification would update
-    // this, but double check in case no WebContent processes have run recently.
-    if (isSystemUnderCriticalMemoryPressure())
-        m_lastCriticalMemoryPressureStatusTime = now;
+    // Typically a WebContent process receiving a memory pressure notification would update this,
+    // but double check in case no WebContent processes have run recently.
+    auto status = systemMemoryPressureStatus();
+    if (shouldSuspendAggressivelyBasedOnSystemMemoryPressureStatus(status)) {
+        WEBPROCESSPOOL_RELEASE_LOG(MemoryPressure, "checkMemoryPressureStatus: System is at %" PUBLIC_LOG_STRING " memory pressure level. WebContent processes will continue suspending aggressively.", systemMemoryPressureStatusDescription(status).characters());
+        m_lastMemoryPressureStatusTime = now;
+    }
 
-    auto intervalSinceLastCriticalMemoryPressureEvent = now - m_lastCriticalMemoryPressureStatusTime;
+    auto intervalSinceLastMemoryPressureEvent = now - m_lastMemoryPressureStatusTime;
 
-    if (intervalSinceLastCriticalMemoryPressureEvent >= criticalMemoryPressureCheckInterval()) {
-        WEBPROCESSPOOL_RELEASE_LOG(MemoryPressure, "checkMemoryPressureStatus: System memory pressure has been non-critical for a long period of time. WebContent processes will suspend normally.");
+    if (intervalSinceLastMemoryPressureEvent >= memoryPressureCheckInterval()) {
+        WEBPROCESSPOOL_RELEASE_LOG(MemoryPressure, "checkMemoryPressureStatus: System has not been under memory pressure for a long period of time. WebContent processes will suspend normally.");
         updateWebProcessSuspensionDelay();
         return;
     }
 
-    m_checkMemoryPressureStatusTimer.startOneShot(criticalMemoryPressureCheckInterval() - intervalSinceLastCriticalMemoryPressureEvent);
+    m_checkMemoryPressureStatusTimer.startOneShot(memoryPressureCheckInterval() - intervalSinceLastMemoryPressureEvent);
 }
 
 Seconds WebProcessPool::defaultWebProcessSuspensionDelay()
@@ -2570,37 +2597,33 @@ Seconds WebProcessPool::webProcessSuspensionDelay() const
         return value > 0 ? Seconds(value) : 10_s;
     }();
 
-    if (!m_configuration->suspendsWebProcessesAggressivelyOnCriticalMemoryPressure())
+    if (!m_configuration->suspendsWebProcessesAggressivelyOnMemoryPressure())
         return defaultWebProcessSuspensionDelay();
 
     // The system has been under critical memory pressure recently, so suspend processes faster than normal.
-    if (ApproximateTime::now() < m_lastCriticalMemoryPressureStatusTime + criticalMemoryPressureCheckInterval())
+    if (ApproximateTime::now() < m_lastMemoryPressureStatusTime + memoryPressureCheckInterval())
         return fastSuspensionDelay;
 
     return defaultWebProcessSuspensionDelay();
 }
 
-void WebProcessPool::memoryPressureStatusChangedForProcess(WebProcessProxy& process, SystemMemoryPressureStatus status)
+void WebProcessPool::memoryPressureStatusChangedForProcess(WebProcessProxy& process, SystemMemoryPressureStatus)
 {
-    if (status != SystemMemoryPressureStatus::Critical)
-        return;
+    // Read the most up-to-date status from the kernel to make sure this isn't a stale event from a
+    // suspended process that just resumed.
+    SystemMemoryPressureStatus status = systemMemoryPressureStatus();
 
-    if (process.isRunningServiceWorkers()) {
+    if (status == SystemMemoryPressureStatus::Critical && process.isRunningServiceWorkers()) {
         RefPtr store = process.websiteDataStore();
         RefPtr networkProcess = store ? store->networkProcessIfExists() : nullptr;
         if (networkProcess)
             networkProcess->terminateIdleServiceWorkers(process.coreProcessIdentifier(), [activity = process.protectedThrottler()->backgroundActivity("Idle service worker processing"_s)] { });
     }
 
-    if (!m_configuration->suspendsWebProcessesAggressivelyOnCriticalMemoryPressure())
+    if (!m_configuration->suspendsWebProcessesAggressivelyOnMemoryPressure() || !shouldSuspendAggressivelyBasedOnSystemMemoryPressureStatus(status))
         return;
 
-    // Make sure this isn't a stale critical memory pressure event from a process that suspended
-    // a long time ago and just resumed.
-    if (!isSystemUnderCriticalMemoryPressure())
-        return;
-
-    m_lastCriticalMemoryPressureStatusTime = ApproximateTime::now();
+    m_lastMemoryPressureStatusTime = ApproximateTime::now();
 
     // Immediately tell this process to update its suspension delay, which might cause it to suspend
     // and help relieve the pressure.
@@ -2608,9 +2631,9 @@ void WebProcessPool::memoryPressureStatusChangedForProcess(WebProcessProxy& proc
 
     if (m_checkMemoryPressureStatusTimer.isActive())
         return;
-    m_checkMemoryPressureStatusTimer.startOneShot(criticalMemoryPressureCheckInterval());
+    m_checkMemoryPressureStatusTimer.startOneShot(memoryPressureCheckInterval());
 
-    WEBPROCESSPOOL_RELEASE_LOG(MemoryPressure, "memoryPressureStatusChangedForProcess: Detected critical system memory pressure. WebContent processes will suspend aggressively.");
+    WEBPROCESSPOOL_RELEASE_LOG(MemoryPressure, "memoryPressureStatusChangedForProcess: System is at %" PUBLIC_LOG_STRING " memory pressure level. WebContent processes will suspend aggressively.", systemMemoryPressureStatusDescription(status).characters());
     updateWebProcessSuspensionDelay();
 }
 
