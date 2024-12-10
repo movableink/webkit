@@ -5,6 +5,8 @@ file(MAKE_DIRECTORY ${libwebrtc_DERIVED_SOURCES_DIR})
 
 enable_language(ASM)
 
+add_definitions(-DLIBYUV_DISABLE_SVE)
+
 if (NOT APPLE)
     find_package(LibVpx 1.10.0)
     if (NOT LIBVPX_FOUND)
