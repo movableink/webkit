@@ -267,6 +267,7 @@ JSPictureInPictureEvent.cpp
 JSPictureInPictureWindow.cpp
 JSPointerEvent.cpp
 JSPopStateEvent.cpp
+JSPushEvent.cpp
 JSPushSubscription.cpp
 JSRTCDTMFSender.cpp
 JSRTCDataChannel.cpp

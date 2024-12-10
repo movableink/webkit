@@ -1478,7 +1478,7 @@ struct WebCore::HTMLModelElementCamera {
 };
 
 struct WebCore::NotificationData {
-    URL defaultActionURL;
+    URL navigateURL;
     String title;
     String body;
     String iconURL;
