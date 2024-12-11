@@ -1036,6 +1036,7 @@ public:
     virtual AccessibilityChildrenVector radioButtonGroup() const = 0;
 
     bool hasPopup() const;
+    bool selfOrAncestorLinkHasPopup() const;
     virtual String popupValue() const = 0;
     virtual bool supportsHasPopup() const = 0;
     virtual bool pressedIsPresent() const = 0;
@@ -1043,6 +1044,7 @@ public:
     virtual bool supportsExpanded() const = 0;
     virtual bool supportsChecked() const = 0;
     virtual AccessibilitySortDirection sortDirection() const = 0;
+    AccessibilitySortDirection sortDirectionIncludingAncestors() const;
     virtual bool supportsRangeValue() const = 0;
     virtual String identifierAttribute() const = 0;
     virtual String linkRelValue() const = 0;
@@ -1332,7 +1334,6 @@ public:
     static bool liveRegionStatusIsEnabled(const AtomString&);
     bool supportsLiveRegion(bool excludeIfOff = true) const;
     virtual AXCoreObject* liveRegionAncestor(bool excludeIfOff = true) const = 0;
-    bool isInsideLiveRegion(bool excludeIfOff = true) const;
     virtual const String liveRegionStatus() const = 0;
     virtual const String liveRegionRelevant() const = 0;
     virtual bool liveRegionAtomic() const = 0;
@@ -1513,11 +1514,6 @@ inline SpinButtonType AXCoreObject::spinButtonType()
 {
     ASSERT_WITH_MESSAGE(isSpinButton(), "spinButtonType() should only be called on spinbuttons.");
     return incrementButton() || decrementButton() ? SpinButtonType::Composite : SpinButtonType::Standalone;
-}
-
-inline bool AXCoreObject::isInsideLiveRegion(bool excludeIfOff) const
-{
-    return liveRegionAncestor(excludeIfOff);
 }
 
 inline bool AXCoreObject::canSetTextRangeAttributes() const

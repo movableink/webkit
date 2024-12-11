@@ -3259,15 +3259,13 @@ void AccessibilityObject::setFocused(bool focus)
 
 AccessibilitySortDirection AccessibilityObject::sortDirection() const
 {
-    // Only objects that are descendant of column or row headers are allowed to have sort direction.
-    auto* header = Accessibility::findAncestor<AccessibilityObject>(*this, true, [] (const AccessibilityObject& object) {
-        auto role = object.roleValue();
-        return role == AccessibilityRole::ColumnHeader || role == AccessibilityRole::RowHeader;
-    });
-    if (!header)
+    auto role = roleValue();
+    // Only row and column headers are allowed to have aria-sort.
+    // https://w3c.github.io/aria/#aria-sort
+    if (role != AccessibilityRole::ColumnHeader && role != AccessibilityRole::RowHeader)
         return AccessibilitySortDirection::Invalid;
 
-    auto& sortAttribute = header->getAttribute(aria_sortAttr);
+    auto& sortAttribute = getAttribute(aria_sortAttr);
     if (sortAttribute.isNull())
         return AccessibilitySortDirection::None;
 
@@ -3934,10 +3932,9 @@ AccessibilityRole AccessibilityObject::buttonRoleType() const
     // https://www.w3.org/TR/wai-aria#aria-pressed
     if (pressedIsPresent())
         return AccessibilityRole::ToggleButton;
-    if (hasPopup())
+    if (selfOrAncestorLinkHasPopup())
         return AccessibilityRole::PopUpButton;
-    // We don't contemplate AccessibilityRole::RadioButton, as it depends on the input
-    // type.
+    // We don't contemplate AccessibilityRole::RadioButton, as it depends on the input type.
 
     return AccessibilityRole::Button;
 }

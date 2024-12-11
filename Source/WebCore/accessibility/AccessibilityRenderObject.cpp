@@ -2140,7 +2140,7 @@ AccessibilityRole AccessibilityRenderObject::determineAccessibilityRole()
         return AccessibilityRole::ImageMap;
     if (m_renderer->isImage()) {
         if (is<HTMLInputElement>(node))
-            return hasPopup() ? AccessibilityRole::PopUpButton : AccessibilityRole::Button;
+            return selfOrAncestorLinkHasPopup() ? AccessibilityRole::PopUpButton : AccessibilityRole::Button;
 
         if (auto* svgRoot = remoteSVGRootElement(Create)) {
             if (svgRoot->hasAccessibleContent())
