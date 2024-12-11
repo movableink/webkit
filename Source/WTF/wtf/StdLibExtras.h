@@ -931,6 +931,17 @@ void memsetSpan(std::span<T, Extent> destination, uint8_t byte)
     memset(destination.data(), byte, destination.size_bytes());
 }
 
+template<typename T, std::size_t Extent>
+void secureMemsetSpan(std::span<T, Extent> destination, uint8_t byte)
+{
+    static_assert(std::is_trivially_copyable_v<T>);
+#ifdef __STDC_LIB_EXT1__
+    memset_s(destination.data(), byte, destination.size_bytes());
+#else
+    memset(destination.data(), byte, destination.size_bytes());
+#endif
+}
+
 template<typename T> concept ByteType = sizeof(T) == 1 && ((std::is_integral_v<T> && !std::same_as<T, bool>) || std::same_as<T, std::byte>) && !std::is_const_v<T>;
 
 template<typename> struct ByteCastTraits;
@@ -1203,6 +1214,7 @@ using WTF::roundUpToMultipleOf;
 using WTF::roundUpToMultipleOfNonPowerOfTwo;
 using WTF::roundDownToMultipleOf;
 using WTF::safeCast;
+using WTF::secureMemsetSpan;
 using WTF::singleElementSpan;
 using WTF::spanConstCast;
 using WTF::spanReinterpretCast;

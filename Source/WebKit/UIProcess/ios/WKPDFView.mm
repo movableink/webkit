@@ -47,6 +47,7 @@
 #import <wtf/BlockPtr.h>
 #import <wtf/MainThread.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/StdLibExtras.h>
 #import <wtf/WeakObjCPtr.h>
 #import <wtf/cocoa/Entitlements.h>
 #import <wtf/cocoa/NSURLExtras.h>
@@ -177,7 +178,7 @@ static void* kvoContext = &kvoContext;
     [[_hostViewController view] removeFromSuperview];
     [_pageNumberIndicator removeFromSuperview];
     [_keyboardScrollingAnimator invalidate];
-    std::memset(_passwordForPrinting.mutableData(), 0, _passwordForPrinting.length());
+    secureMemsetSpan(_passwordForPrinting.mutableSpan(), 0);
 #if HAVE(UIFINDINTERACTION)
     _searchAggregator = nil;
     _searchString = nil;
