@@ -1229,6 +1229,9 @@ Ref<BindGroup> Device::createBindGroup(const WGPUBindGroupDescriptor& descriptor
     argumentBuffer[ShaderStage::Fragment].label = bindGroupLayout->fragmentArgumentEncoder().label;
     argumentBuffer[ShaderStage::Compute].label = bindGroupLayout->computeArgumentEncoder().label;
 
+    std::sort(dynamicBuffers.begin(), dynamicBuffers.end(), [](const BindGroup::BufferAndType& a, const BindGroup::BufferAndType& b) {
+        return a.bindingIndex < b.bindingIndex;
+    });
     return BindGroup::create(argumentBuffer[ShaderStage::Vertex], argumentBuffer[ShaderStage::Fragment], argumentBuffer[ShaderStage::Compute], WTFMove(resources), bindGroupLayout, WTFMove(dynamicBuffers), WTFMove(samplersSet), WTFMove(externalTextureIndices), *this);
 #undef VALIDATION_ERROR
 #undef INTERNAL_ERROR_STRING
