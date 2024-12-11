@@ -349,6 +349,7 @@ namespace JSC { namespace DFG {
     macro(StringIndexOf, NodeResultInt32) \
     \
     /* Optimizations for string access */ \
+    macro(StringAt, NodeResultJS) \
     macro(StringCharCodeAt, NodeResultInt32) \
     macro(StringCodePointAt, NodeResultInt32) \
     macro(StringCharAt, NodeResultJS) \
