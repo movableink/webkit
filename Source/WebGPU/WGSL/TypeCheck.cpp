@@ -250,6 +250,7 @@ private:
     Vector<Error> m_errors;
     Vector<BreakTarget> m_breakTargetStack;
     HashMap<String, OverloadedDeclaration> m_overloadedOperations;
+    HashMap<String, AST::IdentifierExpression*> m_arrayCountOverrides;
 };
 
 TypeChecker::TypeChecker(ShaderModule& shaderModule)
@@ -1769,12 +1770,18 @@ void TypeChecker::visit(AST::ArrayTypeExpression& array)
             }
             size = { static_cast<unsigned>(elementCount) };
         } else {
-            m_shaderModule.addOverrideValidation(*array.maybeElementCount(), [&](const ConstantValue& elementCount) -> std::optional<String> {
+            auto* countExpression = array.maybeElementCount();
+            if (auto* identifier = dynamicDowncast<AST::IdentifierExpression>(countExpression)) {
+                auto result = m_arrayCountOverrides.add(identifier->identifier().id(), identifier);
+                countExpression = result.iterator->value;
+            }
+
+            m_shaderModule.addOverrideValidation(*countExpression, [&](const ConstantValue& elementCount) -> std::optional<String> {
                 if (elementCount.integerValue() < 1)
                     return { "array count must be greater than 0"_s };
                 return std::nullopt;
             });
-            size = { array.maybeElementCount() };
+            size = { countExpression };
         }
     }
 
