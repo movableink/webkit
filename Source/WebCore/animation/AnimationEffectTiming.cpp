@@ -62,7 +62,7 @@ void AnimationEffectTiming::updateComputedProperties(std::optional<WebAnimationT
             // Set start delay and end delay to 0, as it is not possible to mix time and proportions.
             startDelay = WebAnimationTime::fromPercentage(0);
             endDelay = WebAnimationTime::fromPercentage(0);
-            iterationDuration = std::isinf(iterations) ? WebAnimationTime::fromPercentage(0) : *timelineDuration;
+            iterationDuration = std::isinf(iterations) ? WebAnimationTime::fromPercentage(0) : *timelineDuration / iterations;
         } else if (auto totalTime = specifiedEndTime()) {
             auto sanitize = [&](const WebAnimationTime& time) {
                 if (time.isInfinity() || time.isNaN())
