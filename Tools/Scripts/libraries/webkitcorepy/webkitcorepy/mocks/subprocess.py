@@ -154,7 +154,6 @@ class Subprocess(ContextStack):
             return candidates
 
         raise FileNotFoundError("No such file or directory: '{path}': '{path}'".format(path=program))
-        raise OSError('[Errno 2] No such file or directory')
 
     @classmethod
     def completion_for(cls, *args, **kwargs):

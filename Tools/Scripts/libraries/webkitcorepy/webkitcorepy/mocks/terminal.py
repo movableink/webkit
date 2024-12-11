@@ -36,6 +36,3 @@ class Terminal(object):
             return args[cls.index - 1]
 
         return patch('builtins.input', new=function)
-
-        import __builtin__
-        return patch.object(__builtin__, 'raw_input', new=function)
