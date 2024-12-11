@@ -5130,10 +5130,10 @@ void WebPage::drawToPDFiOS(WebCore::FrameIdentifier frameID, const PrintInfo& pr
         auto originalLayoutViewportOverrideRect = frameView.layoutViewportOverrideRect();
         frameView.setLayoutViewportOverrideRect(LayoutRect(snapshotRect));
 
-        auto pdfData = pdfSnapshotAtSize(snapshotRect, snapshotSize, { });
+        auto buffer = pdfSnapshotAtSize(snapshotRect, snapshotSize, { });
 
         frameView.setLayoutViewportOverrideRect(originalLayoutViewportOverrideRect);
-        reply(SharedBuffer::create(pdfData.get()));
+        reply(WTFMove(buffer));
         return;
     }
 

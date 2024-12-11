@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2009 Dirk Schulze <krit@webkit.org>
  * Copyright (C) Research In Motion Limited 2011. All rights reserved.
- * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,6 +43,7 @@
 #include <wtf/text/MakeString.h>
 
 #if USE(CG)
+#include "ImageBufferCGPDFDocumentBackend.h"
 #include "ImageBufferUtilitiesCG.h"
 #endif
 
@@ -99,6 +100,12 @@ RefPtr<ImageBuffer> ImageBuffer::create(const FloatSize& size, RenderingMode ren
         return create<ImageBufferPlatformBitmapBackend>(size, resolutionScale, colorSpace, pixelFormat, purpose, { });
 
     case RenderingMode::PDFDocument:
+#if USE(CG)
+        return ImageBuffer::create<ImageBufferCGPDFDocumentBackend>(size, resolutionScale, colorSpace, pixelFormat, purpose, { });
+#else
+        return nullptr;
+#endif
+
     case RenderingMode::DisplayList:
         return nullptr;
     }
@@ -548,6 +555,13 @@ void ImageBuffer::putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& 
     auto destinationPointScaled = destinationPoint;
     destinationPointScaled.scale(resolutionScale());
     backend->putPixelBuffer(pixelBuffer, sourceRectScaled, destinationPointScaled, destinationFormat);
+}
+
+RefPtr<SharedBuffer> ImageBuffer::sinkToPDFDocument()
+{
+    if (auto* backend = ensureBackend())
+        return backend->sinkToPDFDocument();
+    return nullptr;
 }
 
 bool ImageBuffer::isInUse() const
