@@ -190,6 +190,18 @@ ExceptionOr<void> AnimationEffect::updateTiming(Document& document, std::optiona
         }
     }
 
+    if (auto iterations = timing->iterations) {
+        // https://github.com/w3c/csswg-drafts/issues/11343
+        if (std::isinf(*iterations)) {
+            if (RefPtr animation = m_animation.get()) {
+                if (RefPtr timeline = animation->timeline()) {
+                    if (timeline->isProgressBased())
+                        return Exception { ExceptionCode::TypeError, "The number of iterations cannot be set to Infinity for progress-based animations"_s };
+                }
+            }
+        }
+    }
+
     // 4. If the easing member of input is present but cannot be parsed using the <timing-function> production [CSS-EASING-1], throw a TypeError and abort this procedure.
     if (!timing->easing.isNull()) {
         CSSParserContext parsingContext(document);
