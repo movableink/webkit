@@ -2564,6 +2564,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     rendering/style/StyleDeprecatedFlexibleBoxData.h
     rendering/style/StyleFilterData.h
     rendering/style/StyleFlexibleBoxData.h
+    rendering/style/StyleFontData.h
     rendering/style/StyleGridData.h
     rendering/style/StyleGridItemData.h
     rendering/style/StyleImage.h

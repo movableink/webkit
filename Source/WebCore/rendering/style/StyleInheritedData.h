@@ -27,12 +27,15 @@
 #include "FontCascade.h"
 #include "Length.h"
 #include "StyleColor.h"
+#include <wtf/DataRef.h>
 
 namespace WTF {
 class TextStream;
 }
 
 namespace WebCore {
+
+class StyleFontData;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleInheritedData);
 class StyleInheritedData : public RefCounted<StyleInheritedData> {
@@ -59,7 +62,7 @@ public:
     Length specifiedLineHeight;
 #endif
 
-    FontCascade fontCascade;
+    DataRef<StyleFontData> fontData;
     Color color;
     Color visitedLinkColor;
 

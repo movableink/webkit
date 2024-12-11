@@ -2369,6 +2369,8 @@ imported/w3c/web-platform-tests/svg/text/reftests/xml-lang-attribute.svg [ Image
 imported/w3c/web-platform-tests/svg/text/reftests/textpath-side-001.svg [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/svg/text/reftests/text-font-face-load-image.html [ Skip ]
 
+webkit.org/b/283954 imported/w3c/web-platform-tests/svg/text/reftests/transform-dynamic-change-root.html [ ImageOnlyFailure ]
+
 [ Debug ] fast/loader/document-with-fragment-url-3.html [ Pass Timeout ]
 [ Debug ] fast/loader/document-with-fragment-url-4.html [ Pass Timeout ]
 
