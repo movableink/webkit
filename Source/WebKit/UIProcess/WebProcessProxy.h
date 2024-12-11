@@ -36,6 +36,7 @@
 #include "ProcessThrottler.h"
 #include "RemoteWorkerInitializationData.h"
 #include "ResponsivenessTimer.h"
+#include "ScopedActiveMessageReceiveQueue.h"
 #include "SharedPreferencesForWebProcess.h"
 #include "SpeechRecognitionServer.h"
 #include "UserContentControllerIdentifier.h"
@@ -814,7 +815,7 @@ private:
     WebCore::ProcessIdentity m_processIdentity;
 
 #if ENABLE(LOGD_BLOCKING_IN_WEBCONTENT)
-    LogStream m_logStream;
+    IPC::ScopedActiveMessageReceiveQueue<LogStream> m_logStream;
 #endif
 };
 

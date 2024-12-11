@@ -1420,8 +1420,8 @@ $(PROJECT_DIR)/dom/DeviceMotionEvent.idl
 $(PROJECT_DIR)/dom/DeviceOrientationEvent.idl
 $(PROJECT_DIR)/dom/DeviceOrientationOrMotionEvent.idl
 $(PROJECT_DIR)/dom/DeviceOrientationOrMotionPermissionState.idl
-$(PROJECT_DIR)/dom/Document+CaretPositionFromPoint.idl
 $(PROJECT_DIR)/dom/Document+CSSOMView.idl
+$(PROJECT_DIR)/dom/Document+CaretPositionFromPoint.idl
 $(PROJECT_DIR)/dom/Document+Fullscreen.idl
 $(PROJECT_DIR)/dom/Document+HTML.idl
 $(PROJECT_DIR)/dom/Document+HTMLObsolete.idl
@@ -1930,6 +1930,7 @@ $(PROJECT_DIR)/page/WindowSessionStorage.idl
 $(PROJECT_DIR)/page/WorkerNavigator.idl
 $(PROJECT_DIR)/page/csp/CSPViolationReportBody.idl
 $(PROJECT_DIR)/platform/ColorData.gperf
+$(PROJECT_DIR)/platform/LogMessages.in
 $(PROJECT_DIR)/platform/network/HTTPHeaderNames.in
 $(PROJECT_DIR)/platform/network/create-http-header-name-table
 $(PROJECT_DIR)/plugins/DOMMimeType.idl
