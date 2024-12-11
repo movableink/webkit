@@ -38,9 +38,31 @@
 
 namespace WebCore {
 
-Ref<ScrollTimeline> ScrollTimeline::create(ScrollTimelineOptions&& options)
+Ref<ScrollTimeline> ScrollTimeline::create(Document& document, ScrollTimelineOptions&& options)
 {
-    return adoptRef(*new ScrollTimeline(WTFMove(options)));
+    // https://drafts.csswg.org/scroll-animations-1/#dom-scrolltimeline-scrolltimeline
+
+    // 1. Let timeline be the new ScrollTimeline object.
+    auto timeline = adoptRef(*new ScrollTimeline);
+
+    // 2. Set the source of timeline to:
+    if (auto optionalSource = options.source) {
+        // If the source member of options is present,
+        // The source member of options.
+        timeline->setSource(optionalSource->get());
+    } else if (RefPtr scrollingElement = Ref { document }->scrollingElement()) {
+        // Otherwise,
+        // The scrollingElement of the Document associated with the Window that is the current global object.
+        timeline->setSource(scrollingElement.get());
+    }
+
+    // 3. Set the axis property of timeline to the corresponding value from options.
+    timeline->setAxis(options.axis);
+
+    if (timeline->m_source)
+        timeline->cacheCurrentTime();
+
+    return timeline;
 }
 
 Ref<ScrollTimeline> ScrollTimeline::create(const AtomString& name, ScrollAxis axis)
@@ -79,15 +101,9 @@ Ref<ScrollTimeline> ScrollTimeline::createFromCSSValue(const CSSScrollValue& css
 // timeline duration is unresolved. For a non-monotonic (e.g. scroll) timeline,
 // the duration has a fixed upper bound. In this case, the timeline is a
 // progress-based timeline, and its timeline duration is 100%.
-ScrollTimeline::ScrollTimeline(ScrollTimelineOptions&& options)
+ScrollTimeline::ScrollTimeline()
     : AnimationTimeline(WebAnimationTime::fromPercentage(100))
-    , m_source(WTFMove(options.source))
-    , m_axis(options.axis)
 {
-    if (m_source) {
-        m_source->protectedDocument()->ensureTimelinesController().addTimeline(*this);
-        cacheCurrentTime();
-    }
 }
 
 ScrollTimeline::ScrollTimeline(const AtomString& name, ScrollAxis axis)

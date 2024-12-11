@@ -17,7 +17,6 @@ JSBackgroundFetchRegistration.cpp
 JSBackgroundFetchUpdateUIEvent.cpp
 JSBarcodeDetector.cpp
 JSBaseAudioContext.cpp
-JSBasicCredential.cpp
 JSBiquadFilterNode.cpp
 JSBlob.cpp
 JSBroadcastChannel.cpp
@@ -42,7 +41,6 @@ JSCredentialsContainer.cpp
 JSCustomElementRegistry.cpp
 JSCustomEvent.cpp
 JSDOMApplicationCache.cpp
-JSDOMCSSNamespace.cpp
 JSDOMCache.cpp
 JSDOMCacheStorage.cpp
 JSDOMFormData.cpp
@@ -185,7 +183,6 @@ JSPaymentResponse.cpp
 JSPerformance.cpp
 JSPerformanceObserver.cpp
 JSPermissions.cpp
-JSPublicKeyCredential.cpp
 JSPushManager.cpp
 JSPushSubscription.cpp
 JSRTCDTMFSender.cpp

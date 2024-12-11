@@ -37,6 +37,7 @@ namespace WebCore {
 
 class AnimationTimelinesController;
 class CSSScrollValue;
+class Document;
 class Element;
 class RenderStyle;
 class ScrollableArea;
@@ -45,7 +46,7 @@ struct TimelineRange;
 
 class ScrollTimeline : public AnimationTimeline {
 public:
-    static Ref<ScrollTimeline> create(ScrollTimelineOptions&& = { });
+    static Ref<ScrollTimeline> create(Document&, ScrollTimelineOptions&& = { });
     static Ref<ScrollTimeline> create(const AtomString&, ScrollAxis);
     static Ref<ScrollTimeline> createFromCSSValue(const CSSScrollValue&);
 
@@ -89,7 +90,7 @@ protected:
 private:
     enum class Scroller : uint8_t { Nearest, Root, Self };
 
-    explicit ScrollTimeline(ScrollTimelineOptions&& = { });
+    explicit ScrollTimeline();
     explicit ScrollTimeline(Scroller, ScrollAxis);
 
     bool isScrollTimeline() const final { return true; }
