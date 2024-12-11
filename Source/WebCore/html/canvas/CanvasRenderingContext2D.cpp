@@ -214,6 +214,12 @@ void CanvasRenderingContext2D::setFontWithoutUpdatingStyle(const String& newFont
     modifiableState().font.initialize(document.fontSelector(), *fontCascade);
     ASSERT(state().font.realized());
     ASSERT(state().font.isPopulated());
+
+    // Recompute the word and the letter spacing for the new font.
+    String letterSpacing;
+    setLetterSpacing(std::exchange(modifiableState().letterSpacing, letterSpacing));
+    String wordSpacing;
+    setWordSpacing(std::exchange(modifiableState().wordSpacing, wordSpacing));
 }
 
 inline TextDirection CanvasRenderingContext2D::toTextDirection(Direction direction, const RenderStyle** computedStyle) const

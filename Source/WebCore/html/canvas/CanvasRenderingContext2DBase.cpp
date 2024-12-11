@@ -38,7 +38,9 @@
 #include "CSSMarkup.h"
 #include "CSSParser.h"
 #include "CSSPropertyNames.h"
+#include "CSSPropertyParserConsumer+Length.h"
 #include "CSSStyleImageValue.h"
+#include "CSSTokenizer.h"
 #include "CachedImage.h"
 #include "CanvasFilterContextSwitcher.h"
 #include "CanvasGradient.h"
@@ -331,6 +333,8 @@ CanvasRenderingContext2DBase::State::State()
     , textBaseline(AlphabeticTextBaseline)
     , direction(Direction::Inherit)
     , filterString("none"_s)
+    , letterSpacing("0px"_s)
+    , wordSpacing("0px"_s)
     , unparsedFont(DefaultFont)
 {
 }
@@ -3039,6 +3043,40 @@ std::optional<CanvasRenderingContext2DBase::RenderingMode> CanvasRenderingContex
             return buffer->renderingMode();
     }
     return std::nullopt;
+}
+
+void CanvasRenderingContext2DBase::setLetterSpacing(const String& letterSpacing)
+{
+    if (state().letterSpacing == letterSpacing)
+        return;
+    realizeSaves();
+    CSSTokenizer tokenizer(letterSpacing);
+    auto tokenRange = tokenizer.tokenRange();
+    tokenRange.consumeWhitespace();
+    RefPtr parsedValue = CSSPropertyParserHelpers::consumeLength(tokenRange, HTMLStandardMode);
+    if (!parsedValue)
+        return;
+    modifiableState().letterSpacing = parsedValue->cssText();
+    auto& fontCascade = fontProxy()->fontCascade();
+    double pixels = CSSPrimitiveValue::computeUnzoomedNonCalcLengthDouble(parsedValue->primitiveType(), parsedValue->valueNoConversionDataRequired(), CSSPropertyLetterSpacing, &fontCascade);
+    modifiableState().font.setLetterSpacing(Length(pixels, LengthType::Fixed));
+}
+
+void CanvasRenderingContext2DBase::setWordSpacing(const String& wordSpacing)
+{
+    if (state().wordSpacing == wordSpacing)
+        return;
+    realizeSaves();
+    CSSTokenizer tokenizer(wordSpacing);
+    auto tokenRange = tokenizer.tokenRange();
+    tokenRange.consumeWhitespace();
+    RefPtr parsedValue = CSSPropertyParserHelpers::consumeLength(tokenRange, HTMLStandardMode);
+    if (!parsedValue)
+        return;
+    modifiableState().wordSpacing = parsedValue->cssText();
+    auto& fontCascade = fontProxy()->fontCascade();
+    double pixels = CSSPrimitiveValue::computeUnzoomedNonCalcLengthDouble(parsedValue->primitiveType(), parsedValue->valueNoConversionDataRequired(), CSSPropertyWordSpacing, &fontCascade);
+    modifiableState().font.setWordSpacing(Length(pixels, LengthType::Fixed));
 }
 
 } // namespace WebCore
