@@ -2452,6 +2452,11 @@ table.attachment_entry {
     background-color: var(--input-background-color);
 }
 
+/** Bug Activity **/
+#bug-activity {
+    width: 100%;
+}
+
 /** Reports pages **/
 #duplicates_table th, #duplicates_table td {
     border: none;
