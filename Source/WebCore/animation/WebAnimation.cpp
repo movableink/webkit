@@ -575,8 +575,8 @@ double WebAnimation::effectivePlaybackRate() const
 
 void WebAnimation::setPlaybackRate(double newPlaybackRate)
 {
-    // 3.4.17.1. Updating the playback rate of an animation
-    // https://drafts.csswg.org/web-animations-1/#updating-the-playback-rate-of-an-animation
+    // Setting the playback rate of an animation
+    // https://drafts.csswg.org/web-animations-1/#setting-the-playback-rate-of-an-animation
 
     // 1. Clear any pending playback rate on animation.
     m_pendingPlaybackRate = std::nullopt;
@@ -584,12 +584,26 @@ void WebAnimation::setPlaybackRate(double newPlaybackRate)
     // 2. Let previous time be the value of the current time of animation before changing the playback rate.
     auto previousTime = currentTime();
 
-    // 3. Set the playback rate to new playback rate.
+    // 3. Let previous playback rate be the current effective playback rate of animation.
+    auto previousPlaybackRate = effectivePlaybackRate();
+
+    // 4. Set the playback rate to new playback rate.
     m_playbackRate = newPlaybackRate;
 
-    // 4. If previous time is resolved, set the current time of animation to previous time.
-    if (previousTime)
+    // 5. Perform the steps corresponding to the first matching condition from the following, if any:
+    if (m_timeline && m_timeline->isMonotonic() && previousTime) {
+        // If animation is associated with a monotonically increasing timeline and the previous time is resolved,
+        // Set the current time of animation to previous time.
         setCurrentTime(previousTime);
+    } else if (m_timeline && !m_timeline->isMonotonic() && m_startTime && !effectEndTime().isInfinity()
+        && ((previousPlaybackRate < 0 && m_playbackRate >= 0) || (previousPlaybackRate >= 0 && m_playbackRate < 0))) {
+        // If animation is associated with a non-null timeline that is not monotonically increasing,
+        // the start time of animation is resolved, associated effect end is not infinity, and either:
+        // - the previous playback rate < 0 and the new playback rate ≥ 0, or
+        // - the previous playback rate ≥ 0 and the new playback rate < 0,
+        // Set animation's start time to the result of evaluating associated effect end − start time for animation.
+        m_startTime = effectEndTime() - *m_startTime;
+    }
 
     if (m_effect) {
         m_effect->animationDidChangeTimingProperties();
