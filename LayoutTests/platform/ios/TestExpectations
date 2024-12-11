@@ -7581,3 +7581,5 @@ fast/events/ios/keydown-keyup-arrow-keys-in-non-editable-element.html [ Skip ]
 fast/events/ios/keydown-keyup-in-non-editable-content.html [ Skip ]
 fast/events/ios/keydown-keyup-special-keys-in-non-editable-element.html [ Skip ]
 fast/events/ios/tab-cycle.html [ Skip ]
+
+webkit.org/b/284419 imported/w3c/web-platform-tests/html/rendering/the-details-element/details-pseudo-elements-006.html [ Failure ]
