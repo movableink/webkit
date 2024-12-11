@@ -26,13 +26,9 @@
 #pragma once
 
 #include "APIObject.h"
-#include "CallbackID.h"
-#include "DrawingAreaInfo.h"
 #include "EventDispatcher.h"
-#include "GeolocationIdentifier.h"
 #include "IdentifierTypes.h"
 #include "InjectedBundlePageFullScreenClient.h"
-#include "LayerTreeContext.h"
 #include "MediaPlaybackState.h"
 #include "MessageReceiver.h"
 #include "MessageSender.h"
@@ -41,14 +37,11 @@
 #include "StorageNamespaceIdentifier.h"
 #include "TransactionID.h"
 #include "UserContentControllerIdentifier.h"
-#include "UserData.h"
 #include "VisitedLinkTableIdentifier.h"
-#include "WebBackForwardListProxy.h"
 #include "WebEventType.h"
 #include "WebPageProxyIdentifier.h"
 #include "WebURLSchemeHandlerIdentifier.h"
 #include "WebUndoStepID.h"
-#include "WebsitePoliciesData.h"
 #include <JavaScriptCore/InspectorFrontendChannel.h>
 #include <WebCore/DictionaryPopupInfo.h>
 #include <WebCore/DisabledAdaptations.h>
@@ -205,6 +198,7 @@ class HTMLPlugInElement;
 class HTMLSelectElement;
 class HTMLVideoElement;
 class HandleUserInputEventResult;
+class HistoryItem;
 class IgnoreSelectionChangeForScope;
 class IntPoint;
 class IntRect;
@@ -230,8 +224,6 @@ class SubstituteData;
 class TextCheckingRequest;
 class VisiblePosition;
 
-enum class LayoutMilestone : uint16_t;
-
 enum class ActivityState : uint16_t;
 enum class COEPDisposition : bool;
 enum class CaretAnimatorType : uint8_t;
@@ -241,6 +233,7 @@ enum class DOMPasteAccessCategory : uint8_t;
 enum class DOMPasteAccessResponse : uint8_t;
 enum class DragApplicationFlags : uint8_t;
 enum class DragHandlingMethod : uint8_t;
+enum class DeviceOrientationOrMotionPermissionState : uint8_t;
 enum class EventHandling : uint8_t;
 enum class EventMakesGamepadsVisible : bool;
 enum class ExceptionCode : uint8_t;
@@ -250,6 +243,7 @@ enum class ImageDecodingError : uint8_t;
 enum class InputMode : uint8_t;
 enum class IsLoggedIn : uint8_t;
 enum class LayerTreeAsTextOptions : uint16_t;
+enum class LayoutMilestone : uint16_t;
 enum class LinkDecorationFilteringTrigger : uint8_t;
 enum class MediaConstraintType : uint8_t;
 enum class MediaProducerMediaCaptureKind : uint8_t;
@@ -275,6 +269,7 @@ enum class PaginationMode : uint8_t;
 
 struct AppHighlight;
 struct AttributedString;
+struct BackForwardItemIdentifierType;
 struct CharacterRange;
 struct CompositionHighlight;
 struct CompositionUnderline;
@@ -288,12 +283,19 @@ struct ExceptionDetails;
 struct FontAttributes;
 struct GlobalFrameIdentifier;
 struct GlobalWindowIdentifier;
+#if ENABLE(ATTACHMENT_ELEMENT)
+class HTMLAttachmentElement;
+#endif
+#if ENABLE(IOS_TOUCH_EVENTS)
+class HandleUserInputEventResult;
+#endif
 struct InteractionRegion;
 struct KeypressCommand;
 struct MarkupExclusionRule;
 struct MediaDeviceHashSalts;
 struct MediaUsageInfo;
 struct MessageWithMessagePorts;
+struct NavigationIdentifierType;
 struct NowPlayingInfo;
 struct ProcessSyncData;
 struct PromisedAttachmentInfo;
@@ -307,24 +309,17 @@ struct TextAnimationData;
 struct TextCheckingResult;
 struct TextRecognitionOptions;
 struct TextRecognitionResult;
-struct ViewportArguments;
-
-using DictationContext = ObjectIdentifier<DictationContextType>;
-using MediaProducerMediaStateFlags = OptionSet<MediaProducerMediaState>;
-using MediaProducerMutedStateFlags = OptionSet<MediaProducerMutedState>;
-using PlatformDisplayID = uint32_t;
-
-#if ENABLE(ATTACHMENT_ELEMENT)
-class HTMLAttachmentElement;
-#endif
-
-#if ENABLE(IOS_TOUCH_EVENTS)
-class HandleUserInputEventResult;
-#endif
-
 #if HAVE(TRANSLATION_UI_SERVICES) && ENABLE(CONTEXT_MENUS)
 struct TranslationContextMenuInfo;
 #endif
+struct ViewportArguments;
+
+using BackForwardItemIdentifier = ProcessQualified<ObjectIdentifier<BackForwardItemIdentifierType>>;
+using DictationContext = ObjectIdentifier<DictationContextType>;
+using MediaProducerMediaStateFlags = OptionSet<MediaProducerMediaState>;
+using MediaProducerMutedStateFlags = OptionSet<MediaProducerMutedState>;
+using NavigationIdentifier = ObjectIdentifier<NavigationIdentifierType, uint64_t>;
+using PlatformDisplayID = uint32_t;
 
 namespace TextExtraction {
 struct Item;
@@ -350,6 +345,7 @@ using TextSuggestionID = WTF::UUID;
 
 namespace WebKit {
 
+class CallbackID;
 class ContextMenuContextData;
 class DrawingArea;
 class FindController;
@@ -366,10 +362,17 @@ class ModelProcessConnection;
 class NotificationPermissionRequestManager;
 class PDFPluginBase;
 class PageBanner;
+#if ENABLE(WEBXR) && !USE(OPENXR)
+class PlatformXRSystemProxy;
+#endif
 class PluginView;
+class RemoteLayerTreeTransaction;
 class RemoteMediaSessionCoordinator;
 class RemoteRenderingBackendProxy;
 class RemoteWebInspectorUI;
+#if ENABLE(REVEAL)
+class RevealItem;
+#endif
 class SandboxExtension;
 class SandboxExtensionHandle;
 class SharedMemoryHandle;
@@ -386,8 +389,15 @@ class WebEvent;
 class WebFoundTextRangeController;
 class WebHistoryItemClient;
 class PlaybackSessionManager;
+class UserData;
 class VideoPresentationManager;
+#if ENABLE(UI_SIDE_COMPOSITING)
+class VisibleContentRectUpdateInfo;
+#endif
 class WebBackForwardListItem;
+#if ENABLE(WK_WEB_EXTENSIONS) && PLATFORM(COCOA)
+class WebExtensionControllerProxy;
+#endif
 class WebFrame;
 class WebFullScreenManager;
 class WebGestureEvent;
@@ -412,13 +422,14 @@ class WebURLSchemeHandlerProxy;
 class WebUndoStep;
 class WebUserContentController;
 class WebWheelEvent;
-class RemoteLayerTreeTransaction;
 
 enum class ContentAsStringIncludesChildFrames : bool;
 enum class ContentWorldIdentifierType;
 enum class DragControllerAction : uint8_t;
+enum class DrawingAreaType : uint8_t;
 enum class FindOptions : uint16_t;
 enum class FindDecorationStyle : uint8_t;
+enum class LayerHostingMode : uint8_t;
 enum class NavigatingToAppBoundDomain : bool;
 enum class SnapshotOption : uint16_t;
 enum class SyntheticEditingCommandType : uint8_t;
@@ -440,6 +451,7 @@ struct FrameTreeCreationParameters;
 struct FrameTreeNodeData;
 struct FocusedElementInformation;
 struct FrameTreeNodeData;
+struct GeolocationIdentifierType;
 struct GoToBackForwardItemParameters;
 #if PLATFORM(IOS_FAMILY)
 struct HardwareKeyboardState;
@@ -461,32 +473,18 @@ struct WebFoundTextRange;
 struct WebHitTestResultData;
 struct WebPageCreationParameters;
 struct WebPreferencesStore;
+struct WebsitePoliciesData;
 
+using ActivityStateChangeID = uint64_t;
 using ContentWorldIdentifier = ObjectIdentifier<ContentWorldIdentifierType>;
-
-#if ENABLE(UI_SIDE_COMPOSITING)
-class VisibleContentRectUpdateInfo;
-#endif
-
-#if ENABLE(REVEAL)
-class RevealItem;
-#endif
-
-#if ENABLE(WK_WEB_EXTENSIONS) && PLATFORM(COCOA)
-class WebExtensionControllerProxy;
-#endif
-
-#if ENABLE(WEBXR) && !USE(OPENXR)
-class PlatformXRSystemProxy;
-#endif
+using GeolocationIdentifier = ObjectIdentifier<GeolocationIdentifierType>;
+using SnapshotOptions = OptionSet<SnapshotOption>;
+using WKEventModifiers = uint32_t;
 
 enum class DisallowLayoutViewportHeightExpansionReason : uint8_t {
     ElementFullScreen       = 1 << 0,
     LargeContainer          = 1 << 1,
 };
-
-using SnapshotOptions = OptionSet<SnapshotOption>;
-using WKEventModifiers = uint32_t;
 
 class WebPage final : public API::ObjectImpl<API::Object::Type::BundlePage>, public IPC::MessageReceiver, public IPC::MessageSender {
 public:
@@ -494,8 +492,8 @@ public:
 
     virtual ~WebPage();
 
-    void ref() const final { API::ObjectImpl<API::Object::Type::BundlePage>::ref(); }
-    void deref() const final { API::ObjectImpl<API::Object::Type::BundlePage>::deref(); }
+    void ref() const final;
+    void deref() const final;
 
     void reinitializeWebPage(WebPageCreationParameters&&);
 
@@ -2832,7 +2830,6 @@ private:
     UserActivity m_userActivity;
 
     Markable<WebCore::NavigationIdentifier> m_pendingNavigationID;
-    std::optional<WebsitePoliciesData> m_pendingWebsitePolicies;
 
     bool m_mainFrameProgressCompleted { false };
     bool m_shouldDispatchFakeMouseMoveEvents { true };

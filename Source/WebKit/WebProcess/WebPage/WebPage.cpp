@@ -516,6 +516,16 @@ Ref<WebPage> WebPage::create(PageIdentifier pageID, WebPageCreationParameters&& 
     return page;
 }
 
+void WebPage::ref() const
+{
+    API::ObjectImpl<API::Object::Type::BundlePage>::ref();
+}
+
+void WebPage::deref() const
+{
+    API::ObjectImpl<API::Object::Type::BundlePage>::deref();
+}
+
 static Vector<UserContentURLPattern> parseAndAllowAccessToCORSDisablingPatterns(const Vector<String>& input)
 {
     return WTF::compactMap(input, [](auto& pattern) -> std::optional<UserContentURLPattern> {
@@ -2105,7 +2115,7 @@ void WebPage::loadRequest(LoadParameters&& loadParameters)
     SendStopResponsivenessTimer stopper;
 
     m_pendingNavigationID = loadParameters.navigationID;
-    m_pendingWebsitePolicies = WTFMove(loadParameters.websitePolicies);
+    m_internals->pendingWebsitePolicies = WTFMove(loadParameters.websitePolicies);
 
     m_sandboxExtensionTracker.beginLoad(WTFMove(loadParameters.sandboxExtensionHandle));
 
@@ -2139,7 +2149,7 @@ void WebPage::loadRequest(LoadParameters&& loadParameters)
     localFrame->loader().load(WTFMove(frameLoadRequest));
 
     ASSERT(!m_pendingNavigationID);
-    ASSERT(!m_pendingWebsitePolicies);
+    ASSERT(!m_internals->pendingWebsitePolicies);
 }
 
 // LoadRequestWaitingForProcessLaunch should never be sent to the WebProcess. It must always be converted to a LoadRequest message.
@@ -2160,7 +2170,7 @@ void WebPage::loadDataImpl(std::optional<WebCore::NavigationIdentifier> navigati
     SendStopResponsivenessTimer stopper;
 
     m_pendingNavigationID = navigationID;
-    m_pendingWebsitePolicies = WTFMove(websitePolicies);
+    m_internals->pendingWebsitePolicies = WTFMove(websitePolicies);
 
     SubstituteData substituteData(WTFMove(sharedBuffer), unreachableURL, response, sessionHistoryVisibility);
 
@@ -2335,7 +2345,7 @@ void WebPage::goToBackForwardItem(GoToBackForwardItemParameters&& parameters)
 
     ASSERT(!m_pendingNavigationID);
     m_pendingNavigationID = parameters.navigationID;
-    m_pendingWebsitePolicies = WTFMove(parameters.websitePolicies);
+    m_internals->pendingWebsitePolicies = WTFMove(parameters.websitePolicies);
 
     Ref targetFrame = m_mainFrame;
     if (!item->wasRestoredFromSession()) {
@@ -8097,10 +8107,10 @@ Ref<DocumentLoader> WebPage::createDocumentLoader(LocalFrame& frame, const Resou
             m_pendingNavigationID = std::nullopt;
         }
 
-        if (m_pendingWebsitePolicies && frame.isMainFrame()) {
-            m_allowsContentJavaScriptFromMostRecentNavigation = m_pendingWebsitePolicies->allowsContentJavaScript;
-            WebsitePoliciesData::applyToDocumentLoader(WTFMove(*m_pendingWebsitePolicies), documentLoader);
-            m_pendingWebsitePolicies = std::nullopt;
+        if (m_internals->pendingWebsitePolicies && frame.isMainFrame()) {
+            m_allowsContentJavaScriptFromMostRecentNavigation = m_internals->pendingWebsitePolicies->allowsContentJavaScript;
+            WebsitePoliciesData::applyToDocumentLoader(WTFMove(*m_internals->pendingWebsitePolicies), documentLoader);
+            m_internals->pendingWebsitePolicies = std::nullopt;
         }
     }
 

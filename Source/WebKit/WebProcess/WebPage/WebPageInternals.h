@@ -43,6 +43,7 @@ struct WebPage::Internals {
     WebCore::CreateNewGroupForHighlight highlightIsNewGroup { WebCore::CreateNewGroupForHighlight::No };
     WebCore::HighlightRequestOriginatedInApp highlightRequestOriginatedInApp { WebCore::HighlightRequestOriginatedInApp::No };
 #endif
+    std::optional<WebsitePoliciesData> pendingWebsitePolicies;
 };
 
 } // namespace WebKit
