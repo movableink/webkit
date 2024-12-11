@@ -11014,6 +11014,8 @@ void Document::clearRenderingIsSuppressedForViewTransition()
     if (std::exchange(m_renderingIsSuppressedForViewTransition, false)) {
         if (CheckedPtr view = renderView())
             view->compositor().setRenderingIsSuppressed(false);
+
+        scheduleRenderingUpdate({ });
     }
 }
 
@@ -11026,6 +11028,7 @@ void Document::flushDeferredRenderingIsSuppressedForViewTransitionChanges()
 // https://drafts.csswg.org/css-view-transitions/#ViewTransition-prepare
 RefPtr<ViewTransition> Document::startViewTransition(StartViewTransitionCallbackOptions&& callbackOptions)
 {
+    LOG_WITH_STREAM(ViewTransitions, stream << "Document " << this << " startViewTransition");
     if (!globalObject())
         return nullptr;
 

@@ -41,6 +41,7 @@
 #include "JSDOMPromise.h"
 #include "JSDOMPromiseDeferred.h"
 #include "LayoutRect.h"
+#include "Logging.h"
 #include "PseudoElementRequest.h"
 #include "RenderBox.h"
 #include "RenderInline.h"
@@ -56,6 +57,7 @@
 #include "WebAnimation.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
@@ -90,6 +92,9 @@ ViewTransition::~ViewTransition() = default;
 Ref<ViewTransition> ViewTransition::createSamePage(Document& document, RefPtr<ViewTransitionUpdateCallback>&& updateCallback, Vector<AtomString>&& initialActiveTypes)
 {
     Ref viewTransition = adoptRef(*new ViewTransition(document, WTFMove(updateCallback), WTFMove(initialActiveTypes)));
+
+    LOG_WITH_STREAM(ViewTransitions, stream << "ViewTransition::createSamePage created transition " << viewTransition.ptr());
+
     viewTransition->suspendIfNeeded();
     return viewTransition;
 }
@@ -165,6 +170,8 @@ void ViewTransition::skipViewTransition(ExceptionOr<JSC::JSValue>&& reason)
     if (!document())
         return;
 
+    LOG_WITH_STREAM(ViewTransitions, stream << "ViewTransition " << this << " skipViewTransition - phase " << m_phase);
+
     ASSERT(m_phase != ViewTransitionPhase::Done);
 
     if (m_phase < ViewTransitionPhase::UpdateCallbackCalled) {
@@ -231,6 +238,8 @@ void ViewTransition::callUpdateCallback()
     if (!document())
         return;
 
+    LOG_WITH_STREAM(ViewTransitions, stream << "ViewTransition " << this << " callUpdateCallback");
+
     ASSERT(m_phase < ViewTransitionPhase::UpdateCallbackCalled || m_phase == ViewTransitionPhase::Done);
 
     if (m_phase != ViewTransitionPhase::Done)
@@ -286,6 +295,7 @@ void ViewTransition::callUpdateCallback()
     });
 
     m_updateCallbackTimeout = protectedDocument()->checkedEventLoop()->scheduleTask(defaultTimeout, TaskSource::DOMManipulation, [this, weakThis = WeakPtr { *this }] {
+        LOG_WITH_STREAM(ViewTransitions, stream << "ViewTransition " << this << " update callback timed out");
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;
@@ -991,6 +1001,18 @@ UniqueRef<ViewTransitionParams> ViewTransition::takeViewTransitionParams()
     params->initialPageZoom = m_initialPageZoom;
 
     return params;
+}
+
+TextStream& operator<<(TextStream& ts, ViewTransitionPhase phase)
+{
+    switch (phase) {
+    case ViewTransitionPhase::PendingCapture: ts << "PendingCapture"; break;
+    case ViewTransitionPhase::CapturingOldState: ts << "CapturingOldState"; break;
+    case ViewTransitionPhase::UpdateCallbackCalled: ts << "UpdateCallbackCalled"; break;
+    case ViewTransitionPhase::Animating: ts << "Animating"; break;
+    case ViewTransitionPhase::Done: ts << "Done"; break;
+    }
+    return ts;
 }
 
 }
