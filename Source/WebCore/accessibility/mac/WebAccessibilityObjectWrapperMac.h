@@ -139,6 +139,7 @@ extern "C" AXUIElementRef NSAccessibilityCreateAXUIElementRef(id element);
 - (id)_associatedPluginParent;
 // For testing use only.
 - (void)_accessibilityHitTestResolvingRemoteFrame:(NSPoint)point callback:(void(^)(NSString *))callback;
+- (NSArray *)_accessibilityChildrenFromIndex:(NSUInteger)index maxCount:(NSUInteger)maxCount returnPlatformElements:(BOOL)returnPlatformElements;
 
 @end
 

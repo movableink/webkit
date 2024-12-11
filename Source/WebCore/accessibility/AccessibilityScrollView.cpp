@@ -214,6 +214,10 @@ void AccessibilityScrollView::clearChildren()
 
 bool AccessibilityScrollView::computeIsIgnored() const
 {
+    // Scroll view's that host remote frames won't have web area objects, but shouldn't be ignored so that they are also available in the isolated tree.
+    if (m_remoteFrame)
+        return false;
+
     AccessibilityObject* webArea = webAreaObject();
     if (!webArea)
         return true;

@@ -4034,59 +4034,65 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 - (NSArray *)accessibilityArrayAttributeValues:(NSString *)attribute index:(NSUInteger)index maxCount:(NSUInteger)maxCount
 {
     AXTRACE(makeString("WebAccessibilityObjectWrapper accessibilityArrayAttributeValue:"_s, String(attribute)));
+
+    if ([attribute isEqualToString:NSAccessibilityChildrenAttribute])
+        return [self _accessibilityChildrenFromIndex:index maxCount:maxCount returnPlatformElements:YES];
+
+    return [super accessibilityArrayAttributeValues:attribute index:index maxCount:maxCount];
+}
+
+- (NSArray *)_accessibilityChildrenFromIndex:(NSUInteger)index maxCount:(NSUInteger)maxCount returnPlatformElements:(BOOL)returnPlatformElements
+{
     RefPtr<AXCoreObject> backingObject = self.updateObjectBackingStore;
     if (!backingObject)
         return nil;
 
-    if ([attribute isEqualToString:NSAccessibilityChildrenAttribute]) {
-        const auto& unignoredChildren = backingObject->unignoredChildren();
-        if (unignoredChildren.isEmpty()) {
-            NSArray *children = transformSpecialChildrenCases(*backingObject, unignoredChildren);
-            if (!children)
-                return nil;
+    const auto& unignoredChildren = backingObject->unignoredChildren();
+    if (unignoredChildren.isEmpty()) {
+        NSArray *children = transformSpecialChildrenCases(*backingObject, unignoredChildren);
+        if (!children)
+            return nil;
 
-            NSUInteger childCount = [children count];
-            if (index >= childCount)
-                return nil;
-
-            NSUInteger arrayLength = std::min(childCount - index, maxCount);
-            return [children subarrayWithRange:NSMakeRange(index, arrayLength)];
-        }
-
-        if (backingObject->isTree() || backingObject->isTreeItem()) {
-            // Tree objects return their rows as their children & tree items return their contents sans rows.
-            // We can use the original method in this case.
-            return [super accessibilityArrayAttributeValues:attribute index:index maxCount:maxCount];
-        }
-
-        auto children = makeNSArray(unignoredChildren);
-        unsigned childCount = [children count];
+        NSUInteger childCount = [children count];
         if (index >= childCount)
             return nil;
 
-        unsigned available = std::min(childCount - index, maxCount);
-
-        NSMutableArray *subarray = [NSMutableArray arrayWithCapacity:available];
-        for (unsigned added = 0; added < available; ++index, ++added) {
-            WebAccessibilityObjectWrapper* wrapper = children[index];
-
-            // The attachment view should be returned, otherwise AX palindrome errors occur.
-            id attachmentView = nil;
-            if (RefPtr childObject = [wrapper isKindOfClass:[WebAccessibilityObjectWrapper class]] ? wrapper.axBackingObject : nullptr) {
-                if (childObject->isAttachment())
-                    attachmentView = [wrapper attachmentView];
-                else if (childObject->isRemoteFrame())
-                    attachmentView = childObject->remoteFramePlatformElement().get();
-            }
-
-            [subarray addObject:attachmentView ? attachmentView : wrapper];
-        }
-
-        return subarray;
+        NSUInteger arrayLength = std::min(childCount - index, maxCount);
+        return [children subarrayWithRange:NSMakeRange(index, arrayLength)];
     }
 
-    return [super accessibilityArrayAttributeValues:attribute index:index maxCount:maxCount];
+    if (backingObject->isTree() || backingObject->isTreeItem()) {
+        // Tree objects return their rows as their children & tree items return their contents sans rows.
+        // We can use the original method in this case.
+        return [super accessibilityArrayAttributeValues:NSAccessibilityChildrenAttribute index:index maxCount:maxCount];
+    }
+
+    auto children = makeNSArray(unignoredChildren, returnPlatformElements);
+    unsigned childCount = [children count];
+    if (index >= childCount)
+        return nil;
+
+    unsigned available = std::min(childCount - index, maxCount);
+
+    NSMutableArray *subarray = [NSMutableArray arrayWithCapacity:available];
+    for (unsigned added = 0; added < available; ++index, ++added) {
+        WebAccessibilityObjectWrapper* wrapper = children[index];
+
+        // The attachment view should be returned, otherwise AX palindrome errors occur.
+        id attachmentView = nil;
+        if (RefPtr childObject = [wrapper isKindOfClass:[WebAccessibilityObjectWrapper class]] ? wrapper.axBackingObject : nullptr) {
+            if (childObject->isAttachment())
+                attachmentView = [wrapper attachmentView];
+            else if (childObject->isRemoteFrame() && returnPlatformElements)
+                attachmentView = childObject->remoteFramePlatformElement().get();
+        }
+
+        [subarray addObject:attachmentView ? attachmentView : wrapper];
+    }
+
+    return subarray;
 }
+
 
 @end
 

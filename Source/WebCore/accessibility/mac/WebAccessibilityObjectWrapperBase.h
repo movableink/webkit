@@ -123,7 +123,7 @@ RetainPtr<NSAttributedString> attributedStringCreate(Node&, StringView, const Si
 
 extern WebCore::AccessibilitySearchCriteria accessibilitySearchCriteriaForSearchPredicate(WebCore::AXCoreObject&, const NSDictionary *);
 
-extern NSArray *makeNSArray(const WebCore::AXCoreObject::AccessibilityChildrenVector&);
+extern NSArray *makeNSArray(const WebCore::AXCoreObject::AccessibilityChildrenVector&, BOOL returnPlatformElements = YES);
 extern NSRange makeNSRange(std::optional<WebCore::SimpleRange>);
 extern std::optional<WebCore::SimpleRange> makeDOMRange(WebCore::Document*, NSRange);
 
