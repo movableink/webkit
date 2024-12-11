@@ -3994,8 +3994,9 @@ bool Page::useDarkAppearance() const
         return m_useDarkAppearanceOverride.value();
 
     if (RefPtr documentLoader = localMainFrame->loader().documentLoader()) {
-        if (documentLoader->colorSchemePreference() == ColorSchemePreference::Dark)
-            return true;
+        auto colorSchemePreference = documentLoader->colorSchemePreference();
+        if (colorSchemePreference != ColorSchemePreference::NoPreference)
+            return colorSchemePreference == ColorSchemePreference::Dark;
     }
 
     return m_useDarkAppearance;
