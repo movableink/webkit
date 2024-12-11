@@ -35,6 +35,7 @@
 
 namespace WebCore {
 
+class CustomElementRegistry;
 class DocumentFragment;
 class Element;
 class HTMLDocument;

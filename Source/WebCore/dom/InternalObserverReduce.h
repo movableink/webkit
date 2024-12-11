@@ -27,6 +27,10 @@
 
 #include <wtf/Forward.h>
 
+namespace JSC {
+class JSValue;
+}
+
 namespace WebCore {
 
 class DeferredPromise;
