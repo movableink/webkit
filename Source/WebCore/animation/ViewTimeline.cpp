@@ -228,11 +228,14 @@ void ViewTimeline::cacheCurrentTime()
         auto* sourceScrollableArea = scrollableAreaForSourceRenderer(sourceScrollerRenderer(), m_subject->document());
         if (!sourceScrollableArea)
             return { };
+        auto scrollDirection = resolvedScrollDirection();
+        if (!scrollDirection)
+            return { };
 
-        float scrollOffset = axis() == ScrollAxis::Block ? sourceScrollableArea->scrollOffset().y() : sourceScrollableArea->scrollOffset().x();
-        float scrollContainerSize = axis() == ScrollAxis::Block ? sourceScrollableArea->visibleHeight() : sourceScrollableArea->visibleWidth();
+        float scrollOffset = scrollDirection->isVertical ? sourceScrollableArea->scrollOffset().y() : sourceScrollableArea->scrollOffset().x();
+        float scrollContainerSize = scrollDirection->isVertical ? sourceScrollableArea->visibleHeight() : sourceScrollableArea->visibleWidth();
         auto subjectOffsetFromSource = subjectRenderer->localToContainerPoint(pointForLocalToContainer(*sourceScrollableArea), sourceScrollerRenderer());
-        float subjectOffset = axis() == ScrollAxis::Block ? subjectOffsetFromSource.y() : subjectOffsetFromSource.x();
+        float subjectOffset = scrollDirection->isVertical ? subjectOffsetFromSource.y() : subjectOffsetFromSource.x();
         auto subjectBounds = [&] -> FloatSize {
             if (CheckedPtr subjectRenderBox = dynamicDowncast<RenderBox>(subjectRenderer.get()))
                 return subjectRenderBox->contentBoxRect().size();
@@ -245,7 +248,7 @@ void ViewTimeline::cacheCurrentTime()
             return { };
         }();
 
-        auto subjectSize = axis() == ScrollAxis::Block ? subjectBounds.height() : subjectBounds.width();
+        auto subjectSize = scrollDirection->isVertical ? subjectBounds.height() : subjectBounds.width();
 
         auto insetStartLength = m_insets.start.value_or(Length());
         auto insetEndLength = m_insets.start.value_or(insetStartLength);

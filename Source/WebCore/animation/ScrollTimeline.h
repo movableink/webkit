@@ -87,6 +87,12 @@ protected:
 
     static ScrollableArea* scrollableAreaForSourceRenderer(const RenderElement*, Document&);
 
+    struct ResolvedScrollDirection {
+        bool isVertical;
+        bool isReversed;
+    };
+    std::optional<ResolvedScrollDirection> resolvedScrollDirection() const;
+
 private:
     enum class Scroller : uint8_t { Nearest, Root, Self };
 

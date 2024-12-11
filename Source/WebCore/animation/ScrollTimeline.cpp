@@ -216,6 +216,52 @@ AnimationTimelinesController* ScrollTimeline::controller() const
     return nullptr;
 }
 
+std::optional<ScrollTimeline::ResolvedScrollDirection> ScrollTimeline::resolvedScrollDirection() const
+{
+    RefPtr source = this->source();
+    if (!source)
+        return { };
+
+    CheckedPtr renderer = source->renderer();
+    if (!renderer)
+        return { };
+
+    auto writingMode = renderer->style().writingMode();
+
+    auto isVertical = [&] {
+        switch (m_axis) {
+        case ScrollAxis::Block:
+            // https://drafts.csswg.org/scroll-animations-1/#valdef-scroll-block
+            // Specifies to use the measure of progress along the block axis of the scroll container.
+            // https://drafts.csswg.org/css-writing-modes-4/#block-axis
+            // The axis in the block dimension, i.e. the vertical axis in horizontal writing modes and
+            // the horizontal axis in vertical writing modes.
+            return writingMode.isHorizontal();
+        case ScrollAxis::Inline:
+            // https://drafts.csswg.org/scroll-animations-1/#valdef-scroll-inline
+            // Specifies to use the measure of progress along the inline axis of the scroll container.
+            // https://drafts.csswg.org/css-writing-modes-4/#inline-axis
+            // The axis in the inline dimension, i.e. the horizontal axis in horizontal writing modes and
+            // the vertical axis in vertical writing modes.
+            return writingMode.isVertical();
+        case ScrollAxis::X:
+            // https://drafts.csswg.org/scroll-animations-1/#valdef-scroll-x
+            // Specifies to use the measure of progress along the horizontal axis of the scroll container.
+            return false;
+        case ScrollAxis::Y:
+            // https://drafts.csswg.org/scroll-animations-1/#valdef-scroll-y
+            // Specifies to use the measure of progress along the vertical axis of the scroll container.
+            return true;
+        }
+        ASSERT_NOT_REACHED();
+        return true;
+    }();
+
+    auto isReversed = (isVertical && !writingMode.isAnyTopToBottom()) || (!isVertical && !writingMode.isAnyLeftToRight());
+
+    return { { isVertical, isReversed } };
+}
+
 void ScrollTimeline::cacheCurrentTime()
 {
     auto previousMaxScrollOffset = m_cachedCurrentTimeData.maxScrollOffset;
@@ -227,8 +273,12 @@ void ScrollTimeline::cacheCurrentTime()
         auto* sourceScrollableArea = scrollableAreaForSourceRenderer(source->renderer(), source->document());
         if (!sourceScrollableArea)
             return { };
-        float scrollOffset = axis() == ScrollAxis::Block ? sourceScrollableArea->scrollOffset().y() : sourceScrollableArea->scrollOffset().x();
-        float maxScrollOffset = axis() == ScrollAxis::Block ? sourceScrollableArea->maximumScrollOffset().y() : sourceScrollableArea->maximumScrollOffset().x();
+        auto scrollDirection = resolvedScrollDirection();
+        if (!scrollDirection)
+            return { };
+
+        float scrollOffset = scrollDirection->isVertical ? sourceScrollableArea->scrollOffset().y() : sourceScrollableArea->scrollOffset().x();
+        float maxScrollOffset = scrollDirection->isVertical ? sourceScrollableArea->maximumScrollOffset().y() : sourceScrollableArea->maximumScrollOffset().x();
         // Chrome appears to clip the current time of a scroll timeline in the [0-100] range.
         // We match this behavior for compatibility reasons, see https://github.com/w3c/csswg-drafts/issues/11033.
         if (maxScrollOffset > 0)
@@ -318,8 +368,13 @@ std::optional<WebAnimationTime> ScrollTimeline::currentTime()
     auto data = computeTimelineData();
     auto range = data.rangeEnd - data.rangeStart;
     if (!range)
-        return std::nullopt;
-    auto distance = data.scrollOffset - data.rangeStart;
+        return { };
+
+    auto scrollDirection = resolvedScrollDirection();
+    if (!scrollDirection)
+        return { };
+
+    auto distance = scrollDirection->isReversed ? data.rangeEnd - data.scrollOffset : data.scrollOffset - data.rangeStart;
     auto progress = distance / range;
     return WebAnimationTime::fromPercentage(progress * 100);
 }
