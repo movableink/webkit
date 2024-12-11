@@ -74,7 +74,6 @@ UIProcess/WebAuthentication/Cocoa/WebAuthenticationPanelClient.mm
 UIProcess/WebAuthentication/Virtual/VirtualService.mm
 UIProcess/WebProcessProxy.cpp
 UIProcess/mac/WebViewImpl.mm
-WebProcess/Extensions/API/Cocoa/WebExtensionAPIWebRequestCocoa.mm
 WebProcess/GPU/graphics/WebGPU/RemoteCompositorIntegrationProxy.cpp
 WebProcess/GPU/graphics/WebGPU/RemoteXRBindingProxy.cpp
 WebProcess/GPU/graphics/WebGPU/WebGPUDowncastConvertToBackingContext.cpp
