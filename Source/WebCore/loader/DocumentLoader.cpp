@@ -86,6 +86,7 @@
 #include "ProgressTracker.h"
 #include "Quirks.h"
 #include "ResourceLoadObserver.h"
+#include "ResourceMonitor.h"
 #include "SWClientConnection.h"
 #include "ScriptableDocumentParser.h"
 #include "SecurityPolicy.h"
@@ -1255,6 +1256,16 @@ static inline bool shouldUseActiveServiceWorkerFromParent(const Document& docume
     return !document.url().protocolIsInHTTPFamily() && !document.securityOrigin().isOpaque() && parent.protectedSecurityOrigin()->isSameOriginDomain(document.securityOrigin());
 }
 
+#if ENABLE(CONTENT_EXTENSIONS)
+static inline bool shouldEnableResourceMonitor(const Frame& frame)
+{
+    if (frame.isMainFrame())
+        return false;
+
+    return frame.settings().iFrameResourceMonitoringEnabled();
+}
+#endif
+
 void DocumentLoader::commitData(const SharedBuffer& data)
 {
     if (!m_gotFirstByte) {
@@ -1265,7 +1276,8 @@ void DocumentLoader::commitData(const SharedBuffer& data)
 
         m_writer.setDocumentWasLoadedAsPartOfNavigation();
 
-        RefPtr documentOrNull = m_frame ? m_frame->document() : nullptr;
+        RefPtr frame = m_frame.get();
+        RefPtr documentOrNull = frame ? frame->document() : nullptr;
 
         auto scope = makeScopeExit([&] {
             if (auto createdCallback = std::exchange(m_whenDocumentIsCreatedCallback, { }))
@@ -1275,6 +1287,12 @@ void DocumentLoader::commitData(const SharedBuffer& data)
         if (!documentOrNull)
             return;
         auto& document = *documentOrNull;
+        ASSERT(frame);
+
+#if ENABLE(CONTENT_EXTENSIONS)
+        if (shouldEnableResourceMonitor(*frame))
+            document.setResourceMonitor(ResourceMonitor::create(*frame, documentURL()));
+#endif
 
         if (SecurityPolicy::allowSubstituteDataAccessToLocal() && m_originalSubstituteDataWasValid) {
             // If this document was loaded with substituteData, then the document can

@@ -2018,6 +2018,8 @@ loader/ResourceLoadNotifier.cpp
 loader/ResourceLoadObserver.cpp
 loader/ResourceLoadStatistics.cpp
 loader/ResourceLoader.cpp
+loader/ResourceMonitor.cpp
+loader/ResourceMonitorChecker.cpp
 loader/ResourceTiming.cpp
 loader/ResourceTimingInformation.cpp
 loader/ServerTiming.cpp

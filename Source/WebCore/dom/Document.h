@@ -216,6 +216,7 @@ class RenderView;
 class ReportingScope;
 class RequestAnimationFrameCallback;
 class ResizeObserver;
+class ResourceMonitor;
 class SVGDocumentExtensions;
 class SVGElement;
 class SVGSVGElement;
@@ -1983,6 +1984,12 @@ public:
 
     unsigned unloadCounter() const { return m_unloadCounter; }
 
+#if ENABLE(CONTENT_EXTENSIONS)
+    ResourceMonitor* resourceMonitor();
+    void setResourceMonitor(RefPtr<ResourceMonitor>&&);
+    ResourceMonitor* parentResourceMonitor();
+#endif
+
 protected:
     enum class ConstructionFlag : uint8_t {
         Synthesized = 1 << 0,
@@ -2688,6 +2695,10 @@ private:
 
     mutable std::unique_ptr<CSSParserContext> m_cachedCSSParserContext;
     mutable std::unique_ptr<PermissionsPolicy> m_permissionsPolicy;
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    RefPtr<ResourceMonitor> m_resourceMonitor;
+#endif
 };
 
 Element* eventTargetElementForDocument(Document*);

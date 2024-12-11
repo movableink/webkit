@@ -57,6 +57,7 @@
 #include "Quirks.h"
 #include "ResourceError.h"
 #include "ResourceHandle.h"
+#include "ResourceMonitor.h"
 #include "SecurityOrigin.h"
 #include "SubresourceLoader.h"
 #include <wtf/CompletionHandler.h>
@@ -602,6 +603,11 @@ void ResourceLoader::didReceiveResponse(const ResourceResponse& r, CompletionHan
 
     if (m_options.sendLoadCallbacks == SendCallbackPolicy::SendCallbacks)
         protectedFrameLoader()->notifier().didReceiveResponse(this, m_response);
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    if (RefPtr monitor = resourceMonitor())
+        monitor->didReceiveResponse(m_response.url(), m_resourceType);
+#endif
 }
 
 void ResourceLoader::didReceiveData(const SharedBuffer& buffer, long long encodedDataLength, DataPayloadType dataPayloadType)
@@ -628,6 +634,11 @@ void ResourceLoader::didReceiveBuffer(const FragmentedSharedBuffer& buffer, long
     // Could be an issue with a giant local file.
     if (m_options.sendLoadCallbacks == SendCallbackPolicy::SendCallbacks && m_frame)
         protectedFrameLoader()->notifier().didReceiveData(this, buffer.makeContiguous(), static_cast<int>(encodedDataLength));
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    if (RefPtr monitor = resourceMonitor())
+        monitor->addNetworkUsage(encodedDataLength > 0 ? static_cast<size_t>(encodedDataLength) : buffer.size());
+#endif
 }
 
 void ResourceLoader::didFinishLoading(const NetworkLoadMetrics& networkLoadMetrics)
@@ -946,6 +957,15 @@ RefPtr<LocalFrame> ResourceLoader::protectedFrame() const
 {
     return m_frame;
 }
+
+#if ENABLE(CONTENT_EXTENSIONS)
+ResourceMonitor* ResourceLoader::resourceMonitor()
+{
+    if (RefPtr document = m_frame ? m_frame->document() : nullptr)
+        return document->resourceMonitor();
+    return nullptr;
+}
+#endif
 
 } // namespace WebCore
 

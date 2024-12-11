@@ -233,6 +233,7 @@
 #include "ResizeObserverEntry.h"
 #include "ResolvedStyle.h"
 #include "ResourceLoadObserver.h"
+#include "ResourceMonitor.h"
 #include "SVGDocumentExtensions.h"
 #include "SVGElementFactory.h"
 #include "SVGElementTypeHelpers.h"
@@ -11131,6 +11132,28 @@ void Document::securityOriginDidChange()
 {
     m_permissionsPolicy = nullptr;
 }
+
+#if ENABLE(CONTENT_EXTENSIONS)
+
+ResourceMonitor* Document::resourceMonitor()
+{
+    return m_resourceMonitor.get();
+}
+
+void Document::setResourceMonitor(RefPtr<ResourceMonitor>&& resourceMonitor)
+{
+    m_resourceMonitor = WTFMove(resourceMonitor);
+}
+
+ResourceMonitor* Document::parentResourceMonitor()
+{
+    if (RefPtr parent = parentDocument())
+        return parent->resourceMonitor();
+
+    return nullptr;
+}
+
+#endif
 
 } // namespace WebCore
 
