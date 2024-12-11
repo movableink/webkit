@@ -27,11 +27,17 @@
 #include "ResourceMonitorChecker.h"
 
 #include <wtf/CryptographicallyRandomNumber.h>
+#include <wtf/Seconds.h>
 #include <wtf/StdLibExtras.h>
+
+#if ENABLE(CONTENT_EXTENSIONS)
+
+#define RESOURCEMONITOR_RELEASE_LOG(fmt, ...) RELEASE_LOG(ResourceLoading, "%p - ResourceMonitorChecker::" fmt, this, ##__VA_ARGS__)
 
 namespace WebCore {
 
-#if ENABLE(CONTENT_EXTENSIONS)
+static constexpr Seconds ruleListPreparationTimeout = 10_s;
+static constexpr auto defaultEligibility = ResourceMonitor::Eligibility::NotEligible;
 
 ResourceMonitorChecker& ResourceMonitorChecker::singleton()
 {
@@ -42,6 +48,24 @@ ResourceMonitorChecker& ResourceMonitorChecker::singleton()
 ResourceMonitorChecker::ResourceMonitorChecker()
     : m_workQueue { WorkQueue::create("ResourceMonitorChecker Work Queue"_s) }
 {
+    protectedWorkQueue()->dispatchAfter(ruleListPreparationTimeout, [this] mutable {
+        if (m_ruleList)
+            return;
+
+        RESOURCEMONITOR_RELEASE_LOG("did not receive rule list in time, using default eligibility");
+
+        m_ruleListIsPreparing = false;
+        finishPendingQueries([](const auto&) {
+            return defaultEligibility;
+        });
+    });
+}
+
+ResourceMonitorChecker::~ResourceMonitorChecker()
+{
+    finishPendingQueries([](const auto&) {
+        return defaultEligibility;
+    });
 }
 
 void ResourceMonitorChecker::checkEligibility(ContentExtensions::ResourceLoadInfo&& info, CompletionHandler<void(Eligibility)>&& completionHandler)
@@ -49,11 +73,12 @@ void ResourceMonitorChecker::checkEligibility(ContentExtensions::ResourceLoadInf
     ASSERT(isMainThread());
 
     protectedWorkQueue()->dispatch([this, info = crossThreadCopy(WTFMove(info)), completionHandler = WTFMove(completionHandler)] mutable {
-        Eligibility eligibility = Eligibility::Unsure;
-        {
-            Locker locker { m_lock };
-            eligibility = checkEligibilityWithLock(info);
+        if (!m_ruleList && m_ruleListIsPreparing) {
+            m_pendingQueries.append(std::make_pair(WTFMove(info), WTFMove(completionHandler)));
+            return;
         }
+
+        Eligibility eligibility = m_ruleList ? checkEligibility(info) : defaultEligibility;
 
         callOnMainRunLoop([eligibility, completionHandler = WTFMove(completionHandler)] mutable {
             completionHandler(eligibility);
@@ -61,18 +86,9 @@ void ResourceMonitorChecker::checkEligibility(ContentExtensions::ResourceLoadInf
     });
 }
 
-ResourceMonitor::Eligibility ResourceMonitorChecker::checkEligibilityForTesting(const ContentExtensions::ResourceLoadInfo& info)
+ResourceMonitor::Eligibility ResourceMonitorChecker::checkEligibility(const ContentExtensions::ResourceLoadInfo& info)
 {
-    ASSERT(isMainThread());
-
-    Locker locker { m_lock };
-    return checkEligibilityWithLock(info);
-}
-
-ResourceMonitor::Eligibility ResourceMonitorChecker::checkEligibilityWithLock(const ContentExtensions::ResourceLoadInfo& info)
-{
-    if (!m_ruleList)
-        return Eligibility::Unsure;
+    ASSERT(m_ruleList);
 
     auto matched = m_ruleList->processContentRuleListsForResourceMonitoring(info.resourceURL, info.mainDocumentURL, info.frameURL, info.type);
     return matched ? Eligibility::Eligible : Eligibility::NotEligible;
@@ -82,10 +98,38 @@ void ResourceMonitorChecker::setContentRuleList(ContentExtensions::ContentExtens
 {
     ASSERT(isMainThread());
 
-    Locker locker { m_lock };
-    m_ruleList = makeUnique<ContentExtensions::ContentExtensionsBackend>(WTFMove(backend));
+    protectedWorkQueue()->dispatch([this, backend = crossThreadCopy(WTFMove(backend))] mutable {
+        m_ruleList = makeUnique<ContentExtensions::ContentExtensionsBackend>(WTFMove(backend));
+        m_ruleListIsPreparing = false;
+
+        RESOURCEMONITOR_RELEASE_LOG("content rule list is set");
+
+        if (!m_pendingQueries.isEmpty()) {
+            finishPendingQueries([this](const auto& info) {
+                return checkEligibility(info); }
+            );
+        }
+    });
 }
 
-#endif
+void ResourceMonitorChecker::finishPendingQueries(Function<Eligibility(const ContentExtensions::ResourceLoadInfo&)> checker)
+{
+    RESOURCEMONITOR_RELEASE_LOG("finish pending queries: count %lu", m_pendingQueries.size());
+
+    for (auto& pair : m_pendingQueries) {
+        auto& [info, completionHandler] = pair;
+
+        Eligibility eligibility = checker(info);
+
+        callOnMainRunLoop([eligibility, completionHandler = WTFMove(completionHandler)] mutable {
+            completionHandler(eligibility);
+        });
+    }
+    m_pendingQueries.clear();
+}
 
 } // namespace WebCore
+
+#undef RESOURCEMONITOR_RELEASE_LOG
+
+#endif

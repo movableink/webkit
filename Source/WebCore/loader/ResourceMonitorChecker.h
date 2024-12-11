@@ -46,21 +46,24 @@ public:
 
     static ResourceMonitorChecker& singleton();
 
+    ~ResourceMonitorChecker();
+
     void checkEligibility(ContentExtensions::ResourceLoadInfo&&, CompletionHandler<void(Eligibility)>&&);
-    Eligibility checkEligibilityForTesting(const ContentExtensions::ResourceLoadInfo&);
 
     void setContentRuleList(ContentExtensions::ContentExtensionsBackend&&);
 
 private:
     ResourceMonitorChecker();
 
+    Eligibility checkEligibility(const ContentExtensions::ResourceLoadInfo&);
+    void finishPendingQueries(Function<Eligibility(const ContentExtensions::ResourceLoadInfo&)> checker);
+
     Ref<WorkQueue> protectedWorkQueue() { return m_workQueue; }
 
-    Eligibility checkEligibilityWithLock(const ContentExtensions::ResourceLoadInfo&) WTF_REQUIRES_LOCK(m_lock);
-
     Ref<WorkQueue> m_workQueue;
-    std::unique_ptr<ContentExtensions::ContentExtensionsBackend> m_ruleList WTF_GUARDED_BY_LOCK(m_lock);
-    Lock m_lock;
+    std::unique_ptr<ContentExtensions::ContentExtensionsBackend> m_ruleList;
+    Vector<std::pair<ContentExtensions::ResourceLoadInfo, CompletionHandler<void(Eligibility)>>> m_pendingQueries;
+    bool m_ruleListIsPreparing { true };
 };
 
 } // namespace WebCore
