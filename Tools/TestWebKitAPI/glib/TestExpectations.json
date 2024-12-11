@@ -383,9 +383,6 @@
         "subtests": {
             "/webkit/Downloads/remote-file-error": {
                 "expected": {"gtk": {"status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/254002"}}
-            },
-            "/webkit/Downloads/local-file-error": {
-                "expected": {"wpe": {"status": ["CRASH", "PASS"], "bug": "webkit.org/b/281813"}}
             }
         }
     },
