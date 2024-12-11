@@ -32,7 +32,6 @@
 #include "MessageReceiverMap.h"
 #include "NetworkProcessProxy.h"
 #include "ProcessLauncher.h"
-#include "ProcessTerminationReason.h"
 #include "ProcessThrottler.h"
 #include "RemoteWorkerInitializationData.h"
 #include "ResponsivenessTimer.h"
@@ -136,6 +135,7 @@ struct WebPageCreationParameters;
 struct WebPreferencesStore;
 struct WebsiteData;
 
+enum class ProcessTerminationReason : uint8_t;
 enum class ProcessThrottleState : uint8_t;
 enum class RemoteWorkerType : uint8_t;
 enum class WebsiteDataType : uint32_t;
@@ -568,6 +568,8 @@ private:
 
     void platformInitialize();
     void platformDestroy();
+
+    ProcessTerminationReason terminationReason() const;
 
     // IPC message handlers.
     void updateBackForwardItem(Ref<FrameState>&&);

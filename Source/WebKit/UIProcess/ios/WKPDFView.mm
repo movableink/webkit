@@ -32,6 +32,7 @@
 #import "FindClient.h"
 #import "PDFKitSPI.h"
 #import "PickerDismissalReason.h"
+#import "ProcessTerminationReason.h"
 #import "UIKitSPI.h"
 #import "WKActionSheetAssistant.h"
 #import "WKKeyboardScrollingAnimator.h"

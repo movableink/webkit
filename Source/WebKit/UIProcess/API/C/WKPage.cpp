@@ -69,6 +69,7 @@
 #include "PageClient.h"
 #include "PageLoadState.h"
 #include "PrintInfo.h"
+#include "ProcessTerminationReason.h"
 #include "QueryPermissionResultCallback.h"
 #include "SpeechRecognitionPermissionRequest.h"
 #include "UserMediaPermissionCheckProxy.h"

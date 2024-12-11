@@ -55,6 +55,7 @@
 #include "OverrideLanguages.h"
 #include "PageLoadState.h"
 #include "PerActivityStateCPUUsageSampler.h"
+#include "ProcessTerminationReason.h"
 #include "RemotePageProxy.h"
 #include "RemoteWorkerType.h"
 #include "RestrictedOpenerType.h"
@@ -477,7 +478,7 @@ void WebProcessPool::setApplicationIsActive(bool isActive)
     checkedWebProcessCache()->setApplicationIsActive(isActive);
 }
 
-static bool shouldReportAuxiliaryProcessCrash(ProcessTerminationReason reason)
+static bool shouldReportNetworkOrGPUProcessCrash(ProcessTerminationReason reason)
 {
     switch (reason) {
     case ProcessTerminationReason::ExceededMemoryLimit:
@@ -495,6 +496,7 @@ static bool shouldReportAuxiliaryProcessCrash(ProcessTerminationReason reason)
         return false;
     case ProcessTerminationReason::GPUProcessCrashedTooManyTimes:
     case ProcessTerminationReason::ModelProcessCrashedTooManyTimes:
+    case ProcessTerminationReason::NonMainFrameWebContentProcessCrash:
         ASSERT_NOT_REACHED();
         return false;
     }
@@ -504,7 +506,7 @@ static bool shouldReportAuxiliaryProcessCrash(ProcessTerminationReason reason)
 
 void WebProcessPool::networkProcessDidTerminate(NetworkProcessProxy& networkProcessProxy, ProcessTerminationReason reason)
 {
-    if (shouldReportAuxiliaryProcessCrash(reason))
+    if (shouldReportNetworkOrGPUProcessCrash(reason))
         m_client.networkProcessDidCrash(this, networkProcessProxy.processID(), reason);
 
     if (RefPtr automationSession = m_automationSession)
@@ -548,7 +550,7 @@ void WebProcessPool::gpuProcessExited(ProcessID identifier, ProcessTerminationRe
     WEBPROCESSPOOL_RELEASE_LOG(Process, "gpuProcessDidExit: PID=%d, reason=%" PUBLIC_LOG_STRING, identifier, processTerminationReasonToString(reason).characters());
     m_gpuProcess = nullptr;
 
-    if (shouldReportAuxiliaryProcessCrash(reason))
+    if (shouldReportNetworkOrGPUProcessCrash(reason))
         m_client.gpuProcessDidCrash(this, identifier, reason);
 
     Vector<Ref<WebProcessProxy>> processes = m_processes;

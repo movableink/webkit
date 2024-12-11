@@ -50,6 +50,7 @@
 #import "NavigationState.h"
 #import "PageClient.h"
 #import "PlatformWritingToolsUtilities.h"
+#import "ProcessTerminationReason.h"
 #import "ProvisionalPageProxy.h"
 #import "QuickLookThumbnailLoader.h"
 #import "RemoteLayerTreeScrollingPerformanceData.h"

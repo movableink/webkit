@@ -43,6 +43,7 @@
 #include "NotificationManagerMessageHandlerMessages.h"
 #include "PageLoadState.h"
 #include "PlatformXRSystem.h"
+#include "ProcessTerminationReason.h"
 #include "ProvisionalFrameProxy.h"
 #include "ProvisionalPageProxy.h"
 #include "RemotePageProxy.h"
@@ -1270,6 +1271,19 @@ bool WebProcessProxy::dispatchSyncMessage(IPC::Connection& connection, IPC::Deco
     return true;
 }
 
+ProcessTerminationReason WebProcessProxy::terminationReason() const
+{
+    if (!m_sharedPreferencesForWebProcess.siteIsolationEnabled)
+        return ProcessTerminationReason::Crash;
+
+    for (auto& page : m_pageMap.values()) {
+        if (this == &page->siteIsolatedProcess())
+            return ProcessTerminationReason::Crash;
+    }
+
+    return ProcessTerminationReason::NonMainFrameWebContentProcessCrash;
+}
+
 void WebProcessProxy::didClose(IPC::Connection& connection)
 {
 #if OS(DARWIN)
@@ -1278,7 +1292,7 @@ void WebProcessProxy::didClose(IPC::Connection& connection)
     WEBPROCESSPROXY_RELEASE_LOG_ERROR(Process, "didClose (web process crash)");
 #endif
 
-    processDidTerminateOrFailedToLaunch(ProcessTerminationReason::Crash);
+    processDidTerminateOrFailedToLaunch(terminationReason());
 }
 
 #if PLATFORM(COCOA) && ENABLE(MEDIA_STREAM)
@@ -1433,7 +1447,7 @@ void WebProcessProxy::didFinishLaunching(ProcessLauncher* launcher, IPC::Connect
 
     if (didTerminate) {
         WEBPROCESSPROXY_RELEASE_LOG_ERROR(Process, "didFinishLaunching: Invalid connection identifier (web process failed to launch)");
-        processDidTerminateOrFailedToLaunch(ProcessTerminationReason::Crash);
+        processDidTerminateOrFailedToLaunch(terminationReason());
         return;
     }
 
