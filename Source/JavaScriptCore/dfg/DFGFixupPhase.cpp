@@ -1527,12 +1527,16 @@ private:
             }
             break;
         }
-            
-        case AtomicsIsLockFree:
-            if (m_graph.child(node, 0)->shouldSpeculateInt32())
-                fixIntOrBooleanEdge(m_graph.child(node, 0));
+
+        case AtomicsIsLockFree: {
+            Edge child1 = m_graph.child(node, 0);
+            if (child1->shouldSpeculateInt32()) {
+                fixIntOrBooleanEdge(child1);
+                node->clearFlags(NodeMustGenerate);
+            }
             break;
-            
+        }
+
         case ArrayPush: {
             // May need to refine the array mode in case the value prediction contravenes
             // the array prediction. For example, we may have evidence showing that the
