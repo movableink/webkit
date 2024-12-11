@@ -269,80 +269,8 @@ set(webrtc_SOURCES
     Source/third_party/boringssl/src/crypto/evp/scrypt.c
     Source/third_party/boringssl/src/crypto/evp/sign.c
     Source/third_party/boringssl/src/crypto/ex_data.c
-    Source/third_party/boringssl/src/crypto/fipsmodule/aes/aes.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/aes/aes_nohw.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/aes/key_wrap.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/aes/mode_wrappers.c.inc
     Source/third_party/boringssl/src/crypto/fipsmodule/bcm.c
-    Source/third_party/boringssl/src/crypto/fipsmodule/bn/add.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/bn/asm/x86_64-gcc.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/bn/bn.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/bn/bytes.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/bn/cmp.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/bn/ctx.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/bn/div.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/bn/div_extra.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/bn/exponentiation.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/bn/gcd.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/bn/gcd_extra.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/bn/generic.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/bn/jacobi.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/bn/montgomery.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/bn/montgomery_inv.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/bn/mul.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/bn/prime.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/bn/random.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/bn/rsaz_exp.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/bn/shift.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/bn/sqrt.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/cipher/aead.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/cipher/cipher.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/cipher/e_aes.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/cipher/e_aesccm.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/cmac/cmac.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/dh/check.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/dh/dh.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/digest/digest.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/digest/digests.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/digestsign/digestsign.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/ec/ec.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/ec/ec_key.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/ec/ec_montgomery.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/ec/felem.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/ec/oct.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/ec/p224-64.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/ec/p256-nistz.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/ec/p256.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/ec/scalar.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/ec/simple.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/ec/simple_mul.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/ec/util.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/ec/wnaf.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/ecdh/ecdh.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/ecdsa/ecdsa.c.inc
     Source/third_party/boringssl/src/crypto/fipsmodule/fips_shared_support.c
-    Source/third_party/boringssl/src/crypto/fipsmodule/hkdf/hkdf.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/hmac/hmac.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/modes/cbc.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/modes/cfb.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/modes/ctr.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/modes/gcm.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/modes/gcm_nohw.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/modes/ofb.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/modes/polyval.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/rand/ctrdrbg.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/rand/rand.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/rsa/blinding.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/rsa/padding.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/rsa/rsa.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/rsa/rsa_impl.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/self_check/fips.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/self_check/self_check.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/service_indicator/service_indicator.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/sha/sha1.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/sha/sha256.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/sha/sha512.c.inc
-    Source/third_party/boringssl/src/crypto/fipsmodule/tls/kdf.c.inc
     Source/third_party/boringssl/src/crypto/hpke/hpke.c
     Source/third_party/boringssl/src/crypto/hrss/hrss.c
     Source/third_party/boringssl/src/crypto/keccak/keccak.c
