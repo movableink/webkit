@@ -399,6 +399,7 @@ JSWebAnimation.cpp
 JSWebCodecsAudioData.cpp
 JSWebCodecsAudioDecoder.cpp
 JSWebCodecsAudioEncoder.cpp
+JSWebCodecsEncodedVideoChunk.cpp
 JSWebCodecsVideoDecoder.cpp
 JSWebCodecsVideoEncoder.cpp
 JSWebCodecsVideoFrame.cpp
