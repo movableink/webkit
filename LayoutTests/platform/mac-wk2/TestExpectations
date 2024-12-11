@@ -1970,3 +1970,5 @@ webkit.org/b/284190 [ Sequoia+ ] http/tests/privateClickMeasurement/send-attribu
 
 webkit.org/b/284492 [ Sequoia+ ] imported/w3c/web-platform-tests/fetch/api/cors/cors-cookies-redirect.any.html [ Failure ]
 webkit.org/b/284492 [ Sequoia+ ] imported/w3c/web-platform-tests/fetch/api/cors/cors-cookies-redirect.any.worker.html [ Failure ]
+
+webkit.org/b/284493 [ Debug ] imported/blink/fast/hidpi/border-background-align.html [ Crash ]
