@@ -3116,4 +3116,15 @@ void NetworkProcess::fetchLocalStorage(PAL::SessionID sessionID, CompletionHandl
     session->protectedStorageManager()->fetchLocalStorage(WTFMove(completionHandler));
 }
 
+void NetworkProcess::restoreLocalStorage(PAL::SessionID sessionID, HashMap<WebCore::ClientOrigin, HashMap<String, String>>&& localStorageMap, CompletionHandler<void(bool)>&& completionHandler)
+{
+    CheckedPtr session = networkSession(sessionID);
+    if (!session) {
+        completionHandler(false);
+        return;
+    }
+
+    session->protectedStorageManager()->restoreLocalStorage(WTFMove(localStorageMap), WTFMove(completionHandler));
+}
+
 } // namespace WebKit

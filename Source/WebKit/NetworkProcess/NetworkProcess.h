@@ -453,6 +453,7 @@ public:
     bool enableModernDownloadProgress() const { return m_enableModernDownloadProgress; }
 
     void fetchLocalStorage(PAL::SessionID, CompletionHandler<void(HashMap<WebCore::ClientOrigin, HashMap<String, String>>&&)>&&);
+    void restoreLocalStorage(PAL::SessionID, HashMap<WebCore::ClientOrigin, HashMap<String, String>>&&, CompletionHandler<void(bool)>&&);
 
 private:
     void platformInitializeNetworkProcess(const NetworkProcessCreationParameters&);

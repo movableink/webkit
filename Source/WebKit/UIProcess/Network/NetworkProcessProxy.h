@@ -342,6 +342,7 @@ public:
     void notifyMediaStreamingActivity(bool);
 
     void fetchLocalStorage(PAL::SessionID, CompletionHandler<void(HashMap<WebCore::ClientOrigin, HashMap<String, String>>&&)>&&);
+    void restoreLocalStorage(PAL::SessionID, HashMap<WebCore::ClientOrigin, HashMap<String, String>>&&, CompletionHandler<void(bool)>&&);
 
 private:
     explicit NetworkProcessProxy();
