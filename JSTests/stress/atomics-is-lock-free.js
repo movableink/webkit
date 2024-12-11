@@ -10,7 +10,6 @@ function f1() {
 }
 
 for (let i = 0; i < 10; i++) {
-    print(i)
     res = 0;
     f1();
     if (!res)
