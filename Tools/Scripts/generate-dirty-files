@@ -26,6 +26,7 @@ import subprocess
 import argparse
 import json
 import sys
+import re
 
 CHECKER_MAP = {
     'Member variable is a raw-pointer/reference to reference-countable type': 'NoUncountedMemberChecker',
@@ -40,6 +41,7 @@ CHECKER_MAP = {
 }
 
 PROJECTS = ['WebCore', 'WebKit']
+DERIVED_SOURCES_RE = r'.*\/DerivedSources\/.*\/JS.*'
 
 
 def parser():
@@ -103,12 +105,13 @@ def find_project_results(args, project, file_list, results_data, issue_to_report
             bug_counts[bug_type] = 0
         bug_counts[bug_type] += 1
 
-        # Truncate path after project name to match the expectations file
-        try:
-            file_name = file_name.split(f'{project}/')[1]
-        except IndexError:
-            # Ignore WebKitBuild/Debug files that are included in other projects
-            continue
+        if not re.match(DERIVED_SOURCES_RE, file_name):
+            # Truncate path after project name to match the expectations file
+            try:
+                file_name = file_name.split(f'{project}/')[1]
+            except IndexError:
+                # Ignore WebKitBuild/Debug files that are included in other projects
+                continue
 
         # Map filename to issues for each bug type
         file_dict = results_data.get(CHECKER_MAP[bug_type], {})
