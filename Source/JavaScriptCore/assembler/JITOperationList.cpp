@@ -127,6 +127,8 @@ LLINT_DECLARE_ROUTINE_VALIDATE(wasm_to_wasm_wrapper_entry);
 LLINT_DECLARE_ROUTINE_VALIDATE(wasm_to_js_wrapper_entry);
 LLINT_DECLARE_ROUTINE_VALIDATE(ipint_trampoline);
 LLINT_DECLARE_ROUTINE_VALIDATE(ipint_entry);
+LLINT_DECLARE_ROUTINE_VALIDATE(ipint_function_prologue_simd_trampoline);
+LLINT_DECLARE_ROUTINE_VALIDATE(ipint_function_prologue_simd);
 
 #if ENABLE(JIT_OPERATION_VALIDATION)
 #define LLINT_OP_EXTRAS(validateLabel) reinterpret_cast<void*>(validateLabel)
