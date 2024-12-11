@@ -790,6 +790,8 @@ inline float RenderStyle::wordSpacing() const { return m_inheritedData->fontData
 constexpr LengthType RenderStyle::zeroLength() { return LengthType::Fixed; }
 inline float RenderStyle::zoom() const { return m_nonInheritedData->rareData->zoom; }
 
+inline bool RenderStyle::nativeAppearanceDisabled() const { return m_nonInheritedData->rareData->nativeAppearanceDisabled; }
+
 // ignore non-standard ::-webkit-scrollbar when standard properties are in use
 inline bool RenderStyle::usesStandardScrollbarStyle() const { return scrollbarWidth() != ScrollbarWidth::Auto || scrollbarColor().has_value(); }
 inline bool RenderStyle::usesLegacyScrollbarStyle() const { return hasPseudoStyle(PseudoId::WebKitScrollbar) && !usesStandardScrollbarStyle(); }

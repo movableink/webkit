@@ -100,6 +100,8 @@ public:
     // https://drafts.csswg.org/css-sizing-3/#sizing-property
     static bool isSizingProperty(CSSPropertyID);
 
+    static bool disablesNativeAppearance(CSSPropertyID);
+
     const StylePropertyMetadata& metadata() const { return m_metadata; }
     static bool isColorProperty(CSSPropertyID propertyId)
     {

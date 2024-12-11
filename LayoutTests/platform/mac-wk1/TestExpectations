@@ -1128,8 +1128,6 @@ fast/forms/color [ Skip ]
 imported/w3c/web-platform-tests/html/semantics/forms/the-input-element/color-attributes.window.html [ Skip ]
 imported/w3c/web-platform-tests/html/semantics/forms/the-input-element/color.tentative.html [ Skip ]
 imported/w3c/web-platform-tests/html/semantics/forms/the-input-element/color.window.html [ Skip ]
-imported/w3c/web-platform-tests/css/css-ui/compute-kind-widget-generated/kind-of-widget-fallback-color-input-background-color-001.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-ui/compute-kind-widget-generated/kind-of-widget-fallback-color-input-background-size-001.html [ ImageOnlyFailure ]
 
 # Audio session and media session manager are a singletons
 platform/mac/media/media-source/media-source-change-source.html [ Skip ]
