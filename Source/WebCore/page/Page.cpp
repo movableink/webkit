@@ -61,6 +61,7 @@
 #include "DocumentInlines.h"
 #include "DocumentLoader.h"
 #include "DocumentMarkerController.h"
+#include "DocumentSyncData.h"
 #include "DragController.h"
 #include "Editing.h"
 #include "Editor.h"
@@ -438,6 +439,7 @@ Page::Page(PageConfiguration&& pageConfiguration)
     , m_writingToolsController(makeUniqueRef<WritingToolsController>(*this))
 #endif
     , m_activeNowPlayingSessionUpdateTimer(*this, &Page::activeNowPlayingSessionUpdateTimerFired)
+    , m_documentSyncData(makeUniqueRef<DocumentSyncData>())
 {
     updateTimerThrottlingState();
 
@@ -793,9 +795,27 @@ void Page::setMainFrame(Ref<Frame>&& frame)
 
 void Page::setMainFrameURL(const URL& url)
 {
+    if (url == m_mainFrameURL)
+        return;
+
     m_mainFrameURL = url;
     m_mainFrameOrigin = SecurityOrigin::create(url);
+
+    processSyncClient().broadcastMainFrameURLChangeToOtherProcesses(url);
 }
+
+#if ENABLE(DOM_AUDIO_SESSION)
+void Page::setAudioSessionType(DOMAudioSessionType audioSessionType)
+{
+    m_documentSyncData->audioSessionType = audioSessionType;
+    processSyncClient().broadcastAudioSessionTypeToOtherProcesses(audioSessionType);
+}
+
+DOMAudioSessionType Page::audioSessionType() const
+{
+    return m_documentSyncData->audioSessionType;
+}
+#endif
 
 void Page::updateProcessSyncData(const ProcessSyncData& data)
 {
@@ -803,6 +823,11 @@ void Page::updateProcessSyncData(const ProcessSyncData& data)
     case ProcessSyncDataType::MainFrameURLChange:
         setMainFrameURL(std::get<URL>(data.value));
         break;
+#if ENABLE(DOM_AUDIO_SESSION)
+    case ProcessSyncDataType::AudioSessionType:
+        m_documentSyncData->update(data);
+        break;
+#endif
     }
 }
 

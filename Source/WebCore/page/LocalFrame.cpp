@@ -1243,10 +1243,8 @@ CheckedRef<const EventHandler> LocalFrame::checkedEventHandler() const
 
 void LocalFrame::documentURLDidChange(const URL& url)
 {
-    if (RefPtr page = this->page(); page && isMainFrame()) {
+    if (RefPtr page = this->page(); page && isMainFrame())
         page->setMainFrameURL(url);
-        page->processSyncClient().broadcastMainFrameURLChangeToOtherProcesses(url);
-    }
 }
 
 #if ENABLE(DATA_DETECTION)

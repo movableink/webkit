@@ -2687,6 +2687,8 @@ PROCESS_SYNC_DATA_INPUT_FILES = \
     $(WebCore)/page/ProcessSyncData.in \
 
 GENERATED_PROCESS_SYNC_CLIENT_OUTPUT_FILES = \
+	DocumentSyncData.cpp \
+	DocumentSyncData.h \
 	ProcessSyncClient.cpp \
 	ProcessSyncClient.h \
 	ProcessSyncData.h \
