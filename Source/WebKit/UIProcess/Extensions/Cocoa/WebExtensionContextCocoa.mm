@@ -4530,8 +4530,8 @@ void WebExtensionContext::addInjectedContent(const InjectedContentVector& inject
             Ref userStyleSheet = API::UserStyleSheet::create(WebCore::UserStyleSheet { WTFMove(styleSheetString), URL { m_baseURL, styleSheetPath }, makeVector<String>(includeMatchPatterns), makeVector<String>(excludeMatchPatterns), injectedFrames, styleLevel, std::nullopt }, executionWorld);
             originInjectedStyleSheets.append(userStyleSheet);
 
-            for (auto& userContentController : userContentControllers)
-                userContentController.addUserStyleSheet(userStyleSheet);
+            for (Ref userContentController : userContentControllers)
+                userContentController->addUserStyleSheet(userStyleSheet);
 
             if (isRegisteredScript) {
                 RefPtr registeredScript = m_registeredScriptsMap.get(scriptID);
