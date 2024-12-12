@@ -286,6 +286,7 @@
     macro(toLocaleString) \
     macro(toPrecision) \
     macro(toReversed) \
+    macro(toSorted) \
     macro(toString) \
     macro(toTemporalInstant) \
     macro(toWellFormed) \
