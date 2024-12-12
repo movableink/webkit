@@ -1785,9 +1785,6 @@ bool Quirks::needsIPadMiniUserAgent(const URL& url)
 {
     auto host = url.host();
 
-    if (host == "tv.kakao.com"_s || host.endsWith(".tv.kakao.com"_s))
-        return true;
-
     if (host == "huya.com"_s || host.endsWith(".huya.com"_s))
         return true;
 
