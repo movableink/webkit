@@ -46,6 +46,7 @@ public:
         std::optional<AudioStreamBasicDescription> description { };
         std::optional<unsigned> outputBitRate { };
         bool generateTimestamp { true };
+        std::optional<unsigned> preSkip { }; // If not set, let AudioConverter use the default.
     };
     static RefPtr<AudioSampleBufferConverter> create(CMBufferQueueTriggerCallback, void* callbackObject, const Options&);
     ~AudioSampleBufferConverter();
@@ -68,7 +69,7 @@ private:
     static OSStatus audioConverterComplexInputDataProc(AudioConverterRef, UInt32*, AudioBufferList*, AudioStreamPacketDescription**, void*);
 
     void processSampleBuffer(CMSampleBufferRef);
-    bool initAudioConverterForSourceFormatDescription(CMFormatDescriptionRef, AudioFormatID);
+    OSStatus initAudioConverterForSourceFormatDescription(CMFormatDescriptionRef, AudioFormatID);
     void attachPrimingTrimsIfNeeded(CMSampleBufferRef);
     RetainPtr<NSNumber> gradualDecoderRefreshCount();
     Expected<RetainPtr<CMSampleBufferRef>, OSStatus> sampleBuffer(const WebAudioBufferList&, uint32_t numSamples);
@@ -106,8 +107,8 @@ private:
     Vector<AudioStreamPacketDescription> m_packetDescriptions WTF_GUARDED_BY_CAPABILITY(queue().get());
     OSStatus m_lastError WTF_GUARDED_BY_CAPABILITY(queue().get()) { 0 };
     const AudioFormatID m_outputCodecType;
-    const std::optional<unsigned> m_outputBitRate;
-    const bool m_generateTimestamp { true };
+    const Options m_options;
+    std::atomic<unsigned> m_defaultBitRate { 0 };
 };
 
 }

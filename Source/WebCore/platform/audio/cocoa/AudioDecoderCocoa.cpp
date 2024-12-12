@@ -35,6 +35,7 @@
 #include "MediaUtilities.h"
 #include "PlatformRawAudioData.h"
 #include "SharedBuffer.h"
+#include "WebMAudioUtilitiesCocoa.h"
 #include <CoreAudio/CoreAudioTypes.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -248,9 +249,10 @@ String InternalAudioDecoderCocoa::initialize(const String& codecName, const Audi
     if (!result)
         return result.error();
 
+    unsigned preSkip = 0;
     auto [codec, format] = *result;
     if (!format) {
-        if (codec == kAudioFormatOpus && config.numberOfChannels >= 2)
+        if (codec == kAudioFormatOpus && config.numberOfChannels > 2)
             return "Opus with more than 2 channels isn't supported"_s;
 
         if (codec == kAudioFormatFLAC && config.description.empty())
@@ -268,6 +270,10 @@ String InternalAudioDecoderCocoa::initialize(const String& codecName, const Audi
         if (config.description.size()) {
             UInt32 size = sizeof(asbd);
             succeeded = PAL::AudioFormatGetProperty(kAudioFormatProperty_FormatInfo, config.description.size(), config.description.data(), &size, &asbd) == noErr;
+            if (codec == kAudioFormatOpus) {
+                if (auto cookie = parseOpusPrivateData(config.description, { }))
+                    preSkip = cookie->preSkip;
+            }
         }
         if (!succeeded) {
             asbd.mSampleRate = double(config.sampleRate);
@@ -286,7 +292,8 @@ String InternalAudioDecoderCocoa::initialize(const String& codecName, const Audi
     AudioSampleBufferConverter::Options options = {
         .format = kAudioFormatLinearPCM,
         .description = m_outputDescription->streamDescription(),
-        .generateTimestamp = false
+        .generateTimestamp = false,
+        .preSkip = preSkip
     };
 
     m_converter = AudioSampleBufferConverter::create(decompressedAudioOutputBufferCallback, this, options);
