@@ -145,11 +145,10 @@ bool nw_resolver_set_update_handler(nw_resolver_t, dispatch_queue_t, nw_resolver
 bool nw_resolver_cancel(nw_resolver_t);
 void nw_context_set_privacy_level(nw_context_t, nw_context_privacy_level_t);
 void nw_parameters_set_context(nw_parameters_t, nw_context_t);
+
 nw_context_t nw_context_create(const char *);
 size_t nw_array_get_count(nw_array_t);
 nw_object_t nw_array_get_object_at_index(nw_array_t, size_t);
-nw_parameters_t nw_parameters_create_quic_stream(nw_parameters_configure_protocol_block_t, nw_parameters_configure_protocol_block_t);
-sec_protocol_options_t nw_quic_connection_copy_sec_protocol_options(nw_protocol_options_t);
 #ifdef __cplusplus
 }
 #endif
