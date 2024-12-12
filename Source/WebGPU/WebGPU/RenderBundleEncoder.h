@@ -142,6 +142,7 @@ private:
     void recordCommand(WTF::Function<bool(void)>&&);
     void storeVertexBufferCountsForValidation(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t baseVertex, uint32_t firstInstance, MTLIndexType, NSUInteger indexBufferOffsetInBytes);
     std::pair<uint32_t, uint32_t> computeMininumVertexInstanceCount() const;
+    void resetIndexBuffer();
 
     const Ref<Device> m_device;
     RefPtr<Buffer> m_indexBuffer;

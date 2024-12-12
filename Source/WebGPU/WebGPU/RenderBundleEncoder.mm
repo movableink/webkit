@@ -715,7 +715,7 @@ RenderBundleEncoder::FinalizeRenderCommand RenderBundleEncoder::drawIndexed(uint
 
         auto indexCountTimesSizeInBytes = checkedProduct<size_t>(indexCount, indexSizeInBytes);
         auto lastIndexOffset = checkedSum<size_t>(firstIndexOffsetInBytes, indexCountTimesSizeInBytes);
-        if (lastIndexOffset.hasOverflowed() || lastIndexOffset.value() > m_indexBufferSize) {
+        if (lastIndexOffset.hasOverflowed() || lastIndexOffset.value() > m_indexBufferSize || m_indexBufferSize < indexSizeInBytes) {
             makeInvalid(@"firstIndexOffsetInBytes + indexCount * indexSizeInBytes > m_indexBufferSize");
             return finalizeRenderCommand();
         }
@@ -947,6 +947,14 @@ bool RenderBundleEncoder::validToEncodeCommand() const
     return !m_finished || (m_renderPassEncoder && RefPtr { m_renderPassEncoder.get() }->renderCommandEncoder() && !m_makeSubmitInvalid);
 }
 
+void RenderBundleEncoder::resetIndexBuffer()
+{
+    m_indexBuffer = nullptr;
+    m_indexType = MTLIndexTypeUInt16;
+    m_indexBufferOffset = 0;
+    m_indexBufferSize = 0;
+}
+
 Ref<RenderBundle> RenderBundleEncoder::finish(const WGPURenderBundleDescriptor& descriptor)
 {
     auto device = m_device;
@@ -956,6 +964,7 @@ Ref<RenderBundle> RenderBundleEncoder::finish(const WGPURenderBundleDescriptor& 
     }
 
     m_requiresCommandReplay = m_requiresCommandReplay ?: (!m_currentCommandIndex);
+    resetIndexBuffer();
 
     auto createRenderBundle = ^{
         if (m_requiresCommandReplay)
@@ -999,6 +1008,7 @@ void RenderBundleEncoder::replayCommands(RenderPassEncoder& renderPassEncoder)
     m_currentPipelineState = nil;
     m_depthStencilState = nil;
     m_bindGroupDynamicOffsets = std::nullopt;
+    resetIndexBuffer();
 }
 
 void RenderBundleEncoder::insertDebugMarker(String&&)
@@ -1133,7 +1143,7 @@ void RenderBundleEncoder::setIndexBuffer(Buffer& buffer, WGPUIndexFormat format,
     RELEASE_ASSERT(m_indexBuffer);
     m_indexType = format == WGPUIndexFormat_Uint32 ? MTLIndexTypeUInt32 : MTLIndexTypeUInt16;
     m_indexBufferOffset = offset;
-    m_indexBufferSize = size;
+    m_indexBufferSize = size == WGPU_WHOLE_SIZE ? buffer.initialSize() : size;
     if (m_renderPassEncoder && !setCommandEncoder(buffer, m_renderPassEncoder))
         return;
 
@@ -1153,12 +1163,6 @@ void RenderBundleEncoder::setIndexBuffer(Buffer& buffer, WGPUIndexFormat format,
         auto indexSizeInBytes = (format == WGPUIndexFormat_Uint16 ? sizeof(uint16_t) : sizeof(uint32_t));
         if (!(buffer.usage() & WGPUBufferUsage_Index) || (offset % indexSizeInBytes)) {
             makeInvalid(@"setIndexBuffer: validation failed");
-            return;
-        }
-
-        auto sum = checkedSum<uint64_t>(offset, size);
-        if (sum.hasOverflowed() || sum.value() > buffer.initialSize()) {
-            makeInvalid(@"setIndexBuffer: offset + size > buffer.size()");
             return;
         }
 
@@ -1348,12 +1352,6 @@ void RenderBundleEncoder::setVertexBuffer(uint32_t slot, Buffer* optionalBuffer,
             }
             if (slot >= m_device->limits().maxVertexBuffers || !(buffer.usage() & WGPUBufferUsage_Vertex) || (offset % 4)) {
                 makeInvalid(@"setVertexBuffer: validation failed");
-                return;
-            }
-
-            auto sum = checkedSum<uint64_t>(offset, size);
-            if (sum.hasOverflowed() || sum.value() > buffer.initialSize()) {
-                makeInvalid(@"offset + size > buffer.size()");
                 return;
             }
         }

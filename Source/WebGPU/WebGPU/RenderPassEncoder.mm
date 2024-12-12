@@ -1278,10 +1278,9 @@ void RenderPassEncoder::setIndexBuffer(Buffer& buffer, WGPUIndexFormat format, u
     }
 
     m_indexBuffer = &buffer;
-    m_indexBufferSize = size;
+    m_indexBufferSize = size == WGPU_WHOLE_SIZE ? buffer.initialSize() : size;
     m_indexType = format == WGPUIndexFormat_Uint32 ? MTLIndexTypeUInt32 : MTLIndexTypeUInt16;
     m_indexBufferOffset = offset;
-    UNUSED_PARAM(size);
     addResourceToActiveResources(&buffer, buffer.buffer(), BindGroupEntryUsage::Input);
 }
 
@@ -1371,6 +1370,8 @@ void RenderPassEncoder::setVertexBuffer(uint32_t slot, const Buffer* optionalBuf
     m_maxVertexBufferSlot = std::max(slot, m_maxVertexBufferSlot);
     id<MTLBuffer> mtlBuffer = buffer.buffer();
     auto bufferLength = mtlBuffer.length;
+    if (size == WGPU_WHOLE_SIZE)
+        size = buffer.initialSize();
     m_vertexBuffers.set(slot, BufferAndOffset { .buffer = mtlBuffer, .offset = offset, .size = size });
     if (offset == bufferLength && !size)
         return;
