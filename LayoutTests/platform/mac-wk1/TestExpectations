@@ -1061,6 +1061,7 @@ http/tests/referrer-policy-img/no-referrer-when-downgrade/ [ Skip ]
 http/tests/referrer-policy-img/unsafe-url/cross-origin-http-http.html [ Skip ]
 http/tests/referrer-policy-img/unsafe-url/cross-origin-http.https.html [ Skip ]
 http/tests/referrer-policy-img/unsafe-url/cross-origin-http-UpgradeMixedContent.https.html [ Skip ]
+http/tests/ipc/ipc-fetch-task-message-crash.html [ Skip ]
 
 # Cross origin HTTPS loads require certificate validation, which are not supported for WK1 ping loads.
 http/tests/security/contentSecurityPolicy/block-all-mixed-content/insecure-ping-in-iframe.https.html [ Failure ]
