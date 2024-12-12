@@ -429,7 +429,7 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
 
 #if ENABLE(AX_THREAD_TEXT_APIS)
     setProperty(AXPropertyName::TextRuns, object.textRuns());
-    setProperty(AXPropertyName::ShouldEmitNewlinesBeforeAndAfterNode, object.shouldEmitNewlinesBeforeAndAfterNode());
+    setProperty(AXPropertyName::EmitTextAfterBehavior, object.emitTextAfterBehavior());
 #endif
 
     // These properties are only needed on the AXCoreObject interface due to their use in ATSPI,
@@ -622,7 +622,8 @@ void AXIsolatedObject::setProperty(AXPropertyName propertyName, AXPropertyValueV
 #if ENABLE(AX_THREAD_TEXT_APIS)
         [](AXTextRuns& runs) { return !runs.size(); },
         [](RetainPtr<CTFontRef>& typedValue) { return !typedValue; },
-#endif
+        [](TextEmissionBehavior typedValue) { return typedValue == TextEmissionBehavior::None; },
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
         [] (WallTime& time) { return !time; },
         [] (DateComponentsType& typedValue) { return typedValue == DateComponentsType::Invalid; },
         [](auto&) {
