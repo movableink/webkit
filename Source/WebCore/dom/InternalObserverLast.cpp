@@ -32,6 +32,7 @@
 #include "ExceptionCode.h"
 #include "InternalObserver.h"
 #include "JSDOMPromiseDeferred.h"
+#include "JSValueInWrappedObject.h"
 #include "Observable.h"
 #include "ScriptExecutionContext.h"
 #include "SubscribeOptions.h"
@@ -53,29 +54,30 @@ public:
 private:
     void next(JSC::JSValue value) final
     {
-        m_lastValue = value;
+        m_lastValue.setWeakly(value);
     }
 
     void error(JSC::JSValue value) final
     {
-        Ref { m_promise }->reject<IDLAny>(value);
+        protectedPromise()->reject<IDLAny>(value);
     }
 
     void complete() final
     {
         InternalObserver::complete();
 
-        auto lastValue = std::exchange(m_lastValue, std::nullopt);
+        if (UNLIKELY(!m_lastValue))
+            return protectedPromise()->reject(Exception { ExceptionCode::RangeError, "No values in Observable"_s });
 
-        if (UNLIKELY(!lastValue))
-            return Ref { m_promise }->reject(Exception { ExceptionCode::RangeError, "No values in Observable"_s });
-
-        Ref { m_promise }->resolve<IDLAny>(*lastValue);
+        protectedPromise()->resolve<IDLAny>(m_lastValue.getValue());
     }
 
-    void visitAdditionalChildren(JSC::AbstractSlotVisitor&) const final
+    void visitAdditionalChildren(JSC::AbstractSlotVisitor& visitor) const final
     {
+        m_lastValue.visit(visitor);
     }
+
+    Ref<DeferredPromise> protectedPromise() const { return m_promise; }
 
     InternalObserverLast(ScriptExecutionContext& context, Ref<DeferredPromise>&& promise)
         : InternalObserver(context)
@@ -83,15 +85,13 @@ private:
     {
     }
 
-    std::optional<JSC::JSValue> m_lastValue;
+    JSValueInWrappedObject m_lastValue;
     Ref<DeferredPromise> m_promise;
 };
 
 void createInternalObserverOperatorLast(ScriptExecutionContext& context, Observable& observable, const SubscribeOptions& options, Ref<DeferredPromise>&& promise)
 {
-    if (options.signal) {
-        Ref signal = *options.signal;
-
+    if (RefPtr signal = options.signal) {
         if (signal->aborted())
             return promise->reject<IDLAny>(signal->reason().getValue());
 
