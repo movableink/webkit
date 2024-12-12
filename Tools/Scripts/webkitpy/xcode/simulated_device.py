@@ -490,7 +490,7 @@ class SimulatedDeviceManager(object):
             # To avoid the immense strain this causes on the host's memory usage, we rebuild the cache here.
             if len(SimulatedDeviceManager.INITIALIZED_DEVICES) == 0:
                 for runtime in SimulatedDeviceManager.AVAILABLE_RUNTIMES:
-                    if runtime.os_variant in ['iOS', 'xrOS']:
+                    if runtime.os_variant == 'iOS':
                         runtime.rebuild_dyld_shared_cache(host)
 
         # Check for any other matching simulators that can satisfy the request.
