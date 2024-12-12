@@ -33,14 +33,13 @@
 #import "TestWKWebView.h"
 #import "Utilities.h"
 #import <WebKit/WKScriptMessageHandler.h>
-#import <WebKit/WKWebsiteDataRecord.h>
+#import <WebKit/WKWebViewPrivate.h>
 #import <WebKit/WKWebsiteDataStore.h>
-#import <WebKit/WKWebsiteDataStorePrivate.h>
 #import <wtf/RetainPtr.h>
 
-static void testRestoreLocalStorage(RetainPtr<WKWebsiteDataStore> websiteDataStore)
+static void testRestoreSessionStorage(RetainPtr<WKWebsiteDataStore> websiteDataStore)
 {
-    // Fetch Local Storage.
+    // Fetch Session Storage.
 
     // Clear the data store.
     __block bool done = false;
@@ -60,26 +59,25 @@ static void testRestoreLocalStorage(RetainPtr<WKWebsiteDataStore> websiteDataSto
     [webView loadHTMLString:@"<body>webkit.org</body>" baseURL:[NSURL URLWithString:@"https://webkit.org"]];
     [navigationDelegate waitForDidFinishNavigation];
 
-    // Put data into local storage.
-    [webView evaluateJavaScript:@"localStorage.setItem('key', 'value');" completionHandler:^(id value, NSError *error) {
+    // Put data into session storage.
+    [webView evaluateJavaScript:@"sessionStorage.setItem('key', 'value');" completionHandler:^(id value, NSError *error) {
         EXPECT_NULL(error);
         done = true;
     }];
     TestWebKitAPI::Util::run(&done);
     done = false;
 
-    // Fetch the local storage data.
-    RetainPtr set = [NSSet setWithObject:WKWebsiteDataTypeLocalStorage];
-    __block RetainPtr<NSData> localStorageData;
-    [[[webView configuration] websiteDataStore] _fetchDataOfTypes:set.get() completionHandler:^(NSData *data) {
+    // Fetch the session storage data.
+    __block RetainPtr<NSData> sessionStorageData;
+    [webView _fetchDataOfTypes:_WKWebViewDataTypeSessionStorage completionHandler:^(NSData *data) {
         EXPECT_NOT_NULL(data);
-        localStorageData = data;
+        sessionStorageData = data;
         done = true;
     }];
     TestWebKitAPI::Util::run(&done);
     done = false;
 
-    // Restore Local Storage.
+    // Restore Session Storage.
 
     // Clear the data store.
     [websiteDataStore removeDataOfTypes:[WKWebsiteDataStore allWebsiteDataTypes] modifiedSince:[NSDate distantPast] completionHandler:^{
@@ -92,8 +90,8 @@ static void testRestoreLocalStorage(RetainPtr<WKWebsiteDataStore> websiteDataSto
     RetainPtr newWebView = adoptNS([[WKWebView alloc] initWithFrame:CGRectMake(0, 0, 100, 100) configuration:viewConfiguration.get()]);
     [newWebView setNavigationDelegate:navigationDelegate.get()];
 
-    // Restore the local storage data.
-    [[[newWebView configuration] websiteDataStore] _restoreData:localStorageData.get() completionHandler:^(BOOL succeeded) {
+    // Restore the session storage data.
+    [newWebView _restoreData:sessionStorageData.get() completionHandler:^(BOOL succeeded) {
         EXPECT_TRUE(succeeded);
         done = true;
     }];
@@ -104,8 +102,8 @@ static void testRestoreLocalStorage(RetainPtr<WKWebsiteDataStore> websiteDataSto
     [newWebView loadHTMLString:@"<body>webkit.org</body>" baseURL:[NSURL URLWithString:@"https://webkit.org"]];
     [navigationDelegate waitForDidFinishNavigation];
 
-    // Check that the local storage data was correctly restored.
-    [newWebView evaluateJavaScript:@"localStorage.getItem('key');" completionHandler:^(id value, NSError *error) {
+    // Check that the session storage data was correctly restored.
+    [newWebView evaluateJavaScript:@"sessionStorage.getItem('key');" completionHandler:^(id value, NSError *error) {
         EXPECT_NULL(error);
         EXPECT_TRUE([value isKindOfClass:[NSString class]]);
         EXPECT_WK_STREQ(@"value", value);
@@ -115,20 +113,20 @@ static void testRestoreLocalStorage(RetainPtr<WKWebsiteDataStore> websiteDataSto
     done = false;
 }
 
-TEST(WebKit, RestoreLocalStorageFromPersistentDataStore)
+TEST(WebKit, RestoreSessionStorageFromPersistentDataStore)
 {
-    testRestoreLocalStorage([WKWebsiteDataStore defaultDataStore]);
+    testRestoreSessionStorage([WKWebsiteDataStore defaultDataStore]);
 }
 
-TEST(WebKit, RestoreLocalStorageFromEphemeralDataStore)
+TEST(WebKit, RestoreSessionStorageFromEphemeralDataStore)
 {
-    testRestoreLocalStorage([WKWebsiteDataStore nonPersistentDataStore]);
+    testRestoreSessionStorage([WKWebsiteDataStore nonPersistentDataStore]);
 }
 
-@interface RestoreLocalStorageMessageHandler : NSObject <WKScriptMessageHandler>
+@interface RestoreSessionStorageMessageHandler : NSObject <WKScriptMessageHandler>
 @end
 
-@implementation RestoreLocalStorageMessageHandler
+@implementation RestoreSessionStorageMessageHandler
 
 - (void)userContentController:(WKUserContentController *)userContentController didReceiveScriptMessage:(WKScriptMessage *)message
 {
@@ -155,9 +153,9 @@ function postMessage(message)
 }
 function item()
 {
-    result = localStorage.getItem('key');
+    result = sessionStorage.getItem('key');
     if (!result) {
-        localStorage.setItem('key', 'value');
+        sessionStorage.setItem('key', 'value');
         postMessage('Item is set');
     } else
         postMessage(result);
@@ -166,9 +164,9 @@ item();
 </script>
 )TESTRESOURCE"_s;
 
-static void testRestoreLocalStorageThirdPartyIFrame(RetainPtr<WKWebsiteDataStore> websiteDataStore)
+static void testRestoreSessionStorageThirdPartyIFrame(RetainPtr<WKWebsiteDataStore> websiteDataStore)
 {
-    // Fetch Local Storage.
+    // Fetch Session Storage.
 
     // Clear the data store.
     __block bool done = false;
@@ -180,7 +178,7 @@ static void testRestoreLocalStorageThirdPartyIFrame(RetainPtr<WKWebsiteDataStore
 
     // Create and load the WebView.
     RetainPtr viewConfiguration = adoptNS([[WKWebViewConfiguration alloc] init]);
-    RetainPtr handler = adoptNS([[RestoreLocalStorageMessageHandler alloc] init]);
+    RetainPtr handler = adoptNS([[RestoreSessionStorageMessageHandler alloc] init]);
     [[viewConfiguration userContentController] addScriptMessageHandler:handler.get() name:@"testHandler"];
     [viewConfiguration setWebsiteDataStore:websiteDataStore.get()];
 
@@ -199,24 +197,23 @@ static void testRestoreLocalStorageThirdPartyIFrame(RetainPtr<WKWebsiteDataStore
         { "/"_s, { frameBytes } },
     }, TestWebKitAPI::HTTPServer::Protocol::Https, nullptr, nullptr, 9091);
 
-    // The third party iframe will put the data into local storage.
+    // The third party iframe will put the data into session storage.
     [webView loadHTMLString:mainFrameString baseURL:[NSURL URLWithString:@"https://webkit.org"]];
     TestWebKitAPI::Util::run(&receivedScriptMessage);
     receivedScriptMessage = false;
     EXPECT_WK_STREQ(@"Item is set", [lastScriptMessage body]);
 
-    // Fetch the local storage data.
-    RetainPtr set = [NSSet setWithObject:WKWebsiteDataTypeLocalStorage];
-    __block RetainPtr<NSData> localStorageData;
-    [[[webView configuration] websiteDataStore] _fetchDataOfTypes:set.get() completionHandler:^(NSData *data) {
+    // Fetch the session storage data.
+    __block RetainPtr<NSData> sessionStorageData;
+    [webView _fetchDataOfTypes:_WKWebViewDataTypeSessionStorage completionHandler:^(NSData *data) {
         EXPECT_NOT_NULL(data);
-        localStorageData = data;
+        sessionStorageData = data;
         done = true;
     }];
     TestWebKitAPI::Util::run(&done);
     done = false;
 
-    // Restore Local Storage.
+    // Restore Session Storage.
 
     // Clear the data store.
     [websiteDataStore removeDataOfTypes:[WKWebsiteDataStore allWebsiteDataTypes] modifiedSince:[NSDate distantPast] completionHandler:^{
@@ -230,26 +227,26 @@ static void testRestoreLocalStorageThirdPartyIFrame(RetainPtr<WKWebsiteDataStore
     [newWebView setNavigationDelegate:navigationDelegate.get()];
 
     // Restore the local storage data.
-    [[[newWebView configuration] websiteDataStore] _restoreData:localStorageData.get() completionHandler:^(BOOL succeeded) {
+    [newWebView _restoreData:sessionStorageData.get() completionHandler:^(BOOL succeeded) {
         EXPECT_TRUE(succeeded);
         done = true;
     }];
     TestWebKitAPI::Util::run(&done);
     done = false;
 
-    // The third party iframe will check that the local storage data was correctly restored.
+    // The third party iframe will check that the session storage data was correctly restored.
     [newWebView loadHTMLString:mainFrameString baseURL:[NSURL URLWithString:@"https://webkit.org"]];
     TestWebKitAPI::Util::run(&receivedScriptMessage);
     receivedScriptMessage = false;
     EXPECT_WK_STREQ(@"value", [lastScriptMessage body]);
 }
 
-TEST(WebKit, RestoreLocalStorageFromPersistentDataStoreThirdPartyIFrame)
+TEST(WebKit, RestoreSessionStorageFromPersistentDataStoreThirdPartyIFrame)
 {
-    testRestoreLocalStorageThirdPartyIFrame([WKWebsiteDataStore defaultDataStore]);
+    testRestoreSessionStorageThirdPartyIFrame([WKWebsiteDataStore defaultDataStore]);
 }
 
-TEST(WebKit, RestoreLocalStorageFromEphemeralDataStoreThirdPartyIFrame)
+TEST(WebKit, RestoreSessionStorageFromEphemeralDataStoreThirdPartyIFrame)
 {
-    testRestoreLocalStorageThirdPartyIFrame([WKWebsiteDataStore nonPersistentDataStore]);
+    testRestoreSessionStorageThirdPartyIFrame([WKWebsiteDataStore nonPersistentDataStore]);
 }
