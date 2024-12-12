@@ -58,9 +58,7 @@ public:
         ShouldSubpixelQuantizeFonts = 1 << 13,
         ShadowsIgnoreTransforms     = 1 << 14,
         DrawLuminanceMask           = 1 << 15,
-#if HAVE(OS_DARK_MODE_SUPPORT)
         UseDarkAppearance           = 1 << 16,
-#endif
     };
     using ChangeFlags = OptionSet<Change>;
 
@@ -144,10 +142,8 @@ public:
     bool drawLuminanceMask() const { return m_drawLuminanceMask; }
     void setDrawLuminanceMask(bool drawLuminanceMask) { setProperty(Change::DrawLuminanceMask, &GraphicsContextState::m_drawLuminanceMask, drawLuminanceMask); }
 
-#if HAVE(OS_DARK_MODE_SUPPORT)
     bool useDarkAppearance() const { return m_useDarkAppearance; }
     void setUseDarkAppearance(bool useDarkAppearance) { setProperty(Change::UseDarkAppearance, &GraphicsContextState::m_useDarkAppearance, useDarkAppearance); }
-#endif
     
     bool containsOnlyInlineChanges() const;
     bool containsOnlyInlineStrokeChanges() const;
@@ -204,9 +200,7 @@ private:
     bool m_shouldSubpixelQuantizeFonts { true };
     bool m_shadowsIgnoreTransforms { false };
     bool m_drawLuminanceMask { false };
-#if HAVE(OS_DARK_MODE_SUPPORT)
     bool m_useDarkAppearance { false };
-#endif
 
     Purpose m_purpose { Purpose::Initial };
 };

@@ -277,7 +277,7 @@ Color RenderThemeAdwaita::systemColor(CSSValueID cssValueID, OptionSet<StyleColo
         return { Color::white, Color::Flags::Semantic };
 
     case CSSValueField:
-#if HAVE(OS_DARK_MODE_SUPPORT)
+#if PLATFORM(COCOA)
     case CSSValueWebkitControlBackground:
 #endif
         if (useDarkAppearance)

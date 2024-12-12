@@ -3382,15 +3382,12 @@ void LocalFrameView::updateBaseBackgroundColorIfNecessary()
 void LocalFrameView::updateBackgroundRecursively(const std::optional<Color>& backgroundColor)
 {
     auto intrinsicBaseBackgroundColor = [](LocalFrameView& view) -> Color {
-#if HAVE(OS_DARK_MODE_SUPPORT)
 #if PLATFORM(COCOA)
         static const auto cssValueControlBackground = CSSValueAppleSystemControlBackground;
 #else
         static const auto cssValueControlBackground = CSSValueWindow;
 #endif
         return RenderTheme::singleton().systemColor(cssValueControlBackground, view.styleColorOptions());
-#endif
-        return Color::white;
     };
 
     for (Frame* frame = m_frame.ptr(); frame; frame = frame->tree().traverseNext(m_frame.ptr())) {

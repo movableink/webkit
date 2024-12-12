@@ -4007,16 +4007,12 @@ bool Page::useDarkAppearance() const
 
 void Page::setUseDarkAppearanceOverride(std::optional<bool> valueOverride)
 {
-#if HAVE(OS_DARK_MODE_SUPPORT)
     if (valueOverride == m_useDarkAppearanceOverride)
         return;
 
     m_useDarkAppearanceOverride = valueOverride;
 
     appearanceDidChange();
-#else
-    UNUSED_PARAM(valueOverride);
-#endif
 }
 
 void Page::setFullscreenInsets(const FloatBoxExtent& insets)

@@ -2353,11 +2353,6 @@ if (USE_LIBWEBRTC)
     )
 endif ()
 
-# FIXME: This needs a more scalable solution. See webkit.org/b/267080 for some related discussion.
-if (HAVE_OS_DARK_MODE_SUPPORT)
-    set(FEATURE_DEFINES_WITH_SPACE_SEPARATOR "${FEATURE_DEFINES_WITH_SPACE_SEPARATOR} HAVE_OS_DARK_MODE_SUPPORT")
-endif ()
-
 set(WebCoreTestSupport_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/platform/mock"
     "${WEBCORE_DIR}/testing"
