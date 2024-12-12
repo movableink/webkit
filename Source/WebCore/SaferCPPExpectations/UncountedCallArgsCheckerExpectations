@@ -625,7 +625,6 @@ dom/IdleCallbackController.cpp
 dom/IdleDeadline.cpp
 dom/ImageOverlay.cpp
 dom/InlineStyleSheetOwner.cpp
-dom/InternalObserverMap.cpp
 dom/KeyboardEvent.cpp
 dom/LiveNodeList.h
 dom/LiveNodeListInlines.h
