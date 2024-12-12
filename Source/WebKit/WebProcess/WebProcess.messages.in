@@ -132,7 +132,7 @@ messages -> WebProcess : AuxiliaryProcess WantsAsyncDispatchMessage {
 #endif
 
 #if PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
-    BacklightLevelDidChange(float backlightLevel)
+    [DeferSendingIfSuspended] BacklightLevelDidChange(float backlightLevel)
 #endif
 
 #if PLATFORM(MAC) || PLATFORM(MACCATALYST)
