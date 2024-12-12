@@ -26,6 +26,7 @@
 
 #if USE(AVFOUNDATION)
 
+#include "BitrateMode.h"
 #include <CoreMedia/CoreMedia.h>
 #include <wtf/Forward.h>
 #include <wtf/ThreadSafeWeakPtr.h>
@@ -41,12 +42,28 @@ class WebAudioBufferList;
 
 class AudioSampleBufferConverter : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<AudioSampleBufferConverter> {
 public:
+
+#if ENABLE(WEB_CODECS)
+    using BitrateMode = BitrateMode;
+#else
+    enum class BitrateMode {
+        Constant,
+        Variable
+    };
+#endif
+
     struct Options {
         AudioFormatID format { kAudioFormatMPEG4AAC };
         std::optional<AudioStreamBasicDescription> description { };
         std::optional<unsigned> outputBitRate { };
         bool generateTimestamp { true };
-        std::optional<unsigned> preSkip { }; // If not set, let AudioConverter use the default.
+        std::optional<unsigned> preSkip { };
+        std::optional<BitrateMode> bitrateMode { };
+        std::optional<unsigned> packetSize { };
+        std::optional<unsigned> complexity { };
+        std::optional<unsigned> packetlossperc { };
+        std::optional<bool> useinbandfec { };
+        std::optional<bool> usedtx { };
     };
     static RefPtr<AudioSampleBufferConverter> create(CMBufferQueueTriggerCallback, void* callbackObject, const Options&);
     ~AudioSampleBufferConverter();
@@ -60,6 +77,7 @@ public:
     RetainPtr<CMSampleBufferRef> takeOutputSampleBuffer();
 
     unsigned bitRate() const;
+    unsigned preSkip() const { return m_preSkip; }
 
 private:
     AudioSampleBufferConverter(const Options&);
@@ -109,6 +127,7 @@ private:
     const AudioFormatID m_outputCodecType;
     const Options m_options;
     std::atomic<unsigned> m_defaultBitRate { 0 };
+    std::atomic<unsigned> m_preSkip { 0 };
 };
 
 }
