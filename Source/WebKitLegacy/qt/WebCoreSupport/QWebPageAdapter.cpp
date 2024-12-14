@@ -97,12 +97,14 @@
 #include <WebCore/PageIdentifier.h>
 #include <WebCore/PlatformKeyboardEvent.h>
 #include <WebCore/PlatformMouseEvent.h>
+#include <WebCore/PlatformWheelEvent.h>
 #include <WebCore/ProcessSyncClient.h>
 #include <WebCore/ProgressTracker.h>
 #include <WebCore/QWebPageClient.h>
 #include <WebCore/RemoteFrameClient.h>
 #include <WebCore/RenderTextControl.h>
 #include <WebCore/ScrollbarTheme.h>
+#include <WebCore/ScrollingCoordinatorTypes.h>
 #include <WebCore/Settings.h>
 #include <WebCore/TextIterator.h>
 #include <WebCore/UserAgentQt.h>
@@ -704,8 +706,8 @@ void QWebPageAdapter::wheelEvent(QWheelEvent *ev, int wheelScrollLines)
         return;
 
     PlatformWheelEvent pev = convertWheelEvent(ev, wheelScrollLines);
-    bool accepted = frame->eventHandler().handleWheelEvent(pev, { WheelEventProcessingSteps::SynchronousScrolling, WheelEventProcessingSteps::BlockingDOMEventDispatch }).wasHandled();
-    ev->setAccepted(accepted);
+    auto [result, _] = frame->eventHandler().handleWheelEvent(pev, { WheelEventProcessingSteps::SynchronousScrolling, WheelEventProcessingSteps::BlockingDOMEventDispatch });
+    ev->setAccepted(result.wasHandled());
 }
 #endif // QT_NO_WHEELEVENT
 

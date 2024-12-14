@@ -258,6 +258,15 @@ struct FontPlatformSerializedData {
     LOGFONT logFont;
 #endif
 };
+#elif PLATFORM(QT)
+struct FontPlatformSerializedCreationData {
+    Vector<uint8_t> fontFaceData;
+    String itemInCollection;
+};
+
+struct FontPlatformSerializedData {
+    QRawFont rawFont;
+};
 #endif
 
 #if PLATFORM(QT)

@@ -46,6 +46,7 @@
 #include <WebCore/ColorChooser.h>
 #include <WebCore/ColorChooserClient.h>
 #include <WebCore/CookieConsentDecisionResult.h>
+#include <WebCore/Cursor.h>
 #include <WebCore/DatabaseTracker.h>
 #include <WebCore/Document.h>
 #include <WebCore/FileChooser.h>

@@ -35,6 +35,7 @@
 #include <QNetworkCookie>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/WallTime.h>
 
 namespace WebCore {
 

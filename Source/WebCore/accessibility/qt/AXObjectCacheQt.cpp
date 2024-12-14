@@ -32,6 +32,7 @@
 #include "HTMLSelectElement.h"
 #include "LocalFrame.h"
 #include "Page.h"
+#include "NotImplemented.h"
 
 namespace WebCore {
 
@@ -63,7 +64,7 @@ void AXObjectCache::frameLoadingEventPlatformNotification(AccessibilityObject*, 
 void AXObjectCache::handleScrolledToAnchor(const Node& scrolledToNode)
 {
     if (RefPtr object = AccessibilityObject::firstAccessibleObjectFromNode(&scrolledToNode))
-        postPlatformNotification(*object, AXScrolledToAnchor);
+        postPlatformNotification(*object, AXNotification::ScrolledToAnchor);
 }
 
 void AXObjectCache::platformHandleFocusedUIElementChanged(Element*, Element* newFocusedNode)
@@ -76,7 +77,7 @@ void AXObjectCache::platformHandleFocusedUIElementChanged(Element*, Element* new
         return;
 
     if (RefPtr focusedObject = focusedObjectForPage(page))
-        postPlatformNotification(*focusedObject, AXFocusedUIElementChanged);
+        postPlatformNotification(*focusedObject, AXNotification::FocusedUIElementChanged);
 }
 
 void AXObjectCache::platformPerformDeferredCacheUpdate()

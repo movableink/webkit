@@ -86,7 +86,8 @@ bool EventHandler::passWheelEventToWidget(const PlatformWheelEvent& event, Widge
     if (!widget.isLocalFrameView())
         return false;
 
-    return downcast<LocalFrameView>(widget).frame().eventHandler().handleWheelEvent(event, { }).wasHandled();
+    auto [result, _] = downcast<LocalFrameView>(widget).frame().eventHandler().handleWheelEvent(event, { });
+    return result.wasHandled();
 }
 
 HandleUserInputEventResult EventHandler::passMousePressEventToSubframe(MouseEventWithHitTestResults& mev, LocalFrame& subframe)

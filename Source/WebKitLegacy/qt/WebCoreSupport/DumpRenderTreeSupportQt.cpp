@@ -43,6 +43,7 @@
 #include <WebCore/DocumentLoader.h>
 #include <WebCore/Editor.h>
 #include <WebCore/FocusController.h>
+#include <WebCore/FrameLoader.h>
 #include <WebCore/FrameLoadRequest.h>
 #include <WebCore/GraphicsContextQt.h>
 #include <WebCore/GCController.h>
