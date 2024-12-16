@@ -257,7 +257,12 @@ ExceptionOr<Ref<WebCodecsVideoFrame>> WebCodecsVideoFrame::create(ScriptExecutio
     if (!pixelBuffer)
         return Exception { ExceptionCode::InvalidStateError,  "Buffer has no frame"_s };
 
+#if PLATFORM(QT) && ENABLE(VIDEO) && !USE(GSTREAMER)
+    // QTFIXME
+    RefPtr<VideoFrame> videoFrame = nullptr;
+#else
     auto videoFrame = VideoFrame::createFromPixelBuffer(pixelBuffer.releaseNonNull(), { PlatformVideoColorPrimaries::Bt709, PlatformVideoTransferCharacteristics::Iec6196621, PlatformVideoMatrixCoefficients::Rgb, true });
+#endif
 
     if (!videoFrame)
         return Exception { ExceptionCode::InvalidStateError,  "Unable to create frame from buffer"_s };
