@@ -308,7 +308,7 @@ WEBKIT_OPTION_DEPEND(USE_SYSTEM_SYSPROF_CAPTURE USE_SYSPROF_CAPTURE)
 WEBKIT_OPTION_DEFINE(ENABLE_JSC_RESTRICTED_OPTIONS_BY_DEFAULT "Whether to enable dangerous development options in JSC by default." PRIVATE OFF)
 
 option(GENERATE_DOCUMENTATION "Generate HTML and QCH documentation" OFF)
-cmake_dependent_option(ENABLE_TEST_SUPPORT "Build tools for running layout tests and related library code" ON
+cmake_dependent_option(ENABLE_TEST_SUPPORT "Build tools for running layout tests and related library code" OFF
                                            "DEVELOPER_MODE" OFF)
 option(USE_STATIC_RUNTIME "Use static runtime (MSVC only)" OFF)
 option(ENABLE_PCH "Use pre-compiled headers (MSVC only)" ON)
