@@ -82,7 +82,7 @@ Ref<AudioDecoder::CreatePromise> AudioDecoder::create(const String& codecName, c
     UNUSED_PARAM(config);
     UNUSED_PARAM(outputCallback);
 
-    return CreatePromise::createAndReject("Not supported"_s));
+    return CreatePromise::createAndReject("Not supported"_s);
 #endif
 }
 
