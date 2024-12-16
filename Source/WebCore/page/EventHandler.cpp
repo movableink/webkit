@@ -4742,6 +4742,7 @@ bool EventHandler::tabsToLinks(KeyboardEvent* event) const
     return (event && eventInvertsTabsToLinksClientCallResult(*event)) ? !tabsToLinksClientCallResult : tabsToLinksClientCallResult;
 }
 
+#if !PLATFORM(QT)
 bool EventHandler::tabsToAllFormControls(KeyboardEvent* event) const
 {
 #if PLATFORM(COCOA)
@@ -4771,6 +4772,7 @@ bool EventHandler::tabsToAllFormControls(KeyboardEvent* event) const
     return true;
 #endif
 }
+#endif // !PLATFORM(QT)
 
 void EventHandler::defaultTextInputEventHandler(TextEvent& event)
 {
