@@ -142,9 +142,9 @@ void JSString::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 DEFINE_VISIT_CHILDREN(JSString);
 
 template<typename CharacterType>
-void JSRopeString::resolveRopeInternalNoSubstring(std::span<CharacterType> buffer, uint8_t* stackLimit) const
+void JSRopeString::resolveRopeInternalNoSubstring(std::span<CharacterType> buffer) const
 {
-    resolveToBuffer(fiber0(), fiber1(), fiber2(), buffer, stackLimit);
+    resolveToBuffer(fiber0(), fiber1(), fiber2(), buffer);
 }
 
 AtomString JSRopeString::resolveRopeToAtomString(JSGlobalObject* globalObject) const
@@ -166,15 +166,14 @@ AtomString JSRopeString::resolveRopeToAtomString(JSGlobalObject* globalObject) c
     }
 
     AtomString atomString;
-    uint8_t* stackLimit = std::bit_cast<uint8_t*>(vm.softStackLimit());
     if (!isSubstring()) {
         if (is8Bit()) {
             std::array<LChar, maxLengthForOnStackResolve> buffer;
-            resolveRopeInternalNoSubstring(std::span { buffer }.first(length()), stackLimit);
+            resolveRopeInternalNoSubstring(std::span { buffer }.first(length()));
             atomString = std::span<const LChar> { buffer }.first(length());
         } else {
             std::array<UChar, maxLengthForOnStackResolve> buffer;
-            resolveRopeInternalNoSubstring(std::span { buffer }.first(length()), stackLimit);
+            resolveRopeInternalNoSubstring(std::span { buffer }.first(length()));
             atomString = std::span<const UChar> { buffer }.first(length());
         }
     } else
@@ -207,14 +206,13 @@ RefPtr<AtomStringImpl> JSRopeString::resolveRopeToExistingAtomString(JSGlobalObj
     
     RefPtr<AtomStringImpl> existingAtomString;
     if (!isSubstring()) {
-        uint8_t* stackLimit = std::bit_cast<uint8_t*>(vm.softStackLimit());
         if (is8Bit()) {
             std::array<LChar, maxLengthForOnStackResolve> buffer;
-            resolveRopeInternalNoSubstring(std::span { buffer }.first(length()), stackLimit);
+            resolveRopeInternalNoSubstring(std::span { buffer }.first(length()));
             existingAtomString = AtomStringImpl::lookUp(std::span { buffer }.first(length()));
         } else {
             std::array<UChar, maxLengthForOnStackResolve> buffer;
-            resolveRopeInternalNoSubstring(std::span { buffer }.first(length()), stackLimit);
+            resolveRopeInternalNoSubstring(std::span { buffer }.first(length()));
             existingAtomString = AtomStringImpl::lookUp(std::span { buffer }.first(length()));
         }
     } else
@@ -247,8 +245,7 @@ const String& JSRopeString::resolveRopeWithFunction(JSGlobalObject* nullOrGlobal
         }
 
         size_t sizeToReport = newImpl->cost();
-        uint8_t* stackLimit = std::bit_cast<uint8_t*>(vm.softStackLimit());
-        resolveRopeInternalNoSubstring(buffer, stackLimit);
+        resolveRopeInternalNoSubstring(buffer);
         convertToNonRope(function(newImpl.releaseNonNull()));
         if constexpr (reportAllocation)
             vm.heap.reportExtraMemoryAllocated(this, sizeToReport);
@@ -263,8 +260,7 @@ const String& JSRopeString::resolveRopeWithFunction(JSGlobalObject* nullOrGlobal
     }
     
     size_t sizeToReport = newImpl->cost();
-    uint8_t* stackLimit = std::bit_cast<uint8_t*>(vm.softStackLimit());
-    resolveRopeInternalNoSubstring(buffer, stackLimit);
+    resolveRopeInternalNoSubstring(buffer);
     convertToNonRope(function(newImpl.releaseNonNull()));
     if constexpr (reportAllocation)
         vm.heap.reportExtraMemoryAllocated(this, sizeToReport);
