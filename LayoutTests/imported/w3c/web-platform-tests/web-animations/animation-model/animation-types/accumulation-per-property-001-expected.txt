@@ -283,6 +283,8 @@ PASS font-stretch: percentage
 PASS font-style (type: discrete) has testAccumulation function
 PASS font-style: "oblique" onto "italic"
 PASS font-style: "italic" onto "oblique"
+PASS font-width (type: percentage) has testAccumulation function
+PASS font-width: percentage
 PASS float (type: discrete) has testAccumulation function
 PASS float: "right" onto "left"
 PASS float: "left" onto "right"

@@ -570,6 +570,10 @@ const gCSSProperties1 = {
       { type: 'discrete', options: [ [ 'italic', 'oblique' ] ] }
     ]
   },
+  'font-width': {
+    // https://drafts.csswg.org/css-fonts-4/#propdef-font-width
+    types: [ 'percentage' ]
+  },
   'float': {
     // https://drafts.csswg.org/css-page-floats/#propdef-float
     types: [

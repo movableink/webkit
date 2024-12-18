@@ -586,7 +586,7 @@ public:
     inline FontOpticalSizing fontOpticalSizing() const;
     inline FontVariationSettings fontVariationSettings() const;
     inline FontSelectionValue fontWeight() const;
-    inline FontSelectionValue fontStretch() const;
+    inline FontSelectionValue fontWidth() const;
     inline std::optional<FontSelectionValue> fontItalic() const;
     inline const FontPalette& fontPalette() const;
     inline FontSizeAdjust fontSizeAdjust() const;
@@ -1289,7 +1289,7 @@ public:
     void setFontOpticalSizing(FontOpticalSizing);
     void setFontVariationSettings(FontVariationSettings);
     void setFontWeight(FontSelectionValue);
-    void setFontStretch(FontSelectionValue);
+    void setFontWidth(FontSelectionValue);
     void setFontItalic(std::optional<FontSelectionValue>);
     void setFontPalette(const FontPalette&);
 

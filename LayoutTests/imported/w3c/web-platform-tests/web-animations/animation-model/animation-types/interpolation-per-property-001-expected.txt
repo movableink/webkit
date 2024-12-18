@@ -347,6 +347,8 @@ PASS font-style (type: discrete) has testInterpolation function
 PASS font-style uses discrete animation when animating between "italic" and "oblique" with linear easing
 PASS font-style uses discrete animation when animating between "italic" and "oblique" with effect easing
 PASS font-style uses discrete animation when animating between "italic" and "oblique" with keyframe easing
+PASS font-width (type: percentage) has testInterpolation function
+PASS font-width supports animating as a percentage
 PASS float (type: discrete) has testInterpolation function
 PASS float uses discrete animation when animating between "left" and "right" with linear easing
 PASS float uses discrete animation when animating between "left" and "right" with effect easing

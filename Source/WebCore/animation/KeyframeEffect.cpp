@@ -128,6 +128,10 @@ static inline CSSPropertyID IDLAttributeNameToAnimationPropertyName(const AtomSt
     if (idlAttributeName == "cssOffset"_s)
         return CSSPropertyOffset;
 
+    // If the attribute is the string "fontStretch" return the CSS font-width property that it aliases.
+    if (idlAttributeName == "fontStretch"_s)
+        return CSSPropertyFontWidth;
+
     // 4. Otherwise, return the result of applying the IDL attribute to CSS property algorithm [CSSOM] to attribute.
     auto cssPropertyId = CSSStyleDeclaration::getCSSPropertyIDFromJavaScriptPropertyName(idlAttributeName);
 

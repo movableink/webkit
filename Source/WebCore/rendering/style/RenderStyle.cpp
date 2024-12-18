@@ -2003,7 +2003,7 @@ void RenderStyle::conservativelyCollectChangedAnimatableProperties(const RenderS
             changingProperties.m_properties.set(CSSPropertyFontVariantLigatures);
             changingProperties.m_properties.set(CSSPropertyFontVariantNumeric);
             changingProperties.m_properties.set(CSSPropertyFontSize);
-            changingProperties.m_properties.set(CSSPropertyFontStretch);
+            changingProperties.m_properties.set(CSSPropertyFontWidth);
             changingProperties.m_properties.set(CSSPropertyFontPalette);
             changingProperties.m_properties.set(CSSPropertyFontKerning);
             changingProperties.m_properties.set(CSSPropertyFontSynthesisWeight);
@@ -2945,10 +2945,11 @@ void RenderStyle::setFontWeight(FontSelectionValue value)
     setFontDescription(WTFMove(description));
 }
 
-void RenderStyle::setFontStretch(FontSelectionValue value)
+void RenderStyle::setFontWidth(FontSelectionValue value)
 {
     auto description = fontDescription();
-    description.setStretch(value);
+    description.setWidth(value);
+
     setFontDescription(WTFMove(description));
 }
 
