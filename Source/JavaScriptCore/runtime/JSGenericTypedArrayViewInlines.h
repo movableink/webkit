@@ -1013,6 +1013,17 @@ template<typename PassedAdaptor> inline Structure* JSGenericResizableOrGrowableS
     return Structure::create(vm, globalObject, prototype, TypeInfo(typeForTypedArrayType(Base::Adaptor::typeValue), StructureFlags), info(), NonArray);
 }
 
+template<typename PassedAdaptor> inline bool JSGenericResizableOrGrowableSharedTypedArrayView<PassedAdaptor>::preventExtensions(JSObject* cell, JSGlobalObject* globalObject)
+{
+    // https://tc39.es/ecma262/#sec-typedarray-preventextensions
+    auto* object = jsCast<JSGenericResizableOrGrowableSharedTypedArrayView<PassedAdaptor>*>(cell);
+    if (object->isAutoLength())
+        return false;
+    if (object->isResizableNonShared())
+        return false;
+    return Base::preventExtensions(object, globalObject);
+}
+
 } // namespace JSC
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

@@ -79,9 +79,6 @@ test/built-ins/Function/prototype/toString/built-in-function-object.js:
 test/built-ins/Object/entries/order-after-define-property-with-function.js:
   default: 'Test262Error: Actual [a, name] and expected [name, a] should have the same contents. '
   strict mode: 'Test262Error: Actual [a, name] and expected [name, a] should have the same contents. '
-test/built-ins/Object/freeze/typedarray-backed-by-resizable-buffer.js:
-  default: 'Test262Error: Expected a TypeError to be thrown but no exception was thrown at all'
-  strict mode: 'Test262Error: Expected a TypeError to be thrown but no exception was thrown at all'
 test/built-ins/Object/keys/order-after-define-property-with-function.js:
   default: 'Test262Error: Actual [a, length] and expected [length, a] should have the same contents. '
   strict mode: 'Test262Error: Actual [a, length] and expected [length, a] should have the same contents. '

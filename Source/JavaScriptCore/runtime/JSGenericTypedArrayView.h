@@ -226,6 +226,8 @@ public:
 
     static inline const ClassInfo* info();
     static inline Structure* createStructure(VM&, JSGlobalObject*, JSValue prototype);
+
+    static bool preventExtensions(JSObject*, JSGlobalObject*);
 };
 
 template<typename Adaptor> inline RefPtr<typename Adaptor::ViewType> toPossiblySharedNativeTypedView(VM&, JSValue);
