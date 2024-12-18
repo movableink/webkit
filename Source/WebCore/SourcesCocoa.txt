@@ -457,7 +457,6 @@ platform/graphics/cocoa/ImageAdapterCocoa.mm
 platform/graphics/cocoa/MediaEngineConfigurationFactoryCocoa.cpp
 platform/graphics/cocoa/MediaPlayerCocoa.mm
 platform/graphics/cocoa/MediaPlayerPrivateWebM.mm @no-unify
-platform/graphics/cocoa/PlatformTimeRangesCocoa.mm @no-unify
 platform/graphics/cocoa/SourceBufferParser.cpp
 platform/graphics/cocoa/SourceBufferParserWebM.cpp
 platform/graphics/cocoa/SystemFontDatabaseCocoa.mm

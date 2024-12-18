@@ -141,8 +141,22 @@ void PlaybackSessionInterfaceAVKitLegacy::rateChanged(OptionSet<PlaybackSessionM
 
 void PlaybackSessionInterfaceAVKitLegacy::seekableRangesChanged(const TimeRanges& timeRanges, double lastModifiedTime, double liveUpdateInterval)
 {
-    [m_playerController setSeekableTimeRanges:makeNSArray(timeRanges.ranges()).get()];
-    [m_playerController setSeekableTimeRangesLastModifiedTime:lastModifiedTime];
+    RetainPtr<NSMutableArray> seekableRanges = adoptNS([[NSMutableArray alloc] init]);
+
+#if !PLATFORM(WATCHOS)
+    for (unsigned i = 0; i < timeRanges.length(); i++) {
+        double start = timeRanges.start(i).releaseReturnValue();
+        double end = timeRanges.end(i).releaseReturnValue();
+
+        CMTimeRange range = PAL::CMTimeRangeMake(PAL::CMTimeMakeWithSeconds(start, 1000), PAL::CMTimeMakeWithSeconds(end-start, 1000));
+        [seekableRanges addObject:[NSValue valueWithCMTimeRange:range]];
+    }
+#else
+    UNUSED_PARAM(timeRanges);
+#endif
+
+    [m_playerController setSeekableTimeRanges:seekableRanges.get()];
+    [m_playerController setSeekableTimeRangesLastModifiedTime: lastModifiedTime];
     [m_playerController setLiveUpdateInterval:liveUpdateInterval];
 }
 
