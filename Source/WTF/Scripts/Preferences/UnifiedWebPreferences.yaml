@@ -7882,6 +7882,7 @@ UseGPUProcessForMediaEnabled:
     WebKit:
       "ENABLE(GPU_PROCESS_BY_DEFAULT)": true
       default: false
+  sharedPreferenceForWebProcess: true
 
 UseGPUProcessForWebGLEnabled:
   type: bool
