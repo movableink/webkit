@@ -62,6 +62,10 @@
 #include <wtf/glib/GSocketMonitor.h>
 #endif
 
+#if USE(UNIX_DOMAIN_SOCKETS)
+#include <wtf/unix/UnixFileDescriptor.h>
+#endif
+
 #if ENABLE(IPC_TESTING_API)
 #include "MessageObserver.h"
 #endif
@@ -252,15 +256,15 @@ public:
 
 #if USE(UNIX_DOMAIN_SOCKETS)
         explicit Identifier(Handle&& handle)
-            : Identifier(handle.release())
+            : Identifier({ handle.release(), UnixFileDescriptor::Adopt })
         {
         }
-        explicit Identifier(int handle)
-            : handle(handle)
+        explicit Identifier(UnixFileDescriptor&& fd)
+            : handle(WTFMove(fd))
         {
         }
-        operator bool() const { return handle != -1; }
-        int handle { -1 };
+        operator bool() const { return !!handle; }
+        UnixFileDescriptor handle;
 #elif OS(WINDOWS)
         explicit Identifier(Handle&& handle)
             : Identifier(handle.leak())
@@ -664,7 +668,7 @@ private:
     GSocketMonitor m_readSocketMonitor;
     GSocketMonitor m_writeSocketMonitor;
 #else
-    int m_socketDescriptor;
+    UnixFileDescriptor m_socketDescriptor;
 #endif
 #if PLATFORM(PLAYSTATION)
     RefPtr<WTF::Thread> m_socketMonitor;

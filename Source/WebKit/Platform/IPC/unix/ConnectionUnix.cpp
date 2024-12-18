@@ -104,7 +104,7 @@ int Connection::socketDescriptor() const
 #if USE(GLIB)
     return g_socket_get_fd(m_socket.get());
 #else
-    return m_socketDescriptor;
+    return m_socketDescriptor.value();
 #endif
 }
 
@@ -112,14 +112,14 @@ void Connection::platformInitialize(Identifier&& identifier)
 {
 #if USE(GLIB)
     GUniqueOutPtr<GError> error;
-    m_socket = adoptGRef(g_socket_new_from_fd(identifier.handle, &error.outPtr()));
+    m_socket = adoptGRef(g_socket_new_from_fd(identifier.handle.release(), &error.outPtr()));
     if (!m_socket) {
         // Note: g_socket_new_from_fd() takes ownership of the fd only on success, so if this error
         // were not fatal, we would need to close it here.
         g_error("Failed to adopt IPC::Connection socket: %s", error->message);
     }
 #else
-    m_socketDescriptor = identifier.handle;
+    m_socketDescriptor = WTFMove(identifier.handle);
 #endif
     m_readBuffer.reserveInitialCapacity(messageMaxSize);
     m_fileDescriptors.reserveInitialCapacity(attachmentMaxAmount);
@@ -128,7 +128,6 @@ void Connection::platformInitialize(Identifier&& identifier)
 void Connection::platformInvalidate()
 {
 #if USE(GLIB)
-    // In the GLib platform the socket descriptor is owned by GSocket.
     m_socket = nullptr;
 #else
     if (m_socketDescriptor != -1)
@@ -589,7 +588,7 @@ SocketPair createPlatformConnection(unsigned options)
 
         setPasscredIfNeeded();
 
-        return { sockets[0], sockets[1] };
+        return { { sockets[0], UnixFileDescriptor::Adopt }, { sockets[1], UnixFileDescriptor::Adopt } };
     }
 #endif
 
@@ -602,13 +601,13 @@ SocketPair createPlatformConnection(unsigned options)
 
     setPasscredIfNeeded();
 
-    return { sockets[0], sockets[1] };
+    return { { sockets[0], UnixFileDescriptor::Adopt }, { sockets[1], UnixFileDescriptor::Adopt } };
 }
 
 std::optional<Connection::ConnectionIdentifierPair> Connection::createConnectionIdentifierPair()
 {
     SocketPair socketPair = createPlatformConnection();
-    return ConnectionIdentifierPair { Identifier { UnixFileDescriptor { socketPair.server,  UnixFileDescriptor::Adopt } }, UnixFileDescriptor { socketPair.client, UnixFileDescriptor::Adopt } };
+    return { { Identifier { WTFMove(socketPair.server) }, ConnectionHandle { WTFMove(socketPair.client) } } };
 }
 
 #if USE(GLIB) && OS(LINUX)
