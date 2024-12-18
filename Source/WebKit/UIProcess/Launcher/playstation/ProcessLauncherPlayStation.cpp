@@ -96,10 +96,9 @@ void ProcessLauncher::launchProcess()
     }
 
     // We've finished launching the process, message back to the main run loop.
-    IPC::Connection::Identifier serverIdentifier { WTFMove(socketPair.server) };
     RefPtr<ProcessLauncher> protectedThis(this);
     RunLoop::main().dispatch([=] {
-        protectedThis->didFinishLaunchingProcess(appLocalPid, WTFMove(serverIdentifier));
+        protectedThis->didFinishLaunchingProcess(appLocalPid, IPC::Connection::Identifier { socketPair.server });
     });
 }
 
