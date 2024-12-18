@@ -44,13 +44,13 @@ class ResourceMonitorChecker final {
 public:
     using Eligibility = ResourceMonitor::Eligibility;
 
-    static ResourceMonitorChecker& singleton();
+    WEBCORE_EXPORT static ResourceMonitorChecker& singleton();
 
     ~ResourceMonitorChecker();
 
     void checkEligibility(ContentExtensions::ResourceLoadInfo&&, CompletionHandler<void(Eligibility)>&&);
 
-    void setContentRuleList(ContentExtensions::ContentExtensionsBackend&&);
+    WEBCORE_EXPORT void setContentRuleList(ContentExtensions::ContentExtensionsBackend&&);
 
 private:
     ResourceMonitorChecker();

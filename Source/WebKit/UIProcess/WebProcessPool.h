@@ -121,6 +121,7 @@ class SuspendedPageProxy;
 class UIGamepad;
 class WebAutomationSession;
 class WebBackForwardCache;
+class WebCompiledContentRuleList;
 class WebContextSupplement;
 class WebPageGroup;
 class WebPageProxy;
@@ -612,6 +613,10 @@ public:
     void updateWebProcessSuspensionDelayWithPacing(WeakHashSet<WebProcessProxy>&&);
 #endif
 
+#if ENABLE(CONTENT_EXTENSIONS)
+    WebCompiledContentRuleList* cachedResourceMonitorRuleList();
+#endif
+
 private:
     enum class NeedsGlobalStaticInitialization : bool { No, Yes };
     void platformInitialize(NeedsGlobalStaticInitialization);
@@ -723,6 +728,12 @@ private:
 
 #if ENABLE(MODEL_PROCESS)
     ModelProcessProxy& ensureModelProcess();
+#endif
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    void loadOrUpdateResourceMonitorRuleList();
+
+    void platformLoadResourceMonitorRuleList(CompletionHandler<void()>&&);
 #endif
 
     Ref<API::ProcessPoolConfiguration> m_configuration;
@@ -949,6 +960,13 @@ private:
 #if ENABLE(WEB_PROCESS_SUSPENSION_DELAY)
     ApproximateTime m_lastMemoryPressureStatusTime;
     RunLoop::Timer m_checkMemoryPressureStatusTimer;
+#endif
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    RefPtr<WebCompiledContentRuleList> m_resourceMonitorRuleListCache;
+    bool m_resourceMonitorRuleListLoading { false };
+    bool m_resourceMonitorRuleListFailed { false };
+    RunLoop::Timer m_resourceMonitorRuleListRefreshTimer;
 #endif
 
 #if ENABLE(IPC_TESTING_API)

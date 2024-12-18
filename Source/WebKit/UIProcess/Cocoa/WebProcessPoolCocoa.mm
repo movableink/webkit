@@ -1333,4 +1333,11 @@ void WebProcessPool::setCachedHardwareKeyboardState(HardwareKeyboardState hardwa
 }
 #endif
 
+#if ENABLE(CONTENT_EXTENSIONS)
+void WebProcessPool::platformLoadResourceMonitorRuleList(CompletionHandler<void()>&& completionHandler)
+{
+    completionHandler();
+}
+#endif
+
 } // namespace WebKit

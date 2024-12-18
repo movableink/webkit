@@ -143,6 +143,7 @@ class WebAutomationSessionProxy;
 class WebBadgeClient;
 class WebBroadcastChannelRegistry;
 class WebCacheStorageProvider;
+class WebCompiledContentRuleListData;
 class WebCookieJar;
 class WebFileSystemStorageConnection;
 class WebFrame;
@@ -399,6 +400,10 @@ public:
 #if ENABLE(NOTIFY_BLOCKING)
     void postNotification(const String& message, std::optional<uint64_t> state);
     void postObserverNotification(const String& message);
+#endif
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    void setResourceMonitorContentRuleList(WebCompiledContentRuleListData&&);
 #endif
 
     bool areAllPagesThrottleable() const;

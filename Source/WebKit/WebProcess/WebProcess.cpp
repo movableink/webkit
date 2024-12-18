@@ -233,6 +233,11 @@
 #include "WebMockContentFilterManager.h"
 #endif
 
+#if ENABLE(CONTENT_EXTENSIONS)
+#include "WebCompiledContentRuleList.h"
+#include <WebCore/ResourceMonitorChecker.h>
+#endif
+
 #if HAVE(LSDATABASECONTEXT)
 #include "LaunchServicesDatabaseManager.h"
 #endif
@@ -2470,6 +2475,22 @@ Ref<WebCookieJar> WebProcess::protectedCookieJar()
 {
     return m_cookieJar;
 }
+
+#if ENABLE(CONTENT_EXTENSIONS)
+void WebProcess::setResourceMonitorContentRuleList(WebCompiledContentRuleListData&& ruleListData)
+{
+    RefPtr compiledContentRuleList = WebCompiledContentRuleList::create(WTFMove(ruleListData));
+    if (!compiledContentRuleList) {
+        WEBPROCESS_RELEASE_LOG_ERROR(ResourceLoadStatistics, "setResourceMonitorContentRuleList: Failed to create rule list");
+        return;
+    }
+
+    WebCore::ContentExtensions::ContentExtensionsBackend backend;
+    backend.addContentExtension(ruleListData.identifier, compiledContentRuleList.releaseNonNull(), { }, ContentExtensions::ContentExtension::ShouldCompileCSS::No);
+
+    WebCore::ResourceMonitorChecker::singleton().setContentRuleList(WTFMove(backend));
+}
+#endif
 
 } // namespace WebKit
 

@@ -3096,6 +3096,26 @@ const WebCore::ProcessIdentity& WebProcessProxy::processIdentity()
 }
 #endif
 
+#if ENABLE(CONTENT_EXTENSIONS)
+void WebProcessProxy::requestResourceMonitorRuleLists()
+{
+    if (RefPtr processPool = m_processPool.get()) {
+        m_resourceMonitorRuleListRequestedBySomePage = true;
+
+        if (RefPtr ruleList = processPool->cachedResourceMonitorRuleList())
+            setResourceMonitorRuleListsIfRequired(ruleList.get());
+    }
+}
+
+void WebProcessProxy::setResourceMonitorRuleListsIfRequired(WebCompiledContentRuleList* ruleList)
+{
+    if (!m_resourceMonitorRuleListRequestedBySomePage || m_resourceMonitorRuleList == ruleList)
+        return;
+
+    m_resourceMonitorRuleList = ruleList;
+    send(Messages::WebProcess::SetResourceMonitorContentRuleList(ruleList->data()), 0);
+}
+#endif
 
 } // namespace WebKit
 

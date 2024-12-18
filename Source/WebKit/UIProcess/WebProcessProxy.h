@@ -117,6 +117,7 @@ class SuspendedPageProxy;
 class UserMediaCaptureManagerProxy;
 class VisitedLinkStore;
 class WebBackForwardListItem;
+class WebCompiledContentRuleList;
 class WebCompiledContentRuleListData;
 class WebFrameProxy;
 class WebLockRegistryProxy;
@@ -536,6 +537,11 @@ public:
     HashMap<WebCore::PageIdentifier, CoreIPCAuditToken> presentingApplicationAuditTokens() const;
 #endif
 
+#if ENABLE(CONTENT_EXTENSIONS)
+    void requestResourceMonitorRuleLists();
+    void setResourceMonitorRuleListsIfRequired(WebCompiledContentRuleList*);
+#endif
+
 private:
     Type type() const final { return Type::WebContent; }
 
@@ -831,6 +837,12 @@ private:
 #if ENABLE(LOGD_BLOCKING_IN_WEBCONTENT)
     IPC::ScopedActiveMessageReceiveQueue<LogStream> m_logStream;
 #endif
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    bool m_resourceMonitorRuleListRequestedBySomePage { false };
+    RefPtr<WebCompiledContentRuleList> m_resourceMonitorRuleList;
+#endif
+
 };
 
 WTF::TextStream& operator<<(WTF::TextStream&, const WebProcessProxy&);

@@ -71,6 +71,7 @@
 #include "WebBackForwardCache.h"
 #include "WebBackForwardList.h"
 #include "WebBackForwardListItem.h"
+#include "WebCompiledContentRuleList.h"
 #include "WebContextSupplement.h"
 #include "WebFrameProxy.h"
 #include "WebGeolocationManagerProxy.h"
@@ -105,6 +106,7 @@
 #include <WebCore/Site.h>
 #include <pal/SessionID.h>
 #include <wtf/CallbackAggregator.h>
+#include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/ProcessPrivilege.h>
@@ -267,6 +269,9 @@ WebProcessPool::WebProcessPool(API::ProcessPoolConfiguration& configuration)
 #if ENABLE(WEB_PROCESS_SUSPENSION_DELAY)
     , m_lastMemoryPressureStatusTime(ApproximateTime::now() - memoryPressureCheckInterval())
     , m_checkMemoryPressureStatusTimer(RunLoop::main(), this, &WebProcessPool::checkMemoryPressureStatus)
+#endif
+#if ENABLE(CONTENT_EXTENSIONS)
+    , m_resourceMonitorRuleListRefreshTimer(RunLoop::main(), this, &WebProcessPool::loadOrUpdateResourceMonitorRuleList)
 #endif
 #if ENABLE(IPC_TESTING_API)
     , m_ipcTester(IPCTester::create())
@@ -2680,5 +2685,61 @@ void WebProcessPool::updateWebProcessSuspensionDelayWithPacing(WeakHashSet<WebPr
 }
 
 #endif // ENABLE(WEB_PROCESS_SUSPENSION_DELAY)
+
+#if ENABLE(CONTENT_EXTENSIONS)
+
+constexpr static Seconds resourceMonitorRuleListCheckInterval = 24_h;
+
+WebCompiledContentRuleList* WebProcessPool::cachedResourceMonitorRuleList()
+{
+    if (!m_resourceMonitorRuleListCache)
+        loadOrUpdateResourceMonitorRuleList();
+
+    return m_resourceMonitorRuleListCache.get();
+}
+
+void WebProcessPool::loadOrUpdateResourceMonitorRuleList()
+{
+    if (m_resourceMonitorRuleListLoading || m_resourceMonitorRuleListFailed)
+        return;
+
+    WEBPROCESSPOOL_RELEASE_LOG(Process, "loadOrUpdateResourceMonitorRuleList: rule list is requested");
+
+    m_resourceMonitorRuleListLoading = true;
+
+    platformLoadResourceMonitorRuleList([weakThis = WeakPtr { *this }] {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
+            return;
+
+        protectedThis->m_resourceMonitorRuleListLoading = false;
+
+        RefPtr ruleList = protectedThis->m_resourceMonitorRuleListCache;
+        if (!ruleList) {
+            protectedThis->m_resourceMonitorRuleListFailed = true;
+            return;
+        }
+
+        if (!protectedThis->m_resourceMonitorRuleListRefreshTimer.isActive()) {
+            auto interval = resourceMonitorRuleListCheckInterval + Seconds::fromHours(cryptographicallyRandomUnitInterval());
+            protectedThis->m_resourceMonitorRuleListRefreshTimer.startOneShot(interval);
+        }
+
+        if (protectedThis->m_processes.isEmpty())
+            return;
+
+        for (Ref process : protectedThis->m_processes)
+            process->setResourceMonitorRuleListsIfRequired(ruleList.get());
+    });
+}
+
+#if !PLATFORM(COCOA)
+void WebProcessPool::platformLoadResourceMonitorRuleList(CompletionHandler<void()>&& completionHandler)
+{
+    completionHandler();
+}
+#endif
+
+#endif
 
 } // namespace WebKit
