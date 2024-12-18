@@ -609,6 +609,13 @@ class Git(Scm):
             return sorted(result.get(remote, []))
         return result
 
+    def is_suitable_branch_for_pull_request(self, branch, source_remote):
+        if branch is None or branch in self.DEFAULT_BRANCHES or self.PROD_BRANCHES.match(branch):
+            return False
+        elif branch in self.branches_for(remote=source_remote) and not self.dev_branches.match(branch):
+            return False
+        return True
+
     def _is_on_default_branch(self, hash):
         branches = self.branches_for(remote=None)
         remote_keys = [None] + self.source_remotes()
