@@ -175,10 +175,6 @@ void initializeWebViewConfiguration(const char* libraryPath, WKStringRef injecte
         [configuration _setAllowTopNavigationToDataURLs:YES];
         [configuration _setApplePayEnabled:YES];
 
-#if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
-        [configuration _setOverlayRegionsEnabled:YES];
-#endif
-
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
         [configuration _setCSSTransformStyleSeparatedEnabled:YES];
 #endif

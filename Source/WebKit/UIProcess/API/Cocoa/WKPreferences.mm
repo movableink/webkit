@@ -1672,6 +1672,24 @@ static WebCore::EditableLinkBehavior toEditableLinkBehavior(_WKEditableLinkBehav
     return _preferences->cssTransformStyleSeparatedEnabled();
 }
 
+- (void)_setOverlayRegionsEnabled:(BOOL)enabled
+{
+#if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
+    _preferences->setOverlayRegionsEnabled(enabled);
+#else
+    UNUSED_PARAM(enabled);
+#endif
+}
+
+- (BOOL)_overlayRegionsEnabled
+{
+#if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
+    return _preferences->overlayRegionsEnabled();
+#else
+    return NO;
+#endif
+}
+
 - (void)_setSpatialVideoEnabled:(BOOL)enabled
 {
 #if ENABLE(LINEAR_MEDIA_PLAYER)
@@ -1844,5 +1862,9 @@ static WebCore::EditableLinkBehavior toEditableLinkBehavior(_WKEditableLinkBehav
 - (void)_setOfflineApplicationCacheIsEnabled:(BOOL)offlineApplicationCacheIsEnabled
 {
 }
+
+#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/WKPreferencesAdditions.mm>)
+#import <WebKitAdditions/WKPreferencesAdditions.mm>
+#endif
 
 @end

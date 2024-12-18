@@ -5590,6 +5590,19 @@ OverlappingBackingStoreProvidersEnabled:
     WebCore:
       default: true
 
+OverlayRegionsEnabled:
+  type: bool
+  status: testable
+  category: dom
+  humanReadableName: "Overlay Regions"
+  humanReadableDescription: "Generate and visualize overlay regions"
+  condition: ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
+  webcoreBinding: none
+  exposed: [ WebKit ]
+  defaultValue:
+    WebKit:
+      default: false
+
 OverscrollBehaviorEnabled:
   type: bool
   status: stable

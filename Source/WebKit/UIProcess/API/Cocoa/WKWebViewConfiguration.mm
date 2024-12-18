@@ -255,7 +255,6 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     [coder encodeBool:self._multiRepresentationHEICInsertionEnabled forKey:@"multiRepresentationHEICInsertionEnabled"];
 #if PLATFORM(VISION)
     [coder encodeBool:self._gamepadAccessRequiresExplicitConsent forKey:@"gamepadAccessRequiresExplicitConsent"];
-    [coder encodeBool:self._overlayRegionsEnabled forKey:@"overlayRegionsEnabled"];
     [coder encodeBool:self._cssTransformStyleSeparatedEnabled forKey:@"cssTransformStyleSeparatedEnabled"];
 #endif
 }
@@ -307,7 +306,6 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     self._multiRepresentationHEICInsertionEnabled = [coder decodeBoolForKey:@"multiRepresentationHEICInsertionEnabled"];
 #if PLATFORM(VISION)
     self._gamepadAccessRequiresExplicitConsent = [coder decodeBoolForKey:@"gamepadAccessRequiresExplicitConsent"];
-    self._overlayRegionsEnabled = [coder decodeBoolForKey:@"overlayRegionsEnabled"];
     self._cssTransformStyleSeparatedEnabled = [coder decodeBoolForKey:@"cssTransformStyleSeparatedEnabled"];
 #endif
 
@@ -1533,22 +1531,6 @@ static WebKit::AttributionOverrideTesting toAttributionOverrideTesting(_WKAttrib
 {
 #if ENABLE(GAMEPAD)
     _pageConfiguration->setGamepadAccessRequiresExplicitConsent(gamepadAccessRequiresExplicitConsent ? WebCore::ShouldRequireExplicitConsentForGamepadAccess::Yes : WebCore::ShouldRequireExplicitConsentForGamepadAccess::No);
-#endif
-}
-
-- (BOOL)_overlayRegionsEnabled
-{
-#if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
-    return _pageConfiguration->overlayRegionsEnabled();
-#else
-    return NO;
-#endif
-}
-
-- (void)_setOverlayRegionsEnabled:(BOOL)overlayRegionsEnabled
-{
-#if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
-    _pageConfiguration->setOverlayRegionsEnabled(overlayRegionsEnabled);
 #endif
 }
 
