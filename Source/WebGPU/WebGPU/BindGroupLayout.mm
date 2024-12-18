@@ -352,7 +352,7 @@ Ref<BindGroupLayout> Device::createBindGroupLayout(const WGPUBindGroupLayoutDesc
                     }
 
                     if (isExternalTexture)
-                        bindingOffset[stage] += maxGeneratedDescriptors;
+                        bindingOffset[stage] += (maxGeneratedDescriptors - 1);
                 }
             }
         }

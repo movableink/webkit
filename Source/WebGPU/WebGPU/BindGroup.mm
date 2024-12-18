@@ -1179,6 +1179,7 @@ Ref<BindGroup> Device::createBindGroup(const WGPUBindGroupDescriptor& descriptor
 
                 if (stage != ShaderStage::Undefined) {
                     argumentIndices[stage].remove(index);
+                    externalTexture->updateExternalTextures(texture0, texture1);
                     [argumentEncoder[stage] setTexture:texture0 atIndex:index++];
 
                     argumentIndices[stage].remove(index);
@@ -1371,7 +1372,7 @@ void BindGroup::rebindSamplersIfNeeded() const
     }
 }
 
-bool BindGroup::updateExternalTextures(const ExternalTexture& externalTexture)
+bool BindGroup::updateExternalTextures(ExternalTexture& externalTexture)
 {
     if (!m_bindGroupLayout || externalTexture.openCommandEncoderCount())
         return false;
@@ -1380,6 +1381,7 @@ bool BindGroup::updateExternalTextures(const ExternalTexture& externalTexture)
     auto textureData = device->createExternalTextureFromPixelBuffer(externalTexture.pixelBuffer(), externalTexture.colorSpace());
     id<MTLTexture> texture0 = textureData.texture0 ?: device->placeholderTexture(WGPUTextureFormat_BGRA8Unorm);
     id<MTLTexture> texture1 = textureData.texture1 ?: device->placeholderTexture(WGPUTextureFormat_BGRA8Unorm);
+    externalTexture.updateExternalTextures(texture0, texture1);
     if (!texture0 || !texture1)
         return false;
 

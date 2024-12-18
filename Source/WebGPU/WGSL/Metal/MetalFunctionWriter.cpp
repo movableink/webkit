@@ -604,10 +604,19 @@ void FunctionDefinitionWriter::visit(AST::Structure& structDecl)
             auto& name = member.name();
             auto* type = member.type().inferredType();
             if (isPrimitive(type, Types::Primitive::TextureExternal) || isPrimitiveReference(type, Types::Primitive::TextureExternal))  {
-                m_stringBuilder.append(m_indent, "texture2d<float> __"_s, name, "_FirstPlane;\n"_s,
-                    m_indent, "texture2d<float> __"_s, name, "_SecondPlane;\n"_s,
-                    m_indent, "float3x2 __"_s, name, "_UVRemapMatrix;\n"_s,
-                    m_indent, "float4x3 __"_s, name, "_ColorSpaceConversionMatrix;\n"_s);
+                decltype(std::declval<ConstantValue>().integerValue()) bindingIndex = 0;
+                for (auto& attribute : member.attributes()) {
+                    if (auto* bindingAttribute = dynamicDowncast<AST::BindingAttribute>(attribute)) {
+                        if (auto bindingIndexValue = bindingAttribute->binding().constantValue()) {
+                            bindingIndex = bindingIndexValue->integerValue();
+                            break;
+                        }
+                    }
+                }
+                m_stringBuilder.append(m_indent, "texture2d<float> __"_s, name, "_FirstPlane [[id("_s, bindingIndex, ")]];\n"_s,
+                    m_indent, "texture2d<float> __"_s, name, "_SecondPlane [[id("_s, (bindingIndex + 1), ")]];\n"_s,
+                    m_indent, "float3x2 __"_s, name, "_UVRemapMatrix [[id("_s, (bindingIndex + 2), ")]];\n"_s,
+                    m_indent, "float4x3 __"_s, name, "_ColorSpaceConversionMatrix [[id("_s, (bindingIndex + 3), ")]];\n"_s);
                 continue;
             }
 

@@ -114,6 +114,7 @@ public:
     bool encoderIsCurrent(id<MTLCommandEncoder>) const;
     bool submitWillBeInvalid() const { return m_makeSubmitInvalid; }
     void addBuffer(id<MTLBuffer>);
+    void addTexture(id<MTLTexture>);
     void addTexture(const Texture&);
     id<MTLCommandBuffer> commandBuffer() const;
     void setExistingEncoder(id<MTLCommandEncoder>);
@@ -143,15 +144,13 @@ private PUBLIC_IN_WEBGPU_SWIFT:
 private:
     void discardCommandBuffer();
 
-    RefPtr<CommandBuffer> protectedCachedCommandBuffer() const { return m_cachedCommandBuffer.get(); }
-
     id<MTLCommandBuffer> m_commandBuffer { nil };
     id<MTLSharedEvent> m_abortCommandBuffer { nil };
     id<MTLBlitCommandEncoder> m_blitCommandEncoder { nil };
     id<MTLCommandEncoder> m_existingCommandEncoder { nil };
 
     uint64_t m_debugGroupStackSize { 0 };
-    WeakPtr<CommandBuffer> m_cachedCommandBuffer;
+    ThreadSafeWeakPtr<CommandBuffer> m_cachedCommandBuffer;
     NSString* m_lastErrorString { nil };
     int m_bufferMapCount { 0 };
     bool m_makeSubmitInvalid { false };
@@ -160,6 +159,8 @@ private:
     NSMutableSet<id<MTLTexture>> *m_managedTextures { nil };
     NSMutableSet<id<MTLBuffer>> *m_managedBuffers { nil };
 #endif
+    NSMutableSet<id<MTLTexture>> *m_retainedTextures { nil };
+    NSMutableSet<id<MTLBuffer>> *m_retainedBuffers { nil };
     id<MTLSharedEvent> m_sharedEvent { nil };
     uint64_t m_sharedEventSignalValue { 0 };
 private PUBLIC_IN_WEBGPU_SWIFT:

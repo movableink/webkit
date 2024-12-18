@@ -41,7 +41,7 @@ class CommandEncoder;
 class Device;
 
 // https://gpuweb.github.io/gpuweb/#gpucommandbuffer
-class CommandBuffer : public RefCountedAndCanMakeWeakPtr<CommandBuffer>, public WGPUCommandBufferImpl {
+class CommandBuffer : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<CommandBuffer>, public WGPUCommandBufferImpl {
     WTF_MAKE_TZONE_ALLOCATED(CommandBuffer);
 public:
     static Ref<CommandBuffer> create(id<MTLCommandBuffer> commandBuffer, Device& device, id<MTLSharedEvent> sharedEvent, uint64_t sharedEventSignalValue, CommandEncoder& commandEncoder)
