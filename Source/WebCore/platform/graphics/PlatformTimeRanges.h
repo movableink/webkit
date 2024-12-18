@@ -31,6 +31,8 @@
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
+OBJC_CLASS NSArray;
+
 namespace WTF {
 class PrintStream;
 }
@@ -139,6 +141,10 @@ private:
 
     Vector<Range> m_ranges;
 };
+
+#if PLATFORM(COCOA)
+RetainPtr<NSArray> makeNSArray(const PlatformTimeRanges&);
+#endif
 
 } // namespace WebCore
 
