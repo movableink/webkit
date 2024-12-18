@@ -75,6 +75,7 @@
 #include "LocalDOMWindow.h"
 #include "LocalFrameLoaderClient.h"
 #include "LocalFrameView.h"
+#include "LocalizedStrings.h"
 #include "Logging.h"
 #include "Navigator.h"
 #include "NodeList.h"
@@ -123,6 +124,10 @@
 #include "DataDetectionResultsStorage.h"
 #endif
 
+#if ENABLE(CONTENT_EXTENSIONS) && USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/LocalFrameAdditions.h>)
+#import <WebKitAdditions/LocalFrameAdditions.h>
+#endif
+
 #define FRAME_RELEASE_LOG_ERROR(channel, fmt, ...) RELEASE_LOG_ERROR(channel, "%p - Frame::" fmt, this, ##__VA_ARGS__)
 
 namespace WebCore {
@@ -131,6 +136,10 @@ using namespace HTMLNames;
 
 #if PLATFORM(IOS_FAMILY)
 static const Seconds scrollFrequency { 1000_s / 60. };
+#endif
+
+#if ENABLE(CONTENT_EXTENSIONS)
+static String generateResourceMonitorErrorHTML();
 #endif
 
 DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, frameCounter, ("Frame"));
@@ -1398,10 +1407,19 @@ void LocalFrame::networkUsageDidExceedThreshold()
 
     FRAME_RELEASE_LOG_ERROR(ResourceLoading, "networkUsageDidExceedThreshold: Unloading frame due to exceeding threshold.");
 
-    showResourceMonitoringError("This frame was unloaded."_s);
+    showResourceMonitoringError(generateResourceMonitorErrorHTML());
 
     if (RefPtr document = this->document())
         document->addConsoleMessage(MessageSource::ContentBlocker, MessageLevel::Error, "Frame was unloaded because its network usage exceeded the limit."_s);
+}
+
+static String generateResourceMonitorErrorHTML()
+{
+#if PLATFORM(COCOA) && HAVE(LOCAL_FRAME_ADDITIONS)
+    return generateResourceMonitorErrorHTMLForCocoa();
+#else
+    return WEB_UI_STRING("This frame is hidden for using too many system resources.", "Description HTML for frame unloaded by ResourceMonitor");
+#endif
 }
 
 void LocalFrame::showResourceMonitoringError(String&& htmlContent)

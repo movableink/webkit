@@ -2161,3 +2161,5 @@
 /* Option in segmented control for choosing list type in text editing */
 "•" = "•";
 
+/* Description HTML for frame unloaded by ResourceMonitor */
+"This frame is hidden for using too many system resources." = "This frame is hidden for using too many system resources.";
