@@ -52,6 +52,7 @@ struct MediaRecorderPrivateOptions;
 class MediaSample;
 class PlatformAudioData;
 class VideoFrame;
+struct AudioInfo;
 struct VideoInfo;
 
 class MediaRecorderPrivateEncoder final : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<MediaRecorderPrivateEncoder, WTF::DestructionThread::Main> {
@@ -144,11 +145,11 @@ private:
     String m_audioCodecMimeType WTF_GUARDED_BY_CAPABILITY(mainThread);
     std::optional<uint8_t> m_audioTrackIndex WTF_GUARDED_BY_CAPABILITY(queueSingleton());
     RetainPtr<CMFormatDescriptionRef> m_audioFormatDescription WTF_GUARDED_BY_CAPABILITY(queueSingleton());
-    RetainPtr<CMFormatDescriptionRef> m_audioCompressedFormatDescription WTF_GUARDED_BY_CAPABILITY(queueSingleton());
+    RefPtr<AudioInfo> m_audioCompressedAudioInfo WTF_GUARDED_BY_CAPABILITY(queueSingleton());
     RefPtr<AudioSampleBufferConverter> m_audioConverter WTF_GUARDED_BY_CAPABILITY(queueSingleton());
     bool m_formatChangedOccurred WTF_GUARDED_BY_CAPABILITY(queueSingleton()) { false };
     std::optional<AudioStreamBasicDescription> m_originalOutputDescription WTF_GUARDED_BY_CAPABILITY(queueSingleton());
-    Deque<Ref<MediaSample>> m_encodedAudioFrames WTF_GUARDED_BY_CAPABILITY(queueSingleton());
+    Deque<UniqueRef<MediaSamplesBlock>> m_encodedAudioFrames WTF_GUARDED_BY_CAPABILITY(queueSingleton());
     std::optional<std::pair<const MediaTime, GenericPromise::Producer>> m_pendingAudioFramePromise WTF_GUARDED_BY_CAPABILITY(queueSingleton());
     Lock m_ringBuffersLock;
     Deque<std::unique_ptr<InProcessCARingBuffer>> m_ringBuffers WTF_GUARDED_BY_LOCK(m_ringBuffersLock);
@@ -168,8 +169,8 @@ private:
     RetainPtr<CMFormatDescriptionRef> m_videoFormatDescription WTF_GUARDED_BY_CAPABILITY(queueSingleton());
     RefPtr<VideoEncoder> m_videoEncoder WTF_GUARDED_BY_CAPABILITY(queueSingleton());
     Deque<std::pair<Ref<VideoFrame>, MediaTime>> m_pendingVideoFrames WTF_GUARDED_BY_CAPABILITY(queueSingleton());
-    Deque<Ref<MediaSample>> m_encodedVideoFrames WTF_GUARDED_BY_CAPABILITY(queueSingleton());
-    Deque<Ref<MediaSample>> m_interleavedFrames WTF_GUARDED_BY_CAPABILITY(queueSingleton());
+    Deque<UniqueRef<MediaSamplesBlock>> m_encodedVideoFrames WTF_GUARDED_BY_CAPABILITY(queueSingleton());
+    Deque<UniqueRef<MediaSamplesBlock>> m_interleavedFrames WTF_GUARDED_BY_CAPABILITY(queueSingleton());
     bool m_firstVideoFrameProcessed WTF_GUARDED_BY_CAPABILITY(queueSingleton()) { false };
     MediaTime m_lastEnqueuedRawVideoFrame WTF_GUARDED_BY_CAPABILITY(queueSingleton()) { MediaTime::negativeInfiniteTime() };
     MediaTime m_lastVideoKeyframeTime WTF_GUARDED_BY_CAPABILITY(queueSingleton());

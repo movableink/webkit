@@ -28,6 +28,7 @@
 
 #if ENABLE(MEDIA_RECORDER_WEBM)
 
+#import "CMUtilities.h"
 #import "Logging.h"
 #import "MediaSampleAVFObjC.h"
 #import "MediaUtilities.h"
@@ -44,6 +45,20 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaRecorderPrivateWriterWebM);
+
+static const char* mkvCodeIcForMediaVideoCodecId(FourCC codec)
+{
+    switch (codec.value) {
+    case 'vp08': return mkvmuxer::Tracks::kVp8CodecId;
+    case 'vp92':
+    case kCMVideoCodecType_VP9: return mkvmuxer::Tracks::kVp9CodecId;
+    case kCMVideoCodecType_AV1: return mkvmuxer::Tracks::kAv1CodecId;
+    case kAudioFormatOpus: return mkvmuxer::Tracks::kOpusCodecId;
+    default:
+        ASSERT_NOT_REACHED("Unsupported codec");
+        return "";
+    }
+}
 
 class MediaRecorderPrivateWriterWebMDelegate : public mkvmuxer::IMkvWriter {
     WTF_MAKE_TZONE_ALLOCATED_INLINE(MediaRecorderPrivateWriterWebMDelegate);
@@ -64,7 +79,7 @@ public:
     mkvmuxer::int32 Write(const void* buf, mkvmuxer::uint32 len) final
     {
         if (RefPtr protectedListener = m_listener.get())
-            protectedListener->appendData({ reinterpret_cast<const uint8_t*>(buf), len });
+            protectedListener->appendData(unsafeMakeSpan(static_cast<const uint8_t*>(buf), len));
         m_position += len;
         return 0;
     }
@@ -74,28 +89,29 @@ public:
     int32_t Position(int64_t) final { return -1; }
     void ElementStartNotify(uint64_t, int64_t) final { }
 
-    std::optional<uint8_t> addAudioTrack(const AudioStreamBasicDescription& asbd, const char* codec)
+    std::optional<uint8_t> addAudioTrack(const AudioInfo& info)
     {
-        auto trackIndex = m_segment.AddAudioTrack(asbd.mSampleRate, asbd.mChannelsPerFrame, 0);
+        auto trackIndex = m_segment.AddAudioTrack(info.rate, info.channels, 0);
         if (!trackIndex)
             return { };
         auto* audioTrack = reinterpret_cast<mkvmuxer::AudioTrack*>(m_segment.GetTrackByNumber(trackIndex));
         ASSERT(audioTrack);
         audioTrack->set_bit_depth(32u);
-        audioTrack->set_codec_id(codec);
-        auto opusHeader = createOpusPrivateData(asbd);
+        audioTrack->set_codec_id(mkvCodeIcForMediaVideoCodecId(info.codecName));
+        auto description = audioStreamDescriptionFromAudioInfo(info);
+        auto opusHeader = createOpusPrivateData(description.streamDescription());
         audioTrack->SetCodecPrivate(opusHeader.data(), opusHeader.size());
         return trackIndex;
     }
 
-    std::optional<uint8_t> addVideoTrack(uint32_t width, uint32_t height, const char* codec)
+    std::optional<uint8_t> addVideoTrack(const VideoInfo& info)
     {
-        auto trackIndex = m_segment.AddVideoTrack(width, height, 0);
+        auto trackIndex = m_segment.AddVideoTrack(info.size.width(), info.size.height(), 0);
         if (!trackIndex)
             return { };
         auto* videoTrack = reinterpret_cast<mkvmuxer::VideoTrack*>(m_segment.GetTrackByNumber(trackIndex));
         ASSERT(videoTrack);
-        videoTrack->set_codec_id(codec);
+        videoTrack->set_codec_id(mkvCodeIcForMediaVideoCodecId(info.codecName));
         return trackIndex;
     }
 
@@ -125,20 +141,6 @@ std::unique_ptr<MediaRecorderPrivateWriter> MediaRecorderPrivateWriterWebM::crea
     return std::unique_ptr<MediaRecorderPrivateWriter> { new MediaRecorderPrivateWriterWebM(listener) };
 }
 
-static const char* mkvCodeIcForMediaVideoCodecId(FourCharCode codec)
-{
-    switch (codec) {
-    case 'vp08': return mkvmuxer::Tracks::kVp8CodecId;
-    case 'vp92':
-    case kCMVideoCodecType_VP9: return mkvmuxer::Tracks::kVp9CodecId;
-    case kCMVideoCodecType_AV1: return mkvmuxer::Tracks::kAv1CodecId;
-    case kAudioFormatOpus: return mkvmuxer::Tracks::kOpusCodecId;
-    default:
-        ASSERT_NOT_REACHED("Unsupported codec");
-        return "";
-    }
-}
-
 MediaRecorderPrivateWriterWebM::MediaRecorderPrivateWriterWebM(MediaRecorderPrivateWriterListener& listener)
     : m_delegate(makeUniqueRef<MediaRecorderPrivateWriterWebMDelegate>(listener))
 {
@@ -146,35 +148,25 @@ MediaRecorderPrivateWriterWebM::MediaRecorderPrivateWriterWebM(MediaRecorderPriv
 
 MediaRecorderPrivateWriterWebM::~MediaRecorderPrivateWriterWebM() = default;
 
-std::optional<uint8_t> MediaRecorderPrivateWriterWebM::addAudioTrack(CMFormatDescriptionRef description)
+std::optional<uint8_t> MediaRecorderPrivateWriterWebM::addAudioTrack(const AudioInfo& description)
 {
-    const AudioStreamBasicDescription* asbd = PAL::CMAudioFormatDescriptionGetStreamBasicDescription(description);
-    if (!asbd)
-        return { };
-
-    return m_delegate->addAudioTrack(*asbd, mkvCodeIcForMediaVideoCodecId(asbd->mFormatID));
+    return m_delegate->addAudioTrack(description);
 }
 
-std::optional<uint8_t> MediaRecorderPrivateWriterWebM::addVideoTrack(CMFormatDescriptionRef description, const std::optional<CGAffineTransform>&)
+std::optional<uint8_t> MediaRecorderPrivateWriterWebM::addVideoTrack(const VideoInfo& description, const std::optional<CGAffineTransform>&)
 {
-    CMVideoDimensions dimensions = PAL::CMVideoFormatDescriptionGetDimensions(description);
-    CMVideoCodecType codec = PAL::CMFormatDescriptionGetMediaSubType(description);
-    return m_delegate->addVideoTrack(dimensions.width, dimensions.height, mkvCodeIcForMediaVideoCodecId(codec));
+    return m_delegate->addVideoTrack(description);
 }
 
-MediaRecorderPrivateWriterWebM::Result MediaRecorderPrivateWriterWebM::writeFrame(const MediaSample& sample)
+MediaRecorderPrivateWriterWebM::Result MediaRecorderPrivateWriterWebM::writeFrame(const MediaSamplesBlock& sample)
 {
-    RetainPtr sampleBuffer = downcast<MediaSampleAVFObjC>(sample).sampleBuffer();
-    RetainPtr buffer = PAL::CMSampleBufferGetDataBuffer(sampleBuffer.get());
-    ASSERT(PAL::CMBlockBufferIsRangeContiguous(buffer.get(), 0, 0));
-    size_t srcSize = PAL::CMBlockBufferGetDataLength(buffer.get());
-    char* srcData = nullptr;
-    if (PAL::CMBlockBufferGetDataPointer(buffer.get(), 0, nullptr, nullptr, &srcData) != noErr)
-        return Result::Failure;
-
-    bool isKeyFrame = sample.flags() & MediaSample::IsSync;
-
-    return m_delegate->addFrame({ reinterpret_cast<const uint8_t*>(srcData), srcSize }, sample.trackID(), Seconds { sample.presentationTime().toDouble() }.nanosecondsAs<uint64_t>(), isKeyFrame) ? Result::Success : Result::Failure;
+    bool success = true;
+    for (auto& block : sample) {
+        ASSERT(block.data);
+        Ref buffer = Ref { *block.data }->makeContiguous();
+        success &= m_delegate->addFrame(buffer->span(), sample.trackID(), Seconds { block.presentationTime.toDouble() }.nanosecondsAs<uint64_t>(), block.isSync());
+    }
+    return success ? Result::Success : Result::Failure;
 }
 
 void MediaRecorderPrivateWriterWebM::forceNewSegment(const MediaTime&)

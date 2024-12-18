@@ -31,10 +31,15 @@
 #include "MediaRecorderPrivateWriterAVFObjC.h"
 #include "MediaRecorderPrivateWriterWebM.h"
 #include "MediaSample.h"
+#include "MediaStrategy.h"
+#include "PlatformStrategies.h"
 #include <wtf/MediaTime.h>
 #include <wtf/NativePromise.h>
 
 namespace WebCore {
+
+MediaRecorderPrivateWriter::MediaRecorderPrivateWriter() = default;
+MediaRecorderPrivateWriter::~MediaRecorderPrivateWriter() = default;
 
 std::unique_ptr<MediaRecorderPrivateWriter> MediaRecorderPrivateWriter::create(String type, MediaRecorderPrivateWriterListener& listener)
 {
@@ -47,14 +52,14 @@ std::unique_ptr<MediaRecorderPrivateWriter> MediaRecorderPrivateWriter::create(S
     return nullptr;
 }
 
-Ref<MediaRecorderPrivateWriter::WriterPromise> MediaRecorderPrivateWriter::writeFrames(Deque<Ref<MediaSample>>&& samples, const MediaTime& endTime)
+Ref<MediaRecorderPrivateWriter::WriterPromise> MediaRecorderPrivateWriter::writeFrames(Deque<UniqueRef<MediaSamplesBlock>>&& samples, const MediaTime& endTime)
 {
     while (!samples.isEmpty())
         m_pendingFrames.append(samples.takeFirst());
 
     auto result = Result::Success;
     while (!m_pendingFrames.isEmpty() && result == Result::Success)
-        result = writeFrame(m_pendingFrames.takeFirst());
+        result = writeFrame(m_pendingFrames.takeFirst().get());
 
     // End the segment if we succeded in writing all frames, otherwise we will retry them on the next call.
     if (m_pendingFrames.isEmpty())

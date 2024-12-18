@@ -29,6 +29,7 @@
 #if ENABLE(MEDIA_RECORDER)
 
 #import "AudioStreamDescription.h"
+#import "CMUtilities.h"
 #import "Logging.h"
 #import "MediaSampleAVFObjC.h"
 #import <AVFoundation/AVAssetWriter.h>
@@ -102,9 +103,10 @@ MediaRecorderPrivateWriterAVFObjC::MediaRecorderPrivateWriterAVFObjC(RetainPtr<A
 
 MediaRecorderPrivateWriterAVFObjC::~MediaRecorderPrivateWriterAVFObjC() = default;
 
-std::optional<uint8_t> MediaRecorderPrivateWriterAVFObjC::addAudioTrack(CMFormatDescriptionRef description)
+std::optional<uint8_t> MediaRecorderPrivateWriterAVFObjC::addAudioTrack(const AudioInfo& info)
 {
-    m_audioAssetWriterInput = adoptNS([PAL::allocAVAssetWriterInputInstance() initWithMediaType:AVMediaTypeAudio outputSettings:nil sourceFormatHint:description]);
+    m_audioDescription = createFormatDescriptionFromTrackInfo(info);
+    m_audioAssetWriterInput = adoptNS([PAL::allocAVAssetWriterInputInstance() initWithMediaType:AVMediaTypeAudio outputSettings:nil sourceFormatHint:m_audioDescription.get()]);
     [m_audioAssetWriterInput setExpectsMediaDataInRealTime:true];
     if (![m_writer canAddInput:m_audioAssetWriterInput.get()]) {
         RELEASE_LOG_ERROR(MediaStream, "MediaRecorderPrivateWriterAVFObjC::addAudioTrack failed canAddInput for audio with %ld", static_cast<long>([m_writer error].code));
@@ -117,9 +119,10 @@ std::optional<uint8_t> MediaRecorderPrivateWriterAVFObjC::addAudioTrack(CMFormat
     return m_audioTrackIndex;
 }
 
-std::optional<uint8_t> MediaRecorderPrivateWriterAVFObjC::addVideoTrack(CMFormatDescriptionRef description, const std::optional<CGAffineTransform>& transform)
+std::optional<uint8_t> MediaRecorderPrivateWriterAVFObjC::addVideoTrack(const VideoInfo& info, const std::optional<CGAffineTransform>& transform)
 {
-    m_videoAssetWriterInput = adoptNS([PAL::allocAVAssetWriterInputInstance() initWithMediaType:AVMediaTypeVideo outputSettings:nil sourceFormatHint:description]);
+    m_videoDescription = createFormatDescriptionFromTrackInfo(info);
+    m_videoAssetWriterInput = adoptNS([PAL::allocAVAssetWriterInputInstance() initWithMediaType:AVMediaTypeVideo outputSettings:nil sourceFormatHint:m_videoDescription.get()]);
     [m_videoAssetWriterInput setExpectsMediaDataInRealTime:true];
     if (transform)
         [m_videoAssetWriterInput setTransform:*transform];
@@ -155,28 +158,38 @@ bool MediaRecorderPrivateWriterAVFObjC::allTracksAdded()
     return true;
 }
 
-MediaRecorderPrivateWriterAVFObjC::Result MediaRecorderPrivateWriterAVFObjC::writeFrame(const MediaSample& sample)
+MediaRecorderPrivateWriterAVFObjC::Result MediaRecorderPrivateWriterAVFObjC::writeFrame(const MediaSamplesBlock& frame)
 {
-    if (sample.trackID() == m_audioTrackIndex) {
+    if (frame.trackID() == m_audioTrackIndex) {
         if (![m_audioAssetWriterInput isReadyForMoreMediaData])
             return Result::NotReady;
 
-        auto result = [m_audioAssetWriterInput appendSampleBuffer:downcast<MediaSampleAVFObjC>(sample).sampleBuffer()] ? Result::Success : Result::Failure;
-        if (result != Result::Success)
+        auto sample = toCMSampleBuffer(frame, m_audioDescription.get());
+        if (sample) {
+            if ([m_audioAssetWriterInput appendSampleBuffer:sample->get()])
+                return Result::Success;
             RELEASE_LOG_ERROR(MediaStream, "MediaRecorderPMediaRecorderPrivateWriterAVFObjC::writeFrame audio failed with %ld", static_cast<long>([m_writer error].code));
-        return result;
+            return Result::Failure;
+        }
+        RELEASE_LOG_ERROR(MediaStream, "MediaRecorderPMediaRecorderPrivateWriterAVFObjC::writeFrame autio toCMSampleBuffer failed with %s", sample.error().data());
+        return Result::Failure;
     }
 
-    ASSERT(sample.trackID() == m_videoTrackIndex);
+    ASSERT(frame.trackID() == m_videoTrackIndex);
     if (![m_videoAssetWriterInput isReadyForMoreMediaData])
         return Result::NotReady;
 
-    auto result = [m_videoAssetWriterInput appendSampleBuffer:downcast<MediaSampleAVFObjC>(sample).sampleBuffer()] ? Result::Success : Result::Failure;
-    if (result != Result::Success)
-        RELEASE_LOG_ERROR(MediaStream, "MediaRecorderPMediaRecorderPrivateWriterAVFObjC::muxFrame video failed with %ld", static_cast<long>([m_writer error].code));
-
     m_hasAddedVideoFrame = true;
-    return result;
+
+    auto sample = toCMSampleBuffer(frame, m_videoDescription.get());
+    if (sample) {
+        if ([m_videoAssetWriterInput appendSampleBuffer:sample->get()])
+            return Result::Success;
+        RELEASE_LOG_ERROR(MediaStream, "MediaRecorderPMediaRecorderPrivateWriterAVFObjC::writeFrame video failed with %ld", static_cast<long>([m_writer error].code));
+        return Result::Failure;
+    }
+    RELEASE_LOG_ERROR(MediaStream, "MediaRecorderPMediaRecorderPrivateWriterAVFObjC::writeFrame video toCMSampleBuffer failed with %s", sample.error().data());
+    return Result::Failure;
 }
 
 static inline void appendEndsPreviousSampleDurationMarker(AVAssetWriterInput *assetWriterInput, CMTime presentationTimeStamp)
