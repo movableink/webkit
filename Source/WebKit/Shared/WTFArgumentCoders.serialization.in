@@ -94,6 +94,7 @@ template: enum class WebKit::RemoteCDMInstanceIdentifierType
 template: enum class WebKit::RemoteCDMInstanceSessionIdentifierType
 template: enum class WebKit::RemoteLegacyCDMIdentifierType
 template: enum class WebKit::RemoteLegacyCDMSessionIdentifierType
+template: enum class WebKit::RemoteMediaRecorderPrivateWriterIdentifierType
 template: enum class WebKit::RemoteMediaResourceIdentifierType
 template: enum class WebKit::RemoteMediaSourceIdentifierType
 template: enum class WebKit::RemoteRemoteCommandListenerIdentifierType

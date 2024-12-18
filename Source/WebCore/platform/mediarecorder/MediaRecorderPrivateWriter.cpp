@@ -43,6 +43,11 @@ MediaRecorderPrivateWriter::~MediaRecorderPrivateWriter() = default;
 
 std::unique_ptr<MediaRecorderPrivateWriter> MediaRecorderPrivateWriter::create(String type, MediaRecorderPrivateWriterListener& listener)
 {
+    if (hasPlatformStrategies()) {
+        auto writer = platformStrategies()->mediaStrategy().createMediaRecorderPrivateWriter(type, listener);
+        if (writer)
+            return writer;
+    }
     if (equalLettersIgnoringASCIICase(type, "video/mp4"_s) || equalLettersIgnoringASCIICase(type, "audio/mp4"_s))
         return MediaRecorderPrivateWriterAVFObjC::create(listener);
 #if ENABLE(MEDIA_RECORDER_WEBM)

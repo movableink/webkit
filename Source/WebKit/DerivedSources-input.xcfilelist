@@ -101,11 +101,13 @@ $(PROJECT_DIR)/GPUProcess/media/RemoteMediaEngineConfigurationFactoryProxy.messa
 $(PROJECT_DIR)/GPUProcess/media/RemoteMediaPlayerManagerProxy.messages.in
 $(PROJECT_DIR)/GPUProcess/media/RemoteMediaPlayerProxy.messages.in
 $(PROJECT_DIR)/GPUProcess/media/RemoteMediaPlayerProxyConfiguration.serialization.in
+$(PROJECT_DIR)/GPUProcess/media/RemoteMediaRecorderPrivateWriterManager.messages.in
 $(PROJECT_DIR)/GPUProcess/media/RemoteMediaResourceManager.messages.in
 $(PROJECT_DIR)/GPUProcess/media/RemoteMediaSourceProxy.messages.in
 $(PROJECT_DIR)/GPUProcess/media/RemoteRemoteCommandListenerProxy.messages.in
 $(PROJECT_DIR)/GPUProcess/media/RemoteSourceBufferProxy.messages.in
 $(PROJECT_DIR)/GPUProcess/media/RemoteTextTrackProxy.messages.in
+$(PROJECT_DIR)/GPUProcess/media/RemoteTrackInfo.serialization.in
 $(PROJECT_DIR)/GPUProcess/media/RemoteVideoFrameObjectHeap.messages.in
 $(PROJECT_DIR)/GPUProcess/media/RemoteVideoTrackProxy.messages.in
 $(PROJECT_DIR)/GPUProcess/media/TextTrackPrivateRemoteConfiguration.serialization.in

@@ -8831,3 +8831,29 @@ enum class WebCore::DOMAudioSessionType : uint8_t {
     PlayAndRecord
 };
 #endif
+
+header: <WebCore/MediaSample.h>
+[Nested] enum class WebCore::TrackInfo::TrackType : uint8_t {
+    Unknown,
+    Audio,
+    Video
+};
+
+header: <WebCore/MediaSample.h>
+[Nested] class WebCore::MediaSamplesBlock::MediaSampleItem {
+    MediaTime presentationTime;
+    MediaTime decodeTime;
+    MediaTime duration;
+    std::pair<MediaTime, MediaTime> trimInterval;
+    RefPtr<WebCore::FragmentedSharedBuffer> data;
+    uint32_t flags;
+};
+
+#if PLATFORM(COCOA) && ENABLE(MEDIA_RECORDER)
+header: <WebCore/MediaRecorderPrivateWriter.h>
+[Nested] enum class WebCore::MediaRecorderPrivateWriter::Result : uint8_t {
+    Success,
+    Failure,
+    NotReady
+};
+#endif

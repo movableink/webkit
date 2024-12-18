@@ -76,6 +76,7 @@ GPUProcess/mac/GPUProcessMac.mm
 GPUProcess/mac/LocalAudioSessionRoutingArbitrator.cpp
 GPUProcess/media/RemoteAudioSourceProviderProxy.cpp
 GPUProcess/media/RemoteImageDecoderAVFProxy.cpp
+GPUProcess/media/RemoteMediaRecorderPrivateWriterManager.cpp
 GPUProcess/media/RemoteVideoFrameObjectHeap.mm
 GPUProcess/media/cocoa/RemoteMediaPlayerManagerProxyCocoa.mm
 GPUProcess/media/cocoa/RemoteMediaPlayerProxyCocoa.mm
@@ -667,6 +668,7 @@ WebProcess/GPU/media/RemoteAudioSourceProvider.cpp
 WebProcess/GPU/media/RemoteAudioSourceProviderManager.cpp
 WebProcess/GPU/media/RemoteImageDecoderAVF.cpp
 WebProcess/GPU/media/RemoteImageDecoderAVFManager.cpp
+WebProcess/GPU/media/RemoteMediaRecorderPrivateWriter.cpp
 WebProcess/GPU/media/cocoa/MediaPlayerPrivateRemoteCocoa.mm
 WebProcess/GPU/media/cocoa/VideoLayerRemoteCocoa.mm
 WebProcess/GPU/media/ios/RemoteMediaSessionHelper.cpp
@@ -843,6 +845,7 @@ RemoteLegacyCDMSessionProxyMessageReceiver.cpp
 RemoteMediaEngineConfigurationFactoryProxyMessageReceiver.cpp
 RemoteMediaPlayerManagerProxyMessageReceiver.cpp
 RemoteMediaPlayerProxyMessageReceiver.cpp
+RemoteMediaRecorderPrivateWriterManagerMessageReceiver.cpp
 RemoteMediaResourceManagerMessageReceiver.cpp
 RemoteMediaSessionCoordinatorMessageReceiver.cpp
 RemoteMediaSessionCoordinatorProxyMessageReceiver.cpp

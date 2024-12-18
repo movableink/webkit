@@ -71,6 +71,9 @@
 #if ENABLE(GPU_PROCESS) && ENABLE(LEGACY_ENCRYPTED_MEDIA)
 #include "RemoteLegacyCDMSessionIdentifier.h"
 #endif
+#if ENABLE(GPU_PROCESS) && ENABLE(MEDIA_RECORDER)
+#include "RemoteMediaRecorderPrivateWriterIdentifier.h"
+#endif
 #include "RemoteMediaResourceIdentifier.h"
 #if ENABLE(GPU_PROCESS) && ENABLE(MEDIA_SOURCE)
 #include "RemoteMediaSourceIdentifier.h"
@@ -636,6 +639,9 @@ Vector<ASCIILiteral> serializedIdentifiers()
 #if ENABLE(GPU_PROCESS) && ENABLE(LEGACY_ENCRYPTED_MEDIA)
     static_assert(sizeof(uint64_t) == sizeof(WebKit::RemoteLegacyCDMSessionIdentifier));
 #endif
+#if ENABLE(GPU_PROCESS) && ENABLE(MEDIA_RECORDER)
+    static_assert(sizeof(uint64_t) == sizeof(WebKit::RemoteMediaRecorderPrivateWriterIdentifier));
+#endif
     static_assert(sizeof(uint64_t) == sizeof(WebKit::RemoteMediaResourceIdentifier));
 #if ENABLE(GPU_PROCESS) && ENABLE(MEDIA_SOURCE)
     static_assert(sizeof(uint64_t) == sizeof(WebKit::RemoteMediaSourceIdentifier));
@@ -782,6 +788,9 @@ Vector<ASCIILiteral> serializedIdentifiers()
 #endif
 #if ENABLE(GPU_PROCESS) && ENABLE(LEGACY_ENCRYPTED_MEDIA)
         "WebKit::RemoteLegacyCDMSessionIdentifier"_s,
+#endif
+#if ENABLE(GPU_PROCESS) && ENABLE(MEDIA_RECORDER)
+        "WebKit::RemoteMediaRecorderPrivateWriterIdentifier"_s,
 #endif
         "WebKit::RemoteMediaResourceIdentifier"_s,
 #if ENABLE(GPU_PROCESS) && ENABLE(MEDIA_SOURCE)

@@ -211,9 +211,8 @@ private:
 class MediaSamplesBlock {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    using MediaSampleDataType = RefPtr<FragmentedSharedBuffer>;
     struct MediaSampleItem {
-        using MediaSampleDataType = MediaSamplesBlock::MediaSampleDataType;
+        using MediaSampleDataType = RefPtr<FragmentedSharedBuffer>;
         MediaTime presentationTime;
         MediaTime decodeTime { MediaTime::indefiniteTime() };
         MediaTime duration { MediaTime::zeroTime() };
@@ -222,6 +221,8 @@ public:
         uint32_t flags { };
         bool isSync() const { return flags & MediaSample::IsSync; }
     };
+
+    using MediaSampleDataType = MediaSampleItem::MediaSampleDataType;
     using SamplesVector = Vector<MediaSampleItem>;
 
     MediaSamplesBlock() = default;
