@@ -307,7 +307,7 @@ public:
     void selfOnlyRef();
     void selfOnlyDeref();
 
-    void documentURLDidChange(const URL&);
+    void documentURLOrOriginDidChange();
 
 #if ENABLE(WINDOW_PROXY_PROPERTY_ACCESS_NOTIFICATION)
     void didAccessWindowProxyPropertyViaOpener(WindowProxyProperty);

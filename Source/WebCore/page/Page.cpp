@@ -796,17 +796,38 @@ void Page::progressFinished(LocalFrame& frameWithCompletedProgress) const
 void Page::setMainFrame(Ref<Frame>&& frame)
 {
     m_mainFrame = WTFMove(frame);
+
+    RefPtr<Document> document;
+    if (RefPtr localFrame = dynamicDowncast<LocalFrame>(m_mainFrame.get()))
+        document = localFrame->document();
+
+    m_topDocumentSyncData = document ? document->syncData() : DocumentSyncData::create();
 }
 
-void Page::setMainFrameURL(const URL& url)
+void Page::setMainFrameURLAndOrigin(const URL& url, RefPtr<SecurityOrigin>&& origin)
 {
-    if (url == m_mainFrameURL)
+    // This URL and SecurityOrigin is relevant to this Page only if it is not
+    // directly hosting the local main frame.
+    RefPtr localFrame = dynamicDowncast<LocalFrame>(m_mainFrame.get());
+    if (!localFrame) {
+        m_topDocumentSyncData->documentURL = url;
+
+        if (!origin)
+            origin = SecurityOrigin::create(url);
+        m_topDocumentSyncData->documentSecurityOrigin = WTFMove(origin);
+
         return;
+    }
 
-    m_mainFrameURL = url;
-    m_mainFrameOrigin = SecurityOrigin::create(url);
+    // If this page is hosting the local main frame, make sure the url and origin
+    // match what we expect, then broadcast them out to other processes.
+    RELEASE_ASSERT(url == m_topDocumentSyncData->documentURL);
+    if (!origin)
+        RELEASE_ASSERT(!m_topDocumentSyncData->documentSecurityOrigin);
+    else
+        RELEASE_ASSERT(origin->equal(*m_topDocumentSyncData->documentSecurityOrigin));
 
-    processSyncClient().broadcastMainFrameURLChangeToOtherProcesses(url);
+    processSyncClient().broadcastTopDocumentSyncDataToOtherProcesses(m_topDocumentSyncData.get());
 }
 
 #if ENABLE(DOM_AUDIO_SESSION)
@@ -853,28 +874,27 @@ bool Page::autofocusProcessed() const
 void Page::updateProcessSyncData(const ProcessSyncData& data)
 {
     switch (data.type) {
-    case ProcessSyncDataType::MainFrameURLChange:
-        setMainFrameURL(std::get<enumToUnderlyingType(ProcessSyncDataType::MainFrameURLChange)>(data.value));
-        break;
     case ProcessSyncDataType::IsAutofocusProcessed:
-        m_topDocumentSyncData->update(data);
-        break;
     case ProcessSyncDataType::UserDidInteractWithPage:
-        m_topDocumentSyncData->update(data);
-        break;
+    case ProcessSyncDataType::DocumentURL:
+    case ProcessSyncDataType::DocumentSecurityOrigin:
 #if ENABLE(DOM_AUDIO_SESSION)
     case ProcessSyncDataType::AudioSessionType:
+#endif
         m_topDocumentSyncData->update(data);
         break;
-#endif
     }
 }
 
 void Page::updateTopDocumentSyncData(Ref<DocumentSyncData>&& data)
 {
-    // Pages should never get updates to top document sync data from another
-    // process if they directly host the main frame document.
-    RELEASE_ASSERT(!hasLocalMainFrame());
+    if (RefPtr localFrame = dynamicDowncast<LocalFrame>(m_mainFrame.get())) {
+        // Prefer the main LocalFrame document's data, but if the main LocalFrame
+        // has no document, accept the remote pushed data.
+        if (localFrame->document())
+            return;
+    }
+
     m_topDocumentSyncData = WTFMove(data);
 }
 
@@ -884,11 +904,16 @@ void Page::setMainFrameURLFragment(String&& fragment)
         m_mainFrameURLFragment = WTFMove(fragment);
 }
 
+const URL& Page::mainFrameURL() const
+{
+    return m_topDocumentSyncData->documentURL;
+}
+
 SecurityOrigin& Page::mainFrameOrigin() const
 {
-    if (!m_mainFrameOrigin)
+    if (!m_topDocumentSyncData->documentSecurityOrigin)
         return SecurityOrigin::opaqueOrigin();
-    return *m_mainFrameOrigin;
+    return *m_topDocumentSyncData->documentSecurityOrigin;
 }
 
 bool Page::openedByDOM() const
@@ -3798,8 +3823,7 @@ void Page::setSessionID(PAL::SessionID sessionID)
 
     if (sessionID != m_sessionID) {
         constexpr auto doNotCreate = StorageNamespaceProvider::ShouldCreateNamespace::No;
-        auto* localMainFrame = dynamicDowncast<LocalFrame>(m_mainFrame.get());
-        RefPtr topOrigin = localMainFrame ? &localMainFrame->document()->topOrigin() : m_mainFrameOrigin;
+        RefPtr topOrigin = &mainFrameOrigin();
         if (RefPtr sessionStorage = topOrigin ? m_storageNamespaceProvider->sessionStorageNamespace(*topOrigin, *this, doNotCreate) : nullptr)
             sessionStorage->setSessionIDForTesting(sessionID);
     }

@@ -1000,13 +1000,9 @@ SecurityOrigin& Document::topOrigin() const
     if (!settings().siteIsolationEnabled())
         return topDocument().securityOrigin();
 
-    RefPtr frame = this->frame();
-    if (RefPtr localMainFrame = frame ? dynamicDowncast<LocalFrame>(frame->mainFrame()) : nullptr) {
-        if (RefPtr mainFrameDocument = localMainFrame->document())
-            return mainFrameDocument->securityOrigin();
-    }
-    if (RefPtr page = this->page())
-        return page->mainFrameOrigin();
+    if (isTopDocument())
+        return securityOrigin();
+
     return SecurityOrigin::opaqueOrigin();
 }
 
@@ -4152,9 +4148,10 @@ void Document::setURL(const URL& url)
         newURL.removeHostAndPort();
     // SecurityContext::securityOrigin may not be initialized at this time if setURL() is called in the constructor, therefore calling topOrigin() is not always safe.
     auto topOrigin = isTopDocument() && !SecurityContext::securityOrigin() ? SecurityOrigin::create(url)->data() : this->topOrigin().data();
+    m_syncData->documentURL = newURL;
     m_url = { WTFMove(newURL), topOrigin };
     if (m_frame)
-        m_frame->documentURLDidChange(m_url);
+        m_frame->documentURLOrOriginDidChange();
 
     m_documentURI = m_url.url();
     m_adjustedURL = adjustedURL();
@@ -11144,7 +11141,10 @@ PermissionsPolicy Document::permissionsPolicy() const
 
 void Document::securityOriginDidChange()
 {
+    m_syncData->documentSecurityOrigin = SecurityContext::securityOrigin();
     m_permissionsPolicy = nullptr;
+    if (m_frame)
+        m_frame->documentURLOrOriginDidChange();
 }
 
 #if ENABLE(CONTENT_EXTENSIONS)

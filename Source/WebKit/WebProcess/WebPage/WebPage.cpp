@@ -922,7 +922,7 @@ WebPage::WebPage(PageIdentifier pageID, WebPageCreationParameters&& parameters)
     if (auto& remotePageParameters = parameters.remotePageParameters) {
         for (auto& childParameters : remotePageParameters->frameTreeParameters.children)
             constructFrameTree(m_mainFrame.get(), childParameters);
-        m_page->setMainFrameURL(remotePageParameters->initialMainDocumentURL);
+        m_page->setMainFrameURLAndOrigin(remotePageParameters->initialMainDocumentURL, nullptr);
         if (auto websitePolicies = remotePageParameters->websitePoliciesData) {
             if (auto* remoteMainFrameClient = m_mainFrame->remoteFrameClient())
                 remoteMainFrameClient->applyWebsitePolicies(WTFMove(*remotePageParameters->websitePoliciesData));

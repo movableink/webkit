@@ -1241,10 +1241,15 @@ CheckedRef<const EventHandler> LocalFrame::checkedEventHandler() const
     return m_eventHandler.get();
 }
 
-void LocalFrame::documentURLDidChange(const URL& url)
+void LocalFrame::documentURLOrOriginDidChange()
 {
-    if (RefPtr page = this->page(); page && isMainFrame())
-        page->setMainFrameURL(url);
+    if (!isMainFrame())
+        return;
+
+    RefPtr page = this->protectedPage();
+    RefPtr document = this->protectedDocument();
+    if (page && document)
+        page->setMainFrameURLAndOrigin(document->url(), document->protectedSecurityOrigin());
 }
 
 #if ENABLE(DATA_DETECTION)
