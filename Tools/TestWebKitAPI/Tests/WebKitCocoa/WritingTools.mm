@@ -35,6 +35,7 @@
 #import "TestUIDelegate.h"
 #import "TestWKWebView.h"
 #import "UIKitSPIForTesting.h"
+#import "UnifiedPDFTestHelpers.h"
 #import "WKWebViewConfigurationExtras.h"
 #import <SoftLinking/WeakLinking.h>
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
@@ -3951,6 +3952,21 @@ TEST(WritingTools, AttributedStringWithWebKitLegacy)
     }];
 
     TestWebKitAPI::Util::run(&finished);
+}
+#endif
+
+#if ENABLE(PDF_PLUGIN)
+TEST(WritingTools, PDFTextSelections)
+{
+    if constexpr (!TestWebKitAPI::unifiedPDFForTestingEnabled)
+        return;
+
+    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:TestWebKitAPI::configurationForWebViewTestingUnifiedPDF().get()]);
+    RetainPtr request = [NSURLRequest requestWithURL:[NSBundle.test_resourcesBundle URLForResource:@"test" withExtension:@"pdf"]];
+    [webView synchronouslyLoadRequest:request.get()];
+    [webView selectAll:nil];
+    [webView waitForNextPresentationUpdate];
+    EXPECT_EQ([webView writingToolsBehaviorForTesting], PlatformWritingToolsBehaviorNone);
 }
 #endif
 

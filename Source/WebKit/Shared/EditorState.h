@@ -85,8 +85,8 @@ struct EditorState {
     bool isInPasswordField { false };
     bool hasComposition { false };
     bool triggeredByAccessibilitySelectionChange { false };
-#if PLATFORM(MAC)
     bool isInPlugin { false };
+#if PLATFORM(MAC)
     bool canEnableAutomaticSpellingCorrection { true };
 #endif
 

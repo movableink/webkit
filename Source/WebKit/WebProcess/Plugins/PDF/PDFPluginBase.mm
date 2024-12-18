@@ -1277,9 +1277,7 @@ bool PDFPluginBase::populateEditorStateIfNeeded(EditorState& state) const
 
     state.selectionIsNone = false;
     state.selectionIsRange = true;
-#if PLATFORM(MAC)
     state.isInPlugin = true;
-#endif
     return true;
 }
 

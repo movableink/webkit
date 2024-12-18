@@ -53,8 +53,8 @@ struct WebKit::EditorState {
     bool isInPasswordField;
     bool hasComposition;
     bool triggeredByAccessibilitySelectionChange;
-#if PLATFORM(MAC)
     bool isInPlugin;
+#if PLATFORM(MAC)
     bool canEnableAutomaticSpellingCorrection;
 #endif
     std::optional<WebKit::EditorState::PostLayoutData> postLayoutData;
