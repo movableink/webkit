@@ -124,9 +124,6 @@ bool SVGImage::renderingTaintsOrigin() const
 
 void SVGImage::setContainerSize(const FloatSize& size)
 {
-    if (!usesContainerSize())
-        return;
-
     RefPtr rootElement = this->rootElement();
     if (!rootElement || !rootElement->renderer() || !rootElement->renderer()->isRenderOrLegacyRenderSVGRoot())
         return;
