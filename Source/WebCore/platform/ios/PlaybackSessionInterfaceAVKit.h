@@ -30,6 +30,8 @@
 #include "PlaybackSessionInterfaceIOS.h"
 #include <wtf/TZoneMalloc.h>
 
+OBJC_CLASS WebAVContentSource;
+
 namespace WebCore {
 
 class PlaybackSessionInterfaceAVKit final : public PlaybackSessionInterfaceIOS {
@@ -39,31 +41,36 @@ public:
     WEBCORE_EXPORT static Ref<PlaybackSessionInterfaceAVKit> create(PlaybackSessionModel&);
     ~PlaybackSessionInterfaceAVKit();
 
+    void nowPlayingMetadataChanged(const NowPlayingMetadata&);
+
     // PlaybackSessionInterfaceIOS overrides
     WebAVPlayerController *playerController() const final { return nullptr; }
     WKSLinearMediaPlayer *linearMediaPlayer() const final { return nullptr; }
-    void durationChanged(double) final { }
-    void currentTimeChanged(double, double) final { }
+    void durationChanged(double) final;
+    void currentTimeChanged(double, double) final;
     void bufferedTimeChanged(double) final { }
-    void rateChanged(OptionSet<PlaybackSessionModel::PlaybackState>, double, double) final { }
-    void seekableRangesChanged(const TimeRanges&, double, double) final { }
-    void canPlayFastReverseChanged(bool) final { }
-    void audioMediaSelectionOptionsChanged(const Vector<MediaSelectionOption>&, uint64_t) final { }
-    void legibleMediaSelectionOptionsChanged(const Vector<MediaSelectionOption>&, uint64_t) final { }
-    void audioMediaSelectionIndexChanged(uint64_t) final { }
-    void legibleMediaSelectionIndexChanged(uint64_t) final { }
+    void rateChanged(OptionSet<PlaybackSessionModel::PlaybackState>, double, double) final;
+    void seekableRangesChanged(const TimeRanges&, double, double) final;
+    void canPlayFastReverseChanged(bool) final;
+    void audioMediaSelectionOptionsChanged(const Vector<MediaSelectionOption>&, uint64_t) final;
+    void legibleMediaSelectionOptionsChanged(const Vector<MediaSelectionOption>&, uint64_t) final;
+    void audioMediaSelectionIndexChanged(uint64_t) final;
+    void legibleMediaSelectionIndexChanged(uint64_t) final;
     void externalPlaybackChanged(bool, PlaybackSessionModel::ExternalPlaybackTargetType, const String&) final { }
     void wirelessVideoPlaybackDisabledChanged(bool) final { }
-    void mutedChanged(bool) final { }
-    void volumeChanged(double) final { }
-    void startObservingNowPlayingMetadata() final { }
-    void stopObservingNowPlayingMetadata() final { }
+    void mutedChanged(bool) final;
+    void volumeChanged(double) final;
+    void startObservingNowPlayingMetadata() final;
+    void stopObservingNowPlayingMetadata() final;
 #if !RELEASE_LOG_DISABLED
     ASCIILiteral logClassName() const final;
 #endif
 
 private:
     PlaybackSessionInterfaceAVKit(PlaybackSessionModel&);
+
+    RetainPtr<WebAVContentSource> m_contentSource;
+    NowPlayingMetadataObserver m_nowPlayingMetadataObserver;
 };
 
 } // namespace WebCore
