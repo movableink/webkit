@@ -3951,11 +3951,20 @@ void UnifiedPDFPlugin::clearSelection()
     setCurrentSelection({ });
 }
 
+#if HAVE(PDFDOCUMENT_SELECTION_WITH_GRANULARITY)
+
 static bool areVisuallyDistinct(FloatPoint a, FloatPoint b)
 {
     static constexpr auto maxDistanceSquared = 0.1 * 0.1;
     return (a - b).diagonalLengthSquared() > maxDistanceSquared;
 }
+
+static bool isEmpty(PDFSelection *selection)
+{
+    return !selection.pages.count;
+}
+
+#endif // HAVE(PDFDOCUMENT_SELECTION_WITH_GRANULARITY)
 
 void UnifiedPDFPlugin::setSelectionRange(FloatPoint pointInRootView, TextGranularity granularity)
 {
@@ -3975,11 +3984,6 @@ void UnifiedPDFPlugin::setSelectionRange(FloatPoint pointInRootView, TextGranula
     UNUSED_PARAM(pointInRootView);
     UNUSED_PARAM(granularity);
 #endif
-}
-
-static bool isEmpty(PDFSelection *selection)
-{
-    return !selection.pages.count;
 }
 
 SelectionWasFlipped UnifiedPDFPlugin::moveSelectionEndpoint(FloatPoint pointInRootView, SelectionEndpoint extentEndpoint)
