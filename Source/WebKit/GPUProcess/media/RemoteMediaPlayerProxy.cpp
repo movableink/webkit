@@ -43,6 +43,7 @@
 #include "RemoteMediaResourceIdentifier.h"
 #include "RemoteMediaResourceLoader.h"
 #include "RemoteMediaResourceManager.h"
+#include "RemoteAudioSessionProxy.h"
 #include "RemoteTextTrackProxy.h"
 #include "RemoteVideoFrameObjectHeap.h"
 #include "RemoteVideoFrameProxy.h"
@@ -1326,6 +1327,13 @@ void RemoteMediaPlayerProxy::audioOutputDeviceChanged(String&& deviceId)
     m_configuration.audioOutputDeviceId = WTFMove(deviceId);
     if (RefPtr player = m_player)
         player->audioOutputDeviceChanged();
+
+#if PLATFORM(IOS_FAMILY) && USE(AUDIO_SESSION)
+    RefPtr manager = m_manager.get();
+    RefPtr connection = manager->gpuConnectionToWebProcess();
+    Ref audioSession = connection->audioSessionProxy();
+    audioSession->setPreferredSpeakerID(m_configuration.audioOutputDeviceId);
+#endif
 }
 
 } // namespace WebKit

@@ -33,7 +33,9 @@
 #include "GPUProcessConnectionMessages.h"
 #include "IPCSemaphore.h"
 #include "Logging.h"
+#include "RemoteAudioSessionProxy.h"
 #include "SharedCARingBuffer.h"
+#include <WebCore/AVAudioSessionCaptureDeviceManager.h>
 #include <WebCore/AudioMediaStreamTrackRenderer.h>
 #include <WebCore/AudioMediaStreamTrackRendererInternalUnit.h>
 #include <WebCore/AudioSampleBufferList.h>
@@ -159,6 +161,15 @@ void RemoteAudioMediaStreamTrackRendererInternalUnitManager::notifyLastToCapture
 {
     for (Ref unit : m_units.values())
         unit->updateShouldRegisterAsSpeakerSamplesProducer();
+}
+
+void RemoteAudioMediaStreamTrackRendererInternalUnitManager::setLastDeviceUsed(const String& deviceID)
+{
+#if PLATFORM(IOS_FAMILY) && USE(AUDIO_SESSION)
+    RefPtr connection = m_gpuConnectionToWebProcess.get();
+    Ref audioSession = connection->audioSessionProxy();
+    audioSession->setPreferredSpeakerID(deviceID != AudioMediaStreamTrackRenderer::defaultDeviceID() ? deviceID : emptyString());
+#endif
 }
 
 std::optional<SharedPreferencesForWebProcess> RemoteAudioMediaStreamTrackRendererInternalUnitManager::sharedPreferencesForWebProcess() const

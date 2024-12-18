@@ -29,6 +29,7 @@
 #if ENABLE(MEDIA_STREAM) && PLATFORM(IOS_FAMILY)
 
 #import "AVAudioSessionCaptureDevice.h"
+#import "AudioSession.h"
 #import "CoreAudioSharedUnit.h"
 #import "Logging.h"
 #import "RealtimeMediaSourceCenter.h"
@@ -154,45 +155,61 @@ std::optional<AVAudioSessionCaptureDevice> AVAudioSessionCaptureDeviceManager::a
     return std::nullopt;
 }
 
-void AVAudioSessionCaptureDeviceManager::setPreferredAudioSessionDeviceUID(const String& deviceUID)
+void AVAudioSessionCaptureDeviceManager::setPreferredMicrophoneID(const String& microphoneID)
 {
-    if (setPreferredAudioSessionDeviceUIDInternal(deviceUID))
-        m_preferredAudioDeviceUID = deviceUID;
+    auto previousMicrophoneID = m_preferredMicrophoneID;
+    m_preferredMicrophoneID = microphoneID;
+    if (!setPreferredAudioSessionDeviceIDs())
+        m_preferredMicrophoneID = WTFMove(previousMicrophoneID);
 }
 
-void AVAudioSessionCaptureDeviceManager::configurePreferredAudioCaptureDevice()
+void AVAudioSessionCaptureDeviceManager::configurePreferredMicrophone()
 {
-    ASSERT(!m_preferredAudioDeviceUID.isEmpty());
-    if (!m_preferredAudioDeviceUID.isEmpty())
-        setPreferredAudioSessionDeviceUIDInternal(m_preferredAudioDeviceUID);
+    ASSERT(!m_preferredMicrophoneID.isEmpty());
+    if (!m_preferredMicrophoneID.isEmpty())
+        setPreferredAudioSessionDeviceIDs();
 }
 
-bool AVAudioSessionCaptureDeviceManager::setPreferredAudioSessionDeviceUIDInternal(const String& deviceUID)
+void AVAudioSessionCaptureDeviceManager::setPreferredSpeakerID(const String& speakerID)
 {
-    AVAudioSessionPortDescription *preferredPort = nil;
-    if (!deviceUID.isNull()) {
-        NSString *nsDeviceUID = deviceUID;
+    auto previousSpeakerID = m_preferredSpeakerID;
+    m_preferredSpeakerID = speakerID;
+    if (!setPreferredAudioSessionDeviceIDs())
+        m_preferredSpeakerID = WTFMove(previousSpeakerID);
+    else if (!m_preferredSpeakerID.isEmpty()) {
+#if USE(APPLE_INTERNAL_SDK)
+#import <WebKitAdditions/AVAudioSessionCaptureDeviceManagerAdditions-2.mm>
+#endif
+    }
+
+    AudioSession::sharedSession().setCategory(AudioSession::sharedSession().category(), AudioSession::sharedSession().mode(), AudioSession::sharedSession().routeSharingPolicy());
+}
+
+bool AVAudioSessionCaptureDeviceManager::setPreferredAudioSessionDeviceIDs()
+{
+    AVAudioSessionPortDescription *preferredInputPort = nil;
+    if (!m_preferredMicrophoneID.isEmpty()) {
+        NSString *nsDeviceUID = m_preferredMicrophoneID;
         for (AVAudioSessionPortDescription *portDescription in [m_audioSession availableInputs]) {
             if ([portDescription.UID isEqualToString:nsDeviceUID]) {
-                preferredPort = portDescription;
+                preferredInputPort = portDescription;
                 break;
             }
         }
+    }
+    {
+        RELEASE_LOG_INFO(WebRTC, "AVAudioSessionCaptureDeviceManager setting preferred input to '%{public}s'", m_preferredMicrophoneID.ascii().data());
 
-        if (!preferredPort) {
-            RELEASE_LOG_ERROR(WebRTC, "failed to find preferred input '%{public}s'", deviceUID.ascii().data());
+        NSError *error = nil;
+        if (![[PAL::getAVAudioSessionClass() sharedInstance] setPreferredInput:preferredInputPort error:&error]) {
+            RELEASE_LOG_ERROR(WebRTC, "AVAudioSessionCaptureDeviceManager failed to set preferred input to '%{public}s' with error: %@", m_preferredMicrophoneID.utf8().data(), error.localizedDescription);
             return false;
         }
     }
 
-    RELEASE_LOG_INFO(WebRTC, "AVAudioSessionCaptureDeviceManager setting preferred input to '%{public}s'", deviceUID.ascii().data());
-
-    NSError *error = nil;
-    if (![[PAL::getAVAudioSessionClass() sharedInstance] setPreferredInput:preferredPort error:&error]) {
-        RELEASE_LOG_ERROR(WebRTC, "failed to set preferred input to '%{public}s' with error: %@", deviceUID.ascii().data(), error.localizedDescription);
-        return false;
-    }
-
+#if USE(APPLE_INTERNAL_SDK)
+#import <WebKitAdditions/AVAudioSessionCaptureDeviceManagerAdditions-3.mm>
+#endif
     return true;
 }
 

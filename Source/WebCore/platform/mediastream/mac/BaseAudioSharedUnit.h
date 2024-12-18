@@ -58,7 +58,7 @@ public:
 
     void startProducingData();
     void stopProducingData();
-    void reconfigure();
+    WEBCORE_EXPORT void reconfigure();
     virtual bool isProducingData() const = 0;
 
     virtual void delaySamples(Seconds) { }

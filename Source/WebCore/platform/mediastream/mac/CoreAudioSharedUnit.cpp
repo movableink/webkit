@@ -266,7 +266,7 @@ void CoreAudioSharedUnit::captureDeviceChanged()
 #if PLATFORM(MAC)
     reconfigureAudioUnit();
 #else
-    AVAudioSessionCaptureDeviceManager::singleton().setPreferredAudioSessionDeviceUID(isCapturingWithDefaultMicrophone() ? String { } : persistentID());
+    AVAudioSessionCaptureDeviceManager::singleton().setPreferredMicrophoneID(isCapturingWithDefaultMicrophone() ? String { } : persistentID());
 #endif
     updateVoiceActivityDetection();
 }

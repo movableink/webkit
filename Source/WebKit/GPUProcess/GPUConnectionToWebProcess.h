@@ -279,6 +279,10 @@ public:
 
     bool isAlwaysOnLoggingAllowed() const;
 
+#if USE(AUDIO_SESSION)
+    RemoteAudioSessionProxy& audioSessionProxy();
+#endif
+
 private:
     GPUConnectionToWebProcess(GPUProcess&, WebCore::ProcessIdentifier, PAL::SessionID, IPC::Connection::Handle&&, GPUProcessConnectionParameters&&);
 
@@ -325,7 +329,6 @@ private:
 #endif
 
 #if USE(AUDIO_SESSION)
-    RemoteAudioSessionProxy& audioSessionProxy();
     Ref<RemoteAudioSessionProxy> protectedAudioSessionProxy();
     using EnsureAudioSessionCompletion = CompletionHandler<void(const RemoteAudioSessionConfiguration&)>;
     void ensureAudioSession(EnsureAudioSessionCompletion&&);

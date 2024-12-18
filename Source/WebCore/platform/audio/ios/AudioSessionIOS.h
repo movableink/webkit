@@ -76,7 +76,7 @@ private:
     void setSoundStageSize(SoundStageSize) final;
     SoundStageSize soundStageSize() const final { return m_soundStageSize; }
 
-    String m_lastSetPreferredAudioDeviceUID;
+    String m_lastSetPreferredMicrophoneID;
     RetainPtr<WebInterruptionObserverHelper> m_interruptionObserverHelper;
     String m_sceneIdentifier;
     SoundStageSize m_soundStageSize { SoundStageSize::Automatic };

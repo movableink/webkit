@@ -34,6 +34,8 @@ messages -> RemoteAudioMediaStreamTrackRendererInternalUnitManager {
 
     StartUnit(WebKit::AudioMediaStreamTrackRendererInternalUnitIdentifier identifier, struct WebKit::ConsumerSharedCARingBufferHandle storageHandle, IPC::Semaphore renderSemaphore)
     StopUnit(WebKit::AudioMediaStreamTrackRendererInternalUnitIdentifier identifier)
+
+    SetLastDeviceUsed(String deviceID)
 }
 
 #endif

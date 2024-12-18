@@ -58,9 +58,12 @@ public:
     void enableAllDevicesQuery();
     void disableAllDevicesQuery();
 
-    void setPreferredAudioSessionDeviceUID(const String&);
-    String preferredAudioSessionDeviceUID() const { return m_preferredAudioDeviceUID; }
-    void configurePreferredAudioCaptureDevice();
+    void setPreferredMicrophoneID(const String&);
+    const String& preferredMicrophoneID() const { return m_preferredMicrophoneID; }
+    void configurePreferredMicrophone();
+
+    WEBCORE_EXPORT void setPreferredSpeakerID(const String&);
+    bool isReceiverPreferredSpeaker() const { return m_isReceiverPreferredSpeaker; }
 
 private:
     AVAudioSessionCaptureDeviceManager();
@@ -70,7 +73,7 @@ private:
     void refreshAudioCaptureDevices();
     Vector<AVAudioSessionCaptureDevice> retrieveAudioSessionCaptureDevices() const;
     void setAudioCaptureDevices(Vector<AVAudioSessionCaptureDevice>&&);
-    bool setPreferredAudioSessionDeviceUIDInternal(const String&);
+    bool setPreferredAudioSessionDeviceIDs();
     void notifyNewCurrentMicrophoneDevice(CaptureDevice&&);
 
     enum class AudioSessionState { NotNeeded, Inactive, Active };
@@ -81,7 +84,9 @@ private:
     RetainPtr<WebAVAudioSessionAvailableInputsListener> m_listener;
     RetainPtr<AVAudioSession> m_audioSession;
     Ref<WorkQueue> m_dispatchQueue;
-    String m_preferredAudioDeviceUID;
+    String m_preferredMicrophoneID;
+    String m_preferredSpeakerID;
+    bool m_isReceiverPreferredSpeaker { false };
     bool m_recomputeDevices { true };
     mutable RetainPtr<AVAudioSessionPortDescription> m_lastDefaultMicrophone;
 };

@@ -31,6 +31,7 @@
 #include "AudioMediaStreamTrackRendererInternalUnitIdentifier.h"
 #include "GPUProcessConnection.h"
 #include "IPCSemaphore.h"
+#include "Logging.h"
 #include "RemoteAudioMediaStreamTrackRendererInternalUnitManagerMessages.h"
 #include "SharedCARingBuffer.h"
 #include "WebProcess.h"
@@ -73,6 +74,7 @@ private:
     void close() { stopThread(); }
 
     void retrieveFormatDescription(CompletionHandler<void(std::optional<WebCore::CAAudioStreamDescription>)>&&) final;
+    void setLastDeviceUsed(const String&) final;
 
     void initialize(const WebCore::CAAudioStreamDescription&, size_t frameChunkSize);
     void storageChanged(WebCore::SharedMemory*, const WebCore::CAAudioStreamDescription&, size_t);
@@ -221,6 +223,11 @@ void AudioMediaStreamTrackRendererInternalUnitManagerProxy::retrieveFormatDescri
         return;
     }
     callback(m_description);
+}
+
+void AudioMediaStreamTrackRendererInternalUnitManagerProxy::setLastDeviceUsed(const String& deviceID)
+{
+    WebProcess::singleton().ensureGPUProcessConnection().connection().send(Messages::RemoteAudioMediaStreamTrackRendererInternalUnitManager::SetLastDeviceUsed { deviceID }, 0);
 }
 
 void AudioMediaStreamTrackRendererInternalUnitManagerProxy::stopThread()

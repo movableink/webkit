@@ -212,7 +212,11 @@ void AudioSessionIOS::setCategory(CategoryType newCategory, Mode newMode, RouteS
         break;
     case CategoryType::PlayAndRecord:
         categoryString = AVAudioSessionCategoryPlayAndRecord;
-        options |= AVAudioSessionCategoryOptionAllowBluetooth | AVAudioSessionCategoryOptionAllowBluetoothA2DP | AVAudioSessionCategoryOptionDefaultToSpeaker | AVAudioSessionCategoryOptionAllowAirPlay;
+        options |= AVAudioSessionCategoryOptionAllowBluetooth | AVAudioSessionCategoryOptionAllowBluetoothA2DP | AVAudioSessionCategoryOptionAllowAirPlay;
+#if ENABLE(MEDIA_STREAM)
+        if (!AVAudioSessionCaptureDeviceManager::singleton().isReceiverPreferredSpeaker())
+#endif
+            options |= AVAudioSessionCategoryOptionDefaultToSpeaker;
         break;
     case CategoryType::AudioProcessing:
         categoryString = AVAudioSessionCategoryAudioProcessing;
@@ -227,6 +231,10 @@ void AudioSessionIOS::setCategory(CategoryType newCategory, Mode newMode, RouteS
         case Mode::MoviePlayback:
             return AVAudioSessionModeMoviePlayback;
         case Mode::VideoChat:
+#if ENABLE(MEDIA_STREAM)
+            if (AVAudioSessionCaptureDeviceManager::singleton().isReceiverPreferredSpeaker())
+                return AVAudioSessionModeDefault;
+#endif
             return AVAudioSessionModeVideoChat;
         case Mode::Default:
             break;
@@ -236,12 +244,12 @@ void AudioSessionIOS::setCategory(CategoryType newCategory, Mode newMode, RouteS
 
     bool needDeviceUpdate = false;
 #if ENABLE(MEDIA_STREAM)
-    auto preferredDeviceUID = AVAudioSessionCaptureDeviceManager::singleton().preferredAudioSessionDeviceUID();
-    if ((newCategory == CategoryType::PlayAndRecord || newCategory == CategoryType::RecordAudio) && !preferredDeviceUID.isEmpty()) {
-        if (m_lastSetPreferredAudioDeviceUID != preferredDeviceUID)
+    auto preferredMicrophoneID = AVAudioSessionCaptureDeviceManager::singleton().preferredMicrophoneID();
+    if ((newCategory == CategoryType::PlayAndRecord || newCategory == CategoryType::RecordAudio) && !preferredMicrophoneID.isEmpty()) {
+        if (m_lastSetPreferredMicrophoneID != preferredMicrophoneID)
             needDeviceUpdate = true;
     } else
-        m_lastSetPreferredAudioDeviceUID = emptyString();
+        m_lastSetPreferredMicrophoneID = emptyString();
 #endif
 
     AVAudioSession *session = [PAL::getAVAudioSessionClass() sharedInstance];
@@ -265,9 +273,9 @@ void AudioSessionIOS::setCategory(CategoryType newCategory, Mode newMode, RouteS
 
 #if ENABLE(MEDIA_STREAM)
     if (needDeviceUpdate) {
-        AVAudioSessionCaptureDeviceManager::singleton().configurePreferredAudioCaptureDevice();
-        m_lastSetPreferredAudioDeviceUID = AVAudioSessionCaptureDeviceManager::singleton().preferredAudioSessionDeviceUID();
-        ALWAYS_LOG(identifier, "prefered device = ", m_lastSetPreferredAudioDeviceUID);
+        AVAudioSessionCaptureDeviceManager::singleton().configurePreferredMicrophone();
+        m_lastSetPreferredMicrophoneID = AVAudioSessionCaptureDeviceManager::singleton().preferredMicrophoneID();
+        ALWAYS_LOG(identifier, "prefered microphone = ", m_lastSetPreferredMicrophoneID);
     }
 #endif
     for (auto& observer : audioSessionCategoryChangedObservers())
