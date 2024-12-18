@@ -152,6 +152,16 @@ namespace ax = WebCore::Accessibility;
     ASSERT(isMainRunLoop());
     m_isolatedTreeRoot = root.get();
 }
+
+- (void)setWindow:(id)window
+{
+    ASSERT(window);
+    ASSERT(isMainRunLoop());
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    Locker lock { m_windowLock };
+#endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    m_window = window;
+}
 #endif
 
 - (void)setHasMainFramePlugin:(bool)hasPlugin
@@ -174,6 +184,10 @@ namespace ax = WebCore::Accessibility;
 - (void)setRemoteParent:(id)parent
 {
     ASSERT(isMainRunLoop());
+
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    Locker lock { m_parentLock };
+#endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     m_parent = parent;
 }
 
