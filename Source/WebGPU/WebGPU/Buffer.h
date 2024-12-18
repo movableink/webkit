@@ -73,7 +73,7 @@ public:
     ~Buffer();
 
     void destroy();
-    std::span<uint8_t> getMappedRange(size_t offset, size_t);
+    std::span<uint8_t> getMappedRange(size_t offset, size_t) HAS_SWIFTCXX_THUNK;
     void mapAsync(WGPUMapModeFlags, size_t offset, size_t, CompletionHandler<void(WGPUBufferMapAsyncStatus)>&& callback);
     void unmap();
     void setLabel(String&&);
@@ -126,7 +126,11 @@ private:
     Buffer(id<MTLBuffer>, uint64_t initialSize, WGPUBufferUsageFlags, State initialState, MappingRange initialMappingRange, Device&);
     Buffer(Device&);
 
+
+private PUBLIC_IN_WEBGPU_SWIFT:
     bool validateGetMappedRange(size_t offset, size_t rangeSize) const;
+
+private:
     NSString* errorValidatingMapAsync(WGPUMapModeFlags, size_t offset, size_t rangeSize) const;
     bool validateUnmap() const;
     void setState(State);
@@ -147,7 +151,9 @@ private:
     // [[mapping]] is unnecessary; we can just use m_device.contents.
     MappingRange m_mappingRange { 0, 0 };
     using MappedRanges = RangeSet<Range<size_t>>;
+private PUBLIC_IN_WEBGPU_SWIFT:
     MappedRanges m_mappedRanges;
+private:
     WGPUMapModeFlags m_mapMode { WGPUMapMode_None };
     struct IndirectArgsCache {
         uint64_t indirectOffset { UINT64_MAX };
