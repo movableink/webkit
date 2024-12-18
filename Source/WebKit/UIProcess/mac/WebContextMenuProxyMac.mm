@@ -126,6 +126,8 @@
 - (void)showWritingTools:(id)sender;
 #endif
 
+- (void)performShare:(id)sender;
+
 @end
 
 @implementation WKMenuTarget
@@ -181,6 +183,14 @@
     _menuProxy->handleContextMenuWritingTools(WebKit::convertToWebRequestedTool(tool));
 }
 #endif
+
+- (void)performShare:(id)sender
+{
+    if (!_menuProxy)
+        return;
+
+    _menuProxy->handleShareMenuItem();
+}
 
 @end
 
@@ -245,6 +255,13 @@ void WebContextMenuProxyMac::handleContextMenuWritingTools(WebCore::WritingTools
     page()->handleContextMenuWritingTools(tool);
 }
 #endif
+
+void WebContextMenuProxyMac::handleShareMenuItem()
+{
+    RetainPtr shareMenuItem = createShareMenuItem(ShareMenuItemType::Popover);
+    [shareMenuItem setMenu:m_menu.get()];
+    [[NSApplication sharedApplication] sendAction:[shareMenuItem action] to:[shareMenuItem target] from:shareMenuItem.get()];
+}
 
 #if ENABLE(SERVICE_CONTROLS)
 void WebContextMenuProxyMac::setupServicesMenu()
@@ -414,7 +431,7 @@ void WebContextMenuProxyMac::removeBackgroundFromControlledImage()
 #endif // ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
 }
 
-void WebContextMenuProxyMac::getShareMenuItem(CompletionHandler<void(NSMenuItem *)>&& completionHandler)
+RetainPtr<NSMenuItem> WebContextMenuProxyMac::createShareMenuItem(ShareMenuItemType type)
 {
     ASSERT(m_context.webHitTestResultData());
     auto hitTestData = m_context.webHitTestResultData().value();
@@ -433,8 +450,11 @@ void WebContextMenuProxyMac::getShareMenuItem(CompletionHandler<void(NSMenuItem 
             [items addObject:(NSURL *)downloadableMediaURL];
     }
 
+    bool usePlaceholder = type == ShareMenuItemType::Placeholder;
     if (hitTestData.imageSharedMemory) {
-        if (auto image = adoptNS([[NSImage alloc] initWithData:hitTestData.imageSharedMemory->toNSData().get()])) {
+        if (usePlaceholder)
+            [items addObject:adoptNS([[NSImage alloc] init]).get()];
+        else if (auto image = adoptNS([[NSImage alloc] initWithData:hitTestData.imageSharedMemory->toNSData().get()])) {
             NSString *title = hitTestData.imageText;
             if (!title.length)
                 title = WEB_UI_NSSTRING(@"Image", "Fallback title for images in the share sheet");
@@ -447,16 +467,20 @@ void WebContextMenuProxyMac::getShareMenuItem(CompletionHandler<void(NSMenuItem 
     if (!m_context.selectedText().isEmpty())
         [items addObject:(NSString *)m_context.selectedText()];
 
-    if (![items count]) {
-        completionHandler(nil);
-        return;
-    }
+    if (![items count])
+        return nil;
 
-    auto sharingServicePicker = adoptNS([[NSSharingServicePicker alloc] initWithItems:items.get()]);
-    NSMenuItem *shareMenuItem = [sharingServicePicker standardShareMenuItem];
-    [shareMenuItem setRepresentedObject:sharingServicePicker.get()];
-    shareMenuItem.identifier = _WKMenuItemIdentifierShareMenu;
-    completionHandler(shareMenuItem);
+    RetainPtr sharingServicePicker = adoptNS([[NSSharingServicePicker alloc] initWithItems:items.get()]);
+    RetainPtr shareMenuItem = [sharingServicePicker standardShareMenuItem];
+
+    if (usePlaceholder) {
+        shareMenuItem = adoptNS([[NSMenuItem alloc] initWithTitle:[shareMenuItem title] action:@selector(performShare:) keyEquivalent:@""]);
+        [shareMenuItem setTarget:[WKMenuTarget sharedMenuTarget]];
+    } else
+        [shareMenuItem setRepresentedObject:sharingServicePicker.get()];
+
+    [shareMenuItem setIdentifier:_WKMenuItemIdentifierShareMenu];
+    return shareMenuItem;
 }
 #endif
 
@@ -810,7 +834,7 @@ void WebContextMenuProxyMac::getContextMenuItem(const WebContextMenuItemData& it
 {
 #if ENABLE(SERVICE_CONTROLS)
     if (item.action() == ContextMenuItemTagShareMenu) {
-        getShareMenuItem(WTFMove(completionHandler));
+        completionHandler(createShareMenuItem(ShareMenuItemType::Placeholder).get());
         return;
     }
 #endif
