@@ -2988,3 +2988,7 @@ webkit.org/b/284486 [ Ventura+ ] imported/w3c/web-platform-tests/css/css-grid/su
 webkit.org/b/284486 [ Ventura+ ] imported/w3c/web-platform-tests/css/css-grid/subgrid/subgrid-baseline-007.html [ Pass Failure ]
 
 webkit.org/b/284507 [ Ventura+ ] storage/indexeddb/objectstore-basics.html [ Pass Crash Timeout ]
+
+webkit.org/b/284898 [ Ventura+ ] fonts/font-weight-invalid-crash.html [ Pass Failure ]
+webkit.org/b/284898 [ Ventura+ ] fonts/ligature.html [ Pass Failure ImageOnlyFailure ]
+
