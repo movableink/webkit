@@ -5286,6 +5286,21 @@ ModelElementEnabled:
   disableInLockdownMode: true
   sharedPreferenceForWebProcess: true
 
+ModelNoPortalAttributeEnabled:
+  type: bool
+  status: unstable
+  condition: PLATFORM(VISION) && ENABLE(MODEL_PROCESS)
+  humanReadableName: "Model noportal attribute"
+  humanReadableDescription: "Enable Model noportal attribute support"
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+  disableInLockdownMode: true
+
 ModelProcessEnabled:
   type: bool
   status: unstable

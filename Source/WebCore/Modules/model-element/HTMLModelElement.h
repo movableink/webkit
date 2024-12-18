@@ -222,6 +222,8 @@ private:
     void environmentMapRequestResource();
     void environmentMapResetAndReject(Exception&&);
     void environmentMapResourceFinished();
+    bool hasPortal() const;
+    void updateHasPortal();
 #endif
     void modelResourceFinished();
 

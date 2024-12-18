@@ -38,6 +38,7 @@ messages -> ModelProcessModelPlayerProxy {
     SetPaused(bool paused) -> (bool succeeded) Async
     SetCurrentTime(Seconds currentTime) -> () Async
     SetEnvironmentMap(Ref<WebCore::SharedBuffer> data)
+    SetHasPortal(bool hasPortal)
 }
 
 #endif

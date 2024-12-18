@@ -110,6 +110,10 @@ void ModelPlayer::setCurrentTime(Seconds, CompletionHandler<void()>&& completion
 void ModelPlayer::setEnvironmentMap(Ref<SharedBuffer>&&)
 {
 }
+
+void ModelPlayer::setHasPortal(bool)
+{
+}
 #endif // ENABLE(MODEL_PROCESS)
 
 }

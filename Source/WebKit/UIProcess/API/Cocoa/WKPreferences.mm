@@ -1707,6 +1707,37 @@ static WebCore::EditableLinkBehavior toEditableLinkBehavior(_WKEditableLinkBehav
     return NO;
 #endif
 }
+
+- (void)_setModelElementEnabled:(BOOL)enabled
+{
+    _preferences->setModelElementEnabled(enabled);
+}
+
+- (BOOL)_modelProcessEnabled
+{
+    return _preferences->modelProcessEnabled();
+}
+
+- (void)_setModelProcessEnabled:(BOOL)enabled
+{
+    _preferences->setModelProcessEnabled(enabled);
+}
+
+- (BOOL)_modelElementEnabled
+{
+    return _preferences->modelElementEnabled();
+}
+
+- (void)_setModelNoPortalAttributeEnabled:(BOOL)enabled
+{
+    _preferences->setModelNoPortalAttributeEnabled(enabled);
+}
+
+- (BOOL)_modelNoPortalAttributeEnabled
+{
+    return _preferences->modelNoPortalAttributeEnabled();
+}
+
 @end
 
 @implementation WKPreferences (WKDeprecated)

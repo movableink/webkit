@@ -332,6 +332,14 @@ void ModelProcessModelPlayer::setEnvironmentMap(Ref<WebCore::SharedBuffer>&& dat
     send(Messages::ModelProcessModelPlayerProxy::SetEnvironmentMap(WTFMove(data)));
 }
 
+void ModelProcessModelPlayer::setHasPortal(bool hasPortal)
+{
+    if (m_hasPortal == hasPortal)
+        return;
+
+    m_hasPortal = hasPortal;
+    send(Messages::ModelProcessModelPlayerProxy::SetHasPortal(m_hasPortal));
+}
 }
 
 #endif // ENABLE(MODEL_PROCESS)

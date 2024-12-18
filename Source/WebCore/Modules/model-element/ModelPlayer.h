@@ -96,6 +96,7 @@ public:
     virtual Seconds currentTime() const;
     virtual void setCurrentTime(Seconds, CompletionHandler<void()>&&);
     virtual void setEnvironmentMap(Ref<SharedBuffer>&& data);
+    virtual void setHasPortal(bool);
 #endif
 };
 

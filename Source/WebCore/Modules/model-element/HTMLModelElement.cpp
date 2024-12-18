@@ -298,6 +298,7 @@ void HTMLModelElement::createModelPlayer()
     m_modelPlayer->setAutoplay(autoplay());
     m_modelPlayer->setLoop(loop());
     m_modelPlayer->setPlaybackRate(m_playbackRate, [&](double) { });
+    m_modelPlayer->setHasPortal(hasPortal());
 #endif
 
     // FIXME: We need to tell the player if the size changes as well, so passing this
@@ -500,6 +501,10 @@ void HTMLModelElement::attributeChanged(const QualifiedName& name, const AtomStr
         updateLoop();
     else if (name == environmentmapAttr)
         updateEnvironmentMap();
+#if PLATFORM(VISION)
+    else if (document().settings().modelNoPortalAttributeEnabled() && name == noportalAttr)
+        updateHasPortal();
+#endif
 #endif
     else
         HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
@@ -691,6 +696,21 @@ void HTMLModelElement::setCurrentTime(double currentTime)
 {
     if (m_modelPlayer)
         m_modelPlayer->setCurrentTime(Seconds(currentTime), [&]() { });
+}
+
+bool HTMLModelElement::hasPortal() const
+{
+#if PLATFORM(VISION)
+    return !(document().settings().modelNoPortalAttributeEnabled() && hasAttributeWithoutSynchronization(HTMLNames::noportalAttr));
+#else
+    return true;
+#endif
+}
+
+void HTMLModelElement::updateHasPortal()
+{
+    if (RefPtr modelPlayer = m_modelPlayer)
+        modelPlayer->setHasPortal(hasPortal());
 }
 
 const URL& HTMLModelElement::environmentMap() const

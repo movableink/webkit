@@ -103,6 +103,7 @@ private:
     Seconds currentTime() const final;
     void setCurrentTime(Seconds, CompletionHandler<void()>&&) final;
     void setEnvironmentMap(Ref<WebCore::SharedBuffer>&& data) final;
+    void setHasPortal(bool) final;
 
     WebCore::ModelPlayerIdentifier m_id;
     WeakPtr<WebPage> m_page;
@@ -110,6 +111,7 @@ private:
 
     std::optional<WebCore::LayerHostingContextIdentifier> m_layerHostingContextIdentifier;
 
+    bool m_hasPortal { true };
     bool m_autoplay { false };
     bool m_loop { false };
     double m_requestedPlaybackRate { 1.0 };

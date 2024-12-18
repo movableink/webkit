@@ -158,13 +158,12 @@ void ModelProcessModelPlayerProxy::createLayer()
 
     m_layer = adoptNS([[WKModelProcessModelLayer alloc] init]);
     [m_layer setName:@"WKModelProcessModelLayer"];
-    [m_layer setValue:@YES forKeyPath:@"separatedOptions.isPortal"];
     [m_layer setValue:@YES forKeyPath:@"separatedOptions.updates.transform"];
     [m_layer setValue:@YES forKeyPath:@"separatedOptions.updates.collider"];
     [m_layer setValue:@YES forKeyPath:@"separatedOptions.updates.mesh"];
     [m_layer setValue:@YES forKeyPath:@"separatedOptions.updates.material"];
     [m_layer setValue:@YES forKeyPath:@"separatedOptions.updates.texture"];
-    [m_layer setValue:@YES forKeyPath:@"separatedOptions.updates.clippingPrimitive"];
+    updatePortalAndClipping();
     updateBackgroundColor();
 
     [m_layer setPlayer:RefPtr { this }];
@@ -264,7 +263,7 @@ void ModelProcessModelPlayerProxy::computeTransform()
         return;
 
     // FIXME: Use the value of the 'object-fit' property here to compute an appropriate SRT.
-    RESRT newSRT = computeSRT(m_layer.get(), m_originalBoundingBoxExtents, m_originalBoundingBoxCenter, m_pitch, m_yaw, true, effectivePointsPerMeter(m_layer.get()));
+    RESRT newSRT = computeSRT(m_layer.get(), m_originalBoundingBoxExtents, m_originalBoundingBoxCenter, m_pitch, m_yaw, m_hasPortal, effectivePointsPerMeter(m_layer.get()));
     m_transformSRT = newSRT;
 
     simd_float4x4 matrix = RESRTMatrix(m_transformSRT);
@@ -286,6 +285,22 @@ void ModelProcessModelPlayerProxy::updateOpacity()
         return;
 
     [m_modelRKEntity setOpacity:[m_layer opacity]];
+}
+
+void ModelProcessModelPlayerProxy::updatePortalAndClipping()
+{
+    if (!m_layer)
+        return;
+
+    if (m_hasPortal) {
+        [m_layer setValue:@YES forKeyPath:@"separatedOptions.isPortal"];
+        [m_layer setValue:@YES forKeyPath:@"separatedOptions.updates.clippingPrimitive"];
+    } else {
+        [m_layer setValue:nil forKeyPath:@"separatedOptions.isPortal"];
+        [m_layer setValue:@NO forKeyPath:@"separatedOptions.updates.clippingPrimitive"];
+    }
+
+    // FIXME: rdar://141457267 (Remove clipping when <model> doesn't have a portal)
 }
 
 void ModelProcessModelPlayerProxy::startAnimating()
@@ -595,6 +610,17 @@ void ModelProcessModelPlayerProxy::applyEnvironmentMapDataAndRelease()
     }
 }
 
+void ModelProcessModelPlayerProxy::setHasPortal(bool hasPortal)
+{
+    if (m_hasPortal == hasPortal)
+        return;
+
+    m_hasPortal = hasPortal;
+
+    updatePortalAndClipping();
+    computeTransform();
+    updateTransform();
+}
 
 } // namespace WebKit
 
