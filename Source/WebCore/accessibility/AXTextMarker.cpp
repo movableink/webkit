@@ -633,6 +633,35 @@ AXTextMarker AXTextMarker::findLastBefore(std::optional<AXID> stopAtID) const
     return marker;
 }
 
+AXTextMarkerRange AXTextMarker::rangeWithSameStyle() const
+{
+    RELEASE_ASSERT(!isMainThread());
+
+    if (!isValid())
+        return { };
+
+    auto originalStyle = object()->stylesForAttributedString();
+    auto findMarkerWithDifferentStyle = [&] (AXDirection direction) -> AXTextMarker {
+        RefPtr current = isolatedObject();
+        while (current) {
+            RefPtr next = findObjectWithRuns(*current, direction);
+            if (next && originalStyle != next->stylesForAttributedString())
+                break;
+            current = WTFMove(next);
+        }
+
+        if (current)
+            return AXTextMarker { *current, direction == AXDirection::Next ? current->textRuns()->totalLength() : 0 };
+        if (RefPtr tree = std::get<RefPtr<AXIsolatedTree>>(axTreeForID(object()->treeID()))) {
+            // The style is unchanged from `this` to the start or end of tree. Return the start-or-end-of-tree position.
+            return direction == AXDirection::Next ? tree->lastMarker() : tree->firstMarker();
+        }
+        return { };
+    };
+
+    return { findMarkerWithDifferentStyle(AXDirection::Previous), findMarkerWithDifferentStyle(AXDirection::Next) };
+}
+
 String AXTextMarkerRange::toString() const
 {
     RELEASE_ASSERT(!isMainThread());
@@ -992,22 +1021,40 @@ bool AXTextMarker::isInTextRun() const
 AXTextMarkerRange AXTextMarker::lineRange(LineRangeType type) const
 {
     if (!isValid())
-        return { { }, { } };
+        return { };
 
     if (type == LineRangeType::Current) {
         auto startMarker = atLineStart() ? *this : previousLineStart();
         auto endMarker = atLineEnd() ? *this : nextLineEnd();
 
         return { WTFMove(startMarker), WTFMove(endMarker) };
+    } else if (type == LineRangeType::Left) {
+        // Move backwards off a line start (because this is a "left-line" request).
+        auto startMarker = atLineStart() ? findMarker(AXDirection::Previous) : *this;
+        if (!startMarker.atLineStart())
+            startMarker = startMarker.previousLineStart();
+
+        auto endMarker = startMarker.nextLineEnd();
+        return { WTFMove(startMarker), WTFMove(endMarker) };
+    } else {
+        ASSERT(type == LineRangeType::Right);
+
+        // Move forwards off a line end (because this a "right-line" request).
+        auto startMarker = atLineEnd() ? findMarker(AXDirection::Next) : *this;
+        if (!startMarker.atLineStart())
+            startMarker = startMarker.previousLineStart();
+
+        auto endMarker = startMarker.nextLineEnd();
+        return { WTFMove(startMarker), WTFMove(endMarker) };
     }
-    // FIXME: The other types aren't implemented yet.
-    RELEASE_ASSERT_NOT_REACHED();
+
+    return { };
 }
 
 AXTextMarkerRange AXTextMarker::wordRange(WordRangeType type) const
 {
     if (!isValid())
-        return { { }, { } };
+        return { };
 
     AXTextMarker startMarker, endMarker;
 
@@ -1053,7 +1100,7 @@ AXTextMarkerRange AXTextMarker::wordRange(WordRangeType type) const
 AXTextMarkerRange AXTextMarker::sentenceRange(SentenceRangeType type) const
 {
     if (!isValid())
-        return { { }, { } };
+        return { };
 
     AXTextMarker startMarker, endMarker;
 
@@ -1072,7 +1119,7 @@ AXTextMarkerRange AXTextMarker::sentenceRange(SentenceRangeType type) const
 AXTextMarkerRange AXTextMarker::paragraphRange() const
 {
     if (!isValid())
-        return { { }, { } };
+        return { };
 
     // paragraphForCharacterOffset on the main thread doesn't directly call nextParagraphEnd and previousParagraphStart.
     // When actually computing the range from the current position, directly call findMarker.

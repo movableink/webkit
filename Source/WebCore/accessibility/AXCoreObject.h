@@ -742,6 +742,7 @@ struct LineDecorationStyle {
         , hasLinethrough(hasLinethrough)
         , linethroughColor(linethroughColor)
     { }
+    bool operator==(const LineDecorationStyle&) const = default;
 
     String debugDescription() const;
 };
@@ -756,6 +757,8 @@ struct AttributedStringStyle {
     bool isSuperscript { false };
     bool hasTextShadow { false };
     LineDecorationStyle lineStyle;
+
+    bool operator==(const AttributedStringStyle&) const = default;
 
     bool hasUnderline() const { return lineStyle.hasUnderline; }
     Color underlineColor() const { return lineStyle.underlineColor; }

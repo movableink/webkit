@@ -80,6 +80,7 @@ public:
     AXIsolatedObject* clickableSelfOrAncestor(ClickHandlerFilter filter = ClickHandlerFilter::ExcludeBody) const final { return Accessibility::clickableSelfOrAncestor(*this, filter); };
     AXIsolatedObject* editableAncestor() const final { return Accessibility::editableAncestor(*this); };
     bool canSetFocusAttribute() const final { return boolAttributeValue(AXPropertyName::CanSetFocusAttribute); }
+    AttributedStringStyle stylesForAttributedString() const final;
 
 #if ENABLE(AX_THREAD_TEXT_APIS)
     const AXTextRuns* textRuns() const;
@@ -505,7 +506,6 @@ private:
     unsigned textLength() const final;
 #if PLATFORM(COCOA)
     RetainPtr<NSAttributedString> attributedStringForTextMarkerRange(AXTextMarkerRange&&, SpellCheck) const final;
-    AttributedStringStyle stylesForAttributedString() const final;
 #endif
     AXObjectCache* axObjectCache() const final;
     Element* actionElement() const final;

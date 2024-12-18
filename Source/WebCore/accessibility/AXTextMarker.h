@@ -204,6 +204,8 @@ public:
     AXTextMarkerRange sentenceRange(SentenceRangeType) const;
     // Creates a range for the paragraph at the current marker.
     AXTextMarkerRange paragraphRange() const;
+    // Returns a range pointing to the start and end positions that have the same text styles as `this`.
+    AXTextMarkerRange rangeWithSameStyle() const;
     // Given a character offset relative to this marker, find the next marker the offset points to.
     AXTextMarker nextMarkerFromOffset(unsigned) const;
     // Returns the number of intermediate text markers between this and the root.

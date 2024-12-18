@@ -3168,9 +3168,29 @@ enum class TextUnit {
     });
 }
 
-- (AXTextMarkerRangeRef)lineTextMarkerRangeForTextMarker:(AXTextMarkerRef)textMarker forUnit:(TextUnit)textUnit
+- (id)lineTextMarkerRangeForTextMarker:(AXTextMarkerRef)textMarker forUnit:(TextUnit)textUnit
 {
-    return Accessibility::retrieveAutoreleasedValueFromMainThread<AXTextMarkerRangeRef>([textMarker = retainPtr(textMarker), &textUnit, protectedSelf = retainPtr(self)] () -> RetainPtr<AXTextMarkerRangeRef> {
+#if ENABLE(AX_THREAD_TEXT_APIS)
+        if (AXObjectCache::useAXThreadTextApis()) {
+            auto rangeType = LineRangeType::Current;
+            switch (textUnit) {
+            case TextUnit::Line:
+                break;
+            case TextUnit::LeftLine:
+                rangeType = LineRangeType::Left;
+                break;
+            case TextUnit::RightLine:
+                rangeType = LineRangeType::Right;
+                break;
+            default:
+                ASSERT_NOT_REACHED();
+                break;
+            }
+            return AXTextMarker { textMarker }.lineRange(rangeType).platformData().bridgingAutorelease();
+        }
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
+
+    return (id)Accessibility::retrieveAutoreleasedValueFromMainThread<AXTextMarkerRangeRef>([textMarker = retainPtr(textMarker), &textUnit, protectedSelf = retainPtr(self)] () ->  RetainPtr<AXTextMarkerRangeRef> {
         auto* backingObject = protectedSelf.get().axBackingObject;
         if (!backingObject)
             return nil;
@@ -3463,15 +3483,8 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     }
 
     // TextMarkerRange attributes.
-    if ([attribute isEqualToString:AXLineTextMarkerRangeForTextMarkerAttribute]) {
-#if ENABLE(AX_THREAD_TEXT_APIS)
-        if (AXObjectCache::useAXThreadTextApis()) {
-            AXTextMarker inputMarker { textMarker };
-            return inputMarker.lineRange(LineRangeType::Current).platformData().bridgingAutorelease();
-        }
-#endif
-        return (id)[self lineTextMarkerRangeForTextMarker:textMarker forUnit:TextUnit::Line];
-    }
+    if ([attribute isEqualToString:AXLineTextMarkerRangeForTextMarkerAttribute])
+        return [self lineTextMarkerRangeForTextMarker:textMarker forUnit:TextUnit::Line];
 
     if ([attribute isEqualToString:AXMisspellingTextMarkerRangeAttribute]) {
         return (id)Accessibility::retrieveAutoreleasedValueFromMainThread<AXTextMarkerRangeRef>([&dictionary, protectedSelf = retainPtr(self)] () -> RetainPtr<AXTextMarkerRangeRef> {
@@ -3763,10 +3776,10 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
         return (id)[self textMarkerRangeAtTextMarker:textMarker forUnit:TextUnit::RightWord];
 
     if ([attribute isEqualToString:AXLeftLineTextMarkerRangeForTextMarkerAttribute])
-        return (id)[self lineTextMarkerRangeForTextMarker:textMarker forUnit:TextUnit::LeftLine];
+        return [self lineTextMarkerRangeForTextMarker:textMarker forUnit:TextUnit::LeftLine];
 
     if ([attribute isEqualToString:AXRightLineTextMarkerRangeForTextMarkerAttribute])
-        return (id)[self lineTextMarkerRangeForTextMarker:textMarker forUnit:TextUnit::RightLine];
+        return [self lineTextMarkerRangeForTextMarker:textMarker forUnit:TextUnit::RightLine];
 
     if ([attribute isEqualToString:AXSentenceTextMarkerRangeForTextMarkerAttribute])
         return (id)[self textMarkerRangeAtTextMarker:textMarker forUnit:TextUnit::Sentence];
@@ -3813,6 +3826,11 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
         return (id)[self textMarkerForTextMarker:textMarker atUnit:TextUnit::PreviousParagraphStart];
 
     if ([attribute isEqualToString:AXStyleTextMarkerRangeForTextMarkerAttribute]) {
+#if ENABLE(AX_THREAD_TEXT_APIS)
+        if (AXObjectCache::useAXThreadTextApis())
+            return AXTextMarker { textMarker }.rangeWithSameStyle().platformData().bridgingAutorelease();
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
+
         return Accessibility::retrieveAutoreleasedValueFromMainThread<id>([textMarker = retainPtr(textMarker), protectedSelf = retainPtr(self)] () -> RetainPtr<id> {
             auto* backingObject = protectedSelf.get().axBackingObject;
             if (!backingObject)
