@@ -151,6 +151,11 @@ OptionSet<CoordinatedBackingStoreProxy::UpdateResult> CoordinatedBackingStorePro
 
     WTFEndSignpost(this, UpdateTiles);
 
+#if !HAVE(OS_SIGNPOST) && !USE(SYSPROF_CAPTURE)
+    UNUSED_VARIABLE(dirtyTilesCount);
+    UNUSED_VARIABLE(dirtyTileIndex);
+#endif
+
     if (tilesToCreate.isEmpty() && tilesToUpdate.isEmpty() && tilesToRemove.isEmpty())
         return result;
 
