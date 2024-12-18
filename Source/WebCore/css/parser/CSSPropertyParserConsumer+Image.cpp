@@ -1154,7 +1154,7 @@ static RefPtr<CSSPrimitiveValue> consumeImageSetResolutionOrTypeFunction(CSSPars
             return CSSPrimitiveValue::create(typeFunction.value);
         },
         [&](const CSS::Resolution<>& resolution) -> RefPtr<CSSPrimitiveValue> {
-            return CSSPrimitiveValueResolverBase::resolve(resolution, CSSCalcSymbolTable { }, options);
+            return CSSPrimitiveValueResolverBase::resolve(resolution, options);
         }
     );
 }

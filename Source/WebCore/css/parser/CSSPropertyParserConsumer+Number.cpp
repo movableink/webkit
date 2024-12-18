@@ -41,8 +41,8 @@ RefPtr<CSSPrimitiveValue> consumeNumber(CSSParserTokenRange& range, const CSSPar
         .parserMode = context.mode,
     };
     if (valueRange == ValueRange::All)
-        return CSSPrimitiveValueResolver<CSS::Number<CSS::All>>::consumeAndResolve(range, context, { }, { }, options);
-    return CSSPrimitiveValueResolver<CSS::Number<CSS::Nonnegative>>::consumeAndResolve(range, context, { }, { }, options);
+        return CSSPrimitiveValueResolver<CSS::Number<CSS::All>>::consumeAndResolve(range, context, options);
+    return CSSPrimitiveValueResolver<CSS::Number<CSS::Nonnegative>>::consumeAndResolve(range, context, options);
 }
 
 } // namespace CSSPropertyParserHelpers

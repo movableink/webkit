@@ -48,14 +48,14 @@ auto ToCSS<BoxShadow>::operator()(const BoxShadow& value, const RenderStyle& sty
     };
 }
 
-auto ToStyle<CSS::BoxShadow>::operator()(const CSS::BoxShadow& value, const BuilderState& state, const CSSCalcSymbolTable& symbolTable) -> BoxShadow
+auto ToStyle<CSS::BoxShadow>::operator()(const CSS::BoxShadow& value, const BuilderState& state) -> BoxShadow
 {
     return {
-        .color = value.color ? toStyle(*value.color, state, symbolTable) : Color::currentColor(),
-        .location = toStyle(value.location, state, symbolTable),
-        .blur = value.blur ? toStyle(*value.blur, state, symbolTable) : Length<CSS::Nonnegative> { 0 },
-        .spread = value.spread ? toStyle(*value.spread, state, symbolTable) : Length<> { 0 },
-        .inset = toStyle(value.inset, state, symbolTable),
+        .color = value.color ? toStyle(*value.color, state) : Color::currentColor(),
+        .location = toStyle(value.location, state),
+        .blur = value.blur ? toStyle(*value.blur, state) : Length<CSS::Nonnegative> { 0 },
+        .spread = value.spread ? toStyle(*value.spread, state) : Length<> { 0 },
+        .inset = toStyle(value.inset, state),
         .isWebkitBoxShadow = value.isWebkitBoxShadow,
     };
 }

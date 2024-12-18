@@ -62,10 +62,10 @@ template<size_t I> const auto& get(const Path& value)
 }
 
 template<> struct ToCSS<Path> { auto operator()(const Path&, const RenderStyle&) -> CSS::Path; };
-template<> struct ToStyle<CSS::Path> { auto operator()(const CSS::Path&, const BuilderState&, const CSSCalcSymbolTable&) -> Path; };
+template<> struct ToStyle<CSS::Path> { auto operator()(const CSS::Path&, const BuilderState&) -> Path; };
 
 template<> struct ToCSS<Path::Data> { auto operator()(const Path::Data&, const RenderStyle&) -> CSS::Path::Data; };
-template<> struct ToStyle<CSS::Path::Data> { auto operator()(const CSS::Path::Data&, const BuilderState&, const CSSCalcSymbolTable&) -> Path::Data; };
+template<> struct ToStyle<CSS::Path::Data> { auto operator()(const CSS::Path::Data&, const BuilderState&) -> Path::Data; };
 
 // Non-standard parameters, `conversion` and `zoom`, are needed in some instances of Style <-> CSS conversions
 // for Path, so additional "override" conversion operators are provided here.

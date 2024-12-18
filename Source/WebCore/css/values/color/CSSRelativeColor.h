@@ -80,7 +80,7 @@ WebCore::Color createColor(const RelativeColor<Descriptor>& unresolved, Platform
     if (state.conversionData)
         return resolve(WTFMove(resolver), *state.conversionData);
 
-    if (!requiresConversionData(resolver.components))
+    if (!componentsRequireConversionData<Descriptor>(resolver.components))
         return resolveNoConversionDataRequired(WTFMove(resolver));
 
     return { };

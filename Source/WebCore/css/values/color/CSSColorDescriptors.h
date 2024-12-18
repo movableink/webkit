@@ -108,12 +108,12 @@ using StyleColorParseType = std::tuple<
     std::optional<GetStyleColorParseTypeComponentResult<Descriptor, 3>>
 >;
 
-template<typename Descriptor> constexpr bool containsUnevaluatedCalc(const StyleColorParseType<Descriptor>&)
+template<typename Descriptor> constexpr bool componentsContainsUnevaluatedCalc(const StyleColorParseType<Descriptor>&)
 {
     return false;
 }
 
-template<typename Descriptor> constexpr bool requiresConversionData(const StyleColorParseType<Descriptor>&)
+template<typename Descriptor> constexpr bool componentsRequireConversionData(const StyleColorParseType<Descriptor>&)
 {
     return false;
 }
@@ -137,7 +137,7 @@ using CSSColorParseTypeWithCalc = std::tuple<
     std::optional<GetCSSColorParseTypeWithCalcComponentResult<Descriptor, 3>>
 >;
 
-template<typename Descriptor> bool containsUnevaluatedCalc(const CSSColorParseTypeWithCalc<Descriptor>& components)
+template<typename Descriptor> bool componentsContainsUnevaluatedCalc(const CSSColorParseTypeWithCalc<Descriptor>& components)
 {
     return isUnevaluatedCalc(std::get<0>(components))
         || isUnevaluatedCalc(std::get<1>(components))
@@ -145,7 +145,7 @@ template<typename Descriptor> bool containsUnevaluatedCalc(const CSSColorParseTy
         || isUnevaluatedCalc(std::get<3>(components));
 }
 
-template<typename Descriptor> bool requiresConversionData(const CSSColorParseTypeWithCalc<Descriptor>& components)
+template<typename Descriptor> bool componentsRequireConversionData(const CSSColorParseTypeWithCalc<Descriptor>& components)
 {
     return requiresConversionData(std::get<0>(components))
         || requiresConversionData(std::get<1>(components))
@@ -172,7 +172,7 @@ using CSSColorParseTypeWithCalcAndSymbols = std::tuple<
     std::optional<GetCSSColorParseTypeWithCalcAndSymbolsComponentResult<Descriptor, 3>>
 >;
 
-template<typename Descriptor> bool containsUnevaluatedCalc(const CSSColorParseTypeWithCalcAndSymbols<Descriptor>& components)
+template<typename Descriptor> bool componentsContainsUnevaluatedCalc(const CSSColorParseTypeWithCalcAndSymbols<Descriptor>& components)
 {
     return isUnevaluatedCalc(std::get<0>(components))
         || isUnevaluatedCalc(std::get<1>(components))
@@ -180,7 +180,7 @@ template<typename Descriptor> bool containsUnevaluatedCalc(const CSSColorParseTy
         || isUnevaluatedCalc(std::get<3>(components));
 }
 
-template<typename Descriptor> bool requiresConversionData(const CSSColorParseTypeWithCalcAndSymbols<Descriptor>& components)
+template<typename Descriptor> bool componentsRequireConversionData(const CSSColorParseTypeWithCalcAndSymbols<Descriptor>& components)
 {
     return requiresConversionData(std::get<0>(components))
         || requiresConversionData(std::get<1>(components))

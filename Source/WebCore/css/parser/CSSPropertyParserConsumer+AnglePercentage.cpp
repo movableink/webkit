@@ -41,8 +41,8 @@ RefPtr<CSSPrimitiveValue> consumeAnglePercentage(CSSParserTokenRange& range, con
         .unitlessZero = unitlessZero
     };
     if (valueRange == ValueRange::All)
-        return CSSPrimitiveValueResolver<CSS::AnglePercentage<CSS::All>>::consumeAndResolve(range, context, { }, { }, options);
-    return CSSPrimitiveValueResolver<CSS::AnglePercentage<CSS::Nonnegative>>::consumeAndResolve(range, context, { }, { }, options);
+        return CSSPrimitiveValueResolver<CSS::AnglePercentage<CSS::All>>::consumeAndResolve(range, context, options);
+    return CSSPrimitiveValueResolver<CSS::AnglePercentage<CSS::Nonnegative>>::consumeAndResolve(range, context, options);
 }
 
 } // namespace CSSPropertyParserHelpers

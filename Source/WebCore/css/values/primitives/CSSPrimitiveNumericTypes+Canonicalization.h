@@ -27,6 +27,9 @@
 #include "CSSPrimitiveNumericTypes.h"
 
 namespace WebCore {
+
+struct NoConversionDataRequiredToken;
+
 namespace CSS {
 
 // MARK: Angle
@@ -40,10 +43,10 @@ template<auto R> double canonicalize(AngleRaw<R> raw)
 
 // MARK: Length
 
-double canonicalizeLengthNoConversionDataRequired(double, CSSUnitType);
+double canonicalizeLength(double, CSSUnitType, NoConversionDataRequiredToken);
 double canonicalizeLength(double, CSSUnitType, const CSSToLengthConversionData&);
 float clampLengthToAllowedLimits(double);
-float canonicalizeAndClampLengthNoConversionDataRequired(double, CSSUnitType);
+float canonicalizeAndClampLength(double, CSSUnitType, NoConversionDataRequiredToken);
 float canonicalizeAndClampLength(double, CSSUnitType, const CSSToLengthConversionData&);
 
 // MARK: Time

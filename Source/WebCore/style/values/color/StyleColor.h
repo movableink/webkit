@@ -182,8 +182,8 @@ template<> struct ToCSS<Color> {
     auto operator()(const Color&, const RenderStyle&) -> CSS::Color;
 };
 template<> struct ToStyle<CSS::Color> {
-    auto operator()(const CSS::Color&, const BuilderState&, const CSSCalcSymbolTable&, ForVisitedLink) -> Color;
-    auto operator()(const CSS::Color&, const BuilderState&, const CSSCalcSymbolTable&) -> Color;
+    auto operator()(const CSS::Color&, const BuilderState&, ForVisitedLink) -> Color;
+    auto operator()(const CSS::Color&, const BuilderState&) -> Color;
 };
 
 template<typename... F> decltype(auto) Color::switchOn(F&&... f) const

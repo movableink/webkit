@@ -357,14 +357,14 @@ auto ToCSS<Color>::operator()(const Color& value, const RenderStyle& style) -> C
     return CSS::Color { CSS::ResolvedColor { style.colorResolvingCurrentColor(value) } };
 }
 
-auto ToStyle<CSS::Color>::operator()(const CSS::Color& value, const BuilderState& builderState, const CSSCalcSymbolTable&, ForVisitedLink forVisitedLink) -> Color
+auto ToStyle<CSS::Color>::operator()(const CSS::Color& value, const BuilderState& builderState, ForVisitedLink forVisitedLink) -> Color
 {
     return toStyleColor(value, builderState.document(), builderState.style(), builderState.cssToLengthConversionData(), forVisitedLink);
 }
 
-auto ToStyle<CSS::Color>::operator()(const CSS::Color& value, const BuilderState& builderState, const CSSCalcSymbolTable& symbolTable) -> Color
+auto ToStyle<CSS::Color>::operator()(const CSS::Color& value, const BuilderState& builderState) -> Color
 {
-    return (*this)(value, builderState, symbolTable, ForVisitedLink::No);
+    return toStyle(value, builderState, ForVisitedLink::No);
 }
 
 } // namespace Style

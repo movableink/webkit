@@ -57,7 +57,7 @@ template<size_t I> const auto& get(const BorderRadius& value)
 }
 
 template<> struct ToCSS<BorderRadius> { auto operator()(const BorderRadius&, const RenderStyle&) -> CSS::BorderRadius; };
-template<> struct ToStyle<CSS::BorderRadius> { auto operator()(const CSS::BorderRadius&, const BuilderState&, const CSSCalcSymbolTable&) -> BorderRadius; };
+template<> struct ToStyle<CSS::BorderRadius> { auto operator()(const CSS::BorderRadius&, const BuilderState&) -> BorderRadius; };
 
 FloatRoundedRect::Radii evaluate(const BorderRadius&, FloatSize referenceBox);
 

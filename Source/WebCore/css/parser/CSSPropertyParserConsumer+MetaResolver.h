@@ -45,24 +45,24 @@ template<typename R, typename Base, typename T, typename... Ts>
 struct MetaResolver : Base {
     using ResultType = R;
 
-    static ResultType resolve(std::variant<T, Ts...>&& consumeResult, const CSSCalcSymbolTable& symbolTable, CSSPropertyParserOptions options) requires (sizeof...(Ts) > 0)
+    static ResultType resolve(std::variant<T, Ts...>&& consumeResult, CSSPropertyParserOptions options) requires (sizeof...(Ts) > 0)
     {
         return WTF::switchOn(WTFMove(consumeResult), [&](auto&& value) -> ResultType {
-            return Base::resolve(WTFMove(value), symbolTable, options);
+            return Base::resolve(WTFMove(value), options);
         });
     }
 
-    static ResultType resolve(T&& consumeResult, const CSSCalcSymbolTable& symbolTable, CSSPropertyParserOptions options) requires (sizeof...(Ts) == 0)
+    static ResultType resolve(T&& consumeResult, CSSPropertyParserOptions options) requires (sizeof...(Ts) == 0)
     {
-        return Base::resolve(WTFMove(consumeResult), symbolTable, options);
+        return Base::resolve(WTFMove(consumeResult), options);
     }
 
-    static ResultType consumeAndResolve(CSSParserTokenRange& range, const CSSParserContext& context, CSSCalcSymbolsAllowed symbolsAllowed, const CSSCalcSymbolTable& symbolTable, CSSPropertyParserOptions options)
+    static ResultType consumeAndResolve(CSSParserTokenRange& range, const CSSParserContext& context, CSSPropertyParserOptions options)
     {
-        auto result = MetaConsumer<T, Ts...>::consume(range, context, WTFMove(symbolsAllowed), options);
+        auto result = MetaConsumer<T, Ts...>::consume(range, context, { }, options);
         if (!result)
             return { };
-        return resolve(WTFMove(*result), symbolTable, options);
+        return resolve(WTFMove(*result), options);
     }
 };
 

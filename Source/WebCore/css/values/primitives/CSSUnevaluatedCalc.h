@@ -39,6 +39,7 @@ namespace WebCore {
 class CSSCalcSymbolTable;
 class CSSToLengthConversionData;
 struct ComputedStyleDependencies;
+struct NoConversionDataRequiredToken;
 
 namespace Calculation {
 enum class Category : uint8_t;
@@ -59,17 +60,18 @@ void unevaluatedCalcCollectComputedStyleDependencies(ComputedStyleDependencies&,
 
 Ref<CSSCalcValue> unevaluatedCalcSimplify(const Ref<CSSCalcValue>&, const CSSToLengthConversionData&, const CSSCalcSymbolTable&);
 
-double unevaluatedCalcEvaluate(const Ref<CSSCalcValue>&, const Style::BuilderState&, Calculation::Category);
-double unevaluatedCalcEvaluate(const Ref<CSSCalcValue>&, const Style::BuilderState&, const CSSCalcSymbolTable&, Calculation::Category);
-double unevaluatedCalcEvaluate(const Ref<CSSCalcValue>&, const CSSToLengthConversionData&, Calculation::Category);
-double unevaluatedCalcEvaluate(const Ref<CSSCalcValue>&, const CSSToLengthConversionData&, const CSSCalcSymbolTable&, Calculation::Category);
-double unevaluatedCalcEvaluateNoConversionDataRequired(const Ref<CSSCalcValue>&, Calculation::Category);
-double unevaluatedCalcEvaluateNoConversionDataRequired(const Ref<CSSCalcValue>&, const CSSCalcSymbolTable&, Calculation::Category);
+double unevaluatedCalcEvaluate(const Ref<CSSCalcValue>&, Calculation::Category, const Style::BuilderState&);
+double unevaluatedCalcEvaluate(const Ref<CSSCalcValue>&, Calculation::Category, const Style::BuilderState&, const CSSCalcSymbolTable&);
+double unevaluatedCalcEvaluate(const Ref<CSSCalcValue>&, Calculation::Category, const CSSToLengthConversionData&);
+double unevaluatedCalcEvaluate(const Ref<CSSCalcValue>&, Calculation::Category, const CSSToLengthConversionData&, const CSSCalcSymbolTable&);
+double unevaluatedCalcEvaluate(const Ref<CSSCalcValue>&, Calculation::Category, NoConversionDataRequiredToken);
+double unevaluatedCalcEvaluate(const Ref<CSSCalcValue>&, Calculation::Category, NoConversionDataRequiredToken, const CSSCalcSymbolTable&);
 
 // `UnevaluatedCalc` annotates a `CSSCalcValue` with the raw value type that it
 // will be evaluated to, allowing the processing of calc in generic code.
 template<typename T> struct UnevaluatedCalc {
     using RawType = T;
+    static constexpr auto category = T::category;
 
     UnevaluatedCalc(Ref<CSSCalcValue>&& value)
         : calc { WTFMove(value) }

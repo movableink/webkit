@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -22,29 +22,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
-
-#include "CSSCalcSymbolTable.h"
-#include "CSSParserTokenRange.h"
+#pragma once
 
 namespace WebCore {
-namespace CSSPropertyParserHelpers {
 
-RefPtr<CSSPrimitiveValue> CSSPrimitiveValueResolverBase::resolve(CSS::NoneRaw, const CSSCalcSymbolTable&, CSSPropertyParserOptions)
-{
-    return CSSPrimitiveValue::create(std::numeric_limits<double>::quiet_NaN(), CSSUnitType::CSS_NUMBER);
-}
+// Token passed around to indicate that the caller has checked that no conversion data is required.
+struct NoConversionDataRequiredToken { };
 
-RefPtr<CSSPrimitiveValue> CSSPrimitiveValueResolverBase::resolve(CSS::SymbolRaw value, const CSSCalcSymbolTable& symbolTable, CSSPropertyParserOptions)
-{
-    if (auto variable = symbolTable.get(value.value))
-        return CSSPrimitiveValue::create(variable->value, variable->unit);
-
-    // We should only get here if the symbol was previously looked up in the symbol table.
-    ASSERT_NOT_REACHED();
-    return nullptr;
-}
-
-} // namespace CSSPropertyParserHelpers
 } // namespace WebCore

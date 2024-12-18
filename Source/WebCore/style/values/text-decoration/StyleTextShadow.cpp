@@ -45,12 +45,12 @@ auto ToCSS<TextShadow>::operator()(const TextShadow& value, const RenderStyle& s
     };
 }
 
-auto ToStyle<CSS::TextShadow>::operator()(const CSS::TextShadow& value, const BuilderState& state, const CSSCalcSymbolTable& symbolTable) -> TextShadow
+auto ToStyle<CSS::TextShadow>::operator()(const CSS::TextShadow& value, const BuilderState& state) -> TextShadow
 {
     return {
-        .color = value.color ? toStyle(*value.color, state, symbolTable) : Color::currentColor(),
-        .location = toStyle(value.location, state, symbolTable),
-        .blur = value.blur ? toStyle(*value.blur, state, symbolTable) : Length<CSS::Nonnegative> { 0 },
+        .color = value.color ? toStyle(*value.color, state) : Color::currentColor(),
+        .location = toStyle(value.location, state),
+        .blur = value.blur ? toStyle(*value.blur, state) : Length<CSS::Nonnegative> { 0 },
     };
 }
 

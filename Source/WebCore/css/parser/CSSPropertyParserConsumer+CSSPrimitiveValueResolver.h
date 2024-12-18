@@ -39,27 +39,24 @@ namespace CSSPropertyParserHelpers {
 
 /// Non-template base type for code sharing.
 struct CSSPrimitiveValueResolverBase {
-    static RefPtr<CSSPrimitiveValue> resolve(CSS::NoneRaw, const CSSCalcSymbolTable&, CSSPropertyParserOptions);
-    static RefPtr<CSSPrimitiveValue> resolve(CSS::SymbolRaw, const CSSCalcSymbolTable&, CSSPropertyParserOptions);
-
-    template<CSS::RawNumeric Raw> static RefPtr<CSSPrimitiveValue> resolve(Raw value, const CSSCalcSymbolTable&, CSSPropertyParserOptions)
+    template<CSS::RawNumeric Raw> static RefPtr<CSSPrimitiveValue> resolve(Raw value, CSSPropertyParserOptions)
     {
         return CSSPrimitiveValue::create(value.value, value.type);
     }
 
-    template<CSS::Range R, typename IntType> static RefPtr<CSSPrimitiveValue> resolve(CSS::IntegerRaw<R, IntType> value, const CSSCalcSymbolTable&, CSSPropertyParserOptions)
+    template<CSS::Range R, typename IntType> static RefPtr<CSSPrimitiveValue> resolve(CSS::IntegerRaw<R, IntType> value, CSSPropertyParserOptions)
     {
         return CSSPrimitiveValue::createInteger(value.value);
     }
 
-    template<typename T> static RefPtr<CSSPrimitiveValue> resolve(CSS::UnevaluatedCalc<T> value, const CSSCalcSymbolTable&, CSSPropertyParserOptions)
+    template<typename T> static RefPtr<CSSPrimitiveValue> resolve(CSS::UnevaluatedCalc<T> value, CSSPropertyParserOptions)
     {
         return CSSPrimitiveValue::create(value.protectedCalc());
     }
 
-    template<typename T> static RefPtr<CSSPrimitiveValue> resolve(CSS::PrimitiveNumeric<T> value, const CSSCalcSymbolTable& symbolTable, CSSPropertyParserOptions options)
+    template<typename T> static RefPtr<CSSPrimitiveValue> resolve(CSS::PrimitiveNumeric<T> value, CSSPropertyParserOptions options)
     {
-        return WTF::switchOn(WTFMove(value), [&](auto&& value) { return resolve(WTFMove(value), symbolTable, options); });
+        return WTF::switchOn(WTFMove(value), [&](auto&& value) { return resolve(WTFMove(value), options); });
     }
 };
 

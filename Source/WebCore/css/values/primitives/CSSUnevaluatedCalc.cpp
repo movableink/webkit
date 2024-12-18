@@ -26,6 +26,7 @@
 #include "CSSUnevaluatedCalc.h"
 
 #include "CSSCalcSymbolTable.h"
+#include "CSSNoConversionDataRequiredToken.h"
 #include "StyleBuilderState.h"
 #include <wtf/text/StringBuilder.h>
 
@@ -57,36 +58,36 @@ Ref<CSSCalcValue> unevaluatedCalcSimplify(const Ref<CSSCalcValue>& calc, const C
     return calc->copySimplified(conversionData, symbolTable);
 }
 
-double unevaluatedCalcEvaluate(const Ref<CSSCalcValue>& calc, const Style::BuilderState& state, Calculation::Category category)
+double unevaluatedCalcEvaluate(const Ref<CSSCalcValue>& calc, Calculation::Category category, const Style::BuilderState& state)
 {
-    return unevaluatedCalcEvaluate(calc, state.cssToLengthConversionData(), { }, category);
+    return unevaluatedCalcEvaluate(calc, category, state.cssToLengthConversionData(), { });
 }
 
-double unevaluatedCalcEvaluate(const Ref<CSSCalcValue>& calc, const Style::BuilderState& state, const CSSCalcSymbolTable& symbolTable, Calculation::Category category)
+double unevaluatedCalcEvaluate(const Ref<CSSCalcValue>& calc, Calculation::Category category, const Style::BuilderState& state, const CSSCalcSymbolTable& symbolTable)
 {
-    return unevaluatedCalcEvaluate(calc, state.cssToLengthConversionData(), symbolTable, category);
+    return unevaluatedCalcEvaluate(calc, category, state.cssToLengthConversionData(), symbolTable);
 }
 
-double unevaluatedCalcEvaluate(const Ref<CSSCalcValue>& calc, const CSSToLengthConversionData& conversionData, Calculation::Category category)
+double unevaluatedCalcEvaluate(const Ref<CSSCalcValue>& calc, Calculation::Category category, const CSSToLengthConversionData& conversionData)
 {
-    return unevaluatedCalcEvaluate(calc, conversionData, { }, category);
+    return unevaluatedCalcEvaluate(calc, category, conversionData, { });
 }
 
-double unevaluatedCalcEvaluate(const Ref<CSSCalcValue>& calc, const CSSToLengthConversionData& conversionData, const CSSCalcSymbolTable& symbolTable, Calculation::Category category)
+double unevaluatedCalcEvaluate(const Ref<CSSCalcValue>& calc, Calculation::Category category, const CSSToLengthConversionData& conversionData, const CSSCalcSymbolTable& symbolTable)
 {
     ASSERT_UNUSED(category, calc->category() == category);
     return calc->doubleValue(conversionData, symbolTable);
 }
 
-double unevaluatedCalcEvaluateNoConversionDataRequired(const Ref<CSSCalcValue>& calc, Calculation::Category category)
+double unevaluatedCalcEvaluate(const Ref<CSSCalcValue>& calc, Calculation::Category category, NoConversionDataRequiredToken token)
 {
-    return unevaluatedCalcEvaluateNoConversionDataRequired(calc, { }, category);
+    return unevaluatedCalcEvaluate(calc, category, token, { });
 }
 
-double unevaluatedCalcEvaluateNoConversionDataRequired(const Ref<CSSCalcValue>& calc, const CSSCalcSymbolTable& symbolTable, Calculation::Category category)
+double unevaluatedCalcEvaluate(const Ref<CSSCalcValue>& calc, Calculation::Category category, NoConversionDataRequiredToken token, const CSSCalcSymbolTable& symbolTable)
 {
     ASSERT_UNUSED(category, calc->category() == category);
-    return calc->doubleValueNoConversionDataRequired(symbolTable);
+    return calc->doubleValue(token, symbolTable);
 }
 
 } // namespace CSS

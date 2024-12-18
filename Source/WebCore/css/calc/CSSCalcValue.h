@@ -56,6 +56,7 @@ class RenderStyle;
 struct CSSParserContext;
 struct CSSPropertyParserOptions;
 struct Length;
+struct NoConversionDataRequiredToken;
 
 enum CSSValueID : uint16_t;
 
@@ -71,6 +72,7 @@ public:
     ~CSSCalcValue();
 
     // Creates a copy of the CSSCalc::Tree with non-canonical dimensions and any symbols present in the provided symbol table resolved.
+    Ref<CSSCalcValue> copySimplified(const CSSToLengthConversionData&) const;
     Ref<CSSCalcValue> copySimplified(const CSSToLengthConversionData&, const CSSCalcSymbolTable&) const;
 
     Calculation::Category category() const { return m_tree.category; }
@@ -79,13 +81,18 @@ public:
     // Returns whether the CSSCalc::Tree requires `CSSToLengthConversionData` to fully resolve.
     bool requiresConversionData() const;
 
+    double doubleValue(const CSSToLengthConversionData&) const;
     double doubleValue(const CSSToLengthConversionData&, const CSSCalcSymbolTable&) const;
-    double doubleValueNoConversionDataRequired(const CSSCalcSymbolTable&) const;
-    double doubleValueDeprecated(const CSSCalcSymbolTable&) const;
+    double doubleValue(NoConversionDataRequiredToken) const;
+    double doubleValue(NoConversionDataRequiredToken, const CSSCalcSymbolTable&) const;
+    double doubleValueDeprecated() const;
 
+    double computeLengthPx(const CSSToLengthConversionData&) const;
     double computeLengthPx(const CSSToLengthConversionData&, const CSSCalcSymbolTable&) const;
 
-    Ref<CalculationValue> createCalculationValueNoConversionDataRequired(const CSSCalcSymbolTable&) const;
+    Ref<CalculationValue> createCalculationValue(NoConversionDataRequiredToken) const;
+    Ref<CalculationValue> createCalculationValue(NoConversionDataRequiredToken, const CSSCalcSymbolTable&) const;
+    Ref<CalculationValue> createCalculationValue(const CSSToLengthConversionData&) const;
     Ref<CalculationValue> createCalculationValue(const CSSToLengthConversionData&, const CSSCalcSymbolTable&) const;
 
     void collectComputedStyleDependencies(ComputedStyleDependencies&) const;

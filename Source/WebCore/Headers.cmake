@@ -965,6 +965,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     css/typedom/numeric/CSSNumericBaseType.h
     css/typedom/numeric/CSSNumericType.h
 
+    css/values/CSSNoConversionDataRequiredToken.h
     css/values/CSSValueAggregates.h
     css/values/CSSValueTypes.h
 

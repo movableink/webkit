@@ -40,7 +40,7 @@ RefPtr<CSSPrimitiveValue> consumeAngle(CSSParserTokenRange& range, const CSSPars
         .unitless = unitless,
         .unitlessZero = unitlessZero
     };
-    return CSSPrimitiveValueResolver<CSS::Angle<CSS::All>>::consumeAndResolve(range, context, { }, { }, options);
+    return CSSPrimitiveValueResolver<CSS::Angle<CSS::All>>::consumeAndResolve(range, context, options);
 }
 
 } // namespace CSSPropertyParserHelpers

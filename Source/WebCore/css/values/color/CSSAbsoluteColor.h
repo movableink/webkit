@@ -62,7 +62,7 @@ template<typename D> WebCore::Color createColor(const AbsoluteColor<D>& unresolv
     if (state.conversionData)
         return resolve(WTFMove(resolver), *state.conversionData);
 
-    if (!requiresConversionData(resolver.components))
+    if (!componentsRequireConversionData<D>(resolver.components))
         return resolveNoConversionDataRequired(WTFMove(resolver));
 
     return { };

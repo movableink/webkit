@@ -41,8 +41,8 @@ RefPtr<CSSPrimitiveValue> consumeLength(CSSParserTokenRange& range, const CSSPar
         .unitlessZero = UnitlessZeroQuirk::Allow
     };
     if (valueRange == ValueRange::All)
-        return CSSPrimitiveValueResolver<CSS::Length<CSS::All>>::consumeAndResolve(range, context, { }, { }, options);
-    return CSSPrimitiveValueResolver<CSS::Length<CSS::Nonnegative>>::consumeAndResolve(range, context, { }, { }, options);
+        return CSSPrimitiveValueResolver<CSS::Length<CSS::All>>::consumeAndResolve(range, context, options);
+    return CSSPrimitiveValueResolver<CSS::Length<CSS::Nonnegative>>::consumeAndResolve(range, context, options);
 }
 
 RefPtr<CSSPrimitiveValue> consumeLength(CSSParserTokenRange& range, const CSSParserContext& context, CSSParserMode overrideParserMode, ValueRange valueRange, UnitlessQuirk unitless)
@@ -53,8 +53,8 @@ RefPtr<CSSPrimitiveValue> consumeLength(CSSParserTokenRange& range, const CSSPar
         .unitlessZero = UnitlessZeroQuirk::Allow
     };
     if (valueRange == ValueRange::All)
-        return CSSPrimitiveValueResolver<CSS::Length<CSS::All>>::consumeAndResolve(range, context, { }, { }, options);
-    return CSSPrimitiveValueResolver<CSS::Length<CSS::Nonnegative>>::consumeAndResolve(range, context, { }, { }, options);
+        return CSSPrimitiveValueResolver<CSS::Length<CSS::All>>::consumeAndResolve(range, context, options);
+    return CSSPrimitiveValueResolver<CSS::Length<CSS::Nonnegative>>::consumeAndResolve(range, context, options);
 }
 
 } // namespace CSSPropertyParserHelpers

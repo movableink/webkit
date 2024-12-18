@@ -150,7 +150,7 @@ static bool consumeAlphaDelimiter(CSSParserTokenRange& args)
 
 template<typename Descriptor> static CSS::AbsoluteColor<typename Descriptor::Canonical> normalizeNonCalcComponents(const CSS::AbsoluteColor<Descriptor>& unresolved, ColorParserState& state)
 {
-    ASSERT(containsUnevaluatedCalc<Descriptor>(unresolved.components));
+    ASSERT(componentsContainsUnevaluatedCalc<Descriptor>(unresolved.components));
 
     // The canonical descriptor is normally the descriptor itself, except for legacy rgb and hsl, which use the modern counterparts.
     using CanonicalDescriptor = typename Descriptor::Canonical;
@@ -182,7 +182,7 @@ template<typename Descriptor> static CSS::AbsoluteColor<typename Descriptor::Can
 
 template<typename Descriptor> static CSS::AbsoluteColor<typename Descriptor::Canonical> normalizeNonCalcRequiringConversionDataComponents(const CSS::AbsoluteColor<Descriptor>& unresolved, ColorParserState& state)
 {
-    ASSERT(containsUnevaluatedCalc<Descriptor>(unresolved.components));
+    ASSERT(componentsContainsUnevaluatedCalc<Descriptor>(unresolved.components));
 
     // Evaluated any calc values that don't require conversion data.
     auto partiallyResolved = CSS::AbsoluteColor<Descriptor> {
@@ -237,15 +237,15 @@ static std::optional<CSS::Color> consumeAbsoluteFunctionParameters(CSSParserToke
         // calc() will "resolve to a single value" when no conversion data is required.
 
         // For this legacy / eager evaluating case, we want to preserve any calc() components that require conversion data.
-        if (requiresConversionData<Descriptor>(unresolved.components))
+        if (componentsRequireConversionData<Descriptor>(unresolved.components))
             return makeCSSColor(normalizeNonCalcRequiringConversionDataComponents(unresolved, state));
     } else {
         // For the non-legacy / non-eager evaluating cases, we want preserve any calc(), not just calc() requiring conversion data, so the check is a bit more permissive.
-        if (containsUnevaluatedCalc<Descriptor>(unresolved.components))
+        if (componentsContainsUnevaluatedCalc<Descriptor>(unresolved.components))
             return makeCSSColor(normalizeNonCalcComponents(unresolved, state));
     }
 
-    ASSERT(!requiresConversionData<Descriptor>(unresolved.components));
+    ASSERT(!componentsRequireConversionData<Descriptor>(unresolved.components));
 
     // In all other cases, we can fully resolve the color all the way to an absolute Color value.
 

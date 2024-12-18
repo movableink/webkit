@@ -50,7 +50,7 @@ template<size_t I> const auto& get(const TextShadow& value)
 }
 
 template<> struct ToCSS<TextShadow> { auto operator()(const TextShadow&, const RenderStyle&) -> CSS::TextShadow; };
-template<> struct ToStyle<CSS::TextShadow> { auto operator()(const CSS::TextShadow&, const BuilderState&, const CSSCalcSymbolTable&) -> TextShadow; };
+template<> struct ToStyle<CSS::TextShadow> { auto operator()(const CSS::TextShadow&, const BuilderState&) -> TextShadow; };
 
 template<> struct Blending<TextShadow> {
     auto canBlend(const TextShadow&, const TextShadow&, const RenderStyle&, const RenderStyle&) -> bool;

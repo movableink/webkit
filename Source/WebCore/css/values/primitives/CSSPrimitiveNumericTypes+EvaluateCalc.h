@@ -24,6 +24,7 @@
 
 #pragma once
 
+#include "CSSNoConversionDataRequiredToken.h"
 #include "CSSPrimitiveNumericTypes.h"
 #include "CSSUnevaluatedCalc.h"
 
@@ -41,12 +42,12 @@ template<typename T> bool requiresConversionData(const PrimitiveNumeric<T>& prim
 
 // FIXME: Remove "evaluateCalc" family of functions once color code has moved to the "toStyle" family of functions.
 
-template<RawNumeric T> auto evaluateCalcNoConversionDataRequired(const UnevaluatedCalc<T>& calc, const CSSCalcSymbolTable& symbolTable) -> T
+template<RawNumeric T> auto evaluateCalc(const UnevaluatedCalc<T>& calc, NoConversionDataRequiredToken token, const CSSCalcSymbolTable& symbolTable) -> T
 {
-    return { unevaluatedCalcEvaluateNoConversionDataRequired(calc.protectedCalc(), symbolTable, T::category) };
+    return { unevaluatedCalcEvaluate(calc.protectedCalc(), T::category, token, symbolTable) };
 }
 
-template<typename T> constexpr auto evaluateCalcNoConversionDataRequired(const T& component, const CSSCalcSymbolTable&) -> T
+template<typename T> constexpr auto evaluateCalc(const T& component, NoConversionDataRequiredToken, const CSSCalcSymbolTable&) -> T
 {
     return component;
 }
@@ -56,7 +57,7 @@ template<typename... Ts> auto evaluateCalcIfNoConversionDataRequired(const std::
     return WTF::switchOn(component, [&](const auto& alternative) -> std::variant<Ts...> {
         if (requiresConversionData(alternative))
             return alternative;
-        return evaluateCalcNoConversionDataRequired(alternative, symbolTable);
+        return evaluateCalc(alternative, NoConversionDataRequiredToken { }, symbolTable);
     });
 }
 
@@ -65,7 +66,7 @@ template<typename T> auto evaluateCalcIfNoConversionDataRequired(const Primitive
     return WTF::switchOn(component, [&](const auto& alternative) -> PrimitiveNumeric<T> {
         if (requiresConversionData(alternative))
             return { alternative };
-        return { evaluateCalcNoConversionDataRequired(alternative, symbolTable) };
+        return { evaluateCalc(alternative, NoConversionDataRequiredToken { }, symbolTable) };
     });
 }
 

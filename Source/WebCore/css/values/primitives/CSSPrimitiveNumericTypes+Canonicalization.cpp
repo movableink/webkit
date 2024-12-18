@@ -25,6 +25,7 @@
 #include "config.h"
 #include "CSSPrimitiveNumericTypes+Canonicalization.h"
 
+#include "CSSNoConversionDataRequiredToken.h"
 #include "CSSPrimitiveValue.h"
 #include "CSSToLengthConversionData.h"
 #include "FloatConversion.h"
@@ -41,7 +42,7 @@ double canonicalizeAngle(double value, CSSUnitType type)
 
 // MARK: Length
 
-double canonicalizeLengthNoConversionDataRequired(double value, CSSUnitType type)
+double canonicalizeLength(double value, CSSUnitType type, NoConversionDataRequiredToken)
 {
     return CSSPrimitiveValue::computeNonCalcLengthDouble({ }, type, value);
 }
@@ -56,9 +57,9 @@ float clampLengthToAllowedLimits(double value)
     return clampTo<float>(narrowPrecisionToFloat(value), minValueForCssLength, maxValueForCssLength);
 }
 
-float canonicalizeAndClampLengthNoConversionDataRequired(double value, CSSUnitType type)
+float canonicalizeAndClampLength(double value, CSSUnitType type, NoConversionDataRequiredToken token)
 {
-    return clampLengthToAllowedLimits(canonicalizeLengthNoConversionDataRequired(value, type));
+    return clampLengthToAllowedLimits(canonicalizeLength(value, type, token));
 }
 
 float canonicalizeAndClampLength(double value, CSSUnitType type, const CSSToLengthConversionData& conversionData)

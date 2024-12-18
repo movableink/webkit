@@ -40,6 +40,7 @@
 #include "CSSCalcTree+Parser.h"
 #include "CSSCalcTree+Serialization.h"
 #include "CSSCalcTree+Simplification.h"
+#include "CSSNoConversionDataRequiredToken.h"
 #include "CSSParser.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPropertyParserOptions.h"
@@ -90,6 +91,11 @@ Ref<CSSCalcValue> CSSCalcValue::create(const CalculationValue& value, const Rend
 Ref<CSSCalcValue> CSSCalcValue::create(CSSCalc::Tree&& tree)
 {
     return adoptRef(*new CSSCalcValue(WTFMove(tree)));
+}
+
+Ref<CSSCalcValue> CSSCalcValue::copySimplified(const CSSToLengthConversionData& conversionData) const
+{
+    return copySimplified(conversionData, { });
 }
 
 Ref<CSSCalcValue> CSSCalcValue::copySimplified(const CSSToLengthConversionData& conversionData, const CSSCalcSymbolTable& symbolTable) const
@@ -192,23 +198,9 @@ inline double CSSCalcValue::clampToPermittedRange(double value) const
     return std::clamp(value, m_tree.range.min, m_tree.range.max);
 }
 
-double CSSCalcValue::doubleValueNoConversionDataRequired(const CSSCalcSymbolTable& symbolTable) const
+double CSSCalcValue::doubleValue(const CSSToLengthConversionData& conversionData) const
 {
-    auto options = CSSCalc::EvaluationOptions {
-        .conversionData = std::nullopt,
-        .symbolTable = symbolTable,
-        .allowUnresolvedUnits = true,
-        .allowNonMatchingUnits = true
-    };
-    return clampToPermittedRange(CSSCalc::evaluateDouble(m_tree, options).value_or(0));
-}
-
-double CSSCalcValue::doubleValueDeprecated(const CSSCalcSymbolTable& symbolTable) const
-{
-    if (m_tree.requiresConversionData)
-        ALWAYS_LOG_WITH_STREAM(stream << "ERROR: The value returned from CSSCalcValue::doubleValueDeprecated is likely incorrect as the calculation tree has unresolved units that require CSSToLengthConversionData to interpret. Update caller to use non-deprecated variant of this function.");
-
-    return doubleValueNoConversionDataRequired(symbolTable);
+    return doubleValue(conversionData, { });
 }
 
 double CSSCalcValue::doubleValue(const CSSToLengthConversionData& conversionData, const CSSCalcSymbolTable& symbolTable) const
@@ -220,6 +212,35 @@ double CSSCalcValue::doubleValue(const CSSToLengthConversionData& conversionData
     return clampToPermittedRange(CSSCalc::evaluateDouble(m_tree, options).value_or(0));
 }
 
+double CSSCalcValue::doubleValue(NoConversionDataRequiredToken token) const
+{
+    return doubleValue(token, { });
+}
+
+double CSSCalcValue::doubleValue(NoConversionDataRequiredToken, const CSSCalcSymbolTable& symbolTable) const
+{
+    auto options = CSSCalc::EvaluationOptions {
+        .conversionData = std::nullopt,
+        .symbolTable = symbolTable,
+        .allowUnresolvedUnits = true,
+        .allowNonMatchingUnits = true
+    };
+    return clampToPermittedRange(CSSCalc::evaluateDouble(m_tree, options).value_or(0));
+}
+
+double CSSCalcValue::doubleValueDeprecated() const
+{
+    if (m_tree.requiresConversionData)
+        ALWAYS_LOG_WITH_STREAM(stream << "ERROR: The value returned from CSSCalcValue::doubleValueDeprecated is likely incorrect as the calculation tree has unresolved units that require CSSToLengthConversionData to interpret. Update caller to use non-deprecated variant of this function.");
+
+    return doubleValue(NoConversionDataRequiredToken { });
+}
+
+double CSSCalcValue::computeLengthPx(const CSSToLengthConversionData& conversionData) const
+{
+    return computeLengthPx(conversionData, { });
+}
+
 double CSSCalcValue::computeLengthPx(const CSSToLengthConversionData& conversionData, const CSSCalcSymbolTable& symbolTable) const
 {
     auto options = CSSCalc::EvaluationOptions {
@@ -229,21 +250,31 @@ double CSSCalcValue::computeLengthPx(const CSSToLengthConversionData& conversion
     return clampToPermittedRange(CSSPrimitiveValue::computeNonCalcLengthDouble(conversionData, CSSUnitType::CSS_PX, CSSCalc::evaluateDouble(m_tree, options).value_or(0)));
 }
 
-Ref<CalculationValue> CSSCalcValue::createCalculationValueNoConversionDataRequired(const CSSCalcSymbolTable& symbolTable) const
+Ref<CalculationValue> CSSCalcValue::createCalculationValue(const CSSToLengthConversionData& conversionData) const
 {
-    ASSERT(!m_tree.requiresConversionData);
-
-    auto options = CSSCalc::EvaluationOptions {
-        .conversionData = std::nullopt,
-        .symbolTable = symbolTable
-    };
-    return CSSCalc::toCalculationValue(m_tree, options);
+    return createCalculationValue(conversionData, { });
 }
 
 Ref<CalculationValue> CSSCalcValue::createCalculationValue(const CSSToLengthConversionData& conversionData, const CSSCalcSymbolTable& symbolTable) const
 {
     auto options = CSSCalc::EvaluationOptions {
         .conversionData = conversionData,
+        .symbolTable = symbolTable
+    };
+    return CSSCalc::toCalculationValue(m_tree, options);
+}
+
+Ref<CalculationValue> CSSCalcValue::createCalculationValue(NoConversionDataRequiredToken token) const
+{
+    return createCalculationValue(token, { });
+}
+
+Ref<CalculationValue> CSSCalcValue::createCalculationValue(NoConversionDataRequiredToken, const CSSCalcSymbolTable& symbolTable) const
+{
+    ASSERT(!m_tree.requiresConversionData);
+
+    auto options = CSSCalc::EvaluationOptions {
+        .conversionData = std::nullopt,
         .symbolTable = symbolTable
     };
     return CSSCalc::toCalculationValue(m_tree, options);

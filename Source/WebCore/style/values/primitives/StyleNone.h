@@ -37,16 +37,14 @@ struct None {
     constexpr bool operator==(const None&) const = default;
 };
 
-template<> struct ToPrimaryCSSTypeMapping<CSS::NoneRaw> { using type = CSS::None; };
-
 template<> struct ToCSSMapping<None> { using type = CSS::None; };
-template<> struct ToCSS<None> { constexpr auto operator()(const None&, const RenderStyle&) -> CSS::None { return { }; } };
+template<> struct ToCSS<None> {
+    template<typename... Rest> constexpr auto operator()(const None&, Rest&&...) -> CSS::None { return { }; }
+};
 
 template<> struct ToStyleMapping<CSS::None> { using type = None; };
 template<> struct ToStyle<CSS::None> {
-    auto operator()(const CSS::None&, const CSSToLengthConversionData&, const CSSCalcSymbolTable&) -> None { return { }; }
-    auto operator()(const CSS::None&, const BuilderState&, const CSSCalcSymbolTable&) -> None { return { }; }
-    auto operator()(const CSS::None&, NoConversionDataRequiredToken, const CSSCalcSymbolTable&) -> None { return { }; }
+    template<typename... Rest> constexpr auto operator()(const CSS::None&, Rest&&...) -> None { return { }; }
 };
 
 template<> struct Blending<None> {

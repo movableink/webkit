@@ -34,7 +34,7 @@ namespace CSSPropertyParserHelpers {
 
 RefPtr<CSSPrimitiveValue> consumeResolution(CSSParserTokenRange& range, const CSSParserContext& context)
 {
-    return CSSPrimitiveValueResolver<CSS::Resolution<>>::consumeAndResolve(range, context, { }, { }, { });
+    return CSSPrimitiveValueResolver<CSS::Resolution<>>::consumeAndResolve(range, context, { });
 }
 
 } // namespace CSSPropertyParserHelpers

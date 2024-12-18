@@ -161,12 +161,9 @@ Color BuilderState::createStyleColor(const CSSValue& value, ForVisitedLink forVi
     if (!element() || !element()->isLink())
         forVisitedLink = ForVisitedLink::No;
 
-    // FIXME: Figure out an extensible way to pass additional information, like ForVisitedLink, to toStyle() so we can use the normal override.
-    // FIXME: Alternatively, add ForVisitedLink state to BuilderState and push/pop on entry.
-
     if (RefPtr color = dynamicDowncast<CSSColorValue>(value))
-        return toStyleColor(color->color(), document(), m_style, m_cssToLengthConversionData, forVisitedLink);
-    return toStyleColor(CSS::Color { CSS::KeywordColor { value.valueID() } }, document(), m_style, m_cssToLengthConversionData, forVisitedLink);
+        return toStyle(color->color(), *this, forVisitedLink);
+    return toStyle(CSS::Color { CSS::KeywordColor { value.valueID() } }, *this, forVisitedLink);
 }
 
 void BuilderState::registerContentAttribute(const AtomString& attributeLocalName)

@@ -638,6 +638,7 @@ private:
     std::variant<EmptyToken, Number<nR>, Percentage<pR>> value;
 };
 
+
 template<CSS::Range nR = CSS::All, CSS::Range pR = nR> struct NumberOrPercentageResolvedToNumber {
     Number<nR> value { 0 };
 
@@ -702,9 +703,15 @@ template<auto R> struct ToStyleMapping<CSS::Flex<R>>                   { using t
 template<auto R> struct ToStyleMapping<CSS::AnglePercentage<R>>        { using type = AnglePercentage<R>; };
 template<auto R> struct ToStyleMapping<CSS::LengthPercentage<R>>       { using type = LengthPercentage<R>; };
 
+template<auto nR, auto pR> struct ToStyleMapping<CSS::NumberOrPercentage<nR, pR>>                 { using type = NumberOrPercentage<nR, pR>; };
+template<auto nR, auto pR> struct ToStyleMapping<CSS::NumberOrPercentageResolvedToNumber<nR, pR>> { using type = NumberOrPercentageResolvedToNumber<nR, pR>; };
+
 // MARK: Style type mapping -> CSS type mappings
 
 template<StyleNumeric T> struct ToCSSMapping<T>                        { using type = typename T::CSS; };
+
+template<auto nR, auto pR> struct ToCSSMapping<NumberOrPercentage<nR, pR>>                 { using type = CSS::NumberOrPercentage<nR, pR>; };
+template<auto nR, auto pR> struct ToCSSMapping<NumberOrPercentageResolvedToNumber<nR, pR>> { using type = CSS::NumberOrPercentageResolvedToNumber<nR, pR>; };
 
 } // namespace Style
 

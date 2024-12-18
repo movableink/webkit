@@ -49,13 +49,13 @@ auto ToCSS<BorderRadius>::operator()(const BorderRadius& value, const RenderStyl
     };
 }
 
-auto ToStyle<CSS::BorderRadius>::operator()(const CSS::BorderRadius& value, const BuilderState& state, const CSSCalcSymbolTable& symbolTable) -> BorderRadius
+auto ToStyle<CSS::BorderRadius>::operator()(const CSS::BorderRadius& value, const BuilderState& state) -> BorderRadius
 {
     return {
-        .topLeft { toStyle(value.topLeft(), state, symbolTable) },
-        .topRight { toStyle(value.topRight(), state, symbolTable) },
-        .bottomRight { toStyle(value.bottomRight(), state, symbolTable) },
-        .bottomLeft { toStyle(value.bottomLeft(), state, symbolTable) },
+        .topLeft { toStyle(value.topLeft(), state) },
+        .topRight { toStyle(value.topRight(), state) },
+        .bottomRight { toStyle(value.bottomRight(), state) },
+        .bottomLeft { toStyle(value.bottomLeft(), state) },
     };
 }
 
