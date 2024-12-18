@@ -207,10 +207,6 @@ public:
     void clearInteractionRegions();
 #endif
 
-#if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
-    void updateSeparatedProperties();
-#endif
-
     void updateAfterWidgetResize();
     void positionOverflowControlsLayers();
     

@@ -432,9 +432,6 @@ public:
     bool isIsSeparated() const { return m_isSeparated; }
     virtual void setIsSeparated(bool b) { m_isSeparated = b; }
 
-    bool isSeparatedImage() const { return m_isSeparatedImage; }
-    virtual void setIsSeparatedImage(bool b) { m_isSeparatedImage = b; }
-
 #if HAVE(CORE_ANIMATION_SEPARATED_PORTALS)
     bool isSeparatedPortal() const { return m_isSeparatedPortal; }
     virtual void setIsSeparatedPortal(bool b) { m_isSeparatedPortal = b; }
@@ -573,7 +570,6 @@ public:
     virtual std::optional<PlatformLayerIdentifier> contentsLayerIDForModel() const { return std::nullopt; }
 #endif
     virtual bool usesContentsLayer() const { return false; }
-
 
     // Callback from the underlying graphics system to draw layer contents.
     WEBCORE_EXPORT void paintGraphicsLayerContents(GraphicsContext&, const FloatRect& clip, OptionSet<GraphicsLayerPaintBehavior> = { }) const;
@@ -823,7 +819,6 @@ protected:
     bool m_renderingIsSuppressedIncludingDescendants : 1 { false };
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
     bool m_isSeparated : 1;
-    bool m_isSeparatedImage : 1;
 #if HAVE(CORE_ANIMATION_SEPARATED_PORTALS)
     bool m_isSeparatedPortal : 1;
     bool m_isDescendentOfSeparatedPortal : 1;

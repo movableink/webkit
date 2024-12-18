@@ -286,11 +286,6 @@ TextStream& operator<<(TextStream& ts, PlatformCALayer::LayerType layerType)
         ts << "model-layer";
         break;
 #endif
-#if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
-    case PlatformCALayer::LayerType::LayerTypeSeparatedImageLayer:
-        ts << "separated-image-layer";
-        break;
-#endif
     case PlatformCALayer::LayerType::LayerTypeHost:
         ts << "host";
         break;
