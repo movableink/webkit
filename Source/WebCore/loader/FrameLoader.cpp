@@ -1734,8 +1734,13 @@ void FrameLoader::loadWithNavigationAction(const ResourceRequest& request, Navig
     FRAMELOADER_RELEASE_LOG_FORWARDABLE(FRAMELOADER_LOADWITHNAVIGATIONACTION);
 
     m_errorOccurredInLoading = false;
-
     if (request.url().protocolIsJavaScript() && !action.isInitialFrameSrcLoad()) {
+        if (auto requester = action.requester(); requester && requester->documentIdentifier) {
+            if (RefPtr requestingDocument = Document::allDocumentsMap().get(requester->documentIdentifier); requestingDocument && requestingDocument->contentSecurityPolicy()) {
+                if (!requestingDocument->contentSecurityPolicy()->allowJavaScriptURLs(protectedFrame()->document()->url().string(), { }, request.url().string(), nullptr))
+                    return completionHandler();
+            }
+        }
         executeJavaScriptURL(request.url(), action);
         return completionHandler();
     }
