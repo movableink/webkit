@@ -37,6 +37,7 @@
 namespace WebKit {
 
 class GPUConnectionToWebProcess;
+struct SharedPreferencesForWebProcess;
 
 class RemoteMediaEngineConfigurationFactoryProxy final : private IPC::MessageReceiver {
     WTF_MAKE_TZONE_ALLOCATED(RemoteMediaEngineConfigurationFactoryProxy);
@@ -49,6 +50,7 @@ public:
     void ref() const final;
     void deref() const final;
 
+    std::optional<SharedPreferencesForWebProcess> sharedPreferencesForWebProcess() const;
 private:
     friend class GPUProcessConnection;
     // IPC::MessageReceiver
