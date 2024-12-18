@@ -2465,6 +2465,9 @@
     "imported/w3c/web-platform-tests/dom/traversal/TreeWalker.html": [
         "slow"
     ],
+    "imported/w3c/web-platform-tests/editing/crashtests/insertparagraph-in-listitem-in-svg-followed-by-collapsible-spaces.html": [
+        "slow"
+    ],
     "imported/w3c/web-platform-tests/editing/run/backcolor.html": [
         "slow"
     ],
