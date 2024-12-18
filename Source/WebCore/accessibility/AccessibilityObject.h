@@ -601,7 +601,7 @@ public:
     AXTextMarkerRange textMarkerRangeForNSRange(const NSRange&) const final;
 #endif
 #if PLATFORM(MAC)
-    AXTextMarkerRange selectedTextMarkerRange() final;
+    AXTextMarkerRange selectedTextMarkerRange() const final;
 #endif
     static String stringForVisiblePositionRange(const VisiblePositionRange&);
     String stringForRange(const SimpleRange&) const final;

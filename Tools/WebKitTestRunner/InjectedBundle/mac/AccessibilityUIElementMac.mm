@@ -1749,6 +1749,18 @@ void AccessibilityUIElement::scrollToMakeVisibleWithSubFocus(int x, int y, int w
     END_AX_OBJC_EXCEPTIONS
 }
 
+JSRetainPtr<JSStringRef> AccessibilityUIElement::selectedText()
+{
+    BEGIN_AX_OBJC_EXCEPTIONS
+    auto string = attributeValue(@"AXSelectedText");
+    if (![string isKindOfClass:[NSString class]])
+        return nullptr;
+    return [string createJSStringRef];
+    END_AX_OBJC_EXCEPTIONS
+
+    return nullptr;
+}
+
 JSRetainPtr<JSStringRef> AccessibilityUIElement::selectedTextRange()
 {
     NSRange range = NSMakeRange(NSNotFound, 0);

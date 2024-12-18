@@ -939,6 +939,11 @@ void AXIsolatedObject::setFocused(bool value)
 
 String AXIsolatedObject::selectedText() const
 {
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    if (AXObjectCache::useAXThreadTextApis())
+        return selectedTextMarkerRange().toString();
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
+
     return Accessibility::retrieveValueFromMainThread<String>([this] () -> String {
         if (auto* object = associatedAXObject())
             return object->selectedText().isolatedCopy();
@@ -1285,11 +1290,11 @@ std::optional<SimpleRange> AXIsolatedObject::rangeForCharacterRange(const Charac
 }
 
 #if PLATFORM(MAC)
-AXTextMarkerRange AXIsolatedObject::selectedTextMarkerRange()
+AXTextMarkerRange AXIsolatedObject::selectedTextMarkerRange() const
 {
     return tree()->selectedTextMarkerRange();
 }
-#endif
+#endif // PLATFORM(MAC)
 
 String AXIsolatedObject::stringForRange(const SimpleRange& range) const
 {

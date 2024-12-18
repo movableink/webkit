@@ -116,7 +116,8 @@ struct AXTextRuns {
     }
     unsigned totalLength() const
     {
-        return runLengthSumTo(runs.size() - 1);
+        unsigned size = runs.size();
+        return size ? runLengthSumTo(size - 1) : 0;
     }
     unsigned runLengthSumTo(size_t index) const;
 

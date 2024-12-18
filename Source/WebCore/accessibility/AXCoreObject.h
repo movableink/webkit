@@ -1303,7 +1303,7 @@ public:
     virtual AXTextMarkerRange textMarkerRangeForNSRange(const NSRange&) const = 0;
 #endif
 #if PLATFORM(MAC)
-    virtual AXTextMarkerRange selectedTextMarkerRange() = 0;
+    virtual AXTextMarkerRange selectedTextMarkerRange() const = 0;
 #endif
 
     virtual String stringForRange(const SimpleRange&) const = 0;

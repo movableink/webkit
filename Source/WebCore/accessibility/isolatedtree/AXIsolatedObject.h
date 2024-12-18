@@ -406,7 +406,7 @@ private:
     AXTextMarkerRange textMarkerRangeForNSRange(const NSRange&) const final;
 #endif
 #if PLATFORM(MAC)
-    AXTextMarkerRange selectedTextMarkerRange() final;
+    AXTextMarkerRange selectedTextMarkerRange() const final;
 #endif
     String stringForRange(const SimpleRange&) const final;
     IntRect boundsForRange(const SimpleRange&) const final;

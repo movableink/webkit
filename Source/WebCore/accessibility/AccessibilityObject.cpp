@@ -1735,14 +1735,14 @@ VisiblePositionRange AccessibilityObject::lineRangeForPosition(const VisiblePosi
 }
 
 #if PLATFORM(MAC)
-AXTextMarkerRange AccessibilityObject::selectedTextMarkerRange()
+AXTextMarkerRange AccessibilityObject::selectedTextMarkerRange() const
 {
     auto visibleRange = selectedVisiblePositionRange();
     if (visibleRange.isNull())
         return { };
     return { visibleRange };
 }
-#endif
+#endif // PLATFORM(MAC)
 
 bool AccessibilityObject::replacedNodeNeedsCharacter(Node& replacedNode)
 {
