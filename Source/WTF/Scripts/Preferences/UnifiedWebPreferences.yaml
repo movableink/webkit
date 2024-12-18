@@ -4854,6 +4854,7 @@ MediaControlsContextMenusEnabled:
       default: true
     WebCore:
       default: false
+  sharedPreferenceForWebProcess: true
 
 MediaControlsScaleWithPageZoom:
   type: bool
