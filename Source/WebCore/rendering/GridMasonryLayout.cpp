@@ -64,12 +64,7 @@ void GridMasonryLayout::performMasonryPlacement(const GridTrackSizingAlgorithm& 
     // the insertIntoGridAndLayoutItem() will modify the m_autoFlowNextCursor, so m_autoFlowNextCursor needs to be reset.
     m_autoFlowNextCursor = 0;
 
-    if (m_renderGrid.style().masonryAutoFlow().placementOrder == MasonryAutoFlowPlacementOrder::Ordered)
-        placeItemsUsingOrderModifiedDocumentOrder(algorithm, layoutPhase);
-    else {
-        placeItemsWithDefiniteGridAxisPosition(algorithm, layoutPhase);
-        placeItemsWithIndefiniteGridAxisPosition(algorithm, layoutPhase);
-    }
+    placeItemsUsingOrderModifiedDocumentOrder(algorithm, layoutPhase);
 }
 
 void GridMasonryLayout::collectMasonryItems()
@@ -84,14 +79,7 @@ void GridMasonryLayout::collectMasonryItems()
         if (grid.orderIterator().shouldSkipChild(*gridItem))
             continue;
 
-        if (m_renderGrid.style().masonryAutoFlow().placementOrder == MasonryAutoFlowPlacementOrder::Ordered)
-            m_itemsWithDefiniteGridAxisPosition.append(gridItem);
-        else if (m_renderGrid.style().masonryAutoFlow().placementOrder == MasonryAutoFlowPlacementOrder::DefiniteFirst) {
-            if (hasDefiniteGridAxisPosition(*gridItem, gridAxisDirection()))
-                m_itemsWithDefiniteGridAxisPosition.append(gridItem);
-            else
-                m_itemsWithIndefiniteGridAxisPosition.append(gridItem);
-        }
+        m_itemsWithDefiniteGridAxisPosition.append(gridItem);
     }
 }
 
