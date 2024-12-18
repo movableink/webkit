@@ -2015,6 +2015,21 @@ static void testWebViewEnableHTML5Database(WebViewTest* test, gconstpointer)
     g_assert_cmpint(waitForFooChanged(), ==, -1);
 }
 
+static void testWebViewLoadAlternateHTMLFromPageWithCSP(WebViewTest* test, gconstpointer)
+{
+    char html[] = "<html><head><meta http-equiv=\"Content-Security-Policy\" content=\"script-src 'none'\"/></html>";
+    char alternateHTML[] = "<html><head></head><body><script>test=true</script></body></html>";
+    GUniqueOutPtr<GError> error;
+
+    webkit_web_view_load_html(test->m_webView, html, "http://example.com");
+    test->waitUntilLoadFinished();
+
+    webkit_web_view_load_alternate_html(test->m_webView, alternateHTML, "about:error", nullptr);
+    test->waitUntilLoadFinished();
+    test->runJavaScriptAndWaitUntilFinished("test === true", &error.outPtr());
+    g_assert_no_error(error.get());
+}
+
 #if USE(SOUP2)
 static void serverCallback(SoupServer* server, SoupMessage* message, const char* path, GHashTable*, SoupClientContext*, gpointer)
 #else
@@ -2089,6 +2104,7 @@ void beforeAll()
     WebViewTest::add("WebKitWebView", "web-extension-mode", testWebViewWebExtensionMode);
     WebViewTest::add("WebKitWebView", "disable-web-security", testWebViewDisableWebSecurity);
     WebViewTest::add("WebKitWebView", "enable-html5-database", testWebViewEnableHTML5Database);
+    WebViewTest::add("WebKitWebView", "load-alternate-html-from-page-with-csp", testWebViewLoadAlternateHTMLFromPageWithCSP);
 }
 
 void afterAll()
