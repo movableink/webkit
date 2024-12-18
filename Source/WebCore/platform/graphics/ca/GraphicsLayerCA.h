@@ -101,6 +101,7 @@ public:
     WEBCORE_EXPORT void setUserInteractionEnabled(bool) override;
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
     WEBCORE_EXPORT void setIsSeparated(bool) override;
+    WEBCORE_EXPORT void setIsSeparatedImage(bool) override;
 #if HAVE(CORE_ANIMATION_SEPARATED_PORTALS)
     WEBCORE_EXPORT void setIsSeparatedPortal(bool) override;
 #endif
@@ -166,6 +167,7 @@ public:
     WEBCORE_EXPORT void setContentsToModel(RefPtr<Model>&&, ModelInteraction) override;
     WEBCORE_EXPORT std::optional<PlatformLayerIdentifier> contentsLayerIDForModel() const override;
 #endif
+
     WEBCORE_EXPORT void setContentsMinificationFilter(ScalingFilter) override;
     WEBCORE_EXPORT void setContentsMagnificationFilter(ScalingFilter) override;
 

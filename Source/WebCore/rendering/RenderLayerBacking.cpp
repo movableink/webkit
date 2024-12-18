@@ -1240,6 +1240,7 @@ bool RenderLayerBacking::updateConfiguration(const RenderLayer* compositingAnces
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
     bool clipsDescendants = RenderLayerCompositor::hasCompositedWidgetContents(renderer())
         || RenderLayerCompositor::isSeparated(renderer());
+    updateSeparatedProperties();
 #else
     bool clipsDescendants = RenderLayerCompositor::hasCompositedWidgetContents(renderer());
 #endif
@@ -1490,11 +1491,6 @@ void RenderLayerBacking::updateGeometry(const RenderLayer* compositedAncestor)
 
     m_graphicsLayer->setPosition(primaryLayerPosition);
     m_graphicsLayer->setSize(primaryGraphicsLayerRect.size());
-
-#if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
-    // FIXME: Take ancestry into account and remove unnecessary structural layers.
-    m_graphicsLayer->setIsSeparated(style.usedTransformStyle3D() == TransformStyle3D::Separated);
-#endif
 
     // Compute renderer offset from primary graphics layer. Note that primaryGraphicsLayerRect is in parentGraphicsLayer's coordinate system which is not necessarily
     // the same as the ancestor graphics layer.
@@ -2092,6 +2088,33 @@ void RenderLayerBacking::clearInteractionRegions()
 
     if (m_foregroundLayer)
         clearInteractionRegionsForLayer(*m_foregroundLayer);
+}
+#endif
+
+#if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
+void RenderLayerBacking::updateSeparatedProperties()
+{
+    bool isSeparated = RenderLayerCompositor::isSeparated(renderer());
+    m_graphicsLayer->setIsSeparated(isSeparated);
+
+    const auto& renderImage = dynamicDowncast<RenderImage>(renderer());
+    if (!renderImage)
+        return;
+
+    bool isSeparatedImage = [&] {
+        if (!isSeparated)
+            return false;
+        if (!renderImage->cachedImage() || renderImage->cachedImage()->errorOccurred())
+            return false;
+        auto* image = renderImage->cachedImage()->imageForRenderer(renderImage);
+        if (!image)
+            return false;
+        if (image == &Image::nullImage())
+            return false;
+        return image->isBitmapImage() && image->nativeImage();
+    }();
+
+    m_graphicsLayer->setIsSeparatedImage(isSeparatedImage);
 }
 #endif
 
@@ -3237,6 +3260,10 @@ bool RenderLayerBacking::isUnscaledBitmapOnly() const
 void RenderLayerBacking::contentChanged(ContentChangeType changeType)
 {
     PaintedContentsInfo contentsInfo(*this);
+#if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
+    if (changeType == ContentChangeType::Image && RenderLayerCompositor::isSeparated(renderer()))
+        updateSeparatedProperties();
+#endif
     if (changeType == ContentChangeType::Image || changeType == ContentChangeType::Canvas) {
         if (contentsInfo.isDirectlyCompositedImage()) {
             updateImageContents(contentsInfo);

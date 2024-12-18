@@ -772,6 +772,15 @@ void GraphicsLayerCA::setIsSeparated(bool isSeparated)
     noteLayerPropertyChanged(SeparatedChanged);
 }
 
+void GraphicsLayerCA::setIsSeparatedImage(bool isSeparatedImage)
+{
+    if (isSeparatedImage == m_isSeparatedImage)
+        return;
+
+    GraphicsLayer::setIsSeparatedImage(isSeparatedImage);
+    // Impacts layer type not properties.
+}
+
 #if HAVE(CORE_ANIMATION_SEPARATED_PORTALS)
 void GraphicsLayerCA::setIsSeparatedPortal(bool isSeparatedPortal)
 {
@@ -2053,6 +2062,12 @@ void GraphicsLayerCA::commitLayerTypeChangesBeforeSublayers(CommitState&, float 
 
     if (needTiledLayer)
         neededLayerType = PlatformCALayer::LayerType::LayerTypeTiledBackingLayer;
+#if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
+    else if (m_isSeparatedImage)
+        neededLayerType = PlatformCALayer::LayerType::LayerTypeSeparatedImageLayer;
+    else if (currentLayerType == PlatformCALayer::LayerType::LayerTypeSeparatedImageLayer)
+        neededLayerType = PlatformCALayer::LayerType::LayerTypeWebLayer;
+#endif
     else if (currentLayerType == PlatformCALayer::LayerType::LayerTypeTiledBackingLayer)
         neededLayerType = PlatformCALayer::LayerType::LayerTypeWebLayer;
 
@@ -4657,6 +4672,10 @@ void GraphicsLayerCA::changeLayerTypeTo(PlatformCALayer::LayerType newLayerType)
         | EventRegionChanged
         | NameChanged
         | DebugIndicatorsChanged
+#if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
+        | ContentsRectsChanged
+        | SeparatedChanged
+#endif
 #if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION) || HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
         | CoverageRectChanged);
 #else

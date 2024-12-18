@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,61 +23,22 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if PLATFORM(IOS_FAMILY)
+#if defined(TARGET_OS_VISION) && TARGET_OS_VISION
 
-#import "UIKitSPI.h"
-#import "WKBaseScrollView.h"
 #import "WKRemoteLayerTreeViewProtocols.h"
-#import <wtf/OptionSet.h>
+#import <UIKit/UIKit.h>
 
-OBJC_CLASS UIScrollView;
+NS_ASSUME_NONNULL_BEGIN
 
-namespace WebCore {
-class FloatRect;
-class IntPoint;
+@interface WKSeparatedImageView : UIView <WKContentControlled>
 
-enum class EventListenerRegionType : uint8_t;
-enum class TouchAction : uint8_t;
-}
+- (instancetype)init NS_DESIGNATED_INITIALIZER;
+- (instancetype)initWithCoder:(NSCoder *)coder NS_UNAVAILABLE;
 
-namespace WebKit {
-class RemoteLayerTreeHost;
-class WebPageProxy;
-}
+- (void)setSurface:(nullable IOSurfaceRef)surface;
 
-@interface WKCompositingView : UIView <WKContentControlled>
 @end
 
-@interface WKTransformView : WKCompositingView
-@end
+NS_ASSUME_NONNULL_END
 
-@interface WKBackdropView : WKCompositingView
-@end
-
-@interface WKShapeView : WKCompositingView
-@end
-
-@interface WKUIRemoteView : _UIRemoteView <WKContentControlled>
-@end
-
-@interface WKChildScrollView : WKBaseScrollView <WKContentControlled>
-@end
-
-#if USE(APPLE_INTERNAL_SDK)
-#import <WebKitAdditions/WKSeparatedModelView.h>
 #endif
-
-namespace WebKit {
-
-OptionSet<WebCore::TouchAction> touchActionsForPoint(UIView *rootView, const WebCore::IntPoint&);
-UIScrollView *findActingScrollParent(UIScrollView *, const RemoteLayerTreeHost&);
-
-OptionSet<WebCore::EventListenerRegionType> eventListenerTypesAtPoint(UIView *rootView, const WebCore::IntPoint&);
-
-#if ENABLE(EDITABLE_REGION)
-bool mayContainEditableElementsInRect(UIView *rootView, const WebCore::FloatRect&);
-#endif
-
-}
-
-#endif // PLATFORM(IOS_FAMILY)

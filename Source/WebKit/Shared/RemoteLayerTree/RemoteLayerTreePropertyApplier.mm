@@ -45,12 +45,15 @@
 #import <wtf/cocoa/VectorCocoa.h>
 
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
+#import "WKSeparatedImageView.h"
+
 #if USE(APPLE_INTERNAL_SDK)
 #import <WebKitAdditions/SeparatedLayerAdditions.h>
 #else
 static void configureSeparatedLayer(CALayer *) { }
 #endif
-#endif
+
+#endif // HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
 
 #if PLATFORM(IOS_FAMILY)
 #import "RemoteLayerTreeViews.h"
@@ -262,12 +265,16 @@ void RemoteLayerTreePropertyApplier::applyPropertiesToLayer(CALayer *layer, Remo
         auto* backingStore = properties.backingStoreOrProperties.properties.get();
         if (backingStore && properties.backingStoreAttached) {
             std::optional<WebCore::RenderingResourceIdentifier> asyncContentsIdentifier;
+            UIView* hostingView = nil;
             if (layerTreeNode) {
                 backingStore->updateCachedBuffers(*layerTreeNode, layerContentsType);
                 asyncContentsIdentifier = layerTreeNode->asyncContentsIdentifier();
+#if PLATFORM(IOS_FAMILY)
+                hostingView = layerTreeNode->uiView();
+#endif
             }
 
-            backingStore->applyBackingStoreToLayer(layer, layerContentsType, asyncContentsIdentifier, layerTreeHost->replayDynamicContentScalingDisplayListsIntoBackingStore());
+            backingStore->applyBackingStoreToLayer(layer, layerContentsType, asyncContentsIdentifier, layerTreeHost->replayDynamicContentScalingDisplayListsIntoBackingStore(), hostingView);
         } else
             [layer _web_clearContents];
     }

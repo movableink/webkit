@@ -208,6 +208,7 @@ static String allowListedClassToString(UIView *view)
         "WKContentView"_s,
         "WKModelView"_s,
         "WKScrollView"_s,
+        "WKSeparatedImageView"_s,
         "WKSeparatedModelView"_s,
         "WKShapeView"_s,
         "WKSimpleBackdropView"_s,
@@ -224,6 +225,23 @@ static String allowListedClassToString(UIView *view)
 
     return "<class not in allowed list of classes>"_s;
 }
+
+#if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
+static bool shouldDumpSeparatedDetails(UIView *view)
+{
+    static constexpr ComparableASCIILiteral deniedClassesArray[] = {
+        "WKCompositingView"_s,
+        "WKSeparatedImageView"_s,
+    };
+    static constexpr SortedArraySet deniedClasses { deniedClassesArray };
+
+    String classString { NSStringFromClass(view.class) };
+    if (deniedClasses.contains(classString))
+        return false;
+
+    return true;
+}
+#endif
 
 static void dumpUIView(TextStream& ts, UIView *view)
 {
@@ -267,11 +285,15 @@ static void dumpUIView(TextStream& ts, UIView *view)
     if (view.layer.anchorPointZ != 0)
         ts.dumpProperty("layer anchorPointZ", makeString(view.layer.anchorPointZ));
 
+    if (view.layer.cornerRadius != 0.0)
+        ts.dumpProperty("layer cornerRadius", makeString(view.layer.cornerRadius));
+
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
     if (view.layer.separated) {
         TextStream::GroupScope scope(ts);
         ts << "separated";
-        dumpSeparatedLayerProperties(ts, view.layer);
+        if (shouldDumpSeparatedDetails(view))
+            dumpSeparatedLayerProperties(ts, view.layer);
     }
 #endif
 

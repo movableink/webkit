@@ -27,6 +27,7 @@
 #import <WebKit/WKHistoryDelegatePrivate.h>
 #import <WebKit/WKNavigationPrivate.h>
 #import <WebKit/WKProcessPoolPrivate.h>
+#import <WebKit/WKRemoteLayerTreeViewProtocols.h>
 #import <WebKit/WKUIDelegatePrivate.h>
 #import <WebKit/WKWebExtensionActionPrivate.h>
 #import <WebKit/WKWebExtensionCommandPrivate.h>
