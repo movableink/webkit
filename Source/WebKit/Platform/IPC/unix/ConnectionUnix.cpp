@@ -130,9 +130,8 @@ void Connection::platformInvalidate()
 #if USE(GLIB)
     m_socket = nullptr;
 #else
-    if (m_socketDescriptor != -1)
-        closeWithRetry(m_socketDescriptor);
-    m_socketDescriptor = -1;
+    if (m_socketDescriptor.value() != -1)
+        closeWithRetry(m_socketDescriptor.release());
 #endif
 
     if (!m_isConnected)
