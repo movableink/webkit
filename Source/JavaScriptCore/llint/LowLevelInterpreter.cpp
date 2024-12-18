@@ -45,6 +45,8 @@
 
 using namespace JSC::LLInt;
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 // LLInt C Loop opcodes
 // ====================
 // In the implementation of the C loop, the LLint trampoline glue functions
@@ -480,6 +482,8 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
 } // Interpreter::llintCLoopExecute()
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #else // !ENABLE(C_LOOP)
 

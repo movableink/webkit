@@ -362,6 +362,16 @@
 #define ENABLE_FIXED_IOS_TOUCH_POINT_RADIUS 1
 #endif
 
+// If building for C_LOOP disable all JIT ENABLEs
+#if ENABLE(C_LOOP)
+#define ENABLE_JIT 0
+#define ENABLE_DFG_JIT 0
+#define ENABLE_FTL_JIT 0
+#define ENABLE_B3_JIT 0
+#define ENABLE_WEBASSEMBLY_BBQJIT 0
+#define ENABLE_WEBASSEMBLY_OMGJIT 0
+#endif
+
 #if !defined(ENABLE_FTL_JIT) && CPU(ADDRESS64)
 #define ENABLE_FTL_JIT 1
 #endif
