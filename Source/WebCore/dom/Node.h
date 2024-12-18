@@ -186,7 +186,7 @@ public:
         Everything,
     };
     virtual Ref<Node> cloneNodeInternal(TreeScope&, CloningOperation) = 0;
-    Ref<Node> cloneNode(bool deep) { return cloneNodeInternal(treeScope(), deep ? CloningOperation::Everything : CloningOperation::OnlySelf); }
+    Ref<Node> cloneNode(bool deep);
     WEBCORE_EXPORT ExceptionOr<Ref<Node>> cloneNodeForBindings(bool deep);
 
     virtual const AtomString& localName() const;

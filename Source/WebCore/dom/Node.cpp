@@ -804,6 +804,12 @@ void Node::normalize()
     }
 }
 
+Ref<Node> Node::cloneNode(bool deep)
+{
+    ASSERT(!isShadowRoot());
+    return cloneNodeInternal(document(), deep ? CloningOperation::Everything : CloningOperation::OnlySelf);
+}
+
 ExceptionOr<Ref<Node>> Node::cloneNodeForBindings(bool deep)
 {
     if (UNLIKELY(isShadowRoot()))
