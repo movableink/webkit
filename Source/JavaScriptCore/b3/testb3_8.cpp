@@ -1094,6 +1094,14 @@ void testStoreAfterClobberExitsSideways()
     RegisterSetBuilder csrs;
     csrs.merge(RegisterSetBuilder::calleeSaveRegisters());
     csrs.exclude(RegisterSetBuilder::stackRegisters());
+#if CPU(ARM)
+    csrs.remove(MacroAssembler::fpTempRegister);
+    // FIXME We should allow this to be used. See the note
+    // in https://commits.webkit.org/257808@main for more
+    // info about why masm is using scratch registers on
+    // ARM-only.
+    csrs.remove(MacroAssembler::addressTempRegister);
+#endif
     csrs.buildAndValidate().forEach(
         [&] (Reg reg) {
             CHECK(reg != pinnedBaseGPR);
@@ -1111,11 +1119,13 @@ void testStoreAfterClobberExitsSideways()
 
     BasicBlock* root = proc.addBlock();
 
-    auto* pointer = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR2);
+    Value* pointer = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR2);
     auto* resultAddress = root->appendNew<WasmAddressValue>(proc, Origin(), pointer, pinnedBaseGPR);
     root->appendNew<MemoryValue>(proc, Store, Origin(), root->appendNew<Const32Value>(proc, Origin(), 10), resultAddress, 0);
 
-    root->appendNew<WasmBoundsCheckValue>(proc, Origin(), pinnedSizeGPR, root->appendNew<Value>(proc, Trunc, Origin(), pointer), 0);
+    if (is64Bit())
+        pointer = root->appendNew<Value>(proc, Trunc, Origin(), pointer);
+    root->appendNew<WasmBoundsCheckValue>(proc, Origin(), pinnedSizeGPR, pointer, 0);
 
     root->appendNew<MemoryValue>(proc, Store, Origin(), root->appendNew<Const32Value>(proc, Origin(), 20), resultAddress, 0);
     root->appendNewControlValue(proc, Return, Origin(), root->appendNew<Const32Value>(proc, Origin(), 30));
@@ -1170,7 +1180,7 @@ void testStoreAfterClobberDifferentWidth()
     auto binary = compileProc(proc);
 
     uint64_t* memory = new uint64_t[10];
-    uint64_t ptr = 1*8;
+    uintptr_t ptr = 1*8;
 
     for (int i = 0; i < 10; ++i)
         memory[i] = 0;
@@ -1223,7 +1233,7 @@ void testStoreAfterClobberDifferentWidthSuccessor()
     auto binary = compileProc(proc);
 
     uint64_t* memory = new uint64_t[10];
-    uint64_t ptr = 1*8;
+    uintptr_t ptr = 1*8;
 
     for (int i = 0; i < 10; ++i)
         memory[i] = 0;
@@ -1274,6 +1284,14 @@ void testStoreAfterClobberExitsSidewaysSuccessor()
     RegisterSetBuilder csrs;
     csrs.merge(RegisterSetBuilder::calleeSaveRegisters());
     csrs.exclude(RegisterSetBuilder::stackRegisters());
+#if CPU(ARM)
+    csrs.remove(MacroAssembler::fpTempRegister);
+    // FIXME We should allow this to be used. See the note
+    // in https://commits.webkit.org/257808@main for more
+    // info about why masm is using scratch registers on
+    // ARM-only.
+    csrs.remove(MacroAssembler::addressTempRegister);
+#endif
     csrs.buildAndValidate().forEach(
         [&] (Reg reg) {
             CHECK(reg != pinnedBaseGPR);
@@ -1295,7 +1313,7 @@ void testStoreAfterClobberExitsSidewaysSuccessor()
     BasicBlock* c = proc.addBlock();
     BasicBlock* continuation = proc.addBlock();
 
-    auto* pointer = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR2);
+    Value* pointer = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR2);
     auto* path = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR3);
     auto* resultAddress = root->appendNew<WasmAddressValue>(proc, Origin(), pointer, pinnedBaseGPR);
     root->appendNew<MemoryValue>(proc, Store, Origin(), root->appendNew<Const64Value>(proc, Origin(), -1), resultAddress, 0);
@@ -1305,7 +1323,9 @@ void testStoreAfterClobberExitsSidewaysSuccessor()
     switchValue->appendCase(SwitchCase(0, FrequentedBlock(a)));
     switchValue->appendCase(SwitchCase(1, FrequentedBlock(b)));
 
-    b->appendNew<WasmBoundsCheckValue>(proc, Origin(), pinnedSizeGPR, b->appendNew<Value>(proc, Trunc, Origin(), pointer), 0);
+    if (is64Bit())
+        pointer = b->appendNew<Value>(proc, Trunc, Origin(), pointer);
+    b->appendNew<WasmBoundsCheckValue>(proc, Origin(), pinnedSizeGPR, pointer, 0);
 
     UpsilonValue* takeA = a->appendNew<UpsilonValue>(proc, Origin(), a->appendNew<Const64Value>(proc, Origin(), 10));
     UpsilonValue* takeB = b->appendNew<UpsilonValue>(proc, Origin(), b->appendNew<Const64Value>(proc, Origin(), 20));
@@ -1327,7 +1347,7 @@ void testStoreAfterClobberExitsSidewaysSuccessor()
     auto binary = compileProc(proc);
 
     uint64_t* memory = new uint64_t[10];
-    uint64_t ptr = 1*8;
+    uintptr_t ptr = 1*8;
 
     for (int i = 0; i < 10; ++i)
         memory[i] = 0;
