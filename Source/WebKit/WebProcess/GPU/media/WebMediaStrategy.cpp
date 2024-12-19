@@ -127,7 +127,7 @@ std::unique_ptr<MediaRecorderPrivateWriter> WebMediaStrategy::createMediaRecorde
     ASSERT(isMainRunLoop());
 #if ENABLE(GPU_PROCESS)
     if (m_useGPUProcess && (equalLettersIgnoringASCIICase(type, "video/mp4"_s) || equalLettersIgnoringASCIICase(type, "audio/mp4"_s)))
-        RemoteMediaRecorderPrivateWriter::create(WebProcess::singleton().ensureGPUProcessConnection(), type, listener);
+        return RemoteMediaRecorderPrivateWriter::create(WebProcess::singleton().ensureGPUProcessConnection(), type, listener);
 #else
     UNUSED_PARAM(type);
     UNUSED_PARAM(listener);
