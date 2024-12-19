@@ -1012,6 +1012,9 @@ using PlatformRoleMap = UncheckedKeyHashMap<AccessibilityRole, String, DefaultHa
 PlatformRoleMap createPlatformRoleMap();
 String roleToPlatformString(AccessibilityRole);
 
+#if PLATFORM(IOS_FAMILY)
+WEBCORE_EXPORT NSData* newAccessibilityRemoteToken(NSString *);
+#endif
 } // namespace Accessibility
 
 class AXChildIterator {

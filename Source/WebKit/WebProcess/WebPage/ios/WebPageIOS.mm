@@ -28,7 +28,6 @@
 
 #if PLATFORM(IOS_FAMILY)
 
-#import "AccessibilityIOS.h"
 #import "DocumentEditingContext.h"
 #import "DrawingArea.h"
 #import "EditingRange.h"
@@ -175,6 +174,7 @@
 #import <wtf/text/StringToIntegerConversion.h>
 #import <wtf/text/TextBreakIterator.h>
 #import <wtf/text/TextStream.h>
+#import <wtf/text/WTFString.h>
 
 #if ENABLE(ATTACHMENT_ELEMENT)
 #import <WebCore/PromisedAttachmentInfo.h>
@@ -267,7 +267,7 @@ void WebPage::platformReinitialize()
 
 RetainPtr<NSData> WebPage::accessibilityRemoteTokenData() const
 {
-    return newAccessibilityRemoteToken([NSUUID UUID]);
+    return WebCore::Accessibility::newAccessibilityRemoteToken([[NSUUID UUID] UUIDString]);
 }
 
 void WebPage::relayAccessibilityNotification(const String& notificationName, const RetainPtr<NSData>& notificationData)
@@ -669,14 +669,23 @@ NSObject *WebPage::accessibilityObjectForMainFramePlugin()
     return nil;
 }
     
-void WebPage::updateRemotePageAccessibilityOffset(WebCore::FrameIdentifier, WebCore::IntPoint)
+void WebPage::updateRemotePageAccessibilityOffset(WebCore::FrameIdentifier, WebCore::IntPoint offset)
 {
-    // FIXME: Implement
+    [accessibilityRemoteObject() setRemoteFrameOffset:offset];
 }
 
-void WebPage::registerRemoteFrameAccessibilityTokens(pid_t, std::span<const uint8_t>)
+void WebPage::registerRemoteFrameAccessibilityTokens(pid_t pid, std::span<const uint8_t> elementToken)
 {
-    // FIXME: Implement
+    createMockAccessibilityElement(pid);
+    [m_mockAccessibilityElement setRemoteTokenData:toNSData(elementToken).get()];
+}
+
+void WebPage::createMockAccessibilityElement(pid_t pid)
+{
+    auto mockAccessibilityElement = adoptNS([[WKAccessibilityWebPageObject alloc] init]);
+
+    [mockAccessibilityElement setWebPage:this];
+    m_mockAccessibilityElement = WTFMove(mockAccessibilityElement);
 }
 
 void WebPage::registerUIProcessAccessibilityTokens(std::span<const uint8_t> elementToken, std::span<const uint8_t>)
@@ -698,14 +707,12 @@ void WebPage::getDataSelectionForPasteboard(const String, CompletionHandler<void
 
 WebCore::IntPoint WebPage::accessibilityRemoteFrameOffset()
 {
-    notImplemented();
-    return { };
+    return [m_mockAccessibilityElement accessibilityRemoteFrameOffset];
 }
 
 WKAccessibilityWebPageObject* WebPage::accessibilityRemoteObject()
 {
-    notImplemented();
-    return 0;
+    return m_mockAccessibilityElement.get();
 }
 
 bool WebPage::platformCanHandleRequest(const WebCore::ResourceRequest& request)

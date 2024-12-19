@@ -28,6 +28,7 @@
 
 #if PLATFORM(IOS_FAMILY)
 
+#import "AXRemoteFrame.h"
 #import "AccessibilityRenderObject.h"
 #import "EventNames.h"
 #import "HTMLInputElement.h"
@@ -36,10 +37,14 @@
 #import "RenderObject.h"
 #import "WAKView.h"
 #import "WebAccessibilityObjectWrapperIOS.h"
+#import <pal/spi/ios/AXRuntimeSPI.h>
 #import <wtf/SoftLinking.h>
+#import <wtf/cocoa/SpanCocoa.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/text/MakeString.h>
+#import <wtf/text/WTFString.h>
 
+SOFT_LINK_CLASS_OPTIONAL(AXRuntime, AXRemoteElement);
 SOFT_LINK_CONSTANT(AXRuntime, UIAccessibilityTokenBlockquoteLevel, NSString *);
 #define AccessibilityTokenBlockquoteLevel getUIAccessibilityTokenBlockquoteLevel()
 SOFT_LINK_CONSTANT(AXRuntime, UIAccessibilityTokenUnderline, NSString *);
@@ -171,6 +176,38 @@ void AccessibilityObject::setLastPresentedTextPrediction(Node& previousCompositi
 #endif // HAVE (INLINE_PREDICTIONS)
 }
 
+static RetainPtr<NSDictionary> unarchivedTokenForData(RetainPtr<NSData> tokenData)
+{
+    NSError *error = nil;
+    return [NSKeyedUnarchiver unarchivedObjectOfClasses:[NSSet setWithObjects:[NSDictionary class], [NSNumber class], [NSString class], nil] fromData:tokenData.get() error:&error];
+}
+
+std::span<const uint8_t> AXRemoteFrame::generateRemoteToken() const
+{
+    return span(Accessibility::newAccessibilityRemoteToken([[NSUUID UUID] UUIDString]));
+}
+
+void AXRemoteFrame::initializePlatformElementWithRemoteToken(std::span<const uint8_t> token, int processIdentifier)
+{
+    m_processIdentifier = processIdentifier;
+
+    RetainPtr nsToken = toNSData(token);
+    NSDictionary *tokenDictionary = nsToken ? unarchivedTokenForData(nsToken).get() : nil;
+    if (!tokenDictionary)
+        return;
+
+    NSString *uuid = [tokenDictionary objectForKey:@"ax-uuid"];
+    AXRemoteElement *remoteElement = [allocAXRemoteElementInstance() initWithUUID:uuid andRemotePid:processIdentifier andContextId:0];
+    remoteElement.onClientSide = YES;
+    RefPtr parent = parentObjectUnignored();
+    remoteElement.accessibilityContainer = parent ?  parent->wrapper() : nil;
+
+    m_remoteFramePlatformElement = adoptNS(remoteElement);
+
+    if (CheckedPtr cache = axObjectCache())
+        cache->onRemoteFrameInitialized(*this);
+}
+
 // NSAttributedString support.
 
 static void attributeStringSetLanguage(NSMutableAttributedString *attrString, RenderObject* renderer, const NSRange& range)
@@ -289,6 +326,17 @@ RetainPtr<NSAttributedString> attributedStringCreate(Node& node, StringView text
     attributedStringSetCompositionAttributes(result.get(), renderer.get());
 
     return result;
+}
+
+namespace Accessibility {
+
+NSData *newAccessibilityRemoteToken(NSString *uuidString)
+{
+    if (!uuidString)
+        return nil;
+    return [NSKeyedArchiver archivedDataWithRootObject:@{ @"ax-pid" : @(getpid()), @"ax-uuid" : uuidString, @"ax-register" : @YES } requiringSecureCoding:YES error:nullptr];
+}
+
 }
 
 } // WebCore

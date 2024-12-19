@@ -141,8 +141,8 @@ void WebRemoteFrameClient::bindRemoteAccessibilityFrames(int processIdentifier, 
 
     auto [resultToken, processIdentifierResult] = sendResult.takeReply();
 
+#if PLATFORM(MAC)
     // Make sure AppKit system knows about our remote UI process status now.
-#if PLATFORM(COCOA)
     page->accessibilityManageRemoteElementStatus(true, processIdentifierResult);
 #endif
     completionHandler(resultToken, processIdentifierResult);

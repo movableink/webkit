@@ -394,7 +394,10 @@ static AccessibilityObjectWrapper* AccessibilityUnignoredAncestor(AccessibilityO
     auto array = adoptNS([[NSMutableArray alloc] init]);
     for (const auto& child : self.axBackingObject->unignoredChildren()) {
         auto* wrapper = child->wrapper();
-        if (child->isAttachment()) {
+        if (child->isRemoteFrame()) {
+            if (id platformRemoteFrame = child->remoteFramePlatformElement().get())
+                [array addObject:platformRemoteFrame];
+        } else if (child->isAttachment()) {
             if (id attachmentView = [wrapper attachmentView])
                 [array addObject:attachmentView];
         } else
@@ -443,6 +446,9 @@ static AccessibilityObjectWrapper* AccessibilityUnignoredAncestor(AccessibilityO
     if (children[elementIndex]->isAttachment()) {
         if (id attachmentView = [wrapper attachmentView])
             return attachmentView;
+    } else if (children[elementIndex]->isRemoteFrame()) {
+        if (id remoteFramePlatformElement = children[elementIndex]->remoteFramePlatformElement().get())
+            return remoteFramePlatformElement;
     }
 
     return wrapper;
@@ -1678,6 +1684,7 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
 - (CGRect)_accessibilityRelativeFrame
 {
     auto rect = FloatRect(snappedIntRect(self.axBackingObject->elementRect()));
+    rect.moveBy({ self.axBackingObject->remoteFrameOffset() });
     return [self convertRectToSpace:rect space:AccessibilityConversionSpace::Page];
 }
 
@@ -1715,6 +1722,7 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
         return CGRectZero;
     
     auto rect = FloatRect(snappedIntRect(self.axBackingObject->elementRect()));
+    rect.moveBy({ self.axBackingObject->remoteFrameOffset() });
     return [self convertRectToSpace:rect space:AccessibilityConversionSpace::Screen];
 }
 

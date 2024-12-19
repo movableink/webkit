@@ -240,7 +240,7 @@ void AccessibilityScrollView::addRemoteFrameChild()
         m_remoteFrame = downcast<AXRemoteFrame>(cache->create(AccessibilityRole::RemoteFrame));
         m_remoteFrame->setParent(this);
 
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
         // Generate a new token and pass it back to the other remote frame so it can bind these objects together.
         Ref remoteFrame = remoteFrameView->frame();
         m_remoteFrame->setFrameID(remoteFrame->frameID());
@@ -251,7 +251,7 @@ void AccessibilityScrollView::addRemoteFrameChild()
             auto location = elementRect().location();
             remoteFrame->updateRemoteFrameAccessibilityOffset(flooredIntPoint(location));
         });
-#endif
+#endif // PLATFORM(COCOA)
     } else
         m_remoteFrame->setParent(this);
 

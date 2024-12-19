@@ -473,7 +473,11 @@ void WebPage::bindRemoteAccessibilityFrames(int processIdentifier, WebCore::Fram
     registerRemoteFrameAccessibilityTokens(processIdentifier, dataToken.span());
 
     // Get our remote token data and send back to the RemoteFrame.
+#if PLATFORM(MAC)
     completionHandler({ span(accessibilityRemoteTokenData().get()) }, getpid());
+#else
+    completionHandler({ dataToken }, getpid());
+#endif
 }
 
 void WebPage::resolveAccessibilityHitTestForTesting(const WebCore::IntPoint& point, CompletionHandler<void(String)>&& completionHandler)
