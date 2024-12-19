@@ -624,8 +624,7 @@ macro ipintCatchCommon()
 
     loadi [MC], t0
     addp t1, t0
-    # 1 << 4 == StackValueSize
-    lshiftq 4, t0
+    lshiftq StackValueShift, t0
     addq IPIntCalleeSaveSpaceStackAligned, t0
     subp cfr, t0, sp
 end

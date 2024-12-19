@@ -238,7 +238,7 @@ macro argumINTInitializeDefaultLocals()
     sxb2q argumINTTmp, argumINTTmp
     andq ValueNull, argumINTTmp
     storeq argumINTTmp, [argumINTDst]
-    addq 8, argumINTDst
+    addq LocalSize, argumINTDst
 end
 
 macro argumINTFinish()
@@ -681,7 +681,7 @@ instructionLabel(_select_t)
     popInt32(t0, t2)
     bieq t0, 0, .ipint_select_t_val2
     addq StackValueSize, sp
-    loadi IPInt::InstructionLengthMetadata::length[MC], t0
+    loadb IPInt::InstructionLengthMetadata::length[MC], t0
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
     nextIPIntInstruction()
@@ -689,7 +689,7 @@ instructionLabel(_select_t)
     popQuad(t1, t2)
     popQuad(t0, t3)
     pushQuadPair(t2, t1)
-    loadi IPInt::InstructionLengthMetadata::length[MC], t0
+    loadb IPInt::InstructionLengthMetadata::length[MC], t0
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
     nextIPIntInstruction()
@@ -5690,24 +5690,25 @@ end
     move sp, t3
     addp numArguments, t3
 
-    # arg             <- initial SP
+    # (down = decreasing address)
+    # <first non-arg> <- t3 = SP after all arguments
     # arg
     # ...
     # arg
-    # <first non-arg> <- t3 = SP after all arguments
+    # arg             <- initial SP
 
     # store sp as our shadow stack for arguments later
     move sp, sc0
     # make extra space if necessary
     subp extraSpaceForReturns, sp
 
-    # reserved        <- sp
-    # reserved
-    # arg             <- sc0 = initial sp
+    # <first non-arg> <- t3
     # arg
     # ...
     # arg
-    # <first non-arg> <- t3
+    # arg             <- sc0 = initial sp
+    # reserved
+    # reserved        <- sp
 
     push t3, t3
     push PL, wasmInstance
@@ -5716,21 +5717,21 @@ end
     move sp, t2
     subp stackFrameSize, sp
 
-    # call frame      <- sp
-    # call frame
-    # call frame
-    # call frame
-    # call frame
-    # call frame
-    # PL, wasmInstance
-    # t3, t3
-    # reserved
-    # reserved
-    # arg             <- sc0 = initial sp
+    # <first non-arg> <- t3
     # arg
     # ...
     # arg
-    # <first non-arg> <- t3
+    # arg             <- sc0 = initial sp
+    # reserved
+    # reserved
+    # t3, t3
+    # PL, wasmInstance
+    # call frame
+    # call frame
+    # call frame
+    # call frame
+    # call frame
+    # call frame      <- sp
 
     # set up the Callee slot
     storeq sc1, Callee - CallerFrameAndPCSize[sp]
@@ -5746,6 +5747,22 @@ end
 .ipint_tail_call_common:
     # Free up r0 to be used as argument register
 
+    #  <caller frame>
+    #  return val
+    #  return val
+    #  argument
+    #  argument
+    #  argument
+    #  argument
+    #  call frame
+    #  call frame      <- cfr
+    #  (IPInt locals)
+    #  (IPInt stack)
+    #  argument 0
+    #  ...
+    #  argument n-1
+    #  argument n      <- sp
+
     # sc1 = target callee => wasmInstance to free up sc1
     const savedCallee = wasmInstance
     move sc1, savedCallee 
@@ -5756,12 +5773,46 @@ end
     # store entrypoint and target instance on the stack for now
     push r0, r1
 
-    # determine new stack pointer
+    #  <caller frame>
+    #  return val
+    #  return val
+    #  argument
+    #  argument
+    #  argument
+    #  argument
+    #  call frame
+    #  call frame                  <- cfr
+    #  (IPInt locals)
+    #  (IPInt stack)
+    #  argument 0
+    #  ...
+    #  argument n-1
+    #  argument n                  <- sc1
+    #  entrypoint, targetInstance  <- sp
+
+    # determine the location to begin copying stack arguments, starting from the last
     move cfr, sc2
-    addp CallFrameHeaderSize + 8, sc2
+    addp FirstArgumentOffset, sc2
     addp t2, sc2
 
-    # save the MC and PC
+    #  <caller frame>
+    #  return val                  <- sc2
+    #  return val
+    #  argument
+    #  argument
+    #  argument
+    #  argument
+    #  call frame
+    #  call frame                  <- cfr
+    #  (IPInt locals)
+    #  (IPInt stack)
+    #  argument 0
+    #  ...
+    #  argument n-1
+    #  argument n                  <- sc1
+    #  entrypoint, targetInstance  <- sp
+
+    # get saved MC and PC
 
     if ARM64 or ARM64E
         loadpairq -0x10[cfr], t0, t1
@@ -5777,6 +5828,25 @@ end
     loadp [cfr], t1
 
     push t0, t1
+
+    #  <caller frame>
+    #  return val                  <- sc2
+    #  return val
+    #  argument
+    #  argument
+    #  argument
+    #  argument
+    #  call frame
+    #  call frame                  <- cfr
+    #  (IPInt locals)
+    #  (IPInt stack)
+    #  argument 0
+    #  ...
+    #  argument n-1
+    #  argument n                  <- sc1
+    #  entrypoint, targetInstance
+    #  saved MC/PC
+    #  return address, saved CFR   <- sp
 
     mintArgDispatch()
 
@@ -5879,15 +5949,19 @@ mintAlign(_stackeight)
     storeq sc2, 8[sc3]
     mintArgDispatch()
 
+# Since we're writing into the same frame, we're going to first push stack arguments onto the stack.
+# Once we're done, we'll copy them back down into the new frame, to avoid having to deal with writing over
+# arguments lower down on the stack.
+
 mintAlign(_tail_stackzero)
-    mintPop(PC)
-    storeq PC, [sc2]
+    mintPop(sc3)
+    storeq sc3, [sp]
     mintArgDispatch()
 
 mintAlign(_tail_stackeight)
-    mintPop(PC)
-    subp 16, sc2
-    storeq PC, 8[sc2]
+    mintPop(sc3)
+    subp 16, sp
+    storeq sc3, 8[sp]
     mintArgDispatch()
 
 mintAlign(_gap)
@@ -5895,7 +5969,7 @@ mintAlign(_gap)
     mintArgDispatch()
 
 mintAlign(_tail_gap)
-    subp 16, sc2
+    subp 16, sp
     mintArgDispatch()
 
 mintAlign(_tail_call)
@@ -5936,31 +6010,33 @@ _wasm_ipint_call_return_location_wide32:
     loadp ThisArgumentOffset[cfr], sc0
     move sc0, sp
 
-    # call frame        <- sp
-    # call frame
-    # call frame
-    # call frame
-    # call frame return
-    # call frame return
-    # PL, wasmInstance  <- sc3
-    # t3, t3
-    # reserved
-    # reserved
-    # arg
+    # <first non-arg>   <- t3
     # arg
     # ...
     # arg
-    # <first non-arg>   <- t3
+    # arg
+    # reserved
+    # reserved
+    # t3, t3
+    # PL, wasmInstance  <- sc3
+    # call frame return
+    # call frame return
+    # call frame
+    # call frame
+    # call frame
+    # call frame        <- sp
 
     loadi [MC], sc3
     advanceMC(IPInt::CallReturnMetadata::resultBytecode)
     leap [sp, sc3], sc3
-    addp FirstArgumentOffset - CallerFrameAndPCSize, sp
 
     const mintRetSrc = sc1
     const mintRetDst = sc2
 
-    move sp, mintRetSrc
+    loadi [MC], sc1
+    advanceMC(4)
+    leap [sp, mintRetSrc], mintRetSrc
+
     loadp 2*SlotSize[sc3], mintRetDst
 
     mintRetDispatch()
@@ -6075,21 +6151,21 @@ mintAlign(_stack_gap)
 
 mintAlign(_end)
 
-    # call frame
-    # call frame
-    # call frame
-    # call frame
-    # call frame return
-    # call frame return <- sp
-    # PL, wasmInstance  <- sc3
-    # t3, t3
-    # return result     <- mintRetDst => new SP
-    # return result
-    # return result
+    # <first non-arg>   <- t3
     # return result
     # ...
     # return result
-    # <first non-arg>   <- t3
+    # return result
+    # return result
+    # return result     <- mintRetDst => new SP
+    # t3, t3
+    # PL, wasmInstance  <- sc3
+    # call frame return <- sp
+    # call frame return
+    # call frame
+    # call frame
+    # call frame
+    # call frame
 
     # note: we don't care about t3 anymore
 if ARM64 or ARM64E
@@ -6112,11 +6188,63 @@ end
     nextIPIntInstruction()
 
 .ipint_perform_tail_call:
+
+    #  <caller frame>
+    #  return val                  <- sc2
+    #  return val
+    #  argument
+    #  argument
+    #  argument
+    #  argument
+    #  call frame
+    #  call frame                  <- cfr
+    #  (IPInt locals)
+    #  (IPInt stack)
+    #  argument 0
+    #  ...
+    #  argument n-1
+    #  argument n                  <- sc1
+    #  entrypoint, targetInstance
+    #  saved MC/PC
+    #  return address, saved CFR
+    #  stack arguments
+    #  stack arguments
+    #  stack arguments
+    #  stack arguments             <- sp
+
+    # load the size of stack values in, and subtract that from sc2
+    loadi [MC], sc3
+    mulq -SlotSize, sc3
+
+    # copy from sc2 downwards
+.ipint_tail_call_copy_stackargs_loop:
+    btiz sc3, .ipint_tail_call_copy_stackargs_loop_end
+if ARM64 or ARM64E
+    loadpairq [sp], sc0, sc1
+    storepairq sc0, sc1, [sc2, sc3]
+else
+    loadq [sp], sc0
+    loadq 8[sp], sc1
+    storeq sc0, [sc2, sc3]
+    storeq sc1, 8[sc2, sc3]
+end
+
+    addq 16, sc3
+    addq 16, sp
+    jmp .ipint_tail_call_copy_stackargs_loop
+
+.ipint_tail_call_copy_stackargs_loop_end:
+
+    # reload it here, which isn't optimal, but we don't really have registers
+    loadi [MC], sc3
+    mulq SlotSize, sc3
+    subp sc3, sc2
+
     # re-setup the call frame, and load our return address in
-    subp CallFrameHeaderSize + 8, sc2
+    subp FirstArgumentOffset, sc2
 if X86_64
     pop sc1, sc0
-    storep sc0, ReturnPC[sp]
+    storep sc0, ReturnPC[sc2]
 elsif ARM64 or ARM64E or ARMv7 or RISCV64
     pop sc1, lr
 end
@@ -6125,11 +6253,34 @@ end
 
     # take off the last two values we stored, and move SP down to make it look like a fresh frame
     pop targetInstance, ws0
-    addp CallerFrameAndPCSize, sc2, sp
 
+    #  <caller frame>
+    #  return val
+    #  return val
+    #  ...
+    #  argument
+    #  argument
+    #  argument
+    #  argument
+    #  argument                    <- cfr
+    #  argument
+    #  argument
+    #  <to be frame>
+    #  <to be frame>               <- NEW SP
+    #  <to be frame>               <- sc2
+    #  argument 0
+    #  ...
+    #  argument n-1
+    #  argument n                  <- sc1
+
+    # on ARM: lr = return address
+
+    move sc2, sp
+    addp CallerFrameAndPCSize, sp
 if ARM64E
     addp CallerFrameAndPCSize, cfr, ws2
 end
+    # saved cfr
     move sc1, cfr
 
     # save new Callee

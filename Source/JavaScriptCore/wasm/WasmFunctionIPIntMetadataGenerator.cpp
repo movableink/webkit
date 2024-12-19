@@ -47,6 +47,13 @@ unsigned FunctionIPIntMetadataGenerator::addSignature(const TypeDefinition& sign
     return index;
 }
 
+void FunctionIPIntMetadataGenerator::setTailCall(uint32_t functionIndex, bool isImportedFunctionFromFunctionIndexSpace)
+{
+    m_tailCallSuccessors.set(functionIndex);
+    if (isImportedFunctionFromFunctionIndexSpace)
+        setTailCallClobbersInstance();
+}
+
 void FunctionIPIntMetadataGenerator::addLength(size_t length)
 {
     IPInt::InstructionLengthMetadata instructionLength {

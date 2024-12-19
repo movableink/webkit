@@ -57,6 +57,7 @@ Ref<CalleeGroup> CalleeGroup::createFromExisting(MemoryMode mode, const CalleeGr
 CalleeGroup::CalleeGroup(MemoryMode mode, const CalleeGroup& other)
     : m_calleeCount(other.m_calleeCount)
     , m_mode(mode)
+    , m_ipintCallees(other.m_ipintCallees)
     , m_llintCallees(other.m_llintCallees)
     , m_jsEntrypointCallees(other.m_jsEntrypointCallees)
     , m_callers(m_calleeCount)

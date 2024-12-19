@@ -82,6 +82,8 @@ public:
     FunctionCodeIndex functionIndex() const { return m_functionIndex; }
     const BitVector& tailCallSuccessors() const { return m_tailCallSuccessors; }
     bool tailCallClobbersInstance() const { return m_tailCallClobbersInstance ; }
+    void setTailCall(uint32_t, bool);
+    void setTailCallClobbersInstance() { m_tailCallClobbersInstance = true; }
 
     FixedBitVector&& takeCallees() { return WTFMove(m_callees); }
 

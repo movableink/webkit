@@ -39,6 +39,7 @@
 #include "WasmFunctionParser.h"
 #include "WasmGeneratorTraits.h"
 #include <variant>
+#include <wtf/Assertions.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/RefPtr.h>
 
@@ -517,6 +518,14 @@ public:
     PartialResult WARN_UNUSED_RETURN addUnreachable();
     PartialResult WARN_UNUSED_RETURN addCrash();
 
+    inline void assertAboutStackSize(bool condition)
+    {
+        // There's a few cases that we only want to assert our stack contents if SIMD isn't enabled.
+        // Since IPInt doesn't support SIMD, we don't update the stack size correctly, but this is
+        // not an issue because the code never gets run.
+        ASSERT_UNUSED(condition, m_usesSIMD || condition);
+    }
+
     void setParser(FunctionParser<IPIntGenerator>* parser) { m_parser = parser; };
     size_t getCurrentInstructionLength()
     {
@@ -533,13 +542,8 @@ public:
     void willParseExtendedOpcode() { }
     void didParseOpcode()
     {
-        // IPInt doesn't support SIMD yet, but we end up with validation errors if we parse a SIMD
-        // function, since we're not updating the stack height in the generator. We're never going
-        // to run the code, so we don't care.
-        if (m_usesSIMD)
-            return;
         if (!m_parser->unreachableBlocks())
-            ASSERT(m_parser->getStackHeightInValues() == m_stackSize.value());
+            assertAboutStackSize(m_parser->getStackHeightInValues() == m_stackSize.value());
     }
     void dump(const ControlStack&, const Stack*);
 
@@ -2060,8 +2064,9 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addBlock(BlockSignature signatu
     });
     ++coalesceDebt;
 
-    tryToResolveEntryTarget(block.m_index, { curPC(), curMC() }, m_metadata->m_metadata.data());
+    IPIntLocation here = { curPC(), curMC() };
     m_metadata->addBlankSpace<IPInt::BlockMetadata>();
+    tryToResolveEntryTarget(block.m_index, here, m_metadata->m_metadata.data());
 
     coalesceControlFlow();
 
@@ -2089,7 +2094,7 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addLoop(BlockSignature signatur
     m_metadata->appendMetadata(md);
 
     // Loop OSR
-    ASSERT(m_parser->getStackHeightInValues() + newStack.size() == m_stackSize.value());
+    assertAboutStackSize(m_parser->getStackHeightInValues() + newStack.size() == m_stackSize.value());
     unsigned numOSREntryDataValues = m_stackSize.value();
 
     // Note the +1: we do this to avoid having 0 as a key in the map, since the current map can't handle 0 as a key
@@ -2215,7 +2220,9 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addTryTable(BlockSignature sign
     });
     ++coalesceDebt;
 
-    tryToResolveEntryTarget(result.m_index, { curPC(), curMC() }, m_metadata->m_metadata.data());
+    IPIntLocation here = { curPC(), curMC() };
+    m_metadata->addBlankSpace<IPInt::BlockMetadata>();
+    tryToResolveEntryTarget(result.m_index, here, m_metadata->m_metadata.data());
 
     result.m_tryTableTargets.appendUsingFunctor(targets.size(),
         [&](unsigned i) -> ControlType::TryTableTarget {
@@ -2228,8 +2235,6 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addTryTable(BlockSignature sign
             };
         }
     );
-
-    m_metadata->addBlankSpace<IPInt::BlockMetadata>();
 
     // append all the branch data first
     for (auto& target : targets) {
@@ -2280,7 +2285,7 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addCatchToUnreachable(unsigned 
     for (unsigned i = 0; i < signature.argumentCount(); i++)
         results.append(Value { });
 
-    ASSERT(block.stackSize() == m_parser->getControlEntryStackHeightInValues());
+    assertAboutStackSize(block.stackSize() == m_parser->getControlEntryStackHeightInValues());
     m_stackSize = block.stackSize();
     changeStackSize(signature.argumentCount());
 
@@ -2320,7 +2325,7 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addCatchAllToUnreachable(Contro
     else
         block.m_catchKind = CatchKind::CatchAll;
 
-    ASSERT(block.stackSize() == m_parser->getControlEntryStackHeightInValues());
+    assertAboutStackSize(block.stackSize() == m_parser->getControlEntryStackHeightInValues());
     m_stackSize = block.stackSize();
 
     // FIXME: If this is actually unreachable we shouldn't need metadata.
@@ -2498,8 +2503,8 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addSwitch(ExpressionType, const
             .toKeep = safeCast<uint16_t>(block->branchTargetArity())
         };
         IPIntLocation here = { curPC(), curMC() };
-        tryToResolveBranchTarget(*block, here, m_metadata->m_metadata.data());
         m_metadata->appendMetadata(target);
+        tryToResolveBranchTarget(*block, here, m_metadata->m_metadata.data());
     }
     IPInt::BranchTargetMetadata defaultTarget {
         .block = { .deltaPC = 0xbeef, .deltaMC = 0xbeef },
@@ -2507,8 +2512,8 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addSwitch(ExpressionType, const
         .toKeep = safeCast<uint16_t>(defaultJump.branchTargetArity())
     };
     IPIntLocation here = { curPC(), curMC() };
-    tryToResolveBranchTarget(defaultJump, here, m_metadata->m_metadata.data());
     m_metadata->appendMetadata(defaultTarget);
+    tryToResolveBranchTarget(defaultJump, here, m_metadata->m_metadata.data());
 
     return { };
 }
@@ -2670,6 +2675,9 @@ void IPIntGenerator::addCallCommonData(const FunctionSignature& signature, const
         mINTBytecode.append(static_cast<uint8_t>(IPInt::CallArgumentBytecode::StackAlign));
     }
 
+    for (unsigned i = stackArgs; i < wasmCallingConvention().numberOfStackValues(signature); i += 2)
+        mINTBytecode.append(static_cast<uint8_t>(IPInt::CallArgumentBytecode::StackAlign));
+
     auto size = m_metadata->m_metadata.size();
     m_metadata->addBlankSpace(mINTBytecode.size());
     auto data = m_metadata->m_metadata.data() + size;
@@ -2695,6 +2703,8 @@ void IPIntGenerator::addCallCommonData(const FunctionSignature& signature, const
     ASSERT_UNUSED(NUM_MINT_RET_FPRS, wasmCallingConvention().fprArgs.size() <= NUM_MINT_RET_FPRS);
 
     bool hasSeenStackArgument = false;
+    uint32_t firstStackArgumentSPOffset = 0;
+
     for (size_t i = 0; i < signature.returnCount(); ++i) {
         auto loc = returnConvention.results[i].location;
         if (loc.isGPR()) {
@@ -2706,9 +2716,9 @@ void IPIntGenerator::addCallCommonData(const FunctionSignature& signature, const
         } else if (loc.isStackArgument()) {
             if (!hasSeenStackArgument) {
                 hasSeenStackArgument = true;
+                // If our first argument starts further down the frame, we need to push a bunch of empty values
                 // If our first stack argument is in an "odd" slot, we need to skip one slot.
-                if (loc.offsetFromSP() % 16)
-                    mINTBytecode.append(static_cast<uint8_t>(IPInt::CallResultBytecode::StackGap));
+                firstStackArgumentSPOffset = loc.offsetFromSP();
             }
             mINTBytecode.append(static_cast<uint8_t>(IPInt::CallResultBytecode::ResultStack));
         }
@@ -2717,6 +2727,7 @@ void IPIntGenerator::addCallCommonData(const FunctionSignature& signature, const
     }
     mINTBytecode.append(static_cast<uint8_t>(IPInt::CallResultBytecode::End));
 
+    m_metadata->appendMetadata(firstStackArgumentSPOffset);
     size = m_metadata->m_metadata.size();
     m_metadata->addBlankSpace(mINTBytecode.size());
     data = m_metadata->m_metadata.data() + size;
@@ -2756,6 +2767,9 @@ void IPIntGenerator::addTailCallCommonData(const FunctionSignature& signature)
         mINTBytecode.append(static_cast<uint8_t>(IPInt::CallArgumentBytecode::TailStackAlign));
     }
 
+    for (unsigned i = stackArgs; i < WTF::roundUpToMultipleOf(stackAlignmentRegisters(), wasmCallingConvention().numberOfStackValues(signature)); i += stackAlignmentRegisters())
+        mINTBytecode.append(static_cast<uint8_t>(IPInt::CallArgumentBytecode::TailStackAlign));
+
     auto size = m_metadata->m_metadata.size();
     m_metadata->addBlankSpace(mINTBytecode.size());
     auto data = m_metadata->m_metadata.data() + size;
@@ -2764,6 +2778,15 @@ void IPIntGenerator::addTailCallCommonData(const FunctionSignature& signature)
         data += 1;
         mINTBytecode.removeLast();
     }
+
+    uint32_t numStackValues = WTF::roundUpToMultipleOf(stackAlignmentRegisters(), wasmCallingConvention().numberOfStackValues(signature));
+
+    // each stack value is 8B, so to calculate stack size in V128, we need to divide by two
+    if (m_stackSize + numStackValues / 2 > m_maxStackSize)
+        m_maxStackSize = m_stackSize + numStackValues / 2;
+
+    ASSERT(!(numStackValues % 2));
+    m_metadata->appendMetadata(numStackValues);
 }
 
 PartialResult WARN_UNUSED_RETURN IPIntGenerator::addCall(FunctionSpaceIndex index, const TypeDefinition& type, ArgumentList&, ResultList& results, CallType callType)
@@ -2776,6 +2799,7 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addCall(FunctionSpaceIndex inde
         // jump to entrypoint
         changeStackSize(-signature.argumentCount());
         const auto& callingConvention = wasmCallingConvention();
+        m_metadata->setTailCall(index, m_info.isImportedFunctionFromFunctionIndexSpace(index));
 
         const TypeIndex callerTypeIndex = m_info.internalFunctionTypeIndices[m_functionIndex];
         const TypeDefinition& callerTypeDefinition = TypeInformation::get(callerTypeIndex).expand();
@@ -2819,6 +2843,8 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addCallIndirect(unsigned tableI
     if (callType == CallType::TailCall) {
         const unsigned callIndex = 1;
         changeStackSize(-signature.argumentCount() - callIndex);
+        m_metadata->setTailCallClobbersInstance();
+
         // on a tail call, we need to:
         // roll back to old SP, shift SP to accommodate arguments
         // put arguments into registers / sp (reutilize mINT)
@@ -2869,6 +2895,8 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addCallRef(const TypeDefinition
     if (callType == CallType::TailCall) {
         const unsigned callIndex = 1;
         changeStackSize(-signature.argumentCount() - callIndex);
+        m_metadata->setTailCallClobbersInstance();
+
         // on a tail call, we need to:
         // roll back to old SP, shift SP to accommodate arguments
         // put arguments into registers / sp (reutilize mINT)
