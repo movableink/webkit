@@ -27,6 +27,7 @@
 
 #if (PLATFORM(IOS) || PLATFORM(VISION)) && USE(SYSTEM_PREVIEW)
 
+#import "PlatformUtilities.h"
 #import "TestUIDelegate.h"
 #import "TestWKWebViewController.h"
 #import "Utilities.h"

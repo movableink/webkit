@@ -26,6 +26,7 @@
 #import "config.h"
 #import "TestWKWebView.h"
 
+#import "CGImagePixelReader.h"
 #import "ClassMethodSwizzler.h"
 #import "InstanceMethodSwizzler.h"
 #import "PlatformUtilities.h"
@@ -33,6 +34,7 @@
 #import "TestNavigationDelegate.h"
 #import "Utilities.h"
 
+#import <WebCore/Color.h>
 #import <WebKit/WKContentWorld.h>
 #import <WebKit/WKUIDelegate.h>
 #import <WebKit/WKWebViewConfigurationPrivate.h>
@@ -47,6 +49,7 @@
 #import <wtf/BlockPtr.h>
 #import <wtf/Deque.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/Vector.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
 
 #if PLATFORM(MAC)
@@ -1128,6 +1131,23 @@ static InputSessionChangeCount nextInputSessionChangeCount()
     if (midpoint.count != 2)
         return std::nullopt;
     return CGPointMake(midpoint.firstObject.doubleValue, midpoint.lastObject.doubleValue);
+}
+
+- (Vector<WebCore::Color>)sampleColors
+{
+    return [self sampleColorsWithInterval:TestWebKitAPI::CGImagePixelReader::defaultWebViewSamplingInterval];
+}
+
+- (Vector<WebCore::Color>)sampleColorsWithInterval:(unsigned)interval
+{
+    [self waitForNextPresentationUpdate];
+    Vector<WebCore::Color> samples;
+    TestWebKitAPI::CGImagePixelReader reader { [self snapshotAfterScreenUpdates] };
+    for (unsigned x = interval; x < reader.width() - interval; x += interval) {
+        for (unsigned y = interval; y < reader.height() - interval; y += interval)
+            samples.append(reader.at(x, y));
+    }
+    return samples;
 }
 
 #if PLATFORM(IOS_FAMILY)

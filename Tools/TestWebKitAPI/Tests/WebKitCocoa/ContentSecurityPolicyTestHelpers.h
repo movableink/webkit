@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,35 +25,10 @@
 
 #pragma once
 
-#include <CoreGraphics/CoreGraphics.h>
-#include <wtf/Forward.h>
-#include <wtf/RetainPtr.h>
-
-namespace WebCore {
-class Color;
-}
+OBJC_CLASS TestWKWebView;
 
 namespace TestWebKitAPI {
 
-// FIXME: We can unify most of this helper class with the logic in `TestPDFPage::colorAtPoint`, and deploy this
-// helper class in several other tests that read pixel data from CGImages.
-class CGImagePixelReader {
-    WTF_MAKE_FAST_ALLOCATED; WTF_MAKE_NONCOPYABLE(CGImagePixelReader);
-public:
-    CGImagePixelReader(CGImageRef);
+void runLoadPDFWithSandboxCSPDirectiveTest(TestWKWebView *);
 
-    bool isTransparentBlack(unsigned x, unsigned y) const;
-    WebCore::Color at(unsigned x, unsigned y) const;
-
-    unsigned width() const { return m_width; }
-    unsigned height() const { return m_height; }
-
-    static constexpr auto defaultWebViewSamplingInterval { 100 };
-
-private:
-    unsigned m_width { 0 };
-    unsigned m_height { 0 };
-    RetainPtr<CGContextRef> m_context;
-};
-
-} // namespace TestWebKitAPI
+}

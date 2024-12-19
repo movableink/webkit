@@ -138,36 +138,36 @@ TEST(WebKit, RestoreLocalStorageFromEphemeralDataStore)
 
 @end
 
-static NSString *mainFrameString = @"<script> \
-    function postResult(event) \
-    { \
-        window.webkit.messageHandlers.testHandler.postMessage(event.data); \
-    } \
-    addEventListener('message', postResult, false); \
-    </script> \
-    <iframe src='https://127.0.0.1:9091/'>";
-
-static constexpr auto frameBytes = R"TESTRESOURCE(
-<script>
-function postMessage(message)
-{
-    parent.postMessage(message, '*');
-}
-function item()
-{
-    result = localStorage.getItem('key');
-    if (!result) {
-        localStorage.setItem('key', 'value');
-        postMessage('Item is set');
-    } else
-        postMessage(result);
-}
-item();
-</script>
-)TESTRESOURCE"_s;
-
 static void testRestoreLocalStorageThirdPartyIFrame(RetainPtr<WKWebsiteDataStore> websiteDataStore)
 {
+    static NSString *mainFrameString = @"<script> \
+        function postResult(event) \
+        { \
+            window.webkit.messageHandlers.testHandler.postMessage(event.data); \
+        } \
+        addEventListener('message', postResult, false); \
+        </script> \
+        <iframe src='https://127.0.0.1:9091/'>";
+
+    static constexpr auto frameBytes = R"TESTRESOURCE(
+    <script>
+    function postMessage(message)
+    {
+        parent.postMessage(message, '*');
+    }
+    function item()
+    {
+        result = localStorage.getItem('key');
+        if (!result) {
+            localStorage.setItem('key', 'value');
+            postMessage('Item is set');
+        } else
+            postMessage(result);
+    }
+    item();
+    </script>
+    )TESTRESOURCE"_s;
+
     // Fetch Local Storage.
 
     // Clear the data store.

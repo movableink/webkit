@@ -86,6 +86,7 @@ Tests/WebKitCocoa/ConsoleMessageWithDetails.mm
 Tests/WebKitCocoa/ContentFiltering.mm
 Tests/WebKitCocoa/ContentRuleListNotification.mm
 Tests/WebKitCocoa/ContentSecurityPolicy.mm
+Tests/WebKitCocoa/ContentSecurityPolicyTestHelpers.mm
 Tests/WebKitCocoa/ContextMenus.mm
 Tests/WebKitCocoa/CookieAcceptPolicy.mm
 Tests/WebKitCocoa/CookiePrivateBrowsing.mm

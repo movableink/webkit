@@ -28,6 +28,8 @@
 #if ENABLE(UNIFIED_PDF)
 
 #import "CGImagePixelReader.h"
+#import "ContentSecurityPolicyTestHelpers.h"
+#import "HTTPServer.h"
 #import "IOSMouseEventTestHarness.h"
 #import "MouseSupportUIDelegate.h"
 #import "PlatformUtilities.h"
@@ -39,6 +41,7 @@
 #import "WKPrinting.h"
 #import "WKWebViewConfigurationExtras.h"
 #import "WKWebViewForTestingImmediateActions.h"
+#import <WebCore/Color.h>
 #import <WebCore/ColorSerialization.h>
 #import <WebKit/WKNavigationDelegatePrivate.h>
 #import <WebKit/WKPreferencesPrivate.h>
@@ -78,20 +81,6 @@
 
 namespace TestWebKitAPI {
 
-static constexpr auto defaultSamplingInterval = 100;
-static Vector<WebCore::Color> sampleColorsInWebView(TestWKWebView *webView, unsigned interval = defaultSamplingInterval)
-{
-    [webView waitForNextPresentationUpdate];
-
-    Vector<WebCore::Color> samples;
-    CGImagePixelReader reader { [webView snapshotAfterScreenUpdates] };
-    for (unsigned x = interval; x < reader.width() - interval; x += interval) {
-        for (unsigned y = interval; y < reader.height() - interval; y += interval)
-            samples.append(reader.at(x, y));
-    }
-    return samples;
-}
-
 #if PLATFORM(MAC)
 
 UNIFIED_PDF_TEST(KeyboardScrollingInSinglePageMode)
@@ -108,14 +97,14 @@ UNIFIED_PDF_TEST(KeyboardScrollingInSinglePageMode)
     [webView waitForNextPresentationUpdate];
     [webView setMagnification:2];
 
-    auto colorsBeforeScrolling = sampleColorsInWebView(webView.get());
+    auto colorsBeforeScrolling = [webView sampleColors];
     Vector<WebCore::Color> colorsAfterScrollingDown;
     while (true) {
         [webView sendKey:@"ArrowDown" code:NSDownArrowFunctionKey isDown:YES modifiers:0];
         Util::runFor(200_ms);
         [webView sendKey:@"ArrowDown" code:NSDownArrowFunctionKey isDown:NO modifiers:0];
         Util::runFor(50_ms);
-        colorsAfterScrollingDown = sampleColorsInWebView(webView.get());
+        colorsAfterScrollingDown = [webView sampleColors];
         if (colorsBeforeScrolling != colorsAfterScrollingDown)
             break;
     }
@@ -126,7 +115,7 @@ UNIFIED_PDF_TEST(KeyboardScrollingInSinglePageMode)
         Util::runFor(200_ms);
         [webView sendKey:@"ArrowRight" code:NSRightArrowFunctionKey isDown:NO modifiers:0];
         Util::runFor(50_ms);
-        colorsAfterScrollingRight = sampleColorsInWebView(webView.get());
+        colorsAfterScrollingRight = [webView sampleColors];
         if (colorsAfterScrollingDown != colorsAfterScrollingRight)
             break;
     }
@@ -227,7 +216,7 @@ UNIFIED_PDF_TEST(PasswordFormShouldDismissAfterNavigation)
     RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 600, 600) configuration:configurationForWebViewTestingUnifiedPDF().get() addToWindow:YES]);
 
     [webView synchronouslyLoadRequest:[NSURLRequest requestWithURL:[NSBundle.test_resourcesBundle URLForResource:@"notEncrypted" withExtension:@"pdf"]]];
-    auto colorsBefore = sampleColorsInWebView(webView.get(), 2);
+    auto colorsBefore = [webView sampleColorsWithInterval:2];
 
     RetainPtr request = [NSURLRequest requestWithURL:[NSBundle.test_resourcesBundle URLForResource:@"encrypted" withExtension:@"pdf"]];
     [webView synchronouslyLoadRequest:request.get()];
@@ -238,7 +227,7 @@ UNIFIED_PDF_TEST(PasswordFormShouldDismissAfterNavigation)
     Util::runFor(50_ms);
 
     [webView objectByEvaluatingJavaScript:@"internals.unlockPDFDocumentForTesting(document.querySelector('embed'), 'test')"];
-    auto colorsAfter = sampleColorsInWebView(webView.get(), 2);
+    auto colorsAfter = [webView sampleColorsWithInterval:2];
 
     EXPECT_EQ(colorsBefore, colorsAfter);
 }
@@ -293,6 +282,11 @@ UNIFIED_PDF_TEST(MouseDidMoveOverPDF)
 }
 
 #endif
+
+UNIFIED_PDF_TEST(LoadPDFWithSandboxCSPDirective)
+{
+    runLoadPDFWithSandboxCSPDirectiveTest([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configurationForWebViewTestingUnifiedPDF().get()]);
+}
 
 } // namespace TestWebKitAPI
 

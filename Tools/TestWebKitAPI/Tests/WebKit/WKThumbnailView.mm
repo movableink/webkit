@@ -35,6 +35,7 @@
 #import "TestWKWebView.h"
 #import "UISideCompositingScope.h"
 #import "WKWebViewConfigurationExtras.h"
+#import <WebCore/Color.h>
 #import <WebKit/WKWebViewPrivate.h>
 #import <WebKit/_WKThumbnailView.h>
 #import <wtf/RetainPtr.h>

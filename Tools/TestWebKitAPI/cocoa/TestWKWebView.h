@@ -24,6 +24,7 @@
  */
 
 #import <WebKit/WebKit.h>
+#import <wtf/Forward.h>
 #import <wtf/RetainPtr.h>
 
 @class _WKFrameTreeNode;
@@ -65,6 +66,10 @@ struct AutocorrectionContext {
 };
 
 } // namespace TestWebKitAPI
+
+namespace WebCore {
+class Color;
+}
 
 @interface WKWebView (TestWebKitAPI)
 #if PLATFORM(IOS_FAMILY)
@@ -165,6 +170,8 @@ struct AutocorrectionContext {
 - (void)waitForPendingMouseEvents;
 - (void)focus;
 - (std::optional<CGPoint>)getElementMidpoint:(NSString *)selector;
+- (Vector<WebCore::Color>)sampleColors;
+- (Vector<WebCore::Color>)sampleColorsWithInterval:(unsigned)interval;
 @end
 
 #if PLATFORM(IOS_FAMILY)

@@ -29,6 +29,7 @@
 #import "PlatformUtilities.h"
 #import "TestUIDelegate.h"
 #import "TestWKWebView.h"
+#import <WebCore/Color.h>
 #import <WebKit/WKFrameInfoPrivate.h>
 #import <WebKit/WKWebViewPrivate.h>
 #import <WebKit/_WKFrameTreeNode.h>

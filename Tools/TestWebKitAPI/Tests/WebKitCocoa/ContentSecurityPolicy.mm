@@ -25,6 +25,7 @@
 
 #import "config.h"
 
+#import "ContentSecurityPolicyTestHelpers.h"
 #import "HTTPServer.h"
 #import "TestNavigationDelegate.h"
 #import "TestWKWebView.h"
@@ -125,4 +126,9 @@ TEST(ContentSecurityPolicy, InvalidRequireTrustedTypesFor)
     auto webView = adoptNS([WKWebView new]);
     [webView loadRequest:server.request()];
     [webView _test_waitForDidFinishNavigation];
+}
+
+TEST(ContentSecurityPolicy, LoadPDFWithSandboxCSPDirective)
+{
+    TestWebKitAPI::runLoadPDFWithSandboxCSPDirectiveTest([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);
 }

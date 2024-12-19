@@ -39,6 +39,7 @@
 #import "UIKitSPIForTesting.h"
 #import "UserInterfaceSwizzler.h"
 #import "WKWebViewConfigurationExtras.h"
+#import <WebCore/Color.h>
 #import <WebKit/WKProcessPoolPrivate.h>
 #import <WebKit/WKWebViewConfigurationPrivate.h>
 #import <WebKit/WKWebViewPrivate.h>
