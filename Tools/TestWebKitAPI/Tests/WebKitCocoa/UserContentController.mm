@@ -1331,6 +1331,52 @@ TEST(WKUserContentController, AllowAutofill)
     EXPECT_WK_STREQ(@"undefined", resultValue.get());
 }
 
+#if WK_HAVE_C_SPI
+
+TEST(WKUserContentController, DisableAutofillSpellcheck)
+{
+    scriptMessagesVector.clear();
+    isDoneWithNavigation = false;
+    receivedScriptMessage = false;
+
+    RetainPtr contentWorldConfiguration = adoptNS([[_WKContentWorldConfiguration alloc] init]);
+    [contentWorldConfiguration setName:@"TestWorldAllowingAutofill"];
+    [contentWorldConfiguration setAllowAutofill:YES];
+
+    RetainPtr world = [WKContentWorld _worldWithConfiguration:contentWorldConfiguration.get()];
+    RetainPtr handler = adoptNS([[ScriptMessageHandler alloc] init]);
+    RetainPtr userScript = adoptNS([[WKUserScript alloc] _initWithSource:@"onload = () => { "
+        " document.body.innerHTML = '<input><input>'; document.querySelectorAll('input')[1].autofillSpellcheck = false;"
+        " webkit.messageHandlers.testHandler.postMessage(Array.from(document.querySelectorAll('input')).map((input) => input.autofillSpellcheck).join(','))"
+        " }"
+        injectionTime:WKUserScriptInjectionTimeAtDocumentStart forMainFrameOnly:NO includeMatchPatternStrings:@[] excludeMatchPatternStrings:@[] associatedURL:nil contentWorld:world.get() deferRunningUntilNotification:NO]);
+
+    RetainPtr configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    WKRetainPtr<WKContextRef> context = adoptWK(TestWebKitAPI::Util::createContextForInjectedBundleTest("InternalsInjectedBundleTest"));
+    [configuration setProcessPool:(WKProcessPool *)context.get()];
+    [[configuration userContentController] _addScriptMessageHandler:handler.get() name:@"testHandler" contentWorld:world.get()];
+    [[configuration userContentController] addUserScript:userScript.get()];
+
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
+
+    RetainPtr delegate = adoptNS([[SimpleNavigationDelegate alloc] init]);
+    [webView setNavigationDelegate:delegate.get()];
+
+    RetainPtr request = [NSURLRequest requestWithURL:[NSBundle.test_resourcesBundle URLForResource:@"simple" withExtension:@"html"]];
+
+    isDoneWithNavigation = false;
+    [webView loadRequest:request.get()];
+
+    TestWebKitAPI::Util::run(&receivedScriptMessage);
+    receivedScriptMessage = false;
+    EXPECT_WK_STREQ(@"true,false", (NSString *)[scriptMessagesVector[0] body]);
+
+    EXPECT_FALSE([[webView objectByEvaluatingJavaScript:@"internals.isSpellcheckDisabledExceptTextReplacement(document.querySelectorAll('input')[0])"] boolValue]);
+    EXPECT_TRUE([[webView objectByEvaluatingJavaScript:@"internals.isSpellcheckDisabledExceptTextReplacement(document.querySelectorAll('input')[1])"] boolValue]);
+}
+
+#endif
+
 #if PLATFORM(MAC)
 bool didCallDidClickAutoFillButtonWithUserInfo = NO;
 
