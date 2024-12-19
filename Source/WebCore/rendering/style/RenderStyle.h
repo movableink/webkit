@@ -235,7 +235,6 @@ enum class TextZoom : bool;
 enum class TouchAction : uint8_t;
 enum class TransformBox : uint8_t;
 enum class TransformStyle3D : uint8_t;
-enum class TypographicMode : bool;
 enum class UnicodeBidi : uint8_t;
 enum class UsedClear : uint8_t;
 enum class UsedFloat : uint8_t;
