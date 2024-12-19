@@ -217,7 +217,7 @@ struct ProcessSyncData {
 """
 
 
-def generate_process_sync_data_header(synched_datas):
+def generate_process_sync_data_header(synched_datas, document_synched_datas):
     result = []
     result.append(_header_license)
     result.append('#pragma once\n')
@@ -236,6 +236,22 @@ def generate_process_sync_data_header(synched_datas):
         if data.conditional is not None:
             result.append('#endif')
 
+    result.append("};")
+    result.append("")
+    result.append("static const ProcessSyncDataType allDocumentSyncDataTypes[] = {")
+    data = document_synched_datas[0]
+    if data.conditional is not None:
+        result.append('#if %s' % data.conditional)
+    result.append('    ProcessSyncDataType::%s' % data.name)
+    if data.conditional is not None:
+        result.append('#endif')
+
+    for data in document_synched_datas[1:]:
+        if data.conditional is not None:
+            result.append('#if %s' % data.conditional)
+        result.append('    , ProcessSyncDataType::%s' % data.name)
+        if data.conditional is not None:
+            result.append('#endif')
     result.append("};")
     result.append("")
 
@@ -580,10 +596,10 @@ def main(argv):
     with open(output_directory + 'ProcessSyncClient.cpp', "w+") as output:
         output.write(generate_process_sync_client_impl(synched_datas))
 
-    with open(output_directory + 'ProcessSyncData.h', "w+") as output:
-        output.write(generate_process_sync_data_header(synched_datas))
-
     document_synched_datas = sort_datas_for_document_sync_data_order(synched_datas)
+
+    with open(output_directory + 'ProcessSyncData.h', "w+") as output:
+        output.write(generate_process_sync_data_header(synched_datas, document_synched_datas))
 
     with open(output_directory + 'ProcessSyncData.serialization.in', "w+") as output:
         output.write(generate_process_sync_data_serialiation_in(synched_datas, document_synched_datas))

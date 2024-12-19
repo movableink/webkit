@@ -45,17 +45,17 @@ void ProcessSyncClient::broadcastMainFrameURLChangeToOtherProcesses(const URL& d
     dataVariant.emplace<enumToUnderlyingType(ProcessSyncDataType::MainFrameURLChange)>(data);
     broadcastProcessSyncDataToOtherProcesses({ ProcessSyncDataType::MainFrameURLChange, WTFMove(dataVariant) });
 }
-void ProcessSyncClient::broadcastUserDidInteractWithPageToOtherProcesses(const bool& data)
-{
-    ProcessSyncDataVariant dataVariant;
-    dataVariant.emplace<enumToUnderlyingType(ProcessSyncDataType::UserDidInteractWithPage)>(data);
-    broadcastProcessSyncDataToOtherProcesses({ ProcessSyncDataType::UserDidInteractWithPage, WTFMove(dataVariant) });
-}
 void ProcessSyncClient::broadcastIsAutofocusProcessedToOtherProcesses(const bool& data)
 {
     ProcessSyncDataVariant dataVariant;
     dataVariant.emplace<enumToUnderlyingType(ProcessSyncDataType::IsAutofocusProcessed)>(data);
     broadcastProcessSyncDataToOtherProcesses({ ProcessSyncDataType::IsAutofocusProcessed, WTFMove(dataVariant) });
+}
+void ProcessSyncClient::broadcastUserDidInteractWithPageToOtherProcesses(const bool& data)
+{
+    ProcessSyncDataVariant dataVariant;
+    dataVariant.emplace<enumToUnderlyingType(ProcessSyncDataType::UserDidInteractWithPage)>(data);
+    broadcastProcessSyncDataToOtherProcesses({ ProcessSyncDataType::UserDidInteractWithPage, WTFMove(dataVariant) });
 }
 
 } // namespace WebCore

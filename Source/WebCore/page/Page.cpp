@@ -871,11 +871,17 @@ bool Page::autofocusProcessed() const
     return m_topDocumentSyncData->isAutofocusProcessed;
 }
 
+bool Page::topDocumentHasDocumentClass(DocumentClass documentClass) const
+{
+    return m_topDocumentSyncData->documentClasses.contains(documentClass);
+}
+
 void Page::updateProcessSyncData(const ProcessSyncData& data)
 {
     switch (data.type) {
     case ProcessSyncDataType::IsAutofocusProcessed:
     case ProcessSyncDataType::UserDidInteractWithPage:
+    case ProcessSyncDataType::DocumentClasses:
     case ProcessSyncDataType::DocumentURL:
     case ProcessSyncDataType::DocumentSecurityOrigin:
 #if ENABLE(DOM_AUDIO_SESSION)

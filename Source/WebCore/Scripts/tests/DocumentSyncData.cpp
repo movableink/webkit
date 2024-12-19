@@ -34,16 +34,16 @@ namespace WebCore {
 void DocumentSyncData::update(const ProcessSyncData& data)
 {
     switch (data.type) {
-    case ProcessSyncDataType::UserDidInteractWithPage:
-        userDidInteractWithPage = std::get<enumToUnderlyingType(ProcessSyncDataType::UserDidInteractWithPage)>(data.value);
+    case ProcessSyncDataType::IsAutofocusProcessed:
+        isAutofocusProcessed = std::get<enumToUnderlyingType(ProcessSyncDataType::IsAutofocusProcessed)>(data.value);
         break;
 #if ENABLE(DOM_AUDIO_SESSION)
     case ProcessSyncDataType::AudioSessionType:
         audioSessionType = std::get<enumToUnderlyingType(ProcessSyncDataType::AudioSessionType)>(data.value);
         break;
 #endif
-    case ProcessSyncDataType::IsAutofocusProcessed:
-        isAutofocusProcessed = std::get<enumToUnderlyingType(ProcessSyncDataType::IsAutofocusProcessed)>(data.value);
+    case ProcessSyncDataType::UserDidInteractWithPage:
+        userDidInteractWithPage = std::get<enumToUnderlyingType(ProcessSyncDataType::UserDidInteractWithPage)>(data.value);
         break;
     default:
         RELEASE_ASSERT_NOT_REACHED();
@@ -51,17 +51,17 @@ void DocumentSyncData::update(const ProcessSyncData& data)
 }
 
 DocumentSyncData::DocumentSyncData(
-      bool userDidInteractWithPage
+      bool isAutofocusProcessed
 #if ENABLE(DOM_AUDIO_SESSION)
     , WebCore::DOMAudioSessionType audioSessionType
 #endif
-    , bool isAutofocusProcessed
+    , bool userDidInteractWithPage
 )
-    : userDidInteractWithPage(userDidInteractWithPage)
+    : isAutofocusProcessed(isAutofocusProcessed)
 #if ENABLE(DOM_AUDIO_SESSION)
     , audioSessionType(audioSessionType)
 #endif
-    , isAutofocusProcessed(isAutofocusProcessed)
+    , userDidInteractWithPage(userDidInteractWithPage)
 {
 }
 

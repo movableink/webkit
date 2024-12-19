@@ -3310,7 +3310,7 @@ void SelectorCodeGenerator::generateElementAttributesMatching(Assembler::JumpLis
 
 static inline Assembler::Jump testIsHTMLClassOnDocument(Assembler::ResultCondition condition, Assembler& assembler, Assembler::RegisterID documentAddress)
 {
-    static_assert(sizeof(Document::DocumentClass) == 2, "Document::DocumentClass must be a 16-bit value for branchTest16");
+    static_assert(sizeof(DocumentClass) == 2, "DocumentClass must be a 16-bit value for branchTest16");
     return assembler.branchTest16(condition, Assembler::Address(documentAddress, Document::documentClassesMemoryOffset()), Assembler::TrustedImm32(Document::isHTMLDocumentClassFlag()));
 }
 

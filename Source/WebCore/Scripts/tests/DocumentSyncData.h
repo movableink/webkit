@@ -43,11 +43,11 @@ public:
     static Ref<DocumentSyncData> create() { return adoptRef(*new DocumentSyncData); }
     void update(const ProcessSyncData&);
 
-    bool userDidInteractWithPage = { };
+    bool isAutofocusProcessed = { };
 #if ENABLE(DOM_AUDIO_SESSION)
     WebCore::DOMAudioSessionType audioSessionType = { };
 #endif
-    bool isAutofocusProcessed = { };
+    bool userDidInteractWithPage = { };
 
 private:
     DocumentSyncData() = default;

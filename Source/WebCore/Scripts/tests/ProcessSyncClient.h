@@ -46,8 +46,8 @@ public:
     void broadcastAudioSessionTypeToOtherProcesses(const WebCore::DOMAudioSessionType&);
 #endif
     void broadcastMainFrameURLChangeToOtherProcesses(const URL&);
-    void broadcastUserDidInteractWithPageToOtherProcesses(const bool&);
     void broadcastIsAutofocusProcessedToOtherProcesses(const bool&);
+    void broadcastUserDidInteractWithPageToOtherProcesses(const bool&);
 
 protected:
     virtual void broadcastProcessSyncDataToOtherProcesses(const ProcessSyncData&) { }

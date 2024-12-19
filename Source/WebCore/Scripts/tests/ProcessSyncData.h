@@ -35,8 +35,16 @@ enum class ProcessSyncDataType : uint8_t {
     AudioSessionType = 0,
 #endif
     MainFrameURLChange = 1,
-    UserDidInteractWithPage = 2,
-    IsAutofocusProcessed = 3,
+    IsAutofocusProcessed = 2,
+    UserDidInteractWithPage = 3,
+};
+
+static const ProcessSyncDataType allDocumentSyncDataTypes[] = {
+    ProcessSyncDataType::IsAutofocusProcessed
+#if ENABLE(DOM_AUDIO_SESSION)
+    , ProcessSyncDataType::AudioSessionType
+#endif
+    , ProcessSyncDataType::UserDidInteractWithPage
 };
 
 #if !ENABLE(DOM_AUDIO_SESSION)

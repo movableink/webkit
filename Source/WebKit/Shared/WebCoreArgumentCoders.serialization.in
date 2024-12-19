@@ -8857,3 +8857,19 @@ header: <WebCore/MediaRecorderPrivateWriter.h>
     NotReady
 };
 #endif
+
+header: <WebCore/DocumentClasses.h>
+[OptionSet, CustomHeader] enum class WebCore::DocumentClass : uint16_t {
+    HTML,
+    XHTML,
+    Image,
+    Plugin,
+    Media,
+    SVG,
+    Text,
+    XML,
+#if ENABLE(MODEL_ELEMENT)
+    Model,
+#endif
+    PDF
+};

@@ -30,6 +30,7 @@
 #include "Color.h"
 #include "ContainerNode.h"
 #include "ContextDestructionObserverInlines.h"
+#include "DocumentClasses.h"
 #include "DocumentEventTiming.h"
 #include "DocumentSyncData.h"
 #include "FontSelectorClient.h"
@@ -313,19 +314,20 @@ enum class FireEvents : bool;
 enum class FocusDirection : uint8_t;
 enum class FocusPreviousElement : bool;
 enum class FocusTrigger : uint8_t;
-enum class MediaProducerMediaState : uint32_t;
 enum class MediaProducerMediaCaptureKind : uint8_t;
+enum class MediaProducerMediaState : uint32_t;
 enum class MediaProducerMutedState : uint8_t;
+enum class MutationObserverOptionType : uint8_t;
 enum class NoiseInjectionPolicy : uint8_t;
 enum class ParserContentPolicy : uint8_t;
 enum class PlatformEventType : uint8_t;
+enum class ProcessSyncDataType : uint8_t;
 enum class ReferrerPolicySource : uint8_t;
-enum class RouteSharingPolicy : uint8_t;
-enum class ShouldOpenExternalURLsPolicy : uint8_t;
 enum class RenderingUpdateStep : uint32_t;
+enum class RouteSharingPolicy : uint8_t;
 enum class ScheduleLocationChangeResult : uint8_t;
+enum class ShouldOpenExternalURLsPolicy : uint8_t;
 enum class StyleColorOptions : uint8_t;
-enum class MutationObserverOptionType : uint8_t;
 enum class ViolationReportType : uint8_t;
 enum class VisibilityState : bool;
 
@@ -616,23 +618,6 @@ public:
     // Other methods (not part of DOM)
     bool isSynthesized() const { return m_isSynthesized; }
 
-    enum class DocumentClass : uint16_t {
-        HTML = 1,
-        XHTML = 1 << 1,
-        Image = 1 << 2,
-        Plugin = 1 << 3,
-        Media = 1 << 4,
-        SVG = 1 << 5,
-        Text = 1 << 6,
-        XML = 1 << 7,
-#if ENABLE(MODEL_ELEMENT)
-        Model = 1 << 8,
-#endif
-        PDF = 1 << 9,
-    };
-
-    using DocumentClasses = OptionSet<DocumentClass>;
-
     bool isHTMLDocument() const { return m_documentClasses.contains(DocumentClass::HTML); }
     bool isXHTMLDocument() const { return m_documentClasses.contains(DocumentClass::XHTML); }
     bool isXMLDocument() const { return m_documentClasses.contains(DocumentClass::XML); }
@@ -645,6 +630,7 @@ public:
     bool isModelDocument() const { return m_documentClasses.contains(DocumentClass::Model); }
 #endif
     bool isPDFDocument() const { return m_documentClasses.contains(DocumentClass::PDF); }
+
     bool hasSVGRootNode() const;
     virtual bool isFrameSet() const { return false; }
 
@@ -1997,6 +1983,7 @@ protected:
 
 private:
     friend class DocumentParserYieldToken;
+    friend class DocumentSyncData;
     friend class IgnoreDestructiveWriteCountIncrementer;
     friend class Node;
     friend class Page;
@@ -2150,6 +2137,7 @@ private:
     void securityOriginDidChange() final;
 
     Ref<DocumentSyncData> syncData() { return m_syncData.get(); }
+    void populateDocumentSyncDataForNewlyConstructedDocument(ProcessSyncDataType);
 
     const Ref<const Settings> m_settings;
 
@@ -2533,6 +2521,7 @@ private:
     enum class PageStatus : uint8_t { None, Shown, Hidden };
     PageStatus m_lastPageStatus { PageStatus::None };
 
+    // Because the CSS JIT needs an offset to this data member, we have to store it both here and in DocumentSyncData.
     DocumentClasses m_documentClasses;
 
     TextDirection m_documentElementTextDirection;
@@ -2548,10 +2537,6 @@ private:
     OptionSet<VisualUpdatesPreventedReason> m_visualUpdatesPreventedReasons;
 
     FocusTrigger m_latestFocusTrigger { };
-
-#if ENABLE(DOM_AUDIO_SESSION)
-    DOMAudioSessionType m_audioSessionType { };
-#endif
 
     OptionSet<ContentRelevancy> m_contentRelevancyUpdate;
 

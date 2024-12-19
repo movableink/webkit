@@ -26,11 +26,11 @@
 header: <WebCore/ProcessSyncData.h>
 
 [RefCounted] class WebCore::DocumentSyncData {
-    bool userDidInteractWithPage;
+    bool isAutofocusProcessed;
 #if ENABLE(DOM_AUDIO_SESSION)
     WebCore::DOMAudioSessionType audioSessionType;
 #endif
-    bool isAutofocusProcessed;
+    bool userDidInteractWithPage;
 };
 
 enum class WebCore::ProcessSyncDataType : uint8_t {
@@ -38,8 +38,8 @@ enum class WebCore::ProcessSyncDataType : uint8_t {
     AudioSessionType,
 #endif
     MainFrameURLChange,
-    UserDidInteractWithPage,
     IsAutofocusProcessed,
+    UserDidInteractWithPage,
 };
  
 #if !ENABLE(DOM_AUDIO_SESSION)

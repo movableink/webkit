@@ -226,6 +226,7 @@ enum class AdvancedPrivacyProtections : uint16_t;
 enum class CanWrap : bool;
 enum class DidWrap : bool;
 enum class DisabledAdaptations : uint8_t;
+enum class DocumentClass : uint16_t;
 enum class EventTrackingRegionsEventType : uint8_t;
 enum class FilterRenderingMode : uint8_t;
 enum class RouteSharingPolicy : uint8_t;
@@ -390,6 +391,7 @@ public:
     bool userDidInteractWithPage() const;
     void setAutofocusProcessed();
     bool autofocusProcessed() const;
+    bool topDocumentHasDocumentClass(DocumentClass) const;
 
     WEBCORE_EXPORT void updateProcessSyncData(const ProcessSyncData&);
     WEBCORE_EXPORT void updateTopDocumentSyncData(Ref<DocumentSyncData>&&);

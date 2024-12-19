@@ -210,6 +210,7 @@
 #include "PolicyChecker.h"
 #include "PopStateEvent.h"
 #include "Position.h"
+#include "ProcessSyncData.h"
 #include "ProcessingInstruction.h"
 #include "PseudoClassChangeInvalidation.h"
 #include "PublicSuffixStore.h"
@@ -643,9 +644,6 @@ Document::Document(LocalFrame* frame, const Settings& settings, const URL& url, 
     , m_fragmentDirectiveForBindings(FragmentDirective::create())
     , m_documentClasses(documentClasses)
     , m_latestFocusTrigger { FocusTrigger::Other }
-#if ENABLE(DOM_AUDIO_SESSION)
-    , m_audioSessionType { DOMAudioSession::Type::Auto }
-#endif
     , m_isSynthesized(constructionFlags.contains(ConstructionFlag::Synthesized))
     , m_isNonRenderedPlaceholder(constructionFlags.contains(ConstructionFlag::NonRenderedPlaceholder))
     , m_frameIdentifier(frame ? std::optional(frame->frameID()) : std::nullopt)
@@ -685,6 +683,31 @@ Document::Document(LocalFrame* frame, const Settings& settings, const URL& url, 
     ASSERT(!hasEmptySecurityOriginPolicyAndContentSecurityPolicy() || !hasInitializedSecurityOriginPolicyOrContentSecurityPolicy());
     m_constructionDidFinish = true;
 
+    // We walk all of the relevant enums to popular one at a time in a switch statement to make sure
+    // that an engineer writes the relevant manual code whenever a new generated type is added.
+    for (const ProcessSyncDataType dataType : allDocumentSyncDataTypes)
+        populateDocumentSyncDataForNewlyConstructedDocument(dataType);
+}
+
+void Document::populateDocumentSyncDataForNewlyConstructedDocument(ProcessSyncDataType dataType)
+{
+    switch (dataType) {
+    case ProcessSyncDataType::DocumentClasses:
+        m_syncData->documentClasses = m_documentClasses;
+        break;
+#if ENABLE(DOM_AUDIO_SESSION)
+    case ProcessSyncDataType::AudioSessionType:
+        m_syncData->audioSessionType = DOMAudioSession::Type::Auto;
+        break;
+#endif
+    // The following either have default values that match a newly constructed document
+    // or are populated other ways even on newly constructed documents.
+    case ProcessSyncDataType::IsAutofocusProcessed:
+    case ProcessSyncDataType::UserDidInteractWithPage:
+    case ProcessSyncDataType::DocumentURL:
+    case ProcessSyncDataType::DocumentSecurityOrigin:
+        break;
+    }
 }
 
 void Document::createNewIdentifier()
