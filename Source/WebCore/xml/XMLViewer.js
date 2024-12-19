@@ -210,15 +210,9 @@ function processText(parentElement, node)
 }
 
 // Processing utils.
-
-function trim(value)
-{
-    return value.replace(/^\s\s*/, '').replace(/\s\s*$/, '');
-}
-
 function isShort(value)
 {
-    return trim(value).length <= 50;
+    return value.trim().length <= 50;
 }
 
 // Tree rendering.
@@ -290,7 +284,7 @@ function createComment(commentString)
 function createText(value)
 {
     var text = createHTMLElement('span');
-    text.textContent = trim(value);
+    text.textContent = value.trim();
     text.classList.add('text');
     return text;
 }
