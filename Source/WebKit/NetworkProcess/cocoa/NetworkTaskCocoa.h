@@ -57,7 +57,7 @@ protected:
 
     static NSHTTPCookieStorage *statelessCookieStorage();
     bool shouldApplyCookiePolicyForThirdPartyCloaking() const;
-    void applyCookiePolicyForThirdPartyCloaking(const WebCore::ResourceRequest&);
+    void setCookieTransform(const WebCore::ResourceRequest&);
     void blockCookies();
     void unblockCookies();
     static void updateTaskWithFirstPartyForSameSiteCookies(NSURLSessionTask*, const WebCore::ResourceRequest&);
@@ -73,6 +73,9 @@ protected:
     virtual WebCore::StoredCredentialsPolicy storedCredentialsPolicy() const = 0;
 
 private:
+    void setCookieTransformForFirstPartyRequest(const WebCore::ResourceRequest&);
+    void setCookieTransformForThirdPartyRequest(const WebCore::ResourceRequest&);
+
     WeakPtr<NetworkSession> m_networkSession;
     bool m_hasBeenSetToUseStatelessCookieStorage { false };
     Seconds m_ageCapForCNAMECloakedCookies { 24_h * 7 };

@@ -335,8 +335,7 @@ NetworkDataTaskCocoa::NetworkDataTaskCocoa(NetworkSession& session, NetworkDataT
 #endif
     }
 
-    if (!isTopLevelNavigation())
-        applyCookiePolicyForThirdPartyCloaking(request);
+    setCookieTransform(request);
     if (shouldBlockCookies(thirdPartyCookieBlockingDecision)) {
 #if !RELEASE_LOG_DISABLED
         if (m_session->shouldLogCookieInformation())

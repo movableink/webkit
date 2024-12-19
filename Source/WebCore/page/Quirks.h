@@ -45,6 +45,7 @@ class LocalFrame;
 class Node;
 class PlatformMouseEvent;
 class RegistrableDomain;
+class ResourceRequest;
 class RenderStyle;
 class SecurityOriginData;
 class WeakPtrImplWithEventTargetData;
@@ -105,6 +106,8 @@ public:
     WEBCORE_EXPORT static bool needsIPadMiniUserAgent(const URL&);
     WEBCORE_EXPORT static bool needsIPhoneUserAgent(const URL&);
     WEBCORE_EXPORT static bool needsDesktopUserAgent(const URL&);
+
+    WEBCORE_EXPORT static bool needsPartitionedCookies(const ResourceRequest&);
 
     WEBCORE_EXPORT static std::optional<Vector<HashSet<String>>> defaultVisibilityAdjustmentSelectors(const URL&);
 

@@ -61,6 +61,7 @@
 #include "QuirksData.h"
 #include "RegistrableDomain.h"
 #include "ResourceLoadObserver.h"
+#include "ResourceRequest.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGPathElement.h"
 #include "SVGSVGElement.h"
@@ -1453,6 +1454,13 @@ bool Quirks::needsIPhoneUserAgent(const URL& url)
 bool Quirks::needsDesktopUserAgent(const URL& url)
 {
     return needsDesktopUserAgentInternal(url);
+}
+
+bool Quirks::needsPartitionedCookies(const ResourceRequest& request)
+{
+    if (request.isTopSite())
+        return false;
+    return request.url().protocolIsInHTTPFamily() && request.url().host().endsWith(".billpaysite.com"_s);
 }
 
 // premierleague.com: rdar://123721211

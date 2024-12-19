@@ -31,6 +31,7 @@
 #import "NetworkSession.h"
 #import <WebCore/DNS.h>
 #import <WebCore/NetworkStorageSession.h>
+#import <WebCore/Quirks.h>
 #import <WebCore/RegistrableDomain.h>
 #import <pal/spi/cf/CFNetworkSPI.h>
 #import <wtf/BlockPtr.h>
@@ -102,6 +103,19 @@ static NSArray<NSHTTPCookie *> *cookiesByCappingExpiry(NSArray<NSHTTPCookie *> *
     return cappedCookies;
 }
 
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+static NSArray<NSHTTPCookie *> *cookiesBySettingPartition(NSArray<NSHTTPCookie *> *cookies, NSString* partition)
+{
+    RetainPtr<NSMutableArray> partitionedCookies = [NSMutableArray arrayWithCapacity:cookies.count];
+    for (NSHTTPCookie *cookie in cookies) {
+        RetainPtr partitionedCookie = WebCore::NetworkStorageSession::setCookiePartition(cookie, partition);
+        if (partitionedCookie)
+            [partitionedCookies addObject:partitionedCookie.get()];
+    }
+    return partitionedCookies.get();
+}
+#endif
+
 // FIXME: Temporary fix for <rdar://60089022> and <rdar://100500464> until content can be updated.
 bool NetworkTaskCocoa::needsFirstPartyCookieBlockingLatchModeQuirk(const URL& firstPartyURL, const URL& requestURL, const URL& redirectingURL) const
 {
@@ -127,7 +141,47 @@ bool NetworkTaskCocoa::needsFirstPartyCookieBlockingLatchModeQuirk(const URL& fi
     return quirk->value == requestDomain;
 }
 
-void NetworkTaskCocoa::applyCookiePolicyForThirdPartyCloaking(const WebCore::ResourceRequest& request)
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+void NetworkTaskCocoa::setCookieTransformForFirstPartyRequest(const WebCore::ResourceRequest& request)
+{
+    if (!request.isThirdParty())
+        return;
+
+    ASSERT(!task()._cookieTransformCallback);
+    if (!!task()._cookieTransformCallback)
+        return;
+
+    if (!Quirks::needsPartitionedCookies(request))
+        return;
+
+    CheckedPtr networkStorageSession = m_networkSession->networkStorageSession();
+    if (!networkStorageSession)
+        return;
+
+    if (!networkStorageSession->isOptInCookiePartitioningEnabled())
+        return;
+
+    String cookiePartition = networkStorageSession->cookiePartitionIdentifier(request);
+
+    task()._cookieTransformCallback = makeBlockPtr([
+        requestURL = crossThreadCopy(request.url())
+        , weakTask = WeakObjCPtr<NSURLSessionTask>(task())
+        , cookiePartition = crossThreadCopy(cookiePartition)]
+        (NSArray<NSHTTPCookie*> *cookiesSetInResponse) -> NSArray<NSHTTPCookie*> * {
+        auto task = weakTask.get();
+        if (!task || ![cookiesSetInResponse count])
+            return cookiesSetInResponse;
+
+        // FIXME: Consider making these session cookies, as well.
+        if (!cookiePartition.isEmpty())
+            cookiesSetInResponse = cookiesBySettingPartition(cookiesSetInResponse, cookiePartition);
+
+        return cookiesSetInResponse;
+    }).get();
+}
+#endif
+
+void NetworkTaskCocoa::setCookieTransformForThirdPartyRequest(const WebCore::ResourceRequest& request)
 {
     if (!shouldApplyCookiePolicyForThirdPartyCloaking())
         return;
@@ -215,6 +269,17 @@ void NetworkTaskCocoa::applyCookiePolicyForThirdPartyCloaking(const WebCore::Res
     }).get();
 }
 
+void NetworkTaskCocoa::setCookieTransform(const WebCore::ResourceRequest& request)
+{
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+    if (request.isThirdParty()) {
+        setCookieTransformForFirstPartyRequest(request);
+        return;
+    }
+#endif
+    setCookieTransformForThirdPartyRequest(request);
+}
+
 void NetworkTaskCocoa::blockCookies()
 {
     ASSERT(hasProcessPrivilege(ProcessPrivilege::CanAccessRawCookies));
@@ -274,7 +339,7 @@ void NetworkTaskCocoa::willPerformHTTPRedirection(WebCore::ResourceResponse&& re
     request.setIsAppInitiated(request.nsURLRequest(WebCore::HTTPBodyUpdatePolicy::DoNotUpdateHTTPBody).attribution == NSURLRequestAttributionDeveloper);
 #endif
 
-    applyCookiePolicyForThirdPartyCloaking(request);
+    setCookieTransform(request);
     if (!m_hasBeenSetToUseStatelessCookieStorage) {
         if (storedCredentialsPolicy() == WebCore::StoredCredentialsPolicy::EphemeralStateless
             || (m_networkSession->networkStorageSession() && m_networkSession->networkStorageSession()->shouldBlockCookies(request, frameID(), pageID(), m_shouldRelaxThirdPartyCookieBlocking)))

@@ -346,6 +346,26 @@ NSHTTPCookie *NetworkStorageSession::capExpiryOfPersistentCookie(NSHTTPCookie *c
     return cookie;
 }
 
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+NSHTTPCookie *NetworkStorageSession::setCookiePartition(NSHTTPCookie *cookie, NSString* partitionKey)
+{
+    if (!cookie)
+        return cookie;
+
+    if (!partitionKey)
+        return cookie;
+
+    if (cookie._storagePartition) {
+        ASSERT(cookie._storagePartition == partitionKey);
+        return cookie;
+    }
+
+    auto properties = adoptNS([[cookie properties] mutableCopy]);
+    [properties setObject:(NSString *)partitionKey forKey:@"StoragePartition"];
+    return [NSHTTPCookie cookieWithProperties:properties.get()];
+}
+#endif
+
 RetainPtr<NSArray> NetworkStorageSession::cookiesForURL(const URL& firstParty, const SameSiteInfo& sameSiteInfo, const URL& url, std::optional<FrameIdentifier> frameID, std::optional<PageIdentifier> pageID, ApplyTrackingPrevention applyTrackingPrevention, ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking) const
 {
     auto thirdPartyCookieBlockingDecision = thirdPartyCookieBlockingDecisionForRequest(firstParty, url, frameID, pageID, shouldRelaxThirdPartyCookieBlocking);
