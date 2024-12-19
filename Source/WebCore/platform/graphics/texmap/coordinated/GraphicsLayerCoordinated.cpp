@@ -771,12 +771,12 @@ void GraphicsLayerCoordinated::computeLayerTransformIfNeeded(bool affectedByTran
 
     m_layerTransform.current.setLocalTransform(currentTransform);
 
-    m_layerTransform.current.setAnchorPoint(m_platformLayer->anchorPoint());
-    m_layerTransform.current.setPosition(FloatPoint(m_platformLayer->position() - m_platformLayer->boundsOrigin()));
-    m_layerTransform.current.setSize(m_platformLayer->size());
+    m_layerTransform.current.setAnchorPoint(m_anchorPoint);
+    m_layerTransform.current.setPosition(FloatPoint(m_position - m_boundsOrigin));
+    m_layerTransform.current.setSize(m_size);
 
     m_layerTransform.current.setFlattening(!m_preserves3D);
-    m_layerTransform.current.setChildrenTransform(m_platformLayer->childrenTransform());
+    m_layerTransform.current.setChildrenTransform(childrenTransform());
     m_layerTransform.current.combineTransforms(parent() ? downcast<GraphicsLayerCoordinated>(*parent()).m_layerTransform.current.combinedForChildren() : TransformationMatrix());
 
     m_layerTransform.cachedCombined = m_layerTransform.current.combined();
