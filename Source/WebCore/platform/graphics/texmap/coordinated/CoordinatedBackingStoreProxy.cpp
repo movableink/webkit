@@ -51,12 +51,18 @@ void CoordinatedBackingStoreProxy::Update::appendUpdate(float scale, Vector<uint
 
     // Remove any creations or updates previously registered for tiles that are going to be removed now.
     if (!m_tilesToCreate.isEmpty() || !m_tilesToUpdate.isEmpty()) {
+        Vector<uint32_t, 8> createdTilesRemoved;
         for (const auto& tileID : tilesToRemove) {
-            m_tilesToCreate.removeAll(tileID);
+            if (m_tilesToCreate.removeAll(tileID))
+                createdTilesRemoved.append(tileID);
             m_tilesToUpdate.removeAllMatching([tileID](auto& update) {
                 return update.tileID == tileID;
             });
         }
+
+        // Remove the removals of tiles also registered to be created.
+        for (const auto& tileID : createdTilesRemoved)
+            tilesToRemove.removeFirst(tileID);
     }
 
     if (m_tilesToCreate.isEmpty())
