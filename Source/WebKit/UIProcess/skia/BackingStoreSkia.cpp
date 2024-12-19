@@ -29,10 +29,13 @@
 #if USE(SKIA)
 
 #include "UpdateInfo.h"
-#include <WebCore/BitmapInfo.h>
 #include <WebCore/GraphicsContextSkia.h>
 #include <skia/core/SkBitmap.h>
 #include <skia/core/SkCanvas.h>
+
+#if PLATFORM(WIN)
+#include <WebCore/BitmapInfo.h>
+#endif
 
 namespace WebKit {
 

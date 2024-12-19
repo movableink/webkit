@@ -157,8 +157,4 @@ if (USE_CAIRO)
     include(Platform/Cairo.cmake)
 elseif (USE_SKIA)
     include(Platform/Skia.cmake)
-
-    list(APPEND WebKit_PUBLIC_FRAMEWORK_HEADERS
-        Shared/API/c/skia/WKImageSkia.h
-    )
 endif ()

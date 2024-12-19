@@ -29,13 +29,6 @@
 #include "Font.h"
 #include "FontDescription.h"
 #include "StyleFontSizeFunctions.h"
-#if defined(__ANDROID__) || defined(ANDROID)
-#include <skia/ports/SkFontMgr_android.h>
-#elif PLATFORM(WIN)
-#include <skia/ports/SkTypeface_win.h>
-#else
-#include <skia/ports/SkFontMgr_fontconfig.h>
-#endif
 #include <wtf/Assertions.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/CharacterProperties.h>
@@ -45,8 +38,13 @@
 #include "SystemSettings.h"
 #endif
 
-#if PLATFORM(WIN)
+#if defined(__ANDROID__) || defined(ANDROID)
+#include <skia/ports/SkFontMgr_android.h>
+#elif PLATFORM(WIN)
 #include <dwrite.h>
+#include <skia/ports/SkTypeface_win.h>
+#else
+#include <skia/ports/SkFontMgr_fontconfig.h>
 #endif
 
 namespace WebCore {

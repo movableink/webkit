@@ -1,11 +1,14 @@
 set_property(DIRECTORY . PROPERTY FOLDER "skia")
 
 # Skia dependencies not used directly in WebKit.
-if (NOT WIN32)
+if (NOT WIN32 AND NOT PLAYSTATION)
     find_package(Freetype 2.9.0 REQUIRED)
     find_package(Fontconfig 2.13.0 REQUIRED)
 endif ()
-find_package(WebP REQUIRED COMPONENTS mux)
+
+if (USE_SKIA_ENCODERS)
+    find_package(WebP REQUIRED COMPONENTS mux)
+endif ()
 
 if (ANDROID)
     find_package(EXPAT REQUIRED)
@@ -115,6 +118,8 @@ if (DEVELOPER_MODE AND (SKIA_ROOT_DIR OR NOT "$ENV{SKIA_ROOT_DIR}" STREQUAL ""))
         "skia_use_egl=true + skia_use_epoxy_egl=true. Expect malfunctions "
         "otherwise at runtime!"
     )
+
+    add_library(Skia::Skia ALIAS Skia)
     return ()
 endif ()
 
@@ -658,14 +663,6 @@ add_library(Skia STATIC
     src/effects/imagefilters/SkRuntimeImageFilter.cpp
     src/effects/imagefilters/SkShaderImageFilter.cpp
 
-    src/encode/SkEncoder.cpp
-    src/encode/SkICC.cpp
-    src/encode/SkJPEGWriteUtility.cpp
-    src/encode/SkJpegEncoderImpl.cpp
-    src/encode/SkPngEncoderBase.cpp
-    src/encode/SkPngEncoderImpl.cpp
-    src/encode/SkWebpEncoderImpl.cpp
-
     src/pathops/SkAddIntersections.cpp
     src/pathops/SkDConicLineIntersection.cpp
     src/pathops/SkDCubicLineIntersection.cpp
@@ -933,19 +930,40 @@ else ()
         src/ports/SkTypeface_proxy.cpp
     )
     target_link_libraries(Skia PRIVATE
-       Fontconfig::Fontconfig
+        Fontconfig::Fontconfig
+        Freetype::Freetype
     )
 endif ()
 
-if (WIN32)
+if (USE_LIBEPOXY)
+    target_sources(Skia PRIVATE src/gpu/ganesh/gl/epoxy/GrGLMakeEpoxyEGLInterface.cpp)
+    target_link_libraries(Skia PRIVATE Epoxy::Epoxy)
+else ()
     target_sources(Skia PRIVATE src/gpu/ganesh/gl/egl/GrGLMakeNativeInterface_egl.cpp)
     target_sources(Skia PRIVATE src/gpu/ganesh/gl/egl/GrGLMakeEGLInterface.cpp)
-    target_link_libraries(Skia PRIVATE ANGLE::EGL)
-else ()  
-    target_sources(Skia PRIVATE src/gpu/ganesh/gl/epoxy/GrGLMakeEpoxyEGLInterface.cpp)
-    target_link_libraries(Skia PRIVATE
-        Epoxy::Epoxy
-        Freetype::Freetype
+    if (USE_ANGLE_EGL)
+        target_link_libraries(Skia PRIVATE ANGLE::EGL)
+    else ()
+        target_link_libraries(Skia PRIVATE ${EGL_LIBRARIES})
+    endif ()
+endif ()
+
+if (USE_SKIA_ENCODERS)
+    target_sources(Skia PRIVATE
+        src/encode/SkEncoder.cpp
+        src/encode/SkICC.cpp
+        src/encode/SkJPEGWriteUtility.cpp
+        src/encode/SkJpegEncoderImpl.cpp
+        src/encode/SkPngEncoderBase.cpp
+        src/encode/SkPngEncoderImpl.cpp
+        src/encode/SkWebpEncoderImpl.cpp
+    )
+    target_link_libraries(Skia PRIVATE WebP::mux)
+else ()
+    target_sources(Skia PRIVATE
+        src/encode/SkPngEncoder_none.cpp
+        src/encode/SkJpegEncoder_none.cpp
+        src/encode/SkWebpEncoder_none.cpp
     )
 endif ()
 
@@ -1036,7 +1054,6 @@ endif ()
 target_link_libraries(Skia PRIVATE
     JPEG::JPEG
     PNG::PNG
-    WebP::mux
 )
 
 WEBKIT_ADD_TARGET_CXX_FLAGS(Skia
@@ -1189,3 +1206,5 @@ if (Skia_SkCMS_SKX_OPTS)
 else ()
     target_compile_definitions(Skia PRIVATE SKCMS_DISABLE_SKX)
 endif ()
+
+add_library(Skia::Skia ALIAS Skia)

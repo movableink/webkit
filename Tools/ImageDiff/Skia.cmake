@@ -3,7 +3,7 @@ list(APPEND ImageDiff_SOURCES
 )
 
 list(APPEND ImageDiff_LIBRARIES
-    Skia
+    Skia::Skia
 )
 
 list(APPEND ImageDiff_PRIVATE_DEFINITIONS USE_SKIA=1)
