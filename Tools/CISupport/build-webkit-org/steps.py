@@ -988,6 +988,17 @@ class RunDashboardTests(RunWebKitTests):
         return super().run()
 
 
+class RunWorldLeaksTests(RunWebKitTests):
+    name = "world-leaks-tests"
+    description = ["world-leaks-tests running"]
+    descriptionDone = ["world-leaks-tests"]
+    resultDirectory = os.path.join(RunWebKitTests.resultDirectory, "world-leaks-layout-test-results")
+
+    def run(self):
+        self.command += ["--world-leaks"]
+        return super().run()
+
+
 class RunAPITests(TestWithFailureCount, CustomFlagsMixin):
     name = "run-api-tests"
     VALID_ADDITIONAL_ARGUMENTS_LIST = ["--remote-layer-tree", "--use-gpu-process"]

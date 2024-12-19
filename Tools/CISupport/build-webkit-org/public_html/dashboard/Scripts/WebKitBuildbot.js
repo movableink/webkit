@@ -41,6 +41,7 @@ WebKitBuildbot = function()
             "Apple-Sequoia-AppleSilicon-Release-Test262-Tests": {heading: "Release arm64 Test262 (Tests)"},
             "Apple-Sequoia-LLINT-CLoop-BuildAndTest": {heading: "LLINT CLoop (BuildAndTest)"},
         }},
+        "Apple-Sequoia-Release-World-Leaks-Tests": {platform: Dashboard.Platform.macOSSequoia, debug: false, heading: "World Leaks (Tests)"},
         "Apple-Sonoma-Release-Build": {platform: Dashboard.Platform.macOSSonoma, debug: false, builder: true, architecture: Buildbot.BuildArchitecture.SixtyFourBit},
         "Apple-Sonoma-Debug-Build": {platform: Dashboard.Platform.macOSSonoma, debug: true, builder: true, architecture: Buildbot.BuildArchitecture.SixtyFourBit},
         "Apple-Sonoma-Debug-WK1-Tests": {platform: Dashboard.Platform.macOSSonoma, debug: true, tester: true, testCategory: Buildbot.TestCategory.WebKit1},

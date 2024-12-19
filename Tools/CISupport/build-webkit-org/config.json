@@ -50,6 +50,8 @@
                   { "name": "bot1021", "platform": "mac-sequoia" },
                   { "name": "bot1025", "platform": "mac-sequoia" },
                   { "name": "bot1026", "platform": "mac-sequoia" },
+                  { "name": "bot1027", "platform": "mac-sequoia" },
+                  { "name": "bot1028", "platform": "mac-sequoia" },
 
                   { "name": "bot304", "platform": "ios-18" },
                   { "name": "bot305", "platform": "ios-simulator-18" },
@@ -172,6 +174,11 @@
                   "platform": "mac-sequoia", "configuration": "release", "architectures": ["x86_64", "arm64"],
                   "additionalArguments": ["--no-retry-failures"],
                   "workernames": ["bot1026"]
+                  },
+                  { "name": "Apple-Sequoia-Release-World-Leaks-Tests", "factory": "TestWorldLeaksFactory",
+                  "platform": "mac-sequoia", "configuration": "release", "architectures": ["x86_64", "arm64"],
+                  "additionalArguments": ["--no-retry-failures"],
+                  "workernames": ["bot1027", "bot1028"]
                   },
                   { "name": "Apple-Sequoia-Release-AppleSilicon-WK2-Tests", "factory": "TestAllButJSCFactory",
                   "platform": "mac-sequoia", "configuration": "release", "architectures": ["x86_64", "arm64"],
@@ -758,7 +765,7 @@
                   },
 
                   { "type": "PlatformSpecificScheduler", "platform": "mac-sequoia", "branch": "main", "treeStableTimer": 45.0,
-                  "builderNames": ["Apple-Sequoia-Release-Build", "Apple-Sequoia-Debug-Build", "Apple-Sequoia-Safer-CPP-Checks", "Apple-Sequoia-LLINT-CLoop-BuildAndTest"]
+                  "builderNames": ["Apple-Sequoia-Release-Build", "Apple-Sequoia-Debug-Build", "Apple-Sequoia-Safer-CPP-Checks", "Apple-Sequoia-LLINT-CLoop-BuildAndTest", "Apple-Sequoia-Release-World-Leaks-Tests"]
                   },
                   { "type": "Triggerable", "name": "sequoia-release-tests-wk1",
                   "builderNames": ["Apple-Sequoia-Release-WK1-Tests"]

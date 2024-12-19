@@ -267,6 +267,11 @@ class TestWebKit1AllButJSCFactory(TestWebKit1Factory):
     JSCTestClass = None
 
 
+class TestWorldLeaksFactory(TestFactory):
+    JSCTestClass = None
+    LayoutTestClass = RunWorldLeaksTests
+
+
 class BuildAndPerfTestFactory(Factory):
     def __init__(self, platform, configuration, architectures, additionalArguments=None, device_model=None, **kwargs):
         Factory.__init__(self, platform, configuration, architectures, False, additionalArguments, device_model, **kwargs)
