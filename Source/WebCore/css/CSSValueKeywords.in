@@ -1835,3 +1835,5 @@ most-inline-size
 flip-block
 flip-inline
 flip-start
+// view-transition-name
+match-element

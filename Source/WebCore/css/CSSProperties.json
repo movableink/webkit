@@ -9479,7 +9479,7 @@
         "view-transition-name": {
             "codegen-properties": {
                 "converter": "ViewTransitionName",
-                "parser-grammar": "none | auto | <custom-ident>",
+                "parser-grammar": "none | auto | match-element | <custom-ident>",
                 "settings-flag": "viewTransitionsEnabled"
             },
             "specification": {
