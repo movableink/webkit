@@ -45,10 +45,10 @@ NetworkTransportStream::NetworkTransportStream(NetworkTransportSession& session,
         receiveLoop();
 }
 
-void NetworkTransportStream::sendBytes(std::span<const uint8_t> data, bool)
+void NetworkTransportStream::sendBytes(std::span<const uint8_t> data, bool withFin)
 {
     ASSERT(m_streamType != NetworkTransportStreamType::IncomingUnidirectional);
-    nw_connection_send(m_connection.get(), makeDispatchData(Vector(data)).get(), NW_CONNECTION_DEFAULT_MESSAGE_CONTEXT, true, ^(nw_error_t error) {
+    nw_connection_send(m_connection.get(), makeDispatchData(Vector(data)).get(), NW_CONNECTION_DEFAULT_MESSAGE_CONTEXT, withFin, ^(nw_error_t error) {
         // FIXME: Pipe any error to JS.
         // FIXME: sendBytes should probably have a completion handler.
     });

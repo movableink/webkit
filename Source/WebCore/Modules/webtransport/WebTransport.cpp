@@ -32,6 +32,7 @@
 #include "JSDOMPromise.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSWebTransportBidirectionalStream.h"
+#include "JSWebTransportCloseInfo.h"
 #include "JSWebTransportSendStream.h"
 #include "ReadableStream.h"
 #include "SocketProvider.h"
@@ -167,7 +168,9 @@ void WebTransport::receiveIncomingUnidirectionalStream(Ref<ReadableStreamSource>
     } ();
     if (stream.hasException())
         return;
-    m_receiveStreamSource->receiveIncomingStream(jsDOMGlobalObject, stream.releaseReturnValue());
+    auto receiveStream = stream.releaseReturnValue();
+    m_receiveStreams.add(receiveStream);
+    m_receiveStreamSource->receiveIncomingStream(jsDOMGlobalObject, WTFMove(receiveStream));
 }
 
 static ExceptionOr<Ref<WebTransportBidirectionalStream>> createBidirectionalStream(JSDOMGlobalObject& globalObject, WebTransportBidirectionalStreamConstructionParameters&& parameters)
@@ -199,7 +202,10 @@ void WebTransport::receiveBidirectionalStream(WebTransportBidirectionalStreamCon
     auto stream = WebCore::createBidirectionalStream(jsDOMGlobalObject, WTFMove(parameters));
     if (stream.hasException())
         return;
-    m_bidirectionalStreamSource->receiveIncomingStream(jsDOMGlobalObject, stream.releaseReturnValue());
+    auto bidiStream = stream.releaseReturnValue();
+    m_sendStreams.add(bidiStream->writable());
+    m_receiveStreams.add(bidiStream->readable());
+    m_bidirectionalStreamSource->receiveIncomingStream(jsDOMGlobalObject, WTFMove(bidiStream));
 }
 
 void WebTransport::getStats(Ref<DeferredPromise>&& promise)
@@ -270,24 +276,21 @@ void WebTransport::close(WebTransportCloseInfo&& closeInfo)
 void WebTransport::cleanup(Ref<DOMException>&&, std::optional<WebTransportCloseInfo>&& closeInfo)
 {
     // https://www.w3.org/TR/webtransport/#webtransport-cleanup
-
-    m_sendStreams = { }; // FIXME: Error each send stream.
-    // FIXME: The use of cancel and the use of NetworkError aren't quite correct in this function.
+    for (auto& stream : std::exchange(m_sendStreams, { }))
+        stream->closeIfPossible();
     for (auto& stream : std::exchange(m_receiveStreams, { }))
         stream->cancel(Exception { ExceptionCode::NetworkError });
-
+    m_datagrams->readable().cancel(Exception { ExceptionCode::NetworkError });
+    m_datagrams->writable().closeIfPossible();
+    m_incomingBidirectionalStreams->cancel(Exception { ExceptionCode::NetworkError });
+    m_incomingUnidirectionalStreams->cancel(Exception { ExceptionCode::NetworkError });
     if (closeInfo) {
-        // FIXME: Resolve with closeInfo.
-        m_closed.second->resolve();
-        m_incomingBidirectionalStreams->cancel(Exception { ExceptionCode::NetworkError });
-        m_incomingUnidirectionalStreams->cancel(Exception { ExceptionCode::NetworkError });
         m_state = State::Closed;
+        m_closed.second->resolve<IDLDictionary<WebTransportCloseInfo>>(*closeInfo);
     } else {
+        m_state = State::Failed;
         m_closed.second->reject(Exception { ExceptionCode::NetworkError });
         m_ready.second->reject(Exception { ExceptionCode::NetworkError });
-        m_incomingBidirectionalStreams->cancel(Exception { ExceptionCode::NetworkError });
-        m_incomingUnidirectionalStreams->cancel(Exception { ExceptionCode::NetworkError });
-        m_state = State::Failed;
     }
 }
 
@@ -301,7 +304,7 @@ void WebTransport::createBidirectionalStream(ScriptExecutionContext& context, We
     // https://www.w3.org/TR/webtransport/#dom-webtransport-createbidirectionalstream
     if (m_state == State::Closed || m_state == State::Failed || !m_session)
         return promise->reject(ExceptionCode::InvalidStateError);
-    m_session->createBidirectionalStream([promise = WTFMove(promise), context = WeakPtr { context }] (std::optional<WebTransportBidirectionalStreamConstructionParameters>&& parameters) {
+    m_session->createBidirectionalStream([promise = WTFMove(promise), context = WeakPtr { context }, protectedThis = Ref { *this }] (std::optional<WebTransportBidirectionalStreamConstructionParameters>&& parameters) {
         if (!parameters)
             return promise->reject(nullptr);
         if (!context)
@@ -313,7 +316,10 @@ void WebTransport::createBidirectionalStream(ScriptExecutionContext& context, We
         auto stream = WebCore::createBidirectionalStream(jsDOMGlobalObject, WTFMove(*parameters));
         if (stream.hasException())
             return promise->reject(stream.releaseException());
-        promise->resolveWithNewlyCreated<IDLInterface<WebTransportBidirectionalStream>>(stream.releaseReturnValue());
+        auto bidiStream = stream.releaseReturnValue();
+        protectedThis->m_sendStreams.add(bidiStream->writable());
+        protectedThis->m_receiveStreams.add(bidiStream->readable());
+        promise->resolveWithNewlyCreated<IDLInterface<WebTransportBidirectionalStream>>(WTFMove(bidiStream));
     });
 }
 
@@ -327,7 +333,7 @@ void WebTransport::createUnidirectionalStream(ScriptExecutionContext& context, W
     // https://www.w3.org/TR/webtransport/#dom-webtransport-createunidirectionalstream
     if (m_state == State::Closed || m_state == State::Failed || !m_session)
         return promise->reject(ExceptionCode::InvalidStateError);
-    m_session->createOutgoingUnidirectionalStream([promise = WTFMove(promise), context = WeakPtr { context }] (RefPtr<WritableStreamSink>&& sink) {
+    m_session->createOutgoingUnidirectionalStream([promise = WTFMove(promise), context = WeakPtr { context }, protectedThis = Ref { *this }] (RefPtr<WritableStreamSink>&& sink) {
         if (!sink)
             return promise->reject(nullptr);
         if (!context)
@@ -342,7 +348,9 @@ void WebTransport::createUnidirectionalStream(ScriptExecutionContext& context, W
         } ();
         if (stream.hasException())
             return promise->reject(stream.releaseException());
-        promise->resolveWithNewlyCreated<IDLInterface<WebTransportSendStream>>(stream.releaseReturnValue());
+        auto sendStream = stream.releaseReturnValue();
+        protectedThis->m_sendStreams.add(sendStream);
+        promise->resolveWithNewlyCreated<IDLInterface<WebTransportSendStream>>(sendStream);
     });
 }
 
@@ -351,4 +359,8 @@ ReadableStream& WebTransport::incomingUnidirectionalStreams()
     return m_incomingUnidirectionalStreams.get();
 }
 
+void WebTransport::networkProcessCrashed()
+{
+    cleanup(DOMException::create(ExceptionCode::AbortError), std::nullopt);
+}
 }

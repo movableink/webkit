@@ -38,6 +38,7 @@ public:
     virtual void receiveDatagram(std::span<const uint8_t>) = 0;
     virtual void receiveIncomingUnidirectionalStream(Ref<ReadableStreamSource>&&) = 0;
     virtual void receiveBidirectionalStream(WebTransportBidirectionalStreamConstructionParameters&&) = 0;
+    virtual void networkProcessCrashed() = 0;
 };
 
 }

@@ -64,8 +64,10 @@ static void didReceiveServerTrustChallenge(Ref<NetworkConnectionToWebProcess>&& 
     auto challengeCompletionHandler = [completion = makeBlockPtr(completion), secTrust = WTFMove(secTrust)] (AuthenticationChallengeDisposition disposition, const WebCore::Credential& credential) {
         switch (disposition) {
         case AuthenticationChallengeDisposition::UseCredential: {
-            if (!credential.isEmpty())
+            if (!credential.isEmpty()) {
                 completion(true);
+                return;
+            }
         }
         FALLTHROUGH;
         case AuthenticationChallengeDisposition::RejectProtectionSpaceAndContinue:

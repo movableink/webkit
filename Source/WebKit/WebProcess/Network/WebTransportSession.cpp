@@ -173,4 +173,9 @@ void WebTransportSession::terminate(uint32_t code, CString&& reason)
     send(Messages::NetworkTransportSession::Terminate(code, WTFMove(reason)));
 }
 
+void WebTransportSession::networkProcessCrashed()
+{
+    if (auto strongClient = m_client.get())
+        strongClient->networkProcessCrashed();
+}
 }

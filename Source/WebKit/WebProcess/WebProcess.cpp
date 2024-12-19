@@ -1344,6 +1344,9 @@ void WebProcess::networkProcessConnectionClosed(NetworkProcessConnection* connec
     }
 
     m_cacheStorageProvider->networkProcessConnectionClosed();
+
+    for (auto& webtransportSession : m_webTransportSessions.values())
+        webtransportSession->networkProcessCrashed();
 }
 
 WebFileSystemStorageConnection& WebProcess::fileSystemStorageConnection()

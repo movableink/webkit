@@ -98,6 +98,7 @@ private:
     void receiveDatagram(std::span<const uint8_t>) final;
     void receiveIncomingUnidirectionalStream(Ref<ReadableStreamSource>&&) final;
     void receiveBidirectionalStream(WebTransportBidirectionalStreamConstructionParameters&&) final;
+    void networkProcessCrashed() final;
 
     ListHashSet<Ref<WritableStream>> m_sendStreams;
     ListHashSet<Ref<ReadableStream>> m_receiveStreams;

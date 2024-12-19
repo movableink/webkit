@@ -67,6 +67,8 @@ public:
 
     // MessageReceiver
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) final;
+
+    void networkProcessCrashed();
 private:
     WebTransportSession(WebTransportSessionIdentifier);
 
