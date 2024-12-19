@@ -114,12 +114,12 @@ void ProcessLauncher::launchProcess()
         argv[i++] = nullptr;
         WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
-        m_processID = ProcessProviderLibWPE::singleton().launchProcess(m_launchOptions, argv, WTFMove(webkitSocketPair.client));
+        m_processID = ProcessProviderLibWPE::singleton().launchProcess(m_launchOptions, argv, webkitSocketPair.client.value());
         if (m_processID <= -1)
             g_error("Unable to spawn a new child process");
 
         // We've finished launching the process, message back to the main run loop.
-        RunLoop::main().dispatch([protectedThis = Ref { *this }, this, serverSocket = WTFMove(webkitSocketPair.server)] {
+        RunLoop::main().dispatch([protectedThis = Ref { *this }, this, serverSocket = WTFMove(webkitSocketPair.server)] mutable {
             didFinishLaunchingProcess(m_processID, IPC::Connection::Identifier { WTFMove(serverSocket) });
         });
 
