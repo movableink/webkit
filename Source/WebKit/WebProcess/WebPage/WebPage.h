@@ -54,7 +54,6 @@
 #include <WebCore/ShareData.h>
 #include <WebCore/ShareableBitmap.h>
 #include <WebCore/SimpleRange.h>
-#include <WebCore/SnapshotIdentifier.h>
 #include <WebCore/SubstituteData.h>
 #include <WebCore/TextManipulationController.h>
 #include <WebCore/TextManipulationItem.h>
@@ -188,7 +187,6 @@ class HTMLVideoElement;
 class HandleUserInputEventResult;
 class HistoryItem;
 class IgnoreSelectionChangeForScope;
-class ImageBuffer;
 class IntPoint;
 class IntRect;
 class KeyboardEvent;
@@ -1293,8 +1291,6 @@ public:
     void computePagesForPrintingImpl(WebCore::FrameIdentifier, const PrintInfo&, Vector<WebCore::IntRect>& pageRects, double& totalScaleFactor, WebCore::FloatBoxExtent& computedMargin);
 
 #if PLATFORM(COCOA)
-    void drawToPDF(WebCore::FrameIdentifier, const std::optional<WebCore::FloatRect>&, bool allowTransparentBackground,  CompletionHandler<void(RefPtr<WebCore::SharedBuffer>&&)>&&);
-    void drawCompositedToPDF(WebCore::FrameIdentifier, const std::optional<WebCore::FloatRect>&, bool allowTransparentBackground, WebCore::SnapshotIdentifier);
     void drawRectToImage(WebCore::FrameIdentifier, const PrintInfo&, const WebCore::IntRect&, const WebCore::IntSize&, CompletionHandler<void(std::optional<WebCore::ShareableBitmap::Handle>&&)>&&);
     void drawRectToImageDuringDOMPrintOperation(WebCore::FrameIdentifier frameID, const PrintInfo& printInfo, const WebCore::IntRect& rect, const WebCore::IntSize& imageSize, CompletionHandler<void(std::optional<WebCore::ShareableBitmap::Handle>&&)>&& completionHandler) { drawRectToImage(frameID, printInfo, rect, imageSize, WTFMove(completionHandler)); }
     void drawPagesToPDF(WebCore::FrameIdentifier, const PrintInfo&, uint32_t first, uint32_t count, CompletionHandler<void(RefPtr<WebCore::SharedBuffer>&&)>&&);
@@ -1307,6 +1303,8 @@ public:
     void drawToPDFiOS(WebCore::FrameIdentifier, const PrintInfo&, size_t, CompletionHandler<void(RefPtr<WebCore::SharedBuffer>&&)>&&);
     void drawToImage(WebCore::FrameIdentifier, const PrintInfo&, CompletionHandler<void(std::optional<WebCore::ShareableBitmap::Handle>&&)>&&);
 #endif
+
+    void drawToPDF(WebCore::FrameIdentifier, const std::optional<WebCore::FloatRect>&, bool allowTransparentBackground,  CompletionHandler<void(RefPtr<WebCore::SharedBuffer>&&)>&&);
 
 #if PLATFORM(GTK)
     void drawPagesForPrinting(WebCore::FrameIdentifier, const PrintInfo&, CompletionHandler<void(std::optional<WebCore::SharedMemoryHandle>&&, WebCore::ResourceError&&)>&&);
@@ -2373,10 +2371,8 @@ private:
 
     RefPtr<WebImage> snapshotAtSize(const WebCore::IntRect&, const WebCore::IntSize& bitmapSize, SnapshotOptions, WebCore::LocalFrame&, WebCore::LocalFrameView&);
     RefPtr<WebImage> snapshotNode(WebCore::Node&, SnapshotOptions, unsigned maximumPixelCount = std::numeric_limits<unsigned>::max());
-
 #if PLATFORM(COCOA)
-    void drawMainFrameToPDF(WebCore::LocalFrame&, WebCore::GraphicsContext&, WebCore::IntRect& snapshotRect, bool allowTransparentBackground);
-    void pdfSnapshotAtSize(WebCore::LocalFrame&, WebCore::GraphicsContext&, const WebCore::IntRect& snapshotRect, SnapshotOptions);
+    RefPtr<WebCore::SharedBuffer> pdfSnapshotAtSize(WebCore::IntRect, WebCore::IntSize bitmapSize, SnapshotOptions);
 #endif
 
 #if ENABLE(ATTACHMENT_ELEMENT)

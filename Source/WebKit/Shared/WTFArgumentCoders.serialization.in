@@ -185,7 +185,6 @@ template: enum class WebCore::RenderingResourceIdentifierType
 template: enum class WebCore::ServiceWorkerIdentifierType
 template: enum class WebCore::ServiceWorkerJobIdentifierType
 template: enum class WebCore::ServiceWorkerRegistrationIdentifierType
-template: enum class WebCore::SnapshotIdentifierType
 template: enum class WebCore::WebLockIdentifierType
 template: enum class WebCore::WebSocketIdentifierType
 template: enum class WebCore::WorkerFileSystemStorageConnectionCallbackIdentifierType

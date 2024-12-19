@@ -1,4 +1,4 @@
-# Copyright (C) 2010-2024 Apple Inc. All rights reserved.
+# Copyright (C) 2010-2023 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -473,7 +473,6 @@ messages -> WebPage WantsAsyncDispatchMessage {
     DrawToImage(WebCore::FrameIdentifier frameID, struct WebKit::PrintInfo printInfo) -> (std::optional<WebCore::ShareableBitmapHandle> data) ReplyCanDispatchOutOfOrder
 #endif
     DrawToPDF(WebCore::FrameIdentifier frameID, std::optional<WebCore::FloatRect> rect, bool allowTransparentBackground) -> (RefPtr<WebCore::SharedBuffer> data)
-    DrawCompositedToPDF(WebCore::FrameIdentifier frameID, std::optional<WebCore::FloatRect> rect, bool allowTransparentBackground, WebCore::SnapshotIdentifier snapshotIdentifier)
 #endif
 #if PLATFORM(GTK)
     DrawPagesForPrinting(WebCore::FrameIdentifier frameID, struct WebKit::PrintInfo printInfo) -> (std::optional<WebCore::SharedMemory::Handle> data, WebCore::ResourceError error)

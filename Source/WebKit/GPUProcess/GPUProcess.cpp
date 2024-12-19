@@ -381,13 +381,6 @@ void GPUProcess::updateSandboxAccess(const Vector<SandboxExtension::Handle>& ext
         SandboxExtension::consumePermanently(extension);
 }
 
-#if PLATFORM(COCOA)
-void GPUProcess::didDrawCompositedToPDF(PageIdentifier pageID, RefPtr<SharedBuffer>&& data, SnapshotIdentifier snapshotIdentifier)
-{
-    protectedParentProcessConnection()->send(Messages::GPUProcessProxy::DidDrawCompositedToPDF(pageID, WTFMove(data), snapshotIdentifier), 0);
-}
-#endif
-
 #if ENABLE(MEDIA_STREAM)
 void GPUProcess::setMockCaptureDevicesEnabled(bool isEnabled)
 {

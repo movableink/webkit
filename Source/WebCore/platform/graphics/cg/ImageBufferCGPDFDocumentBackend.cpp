@@ -75,7 +75,7 @@ GraphicsContext& ImageBufferCGPDFDocumentBackend::context()
     return *m_context;
 }
 
-RefPtr<SharedBuffer> ImageBufferCGPDFDocumentBackend::sinkIntoPDFDocument()
+RefPtr<SharedBuffer> ImageBufferCGPDFDocumentBackend::sinkToPDFDocument()
 {
     CGPDFContextClose(m_context->platformContext());
     return SharedBuffer::create(m_data.get());

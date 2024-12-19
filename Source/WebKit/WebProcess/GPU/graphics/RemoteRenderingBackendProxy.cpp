@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,6 @@
 
 #include "BufferIdentifierSet.h"
 #include "GPUConnectionToWebProcess.h"
-#include "ImageBufferRemotePDFDocumentBackend.h"
 #include "ImageBufferShareableBitmapBackend.h"
 #include "Logging.h"
 #include "RemoteDisplayListRecorderProxy.h"
@@ -248,9 +247,6 @@ RefPtr<ImageBuffer> RemoteRenderingBackendProxy::createImageBuffer(const FloatSi
         break;
 
     case RenderingMode::PDFDocument:
-        imageBuffer = RemoteImageBufferProxy::create<ImageBufferRemotePDFDocumentBackend>(size, resolutionScale, colorSpace, pixelFormat, purpose, *this);
-        break;
-
     case RenderingMode::DisplayList:
         break;
     }
@@ -305,13 +301,6 @@ void RemoteRenderingBackendProxy::moveToImageBuffer(WebCore::RenderingResourceId
 {
     send(Messages::RemoteRenderingBackend::MoveToImageBuffer(identifier));
 }
-
-#if PLATFORM(COCOA)
-void RemoteRenderingBackendProxy::didDrawCompositedToPDF(PageIdentifier pageID, RenderingResourceIdentifier imageBufferIdentifier, SnapshotIdentifier snapshotIdentifier)
-{
-    send(Messages::RemoteRenderingBackend::DidDrawCompositedToPDF(pageID, imageBufferIdentifier, snapshotIdentifier));
-}
-#endif
 
 bool RemoteRenderingBackendProxy::getPixelBufferForImageBuffer(RenderingResourceIdentifier imageBuffer, const PixelBufferFormat& destinationFormat, const IntRect& srcRect, std::span<uint8_t> result)
 {

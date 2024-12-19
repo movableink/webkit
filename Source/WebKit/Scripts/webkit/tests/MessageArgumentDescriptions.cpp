@@ -152,7 +152,6 @@
 #include <WebCore/ServiceWorkerTypes.h>
 #include <WebCore/SharedWorkerIdentifier.h>
 #include <WebCore/SleepDisablerIdentifier.h>
-#include <WebCore/SnapshotIdentifier.h>
 #include <WebCore/SpeechRecognitionConnectionClientIdentifier.h>
 #include <WebCore/TextCheckingRequestIdentifier.h>
 #include <WebCore/TextManipulationItemIdentifier.h>
@@ -588,7 +587,6 @@ Vector<ASCIILiteral> serializedIdentifiers()
     static_assert(sizeof(uint64_t) == sizeof(WebCore::SharedWorkerIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebCore::SharedWorkerObjectIdentifierID));
     static_assert(sizeof(uint64_t) == sizeof(WebCore::SleepDisablerIdentifier));
-    static_assert(sizeof(uint64_t) == sizeof(WebCore::SnapshotIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebCore::SpeechRecognitionConnectionClientIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebCore::TextCheckingRequestIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebCore::TextManipulationItemIdentifier));
@@ -739,7 +737,6 @@ Vector<ASCIILiteral> serializedIdentifiers()
         "WebCore::SharedWorkerIdentifier"_s,
         "WebCore::SharedWorkerObjectIdentifierID"_s,
         "WebCore::SleepDisablerIdentifier"_s,
-        "WebCore::SnapshotIdentifier"_s,
         "WebCore::SpeechRecognitionConnectionClientIdentifier"_s,
         "WebCore::TextCheckingRequestIdentifier"_s,
         "WebCore::TextManipulationItemIdentifier"_s,

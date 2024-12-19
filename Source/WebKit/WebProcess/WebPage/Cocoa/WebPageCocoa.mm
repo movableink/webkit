@@ -528,12 +528,21 @@ void WebPage::updateMockAccessibilityElementAfterCommittingLoad()
     [m_mockAccessibilityElement setHasMainFramePlugin:document ? document->isPluginDocument() : false];
 }
 
-void WebPage::pdfSnapshotAtSize(LocalFrame& localMainFrame, GraphicsContext& context, const IntRect& snapshotRect, SnapshotOptions options)
+RefPtr<SharedBuffer> WebPage::pdfSnapshotAtSize(IntRect rect, IntSize bitmapSize, SnapshotOptions options)
 {
-    Ref frameView = *localMainFrame.view();
+    RefPtr coreFrame = m_mainFrame->coreLocalFrame();
+    if (!coreFrame)
+        return nullptr;
 
-    auto rect = snapshotRect;
-    auto bitmapSize = rect.size();
+    RefPtr frameView = coreFrame->view();
+    if (!frameView)
+        return nullptr;
+
+    RefPtr buffer = ImageBuffer::create(bitmapSize, RenderingMode::PDFDocument, RenderingPurpose::Snapshot, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8, &m_page->chrome());
+    if (!buffer)
+        return nullptr;
+
+    auto& context = buffer->context();
 
     int64_t remainingHeight = bitmapSize.height();
     int64_t nextRectY = rect.y();
@@ -549,13 +558,15 @@ void WebPage::pdfSnapshotAtSize(LocalFrame& localMainFrame, GraphicsContext& con
         context.scale({ 1, -1 });
         context.translate(0, -bitmapSize.height());
 
-        paintSnapshotAtSize(rect, bitmapSize, options, localMainFrame, frameView, context);
+        paintSnapshotAtSize(rect, bitmapSize, options, *coreFrame, *frameView, context);
 
         context.endPage();
 
         nextRectY += bitmapSize.height();
         remainingHeight -= maxPageHeight;
     }
+
+    return buffer->sinkToPDFDocument();
 }
 
 void WebPage::getProcessDisplayName(CompletionHandler<void(String&&)>&& completionHandler)

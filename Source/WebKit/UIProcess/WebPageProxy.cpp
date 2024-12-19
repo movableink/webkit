@@ -12539,26 +12539,6 @@ void WebPageProxy::drawToPDF(FrameIdentifier frameID, const std::optional<FloatR
     }
     sendWithAsyncReply(Messages::WebPage::DrawToPDF(frameID, rect, allowTransparentBackground), WTFMove(callback));
 }
-
-void WebPageProxy::drawCompositedToPDF(FrameIdentifier frameID, const std::optional<FloatRect>& rect, bool allowTransparentBackground, CompletionHandler<void(RefPtr<SharedBuffer>&&)>&& callback)
-{
-    if (!hasRunningProcess()) {
-        callback({ });
-        return;
-    }
-
-    auto snapshotIdentifier = SnapshotIdentifier::generate();
-    m_pdfSnapshots.add(snapshotIdentifier, WTFMove(callback));
-    send(Messages::WebPage::DrawCompositedToPDF(frameID, rect, allowTransparentBackground, snapshotIdentifier));
-}
-
-void WebPageProxy::didDrawCompositedToPDF(RefPtr<SharedBuffer>&& data, SnapshotIdentifier snapshotIdentifier)
-{
-    auto callback = m_pdfSnapshots.take(snapshotIdentifier);
-    if (!callback)
-        return;
-    callback(WTFMove(data));
-}
 #endif // PLATFORM(COCOA)
 
 void WebPageProxy::getPDFFirstPageSize(WebCore::FrameIdentifier frameID, CompletionHandler<void(WebCore::FloatSize)>&& completionHandler)

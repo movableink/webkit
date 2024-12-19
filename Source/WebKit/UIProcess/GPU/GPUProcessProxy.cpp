@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -495,14 +495,6 @@ void GPUProcessProxy::promptForGetDisplayMedia(WebCore::DisplayCapturePromptType
 void GPUProcessProxy::cancelGetDisplayMediaPrompt()
 {
     send(Messages::GPUProcess::CancelGetDisplayMediaPrompt { }, 0);
-}
-#endif
-
-#if PLATFORM(COCOA)
-void GPUProcessProxy::didDrawCompositedToPDF(PageIdentifier pageID, RefPtr<SharedBuffer>&& data, SnapshotIdentifier snapshotIdentifier)
-{
-    if (auto page = WebProcessProxy::webPage(pageID))
-        page->didDrawCompositedToPDF(WTFMove(data), snapshotIdentifier);
 }
 #endif
 

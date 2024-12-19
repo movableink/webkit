@@ -38,23 +38,6 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ThreadSafeImageBufferFlusher);
 
-IntSize ImageBufferBackend::calculateSafeBackendSize(const Parameters& parameters)
-{
-    IntSize backendSize = parameters.backendSize;
-    if (backendSize.isEmpty())
-        return backendSize;
-
-    auto bytesPerRow = 4 * CheckedUint32(backendSize.width());
-    if (bytesPerRow.hasOverflowed())
-        return { };
-
-    CheckedSize numBytes = CheckedUint32(backendSize.height()) * bytesPerRow;
-    if (numBytes.hasOverflowed())
-        return { };
-
-    return backendSize;
-}
-
 size_t ImageBufferBackend::calculateMemoryCost(const IntSize& backendSize, unsigned bytesPerRow)
 {
     ASSERT(!backendSize.isEmpty());
@@ -161,7 +144,7 @@ void ImageBufferBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer, co
     convertImagePixels(source, destination, destinationRect.size());
 }
 
-RefPtr<SharedBuffer> ImageBufferBackend::sinkIntoPDFDocument()
+RefPtr<SharedBuffer> ImageBufferBackend::sinkToPDFDocument()
 {
     return nullptr;
 }

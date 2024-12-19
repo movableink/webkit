@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -117,8 +117,6 @@ class StrokeBezierCurve;
 class ApplyFillPattern;
 class ApplyStrokePattern;
 #endif
-class BeginPage;
-class EndPage;
 
 using Item = std::variant
     < ApplyDeviceScaleFactor
@@ -196,8 +194,6 @@ using Item = std::variant
     , ApplyFillPattern
     , ApplyStrokePattern
 #endif
-    , BeginPage
-    , EndPage
 >;
 
 enum class StopReplayReason : uint8_t {

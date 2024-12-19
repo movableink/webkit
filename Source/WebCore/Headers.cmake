@@ -2186,7 +2186,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/ShareableBitmap.h
     platform/graphics/ShareableBitmapHandle.h
     platform/graphics/ShouldLocalizeAxisNames.h
-    platform/graphics/SnapshotIdentifier.h
     platform/graphics/SourceBrush.h
     platform/graphics/SourceBrushLogicalGradient.h
     platform/graphics/SourceBufferPrivate.h

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Apple Inc.  All rights reserved.
+ * Copyright (C) 2023 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,25 +34,25 @@ namespace WebCore {
 // Used for ImageBuffers that return NullGraphicsContext as the ImageBuffer::context().
 // Solves the problem of holding NullGraphicsContext similarly to holding other
 // GraphicsContext instances, via a ImageBuffer reference.
-class WEBCORE_EXPORT NullImageBufferBackend : public ImageBufferBackend {
+class NullImageBufferBackend final : public ImageBufferBackend {
 public:
-    static std::unique_ptr<NullImageBufferBackend> create(const Parameters&, const ImageBufferCreationContext&);
-    ~NullImageBufferBackend();
+    WEBCORE_EXPORT static std::unique_ptr<NullImageBufferBackend> create(const Parameters&, const ImageBufferCreationContext&);
+    WEBCORE_EXPORT ~NullImageBufferBackend();
     static size_t calculateMemoryCost(const Parameters&) { return 0; }
 
-    NullGraphicsContext& context() override;
-    RefPtr<NativeImage> copyNativeImage() override;
-    RefPtr<NativeImage> createNativeImageReference() override;
-    void getPixelBuffer(const IntRect&, PixelBuffer&) override;
-    void putPixelBuffer(const PixelBuffer&, const IntRect&, const IntPoint&, AlphaPremultiplication) override;
-    bool canMapBackingStore() const override;
-    String debugDescription() const override;
+    NullGraphicsContext& context() final;
+    RefPtr<NativeImage> copyNativeImage() final;
+    RefPtr<NativeImage> createNativeImageReference() final;
+    void getPixelBuffer(const IntRect&, PixelBuffer&) final;
+    void putPixelBuffer(const PixelBuffer&, const IntRect&, const IntPoint&, AlphaPremultiplication) final;
+    bool canMapBackingStore() const final;
+    String debugDescription() const final;
 
 protected:
     using ImageBufferBackend::ImageBufferBackend;
-    unsigned bytesPerRow() const override;
+    unsigned bytesPerRow() const final;
 
     NullGraphicsContext m_context;
 };
 
-} // namespace WebCore
+}

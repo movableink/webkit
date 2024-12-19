@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -632,16 +632,6 @@ void RemoteDisplayListRecorder::applyFillPattern()
 void RemoteDisplayListRecorder::applyDeviceScaleFactor(float scaleFactor)
 {
     handleItem(DisplayList::ApplyDeviceScaleFactor(scaleFactor));
-}
-
-void RemoteDisplayListRecorder::beginPage(const IntSize& pageSize)
-{
-    handleItem(DisplayList::BeginPage(pageSize));
-}
-
-void RemoteDisplayListRecorder::endPage()
-{
-    handleItem(DisplayList::EndPage());
 }
 
 std::optional<SharedPreferencesForWebProcess> RemoteDisplayListRecorder::sharedPreferencesForWebProcess() const

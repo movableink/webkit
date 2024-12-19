@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -96,10 +96,6 @@ public:
     void transferImageBuffer(std::unique_ptr<RemoteSerializedImageBufferProxy>, WebCore::ImageBuffer&);
     void moveToSerializedBuffer(WebCore::RenderingResourceIdentifier);
     void moveToImageBuffer(WebCore::RenderingResourceIdentifier);
-
-#if PLATFORM(COCOA)
-    void didDrawCompositedToPDF(WebCore::PageIdentifier, WebCore::RenderingResourceIdentifier imageBufferIdentifier, WebCore::SnapshotIdentifier);
-#endif
 
     void createRemoteImageBuffer(WebCore::ImageBuffer&);
     bool isCached(const WebCore::ImageBuffer&) const;

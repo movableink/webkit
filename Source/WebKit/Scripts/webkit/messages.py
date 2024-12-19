@@ -1,4 +1,4 @@
-# Copyright (C) 2010-2024 Apple Inc. All rights reserved.
+# Copyright (C) 2010-2023 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -367,7 +367,6 @@ def serialized_identifiers():
         'WebCore::SharedWorkerIdentifier',
         'WebCore::SharedWorkerObjectIdentifierID',
         'WebCore::SleepDisablerIdentifier',
-        'WebCore::SnapshotIdentifier',
         'WebCore::SpeechRecognitionConnectionClientIdentifier',
         'WebCore::TextCheckingRequestIdentifier',
         'WebCore::TextManipulationItemIdentifier',

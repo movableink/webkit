@@ -36,7 +36,6 @@
 #include <WebCore/PageIdentifier.h>
 #include <WebCore/ProcessIdentity.h>
 #include <WebCore/ShareableBitmap.h>
-#include <WebCore/SnapshotIdentifier.h>
 #include <WebCore/Timer.h>
 #include <pal/SessionID.h>
 #include <wtf/Function.h>
@@ -151,10 +150,6 @@ public:
     void setPresentingApplicationAuditToken(WebCore::ProcessIdentifier, WebCore::PageIdentifier, std::optional<CoreIPCAuditToken>&&);
 #endif
 
-#if PLATFORM(COCOA)
-    void didDrawCompositedToPDF(WebCore::PageIdentifier, RefPtr<WebCore::SharedBuffer>&&, WebCore::SnapshotIdentifier);
-#endif
-
 private:
     void lowMemoryHandler(Critical, Synchronous);
 
@@ -179,7 +174,7 @@ private:
     void addSession(PAL::SessionID, GPUProcessSessionParameters&&);
     void removeSession(PAL::SessionID);
     void updateSandboxAccess(const Vector<SandboxExtension::Handle>&);
-
+    
     bool updatePreference(std::optional<bool>& oldPreference, std::optional<bool>& newPreference);
     void userPreferredLanguagesChanged(Vector<String>&&);
 

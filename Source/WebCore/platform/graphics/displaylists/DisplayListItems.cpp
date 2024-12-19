@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -226,7 +226,7 @@ void ClipOutRoundedRect::dump(TextStream& ts, OptionSet<AsTextFlag>) const
     ts.dumpProperty("rect", rect());
 }
 
-void ClipToImageBuffer::apply(GraphicsContext& context, ImageBuffer& imageBuffer) const
+void ClipToImageBuffer::apply(GraphicsContext& context, WebCore::ImageBuffer& imageBuffer) const
 {
     context.clipToImageBuffer(imageBuffer, m_destinationRect);
 }
@@ -355,7 +355,7 @@ void DrawDisplayListItems::dump(TextStream& ts, OptionSet<AsTextFlag>) const
     ts.dumpProperty("destination", destination());
 }
 
-void DrawImageBuffer::apply(GraphicsContext& context, ImageBuffer& imageBuffer) const
+void DrawImageBuffer::apply(GraphicsContext& context, WebCore::ImageBuffer& imageBuffer) const
 {
     context.drawImageBuffer(imageBuffer, m_destinationRect, m_srcRect, m_options);
 }
@@ -910,21 +910,6 @@ void ApplyDeviceScaleFactor::apply(GraphicsContext& context) const
 void ApplyDeviceScaleFactor::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
     ts.dumpProperty("scale-factor", scaleFactor());
-}
-
-void BeginPage::apply(GraphicsContext& context) const
-{
-    context.beginPage(m_pageSize);
-}
-
-void BeginPage::dump(TextStream& ts, OptionSet<AsTextFlag>) const
-{
-    ts.dumpProperty("page-size", pageSize());
-}
-
-void EndPage::apply(GraphicsContext& context) const
-{
-    context.endPage();
 }
 
 } // namespace DisplayList

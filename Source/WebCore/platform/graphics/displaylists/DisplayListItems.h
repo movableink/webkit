@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -1488,32 +1488,6 @@ public:
 
 private:
     float m_scaleFactor { 1 };
-};
-
-class BeginPage {
-public:
-    static constexpr char name[] = "begin-page";
-
-    BeginPage(const IntSize& pageSize)
-        : m_pageSize(pageSize)
-    {
-    }
-
-    const IntSize& pageSize() const { return m_pageSize; }
-
-    WEBCORE_EXPORT void apply(GraphicsContext&) const;
-    void dump(TextStream&, OptionSet<AsTextFlag>) const;
-
-private:
-    IntSize m_pageSize;
-};
-
-class EndPage {
-public:
-    static constexpr char name[] = "end-page";
-
-    WEBCORE_EXPORT void apply(GraphicsContext&) const;
-    void dump(TextStream&, OptionSet<AsTextFlag>) const { }
 };
 
 } // namespace DisplayList

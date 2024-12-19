@@ -114,7 +114,6 @@ public:
 
     WEBCORE_EXPORT virtual ~ImageBufferBackend();
 
-    WEBCORE_EXPORT static IntSize calculateSafeBackendSize(const Parameters&);
     WEBCORE_EXPORT static size_t calculateMemoryCost(const IntSize& backendSize, unsigned bytesPerRow);
     WEBCORE_EXPORT static AffineTransform calculateBaseTransform(const Parameters&);
 
@@ -131,7 +130,7 @@ public:
     virtual void getPixelBuffer(const IntRect& srcRect, PixelBuffer& destination) = 0;
     virtual void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) = 0;
 
-    WEBCORE_EXPORT virtual RefPtr<SharedBuffer> sinkIntoPDFDocument();
+    WEBCORE_EXPORT virtual RefPtr<SharedBuffer> sinkToPDFDocument();
 
 #if HAVE(IOSURFACE)
     virtual IOSurface* surface() { return nullptr; }
