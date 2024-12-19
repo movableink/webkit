@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -54,9 +54,6 @@
 #include "ShapeDetectionObjectHeap.h"
 #include "SwapBuffersDisplayRequirement.h"
 #include "WebPageProxy.h"
-#if PLATFORM(COCOA)
-#include <pal/cf/CoreTextSoftLink.h>
-#endif
 #include <WebCore/HTMLCanvasElement.h>
 #include <WebCore/NullImageBufferBackend.h>
 #include <WebCore/RenderingResourceIdentifier.h>
@@ -64,6 +61,10 @@
 #include <wtf/RunLoop.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/SystemTracing.h>
+
+#if USE(CG)
+#include <WebCore/ImageBufferCGPDFDocumentBackend.h>
+#endif
 
 #if HAVE(IOSURFACE)
 #include "ImageBufferRemoteIOSurfaceBackend.h"
@@ -81,6 +82,10 @@
 #if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
 #import "DynamicContentScalingBifurcatedImageBuffer.h"
 #import "DynamicContentScalingImageBufferBackend.h"
+#endif
+
+#if PLATFORM(COCOA)
+#include <pal/cf/CoreTextSoftLink.h>
 #endif
 
 #define MESSAGE_CHECK(assertion, message) MESSAGE_CHECK_WITH_MESSAGE_BASE(assertion, &m_gpuConnectionToWebProcess->connection(), message);
@@ -208,10 +213,10 @@ void RemoteRenderingBackend::didCreateImageBuffer(Ref<ImageBuffer> imageBuffer)
 {
     auto imageBufferIdentifier = imageBuffer->renderingResourceIdentifier();
     auto* sharing = imageBuffer->toBackendSharing();
-    auto handle = downcast<ImageBufferBackendHandleSharing>(*sharing).createBackendHandle();
+    auto handle = sharing ? downcast<ImageBufferBackendHandleSharing>(*sharing).createBackendHandle() : std::nullopt;
     m_remoteDisplayLists.add(imageBufferIdentifier, RemoteDisplayListRecorder::create(imageBuffer.get(), imageBufferIdentifier, *this));
     m_remoteImageBuffers.add(imageBufferIdentifier, RemoteImageBuffer::create(WTFMove(imageBuffer), *this));
-    send(Messages::RemoteImageBufferProxy::DidCreateBackend(WTFMove(*handle)), imageBufferIdentifier);
+    send(Messages::RemoteImageBufferProxy::DidCreateBackend(WTFMove(handle)), imageBufferIdentifier);
 }
 
 void RemoteRenderingBackend::moveToSerializedBuffer(RenderingResourceIdentifier identifier)
@@ -253,21 +258,54 @@ void RemoteRenderingBackend::moveToImageBuffer(RenderingResourceIdentifier ident
     didCreateImageBuffer(imageBuffer.releaseNonNull());
 }
 
+#if PLATFORM(COCOA)
+void RemoteRenderingBackend::didDrawCompositedToPDF(PageIdentifier pageID, RenderingResourceIdentifier imageBufferIdentifier, SnapshotIdentifier snapshotIdentifier)
+{
+    assertIsCurrent(workQueue());
+    auto imageBuffer = this->imageBuffer(imageBufferIdentifier);
+    if (!imageBuffer) {
+        ASSERT_IS_TESTING_IPC();
+        return;
+    }
+
+    ASSERT(imageBufferIdentifier == imageBuffer->renderingResourceIdentifier());
+    auto data = imageBuffer->sinkIntoPDFDocument();
+
+    callOnMainRunLoop([pageID, data = WTFMove(data), snapshotIdentifier]() mutable {
+        GPUProcess::singleton().didDrawCompositedToPDF(pageID, WTFMove(data), snapshotIdentifier);
+    });
+}
+#endif
+
 template<typename ImageBufferType>
 static RefPtr<ImageBuffer> allocateImageBufferInternal(const FloatSize& logicalSize, RenderingMode renderingMode, RenderingPurpose purpose, float resolutionScale, const DestinationColorSpace& colorSpace, ImageBufferPixelFormat pixelFormat, ImageBufferCreationContext& creationContext, RenderingResourceIdentifier imageBufferIdentifier)
 {
     RefPtr<ImageBuffer> imageBuffer;
 
+    switch (renderingMode) {
+    case RenderingMode::Accelerated:
 #if HAVE(IOSURFACE)
-    if (renderingMode == RenderingMode::Accelerated) {
         if (isSmallLayerBacking({ logicalSize, resolutionScale, colorSpace, pixelFormat, purpose }))
             imageBuffer = ImageBuffer::create<ImageBufferShareableMappedIOSurfaceBitmapBackend, ImageBufferType>(logicalSize, resolutionScale, colorSpace, pixelFormat, purpose, creationContext, imageBufferIdentifier);
         if (!imageBuffer)
             imageBuffer = ImageBuffer::create<ImageBufferShareableMappedIOSurfaceBackend, ImageBufferType>(logicalSize, resolutionScale, colorSpace, pixelFormat, purpose, creationContext, imageBufferIdentifier);
-    }
 #endif
-    if (!imageBuffer)
-        imageBuffer = ImageBuffer::create<ImageBufferShareableBitmapBackend, ImageBufferType>(logicalSize, resolutionScale, colorSpace, pixelFormat, purpose, creationContext, imageBufferIdentifier);
+        [[fallthrough]];
+
+    case RenderingMode::Unaccelerated:
+        if (!imageBuffer)
+            imageBuffer = ImageBuffer::create<ImageBufferShareableBitmapBackend, ImageBufferType>(logicalSize, resolutionScale, colorSpace, pixelFormat, purpose, creationContext, imageBufferIdentifier);
+        break;
+
+    case RenderingMode::PDFDocument:
+#if USE(CG)
+        imageBuffer = ImageBuffer::create<ImageBufferCGPDFDocumentBackend, ImageBufferType>(logicalSize, resolutionScale, colorSpace, pixelFormat, purpose, creationContext, imageBufferIdentifier);
+#endif
+        break;
+
+    case RenderingMode::DisplayList:
+        break;
+    }
 
     return imageBuffer;
 }

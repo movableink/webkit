@@ -6553,24 +6553,9 @@ void WebPage::computePagesForPrintingImpl(FrameIdentifier frameID, const PrintIn
 }
 
 #if PLATFORM(COCOA)
-void WebPage::drawToPDF(FrameIdentifier frameID, const std::optional<FloatRect>& rect, bool allowTransparentBackground,  CompletionHandler<void(RefPtr<WebCore::SharedBuffer>&&)>&& completionHandler)
+void WebPage::drawMainFrameToPDF(LocalFrame& localMainFrame, GraphicsContext& context, IntRect& snapshotRect, bool allowTransparentBackground)
 {
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
-    if (!localMainFrame)
-        return;
-
-    Ref frameView = *localMainFrame->view();
-    IntSize snapshotSize;
-    if (rect)
-        snapshotSize = IntSize(rect->size());
-    else
-        snapshotSize = { frameView->contentsSize() };
-
-    IntRect snapshotRect;
-    if (rect)
-        snapshotRect = { {(int)rect->x(), (int)rect->y()}, snapshotSize };
-    else
-        snapshotRect = { {0, 0}, snapshotSize };
+    Ref frameView = *localMainFrame.view();
 
     auto originalLayoutViewportOverrideRect = frameView->layoutViewportOverrideRect();
     frameView->setLayoutViewportOverrideRect(LayoutRect(snapshotRect));
@@ -6584,7 +6569,7 @@ void WebPage::drawToPDF(FrameIdentifier frameID, const std::optional<FloatRect>&
         frameView->setBaseBackgroundColor(Color::transparentBlack);
     }
 
-    auto buffer = pdfSnapshotAtSize(snapshotRect, snapshotSize, { });
+    pdfSnapshotAtSize(localMainFrame, context, snapshotRect, { });
 
     if (allowTransparentBackground) {
         frameView->setTransparent(false);
@@ -6593,8 +6578,42 @@ void WebPage::drawToPDF(FrameIdentifier frameID, const std::optional<FloatRect>&
 
     frameView->setLayoutViewportOverrideRect(originalLayoutViewportOverrideRect);
     frameView->setPaintBehavior(originalPaintBehavior);
+}
 
-    completionHandler(WTFMove(buffer));
+void WebPage::drawToPDF(FrameIdentifier frameID, const std::optional<FloatRect>& rect, bool allowTransparentBackground, CompletionHandler<void(RefPtr<WebCore::SharedBuffer>&&)>&& completionHandler)
+{
+    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
+    if (!localMainFrame)
+        return;
+
+    Ref frameView = *localMainFrame->view();
+    auto snapshotRect = IntRect { rect.value_or(FloatRect { { }, frameView->contentsSize() }) };
+
+    RefPtr buffer = ImageBuffer::create(snapshotRect.size(), RenderingMode::PDFDocument, RenderingPurpose::Snapshot, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
+    if (!buffer)
+        return;
+
+    drawMainFrameToPDF(*localMainFrame, buffer->context(), snapshotRect, allowTransparentBackground);
+    completionHandler(buffer->sinkIntoPDFDocument());
+}
+
+void WebPage::drawCompositedToPDF(FrameIdentifier frameID, const std::optional<FloatRect>& rect, bool allowTransparentBackground, SnapshotIdentifier snapshotIdentifier)
+{
+    ASSERT(m_page->settings().siteIsolationEnabled());
+
+    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
+    if (!localMainFrame)
+        return;
+
+    Ref frameView = *localMainFrame->view();
+    auto snapshotRect = IntRect { rect.value_or(FloatRect { { }, frameView->contentsSize() }) };
+
+    RefPtr buffer = ImageBuffer::create(snapshotRect.size(), RenderingMode::PDFDocument, RenderingPurpose::Snapshot, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8, &m_page->chrome());
+    if (!buffer)
+        return;
+
+    drawMainFrameToPDF(*localMainFrame, buffer->context(), snapshotRect, allowTransparentBackground);
+    ensureProtectedRemoteRenderingBackendProxy()->didDrawCompositedToPDF(m_identifier, buffer->renderingResourceIdentifier(), snapshotIdentifier);
 }
 
 void WebPage::drawRectToImage(FrameIdentifier frameID, const PrintInfo& printInfo, const IntRect& rect, const WebCore::IntSize& imageSize, CompletionHandler<void(std::optional<WebCore::ShareableBitmap::Handle>&&)>&& completionHandler)

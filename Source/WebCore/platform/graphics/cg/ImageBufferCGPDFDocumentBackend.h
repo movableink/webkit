@@ -57,7 +57,7 @@ private:
     void getPixelBuffer(const IntRect&, PixelBuffer&) final { ASSERT_NOT_REACHED(); }
     void putPixelBuffer(const PixelBuffer&, const IntRect&, const IntPoint&, AlphaPremultiplication) final { ASSERT_NOT_REACHED(); }
 
-    RefPtr<SharedBuffer> sinkToPDFDocument() final;
+    RefPtr<SharedBuffer> sinkIntoPDFDocument() final;
 
     String debugDescription() const final;
 
