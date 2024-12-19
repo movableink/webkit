@@ -335,7 +335,7 @@ void HistoryController::goToItem(HistoryItem& targetItem, FrameLoadType type, Sh
 
     // Set the BF cursor before commit, which lets the user quickly click back/forward again.
     // - plus, it only makes sense for the top level of the operation through the frame tree,
-    // as opposed to happening for some/one of the page commits that might happen soon
+    // as opposed to happening for some/one of the page commits that might happen soon.
     CheckedRef backForward = page->backForward();
     RefPtr currentItem = backForward->currentItem(m_frame->frameID());
     backForward->setProvisionalItem(targetItem);
@@ -344,10 +344,90 @@ void HistoryController::goToItem(HistoryItem& targetItem, FrameLoadType type, Sh
     // This must be done before trying to navigate the desired frame, because some
     // navigations can commit immediately (such as about:blank).  We must be sure that
     // all frames have provisional items set before the commit.
-    recursiveSetProvisionalItem(targetItem, currentItem.get());
+    recursiveSetProvisionalItem(targetItem, currentItem.get(), ForNavigationAPI::No);
 
     // Now that all other frames have provisional items, do the actual navigation.
     recursiveGoToItem(targetItem, currentItem.get(), type, shouldTreatAsContinuingLoad);
+}
+
+struct HistoryController::FrameToNavigate {
+    Ref<LocalFrame> frame;
+    RefPtr<HistoryItem> fromItem;
+    Ref<HistoryItem> toItem;
+};
+
+void HistoryController::goToItemForNavigationAPI(HistoryItem& targetItem, FrameLoadType type, const String& targetNavigationEntryKey)
+{
+    LOG(History, "HistoryController %p goToItemForNavigationAPI %p type=%d", this, &targetItem, static_cast<int>(type));
+
+    ASSERT(m_frame->isRootFrame());
+    RefPtr localFrame = dynamicDowncast<LocalFrame>(m_frame.get());
+
+    // shouldGoToHistoryItem is a private delegate method. This is needed to fix:
+    // <rdar://problem/3951283> can view pages from the back/forward cache that should be disallowed by Parental Controls
+    // Ultimately, history item navigations should go through the policy delegate. That's covered in:
+    // <rdar://problem/3979539> back/forward cache navigations should consult policy delegate
+    RefPtr page = m_frame->page();
+    if (!page)
+        return;
+    if (localFrame && !localFrame->protectedLoader()->client().shouldGoToHistoryItem(targetItem))
+        return;
+
+    Vector<FrameToNavigate> framesToNavigate;
+    if (RefPtr fromItem = page->backForward().currentItem()) {
+        if (RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame()))
+            recursiveGatherFramesToNavigate(*localMainFrame, framesToNavigate, targetItem, fromItem.get());
+    }
+
+    // Set the BF cursor before commit, which lets the user quickly click back/forward again.
+    // - plus, it only makes sense for the top level of the operation through the frame tree,
+    // as opposed to happening for some/one of the page commits that might happen soon
+    CheckedRef backForward = page->backForward();
+    RefPtr currentItem = backForward->currentItem(m_frame->frameID());
+    backForward->setProvisionalItem(targetItem);
+
+    // First set the provisional item of any frames that are not actually navigating.
+    // This must be done before trying to navigate the desired frame, because some
+    // navigations can commit immediately (such as about:blank). We must be sure that
+    // all frames have provisional items set before the commit.
+    recursiveSetProvisionalItem(targetItem, currentItem.get(), ForNavigationAPI::Yes);
+
+    RefPtr upcomingTraverseMethodTracker = localFrame ? localFrame->window()->navigation().upcomingTraverseMethodTracker(targetNavigationEntryKey) : nullptr;
+    for (auto& frameToNavigate : framesToNavigate) {
+        frameToNavigate.frame->protectedLoader()->loadItem(frameToNavigate.toItem, frameToNavigate.fromItem.get(), type, ShouldTreatAsContinuingLoad::No);
+        // If the navigation was aborted (by the JS called preventDefault() on the navigate event), then
+        // do not do any further navigations.
+        if (upcomingTraverseMethodTracker && upcomingTraverseMethodTracker->finishedPromise->wasRejected())
+            break;
+    }
+}
+
+void HistoryController::recursiveGatherFramesToNavigate(LocalFrame& frame, Vector<FrameToNavigate>& framesToNavigate, HistoryItem& targetItem, HistoryItem* fromItem)
+{
+    if (!itemsAreClones(targetItem, fromItem)) {
+        auto frameID = targetItem.frameID();
+        if (!frameID)
+            return;
+        framesToNavigate.append(FrameToNavigate { frame, fromItem, targetItem });
+        if (!fromItem || !fromItem->shouldDoSameDocumentNavigationTo(targetItem))
+            return;
+    }
+    ASSERT(fromItem);
+    for (Ref childItem : targetItem.children()) {
+        auto frameID = childItem->frameID();
+        if (!frameID)
+            continue;
+
+        RefPtr fromChildItem = fromItem->childItemWithFrameID(*frameID);
+        if (!fromChildItem)
+            continue;
+
+        RefPtr subframe = dynamicDowncast<LocalFrame>(frame.tree().descendantByFrameID(*frameID));
+        if (!subframe)
+            return;
+
+        recursiveGatherFramesToNavigate(*subframe, framesToNavigate, childItem, fromChildItem.get());
+    }
 }
 
 void HistoryController::setDefersLoading(bool defer)
@@ -797,13 +877,15 @@ Ref<HistoryItem> HistoryController::createItemTree(HistoryItemClient& client, Lo
 // tracking whether each frame already has the content the item requests.  If there is
 // a match, we set the provisional item and recurse.  Otherwise we will reload that
 // frame and all its kids in recursiveGoToItem.
-void HistoryController::recursiveSetProvisionalItem(HistoryItem& item, HistoryItem* fromItem)
+void HistoryController::recursiveSetProvisionalItem(HistoryItem& item, HistoryItem* fromItem, ForNavigationAPI forNavigationAPI)
 {
-    if (!itemsAreClones(item, fromItem))
-        return;
-
-    // Set provisional item, which will be committed in recursiveUpdateForCommit.
-    m_provisionalItem = &item;
+    if (!itemsAreClones(item, fromItem)) {
+        if (forNavigationAPI == ForNavigationAPI::No || !fromItem || !fromItem->shouldDoSameDocumentNavigationTo(item))
+            return;
+    } else {
+        // Set provisional item, which will be committed in recursiveUpdateForCommit.
+        m_provisionalItem = &item;
+    }
 
     for (Ref childItem : item.children()) {
         auto frameID = childItem->frameID();
@@ -845,7 +927,7 @@ void HistoryController::recursiveGoToItem(HistoryItem& item, HistoryItem* fromIt
 }
 
 // The following logic must be kept in sync with WebKit::WebBackForwardListItem::itemIsClone().
-bool HistoryController::itemsAreClones(HistoryItem& item1, HistoryItem* item2) const
+bool HistoryController::itemsAreClones(HistoryItem& item1, HistoryItem* item2)
 {
     // If the item we're going to is a clone of the item we're at, then we do
     // not need to load it again.  The current frame tree and the frame tree

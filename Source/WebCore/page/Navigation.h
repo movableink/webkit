@@ -163,6 +163,8 @@ public:
     ScriptExecutionContext* scriptExecutionContext() const final;
     RefPtr<ScriptExecutionContext> protectedScriptExecutionContext() const;
 
+    NavigationAPIMethodTracker* upcomingTraverseMethodTracker(const String& key) const { return m_upcomingTraverseMethodTrackers.get(key); }
+
 private:
     explicit Navigation(LocalDOMWindow&);
 

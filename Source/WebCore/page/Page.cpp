@@ -944,6 +944,14 @@ void Page::goToItem(LocalFrame& frame, HistoryItem& item, FrameLoadType type, Sh
     frame.checkedHistory()->goToItem(item, type, shouldTreatAsContinuingLoad);
 }
 
+void Page::goToItemForNavigationAPI(LocalFrame& frame, HistoryItem& item, FrameLoadType type, const String& targetNavigationEntryKey)
+{
+    ASSERT(frame.isRootFrame());
+    if (frame.checkedHistory()->shouldStopLoadingForHistoryItem(item))
+        frame.protectedLoader()->stopAllLoadersAndCheckCompleteness();
+    frame.checkedHistory()->goToItemForNavigationAPI(item, type, targetNavigationEntryKey);
+}
+
 void Page::setGroupName(const String& name)
 {
     if (m_group && !m_group->name().isEmpty()) {

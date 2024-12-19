@@ -387,8 +387,10 @@ public:
         }
 
         auto completionHandler = std::exchange(m_completionHandler, nullptr);
+
         Ref rootFrame = localFrame->rootFrame();
-        page->goToItem(rootFrame, *historyItem, FrameLoadType::IndexedBackForward, ShouldTreatAsContinuingLoad::No);
+        page->goToItemForNavigationAPI(rootFrame, *historyItem, FrameLoadType::IndexedBackForward, m_key);
+
         completionHandler(ScheduleHistoryNavigationResult::Completed);
     }
 

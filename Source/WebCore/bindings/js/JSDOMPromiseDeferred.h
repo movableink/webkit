@@ -164,6 +164,15 @@ public:
     WEBCORE_EXPORT void reject(Exception, RejectAsHandled = RejectAsHandled::No);
     WEBCORE_EXPORT void reject(ExceptionCode, const String& = { }, RejectAsHandled = RejectAsHandled::No);
 
+    bool wasRejected() const
+    {
+        auto* lexicalGlobalObject = globalObject();
+        ASSERT(lexicalGlobalObject);
+
+        ASSERT(deferred());
+        return deferred()->status(lexicalGlobalObject->vm()) == JSC::JSPromise::Status::Rejected;
+    }
+
     template<typename Callback>
     void resolveWithCallback(Callback callback)
     {
