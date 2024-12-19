@@ -41,7 +41,6 @@ function updateResultWithEvent(event) {
     event.preventDefault();
 }
 
-source.focus();
 source.setSelectionRange(0, source.value.length);
 destination.addEventListener("paste", updateResultWithEvent);
 

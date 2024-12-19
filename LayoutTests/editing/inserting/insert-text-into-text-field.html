@@ -26,7 +26,6 @@ if (window.testRunner)
     testRunner.dumpAsText();
 
 var input = document.getElementById("input");
-input.focus();
 input.setSelectionRange(1, 1);
 document.execCommand("InsertHTML", false, "b");
 if (input.value == "ab")

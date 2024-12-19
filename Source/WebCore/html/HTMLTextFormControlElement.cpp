@@ -217,8 +217,6 @@ void HTMLTextFormControlElement::setSelectionDirection(const String& direction)
 
 void HTMLTextFormControlElement::select(SelectionRevealMode revealMode, const AXTextStateChangeIntent& intent)
 {
-    FocusOptions focusOptions { .preventScroll = true };
-    focus(focusOptions);
     if (setSelectionRange(0, std::numeric_limits<unsigned>::max(), SelectionHasNoDirection, revealMode, intent))
         scheduleSelectEvent();
 }
@@ -331,20 +329,19 @@ bool HTMLTextFormControlElement::setSelectionRange(unsigned start, unsigned end,
         // FIXME: Removing this synchronous layout requires fixing setSelectionWithoutUpdatingAppearance not needing up-to-date style.
         protectedDocument()->updateLayoutIgnorePendingStylesheets();
 
-#if PLATFORM(COCOA)
-        bool cacheSelectionIfNotFocusedOrSelected = WTF::linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::SetSelectionRangeCachesSelectionIfNotFocusedOrSelected);
-#else
-        bool cacheSelectionIfNotFocusedOrSelected = true;
-#endif
-        // Cache selection if neither selection or focus is on the input.
-        if (cacheSelectionIfNotFocusedOrSelected && frame && enclosingTextFormControl(frame->selection().selection().start()) != this)
+        if (!isTextField())
+            return false;
+
+        // Double-check our connected state after the layout update.
+        if (!isConnected())
             return cacheSelection(start, end, direction);
 
-        // Cache selection if renderer is invisible.
-        if (CheckedPtr renderer = this->renderer()) {
-            if (renderer->style().visibility() == Visibility::Hidden || !innerText->renderBox() || !innerText->renderBox()->height())
-                return cacheSelection(start, end, direction);
-        }
+        // Double-check the state of innerTextElement after the layout.
+        innerText = innerTextElement();
+        auto* rendererTextControl = renderer();
+
+        if (innerText && rendererTextControl && (rendererTextControl->style().visibility() == Visibility::Hidden || !innerText->renderBox() || !innerText->renderBox()->height()))
+            return cacheSelection(start, end, direction);
     }
 
     auto previousSelectionStart = m_cachedSelectionStart;
