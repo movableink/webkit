@@ -102,10 +102,11 @@ using namespace WebKit;
     if (!uniqueIdentifier)
         return;
 
-    if (!_webExtensionController)
+    RefPtr webExtensionController = _webExtensionController.get();
+    if (!webExtensionController)
         return;
 
-    if (RefPtr context = _webExtensionController->extensionContext(uniqueIdentifier))
+    if (RefPtr context = webExtensionController->extensionContext(uniqueIdentifier))
         context->invalidateStorage();
 }
 
@@ -486,7 +487,7 @@ void WebExtensionController::addWebsiteDataStore(WebsiteDataStore& dataStore)
         m_cookieStoreObserver = HTTPCookieStoreObserver::create(*this);
 
     m_websiteDataStores.add(dataStore);
-    dataStore.protectedCookieStore()->registerObserver(*m_cookieStoreObserver);
+    dataStore.protectedCookieStore()->registerObserver(*protectedCookieStoreObserver());
 }
 
 void WebExtensionController::removeWebsiteDataStore(WebsiteDataStore& dataStore)
@@ -498,7 +499,7 @@ void WebExtensionController::removeWebsiteDataStore(WebsiteDataStore& dataStore)
     }
 
     m_websiteDataStores.remove(dataStore);
-    dataStore.protectedCookieStore()->unregisterObserver(*m_cookieStoreObserver);
+    dataStore.protectedCookieStore()->unregisterObserver(*protectedCookieStoreObserver());
 
     if (m_websiteDataStores.isEmptyIgnoringNullReferences())
         m_cookieStoreObserver = nullptr;

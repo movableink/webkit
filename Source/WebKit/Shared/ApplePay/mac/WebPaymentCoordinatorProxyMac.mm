@@ -139,8 +139,8 @@ void WebPaymentCoordinatorProxy::platformHidePaymentUI()
 
     [[m_sheetWindow sheetParent] endSheet:m_sheetWindow.get()];
 
-    if (m_authorizationPresenter)
-        m_authorizationPresenter->dismiss();
+    if (RefPtr authorizationPresenter = m_authorizationPresenter)
+        authorizationPresenter->dismiss();
 
     m_sheetWindow = nullptr;
 }

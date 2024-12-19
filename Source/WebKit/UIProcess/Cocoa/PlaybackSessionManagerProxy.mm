@@ -320,8 +320,8 @@ void PlaybackSessionModelContext::durationChanged(double duration)
 {
     ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER, duration);
     m_duration = duration;
-    for (auto& client : m_clients)
-        client.durationChanged(duration);
+    for (CheckedRef client : m_clients)
+        client->durationChanged(duration);
 }
 
 void PlaybackSessionModelContext::currentTimeChanged(double currentTime)
@@ -332,16 +332,16 @@ void PlaybackSessionModelContext::currentTimeChanged(double currentTime)
     if (m_playbackStartedTimeNeedsUpdate)
         playbackStartedTimeChanged(currentTime);
 
-    for (auto& client : m_clients)
-        client.currentTimeChanged(currentTime, anchorTime);
+    for (CheckedRef client : m_clients)
+        client->currentTimeChanged(currentTime, anchorTime);
 }
 
 void PlaybackSessionModelContext::bufferedTimeChanged(double bufferedTime)
 {
     INFO_LOG_IF_POSSIBLE(LOGIDENTIFIER, bufferedTime);
     m_bufferedTime = bufferedTime;
-    for (auto& client : m_clients)
-        client.bufferedTimeChanged(bufferedTime);
+    for (CheckedRef client : m_clients)
+        client->bufferedTimeChanged(bufferedTime);
 }
 
 void PlaybackSessionModelContext::rateChanged(OptionSet<WebCore::PlaybackSessionModel::PlaybackState> playbackState, double playbackRate, double defaultPlaybackRate)
@@ -350,8 +350,8 @@ void PlaybackSessionModelContext::rateChanged(OptionSet<WebCore::PlaybackSession
     m_playbackState = playbackState;
     m_playbackRate = playbackRate;
     m_defaultPlaybackRate = defaultPlaybackRate;
-    for (auto& client : m_clients)
-        client.rateChanged(m_playbackState, m_playbackRate, m_defaultPlaybackRate);
+    for (CheckedRef client : m_clients)
+        client->rateChanged(m_playbackState, m_playbackRate, m_defaultPlaybackRate);
 }
 
 void PlaybackSessionModelContext::seekableRangesChanged(WebCore::TimeRanges& seekableRanges, double lastModifiedTime, double liveUpdateInterval)
@@ -360,23 +360,23 @@ void PlaybackSessionModelContext::seekableRangesChanged(WebCore::TimeRanges& see
     m_seekableRanges = seekableRanges;
     m_seekableTimeRangesLastModifiedTime = lastModifiedTime;
     m_liveUpdateInterval = liveUpdateInterval;
-    for (auto& client : m_clients)
-        client.seekableRangesChanged(seekableRanges, lastModifiedTime, liveUpdateInterval);
+    for (CheckedRef client : m_clients)
+        client->seekableRangesChanged(seekableRanges, lastModifiedTime, liveUpdateInterval);
 }
 
 void PlaybackSessionModelContext::canPlayFastReverseChanged(bool canPlayFastReverse)
 {
     m_canPlayFastReverse = canPlayFastReverse;
-    for (auto& client : m_clients)
-        client.canPlayFastReverseChanged(canPlayFastReverse);
+    for (CheckedRef client : m_clients)
+        client->canPlayFastReverseChanged(canPlayFastReverse);
 }
 
 void PlaybackSessionModelContext::audioMediaSelectionOptionsChanged(const Vector<MediaSelectionOption>& audioMediaSelectionOptions, uint64_t audioMediaSelectedIndex)
 {
     m_audioMediaSelectionOptions = audioMediaSelectionOptions;
     m_audioMediaSelectedIndex = audioMediaSelectedIndex;
-    for (auto& client : m_clients)
-        client.audioMediaSelectionOptionsChanged(audioMediaSelectionOptions, audioMediaSelectedIndex);
+    for (CheckedRef client : m_clients)
+        client->audioMediaSelectionOptionsChanged(audioMediaSelectionOptions, audioMediaSelectedIndex);
 }
 
 void PlaybackSessionModelContext::legibleMediaSelectionOptionsChanged(const Vector<MediaSelectionOption>& legibleMediaSelectionOptions, uint64_t legibleMediaSelectedIndex)
@@ -384,24 +384,24 @@ void PlaybackSessionModelContext::legibleMediaSelectionOptionsChanged(const Vect
     m_legibleMediaSelectionOptions = legibleMediaSelectionOptions;
     m_legibleMediaSelectedIndex = legibleMediaSelectedIndex;
 
-    for (auto& client : m_clients)
-        client.legibleMediaSelectionOptionsChanged(legibleMediaSelectionOptions, legibleMediaSelectedIndex);
+    for (CheckedRef client : m_clients)
+        client->legibleMediaSelectionOptionsChanged(legibleMediaSelectionOptions, legibleMediaSelectedIndex);
 }
 
 void PlaybackSessionModelContext::audioMediaSelectionIndexChanged(uint64_t selectedIndex)
 {
     m_audioMediaSelectedIndex = selectedIndex;
 
-    for (auto& client : m_clients)
-        client.audioMediaSelectionIndexChanged(selectedIndex);
+    for (CheckedRef client : m_clients)
+        client->audioMediaSelectionIndexChanged(selectedIndex);
 }
 
 void PlaybackSessionModelContext::legibleMediaSelectionIndexChanged(uint64_t selectedIndex)
 {
     m_legibleMediaSelectedIndex = selectedIndex;
 
-    for (auto& client : m_clients)
-        client.legibleMediaSelectionIndexChanged(selectedIndex);
+    for (CheckedRef client : m_clients)
+        client->legibleMediaSelectionIndexChanged(selectedIndex);
 }
 
 void PlaybackSessionModelContext::externalPlaybackChanged(bool enabled, PlaybackSessionModel::ExternalPlaybackTargetType type, const String& localizedName)
@@ -410,50 +410,50 @@ void PlaybackSessionModelContext::externalPlaybackChanged(bool enabled, Playback
     m_externalPlaybackTargetType = type;
     m_externalPlaybackLocalizedDeviceName = localizedName;
 
-    for (auto& client : m_clients)
-        client.externalPlaybackChanged(enabled, type, localizedName);
+    for (CheckedRef client : m_clients)
+        client->externalPlaybackChanged(enabled, type, localizedName);
 }
 
 void PlaybackSessionModelContext::wirelessVideoPlaybackDisabledChanged(bool wirelessVideoPlaybackDisabled)
 {
     m_wirelessVideoPlaybackDisabled = wirelessVideoPlaybackDisabled;
-    for (auto& client : m_clients)
-        client.wirelessVideoPlaybackDisabledChanged(wirelessVideoPlaybackDisabled);
+    for (CheckedRef client : m_clients)
+        client->wirelessVideoPlaybackDisabledChanged(wirelessVideoPlaybackDisabled);
 }
 
 void PlaybackSessionModelContext::mutedChanged(bool muted)
 {
     m_muted = muted;
-    for (auto& client : m_clients)
-        client.mutedChanged(muted);
+    for (CheckedRef client : m_clients)
+        client->mutedChanged(muted);
 }
 
 void PlaybackSessionModelContext::volumeChanged(double volume)
 {
     m_volume = volume;
-    for (auto& client : m_clients)
-        client.volumeChanged(volume);
+    for (CheckedRef client : m_clients)
+        client->volumeChanged(volume);
 }
 
 void PlaybackSessionModelContext::pictureInPictureSupportedChanged(bool supported)
 {
     m_pictureInPictureSupported = supported;
-    for (auto& client : m_clients)
-        client.isPictureInPictureSupportedChanged(supported);
+    for (CheckedRef client : m_clients)
+        client->isPictureInPictureSupportedChanged(supported);
 }
 
 void PlaybackSessionModelContext::pictureInPictureActiveChanged(bool active)
 {
     m_pictureInPictureActive = active;
-    for (auto& client : m_clients)
-        client.pictureInPictureActiveChanged(active);
+    for (CheckedRef client : m_clients)
+        client->pictureInPictureActiveChanged(active);
 }
 
 void PlaybackSessionModelContext::isInWindowFullscreenActiveChanged(bool active)
 {
     m_isInWindowFullscreenActive = active;
-    for (auto& client : m_clients)
-        client.isInWindowFullscreenActiveChanged(active);
+    for (CheckedRef client : m_clients)
+        client->isInWindowFullscreenActiveChanged(active);
 }
 
 #if ENABLE(LINEAR_MEDIA_PLAYER)
@@ -465,8 +465,8 @@ void PlaybackSessionModelContext::supportsLinearMediaPlayerChanged(bool supports
     ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER, supportsLinearMediaPlayer);
     m_supportsLinearMediaPlayer = supportsLinearMediaPlayer;
 
-    for (auto& client : m_clients)
-        client.supportsLinearMediaPlayerChanged(supportsLinearMediaPlayer);
+    for (CheckedRef client : m_clients)
+        client->supportsLinearMediaPlayerChanged(supportsLinearMediaPlayer);
 
     if (RefPtr manager = m_manager.get())
         manager->updateVideoControlsManager(m_contextId);
@@ -480,8 +480,8 @@ void PlaybackSessionModelContext::spatialVideoMetadataChanged(const std::optiona
         ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER, *metadata);
     m_spatialVideoMetadata = metadata;
 
-    for (auto& client : m_clients)
-        client.spatialVideoMetadataChanged(m_spatialVideoMetadata);
+    for (CheckedRef client : m_clients)
+        client->spatialVideoMetadataChanged(m_spatialVideoMetadata);
 }
 #endif
 

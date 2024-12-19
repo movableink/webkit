@@ -262,7 +262,7 @@ static JSValueRef evaluateJavaScriptCallback(JSContextRef context, JSObjectRef f
 JSObjectRef WebAutomationSessionProxy::scriptObject(JSGlobalContextRef context)
 {
     JSC::JSGlobalObject* globalObject = toJS(context);
-    JSC::VM& vm = globalObject->vm();
+    SUPPRESS_UNCOUNTED_LOCAL JSC::VM& vm = globalObject->vm();
     JSC::JSLockHolder locker(vm);
     auto scriptObjectID = JSC::Identifier::fromUid(m_scriptObjectIdentifier);
     if (!globalObject->hasProperty(globalObject, scriptObjectID))
@@ -274,7 +274,7 @@ JSObjectRef WebAutomationSessionProxy::scriptObject(JSGlobalContextRef context)
 void WebAutomationSessionProxy::setScriptObject(JSGlobalContextRef context, JSObjectRef object)
 {
     JSC::JSGlobalObject* globalObject = toJS(context);
-    JSC::VM& vm = globalObject->vm();
+    SUPPRESS_UNCOUNTED_LOCAL JSC::VM& vm = globalObject->vm();
     JSC::JSLockHolder locker(vm);
     auto scriptObjectID = JSC::Identifier::fromUid(m_scriptObjectIdentifier);
     JSC::PutPropertySlot slot(globalObject);
@@ -955,7 +955,7 @@ void WebAutomationSessionProxy::takeScreenshot(WebCore::PageIdentifier pageID, s
         RefPtr localMainFrame = dynamicDowncast<LocalFrame>(frame->coreFrame()->mainFrame());
         if (!localMainFrame)
             return;
-        auto snapshotRect = WebCore::IntRect(localMainFrame->view()->clientToDocumentRect(rect));
+        auto snapshotRect = WebCore::IntRect(localMainFrame->protectedView()->clientToDocumentRect(rect));
         RefPtr<WebImage> image = page->scaledSnapshotWithOptions(snapshotRect, 1, SnapshotOption::Shareable);
         if (!image)
             return completionHandler(std::nullopt, Inspector::Protocol::AutomationHelpers::getEnumConstantValue(Inspector::Protocol::Automation::ErrorMessage::ScreenshotError));
@@ -1013,7 +1013,7 @@ void WebAutomationSessionProxy::snapshotRectForScreenshot(WebCore::PageIdentifie
         return;
     }
 
-    completionHandler(std::nullopt, WebCore::IntRect(localMainFrame->view()->documentToClientRect(snapshotRect)));
+    completionHandler(std::nullopt, WebCore::IntRect(localMainFrame->protectedView()->documentToClientRect(snapshotRect)));
 }
 
 void WebAutomationSessionProxy::getCookiesForFrame(WebCore::PageIdentifier pageID, std::optional<WebCore::FrameIdentifier> frameID, CompletionHandler<void(std::optional<String>, Vector<WebCore::Cookie>)>&& completionHandler)

@@ -254,6 +254,8 @@ private:
         WeakPtr<WebExtensionController> m_extensionController;
     };
 
+    RefPtr<HTTPCookieStoreObserver> protectedCookieStoreObserver() { return m_cookieStoreObserver; }
+
     Ref<WebExtensionControllerConfiguration> m_configuration;
 
 #if PLATFORM(COCOA)

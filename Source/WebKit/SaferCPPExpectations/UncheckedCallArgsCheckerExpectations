@@ -20,7 +20,6 @@ UIProcess/API/Cocoa/WKWebView.mm
 UIProcess/API/Cocoa/WKWebViewTesting.mm
 UIProcess/API/Cocoa/WKWebsiteDataStore.mm
 UIProcess/BrowsingContextGroup.cpp
-UIProcess/Cocoa/VideoPresentationManagerProxy.mm
 UIProcess/Inspector/InspectorTargetProxy.cpp
 UIProcess/Launcher/ProcessLauncher.cpp
 UIProcess/MediaKeySystemPermissionRequestManagerProxy.cpp
@@ -38,7 +37,6 @@ UIProcess/WebProcessCache.cpp
 UIProcess/WebURLSchemeTask.cpp
 UIProcess/mac/WKImmediateActionController.mm
 UIProcess/mac/WebViewImpl.mm
-WebProcess/Automation/WebAutomationSessionProxy.cpp
 WebProcess/FullScreen/WebFullScreenManager.cpp
 WebProcess/Inspector/WebInspectorInternal.cpp
 WebProcess/Plugins/PDF/PDFPlugin.mm

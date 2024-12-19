@@ -77,8 +77,6 @@ Shared/API/c/mac/WKWebArchiveRef.cpp
 Shared/API/c/mac/WKWebArchiveResource.cpp
 Shared/APIWebArchive.mm
 Shared/APIWebArchiveResource.mm
-Shared/ApplePay/cocoa/WebPaymentCoordinatorProxyCocoa.mm
-Shared/ApplePay/mac/WebPaymentCoordinatorProxyMac.mm
 Shared/BlobDataFileReferenceWithSandboxExtension.cpp
 Shared/Cocoa/APIObject.mm
 Shared/Cocoa/DefaultWebBrowserChecks.mm
@@ -230,7 +228,6 @@ UIProcess/Cocoa/WebInspectorPreferenceObserver.mm
 UIProcess/DeviceIdHashSaltStorage.cpp
 UIProcess/Extensions/Cocoa/WebExtensionActionCocoa.mm
 UIProcess/Extensions/Cocoa/WebExtensionCommandCocoa.mm
-UIProcess/Extensions/Cocoa/WebExtensionControllerCocoa.mm
 UIProcess/Extensions/Cocoa/WebExtensionURLSchemeHandlerCocoa.mm
 UIProcess/Extensions/WebExtensionAlarm.cpp
 UIProcess/Extensions/WebExtensionCommand.cpp

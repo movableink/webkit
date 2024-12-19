@@ -1792,10 +1792,10 @@ RefPtr<API::Object> WebProcessProxy::transformHandlesToObjects(API::Object* obje
         {
             switch (object.type()) {
             case API::Object::Type::FrameHandle:
-                return static_cast<const API::FrameHandle&>(object).isAutoconverting();
+                return downcast<const API::FrameHandle>(object).isAutoconverting();
 
             case API::Object::Type::PageHandle:
-                return static_cast<const API::PageHandle&>(object).isAutoconverting();
+                return downcast<const API::PageHandle>(object).isAutoconverting();
 
             default:
                 return false;
@@ -1807,12 +1807,12 @@ RefPtr<API::Object> WebProcessProxy::transformHandlesToObjects(API::Object* obje
             switch (object.type()) {
             case API::Object::Type::FrameHandle: {
                 ASSERT(static_cast<API::FrameHandle&>(object).isAutoconverting());
-                auto frameID = static_cast<API::FrameHandle&>(object).frameID();
+                auto frameID = downcast<API::FrameHandle>(object).frameID();
                 return WebFrameProxy::webFrame(frameID);
             }
             case API::Object::Type::PageHandle:
                 ASSERT(static_cast<API::PageHandle&>(object).isAutoconverting());
-                return protectedProcess()->webPage(static_cast<API::PageHandle&>(object).pageProxyID());
+                return protectedProcess()->webPage(downcast<API::PageHandle>(object).pageProxyID());
 
             default:
                 return &object;
@@ -1847,10 +1847,10 @@ RefPtr<API::Object> WebProcessProxy::transformObjectsToHandles(API::Object* obje
         {
             switch (object.type()) {
             case API::Object::Type::Frame:
-                return API::FrameHandle::createAutoconverting(static_cast<const WebFrameProxy&>(object).frameID());
+                return API::FrameHandle::createAutoconverting(downcast<WebFrameProxy>(object).frameID());
 
             case API::Object::Type::Page:
-                return API::PageHandle::createAutoconverting(static_cast<const WebPageProxy&>(object).identifier(), static_cast<const WebPageProxy&>(object).webPageIDInMainFrameProcess());
+                return API::PageHandle::createAutoconverting(downcast<WebPageProxy>(object).identifier(), downcast<WebPageProxy>(object).webPageIDInMainFrameProcess());
 
             default:
                 return &object;
@@ -1885,7 +1885,7 @@ void WebProcessProxy::didChangeThrottleState(ProcessThrottleState type)
 {
     AuxiliaryProcessProxy::didChangeThrottleState(type);
 
-    auto scope = makeScopeExit([this]() {
+    auto scope = makeScopeExit([this, protectedThis = Ref { *this }]() {
         updateRuntimeStatistics();
     });
 

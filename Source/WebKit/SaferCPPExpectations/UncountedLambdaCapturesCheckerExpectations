@@ -5,11 +5,8 @@ NetworkProcess/cocoa/NetworkSessionCocoa.mm
 Platform/IPC/HandleMessage.h
 Platform/IPC/StreamConnectionWorkQueue.cpp
 UIProcess/AuxiliaryProcessProxy.cpp
-UIProcess/Cocoa/WebProcessPoolCocoa.mm
-UIProcess/UserContent/WebUserContentControllerProxy.cpp
 UIProcess/UserMediaProcessManager.cpp
 UIProcess/WebPageProxy.cpp
-UIProcess/WebProcessProxy.cpp
 WebProcess/GPU/media/RemoteAudioDestinationProxy.cpp
 WebProcess/GPU/media/RemoteImageDecoderAVF.cpp
 WebProcess/GPU/media/RemoteMediaPlayerManager.cpp

@@ -495,7 +495,7 @@ uint64_t VideoPresentationModelContext::nextChildIdentifier() const
 
 const Logger* VideoPresentationModelContext::loggerPtr() const
 {
-    return m_playbackSessionModel->loggerPtr();
+    return Ref { m_playbackSessionModel }->loggerPtr();
 }
 
 WTFLogChannel& VideoPresentationModelContext::logChannel() const
