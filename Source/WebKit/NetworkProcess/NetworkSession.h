@@ -285,6 +285,8 @@ public:
 
     void recordHTTPSConnectionTiming(const WebCore::NetworkLoadMetrics&);
     double currentHTTPSConnectionAverageTiming() const { return m_recentHTTPSConnectionTiming.currentMovingAverage; }
+
+    virtual bool isNetworkSessionCocoa() const { return false; }
                                     
 protected:
     NetworkSession(NetworkProcess&, const NetworkSessionCreationParameters&);

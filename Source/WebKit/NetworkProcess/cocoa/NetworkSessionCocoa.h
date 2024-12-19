@@ -201,6 +201,8 @@ private:
 
     void forEachSessionWrapper(Function<void(SessionWrapper&)>&&);
 
+    bool isNetworkSessionCocoa() const final { return true; }
+
     Ref<SessionSet> m_defaultSessionSet;
     HashMap<WebPageProxyIdentifier, Ref<SessionSet>> m_perPageSessionSets;
     HashMap<WebPageNetworkParameters, WeakPtr<SessionSet>> m_perParametersSessionSets;
@@ -234,3 +236,7 @@ private:
 };
 
 } // namespace WebKit
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::NetworkSessionCocoa)
+    static bool isType(const WebKit::NetworkSession& networkSession) { return networkSession.isNetworkSessionCocoa(); }
+SPECIALIZE_TYPE_TRAITS_END()
