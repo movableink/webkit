@@ -32,6 +32,7 @@
 #include "JSCJSValue.h"
 #include "OperationResult.h"
 #include "WasmExceptionType.h"
+#include "WasmFormat.h"
 #include "WasmOSREntryData.h"
 #include "WasmTypeDefinition.h"
 
