@@ -435,6 +435,7 @@ Navigation::Result Navigation::navigate(const String& url, NavigateOptions&& opt
 
     auto request = FrameLoadRequest(*frame(), newURL);
     request.setNavigationHistoryBehavior(options.history);
+    request.setIsFromNavigationAPI(true);
     frame()->loader().loadFrameRequest(WTFMove(request), nullptr, { });
 
     // If the load() call never made it to the point that NavigateEvent was emitted, thus promoteUpcomingAPIMethodTracker() called, this will be true.

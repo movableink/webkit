@@ -181,8 +181,11 @@ void WebFrameLoaderClient::dispatchDecidePolicyForNavigationAction(const Navigat
 
     // Notify the UIProcess.
     if (policyDecisionMode == PolicyDecisionMode::Synchronous) {
+        bool shouldUseSyncIPCForFragmentNavigations = false;
 #if PLATFORM(COCOA)
-        if (navigationAction.processingUserGesture() || !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::AsyncFragmentNavigationPolicyDecision)) {
+        shouldUseSyncIPCForFragmentNavigations = !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::AsyncFragmentNavigationPolicyDecision);
+#endif
+        if (navigationAction.processingUserGesture() || navigationAction.isFromNavigationAPI() || shouldUseSyncIPCForFragmentNavigations) {
             auto sendResult = webPage->sendSync(Messages::WebPageProxy::DecidePolicyForNavigationActionSync(*navigationActionData));
             if (!sendResult.succeeded()) {
                 WebFrameLoaderClient_RELEASE_LOG_ERROR(WEBFRAMELOADERCLIENT_DISPATCHDECIDEPOLICYFORNAVIGATIONACTION_SYNC_IPC_FAILED, (uint8_t)sendResult.error());
@@ -195,7 +198,6 @@ void WebFrameLoaderClient::dispatchDecidePolicyForNavigationAction(const Navigat
             m_frame->didReceivePolicyDecision(listenerID, PolicyDecision { policyDecision.isNavigatingToAppBoundDomain, policyDecision.policyAction, { }, policyDecision.downloadID });
             return;
         }
-#endif
         webPage->sendWithAsyncReply(Messages::WebPageProxy::DecidePolicyForNavigationActionAsync(*navigationActionData), [] (PolicyDecision&&) { });
         m_frame->didReceivePolicyDecision(listenerID, PolicyDecision { std::nullopt, PolicyAction::Use });
         return;

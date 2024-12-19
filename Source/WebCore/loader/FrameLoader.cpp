@@ -592,7 +592,7 @@ void FrameLoader::stopLoading(UnloadEventPolicy unloadEventPolicy)
         // FIXME: Should the DatabaseManager watch for something like ActiveDOMObject::stop() rather than being special-cased here?
         DatabaseManager::singleton().stopDatabases(*document, nullptr);
 
-        if (document->settings().navigationAPIEnabled() && unloadEventPolicy != UnloadEventPolicy::UnloadAndPageHide) {
+        if (document->settings().navigationAPIEnabled() && !m_doNotAbortNavigationAPI && unloadEventPolicy != UnloadEventPolicy::UnloadAndPageHide) {
             RefPtr window = m_frame->document()->domWindow();
             window->protectedNavigation()->abortOngoingNavigationIfNeeded();
         }
@@ -1574,6 +1574,7 @@ void FrameLoader::loadURL(FrameLoadRequest&& frameLoadRequest, const String& ref
     action.setLockBackForwardList(frameLoadRequest.lockBackForwardList());
     action.setShouldReplaceDocumentIfJavaScriptURL(frameLoadRequest.shouldReplaceDocumentIfJavaScriptURL());
     action.setIsInitialFrameSrcLoad(frameLoadRequest.isInitialFrameSrcLoad());
+    action.setIsFromNavigationAPI(frameLoadRequest.isFromNavigationAPI());
     action.setNewFrameOpenerPolicy(frameLoadRequest.newFrameOpenerPolicy());
     auto historyHandling = frameLoadRequest.navigationHistoryBehavior();
     RefPtr document = m_frame->document();
@@ -1886,11 +1887,12 @@ void FrameLoader::loadWithDocumentLoader(DocumentLoader* loader, FrameLoadType t
         return;
     }
 
+    auto policyDecisionMode = loader->triggeringAction().isFromNavigationAPI() ? PolicyDecisionMode::Synchronous : PolicyDecisionMode::Asynchronous;
     RELEASE_ASSERT(!isBackForwardLoadType(policyChecker().loadType()) || frame->history().provisionalItem());
     policyChecker().checkNavigationPolicy(ResourceRequest(loader->request()), ResourceResponse { } /* redirectResponse */, loader, WTFMove(formState), [this, frame, allowNavigationToInvalidURL, completionHandler = completionHandlerCaller.release()] (const ResourceRequest& request, WeakPtr<FormState>&& weakFormState, NavigationPolicyDecision navigationPolicyDecision) mutable {
         continueLoadAfterNavigationPolicy(request, RefPtr { weakFormState.get() }.get(), navigationPolicyDecision, allowNavigationToInvalidURL);
         completionHandler();
-    }, PolicyDecisionMode::Asynchronous);
+    }, policyDecisionMode);
 }
 
 void FrameLoader::clearProvisionalLoadForPolicyCheck()
@@ -2141,6 +2143,11 @@ void FrameLoader::stopForUserCancel(bool deferCheckLoadComplete)
     Ref frame = m_frame.get();
 
     stopAllLoaders();
+
+    if (m_frame->document()->settings().navigationAPIEnabled()) {
+        RefPtr window = m_frame->document()->domWindow();
+        window->protectedNavigation()->abortOngoingNavigationIfNeeded();
+    }
 
 #if PLATFORM(IOS_FAMILY)
     // Lay out immediately when stopping to immediately clear the old page if we just committed this one
@@ -4000,8 +4007,13 @@ void FrameLoader::continueLoadAfterNavigationPolicy(const ResourceRequest& reque
     }
 
     FrameLoadType type = policyChecker().loadType();
-    // A new navigation is in progress, so don't clear the history's provisional item.
-    stopAllLoaders(ClearProvisionalItem::No);
+
+    {
+        SetForScope<bool> doNotAbortNavigationAPI { m_doNotAbortNavigationAPI, m_policyDocumentLoader->triggeringAction().isFromNavigationAPI() };
+
+        // A new navigation is in progress, so don't clear the history's provisional item.
+        stopAllLoaders(ClearProvisionalItem::No);
+    }
 
     // <rdar://problem/6250856> - In certain circumstances on pages with multiple frames, stopAllLoaders()
     // might detach the current FrameLoader, in which case we should bail on this newly defunct load. 

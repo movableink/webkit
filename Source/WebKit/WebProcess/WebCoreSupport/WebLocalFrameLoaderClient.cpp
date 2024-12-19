@@ -674,6 +674,9 @@ void WebLocalFrameLoaderClient::dispatchDidFailProvisionalLoad(const ResourceErr
 
     webPage->sandboxExtensionTracker().didFailProvisionalLoad(m_frame.ptr());
 
+    if (m_frame->isMainFrame())
+        completePageTransitionIfNeeded();
+
     // FIXME: This is gross. This is necessary because if the client calls WKBundlePageStopLoading() from within the didFailProvisionalLoadWithErrorForFrame
     // injected bundle client call, that will cause the provisional DocumentLoader to be disconnected from the Frame, and didDistroyNavigation message
     // to be sent to the UIProcess (and the destruction of the DocumentLoader). If that happens, and we had captured the navigationID before injected bundle 
