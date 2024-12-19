@@ -336,6 +336,8 @@ void ThreadedCompositor::renderLayerTree()
     m_compositionResponseID = compositionRequestID;
     if (!m_didRenderFrameTimer.isActive())
         m_didRenderFrameTimer.startOneShot(0_s);
+#elif !HAVE(OS_SIGNPOST) && !USE(SYSPROF_CAPTURE)
+    UNUSED_VARIABLE(compositionRequestID);
 #endif
     RunLoop::main().dispatch([this, protectedThis = Ref { *this }] {
         if (m_layerTreeHost)
