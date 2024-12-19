@@ -3899,7 +3899,6 @@ imported/w3c/web-platform-tests/preload/preload-type-match.html [ DumpJSConsoleL
 
 # WPT import failures
 imported/w3c/web-platform-tests/html/canvas/offscreen/layers [ Skip ]
-imported/w3c/web-platform-tests/html/canvas/element/fill-and-stroke-styles/2d.pattern.image.broken.html [ Failure ]
 imported/w3c/web-platform-tests/html/canvas/offscreen/fill-and-stroke-styles/2d.fillStyle.get.halftransparent.html [ Failure ]
 imported/w3c/web-platform-tests/html/canvas/offscreen/fill-and-stroke-styles/2d.fillStyle.get.halftransparent.worker.html [ Failure ]
 imported/w3c/web-platform-tests/html/canvas/offscreen/filters/2d.filter.canvasFilterObject.dropShadow.tentative.html [ ImageOnlyFailure ]

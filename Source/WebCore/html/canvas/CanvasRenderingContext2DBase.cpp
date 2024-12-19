@@ -2189,6 +2189,9 @@ ExceptionOr<RefPtr<CanvasPattern>> CanvasRenderingContext2DBase::createPattern(H
     if (!cachedImage || !imageElement.complete())
         return nullptr;
 
+    if (cachedImage->errorOccurred())
+        return Exception { ExceptionCode::InvalidStateError };
+
     if (cachedImage->status() == CachedResource::LoadError)
         return Exception { ExceptionCode::InvalidStateError };
 
@@ -2214,7 +2217,7 @@ ExceptionOr<RefPtr<CanvasPattern>> CanvasRenderingContext2DBase::createPattern(S
     if (cachedImage->errorOccurred())
         return Exception { ExceptionCode::InvalidStateError };
 
-    // The image loading hasn startedbut it is not complete.
+    // The image loading has started but it is not complete.
     if (!cachedImage->image())
         return nullptr;
 
