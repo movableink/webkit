@@ -33,11 +33,13 @@ class WebPageProxy;
 
 class WebNotificationManagerMessageHandler : public NotificationManagerMessageHandler {
     friend class WebPageProxy;
-private:
-    explicit WebNotificationManagerMessageHandler(WebPageProxy&);
 
+public:
     void ref() const final;
     void deref() const final;
+
+private:
+    explicit WebNotificationManagerMessageHandler(WebPageProxy&);
 
     void showNotification(IPC::Connection&, const WebCore::NotificationData&, RefPtr<WebCore::NotificationResources>&&, CompletionHandler<void()>&&) final;
     void cancelNotification(WebCore::SecurityOriginData&&, const WTF::UUID& notificationID) final;

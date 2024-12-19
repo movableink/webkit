@@ -158,10 +158,10 @@ public:
 
     const WebCore::CertificateInfo& certificateInfo() const { return m_committedState.certificateInfo; }
 
-    const URL& resourceDirectoryURL() const;
+    const URL& resourceDirectoryURL() const { return m_committedState.resourceDirectoryURL; }
 
-    const String& pendingAPIRequestURL() const;
-    const PendingAPIRequest& pendingAPIRequest() const;
+    const String& pendingAPIRequestURL() const { return m_committedState.pendingAPIRequest.url; }
+    const PendingAPIRequest& pendingAPIRequest() const { return m_committedState.pendingAPIRequest; }
     void setPendingAPIRequest(const Transaction::Token&, PendingAPIRequest&& pendingAPIRequest, const URL& resourceDirectoryPath = { });
     void clearPendingAPIRequest(const Transaction::Token&);
 

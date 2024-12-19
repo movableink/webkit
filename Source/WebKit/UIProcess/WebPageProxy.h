@@ -618,7 +618,7 @@ public:
 
     static void forMostVisibleWebPageIfAny(PAL::SessionID, const WebCore::SecurityOriginData&, CompletionHandler<void(WebPageProxy*)>&&);
 
-    const API::PageConfiguration& configuration() const;
+    const API::PageConfiguration& configuration() const { return m_configuration.get(); }
     Ref<API::PageConfiguration> protectedConfiguration() const;
 
     using Identifier = WebPageProxyIdentifier;
@@ -652,7 +652,7 @@ public:
     bool shouldEnableLockdownMode() const;
 
     bool hasSameGPUAndNetworkProcessPreferencesAs(const API::PageConfiguration&) const;
-    bool hasSameGPUAndNetworkProcessPreferencesAs(const WebPageProxy& page) const { return hasSameGPUAndNetworkProcessPreferencesAs(Ref { page }->configuration()); }
+    bool hasSameGPUAndNetworkProcessPreferencesAs(const WebPageProxy&) const;
 
     void processIsNoLongerAssociatedWithPage(WebProcessProxy&);
 
@@ -1630,8 +1630,8 @@ public:
 
     WebProcessProxy& ensureRunningProcess();
     Ref<WebProcessProxy> ensureProtectedRunningProcess();
-    WebProcessProxy& legacyMainFrameProcess() const { return m_legacyMainFrameProcess; }
     WebProcessProxy& siteIsolatedProcess() const { return m_legacyMainFrameProcess; }
+    WebProcessProxy& legacyMainFrameProcess() const { return m_legacyMainFrameProcess; }
     Ref<WebProcessProxy> protectedLegacyMainFrameProcess() const;
     ProcessID legacyMainFrameProcessID() const;
 
@@ -1639,6 +1639,7 @@ public:
     ProcessID modelProcessID() const;
 
     WebBackForwardCache& backForwardCache() const;
+    Ref<WebBackForwardCache> protectedBackForwardCache() const;
 
     const WebPreferences& preferences() const { return m_preferences; }
     WebPreferences& preferences() { return m_preferences; }

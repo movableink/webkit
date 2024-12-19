@@ -49,6 +49,8 @@ public:
     WebCore::BackForwardItemIdentifier identifier() const;
 
     WebBackForwardListFrameItem* parent() const { return m_parent.get(); }
+    RefPtr<WebBackForwardListFrameItem> protectedParent() const { return m_parent.get(); }
+
     WebBackForwardListFrameItem& rootFrame();
     WebBackForwardListFrameItem* childItemForFrameID(WebCore::FrameIdentifier);
 

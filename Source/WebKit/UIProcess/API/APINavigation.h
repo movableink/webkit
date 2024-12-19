@@ -111,6 +111,7 @@ public:
     bool currentRequestIsCrossSiteRedirect() const;
 
     WebKit::WebBackForwardListItem* targetItem() const { return m_targetItem.get(); }
+    RefPtr<WebKit::WebBackForwardListItem> protectedTargetItem() const { return m_targetItem; }
     WebKit::WebBackForwardListItem* fromItem() const { return m_fromItem.get(); }
     std::optional<WebCore::FrameLoadType> backForwardFrameLoadType() const { return m_backForwardFrameLoadType; }
     WebKit::WebBackForwardListItem* reloadItem() const { return m_reloadItem.get(); }

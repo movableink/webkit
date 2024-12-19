@@ -123,13 +123,14 @@ public:
     const WTF::String& openedMainFrameName() const;
     void setOpenedMainFrameName(const WTF::String&);
 
-    WebCore::SandboxFlags initialSandboxFlags() const;
+    WebCore::SandboxFlags initialSandboxFlags() const { return m_data.initialSandboxFlags; }
     void setInitialSandboxFlags(WebCore::SandboxFlags);
 
     const std::optional<WebCore::WindowFeatures>& windowFeatures() const;
     void setWindowFeatures(WebCore::WindowFeatures&&);
 
     WebKit::WebProcessPool& processPool() const;
+    Ref<WebKit::WebProcessPool> protectedProcessPool() const;
     void setProcessPool(RefPtr<WebKit::WebProcessPool>&&);
 
     WebKit::WebUserContentControllerProxy& userContentController() const;

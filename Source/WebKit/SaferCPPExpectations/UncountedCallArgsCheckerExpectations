@@ -283,7 +283,6 @@ UIProcess/WebEditCommandProxy.cpp
 UIProcess/WebFrameProxy.cpp
 UIProcess/WebOpenPanelResultListenerProxy.cpp
 UIProcess/WebPageProxy.cpp
-UIProcess/WebPageProxy.h
 UIProcess/WebPreferences.cpp
 UIProcess/WebPreferences.h
 UIProcess/WebProcessActivityState.cpp
