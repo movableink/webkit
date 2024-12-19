@@ -1941,3 +1941,5 @@ http/tests/cookies/same-site/fetch-in-cross-origin-service-worker.html [ Failure
 http/tests/cookies/same-site/popup-cross-site-post.html [ Failure ]
 
 imported/w3c/web-platform-tests/css/css-view-transitions/element-is-grouping-during-animation.html [ ImageOnlyFailure Pass ]
+
+webkit.org/b/213782 webanimations/accelerated-animation-with-easing.html [ Failure Pass ]

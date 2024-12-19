@@ -722,19 +722,15 @@ webkit.org/b/129758 js/dom/create-lots-of-workers.html [ Timeout Pass ]
 
 webkit.org/b/181534 perf/show-hide-table-rows.html [ Pass Failure ]
 
-
 webkit.org/b/195466 imported/w3c/web-platform-tests/html/semantics/embedded-content/media-elements/ready-states/autoplay.html [ Failure ]
 
 webkit.org/b/200304 svg/as-image/svg-image-with-data-uri-background.html [ ImageOnlyFailure Pass ]
 
 webkit.org/b/207711 [ Debug ] imported/w3c/web-platform-tests/web-animations/timing-model/animations/sync-start-times.html [ Pass ImageOnlyFailure ]
 
-
 webkit.org/b/212082 imported/w3c/web-platform-tests/mathml/presentation-markup/operators/mo-form-minus-plus.html [ ImageOnlyFailure ]
 
-
-
-
+webkit.org/b/213231 fast/block/float/float-with-anonymous-previous-sibling.html [ ImageOnlyFailure Pass ]
 
 webkit.org/b/213233 fast/images/imagemap-focus-ring-zoom-style.html [ ImageOnlyFailure Pass ]
 
@@ -745,8 +741,10 @@ webkit.org/b/216650 fast/events/mouse-cursor.html [ Failure ]
 webkit.org/b/216650 fast/events/mouse-focus-imagemap.html [ Failure ]
 webkit.org/b/216650 fast/events/mouse-moved-remove-frame-crash.html [ Timeout ]
 
+webkit.org/b/219465 [ Debug ] imported/w3c/web-platform-tests/html/browsers/browsing-the-web/history-traversal/persisted-user-state-restoration/resume-timer-on-history-back.html [ Failure Pass ]
+webkit.org/b/235277 [ Debug ] imported/w3c/web-platform-tests/html/canvas/offscreen/text/2d.text.drawing.style.measure.rtl.text.worker.html [ Failure Pass ]
 
-webkit.org/b/219465 imported/w3c/web-platform-tests/html/browsers/browsing-the-web/history-traversal/persisted-user-state-restoration/resume-timer-on-history-back.html [ Failure Pass ]
+webkit.org/b/258541 webrtc/vp9-profile2.html [ Skip ] # Timeout Crash.
 
 # Flaky tests detected from 29Jan2023 to 23Feb2023
 webkit.org/b/252878 fast/events/mouse-events-on-textarea-resize.html [ Failure ]
@@ -1603,3 +1601,5 @@ http/tests/cookies/same-site/popup-cross-site-post.html [ Failure ]
 webkit.org/b/282970 imported/w3c/web-platform-tests/scroll-to-text-fragment/drag-selection-over-target-text.html [ Failure ]
 
 fast/text/hyphenate-avoid-orphaned-word.html [ Failure ]
+
+webkit.org/b/216538 webrtc/captureCanvas-webrtc-software-h264-baseline.html [ Timeout Crash Failure ]

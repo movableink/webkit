@@ -4362,6 +4362,22 @@ webkit.org/b/153771 animations/resume-after-page-cache.html [ Failure Pass ]
 
 fast/canvas/webgl/context-lost-restored-p3.html [ Failure ]
 
+webkit.org/b/208984 fast/events/touch/touch-slider-no-js-touch-listener.html [ Crash Failure Pass ]
+
+webkit.org/b/210373 media/track/track-user-stylesheet.html [ Timeout Pass ]
+
+webkit.org/b/210374 http/tests/media/user-gesture-preserved-across-xmlhttprequest.html [ Timeout Crash Failure ]
+
+webkit.org/b/211768 compositing/video/video-border-radius.html [ Crash Pass ]
+
+webkit.org/b/213331 imported/w3c/web-platform-tests/webaudio/the-audio-api/the-mediaelementaudiosourcenode-interface/mediaElementAudioSourceToScriptProcessorTest.html [ Failure ]
+
+webkit.org/b/213508 [ Debug ] imported/w3c/web-platform-tests/service-workers/service-worker/fetch-audio-tainting.https.html [ Crash Pass ]
+
+webkit.org/b/213783 webanimations/accelerated-animation-with-easing.html [ Failure Pass ]
+
+webkit.org/b/216763 webrtc/captureCanvas-webrtc-software-h264-high.html [ Skip ] # Timeout
+
 # End: Common failures between GTK and WPE.
 
 #////////////////////////////////////////////////////////////////////////////////////////
