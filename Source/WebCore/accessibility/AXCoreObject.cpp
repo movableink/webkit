@@ -677,6 +677,13 @@ AXCoreObject* AXCoreObject::activeDescendant() const
     return nullptr;
 }
 
+AXCoreObject* AXCoreObject::selfOrFirstTextDescendant()
+{
+    return Accessibility::findUnignoredDescendant(*this, /* includeSelf */ true, [] (auto& descendant) {
+        return descendant.isStaticText();
+    });
+}
+
 AXCoreObject::AccessibilityChildrenVector AXCoreObject::selectedCells()
 {
     if (!isTable())

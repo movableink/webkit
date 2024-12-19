@@ -975,7 +975,7 @@ public:
     virtual std::optional<SimpleRange> misspellingRange(const SimpleRange& start, AccessibilitySearchDirection) const = 0;
     virtual std::optional<SimpleRange> visibleCharacterRange() const = 0;
     virtual bool hasPlainText() const = 0;
-    virtual bool hasSameFont(const AXCoreObject&) const = 0;
+    virtual bool hasSameFont(AXCoreObject&) = 0;
     virtual bool hasSameFontColor(const AXCoreObject&) const = 0;
     virtual bool hasSameStyle(const AXCoreObject&) const = 0;
     bool isStaticText() const { return roleValue() == AccessibilityRole::StaticText; }
@@ -1093,6 +1093,7 @@ public:
 
     virtual AccessibilityChildrenVector findMatchingObjects(AccessibilitySearchCriteria&&) = 0;
     virtual bool isDescendantOfRole(AccessibilityRole) const = 0;
+    AXCoreObject* selfOrFirstTextDescendant();
 
     virtual bool hasDocumentRoleAncestor() const = 0;
     virtual bool hasWebApplicationAncestor() const = 0;
@@ -1137,6 +1138,7 @@ public:
     enum class SpellCheck : bool { No, Yes };
     virtual RetainPtr<NSAttributedString> attributedStringForTextMarkerRange(AXTextMarkerRange&&, SpellCheck) const = 0;
     virtual AttributedStringStyle stylesForAttributedString() const = 0;
+    virtual RetainPtr<CTFontRef> font() const = 0;
 #endif
 
 #if PLATFORM(MAC)
@@ -1188,7 +1190,6 @@ public:
 #if PLATFORM(MAC)
     virtual FloatRect primaryScreenRect() const = 0;
 #endif
-    virtual FloatRect unobscuredContentRect() const = 0;
     virtual IntSize size() const = 0;
     virtual IntPoint clickPoint() = 0;
     virtual Path elementPath() const = 0;
@@ -1689,6 +1690,19 @@ T* exposedTableAncestor(const T& object, bool includeSelf = false)
     return findAncestor<T>(object, includeSelf, [] (const T& object) {
         return object.isTable() && object.isExposable();
     });
+}
+
+template<typename T, typename F>
+AXCoreObject* findUnignoredDescendant(T& object, bool includeSelf, const F& matches)
+{
+    if (includeSelf && matches(object) && !object.isIgnored())
+        return &object;
+
+    for (Ref child : object.childrenIncludingIgnored()) {
+        if (auto* descendant = findUnignoredDescendant(child.get(), /* includeSelf */ true, matches))
+            return descendant;
+    }
+    return nullptr;
 }
 
 template<typename T, typename F>

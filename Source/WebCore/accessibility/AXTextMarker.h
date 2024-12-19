@@ -286,6 +286,7 @@ public:
 
     AXTextMarker start() const { return m_start; }
     AXTextMarker end() const { return m_end; }
+    bool isCollapsed() const { return m_start.isEqual(m_end); }
     bool isConfinedTo(std::optional<AXID>) const;
     bool isConfined() const;
 

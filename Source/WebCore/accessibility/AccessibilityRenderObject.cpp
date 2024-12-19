@@ -2669,7 +2669,7 @@ bool AccessibilityRenderObject::hasPlainText() const
         && style.textDecorationsInEffect().isEmpty();
 }
 
-bool AccessibilityRenderObject::hasSameFont(const AXCoreObject& object) const
+bool AccessibilityRenderObject::hasSameFont(AXCoreObject& object)
 {
     auto* renderer = object.renderer();
     if (!m_renderer || !renderer)

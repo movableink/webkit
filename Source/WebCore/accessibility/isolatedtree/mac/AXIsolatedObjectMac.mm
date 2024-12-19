@@ -109,7 +109,7 @@ void AXIsolatedObject::initializePlatformProperties(const Ref<const Accessibilit
 AttributedStringStyle AXIsolatedObject::stylesForAttributedString() const
 {
     return {
-        propertyValue<RetainPtr<CTFontRef>>(AXPropertyName::Font),
+        font(),
         colorAttributeValue(AXPropertyName::TextColor),
         colorAttributeValue(AXPropertyName::BackgroundColor),
         boolAttributeValue(AXPropertyName::IsSubscript),

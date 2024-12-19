@@ -66,7 +66,7 @@ public:
     bool hasBoldFont() const final;
     bool hasItalicFont() const final;
     bool hasPlainText() const final;
-    bool hasSameFont(const AXCoreObject&) const final;
+    bool hasSameFont(AXCoreObject&) final;
     bool hasSameFontColor(const AXCoreObject&) const final;
     bool hasSameStyle(const AXCoreObject&) const final;
     bool hasUnderline() const final;

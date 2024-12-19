@@ -118,7 +118,7 @@ private:
     void setPropertyFlag(AXPropertyFlag, bool);
     bool hasPropertyFlag(AXPropertyFlag) const;
 
-    static bool canBeMultilineTextField(AccessibilityObject&, bool isNonNativeTextControl);
+    static bool canBeMultilineTextField(AccessibilityObject&);
 
     // FIXME: consolidate all AttributeValue retrieval in a single template method.
     bool boolAttributeValue(AXPropertyName) const;
@@ -418,7 +418,6 @@ private:
     int indexForVisiblePosition(const VisiblePosition&) const final;
     int lineForPosition(const VisiblePosition&) const final;
     std::optional<SimpleRange> visibleCharacterRange() const final;
-    FloatRect unobscuredContentRect() const final;
     
     // Attribute setters.
     void setARIAGrabbed(bool) final;
@@ -477,7 +476,7 @@ private:
     bool hasItalicFont() const final { return boolAttributeValue(AXPropertyName::HasItalicFont); }
     Vector<AXTextMarkerRange> misspellingRanges() const final;
     bool hasPlainText() const final { return boolAttributeValue(AXPropertyName::HasPlainText); }
-    bool hasSameFont(const AXCoreObject&) const final;
+    bool hasSameFont(AXCoreObject&) final;
     bool hasSameFontColor(const AXCoreObject&) const final;
     bool hasSameStyle(const AXCoreObject&) const final;
     bool hasUnderline() const final { return boolAttributeValue(AXPropertyName::HasUnderline); }
@@ -506,6 +505,7 @@ private:
     unsigned textLength() const final;
 #if PLATFORM(COCOA)
     RetainPtr<NSAttributedString> attributedStringForTextMarkerRange(AXTextMarkerRange&&, SpellCheck) const final;
+    RetainPtr<CTFontRef> font() const final { return propertyValue<RetainPtr<CTFontRef>>(AXPropertyName::Font); }
 #endif
     AXObjectCache* axObjectCache() const final;
     Element* actionElement() const final;

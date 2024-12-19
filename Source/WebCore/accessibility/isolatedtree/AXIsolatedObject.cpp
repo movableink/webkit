@@ -427,14 +427,15 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
         setProperty(AXPropertyName::ExtendedDescription, descriptor.isolatedCopy());
 
     if (object.isTextControl()) {
+        // FIXME: We don't keep this property up-to-date, and we can probably just compute it using
+        // AXIsolatedObject::selectedTextMarkerRange() (which does stay up-to-date).
         setProperty(AXPropertyName::SelectedTextRange, object.selectedTextRange());
 
         auto range = object.textInputMarkedTextMarkerRange();
         if (auto characterRange = range.characterRange(); range && characterRange)
             setProperty(AXPropertyName::TextInputMarkedTextMarkerRange, std::pair<Markable<AXID>, CharacterRange>(range.start().objectID(), *characterRange));
 
-        bool isNonNativeTextControl = object.isNonNativeTextControl();
-        setProperty(AXPropertyName::CanBeMultilineTextField, canBeMultilineTextField(object, isNonNativeTextControl));
+        setProperty(AXPropertyName::CanBeMultilineTextField, canBeMultilineTextField(object));
     }
 
 #if ENABLE(AX_THREAD_TEXT_APIS)
@@ -461,9 +462,9 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
     initializePlatformProperties(axObject);
 }
 
-bool AXIsolatedObject::canBeMultilineTextField(AccessibilityObject& object, bool isNonNativeTextControl)
+bool AXIsolatedObject::canBeMultilineTextField(AccessibilityObject& object)
 {
-    if (isNonNativeTextControl)
+    if (object.isNonNativeTextControl())
         return !object.hasAttribute(aria_multilineAttr) || object.ariaIsMultiline();
 
     auto* renderer = object.renderer();
@@ -1550,6 +1551,21 @@ int AXIsolatedObject::insertionPointLineNumber() const
     if (!boolAttributeValue(AXPropertyName::CanBeMultilineTextField))
         return 0;
 
+    auto selectedMarkerRange = selectedTextMarkerRange();
+    if (selectedMarkerRange.start().isNull() || !selectedMarkerRange.isCollapsed()) {
+        // If the selection is not collapsed, we don't know whether the insertion point is at the start or the end, so return -1.
+        return -1;
+    }
+
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    if (AXObjectCache::useAXThreadTextApis()) {
+        RefPtr selectionObject = selectedMarkerRange.start().isolatedObject();
+        if (isTextControl() && selectionObject && isAncestorOfObject(*selectionObject))
+            return selectedMarkerRange.start().lineIndex();
+        return -1;
+    }
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
+
     return Accessibility::retrieveValueFromMainThread<int>([this] () -> int {
         if (auto* axObject = associatedAXObject())
             return axObject->insertionPointLineNumber();
@@ -1680,15 +1696,6 @@ Vector<RetainPtr<id>> AXIsolatedObject::modelElementChildren()
 }
 #endif
 
-FloatRect AXIsolatedObject::unobscuredContentRect() const
-{
-    return Accessibility::retrieveValueFromMainThread<FloatRect>([this] () -> FloatRect {
-        if (auto* object = associatedAXObject())
-            return object->unobscuredContentRect();
-        return { };
-    });
-}
-
 std::optional<SimpleRange> AXIsolatedObject::simpleRange() const
 {
     ASSERT(isMainThread());
@@ -1818,8 +1825,22 @@ Vector<AXTextMarkerRange> AXIsolatedObject::misspellingRanges() const
     });
 }
 
-bool AXIsolatedObject::hasSameFont(const AXCoreObject& otherObject) const
+bool AXIsolatedObject::hasSameFont(AXCoreObject& otherObject)
 {
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    if (AXObjectCache::useAXThreadTextApis()) {
+        // Having a font only really makes sense for text, so if this or otherObject isn't text, find the first text descendant to compare.
+        RefPtr thisText = selfOrFirstTextDescendant();
+        RefPtr otherText = otherObject.selfOrFirstTextDescendant();
+
+        if (!thisText || !otherText) {
+            // We can't make a meaningful comparison unless we have two objects to compare, so return false.
+            return false;
+        }
+        return thisText->font() == otherText->font();
+    }
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
+
     if (!is<AXIsolatedObject>(otherObject))
         return false;
 
