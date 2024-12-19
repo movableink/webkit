@@ -43,8 +43,6 @@ void GridMasonryLayout::initializeMasonry(unsigned gridAxisTracks, GridTrackSizi
     m_gridAxisTracksCount = gridAxisTracks;
     m_gridContentSize = 0;
 
-    allocateCapacityForMasonryVector();
-    collectMasonryItems();
     m_renderGrid.currentGrid().setupGridForMasonryLayout();
     m_renderGrid.populateExplicitGridAndOrderIterator();
 
@@ -67,27 +65,6 @@ void GridMasonryLayout::performMasonryPlacement(const GridTrackSizingAlgorithm& 
     placeMasonryItems(algorithm, layoutPhase);
 }
 
-void GridMasonryLayout::collectMasonryItems()
-{
-    ASSERT(m_gridAxisTracksCount);
-
-    m_masonryItems.shrink(0);
-
-    auto& grid = m_renderGrid.currentGrid();
-    for (auto* gridItem = grid.orderIterator().first(); gridItem; gridItem = grid.orderIterator().next()) {
-        if (grid.orderIterator().shouldSkipChild(*gridItem))
-            continue;
-
-        m_masonryItems.append(gridItem);
-    }
-}
-
-void GridMasonryLayout::allocateCapacityForMasonryVector()
-{
-    auto gridCapacity = m_renderGrid.currentGrid().numTracks(GridTrackSizingDirection::ForRows) * m_renderGrid.currentGrid().numTracks(GridTrackSizingDirection::ForColumns);
-    m_masonryItems.reserveCapacity(gridCapacity);
-}
-
 void GridMasonryLayout::resizeAndResetRunningPositions()
 {
     m_runningPositions.resize(m_gridAxisTracksCount);
@@ -96,15 +73,15 @@ void GridMasonryLayout::resizeAndResetRunningPositions()
 
 void GridMasonryLayout::placeMasonryItems(const GridTrackSizingAlgorithm& algorithm, GridMasonryLayout::MasonryLayoutPhase layoutPhase)
 {
-    for (auto& gridItem : m_masonryItems) {
-        ASSERT(gridItem);
-        if (!gridItem)
+    ASSERT(m_gridAxisTracksCount);
+
+    auto& grid = m_renderGrid.currentGrid();
+    for (CheckedPtr gridItem = grid.orderIterator().first(); gridItem; gridItem = grid.orderIterator().next()) {
+        if (grid.orderIterator().shouldSkipChild(*gridItem))
             continue;
 
-        if (hasDefiniteGridAxisPosition(*gridItem, gridAxisDirection()))
-            insertIntoGridAndLayoutItem(algorithm, *gridItem, gridAreaForDefiniteGridAxisItem(*gridItem), layoutPhase);
-        else
-            insertIntoGridAndLayoutItem(algorithm, *gridItem, gridAreaForIndefiniteGridAxisItem(*gridItem), layoutPhase);
+        auto gridArea = hasDefiniteGridAxisPosition(*gridItem, gridAxisDirection()) ? gridAreaForDefiniteGridAxisItem(*gridItem) : gridAreaForIndefiniteGridAxisItem(*gridItem);
+        insertIntoGridAndLayoutItem(algorithm, *gridItem, gridArea, layoutPhase);
     }
 }
 

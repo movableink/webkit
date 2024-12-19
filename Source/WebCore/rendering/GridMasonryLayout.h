@@ -60,14 +60,12 @@ private:
     GridArea gridAreaForIndefiniteGridAxisItem(const RenderBox& item);
     GridArea gridAreaForDefiniteGridAxisItem(const RenderBox&) const;
 
-    void collectMasonryItems();
     void placeMasonryItems(const GridTrackSizingAlgorithm&, GridMasonryLayout::MasonryLayoutPhase);
     void setItemGridAxisContainingBlockToGridArea(const GridTrackSizingAlgorithm&, RenderBox&);
     void insertIntoGridAndLayoutItem(const GridTrackSizingAlgorithm&, RenderBox&, const GridArea&, GridMasonryLayout::MasonryLayoutPhase);
     LayoutUnit calculateMasonryIntrinsicLogicalWidth(RenderBox&, GridMasonryLayout::MasonryLayoutPhase);
 
     void resizeAndResetRunningPositions();
-    void allocateCapacityForMasonryVector();
     LayoutUnit masonryAxisMarginBoxForItem(const RenderBox& gridItem);
     void updateRunningPositions(const RenderBox& gridItem, const GridArea&);
     void updateItemOffset(const RenderBox& gridItem, LayoutUnit offset);
@@ -80,7 +78,6 @@ private:
 
     unsigned m_gridAxisTracksCount;
 
-    Vector<SingleThreadWeakPtr<RenderBox>> m_masonryItems;
     Vector<LayoutUnit> m_runningPositions;
     UncheckedKeyHashMap<SingleThreadWeakRef<const RenderBox>, LayoutUnit> m_itemOffsets;
     RenderGrid& m_renderGrid;
