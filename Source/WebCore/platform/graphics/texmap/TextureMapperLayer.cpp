@@ -204,7 +204,7 @@ void TextureMapperLayer::processFlatteningRequirements()
     m_flattenedLayer = makeUnique<TextureMapperFlattenedLayer>(layerRegion.bounds(), data.zNear, data.zFar);
 }
 
-void TextureMapperLayer::computeFlattenedRegion(Region& region, bool layerIsFlatteningRoot)
+void TextureMapperLayer::computeFlattenedRegion(Region& region, bool layerIsFlatteningRoot) const
 {
     auto rect = isFlattened() ? m_flattenedLayer->layerRect() : layerRect();
 
@@ -563,9 +563,8 @@ bool TextureMapperLayer::shouldBlend() const
 
 bool TextureMapperLayer::flattensAsLeafOf3DSceneOr3DPerspective() const
 {
-    bool isLeafOf3DScene = !m_state.preserves3D && (m_parent && m_parent->preserves3D());
     bool hasPerspective = m_layerTransforms.localTransform.hasPerspective() && m_layerTransforms.localTransform.m34() != -1.f;
-    if ((isLeafOf3DScene || hasPerspective) && !m_children.isEmpty() && !m_layerTransforms.localTransform.isAffine())
+    if ((isLeafOf3DRenderingContext() || hasPerspective) && !m_children.isEmpty() && !m_layerTransforms.localTransform.isAffine())
         return true;
 
     return false;
@@ -1080,19 +1079,18 @@ void TextureMapperLayer::paintWith3DRenderingContext(TextureMapperPaintOptions& 
 
 void TextureMapperLayer::collect3DRenderingContextLayers(Vector<TextureMapperLayer*>& layers)
 {
-    bool isLeafOf3DRenderingContext = !m_state.preserves3D && (m_parent && m_parent->preserves3D());
-    if (preserves3D() || isLeafOf3DRenderingContext) {
+    if (preserves3D() || isLeafOf3DRenderingContext()) {
         bool hasVisualContent = m_backingStore || m_contentsLayer
             || (m_state.backgroundColor.isValid() && m_state.backgroundColor.isVisible())
             || (m_state.solidColor.isValid() && m_state.solidColor.isVisible())
             || hasFilters() || hasBackdrop();
 
         // Add layers to 3d rendering context only if they get actually painted.
-        if (isVisible() && (hasVisualContent || (isLeafOf3DRenderingContext && !m_children.isEmpty())))
+        if (isVisible() && (hasVisualContent || (isLeafOf3DRenderingContext() && !m_children.isEmpty())))
             layers.append(this);
 
         // Stop recursion on 3d rendering context leaf
-        if (isLeafOf3DRenderingContext)
+        if (isLeafOf3DRenderingContext())
             return;
     }
 
@@ -1343,6 +1341,16 @@ FloatRect TextureMapperLayer::effectiveLayerRect() const
 {
     if (isFlattened())
         return m_flattenedLayer->layerRect();
+
+    if (isLeafOf3DRenderingContext() && !m_children.isEmpty()) {
+        // If leaf has children but no 3D transformation then it doesn't get flattened surface.
+        // However, from 3D rendering context/BSP calculation point of view the effective
+        // layer area is still the same as it would be flattened.
+        Region layerRegion;
+        computeFlattenedRegion(layerRegion, true);
+        return layerRegion.bounds();
+    }
+
     return layerRect();
 }
 

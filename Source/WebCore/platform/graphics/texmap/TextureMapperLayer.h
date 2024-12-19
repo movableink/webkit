@@ -144,7 +144,7 @@ private:
 
     void processDescendantLayersFlatteningRequirements();
     void processFlatteningRequirements();
-    void computeFlattenedRegion(Region&, bool);
+    void computeFlattenedRegion(Region&, bool) const;
     void destroyFlattenedDescendantLayers();
 
     struct ComputeTransformData;
@@ -196,6 +196,7 @@ private:
     bool flattensAsLeafOf3DSceneOr3DPerspective() const;
 
     bool preserves3D() const { return m_state.preserves3D; }
+    bool isLeafOf3DRenderingContext() const { return !m_state.preserves3D && (m_parent && m_parent->preserves3D()); }
     bool isFlattened() const { return !!m_flattenedLayer; }
     bool hasMask() const { return !!m_state.maskLayer; }
     bool hasBackdrop() const  { return !!m_state.backdropLayer; }
