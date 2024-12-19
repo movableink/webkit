@@ -55,6 +55,7 @@ class AcceleratedEffect;
 struct AcceleratedEffectValues;
 #endif
 
+enum class AppleVisualEffect : uint8_t;
 enum class MediaPlayerVideoGravity : uint8_t;
 enum class ContentsFormat : uint8_t;
 
@@ -76,6 +77,9 @@ enum class PlatformCALayerLayerType : uint8_t {
         LayerTypeAVPlayerLayer,
         LayerTypeContentsProvidedLayer,
         LayerTypeBackdropLayer,
+#if HAVE(CORE_MATERIAL)
+        LayerTypeMaterialLayer,
+#endif
         LayerTypeShapeLayer,
         LayerTypeScrollContainerLayer,
 #if ENABLE(MODEL_ELEMENT)
@@ -300,6 +304,11 @@ public:
     virtual bool isDescendentOfSeparatedPortal() const = 0;
     virtual void setIsDescendentOfSeparatedPortal(bool) = 0;
 #endif
+#endif
+
+#if HAVE(CORE_MATERIAL)
+    virtual AppleVisualEffect appleVisualEffect() const = 0;
+    virtual void setAppleVisualEffect(AppleVisualEffect) = 0;
 #endif
 
     virtual TiledBacking* tiledBacking() = 0;

@@ -843,6 +843,11 @@ static bool rareDataChangeRequiresLayout(const StyleRareNonInheritedData& first,
     if (first.hasBackdropFilters() != second.hasBackdropFilters())
         return true;
 
+#if HAVE(CORE_MATERIAL)
+    if (first.appleVisualEffect != second.appleVisualEffect)
+        return true;
+#endif
+
     if (first.inputSecurity != second.inputSecurity)
         return true;
 

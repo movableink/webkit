@@ -23,37 +23,21 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "config.h"
 
 #if HAVE(CORE_MATERIAL)
 
-namespace WTF {
-class TextStream;
-}
+#import <pal/spi/cocoa/CoreMaterialSPI.h>
+#import <wtf/SoftLinking.h>
 
-namespace WebCore {
+SOFT_LINK_PRIVATE_FRAMEWORK_FOR_SOURCE_WITH_EXPORT(PAL, CoreMaterial, PAL_EXPORT)
 
-enum class AppleVisualEffect : uint8_t {
-    None,
-    BlurUltraThinMaterial,
-    BlurThinMaterial,
-    BlurMaterial,
-    BlurThickMaterial,
-    BlurChromeMaterial,
-    VibrancyLabel,
-    VibrancySecondaryLabel,
-    VibrancyTertiaryLabel,
-    VibrancyQuaternaryLabel,
-    VibrancyFill,
-    VibrancySecondaryFill,
-    VibrancyTertiaryFill,
-    VibrancySeparator,
-};
+SOFT_LINK_CLASS_FOR_SOURCE_WITH_EXPORT(PAL, CoreMaterial, MTMaterialLayer, PAL_EXPORT)
 
-WEBCORE_EXPORT bool appleVisualEffectNeedsBackdrop(AppleVisualEffect);
-
-WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, AppleVisualEffect);
-
-} // namespace WebCore
+SOFT_LINK_CONSTANT_FOR_SOURCE_WITH_EXPORT(PAL, CoreMaterial, MTCoreMaterialRecipePlatformContentLight, NSString *, PAL_EXPORT)
+SOFT_LINK_CONSTANT_FOR_SOURCE_WITH_EXPORT(PAL, CoreMaterial, MTCoreMaterialRecipePlatformChromeLight, NSString *, PAL_EXPORT)
+SOFT_LINK_CONSTANT_FOR_SOURCE_WITH_EXPORT(PAL, CoreMaterial, MTCoreMaterialRecipePlatformContentThickLight, NSString *, PAL_EXPORT)
+SOFT_LINK_CONSTANT_FOR_SOURCE_WITH_EXPORT(PAL, CoreMaterial, MTCoreMaterialRecipePlatformContentThinLight, NSString *, PAL_EXPORT)
+SOFT_LINK_CONSTANT_FOR_SOURCE_WITH_EXPORT(PAL, CoreMaterial, MTCoreMaterialRecipePlatformContentUltraThinLight, NSString *, PAL_EXPORT)
 
 #endif // HAVE(CORE_MATERIAL)

@@ -27,33 +27,16 @@
 
 #if HAVE(CORE_MATERIAL)
 
-namespace WTF {
-class TextStream;
-}
+#import <pal/spi/cocoa/CoreMaterialSPI.h>
+#import <wtf/SoftLinking.h>
 
-namespace WebCore {
+SOFT_LINK_FRAMEWORK_FOR_HEADER(PAL, CoreMaterial)
+SOFT_LINK_CLASS_FOR_HEADER(PAL, MTMaterialLayer)
 
-enum class AppleVisualEffect : uint8_t {
-    None,
-    BlurUltraThinMaterial,
-    BlurThinMaterial,
-    BlurMaterial,
-    BlurThickMaterial,
-    BlurChromeMaterial,
-    VibrancyLabel,
-    VibrancySecondaryLabel,
-    VibrancyTertiaryLabel,
-    VibrancyQuaternaryLabel,
-    VibrancyFill,
-    VibrancySecondaryFill,
-    VibrancyTertiaryFill,
-    VibrancySeparator,
-};
-
-WEBCORE_EXPORT bool appleVisualEffectNeedsBackdrop(AppleVisualEffect);
-
-WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, AppleVisualEffect);
-
-} // namespace WebCore
+SOFT_LINK_CONSTANT_FOR_HEADER(PAL, CoreMaterial, MTCoreMaterialRecipePlatformContentLight, NSString *)
+SOFT_LINK_CONSTANT_FOR_HEADER(PAL, CoreMaterial, MTCoreMaterialRecipePlatformChromeLight, NSString *)
+SOFT_LINK_CONSTANT_FOR_HEADER(PAL, CoreMaterial, MTCoreMaterialRecipePlatformContentThickLight, NSString *)
+SOFT_LINK_CONSTANT_FOR_HEADER(PAL, CoreMaterial, MTCoreMaterialRecipePlatformContentUltraThinLight, NSString *)
+SOFT_LINK_CONSTANT_FOR_HEADER(PAL, CoreMaterial, MTCoreMaterialRecipePlatformContentThinLight, NSString *)
 
 #endif // HAVE(CORE_MATERIAL)

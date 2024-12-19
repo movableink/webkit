@@ -567,6 +567,9 @@ void RenderLayerBacking::createPrimaryGraphicsLayer()
     updateTransform(style);
     updateFilters(style);
     updateBackdropFilters(style);
+#if HAVE(CORE_MATERIAL)
+    updateAppleVisualEffect(style);
+#endif
     updateBackdropRoot();
     updateBlendMode(style);
 #if ENABLE(VIDEO)
@@ -782,7 +785,11 @@ void RenderLayerBacking::updateBackdropFilters(const RenderStyle& style)
 
 void RenderLayerBacking::updateBackdropFiltersGeometry()
 {
-    if (!m_canCompositeBackdropFilters)
+    bool shouldUpdateBackdropFiltersGeometry = m_canCompositeBackdropFilters;
+#if HAVE(CORE_MATERIAL)
+    shouldUpdateBackdropFiltersGeometry |= renderer().hasAppleVisualEffectRequiringBackdropFilter();
+#endif
+    if (!shouldUpdateBackdropFiltersGeometry)
         return;
 
     CheckedPtr renderBox = dynamicDowncast<RenderBox>(this->renderer());
@@ -879,6 +886,13 @@ void RenderLayerBacking::updateContentsScalingFilters(const RenderStyle& style)
     m_graphicsLayer->setContentsMinificationFilter(minificationFilter);
     m_graphicsLayer->setContentsMagnificationFilter(magnificationFilter);
 }
+
+#if HAVE(CORE_MATERIAL)
+void RenderLayerBacking::updateAppleVisualEffect(const RenderStyle& style)
+{
+    m_graphicsLayer->setAppleVisualEffect(style.appleVisualEffect());
+}
+#endif
 
 static bool layerOrAncestorIsTransformedOrUsingCompositedScrolling(RenderLayer& layer)
 {
@@ -1049,6 +1063,9 @@ void RenderLayerBacking::updateConfigurationAfterStyleChange()
     updateFilters(style);
 
     updateBackdropFilters(style);
+#if HAVE(CORE_MATERIAL)
+    updateAppleVisualEffect(style);
+#endif
     updateBackdropRoot();
     updateBlendMode(style);
     updateContentsScalingFilters(style);
@@ -1428,6 +1445,9 @@ void RenderLayerBacking::updateGeometry(const RenderLayer* compositedAncestor)
     updateOpacity(style);
     updateFilters(style);
     updateBackdropFilters(style);
+#if HAVE(CORE_MATERIAL)
+    updateAppleVisualEffect(style);
+#endif
     updateBackdropRoot();
     updateBlendMode(style);
     updateContentsScalingFilters(style);

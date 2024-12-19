@@ -27,33 +27,29 @@
 
 #if HAVE(CORE_MATERIAL)
 
-namespace WTF {
-class TextStream;
-}
+#import <Foundation/NSString.h>
+#import <pal/spi/cocoa/QuartzCoreSPI.h>
 
-namespace WebCore {
+#if USE(APPLE_INTERNAL_SDK)
 
-enum class AppleVisualEffect : uint8_t {
-    None,
-    BlurUltraThinMaterial,
-    BlurThinMaterial,
-    BlurMaterial,
-    BlurThickMaterial,
-    BlurChromeMaterial,
-    VibrancyLabel,
-    VibrancySecondaryLabel,
-    VibrancyTertiaryLabel,
-    VibrancyQuaternaryLabel,
-    VibrancyFill,
-    VibrancySecondaryFill,
-    VibrancyTertiaryFill,
-    VibrancySeparator,
-};
+#import <CoreMaterial/CoreMaterial.h>
 
-WEBCORE_EXPORT bool appleVisualEffectNeedsBackdrop(AppleVisualEffect);
+#else
 
-WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, AppleVisualEffect);
+typedef NSString * MTCoreMaterialRecipe NS_STRING_ENUM;
 
-} // namespace WebCore
+extern MTCoreMaterialRecipe const MTCoreMaterialRecipePlatformChromeLight;
+extern MTCoreMaterialRecipe const MTCoreMaterialRecipePlatformContentUltraThinLight;
+extern MTCoreMaterialRecipe const MTCoreMaterialRecipePlatformContentThinLight;
+extern MTCoreMaterialRecipe const MTCoreMaterialRecipePlatformContentLight;
+extern MTCoreMaterialRecipe const MTCoreMaterialRecipePlatformContentThickLight;
+
+@interface MTMaterialLayer : CABackdropLayer
+
+@property (nonatomic, copy) MTCoreMaterialRecipe recipe;
+
+@end
+
+#endif // USE(APPLE_INTERNAL_SDK)
 
 #endif // HAVE(CORE_MATERIAL)

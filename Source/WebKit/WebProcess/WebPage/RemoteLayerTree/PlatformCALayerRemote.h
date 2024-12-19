@@ -231,6 +231,11 @@ public:
 #endif
 #endif
 
+#if HAVE(CORE_MATERIAL)
+    WebCore::AppleVisualEffect appleVisualEffect() const override;
+    void setAppleVisualEffect(WebCore::AppleVisualEffect) override;
+#endif
+
     WebCore::TiledBacking* tiledBacking() override { return nullptr; }
 
     Ref<WebCore::PlatformCALayer> clone(WebCore::PlatformCALayerClient* owner) const override;

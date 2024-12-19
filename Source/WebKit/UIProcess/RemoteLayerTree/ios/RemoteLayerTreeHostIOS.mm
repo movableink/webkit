@@ -68,6 +68,11 @@ RefPtr<RemoteLayerTreeNode> RemoteLayerTreeHost::makeNode(const RemoteLayerTreeT
     case PlatformCALayer::LayerType::LayerTypeBackdropLayer:
         return makeWithView(adoptNS([[WKBackdropView alloc] init]));
 
+#if HAVE(CORE_MATERIAL)
+    case PlatformCALayer::LayerType::LayerTypeMaterialLayer:
+        return makeWithView(adoptNS([[WKMaterialView alloc] init]));
+#endif
+
     case PlatformCALayer::LayerType::LayerTypeTransformLayer:
         return makeWithView(adoptNS([[WKTransformView alloc] init]));
 

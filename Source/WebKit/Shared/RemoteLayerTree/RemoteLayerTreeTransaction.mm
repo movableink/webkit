@@ -241,6 +241,11 @@ static void dumpChangedLayers(TextStream& ts, const LayerPropertiesMap& changedL
 
         if (layerProperties.changedProperties & LayerChange::VideoGravityChanged)
             ts.dumpProperty("videoGravity", layerProperties.videoGravity);
+
+#if HAVE(CORE_MATERIAL)
+        if (layerProperties.changedProperties & LayerChange::AppleVisualEffectChanged)
+            ts.dumpProperty("appleVisualEffect", layerProperties.appleVisualEffect);
+#endif
     }
 }
 

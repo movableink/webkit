@@ -32,6 +32,31 @@
 
 namespace WebCore {
 
+bool appleVisualEffectNeedsBackdrop(AppleVisualEffect effect)
+{
+    switch (effect) {
+    case AppleVisualEffect::BlurUltraThinMaterial:
+    case AppleVisualEffect::BlurThinMaterial:
+    case AppleVisualEffect::BlurMaterial:
+    case AppleVisualEffect::BlurThickMaterial:
+    case AppleVisualEffect::BlurChromeMaterial:
+        return true;
+    case AppleVisualEffect::None:
+    case AppleVisualEffect::VibrancyLabel:
+    case AppleVisualEffect::VibrancySecondaryLabel:
+    case AppleVisualEffect::VibrancyTertiaryLabel:
+    case AppleVisualEffect::VibrancyQuaternaryLabel:
+    case AppleVisualEffect::VibrancyFill:
+    case AppleVisualEffect::VibrancySecondaryFill:
+    case AppleVisualEffect::VibrancyTertiaryFill:
+    case AppleVisualEffect::VibrancySeparator:
+        return false;
+    }
+
+    ASSERT_NOT_REACHED();
+    return false;
+}
+
 TextStream& operator<<(TextStream& ts, AppleVisualEffect effect)
 {
     switch (effect) {

@@ -77,6 +77,9 @@ header: "RemoteLayerTreeTransaction.h"
     VisibleRectChanged
 #endif
     ContentsFormatChanged
+#if HAVE(CORE_MATERIAL)
+    AppleVisualEffectChanged
+#endif
 };
 
 header: "SwapBuffersDisplayRequirement.h"
@@ -275,6 +278,9 @@ headers: "LayerProperties.h" "PlatformCALayerRemote.h"
     [OptionalTupleBit=WebKit::LayerChange::VisibleRectChanged] WebCore::FloatRect visibleRect;
 #endif
     [OptionalTupleBit=WebKit::LayerChange::ContentsFormatChanged] WebCore::ContentsFormat contentsFormat;
+#if HAVE(CORE_MATERIAL)
+    [OptionalTupleBit=WebKit::LayerChange::AppleVisualEffectChanged] WebCore::AppleVisualEffect appleVisualEffect;
+#endif
 };
 
 using WebKit::LayerHostingContextID = uint32_t;

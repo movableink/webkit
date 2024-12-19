@@ -266,6 +266,11 @@ TextStream& operator<<(TextStream& ts, PlatformCALayer::LayerType layerType)
     case PlatformCALayer::LayerType::LayerTypeBackdropLayer:
         ts << "backdrop-layer";
         break;
+#if HAVE(CORE_MATERIAL)
+    case PlatformCALayer::LayerType::LayerTypeMaterialLayer:
+        ts << "material-layer";
+        break;
+#endif
     case PlatformCALayer::LayerType::LayerTypeAVPlayerLayer:
         ts << "av-player-layer";
         break;

@@ -7920,6 +7920,28 @@ header: <WebCore/SharedBuffer.h>
     WebCore::SourceGraphic
 }
 
+#if HAVE(CORE_MATERIAL)
+
+header: <WebCore/AppleVisualEffect.h>
+enum class WebCore::AppleVisualEffect : uint8_t {
+    None,
+    BlurUltraThinMaterial,
+    BlurThinMaterial,
+    BlurMaterial,
+    BlurThickMaterial,
+    BlurChromeMaterial,
+    VibrancyLabel,
+    VibrancySecondaryLabel,
+    VibrancyTertiaryLabel,
+    VibrancyQuaternaryLabel,
+    VibrancyFill,
+    VibrancySecondaryFill,
+    VibrancyTertiaryFill,
+    VibrancySeparator,
+};
+
+#endif
+
 #if ENABLE(MEDIA_SOURCE)
 
 header: <WebCore/MediaSourcePrivate.h>

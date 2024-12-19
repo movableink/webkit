@@ -212,6 +212,11 @@ struct RenderLayerCompositor::CompositingState {
 
         if ((layer.isComposited() && layer.hasBackdropFilter()) || (layer.hasBackdropFilterDescendantsWithoutRoot() && !layer.isBackdropRoot()))
             hasBackdropFilterDescendantsWithoutRoot = true;
+
+#if HAVE(CORE_MATERIAL)
+        if (layer.isComposited() && layer.hasAppleVisualEffectRequiringBackdropFilter())
+            hasBackdropFilterDescendantsWithoutRoot = true;
+#endif
     }
 
     bool hasNonRootCompositedAncestor() const
@@ -3288,6 +3293,9 @@ bool RenderLayerCompositor::requiresOwnBackingStore(const RenderLayer& layer, co
         || renderer.hasMask()
         || renderer.hasReflection()
         || renderer.hasFilter()
+#if HAVE(CORE_MATERIAL)
+        || renderer.hasAppleVisualEffect()
+#endif
         || renderer.hasBackdropFilter())
         return true;
 
@@ -3390,6 +3398,11 @@ OptionSet<CompositingReason> RenderLayerCompositor::reasonsForCompositing(const 
 
         if (renderer.hasFilter() || renderer.hasBackdropFilter())
             reasons.add(CompositingReason::FilterWithCompositedDescendants);
+
+#if HAVE(CORE_MATERIAL)
+        if (renderer.hasAppleVisualEffect())
+            reasons.add(CompositingReason::FilterWithCompositedDescendants);
+#endif
 
         if (layer.isBackdropRoot())
             reasons.add(CompositingReason::BackdropRoot);
@@ -3864,6 +3877,11 @@ bool RenderLayerCompositor::requiresCompositingForFilters(RenderLayerModelObject
 {
     if (renderer.hasBackdropFilter())
         return true;
+
+#if HAVE(CORE_MATERIAL)
+    if (renderer.hasAppleVisualEffect())
+        return true;
+#endif
 
     if (!(m_compositingTriggers & ChromeClient::FilterTrigger))
         return false;

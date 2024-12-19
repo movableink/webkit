@@ -560,6 +560,9 @@ static bool canCreateStackingContext(const RenderLayer& layer)
         || renderer.hasFilter()
         || renderer.hasMask()
         || renderer.hasBackdropFilter()
+#if HAVE(CORE_MATERIAL)
+        || renderer.hasAppleVisualEffect()
+#endif
         || renderer.hasBlendMode()
         || renderer.isTransparent()
         || renderer.requiresRenderingConsolidationForViewTransition()
@@ -604,6 +607,9 @@ bool RenderLayer::computeCanBeBackdropRoot() const
     return isRenderViewLayer()
         || renderer().isTransparent()
         || renderer().hasBackdropFilter()
+#if HAVE(CORE_MATERIAL)
+        || renderer().hasAppleVisualEffect()
+#endif
         || renderer().hasClipPath()
         || renderer().hasFilter()
         || renderer().hasBlendMode()
@@ -2994,6 +3000,9 @@ String RenderLayer::debugDescription() const
         transform() ? " has transform"_s : ""_s,
         hasFilter() ? " has filter"_s : ""_s,
         hasBackdropFilter() ? " has backdrop filter"_s : ""_s,
+#if HAVE(CORE_MATERIAL)
+        hasAppleVisualEffect() ? " has apple visual effect"_s : ""_s,
+#endif
         hasBlendMode() ? " has blend mode"_s : ""_s,
         isolatesBlending() ? " isolates blending"_s : ""_s,
         compositedDescription);

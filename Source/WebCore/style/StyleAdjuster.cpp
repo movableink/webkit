@@ -548,6 +548,9 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             || style.boxReflect()
             || style.hasFilter()
             || style.hasBackdropFilter()
+#if HAVE(CORE_MATERIAL)
+            || style.hasAppleVisualEffect()
+#endif
             || style.hasBlendMode()
             || style.hasIsolation()
             || style.position() == PositionType::Sticky
@@ -692,6 +695,9 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             || style.hasIsolation()
             || style.hasMask()
             || style.hasBackdropFilter()
+#if HAVE(CORE_MATERIAL)
+            || style.hasAppleVisualEffect()
+#endif
             || style.hasBlendMode()
             || !style.viewTransitionName().isNone();
         if (RefPtr element = m_element) {

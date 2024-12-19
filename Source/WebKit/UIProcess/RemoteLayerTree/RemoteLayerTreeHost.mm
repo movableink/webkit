@@ -47,6 +47,7 @@
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
 #import <wtf/TZoneMallocInlines.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
+#import <pal/cocoa/CoreMaterialSoftLink.h>
 #import <pal/cocoa/QuartzCoreSoftLink.h>
 
 #if PLATFORM(IOS_FAMILY)
@@ -437,6 +438,12 @@ RefPtr<RemoteLayerTreeNode> RemoteLayerTreeHost::makeNode(const RemoteLayerTreeT
 
     case PlatformCALayer::LayerType::LayerTypeBackdropLayer:
         return makeWithLayer(adoptNS([[CABackdropLayer alloc] init]));
+
+#if HAVE(CORE_MATERIAL)
+    case PlatformCALayer::LayerType::LayerTypeMaterialLayer:
+        return makeWithLayer(adoptNS([PAL::allocMTMaterialLayerInstance() init]));
+#endif
+
     case PlatformCALayer::LayerType::LayerTypeCustom:
     case PlatformCALayer::LayerType::LayerTypeAVPlayerLayer:
         if (m_isDebugLayerTreeHost)

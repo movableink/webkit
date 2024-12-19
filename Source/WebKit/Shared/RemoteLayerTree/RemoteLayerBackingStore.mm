@@ -419,6 +419,9 @@ void RemoteLayerBackingStore::drawInContext(GraphicsContext& context)
         break;
     case PlatformCALayer::LayerType::LayerTypeWebLayer:
     case PlatformCALayer::LayerType::LayerTypeBackdropLayer:
+#if HAVE(CORE_MATERIAL)
+    case PlatformCALayer::LayerType::LayerTypeMaterialLayer:
+#endif
         PlatformCALayer::drawLayerContents(context, m_layer.ptr(), m_paintingRects, paintBehavior);
         break;
     case PlatformCALayer::LayerType::LayerTypeLayer:

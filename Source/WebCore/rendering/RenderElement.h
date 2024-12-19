@@ -212,6 +212,11 @@ public:
     inline bool hasBlendMode() const;
     inline bool hasShapeOutside() const;
 
+#if HAVE(CORE_MATERIAL)
+    inline bool hasAppleVisualEffect() const;
+    inline bool hasAppleVisualEffectRequiringBackdropFilter() const;
+#endif
+
     void registerForVisibleInViewportCallback();
     void unregisterForVisibleInViewportCallback();
 

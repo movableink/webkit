@@ -1153,6 +1153,8 @@ public:
 
 #if HAVE(CORE_MATERIAL)
     inline AppleVisualEffect appleVisualEffect() const;
+    inline bool hasAppleVisualEffect() const;
+    inline bool hasAppleVisualEffectRequiringBackdropFilter() const;
 #endif
 
     inline MathStyle mathStyle() const;

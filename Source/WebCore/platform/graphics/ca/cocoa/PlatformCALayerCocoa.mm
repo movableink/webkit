@@ -70,6 +70,7 @@
 #endif
 
 #import <pal/cocoa/AVFoundationSoftLink.h>
+#import <pal/cocoa/CoreMaterialSoftLink.h>
 
 namespace WebCore {
 
@@ -243,6 +244,11 @@ PlatformCALayerCocoa::PlatformCALayerCocoa(LayerType layerType, PlatformCALayerC
     case LayerType::LayerTypeBackdropLayer:
         layerClass = [CABackdropLayer class];
         break;
+#if HAVE(CORE_MATERIAL)
+    case LayerType::LayerTypeMaterialLayer:
+        layerClass = PAL::getMTMaterialLayerClass();
+        break;
+#endif
     case LayerType::LayerTypeTiledBackingLayer:
     case LayerType::LayerTypePageTiledBackingLayer:
         layerClass = [WebTiledBackingLayer class];
@@ -271,8 +277,8 @@ PlatformCALayerCocoa::PlatformCALayerCocoa(LayerType layerType, PlatformCALayerC
         m_layer = adoptNS([(CALayer *)[layerClass alloc] init]);
 
 #if PLATFORM(MAC)
-    if (layerType == LayerType::LayerTypeBackdropLayer)
-        [(CABackdropLayer*)m_layer.get() setWindowServerAware:NO];
+    if (layerType == LayerType::LayerTypeBackdropLayer || layerType == LayerType::LayerTypeMaterialLayer)
+        [(CABackdropLayer *)m_layer.get() setWindowServerAware:NO];
 #endif
 
     commonInit();
@@ -338,6 +344,11 @@ Ref<PlatformCALayer> PlatformCALayerCocoa::clone(PlatformCALayerClient* owner) c
     case PlatformCALayer::LayerType::LayerTypeBackdropLayer:
         type = PlatformCALayer::LayerType::LayerTypeBackdropLayer;
         break;
+#if HAVE(CORE_MATERIAL)
+    case PlatformCALayer::LayerType::LayerTypeMaterialLayer:
+        type = PlatformCALayer::LayerType::LayerTypeMaterialLayer;
+        break;
+#endif
     case PlatformCALayer::LayerType::LayerTypeLayer:
     default:
         type = PlatformCALayer::LayerType::LayerTypeLayer;
@@ -1130,6 +1141,22 @@ void PlatformCALayerCocoa::setIsDescendentOfSeparatedPortal(bool)
     ASSERT_NOT_REACHED();
 }
 #endif
+#endif
+
+#if HAVE(CORE_MATERIAL)
+
+AppleVisualEffect PlatformCALayerCocoa::appleVisualEffect() const
+{
+    // FIXME: Add an implementation for when UI-side compositing is disabled.
+    return m_appleVisualEffect;
+}
+
+void PlatformCALayerCocoa::setAppleVisualEffect(AppleVisualEffect effect)
+{
+    // FIXME: Add an implementation for when UI-side compositing is disabled.
+    m_appleVisualEffect = effect;
+}
+
 #endif
 
 void PlatformCALayerCocoa::updateContentsFormat()

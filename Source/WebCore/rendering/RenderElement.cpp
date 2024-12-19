@@ -448,6 +448,9 @@ bool RenderElement::repaintBeforeStyleChange(StyleDifference diff, const RenderS
             // If we don't have a layer yet, but we are going to get one because of transform or opacity, then we need to repaint the old position of the object.
             bool hasLayer = modelObject->hasLayer();
             bool willHaveLayer = newStyle.affectsTransform() || newStyle.hasOpacity() || newStyle.hasFilter() || newStyle.hasBackdropFilter();
+#if HAVE(CORE_MATERIAL)
+            willHaveLayer |= newStyle.hasAppleVisualEffect();
+#endif
             if (!hasLayer && willHaveLayer)
                 return RequiredRepaint::RendererOnly;
         }
@@ -2189,6 +2192,9 @@ void RenderElement::adjustFragmentedFlowStateOnContainingBlockChangeIfNeeded(con
         || oldStyle.hasTransformRelatedProperty() != m_style.hasTransformRelatedProperty()
         || oldStyle.willChange() != newStyle.willChange()
         || oldStyle.hasBackdropFilter() != newStyle.hasBackdropFilter()
+#if HAVE(CORE_MATERIAL)
+        || oldStyle.hasAppleVisualEffectRequiringBackdropFilter() != newStyle.hasAppleVisualEffectRequiringBackdropFilter()
+#endif
         || oldStyle.containsLayout() != newStyle.containsLayout()
         || oldStyle.containsSize() != newStyle.containsSize();
     if (!mayNotBeContainingBlockForDescendantsAnymore)

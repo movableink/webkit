@@ -62,6 +62,11 @@ class WebPageProxy;
 @interface WKShapeView : WKCompositingView
 @end
 
+#if HAVE(CORE_MATERIAL)
+@interface WKMaterialView : WKCompositingView
+@end
+#endif
+
 @interface WKUIRemoteView : _UIRemoteView <WKContentControlled>
 @end
 

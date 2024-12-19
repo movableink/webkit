@@ -106,6 +106,10 @@ public:
 #endif
 #endif
 
+#if HAVE(CORE_MATERIAL)
+    WEBCORE_EXPORT void setAppleVisualEffect(AppleVisualEffect) override;
+#endif
+
     WEBCORE_EXPORT void setBackgroundColor(const Color&) override;
 
     WEBCORE_EXPORT void setContentsOpaque(bool) override;
@@ -514,6 +518,10 @@ private:
 #endif
     void updateContentsScalingFilters();
 
+#if HAVE(CORE_MATERIAL)
+    void updateAppleVisualEffect();
+#endif
+
     enum StructuralLayerPurpose {
         NoStructuralLayer = 0,
         StructuralLayerForPreserves3D,
@@ -627,6 +635,9 @@ private:
         ContentsScalingFiltersChanged           = 1LLU << 43,
         VideoGravityChanged                     = 1LLU << 44,
         BackdropRootChanged                     = 1LLU << 45,
+#if HAVE(CORE_MATERIAL)
+        AppleVisualEffectChanged                = 1LLU << 46,
+#endif
     };
     typedef uint64_t LayerChangeFlags;
     static ASCIILiteral layerChangeAsString(LayerChange);

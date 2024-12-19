@@ -365,6 +365,9 @@ private:
     void updateVideoGravity(const RenderStyle&);
 #endif
     void updateContentsScalingFilters(const RenderStyle&);
+#if HAVE(CORE_MATERIAL)
+    void updateAppleVisualEffect(const RenderStyle&);
+#endif
 
     // Return the opacity value that this layer should use for compositing.
     float compositingOpacity(float rendererOpacity) const;

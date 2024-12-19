@@ -58,6 +58,10 @@ static void configureSeparatedLayer(CALayer *) { }
 #import <UIKitSPI.h>
 #endif
 
+#if HAVE(CORE_MATERIAL)
+#import <pal/cocoa/CoreMaterialSoftLink.h>
+#endif
+
 #if PLATFORM(IOS_FAMILY)
 @interface UIView (WKUIViewUtilities)
 - (void)_web_setSubviews:(NSArray *)subviews;
@@ -136,6 +140,37 @@ static NSString *toCAFilterType(PlatformCALayer::FilterType type)
     ASSERT_NOT_REACHED();
     return 0;
 }
+
+#if HAVE(CORE_MATERIAL)
+
+static MTCoreMaterialRecipe materialRecipeForAppleVisualEffect(AppleVisualEffect effect)
+{
+    switch (effect) {
+    case AppleVisualEffect::BlurUltraThinMaterial:
+        return PAL::get_CoreMaterial_MTCoreMaterialRecipePlatformContentUltraThinLight();
+    case AppleVisualEffect::BlurThinMaterial:
+        return PAL::get_CoreMaterial_MTCoreMaterialRecipePlatformContentThinLight();
+    case AppleVisualEffect::BlurMaterial:
+        return PAL::get_CoreMaterial_MTCoreMaterialRecipePlatformContentLight();
+    case AppleVisualEffect::BlurThickMaterial:
+        return PAL::get_CoreMaterial_MTCoreMaterialRecipePlatformContentThickLight();
+    case AppleVisualEffect::BlurChromeMaterial:
+        return PAL::get_CoreMaterial_MTCoreMaterialRecipePlatformChromeLight();
+    case AppleVisualEffect::None:
+    case AppleVisualEffect::VibrancyLabel:
+    case AppleVisualEffect::VibrancySecondaryLabel:
+    case AppleVisualEffect::VibrancyTertiaryLabel:
+    case AppleVisualEffect::VibrancyQuaternaryLabel:
+    case AppleVisualEffect::VibrancyFill:
+    case AppleVisualEffect::VibrancySecondaryFill:
+    case AppleVisualEffect::VibrancyTertiaryFill:
+    case AppleVisualEffect::VibrancySeparator:
+        ASSERT_NOT_REACHED();
+        return nil;
+    }
+}
+
+#endif
 
 static void updateCustomAppearance(CALayer *layer, GraphicsLayer::CustomAppearance customAppearance)
 {
@@ -331,6 +366,15 @@ void RemoteLayerTreePropertyApplier::applyPropertiesToLayer(CALayer *layer, Remo
         }
 #endif
     }
+
+#if HAVE(CORE_MATERIAL)
+    if (properties.changedProperties & LayerChange::AppleVisualEffectChanged) {
+        if ([layer isKindOfClass:PAL::getMTMaterialLayerClass()]) {
+            if (RetainPtr recipe = materialRecipeForAppleVisualEffect(properties.appleVisualEffect))
+                [(MTMaterialLayer *)layer setRecipe:recipe.get()];
+        }
+    }
+#endif
 }
 
 void RemoteLayerTreePropertyApplier::applyProperties(RemoteLayerTreeNode& node, RemoteLayerTreeHost* layerTreeHost, const LayerProperties& properties, const RelatedLayerMap& relatedLayers, LayerContentsType layerContentsType)
