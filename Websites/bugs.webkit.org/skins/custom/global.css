@@ -1500,7 +1500,6 @@ a[href*=quicksearch]:after {
 }
 
 /** Notices **/
-
 .note, #new_release, #message, .throw_error {
     float: none;
     margin: 0 0 3rem 0;
@@ -1523,6 +1522,15 @@ a[href*=quicksearch]:after {
     font-weight: bold;
     font-size: var(--font-size-xlarge);
 }
+
+.bugfields .warning {
+   border: 1px solid var(--syntax-color-error-border);
+   padding: 1rem 3rem;
+   color: var(--syntax-color-error-border);
+   background-color: var(--code-background-color);
+   text-align: center;
+}
+
 
 .intro {
     font-size: 2.2rem;
