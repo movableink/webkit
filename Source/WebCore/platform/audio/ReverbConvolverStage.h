@@ -51,8 +51,8 @@ public:
     ReverbConvolverStage(const float* impulseResponse, size_t responseLength, size_t reverbTotalLatency, size_t stageOffset, size_t stageLength, size_t fftSize, size_t renderPhase, size_t renderSliceSize, ReverbAccumulationBuffer*, float scale, bool directMode = false);
     ~ReverbConvolverStage();
 
-    // WARNING: framesToProcess must be such that it evenly divides the delay buffer size (stage_offset).
-    void process(const float* source, size_t framesToProcess);
+    // WARNING: source.size() must be such that it evenly divides the delay buffer size (stage_offset).
+    void process(std::span<const float> source);
 
     void processInBackground(ReverbConvolver* convolver, size_t framesToProcess);
 

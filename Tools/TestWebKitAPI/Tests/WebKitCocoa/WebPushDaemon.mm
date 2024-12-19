@@ -57,6 +57,7 @@
 #import <mach/task.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/OSObjectPtr.h>
+#import <wtf/StdLibExtras.h>
 #import <wtf/UUID.h>
 #import <wtf/UniqueRef.h>
 #import <wtf/cocoa/SpanCocoa.h>
@@ -312,7 +313,7 @@ static WebKit::WebPushD::WebPushDaemonConnectionConfiguration defaultWebPushDaem
 {
     auto token = getSelfAuditToken();
     Vector<uint8_t> auditToken(sizeof(token));
-    memcpy(auditToken.data(), &token, sizeof(token));
+    memcpySpan(auditToken.mutableSpan(), asByteSpan(token));
 
     IGNORE_CLANG_WARNINGS_BEGIN("missing-designated-field-initializers")
     return { .hostAppAuditTokenData = WTFMove(auditToken) };

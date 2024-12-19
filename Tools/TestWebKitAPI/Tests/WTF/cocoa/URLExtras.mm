@@ -44,14 +44,14 @@ static NSData *literalAsData(const char* literal)
 
 static const char* dataAsString(NSData *data)
 {
-    static char buffer[1000];
-    if ([data length] > sizeof(buffer) - 1)
+    static std::array<char, 1000> buffer;
+    if ([data length] > buffer.size() - 1)
         return "ERROR";
     if (memchr([data bytes], 0, [data length]))
         return "ERROR";
-    memcpy(buffer, [data bytes], [data length]);
+    memcpySpan(std::span { buffer }, span(data));
     buffer[[data length]] = '\0';
-    return buffer;
+    return buffer.data();
 }
 
 static const char* originalDataAsString(NSURL *URL)

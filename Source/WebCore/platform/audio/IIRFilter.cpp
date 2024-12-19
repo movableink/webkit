@@ -71,7 +71,7 @@ void IIRFilter::reset()
     m_bufferIndex = 0;
 }
 
-void IIRFilter::process(const float* source, float* destination, size_t framesToProcess)
+void IIRFilter::process(std::span<const float> source, std::span<float> destination)
 {
     // Compute
     //
@@ -98,7 +98,7 @@ void IIRFilter::process(const float* source, float* destination, size_t framesTo
     double* xBuffer = m_xBuffer.data();
     double* yBuffer = m_yBuffer.data();
 
-    for (size_t n = 0; n < framesToProcess; ++n) {
+    for (size_t n = 0; n < source.size(); ++n) {
         // To help minimize roundoff, we compute using double's, even though the
         // filter coefficients only have single precision values.
         double yn = feedforward[0] * source[n];
@@ -127,7 +127,7 @@ void IIRFilter::process(const float* source, float* destination, size_t framesTo
     }
 }
 
-void IIRFilter::getFrequencyResponse(unsigned length, const float* frequency, float* magResponse, float* phaseResponse)
+void IIRFilter::getFrequencyResponse(unsigned length, std::span<const float> frequency, std::span<float> magResponse, std::span<float> phaseResponse)
 {
     // Evaluate the z-transform of the filter at the given normalized frequencies
     // from 0 to 1. (One corresponds to the Nyquist frequency.)
@@ -206,7 +206,7 @@ double IIRFilter::tailTime(double sampleRate, bool isFilterStable)
     input[0] = 1;
 
     // Process the first block and get the max magnitude of the output.
-    process(input.data(), output.data(), AudioUtilities::renderQuantumSize);
+    process(input.span().first(AudioUtilities::renderQuantumSize), output.span());
     magnitudes[0] = VectorMath::maximumMagnitude(output.data(), AudioUtilities::renderQuantumSize);
 
     // Process the rest of the signal, getting the max magnitude of the
@@ -214,7 +214,7 @@ double IIRFilter::tailTime(double sampleRate, bool isFilterStable)
     input[0] = 0;
 
     for (int k = 1; k < numberOfBlocks; ++k) {
-        process(input.data(), output.data(), AudioUtilities::renderQuantumSize);
+        process(input.span().first(AudioUtilities::renderQuantumSize), output.span());
         magnitudes[k] = VectorMath::maximumMagnitude(output.data(), AudioUtilities::renderQuantumSize);
     }
 

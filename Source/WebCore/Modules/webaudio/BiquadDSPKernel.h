@@ -44,7 +44,7 @@ public:
     }
     
     // AudioDSPKernel
-    void process(const float* source, float* dest, size_t framesToProcess) override;
+    void process(std::span<const float> source, std::span<float> destination) final;
     void reset() override { m_biquad.reset(); }
 
     // Get the magnitude and phase response of the filter at the given

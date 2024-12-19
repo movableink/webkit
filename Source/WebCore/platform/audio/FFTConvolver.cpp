@@ -50,42 +50,44 @@ FFTConvolver::FFTConvolver(size_t fftSize)
 {
 }
 
-void FFTConvolver::process(FFTFrame* fftKernel, const float* sourceP, float* destP, size_t framesToProcess)
+void FFTConvolver::process(FFTFrame* fftKernel, std::span<const float> source, std::span<float> destination)
 {
     size_t halfSize = fftSize() / 2;
 
-    // framesToProcess must be an exact multiple of halfSize,
-    // or halfSize is a multiple of framesToProcess when halfSize > framesToProcess.
-    bool isGood = !(halfSize % framesToProcess && framesToProcess % halfSize);
+    // source.size() must be an exact multiple of halfSize,
+    // or halfSize is a multiple of source.size() when halfSize > source.size().
+    bool isGood = !(halfSize % source.size() && source.size() % halfSize);
     ASSERT(isGood);
     if (!isGood)
         return;
 
-    size_t numberOfDivisions = halfSize <= framesToProcess ? (framesToProcess / halfSize) : 1;
-    size_t divisionSize = numberOfDivisions == 1 ? framesToProcess : halfSize;
+    size_t numberOfDivisions = halfSize <= source.size() ? (source.size() / halfSize) : 1;
+    size_t divisionSize = numberOfDivisions == 1 ? source.size() : halfSize;
 
-    for (size_t i = 0; i < numberOfDivisions; ++i, sourceP += divisionSize, destP += divisionSize) {
+    for (size_t i = 0; i < numberOfDivisions; ++i, source = source.subspan(divisionSize), destination = destination.subspan(divisionSize)) {
         // Copy samples to input buffer (note contraint above!)
-        float* inputP = m_inputBuffer.data();
+        auto inputP = m_inputBuffer.span();
 
         // Sanity check
-        bool isCopyGood1 = sourceP && inputP && m_readWriteIndex + divisionSize <= m_inputBuffer.size();
+        bool isCopyGood1 = source.data() && inputP.data() && m_readWriteIndex + divisionSize <= m_inputBuffer.size();
         ASSERT(isCopyGood1);
         if (!isCopyGood1)
             return;
 
-        memcpy(inputP + m_readWriteIndex, sourceP, sizeof(float) * divisionSize);
+        IGNORE_WARNINGS_BEGIN("restrict")
+        memcpySpan(inputP.subspan(m_readWriteIndex), source.first(divisionSize));
+        IGNORE_WARNINGS_END
 
         // Copy samples from output buffer
-        float* outputP = m_outputBuffer.data();
+        auto outputP = m_outputBuffer.span();
 
         // Sanity check
-        bool isCopyGood2 = destP && outputP && m_readWriteIndex + divisionSize <= m_outputBuffer.size();
+        bool isCopyGood2 = destination.data() && outputP.data() && m_readWriteIndex + divisionSize <= m_outputBuffer.size();
         ASSERT(isCopyGood2);
         if (!isCopyGood2)
             return;
 
-        memcpy(destP, outputP + m_readWriteIndex, sizeof(float) * divisionSize);
+        memcpySpan(destination, outputP.subspan(m_readWriteIndex, divisionSize));
         m_readWriteIndex += divisionSize;
 
         // Check if it's time to perform the next FFT

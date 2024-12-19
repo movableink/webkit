@@ -96,7 +96,7 @@ void AudioDSPKernelProcessor::process(const AudioBus* source, AudioBus* destinat
         return;
         
     for (unsigned i = 0; i < m_kernels.size(); ++i)
-        m_kernels[i]->process(source->channel(i)->data(), destination->channel(i)->mutableData(), framesToProcess);
+        m_kernels[i]->process(source->channel(i)->span().first(framesToProcess), destination->channel(i)->mutableSpan());
 }
 
 void AudioDSPKernelProcessor::processOnlyAudioParams(size_t framesToProcess)

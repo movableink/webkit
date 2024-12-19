@@ -177,19 +177,19 @@ void ReverbConvolver::process(const AudioChannel* sourceChannel, AudioChannel* d
     if (!isSafe)
         return;
         
-    const float* source = sourceChannel->data();
+    auto source = sourceChannel->span().first(framesToProcess);
     auto destination = destinationChannel->mutableSpan();
-    bool isDataSafe = source && destination.data();
+    bool isDataSafe = source.data() && destination.data();
     ASSERT(isDataSafe);
     if (!isDataSafe)
         return;
 
     // Feed input buffer (read by all threads)
-    m_inputBuffer.write(source, framesToProcess);
+    m_inputBuffer.write(source);
 
     // Accumulate contributions from each stage
     for (size_t i = 0; i < m_stages.size(); ++i)
-        m_stages[i]->process(source, framesToProcess);
+        m_stages[i]->process(source);
 
     // Finally read from accumulation buffer
     m_accumulationBuffer.readAndClear(destination, framesToProcess);

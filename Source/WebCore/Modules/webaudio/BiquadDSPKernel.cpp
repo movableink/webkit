@@ -199,17 +199,17 @@ void BiquadDSPKernel::updateCoefficients(size_t numberOfFrames, std::span<const 
     updateTailTime(numberOfFrames - 1);
 }
 
-void BiquadDSPKernel::process(const float* source, float* destination, size_t framesToProcess)
+void BiquadDSPKernel::process(std::span<const float> source, std::span<float> destination)
 {
-    ASSERT(source && destination && biquadProcessor());
+    ASSERT(source.data() && destination.data() && biquadProcessor());
     
     // Recompute filter coefficients if any of the parameters have changed.
     // FIXME: as an optimization, implement a way that a Biquad object can simply copy its internal filter coefficients from another Biquad object.
     // Then re-factor this code to only run for the first BiquadDSPKernel of each BiquadProcessor.
 
-    updateCoefficientsIfNecessary(framesToProcess);
+    updateCoefficientsIfNecessary(source.size());
 
-    m_biquad.process(source, destination, framesToProcess);
+    m_biquad.process(source, destination);
 }
 
 void BiquadDSPKernel::getFrequencyResponse(unsigned nFrequencies, const float* frequencyHz, float* magResponse, float* phaseResponse)

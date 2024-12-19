@@ -104,33 +104,33 @@ static void FetchABL(AudioBufferList* list, size_t destOffset, Vector<Byte*>& po
         if (destOffset > dest.mDataByteSize)
             continue;
 
-        auto* destinationData = static_cast<Byte*>(dest.mData) + destOffset;
+        auto destinationData = dataMutableByteSpan(dest).subspan(destOffset);
         auto* sourceData = pointer + srcOffset;
         auto nbytes = std::min<size_t>(nbytesTarget, dest.mDataByteSize - destOffset);
         switch (mode) {
         case CARingBuffer::Copy:
-            memcpy(destinationData, sourceData, nbytes);
+            memcpySpan(destinationData, unsafeMakeSpan(sourceData, nbytes));
             break;
         case CARingBuffer::MixInt16: {
-            auto* destination = reinterpret_cast<int16_t*>(destinationData);
+            auto destination = spanReinterpretCast<int16_t>(destinationData);
             auto* source = reinterpret_cast<int16_t*>(sourceData);
             for (size_t i = 0; i < nbytes / sizeof(int16_t); i++)
                 destination[i] += source[i];
             break;
         }
         case CARingBuffer::MixInt32: {
-            auto* destination = reinterpret_cast<int32_t*>(destinationData);
-            vDSP_vaddi(destination, 1, reinterpret_cast<int32_t*>(sourceData), 1, destination, 1, nbytes / sizeof(int32_t));
+            auto destination = spanReinterpretCast<int32_t>(destinationData);
+            vDSP_vaddi(destination.data(), 1, reinterpret_cast<int32_t*>(sourceData), 1, destination.data(), 1, nbytes / sizeof(int32_t));
             break;
         }
         case CARingBuffer::MixFloat32: {
-            auto* destination = reinterpret_cast<float*>(destinationData);
-            vDSP_vadd(destination, 1, reinterpret_cast<float*>(sourceData), 1, destination, 1, nbytes / sizeof(float));
+            auto destination = spanReinterpretCast<float>(destinationData);
+            vDSP_vadd(destination.data(), 1, reinterpret_cast<float*>(sourceData), 1, destination.data(), 1, nbytes / sizeof(float));
             break;
         }
         case CARingBuffer::MixFloat64: {
-            auto* destination = reinterpret_cast<double*>(destinationData);
-            vDSP_vaddD(destination, 1, reinterpret_cast<double*>(sourceData), 1, destination, 1, nbytes / sizeof(double));
+            auto destination = spanReinterpretCast<double>(destinationData);
+            vDSP_vaddD(destination.data(), 1, reinterpret_cast<double*>(sourceData), 1, destination.data(), 1, nbytes / sizeof(double));
             break;
         }
         }

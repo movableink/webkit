@@ -42,7 +42,7 @@ public:
     explicit WaveShaperDSPKernel(WaveShaperProcessor*);
 
     // AudioDSPKernel
-    void process(const float* source, float* dest, size_t framesToProcess) final;
+    void process(std::span<const float> source, std::span<float> destination) final;
     void reset() final;
     double tailTime() const final { return 0; }
     double latencyTime() const final;
@@ -52,11 +52,11 @@ public:
 
 private:
     // Apply the shaping curve.
-    void processCurve(const float* source, float* dest, size_t framesToProcess);
+    void processCurve(std::span<const float> source, std::span<float> destination);
 
     // Use up-sampling, process at the higher sample-rate, then down-sample.
-    void processCurve2x(const float* source, float* dest, size_t framesToProcess);
-    void processCurve4x(const float* source, float* dest, size_t framesToProcess);
+    void processCurve2x(std::span<const float> source, std::span<float> destination);
+    void processCurve4x(std::span<const float> source, std::span<float> destination);
 
     bool requiresTailProcessing() const final;
 

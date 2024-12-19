@@ -379,15 +379,15 @@ public:
     {
     }
 
-    int readOutBytes(char* outputBuffer, unsigned askedToRead)
+    int readOutBytes(std::span<char> outputBuffer)
     {
-        unsigned bytesLeft = m_buffer.size() - m_currentOffset;
-        unsigned lenToCopy = std::min(askedToRead, bytesLeft);
-        if (lenToCopy) {
-            memcpy(outputBuffer, m_buffer.data() + m_currentOffset, lenToCopy);
-            m_currentOffset += lenToCopy;
+        size_t bytesLeft = m_buffer.size() - m_currentOffset;
+        size_t lengthToCopy = std::min(outputBuffer.size(), bytesLeft);
+        if (lengthToCopy) {
+            memcpySpan(outputBuffer, m_buffer.subspan(m_currentOffset, lengthToCopy));
+            m_currentOffset += lengthToCopy;
         }
-        return lenToCopy;
+        return lengthToCopy;
     }
 
 private:
@@ -527,7 +527,7 @@ static int readFunc(void* context, char* buffer, int len)
         return 0;
 
     OffsetBuffer* data = static_cast<OffsetBuffer*>(context);
-    return data->readOutBytes(buffer, len);
+    return data->readOutBytes(unsafeMakeSpan(buffer, len));
 }
 
 static int writeFunc(void*, const char*, int)
@@ -602,7 +602,7 @@ RefPtr<XMLParserContext> XMLParserContext::createMemoryParser(xmlSAXHandlerPtr h
     if (!parser)
         return nullptr;
 
-    memcpy(parser->sax, handlers, sizeof(xmlSAXHandler));
+    memcpySpan(asMutableByteSpan(*parser->sax), asByteSpan(*handlers));
 
     // Substitute entities.
     // FIXME: Why is XML_PARSE_NODICT needed? This is different from what createStringParser does.

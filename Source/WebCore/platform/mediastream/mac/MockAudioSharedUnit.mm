@@ -38,6 +38,7 @@
 #import "MockRealtimeMediaSourceCenter.h"
 #import "NotImplemented.h"
 #import "RealtimeMediaSourceSettings.h"
+#import "SpanCoreAudio.h"
 #import "WebAudioBufferList.h"
 #import "WebAudioSourceProviderCocoa.h"
 #import <AVFoundation/AVAudioBuffer.h>
@@ -369,7 +370,7 @@ void MockAudioSharedInternalUnit::generateSampleBuffers(MonotonicTime renderTime
         uint32_t bipBopCount = std::min(frameCount, bipBopRemain);
         for (auto& audioBuffer : m_audioBufferList->buffers()) {
             audioBuffer.mDataByteSize = frameCount * m_streamFormat.mBytesPerFrame;
-            memcpy(audioBuffer.mData, &m_bipBopBuffer[bipBopStart], sizeof(Float32) * bipBopCount);
+            memcpySpan(dataMutableFloatSpan(audioBuffer), m_bipBopBuffer.subspan(bipBopStart, bipBopCount));
             addHum(HumVolume, HumFrequency, sampleRate(), m_samplesRendered, static_cast<float*>(audioBuffer.mData), bipBopCount);
         }
         emitSampleBuffers(bipBopCount);
@@ -399,9 +400,9 @@ OSStatus MockAudioSharedInternalUnit::render(AudioUnitRenderActionFlags*, const 
         if (copySize > buffer->mBuffers[i].mDataByteSize)
             return kAudio_ParamError;
 
-        auto* source = static_cast<uint8_t*>(sourceBuffer->mBuffers[i].mData);
-        auto* destination = static_cast<uint8_t*>(buffer->mBuffers[i].mData);
-        memcpy(destination, source, copySize);
+        auto source = dataByteSpan(sourceBuffer->mBuffers[i]);
+        auto destination = dataMutableByteSpan(buffer->mBuffers[i]);
+        memcpySpan(destination, source.first(copySize));
     }
 
     return 0;

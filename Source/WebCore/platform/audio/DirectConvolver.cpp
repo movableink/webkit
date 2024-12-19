@@ -37,6 +37,7 @@
 #endif
 
 #include "VectorMath.h"
+#include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
@@ -51,10 +52,10 @@ DirectConvolver::DirectConvolver(size_t inputBlockSize)
 {
 }
 
-void DirectConvolver::process(AudioFloatArray* convolutionKernel, const float* sourceP, float* destP, size_t framesToProcess)
+void DirectConvolver::process(AudioFloatArray* convolutionKernel, std::span<const float> source, std::span<float> destination)
 {
-    ASSERT(framesToProcess == m_inputBlockSize);
-    if (framesToProcess != m_inputBlockSize)
+    ASSERT(source.size() == m_inputBlockSize);
+    if (source.size() != m_inputBlockSize)
         return;
 
     // Only support kernelSize <= m_inputBlockSize
@@ -63,21 +64,21 @@ void DirectConvolver::process(AudioFloatArray* convolutionKernel, const float* s
     if (kernelSize > m_inputBlockSize)
         return;
 
-    float* kernelP = convolutionKernel->data();
+    auto kernelP = convolutionKernel->span();
 
     // Sanity check
-    bool isCopyGood = kernelP && sourceP && destP && m_buffer.data();
+    bool isCopyGood = kernelP.data() && source.data() && destination.data() && m_buffer.data();
     ASSERT(isCopyGood);
     if (!isCopyGood)
         return;
 
-    float* inputP = m_buffer.data() + m_inputBlockSize;
+    auto inputP = m_buffer.span().subspan(m_inputBlockSize);
 
     // Copy samples to 2nd half of input buffer.
-    memcpy(inputP, sourceP, sizeof(float) * framesToProcess);
+    memcpySpan(inputP, source);
 
 #if USE(ACCELERATE)
-    vDSP_conv(inputP - kernelSize + 1, 1, kernelP + kernelSize - 1, -1, destP, 1, framesToProcess, kernelSize);
+    vDSP_conv(inputP.data() - kernelSize + 1, 1, kernelP.subspan(kernelSize - 1).data(), -1, destination.data(), 1, source.size(), kernelSize);
 #else
     // FIXME: The macro can be further optimized to avoid pipeline stalls. One possibility is to maintain 4 separate sums and change the macro to CONVOLVE_FOUR_SAMPLES.
 #define CONVOLVE_ONE_SAMPLE             \
@@ -85,7 +86,7 @@ void DirectConvolver::process(AudioFloatArray* convolutionKernel, const float* s
     j++;
 
     size_t i = 0;
-    while (i < framesToProcess) {
+    while (i < source.size()) {
         size_t j = 0;
         float sum = 0;
         
@@ -346,12 +347,12 @@ void DirectConvolver::process(AudioFloatArray* convolutionKernel, const float* s
                 CONVOLVE_ONE_SAMPLE
             }
         }
-        destP[i++] = sum;
+        destination[i++] = sum;
     }
 #endif // USE(ACCELERATE)
 
     // Copy 2nd half of input buffer to 1st half.
-    memcpy(m_buffer.data(), inputP, sizeof(float) * framesToProcess);
+    memcpySpan(m_buffer.span(), inputP.first(source.size()));
 }
 
 void DirectConvolver::reset()

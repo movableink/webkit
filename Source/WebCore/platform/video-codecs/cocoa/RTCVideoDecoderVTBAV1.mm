@@ -36,6 +36,7 @@
 #import <wtf/CheckedArithmetic.h>
 #import <wtf/FastMalloc.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/cf/VectorCF.h>
 
 #import "CoreVideoSoftLink.h"
 #import "VideoToolboxSoftLink.h"
@@ -277,14 +278,14 @@ static RetainPtr<CMVideoFormatDescriptionRef> computeAV1InputFormat(std::span<co
     size_t cfDataSize = VPCodecConfigurationContentsSize + fullOBUHeader.size();
     auto cfData = adoptCF(CFDataCreateMutable(kCFAllocatorDefault, cfDataSize));
     CFDataIncreaseLength(cfData.get(), cfDataSize);
-    uint8_t* header = CFDataGetMutableBytePtr(cfData.get());
+    auto header = mutableSpan(cfData.get());
 
     header[0] = 129;
     header[1] = (parameters->profile << 5) | parameters->level;
     header[2] = (parameters->high_bitdepth << 6) | (parameters->twelve_bit << 5) | (parameters->chroma_type << 2);
     header[3] = 0;
 
-    memcpy(header + 4, fullOBUHeader.data(), fullOBUHeader.size());
+    memcpySpan(header.subspan(4), fullOBUHeader);
 
     auto configurationDict = @{ @"av1C": (__bridge NSData *)cfData.get() };
     auto extensions = @{ (__bridge NSString *)PAL::kCMFormatDescriptionExtension_SampleDescriptionExtensionAtoms: configurationDict };

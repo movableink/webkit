@@ -32,8 +32,10 @@
 #include "VectorMath.h"
 #include <Accelerate/Accelerate.h>
 #include <AudioToolbox/AudioConverter.h>
-#include <pal/cf/AudioToolboxSoftLink.h>
 #include <wtf/SetForScope.h>
+#include <wtf/StdLibExtras.h>
+
+#include <pal/cf/AudioToolboxSoftLink.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -193,9 +195,9 @@ OSStatus AudioSampleBufferList::copyFrom(const AudioSampleBufferList& source, si
     m_sampleCount = frameCount;
 
     for (uint32_t i = 0; i < m_bufferList->bufferCount(); i++) {
-        uint8_t* sourceData = static_cast<uint8_t*>(source.bufferList().buffer(i)->mData);
-        uint8_t* destination = static_cast<uint8_t*>(m_bufferList->buffer(i)->mData);
-        memcpy(destination, sourceData, frameCount * m_internalFormat.bytesPerPacket());
+        auto sourceData = dataByteSpan(*source.bufferList().buffer(i));
+        auto destination = dataMutableByteSpan(*m_bufferList->buffer(i));
+        memcpySpan(destination, sourceData.first(frameCount * m_internalFormat.bytesPerPacket()));
     }
 
     return 0;
@@ -209,9 +211,9 @@ OSStatus AudioSampleBufferList::copyTo(AudioBufferList& buffer, size_t frameCoun
         return kAudio_ParamError;
 
     for (uint32_t i = 0; i < buffer.mNumberBuffers; i++) {
-        uint8_t* sourceData = static_cast<uint8_t*>(m_bufferList->buffer(i)->mData);
-        uint8_t* destination = static_cast<uint8_t*>(buffer.mBuffers[i].mData);
-        memcpy(destination, sourceData, frameCount * m_internalFormat.bytesPerPacket());
+        auto sourceData = dataByteSpan(*m_bufferList->buffer(i));
+        auto destination = dataMutableByteSpan(buffer.mBuffers[i]);
+        memcpySpan(destination, sourceData.first(frameCount * m_internalFormat.bytesPerPacket()));
     }
 
     return 0;
