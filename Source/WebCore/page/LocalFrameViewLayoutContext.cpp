@@ -225,13 +225,12 @@ void LocalFrameViewLayoutContext::performLayout(bool canDeferUpdateLayerPosition
         layoutRoot = subtreeLayoutRoot() ? subtreeLayoutRoot() : renderView();
         m_needsFullRepaint = is<RenderView>(layoutRoot) && (m_firstLayout || renderView()->printing());
 
-        LOG_WITH_STREAM(Layout, stream << "LocalFrameView " << &view() << " layout " << m_layoutIdentifier << " - subtree root " << subtreeLayoutRoot() << ", needsFullRepaint " << m_needsFullRepaint);
+        LOG_WITH_STREAM(Layout, stream << "LocalFrameView " << &view() << " layout " << m_layoutUpdateCount << " - subtree root " << subtreeLayoutRoot() << ", needsFullRepaint " << m_needsFullRepaint);
 
         protectedView()->willDoLayout(layoutRoot);
         m_firstLayout = false;
     }
 
-    auto isSimplifiedLayout = layoutRoot->needsSimplifiedNormalFlowLayoutOnly();
     {
         TraceScope tracingScope(RenderTreeLayoutStart, RenderTreeLayoutEnd);
         SetForScope layoutPhase(m_layoutPhase, LayoutPhase::InRenderTreeLayout);
@@ -241,7 +240,6 @@ void LocalFrameViewLayoutContext::performLayout(bool canDeferUpdateLayerPosition
 #ifndef NDEBUG
         RenderTreeNeedsLayoutChecker checker(*renderView());
 #endif
-        ++m_layoutIdentifier;
         layoutRoot->layout();
 #if ENABLE(TEXT_AUTOSIZING)
         applyTextSizingIfNeeded(*layoutRoot.get());
@@ -274,7 +272,7 @@ void LocalFrameViewLayoutContext::performLayout(bool canDeferUpdateLayerPosition
         if (m_needsFullRepaint)
             renderView()->repaintRootContents();
         ASSERT(!layoutRoot->needsLayout());
-        protectedView()->didLayout(layoutRoot, isSimplifiedLayout, canDeferUpdateLayerPositions);
+        protectedView()->didLayout(layoutRoot, canDeferUpdateLayerPositions);
         runOrScheduleAsynchronousTasks(canDeferUpdateLayerPositions);
     }
     InspectorInstrumentation::didLayout(frame, *layoutRoot);
@@ -323,11 +321,11 @@ void LocalFrameViewLayoutContext::flushPostLayoutTasks()
     runPostLayoutTasks();
 }
 
-void LocalFrameViewLayoutContext::didLayout(bool didRunSimplifiedLayout, bool canDeferUpdateLayerPositions)
+void LocalFrameViewLayoutContext::didLayout(bool canDeferUpdateLayerPositions)
 {
     m_layoutUpdateCount++;
 
-    auto updateLayerPositions = UpdateLayerPositions { layoutIdentifier(), needsFullRepaint(), didRunSimplifiedLayout };
+    auto updateLayerPositions = UpdateLayerPositions { needsFullRepaint() };
     if (m_pendingUpdateLayerPositions)
         m_pendingUpdateLayerPositions->merge(updateLayerPositions);
     else
@@ -352,8 +350,7 @@ void LocalFrameViewLayoutContext::flushUpdateLayerPositions()
     bool environmentChanged = repaintRectEnvironment != m_lastRepaintRectEnvironment;
 
     auto updateLayerPositions = *std::exchange(m_pendingUpdateLayerPositions, std::nullopt);
-    auto canUseSimplifiedRepaint = updateLayerPositions.didRunSimplifiedLayout ? RenderLayer::CanUseSimplifiedRepaintPass::Yes : RenderLayer::CanUseSimplifiedRepaintPass::No;
-    view->layer()->updateLayerPositionsAfterLayout(updateLayerPositions.layoutIdentifier, updateLayerPositions.needsFullRepaint, environmentChanged, canUseSimplifiedRepaint);
+    view->layer()->updateLayerPositionsAfterLayout(updateLayerPositions.needsFullRepaint, environmentChanged);
 
     m_renderLayerPositionUpdateCount++;
     m_lastRepaintRectEnvironment = WTFMove(repaintRectEnvironment);

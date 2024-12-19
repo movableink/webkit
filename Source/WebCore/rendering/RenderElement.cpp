@@ -1128,11 +1128,6 @@ void RenderElement::willBeRemovedFromTree()
     RenderObject::willBeRemovedFromTree();
 }
 
-bool RenderElement::didVisitSinceLayout(LayoutIdentifier identifier) const
-{
-    return layoutIdentifier() >= identifier;
-}
-
 inline void RenderElement::clearSubtreeLayoutRootIfNeeded() const
 {
     if (renderTreeBeingDestroyed())

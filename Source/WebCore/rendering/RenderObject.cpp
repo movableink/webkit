@@ -575,12 +575,8 @@ void RenderObject::clearNeedsLayout(HadSkippedLayout hadSkippedLayout)
     setEverHadLayout();
     setHadSkippedLayout(hadSkippedLayout == HadSkippedLayout::Yes);
 
-    if (auto* renderElement = dynamicDowncast<RenderElement>(*this)) {
-        renderElement->setLayoutIdentifier(renderElement->view().frameView().layoutContext().layoutIdentifier());
-
-        if (hasLayer())
-            downcast<RenderLayerModelObject>(*this).layer()->setSelfAndChildrenNeedPositionUpdate();
-    }
+    if (hasLayer())
+        downcast<RenderLayerModelObject>(*this).layer()->setSelfAndChildrenNeedPositionUpdate();
     m_stateBitfields.clearFlag(StateFlag::NeedsLayout);
     setPosChildNeedsLayoutBit(false);
     setNeedsSimplifiedNormalFlowLayoutBit(false);
@@ -599,20 +595,6 @@ void RenderObject::scheduleLayout(RenderElement* layoutRoot)
 
     if (layoutRoot && layoutRoot->isRooted())
         layoutRoot->view().protectedFrameView()->checkedLayoutContext()->scheduleSubtreeLayout(*layoutRoot);
-}
-
-static inline void setIsSimplifiedLayoutRootForLayerIfApplicable(RenderElement& renderElement)
-{
-    ASSERT(renderElement.isOutOfFlowPositioned());
-
-    if (!renderElement.normalChildNeedsLayout())
-        return;
-
-    if (auto* renderer = dynamicDowncast<RenderLayerModelObject>(renderElement)) {
-        if (auto* layer = renderer->layer())
-            return layer->setIsSimplifiedLayoutRoot();
-    }
-    ASSERT_NOT_REACHED();
 }
 
 RenderElement* RenderObject::markContainingBlocksForLayout(RenderElement* layoutRoot)
@@ -668,8 +650,6 @@ RenderElement* RenderObject::markContainingBlocksForLayout(RenderElement* layout
             return ancestor.get();
 
         hasOutOfFlowPosition = ancestor->isOutOfFlowPositioned();
-        if (hasOutOfFlowPosition)
-            setIsSimplifiedLayoutRootForLayerIfApplicable(*ancestor);
         ancestor = WTFMove(container);
     }
     return { };
@@ -1490,11 +1470,6 @@ void RenderObject::outputRenderObject(TextStream& stream, bool mark, int depth) 
         if (outOfFlowChildNeedsStaticPositionLayout())
             stream << "[out of flow child needs parent layout]";
     }
-    stream << " layout id->";
-    if (auto* renderElement = dynamicDowncast<RenderElement>(*this))
-        stream << "[" << renderElement->layoutIdentifier() << "]";
-    else
-        stream << "[n/a]";
     stream.nextLine();
 }
 

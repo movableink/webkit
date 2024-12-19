@@ -112,7 +112,7 @@ public:
     bool needsFullRepaint() const { return m_needsFullRepaint; }
 
     void flushPostLayoutTasks();
-    void didLayout(bool didRunSimplifiedLayout, bool canDeferUpdateLayerPositions);
+    void didLayout(bool canDeferUpdateLayerPositions);
 
     void flushUpdateLayerPositions();
 
@@ -143,8 +143,6 @@ public:
     UpdateScrollInfoAfterLayoutTransaction* updateScrollInfoAfterLayoutTransactionIfExists() { return m_updateScrollInfoAfterLayoutTransaction.get(); }
     void setBoxNeedsTransformUpdateAfterContainerLayout(RenderBox&, RenderBlock& container);
     Vector<SingleThreadWeakPtr<RenderBox>> takeBoxesNeedingTransformUpdateAfterContainerLayout(RenderBlock&);
-
-    RenderElement::LayoutIdentifier layoutIdentifier() const { return m_layoutIdentifier; }
 
     void startTrackingLayoutUpdates() { m_layoutUpdateCount = 0; }
     unsigned layoutUpdateCount() const { return m_layoutUpdateCount; }
@@ -205,8 +203,6 @@ private:
     Timer m_layoutTimer;
     Timer m_postLayoutTaskTimer;
     SingleThreadWeakPtr<RenderElement> m_subtreeLayoutRoot;
-    // Note that arithmetic overflow is perfectly acceptable as long as we use this only for repaint optimization.
-    RenderElement::LayoutIdentifier m_layoutIdentifier : 12 { 0 };
 
     bool m_layoutSchedulingIsEnabled { true };
     bool m_firstLayout { true };
@@ -232,13 +228,9 @@ private:
         void merge(const UpdateLayerPositions& other)
         {
             needsFullRepaint |= other.needsFullRepaint;
-            if (!other.didRunSimplifiedLayout)
-                didRunSimplifiedLayout = false;
         }
 
-        RenderElement::LayoutIdentifier layoutIdentifier : 12 { 0 };
         bool needsFullRepaint { false };
-        bool didRunSimplifiedLayout { true };
     };
     std::optional<UpdateLayerPositions> m_pendingUpdateLayerPositions;
 

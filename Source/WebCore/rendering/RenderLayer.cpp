@@ -1055,7 +1055,7 @@ void RenderLayer::updateLayerPositionsAfterStyleChange(bool environmentChanged)
         setSelfAndDescendantsNeedPositionUpdate();
 
     willUpdateLayerPositions();
-    recursiveUpdateLayerPositions(0, updateLayerPositionFlags(environmentChanged));
+    recursiveUpdateLayerPositions(updateLayerPositionFlags(environmentChanged));
 
     LOG(Compositing, "RenderLayer %p updateLayerPositionsAfterStyleChange - after", this);
 #if ENABLE(TREE_DEBUGGING)
@@ -1070,7 +1070,7 @@ uint32_t gVerifyPositionsCount = 0;
 uint32_t gVisitedPositionsCount = 0;
 #endif
 
-void RenderLayer::updateLayerPositionsAfterLayout(RenderElement::LayoutIdentifier layoutIdentifier, bool didFullRepaint, bool environmentChanged, CanUseSimplifiedRepaintPass canUseSimplifiedRepaintPass)
+void RenderLayer::updateLayerPositionsAfterLayout(bool didFullRepaint, bool environmentChanged)
 {
     ASSERT(isRenderViewLayer());
 
@@ -1102,7 +1102,7 @@ void RenderLayer::updateLayerPositionsAfterLayout(RenderElement::LayoutIdentifie
 
     willUpdateLayerPositions();
 
-    recursiveUpdateLayerPositions(layoutIdentifier, updateLayerPositionFlags(didFullRepaint, environmentChanged), canUseSimplifiedRepaintPass);
+    recursiveUpdateLayerPositions(updateLayerPositionFlags(didFullRepaint, environmentChanged));
 
     LOG(Compositing, "RenderLayer %p updateLayerPositionsAfterLayout - after", this);
 #if ASSERT_ENABLED
@@ -1138,7 +1138,7 @@ bool RenderLayer::ancestorLayerPositionStateChanged(OptionSet<UpdateLayerPositio
 #endif
 
 template<RenderLayer::UpdateLayerPositionsMode mode>
-void RenderLayer::recursiveUpdateLayerPositions(RenderElement::LayoutIdentifier layoutIdentifier, OptionSet<UpdateLayerPositionsFlag> flags, CanUseSimplifiedRepaintPass canUseSimplifiedRepaintPass)
+void RenderLayer::recursiveUpdateLayerPositions(OptionSet<UpdateLayerPositionsFlag> flags)
 {
 #if ASSERT_ENABLED
     if (mode == Write)
@@ -1150,7 +1150,7 @@ void RenderLayer::recursiveUpdateLayerPositions(RenderElement::LayoutIdentifier 
 
     if (mode == Write && !needsPositionUpdate() && !flags.containsAny(invalidationLayerPositionsFlags())) {
 #if LAYER_POSITIONS_ASSERT_ENABLED
-        recursiveUpdateLayerPositions<Verify>(layoutIdentifier, flags, canUseSimplifiedRepaintPass);
+        recursiveUpdateLayerPositions<Verify>(flags);
 #endif
         return;
     }
@@ -1242,35 +1242,6 @@ void RenderLayer::recursiveUpdateLayerPositions(RenderElement::LayoutIdentifier 
             return;
         }
 
-        auto mayNeedRepaintRectUpdate = [&] {
-            if (canUseSimplifiedRepaintPass == CanUseSimplifiedRepaintPass::No)
-                return true;
-            if (m_isSimplifiedLayoutRoot) {
-                // Disable optimization for normal flow subtree(s) while running simplified repaint (initiated by simplified layout).
-                m_isSimplifiedLayoutRoot = false;
-                canUseSimplifiedRepaintPass = CanUseSimplifiedRepaintPass::No;
-                return true;
-            }
-            if (!renderer().didVisitSinceLayout(layoutIdentifier))
-                return false;
-            if (auto* renderBox = this->renderBox(); renderBox && renderBox->hasRenderOverflow() && renderBox->hasTransformRelatedProperty()) {
-                // Disable optimization for subtree when dealing with overflow as RenderLayer is not sized to enclose overflow.
-                // FIXME: This should check if transform related property has changed.
-                canUseSimplifiedRepaintPass = CanUseSimplifiedRepaintPass::No;
-            }
-            return true;
-        };
-        if (!mayNeedRepaintRectUpdate()) {
-#if LAYER_POSITIONS_ASSERT_ENABLED
-            // With this optimization, it's possible for the repaint container to have changed
-            // (and thus the repaint rects), but we expect RenderLayerCompositor to already have
-            // issued the right repaint requests. We can just write here to stop the verification
-            // getting confused.
-            computeRepaintRects(renderer().containerForRepaint().renderer.get());
-#endif
-            return;
-        }
-
         // FIXME: Paint offset cache does not work with RenderLayers as there is not a 1-to-1
         // mapping between them and the RenderObjects. It would be neat to enable
         // LayoutState outside the layout() phase and use it here.
@@ -1336,11 +1307,11 @@ void RenderLayer::recursiveUpdateLayerPositions(RenderElement::LayoutIdentifier 
 
     if (flags.containsAny(invalidationLayerPositionsFlags()) || m_layerPositionDirtyBits.contains(LayerPositionUpdates::DescendantNeedsPositionUpdate)) {
         for (RenderLayer* child = firstChild(); child; child = child->nextSibling())
-            child->recursiveUpdateLayerPositions<mode>(layoutIdentifier, flags, canUseSimplifiedRepaintPass);
+            child->recursiveUpdateLayerPositions<mode>(flags);
     } else {
 #if LAYER_POSITIONS_ASSERT_ENABLED
         for (RenderLayer* child = firstChild(); child; child = child->nextSibling())
-            child->recursiveUpdateLayerPositions<Verify>(layoutIdentifier, flags, canUseSimplifiedRepaintPass);
+            child->recursiveUpdateLayerPositions<Verify>(flags);
 #endif
     }
 
