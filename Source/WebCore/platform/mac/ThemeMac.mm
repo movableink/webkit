@@ -30,6 +30,7 @@
 
 #import "FontCascade.h"
 #import "LengthSize.h"
+#import <pal/spi/cocoa/NSStepperCellSPI.h>
 #import <pal/spi/mac/CoreUISPI.h>
 #import <pal/spi/mac/NSAppearanceSPI.h>
 #import <wtf/BlockObjCExceptions.h>
@@ -214,8 +215,34 @@ static const int* buttonMargins(NSControlSize controlSize)
 
 // Stepper
 
+static const int* stepperMargins(NSControlSize controlSize)
+{
+#if HAVE(NSSTEPPERCELL_INCREMENTING)
+    if ([NSStepperCell instancesRespondToSelector:@selector(setIncrementing:)]) {
+        static const int margins[4][4] =
+        {
+            { 4, 3, 4, 3 },
+            { 2, 2, 4, 2 },
+            { 2, 2, 3, 2 },
+            { 4, 3, 4, 3 },
+        };
+        return margins[controlSize];
+    }
+#else
+    UNUSED_PARAM(controlSize);
+#endif
+    static const int stepperMargin[4] = { 0, 0, 0, 0 };
+    return stepperMargin;
+}
+
 static const std::array<IntSize, 4>& stepperSizes()
 {
+#if HAVE(NSSTEPPERCELL_INCREMENTING)
+    if ([NSStepperCell instancesRespondToSelector:@selector(setIncrementing:)]) {
+        static const std::array<IntSize, 4> sizes = { { IntSize(19, 28), IntSize(15, 22), IntSize(13, 18), IntSize(19, 28) } };
+        return sizes;
+    }
+#endif
     static const std::array<IntSize, 4> sizes = { { IntSize(19, 27), IntSize(15, 22), IntSize(13, 15), IntSize(19, 27) } };
     return sizes;
 }
@@ -225,8 +252,13 @@ static const std::array<IntSize, 4>& stepperSizes()
 static NSControlSize stepperControlSizeForFont(const FontCascade& font)
 {
     auto fontSize = font.size();
-    if (fontSize >= 23 && ThemeMac::supportsLargeFormControls())
+    if (fontSize >= 23 && ThemeMac::supportsLargeFormControls()) {
+#if HAVE(NSSTEPPERCELL_INCREMENTING)
+        if ([NSStepperCell instancesRespondToSelector:@selector(setIncrementing:)])
+            return NSControlSizeRegular;
+#endif
         return NSControlSizeLarge;
+    }
     if (fontSize >= 18)
         return NSControlSizeRegular;
     if (fontSize >= 13)
@@ -419,12 +451,15 @@ void ThemeMac::inflateControlPaintRect(StyleAppearance appearance, FloatRect& zo
         break;
     }
     case StyleAppearance::InnerSpinButton: {
-        static const int stepperMargin[4] = { 0, 0, 0, 0 };
         auto controlSize = controlSizeFromPixelSize(stepperSizes(), zoomRectSize, zoomFactor);
+#if HAVE(NSSTEPPERCELL_INCREMENTING)
+        if ([NSStepperCell instancesRespondToSelector:@selector(setIncrementing:)] && controlSize == NSControlSizeLarge)
+            controlSize = NSControlSizeRegular;
+#endif
         IntSize zoomedSize = stepperSizes()[controlSize];
         zoomedSize.setHeight(zoomedSize.height() * zoomFactor);
         zoomedSize.setWidth(zoomedSize.width() * zoomFactor);
-        zoomedRect = inflateRect(zoomedRect, zoomedSize, stepperMargin, zoomFactor);
+        zoomedRect = inflateRect(zoomedRect, zoomedSize, stepperMargins(controlSize), zoomFactor);
         break;
     }
     default:

@@ -84,6 +84,7 @@ private:
     NSSearchFieldCell *searchFieldCell() const;
     NSMenu *searchMenuTemplate() const;
     NSSliderCell *sliderCell() const;
+    NSStepperCell *stepperCell() const;
     NSTextFieldCell *textFieldCell() const;
 
     mutable RetainPtr<WebControlView> m_drawingView;
@@ -100,6 +101,7 @@ private:
     mutable RetainPtr<NSSearchFieldCell> m_searchFieldCell;
     mutable RetainPtr<NSMenu> m_searchMenuTemplate;
     mutable RetainPtr<NSSliderCell> m_sliderCell;
+    mutable RetainPtr<NSStepperCell> m_stepperCell;
     mutable RetainPtr<NSTextFieldCell> m_textFieldCell;
 };
 

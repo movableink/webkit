@@ -214,6 +214,13 @@ NSSliderCell *ControlFactoryMac::sliderCell() const
     return m_sliderCell.get();
 }
 
+NSStepperCell *ControlFactoryMac::stepperCell() const
+{
+    if (!m_stepperCell)
+        m_stepperCell = adoptNS([[NSStepperCell alloc] init]);
+    return m_stepperCell.get();
+}
+
 NSTextFieldCell *ControlFactoryMac::textFieldCell() const
 {
     if (!m_textFieldCell) {
@@ -252,7 +259,7 @@ std::unique_ptr<PlatformControl> ControlFactoryMac::createPlatformImageControlsB
 
 std::unique_ptr<PlatformControl> ControlFactoryMac::createPlatformInnerSpinButton(InnerSpinButtonPart& part)
 {
-    return makeUnique<InnerSpinButtonMac>(part, *this);
+    return makeUnique<InnerSpinButtonMac>(part, *this, stepperCell());
 }
 
 std::unique_ptr<PlatformControl> ControlFactoryMac::createPlatformMenuList(MenuListPart& part)
