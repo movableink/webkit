@@ -44,7 +44,10 @@
 #import <wtf/text/MakeString.h>
 #import <wtf/text/WTFString.h>
 
+#if !PLATFORM(MACCATALYST)
 SOFT_LINK_CLASS_OPTIONAL(AXRuntime, AXRemoteElement);
+#endif
+
 SOFT_LINK_CONSTANT(AXRuntime, UIAccessibilityTokenBlockquoteLevel, NSString *);
 #define AccessibilityTokenBlockquoteLevel getUIAccessibilityTokenBlockquoteLevel()
 SOFT_LINK_CONSTANT(AXRuntime, UIAccessibilityTokenUnderline, NSString *);
@@ -189,6 +192,7 @@ std::span<const uint8_t> AXRemoteFrame::generateRemoteToken() const
 
 void AXRemoteFrame::initializePlatformElementWithRemoteToken(std::span<const uint8_t> token, int processIdentifier)
 {
+#if !PLATFORM(MACCATALYST)
     m_processIdentifier = processIdentifier;
 
     RetainPtr nsToken = toNSData(token);
@@ -206,6 +210,10 @@ void AXRemoteFrame::initializePlatformElementWithRemoteToken(std::span<const uin
 
     if (CheckedPtr cache = axObjectCache())
         cache->onRemoteFrameInitialized(*this);
+#else
+    UNUSED_PARAM(token);
+    UNUSED_PARAM(processIdentifier);
+#endif // !PLATFORM(MACCATALYST)
 }
 
 // NSAttributedString support.
