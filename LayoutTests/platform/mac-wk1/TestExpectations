@@ -2992,3 +2992,4 @@ webkit.org/b/284507 [ Ventura+ ] storage/indexeddb/objectstore-basics.html [ Pas
 webkit.org/b/284898 [ Ventura+ ] fonts/font-weight-invalid-crash.html [ Pass Failure ]
 webkit.org/b/284898 [ Ventura+ ] fonts/ligature.html [ Pass Failure ImageOnlyFailure ]
 
+webkit.org/b/284954 [ Ventura+ ] imported/w3c/web-platform-tests/css/css-box/margin-trim/computed-margin-values/block-container-block-start-child-with-border.html [ Pass Failure ]
