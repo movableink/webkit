@@ -49,6 +49,10 @@
 #include <WebKitAdditions/WebPreferencesDefaultValuesAdditions.h>
 #endif
 
+#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/DeprecatedGlobalSettingsAdditions.cpp>)
+#include <WebKitAdditions/DeprecatedGlobalSettingsAdditions.cpp>
+#endif
+
 namespace WebKit {
 
 #if PLATFORM(IOS_FAMILY)
@@ -334,5 +338,20 @@ bool defaultUseGPUProcessForDOMRenderingEnabled()
 
     return false;
 }
+
+#if ENABLE(WEB_PUSH_NOTIFICATIONS)
+bool defaultBuiltInNotificationsEnabled()
+{
+#if defined(DEPRECATED_GLOBAL_SETTINGS_BUILT_IN_NOTIFICATIONS_ENABLED_ADDITIONS)
+    DEPRECATED_GLOBAL_SETTINGS_BUILT_IN_NOTIFICATIONS_ENABLED_ADDITIONS;
+#endif
+
+#if defined(WEB_PREFERENCES_BUILT_IN_NOTIFICATIONS_ENABLED_ADDITIONS)
+    WEB_PREFERENCES_BUILT_IN_NOTIFICATIONS_ENABLED_ADDITIONS;
+#endif
+
+    return false;
+}
+#endif
 
 } // namespace WebKit

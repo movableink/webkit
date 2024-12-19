@@ -161,4 +161,8 @@ bool defaultUseSCContentSharingPicker();
 bool defaultPeerConnectionEnabledAvailable();
 #endif
 
+#if ENABLE(WEB_PUSH_NOTIFICATIONS)
+bool defaultBuiltInNotificationsEnabled();
+#endif
+
 } // namespace WebKit

@@ -1067,7 +1067,7 @@ BuiltInNotificationsEnabled:
     WebCore:
       default: false
     WebKit:
-      default: false
+      default: defaultBuiltInNotificationsEnabled()
   sharedPreferenceForWebProcess: true
   richJavaScript: true
 
