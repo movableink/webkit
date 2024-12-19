@@ -139,6 +139,7 @@ const RealtimeMediaSourceCapabilities& DisplayCaptureSourceCocoa::capabilities()
         capabilities.setWidth({ 1, intrinsicSize.width() });
         capabilities.setHeight({ 1, intrinsicSize.height() });
         capabilities.setFrameRate({ .01, 30.0 });
+        capabilities.setDeviceId(hashedId());
 
         m_capabilities = WTFMove(capabilities);
     }

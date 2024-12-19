@@ -203,6 +203,9 @@ const RealtimeMediaSourceCapabilities& MockRealtimeVideoSource::capabilities()
 
     auto supportedConstraints = settings().supportedConstraints();
     RealtimeMediaSourceCapabilities capabilities(supportedConstraints);
+
+    capabilities.setDeviceId(hashedId());
+
     if (mockCamera()) {
         auto facingMode = std::get<MockCameraProperties>(m_device.properties).facingMode;
         if (facingMode != VideoFacingMode::Unknown)
