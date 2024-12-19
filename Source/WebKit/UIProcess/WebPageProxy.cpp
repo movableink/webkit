@@ -2529,10 +2529,8 @@ RefPtr<API::Navigation> WebPageProxy::goToBackForwardItem(WebBackForwardListItem
 
     if (item.isRemoteFrameNavigation() || frameItem.identifier().processIdentifier() != item.protectedRootFrameItem()->identifier().processIdentifier()) {
         ASSERT(m_preferences->siteIsolationEnabled());
-        if (RefPtr frame = WebFrameProxy::webFrame(frameItem.frameID())) {
-            frame->setPendingChildBackForwardItem(frameItem.protectedParent().get());
+        if (RefPtr frame = WebFrameProxy::webFrame(frameItem.frameID()))
             process = frame->process();
-        }
     }
 
     process->markProcessAsRecentlyUsed();
@@ -5000,7 +4998,7 @@ void WebPageProxy::continueNavigationInNewProcess(API::Navigation& navigation, W
         loadParameters.isRequestFromClientOrUserInput = navigation.isRequestFromClientOrUserInput();
         loadParameters.navigationID = navigation.navigationID();
         loadParameters.effectiveSandboxFlags = frame.effectiveSandboxFlags();
-        loadParameters.lockBackForwardList = frame.hasPendingChildBackForwardItem() ? LockBackForwardList::Yes : LockBackForwardList::No;
+        loadParameters.lockBackForwardList = !!navigation.backForwardFrameLoadType() ? LockBackForwardList::Yes : LockBackForwardList::No;
         loadParameters.ownerPermissionsPolicy = navigation.lastNavigationAction().ownerPermissionsPolicy;
         loadParameters.isPerformingHTTPFallback = isPerformingHTTPFallback == IsPerformingHTTPFallback::Yes;
 

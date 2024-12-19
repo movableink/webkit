@@ -3064,6 +3064,8 @@ TEST(SiteIsolation, NavigateIframeCrossOriginBackForward)
     EXPECT_WK_STREQ([webView _test_waitForAlert], "a");
     [webView goForward];
     EXPECT_WK_STREQ([webView _test_waitForAlert], "b");
+    [webView goBack];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "a");
 }
 
 TEST(SiteIsolation, ProtocolProcessSeparation)
