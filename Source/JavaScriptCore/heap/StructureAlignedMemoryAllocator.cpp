@@ -128,7 +128,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     static void commitBlock(void* block)
     {
-#if OS(UNIX) && ASSERT_ENABLED
+#if OS(UNIX) && !PLATFORM(PLAYSTATION) && ASSERT_ENABLED
         constexpr bool readable = true;
         constexpr bool writable = true;
         OSAllocator::protect(block, MarkedBlock::blockSize, readable, writable);
@@ -141,7 +141,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     static void decommitBlock(void* block)
     {
-#if OS(UNIX) && ASSERT_ENABLED
+#if OS(UNIX) && !PLATFORM(PLAYSTATION) && ASSERT_ENABLED
         constexpr bool readable = false;
         constexpr bool writable = false;
         OSAllocator::protect(block, MarkedBlock::blockSize, readable, writable);
