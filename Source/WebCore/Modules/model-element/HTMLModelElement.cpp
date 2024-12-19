@@ -449,7 +449,7 @@ void HTMLModelElement::didUpdateBoundingBox(ModelPlayer&, const FloatPoint3D& ce
 
 void HTMLModelElement::didFinishEnvironmentMapLoading(bool succeeded)
 {
-    if (!m_environmentMapReadyPromise->isFulfilled()) {
+    if (!m_environmentMapURL.isEmpty() && !m_environmentMapReadyPromise->isFulfilled()) {
         if (succeeded)
             m_environmentMapReadyPromise->resolve();
         else
