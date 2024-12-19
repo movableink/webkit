@@ -108,9 +108,11 @@ static PAS_ALWAYS_INLINE void pas_local_allocator_commit_if_necessary(pas_local_
 static inline void pas_local_allocator_set_up_bump(pas_local_allocator* allocator,
                                                    uintptr_t page_boundary,
                                                    uintptr_t begin,
-                                                   uintptr_t end)
+                                                   uintptr_t end,
+                                                   pas_segregated_page_config page_config)
 {
     PAS_TESTING_ASSERT(end);
+    allocator->is_small_bumpable = page_config.base.page_config_size_category == pas_page_config_size_category_small;
     allocator->payload_end = end;
     allocator->remaining = (unsigned)(end - begin);
     allocator->current_offset = 0;
@@ -411,7 +413,7 @@ pas_local_allocator_make_bump(
 {
     PAS_ASSERT(page_config.base.is_enabled);
     
-    pas_local_allocator_set_up_bump(allocator, page_boundary, begin, end);
+    pas_local_allocator_set_up_bump(allocator, page_boundary, begin, end, page_config);
 }
 
 static PAS_ALWAYS_INLINE void
@@ -546,6 +548,8 @@ pas_local_allocator_set_up_primordial_bump(
         allocator->remaining = end_offset - begin_offset;
         break;
     }
+
+    allocator->is_small_bumpable = page_config.base.page_config_size_category == pas_page_config_size_category_small;
 
     pas_compiler_fence();
 
@@ -1539,7 +1543,8 @@ pas_local_allocator_try_allocate_inline_cases(pas_local_allocator* allocator,
         if (verbose)
             pas_log("Returning bump allocation %p.\n", (void*)result);
 
-        PAS_PROFILE(LOCAL_BUMP_ALLOCATION, &config, result, object_size, allocation_mode);
+        PAS_PROFILE(LOCAL_BUMP_ALLOCATION, config, allocator, result, object_size, allocation_mode);
+
         return pas_allocation_result_create_success(result);
     }
 

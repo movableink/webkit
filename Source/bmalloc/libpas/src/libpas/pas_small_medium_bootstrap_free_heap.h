@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Apple Inc. All rights reserved.
+ * Copyright (c) 2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -20,27 +20,27 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PAS_ENUMERABLE_PAGE_MALLOC_H
-#define PAS_ENUMERABLE_PAGE_MALLOC_H
+#ifndef PAS_SMALL_MEDIUM_BOOTSTRAP_FREE_HEAP_H
+#define PAS_SMALL_MEDIUM_BOOTSTRAP_FREE_HEAP_H
 
-#include "pas_aligned_allocation_result.h"
-#include "pas_alignment.h"
-#include "pas_enumerable_range_list.h"
+#include "pas_allocation_config.h"
+#include "pas_allocation_kind.h"
+#include "pas_lock.h"
+#include "pas_simple_large_free_heap.h"
 
 PAS_BEGIN_EXTERN_C;
 
-PAS_API extern pas_enumerable_range_list pas_enumerable_page_malloc_page_list;
+#define PAS_BOOTSTRAP_FOR_SMALL_FREE_LIST_MINIMUM_SIZE 4u
 
-/* It's assumed that whatever is returned from this is never deallocated, but may be decommitted. */
-PAS_API pas_aligned_allocation_result
-pas_enumerable_page_malloc_try_allocate_without_deallocating_padding(
-    size_t size, pas_alignment alignment, bool may_contain_small_or_medium);
+#define PAS_SIMPLE_FREE_HEAP_NAME pas_small_medium_bootstrap_free_heap
+#define PAS_SIMPLE_FREE_HEAP_ID(suffix) pas_small_medium_bootstrap_free_heap ## suffix
+#include "pas_simple_free_heap_declarations.def"
+#undef PAS_SIMPLE_FREE_HEAP_NAME
+#undef PAS_SIMPLE_FREE_HEAP_ID
 
 PAS_END_EXTERN_C;
 
-#endif /* PAS_ENUMERABLE_PAGE_MALLOC_H */
-
-
+#endif /* PAS_SMALL_MEDIUM_BOOTSTRAP_FREE_HEAP_H */

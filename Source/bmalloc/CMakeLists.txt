@@ -186,6 +186,8 @@ set(bmalloc_C_SOURCES
     libpas/src/libpas/pas_simple_free_heap_helpers.c
     libpas/src/libpas/pas_simple_large_free_heap.c
     libpas/src/libpas/pas_simple_type.c
+    libpas/src/libpas/pas_small_medium_bootstrap_free_heap.c
+    libpas/src/libpas/pas_small_medium_bootstrap_heap_page_provider.c
     libpas/src/libpas/pas_status_reporter.c
     libpas/src/libpas/pas_stream.c
     libpas/src/libpas/pas_string_stream.c
@@ -556,6 +558,7 @@ set(bmalloc_PUBLIC_HEADERS
     libpas/src/libpas/pas_page_base.h
     libpas/src/libpas/pas_page_base_inlines.h
     libpas/src/libpas/pas_page_config_kind.h
+    libpas/src/libpas/pas_page_config_size_category.h
     libpas/src/libpas/pas_page_granule_use_count.h
     libpas/src/libpas/pas_page_header_placement_mode.h
     libpas/src/libpas/pas_page_header_table.h
@@ -645,6 +648,8 @@ set(bmalloc_PUBLIC_HEADERS
     libpas/src/libpas/pas_slow_path_mode.h
     libpas/src/libpas/pas_slow_path_mode_prefix.h
     libpas/src/libpas/pas_small_large_map_entry.h
+    libpas/src/libpas/pas_small_medium_bootstrap_free_heap.h
+    libpas/src/libpas/pas_small_medium_bootstrap_heap_page_provider.h
     libpas/src/libpas/pas_snprintf.h
     libpas/src/libpas/pas_status_reporter.h
     libpas/src/libpas/pas_stream.h

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Apple Inc. All rights reserved.
+ * Copyright (c) 2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -20,27 +20,40 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PAS_ENUMERABLE_PAGE_MALLOC_H
-#define PAS_ENUMERABLE_PAGE_MALLOC_H
+#include "pas_config.h"
 
-#include "pas_aligned_allocation_result.h"
-#include "pas_alignment.h"
-#include "pas_enumerable_range_list.h"
+#if LIBPAS_ENABLED
 
-PAS_BEGIN_EXTERN_C;
+#include "pas_small_medium_bootstrap_heap_page_provider.h"
 
-PAS_API extern pas_enumerable_range_list pas_enumerable_page_malloc_page_list;
+#include "pas_small_medium_bootstrap_free_heap.h"
 
-/* It's assumed that whatever is returned from this is never deallocated, but may be decommitted. */
-PAS_API pas_aligned_allocation_result
-pas_enumerable_page_malloc_try_allocate_without_deallocating_padding(
-    size_t size, pas_alignment alignment, bool may_contain_small_or_medium);
+pas_allocation_result pas_small_medium_bootstrap_heap_page_provider(
+    size_t size,
+    pas_alignment alignment,
+    const char* name,
+    pas_heap* heap,
+    pas_physical_memory_transaction* transaction,
+    void *arg)
+{
+    PAS_UNUSED_PARAM(arg);
+    PAS_UNUSED_PARAM(heap);
+    PAS_UNUSED_PARAM(transaction);
+    static const bool verbose = PAS_SHOULD_LOG(PAS_LOG_BOOTSTRAP_HEAPS);
 
-PAS_END_EXTERN_C;
+    if (verbose)
+        pas_log("small/medium bootstrap heap page-provider allocating %zu for %s\n", size, name);
 
-#endif /* PAS_ENUMERABLE_PAGE_MALLOC_H */
+    pas_allocation_result retval = pas_small_medium_bootstrap_free_heap_try_allocate_with_alignment(
+        size, alignment, name, pas_delegate_allocation);
 
+    if (verbose)
+        pas_log("small/medium bootstrap heap page-provider done allocating\n");
 
+    return retval;
+}
+
+#endif /* LIBPAS_ENABLED */

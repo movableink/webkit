@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Apple Inc. All rights reserved.
+ * Copyright (c) 2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -20,27 +20,42 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PAS_ENUMERABLE_PAGE_MALLOC_H
-#define PAS_ENUMERABLE_PAGE_MALLOC_H
+#ifndef PAS_PAGE_CONFIG_SIZE_CATEGORY_H
+#define PAS_PAGE_CONFIG_SIZE_CATEGORY_H
 
-#include "pas_aligned_allocation_result.h"
-#include "pas_alignment.h"
-#include "pas_enumerable_range_list.h"
+#include "pas_utils.h"
 
 PAS_BEGIN_EXTERN_C;
 
-PAS_API extern pas_enumerable_range_list pas_enumerable_page_malloc_page_list;
+enum pas_page_config_size_category {
+    pas_page_config_size_category_small,
+    pas_page_config_size_category_medium,
+    pas_page_config_size_category_marge,
+    pas_page_config_size_category_large,
+};
 
-/* It's assumed that whatever is returned from this is never deallocated, but may be decommitted. */
-PAS_API pas_aligned_allocation_result
-pas_enumerable_page_malloc_try_allocate_without_deallocating_padding(
-    size_t size, pas_alignment alignment, bool may_contain_small_or_medium);
+typedef enum pas_page_config_size_category pas_page_config_size_category;
+
+static inline const char* pas_page_config_size_category_get_string(pas_page_config_size_category page_config_size_category)
+{
+    switch (page_config_size_category) {
+    case pas_page_config_size_category_small:
+        return "small";
+    case pas_page_config_size_category_medium:
+        return "medium";
+    case pas_page_config_size_category_marge:
+        return "marge";
+    case pas_page_config_size_category_large:
+        return "large";
+    }
+    PAS_ASSERT(!"Should not be reached");
+    return NULL;
+}
 
 PAS_END_EXTERN_C;
 
-#endif /* PAS_ENUMERABLE_PAGE_MALLOC_H */
-
+#endif /* PAS_PAGE_CONFIG_SIZE_CATEGORY_H */
 
