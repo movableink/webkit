@@ -1768,6 +1768,8 @@ struct WebCore::Cookie {
     WebCore::Cookie::SameSitePolicy sameSite;
 };
 
+enum class WebCore::ShouldPartitionCookie : bool
+
 #if ENABLE(VIDEO)
 struct WebCore::VideoFrameMetadata {
     double presentationTime;

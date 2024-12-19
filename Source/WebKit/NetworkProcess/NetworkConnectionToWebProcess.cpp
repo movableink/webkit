@@ -834,13 +834,19 @@ void NetworkConnectionToWebProcess::getRawCookies(const URL& firstParty, const S
     completionHandler(WTFMove(result));
 }
 
-void NetworkConnectionToWebProcess::setRawCookie(const WebCore::Cookie& cookie)
+void NetworkConnectionToWebProcess::setRawCookie(const URL& firstParty, const WebCore::Cookie& cookie, ShouldPartitionCookie shouldPartitionCookie)
 {
     auto* networkStorageSession = storageSession();
     if (!networkStorageSession)
         return;
 
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+    networkStorageSession->setCookie(firstParty, cookie, shouldPartitionCookie);
+#else
+    UNUSED_PARAM(firstParty);
+    UNUSED_PARAM(shouldPartitionCookie);
     networkStorageSession->setCookie(cookie);
+#endif
 }
 
 void NetworkConnectionToWebProcess::deleteCookie(const URL& url, const String& cookieName, CompletionHandler<void()>&& completionHandler)
