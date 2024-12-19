@@ -295,6 +295,7 @@ class macOSWK2Factory(TestFactory):
 class PlayStationBuildFactory(BuildFactory):
     branches = [r'main']
     requiresUserValidation = True
+    skipUpload = True
 
 
 class WinBuildFactory(BuildFactory):
