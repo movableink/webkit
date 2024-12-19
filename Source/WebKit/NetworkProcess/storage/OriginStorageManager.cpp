@@ -759,6 +759,11 @@ CacheStorageManager& OriginStorageManager::cacheStorageManager(CacheStorageRegis
     }, WTFMove(queue));
 }
 
+Ref<CacheStorageManager> OriginStorageManager::protectedCacheStorageManager(CacheStorageRegistry& registry, const WebCore::ClientOrigin& origin, Ref<WorkQueue>&& queue)
+{
+    return cacheStorageManager(registry, origin, WTFMove(queue));
+}
+
 BackgroundFetchStoreManager& OriginStorageManager::backgroundFetchManager(Ref<WorkQueue>&& queue)
 {
     return defaultBucket().backgroundFetchManager(WTFMove(queue), [quotaManager = ThreadSafeWeakPtr { this->quotaManager() }](uint64_t spaceRequested, CompletionHandler<void(bool)>&& completionHandler) mutable {

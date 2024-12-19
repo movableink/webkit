@@ -632,6 +632,11 @@ NetworkLoadScheduler& NetworkSession::networkLoadScheduler()
     return *m_networkLoadScheduler;
 }
 
+Ref<NetworkLoadScheduler> NetworkSession::protectedNetworkLoadScheduler()
+{
+    return networkLoadScheduler();
+}
+
 String NetworkSession::attributedBundleIdentifierFromPageIdentifier(WebPageProxyIdentifier identifier) const
 {
     return m_attributedBundleIdentifierFromPageIdentifiers.get(identifier);
@@ -904,5 +909,10 @@ Ref<NetworkNotificationManager> NetworkSession::protectedNotificationManager()
     return m_notificationManager.get();
 }
 #endif
+
+Ref<NetworkBroadcastChannelRegistry> NetworkSession::protectedBroadcastChannelRegistry()
+{
+    return m_broadcastChannelRegistry;
+}
 
 } // namespace WebKit

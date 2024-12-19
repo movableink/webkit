@@ -195,6 +195,7 @@ public:
 
     WebCore::BlobRegistryImpl& blobRegistry() { return m_blobRegistry; }
     NetworkBroadcastChannelRegistry& broadcastChannelRegistry() { return m_broadcastChannelRegistry; }
+    Ref<NetworkBroadcastChannelRegistry> protectedBroadcastChannelRegistry();
 
     unsigned testSpeedMultiplier() const { return m_testSpeedMultiplier; }
     bool allowsServerPreconnect() const { return m_allowsServerPreconnect; }
@@ -233,6 +234,8 @@ public:
     void clearCacheEngine();
 
     NetworkLoadScheduler& networkLoadScheduler();
+    Ref<NetworkLoadScheduler> protectedNetworkLoadScheduler();
+
     PCM::ManagerInterface& privateClickMeasurement() { return m_privateClickMeasurement.get(); }
     void setPrivateClickMeasurementDebugMode(bool);
     bool privateClickMeasurementDebugModeEnabled() const { return m_privateClickMeasurementDebugModeEnabled; }
