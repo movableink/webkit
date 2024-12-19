@@ -46,9 +46,9 @@ typedef struct _GstGLDisplay GstGLDisplay;
 #endif // ENABLE(VIDEO) && USE(GSTREAMER)
 
 #if USE(SKIA)
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 #include <skia/gpu/ganesh/GrDirectContext.h>
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 #include <wtf/ThreadSafeWeakHashSet.h>
 #endif
 

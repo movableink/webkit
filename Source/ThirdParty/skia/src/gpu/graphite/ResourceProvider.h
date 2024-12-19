@@ -86,6 +86,7 @@ public:
 
     ProxyCache* proxyCache() { return fResourceCache->proxyCache(); }
 
+    void setResourceCacheLimit(size_t bytes) { return fResourceCache->setMaxBudget(bytes); }
     size_t getResourceCacheLimit() const { return fResourceCache->getMaxBudget(); }
     size_t getResourceCacheCurrentBudgetedBytes() const {
         return fResourceCache->currentBudgetedBytes();
@@ -128,9 +129,11 @@ protected:
 private:
     virtual sk_sp<GraphicsPipeline> createGraphicsPipeline(
             const RuntimeEffectDictionary*,
+            const UniqueKey&,
             const GraphicsPipelineDesc&,
             const RenderPassDesc&,
-            SkEnumBitMask<PipelineCreationFlags>) = 0;
+            SkEnumBitMask<PipelineCreationFlags>,
+            uint32_t compilationID) = 0;
     virtual sk_sp<ComputePipeline> createComputePipeline(const ComputePipelineDesc&) = 0;
     virtual sk_sp<Texture> createTexture(SkISize,
                                          const TextureInfo&,

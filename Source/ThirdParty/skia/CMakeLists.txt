@@ -138,7 +138,6 @@ add_library(Skia STATIC
     src/base/SkQuads.cpp
     src/base/SkSafeMath.cpp
     src/base/SkSemaphore.cpp
-    src/base/SkSharedMutex.cpp
     src/base/SkSpinlock.cpp
     src/base/SkTDArray.cpp
     src/base/SkTSearch.cpp
@@ -152,6 +151,7 @@ add_library(Skia STATIC
     src/codec/SkColorPalette.cpp
     src/codec/SkEncodedInfo.cpp
     src/codec/SkExif.cpp
+    src/codec/SkGainmapInfo.cpp
     src/codec/SkImageGenerator_FromEncoded.cpp
     src/codec/SkJpegCodec.cpp
     src/codec/SkJpegDecoderMgr.cpp
@@ -163,6 +163,7 @@ add_library(Skia STATIC
     src/codec/SkPixmapUtils.cpp
     src/codec/SkPngCodec.cpp
     src/codec/SkPngCodecBase.cpp
+    src/codec/SkPngCompositeChunkReader.cpp
     src/codec/SkSampler.cpp
     src/codec/SkSwizzler.cpp
     src/codec/SkTiffUtility.cpp
@@ -661,6 +662,7 @@ add_library(Skia STATIC
     src/encode/SkICC.cpp
     src/encode/SkJPEGWriteUtility.cpp
     src/encode/SkJpegEncoderImpl.cpp
+    src/encode/SkPngEncoderBase.cpp
     src/encode/SkPngEncoderImpl.cpp
     src/encode/SkWebpEncoderImpl.cpp
 
@@ -870,7 +872,6 @@ add_library(Skia STATIC
     src/utils/SkCustomTypeface.cpp
     src/utils/SkDashPath.cpp
     src/utils/SkFloatToDecimal.cpp
-    src/utils/SkJSON.cpp
     src/utils/SkJSONWriter.cpp
     src/utils/SkMatrix22.cpp
     src/utils/SkNWayCanvas.cpp
@@ -899,10 +900,11 @@ add_library(Skia STATIC
 )
 
 if (ANDROID)
-    target_sources(Skia PRIVATE src/ports/SkDebug_android.cpp)
-    target_sources(Skia PRIVATE src/ports/SkFontMgr_android.cpp)
-    target_sources(Skia PRIVATE src/ports/SkFontMgr_android_parser.cpp)
-
+    target_sources(Skia PRIVATE
+        src/ports/SkDebug_android.cpp
+        src/ports/SkFontMgr_android.cpp
+        src/ports/SkFontMgr_android_parser.cpp
+    )
     target_link_libraries(Skia PRIVATE
         EXPAT::EXPAT
     )
@@ -919,17 +921,17 @@ elseif (WIN32)
         src/utils/win/SkDWriteGeometrySink.cpp
     )
 else ()
-    target_sources(Skia PRIVATE src/ports/SkDebug_stdio.cpp)
-    target_sources(Skia PRIVATE src/ports/SkFontMgr_fontconfig.cpp)
     target_sources(Skia PRIVATE
-        src/ports/SkOSFile_posix.cpp
+        src/ports/SkDebug_stdio.cpp
         src/ports/SkFontConfigInterface.cpp
         src/ports/SkFontConfigInterface_direct.cpp
         src/ports/SkFontConfigInterface_direct_factory.cpp
         src/ports/SkFontHost_FreeType.cpp
         src/ports/SkFontHost_FreeType_common.cpp
+        src/ports/SkFontMgr_fontconfig.cpp
+        src/ports/SkOSFile_posix.cpp
+        src/ports/SkTypeface_proxy.cpp
     )
-
     target_link_libraries(Skia PRIVATE
        Fontconfig::Fontconfig
     )

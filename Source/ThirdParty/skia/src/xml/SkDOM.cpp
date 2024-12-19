@@ -288,9 +288,6 @@ const char* SkDOM::AttrIter::next(const char** value) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "include/private/base/SkTDArray.h"
-#include "src/xml/SkXMLParser.h"
-
 const SkDOM::Node* SkDOM::build(SkStream& docStream) {
     SkDOMParser parser(&fAlloc);
     if (!parser.parse(docStream))

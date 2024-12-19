@@ -318,9 +318,7 @@ func (b *taskBuilder) dmFlags(internalHardwareLabel string) {
 			skip(ALL, "test", ALL, "OverdrawSurface_Gpu")
 			skip(ALL, "test", ALL, "PinnedImageTest")
 			skip(ALL, "test", ALL, "RecordingOrderTest_Graphite")
-			skip(ALL, "test", ALL, "RecordingSurfacesTestClear")
-			skip(ALL, "test", ALL, "RecordingSurfacesTestDraw")
-			skip(ALL, "test", ALL, "RecordingSurfacesTestWritePixels")
+			skip(ALL, "test", ALL, "RecordingSurfacesTest")
 			skip(ALL, "test", ALL, "ReimportImageTextureWithMipLevels")
 			skip(ALL, "test", ALL, "ReplaceSurfaceBackendTexture")
 			skip(ALL, "test", ALL, "ResourceCacheCache")
@@ -462,6 +460,8 @@ func (b *taskBuilder) dmFlags(internalHardwareLabel string) {
 				// b/373845830 - Precompile isn't thread-safe on either Dawn Metal
 				// or Dawn Vulkan
 				skip(ALL, "test", ALL, "ThreadedPrecompileTest")
+				// b/380039123 getting both ASAN and TSAN failures for this test on Dawn
+				skip(ALL, "test", ALL, "ThreadedCompilePrecompileTest")
 
 				if b.extraConfig("Vulkan") {
 					if b.extraConfig("TSAN") {
@@ -492,6 +492,9 @@ func (b *taskBuilder) dmFlags(internalHardwareLabel string) {
 						skip(ALL, "test", ALL, "ImageAsyncReadPixelsGraphite")
 						skip(ALL, "test", ALL, "SurfaceAsyncReadPixelsGraphite")
 					}
+
+					// b/380049954 Graphite Native Vulkan has a thread race issue
+					skip(ALL, "test", ALL, "ThreadedCompilePrecompileTest")
 				}
 			}
 		}
@@ -548,6 +551,18 @@ func (b *taskBuilder) dmFlags(internalHardwareLabel string) {
 			skip(ALL, "test", ALL, "ProcessorCloneTest")
 		}
 
+		if b.model("MotoG73") {
+			// https://g-issues.skia.org/issues/370739986
+			skip(ALL, "test", ALL, "SkSLSwizzleIndexStore_Ganesh")
+			skip(ALL, "test", ALL, "SkSLMatrixScalarMath_Ganesh")
+			skip(ALL, "test", ALL, "SkSLMatrixOpEqualsES3_Ganesh")
+			skip(ALL, "test", ALL, "SkSLMatrixScalarNoOpFolding_Ganesh")
+
+			skip(ALL, "test", ALL, "SkSLIncrementDisambiguation_Ganesh")
+			skip(ALL, "test", ALL, "SkSLArrayFolding_Ganesh")
+			skip(ALL, "test", ALL, "SkSLIntrinsicModf_Ganesh")
+		}
+
 		if b.model("Spin513") {
 			// skbug.com/11876
 			skip(ALL, "test", ALL, "Programs")
@@ -571,7 +586,9 @@ func (b *taskBuilder) dmFlags(internalHardwareLabel string) {
 		if b.extraConfig("Vulkan") && !b.extraConfig("Graphite") {
 			configs = []string{"vk"}
 			// MSAA doesn't work well on Intel GPUs chromium:527565, chromium:983926, skia:9023
-			if !b.matchGpu("Intel") {
+			// MSAA4 is not supported on the MotoG73
+			//     "Configuration 'vkmsaa4' sample count 4 is not a supported sample count."
+			if !b.matchGpu("Intel") && !b.model("MotoG73") {
 				configs = append(configs, "vkmsaa4")
 			}
 			// Temporarily limit the machines we test dynamic MSAA on.
@@ -1471,6 +1488,17 @@ func (b *taskBuilder) dmFlags(internalHardwareLabel string) {
 		match = append(match, "srgb_colorfilter")
 		match = append(match, "strokedlines")
 		match = append(match, "sweep_tiling")
+	}
+
+	if b.matchExtraConfig("RustPNG") {
+		// TODO(b/356875275) many PNG decoding tests still fail (e.g. those with SkAndroidCodec
+		// or some from DM's image source). For now, just opt-in the tests we know pass and
+		// eventually remove this special handling to run all image tests.
+		skipped = []string{}
+		match = []string{
+			"RustPngCodec",
+			"RustEncodePng",
+		}
 	}
 
 	if len(skipped) > 0 {

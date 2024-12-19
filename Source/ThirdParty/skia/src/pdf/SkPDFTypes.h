@@ -23,6 +23,17 @@ class SkStreamAsset;
 class SkString;
 class SkWStream;
 
+#ifndef SK_PDF_MASK_QUALITY
+    // If MASK_QUALITY is in [0,100], will be used for JpegEncoder.
+    // Otherwise, just encode masks losslessly.
+    #define SK_PDF_MASK_QUALITY 50
+    // Since these masks are used for blurry shadows, we shouldn't need
+    // high quality.  Raise this value if your shadows have visible JPEG
+    // artifacts.
+    // If SkJpegEncoder::Encode fails, we will fall back to the lossless
+    // encoding.
+#endif
+
 struct SkPDFIndirectReference {
     int fValue = -1;
     explicit operator bool() const { return fValue != -1; }
@@ -189,12 +200,6 @@ static inline std::unique_ptr<SkPDFDict> SkPDFMakeDict(const char* type = nullpt
 enum class SkPDFSteamCompressionEnabled : bool {
     No = false,
     Yes = true,
-    Default =
-#ifdef SK_PDF_LESS_COMPRESSION
-        No,
-#else
-        Yes,
-#endif
 };
 
 // Exposed for unit testing.
@@ -205,5 +210,5 @@ SkPDFIndirectReference SkPDFStreamOut(
     std::unique_ptr<SkPDFDict> dict,
     std::unique_ptr<SkStreamAsset> stream,
     SkPDFDocument* doc,
-    SkPDFSteamCompressionEnabled compress = SkPDFSteamCompressionEnabled::Default);
+    SkPDFSteamCompressionEnabled compress = SkPDFSteamCompressionEnabled::Yes);
 #endif

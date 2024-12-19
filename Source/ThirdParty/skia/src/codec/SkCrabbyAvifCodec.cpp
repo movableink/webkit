@@ -36,7 +36,27 @@ float FractionToFloat(NumeratorType numerator, uint32_t denominator) {
     return static_cast<double>(numerator) / denominator;
 }
 
-bool PopulateGainmapInfo(const crabbyavif::avifGainMap& gain_map, SkGainmapInfo* info) {
+sk_sp<SkColorSpace> AltImageColorSpace(const crabbyavif::avifGainMap& gain_map,
+                                       const crabbyavif::avifImage& image) {
+    sk_sp<SkColorSpace> color_space = nullptr;
+    if (!gain_map.altICC.size) {
+        return nullptr;
+    }
+    if (image.icc.size == gain_map.altICC.size &&
+        memcmp(gain_map.altICC.data, image.icc.data, gain_map.altICC.size) == 0) {
+        // Same ICC as the base image, no need to specify it.
+        return nullptr;
+    }
+    skcms_ICCProfile icc_profile;
+    if (!skcms_Parse(gain_map.altICC.data, gain_map.altICC.size, &icc_profile)) {
+        return nullptr;
+    }
+    return SkColorSpace::Make(icc_profile);
+}
+
+bool PopulateGainmapInfo(const crabbyavif::avifGainMap& gain_map,
+                         const crabbyavif::avifImage& image,
+                         SkGainmapInfo* info) {
     if (gain_map.baseHdrHeadroom.d == 0 || gain_map.alternateHdrHeadroom.d == 0) {
         return false;
     }
@@ -68,10 +88,9 @@ bool PopulateGainmapInfo(const crabbyavif::avifGainMap& gain_map, SkGainmapInfo*
                 FractionToFloat(gain_map.alternateOffset[i].n, gain_map.alternateOffset[i].d);
         info->fEpsilonSdr[i] = base_is_hdr ? alternate_offset : base_offset;
         info->fEpsilonHdr[i] = base_is_hdr ? base_offset : alternate_offset;
-
-        if (!gain_map.useBaseColorSpace) {
-            // TODO(vigneshv): Compute fGainmapMathColorSpace.
-        }
+    }
+    if (!gain_map.useBaseColorSpace) {
+        info->fGainmapMathColorSpace = AltImageColorSpace(gain_map, image);
     }
     return true;
 }
@@ -278,7 +297,8 @@ bool SkCrabbyAvifCodec::conversionSupported(const SkImageInfo& dstInfo,
                                             bool needsColorXform) {
     return dstInfo.colorType() == kRGBA_8888_SkColorType ||
            dstInfo.colorType() == kRGBA_1010102_SkColorType ||
-           dstInfo.colorType() == kRGBA_F16_SkColorType;
+           dstInfo.colorType() == kRGBA_F16_SkColorType ||
+           dstInfo.colorType() == kRGB_565_SkColorType;
 }
 
 SkCodec::Result SkCrabbyAvifCodec::onGetPixels(const SkImageInfo& dstInfo,
@@ -288,6 +308,21 @@ SkCodec::Result SkCrabbyAvifCodec::onGetPixels(const SkImageInfo& dstInfo,
                                                int* rowsDecoded) {
     if (options.fSubset) {
         return kUnimplemented;
+    }
+
+    switch (dstInfo.colorType()) {
+        case kRGBA_8888_SkColorType:
+        case kRGB_565_SkColorType:
+            fAvifDecoder->androidMediaCodecOutputColorFormat =
+                    crabbyavif::ANDROID_MEDIA_CODEC_OUTPUT_COLOR_FORMAT_YUV420_FLEXIBLE;
+            break;
+        case kRGBA_F16_SkColorType:
+        case kRGBA_1010102_SkColorType:
+            fAvifDecoder->androidMediaCodecOutputColorFormat =
+                    crabbyavif::ANDROID_MEDIA_CODEC_OUTPUT_COLOR_FORMAT_P010;
+            break;
+        default:
+            return kUnimplemented;
     }
 
     crabbyavif::avifResult result =
@@ -300,7 +335,21 @@ SkCodec::Result SkCrabbyAvifCodec::onGetPixels(const SkImageInfo& dstInfo,
     }
     crabbyavif::avifImage* image =
             fGainmapOnly ? fAvifDecoder->image->gainMap->image : fAvifDecoder->image;
+    using AvifImagePtr =
+            std::unique_ptr<crabbyavif::avifImage, decltype(&crabbyavif::crabby_avifImageDestroy)>;
+
+    AvifImagePtr scaled_image{nullptr, crabbyavif::crabby_avifImageDestroy};
     if (this->dimensions() != dstInfo.dimensions()) {
+        // |image| contains plane pointers which point to Android MediaCodec's buffers. Those
+        // buffers are read-only and hence we cannot scale in place. Make a copy of the image and
+        // scale the copied image.
+        scaled_image.reset(crabbyavif::crabby_avifImageCreateEmpty());
+        result = crabbyavif::crabby_avifImageCopy(
+            scaled_image.get(), image, crabbyavif::AVIF_PLANES_ALL);
+        if (result != crabbyavif::AVIF_RESULT_OK) {
+            return kInvalidInput;
+        }
+        image = scaled_image.get();
         result = crabbyavif::avifImageScale(
                 image, dstInfo.width(), dstInfo.height(), &fAvifDecoder->diag);
         if (result != crabbyavif::AVIF_RESULT_OK) {
@@ -308,8 +357,6 @@ SkCodec::Result SkCrabbyAvifCodec::onGetPixels(const SkImageInfo& dstInfo,
         }
     }
 
-    using AvifImagePtr =
-            std::unique_ptr<crabbyavif::avifImage, decltype(&crabbyavif::crabby_avifImageDestroy)>;
     // cropped_image is a view into the underlying image. It can be safely deleted once the pixels
     // are converted into RGB (or when it goes out of scope in one of the error paths).
     AvifImagePtr cropped_image{nullptr, crabbyavif::crabby_avifImageDestroy};
@@ -341,6 +388,10 @@ SkCodec::Result SkCrabbyAvifCodec::onGetPixels(const SkImageInfo& dstInfo,
             rgbImage.depth = 10;
             rgbImage.format = crabbyavif::AVIF_RGB_FORMAT_RGBA1010102;
             break;
+        case kRGB_565_SkColorType:
+            rgbImage.depth = 8;
+            rgbImage.format = crabbyavif::AVIF_RGB_FORMAT_RGB565;
+            break;
         default:
             // TODO(vigneshv): Check if more color types need to be supported.
             // Currently android supports at least RGB565 and BGRA8888 which is
@@ -364,7 +415,7 @@ SkCodec::Result SkCrabbyAvifCodec::onGetPixels(const SkImageInfo& dstInfo,
 bool SkCrabbyAvifCodec::onGetGainmapCodec(SkGainmapInfo* info,
                                           std::unique_ptr<SkCodec>* gainmapCodec) {
     if (!gainmapCodec || !info || !fAvifDecoder->image || !fAvifDecoder->image->gainMap ||
-        !PopulateGainmapInfo(*fAvifDecoder->image->gainMap, info)) {
+        !PopulateGainmapInfo(*fAvifDecoder->image->gainMap, *fAvifDecoder->image, info)) {
         return false;
     }
     Result result;

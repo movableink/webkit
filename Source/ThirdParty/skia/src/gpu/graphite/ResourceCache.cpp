@@ -557,12 +557,25 @@ void ResourceCache::setResourceTimestamp(Resource* resource, uint32_t timestamp)
 }
 
 void ResourceCache::dumpMemoryStatistics(SkTraceMemoryDump* traceMemoryDump) const {
+    ASSERT_SINGLE_OWNER
+
+    // There is no need to process the return queue here. Resources in the queue are still in
+    // either the purgeable queue or the nonpurgeable resources list (likely to be moved to the
+    // purgeable queue). However, the Resource's own ref counts are used to report its purgeable
+    // state to the memory dump, which is accurate without draining the return queue.
+
     for (int i = 0; i < fNonpurgeableResources.size(); ++i) {
         fNonpurgeableResources[i]->dumpMemoryStatistics(traceMemoryDump);
     }
     for (int i = 0; i < fPurgeableQueue.count(); ++i) {
         fPurgeableQueue.at(i)->dumpMemoryStatistics(traceMemoryDump);
     }
+}
+
+void ResourceCache::setMaxBudget(size_t bytes) {
+    fMaxBytes = bytes;
+    this->processReturnedResources();
+    this->purgeAsNeeded();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -726,12 +739,6 @@ bool ResourceCache::isInCache(const Resource* resource) const {
 
 int ResourceCache::numFindableResources() const {
     return fResourceMap.count();
-}
-
-void ResourceCache::setMaxBudget(size_t bytes) {
-    fMaxBytes = bytes;
-    this->processReturnedResources();
-    this->purgeAsNeeded();
 }
 
 Resource* ResourceCache::topOfPurgeableQueue() {

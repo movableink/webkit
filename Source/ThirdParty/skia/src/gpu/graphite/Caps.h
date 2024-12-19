@@ -322,6 +322,8 @@ public:
 
     bool setBackendLabels() const { return fSetBackendLabels; }
 
+    GpuStatsFlags supportedGpuStats() const { return fSupportedGpuStats; }
+
 protected:
     Caps();
 
@@ -408,6 +410,8 @@ protected:
 
     ResourceBindingRequirements fResourceBindingReqs;
 
+    GpuStatsFlags fSupportedGpuStats = GpuStatsFlags::kNone;
+
     //////////////////////////////////////////////////////////////////////////////////////////
     // Client-provided Caps
 
@@ -432,7 +436,6 @@ protected:
     bool fAllowMultipleAtlasTextures = true;
     bool fSupportBilerpFromGlyphAtlas = false;
 
-    // Set based on client options
     bool fRequireOrderedRecordings = false;
 
     bool fSetBackendLabels = false;

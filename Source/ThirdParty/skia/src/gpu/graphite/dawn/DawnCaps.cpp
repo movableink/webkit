@@ -28,6 +28,10 @@
 #include "src/gpu/graphite/dawn/DawnUtilsPriv.h"
 #include "src/sksl/SkSLUtil.h"
 
+#if defined(__EMSCRIPTEN__)
+#include <emscripten/version.h>
+#endif
+
 namespace {
 
 skgpu::UniqueKey::Domain get_pipeline_domain() {
@@ -429,6 +433,10 @@ void DawnCaps::initCaps(const DawnBackendContext& backendContext, const ContextO
     SkASSERT(limitsSucceeded);
 #endif
 #else
+    wgpu::DawnTexelCopyBufferRowAlignmentLimits alignmentLimits{};
+    if (backendContext.fDevice.HasFeature(wgpu::FeatureName::DawnTexelCopyBufferRowAlignment)) {
+        limits.nextInChain = &alignmentLimits;
+    }
     [[maybe_unused]] wgpu::Status status = backendContext.fDevice.GetLimits(&limits);
     SkASSERT(status == wgpu::Status::Success);
 #endif
@@ -441,6 +449,13 @@ void DawnCaps::initCaps(const DawnBackendContext& backendContext, const ContextO
 
     // Dawn requires 256 bytes per row alignment for buffer texture copies.
     fTextureDataRowBytesAlignment = 256;
+#if !defined(__EMSCRIPTEN__)
+    // If the device supports the DawnTexelCopyBufferRowAlignment feature, the alignment can be
+    // queried from its limits.
+    if (backendContext.fDevice.HasFeature(wgpu::FeatureName::DawnTexelCopyBufferRowAlignment)) {
+        fTextureDataRowBytesAlignment = alignmentLimits.minTexelCopyBufferRowAlignment;
+    }
+#endif
 
     fResourceBindingReqs.fUniformBufferLayout = Layout::kStd140;
     // The WGSL generator assumes tightly packed std430 layout for SSBOs which is also the default
@@ -500,6 +515,24 @@ void DawnCaps::initCaps(const DawnBackendContext& backendContext, const ContextO
     fSupportsPartialLoadResolve =
             backendContext.fDevice.HasFeature(wgpu::FeatureName::DawnPartialLoadResolveTexture);
 #endif
+
+    if (backendContext.fDevice.HasFeature(wgpu::FeatureName::TimestampQuery)) {
+        // Native Dawn has an API for writing timestamps on command buffers. WebGPU only supports
+        // begin and end timestamps on render and compute passes.
+#if !defined(__EMSCRIPTEN__)
+        fSupportsCommandBufferTimestamps = true;
+#endif
+
+        // The emscripten C/C++ interface before 3.1.48 for timestamp query writes on render and
+        // compute passes is different than on current emsdk. The older API isn't correctly
+        // translated to the current JS WebGPU API in emsdk. So we require 3.1.48+.
+#if !defined(__EMSCRIPTEN__)                                                                   \
+        || (__EMSCRIPTEN_major__ > 3)                                                          \
+        || (__EMSCRIPTEN_major__ == 3 && __EMSCRIPTEN_minor__ > 1)                             \
+        || (__EMSCRIPTEN_major__ == 3 && __EMSCRIPTEN_minor__ == 1 && __EMSCRIPTEN_tiny__ >= 48)
+        fSupportedGpuStats |= GpuStatsFlags::kElapsedTime;
+#endif
+    }
 
     if (!backendContext.fTick) {
         fAllowCpuSync = false;

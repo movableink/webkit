@@ -74,10 +74,10 @@
 #include "include/gpu/graphite/Recorder.h"
 #include "include/gpu/graphite/Recording.h"
 #include "include/gpu/graphite/Surface.h"
-#include "tools/GpuToolUtils.h"
 #include "tools/flags/CommonFlagsGraphite.h"
 #include "tools/graphite/ContextFactory.h"
 #include "tools/graphite/GraphiteTestContext.h"
+#include "tools/graphite/GraphiteToolUtils.h"
 #endif
 
 #include <cinttypes>
@@ -360,6 +360,7 @@ struct GraphiteTarget : public Target {
     }
     bool init(SkImageInfo info, Benchmark* bench) override {
         skiatest::graphite::TestOptions testOptions = gTestOptions;
+        testOptions.fContextOptions.fRequireOrderedRecordings = true;
         bench->modifyGraphiteContextOptions(&testOptions.fContextOptions);
 
         this->factory = std::make_unique<ContextFactory>(testOptions);

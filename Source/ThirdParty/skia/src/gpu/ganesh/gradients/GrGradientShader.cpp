@@ -342,12 +342,12 @@ static std::unique_ptr<GrFragmentProcessor> make_looping_colorizer(int intervalC
         int loopCount = SkNextLog2(intervalChunks);
         sksl.appendf(
         "#version 300\n" // important space to separate token.
-        "uniform half4 thresholds[%d];"
+        "uniform float4 thresholds[%d];"
         "uniform float4 scale[%d];"
         "uniform float4 bias[%d];"
 
         "half4 main(float2 coord) {"
-            "half t = half(coord.x);"
+            "float t = coord.x;"
 
             // Choose a chunk from thresholds via binary search in a loop.
             "int low = 0;"
@@ -612,7 +612,7 @@ static std::unique_ptr<GrFragmentProcessor> make_clamped_gradient(
         "uniform int layoutPreservesOpacity;"  // specialized
 
         "half4 main(float2 coord) {"
-            "float4 t = gradLayout.eval(coord);"
+            "half4 t = gradLayout.eval(coord);"
             "half4 outColor;"
 
             // If t.x is below 0, use the left border color without invoking the child processor.
