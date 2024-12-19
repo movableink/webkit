@@ -2997,13 +2997,11 @@ void RenderStyle::getShadowVerticalExtent(const ShadowData* shadow, LayoutUnit& 
     }
 }
 
-Style::Color RenderStyle::unresolvedColorForProperty(CSSPropertyID colorProperty, bool visitedLink) const
+const Style::Color& RenderStyle::unresolvedColorForProperty(CSSPropertyID colorProperty, bool visitedLink) const
 {
     switch (colorProperty) {
     case CSSPropertyAccentColor:
         return accentColor();
-    case CSSPropertyColor:
-        return visitedLink ? visitedLinkColor() : color();
     case CSSPropertyBackgroundColor:
         return visitedLink ? visitedLinkBackgroundColor() : backgroundColor();
     case CSSPropertyBorderBottomColor:
@@ -3050,13 +3048,16 @@ Style::Color RenderStyle::unresolvedColorForProperty(CSSPropertyID colorProperty
         break;
     }
 
-    return { };
+    static NeverDestroyed<Style::Color> defaultColor { };
+    return defaultColor;
 }
 
 Color RenderStyle::colorResolvingCurrentColor(CSSPropertyID colorProperty, bool visitedLink) const
 {
-    auto result = unresolvedColorForProperty(colorProperty, visitedLink);
+    if (colorProperty == CSSPropertyColor)
+        return visitedLink ? visitedLinkColor() : color();
 
+    auto& result = unresolvedColorForProperty(colorProperty, visitedLink);
     if (result.isCurrentColor()) {
         if (colorProperty == CSSPropertyTextDecorationColor) {
             if (hasPositiveStrokeWidth()) {
