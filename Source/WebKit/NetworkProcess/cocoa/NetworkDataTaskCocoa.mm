@@ -213,22 +213,7 @@ NetworkDataTaskCocoa::NetworkDataTaskCocoa(NetworkSession& session, NetworkDataT
         applyBasicAuthorizationHeader(request, m_initialCredential);
     }
 
-    const auto shouldBlockCookies = [](WebCore::ThirdPartyCookieBlockingDecision thirdPartyCookieBlockingDecision) {
-        return thirdPartyCookieBlockingDecision == WebCore::ThirdPartyCookieBlockingDecision::All;
-    };
-
-#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
-    bool isOptInCookiePartitioningEnabled { false };
-#endif
-
-    auto thirdPartyCookieBlockingDecision = m_storedCredentialsPolicy == WebCore::StoredCredentialsPolicy::EphemeralStateless ? WebCore::ThirdPartyCookieBlockingDecision::All : WebCore::ThirdPartyCookieBlockingDecision::None;
-    if (CheckedPtr networkStorageSession = session.networkStorageSession()) {
-#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
-        isOptInCookiePartitioningEnabled = networkStorageSession->isOptInCookiePartitioningEnabled();
-#endif
-        if (!shouldBlockCookies(thirdPartyCookieBlockingDecision))
-            thirdPartyCookieBlockingDecision = networkStorageSession->thirdPartyCookieBlockingDecisionForRequest(request, frameID(), pageID(), shouldRelaxThirdPartyCookieBlocking());
-    }
+    auto thirdPartyCookieBlockingDecision = requestThirdPartyCookieBlockingDecision(request);
     restrictRequestReferrerToOriginIfNeeded(request);
 
     RetainPtr<NSURLRequest> nsRequest = request.nsURLRequest(WebCore::HTTPBodyUpdatePolicy::UpdateHTTPBody);
@@ -269,7 +254,7 @@ NetworkDataTaskCocoa::NetworkDataTaskCocoa(NetworkSession& session, NetworkDataT
 #endif
 
 #if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
-    if (isOptInCookiePartitioningEnabled && [mutableRequest respondsToSelector:@selector(_setAllowOnlyPartitionedCookies:)]) {
+    if (isOptInCookiePartitioningEnabled() && [mutableRequest respondsToSelector:@selector(_setAllowOnlyPartitionedCookies:)]) {
         auto shouldAllowOnlyPartitioned = thirdPartyCookieBlockingDecision == WebCore::ThirdPartyCookieBlockingDecision::AllExceptPartitioned ? YES : NO;
         [mutableRequest _setAllowOnlyPartitionedCookies:shouldAllowOnlyPartitioned];
     }

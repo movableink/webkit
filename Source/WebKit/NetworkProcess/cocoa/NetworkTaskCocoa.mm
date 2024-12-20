@@ -304,6 +304,31 @@ void NetworkTaskCocoa::unblockCookies()
     }
 }
 
+bool NetworkTaskCocoa::shouldBlockCookies(WebCore::ThirdPartyCookieBlockingDecision thirdPartyCookieBlockingDecision)
+{
+    return thirdPartyCookieBlockingDecision == WebCore::ThirdPartyCookieBlockingDecision::All;
+}
+
+WebCore::ThirdPartyCookieBlockingDecision NetworkTaskCocoa::requestThirdPartyCookieBlockingDecision(const WebCore::ResourceRequest& request) const
+{
+    auto thirdPartyCookieBlockingDecision = storedCredentialsPolicy() == WebCore::StoredCredentialsPolicy::EphemeralStateless ? WebCore::ThirdPartyCookieBlockingDecision::All : WebCore::ThirdPartyCookieBlockingDecision::None;
+    if (CheckedPtr networkStorageSession = m_networkSession->networkStorageSession()) {
+        if (!shouldBlockCookies(thirdPartyCookieBlockingDecision))
+            thirdPartyCookieBlockingDecision = networkStorageSession->thirdPartyCookieBlockingDecisionForRequest(request, frameID(), pageID(), m_shouldRelaxThirdPartyCookieBlocking);
+    }
+    return thirdPartyCookieBlockingDecision;
+}
+
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+bool NetworkTaskCocoa::isOptInCookiePartitioningEnabled() const
+{
+    bool isOptInCookiePartitioningEnabled { false };
+    if (CheckedPtr networkStorageSession = m_networkSession->networkStorageSession())
+        isOptInCookiePartitioningEnabled = networkStorageSession->isOptInCookiePartitioningEnabled();
+    return isOptInCookiePartitioningEnabled;
+}
+#endif
+
 void NetworkTaskCocoa::updateTaskWithFirstPartyForSameSiteCookies(NSURLSessionTask* task, const WebCore::ResourceRequest& request)
 {
     if (request.isSameSiteUnspecified())
@@ -320,11 +345,11 @@ void NetworkTaskCocoa::updateTaskWithFirstPartyForSameSiteCookies(NSURLSessionTa
 #if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
 void NetworkTaskCocoa::updateTaskWithStoragePartitionIdentifier(const WebCore::ResourceRequest& request)
 {
-    CheckedPtr networkStorageSession = m_networkSession->networkStorageSession();
-    if (!networkStorageSession)
+    if (!isOptInCookiePartitioningEnabled())
         return;
 
-    if (!networkStorageSession->isOptInCookiePartitioningEnabled())
+    CheckedPtr networkStorageSession = m_networkSession->networkStorageSession();
+    if (!networkStorageSession)
         return;
 
     // FIXME: Remove respondsToSelector when available with NWLoader. rdar://134913391
@@ -341,9 +366,19 @@ void NetworkTaskCocoa::willPerformHTTPRedirection(WebCore::ResourceResponse&& re
 
     setCookieTransform(request);
     if (!m_hasBeenSetToUseStatelessCookieStorage) {
-        if (storedCredentialsPolicy() == WebCore::StoredCredentialsPolicy::EphemeralStateless
-            || (m_networkSession->networkStorageSession() && m_networkSession->networkStorageSession()->shouldBlockCookies(request, frameID(), pageID(), m_shouldRelaxThirdPartyCookieBlocking)))
+        auto thirdPartyCookieBlockingDecision = requestThirdPartyCookieBlockingDecision(request);
+        if (shouldBlockCookies(thirdPartyCookieBlockingDecision))
             blockCookies();
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+        else {
+            RetainPtr<NSMutableURLRequest> mutableRequest = adoptNS([request.nsURLRequest(WebCore::HTTPBodyUpdatePolicy::UpdateHTTPBody) mutableCopy]);
+            if (isOptInCookiePartitioningEnabled() && [mutableRequest respondsToSelector:@selector(_setAllowOnlyPartitionedCookies:)]) {
+                auto shouldAllowOnlyPartitioned = thirdPartyCookieBlockingDecision == WebCore::ThirdPartyCookieBlockingDecision::AllExceptPartitioned ? YES : NO;
+                [mutableRequest _setAllowOnlyPartitionedCookies:shouldAllowOnlyPartitioned];
+                request = mutableRequest.get();
+            }
+        }
+#endif
     } else if (storedCredentialsPolicy() != WebCore::StoredCredentialsPolicy::EphemeralStateless && needsFirstPartyCookieBlockingLatchModeQuirk(request.firstPartyForCookies(), request.url(), redirectResponse.url()))
         unblockCookies();
 #if !RELEASE_LOG_DISABLED
