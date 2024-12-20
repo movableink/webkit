@@ -30,6 +30,7 @@
 
 #import "Logging.h"
 #import "RestrictedOpenerType.h"
+#import "WKContentRuleListStore.h"
 #import <WebCore/DNS.h>
 #import <WebCore/LinkDecorationFilteringData.h>
 #import <WebCore/OrganizationStorageAccessPromptQuirk.h>
@@ -44,7 +45,6 @@
 #import <wtf/WeakRandom.h>
 #import <wtf/cocoa/VectorCocoa.h>
 #import <wtf/text/MakeString.h>
-
 #import <pal/cocoa/WebPrivacySoftLink.h>
 
 #if HAVE(SYSTEM_SUPPORT_FOR_ADVANCED_PRIVACY_PROTECTIONS)
@@ -404,6 +404,36 @@ RestrictedOpenerType RestrictedOpenerDomainsController::lookup(const WebCore::Re
 
     auto it = m_restrictedOpenerTypes.find(domain);
     return it == m_restrictedOpenerTypes.end() ? RestrictedOpenerType::Unrestricted : it->value;
+}
+
+ResourceMonitorURLsController& ResourceMonitorURLsController::singleton()
+{
+    static MainThreadNeverDestroyed<ResourceMonitorURLsController> sharedInstance;
+    return sharedInstance.get();
+}
+
+void ResourceMonitorURLsController::prepare(CompletionHandler<void(WKContentRuleList*, bool)>&& completionHandler)
+{
+    ASSERT(RunLoop::isMain());
+    if (!PAL::isWebPrivacyFrameworkAvailable() || ![PAL::getWPResourcesClass() instancesRespondToSelector:@selector(prepareResouceMonitorRulesForStore:completionHandler:)]) {
+        completionHandler(nullptr, false);
+        return;
+    }
+
+    static MainThreadNeverDestroyed<Vector<CompletionHandler<void(WKContentRuleList*, bool)>, 1>> lookupCompletionHandlers;
+    lookupCompletionHandlers->append(WTFMove(completionHandler));
+    if (lookupCompletionHandlers->size() > 1)
+        return;
+
+    WKContentRuleListStore *store = [WKContentRuleListStore defaultStore];
+
+    [[PAL::getWPResourcesClass() sharedInstance] prepareResouceMonitorRulesForStore:store completionHandler:^(WKContentRuleList *list, bool updated, NSError *error) {
+        if (error)
+            RELEASE_LOG_ERROR(ResourceLoadStatistics, "Failed to request resource monitor urls from WebPrivacy");
+
+        for (auto& completionHandler : std::exchange(lookupCompletionHandlers.get(), { }))
+            completionHandler(list, updated);
+    }];
 }
 
 #if HAVE(SYSTEM_SUPPORT_FOR_ADVANCED_PRIVACY_PROTECTIONS)

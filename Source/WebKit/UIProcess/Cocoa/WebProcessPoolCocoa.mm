@@ -46,7 +46,9 @@
 #import "SandboxUtilities.h"
 #import "TextChecker.h"
 #import "WKBrowsingContextControllerInternal.h"
+#import "WKContentRuleListInternal.h"
 #import "WebBackForwardCache.h"
+#import "WebCompiledContentRuleList.h"
 #import "WebMemoryPressureHandler.h"
 #import "WebPageGroup.h"
 #import "WebPageMessages.h"
@@ -1337,7 +1339,15 @@ void WebProcessPool::setCachedHardwareKeyboardState(HardwareKeyboardState hardwa
 #if ENABLE(CONTENT_EXTENSIONS)
 void WebProcessPool::platformLoadResourceMonitorRuleList(CompletionHandler<void()>&& completionHandler)
 {
-    completionHandler();
+    ResourceMonitorURLsController::singleton().prepare([weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)](WKContentRuleList *list, bool updated) mutable {
+        if (RefPtr protectedThis = weakThis.get()) {
+            if (list && (updated || !protectedThis->m_resourceMonitorRuleListCache)) {
+                auto data = list->_contentRuleList->compiledRuleList().data();
+                protectedThis->m_resourceMonitorRuleListCache = WebCompiledContentRuleList::create(WTFMove(data));
+            }
+        }
+        completionHandler();
+    });
 }
 #endif
 

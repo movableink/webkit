@@ -45,6 +45,7 @@
 
 OBJC_CLASS WKWebPrivacyNotificationListener;
 OBJC_CLASS NSURLSession;
+OBJC_CLASS WKContentRuleList;
 
 namespace WebKit {
 
@@ -181,6 +182,17 @@ private:
     RetainPtr<WKWebPrivacyNotificationListener> m_notificationListener;
     HashMap<WebCore::RegistrableDomain, RestrictedOpenerType> m_restrictedOpenerTypes;
     uint64_t m_nextScheduledUpdateTime { 0 };
+};
+
+class ResourceMonitorURLsController {
+public:
+    static ResourceMonitorURLsController& singleton();
+
+    void prepare(CompletionHandler<void(WKContentRuleList *, bool)>&&);
+
+private:
+    friend class NeverDestroyed<ResourceMonitorURLsController, MainThreadAccessTraits>;
+    ResourceMonitorURLsController() = default;
 };
 
 #endif // ENABLE(ADVANCED_PRIVACY_PROTECTIONS)

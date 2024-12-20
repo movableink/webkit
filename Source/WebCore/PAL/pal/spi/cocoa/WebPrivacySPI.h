@@ -163,6 +163,17 @@ typedef void (^WPRestrictedOpenerDomainsCompletionHandler)(NSArray<WPRestrictedO
 @end
 #endif
 
+#if !defined(HAS_WEB_PRIVACY_RESOURCE_MONITOR_URLS_API)
+@class WKContentRuleList;
+@class WKContentRuleListStore;
+
+typedef void (^WPRuleListPreparationCompletionHandler)(WKContentRuleList *, bool, NSError *);
+
+@interface WPResources (Staging_141646051)
+- (void)prepareResouceMonitorRulesForStore:(WKContentRuleListStore *)store completionHandler:(WPRuleListPreparationCompletionHandler)completionHandler;
+@end
+#endif
+
 WTF_EXTERN_C_BEGIN
 
 extern NSString *const WPNotificationUserInfoResourceTypeKey;
