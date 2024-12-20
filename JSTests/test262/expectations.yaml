@@ -1360,12 +1360,6 @@ test/language/statements/with/get-mutable-binding-binding-deleted-in-get-unscopa
   default: "ReferenceError: Can't find variable: binding"
 test/language/statements/with/set-mutable-binding-idref-compound-assign-with-proxy-env.js:
   default: 'Test262Error: Actual [has:p, get:Symbol(Symbol.unscopables), get:p, has:p, set:p, getOwnPropertyDescriptor:p, defineProperty:p] and expected [has:p, get:Symbol(Symbol.unscopables), has:p, get:p, has:p, set:p, getOwnPropertyDescriptor:p, defineProperty:p] should have the same contents. '
-test/staging/built-ins/Object/preventExtensions/preventExtensions-variable-length-typed-arrays.js:
-  default: 'Test262Error: Expected a TypeError to be thrown but no exception was thrown at all'
-  strict mode: 'Test262Error: Expected a TypeError to be thrown but no exception was thrown at all'
 test/staging/built-ins/Object/seal/seal-variable-length-typed-arrays.js:
   default: 'TypeError: Attempting to store non-configurable property on a typed array at index: 0'
   strict mode: 'TypeError: Attempting to store non-configurable property on a typed array at index: 0'
-test/staging/built-ins/Reflect/preventExtensions/preventExtensions-variable-length-typed-arrays.js:
-  default: 'Test262Error: Expected SameValue(«true», «false») to be true'
-  strict mode: 'Test262Error: Expected SameValue(«true», «false») to be true'
