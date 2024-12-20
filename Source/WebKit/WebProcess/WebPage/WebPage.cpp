@@ -1555,7 +1555,7 @@ EditorState WebPage::editorState(ShouldPerformLayout shouldPerformLayout) const
     });
 
 #if ENABLE(PDF_PLUGIN)
-    if (RefPtr pluginView = pluginViewForFrame(frame.get()); pluginView && pluginView->populateEditorStateIfNeeded(result))
+    if (RefPtr pluginView = focusedPluginViewForFrame(*frame); pluginView && pluginView->populateEditorStateIfNeeded(result))
         return result;
 #endif
 

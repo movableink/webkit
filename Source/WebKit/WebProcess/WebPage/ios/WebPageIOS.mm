@@ -105,6 +105,7 @@
 #import <WebCore/HTMLLabelElement.h>
 #import <WebCore/HTMLOptGroupElement.h>
 #import <WebCore/HTMLOptionElement.h>
+#import <WebCore/HTMLPlugInElement.h>
 #import <WebCore/HTMLSelectElement.h>
 #import <WebCore/HTMLSummaryElement.h>
 #import <WebCore/HTMLTextAreaElement.h>
@@ -133,6 +134,7 @@
 #import <WebCore/PlatformMediaSessionManager.h>
 #import <WebCore/PlatformMouseEvent.h>
 #import <WebCore/PluginDocument.h>
+#import <WebCore/PluginViewBase.h>
 #import <WebCore/PointerCaptureController.h>
 #import <WebCore/PointerCharacteristics.h>
 #import <WebCore/PrintContext.h>
@@ -990,8 +992,10 @@ void WebPage::completeSyntheticClick(Node& nodeRespondingToClick, const WebCore:
         return;
 
 #if ENABLE(PDF_PLUGIN)
-    if (RefPtr pluginView = pluginViewForFrame(newFocusedFrame.get()))
-        pluginView->handleSyntheticClick(WTFMove(releaseEvent));
+    if (RefPtr pluginElement = dynamicDowncast<HTMLPlugInElement>(nodeRespondingToClick)) {
+        if (RefPtr pluginWidget = static_cast<PluginView*>(pluginElement->pluginWidget()))
+            pluginWidget->handleSyntheticClick(WTFMove(releaseEvent));
+    }
 #endif
 
     invokePendingSyntheticClickCallback(SyntheticClickResult::Click);
@@ -2057,7 +2061,7 @@ void WebPage::updateSelectionWithTouches(const IntPoint& point, SelectionTouch s
         return;
 
 #if ENABLE(PDF_PLUGIN)
-    if (RefPtr pluginView = pluginViewForFrame(frame.get())) {
+    if (RefPtr pluginView = focusedPluginViewForFrame(*frame)) {
         OptionSet<SelectionFlags> resultFlags;
         auto startOrEnd = baseIsStart ? SelectionEndpoint::End : SelectionEndpoint::Start;
         if (pluginView->moveSelectionEndpoint(point, startOrEnd) == SelectionWasFlipped::Yes)
@@ -2653,7 +2657,7 @@ void WebPage::setSelectionRange(const WebCore::IntPoint& point, WebCore::TextGra
 
 #if ENABLE(PDF_PLUGIN)
     // FIXME: Support text selection in embedded PDFs.
-    if (RefPtr pluginView = pluginViewForFrame(frame.get())) {
+    if (RefPtr pluginView = focusedPluginViewForFrame(*frame)) {
         pluginView->setSelectionRange(point, granularity);
         return;
     }
@@ -2702,7 +2706,7 @@ void WebPage::updateSelectionWithExtentPointAndBoundary(const WebCore::IntPoint&
         return callback(false);
 
 #if ENABLE(PDF_PLUGIN)
-    if (RefPtr pluginView = pluginViewForFrame(frame.get())) {
+    if (RefPtr pluginView = focusedPluginViewForFrame(*frame)) {
         auto movedEndpoint = pluginView->extendInitialSelection(point, granularity);
         return callback(movedEndpoint == SelectionEndpoint::End);
     }
@@ -3737,7 +3741,7 @@ InteractionInformationAtPosition WebPage::positionInformation(const InteractionI
     auto hitTestResult = eventHandler.hitTestResultAtPoint(request.point, hitTestRequestTypes);
 
 #if ENABLE(PDF_PLUGIN)
-    RefPtr pluginView = pluginViewForFrame(hitTestResult.innerNodeFrame());
+    RefPtr pluginView = hitTestResult.isOverWidget() ? pluginViewForFrame(hitTestResult.innerNodeFrame()) : nullptr;
 #endif
 
     info.cursorContext = [&] {
