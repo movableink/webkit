@@ -992,6 +992,8 @@ private:
         case UMod:
         case Jump:
         case Nop:
+        case WasmAddress:
+        case WasmBoundsCheck:
             return;
         case Set: {
             if (m_value->child(0)->type() != Int64)

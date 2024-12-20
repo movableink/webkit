@@ -1526,7 +1526,7 @@ void testLateRegister()
         lateUseArgs.append(value);
     }
     Value* regularUse = root->appendNew<Const64Value>(proc, Origin(), 1);
-    PatchpointValue* firstPatchpoint = root->appendNew<PatchpointValue>(proc, Int64, Origin());
+    PatchpointValue* firstPatchpoint = root->appendNew<PatchpointValue>(proc, pointerType(), Origin());
     {
         unsigned i = 0;
         for (GPRReg reg = CCallHelpers::firstRegister(); reg <= CCallHelpers::lastRegister(); reg = CCallHelpers::nextRegister(reg)) {
@@ -1556,7 +1556,7 @@ void testLateRegister()
             CHECK(!!skipped);
         });
 
-    PatchpointValue* secondPatchpoint = root->appendNew<PatchpointValue>(proc, Int64, Origin());
+    PatchpointValue* secondPatchpoint = root->appendNew<PatchpointValue>(proc, pointerType(), Origin());
     secondPatchpoint->append(firstPatchpoint, ValueRep::reg(GPRInfo::regT1));
     secondPatchpoint->setGenerator(
         [&] (CCallHelpers& jit, const StackmapGenerationParams& params) {
@@ -1571,7 +1571,7 @@ void testLateRegister()
     root->appendNewControlValue(proc, Return, Origin(), secondPatchpoint);
 
     auto code = compileProc(proc);
-    CHECK_EQ(invoke<uint64_t>(*code), result);
+    CHECK_EQ(invoke<uintptr_t>(*code), result);
 }
 
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(interpreterPrint, void, (Vector<intptr_t>* stream, intptr_t value));

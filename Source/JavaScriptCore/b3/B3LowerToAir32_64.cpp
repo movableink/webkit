@@ -4288,7 +4288,7 @@ private:
                 }
             }
 
-            append(Add64, Arg(address->pinnedGPR()), tmp(m_value->child(0)), tmp(address));
+            append(Add32, Arg(address->pinnedGPR()), tmp(m_value->child(0)), tmp(address));
             return;
         }
 
@@ -5174,11 +5174,11 @@ private:
             append(Inst(Move32, value, pointer, ptrPlusImm));
             if (value->offset()) {
                 if (imm(value->offset()))
-                    append(Add64, imm(value->offset()), ptrPlusImm);
+                    append(Add32, imm(value->offset()), ptrPlusImm);
                 else {
                     Arg bigImm = m_code.newTmp(GP);
                     append(Move, Arg::bigImm(value->offset()), bigImm);
-                    append(Add64, bigImm, ptrPlusImm);
+                    append(Add32, bigImm, ptrPlusImm);
                 }
             }
 

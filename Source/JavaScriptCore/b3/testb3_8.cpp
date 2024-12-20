@@ -987,7 +987,7 @@ void testWasmAddressDoesNotCSE()
 
     auto* originalAddress = root->appendNew<WasmAddressValue>(proc, Origin(), pointer, pinnedGPR);
     root->appendNew<MemoryValue>(proc, Store, Origin(), originalAddress, 
-        root->appendNew<WasmAddressValue>(proc, Origin(), root->appendNew<Const64Value>(proc, Origin(), 6*8), pinnedGPR), 0);
+        root->appendNew<WasmAddressValue>(proc, Origin(), root->appendNew<ConstPtrValue>(proc, Origin(), 6*8), pinnedGPR), 0);
 
     SwitchValue* switchValue = root->appendNew<SwitchValue>(proc, Origin(), path);
     switchValue->setFallThrough(FrequentedBlock(c));
@@ -1017,7 +1017,7 @@ void testWasmAddressDoesNotCSE()
 
     auto* address2 = continuation->appendNew<WasmAddressValue>(proc, Origin(), pointer, pinnedGPR);
     continuation->appendNew<MemoryValue>(proc, Store, Origin(), takenPhi,
-        continuation->appendNew<WasmAddressValue>(proc, Origin(), continuation->appendNew<Const64Value>(proc, Origin(), 4*8), pinnedGPR),
+        continuation->appendNew<WasmAddressValue>(proc, Origin(), continuation->appendNew<ConstPtrValue>(proc, Origin(), 4*8), pinnedGPR),
         0);
 
     auto* returnVal = address2;
@@ -1030,15 +1030,15 @@ void testWasmAddressDoesNotCSE()
     auto binary = compileProc(proc);
 
     uint64_t* memory = new uint64_t[10];
-    uint64_t ptr = 8;
+    uintptr_t ptr = 8;
 
-    uint64_t finalPtr = reinterpret_cast<uint64_t>(static_cast<void*>(memory)) + ptr;
+    uintptr_t finalPtr = reinterpret_cast<uintptr_t>(static_cast<void*>(memory)) + ptr;
 
     for (int i = 0; i < 10; ++i)
         memory[i] = 0;
 
     {
-        uint64_t result = invoke<uint64_t>(*binary, memory, ptr, 0);
+        uintptr_t result = invoke<uintptr_t>(*binary, memory, ptr, 0);
 
         CHECK_EQ(result, finalPtr);
         CHECK_EQ(memory[0], 0ul);
@@ -1054,7 +1054,7 @@ void testWasmAddressDoesNotCSE()
     memory[7] = 0;
 
     {
-        uint64_t result = invoke<uint64_t>(*binary, memory, ptr, 1);
+        uintptr_t result = invoke<uintptr_t>(*binary, memory, ptr, 1);
 
         CHECK_EQ(result, finalPtr + 8);
         CHECK_EQ(memory[0], 0ul);
@@ -1069,7 +1069,7 @@ void testWasmAddressDoesNotCSE()
     memory[6] = 0;
     memory[7] = 0;
     {
-        uint64_t result = invoke<uint64_t>(*binary, memory, ptr, 2);
+        uintptr_t result = invoke<uintptr_t>(*binary, memory, ptr, 2);
 
         CHECK_EQ(result, finalPtr);
         CHECK_EQ(memory[0], 0ul);
@@ -1173,7 +1173,7 @@ void testStoreAfterClobberDifferentWidth()
 
     auto* pointer = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
     auto* resultAddress = root->appendNew<WasmAddressValue>(proc, Origin(), pointer, pinnedBaseGPR);
-    root->appendNew<MemoryValue>(proc, Store, Origin(), root->appendNew<Const64Value>(proc, Origin(), -1), resultAddress, 0);
+    root->appendNew<MemoryValue>(proc, Store, Origin(), root->appendNew<ConstPtrValue>(proc, Origin(), -1), resultAddress, 0);
     root->appendNew<MemoryValue>(proc, Store, Origin(), root->appendNew<Const32Value>(proc, Origin(), 20), resultAddress, 0);
     root->appendNewControlValue(proc, Return, Origin(), root->appendNew<Const32Value>(proc, Origin(), 30));
 
@@ -1212,7 +1212,7 @@ void testStoreAfterClobberDifferentWidthSuccessor()
     auto* pointer = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
     auto* path = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR2);
     auto* resultAddress = root->appendNew<WasmAddressValue>(proc, Origin(), pointer, pinnedBaseGPR);
-    root->appendNew<MemoryValue>(proc, Store, Origin(), root->appendNew<Const64Value>(proc, Origin(), -1), resultAddress, 0);
+    root->appendNew<MemoryValue>(proc, Store, Origin(), root->appendNew<ConstPtrValue>(proc, Origin(), -1), resultAddress, 0);
 
     SwitchValue* switchValue = root->appendNew<SwitchValue>(proc, Origin(), path);
     switchValue->setFallThrough(FrequentedBlock(c));
@@ -1316,7 +1316,7 @@ void testStoreAfterClobberExitsSidewaysSuccessor()
     Value* pointer = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR2);
     auto* path = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR3);
     auto* resultAddress = root->appendNew<WasmAddressValue>(proc, Origin(), pointer, pinnedBaseGPR);
-    root->appendNew<MemoryValue>(proc, Store, Origin(), root->appendNew<Const64Value>(proc, Origin(), -1), resultAddress, 0);
+    root->appendNew<MemoryValue>(proc, Store, Origin(), root->appendNew<ConstPtrValue>(proc, Origin(), -1), resultAddress, 0);
 
     SwitchValue* switchValue = root->appendNew<SwitchValue>(proc, Origin(), path);
     switchValue->setFallThrough(FrequentedBlock(c));

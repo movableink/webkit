@@ -37,6 +37,13 @@ void testPinRegisters()
         RegisterSetBuilder csrs;
         csrs.merge(RegisterSetBuilder::calleeSaveRegisters());
         csrs.exclude(RegisterSetBuilder::stackRegisters());
+#if CPU(ARM)
+        // FIXME We should allow this to be used. See the note
+        // in https://commits.webkit.org/257808@main for more
+        // info about why masm is using scratch registers on
+        // ARM-only.
+        csrs.remove(MacroAssembler::addressTempRegister);
+#endif // CPU(ARM)
         if (pin) {
             csrs.buildAndValidate().forEach(
                 [&] (Reg reg) {
