@@ -5831,6 +5831,21 @@
     "imported/w3c/web-platform-tests/svg/animations/svglengthlist-animation-3.html": [
         "slow"
     ],
+    "imported/w3c/web-platform-tests/svg/interact/scripted/async-01.svg": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/svg/interact/scripted/async-02.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/svg/interact/scripted/async-03.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/svg/interact/scripted/defer-02.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/svg/interact/scripted/module-02.html": [
+        "slow"
+    ],
     "imported/w3c/web-platform-tests/trusted-types/TrustedTypePolicyFactory-getAttributeType-event-handler-content-attributes.tentative.html": [
         "slow"
     ],
