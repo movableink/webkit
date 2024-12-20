@@ -28,6 +28,7 @@
 
 #include "ScriptExecutionContext.h"
 #include "URLPatternCanonical.h"
+#include "URLPatternConstructorStringParser.h"
 #include "URLPatternInit.h"
 #include "URLPatternOptions.h"
 #include "URLPatternParser.h"
@@ -213,9 +214,12 @@ ExceptionOr<Ref<URLPattern>> URLPattern::create(ScriptExecutionContext& context,
 
     if (!input)
         return Exception { ExceptionCode::NotSupportedError, "Not implemented."_s };
-    if (std::holds_alternative<String>(*input) && !std::get<String>(*input).isNull())
-        return Exception { ExceptionCode::NotSupportedError, "Not implemented."_s };
-    if (std::holds_alternative<URLPatternInit>(*input))
+    if (std::holds_alternative<String>(*input) && !std::get<String>(*input).isNull()) {
+        auto maybeInit = URLPatternConstructorStringParser(WTFMove(std::get<String>(*input))).parse(context);
+        if (maybeInit.hasException())
+            return maybeInit.releaseException();
+        init = maybeInit.releaseReturnValue();
+    } else if (std::holds_alternative<URLPatternInit>(*input))
         init = std::get<URLPatternInit>(*input);
 
     auto maybeProcessedInit = processInit(WTFMove(init), BaseURLStringType::Pattern);
@@ -281,7 +285,7 @@ ExceptionOr<std::optional<URLPatternResult>> URLPattern::exec(ScriptExecutionCon
 ExceptionOr<void> URLPattern::compileAllComponents(ScriptExecutionContext& context, URLPatternInit&& processedInit, const URLPatternOptions& options)
 {
     Ref vm = context.vm();
-    JSLockHolder lock(vm);
+    JSC::JSLockHolder lock(vm);
 
     auto maybeProtocolComponent = URLPatternUtilities::URLPatternComponent::compile(vm, processedInit.protocol, EncodingCallbackType::Protocol, URLPatternUtilities::URLPatternStringOptions { });
     if (maybeProtocolComponent.hasException())

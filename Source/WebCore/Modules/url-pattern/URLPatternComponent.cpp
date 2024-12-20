@@ -35,6 +35,7 @@
 #include <JavaScriptCore/RegExpObject.h>
 
 namespace WebCore {
+using namespace JSC;
 namespace URLPatternUtilities {
 
 URLPatternComponent::URLPatternComponent(String&& patternString, JSC::Strong<JSC::RegExp>&& regex, Vector<String>&& groupNameList, bool hasRegexpGroupsFromPartsList)

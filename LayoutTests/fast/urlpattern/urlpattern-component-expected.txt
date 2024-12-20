@@ -1,4 +1,4 @@
-CONSOLE MESSAGE: NotSupportedError: Not implemented.
+CONSOLE MESSAGE: TypeError: Type error
 Tests URLPattern: URLPattern constructor
 
 On success, you will see a series of "PASS" messages, followed by "TEST COMPLETE".
@@ -3633,6 +3633,25 @@ PASS urlPatternComponent is "*"
 Component: hash
 PASS urlPatternComponent is "*"
 Testing: {"pattern":["https://example.com:8080/foo?bar#baz"],"inputs":[{"pathname":"/foo","search":"bar","hash":"baz","baseURL":"https://example.com:8080"}],"expected_obj":{"protocol":"https","username":"*","password":"*","hostname":"example.com","port":"8080","pathname":"/foo","search":"bar","hash":"baz"},"expected_match":{"protocol":{"input":"https","groups":{}},"hostname":{"input":"example.com","groups":{}},"port":{"input":"8080","groups":{}},"pathname":{"input":"/foo","groups":{}},"search":{"input":"bar","groups":{}},"hash":{"input":"baz","groups":{}}}}
+Component: protocol
+PASS urlPatternComponent is "https"
+Component: username
+PASS urlPatternComponent is "*"
+Component: password
+PASS urlPatternComponent is "*"
+Component: hostname
+PASS urlPatternComponent is "example.com"
+Component: port
+PASS urlPatternComponent is "8080"
+Component: password
+PASS urlPatternComponent is "*"
+Component: pathname
+PASS urlPatternComponent is "/foo"
+Component: search
+PASS urlPatternComponent is "bar"
+Component: hash
+PASS urlPatternComponent is "baz"
+Testing: {"pattern":["/foo?bar#baz","https://example.com:8080"],"inputs":[{"pathname":"/foo","search":"bar","hash":"baz","baseURL":"https://example.com:8080"}],"expected_obj":{"pathname":"/foo","search":"bar","hash":"baz"},"expected_match":{"protocol":{"input":"https","groups":{}},"hostname":{"input":"example.com","groups":{}},"port":{"input":"8080","groups":{}},"pathname":{"input":"/foo","groups":{}},"search":{"input":"bar","groups":{}},"hash":{"input":"baz","groups":{}}}}
 FAIL successfullyParsed should be true. Was false.
 Some tests failed.
 
