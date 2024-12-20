@@ -7,10 +7,8 @@ Modules/mediasource/SourceBuffer.h
 Modules/mediastream/RTCPeerConnection.h
 Modules/mediastream/libwebrtc/LibWebRTCObservers.h
 Modules/notifications/NotificationResourcesLoader.h
-Modules/permissions/NavigatorPermissions.h
 Modules/push-api/PushManager.h
 Modules/push-api/ServiceWorkerRegistrationPushAPI.h
-Modules/screen-wake-lock/NavigatorScreenWakeLock.h
 Modules/storage/StorageManager.cpp
 Modules/webaudio/AudioNodeInput.h
 Modules/webaudio/AudioNodeOutput.h
@@ -81,7 +79,6 @@ inspector/agents/worker/WorkerDebuggerAgent.h
 layout/formattingContexts/inline/InlineItemsBuilder.h
 loader/appcache/ApplicationCacheStorage.cpp
 page/FrameSnapshotting.cpp
-page/NavigatorLoginStatus.h
 page/OpportunisticTaskScheduler.h
 page/PerformanceLogging.h
 page/PointerLockController.h
