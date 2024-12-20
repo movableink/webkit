@@ -1936,7 +1936,6 @@ webkit.org/b/179775 imported/w3c/web-platform-tests/xhr/firing-events-http-no-co
 webkit.org/b/184742 accessibility/mac/async-increment-decrement-action.html [ Skip ]
 webkit.org/b/185897 accessibility/mac/set-value-editable-types.html [ Skip ]
 webkit.org/b/193414 accessibility/mac/relative-frame.html [ Skip ]
-webkit.org/b/215129 accessibility/mac/resolved-text-editing.html [ Skip ]
 
 webkit.org/b/182752 accessibility/mac/accessibility-make-first-responder.html [ Skip ]
 

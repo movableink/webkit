@@ -924,8 +924,6 @@ public:
     bool isButton() const;
     bool isMeter() const { return roleValue() == AccessibilityRole::Meter; }
 
-    virtual UncheckedKeyHashMap<String, AXEditingStyleValueVariant> resolvedEditingStyles() const = 0;
-
     bool isListItem() const { return roleValue() == AccessibilityRole::ListItem; }
     bool isCheckboxOrRadio() const { return isCheckbox() || isRadioButton(); }
     bool isScrollView() const { return roleValue() == AccessibilityRole::ScrollArea; }

@@ -2216,9 +2216,6 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     if ([attributeName isEqualToString:NSAccessibilityDOMClassListAttribute])
         return createNSArray(backingObject->classList()).autorelease();
 
-    if ([attributeName isEqualToString:@"AXResolvedEditingStyles"])
-        return [self baseAccessibilityResolvedEditingStyles];
-
     // This allows us to connect to a plugin that creates a shadow node for editing (like PDFs).
     if ([attributeName isEqualToString:@"_AXAssociatedPluginParent"])
         return [self _associatedPluginParentWith:backingObject];

@@ -5,28 +5,24 @@
 </head>
 <body>
 
-<div contenteditable id=div></div>
+<div contenteditable id="contenteditable"></div>
 
 <script>
 let output = "This tests that we can retrieve resolved editing styles from the editable text area.\n\n";
 
 if (window.accessibilityController) {
-    window.jsTestIsAsync = true;
-
-    var div = document.getElementById("div");
-    div.focus();
+    document.getElementById("contenteditable").focus();
 
     textInputController.insertText("a");
     document.execCommand("italic", false)
     document.execCommand("FontSize", false, 6)
 
-    var axDiv = accessibilityController.accessibleElementById("div");
-    axDiv.attributeValueAsync("AXResolvedEditingStyles", function(value) {
-        output += value;
+    output += accessibilityController
+        .accessibleElementById("contenteditable")
+        .stringDescriptionOfAttributeValue("AXResolvedEditingStyles");
 
-        debug(output);
-        finishJSTest();
-    });
+    debug(output);
+    finishJSTest();
 }
 </script>
 </body>

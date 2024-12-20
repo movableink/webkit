@@ -711,8 +711,16 @@ std::optional<SimpleRange> makeDOMRange(Document* document, NSRange range)
 
 - (NSDictionary<NSString *, id> *)baseAccessibilityResolvedEditingStyles
 {
+    // We're only going to behave properly in this method if we're on the main-thread, since
+    // that's the only time casting to AccessibilityObject is going to be successful.
+    ASSERT(isMainThread());
+
+    RefPtr axObject = dynamicDowncast<AccessibilityObject>(self.axBackingObject);
+    if (!axObject)
+        return nil;
+
     NSMutableDictionary<NSString *, id> *results = [NSMutableDictionary dictionary];
-    auto editingStyles = self.axBackingObject->resolvedEditingStyles();
+    auto editingStyles = axObject->resolvedEditingStyles();
     for (String& key : editingStyles.keys()) {
         auto value = editingStyles.get(key);
         id result = WTF::switchOn(value,
