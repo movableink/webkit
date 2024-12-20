@@ -21,9 +21,9 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 [
-    ExceptionForEnabledBy,
     DispatchedFrom=WebContent,
-    DispatchedTo=Networking
+    DispatchedTo=Networking,
+    EnabledBy=WebSocketEnabled
 ]
 messages -> NetworkSocketChannel {
     SendString(std::span<const uint8_t> message) -> ()
