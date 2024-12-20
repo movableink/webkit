@@ -31,6 +31,8 @@
 #include "DOMWindow.h"
 #include "ExceptionOr.h"
 #include "LocalFrame.h"
+#include "PushManager.h"
+#include "PushSubscriptionOwner.h"
 #include "ReducedResolutionSeconds.h"
 #include "ScrollToOptions.h"
 #include "Supplementable.h"
@@ -79,7 +81,11 @@ class LocalDOMWindow final
     , public ContextDestructionObserver
     , public Base64Utilities
     , public WindowOrWorkerGlobalScope
-    , public Supplementable<LocalDOMWindow> {
+    , public Supplementable<LocalDOMWindow>
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    , public PushSubscriptionOwner
+#endif
+    {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LocalDOMWindow);
 public:
 
@@ -363,6 +369,13 @@ public:
 
     CookieStore& cookieStore();
 
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    PushManager& pushManager();
+
+    void ref() const final { DOMWindow::ref(); }
+    void deref() const final { DOMWindow::deref(); }
+#endif
+
 private:
     explicit LocalDOMWindow(Document&);
 
@@ -391,6 +404,16 @@ private:
 #endif
 
     void processPostMessage(JSC::JSGlobalObject&, const String& origin, const MessageWithMessagePorts&, RefPtr<WindowProxy>&&, RefPtr<SecurityOrigin>&&);
+
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    bool isActive() const final { return true; }
+
+    void subscribeToPushService(const Vector<uint8_t>& applicationServerKey, DOMPromiseDeferred<IDLInterface<PushSubscription>>&&) final;
+    void unsubscribeFromPushService(std::optional<PushSubscriptionIdentifier>, DOMPromiseDeferred<IDLBoolean>&&) final;
+    void getPushSubscription(DOMPromiseDeferred<IDLNullable<IDLInterface<PushSubscription>>>&&) final;
+    void getPushPermissionState(DOMPromiseDeferred<IDLEnumeration<PushPermissionState>>&&) final;
+#endif // ENABLE(DECLARATIVE_WEB_PUSH)
+
     bool m_shouldPrintWhenFinishedLoading { false };
     bool m_suspendedForDocumentSuspension { false };
     bool m_isSuspendingObservers { false };
@@ -451,6 +474,10 @@ private:
 #endif
 
     RefPtr<CookieStore> m_cookieStore;
+
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    PushManager m_pushManager;
+#endif
 };
 
 inline String LocalDOMWindow::status() const

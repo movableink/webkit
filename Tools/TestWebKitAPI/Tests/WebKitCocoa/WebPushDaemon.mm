@@ -402,7 +402,7 @@ window.onload = function()
 async function subscribe(key)
 {
     try {
-        globalSubscription = await navigator.pushManager.subscribe({
+        globalSubscription = await window.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: key
         });
@@ -425,7 +425,7 @@ async function unsubscribe()
 async function getPushSubscription()
 {
     try {
-        let subscription = await navigator.pushManager.getSubscription();
+        let subscription = await window.pushManager.getSubscription();
         return subscription ? subscription.toJSON() : null;
     } catch (error) {
         return "Error: " + error;

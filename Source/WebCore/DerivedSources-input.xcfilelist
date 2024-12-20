@@ -822,7 +822,6 @@ $(PROJECT_DIR)/Modules/pictureinpicture/DocumentOrShadowRoot+PictureInPicture.id
 $(PROJECT_DIR)/Modules/pictureinpicture/HTMLVideoElement+PictureInPicture.idl
 $(PROJECT_DIR)/Modules/pictureinpicture/PictureInPictureEvent.idl
 $(PROJECT_DIR)/Modules/pictureinpicture/PictureInPictureWindow.idl
-$(PROJECT_DIR)/Modules/push-api/NavigatorPush.idl
 $(PROJECT_DIR)/Modules/push-api/PushEncryptionKeyName.idl
 $(PROJECT_DIR)/Modules/push-api/PushEvent.idl
 $(PROJECT_DIR)/Modules/push-api/PushEventInit.idl
@@ -837,6 +836,7 @@ $(PROJECT_DIR)/Modules/push-api/PushSubscriptionOptions.idl
 $(PROJECT_DIR)/Modules/push-api/PushSubscriptionOptionsInit.idl
 $(PROJECT_DIR)/Modules/push-api/ServiceWorkerGlobalScope+PushAPI.idl
 $(PROJECT_DIR)/Modules/push-api/ServiceWorkerRegistration+PushAPI.idl
+$(PROJECT_DIR)/Modules/push-api/WindowPush.idl
 $(PROJECT_DIR)/Modules/remoteplayback/HTMLMediaElement+RemotePlayback.idl
 $(PROJECT_DIR)/Modules/remoteplayback/RemotePlayback.idl
 $(PROJECT_DIR)/Modules/remoteplayback/RemotePlaybackAvailabilityCallback.idl

@@ -675,6 +675,7 @@ namespace WebCore {
     macro(pullAgain) \
     macro(pullAlgorithm) \
     macro(pulling) \
+    macro(pushManager) \
     macro(queue) \
     macro(queuedAddIceCandidate) \
     macro(queuedCreateAnswer) \

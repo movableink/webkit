@@ -27,6 +27,6 @@
 [
     Conditional=DECLARATIVE_WEB_PUSH,
     EnabledBySetting=DeclarativeWebPush,
-] interface mixin NavigatorPush {
-    readonly attribute PushManager pushManager;
+] interface mixin WindowPush {
+    [SameObject] readonly attribute PushManager pushManager;
 };

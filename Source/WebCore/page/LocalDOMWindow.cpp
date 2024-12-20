@@ -76,6 +76,7 @@
 #include "JSDOMPromiseDeferred.h"
 #include "JSDOMWindowBase.h"
 #include "JSExecState.h"
+#include "JSPushSubscription.h"
 #include "LocalFrame.h"
 #include "LocalFrameLoaderClient.h"
 #include "LocalFrameView.h"
@@ -95,6 +96,8 @@
 #include "Performance.h"
 #include "PerformanceNavigationTiming.h"
 #include "PermissionsPolicy.h"
+#include "PlatformStrategies.h"
+#include "PushStrategy.h"
 #include "Quirks.h"
 #include "RemoteFrame.h"
 #include "RequestAnimationFrameCallback.h"
@@ -416,6 +419,9 @@ void LocalDOMWindow::setCanShowModalDialogOverride(bool allow)
 LocalDOMWindow::LocalDOMWindow(Document& document)
     : DOMWindow(GlobalWindowIdentifier { Process::identifier(), WindowIdentifier::generate() }, DOMWindowType::Local)
     , ContextDestructionObserver(&document)
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    , m_pushManager(*this)
+#endif
 {
     ASSERT(frame());
     addLanguageChangeObserver(this, &languagesChangedCallback);
@@ -2803,5 +2809,79 @@ CookieStore& LocalDOMWindow::cookieStore()
         m_cookieStore = CookieStore::create(protectedDocument().get());
     return *m_cookieStore;
 }
+
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+PushManager& LocalDOMWindow::pushManager()
+{
+    return m_pushManager;
+}
+
+static URL toScope(LocalDOMWindow& window)
+{
+    if (auto* frame = window.frame()) {
+        if (auto* document = frame->document())
+            return URL { document->url().protocolHostAndPort() };
+    }
+
+    return { };
+}
+
+void LocalDOMWindow::subscribeToPushService(const Vector<uint8_t>& applicationServerKey, DOMPromiseDeferred<IDLInterface<PushSubscription>>&& promise)
+{
+    LOG(Push, "LocalDOMWindow::subscribeToPushService");
+
+    platformStrategies()->pushStrategy()->windowSubscribeToPushService(toScope(*this), applicationServerKey, [protectedThis = Ref { *this }, promise = WTFMove(promise)](auto&& result) mutable {
+        LOG(Push, "LocalDOMWindow::subscribeToPushService completed");
+        if (result.hasException()) {
+            promise.reject(result.releaseException());
+            return;
+        }
+
+        promise.resolve(PushSubscription::create(result.releaseReturnValue(), protectedThis.ptr()));
+    });
+}
+
+void LocalDOMWindow::unsubscribeFromPushService(std::optional<PushSubscriptionIdentifier> subscriptionIdentifier, DOMPromiseDeferred<IDLBoolean>&& promise)
+{
+    LOG(Push, "LocalDOMWindow::unsubscribeFromPushService");
+
+    platformStrategies()->pushStrategy()->windowUnsubscribeFromPushService(toScope(*this), subscriptionIdentifier, [promise = WTFMove(promise)](auto&& result) mutable {
+        LOG(Push, "LocalDOMWindow::unsubscribeFromPushService completed");
+        promise.settle(WTFMove(result));
+    });
+}
+
+void LocalDOMWindow::getPushSubscription(DOMPromiseDeferred<IDLNullable<IDLInterface<PushSubscription>>>&& promise)
+{
+    LOG(Push, "LocalDOMWindow::getPushSubscription");
+
+    platformStrategies()->pushStrategy()->windowGetPushSubscription(toScope(*this), [protectedThis = Ref { *this }, promise = WTFMove(promise)](auto&& result) mutable {
+        LOG(Push, "LocalDOMWindow::getPushSubscription completed");
+        if (result.hasException()) {
+            promise.reject(result.releaseException());
+            return;
+        }
+
+        auto optionalPushSubscriptionData = result.releaseReturnValue();
+        if (!optionalPushSubscriptionData) {
+            promise.resolve(nullptr);
+            return;
+        }
+
+        promise.resolve(PushSubscription::create(WTFMove(*optionalPushSubscriptionData), protectedThis.ptr()).ptr());
+    });
+}
+
+void LocalDOMWindow::getPushPermissionState(DOMPromiseDeferred<IDLEnumeration<PushPermissionState>>&& promise)
+{
+    LOG(Push, "LocalDOMWindow::getPushPermissionState");
+
+    platformStrategies()->pushStrategy()->windowGetPushPermissionState(toScope(*this), [promise = WTFMove(promise)](auto&& result) mutable {
+        LOG(Push, "LocalDOMWindow::getPushPermissionState completed");
+        promise.settle(WTFMove(result));
+    });
+}
+
+#endif // #if ENABLE(DECLARATIVE_WEB_PUSH)
 
 } // namespace WebCore
