@@ -2489,7 +2489,8 @@ void WebProcess::setResourceMonitorContentRuleList(WebCompiledContentRuleListDat
     }
 
     WebCore::ContentExtensions::ContentExtensionsBackend backend;
-    backend.addContentExtension(ruleListData.identifier, compiledContentRuleList.releaseNonNull(), { }, ContentExtensions::ContentExtension::ShouldCompileCSS::No);
+    auto identifier = compiledContentRuleList->data().identifier;
+    backend.addContentExtension(identifier, compiledContentRuleList.releaseNonNull(), { }, ContentExtensions::ContentExtension::ShouldCompileCSS::No);
 
     WebCore::ResourceMonitorChecker::singleton().setContentRuleList(WTFMove(backend));
 }
