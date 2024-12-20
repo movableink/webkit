@@ -1,4 +1,3 @@
-//@ skip if $architecture == "arm"
 /*
 (module
     (type $0 (struct (field i8) (field i16) (field i32) (field i64) (field i8) (field i16) (field i32) (field i64)))

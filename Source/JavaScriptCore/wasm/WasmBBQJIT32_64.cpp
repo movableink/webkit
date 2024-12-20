@@ -1884,7 +1884,7 @@ void BBQJIT::emitStructPayloadSet(GPRReg payloadGPR, const StructType& structTyp
             if (structType.field(fieldIndex).type.is<PackedType>()) {
                 ScratchScope<1, 0> scratches(*this);
                 // If it's a packed type, we materialize the constant to ensure constant blinding.
-                emitMoveConst(value, Location::fromGPR(scratches.gpr(0)));
+                emitMoveConst(Value::fromI32(value.asI32()), Location::fromGPR(scratches.gpr(0)));
                 switch (structType.field(fieldIndex).type.as<PackedType>()) {
                 case PackedType::I8:
                     m_jit.store8(scratches.gpr(0), MacroAssembler::Address(payloadGPR, fieldOffset));
