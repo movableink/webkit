@@ -660,6 +660,9 @@ void AXIsolatedTree::updateNodeProperties(AccessibilityObject& axObject, const A
         case AXPropertyName::CurrentState:
             propertyMap.set(AXPropertyName::CurrentState, static_cast<int>(axObject.currentState()));
             break;
+        case AXPropertyName::DatetimeAttributeValue:
+            propertyMap.set(AXPropertyName::DatetimeAttributeValue, axObject.datetimeAttributeValue().isolatedCopy());
+            break;
         case AXPropertyName::DisclosedRows:
             propertyMap.set(AXPropertyName::DisclosedRows, axIDs(axObject.disclosedRows()));
             break;

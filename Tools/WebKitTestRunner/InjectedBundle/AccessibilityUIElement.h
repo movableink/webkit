@@ -136,6 +136,12 @@ public:
     JSRetainPtr<JSStringRef> selectedText() { return nullptr; }
 #endif // PLATFORM(MAC)
 
+#if PLATFORM(COCOA)
+    JSRetainPtr<JSStringRef> dateTimeValue() const;
+#else
+    JSRetainPtr<JSStringRef> dateTimeValue() const { return nullptr; }
+#endif // PLATFORM(COCOA)
+
     // Attributes - platform-independent implementations
     JSRetainPtr<JSStringRef> stringDescriptionOfAttributeValue(JSStringRef attribute);
     JSRetainPtr<JSStringRef> stringAttributeValue(JSStringRef attribute);

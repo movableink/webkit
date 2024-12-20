@@ -57,6 +57,7 @@ typedef void (*AXPostedNotificationCallback)(id element, NSString* notification,
 - (id)accessibilityElementForRow:(NSInteger)row andColumn:(NSInteger)column;
 - (NSURL *)accessibilityURL;
 - (NSArray *)accessibilityHeaderElements;
+- (NSString *)accessibilityDatetimeValue;
 - (NSArray *)accessibilityDetailsElements;
 - (NSArray *)accessibilityErrorMessageElements;
 - (NSString *)accessibilityPlaceholderValue;
@@ -1060,6 +1061,11 @@ void AccessibilityUIElement::clearSelectedChildren() const
 JSRetainPtr<JSStringRef> AccessibilityUIElement::accessibilityValue() const
 {
     return createJSString();
+}
+
+JSRetainPtr<JSStringRef> AccessibilityUIElement::dateTimeValue() const
+{
+    return [[m_element accessibilityDatetimeValue] createJSStringRef];
 }
 
 void AccessibilityUIElement::assistiveTechnologySimulatedFocus()

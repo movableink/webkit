@@ -85,6 +85,7 @@ interface AccessibilityUIElement {
 
     readonly attribute DOMString stringValue;
     readonly attribute DOMString dateValue;
+    readonly attribute DOMString dateTimeValue;
     readonly attribute long intValue;
     readonly attribute long minValue;
     readonly attribute long maxValue;
