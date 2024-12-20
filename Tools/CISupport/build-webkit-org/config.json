@@ -166,7 +166,7 @@
                       "sequoia-release-tests-wk1", "sequoia-release-tests-wk2", "sequoia-release-perf-tests",
                       "sequoia-release-applesilicon-tests-wk1", "sequoia-release-applesilicon-tests-wk2",
                       "sequoia-applesilicon-release-tests-test262", "sequoia-release-tests-wk2-accessibility-isolated-tree", 
-                      "sequoia-release-tests-wk2-site-isolation-tree"
+                      "sequoia-release-tests-wk2-site-isolation-tree", "sequoia-release-world-leaks-tests"
                   ],
                   "workernames": ["bot279", "bot198"]
                   },
@@ -765,7 +765,7 @@
                   },
 
                   { "type": "PlatformSpecificScheduler", "platform": "mac-sequoia", "branch": "main", "treeStableTimer": 45.0,
-                  "builderNames": ["Apple-Sequoia-Release-Build", "Apple-Sequoia-Debug-Build", "Apple-Sequoia-Safer-CPP-Checks", "Apple-Sequoia-LLINT-CLoop-BuildAndTest", "Apple-Sequoia-Release-World-Leaks-Tests"]
+                  "builderNames": ["Apple-Sequoia-Release-Build", "Apple-Sequoia-Debug-Build", "Apple-Sequoia-Safer-CPP-Checks", "Apple-Sequoia-LLINT-CLoop-BuildAndTest"]
                   },
                   { "type": "Triggerable", "name": "sequoia-release-tests-wk1",
                   "builderNames": ["Apple-Sequoia-Release-WK1-Tests"]
@@ -802,7 +802,11 @@
                   },
                   { "type": "Triggerable", "name": "sequoia-release-tests-wk2-site-isolation-tree",
                   "builderNames": ["Apple-Sequoia-Release-WK2-Site-Isolation-Tree-Tests"]
-                  },                  
+                  },
+                  {
+                    "type": "Triggerable", "name": "sequoia-release-world-leaks-tests",
+                    "builderNames": ["Apple-Sequoia-Release-World-Leaks-Tests"]
+                  },
                   { "type": "PlatformSpecificScheduler", "platform": "mac-sonoma", "branch": "main", "treeStableTimer": 45.0,
                   "builderNames": ["Apple-Sonoma-Release-Build", "Apple-Sonoma-Debug-Build"]
                   },
