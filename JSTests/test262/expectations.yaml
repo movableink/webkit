@@ -1093,9 +1093,6 @@ test/built-ins/TypedArrayConstructors/internals/Set/key-is-valid-index-prototype
 test/built-ins/TypedArrayConstructors/internals/Set/key-is-valid-index-reflect-set.js:
   default: 'Test262Error: target[0] should remain unchanged (receiver: empty object) Expected SameValue(«2.3», «0») to be true (Testing with Float64Array.)'
   strict mode: 'Test262Error: target[0] should remain unchanged (receiver: empty object) Expected SameValue(«2.3», «0») to be true (Testing with Float64Array.)'
-test/intl402/DateTimeFormat/canonicalize-calendar.js:
-  default: 'Test262Error: calendar ID is canonicalized (option) Expected SameValue(«"islamicc"», «"islamic-civil"») to be true'
-  strict mode: 'Test262Error: calendar ID is canonicalized (option) Expected SameValue(«"islamicc"», «"islamic-civil"») to be true'
 test/intl402/DateTimeFormat/prototype/format/dayPeriod-long-en.js:
   default: 'Test262Error: 00:00, long format Expected SameValue(«"in the morning"», «"at night"») to be true'
   strict mode: 'Test262Error: 00:00, long format Expected SameValue(«"in the morning"», «"at night"») to be true'

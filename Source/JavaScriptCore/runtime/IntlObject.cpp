@@ -1555,8 +1555,6 @@ std::optional<String> mapICUCalendarKeywordToBCP47(const String& calendar)
 {
     if (calendar == "gregorian"_s)
         return "gregory"_s;
-    // islamicc is deprecated in BCP47, and islamic-civil is preferred.
-    // https://github.com/unicode-org/cldr/blob/master/common/bcp47/calendar.xml
     if (calendar == "ethiopic-amete-alem"_s)
         return "ethioaa"_s;
     return std::nullopt;
@@ -1566,8 +1564,6 @@ std::optional<String> mapBCP47ToICUCalendarKeyword(const String& calendar)
 {
     if (calendar == "gregory"_s)
         return "gregorian"_s;
-    if (calendar == "islamicc"_s)
-        return "islamic-civil"_s;
     if (calendar == "ethioaa"_s)
         return "ethiopic-amete-alem"_s;
     return std::nullopt;
