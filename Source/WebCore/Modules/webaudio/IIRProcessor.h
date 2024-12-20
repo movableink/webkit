@@ -51,6 +51,8 @@ public:
     bool isFilterStable() const { return m_isFilterStable; }
 
 private:
+    Type processorType() const final { return Type::IIR; }
+
     Vector<double> m_feedforward;
     Vector<double> m_feedback;
     bool m_isFilterStable;
@@ -59,3 +61,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::IIRProcessor) \
+    static bool isType(const WebCore::AudioProcessor& processor) { return processor.processorType() == WebCore::AudioProcessor::Type::IIR; } \
+SPECIALIZE_TYPE_TRAITS_END()

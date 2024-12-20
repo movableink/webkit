@@ -41,7 +41,7 @@ public:
     void getFrequencyResponse(unsigned length, std::span<const float> frequencyHz, std::span<float> magResponse, std::span<float> phaseResponse);
 
 private:
-    IIRProcessor* iirProcessor() { return static_cast<IIRProcessor*>(processor()); }
+    IIRProcessor* iirProcessor() { return downcast<IIRProcessor>(processor()); }
 
     // AudioDSPKernel
     void process(std::span<const float> source, std::span<float> destination) final;

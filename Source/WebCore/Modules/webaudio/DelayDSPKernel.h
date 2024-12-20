@@ -64,7 +64,7 @@ private:
     // Temporary buffer used to hold the second sample for interpolation if needed.
     AudioFloatArray m_tempBuffer;
 
-    DelayProcessor* delayProcessor() { return static_cast<DelayProcessor*>(processor()); }
+    DelayProcessor* delayProcessor() { return downcast<DelayProcessor>(processor()); }
 };
 
 } // namespace WebCore

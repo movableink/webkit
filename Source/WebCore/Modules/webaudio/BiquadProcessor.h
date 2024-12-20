@@ -70,6 +70,8 @@ public:
     bool shouldUseARate() const { return m_shouldUseARate; }
 
 private:
+    Type processorType() const final { return Type::Biquad; }
+
     BiquadFilterType m_type { BiquadFilterType::Lowpass };
 
     Ref<AudioParam> m_parameter1;
@@ -87,3 +89,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::BiquadProcessor) \
+    static bool isType(const WebCore::AudioProcessor& processor) { return processor.processorType() == WebCore::AudioProcessor::Type::Biquad; } \
+SPECIALIZE_TYPE_TRAITS_END()

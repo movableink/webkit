@@ -65,6 +65,8 @@ public:
     Lock& processLock() const WTF_RETURNS_LOCK(m_processLock) { return m_processLock; }
 
 private:
+    Type processorType() const final { return Type::WaveShaper; }
+
     // m_curve represents the non-linear shaping curve.
     RefPtr<Float32Array> m_curve WTF_GUARDED_BY_LOCK(m_processLock);
 
@@ -75,3 +77,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WaveShaperProcessor) \
+    static bool isType(const WebCore::AudioProcessor& processor) { return processor.processorType() == WebCore::AudioProcessor::Type::WaveShaper; } \
+SPECIALIZE_TYPE_TRAITS_END()

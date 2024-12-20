@@ -60,7 +60,7 @@ public:
 
 private:
     Biquad m_biquad;
-    BiquadProcessor* biquadProcessor() { return static_cast<BiquadProcessor*>(processor()); }
+    BiquadProcessor* biquadProcessor() { return downcast<BiquadProcessor>(processor()); }
 
     // To prevent audio glitches when parameters are changed,
     // dezippering is used to slowly change the parameters.
