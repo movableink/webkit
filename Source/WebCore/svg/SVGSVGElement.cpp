@@ -2,7 +2,7 @@
  * Copyright (C) 2004, 2005, 2006, 2019 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006, 2007, 2008, 2010 Rob Buis <buis@kde.org>
  * Copyright (C) 2007-2024 Apple Inc. All rights reserved.
- * Copyright (C) 2015 Google Inc. All rights reserved.
+ * Copyright (C) 2015-2022 Google Inc. All rights reserved.
  * Copyright (C) 2014 Adobe Systems Incorporated. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -587,7 +587,11 @@ FloatRect SVGSVGElement::currentViewBoxRect() const
     if (!viewBox.isEmpty())
         return viewBox;
 
-    auto isEmbeddedThroughSVGImage = [](const RenderElement* renderer) -> bool {
+    auto isEmbeddedThroughSVGImage = [this](const RenderElement* renderer) -> bool {
+        auto isDocumentElement = document().documentElement() == this;
+        if (!isDocumentElement)
+            return false;
+
         if (!renderer)
             return false;
 
