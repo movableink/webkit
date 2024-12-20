@@ -1410,6 +1410,11 @@ void CommandEncoder::addTexture(const Texture& baseTexture)
     }
 }
 
+void CommandEncoder::addSampler(const Sampler& sampler)
+{
+    m_retainedSamplers.add(RefPtr { &sampler });
+}
+
 void CommandEncoder::makeSubmitInvalid(NSString* errorString)
 {
     m_makeSubmitInvalid = true;

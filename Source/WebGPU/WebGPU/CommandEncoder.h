@@ -57,6 +57,7 @@ class ComputePassEncoder;
 class Device;
 class QuerySet;
 class RenderPassEncoder;
+class Sampler;
 class Texture;
 
 // https://gpuweb.github.io/gpuweb/#gpucommandencoder
@@ -116,6 +117,7 @@ public:
     void addBuffer(id<MTLBuffer>);
     void addTexture(id<MTLTexture>);
     void addTexture(const Texture&);
+    void addSampler(const Sampler&);
     id<MTLCommandBuffer> commandBuffer() const;
     void setExistingEncoder(id<MTLCommandEncoder>);
     void generateInvalidEncoderStateError();
@@ -161,6 +163,7 @@ private:
 #endif
     NSMutableSet<id<MTLTexture>> *m_retainedTextures { nil };
     NSMutableSet<id<MTLBuffer>> *m_retainedBuffers { nil };
+    HashSet<RefPtr<const Sampler>> m_retainedSamplers;
     id<MTLSharedEvent> m_sharedEvent { nil };
     uint64_t m_sharedEventSignalValue { 0 };
 private PUBLIC_IN_WEBGPU_SWIFT:

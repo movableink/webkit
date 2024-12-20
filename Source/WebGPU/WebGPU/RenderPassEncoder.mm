@@ -1242,6 +1242,11 @@ void RenderPassEncoder::setBindGroup(uint32_t groupIndex, const BindGroup& group
             addResourceToActiveResources(resourceUsage.resource, resource.mtlResources[i], resourceUsage.usage);
             setCommandEncoder(resourceUsage.resource);
         }
+        auto parentEncoder = m_parentEncoder;
+        for (auto& [samplerPtr, _] : group.samplers()) {
+            if (RefPtr sampler = samplerPtr.get())
+                parentEncoder->addSampler(*sampler);
+        }
     }
 
     m_bindGroups.set(groupIndex, &group);
