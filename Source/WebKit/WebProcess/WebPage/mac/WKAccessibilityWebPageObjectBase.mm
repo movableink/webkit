@@ -155,7 +155,6 @@ namespace ax = WebCore::Accessibility;
 
 - (void)setWindow:(id)window
 {
-    ASSERT(window);
     ASSERT(isMainRunLoop());
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     Locker lock { m_windowLock };
