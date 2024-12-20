@@ -47,19 +47,25 @@ namespace WebDriver {
 class CommandResult;
 class SessionHost;
 
-class Session : public RefCounted<Session> {
+class Session :
+#if ENABLE(WEBDRIVER_BIDI)
+public BiDiEventHandler // Inherits RefCounted
+#else
+public RefCounted<Session>
+#endif
+{
 public:
     static Ref<Session> create(Ref<SessionHost>&& host)
     {
         return adoptRef(*new Session(WTFMove(host)));
     }
-    ~Session();
 #if ENABLE(WEBDRIVER_BIDI)
     static Ref<Session> create(Ref<SessionHost>&& host, WeakPtr<WebSocketServer> bidiServer)
     {
         return adoptRef(*new Session(WTFMove(host), WTFMove(bidiServer)));
     }
 #endif
+    virtual ~Session();
 
     const String& id() const;
     const Capabilities& capabilities() const;
@@ -149,6 +155,12 @@ public:
     void getAlertText(Function<void(CommandResult&&)>&&);
     void sendAlertText(const String&, Function<void(CommandResult&&)>&&);
     void takeScreenshot(std::optional<String> elementID, std::optional<bool> scrollIntoView, Function<void(CommandResult&&)>&&);
+
+#if ENABLE(WEBDRIVER_BIDI)
+    void enableGlobalEvent(const String&);
+    void disableGlobalEvent(const String&);
+    void dispatchEvent(RefPtr<JSON::Object>&&);
+#endif
 
 private:
     Session(Ref<SessionHost>&&);
@@ -259,7 +271,16 @@ private:
 #if ENABLE(WEBDRIVER_BIDI)
     bool m_hasBiDiEnabled { false };
 
+    // https://w3c.github.io/webdriver-bidi/#events
+    HashSet<String> m_globalEventSet;
     WeakPtr<WebSocketServer> m_bidiServer;
+
+    bool eventIsEnabled(const String&, const Vector<String>&);
+    void emitEvent(const String&, RefPtr<JSON::Object>&&);
+    String toInternalEventName(const String&);
+
+    // Actual event handlers
+    void doLogEntryAdded(RefPtr<JSON::Object>&&);
 #endif
 };
 

@@ -80,6 +80,7 @@ set(WebCore_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/accessibility"
     "${WEBCORE_DIR}/accessibility/isolatedtree"
     "${WEBCORE_DIR}/animation"
+    "${WEBCORE_DIR}/automation"
     "${WEBCORE_DIR}/bindings"
     "${WEBCORE_DIR}/bindings/js"
     "${WEBCORE_DIR}/bridge"

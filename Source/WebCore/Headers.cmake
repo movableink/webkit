@@ -740,6 +740,8 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     animation/WebAnimationTime.h
     animation/WebAnimationTypes.h
 
+    automation/AutomationInstrumentation.h
+
     bindings/IDLTypes.h
 
     bindings/js/BufferSource.h

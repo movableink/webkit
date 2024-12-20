@@ -36,6 +36,7 @@
 #include "CoordinateSystem.h"
 #include "PageLoadState.h"
 #include "WebAutomationSessionMacros.h"
+#include "WebAutomationSessionMessages.h"
 #include "WebAutomationSessionProxyMessages.h"
 #include "WebFrameProxy.h"
 #include "WebFullScreenManagerProxy.h"
@@ -43,6 +44,7 @@
 #include "WebOpenPanelResultListenerProxy.h"
 #include "WebPageProxy.h"
 #include "WebProcessPool.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <JavaScriptCore/InspectorBackendDispatcher.h>
 #include <JavaScriptCore/InspectorFrontendRouter.h>
 #include <WebCore/MIMETypeRegistry.h>
@@ -166,7 +168,13 @@ void WebAutomationSession::setClient(std::unique_ptr<API::AutomationSessionClien
 
 void WebAutomationSession::setProcessPool(WebKit::WebProcessPool* processPool)
 {
+    if (auto pool = protectedProcessPool())
+        pool->removeMessageReceiver(Messages::WebAutomationSession::messageReceiverName());
+
     m_processPool = processPool;
+
+    if (auto pool = protectedProcessPool())
+        pool->addMessageReceiver(Messages::WebAutomationSession::messageReceiverName(), *this);
 }
 
 RefPtr<WebProcessPool> WebAutomationSession::protectedProcessPool() const
@@ -2567,6 +2575,47 @@ Ref<Inspector::BackendDispatcher> WebAutomationSession::protectedBackendDispatch
 Ref<WebAutomationSession::Debuggable> WebAutomationSession::protectedDebuggable() const
 {
     return m_debuggable;
+}
+
+static String logEntryLevelForMessage(const JSC::MessageType& messageType, const MessageLevel& messageLevel)
+{
+    if (messageType == JSC::MessageType::Assert || messageLevel == JSC::MessageLevel::Error)
+        return "error"_s;
+    if (messageType == JSC::MessageType::Trace || messageLevel == JSC::MessageLevel::Debug)
+        return "debug"_s;
+    if (messageLevel == MessageLevel::Warning)
+        return "warn"_s;
+    return "info"_s;
+}
+
+static String logEntryMethodNameForMessage(const JSC::MessageType& messageType, const MessageLevel& messageLevel)
+{
+    if (messageType == JSC::MessageType::Assert)
+        return "assert"_s;
+    if (messageType == JSC::MessageType::Trace)
+        return "trace"_s;
+    if (messageLevel == JSC::MessageLevel::Warning)
+        return "warn"_s;
+    if (messageLevel == JSC::MessageLevel::Error)
+        return "error"_s;
+    if (messageLevel == JSC::MessageLevel::Debug)
+        return "debug"_s;
+    return "log"_s;
+}
+
+void WebAutomationSession::logEntryAdded(const JSC::MessageSource& messageSource, const JSC::MessageLevel& messageLevel, const String& messageText, const JSC::MessageType& messageType, const WallTime& timestamp)
+{
+    // FIXME Support getting source information
+    // https://bugs.webkit.org/show_bug.cgi?id=282978
+    String sourceString;
+
+    auto level = logEntryLevelForMessage(messageType, messageLevel);
+    auto method = logEntryMethodNameForMessage(messageType, messageLevel);
+    auto type = "console"_s;
+
+    // FIXME Get browsing context handle and source info
+    // https://bugs.webkit.org/show_bug.cgi?id=282981
+    m_domainNotifier->logEntryAdded(level, sourceString, messageText, timestamp.secondsSinceEpoch().milliseconds(), type, method);
 }
 
 #if !PLATFORM(COCOA) && !USE(CAIRO) && !USE(SKIA)

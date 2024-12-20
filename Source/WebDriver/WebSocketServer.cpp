@@ -159,9 +159,6 @@ void WebSocketServer::removeResourceForSession(const String& sessionId)
 
 WebSocketMessageHandler::Message WebSocketMessageHandler::Message::fail(CommandResult::ErrorCode errorCode, std::optional<Connection> connection, std::optional<String> errorMessage, std::optional<int> commandId)
 {
-    if (!connection)
-        return { };
-
     auto reply = JSON::Object::create();
 
     if (commandId)
@@ -172,7 +169,7 @@ WebSocketMessageHandler::Message WebSocketMessageHandler::Message::fail(CommandR
 
     reply->setInteger("error"_s, CommandResult::errorCodeToHTTPStatusCode(errorCode));
 
-    return { *connection, reply->toJSONString().utf8() };
+    return { (connection ? (*connection) : nullptr), reply->toJSONString().utf8() };
 }
 
 WebSocketMessageHandler::Message WebSocketMessageHandler::Message::reply(const String& type, unsigned id, Ref<JSON::Value>&& result)

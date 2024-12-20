@@ -85,6 +85,10 @@
 #include "WebGLRenderingContext.h"
 #endif
 
+#if ENABLE(WEBDRIVER_BIDI)
+#include "AutomationInstrumentation.h"
+#endif
+
 namespace WebCore {
 using namespace Inspector;
 
@@ -155,6 +159,9 @@ void PageConsoleClient::addMessage(std::unique_ptr<Inspector::ConsoleMessage>&& 
             logMessageToSystemConsole(*consoleMessage);
     }
 
+#if ENABLE(WEBDRIVER_BIDI)
+    AutomationInstrumentation::addMessageToConsole(consoleMessage);
+#endif
     InspectorInstrumentation::addMessageToConsole(page, WTFMove(consoleMessage));
 }
 
@@ -205,6 +212,9 @@ void PageConsoleClient::messageWithTypeAndLevel(MessageType type, MessageLevel l
     unsigned lineNumber = message->line();
     unsigned columnNumber = message->column();
 
+#if ENABLE(WEBDRIVER_BIDI)
+    AutomationInstrumentation::addMessageToConsole(message);
+#endif
     Ref page = m_page.get();
     InspectorInstrumentation::addMessageToConsole(page, WTFMove(message));
 

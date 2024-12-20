@@ -29,6 +29,7 @@
 #include "AutomationProtocolObjects.h"
 #include "CoordinateSystem.h"
 #include "WebAutomationDOMWindowObserver.h"
+#include "WebAutomationSessionMessages.h"
 #include "WebAutomationSessionProxyMessages.h"
 #include "WebAutomationSessionProxyScriptSource.h"
 #include "WebFrame.h"
@@ -36,6 +37,7 @@
 #include "WebPage.h"
 #include "WebProcess.h"
 #include <JavaScriptCore/APICast.h>
+#include <JavaScriptCore/ConsoleMessage.h>
 #include <JavaScriptCore/Exception.h>
 #include <JavaScriptCore/JSObject.h>
 #include <JavaScriptCore/JSStringRefPrivate.h>
@@ -67,6 +69,10 @@
 
 #if ENABLE(DATALIST_ELEMENT)
 #include <WebCore/HTMLDataListElement.h>
+#endif
+
+#if ENABLE(WEBDRIVER_BIDI)
+#include <WebCore/AutomationInstrumentation.h>
 #endif
 
 namespace WebKit {
@@ -123,6 +129,9 @@ WebAutomationSessionProxy::WebAutomationSessionProxy(const String& sessionIdenti
     , m_scriptObjectIdentifier(JSC::PrivateName::Description, "automationSessionProxy"_s)
 {
     WebProcess::singleton().addMessageReceiver(Messages::WebAutomationSessionProxy::messageReceiverName(), *this);
+#if ENABLE(WEBDRIVER_BIDI)
+    AutomationInstrumentation::setClient(*this);
+#endif
 }
 
 WebAutomationSessionProxy::~WebAutomationSessionProxy()
@@ -130,6 +139,9 @@ WebAutomationSessionProxy::~WebAutomationSessionProxy()
     m_frameObservers.clear();
 
     WebProcess::singleton().removeMessageReceiver(Messages::WebAutomationSessionProxy::messageReceiverName());
+#if ENABLE(WEBDRIVER_BIDI)
+    AutomationInstrumentation::clearClient();
+#endif
 }
 
 static bool isValidNodeHandle(const String& nodeHandle)
@@ -1064,5 +1076,12 @@ void WebAutomationSessionProxy::deleteCookie(WebCore::PageIdentifier pageID, std
         completionHandler(std::nullopt);
     });
 }
+
+#if ENABLE(WEBDRIVER_BIDI)
+void WebAutomationSessionProxy::addMessageToConsole(const JSC::MessageSource& source, const JSC::MessageLevel& level, const String& messageText, const JSC::MessageType& type, const WallTime& timestamp)
+{
+    WebProcess::singleton().parentProcessConnection()->send(Messages::WebAutomationSession::LogEntryAdded(source, level, messageText, type, timestamp), 0);
+}
+#endif
 
 } // namespace WebKit

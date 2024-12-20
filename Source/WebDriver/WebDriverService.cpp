@@ -272,6 +272,8 @@ const WebDriverService::Command WebDriverService::s_commands[] = {
 #if ENABLE(WEBDRIVER_BIDI)
 const WebDriverService::BidiCommand WebDriverService::s_bidiCommands[] = {
     { "session.status"_s, &WebDriverService::bidiSessionStatus },
+    { "session.subscribe"_s, &WebDriverService::bidiSessionSubscribe },
+    { "session.unsubscribe"_s, &WebDriverService::bidiSessionUnsubscribe },
 };
 #endif
 
@@ -2687,6 +2689,48 @@ void WebDriverService::bidiSessionStatus(unsigned id, RefPtr<JSON::Object>&&, Fu
         result->setString("message"_s, "Maximum number of sessions created"_s);
 
     completionHandler(WebSocketMessageHandler::Message::reply("success"_s, id, WTFMove(result)));
+}
+
+void WebDriverService::bidiSessionSubscribe(unsigned id, RefPtr<JSON::Object>&&parameters, Function<void(WebSocketMessageHandler::Message&&)>&& completionHandler)
+{
+    // https://w3c.github.io/webdriver-bidi/#command-session-subscribe
+    auto eventNames = parameters->getArray("events"_s);
+
+    if (!eventNames) {
+        completionHandler(WebSocketMessageHandler::Message::fail(CommandResult::ErrorCode::InvalidArgument, std::nullopt));
+        return;
+    }
+
+    // FIXME: Support event priorities.
+    // https://bugs.webkit.org/show_bug.cgi?id=282436
+    // FIXME: Support by-context subscriptions.
+    // https://bugs.webkit.org/show_bug.cgi?id=282981
+    for (auto& eventName : *eventNames) {
+        auto event = eventName->asString();
+        m_session->enableGlobalEvent(event);
+    }
+
+    completionHandler(WebSocketMessageHandler::Message::reply("success"_s, id, JSON::Value::null()));
+}
+
+void WebDriverService::bidiSessionUnsubscribe(unsigned id, RefPtr<JSON::Object>&&parameters, Function<void(WebSocketMessageHandler::Message&&)>&& completionHandler)
+{
+    // https://w3c.github.io/webdriver-bidi/#command-session-unsubscribe
+    auto eventNames = parameters->getArray("events"_s);
+
+    if (!eventNames) {
+        completionHandler(WebSocketMessageHandler::Message::fail(CommandResult::ErrorCode::InvalidArgument, std::nullopt));
+        return;
+    }
+
+    // FIXME: Support by-context unsubscriptions.
+    // https://bugs.webkit.org/show_bug.cgi?id=282981
+    for (auto& eventName : *eventNames) {
+        auto event = eventName->asString();
+        m_session->disableGlobalEvent(event);
+    }
+
+    completionHandler(WebSocketMessageHandler::Message::reply("success"_s, id, JSON::Value::null()));
 }
 
 void WebDriverService::clientDisconnected(const WebSocketMessageHandler::Connection& connection)

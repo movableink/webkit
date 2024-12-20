@@ -620,6 +620,7 @@ animation/ViewTimeline.cpp
 animation/WebAnimation.cpp
 animation/WebAnimationTime.cpp
 animation/WebAnimationUtilities.cpp
+automation/AutomationInstrumentation.cpp
 bindings/js/BindingsJSTZoneImpls.cpp
 bindings/js/CachedModuleScriptLoader.cpp
 bindings/js/CachedScriptFetcher.cpp
