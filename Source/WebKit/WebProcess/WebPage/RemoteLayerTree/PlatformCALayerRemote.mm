@@ -50,6 +50,10 @@
 #import <WebCore/AcceleratedEffectValues.h>
 #endif
 
+#if ENABLE(MODEL_PROCESS)
+#import <WebCore/ModelContext.h>
+#endif
+
 namespace WebKit {
 using namespace WebCore;
 
@@ -72,10 +76,12 @@ Ref<PlatformCALayerRemote> PlatformCALayerRemote::create(PlatformLayer *platform
     return PlatformCALayerRemoteCustom::create(platformLayer, owner, context);
 }
 
-Ref<PlatformCALayerRemote> PlatformCALayerRemote::create(LayerHostingContextID contextID, WebCore::PlatformCALayerClient* owner, RemoteLayerTreeContext& context)
+#if ENABLE(MODEL_PROCESS)
+Ref<PlatformCALayerRemote> PlatformCALayerRemote::create(Ref<WebCore::ModelContext> modelContext, WebCore::PlatformCALayerClient* owner, RemoteLayerTreeContext& context)
 {
-    return PlatformCALayerRemoteCustom::create(contextID, owner, context);
+    return PlatformCALayerRemoteCustom::create(modelContext, owner, context);
 }
+#endif
 
 #if ENABLE(MODEL_ELEMENT)
 Ref<PlatformCALayerRemote> PlatformCALayerRemote::create(Ref<WebCore::Model> model, WebCore::PlatformCALayerClient* owner, RemoteLayerTreeContext& context)

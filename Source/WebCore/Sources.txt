@@ -2522,6 +2522,7 @@ platform/graphics/MediaPlayerPrivate.cpp
 platform/graphics/MediaResourceSniffer.cpp
 platform/graphics/MediaSourcePrivate.cpp
 platform/graphics/Model.cpp
+platform/graphics/ModelContext.cpp
 platform/graphics/NamedImageGeneratedImage.cpp
 platform/graphics/NullImageBufferBackend.cpp
 platform/graphics/NativeImage.cpp

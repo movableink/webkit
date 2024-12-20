@@ -68,6 +68,10 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
 
+#if ENABLE(MODEL_PROCESS)
+#include "ModelContext.h"
+#endif
+
 namespace WebCore {
 
 using namespace HTMLNames;
@@ -373,20 +377,34 @@ void HTMLModelElement::didFailLoading(ModelPlayer& modelPlayer, const ResourceEr
         m_readyPromise->reject(Exception { ExceptionCode::AbortError });
 }
 
-std::optional<PlatformLayerIdentifier> HTMLModelElement::platformLayerID()
+RefPtr<GraphicsLayer> HTMLModelElement::graphicsLayer() const
 {
     auto* page = document().page();
     if (!page)
-        return std::nullopt;
+        return nullptr;
 
     auto* renderLayerModelObject = dynamicDowncast<RenderLayerModelObject>(this->renderer());
     if (!renderLayerModelObject)
+        return nullptr;
+
+    if (!renderLayerModelObject->isComposited())
+        return nullptr;
+
+    return renderLayerModelObject->layer()->backing()->graphicsLayer();
+}
+
+std::optional<PlatformLayerIdentifier> HTMLModelElement::layerID() const
+{
+    auto graphicsLayer = this->graphicsLayer();
+    if (!graphicsLayer)
         return std::nullopt;
 
-    if (!renderLayerModelObject->isComposited() || !renderLayerModelObject->layer() || !renderLayerModelObject->layer()->backing())
-        return std::nullopt;
+    return graphicsLayer->primaryLayerID();
+}
 
-    RefPtr graphicsLayer = renderLayerModelObject->layer()->backing()->graphicsLayer();
+std::optional<PlatformLayerIdentifier> HTMLModelElement::modelContentsLayerID() const
+{
+    auto graphicsLayer = this->graphicsLayer();
     if (!graphicsLayer)
         return std::nullopt;
 
@@ -402,6 +420,19 @@ void HTMLModelElement::applyBackgroundColor(Color color)
 }
 
 #if ENABLE(MODEL_PROCESS)
+RefPtr<ModelContext> HTMLModelElement::modelContext() const
+{
+    auto modelLayerIdentifier = layerID();
+    if (!modelLayerIdentifier)
+        return nullptr;
+
+    auto modelContentsLayerHostingContextIdentifier = layerHostingContextIdentifier();
+    if (!modelContentsLayerHostingContextIdentifier)
+        return nullptr;
+
+    return ModelContext::create(*modelLayerIdentifier, *modelContentsLayerHostingContextIdentifier).ptr();
+}
+
 const DOMMatrixReadOnly& HTMLModelElement::entityTransform() const
 {
     return m_entityTransform.get();

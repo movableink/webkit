@@ -40,6 +40,9 @@ class LayerPool;
 class AcceleratedEffect;
 struct AcceleratedEffectValues;
 #endif
+#if ENABLE(MODEL_PROCESS)
+class ModelContext;
+#endif
 }
 
 namespace WebKit {
@@ -57,7 +60,9 @@ class PlatformCALayerRemote : public WebCore::PlatformCALayer, public CanMakeWea
 public:
     static Ref<PlatformCALayerRemote> create(WebCore::PlatformCALayer::LayerType, WebCore::PlatformCALayerClient*, RemoteLayerTreeContext&);
     static Ref<PlatformCALayerRemote> create(PlatformLayer *, WebCore::PlatformCALayerClient*, RemoteLayerTreeContext&);
-    static Ref<PlatformCALayerRemote> create(LayerHostingContextID, WebCore::PlatformCALayerClient* owner, RemoteLayerTreeContext&);
+#if ENABLE(MODEL_PROCESS)
+    static Ref<PlatformCALayerRemote> create(Ref<WebCore::ModelContext>, WebCore::PlatformCALayerClient* owner, RemoteLayerTreeContext&);
+#endif
 #if ENABLE(MODEL_ELEMENT)
     static Ref<PlatformCALayerRemote> create(Ref<WebCore::Model>, WebCore::PlatformCALayerClient*, RemoteLayerTreeContext&);
 #endif

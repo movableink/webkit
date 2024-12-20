@@ -79,6 +79,10 @@
 #include "AcceleratedEffectStack.h"
 #endif
 
+#if ENABLE(MODEL_PROCESS)
+#include "ModelContext.h"
+#endif
+
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(GraphicsLayerCA);
@@ -344,11 +348,13 @@ Ref<PlatformCALayer> GraphicsLayerCA::createPlatformCALayer(PlatformLayer* platf
     return PlatformCALayerCocoa::create(platformLayer, owner);
 }
 
-Ref<PlatformCALayer> GraphicsLayerCA::createPlatformCALayer(LayerHostingContextIdentifier, PlatformCALayerClient* owner)
+#if ENABLE(MODEL_PROCESS)
+Ref<PlatformCALayer> GraphicsLayerCA::createPlatformCALayer(Ref<ModelContext>, PlatformCALayerClient* owner)
 {
     ASSERT_NOT_REACHED_WITH_MESSAGE("GraphicsLayerCARemote::createPlatformCALayer should always be called instead of this, but this symbol is needed to compile WebKitLegacy.");
     return GraphicsLayerCA::createPlatformCALayer(PlatformCALayer::LayerType::LayerTypeLayer, owner);
 }
+#endif
 
 #if ENABLE(MODEL_ELEMENT)
 Ref<PlatformCALayer> GraphicsLayerCA::createPlatformCALayer(Ref<WebCore::Model>, PlatformCALayerClient* owner)
@@ -1371,17 +1377,19 @@ void GraphicsLayerCA::setContentsToPlatformLayerHost(LayerHostingContextIdentifi
     noteLayerPropertyChanged(ContentsPlatformLayerChanged);
 }
 
-void GraphicsLayerCA::setContentsToRemotePlatformContext(LayerHostingContextIdentifier identifier, ContentsLayerPurpose purpose)
+#if ENABLE(MODEL_PROCESS)
+void GraphicsLayerCA::setContentsToModelContext(Ref<ModelContext> modelContext, ContentsLayerPurpose purpose)
 {
-    if (m_contentsLayer && m_contentsLayer->hostingContextIdentifier() == identifier)
+    if (m_contentsLayer && m_contentsLayer->hostingContextIdentifier() == modelContext->modelContentsLayerHostingContextIdentifier())
         return;
 
-    m_contentsLayer = createPlatformCALayer(identifier, this);
+    m_contentsLayer = createPlatformCALayer(modelContext, this);
     m_contentsLayerPurpose = purpose;
     m_contentsDisplayDelegate = nullptr;
     noteSublayersChanged();
     noteLayerPropertyChanged(ContentsPlatformLayerChanged);
 }
+#endif
 
 void GraphicsLayerCA::setContentsToVideoElement(HTMLVideoElement& videoElement, ContentsLayerPurpose purpose)
 {

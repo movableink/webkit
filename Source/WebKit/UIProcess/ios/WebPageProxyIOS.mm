@@ -1748,6 +1748,13 @@ void WebPageProxy::isPotentialTapInProgress(CompletionHandler<void(bool)>&& comp
 
 #endif // PLATFORM(IOS_FAMILY)
 
+#if PLATFORM(IOS_FAMILY) && ENABLE(MODEL_PROCESS)
+RefPtr<ModelPresentationManagerProxy> WebPageProxy::modelPresentationManagerProxy() const
+{
+    return internals().modelPresentationManagerProxy;
+}
+#endif
+
 } // namespace WebKit
 
 #undef WEBPAGEPROXY_RELEASE_LOG

@@ -47,6 +47,7 @@ namespace WebCore {
 class DOMMatrixReadOnly;
 class DOMPointReadOnly;
 class Event;
+class GraphicsLayer;
 class LayoutSize;
 class Model;
 class ModelPlayer;
@@ -57,6 +58,7 @@ template<typename IDLType> class DOMPromiseProxyWithResolveCallback;
 
 #if ENABLE(MODEL_PROCESS)
 template<typename IDLType> class DOMPromiseProxy;
+class ModelContext;
 #endif
 
 class HTMLModelElement final : public HTMLElement, private CachedRawResourceClient, public ModelPlayerClient, public ActiveDOMObject {
@@ -91,6 +93,8 @@ public:
     void applyBackgroundColor(Color);
 
 #if ENABLE(MODEL_PROCESS)
+    RefPtr<ModelContext> modelContext() const;
+
     const DOMMatrixReadOnly& entityTransform() const;
     ExceptionOr<void> setEntityTransform(const DOMMatrixReadOnly&);
 
@@ -167,6 +171,9 @@ private:
     void createModelPlayer();
     void deleteModelPlayer();
 
+    RefPtr<GraphicsLayer> graphicsLayer() const;
+    std::optional<PlatformLayerIdentifier> layerID() const;
+
     HTMLModelElement& readyPromiseResolve();
 
     // ActiveDOMObject.
@@ -199,7 +206,7 @@ private:
     void didUpdateBoundingBox(ModelPlayer&, const FloatPoint3D&, const FloatPoint3D&) final;
     void didFinishEnvironmentMapLoading(bool succeeded) final;
 #endif
-    std::optional<PlatformLayerIdentifier> platformLayerID() final;
+    std::optional<PlatformLayerIdentifier> modelContentsLayerID() const final;
 
     void defaultEventHandler(Event&) final;
     void dragDidStart(MouseEvent&);

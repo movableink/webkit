@@ -83,6 +83,10 @@ class TransformationMatrix;
 
 typedef unsigned TileCoverage;
 
+#if ENABLE(MODEL_PROCESS)
+class ModelContext;
+#endif
+
 #if ENABLE(THREADED_ANIMATION_RESOLUTION)
 struct AcceleratedEffectValues;
 String acceleratedEffectPropertyIDAsString(AcceleratedEffectProperty);
@@ -569,7 +573,9 @@ public:
     virtual void setContentsToSolidColor(const Color&) { }
     virtual void setContentsToPlatformLayer(PlatformLayer*, ContentsLayerPurpose) { }
     virtual void setContentsToPlatformLayerHost(LayerHostingContextIdentifier) { }
-    virtual void setContentsToRemotePlatformContext(LayerHostingContextIdentifier, ContentsLayerPurpose) { }
+#if ENABLE(MODEL_PROCESS)
+    virtual void setContentsToModelContext(Ref<ModelContext>, ContentsLayerPurpose) { }
+#endif
     virtual void setContentsToVideoElement(HTMLVideoElement&, ContentsLayerPurpose) { }
     virtual void setContentsDisplayDelegate(RefPtr<GraphicsLayerContentsDisplayDelegate>&&, ContentsLayerPurpose);
     WEBCORE_EXPORT virtual RefPtr<GraphicsLayerAsyncContentsDisplayDelegate> createAsyncContentsDisplayDelegate(GraphicsLayerAsyncContentsDisplayDelegate* existing);

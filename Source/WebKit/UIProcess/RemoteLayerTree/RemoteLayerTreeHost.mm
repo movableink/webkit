@@ -47,12 +47,16 @@
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
 #import <wtf/TZoneMallocInlines.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
-#import <pal/cocoa/CoreMaterialSoftLink.h>
-#import <pal/cocoa/QuartzCoreSoftLink.h>
 
 #if PLATFORM(IOS_FAMILY)
 #import <UIKit/UIView.h>
+#if ENABLE(MODEL_PROCESS)
+#import "ModelPresentationManagerProxy.h"
 #endif
+#endif
+
+#import <pal/cocoa/CoreMaterialSoftLink.h>
+#import <pal/cocoa/QuartzCoreSoftLink.h>
 
 namespace WebKit {
 using namespace WebCore;
@@ -302,6 +306,14 @@ void RemoteLayerTreeHost::layerWillBeRemoved(WebCore::ProcessIdentifier processI
         if (auto videoManager = m_drawingArea->page() ? m_drawingArea->page()->videoPresentationManager() : nullptr)
             videoManager->willRemoveLayerForID(videoLayerIter->value);
         m_videoLayers.remove(videoLayerIter);
+    }
+#endif
+
+#if PLATFORM(IOS_FAMILY) && ENABLE(MODEL_PROCESS)
+    if (m_modelLayers.contains(layerID)) {
+        if (auto modelPresentationManager = m_drawingArea->page() ? m_drawingArea->page()->modelPresentationManagerProxy() : nullptr)
+            modelPresentationManager->invalidateModel(layerID);
+        m_modelLayers.remove(layerID);
     }
 #endif
 }

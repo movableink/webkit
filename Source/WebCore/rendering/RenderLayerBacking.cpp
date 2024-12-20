@@ -110,6 +110,10 @@
 #include <wtf/WeakListHashSet.h>
 #endif
 
+#if ENABLE(MODEL_PROCESS)
+#include "ModelContext.h"
+#endif
+
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderLayerBacking);
@@ -1233,8 +1237,8 @@ bool RenderLayerBacking::updateConfiguration(const RenderLayer* compositingAnces
         if (element->usesPlatformLayer())
             m_graphicsLayer->setContentsToPlatformLayer(element->platformLayer(), GraphicsLayer::ContentsLayerPurpose::Model);
 #if ENABLE(MODEL_PROCESS)
-        else if (auto contextID = element->layerHostingContextIdentifier(); contextID && element->document().settings().modelProcessEnabled()) {
-            m_graphicsLayer->setContentsToRemotePlatformContext(contextID.value(), GraphicsLayer::ContentsLayerPurpose::HostedModel);
+        else if (auto modelContext = element->modelContext(); modelContext && element->document().settings().modelProcessEnabled()) {
+            m_graphicsLayer->setContentsToModelContext(*modelContext, GraphicsLayer::ContentsLayerPurpose::HostedModel);
             element->applyBackgroundColor(rendererBackgroundColor());
         }
 #endif

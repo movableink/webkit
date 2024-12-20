@@ -5800,6 +5800,10 @@
 		52B060F82B745E00009B1666 /* CoreIPCCVPixelBufferRef.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = CoreIPCCVPixelBufferRef.mm; sourceTree = "<group>"; };
 		52C05BA72874996C00D80C59 /* MockCcidService.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MockCcidService.h; sourceTree = "<group>"; };
 		52C05BA82874996C00D80C59 /* MockCcidService.mm */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; path = MockCcidService.mm; sourceTree = "<group>"; };
+		52C25B422D0C12F700A26AB8 /* ModelPresentationManagerProxy.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ModelPresentationManagerProxy.h; sourceTree = "<group>"; };
+		52C25B432D0C12F700A26AB8 /* ModelPresentationManagerProxy.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ModelPresentationManagerProxy.mm; sourceTree = "<group>"; };
+		52C25B442D0C1B9100A26AB8 /* WKPageHostedModelView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = WKPageHostedModelView.h; path = ios/WKPageHostedModelView.h; sourceTree = "<group>"; };
+		52C25B452D0C1B9100A26AB8 /* WKPageHostedModelView.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = WKPageHostedModelView.mm; path = ios/WKPageHostedModelView.mm; sourceTree = "<group>"; };
 		52C3C26428651F860005BE6E /* WKBrowsingContextHandlePrivate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WKBrowsingContextHandlePrivate.h; sourceTree = "<group>"; };
 		52CDC5BD2731DA0C00A3E3EB /* VirtualAuthenticatorConfiguration.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = VirtualAuthenticatorConfiguration.h; sourceTree = "<group>"; };
 		52CDC5BE2731DA0C00A3E3EB /* VirtualService.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = VirtualService.mm; sourceTree = "<group>"; };
@@ -11119,6 +11123,8 @@
 		2DA8153428A4939700CF811C /* Model */ = {
 			isa = PBXGroup;
 			children = (
+				52C25B422D0C12F700A26AB8 /* ModelPresentationManagerProxy.h */,
+				52C25B432D0C12F700A26AB8 /* ModelPresentationManagerProxy.mm */,
 				2DA8153628A4939700CF811C /* ModelProcessProxy.cpp */,
 				2DA8153528A4939700CF811C /* ModelProcessProxy.h */,
 				2DA8153728A4939700CF811C /* ModelProcessProxy.messages.in */,
@@ -11243,6 +11249,8 @@
 				950F287F252414EA00B74F1C /* WKMouseDeviceObserver.mm */,
 				F4C627E62A7AC17400F546BF /* WKMouseInteraction.h */,
 				F4C627E52A7AC17300F546BF /* WKMouseInteraction.mm */,
+				52C25B442D0C1B9100A26AB8 /* WKPageHostedModelView.h */,
+				52C25B452D0C1B9100A26AB8 /* WKPageHostedModelView.mm */,
 				A15EEDE41E301CEE000069B0 /* WKPasswordView.h */,
 				A15EEDE31E301CEE000069B0 /* WKPasswordView.mm */,
 				A1046E9F2079263100F0C5D8 /* WKPDFView.h */,

@@ -95,6 +95,10 @@
 #include "CocoaWindow.h"
 #endif
 
+#if PLATFORM(IOS_FAMILY) && ENABLE(MODEL_PROCESS)
+#include "ModelPresentationManagerProxy.h"
+#endif
+
 namespace WebKit {
 
 #if ENABLE(WINDOW_PROXY_PROPERTY_ACCESS_NOTIFICATION)
@@ -448,6 +452,10 @@ public:
 
 #if PLATFORM(MAC)
     WebCore::FloatPoint scrollPositionDuringLastEditorStateUpdate;
+#endif
+
+#if PLATFORM(IOS_FAMILY) && ENABLE(MODEL_PROCESS)
+    RefPtr<ModelPresentationManagerProxy> modelPresentationManagerProxy;
 #endif
 
     bool allowsLayoutViewportHeightExpansion { true };

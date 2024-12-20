@@ -498,6 +498,10 @@ class WebWheelEvent;
 class WebWheelEventCoalescer;
 class WebsiteDataStore;
 
+#if PLATFORM(IOS_FAMILY) && ENABLE(MODEL_PROCESS)
+class ModelPresentationManagerProxy;
+#endif
+
 struct AppPrivacyReportTestingData;
 struct DataDetectionResult;
 struct DocumentEditingContext;
@@ -2630,6 +2634,10 @@ public:
 #if HAVE(AUDIT_TOKEN)
     const std::optional<audit_token_t>& presentingApplicationAuditToken() const;
     void setPresentingApplicationAuditToken(const audit_token_t&);
+#endif
+
+#if PLATFORM(IOS_FAMILY) && ENABLE(MODEL_PROCESS)
+    RefPtr<ModelPresentationManagerProxy> modelPresentationManagerProxy() const;
 #endif
 
 private:

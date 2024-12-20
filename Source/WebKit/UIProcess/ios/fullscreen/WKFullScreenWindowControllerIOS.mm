@@ -50,6 +50,7 @@
 #import <WebCore/IntRect.h>
 #import <WebCore/LocalizedStrings.h>
 #import <WebCore/VideoPresentationInterfaceAVKitLegacy.h>
+#import <WebCore/VideoPresentationInterfaceTVOS.h>
 #import <WebCore/VideoPresentationModel.h>
 #import <WebCore/ViewportArguments.h>
 #import <objc/runtime.h>

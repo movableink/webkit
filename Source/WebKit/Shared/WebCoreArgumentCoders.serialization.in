@@ -7017,6 +7017,13 @@ struct WebCore::CookieChangeSubscription {
     URL url()
 }
 
+#if ENABLE(MODEL_PROCESS)
+[RefCounted] class WebCore::ModelContext {
+    WebCore::PlatformLayerIdentifier modelLayerIdentifier()
+    WebCore::LayerHostingContextIdentifier modelContentsLayerHostingContextIdentifier()
+};
+#endif
+
 #if PLATFORM(IOS_FAMILY)
 [Nested] enum class WebCore::InspectorOverlayLabel::Arrow::Direction : uint8_t {
     None,

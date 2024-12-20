@@ -42,6 +42,11 @@
 #import "WKModelView.h"
 #endif
 
+#if ENABLE(MODEL_PROCESS)
+#import "ModelPresentationManagerProxy.h"
+#import "WKPageHostedModelView.h"
+#endif
+
 namespace WebKit {
 using namespace WebCore;
 
@@ -92,6 +97,17 @@ RefPtr<RemoteLayerTreeNode> RemoteLayerTreeHost::makeNode(const RemoteLayerTreeT
 
         if (!m_drawingArea->page())
             return nullptr;
+
+#if ENABLE(MODEL_PROCESS)
+        if (auto modelContext = properties.modelContext()) {
+            if (auto modelPresentationManager = m_drawingArea->page() ? m_drawingArea->page()->modelPresentationManagerProxy() : nullptr) {
+                if (auto view = modelPresentationManager->setUpModelView(*modelContext)) {
+                    m_modelLayers.add(modelContext->modelLayerIdentifier());
+                    return makeWithView(WTFMove(view));
+                }
+            }
+        }
+#endif
 
         auto view = adoptNS([[WKUIRemoteView alloc] initWithFrame:CGRectZero pid:m_drawingArea->page()->legacyMainFrameProcessID() contextID:properties.hostingContextID()]);
         return makeWithView(WTFMove(view));
