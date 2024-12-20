@@ -103,8 +103,6 @@
 #include "ContentChangeObserver.h"
 #endif
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Node);
@@ -1816,7 +1814,7 @@ ExceptionOr<void> Node::setTextContent(String&& text)
 static SHA1::Digest hashPointer(const void* pointer)
 {
     SHA1 sha1;
-    sha1.addBytes(std::span { reinterpret_cast<const uint8_t*>(&pointer), sizeof(pointer) });
+    sha1.addBytes(asByteSpan(pointer));
     SHA1::Digest digest;
     sha1.computeHash(digest);
     return digest;
@@ -3104,8 +3102,6 @@ TextStream& operator<<(TextStream& ts, const Node& node)
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #if ENABLE(TREE_DEBUGGING)
 
