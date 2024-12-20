@@ -484,6 +484,8 @@ public:
     AudioSessionRoutingArbitrator* audioSessionRoutingArbitrator() const { return m_routingArbitrator.get(); }
 #endif
 
+    bool mediaPlaybackEnabled() const { return m_mediaPlaybackEnabled; }
+
 private:
     WebProcess();
     ~WebProcess();
@@ -891,6 +893,7 @@ private:
     HashMap<WebTransportSessionIdentifier, WeakPtr<WebTransportSession>> m_webTransportSessions;
     HashSet<WebCore::RegistrableDomain> m_domainsWithStorageAccessQuirks;
     std::unique_ptr<ScriptTelemetryFilter> m_scriptTelemetryFilter;
+    bool m_mediaPlaybackEnabled { false };
 };
 
 } // namespace WebKit

@@ -2457,6 +2457,8 @@ bool WebProcess::requiresScriptTelemetryForURL(const URL& url, const WebCore::Se
 
 void WebProcess::enableMediaPlayback()
 {
+    m_mediaPlaybackEnabled = true;
+
 #if USE(AUDIO_SESSION)
     if (!WebCore::AudioSession::enableMediaPlayback())
         return;
