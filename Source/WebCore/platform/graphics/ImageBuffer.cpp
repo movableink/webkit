@@ -557,10 +557,10 @@ void ImageBuffer::putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& 
     backend->putPixelBuffer(pixelBuffer, sourceRectScaled, destinationPointScaled, destinationFormat);
 }
 
-RefPtr<SharedBuffer> ImageBuffer::sinkToPDFDocument()
+RefPtr<SharedBuffer> ImageBuffer::sinkIntoPDFDocument()
 {
     if (auto* backend = ensureBackend())
-        return backend->sinkToPDFDocument();
+        return backend->sinkIntoPDFDocument();
     return nullptr;
 }
 

@@ -34,6 +34,7 @@
 #include "WebPage.h"
 #include "WebProcess.h"
 #include <WebCore/LayerHostingContextIdentifier.h>
+#include <WebCore/Page.h>
 #include <WebCore/TransformationMatrix.h>
 
 namespace WebKit {

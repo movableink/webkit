@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2022 Apple Inc.  All rights reserved.
+ * Copyright (C) 2020-2024 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 
 #include "GPUConnectionToWebProcessMessages.h"
 #include "IPCEvent.h"
+#include "ImageBufferRemotePDFDocumentBackend.h"
 #include "ImageBufferShareableBitmapBackend.h"
 #include "Logging.h"
 #include "RemoteImageBufferMessages.h"
@@ -146,23 +147,37 @@ void RemoteImageBufferProxy::didCreateBackend(std::optional<ImageBufferBackendHa
     // This should match RemoteImageBufferProxy::create<>() call site and RemoteImageBuffer::create<>() call site.
     // FIXME: this will be removed and backend be constructed in the contructor.
     std::unique_ptr<ImageBufferBackend> backend;
-    if (backendHandle) {
-        auto backendParameters = this->backendParameters(parameters());
+    auto backendParameters = this->backendParameters(parameters());
+
+    switch (renderingMode()) {
+    case RenderingMode::Accelerated:
 #if HAVE(IOSURFACE)
-        if (std::holds_alternative<MachSendRight>(*backendHandle)) {
+        if (backendHandle && std::holds_alternative<MachSendRight>(*backendHandle)) {
             if (RemoteRenderingBackendProxy::canMapRemoteImageBufferBackendBackingStore())
                 backend = ImageBufferShareableMappedIOSurfaceBackend::create(backendParameters, WTFMove(*backendHandle));
             else
                 backend = ImageBufferRemoteIOSurfaceBackend::create(backendParameters, WTFMove(*backendHandle));
         }
 #endif
-        if (std::holds_alternative<ShareableBitmap::Handle>(*backendHandle)) {
+        [[fallthrough]];
+
+    case RenderingMode::Unaccelerated:
+        if (backendHandle && std::holds_alternative<ShareableBitmap::Handle>(*backendHandle)) {
             m_backendInfo = ImageBuffer::populateBackendInfo<ImageBufferShareableBitmapBackend>(backendParameters);
             auto handle = std::get<ShareableBitmap::Handle>(WTFMove(*backendHandle));
             handle.takeOwnershipOfMemory(MemoryLedger::Graphics);
             backend = ImageBufferShareableBitmapBackend::create(backendParameters, WTFMove(handle));
         }
+        break;
+
+    case RenderingMode::PDFDocument:
+        backend = ImageBufferRemotePDFDocumentBackend::create(backendParameters);
+        break;
+
+    case RenderingMode::DisplayList:
+        break;
     }
+
     if (!backend) {
         m_remoteDisplayList.disconnect();
         RefPtr remoteRenderingBackendProxy = m_remoteRenderingBackendProxy.get();

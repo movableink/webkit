@@ -5203,22 +5203,27 @@ void WebPage::drawToImage(WebCore::FrameIdentifier frameID, const PrintInfo& pri
     endPrinting();
 }
 
-void WebPage::drawToPDFiOS(WebCore::FrameIdentifier frameID, const PrintInfo& printInfo, size_t pageCount, CompletionHandler<void(RefPtr<SharedBuffer>&&)>&& reply)
+void WebPage::drawToPDFiOS(FrameIdentifier frameID, const PrintInfo& printInfo, size_t pageCount, CompletionHandler<void(RefPtr<SharedBuffer>&&)>&& reply)
 {
     if (printInfo.snapshotFirstPage) {
-        IntSize snapshotSize { FloatSize { printInfo.availablePaperWidth, printInfo.availablePaperHeight } };
-        IntRect snapshotRect { {0, 0}, snapshotSize };
-        auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
+        RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
         if (!localMainFrame)
             return;
-        auto& frameView = *localMainFrame->view();
-        auto originalLayoutViewportOverrideRect = frameView.layoutViewportOverrideRect();
-        frameView.setLayoutViewportOverrideRect(LayoutRect(snapshotRect));
 
-        auto buffer = pdfSnapshotAtSize(snapshotRect, snapshotSize, { });
+        auto snapshotRect = IntRect { FloatRect { { }, FloatSize { printInfo.availablePaperWidth, printInfo.availablePaperHeight } } };
 
-        frameView.setLayoutViewportOverrideRect(originalLayoutViewportOverrideRect);
-        reply(WTFMove(buffer));
+        RefPtr buffer = ImageBuffer::create(snapshotRect.size(), RenderingMode::PDFDocument, RenderingPurpose::Snapshot, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
+        if (!buffer)
+            return;
+
+        Ref frameView = *localMainFrame->view();
+        auto originalLayoutViewportOverrideRect = frameView->layoutViewportOverrideRect();
+        frameView->setLayoutViewportOverrideRect(LayoutRect(snapshotRect));
+
+        pdfSnapshotAtSize(*localMainFrame, buffer->context(), snapshotRect, { });
+
+        frameView->setLayoutViewportOverrideRect(originalLayoutViewportOverrideRect);
+        reply(buffer->sinkIntoPDFDocument());
         return;
     }
 
