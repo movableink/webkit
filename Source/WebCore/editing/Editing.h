@@ -161,6 +161,13 @@ VisiblePosition visiblePositionForIndexUsingCharacterIterator(Node&, int index);
 
 WEBCORE_EXPORT VisiblePosition closestEditablePositionInElementForAbsolutePoint(const Element&, const IntPoint&);
 
+enum class SelectionExtentMovement : uint8_t {
+    Closest,
+    Left,
+    Right,
+};
+void adjustVisibleExtentPreservingVisualContiguity(const VisiblePosition& base, VisiblePosition& extent, SelectionExtentMovement);
+
 // -------------------------------------------------------------------------
 // HTMLElement
 // -------------------------------------------------------------------------

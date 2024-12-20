@@ -937,13 +937,22 @@ VisiblePosition FrameSelection::nextWordPositionForPlatform(const VisiblePositio
     return positionAfterCurrentWord;
 }
 
-static void adjustPositionForUserSelectAll(VisiblePosition& pos, bool isForward)
+void FrameSelection::adjustSelectionExtentIfNeeded(VisiblePosition& extent, bool isForward, UserTriggered userTriggered)
 {
-    if (RefPtr rootUserSelectAll = Position::rootUserSelectAllForNode(pos.deepEquivalent().anchorNode()))
-        pos = isForward ? positionAfterNode(rootUserSelectAll.get()).downstream(CanCrossEditingBoundary) : positionBeforeNode(rootUserSelectAll.get()).upstream(CanCrossEditingBoundary);
+    if (userTriggered == UserTriggered::Yes) {
+#if PLATFORM(IOS_FAMILY)
+        if (RefPtr document = this->document()) {
+            if (document->protectedSettings()->visuallyContiguousBidiTextSelectionEnabled())
+                adjustVisibleExtentPreservingVisualContiguity(m_selection.base(), extent, isForward ? SelectionExtentMovement::Right : SelectionExtentMovement::Left);
+        }
+#endif
+    }
+
+    if (RefPtr rootUserSelectAll = Position::rootUserSelectAllForNode(extent.deepEquivalent().anchorNode()))
+        extent = isForward ? positionAfterNode(rootUserSelectAll.get()).downstream(CanCrossEditingBoundary) : positionBeforeNode(rootUserSelectAll.get()).upstream(CanCrossEditingBoundary);
 }
 
-VisiblePosition FrameSelection::modifyExtendingRight(TextGranularity granularity)
+VisiblePosition FrameSelection::modifyExtendingRight(TextGranularity granularity, UserTriggered userTriggered)
 {
     VisiblePosition pos(m_selection.extent(), m_selection.affinity());
 
@@ -967,9 +976,9 @@ VisiblePosition FrameSelection::modifyExtendingRight(TextGranularity granularity
         break;
     case TextGranularity::LineBoundary:
         if (directionOfEnclosingBlock() == TextDirection::LTR)
-            pos = modifyExtendingForward(granularity);
+            pos = modifyExtendingForward(granularity, userTriggered);
         else
-            pos = modifyExtendingBackward(granularity);
+            pos = modifyExtendingBackward(granularity, userTriggered);
         break;
     case TextGranularity::SentenceGranularity:
     case TextGranularity::LineGranularity:
@@ -978,17 +987,17 @@ VisiblePosition FrameSelection::modifyExtendingRight(TextGranularity granularity
     case TextGranularity::ParagraphBoundary:
     case TextGranularity::DocumentBoundary:
         // FIXME: implement all of the above?
-        pos = modifyExtendingForward(granularity);
+        pos = modifyExtendingForward(granularity, userTriggered);
         break;
     case TextGranularity::DocumentGranularity:
         ASSERT_NOT_REACHED();
         break;
     }
-    adjustPositionForUserSelectAll(pos, directionOfEnclosingBlock() == TextDirection::LTR);
+    adjustSelectionExtentIfNeeded(pos, directionOfEnclosingBlock() == TextDirection::LTR, userTriggered);
     return pos;
 }
 
-VisiblePosition FrameSelection::modifyExtendingForward(TextGranularity granularity)
+VisiblePosition FrameSelection::modifyExtendingForward(TextGranularity granularity, UserTriggered userTriggered)
 {
     VisiblePosition pos(m_selection.extent(), m_selection.affinity());
     switch (granularity) {
@@ -1027,7 +1036,7 @@ VisiblePosition FrameSelection::modifyExtendingForward(TextGranularity granulari
             pos = endOfDocument(pos);
         break;
     }
-    adjustPositionForUserSelectAll(pos, directionOfEnclosingBlock() == TextDirection::LTR);
+    adjustSelectionExtentIfNeeded(pos, directionOfEnclosingBlock() == TextDirection::LTR, userTriggered);
     return pos;
 }
 
@@ -1156,7 +1165,7 @@ VisiblePosition FrameSelection::modifyMovingForward(TextGranularity granularity,
     return pos;
 }
 
-VisiblePosition FrameSelection::modifyExtendingLeft(TextGranularity granularity)
+VisiblePosition FrameSelection::modifyExtendingLeft(TextGranularity granularity, UserTriggered userTriggered)
 {
     VisiblePosition pos(m_selection.extent(), m_selection.affinity());
 
@@ -1180,9 +1189,9 @@ VisiblePosition FrameSelection::modifyExtendingLeft(TextGranularity granularity)
         break;
     case TextGranularity::LineBoundary:
         if (directionOfEnclosingBlock() == TextDirection::LTR)
-            pos = modifyExtendingBackward(granularity);
+            pos = modifyExtendingBackward(granularity, userTriggered);
         else
-            pos = modifyExtendingForward(granularity);
+            pos = modifyExtendingForward(granularity, userTriggered);
         break;
     case TextGranularity::SentenceGranularity:
     case TextGranularity::LineGranularity:
@@ -1190,17 +1199,17 @@ VisiblePosition FrameSelection::modifyExtendingLeft(TextGranularity granularity)
     case TextGranularity::SentenceBoundary:
     case TextGranularity::ParagraphBoundary:
     case TextGranularity::DocumentBoundary:
-        pos = modifyExtendingBackward(granularity);
+        pos = modifyExtendingBackward(granularity, userTriggered);
         break;
     case TextGranularity::DocumentGranularity:
         ASSERT_NOT_REACHED();
         break;
     }
-    adjustPositionForUserSelectAll(pos, !(directionOfEnclosingBlock() == TextDirection::LTR));
+    adjustSelectionExtentIfNeeded(pos, directionOfEnclosingBlock() == TextDirection::RTL, userTriggered);
     return pos;
 }
        
-VisiblePosition FrameSelection::modifyExtendingBackward(TextGranularity granularity)
+VisiblePosition FrameSelection::modifyExtendingBackward(TextGranularity granularity, UserTriggered userTriggered)
 {
     VisiblePosition pos(m_selection.extent(), m_selection.affinity());
 
@@ -1244,7 +1253,7 @@ VisiblePosition FrameSelection::modifyExtendingBackward(TextGranularity granular
         ASSERT_NOT_REACHED();
         break;
     }
-    adjustPositionForUserSelectAll(pos, !(directionOfEnclosingBlock() == TextDirection::LTR));
+    adjustSelectionExtentIfNeeded(pos, directionOfEnclosingBlock() == TextDirection::RTL, userTriggered);
     return pos;
 }
 
@@ -1536,11 +1545,11 @@ bool FrameSelection::modify(Alteration alter, SelectionDirection direction, Text
         if (alter == Alteration::Move)
             position = modifyMovingRight(granularity, &reachedBoundary);
         else
-            position = modifyExtendingRight(granularity);
+            position = modifyExtendingRight(granularity, userTriggered);
         break;
     case SelectionDirection::Forward:
         if (alter == Alteration::Extend)
-            position = modifyExtendingForward(granularity);
+            position = modifyExtendingForward(granularity, userTriggered);
         else
             position = modifyMovingForward(granularity, &reachedBoundary);
         break;
@@ -1548,11 +1557,11 @@ bool FrameSelection::modify(Alteration alter, SelectionDirection direction, Text
         if (alter == Alteration::Move)
             position = modifyMovingLeft(granularity, &reachedBoundary);
         else
-            position = modifyExtendingLeft(granularity);
+            position = modifyExtendingLeft(granularity, userTriggered);
         break;
     case SelectionDirection::Backward:
         if (alter == Alteration::Extend)
-            position = modifyExtendingBackward(granularity);
+            position = modifyExtendingBackward(granularity, userTriggered);
         else
             position = modifyMovingBackward(granularity, &reachedBoundary);
         break;
@@ -2396,7 +2405,7 @@ void FrameSelection::updateAppearance()
     // Construct a new VisibleSolution, since m_selection is not necessarily valid, and the following steps
     // assume a valid selection. See <https://bugs.webkit.org/show_bug.cgi?id=69563> and <rdar://problem/10232866>.
 #if ENABLE(TEXT_CARET)
-    VisiblePosition endVisiblePosition = paintBlockCursor ? modifyExtendingForward(TextGranularity::CharacterGranularity) : oldSelection.visibleEnd();
+    VisiblePosition endVisiblePosition = paintBlockCursor ? modifyExtendingForward(TextGranularity::CharacterGranularity, UserTriggered::No) : oldSelection.visibleEnd();
     VisibleSelection selection(oldSelection.visibleStart(), endVisiblePosition);
 #else
     VisibleSelection selection(oldSelection.visibleStart(), oldSelection.visibleEnd());

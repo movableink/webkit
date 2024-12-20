@@ -230,6 +230,18 @@ IntRect RenderedPosition::absoluteRect(CaretRectMode caretRectMode) const
     return localRect == IntRect() ? IntRect() : m_renderer->localToAbsoluteQuad(FloatRect(localRect)).enclosingBoundingBox();
 }
 
+std::optional<BoundaryPoint> RenderedPosition::boundaryPoint() const
+{
+    if (!m_box)
+        return std::nullopt;
+
+    RefPtr node = m_box->renderer().node();
+    if (!node)
+        return std::nullopt;
+
+    return BoundaryPoint { *node, offset() };
+}
+
 bool renderObjectContainsPosition(const RenderObject* target, const Position& position)
 {
     for (auto* renderer = rendererFromPosition(position); renderer && renderer->node(); renderer = renderer->parent()) {

@@ -30,6 +30,7 @@
 
 #pragma once
 
+#include "BoundaryPoint.h"
 #include "CaretRectComputation.h"
 #include "InlineIteratorBox.h"
 #include "InlineIteratorLineBox.h"
@@ -72,6 +73,8 @@ public:
     Position positionAtRightBoundaryOfBiDiRun() const;
 
     IntRect absoluteRect(CaretRectMode = CaretRectMode::Normal) const;
+
+    std::optional<BoundaryPoint> boundaryPoint() const;
 
 private:
     bool operator==(const RenderedPosition&) const { return false; }

@@ -310,14 +310,16 @@ private:
     VisiblePosition endForPlatform() const;
     VisiblePosition nextWordPositionForPlatform(const VisiblePosition&);
 
-    VisiblePosition modifyExtendingRight(TextGranularity);
-    VisiblePosition modifyExtendingForward(TextGranularity);
+    VisiblePosition modifyExtendingRight(TextGranularity, UserTriggered);
+    VisiblePosition modifyExtendingForward(TextGranularity, UserTriggered);
     VisiblePosition modifyMovingRight(TextGranularity, bool* reachedBoundary = nullptr);
     VisiblePosition modifyMovingForward(TextGranularity, bool* reachedBoundary = nullptr);
-    VisiblePosition modifyExtendingLeft(TextGranularity);
-    VisiblePosition modifyExtendingBackward(TextGranularity);
+    VisiblePosition modifyExtendingLeft(TextGranularity, UserTriggered);
+    VisiblePosition modifyExtendingBackward(TextGranularity, UserTriggered);
     VisiblePosition modifyMovingLeft(TextGranularity, bool* reachedBoundary = nullptr);
     VisiblePosition modifyMovingBackward(TextGranularity, bool* reachedBoundary = nullptr);
+
+    void adjustSelectionExtentIfNeeded(VisiblePosition& extent, bool isForward, UserTriggered);
 
     enum class PositionType : uint8_t { Start, End, Extent };
     LayoutUnit lineDirectionPointForBlockDirectionNavigation(PositionType);
