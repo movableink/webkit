@@ -639,6 +639,9 @@ void AXIsolatedTree::updateNodeProperties(AccessibilityObject& axObject, const A
         case AXPropertyName::CanSetFocusAttribute:
             propertyMap.set(AXPropertyName::CanSetFocusAttribute, axObject.canSetFocusAttribute());
             break;
+        case AXPropertyName::CanSetSelectedAttribute:
+            propertyMap.set(AXPropertyName::CanSetSelectedAttribute, axObject.canSetSelectedAttribute());
+            break;
         case AXPropertyName::CanSetValueAttribute:
             propertyMap.set(AXPropertyName::CanSetValueAttribute, axObject.canSetValueAttribute());
             break;

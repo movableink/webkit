@@ -4594,7 +4594,7 @@ void AXObjectCache::updateIsolatedTree(const Vector<std::pair<Ref<AccessibilityO
             tree->queueNodeUpdate(notification.first->objectID(), { AXPropertyName::ColumnIndexRange });
             break;
         case AXNotification::DisabledStateChanged:
-            tree->updatePropertiesForSelfAndDescendants(notification.first.get(), { { AXPropertyName::CanSetFocusAttribute, AXPropertyName::IsEnabled } });
+            tree->updatePropertiesForSelfAndDescendants(notification.first.get(), { { AXPropertyName::CanSetFocusAttribute, AXPropertyName::CanSetSelectedAttribute, AXPropertyName::IsEnabled } });
             break;
         case AXNotification::ExpandedChanged:
             tree->queueNodeUpdate(notification.first->objectID(), { AXPropertyName::IsExpanded });
