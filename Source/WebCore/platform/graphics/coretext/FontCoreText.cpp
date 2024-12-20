@@ -117,11 +117,8 @@ bool fontHasEitherTable(CTFontRef ctFont, unsigned tableTag1, unsigned tableTag2
 
 void Font::platformInit()
 {
-#if PLATFORM(IOS_FAMILY)
-    m_syntheticBoldOffset = m_platformData.syntheticBold() ? ceilf(m_platformData.size() / 24.0f) : 0.f;
-#else
-    m_syntheticBoldOffset = m_platformData.syntheticBold() ? 1.0f : 0.f;
-#endif
+    auto constexpr syntheticBoldScaleFactor = 36.0f;
+    m_syntheticBoldOffset = m_platformData.syntheticBold() ? (m_platformData.size() / syntheticBoldScaleFactor) : 0.f;
 
     unsigned unitsPerEm = CTFontGetUnitsPerEm(getCTFont());
     float pointSize = m_platformData.size();
