@@ -957,4 +957,55 @@ TEST_F(FileSystemTest, makeSafeToUseMemoryMapForPath)
 #endif
 }
 
+TEST_F(FileSystemTest, isAncestor)
+{
+    Vector<std::pair<std::pair<const char*, const char*>, bool>> narrowString {
+        { { "/a/b/c/", "/a/b/c/d" }, true },
+        { { "/a/b/c", "/a/b/c/d/e/.." }, true },
+        { { "/a/b/c/.", "/a/b/c/d" }, true },
+        { { "/a/b/c", "/a/b/c" }, false },
+        { { "/a/b/c/x/..", "/a/b/c" }, false },
+        { { "/a/b/c/dir1", "/a/b/c/dir2" }, false },
+        { { "/a/b/c", "/a/b/c/" }, false },
+        { { "/a/b/c", "/a/b/c/." }, false },
+        { { "a/b/c", "/a/b/c/" }, false },
+        { { "a/b/c", "a/b/c/" }, false },
+        { { "/a/b/c", "a/b/c/" }, false }
+    };
+    std::for_each(narrowString.begin(), narrowString.end(), [](auto input) {
+        EXPECT_EQ(
+            input.second,
+                FileSystem::isAncestor(
+                    ASCIILiteral::fromLiteralUnsafe(input.first.first),
+                    ASCIILiteral::fromLiteralUnsafe(input.first.second)
+                )
+            );
+        }
+    );
+
+    Vector<std::pair<std::pair<const char16_t *, const char16_t *>, bool>> wideString {
+        { { u"/a/b/c/", u"/a/b/c/d" }, true },
+        { { u"/a/b/c", u"/a/b/c/d/e/.." }, true },
+        { { u"/a/b/c/.", u"/a/b/c/d" }, true },
+        { { u"/a/b/c", u"/a/b/c" }, false },
+        { { u"/a/b/c/x/..", u"/a/b/c" }, false },
+        { { u"/a/b/c/dir1", u"/a/b/c/dir2" }, false },
+        { { u"/a/b/c", u"/a/b/c/" }, false },
+        { { u"/a/b/c", u"/a/b/c/." }, false },
+        { { u"a/b/c", u"/a/b/c/" }, false },
+        { { u"a/b/c", u"a/b/c/" }, false },
+        { { u"/a/b/c", u"a/b/c/" }, false }
+    };
+    std::for_each(wideString.begin(), wideString.end(), [](auto input) {
+        EXPECT_EQ(
+            input.second,
+                FileSystem::isAncestor(
+                    std::span<const UChar> { static_cast<const UChar *>(input.first.first), std::char_traits<char16_t>::length(input.first.first) },
+                    std::span<const UChar> { static_cast<const UChar*>(input.first.second), std::char_traits<char16_t>::length(input.first.second) }
+                )
+            );
+        }
+    );
+}
+
 } // namespace TestWebKitAPI

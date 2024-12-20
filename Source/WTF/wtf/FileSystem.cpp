@@ -647,6 +647,9 @@ bool moveFile(const String& oldPath, const String& newPath)
     if (!ec)
         return true;
 
+    if (isAncestor(oldPath, newPath))
+        return false;
+
     // Fall back to copying and then deleting source as rename() does not work across volumes.
     ec = { };
     std::filesystem::copy(fsOldPath, fsNewPath, std::filesystem::copy_options::overwrite_existing | std::filesystem::copy_options::recursive, ec);
@@ -834,6 +837,17 @@ String parentPath(const String& path)
 String lexicallyNormal(const String& path)
 {
     return fromStdFileSystemPath(toStdFileSystemPath(path).lexically_normal());
+}
+
+bool isAncestor(const String& possibleAncestor, const String& possibleChild)
+{
+    auto possibleChildLexicallyNormal = lexicallyNormal(possibleChild);
+    auto possibleAncestorLexicallyNormal = lexicallyNormal(possibleAncestor);
+    if (possibleChildLexicallyNormal.endsWith(static_cast<UChar>(std::filesystem::path::preferred_separator)))
+        possibleChildLexicallyNormal = possibleChildLexicallyNormal.left(possibleChildLexicallyNormal.length() - 1);
+    if (possibleAncestorLexicallyNormal.endsWith(static_cast<UChar>(std::filesystem::path::preferred_separator)))
+        possibleAncestorLexicallyNormal = possibleAncestorLexicallyNormal.left(possibleAncestorLexicallyNormal.length() - 1);
+    return possibleChildLexicallyNormal.startsWith(possibleAncestorLexicallyNormal) && possibleChildLexicallyNormal.length() != possibleAncestorLexicallyNormal.length();
 }
 
 String createTemporaryFile(StringView prefix, StringView suffix)
