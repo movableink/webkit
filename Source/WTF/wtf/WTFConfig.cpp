@@ -46,6 +46,10 @@
 #include <sys/mman.h>
 #endif
 
+#if USE(APPLE_INTERNAL_SDK)
+#include <WebKitAdditions/WTFConfigAdditions.h>
+#endif
+
 #include <mutex>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
@@ -118,6 +122,10 @@ void Config::initialize()
     uint8_t* reservedConfigBytes = reinterpret_cast_ptr<uint8_t*>(WebConfig::g_config + WebConfig::reservedSlotsForExecutableAllocator);
     reservedConfigBytes[WebConfig::ReservedByteForAllocationProfiling] = 0;
     reservedConfigBytes[WebConfig::ReservedByteForAllocationProfilingMode] = 0;
+
+#if USE(APPLE_INTERNAL_SDK)
+    WTF_INITIALIZE_ADDITIONAL_CONFIG();
+#endif
 
     const char* useAllocationProfilingRaw = getenv("JSC_useAllocationProfiling");
     if (useAllocationProfilingRaw) {
