@@ -100,6 +100,7 @@ public:
     virtual bool isFlexibleBoxImpl() const { return false; };
     
     std::optional<LayoutUnit> usedFlexItemOverridingLogicalHeightForPercentageResolution(const RenderBox&);
+    bool canUseFlexItemForPercentageResolutionByStyle(const RenderBox&);
     
     void clearCachedMainSizeForFlexItem(const RenderBox& flexItem);
     
@@ -208,8 +209,6 @@ private:
     Overflow mainAxisOverflowForFlexItem(const RenderBox& flexItem) const;
     Overflow crossAxisOverflowForFlexItem(const RenderBox& flexItem) const;
     void cacheFlexItemMainSize(const RenderBox& flexItem);
-    std::optional<LayoutUnit> usedFlexItemOverridingCrossSizeForPercentageResolution(const RenderBox&);
-    std::optional<LayoutUnit> usedFlexItemOverridingMainSizeForPercentageResolution(const RenderBox&);
 
     void performFlexLayout(bool relayoutChildren);
     LayoutUnit autoMarginOffsetInMainAxis(const FlexLayoutItems&, LayoutUnit& availableFreeSpace);

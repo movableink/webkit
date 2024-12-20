@@ -1602,12 +1602,17 @@ std::pair<LayoutUnit, LayoutUnit> RenderFlexibleBox::computeFlexItemMinMaxSizes(
     return { 0_lu, maxExtent.value_or(LayoutUnit::max()) };
 }
     
-std::optional<LayoutUnit> RenderFlexibleBox::usedFlexItemOverridingCrossSizeForPercentageResolution(const RenderBox& flexItem)
+bool RenderFlexibleBox::canUseFlexItemForPercentageResolutionByStyle(const RenderBox& flexItem)
 {
-    ASSERT(mainAxisIsFlexItemInlineAxis(flexItem));
-    if (alignmentForFlexItem(flexItem) != ItemPosition::Stretch)
-        return { };
-    return flexItem.overridingLogicalHeight();
+    ASSERT(flexItem.isFlexItem());
+
+    if (mainAxisIsFlexItemInlineAxis(flexItem))
+        return alignmentForFlexItem(flexItem) == ItemPosition::Stretch;
+
+    if (flexItem.style().flexGrow() == RenderStyle::initialFlexGrow() && flexItem.style().flexShrink() == 0.0f && flexItemMainSizeIsDefinite(flexItem, flexBasisForFlexItem(flexItem)))
+        return true;
+
+    return canComputePercentageFlexBasis(flexItem, Length(0, LengthType::Percent), UpdatePercentageHeightDescendants::Yes);
 }
 
 // This method is only called whenever a descendant of a flex item wants to resolve a percentage in its
@@ -1616,28 +1621,9 @@ std::optional<LayoutUnit> RenderFlexibleBox::usedFlexItemOverridingCrossSizeForP
 // are some exceptions though that are implemented here, like the case of fully inflexible items with
 // definite flex-basis, or whenever the flex container has a definite main size. See
 // https://drafts.csswg.org/css-flexbox/#definite-sizes for additional details.
-std::optional<LayoutUnit> RenderFlexibleBox::usedFlexItemOverridingMainSizeForPercentageResolution(const RenderBox& flexItem)
-{
-    ASSERT(!mainAxisIsFlexItemInlineAxis(flexItem));
-
-    // The main size of a fully inflexible item with a definite flex basis is, by definition, definite.
-    if (flexItem.style().flexGrow() == 0.0 && flexItem.style().flexShrink() == 0.0 && flexItemMainSizeIsDefinite(flexItem, flexBasisForFlexItem(flexItem)))
-        return flexItem.overridingLogicalHeight();
-
-    // This function implements section 9.8. Definite and Indefinite Sizes, case 2) of the flexbox spec.
-    // If the flex container has a definite main size the flex item post-flexing main size is also treated
-    // as definite. We make up a percentage to check whether we have a definite size.
-    if (!canComputePercentageFlexBasis(flexItem, Length(0, LengthType::Percent), UpdatePercentageHeightDescendants::Yes))
-        return { };
-
-    return flexItem.overridingLogicalHeight();
-}
-
 std::optional<LayoutUnit> RenderFlexibleBox::usedFlexItemOverridingLogicalHeightForPercentageResolution(const RenderBox& flexItem)
 {
-    if (mainAxisIsFlexItemInlineAxis(flexItem))
-        return usedFlexItemOverridingCrossSizeForPercentageResolution(flexItem);
-    return usedFlexItemOverridingMainSizeForPercentageResolution(flexItem);
+    return canUseFlexItemForPercentageResolutionByStyle(flexItem) ? flexItem.overridingLogicalHeight() : std::nullopt;
 }
 
 LayoutUnit RenderFlexibleBox::adjustFlexItemSizeForAspectRatioCrossAxisMinAndMax(const RenderBox& flexItem, LayoutUnit flexItemSize)
