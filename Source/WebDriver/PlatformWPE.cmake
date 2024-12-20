@@ -11,6 +11,8 @@ list(APPEND WebDriver_SOURCES
 
     soup/HTTPServerSoup.cpp
 
+    unix/LoggingUnix.cpp
+
     wpe/WebDriverServiceWPE.cpp
 )
 

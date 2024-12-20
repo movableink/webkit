@@ -28,6 +28,7 @@
 
 #include "Capabilities.h"
 #include "CommandResult.h"
+#include "Logging.h"
 #include "SessionHost.h"
 #include <wtf/Compiler.h>
 #include <wtf/LoggerHelper.h>
@@ -179,9 +180,11 @@ int WebDriverService::run(int argc, char** argv)
 #if ENABLE(WEBDRIVER_BIDI)
     if (!m_bidiServer.listen(host ? *host : nullString(), *bidiPort))
         return EXIT_FAILURE;
+    RELEASE_LOG(WebDriverBiDi, "Started WebSocket server with host %s and port %d", (host ? host->utf8().data() : ""), *bidiPort);
 #endif // ENABLE(WEBDRIVER_BIDI)
     if (!m_server.listen(host, *port))
         return EXIT_FAILURE;
+    RELEASE_LOG(WebDriverClassic, "Started HTTP server with host %s and port %d", (host ? host->utf8().data() : ""), *port);
 
     RunLoop::run();
 
@@ -400,25 +403,25 @@ bool WebDriverService::acceptHandshake(HTTPRequestHandler::Request&& request)
     auto& resources = m_bidiServer.listener()->resources;
     auto foundResource = std::find(resources.begin(), resources.end(), resourceName);
     if (foundResource == resources.end()) {
-        WTFLogAlways("Resource name %s not found in listener's list of WebSocket resources. Rejecting handshake.", resourceName.utf8().data());
+        RELEASE_LOG(WebDriverBiDi, "Resource name %s not found in listener's list of WebSocket resources. Rejecting handshake.", resourceName.utf8().data());
         return false;
     }
 
     if (*foundResource == "/session"_s) {
         // FIXME Add support for bidi-only sessions
-        WTFLogAlways("BiDi-only sessions are not supported yet. Rejecting handshake.");
+        RELEASE_LOG(WebDriverBiDi, "BiDi-only sessions are not supported yet. Rejecting handshake.");
         return false;
     }
 
     auto sessionID = m_bidiServer.getSessionID(resourceName);
     if (sessionID.isNull()) {
-        WTFLogAlways("No session ID found for resource name %s. Rejecting handshake.", resourceName.utf8().data());
+        RELEASE_LOG(WebDriverBiDi, "No session ID found for resource name %s. Rejecting handshake.", resourceName.utf8().data());
         return false;
     }
 
     // FIXME Properly support multiple sessions in the future
     if (sessionID != m_session->id()) {
-        WTFLogAlways("No active session found for session ID %s. Rejecting handshake.", sessionID.utf8().data());
+        RELEASE_LOG(WebDriverBiDi, "No active session found for session ID %s. Rejecting handshake.", sessionID.utf8().data());
         return false;
     }
 
@@ -430,7 +433,7 @@ void WebDriverService::handleMessage(WebSocketMessageHandler::Message&& message,
     // https://w3c.github.io/webdriver-bidi/#handle-an-incoming-message
 
     if (!message.connection) {
-        WTFLogAlways("Incoming message without attached connection. Ignoring message.");
+        RELEASE_LOG(WebDriverBiDi, "Incoming message without attached connection. Ignoring message.");
         completionHandler(WebSocketMessageHandler::Message::fail(CommandResult::ErrorCode::UnknownError, std::nullopt));
         return;
     }
@@ -439,7 +442,7 @@ void WebDriverService::handleMessage(WebSocketMessageHandler::Message&& message,
     auto session = m_bidiServer.session(connection);
     if (!session) {
         if (!m_bidiServer.isStaticConnection(connection)) {
-            WTFLogAlways("Unknown connection. Ignoring message.");
+            RELEASE_LOG(WebDriverBiDi, "Unknown connection. Ignoring message.");
             completionHandler(WebSocketMessageHandler::Message::fail(CommandResult::ErrorCode::InvalidSessionID, connection));
             return;
         }
@@ -449,13 +452,13 @@ void WebDriverService::handleMessage(WebSocketMessageHandler::Message&& message,
 
     auto parsedMessageValue = JSON::Value::parseJSON(String::fromUTF8(message.payload.data()));
     if (!parsedMessageValue) {
-        WTFLogAlways("WebDriver handle Message: Failed to parse incoming message");
+        RELEASE_LOG(WebDriverBiDi, "WebDriver handle Message: Failed to parse incoming message");
         completionHandler(WebSocketMessageHandler::Message::fail(CommandResult::ErrorCode::InvalidArgument, message.connection));
         return;
     }
 
     if (session && m_session && session->id() != m_session->id()) {
-        WTFLogAlways("Not an active session. Ignoring message.");
+        RELEASE_LOG(WebDriverBiDi, "Not an active session. Ignoring message.");
         return;
     }
 
@@ -463,7 +466,7 @@ void WebDriverService::handleMessage(WebSocketMessageHandler::Message&& message,
     unsigned id = 0;
     RefPtr<JSON::Object> parameters;
     if (!findBidiCommand(parsedMessageValue, &handler, id, parameters)) {
-        WTFLogAlways("Failed to find appropriate BiDi command");
+        RELEASE_LOG(WebDriverBiDi, "Failed to find appropriate BiDi command");
         std::optional<int> commandId;
         if (auto parsedMessageObject = parsedMessageValue->asObject()) {
             auto parsedCommandId = parsedMessageObject->getInteger("id"_s);
@@ -1128,11 +1131,11 @@ void WebDriverService::createSession(Vector<Capabilities>&& capabilitiesList, Re
                 capabilitiesObject->setString("webSocketUrl"_s, webSocketURL);
                 m_session->setHasBiDiEnabled(true);
             } else {
-                WTFLogAlways("BiDi support not enabled for session %s", m_session->id().utf8().data());
+                RELEASE_LOG(WebDriverBiDi, "BiDi support not enabled for session %s", m_session->id().utf8().data());
                 if (!m_session->hasBiDiEnabled())
-                    WTFLogAlways("BiDi flag not set for session %s", m_session->id().utf8().data());
+                    RELEASE_LOG(WebDriverBiDi, "BiDi flag not set for session %s", m_session->id().utf8().data());
                 if (!capabilities.webSocketURL || !*capabilities.webSocketURL)
-                    WTFLogAlways("webSocketURL not set for session %s", m_session->id().utf8().data());
+                    RELEASE_LOG(WebDriverBiDi, "webSocketURL not set for session %s", m_session->id().utf8().data());
             }
 #endif
 
