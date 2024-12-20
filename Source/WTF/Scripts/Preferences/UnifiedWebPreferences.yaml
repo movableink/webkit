@@ -7828,8 +7828,9 @@ UseAVCaptureDeviceRotationCoordinatorAPI:
   condition: HAVE(AVCAPTUREDEVICEROTATIONCOORDINATOR)
   defaultValue:
     WebKit:
-      default: true
-  sharedPreferenceForWebProcess: true
+      # FIXME: Re-enable on visionOS once rdar://139112264 is resolved.
+      "PLATFORM(VISION)": false
+      default: false
 
 UseAsyncUIKitInteractions:
   type: bool
