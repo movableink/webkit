@@ -34,7 +34,6 @@
 
 namespace WebCore {
 
-class Frame;
 class HistoryItem;
 class HistoryItemClient;
 class LocalFrame;
@@ -51,7 +50,7 @@ class HistoryController final : public CanMakeCheckedPtr<HistoryController> {
 public:
     enum HistoryUpdateType { UpdateAll, UpdateAllExceptBackForwardList };
 
-    explicit HistoryController(Frame&);
+    explicit HistoryController(LocalFrame&);
     ~HistoryController();
 
     WEBCORE_EXPORT void saveScrollPositionAndViewStateToItem(HistoryItem*);
@@ -120,10 +119,9 @@ private:
 
     struct FrameToNavigate;
     static void recursiveGatherFramesToNavigate(LocalFrame&, Vector<FrameToNavigate>&, HistoryItem& targetItem, HistoryItem* fromItem);
+    Ref<LocalFrame> protectedFrame() const;
 
-    Ref<Frame> protectedFrame() const;
-
-    WeakRef<Frame> m_frame;
+    const WeakRef<LocalFrame> m_frame;
 
     RefPtr<HistoryItem> m_currentItem;
     RefPtr<HistoryItem> m_previousItem;

@@ -117,7 +117,7 @@ void Navigation::initializeForNewWindow(std::optional<NavigationNavigationType> 
     if (!page)
         return;
 
-    RefPtr currentItem = frame()->history().currentItem();
+    RefPtr currentItem = frame()->loader().history().currentItem();
     if (!currentItem)
         return;
     // For main frames we can still rely on the page b/f list. However for subframes we need below logic to not lose the bookkeeping done in the previous window.
@@ -139,7 +139,7 @@ void Navigation::initializeForNewWindow(std::optional<NavigationNavigationType> 
             if (navigationType == NavigationNavigationType::Traverse) {
                 m_currentEntryIndex = getEntryIndexOfHistoryItem(m_entries, *currentItem);
                 if (m_currentEntryIndex) {
-                    updateForActivation(frame()->history().previousItem(), navigationType);
+                    updateForActivation(frame()->loader().history().previousItem(), navigationType);
                     return;
                 }
                 // We are doing a cross document subframe traversal, we can't rely on previous window, so clear
@@ -195,7 +195,7 @@ void Navigation::initializeForNewWindow(std::optional<NavigationNavigationType> 
         m_entries.append(NavigationHistoryEntry::create(*this, WTFMove(item)));
 
     m_currentEntryIndex = getEntryIndexOfHistoryItem(m_entries, *currentItem, start);
-    updateForActivation(frame()->history().previousItem(), navigationType);
+    updateForActivation(frame()->loader().history().previousItem(), navigationType);
 }
 
 // https://html.spec.whatwg.org/multipage/nav-history-apis.html#navigation-activation
@@ -242,7 +242,7 @@ RefPtr<NavigationActivation> Navigation::createForPageswapEvent(HistoryItem* new
     RefPtr<NavigationHistoryEntry> oldEntry;
     if (frame()->document() && frame()->document()->settings().navigationAPIEnabled())
         oldEntry = currentEntry();
-    else if (RefPtr currentItem = frame()->checkedHistory()->currentItem())
+    else if (RefPtr currentItem = frame()->loader().checkedHistory()->currentItem())
         oldEntry = NavigationHistoryEntry::create(*this, *currentItem);
 
     RefPtr<NavigationHistoryEntry> newEntry;
@@ -1030,7 +1030,7 @@ Navigation::DispatchResult Navigation::innerDispatchNavigateEvent(NavigationNavi
 // https://html.spec.whatwg.org/multipage/nav-history-apis.html#fire-a-traverse-navigate-event
 Navigation::DispatchResult Navigation::dispatchTraversalNavigateEvent(HistoryItem& historyItem)
 {
-    auto* currentItem = frame() ? frame()->history().currentItem() : nullptr;
+    auto* currentItem = frame() ? frame()->loader().history().currentItem() : nullptr;
     bool isSameDocument = currentItem && currentItem->documentSequenceNumber() == historyItem.documentSequenceNumber();
 
     RefPtr<NavigationHistoryEntry> destinationEntry;

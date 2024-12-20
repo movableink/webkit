@@ -29,7 +29,6 @@
 #include "FrameLoaderClient.h"
 #include "HTMLFrameOwnerElement.h"
 #include "HTMLIFrameElement.h"
-#include "HistoryController.h"
 #include "LocalDOMWindow.h"
 #include "NavigationScheduler.h"
 #include "Page.h"
@@ -114,7 +113,6 @@ Frame::Frame(Page& page, FrameIdentifier frameID, FrameType frameType, HTMLFrame
     , m_frameType(frameType)
     , m_navigationScheduler(makeUniqueRefWithoutRefCountedCheck<NavigationScheduler>(*this))
     , m_opener(opener)
-    , m_history(makeUniqueRef<HistoryController>(*this))
 {
     if (parent)
         parent->tree().appendChild(*this);
@@ -266,11 +264,6 @@ void Frame::detachFromAllOpenedFrames()
 bool Frame::hasOpenedFrames() const
 {
     return !m_openedFrames.isEmptyIgnoringNullReferences();
-}
-
-CheckedRef<HistoryController> Frame::checkedHistory() const
-{
-    return m_history.get();
 }
 
 void Frame::setOwnerElement(HTMLFrameOwnerElement* element)

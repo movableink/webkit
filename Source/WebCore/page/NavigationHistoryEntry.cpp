@@ -129,7 +129,7 @@ bool NavigationHistoryEntry::sameDocument() const
     RefPtr document = dynamicDowncast<Document>(scriptExecutionContext());
     if (!document || !document->isFullyActive())
         return false;
-    RefPtr currentItem = document->frame()->checkedHistory()->currentItem();
+    RefPtr currentItem = document->frame() ? document->frame()->loader().history().currentItem() : nullptr;
     if (!currentItem)
         return false;
     return currentItem->documentSequenceNumber() == m_associatedHistoryItem->documentSequenceNumber();

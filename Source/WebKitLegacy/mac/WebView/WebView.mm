@@ -1876,7 +1876,7 @@ static WebCore::ApplicationCacheStorage& webApplicationCacheStorage()
 {
     auto* frame = [self _mainCoreFrame];
     if (frame)
-        frame->history().replaceCurrentItem(core(item));
+        frame->loader().history().replaceCurrentItem(core(item));
 }
 
 + (void)willEnterBackgroundWithCompletionHandler:(void(^)(void))handler
@@ -2785,7 +2785,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
             // since that might have changed since loading and it is normally not saved
             // until we leave that page.
             if (auto* localMainFrame = dynamicDowncast<WebCore::LocalFrame>(otherView->_private->page->mainFrame()))
-                localMainFrame->history().saveDocumentAndScrollState();
+                localMainFrame->loader().history().saveDocumentAndScrollState();
         }
         Ref newItem = otherBackForward->itemAtIndex(i)->copy();
         if (i == 0)

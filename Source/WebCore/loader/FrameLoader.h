@@ -72,6 +72,7 @@ class FormState;
 class FormSubmission;
 class FrameLoadRequest;
 class FrameNetworkingContext;
+class HistoryController;
 class HistoryItem;
 class LocalDOMWindow;
 class LocalFrameLoaderClient;
@@ -120,6 +121,9 @@ public:
     WEBCORE_EXPORT Ref<LocalFrame> protectedFrame() const;
 
     PolicyChecker& policyChecker() const { return *m_policyChecker; }
+
+    HistoryController& history() const { return m_history; }
+    WEBCORE_EXPORT CheckedRef<HistoryController> checkedHistory() const;
 
     ResourceLoadNotifier& notifier() const { return m_notifier; }
 
@@ -464,6 +468,7 @@ private:
     UniqueRef<LocalFrameLoaderClient> m_client;
 
     const std::unique_ptr<PolicyChecker> m_policyChecker;
+    const UniqueRef<HistoryController> m_history;
     mutable ResourceLoadNotifier m_notifier;
     const std::unique_ptr<SubframeLoader> m_subframeLoader;
     mutable FrameLoaderStateMachine m_stateMachine;
