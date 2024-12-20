@@ -30,7 +30,7 @@
 #import <Foundation/NSString.h>
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
 
-#if USE(APPLE_INTERNAL_SDK)
+#if USE(APPLE_INTERNAL_SDK) && __has_include(<CoreMaterial/CoreMaterial.h>)
 
 #import <CoreMaterial/CoreMaterial.h>
 
