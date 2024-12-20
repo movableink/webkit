@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -292,16 +292,25 @@ RTCRtpSFrameTransformer::TransformResult RTCRtpSFrameTransformer::encryptFrame(s
         break;
     }
 
+    auto prefixBufferSpan = WTF::switchOn(prefixBuffer,
+        [](const std::span<const uint8_t>& span) -> std::span<const uint8_t> {
+            return span;
+        },
+        [](const Vector<uint8_t>& buffer) -> std::span<const uint8_t> {
+            return buffer.span();
+        }
+    );
+
     Locker locker { m_keyLock };
 
     auto iv = computeIV(m_counter, m_saltKey);
 
-    Vector<uint8_t> transformedData(prefixBuffer.size + data.size() + MaxHeaderSize + m_authenticationSize);
+    Vector<uint8_t> transformedData(prefixBufferSpan.size() + data.size() + MaxHeaderSize + m_authenticationSize);
 
-    if (prefixBuffer.data)
-        std::memcpy(transformedData.data(), prefixBuffer.data, prefixBuffer.size);
+    if (prefixBufferSpan.size())
+        memcpySpan(transformedData.mutableSpan(), prefixBufferSpan);
 
-    auto* newDataPointer = transformedData.data() + prefixBuffer.size;
+    auto* newDataPointer = transformedData.data() + prefixBufferSpan.size();
     // Fill header.
     size_t headerSize = 1;
     *newDataPointer = computeFirstHeaderByte(m_keyId, m_counter);
@@ -330,7 +339,7 @@ RTCRtpSFrameTransformer::TransformResult RTCRtpSFrameTransformer::encryptFrame(s
     std::memcpy(newDataPointer + data.size() + headerSize, signature.data(), m_authenticationSize);
 
     if (m_compatibilityMode == CompatibilityMode::H264)
-        toRbsp(transformedData, prefixBuffer.size);
+        toRbsp(transformedData, prefixBufferSpan.size());
 
     ++m_counter;
 

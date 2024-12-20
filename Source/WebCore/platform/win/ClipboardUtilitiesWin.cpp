@@ -502,7 +502,8 @@ String getURL(const DragDataMap* data, DragData::FilenameConversionPolicy filena
     if (!getDataMapItem(data, filenameWFormat(), stringData))
         getDataMapItem(data, filenameFormat(), stringData);
 
-    auto wcharData = stringData.wideCharacters().data();
+    auto wideCharacters = stringData.wideCharacters();
+    auto wcharData = wideCharacters.data();
     if (stringData.isEmpty() || (!PathFileExists(wcharData) && !PathIsUNC(wcharData)))
         return url;
 

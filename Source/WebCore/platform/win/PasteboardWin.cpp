@@ -1003,7 +1003,8 @@ static HGLOBAL createGlobalHDropContent(const URL& url, String& fileName, Fragme
         // windows does not enjoy a leading slash on paths
         if (localPath[0] == '/')
             localPath = localPath.substring(1);
-        LPCWSTR localPathStr = localPath.wideCharacters().data();
+        auto wideCharacters = localPath.wideCharacters();
+        LPCWSTR localPathStr = wideCharacters.data();
         if (localPathStr && wcslen(localPathStr) + 1 < MAX_PATH)
             wcscpy_s(filePath, MAX_PATH, localPathStr);
         else

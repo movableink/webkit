@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,11 +33,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
-struct SFrameCompatibilityPrefixBuffer {
-    const uint8_t* data { nullptr };
-    size_t size { 0 };
-    Vector<uint8_t> buffer;
-};
+using SFrameCompatibilityPrefixBuffer = std::variant<std::span<const uint8_t>, Vector<uint8_t>>;
 
 size_t computeH264PrefixOffset(std::span<const uint8_t>);
 SFrameCompatibilityPrefixBuffer computeH264PrefixBuffer(std::span<const uint8_t>);
