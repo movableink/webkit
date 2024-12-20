@@ -263,7 +263,7 @@ void CookieStore::get(CookieStoreGetOptions&& options, Ref<DeferredPromise>&& pr
     }
 
     if (options.name.isNull() && options.url.isNull()) {
-        promise->reject(ExceptionCode::TypeError);
+        promise->reject(Exception { ExceptionCode::TypeError, "CookieStoreGetOptions must not be empty"_s });
         return;
     }
 
@@ -271,12 +271,12 @@ void CookieStore::get(CookieStoreGetOptions&& options, Ref<DeferredPromise>&& pr
     if (!options.url.isNull()) {
         auto parsed = context->completeURL(options.url);
         if (context->isDocument() && parsed != url) {
-            promise->reject(ExceptionCode::TypeError);
+            promise->reject(Exception { ExceptionCode::TypeError, "URL must match the document URL"_s });
             return;
         }
 
         if (!origin->isSameOriginAs(SecurityOrigin::create(parsed))) {
-            promise->reject(ExceptionCode::TypeError);
+            promise->reject(Exception { ExceptionCode::TypeError, "Origin must match the context's origin"_s });
             return;
         }
         url = WTFMove(parsed);
@@ -334,12 +334,12 @@ void CookieStore::getAll(CookieStoreGetOptions&& options, Ref<DeferredPromise>&&
     if (!options.url.isNull()) {
         auto parsed = context->completeURL(options.url);
         if (context->isDocument() && parsed != url) {
-            promise->reject(ExceptionCode::TypeError);
+            promise->reject(Exception { ExceptionCode::TypeError, "URL must match the document URL"_s });
             return;
         }
 
         if (!origin->isSameOriginAs(SecurityOrigin::create(parsed))) {
-            promise->reject(ExceptionCode::TypeError);
+            promise->reject(Exception { ExceptionCode::TypeError, "Origin must match the context's origin"_s });
             return;
         }
         url = WTFMove(parsed);
