@@ -477,8 +477,8 @@ private:
     Vector<AXTextMarkerRange> misspellingRanges() const final;
     bool hasPlainText() const final { return boolAttributeValue(AXPropertyName::HasPlainText); }
     bool hasSameFont(AXCoreObject&) final;
-    bool hasSameFontColor(const AXCoreObject&) const final;
-    bool hasSameStyle(const AXCoreObject&) const final;
+    bool hasSameFontColor(AXCoreObject&) final;
+    bool hasSameStyle(AXCoreObject&) final;
     bool hasUnderline() const final { return boolAttributeValue(AXPropertyName::HasUnderline); }
     bool hasHighlighting() const final { return boolAttributeValue(AXPropertyName::HasHighlighting); }
     AXTextMarkerRange textInputMarkedTextMarkerRange() const final;
