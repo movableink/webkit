@@ -27,7 +27,7 @@
 
 #pragma once
 
-#if ENABLE(ASYNC_SCROLLING) && USE(NICOSIA)
+#if ENABLE(ASYNC_SCROLLING) && USE(COORDINATED_GRAPHICS)
 
 #include "ThreadedScrollingTree.h"
 
@@ -56,4 +56,4 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_SCROLLING_TREE(WebCore::ScrollingTreeCoordinated, isScrollingTreeCoordinated())
 
-#endif // ENABLE(ASYNC_SCROLLING) && USE(NICOSIA)
+#endif // ENABLE(ASYNC_SCROLLING) && USE(COORDINATED_GRAPHICS)

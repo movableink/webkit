@@ -27,6 +27,7 @@
 #include "TextureMapperPlatformLayerProxy.h"
 
 #if USE(COORDINATED_GRAPHICS)
+#include "CoordinatedPlatformLayer.h"
 #include "CoordinatedPlatformLayerBuffer.h"
 #include "TextureMapperLayer.h"
 #include <wtf/Scope.h>
@@ -48,15 +49,13 @@ TextureMapperPlatformLayerProxy::TextureMapperPlatformLayerProxy(ContentType con
 
 TextureMapperPlatformLayerProxy::~TextureMapperPlatformLayerProxy()
 {
-    Locker locker { m_lock };
-    if (m_targetLayer)
-        m_targetLayer->setContentsLayer(nullptr);
+    ASSERT(!m_targetLayer);
 }
 
 bool TextureMapperPlatformLayerProxy::isActiveLocked() const
 {
     ASSERT(m_lock.isHeld());
-    return !!m_targetLayer && !!m_compositor;
+    return !!m_targetLayer;
 }
 
 bool TextureMapperPlatformLayerProxy::isActive()
@@ -65,25 +64,25 @@ bool TextureMapperPlatformLayerProxy::isActive()
     return isActiveLocked();
 }
 
-void TextureMapperPlatformLayerProxy::activateOnCompositingThread(Compositor* compositor, TextureMapperLayer* targetLayer)
+void TextureMapperPlatformLayerProxy::activateOnCompositingThread(CoordinatedPlatformLayer& targetLayer)
 {
 #if ASSERT_ENABLED
     if (!m_compositorThread)
         m_compositorThread = &Thread::current();
 #endif
     ASSERT(m_compositorThread == &Thread::current());
-    ASSERT(compositor);
-    ASSERT(targetLayer);
+
     Function<void()> updateFunction;
     {
         Locker locker { m_lock };
-        m_compositor = compositor;
         // If the proxy is already active on another layer, remove the layer's reference to the current buffer.
-        if (m_targetLayer)
-            m_targetLayer->setContentsLayer(nullptr);
-        m_targetLayer = targetLayer;
-        if (m_targetLayer && m_currentBuffer)
-            m_targetLayer->setContentsLayer(m_currentBuffer.get());
+        if (m_targetLayer) {
+            if (auto* layer = m_targetLayer->target())
+                layer->setContentsLayer(nullptr);
+        }
+        m_targetLayer = &targetLayer;
+        if (m_currentBuffer)
+            m_targetLayer->ensureTarget().setContentsLayer(m_currentBuffer.get());
 
         m_compositorThreadUpdateTimer = makeUnique<RunLoop::Timer>(RunLoop::current(), this, &TextureMapperPlatformLayerProxy::compositorThreadUpdateTimerFired);
 #if USE(GLIB_EVENT_LOOP)
@@ -106,9 +105,9 @@ void TextureMapperPlatformLayerProxy::invalidate()
     Function<void()> updateFunction;
     {
         Locker locker { m_lock };
-        m_compositor = nullptr;
         if (m_targetLayer) {
-            m_targetLayer->setContentsLayer(nullptr);
+            if (auto* layer = m_targetLayer->target())
+                layer->setContentsLayer(nullptr);
             m_targetLayer = nullptr;
         }
 
@@ -135,7 +134,7 @@ void TextureMapperPlatformLayerProxy::swapBuffer()
         return;
 
     m_currentBuffer = WTFMove(m_pendingBuffer);
-    m_targetLayer->setContentsLayer(m_currentBuffer.get());
+    m_targetLayer->ensureTarget().setContentsLayer(m_currentBuffer.get());
 }
 
 void TextureMapperPlatformLayerProxy::pushNextBuffer(std::unique_ptr<CoordinatedPlatformLayerBuffer>&& newBuffer)
@@ -157,8 +156,8 @@ void TextureMapperPlatformLayerProxy::pushNextBuffer(std::unique_ptr<Coordinated
     }
 #endif
 
-    if (m_compositor)
-        m_compositor->onNewBufferAvailable();
+    if (m_targetLayer)
+        m_targetLayer->requestComposition();
 }
 
 void TextureMapperPlatformLayerProxy::swapBuffersIfNeeded()
@@ -190,7 +189,7 @@ void TextureMapperPlatformLayerProxy::dropCurrentBufferWhilePreservingTexture(bo
 #endif
 
         m_currentBuffer = WTFMove(m_pendingBuffer);
-        m_targetLayer->setContentsLayer(m_currentBuffer.get());
+        m_targetLayer->ensureTarget().setContentsLayer(m_currentBuffer.get());
     };
 
     if (!scheduleUpdateOnCompositorThread(WTFMove(dropBufferFunction)))

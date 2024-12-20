@@ -74,9 +74,9 @@ public:
     void preferredBufferFormatsDidChange();
 #endif
 
-    uint32_t requestComposition(const RefPtr<Nicosia::Scene>&);
+    uint32_t requestComposition();
+
     void updateScene();
-    void updateSceneWithoutRendering();
 
     void invalidate();
 
@@ -133,7 +133,6 @@ private:
         WebCore::IntSize viewportSize;
         float scaleFactor { 1 };
         bool needsResize { false };
-        Vector<RefPtr<Nicosia::Scene>> states;
 
         bool clientRendersNextFrame { false };
         uint32_t compositionRequestID { 0 };

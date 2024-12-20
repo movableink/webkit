@@ -30,7 +30,7 @@
 #include "LayerTreeHost.h"
 
 #if USE(COORDINATED_GRAPHICS)
-
+#include "CoordinatedSceneState.h"
 #include "DrawingArea.h"
 #include "WebPageInlines.h"
 #include "WebPageProxyMessages.h"
@@ -73,6 +73,7 @@ LayerTreeHost::LayerTreeHost(WebPage& webPage)
 LayerTreeHost::LayerTreeHost(WebPage& webPage, WebCore::PlatformDisplayID displayID)
 #endif
     : m_webPage(webPage)
+    , m_sceneState(CoordinatedSceneState::create())
     , m_layerFlushTimer(RunLoop::main(), this, &LayerTreeHost::layerFlushTimerFired)
 #if !HAVE(DISPLAY_LINK)
     , m_displayID(displayID)
@@ -83,14 +84,12 @@ LayerTreeHost::LayerTreeHost(WebPage& webPage, WebCore::PlatformDisplayID displa
     , m_skiaPaintingEngine(SkiaPaintingEngine::create())
 #endif
 {
-    m_nicosia.scene = Nicosia::Scene::create();
-
-    m_rootLayer = GraphicsLayer::create(this, *this);
-#ifndef NDEBUG
-    m_rootLayer->setName(MAKE_STATIC_STRING_IMPL("LayerTreeHost root layer"));
-#endif
-    m_rootLayer->setDrawsContent(false);
-    m_rootLayer->setSize(m_webPage.size());
+    {
+        auto& rootLayer = m_sceneState->rootLayer();
+        Locker locker { rootLayer.lock() };
+        rootLayer.setAnchorPoint(FloatPoint3D(0, 0, 0));
+        rootLayer.setSize(m_webPage.size());
+    }
 
 #if USE(GLIB_EVENT_LOOP)
     m_layerFlushTimer.setPriority(RunLoopSourcePriority::LayerFlushTimer);
@@ -123,11 +122,7 @@ LayerTreeHost::~LayerTreeHost()
 
     cancelPendingLayerFlush();
 
-    m_rootLayer = nullptr;
-    while (!m_layers.isEmpty()) {
-        auto layer = m_layers.takeAny();
-        layer->invalidateClient();
-    }
+    m_sceneState->invalidate();
 
 #if USE(SKIA)
     m_skiaPaintingEngine = nullptr;
@@ -183,23 +178,12 @@ void LayerTreeHost::flushLayers()
     TraceScope traceScope(FlushPendingLayerChangesStart, FlushPendingLayerChangesEnd);
 #endif
 
-    if (!m_didInitializeRootCompositingLayer) {
-        auto& rootLayer = downcast<GraphicsLayerCoordinated>(*m_rootLayer);
-        m_nicosia.state.rootLayer = rootLayer.coordinatedPlatformLayer().compositionLayer();
-        m_didInitializeRootCompositingLayer = true;
-        m_forceFrameSync = true;
-        m_didChangeSceneState = true;
-    }
-
     Ref page { m_webPage };
     page->updateRendering();
     page->flushPendingEditorStateUpdate();
 
-    WTFBeginSignpost(this, FlushRootCompositingLayer);
-    m_rootLayer->flushCompositingStateForThisLayerOnly();
     if (m_overlayCompositingLayer)
         m_overlayCompositingLayer->flushCompositingState(visibleContentsRect());
-    WTFEndSignpost(this, FlushRootCompositingLayer);
 
     OptionSet<FinalizeRenderingUpdateFlags> flags;
 #if PLATFORM(GTK)
@@ -210,22 +194,12 @@ void LayerTreeHost::flushLayers()
 #endif
     page->finalizeRenderingUpdate(flags);
 
-    if (m_compositionRequired || m_forceFrameSync) {
-        if (m_didChangeSceneState) {
-            m_nicosia.scene->accessState([this](Nicosia::Scene::State& state) {
-                ++state.id;
-                state.layers = m_nicosia.state.layers;
-                state.rootLayer = m_nicosia.state.rootLayer;
-            });
+    bool didChangeSceneState = m_sceneState->flush();
+    if (m_compositionRequired || m_forceFrameSync || didChangeSceneState)
+        commitSceneState();
 
-            commitSceneState(m_nicosia.scene);
-        } else
-            commitSceneState(nullptr);
-
-        m_compositionRequired = false;
-        m_forceFrameSync = false;
-        m_didChangeSceneState = false;
-    }
+    m_compositionRequired = false;
+    m_forceFrameSync = false;
 
     page->didUpdateRendering();
 
@@ -266,17 +240,25 @@ void LayerTreeHost::layerFlushTimerFired()
     WTFEndSignpost(this, LayerFlushTimerFired);
 }
 
+void LayerTreeHost::updateRootLayer()
+{
+    Vector<Ref<CoordinatedPlatformLayer>> children;
+    if (m_rootCompositingLayer) {
+        children.append(downcast<GraphicsLayerCoordinated>(m_rootCompositingLayer)->coordinatedPlatformLayer());
+        if (m_overlayCompositingLayer)
+            children.append(downcast<GraphicsLayerCoordinated>(m_overlayCompositingLayer)->coordinatedPlatformLayer());
+    }
+
+    m_sceneState->setRootLayerChildren(WTFMove(children));
+}
+
 void LayerTreeHost::setRootCompositingLayer(GraphicsLayer* graphicsLayer)
 {
     if (m_rootCompositingLayer == graphicsLayer)
         return;
 
-    if (m_rootCompositingLayer)
-        m_rootCompositingLayer->removeFromParent();
-
     m_rootCompositingLayer = graphicsLayer;
-    if (m_rootCompositingLayer)
-        m_rootLayer->addChildAtIndex(*m_rootCompositingLayer, 0);
+    updateRootLayer();
 }
 
 void LayerTreeHost::setViewOverlayRootLayer(GraphicsLayer* graphicsLayer)
@@ -284,12 +266,8 @@ void LayerTreeHost::setViewOverlayRootLayer(GraphicsLayer* graphicsLayer)
     if (m_overlayCompositingLayer == graphicsLayer)
         return;
 
-    if (m_overlayCompositingLayer)
-        m_overlayCompositingLayer->removeFromParent();
-
     m_overlayCompositingLayer = graphicsLayer;
-    if (m_overlayCompositingLayer)
-        m_rootLayer->addChild(*m_overlayCompositingLayer);
+    updateRootLayer();
 }
 
 void LayerTreeHost::forceRepaint()
@@ -322,7 +300,11 @@ void LayerTreeHost::forceRepaintAsync(CompletionHandler<void()>&& callback)
 
 void LayerTreeHost::sizeDidChange(const IntSize& size)
 {
-    m_rootLayer->setSize(size);
+    {
+        auto& rootLayer = m_sceneState->rootLayer();
+        Locker locker { rootLayer.lock() };
+        rootLayer.setSize(size);
+    }
     scheduleLayerFlush();
 
     m_compositor->setViewportSize(size, m_webPage.deviceScaleFactor());
@@ -366,18 +348,12 @@ void LayerTreeHost::backgroundColorDidChange()
 
 void LayerTreeHost::attachLayer(CoordinatedPlatformLayer& layer)
 {
-    auto& compositionLayer = layer.compositionLayer();
-    m_nicosia.state.layers.add(compositionLayer);
-    m_layers.add(layer);
-    m_didChangeSceneState = true;
+    m_sceneState->addLayer(layer);
 }
 
 void LayerTreeHost::detachLayer(CoordinatedPlatformLayer& layer)
 {
-    auto& compositionLayer = layer.compositionLayer();
-    m_nicosia.state.layers.remove(compositionLayer);
-    m_layers.remove(layer);
-    m_didChangeSceneState = true;
+    m_sceneState->removeLayer(layer);
 }
 
 void LayerTreeHost::notifyCompositionRequired()
@@ -474,10 +450,10 @@ void LayerTreeHost::didComposite(uint32_t compositionResponseID)
 }
 #endif
 
-void LayerTreeHost::commitSceneState(const RefPtr<Nicosia::Scene>& state)
+void LayerTreeHost::commitSceneState()
 {
     m_isWaitingForRenderer = true;
-    m_compositionRequestID = m_compositor->requestComposition(state);
+    m_compositionRequestID = m_compositor->requestComposition();
     WTFEmitSignpost(this, CommitSceneState, "compositionRequestID %i", m_compositionRequestID);
 }
 

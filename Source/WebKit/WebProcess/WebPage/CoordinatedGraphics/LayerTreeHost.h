@@ -35,8 +35,6 @@
 #include <WebCore/FloatPoint.h>
 #include <WebCore/GraphicsLayerClient.h>
 #include <WebCore/GraphicsLayerFactory.h>
-#include <WebCore/NicosiaPlatformLayer.h>
-#include <WebCore/NicosiaScene.h>
 #include <WebCore/PlatformScreen.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
@@ -73,7 +71,7 @@ template<> struct IsDeprecatedTimerSmartPointerException<WebKit::LayerTreeHost> 
 }
 
 namespace WebKit {
-
+class CoordinatedSceneState;
 class WebPage;
 
 class LayerTreeHost final : public CanMakeCheckedPtr<LayerTreeHost>, public WebCore::GraphicsLayerClient, public WebCore::GraphicsLayerFactory, public WebCore::CoordinatedPlatformLayer::Client
@@ -92,6 +90,7 @@ public:
     ~LayerTreeHost();
 
     WebPage& webPage() const { return m_webPage; }
+    CoordinatedSceneState& sceneState() const { return m_sceneState.get(); }
 
     const LayerTreeContext& layerTreeContext() const { return m_layerTreeContext; }
     void setLayerFlushSchedulingEnabled(bool);
@@ -133,10 +132,11 @@ public:
     void preferredBufferFormatsDidChange();
 #endif
 private:
+    void updateRootLayer();
     WebCore::FloatRect visibleContentsRect() const;
     void layerFlushTimerFired();
     void flushLayers();
-    void commitSceneState(const RefPtr<Nicosia::Scene>&);
+    void commitSceneState();
     void renderNextFrame(bool);
 
     // CoordinatedPlatformLayer::Client
@@ -170,12 +170,11 @@ private:
 
     WebPage& m_webPage;
     LayerTreeContext m_layerTreeContext;
-    RefPtr<WebCore::GraphicsLayer> m_rootLayer;
+    Ref<CoordinatedSceneState> m_sceneState;
     WebCore::GraphicsLayer* m_rootCompositingLayer { nullptr };
     WebCore::GraphicsLayer* m_overlayCompositingLayer { nullptr };
     HashSet<Ref<WebCore::CoordinatedPlatformLayer>> m_layers;
     bool m_didInitializeRootCompositingLayer { false };
-    bool m_didChangeSceneState { false };
     bool m_layerFlushSchedulingEnabled { true };
     bool m_isPurgingBackingStores { false };
     bool m_isSuspended { false };
@@ -202,10 +201,6 @@ private:
     std::unique_ptr<WebCore::SkiaPaintingEngine> m_skiaPaintingEngine;
 #endif
     HashMap<uint64_t, Ref<WebCore::CoordinatedImageBackingStore>> m_imageBackingStores;
-    struct {
-        RefPtr<Nicosia::Scene> scene;
-        Nicosia::Scene::State state;
-    } m_nicosia;
 
 #if PLATFORM(GTK)
     bool m_transientZoom { false };

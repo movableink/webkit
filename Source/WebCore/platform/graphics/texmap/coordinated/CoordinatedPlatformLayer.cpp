@@ -27,10 +27,16 @@
 #include "CoordinatedPlatformLayer.h"
 
 #if USE(COORDINATED_GRAPHICS)
+#include "CoordinatedAnimatedBackingStoreClient.h"
+#include "CoordinatedBackingStore.h"
 #include "CoordinatedBackingStoreProxy.h"
+#include "CoordinatedImageBackingStore.h"
+#include "CoordinatedPlatformLayerBuffer.h"
 #include "CoordinatedTileBuffer.h"
 #include "GraphicsContext.h"
 #include "GraphicsLayerCoordinated.h"
+#include "TextureMapperLayer.h"
+#include "TextureMapperPlatformLayerProxy.h"
 #include <wtf/MainThread.h>
 
 #if USE(CAIRO)
@@ -59,7 +65,6 @@ CoordinatedPlatformLayer::CoordinatedPlatformLayer(Client* client)
     , m_id(PlatformLayerIdentifier::generate())
 {
     ASSERT(isMainThread());
-    m_nicosia.layer = Nicosia::CompositionLayer::create(m_id.object().toUInt64());
 }
 
 CoordinatedPlatformLayer::~CoordinatedPlatformLayer() = default;
@@ -88,6 +93,31 @@ GraphicsLayerCoordinated* CoordinatedPlatformLayer::owner() const
     return m_owner;
 }
 
+TextureMapperLayer& CoordinatedPlatformLayer::ensureTarget()
+{
+    ASSERT(!isMainThread());
+    if (!m_target)
+        m_target = makeUnique<TextureMapperLayer>();
+    return *m_target;
+}
+
+TextureMapperLayer* CoordinatedPlatformLayer::target() const
+{
+    ASSERT(!isMainThread());
+    return m_target.get();
+}
+
+void CoordinatedPlatformLayer::invalidateTarget()
+{
+    ASSERT(!isMainThread());
+    if (m_committedContentsBuffer) {
+        m_committedContentsBuffer->invalidate();
+        m_committedContentsBuffer = nullptr;
+    }
+    m_backingStore = nullptr;
+    m_target = nullptr;
+}
+
 void CoordinatedPlatformLayer::invalidateClient()
 {
     ASSERT(isMainThread());
@@ -109,7 +139,7 @@ void CoordinatedPlatformLayer::setPosition(FloatPoint&& position)
         return;
 
     m_position = WTFMove(position);
-    m_nicosia.delta.positionChanged = true;
+    m_pendingChanges.add(Change::Position);
     notifyCompositionRequired();
 }
 
@@ -120,13 +150,7 @@ void CoordinatedPlatformLayer::setPositionForScrolling(const FloatPoint& positio
         return;
 
     m_position = position;
-    Nicosia::CompositionLayer::LayerState::Delta delta;
-    delta.positionChanged = true;
-    m_nicosia.layer->accessPending([&](Nicosia::CompositionLayer::LayerState& state) {
-        state.delta.value |= delta.value;
-        state.position = m_position;
-    });
-    m_nicosia.layer->flushState();
+    m_pendingChanges.add(Change::Position);
     notifyCompositionRequired();
 }
 
@@ -159,7 +183,7 @@ void CoordinatedPlatformLayer::setBoundsOrigin(const FloatPoint& origin)
         return;
 
     m_boundsOrigin = origin;
-    m_nicosia.delta.boundsOriginChanged = true;
+    m_pendingChanges.add(Change::BoundsOrigin);
     notifyCompositionRequired();
 }
 
@@ -170,13 +194,7 @@ void CoordinatedPlatformLayer::setBoundsOriginForScrolling(const FloatPoint& ori
         return;
 
     m_boundsOrigin = origin;
-    Nicosia::CompositionLayer::LayerState::Delta delta;
-    delta.boundsOriginChanged = true;
-    m_nicosia.layer->accessPending([&](Nicosia::CompositionLayer::LayerState& state) {
-        state.delta.value |= delta.value;
-        state.boundsOrigin = m_boundsOrigin;
-    });
-    m_nicosia.layer->flushState();
+    m_pendingChanges.add(Change::BoundsOrigin);
     notifyCompositionRequired();
 }
 
@@ -193,7 +211,7 @@ void CoordinatedPlatformLayer::setAnchorPoint(FloatPoint3D&& point)
         return;
 
     m_anchorPoint = WTFMove(point);
-    m_nicosia.delta.anchorPointChanged = true;
+    m_pendingChanges.add(Change::AnchorPoint);
     notifyCompositionRequired();
 }
 
@@ -210,7 +228,7 @@ void CoordinatedPlatformLayer::setSize(FloatSize&& size)
         return;
 
     m_size = WTFMove(size);
-    m_nicosia.delta.sizeChanged = true;
+    m_pendingChanges.add(Change::Size);
     notifyCompositionRequired();
 }
 
@@ -233,7 +251,7 @@ void CoordinatedPlatformLayer::setTransform(const TransformationMatrix& matrix)
         return;
 
     m_transform = matrix;
-    m_nicosia.delta.transformChanged = true;
+    m_pendingChanges.add(Change::Transform);
     notifyCompositionRequired();
 }
 
@@ -250,7 +268,7 @@ void CoordinatedPlatformLayer::setChildrenTransform(const TransformationMatrix& 
         return;
 
     m_childrenTransform = matrix;
-    m_nicosia.delta.childrenTransformChanged = true;
+    m_pendingChanges.add(Change::ChildrenTransform);
     notifyCompositionRequired();
 }
 
@@ -293,7 +311,7 @@ void CoordinatedPlatformLayer::setScrollingNodeID(std::optional<ScrollingNodeID>
         return;
 
     m_scrollingNodeID = nodeID;
-    m_nicosia.delta.scrollingNodeChanged = true;
+    m_pendingChanges.add(Change::ScrollingNode);
     notifyCompositionRequired();
 }
 
@@ -311,7 +329,7 @@ void CoordinatedPlatformLayer::setDrawsContent(bool drawsContent)
         return;
 
     m_drawsContent = drawsContent;
-    m_nicosia.delta.flagsChanged = true;
+    m_pendingChanges.add(Change::DrawsContent);
     notifyCompositionRequired();
 }
 
@@ -322,7 +340,7 @@ void CoordinatedPlatformLayer::setMasksToBounds(bool masksToBounds)
         return;
 
     m_masksToBounds = masksToBounds;
-    m_nicosia.delta.flagsChanged = true;
+    m_pendingChanges.add(Change::MasksToBounds);
     notifyCompositionRequired();
 }
 
@@ -333,7 +351,7 @@ void CoordinatedPlatformLayer::setPreserves3D(bool preserves3D)
         return;
 
     m_preserves3D = preserves3D;
-    m_nicosia.delta.flagsChanged = true;
+    m_pendingChanges.add(Change::Preserves3D);
     notifyCompositionRequired();
 }
 
@@ -344,7 +362,7 @@ void CoordinatedPlatformLayer::setBackfaceVisibility(bool backfaceVisibility)
         return;
 
     m_backfaceVisibility = backfaceVisibility;
-    m_nicosia.delta.flagsChanged = true;
+    m_pendingChanges.add(Change::BackfaceVisibility);
     notifyCompositionRequired();
 }
 
@@ -355,7 +373,7 @@ void CoordinatedPlatformLayer::setOpacity(float opacity)
         return;
 
     m_opacity = opacity;
-    m_nicosia.delta.opacityChanged = true;
+    m_pendingChanges.add(Change::Opacity);
     notifyCompositionRequired();
 }
 
@@ -366,7 +384,7 @@ void CoordinatedPlatformLayer::setContentsVisible(bool contentsVisible)
         return;
 
     m_contentsVisible = contentsVisible;
-    m_nicosia.delta.flagsChanged = true;
+    m_pendingChanges.add(Change::ContentsVisible);
     notifyCompositionRequired();
 }
 
@@ -383,8 +401,8 @@ void CoordinatedPlatformLayer::setContentsOpaque(bool contentsOpaque)
         return;
 
     m_contentsOpaque = contentsOpaque;
-    m_nicosia.delta.flagsChanged = true;
-    // FIXME: request a full repaint.
+    m_pendingChanges.add(Change::ContentsOpaque);
+    // FIXME: request a full repaint?
     notifyCompositionRequired();
 }
 
@@ -395,7 +413,7 @@ void CoordinatedPlatformLayer::setContentsRect(const FloatRect& contentsRect)
         return;
 
     m_contentsRect = contentsRect;
-    m_nicosia.delta.contentsRectChanged = true;
+    m_pendingChanges.add(Change::ContentsRect);
     notifyCompositionRequired();
 }
 
@@ -406,7 +424,7 @@ void CoordinatedPlatformLayer::setContentsRectClipsDescendants(bool contentsRect
         return;
 
     m_contentsRectClipsDescendants = contentsRectClipsDescendants;
-    m_nicosia.delta.flagsChanged = true;
+    m_pendingChanges.add(Change::ContentsRectClipsDescendants);
     notifyCompositionRequired();
 }
 
@@ -417,7 +435,7 @@ void CoordinatedPlatformLayer::setContentsClippingRect(const FloatRoundedRect& c
         return;
 
     m_contentsClippingRect = contentsClippingRect;
-    m_nicosia.delta.contentsClippingRectChanged = true;
+    m_pendingChanges.add(Change::ContentsClippingRect);
     notifyCompositionRequired();
 }
 
@@ -428,10 +446,8 @@ void CoordinatedPlatformLayer::setContentsScale(float contentsScale)
         return;
 
     m_contentsScale = contentsScale;
-    if (m_backingStore) {
-        m_backingStore->setContentsScale(m_contentsScale);
-        m_nicosia.delta.backingStoreChanged = true;
-    }
+    if (m_backingStoreProxy)
+        m_backingStoreProxy->setContentsScale(m_contentsScale);
     notifyCompositionRequired();
 }
 
@@ -444,14 +460,14 @@ void CoordinatedPlatformLayer::setContentsBuffer(TextureMapperPlatformLayerProxy
     m_contentsBuffer = contentsBuffer;
     if (m_contentsBuffer)
         m_contentsBufferNeedsDisplay = true;
-    m_nicosia.delta.contentLayerChanged = true;
+    m_pendingChanges.add(Change::ContentsBuffer);
     notifyCompositionRequired();
 }
 
 void CoordinatedPlatformLayer::setContentsBufferNeedsDisplay()
 {
     ASSERT(m_lock.isHeld());
-    if (m_contentsBufferNeedsDisplay)
+    if (!m_contentsBuffer || m_contentsBufferNeedsDisplay)
         return;
 
     m_contentsBufferNeedsDisplay = true;
@@ -469,7 +485,7 @@ void CoordinatedPlatformLayer::setContentsImage(RefPtr<NativeImage>&& image)
         m_imageBackingStore = m_client->imageBackingStore(image.releaseNonNull());
     } else
         m_imageBackingStore = nullptr;
-    m_nicosia.delta.imageBackingChanged = true;
+    m_pendingChanges.add(Change::ContentsImage);
     notifyCompositionRequired();
 }
 
@@ -480,7 +496,7 @@ void CoordinatedPlatformLayer::setContentsColor(const Color& color)
         return;
 
     m_contentsColor = color;
-    m_nicosia.delta.solidColorChanged = true;
+    m_pendingChanges.add(Change::ContentsColor);
     notifyCompositionRequired();
 }
 
@@ -491,7 +507,7 @@ void CoordinatedPlatformLayer::setContentsTileSize(const FloatSize& contentsTile
         return;
 
     m_contentsTileSize = contentsTileSize;
-    m_nicosia.delta.contentsTilingChanged = true;
+    m_pendingChanges.add(Change::ContentsTiling);
     notifyCompositionRequired();
 }
 
@@ -502,7 +518,7 @@ void CoordinatedPlatformLayer::setContentsTilePhase(const FloatSize& contentsTil
         return;
 
     m_contentsTilePhase = contentsTilePhase;
-    m_nicosia.delta.contentsTilingChanged = true;
+    m_pendingChanges.add(Change::ContentsTiling);
     notifyCompositionRequired();
 }
 
@@ -513,8 +529,6 @@ void CoordinatedPlatformLayer::setDirtyRegion(Vector<IntRect, 1>&& dirtyRegion)
         return;
 
     m_dirtyRegion = WTFMove(dirtyRegion);
-    if (m_backingStore)
-        m_nicosia.delta.backingStoreChanged = true;
     notifyCompositionRequired();
 }
 
@@ -526,7 +540,7 @@ void CoordinatedPlatformLayer::setDamage(Damage&& damage)
         return;
 
     m_damage = WTFMove(damage);
-    m_nicosia.delta.damageChanged = true;
+    m_pendingChanges.add(Change::Damage);
 }
 #endif
 
@@ -537,7 +551,7 @@ void CoordinatedPlatformLayer::setFilters(const FilterOperations& filters)
         return;
 
     m_filters = filters;
-    m_nicosia.delta.filtersChanged = true;
+    m_pendingChanges.add(Change::Filters);
     notifyCompositionRequired();
 }
 
@@ -548,7 +562,7 @@ void CoordinatedPlatformLayer::setMask(CoordinatedPlatformLayer* mask)
         return;
 
     m_mask = mask;
-    m_nicosia.delta.maskChanged = true;
+    m_pendingChanges.add(Change::Mask);
     notifyCompositionRequired();
 }
 
@@ -559,7 +573,7 @@ void CoordinatedPlatformLayer::setReplica(CoordinatedPlatformLayer* replica)
         return;
 
     m_replica = replica;
-    m_nicosia.delta.replicaChanged = true;
+    m_pendingChanges.add(Change::Replica);
     notifyCompositionRequired();
 }
 
@@ -570,7 +584,7 @@ void CoordinatedPlatformLayer::setBackdrop(CoordinatedPlatformLayer* backdrop)
         return;
 
     m_backdrop = backdrop;
-    m_nicosia.delta.backdropFiltersChanged = true;
+    m_pendingChanges.add(Change::Backdrop);
     notifyCompositionRequired();
 }
 
@@ -581,7 +595,7 @@ void CoordinatedPlatformLayer::setBackdropRect(const FloatRoundedRect& backdropR
         return;
 
     m_backdropRect = backdropRect;
-    m_nicosia.delta.backdropFiltersRectChanged = true;
+    m_pendingChanges.add(Change::BackdropRect);
     notifyCompositionRequired();
 }
 
@@ -589,7 +603,7 @@ void CoordinatedPlatformLayer::setAnimations(const TextureMapperAnimations& anim
 {
     ASSERT(m_lock.isHeld());
     m_animations = animations;
-    m_nicosia.delta.animationsChanged = true;
+    m_pendingChanges.add(Change::Animations);
     notifyCompositionRequired();
 }
 
@@ -600,7 +614,7 @@ void CoordinatedPlatformLayer::setChildren(Vector<Ref<CoordinatedPlatformLayer>>
         return;
 
     m_children = WTFMove(children);
-    m_nicosia.delta.childrenChanged = true;
+    m_pendingChanges.add(Change::Children);
     notifyCompositionRequired();
 }
 
@@ -613,12 +627,7 @@ const Vector<Ref<CoordinatedPlatformLayer>>& CoordinatedPlatformLayer::children(
 void CoordinatedPlatformLayer::setEventRegion(const EventRegion& eventRegion)
 {
     ASSERT(m_lock.isHeld());
-    if (m_eventRegion == eventRegion)
-        return;
-
     m_eventRegion = eventRegion;
-    m_nicosia.delta.eventRegionChanged = true;
-    notifyCompositionRequired();
 }
 
 const EventRegion& CoordinatedPlatformLayer::eventRegion() const
@@ -635,7 +644,7 @@ void CoordinatedPlatformLayer::setDebugBorder(Color&& borderColor, float borderW
 
     m_debugBorderColor = WTFMove(borderColor);
     m_debugBorderWidth = borderWidth;
-    m_nicosia.delta.debugBorderChanged = true;
+    m_pendingChanges.add(Change::DebugIndicators);
     notifyCompositionRequired();
 }
 
@@ -646,13 +655,16 @@ void CoordinatedPlatformLayer::setShowRepaintCounter(bool showRepaintCounter)
         return;
 
     m_repaintCount = showRepaintCounter ? m_owner->repaintCount() : -1;
-    m_nicosia.delta.repaintCounterChanged = true;
+    m_pendingChanges.add(Change::DebugIndicators);
     notifyCompositionRequired();
 }
 
 bool CoordinatedPlatformLayer::needsBackingStore() const
 {
     ASSERT(m_lock.isHeld());
+    if (!m_owner)
+        return false;
+
     if (!m_drawsContent || !m_contentsVisible || m_size.isEmpty())
         return false;
 
@@ -670,24 +682,21 @@ bool CoordinatedPlatformLayer::needsBackingStore() const
 
 void CoordinatedPlatformLayer::updateBackingStore()
 {
-    if (!m_owner)
-        return;
-
-    bool scaleChanged = m_backingStore->setContentsScale(m_contentsScale);
+    bool scaleChanged = m_backingStoreProxy->setContentsScale(m_contentsScale);
     if (!scaleChanged && m_dirtyRegion.isEmpty() && !m_pendingTilesCreation && !m_needsTilesUpdate)
         return;
 
     IntRect contentsRect(IntPoint::zero(), IntSize(m_size));
-    auto updateResult = m_backingStore->updateIfNeeded(m_transformedVisibleRectIncludingFuture, contentsRect, m_pendingTilesCreation || m_needsTilesUpdate, m_dirtyRegion, *this);
+    auto updateResult = m_backingStoreProxy->updateIfNeeded(m_transformedVisibleRectIncludingFuture, contentsRect, m_pendingTilesCreation || m_needsTilesUpdate, m_dirtyRegion, *this);
     m_needsTilesUpdate = false;
     m_dirtyRegion.clear();
     if (m_animatedBackingStoreClient)
-        m_animatedBackingStoreClient->update(m_visibleRect, m_backingStore->coverRect(), m_size, m_contentsScale);
+        m_animatedBackingStoreClient->update(m_visibleRect, m_backingStoreProxy->coverRect(), m_size, m_contentsScale);
 
     if (updateResult.contains(CoordinatedBackingStoreProxy::UpdateResult::TilesChanged)) {
         if (m_repaintCount != -1 && updateResult.contains(CoordinatedBackingStoreProxy::UpdateResult::BuffersChanged)) {
             m_repaintCount = m_owner->incrementRepaintCount();
-            m_nicosia.delta.repaintCounterChanged = true;
+            m_pendingChanges.add(Change::DebugIndicators);
         }
         notifyCompositionRequired();
     }
@@ -697,7 +706,6 @@ void CoordinatedPlatformLayer::updateBackingStore()
 
 void CoordinatedPlatformLayer::updateContents(bool affectedByTransformAnimation)
 {
-    ASSERT(m_owner);
     Locker locker { m_lock };
 
     if (m_contentsBufferNeedsDisplay) {
@@ -707,129 +715,34 @@ void CoordinatedPlatformLayer::updateContents(bool affectedByTransformAnimation)
     }
 
     if (needsBackingStore()) {
-        if (!m_backingStore) {
-            m_backingStore = CoordinatedBackingStoreProxy::create(m_contentsScale);
-            m_nicosia.delta.backingStoreChanged = true;
+        if (!m_backingStoreProxy) {
+            m_backingStoreProxy = CoordinatedBackingStoreProxy::create(m_contentsScale);
             m_needsTilesUpdate = true;
         }
-    } else if (m_backingStore) {
-        m_backingStore = nullptr;
-        m_nicosia.delta.backingStoreChanged = true;
-    }
 
-    if (m_backingStore && affectedByTransformAnimation) {
-        if (!m_animatedBackingStoreClient) {
-            m_animatedBackingStoreClient = CoordinatedAnimatedBackingStoreClient::create(*m_owner);
-            m_nicosia.delta.animatedBackingStoreClientChanged = true;
+        if (affectedByTransformAnimation) {
+            if (!m_animatedBackingStoreClient)
+                m_animatedBackingStoreClient = CoordinatedAnimatedBackingStoreClient::create(*m_owner);
+        } else if (m_animatedBackingStoreClient) {
+            m_animatedBackingStoreClient->invalidate();
+            m_animatedBackingStoreClient = nullptr;
         }
-    } else if (m_animatedBackingStoreClient) {
-        m_animatedBackingStoreClient->invalidate();
-        m_animatedBackingStoreClient = nullptr;
-        m_nicosia.delta.animatedBackingStoreClientChanged = true;
+
+        updateBackingStore();
+    } else {
+        m_backingStoreProxy = nullptr;
+        if (m_animatedBackingStoreClient) {
+            m_animatedBackingStoreClient->invalidate();
+            m_animatedBackingStoreClient = nullptr;
+        }
     }
 
     if (m_imageBackingStore) {
         bool wasVisible = m_imageBackingStoreVisible;
         m_imageBackingStoreVisible = m_transformedVisibleRect.intersects(IntRect(m_contentsRect));
         if (wasVisible != m_imageBackingStoreVisible)
-            m_nicosia.delta.imageBackingChanged = true;
+            m_pendingChanges.add(Change::ContentsImage);
     }
-
-    bool hadPendingChanges = false;
-    if (!!m_nicosia.delta.value) {
-        m_nicosia.layer->accessPending([this](Nicosia::CompositionLayer::LayerState& state) {
-            auto& localDelta = m_nicosia.delta;
-            state.delta.value |= localDelta.value;
-
-            if (localDelta.positionChanged)
-                state.position = m_position;
-            if (localDelta.anchorPointChanged)
-                state.anchorPoint = m_anchorPoint;
-            if (localDelta.sizeChanged)
-                state.size = m_size;
-            if (localDelta.boundsOriginChanged)
-                state.boundsOrigin = m_boundsOrigin;
-            if (localDelta.transformChanged)
-                state.transform = m_transform;
-            if (localDelta.childrenTransformChanged)
-                state.childrenTransform = m_childrenTransform;
-            if (localDelta.contentsRectChanged)
-                state.contentsRect = m_contentsRect;
-            if (localDelta.contentsClippingRectChanged)
-                state.contentsClippingRect = m_contentsClippingRect;
-            if (localDelta.contentsTilingChanged) {
-                state.contentsTileSize = m_contentsTileSize;
-                state.contentsTilePhase = m_contentsTilePhase;
-            }
-            if (localDelta.flagsChanged) {
-                state.flags.drawsContent = m_drawsContent;
-                state.flags.masksToBounds = m_masksToBounds;
-                state.flags.preserves3D = m_preserves3D;
-                state.flags.backfaceVisible = m_backfaceVisibility;
-                state.flags.contentsVisible = m_contentsVisible;
-                state.flags.contentsOpaque = m_contentsOpaque;
-                state.flags.contentsRectClipsDescendants = m_contentsRectClipsDescendants;
-            }
-            if (localDelta.opacityChanged)
-                state.opacity = m_opacity;
-            if (localDelta.filtersChanged)
-                state.filters = m_filters;
-            if (localDelta.maskChanged)
-                state.mask = m_mask ? m_mask->compositionLayer() : nullptr;
-            if (localDelta.replicaChanged)
-                state.replica = m_replica ? m_replica->compositionLayer() : nullptr;
-            if (localDelta.backdropFiltersChanged)
-                state.backdropLayer = m_backdrop ? m_backdrop->compositionLayer() : nullptr;
-            if (localDelta.backdropFiltersRectChanged)
-                state.backdropFiltersRect = m_backdropRect;
-            if (localDelta.animationsChanged)
-                state.animations = m_animations;
-            if (localDelta.childrenChanged) {
-                state.children = m_children.map<Vector<RefPtr<Nicosia::CompositionLayer>>>([](const auto& child) {
-                    return child->compositionLayer();
-                });
-            }
-            if (localDelta.backingStoreChanged)
-                state.backingStore = m_backingStore;
-            if (localDelta.animatedBackingStoreClientChanged)
-                state.animatedBackingStoreClient = m_animatedBackingStoreClient;
-            if (localDelta.imageBackingChanged) {
-                state.imageBacking.store = m_imageBackingStore;
-                state.imageBacking.isVisible = m_imageBackingStoreVisible;
-            }
-            if (localDelta.solidColorChanged)
-                state.solidColor = m_contentsColor;
-            if (localDelta.contentLayerChanged)
-                state.contentLayer = m_contentsBuffer;
-            if (localDelta.eventRegionChanged)
-                state.eventRegion = m_eventRegion;
-#if ENABLE(SCROLLING_THREAD)
-            if (localDelta.scrollingNodeChanged)
-                state.scrollingNodeID = m_scrollingNodeID;
-#endif
-            if (localDelta.debugBorderChanged) {
-                state.debugBorder.visible = m_debugBorderColor.isVisible();
-                state.debugBorder.color = m_debugBorderColor;
-                state.debugBorder.width = m_debugBorderWidth;
-            }
-            if (localDelta.repaintCounterChanged) {
-                state.repaintCounter.visible = m_repaintCount != -1;
-                state.repaintCounter.count = m_repaintCount;
-            }
-#if ENABLE(DAMAGE_TRACKING)
-            if (localDelta.damageChanged)
-                state.damage = WTFMove(m_damage);
-#endif
-        });
-        hadPendingChanges = true;
-        m_nicosia.delta = { };
-    }
-
-    if (m_backingStore)
-        updateBackingStore();
-
-    if (hadPendingChanges)
-        m_nicosia.layer->flushState();
 
     if (m_backdrop)
         m_backdrop->updateContents(affectedByTransformAnimation);
@@ -838,7 +751,7 @@ void CoordinatedPlatformLayer::updateContents(bool affectedByTransformAnimation)
 void CoordinatedPlatformLayer::purgeBackingStores()
 {
     Locker locker { m_lock };
-    m_backingStore = nullptr;
+    m_backingStoreProxy = nullptr;
     if (m_animatedBackingStoreClient) {
         m_animatedBackingStoreClient->invalidate();
         m_animatedBackingStoreClient = nullptr;
@@ -872,6 +785,147 @@ Ref<CoordinatedTileBuffer> CoordinatedPlatformLayer::paint(const IntRect& dirtyR
 #elif USE(SKIA)
     return m_client->paintingEngine().paintLayer(*m_owner, dirtyRect, m_contentsOpaque, m_contentsScale);
 #endif
+}
+
+void CoordinatedPlatformLayer::flushCompositingState()
+{
+    ASSERT(!isMainThread());
+    Locker locker { m_lock };
+    if (m_pendingChanges.isEmpty() && !m_backingStoreProxy && !m_contentsBuffer)
+        return;
+
+    auto& layer = ensureTarget();
+    if (m_pendingChanges.contains(Change::Position))
+        layer.setPosition(m_position);
+
+    if (m_pendingChanges.contains(Change::AnchorPoint))
+        layer.setAnchorPoint(m_anchorPoint);
+
+    if (m_pendingChanges.contains(Change::Size))
+        layer.setSize(m_size);
+
+    if (m_pendingChanges.contains(Change::BoundsOrigin))
+        layer.setBoundsOrigin(m_boundsOrigin);
+
+    if (m_pendingChanges.contains(Change::Transform))
+        layer.setTransform(m_transform);
+
+    if (m_pendingChanges.contains(Change::ChildrenTransform))
+        layer.setChildrenTransform(m_childrenTransform);
+
+    if (m_pendingChanges.contains(Change::Preserves3D))
+        layer.setPreserves3D(m_preserves3D);
+
+    if (m_pendingChanges.contains(Change::MasksToBounds))
+        layer.setMasksToBounds(m_masksToBounds);
+
+    if (m_pendingChanges.contains(Change::BackfaceVisibility))
+        layer.setBackfaceVisibility(m_backfaceVisibility);
+
+    if (m_pendingChanges.contains(Change::Opacity))
+        layer.setOpacity(m_opacity);
+
+    if (m_pendingChanges.contains(Change::ContentsVisible))
+        layer.setContentsVisible(m_contentsVisible);
+
+    if (m_pendingChanges.contains(Change::ContentsOpaque))
+        layer.setContentsOpaque(m_contentsOpaque);
+
+    if (m_pendingChanges.contains(Change::ContentsRect))
+        layer.setContentsRect(m_contentsRect);
+
+    if (m_pendingChanges.contains(Change::ContentsRectClipsDescendants))
+        layer.setContentsRectClipsDescendants(m_contentsRectClipsDescendants);
+
+    if (m_pendingChanges.contains(Change::ContentsTiling)) {
+        layer.setContentsTileSize(m_contentsTileSize);
+        layer.setContentsTilePhase(m_contentsTilePhase);
+    }
+
+    if (m_pendingChanges.contains(Change::ContentsClippingRect))
+        layer.setContentsClippingRect(m_contentsClippingRect);
+
+    if (m_pendingChanges.contains(Change::ContentsBuffer)) {
+        if (m_committedContentsBuffer && m_committedContentsBuffer != m_contentsBuffer)
+            m_committedContentsBuffer->invalidate();
+
+        m_committedContentsBuffer = m_contentsBuffer;
+        if (m_committedContentsBuffer)
+            m_committedContentsBuffer->activateOnCompositingThread(*this);
+    }
+
+    if (m_pendingChanges.contains(Change::ContentsColor))
+        layer.setSolidColor(m_contentsColor);
+
+#if ENABLE(DAMAGE_TRACKING)
+    if (m_pendingChanges.contains(Change::Damage))
+        layer.setDamage(m_damage);
+#endif
+
+    if (m_pendingChanges.contains(Change::Filters))
+        layer.setFilters(m_filters);
+
+    if (m_pendingChanges.contains(Change::Mask))
+        layer.setMaskLayer(m_mask ? &m_mask->ensureTarget() : nullptr);
+
+    if (m_pendingChanges.contains(Change::Replica))
+        layer.setReplicaLayer(m_replica ? &m_replica->ensureTarget() : nullptr);
+
+    if (m_pendingChanges.contains(Change::Backdrop))
+        layer.setBackdropLayer(m_backdrop ? &m_backdrop->ensureTarget() : nullptr);
+
+    if (m_pendingChanges.contains(Change::BackdropRect))
+        layer.setBackdropFiltersRect(m_backdropRect);
+
+    if (m_pendingChanges.contains(Change::Animations))
+        layer.setAnimations(m_animations);
+
+    if (m_pendingChanges.contains(Change::DebugIndicators)) {
+        layer.setShowRepaintCounter(m_repaintCount != -1);
+        layer.setRepaintCount(m_repaintCount);
+
+        layer.setShowDebugBorder(m_debugBorderColor.isVisible());
+        layer.setDebugBorderColor(m_debugBorderColor);
+        layer.setDebugBorderWidth(m_debugBorderWidth);
+    }
+
+    if (m_pendingChanges.contains(Change::Children)) {
+        layer.setChildren(WTF::map(m_children, [](auto& child) {
+            return &child->ensureTarget();
+        }));
+    }
+
+    if (m_backingStoreProxy) {
+        if (!m_backingStore)
+            m_backingStore = CoordinatedBackingStore::create();
+        layer.setBackingStore(m_backingStore.get());
+
+        if (m_animatedBackingStoreClient)
+            layer.setAnimatedBackingStoreClient(m_animatedBackingStoreClient.get());
+
+        auto update = m_backingStoreProxy->takePendingUpdate();
+        m_backingStore->resize(layer.size(), update.scale());
+
+        for (auto tileID : update.tilesToCreate())
+            m_backingStore->createTile(tileID);
+        for (auto tileID : update.tilesToRemove())
+            m_backingStore->removeTile(tileID);
+        for (const auto& tileUpdate : update.tilesToUpdate())
+            m_backingStore->updateTile(tileUpdate.tileID, tileUpdate.dirtyRect, tileUpdate.tileRect, tileUpdate.buffer.copyRef(), { });
+    } else {
+        layer.setBackingStore(nullptr);
+        layer.setAnimatedBackingStoreClient(nullptr);
+        m_backingStore = nullptr;
+    }
+
+    if (m_committedContentsBuffer)
+        m_committedContentsBuffer->swapBuffer();
+    else if (m_imageBackingStore && m_imageBackingStoreVisible)
+        layer.setContentsLayer(m_imageBackingStore->buffer());
+    else
+        layer.setContentsLayer(nullptr);
+
+    m_pendingChanges = { };
 }
 
 } // namespace WebCore

@@ -66,6 +66,8 @@ void CoordinatedBackingStore::paintToTextureMapper(TextureMapper& textureMapper,
 
     ASSERT(!m_size.isZero());
 
+    processPendingUpdates(textureMapper);
+
     Vector<CoordinatedBackingStoreTile*, 16> tilesToPaint;
     Vector<CoordinatedBackingStoreTile*, 16> previousTilesToPaint;
 

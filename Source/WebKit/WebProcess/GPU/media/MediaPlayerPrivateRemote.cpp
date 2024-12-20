@@ -64,8 +64,7 @@
 #include <wtf/URL.h>
 #include <wtf/text/CString.h>
 
-#if USE(NICOSIA)
-#include <WebCore/NicosiaPlatformLayer.h>
+#if PLATFORM(GTK) || PLATFORM(WPE)
 #include <WebCore/TextureMapperPlatformLayerProxy.h>
 #elif USE(COORDINATED_GRAPHICS)
 #include <WebCore/TextureMapperPlatformLayerProxyProvider.h>

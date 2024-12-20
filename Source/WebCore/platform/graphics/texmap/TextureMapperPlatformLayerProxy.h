@@ -26,14 +26,13 @@
 #pragma once
 
 #if USE(COORDINATED_GRAPHICS)
-
 #include <wtf/Function.h>
 #include <wtf/Lock.h>
 #include <wtf/RunLoop.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
 namespace WebCore {
-
+class CoordinatedPlatformLayer;
 class CoordinatedPlatformLayerBuffer;
 class IntSize;
 class TextureMapperLayer;
@@ -48,11 +47,6 @@ public:
         Canvas
     };
 
-    class Compositor {
-    public:
-        virtual void onNewBufferAvailable() = 0;
-    };
-
     static Ref<TextureMapperPlatformLayerProxy> create(ContentType contentType)
     {
         return adoptRef(*new TextureMapperPlatformLayerProxy(contentType));
@@ -63,7 +57,7 @@ public:
     ContentType contentType() const { return m_contentType; }
 
     bool isActive();
-    void activateOnCompositingThread(Compositor*, TextureMapperLayer*);
+    void activateOnCompositingThread(CoordinatedPlatformLayer&);
     void invalidate();
     void swapBuffer();
 
@@ -81,14 +75,13 @@ private:
     void compositorThreadUpdateTimerFired();
 
     Lock m_lock;
-    Compositor* m_compositor { nullptr };
+    RefPtr<CoordinatedPlatformLayer> m_targetLayer;
 #if ASSERT_ENABLED
     RefPtr<Thread> m_compositorThread;
 #endif
     std::unique_ptr<RunLoop::Timer> m_compositorThreadUpdateTimer;
     Function<void()> m_compositorThreadUpdateFunction;
 
-    TextureMapperLayer* m_targetLayer { nullptr };
     ContentType m_contentType;
     std::unique_ptr<CoordinatedPlatformLayerBuffer> m_currentBuffer;
     std::unique_ptr<CoordinatedPlatformLayerBuffer> m_pendingBuffer;

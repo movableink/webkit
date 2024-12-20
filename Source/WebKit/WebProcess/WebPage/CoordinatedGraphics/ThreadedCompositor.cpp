@@ -29,6 +29,7 @@
 #if USE(COORDINATED_GRAPHICS)
 #include "AcceleratedSurface.h"
 #include "CompositingRunLoop.h"
+#include "CoordinatedSceneState.h"
 #include "LayerTreeHost.h"
 #include "WebPage.h"
 #include "WebProcess.h"
@@ -101,7 +102,7 @@ ThreadedCompositor::ThreadedCompositor(LayerTreeHost& layerTreeHost, ThreadedDis
     m_display.displayUpdate = { 0, c_defaultRefreshRate / 1000 };
 #endif
 
-    m_compositingRunLoop->performTaskSync([this, protectedThis = Ref { *this }] {
+    m_compositingRunLoop->performTaskSync([this, protectedThis = Ref { *this }, sceneState = Ref { m_layerTreeHost->sceneState() }] {
 #if !HAVE(DISPLAY_LINK)
         m_display.updateTimer = makeUnique<RunLoop::Timer>(RunLoop::current(), this, &ThreadedCompositor::displayUpdateFired);
 #if USE(GLIB_EVENT_LOOP)
@@ -111,7 +112,7 @@ ThreadedCompositor::ThreadedCompositor(LayerTreeHost& layerTreeHost, ThreadedDis
         m_display.updateTimer->startOneShot(Seconds { 1.0 / m_display.displayUpdate.updatesPerSecond });
 #endif
 
-        m_scene = adoptRef(new CoordinatedGraphicsScene(this));
+        m_scene = adoptRef(new CoordinatedGraphicsScene(*this, sceneState.get()));
 
         // GLNativeWindowType depends on the EGL implementation: reinterpret_cast works
         // for pointers (only if they are 64-bit wide and not for other cases), and static_cast for
@@ -154,7 +155,7 @@ void ThreadedCompositor::invalidate()
 
         // Update the scene at this point ensures the layers state are correctly propagated
         // in the ThreadedCompositor and in the CompositingCoordinator.
-        updateSceneWithoutRendering();
+        m_scene->updateSceneState();
 
         m_scene->purgeGLResources();
         m_surface->willDestroyGLContext();
@@ -276,9 +277,6 @@ void ThreadedCompositor::renderLayerTree()
     float scaleFactor;
     bool needsResize;
     uint32_t compositionRequestID;
-
-    Vector<RefPtr<Nicosia::Scene>> states;
-
     {
         Locker locker { m_attributes.lock };
         viewportSize = m_attributes.viewportSize;
@@ -286,12 +284,10 @@ void ThreadedCompositor::renderLayerTree()
         needsResize = m_attributes.needsResize;
         compositionRequestID = m_attributes.compositionRequestID;
 
-        states = WTFMove(m_attributes.states);
-
-        if (!states.isEmpty()) {
-            // Client has to be notified upon finishing this scene update.
-            m_attributes.clientRendersNextFrame = true;
-        }
+#if !HAVE(DISPLAY_LINK)
+        // Client has to be notified upon finishing this scene update.
+        m_attributes.clientRendersNextFrame = m_scene->state().layersDidChange();
+#endif
 
         // Reset the needsResize attribute to false.
         m_attributes.needsResize = false;
@@ -318,9 +314,6 @@ void ThreadedCompositor::renderLayerTree()
         glViewport(0, 0, viewportSize.width(), viewportSize.height());
 
     m_surface->clearIfNeeded();
-    WTFBeginSignpost(this, ApplyStateChanges);
-    m_scene->applyStateChanges(states);
-    WTFEndSignpost(this, ApplyStateChanges);
 
     WTFBeginSignpost(this, PaintToGLContext);
     m_scene->paintToCurrentGLContext(viewportTransform, FloatRect { FloatPoint { }, viewportSize }, m_flipY);
@@ -345,14 +338,12 @@ void ThreadedCompositor::renderLayerTree()
     });
 }
 
-uint32_t ThreadedCompositor::requestComposition(const RefPtr<Nicosia::Scene>& state)
+uint32_t ThreadedCompositor::requestComposition()
 {
     ASSERT(RunLoop::isMain());
     uint32_t compositionRequestID;
     {
         Locker locker { m_attributes.lock };
-        if (state)
-            m_attributes.states.append(state);
         compositionRequestID = ++m_attributes.compositionRequestID;
     }
     m_compositingRunLoop->scheduleUpdate();
@@ -362,19 +353,6 @@ uint32_t ThreadedCompositor::requestComposition(const RefPtr<Nicosia::Scene>& st
 void ThreadedCompositor::updateScene()
 {
     m_compositingRunLoop->scheduleUpdate();
-}
-
-void ThreadedCompositor::updateSceneWithoutRendering()
-{
-    Vector<RefPtr<Nicosia::Scene>> states;
-
-    {
-        Locker locker { m_attributes.lock };
-        states = WTFMove(m_attributes.states);
-
-    }
-    m_scene->applyStateChanges(states);
-    m_scene->updateSceneState();
 }
 
 void ThreadedCompositor::frameComplete()

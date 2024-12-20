@@ -137,21 +137,6 @@ else ()
     )
 endif ()
 
-if (USE_NICOSIA)
-    list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
-        "${WEBCORE_DIR}/platform/graphics/nicosia"
-        "${WEBCORE_DIR}/platform/graphics/nicosia/texmap"
-    )
-    list(APPEND WebCore_UNIFIED_SOURCE_LIST_FILES
-        "platform/SourcesNicosia.txt"
-    )
-    list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
-        platform/graphics/nicosia/NicosiaCompositionLayer.h
-        platform/graphics/nicosia/NicosiaPlatformLayer.h
-        platform/graphics/nicosia/NicosiaScene.h
-    )
-endif ()
-
 if (USE_GRAPHICS_LAYER_WC)
     list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
         "${WEBCORE_DIR}/platform/graphics/wc"

@@ -26,10 +26,10 @@
 #pragma once
 
 #if USE(COORDINATED_GRAPHICS)
+#include "Damage.h"
 #include "FloatPoint.h"
 #include "FloatPoint3D.h"
 #include "FloatSize.h"
-#include "NicosiaCompositionLayer.h"
 #include "PlatformLayerIdentifier.h"
 #include "TextureMapperAnimation.h"
 #include "TransformationMatrix.h"
@@ -38,12 +38,14 @@
 
 namespace WebCore {
 class CoordinatedAnimatedBackingStoreClient;
+class CoordinatedBackingStore;
 class CoordinatedBackingStoreProxy;
 class CoordinatedImageBackingStore;
 class CoordinatedPlatformLayer;
 class CoordinatedTileBuffer;
 class GraphicsLayerCoordinated;
 class NativeImage;
+class TextureMapperLayer;
 class TextureMapperPlatformLayerProxy;
 
 #if USE(SKIA)
@@ -79,7 +81,6 @@ public:
     virtual ~CoordinatedPlatformLayer();
 
     PlatformLayerIdentifier id() const { return m_id; }
-    const RefPtr<Nicosia::CompositionLayer>& compositionLayer() const { return m_nicosia.layer; }
     Lock& lock() { return m_lock; }
 
     Client& client() const { ASSERT(m_client); return *m_client; }
@@ -87,6 +88,10 @@ public:
 
     void setOwner(GraphicsLayerCoordinated*);
     GraphicsLayerCoordinated* owner() const;
+
+    TextureMapperLayer& ensureTarget();
+    TextureMapperLayer* target() const;
+    void invalidateTarget();
 
     void setPosition(FloatPoint&&);
     enum class ForcePositionSync : bool { No, Yes };
@@ -159,6 +164,7 @@ public:
     void setShowRepaintCounter(bool);
 
     void updateContents(bool affectedByTransformAnimation);
+    void flushCompositingState();
 
     bool hasPendingTilesCreation() const { return m_pendingTilesCreation; }
     bool hasImageBackingStore() const { return !!m_imageBackingStore; }
@@ -176,23 +182,55 @@ private:
     void updateBackingStore();
     void purgeBackingStores();
 
+    enum class Change : uint32_t {
+        Position                     = 1 << 0,
+        BoundsOrigin                 = 1 << 1,
+        AnchorPoint                  = 1 << 2,
+        Size                         = 1 << 3,
+        Transform                    = 1 << 4,
+        ChildrenTransform            = 1 << 5,
+        DrawsContent                 = 1 << 6,
+        MasksToBounds                = 1 << 7,
+        Preserves3D                  = 1 << 8,
+        BackfaceVisibility           = 1 << 9,
+        Opacity                      = 1 << 10,
+        Children                     = 1 << 11,
+        ContentsVisible              = 1 << 12,
+        ContentsOpaque               = 1 << 13,
+        ContentsRect                 = 1 << 14,
+        ContentsRectClipsDescendants = 1 << 15,
+        ContentsClippingRect         = 1 << 16,
+        ContentsTiling               = 1 << 17,
+        ContentsBuffer               = 1 << 18,
+        ContentsImage                = 1 << 19,
+        ContentsColor                = 1 << 20,
+        Filters                      = 1 << 21,
+        Mask                         = 1 << 22,
+        Replica                      = 1 << 23,
+        Backdrop                     = 1 << 24,
+        BackdropRect                 = 1 << 25,
+        Animations                   = 1 << 26,
+        DebugIndicators              = 1 << 27,
+#if ENABLE(DAMAGE_TRACKING)
+        Damage                       = 1 << 28,
+#endif
+#if ENABLE(SCROLLING_THREAD)
+        ScrollingNode                = 1 << 29
+#endif
+    };
+
     // FIXME: remove the client when a subclass is added for the WebProcess.
     Client* m_client { nullptr };
 
     const PlatformLayerIdentifier m_id;
 
-    struct {
-        RefPtr<Nicosia::CompositionLayer> layer;
-        Nicosia::CompositionLayer::LayerState::Delta delta;
-        Nicosia::CompositionLayer::LayerState::RepaintCounter repaintCounter;
-        Nicosia::CompositionLayer::LayerState::DebugBorder debugBorder;
-    } m_nicosia;
-
     GraphicsLayerCoordinated* m_owner { nullptr };
+    std::unique_ptr<TextureMapperLayer> m_target;
     bool m_pendingTilesCreation { false };
     bool m_needsTilesUpdate { false };
 
     Lock m_lock;
+    OptionSet<Change> m_pendingChanges WTF_GUARDED_BY_LOCK(m_lock);
     FloatPoint m_position WTF_GUARDED_BY_LOCK(m_lock);
     FloatPoint3D m_anchorPoint WTF_GUARDED_BY_LOCK(m_lock) { 0.5f, 0.5f, 0 };
     FloatSize m_size WTF_GUARDED_BY_LOCK(m_lock);
@@ -217,8 +255,10 @@ private:
     FloatSize m_contentsTilePhase WTF_GUARDED_BY_LOCK(m_lock);
     float m_contentsScale WTF_GUARDED_BY_LOCK(m_lock) { 1. };
     RefPtr<TextureMapperPlatformLayerProxy> m_contentsBuffer WTF_GUARDED_BY_LOCK(m_lock);
+    RefPtr<TextureMapperPlatformLayerProxy> m_committedContentsBuffer WTF_GUARDED_BY_LOCK(m_lock);
     bool m_contentsBufferNeedsDisplay WTF_GUARDED_BY_LOCK(m_lock) { false };
-    RefPtr<CoordinatedBackingStoreProxy> m_backingStore WTF_GUARDED_BY_LOCK(m_lock);
+    RefPtr<CoordinatedBackingStoreProxy> m_backingStoreProxy WTF_GUARDED_BY_LOCK(m_lock);
+    RefPtr<CoordinatedBackingStore> m_backingStore WTF_GUARDED_BY_LOCK(m_lock);
     RefPtr<CoordinatedAnimatedBackingStoreClient> m_animatedBackingStoreClient WTF_GUARDED_BY_LOCK(m_lock);
     RefPtr<CoordinatedImageBackingStore> m_imageBackingStore WTF_GUARDED_BY_LOCK(m_lock);
     bool m_imageBackingStoreVisible WTF_GUARDED_BY_LOCK(m_lock) { false };
