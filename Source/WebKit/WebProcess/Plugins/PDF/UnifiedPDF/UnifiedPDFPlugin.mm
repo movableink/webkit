@@ -536,7 +536,7 @@ void UnifiedPDFPlugin::ensureLayers()
         m_rootLayer->addChild(*m_overflowControlsContainer);
     }
 
-    m_presentationController->setupLayers(*m_scrollContainerLayer);
+    m_presentationController->setupLayers(*m_scrolledContentsLayer);
 }
 
 void UnifiedPDFPlugin::incrementalLoadingRepaintTimerFired()
