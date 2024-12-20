@@ -277,7 +277,11 @@ PlatformCALayerCocoa::PlatformCALayerCocoa(LayerType layerType, PlatformCALayerC
         m_layer = adoptNS([(CALayer *)[layerClass alloc] init]);
 
 #if PLATFORM(MAC)
-    if (layerType == LayerType::LayerTypeBackdropLayer || layerType == LayerType::LayerTypeMaterialLayer)
+    bool isBackdropLayer = layerType == LayerType::LayerTypeBackdropLayer;
+#if HAVE(CORE_MATERIAL)
+    isBackdropLayer |= layerType == LayerType::LayerTypeMaterialLayer;
+#endif
+    if (isBackdropLayer)
         [(CABackdropLayer *)m_layer.get() setWindowServerAware:NO];
 #endif
 

@@ -28,6 +28,9 @@ pdf/annotations/dropdown-select-second-option.html [ Skip ]
 http/tests/download/anchor-download-redirect-cross-origin.html
 http/tests/download/anchor-download-redirect-cross-origin-top-level.html
 
+# CoreMaterial is unavailable on Ventura.
+apple-visual-effects [ Skip ]
+
 # These fail with an "IOSurface textures must use MTLStorageModeManaged" assertion on Ventura, but not on later OSes.
 fast/webgpu/nocrash/fuzz-274161.html [ Skip ]
 fast/webgpu/nocrash/fuzz-274270.html [ Skip ]
