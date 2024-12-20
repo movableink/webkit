@@ -4608,8 +4608,6 @@ webkit.org/b/257904 http/tests/site-isolation/draw-after-navigation.html [ Skip 
 webkit.org/b/257904 http/tests/site-isolation/draw-with-size-after-same-origin-navigation.html [ Skip ]
 webkit.org/b/257904 http/tests/site-isolation/page-zoom.html [ Skip ]
 
-webkit.org/b/269550 http/tests/site-isolation/scrolling/ [ Skip ]
-
 # This test can't be enabled on iOS until EventSenderProxy::keyDown() is implemented on iOS.
 http/tests/site-isolation/key-events.html [ Skip ]
 
