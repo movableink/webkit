@@ -1943,3 +1943,6 @@ webkit.org/b/232282 [ Ventura+ ] fast/scrolling/mac/scrollbars/overlay-scrollbar
 # webkit.org/b/284853 REGRESSION(287869@main?): [macOS Debug wk2] ASSERTION FAILED: WebCore::MediaRecorderPrivateEncoder::interleaveAndEnqueueNextFrame() in http/wpt/mediarecorder tests (flaky in EWS)
 [ Debug ] http/wpt/mediarecorder/MediaRecorder-video-bitrate.html [ Skip ]
 [ Debug ] http/wpt/mediarecorder/pause-recording.html [ Skip ]
+
+webkit.org/b/285033 [ Ventura+ ] http/tests/download/sandboxed-iframe-download-not-allowed.html [ Pass Failure ]
+
