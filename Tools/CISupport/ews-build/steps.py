@@ -3330,6 +3330,8 @@ class CompileWebKit(shell.Compile, AddToLogMixin, ShellMixin):
         return shell.Compile.start(self)
 
     def errorReceived(self, error):
+        # Temporary workaround for catching silent failures: https://bugs.webkit.org/show_bug.cgi?id=276081
+        self.setProperty('build_failed', True)
         self._addToLog('errors', error + '\n')
 
     def handleExcessiveLogging(self):
@@ -3395,6 +3397,8 @@ class CompileWebKit(shell.Compile, AddToLogMixin, ShellMixin):
         return super().evaluateCommand(cmd)
 
     def getResultSummary(self):
+        if self.getProperty('build_failed'):
+            self.results = FAILURE
         if self.results == FAILURE:
             return {'step': 'Failed to compile WebKit'}
         if self.results == SKIPPED:
