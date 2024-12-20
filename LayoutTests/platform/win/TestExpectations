@@ -813,6 +813,8 @@ http/tests/resourceLoadStatistics/website-data-removal-for-site-navigated-to-wit
 http/tests/resourceLoadStatistics/website-data-removal-for-site-without-user-interaction-js-cookie-checking.html [ Failure ]
 http/tests/resourceLoadStatistics/website-data-removal-for-site-without-user-interaction.html [ Failure ]
 
+http/tests/resourceLoadStatistics/only-partitioned-third-party-cookies.https.html [ Skip ]
+
 http/tests/security/XFrameOptions/x-frame-options-deny.html [ Skip ] # Failure
 http/tests/security/XFrameOptions/x-frame-options-multiple-headers-conflict.html [ Skip ] # Failure
 http/tests/security/XFrameOptions/x-frame-options-multiple-headers-sameorigin-deny.html [ Skip ] # Failure

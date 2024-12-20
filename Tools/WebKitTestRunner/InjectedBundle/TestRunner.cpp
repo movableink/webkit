@@ -1502,11 +1502,13 @@ void TestRunner::setStatisticsShouldDowngradeReferrer(JSContextRef context, bool
     postMessageWithAsyncReply(context, "SetStatisticsShouldDowngradeReferrer", adoptWK(WKBooleanCreate(value)), completionHandler);
 }
 
-void TestRunner::setStatisticsShouldBlockThirdPartyCookies(JSContextRef context, bool value, JSValueRef completionHandler, bool onlyOnSitesWithoutUserInteraction)
+void TestRunner::setStatisticsShouldBlockThirdPartyCookies(JSContextRef context, bool value, JSValueRef completionHandler, bool onlyOnSitesWithoutUserInteraction, bool onlyUnpartitionedCookies)
 {
     auto messageName = "SetStatisticsShouldBlockThirdPartyCookies";
     if (onlyOnSitesWithoutUserInteraction)
         messageName = "SetStatisticsShouldBlockThirdPartyCookiesOnSitesWithoutUserInteraction";
+    else if (onlyUnpartitionedCookies)
+        messageName = "SetStatisticsShouldBlockThirdPartyCookiesExceptPartitioned";
     postMessageWithAsyncReply(context, messageName, adoptWK(WKBooleanCreate(value)), completionHandler);
 }
 

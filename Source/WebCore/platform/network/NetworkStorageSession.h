@@ -95,7 +95,16 @@ enum class HTTPCookieAcceptPolicy : uint8_t;
 enum class IncludeSecureCookies : bool;
 enum class IncludeHttpOnlyCookies : bool;
 enum class ShouldPartitionCookie : bool;
-enum class ThirdPartyCookieBlockingMode : uint8_t { All, AllExceptBetweenAppBoundDomains, AllExceptManagedDomains, AllOnSitesWithoutUserInteraction, OnlyAccordingToPerDomainPolicy };
+enum class ThirdPartyCookieBlockingMode : uint8_t {
+    All,
+    AllExceptBetweenAppBoundDomains,
+    AllExceptManagedDomains,
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+    AllExceptPartitioned,
+#endif
+    AllOnSitesWithoutUserInteraction,
+    OnlyAccordingToPerDomainPolicy
+};
 enum class ThirdPartyCookieBlockingDecision : uint8_t {
     None,
     All,

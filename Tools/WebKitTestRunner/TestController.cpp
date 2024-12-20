@@ -2028,10 +2028,13 @@ void TestController::didReceiveAsyncMessageFromInjectedBundle(WKStringRef messag
         return setStatisticsDebugMode(booleanValue(messageBody), WTFMove(completionHandler));
 
     if (WKStringIsEqualToUTF8CString(messageName, "SetStatisticsShouldBlockThirdPartyCookiesOnSitesWithoutUserInteraction"))
-        return setStatisticsShouldBlockThirdPartyCookies(booleanValue(messageBody), true, WTFMove(completionHandler));
+        return setStatisticsShouldBlockThirdPartyCookies(booleanValue(messageBody), ThirdPartyCookieBlockingPolicy::AllOnlyOnSitesWithoutUserInteraction, WTFMove(completionHandler));
+
+    if (WKStringIsEqualToUTF8CString(messageName, "SetStatisticsShouldBlockThirdPartyCookiesExceptPartitioned"))
+        return setStatisticsShouldBlockThirdPartyCookies(booleanValue(messageBody), ThirdPartyCookieBlockingPolicy::AllExceptPartitioned, WTFMove(completionHandler));
 
     if (WKStringIsEqualToUTF8CString(messageName, "SetStatisticsShouldBlockThirdPartyCookies"))
-        return setStatisticsShouldBlockThirdPartyCookies(booleanValue(messageBody), false, WTFMove(completionHandler));
+        return setStatisticsShouldBlockThirdPartyCookies(booleanValue(messageBody), ThirdPartyCookieBlockingPolicy::All, WTFMove(completionHandler));
 
     if (WKStringIsEqualToUTF8CString(messageName, "SetStatisticsPrevalentResourceForDebugMode")) {
         WKStringRef hostName = stringValue(messageBody);
@@ -4101,9 +4104,25 @@ void TestController::setStatisticsShouldDowngradeReferrer(bool value, Completion
     WKWebsiteDataStoreSetResourceLoadStatisticsShouldDowngradeReferrerForTesting(websiteDataStore(), value, completionHandler.leak(), adoptAndCallCompletionHandler);
 }
 
-void TestController::setStatisticsShouldBlockThirdPartyCookies(bool value, bool onlyOnSitesWithoutUserInteraction, CompletionHandler<void(WKTypeRef)>&& completionHandler)
+void TestController::setStatisticsShouldBlockThirdPartyCookies(bool value, ThirdPartyCookieBlockingPolicy thirdPartyCookieBlockingPolicy, CompletionHandler<void(WKTypeRef)>&& completionHandler)
 {
-    WKWebsiteDataStoreSetResourceLoadStatisticsShouldBlockThirdPartyCookiesForTesting(websiteDataStore(), value, onlyOnSitesWithoutUserInteraction, completionHandler.leak(), adoptAndCallCompletionHandler);
+    WKThirdPartyCookieBlockingPolicy blockingPolicy;
+    switch (thirdPartyCookieBlockingPolicy) {
+    case ThirdPartyCookieBlockingPolicy::AllOnlyOnSitesWithoutUserInteraction:
+        blockingPolicy = kWKThirdPartyCookieBlockingPolicyAllOnlyOnSitesWithoutUserInteraction;
+        break;
+    case ThirdPartyCookieBlockingPolicy::AllExceptPartitioned:
+        blockingPolicy = kWKThirdPartyCookieBlockingPolicyAllExceptPartitioned;
+        break;
+    case ThirdPartyCookieBlockingPolicy::All:
+        blockingPolicy = kWKThirdPartyCookieBlockingPolicyAll;
+        break;
+    default:
+        ASSERT_NOT_REACHED();
+        blockingPolicy = kWKThirdPartyCookieBlockingPolicyAll;
+        break;
+    };
+    WKWebsiteDataStoreSetResourceLoadStatisticsShouldBlockThirdPartyCookiesForTesting(websiteDataStore(), value, blockingPolicy, completionHandler.leak(), adoptAndCallCompletionHandler);
 }
 
 void TestController::setStatisticsFirstPartyWebsiteDataRemovalMode(bool value, CompletionHandler<void(WKTypeRef)>&& completionHandler)

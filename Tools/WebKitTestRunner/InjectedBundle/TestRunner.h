@@ -455,7 +455,7 @@ public:
     void setStatisticsCacheMaxAgeCap(double seconds);
     bool hasStatisticsIsolatedSession(JSStringRef hostName);
     void setStatisticsShouldDowngradeReferrer(JSContextRef, bool, JSValueRef callback);
-    void setStatisticsShouldBlockThirdPartyCookies(JSContextRef, bool value, JSValueRef callback, bool onlyOnSitesWithoutUserInteraction);
+    void setStatisticsShouldBlockThirdPartyCookies(JSContextRef, bool value, JSValueRef callback, bool onlyOnSitesWithoutUserInteraction, bool onlyUnpartitionedCookies);
     void setStatisticsFirstPartyWebsiteDataRemovalMode(JSContextRef, bool value, JSValueRef callback);
     void statisticsSetToSameSiteStrictCookies(JSContextRef, JSStringRef hostName, JSValueRef callback);
     void statisticsSetFirstPartyHostCNAMEDomain(JSContextRef, JSStringRef firstPartyURLString, JSStringRef cnameURLString, JSValueRef completionHandler);

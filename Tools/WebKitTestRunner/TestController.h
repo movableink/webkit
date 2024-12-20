@@ -269,7 +269,8 @@ public:
     void setStatisticsCacheMaxAgeCap(double seconds);
     bool hasStatisticsIsolatedSession(WKStringRef hostName);
     void setStatisticsShouldDowngradeReferrer(bool value, CompletionHandler<void(WKTypeRef)>&&);
-    void setStatisticsShouldBlockThirdPartyCookies(bool value, bool onlyOnSitesWithoutUserInteraction, CompletionHandler<void(WKTypeRef)>&&);
+    enum class ThirdPartyCookieBlockingPolicy { All, AllOnlyOnSitesWithoutUserInteraction, AllExceptPartitioned };
+    void setStatisticsShouldBlockThirdPartyCookies(bool value, ThirdPartyCookieBlockingPolicy, CompletionHandler<void(WKTypeRef)>&&);
     void setStatisticsFirstPartyWebsiteDataRemovalMode(bool value, CompletionHandler<void(WKTypeRef)>&&);
     void setStatisticsToSameSiteStrictCookies(WKStringRef hostName, CompletionHandler<void(WKTypeRef)>&&);
     void setStatisticsFirstPartyHostCNAMEDomain(WKStringRef firstPartyURLString, WKStringRef cnameURLString, CompletionHandler<void(WKTypeRef)>&&);

@@ -195,6 +195,10 @@ ThirdPartyCookieBlockingDecision NetworkStorageSession::thirdPartyCookieBlocking
         return decideThirdPartyCookieBlocking(shouldExemptDomainPairFromThirdPartyCookieBlocking(firstPartyDomain, resourceDomain));
     case ThirdPartyCookieBlockingMode::AllExceptManagedDomains:
         return m_managedDomains.contains(firstPartyDomain) ? ThirdPartyCookieBlockingDecision::None : ThirdPartyCookieBlockingDecision::All;
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+    case ThirdPartyCookieBlockingMode::AllExceptPartitioned:
+        return ThirdPartyCookieBlockingDecision::AllExceptPartitioned;
+#endif
     case ThirdPartyCookieBlockingMode::AllOnSitesWithoutUserInteraction:
         if (!hasHadUserInteractionAsFirstParty(firstPartyDomain))
             return decideThirdPartyCookieBlocking(false);

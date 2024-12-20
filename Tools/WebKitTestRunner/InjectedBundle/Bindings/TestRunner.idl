@@ -358,7 +358,7 @@ interface TestRunner {
     undefined statisticsResetToConsistentState(object completionHandler);
     boolean hasStatisticsIsolatedSession(DOMString hostName);
     undefined setStatisticsShouldDowngradeReferrer(boolean value, object callback);
-    undefined setStatisticsShouldBlockThirdPartyCookies(boolean value, object callback, optional boolean onlyOnSitesWithoutUserInteraction);
+    undefined setStatisticsShouldBlockThirdPartyCookies(boolean value, object callback, optional boolean onlyOnSitesWithoutUserInteraction, optional boolean onlyUnpartitionedCookies);
     undefined setStatisticsFirstPartyWebsiteDataRemovalMode(boolean value, object callback);
     undefined statisticsSetToSameSiteStrictCookies(DOMString hostName, object callback);
     undefined statisticsSetFirstPartyHostCNAMEDomain(DOMString firstPartyURLString, DOMString cnameURLString, object callback);
