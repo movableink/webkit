@@ -32,6 +32,7 @@
 #include "WPEEnumTypes.h"
 #include "WPEEvent.h"
 #include "WPEGestureControllerImpl.h"
+#include "WPESettings.h"
 #include "WPEToplevelPrivate.h"
 #include "WPEViewPrivate.h"
 #include <optional>
@@ -170,11 +171,12 @@ static void wpeViewGetProperty(GObject* object, guint propId, GValue* value, GPa
 static void wpeViewConstructed(GObject* object)
 {
     G_OBJECT_CLASS(wpe_view_parent_class)->constructed(object);
+    auto* view = WPE_VIEW(object);
+    auto* priv = view->priv;
+    auto settings = wpe_display_get_settings(priv->display.get());
 
-    // FIXME: add API to set the default view size.
-    auto* priv = WPE_VIEW(object)->priv;
-    priv->width = 1024;
-    priv->height = 768;
+    GVariant* toplevelSize = wpe_settings_get_value(settings, WPE_SETTING_TOPLEVEL_DEFAULT_SIZE, nullptr);
+    g_variant_get(toplevelSize, "(uu)", &priv->width, &priv->height);
 }
 
 static void wpeViewDispose(GObject* object)
@@ -953,9 +955,10 @@ guint wpe_view_compute_press_count(WPEView* view, gdouble x, gdouble y, guint bu
     auto* priv = view->priv;
     unsigned pressCount = 1;
     if (priv->lastButtonPress.pressCount) {
-        // FIXME: make these configurable.
-        static const int doubleClickDistance = 5;
-        static const unsigned doubleClickTime = 400;
+        auto* settings = wpe_display_get_settings(priv->display.get());
+        int doubleClickDistance = wpe_settings_get_uint32(settings, WPE_SETTING_DOUBLE_CLICK_DISTANCE, nullptr);
+        unsigned doubleClickTime = wpe_settings_get_uint32(settings, WPE_SETTING_DOUBLE_CLICK_TIME, nullptr);
+
         if (std::abs(x - priv->lastButtonPress.x) < doubleClickDistance
             && std::abs(y - priv->lastButtonPress.y) < doubleClickDistance
             && button == priv->lastButtonPress.button

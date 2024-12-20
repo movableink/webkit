@@ -162,7 +162,39 @@ typedef enum {
  * Default: 1200
  */
 #define WPE_SETTING_CURSOR_BLINK_TIME "/wpe-platform/cursor-blink-time"
-
+/**
+ * WPE_SETTING_TOPLEVEL_DEFAULT_SIZE:
+ *
+ * The default size of the toplevel upon construction, represented as
+ * a pair of unsigned 32-bit integers (width, height).
+ *
+ * VariantType: (uu)
+ *
+ * Default: (1024, 768)
+ */
+#define WPE_SETTING_TOPLEVEL_DEFAULT_SIZE "/wpe-platform/toplevel-default-size"
+/**
+ * WPE_SETTING_DOUBLE_CLICK_DISTANCE:
+ *
+ * The allowed distance travelled in either the x or the y coordinate of a
+ * button press event from the previous press to be considered a double click.
+ *
+ * VariantType: uint32
+ *
+ * Default: 5
+ */
+#define WPE_SETTING_DOUBLE_CLICK_DISTANCE "/wpe-platform/events/double-click/distance"
+/**
+ * WPE_SETTING_DOUBLE_CLICK_TIME:
+ *
+ * The allowed time elapse since the previous button press event until the current
+ * press to be considered a double click.
+ *
+ * VariantType: uint32
+ *
+ * Default: 400
+ */
+#define WPE_SETTING_DOUBLE_CLICK_TIME "/wpe-platform/events/double-click/time"
 
 /**
  * WPESettingsSource:
