@@ -80,12 +80,12 @@ static JSObject* toJSObject(JSValueInWrappedObject& wrapper)
     return wrapper ? jsDynamicCast<JSObject*>(wrapper.getValue()) : nullptr;
 }
 
-static JSFloat32Array* constructJSFloat32Array(JSGlobalObject& globalObject, unsigned length, const float* data = nullptr)
+static JSFloat32Array* constructJSFloat32Array(JSGlobalObject& globalObject, unsigned length, std::span<const float> data = { })
 {
     constexpr bool isResizableOrGrowableShared = false;
     auto* jsArray = JSFloat32Array::create(&globalObject, globalObject.typedArrayStructure(TypeFloat32, isResizableOrGrowableShared), length);
-    if (data)
-        memcpy(jsArray->typedVector(), data, sizeof(float) * length);
+    if (!data.empty())
+        memcpySpan(jsArray->typedSpan(), data.first(length));
     return jsArray;
 }
 
@@ -98,7 +98,7 @@ static JSObject* constructFrozenKeyValueObject(VM& vm, JSGlobalObject& globalObj
         PutPropertySlot slot(object, false, PutPropertySlot::PutById);
         // Per the specification, if the value is constant, we pass the JS an array with length 1, with the array item being the constant.
         unsigned jsArraySize = pair.value->containsConstantValue() ? 1 : pair.value->size();
-        object->putInline(&globalObject, Identifier::fromString(vm, pair.key), constructJSFloat32Array(globalObject, jsArraySize, pair.value->data()), slot);
+        object->putInline(&globalObject, Identifier::fromString(vm, pair.key), constructJSFloat32Array(globalObject, jsArraySize, pair.value->span()), slot);
     }
     JSC::objectConstructorFreeze(&globalObject, object);
     EXCEPTION_ASSERT_UNUSED(scope, !scope.exception());
@@ -114,7 +114,7 @@ static JSArray* constructFrozenJSArray(VM& vm, JSGlobalObject& globalObject, JSC
     auto* channelsData = JSArray::create(vm, globalObject.originalArrayStructureForIndexingType(ArrayWithContiguous), numberOfChannels);
     for (unsigned j = 0; j < numberOfChannels; ++j) {
         auto* channel = bus->channel(j);
-        channelsData->setIndexQuickly(vm, j, constructJSFloat32Array(globalObject, channel->length(), shouldPopulateWithBusData == ShouldPopulateWithBusData::Yes ? channel->data() : nullptr));
+        channelsData->setIndexQuickly(vm, j, constructJSFloat32Array(globalObject, channel->length(), shouldPopulateWithBusData == ShouldPopulateWithBusData::Yes ? channel->span() : std::span<const float> { }));
     }
     JSC::objectConstructorFreeze(&globalObject, channelsData);
     EXCEPTION_ASSERT_UNUSED(scope, !scope.exception());
@@ -147,7 +147,7 @@ static void copyDataFromJSArrayToBuses(JSGlobalObject& globalObject, JSArray& js
             auto* channel = bus->channel(j);
             auto* jsChannelData = getArrayAtIndex<JSFloat32Array>(*channelsArray, globalObject, j);
             if (LIKELY(jsChannelData && !jsChannelData->isShared() && jsChannelData->length() == channel->length()))
-                memcpy(channel->mutableData(), jsChannelData->typedVector(), sizeof(float) * channel->length());
+                memcpySpan(channel->mutableSpan(), jsChannelData->typedSpan().first(channel->length()));
             else
                 channel->zero();
         }
@@ -170,7 +170,7 @@ static bool copyDataFromBusesToJSArray(JSGlobalObject& globalObject, const Vecto
             auto* jsChannelArray = getArrayAtIndex<JSFloat32Array>(*jsChannelsArray, globalObject, channelIndex);
             if (!jsChannelArray || jsChannelArray->isShared() || jsChannelArray->length() != channel->length())
                 return false;
-            memcpy(jsChannelArray->typedVector(), channel->mutableData(), sizeof(float) * jsChannelArray->length());
+            memcpySpan(jsChannelArray->typedSpan(), channel->mutableSpan().first(jsChannelArray->length()));
         }
     }
     return true;
@@ -188,7 +188,7 @@ static bool copyDataFromParameterMapToJSObject(VM& vm, JSGlobalObject& globalObj
         unsigned expectedLength = pair.value->containsConstantValue() ? 1 : pair.value->size();
         if (jsTypedArray->length() != expectedLength)
             return false;
-        memcpy(jsTypedArray->typedVector(), pair.value->data(), sizeof(float) * jsTypedArray->length());
+        memcpySpan(jsTypedArray->typedSpan(), pair.value->span().first(jsTypedArray->length()));
     }
     return true;
 }

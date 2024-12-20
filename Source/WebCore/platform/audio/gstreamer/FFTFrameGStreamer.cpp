@@ -87,9 +87,9 @@ void FFTFrame::initialize()
 
 FFTFrame::~FFTFrame() = default;
 
-void FFTFrame::doFFT(const float* data)
+void FFTFrame::doFFT(std::span<const float> data)
 {
-    gst_fft_f32_fft(m_fft.get(), data, m_complexData.get());
+    gst_fft_f32_fft(m_fft.get(), data.data(), m_complexData.get());
 
     WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
     float* imagData = m_imagData.data();
@@ -101,7 +101,7 @@ void FFTFrame::doFFT(const float* data)
     }
 }
 
-void FFTFrame::doInverseFFT(float* data)
+void FFTFrame::doInverseFFT(std::span<float> data)
 {
     //  Merge the real and imaginary vectors to complex vector.
     WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
@@ -114,10 +114,10 @@ void FFTFrame::doInverseFFT(float* data)
         m_complexData[i].r = realData[i];
     }
 
-    gst_fft_f32_inverse_fft(m_inverseFft.get(), m_complexData.get(), data);
+    gst_fft_f32_inverse_fft(m_inverseFft.get(), m_complexData.get(), data.data());
 
     // Scale so that a forward then inverse FFT yields exactly the original data.
-    VectorMath::multiplyByScalar(data, 1.0 / m_FFTSize, data, m_FFTSize);
+    VectorMath::multiplyByScalar(data.data(), 1.0 / m_FFTSize, data.data(), m_FFTSize);
 }
 
 int FFTFrame::minFFTSize()

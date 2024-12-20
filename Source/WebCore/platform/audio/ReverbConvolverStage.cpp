@@ -48,18 +48,18 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ReverbConvolverStage);
 
-ReverbConvolverStage::ReverbConvolverStage(const float* impulseResponse, size_t, size_t reverbTotalLatency, size_t stageOffset, size_t stageLength,
+ReverbConvolverStage::ReverbConvolverStage(std::span<const float> impulseResponse, size_t reverbTotalLatency, size_t stageOffset, size_t stageLength,
     size_t fftSize, size_t renderPhase, size_t renderSliceSize, ReverbAccumulationBuffer* accumulationBuffer, float scale, bool directMode)
     : m_accumulationBuffer(accumulationBuffer)
     , m_temporaryBuffer(renderSliceSize)
     , m_directMode(directMode)
 {
-    ASSERT(impulseResponse);
+    ASSERT(impulseResponse.data());
     ASSERT(accumulationBuffer);
 
     if (!m_directMode) {
         m_fftKernel = makeUnique<FFTFrame>(fftSize);
-        m_fftKernel->doPaddedFFT(impulseResponse + stageOffset, stageLength);
+        m_fftKernel->doPaddedFFT(impulseResponse.subspan(stageOffset, stageLength));
         // Account for the normalization (if any) of the convolver. By linearity,
         // we can scale the FFT by the factor instead of the input. We do it this
         // way so we don't need to create a temporary for the scaled result before
@@ -128,7 +128,7 @@ void ReverbConvolverStage::process(std::span<const float> source)
     std::span<float> temporaryBuffer;
     bool isTemporaryBufferSafe = false;
     if (m_preDelayLength > 0) {
-        // Handles both the read case (call to process() ) and the write case (memcpy() )
+        // Handles both the read case (call to process() ) and the write case (memcpySpan() )
         bool isPreDelaySafe = m_preReadWriteIndex + source.size() <= m_preDelayBuffer.size();
         ASSERT(isPreDelaySafe);
         if (!isPreDelaySafe)

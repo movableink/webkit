@@ -116,7 +116,7 @@ public:
         zeroSpan(span().subspan(start, end - start));
     }
 
-    void copyToRange(const T* sourceData, unsigned start, unsigned end)
+    void copyToRange(std::span<const T> sourceData, unsigned start, unsigned end)
     {
         bool isSafe = (start <= end) && (end <= size());
         ASSERT(isSafe);
@@ -125,7 +125,7 @@ public:
 
         // This expression cannot overflow because end - start cannot be
         // greater than m_size, which is safe due to the check in resize().
-        memcpy(this->data() + start, sourceData, sizeof(T) * (end - start));
+        memcpySpan(this->span().subspan(start), sourceData.first(end - start));
     }
 
     bool containsConstantValue() const

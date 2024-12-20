@@ -233,13 +233,13 @@ void PeriodicWave::createBandLimitedTables(const float* realData, const float* i
         m_bandLimitedTables.append(makeUnique<AudioFloatArray>(waveSize));
 
         // Apply an inverse FFT to generate the time-domain table data.
-        float* data = m_bandLimitedTables[rangeIndex]->data();
+        auto data = m_bandLimitedTables[rangeIndex]->span();
         frame.doInverseFFT(data);
 
         // For the first range (which has the highest power), calculate its peak value then compute normalization scale.
         if (disableNormalization == ShouldDisableNormalization::No) {
             if (!rangeIndex) {
-                float maxValue = VectorMath::maximumMagnitude(data, fftSize);
+                float maxValue = VectorMath::maximumMagnitude(data.data(), fftSize);
 
                 if (maxValue)
                     normalizationScale = 1.0f / maxValue;
@@ -247,7 +247,7 @@ void PeriodicWave::createBandLimitedTables(const float* realData, const float* i
         }
 
         // Apply normalization scale.
-        VectorMath::multiplyByScalar(data, normalizationScale, data, fftSize);
+        VectorMath::multiplyByScalar(data.data(), normalizationScale, data.data(), fftSize);
     }
 }
 

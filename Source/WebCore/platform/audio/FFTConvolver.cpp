@@ -93,9 +93,9 @@ void FFTConvolver::process(FFTFrame* fftKernel, std::span<const float> source, s
         // Check if it's time to perform the next FFT
         if (m_readWriteIndex == halfSize) {
             // The input buffer is now filled (get frequency-domain version)
-            m_frame.doFFT(m_inputBuffer.data());
+            m_frame.doFFT(m_inputBuffer.span());
             m_frame.multiply(*fftKernel);
-            m_frame.doInverseFFT(m_outputBuffer.data());
+            m_frame.doInverseFFT(m_outputBuffer.span());
 
             // Overlap-add 1st half from previous time
             VectorMath::add(m_outputBuffer.data(), m_lastOverlapBuffer.data(), m_outputBuffer.data(), halfSize);

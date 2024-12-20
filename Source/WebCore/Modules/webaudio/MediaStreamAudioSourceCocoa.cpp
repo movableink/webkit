@@ -35,6 +35,8 @@
 #include "WebAudioBufferList.h"
 #include <CoreAudio/CoreAudioTypes.h>
 #include <pal/avfoundation/MediaTimeAVFoundation.h>
+#include <wtf/StdLibExtras.h>
+
 #include <pal/cf/CoreMediaSoftLink.h>
 #include "CoreVideoSoftLink.h"
 
@@ -60,7 +62,7 @@ static inline void copyChannelData(AudioChannel& channel, AudioBuffer& buffer, s
         zeroSpan(dataMutableByteSpan(buffer));
         return;
     }
-    memcpy(buffer.mData, channel.data(), buffer.mDataByteSize);
+    memcpySpan(dataMutableByteSpan(buffer), asByteSpan(channel.span()).first(buffer.mDataByteSize));
 }
 
 void MediaStreamAudioSource::consumeAudio(AudioBus& bus, size_t numberOfFrames)

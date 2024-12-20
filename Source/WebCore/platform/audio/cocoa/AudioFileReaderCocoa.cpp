@@ -54,6 +54,7 @@
 #include <wtf/NativePromise.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/Scope.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 #include <pal/cf/AudioToolboxSoftLink.h>
@@ -386,8 +387,9 @@ std::optional<size_t> AudioFileReader::decodeWebMData(AudioBufferList& bufferLis
 }
 #endif
 
-OSStatus AudioFileReader::readProc(void* clientData, SInt64 position, UInt32 requestCount, void* buffer, UInt32* actualCount)
+OSStatus AudioFileReader::readProc(void* clientData, SInt64 position, UInt32 requestCount, void* rawBuffer, UInt32* actualCount)
 {
+    auto buffer = unsafeMakeSpan(static_cast<uint8_t*>(rawBuffer), requestCount);
     auto* audioFileReader = static_cast<AudioFileReader*>(clientData);
 
     auto dataSize = audioFileReader->dataSize();
@@ -397,7 +399,7 @@ OSStatus AudioFileReader::readProc(void* clientData, SInt64 position, UInt32 req
     if (static_cast<UInt64>(position) < dataSize) {
         size_t bytesAvailable = dataSize - static_cast<size_t>(position);
         bytesToRead = requestCount <= bytesAvailable ? requestCount : bytesAvailable;
-        memcpy(buffer, dataSpan.subspan(position).data(), bytesToRead);
+        memcpySpan(buffer, dataSpan.subspan(position).first(bytesToRead));
     }
 
     if (actualCount)

@@ -73,7 +73,7 @@ ReverbConvolver::ReverbConvolver(AudioChannel* impulseResponse, size_t renderSli
     // Otherwise, assume we're being run from a command-line tool.
     bool hasRealtimeConstraint = useBackgroundThreads;
 
-    const float* response = impulseResponse->data();
+    auto response = impulseResponse->span();
     size_t totalResponseLength = impulseResponse->length();
 
     // The total latency is zero because the direct-convolution is used in the leading portion.
@@ -95,7 +95,7 @@ ReverbConvolver::ReverbConvolver(AudioChannel* impulseResponse, size_t renderSli
 
         bool useDirectConvolver = !stageOffset;
 
-        auto stage = makeUnique<ReverbConvolverStage>(response, totalResponseLength, reverbTotalLatency, stageOffset, stageSize, fftSize, renderPhase, renderSliceSize, &m_accumulationBuffer, scale, useDirectConvolver);
+        auto stage = makeUnique<ReverbConvolverStage>(response, reverbTotalLatency, stageOffset, stageSize, fftSize, renderPhase, renderSliceSize, &m_accumulationBuffer, scale, useDirectConvolver);
 
         bool isBackgroundStage = false;
 

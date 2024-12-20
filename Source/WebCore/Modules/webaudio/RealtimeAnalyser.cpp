@@ -92,13 +92,13 @@ void RealtimeAnalyser::writeInput(AudioBus* bus, size_t framesToProcess)
         return;    
     
     // Perform real-time analysis
-    float* dest = m_inputBuffer.data() + m_writeIndex;
+    auto destination = m_inputBuffer.span().subspan(m_writeIndex);
 
     // Clear the bus and downmix the input according to the down mixing rules.
     // Then save the result in the m_inputBuffer at the appropriate place.
     m_downmixBus->zero();
     m_downmixBus->sumFrom(*bus);
-    memcpy(dest, m_downmixBus->channel(0)->data(), sizeof(float) * framesToProcess);
+    memcpySpan(destination, m_downmixBus->channel(0)->span().first(framesToProcess));
 
     m_writeIndex += framesToProcess;
     if (m_writeIndex >= InputBufferSize)
@@ -110,7 +110,7 @@ void RealtimeAnalyser::writeInput(AudioBus* bus, size_t framesToProcess)
 
 namespace {
 
-void applyWindow(float* p, size_t n)
+void applyWindow(std::span<float> p, size_t n)
 {
     ASSERT(isMainThread());
     
@@ -142,16 +142,16 @@ void RealtimeAnalyser::doFFTAnalysisIfNecessary()
     size_t fftSize = this->fftSize();
     
     AudioFloatArray temporaryBuffer(fftSize);
-    float* inputBuffer = m_inputBuffer.data();
-    float* tempP = temporaryBuffer.data();
+    auto inputBuffer = m_inputBuffer.span();
+    auto tempP = temporaryBuffer.span();
 
     // Take the previous fftSize values from the input buffer and copy into the temporary buffer.
     unsigned writeIndex = m_writeIndex;
     if (writeIndex < fftSize) {
-        memcpy(tempP, inputBuffer + writeIndex - fftSize + InputBufferSize, sizeof(*tempP) * (fftSize - writeIndex));
-        memcpy(tempP + fftSize - writeIndex, inputBuffer, sizeof(*tempP) * writeIndex);
+        memcpySpan(tempP, inputBuffer.subspan(writeIndex - fftSize + InputBufferSize, fftSize - writeIndex));
+        memcpySpan(tempP.subspan(fftSize - writeIndex), inputBuffer.first(writeIndex));
     } else 
-        memcpy(tempP, inputBuffer + writeIndex - fftSize, sizeof(*tempP) * fftSize);
+        memcpySpan(tempP, inputBuffer.subspan(writeIndex - fftSize, fftSize));
 
     
     // Window the input samples.
