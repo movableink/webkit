@@ -451,6 +451,23 @@ static WebEvent *unwrap(BEKeyEntry *event)
     }];
 }
 
+- (void)selectTextInGranularity:(UITextGranularity)granularity atPoint:(CGPoint)pointInRootView
+{
+    bool done = false;
+    auto completion = makeBlockPtr([&] {
+        done = true;
+    });
+
+#if USE(BROWSERENGINEKIT)
+    if (self.hasAsyncTextInput)
+        [self.asyncTextInput selectTextInGranularity:granularity atPoint:pointInRootView completionHandler:completion.get()];
+    else
+#endif
+        [self.textInputContentView selectTextWithGranularity:granularity atPoint:pointInRootView completionHandler:completion.get()];
+
+    TestWebKitAPI::Util::run(&done);
+}
+
 - (void)handleKeyEvent:(WebEvent *)event completion:(void (^)(WebEvent *theEvent, BOOL handled))completion
 {
 #if USE(BROWSERENGINEKIT)

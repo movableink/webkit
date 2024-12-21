@@ -1590,7 +1590,7 @@ static std::optional<SimpleRange> expandForImageOverlay(const SimpleRange& range
 void WebPage::selectWithGesture(const IntPoint& point, GestureType gestureType, GestureRecognizerState gestureState, bool isInteractingWithFocusedElement, CompletionHandler<void(const WebCore::IntPoint&, GestureType, GestureRecognizerState, OptionSet<SelectionFlags>)>&& completionHandler)
 {
     if (static_cast<GestureRecognizerState>(gestureState) == GestureRecognizerState::Began)
-        setFocusedFrameBeforeSelectingTextAtLocation(point);
+        updateFocusBeforeSelectingTextAtLocation(point);
 
     RefPtr frame = m_page->checkedFocusController()->focusedOrMainFrame();
     if (!frame)
@@ -2546,7 +2546,7 @@ void WebPage::selectPositionAtPoint(const WebCore::IntPoint& point, bool isInter
 {
     SetForScope userIsInteractingChange { m_userIsInteracting, true };
 
-    setFocusedFrameBeforeSelectingTextAtLocation(point);
+    updateFocusBeforeSelectingTextAtLocation(point);
 
     RefPtr frame = m_page->checkedFocusController()->focusedOrMainFrame();
     if (!frame)
@@ -2632,7 +2632,7 @@ static inline bool rectIsTooBigForSelection(const IntRect& blockRect, const Loca
     return blockRect.height() > frame.view()->unobscuredContentRect().height() * factor;
 }
 
-void WebPage::setFocusedFrameBeforeSelectingTextAtLocation(const IntPoint& point)
+void WebPage::updateFocusBeforeSelectingTextAtLocation(const IntPoint& point)
 {
     static constexpr OptionSet hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::AllowVisibleChildFrameContentOnly };
     RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
@@ -2641,15 +2641,24 @@ void WebPage::setFocusedFrameBeforeSelectingTextAtLocation(const IntPoint& point
 
     auto result = localMainFrame->eventHandler().hitTestResultAtPoint(point, hitType);
     RefPtr hitNode = result.innerNode();
-    if (hitNode && hitNode->renderer()) {
-        RefPtr frame = result.innerNodeFrame();
-        m_page->checkedFocusController()->setFocusedFrame(frame.get());
-    }
+    if (!hitNode || !hitNode->renderer())
+        return;
+
+    RefPtr frame = result.innerNodeFrame();
+    m_page->checkedFocusController()->setFocusedFrame(frame.get());
+
+    if (!result.isOverWidget())
+        return;
+
+#if ENABLE(PDF_PLUGIN)
+    if (RefPtr pluginView = pluginViewForFrame(frame.get()))
+        pluginView->focusPluginElement();
+#endif
 }
 
 void WebPage::setSelectionRange(const WebCore::IntPoint& point, WebCore::TextGranularity granularity, bool isInteractingWithFocusedElement)
 {
-    setFocusedFrameBeforeSelectingTextAtLocation(point);
+    updateFocusBeforeSelectingTextAtLocation(point);
 
     RefPtr frame = m_page->checkedFocusController()->focusedOrMainFrame();
     if (!frame)

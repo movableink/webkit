@@ -259,6 +259,18 @@ UNIFIED_PDF_TEST(SpeakSelection)
     EXPECT_WK_STREQ(@"Test PDF Content\n555-555-1234", [webView textForSpeakSelection]);
 }
 
+UNIFIED_PDF_TEST(CopySelectedText)
+{
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 600, 600) configuration:configurationForWebViewTestingUnifiedPDF().get()]);
+    [webView synchronouslyLoadRequest:[NSURLRequest requestWithURL:[NSBundle.test_resourcesBundle URLForResource:@"test" withExtension:@"pdf"]]];
+
+    [webView selectTextInGranularity:UITextGranularityWord atPoint:CGPointMake(100, 100)];
+    [webView copy:nil];
+    [webView waitForNextPresentationUpdate];
+
+    EXPECT_WK_STREQ(@"Test", [[UIPasteboard generalPasteboard] string]);
+}
+
 #endif // PLATFORM(IOS_FAMILY)
 
 #if HAVE(UIKIT_WITH_MOUSE_SUPPORT)

@@ -91,6 +91,7 @@ class Color;
 - (void)insertText:(NSString *)primaryString alternatives:(NSArray<NSString *> *)alternatives;
 - (void)handleKeyEvent:(WebEvent *)event completion:(void (^)(WebEvent *theEvent, BOOL handled))completion;
 - (void)selectTextForContextMenuWithLocationInView:(CGPoint)locationInView completion:(void(^)(BOOL shouldPresent))completion;
+- (void)selectTextInGranularity:(UITextGranularity)granularity atPoint:(CGPoint)locationInView;
 - (void)defineSelection;
 - (void)shareSelection;
 - (void)moveSelectionToStartOfParagraph;

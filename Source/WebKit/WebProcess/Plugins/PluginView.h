@@ -154,6 +154,8 @@ public:
 
     void openWithPreview(CompletionHandler<void(const String&, FrameInfoData&&, std::span<const uint8_t>, const String&)>&&);
 
+    void focusPluginElement();
+
 private:
     PluginView(WebCore::HTMLPlugInElement&, const URL&, const String& contentType, bool shouldUseManualLoader, WebPage&);
     virtual ~PluginView();
@@ -166,7 +168,6 @@ private:
     void viewVisibilityDidChange();
 
     WebCore::IntRect clipRectInWindowCoordinates() const;
-    void focusPluginElement();
     
     void pendingResourceRequestTimerFired();
 
