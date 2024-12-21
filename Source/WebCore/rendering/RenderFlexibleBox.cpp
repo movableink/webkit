@@ -255,6 +255,7 @@ void RenderFlexibleBox::computeChildIntrinsicLogicalWidths(RenderBox& flexBoxChi
     if (flexItemCrossSizeShouldUseContainerCrossSize(flexBoxChild) && !isFlexItem()) {
         auto axis = mainAxisIsFlexItemInlineAxis(flexBoxChild) ? OverridingSizesScope::Axis::Block : OverridingSizesScope::Axis::Inline;
         OverridingSizesScope overridingSizeScope(flexBoxChild, axis, computeCrossSizeForFlexItemUsingContainerCrossSize(flexBoxChild));
+        auto flexItemIntrinsicSizeComputation = SetForScope(m_inFlexItemIntrinsicWidthComputation, true);
         RenderBlock::computeChildIntrinsicLogicalWidths(flexBoxChild, minPreferredLogicalWidth, maxPreferredLogicalWidth);
         return;
     }
@@ -497,6 +498,7 @@ void RenderFlexibleBox::paintChildren(PaintInfo& paintInfo, const LayoutPoint& p
 
 void RenderFlexibleBox::repositionLogicalHeightDependentFlexItems(FlexLineStates& lineStates, LayoutUnit gapBetweenLines)
 {
+    auto flexLayoutScope = SetForScope(m_inCrossAxisLayout, true);
     LayoutUnit crossAxisStartEdge = lineStates.isEmpty() ? 0_lu : lineStates[0].crossAxisOffset;
     // If we have a single line flexbox, the line height is all the available space. For flex-direction: row,
     // this means we need to use the height, so we do this after calling updateLogicalHeight.
@@ -1603,17 +1605,33 @@ std::pair<LayoutUnit, LayoutUnit> RenderFlexibleBox::computeFlexItemMinMaxSizes(
     return { 0_lu, maxExtent.value_or(LayoutUnit::max()) };
 }
     
-bool RenderFlexibleBox::canUseFlexItemForPercentageResolutionByStyle(const RenderBox& flexItem)
+bool RenderFlexibleBox::canUseFlexItemForPercentageResolution(const RenderBox& flexItem)
 {
     ASSERT(flexItem.isFlexItem());
 
-    if (mainAxisIsFlexItemInlineAxis(flexItem))
-        return alignmentForFlexItem(flexItem) == ItemPosition::Stretch;
+    auto canUseByLayoutPhase = [&] {
+        if (m_inFlexItemLayout) {
+            // While running flex _item_ layout, we may only resolve percentage against the flex item when it is orthogonal to the flex container.
+            return !mainAxisIsFlexItemInlineAxis(flexItem);
+        }
+        if (m_inCrossAxisLayout || m_inFlexItemIntrinsicWidthComputation)
+            return true;
+        // Let's decide based on style when we are outside of layout (i.e. relative percent position).
+        return !m_inLayout;
+    };
+    if (!canUseByLayoutPhase())
+        return false;
 
-    if (flexItem.style().flexGrow() == RenderStyle::initialFlexGrow() && flexItem.style().flexShrink() == 0.0f && flexItemMainSizeIsDefinite(flexItem, flexBasisForFlexItem(flexItem)))
-        return true;
+    auto canUseByStyle = [&] {
+        if (mainAxisIsFlexItemInlineAxis(flexItem))
+            return alignmentForFlexItem(flexItem) == ItemPosition::Stretch;
 
-    return canComputePercentageFlexBasis(flexItem, Length(0, LengthType::Percent), UpdatePercentageHeightDescendants::Yes);
+        if (flexItem.style().flexGrow() == RenderStyle::initialFlexGrow() && flexItem.style().flexShrink() == 0.0f && flexItemMainSizeIsDefinite(flexItem, flexBasisForFlexItem(flexItem)))
+            return true;
+
+        return canComputePercentageFlexBasis(flexItem, Length(0, LengthType::Percent), UpdatePercentageHeightDescendants::Yes);
+    };
+    return canUseByStyle();
 }
 
 // This method is only called whenever a descendant of a flex item wants to resolve a percentage in its
@@ -1624,7 +1642,7 @@ bool RenderFlexibleBox::canUseFlexItemForPercentageResolutionByStyle(const Rende
 // https://drafts.csswg.org/css-flexbox/#definite-sizes for additional details.
 std::optional<LayoutUnit> RenderFlexibleBox::usedFlexItemOverridingLogicalHeightForPercentageResolution(const RenderBox& flexItem)
 {
-    return canUseFlexItemForPercentageResolutionByStyle(flexItem) ? flexItem.overridingLogicalHeight() : std::nullopt;
+    return canUseFlexItemForPercentageResolution(flexItem) ? flexItem.overridingLogicalHeight() : std::nullopt;
 }
 
 LayoutUnit RenderFlexibleBox::adjustFlexItemSizeForAspectRatioCrossAxisMinAndMax(const RenderBox& flexItem, LayoutUnit flexItemSize)
@@ -2202,6 +2220,7 @@ void RenderFlexibleBox::layoutAndPlaceFlexItems(LayoutUnit& crossAxisOffset, Fle
 
     ContentDistribution distribution = style().resolvedJustifyContentDistribution(contentAlignmentNormalBehavior());
     bool shouldFlipMainAxis = !isColumnFlow() && !isLeftToRightFlow();
+    auto flexLayoutScope = SetForScope(m_inFlexItemLayout, true);
     for (size_t i = 0; i < flexLayoutItems.size(); ++i) {
         auto& flexLayoutItem = flexLayoutItems[i];
         auto& flexItem = flexLayoutItem.renderer.get();

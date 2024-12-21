@@ -100,7 +100,7 @@ public:
     virtual bool isFlexibleBoxImpl() const { return false; };
     
     std::optional<LayoutUnit> usedFlexItemOverridingLogicalHeightForPercentageResolution(const RenderBox&);
-    bool canUseFlexItemForPercentageResolutionByStyle(const RenderBox&);
+    bool canUseFlexItemForPercentageResolution(const RenderBox&);
     
     void clearCachedMainSizeForFlexItem(const RenderBox& flexItem);
     
@@ -300,6 +300,9 @@ private:
     // This is SizeIsUnknown outside of layoutBlock()
     SizeDefiniteness m_hasDefiniteHeight { SizeDefiniteness::Unknown };
     bool m_inLayout { false };
+    bool m_inCrossAxisLayout { false };
+    bool m_inFlexItemLayout { false };
+    mutable bool m_inFlexItemIntrinsicWidthComputation { false };
     bool m_shouldResetFlexItemLogicalHeightBeforeLayout { false };
     bool m_isComputingFlexBaseSizes { false };
     std::optional<bool> m_hasFlexFormattingContextLayout;
