@@ -774,7 +774,7 @@ void UnifiedPDFPlugin::paintContents(const GraphicsLayer* layer, GraphicsContext
     ASSERT_NOT_REACHED();
 }
 
-void UnifiedPDFPlugin::paintPDFContent(const WebCore::GraphicsLayer* layer, GraphicsContext& context, const FloatRect& clipRect, const std::optional<PDFLayoutRow>& row, PaintingBehavior behavior, AsyncPDFRenderer* asyncRenderer)
+void UnifiedPDFPlugin::paintPDFContent(const WebCore::GraphicsLayer* layer, GraphicsContext& context, const FloatRect& clipRect, const std::optional<PDFLayoutRow>& row, AsyncPDFRenderer* asyncRenderer)
 {
     if (visibleOrDocumentSizeIsEmpty() || !m_presentationController)
         return;
@@ -782,15 +782,6 @@ void UnifiedPDFPlugin::paintPDFContent(const WebCore::GraphicsLayer* layer, Grap
     auto stateSaver = GraphicsContextStateSaver(context);
 
     auto showDebugIndicators = shouldShowDebugIndicators();
-
-    bool haveSelection = false;
-    bool isVisibleAndActive = false;
-    bool shouldPaintSelection = behavior == PaintingBehavior::All && !canPaintSelectionIntoOwnedLayer();
-    if (m_currentSelection && ![m_currentSelection isEmpty] && shouldPaintSelection) {
-        haveSelection = true;
-        if (RefPtr page = this->page())
-            isVisibleAndActive = page->isVisibleAndActive();
-    }
 
     auto pageWithAnnotation = pageIndexWithHoveredAnnotation();
 
@@ -826,7 +817,7 @@ void UnifiedPDFPlugin::paintPDFContent(const WebCore::GraphicsLayer* layer, Grap
         }
 
         bool currentPageHasAnnotation = pageWithAnnotation && *pageWithAnnotation == pageInfo.pageIndex;
-        if (asyncRenderer && !haveSelection && !currentPageHasAnnotation)
+        if (asyncRenderer && !currentPageHasAnnotation)
             continue;
 
         auto pageStateSaver = GraphicsContextStateSaver(context);
@@ -851,17 +842,12 @@ void UnifiedPDFPlugin::paintPDFContent(const WebCore::GraphicsLayer* layer, Grap
             [page drawWithBox:kPDFDisplayBoxCropBox toContext:context.platformContext()];
         }
 
-        if (haveSelection || currentPageHasAnnotation) {
+        if (currentPageHasAnnotation) {
             auto pageGeometry = m_documentLayout.geometryForPage(page);
             auto transformForBox = m_documentLayout.toPageTransform(*pageGeometry).inverse().value_or(AffineTransform { });
             GraphicsContextStateSaver stateSaver(context);
             context.concatCTM(transformForBox);
-
-            if (haveSelection)
-                [m_currentSelection drawForPage:page.get() withBox:kCGPDFCropBox active:isVisibleAndActive inContext:context.platformContext()];
-
-            if (currentPageHasAnnotation)
-                paintHoveredAnnotationOnPage(pageInfo.pageIndex, context, clipRect);
+            paintHoveredAnnotationOnPage(pageInfo.pageIndex, context, clipRect);
         }
     }
 }
@@ -869,7 +855,7 @@ void UnifiedPDFPlugin::paintPDFContent(const WebCore::GraphicsLayer* layer, Grap
 #if ENABLE(UNIFIED_PDF_SELECTION_LAYER)
 void UnifiedPDFPlugin::paintPDFSelection(const GraphicsLayer* layer, GraphicsContext& context, const FloatRect& clipRect, std::optional<PDFLayoutRow> row)
 {
-    if (!m_currentSelection || [m_currentSelection isEmpty] || !canPaintSelectionIntoOwnedLayer() || !m_presentationController)
+    if (!m_currentSelection || [m_currentSelection isEmpty] || !m_presentationController)
         return;
 
     bool isVisibleAndActive = false;
@@ -930,14 +916,6 @@ void UnifiedPDFPlugin::paintPDFSelection(const GraphicsLayer* layer, GraphicsCon
     }
 }
 #endif
-
-bool UnifiedPDFPlugin::canPaintSelectionIntoOwnedLayer() const
-{
-#if ENABLE(UNIFIED_PDF_SELECTION_LAYER)
-    return [getPDFSelectionClass() instancesRespondToSelector:@selector(enumerateRectsAndTransformsForPage:usingBlock:)];
-#endif
-    return false;
-}
 
 static const WebCore::Color textAnnotationHoverColor()
 {
@@ -3288,7 +3266,7 @@ RefPtr<TextIndicator> UnifiedPDFPlugin::textIndicatorForSelection(PDFSelection *
         context.translate(-rectInContentsCoordinates.location());
 
         auto layoutRow = m_documentLayout.rowForPageIndex(selectionPageCoverage[0].pageIndex);
-        paintPDFContent(nullptr, context, rectInContentsCoordinates, layoutRow, PaintingBehavior::PageContentsOnly);
+        paintPDFContent(nullptr, context, rectInContentsCoordinates, layoutRow);
     }
 
     // FIXME: Figure out how to share this with WebTextIndicatorLayer.

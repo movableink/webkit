@@ -1107,7 +1107,7 @@ void PDFDiscretePresentationController::buildRows()
         RefPtr rowContentsLayer = row.contentsLayer = createGraphicsLayer(makeString("Row contents "_s, rowIndex), GraphicsLayer::Type::TiledBacking);
         rowContentsLayer->setAnchorPoint({ });
         rowContentsLayer->setDrawsContent(true);
-        rowContentsLayer->setAcceleratesDrawing(m_plugin->canPaintSelectionIntoOwnedLayer());
+        rowContentsLayer->setAcceleratesDrawing(true);
 
         // This is the call that enables async rendering.
         asyncRenderer()->startTrackingLayer(*rowContentsLayer);
@@ -1368,7 +1368,7 @@ void PDFDiscretePresentationController::setNeedsRepaintInDocumentRect(OptionSet<
     }
 
 #if ENABLE(UNIFIED_PDF_SELECTION_LAYER)
-    if (repaintRequirements.contains(RepaintRequirement::Selection) && m_plugin->canPaintSelectionIntoOwnedLayer()) {
+    if (repaintRequirements.contains(RepaintRequirement::Selection)) {
         RefPtr { row.selectionLayer }->setNeedsDisplayInRect(contentsRect);
         if (repaintRequirements.hasExactlyOneBitSet())
             return;
@@ -1456,21 +1456,6 @@ std::optional<float> PDFDiscretePresentationController::customContentsScale(cons
     return { };
 }
 
-bool PDFDiscretePresentationController::layerNeedsPlatformContext(const GraphicsLayer* layer) const
-{
-    if (m_plugin->canPaintSelectionIntoOwnedLayer())
-        return false;
-
-    // We need a platform context if the plugin can not paint selections into its own layer,
-    // since we would then have to vend a platform context that PDFKit can paint into.
-    // However, this constraint only applies for the contents layer. No other layer needs to be WP-backed.
-    auto* rowData = rowDataForLayer(layer);
-    if (!rowData)
-        return false;
-
-    return layer == rowData->contentsLayer.get();
-}
-
 void PDFDiscretePresentationController::tiledBackingUsageChanged(const GraphicsLayer* layer, bool usingTiledBacking)
 {
     if (usingTiledBacking)
@@ -1549,7 +1534,7 @@ void PDFDiscretePresentationController::paintContents(const GraphicsLayer* layer
 
     if (layer == rowData.contentsLayer.get()) {
         RefPtr asyncRenderer = asyncRendererIfExists();
-        m_plugin->paintPDFContent(layer, context, clipRect, rowData.pages, UnifiedPDFPlugin::PaintingBehavior::All, asyncRenderer.get());
+        m_plugin->paintPDFContent(layer, context, clipRect, rowData.pages, asyncRenderer.get());
         return;
     }
 

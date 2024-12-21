@@ -153,7 +153,7 @@ void PDFScrollingPresentationController::setupLayers(GraphicsLayer& scrolledCont
         m_contentsLayer = createGraphicsLayer("PDF contents"_s, m_plugin->isFullMainFramePlugin() ? GraphicsLayer::Type::PageTiledBacking : GraphicsLayer::Type::TiledBacking);
         m_contentsLayer->setAnchorPoint({ });
         m_contentsLayer->setDrawsContent(true);
-        m_contentsLayer->setAcceleratesDrawing(m_plugin->canPaintSelectionIntoOwnedLayer());
+        m_contentsLayer->setAcceleratesDrawing(true);
         scrolledContentsLayer.addChild(*m_contentsLayer);
 
         // This is the call that enables async rendering.
@@ -338,7 +338,7 @@ void PDFScrollingPresentationController::setNeedsRepaintInDocumentRect(OptionSet
     }
 
 #if ENABLE(UNIFIED_PDF_SELECTION_LAYER)
-    if (repaintRequirements.contains(RepaintRequirement::Selection) && m_plugin->canPaintSelectionIntoOwnedLayer()) {
+    if (repaintRequirements.contains(RepaintRequirement::Selection)) {
         RefPtr { m_selectionLayer }->setNeedsDisplayInRect(contentsRect);
         if (repaintRequirements.hasExactlyOneBitSet())
             return;
@@ -418,14 +418,6 @@ std::optional<float> PDFScrollingPresentationController::customContentsScale(con
     return { };
 }
 
-bool PDFScrollingPresentationController::layerNeedsPlatformContext(const GraphicsLayer* layer) const
-{
-    // We need a platform context if the plugin can not paint selections into its own layer,
-    // since we would then have to vend a platform context that PDFKit can paint into.
-    // However, this constraint only applies for the contents layer. No other layer needs to be WP-backed.
-    return layer == m_contentsLayer.get() && !m_plugin->canPaintSelectionIntoOwnedLayer();
-}
-
 void PDFScrollingPresentationController::tiledBackingUsageChanged(const GraphicsLayer* layer, bool usingTiledBacking)
 {
     if (usingTiledBacking)
@@ -437,7 +429,7 @@ void PDFScrollingPresentationController::paintContents(const GraphicsLayer* laye
 
     if (layer == m_contentsLayer.get()) {
         RefPtr asyncRenderer = asyncRendererIfExists();
-        m_plugin->paintPDFContent(layer, context, clipRect, { }, UnifiedPDFPlugin::PaintingBehavior::All, asyncRenderer.get());
+        m_plugin->paintPDFContent(layer, context, clipRect, { }, asyncRenderer.get());
         return;
     }
 
