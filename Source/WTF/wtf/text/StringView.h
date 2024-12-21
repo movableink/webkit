@@ -1418,12 +1418,12 @@ inline bool String::endsWithIgnoringASCIICase(StringView string) const
 
 inline bool String::hasInfixStartingAt(StringView prefix, unsigned start) const
 {
-    return m_impl && prefix && m_impl->hasInfixStartingAt(prefix, start);
+    SUPPRESS_UNCOUNTED_ARG return m_impl && prefix && m_impl->hasInfixStartingAt(prefix, start);
 }
 
 inline bool String::hasInfixEndingAt(StringView suffix, unsigned end) const
 {
-    return m_impl && suffix && m_impl->hasInfixEndingAt(suffix, end);
+    SUPPRESS_UNCOUNTED_ARG return m_impl && suffix && m_impl->hasInfixEndingAt(suffix, end);
 }
 
 inline size_t AtomString::find(StringView string, size_t start) const

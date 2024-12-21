@@ -1,7 +1,4 @@
 WebKitBuild/Release/usr/local/include/wtf/text/AtomString.h
-WebKitBuild/Release/usr/local/include/wtf/text/AtomStringImpl.h
-WebKitBuild/Release/usr/local/include/wtf/text/StringImpl.h
-WebKitBuild/Release/usr/local/include/wtf/text/WTFString.h
 wtf/NeverDestroyed.h
 wtf/Ref.h
 wtf/RefPtr.h

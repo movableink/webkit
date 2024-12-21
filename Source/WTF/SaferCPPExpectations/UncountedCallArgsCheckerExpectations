@@ -1,5 +1,4 @@
 WebKitBuild/Release/usr/local/include/wtf/text/StringImpl.h
-WebKitBuild/Release/usr/local/include/wtf/text/StringView.h
 WebKitBuild/Release/usr/local/include/wtf/text/WTFString.h
 wtf/AutomaticThread.cpp
 wtf/JSONValues.cpp
