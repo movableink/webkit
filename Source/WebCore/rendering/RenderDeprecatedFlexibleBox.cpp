@@ -966,13 +966,13 @@ static size_t lineCountFor(const RenderBlockFlow& blockFlow)
 static RenderBlockFlow* blockContainerForLastFormattedLine(const RenderBlock& enclosingBlockContainer)
 {
     for (auto* child = enclosingBlockContainer.lastChild(); child; child = child->previousSibling()) {
-        CheckedPtr blockContainer = dynamicDowncast<RenderBlockFlow>(*child);
+        CheckedPtr blockContainer = dynamicDowncast<RenderBlock>(*child);
         if (!blockContainer)
             continue;
         if (auto* descendantRoot = blockContainerForLastFormattedLine(*blockContainer))
             return descendantRoot;
-        if (blockContainer->hasLines())
-            return blockContainer.get();
+        if (CheckedPtr blockFlow = dynamicDowncast<RenderBlockFlow>(blockContainer.get()); blockFlow && blockFlow->hasLines())
+            return blockFlow.get();
     }
     return { };
 }
