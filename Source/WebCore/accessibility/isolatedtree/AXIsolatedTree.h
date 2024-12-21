@@ -83,7 +83,11 @@ enum class AXPropertyFlag : uint32_t {
 
 enum class AXPropertyName : uint16_t {
     ARIATreeRows,
+#if !ENABLE(AX_THREAD_TEXT_APIS)
+    // Rather than caching text content as property when ENABLE(AX_THREAD_TEXT_APIS), we should
+    // synthesize it on-the-fly using AXPropertyName::TextRuns.
     AttributedText,
+#endif // !ENABLE(AX_THREAD_TEXT_APIS)
     AXColumnCount,
     AXColumnIndex,
     AXRowCount,
@@ -271,7 +275,11 @@ enum class AXPropertyName : uint16_t {
     SupportsPosInSet,
     SupportsRangeValue,
     SupportsSetSize,
+#if !ENABLE(AX_THREAD_TEXT_APIS)
+    // Rather than caching text content as property when ENABLE(AX_THREAD_TEXT_APIS), we should
+    // synthesize it on-the-fly using AXPropertyName::TextRuns.
     TextContent,
+#endif // !ENABLE(AX_THREAD_TEXT_APIS)
     TextInputMarkedTextMarkerRange,
 #if ENABLE(AX_THREAD_TEXT_APIS)
     TextRuns,

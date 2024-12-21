@@ -627,9 +627,11 @@ TextStream& operator<<(WTF::TextStream& stream, AXPropertyName property)
     case AXPropertyName::ARIATreeRows:
         stream << "ARIATreeRows";
         break;
+#if !ENABLE(AX_THREAD_TEXT_APIS)
     case AXPropertyName::AttributedText:
         stream << "AttributedText";
         break;
+#endif // !ENABLE(AX_THREAD_TEXT_APIS)
     case AXPropertyName::AXColumnCount:
         stream << "AXColumnCount";
         break;
@@ -1183,9 +1185,11 @@ TextStream& operator<<(WTF::TextStream& stream, AXPropertyName property)
     case AXPropertyName::SupportsSetSize:
         stream << "SupportsSetSize";
         break;
+#if !ENABLE(AX_THREAD_TEXT_APIS)
     case AXPropertyName::TextContent:
         stream << "TextContent";
         break;
+#endif // !ENABLE(AX_THREAD_TEXT_APIS)
     case AXPropertyName::TextInputMarkedTextMarkerRange:
         stream << "TextInputMarkedTextMarkerRange";
         break;

@@ -804,10 +804,6 @@ static NSAttributedString *attributedStringForTextMarkerRange(const AXCoreObject
     if (!textMarkerRangeRef)
         return nil;
 
-#if ENABLE(AX_THREAD_TEXT_APIS)
-    if (AXObjectCache::useAXThreadTextApis())
-        return AXTextMarkerRange { textMarkerRangeRef }.toAttributedString(spellCheck).autorelease();
-#endif // ENABLE(AX_THREAD_TEXT_APIS)
     return object.attributedStringForTextMarkerRange({ textMarkerRangeRef }, spellCheck).autorelease();
 }
 

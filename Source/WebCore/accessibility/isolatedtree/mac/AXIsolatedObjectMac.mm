@@ -62,7 +62,13 @@ void AXIsolatedObject::initializePlatformProperties(const Ref<const Accessibilit
         setProperty(AXPropertyName::TextColor, WTFMove(style.textColor));
         setProperty(AXPropertyName::UnderlineColor, style.underlineColor());
     }
+    // FIXME: Can we compute this off the main-thread with our cached text runs?
+    setProperty(AXPropertyName::StringValue, object->stringValue().isolatedCopy());
 #endif // ENABLE(AX_THREAD_TEXT_APIS)
+
+#if !ENABLE(AX_THREAD_TEXT_APIS)
+    // Do not cache AXPropertyName::AttributedText or AXPropertyName::TextContent when ENABLE(AX_THREAD_TEXT_APIS).
+    // We should instead be synthesizing these on-the-fly using AXProperty::TextRuns.
 
     RetainPtr<NSAttributedString> attributedText;
     // FIXME: Don't eagerly cache textarea/contenteditable values longer than 12500 characters as rangeForCharacterRange is very expensive.
@@ -88,12 +94,13 @@ void AXIsolatedObject::initializePlatformProperties(const Ref<const Accessibilit
         }
     }
 
-    setProperty(AXPropertyName::RemoteFramePlatformElement, object->remoteFramePlatformElement());
-
     // Cache the StringValue only if it differs from the AttributedText.
     auto value = object->stringValue();
     if (!attributedText || value != String([attributedText string]))
         setProperty(AXPropertyName::StringValue, value.isolatedCopy());
+#endif // !ENABLE(AX_THREAD_TEXT_APIS)
+
+    setProperty(AXPropertyName::RemoteFramePlatformElement, object->remoteFramePlatformElement());
 
     if (object->isWebArea()) {
         setProperty(AXPropertyName::PreventKeyboardDOMEventDispatch, object->preventKeyboardDOMEventDispatch());
@@ -166,11 +173,16 @@ void AXIsolatedObject::detachPlatformWrapper(AccessibilityDetachmentType detachm
 
 std::optional<String> AXIsolatedObject::textContent() const
 {
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    if (AXObjectCache::useAXThreadTextApis())
+        return textMarkerRange().toString();
+#else
     if (m_propertyMap.contains(AXPropertyName::TextContent))
         return stringAttributeValue(AXPropertyName::TextContent);
     if (auto attributedText = propertyValue<RetainPtr<NSAttributedString>>(AXPropertyName::AttributedText))
         return String { [attributedText string] };
-    return std::nullopt;
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
+    return { };
 }
 
 AXTextMarkerRange AXIsolatedObject::textMarkerRange() const
@@ -180,8 +192,10 @@ AXTextMarkerRange AXIsolatedObject::textMarkerRange() const
         return { };
     }
 
+#if !ENABLE(AX_THREAD_TEXT_APIS)
     if (auto text = textContent())
         return { tree()->treeID(), objectID(), 0, text->length() };
+#endif // !ENABLE(AX_THREAD_TEXT_APIS)
 
 #if ENABLE(AX_THREAD_TEXT_APIS)
     if (AXObjectCache::useAXThreadTextApis()) {
@@ -235,17 +249,27 @@ AXTextMarkerRange AXIsolatedObject::textMarkerRangeForNSRange(const NSRange& ran
 
 std::optional<String> AXIsolatedObject::platformStringValue() const
 {
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    if (AXObjectCache::useAXThreadTextApis())
+        return textMarkerRange().toString();
+#else
     if (auto attributedText = propertyValue<RetainPtr<NSAttributedString>>(AXPropertyName::AttributedText))
         return [attributedText string];
-    return std::nullopt;
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
+    return { };
 }
 
 unsigned AXIsolatedObject::textLength() const
 {
     ASSERT(isTextControl());
 
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    if (AXObjectCache::useAXThreadTextApis())
+        return textMarkerRange().toString().length();
+#else
     if (auto attributedText = propertyValue<RetainPtr<NSAttributedString>>(AXPropertyName::AttributedText))
         return [attributedText length];
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
     return 0;
 }
 
@@ -259,6 +283,11 @@ RetainPtr<NSAttributedString> AXIsolatedObject::attributedStringForTextMarkerRan
     if (!markerRange)
         return nil;
 
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    if (AXObjectCache::useAXThreadTextApis())
+        return markerRange.toAttributedString(spellCheck).autorelease();
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
+
     // At the moment we are only handling ranges that are confined to a single object, and for which we cached the AttributeString.
     // FIXME: Extend to cases where the range expands multiple objects.
 
@@ -270,7 +299,10 @@ RetainPtr<NSAttributedString> AXIsolatedObject::attributedStringForTextMarkerRan
             return object->attributedStringForTextMarkerRange(WTFMove(markerRange), spellCheck);
     }
 
-    auto attributedText = propertyValue<RetainPtr<NSAttributedString>>(AXPropertyName::AttributedText);
+    RetainPtr<NSAttributedString> attributedText = nil;
+#if !ENABLE(AX_THREAD_TEXT_APIS)
+    attributedText = propertyValue<RetainPtr<NSAttributedString>>(AXPropertyName::AttributedText);
+#endif // !ENABLE(AX_THREAD_TEXT_APIS)
     if (!isConfined || !attributedText) {
         return Accessibility::retrieveValueFromMainThread<RetainPtr<NSAttributedString>>([markerRange = WTFMove(markerRange), &spellCheck, this] () mutable -> RetainPtr<NSAttributedString> {
             if (RefPtr axObject = associatedAXObject())
