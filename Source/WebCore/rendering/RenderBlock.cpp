@@ -2262,45 +2262,42 @@ void RenderBlock::computePreferredLogicalWidths()
 void RenderBlock::computeBlockPreferredLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const
 {
     ASSERT(!shouldApplyInlineSizeContainment());
-
-    const RenderStyle& styleToUse = style();
-    auto nowrap = styleToUse.textWrapMode() == TextWrapMode::NoWrap && styleToUse.whiteSpaceCollapse() == WhiteSpaceCollapse::Collapse;
-
-    RenderObject* child = firstChild();
-    RenderBlock* containingBlock = this->containingBlock();
-    LayoutUnit floatLeftWidth, floatRightWidth;
+    auto* containingBlock = this->containingBlock();
+    if (!containingBlock) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
 
     LayoutUnit childMinWidth;
     LayoutUnit childMaxWidth;
-    bool hadExcludedChildren = computePreferredWidthsForExcludedChildren(childMinWidth, childMaxWidth);
-    if (hadExcludedChildren) {
+    if (computePreferredWidthsForExcludedChildren(childMinWidth, childMaxWidth)) {
         minLogicalWidth = std::max(childMinWidth, minLogicalWidth);
         maxLogicalWidth = std::max(childMaxWidth, maxLogicalWidth);
     }
 
-    while (child) {
+    LayoutUnit floatLeftWidth;
+    LayoutUnit floatRightWidth;
+    auto nowrap = style().textWrapMode() == TextWrapMode::NoWrap && style().whiteSpaceCollapse() == WhiteSpaceCollapse::Collapse;
+    for (auto& childBox : childrenOfType<RenderBox>(*this)) {
         // Positioned children don't affect the min/max width. Legends in fieldsets are skipped here
         // since they compute outside of any one layout system. Other children excluded from
         // normal layout are only used with block flows, so it's ok to calculate them here.
-        if (child->isOutOfFlowPositioned() || child->isExcludedAndPlacedInBorder()) {
-            child = child->nextSibling();
+        if (childBox.isOutOfFlowPositioned() || childBox.isExcludedAndPlacedInBorder())
             continue;
-        }
 
-        const RenderStyle& childStyle = child->style();
+        auto& childStyle = childBox.style();
         // Either the box itself of its content avoids floats.
-        auto* childBox = dynamicDowncast<RenderBox>(*child);
-        auto childAvoidsFloats = childBox ? childBox->avoidsFloats() || (childBox->isAnonymousBlock() && childBox->childrenInline()) : false;
-        if (child->isFloating() || childAvoidsFloats) {
+        auto childAvoidsFloats = childBox.avoidsFloats() || (childBox.isAnonymousBlock() && childBox.childrenInline());
+        if (childBox.isFloating() || childAvoidsFloats) {
             LayoutUnit floatTotalWidth = floatLeftWidth + floatRightWidth;
-            auto childUsedClear = RenderStyle::usedClear(*child);
+            auto childUsedClear = RenderStyle::usedClear(childBox);
             if (childUsedClear == UsedClear::Left || childUsedClear == UsedClear::Both) {
                 maxLogicalWidth = std::max(floatTotalWidth, maxLogicalWidth);
-                floatLeftWidth = 0;
+                floatLeftWidth = 0.f;
             }
             if (childUsedClear == UsedClear::Right || childUsedClear == UsedClear::Both) {
                 maxLogicalWidth = std::max(floatTotalWidth, maxLogicalWidth);
-                floatRightWidth = 0;
+                floatRightWidth = 0.f;
             }
         }
 
@@ -2318,93 +2315,101 @@ void RenderBlock::computeBlockPreferredLogicalWidths(LayoutUnit& minLogicalWidth
             marginEnd += endMarginLength.value();
         margin = marginStart + marginEnd;
 
-        LayoutUnit childMinPreferredLogicalWidth, childMaxPreferredLogicalWidth;
-        computeChildPreferredLogicalWidths(*child, childMinPreferredLogicalWidth, childMaxPreferredLogicalWidth);
+        LayoutUnit childMinPreferredLogicalWidth;
+        LayoutUnit childMaxPreferredLogicalWidth;
+        computeChildPreferredLogicalWidths(const_cast<RenderBox&>(childBox), childMinPreferredLogicalWidth, childMaxPreferredLogicalWidth);
 
-        LayoutUnit w = childMinPreferredLogicalWidth + margin;
-        minLogicalWidth = std::max(w, minLogicalWidth);
+        auto logicalWidth = childMinPreferredLogicalWidth + margin;
+        minLogicalWidth = std::max(logicalWidth, minLogicalWidth);
 
         // IE ignores tables for calculation of nowrap. Makes some sense.
-        if (nowrap && !child->isRenderTable())
-            maxLogicalWidth = std::max(w, maxLogicalWidth);
+        if (nowrap && !childBox.isRenderTable())
+            maxLogicalWidth = std::max(logicalWidth, maxLogicalWidth);
 
-        w = childMaxPreferredLogicalWidth + margin;
+        logicalWidth = childMaxPreferredLogicalWidth + margin;
 
-        if (!child->isFloating()) {
+        if (!childBox.isFloating()) {
             if (childAvoidsFloats) {
                 // Determine a left and right max value based off whether or not the floats can fit in the
                 // margins of the object.  For negative margins, we will attempt to overlap the float if the negative margin
                 // is smaller than the float width.
-                bool ltr = containingBlock
-                    ? containingBlock->writingMode().isLogicalLeftInlineStart()
-                    : writingMode().isLogicalLeftInlineStart();
+                bool ltr = containingBlock->writingMode().isLogicalLeftInlineStart();
                 LayoutUnit marginLogicalLeft = ltr ? marginStart : marginEnd;
                 LayoutUnit marginLogicalRight = ltr ? marginEnd : marginStart;
                 LayoutUnit maxLeft = marginLogicalLeft > 0 ? std::max(floatLeftWidth, marginLogicalLeft) : floatLeftWidth + marginLogicalLeft;
                 LayoutUnit maxRight = marginLogicalRight > 0 ? std::max(floatRightWidth, marginLogicalRight) : floatRightWidth + marginLogicalRight;
-                w = childMaxPreferredLogicalWidth + maxLeft + maxRight;
-                w = std::max(w, floatLeftWidth + floatRightWidth);
-            }
-            else
+                logicalWidth = childMaxPreferredLogicalWidth + maxLeft + maxRight;
+                logicalWidth = std::max(logicalWidth, floatLeftWidth + floatRightWidth);
+            } else
                 maxLogicalWidth = std::max(floatLeftWidth + floatRightWidth, maxLogicalWidth);
-            floatLeftWidth = floatRightWidth = 0;
+            floatLeftWidth = 0.f;
+            floatRightWidth = 0.f;
         }
 
-        if (child->isFloating()) {
-            if (RenderStyle::usedFloat(*child) == UsedFloat::Left)
-                floatLeftWidth += w;
+        if (childBox.isFloating()) {
+            if (RenderStyle::usedFloat(childBox) == UsedFloat::Left)
+                floatLeftWidth += logicalWidth;
             else
-                floatRightWidth += w;
+                floatRightWidth += logicalWidth;
         } else
-            maxLogicalWidth = std::max(w, maxLogicalWidth);
-
-        child = child->nextSibling();
+            maxLogicalWidth = std::max(logicalWidth, maxLogicalWidth);
     }
 
     // Always make sure these values are non-negative.
-    minLogicalWidth = std::max<LayoutUnit>(0, minLogicalWidth);
-    maxLogicalWidth = std::max<LayoutUnit>(0, maxLogicalWidth);
+    minLogicalWidth = std::max(0_lu, minLogicalWidth);
+    maxLogicalWidth = std::max(0_lu, maxLogicalWidth);
 
     maxLogicalWidth = std::max(floatLeftWidth + floatRightWidth, maxLogicalWidth);
 }
 
-void RenderBlock::computeChildIntrinsicLogicalWidths(RenderObject& child, LayoutUnit& minPreferredLogicalWidth, LayoutUnit& maxPreferredLogicalWidth) const
+void RenderBlock::computeChildIntrinsicLogicalWidths(RenderBox& child, LayoutUnit& minPreferredLogicalWidth, LayoutUnit& maxPreferredLogicalWidth) const
 {
     minPreferredLogicalWidth = child.minPreferredLogicalWidth();
     maxPreferredLogicalWidth = child.maxPreferredLogicalWidth();
 }
 
-void RenderBlock::computeChildPreferredLogicalWidths(RenderObject& child, LayoutUnit& minPreferredLogicalWidth, LayoutUnit& maxPreferredLogicalWidth) const
+void RenderBlock::computeChildPreferredLogicalWidths(RenderBox& childBox, LayoutUnit& minPreferredLogicalWidth, LayoutUnit& maxPreferredLogicalWidth) const
 {
-    if (CheckedPtr box = dynamicDowncast<RenderBox>(child); box && box->isHorizontalWritingMode() != isHorizontalWritingMode()) {
+    if (childBox.isHorizontalWritingMode() != isHorizontalWritingMode()) {
         // If the child is an orthogonal flow, child's height determines the width,
         // but the height is not available until layout.
         // http://dev.w3.org/csswg/css-writing-modes-3/#orthogonal-shrink-to-fit
-        if (!box->needsLayout()) {
-            minPreferredLogicalWidth = maxPreferredLogicalWidth = box->logicalHeight();
+        if (!childBox.needsLayout()) {
+            minPreferredLogicalWidth = childBox.logicalHeight();
+            maxPreferredLogicalWidth = childBox.logicalHeight();
             return;
         }
-        if (box->shouldComputeLogicalHeightFromAspectRatio() && box->style().logicalWidth().isFixed()) {
-            LayoutUnit logicalWidth = LayoutUnit(box->style().logicalWidth().value());
-            minPreferredLogicalWidth = maxPreferredLogicalWidth = blockSizeFromAspectRatio(box->horizontalBorderAndPaddingExtent(), box->verticalBorderAndPaddingExtent(), LayoutUnit(box->style().logicalAspectRatio()), box->style().boxSizingForAspectRatio(), logicalWidth, style().aspectRatioType(), isRenderReplaced());
+        auto& childBoxStyle = childBox.style();
+        if (childBox.shouldComputeLogicalHeightFromAspectRatio() && childBoxStyle.logicalWidth().isFixed()) {
+            auto aspectRatioSize = blockSizeFromAspectRatio(childBox.horizontalBorderAndPaddingExtent()
+                , childBox.verticalBorderAndPaddingExtent()
+                , LayoutUnit { childBoxStyle.logicalAspectRatio() }
+                , childBoxStyle.boxSizingForAspectRatio()
+                , LayoutUnit { childBoxStyle.logicalWidth().value() }
+                , style().aspectRatioType()
+                , isRenderReplaced());
+            minPreferredLogicalWidth = aspectRatioSize;
+            maxPreferredLogicalWidth = aspectRatioSize;
             return;
         }
-        minPreferredLogicalWidth = maxPreferredLogicalWidth = box->computeLogicalHeightWithoutLayout();
+        auto logicalHeightWithoutLayout = childBox.computeLogicalHeightWithoutLayout();
+        minPreferredLogicalWidth = logicalHeightWithoutLayout;
+        maxPreferredLogicalWidth = logicalHeightWithoutLayout;
         return;
     }
     
-    computeChildIntrinsicLogicalWidths(child, minPreferredLogicalWidth, maxPreferredLogicalWidth);
+    computeChildIntrinsicLogicalWidths(childBox, minPreferredLogicalWidth, maxPreferredLogicalWidth);
 
     // For non-replaced blocks if the inline size is min|max-content or a definite
     // size the min|max-content contribution is that size plus border, padding and
     // margin https://drafts.csswg.org/css-sizing/#block-intrinsic
-    if (child.isRenderBlock()) {
-        const Length& computedInlineSize = child.style().logicalWidth();
-        if (computedInlineSize.isMaxContent())
-            minPreferredLogicalWidth = maxPreferredLogicalWidth;
-        else if (computedInlineSize.isMinContent())
-            maxPreferredLogicalWidth = minPreferredLogicalWidth;
-    }
+    if (!is<RenderBlock>(childBox))
+        return;
+    auto& computedInlineSize = childBox.style().logicalWidth();
+    if (computedInlineSize.isMaxContent())
+        minPreferredLogicalWidth = maxPreferredLogicalWidth;
+    else if (computedInlineSize.isMinContent())
+        maxPreferredLogicalWidth = minPreferredLogicalWidth;
 }
 
 bool RenderBlock::hasLineIfEmpty() const

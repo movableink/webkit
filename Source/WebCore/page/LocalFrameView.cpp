@@ -3947,15 +3947,19 @@ void LocalFrameView::performSizeToContentAutoSize()
 
     auto document = m_frame->protectedDocument();
     auto& renderView = *document->renderView();
+    auto* documentRenderer = downcast<RenderElement>(renderView.firstChild());
+    if (!documentRenderer) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
     auto layoutWithAdjustedStyleIfNeeded = [&] {
         document->updateStyleIfNeeded();
-        if (auto* documentRenderer = downcast<RenderElement>(renderView.firstChild())) {
-            auto& style = documentRenderer->mutableStyle();
-            if (style.logicalHeight().isPercent()) {
-                // Percent height values on the document renderer when we don't really have a proper viewport size can
-                // result incorrect rendering in certain layout contexts (e.g flex).
-                style.setLogicalHeight({ });
-            }
+        auto& style = documentRenderer->mutableStyle();
+        if (style.logicalHeight().isPercent()) {
+            // Percent height values on the document renderer when we don't really have a proper viewport size can
+            // result incorrect rendering in certain layout contexts (e.g flex).
+            style.setLogicalHeight({ });
         }
         document->updateLayout();
     };
@@ -3971,7 +3975,7 @@ void LocalFrameView::performSizeToContentAutoSize()
     for (int i = 0; i < 2; i++) {
         layoutWithAdjustedStyleIfNeeded();
         // Update various sizes including contentsSize, scrollHeight, etc.
-        auto newSize = IntSize { renderView.minPreferredLogicalWidth(), renderView.documentRect().height() };
+        auto newSize = IntSize { documentRenderer->minPreferredLogicalWidth(), renderView.documentRect().height() };
 
         // Check to see if a scrollbar is needed for a given dimension and
         // if so, increase the other dimension to account for the scrollbar.
