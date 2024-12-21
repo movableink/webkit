@@ -415,7 +415,7 @@ static const RatioSchema& deviceAspectRatioFeatureSchema()
         "device-aspect-ratio"_s,
         OptionSet<MediaQueryDynamicDependency>(),
         [](auto& context) {
-            if (RefPtr localFrame = dynamicDowncast<LocalFrame>(context.document->frame()->mainFrame())) {
+            if (RefPtr localFrame = context.document->frame()->localMainFrame()) {
                 auto screenSize = localFrame->screenSize();
                 return FloatSize { screenSize.width(), screenSize.height() };
             }
@@ -431,7 +431,7 @@ static const LengthSchema& deviceHeightFeatureSchema()
         "device-height"_s,
         OptionSet<MediaQueryDynamicDependency>(),
         [](auto& context) {
-            if (RefPtr localFrame = dynamicDowncast<LocalFrame>(context.document->frame()->mainFrame()))
+            if (RefPtr localFrame = context.document->frame()->localMainFrame())
                 return LayoutUnit { localFrame->screenSize().height() };
             return LayoutUnit { 0.0f };
         }
@@ -457,7 +457,7 @@ static const LengthSchema& deviceWidthFeatureSchema()
         "device-width"_s,
         OptionSet<MediaQueryDynamicDependency>(),
         [](auto& context) {
-            if (RefPtr localFrame = dynamicDowncast<LocalFrame>(context.document->frame()->mainFrame()))
+            if (RefPtr localFrame = context.document->frame()->localMainFrame())
                 return LayoutUnit { localFrame->screenSize().width() };
             return LayoutUnit { 0.0f };
         }
@@ -572,7 +572,7 @@ static const IntegerSchema& monochromeFeatureSchema()
         MediaQueryDynamicDependency::Accessibility,
         [](auto& context) {
             Ref frame = *context.document->frame();
-            RefPtr localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame());
+            RefPtr localFrame = context.document->localMainFrame();
             bool isMonochrome = [&] {
                 if (frame->settings().forcedDisplayIsMonochromeAccessibilityValue() == ForcedAccessibilityValue::On)
                     return true;

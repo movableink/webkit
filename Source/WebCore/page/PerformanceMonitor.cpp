@@ -156,7 +156,7 @@ void PerformanceMonitor::activityStateChanged(OptionSet<ActivityState> oldState,
 enum class ReportingReason { HighCPUUsage, HighMemoryUsage };
 static void reportPageOverPostLoadResourceThreshold(Page& page, ReportingReason reason)
 {
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(page.mainFrame());
+    RefPtr localMainFrame = page.localMainFrame();
     if (!localMainFrame)
         return;
 

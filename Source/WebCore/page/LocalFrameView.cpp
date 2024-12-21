@@ -2504,7 +2504,7 @@ void LocalFrameView::textFragmentIndicatorTimerFired()
         return;
     
     if (textIndicator) {
-        auto* localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+        RefPtr localMainFrame = page->localMainFrame();
         if (!localMainFrame)
             return;
 
@@ -5632,7 +5632,7 @@ void LocalFrameView::firePaintRelatedMilestonesIfNeeded()
 
     m_milestonesPendingPaint = { };
 
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    RefPtr localMainFrame = page->localMainFrame();
     if (milestonesAchieved && localMainFrame)
         localMainFrame->loader().didReachLayoutMilestone(milestonesAchieved);
 }

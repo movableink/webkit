@@ -2817,7 +2817,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         }
     }
 
-    if (auto* localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame()))
+    if (RefPtr localMainFrame = page->localMainFrame())
         page->contextMenuController().showContextMenuAt(*localMainFrame, rect.center());
 }
 

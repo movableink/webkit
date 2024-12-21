@@ -448,7 +448,7 @@ void WebUserContentController::addUserScriptInternal(InjectedBundleScriptWorld& 
             if (&page.userContentProvider() != this)
                 return;
             
-            auto* localMainFrame = dynamicDowncast<LocalFrame>(page.mainFrame());
+            RefPtr localMainFrame = page.localMainFrame();
             if (!localMainFrame)
                 return;
 
@@ -457,7 +457,7 @@ void WebUserContentController::addUserScriptInternal(InjectedBundleScriptWorld& 
                 return;
             }
 
-            for (WebCore::Frame* frame = localMainFrame; frame; frame = frame->tree().traverseNext(localMainFrame)) {
+            for (WebCore::Frame* frame = localMainFrame.get(); frame; frame = frame->tree().traverseNext(localMainFrame.get())) {
                 auto* localFrame = dynamicDowncast<LocalFrame>(frame);
                 if (!localFrame)
                     continue;

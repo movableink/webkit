@@ -294,7 +294,7 @@ Seconds ServicesOverlayController::remainingTimeUntilHighlightShouldBeShown(Data
         return 0_s;
 
     Ref page = m_page.get();
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    RefPtr localMainFrame = page->localMainFrame();
     if (!localMainFrame)
         return 0_s;
 
@@ -354,7 +354,7 @@ void ServicesOverlayController::removeAllPotentialHighlightsOfType(DataDetectorH
 void ServicesOverlayController::buildPhoneNumberHighlights()
 {
     Ref page = m_page.get();
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    RefPtr localMainFrame = page->localMainFrame();
     if (!localMainFrame)
         return;
 

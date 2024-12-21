@@ -75,7 +75,7 @@ void PageOverlayController::installedPageOverlaysChanged()
     else
         detachViewOverlayLayers();
 
-    if (auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame())) {
+    if (RefPtr localMainFrame = m_page->localMainFrame()) {
         if (RefPtr frameView = localMainFrame->view())
             frameView->setNeedsCompositingConfigurationUpdate();
     }
@@ -221,7 +221,7 @@ void PageOverlayController::installPageOverlay(PageOverlay& overlay, PageOverlay
 
     overlay.setPage(protectedPage().ptr());
 
-    if (auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame())) {
+    if (RefPtr localMainFrame = m_page->localMainFrame()) {
         if (RefPtr frameView = localMainFrame->view())
             frameView->enterCompositingMode();
     }

@@ -4472,7 +4472,7 @@ float RenderLayerCompositor::contentsScaleMultiplierForNewTiles(const GraphicsLa
 {
 #if PLATFORM(IOS_FAMILY)
     RefPtr<LegacyTileCache> tileCache;
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(page().mainFrame());
+    RefPtr localMainFrame = page().localMainFrame();
     if (auto* frameView = localMainFrame ? localMainFrame->view() : nullptr)
         tileCache = frameView->legacyTileCache();
 

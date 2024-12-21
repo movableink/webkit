@@ -210,7 +210,7 @@ static bool canCachePage(Page& page)
     PCLOG("--------\n Determining if page can be cached:"_s);
 
     CheckedRef diagnosticLoggingClient = page.diagnosticLoggingClient();
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page.mainFrame());
+    RefPtr localMainFrame = page.localMainFrame();
     if (!localMainFrame)
         return false;
     bool isCacheable = canCacheFrame(*localMainFrame, diagnosticLoggingClient, indentLevel + 1);
@@ -376,7 +376,7 @@ void BackForwardCache::markPagesForDeviceOrPageScaleChanged(Page& page)
             ASSERT(!m_items.contains(item.key));
             continue;
         }
-        auto* localMainFrame = dynamicDowncast<LocalFrame>(page.mainFrame());
+        RefPtr localMainFrame = page.localMainFrame();
         if (localMainFrame == &(*cachedPage)->cachedMainFrame()->view()->frame())
             (*cachedPage)->markForDeviceOrPageScaleChanged();
     }
@@ -390,7 +390,7 @@ void BackForwardCache::markPagesForContentsSizeChanged(Page& page)
             ASSERT(!m_items.contains(item.key));
             continue;
         }
-        auto* localMainFrame = dynamicDowncast<LocalFrame>(page.mainFrame());
+        RefPtr localMainFrame = page.localMainFrame();
         if (localMainFrame == &(*cachedPage)->cachedMainFrame()->view()->frame())
             (*cachedPage)->markForContentsSizeChanged();
     }
@@ -455,7 +455,7 @@ static void firePageHideEventRecursively(LocalFrame& frame)
 
 std::unique_ptr<CachedPage> BackForwardCache::trySuspendPage(Page& page, ForceSuspension forceSuspension)
 {
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page.mainFrame());
+    RefPtr localMainFrame = page.localMainFrame();
     if (!localMainFrame)
         return nullptr;
 

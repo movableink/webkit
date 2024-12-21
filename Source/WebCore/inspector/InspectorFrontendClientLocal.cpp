@@ -281,7 +281,7 @@ void InspectorFrontendClientLocal::changeSheetRect(const FloatRect& rect)
 
 void InspectorFrontendClientLocal::openURLExternally(const String& url)
 {
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(protectedInspectedPageController()->inspectedPage().mainFrame());
+    RefPtr localMainFrame = protectedInspectedPageController()->inspectedPage().localMainFrame();
     if (!localMainFrame)
         return;
     Ref mainFrame = *localMainFrame;

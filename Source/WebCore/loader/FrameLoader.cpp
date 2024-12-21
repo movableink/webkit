@@ -2836,7 +2836,7 @@ void FrameLoader::checkLoadCompleteForThisFrame(LoadWillContinueInAnotherProcess
         if (RefPtr page = m_frame->page()) {
             if (isBackForwardLoadType(loadType())) {
                 // Reset the back forward list to the last committed history item at the top level.
-                if (auto* localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame()))
+                if (RefPtr localMainFrame = page->localMainFrame())
                     item = localMainFrame->loader().history().currentItem();
             }
 

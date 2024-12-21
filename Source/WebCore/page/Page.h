@@ -375,6 +375,8 @@ public:
 
     EditorClient& editorClient() { return m_editorClient.get(); }
 
+    WEBCORE_EXPORT RefPtr<LocalFrame> localMainFrame();
+    RefPtr<const LocalFrame> localMainFrame() const;
     Frame& mainFrame() { return m_mainFrame.get(); }
     const Frame& mainFrame() const { return m_mainFrame.get(); }
     WEBCORE_EXPORT Ref<Frame> protectedMainFrame() const;

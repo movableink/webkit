@@ -493,7 +493,7 @@ Vector<WebCore::FloatRect> WebFoundTextRangeController::rectsForTextMatchesInRec
 
 WebCore::LocalFrame* WebFoundTextRangeController::frameForFoundTextRange(const WebFoundTextRange& range) const
 {
-    RefPtr mainFrame = dynamicDowncast<LocalFrame>(m_webPage->corePage()->mainFrame());
+    RefPtr mainFrame = m_webPage->corePage()->localMainFrame();
     if (!mainFrame)
         return nullptr;
 

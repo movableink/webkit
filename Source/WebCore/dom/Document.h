@@ -689,6 +689,7 @@ public:
     RefPtr<LocalFrameView> protectedView() const;
     inline Page* page() const; // Defined in Page.h.
     inline RefPtr<Page> protectedPage() const; // Defined in Page.h.
+    WEBCORE_EXPORT RefPtr<LocalFrame> localMainFrame() const;
     const Settings& settings() const { return m_settings.get(); }
     Ref<Settings> protectedSettings() const;
     EditingBehavior editingBehavior() const;

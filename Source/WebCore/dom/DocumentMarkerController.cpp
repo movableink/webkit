@@ -160,15 +160,11 @@ void DocumentMarkerController::invalidateRectsForMarkersInNode(Node& node)
 
 static void updateMainFrameLayoutIfNeeded(Document& document)
 {
-    RefPtr frame = document.frame();
-    if (!frame)
+    RefPtr localMainFrame = document.localMainFrame();
+    if (!localMainFrame)
         return;
 
-    RefPtr localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame());
-    if (!localFrame)
-        return;
-
-    if (RefPtr mainFrameView = localFrame->view())
+    if (RefPtr mainFrameView = localMainFrame->view())
         mainFrameView->updateLayoutAndStyleIfNeededRecursive();
 }
 

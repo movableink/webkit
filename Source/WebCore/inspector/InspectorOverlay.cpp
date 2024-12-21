@@ -915,7 +915,7 @@ void InspectorOverlay::drawRulers(GraphicsContext& context, const InspectorOverl
     constexpr auto darkRulerColor = Color::black.colorWithAlphaByte(128);
 
     IntPoint scrollOffset;
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(page().mainFrame());
+    RefPtr localMainFrame = page().localMainFrame();
     if (!localMainFrame)
         return;
 

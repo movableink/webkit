@@ -284,7 +284,7 @@ bool WebInspector::canAttachWindow()
         return true;
 
     // Don't allow the attach if the window would be too small to accommodate the minimum inspector size.
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->corePage()->mainFrame());
+    RefPtr localMainFrame = m_page->localMainFrame();
     if (!localMainFrame)
         return false;
     unsigned inspectedPageHeight = localMainFrame->view()->visibleHeight();

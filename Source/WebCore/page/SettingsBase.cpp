@@ -338,7 +338,7 @@ void SettingsBase::mediaTypeOverrideChanged()
     if (!page)
         return;
 
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    RefPtr localMainFrame = page->localMainFrame();
     if (!localMainFrame)
         return;
 
@@ -476,14 +476,14 @@ void SettingsBase::storageBlockingPolicyChanged()
 
 void SettingsBase::backgroundShouldExtendBeyondPageChanged()
 {
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
+    RefPtr localMainFrame = m_page->localMainFrame();
     if (m_page && localMainFrame)
         localMainFrame->view()->updateExtendBackgroundIfNecessary();
 }
 
 void SettingsBase::scrollingPerformanceTestingEnabledChanged()
 {
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
+    RefPtr localMainFrame = m_page->localMainFrame();
     if (m_page && localMainFrame && localMainFrame->view())
         localMainFrame->view()->setScrollingPerformanceTestingEnabled(m_page->settings().scrollingPerformanceTestingEnabled());
 }

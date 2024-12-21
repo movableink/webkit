@@ -119,15 +119,11 @@ static bool shouldSuppressEventDispatchInDOM(Node& node, Event& event)
     if (!event.isTrusted())
         return false;
 
-    RefPtr frame = node.document().frame();
-    if (!frame)
+    RefPtr localMainFrame = node.document().localMainFrame();
+    if (!localMainFrame)
         return false;
 
-    RefPtr localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame());
-    if (!localFrame)
-        return false;
-
-    if (!localFrame->protectedLoader()->shouldSuppressTextInputFromEditing())
+    if (!localMainFrame->protectedLoader()->shouldSuppressTextInputFromEditing())
         return false;
 
     if (auto* textEvent = dynamicDowncast<TextEvent>(event))

@@ -217,7 +217,7 @@ void WebPage::performDictionaryLookupAtLocation(const FloatPoint& floatPoint)
     }
 #endif
     
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
+    RefPtr localMainFrame = m_page->localMainFrame();
     if (!localMainFrame)
         return;
     // Find the frame the point is over.
@@ -507,7 +507,7 @@ WebPaymentCoordinator* WebPage::paymentCoordinator()
 
 void WebPage::getContentsAsAttributedString(CompletionHandler<void(const WebCore::AttributedString&)>&& completionHandler)
 {
-    RefPtr localFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
+    RefPtr localFrame = m_page->localMainFrame();
     completionHandler(localFrame ? attributedString(makeRangeSelectingNodeContents(Ref { *localFrame->document() }), IgnoreUserSelectNone::No) : AttributedString { });
 }
 

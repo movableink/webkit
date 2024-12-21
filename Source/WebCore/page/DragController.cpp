@@ -248,7 +248,7 @@ bool DragController::performDragOperation(DragData&& dragData)
 
     IgnoreSelectionChangeForScope ignoreSelectionChanges { *focusedOrMainFrame };
 
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
+    RefPtr localMainFrame = m_page->localMainFrame();
     if (!localMainFrame)
         return false;
 
@@ -522,7 +522,7 @@ OptionSet<DragSourceAction> DragController::delegateDragSourceAction(const IntPo
 
 std::optional<DragOperation> DragController::operationForLoad(const DragData& dragData)
 {
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
+    RefPtr localMainFrame = m_page->localMainFrame();
     if (!localMainFrame)
         return std::nullopt;
     RefPtr document = localMainFrame->documentAtPoint(dragData.clientPosition());
@@ -678,7 +678,7 @@ bool DragController::concludeEditDrag(const DragData& dragData)
 
 bool DragController::canProcessDrag(const DragData& dragData)
 {
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
+    RefPtr localMainFrame = m_page->localMainFrame();
     if (!localMainFrame)
         return false;
     IntPoint point = localMainFrame->protectedView()->windowToContents(dragData.clientPosition());
@@ -1584,7 +1584,7 @@ void DragController::finalizeDroppedImagePlaceholder(HTMLImageElement& placehold
 // Manual drag caret manipulation
 void DragController::placeDragCaret(const IntPoint& windowPoint)
 {
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
+    RefPtr localMainFrame = m_page->localMainFrame();
     if (!localMainFrame)
         return;
     mouseMovedIntoDocument(RefPtr { localMainFrame->documentAtPoint(windowPoint) });

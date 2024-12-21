@@ -175,7 +175,7 @@ Ref<InternalSettings> InternalSettings::create(Page* page)
 void InternalSettings::resetToConsistentState()
 {
     m_page->setPageScaleFactor(1, { 0, 0 });
-    if (auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame()))
+    if (RefPtr localMainFrame = m_page->localMainFrame())
         localMainFrame->setPageAndTextZoomFactors(1, 1);
     m_page->setCanStartMedia(true);
     m_page->setUseColorAppearance(false, false);
@@ -516,7 +516,7 @@ ExceptionOr<void> InternalSettings::setUseElevatedUserInterfaceLevel(bool useEle
 
 ExceptionOr<void> InternalSettings::setAllowUnclampedScrollPosition(bool allowUnclamped)
 {
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
+    RefPtr localMainFrame = m_page->localMainFrame();
     if (!m_page || !localMainFrame || !localMainFrame->view())
         return Exception { ExceptionCode::InvalidAccessError };
 

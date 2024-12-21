@@ -140,7 +140,7 @@ WebSocketChannel::ConnectStatus WebSocketChannel::connect(const URL& url, const 
     ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking { ShouldRelaxThirdPartyCookieBlocking::No };
     StoredCredentialsPolicy storedCredentialsPolicy { StoredCredentialsPolicy::Use };
     if (auto* frame = m_document ? m_document->frame() : nullptr) {
-        auto* mainFrame = dynamicDowncast<LocalFrame>(frame->mainFrame());
+        RefPtr mainFrame = m_document->localMainFrame();
         if (!mainFrame)
             return ConnectStatus::KO; 
         frameID = mainFrame->frameID();

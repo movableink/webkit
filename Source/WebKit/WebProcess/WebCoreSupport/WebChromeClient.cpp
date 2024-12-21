@@ -666,7 +666,7 @@ void WebChromeClient::invalidateRootView(const IntRect&)
 void WebChromeClient::invalidateContentsAndRootView(const IntRect& rect)
 {
     auto page = protectedPage();
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->corePage()->mainFrame());
+    RefPtr localMainFrame = page->corePage()->localMainFrame();
     if (!localMainFrame)
         return;
 
@@ -681,7 +681,7 @@ void WebChromeClient::invalidateContentsAndRootView(const IntRect& rect)
 void WebChromeClient::invalidateContentsForSlowScroll(const IntRect& rect)
 {
     auto page = protectedPage();
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->corePage()->mainFrame());
+    RefPtr localMainFrame = page->corePage()->localMainFrame();
     if (!localMainFrame)
         return;
 

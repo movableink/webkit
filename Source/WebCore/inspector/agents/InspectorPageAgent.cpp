@@ -427,7 +427,7 @@ Inspector::Protocol::ErrorStringOr<void> InspectorPageAgent::reload(std::optiona
     if (!revalidateAllResources || !*revalidateAllResources)
         reloadOptions.add(ReloadOption::ExpiredOnly);
 
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_inspectedPage.mainFrame());
+    RefPtr localMainFrame = m_inspectedPage.localMainFrame();
     if (!localMainFrame)
         return makeUnexpected("main frame is not local"_s);
     localMainFrame->loader().reload(reloadOptions);
@@ -437,7 +437,7 @@ Inspector::Protocol::ErrorStringOr<void> InspectorPageAgent::reload(std::optiona
 
 Inspector::Protocol::ErrorStringOr<void> InspectorPageAgent::navigate(const String& url)
 {
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_inspectedPage.mainFrame());
+    RefPtr localMainFrame = m_inspectedPage.localMainFrame();
     if (!localMainFrame)
         return { };
 
@@ -788,8 +788,8 @@ Inspector::Protocol::ErrorStringOr<void> InspectorPageAgent::deleteCookie(const 
 
 Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::Page::FrameResourceTree>> InspectorPageAgent::getResourceTree()
 {
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_inspectedPage.mainFrame());
-    return buildObjectForFrameTree(localMainFrame);
+    RefPtr localMainFrame = m_inspectedPage.localMainFrame();
+    return buildObjectForFrameTree(localMainFrame.get());
 }
 
 Inspector::Protocol::ErrorStringOr<std::tuple<String, bool /* base64Encoded */>> InspectorPageAgent::getResourceContent(const Inspector::Protocol::Network::FrameId& frameId, const String& url)
@@ -1175,7 +1175,7 @@ Inspector::Protocol::ErrorStringOr<void> InspectorPageAgent::setEmulatedMedia(co
     // FIXME: Schedule a rendering update instead of synchronously updating the layout.
     m_inspectedPage.updateStyleAfterChangeInEnvironment();
 
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_inspectedPage.mainFrame());
+    RefPtr localMainFrame = m_inspectedPage.localMainFrame();
     if (!localMainFrame)
         return { };
 
@@ -1211,7 +1211,7 @@ Inspector::Protocol::ErrorStringOr<String> InspectorPageAgent::snapshotNode(Insp
     if (!node)
         return makeUnexpected(errorString);
     
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_inspectedPage.mainFrame());
+    RefPtr localMainFrame = m_inspectedPage.localMainFrame();
     if (!localMainFrame)
         return makeUnexpected("Main frame isn't local"_s);
 
@@ -1229,7 +1229,7 @@ Inspector::Protocol::ErrorStringOr<String> InspectorPageAgent::snapshotRect(int 
         options.flags.add(SnapshotFlags::InViewCoordinates);
 
     IntRect rectangle(x, y, width, height);
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_inspectedPage.mainFrame());
+    RefPtr localMainFrame = m_inspectedPage.localMainFrame();
     if (!localMainFrame)
         return makeUnexpected("Main frame isn't local"_s);
     auto snapshot = snapshotFrameRect(*localMainFrame, rectangle, WTFMove(options));
@@ -1243,7 +1243,7 @@ Inspector::Protocol::ErrorStringOr<String> InspectorPageAgent::snapshotRect(int 
 #if ENABLE(WEB_ARCHIVE) && USE(CF)
 Inspector::Protocol::ErrorStringOr<String> InspectorPageAgent::archive()
 {
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_inspectedPage.mainFrame());
+    RefPtr localMainFrame = m_inspectedPage.localMainFrame();
     if (!localMainFrame)
         return makeUnexpected("Main frame isn't local"_s);
 
@@ -1268,7 +1268,7 @@ Inspector::Protocol::ErrorStringOr<void> InspectorPageAgent::setScreenSizeOverri
     if (height && *height <= 0)
         return makeUnexpected("Screen height override should be a positive integer"_s);
 
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_inspectedPage.mainFrame());
+    RefPtr localMainFrame = m_inspectedPage.localMainFrame();
     if (!localMainFrame)
         return makeUnexpected("Main frame isn't local"_s);
     localMainFrame->setOverrideScreenSize(FloatSize(width.value_or(0), height.value_or(0)));

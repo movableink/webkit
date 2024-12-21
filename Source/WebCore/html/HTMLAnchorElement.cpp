@@ -467,9 +467,12 @@ std::optional<PrivateClickMeasurement> HTMLAnchorElement::parsePrivateClickMeasu
     using SourceSite = PCM::SourceSite;
     using AttributionDestinationSite = PCM::AttributionDestinationSite;
 
-    RefPtr frame { document().frame() };
-    auto* page = document().page();
-    if (!frame || !page || !document().settings().privateClickMeasurementEnabled() || !UserGestureIndicator::processingUserGesture())
+    RefPtr page = document().protectedPage();
+    if (!page || !document().settings().privateClickMeasurementEnabled() || !UserGestureIndicator::processingUserGesture())
+        return std::nullopt;
+
+    RefPtr localMainFrame = page->localMainFrame();
+    if (!localMainFrame)
         return std::nullopt;
 
     if (auto pcm = parsePrivateClickMeasurementForSKAdNetwork(hrefURL))
@@ -506,11 +509,7 @@ std::optional<PrivateClickMeasurement> HTMLAnchorElement::parsePrivateClickMeasu
     }
 
     RegistrableDomain mainDocumentRegistrableDomain;
-    auto* localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame());
-    if (!localFrame)
-        return std::nullopt;
-
-    if (auto mainDocument = localFrame->document())
+    if (auto mainDocument = localMainFrame->document())
         mainDocumentRegistrableDomain = RegistrableDomain { mainDocument->url() };
     else {
         protectedDocument()->addConsoleMessage(MessageSource::Other, MessageLevel::Warning, "Could not find a main document to use as source site for Private Click Measurement."_s);

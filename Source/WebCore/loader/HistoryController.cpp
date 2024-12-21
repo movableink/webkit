@@ -356,7 +356,7 @@ void HistoryController::goToItemForNavigationAPI(HistoryItem& targetItem, FrameL
 
     Vector<FrameToNavigate> framesToNavigate;
     if (RefPtr fromItem = page->backForward().currentItem()) {
-        if (RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame()))
+        if (RefPtr localMainFrame = page->localMainFrame())
             recursiveGatherFramesToNavigate(*localMainFrame, framesToNavigate, targetItem, fromItem.get());
     }
 

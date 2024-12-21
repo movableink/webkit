@@ -204,7 +204,7 @@ Ref<Page> createPageForSanitizingWebContent()
     page->settings().setAcceleratedCompositingEnabled(false);
     page->settings().setLinkPreloadEnabled(false);
 
-    RefPtr frame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    RefPtr frame = page->localMainFrame();
     if (!frame)
         return page;
 
@@ -228,7 +228,7 @@ Ref<Page> createPageForSanitizingWebContent()
 String sanitizeMarkup(const String& rawHTML, MSOListQuirks msoListQuirks, std::optional<Function<void(DocumentFragment&)>> fragmentSanitizer)
 {
     Ref page = createPageForSanitizingWebContent();
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    RefPtr localMainFrame = page->localMainFrame();
     if (!localMainFrame)
         return String();
 

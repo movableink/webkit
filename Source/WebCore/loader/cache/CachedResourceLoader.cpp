@@ -1209,7 +1209,7 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
             bool sameOriginRequest = false;
             Ref requestedOrigin = SecurityOrigin::create(url);
             if (type == CachedResource::Type::MainResource) {
-                RefPtr localMainFrame = dynamicDowncast<LocalFrame>(frame->mainFrame());
+                RefPtr localMainFrame = page->localMainFrame();
                 if (frame->isMainFrame())
                     sameOriginRequest = true;
                 else if (RefPtr topDocument = localMainFrame ? localMainFrame->document() : nullptr)

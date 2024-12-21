@@ -877,7 +877,7 @@ LocalFrame* WebLocalFrameLoaderClient::dispatchCreatePage(const NavigationAction
     if (!newPage)
         return nullptr;
     
-    return dynamicDowncast<LocalFrame>(newPage->mainFrame());
+    return newPage->localMainFrame().get();
 }
 
 void WebLocalFrameLoaderClient::dispatchShow()

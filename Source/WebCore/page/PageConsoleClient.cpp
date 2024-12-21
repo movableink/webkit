@@ -379,7 +379,7 @@ void PageConsoleClient::screenshot(JSC::JSGlobalObject* lexicalGlobalObject, Ref
 
                 if (dataURL.isEmpty()) {
                     if (!snapshot) {
-                        if (RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame()))
+                        if (RefPtr localMainFrame = m_page->localMainFrame())
                             snapshot = WebCore::snapshotNode(*localMainFrame, *node, { { }, ImageBufferPixelFormat::BGRA8, DestinationColorSpace::SRGB() });
                     }
 
@@ -420,7 +420,7 @@ void PageConsoleClient::screenshot(JSC::JSGlobalObject* lexicalGlobalObject, Ref
 
     if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
         if (!target) {
-            if (RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame())) {
+            if (RefPtr localMainFrame = m_page->localMainFrame()) {
                 // If no target is provided, capture an image of the viewport.
                 auto viewportRect = localMainFrame->view()->unobscuredContentRect();
                 if (auto snapshot = WebCore::snapshotFrameRect(*localMainFrame, viewportRect, { { }, ImageBufferPixelFormat::BGRA8, DestinationColorSpace::SRGB() }))

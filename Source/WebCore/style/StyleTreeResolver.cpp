@@ -1313,7 +1313,7 @@ static void suspendMemoryCacheClientCalls(Document& document)
 
     page->setMemoryCacheClientCallsEnabled(false);
 
-    if (auto* localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame()))
+    if (RefPtr localMainFrame = page->localMainFrame())
         memoryCacheClientCallsResumeQueue().append(localMainFrame);
 }
 

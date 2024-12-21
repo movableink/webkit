@@ -100,7 +100,7 @@ void BackForwardController::goBackOrForward(int distance)
         return;
 
     Ref page { protectedPage() };
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    RefPtr localMainFrame = page->localMainFrame();
     if (!localMainFrame)
         return;
 
@@ -114,7 +114,7 @@ bool BackForwardController::goBack()
         return false;
 
     Ref page { protectedPage() };
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    RefPtr localMainFrame = page->localMainFrame();
     if (!localMainFrame)
         return false;
 
@@ -129,7 +129,7 @@ bool BackForwardController::goForward()
         return false;
 
     Ref page { protectedPage() };
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    RefPtr localMainFrame = page->localMainFrame();
     if (!localMainFrame)
         return false;
 

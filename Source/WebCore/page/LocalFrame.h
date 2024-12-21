@@ -148,6 +148,7 @@ public:
     RefPtr<Document> protectedDocument() const;
     LocalFrameView* view() const;
     inline RefPtr<LocalFrameView> protectedView() const; // Defined in LocalFrameView.h.
+    WEBCORE_EXPORT RefPtr<LocalFrame> localMainFrame() const;
 
     Editor& editor() { return document()->editor(); }
     const Editor& editor() const { return document()->editor(); }

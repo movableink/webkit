@@ -242,7 +242,7 @@ void ServiceWorkerContainer::willSettleRegistrationPromise(bool success)
     if (!page || !page->isServiceWorkerPage())
         return;
     
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    RefPtr localMainFrame = page->localMainFrame();
     if (!localMainFrame)
         return;
 

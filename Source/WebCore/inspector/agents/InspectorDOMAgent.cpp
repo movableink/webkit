@@ -326,7 +326,7 @@ void InspectorDOMAgent::didCreateFrontendAndBackend(Inspector::FrontendRouter*, 
     m_domEditor = makeUnique<DOMEditor>(*m_history);
 
     m_instrumentingAgents.setPersistentDOMAgent(this);
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_inspectedPage.mainFrame());
+    RefPtr localMainFrame = m_inspectedPage.localMainFrame();
     if (!localMainFrame)
         return;
     m_document = localMainFrame->document();

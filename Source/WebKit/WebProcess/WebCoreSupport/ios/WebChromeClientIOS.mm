@@ -52,7 +52,7 @@ using namespace WebCore;
 
 void WebChromeClient::didPreventDefaultForEvent()
 {
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page().mainFrame());
+    RefPtr localMainFrame = page().localMainFrame();
     if (!localMainFrame)
         return;
     ContentChangeObserver::didPreventDefaultForEvent(*localMainFrame);

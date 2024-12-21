@@ -61,7 +61,7 @@ String PageDebuggable::name() const
         if (!page)
             return;
 
-        RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+        RefPtr localMainFrame = page->localMainFrame();
         if (!localMainFrame)
             return;
 
@@ -81,7 +81,7 @@ String PageDebuggable::url() const
         if (!page)
             return;
 
-        RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+        RefPtr localMainFrame = page->localMainFrame();
         if (!localMainFrame)
             return;
 

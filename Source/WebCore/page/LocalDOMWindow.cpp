@@ -1821,7 +1821,7 @@ void LocalDOMWindow::moveTo(int x, int y) const
 
     RefPtr page = frame()->page();
     auto update = page->chrome().windowRect();
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    RefPtr localMainFrame = page->localMainFrame();
     if (!localMainFrame)
         return;
 

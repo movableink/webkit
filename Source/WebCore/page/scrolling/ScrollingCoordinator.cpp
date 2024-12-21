@@ -197,7 +197,7 @@ EventTrackingRegions ScrollingCoordinator::absoluteEventTrackingRegionsForFrame(
 
 EventTrackingRegions ScrollingCoordinator::absoluteEventTrackingRegions() const
 {
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
+    RefPtr localMainFrame = m_page->localMainFrame();
     if (!localMainFrame)
         return EventTrackingRegions();
     return absoluteEventTrackingRegionsForFrame(*localMainFrame);
@@ -342,7 +342,7 @@ void ScrollingCoordinator::updateSynchronousScrollingReasons(LocalFrameView& fra
         newSynchronousScrollingReasons.add(SynchronousScrollingReason::HasNonLayerViewportConstrainedObjects);
 
     Ref localFrame = frameView.frame();
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(localFrame->mainFrame()); 
+    RefPtr localMainFrame = localFrame->localMainFrame();
     if (localMainFrame
         && localMainFrame->document()
         && localFrame->document()->isImageDocument())
@@ -439,7 +439,7 @@ String ScrollingCoordinator::synchronousScrollingReasonsAsText(OptionSet<Synchro
 
 String ScrollingCoordinator::synchronousScrollingReasonsAsText() const
 {
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
+    RefPtr localMainFrame = m_page->localMainFrame();
     if (localMainFrame) {
         if (auto* frameView = localMainFrame->view())
             return synchronousScrollingReasonsAsText(synchronousScrollingReasons(frameView->scrollingNodeID()));

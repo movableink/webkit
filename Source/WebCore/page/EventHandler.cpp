@@ -4226,7 +4226,7 @@ static void removeDraggedContentDocumentMarkersFromAllFramesInPage(Page& page)
         document.markers().removeMarkers(DocumentMarkerType::DraggedContent);
     });
 
-    if (auto* localMainFrame = dynamicDowncast<LocalFrame>(page.mainFrame())) {
+    if (RefPtr localMainFrame = page.localMainFrame()) {
         if (auto* mainFrameRenderer = localMainFrame->contentRenderer())
             mainFrameRenderer->repaintRootContents();
     }

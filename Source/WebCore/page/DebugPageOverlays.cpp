@@ -329,7 +329,7 @@ std::optional<std::pair<RenderLayer&, GraphicsLayer&>> InteractionRegionOverlay:
         HitTestRequest::Type::AllowChildFrameContent
     };
     HitTestResult result(m_mouseLocationInContentCoordinates);
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    RefPtr localMainFrame = page->localMainFrame();
     if (!localMainFrame)
         return std::nullopt;
 
@@ -373,7 +373,7 @@ std::optional<InteractionRegion> InteractionRegionOverlay::activeRegion() const
     IntRect hitRectInOverlayCoordinates;
     float hitRegionArea = 0;
 
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    RefPtr localMainFrame = page->localMainFrame();
     if (!localMainFrame)
         return std::nullopt;
 
@@ -611,7 +611,7 @@ bool InteractionRegionOverlay::mouseEvent(PageOverlay& overlay, const PlatformMo
     RefPtr page = m_page.get();
     if (!page)
         return false;
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    RefPtr localMainFrame = page->localMainFrame();
     if (!localMainFrame)
         return false;
     RefPtr mainFrameView = localMainFrame->view();

@@ -902,8 +902,10 @@ bool AccessibilityNodeObject::supportsDragging() const
 bool AccessibilityNodeObject::isGrabbed()
 {
 #if ENABLE(DRAG_SUPPORT)
-    if (mainFrame() && mainFrame()->eventHandler().draggingElement() == element())
-        return true;
+    if (RefPtr localMainFrame = this->localMainFrame()) {
+        if (localMainFrame->eventHandler().draggingElement() == element())
+            return true;
+    }
 #endif
 
     return elementAttributeValue(aria_grabbedAttr);

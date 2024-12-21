@@ -182,7 +182,7 @@ LocalFrame::LocalFrame(Page& page, ClientCreator&& clientCreator, FrameIdentifie
     ProcessWarming::initializeNames();
     StaticCSSValuePool::init();
 
-    if (RefPtr localMainFrame = dynamicDowncast<LocalFrame>(mainFrame()); localMainFrame && parent)
+    if (RefPtr localMainFrame = this->localMainFrame(); localMainFrame && parent)
         localMainFrame->selfOnlyRef();
 
 #ifndef NDEBUG
@@ -244,11 +244,16 @@ LocalFrame::~LocalFrame()
     while (auto* destructionObserver = m_destructionObservers.takeAny())
         destructionObserver->frameDestroyed();
 
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(mainFrame());
+    RefPtr localMainFrame = this->localMainFrame();
     if (!isMainFrame() && localMainFrame)
         localMainFrame->selfOnlyDeref();
 
     detachFromPage();
+}
+
+RefPtr<LocalFrame> LocalFrame::localMainFrame() const
+{
+    return dynamicDowncast<LocalFrame>(mainFrame());
 }
 
 void LocalFrame::addDestructionObserver(FrameDestructionObserver& observer)

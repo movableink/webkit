@@ -494,7 +494,7 @@ public:
     RefPtr<Document> protectedDocument() const;
     LocalFrameView* documentFrameView() const override;
     LocalFrame* frame() const;
-    LocalFrame* mainFrame() const;
+    RefPtr<LocalFrame> localMainFrame() const;
     Document* topDocument() const;
     RenderView* topRenderer() const;
     ScrollView* scrollView() const override { return nullptr; }

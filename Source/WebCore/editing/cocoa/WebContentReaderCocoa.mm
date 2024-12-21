@@ -525,7 +525,7 @@ static std::optional<MarkupAndArchive> extractMarkupAndArchive(SharedBuffer& buf
 static String sanitizeMarkupWithArchive(LocalFrame& frame, Document& destinationDocument, MarkupAndArchive& markupAndArchive, MSOListQuirks msoListQuirks, const std::function<bool(const String)>& canShowMIMETypeAsHTML)
 {
     Ref page = createPageForSanitizingWebContent();
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    RefPtr localMainFrame = page->localMainFrame();
     if (!localMainFrame)
         return String();
 

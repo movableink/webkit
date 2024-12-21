@@ -73,7 +73,7 @@ void Page::platformInitialize()
             WTFLogAlways("%u live pages:", numPages);
 
             Page::forEachPage([](Page& page) {
-                auto* localMainFrame = dynamicDowncast<LocalFrame>(page.mainFrame());
+                RefPtr localMainFrame = page.localMainFrame();
                 if (!localMainFrame)
                     return;
                 const auto* mainFrameDocument = localMainFrame->document();

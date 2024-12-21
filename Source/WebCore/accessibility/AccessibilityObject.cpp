@@ -1396,7 +1396,7 @@ bool AccessibilityObject::press()
 bool AccessibilityObject::dispatchTouchEvent()
 {
 #if ENABLE(IOS_TOUCH_EVENTS)
-    if (auto* frame = mainFrame())
+    if (RefPtr frame = localMainFrame())
         return frame->eventHandler().dispatchSimulatedTouchEvent(clickPoint());
 #endif
     return false;
@@ -1408,21 +1408,11 @@ LocalFrame* AccessibilityObject::frame() const
     return node ? node->document().frame() : nullptr;
 }
 
-LocalFrame* AccessibilityObject::mainFrame() const
+RefPtr<LocalFrame> AccessibilityObject::localMainFrame() const
 {
-    auto* document = topDocument();
-    if (!document)
-        return nullptr;
-    
-    auto* frame = document->frame();
-    if (!frame)
-        return nullptr;
-    
-    auto* localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame());
-    if (!localFrame)
-        return nullptr;
-
-    return localFrame;
+    if (RefPtr page = this->page())
+        return page->localMainFrame();
+    return nullptr;
 }
 
 Document* AccessibilityObject::topDocument() const

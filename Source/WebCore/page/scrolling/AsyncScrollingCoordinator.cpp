@@ -1285,7 +1285,7 @@ void AsyncScrollingCoordinator::reportSynchronousScrollingReasonsChanged(Monoton
 bool AsyncScrollingCoordinator::scrollAnimatorEnabled() const
 {
     ASSERT(isMainThread());
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(page()->mainFrame());
+    RefPtr localMainFrame = page()->localMainFrame();
     if (!localMainFrame)
         return false;
     auto& settings = localMainFrame->settings();

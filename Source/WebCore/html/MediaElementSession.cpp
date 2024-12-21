@@ -1008,28 +1008,28 @@ static bool isElementMainContentForPurposesOfAutoplay(const HTMLMediaElement& el
     if (!document->frame() || !document->frame()->isMainFrame())
         return false;
 
-    RefPtr mainFrame = dynamicDowncast<LocalFrame>(document->frame()->mainFrame());
-    if (!mainFrame)
+    RefPtr localMainFrame = document->localMainFrame();
+    if (!localMainFrame)
         return false;
 
-    if (!mainFrame->view() || !mainFrame->view()->renderView())
+    if (!localMainFrame->view() || !localMainFrame->view()->renderView())
         return false;
 
     if (!shouldHitTestMainFrame)
         return true;
 
-    if (!mainFrame->document())
+    if (!localMainFrame->document())
         return false;
 
     // Hit test the area of the main frame where the element appears, to determine if the element is being obscured.
     // Elements which are obscured by other elements cannot be main content.
     IntRect rectRelativeToView = element.boundingBoxInRootViewCoordinates();
-    ScrollPosition scrollPosition = mainFrame->view()->documentScrollPositionRelativeToViewOrigin();
+    ScrollPosition scrollPosition = localMainFrame->view()->documentScrollPositionRelativeToViewOrigin();
     IntRect rectRelativeToTopDocument(rectRelativeToView.location() + scrollPosition, rectRelativeToView.size());
     OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::AllowChildFrameContent, HitTestRequest::Type::IgnoreClipping, HitTestRequest::Type::DisallowUserAgentShadowContent };
     HitTestResult result(rectRelativeToTopDocument.center());
 
-    mainFrame->protectedDocument()->hitTest(hitType, result);
+    localMainFrame->protectedDocument()->hitTest(hitType, result);
     result.setToNonUserAgentShadowAncestor();
     return result.targetElement() == &element;
 }

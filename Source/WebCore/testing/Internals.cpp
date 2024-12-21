@@ -568,7 +568,7 @@ void Internals::resetToConsistentState(Page& page)
     page.setDefersLoading(false);
     page.setResourceCachingDisabledByWebInspector(false);
 
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(page.mainFrame());
+    RefPtr localMainFrame = page.localMainFrame();
     if (!localMainFrame)
         return;
 

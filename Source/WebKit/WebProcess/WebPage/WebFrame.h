@@ -243,6 +243,8 @@ private:
 
     inline WebCore::DocumentLoader* policySourceDocumentLoader() const;
 
+    RefPtr<WebCore::LocalFrame> localFrame();
+
     WeakPtr<WebCore::Frame> m_coreFrame;
     WeakPtr<WebPage> m_page;
     RefPtr<WebCore::LocalFrame> m_provisionalFrame;
