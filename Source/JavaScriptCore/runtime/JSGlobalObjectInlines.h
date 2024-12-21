@@ -42,6 +42,8 @@
 #include "StructureInlines.h"
 #include <wtf/Hasher.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 struct JSGlobalObject::RareData {
@@ -683,3 +685,5 @@ template<typename Type> inline Type JSGlobalObject::linkTimeConstantConcurrently
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

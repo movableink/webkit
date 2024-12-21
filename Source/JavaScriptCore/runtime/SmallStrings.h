@@ -29,6 +29,8 @@
 #include "TypeofType.h"
 #include <wtf/Noncopyable.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 #define JSC_COMMON_STRINGS_EACH_NAME(macro) \
     macro(default) \
     macro(boolean) \
@@ -174,3 +176,5 @@ private:
 };
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

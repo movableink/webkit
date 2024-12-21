@@ -12,6 +12,7 @@ flags:
   RegExp.escape: useRegExpEscape
   Math.sumPrecise: useMathSumPreciseMethod
   Error.isError: useErrorIsError
+  json-parse-with-source: useJSONSourceTextAccess
 skip:
   features:
     - callable-boundary-realms
@@ -20,7 +21,6 @@ skip:
     - explicit-resource-management
     - regexp-modifiers
     - source-phase-imports
-    - json-parse-with-source
     - import-defer
   paths:
     - test/built-ins/Temporal/Instant/prototype/toZonedDateTimeISO
