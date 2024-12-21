@@ -58,8 +58,6 @@ public:
     std::optional<AXID> treeID() const final { return tree()->treeID(); }
     String dbgInternal(bool, OptionSet<AXDebugStringOption>) const final;
 
-    AccessibilityRole roleValue() const final { return static_cast<AccessibilityRole>(intAttributeValue(AXPropertyName::RoleValue)); }
-
     void attachPlatformWrapper(AccessibilityObjectWrapper*);
     bool isDetached() const final;
     bool isTable() const final { return boolAttributeValue(AXPropertyName::IsTable); }

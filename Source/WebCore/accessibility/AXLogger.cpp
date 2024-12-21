@@ -1095,9 +1095,6 @@ TextStream& operator<<(WTF::TextStream& stream, AXPropertyName property)
     case AXPropertyName::RemoteFramePlatformElement:
         stream << "RemoteFramePlatformElement";
         break;
-    case AXPropertyName::RoleValue:
-        stream << "RoleValue";
-        break;
     case AXPropertyName::RolePlatformString:
         stream << "RolePlatformString";
         break;

@@ -245,7 +245,6 @@ enum class AXPropertyName : uint16_t {
     RelativeFrame,
     RemoteFrameOffset,
     RemoteFramePlatformElement,
-    RoleValue,
     RolePlatformString,
     RoleDescription,
     Rows,

@@ -59,9 +59,7 @@ AXIsolatedObject::AXIsolatedObject(const Ref<AccessibilityObject>& axObject, AXI
 
     if (auto* axParent = axObject->parentInCoreTree())
         m_parentID = axParent->objectID();
-
-    // Allocate a capacity based on the minimum properties an object has (based on measurements from a real webpage).
-    m_propertyMap.reserveInitialCapacity(12);
+    m_role = axObject->roleValue();
 
     initializeProperties(axObject);
 }
@@ -103,16 +101,23 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
     AXTRACE("AXIsolatedObject::initializeProperties"_s);
     auto& object = axObject.get();
 
-    // These properties are cached for all objects, ignored and unignored.
-    setProperty(AXPropertyName::HasClickHandler, object.hasClickHandler());
-    auto tag = object.tagName();
-    if (tag == bodyTag)
-        setProperty(AXPropertyName::HasBodyTag, true);
-#if ENABLE(AX_THREAD_TEXT_APIS)
-    else if (tag == markTag)
-        setProperty(AXPropertyName::HasMarkTag, true);
-#endif // ENABLE(AX_THREAD_TEXT_APIS)
+    auto reserveCapacityAndCacheBaseProperties = [&] (unsigned sizeToReserve) {
+        if (sizeToReserve)
+            m_propertyMap.reserveInitialCapacity(sizeToReserve);
 
+        // These properties are cached for all objects, ignored and unignored.
+        setProperty(AXPropertyName::HasClickHandler, object.hasClickHandler());
+        auto tag = object.tagName();
+        if (tag == bodyTag)
+            setProperty(AXPropertyName::HasBodyTag, true);
+#if ENABLE(AX_THREAD_TEXT_APIS)
+        else if (tag == markTag)
+            setProperty(AXPropertyName::HasMarkTag, true);
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
+    };
+
+    // Allocate a capacity based on the minimum properties an object has (based on measurements from a real webpage).
+    constexpr unsigned unignoredSizeToReserve = 11;
 #if ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
     if (object.includeIgnoredInCoreTree()) {
         bool isIgnored = object.isIgnored();
@@ -125,13 +130,13 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
         bool needsAllProperties = !isIgnored || tree()->isUnconnectedNode(axObject->objectID()) || is<RenderText>(axObject->renderer());
         if (!needsAllProperties) {
             // FIXME: If isIgnored, we should only cache a small subset of necessary properties, e.g. those used in the text marker APIs.
+            reserveCapacityAndCacheBaseProperties(0);
             return;
         }
-    } else {
-        // The default state — do not include ignored in the core accessibility tree, meaning
-        // everything we create an isolated object for is unignored.
-        setProperty(AXPropertyName::IsIgnored, false);
+        reserveCapacityAndCacheBaseProperties(unignoredSizeToReserve);
     }
+#else
+    reserveCapacityAndCacheBaseProperties(unignoredSizeToReserve);
 #endif // ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
 
     if (object.ancestorFlagsAreInitialized())
@@ -155,7 +160,6 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
     setProperty(AXPropertyName::IsValueAutofillAvailable, object.isValueAutofillAvailable());
     setProperty(AXPropertyName::RoleDescription, object.roleDescription().isolatedCopy());
     setProperty(AXPropertyName::RolePlatformString, object.rolePlatformString().isolatedCopy());
-    setProperty(AXPropertyName::RoleValue, static_cast<int>(object.roleValue()));
     setProperty(AXPropertyName::SubrolePlatformString, object.subrolePlatformString().isolatedCopy());
     setProperty(AXPropertyName::CanSetFocusAttribute, object.canSetFocusAttribute());
     setProperty(AXPropertyName::CanSetValueAttribute, object.canSetValueAttribute());

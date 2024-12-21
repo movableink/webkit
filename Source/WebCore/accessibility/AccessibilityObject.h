@@ -436,7 +436,6 @@ public:
     // Only if isColorWell()
     SRGBA<uint8_t> colorValue() const override;
 
-    AccessibilityRole roleValue() const final { return m_role; }
     virtual AccessibilityRole determineAccessibilityRole() = 0;
     String rolePlatformString() const final;
     String roleDescription() const override;
@@ -945,7 +944,6 @@ private:
 protected: // FIXME: Make the data members private.
     AccessibilityChildrenVector m_children;
     mutable bool m_childrenInitialized { false };
-    AccessibilityRole m_role { AccessibilityRole::Unknown };
 private:
     OptionSet<AXAncestorFlag> m_ancestorFlags;
     AccessibilityObjectInclusion m_lastKnownIsIgnoredValue { AccessibilityObjectInclusion::DefaultBehavior };

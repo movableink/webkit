@@ -1152,7 +1152,7 @@ public:
     // Only if isColorWell()
     virtual SRGBA<uint8_t> colorValue() const = 0;
 
-    virtual AccessibilityRole roleValue() const = 0;
+    AccessibilityRole roleValue() const { return m_role; }
     // Non-localized string associated with the object role.
     virtual String rolePlatformString() const = 0;
     // Localized string that describes the object's role.
@@ -1462,6 +1462,7 @@ protected:
     explicit AXCoreObject(AXID axID)
         : m_id(axID)
     { }
+    AccessibilityRole m_role { AccessibilityRole::Unknown };
 
 private:
     virtual String dbgInternal(bool, OptionSet<AXDebugStringOption>) const = 0;
