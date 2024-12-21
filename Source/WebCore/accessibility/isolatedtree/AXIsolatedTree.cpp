@@ -168,7 +168,7 @@ Ref<AXIsolatedTree> AXIsolatedTree::create(AXObjectCache& axObjectCache)
     auto* axFocus = axObjectCache.focusedObjectForPage(document.page());
     if (axFocus)
         tree->setFocusedNodeID(axFocus->objectID());
-
+    tree->setSelectedTextMarkerRange(document.selection().selection());
     tree->updateLoadingProgress(axObjectCache.loadingProgress());
 
     const auto relations = axObjectCache.relations();

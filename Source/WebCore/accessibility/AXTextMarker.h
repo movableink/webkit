@@ -253,6 +253,7 @@ class AXTextMarkerRange {
 public:
     // Constructors.
     AXTextMarkerRange(const VisiblePositionRange&);
+    AXTextMarkerRange(const VisibleSelection&);
     AXTextMarkerRange(const std::optional<SimpleRange>&);
     AXTextMarkerRange(const AXTextMarker&, const AXTextMarker&);
     AXTextMarkerRange(AXTextMarker&&, AXTextMarker&&);

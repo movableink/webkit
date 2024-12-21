@@ -223,6 +223,13 @@ String AXTextMarker::debugDescription() const
     );
 }
 
+AXTextMarkerRange::AXTextMarkerRange(const VisibleSelection& selection)
+    : m_start(selection.visibleStart())
+    , m_end(selection.visibleEnd())
+{
+    ASSERT(isMainThread());
+}
+
 AXTextMarkerRange::AXTextMarkerRange(const VisiblePositionRange& range)
     : m_start(range.start)
     , m_end(range.end)
