@@ -4,7 +4,6 @@ CompressionStreamBuiltins.h
 CountQueuingStrategyBuiltins.h
 DecompressionStreamBuiltins.h
 EventNames.h
-InternalSettingsGenerated.cpp
 Modules/ShapeDetection/BarcodeDetector.cpp
 Modules/ShapeDetection/FaceDetector.cpp
 Modules/ShapeDetection/TextDetector.cpp
@@ -150,7 +149,6 @@ Modules/mediastream/RTCRtpScriptTransformer.cpp
 Modules/mediastream/RTCRtpSender.cpp
 Modules/mediastream/RTCRtpTransceiver.cpp
 Modules/mediastream/RTCRtpTransform.cpp
-Modules/mediastream/UserMediaController.cpp
 Modules/mediastream/UserMediaRequest.cpp
 Modules/mediastream/VideoTrackGenerator.cpp
 Modules/mediastream/libwebrtc/LibWebRTCDtlsTransportBackend.cpp
@@ -332,7 +330,6 @@ animation/ViewTimeline.cpp
 animation/WebAnimation.cpp
 animation/WebAnimationUtilities.cpp
 bindings/js/CachedModuleScriptLoader.cpp
-bindings/js/CachedScriptFetcher.cpp
 bindings/js/CommonVM.cpp
 bindings/js/DOMPromiseProxy.h
 bindings/js/DOMWrapperWorld.cpp
@@ -527,7 +524,6 @@ css/CSSViewTransitionRule.h
 css/CSSViewValue.cpp
 css/CSSViewValue.h
 css/ComputedStyleExtractor.cpp
-css/DOMCSSNamespace.cpp
 css/DeprecatedCSSOMPrimitiveValue.h
 css/DeprecatedCSSOMRGBColor.h
 css/DeprecatedCSSOMRect.h
@@ -568,8 +564,6 @@ css/typedom/CSSStyleValueFactory.cpp
 css/typedom/ComputedStylePropertyMapReadOnly.cpp
 css/typedom/DeclaredStylePropertyMap.cpp
 css/typedom/InlineStylePropertyMap.cpp
-css/typedom/MainThreadStylePropertyMapReadOnly.cpp
-css/typedom/StylePropertyMap.cpp
 css/typedom/numeric/CSSMathClamp.cpp
 css/typedom/numeric/CSSMathInvert.cpp
 css/typedom/numeric/CSSMathMax.cpp
@@ -779,7 +773,6 @@ html/HTMLCollection.cpp
 html/HTMLCollectionInlines.h
 html/HTMLDetailsElement.cpp
 html/HTMLDialogElement.cpp
-html/HTMLDocument.cpp
 html/HTMLElement.cpp
 html/HTMLEmbedElement.cpp
 html/HTMLFormControlElement.cpp
@@ -1046,7 +1039,6 @@ page/LocalFrame.h
 page/LocalFrameView.cpp
 page/LocalFrameViewLayoutContext.cpp
 page/Location.cpp
-page/NavigateEvent.cpp
 page/Navigation.cpp
 page/NavigationDestination.cpp
 page/NavigationDestination.h
@@ -1123,7 +1115,6 @@ platform/NowPlayingManager.cpp
 platform/ScrollAnimationSmooth.cpp
 platform/ScrollAnimator.cpp
 platform/ScrollView.cpp
-platform/ScrollableArea.cpp
 platform/ShareableResource.cpp
 platform/SharedBuffer.cpp
 platform/SharedBuffer.h
@@ -1691,7 +1682,6 @@ xml/XPathParser.cpp
 xml/XPathValue.cpp
 xml/XSLImportRule.cpp
 xml/XSLStyleSheetLibxslt.cpp
-xml/XSLTProcessor.cpp
 xml/XSLTProcessorLibxslt.cpp
 xml/parser/XMLDocumentParser.cpp
 xml/parser/XMLDocumentParserLibxml2.cpp

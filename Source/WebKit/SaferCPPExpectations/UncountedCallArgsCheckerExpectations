@@ -311,7 +311,6 @@ UIProcess/mac/WebDateTimePickerMac.mm
 UIProcess/mac/WebViewImpl.mm
 WebProcess/ApplePay/WebPaymentCoordinator.cpp
 WebProcess/Automation/WebAutomationDOMWindowObserver.cpp
-WebProcess/Automation/WebAutomationSessionProxy.cpp
 WebProcess/Cache/WebCacheStorageConnection.cpp
 WebProcess/Cache/WebCacheStorageProvider.cpp
 WebProcess/Extensions/API/Cocoa/WebExtensionAPIAlarmsCocoa.mm

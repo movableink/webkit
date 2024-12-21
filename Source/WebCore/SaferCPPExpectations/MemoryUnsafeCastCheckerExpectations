@@ -47,12 +47,6 @@ Modules/speech/LocalDOMWindowSpeechSynthesis.cpp
 Modules/speech/SpeechSynthesis.cpp
 Modules/streams/TransformStream.cpp
 Modules/webaudio/AudioWorkletGlobalScope.cpp
-Modules/webaudio/BiquadFilterNode.h
-Modules/webaudio/DelayDSPKernel.h
-Modules/webaudio/IIRDSPKernel.h
-Modules/webaudio/IIRFilterNode.h
-Modules/webaudio/WaveShaperDSPKernel.h
-Modules/webaudio/WaveShaperNode.h
 Modules/webaudio/WaveShaperProcessor.cpp
 Modules/webdriver/NavigatorWebDriver.cpp
 ReadableByteStreamControllerBuiltins.cpp

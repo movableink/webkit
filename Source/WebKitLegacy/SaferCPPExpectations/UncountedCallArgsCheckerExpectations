@@ -139,12 +139,10 @@ mac/WebCoreSupport/WebEditorClient.mm
 mac/WebCoreSupport/WebFrameLoaderClient.mm
 mac/WebCoreSupport/WebFrameNetworkingContext.mm
 mac/WebCoreSupport/WebGeolocationClient.mm
-mac/WebCoreSupport/WebInspectorClient.mm
 mac/WebCoreSupport/WebKitFullScreenListener.mm
 mac/WebCoreSupport/WebOpenPanelResultListener.mm
 mac/WebCoreSupport/WebSecurityOrigin.mm
 mac/WebCoreSupport/WebValidationMessageClient.mm
-mac/WebInspector/WebInspector.mm
 mac/WebInspector/WebNodeHighlightView.mm
 mac/WebView/WebArchive.mm
 mac/WebView/WebDataSource.mm

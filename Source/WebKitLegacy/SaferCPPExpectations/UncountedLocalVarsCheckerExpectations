@@ -2,7 +2,6 @@ Storage/StorageAreaImpl.cpp
 Storage/WebDatabaseProvider.cpp
 WebCoreSupport/WebResourceLoadScheduler.cpp
 WebCoreSupport/WebSocketChannel.cpp
-WebViewPreferencesChangedGenerated.mm
 mac/DOM/DOM.mm
 mac/DOM/DOMAbstractView.mm
 mac/DOM/DOMDocument.mm
