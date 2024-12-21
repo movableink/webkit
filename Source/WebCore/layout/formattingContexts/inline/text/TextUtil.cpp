@@ -698,7 +698,7 @@ char32_t TextUtil::lastBaseCharacterFromText(StringView string)
     if (!string.length())
         return 0;
 
-    for (size_t characterIndex = string.length() - 1; characterIndex >= 0; --characterIndex) {
+    for (size_t characterIndex = string.length() - 1; characterIndex--;) {
         auto character = string.characterAt(characterIndex);
         if (!isCombiningMark(character))
             return character;
