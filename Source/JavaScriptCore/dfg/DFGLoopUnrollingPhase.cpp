@@ -510,7 +510,10 @@ public:
         }
 
         // Done clone.
-        m_blockInsertionSet.execute();
+        if (!m_blockInsertionSet.execute()) {
+            m_graph.invalidateCFG();
+            m_graph.dethread();
+        }
         m_graph.resetReachability();
         m_graph.killUnreachableBlocks();
         ASSERT(m_graph.m_form == LoadStore);
