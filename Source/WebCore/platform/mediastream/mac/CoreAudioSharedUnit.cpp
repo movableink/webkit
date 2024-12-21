@@ -676,9 +676,9 @@ void CoreAudioSharedUnit::updateMutedState(SyncUpdate syncUpdate)
 {
     UInt32 muteUplinkOutput = !isProducingMicrophoneSamples();
 
-    if (syncUpdate == SyncUpdate::No && muteUplinkOutput && !hasClients()) {
-        RELEASE_LOG_INFO(WebRTC, "CoreAudioSharedUnit::updateMutedState(%p) delaying mute in case unit gets stopped soon", this);
-        // We leave some time for playback to stop, but not too long if the user decided to stop capture.
+    if (syncUpdate == SyncUpdate::No && muteUplinkOutput) {
+        RELEASE_LOG_INFO(WebRTC, "CoreAudioSharedUnit::updateMutedState(%p) delaying mute in case unit gets stopped or unmuted soon", this);
+        // We leave some time for playback to stop or for capture to restart, but not too long if the user decided to stop capture.
         static constexpr Seconds mutedStateDelay = 500_ms;
         m_updateMutedStateTimer.startOneShot(mutedStateDelay);
         return;
