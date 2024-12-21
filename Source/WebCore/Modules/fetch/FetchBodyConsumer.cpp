@@ -40,6 +40,7 @@
 #include "JSDOMFormData.h"
 #include "JSDOMPromiseDeferred.h"
 #include "TextResourceDecoder.h"
+#include <wtf/StdLibExtras.h>
 #include <wtf/StringExtras.h>
 #include <wtf/URLParser.h>
 #include <wtf/text/MakeString.h>
@@ -138,15 +139,14 @@ FetchBodyConsumer::FetchBodyConsumer(FetchBodyConsumer&&) = default;
 FetchBodyConsumer::~FetchBodyConsumer() = default;
 FetchBodyConsumer& FetchBodyConsumer::operator=(FetchBodyConsumer&&) = default;
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 // https://fetch.spec.whatwg.org/#concept-body-package-data
 RefPtr<DOMFormData> FetchBodyConsumer::packageFormData(ScriptExecutionContext* context, const String& contentType, std::span<const uint8_t> data)
 {
     auto parseMultipartPart = [context] (std::span<const uint8_t> part, DOMFormData& form) -> bool {
-        auto* headerEnd = static_cast<const uint8_t*>(memmem(part.data(), part.size(), "\r\n\r\n", 4));
-        if (!headerEnd)
+        size_t headerEnd = memmemSpan(part, "\r\n\r\n"_span);
+        if (headerEnd == notFound)
             return false;
-        auto headerBytes = part.first(static_cast<size_t>(headerEnd - part.data()));
+        auto headerBytes = part.first(headerEnd);
 
         auto body = part.subspan(headerBytes.size() + strlen("\r\n\r\n"));
 
@@ -202,14 +202,15 @@ RefPtr<DOMFormData> FetchBodyConsumer::packageFormData(ScriptExecutionContext* c
         CString boundary = boundaryWithDashes.utf8();
         size_t boundaryLength = boundary.length();
 
-        auto* currentBoundary = static_cast<const uint8_t*>(memmem(data.data(), data.size(), boundary.data(), boundaryLength));
-        if (!currentBoundary)
+        size_t currentBoundaryIndex = memmemSpan(data, boundary.span());
+        if (currentBoundaryIndex == notFound)
             return nullptr;
-        auto* nextBoundary = static_cast<const uint8_t*>(memmem(currentBoundary + boundaryLength, data.size() - (currentBoundary + boundaryLength - data.data()), boundary.data(), boundaryLength));
-        while (nextBoundary) {
-            parseMultipartPart(std::span { currentBoundary + boundaryLength, nextBoundary - currentBoundary - boundaryLength - strlen("\r\n") }, form.get());
-            currentBoundary = nextBoundary;
-            nextBoundary = static_cast<const uint8_t*>(memmem(nextBoundary + boundaryLength, data.size() - (nextBoundary + boundaryLength - data.data()), boundary.data(), boundaryLength));
+        data = data.subspan(currentBoundaryIndex + boundaryLength);
+        size_t nextBoundaryIndex;
+        while ((nextBoundaryIndex = memmemSpan(data, boundary.span())) != notFound) {
+            parseMultipartPart(data.first(nextBoundaryIndex - strlen("\r\n")), form.get());
+            currentBoundaryIndex = nextBoundaryIndex;
+            data = data.subspan(nextBoundaryIndex + boundaryLength);
         }
     } else if (mimeType && equalLettersIgnoringASCIICase(mimeType->type, "application"_s) && equalLettersIgnoringASCIICase(mimeType->subtype, "x-www-form-urlencoded"_s)) {
         auto dataString = String::fromUTF8(data);
@@ -220,7 +221,6 @@ RefPtr<DOMFormData> FetchBodyConsumer::packageFormData(ScriptExecutionContext* c
 
     return form;
 }
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 static void resolveWithTypeAndData(Ref<DeferredPromise>&& promise, FetchBodyConsumer::Type type, const String& contentType, std::span<const uint8_t> data)
 {
