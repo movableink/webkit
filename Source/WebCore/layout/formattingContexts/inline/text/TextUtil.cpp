@@ -40,6 +40,7 @@
 #include "TextSpacing.h"
 #include "WidthIterator.h"
 #include <unicode/ubidi.h>
+#include <wtf/text/CharacterProperties.h>
 #include <wtf/text/TextBreakIterator.h>
 
 namespace WebCore {
@@ -690,6 +691,19 @@ bool TextUtil::hasPositionDependentContentWidth(StringView textContent)
     if (textContent.is8Bit())
         return charactersContain<LChar, tabCharacter>(textContent.span8());
     return charactersContain<UChar, tabCharacter>(textContent.span16());
+}
+
+char32_t TextUtil::lastBaseCharacterFromText(StringView string)
+{
+    if (!string.length())
+        return 0;
+
+    for (size_t characterIndex = string.length() - 1; characterIndex >= 0; --characterIndex) {
+        auto character = string.characterAt(characterIndex);
+        if (!isCombiningMark(character))
+            return character;
+    }
+    return 0;
 }
 
 }

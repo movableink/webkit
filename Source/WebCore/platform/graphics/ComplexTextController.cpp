@@ -776,12 +776,17 @@ void ComplexTextController::adjustGlyphsAndAdvances()
             const auto& textAutoSpace =  m_font.textAutospace();
             float textAutoSpaceSpacing = 0;
             auto characterClass = TextSpacing::CharacterClass::Undefined;
-            if (!textAutoSpace.isNoAutospace())
+            // Since we are iterating through glyphs here we skip combining marks, since we just care about the grapheme cluster base for text-autospace.
+            if (!textAutoSpace.isNoAutospace() && !isCombiningMark(character)) {
                 characterClass = TextSpacing::characterClass(character);
-            if (textAutoSpace.shouldApplySpacing(previousCharacterClass, characterClass)) {
-                textAutoSpaceSpacing = complexTextRun.textAutospaceSize();
-                advance.expand(textAutoSpaceSpacing, 0);
+                if (textAutoSpace.shouldApplySpacing(previousCharacterClass, characterClass)) {
+                    textAutoSpaceSpacing = complexTextRun.textAutospaceSize();
+                    advance.expand(textAutoSpaceSpacing, 0);
+                }
+
+                previousCharacterClass = characterClass;
             }
+
             if (!textAutoSpace.isNoAutospace())
                 m_textAutoSpaceSpacings.append(textAutoSpaceSpacing);
 
@@ -814,7 +819,6 @@ void ComplexTextController::adjustGlyphsAndAdvances()
             glyphOrigin.move(advance);
 
             previousCharacterIndex = characterIndex;
-            previousCharacterClass = characterClass;
         }
         if (!isMonotonic)
             complexTextRun.setIsNonMonotonic();
