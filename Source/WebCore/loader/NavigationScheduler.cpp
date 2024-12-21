@@ -413,8 +413,6 @@ public:
     void fire(Frame& frame) final
     {
         RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
-        if (!localFrame)
-            return;
         Ref submission = m_submission;
         if (submission->wasCancelled())
             return;
@@ -426,7 +424,7 @@ public:
         // selecting a target, in case conditions have changed. Other code paths avoid this by targeting
         // without leaving a time window. If we fail the check just silently drop the form submission.
         Ref requestingDocument = submission->state().sourceDocument();
-        if (!requestingDocument->canNavigate(localFrame.get()))
+        if (!requestingDocument->canNavigate(&frame))
             return;
         FrameLoadRequest frameLoadRequest { requestingDocument.copyRef(), requestingDocument->protectedSecurityOrigin(), { }, { }, initiatedByMainFrame() };
         frameLoadRequest.setLockHistory(lockHistory());
@@ -437,10 +435,13 @@ public:
         frameLoadRequest.disableShouldReplaceDocumentIfJavaScriptURL();
         submission->populateFrameLoadRequest(frameLoadRequest);
         auto navigationHistoryBehavior = m_navigationHistoryBehavior;
-        if (localFrame->document() != requestingDocument.ptr())
+        if (localFrame && localFrame->document() != requestingDocument.ptr())
             navigationHistoryBehavior = NavigationHistoryBehavior::Push;
         frameLoadRequest.setNavigationHistoryBehavior(navigationHistoryBehavior);
-        localFrame->protectedLoader()->loadFrameRequest(WTFMove(frameLoadRequest), submission->protectedEvent().get(), submission->takeState());
+        if (localFrame)
+            localFrame->protectedLoader()->loadFrameRequest(WTFMove(frameLoadRequest), submission->protectedEvent().get(), submission->takeState());
+        else
+            frame.changeLocation(WTFMove(frameLoadRequest));
     }
 
     void didStartTimer(Frame& frame, Timer& timer) final
@@ -646,7 +647,8 @@ void NavigationScheduler::scheduleFormSubmission(Ref<FormSubmission>&& submissio
 
     // Handle a location change of a page with no document as a special case.
     // This may happen when a frame changes the location of another frame.
-    bool duringLoad = !downcast<LocalFrame>(m_frame.get()).loader().stateMachine().committedFirstRealDocumentLoad();
+    RefPtr localFrame = dynamicDowncast<LocalFrame>(m_frame.get());
+    bool duringLoad = localFrame && !localFrame->loader().stateMachine().committedFirstRealDocumentLoad();
 
     // If this is a child frame and the form submission was triggered by a script, lock the back/forward list
     // to match IE and Opera.
@@ -663,7 +665,7 @@ void NavigationScheduler::scheduleFormSubmission(Ref<FormSubmission>&& submissio
 
     // FIXME: We currently run JavaScript URLs synchronously even though this doesn't appear to match the specification.
     if (isJavaScriptURL) {
-        scheduledFormSubmission->fire(downcast<LocalFrame>(protectedFrame()));
+        scheduledFormSubmission->fire(protectedFrame());
         return;
     }
     
@@ -763,7 +765,7 @@ void NavigationScheduler::schedule(std::unique_ptr<ScheduledNavigation> redirect
     ASSERT(m_frame->page());
 
     Ref frame = m_frame.get();
-    auto* localFrame = dynamicDowncast<LocalFrame>(frame.get());
+    RefPtr localFrame = dynamicDowncast<LocalFrame>(frame.get());
 
     // If a redirect was scheduled during a load, then stop the current load.
     // Otherwise when the current load transitions from a provisional to a 

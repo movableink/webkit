@@ -3689,4 +3689,27 @@ TEST(SiteIsolation, ProcessTerminationReason)
     EXPECT_EQ(server.totalRequests(), 4u);
 }
 
+TEST(SiteIsolation, FormSubmit)
+{
+    auto mainHTML = "<script>onload=()=>{onlyform.submit()}</script>"
+    "<iframe name='onlyiframe' src='https://webkit.org/iframe'></iframe>"
+    "<form action='alert_when_loaded' method='get' target='onlyiframe' id='onlyform'><input type='hidden' name='textname' value='textvalue'>"_s;
+
+    HTTPServer server({
+        { "/example"_s, { mainHTML } },
+        { "/iframe"_s, { "hi"_s } },
+        { "/alert_when_loaded?textname=textvalue"_s, { "<script>alert(window.location.search)</script>"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(server);
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "?textname=textvalue");
+    checkFrameTreesInProcesses(webView.get(), {
+        { "https://example.com"_s,
+            { { "https://example.com"_s } }
+        }
+    });
+}
+
 }
