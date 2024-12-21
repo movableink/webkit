@@ -1,5 +1,3 @@
-ByteLengthQueuingStrategyBuiltins.h
-CommandLineAPIModuleSourceBuiltins.h
 Modules/WebGPU/GPUPresentationContextDescriptor.h
 Modules/encryptedmedia/MediaKeyStatusMap.h
 Modules/fetch/FetchBodyOwner.h
@@ -19,7 +17,6 @@ Modules/webdatabase/SQLTransactionBackend.h
 accessibility/AXCoreObject.h
 accessibility/AXSearchManager.h
 animation/AnimationTimelinesController.h
-bindings/js/DOMWrapperWorld.h
 bindings/js/IDBBindingUtilities.cpp
 bindings/js/JSEventTargetCustom.h
 bindings/js/JSLazyEventListener.cpp
@@ -79,11 +76,9 @@ inspector/agents/worker/WorkerDebuggerAgent.h
 layout/formattingContexts/inline/InlineItemsBuilder.h
 loader/appcache/ApplicationCacheStorage.cpp
 page/FrameSnapshotting.cpp
-page/OpportunisticTaskScheduler.h
 page/PerformanceLogging.h
 page/PointerLockController.h
 page/RenderingUpdateScheduler.h
-page/ResourceUsageThread.h
 page/UndoManager.h
 page/WheelEventTestMonitor.h
 page/scrolling/ScrollLatchingController.h

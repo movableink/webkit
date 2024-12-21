@@ -76,7 +76,6 @@ WebProcess/GPU/media/RemoteAudioDestinationProxy.cpp
 WebProcess/GPU/webrtc/LibWebRTCCodecs.cpp
 WebProcess/GPU/webrtc/SampleBufferDisplayLayerManager.cpp
 WebProcess/Geolocation/GeolocationPermissionRequestManager.cpp
-WebProcess/Geolocation/WebGeolocationManager.cpp
 WebProcess/InjectedBundle/API/Cocoa/WKWebProcessPlugInFrame.mm
 WebProcess/InjectedBundle/API/c/WKBundle.cpp
 WebProcess/InjectedBundle/API/c/WKBundleFrame.cpp

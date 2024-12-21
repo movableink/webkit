@@ -73,12 +73,7 @@ accessibility/mac/WebAccessibilityObjectWrapperMac.mm
 animation/BlendingKeyframes.cpp
 animation/KeyframeEffect.cpp
 bindings/js/JSCustomElementInterface.cpp
-bindings/js/JSDOMConvertUnion.h
-bindings/js/JSDOMGlobalObject.cpp
-bindings/js/JSDOMIterator.cpp
 bindings/js/JSDOMPromiseDeferred.cpp
-bindings/js/JSEventListener.cpp
-bindings/js/ScriptModuleLoader.cpp
 bindings/js/SerializedScriptValue.cpp
 contentextensions/ContentExtensionsBackend.cpp
 crypto/SubtleCrypto.cpp
@@ -145,7 +140,6 @@ page/EventSource.cpp
 page/ImageAnalysisQueue.cpp
 page/LocalDOMWindow.cpp
 page/Navigation.cpp
-page/OpportunisticTaskScheduler.cpp
 page/Page.cpp
 page/Quirks.cpp
 page/ScreenOrientation.cpp

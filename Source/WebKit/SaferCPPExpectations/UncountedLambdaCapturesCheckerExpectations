@@ -18,6 +18,7 @@ NetworkProcess/NetworkLoad.cpp
 NetworkProcess/NetworkLoadChecker.cpp
 NetworkProcess/NetworkProcess.cpp
 NetworkProcess/NetworkResourceLoader.cpp
+NetworkProcess/PingLoad.cpp
 NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementManager.cpp
 NetworkProcess/ServiceWorker/ServiceWorkerFetchTask.cpp
 NetworkProcess/ServiceWorker/WebSWRegistrationStore.cpp
