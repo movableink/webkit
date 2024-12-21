@@ -322,6 +322,7 @@ set(WTF_PUBLIC_HEADERS
     ThreadMessage.h
     ThreadSafetyAnalysis.h
     ThreadSafeRefCounted.h
+    ThreadSafeRefCountedWithSuppressingSaferCPPChecking.h
     ThreadSafeWeakHashSet.h
     ThreadSafeWeakPtr.h
     ThreadSanitizerSupport.h

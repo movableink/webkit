@@ -4394,7 +4394,7 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
         JSLockHolder locker(vm);
         // This is needed because we don't want the worker's main
         // thread to die before its compilation threads finish.
-        vm.deref();
+        vm.derefSuppressingSaferCPPChecking();
     }
 
     return result;

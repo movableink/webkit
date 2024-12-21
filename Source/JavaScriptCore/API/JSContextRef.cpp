@@ -73,7 +73,7 @@ JSContextGroupRef JSContextGroupCreate()
 
 JSContextGroupRef JSContextGroupRetain(JSContextGroupRef group)
 {
-    toJS(group)->ref();
+    toJS(group)->refSuppressingSaferCPPChecking();
     return group;
 }
 
@@ -82,7 +82,7 @@ void JSContextGroupRelease(JSContextGroupRef group)
     VM& vm = *toJS(group);
 
     JSLockHolder locker(&vm);
-    vm.deref();
+    vm.derefSuppressingSaferCPPChecking();
 }
 
 static bool internalScriptTimeoutCallback(JSGlobalObject* globalObject, void* callbackPtr, void* callbackData)
@@ -169,7 +169,7 @@ JSGlobalContextRef JSGlobalContextRetain(JSGlobalContextRef ctx)
     JSLockHolder locker(vm);
 
     gcProtect(globalObject);
-    vm.ref();
+    vm.refSuppressingSaferCPPChecking();
     return ctx;
 }
 
@@ -182,7 +182,7 @@ void JSGlobalContextRelease(JSGlobalContextRef ctx)
     bool protectCountIsZero = vm.heap.unprotect(globalObject);
     if (protectCountIsZero)
         vm.heap.reportAbandonedObjectGraph();
-    vm.deref();
+    vm.derefSuppressingSaferCPPChecking();
 }
 
 JSObjectRef JSContextGetGlobalObject(JSContextRef ctx)
