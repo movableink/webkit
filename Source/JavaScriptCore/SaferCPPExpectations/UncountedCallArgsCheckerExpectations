@@ -260,4 +260,3 @@ wasm/WasmTypeDefinitionInlines.h
 wasm/js/JSWebAssemblyInstance.h
 wasm/js/JSWebAssemblyMemory.h
 wasm/js/WebAssemblyFunction.h
-yarr/YarrMatchingContextHolder.h
