@@ -3279,6 +3279,7 @@ class CompileWebKit(shell.Compile, AddToLogMixin, ShellMixin):
     def __init__(self, skipUpload=False, **kwargs):
         self.skipUpload = skipUpload
         self.cancelled_due_to_huge_logs = False
+        self.build_failed = False
         super().__init__(timeout=60 * 60, logEnviron=False, **kwargs)
 
     def doStepIf(self, step):
@@ -3331,7 +3332,7 @@ class CompileWebKit(shell.Compile, AddToLogMixin, ShellMixin):
 
     def errorReceived(self, error):
         # Temporary workaround for catching silent failures: https://bugs.webkit.org/show_bug.cgi?id=276081
-        self.setProperty('build_failed', True)
+        self.build_failed = True
         self._addToLog('errors', error + '\n')
 
     def handleExcessiveLogging(self):
@@ -3397,7 +3398,7 @@ class CompileWebKit(shell.Compile, AddToLogMixin, ShellMixin):
         return super().evaluateCommand(cmd)
 
     def getResultSummary(self):
-        if self.getProperty('build_failed'):
+        if self.build_failed:
             self.results = FAILURE
         if self.results == FAILURE:
             return {'step': 'Failed to compile WebKit'}
