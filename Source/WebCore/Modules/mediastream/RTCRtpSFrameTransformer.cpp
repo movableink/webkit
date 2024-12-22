@@ -30,6 +30,7 @@
 
 #include "SFrameUtils.h"
 #include <wtf/Algorithms.h>
+#include <wtf/StdLibExtras.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -39,10 +40,10 @@ namespace WebCore {
 static constexpr unsigned AES_CM_128_HMAC_SHA256_NONCE_SIZE = 12;
 #endif
 
-static inline void writeUInt64(uint8_t* data, uint64_t value, uint8_t valueLength)
+static inline void writeUInt64(std::span<uint8_t> data, uint64_t value, uint8_t valueLength)
 {
     for (unsigned i = 0; i < valueLength; ++i)
-        *data++ = (value >> ((valueLength - 1 - i) * 8)) & 0xff;
+        data[i] = (value >> ((valueLength - 1 - i) * 8)) & 0xff;
 }
 
 static inline uint64_t readUInt64(std::span<const uint8_t> data)
@@ -310,17 +311,17 @@ RTCRtpSFrameTransformer::TransformResult RTCRtpSFrameTransformer::encryptFrame(s
     if (prefixBufferSpan.size())
         memcpySpan(transformedData.mutableSpan(), prefixBufferSpan);
 
-    auto* newDataPointer = transformedData.data() + prefixBufferSpan.size();
+    auto newDataSpan = transformedData.mutableSpan().subspan(prefixBufferSpan.size());
     // Fill header.
     size_t headerSize = 1;
-    *newDataPointer = computeFirstHeaderByte(m_keyId, m_counter);
+    newDataSpan[0] = computeFirstHeaderByte(m_keyId, m_counter);
     if (m_keyId >= 8) {
         auto keyIdLength = lengthOfUInt64(m_keyId);
-        writeUInt64(newDataPointer + headerSize, m_keyId, keyIdLength);
+        writeUInt64(newDataSpan.subspan(headerSize), m_keyId, keyIdLength);
         headerSize += keyIdLength;
     }
     auto counterLength = lengthOfUInt64(m_counter);
-    writeUInt64(newDataPointer + headerSize, m_counter, counterLength);
+    writeUInt64(newDataSpan.subspan(headerSize), m_counter, counterLength);
     headerSize += counterLength;
 
     ASSERT(headerSize < MaxHeaderSize);
@@ -332,11 +333,11 @@ RTCRtpSFrameTransformer::TransformResult RTCRtpSFrameTransformer::encryptFrame(s
     if (encryptedData.hasException())
         return makeUnexpected(ErrorInformation { Error::Other, encryptedData.exception().message(), 0 });
 
-    std::memcpy(newDataPointer + headerSize, encryptedData.returnValue().data(), data.size());
+    memcpySpan(newDataSpan.subspan(headerSize), encryptedData.returnValue().span().first(data.size()));
 
     // Fill signature
-    auto signature = computeEncryptedDataSignature(iv, std::span { newDataPointer, headerSize }, std::span { newDataPointer + headerSize, data.size() }, m_authenticationKey);
-    std::memcpy(newDataPointer + data.size() + headerSize, signature.data(), m_authenticationSize);
+    auto signature = computeEncryptedDataSignature(iv, newDataSpan.first(headerSize), newDataSpan.subspan(headerSize, data.size()), m_authenticationKey);
+    memcpySpan(newDataSpan.subspan(data.size() + headerSize), signature.span().first(m_authenticationSize));
 
     if (m_compatibilityMode == CompatibilityMode::H264)
         toRbsp(transformedData, prefixBufferSpan.size());

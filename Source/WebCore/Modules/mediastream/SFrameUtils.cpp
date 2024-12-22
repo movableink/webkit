@@ -29,6 +29,7 @@
 #if ENABLE(WEB_RTC)
 
 #include <wtf/Function.h>
+#include <wtf/StdLibExtras.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -139,7 +140,7 @@ SFrameCompatibilityPrefixBuffer computeH264PrefixBuffer(std::span<const uint8_t>
     Vector<uint8_t> buffer(spsPpsLength + 2);
 IGNORE_GCC_WARNINGS_BEGIN("restrict")
     // https://bugs.webkit.org/show_bug.cgi?id=246862
-    std::memcpy(buffer.data(), frameData.data(), spsPpsLength);
+    memcpySpan(buffer.mutableSpan(), frameData.first(spsPpsLength));
 IGNORE_GCC_WARNINGS_END
     buffer[spsPpsLength] = 0x25;
     buffer[spsPpsLength + 1] = 0xb8;

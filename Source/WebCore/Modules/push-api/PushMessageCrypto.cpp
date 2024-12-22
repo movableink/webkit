@@ -30,6 +30,7 @@
 #include <array>
 #include <wtf/ByteOrder.h>
 #include <wtf/CryptographicallyRandomNumber.h>
+#include <wtf/StdLibExtras.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -89,10 +90,10 @@ std::optional<Vector<uint8_t>> decryptAES128GCMPayload(const ClientKeys& clientK
 
     // Extract encryption parameters from header as described in RFC8188.
     struct PayloadHeader {
-        uint8_t salt[saltLength];
-        uint8_t ignored[4];
+        std::array<uint8_t, saltLength> salt;
+        std::array<uint8_t, 4> ignored;
         uint8_t keyLength;
-        uint8_t serverPublicKey[p256dhPublicKeyLength];
+        std::array<uint8_t, p256dhPublicKeyLength> serverPublicKey;
     };
     static_assert(sizeof(PayloadHeader) == 86);
     static constexpr size_t minPushPayloadLength = sizeof(PayloadHeader) + 1 /* minPaddingLength */ + aes128GCMTagLength;
@@ -101,7 +102,7 @@ std::optional<Vector<uint8_t>> decryptAES128GCMPayload(const ClientKeys& clientK
         return std::nullopt;
 
     PayloadHeader header;
-    memcpy(&header, payload.data(), sizeof(header));
+    memcpySpan(asMutableByteSpan(header), payload.first(sizeof(header)));
 
     if (header.keyLength != p256dhPublicKeyLength)
         return std::nullopt;
@@ -129,15 +130,15 @@ std::optional<Vector<uint8_t>> decryptAES128GCMPayload(const ClientKeys& clientK
      */
     struct KeyInfo {
         char label[14] = { "WebPush: info" };
-        uint8_t clientKey[p256dhPublicKeyLength];
-        uint8_t serverKey[p256dhPublicKeyLength];
+        std::array<uint8_t, p256dhPublicKeyLength> clientKey;
+        std::array<uint8_t, p256dhPublicKeyLength> serverKey;
         uint8_t end = 0x01;
     };
     static_assert(sizeof(KeyInfo) == 145);
 
     KeyInfo keyInfo;
-    memcpy(keyInfo.clientKey, clientKeys.clientP256DHKeyPair.publicKey.data(), p256dhPublicKeyLength);
-    memcpy(keyInfo.serverKey, header.serverPublicKey, p256dhPublicKeyLength);
+    memcpySpan(std::span { keyInfo.clientKey }, clientKeys.clientP256DHKeyPair.publicKey.span().first(p256dhPublicKeyLength));
+    memcpySpan(std::span { keyInfo.serverKey }, std::span { header.serverPublicKey });
 
     auto ikm = hmacSHA256(prkKey, std::span(reinterpret_cast<uint8_t*>(&keyInfo), sizeof(keyInfo)));
 
@@ -180,7 +181,7 @@ std::optional<Vector<uint8_t>> decryptAES128GCMPayload(const ClientKeys& clientK
     return plainText;
 }
 
-static size_t computeAESGCMPaddingLength(const uint8_t *begin, size_t length)
+static size_t computeAESGCMPaddingLength(std::span<const uint8_t> span)
 {
     /*
      * Compute padding length as defined in draft-ietf-httpbis-encryption-encoding-03:
@@ -192,25 +193,24 @@ static size_t computeAESGCMPaddingLength(const uint8_t *begin, size_t length)
      * Padding consists of a two octet unsigned integer in network byte order, followed by that
      * number of 0x00 octets. The minimum padding size is 2 bytes.
      */
-    if (length < 2)
+    if (span.size() < 2)
         return SIZE_MAX;
 
     uint16_t paddingLength;
-    memcpy(&paddingLength, begin, 2);
+    memcpySpan(asMutableByteSpan(paddingLength), span.first(2));
     paddingLength = ntohs(paddingLength);
 
-    const uint8_t* cur = begin + 2;
-    const uint8_t* end = begin + length;
+    size_t current = 2;
     uint16_t paddingLeft = paddingLength;
-    while (cur < end && (*cur == 0x0) && paddingLeft) {
-        ++cur;
+    while (current < span.size() && span[current] == 0x0 && paddingLeft) {
+        ++current;
         --paddingLeft;
     }
 
     if (paddingLeft)
         return SIZE_MAX;
 
-    return cur - begin;
+    return current;
 }
 
 std::optional<Vector<uint8_t>> decryptAESGCMPayload(const ClientKeys& clientKeys, std::span<const uint8_t> serverP256DHPublicKey, std::span<const uint8_t> salt, std::span<const uint8_t> payload)
@@ -253,25 +253,25 @@ std::optional<Vector<uint8_t>> decryptAESGCMPayload(const ClientKeys& clientKeys
      */
     struct KeyDerivationContext {
         char label[6] = { "P-256" };
-        uint8_t clientPublicKeyLength[2] = { 0, 0x41 };
-        uint8_t clientPublicKey[p256dhPublicKeyLength];
-        uint8_t serverPublicKeyLength[2] = { 0, 0x41 };
-        uint8_t serverPublicKey[p256dhPublicKeyLength];
+        std::array<uint8_t, 2> clientPublicKeyLength { 0, 0x41 };
+        std::array<uint8_t, p256dhPublicKeyLength> clientPublicKey;
+        std::array<uint8_t, 2> serverPublicKeyLength { 0, 0x41 };
+        std::array<uint8_t, p256dhPublicKeyLength> serverPublicKey;
         uint8_t end = 0x01;
     };
     static_assert(sizeof(KeyDerivationContext) == 141);
     KeyDerivationContext context;
-    memcpy(context.clientPublicKey, clientKeys.clientP256DHKeyPair.publicKey.data(), p256dhPublicKeyLength);
-    memcpy(context.serverPublicKey, serverP256DHPublicKey.data(), p256dhPublicKeyLength);
+    memcpySpan(std::span { context.clientPublicKey }, clientKeys.clientP256DHKeyPair.publicKey.span().first(p256dhPublicKeyLength));
+    memcpySpan(std::span { context.serverPublicKey }, serverP256DHPublicKey.first(p256dhPublicKeyLength));
 
     /*
      * cek_info = "Content-Encoding: aesgcm" || 0x00 || context
      * CEK = HMAC-SHA-256(PRK, cek_info || 0x01)[0..15]
      */
-    static const uint8_t cekInfoHeader[] = "Content-Encoding: aesgcm";
-    uint8_t cekInfo[sizeof(cekInfoHeader) + sizeof(context)];
-    memcpy(cekInfo, cekInfoHeader, sizeof(cekInfoHeader));
-    memcpy(cekInfo + sizeof(cekInfoHeader), &context, sizeof(context));
+    static constexpr auto cekInfoHeader = "Content-Encoding: aesgcm"_s;
+    std::array<uint8_t, cekInfoHeader.length() + 1 + sizeof(context)> cekInfo;
+    memcpySpan(std::span { cekInfo }, cekInfoHeader.spanIncludingNullTerminator());
+    memcpySpan(std::span { cekInfo }.subspan(cekInfoHeader.length() + 1), asByteSpan(context));
 
     auto cek = hmacSHA256(prk, cekInfo);
     cek.shrink(16);
@@ -280,10 +280,10 @@ std::optional<Vector<uint8_t>> decryptAESGCMPayload(const ClientKeys& clientKeys
      * nonce_info = "Content-Encoding: nonce" || 0x00 || context
      * NONCE = HMAC-SHA-256(PRK, nonce_info || 0x01)[0..11]
      */
-    static const uint8_t nonceInfoHeader[] = "Content-Encoding: nonce";
-    uint8_t nonceInfo[sizeof(nonceInfoHeader) + sizeof(context)];
-    memcpy(nonceInfo, nonceInfoHeader, sizeof(nonceInfoHeader));
-    memcpy(nonceInfo + sizeof(nonceInfoHeader), &context, sizeof(context));
+    static constexpr auto nonceInfoHeader = "Content-Encoding: nonce"_s;
+    std::array<uint8_t, nonceInfoHeader.length() + 1 + sizeof(context)> nonceInfo;
+    memcpySpan(std::span { nonceInfo }, nonceInfoHeader.spanIncludingNullTerminator());
+    memcpySpan(std::span { nonceInfo }.subspan(nonceInfoHeader.length() + 1), asByteSpan(context));
 
     auto nonce = hmacSHA256(prk, nonceInfo);
     nonce.shrink(12);
@@ -294,7 +294,7 @@ std::optional<Vector<uint8_t>> decryptAESGCMPayload(const ClientKeys& clientKeys
         return std::nullopt;
 
     auto plainText = WTFMove(plainTextResult.value());
-    size_t paddingLength = computeAESGCMPaddingLength(plainText.data(), plainText.size());
+    size_t paddingLength = computeAESGCMPaddingLength(plainText.span());
     if (paddingLength == SIZE_MAX)
         return std::nullopt;
 
