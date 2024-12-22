@@ -1256,6 +1256,8 @@ fast/dom/HTMLInputElement/change-type-in-input-event-listener.html [ Skip ]
 webkit.org/b/227753 [ Debug ] fast/dom/Window/post-message-large-array-buffer-should-not-crash.html [ Pass Failure ]
 webkit.org/b/224735 [ Release ] fast/dom/Window/post-message-large-array-buffer-should-not-crash.html [ Skip ] # Crash
 
+fast/editing/recursive-reapply-edit-command-crash.html [ Pass Failure ]
+
 fast/dom/HTMLLinkElement/link-stylesheet-load-once.html [ Failure ]
 fast/dom/Window/window-focus-self.html [ Failure ]
 fast/dom/Window/window-resize-and-move-arguments.html [ Failure ]
