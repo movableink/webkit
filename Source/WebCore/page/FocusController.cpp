@@ -623,10 +623,10 @@ bool FocusController::advanceFocusInDocumentOrder(FocusDirection direction, Keyb
         }
 
         // Chrome doesn't want focus, so we should wrap focus.
-        RefPtr localMainFrame = m_page->localMainFrame();
-        if (!localMainFrame)
+        RefPtr localTopDocument = m_page->localTopDocument();
+        if (!localTopDocument)
             return false;
-        element = findFocusableElementAcrossFocusScope(direction, FocusNavigationScope::scopeOf(*localMainFrame->protectedDocument()), nullptr, event);
+        element = findFocusableElementAcrossFocusScope(direction, FocusNavigationScope::scopeOf(*localTopDocument), nullptr, event);
 
         if (!element)
             return false;

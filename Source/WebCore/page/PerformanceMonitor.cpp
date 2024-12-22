@@ -156,15 +156,7 @@ void PerformanceMonitor::activityStateChanged(OptionSet<ActivityState> oldState,
 enum class ReportingReason { HighCPUUsage, HighMemoryUsage };
 static void reportPageOverPostLoadResourceThreshold(Page& page, ReportingReason reason)
 {
-    RefPtr localMainFrame = page.localMainFrame();
-    if (!localMainFrame)
-        return;
-
-    auto* document = localMainFrame->document();
-    if (!document)
-        return;
-
-    RegistrableDomain registrableDomain { document->url() };
+    RegistrableDomain registrableDomain { page.mainFrameURL() };
     if (registrableDomain.isEmpty())
         return;
 

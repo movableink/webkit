@@ -1209,10 +1209,9 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
             bool sameOriginRequest = false;
             Ref requestedOrigin = SecurityOrigin::create(url);
             if (type == CachedResource::Type::MainResource) {
-                RefPtr localMainFrame = page->localMainFrame();
                 if (frame->isMainFrame())
                     sameOriginRequest = true;
-                else if (RefPtr topDocument = localMainFrame ? localMainFrame->document() : nullptr)
+                else if (RefPtr topDocument = page->localTopDocument())
                     sameOriginRequest = topDocument->protectedSecurityOrigin()->isSameSchemeHostPort(requestedOrigin.get());
             } else if (RefPtr document = this->document()) {
                 sameOriginRequest = document->protectedTopOrigin()->isSameSchemeHostPort(requestedOrigin.get())

@@ -228,12 +228,9 @@ Ref<Page> createPageForSanitizingWebContent()
 String sanitizeMarkup(const String& rawHTML, MSOListQuirks msoListQuirks, std::optional<Function<void(DocumentFragment&)>> fragmentSanitizer)
 {
     Ref page = createPageForSanitizingWebContent();
-    RefPtr localMainFrame = page->localMainFrame();
-    if (!localMainFrame)
+    RefPtr stagingDocument = page->localTopDocument();
+    if (!stagingDocument)
         return String();
-
-    RefPtr stagingDocument = localMainFrame->document();
-    ASSERT(stagingDocument);
 
     auto fragment = createFragmentFromMarkup(*stagingDocument, rawHTML, emptyString(), { });
 

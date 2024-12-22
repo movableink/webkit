@@ -128,8 +128,7 @@ void WebPage::platformInitializeAccessibility()
     // Get the pid for the starting process.
     pid_t pid = legacyPresentingApplicationPID();
     createMockAccessibilityElement(pid);
-    RefPtr localMainFrame = m_page->localMainFrame();
-    if (localMainFrame)
+    if (m_page->localMainFrame())
         accessibilityTransferRemoteToken(accessibilityRemoteTokenData());
 
     // Close Mach connection to Launch Services.

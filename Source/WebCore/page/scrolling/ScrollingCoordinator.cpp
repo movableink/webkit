@@ -28,6 +28,7 @@
 #include "ScrollingCoordinator.h"
 
 #include "Document.h"
+#include "DocumentClasses.h"
 #include "EventNames.h"
 #include "GraphicsLayer.h"
 #include "LocalFrame.h"
@@ -341,11 +342,8 @@ void ScrollingCoordinator::updateSynchronousScrollingReasons(LocalFrameView& fra
     if (hasVisibleSlowRepaintViewportConstrainedObjects(frameView))
         newSynchronousScrollingReasons.add(SynchronousScrollingReason::HasNonLayerViewportConstrainedObjects);
 
-    Ref localFrame = frameView.frame();
-    RefPtr localMainFrame = localFrame->localMainFrame();
-    if (localMainFrame
-        && localMainFrame->document()
-        && localFrame->document()->isImageDocument())
+    RefPtr page = frameView.frame().protectedPage();
+    if (page && page->topDocumentHasDocumentClass(DocumentClass::Image))
         newSynchronousScrollingReasons.add(SynchronousScrollingReason::IsImageDocument);
 
     setSynchronousScrollingReasons(frameView.scrollingNodeID(), newSynchronousScrollingReasons);

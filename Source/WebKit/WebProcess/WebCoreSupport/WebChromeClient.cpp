@@ -666,11 +666,11 @@ void WebChromeClient::invalidateRootView(const IntRect&)
 void WebChromeClient::invalidateContentsAndRootView(const IntRect& rect)
 {
     auto page = protectedPage();
-    RefPtr localMainFrame = page->corePage()->localMainFrame();
-    if (!localMainFrame)
+    RefPtr corePage = page->protectedCorePage();
+    if (!corePage)
         return;
 
-    if (RefPtr document = localMainFrame->document()) {
+    if (RefPtr document = corePage->localTopDocument()) {
         if (document->printing())
             return;
     }
@@ -681,11 +681,11 @@ void WebChromeClient::invalidateContentsAndRootView(const IntRect& rect)
 void WebChromeClient::invalidateContentsForSlowScroll(const IntRect& rect)
 {
     auto page = protectedPage();
-    RefPtr localMainFrame = page->corePage()->localMainFrame();
-    if (!localMainFrame)
+    RefPtr corePage = page->protectedCorePage();
+    if (!corePage)
         return;
 
-    if (RefPtr document = localMainFrame->document()) {
+    if (RefPtr document = corePage->localTopDocument()) {
         if (document->printing())
             return;
     }

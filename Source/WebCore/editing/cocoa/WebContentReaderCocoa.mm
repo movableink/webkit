@@ -525,12 +525,10 @@ static std::optional<MarkupAndArchive> extractMarkupAndArchive(SharedBuffer& buf
 static String sanitizeMarkupWithArchive(LocalFrame& frame, Document& destinationDocument, MarkupAndArchive& markupAndArchive, MSOListQuirks msoListQuirks, const std::function<bool(const String)>& canShowMIMETypeAsHTML)
 {
     Ref page = createPageForSanitizingWebContent();
-    RefPtr localMainFrame = page->localMainFrame();
-    if (!localMainFrame)
+    RefPtr stagingDocument = page->localTopDocument();
+    if (!stagingDocument)
         return String();
 
-    Document* stagingDocument = localMainFrame->document();
-    ASSERT(stagingDocument);
     auto fragment = createFragmentFromMarkup(*stagingDocument, markupAndArchive.markup, markupAndArchive.mainResource->url().string(), { });
 
     if (shouldReplaceRichContentWithAttachments()) {

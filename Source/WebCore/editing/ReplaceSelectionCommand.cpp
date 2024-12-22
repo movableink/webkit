@@ -192,11 +192,10 @@ ReplacementFragment::ReplacementFragment(RefPtr<DocumentFragment>&& inputFragmen
     }
 
     Ref page = createPageForSanitizingWebContent();
-    RefPtr localMainFrame = page->localMainFrame();
-    if (!localMainFrame)
+    RefPtr stagingDocument = page->localTopDocument();
+    if (!stagingDocument)
         return;
 
-    RefPtr stagingDocument { localMainFrame->document() };
     ASSERT(stagingDocument->body());
 
     ComputedStyleExtractor computedStyleOfEditableRoot(editableRoot.get());

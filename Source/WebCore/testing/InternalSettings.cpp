@@ -516,11 +516,18 @@ ExceptionOr<void> InternalSettings::setUseElevatedUserInterfaceLevel(bool useEle
 
 ExceptionOr<void> InternalSettings::setAllowUnclampedScrollPosition(bool allowUnclamped)
 {
-    RefPtr localMainFrame = m_page->localMainFrame();
-    if (!m_page || !localMainFrame || !localMainFrame->view())
+    if (!m_page)
         return Exception { ExceptionCode::InvalidAccessError };
 
-    localMainFrame->view()->setAllowsUnclampedScrollPositionForTesting(allowUnclamped);
+    RefPtr localMainFrame = m_page->localMainFrame();
+    if (!localMainFrame)
+        return Exception { ExceptionCode::InvalidAccessError };
+
+    RefPtr view = localMainFrame->view();
+    if (!view)
+        return Exception { ExceptionCode::InvalidAccessError };
+
+    view->setAllowsUnclampedScrollPositionForTesting(allowUnclamped);
     return { };
 }
 

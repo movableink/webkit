@@ -325,10 +325,8 @@ void NetworkProcessConnection::broadcastConsoleMessage(MessageSource source, Mes
     FAST_RETURN_IF_NO_FRONTENDS(void());
 
     Page::forEachPage([&] (auto& page) {
-        if (RefPtr localMainFrame = page.localMainFrame()) {
-            if (RefPtr document = localMainFrame->document())
-                document->addConsoleMessage(source, level, message);
-        }
+        if (RefPtr localTopDocument = page.localTopDocument())
+            localTopDocument->addConsoleMessage(source, level, message);
     });
 }
 

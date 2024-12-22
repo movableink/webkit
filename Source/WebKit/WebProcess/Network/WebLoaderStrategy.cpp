@@ -125,7 +125,7 @@ void WebLoaderStrategy::loadResource(LocalFrame& frame, CachedResource& resource
 {
     if (resource.type() != CachedResource::Type::MainResource || !frame.isMainFrame()) {
         if (RefPtr localMainFrame = frame.localMainFrame()) {
-            if (auto* document = localMainFrame->document()) {
+            if (RefPtr document = localMainFrame->document()) {
                 if (document && document->loader())
                     request.setIsAppInitiated(document->loader()->lastNavigationWasAppInitiated());
             }

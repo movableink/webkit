@@ -471,10 +471,6 @@ std::optional<PrivateClickMeasurement> HTMLAnchorElement::parsePrivateClickMeasu
     if (!page || !document().settings().privateClickMeasurementEnabled() || !UserGestureIndicator::processingUserGesture())
         return std::nullopt;
 
-    RefPtr localMainFrame = page->localMainFrame();
-    if (!localMainFrame)
-        return std::nullopt;
-
     if (auto pcm = parsePrivateClickMeasurementForSKAdNetwork(hrefURL))
         return pcm;
 
@@ -508,14 +504,13 @@ std::optional<PrivateClickMeasurement> HTMLAnchorElement::parsePrivateClickMeasu
         return std::nullopt;
     }
 
-    RegistrableDomain mainDocumentRegistrableDomain;
-    if (auto mainDocument = localMainFrame->document())
-        mainDocumentRegistrableDomain = RegistrableDomain { mainDocument->url() };
-    else {
+    auto& mainURL = page->mainFrameURL();
+    if (mainURL.isEmpty()) {
         protectedDocument()->addConsoleMessage(MessageSource::Other, MessageLevel::Warning, "Could not find a main document to use as source site for Private Click Measurement."_s);
         return std::nullopt;
     }
 
+    RegistrableDomain mainDocumentRegistrableDomain = RegistrableDomain { mainURL };
     if (mainDocumentRegistrableDomain.matches(destinationURL)) {
         protectedDocument()->addConsoleMessage(MessageSource::Other, MessageLevel::Warning, "attributiondestination can not be the same site as the current website."_s);
         return std::nullopt;

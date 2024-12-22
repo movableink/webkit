@@ -326,10 +326,7 @@ void InspectorDOMAgent::didCreateFrontendAndBackend(Inspector::FrontendRouter*, 
     m_domEditor = makeUnique<DOMEditor>(*m_history);
 
     m_instrumentingAgents.setPersistentDOMAgent(this);
-    RefPtr localMainFrame = m_inspectedPage.localMainFrame();
-    if (!localMainFrame)
-        return;
-    m_document = localMainFrame->document();
+    m_document = m_inspectedPage.localTopDocument();
 
     // Force a layout so that we can collect additional information from the layout process.
     relayoutDocument();

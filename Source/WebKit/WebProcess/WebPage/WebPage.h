@@ -738,6 +738,7 @@ public:
     WebCore::FrameView* mainFrameView() const; // May return nullptr.
     WebCore::LocalFrameView* localMainFrameView() const; // May return nullptr.
     RefPtr<WebCore::LocalFrame> localMainFrame() const;
+    RefPtr<WebCore::Document> localTopDocument() const;
 
     void createRemoteSubframe(WebCore::FrameIdentifier parentID, WebCore::FrameIdentifier newChildID, const String& newChildFrameName);
 

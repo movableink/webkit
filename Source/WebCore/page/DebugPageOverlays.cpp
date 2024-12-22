@@ -329,11 +329,11 @@ std::optional<std::pair<RenderLayer&, GraphicsLayer&>> InteractionRegionOverlay:
         HitTestRequest::Type::AllowChildFrameContent
     };
     HitTestResult result(m_mouseLocationInContentCoordinates);
-    RefPtr localMainFrame = page->localMainFrame();
-    if (!localMainFrame)
+    RefPtr localTopDocument = page->localTopDocument();
+    if (!localTopDocument)
         return std::nullopt;
 
-    localMainFrame->document()->hitTest(hitType, result);
+    localTopDocument->hitTest(hitType, result);
 
     RefPtr hitNode = result.innerNode();
     if (!hitNode || !hitNode->renderer())

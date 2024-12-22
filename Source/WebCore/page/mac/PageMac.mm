@@ -73,11 +73,10 @@ void Page::platformInitialize()
             WTFLogAlways("%u live pages:", numPages);
 
             Page::forEachPage([](Page& page) {
-                RefPtr localMainFrame = page.localMainFrame();
-                if (!localMainFrame)
+                RefPtr localTopDocument = page.localTopDocument();
+                if (!localTopDocument)
                     return;
-                const auto* mainFrameDocument = localMainFrame->document();
-                WTFLogAlways("Page %p with main document %p %s", &page, mainFrameDocument, mainFrameDocument ? mainFrameDocument->url().string().utf8().data() : "");
+                WTFLogAlways("Page %p with main document %p %s", &page, localTopDocument.get(), localTopDocument ? localTopDocument->url().string().utf8().data() : "");
             });
 
             WTFLogAlways("%u live documents:", Document::allDocuments().size());

@@ -595,9 +595,8 @@ void Page::destroyRenderTrees()
 
 OptionSet<DisabledAdaptations> Page::disabledAdaptations() const
 {
-    RefPtr localMainFrame = this->localMainFrame();
-    if (RefPtr document = localMainFrame ? localMainFrame->document() : nullptr)
-        return document->disabledAdaptations();
+    if (RefPtr localTopDocument = this->localTopDocument())
+        return localTopDocument->disabledAdaptations();
     return { };
 }
 
@@ -634,9 +633,8 @@ void Page::setOverrideViewportArguments(const std::optional<ViewportArguments>& 
         return;
 
     m_overrideViewportArguments = viewportArguments;
-    RefPtr localMainFrame = this->localMainFrame();
-    if (RefPtr document = localMainFrame ? localMainFrame->document() : nullptr)
-        document->updateViewportArguments();
+    if (RefPtr localTopDocument = this->localTopDocument())
+        localTopDocument->updateViewportArguments();
 }
 
 ScrollingCoordinator* Page::scrollingCoordinator()
@@ -767,12 +765,11 @@ void Page::settingsDidChange()
 
 std::optional<AXTreeData> Page::accessibilityTreeData() const
 {
-    RefPtr localMainFrame = this->localMainFrame();
-    RefPtr document = localMainFrame ? localMainFrame->document() : nullptr;
-    if (!document)
+    RefPtr localTopDocument = this->localTopDocument();
+    if (!localTopDocument)
         return std::nullopt;
 
-    if (CheckedPtr cache = document->existingAXObjectCache())
+    if (CheckedPtr cache = localTopDocument->existingAXObjectCache())
         return { cache->treeData() };
     return std::nullopt;
 }
@@ -1051,11 +1048,7 @@ bool Page::showAllPlugins() const
     if (m_showAllPlugins)
         return true;
 
-    RefPtr localMainFrame = this->localMainFrame();
-    if (Document* document = localMainFrame ? localMainFrame->document() : nullptr)
-        return document->securityOrigin().isLocal();
-
-    return false;
+    return mainFrameOrigin().isLocal();
 }
 
 inline std::optional<std::pair<WeakRef<MediaCanStartListener>, WeakRef<Document, WeakPtrImplWithEventTargetData>>>  Page::takeAnyMediaCanStartListener()
@@ -1572,8 +1565,7 @@ void Page::setZoomedOutPageScaleFactor(float scale)
 void Page::setPageScaleFactor(float scale, const IntPoint& origin, bool inStableState)
 {
     LOG_WITH_STREAM(Viewports, stream << "Page " << this << " setPageScaleFactor " << scale << " at " << origin << " - stable " << inStableState);
-    RefPtr localMainFrame = this->localMainFrame();
-    RefPtr mainDocument = localMainFrame ? localMainFrame->document() : nullptr;
+    RefPtr mainDocument = localTopDocument();
     RefPtr mainFrameView = mainDocument ? mainDocument->view() : nullptr;
 
     if (scale == m_pageScaleFactor) {
@@ -1920,9 +1912,8 @@ unsigned Page::pageCount() const
     if (m_pagination.mode == Pagination::Mode::Unpaginated)
         return 0;
 
-    RefPtr localMainFrame = this->localMainFrame();
-    if (RefPtr document = localMainFrame ? localMainFrame->document() : nullptr)
-        document->updateLayoutIgnorePendingStylesheets();
+    if (RefPtr localTopDocument = this->localTopDocument())
+        localTopDocument->updateLayoutIgnorePendingStylesheets();
 
     return pageCountAssumingLayoutIsUpToDate();
 }
@@ -2399,10 +2390,8 @@ void Page::prioritizeVisibleResources()
 {
     if (loadSchedulingMode() == LoadSchedulingMode::Direct)
         return;
-    RefPtr localMainFrame = this->localMainFrame();
-    if (!localMainFrame)
-        return;
-    if (!localMainFrame->document())
+    RefPtr localTopDocument = this->localTopDocument();
+    if (!localTopDocument)
         return;
 
     Vector<CachedResourceHandle<CachedResource>> toPrioritize;
@@ -2412,13 +2401,12 @@ void Page::prioritizeVisibleResources()
     });
     
     auto computeSchedulingMode = [&] {
-        Ref document = *localMainFrame->document();
         // Parsing generates resource loads.
-        if (document->parsing())
+        if (localTopDocument->parsing())
             return LoadSchedulingMode::Prioritized;
         
         // Async script execution may generate more resource loads that benefit from prioritization.
-        if (CheckedPtr scriptRunner = document->scriptRunnerIfExists(); scriptRunner && scriptRunner->hasPendingScripts())
+        if (CheckedPtr scriptRunner = localTopDocument->scriptRunnerIfExists(); scriptRunner && scriptRunner->hasPendingScripts())
             return LoadSchedulingMode::Prioritized;
         
         // We still haven't finished loading the visible resources.
@@ -3377,12 +3365,10 @@ void Page::removeLayoutMilestones(OptionSet<LayoutMilestone> milestones)
 
 Color Page::themeColor() const
 {
-    RefPtr localMainFrame = this->localMainFrame();
-    auto* document = localMainFrame ? localMainFrame->document() : nullptr;
-    if (!document)
-        return { };
+    if (RefPtr localTopDocument = this->localTopDocument())
+        return localTopDocument->themeColor();
 
-    return document->themeColor();
+    return { };
 }
 
 Color Page::pageExtendedBackgroundColor() const
@@ -4222,6 +4208,20 @@ RefPtr<LocalFrame> Page::localMainFrame()
 RefPtr<const LocalFrame> Page::localMainFrame() const
 {
     return dynamicDowncast<LocalFrame>(mainFrame());
+}
+
+RefPtr<Document> Page::localTopDocument()
+{
+    if (RefPtr localMainFrame = this->localMainFrame())
+        return localMainFrame->document();
+    return nullptr;
+}
+
+RefPtr<Document> Page::localTopDocument() const
+{
+    if (RefPtr localMainFrame = this->localMainFrame())
+        return localMainFrame->document();
+    return nullptr;
 }
 
 bool Page::hasLocalMainFrame()
@@ -5241,9 +5241,8 @@ void Page::respondToReappliedWritingToolsEditing(EditCommandComposition* command
 
 Vector<FloatRect> Page::proofreadingSessionSuggestionTextRectsInRootViewCoordinates(const CharacterRange& enclosingRangeRelativeToSessionRange) const
 {
-    RefPtr localMainFrame = this->localMainFrame();
-    RefPtr document = localMainFrame ? localMainFrame->document() : nullptr;
-    if (!document) {
+    RefPtr localTopDocument = this->localTopDocument();
+    if (!localTopDocument) {
         ASSERT_NOT_REACHED();
         return { };
     }
@@ -5254,14 +5253,13 @@ Vector<FloatRect> Page::proofreadingSessionSuggestionTextRectsInRootViewCoordina
         return { };
     }
 
-    return IntelligenceTextEffectsSupport::writingToolsTextSuggestionRectsInRootViewCoordinates(*document, *scope, enclosingRangeRelativeToSessionRange);
+    return IntelligenceTextEffectsSupport::writingToolsTextSuggestionRectsInRootViewCoordinates(*localTopDocument, *scope, enclosingRangeRelativeToSessionRange);
 }
 
 void Page::updateTextVisibilityForActiveWritingToolsSession(const CharacterRange& rangeRelativeToSessionRange, bool visible, const WTF::UUID& identifier)
 {
-    RefPtr localMainFrame = this->localMainFrame();
-    RefPtr document = localMainFrame ? localMainFrame->document() : nullptr;
-    if (!document) {
+    RefPtr localTopDocument = this->localTopDocument();
+    if (!localTopDocument) {
         ASSERT_NOT_REACHED();
         return;
     }
@@ -5272,14 +5270,13 @@ void Page::updateTextVisibilityForActiveWritingToolsSession(const CharacterRange
         return;
     }
 
-    IntelligenceTextEffectsSupport::updateTextVisibility(*document, *scope, rangeRelativeToSessionRange, visible, identifier);
+    IntelligenceTextEffectsSupport::updateTextVisibility(*localTopDocument, *scope, rangeRelativeToSessionRange, visible, identifier);
 }
 
 std::optional<TextIndicatorData> Page::textPreviewDataForActiveWritingToolsSession(const CharacterRange& rangeRelativeToSessionRange)
 {
-    RefPtr localMainFrame = this->localMainFrame();
-    RefPtr document = localMainFrame ? localMainFrame->document() : nullptr;
-    if (!document) {
+    RefPtr localTopDocument = this->localTopDocument();
+    if (!localTopDocument) {
         ASSERT_NOT_REACHED();
         return std::nullopt;
     }
@@ -5290,14 +5287,13 @@ std::optional<TextIndicatorData> Page::textPreviewDataForActiveWritingToolsSessi
         return std::nullopt;
     }
 
-    return IntelligenceTextEffectsSupport::textPreviewDataForRange(*document, *scope, rangeRelativeToSessionRange);
+    return IntelligenceTextEffectsSupport::textPreviewDataForRange(*localTopDocument, *scope, rangeRelativeToSessionRange);
 }
 
 void Page::decorateTextReplacementsForActiveWritingToolsSession(const CharacterRange& rangeRelativeToSessionRange)
 {
-    RefPtr localMainFrame = this->localMainFrame();
-    RefPtr document = localMainFrame ? localMainFrame->document() : nullptr;
-    if (!document) {
+    RefPtr localTopDocument = this->localTopDocument();
+    if (!localTopDocument) {
         ASSERT_NOT_REACHED();
         return;
     }
@@ -5308,14 +5304,13 @@ void Page::decorateTextReplacementsForActiveWritingToolsSession(const CharacterR
         return;
     }
 
-    IntelligenceTextEffectsSupport::decorateWritingToolsTextReplacements(*document, *scope, rangeRelativeToSessionRange);
+    IntelligenceTextEffectsSupport::decorateWritingToolsTextReplacements(*localTopDocument, *scope, rangeRelativeToSessionRange);
 }
 
 void Page::setSelectionForActiveWritingToolsSession(const CharacterRange& rangeRelativeToSessionRange)
 {
-    RefPtr localMainFrame = this->localMainFrame();
-    RefPtr document = localMainFrame ? localMainFrame->document() : nullptr;
-    if (!document) {
+    RefPtr localTopDocument = this->localTopDocument();
+    if (!localTopDocument) {
         ASSERT_NOT_REACHED();
         return;
     }
@@ -5331,7 +5326,7 @@ void Page::setSelectionForActiveWritingToolsSession(const CharacterRange& rangeR
     if (visibleSelection.isNoneOrOrphaned())
         return;
 
-    document->selection().setSelection(visibleSelection);
+    localTopDocument->selection().setSelection(visibleSelection);
 }
 
 std::optional<SimpleRange> Page::contextRangeForActiveWritingToolsSession() const

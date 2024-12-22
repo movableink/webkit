@@ -61,14 +61,11 @@ String PageDebuggable::name() const
         if (!page)
             return;
 
-        RefPtr localMainFrame = page->localMainFrame();
-        if (!localMainFrame)
+        RefPtr localTopDocument = page->localTopDocument();
+        if (!localTopDocument)
             return;
 
-        if (!localMainFrame->document())
-            return;
-
-        name = localMainFrame->document()->title().isolatedCopy();
+        name = localTopDocument->title().isolatedCopy();
     });
     return name;
 }
@@ -81,14 +78,7 @@ String PageDebuggable::url() const
         if (!page)
             return;
 
-        RefPtr localMainFrame = page->localMainFrame();
-        if (!localMainFrame)
-            return;
-
-        if (!localMainFrame->document())
-            return;
-
-        url = localMainFrame->document()->url().string().isolatedCopy();
+        url = page->mainFrameURL().string().isolatedCopy();
         if (url.isEmpty())
             url = "about:blank"_s;
     });

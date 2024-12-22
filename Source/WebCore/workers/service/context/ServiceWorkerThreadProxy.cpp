@@ -67,7 +67,7 @@ static ThreadSafeWeakHashSet<ServiceWorkerThreadProxy>& allServiceWorkerThreadPr
 
 ServiceWorkerThreadProxy::ServiceWorkerThreadProxy(Ref<Page>&& page, ServiceWorkerContextData&& contextData, ServiceWorkerData&& workerData, String&& userAgent, WorkerThreadMode workerThreadMode, CacheStorageProvider& cacheStorageProvider, std::unique_ptr<NotificationClient>&& notificationClient)
     : m_page(WTFMove(page))
-    , m_document(*m_page->localMainFrame()->document())
+    , m_document(*m_page->localTopDocument())
 #if ENABLE(REMOTE_INSPECTOR)
     , m_remoteDebuggable(ServiceWorkerDebuggable::create(*this, contextData))
 #endif

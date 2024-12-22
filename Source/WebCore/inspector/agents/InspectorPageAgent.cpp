@@ -440,11 +440,14 @@ Inspector::Protocol::ErrorStringOr<void> InspectorPageAgent::navigate(const Stri
     RefPtr localMainFrame = m_inspectedPage.localMainFrame();
     if (!localMainFrame)
         return { };
+    RefPtr localTopDocument = m_inspectedPage.localTopDocument();
+    if (!localTopDocument)
+        return { };
 
-    UserGestureIndicator indicator { IsProcessingUserGesture::Yes, localMainFrame->document() };
+    UserGestureIndicator indicator { IsProcessingUserGesture::Yes, localTopDocument.get() };
 
-    ResourceRequest resourceRequest { localMainFrame->document()->completeURL(url) };
-    FrameLoadRequest frameLoadRequest { *localMainFrame->document(), localMainFrame->document()->securityOrigin(), WTFMove(resourceRequest), selfTargetFrameName(), InitiatedByMainFrame::Unknown };
+    ResourceRequest resourceRequest { localTopDocument->completeURL(url) };
+    FrameLoadRequest frameLoadRequest { *localTopDocument, localTopDocument->securityOrigin(), WTFMove(resourceRequest), selfTargetFrameName(), InitiatedByMainFrame::Unknown };
     frameLoadRequest.disableNavigationToInvalidURL();
     localMainFrame->loader().changeLocation(WTFMove(frameLoadRequest));
 
@@ -1175,11 +1178,7 @@ Inspector::Protocol::ErrorStringOr<void> InspectorPageAgent::setEmulatedMedia(co
     // FIXME: Schedule a rendering update instead of synchronously updating the layout.
     m_inspectedPage.updateStyleAfterChangeInEnvironment();
 
-    RefPtr localMainFrame = m_inspectedPage.localMainFrame();
-    if (!localMainFrame)
-        return { };
-
-    RefPtr document = localMainFrame->document();
+    RefPtr document = m_inspectedPage.localTopDocument();
     if (!document)
         return { };
 

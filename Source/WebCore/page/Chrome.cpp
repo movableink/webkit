@@ -239,11 +239,11 @@ void Chrome::runModal()
     // JavaScript that runs within the nested event loop must not be run in the context of the
     // script that called showModalDialog. Null out entryScope to break the connection.
 
-    RefPtr localMainFrame = m_page->localMainFrame();
-    if (!localMainFrame)
+    RefPtr localTopDocument = m_page->localTopDocument();
+    if (!localTopDocument)
         return;
 
-    SetForScope entryScopeNullifier { localMainFrame->document()->vm().entryScope, nullptr };
+    SetForScope entryScopeNullifier { localTopDocument->vm().entryScope, nullptr };
 
     TimerBase::fireTimersInNestedEventLoop();
     m_client->runModal();

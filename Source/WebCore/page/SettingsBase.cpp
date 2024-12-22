@@ -476,16 +476,30 @@ void SettingsBase::storageBlockingPolicyChanged()
 
 void SettingsBase::backgroundShouldExtendBeyondPageChanged()
 {
-    RefPtr localMainFrame = m_page->localMainFrame();
-    if (m_page && localMainFrame)
-        localMainFrame->view()->updateExtendBackgroundIfNecessary();
+    RefPtr page = m_page.get();
+    if (!page)
+        return;
+
+    RefPtr localMainFrame = page->localMainFrame();
+    if (!localMainFrame)
+        return;
+
+    if (RefPtr view = localMainFrame->view())
+        view->updateExtendBackgroundIfNecessary();
 }
 
 void SettingsBase::scrollingPerformanceTestingEnabledChanged()
 {
-    RefPtr localMainFrame = m_page->localMainFrame();
-    if (m_page && localMainFrame && localMainFrame->view())
-        localMainFrame->view()->setScrollingPerformanceTestingEnabled(m_page->settings().scrollingPerformanceTestingEnabled());
+    RefPtr page = m_page.get();
+    if (!page)
+        return;
+
+    RefPtr localMainFrame = page->localMainFrame();
+    if (!localMainFrame)
+        return;
+
+    if (RefPtr view = localMainFrame->view())
+        view->setScrollingPerformanceTestingEnabled(page->settings().scrollingPerformanceTestingEnabled());
 }
 
 void SettingsBase::hiddenPageDOMTimerThrottlingStateChanged()
