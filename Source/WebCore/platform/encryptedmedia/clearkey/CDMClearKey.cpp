@@ -163,7 +163,7 @@ static std::pair<unsigned, unsigned> extractKeyidsLocationFromCencInitData(const
             return keyIdsMap;
 
         // 12 = BMFF box header + Full box header.
-        if (equalSpans(data.subspan(index + 12, ClearKey::cencSystemId.size()), std::span { ClearKey::cencSystemId })) {
+        if (spanHasPrefix(data.subspan(index + 12), std::span { ClearKey::cencSystemId })) {
             foundPssh = true;
             break;
         }

@@ -302,13 +302,13 @@ RefPtr<CryptoKeyEC> CryptoKeyEC::platformImportSpki(CryptoAlgorithmIdentifier id
     index += bytesUsedToEncodedLength(keyData[index]); // Read length
     if (keyData.size() < index + sizeof(IdEcPublicKey))
         return nullptr;
-    if (!equalSpans(keyData.subspan(index, sizeof(IdEcPublicKey)), std::span { IdEcPublicKey }))
+    if (!spanHasPrefix(keyData.subspan(index), std::span { IdEcPublicKey }))
         return nullptr;
     index += std::size(IdEcPublicKey); // Read id-ecPublicKey
     auto oid = getOID(curve);
     if (keyData.size() < index + oid.size())
         return nullptr;
-    if (!equalSpans(keyData.subspan(index, oid.size()), oid))
+    if (!spanHasPrefix(keyData.subspan(index), oid))
         return nullptr;
     index += oid.size() + 1; // Read named curve OID, BIT STRING
     if (keyData.size() < index + 1)
@@ -392,13 +392,13 @@ RefPtr<CryptoKeyEC> CryptoKeyEC::platformImportPkcs8(CryptoAlgorithmIdentifier i
     index += bytesUsedToEncodedLength(keyData[index]); // Read length
     if (keyData.size() < index + sizeof(IdEcPublicKey))
         return nullptr;
-    if (!equalSpans(keyData.subspan(index, sizeof(IdEcPublicKey)), std::span { IdEcPublicKey }))
+    if (!spanHasPrefix(keyData.subspan(index), std::span { IdEcPublicKey }))
         return nullptr;
     index += std::size(IdEcPublicKey); // Read id-ecPublicKey
     auto oid = getOID(curve);
     if (keyData.size() < index + oid.size())
         return nullptr;
-    if (!equalSpans(keyData.subspan(index, oid.size()), oid))
+    if (!spanHasPrefix(keyData.subspan(index), oid))
         return nullptr;
     index += oid.size() + 1; // Read named curve OID, OCTET STRING
     if (keyData.size() < index + 1)

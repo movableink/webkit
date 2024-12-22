@@ -899,6 +899,28 @@ bool equalSpans(std::span<T, TExtent> a, std::span<U, UExtent> b)
 }
 
 template<typename T, std::size_t TExtent, typename U, std::size_t UExtent>
+bool spanHasPrefix(std::span<T, TExtent> span, std::span<U, UExtent> prefix)
+{
+    static_assert(sizeof(T) == sizeof(U));
+    static_assert(std::has_unique_object_representations_v<T>);
+    static_assert(std::has_unique_object_representations_v<U>);
+    if (span.size() < prefix.size())
+        return false;
+    return !memcmp(span.data(), prefix.data(), prefix.size_bytes());
+}
+
+template<typename T, std::size_t TExtent, typename U, std::size_t UExtent>
+bool spanHasSuffix(std::span<T, TExtent> span, std::span<U, UExtent> suffix)
+{
+    static_assert(sizeof(T) == sizeof(U));
+    static_assert(std::has_unique_object_representations_v<T>);
+    static_assert(std::has_unique_object_representations_v<U>);
+    if (span.size() < suffix.size())
+        return false;
+    return !memcmp(span.last(suffix.size()).data(), suffix.data(), suffix.size_bytes());
+}
+
+template<typename T, std::size_t TExtent, typename U, std::size_t UExtent>
 int compareSpans(std::span<T, TExtent> a, std::span<U, UExtent> b)
 {
     static_assert(sizeof(T) == sizeof(U));
@@ -1247,6 +1269,8 @@ using WTF::safeCast;
 using WTF::secureMemsetSpan;
 using WTF::singleElementSpan;
 using WTF::spanConstCast;
+using WTF::spanHasPrefix;
+using WTF::spanHasSuffix;
 using WTF::spanReinterpretCast;
 using WTF::toTwosComplement;
 using WTF::tryBinarySearch;

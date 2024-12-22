@@ -31,6 +31,7 @@
 
 #pragma once
 
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/StringCommon.h>
 #include <wtf/text/StringParsingBuffer.h>
 
@@ -233,36 +234,24 @@ template<typename CharacterType> bool skipExactlyIgnoringASCIICase(StringParsing
     return true;
 }
 
-template<typename CharacterType, unsigned characterCount> bool skipLettersExactlyIgnoringASCIICase(StringParsingBuffer<CharacterType>& buffer, const CharacterType(&letters)[characterCount])
+template<typename CharacterType, std::size_t Extent> bool skipLettersExactlyIgnoringASCIICase(StringParsingBuffer<CharacterType>& buffer, std::span<const CharacterType, Extent> letters)
 {
-    if (buffer.lengthRemaining() < characterCount)
+    if (buffer.lengthRemaining() < letters.size())
         return false;
-    for (unsigned i = 0; i < characterCount; ++i) {
+    for (unsigned i = 0; i < letters.size(); ++i) {
         ASSERT(isASCIIAlpha(letters[i]));
         if (!isASCIIAlphaCaselessEqual(buffer.position()[i], static_cast<char>(letters[i])))
             return false;
     }
-    buffer += characterCount;
+    buffer += letters.size();
     return true;
 }
 
-template<typename CharacterType, unsigned characterCount> constexpr bool skipCharactersExactly(const CharacterType*& ptr, const CharacterType* end, const CharacterType(&str)[characterCount])
+template<typename CharacterType, std::size_t Extent> constexpr bool skipCharactersExactly(StringParsingBuffer<CharacterType>& buffer, std::span<const CharacterType, Extent> string)
 {
-    if (end - ptr < characterCount)
+    if (!spanHasPrefix(buffer.span(), string))
         return false;
-    if (memcmp(str, ptr, sizeof(CharacterType) * characterCount))
-        return false;
-    ptr += characterCount;
-    return true;
-}
-
-template<typename CharacterType, unsigned characterCount> constexpr bool skipCharactersExactly(StringParsingBuffer<CharacterType>& buffer, const CharacterType(&str)[characterCount])
-{
-    if (buffer.lengthRemaining() < characterCount)
-        return false;
-    if (memcmp(str, buffer.position(), sizeof(CharacterType) * characterCount))
-        return false;
-    buffer += characterCount;
+    buffer += string.size();
     return true;
 }
 

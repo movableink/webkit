@@ -363,7 +363,7 @@ bool FragmentedSharedBuffer::startsWith(std::span<const uint8_t> prefix) const
     size_t remaining = prefix.size();
     for (auto& segment : m_segments) {
         size_t amountToCompareThisTime = std::min(remaining, segment.segment->size());
-        if (!equalSpans(prefix.first(amountToCompareThisTime), segment.segment->span().first(amountToCompareThisTime)))
+        if (!spanHasPrefix(segment.segment->span(), prefix.first(amountToCompareThisTime)))
             return false;
         remaining -= amountToCompareThisTime;
         if (!remaining)

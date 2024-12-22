@@ -65,38 +65,37 @@ namespace {
 #if !PLATFORM(COCOA)
 static bool matchesGIFSignature(std::span<const uint8_t> contents)
 {
-    auto start = contents.first(6);
-    return equalSpans(start, "GIF87a"_span) || equalSpans(start, "GIF89a"_span);
+    return spanHasPrefix(contents, "GIF87a"_span) || spanHasPrefix(contents, "GIF89a"_span);
 }
 
 static bool matchesPNGSignature(std::span<const uint8_t> contents)
 {
-    return equalSpans(contents.first(8), unsafeMakeSpan("\x89\x50\x4E\x47\x0D\x0A\x1A\x0A", 8));
+    return spanHasPrefix(contents, unsafeMakeSpan("\x89\x50\x4E\x47\x0D\x0A\x1A\x0A", 8));
 }
 
 static bool matchesJPEGSignature(std::span<const uint8_t> contents)
 {
-    return equalSpans(contents.first(3), unsafeMakeSpan("\xFF\xD8\xFF", 3));
+    return spanHasPrefix(contents, unsafeMakeSpan("\xFF\xD8\xFF", 3));
 }
 
 static bool matchesBMPSignature(std::span<const uint8_t> contents)
 {
-    return equalSpans(contents.first(2), "BM"_span);
+    return spanHasPrefix(contents, "BM"_span);
 }
 
 static bool matchesICOSignature(std::span<const uint8_t> contents)
 {
-    return equalSpans(contents.first(4), unsafeMakeSpan("\x00\x00\x01\x00", 4));
+    return spanHasPrefix(contents, unsafeMakeSpan("\x00\x00\x01\x00", 4));
 }
 
 static bool matchesCURSignature(std::span<const uint8_t> contents)
 {
-    return equalSpans(contents.first(4), unsafeMakeSpan("\x00\x00\x02\x00", 4));
+    return spanHasPrefix(contents, unsafeMakeSpan("\x00\x00\x02\x00", 4));
 }
 
 static bool matchesWebPSignature(std::span<const uint8_t> contents)
 {
-    return equalSpans(contents.first(4), "RIFF"_span) && equalSpans(contents.subspan(8, 6), "WEBPVP"_span);
+    return spanHasPrefix(contents, "RIFF"_span) && spanHasPrefix(contents.subspan(8), "WEBPVP"_span);
 }
 #endif
 
@@ -112,7 +111,7 @@ static bool matchesAVIFSignature(std::span<const uint8_t> contents, FragmentedSh
     return uti == "public.avif"_s || uti == "public.avis"_s;
 #else
     UNUSED_PARAM(data);
-    return equalSpans(contents.subspan(4, 4), unsafeMakeSpan("\x66\x74\x79\x70", 4));
+    return spanHasPrefix(contents.subspan(4), unsafeMakeSpan("\x66\x74\x79\x70", 4));
 #endif
 }
 #endif // USE(AVIF)

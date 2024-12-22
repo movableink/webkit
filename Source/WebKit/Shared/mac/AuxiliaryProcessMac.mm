@@ -489,7 +489,7 @@ static bool tryApplyCachedSandbox(const SandboxInfo& info)
         return false;
     if (cachedSandboxHeader.headerSize != info.header.length())
         return false;
-    if (!equalSpans(sandboxHeader.first(info.header.length()), info.header.span()))
+    if (!spanHasPrefix(sandboxHeader, info.header.span()))
         return false;
 
     SandboxProfile profile { };

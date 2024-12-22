@@ -125,8 +125,6 @@ bool DataCue::cueContentsMatch(const TextTrackCue& cue) const
     RefPtr<ArrayBuffer> otherData = dataCue->data();
     if ((otherData && !m_data) || (!otherData && m_data))
         return false;
-    if (m_data && m_data->byteLength() != otherData->byteLength())
-        return false;
     if (m_data && m_data->data() && !equalSpans(m_data->span(), otherData->span()))
         return false;
 

@@ -469,7 +469,7 @@ bool TextResourceDecoder::checkForCSSCharset(std::span<const uint8_t> data, bool
     data = m_buffer.span();
 
     static constexpr std::array<uint8_t, 10> charsetPrefix { '@', 'c', 'h', 'a', 'r', 's', 'e', 't', ' ', '"' };
-    if (equalSpans(data.first(10), std::span { charsetPrefix })) {
+    if (spanHasPrefix(data, std::span { charsetPrefix })) {
         data = data.subspan(10);
 
         size_t index = 0;
@@ -524,7 +524,7 @@ bool TextResourceDecoder::checkForHeadCharset(std::span<const uint8_t> data, boo
     static constexpr std::array<uint8_t, 5> xmlPrefix { '<', '?', 'x', 'm', 'l' };
     static constexpr std::array<uint8_t, 6> xmlPrefixLittleEndian { '<', 0, '?', 0, 'x', 0 };
     static constexpr std::array<uint8_t, 6> xmlPrefixBigEndian { 0, '<', 0, '?', 0, 'x' };
-    if (equalSpans(bufferData.first(5), std::span { xmlPrefix })) {
+    if (spanHasPrefix(bufferData, std::span { xmlPrefix })) {
         auto xmlDeclarationEnd = bufferData;
         while (!xmlDeclarationEnd.empty() && xmlDeclarationEnd[0] != '>')
             xmlDeclarationEnd = xmlDeclarationEnd.subspan(1);
@@ -536,10 +536,10 @@ bool TextResourceDecoder::checkForHeadCharset(std::span<const uint8_t> data, boo
         if (pos != -1)
             setEncoding(findTextEncoding(bufferData.subspan(pos, len)), EncodingFromXMLHeader);
         // continue looking for a charset - it may be specified in an HTTP-Equiv meta
-    } else if (equalSpans(bufferData.first(6), std::span { xmlPrefixLittleEndian })) {
+    } else if (spanHasPrefix(bufferData, std::span { xmlPrefixLittleEndian })) {
         setEncoding(PAL::UTF16LittleEndianEncoding(), AutoDetectedEncoding);
         return true;
-    } else if (equalSpans(bufferData.first(6), std::span { xmlPrefixBigEndian })) {
+    } else if (spanHasPrefix(bufferData, std::span { xmlPrefixBigEndian })) {
         setEncoding(PAL::UTF16BigEndianEncoding(), AutoDetectedEncoding);
         return true;
     }

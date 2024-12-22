@@ -104,13 +104,6 @@ bool isCustomPropertyName(StringView propertyName)
     return propertyName.length() > 2 && propertyName.characterAt(0) == '-' && propertyName.characterAt(1) == '-';
 }
 
-static bool hasPrefix(std::span<const char> string, std::span<const LChar> prefix)
-{
-    if (string.size() < prefix.size())
-        return false;
-    return equalSpans(string.first(prefix.size()), prefix);
-}
-
 template<typename CharacterType> static CSSPropertyID cssPropertyID(std::span<const CharacterType> characters)
 {
     char buffer[maxCSSPropertyNameLength];
@@ -126,10 +119,10 @@ template<typename CharacterType> static CSSPropertyID cssPropertyID(std::span<co
 // FIXME: Remove this mechanism entirely once we can do it without breaking the web.
 static bool isAppleLegacyCSSValueKeyword(std::span<const char> characters)
 {
-    return hasPrefix(characters.subspan(1), "apple-"_span)
-        && !hasPrefix(characters.subspan(7), "system"_span)
-        && !hasPrefix(characters.subspan(7), "pay"_span)
-        && !hasPrefix(characters.subspan(7), "wireless"_span);
+    return spanHasPrefix(characters.subspan(1), "apple-"_span)
+        && !spanHasPrefix(characters.subspan(7), "system"_span)
+        && !spanHasPrefix(characters.subspan(7), "pay"_span)
+        && !spanHasPrefix(characters.subspan(7), "wireless"_span);
 }
 
 template<typename CharacterType> static CSSValueID cssValueKeywordID(std::span<const CharacterType> characters)

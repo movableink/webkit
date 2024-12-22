@@ -307,7 +307,7 @@ private:
 
         struct A : ContainerTag<HTMLAnchorElement, PermittedParents::FlowContent> {
             static constexpr ElementName tagName = ElementNames::HTML::a;
-            static constexpr CharacterType tagNameCharacters[] = { 'a' };
+            static constexpr std::array<CharacterType, 1> tagNameCharacters { 'a' };
 
             static RefPtr<HTMLElement> parseChild(ContainerNode& parent, HTMLFastPathParser& self)
             {
@@ -321,7 +321,7 @@ private:
 
         struct AWithPhrasingContent : ContainsPhrasingContentTag<HTMLAnchorElement, PermittedParents::PhrasingOrFlowContent> {
             static constexpr ElementName tagName = ElementNames::HTML::a;
-            static constexpr CharacterType tagNameCharacters[] = { 'a' };
+            static constexpr std::array<CharacterType, 1> tagNameCharacters { 'a' };
 
             static RefPtr<HTMLElement> parseChild(ContainerNode& parent, HTMLFastPathParser& self)
             {
@@ -335,7 +335,7 @@ private:
 
         struct B : ContainsPhrasingContentTag<HTMLElement, PermittedParents::PhrasingOrFlowContent> {
             static constexpr ElementName tagName = ElementNames::HTML::b;
-            static constexpr CharacterType tagNameCharacters[] = { 'b' };
+            static constexpr std::array<CharacterType, 1> tagNameCharacters { 'b' };
 
             static Ref<HTMLElement> create(Document& document)
             {
@@ -345,27 +345,27 @@ private:
 
         struct Br : VoidTag<HTMLBRElement, PermittedParents::PhrasingOrFlowContent> {
             static constexpr ElementName tagName = ElementNames::HTML::br;
-            static constexpr CharacterType tagNameCharacters[] = { 'b', 'r' };
+            static constexpr std::array<CharacterType, 2> tagNameCharacters { 'b', 'r' };
         };
 
         struct Button : ContainsPhrasingContentTag<HTMLButtonElement, PermittedParents::PhrasingOrFlowContent> {
             static constexpr ElementName tagName = ElementNames::HTML::button;
-            static constexpr CharacterType tagNameCharacters[] = { 'b', 'u', 't', 't', 'o', 'n' };
+            static constexpr std::array<CharacterType, 6> tagNameCharacters { 'b', 'u', 't', 't', 'o', 'n' };
         };
 
         struct Div : ContainerTag<HTMLDivElement, PermittedParents::FlowContent> {
             static constexpr ElementName tagName = ElementNames::HTML::div;
-            static constexpr CharacterType tagNameCharacters[] = { 'd', 'i', 'v' };
+            static constexpr std::array<CharacterType, 3> tagNameCharacters { 'd', 'i', 'v' };
         };
 
         struct Body : ContainerTag<HTMLBodyElement, PermittedParents::Special> {
             static constexpr ElementName tagName = ElementNames::HTML::body;
-            static constexpr CharacterType tagNameCharacters[] = { 'b', 'o', 'd', 'y' };
+            static constexpr std::array<CharacterType, 4> tagNameCharacters { 'b', 'o', 'd', 'y' };
         };
 
         struct Footer : ContainerTag<HTMLElement, PermittedParents::FlowContent> {
             static constexpr ElementName tagName = ElementNames::HTML::footer;
-            static constexpr CharacterType tagNameCharacters[] = { 'f', 'o', 'o', 't', 'e', 'r' };
+            static constexpr std::array<CharacterType, 6> tagNameCharacters { 'f', 'o', 'o', 't', 'e', 'r' };
 
             static Ref<HTMLElement> create(Document& document)
             {
@@ -375,7 +375,7 @@ private:
 
         struct I : ContainsPhrasingContentTag<HTMLElement, PermittedParents::PhrasingOrFlowContent> {
             static constexpr ElementName tagName = ElementNames::HTML::i;
-            static constexpr CharacterType tagNameCharacters[] = { 'i' };
+            static constexpr std::array<CharacterType, 1> tagNameCharacters { 'i' };
 
             static Ref<HTMLElement> create(Document& document)
             {
@@ -385,7 +385,7 @@ private:
 
         struct Input : VoidTag<HTMLInputElement, PermittedParents::PhrasingOrFlowContent> {
             static constexpr ElementName tagName = ElementNames::HTML::input;
-            static constexpr CharacterType tagNameCharacters[] = { 'i', 'n', 'p', 'u', 't' };
+            static constexpr std::array<CharacterType, 5> tagNameCharacters { 'i', 'n', 'p', 'u', 't' };
 
             static Ref<HTMLInputElement> create(Document& document)
             {
@@ -395,17 +395,17 @@ private:
 
         struct Li : ContainerTag<HTMLLIElement, PermittedParents::FlowContent> {
             static constexpr ElementName tagName = ElementNames::HTML::li;
-            static constexpr CharacterType tagNameCharacters[] = { 'l', 'i' };
+            static constexpr std::array<CharacterType, 2> tagNameCharacters { 'l', 'i' };
         };
 
         struct Label : ContainsPhrasingContentTag<HTMLLabelElement, PermittedParents::PhrasingOrFlowContent> {
             static constexpr ElementName tagName = ElementNames::HTML::label;
-            static constexpr CharacterType tagNameCharacters[] = { 'l', 'a', 'b', 'e', 'l' };
+            static constexpr std::array<CharacterType, 5> tagNameCharacters { 'l', 'a', 'b', 'e', 'l' };
         };
 
         struct Option : ContainerTag<HTMLOptionElement, PermittedParents::Special> {
             static constexpr ElementName tagName = ElementNames::HTML::option;
-            static constexpr CharacterType tagNameCharacters[] = { 'o', 'p', 't', 'i', 'o', 'n' };
+            static constexpr std::array<CharacterType, 6> tagNameCharacters { 'o', 'p', 't', 'i', 'o', 'n' };
 
             static RefPtr<HTMLElement> parseChild(ContainerNode&, HTMLFastPathParser& self)
             {
@@ -416,7 +416,7 @@ private:
 
         struct Ol : ContainerTag<HTMLOListElement, PermittedParents::FlowContent> {
             static constexpr ElementName tagName = ElementNames::HTML::ol;
-            static constexpr CharacterType tagNameCharacters[] = { 'o', 'l' };
+            static constexpr std::array<CharacterType, 2> tagNameCharacters { 'o', 'l' };
 
             static RefPtr<HTMLElement> parseChild(ContainerNode& parent, HTMLFastPathParser& self)
             {
@@ -426,12 +426,12 @@ private:
 
         struct P : ContainsPhrasingContentTag<HTMLParagraphElement, PermittedParents::FlowContent> {
             static constexpr ElementName tagName = ElementNames::HTML::p;
-            static constexpr CharacterType tagNameCharacters[] = { 'p' };
+            static constexpr std::array<CharacterType, 1> tagNameCharacters { 'p' };
         };
 
         struct Select : ContainerTag<HTMLSelectElement, PermittedParents::PhrasingOrFlowContent> {
             static constexpr ElementName tagName = ElementNames::HTML::select;
-            static constexpr CharacterType tagNameCharacters[] = { 's', 'e', 'l', 'e', 'c', 't' };
+            static constexpr std::array<CharacterType, 6> tagNameCharacters { 's', 'e', 'l', 'e', 'c', 't' };
 
             static RefPtr<HTMLElement> parseChild(ContainerNode& parent, HTMLFastPathParser& self)
             {
@@ -441,12 +441,12 @@ private:
 
         struct Span : ContainsPhrasingContentTag<HTMLSpanElement, PermittedParents::PhrasingOrFlowContent> {
             static constexpr ElementName tagName = ElementNames::HTML::span;
-            static constexpr CharacterType tagNameCharacters[] = { 's', 'p', 'a', 'n' };
+            static constexpr std::array<CharacterType, 4> tagNameCharacters { 's', 'p', 'a', 'n' };
         };
 
         struct Strong : ContainsPhrasingContentTag<HTMLElement, PermittedParents::PhrasingOrFlowContent> {
             static constexpr ElementName tagName = ElementNames::HTML::strong;
-            static constexpr CharacterType tagNameCharacters[] = { 's', 't', 'r', 'o', 'n', 'g' };
+            static constexpr std::array<CharacterType, 6> tagNameCharacters { 's', 't', 'r', 'o', 'n', 'g' };
 
             static Ref<HTMLElement> create(Document& document)
             {
@@ -456,7 +456,7 @@ private:
 
         struct Ul : ContainerTag<HTMLUListElement, PermittedParents::FlowContent> {
             static constexpr ElementName tagName = ElementNames::HTML::ul;
-            static constexpr CharacterType tagNameCharacters[] = { 'u', 'l' };
+            static constexpr std::array<CharacterType, 2> tagNameCharacters { 'u', 'l' };
 
             static RefPtr<HTMLElement> parseChild(ContainerNode& parent, HTMLFastPathParser& self)
             {
@@ -930,8 +930,8 @@ private:
         ASSERT(*m_parsingBuffer == '/');
         m_parsingBuffer.advance();
 
-        if (UNLIKELY(!skipCharactersExactly(m_parsingBuffer, Tag::tagNameCharacters))) {
-            if (UNLIKELY(!skipLettersExactlyIgnoringASCIICase(m_parsingBuffer, Tag::tagNameCharacters)))
+        if (UNLIKELY(!skipCharactersExactly(m_parsingBuffer, std::span { Tag::tagNameCharacters }))) {
+            if (UNLIKELY(!skipLettersExactlyIgnoringASCIICase(m_parsingBuffer, std::span { Tag::tagNameCharacters })))
                 return didFail(HTMLFastPathResult::FailedEndTagNameMismatch, element);
         }
         skipWhile<isASCIIWhitespace>(m_parsingBuffer);

@@ -162,12 +162,12 @@ std::optional<SVGTransformValue> SVGTransformable::parseTransformValue(SVGTransf
     return parseTransformValueGeneric(type, buffer);
 }
 
-template<typename CharacterType> static constexpr CharacterType skewXDesc[] =  {'s', 'k', 'e', 'w', 'X'};
-template<typename CharacterType> static constexpr CharacterType skewYDesc[] =  {'s', 'k', 'e', 'w', 'Y'};
-template<typename CharacterType> static constexpr CharacterType scaleDesc[] =  {'s', 'c', 'a', 'l', 'e'};
-template<typename CharacterType> static constexpr CharacterType translateDesc[] =  {'t', 'r', 'a', 'n', 's', 'l', 'a', 't', 'e'};
-template<typename CharacterType> static constexpr CharacterType rotateDesc[] =  {'r', 'o', 't', 'a', 't', 'e'};
-template<typename CharacterType> static constexpr CharacterType matrixDesc[] =  {'m', 'a', 't', 'r', 'i', 'x'};
+template<typename CharacterType> static constexpr std::array<CharacterType, 5> skewXDesc  { 's', 'k', 'e', 'w', 'X' };
+template<typename CharacterType> static constexpr std::array<CharacterType, 5> skewYDesc  { 's', 'k', 'e', 'w', 'Y' };
+template<typename CharacterType> static constexpr std::array<CharacterType, 5> scaleDesc  { 's', 'c', 'a', 'l', 'e' };
+template<typename CharacterType> static constexpr std::array<CharacterType, 9> translateDesc  { 't', 'r', 'a', 'n', 's', 'l', 'a', 't', 'e' };
+template<typename CharacterType> static constexpr std::array<CharacterType, 6> rotateDesc  { 'r', 'o', 't', 'a', 't', 'e' };
+template<typename CharacterType> static constexpr std::array<CharacterType, 6> matrixDesc  { 'm', 'a', 't', 'r', 'i', 'x' };
 
 template<typename CharacterType> static std::optional<SVGTransformValue::SVGTransformType> parseTransformTypeGeneric(StringParsingBuffer<CharacterType>& buffer)
 {
@@ -175,20 +175,20 @@ template<typename CharacterType> static std::optional<SVGTransformValue::SVGTran
         return std::nullopt;
 
     if (*buffer == 's') {
-        if (skipCharactersExactly(buffer, skewXDesc<CharacterType>))
+        if (skipCharactersExactly(buffer, std::span { skewXDesc<CharacterType> }))
             return SVGTransformValue::SVG_TRANSFORM_SKEWX;
-        if (skipCharactersExactly(buffer, skewYDesc<CharacterType>))
+        if (skipCharactersExactly(buffer, std::span { skewYDesc<CharacterType> }))
             return SVGTransformValue::SVG_TRANSFORM_SKEWY;
-        if (skipCharactersExactly(buffer, scaleDesc<CharacterType>))
+        if (skipCharactersExactly(buffer, std::span { scaleDesc<CharacterType> }))
             return SVGTransformValue::SVG_TRANSFORM_SCALE;
         return std::nullopt;
     }
 
-    if (skipCharactersExactly(buffer, translateDesc<CharacterType>))
+    if (skipCharactersExactly(buffer, std::span { translateDesc<CharacterType> }))
         return SVGTransformValue::SVG_TRANSFORM_TRANSLATE;
-    if (skipCharactersExactly(buffer, rotateDesc<CharacterType>))
+    if (skipCharactersExactly(buffer, std::span { rotateDesc<CharacterType> }))
         return SVGTransformValue::SVG_TRANSFORM_ROTATE;
-    if (skipCharactersExactly(buffer, matrixDesc<CharacterType>))
+    if (skipCharactersExactly(buffer, std::span { matrixDesc<CharacterType> }))
         return SVGTransformValue::SVG_TRANSFORM_MATRIX;
 
     return std::nullopt;
