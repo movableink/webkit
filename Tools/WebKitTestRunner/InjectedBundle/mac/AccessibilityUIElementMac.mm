@@ -1374,7 +1374,7 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::speakAs()
     return nullptr;
 }
 
-bool AccessibilityUIElement::ariaIsGrabbed() const
+bool AccessibilityUIElement::isGrabbed() const
 {
     return boolAttributeValueNS(NSAccessibilityGrabbedAttribute);
 }

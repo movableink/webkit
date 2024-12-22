@@ -833,7 +833,7 @@ bool EventHandler::handleMousePressEvent(const MouseEventWithHitTestResults& eve
 
 #if ENABLE(DRAG_SUPPORT)
     // Reset drag state.
-    dragState().source = nullptr;
+    setDragStateSource(nullptr);
 #endif
 
 #if !ENABLE(IOS_TOUCH_EVENTS)
@@ -2520,6 +2520,15 @@ bool EventHandler::dispatchDragEvent(const AtomString& eventType, Element& dragT
 Element* EventHandler::draggingElement() const
 {
     return dragState().source.get();
+}
+
+void EventHandler::setDragStateSource(Element* element) const
+{
+    RefPtr document = m_frame->document();
+    if (CheckedPtr cache = document ? document->existingAXObjectCache() : nullptr)
+        cache->onDragElementChanged(dragState().source.get(), element);
+
+    dragState().source = element;
 }
 
 bool EventHandler::canDropCurrentlyDraggedImageAsFile() const
@@ -4284,7 +4293,7 @@ std::optional<RemoteUserInputEventData> EventHandler::dragSourceEndedAt(const Pl
             removeDraggedContentDocumentMarkersFromAllFramesInPage(*page);
     }
 
-    dragState().source = nullptr;
+    setDragStateSource(nullptr);
     // In case the drag was ended due to an escape key press we need to ensure
     // that consecutive mousemove events don't reinitiate the drag and drop.
     m_mouseDownMayStartDrag = false;
@@ -4295,7 +4304,7 @@ void EventHandler::updateDragStateAfterEditDragIfNeeded(Element& rootEditableEle
 {
     // If inserting the dragged contents removed the drag source, we still want to fire dragend at the root editable element.
     if (draggedElement() && !draggedElement()->isConnected())
-        dragState().source = &rootEditableElement;
+        setDragStateSource(&rootEditableElement);
 }
 
 bool EventHandler::shouldDispatchEventsToDragSourceElement()
@@ -4341,8 +4350,8 @@ bool EventHandler::handleDrag(const MouseEventWithHitTestResults& event, CheckDr
         HitTestResult result(m_mouseDownContentsPosition);
         frame->protectedDocument()->hitTest(OptionSet<HitTestRequest::Type> { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::DisallowUserAgentShadowContent }, result);
         if (RefPtr page = frame->page())
-            dragState().source = page->dragController().draggableElement(frame.ptr(), result.protectedTargetElement().get(), m_mouseDownContentsPosition, dragState());
-        
+            setDragStateSource(page->dragController().draggableElement(frame.ptr(), result.protectedTargetElement().get(), m_mouseDownContentsPosition, dragState()).get());
+
         if (!draggedElement())
             m_mouseDownMayStartDrag = false; // no element is draggable
         else
@@ -4359,7 +4368,7 @@ bool EventHandler::handleDrag(const MouseEventWithHitTestResults& event, CheckDr
         } else if (!dragState().type.containsAny({ DragSourceAction::DHTML, DragSourceAction::Link })) {
             // ... but only bail if we're not over an unselectable element.
             m_mouseDownMayStartDrag = false;
-            dragState().source = nullptr;
+            setDragStateSource(nullptr);
             // ... but if this was the first click in the window, we don't even want to start selection
             if (eventActivatedView(event.event()))
                 m_mouseDownMayStartSelect = false;
@@ -4431,7 +4440,7 @@ bool EventHandler::handleDrag(const MouseEventWithHitTestResults& event, CheckDr
                 dispatchEventToDragSourceElement(eventNames().dragendEvent, event.event());
                 m_mouseDownMayStartDrag = false;
                 invalidateDataTransfer();
-                dragState().source = nullptr;
+                setDragStateSource(nullptr);
                 return true;
             }
         }
@@ -4476,7 +4485,7 @@ bool EventHandler::handleDrag(const MouseEventWithHitTestResults& event, CheckDr
     if (!m_mouseDownMayStartDrag) {
         // Something failed to start the drag, clean up.
         invalidateDataTransfer();
-        dragState().source = nullptr;
+        setDragStateSource(nullptr);
     }
     
     // No more default handling (like selection), whether we're past the hysteresis bounds or not

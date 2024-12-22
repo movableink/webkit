@@ -290,8 +290,8 @@ public:
     RefPtr<AccessibilityUIElement> ownerElementAtIndex(unsigned);
     RefPtr<AccessibilityUIElement> ariaOwnsElementAtIndex(unsigned);
 
-    // ARIA Drag and Drop
-    bool ariaIsGrabbed() const;
+    // Drag and drop
+    bool isGrabbed() const;
     // A space concatentated string of all the drop effects.
     JSRetainPtr<JSStringRef> ariaDropEffects() const;
     

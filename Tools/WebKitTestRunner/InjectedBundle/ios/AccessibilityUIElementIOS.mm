@@ -748,7 +748,7 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::speakAs()
     return [[[m_element accessibilitySpeechHint] componentsJoinedByString:@", "] createJSStringRef];
 }
 
-bool AccessibilityUIElement::ariaIsGrabbed() const
+bool AccessibilityUIElement::isGrabbed() const
 {
     return false;
 }

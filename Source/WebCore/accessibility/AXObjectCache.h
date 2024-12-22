@@ -357,6 +357,7 @@ public:
     void childrenChanged(Node*, Element* newChild = nullptr);
     void childrenChanged(RenderObject*, RenderObject* newChild = nullptr);
     void childrenChanged(AccessibilityObject*);
+    void onDragElementChanged(Element* oldElement, Element* newElement);
     void onEventListenerAdded(Node&, const AtomString& eventType);
     void onEventListenerRemoved(Node&, const AtomString& eventType);
     void onExpandedChanged(HTMLDetailsElement&);

@@ -1163,7 +1163,7 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::speakAs()
     return JSStringCreateWithCharacters(nullptr, 0);
 }
 
-bool AccessibilityUIElement::ariaIsGrabbed() const
+bool AccessibilityUIElement::isGrabbed() const
 {
     m_element->updateBackingStore();
     return m_element->attributes().get("grabbed"_s) == "true"_s;

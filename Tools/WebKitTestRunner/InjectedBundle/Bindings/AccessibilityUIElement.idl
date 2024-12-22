@@ -116,7 +116,7 @@ interface AccessibilityUIElement {
     readonly attribute boolean isOffScreen;
     readonly attribute boolean isValid;
     readonly attribute long hierarchicalLevel;
-    readonly attribute boolean ariaIsGrabbed;
+    readonly attribute boolean isGrabbed;
     readonly attribute DOMString ariaDropEffects;
     readonly attribute DOMString classList;
     readonly attribute DOMString embeddedImageDescription;

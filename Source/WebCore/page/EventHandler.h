@@ -384,6 +384,7 @@ private:
 #if ENABLE(DRAG_SUPPORT)
     static DragState& dragState();
     static const Seconds TextDragDelay;
+    void setDragStateSource(Element*) const;
     SimpleRange createSimpleRangeFromDragStartSelection() const;
     std::optional<WeakSimpleRange> getWeakSimpleRangeFromSelection(const VisibleSelection&) const;
 #endif

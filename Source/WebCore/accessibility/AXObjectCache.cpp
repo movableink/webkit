@@ -1287,6 +1287,23 @@ static bool isClickEvent(const AtomString& eventType)
 }
 #endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 
+void AXObjectCache::onDragElementChanged(Element* oldElement, Element* newElement)
+{
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    if (oldElement == newElement)
+        return;
+
+    if (oldElement)
+        postNotification(get(*oldElement), AXNotification::GrabbedStateChanged);
+
+    if (newElement)
+        postNotification(get(*newElement), AXNotification::GrabbedStateChanged);
+#else
+    UNUSED_PARAM(oldElement);
+    UNUSED_PARAM(newElement);
+#endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+}
+
 void AXObjectCache::onEventListenerAdded(Node& node, const AtomString& eventType)
 {
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
