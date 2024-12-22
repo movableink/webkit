@@ -2469,11 +2469,23 @@ bool RenderElement::createsNewFormattingContext() const
     // https://drafts.csswg.org/css-writing-modes/#block-flow
     if (isWritingModeRoot() && isBlockContainer())
         return true;
-    if (isBlockContainer() && !style().alignContent().isNormal())
+    auto& style = this->style();
+    if (isBlockContainer() && !style.alignContent().isNormal())
         return true;
-    return isInlineBlockOrInlineTable() || isFlexItemIncludingDeprecated()
-        || isRenderTableCell() || isRenderTableCaption() || isFieldset() || isDocumentElementRenderer() || isRenderFragmentedFlow() || isRenderSVGForeignObject()
-        || style().specifiesColumns() || style().columnSpan() == ColumnSpan::All || style().display() == DisplayType::FlowRoot || establishesIndependentFormattingContext();
+    return isInlineBlockOrInlineTable()
+        || isFlexItemIncludingDeprecated()
+        || isRenderTableCell()
+        || isRenderTableCaption()
+        || isFieldset()
+        || isDocumentElementRenderer()
+        || isRenderFragmentedFlow()
+        || isRenderSVGForeignObject()
+        || style.specifiesColumns()
+        || style.columnSpan() == ColumnSpan::All
+        || style.display() == DisplayType::FlowRoot
+        || style.display() == DisplayType::Flex
+        || style.display() == DisplayType::Grid
+        || establishesIndependentFormattingContext();
 }
 
 bool RenderElement::establishesIndependentFormattingContext() const
