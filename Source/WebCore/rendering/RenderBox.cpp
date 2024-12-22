@@ -3586,11 +3586,13 @@ void RenderBox::computePreferredLogicalWidths(const Length& minLogicalWidth, con
         return LayoutUnit::max();
     }();
 
-    auto usedMinLogicalWidth = [&] {
+    auto usedMinLogicalWidth = [&]() -> LayoutUnit {
         // FIXME: We should be able to handle other values for the min logical width here.
         if (minLogicalWidth.isFixed() && minLogicalWidth.value() > 0)
             return adjustContentBoxLogicalWidthForBoxSizing(minLogicalWidth);
-        return LayoutUnit();
+        if (minLogicalWidth.isMaxContent())
+            return m_maxPreferredLogicalWidth;
+        return { };
     }();
 
     if (!style().logicalWidth().isFixed() && shouldComputeLogicalHeightFromAspectRatio()) {
