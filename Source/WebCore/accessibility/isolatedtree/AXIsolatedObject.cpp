@@ -302,11 +302,9 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
         setProperty(AXPropertyName::RowGroupAncestorID, object.rowGroupAncestorID());
     }
 
-    if (object.isTableColumn()) {
-        setProperty(AXPropertyName::IsTableColumn, true);
+    if (object.isTableColumn())
         setProperty(AXPropertyName::ColumnIndex, object.columnIndex());
-        setObjectProperty(AXPropertyName::ColumnHeader, object.columnHeader());
-    } else if (object.isTableRow()) {
+    else if (object.isTableRow()) {
         setProperty(AXPropertyName::IsTableRow, true);
         setProperty(AXPropertyName::RowIndex, object.rowIndex());
     }
@@ -412,8 +410,13 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
     }
 
     if (object.isWidget()) {
-        setProperty(AXPropertyName::IsWidget, true);
-        setProperty(AXPropertyName::IsPlugin, object.isPlugin());
+        if (object.isPlugin()) {
+            // Plugins are a subclass of widget, so we only need to cache IsPlugin, and we implicitly know
+            // this is also a widget (see AXIsolatedObject::isWidget).
+            setProperty(AXPropertyName::IsPlugin, true);
+        } else
+            setProperty(AXPropertyName::IsWidget, true);
+
         setProperty(AXPropertyName::IsVisible, object.isVisible());
     }
 
@@ -556,9 +559,6 @@ void AXIsolatedObject::setProperty(AXPropertyName propertyName, AXPropertyValueV
             return;
         case AXPropertyName::IsNonLayerSVGObject:
             setPropertyFlag(AXPropertyFlag::IsNonLayerSVGObject, std::get<bool>(value));
-            return;
-        case AXPropertyName::IsTableColumn:
-            setPropertyFlag(AXPropertyFlag::IsTableColumn, std::get<bool>(value));
             return;
         case AXPropertyName::IsTableRow:
             setPropertyFlag(AXPropertyFlag::IsTableRow, std::get<bool>(value));
@@ -1162,8 +1162,6 @@ bool AXIsolatedObject::boolAttributeValue(AXPropertyName propertyName) const
         return hasPropertyFlag(AXPropertyFlag::IsKeyboardFocusable);
     case AXPropertyName::IsNonLayerSVGObject:
         return hasPropertyFlag(AXPropertyFlag::IsNonLayerSVGObject);
-    case AXPropertyName::IsTableColumn:
-        return hasPropertyFlag(AXPropertyFlag::IsTableColumn);
     case AXPropertyName::IsTableRow:
         return hasPropertyFlag(AXPropertyFlag::IsTableRow);
     case AXPropertyName::SupportsCheckedState:

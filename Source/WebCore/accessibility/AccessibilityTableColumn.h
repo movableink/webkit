@@ -39,8 +39,6 @@ public:
     static Ref<AccessibilityTableColumn> create(AXID);
     virtual ~AccessibilityTableColumn();
 
-    AccessibilityObject* columnHeader() final;
-
     AccessibilityRole determineAccessibilityRole() final { return AccessibilityRole::Column; }
 
     void setColumnIndex(unsigned);
@@ -55,7 +53,6 @@ private:
     explicit AccessibilityTableColumn(AXID);
     
     bool computeIsIgnored() const final;
-    bool isTableColumn() const final { return true; }
 
     bool isAccessibilityTableColumnInstance() const final { return true; }
     unsigned m_columnIndex;

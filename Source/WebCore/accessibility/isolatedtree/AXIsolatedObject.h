@@ -199,9 +199,7 @@ private:
     std::optional<AXID> rowGroupAncestorID() const final { return propertyValue<Markable<AXID>>(AXPropertyName::RowGroupAncestorID); }
 
     // Table column support.
-    bool isTableColumn() const final { return boolAttributeValue(AXPropertyName::IsTableColumn); }
     unsigned columnIndex() const final { return unsignedAttributeValue(AXPropertyName::ColumnIndex); }
-    AXIsolatedObject* columnHeader() final { return objectAttributeValue(AXPropertyName::ColumnHeader); }
 
     // Table row support.
     bool isTableRow() const final { return boolAttributeValue(AXPropertyName::IsTableRow); }
@@ -510,7 +508,11 @@ private:
     Path elementPath() const final { return pathAttributeValue(AXPropertyName::Path); };
     bool supportsPath() const final { return boolAttributeValue(AXPropertyName::SupportsPath); }
 
-    bool isWidget() const final { return boolAttributeValue(AXPropertyName::IsWidget); }
+    bool isWidget() const final
+    {
+        // Plugins are a widget subclass.
+        return boolAttributeValue(AXPropertyName::IsPlugin) || boolAttributeValue(AXPropertyName::IsWidget);
+    }
     Widget* widget() const final;
     PlatformWidget platformWidget() const final;
     Widget* widgetForAttachmentView() const final;

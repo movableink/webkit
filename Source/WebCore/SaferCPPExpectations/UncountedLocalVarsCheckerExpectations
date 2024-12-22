@@ -125,7 +125,6 @@ accessibility/AccessibilityScrollView.cpp
 accessibility/AccessibilitySlider.cpp
 accessibility/AccessibilityTable.cpp
 accessibility/AccessibilityTableCell.cpp
-accessibility/AccessibilityTableColumn.cpp
 accessibility/AccessibilityTableRow.cpp
 accessibility/AccessibilityTree.cpp
 accessibility/AccessibilityTreeItem.cpp

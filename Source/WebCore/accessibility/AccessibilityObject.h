@@ -160,9 +160,7 @@ public:
     int axRowIndex() const override { return -1; }
 
     // Table column support.
-    bool isTableColumn() const override { return false; }
     unsigned columnIndex() const override { return 0; }
-    AccessibilityObject* columnHeader() override { return nullptr; }
 
     // Table row support.
     bool isTableRow() const override { return false; }

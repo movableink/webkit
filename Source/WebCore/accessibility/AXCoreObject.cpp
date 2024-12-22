@@ -507,6 +507,22 @@ unsigned AXCoreObject::tableLevel() const
     return level;
 }
 
+AXCoreObject* AXCoreObject::columnHeader()
+{
+    if (!isTableColumn())
+        return nullptr;
+
+    RefPtr parent = parentObject();
+    if (!parent || !parent->isTable() || !parent->isExposable())
+        return nullptr;
+
+    for (const auto& cell : unignoredChildren()) {
+        if (cell->roleValue() == AccessibilityRole::ColumnHeader)
+            return cell.ptr();
+    }
+    return nullptr;
+}
+
 AXCoreObject::AccessibilityChildrenVector AXCoreObject::columnHeaders()
 {
     AccessibilityChildrenVector headers;

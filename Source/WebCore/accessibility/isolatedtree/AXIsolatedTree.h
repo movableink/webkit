@@ -71,14 +71,13 @@ enum class AXPropertyFlag : uint32_t {
     IsInlineText                                  = 1 << 10,
     IsKeyboardFocusable                           = 1 << 11,
     IsNonLayerSVGObject                           = 1 << 12,
-    IsTableColumn                                 = 1 << 13,
-    IsTableRow                                    = 1 << 14,
-    SupportsCheckedState                          = 1 << 15,
-    SupportsDragging                              = 1 << 16,
-    SupportsExpanded                              = 1 << 17,
-    SupportsPath                                  = 1 << 18,
-    SupportsPosInSet                              = 1 << 19,
-    SupportsSetSize                               = 1 << 20
+    IsTableRow                                    = 1 << 13,
+    SupportsCheckedState                          = 1 << 14,
+    SupportsDragging                              = 1 << 15,
+    SupportsExpanded                              = 1 << 16,
+    SupportsPath                                  = 1 << 17,
+    SupportsPosInSet                              = 1 << 18,
+    SupportsSetSize                               = 1 << 19
 };
 
 enum class AXPropertyName : uint16_t {
@@ -114,7 +113,6 @@ enum class AXPropertyName : uint16_t {
     CellSlots,
     ColorValue,
     Columns,
-    ColumnHeader,
     ColumnIndex,
     ColumnIndexRange,
     CurrentState,
@@ -203,7 +201,6 @@ enum class AXPropertyName : uint16_t {
     IsSelected,
     IsSelectedOptionActive,
     IsTable,
-    IsTableColumn,
     IsTableRow,
     IsTree,
     IsTreeItem,

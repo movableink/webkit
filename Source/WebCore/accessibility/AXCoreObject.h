@@ -877,9 +877,9 @@ public:
     virtual int axRowIndex() const = 0;
 
     // Table column support.
-    virtual bool isTableColumn() const = 0;
+    bool isTableColumn() const { return roleValue() == AccessibilityRole::Column; }
     virtual unsigned columnIndex() const = 0;
-    virtual AXCoreObject* columnHeader() = 0;
+    AXCoreObject* columnHeader();
 
     // Table row support.
     virtual bool isTableRow() const = 0;

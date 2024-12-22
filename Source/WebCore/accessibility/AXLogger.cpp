@@ -706,9 +706,6 @@ TextStream& operator<<(WTF::TextStream& stream, AXPropertyName property)
     case AXPropertyName::Columns:
         stream << "Columns";
         break;
-    case AXPropertyName::ColumnHeader:
-        stream << "ColumnHeader";
-        break;
     case AXPropertyName::ColumnIndex:
         stream << "ColumnIndex";
         break;
@@ -968,9 +965,6 @@ TextStream& operator<<(WTF::TextStream& stream, AXPropertyName property)
         break;
     case AXPropertyName::IsTable:
         stream << "IsTable";
-        break;
-    case AXPropertyName::IsTableColumn:
-        stream << "IsTableColumn";
         break;
     case AXPropertyName::IsTableRow:
         stream << "IsTableRow";

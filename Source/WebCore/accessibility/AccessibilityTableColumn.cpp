@@ -64,19 +64,6 @@ LayoutRect AccessibilityTableColumn::elementRect() const
     return columnRect;
 }
 
-AccessibilityObject* AccessibilityTableColumn::columnHeader()
-{
-    auto* parentTable = dynamicDowncast<AccessibilityTable>(m_parent.get());
-    if (!parentTable || !parentTable->isExposable())
-        return nullptr;
-
-    for (const auto& cell : unignoredChildren()) {
-        if (cell->roleValue() == AccessibilityRole::ColumnHeader)
-            return &downcast<AccessibilityObject>(cell.get());
-    }
-    return nullptr;
-}
-
 void AccessibilityTableColumn::setColumnIndex(unsigned columnIndex)
 {
     if (m_columnIndex == columnIndex)
