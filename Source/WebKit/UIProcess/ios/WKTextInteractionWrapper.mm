@@ -236,6 +236,13 @@ private:
 #endif // HAVE(UI_TEXT_SELECTION_DISPLAY_INTERACTION)
 }
 
+- (void)setNeedsSelectionUpdate
+{
+#if HAVE(UI_TEXT_SELECTION_DISPLAY_INTERACTION)
+    [self.textSelectionDisplayInteraction setNeedsSelectionUpdate];
+#endif
+}
+
 - (void)activateSelection
 {
 #if USE(BROWSERENGINEKIT)
