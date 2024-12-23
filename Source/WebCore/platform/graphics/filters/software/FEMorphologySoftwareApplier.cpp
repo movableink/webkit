@@ -29,8 +29,13 @@
 #include "Filter.h"
 #include "PixelBuffer.h"
 #include <wtf/ParallelJobs.h>
+#include <wtf/TZoneMallocInlines.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FEMorphologySoftwareApplier);
 
 inline ColorComponents<uint8_t, 4> FEMorphologySoftwareApplier::minOrMax(const ColorComponents<uint8_t, 4>& a, const ColorComponents<uint8_t, 4>& b, MorphologyOperatorType type)
 {
@@ -189,3 +194,5 @@ bool FEMorphologySoftwareApplier::apply(const Filter& filter, const FilterImageV
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

@@ -31,10 +31,14 @@
 #include "config.h"
 #include "LocaleICU.h"
 
+#include "LocaleToScriptMapping.h"
 #include "LocalizedStrings.h"
+#include <hb-icu.h>
+#include <hb.h>
 #include <limits>
 #include <unicode/udatpg.h>
 #include <unicode/uloc.h>
+#include <unicode/uscript.h>
 #include <wtf/DateMath.h>
 #include <wtf/text/StringBuffer.h>
 #include <wtf/text/StringBuilder.h>
@@ -64,6 +68,21 @@ LocaleICU::~LocaleICU()
     udat_close(m_mediumTimeFormat);
     udat_close(m_shortTimeFormat);
 #endif
+}
+
+Locale::WritingDirection LocaleICU::defaultWritingDirection() const
+{
+    UScriptCode icuScript = localeToScriptCodeForFontSelection(m_locale.span());
+    hb_script_t script = hb_icu_script_to_script(icuScript);
+
+    switch (hb_script_get_horizontal_direction(script)) {
+    case HB_DIRECTION_LTR:
+        return WritingDirection::LeftToRight;
+    case HB_DIRECTION_RTL:
+        return WritingDirection::RightToLeft;
+    default:
+        return WritingDirection::Default;
+    }
 }
 
 #if !UCONFIG_NO_FORMATTING

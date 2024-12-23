@@ -39,6 +39,7 @@
 #include "JSNativeStdFunction.h"
 #include "ScriptFunctionCall.h"
 #include <wtf/JSONValues.h>
+#include <wtf/text/MakeString.h>
 
 namespace Inspector {
 
@@ -103,6 +104,10 @@ RefPtr<JSON::Value> toInspectorValue(JSC::JSGlobalObject* globalObject, JSC::JSV
     JSC::JSLockHolder holder(globalObject);
     return jsToInspectorValue(globalObject, value, JSON::Value::maxDepth);
 }
+
+InjectedScriptBase::InjectedScriptBase(const InjectedScriptBase&) = default;
+
+InjectedScriptBase& InjectedScriptBase::operator=(const InjectedScriptBase&) = default;
 
 InjectedScriptBase::InjectedScriptBase(const String& name)
     : m_name(name)

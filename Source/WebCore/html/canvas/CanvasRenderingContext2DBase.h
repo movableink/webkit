@@ -90,11 +90,11 @@ using CanvasImageSource = std::variant<RefPtr<HTMLImageElement>
     >;
 
 class CanvasRenderingContext2DBase : public CanvasRenderingContext, public CanvasPath {
-    WTF_MAKE_ISO_ALLOCATED(CanvasRenderingContext2DBase);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CanvasRenderingContext2DBase);
     friend class CanvasFilterContextSwitcher;
     friend class CanvasLayerContextSwitcher;
 protected:
-    CanvasRenderingContext2DBase(CanvasBase&, CanvasRenderingContext2DSettings&&, bool usesCSSCompatibilityParseMode);
+    CanvasRenderingContext2DBase(CanvasBase&, CanvasRenderingContext::Type, CanvasRenderingContext2DSettings&&, bool usesCSSCompatibilityParseMode);
 
 public:
     virtual ~CanvasRenderingContext2DBase();
@@ -103,6 +103,7 @@ public:
 
     const CanvasRenderingContext2DSettings& getContextAttributes() const { return m_settings; }
     using RenderingMode = WebCore::RenderingMode;
+    std::optional<RenderingMode> renderingModeForTesting() const final;
     std::optional<RenderingMode> getEffectiveRenderingModeForTesting();
 
     double lineWidth() const { return state().lineWidth; }
@@ -325,9 +326,11 @@ protected:
     void realizeSaves();
     State& modifiableState() { ASSERT(!m_unrealizedSaveCount || m_stateStack.size() >= MaxSaveCount); return m_stateStack.last(); }
 
-    virtual GraphicsContext* drawingContext() const;
+    // These methods are de-virtualized for performance reasons.
+    GraphicsContext* drawingContext() const;
+    GraphicsContext* effectiveDrawingContext() const;
+
     virtual GraphicsContext* existingDrawingContext() const;
-    virtual GraphicsContext* effectiveDrawingContext() const;
     virtual AffineTransform baseTransform() const;
 
     enum class DidDrawOption {
@@ -377,8 +380,6 @@ protected:
 
     bool usesCSSCompatibilityParseMode() const { return m_usesCSSCompatibilityParseMode; }
 
-    OptionSet<ImageBufferOptions> adjustImageBufferOptionsForTesting(OptionSet<ImageBufferOptions>) final;
-
 private:
     struct CachedContentsTransparent {
     };
@@ -396,7 +397,6 @@ private:
     void applyShadow();
     bool shouldDrawShadows() const;
 
-    bool is2dBase() const final { return true; }
     bool needsPreparationForDisplay() const final;
     void prepareForDisplay() final;
 
@@ -467,7 +467,6 @@ private:
 
     bool isSurfaceBufferTransparentBlack(SurfaceBuffer) const override;
 #if USE(SKIA)
-    bool delegatesDisplay() const override;
     RefPtr<GraphicsLayerContentsDisplayDelegate> layerContentsDisplayDelegate() override;
 #endif
     bool hasDeferredOperations() const final;

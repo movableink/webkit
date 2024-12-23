@@ -29,6 +29,7 @@
 #include "RemoteVideoFrameObjectHeapProxy.h"
 #include "WebGPUIdentifier.h"
 #include <WebCore/WorkerClient.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 class Page;
@@ -43,7 +44,7 @@ namespace WebKit {
 class WebPage;
 
 class WebWorkerClient : public WebCore::WorkerClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(WebWorkerClient);
 public:
     ~WebWorkerClient();
     // Constructed on the main thread, and then transferred to the
@@ -58,7 +59,7 @@ public:
     WebCore::PlatformDisplayID displayID() const final;
 
     RefPtr<WebCore::ImageBuffer> sinkIntoImageBuffer(std::unique_ptr<WebCore::SerializedImageBuffer>) override;
-    RefPtr<WebCore::ImageBuffer> createImageBuffer(const WebCore::FloatSize&, WebCore::RenderingPurpose, float resolutionScale, const WebCore::DestinationColorSpace&, WebCore::ImageBufferPixelFormat, OptionSet<WebCore::ImageBufferOptions>) const override;
+    RefPtr<WebCore::ImageBuffer> createImageBuffer(const WebCore::FloatSize&, WebCore::RenderingMode, WebCore::RenderingPurpose, float resolutionScale, const WebCore::DestinationColorSpace&, WebCore::ImageBufferPixelFormat) const override;
 #if ENABLE(WEBGL)
     RefPtr<WebCore::GraphicsContextGL> createGraphicsContextGL(const WebCore::GraphicsContextGLAttributes&) const override;
 #endif
@@ -69,7 +70,11 @@ public:
 
 protected:
     WebWorkerClient(SerialFunctionDispatcher&, WebCore::PlatformDisplayID);
-    SerialFunctionDispatcher& m_dispatcher;
+
+    // m_dispatcher should stay alive as long as WebWorkerClient is alive.
+    RefPtr<SerialFunctionDispatcher> dispatcher() const { return m_dispatcher.get(); }
+
+    ThreadSafeWeakPtr<SerialFunctionDispatcher> m_dispatcher;
     const WebCore::PlatformDisplayID m_displayID;
 };
 

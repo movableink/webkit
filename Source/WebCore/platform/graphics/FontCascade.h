@@ -29,12 +29,11 @@
 #include "FontCascadeDescription.h"
 #include "FontCascadeFonts.h"
 #include "Path.h"
-#include "RuntimeApplicationChecks.h"
 #include "TextSpacing.h"
 #include <optional>
 #include <wtf/CheckedRef.h>
-#include <wtf/FastMalloc.h>
 #include <wtf/HashSet.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/CharacterProperties.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -46,16 +45,25 @@ class QTextLayout;
 QT_END_NAMESPACE
 #endif
 
+#if PLATFORM(COCOA)
+#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
+#endif
+
 // "X11/X.h" defines Complex to 0 and conflicts
 // with Complex value in CodePath enum.
 #ifdef Complex
 #undef Complex
 #endif
 
+namespace WTF {
+class TextStream;
+}
+
 namespace WebCore {
 
 class GraphicsContext;
 class LayoutRect;
+class RenderStyle;
 class RenderText;
 class TextLayout;
 class TextRun;
@@ -116,7 +124,7 @@ public:
 };
 
 class FontCascade final : public CanMakeWeakPtr<FontCascade>, public CanMakeCheckedPtr<FontCascade> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(FontCascade);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FontCascade);
 public:
     WEBCORE_EXPORT FontCascade();
@@ -205,10 +213,12 @@ public:
     WEBCORE_EXPORT GlyphData glyphDataForCharacter(char32_t, bool mirror, FontVariant = AutoVariant) const;
     bool canUseSimplifiedTextMeasuring(char32_t, FontVariant, bool whitespaceIsCollapsed, const Font&) const;
 
-    const Font* fontForCombiningCharacterSequence(StringView) const;
+    RefPtr<const Font> fontForCombiningCharacterSequence(StringView) const;
 
     static bool isCJKIdeograph(char32_t);
     static bool isCJKIdeographOrSymbol(char32_t);
+
+    static bool canUseGlyphDisplayList(const RenderStyle&);
 
     // Returns (the number of opportunities, whether the last expansion is a trailing expansion)
     // If there are no opportunities, the bool will be true iff we are forbidding leading expansions.
@@ -225,7 +235,7 @@ public:
     enum class CodePath : uint8_t { Auto, Simple, Complex, SimpleWithGlyphOverflow };
     WEBCORE_EXPORT CodePath codePath(const TextRun&, std::optional<unsigned> from = std::nullopt, std::optional<unsigned> to = std::nullopt) const;
     static CodePath characterRangeCodePath(std::span<const LChar>) { return CodePath::Simple; }
-    static CodePath characterRangeCodePath(std::span<const UChar>);
+    WEBCORE_EXPORT static CodePath characterRangeCodePath(std::span<const UChar>);
 
     bool primaryFontIsSystemFont() const;
 
@@ -295,7 +305,7 @@ public:
             return false;
 #if PLATFORM(COCOA)
         // We make an exception for Books because some already available books when converted to EPUBS might contain object replacement character that should not be visible to the user.
-        return CocoaApplication::isIBooks();
+        return WTF::CocoaApplication::isIBooks();
 #else
         return false;
 #endif
@@ -454,5 +464,7 @@ inline float FontCascade::widthForTextUsingSimplifiedMeasuring(StringView text, 
 
 bool shouldSynthesizeSmallCaps(bool, const Font*, char32_t, std::optional<char32_t>, FontVariantCaps, bool);
 std::optional<char32_t> capitalized(char32_t);
+
+WTF::TextStream& operator<<(WTF::TextStream&, const FontCascade&);
 
 } // namespace WebCore

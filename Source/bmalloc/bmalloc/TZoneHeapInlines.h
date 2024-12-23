@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -117,10 +117,9 @@ auto TZoneHeapBase<Type>::impl() -> IsoHeapImpl<Config>&
 
 #endif // !BUSE(LIBPAS)
 
-// This is most appropraite for template classes.
+// This is most appropraite for template classes or those defined in a .cpp/.mm file.
 
-#define MAKE_BTZONE_MALLOCED_INLINE(tzoneType, tzoneHeapType) \
-public: \
+#define MAKE_BTZONE_MALLOCED_COMMON_INLINE(tzoneType, tzoneHeapType) \
     static ::bmalloc::api::tzoneHeapType<tzoneType>& btzoneHeap() \
     { \
         static ::bmalloc::api::tzoneHeapType<tzoneType> heap("WebKit_"#tzoneType); \
@@ -132,8 +131,9 @@ public: \
     \
     void* operator new(size_t size) \
     { \
-        RELEASE_BASSERT(size == sizeof(tzoneType)); \
-        return btzoneHeap().allocate(); \
+        if (size == sizeof(tzoneType)) \
+            return btzoneHeap().allocate(); \
+        return btzoneHeap().allocate(size); \
     } \
     \
     void operator delete(void* p) \
@@ -155,7 +155,16 @@ public: \
     } \
     \
     using WTFIsFastAllocated = int; \
+
+
+#define MAKE_BTZONE_MALLOCED_INLINE(tzoneType, tzoneHeapType) \
+public: \
+    MAKE_BTZONE_MALLOCED_COMMON_INLINE(tzoneType, tzoneHeapType) \
 private: \
+    using __makeBtzoneMallocedInlineMacroSemicolonifier BUNUSED_TYPE_ALIAS = int
+
+#define MAKE_STRUCT_BTZONE_MALLOCED_INLINE(tzoneType, tzoneHeapType) \
+    MAKE_BTZONE_MALLOCED_COMMON_INLINE(tzoneType, tzoneHeapType) \
     using __makeBtzoneMallocedInlineMacroSemicolonifier BUNUSED_TYPE_ALIAS = int
 
 #define MAKE_BTZONE_MALLOCED_IMPL(tzoneType, tzoneHeapType) \
@@ -167,8 +176,9 @@ private: \
 \
 void* tzoneType::operator new(size_t size) \
 { \
-    RELEASE_BASSERT(size == sizeof(tzoneType)); \
-    return btzoneHeap().allocate(); \
+    if (size == sizeof(tzoneType)) \
+        return btzoneHeap().allocate(); \
+    return btzoneHeap().allocate(size); \
 } \
 \
 void tzoneType::operator delete(void* p) \
@@ -192,8 +202,9 @@ struct MakeBtzoneMallocedImplMacroSemicolonifier##tzoneType { }
 \
 void* tzoneType::operator new(size_t size) \
 { \
-    RELEASE_BASSERT(size == sizeof(tzoneType)); \
-    return btzoneHeap().allocate(); \
+    if (size == sizeof(tzoneType)) \
+        return btzoneHeap().allocate(); \
+    return btzoneHeap().allocate(size); \
 } \
 \
 void tzoneType::operator delete(void* p) \
@@ -219,8 +230,9 @@ template<> \
 template<> \
 void* tzoneType::operator new(size_t size) \
 { \
-    RELEASE_BASSERT(size == sizeof(tzoneType)); \
-    return btzoneHeap().allocate(); \
+    if (size == sizeof(tzoneType)) \
+        return btzoneHeap().allocate(); \
+    return btzoneHeap().allocate(size); \
 } \
 \
 template<> \
@@ -248,8 +260,9 @@ template<> \
 template<> \
 void* tzoneType::operator new(size_t size) \
 { \
-    RELEASE_BASSERT(size == sizeof(tzoneType)); \
-    return btzoneHeap().allocate(); \
+    if (size == sizeof(tzoneType)) \
+        return btzoneHeap().allocate(); \
+    return btzoneHeap().allocate(size); \
 } \
 \
 template<> \

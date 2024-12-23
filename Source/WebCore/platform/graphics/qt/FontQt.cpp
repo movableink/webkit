@@ -59,6 +59,13 @@ FloatRect Font::platformBoundsForGlyph(Glyph glyph) const
     return m_platformData.rawFont().boundingRect(glyph);
 }
 
+RefPtr<Font> Font::platformCreateHalfWidthFont() const
+{
+    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=281333 : implement half width font for this platform.
+    notImplemented();
+    return nullptr;
+}
+
 void Font::platformInit()
 {
     if (!m_platformData.size()) {

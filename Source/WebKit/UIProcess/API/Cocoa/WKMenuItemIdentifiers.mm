@@ -29,7 +29,7 @@
 NSString * const _WKMenuItemIdentifierCopy = @"WKMenuItemIdentifierCopy";
 NSString * const _WKMenuItemIdentifierCopyImage = @"WKMenuItemIdentifierCopyImage";
 NSString * const _WKMenuItemIdentifierCopyLink = @"WKMenuItemIdentifierCopyLink";
-NSString * const _WKMenuItemIdentifierCopyLinkToHighlight = @"WKMenuItemIdentifierCopyLinkToHighlight";
+NSString * const _WKMenuItemIdentifierCopyLinkWithHighlight = @"WKMenuItemIdentifierCopyLinkWithHighlight";
 NSString * const _WKMenuItemIdentifierCopyMediaLink = @"WKMenuItemIdentifierCopyMediaLink";
 NSString * const _WKMenuItemIdentifierDownloadImage = @"WKMenuItemIdentifierDownloadImage";
 NSString * const _WKMenuItemIdentifierDownloadLinkedFile = @"WKMenuItemIdentifierDownloadLinkedFile";
@@ -60,7 +60,7 @@ NSString * const _WKMenuItemIdentifierShareMenu = @"WKMenuItemIdentifierShareMen
 NSString * const _WKMenuItemIdentifierSpeechMenu = @"WKMenuItemIdentifierSpeechMenu";
 
 NSString * const _WKMenuItemIdentifierTranslate = @"WKMenuItemIdentifierTranslate";
-NSString * const _WKMenuItemIdentifierWritingTools = @"WKMenuItemIdentifierWritingTools";
+NSString * const _WKMenuItemIdentifierWritingTools = @"__NSTextViewContextSubmenuIdentifierWritingTools"; // AppKit creates this menu item.
 NSString * const _WKMenuItemIdentifierCopySubject = @"WKMenuItemIdentifierCopySubject";
 
 NSString * const _WKMenuItemIdentifierSpellingMenu = @"WKMenuItemIdentifierSpellingMenu";

@@ -29,12 +29,17 @@
 #include "ImageBuffer.h"
 #include "PixelBuffer.h"
 #include <wtf/MathExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if USE(ACCELERATE)
 #include <Accelerate/Accelerate.h>
 #endif
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FEColorMatrixSoftwareApplier);
 
 FEColorMatrixSoftwareApplier::FEColorMatrixSoftwareApplier(const FEColorMatrix& effect)
     : Base(effect)
@@ -280,3 +285,5 @@ bool FEColorMatrixSoftwareApplier::apply(const Filter&, const FilterImageVector&
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

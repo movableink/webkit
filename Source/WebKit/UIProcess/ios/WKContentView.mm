@@ -31,6 +31,7 @@
 #import "APIPageConfiguration.h"
 #import "AccessibilityIOS.h"
 #import "Connection.h"
+#import "FrameProcess.h"
 #import "FullscreenClient.h"
 #import "GPUProcessProxy.h"
 #import "Logging.h"
@@ -66,16 +67,18 @@
 #import <WebCore/NotImplemented.h>
 #import <WebCore/PlatformScreen.h>
 #import <WebCore/Quirks.h>
-#import <WebCore/RuntimeApplicationChecks.h>
+#import <WebCore/Site.h>
 #import <WebCore/VelocityData.h>
 #import <objc/message.h>
 #import <pal/spi/cocoa/NSAccessibilitySPI.h>
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
 #import <wtf/Condition.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/RuntimeApplicationChecks.h>
 #import <wtf/UUID.h>
 #import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #import <wtf/cocoa/SpanCocoa.h>
+#import <wtf/text/MakeString.h>
 #import <wtf/text/TextStream.h>
 #import <wtf/threads/BinarySemaphore.h>
 #import "AppKitSoftLink.h"
@@ -87,7 +90,7 @@
 
 @interface _WKPrintFormattingAttributes : NSObject
 @property (nonatomic, readonly) size_t pageCount;
-@property (nonatomic, readonly) WebCore::FrameIdentifier frameID;
+@property (nonatomic, readonly) Markable<WebCore::FrameIdentifier> frameID;
 @property (nonatomic, readonly) WebKit::PrintInfo printInfo;
 @end
 
@@ -128,18 +131,53 @@ typedef NS_ENUM(NSInteger, _WKPrintRenderingCallbackType) {
 
 @end
 
-@interface WKQuirkyNSUndoManager : NSUndoManager
+@interface WKNSUndoManager : NSUndoManager
 @property (readonly, weak) WKContentView *contentView;
 @end
 
-@implementation WKQuirkyNSUndoManager
+@implementation WKNSUndoManager {
+    BOOL _isRegisteringUndoCommand;
+}
+
 - (instancetype)initWithContentView:(WKContentView *)contentView
 {
     if (!(self = [super init]))
         return nil;
+
+    _isRegisteringUndoCommand = NO;
     _contentView = contentView;
     return self;
 }
+
+- (void)beginUndoGrouping
+{
+    if (!_isRegisteringUndoCommand)
+        [_contentView _closeCurrentTypingCommand];
+
+    [super beginUndoGrouping];
+}
+
+- (void)registerUndoWithTarget:(id)target selector:(SEL)selector object:(id)object
+{
+    SetForScope registrationScope { _isRegisteringUndoCommand, YES };
+
+    [super registerUndoWithTarget:target selector:selector object:object];
+}
+
+- (void)registerUndoWithTarget:(id)target handler:(void (^)(id))undoHandler
+{
+    SetForScope registrationScope { _isRegisteringUndoCommand, YES };
+
+    [super registerUndoWithTarget:target handler:undoHandler];
+}
+
+@end
+
+@interface WKNSKeyEventSimulatorUndoManager : WKNSUndoManager
+
+@end
+
+@implementation WKNSKeyEventSimulatorUndoManager
 
 - (BOOL)canUndo 
 {
@@ -201,12 +239,12 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
     WebCore::HistoricalVelocityData _historicalKinematicData;
 
-    RetainPtr<NSUndoManager> _undoManager;
-    RetainPtr<WKQuirkyNSUndoManager> _quirkyUndoManager;
+    RetainPtr<WKNSUndoManager> _undoManager;
+    RetainPtr<WKNSKeyEventSimulatorUndoManager> _undoManagerForSimulatingKeyEvents;
 
     Lock _pendingBackgroundPrintFormattersLock;
     RetainPtr<NSMutableSet> _pendingBackgroundPrintFormatters;
-    IPC::Connection::AsyncReplyID _printRenderingCallbackID;
+    Markable<IPC::Connection::AsyncReplyID> _printRenderingCallbackID;
     _WKPrintRenderingCallbackType _printRenderingCallbackType;
 
     Vector<RetainPtr<NSURL>> _temporaryURLsToDeleteWhenDeallocated;
@@ -226,11 +264,15 @@ static NSArray *keyCommandsPlaceholderHackForEvernote(id self, SEL _cmd)
     ASSERT(_pageClient);
 
     _page = processPool.createWebPage(*_pageClient, WTFMove(configuration));
-    _page->initializeWebPage();
+    auto& pageConfiguration = _page->configuration();
+    _page->initializeWebPage(pageConfiguration.openedSite(), pageConfiguration.initialSandboxFlags());
 
     [self _updateRuntimeProtocolConformanceIfNeeded];
 
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+    // FIXME: <rdar://131638772> UIScreen.mainScreen is deprecated.
     _page->setIntrinsicDeviceScaleFactor(WebCore::screenScaleFactor([UIScreen mainScreen]));
+ALLOW_DEPRECATED_DECLARATIONS_END
     _page->setUseFixedLayout(true);
     _page->setScreenIsBeingCaptured([self screenIsBeingCaptured]);
 
@@ -285,9 +327,12 @@ static NSArray *keyCommandsPlaceholderHackForEvernote(id self, SEL _cmd)
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_applicationDidBecomeActive:) name:UIApplicationDidBecomeActiveNotification object:[UIApplication sharedApplication]];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_applicationDidEnterBackground:) name:UIApplicationDidEnterBackgroundNotification object:[UIApplication sharedApplication]];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_applicationWillEnterForeground:) name:UIApplicationWillEnterForegroundNotification object:[UIApplication sharedApplication]];
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+    // FIXME: <rdar://131638772> UIScreen.mainScreen is deprecated.
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_screenCapturedDidChange:) name:UIScreenCapturedDidChangeNotification object:[UIScreen mainScreen]];
+ALLOW_DEPRECATED_DECLARATIONS_END
 
-    if (WebCore::IOSApplication::isEvernote() && !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::WKContentViewDoesNotOverrideKeyCommands))
+    if (WTF::IOSApplication::isEvernote() && !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::WKContentViewDoesNotOverrideKeyCommands))
         class_addMethod(self.class, @selector(keyCommands), reinterpret_cast<IMP>(&keyCommandsPlaceholderHackForEvernote), method_getTypeEncoding(class_getInstanceMethod(self.class, @selector(keyCommands))));
 
     return self;
@@ -614,7 +659,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (void)_didExitStableState
 {
-    _needsDeferredEndScrollingSelectionUpdate = self.shouldHideSelectionWhenScrolling;
+    _needsDeferredEndScrollingSelectionUpdate = self.shouldHideSelectionInFixedPositionWhenScrolling;
     if (!_needsDeferredEndScrollingSelectionUpdate)
         return;
 
@@ -679,7 +724,7 @@ static WebCore::FloatBoxExtent floatBoxExtent(UIEdgeInsets insets)
         !!self.webView._allowsViewportShrinkToFit,
         !!enclosedInScrollableAncestorView,
         velocityData,
-        downcast<WebKit::RemoteLayerTreeDrawingAreaProxy>(*drawingArea).lastCommittedLayerTreeTransactionID());
+        downcast<WebKit::RemoteLayerTreeDrawingAreaProxy>(*drawingArea).lastCommittedMainFrameLayerTreeTransactionID());
 
     LOG_WITH_STREAM(VisibleRects, stream << "-[WKContentView didUpdateVisibleRect]" << visibleContentRectUpdateInfo.dump());
 
@@ -722,18 +767,21 @@ static WebCore::FloatBoxExtent floatBoxExtent(UIEdgeInsets insets)
 
 - (BOOL)screenIsBeingCaptured
 {
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+    // FIXME: <rdar://131638936> UIScreen.isCaptured is deprecated.
     return [[[self window] screen] isCaptured];
+ALLOW_DEPRECATED_DECLARATIONS_END
 }
 
 - (NSUndoManager *)undoManagerForWebView
 {
     if (self.focusedElementInformation.shouldSynthesizeKeyEventsForEditing && self.hasHiddenContentEditable) {
-        if (!_quirkyUndoManager)
-            _quirkyUndoManager = adoptNS([[WKQuirkyNSUndoManager alloc] initWithContentView:self]);
-        return _quirkyUndoManager.get();
+        if (!_undoManagerForSimulatingKeyEvents)
+            _undoManagerForSimulatingKeyEvents = adoptNS([[WKNSKeyEventSimulatorUndoManager alloc] initWithContentView:self]);
+        return _undoManagerForSimulatingKeyEvents.get();
     }
     if (!_undoManager)
-        _undoManager = adoptNS([[NSUndoManager alloc] init]);
+        _undoManager = adoptNS([[WKNSUndoManager alloc] initWithContentView:self]);
     return _undoManager.get();
 }
 
@@ -839,7 +887,7 @@ static void storeAccessibilityRemoteConnectionInformation(id element, pid_t pid,
 
 - (void)_resetPrintingState
 {
-    _printRenderingCallbackID = { };
+    _printRenderingCallbackID = std::nullopt;
 
     Locker locker { _pendingBackgroundPrintFormattersLock };
     for (_WKWebViewPrintFormatter *printFormatter in _pendingBackgroundPrintFormatters.get())
@@ -849,9 +897,9 @@ static void storeAccessibilityRemoteConnectionInformation(id element, pid_t pid,
 
 #pragma mark PageClientImpl methods
 
-- (std::unique_ptr<WebKit::DrawingAreaProxy>)_createDrawingAreaProxy:(WebKit::WebProcessProxy&)webProcessProxy
+- (Ref<WebKit::DrawingAreaProxy>)_createDrawingAreaProxy:(WebKit::WebProcessProxy&)webProcessProxy
 {
-    return makeUnique<WebKit::RemoteLayerTreeDrawingAreaProxyIOS>(*_page, webProcessProxy);
+    return WebKit::RemoteLayerTreeDrawingAreaProxyIOS::create(*_page, webProcessProxy);
 }
 
 - (void)_processDidExit
@@ -1129,7 +1177,7 @@ static void storeAccessibilityRemoteConnectionInformation(id element, pid_t pid,
     printInfo.availablePaperWidth = CGRectGetWidth(printingRect);
     printInfo.availablePaperHeight = CGRectGetHeight(printingRect);
 
-    WebCore::FrameIdentifier frameID;
+    Markable<WebCore::FrameIdentifier> frameID;
     size_t pageCount = printInfo.snapshotFirstPage ? 1 : 0;
 
     if (isPrintingOnBackgroundThread) {
@@ -1149,7 +1197,7 @@ static void storeAccessibilityRemoteConnectionInformation(id element, pid_t pid,
 
             // This has the side effect of calling `WebPage::beginPrinting`. It is important that all calls
             // of `WebPage::beginPrinting` are matched with a corresponding call to `WebPage::endPrinting`.
-            _page->computePagesForPrinting(frameID, printInfo, [&pageCount, &computePagesSemaphore](const Vector<WebCore::IntRect>& pageRects, double /* totalScaleFactorForPrinting */, const WebCore::FloatBoxExtent& /* computedPageMargin */) mutable {
+            _page->computePagesForPrinting(*frameID, printInfo, [&pageCount, &computePagesSemaphore](const Vector<WebCore::IntRect>& pageRects, double /* totalScaleFactorForPrinting */, const WebCore::FloatBoxExtent& /* computedPageMargin */) mutable {
                 ASSERT(pageRects.size() >= 1);
                 pageCount = pageRects.size();
                 RELEASE_LOG(Printing, "Computed pages for printing on background thread. Page count = %zu", pageCount);
@@ -1165,13 +1213,13 @@ static void storeAccessibilityRemoteConnectionInformation(id element, pid_t pid,
         frameID = *identifier;
 
         if (!pageCount)
-            pageCount = _page->computePagesForPrintingiOS(frameID, printInfo);
+            pageCount = _page->computePagesForPrintingiOS(*frameID, printInfo);
     }
 
     if (!pageCount)
         return nil;
 
-    auto attributes = adoptNS([[_WKPrintFormattingAttributes alloc] initWithPageCount:pageCount frameID:frameID printInfo:printInfo]);
+    auto attributes = adoptNS([[_WKPrintFormattingAttributes alloc] initWithPageCount:pageCount frameID:*frameID printInfo:printInfo]);
 
     RELEASE_LOG(Printing, "Computed attributes for print formatter. Computed page count = %zu", pageCount);
 
@@ -1195,9 +1243,9 @@ static void storeAccessibilityRemoteConnectionInformation(id element, pid_t pid,
         RELEASE_LOG(Printing, "Beginning to generate print preview image. Page count = %zu", [formatterAttributes pageCount]);
 
         // Begin generating the image in expectation of a (eventual) request for the drawn data.
-        auto callbackID = retainedSelf->_page->drawToImage([formatterAttributes frameID], [formatterAttributes printInfo], [isPrintingOnBackgroundThread, printFormatter, retainedSelf](std::optional<WebCore::ShareableBitmap::Handle>&& imageHandle) mutable {
+        auto callbackID = retainedSelf->_page->drawToImage(*[formatterAttributes frameID], [formatterAttributes printInfo], [isPrintingOnBackgroundThread, printFormatter, retainedSelf](std::optional<WebCore::ShareableBitmap::Handle>&& imageHandle) mutable {
             if (!isPrintingOnBackgroundThread)
-                retainedSelf->_printRenderingCallbackID = { };
+                retainedSelf->_printRenderingCallbackID = std::nullopt;
             else {
                 Locker locker { retainedSelf->_pendingBackgroundPrintFormattersLock };
                 [retainedSelf->_pendingBackgroundPrintFormatters removeObject:printFormatter.get()];
@@ -1231,9 +1279,9 @@ static void storeAccessibilityRemoteConnectionInformation(id element, pid_t pid,
 
     ensureOnMainRunLoop([formatterAttributes = retainPtr(formatterAttributes), isPrintingOnBackgroundThread, printFormatter = retainPtr(printFormatter), retainedSelf = retainPtr(self)] {
         // Begin generating the PDF in expectation of a (eventual) request for the drawn data.
-        auto callbackID = retainedSelf->_page->drawToPDFiOS([formatterAttributes frameID], [formatterAttributes printInfo], [formatterAttributes pageCount], [isPrintingOnBackgroundThread, printFormatter, retainedSelf](RefPtr<WebCore::SharedBuffer>&& pdfData) mutable {
+        auto callbackID = retainedSelf->_page->drawToPDFiOS(*[formatterAttributes frameID], [formatterAttributes printInfo], [formatterAttributes pageCount], [isPrintingOnBackgroundThread, printFormatter, retainedSelf](RefPtr<WebCore::SharedBuffer>&& pdfData) mutable {
             if (!isPrintingOnBackgroundThread)
-                retainedSelf->_printRenderingCallbackID = { };
+                retainedSelf->_printRenderingCallbackID = std::nullopt;
             else {
                 Locker locker { retainedSelf->_pendingBackgroundPrintFormattersLock };
                 [retainedSelf->_pendingBackgroundPrintFormatters removeObject:printFormatter.get()];
@@ -1261,11 +1309,11 @@ static void storeAccessibilityRemoteConnectionInformation(id element, pid_t pid,
         if (_printRenderingCallbackType != _WKPrintRenderingCallbackTypePrint)
             return;
 
-        auto callbackID = std::exchange(_printRenderingCallbackID, { });
+        auto callbackID = std::exchange(_printRenderingCallbackID, std::nullopt);
         if (!callbackID)
             return;
 
-        _page->legacyMainFrameProcess().connection()->waitForAsyncReplyAndDispatchImmediately<Messages::WebPage::DrawToPDFiOS>(callbackID, Seconds::infinity());
+        _page->legacyMainFrameProcess().connection().waitForAsyncReplyAndDispatchImmediately<Messages::WebPage::DrawToPDFiOS>(*callbackID, Seconds::infinity());
         return;
     }
 
@@ -1305,11 +1353,11 @@ static void storeAccessibilityRemoteConnectionInformation(id element, pid_t pid,
         if (_printRenderingCallbackType != _WKPrintRenderingCallbackTypePreview)
             return;
 
-        auto callbackID = std::exchange(_printRenderingCallbackID, { });
+        auto callbackID = std::exchange(_printRenderingCallbackID, std::nullopt);
         if (!callbackID)
             return;
 
-        _page->legacyMainFrameProcess().connection()->waitForAsyncReplyAndDispatchImmediately<Messages::WebPage::DrawRectToImage>(callbackID, Seconds::infinity());
+        _page->legacyMainFrameProcess().connection().waitForAsyncReplyAndDispatchImmediately<Messages::WebPage::DrawRectToImage>(*callbackID, Seconds::infinity());
         return;
     }
 

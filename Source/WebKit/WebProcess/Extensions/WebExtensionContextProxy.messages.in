@@ -66,8 +66,8 @@ messages -> WebExtensionContextProxy {
     DispatchPortDisconnectEvent(WebKit::WebExtensionPortChannelIdentifier channelIdentifier)
 
     // Runtime
-    DispatchRuntimeMessageEvent(WebKit::WebExtensionContentWorldType contentWorldType, String messageJSON, std::optional<WebKit::WebExtensionFrameIdentifier> targetFrameIdentifier, struct WebKit::WebExtensionMessageSenderParameters senderParameters) -> (String replyJSON)
-    DispatchRuntimeConnectEvent(WebKit::WebExtensionContentWorldType contentWorldType, WebKit::WebExtensionPortChannelIdentifier channelIdentifier, String name, std::optional<WebKit::WebExtensionFrameIdentifier> targetFrameIdentifier, struct WebKit::WebExtensionMessageSenderParameters senderParameters) -> (HashCountedSet<WebKit::WebPageProxyIdentifier> addedPortCounts)
+    DispatchRuntimeMessageEvent(WebKit::WebExtensionContentWorldType contentWorldType, String messageJSON, std::optional<WebKit::WebExtensionMessageTargetParameters> targetParameters, struct WebKit::WebExtensionMessageSenderParameters senderParameters) -> (String replyJSON)
+    DispatchRuntimeConnectEvent(WebKit::WebExtensionContentWorldType contentWorldType, WebKit::WebExtensionPortChannelIdentifier channelIdentifier, String name, std::optional<WebKit::WebExtensionMessageTargetParameters> targetParameters, struct WebKit::WebExtensionMessageSenderParameters senderParameters) -> (HashCountedSet<WebKit::WebPageProxyIdentifier> addedPortCounts)
     DispatchRuntimeInstalledEvent(enum:uint8_t WebKit::WebExtensionContextInstallReason installReason, String previousVersion)
     DispatchRuntimeStartupEvent()
 
@@ -87,7 +87,7 @@ messages -> WebExtensionContextProxy {
     DispatchTabsRemovedEvent(WebKit::WebExtensionTabIdentifier tabIdentifier, WebKit::WebExtensionWindowIdentifier windowIdentifier, WebKit::WebExtensionContext::WindowIsClosing windowIsClosing)
 
     // Web Navigation
-    DispatchWebNavigationEvent(WebKit::WebExtensionEventListenerType type, WebKit::WebExtensionTabIdentifier tabID, WebKit::WebExtensionFrameIdentifier frameID, WebKit::WebExtensionFrameIdentifier parentFrameID, URL targetURL, WallTime timestamp)
+    DispatchWebNavigationEvent(WebKit::WebExtensionEventListenerType type, WebKit::WebExtensionTabIdentifier tabID, struct WebKit::WebExtensionFrameParameters frameParamaters, WallTime timestamp)
 
     // Web Request
     ResourceLoadDidSendRequest(WebKit::WebExtensionTabIdentifier tabIdentifier, WebKit::WebExtensionWindowIdentifier windowIdentifier, WebCore::ResourceRequest request, struct WebKit::ResourceLoadInfo resourceLoadInfo)

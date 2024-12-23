@@ -29,7 +29,6 @@
 #include "InlineDamage.h"
 #include "InlineDisplayBox.h"
 #include "LayoutBoxGeometry.h"
-#include "LayoutIntegrationBoxTree.h"
 #include "LayoutIntegrationInlineContent.h"
 #include "LayoutState.h"
 #include "RenderBlockFlowInlines.h"
@@ -93,9 +92,8 @@ static std::tuple<float, float> glyphOverflowInInlineDirection(size_t firstTextB
     return { leadingOverflow(), trailingOverflow() };
 }
 
-InlineContentBuilder::InlineContentBuilder(const RenderBlockFlow& blockFlow, BoxTree& boxTree)
+InlineContentBuilder::InlineContentBuilder(const RenderBlockFlow& blockFlow)
     : m_blockFlow(blockFlow)
-    , m_boxTree(boxTree)
 {
 }
 
@@ -236,7 +234,7 @@ void InlineContentBuilder::adjustDisplayLines(InlineContent& inlineContent, size
     size_t boxIndex = !startIndex ? 0 : lines[startIndex - 1].lastBoxIndex() + 1;
     auto& rootBoxStyle = m_blockFlow.style();
     auto isLeftToRightInlineDirection = rootBoxStyle.isLeftToRightDirection();
-    auto isHorizontalWritingMode = rootBoxStyle.isHorizontalWritingMode();
+    auto isHorizontalWritingMode = rootBoxStyle.writingMode().isHorizontal();
 
     for (size_t lineIndex = startIndex; lineIndex < lines.size(); ++lineIndex) {
         auto& line = lines[lineIndex];
@@ -283,14 +281,14 @@ void InlineContentBuilder::adjustDisplayLines(InlineContent& inlineContent, size
                 continue;
             }
 
-            if (box.isAtomicInlineLevelBox()) {
+            if (box.isAtomicInlineBox()) {
                 auto& renderer = downcast<RenderBox>(*box.layoutBox().rendererForIntegration());
                 if (!renderer.hasSelfPaintingLayer()) {
-                    auto childInkOverflow = renderer.logicalVisualOverflowRectForPropagation(&renderer.parent()->style());
+                    auto childInkOverflow = renderer.logicalVisualOverflowRectForPropagation(renderer.parent()->writingMode());
                     childInkOverflow.move(box.left(), box.top());
                     inkOverflowRect.unite(childInkOverflow);
                 }
-                auto childScrollableOverflow = renderer.layoutOverflowRectForPropagation(&renderer.parent()->style());
+                auto childScrollableOverflow = renderer.layoutOverflowRectForPropagation(renderer.parent()->writingMode());
                 childScrollableOverflow.move(box.left(), box.top());
                 scrollableOverflowRect.unite(childScrollableOverflow);
                 continue;
@@ -310,7 +308,7 @@ void InlineContentBuilder::adjustDisplayLines(InlineContent& inlineContent, size
         line.setScrollableOverflow(scrollableOverflowRect);
         line.setInkOverflow(inkOverflowRect);
         line.setFirstBoxIndex(firstBoxIndex);
-        line.setBoxCount(boxIndex - firstBoxIndex);
+        ASSERT(line.boxCount() == boxIndex - firstBoxIndex);
 
         if (lineIndex) {
             auto& lastInkOverflow = lines[lineIndex - 1].inkOverflow();
@@ -329,7 +327,7 @@ void InlineContentBuilder::computeIsFirstIsLastBoxAndBidiReorderingForInlineCont
         return;
     }
 
-    HashMap<const Layout::Box*, size_t> lastDisplayBoxForLayoutBoxIndexes;
+    UncheckedKeyHashMap<const Layout::Box*, size_t> lastDisplayBoxForLayoutBoxIndexes;
     lastDisplayBoxForLayoutBoxIndexes.reserveInitialCapacity(boxes.size() - 1);
 
     ASSERT(boxes[0].isRootInlineBox());

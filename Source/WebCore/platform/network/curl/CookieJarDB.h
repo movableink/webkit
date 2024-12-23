@@ -30,6 +30,7 @@
 #include "SQLiteStatement.h"
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
@@ -42,7 +43,7 @@ enum class CookieAcceptPolicy {
 };
 
 class CookieJarDB {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(CookieJarDB);
     WTF_MAKE_NONCOPYABLE(CookieJarDB);
 
 public:
@@ -58,9 +59,10 @@ public:
     CookieAcceptPolicy acceptPolicy() const { return m_acceptPolicy; }
 
     HashSet<String> allDomains();
-    std::optional<Vector<Cookie>> searchCookies(const URL& firstParty, const URL& requestUrl, const std::optional<bool>& httpOnly, const std::optional<bool>& secure, const std::optional<bool>& session);
+    std::optional<Vector<Cookie>> searchCookies(const URL& firstParty, const URL& requestURL, std::optional<bool> httpOnly, std::optional<bool> secure, std::optional<bool> session);
     Vector<Cookie> getAllCookies();
-    WEBCORE_EXPORT bool setCookie(const URL& firstParty, const URL&, const String& cookie, Source, std::optional<Seconds> cappedLifetime = std::nullopt);
+    WEBCORE_EXPORT bool setCookie(const URL& firstParty, const URL&, const String& cookie, Source, std::optional<Seconds> cappedLifetime);
+    WEBCORE_EXPORT bool setCookie(const URL& firstParty, const URL&, const String& cookie, Source);
     bool setCookie(const Cookie&);
 
     bool deleteCookie(const String& url, const String& name);

@@ -38,6 +38,7 @@
 #include "PlatformLayer.h"
 #include "RenderingMode.h"
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
 #if USE(CAIRO)
@@ -47,6 +48,10 @@
 
 #if HAVE(IOSURFACE)
 #include "IOSurface.h"
+#endif
+
+#if USE(SKIA)
+class GrDirectContext;
 #endif
 
 namespace WTF {
@@ -82,7 +87,7 @@ enum class VolatilityState : uint8_t {
 };
 
 class ThreadSafeImageBufferFlusher {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ThreadSafeImageBufferFlusher);
     WTF_MAKE_NONCOPYABLE(ThreadSafeImageBufferFlusher);
 public:
     ThreadSafeImageBufferFlusher() = default;
@@ -132,6 +137,14 @@ public:
     virtual RefPtr<cairo_surface_t> createCairoSurface() { return nullptr; }
 #endif
 
+#if USE(SKIA)
+    virtual void finishAcceleratedRenderingAndCreateFence() { }
+    virtual void waitForAcceleratedRenderingFenceCompletion() { }
+
+    virtual const GrDirectContext* skiaGrContext() const { return nullptr; }
+    WEBCORE_EXPORT virtual RefPtr<ImageBuffer> copyAcceleratedImageBufferBorrowingBackendRenderTarget(const ImageBuffer&) const;
+#endif
+
     virtual bool isInUse() const { return false; }
     virtual void releaseGraphicsContext() { ASSERT_NOT_REACHED(); }
 
@@ -154,7 +167,7 @@ public:
 
     virtual RefPtr<GraphicsLayerContentsDisplayDelegate> layerContentsDisplayDelegate() const { return nullptr; }
 
-    const Parameters& parameters() { return m_parameters; }
+    const Parameters& parameters() const { return m_parameters; }
 
     WEBCORE_EXPORT virtual String debugDescription() const = 0;
 

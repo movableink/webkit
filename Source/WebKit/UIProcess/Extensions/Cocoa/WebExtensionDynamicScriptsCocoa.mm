@@ -32,9 +32,12 @@
 
 #if ENABLE(WK_WEB_EXTENSIONS)
 #import "APIData.h"
+#import "APIError.h"
 #import "CocoaHelpers.h"
 #import "WKContentWorld.h"
 #import "WKFrameInfoPrivate.h"
+#import "WKNSData.h"
+#import "WKNSError.h"
 #import "WKWebViewInternal.h"
 #import "WKWebViewPrivate.h"
 #import "WebExtension.h"
@@ -47,6 +50,7 @@
 #import "_WKFrameHandle.h"
 #import "_WKFrameTreeNode.h"
 #import <wtf/CallbackAggregator.h>
+#import <wtf/TZoneMallocInlines.h>
 #import <wtf/URL.h>
 #import <wtf/cocoa/VectorCocoa.h>
 
@@ -79,21 +83,26 @@ Vector<RetainPtr<_WKFrameTreeNode>> getFrames(_WKFrameTreeNode *currentNode, std
     return matchingFrames;
 }
 
-std::optional<SourcePair> sourcePairForResource(String path, RefPtr<WebExtension> extension)
+std::optional<SourcePair> sourcePairForResource(const String& path, WebExtensionContext& extensionContext)
 {
-    auto *scriptData = extension->resourceDataForPath(path);
-    if (!scriptData)
+    RefPtr<API::Error> error;
+    Ref extension = extensionContext.extension();
+    auto scriptString = extension->resourceStringForPath(path, error);
+    if (!scriptString || error) {
+        extensionContext.recordError(wrapper(error));
         return std::nullopt;
+    }
 
-    auto resourceURL = URL(extension->resourceFileURLForPath(path));
-    return SourcePair { [[NSString alloc] initWithData:scriptData encoding:NSUTF8StringEncoding], resourceURL };
+    scriptString = extensionContext.localizedResourceString(scriptString, extension->resourceMIMETypeForPath(path));
+
+    return SourcePair { scriptString, { extensionContext.baseURL(), path } };
 }
 
-SourcePairs getSourcePairsForParameters(const WebExtensionScriptInjectionParameters& parameters, RefPtr<WebExtension> extension)
+SourcePairs getSourcePairsForParameters(const WebExtensionScriptInjectionParameters& parameters, WebExtensionContext& extensionContext)
 {
     if (parameters.files) {
         return WTF::compactMap(parameters.files.value(), [&](auto& file) -> std::optional<SourcePair> {
-            return sourcePairForResource(file, extension);
+            return sourcePairForResource(file, extensionContext);
         });
     }
 
@@ -102,7 +111,7 @@ SourcePairs getSourcePairsForParameters(const WebExtensionScriptInjectionParamet
 
 class InjectionResultHolder : public RefCounted<InjectionResultHolder> {
     WTF_MAKE_NONCOPYABLE(InjectionResultHolder);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(InjectionResultHolder);
 
 public:
     template<typename... Args>
@@ -170,8 +179,8 @@ void injectStyleSheets(const SourcePairs& styleSheetPairs, WKWebView *webView, A
     for (auto& styleSheet : styleSheetPairs) {
         auto userStyleSheet = API::UserStyleSheet::create(WebCore::UserStyleSheet { styleSheet.first, styleSheet.second, Vector<String> { }, Vector<String> { }, injectedFrames, styleLevel, pageID }, executionWorld);
 
-        auto& controller = page.get()->userContentController();
-        controller.addUserStyleSheet(userStyleSheet);
+        Ref controller = page.get()->userContentController();
+        controller->addUserStyleSheet(userStyleSheet);
 
         context.dynamicallyInjectedUserStyleSheets().append(userStyleSheet);
     }
@@ -186,8 +195,8 @@ void removeStyleSheets(const SourcePairs& styleSheetPairs, WKWebView *webView,  
         for (auto& userStyleSheet : dynamicallyInjectedUserStyleSheets) {
             if (userStyleSheetMatchesContent(userStyleSheet, styleSheetContent, injectedFrames)) {
                 styleSheetsToRemove.append(userStyleSheet);
-                auto& controller = webView._page.get()->userContentController();
-                controller.removeUserStyleSheet(userStyleSheet);
+                Ref controller = webView._page.get()->userContentController();
+                controller->removeUserStyleSheet(userStyleSheet);
             }
         }
 
@@ -213,6 +222,8 @@ WebExtensionScriptInjectionResultParameters toInjectionResultParameters(id resul
 
     return parameters;
 }
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebExtensionRegisteredScript);
 
 void WebExtensionRegisteredScript::updateParameters(const WebExtensionRegisteredScriptParameters& parameters)
 {
@@ -274,8 +285,8 @@ void WebExtensionRegisteredScript::removeUserScripts(const String& identifier)
     auto allUserContentControllers = m_extensionContext->extensionController()->allUserContentControllers();
 
     for (auto& userScript : userScripts) {
-        for (auto& userContentController : allUserContentControllers)
-            userContentController.removeUserScript(userScript);
+        for (Ref userContentController : allUserContentControllers)
+            userContentController->removeUserScript(userScript);
     }
 }
 
@@ -285,8 +296,8 @@ void WebExtensionRegisteredScript::removeUserStyleSheets(const String& identifie
     auto allUserContentControllers = m_extensionContext->extensionController()->allUserContentControllers();
 
     for (auto& userStyleSheet : userStyleSheets) {
-        for (auto& userContentController : allUserContentControllers)
-            userContentController.removeUserStyleSheet(userStyleSheet);
+        for (Ref userContentController : allUserContentControllers)
+            userContentController->removeUserStyleSheet(userStyleSheet);
     }
 }
 

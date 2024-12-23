@@ -43,10 +43,12 @@
 #include <WebKit/WKDragDestinationAction.h>
 #include <WebKit/_WKOverlayScrollbarStyle.h>
 #include <pal/spi/cocoa/AVKitSPI.h>
+#include <pal/spi/cocoa/WritingToolsSPI.h>
 #include <wtf/BlockPtr.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/RetainPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakObjCPtr.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/WorkQueue.h>
@@ -71,7 +73,7 @@ OBJC_CLASS WKImageAnalysisOverlayViewDelegate;
 OBJC_CLASS WKImmediateActionController;
 OBJC_CLASS WKMouseTrackingObserver;
 OBJC_CLASS WKRevealItemPresenter;
-OBJC_CLASS WKSafeBrowsingWarning;
+OBJC_CLASS _WKWarningView;
 OBJC_CLASS WKShareSheet;
 OBJC_CLASS WKTextAnimationManager;
 OBJC_CLASS WKViewLayoutStrategy;
@@ -165,9 +167,9 @@ enum class ReplacementBehavior : uint8_t;
 - (void)_didHandleAcceptedCandidate;
 - (void)_didUpdateCandidateListVisibility:(BOOL)visible;
 
-#if ENABLE(WRITING_TOOLS)
-- (BOOL)_web_wantsWritingToolsInlineEditing;
-#endif
+- (BOOL)_web_hasActiveIntelligenceTextEffects;
+- (void)_web_suppressContentRelativeChildViews;
+- (void)_web_restoreContentRelativeChildViews;
 
 @end
 
@@ -182,7 +184,7 @@ class PageClient;
 class PageClientImpl;
 class DrawingAreaProxy;
 class MediaSessionCoordinatorProxyPrivate;
-class SafeBrowsingWarning;
+class BrowsingWarning;
 class ViewGestureController;
 class ViewSnapshot;
 class WebBackForwardListItem;
@@ -194,6 +196,7 @@ class WebProcessProxy;
 struct WebHitTestResultData;
 
 enum class ContinueUnsafeLoad : bool;
+enum class ForceSoftwareCapturingViewportSnapshot : bool;
 enum class UndoOrRedo : bool;
 
 typedef id <NSValidatedUserInterfaceItem> ValidationItem;
@@ -202,7 +205,7 @@ typedef HashMap<String, ValidationVector> ValidationMap;
 
 class WebViewImpl final : public CanMakeWeakPtr<WebViewImpl>, public CanMakeCheckedPtr<WebViewImpl> {
     WTF_MAKE_NONCOPYABLE(WebViewImpl);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(WebViewImpl);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WebViewImpl);
 public:
     WebViewImpl(NSView <WebViewImplDelegate> *, WKWebView *outerWebView, WebProcessPool&, Ref<API::PageConfiguration>&&);
@@ -212,6 +215,8 @@ public:
     NSWindow *window();
 
     WebPageProxy& page() { return m_page.get(); }
+    Ref<WebPageProxy> protectedPage() const;
+
     NSView *view() const { return m_view.getAutoreleased(); }
 
     void processWillSwap();
@@ -252,7 +257,7 @@ public:
     void setFixedLayoutSize(CGSize);
     CGSize fixedLayoutSize() const;
 
-    std::unique_ptr<DrawingAreaProxy> createDrawingAreaProxy(WebProcessProxy&);
+    Ref<DrawingAreaProxy> createDrawingAreaProxy(WebProcessProxy&);
     bool isUsingUISideCompositing() const;
     void setDrawingAreaSize(CGSize);
     void updateLayer();
@@ -263,10 +268,11 @@ public:
     NSPrintOperation *printOperationWithPrintInfo(NSPrintInfo *, WebFrameProxy&);
 
     void setAutomaticallyAdjustsContentInsets(bool);
-    bool automaticallyAdjustsContentInsets() const { return m_automaticallyAdjustsContentInsets; }
+    bool automaticallyAdjustsContentInsets() const;
     void updateContentInsetsIfAutomatic();
     void setTopContentInset(CGFloat);
     CGFloat topContentInset() const;
+    void flushPendingTopContentInset();
 
     void prepareContentInRect(CGRect);
     void updateViewExposedRect();
@@ -285,9 +291,9 @@ public:
     void setViewScale(CGFloat);
     CGFloat viewScale() const;
 
-    void showSafeBrowsingWarning(const SafeBrowsingWarning&, CompletionHandler<void(std::variant<ContinueUnsafeLoad, URL>&&)>&&);
-    void clearSafeBrowsingWarning();
-    void clearSafeBrowsingWarningIfForMainFrameNavigation();
+    void showWarningView(const BrowsingWarning&, CompletionHandler<void(std::variant<ContinueUnsafeLoad, URL>&&)>&&);
+    void clearWarningView();
+    void clearWarningViewIfForMainFrameNavigation();
 
     WKLayoutMode layoutMode() const;
     void setLayoutMode(WKLayoutMode);
@@ -471,7 +477,7 @@ public:
     void setIgnoresMouseDraggedEvents(bool);
     bool ignoresMouseDraggedEvents() const { return m_ignoresMouseDraggedEvents; }
 
-    void setAccessibilityWebProcessToken(NSData *, WebCore::FrameIdentifier, pid_t);
+    void setAccessibilityWebProcessToken(NSData *, pid_t);
     void accessibilityRegisterUIProcessTokens();
     void updateRemoteAccessibilityRegistration(bool registerProcess);
     id accessibilityFocusedUIElement();
@@ -484,9 +490,9 @@ public:
 
     NSTrackingRectTag addTrackingRect(CGRect, id owner, void* userData, bool assumeInside);
     NSTrackingRectTag addTrackingRectWithTrackingNum(CGRect, id owner, void* userData, bool assumeInside, int tag);
-    void addTrackingRectsWithTrackingNums(CGRect*, id owner, void** userDataList, bool assumeInside, NSTrackingRectTag *trackingNums, int count);
+    void addTrackingRectsWithTrackingNums(Vector<CGRect>, id owner, void** userDataList, bool assumeInside, NSTrackingRectTag *trackingNums);
     void removeTrackingRect(NSTrackingRectTag);
-    void removeTrackingRects(NSTrackingRectTag *, int count);
+    void removeTrackingRects(std::span<NSTrackingRectTag>);
     NSString *stringForToolTip(NSToolTipTag tag);
     void toolTipChanged(const String& oldToolTip, const String& newToolTip);
 
@@ -539,13 +545,14 @@ public:
     NSArray *namesOfPromisedFilesDroppedAtDestination(NSURL *dropDestination);
 
     RefPtr<ViewSnapshot> takeViewSnapshot();
+    RefPtr<ViewSnapshot> takeViewSnapshot(ForceSoftwareCapturingViewportSnapshot);
     void saveBackForwardSnapshotForCurrentItem();
     void saveBackForwardSnapshotForItem(WebBackForwardListItem&);
 
     void insertTextPlaceholderWithSize(CGSize, void(^completionHandler)(NSTextPlaceholder *));
     void removeTextPlaceholder(NSTextPlaceholder *, bool willInsertText, void(^completionHandler)());
 
-    WKSafeBrowsingWarning *safeBrowsingWarning() { return m_safeBrowsingWarning.get(); }
+    _WKWarningView *warningView() { return m_warningView.get(); }
 
     ViewGestureController* gestureController() { return m_gestureController.get(); }
     ViewGestureController& ensureGestureController();
@@ -619,6 +626,7 @@ public:
 
     void createFlagsChangedEventMonitor();
     void removeFlagsChangedEventMonitor();
+    bool hasFlagsChangedEventMonitor();
 
     void mouseMoved(NSEvent *);
     void mouseDown(NSEvent *);
@@ -671,7 +679,8 @@ public:
     bool isPictureInPictureActive();
     void togglePictureInPicture();
     bool isInWindowFullscreenActive() const;
-    void toggleInWindowFullscreen();
+    void enterInWindowFullscreen();
+    void exitInWindowFullscreen();
     void updateMediaPlaybackControlsManager();
 
     AVTouchBarScrubber *mediaPlaybackControlsView() const;
@@ -716,13 +725,8 @@ public:
     void handleContextMenuTranslation(const WebCore::TranslationContextMenuInfo&);
 #endif
 
-#if ENABLE(WRITING_TOOLS)
-    WebCore::WritingTools::Behavior writingToolsBehavior() const;
-#endif
-
 #if ENABLE(WRITING_TOOLS) && ENABLE(CONTEXT_MENUS)
     bool canHandleContextMenuWritingTools() const;
-    void handleContextMenuWritingTools(WebCore::IntRect selectionBoundsInRootView);
 #endif
 
 #if ENABLE(MEDIA_SESSION_COORDINATOR)
@@ -746,9 +750,13 @@ public:
     bool inlinePredictionsEnabled() const { return m_inlinePredictionsEnabled; }
 #endif
 
-#if ENABLE(WRITING_TOOLS_UI)
-    void addTextAnimationForAnimationID(WTF::UUID, const WebKit::TextAnimationData&);
+#if ENABLE(WRITING_TOOLS)
+    void showWritingTools(WTRequestedTool = WTRequestedToolIndex);
+
+    void addTextAnimationForAnimationID(WTF::UUID, const WebCore::TextAnimationData&);
     void removeTextAnimationForAnimationID(WTF::UUID);
+
+    void hideTextAnimationView();
 #endif
 
 #if HAVE(INLINE_PREDICTIONS)
@@ -765,8 +773,10 @@ private:
     bool isRichlyEditableForTouchBar() const;
 
 #if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
-    void installImageAnalysisOverlayView(VKCImageAnalysis *);
+    void installImageAnalysisOverlayView(RetainPtr<VKCImageAnalysis>&&);
     void uninstallImageAnalysisOverlayView();
+    void performOrDeferImageAnalysisOverlayViewHierarchyTask(std::function<void()>&&);
+    void fulfillDeferredImageAnalysisOverlayViewHierarchyTask();
 #endif
 
     bool hasContentRelativeChildViews() const;
@@ -799,9 +809,6 @@ private:
 
     bool supportsArbitraryLayoutModes() const;
     float intrinsicDeviceScaleFactor() const;
-
-    void scheduleSetTopContentInsetDispatch();
-    void dispatchSetTopContentInset();
 
     void sendToolTipMouseExited();
     void sendToolTipMouseEntered();
@@ -852,12 +859,10 @@ private:
 
 #if ENABLE(IMAGE_ANALYSIS)
     CocoaImageAnalyzer *ensureImageAnalyzer();
-    int32_t processImageAnalyzerRequest(CocoaImageAnalyzerRequest *, CompletionHandler<void(CocoaImageAnalysis *, NSError *)>&&);
+    int32_t processImageAnalyzerRequest(CocoaImageAnalyzerRequest *, CompletionHandler<void(RetainPtr<CocoaImageAnalysis>&&, NSError *)>&&);
 #endif
 
     std::optional<EditorState::PostLayoutData> postLayoutDataForContentEditable();
-
-    Ref<WebPageProxy> protectedPage() const;
 
     WeakObjCPtr<NSView<WebViewImplDelegate>> m_view;
     std::unique_ptr<PageClient> m_pageClient;
@@ -876,10 +881,6 @@ private:
     bool m_didScheduleWindowAndViewFrameUpdate { false };
     bool m_windowOcclusionDetectionEnabled { true };
 
-    bool m_automaticallyAdjustsContentInsets { false };
-    std::optional<CGFloat> m_pendingTopContentInset;
-    bool m_didScheduleSetTopContentInsetDispatch { false };
-    
     CGSize m_scrollOffsetAdjustment { 0, 0 };
 
     CGSize m_intrinsicContentSize { 0, 0 };
@@ -955,7 +956,7 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     RetainPtr<WKBrowsingContextController> m_browsingContextController;
 ALLOW_DEPRECATED_DECLARATIONS_END
 
-    std::unique_ptr<ViewGestureController> m_gestureController;
+    RefPtr<ViewGestureController> m_gestureController;
     bool m_allowsBackForwardNavigationGestures { false };
     bool m_allowsMagnification { false };
 
@@ -982,14 +983,14 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     bool m_isHandlingAcceptedCandidate { false };
     bool m_editableElementIsFocused { false };
     bool m_isTextInsertionReplacingSoftSpace { false };
-    RetainPtr<WKSafeBrowsingWarning> m_safeBrowsingWarning;
+    RetainPtr<_WKWarningView> m_warningView;
     
 #if ENABLE(DRAG_SUPPORT)
     NSInteger m_initialNumberOfValidItemsForDrop { 0 };
 #endif
 
 #if ENABLE(WRITING_TOOLS)
-    RetainPtr<WKTextAnimationManager> m_TextAnimationTypeManager;
+    RetainPtr<WKTextAnimationManager> m_textAnimationTypeManager;
 #endif
 
 #if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
@@ -1020,6 +1021,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     RetainPtr<WKImageAnalysisOverlayViewDelegate> m_imageAnalysisOverlayViewDelegate;
     uint32_t m_currentImageAnalysisRequestID { 0 };
     WebCore::FloatRect m_imageAnalysisInteractionBounds;
+    std::function<void()> m_imageAnalysisOverlayViewHierarchyDeferredTask;
 #endif
 
 #if HAVE(TRANSLATION_UI_SERVICES) && ENABLE(CONTEXT_MENUS)

@@ -40,6 +40,7 @@
 #include <wtf/FixedVector.h>
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
@@ -77,8 +78,8 @@ class PlaceholderRenderingContext;
 class PlaceholderRenderingContextSource;
 
 class DetachedOffscreenCanvas {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(DetachedOffscreenCanvas, WEBCORE_EXPORT);
     WTF_MAKE_NONCOPYABLE(DetachedOffscreenCanvas);
-    WTF_MAKE_FAST_ALLOCATED;
     friend class OffscreenCanvas;
 
 public:
@@ -95,8 +96,10 @@ private:
 };
 
 class OffscreenCanvas final : public ActiveDOMObject, public RefCounted<OffscreenCanvas>, public CanvasBase, public EventTarget {
-    WTF_MAKE_ISO_ALLOCATED_EXPORT(OffscreenCanvas, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(OffscreenCanvas, WEBCORE_EXPORT);
 public:
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     struct ImageEncodeOptions {
         String type = "image/png"_s;
@@ -136,8 +139,6 @@ public:
     Image* copiedImage() const final;
     void clearCopiedImage() const final;
 
-    bool hasCreatedImageBuffer() const final { return m_hasCreatedImageBuffer; }
-
     SecurityOrigin* securityOrigin() const final;
 
     bool canDetach() const;
@@ -148,10 +149,6 @@ public:
     void queueTaskKeepingObjectAlive(TaskSource, Function<void()>&&) final;
     void dispatchEvent(Event&) final;
     bool isDetached() const { return m_detached; };
-
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
 
 private:
     OffscreenCanvas(ScriptExecutionContext&, IntSize, RefPtr<PlaceholderRenderingContextSource>&&);
@@ -178,8 +175,6 @@ private:
     std::unique_ptr<CanvasRenderingContext> m_context;
     RefPtr<PlaceholderRenderingContextSource> m_placeholderSource;
     mutable RefPtr<Image> m_copiedImage;
-    // m_hasCreatedImageBuffer means we tried to malloc the buffer. We didn't necessarily get it.
-    mutable bool m_hasCreatedImageBuffer { false };
     bool m_detached { false };
     bool m_hasScheduledCommit { false };
 

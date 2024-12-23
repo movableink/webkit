@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/MediaTime.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
 namespace WTF {
@@ -42,7 +43,7 @@ enum class AddTimeRangeOption : uint8_t {
 };
 
 class WEBCORE_EXPORT PlatformTimeRanges final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(PlatformTimeRanges, WEBCORE_EXPORT);
 public:
     PlatformTimeRanges();
     PlatformTimeRanges(const MediaTime& start, const MediaTime& end);
@@ -142,10 +143,11 @@ private:
 } // namespace WebCore
 
 namespace WTF {
+
 template<typename> struct LogArgument;
 
 template<> struct LogArgument<WebCore::PlatformTimeRanges> {
-    static String toString(const WebCore::PlatformTimeRanges& platformTimeRanges) { return platformTimeRanges.toString(); }
+    WEBCORE_EXPORT static String toString(const WebCore::PlatformTimeRanges&);
 };
 
 } // namespace WTF

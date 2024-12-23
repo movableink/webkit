@@ -26,9 +26,10 @@
 #pragma once
 
 #include <WebCore/CryptoClient.h>
+#include <wtf/TZoneMalloc.h>
 
 class CryptoClientQt:  public WebCore::CryptoClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(CryptoClientQt);
 public:
     CryptoClientQt() = default;
     ~CryptoClientQt() = default;

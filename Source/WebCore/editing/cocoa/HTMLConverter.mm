@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #import "HTMLConverter.h"
 
 #import "ArchiveResource.h"
+#import "CSSColorValue.h"
 #import "CSSComputedStyleDeclaration.h"
 #import "CSSParser.h"
 #import "CSSPrimitiveValue.h"
@@ -74,11 +75,17 @@
 #import <objc/runtime.h>
 #import <pal/spi/cocoa/NSAttributedStringSPI.h>
 #import <wtf/ASCIICType.h>
+#import <wtf/TZoneMallocInlines.h>
+#import <wtf/text/MakeString.h>
 #import <wtf/text/StringBuilder.h>
 #import <wtf/text/StringToIntegerConversion.h>
 
 #if ENABLE(DATA_DETECTION)
 #import "DataDetection.h"
+#endif
+
+#if ENABLE(MULTI_REPRESENTATION_HEIC)
+#import "PlatformNSAdaptiveImageGlyph.h"
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -88,13 +95,14 @@
 #import <pal/spi/ios/UIKitSPI.h>
 #endif
 
-#if USE(APPLE_INTERNAL_SDK)
-#include <WebKitAdditions/WebMultiRepresentationHEICAttachmentAdditions.h>
-#include <WebKitAdditions/WebMultiRepresentationHEICAttachmentDeclarationsAdditions.h>
-#endif
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 using namespace WebCore;
 using namespace HTMLNames;
+
+#if ENABLE(WRITING_TOOLS)
+NSAttributedStringKey const WTWritingToolsPreservedAttributeName = @"WTWritingToolsPreserved";
+#endif
 
 #if PLATFORM(IOS_FAMILY)
 
@@ -127,7 +135,7 @@ static const CGFloat defaultFontSize = 12;
 static const CGFloat minimumFontSize = 1;
 
 class HTMLConverterCaches {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(HTMLConverterCaches);
 public:
     String propertyValueForNode(Node&, CSSPropertyID );
     bool floatPropertyValueForNode(Node&, CSSPropertyID, float&);
@@ -143,9 +151,11 @@ public:
     bool isAncestorsOfStartToBeConverted(Node& node) const { return m_ancestorsUnderCommonAncestor.contains(&node); }
 
 private:
-    HashMap<Element*, std::unique_ptr<ComputedStyleExtractor>> m_computedStyles;
+    UncheckedKeyHashMap<Element*, std::unique_ptr<ComputedStyleExtractor>> m_computedStyles;
     HashSet<Ref<Node>> m_ancestorsUnderCommonAncestor;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLConverterCaches);
 
 @interface NSTextList (WebCoreNSTextListDetails)
 + (NSDictionary *)_standardMarkerAttributesForAttributes:(NSDictionary *)attrs;
@@ -162,7 +172,7 @@ private:
 
 class HTMLConverter {
 public:
-    explicit HTMLConverter(const SimpleRange&);
+    explicit HTMLConverter(const SimpleRange&, IgnoreUserSelectNone);
     ~HTMLConverter();
 
     AttributedString convert();
@@ -172,9 +182,9 @@ private:
     Position m_end;
     DocumentLoader* m_dataSource { nullptr };
     
-    HashMap<RefPtr<Element>, RetainPtr<NSDictionary>> m_attributesForElements;
-    HashMap<RetainPtr<CFTypeRef>, RefPtr<Element>> m_textTableFooters;
-    HashMap<RefPtr<Element>, RetainPtr<NSDictionary>> m_aggregatedAttributesForElements;
+    UncheckedKeyHashMap<RefPtr<Element>, RetainPtr<NSDictionary>> m_attributesForElements;
+    UncheckedKeyHashMap<RetainPtr<CFTypeRef>, RefPtr<Element>> m_textTableFooters;
+    UncheckedKeyHashMap<RefPtr<Element>, RetainPtr<NSDictionary>> m_aggregatedAttributesForElements;
 
     UserSelectNoneStateCache m_userSelectNoneStateCache;
     bool m_ignoreUserSelectNoneContent { false };
@@ -249,11 +259,11 @@ private:
     void _adjustTrailingNewline();
 };
 
-HTMLConverter::HTMLConverter(const SimpleRange& range)
+HTMLConverter::HTMLConverter(const SimpleRange& range, IgnoreUserSelectNone treatment)
     : m_start(makeContainerOffsetPosition(range.start))
     , m_end(makeContainerOffsetPosition(range.end))
     , m_userSelectNoneStateCache(ComposedTree)
-    , m_ignoreUserSelectNoneContent(!range.start.document().quirks().needsToCopyUserSelectNoneQuirk())
+    , m_ignoreUserSelectNoneContent(treatment == IgnoreUserSelectNone::Yes && !range.start.document().quirks().needsToCopyUserSelectNoneQuirk())
 {
     _attrStr = adoptNS([[NSMutableAttributedString alloc] init]);
     _documentAttrs = adoptNS([[NSMutableDictionary alloc] init]);
@@ -462,7 +472,7 @@ static bool stringFromCSSValue(CSSValue& value, String& result)
                 return true;
             }
         }
-    } else if (value.isValueList()) {
+    } else if (value.isValueList() || value.isAppleColorFilterPropertyValue() || value.isFilterPropertyValue() || value.isTextShadowPropertyValue() || value.isBoxShadowPropertyValue()) {
         result = value.cssText();
         return true;
     }
@@ -636,28 +646,15 @@ String HTMLConverterCaches::propertyValueForNode(Node& node, CSSPropertyID prope
 
 static inline bool floatValueFromPrimitiveValue(CSSPrimitiveValue& primitiveValue, float& result)
 {
-    // FIXME: Use CSSPrimitiveValue::computeValue.
     switch (primitiveValue.primitiveType()) {
     case CSSUnitType::CSS_PX:
-        result = primitiveValue.floatValue(CSSUnitType::CSS_PX);
-        return true;
     case CSSUnitType::CSS_PT:
-        result = 4 * primitiveValue.floatValue(CSSUnitType::CSS_PT) / 3;
-        return true;
     case CSSUnitType::CSS_PC:
-        result = 16 * primitiveValue.floatValue(CSSUnitType::CSS_PC);
-        return true;
     case CSSUnitType::CSS_CM:
-        result = 96 * primitiveValue.floatValue(CSSUnitType::CSS_PC) / 2.54;
-        return true;
     case CSSUnitType::CSS_MM:
-        result = 96 * primitiveValue.floatValue(CSSUnitType::CSS_PC) / 25.4;
-        return true;
     case CSSUnitType::CSS_Q:
-        result = 96 * primitiveValue.floatValue(CSSUnitType::CSS_PC) / (25.4 * 4.0);
-        return true;
     case CSSUnitType::CSS_IN:
-        result = 96 * primitiveValue.floatValue(CSSUnitType::CSS_IN);
+        result = primitiveValue.resolveAsLengthDeprecated();
         return true;
     default:
         return false;
@@ -818,12 +815,12 @@ Color HTMLConverterCaches::colorPropertyValueForNode(Node& node, CSSPropertyID p
     bool ignoreDefaultColor = propertyId == CSSPropertyColor;
 
     if (auto value = computedStylePropertyForElement(*element, propertyId); value && value->isColor())
-        return normalizedColor(value->color(), ignoreDefaultColor, *element);
+        return normalizedColor(CSSColorValue::absoluteColor(*value), ignoreDefaultColor, *element);
 
     bool inherit = false;
     if (auto value = inlineStylePropertyForElement(*element, propertyId)) {
         if (value->isColor())
-            return normalizedColor(value->color(), ignoreDefaultColor, *element);
+            return normalizedColor(CSSColorValue::absoluteColor(*value), ignoreDefaultColor, *element);
         if (isValueID(*value, CSSValueInherit))
             inherit = true;
     }
@@ -1214,7 +1211,7 @@ BOOL HTMLConverter::_addMultiRepresentationHEICAttachmentForImageElement(HTMLIma
     if (!image)
         return NO;
 
-    WebMultiRepresentationHEICAttachment *attachment = image->adapter().multiRepresentationHEIC();
+    NSAdaptiveImageGlyph *attachment = image->adapter().multiRepresentationHEIC();
     if (!attachment)
         return NO;
 
@@ -1228,7 +1225,7 @@ BOOL HTMLConverter::_addMultiRepresentationHEICAttachmentForImageElement(HTMLIma
     if (rangeToReplace.location < _domRangeStartIndex)
         _domRangeStartIndex += rangeToReplace.length;
 
-    [_attrStr addAttribute:WebMultiRepresentationHEICAttachmentAttributeName value:attachment range:rangeToReplace];
+    [_attrStr addAttribute:NSAdaptiveImageGlyphAttributeName value:attachment range:rangeToReplace];
 
     _flags.isSoft = NO;
     return YES;
@@ -1300,9 +1297,9 @@ BOOL HTMLConverter::_addAttachmentForElement(Element& element, NSURL *url, BOOL 
         if (RetainPtr data = [fileWrapper regularFileContents]) {
             RefPtr imageElement = dynamicDowncast<HTMLImageElement>(element);
             if (imageElement && imageElement->isMultiRepresentationHEIC())
-                attachment = adoptNS([[PlatformWebMultiRepresentationHEICAttachment alloc] initWithImageContent:data.get()]);
+                attachment = adoptNS([[PlatformNSAdaptiveImageGlyph alloc] initWithImageContent:data.get()]);
             if (attachment)
-                attributeName = WebMultiRepresentationHEICAttachmentAttributeName;
+                attributeName = NSAdaptiveImageGlyphAttributeName;
         }
 #endif
 
@@ -2158,7 +2155,7 @@ void HTMLConverter::_processText(Text& text)
     if (outputString.length()) {
         String textTransform = _caches->propertyValueForNode(text, CSSPropertyTextTransform);
         if (textTransform == "capitalize"_s)
-            outputString = capitalize(outputString, ' '); // FIXME: Needs to take locale into account to work correctly.
+            outputString = capitalize(outputString); // FIXME: Needs to take locale into account to work correctly.
         else if (textTransform == "uppercase"_s)
             outputString = outputString.convertToUppercaseWithoutLocale(); // FIXME: Needs locale to work correctly.
         else if (textTransform == "lowercase"_s)
@@ -2407,15 +2404,24 @@ static RetainPtr<NSFileWrapper> fileWrapperForElement(const HTMLAttachmentElemen
     return wrapper;
 }
 
+static RetainPtr<NSAttributedString> attributedStringWithAttachmentForFileWrapper(NSFileWrapper *fileWrapper)
+{
+    if (!fileWrapper)
+        return adoptNS([[NSAttributedString alloc] initWithString:@" "]).autorelease();
+
+    RetainPtr attachment = adoptNS([[PlatformNSTextAttachment alloc] initWithFileWrapper:fileWrapper]);
+    return [NSAttributedString attributedStringWithAttachment:attachment.get()];
+}
+
 static RetainPtr<NSAttributedString> attributedStringWithAttachmentForElement(const HTMLImageElement& element)
 {
 #if ENABLE(MULTI_REPRESENTATION_HEIC)
     if (element.isMultiRepresentationHEIC()) {
         if (RefPtr image = element.image()) {
-            if (WebMultiRepresentationHEICAttachment *attachment = image->adapter().multiRepresentationHEIC()) {
+            if (NSAdaptiveImageGlyph *attachment = image->adapter().multiRepresentationHEIC()) {
                 RetainPtr attachmentString = adoptNS([[NSString alloc] initWithFormat:@"%C", static_cast<unichar>(NSAttachmentCharacter)]);
                 RetainPtr attributedString = adoptNS([[NSMutableAttributedString alloc] initWithString:attachmentString.get()]);
-                [attributedString addAttribute:WebMultiRepresentationHEICAttachmentAttributeName value:attachment range:NSMakeRange(0, 1)];
+                [attributedString addAttribute:NSAdaptiveImageGlyphAttributeName value:attachment range:NSMakeRange(0, 1)];
                 return attributedString;
             }
         }
@@ -2423,45 +2429,211 @@ static RetainPtr<NSAttributedString> attributedStringWithAttachmentForElement(co
 #endif
 
     RetainPtr fileWrapper = fileWrapperForElement(element);
-    RetainPtr attachment = adoptNS([[PlatformNSTextAttachment alloc] initWithFileWrapper:fileWrapper.get()]);
-    return [NSAttributedString attributedStringWithAttachment:attachment.get()];
+    return attributedStringWithAttachmentForFileWrapper(fileWrapper.get());
 }
 
 static RetainPtr<NSAttributedString> attributedStringWithAttachmentForElement(const HTMLAttachmentElement& element)
 {
     RetainPtr fileWrapper = fileWrapperForElement(element);
-    RetainPtr attachment = adoptNS([[PlatformNSTextAttachment alloc] initWithFileWrapper:fileWrapper.get()]);
-    return [NSAttributedString attributedStringWithAttachment:attachment.get()];
+    return attributedStringWithAttachmentForFileWrapper(fileWrapper.get());
+}
+
+template<typename Data>
+using ElementCache = WeakHashMap<Element, Data, WeakPtrImplWithEventTargetData>;
+
+#if ENABLE(WRITING_TOOLS)
+static bool elementQualifiesForWritingToolsPreservation(Element* element)
+{
+    // If the element is a mail blockquote, it should be preserved after a Writing Tools composition.
+    if (isMailBlockquote(*element))
+        return true;
+
+    // If the element is a tab span node, it is a tab character with `whitespace:pre`, and need not be preserved.
+    if (tabSpanNode(element))
+        return false;
+
+    // If the element has no renderer, it can't have `whitespace:pre` so it need not be preserved.
+    auto renderer = element->renderer();
+    if (!renderer)
+        return false;
+
+    // If the element has `whitespace:pre` (except for the aforementioned exceptions), it should be preserved.
+    if (renderer->style().whiteSpace() == WhiteSpace::Pre)
+        return true;
+
+    // Otherwise, it need not be preserved.
+    return false;
+}
+
+static bool hasAncestorQualifyingForWritingToolsPreservation(Element* ancestor, ElementCache<bool>& cache)
+{
+    if (!ancestor)
+        return false;
+
+    auto entry = cache.find(*ancestor);
+    if (entry == cache.end()) {
+        auto result = elementQualifiesForWritingToolsPreservation(ancestor) || hasAncestorQualifyingForWritingToolsPreservation(ancestor->parentElement(), cache);
+
+        cache.set(*ancestor, result);
+        return result;
+    }
+
+    return entry->value;
+}
+#endif // ENABLE(WRITING_TOOLS)
+
+static RefPtr<Element> enclosingLinkElement(const Node& node, ElementCache<RefPtr<Element>>& cache)
+{
+    Vector<Ref<Element>> ancestors;
+    RefPtr<Element> result;
+    for (RefPtr ancestor = node.parentElementInComposedTree(); ancestor; ancestor = ancestor->parentElementInComposedTree()) {
+        if (ancestor->isLink()) {
+            result = ancestor.get();
+            break;
+        }
+
+        auto entry = cache.find(*ancestor);
+        if (entry != cache.end()) {
+            result = entry->value;
+            break;
+        }
+
+        ancestors.append(*ancestor);
+    }
+
+    for (auto& ancestor : ancestors)
+        cache.add(ancestor.get(), result);
+
+    return result;
+}
+
+static void updateAttributes(const Node* node, const RenderStyle& style, OptionSet<IncludedElement> includedElements,
+    ElementCache<bool>& elementQualifiesForWritingToolsPreservationCache, ElementCache<RefPtr<Element>>& enclosingLinkCache, NSMutableDictionary<NSAttributedStringKey, id> *attributes)
+{
+#if ENABLE(WRITING_TOOLS)
+    if (includedElements.contains(IncludedElement::PreservedContent)) {
+        if (hasAncestorQualifyingForWritingToolsPreservation(node->parentElement(), elementQualifiesForWritingToolsPreservationCache))
+            [attributes setObject:@(1) forKey:WTWritingToolsPreservedAttributeName];
+        else
+            [attributes removeObjectForKey:WTWritingToolsPreservedAttributeName];
+    }
+#else
+    UNUSED_PARAM(node);
+    UNUSED_PARAM(includedElements);
+    UNUSED_PARAM(elementQualifiesForWritingToolsPreservationCache);
+#endif
+
+    if (style.textDecorationsInEffect() & TextDecorationLine::Underline)
+        [attributes setObject:[NSNumber numberWithInteger:NSUnderlineStyleSingle] forKey:NSUnderlineStyleAttributeName];
+    else
+        [attributes removeObjectForKey:NSUnderlineStyleAttributeName];
+
+    if (style.textDecorationsInEffect() & TextDecorationLine::LineThrough)
+        [attributes setObject:[NSNumber numberWithInteger:NSUnderlineStyleSingle] forKey:NSStrikethroughStyleAttributeName];
+    else
+        [attributes removeObjectForKey:NSStrikethroughStyleAttributeName];
+
+    if (auto ctFont = style.fontCascade().primaryFont().getCTFont())
+        [attributes setObject:(__bridge PlatformFont *)ctFont forKey:NSFontAttributeName];
+    else {
+        auto size = style.fontCascade().primaryFont().platformData().size();
+#if PLATFORM(IOS_FAMILY)
+        PlatformFont *platformFont = [PlatformFontClass systemFontOfSize:size];
+#else
+        PlatformFont *platformFont = [[NSFontManager sharedFontManager] convertFont:WebDefaultFont() toSize:size];
+#endif
+        [attributes setObject:platformFont forKey:NSFontAttributeName];
+    }
+
+    auto textAlignment = NSTextAlignmentNatural;
+    switch (style.textAlign()) {
+    case TextAlignMode::Right:
+    case TextAlignMode::WebKitRight:
+        textAlignment = NSTextAlignmentRight;
+        break;
+    case TextAlignMode::Left:
+    case TextAlignMode::WebKitLeft:
+        textAlignment = NSTextAlignmentLeft;
+        break;
+    case TextAlignMode::Center:
+    case TextAlignMode::WebKitCenter:
+        textAlignment = NSTextAlignmentCenter;
+        break;
+    case TextAlignMode::Justify:
+        textAlignment = NSTextAlignmentJustified;
+        break;
+    case TextAlignMode::Start:
+        if (style.hasExplicitlySetDirection())
+            textAlignment = style.isLeftToRightDirection() ? NSTextAlignmentLeft : NSTextAlignmentRight;
+        break;
+    case TextAlignMode::End:
+        textAlignment = style.isLeftToRightDirection() ? NSTextAlignmentRight : NSTextAlignmentLeft;
+        break;
+    default:
+        ASSERT_NOT_REACHED();
+        break;
+    }
+
+    if (textAlignment != NSTextAlignmentNatural) {
+        auto paragraphStyle = adoptNS([PlatformNSParagraphStyle defaultParagraphStyle].mutableCopy);
+        [paragraphStyle setAlignment:textAlignment];
+        [attributes setObject:paragraphStyle.get() forKey:NSParagraphStyleAttributeName];
+    }
+
+    Color foregroundColor = style.visitedDependentColorWithColorFilter(CSSPropertyColor);
+    if (foregroundColor.isVisible())
+        [attributes setObject:cocoaColor(foregroundColor).get() forKey:NSForegroundColorAttributeName];
+    else
+        [attributes removeObjectForKey:NSForegroundColorAttributeName];
+
+    Color backgroundColor = style.visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor);
+    if (backgroundColor.isVisible())
+        [attributes setObject:cocoaColor(backgroundColor).get() forKey:NSBackgroundColorAttributeName];
+    else
+        [attributes removeObjectForKey:NSBackgroundColorAttributeName];
+
+    auto linkURL = [&] -> URL {
+        RefPtr enclosingLink = enclosingLinkElement(*node, enclosingLinkCache);
+        if (!enclosingLink)
+            return { };
+
+        return enclosingLink->absoluteLinkURL();
+    }();
+
+    if (linkURL.isEmpty())
+        [attributes removeObjectForKey:NSLinkAttributeName];
+    else
+        [attributes setObject:(NSURL *)linkURL forKey:NSLinkAttributeName];
+
 }
 
 namespace WebCore {
 
 // This function supports more HTML features than the editing variant below, such as tables.
-AttributedString attributedString(const SimpleRange& range)
+AttributedString attributedString(const SimpleRange& range, IgnoreUserSelectNone treatment)
 {
-    return HTMLConverter { range }.convert();
+    return HTMLConverter { range, treatment }.convert();
 }
 
 // This function uses TextIterator, which makes offsets in its result compatible with HTML editing.
 AttributedString editingAttributedString(const SimpleRange& range, OptionSet<IncludedElement> includedElements)
 {
-#if PLATFORM(MAC)
-    auto fontManager = [NSFontManager sharedFontManager];
-#endif
+    ElementCache<RefPtr<Element>> enclosingLinkCache;
+    ElementCache<bool> elementQualifiesForWritingToolsPreservationCache;
 
-    auto string = adoptNS([[NSMutableAttributedString alloc] init]);
-    auto attrs = adoptNS([[NSMutableDictionary alloc] init]);
+    RetainPtr string = adoptNS([[NSMutableAttributedString alloc] init]);
+    RetainPtr attributes = adoptNS([[NSMutableDictionary alloc] init]);
     NSUInteger stringLength = 0;
     for (TextIterator it(range); !it.atEnd(); it.advance()) {
-        auto node = it.node();
+        RefPtr node = it.node();
 
-        if (RefPtr imageElement = dynamicDowncast<HTMLImageElement>(node); imageElement && includedElements.contains(IncludedElement::Images)) {
+        if (RefPtr imageElement = dynamicDowncast<HTMLImageElement>(node.get()); imageElement && includedElements.contains(IncludedElement::Images)) {
             RetainPtr attachmentAttributedString = attributedStringWithAttachmentForElement(*imageElement);
             [string appendAttributedString:attachmentAttributedString.get()];
             stringLength += [attachmentAttributedString length];
         }
 
-        if (RefPtr attachmentElement = dynamicDowncast<HTMLAttachmentElement>(node); attachmentElement && includedElements.contains(IncludedElement::Attachments)) {
+        if (RefPtr attachmentElement = dynamicDowncast<HTMLAttachmentElement>(node.get()); attachmentElement && includedElements.contains(IncludedElement::Attachments)) {
             RetainPtr attachmentAttributedString = attributedStringWithAttachmentForElement(*attachmentElement);
             [string appendAttributedString:attachmentAttributedString.get()];
             stringLength += [attachmentAttributedString length];
@@ -2476,88 +2648,20 @@ AttributedString editingAttributedString(const SimpleRange& range, OptionSet<Inc
         if (!node)
             node = it.range().start.container.ptr();
         auto renderer = node->renderer();
-        ASSERT(renderer);
-        if (!renderer)
+
+        if (renderer)
+            updateAttributes(node.get(), renderer->style(), includedElements, elementQualifiesForWritingToolsPreservationCache, enclosingLinkCache, attributes.get());
+        else if (!includedElements.contains(IncludedElement::NonRenderedContent))
             continue;
-        auto& style = renderer->style();
-
-        if (style.textDecorationsInEffect() & TextDecorationLine::Underline)
-            [attrs setObject:[NSNumber numberWithInteger:NSUnderlineStyleSingle] forKey:NSUnderlineStyleAttributeName];
-        else
-            [attrs removeObjectForKey:NSUnderlineStyleAttributeName];
-
-        if (style.textDecorationsInEffect() & TextDecorationLine::LineThrough)
-            [attrs setObject:[NSNumber numberWithInteger:NSUnderlineStyleSingle] forKey:NSStrikethroughStyleAttributeName];
-        else
-            [attrs removeObjectForKey:NSStrikethroughStyleAttributeName];
-
-        if (auto ctFont = style.fontCascade().primaryFont().getCTFont())
-            [attrs setObject:(__bridge PlatformFont *)ctFont forKey:NSFontAttributeName];
-        else {
-            auto size = style.fontCascade().primaryFont().platformData().size();
-#if PLATFORM(IOS_FAMILY)
-            PlatformFont *platformFont = [PlatformFontClass systemFontOfSize:size];
-#else
-            PlatformFont *platformFont = [fontManager convertFont:WebDefaultFont() toSize:size];
-#endif
-            [attrs setObject:platformFont forKey:NSFontAttributeName];
-        }
-
-        auto textAlignment = NSTextAlignmentNatural;
-        switch (style.textAlign()) {
-        case TextAlignMode::Right:
-        case TextAlignMode::WebKitRight:
-            textAlignment = NSTextAlignmentRight;
-            break;
-        case TextAlignMode::Left:
-        case TextAlignMode::WebKitLeft:
-            textAlignment = NSTextAlignmentLeft;
-            break;
-        case TextAlignMode::Center:
-        case TextAlignMode::WebKitCenter:
-            textAlignment = NSTextAlignmentCenter;
-            break;
-        case TextAlignMode::Justify:
-            textAlignment = NSTextAlignmentJustified;
-            break;
-        case TextAlignMode::Start:
-            if (style.hasExplicitlySetDirection())
-                textAlignment = style.isLeftToRightDirection() ? NSTextAlignmentLeft : NSTextAlignmentRight;
-            break;
-        case TextAlignMode::End:
-            textAlignment = style.isLeftToRightDirection() ? NSTextAlignmentRight : NSTextAlignmentLeft;
-            break;
-        default:
-            ASSERT_NOT_REACHED();
-            break;
-        }
-
-        if (textAlignment != NSTextAlignmentNatural) {
-            auto paragraphStyle = adoptNS([PlatformNSParagraphStyle defaultParagraphStyle].mutableCopy);
-            [paragraphStyle setAlignment:textAlignment];
-            [attrs setObject:paragraphStyle.get() forKey:NSParagraphStyleAttributeName];
-        }
-
-        Color foregroundColor = style.visitedDependentColorWithColorFilter(CSSPropertyColor);
-        if (foregroundColor.isVisible())
-            [attrs setObject:cocoaColor(foregroundColor).get() forKey:NSForegroundColorAttributeName];
-        else
-            [attrs removeObjectForKey:NSForegroundColorAttributeName];
-
-        Color backgroundColor = style.visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor);
-        if (backgroundColor.isVisible())
-            [attrs setObject:cocoaColor(backgroundColor).get() forKey:NSBackgroundColorAttributeName];
-        else
-            [attrs removeObjectForKey:NSBackgroundColorAttributeName];
 
         RetainPtr<NSString> text;
-        if (style.nbspMode() == NBSPMode::Normal)
+        if (!renderer || renderer->style().nbspMode() == NBSPMode::Normal)
             text = it.text().createNSStringWithoutCopying();
         else
             text = makeStringByReplacingAll(it.text(), noBreakSpace, ' ');
 
         [string replaceCharactersInRange:NSMakeRange(stringLength, 0) withString:text.get()];
-        [string setAttributes:attrs.get() range:NSMakeRange(stringLength, currentTextLength)];
+        [string setAttributes:attributes.get() range:NSMakeRange(stringLength, currentTextLength)];
         stringLength += currentTextLength;
     }
 
@@ -2565,3 +2669,5 @@ AttributedString editingAttributedString(const SimpleRange& range, OptionSet<Inc
 }
     
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

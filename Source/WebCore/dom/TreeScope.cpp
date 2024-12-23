@@ -32,6 +32,7 @@
 #include "Attr.h"
 #include "CSSStyleSheet.h"
 #include "CSSStyleSheetObservableArray.h"
+#include "CustomElementRegistry.h"
 #include "FocusController.h"
 #include "HTMLAnchorElement.h"
 #include "HTMLFrameOwnerElement.h"
@@ -62,7 +63,7 @@
 namespace WebCore {
 
 struct SameSizeAsTreeScope {
-    void* pointers[12];
+    void* pointers[13];
 };
 
 static_assert(sizeof(TreeScope) == sizeof(SameSizeAsTreeScope), "treescope should stay small");
@@ -79,10 +80,11 @@ struct SVGResourcesMap {
     MemoryCompactRobinHoodHashMap<AtomString, LegacyRenderSVGResourceContainer*> legacyResources;
 };
 
-TreeScope::TreeScope(ShadowRoot& shadowRoot, Document& document)
+TreeScope::TreeScope(ShadowRoot& shadowRoot, Document& document, RefPtr<CustomElementRegistry>&& registry)
     : m_rootNode(shadowRoot)
     , m_documentScope(document)
     , m_parentTreeScope(&document)
+    , m_customElementRegistry(WTFMove(registry))
 {
     shadowRoot.setTreeScope(*this);
 }
@@ -99,18 +101,18 @@ TreeScope::~TreeScope() = default;
 
 void TreeScope::ref() const
 {
-    if (auto* document = dynamicDowncast<Document>(m_rootNode))
+    if (auto* document = dynamicDowncast<Document>(m_rootNode.get()))
         document->ref();
     else
-        downcast<ShadowRoot>(m_rootNode).ref();
+        downcast<ShadowRoot>(m_rootNode.get()).ref();
 }
 
 void TreeScope::deref() const
 {
-    if (auto* document = dynamicDowncast<Document>(m_rootNode))
+    if (auto* document = dynamicDowncast<Document>(m_rootNode.get()))
         document->deref();
     else
-        downcast<ShadowRoot>(m_rootNode).deref();
+        downcast<ShadowRoot>(m_rootNode.get()).deref();
 }
 
 IdTargetObserverRegistry& TreeScope::ensureIdTargetObserverRegistry()
@@ -132,10 +134,16 @@ void TreeScope::destroyTreeScopeData()
 void TreeScope::setParentTreeScope(TreeScope& newParentScope)
 {
     // A document node cannot be re-parented.
-    ASSERT(!m_rootNode.isDocumentNode());
+    ASSERT(!m_rootNode->isDocumentNode());
 
     m_parentTreeScope = &newParentScope;
     setDocumentScope(newParentScope.documentScope());
+}
+
+void TreeScope::setCustomElementRegistry(Ref<CustomElementRegistry>&& registry)
+{
+    if (!m_customElementRegistry)
+        m_customElementRegistry = WTFMove(registry);
 }
 
 RefPtr<Element> TreeScope::getElementById(const AtomString& elementId) const
@@ -342,7 +350,7 @@ const Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>>* TreeScope::label
         // Populate the map on first access.
         m_labelsByForAttribute = makeUnique<TreeScopeOrderedMap>();
 
-        for (Ref label : descendantsOfType<HTMLLabelElement>(m_rootNode)) {
+        for (Ref label : descendantsOfType<HTMLLabelElement>(m_rootNode.get())) {
             const AtomString& forValue = label->attributeWithoutSynchronization(forAttr);
             if (!forValue.isEmpty())
                 addLabel(forValue, label);
@@ -473,7 +481,7 @@ Vector<RefPtr<Element>> TreeScope::elementsFromPoint(double clientX, double clie
         lastNode = node;
     }
 
-    if (auto* rootDocument = dynamicDowncast<Document>(m_rootNode)) {
+    if (auto* rootDocument = dynamicDowncast<Document>(m_rootNode.get())) {
         if (Element* rootElement = rootDocument->documentElement()) {
             if (elements.isEmpty() || elements.last() != rootElement)
                 elements.append(rootElement);
@@ -492,7 +500,7 @@ RefPtr<Element> TreeScope::findAnchor(StringView name)
     if (RefPtr element = getElementById(name))
         return element;
     auto inQuirksMode = documentScope().inQuirksMode();
-    Ref rootNode = m_rootNode;
+    Ref rootNode = m_rootNode.get();
     for (Ref anchor : descendantsOfType<HTMLAnchorElement>(rootNode)) {
         if (inQuirksMode) {
             // Quirks mode, ASCII case-insensitive comparison of names.
@@ -592,7 +600,7 @@ RadioButtonGroups& TreeScope::radioButtonGroups()
 CSSStyleSheetObservableArray& TreeScope::ensureAdoptedStyleSheets()
 {
     if (UNLIKELY(!m_adoptedStyleSheets))
-        m_adoptedStyleSheets = CSSStyleSheetObservableArray::create(m_rootNode);
+        m_adoptedStyleSheets = CSSStyleSheetObservableArray::create(m_rootNode.get());
     return *m_adoptedStyleSheets;
 }
 

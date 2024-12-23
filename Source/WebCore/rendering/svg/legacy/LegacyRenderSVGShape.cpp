@@ -47,12 +47,12 @@
 #include "SVGResourcesCache.h"
 #include "SVGURIReference.h"
 #include "SVGVisitedRendererTracking.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(LegacyRenderSVGShape);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LegacyRenderSVGShape);
 
 LegacyRenderSVGShape::LegacyRenderSVGShape(Type type, SVGGraphicsElement& element, RenderStyle&& style)
     : LegacyRenderSVGModelObject(type, element, WTFMove(style), { SVGModelObjectFlag::IsShape, SVGModelObjectFlag::UsesBoundaryCaching })
@@ -206,13 +206,13 @@ void LegacyRenderSVGShape::fillShape(const RenderStyle& style, GraphicsContext& 
 {
     GraphicsContext* context = &originalContext;
     Color fallbackColor;
-    if (LegacyRenderSVGResource* fillPaintingResource = LegacyRenderSVGResource::fillPaintingResource(*this, style, fallbackColor)) {
-        if (fillPaintingResource->applyResource(*this, style, context, RenderSVGResourceMode::ApplyToFill))
+    if (auto* fillPaintingResource = LegacyRenderSVGResource::fillPaintingResource(*this, style, fallbackColor)) {
+        if (resourceWasApplied(fillPaintingResource->applyResource(*this, style, context, RenderSVGResourceMode::ApplyToFill)))
             fillPaintingResource->postApplyResource(*this, context, RenderSVGResourceMode::ApplyToFill, nullptr, this);
         else if (fallbackColor.isValid()) {
-            LegacyRenderSVGResourceSolidColor* fallbackResource = LegacyRenderSVGResource::sharedSolidPaintingResource();
+            auto* fallbackResource = LegacyRenderSVGResource::sharedSolidPaintingResource();
             fallbackResource->setColor(fallbackColor);
-            if (fallbackResource->applyResource(*this, style, context, RenderSVGResourceMode::ApplyToFill))
+            if (resourceWasApplied(fallbackResource->applyResource(*this, style, context, RenderSVGResourceMode::ApplyToFill)))
                 fallbackResource->postApplyResource(*this, context, RenderSVGResourceMode::ApplyToFill, nullptr, this);
         }
     }
@@ -222,13 +222,13 @@ void LegacyRenderSVGShape::strokeShapeInternal(const RenderStyle& style, Graphic
 {
     GraphicsContext* context = &originalContext;
     Color fallbackColor;
-    if (LegacyRenderSVGResource* strokePaintingResource = LegacyRenderSVGResource::strokePaintingResource(*this, style, fallbackColor)) {
-        if (strokePaintingResource->applyResource(*this, style, context, RenderSVGResourceMode::ApplyToStroke))
+    if (auto* strokePaintingResource = LegacyRenderSVGResource::strokePaintingResource(*this, style, fallbackColor)) {
+        if (resourceWasApplied(strokePaintingResource->applyResource(*this, style, context, RenderSVGResourceMode::ApplyToStroke)))
             strokePaintingResource->postApplyResource(*this, context, RenderSVGResourceMode::ApplyToStroke, nullptr, this);
         else if (fallbackColor.isValid()) {
-            LegacyRenderSVGResourceSolidColor* fallbackResource = LegacyRenderSVGResource::sharedSolidPaintingResource();
+            auto* fallbackResource = LegacyRenderSVGResource::sharedSolidPaintingResource();
             fallbackResource->setColor(fallbackColor);
-            if (fallbackResource->applyResource(*this, style, context, RenderSVGResourceMode::ApplyToStroke))
+            if (resourceWasApplied(fallbackResource->applyResource(*this, style, context, RenderSVGResourceMode::ApplyToStroke)))
                 fallbackResource->postApplyResource(*this, context, RenderSVGResourceMode::ApplyToStroke, nullptr, this);
         }
     }
@@ -294,7 +294,9 @@ void LegacyRenderSVGShape::paint(PaintInfo& paintInfo, const LayoutPoint&)
             if (svgStyle->shapeRendering() == ShapeRendering::CrispEdges)
                 childPaintInfo.context().setShouldAntialias(false);
 
+            m_fillRequiresClip = !renderingContext.pathClippingIsEntirelyWithinRendererContents();
             fillStrokeMarkers(childPaintInfo);
+            m_fillRequiresClip = true;
         }
     }
 
@@ -451,7 +453,8 @@ float LegacyRenderSVGShape::strokeWidth() const
 {
     Ref graphicsElement = this->graphicsElement();
     SVGLengthContext lengthContext(graphicsElement.ptr());
-    return lengthContext.valueForLength(style().strokeWidth());
+    auto strokeWidth = lengthContext.valueForLength(style().strokeWidth());
+    return std::isnan(strokeWidth) ? 0 : strokeWidth;
 }
 
 Path& LegacyRenderSVGShape::ensurePath()

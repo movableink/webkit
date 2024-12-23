@@ -37,6 +37,8 @@
 #include <wtf/text/StringView.h>
 #include <wtf/text/WTFString.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 class Int32BigIntImpl;
@@ -493,6 +495,12 @@ public:
 
     static std::optional<double> tryExtractDouble(JSValue);
 
+    inline bool isZero() const
+    {
+        ASSERT(length() || !sign());
+        return !length();
+    }
+
 private:
     JSBigInt(VM&, Structure*, Digit*, unsigned length);
 
@@ -591,12 +599,6 @@ private:
 
     static String toStringBasePowerOfTwo(VM&, JSGlobalObject*, JSBigInt*, unsigned radix);
     static String toStringGeneric(VM&, JSGlobalObject*, JSBigInt*, unsigned radix);
-
-    inline bool isZero() const
-    {
-        ASSERT(length() || !sign());
-        return length() == 0;
-    }
 
     template <typename CharType>
     static JSValue parseInt(JSGlobalObject*, std::span<const CharType> data, ErrorParseMode);
@@ -739,3 +741,5 @@ ALWAYS_INLINE std::optional<double> JSBigInt::tryExtractDouble(JSValue value)
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

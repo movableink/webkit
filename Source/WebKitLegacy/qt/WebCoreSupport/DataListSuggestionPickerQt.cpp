@@ -39,6 +39,8 @@ DataListSuggestionPickerQt::DataListSuggestionPickerQt(QWebPageAdapter& page, We
 {
 }
 
+DataListSuggestionPickerQt::~DataListSuggestionPickerQt() = default;
+
 void DataListSuggestionPickerQt::handleKeydownWithIdentifier(const String&)
 {
 }

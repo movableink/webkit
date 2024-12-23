@@ -29,6 +29,7 @@
 #include "ProcessThrottler.h"
 #include "WebPageProxyIdentifier.h"
 #include <wtf/HashMap.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakObjCPtr.h>
 #include <wtf/WeakPtr.h>
 
@@ -42,7 +43,7 @@ class WebPage;
 class WebProcessProxy;
 
 class RemoteObjectRegistry : public IPC::MessageReceiver {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(RemoteObjectRegistry);
 public:
     virtual ~RemoteObjectRegistry();
 
@@ -54,9 +55,9 @@ protected:
     explicit RemoteObjectRegistry(_WKRemoteObjectRegistry *);
     using MessageSender = std::variant<std::reference_wrapper<WebProcessProxy>, std::reference_wrapper<WebPage>>;
 private:
-    virtual std::unique_ptr<ProcessThrottler::BackgroundActivity> backgroundActivity(ASCIILiteral) { return nullptr; }
-    virtual MessageSender messageSender() = 0;
-    virtual uint64_t messageDestinationID() = 0;
+    virtual RefPtr<ProcessThrottler::BackgroundActivity> backgroundActivity(ASCIILiteral) { return nullptr; }
+    virtual std::optional<MessageSender> messageSender() = 0;
+    virtual std::optional<uint64_t> messageDestinationID() = 0;
     template<typename M> void send(M&&);
 
     // IPC::MessageReceiver
@@ -68,7 +69,7 @@ private:
     void releaseUnusedReplyBlock(uint64_t replyID);
 
     WeakObjCPtr<_WKRemoteObjectRegistry> m_remoteObjectRegistry;
-    HashMap<uint64_t, std::unique_ptr<ProcessThrottler::BackgroundActivity>> m_pendingReplies;
+    HashMap<uint64_t, RefPtr<ProcessThrottler::BackgroundActivity>> m_pendingReplies;
 };
 
 } // namespace WebKit

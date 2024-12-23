@@ -34,6 +34,7 @@
 #include <WebCore/EditorClient.h>
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 
 class QWebPage;
 class QWebPageAdapter;
@@ -41,7 +42,7 @@ class QWebPageAdapter;
 namespace WebCore {
 
 class EditorClientQt : public EditorClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(EditorClientQt);
 public:
     EditorClientQt(QWebPageAdapter*);
     
@@ -101,7 +102,6 @@ public:
     void updateSpellingUIWithMisspelledWord(const String&) override;
     void showSpellingUI(bool show) override;
     bool spellingUIIsShowing() override;
-    void willSetInputMethodState() override;
     void setInputMethodState(Element*) override;
     TextCheckerClient* textChecker() override { return &m_textCheckerClient; }
 

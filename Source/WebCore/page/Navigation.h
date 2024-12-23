@@ -25,9 +25,11 @@
 
 #pragma once
 
+#include "ActiveDOMObject.h"
 #include "EventTarget.h"
 #include "JSDOMPromiseDeferred.h"
 #include "LocalDOMWindowProperty.h"
+#include "NavigateEvent.h"
 #include "NavigationHistoryEntry.h"
 #include "NavigationNavigationType.h"
 #include "NavigationTransition.h"
@@ -84,8 +86,10 @@ private:
     NavigationAPIMethodTrackerIdentifier identifier;
 };
 
+enum class ShouldCopyStateObjectFromCurrentEntry : bool { No, Yes };
+
 class Navigation final : public RefCounted<Navigation>, public EventTarget, public LocalDOMWindowProperty {
-    WTF_MAKE_ISO_ALLOCATED(Navigation);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Navigation);
 public:
     ~Navigation();
 
@@ -118,7 +122,7 @@ public:
         RefPtr<DOMPromise> finished;
     };
 
-    const Vector<Ref<NavigationHistoryEntry>>& entries() const;
+    Vector<Ref<NavigationHistoryEntry>> entries() const;
     NavigationHistoryEntry* currentEntry() const;
     NavigationTransition* transition() { return m_transition.get(); };
     NavigationActivation* activation() { return m_activation.get(); };
@@ -126,7 +130,7 @@ public:
     bool canGoBack() const;
     bool canGoForward() const;
 
-    void initializeEntries(Ref<HistoryItem>&& currentItem, Vector<Ref<HistoryItem>>& items);
+    void initializeForNewWindow(std::optional<NavigationNavigationType>, LocalDOMWindow* previousWindow);
 
     Result navigate(const String& url, NavigateOptions&&, Ref<DeferredPromise>&&, Ref<DeferredPromise>&&);
 
@@ -138,13 +142,23 @@ public:
 
     ExceptionOr<void> updateCurrentEntry(UpdateCurrentEntryOptions&&);
 
-    bool dispatchTraversalNavigateEvent(HistoryItem&);
+    enum class DispatchResult : uint8_t { Completed, Aborted, Intercepted };
+    DispatchResult dispatchTraversalNavigateEvent(HistoryItem&);
     bool dispatchPushReplaceReloadNavigateEvent(const URL&, NavigationNavigationType, bool isSameDocument, FormState*, SerializedScriptValue* classicHistoryAPIState = nullptr);
     bool dispatchDownloadNavigateEvent(const URL&, const String& downloadFilename);
 
-    void updateForNavigation(Ref<HistoryItem>&&, NavigationNavigationType);
+    void updateForNavigation(Ref<HistoryItem>&&, NavigationNavigationType, ShouldCopyStateObjectFromCurrentEntry = ShouldCopyStateObjectFromCurrentEntry::No);
     void updateForReactivation(Vector<Ref<HistoryItem>>& newHistoryItems, HistoryItem& reactivatedItem);
     void updateForActivation(HistoryItem* previousItem, std::optional<NavigationNavigationType>);
+
+    RefPtr<NavigationActivation> createForPageswapEvent(HistoryItem* newItem, DocumentLoader*, bool fromBackForwardCache);
+
+    void abortOngoingNavigationIfNeeded();
+
+    RefPtr<NavigationHistoryEntry> findEntryByKey(const String& key);
+    bool suppressNormalScrollRestoration() const { return m_suppressNormalScrollRestorationDuringOngoingNavigation; }
+
+    void setFocusChanged(FocusDidChange changed) { m_focusChangedDuringOngoingNavigation = changed; }
 
 private:
     explicit Navigation(LocalDOMWindow&);
@@ -156,28 +170,30 @@ private:
     void derefEventTarget() final { deref(); }
 
     bool hasEntriesAndEventsDisabled() const;
-    Result performTraversal(const String& key, Navigation::Options, FrameLoadType, Ref<DeferredPromise>&& committed, Ref<DeferredPromise>&& finished);
-    std::optional<Ref<NavigationHistoryEntry>> findEntryByKey(const String& key);
+    Result performTraversal(const String& key, Navigation::Options, Ref<DeferredPromise>&& committed, Ref<DeferredPromise>&& finished);
     ExceptionOr<RefPtr<SerializedScriptValue>> serializeState(JSC::JSValue state);
-    bool innerDispatchNavigateEvent(NavigationNavigationType, Ref<NavigationDestination>&&, const String& downloadRequestFilename, FormState* = nullptr, SerializedScriptValue* classicHistoryAPIState = nullptr);
+    DispatchResult innerDispatchNavigateEvent(NavigationNavigationType, Ref<NavigationDestination>&&, const String& downloadRequestFilename, FormState* = nullptr, SerializedScriptValue* classicHistoryAPIState = nullptr);
 
     RefPtr<NavigationAPIMethodTracker> maybeSetUpcomingNonTraversalTracker(Ref<DeferredPromise>&& committed, Ref<DeferredPromise>&& finished, JSC::JSValue info, RefPtr<SerializedScriptValue>&&);
     RefPtr<NavigationAPIMethodTracker> addUpcomingTrarveseAPIMethodTracker(Ref<DeferredPromise>&& committed, Ref<DeferredPromise>&& finished, const String& key, JSC::JSValue info);
     void cleanupAPIMethodTracker(NavigationAPIMethodTracker*);
     void resolveFinishedPromise(NavigationAPIMethodTracker*);
-    void rejectFinishedPromise(NavigationAPIMethodTracker*, Exception&&, JSC::JSValue exceptionObject);
+    void rejectFinishedPromise(NavigationAPIMethodTracker*, const Exception&, JSC::JSValue exceptionObject);
     void abortOngoingNavigation(NavigateEvent&);
     void promoteUpcomingAPIMethodTracker(const String& destinationKey);
     void notifyCommittedToEntry(NavigationAPIMethodTracker*, NavigationHistoryEntry*, NavigationNavigationType);
     Result apiMethodTrackerDerivedResult(const NavigationAPIMethodTracker&);
 
+    class NavigationHistoryEntryWrapper;
+    static std::optional<size_t> getEntryIndexOfHistoryItem(const Vector<NavigationHistoryEntryWrapper>& entries, const HistoryItem&, size_t start = 0);
+
     std::optional<size_t> m_currentEntryIndex;
     RefPtr<NavigationTransition> m_transition;
     RefPtr<NavigationActivation> m_activation;
-    Vector<Ref<NavigationHistoryEntry>> m_entries;
+    Vector<NavigationHistoryEntryWrapper> m_entries;
 
     RefPtr<NavigateEvent> m_ongoingNavigateEvent;
-    bool m_focusChangedDuringOnoingNavigation { false };
+    FocusDidChange m_focusChangedDuringOngoingNavigation { FocusDidChange::No };
     bool m_suppressNormalScrollRestorationDuringOngoingNavigation { false };
     RefPtr<NavigationAPIMethodTracker> m_ongoingAPIMethodTracker;
     RefPtr<NavigationAPIMethodTracker> m_upcomingNonTraverseMethodTracker;

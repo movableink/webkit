@@ -28,13 +28,14 @@
 #if PLATFORM(COCOA)
 
 #include <wtf/RefPtr.h>
+#include <wtf/Seconds.h>
 
-class AudioStreamDescription;
+struct AudioStreamBasicDescription;
 
 namespace WebCore {
 
-struct AudioInfo;
 class SharedBuffer;
+struct AudioInfo;
 
 WEBCORE_EXPORT bool isVorbisDecoderAvailable();
 WEBCORE_EXPORT bool registerVorbisDecoderIfNeeded();
@@ -66,7 +67,8 @@ static constexpr size_t kOpusMinimumFrameDataSize = 2;
 bool parseOpusPrivateData(std::span<const uint8_t> privateData, SharedBuffer& frameData, OpusCookieContents&);
 bool parseOpusTOCData(const SharedBuffer& frameData, OpusCookieContents&);
 RefPtr<AudioInfo> createOpusAudioInfo(const OpusCookieContents&);
+Vector<uint8_t> createOpusPrivateData(const AudioStreamBasicDescription&);
 
 }
 
-#endif // && PLATFORM(COCOA)
+#endif // PLATFORM(COCOA)

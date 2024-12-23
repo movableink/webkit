@@ -32,6 +32,7 @@
 
 #include <glib-object.h>
 #include <wpe/WPEDefines.h>
+#include <wpe/WPEGestureController.h>
 #include <wpe/WPEToplevel.h>
 
 G_BEGIN_DECLS
@@ -43,7 +44,7 @@ typedef struct _WPEBuffer WPEBuffer;
 typedef struct _WPEBufferDMABufFormats WPEBufferDMABufFormats;
 typedef struct _WPEDisplay WPEDisplay;
 typedef struct _WPEEvent WPEEvent;
-typedef struct _WPEMonitor WPEMonitor;
+typedef struct _WPEScreen WPEScreen;
 typedef struct _WPERectangle WPERectangle;
 
 struct _WPEViewClass
@@ -55,6 +56,8 @@ struct _WPEViewClass
                                         const WPERectangle *damage_rects,
                                         guint               n_damage_rects,
                                         GError            **error);
+    gboolean (* lock_pointer)          (WPEView            *view);
+    gboolean (* unlock_pointer)        (WPEView            *view);
     void     (* set_cursor_from_name)  (WPEView            *view,
                                         const char         *name);
     void     (* set_cursor_from_bytes) (WPEView            *view,
@@ -104,6 +107,8 @@ WPE_API void                    wpe_view_set_visible                   (WPEView 
 WPE_API gboolean                wpe_view_get_mapped                    (WPEView            *view);
 WPE_API void                    wpe_view_map                           (WPEView            *view);
 WPE_API void                    wpe_view_unmap                         (WPEView            *view);
+WPE_API gboolean                wpe_view_lock_pointer                  (WPEView            *view);
+WPE_API gboolean                wpe_view_unlock_pointer                (WPEView            *view);
 WPE_API void                    wpe_view_set_cursor_from_name          (WPEView            *view,
                                                                         const char         *name);
 WPE_API void                    wpe_view_set_cursor_from_bytes         (WPEView            *view,
@@ -114,7 +119,7 @@ WPE_API void                    wpe_view_set_cursor_from_bytes         (WPEView 
                                                                         guint               hotspot_x,
                                                                         guint               hotspot_y);
 WPE_API WPEToplevelState        wpe_view_get_toplevel_state            (WPEView            *view);
-WPE_API WPEMonitor             *wpe_view_get_monitor                   (WPEView            *view);
+WPE_API WPEScreen              *wpe_view_get_screen                    (WPEView            *view);
 WPE_API gboolean                wpe_view_render_buffer                 (WPEView            *view,
                                                                         WPEBuffer          *buffer,
                                                                         const WPERectangle *damage_rects,
@@ -133,10 +138,14 @@ WPE_API guint                   wpe_view_compute_press_count           (WPEView 
                                                                         guint32             time);
 WPE_API void                    wpe_view_focus_in                      (WPEView            *view);
 WPE_API void                    wpe_view_focus_out                     (WPEView            *view);
+WPE_API gboolean                wpe_view_get_has_focus                 (WPEView            *view);
 WPE_API WPEBufferDMABufFormats *wpe_view_get_preferred_dma_buf_formats (WPEView            *view);
 WPE_API void                    wpe_view_set_opaque_rectangles         (WPEView            *view,
                                                                         WPERectangle       *rects,
                                                                         guint               n_rects);
+WPE_API void                    wpe_view_set_gesture_controller        (WPEView            *view,
+                                                                        WPEGestureController *controller);
+WPE_API WPEGestureController   *wpe_view_get_gesture_controller        (WPEView            *view);
 
 G_END_DECLS
 

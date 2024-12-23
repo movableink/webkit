@@ -43,8 +43,6 @@ class WEBCORE_EXPORT RealtimeVideoCaptureSource : public RealtimeMediaSource, pu
 public:
     virtual ~RealtimeVideoCaptureSource();
 
-    void clientUpdatedSizeFrameRateAndZoom(std::optional<int> width, std::optional<int> height, std::optional<double> frameRate, std::optional<double> zoom);
-
     bool supportsSizeFrameRateAndZoom(const VideoPresetConstraints&) override;
     virtual void generatePresets() = 0;
 
@@ -53,16 +51,14 @@ public:
 
     void ensureIntrinsicSizeMaintainsAspectRatio();
 
-    void ref() const final;
-    void deref() const final;
-    ThreadSafeWeakPtrControlBlock& controlBlock() const final;
+    WTF_ABSTRACT_THREAD_SAFE_REF_COUNTED_AND_CAN_MAKE_WEAK_PTR_IMPL;
 
 protected:
-    RealtimeVideoCaptureSource(const CaptureDevice&, MediaDeviceHashSalts&&, PageIdentifier);
+    RealtimeVideoCaptureSource(const CaptureDevice&, MediaDeviceHashSalts&&, std::optional<PageIdentifier>);
 
     void setSizeFrameRateAndZoom(const VideoPresetConstraints&) override;
 
-    virtual void setFrameRateAndZoomWithPreset(double, double, std::optional<VideoPreset>&&) { };
+    virtual void applyFrameRateAndZoomWithPreset(double, double, std::optional<VideoPreset>&&);
     virtual bool canResizeVideoFrames() const { return false; }
 
     void setSupportedPresets(Vector<VideoPreset>&&);
@@ -80,6 +76,8 @@ protected:
     virtual Ref<TakePhotoNativePromise> takePhotoInternal(PhotoSettings&&);
     bool mutedForPhotoCapture() const { return m_mutedForPhotoCapture; }
 
+    bool canBePowerEfficient();
+
 private:
     struct CaptureSizeFrameRateAndZoom {
         std::optional<VideoPreset> encodingPreset;
@@ -96,6 +94,7 @@ private:
     bool presetSupportsFrameRate(const VideoPreset&, double);
     bool presetSupportsZoom(const VideoPreset&, double);
 
+    void setSizeFrameRateAndZoomForPhoto(CaptureSizeFrameRateAndZoom&&);
     Ref<TakePhotoNativePromise> takePhoto(PhotoSettings&&) final;
     bool isPowerEfficient() const final;
 
@@ -119,6 +118,10 @@ struct SizeFrameRateAndZoom {
     String toJSONString() const;
     Ref<JSON::Object> toJSONObject() const;
 };
+
+inline void RealtimeVideoCaptureSource::applyFrameRateAndZoomWithPreset(double, double, std::optional<VideoPreset>&&)
+{
+}
 
 } // namespace WebCore
 

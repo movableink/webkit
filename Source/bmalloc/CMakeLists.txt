@@ -38,6 +38,7 @@ set(bmalloc_SOURCES
     bmalloc/Scavenger.cpp
     bmalloc/TZoneHeap.cpp
     bmalloc/TZoneHeapManager.cpp
+    bmalloc/TZoneLog.cpp
     bmalloc/bmalloc.cpp
 
     libpas/src/libpas/bmalloc_heap.c
@@ -286,10 +287,10 @@ set(bmalloc_PUBLIC_HEADERS
     bmalloc/SmallLine.h
     bmalloc/SmallPage.h
     bmalloc/StaticPerProcess.h
-    bmalloc/StdLibExtras.h
     bmalloc/TZoneHeap.h
     bmalloc/TZoneHeapInlines.h
     bmalloc/TZoneHeapManager.h
+    bmalloc/TZoneLog.h
     bmalloc/VMAllocate.h
     bmalloc/Vector.h
     bmalloc/Zone.h
@@ -700,7 +701,7 @@ set_source_files_properties(
     libpas/src/libpas/bmalloc_heap_config.c
     libpas/src/libpas/pas_heap_config_kind.c
     libpas/src/libpas/pas_segregated_page_config_kind.c
-    PROPERTIES COMPILE_OPTIONS "${COMPILE_C_AS_CXX}" LANGUAGE CXX
+    PROPERTIES LANGUAGE CXX
 )
 
 WEBKIT_FRAMEWORK_DECLARE(bmalloc)

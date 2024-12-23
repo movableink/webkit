@@ -32,9 +32,12 @@
 #include "WPEToplevelWaylandPrivate.h"
 #include <linux/input.h>
 #include <wtf/MonotonicTime.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/glib/RunLoopSourcePriority.h>
 
 namespace WPE {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WaylandSeat);
 
 WaylandSeat::WaylandSeat(struct wl_seat* seat)
     : m_seat(seat)
@@ -391,8 +394,10 @@ const struct wl_touch_listener WaylandSeat::s_touchListener = {
         seat.m_touch.toplevel.reset(WPE_TOPLEVEL_WAYLAND(toplevel));
 
         auto addResult = seat.m_touch.points.add(id, std::pair<double, double>(wl_fixed_to_double(x), wl_fixed_to_double(y)));
+        if (seat.m_touch.points.size() == 1)
+            wpeToplevelWaylandSetIsUnderTouch(seat.m_touch.toplevel.get(), true);
 
-        GRefPtr<WPEView> view = wpeToplevelWaylandGetVisibleFocusedView(seat.m_touch.toplevel.get());
+        GRefPtr<WPEView> view = wpeToplevelWaylandGetVisibleViewUnderTouch(seat.m_touch.toplevel.get());
         if (!view)
             return;
 
@@ -412,7 +417,13 @@ const struct wl_touch_listener WaylandSeat::s_touchListener = {
         if (iter == seat.m_touch.points.end())
             return;
 
-        if (GRefPtr<WPEView> view = wpeToplevelWaylandGetVisibleFocusedView(seat.m_touch.toplevel.get())) {
+        GRefPtr<WPEView> view = wpeToplevelWaylandGetVisibleViewUnderTouch(seat.m_touch.toplevel.get());
+        if (seat.m_touch.points.size() == 1) {
+            wpeToplevelWaylandSetIsUnderTouch(seat.m_touch.toplevel.get(), false);
+            seat.m_touch.toplevel = nullptr;
+        }
+
+        if (view) {
             auto* event = wpe_event_touch_new(WPE_EVENT_TOUCH_UP, view.get(), seat.m_touch.source, time, seat.modifiers(),
                 id, iter->value.first, iter->value.second);
             wpe_view_event(view.get(), event);
@@ -433,7 +444,7 @@ const struct wl_touch_listener WaylandSeat::s_touchListener = {
 
         iter->value = { wl_fixed_to_double(x), wl_fixed_to_double(y) };
 
-        GRefPtr<WPEView> view = wpeToplevelWaylandGetVisibleFocusedView(seat.m_touch.toplevel.get());
+        GRefPtr<WPEView> view = wpeToplevelWaylandGetVisibleViewUnderTouch(seat.m_touch.toplevel.get());
         if (!view)
             return;
 

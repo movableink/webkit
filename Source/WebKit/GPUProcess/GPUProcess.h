@@ -33,6 +33,7 @@
 #include "WebPageProxyIdentifier.h"
 #include <WebCore/IntDegrees.h>
 #include <WebCore/MediaPlayerIdentifier.h>
+#include <WebCore/ProcessIdentity.h>
 #include <WebCore/ShareableBitmap.h>
 #include <WebCore/Timer.h>
 #include <pal/SessionID.h>
@@ -56,28 +57,36 @@
 namespace WebCore {
 class CaptureDevice;
 class NowPlayingManager;
+class SecurityOriginData;
+
 struct MockMediaDevice;
 struct ScreenProperties;
-class SecurityOriginData;
+
+enum class VideoFrameRotation : uint16_t;
 }
 
 namespace WebKit {
 
 class GPUConnectionToWebProcess;
+class RemoteAudioSessionProxyManager;
 struct GPUProcessConnectionParameters;
 struct GPUProcessCreationParameters;
-struct GPUProcessPreferencesForWebProcess;
 struct GPUProcessSessionParameters;
-class RemoteAudioSessionProxyManager;
+struct SharedPreferencesForWebProcess;
 
-class GPUProcess : public AuxiliaryProcess, public ThreadSafeRefCounted<GPUProcess> {
+class GPUProcess final : public AuxiliaryProcess, public ThreadSafeRefCounted<GPUProcess> {
     WTF_MAKE_NONCOPYABLE(GPUProcess);
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(GPUProcess);
 public:
     GPUProcess();
     ~GPUProcess();
 
     static GPUProcess& singleton();
-    static constexpr WebCore::AuxiliaryProcessType processType = WebCore::AuxiliaryProcessType::GPU;
+    static constexpr WTF::AuxiliaryProcessType processType = WTF::AuxiliaryProcessType::GPU;
+
+    void ref() const final { ThreadSafeRefCounted::ref(); }
+    void deref() const final { ThreadSafeRefCounted::deref(); }
 
     void removeGPUConnectionToWebProcess(GPUConnectionToWebProcess&);
 
@@ -90,12 +99,13 @@ public:
     GPUConnectionToWebProcess* webProcessConnection(WebCore::ProcessIdentifier) const;
 
     const String& mediaCacheDirectory(PAL::SessionID) const;
-#if ENABLE(LEGACY_ENCRYPTED_MEDIA)
+#if ENABLE(LEGACY_ENCRYPTED_MEDIA) || ENABLE(ENCRYPTED_MEDIA)
     const String& mediaKeysStorageDirectory(PAL::SessionID) const;
 #endif
 
 #if ENABLE(GPU_PROCESS) && USE(AUDIO_SESSION)
     RemoteAudioSessionProxyManager& audioSessionManager() const;
+    Ref<RemoteAudioSessionProxyManager> protectedAudioSessionManager() const;
 #endif
 
     WebCore::NowPlayingManager& nowPlayingManager();
@@ -130,6 +140,9 @@ public:
 #if ENABLE(VIDEO)
     void requestBitmapImageForCurrentTime(WebCore::ProcessIdentifier, WebCore::MediaPlayerIdentifier, CompletionHandler<void(std::optional<WebCore::ShareableBitmap::Handle>&&)>&&);
 #endif
+#if ENABLE(WEBXR)
+    std::optional<WebCore::ProcessIdentity> immersiveModeProcessIdentity() const;
+#endif
 
 private:
     void lowMemoryHandler(Critical, Synchronous);
@@ -145,13 +158,13 @@ private:
 
     // IPC::Connection::Client
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
-    void didReceiveGPUProcessMessage(IPC::Connection&, IPC::Decoder&);
 
     // Message Handlers
-    void initializeGPUProcess(GPUProcessCreationParameters&&);
+    void initializeGPUProcess(GPUProcessCreationParameters&&, CompletionHandler<void()>&&);
     void platformInitializeGPUProcess(GPUProcessCreationParameters&);
     void updateGPUProcessPreferences(GPUProcessPreferences&&);
     void createGPUConnectionToWebProcess(WebCore::ProcessIdentifier, PAL::SessionID, IPC::Connection::Handle&&, GPUProcessConnectionParameters&&, CompletionHandler<void()>&&);
+    void sharedPreferencesForWebProcessDidChange(WebCore::ProcessIdentifier, SharedPreferencesForWebProcess&&, CompletionHandler<void()>&&);
     void addSession(PAL::SessionID, GPUProcessSessionParameters&&);
     void removeSession(PAL::SessionID);
     void updateSandboxAccess(const Vector<SandboxExtension::Handle>&);
@@ -162,7 +175,9 @@ private:
 #if ENABLE(MEDIA_STREAM)
     void setMockCaptureDevicesEnabled(bool);
     void setUseSCContentSharingPicker(bool);
+    void enableMicrophoneMuteStatusAPI();
     void setOrientationForMediaCapture(WebCore::IntDegrees);
+    void rotationAngleForCaptureDeviceChanged(const String&, WebCore::VideoFrameRotation);
     void updateCaptureAccess(bool allowAudioCapture, bool allowVideoCapture, bool allowDisplayCapture, WebCore::ProcessIdentifier, CompletionHandler<void()>&&);
     void updateCaptureOrigin(const WebCore::SecurityOriginData&, WebCore::ProcessIdentifier);
     void addMockMediaDevice(const WebCore::MockMediaDevice&);
@@ -172,13 +187,13 @@ private:
     void resetMockMediaDevices();
     void setMockCaptureDevicesInterrupted(bool isCameraInterrupted, bool isMicrophoneInterrupted);
     void triggerMockCaptureConfigurationChange(bool forMicrophone, bool forDisplay);
+    void setShouldListenToVoiceActivity(bool);
 #endif
 #if HAVE(SCREEN_CAPTURE_KIT)
     void promptForGetDisplayMedia(WebCore::DisplayCapturePromptType, CompletionHandler<void(std::optional<WebCore::CaptureDevice>)>&&);
     void cancelGetDisplayMediaPrompt();
 #endif
 #if PLATFORM(MAC)
-    void displayConfigurationChanged(CGDirectDisplayID, CGDisplayChangeSummaryFlags);
     void setScreenProperties(const WebCore::ScreenProperties&);
     void updateProcessName();
 #endif
@@ -198,11 +213,14 @@ private:
 #if HAVE(POWERLOG_TASK_MODE_QUERY)
     void enablePowerLogging(SandboxExtension::Handle&&);
 #endif
+#if ENABLE(WEBXR)
+    void webXRPromptAccepted(std::optional<WebCore::ProcessIdentity>, CompletionHandler<void(bool)>&&);
+#endif
 
     // Connections to WebProcesses.
     HashMap<WebCore::ProcessIdentifier, Ref<GPUConnectionToWebProcess>> m_webProcessConnections;
     MonotonicTime m_creationTime { MonotonicTime::now() };
-    
+
     GPUProcessPreferences m_preferences;
 
 #if ENABLE(MEDIA_STREAM)
@@ -227,7 +245,7 @@ private:
 
     struct GPUSession {
         String mediaCacheDirectory;
-#if ENABLE(LEGACY_ENCRYPTED_MEDIA)
+#if ENABLE(LEGACY_ENCRYPTED_MEDIA) || ENABLE(ENCRYPTED_MEDIA)
         String mediaKeysStorageDirectory;
 #endif
     };
@@ -239,12 +257,13 @@ private:
     String m_uiProcessName;
 #endif
 #if ENABLE(GPU_PROCESS) && USE(AUDIO_SESSION)
-    mutable std::unique_ptr<RemoteAudioSessionProxyManager> m_audioSessionManager;
+    mutable RefPtr<RemoteAudioSessionProxyManager> m_audioSessionManager;
+#endif
+#if ENABLE(WEBXR)
+    std::optional<WebCore::ProcessIdentity> m_processIdentity;
 #endif
 #if ENABLE(VP9) && PLATFORM(COCOA)
-    bool m_haveEnabledVP8Decoder { false };
     bool m_haveEnabledVP9Decoder { false };
-    bool m_haveEnabledSWVPDecoders { false };
 #endif
 
 };

@@ -34,6 +34,7 @@
 
 #if BUSE(LIBPAS)
 #include "TZoneHeapManager.h"
+#include "TZoneLog.h"
 #include "bmalloc_heap_ref.h"
 #endif
 
@@ -62,8 +63,6 @@ BEXPORT void tzoneDeallocate(void* ptr);
 
 using TZoneAnnotation = bmalloc_type;
 
-#define HEAP_DESCRIPTION_SPACE  __attribute__((used, section("__DATA_CONST,__tzone_descs")))
-
 static inline constexpr size_t roundUpToMulipleOf8(size_t x) { return ((x + 7) / 8) * 8; }
 
 // The name "LibPasBmallocHeapType" is important for the pas_status_reporter to work right.
@@ -81,13 +80,20 @@ struct TZoneHeapBase {
 
     static pas_heap_ref& provideHeap()
     {
-        static bmalloc_type HEAP_DESCRIPTION_SPACE type = BMALLOC_TYPE_INITIALIZER(roundUpToMulipleOf8(sizeof(LibPasBmallocHeapType)), roundUpToMulipleOf8(alignof(LibPasBmallocHeapType)), __PRETTY_FUNCTION__);
+        static const bmalloc_type type = BMALLOC_TYPE_INITIALIZER(roundUpToMulipleOf8(sizeof(LibPasBmallocHeapType)), roundUpToMulipleOf8(alignof(LibPasBmallocHeapType)), __PRETTY_FUNCTION__);
         static pas_heap_ref* heap = nullptr;
 
         if (!heap)
-            heap = TZoneHeapManager::getInstance().heapRefForTZoneType(&type);
+            heap = TZoneHeapManager::singleton().heapRefForTZoneType(&type);
 
         return *heap;
+    }
+
+    static pas_heap_ref& provideHeap(size_t differentSize)
+    {
+        bmalloc_type type = BMALLOC_TYPE_INITIALIZER((unsigned)roundUpToMulipleOf8(differentSize), roundUpToMulipleOf8(alignof(LibPasBmallocHeapType)), __PRETTY_FUNCTION__);
+
+        return *TZoneHeapManager::singleton().heapRefForTZoneTypeDifferentSize(&type);
     }
 };
 
@@ -100,6 +106,11 @@ struct TZoneHeap : public TZoneHeapBase<LibPasBmallocHeapType> {
     void* allocate()
     {
         return tzoneAllocate(provideHeap());
+    }
+
+    void* allocate(size_t differentSize)
+    {
+        return tzoneAllocate(provideHeap(differentSize));
     }
 
     void* tryAllocate()
@@ -122,6 +133,11 @@ struct CompactTZoneHeap : public TZoneHeapBase<LibPasBmallocHeapType> {
     void* allocate()
     {
         return tzoneAllocateCompact(provideHeap());
+    }
+
+    void* allocate(size_t differentSize)
+    {
+        return tzoneAllocateCompact(provideHeap(differentSize));
     }
 
     void* tryAllocate()
@@ -183,9 +199,25 @@ struct CompactTZoneHeap : public TZoneHeapBase<Type> {
 };
 #endif // BUSE(LIBPAS) -> so end of !BUSE(LIBPAS)
 
-// Use this together with MAKE_BISO_MALLOCED_IMPL.
-#define MAKE_BTZONE_MALLOCED(isoType, heapType, exportMacro) \
+#define MAKE_BTZONE_MALLOCED_ABSTRACT(isoType, heapType) \
 public: \
+    void* operator new(size_t, void* p) = delete; \
+    void* operator new[](size_t, void* p) = delete; \
+    \
+    void* operator new(size_t size) = delete; \
+    void operator delete(void* p) = delete; \
+    \
+    void* operator new[](size_t size) = delete; \
+    void operator delete[](void* p) = delete; \
+    \
+    void* operator new(size_t, NotNullTag, void* location) = delete; \
+static void freeAfterDestruction(void*) = delete; \
+    \
+    using WTFIsFastAllocated = int; \
+private: \
+    using __makeTZoneMallocedMacroSemicolonifier BUNUSED_TYPE_ALIAS = int
+
+#define MAKE_BTZONE_MALLOCED_COMMON(isoType, heapType, exportMacro) \
     static exportMacro ::bmalloc::api::heapType<isoType>& btzoneHeap(); \
     \
     void* operator new(size_t, void* p) { return p; } \
@@ -204,8 +236,17 @@ public: \
     } \
     exportMacro static void freeAfterDestruction(void*); \
     \
-    using WTFIsFastAllocated = int; \
+    using WTFIsFastAllocated = int;
+
+// Use these two macros together with MAKE_BTZONE_MALLOCED_IMPL.
+#define MAKE_BTZONE_MALLOCED(isoType, heapType, exportMacro) \
+public: \
+    MAKE_BTZONE_MALLOCED_COMMON(isoType, heapType, exportMacro) \
 private: \
+    using __makeTZoneMallocedMacroSemicolonifier BUNUSED_TYPE_ALIAS = int
+
+#define MAKE_STRUCT_BTZONE_MALLOCED(isoType, heapType, exportMacro) \
+    MAKE_BTZONE_MALLOCED_COMMON(isoType, heapType, exportMacro) \
     using __makeTZoneMallocedMacroSemicolonifier BUNUSED_TYPE_ALIAS = int
 
 } } // namespace bmalloc::api

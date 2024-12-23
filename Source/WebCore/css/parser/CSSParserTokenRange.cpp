@@ -1,5 +1,5 @@
 // Copyright 2014 The Chromium Authors. All rights reserved.
-// Copyright (C) 2016 Apple Inc. All rights reserved.
+// Copyright (C) 2016-2024 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -33,6 +33,8 @@
 #include "StyleSheetContents.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/StringBuilder.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -85,7 +87,7 @@ CSSParserTokenRange CSSParserTokenRange::consumeBlockCheckingForEditability(Styl
         if (styleSheet && !styleSheet->usesStyleBasedEditability() && token.type() == IdentToken && equalLettersIgnoringASCIICase(token.value(), "-webkit-user-modify"_s))
             styleSheet->parserSetUsesStyleBasedEditability();
     } while (nestingLevel && m_first < m_last);
-    
+
     if (nestingLevel)
         return makeSubRange(start, m_first); // Ended at EOF
     return makeSubRange(start, m_first - 1);
@@ -108,7 +110,7 @@ void CSSParserTokenRange::consumeComponentValue()
 void CSSParserTokenRange::trimTrailingWhitespace()
 {
     for (; m_last > m_first; --m_last) {
-        if ((m_last - 1)->type() != WhitespaceToken)
+        if (!CSSTokenizer::isWhitespace((m_last - 1)->type()))
             return;
     }
 }
@@ -129,3 +131,5 @@ String CSSParserTokenRange::serialize(CSSParserToken::SerializationMode mode) co
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

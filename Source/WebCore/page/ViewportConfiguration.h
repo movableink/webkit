@@ -31,6 +31,7 @@
 #include "ViewportArguments.h"
 #include <wtf/Noncopyable.h>
 #include <wtf/OptionSet.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WTF {
 class TextStream;
@@ -39,7 +40,8 @@ class TextStream;
 namespace WebCore {
 
 class ViewportConfiguration {
-    WTF_MAKE_NONCOPYABLE(ViewportConfiguration); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ViewportConfiguration);
+    WTF_MAKE_NONCOPYABLE(ViewportConfiguration);
 public:
     // FIXME: unify with ViewportArguments.
     struct Parameters {
@@ -143,6 +145,9 @@ public:
     WEBCORE_EXPORT Parameters nativeWebpageParameters();
     static Parameters nativeWebpageParametersWithoutShrinkToFit();
     static Parameters nativeWebpageParametersWithShrinkToFit();
+#if ENABLE(PDF_PLUGIN)
+    WEBCORE_EXPORT static Parameters pluginDocumentParameters();
+#endif
     WEBCORE_EXPORT static Parameters webpageParameters();
     WEBCORE_EXPORT static Parameters textDocumentParameters();
     WEBCORE_EXPORT static Parameters imageDocumentParameters();

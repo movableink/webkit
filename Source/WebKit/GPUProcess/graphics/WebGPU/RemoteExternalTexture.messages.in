@@ -23,7 +23,8 @@
 
 #if ENABLE(GPU_PROCESS)
 
-messages -> RemoteExternalTexture NotRefCounted Stream {
+[EnabledBy=WebGPUEnabled]
+messages -> RemoteExternalTexture Stream {
     void Destruct()
     void SetLabel(String label)
     void Destroy()

@@ -29,7 +29,10 @@
 #include "InlineIteratorBox.h"
 #include "LayoutIntegrationLineLayout.h"
 #include "RenderStyleInlines.h"
+#include "SVGTextFragment.h"
 #include "TextPainter.h"
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 namespace LayoutIntegration {
@@ -54,7 +57,7 @@ IteratorRange<const InlineDisplay::Box*> InlineContent::boxesForRect(const Layou
     auto& boxes = m_displayContent.boxes;
 
     // FIXME: Do the flips.
-    if (formattingContextRoot().style().isFlippedBlocksWritingMode())
+    if (formattingContextRoot().writingMode().isBlockFlipped())
         return { &boxes.first(), &boxes.last() + 1 };
 
     if (lines.first().inkOverflow().maxY() > rect.y() && lines.last().inkOverflow().y() < rect.maxY())
@@ -167,6 +170,12 @@ const Vector<size_t>& InlineContent::nonRootInlineBoxIndexesForLayoutBox(const L
     return it->value;
 }
 
+const Vector<SVGTextFragment>& InlineContent::svgTextFragments(size_t index) const
+{
+    RELEASE_ASSERT(m_svgTextFragmentsForBoxes.size() > index);
+    return m_svgTextFragmentsForBoxes[index];
+}
+
 void InlineContent::releaseCaches()
 {
     m_firstBoxIndexCache = { };
@@ -182,3 +191,4 @@ void InlineContent::shrinkToFit()
 }
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

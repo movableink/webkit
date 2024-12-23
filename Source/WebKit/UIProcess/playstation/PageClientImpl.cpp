@@ -31,6 +31,7 @@
 #include "WebPageProxy.h"
 #include <WebCore/DOMPasteAccess.h>
 #include <WebCore/NotImplemented.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if USE(GRAPHICS_LAYER_WC)
 #include "DrawingAreaProxyWC.h"
@@ -41,6 +42,8 @@
 #endif
 
 namespace WebKit {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PageClientImpl);
 
 PageClientImpl::PageClientImpl(PlayStationWebView& view)
     : m_view(view)
@@ -55,12 +58,12 @@ uint64_t PageClientImpl::viewWidget()
 #endif
 
 // PageClient's pure virtual functions
-std::unique_ptr<DrawingAreaProxy> PageClientImpl::createDrawingAreaProxy(WebProcessProxy& webProcessProxy)
+Ref<DrawingAreaProxy> PageClientImpl::createDrawingAreaProxy(WebProcessProxy& webProcessProxy)
 {
 #if USE(GRAPHICS_LAYER_WC)
-    return makeUnique<DrawingAreaProxyWC>(*m_view.page(), webProcessProxy);
+    return DrawingAreaProxyWC::create(*m_view.page(), webProcessProxy);
 #else
-    return makeUnique<DrawingAreaProxyCoordinatedGraphics>(*m_view.page(), webProcessProxy);
+    return DrawingAreaProxyCoordinatedGraphics::create(*m_view.page(), webProcessProxy);
 #endif
 }
 
@@ -139,10 +142,6 @@ void PageClientImpl::setCursor(const WebCore::Cursor& cursor)
 }
 
 void PageClientImpl::setCursorHiddenUntilMouseMoves(bool)
-{
-}
-
-void PageClientImpl::didChangeViewportProperties(const WebCore::ViewportAttributes& attributes)
 {
 }
 

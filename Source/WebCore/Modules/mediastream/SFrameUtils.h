@@ -29,6 +29,8 @@
 
 #include <wtf/Vector.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WebCore {
 
 struct SFrameCompatibilityPrefixBuffer {
@@ -47,6 +49,18 @@ WEBCORE_EXPORT void toRbsp(Vector<uint8_t>&, size_t);
 size_t computeVP8PrefixOffset(std::span<const uint8_t>);
 SFrameCompatibilityPrefixBuffer computeVP8PrefixBuffer(std::span<const uint8_t>);
 
+static inline Vector<uint8_t, 8> encodeBigEndian(uint64_t value)
+{
+    Vector<uint8_t, 8> result(8);
+    for (int i = 7; i >= 0; --i) {
+        result.data()[i] = value & 0xff;
+        value = value >> 8;
+    }
+    return result;
+}
+
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_RTC)

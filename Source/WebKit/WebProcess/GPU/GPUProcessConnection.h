@@ -39,6 +39,7 @@
 #include <WebCore/AudioSession.h>
 #include <WebCore/PlatformMediaSession.h>
 #include <WebCore/SharedMemory.h>
+#include <wtf/AbstractThreadSafeRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
 #include <wtf/ThreadSafeWeakHashSet.h>
@@ -70,10 +71,15 @@ class RemoteVideoFrameObjectHeapProxy;
 #endif
 
 class GPUProcessConnection : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<GPUProcessConnection>, public IPC::Connection::Client {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(GPUProcessConnection);
 public:
     static Ref<GPUProcessConnection> create(Ref<IPC::Connection>&&);
     ~GPUProcessConnection();
     GPUProcessConnectionIdentifier identifier() const { return m_identifier; }
+
+    void ref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::ref(); }
+    void deref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::deref(); }
 
     IPC::Connection& connection() { return m_connection.get(); }
     Ref<IPC::Connection> protectedConnection() { return m_connection; }
@@ -86,10 +92,12 @@ public:
     Ref<RemoteSharedResourceCacheProxy> sharedResourceCache();
 #if PLATFORM(COCOA) && ENABLE(MEDIA_STREAM)
     SampleBufferDisplayLayerManager& sampleBufferDisplayLayerManager();
+    Ref<SampleBufferDisplayLayerManager> protectedSampleBufferDisplayLayerManager();
     void resetAudioMediaStreamTrackRendererInternalUnit(AudioMediaStreamTrackRendererInternalUnitIdentifier);
 #endif
 #if ENABLE(VIDEO)
     RemoteVideoFrameObjectHeapProxy& videoFrameObjectHeapProxy();
+    Ref<RemoteVideoFrameObjectHeapProxy> protectedVideoFrameObjectHeapProxy();
     RemoteMediaPlayerManager& mediaPlayerManager();
 #endif
 
@@ -119,13 +127,9 @@ public:
     void createGPU(WebGPUIdentifier, RenderingBackendIdentifier, IPC::StreamServerConnection::Handle&&);
     void releaseGPU(WebGPUIdentifier);
 
-    class Client {
+    class Client : public AbstractThreadSafeRefCountedAndCanMakeWeakPtr {
     public:
         virtual ~Client() = default;
-
-        virtual void ref() const = 0;
-        virtual void deref() const = 0;
-        virtual ThreadSafeWeakPtrControlBlock& controlBlock() const = 0;
 
         virtual void gpuProcessConnectionDidClose(GPUProcessConnection&) { }
     };
@@ -141,7 +145,7 @@ private:
     void didClose(IPC::Connection&) override;
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) final;
     bool didReceiveSyncMessage(IPC::Connection&, IPC::Decoder&, UniqueRef<IPC::Encoder>&) final;
-    void didReceiveInvalidMessage(IPC::Connection&, IPC::MessageName) override;
+    void didReceiveInvalidMessage(IPC::Connection&, IPC::MessageName, int32_t indexOfObjectFailingDecoding) override;
 
     bool dispatchMessage(IPC::Connection&, IPC::Decoder&);
     bool dispatchSyncMessage(IPC::Connection&, IPC::Decoder&, UniqueRef<IPC::Encoder>&);

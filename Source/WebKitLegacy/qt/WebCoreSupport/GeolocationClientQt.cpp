@@ -35,8 +35,11 @@
 #include <WebCore/GeolocationError.h>
 #include <WebCore/GeolocationPosition.h>
 #include <WebCore/Page.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(GeolocationClientQt);
 
 static const char failedToStartServiceErrorMessage[] = "Failed to start Geolocation service";
 

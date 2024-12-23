@@ -40,6 +40,7 @@
 #include "JSDOMPromiseDeferred.h"
 #include "LocalFrame.h"
 #include "Logging.h"
+#include "MediaPlayerPrivate.h"
 #include "Page.h"
 #include "Performance.h"
 #include "PictureInPictureSupport.h"
@@ -50,7 +51,7 @@
 #include "ScriptController.h"
 #include "Settings.h"
 #include "VideoFrameMetadata.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 #if ENABLE(VIDEO_PRESENTATION_MODE)
@@ -64,7 +65,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLVideoElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLVideoElement);
 
 using namespace HTMLNames;
 
@@ -74,6 +75,8 @@ inline HTMLVideoElement::HTMLVideoElement(const QualifiedName& tagName, Document
     ASSERT(hasTagName(videoTag));
     m_defaultPosterURL = AtomString { document.settings().defaultVideoPosterURL() };
 }
+
+HTMLVideoElement::~HTMLVideoElement() = default;
 
 Ref<HTMLVideoElement> HTMLVideoElement::create(const QualifiedName& tagName, Document& document, bool createdByParser)
 {
@@ -108,7 +111,7 @@ void HTMLVideoElement::didAttachRenderers()
 
     if (shouldDisplayPosterImage()) {
         if (!m_imageLoader)
-            m_imageLoader = makeUnique<HTMLImageLoader>(*this);
+            m_imageLoader = makeUniqueWithoutRefCountedCheck<HTMLImageLoader>(*this);
         m_imageLoader->updateFromElement();
         if (CheckedPtr renderer = this->renderer())
             renderer->checkedImageResource()->setCachedImage(m_imageLoader->protectedImage());
@@ -156,6 +159,14 @@ void HTMLVideoElement::computeAcceleratedRenderingStateAndUpdateMediaPlayer()
     player->acceleratedRenderingStateChanged(); // This call will trigger a call back to `mediaPlayerRenderingCanBeAccelerated()` from the MediaPlayer.
 }
 
+#if PLATFORM(IOS_FAMILY)
+bool HTMLVideoElement::canShowWhileLocked() const
+{
+    RefPtr page = document().page();
+    return page && page->canShowWhileLocked();
+}
+#endif
+
 void HTMLVideoElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == widthAttr) {
@@ -180,7 +191,7 @@ void HTMLVideoElement::attributeChanged(const QualifiedName& name, const AtomStr
     if (name == posterAttr) {
         if (shouldDisplayPosterImage()) {
             if (!m_imageLoader)
-                m_imageLoader = makeUnique<HTMLImageLoader>(*this);
+                m_imageLoader = makeUniqueWithoutRefCountedCheck<HTMLImageLoader>(*this);
             m_imageLoader->updateFromElementIgnoringPreviousError();
         } else {
             if (CheckedPtr renderer = this->renderer()) {
@@ -218,14 +229,14 @@ bool HTMLVideoElement::supportsFullscreen(HTMLMediaElementEnums::VideoFullscreen
     if (!player()->supportsFullscreen())
         return false;
 
+#if ENABLE(FULLSCREEN_API)
 #if PLATFORM(IOS_FAMILY)
     // Fullscreen implemented by player.
     if (!document().settings().videoFullscreenRequiresElementFullscreen())
         return true;
 #endif
 
-#if ENABLE(FULLSCREEN_API)
-    if (videoFullscreenMode == HTMLMediaElementEnums::VideoFullscreenModeStandard && !document().settings().fullScreenEnabled())
+    if (videoFullscreenMode == HTMLMediaElementEnums::VideoFullscreenModeStandard && !page->isFullscreenManagerEnabled())
         return false;
 
     // If the full screen API is enabled and is supported for the current element
@@ -332,7 +343,15 @@ std::optional<DestinationColorSpace> HTMLVideoElement::colorSpace() const
 RefPtr<ImageBuffer> HTMLVideoElement::createBufferForPainting(const FloatSize& size, RenderingMode renderingMode, const DestinationColorSpace& colorSpace, ImageBufferPixelFormat pixelFormat) const
 {
     auto* hostWindow = document().view() && document().view()->root() ? document().view()->root()->hostWindow() : nullptr;
-    return ImageBuffer::create(size, RenderingPurpose::MediaPainting, 1, colorSpace, pixelFormat, bufferOptionsForRendingMode(renderingMode), hostWindow);
+    return ImageBuffer::create(size, renderingMode, RenderingPurpose::MediaPainting, 1, colorSpace, pixelFormat, hostWindow);
+}
+
+void HTMLVideoElement::paint(GraphicsContext& context, const FloatRect& destRect)
+{
+    RefPtr player = this->player();
+    if (!player)
+        return;
+    player->paint(context, destRect);
 }
 
 void HTMLVideoElement::paintCurrentFrameInContext(GraphicsContext& context, const FloatRect& destRect)
@@ -345,7 +364,7 @@ void HTMLVideoElement::paintCurrentFrameInContext(GraphicsContext& context, cons
         player->setVisibleForCanvas(true); // Make player visible or it won't draw.
         visibilityStateChanged();
     }
-    context.paintFrameForMedia(*player, destRect);
+    player->paintCurrentFrameInContext(context, destRect);
 }
 
 bool HTMLVideoElement::hasAvailableVideoFrame() const
@@ -686,6 +705,13 @@ void HTMLVideoElement::cancelVideoFrameCallback(unsigned identifier)
     }
 }
 
+void HTMLVideoElement::stop()
+{
+    m_videoFrameRequests.clear();
+    m_servicedVideoFrameRequests.clear();
+    HTMLMediaElement::stop();
+}
+
 static void processVideoFrameMetadataTimestamps(VideoFrameMetadata& metadata, Performance& performance)
 {
     metadata.presentationTime = performance.relativeTimeFromTimeOriginInReducedResolution(MonotonicTime::fromRawSeconds(metadata.presentationTime));
@@ -770,6 +796,20 @@ void HTMLVideoElement::setVideoFullscreenStandby(bool value)
         });
     }
 }
+
+ExceptionOr<void> HTMLVideoElement::enterFullscreenIgnoringPermissionsPolicy()
+{
+    ignoreFullscreenPermissionPolicyOnNextCallToEnterFullscreen();
+    return webkitEnterFullscreen();
+}
+
+#if ENABLE(VIDEO_PRESENTATION_MODE)
+void HTMLVideoElement::setPresentationModeIgnoringPermissionsPolicy(VideoPresentationMode mode)
+{
+    ignoreFullscreenPermissionPolicyOnNextCallToEnterFullscreen();
+    setPresentationMode(mode);
+}
+#endif
 
 } // namespace WebCore
 

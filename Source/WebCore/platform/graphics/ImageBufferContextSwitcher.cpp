@@ -30,10 +30,13 @@
 #include "FilterResults.h"
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-ImageBufferContextSwitcher::ImageBufferContextSwitcher(GraphicsContext& destinationContext, const FloatRect &sourceImageRect, const DestinationColorSpace& colorSpace, RefPtr<Filter>&& filter, FilterResults* results)
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ImageBufferContextSwitcher);
+
+ImageBufferContextSwitcher::ImageBufferContextSwitcher(GraphicsContext& destinationContext, const FloatRect& sourceImageRect, const DestinationColorSpace& colorSpace, RefPtr<Filter>&& filter, FilterResults* results)
     : GraphicsContextSwitcher(WTFMove(filter))
     , m_sourceImageRect(sourceImageRect)
     , m_results(results)
@@ -80,8 +83,8 @@ void ImageBufferContextSwitcher::endClipAndDrawSourceImage(GraphicsContext& dest
 void ImageBufferContextSwitcher::endDrawSourceImage(GraphicsContext& destinationContext, const DestinationColorSpace& colorSpace)
 {
     if (!m_filter) {
-        ASSERT(m_sourceImage);
-        destinationContext.drawImageBuffer(*m_sourceImage, m_sourceImageRect, { destinationContext.compositeOperation(), destinationContext.blendMode() });
+        if (m_sourceImage)
+            destinationContext.drawImageBuffer(*m_sourceImage, m_sourceImageRect, { destinationContext.compositeOperation(), destinationContext.blendMode() });
         return;
     }
 

@@ -35,6 +35,7 @@
 
 #include "Event.h"
 #include "FrameSnapshotting.h"
+#include "ImageBuffer.h"
 #include "InspectorAnimationAgent.h"
 #include "InspectorCPUProfilerAgent.h"
 #include "InspectorClient.h"
@@ -57,10 +58,12 @@
 #include <JavaScriptCore/ScriptArguments.h>
 #include <wtf/SetForScope.h>
 #include <wtf/Stopwatch.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 
 #if PLATFORM(IOS_FAMILY)
-#include "RuntimeApplicationChecks.h"
 #include "WebCoreThreadInternal.h"
+#include <wtf/RuntimeApplicationChecks.h>
 #endif
 
 #if PLATFORM(COCOA)
@@ -71,6 +74,8 @@ namespace WebCore {
 
 using namespace Inspector;
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(InspectorTimelineAgent);
+
 #if PLATFORM(COCOA)
 static CFRunLoopRef currentRunLoop()
 {
@@ -80,7 +85,7 @@ static CFRunLoopRef currentRunLoop()
     // we still allow this, see <rdar://problem/7403328>. Since the race condition and subsequent
     // crash are especially troublesome for iBooks, we never allow the observer to be added to the
     // main run loop in iBooks.
-    if (CocoaApplication::isIBooks())
+    if (WTF::CocoaApplication::isIBooks())
         return WebThreadRunLoop();
 #endif
     return CFRunLoopGetCurrent();
@@ -475,22 +480,22 @@ void InspectorTimelineAgent::didEvaluateScript(LocalFrame&)
     didCompleteCurrentRecord(TimelineRecordType::EvaluateScript);
 }
 
-void InspectorTimelineAgent::didTimeStamp(LocalFrame& frame, const String& message)
+void InspectorTimelineAgent::didTimeStamp(Frame& frame, const String& message)
 {
     appendRecord(TimelineRecordFactory::createTimeStampData(message), TimelineRecordType::TimeStamp, true, &frame);
 }
 
-void InspectorTimelineAgent::time(LocalFrame& frame, const String& message)
+void InspectorTimelineAgent::time(Frame& frame, const String& message)
 {
     appendRecord(TimelineRecordFactory::createTimeStampData(message), TimelineRecordType::Time, true, &frame);
 }
 
-void InspectorTimelineAgent::timeEnd(LocalFrame& frame, const String& message)
+void InspectorTimelineAgent::timeEnd(Frame& frame, const String& message)
 {
     appendRecord(TimelineRecordFactory::createTimeStampData(message), TimelineRecordType::TimeEnd, true, &frame);
 }
 
-void InspectorTimelineAgent::didPerformanceMark(const String& label, std::optional<MonotonicTime> timeInMonotonicTime, LocalFrame* frame)
+void InspectorTimelineAgent::didPerformanceMark(const String& label, std::optional<MonotonicTime> timeInMonotonicTime, Frame* frame)
 {
     std::optional<double> timestamp;
     if (timeInMonotonicTime) {
@@ -797,7 +802,7 @@ void InspectorTimelineAgent::addRecordToTimeline(Ref<JSON::Object>&& record, Tim
     }
 }
 
-void InspectorTimelineAgent::setFrameIdentifier(JSON::Object* record, LocalFrame* frame)
+void InspectorTimelineAgent::setFrameIdentifier(JSON::Object* record, Frame* frame)
 {
     if (!frame)
         return;
@@ -835,7 +840,7 @@ void InspectorTimelineAgent::didCompleteCurrentRecord(TimelineRecordType type)
     }
 }
 
-void InspectorTimelineAgent::appendRecord(Ref<JSON::Object>&& data, TimelineRecordType type, bool captureCallStack, LocalFrame* frame, std::optional<double> startTime)
+void InspectorTimelineAgent::appendRecord(Ref<JSON::Object>&& data, TimelineRecordType type, bool captureCallStack, Frame* frame, std::optional<double> startTime)
 {
     Ref<JSON::Object> record = TimelineRecordFactory::createGenericRecord(startTime.value_or(timestamp()), captureCallStack ? m_maxCallStackDepth : 0);
     record->setObject("data"_s, WTFMove(data));

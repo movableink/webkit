@@ -36,15 +36,16 @@
 #include "ImageBuffer.h"
 #include "ImageOrientation.h"
 #include "IntRect.h"
-#include "MediaPlayer.h"
-#include "MediaPlayerPrivate.h"
 #include "RoundedRect.h"
 #include "SystemImage.h"
 #include "TextBoxIterator.h"
 #include "VideoFrame.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(GraphicsContext);
 
 GraphicsContext::GraphicsContext(IsDeferred isDeferred, const GraphicsContextState::ChangeFlags& changeFlags, InterpolationQuality imageInterpolationQuality)
     : m_state(changeFlags, imageInterpolationQuality)
@@ -232,10 +233,10 @@ void GraphicsContext::drawBidiText(const FontCascade& font, const TextRun& run, 
     bidiRuns.clear();
 }
 
-void GraphicsContext::drawDisplayListItems(const Vector<DisplayList::Item>& items, const DisplayList::ResourceHeap& resourceHeap, const FloatPoint& destination)
+void GraphicsContext::drawDisplayListItems(const Vector<DisplayList::Item>& items, const DisplayList::ResourceHeap& resourceHeap, ControlFactory& controlFactory, const FloatPoint& destination)
 {
     translate(destination);
-    DisplayList::Replayer(*this, items, resourceHeap).replay();
+    DisplayList::Replayer(*this, items, resourceHeap, controlFactory).replay();
     translate(-destination);
 }
 
@@ -267,8 +268,7 @@ IntSize GraphicsContext::compatibleImageBufferSize(const FloatSize& size) const
 
 RefPtr<ImageBuffer> GraphicsContext::createImageBuffer(const FloatSize& size, float resolutionScale, const DestinationColorSpace& colorSpace, std::optional<RenderingMode> renderingMode, std::optional<RenderingMethod>) const
 {
-    auto bufferOptions = bufferOptionsForRendingMode(renderingMode.value_or(this->renderingMode()));
-    return ImageBuffer::create(size, RenderingPurpose::Unspecified, resolutionScale, colorSpace, ImageBufferPixelFormat::BGRA8, bufferOptions);
+    return ImageBuffer::create(size, renderingMode.value_or(this->renderingMode()), RenderingPurpose::Unspecified, resolutionScale, colorSpace, ImageBufferPixelFormat::BGRA8);
 }
 
 RefPtr<ImageBuffer> GraphicsContext::createScaledImageBuffer(const FloatSize& size, const FloatSize& scale, const DestinationColorSpace& colorSpace, std::optional<RenderingMode> renderingMode, std::optional<RenderingMethod> renderingMethod) const
@@ -450,6 +450,13 @@ void GraphicsContext::drawControlPart(ControlPart& part, const FloatRoundedRect&
 {
     part.draw(*this, borderRect, deviceScaleFactor, style);
 }
+
+#if ENABLE(VIDEO)
+void GraphicsContext::drawVideoFrame(VideoFrame& frame, const FloatRect& destination, ImageOrientation orientation, bool shouldDiscardAlpha)
+{
+    frame.draw(*this, destination, orientation, shouldDiscardAlpha);
+}
+#endif
 
 void GraphicsContext::clipRoundedRect(const FloatRoundedRect& rect)
 {
@@ -671,17 +678,5 @@ Vector<FloatPoint> GraphicsContext::centerLineAndCutOffCorners(bool isVerticalLi
 
     return { point1, point2 };
 }
-
-#if ENABLE(VIDEO)
-void GraphicsContext::paintFrameForMedia(MediaPlayer& player, const FloatRect& destination)
-{
-    player.playerPrivate()->paintCurrentFrameInContext(*this, destination);
-}
-
-void GraphicsContext::paintVideoFrame(VideoFrame& frame, const FloatRect& destination, bool shouldDiscardAlpha)
-{
-    frame.paintInContext(*this, destination, ImageOrientation::Orientation::None, shouldDiscardAlpha);
-}
-#endif
 
 } // namespace WebCore

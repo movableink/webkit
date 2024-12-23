@@ -38,7 +38,7 @@
 namespace WebCore {
 
 /*
- * Draw one cubic Bezier curve and repeat the same pattern long the the decoration's axis.
+ * Draw one cubic Bezier curve and repeat the same pattern along the the decoration's axis.
  * The start point (p1), controlPoint1, controlPoint2 and end point (p2) of the Bezier curve
  * form a diamond shape:
  *
@@ -121,27 +121,28 @@ static DashArray translateIntersectionPointsToSkipInkBoundaries(const DashArray&
     
     // Step 1: Make pairs so we can sort based on range starting-point. We dilate the ranges in this step as well.
     Vector<std::pair<float, float>> tuples;
-    for (auto i = intersections.begin(); i != intersections.end(); i++, i++)
-        tuples.append(std::make_pair(*i - dilationAmount, *(i + 1) + dilationAmount));
+    for (size_t i = 0; i < intersections.size(); i += 2)
+        tuples.append(std::pair { intersections[i] - dilationAmount, intersections[i + 1] + dilationAmount });
     std::sort(tuples.begin(), tuples.end(), &compareTuples);
 
     // Step 2: Deal with intersecting ranges.
     Vector<std::pair<float, float>> intermediateTuples;
     if (tuples.size() >= 2) {
-        intermediateTuples.append(*tuples.begin());
-        for (auto i = tuples.begin() + 1; i != tuples.end(); i++) {
+        intermediateTuples.append(tuples.first());
+        for (size_t i = 1; i < tuples.size(); ++i) {
+            auto [secondStart, secondEnd] = tuples[i];
             float& firstEnd = intermediateTuples.last().second;
-            float secondStart = i->first;
-            float secondEnd = i->second;
             if (secondStart <= firstEnd && secondEnd <= firstEnd) {
                 // Ignore this range completely
             } else if (secondStart <= firstEnd)
                 firstEnd = secondEnd;
             else
-                intermediateTuples.append(*i);
+                intermediateTuples.append(std::pair { secondStart, secondEnd });
         }
-    } else
-        intermediateTuples = tuples;
+    } else {
+        // XXX(274780): A plain assignment or move here makes Clang generate bad code in LTO builds.
+        intermediateTuples.swap(tuples);
+    }
 
     // Step 3: Output the space between the ranges, but only if the space warrants an underline.
     float previous = 0;
@@ -204,26 +205,30 @@ TextDecorationPainter::TextDecorationPainter(GraphicsContext& context, const Fon
 // Paint text-shadow, underline, overline
 void TextDecorationPainter::paintBackgroundDecorations(const RenderStyle& style, const TextRun& textRun, const BackgroundDecorationGeometry& decorationGeometry, OptionSet<TextDecorationLine> decorationType, const Styles& decorationStyle)
 {
-    auto paintDecoration = [&] (auto decoration, auto style, auto& color, auto& rect) {
+    auto paintDecoration = [&] (auto decoration, auto underlineStyle, auto& color, auto& rect) {
         m_context.setStrokeColor(color);
 
-        auto strokeStyle = textDecorationStyleToStrokeStyle(style);
+        auto strokeStyle = textDecorationStyleToStrokeStyle(underlineStyle);
 
-        if (style == TextDecorationStyle::Wavy)
+        if (underlineStyle == TextDecorationStyle::Wavy)
             strokeWavyTextDecoration(m_context, rect, decorationGeometry.wavyStrokeParameters);
         else if (decoration == TextDecorationLine::Underline || decoration == TextDecorationLine::Overline) {
-            if ((decorationStyle.skipInk == TextDecorationSkipInk::Auto || decorationStyle.skipInk == TextDecorationSkipInk::All) && m_isHorizontal) {
+            if ((style.textDecorationSkipInk() == TextDecorationSkipInk::Auto || style.textDecorationSkipInk() == TextDecorationSkipInk::All) && m_isHorizontal) {
                 if (!m_context.paintingDisabled()) {
                     auto underlineBoundingBox = m_context.computeUnderlineBoundsForText(rect, m_isPrinting);
-                    DashArray intersections = m_font.dashesForIntersectionsWithRect(textRun, decorationGeometry.textOrigin, underlineBoundingBox);
-                    DashArray boundaries = translateIntersectionPointsToSkipInkBoundaries(intersections, underlineBoundingBox.height(), rect.width());
-                    ASSERT(!(boundaries.size() % 2));
-                    // We don't use underlineBoundingBox here because drawLinesForText() will run computeUnderlineBoundsForText() internally.
-                    m_context.drawLinesForText(rect.location(), rect.height(), boundaries, m_isPrinting, style == TextDecorationStyle::Double, strokeStyle);
+                    auto intersections = m_font.dashesForIntersectionsWithRect(textRun, decorationGeometry.textOrigin, underlineBoundingBox);
+                    if (!intersections.isEmpty()) {
+                        auto dilationAmount = std::min(underlineBoundingBox.height(), style.metricsOfPrimaryFont().height() / 5);
+                        auto boundaries = translateIntersectionPointsToSkipInkBoundaries(intersections, dilationAmount, rect.width());
+                        ASSERT(!(boundaries.size() % 2));
+                        // We don't use underlineBoundingBox here because drawLinesForText() will run computeUnderlineBoundsForText() internally.
+                        m_context.drawLinesForText(rect.location(), rect.height(), boundaries, m_isPrinting, underlineStyle == TextDecorationStyle::Double, strokeStyle);
+                    } else
+                    m_context.drawLineForText(rect, m_isPrinting, underlineStyle == TextDecorationStyle::Double, strokeStyle);
                 }
             } else {
                 // FIXME: Need to support text-decoration-skip: none.
-                m_context.drawLineForText(rect, m_isPrinting, style == TextDecorationStyle::Double, strokeStyle);
+                m_context.drawLineForText(rect, m_isPrinting, underlineStyle == TextDecorationStyle::Double, strokeStyle);
             }
         } else
             ASSERT_NOT_REACHED();
@@ -242,8 +247,8 @@ void TextDecorationPainter::paintBackgroundDecorations(const RenderStyle& style,
             auto shadowExtent = shadow->paintingExtent();
             auto shadowRect = clipRect;
             shadowRect.inflate(shadowExtent);
-            auto shadowX = m_isHorizontal ? shadow->x().value() : shadow->y().value();
-            auto shadowY = m_isHorizontal ? shadow->y().value() : -shadow->x().value();
+            auto shadowX = m_isHorizontal ? shadow->x().value : shadow->y().value;
+            auto shadowY = m_isHorizontal ? shadow->y().value : -shadow->x().value;
             shadowRect.move(shadowX, shadowY);
             clipRect.unite(shadowRect);
             extraOffset = std::max(extraOffset, std::max(0.f, shadowY) + shadowExtent);
@@ -276,9 +281,9 @@ void TextDecorationPainter::paintBackgroundDecorations(const RenderStyle& style,
             if (m_shadowColorFilter)
                 m_shadowColorFilter->transformColor(shadowColor);
 
-            auto shadowX = m_isHorizontal ? shadow->x().value() : shadow->y().value();
-            auto shadowY = m_isHorizontal ? shadow->y().value() : -shadow->x().value();
-            m_context.setDropShadow({ { shadowX, shadowY - extraOffset }, shadow->radius().value(), shadowColor, ShadowRadiusMode::Default });
+            auto shadowX = m_isHorizontal ? shadow->x().value : shadow->y().value;
+            auto shadowY = m_isHorizontal ? shadow->y().value : -shadow->x().value;
+            m_context.setDropShadow({ { shadowX, shadowY - extraOffset }, shadow->radius().value, shadowColor, ShadowRadiusMode::Default });
             shadow = shadow->next();
         };
         applyShadowIfNeeded();
@@ -382,6 +387,12 @@ static void collectStylesForRenderer(TextDecorationPainter::Styles& result, cons
 
 Color TextDecorationPainter::decorationColor(const RenderStyle& style, OptionSet<PaintBehavior> paintBehavior)
 {
+    if (paintBehavior.contains(PaintBehavior::ForceBlackText))
+        return Color::black;
+
+    if (paintBehavior.contains(PaintBehavior::ForceWhiteText))
+        return Color::white;
+
     return style.visitedDependentColorWithColorFilter(CSSPropertyTextDecorationColor, paintBehavior);
 }
 
@@ -394,7 +405,6 @@ auto TextDecorationPainter::stylesForRenderer(const RenderObject& renderer, Opti
     collectStylesForRenderer(result, renderer, requestedDecorations, false, paintBehavior, pseudoId);
     if (firstLineStyle)
         collectStylesForRenderer(result, renderer, requestedDecorations, true, paintBehavior, pseudoId);
-    result.skipInk = renderer.style().textDecorationSkipInk();
     return result;
 }
 

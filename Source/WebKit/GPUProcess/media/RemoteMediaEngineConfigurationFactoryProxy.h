@@ -30,18 +30,24 @@
 #include "Connection.h"
 #include "MessageReceiver.h"
 #include <WebCore/MediaEngineConfigurationFactory.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebKit {
 
+class GPUConnectionToWebProcess;
+
 class RemoteMediaEngineConfigurationFactoryProxy final : private IPC::MessageReceiver {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(RemoteMediaEngineConfigurationFactoryProxy);
 public:
-    RemoteMediaEngineConfigurationFactoryProxy();
+    explicit RemoteMediaEngineConfigurationFactoryProxy(GPUConnectionToWebProcess&);
     virtual ~RemoteMediaEngineConfigurationFactoryProxy();
 
     void didReceiveMessageFromWebProcess(IPC::Connection& connection, IPC::Decoder& decoder) { didReceiveMessage(connection, decoder); }
+
+    void ref() const final;
+    void deref() const final;
 
 private:
     friend class GPUProcessConnection;
@@ -51,6 +57,8 @@ private:
     // Messages
     void createDecodingConfiguration(WebCore::MediaDecodingConfiguration&&, CompletionHandler<void(WebCore::MediaCapabilitiesDecodingInfo&&)>&&);
     void createEncodingConfiguration(WebCore::MediaEncodingConfiguration&&, CompletionHandler<void(WebCore::MediaCapabilitiesEncodingInfo&&)>&&);
+
+    ThreadSafeWeakPtr<GPUConnectionToWebProcess> m_connection; // Cannot be null.
 };
 
 }

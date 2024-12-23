@@ -1,5 +1,5 @@
 //@ skip unless $isWasmPlatform
-//@ runDefaultWasm("--useWebAssembly=1", "--useInterpretedJSEntryWrappers=1")
+//@ runDefaultWasm("--useWasm=1")
 
 var wasm_code;
 try {
@@ -15,7 +15,7 @@ var wasm_module = new WebAssembly.Module(wasm_code);
 var wasm_instance = new WebAssembly.Instance(wasm_module);
 const { test, test_with_call, test_with_call_indirect } = wasm_instance.exports
 
-for (let i = 0; i < 100; ++i) {
+for (let i = 0; i < 100000; ++i) {
     test(5)
     test()
     test(null)

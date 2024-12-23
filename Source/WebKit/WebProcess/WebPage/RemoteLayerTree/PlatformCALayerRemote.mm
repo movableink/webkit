@@ -34,6 +34,7 @@
 #import "RemoteLayerTreePropertyApplier.h"
 #import <WebCore/AnimationUtilities.h>
 #import <WebCore/ColorSpaceCG.h>
+#import <WebCore/ContentsFormatCocoa.h>
 #import <WebCore/EventRegion.h>
 #import <WebCore/GraphicsContext.h>
 #import <WebCore/GraphicsLayerCA.h>
@@ -132,7 +133,7 @@ PlatformCALayerRemote::~PlatformCALayerRemote()
     for (const auto& layer : m_children)
         downcast<PlatformCALayerRemote>(*layer).m_superlayer = nullptr;
 
-    if (RefPtrAllowingPartiallyDestroyed<RemoteLayerTreeContext> protectedContext = m_context.get())
+    if (RefPtr<RemoteLayerTreeContext> protectedContext = m_context.get())
         protectedContext->layerWillLeaveContext(*this);
 }
 
@@ -190,15 +191,15 @@ void PlatformCALayerRemote::updateClonedLayerProperties(PlatformCALayerRemote& c
     clone.updateCustomAppearance(customAppearance());
 }
 
-void PlatformCALayerRemote::recursiveMarkWillBeDisplayed()
+void PlatformCALayerRemote::recursiveMarkWillBeDisplayedWithRenderingSuppresion()
 {
     if (m_properties.backingStoreOrProperties.store && m_properties.backingStoreAttached)
-        m_properties.backingStoreOrProperties.store->layerWillBeDisplayed();
+        m_properties.backingStoreOrProperties.store->layerWillBeDisplayedWithRenderingSuppression();
 
     for (size_t i = 0; i < m_children.size(); ++i) {
         PlatformCALayerRemote& child = downcast<PlatformCALayerRemote>(*m_children[i]);
         ASSERT(child.superlayer() == this);
-        child.recursiveMarkWillBeDisplayed();
+        child.recursiveMarkWillBeDisplayedWithRenderingSuppresion();
     }
 }
 
@@ -211,7 +212,7 @@ void PlatformCALayerRemote::recursiveBuildTransaction(RemoteLayerTreeContext& co
         // Rendering is suppressed, so don't include any mutations from this subtree
         // in the transaction. We do still mark all existing layers as will be displayed though,
         // to prevent the previous contents from being discarded.
-        recursiveMarkWillBeDisplayed();
+        recursiveMarkWillBeDisplayedWithRenderingSuppresion();
         return;
     }
 
@@ -226,9 +227,9 @@ void PlatformCALayerRemote::recursiveBuildTransaction(RemoteLayerTreeContext& co
 
     if (m_properties.changedProperties) {
         if (m_properties.changedProperties & LayerChange::ChildrenChanged) {
-            m_properties.children.resize(m_children.size());
-            for (size_t i = 0; i < m_children.size(); ++i)
-                m_properties.children[i] = m_children[i]->layerID();
+            m_properties.children = WTF::map(m_children, [](auto& child) {
+                return child->layerID();
+            });
         }
 
         // FIXME: the below is only necessary when blockMediaLayerRehostingInWebContentProcess() is disabled.
@@ -273,14 +274,14 @@ void PlatformCALayerRemote::ensureBackingStore()
             return true;
 
         // A layer pulled out of a pool may have existing backing store which we mustn't reuse if it lives in the wrong process.
-        if (m_properties.backingStoreOrProperties.store->processModel() != RemoteLayerBackingStore::processModelForLayer(this))
+        if (m_properties.backingStoreOrProperties.store->processModel() != RemoteLayerBackingStore::processModelForLayer(*this))
             return true;
 
         return false;
     }();
 
     if (needsNewBackingStore)
-        m_properties.backingStoreOrProperties.store = RemoteLayerBackingStore::createForLayer(this);
+        m_properties.backingStoreOrProperties.store = RemoteLayerBackingStore::createForLayer(*this);
 
     updateBackingStore();
 }
@@ -288,6 +289,19 @@ void PlatformCALayerRemote::ensureBackingStore()
 bool PlatformCALayerRemote::containsBitmapOnly() const
 {
     return owner() && owner()->platformCALayerContainsBitmapOnly(this);
+}
+
+DestinationColorSpace PlatformCALayerRemote::displayColorSpace() const
+{
+    if (auto displayColorSpace = contentsFormatExtendedColorSpace(contentsFormat()))
+        return displayColorSpace.value();
+
+#if !PLATFORM(IOS_FAMILY)
+    if (auto displayColorSpace = m_context ? m_context->displayColorSpace() : std::nullopt)
+        return displayColorSpace.value();
+#endif
+
+    return DestinationColorSpace::SRGB();
 }
 
 #if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
@@ -312,15 +326,9 @@ void PlatformCALayerRemote::updateBackingStore()
     parameters.type = m_acceleratesDrawing ? RemoteLayerBackingStore::Type::IOSurface : RemoteLayerBackingStore::Type::Bitmap;
     parameters.size = m_properties.bounds.size();
 
-#if PLATFORM(IOS_FAMILY)
-    parameters.colorSpace = m_wantsDeepColorBackingStore ? DestinationColorSpace { extendedSRGBColorSpaceRef() } : DestinationColorSpace::SRGB();
-#else
-    if (auto displayColorSpace = m_context ? m_context->displayColorSpace() : std::nullopt)
-        parameters.colorSpace = displayColorSpace.value();
-#endif
-
+    parameters.colorSpace = displayColorSpace();
+    parameters.contentsFormat = contentsFormat();
     parameters.scale = m_properties.contentsScale;
-    parameters.deepColor = m_wantsDeepColorBackingStore;
     parameters.isOpaque = m_properties.opaque;
 
 #if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
@@ -371,7 +379,7 @@ void PlatformCALayerRemote::copyContentsFromLayer(PlatformCALayer* layer)
 
 PlatformCALayer* PlatformCALayerRemote::superlayer() const
 {
-    return m_superlayer;
+    return m_superlayer.get();
 }
 
 void PlatformCALayerRemote::removeFromSuperlayer()
@@ -398,7 +406,7 @@ void PlatformCALayerRemote::setSublayers(const PlatformCALayerList& list)
 
     for (const auto& layer : list) {
         layer->removeFromSuperlayer();
-        downcast<PlatformCALayerRemote>(*layer).m_superlayer = this;
+        downcast<PlatformCALayerRemote>(*layer).m_superlayer = *this;
     }
 
     m_properties.notePropertiesChanged(LayerChange::ChildrenChanged);
@@ -419,7 +427,7 @@ void PlatformCALayerRemote::appendSublayer(PlatformCALayer& layer)
 
     layer.removeFromSuperlayer();
     m_children.append(&layer);
-    downcast<PlatformCALayerRemote>(layer).m_superlayer = this;
+    downcast<PlatformCALayerRemote>(layer).m_superlayer = *this;
     m_properties.notePropertiesChanged(LayerChange::ChildrenChanged);
 }
 
@@ -429,7 +437,7 @@ void PlatformCALayerRemote::insertSublayer(PlatformCALayer& layer, size_t index)
 
     layer.removeFromSuperlayer();
     m_children.insert(index, &layer);
-    downcast<PlatformCALayerRemote>(layer).m_superlayer = this;
+    downcast<PlatformCALayerRemote>(layer).m_superlayer = *this;
     m_properties.notePropertiesChanged(LayerChange::ChildrenChanged);
 }
 
@@ -443,7 +451,7 @@ void PlatformCALayerRemote::replaceSublayer(PlatformCALayer& reference, Platform
     if (referenceIndex != notFound) {
         m_children[referenceIndex]->removeFromSuperlayer();
         m_children.insert(referenceIndex, &layer);
-        downcast<PlatformCALayerRemote>(layer).m_superlayer = this;
+        downcast<PlatformCALayerRemote>(layer).m_superlayer = *this;
     }
 
     m_properties.notePropertiesChanged(LayerChange::ChildrenChanged);
@@ -508,7 +516,7 @@ RefPtr<PlatformCAAnimation> PlatformCALayerRemote::animationForKey(const String&
 
 static inline bool isEquivalentLayer(const PlatformCALayer* layer, const std::optional<PlatformLayerIdentifier>& layerID)
 {
-    auto newLayerID = layer ? layer->layerID() : PlatformLayerIdentifier { };
+    auto newLayerID = layer ? std::optional { layer->layerID() } : std::nullopt;
     return layerID == newLayerID;
 }
 
@@ -771,15 +779,18 @@ void PlatformCALayerRemote::setAcceleratesDrawing(bool acceleratesDrawing)
     updateBackingStore();
 }
 
-bool PlatformCALayerRemote::wantsDeepColorBackingStore() const
+ContentsFormat PlatformCALayerRemote::contentsFormat() const
 {
-    return m_wantsDeepColorBackingStore;
+    return m_properties.contentsFormat;
 }
 
-void PlatformCALayerRemote::setWantsDeepColorBackingStore(bool wantsDeepColorBackingStore)
+void PlatformCALayerRemote::setContentsFormat(ContentsFormat contentsFormat)
 {
-    m_wantsDeepColorBackingStore = wantsDeepColorBackingStore;
-    updateBackingStore();
+    if (m_properties.contentsFormat == contentsFormat)
+        return;
+
+    m_properties.contentsFormat = contentsFormat;
+    m_properties.notePropertiesChanged(LayerChange::ContentsFormatChanged);
 }
 
 bool PlatformCALayerRemote::hasContents() const
@@ -1040,12 +1051,12 @@ void PlatformCALayerRemote::setEventRegion(const EventRegion& eventRegion)
 }
 
 #if ENABLE(SCROLLING_THREAD)
-ScrollingNodeID PlatformCALayerRemote::scrollingNodeID() const
+std::optional<ScrollingNodeID> PlatformCALayerRemote::scrollingNodeID() const
 {
-    return m_properties.scrollingNodeID.value_or(ScrollingNodeID { });
+    return m_properties.scrollingNodeID;
 }
 
-void PlatformCALayerRemote::setScrollingNodeID(ScrollingNodeID nodeID)
+void PlatformCALayerRemote::setScrollingNodeID(std::optional<ScrollingNodeID> nodeID)
 {
     if (nodeID == m_properties.scrollingNodeID)
         return;

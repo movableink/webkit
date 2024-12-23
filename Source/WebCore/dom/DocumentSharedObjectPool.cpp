@@ -29,9 +29,14 @@
 
 #include "Element.h"
 #include "ElementData.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/UnalignedAccess.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DocumentSharedObjectPool);
 
 // Do comparisons 8 bytes-at-a-time on architectures where it's safe.
 #if (CPU(X86_64) || CPU(ARM64)) && !ASAN_ENABLED
@@ -100,3 +105,5 @@ Ref<ShareableElementData> DocumentSharedObjectPool::cachedShareableElementDataWi
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

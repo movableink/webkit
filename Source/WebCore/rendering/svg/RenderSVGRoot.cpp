@@ -48,13 +48,13 @@
 #include "SVGSVGElement.h"
 #include "SVGViewSpec.h"
 #include "TransformState.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/SetForScope.h>
 #include <wtf/StackStats.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGRoot);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGRoot);
 
 const int defaultWidth = 300;
 const int defaultHeight = 150;
@@ -171,7 +171,7 @@ LayoutUnit RenderSVGRoot::computeReplacedLogicalHeight(std::optional<LayoutUnit>
         return m_containerSize.height();
 
     if (isEmbeddedThroughFrameContainingSVGDocument())
-        return containingBlock()->availableLogicalHeight(IncludeMarginBorderPadding);
+        return containingBlock()->availableLogicalHeight(AvailableLogicalHeightType::IncludeMarginBorderPadding);
 
     // Standalone SVG / SVG embedded via SVGImage (background-image/border-image/etc) / Inline SVG.
     auto result = RenderReplaced::computeReplacedLogicalHeight(estimatedUsedWidth);

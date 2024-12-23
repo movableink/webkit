@@ -112,7 +112,6 @@ set(TestWTF_SOURCES
     Tests/WTF/SuperFastHash.cpp
     Tests/WTF/WYHash.cpp
     Tests/WTF/StringImpl.cpp
-    Tests/WTF/StringOperators.cpp
     Tests/WTF/StringParsingBuffer.cpp
     Tests/WTF/StringSearch.cpp
     Tests/WTF/StringToIntegerConversion.cpp
@@ -190,8 +189,9 @@ if (ENABLE_WEBCORE)
         Utilities.cpp
 
         Tests/WebCore/AffineTransform.cpp
+        Tests/WebCore/AudioSampleFormat.cpp
         Tests/WebCore/CSSParser.cpp
-        Tests/WebCore/CalculationValue.cpp
+        Tests/WebCore/CSSTokenizerTests.cpp
         Tests/WebCore/ColorTests.cpp
         Tests/WebCore/ComplexTextController.cpp
         Tests/WebCore/ContextMenuAction.cpp
@@ -210,9 +210,11 @@ if (ENABLE_WEBCORE)
         Tests/WebCore/LayoutUnitTests.cpp
         Tests/WebCore/MIMESniffer.cpp
         Tests/WebCore/MIMETypeRegistry.cpp
+        Tests/WebCore/MixedContentChecker.cpp
         Tests/WebCore/MonospaceFontTests.cpp
         Tests/WebCore/NowPlayingInfoTests.cpp
         Tests/WebCore/ParsedContentRange.cpp
+        Tests/WebCore/PathTests.cpp
         Tests/WebCore/PublicSuffix.cpp
         Tests/WebCore/RenderStyleChange.cpp
         Tests/WebCore/SecurityOrigin.cpp

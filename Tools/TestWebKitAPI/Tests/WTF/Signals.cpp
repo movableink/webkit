@@ -27,6 +27,7 @@
 
 #include <type_traits>
 #include <wtf/DataLog.h>
+#include <wtf/Seconds.h>
 #include <wtf/Threading.h>
 #include <wtf/WTFConfig.h>
 #if OS(UNIX)
@@ -98,7 +99,7 @@ TEST(Signals, SignalsAccessFault)
     WTF::Config::finalize();
 
     // Allocate a page of memory
-    char* ptr = bitwise_cast<char*>(Gigacage::tryAllocateZeroedVirtualPages(Gigacage::Primitive, 4096));
+    char* ptr = std::bit_cast<char*>(Gigacage::tryAllocateZeroedVirtualPages(Gigacage::Primitive, 4096));
 
     // Protect that page - 4096 bytes, not readable or writeable
     OSAllocator::protect(ptr, 4096, false, false);

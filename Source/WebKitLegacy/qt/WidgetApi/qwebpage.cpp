@@ -2222,7 +2222,9 @@ void QWebPage::setActualVisibleContentRect(const QRect& rect) const
     if (!mainFrame.hasView())
         return;
 
-    mainFrame.setFixedVisibleContentRect(rect);
+    // WebKit no longer supports setFixedVisibleContentRect, notify user that this is deprecated
+    if (!rect.isEmpty())
+        qWarning("QWebPage::setActualVisibleContentRect has been removed from WebKit.");
 }
 
 /*!

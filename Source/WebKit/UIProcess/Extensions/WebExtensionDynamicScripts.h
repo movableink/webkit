@@ -36,6 +36,7 @@
 #include "WebExtensionScriptInjectionResultParameters.h"
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 
 OBJC_CLASS WKWebView;
 OBJC_CLASS WKFrameInfo;
@@ -45,6 +46,7 @@ namespace WebKit {
 
 class WebExtensionContext;
 class WebExtensionTab;
+struct WebExtensionScriptInjectionParameters;
 
 namespace WebExtensionDynamicScripts {
 
@@ -61,7 +63,7 @@ using UserStyleSheetVector = Vector<Ref<API::UserStyleSheet>>;
 
 class WebExtensionRegisteredScript : public RefCounted<WebExtensionRegisteredScript> {
     WTF_MAKE_NONCOPYABLE(WebExtensionRegisteredScript);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(WebExtensionRegisteredScript);
 
 public:
     template<typename... Args>
@@ -104,15 +106,17 @@ private:
     void removeUserScripts(const String& identifier);
 };
 
-std::optional<SourcePair> sourcePairForResource(String path, RefPtr<WebExtension>);
-SourcePairs getSourcePairsForParameters(const WebExtensionScriptInjectionParameters&, RefPtr<WebExtension>);
+std::optional<SourcePair> sourcePairForResource(const String& path, WebExtensionContext&);
+SourcePairs getSourcePairsForParameters(const WebExtensionScriptInjectionParameters&, WebExtensionContext&);
 Vector<RetainPtr<_WKFrameTreeNode>> getFrames(_WKFrameTreeNode *, std::optional<Vector<WebExtensionFrameIdentifier>>);
 
 void executeScript(const SourcePairs&, WKWebView *, API::ContentWorld&, WebExtensionTab&, const WebExtensionScriptInjectionParameters&, WebExtensionContext&, CompletionHandler<void(InjectionResults&&)>&&);
 void injectStyleSheets(const SourcePairs&, WKWebView *, API::ContentWorld&, WebCore::UserStyleLevel, WebCore::UserContentInjectedFrames, WebExtensionContext&);
 void removeStyleSheets(const SourcePairs&, WKWebView *, WebCore::UserContentInjectedFrames, WebExtensionContext&);
 
+#if PLATFORM(COCOA)
 WebExtensionScriptInjectionResultParameters toInjectionResultParameters(id resultOfExecution, WKFrameInfo *, NSString *errorMessage);
+#endif
 
 } // namespace WebExtensionDynamicScripts
 

@@ -1,6 +1,9 @@
 #include "CryptoClientQt.h"
 #include <WebCore/WrappedCryptoKey.h>
 #include <WebCore/SerializedCryptoKeyWrap.h>
+#include <wtf/TZoneMallocInlines.h>
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CryptoClientQt);
 
 std::optional<Vector<uint8_t>> CryptoClientQt::wrapCryptoKey(const Vector<uint8_t>& key) const
 {

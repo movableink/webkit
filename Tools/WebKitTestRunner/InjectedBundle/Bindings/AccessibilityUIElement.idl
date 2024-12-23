@@ -29,6 +29,8 @@ interface AccessibilityUIElement {
 
     // Element access.
     AccessibilityUIElement elementAtPoint(long x, long y);
+    AccessibilityUIElement elementAtPointWithRemoteElementForTesting(long x, long y);
+    undefined elementAtPointResolvingRemoteFrameForTesting(long x, long y, object callbackFunction);
     AccessibilityUIElement childAtIndex(unsigned long index);
     unsigned long indexOfChild(AccessibilityUIElement child);
     AccessibilityUIElement linkedUIElementAtIndex(unsigned long index);
@@ -120,6 +122,7 @@ interface AccessibilityUIElement {
     readonly attribute boolean isDeletion;
     readonly attribute boolean isFirstItemInSuggestion;
     readonly attribute boolean isLastItemInSuggestion;
+    readonly attribute boolean isRemoteFrame;
 
     readonly attribute long x;
     readonly attribute long y;
@@ -216,6 +219,7 @@ interface AccessibilityUIElement {
     AccessibilityUIElement uiElementForSearchPredicate(AccessibilityUIElement startElement, boolean isDirectionNext, object searchKey, DOMString searchText, boolean visibleOnly, boolean immediateDescendantsOnly);
     DOMString selectTextWithCriteria(DOMString ambiguityResolution, object searchStrings, DOMString replacementString, DOMString activity);
     object searchTextWithCriteria(object searchStrings, DOMString startFrom, DOMString direction);
+    object performTextOperation(DOMString operationType, object markerRanges, object replacementStrings, boolean shouldSmartReplace);
     boolean setSelectedTextRange(unsigned long location, unsigned long length);
 
     // Scroll area attributes.
@@ -239,6 +243,7 @@ interface AccessibilityUIElement {
     AccessibilityTextMarker previousLineStartTextMarkerForTextMarker(AccessibilityTextMarker textMarker);
     AccessibilityTextMarker nextLineEndTextMarkerForTextMarker(AccessibilityTextMarker textMarker);
     long lineIndexForTextMarker(AccessibilityTextMarker textMarker);
+    AccessibilityTextMarkerRange textMarkerRangeForSearchPredicate(AccessibilityTextMarkerRange startRange, boolean forward, object searchKey, DOMString searchText, boolean visibleOnly, boolean immediateDescendantsOnly);
     AccessibilityTextMarkerRange misspellingTextMarkerRange(AccessibilityTextMarkerRange start, boolean forward);
     AccessibilityTextMarkerRange textMarkerRangeForElement(AccessibilityUIElement element);
     AccessibilityTextMarkerRange textMarkerRangeForMarkers(AccessibilityTextMarker startMarker, AccessibilityTextMarker endMarker);

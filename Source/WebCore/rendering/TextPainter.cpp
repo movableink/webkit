@@ -23,15 +23,18 @@
 #include "config.h"
 #include "TextPainter.h"
 
+#include "ControlFactory.h"
 #include "DisplayListRecorderImpl.h"
 #include "DisplayListReplayer.h"
 #include "FilterOperations.h"
+#include "FontCascade.h"
 #include "GraphicsContext.h"
 #include "InlineIteratorTextBox.h"
 #include "LayoutIntegrationInlineContent.h"
 #include "LegacyInlineTextBox.h"
 #include "RenderCombineText.h"
 #include "RenderLayer.h"
+#include "RenderStyle.h"
 #include "ShadowData.h"
 #include <wtf/NeverDestroyed.h>
 
@@ -50,10 +53,10 @@ ShadowApplier::ShadowApplier(const RenderStyle& style, GraphicsContext& context,
         return;
     }
 
-    float shadowX = orientation == FontOrientation::Horizontal ? shadow->x().value() : shadow->y().value();
-    float shadowY = orientation == FontOrientation::Horizontal ? shadow->y().value() : -shadow->x().value();
-    FloatSize shadowOffset(shadowX, shadowY);
-    auto shadowRadius = shadow->radius();
+    auto shadowX = orientation == FontOrientation::Horizontal ? shadow->x().value : shadow->y().value;
+    auto shadowY = orientation == FontOrientation::Horizontal ? shadow->y().value : -shadow->x().value;
+    auto shadowOffset = FloatSize(shadowX, shadowY);
+    auto shadowRadius = shadow->radius().value;
     auto shadowColor = style.colorResolvingCurrentColor(shadow->color());
     if (colorFilter)
         colorFilter->transformColor(shadowColor);
@@ -69,12 +72,12 @@ ShadowApplier::ShadowApplier(const RenderStyle& style, GraphicsContext& context,
         context.clip(shadowRect);
 
         m_didSaveContext = true;
-        m_extraOffset = FloatSize(0, 2 * shadowRect.height() + std::max(0.0f, shadowOffset.height()) + shadowRadius.value());
+        m_extraOffset = FloatSize(0, 2 * shadowRect.height() + std::max(0.0f, shadowOffset.height()) + shadowRadius);
         shadowOffset -= m_extraOffset;
     }
 
     if (!m_avoidDrawingShadow)
-        context.setDropShadow({ shadowOffset, shadowRadius.value(), shadowColor });
+        context.setDropShadow({ shadowOffset, shadowRadius, shadowColor });
 }
 
 inline bool ShadowApplier::isLastShadowIteration()
@@ -121,7 +124,7 @@ void TextPainter::paintTextOrEmphasisMarks(const FontCascade& font, const TextRu
         m_context.drawText(font, textRun, textOrigin, startOffset, endOffset);
     else {
         // Replaying back a whole cached glyph run to the GraphicsContext.
-        m_context.drawDisplayListItems(m_glyphDisplayList->items(), m_glyphDisplayList->resourceHeap(), textOrigin);
+        m_context.drawDisplayListItems(m_glyphDisplayList->items(), m_glyphDisplayList->resourceHeap(), ControlFactory::shared(), textOrigin);
     }
     m_glyphDisplayList = nullptr;
 }
@@ -214,9 +217,9 @@ void TextPainter::paintRange(const TextRun& textRun, const FloatRect& boxRect, c
     paintTextAndEmphasisMarksIfNeeded(textRun, boxRect, textOrigin, start, end, m_style, m_shadow, m_shadowColorFilter);
 }
 
-bool TextPainter::shouldUseGlyphDisplayList(const PaintInfo& paintInfo)
+bool TextPainter::shouldUseGlyphDisplayList(const PaintInfo& paintInfo, const RenderStyle& style)
 {
-    return !paintInfo.context().paintingDisabled() && paintInfo.enclosingSelfPaintingLayer();
+    return !paintInfo.context().paintingDisabled() && paintInfo.enclosingSelfPaintingLayer() && FontCascade::canUseGlyphDisplayList(style);
 }
 
 void TextPainter::setForceUseGlyphDisplayListForTesting(bool enabled)

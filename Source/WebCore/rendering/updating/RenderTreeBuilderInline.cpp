@@ -33,8 +33,11 @@
 #include "RenderTreeBuilderMultiColumn.h"
 #include "RenderTreeBuilderTable.h"
 #include <wtf/SetForScope.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(RenderTreeBuilder, Inline);
 
 static bool canUseAsParentForContinuation(const RenderObject* renderer)
 {
@@ -54,7 +57,7 @@ static RenderBoxModelObject* nextContinuation(RenderObject* renderer)
     return downcast<RenderBlock>(*renderer).inlineContinuation();
 }
 
-static RenderBoxModelObject* continuationBefore(RenderInline& parent, RenderObject* beforeChild)
+RenderBoxModelObject* RenderTreeBuilder::Inline::continuationBefore(RenderInline& parent, RenderObject* beforeChild)
 {
     if (beforeChild && beforeChild->parent() == &parent)
         return &parent;
@@ -81,9 +84,9 @@ static RenderBoxModelObject* continuationBefore(RenderInline& parent, RenderObje
 
 static RenderPtr<RenderInline> cloneAsContinuation(RenderInline& renderer)
 {
-    auto continuationStyle = RenderStyle::clone(renderer.style());
-    continuationStyle.setDisplay(DisplayType::Inline);
-    RenderPtr<RenderInline> cloneInline = createRenderer<RenderInline>(RenderObject::Type::Inline, *renderer.element(), WTFMove(continuationStyle));
+    RenderPtr<RenderInline> cloneInline = renderer.isAnonymous() ?
+    createRenderer<RenderInline>(RenderObject::Type::Inline, renderer.document(), RenderStyle::clone(renderer.style()))
+    : createRenderer<RenderInline>(RenderObject::Type::Inline, *renderer.element(), RenderStyle::clone(renderer.style()));
     cloneInline->initializeStyle();
     cloneInline->setFragmentedFlowState(renderer.fragmentedFlowState());
     cloneInline->setHasOutlineAutoAncestor(renderer.hasOutlineAutoAncestor());
@@ -239,6 +242,7 @@ void RenderTreeBuilder::Inline::splitFlow(RenderInline& parent, RenderObject* be
         RenderObject* o = boxFirst;
         while (o) {
             RenderObject* no = o;
+            auto internalMoveScope = SetForScope { m_builder.m_internalMovesType, IsInternalMove::Yes };
             o = no->nextSibling();
             auto childToMove = m_builder.detachFromRenderElement(*block, *no, WillBeDestroyed::No);
             m_builder.attachToRenderElementInternal(*pre, WTFMove(childToMove));

@@ -29,10 +29,12 @@
 
 #include "ColorSpaceCG.h"
 #include "GraphicsContext.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class WEBCORE_EXPORT GraphicsContextCG : public GraphicsContext {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(GraphicsContextCG, WEBCORE_EXPORT);
 public:
     enum CGContextSource {
         Unknown,
@@ -69,9 +71,9 @@ public:
     void applyDeviceScaleFactor(float factor) final;
 
     using GraphicsContext::fillRect;
-    void fillRect(const FloatRect&) final;
+    void fillRect(const FloatRect&, RequiresClipToRect = RequiresClipToRect::Yes) final;
     void fillRect(const FloatRect&, const Color&) final;
-    void fillRect(const FloatRect&, Gradient&, const AffineTransform&) final;
+    void fillRect(const FloatRect&, Gradient&, const AffineTransform&, RequiresClipToRect = RequiresClipToRect::Yes) final;
     void fillRoundedRectImpl(const FloatRoundedRect&, const Color&) final;
     void fillRectWithRoundedHole(const FloatRect&, const FloatRoundedRect& roundedHoleRect, const Color&) final;
     void clearRect(const FloatRect&) final;
@@ -145,7 +147,6 @@ protected:
     void setCGStyle(const std::optional<GraphicsStyle>&, bool shadowsIgnoreTransforms);
 
 private:
-    void convertToDestinationColorSpaceIfNeeded(RetainPtr<CGImageRef>&);
     void drawNativeImageInternal(NativeImage&, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions = { }) final;
 
     void clearCGShadow();

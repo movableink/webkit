@@ -33,6 +33,7 @@ list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/platform/network/qt"
     "${WEBCORE_DIR}/platform/network/glib"
     "${WEBCORE_DIR}/platform/text/qt"
+    "${WEBCORE_DIR}/platform/video-codecs"
     "${WEBCORE_DIR}/platform/win"
     "${WEBCORE_DIR}/platform/graphics/x11"
 )
@@ -63,6 +64,8 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/qt/ImageBufferQtBackend.h
     platform/graphics/qt/ImageBufferUtilitiesQt.h
     platform/graphics/qt/GraphicsContextQt.h
+    platform/graphics/qt/TransparencyLayer.h
+    platform/graphics/qt/NativeImageQt.h
 
     platform/mock/GeolocationClientMock.h
 
@@ -449,7 +452,6 @@ if (USE_COMMONCRYPTO)
         crypto/cocoa/CryptoAlgorithmHKDFMac.cpp
         crypto/cocoa/CryptoAlgorithmHMACMac.cpp
         crypto/cocoa/CryptoAlgorithmPBKDF2Mac.cpp
-        crypto/cocoa/CryptoAlgorithmRSAES_PKCS1_v1_5Mac.cpp
         crypto/cocoa/CryptoAlgorithmRSASSA_PKCS1_v1_5Mac.cpp
         crypto/cocoa/CryptoAlgorithmRSA_OAEPMac.cpp
         crypto/cocoa/CryptoAlgorithmRSA_PSSMac.cpp
@@ -466,7 +468,7 @@ endif ()
 # Build the include path with duplicates removed
 list(REMOVE_DUPLICATES WebCore_SYSTEM_INCLUDE_DIRECTORIES)
 
-list(APPEND WebCoreTestSupport_LIBRARIES
+list(APPEND WebCoreTestSupport_LIBRARIES PRIVATE
     WebCore
 )
 

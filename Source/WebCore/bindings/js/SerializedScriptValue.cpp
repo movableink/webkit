@@ -37,6 +37,7 @@
 #include "CryptoKeyRSAComponents.h"
 #include "CryptoKeyRaw.h"
 #include "IDBValue.h"
+#include "ImageBuffer.h"
 #include "JSAudioWorkletGlobalScope.h"
 #include "JSBlob.h"
 #include "JSCryptoKey.h"
@@ -108,6 +109,7 @@
 #include <wtf/DataLog.h>
 #include <wtf/MainThread.h>
 #include <wtf/RunLoop.h>
+#include <wtf/StackCheck.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
 #include <wtf/threads/BinarySemaphore.h>
@@ -131,6 +133,8 @@
 #else
 #define ASSUME_LITTLE_ENDIAN 1
 #endif
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -264,6 +268,7 @@ enum ArrayBufferViewSubtag {
     Float64ArrayTag = 9,
     BigInt64ArrayTag = 10,
     BigUint64ArrayTag = 11,
+    Float16ArrayTag = 12,
 };
 
 static ASCIILiteral name(SerializationTag tag)
@@ -513,6 +518,7 @@ static unsigned typedArrayElementSize(ArrayBufferViewSubtag tag)
         return 1;
     case Int16ArrayTag:
     case Uint16ArrayTag:
+    case Float16ArrayTag:
         return 2;
     case Int32ArrayTag:
     case Uint32ArrayTag:
@@ -621,7 +627,7 @@ static String agentClusterIDFromGlobalObject(JSGlobalObject& globalObject)
 
 const uint32_t currentKeyFormatVersion = 1;
 
-enum class CryptoKeyClassSubtag {
+enum class CryptoKeyClassSubtag : uint8_t {
     HMAC = 0,
     AES = 1,
     RSA = 2,
@@ -631,13 +637,13 @@ enum class CryptoKeyClassSubtag {
 };
 const uint8_t cryptoKeyClassSubtagMaximumValue = 5;
 
-enum class CryptoKeyAsymmetricTypeSubtag {
+enum class CryptoKeyAsymmetricTypeSubtag : bool {
     Public = 0,
     Private = 1
 };
 const uint8_t cryptoKeyAsymmetricTypeSubtagMaximumValue = 1;
 
-enum class CryptoKeyUsageTag {
+enum class CryptoKeyUsageTag : uint8_t {
     Encrypt = 0,
     Decrypt = 1,
     Sign = 2,
@@ -686,7 +692,7 @@ static unsigned countUsages(CryptoKeyUsageBitmap usages)
     return count;
 }
 
-enum class CryptoKeyOKPOpNameTag {
+enum class CryptoKeyOKPOpNameTag : bool {
     X25519 = 0,
     ED25519 = 1,
 };
@@ -945,6 +951,10 @@ protected:
 #else
     ALWAYS_INLINE void appendObjectPoolTag(SerializationTag) { }
 #endif
+    bool isSafeToRecurse()
+    {
+        return m_stackCheck.isSafeToRecurse();
+    }
 
     JSGlobalObject* const m_lexicalGlobalObject;
     bool m_failed;
@@ -953,6 +963,7 @@ protected:
 #if ASSERT_ENABLED
     Vector<SerializationTag> m_objectPoolTags;
 #endif
+    StackCheck m_stackCheck;
 };
 
 static std::optional<Vector<uint8_t>> wrapCryptoKey(JSGlobalObject* lexicalGlobalObject, const Vector<uint8_t>& key)
@@ -1117,7 +1128,7 @@ public:
 #endif
 
 private:
-    using ObjectPoolMap = HashMap<JSObject*, uint32_t>;
+    using ObjectPoolMap = UncheckedKeyHashMap<JSObject*, uint32_t>;
 
     CloneSerializer(JSGlobalObject* lexicalGlobalObject, Vector<Ref<MessagePort>>& messagePorts, Vector<RefPtr<JSC::ArrayBuffer>>& arrayBuffers, const Vector<RefPtr<ImageBitmap>>& imageBitmaps,
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
@@ -1442,6 +1453,8 @@ private:
             write(Int32ArrayTag);
         else if (obj->inherits<JSUint32Array>())
             write(Uint32ArrayTag);
+        else if (obj->inherits<JSFloat16Array>())
+            write(Float16ArrayTag);
         else if (obj->inherits<JSFloat32Array>())
             write(Float32ArrayTag);
         else if (obj->inherits<JSFloat64Array>())
@@ -1567,14 +1580,17 @@ private:
 
     void dumpImageBitmap(JSObject* obj, SerializationReturnCode& code)
     {
+        auto& imageBitmap = jsCast<JSImageBitmap*>(obj)->wrapped();
         auto index = m_transferredImageBitmaps.find(obj);
         if (index != m_transferredImageBitmaps.end()) {
+#if USE(SKIA)
+            imageBitmap.prepareForCrossThreadTransfer();
+#endif
             write(ImageBitmapTransferTag);
             write(index->value);
             return;
         }
 
-        auto& imageBitmap = jsCast<JSImageBitmap*>(obj)->wrapped();
         if (!imageBitmap.originClean()) {
             code = SerializationReturnCode::DataCloneError;
             return;
@@ -1875,60 +1891,17 @@ private:
                 return true;
             }
             if (auto* errorInstance = jsDynamicCast<ErrorInstance*>(obj)) {
-                auto& vm = m_lexicalGlobalObject->vm();
-                auto scope = DECLARE_THROW_SCOPE(vm);
-                auto errorTypeValue = errorInstance->get(m_lexicalGlobalObject, vm.propertyNames->name);
-                RETURN_IF_EXCEPTION(scope, false);
-                auto errorTypeString = errorTypeValue.toWTFString(m_lexicalGlobalObject);
-                RETURN_IF_EXCEPTION(scope, false);
-
-                String message;
-                PropertyDescriptor messageDescriptor;
-                if (errorInstance->getOwnPropertyDescriptor(m_lexicalGlobalObject, vm.propertyNames->message, messageDescriptor) && messageDescriptor.isDataDescriptor()) {
-                    EXCEPTION_ASSERT(!scope.exception());
-                    message = messageDescriptor.value().toWTFString(m_lexicalGlobalObject);
-                }
-                RETURN_IF_EXCEPTION(scope, false);
-
-                unsigned line = 0;
-                PropertyDescriptor lineDescriptor;
-                if (errorInstance->getOwnPropertyDescriptor(m_lexicalGlobalObject, vm.propertyNames->line, lineDescriptor) && lineDescriptor.isDataDescriptor()) {
-                    EXCEPTION_ASSERT(!scope.exception());
-                    line = lineDescriptor.value().toNumber(m_lexicalGlobalObject);
-                }
-                RETURN_IF_EXCEPTION(scope, false);
-
-                unsigned column = 0;
-                PropertyDescriptor columnDescriptor;
-                if (errorInstance->getOwnPropertyDescriptor(m_lexicalGlobalObject, vm.propertyNames->column, columnDescriptor) && columnDescriptor.isDataDescriptor()) {
-                    EXCEPTION_ASSERT(!scope.exception());
-                    column = columnDescriptor.value().toNumber(m_lexicalGlobalObject);
-                }
-                RETURN_IF_EXCEPTION(scope, false);
-
-                String sourceURL;
-                PropertyDescriptor sourceURLDescriptor;
-                if (errorInstance->getOwnPropertyDescriptor(m_lexicalGlobalObject, vm.propertyNames->sourceURL, sourceURLDescriptor) && sourceURLDescriptor.isDataDescriptor()) {
-                    EXCEPTION_ASSERT(!scope.exception());
-                    sourceURL = sourceURLDescriptor.value().toWTFString(m_lexicalGlobalObject);
-                }
-                RETURN_IF_EXCEPTION(scope, false);
-
-                String stack;
-                PropertyDescriptor stackDescriptor;
-                if (errorInstance->getOwnPropertyDescriptor(m_lexicalGlobalObject, vm.propertyNames->stack, stackDescriptor) && stackDescriptor.isDataDescriptor()) {
-                    EXCEPTION_ASSERT(!scope.exception());
-                    stack = stackDescriptor.value().toWTFString(m_lexicalGlobalObject);
-                }
-                RETURN_IF_EXCEPTION(scope, false);
+                auto errorInformation = extractErrorInformationFromErrorInstance(m_lexicalGlobalObject, *errorInstance);
+                if (!errorInformation)
+                    return false;
 
                 write(ErrorInstanceTag);
-                write(errorNameToSerializableErrorType(errorTypeString));
-                writeNullableString(message);
-                write(line);
-                write(column);
-                writeNullableString(sourceURL);
-                writeNullableString(stack);
+                write(errorNameToSerializableErrorType(errorInformation->errorTypeString));
+                writeNullableString(errorInformation->message);
+                write(errorInformation->line);
+                write(errorInformation->column);
+                writeNullableString(errorInformation->sourceURL);
+                writeNullableString(errorInformation->stack);
                 return true;
             }
             if (obj->inherits<JSMessagePort>()) {
@@ -1981,11 +1954,7 @@ private:
                 if (arrayBuffer->isResizableOrGrowableShared()) {
                     appendObjectPoolTag(ResizableArrayBufferTag);
                     write(ResizableArrayBufferTag);
-                    uint64_t byteLength = arrayBuffer->byteLength();
-                    write(byteLength);
-                    uint64_t maxByteLength = arrayBuffer->maxByteLength().value_or(0);
-                    write(maxByteLength);
-                    write(arrayBuffer->span());
+                    writeResizableArrayBuffer(arrayBuffer->span(), arrayBuffer->maxByteLength().value_or(0));
                     return true;
                 }
 
@@ -2060,8 +2029,10 @@ private:
                 rawKeySerializer.write(key);
 
                 auto wrappedKey = wrapCryptoKey(m_lexicalGlobalObject, serializedKey);
-                if (!wrappedKey)
-                    return false;
+                if (!wrappedKey) {
+                    code = SerializationReturnCode::DataCloneError;
+                    return true;
+                }
 
                 write(*wrappedKey);
                 return true;
@@ -2368,7 +2339,14 @@ private:
         write(file.url().string());
         write(file.type());
         write(file.name());
-        write(static_cast<double>(file.lastModifiedOverride().value_or(-1)));
+        if (m_forStorage == SerializationForStorage::No)
+            write(static_cast<double>(file.lastModifiedOverride().value_or(-1)));
+        else {
+            if (auto lastModifiedOverride = file.lastModifiedOverride())
+                write(static_cast<double>(*lastModifiedOverride));
+            else
+                write(static_cast<double>(file.lastModified()));
+        }
     }
 
     void write(PredefinedColorSpace colorSpace)
@@ -2608,7 +2586,7 @@ private:
             switch (key->type()) {
             case CryptoKey::Type::Public: {
                 write(CryptoKeyAsymmetricTypeSubtag::Public);
-                auto result = downcast<CryptoKeyEC>(*key).exportRaw(isUsingCryptoKit());
+                auto result = downcast<CryptoKeyEC>(*key).exportRaw();
                 ASSERT(!result.hasException());
                 write(result.releaseReturnValue());
                 break;
@@ -2616,7 +2594,7 @@ private:
             case CryptoKey::Type::Private: {
                 write(CryptoKeyAsymmetricTypeSubtag::Private);
                 // Use the standard complied method is not very efficient, but simple/reliable.
-                auto result = downcast<CryptoKeyEC>(*key).exportPkcs8(isUsingCryptoKit());
+                auto result = downcast<CryptoKeyEC>(*key).exportPkcs8();
                 ASSERT(!result.hasException());
                 write(result.releaseReturnValue());
                 break;
@@ -2650,14 +2628,16 @@ private:
         }
     }
 
-    UseCryptoKit isUsingCryptoKit()
-    {
-        return executionContext(m_lexicalGlobalObject)->settingsValues().cryptoKitEnabled ? UseCryptoKit::Yes : UseCryptoKit::No;
-    }
-
     void write(std::span<const uint8_t> data)
     {
         m_buffer.append(data);
+    }
+
+    void writeResizableArrayBuffer(std::span<const uint8_t> data, size_t maxByteLength)
+    {
+        write(static_cast<uint64_t>(data.size()));
+        write(static_cast<uint64_t>(maxByteLength));
+        write(data);
     }
 
     Vector<uint8_t>& m_buffer;
@@ -2675,9 +2655,9 @@ private:
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
     ObjectPoolMap m_transferredMediaSourceHandles;
 #endif
-    typedef HashMap<RefPtr<UniquedStringImpl>, uint32_t, IdentifierRepHash> StringConstantPool;
+    typedef UncheckedKeyHashMap<RefPtr<UniquedStringImpl>, uint32_t, IdentifierRepHash> StringConstantPool;
     StringConstantPool m_constantPool;
-    using ImageDataPool = HashMap<Ref<ImageData>, uint32_t>;
+    using ImageDataPool = UncheckedKeyHashMap<Ref<ImageData>, uint32_t>;
     ImageDataPool m_imageDataPool;
     Identifier m_emptyIdentifier;
     SerializationContext m_context;
@@ -2862,7 +2842,9 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
                 if (!addToObjectPoolIfNotDupe<MapObjectTag>(inMap))
                     break;
                 write(MapObjectTag);
-                JSMapIterator* iterator = JSMapIterator::create(vm, m_lexicalGlobalObject->mapIteratorStructure(), inMap, IterationKind::Entries);
+                JSMapIterator* iterator = JSMapIterator::create(m_lexicalGlobalObject, m_lexicalGlobalObject->mapIteratorStructure(), inMap, IterationKind::Entries);
+                if (UNLIKELY(scope.exception()))
+                    return SerializationReturnCode::ExistingExceptionError;
                 m_keepAliveBuffer.appendWithCrashOnOverflow(iterator);
                 mapIteratorStack.append(iterator);
                 inputObjectStack.append(inMap);
@@ -2908,7 +2890,9 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
                 if (!addToObjectPoolIfNotDupe<SetObjectTag>(inSet))
                     break;
                 write(SetObjectTag);
-                JSSetIterator* iterator = JSSetIterator::create(vm, m_lexicalGlobalObject->setIteratorStructure(), inSet, IterationKind::Keys);
+                JSSetIterator* iterator = JSSetIterator::create(m_lexicalGlobalObject, m_lexicalGlobalObject->setIteratorStructure(), inSet, IterationKind::Keys);
+                if (UNLIKELY(scope.exception()))
+                    return SerializationReturnCode::ExistingExceptionError;
                 m_keepAliveBuffer.appendWithCrashOnOverflow(iterator);
                 setIteratorStack.append(iterator);
                 inputObjectStack.append(inSet);
@@ -3292,11 +3276,6 @@ private:
 
     enum class VisitNamedMemberResult : uint8_t { Error, Break, Start, Unknown };
 
-    UseCryptoKit isUsingCryptoKit()
-    {
-        return executionContext(m_lexicalGlobalObject)->settingsValues().cryptoKitEnabled ? UseCryptoKit::Yes : UseCryptoKit::No;
-    }
-
     template<WalkerState endState>
     ALWAYS_INLINE VisitNamedMemberResult startVisitNamedMember(MarkedVector<JSObject*, 32>& outputObjectStack, Vector<Identifier, 16>& propertyNameStack, Vector<WalkerState, 16>& stateStack, JSValue& outValue)
     {
@@ -3544,7 +3523,7 @@ private:
             str = String({ reinterpret_cast<const UChar*>(ptr), length });
         ptr += length * sizeof(UChar);
 #else
-        UChar* characters;
+        std::span<UChar> characters;
         str = String::createUninitialized(length, characters);
         for (unsigned i = 0; i < length; ++i) {
             uint16_t c;
@@ -3719,6 +3698,8 @@ private:
     template <typename LengthType>
     bool readArrayBufferViewImpl(VM& vm, JSValue& arrayBufferView)
     {
+        if (!isSafeToRecurse())
+            return false;
         ArrayBufferViewSubtag arrayBufferViewSubtag;
         if (!readArrayBufferViewSubtag(arrayBufferViewSubtag))
             return false;
@@ -3783,6 +3764,8 @@ private:
             return makeArrayBufferView(Int32Array::wrappedAs(arrayBuffer.releaseNonNull(), byteOffset, length).get());
         case Uint32ArrayTag:
             return makeArrayBufferView(Uint32Array::wrappedAs(arrayBuffer.releaseNonNull(), byteOffset, length).get());
+        case Float16ArrayTag:
+            return makeArrayBufferView(Float16Array::wrappedAs(arrayBuffer.releaseNonNull(), byteOffset, length).get());
         case Float32ArrayTag:
             return makeArrayBufferView(Float32Array::wrappedAs(arrayBuffer.releaseNonNull(), byteOffset, length).get());
         case Float64ArrayTag:
@@ -3798,6 +3781,8 @@ private:
 
     bool readArrayBufferView(VM& vm, JSValue& arrayBufferView)
     {
+        if (!isSafeToRecurse())
+            return false;
         if (m_majorVersion < 10)
             return readArrayBufferViewImpl<uint32_t>(vm, arrayBufferView);
         return readArrayBufferViewImpl<uint64_t>(vm, arrayBufferView);
@@ -4169,10 +4154,10 @@ private:
 
         switch (type) {
         case CryptoKeyAsymmetricTypeSubtag::Public:
-            result = CryptoKeyEC::importRaw(algorithm, curve->string(), WTFMove(keyData), extractable, usages, isUsingCryptoKit());
+            result = CryptoKeyEC::importRaw(algorithm, curve->string(), WTFMove(keyData), extractable, usages);
             break;
         case CryptoKeyAsymmetricTypeSubtag::Private:
-            result = CryptoKeyEC::importPkcs8(algorithm, curve->string(), WTFMove(keyData), extractable, usages, isUsingCryptoKit());
+            result = CryptoKeyEC::importPkcs8(algorithm, curve->string(), WTFMove(keyData), extractable, usages);
             break;
         }
 
@@ -4475,6 +4460,9 @@ private:
             m_imageBitmaps[index] = ImageBitmap::create(*executionContext(m_lexicalGlobalObject), WTFMove(*m_detachedImageBitmaps.at(index)));
 
         auto bitmap = m_imageBitmaps[index].get();
+#if USE(SKIA)
+        bitmap->finalizeCrossThreadTransfer();
+#endif
         return getJSValue(bitmap);
     }
 
@@ -4541,8 +4529,11 @@ private:
             return JSValue();
 
         Vector<RTCCertificate::DtlsFingerprint> fingerprints;
-        if (!fingerprints.tryReserveInitialCapacity(size))
+        if (!fingerprints.tryReserveInitialCapacity(size)) {
+            SERIALIZE_TRACE("FAIL deserialize");
+            fail();
             return JSValue();
+        }
         for (unsigned i = 0; i < size; i++) {
             CachedStringRef algorithm;
             if (!readStringData(algorithm))
@@ -4835,6 +4826,8 @@ private:
 
     JSValue readTerminal()
     {
+        if (!isSafeToRecurse())
+            return JSValue();
         SerializationTag tag = readTag();
         if (!isTypeExposedToGlobalObject(*m_globalObject, tag)) {
             SERIALIZE_TRACE("FAIL deserialize");
@@ -4961,10 +4954,13 @@ private:
                     return JSValue();
             }
 
-            if (length && (IntSize(width, height).area() * 4) != length) {
-                SERIALIZE_TRACE("FAIL deserialize");
-                fail();
-                return JSValue();
+            if (length) {
+                auto area = IntSize(width, height).area<RecordOverflow>() * 4;
+                if (area.hasOverflowed() || area.value() != length) {
+                    SERIALIZE_TRACE("FAIL deserialize");
+                    fail();
+                    return JSValue();
+                }
             }
 
             if (!m_isDOMGlobalObject)
@@ -5030,7 +5026,8 @@ private:
             if (!readStringData(flags))
                 return JSValue();
             auto reFlags = Yarr::parseFlags(flags->string());
-            ASSERT(reFlags.has_value());
+            if (!reFlags.has_value())
+                return JSValue();
             VM& vm = m_lexicalGlobalObject->vm();
             RegExp* regExp = RegExp::create(vm, pattern->string(), reFlags.value());
             return RegExpObject::create(vm, m_globalObject->regExpStructure(), regExp);
@@ -5158,10 +5155,10 @@ private:
                     fail();
                     return JSValue();
                 }
-                memory = Wasm::Memory::create(contents.releaseNonNull(), WTFMove(handler));
+                memory = Wasm::Memory::create(vm, contents.releaseNonNull(), WTFMove(handler));
             } else {
                 // zero size & max-size.
-                memory = Wasm::Memory::createZeroSized(JSC::MemorySharingMode::Shared, WTFMove(handler));
+                memory = Wasm::Memory::createZeroSized(vm, JSC::MemorySharingMode::Shared, WTFMove(handler));
             }
 
             result->adopt(memory.releaseNonNull());
@@ -6454,4 +6451,59 @@ IDBValue SerializedScriptValue::writeBlobsToDiskForIndexedDBSynchronously()
     return value;
 }
 
+std::optional<ErrorInformation> extractErrorInformationFromErrorInstance(JSC::JSGlobalObject* lexicalGlobalObject, ErrorInstance& errorInstance)
+{
+    ASSERT(lexicalGlobalObject);
+    auto& vm = lexicalGlobalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    auto errorTypeValue = errorInstance.get(lexicalGlobalObject, vm.propertyNames->name);
+    RETURN_IF_EXCEPTION(scope, std::nullopt);
+    String errorTypeString = errorTypeValue.toWTFString(lexicalGlobalObject);
+    RETURN_IF_EXCEPTION(scope, std::nullopt);
+
+    PropertyDescriptor messageDescriptor;
+    String message;
+    if (errorInstance.getOwnPropertyDescriptor(lexicalGlobalObject, vm.propertyNames->message, messageDescriptor) && messageDescriptor.isDataDescriptor()) {
+        EXCEPTION_ASSERT(!scope.exception());
+        message = messageDescriptor.value().toWTFString(lexicalGlobalObject);
+    }
+    RETURN_IF_EXCEPTION(scope, std::nullopt);
+
+    PropertyDescriptor lineDescriptor;
+    unsigned line = 0;
+    if (errorInstance.getOwnPropertyDescriptor(lexicalGlobalObject, vm.propertyNames->line, lineDescriptor) && lineDescriptor.isDataDescriptor()) {
+        EXCEPTION_ASSERT(!scope.exception());
+        line = lineDescriptor.value().toNumber(lexicalGlobalObject);
+    }
+    RETURN_IF_EXCEPTION(scope, std::nullopt);
+
+    PropertyDescriptor columnDescriptor;
+    unsigned column = 0;
+    if (errorInstance.getOwnPropertyDescriptor(lexicalGlobalObject, vm.propertyNames->column, columnDescriptor) && columnDescriptor.isDataDescriptor()) {
+        EXCEPTION_ASSERT(!scope.exception());
+        column = columnDescriptor.value().toNumber(lexicalGlobalObject);
+    }
+    RETURN_IF_EXCEPTION(scope, std::nullopt);
+
+    PropertyDescriptor sourceURLDescriptor;
+    String sourceURL;
+    if (errorInstance.getOwnPropertyDescriptor(lexicalGlobalObject, vm.propertyNames->sourceURL, sourceURLDescriptor) && sourceURLDescriptor.isDataDescriptor()) {
+        EXCEPTION_ASSERT(!scope.exception());
+        sourceURL = sourceURLDescriptor.value().toWTFString(lexicalGlobalObject);
+    }
+    RETURN_IF_EXCEPTION(scope, std::nullopt);
+
+    PropertyDescriptor stackDescriptor;
+    String stack;
+    if (errorInstance.getOwnPropertyDescriptor(lexicalGlobalObject, vm.propertyNames->stack, stackDescriptor) && stackDescriptor.isDataDescriptor()) {
+        EXCEPTION_ASSERT(!scope.exception());
+        stack = stackDescriptor.value().toWTFString(lexicalGlobalObject);
+    }
+    RETURN_IF_EXCEPTION(scope, std::nullopt);
+
+    return { ErrorInformation { errorTypeString, message, line, column, sourceURL, stack } };
+}
+
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

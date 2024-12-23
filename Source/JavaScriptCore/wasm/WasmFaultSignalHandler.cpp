@@ -43,6 +43,8 @@
 #include <wtf/Lock.h>
 #include <wtf/threads/Signals.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC { namespace Wasm {
 
 using WTF::CodePtr;
@@ -124,7 +126,7 @@ void activateSignalingMemory()
         if (!Wasm::isSupported())
             return;
 
-        if (!Options::useWebAssemblyFaultSignalHandler())
+        if (!Options::useWasmFaultSignalHandler())
             return;
 
         activateSignalHandlersFor(Signal::AccessFault);
@@ -138,7 +140,7 @@ void prepareSignalingMemory()
         if (!Wasm::isSupported())
             return;
 
-        if (!Options::useWebAssemblyFaultSignalHandler())
+        if (!Options::useWasmFaultSignalHandler())
             return;
 
 #if CPU(ARM64E) && HAVE(HARDENED_MACH_EXCEPTIONS)
@@ -152,5 +154,6 @@ void prepareSignalingMemory()
     
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
+#endif // ENABLE(WEBASSEMBLY)

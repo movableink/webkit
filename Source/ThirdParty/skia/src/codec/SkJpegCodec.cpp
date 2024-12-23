@@ -102,7 +102,7 @@ SkCodec::Result SkJpegCodec::ReadHeader(
     }
 
     // Read the jpeg header
-    switch (jpeg_read_header(dinfo, true)) {
+    switch (jpeg_read_header(dinfo, TRUE)) {
         case JPEG_HEADER_OK:
             break;
         case JPEG_SUSPENDED:
@@ -903,6 +903,21 @@ SkCodec::Result SkJpegCodec::onGetYUVAPlanes(const SkYUVAPixmaps& yuvaPixmaps) {
     }
 
     return kSuccess;
+}
+
+bool SkJpegCodec::onGetGainmapCodec(SkGainmapInfo* info, std::unique_ptr<SkCodec>* gainmapCodec) {
+    std::unique_ptr<SkStream> stream;
+    if (!this->onGetGainmapInfo(info, &stream)) {
+        return false;
+    }
+    if (gainmapCodec) {
+        Result result;
+        *gainmapCodec = MakeFromStream(std::move(stream), &result);
+        if (!*gainmapCodec) {
+            return false;
+        }
+    }
+    return true;
 }
 
 bool SkJpegCodec::onGetGainmapInfo(SkGainmapInfo* info,

@@ -79,7 +79,7 @@
 #include <JavaScriptCore/VMTrapsInlines.h>
 #include <JavaScriptCore/WasmStreamingCompiler.h>
 #include <JavaScriptCore/WeakGCMapInlines.h>
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/MakeString.h>
 
 #if ENABLE(REMOTE_INSPECTOR)
 #include <JavaScriptCore/JSRemoteInspector.h>
@@ -462,8 +462,8 @@ JSFunction* JSDOMGlobalObject::createCrossOriginFunction(JSGlobalObject* lexical
     auto& vm = lexicalGlobalObject->vm();
     CrossOriginMapKey key = std::make_pair(lexicalGlobalObject, nativeFunction.taggedPtr());
 
-    // WeakGCMap::ensureValue's functor must not invoke GC since GC can modify WeakGCMap in the middle of HashMap::ensure.
-    // We use DeferGC here (1) not to invoke GC when executing WeakGCMap::ensureValue and (2) to avoid looking up HashMap twice.
+    // WeakGCMap::ensureValue's functor must not invoke GC since GC can modify WeakGCMap in the middle of UncheckedKeyHashMap::ensure.
+    // We use DeferGC here (1) not to invoke GC when executing WeakGCMap::ensureValue and (2) to avoid looking up UncheckedKeyHashMap twice.
     DeferGC deferGC(vm);
     return m_crossOriginFunctionMap.ensureValue(key, [&] {
         return JSFunction::create(vm, lexicalGlobalObject, length, propertyName.publicName(), nativeFunction, ImplementationVisibility::Public);
@@ -476,8 +476,8 @@ GetterSetter* JSDOMGlobalObject::createCrossOriginGetterSetter(JSGlobalObject* l
     auto& vm = lexicalGlobalObject->vm();
     CrossOriginMapKey key = std::make_pair(lexicalGlobalObject, getter ? getter.taggedPtr() : setter.taggedPtr());
 
-    // WeakGCMap::ensureValue's functor must not invoke GC since GC can modify WeakGCMap in the middle of HashMap::ensure.
-    // We use DeferGC here (1) not to invoke GC when executing WeakGCMap::ensureValue and (2) to avoid looking up HashMap twice.
+    // WeakGCMap::ensureValue's functor must not invoke GC since GC can modify WeakGCMap in the middle of UncheckedKeyHashMap::ensure.
+    // We use DeferGC here (1) not to invoke GC when executing WeakGCMap::ensureValue and (2) to avoid looking up UncheckedKeyHashMap twice.
     DeferGC deferGC(vm);
     return m_crossOriginGetterSetterMap.ensureValue(key, [&] {
         return GetterSetter::create(vm, lexicalGlobalObject,
@@ -701,7 +701,7 @@ JSC::JSGlobalObject* JSDOMGlobalObject::deriveShadowRealmGlobalObject(JSC::JSGlo
 
         while (!document->isTopDocument()) {
             auto* candidateDocument = document->parentDocument();
-            if (!candidateDocument || !candidateDocument->securityOrigin().isSameOriginDomain(originalOrigin))
+            if (!candidateDocument || !candidateDocument->protectedSecurityOrigin()->isSameOriginDomain(originalOrigin))
                 break;
 
             document = candidateDocument;

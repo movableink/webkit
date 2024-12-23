@@ -57,9 +57,10 @@
 #include "UserAgentStyleSheets.h"
 #include <pal/FileSizeFormatter.h>
 #include <unicode/ubidi.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/UUID.h>
 #include <wtf/URLParser.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/unicode/CharacterNames.h>
 
 #if ENABLE(SERVICE_CONTROLS)
@@ -72,7 +73,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLAttachmentElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLAttachmentElement);
 
 using namespace HTMLNames;
 
@@ -364,9 +365,9 @@ public:
 
     void handleEvent(ScriptExecutionContext&, Event& event) final
     {
-        if (event.type() == eventNames().clickEvent) {
+        if (isAnyClick(event)) {
             auto& mouseEvent = downcast<MouseEvent>(event);
-            auto copiedEvent = MouseEvent::create(saveAtom(), Event::CanBubble::No, Event::IsCancelable::No, Event::IsComposed::No,
+            auto copiedEvent = MouseEvent::create(saveAtom(), Event::CanBubble::No, Event::IsCancelable::No, Event::IsComposed::No, MonotonicTime::now(),
                 mouseEvent.view(), mouseEvent.detail(), mouseEvent.screenX(), mouseEvent.screenY(), mouseEvent.clientX(), mouseEvent.clientY(),
                 mouseEvent.modifierKeys(), mouseEvent.button(), mouseEvent.buttons(), mouseEvent.syntheticClickType(), nullptr);
 
@@ -432,6 +433,7 @@ void HTMLAttachmentElement::updateSaveButton(bool show)
 
         m_saveButton = createContainedElement<HTMLButtonElement>(*m_saveArea, attachmentSaveButtonIdentifier());
         m_saveButton->addEventListener(eventNames().clickEvent, AttachmentSaveEventListener::create(*this), { });
+        m_saveButton->addEventListener(eventNames().auxclickEvent, AttachmentSaveEventListener::create(*this), { });
     }
 }
 
@@ -925,6 +927,11 @@ void HTMLAttachmentElement::requestWideLayoutIconIfNeeded()
 
     if (!m_imageElement)
         return;
+
+// FIXME: Remove after rdar://136373445 is fixed.
+#if PLATFORM(MAC)
+    RELEASE_LOG(Editing, "HTMLAttachmentElement[uuid=%s] requestAttachmentIcon with type='%s'", uniqueIdentifier().utf8().data(), attachmentType().utf8().data());
+#endif
 
     dispatchEvent(Event::create(eventNames().beforeloadEvent, Event::CanBubble::No, Event::IsCancelable::No));
     document().page()->attachmentElementClient()->requestAttachmentIcon(uniqueIdentifier(), FloatSize(attachmentIconSize, attachmentIconSize));

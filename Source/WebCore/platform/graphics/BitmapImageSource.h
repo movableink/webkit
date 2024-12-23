@@ -42,6 +42,8 @@ class BitmapImageSource : public ImageSource {
 public:
     static Ref<BitmapImageSource> create(BitmapImage&, AlphaOption, GammaAndColorProfileOption);
 
+    virtual ~BitmapImageSource();
+
     // State
     ImageDecoder* decoder(FragmentedSharedBuffer* = nullptr) const;
     ImageDecoder* decoderIfExists() const { return m_decoder.get(); }
@@ -65,7 +67,7 @@ public:
     unsigned primaryFrameIndex() const final { return m_descriptor.primaryFrameIndex(); }
 
     const Vector<ImageFrame>& frames() const { return m_frames; }
-    const ImageFrame& primaryImageFrame() final { return frameAtIndexCacheIfNeeded(primaryFrameIndex()); }
+    const ImageFrame& primaryImageFrame(const std::optional<SubsamplingLevel>& subsamplingLevel = std::nullopt) final { return frameAtIndexCacheIfNeeded(primaryFrameIndex(), subsamplingLevel); }
 
     // NativeImage
     DecodingStatus requestNativeImageAtIndexIfNeeded(unsigned index, SubsamplingLevel, ImageAnimatingState, const DecodingOptions&);
@@ -130,7 +132,7 @@ private:
 
     const ImageFrame& frameAtIndex(unsigned index) const;
     const ImageFrame& frameAtIndexCacheIfNeeded(unsigned index, const std::optional<SubsamplingLevel>& = std::nullopt);
-    const ImageFrame& currentImageFrame() final { return frameAtIndexCacheIfNeeded(currentFrameIndex()); }
+    const ImageFrame& currentImageFrame(const std::optional<SubsamplingLevel>& subsamplingLevel = std::nullopt) final { return frameAtIndexCacheIfNeeded(currentFrameIndex(), subsamplingLevel); }
 
     // NativeImage
     DecodingStatus requestNativeImageAtIndex(unsigned index, SubsamplingLevel, ImageAnimatingState, const DecodingOptions&);
@@ -167,8 +169,13 @@ private:
     bool shouldUseQuickLookForFullscreen() const final { return m_descriptor.shouldUseQuickLookForFullscreen(); }
 #endif
 
+#if ENABLE(SPATIAL_IMAGE_DETECTION)
+    bool isSpatial() const final { return m_descriptor.isSpatial(); }
+#endif
+
     // ImageFrame metadata
     ImageOrientation frameOrientationAtIndex(unsigned index) const final;
+    Headroom frameHeadroomAtIndex(unsigned index) const final;
 
     // BitmapImage metadata
     RefPtr<ImageObserver> imageObserver() const;

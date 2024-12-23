@@ -46,6 +46,7 @@
 #include <WebCore/ColorChooser.h>
 #include <WebCore/ColorChooserClient.h>
 #include <WebCore/CookieConsentDecisionResult.h>
+#include <WebCore/Cursor.h>
 #include <WebCore/DatabaseTracker.h>
 #include <WebCore/Document.h>
 #include <WebCore/FileChooser.h>
@@ -60,6 +61,7 @@
 #include <WebCore/SerializedCryptoKeyWrap.h>
 #include <WebCore/WindowFeatures.h>
 #include <wtf/WallTime.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if USE(TILED_BACKING_STORE)
 #include "TiledBackingStore.h"
@@ -75,6 +77,8 @@
 #endif
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ChromeClientQt);
 
 bool ChromeClientQt::dumpVisitedLinksCallbacks = false;
 
@@ -176,11 +180,11 @@ void ChromeClientQt::focusedFrameChanged(Frame*)
 {
 }
 
-Page* ChromeClientQt::createWindow(LocalFrame& frame, const WindowFeatures& features, const NavigationAction&)
+RefPtr<Page> ChromeClientQt::createWindow(LocalFrame& frame,  const String& openedMainFrameName, const WindowFeatures& features, const NavigationAction&)
 {
 #if ENABLE(FULLSCREEN_API)
     if (!frame.document())
-        return 0;
+        return nullptr;
 
     CheckedPtr fullscreenManager = frame.document()->fullscreenManagerIfExists();
     if (fullscreenManager && fullscreenManager->currentFullscreenElement())
@@ -191,9 +195,11 @@ Page* ChromeClientQt::createWindow(LocalFrame& frame, const WindowFeatures& feat
 
     QWebPageAdapter* newPage = m_webPage->createWindow(features.dialog.value_or(false));
     if (!newPage)
-        return 0;
+        return nullptr;
 
-    return newPage->page.get();
+    newPage->page->mainFrame().tree().setSpecifiedName(AtomString(openedMainFrameName));
+
+    return newPage->page;
 }
 
 void ChromeClientQt::show()
@@ -362,12 +368,6 @@ bool ChromeClientQt::runJavaScriptPrompt(LocalFrame& f, const String& message, c
     return rc;
 }
 
-void ChromeClientQt::setStatusbarText(const String& msg)
-{
-    QString x = msg;
-    QMetaObject::invokeMethod(m_webPage->handle(), "statusBarMessage", Q_ARG(QString, x));
-}
-
 KeyboardUIMode ChromeClientQt::keyboardUIMode()
 {
     return m_webPage->settings->testAttribute(QWebSettings::LinksIncludedInFocusChain)
@@ -523,7 +523,7 @@ void ChromeClientQt::reachedApplicationCacheOriginQuota(SecurityOrigin& origin, 
 }
 
 #if ENABLE(INPUT_TYPE_COLOR)
-std::unique_ptr<ColorChooser> ChromeClientQt::createColorChooser(ColorChooserClient& client, const Color& color)
+RefPtr<ColorChooser> ChromeClientQt::createColorChooser(ColorChooserClient& client, const Color& color)
 {
     const QColor selectedColor = m_webPage->colorSelectionRequested(QColor(color));
     client.didChooseColor(selectedColor);
@@ -533,7 +533,7 @@ std::unique_ptr<ColorChooser> ChromeClientQt::createColorChooser(ColorChooserCli
 #endif
 
 #if ENABLE(DATALIST_ELEMENT)
-std::unique_ptr<DataListSuggestionPicker> ChromeClientQt::createDataListSuggestionPicker(DataListSuggestionsClient&)
+RefPtr<DataListSuggestionPicker> ChromeClientQt::createDataListSuggestionPicker(DataListSuggestionsClient&)
 {
     // QTFIXME: Implement DataListSuggestionPickerQt
     return nullptr;

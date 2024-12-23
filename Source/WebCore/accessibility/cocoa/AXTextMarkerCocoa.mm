@@ -27,6 +27,7 @@
 
 #import <Foundation/NSRange.h>
 #if PLATFORM(MAC)
+#import "AXIsolatedObject.h"
 #import "WebAccessibilityObjectWrapperMac.h"
 #import <pal/spi/mac/HIServicesSPI.h>
 #else // PLATFORM(IOS_FAMILY)
@@ -46,35 +47,53 @@ AXTextMarker::AXTextMarker(PlatformTextMarkerData platformData)
         return;
     }
 
-    RawTextMarkerData rawTextMarkerData;
-    if (AXTextMarkerGetLength(platformData) != sizeof(rawTextMarkerData)) {
+    if (AXTextMarkerGetLength(platformData) != sizeof(m_data)) {
         ASSERT_NOT_REACHED();
         return;
     }
 
-    memcpy(&rawTextMarkerData, AXTextMarkerGetBytePtr(platformData), sizeof(rawTextMarkerData));
-    m_data = rawTextMarkerData.toTextMarkerData();
+    memcpy(&m_data, AXTextMarkerGetBytePtr(platformData), sizeof(m_data));
 #else // PLATFORM(IOS_FAMILY)
-    RawTextMarkerData rawTextMarkerData;
-    [platformData getBytes:&rawTextMarkerData length:sizeof(rawTextMarkerData)];
-    m_data = rawTextMarkerData.toTextMarkerData();
+    [platformData getBytes:&m_data length:sizeof(m_data)];
 #endif
-
-    if (isMainThread())
-        setNodeIfNeeded();
 }
 
 RetainPtr<PlatformTextMarkerData> AXTextMarker::platformData() const
 {
-    auto rawTextMarkerData = m_data.toRawTextMarkerData();
 #if PLATFORM(MAC)
-    return adoptCF(AXTextMarkerCreate(kCFAllocatorDefault, (const UInt8*)&rawTextMarkerData, sizeof(rawTextMarkerData)));
+    return adoptCF(AXTextMarkerCreate(kCFAllocatorDefault, (const UInt8*)&m_data, sizeof(m_data)));
 #else // PLATFORM(IOS_FAMILY)
-    return [NSData dataWithBytes:&rawTextMarkerData length:sizeof(rawTextMarkerData)];
+    return [NSData dataWithBytes:&m_data length:sizeof(m_data)];
 #endif
 }
 
+#if ENABLE(AX_THREAD_TEXT_APIS)
+RetainPtr<NSAttributedString> AXTextMarkerRange::toAttributedString() const
+{
+    RELEASE_ASSERT(!isMainThread());
+
+    auto start = m_start.toTextRunMarker();
+    if (!start.isValid())
+        return nil;
+    auto end = m_end.toTextRunMarker();
+    if (!end.isValid())
+        return nil;
+
+    if (start.isolatedObject() == end.isolatedObject()) {
+        size_t minOffset = std::min(start.offset(), end.offset());
+        size_t maxOffset = std::max(start.offset(), end.offset());
+        // FIXME: createAttributedString takes a StringView, but we create a full-fledged String. Could we create a
+        // new substringView method that returns a StringView?
+        // FIXME: Should we be passing SpellCheck::Yes? Maybe we need to take `SpellCheck` as a function parameter?
+        return start.isolatedObject()->createAttributedString(start.runs()->substring(minOffset, maxOffset - minOffset), AXCoreObject::SpellCheck::No).autorelease();
+    }
+    // FIXME: Handle ranges that span multiple objects.
+    return nil;
+}
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
+
 #if PLATFORM(MAC)
+
 AXTextMarkerRange::AXTextMarkerRange(AXTextMarkerRangeRef textMarkerRangeRef)
 {
     if (!textMarkerRangeRef || CFGetTypeID(textMarkerRangeRef) != AXTextMarkerRangeGetTypeID()) {
@@ -99,7 +118,40 @@ RetainPtr<AXTextMarkerRangeRef> AXTextMarkerRange::platformData() const
         , m_end.platformData().autorelease()
     ));
 }
-#endif // PLATFORM(MAC)
+
+#elif PLATFORM(IOS_FAMILY)
+
+AXTextMarkerRange::AXTextMarkerRange(NSArray *markers)
+{
+    if (markers.count != 2)
+        return;
+
+    WebAccessibilityTextMarker *start = [markers objectAtIndex:0];
+    WebAccessibilityTextMarker *end = [markers objectAtIndex:1];
+    if (![start isKindOfClass:[WebAccessibilityTextMarker class]] || ![end isKindOfClass:[WebAccessibilityTextMarker class]])
+        return;
+
+    m_start = { [start textMarkerData ] };
+    m_end = { [end textMarkerData] };
+}
+
+RetainPtr<NSArray> AXTextMarkerRange::platformData() const
+{
+    if (!*this)
+        return nil;
+
+    RefPtr object = m_start.object();
+    ASSERT(object); // Since *this is not null.
+    auto* cache = object->axObjectCache();
+    if (!cache)
+        return nil;
+
+    auto start = adoptNS([[WebAccessibilityTextMarker alloc] initWithTextMarker:&m_start.m_data cache:cache]);
+    auto end = adoptNS([[WebAccessibilityTextMarker alloc] initWithTextMarker:&m_end.m_data cache:cache]);
+    return adoptNS([[NSArray alloc] initWithObjects:start.get(), end.get(), nil]);
+}
+
+#endif // PLATFORM(IOS_FAMILY)
 
 std::optional<NSRange> AXTextMarkerRange::nsRange() const
 {

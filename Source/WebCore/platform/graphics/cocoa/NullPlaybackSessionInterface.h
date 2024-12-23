@@ -30,6 +30,7 @@
 #include "HTMLMediaElementEnums.h"
 #include "PlaybackSessionModel.h"
 #include <wtf/CheckedRef.h>
+#include <wtf/TZoneMallocInlines.h>
 
 OBJC_CLASS AVPlayerViewController;
 OBJC_CLASS UIView;
@@ -43,7 +44,7 @@ class NullPlaybackSessionInterface final
     : public PlaybackSessionModelClient
     , public RefCounted<NullPlaybackSessionInterface>
     , public CanMakeCheckedPtr<NullPlaybackSessionInterface> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(NullPlaybackSessionInterface);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(NullPlaybackSessionInterface);
 public:
     static Ref<NullPlaybackSessionInterface> create(PlaybackSessionModel& model)
@@ -53,7 +54,6 @@ public:
 
     PlaybackSessionModel* playbackSessionModel() const { return m_model.get(); }
 
-    void setupFullscreen(UIView&, const FloatRect&, const FloatSize&, UIView*, HTMLMediaElementEnums::VideoFullscreenMode, bool, bool, bool) { }
     void enterFullscreen() { }
     bool exitFullscreen(const FloatRect&) { return false; }
     void cleanupFullscreen() { }
@@ -77,10 +77,10 @@ private:
     }
 
     // CheckedPtr interface
-    uint32_t ptrCount() const final { return CanMakeCheckedPtr::ptrCount(); }
-    uint32_t ptrCountWithoutThreadCheck() const final { return CanMakeCheckedPtr::ptrCountWithoutThreadCheck(); }
-    void incrementPtrCount() const final { CanMakeCheckedPtr::incrementPtrCount(); }
-    void decrementPtrCount() const final { CanMakeCheckedPtr::decrementPtrCount(); }
+    uint32_t checkedPtrCount() const final { return CanMakeCheckedPtr::checkedPtrCount(); }
+    uint32_t checkedPtrCountWithoutThreadCheck() const final { return CanMakeCheckedPtr::checkedPtrCountWithoutThreadCheck(); }
+    void incrementCheckedPtrCount() const final { CanMakeCheckedPtr::incrementCheckedPtrCount(); }
+    void decrementCheckedPtrCount() const final { CanMakeCheckedPtr::decrementCheckedPtrCount(); }
 
     void durationChanged(double) final { }
     void currentTimeChanged(double, double) final { }

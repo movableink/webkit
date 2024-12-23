@@ -27,11 +27,14 @@
 #include <wtf/FileSystem.h>
 #include <wtf/PrintStream.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
-#include <wtf/text/StringConcatenate.h>
-#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(GStreamerElementHarness);
+WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(GStreamerElementHarness, Stream);
 
 GST_DEBUG_CATEGORY(webkit_element_harness_debug);
 #define GST_CAT_DEFAULT webkit_element_harness_debug
@@ -112,7 +115,7 @@ GStreamerElementHarness::GStreamerElementHarness(GRefPtr<GstElement>&& element, 
 
     if (hasSometimesSrcPad) {
         GST_DEBUG_OBJECT(m_element.get(), "Expecting output buffers on sometimes src pad(s).");
-        g_signal_connect(m_element.get(), "pad-added", reinterpret_cast<GCallback>(+[](GstElement* element, GstPad* pad, gpointer userData) {
+        g_signal_connect(m_element.get(), "pad-added", reinterpret_cast<GCallback>(+[]([[maybe_unused]] GstElement* element, GstPad* pad, gpointer userData) {
             GST_DEBUG_OBJECT(element, "Pad added: %" GST_PTR_FORMAT, pad);
             auto& harness = *reinterpret_cast<GStreamerElementHarness*>(userData);
             RefPtr<GStreamerElementHarness> downstreamHarness;
@@ -129,7 +132,7 @@ GStreamerElementHarness::GStreamerElementHarness(GRefPtr<GstElement>&& element, 
             harness.dumpGraph("pad-added"_s);
         }), this);
 
-        g_signal_connect(m_element.get(), "pad-removed", reinterpret_cast<GCallback>(+[](GstElement* element, GstPad* pad, gpointer userData) {
+        g_signal_connect(m_element.get(), "pad-removed", reinterpret_cast<GCallback>(+[]([[maybe_unused]] GstElement* element, GstPad* pad, gpointer userData) {
             GST_DEBUG_OBJECT(element, "Pad removed: %" GST_PTR_FORMAT, pad);
             auto& harness = *reinterpret_cast<GStreamerElementHarness*>(userData);
             harness.m_outputStreams.removeAllMatching([pad = GRefPtr<GstPad>(pad)](auto& item) -> bool {
@@ -647,25 +650,24 @@ String MermaidBuilder::describeCaps(const GRefPtr<GstCaps>& caps)
     for (unsigned i = 0; i < capsSize; i++) {
         auto* features = gst_caps_get_features(caps.get(), i);
         const auto* structure = gst_caps_get_structure(caps.get(), i);
-        builder.append(WTF::span(gst_structure_get_name(structure)), "<br/>"_s);
+        builder.append(gstStructureGetName(structure), "<br/>"_s);
         if (features && (gst_caps_features_is_any(features) || !gst_caps_features_is_equal(features, GST_CAPS_FEATURES_MEMORY_SYSTEM_MEMORY))) {
             GUniquePtr<char> serializedFeature(gst_caps_features_to_string(features));
             builder.append('(', WTF::span(serializedFeature.get()), ')');
         }
 
-        gst_structure_foreach(structure, [](GQuark field, const GValue* value, gpointer builderPointer) -> gboolean {
-            auto* builder = reinterpret_cast<StringBuilder*>(builderPointer);
-            builder->append(WTF::span(g_quark_to_string(field)), ": "_s);
+        gstStructureForeach(structure, [&](auto id, const auto value) -> bool {
+            builder.append(gstIdToString(id), ": "_s);
 
             GUniquePtr<char> serializedValue(gst_value_serialize(value));
             String valueString = WTF::span(serializedValue.get());
             if (valueString.length() > 25)
-                builder->append(valueString.substring(0, 25), WTF::span("…"));
+                builder.append(valueString.substring(0, 25), WTF::span("…"));
             else
-                builder->append(valueString);
-            builder->append("<br/>"_s);
+                builder.append(valueString);
+            builder.append("<br/>"_s);
             return TRUE;
-        }, &builder);
+        });
     }
     return builder.toString();
 }

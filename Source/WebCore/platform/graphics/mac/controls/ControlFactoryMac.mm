@@ -54,17 +54,20 @@
 #import <pal/spi/mac/NSServicesRolloverButtonCellSPI.h>
 #import <pal/spi/mac/NSViewSPI.h>
 #import <wtf/BlockObjCExceptions.h>
+#import <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-std::unique_ptr<ControlFactory> ControlFactory::createControlFactory()
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ControlFactoryMac);
+
+RefPtr<ControlFactory> ControlFactory::create()
 {
-    return makeUnique<ControlFactoryMac>();
+    return adoptRef(new ControlFactoryMac());
 }
 
-ControlFactoryMac& ControlFactoryMac::sharedControlFactory()
+ControlFactoryMac& ControlFactoryMac::shared()
 {
-    return static_cast<ControlFactoryMac&>(ControlFactory::sharedControlFactory());
+    return static_cast<ControlFactoryMac&>(ControlFactory::shared());
 }
 
 NSView *ControlFactoryMac::drawingView(const FloatRect& rect, const ControlStyle& style) const

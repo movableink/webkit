@@ -35,13 +35,13 @@
 #include "StyleProperties.h"
 #include "TextControlInnerElements.h"
 #include "VisiblePosition.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/unicode/CharacterNames.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderTextControl);
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderTextControlInnerContainer);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderTextControl);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderTextControlInnerContainer);
 
 RenderTextControl::RenderTextControl(Type type, HTMLTextFormControlElement& element, RenderStyle&& style)
     : RenderBlockFlow(type, element, WTFMove(style), BlockFlowFlag::IsTextControl)
@@ -173,7 +173,10 @@ void RenderTextControl::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidt
     maxLogicalWidth = preferredContentLogicalWidth(const_cast<RenderTextControl*>(this)->getAverageCharWidth());
     if (RenderBox* innerTextRenderBox = innerTextElement() ? innerTextElement()->renderBox() : nullptr)
         maxLogicalWidth += innerTextRenderBox->paddingStart() + innerTextRenderBox->paddingEnd();
-    if (!style().logicalWidth().isPercentOrCalculated())
+    auto& logicalWidth = style().logicalWidth();
+    if (logicalWidth.isCalculated())
+        minLogicalWidth = std::max(0_lu, valueForLength(logicalWidth, 0_lu));
+    else if (!logicalWidth.isPercent())
         minLogicalWidth = maxLogicalWidth;
 }
 

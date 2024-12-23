@@ -184,10 +184,16 @@ void ArgumentCoder<Namespace::Subnamespace::StructName>::encode(OtherEncoder& en
 std::optional<Namespace::Subnamespace::StructName> ArgumentCoder<Namespace::Subnamespace::StructName>::decode(Decoder& decoder)
 {
     auto firstMemberName = decoder.decode<FirstMemberType>();
+    if (UNLIKELY(!firstMemberName))
+        decoder.setIndexOfDecodingFailure(0);
 #if ENABLE(SECOND_MEMBER)
     auto secondMemberName = decoder.decode<SecondMemberType>();
+    if (UNLIKELY(!secondMemberName))
+        decoder.setIndexOfDecodingFailure(1);
 #endif
     auto nullableTestMember = decoder.decode<RetainPtr<CFTypeRef>>();
+    if (UNLIKELY(!nullableTestMember))
+        decoder.setIndexOfDecodingFailure(2);
     if (UNLIKELY(!decoder.isValid()))
         return std::nullopt;
     return {
@@ -1250,6 +1256,43 @@ std::optional<RetainPtr<CFBarRef>> ArgumentCoder<RetainPtr<CFBarRef>>::decode(De
 
 #endif
 
+#if USE(SKIA)
+void ArgumentCoder<SkFooBar>::encode(Encoder& encoder, const SkFooBar& passedInstance)
+{
+    auto instance = CoreIPCSkFooBar(passedInstance);
+    static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.foo())>, int>);
+    static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.bar())>, double>);
+
+    encoder << instance.foo();
+    encoder << instance.bar();
+}
+
+void ArgumentCoder<SkFooBar>::encode(OtherEncoder& encoder, const SkFooBar& passedInstance)
+{
+    auto instance = CoreIPCSkFooBar(passedInstance);
+    static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.foo())>, int>);
+    static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.bar())>, double>);
+
+    encoder << instance.foo();
+    encoder << instance.bar();
+}
+
+std::optional<SkFooBar> ArgumentCoder<SkFooBar>::decode(Decoder& decoder)
+{
+    auto foo = decoder.decode<int>();
+    auto bar = decoder.decode<double>();
+    if (UNLIKELY(!decoder.isValid()))
+        return std::nullopt;
+    return {
+        CoreIPCSkFooBar {
+            WTFMove(*foo),
+            WTFMove(*bar)
+        }
+    };
+}
+
+#endif
+
 void ArgumentCoder<WebKit::RValueWithFunctionCalls>::encode(Encoder& encoder, WebKit::RValueWithFunctionCalls&& instance)
 {
     static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.callFunction())>, SandboxExtensionHandle>);
@@ -1449,6 +1492,37 @@ std::optional<Ref<WebCore::AppKitControlSystemImage>> ArgumentCoder<WebCore::App
 }
 
 #endif
+
+void ArgumentCoder<WebCore::RectEdges<bool>>::encode(Encoder& encoder, const WebCore::RectEdges<bool>& instance)
+{
+    static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.top())>, bool>);
+    static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.right())>, bool>);
+    static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.bottom())>, bool>);
+    static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.left())>, bool>);
+
+    encoder << instance.top();
+    encoder << instance.right();
+    encoder << instance.bottom();
+    encoder << instance.left();
+}
+
+std::optional<WebCore::RectEdges<bool>> ArgumentCoder<WebCore::RectEdges<bool>>::decode(Decoder& decoder)
+{
+    auto top = decoder.decode<bool>();
+    auto right = decoder.decode<bool>();
+    auto bottom = decoder.decode<bool>();
+    auto left = decoder.decode<bool>();
+    if (UNLIKELY(!decoder.isValid()))
+        return std::nullopt;
+    return {
+        WebCore::RectEdges<bool> {
+            WTFMove(*top),
+            WTFMove(*right),
+            WTFMove(*bottom),
+            WTFMove(*left)
+        }
+    };
+}
 
 } // namespace IPC
 

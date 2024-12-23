@@ -53,6 +53,7 @@
 #include <WebCore/SpatialNavigation.h>
 #include <WebCore/StyleProperties.h>
 #include <WebCore/WindowsKeyboardCodes.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <stdio.h>
 
 
@@ -83,6 +84,8 @@ static QString dumpRange(const std::optional<WebCore::SimpleRange>& range)
 
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EditorClientQt);
 
 bool EditorClientQt::dumpEditingCallbacks = false;
 bool EditorClientQt::acceptsEditing = true;
@@ -583,10 +586,6 @@ bool EditorClientQt::spellingUIIsShowing()
 bool EditorClientQt::isEditing() const
 {
     return m_editing;
-}
-
-void EditorClientQt::willSetInputMethodState()
-{
 }
 
 void EditorClientQt::setInputMethodState(WebCore::Element* element)

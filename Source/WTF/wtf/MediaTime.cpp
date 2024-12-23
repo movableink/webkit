@@ -37,6 +37,8 @@
 #include <wtf/JSONValues.h>
 #include <wtf/MathExtras.h>
 #include <wtf/PrintStream.h>
+#include <wtf/Seconds.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/TextStream.h>
 
 namespace WTF {
@@ -48,6 +50,9 @@ static uint32_t greatestCommonDivisor(uint32_t a, uint32_t b)
     ASSERT(a);
     ASSERT(b);
 
+    if (a == b)
+        return a;
+
     // Euclid's Algorithm
     while (b)
         b = std::exchange(a, b) % b;
@@ -56,8 +61,12 @@ static uint32_t greatestCommonDivisor(uint32_t a, uint32_t b)
     return a;
 }
 
-static uint32_t leastCommonMultiple(uint32_t a, uint32_t b, uint32_t &result)
+static bool leastCommonMultiple(uint32_t a, uint32_t b, uint32_t& result)
 {
+    if (a == b) {
+        result = a;
+        return true;
+    }
     return safeMultiply(a, b / greatestCommonDivisor(a, b), result);
 }
 
@@ -128,6 +137,11 @@ MediaTime MediaTime::createWithDouble(double doubleTime, uint32_t timeScale)
     return MediaTime(static_cast<int64_t>(std::round(doubleTime * timeScale)), timeScale, Valid);
 }
 
+MediaTime MediaTime::createWithSeconds(Seconds seconds)
+{
+    return createWithDouble(seconds.value());
+}
+
 float MediaTime::toFloat() const
 {
     if (isInvalid() || isIndefinite())
@@ -152,6 +166,22 @@ double MediaTime::toDouble() const
     if (hasDoubleValue())
         return m_timeValueAsDouble;
     return static_cast<double>(m_timeValue) / m_timeScale;
+}
+
+int64_t MediaTime::toMicroseconds() const
+{
+    if (isInvalid() || isIndefinite())
+        return std::numeric_limits<int64_t>::quiet_NaN();
+    if (isPositiveInfinite())
+        return std::numeric_limits<int64_t>::max();
+    if (isNegativeInfinite())
+        return std::numeric_limits<int64_t>::min();
+    if (hasDoubleValue())
+        return m_timeValueAsDouble * 1000000.0;
+    auto result = CheckedInt64(m_timeValue / m_timeScale) * 1000000LL + CheckedInt64(m_timeValue % static_cast<int64_t>(m_timeScale) * 1000000LL) / static_cast<int64_t>(m_timeScale);
+    if (result.hasOverflowed())
+        return m_timeValue < 0 ? std::numeric_limits<int64_t>::min() : std::numeric_limits<int64_t>::max();
+    return result.value();
 }
 
 MediaTime MediaTime::operator+(const MediaTime& rhs) const
@@ -188,6 +218,7 @@ MediaTime MediaTime::operator+(const MediaTime& rhs) const
         commonTimeScale = MaximumTimeScale;
     a.setTimeScale(commonTimeScale);
     b.setTimeScale(commonTimeScale);
+
     while (!safeAdd(a.m_timeValue, b.m_timeValue, a.m_timeValue)) {
         if (commonTimeScale == 1)
             return a.m_timeValue > 0 ? positiveInfiniteTime() : negativeInfiniteTime();
@@ -232,6 +263,7 @@ MediaTime MediaTime::operator-(const MediaTime& rhs) const
         commonTimeScale = MaximumTimeScale;
     a.setTimeScale(commonTimeScale);
     b.setTimeScale(commonTimeScale);
+
     while (!safeSub(a.m_timeValue, b.m_timeValue, a.m_timeValue)) {
         if (commonTimeScale == 1)
             return a.m_timeValue > 0 ? positiveInfiniteTime() : negativeInfiniteTime();
@@ -593,6 +625,16 @@ String MediaTimeRange::toJSONString() const
     object->setObject("end"_s, end.toJSONObject());
 
     return object->toJSONString();
+}
+
+String LogArgument<MediaTime>::toString(const MediaTime& time)
+{
+    return time.toJSONString();
+}
+
+String LogArgument<MediaTimeRange>::toString(const MediaTimeRange& range)
+{
+    return range.toJSONString();
 }
 
 TextStream& operator<<(TextStream& stream, const MediaTime& time)

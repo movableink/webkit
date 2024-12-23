@@ -33,6 +33,7 @@
 #include "GeometryUtilities.h"
 #include "GraphicsContext.h"
 #include "HitTestResult.h"
+#include "ImageBuffer.h"
 #include "LayoutRepainter.h"
 #include "PointerEventsHitRules.h"
 #include "RenderElementInlines.h"
@@ -43,12 +44,12 @@
 #include "SVGImageElement.h"
 #include "SVGRenderStyle.h"
 #include "SVGVisitedRendererTracking.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGImage);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGImage);
 
 RenderSVGImage::RenderSVGImage(SVGImageElement& element, RenderStyle&& style)
     : RenderSVGModelObject(Type::SVGImage, element, WTFMove(style))
@@ -324,7 +325,7 @@ void RenderSVGImage::repaintOrMarkForLayout(const IntRect* rect)
 
     // Tell any potential compositing layers that the image needs updating.
     if (hasLayer())
-        layer()->contentChanged(ImageChanged);
+        layer()->contentChanged(ContentChangeType::Image);
 }
 
 void RenderSVGImage::notifyFinished(CachedResource& newImage, const NetworkLoadMetrics& metrics, LoadWillContinueInAnotherProcess loadWillContinueInAnotherProcess)
@@ -338,7 +339,7 @@ void RenderSVGImage::notifyFinished(CachedResource& newImage, const NetworkLoadM
         // tell any potential compositing layers
         // that the image is done and they can reference it directly.
         if (hasLayer())
-            layer()->contentChanged(ImageChanged);
+            layer()->contentChanged(ContentChangeType::Image);
     }
 
     RenderSVGModelObject::notifyFinished(newImage, metrics, loadWillContinueInAnotherProcess);

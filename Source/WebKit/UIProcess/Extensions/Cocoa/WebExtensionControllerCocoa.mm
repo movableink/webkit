@@ -37,6 +37,9 @@
 #import "ContextMenuContextData.h"
 #import "Logging.h"
 #import "SandboxUtilities.h"
+#import "WKFeature.h"
+#import "WKPreferences.h"
+#import "WKPreferencesPrivate.h"
 #import "WKWebViewConfigurationPrivate.h"
 #import "WKWebsiteDataStoreInternal.h"
 #import "WebExtensionContext.h"
@@ -49,6 +52,7 @@
 #import "WebExtensionEventListenerType.h"
 #import "WebPageProxy.h"
 #import "WebProcessPool.h"
+#import "_WKFeatureInternal.h"
 #import "_WKWebExtensionStorageSQLiteStore.h"
 #import <WebCore/ContentRuleListResults.h>
 #import <wtf/BlockPtr.h>
@@ -367,7 +371,7 @@ void WebExtensionController::addPage(WebPageProxy& page)
     for (auto& entry : m_registeredSchemeHandlers)
         page.setURLSchemeHandlerForScheme(entry.value.copyRef(), entry.key);
 
-    Ref pool = page.configuration().processPool();
+    Ref pool = page.protectedConfiguration()->processPool();
     addProcessPool(pool);
 
     Ref dataStore = page.websiteDataStore();
@@ -382,7 +386,7 @@ void WebExtensionController::removePage(WebPageProxy& page)
     ASSERT(m_pages.contains(page));
     m_pages.remove(page);
 
-    Ref pool = page.configuration().processPool();
+    Ref pool = page.protectedConfiguration()->processPool();
     removeProcessPool(pool);
 
     Ref dataStore = page.websiteDataStore();
@@ -416,7 +420,7 @@ void WebExtensionController::removeProcessPool(WebProcessPool& processPool)
 {
     // Only remove the message receiver and process pool if no other pages use the same process pool.
     for (Ref knownPage : m_pages) {
-        if (knownPage->configuration().processPool() == processPool)
+        if (knownPage->protectedConfiguration()->processPool() == processPool)
             return;
     }
 
@@ -439,7 +443,7 @@ void WebExtensionController::addUserContentController(WebUserContentControllerPr
         return;
 
     for (Ref context : m_extensionContexts) {
-        if (!context->hasAccessInPrivateBrowsing() && forPrivateBrowsing == ForPrivateBrowsing::Yes)
+        if (!context->hasAccessToPrivateData() && forPrivateBrowsing == ForPrivateBrowsing::Yes)
             continue;
 
         context->addInjectedContent(userContentController);
@@ -464,8 +468,9 @@ void WebExtensionController::removeUserContentController(WebUserContentControlle
 
 WebsiteDataStore* WebExtensionController::websiteDataStore(std::optional<PAL::SessionID> sessionID) const
 {
-    if (!sessionID || configuration().defaultWebsiteDataStore().sessionID() == sessionID.value())
-        return &configuration().defaultWebsiteDataStore();
+    Ref configuration = m_configuration;
+    if (!sessionID || configuration->defaultWebsiteDataStore().sessionID() == sessionID.value())
+        return &configuration->defaultWebsiteDataStore();
 
     for (Ref dataStore : allWebsiteDataStores()) {
         if (dataStore->sessionID() == sessionID.value())
@@ -478,10 +483,10 @@ WebsiteDataStore* WebExtensionController::websiteDataStore(std::optional<PAL::Se
 void WebExtensionController::addWebsiteDataStore(WebsiteDataStore& dataStore)
 {
     if (!m_cookieStoreObserver)
-        m_cookieStoreObserver = makeUnique<HTTPCookieStoreObserver>(*this);
+        m_cookieStoreObserver = HTTPCookieStoreObserver::create(*this);
 
     m_websiteDataStores.add(dataStore);
-    dataStore.cookieStore().registerObserver(*m_cookieStoreObserver);
+    dataStore.protectedCookieStore()->registerObserver(*m_cookieStoreObserver);
 }
 
 void WebExtensionController::removeWebsiteDataStore(WebsiteDataStore& dataStore)
@@ -493,7 +498,7 @@ void WebExtensionController::removeWebsiteDataStore(WebsiteDataStore& dataStore)
     }
 
     m_websiteDataStores.remove(dataStore);
-    dataStore.cookieStore().unregisterObserver(*m_cookieStoreObserver);
+    dataStore.protectedCookieStore()->unregisterObserver(*m_cookieStoreObserver);
 
     if (m_websiteDataStores.isEmptyIgnoringNullReferences())
         m_cookieStoreObserver = nullptr;
@@ -505,6 +510,19 @@ void WebExtensionController::cookiesDidChange(API::HTTPCookieStore& cookieStore)
 
     for (Ref context : m_extensionContexts)
         context->cookiesDidChange(cookieStore);
+}
+
+bool WebExtensionController::isFeatureEnabled(const String& featureName) const
+{
+    WKPreferences *preferences = protectedConfiguration()->webViewConfiguration().preferences;
+
+    NSString *cocoaFeatureName = static_cast<NSString *>(featureName);
+    for (_WKFeature *feature in WKPreferences._features) {
+        if ([feature.key isEqualToString:cocoaFeatureName])
+            return [preferences _isEnabledForFeature:feature];
+    }
+
+    return false;
 }
 
 RefPtr<WebExtensionContext> WebExtensionController::extensionContext(const WebExtension& extension) const
@@ -572,28 +590,28 @@ void WebExtensionController::addItemsToContextMenu(WebPageProxy& page, const Con
 
 // MARK: webNavigation
 
-void WebExtensionController::didStartProvisionalLoadForFrame(WebPageProxyIdentifier pageID, WebExtensionFrameIdentifier frameID, WebExtensionFrameIdentifier parentFrameID, const URL& targetURL, WallTime timestamp)
+void WebExtensionController::didStartProvisionalLoadForFrame(WebPageProxyIdentifier pageID, const WebExtensionFrameParameters& frameParameters, WallTime timestamp)
 {
     for (Ref context : m_extensionContexts)
-        context->didStartProvisionalLoadForFrame(pageID, frameID, parentFrameID, targetURL, timestamp);
+        context->didStartProvisionalLoadForFrame(pageID, frameParameters, timestamp);
 }
 
-void WebExtensionController::didCommitLoadForFrame(WebPageProxyIdentifier pageID, WebExtensionFrameIdentifier frameID, WebExtensionFrameIdentifier parentFrameID, const URL& frameURL, WallTime timestamp)
+void WebExtensionController::didCommitLoadForFrame(WebPageProxyIdentifier pageID, const WebExtensionFrameParameters& frameParameters, WallTime timestamp)
 {
     for (Ref context : m_extensionContexts)
-        context->didCommitLoadForFrame(pageID, frameID, parentFrameID, frameURL, timestamp);
+        context->didCommitLoadForFrame(pageID, frameParameters, timestamp);
 }
 
-void WebExtensionController::didFinishLoadForFrame(WebPageProxyIdentifier pageID, WebExtensionFrameIdentifier frameID, WebExtensionFrameIdentifier parentFrameID, const URL& frameURL, WallTime timestamp)
+void WebExtensionController::didFinishLoadForFrame(WebPageProxyIdentifier pageID, const WebExtensionFrameParameters& frameParameters, WallTime timestamp)
 {
     for (Ref context : m_extensionContexts)
-        context->didFinishLoadForFrame(pageID, frameID, parentFrameID, frameURL, timestamp);
+        context->didFinishLoadForFrame(pageID, frameParameters, timestamp);
 }
 
-void WebExtensionController::didFailLoadForFrame(WebPageProxyIdentifier pageID, WebExtensionFrameIdentifier frameID, WebExtensionFrameIdentifier parentFrameID, const URL& frameURL, WallTime timestamp)
+void WebExtensionController::didFailLoadForFrame(WebPageProxyIdentifier pageID, const WebExtensionFrameParameters& frameParameters, WallTime timestamp)
 {
     for (Ref context : m_extensionContexts)
-        context->didFailLoadForFrame(pageID, frameID, parentFrameID, frameURL, timestamp);
+        context->didFailLoadForFrame(pageID, frameParameters, timestamp);
 }
 
 // MARK: declarativeNetRequest
@@ -621,8 +639,8 @@ void WebExtensionController::handleContentRuleListNotification(WebPageProxyIdent
     if (!savedMatchedRule || m_purgeOldMatchedRulesTimer)
         return;
 
-    m_purgeOldMatchedRulesTimer = makeUnique<WebCore::Timer>(*this, &WebExtensionController::purgeOldMatchedRules);
-    m_purgeOldMatchedRulesTimer->start(purgeMatchedRulesInterval, purgeMatchedRulesInterval);
+    m_purgeOldMatchedRulesTimer = makeUnique<RunLoop::Timer>(RunLoop::protectedMain(), this, &WebExtensionController::purgeOldMatchedRules);
+    m_purgeOldMatchedRulesTimer->startRepeating(purgeMatchedRulesInterval);
 }
 
 void WebExtensionController::purgeOldMatchedRules()
@@ -642,12 +660,12 @@ void WebExtensionController::updateWebsitePoliciesForNavigation(API::WebsitePoli
     auto actionPatterns = websitePolicies.activeContentRuleListActionPatterns();
 
     for (Ref context : m_extensionContexts) {
-        if (!context->hasPermission(_WKWebExtensionPermissionDeclarativeNetRequestWithHostAccess))
+        if (!context->hasPermission(WKWebExtensionPermissionDeclarativeNetRequestWithHostAccess))
             continue;
 
         Vector<String> patterns;
         for (Ref pattern : context->currentPermissionMatchPatterns())
-            patterns.appendVector(makeVector<String>(pattern->expandedStrings()));
+            patterns.appendVector(pattern->expandedStrings());
 
         actionPatterns.set(context->uniqueIdentifier(), WTFMove(patterns));
     }

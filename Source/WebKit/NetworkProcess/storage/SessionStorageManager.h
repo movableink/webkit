@@ -29,6 +29,7 @@
 #include "StorageAreaIdentifier.h"
 #include "StorageAreaMapIdentifier.h"
 #include "StorageNamespaceIdentifier.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 struct ClientOrigin;
@@ -40,7 +41,7 @@ class MemoryStorageArea;
 class StorageAreaRegistry;
 
 class SessionStorageManager {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(SessionStorageManager);
 public:
     explicit SessionStorageManager(StorageAreaRegistry&);
     bool isActive() const;
@@ -49,16 +50,16 @@ public:
     void connectionClosed(IPC::Connection::UniqueID);
     void removeNamespace(StorageNamespaceIdentifier);
 
-    StorageAreaIdentifier connectToSessionStorageArea(IPC::Connection::UniqueID, StorageAreaMapIdentifier, const WebCore::ClientOrigin&, StorageNamespaceIdentifier);
+    std::optional<StorageAreaIdentifier> connectToSessionStorageArea(IPC::Connection::UniqueID, StorageAreaMapIdentifier, const WebCore::ClientOrigin&, StorageNamespaceIdentifier);
     void cancelConnectToSessionStorageArea(IPC::Connection::UniqueID, StorageNamespaceIdentifier);
     void disconnectFromStorageArea(IPC::Connection::UniqueID, StorageAreaIdentifier);
     void cloneStorageArea(StorageNamespaceIdentifier, StorageNamespaceIdentifier);
 
 private:
-    StorageAreaIdentifier addStorageArea(std::unique_ptr<MemoryStorageArea>, StorageNamespaceIdentifier);
+    StorageAreaIdentifier addStorageArea(Ref<MemoryStorageArea>&&, StorageNamespaceIdentifier);
 
-    StorageAreaRegistry& m_registry;
-    HashMap<StorageAreaIdentifier, std::unique_ptr<MemoryStorageArea>> m_storageAreas;
+    CheckedRef<StorageAreaRegistry> m_registry;
+    HashMap<StorageAreaIdentifier, Ref<MemoryStorageArea>> m_storageAreas;
     HashMap<StorageNamespaceIdentifier, StorageAreaIdentifier> m_storageAreasByNamespace;
 };
 

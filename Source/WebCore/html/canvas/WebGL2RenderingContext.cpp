@@ -101,19 +101,21 @@
 #include <JavaScriptCore/SlotVisitorInlines.h>
 #include <JavaScriptCore/TypedArrayType.h>
 #include <algorithm>
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/Lock.h>
 #include <wtf/Locker.h>
+#include <wtf/TZoneMallocInlines.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
 const GCGLuint64 MaxClientWaitTimeout = 0u;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(WebGL2RenderingContext);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebGL2RenderingContext);
 
 std::unique_ptr<WebGL2RenderingContext> WebGL2RenderingContext::create(CanvasBase& canvas, WebGLContextAttributes&& attributes)
 {
-    return std::unique_ptr<WebGL2RenderingContext>(new WebGL2RenderingContext(canvas, WTFMove(attributes)));
+    return std::unique_ptr<WebGL2RenderingContext>(new WebGL2RenderingContext(canvas, Type::WebGL2, WTFMove(attributes)));
 }
 
 WebGL2RenderingContext::~WebGL2RenderingContext()
@@ -1145,8 +1147,6 @@ void WebGL2RenderingContext::compressedTexImage2D(GCGLenum target, GCGLint level
         return;
     }
     if (!validateTexture2DBinding("compressedTexImage2D"_s, target))
-        return;
-    if (!validateCompressedTexFormat("compressedTexImage2D"_s, internalformat))
         return;
     m_context->compressedTexImage2D(target, level, internalformat, width, height, border, imageSize, offset);
 }
@@ -3560,5 +3560,7 @@ void WebGL2RenderingContext::updateBuffersToAutoClear(ClearBufferCaller caller, 
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEBGL)

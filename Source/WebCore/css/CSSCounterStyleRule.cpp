@@ -28,12 +28,14 @@
 
 #include "CSSCounterStyleDescriptors.h"
 #include "CSSPropertyParser.h"
+#include "CSSPropertyParserConsumer+CounterStyles.h"
 #include "CSSStyleSheet.h"
 #include "CSSTokenizer.h"
 #include "CSSValuePair.h"
 #include "MutableStyleProperties.h"
 #include "StyleProperties.h"
 #include "StylePropertiesInlines.h"
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {

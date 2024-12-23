@@ -38,6 +38,15 @@ namespace WGSL {
 
 using namespace Types;
 
+namespace Types {
+
+size_t Array::stride() const
+{
+    return WTF::roundUpToMultipleOf(element->alignment(), element->size());
+}
+
+} // namespace Types
+
 void Type::dump(PrintStream& out) const
 {
     WTF::switchOn(*this,
@@ -417,8 +426,11 @@ unsigned Type::alignment() const
         [&](const Struct& structure) -> unsigned {
             return structure.structure.alignment();
         },
-        [&](const PrimitiveStruct&) -> unsigned {
-            RELEASE_ASSERT_NOT_REACHED();
+        [&](const PrimitiveStruct& structure) -> unsigned {
+            unsigned alignment = 0;
+            for (auto* type : structure.values)
+                alignment = std::max(alignment, type->alignment());
+            return alignment;
         },
         [&](const Function&) -> unsigned {
             RELEASE_ASSERT_NOT_REACHED();

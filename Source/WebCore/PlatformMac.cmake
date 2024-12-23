@@ -142,6 +142,7 @@ list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/platform/spi/cg"
     "${WEBCORE_DIR}/platform/spi/cocoa"
     "${WEBCORE_DIR}/platform/spi/mac"
+    "${WEBCORE_DIR}/platform/video-codecs"
     "${WEBCORE_DIR}/plugins/mac"
     "${WebCore_PRIVATE_FRAMEWORK_HEADERS_DIR}"
 )
@@ -195,6 +196,7 @@ list(APPEND WebCore_SOURCES
 
     platform/audio/AudioSession.cpp
 
+    platform/audio/cocoa/AudioDecoderCocoa.cpp
     platform/audio/cocoa/WebAudioBufferList.cpp
 
     platform/audio/mac/AudioBusMac.mm
@@ -226,6 +228,7 @@ list(APPEND WebCore_SOURCES
     platform/cocoa/ThemeCocoa.mm
     platform/cocoa/VideoToolboxSoftLink.cpp
     platform/cocoa/WebCoreNSErrorExtras.mm
+    platform/cocoa/WebNSAttributedStringExtras.mm
 
     platform/gamepad/cocoa/GameControllerSoftLink.mm
 
@@ -326,23 +329,24 @@ list(APPEND WebCore_SOURCES
     platform/graphics/cocoa/WebActionDisablingCALayerDelegate.mm
     platform/graphics/cocoa/WebCoreCALayerExtras.mm
     platform/graphics/cocoa/WebCoreDecompressionSession.mm
+    platform/graphics/cocoa/WebLayer.mm
     platform/graphics/cocoa/WebMAudioUtilitiesCocoa.mm
     platform/graphics/cocoa/WebProcessGraphicsContextGLCocoa.mm
 
+    platform/graphics/coretext/ComplexTextControllerCoreText.mm
     platform/graphics/coretext/FontCascadeCoreText.cpp
     platform/graphics/coretext/FontCoreText.cpp
     platform/graphics/coretext/FontCustomPlatformDataCoreText.cpp
     platform/graphics/coretext/FontPlatformDataCoreText.cpp
     platform/graphics/coretext/GlyphPageCoreText.cpp
+    platform/graphics/coretext/SimpleFontDataCoreText.cpp
 
     platform/graphics/cv/CVUtilities.mm
-    platform/graphics/cv/GraphicsContextGLCVCocoa.cpp
+    platform/graphics/cv/GraphicsContextGLCVCocoa.mm
     platform/graphics/cv/ImageRotationSessionVT.mm
     platform/graphics/cv/PixelBufferConformerCV.cpp
 
     platform/graphics/mac/ColorMac.mm
-    platform/graphics/mac/ComplexTextControllerCoreText.mm
-    platform/graphics/mac/DisplayConfigurationMonitor.cpp
     platform/graphics/mac/FloatPointMac.mm
     platform/graphics/mac/FloatSizeMac.mm
     platform/graphics/mac/GraphicsChecksMac.cpp
@@ -351,8 +355,6 @@ list(APPEND WebCore_SOURCES
     platform/graphics/mac/IntPointMac.mm
     platform/graphics/mac/IntSizeMac.mm
     platform/graphics/mac/PDFDocumentImageMac.mm
-    platform/graphics/mac/SimpleFontDataCoreText.cpp
-    platform/graphics/mac/WebLayer.mm
 
     platform/graphics/opentype/OpenTypeCG.cpp
     platform/graphics/opentype/OpenTypeMathData.cpp
@@ -386,7 +388,6 @@ list(APPEND WebCore_SOURCES
     platform/mac/WebCoreFullScreenWindow.mm
     platform/mac/WebCoreNSURLExtras.mm
     platform/mac/WebCoreObjCExtras.mm
-    platform/mac/WebNSAttributedStringExtras.mm
     platform/mac/WidgetMac.mm
 
     platform/mediastream/libwebrtc/LibWebRTCAudioModule.cpp
@@ -580,6 +581,7 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/SystemSoundManager.h
     platform/TextRecognitionResult.h
 
+    platform/audio/cocoa/AudioDecoderCocoa.h
     platform/audio/cocoa/AudioDestinationCocoa.h
     platform/audio/cocoa/AudioOutputUnitAdaptor.h
     platform/audio/cocoa/AudioSampleBufferList.h
@@ -677,6 +679,7 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/cocoa/VP9UtilitiesCocoa.h
     platform/graphics/cocoa/WebActionDisablingCALayerDelegate.h
     platform/graphics/cocoa/WebCoreCALayerExtras.h
+    platform/graphics/cocoa/WebLayer.h
     platform/graphics/cocoa/WebMAudioUtilitiesCocoa.h
 
     platform/graphics/cv/CVUtilities.h
@@ -686,11 +689,8 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/cv/VideoFrameCV.h
 
     platform/graphics/mac/ColorMac.h
-    platform/graphics/mac/DisplayConfigurationMonitor.h
     platform/graphics/mac/GraphicsChecksMac.h
-    platform/graphics/mac/ScopedHighPerformanceGPURequest.h
     platform/graphics/mac/SwitchingGPUClient.h
-    platform/graphics/mac/WebLayer.h
 
     platform/ios/PlaybackSessionInterfaceAVKit.h
     platform/ios/WebAVPlayerController.h
@@ -721,9 +721,11 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/mac/WebNSAttributedStringExtras.h
     platform/mac/WebPlaybackControlsManager.h
 
+    platform/mediarecorder/MediaRecorderPrivateEncoder.h
     platform/mediarecorder/MediaRecorderPrivateOptions.h
 
-    platform/mediarecorder/cocoa/MediaRecorderPrivateWriterCocoa.h
+    platform/mediarecorder/cocoa/MediaRecorderPrivateWriterAVFObjC.h
+    platform/mediarecorder/cocoa/MediaRecorderPrivateWriterWebM.h
 
     platform/mediastream/AudioMediaStreamTrackRenderer.h
     platform/mediastream/RealtimeIncomingVideoSource.h

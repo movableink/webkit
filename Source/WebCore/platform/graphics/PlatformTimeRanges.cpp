@@ -29,9 +29,12 @@
 #include <math.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/PrintStream.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PlatformTimeRanges);
 
 PlatformTimeRanges::PlatformTimeRanges()
 {
@@ -385,6 +388,15 @@ size_t PlatformTimeRanges::findLastRangeIndexBefore(const MediaTime& start, cons
         middle = first + ((last - first) / 2);
     }
     return index;
+}
+
+}
+
+namespace WTF {
+
+String LogArgument<WebCore::PlatformTimeRanges>::toString(const WebCore::PlatformTimeRanges& ranges)
+{
+    return ranges.toString();
 }
 
 }

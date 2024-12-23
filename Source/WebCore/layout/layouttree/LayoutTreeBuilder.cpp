@@ -32,6 +32,7 @@
 #include "HTMLTableCellElement.h"
 #include "HTMLTableColElement.h"
 #include "HTMLTableElement.h"
+#include "InlineDisplayContent.h"
 #include "LayoutBox.h"
 #include "LayoutBoxGeometry.h"
 #include "LayoutChildIterator.h"
@@ -57,13 +58,16 @@
 #include "RenderView.h"
 #include "TextUtil.h"
 #include "WidthIterator.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/TextStream.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 namespace Layout {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(LayoutTree);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LayoutTree);
 LayoutTree::LayoutTree(std::unique_ptr<ElementBox> root)
     : m_root(WTFMove(root))
 {
@@ -404,8 +408,8 @@ void showInlineTreeAndRuns(TextStream& stream, const LayoutState& layoutState, c
             stream << "    ";
             auto rect = inlineLevelBox.visualRectIgnoringBlockDirection();
             auto& layoutBox = inlineLevelBox.layoutBox();
-            if (layoutBox.isAtomicInlineLevelBox())
-                stream << "Atomic inline level box";
+            if (layoutBox.isAtomicInlineBox())
+                stream << "Atomic inline box";
             else if (layoutBox.isLineBreakBox())
                 stream << "Line break box";
             else if (layoutBox.isInlineBox())
@@ -492,8 +496,8 @@ static void outputLayoutBox(TextStream& stream, const Box& layoutBox, const BoxG
             stream << "inline-block box";
         else if (layoutBox.isLineBreakBox())
             stream << (layoutBox.isWordBreakOpportunity() ? "word break opportunity" : "line break");
-        else if (layoutBox.isAtomicInlineLevelBox())
-            stream << "atomic inline level box";
+        else if (layoutBox.isAtomicInlineBox())
+            stream << "atomic inline box";
         else if (layoutBox.isReplacedBox())
             stream << "replaced inline box";
         else if (layoutBox.isInlineBox())
@@ -578,7 +582,7 @@ void printLayoutTreeForLiveDocuments()
         // FIXME: Need to find a way to output geometry without layout context.
         auto& renderView = *document->renderView();
         auto layoutTree = TreeBuilder::buildLayoutTree(renderView);
-        auto layoutState = LayoutState { document, layoutTree->root(), Layout::LayoutState::Type::Secondary };
+        auto layoutState = LayoutState { document, layoutTree->root(), Layout::LayoutState::Type::Secondary, { }, { }, { } };
 
         LayoutContext(layoutState).layout(renderView.size());
         showLayoutTree(downcast<InitialContainingBlock>(layoutState.root()), &layoutState);
@@ -589,3 +593,4 @@ void printLayoutTreeForLiveDocuments()
 }
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

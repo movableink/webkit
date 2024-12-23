@@ -75,7 +75,6 @@ public:
         , m_includeEndWidth(true)
         , m_autoWrap(false)
         , m_autoWrapWasEverTrueOnLine(false)
-        , m_floatsFitOnLine(true)
         , m_collapseWhiteSpace(false)
         , m_allowImagesToBreak(!block.document().inQuirksMode() || !block.isRenderTableCell() || !m_blockStyle.logicalWidth().isIntrinsicOrAuto())
         , m_atEnd(false)
@@ -169,7 +168,6 @@ private:
     bool m_includeEndWidth;
     bool m_autoWrap;
     bool m_autoWrapWasEverTrueOnLine;
-    bool m_floatsFitOnLine;
     bool m_collapseWhiteSpace;
     bool m_allowImagesToBreak;
     bool m_atEnd;
@@ -759,9 +757,9 @@ inline TrailingObjects::CollapseFirstSpace checkWhitespaceCollapsingTransitions(
     // shave it off the list, and shave off a trailing space if the previous end point doesn't
     // preserve whitespace.
     if (lBreak.renderer() && lineWhitespaceCollapsingState.numTransitions() && !(lineWhitespaceCollapsingState.numTransitions() % 2)) {
-        const LegacyInlineIterator* transitions = lineWhitespaceCollapsingState.transitions().data();
-        const LegacyInlineIterator& endpoint = transitions[lineWhitespaceCollapsingState.numTransitions() - 2];
-        const LegacyInlineIterator& startpoint = transitions[lineWhitespaceCollapsingState.numTransitions() - 1];
+        auto transitions = lineWhitespaceCollapsingState.transitions().span();
+        auto& endpoint = transitions[lineWhitespaceCollapsingState.numTransitions() - 2];
+        auto& startpoint = transitions[lineWhitespaceCollapsingState.numTransitions() - 1];
         LegacyInlineIterator currpoint = endpoint;
         while (!currpoint.atEnd() && currpoint != startpoint && currpoint != lBreak)
             currpoint.increment();

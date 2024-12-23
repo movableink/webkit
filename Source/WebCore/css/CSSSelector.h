@@ -26,6 +26,9 @@
 #include "RenderStyleConstants.h"
 #include <wtf/EnumTraits.h>
 #include <wtf/FixedVector.h>
+#include <wtf/TZoneMalloc.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -39,6 +42,8 @@ struct PossiblyQuotedIdentifier {
     bool isNull() const { return identifier.isNull(); }
 };
 
+WTF::TextStream& operator<<(WTF::TextStream&, PossiblyQuotedIdentifier);
+
 enum class SelectorSpecificityIncrement {
     ClassA = 0x10000,
     ClassB = 0x100,
@@ -48,7 +53,7 @@ enum class SelectorSpecificityIncrement {
 // Selector for a StyleRule.
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSSelectorRareData);
 class CSSSelector {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(CSSSelector);
 public:
     CSSSelector() = default;
     CSSSelector(const CSSSelector&);
@@ -139,7 +144,8 @@ public:
     const QualifiedName& attribute() const;
     const AtomString& argument() const { return m_hasRareData ? m_data.rareData->argument : nullAtom(); }
     bool attributeValueMatchingIsCaseInsensitive() const;
-    const FixedVector<PossiblyQuotedIdentifier>* argumentList() const { return m_hasRareData ? &m_data.rareData->argumentList : nullptr; }
+    const FixedVector<AtomString>* argumentList() const { return m_hasRareData ? &m_data.rareData->argumentList : nullptr; }
+    const FixedVector<PossiblyQuotedIdentifier>* langList() const { return m_hasRareData ? &m_data.rareData->langList : nullptr; }
     const CSSSelectorList* selectorList() const { return m_hasRareData ? m_data.rareData->selectorList.get() : nullptr; }
     CSSSelectorList* selectorList() { return m_hasRareData ? m_data.rareData->selectorList.get() : nullptr; }
 
@@ -157,6 +163,7 @@ public:
     bool matchesPseudoElement() const;
     bool isSiblingSelector() const;
     bool isAttributeSelector() const;
+    bool isHostPseudoClass() const;
 
     Relation relation() const { return static_cast<Relation>(m_relation); }
     Match match() const { return static_cast<Match>(m_match); }
@@ -183,7 +190,8 @@ private:
     void setAttribute(const QualifiedName&, AttributeMatchType);
     void setNth(int a, int b);
     void setArgument(const AtomString&);
-    void setArgumentList(FixedVector<PossiblyQuotedIdentifier>);
+    void setArgumentList(FixedVector<AtomString>);
+    void setLangList(FixedVector<PossiblyQuotedIdentifier>);
     void setSelectorList(std::unique_ptr<CSSSelectorList>);
 
     void setPseudoClass(PseudoClass);
@@ -236,7 +244,8 @@ private:
         int b { 0 }; // Used for :nth-*
         QualifiedName attribute; // used for attribute selector
         AtomString argument; // Used for :contains and :nth-*
-        FixedVector<PossiblyQuotedIdentifier> argumentList; // Used for :lang and ::part arguments.
+        FixedVector<AtomString> argumentList; // Used for :active-view-transition-type, ::highlight, ::view-transition-{group, image-pair, new, old}, ::part arguments.
+        FixedVector<PossiblyQuotedIdentifier> langList; // Used for :lang arguments.
         std::unique_ptr<CSSSelectorList> selectorList; // Used for :is(), :matches(), and :not().
 
         Ref<RareData> deepCopy() const;
@@ -443,3 +452,5 @@ inline void CSSSelector::setMatch(Match match)
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

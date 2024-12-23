@@ -28,6 +28,7 @@
 #if PLATFORM(IOS_FAMILY) && HAVE(AVKIT)
 
 #include "VideoPresentationInterfaceIOS.h"
+#include <wtf/TZoneMalloc.h>
 
 OBJC_CLASS AVPlayerViewController;
 OBJC_CLASS WebAVPlayerController;
@@ -41,7 +42,7 @@ namespace WebCore {
 class PlaybackSessionInterfaceIOS;
 
 class VideoPresentationInterfaceAVKit final : public VideoPresentationInterfaceIOS {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(VideoPresentationInterfaceAVKit, WEBCORE_EXPORT);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(VideoPresentationInterfaceAVKit);
 public:
     WEBCORE_EXPORT static Ref<VideoPresentationInterfaceAVKit> create(PlaybackSessionInterfaceIOS&);
@@ -54,7 +55,7 @@ public:
 #endif
 
     WEBCORE_EXPORT AVPlayerViewController *avPlayerViewController() const final;
-    WEBCORE_EXPORT void setupFullscreen(UIView& videoView, const FloatRect& initialRect, const FloatSize& videoDimensions, UIView* parentView, HTMLMediaElementEnums::VideoFullscreenMode, bool allowsPictureInPicturePlayback, bool standby, bool blocksReturnToFullscreenFromPictureInPicture);
+    WEBCORE_EXPORT void setupFullscreen(const FloatRect& initialRect, const FloatSize& videoDimensions, UIView* parentView, HTMLMediaElementEnums::VideoFullscreenMode, bool allowsPictureInPicturePlayback, bool standby, bool blocksReturnToFullscreenFromPictureInPicture);
     WEBCORE_EXPORT bool pictureInPictureWasStartedWhenEnteringBackground() const final;
     WEBCORE_EXPORT void setPlayerIdentifier(std::optional<MediaPlayerIdentifier>) final;
     WEBCORE_EXPORT bool mayAutomaticallyShowVideoPictureInPicture() const;
@@ -62,6 +63,9 @@ public:
     bool allowsPictureInPicturePlayback() const { return m_allowsPictureInPicturePlayback; }
     void presentFullscreen(bool animated, Function<void(BOOL, NSError *)>&&) final;
     void dismissFullscreen(bool animated, Function<void(BOOL, NSError *)>&&) final;
+
+    // VideoFullscreenCaptions:
+    WEBCORE_EXPORT void setupCaptionsLayer(CALayer *parent, const WebCore::FloatSize&) final;
 
 private:
     WEBCORE_EXPORT VideoPresentationInterfaceAVKit(PlaybackSessionInterfaceIOS&);
@@ -77,6 +81,7 @@ private:
     void setAllowsPictureInPicturePlayback(bool) final;
     bool isExternalPlaybackActive() const final;
     bool willRenderToLayer() const final;
+    void returnVideoView() final;
 
     RetainPtr<WebAVPlayerViewControllerDelegate> m_playerViewControllerDelegate;
     RetainPtr<WebAVPlayerViewController> m_playerViewController;

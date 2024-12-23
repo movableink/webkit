@@ -604,7 +604,8 @@ void QWebHistoryPrivate::goToItem(RefPtr<WebCore::HistoryItem>&& item)
         return;
 
     auto page = lst->page().page;
-    page->goToItem(page->mainFrame(), *item, WebCore::FrameLoadType::IndexedBackForward, WebCore::ShouldTreatAsContinuingLoad::No);
+    if (RefPtr localMainFrame = dynamicDowncast<WebCore::LocalFrame>(page->mainFrame()))
+        page->goToItem(*localMainFrame, *item, WebCore::FrameLoadType::IndexedBackForward, WebCore::ShouldTreatAsContinuingLoad::No);
 }
 
 QWebPageAdapter* QWebHistoryPrivate::page()

@@ -24,9 +24,11 @@
 
 #include "config.h"
 #include "LibWebRTCRtpTransformableFrame.h"
+#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(WEB_RTC) && USE(LIBWEBRTC)
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 ALLOW_UNUSED_PARAMETERS_BEGIN
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
 ALLOW_COMMA_BEGIN
@@ -36,8 +38,13 @@ ALLOW_COMMA_BEGIN
 ALLOW_COMMA_END
 ALLOW_DEPRECATED_DECLARATIONS_END
 ALLOW_UNUSED_PARAMETERS_END
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LibWebRTCRtpTransformableFrame);
 
 LibWebRTCRtpTransformableFrame::LibWebRTCRtpTransformableFrame(std::unique_ptr<webrtc::TransformableFrameInterface>&& frame, bool isAudioSenderFrame)
     : m_rtcFrame(WTFMove(frame))
@@ -115,5 +122,7 @@ RTCEncodedVideoFrameMetadata LibWebRTCRtpTransformableFrame::videoMetadata() con
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_RTC) && USE(LIBWEBRTC)

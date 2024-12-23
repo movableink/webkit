@@ -31,6 +31,7 @@
 #include <wtf/CompletionHandler.h>
 #include <wtf/HashSet.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/spi/cocoa/SecuritySPI.h>
 #include <wtf/text/WTFString.h>
 
@@ -42,9 +43,10 @@ class AuthenticatorAssertionResponse;
 
 namespace API {
 
-class WebAuthenticationPanelClient {
-    WTF_MAKE_FAST_ALLOCATED;
+class WebAuthenticationPanelClient : public RefCounted<WebAuthenticationPanelClient> {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(WebAuthenticationPanelClient);
 public:
+    static Ref<WebAuthenticationPanelClient> create() { return adoptRef(*new WebAuthenticationPanelClient); }
     virtual ~WebAuthenticationPanelClient() = default;
 
     virtual void updatePanel(WebKit::WebAuthenticationStatus) const { }
@@ -53,6 +55,9 @@ public:
     virtual void selectAssertionResponse(Vector<Ref<WebCore::AuthenticatorAssertionResponse>>&&, WebKit::WebAuthenticationSource, CompletionHandler<void(WebCore::AuthenticatorAssertionResponse*)>&& completionHandler) const { completionHandler(nullptr); }
     virtual void decidePolicyForLocalAuthenticator(CompletionHandler<void(WebKit::LocalAuthenticatorPolicy)>&& completionHandler) const { completionHandler(WebKit::LocalAuthenticatorPolicy::Disallow); }
     virtual void requestLAContextForUserVerification(CompletionHandler<void(LAContext *)>&& completionHandler) const { completionHandler(nullptr); }
+
+protected:
+    WebAuthenticationPanelClient() = default;
 };
 
 } // namespace API

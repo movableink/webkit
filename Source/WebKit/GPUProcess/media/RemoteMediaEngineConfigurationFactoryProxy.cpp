@@ -28,18 +28,23 @@
 
 #if ENABLE(GPU_PROCESS)
 
+#include "GPUConnectionToWebProcess.h"
 #include <WebCore/MediaCapabilitiesDecodingInfo.h>
 #include <WebCore/MediaCapabilitiesEncodingInfo.h>
 #include <WebCore/MediaDecodingConfiguration.h>
 #include <WebCore/MediaEncodingConfiguration.h>
 #include <WebCore/MediaEngineConfigurationFactory.h>
 #include <wtf/Algorithms.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebKit {
 
 using namespace WebCore;
 
-RemoteMediaEngineConfigurationFactoryProxy::RemoteMediaEngineConfigurationFactoryProxy()
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteMediaEngineConfigurationFactoryProxy);
+
+RemoteMediaEngineConfigurationFactoryProxy::RemoteMediaEngineConfigurationFactoryProxy(GPUConnectionToWebProcess& connection)
+    : m_connection(connection)
 {
 }
 
@@ -57,6 +62,16 @@ void RemoteMediaEngineConfigurationFactoryProxy::createEncodingConfiguration(Web
     MediaEngineConfigurationFactory::createEncodingConfiguration(WTFMove(configuration), [completion = WTFMove(completion)] (auto info) mutable {
         completion(WTFMove(info));
     });
+}
+
+void RemoteMediaEngineConfigurationFactoryProxy::ref() const
+{
+    m_connection.get()->ref();
+}
+
+void RemoteMediaEngineConfigurationFactoryProxy::deref() const
+{
+    m_connection.get()->deref();
 }
 
 }

@@ -88,6 +88,9 @@ MacroAssemblerCodeRef<JSEntryPtrTag> defaultCallThunk();
 MacroAssemblerCodeRef<JSEntryPtrTag> getHostCallReturnValueThunk();
 MacroAssemblerCodeRef<JSEntryPtrTag> genericReturnPointThunk(OpcodeSize);
 MacroAssemblerCodeRef<JSEntryPtrTag> fuzzerReturnEarlyFromLoopHintThunk();
+#if ENABLE(JIT)
+MacroAssemblerCodeRef<JITThunkPtrTag> arityFixupThunk();
+#endif
 
 MacroAssemblerCodeRef<ExceptionHandlerPtrTag> callToThrowThunk();
 MacroAssemblerCodeRef<ExceptionHandlerPtrTag> handleUncaughtExceptionThunk();
@@ -96,6 +99,7 @@ MacroAssemblerCodeRef<ExceptionHandlerPtrTag> handleCatchThunk(OpcodeSize);
 #if ENABLE(WEBASSEMBLY)
 MacroAssemblerCodeRef<ExceptionHandlerPtrTag> handleWasmCatchThunk(OpcodeSize);
 MacroAssemblerCodeRef<ExceptionHandlerPtrTag> handleWasmCatchAllThunk(OpcodeSize);
+MacroAssemblerCodeRef<ExceptionHandlerPtrTag> handleWasmTryTableThunk(WasmOpcodeID, OpcodeSize);
 #endif
 
 #if ENABLE(JIT_CAGE)
@@ -127,7 +131,6 @@ MacroAssemblerCodeRef<JSEntryPtrTag> returnLocationThunk(OpcodeID, OpcodeSize);
 MacroAssemblerCodeRef<JITThunkPtrTag> wasmFunctionEntryThunk();
 MacroAssemblerCodeRef<JITThunkPtrTag> wasmFunctionEntryThunkSIMD();
 MacroAssemblerCodeRef<JITThunkPtrTag> inPlaceInterpreterEntryThunk();
-MacroAssemblerCodeRef<JITThunkPtrTag> inPlaceInterpreterEntryThunkSIMD();
 #endif // ENABLE(WEBASSEMBLY)
 
 } } // namespace JSC::LLInt

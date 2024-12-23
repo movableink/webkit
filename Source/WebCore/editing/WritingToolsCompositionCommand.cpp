@@ -35,14 +35,12 @@ namespace WebCore {
 WritingToolsCompositionCommand::WritingToolsCompositionCommand(Ref<Document>&& document, const SimpleRange& endingContextRange)
     : CompositeEditCommand(WTFMove(document), EditAction::InsertReplacement)
     , m_endingContextRange(endingContextRange)
+    , m_currentContextRange(endingContextRange)
 {
 }
 
 void WritingToolsCompositionCommand::replaceContentsOfRangeWithFragment(RefPtr<DocumentFragment>&& fragment, const SimpleRange& range, MatchStyle matchStyle, State state)
 {
-    if (endingSelection().isNoneOrOrphaned() || !endingSelection().isContentEditable())
-        return;
-
     auto contextRange = m_endingContextRange;
 
     auto contextRangeCount = characterCount(contextRange);
@@ -54,13 +52,6 @@ void WritingToolsCompositionCommand::replaceContentsOfRangeWithFragment(RefPtr<D
 
     applyCommandToComposite(ReplaceSelectionCommand::create(protectedDocument(), WTFMove(fragment), options, EditAction::InsertReplacement), range);
 
-    protectedDocument()->selection().setSelection(endingSelection());
-
-    if (state == State::Complete) {
-        // When the command is signaled to be "complete", this commits the entire command as a whole to the undo/redo stack.
-        this->apply();
-    }
-
     // Restore the context range to what it previously was, while taking into account the newly replaced contents.
     auto newContextRange = rangeExpandedAroundRangeByCharacters(endingSelection(), resolvedCharacterRange.location, contextRangeCount - (resolvedCharacterRange.location + resolvedCharacterRange.length));
     if (!newContextRange) {
@@ -68,7 +59,18 @@ void WritingToolsCompositionCommand::replaceContentsOfRangeWithFragment(RefPtr<D
         return;
     }
 
-    m_endingContextRange = *newContextRange;
+    m_currentContextRange = *newContextRange;
+
+    if (state == State::Complete) {
+        // When the command is signaled to be "complete", this commits the entire command as a whole to the undo/redo stack.
+        commit();
+    }
+}
+
+void WritingToolsCompositionCommand::commit()
+{
+    this->apply();
+    m_endingContextRange = m_currentContextRange;
 }
 
 } // namespace WebCore

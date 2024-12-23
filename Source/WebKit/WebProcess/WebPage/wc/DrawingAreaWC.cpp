@@ -45,6 +45,7 @@
 #include <WebCore/LocalFrame.h>
 #include <WebCore/LocalFrameView.h>
 #include <WebCore/Page.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebKit {
 using namespace WebCore;
@@ -392,13 +393,13 @@ void DrawingAreaWC::sendUpdateNonAC()
 void DrawingAreaWC::graphicsLayerAdded(GraphicsLayerWC& layer)
 {
     m_liveGraphicsLayers.append(&layer);
-    m_updateInfo.addedLayers.append(layer.primaryLayerID());
+    m_updateInfo.addedLayers.append(*layer.primaryLayerID());
 }
 
 void DrawingAreaWC::graphicsLayerRemoved(GraphicsLayerWC& layer)
 {
     m_liveGraphicsLayers.remove(&layer);
-    m_updateInfo.removedLayers.append(layer.primaryLayerID());
+    m_updateInfo.removedLayers.append(*layer.primaryLayerID());
 }
 
 void DrawingAreaWC::commitLayerUpdateInfo(WCLayerUpdateInfo&& info)
@@ -409,7 +410,7 @@ void DrawingAreaWC::commitLayerUpdateInfo(WCLayerUpdateInfo&& info)
 RefPtr<ImageBuffer> DrawingAreaWC::createImageBuffer(FloatSize size, float deviceScaleFactor)
 {
     if (WebProcess::singleton().shouldUseRemoteRenderingFor(RenderingPurpose::DOM))
-        return Ref { m_webPage.get() }->ensureRemoteRenderingBackendProxy().createImageBuffer(size, RenderingPurpose::DOM, deviceScaleFactor, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8, { });
+        return Ref { m_webPage.get() }->ensureRemoteRenderingBackendProxy().createImageBuffer(size, RenderingMode::Unaccelerated, RenderingPurpose::DOM, deviceScaleFactor, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
     return ImageBuffer::create<ImageBufferShareableBitmapBackend>(size, deviceScaleFactor, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8, RenderingPurpose::DOM, { });
 }
 

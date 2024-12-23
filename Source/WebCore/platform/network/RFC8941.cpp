@@ -52,10 +52,10 @@ template<typename CharType> static StringView parseKey(StringParsingBuffer<CharT
 {
     if (buffer.atEnd() || !isASCIILower(*buffer))
         return { };
-    auto keyStart = buffer.position();
+    auto keyStart = buffer.span();
     ++buffer;
     skipUntil<isEndOfKey>(buffer);
-    return std::span(keyStart, buffer.position() - keyStart);
+    return keyStart.first(buffer.position() - keyStart.data());
 }
 
 // Parsing a String (https://datatracker.ietf.org/doc/html/rfc8941#section-4.2.5).
@@ -90,9 +90,9 @@ template<typename CharType> static std::optional<Token> parseToken(StringParsing
 {
     if (buffer.atEnd() || (!isASCIIAlpha(*buffer) && *buffer != '*'))
         return std::nullopt;
-    auto tokenStart = buffer.position();
+    auto tokenStart = buffer.span();
     skipUntil<isEndOfToken>(buffer);
-    return Token { String({ tokenStart, buffer.position() }) };
+    return Token { String(tokenStart.first(buffer.position() - tokenStart.data())) };
 }
 
 // Parsing a Boolean (https://datatracker.ietf.org/doc/html/rfc8941#section-4.2.8).

@@ -38,14 +38,15 @@
 #include <wpe/WPEDefines.h>
 #include <wpe/WPEDisplay.h>
 #include <wpe/WPEEGLError.h>
+#include <wpe/WPEGestureController.h>
 #include <wpe/WPEInputMethodContext.h>
 #include <wpe/WPEKeymap.h>
 #include <wpe/WPEKeyUnicode.h>
 #include <wpe/WPEKeymapXKB.h>
 #include <wpe/WPEKeysyms.h>
 #include <wpe/WPEKeysyms.h>
-#include <wpe/WPEMonitor.h>
 #include <wpe/WPERectangle.h>
+#include <wpe/WPEScreen.h>
 #include <wpe/WPEToplevel.h>
 #include <wpe/WPEVersion.h>
 #include <wpe/WPEView.h>

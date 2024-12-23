@@ -33,6 +33,7 @@
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/Lock.h>
 #include <wtf/SequenceLocked.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/Vector.h>
 
@@ -43,7 +44,7 @@ namespace WebCore {
 class CAAudioStreamDescription;
 
 class CARingBuffer {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(CARingBuffer, WEBCORE_EXPORT);
 public:
     WEBCORE_EXPORT virtual ~CARingBuffer();
 
@@ -100,6 +101,8 @@ inline CARingBuffer::FetchMode CARingBuffer::fetchModeForMixing(AudioStreamDescr
 {
     switch (format) {
     case AudioStreamDescription::None:
+    case AudioStreamDescription::Uint8:
+    case AudioStreamDescription::Int24:
         ASSERT_NOT_REACHED();
         return MixInt32;
     case AudioStreamDescription::Int16:
@@ -114,6 +117,7 @@ inline CARingBuffer::FetchMode CARingBuffer::fetchModeForMixing(AudioStreamDescr
 }
 
 class InProcessCARingBuffer final : public CARingBuffer {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(InProcessCARingBuffer, WEBCORE_EXPORT);
 public:
     WEBCORE_EXPORT static std::unique_ptr<InProcessCARingBuffer> allocate(const WebCore::CAAudioStreamDescription& format, size_t frameCount);
     WEBCORE_EXPORT ~InProcessCARingBuffer();

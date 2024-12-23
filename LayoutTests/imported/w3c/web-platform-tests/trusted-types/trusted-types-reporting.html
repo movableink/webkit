@@ -89,7 +89,8 @@
   function flush() {
    expect_throws(_ => {
       var o = document.createElement('object');
-      o.type = "application/x-shockwave-flash";
+      o.type = "video/mp4";
+      o.data = "dummy.webm";
       document.body.appendChild(o);
     });
   }
@@ -124,6 +125,16 @@
     flush();
     return p;
   }, "Trusted Type violation report: creating a forbidden-but-not-reported policy.");
+
+  promise_test(t => {
+    let p = promise_violation("require-trusted-types-for 'script")()
+         .then(expect_blocked_uri("trusted-types-sink"))
+         .then(expect_sample("Element insertAdjacentHTML|x"));
+    expect_throws(() => {
+      document.getElementById("div").insertAdjacentHTML("beforebegin", "x");
+    });
+    return p;
+  }, "Trusted Type violation report: blocked URI and sample for insertAdjacentHTML");
 
   promise_test(t => {
     let p = promise_violation("require-trusted-types-for 'script'")();

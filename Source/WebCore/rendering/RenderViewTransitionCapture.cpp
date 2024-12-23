@@ -30,11 +30,12 @@
 #include "ImageQualityController.h"
 #include "PaintInfo.h"
 #include "RenderBoxModelObjectInlines.h"
-#include <wtf/IsoMallocInlines.h>
+#include "RenderLayer.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderViewTransitionCapture);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderViewTransitionCapture);
 
 RenderViewTransitionCapture::RenderViewTransitionCapture(Type type, Document& document, RenderStyle&& style)
     : RenderReplaced(type, document, WTFMove(style), { }, ReplacedFlag::IsViewTransitionCapture)
@@ -46,6 +47,10 @@ RenderViewTransitionCapture::~RenderViewTransitionCapture() = default;
 void RenderViewTransitionCapture::setImage(RefPtr<ImageBuffer> oldImage)
 {
     m_oldImage = oldImage;
+    if (hasLayer())
+        layer()->contentChanged(ContentChangeType::Image);
+    if (parent())
+        repaint();
 }
 
 bool RenderViewTransitionCapture::setCapturedSize(const LayoutSize& size, const LayoutRect& overflowRect, const LayoutPoint& layerToLayoutOffset)
@@ -117,6 +122,13 @@ Node* RenderViewTransitionCapture::nodeForHitTest() const
 {
     // The view transition pseudo-elements should hit-test to their originating element (the document element).
     return document().documentElement();
+}
+
+bool RenderViewTransitionCapture::paintsContent() const
+{
+    if (style().pseudoElementType() == PseudoId::ViewTransitionOld)
+        return true;
+    return !canUseExistingLayers();
 }
 
 String RenderViewTransitionCapture::debugDescription() const

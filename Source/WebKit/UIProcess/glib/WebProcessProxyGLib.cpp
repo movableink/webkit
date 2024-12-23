@@ -29,10 +29,11 @@
 #include "UserMessage.h"
 #include "WebProcessPool.h"
 #include "WebsiteDataStore.h"
+#include <WebCore/NotImplemented.h>
 #include <signal.h>
 #include <sys/types.h>
 #include <wtf/FileSystem.h>
-
+#include <wtf/glib/Sandbox.h>
 
 namespace WebKit {
 using namespace WebCore;
@@ -40,6 +41,11 @@ using namespace WebCore;
 void WebProcessProxy::platformGetLaunchOptions(ProcessLauncher::LaunchOptions& launchOptions)
 {
     launchOptions.extraInitializationData.set("enable-sandbox"_s, m_processPool->sandboxEnabled() ? "true"_s : "false"_s);
+
+#if USE(ATSPI)
+    launchOptions.extraInitializationData.set("accessibilityBusAddress"_s, m_processPool->accessibilityBusAddress());
+    launchOptions.extraInitializationData.set("accessibilityBusName"_s, m_processPool->generateNextAccessibilityBusName());
+#endif
 
     if (m_processPool->sandboxEnabled()) {
         // Prewarmed processes don't have a WebsiteDataStore yet, so use the primary WebsiteDataStore from the WebProcessPool.
@@ -50,6 +56,10 @@ void WebProcessProxy::platformGetLaunchOptions(ProcessLauncher::LaunchOptions& l
         launchOptions.extraInitializationData.set("mediaKeysDirectory"_s, dataStore->resolvedDirectories().mediaKeysStorageDirectory);
 
         launchOptions.extraSandboxPaths = m_processPool->sandboxPaths();
+#if USE(ATSPI)
+        if (shouldUseBubblewrap())
+            launchOptions.extraInitializationData.set("sandboxedAccessibilityBusAddress"_s, m_processPool->sandboxedAccessibilityBusAddress());
+#endif
     }
 }
 
@@ -66,22 +76,14 @@ void WebProcessProxy::sendMessageToWebContext(UserMessage&& message)
 
 void WebProcessProxy::platformSuspendProcess()
 {
-    auto id = processID();
-    if (!id)
-        return;
-
-    RELEASE_LOG(Process, "%p - [PID=%i] WebProcessProxy::platformSuspendProcess", this, id);
-    kill(id, SIGSTOP);
+    // FIXME: https://webkit.org/b/280014
+    notImplemented();
 }
 
 void WebProcessProxy::platformResumeProcess()
 {
-    auto id = processID();
-    if (!id)
-        return;
-
-    RELEASE_LOG(Process, "%p - [PID=%i] WebProcessProxy::platformResumeProcess", this, id);
-    kill(id, SIGCONT);
+    // FIXME: https://webkit.org/b/280014
+    notImplemented();
 }
 
 } // namespace WebKit

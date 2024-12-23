@@ -29,12 +29,12 @@ navigator.platform is OK
 navigator.plugins is OK
 navigator.product is OK
 navigator.productSub is OK
+navigator.pushManager is OK
 navigator.requestMediaKeySystemAccess() is OK
 navigator.sendBeacon() threw err TypeError: Not enough arguments
 navigator.serviceWorker is OK
 navigator.setAppBadge() is OK
-navigator.setLoggedIn() is OK
-navigator.setLoggedOut() is OK
+navigator.setStatus() is OK
 navigator.share() is OK
 navigator.standalone is OK
 navigator.storage is OK
@@ -73,12 +73,12 @@ navigator.platform is OK
 navigator.plugins is OK
 navigator.product is OK
 navigator.productSub is OK
+navigator.pushManager is OK
 navigator.requestMediaKeySystemAccess() is OK
 navigator.sendBeacon() threw err TypeError: Not enough arguments
 navigator.serviceWorker is OK
 navigator.setAppBadge() is OK
-navigator.setLoggedIn() is OK
-navigator.setLoggedOut() is OK
+navigator.setStatus() is OK
 navigator.share() is OK
 navigator.standalone is OK
 navigator.storage is OK

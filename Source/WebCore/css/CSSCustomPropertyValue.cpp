@@ -74,17 +74,14 @@ String CSSCustomPropertyValue::customCSSText() const
     auto serializeSyntaxValue = [](const SyntaxValue& syntaxValue) -> String {
         return WTF::switchOn(syntaxValue, [&](const Length& value) {
             if (value.type() == LengthType::Calculated) {
+                // FIXME: Implement serialization for CalculationValue directly.
                 auto calcValue = CSSCalcValue::create(value.calculationValue(), RenderStyle::defaultStyle());
-                if (!calcValue) {
-                    ASSERT_NOT_REACHED();
-                    return emptyString();
-                }
                 return calcValue->cssText();
             }
             return CSSPrimitiveValue::create(value, RenderStyle::defaultStyle())->cssText();
         }, [&](const NumericSyntaxValue& value) {
             return CSSPrimitiveValue::create(value.value, value.unitType)->cssText();
-        }, [&](const StyleColor& value) {
+        }, [&](const Style::Color& value) {
             return serializationForCSS(value);
         }, [&](const RefPtr<StyleImage>& value) {
             // FIXME: This is not right for gradients that use `currentcolor`. There should be a way preserve it.
@@ -201,7 +198,7 @@ static bool mayDependOnBaseURL(const CSSCustomPropertyValue::SyntaxValue& syntax
         [](const CSSCustomPropertyValue::NumericSyntaxValue&) {
             return false;
         },
-        [](const StyleColor&) {
+        [](const Style::Color&) {
             return false;
         },
         [](const RefPtr<StyleImage>&) {

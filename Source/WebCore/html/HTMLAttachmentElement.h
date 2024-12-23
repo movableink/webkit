@@ -43,7 +43,8 @@ class ShadowRoot;
 class FragmentedSharedBuffer;
 
 class HTMLAttachmentElement final : public HTMLElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLAttachmentElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLAttachmentElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLAttachmentElement);
 public:
     static Ref<HTMLAttachmentElement> create(const QualifiedName&, Document&);
     WEBCORE_EXPORT static String getAttachmentIdentifier(HTMLElement&);
@@ -113,6 +114,7 @@ private:
     void setNeedsIconRequest();
 
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
+    bool isReplaced(const RenderStyle&) const final { return true; }
     bool shouldSelectOnMouseDown() final {
 #if PLATFORM(IOS_FAMILY)
         return false;

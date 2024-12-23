@@ -51,6 +51,8 @@
 #define WTF_PLATFORM_QT 1
 #elif defined(BUILDING_GTK__)
 #define WTF_PLATFORM_GTK 1
+#elif defined(BUILDING_HAIKU__)
+#define WTF_PLATFORM_HAIKU 1
 #elif defined(BUILDING_WPE__)
 #define WTF_PLATFORM_WPE 1
 #elif defined(BUILDING_JSCONLY__)

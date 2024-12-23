@@ -36,6 +36,7 @@
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/HexNumber.h>
 #include <wtf/WallTime.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 

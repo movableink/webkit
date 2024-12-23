@@ -38,6 +38,7 @@
 #import <pal/avfoundation/MediaTimeAVFoundation.h>
 #import <pal/spi/cocoa/AudioToolboxSPI.h>
 #import <wtf/Scope.h>
+#import <wtf/TZoneMallocInlines.h>
 #import <wtf/cf/TypeCastsCF.h>
 
 #import "CoreVideoSoftLink.h"
@@ -47,6 +48,8 @@
 #import <pal/cf/CoreMediaSoftLink.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PacketDurationParser);
 
 #if ENABLE(VORBIS)
 constexpr uint32_t kAudioFormatVorbis = 'vorb';
@@ -92,10 +95,10 @@ static CFStringRef convertToCMColorPrimaries(PlatformVideoColorPrimaries primari
     }
 }
 
-
 static CFStringRef convertToCMTransferFunction(PlatformVideoTransferCharacteristics characteristics)
 {
     switch (characteristics) {
+    case PlatformVideoTransferCharacteristics::Smpte170m:
     case PlatformVideoTransferCharacteristics::Bt709:
         return kCVImageBufferTransferFunction_ITU_R_709_2;
     case PlatformVideoTransferCharacteristics::Smpte240m:
@@ -163,46 +166,64 @@ RetainPtr<CMFormatDescriptionRef> createFormatDescriptionFromTrackInfo(const Tra
 
     auto& videoInfo = downcast<const VideoInfo>(info);
 
-    auto data = videoInfo.atomData->createCFData();
-    ASSERT(videoInfo.codecName == 'vp09' || videoInfo.codecName == 'vp08');
-    CFTypeRef configurationKeys[] = { CFSTR("vpcC") };
-    CFTypeRef configurationValues[] = { data.get() };
-    auto configurationDict = adoptCF(CFDictionaryCreate(kCFAllocatorDefault, configurationKeys, configurationValues, std::size(configurationKeys), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
+    RetainPtr extensions = adoptCF(CFDictionaryCreateMutable(kCFAllocatorDefault, 5, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
 
-    Vector<CFTypeRef> extensionsKeys { PAL::kCMFormatDescriptionExtension_SampleDescriptionExtensionAtoms };
-    Vector<CFTypeRef> extensionsValues = { configurationDict.get() };
-
-    if (videoInfo.colorSpace.fullRange && *videoInfo.colorSpace.fullRange) {
-        extensionsKeys.append(PAL::kCMFormatDescriptionExtension_FullRangeVideo);
-        extensionsValues.append(kCFBooleanTrue);
+    if (videoInfo.atomData) {
+        RetainPtr data = videoInfo.atomData->createCFData();
+        ASSERT(videoInfo.codecName == kCMVideoCodecType_VP9 || videoInfo.codecName == 'vp08' || videoInfo.codecName == kCMVideoCodecType_H264 || videoInfo.codecName == kCMVideoCodecType_HEVC || videoInfo.codecName == kCMVideoCodecType_AV1);
+        CFStringRef keyName = [](auto codec) {
+            switch (codec) {
+            case kCMVideoCodecType_VP9:
+            case 'vp08':
+                return CFSTR("vpcC");
+            case kCMVideoCodecType_H264:
+                return CFSTR("avcC");
+            case kCMVideoCodecType_HEVC:
+                return CFSTR("hvcC");
+            case kCMVideoCodecType_AV1:
+                return CFSTR("av1C");
+            default:
+                ASSERT_NOT_REACHED();
+                return CFSTR("baad");
+            }
+        }(videoInfo.codecName.value);
+        CFTypeRef configurationKeys[] = { keyName };
+        CFTypeRef configurationValues[] = { data.get() };
+        RetainPtr configurationDict = adoptCF(CFDictionaryCreate(kCFAllocatorDefault, configurationKeys, configurationValues, std::size(configurationKeys), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
+        CFDictionaryAddValue(extensions.get(), PAL::kCMFormatDescriptionExtension_SampleDescriptionExtensionAtoms, configurationDict.get());
     }
+
+    if (videoInfo.colorSpace.fullRange && *videoInfo.colorSpace.fullRange)
+        CFDictionaryAddValue(extensions.get(), PAL::kCMFormatDescriptionExtension_FullRangeVideo, kCFBooleanTrue);
 
     if (videoInfo.colorSpace.primaries) {
-        if (auto cmColorPrimaries = convertToCMColorPrimaries(*videoInfo.colorSpace.primaries)) {
-            extensionsKeys.append(kCVImageBufferColorPrimariesKey);
-            extensionsValues.append(cmColorPrimaries);
-        }
+        if (RetainPtr cmColorPrimaries = convertToCMColorPrimaries(*videoInfo.colorSpace.primaries))
+            CFDictionaryAddValue(extensions.get(), kCVImageBufferColorPrimariesKey, cmColorPrimaries.get());
     }
     if (videoInfo.colorSpace.transfer) {
-        if (auto cmTransferFunction = convertToCMTransferFunction(*videoInfo.colorSpace.transfer)) {
-            extensionsKeys.append(kCVImageBufferTransferFunctionKey);
-            extensionsValues.append(cmTransferFunction);
-        }
+        if (RetainPtr cmTransferFunction = convertToCMTransferFunction(*videoInfo.colorSpace.transfer))
+            CFDictionaryAddValue(extensions.get(), kCVImageBufferTransferFunctionKey, cmTransferFunction.get());
     }
 
     if (videoInfo.colorSpace.matrix) {
-        if (auto cmMatrix = convertToCMYCbCRMatrix(*videoInfo.colorSpace.matrix)) {
-            extensionsKeys.append(kCVImageBufferYCbCrMatrixKey);
-            extensionsValues.append(cmMatrix);
-        }
+        if (RetainPtr cmMatrix = convertToCMYCbCRMatrix(*videoInfo.colorSpace.matrix))
+            CFDictionaryAddValue(extensions.get(), kCVImageBufferYCbCrMatrixKey, cmMatrix.get());
+    }
+    if (videoInfo.size != videoInfo.displaySize) {
+        double horizontalRatio = videoInfo.displaySize.width() / videoInfo.size.width();
+        double verticalRatio = videoInfo.displaySize.height() / videoInfo.size.height();
+        CFDictionaryAddValue(extensions.get(), PAL::get_CoreMedia_kCMFormatDescriptionExtension_PixelAspectRatio(), @{
+            (__bridge NSString*)PAL::get_CoreMedia_kCMFormatDescriptionKey_PixelAspectRatioHorizontalSpacing() : @(horizontalRatio),
+            (__bridge NSString*)PAL::get_CoreMedia_kCMFormatDescriptionKey_PixelAspectRatioVerticalSpacing() : @(verticalRatio)
+        });
     }
 
-    auto extensions = adoptCF(CFDictionaryCreate(kCFAllocatorDefault, extensionsKeys.data(), extensionsValues.data(), extensionsKeys.size(), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
-
     CMVideoFormatDescriptionRef formatDescription = nullptr;
-    CMVideoCodecType codec = videoInfo.codecName == "vp09" ? kCMVideoCodecType_VP9 : 'vp08';
-    if (noErr != PAL::CMVideoFormatDescriptionCreate(kCFAllocatorDefault, codec, videoInfo.size.width(), videoInfo.size.height(), extensions.get(), &formatDescription))
+    auto error = PAL::CMVideoFormatDescriptionCreate(kCFAllocatorDefault, videoInfo.codecName.value, videoInfo.size.width(), videoInfo.size.height(), extensions.get(), &formatDescription);
+    if (error != noErr) {
+        RELEASE_LOG_ERROR(Media, "CMVideoFormatDescriptionCreate failed with error %d (%.4s)", (int)error, (char*)&error);
         return nullptr;
+    }
 
     return adoptCF(formatDescription);
 }
@@ -216,7 +237,7 @@ Expected<RetainPtr<CMSampleBufferRef>, CString> toCMSampleBuffer(MediaSamplesBlo
         samples.clear();
     });
 
-    auto format = formatDescription ? retainPtr(formatDescription) : createFormatDescriptionFromTrackInfo(*samples.info());
+    RetainPtr format = formatDescription ? retainPtr(formatDescription) : createFormatDescriptionFromTrackInfo(*samples.info());
     if (!format)
         return makeUnexpected("No CMFormatDescription available");
 
@@ -279,6 +300,21 @@ Expected<RetainPtr<CMSampleBufferRef>, CString> toCMSampleBuffer(MediaSamplesBlo
     }
 
     return adoptCF(rawSampleBuffer);
+}
+
+void attachColorSpaceToPixelBuffer(const PlatformVideoColorSpace& colorSpace, CVPixelBufferRef pixelBuffer)
+{
+    ASSERT(pixelBuffer);
+    if (!pixelBuffer)
+        return;
+
+    CVBufferRemoveAttachment(pixelBuffer, kCVImageBufferCGColorSpaceKey);
+    if (colorSpace.primaries)
+        CVBufferSetAttachment(pixelBuffer, kCVImageBufferColorPrimariesKey, convertToCMColorPrimaries(*colorSpace.primaries), kCVAttachmentMode_ShouldPropagate);
+    if (colorSpace.transfer)
+        CVBufferSetAttachment(pixelBuffer, kCVImageBufferTransferFunctionKey, convertToCMTransferFunction(*colorSpace.transfer), kCVAttachmentMode_ShouldPropagate);
+    if (colorSpace.matrix)
+        CVBufferSetAttachment(pixelBuffer, kCVImageBufferYCbCrMatrixKey, convertToCMYCbCRMatrix(*colorSpace.matrix), kCVAttachmentMode_ShouldPropagate);
 }
 
 PacketDurationParser::PacketDurationParser(const AudioInfo& info)
@@ -400,6 +436,30 @@ void PacketDurationParser::reset()
 
 PacketDurationParser::~PacketDurationParser() = default;
 
+Vector<AudioStreamPacketDescription> getPacketDescriptions(CMSampleBufferRef sampleBuffer)
+{
+    size_t packetDescriptionsSize;
+    if (PAL::CMSampleBufferGetAudioStreamPacketDescriptions(sampleBuffer, 0, nullptr, &packetDescriptionsSize) != noErr) {
+        RELEASE_LOG_FAULT(WebAudio, "Unable to get packet description list size");
+        return { };
+    }
+    size_t numDescriptions = packetDescriptionsSize / sizeof(AudioStreamPacketDescription);
+    if (!numDescriptions) {
+        RELEASE_LOG_FAULT(WebAudio, "No packet description found.");
+        return { };
+    }
+    Vector<AudioStreamPacketDescription> descriptions(numDescriptions);
+    if (PAL::CMSampleBufferGetAudioStreamPacketDescriptions(sampleBuffer, packetDescriptionsSize, descriptions.data(), nullptr) != noErr) {
+        RELEASE_LOG_FAULT(WebAudio, "Unable to get packet description list");
+        return { };
+    }
+    auto numPackets = PAL::CMSampleBufferGetNumSamples(sampleBuffer);
+    if (numDescriptions != size_t(numPackets)) {
+        RELEASE_LOG_FAULT(WebAudio, "Unhandled CMSampleBuffer structure");
+        return { };
+    }
+    return descriptions;
+}
 
 } // namespace WebCore
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 #include "Element.h"
 #include "HTMLElement.h"
 #include "HTMLFormControlElement.h"
+#include "ToggleEventTask.h"
 
 namespace WebCore {
 
@@ -36,13 +37,8 @@ enum class PopoverVisibilityState : bool {
     Showing,
 };
 
-struct PopoverToggleEventData {
-    PopoverVisibilityState oldState;
-    PopoverVisibilityState newState;
-};
-
 class PopoverData {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PopoverData);
 public:
     PopoverData() = default;
 
@@ -55,9 +51,7 @@ public:
     Element* previouslyFocusedElement() const { return m_previouslyFocusedElement.get(); }
     void setPreviouslyFocusedElement(Element* element) { m_previouslyFocusedElement = element; }
 
-    std::optional<PopoverToggleEventData> queuedToggleEventData() const { return m_queuedToggleEventData; }
-    void setQueuedToggleEventData(PopoverToggleEventData data) { m_queuedToggleEventData = data; }
-    void clearQueuedToggleEventData() { m_queuedToggleEventData = std::nullopt; }
+    Ref<ToggleEventTask> ensureToggleEventTask(Element&);
 
     HTMLFormControlElement* invoker() const { return m_invoker.get(); }
     void setInvoker(const HTMLFormControlElement* element) { m_invoker = element; }
@@ -85,8 +79,8 @@ public:
 private:
     PopoverState m_popoverState;
     PopoverVisibilityState m_visibilityState;
-    std::optional<PopoverToggleEventData> m_queuedToggleEventData;
     WeakPtr<Element, WeakPtrImplWithEventTargetData> m_previouslyFocusedElement;
+    RefPtr<ToggleEventTask> m_toggleEventTask;
     WeakPtr<HTMLFormControlElement, WeakPtrImplWithEventTargetData> m_invoker;
     bool m_isHidingOrShowingPopover = false;
 };

@@ -47,10 +47,11 @@
 #include "OffscreenCanvasRenderingContext2D.h"
 #include "Page.h"
 #include "PlaceholderRenderingContext.h"
+#include "ScriptTelemetryCategory.h"
 #include "WorkerClient.h"
 #include "WorkerGlobalScope.h"
 #include "WorkerNavigator.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(WEBGL)
 #include "Settings.h"
@@ -65,7 +66,8 @@
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(OffscreenCanvas);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DetachedOffscreenCanvas);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(OffscreenCanvas);
 
 DetachedOffscreenCanvas::DetachedOffscreenCanvas(const IntSize& size, bool originClean, RefPtr<PlaceholderRenderingContextSource>&& placeholderSource)
     : m_placeholderSource(WTFMove(placeholderSource))
@@ -119,7 +121,7 @@ Ref<OffscreenCanvas> OffscreenCanvas::create(ScriptExecutionContext& scriptExecu
 
 OffscreenCanvas::OffscreenCanvas(ScriptExecutionContext& scriptExecutionContext, IntSize size, RefPtr<PlaceholderRenderingContextSource>&& placeholderSource)
     : ActiveDOMObject(&scriptExecutionContext)
-    , CanvasBase(WTFMove(size), scriptExecutionContext.noiseInjectionHashSalt())
+    , CanvasBase(WTFMove(size), scriptExecutionContext)
     , m_placeholderSource(WTFMove(placeholderSource))
 {
 }
@@ -314,14 +316,25 @@ void OffscreenCanvas::convertToBlob(ImageEncodeOptions&& options, Ref<DeferredPr
         promise->reject(ExceptionCode::IndexSizeError);
         return;
     }
+
+    auto encodingMIMEType = toEncodingMimeType(options.type);
+    auto quality = qualityFromDouble(options.quality);
+
+    if (RefPtr context = canvasBaseScriptExecutionContext(); context && context->requiresScriptExecutionTelemetry(ScriptTelemetryCategory::Canvas)) {
+        RefPtr buffer = createImageForNoiseInjection();
+        auto blobData = buffer->toData(encodingMIMEType, quality);
+        if (blobData.isEmpty())
+            promise->reject(ExceptionCode::EncodingError);
+        else
+            promise->resolveWithNewlyCreated<IDLInterface<Blob>>(Blob::create(context.get(), WTFMove(blobData), encodingMIMEType));
+        return;
+    }
+
     RefPtr buffer = makeRenderingResultsAvailable();
     if (!buffer) {
         promise->reject(ExceptionCode::InvalidStateError);
         return;
     }
-
-    auto encodingMIMEType = toEncodingMimeType(options.type);
-    auto quality = qualityFromDouble(options.quality);
 
     Vector<uint8_t> blobData = buffer->toData(encodingMIMEType, quality);
     if (blobData.isEmpty()) {
@@ -414,13 +427,13 @@ void OffscreenCanvas::scheduleCommitToPlaceholderCanvas()
 
 void OffscreenCanvas::createImageBuffer() const
 {
-    m_hasCreatedImageBuffer = true;
+    const_cast<OffscreenCanvas*>(this)->setHasCreatedImageBuffer(true);
     setImageBuffer(allocateImageBuffer());
 }
 
 void OffscreenCanvas::setImageBufferAndMarkDirty(RefPtr<ImageBuffer>&& buffer)
 {
-    m_hasCreatedImageBuffer = true;
+    setHasCreatedImageBuffer(true);
     setImageBuffer(WTFMove(buffer));
 
     CanvasBase::didDraw(FloatRect(FloatPoint(), size()));
@@ -432,7 +445,7 @@ void OffscreenCanvas::reset()
     if (RefPtr context = dynamicDowncast<OffscreenCanvasRenderingContext2D>(m_context.get()))
         context->reset();
 
-    m_hasCreatedImageBuffer = false;
+    setHasCreatedImageBuffer(false);
     setImageBuffer(nullptr);
     clearCopiedImage();
 

@@ -27,8 +27,11 @@
 #include "PushMessageCrypto.h"
 
 #include "PushCrypto.h"
+#include <array>
 #include <wtf/ByteOrder.h>
 #include <wtf/CryptographicallyRandomNumber.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore::PushCrypto {
 
@@ -299,3 +302,5 @@ std::optional<Vector<uint8_t>> decryptAESGCMPayload(const ClientKeys& clientKeys
 }
 
 } // namespace WebCore::PushCrypto
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

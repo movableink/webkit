@@ -42,9 +42,19 @@
 #include <WebCore/Timer.h>
 #include <WebCore/LocalFrame.h>
 #include <wtf/UUID.h>
+#include <wtf/TZoneMalloc.h>
 
 class QWebFrameAdapter;
 class QWebPageAdapter;
+
+namespace WebCore {
+class NotificationWrapper;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedTimerSmartPointerException;
+template<> struct IsDeprecatedTimerSmartPointerException<WebCore::NotificationWrapper> : std::true_type { };
+}
 
 namespace WebCore {
 
@@ -54,6 +64,7 @@ class ScriptExecutionContext;
 
 class NotificationWrapper final : public QObject, public QWebNotificationData {
     Q_OBJECT
+    WTF_MAKE_TZONE_ALLOCATED(NotificationWrapper);
 public:
     NotificationWrapper(NotificationData&&);
     ~NotificationWrapper() { }

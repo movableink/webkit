@@ -122,9 +122,14 @@ JSGlobalContextRef JSGlobalContextCreate(JSClassRef globalObjectClass)
 #if OS(DARWIN)
     // If the application was linked before JSGlobalContextCreate was changed to use a unique VM,
     // we use a shared one for backwards compatibility.
-    if (NSVersionOfLinkTimeLibrary("JavaScriptCore") <= webkitFirstVersionWithConcurrentGlobalContexts) {
-        return JSGlobalContextCreateInGroup(toRef(&VM::sharedInstance()), globalObjectClass);
-    }
+    static VM* s_sharedVM;
+    static std::once_flag once;
+    std::call_once(once, [] {
+        if (NSVersionOfLinkTimeLibrary("JavaScriptCore") <= webkitFirstVersionWithConcurrentGlobalContexts)
+            s_sharedVM = &VM::createContextGroup().leakRef();
+    });
+    if (UNLIKELY(s_sharedVM))
+        return JSGlobalContextCreateInGroup(toRef(s_sharedVM), globalObjectClass);
 #endif // OS(DARWIN)
 
     return JSGlobalContextCreateInGroup(nullptr, globalObjectClass);
@@ -503,15 +508,11 @@ JSStringRef JSContextGroupTakeSamplesFromSamplingProfiler(JSContextGroupRef grou
     JSLockHolder locker(&vm);
 
 #if ENABLE(SAMPLING_PROFILER)
-    auto json = vm.takeSamplingProfilerSamplesAsJSON();
-    if (UNLIKELY(!json))
+    auto samples = vm.takeSamplingProfilerSamplesAsJSONString();
+    if (samples.isNull())
         return nullptr;
 
-    auto jsonData = json->toJSONString();
-    if (UNLIKELY(jsonData.isNull()))
-        return nullptr;
-
-    return OpaqueJSString::tryCreate(WTFMove(jsonData)).leakRef();
+    return OpaqueJSString::tryCreate(WTFMove(samples)).leakRef();
 #else
     return nullptr;
 #endif

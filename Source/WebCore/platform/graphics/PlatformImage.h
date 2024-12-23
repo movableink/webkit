@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <wtf/Compiler.h>
+
 #if USE(CG)
 #include <wtf/RetainPtr.h>
 typedef struct CGImage* CGImageRef;
@@ -33,7 +35,9 @@ typedef struct CGImage* CGImageRef;
 #elif PLATFORM(QT)
 #include <QImage>
 #elif USE(SKIA)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 #include <skia/core/SkImage.h>
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 #endif
 
 namespace WebCore {

@@ -1,5 +1,4 @@
-//@ requireOptions("--useInterpretedJSEntryWrappers=1")
-//  Debugging: jsc -m cc-int-to-int.js --useConcurrentJIT=0 --useBBQJIT=0 --useOMGJIT=0 --jitAllowList=nothing --useDFGJIT=0 --dumpDisassembly=0 --forceICFailure=1 --useInterpretedJSEntryWrappers=1 --dumpDisassembly=0
+//  Debugging: jsc -m cc-int-to-int.js --useConcurrentJIT=0 --useBBQJIT=0 --useOMGJIT=0 --jitAllowList=nothing --useDFGJIT=0 --dumpDisassembly=0 --forceICFailure=1 --dumpDisassembly=0
 import { instantiate } from "../wabt-wrapper.js"
 import * as assert from "../assert.js"
 
@@ -30,7 +29,7 @@ async function test() {
     const instance = await instantiate(wat, {}, { simd: true })
     const { test, test_with_call, test_with_call_indirect } = instance.exports
 
-    for (let i = 0; i < 1000; ++i) {
+    for (let i = 0; i < 10000; ++i) {
         assert.eq(test(5), 42 + 5)
         assert.eq(test(), NaN)
         assert.eq(test(null), 42 + 0)

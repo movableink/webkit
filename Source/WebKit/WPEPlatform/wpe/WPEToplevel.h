@@ -40,7 +40,7 @@ WPE_DECLARE_DERIVABLE_TYPE (WPEToplevel, wpe_toplevel, WPE, TOPLEVEL, GObject)
 
 typedef struct _WPEBufferDMABufFormats WPEBufferDMABufFormats;
 typedef struct _WPEDisplay WPEDisplay;
-typedef struct _WPEMonitor WPEMonitor;
+typedef struct _WPEScreen WPEScreen;
 typedef struct _WPEView WPEView;
 
 struct _WPEToplevelClass
@@ -50,7 +50,7 @@ struct _WPEToplevelClass
     void                    (* set_title)                     (WPEToplevel *toplevel,
                                                                const char  *title);
     guint                   (* get_max_views)                 (WPEToplevel *toplevel);
-    WPEMonitor             *(* get_monitor)                   (WPEToplevel *toplevel);
+    WPEScreen              *(* get_screen)                    (WPEToplevel *toplevel);
     gboolean                (* resize)                        (WPEToplevel *toplevel,
                                                                int          width,
                                                                int          height);
@@ -58,6 +58,7 @@ struct _WPEToplevelClass
                                                                gboolean     fullscreen);
     gboolean                (* set_maximized)                 (WPEToplevel *toplevel,
                                                                gboolean     maximized);
+    gboolean                (* set_minimized)                 (WPEToplevel *toplevel);
     WPEBufferDMABufFormats *(* get_preferred_dma_buf_formats) (WPEToplevel *toplevel);
 
     gpointer padding[32];
@@ -117,12 +118,13 @@ WPE_API void                    wpe_toplevel_state_changed                     (
 WPE_API gdouble                 wpe_toplevel_get_scale                         (WPEToplevel               *toplevel);
 WPE_API void                    wpe_toplevel_scale_changed                     (WPEToplevel               *toplevel,
                                                                                 gdouble                    scale);
-WPE_API WPEMonitor             *wpe_toplevel_get_monitor                       (WPEToplevel               *toplevel);
-WPE_API void                    wpe_toplevel_monitor_changed                   (WPEToplevel               *toplevel);
+WPE_API WPEScreen              *wpe_toplevel_get_screen                        (WPEToplevel               *toplevel);
+WPE_API void                    wpe_toplevel_screen_changed                    (WPEToplevel               *toplevel);
 WPE_API gboolean                wpe_toplevel_fullscreen                        (WPEToplevel               *toplevel);
 WPE_API gboolean                wpe_toplevel_unfullscreen                      (WPEToplevel               *toplevel);
 WPE_API gboolean                wpe_toplevel_maximize                          (WPEToplevel               *toplevel);
 WPE_API gboolean                wpe_toplevel_unmaximize                        (WPEToplevel               *toplevel);
+WPE_API gboolean                wpe_toplevel_minimize                          (WPEToplevel               *toplevel);
 WPE_API WPEBufferDMABufFormats *wpe_toplevel_get_preferred_dma_buf_formats     (WPEToplevel               *toplevel);
 WPE_API void                    wpe_toplevel_preferred_dma_buf_formats_changed (WPEToplevel               *toplevel);
 

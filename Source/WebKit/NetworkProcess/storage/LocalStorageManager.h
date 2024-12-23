@@ -28,6 +28,7 @@
 #include "Connection.h"
 #include "StorageAreaIdentifier.h"
 #include "StorageAreaMapIdentifier.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WorkQueue.h>
 
 namespace WebCore {
@@ -42,7 +43,7 @@ class StorageAreaBase;
 class StorageAreaRegistry;
 
 class LocalStorageManager {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(LocalStorageManager);
 public:
     static Vector<WebCore::SecurityOriginData> originsOfLocalStorageData(const String& path);
     static String localStorageFilePath(const String& directory, const WebCore::ClientOrigin&);
@@ -64,14 +65,18 @@ public:
     void cancelConnectToTransientLocalStorageArea(IPC::Connection::UniqueID);
     void disconnectFromStorageArea(IPC::Connection::UniqueID, StorageAreaIdentifier);
 
+    HashMap<String, String> fetchStorageMap() const;
+
 private:
     void connectionClosedForLocalStorageArea(IPC::Connection::UniqueID);
     void connectionClosedForTransientStorageArea(IPC::Connection::UniqueID);
 
+    RefPtr<StorageAreaBase> protectedLocalStorageArea() const;
+
     String m_path;
-    StorageAreaRegistry& m_registry;
-    std::unique_ptr<MemoryStorageArea> m_transientStorageArea;
-    std::unique_ptr<StorageAreaBase> m_localStorageArea;
+    CheckedRef<StorageAreaRegistry> m_registry;
+    RefPtr<MemoryStorageArea> m_transientStorageArea;
+    RefPtr<StorageAreaBase> m_localStorageArea;
 };
 
 } // namespace WebKit

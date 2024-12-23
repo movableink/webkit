@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +35,9 @@
 #include "VectorMath.h"
 #include <algorithm>
 #include <wtf/MathExtras.h>
+#include <wtf/TZoneMallocInlines.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -71,6 +74,8 @@ static bool hasSetTargetConverged(float value, float target, Seconds currentTime
 
     return false;
 }
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AudioParamTimeline);
 
 ExceptionOr<void> AudioParamTimeline::setValueAtTime(float value, Seconds time)
 {
@@ -920,6 +925,8 @@ void AudioParamTimeline::handleCancelValues(ParamEvent& event, ParamEvent* nextE
     }
 }
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(AudioParamTimeline, ParamEvent);
+
 auto AudioParamTimeline::ParamEvent::createSetValueEvent(float value, Seconds time) -> ParamEvent
 {
     return ParamEvent { ParamEvent::SetValue, value, time, 0, Seconds { }, Vector<float> { }, 0, 0, std::nullopt };
@@ -1047,5 +1054,7 @@ bool AudioParamTimeline::hasValues(size_t startFrame, double sampleRate) const
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

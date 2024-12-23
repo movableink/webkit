@@ -77,6 +77,7 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/persistence/PersistentDecoder.h>
 #include <wtf/text/Base64.h>
+#include <wtf/text/MakeString.h>
 
 #if PLATFORM(COCOA)
 #include <wtf/spi/darwin/OSVariantSPI.h>
@@ -693,7 +694,7 @@ bool InspectorFrontendHost::showCertificate(const String& serializedCertificate)
     if (!data)
         return false;
 
-    WTF::Persistence::Decoder decoder({ data->data(), data->size() });
+    WTF::Persistence::Decoder decoder(data->span());
     std::optional<CertificateInfo> certificateInfo;
     decoder >> certificateInfo;
     if (!certificateInfo)

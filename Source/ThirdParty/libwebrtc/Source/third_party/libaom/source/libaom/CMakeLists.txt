@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2016, Alliance for Open Media. All rights reserved
+# Copyright (c) 2016, Alliance for Open Media. All rights reserved.
 #
 # This source code is subject to the terms of the BSD 2 Clause License and the
 # Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License was
@@ -58,9 +58,9 @@ endif()
 # passed to libtool.
 #
 # We set SO_FILE_VERSION = [c-a].a.r
-set(LT_CURRENT 12)
+set(LT_CURRENT 13)
 set(LT_REVISION 0)
-set(LT_AGE 9)
+set(LT_AGE 10)
 math(EXPR SO_VERSION "${LT_CURRENT} - ${LT_AGE}")
 set(SO_FILE_VERSION "${SO_VERSION}.${LT_AGE}.${LT_REVISION}")
 unset(LT_CURRENT)
@@ -200,7 +200,9 @@ list(APPEND AOM_ENCODER_APP_UTIL_SOURCES
             "${AOM_ROOT}/common/y4minput.c"
             "${AOM_ROOT}/common/y4minput.h"
             "${AOM_ROOT}/examples/encoder_util.h"
-            "${AOM_ROOT}/examples/encoder_util.c")
+            "${AOM_ROOT}/examples/encoder_util.c"
+            "${AOM_ROOT}/examples/multilayer_metadata.h"
+            "${AOM_ROOT}/examples/multilayer_metadata.cc")
 
 list(APPEND AOM_ENCODER_STATS_SOURCES "${AOM_ROOT}/stats/aomstats.c"
             "${AOM_ROOT}/stats/aomstats.h" "${AOM_ROOT}/stats/rate_hist.c"
@@ -323,11 +325,28 @@ if(NOT WIN32 AND NOT APPLE)
   endif()
 endif()
 
-if(CONFIG_AV1_ENCODER AND NOT BUILD_SHARED_LIBS)
+if(CONFIG_AV1_ENCODER)
   list(APPEND AOM_AV1_RC_SOURCES "${AOM_ROOT}/av1/ratectrl_rtc.h"
               "${AOM_ROOT}/av1/ratectrl_rtc.cc")
   add_library(aom_av1_rc ${AOM_AV1_RC_SOURCES})
-  target_link_libraries(aom_av1_rc ${AOM_LIB_LINK_TYPE} aom)
+  # aom_av1_rc calls libaom's internal functions, so it must be linked with the
+  # libaom static library.
+  if(BUILD_SHARED_LIBS)
+    target_link_libraries(aom_av1_rc ${AOM_LIB_LINK_TYPE} aom_static)
+  else()
+    target_link_libraries(aom_av1_rc ${AOM_LIB_LINK_TYPE} aom)
+  endif()
+  if(BUILD_SHARED_LIBS)
+    # On Windows, global symbols are not exported from a DLL by default. Enable
+    # the WINDOWS_EXPORT_ALL_SYMBOLS property to export all global symbols from
+    # the aom_av1_rc DLL on Windows, to match the default behavior on other
+    # platforms.
+    set_target_properties(aom_av1_rc PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+    # The aom_av1_rc library and its header "av1/ratectrl_rtc.h" are not
+    # installed by the "install" command, so we don't need to worry about
+    # versioning the aom_av1_rc shared library. If we start to install the
+    # aom_av1_rc library, the library should be versioned.
+  endif()
   if(NOT WIN32 AND NOT APPLE)
     target_link_libraries(aom_av1_rc ${AOM_LIB_LINK_TYPE} m)
   endif()
@@ -336,7 +355,7 @@ endif()
 
 # List of object and static library targets.
 set(AOM_LIB_TARGETS ${AOM_LIB_TARGETS} aom_rtcd aom_mem aom_scale aom)
-if(CONFIG_AV1_ENCODER AND NOT BUILD_SHARED_LIBS)
+if(CONFIG_AV1_ENCODER)
   set(AOM_LIB_TARGETS ${AOM_LIB_TARGETS} aom_av1_rc)
 endif()
 if(BUILD_SHARED_LIBS)
@@ -455,6 +474,17 @@ if(CONFIG_LIBYUV OR CONFIG_TUNE_BUTTERAUGLI)
   add_library(yuv OBJECT ${AOM_LIBYUV_SOURCES})
   if(NOT MSVC)
     target_compile_options(yuv PRIVATE -Wno-shadow)
+    # Many functions in libyuv trigger this warning when enabled with gcc and
+    # clang.
+    is_flag_present(AOM_CXX_FLAGS "-Wmissing-declarations" flag_present)
+    if(flag_present)
+      target_compile_options(yuv PRIVATE -Wno-missing-declarations)
+    endif()
+    # Many functions in libyuv trigger this warning when enabled with clang.
+    is_flag_present(AOM_CXX_FLAGS "-Wmissing-prototypes" flag_present)
+    if(flag_present)
+      target_compile_options(yuv PRIVATE -Wno-missing-prototypes)
+    endif()
   endif()
   include_directories("${AOM_ROOT}/third_party/libyuv/include")
 endif()
@@ -477,29 +507,30 @@ if(CONFIG_AV1_ENCODER)
     add_executable(twopass_encoder "${AOM_ROOT}/examples/twopass_encoder.c"
                                    $<TARGET_OBJECTS:aom_common_app_util>
                                    $<TARGET_OBJECTS:aom_encoder_app_util>)
-    add_executable(noise_model "${AOM_ROOT}/examples/noise_model.c"
-                               $<TARGET_OBJECTS:aom_common_app_util>
-                               $<TARGET_OBJECTS:aom_encoder_app_util>)
-    add_executable(photon_noise_table
-                   "${AOM_ROOT}/examples/photon_noise_table.c"
-                   $<TARGET_OBJECTS:aom_common_app_util>
-                   $<TARGET_OBJECTS:aom_encoder_app_util>)
+    if(NOT BUILD_SHARED_LIBS AND NOT CONFIG_REALTIME_ONLY)
+      add_executable(noise_model "${AOM_ROOT}/examples/noise_model.c"
+                                 $<TARGET_OBJECTS:aom_common_app_util>
+                                 $<TARGET_OBJECTS:aom_encoder_app_util>)
+      add_executable(photon_noise_table
+                     "${AOM_ROOT}/examples/photon_noise_table.c"
+                     $<TARGET_OBJECTS:aom_common_app_util>
+                     $<TARGET_OBJECTS:aom_encoder_app_util>)
+    endif()
     add_executable(scalable_encoder "${AOM_ROOT}/examples/scalable_encoder.c"
                                     $<TARGET_OBJECTS:aom_common_app_util>
                                     $<TARGET_OBJECTS:aom_encoder_app_util>)
+    add_executable(svc_encoder_rtc "${AOM_ROOT}/examples/svc_encoder_rtc.cc"
+                                   $<TARGET_OBJECTS:aom_common_app_util>
+                                   $<TARGET_OBJECTS:aom_encoder_app_util>)
+    target_link_libraries(svc_encoder_rtc ${AOM_LIB_LINK_TYPE} aom_av1_rc)
 
     # Maintain a list of encoder example targets.
-    list(APPEND AOM_ENCODER_EXAMPLE_TARGETS aomenc lossless_encoder noise_model
-                photon_noise_table set_maps simple_encoder scalable_encoder
-                twopass_encoder)
-
-    if(NOT BUILD_SHARED_LIBS)
-      add_executable(svc_encoder_rtc "${AOM_ROOT}/examples/svc_encoder_rtc.cc"
-                                     $<TARGET_OBJECTS:aom_common_app_util>
-                                     $<TARGET_OBJECTS:aom_encoder_app_util>)
-      target_link_libraries(svc_encoder_rtc ${AOM_LIB_LINK_TYPE} aom_av1_rc)
-      list(APPEND AOM_ENCODER_EXAMPLE_TARGETS svc_encoder_rtc)
+    list(APPEND AOM_ENCODER_EXAMPLE_TARGETS aomenc lossless_encoder set_maps
+                simple_encoder scalable_encoder svc_encoder_rtc twopass_encoder)
+    if(NOT BUILD_SHARED_LIBS AND NOT CONFIG_REALTIME_ONLY)
+      list(APPEND AOM_ENCODER_EXAMPLE_TARGETS noise_model photon_noise_table)
     endif()
+
   endif()
 
   if(ENABLE_TOOLS)
@@ -559,13 +590,13 @@ if(CONFIG_AV1_ENCODER)
       target_include_directories(aom_dsp_encoder PRIVATE ${LIBJXL_INCLUDE_DIRS})
     else()
       pkg_check_modules(LIBJXL REQUIRED libjxl)
-      target_link_libraries(aom PRIVATE ${LIBJXL_LDFLAGS} ${LIBJXL_LIBRARIES})
+      target_link_libraries(aom PRIVATE ${LIBJXL_LDFLAGS})
       target_include_directories(aom_dsp_encoder PRIVATE ${LIBJXL_INCLUDE_DIRS})
       if(LIBJXL_CFLAGS)
         append_compiler_flag("${LIBJXL_CFLAGS}")
       endif()
       pkg_check_modules(LIBHWY REQUIRED libhwy)
-      target_link_libraries(aom PRIVATE ${LIBHWY_LDFLAGS} ${LIBHWY_LIBRARIES})
+      target_link_libraries(aom PRIVATE ${LIBHWY_LDFLAGS})
       target_include_directories(aom_dsp_encoder
                                  PRIVATE ${LIBLIBHWY_INCLUDE_DIRS})
       if(LIBHWY_CFLAGS)
@@ -631,10 +662,9 @@ if(CONFIG_AV1_ENCODER)
     if(PKG_CONFIG_FOUND)
       pkg_check_modules(VMAF REQUIRED libvmaf)
       if(BUILD_SHARED_LIBS)
-        target_link_libraries(aom_static
-                              PRIVATE ${VMAF_LDFLAGS} ${VMAF_LIBRARIES})
+        target_link_libraries(aom_static PRIVATE ${VMAF_LDFLAGS})
       endif()
-      target_link_libraries(aom PRIVATE ${VMAF_LDFLAGS} ${VMAF_LIBRARIES})
+      target_link_libraries(aom PRIVATE ${VMAF_LDFLAGS})
       target_include_directories(aom_dsp_encoder PRIVATE ${VMAF_INCLUDE_DIRS})
       if(VMAF_CFLAGS)
         foreach(flag "${VMAF_CFLAGS}")

@@ -36,12 +36,16 @@
 #include "ImageBuffer.h"
 #include "PixelBuffer.h"
 #include "Timer.h"
+#include <wtf/CheckedPtr.h>
 #include <wtf/Lock.h>
 #include <wtf/MathExtras.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RunLoop.h>
 #include <wtf/Scope.h>
+#include <wtf/TZoneMallocInlines.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -59,8 +63,9 @@ static inline int roundUpToMultipleOf32(int d)
 // ShadowBlur needs a scratch image as the buffer for the blur filter.
 // Instead of creating and destroying the buffer for every operation,
 // we create a buffer which will be automatically purged via a timer.
-class ScratchBuffer {
-    WTF_MAKE_FAST_ALLOCATED;
+class ScratchBuffer final : public CanMakeThreadSafeCheckedPtr<ScratchBuffer> {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(ScratchBuffer);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ScratchBuffer);
 public:
     ScratchBuffer()
         : m_purgeTimer(RunLoop::main(), this, &ScratchBuffer::purgeTimerFired)
@@ -85,7 +90,7 @@ public:
         clearScratchBuffer();
 
         // ShadowBlur is not used with accelerated drawing, so it's OK to make an unconditionally unaccelerated buffer.
-        m_imageBuffer = ImageBuffer::create(roundedSize, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
+        m_imageBuffer = ImageBuffer::create(roundedSize, RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
         return m_imageBuffer;
     }
 
@@ -323,8 +328,14 @@ void ShadowBlur::blurLayerImage(std::span<uint8_t> imageData, const IntSize& siz
                 int alpha2 = pixels[(dim - 1) * stride + channels[step]];
 
                 auto ptr = pixels.subspan(channels[step + 1]);
-                auto prev = pixels.subspan(stride + channels[step]);
-                auto next = pixels.subspan(ofs * stride + channels[step]);
+
+                // If either dimension is 1 pixel long, prev would go outside the bounds of pixels,
+                // so make it an empty subspan.
+                auto prev = (stride + channels[step] < pixels.size()) ? pixels.subspan(stride + channels[step]) : std::span<uint8_t> { };
+
+                // if image to be blurred is smaller than the box kernel size, next would go outside
+                // the bounds of pixels, so make it an empty subspan.
+                auto next = (ofs * stride + channels[step] < pixels.size()) ? pixels.subspan(ofs * stride + channels[step]) : std::span<uint8_t> { };
 
                 int i;
                 int sum = side1 * alpha1 + alpha1;
@@ -604,7 +615,7 @@ void ShadowBlur::drawInsetShadow(const AffineTransform& transform, const IntRect
 
 void ShadowBlur::drawRectShadowWithoutTiling(const AffineTransform&, const FloatRoundedRect& shadowedRect, const LayerImageProperties& layerImageProperties, const DrawBufferCallback& drawBuffer)
 {
-    auto layerImage = ImageBuffer::create(expandedIntSize(layerImageProperties.layerSize), RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
+    auto layerImage = ImageBuffer::create(expandedIntSize(layerImageProperties.layerSize), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
     if (!layerImage)
         return;
 
@@ -632,7 +643,7 @@ void ShadowBlur::drawRectShadowWithoutTiling(const AffineTransform&, const Float
 
 void ShadowBlur::drawInsetShadowWithoutTiling(const AffineTransform&, const FloatRect& fullRect, const FloatRoundedRect& holeRect, const LayerImageProperties& layerImageProperties, const DrawBufferCallback& drawBuffer)
 {
-    auto layerImage = ImageBuffer::create(expandedIntSize(layerImageProperties.layerSize), RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
+    auto layerImage = ImageBuffer::create(expandedIntSize(layerImageProperties.layerSize), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
     if (!layerImage)
         return;
 
@@ -708,7 +719,7 @@ void ShadowBlur::drawRectShadowWithTiling(const AffineTransform& transform, cons
     UNUSED_PARAM(layerImageProperties);
 #endif
 
-    if (auto layerImageBuffer = ImageBuffer::create(templateSize, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8))
+    if (auto layerImageBuffer = ImageBuffer::create(templateSize, RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8))
         drawRectShadowWithTilingWithLayerImageBuffer(*layerImageBuffer, transform, shadowedRect, templateSize, edgeSize, drawImage, fillRect, templateShadow);
 }
 
@@ -762,7 +773,7 @@ void ShadowBlur::drawInsetShadowWithTiling(const AffineTransform& transform, con
     }
 #endif
 
-    if (auto layerImageBuffer = ImageBuffer::create(templateSize, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8))
+    if (auto layerImageBuffer = ImageBuffer::create(templateSize, RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8))
         drawInsetShadowWithTilingWithLayerImageBuffer(*layerImageBuffer, transform, fullRect, holeRect, templateSize, edgeSize, drawImage, fillRectWithHole, templateBounds, templateHole);
 }
 
@@ -921,7 +932,7 @@ void ShadowBlur::drawShadowLayer(const AffineTransform& transform, const IntRect
 
     adjustBlurRadius(transform);
 
-    auto layerImage = ImageBuffer::create(expandedIntSize(layerImageProperties->layerSize), RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
+    auto layerImage = ImageBuffer::create(expandedIntSize(layerImageProperties->layerSize), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
     if (!layerImage)
         return;
 
@@ -937,3 +948,5 @@ void ShadowBlur::drawShadowLayer(const AffineTransform& transform, const IntRect
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

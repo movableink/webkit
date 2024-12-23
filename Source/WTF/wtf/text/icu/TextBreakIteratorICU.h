@@ -21,6 +21,7 @@
 #pragma once
 
 #include <unicode/ubrk.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/StringView.h>
 #include <wtf/text/icu/UTextProviderLatin1.h>
 #include <wtf/text/icu/UTextProviderUTF16.h>
@@ -181,7 +182,7 @@ private:
             return AtomString::fromUTF8(scratchBuffer.subspan(0, lengthNeeded));
         if (needsToGrowToProduceBuffer(status)) {
             scratchBuffer.grow(lengthNeeded + 1);
-            memset(scratchBuffer.data() + utf8Locale.length(), 0, scratchBuffer.size() - utf8Locale.length());
+            memsetSpan(scratchBuffer.mutableSpan().subspan(utf8Locale.length()), 0);
             status = U_ZERO_ERROR;
             int32_t lengthNeeded2 = uloc_setKeywordValue("lb", keywordValue, scratchBuffer.data(), scratchBuffer.size(), &status);
             if (!U_SUCCESS(status) || lengthNeeded != lengthNeeded2)

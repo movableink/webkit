@@ -41,6 +41,7 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/ThreadingPrimitives.h>
 #include <wtf/WTFConfig.h>
+#include <wtf/WallTime.h>
 #include <wtf/WordLock.h>
 
 #if OS(LINUX)
@@ -72,6 +73,8 @@
 #include <mach/mach_traps.h>
 #include <mach/thread_switch.h>
 #endif
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 #if OS(QNX)
 #define SA_RESTART 0
@@ -208,7 +211,7 @@ void Thread::initializePlatformThreading()
         if (sigaction(signal, nullptr, &oldAction))
             return false;
         // It has signal already.
-        if (oldAction.sa_handler != SIG_DFL || bitwise_cast<void*>(oldAction.sa_sigaction) != bitwise_cast<void*>(SIG_DFL))
+        if (oldAction.sa_handler != SIG_DFL || std::bit_cast<void*>(oldAction.sa_sigaction) != std::bit_cast<void*>(SIG_DFL))
             WTFLogAlways("Overriding existing handler for signal %d. Set JSC_SIGNAL_FOR_GC if you want WebKit to use a different signal", signal);
         return !sigaction(signal, &action, 0);
     };
@@ -701,5 +704,7 @@ void Thread::yield()
 }
 
 } // namespace WTF
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // USE(PTHREADS)

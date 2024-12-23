@@ -30,6 +30,7 @@
 #include "SameSiteInfo.h"
 #include <optional>
 #include <wtf/Forward.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -47,7 +48,7 @@ class NetworkStorageSession;
 class StorageSessionProvider;
 struct SameSiteInfo;
 
-class WEBCORE_EXPORT CookieJar : public RefCounted<CookieJar>, public CanMakeWeakPtr<CookieJar> {
+class WEBCORE_EXPORT CookieJar : public RefCountedAndCanMakeWeakPtr<CookieJar> {
 public:
     static Ref<CookieJar> create(Ref<StorageSessionProvider>&&);
     
@@ -62,7 +63,7 @@ public:
     virtual bool cookiesEnabled(Document&);
     virtual void remoteCookiesEnabled(const Document&, CompletionHandler<void(bool)>&&) const;
     virtual std::pair<String, SecureCookiesAccessed> cookieRequestHeaderFieldValue(const URL& firstParty, const SameSiteInfo&, const URL&, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, IncludeSecureCookies) const;
-    virtual bool getRawCookies(const Document&, const URL&, Vector<Cookie>&) const;
+    virtual bool getRawCookies(Document&, const URL&, Vector<Cookie>&) const;
     virtual void setRawCookie(const Document&, const Cookie&);
     virtual void deleteCookie(const Document&, const URL&, const String& cookieName, CompletionHandler<void()>&&);
 
@@ -70,7 +71,7 @@ public:
     virtual void setCookieAsync(Document&, const URL&, const Cookie&, CompletionHandler<void(bool)>&&) const;
 
 #if HAVE(COOKIE_CHANGE_LISTENER_API)
-    virtual void addChangeListener(const String& host, const CookieChangeListener&);
+    virtual void addChangeListener(const WebCore::Document&, const CookieChangeListener&);
     virtual void removeChangeListener(const String& host, const CookieChangeListener&);
 #endif
 

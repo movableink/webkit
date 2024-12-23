@@ -25,15 +25,17 @@
 
 #pragma once
 
+#if !PLATFORM(COCOA)
+
 #if USE(LIBWEBRTC)
 
 #include "NetworkRTCProvider.h"
 
-ALLOW_COMMA_BEGIN
-
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 #include <webrtc/rtc_base/async_packet_socket.h>
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
-ALLOW_COMMA_END
+#include <wtf/TZoneMalloc.h>
 
 namespace rtc {
 class AsyncPacketSocket;
@@ -44,7 +46,7 @@ typedef int64_t PacketTime;
 namespace WebKit {
 
 class LibWebRTCSocketClient final : public NetworkRTCProvider::Socket, public sigslot::has_slots<> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(LibWebRTCSocketClient);
 public:
     LibWebRTCSocketClient(WebCore::LibWebRTCSocketIdentifier, NetworkRTCProvider&, std::unique_ptr<rtc::AsyncPacketSocket>&&, Type, Ref<IPC::Connection>&&);
 
@@ -66,7 +68,7 @@ private:
 
     WebCore::LibWebRTCSocketIdentifier m_identifier;
     Type m_type;
-    NetworkRTCProvider& m_rtcProvider;
+    CheckedRef<NetworkRTCProvider> m_rtcProvider;
     std::unique_ptr<rtc::AsyncPacketSocket> m_socket;
     Ref<IPC::Connection> m_connection;
     int m_sendError { 0 };
@@ -75,3 +77,5 @@ private:
 } // namespace WebKit
 
 #endif // USE(LIBWEBRTC)
+
+#endif // !PLATFORM(COCOA)

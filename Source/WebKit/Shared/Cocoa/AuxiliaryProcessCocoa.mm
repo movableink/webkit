@@ -34,7 +34,6 @@
 #import "WKWebView.h"
 #import "XPCServiceEntryPoint.h"
 #import <WebCore/FloatingPointEnvironment.h>
-#import <WebCore/RuntimeApplicationChecks.h>
 #import <mach/task.h>
 #import <objc/runtime.h>
 #import <pal/spi/cg/CoreGraphicsSPI.h>
@@ -42,9 +41,11 @@
 #import <pal/spi/cocoa/NotifySPI.h>
 #import <wtf/FileSystem.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/RuntimeApplicationChecks.h>
 #import <wtf/cocoa/Entitlements.h>
 #import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #import <wtf/cocoa/SoftLinking.h>
+#import <wtf/text/MakeString.h>
 
 #if ENABLE(CFPREFS_DIRECT_MODE)
 #import "AccessibilitySupportSPI.h"
@@ -99,8 +100,7 @@ void AuxiliaryProcess::platformInitialize(const AuxiliaryProcessInitializationPa
 
     [[NSFileManager defaultManager] changeCurrentDirectoryPath:[[NSBundle mainBundle] bundlePath]];
 
-    WebCore::setApplicationBundleIdentifier(parameters.clientBundleIdentifier);
-    setSDKAlignedBehaviors(parameters.clientSDKAlignedBehaviors);
+    setApplicationBundleIdentifier(parameters.clientBundleIdentifier);
 
 #if PLATFORM(MAC)
     disableDowngradeToLayoutManager();
@@ -111,11 +111,11 @@ void AuxiliaryProcess::platformInitialize(const AuxiliaryProcessInitializationPa
 #endif
 }
 
-void AuxiliaryProcess::didReceiveInvalidMessage(IPC::Connection&, IPC::MessageName messageName)
+void AuxiliaryProcess::didReceiveInvalidMessage(IPC::Connection&, IPC::MessageName messageName, int32_t indexOfObjectFailingDecoding)
 {
-    auto errorMessage = makeString("Received invalid message: '"_s, description(messageName), "' ("_s, messageName, ')');
+    auto errorMessage = makeString("Received invalid message: '"_s, description(messageName), "' ("_s, messageName, ", "_s, indexOfObjectFailingDecoding, ')');
     logAndSetCrashLogMessage(errorMessage.utf8().data());
-    CRASH_WITH_INFO(WTF::enumToUnderlyingType(messageName));
+    CRASH_WITH_INFO(WTF::enumToUnderlyingType(messageName), indexOfObjectFailingDecoding);
 }
 
 bool AuxiliaryProcess::parentProcessHasEntitlement(ASCIILiteral entitlement)
@@ -207,7 +207,7 @@ void AuxiliaryProcess::setPreferenceValue(const String& domain, const String& ke
         CFPreferencesSetValue(key.createCFString().get(), (__bridge CFPropertyListRef)value, kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost);
 #if ASSERT_ENABLED
         id valueAfterSetting = [[NSUserDefaults standardUserDefaults] objectForKey:key];
-        ASSERT(valueAfterSetting == value || [valueAfterSetting isEqual:value] || key == "AppleLanguages"_s);
+        ASSERT(valueAfterSetting == value || [valueAfterSetting isEqual:value] || key == "AppleLanguages"_s || key == "PayloadUUID"_s);
 #endif
     } else
         CFPreferencesSetValue(key.createCFString().get(), (__bridge CFPropertyListRef)value, domain.createCFString().get(), kCFPreferencesCurrentUser, kCFPreferencesAnyHost);
@@ -224,16 +224,6 @@ void AuxiliaryProcess::preferenceDidUpdate(const String& domain, const String& k
     setPreferenceValue(domain, key, value);
     handlePreferenceChange(domain, key, value);
 }
-
-#if ENABLE(CFPREFS_DIRECT_MODE)
-void AuxiliaryProcess::preferencesDidUpdate(HashMap<String, std::optional<String>> domainlessPreferences, HashMap<std::pair<String, String>, std::optional<String>> preferences)
-{
-    for (auto& [key, value] : domainlessPreferences)
-        preferenceDidUpdate(String(), key, value);
-    for (auto& [key, value] : preferences)
-        preferenceDidUpdate(key.first, key.second, value);
-}
-#endif
 
 #if !HAVE(UPDATE_WEB_ACCESSIBILITY_SETTINGS) && PLATFORM(IOS_FAMILY)
 static const WTF::String& increaseContrastPreferenceKey()

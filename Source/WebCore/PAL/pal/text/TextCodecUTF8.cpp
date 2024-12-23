@@ -27,12 +27,17 @@
 #include "TextCodecUTF8.h"
 
 #include "TextCodecASCIIFastPath.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuffer.h>
 #include <wtf/text/WTFString.h>
 #include <wtf/unicode/CharacterNames.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace PAL {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TextCodecUTF8);
 
 using namespace WTF::Unicode;
 
@@ -301,7 +306,12 @@ String TextCodecUTF8::decode(std::span<const uint8_t> bytes, bool flush, bool st
     // Each input byte might turn into a character.
     // That includes all bytes in the partial-sequence buffer because
     // each byte in an invalid sequence will turn into a replacement character.
-    StringBuffer<LChar> buffer(m_partialSequenceSize + bytes.size());
+    size_t bufferSize = m_partialSequenceSize + bytes.size();
+    if (bufferSize > std::numeric_limits<unsigned>::max()) {
+        sawError = true;
+        return { };
+    }
+    StringBuffer<LChar> buffer(bufferSize);
 
     auto source = bytes;
     auto* alignedEnd = WTF::alignToMachineWord(bytes.data() + bytes.size());
@@ -380,7 +390,7 @@ String TextCodecUTF8::decode(std::span<const uint8_t> bytes, bool flush, bool st
     return String::adopt(WTFMove(buffer));
 
 upConvertTo16Bit:
-    StringBuffer<UChar> buffer16(m_partialSequenceSize + bytes.size());
+    StringBuffer<UChar> buffer16(bufferSize);
 
     UChar* destination16 = buffer16.characters();
 
@@ -478,3 +488,5 @@ Vector<uint8_t> TextCodecUTF8::encode(StringView string, UnencodableHandling) co
 }
 
 } // namespace PAL
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

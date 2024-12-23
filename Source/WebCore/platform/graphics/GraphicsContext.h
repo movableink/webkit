@@ -43,6 +43,7 @@
 #include <wtf/Function.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/OptionSet.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -52,10 +53,7 @@ class Filter;
 class FilterResults;
 class FloatRoundedRect;
 class Gradient;
-class GraphicsContextPlatformPrivate;
 class ImageBuffer;
-class MediaPlayer;
-class GraphicsContextGL;
 class Path;
 class SystemImage;
 class TextRun;
@@ -67,7 +65,8 @@ class ResourceHeap;
 }
 
 class GraphicsContext {
-    WTF_MAKE_NONCOPYABLE(GraphicsContext); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(GraphicsContext, WEBCORE_EXPORT);
+    WTF_MAKE_NONCOPYABLE(GraphicsContext);
     friend class BifurcatedGraphicsContext;
     friend class DisplayList::DrawNativeImage;
     friend class NativeImage;
@@ -222,9 +221,10 @@ public:
     virtual void fillEllipse(const FloatRect& ellipse) { fillEllipseAsPath(ellipse); }
     virtual void strokeEllipse(const FloatRect& ellipse) { strokeEllipseAsPath(ellipse); }
 
-    virtual void fillRect(const FloatRect&) = 0;
+    enum class RequiresClipToRect : bool { No, Yes };
+    virtual void fillRect(const FloatRect&, RequiresClipToRect = RequiresClipToRect::Yes) = 0;
     virtual void fillRect(const FloatRect&, const Color&) = 0;
-    virtual void fillRect(const FloatRect&, Gradient&, const AffineTransform&) = 0;
+    virtual void fillRect(const FloatRect&, Gradient&, const AffineTransform&, RequiresClipToRect = RequiresClipToRect::Yes) = 0;
     WEBCORE_EXPORT virtual void fillRect(const FloatRect&, Gradient&);
     WEBCORE_EXPORT virtual void fillRect(const FloatRect&, const Color&, CompositeOperator, BlendMode = BlendMode::Normal);
     virtual void fillRoundedRectImpl(const FloatRoundedRect&, const Color&) = 0;
@@ -283,8 +283,7 @@ public:
     WEBCORE_EXPORT virtual void drawControlPart(ControlPart&, const FloatRoundedRect& borderRect, float deviceScaleFactor, const ControlStyle&);
 
 #if ENABLE(VIDEO)
-    WEBCORE_EXPORT virtual void paintFrameForMedia(MediaPlayer&, const FloatRect& destination);
-    WEBCORE_EXPORT virtual void paintVideoFrame(VideoFrame&, const FloatRect& destination, bool shouldDiscardAlpha);
+    WEBCORE_EXPORT virtual void drawVideoFrame(VideoFrame&, const FloatRect& destination, ImageOrientation, bool shouldDiscardAlpha);
 #endif
 
     // Clipping
@@ -324,7 +323,7 @@ public:
 #endif
     
     // DisplayList
-    WEBCORE_EXPORT virtual void drawDisplayListItems(const Vector<DisplayList::Item>&, const DisplayList::ResourceHeap&, const FloatPoint& destination);
+    WEBCORE_EXPORT virtual void drawDisplayListItems(const Vector<DisplayList::Item>&, const DisplayList::ResourceHeap&, ControlFactory&, const FloatPoint& destination);
 
     // Transparency Layers
 

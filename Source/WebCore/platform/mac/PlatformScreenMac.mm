@@ -28,9 +28,11 @@
 
 #if PLATFORM(MAC)
 
+#import "ContentsFormat.h"
 #import "FloatRect.h"
 #import "HostWindow.h"
 #import "LocalFrameView.h"
+#import "PlatformCALayerClient.h"
 #import "ScreenProperties.h"
 #import <ColorSync/ColorSync.h>
 #import <pal/cocoa/OpenGLSoftLinkCocoa.h>
@@ -128,7 +130,7 @@ ScreenProperties collectScreenProperties()
     auto screenSupportsHighDynamicRange = [](PlatformDisplayID displayID, DynamicRangeMode& dynamicRangeMode) {
         bool supportsHighDynamicRange = false;
 #if HAVE(AVPLAYER_VIDEORANGEOVERRIDE)
-        if (PAL::isAVFoundationFrameworkAvailable() && [PAL::getAVPlayerClass() respondsToSelector:@selector(preferredVideoRangeForDisplays:)]) {
+        if (PAL::isAVFoundationFrameworkAvailable()) {
             dynamicRangeMode = convertAVVideoRangeToEnum([PAL::getAVPlayerClass() preferredVideoRangeForDisplays:@[ @(displayID) ]]);
             supportsHighDynamicRange = dynamicRangeMode > DynamicRangeMode::Standard;
         }
@@ -358,6 +360,23 @@ DestinationColorSpace screenColorSpace(Widget* widget)
     return DestinationColorSpace { screen(widget).colorSpace.CGColorSpace };
 }
 
+ContentsFormat screenContentsFormat(Widget* widget, PlatformCALayerClient* client)
+{
+#if HAVE(HDR_SUPPORT)
+    if (client && client->hdrForImagesEnabled() && screenSupportsHighDynamicRange(widget))
+        return ContentsFormat::RGBA16F;
+#endif
+
+#if HAVE(IOSURFACE_RGB10)
+    if (screenSupportsExtendedColor(widget))
+        return ContentsFormat::RGBA10;
+#endif
+
+    UNUSED_PARAM(widget);
+    UNUSED_PARAM(client);
+    return ContentsFormat::RGBA8;
+}
+
 bool screenSupportsExtendedColor(Widget* widget)
 {
     if (auto data = screenProperties(widget))
@@ -389,7 +408,7 @@ DynamicRangeMode preferredDynamicRangeMode(Widget* widget)
         return data->preferredDynamicRangeMode;
 
     ASSERT(hasProcessPrivilege(ProcessPrivilege::CanCommunicateWithWindowServer));
-    if (PAL::isAVFoundationFrameworkAvailable() && [PAL::getAVPlayerClass() respondsToSelector:@selector(preferredVideoRangeForDisplays:)]) {
+    if (PAL::isAVFoundationFrameworkAvailable()) {
         auto displayID = WebCore::displayID(screen(widget));
         return convertAVVideoRangeToEnum([PAL::getAVPlayerClass() preferredVideoRangeForDisplays:@[ @(displayID) ]]);
     }

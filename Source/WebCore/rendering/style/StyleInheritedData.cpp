@@ -23,6 +23,7 @@
 #include "StyleInheritedData.h"
 
 #include "RenderStyleInlines.h"
+#include "RenderStyleDifference.h"
 
 namespace WebCore {
 
@@ -52,6 +53,7 @@ inline StyleInheritedData::StyleInheritedData(const StyleInheritedData& o)
     , color(o.color)
     , visitedLinkColor(o.visitedLinkColor)
 {
+    ASSERT(o == *this, "StyleInheritedData should be properly copied.");
 }
 
 Ref<StyleInheritedData> StyleInheritedData::copy() const
@@ -88,5 +90,25 @@ void StyleInheritedData::fastPathInheritFrom(const StyleInheritedData& inheritPa
     color = inheritParent.color;
     visitedLinkColor = inheritParent.visitedLinkColor;
 }
+
+#if !LOG_DISABLED
+void StyleInheritedData::dumpDifferences(TextStream& ts, const StyleInheritedData& other) const
+{
+    LOG_IF_DIFFERENT(horizontalBorderSpacing);
+    LOG_IF_DIFFERENT(verticalBorderSpacing);
+    LOG_IF_DIFFERENT(lineHeight);
+
+#if ENABLE(TEXT_AUTOSIZING)
+    LOG_IF_DIFFERENT(specifiedLineHeight);
+#endif
+
+    // fontCascade is complex, so gets special dumping.
+    if (fontCascade != other.fontCascade)
+        ts << "fontCascade differs:\n  " << fontCascade << "\n  " << other.fontCascade;
+
+    LOG_IF_DIFFERENT(color);
+    LOG_IF_DIFFERENT(visitedLinkColor);
+}
+#endif
 
 } // namespace WebCore

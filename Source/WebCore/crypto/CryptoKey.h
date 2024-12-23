@@ -45,7 +45,7 @@ namespace WebCore {
 
 class WebCoreOpaqueRoot;
 
-enum class CryptoKeyClass {
+enum class CryptoKeyClass : uint8_t {
     AES,
     EC,
     HMAC,
@@ -53,8 +53,6 @@ enum class CryptoKeyClass {
     RSA,
     Raw,
 };
-
-enum class UseCryptoKit : bool { No, Yes };
 
 class CryptoKey : public ThreadSafeRefCounted<CryptoKey> {
 public:

@@ -163,6 +163,18 @@ struct Limitations
 
     // An extra limit for WebGL texture size. Ignored if 0.
     GLint webGLTextureSizeLimit = 0;
+
+    // GL_ANGLE_multi_draw is emulated and should only be exposed to WebGL. Emulated by default in
+    // shared renderer code.
+    bool multidrawEmulated = true;
+
+    // GL_ANGLE_base_vertex_base_instance is emulated and should only be exposed to WebGL. Emulated
+    // by default in shared renderer code.
+    bool baseInstanceBaseVertexEmulated = true;
+
+    // EXT_base_instance is emulated and should only be exposed to WebGL. Emulated by default in
+    // shared renderer code.
+    bool baseInstanceEmulated = true;
 };
 
 struct TypePrecision
@@ -345,6 +357,8 @@ struct Caps
 
     GLint maxTessEvaluationInputComponents  = 0;
     GLint maxTessEvaluationOutputComponents = 0;
+
+    bool primitiveRestartForPatchesSupported = false;
 
     GLuint subPixelBits = 4;
 
@@ -568,6 +582,9 @@ struct DisplayExtensions
     // EGL_ANDROID_get_frame_timestamps
     bool getFrameTimestamps = false;
 
+    // EGL_ANDROID_front_buffer_auto_refresh
+    bool frontBufferAutoRefreshANDROID = false;
+
     // EGL_ANGLE_timestamp_surface_attribute
     bool timestampSurfaceAttributeANGLE = false;
 
@@ -714,9 +731,6 @@ struct DeviceExtensions
     // EGL_ANGLE_device_cgl
     bool deviceCGL = false;
 
-    // EGL_ANGLE_device_eagl
-    bool deviceEAGL = false;
-
     // EGL_ANGLE_device_metal
     bool deviceMetal = false;
 
@@ -765,6 +779,9 @@ struct ClientExtensions
     // EGL_ANGLE_platform_angle_d3d11on12
     bool platformANGLED3D11ON12 = false;
 
+    // EGL_ANGLE_platform_angle_d3d_luid
+    bool platformANGLED3DLUID = false;
+
     // EGL_ANGLE_platform_angle_opengl
     bool platformANGLEOpenGL = false;
 
@@ -779,9 +796,6 @@ struct ClientExtensions
 
     // EGL_ANGLE_platform_angle_metal
     bool platformANGLEMetal = false;
-
-    // EGL_ANGLE_platform_angle_device_context_volatile_eagl
-    bool platformANGLEDeviceContextVolatileEagl = false;
 
     // EGL_ANGLE_platform_angle_device_context_volatile_cgl
     bool platformANGLEDeviceContextVolatileCgl = false;

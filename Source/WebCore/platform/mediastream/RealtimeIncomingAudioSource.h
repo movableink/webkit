@@ -35,6 +35,7 @@
 #include "LibWebRTCMacros.h"
 #include "RealtimeMediaSource.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 ALLOW_UNUSED_PARAMETERS_BEGIN
 ALLOW_COMMA_BEGIN
 
@@ -42,6 +43,7 @@ ALLOW_COMMA_BEGIN
 
 ALLOW_UNUSED_PARAMETERS_END
 ALLOW_COMMA_END
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #include <wtf/RetainPtr.h>
 
@@ -61,9 +63,7 @@ public:
     void setAudioModule(RefPtr<LibWebRTCAudioModule>&&);
     LibWebRTCAudioModule* audioModule() { return m_audioModule.get(); }
 
-    void ref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<RealtimeIncomingAudioSource, WTF::DestructionThread::MainRunLoop>::ref(); }
-    void deref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<RealtimeIncomingAudioSource, WTF::DestructionThread::MainRunLoop>::deref(); }
-    ThreadSafeWeakPtrControlBlock& controlBlock() const final { return ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<RealtimeIncomingAudioSource, WTF::DestructionThread::MainRunLoop>::controlBlock(); }
+    WTF_ABSTRACT_THREAD_SAFE_REF_COUNTED_AND_CAN_MAKE_WEAK_PTR_IMPL;
     ~RealtimeIncomingAudioSource();
 protected:
     RealtimeIncomingAudioSource(rtc::scoped_refptr<webrtc::AudioTrackInterface>&&, String&&);
@@ -94,7 +94,7 @@ private:
 
 #if !RELEASE_LOG_DISABLED
     mutable RefPtr<const Logger> m_logger;
-    const void* m_logIdentifier;
+    uint64_t m_logIdentifier { 0 };
 #endif
 };
 

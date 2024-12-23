@@ -80,7 +80,7 @@ enum class CaretVisibility : bool { Hidden, Visible };
 
 + (UIImage *)barButtonIcon
 {
-    return [UIImage imageNamed:@"TestWebKitAPI.resources/icon.png"];
+    return [UIImage imageNamed:@"TestWebKitAPIResources.bundle/icon.png"];
 }
 
 + (UIBarButtonItemGroup *)leadingItemsForWebView:(WKWebView *)webView
@@ -847,7 +847,7 @@ TEST(KeyboardInputTests, InsertTextSimulatingKeyboardInput)
     [inputDelegate setFocusStartsInputSessionPolicyHandler:[&](WKWebView *, id <_WKFocusedElementInfo>) { return _WKFocusStartsInputSessionPolicyAllow; }];
     [webView _setInputDelegate:inputDelegate.get()];
 
-    RetainPtr<NSURL> testURL = [[NSBundle mainBundle] URLForResource:@"insert-text" withExtension:@"html" subdirectory:@"TestWebKitAPI.resources"];
+    RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"insert-text" withExtension:@"html"];
     [webView synchronouslyLoadRequest:[NSURLRequest requestWithURL:testURL.get()]];
     [webView evaluateJavaScriptAndWaitForInputSessionToChange:@"document.body.focus()"];
     [[webView textInputContentView] insertText:@"hello"];
@@ -863,7 +863,7 @@ TEST(KeyboardInputTests, InsertDictationAlternativesSimulatingKeyboardInput)
     [inputDelegate setFocusStartsInputSessionPolicyHandler:[&](WKWebView *, id <_WKFocusedElementInfo>) { return _WKFocusStartsInputSessionPolicyAllow; }];
     [webView _setInputDelegate:inputDelegate.get()];
 
-    RetainPtr<NSURL> testURL = [[NSBundle mainBundle] URLForResource:@"insert-text" withExtension:@"html" subdirectory:@"TestWebKitAPI.resources"];
+    RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"insert-text" withExtension:@"html"];
     [webView synchronouslyLoadRequest:[NSURLRequest requestWithURL:testURL.get()]];
     [webView evaluateJavaScriptAndWaitForInputSessionToChange:@"document.body.focus()"];
     [[webView textInputContentView] insertText:@"hello" alternatives:@[ @"helo" ] style:UITextAlternativeStyleNone];
@@ -902,6 +902,49 @@ TEST(KeyboardInputTests, DoNotRegisterActionsInOverriddenUndoManager)
     TestWebKitAPI::Util::run(&doneWaiting);
     EXPECT_TRUE([contentView.undoManagerForWebView canUndo]);
     EXPECT_FALSE([overrideUndoManager canUndo]);
+}
+
+TEST(KeyboardInputTests, NewUndoGroupClosesPreviousTypingCommand)
+{
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 400, 400)]);
+    auto inputDelegate = adoptNS([TestInputDelegate new]);
+    [inputDelegate setFocusStartsInputSessionPolicyHandler:[](WKWebView *, id<_WKFocusedElementInfo>) {
+        return _WKFocusStartsInputSessionPolicyAllow;
+    }];
+    __block bool didStartInputSession = false;
+    [inputDelegate setDidStartInputSessionHandler:^(WKWebView *, id<_WKFormInputSession>) {
+        didStartInputSession = true;
+    }];
+    [webView _setInputDelegate:inputDelegate.get()];
+    [webView synchronouslyLoadHTMLString:@"<body contenteditable>"];
+    [webView objectByEvaluatingJavaScript:@"document.body.focus()"];
+    Util::run(&didStartInputSession);
+
+    RetainPtr contentView = [webView textInputContentView];
+    auto insertText = ^(NSString *text) {
+        [contentView insertText:text];
+        [webView waitForNextPresentationUpdate];
+    };
+
+    insertText(@"Foo");
+
+    [[contentView undoManager] beginUndoGrouping];
+    [webView waitForNextPresentationUpdate];
+
+    insertText(@" ");
+    insertText(@"bar");
+
+    [[contentView undoManager] endUndoGrouping];
+    [webView waitForNextPresentationUpdate];
+    EXPECT_WK_STREQ("Foo bar", [webView contentsAsString]);
+
+    [[contentView undoManager] undo];
+    [webView waitForNextPresentationUpdate];
+    EXPECT_WK_STREQ("Foo", [webView contentsAsString]);
+
+    [[contentView undoManager] undo];
+    [webView waitForNextPresentationUpdate];
+    EXPECT_WK_STREQ("", [webView contentsAsString]);
 }
 
 static UIView * nilResizableSnapshotViewFromRect(id, SEL, CGRect, BOOL, UIEdgeInsets)
@@ -1043,6 +1086,34 @@ TEST(KeyboardInputTests, NoCrashWhenDiscardingMarkedText)
     [webView _close];
 
     Util::runFor(100_ms);
+}
+
+TEST(KeyboardInputTests, NoCrashWithEmptyAttributedMarkedText)
+{
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500)]);
+    [webView _setEditable:YES];
+    [webView synchronouslyLoadHTMLString:@"<meta name='viewport' content='width=device-width'><meta charset='utf-8'><body></body>"];
+    [webView selectAll:nil];
+
+    RetainPtr attributes = @{
+        NSMarkedClauseSegmentAttributeName: @(0),
+        NSUnderlineStyleAttributeName: @(NSUnderlineStyleSingle),
+        NSUnderlineColorAttributeName: UIColor.tintColor
+    };
+
+    RetainPtr composition = adoptNS([[NSAttributedString alloc] initWithString:@"あ" attributes:attributes.get()]);
+    [[webView textInputContentView] setAttributedMarkedText:composition.get() selectedRange:NSMakeRange(0, 1)];
+
+    RetainPtr finalComposition = adoptNS([[NSMutableAttributedString alloc] initWithString:@"あs" attributes:attributes.get()]);
+    [[webView textInputContentView] setAttributedMarkedText:finalComposition.get() selectedRange:NSMakeRange(0, 2)];
+
+    [finalComposition setAttributes:nil range:NSMakeRange(0, 2)];
+    [finalComposition replaceCharactersInRange:NSMakeRange(0, 2) withString:@"明日"];
+
+    [[webView textInputContentView] setAttributedMarkedText:finalComposition.get() selectedRange:NSMakeRange(0, 2)];
+
+    [finalComposition deleteCharactersInRange:NSMakeRange(0, 2)];
+    [[webView textInputContentView] setAttributedMarkedText:finalComposition.get() selectedRange:NSMakeRange(0, 0)];
 }
 
 TEST(KeyboardInputTests, CharactersAroundCaretSelection)

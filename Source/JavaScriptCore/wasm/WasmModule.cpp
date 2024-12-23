@@ -33,6 +33,8 @@
 #include "WasmModuleInformation.h"
 #include "WasmWorklist.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC { namespace Wasm {
 
 Module::Module(LLIntPlan& plan)
@@ -53,7 +55,7 @@ Module::Module(IPIntPlan& plan)
 
 Module::~Module() = default;
 
-Wasm::TypeIndex Module::typeIndexFromFunctionIndexSpace(unsigned functionIndexSpace) const
+Wasm::TypeIndex Module::typeIndexFromFunctionIndexSpace(FunctionSpaceIndex functionIndexSpace) const
 {
     return m_moduleInformation->typeIndexFromFunctionIndexSpace(functionIndexSpace);
 }
@@ -78,7 +80,7 @@ static Plan::CompletionTask makeValidationCallback(Module::AsyncValidationCallba
 {
     return createSharedTask<Plan::CallbackType>([callback = WTFMove(callback)] (Plan& plan) {
         ASSERT(!plan.hasWork());
-        if (Options::useWebAssemblyIPInt())
+        if (Options::useWasmIPInt())
             callback->run(makeValidationResult(static_cast<IPIntPlan&>(plan)));
         else
             callback->run(makeValidationResult(static_cast<LLIntPlan&>(plan)));
@@ -87,7 +89,7 @@ static Plan::CompletionTask makeValidationCallback(Module::AsyncValidationCallba
 
 Module::ValidationResult Module::validateSync(VM& vm, Vector<uint8_t>&& source)
 {
-    if (Options::useWebAssemblyIPInt()) {
+    if (Options::useWasmIPInt()) {
         Ref<IPIntPlan> plan = adoptRef(*new IPIntPlan(vm, WTFMove(source), CompilerMode::Validation, Plan::dontFinalize()));
         Wasm::ensureWorklist().enqueue(plan.get());
         plan->waitForCompletion();
@@ -101,7 +103,7 @@ Module::ValidationResult Module::validateSync(VM& vm, Vector<uint8_t>&& source)
 
 void Module::validateAsync(VM& vm, Vector<uint8_t>&& source, Module::AsyncValidationCallback&& callback)
 {
-    if (Options::useWebAssemblyIPInt()) {
+    if (Options::useWasmIPInt()) {
         Ref<Plan> plan = adoptRef(*new IPIntPlan(vm, WTFMove(source), CompilerMode::Validation, makeValidationCallback(WTFMove(callback))));
         Wasm::ensureWorklist().enqueue(WTFMove(plan));
     } else {
@@ -121,12 +123,10 @@ Ref<CalleeGroup> Module::getOrCreateCalleeGroup(VM& vm, MemoryMode mode)
     // FIXME: We might want to back off retrying at some point:
     // https://bugs.webkit.org/show_bug.cgi?id=170607
     if (!calleeGroup || (calleeGroup->compilationFinished() && !calleeGroup->runnable())) {
-        if (Options::useWebAssemblyIPInt())
+        if (Options::useWasmIPInt())
             m_calleeGroups[static_cast<uint8_t>(mode)] = calleeGroup = CalleeGroup::createFromIPInt(vm, mode, const_cast<ModuleInformation&>(moduleInformation()), m_ipintCallees.copyRef());
-        else if (Options::useWebAssemblyLLInt())
-            m_calleeGroups[static_cast<uint8_t>(mode)] = calleeGroup = CalleeGroup::createFromLLInt(vm, mode, const_cast<ModuleInformation&>(moduleInformation()), m_llintCallees.copyRef());
         else
-            m_calleeGroups[static_cast<uint8_t>(mode)] = calleeGroup = CalleeGroup::createFromLLInt(vm, mode, const_cast<ModuleInformation&>(moduleInformation()), nullptr);
+            m_calleeGroups[static_cast<uint8_t>(mode)] = calleeGroup = CalleeGroup::createFromLLInt(vm, mode, const_cast<ModuleInformation&>(moduleInformation()), m_llintCallees.copyRef());
     }
     return calleeGroup.releaseNonNull();
 }
@@ -160,5 +160,7 @@ void Module::copyInitialCalleeGroupToAllMemoryModes(MemoryMode initialMode)
 }
 
 } } // namespace JSC::Wasm
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEBASSEMBLY)

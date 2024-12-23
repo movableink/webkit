@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,10 +36,13 @@
 #include <wtf/OptionSet.h>
 #include <wtf/Ref.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
 #if USE(SKIA)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 #include <skia/core/SkColor.h>
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 #endif
 
 #if USE(CG)
@@ -79,7 +82,7 @@ struct ColorDataForIPC {
 //    - 4x float color components + color space, stored in a reference counted sub-object
 
 class Color {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(Color);
 public:
     enum class Flags {
         Semantic                        = 1 << 0,
@@ -88,7 +91,7 @@ public:
 
     Color() = default;
 
-    Color(SRGBA<uint8_t>, OptionSet<Flags> = { });
+    WEBCORE_EXPORT Color(SRGBA<uint8_t>, OptionSet<Flags> = { });
     Color(std::optional<SRGBA<uint8_t>>, OptionSet<Flags> = { });
     WEBCORE_EXPORT Color(std::optional<ColorDataForIPC>&&);
 
@@ -101,6 +104,7 @@ public:
     explicit Color(WTF::HashTableEmptyValueType);
     explicit Color(WTF::HashTableDeletedValueType);
     bool isHashTableDeletedValue() const;
+    bool isHashTableEmptyValue() const;
 
     WEBCORE_EXPORT Color(const Color&);
     WEBCORE_EXPORT Color(Color&&);
@@ -174,7 +178,7 @@ public:
 
 #if USE(SKIA)
     Color(const SkColor&);
-    operator SkColor() const;
+    WEBCORE_EXPORT operator SkColor() const;
 
     Color(const SkColor4f&);
     operator SkColor4f() const;
@@ -224,6 +228,7 @@ private:
     friend void add(Hasher&, const Color&);
 
     class OutOfLineComponents : public ThreadSafeRefCounted<OutOfLineComponents> {
+        WTF_MAKE_FAST_COMPACT_ALLOCATED;
     public:
         static Ref<OutOfLineComponents> create(ColorComponents<float, 4>&& components)
         {
@@ -404,6 +409,11 @@ inline bool Color::isHashTableDeletedValue() const
     return flags().contains(FlagsIncludingPrivate::HashTableDeletedValue);
 }
 
+inline bool Color::isHashTableEmptyValue() const
+{
+    return flags().contains(FlagsIncludingPrivate::HashTableEmptyValue);
+}
+
 inline Color::~Color()
 {
     if (isOutOfLine())
@@ -547,9 +557,9 @@ inline uint64_t Color::encodedPackedInlineColor(PackedColor::RGBA color)
 inline uint64_t Color::encodedOutOfLineComponents(Ref<OutOfLineComponents>&& outOfLineComponents)
 {
 #if CPU(ADDRESS64)
-    return bitwise_cast<uint64_t>(&outOfLineComponents.leakRef());
+    return std::bit_cast<uint64_t>(&outOfLineComponents.leakRef());
 #else
-    return bitwise_cast<uint32_t>(&outOfLineComponents.leakRef());
+    return std::bit_cast<uint32_t>(&outOfLineComponents.leakRef());
 #endif
 }
 
@@ -576,9 +586,9 @@ inline PackedColor::RGBA Color::decodedPackedInlineColor(uint64_t value)
 inline Color::OutOfLineComponents& Color::decodedOutOfLineComponents(uint64_t value)
 {
 #if CPU(ADDRESS64)
-    return *bitwise_cast<OutOfLineComponents*>(value & colorValueMask);
+    return *std::bit_cast<OutOfLineComponents*>(value & colorValueMask);
 #else
-    return *bitwise_cast<OutOfLineComponents*>(static_cast<uint32_t>(value & colorValueMask));
+    return *std::bit_cast<OutOfLineComponents*>(static_cast<uint32_t>(value & colorValueMask));
 #endif
 }
 

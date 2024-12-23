@@ -36,6 +36,7 @@
 #include <wtf/RefCounted.h>
 #include <wtf/URL.h>
 #include <wtf/text/WTFString.h>
+#include <wtf/TZoneMalloc.h>
 
 QT_BEGIN_NAMESPACE
 class QEventLoop;
@@ -61,7 +62,7 @@ class FullScreenVideoQt;
 class TextureMapperLayerClientQt;
 
 class ChromeClientQt final : public ChromeClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ChromeClientQt);
 public:
     ChromeClientQt(QWebPageAdapter*);
     ~ChromeClientQt();
@@ -81,7 +82,7 @@ public:
     void focusedElementChanged(Element*) final;
     void focusedFrameChanged(Frame*) final;
 
-    Page* createWindow(LocalFrame&, const WindowFeatures&, const NavigationAction&) final;
+    RefPtr<Page> createWindow(LocalFrame&, const String&, const WindowFeatures&, const NavigationAction&) final;
     void show() final;
 
     bool canRunModal() const final;
@@ -111,8 +112,6 @@ public:
     void runJavaScriptAlert(LocalFrame&, const String&) final;
     bool runJavaScriptConfirm(LocalFrame&, const String&) final;
     bool runJavaScriptPrompt(LocalFrame&, const String& message, const String& defaultValue, String& result) final;
-
-    void setStatusbarText(const String&) final;
 
     void rootFrameAdded(const LocalFrame&) final { }
     void rootFrameRemoved(const LocalFrame&) final { }
@@ -172,11 +171,11 @@ public:
 #endif
 
 #if ENABLE(INPUT_TYPE_COLOR)
-    std::unique_ptr<ColorChooser> createColorChooser(ColorChooserClient&, const Color&) final;
+    RefPtr<ColorChooser> createColorChooser(ColorChooserClient&, const Color&) final;
 #endif
 
 #if ENABLE(DATALIST_ELEMENT)
-    std::unique_ptr<DataListSuggestionPicker> createDataListSuggestionPicker(DataListSuggestionsClient&) final;
+    RefPtr<DataListSuggestionPicker> createDataListSuggestionPicker(DataListSuggestionsClient&) final;
     bool canShowDataListSuggestionLabels() const final { return false; }
 #endif
 

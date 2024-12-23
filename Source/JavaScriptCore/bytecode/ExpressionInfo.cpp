@@ -31,6 +31,8 @@
 #include <wtf/StringPrintStream.h>
 #include <wtf/UniqueRef.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 /*
@@ -1060,22 +1062,4 @@ void ExpressionInfo::dumpEncodedInfo(ExpressionInfo::EncodedInfo* start, Express
 
 } // namespace JSC
 
-namespace WTF {
-
-void printInternal(PrintStream& out, JSC::ExpressionInfo::FieldID fieldID)
-{
-    auto name = [] (auto fieldID) {
-        switch (fieldID) {
-        case JSC::ExpressionInfo::FieldID::InstPC: return "Inst";
-        case JSC::ExpressionInfo::FieldID::Divot: return "Divot";
-        case JSC::ExpressionInfo::FieldID::Start: return "Start";
-        case JSC::ExpressionInfo::FieldID::End: return "End";
-        case JSC::ExpressionInfo::FieldID::Line: return "Line";
-        case JSC::ExpressionInfo::FieldID::Column: return "Column";
-        }
-        return ""; // placate GCC.
-    };
-    out.print(name(fieldID));
-}
-
-} // namespace WTF
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

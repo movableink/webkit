@@ -49,6 +49,8 @@
 #include <variant>
 #include <wtf/TZoneMalloc.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 typedef void (*V_DebugOperation_EPP)(CallFrame*, void*, void*);
@@ -1581,7 +1583,17 @@ public:
         unboxDouble(regs, destFPR);
     }
 #endif
-    
+
+    void unboxNativeCallee(GPRReg boxedGPR, GPRReg calleeGPR)
+    {
+#if USE(JSVALUE64)
+        and64(TrustedImm64(~static_cast<uint64_t>(JSValue::NativeCalleeTag)), boxedGPR, calleeGPR);
+        add64(TrustedImm64(lowestAccessibleAddress()), calleeGPR);
+#else
+        add32(TrustedImm32(lowestAccessibleAddress()), boxedGPR, calleeGPR);
+#endif
+    }
+
     void boxBooleanPayload(GPRReg boolGPR, GPRReg payloadGPR)
     {
 #if USE(JSVALUE64)
@@ -1639,9 +1651,23 @@ public:
         move(TrustedImm32(JSValue::CellTag), boxedRegs.tagGPR());
 #endif
     }
-    
+
+    void boxNativeCallee(GPRReg calleeGPR, GPRReg boxedGPR)
+    {
+#if USE(JSVALUE64)
+#if CPU(ARM64)
+        // NativeCallees are sometimes stored in ThreadSafeWeakOrStrongPtr, which relies on top byte ignore, so we need to strip the top byte on ARM64.
+        and64(TrustedImm64(CalleeBits::nativeCalleeTopByteMask), calleeGPR);
+#endif
+        sub64(calleeGPR, TrustedImm64(lowestAccessibleAddress()), boxedGPR);
+        or64(TrustedImm64(JSValue::NativeCalleeTag), boxedGPR);
+#else
+        sub32(calleeGPR, TrustedImm32(lowestAccessibleAddress()), boxedGPR);
+#endif
+    }
+
     void callExceptionFuzz(VM&, GPRReg exceptionReg);
-    
+
     enum ExceptionCheckKind { NormalExceptionCheck, InvertedExceptionCheck };
     enum ExceptionJumpWidth { NormalJumpWidth, FarJumpWidth };
     JS_EXPORT_PRIVATE Jump emitExceptionCheck(VM&, ExceptionCheckKind = NormalExceptionCheck, ExceptionJumpWidth = NormalJumpWidth, GPRReg exceptionReg = InvalidGPRReg);
@@ -1710,6 +1736,7 @@ public:
         return argumentCount(codeOrigin.inlineCallFrame());
     }
     
+    void emitLoadStructure(RegisterID cell, RegisterID dest);
     void emitNonNullDecodeZeroExtendedStructureID(RegisterID source, RegisterID dest);
     void emitLoadStructure(VM&, RegisterID source, RegisterID dest);
     void emitLoadPrototype(VM&, GPRReg objectGPR, JSValueRegs resultRegs, JumpList& slowPath);
@@ -1759,6 +1786,12 @@ public:
         load8(address, scratchGPR);
         return branch32(Above, scratchGPR, AbsoluteAddress(vm.heap.addressOfBarrierThreshold()));
     }
+
+    Jump branchIfBarriered(GPRReg vmGPR, GPRReg cellGPR, GPRReg scratchGPR)
+    {
+        load8(Address(cellGPR, JSCell::cellStateOffset()), scratchGPR);
+        return branch32(BelowOrEqual, scratchGPR, Address(vmGPR, VM::offsetOfHeapBarrierThreshold()));
+    }
     
     void barrierStoreLoadFence(VM& vm)
     {
@@ -1797,13 +1830,13 @@ public:
     void nukeStructureAndStoreButterfly(VM& vm, GPRReg butterfly, GPRReg object)
     {
         if (isX86()) {
-            or32(TrustedImm32(bitwise_cast<int32_t>(StructureID::nukedStructureIDBit)), Address(object, JSCell::structureIDOffset()));
+            or32(TrustedImm32(std::bit_cast<int32_t>(StructureID::nukedStructureIDBit)), Address(object, JSCell::structureIDOffset()));
             storePtr(butterfly, Address(object, JSObject::butterflyOffset()));
             return;
         }
 
         Jump ok = jumpIfMutatorFenceNotNeeded(vm);
-        or32(TrustedImm32(bitwise_cast<int32_t>(StructureID::nukedStructureIDBit)), Address(object, JSCell::structureIDOffset()));
+        or32(TrustedImm32(std::bit_cast<int32_t>(StructureID::nukedStructureIDBit)), Address(object, JSCell::structureIDOffset()));
         storeFence();
         storePtr(butterfly, Address(object, JSObject::butterflyOffset()));
         storeFence();
@@ -2082,7 +2115,7 @@ public:
 #if USE(JSVALUE64)
         unsigned pairCount = count >> 1;
         unsigned pairIndex = 0;
-        move(TrustedImm64(bitwise_cast<int64_t>(PNaN)), scratchGPR);
+        move(TrustedImm64(std::bit_cast<int64_t>(PNaN)), scratchGPR);
         for (; pairIndex < pairCount; ++pairIndex)
             storePair64(scratchGPR, scratchGPR, baseGPR, TrustedImm32(initialOffset + pairIndex * 2 * sizeof(double)));
         if (count & 1)
@@ -2111,5 +2144,7 @@ protected:
 };
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(JIT)

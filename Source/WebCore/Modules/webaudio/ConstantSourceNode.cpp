@@ -33,11 +33,13 @@
 #include "AudioParam.h"
 #include "AudioUtilities.h"
 #include "ConstantSourceOptions.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(ConstantSourceNode);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ConstantSourceNode);
 
 ExceptionOr<Ref<ConstantSourceNode>> ConstantSourceNode::create(BaseAudioContext& context, const ConstantSourceOptions& options)
 {
@@ -107,5 +109,7 @@ bool ConstantSourceNode::propagatesSilence() const
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

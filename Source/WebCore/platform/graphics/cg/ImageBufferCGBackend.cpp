@@ -33,15 +33,16 @@
 #include "ImageBufferUtilitiesCG.h"
 #include "IntRect.h"
 #include "PixelBuffer.h"
-#include "RuntimeApplicationChecks.h"
 #include <CoreGraphics/CoreGraphics.h>
 #include <pal/spi/cg/CoreGraphicsSPI.h>
+#include <wtf/RuntimeApplicationChecks.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
 class ThreadSafeImageBufferFlusherCG : public ThreadSafeImageBufferFlusher {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(ThreadSafeImageBufferFlusherCG);
 public:
     ThreadSafeImageBufferFlusherCG(CGContextRef context)
         : m_context(context)

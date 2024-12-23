@@ -39,8 +39,13 @@
 #include "ReverbAccumulationBuffer.h"
 #include "ReverbConvolver.h"
 #include "ReverbInputBuffer.h"
+#include <wtf/TZoneMallocInlines.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ReverbConvolverStage);
 
 ReverbConvolverStage::ReverbConvolverStage(const float* impulseResponse, size_t, size_t reverbTotalLatency, size_t stageOffset, size_t stageLength,
     size_t fftSize, size_t renderPhase, size_t renderSliceSize, ReverbAccumulationBuffer* accumulationBuffer, float scale, bool directMode)
@@ -189,5 +194,7 @@ void ReverbConvolverStage::reset()
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

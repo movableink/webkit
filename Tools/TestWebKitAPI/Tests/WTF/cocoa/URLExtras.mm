@@ -31,6 +31,7 @@
 #import <wtf/Vector.h>
 #import <wtf/cocoa/NSURLExtras.h>
 #import <wtf/cocoa/VectorCocoa.h>
+#import <wtf/text/MakeString.h>
 #import <wtf/text/WTFString.h>
 
 namespace TestWebKitAPI {
@@ -247,6 +248,10 @@ TEST(WTF, URLExtras_Solidus)
     // Code path similar to the one used when typing in a URL.
     EXPECT_STREQ("http://site.com/othersite.org", originalDataAsString(WTF::URLWithUserTypedString(@"http://site.com\xEF\xBC\x8Fothersite.org", nil)));
     EXPECT_STREQ("http://site.com/othersite.org", userVisibleString(WTF::URLWithUserTypedString(@"http://site.com\xEF\xBC\x8Fothersite.org", nil)));
+
+    // U+2215, the other solidus.
+    EXPECT_STREQ("https://apple.com%E2%88%95@apple.com%E2%88%95@apple.com", originalDataAsString(WTF::URLWithUserTypedString(@"https://apple.com\xE2\x88\x95@apple.com\xE2\x88\x95@apple.com", nil)));
+    EXPECT_STREQ("https://apple.com%E2%88%95@apple.com%E2%88%95@apple.com", userVisibleString(WTF::URLWithUserTypedString(@"https://apple.com\xE2\x88\x95@apple.com\xE2\x88\x95@apple.com", nil)));
 
     // Code paths similar to the ones used for URLs found in webpages or HTTP responses.
     EXPECT_STREQ("http://site.com\xEF\xBC\x8Fothersite.org", originalDataAsString(literalURL("http://site.com\xEF\xBC\x8Fothersite.org")));

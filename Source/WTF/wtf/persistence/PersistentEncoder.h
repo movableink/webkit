@@ -25,11 +25,9 @@
 
 #pragma once
 
-#include <span>
-#include <wtf/EnumTraits.h>
 #include <wtf/SHA1.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
-#include <wtf/persistence/PersistentCoders.h>
 
 namespace WTF::Persistence {
 
@@ -82,7 +80,7 @@ private:
 
     template<typename Type> Encoder& encodeNumber(Type);
 
-    uint8_t* grow(size_t);
+    std::span<uint8_t> grow(size_t);
 
     template <typename Type> struct Salt;
 
@@ -106,8 +104,8 @@ template <typename Type>
 void Encoder::updateChecksumForNumber(SHA1& sha1, Type value)
 {
     auto typeSalt = Salt<Type>::value;
-    sha1.addBytes(std::span { reinterpret_cast<uint8_t*>(&typeSalt), sizeof(typeSalt) });
-    sha1.addBytes(std::span { reinterpret_cast<uint8_t*>(&value), sizeof(value) });
+    sha1.addBytes(asByteSpan(typeSalt));
+    sha1.addBytes(asByteSpan(value));
 }
 
 }

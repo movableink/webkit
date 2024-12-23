@@ -1,6 +1,7 @@
 //@ skip unless $isWasmPlatform
 //@ skip unless $isSIMDPlatform
-//@ requireOptions("--useWebAssemblySIMD=1")
+//@ $skipModes << :lockdown
+//@ requireOptions("--useWasmSIMD=1")
 //@ requireOptions("--useExecutableAllocationFuzz=false")
 
 // The purpose of this test is to compare SIMD and non-SIMD versions of this code.

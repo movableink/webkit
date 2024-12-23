@@ -36,7 +36,8 @@
 #include "PolicyContainer.h"
 #include "SerializedScriptValue.h"
 #include <memory>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UUID.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
@@ -64,10 +65,9 @@ class FormData;
 class HistoryItem;
 class Image;
 class ResourceRequest;
-enum class PruningReason;
 
 class HistoryItemClient : public RefCounted<HistoryItemClient> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(HistoryItemClient, WEBCORE_EXPORT);
 public:
     virtual ~HistoryItemClient() = default;
     virtual void historyItemChanged(const HistoryItem&) = 0;
@@ -75,9 +75,7 @@ protected:
     HistoryItemClient() = default;
 };
 
-class HistoryItem : public RefCounted<HistoryItem>, public CanMakeWeakPtr<HistoryItem> {
-    friend class BackForwardCache;
-
+class HistoryItem : public RefCountedAndCanMakeWeakPtr<HistoryItem> {
 public:
     using Client = HistoryItemClient;
     static Ref<HistoryItem> create(Client& client, const String& urlString = { }, const String& title = { }, const String& alternateTitle = { }, std::optional<BackForwardItemIdentifier> identifier = { })
@@ -91,6 +89,7 @@ public:
 
     const BackForwardItemIdentifier& identifier() const { return m_identifier; }
     const WTF::UUID& uuidIdentifier() const { return m_uuidIdentifier; }
+    void setUUIDIdentifier(const WTF::UUID& uuidIdentifier) { m_uuidIdentifier = uuidIdentifier; }
 
     // Resets the HistoryItem to its initial state, as returned by create().
     void reset();
@@ -101,7 +100,7 @@ public:
     WEBCORE_EXPORT const String& urlString() const;
     WEBCORE_EXPORT const String& title() const;
     
-    bool isInBackForwardCache() const { return m_cachedPage.get(); }
+    WEBCORE_EXPORT bool isInBackForwardCache() const;
     WEBCORE_EXPORT bool hasCachedPageExpired() const;
 
     WEBCORE_EXPORT void setAlternateTitle(const String&);
@@ -112,7 +111,6 @@ public:
     WEBCORE_EXPORT const String& referrer() const;
     WEBCORE_EXPORT const AtomString& target() const;
     std::optional<FrameIdentifier> frameID() const { return m_frameID; }
-    WEBCORE_EXPORT bool isTargetItem() const;
     
     WEBCORE_EXPORT FormData* formData();
     WEBCORE_EXPORT String formContentType() const;
@@ -143,7 +141,6 @@ public:
     WEBCORE_EXPORT void setTarget(const AtomString&);
     void setFrameID(std::optional<FrameIdentifier> frameID) { m_frameID = frameID; }
     WEBCORE_EXPORT void setTitle(const String&);
-    WEBCORE_EXPORT void setIsTargetItem(bool);
     
     WEBCORE_EXPORT void setStateObject(RefPtr<SerializedScriptValue>&&);
     SerializedScriptValue* stateObject() const { return m_stateObject.get(); }
@@ -237,9 +234,6 @@ public:
 private:
     WEBCORE_EXPORT HistoryItem(Client&, const String& urlString, const String& title, const String& alternateTitle, std::optional<BackForwardItemIdentifier>);
 
-    void setCachedPage(std::unique_ptr<CachedPage>&&);
-    std::unique_ptr<CachedPage> takeCachedPage();
-
     HistoryItem(const HistoryItem&);
 
     static int64_t generateSequenceNumber();
@@ -263,7 +257,6 @@ private:
     Vector<Ref<HistoryItem>> m_children;
     
     bool m_lastVisitWasFailure { false };
-    bool m_isTargetItem { false };
     bool m_wasRestoredFromSession { false };
     bool m_wasCreatedByJSWithoutUserInteraction { false };
     bool m_shouldRestoreScrollPosition { true };
@@ -288,10 +281,6 @@ private:
     // info used to repost form data
     RefPtr<FormData> m_formData;
     String m_formContentType;
-
-    // BackForwardCache controls these fields.
-    std::unique_ptr<CachedPage> m_cachedPage;
-    PruningReason m_pruningReason;
 
 #if PLATFORM(IOS_FAMILY)
     FloatRect m_exposedContentRect;

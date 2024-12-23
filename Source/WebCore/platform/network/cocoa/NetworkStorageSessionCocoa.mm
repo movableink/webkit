@@ -42,6 +42,7 @@
 #import <wtf/ProcessPrivilege.h>
 #import <wtf/URL.h>
 #import <wtf/cocoa/VectorCocoa.h>
+#import <wtf/text/MakeString.h>
 #import <wtf/text/StringBuilder.h>
 #import <wtf/text/cf/StringConcatenateCF.h>
 
@@ -99,8 +100,10 @@ static Vector<Cookie> nsCookiesToCookieVector(NSArray<NSHTTPCookie *> *nsCookies
     Vector<Cookie> cookies;
     cookies.reserveInitialCapacity(nsCookies.count);
     for (NSHTTPCookie *nsCookie in nsCookies) {
-        if (!filter || filter(nsCookie))
-            cookies.append(nsCookie);
+        @autoreleasepool {
+            if (!filter || filter(nsCookie))
+                cookies.append(nsCookie);
+        }
     }
     if (filter)
         cookies.shrinkToFit();
@@ -257,7 +260,6 @@ void NetworkStorageSession::deleteHTTPCookie(CFHTTPCookieStorageRef cookieStorag
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), makeBlockPtr(WTFMove(work)).get());
 }
 
-#if !PLATFORM(WATCHOS) && !PLATFORM(APPLETV)
 static RetainPtr<NSDictionary> policyProperties(const SameSiteInfo& sameSiteInfo, NSURL *url)
 {
     static NSURL *emptyURL = [[NSURL alloc] initWithString:@""];
@@ -267,25 +269,15 @@ static RetainPtr<NSDictionary> policyProperties(const SameSiteInfo& sameSiteInfo
     };
     return policyProperties;
 }
-#endif
 
-static RetainPtr<NSArray> cookiesForURL(NSHTTPCookieStorage *storage, NSURL *url, NSURL *mainDocumentURL, const std::optional<SameSiteInfo>& sameSiteInfo, NSString *partition = nullptr)
+static RetainPtr<NSArray> cookiesForURLFromStorage(NSHTTPCookieStorage *storage, NSURL *url, NSURL *mainDocumentURL, const std::optional<SameSiteInfo>& sameSiteInfo, NSString *partition = nullptr)
 {
     // The _getCookiesForURL: method calls the completionHandler synchronously. We use std::optional<> to check this invariant and crash if it's not met.
     std::optional<RetainPtr<NSArray>> cookiesPtr;
     auto completionHandler = [&cookiesPtr] (NSArray *cookies) {
         cookiesPtr = retainPtr(cookies);
     };
-// FIXME: Seems like this newer code path can be used for watchOS and tvOS too.
-#if !PLATFORM(WATCHOS) && !PLATFORM(APPLETV)
-    if ([storage respondsToSelector:@selector(_getCookiesForURL:mainDocumentURL:partition:policyProperties:completionHandler:)])
-        [storage _getCookiesForURL:url mainDocumentURL:mainDocumentURL partition:partition policyProperties:sameSiteInfo ? policyProperties(sameSiteInfo.value(), url).get() : nullptr completionHandler:completionHandler];
-    else
-        [storage _getCookiesForURL:url mainDocumentURL:mainDocumentURL partition:partition completionHandler:completionHandler];
-#else
-    [storage _getCookiesForURL:url mainDocumentURL:mainDocumentURL partition:partition completionHandler:completionHandler];
-    UNUSED_PARAM(sameSiteInfo);
-#endif
+    [storage _getCookiesForURL:url mainDocumentURL:mainDocumentURL partition:partition policyProperties:sameSiteInfo ? policyProperties(sameSiteInfo.value(), url).get() : nullptr completionHandler:completionHandler];
     RELEASE_ASSERT(!!cookiesPtr);
     return WTFMove(*cookiesPtr);
 }
@@ -294,31 +286,14 @@ void NetworkStorageSession::setHTTPCookiesForURL(CFHTTPCookieStorageRef cookieSt
 {
     ASSERT(hasProcessPrivilege(ProcessPrivilege::CanAccessRawCookies) || m_isInMemoryCookieStore);
     if (!cookieStorage) {
-// FIXME: Seems like this newer code path can be used for watchOS and tvOS too.
-#if !PLATFORM(WATCHOS) && !PLATFORM(APPLETV)
-        if ([NSHTTPCookieStorage instancesRespondToSelector:@selector(_setCookies:forURL:mainDocumentURL:policyProperties:)])
-            [[NSHTTPCookieStorage sharedHTTPCookieStorage] _setCookies:cookies forURL:url mainDocumentURL:mainDocumentURL policyProperties:policyProperties(sameSiteInfo, url).get()];
-        else
-#endif
-            [[NSHTTPCookieStorage sharedHTTPCookieStorage] setCookies:cookies forURL:url mainDocumentURL:mainDocumentURL];
+        [[NSHTTPCookieStorage sharedHTTPCookieStorage] _setCookies:cookies forURL:url mainDocumentURL:mainDocumentURL policyProperties:policyProperties(sameSiteInfo, url).get()];
         return;
     }
-// FIXME: Seems like this newer code path can be used for watchOS and tvOS too.
-#if !PLATFORM(WATCHOS) && !PLATFORM(APPLETV)
-    if ([NSHTTPCookieStorage instancesRespondToSelector:@selector(_setCookies:forURL:mainDocumentURL:policyProperties:)]) {
-        // FIXME: Stop creating a new NSHTTPCookieStorage object each time we want to query the cookie jar.
-        // NetworkStorageSession could instead keep a NSHTTPCookieStorage object for us.
-        RetainPtr<NSHTTPCookieStorage> nsCookieStorage = adoptNS([[NSHTTPCookieStorage alloc] _initWithCFHTTPCookieStorage:cookieStorage]);
-        [nsCookieStorage _setCookies:cookies forURL:url mainDocumentURL:mainDocumentURL policyProperties:policyProperties(sameSiteInfo, url).get()];
-    } else {
-#endif
-        auto cfCookies = adoptCF([NSHTTPCookie _ns2cfCookies:cookies]);
-        CFHTTPCookieStorageSetCookies(cookieStorage, cfCookies.get(), [url _cfurl], [mainDocumentURL _cfurl]);
-#if !PLATFORM(WATCHOS) && !PLATFORM(APPLETV)
-    }
-#else
-    UNUSED_PARAM(sameSiteInfo);
-#endif
+
+    // FIXME: Stop creating a new NSHTTPCookieStorage object each time we want to query the cookie jar.
+    // NetworkStorageSession could instead keep a NSHTTPCookieStorage object for us.
+    RetainPtr<NSHTTPCookieStorage> nsCookieStorage = adoptNS([[NSHTTPCookieStorage alloc] _initWithCFHTTPCookieStorage:cookieStorage]);
+    [nsCookieStorage _setCookies:cookies forURL:url mainDocumentURL:mainDocumentURL policyProperties:policyProperties(sameSiteInfo, url).get()];
 }
 
 RetainPtr<NSArray> NetworkStorageSession::httpCookiesForURL(CFHTTPCookieStorageRef cookieStorage, NSURL *firstParty, const std::optional<SameSiteInfo>& sameSiteInfo, NSURL *url) const
@@ -332,7 +307,7 @@ RetainPtr<NSArray> NetworkStorageSession::httpCookiesForURL(CFHTTPCookieStorageR
     // FIXME: Stop creating a new NSHTTPCookieStorage object each time we want to query the cookie jar.
     // NetworkStorageSession could instead keep a NSHTTPCookieStorage object for us.
     RetainPtr<NSHTTPCookieStorage> nsCookieStorage = adoptNS([[NSHTTPCookieStorage alloc] _initWithCFHTTPCookieStorage:cookieStorage]);
-    return WebCore::cookiesForURL(nsCookieStorage.get(), url, firstParty, sameSiteInfo);
+    return cookiesForURLFromStorage(nsCookieStorage.get(), url, firstParty, sameSiteInfo);
 }
 
 NSHTTPCookie *NetworkStorageSession::capExpiryOfPersistentCookie(NSHTTPCookie *cookie, Seconds cap)
@@ -630,8 +605,10 @@ void NetworkStorageSession::deleteCookiesMatching(const Function<bool(NSHTTPCook
         return;
 
     for (NSHTTPCookie *cookie in cookies.get()) {
-        if (matches(cookie))
-            deleteHTTPCookie(cookieStorage.get(), cookie, [aggregator] { });
+        @autoreleasepool {
+            if (matches(cookie))
+                deleteHTTPCookie(cookieStorage.get(), cookie, [aggregator] { });
+        }
     }
 
     END_BLOCK_OBJC_EXCEPTIONS
@@ -751,23 +728,28 @@ void NetworkStorageSession::unregisterCookieChangeListenersIfNecessary()
     m_didRegisterCookieListeners = false;
 }
 
-void NetworkStorageSession::startListeningForCookieChangeNotifications(CookieChangeObserver& observer, const String& host)
+bool NetworkStorageSession::startListeningForCookieChangeNotifications(CookieChangeObserver& observer, const URL& url, const URL& firstParty, FrameIdentifier frameID, PageIdentifier pageID, ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking)
 {
+    if (shouldBlockCookies(firstParty, url, frameID, pageID, shouldRelaxThirdPartyCookieBlocking))
+        return false;
+
     registerCookieChangeListenersIfNecessary();
 
+    auto host = url.host().toString();
     auto& observers = m_cookieChangeObservers.ensure(host, [] {
         return WeakHashSet<CookieChangeObserver> { };
     }).iterator->value;
-    ASSERT(!observers.contains(observer));
+
     observers.add(observer);
 
     if (!m_subscribedDomainsForCookieChanges)
         m_subscribedDomainsForCookieChanges = adoptNS([[NSMutableSet alloc] init]);
     else if ([m_subscribedDomainsForCookieChanges containsObject:(NSString *)host])
-        return;
+        return true;
 
     [m_subscribedDomainsForCookieChanges addObject:(NSString *)host];
     [nsCookieStorage() _setSubscribedDomainsForCookieChanges:m_subscribedDomainsForCookieChanges.get()];
+    return true;
 }
 
 void NetworkStorageSession::stopListeningForCookieChangeNotifications(CookieChangeObserver& observer, const HashSet<String>& hosts)

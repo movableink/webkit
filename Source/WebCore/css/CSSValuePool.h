@@ -25,11 +25,14 @@
 
 #pragma once
 
+#include "CSSColorValue.h"
 #include "CSSPrimitiveValue.h"
 #include "ColorHash.h"
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/AtomStringHash.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -49,14 +52,14 @@ private:
 
     LazyNeverDestroyed<CSSPrimitiveValue> m_implicitInitialValue;
 
-    LazyNeverDestroyed<CSSPrimitiveValue> m_transparentColor;
-    LazyNeverDestroyed<CSSPrimitiveValue> m_whiteColor;
-    LazyNeverDestroyed<CSSPrimitiveValue> m_blackColor;
+    LazyNeverDestroyed<CSSColorValue> m_transparentColor;
+    LazyNeverDestroyed<CSSColorValue> m_whiteColor;
+    LazyNeverDestroyed<CSSColorValue> m_blackColor;
 
     static constexpr int maximumCacheableIntegerValue = 255;
 
     LazyNeverDestroyed<CSSPrimitiveValue> m_pixelValues[maximumCacheableIntegerValue + 1];
-    LazyNeverDestroyed<CSSPrimitiveValue> m_percentValues[maximumCacheableIntegerValue + 1];
+    LazyNeverDestroyed<CSSPrimitiveValue> m_percentageValues[maximumCacheableIntegerValue + 1];
     LazyNeverDestroyed<CSSPrimitiveValue> m_numberValues[maximumCacheableIntegerValue + 1];
     LazyNeverDestroyed<CSSPrimitiveValue> m_identifierValues[numCSSValueKeywords];
 };
@@ -72,14 +75,14 @@ public:
     static CSSValuePool& singleton();
     void drain();
 
-    Ref<CSSPrimitiveValue> createColorValue(const Color&);
+    Ref<CSSColorValue> createColorValue(const WebCore::Color&);
     RefPtr<CSSValueList> createFontFaceValue(const AtomString&);
     Ref<CSSPrimitiveValue> createFontFamilyValue(const AtomString&);
 
 private:
-    HashMap<Color, Ref<CSSPrimitiveValue>> m_colorValueCache;
-    HashMap<AtomString, RefPtr<CSSValueList>> m_fontFaceValueCache;
-    HashMap<AtomString, Ref<CSSPrimitiveValue>> m_fontFamilyValueCache;
+    UncheckedKeyHashMap<WebCore::Color, Ref<CSSColorValue>> m_colorValueCache;
+    UncheckedKeyHashMap<AtomString, RefPtr<CSSValueList>> m_fontFaceValueCache;
+    UncheckedKeyHashMap<AtomString, Ref<CSSPrimitiveValue>> m_fontFamilyValueCache;
 };
 
 inline CSSPrimitiveValue& CSSPrimitiveValue::implicitInitialValue()
@@ -94,3 +97,5 @@ inline Ref<CSSPrimitiveValue> CSSPrimitiveValue::create(CSSValueID identifier)
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

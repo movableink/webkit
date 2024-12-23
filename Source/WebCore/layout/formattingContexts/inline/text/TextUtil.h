@@ -35,6 +35,10 @@
 
 namespace WebCore {
 
+namespace TextSpacing {
+struct SpacingState;
+}
+
 class RenderStyle;
 class TextRun;
 
@@ -48,8 +52,8 @@ class TextUtil {
 public:
     enum class UseTrailingWhitespaceMeasuringOptimization : bool { No, Yes };
     static InlineLayoutUnit width(const InlineTextItem&, const FontCascade&, InlineLayoutUnit contentLogicalLeft);
-    static InlineLayoutUnit width(const InlineTextItem&, const FontCascade&, unsigned from, unsigned to, InlineLayoutUnit contentLogicalLeft, UseTrailingWhitespaceMeasuringOptimization = UseTrailingWhitespaceMeasuringOptimization::Yes);
-    static InlineLayoutUnit width(const InlineTextBox&, const FontCascade&, unsigned from, unsigned to, InlineLayoutUnit contentLogicalLeft, UseTrailingWhitespaceMeasuringOptimization = UseTrailingWhitespaceMeasuringOptimization::Yes);
+    static InlineLayoutUnit width(const InlineTextItem&, const FontCascade&, unsigned from, unsigned to, InlineLayoutUnit contentLogicalLeft, UseTrailingWhitespaceMeasuringOptimization = UseTrailingWhitespaceMeasuringOptimization::Yes, TextSpacing::SpacingState spacingState = { });
+    static InlineLayoutUnit width(const InlineTextBox&, const FontCascade&, unsigned from, unsigned to, InlineLayoutUnit contentLogicalLeft, UseTrailingWhitespaceMeasuringOptimization = UseTrailingWhitespaceMeasuringOptimization::Yes, TextSpacing::SpacingState spacingState = { });
 
     static InlineLayoutUnit trailingWhitespaceWidth(const InlineTextBox&, const FontCascade&, size_t startPosition, size_t endPosition);
 
@@ -57,11 +61,13 @@ public:
     enum class IncludeHyphen : bool { No, Yes };
     static FallbackFontList fallbackFontsForText(StringView, const RenderStyle&, IncludeHyphen);
 
-    struct EnclosingAscentDescent {
+    struct EnclosingGlyphBounds {
         InlineLayoutUnit ascent { 0.f };
         InlineLayoutUnit descent { 0.f };
+        InlineLayoutUnit left { 0.f };
+        InlineLayoutUnit right { 0.f };
     };
-    static EnclosingAscentDescent enclosingGlyphBoundsForText(StringView, const RenderStyle&);
+    static EnclosingGlyphBounds enclosingGlyphBounds(StringView, const RenderStyle&, bool canUseSimpleFontCodePath = false);
 
     struct WordBreakLeft {
         size_t length { 0 };
@@ -71,6 +77,8 @@ public:
     static WordBreakLeft breakWord(const InlineTextItem&, const FontCascade&, InlineLayoutUnit textWidth, InlineLayoutUnit availableWidth, InlineLayoutUnit contentLogicalLeft);
 
     static bool mayBreakInBetween(const InlineTextItem& previousInlineItem, const InlineTextItem& nextInlineItem);
+    // FIXME: Remove when computeInlinePreferredLogicalWidths is all IFC.
+    static bool mayBreakInBetween(String previousContent, const RenderStyle& previousContentStyle, String nextContent, const RenderStyle& nextContentStyle);
     static unsigned findNextBreakablePosition(CachedLineBreakIteratorFactory&, unsigned startPosition, const RenderStyle&);
     static TextBreakIterator::LineMode::Behavior lineBreakIteratorMode(LineBreak);
     static TextBreakIterator::ContentAnalysis contentAnalysis(WordBreak);
@@ -83,7 +91,9 @@ public:
     static bool isStrongDirectionalityCharacter(char32_t);
     static bool containsStrongDirectionalityText(StringView);
 
-    static TextRun ellipsisTextRun(bool isHorizontal = true);
+    static AtomString ellipsisTextInInlineDirection(bool isHorizontal = true);
+
+    static InlineLayoutUnit hyphenWidth(const RenderStyle&);
 
     static size_t firstUserPerceivedCharacterLength(const InlineTextItem&);
     static size_t firstUserPerceivedCharacterLength(const InlineTextBox&, size_t startPosition, size_t length);

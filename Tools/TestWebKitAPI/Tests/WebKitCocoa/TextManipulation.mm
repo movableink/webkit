@@ -38,8 +38,7 @@
 #import <WebKit/_WKTextManipulationToken.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/RetainPtr.h>
-#import <wtf/text/StringConcatenate.h>
-#import <wtf/text/StringConcatenateNumbers.h>
+#import <wtf/text/MakeString.h>
 
 typedef void(^ItemCallback)(_WKTextManipulationItem *);
 typedef void(^ItemListCallback)(NSArray<_WKTextManipulationItem *> *);
@@ -872,32 +871,52 @@ TEST(TextManipulation, StartTextManipulationExtractsUserInfo)
     EXPECT_WK_STREQ("Fourth", items[4].tokens[0].content);
     {
         auto userInfo = items[0].tokens[0].userInfo;
-        EXPECT_WK_STREQ("TestWebKitAPI.resources", [(NSURL *)userInfo[_WKTextManipulationTokenUserInfoDocumentURLKey] lastPathComponent]);
+#if PLATFORM(MAC)
+        EXPECT_WK_STREQ("Resources", [(NSURL *)userInfo[_WKTextManipulationTokenUserInfoDocumentURLKey] lastPathComponent]);
+#else
+        EXPECT_WK_STREQ("TestWebKitAPIResources.bundle", [(NSURL *)userInfo[_WKTextManipulationTokenUserInfoDocumentURLKey] lastPathComponent]);
+#endif
         EXPECT_WK_STREQ("TITLE", (NSString *)userInfo[_WKTextManipulationTokenUserInfoTagNameKey]);
         EXPECT_FALSE([userInfo[_WKTextManipulationTokenUserInfoVisibilityKey] boolValue]);
     }
     {
         auto userInfo = items[1].tokens[0].userInfo;
-        EXPECT_WK_STREQ("TestWebKitAPI.resources", [(NSURL *)userInfo[_WKTextManipulationTokenUserInfoDocumentURLKey] lastPathComponent]);
+#if PLATFORM(MAC)
+        EXPECT_WK_STREQ("Resources", [(NSURL *)userInfo[_WKTextManipulationTokenUserInfoDocumentURLKey] lastPathComponent]);
+#else
+        EXPECT_WK_STREQ("TestWebKitAPIResources.bundle", [(NSURL *)userInfo[_WKTextManipulationTokenUserInfoDocumentURLKey] lastPathComponent]);
+#endif
         EXPECT_WK_STREQ("P", (NSString *)userInfo[_WKTextManipulationTokenUserInfoTagNameKey]);
         EXPECT_FALSE([userInfo[_WKTextManipulationTokenUserInfoVisibilityKey] boolValue]);
     }
     {
         auto userInfo = items[2].tokens[0].userInfo;
-        EXPECT_WK_STREQ("TestWebKitAPI.resources", [(NSURL *)userInfo[_WKTextManipulationTokenUserInfoDocumentURLKey] lastPathComponent]);
+#if PLATFORM(MAC)
+        EXPECT_WK_STREQ("Resources", [(NSURL *)userInfo[_WKTextManipulationTokenUserInfoDocumentURLKey] lastPathComponent]);
+#else
+        EXPECT_WK_STREQ("TestWebKitAPIResources.bundle", [(NSURL *)userInfo[_WKTextManipulationTokenUserInfoDocumentURLKey] lastPathComponent]);
+#endif
         EXPECT_WK_STREQ("DIV", (NSString *)userInfo[_WKTextManipulationTokenUserInfoTagNameKey]);
         EXPECT_WK_STREQ("button", (NSString *)userInfo[_WKTextManipulationTokenUserInfoRoleAttributeKey]);
         EXPECT_FALSE([userInfo[_WKTextManipulationTokenUserInfoVisibilityKey] boolValue]);
     }
     {
         auto userInfo = items[3].tokens[0].userInfo;
-        EXPECT_WK_STREQ("TestWebKitAPI.resources", [(NSURL *)userInfo[_WKTextManipulationTokenUserInfoDocumentURLKey] lastPathComponent]);
+#if PLATFORM(MAC)
+        EXPECT_WK_STREQ("Resources", [(NSURL *)userInfo[_WKTextManipulationTokenUserInfoDocumentURLKey] lastPathComponent]);
+#else
+        EXPECT_WK_STREQ("TestWebKitAPIResources.bundle", [(NSURL *)userInfo[_WKTextManipulationTokenUserInfoDocumentURLKey] lastPathComponent]);
+#endif
         EXPECT_WK_STREQ("SPAN", (NSString *)userInfo[_WKTextManipulationTokenUserInfoTagNameKey]);
         EXPECT_FALSE([userInfo[_WKTextManipulationTokenUserInfoVisibilityKey] boolValue]);
     }
     {
         auto userInfo = items[4].tokens[0].userInfo;
-        EXPECT_WK_STREQ("TestWebKitAPI.resources", [(NSURL *)userInfo[_WKTextManipulationTokenUserInfoDocumentURLKey] lastPathComponent]);
+#if PLATFORM(MAC)
+        EXPECT_WK_STREQ("Resources", [(NSURL *)userInfo[_WKTextManipulationTokenUserInfoDocumentURLKey] lastPathComponent]);
+#else
+        EXPECT_WK_STREQ("TestWebKitAPIResources.bundle", [(NSURL *)userInfo[_WKTextManipulationTokenUserInfoDocumentURLKey] lastPathComponent]);
+#endif
         EXPECT_WK_STREQ("DIV", (NSString *)userInfo[_WKTextManipulationTokenUserInfoTagNameKey]);
         EXPECT_TRUE([userInfo[_WKTextManipulationTokenUserInfoVisibilityKey] boolValue]);
     }

@@ -31,6 +31,7 @@
 #include <WebCore/GeolocationClient.h>
 #include <WebCore/GeolocationPositionData.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 
 QT_BEGIN_NAMESPACE
 class QGeoPositionInfoSource;
@@ -42,10 +43,17 @@ namespace WebCore {
 
 // This class provides an implementation of a GeolocationClient for QtWebkit.
 class GeolocationClientQt final : public QObject, public GeolocationClient {
+    WTF_MAKE_TZONE_ALLOCATED(GeolocationClientQt);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(GeolocationClientQt);
+
     Q_OBJECT
 public:
     GeolocationClientQt(const QWebPageAdapter*);
     ~GeolocationClientQt() override;
+
+    bool operator==(const WebCore::GeolocationClientQt& other) const {
+        return m_webPage == other.m_webPage;
+    }
 
     void geolocationDestroyed() override;
     void startUpdating(const String& authorizationToken, bool enableHighAccuracy) override;

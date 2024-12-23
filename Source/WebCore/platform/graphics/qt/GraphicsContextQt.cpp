@@ -56,19 +56,16 @@
 #include "Pattern.h"
 #include "ShadowBlur.h"
 #include "TransformationMatrix.h"
-#include "TransparencyLayer.h"
 
 #include <QBrush>
 #include <QGradient>
 #include <QPaintDevice>
 #include <QPaintEngine>
-#include <QPainter>
 #include <QPainterPath>
 #include <QPainterPathStroker>
 #include <QPixmap>
 #include <QPixmapCache>
 #include <QPolygonF>
-#include <QStack>
 #include <QUrl>
 #include <QVector>
 #include <private/qhexstring_p.h>
@@ -241,43 +238,6 @@ static inline Qt::FillRule toQtFillRule(WindRule rule)
     }
     return Qt::OddEvenFill;
 }
-
-class GraphicsContextPlatformPrivate {
-    WTF_MAKE_NONCOPYABLE(GraphicsContextPlatformPrivate); WTF_MAKE_FAST_ALLOCATED;
-public:
-    GraphicsContextPlatformPrivate(QPainter*, const QColor& initialSolidColor);
-    ~GraphicsContextPlatformPrivate();
-
-    inline QPainter* p() const
-    {
-        if (layers.isEmpty())
-            return painter;
-        return &layers.top()->painter;
-    }
-
-    bool antiAliasingForRectsAndLines;
-
-    QStack<TransparencyLayer*> layers;
-    // Counting real layers. Required by isInTransparencyLayer() calls
-    // For example, layers with valid alphaMask are not real layers
-    int layerCount;
-
-    // reuse this brush for solid color (to prevent expensive QBrush construction)
-    QBrush solidColor;
-
-    bool initialSmoothPixmapTransformHint;
-
-    QRectF clipBoundingRect() const
-    {
-        return p()->clipBoundingRect();
-    }
-
-    void takeOwnershipOfPlatformContext() { platformContextIsOwned = true; }
-
-private:
-    QPainter* painter;
-    bool platformContextIsOwned;
-};
 
 GraphicsContextPlatformPrivate::GraphicsContextPlatformPrivate(QPainter* p, const QColor& initialSolidColor)
     : antiAliasingForRectsAndLines(false)
@@ -896,7 +856,7 @@ static inline void drawRepeatPattern(QPainter* p, const Pattern& pattern, const 
         p->setClipping(false);
 }
 
-void GraphicsContextQt::fillRect(const FloatRect& rect)
+void GraphicsContextQt::fillRect(const FloatRect& rect, RequiresClipToRect)
 {
     QPainter* p = m_data->p();
     QRectF normalizedRect = rect.normalized();
@@ -1016,7 +976,7 @@ void GraphicsContextQt::fillRect(const FloatRect& rect, Gradient& gradient)
     gradient.fill(*this, platformRect);
 }
 
-void GraphicsContextQt::fillRect(const FloatRect& rect, Gradient& gradient, const AffineTransform& transform)
+void GraphicsContextQt::fillRect(const FloatRect& rect, Gradient& gradient, const AffineTransform& transform, RequiresClipToRect)
 {
     QRectF platformRect(rect);
     QPainter* p = m_data->p();

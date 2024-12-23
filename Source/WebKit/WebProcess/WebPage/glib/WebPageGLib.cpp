@@ -44,6 +44,7 @@
 #include <WebCore/UserAgent.h>
 #include <WebCore/VisiblePosition.h>
 #include <WebCore/VisibleUnits.h>
+#include <wtf/text/MakeString.h>
 
 #if ENABLE(2022_GLIB_API)
 #include "WebKitWebProcessExtension.h"
@@ -148,7 +149,7 @@ void WebPage::getPlatformEditorState(LocalFrame& frame, EditorState& result) con
         auto compositionRange = frame.editor().compositionRange();
         if (surroundingRange && compositionRange && contains<ComposedTree>(*surroundingRange, *compositionRange)) {
             auto beforeText = plainText({ surroundingRange->start, compositionRange->start });
-            postLayoutData.surroundingContext = beforeText + plainText({ compositionRange->end, surroundingRange->end });
+            postLayoutData.surroundingContext = makeString(beforeText, plainText({ compositionRange->end, surroundingRange->end }));
             postLayoutData.surroundingContextCursorPosition = beforeText.length();
             postLayoutData.surroundingContextSelectionPosition = postLayoutData.surroundingContextCursorPosition;
         } else {
@@ -161,7 +162,7 @@ void WebPage::getPlatformEditorState(LocalFrame& frame, EditorState& result) con
     }
 }
 
-static std::optional<InputMethodState> inputMethodSateForElement(Element* element)
+static std::optional<InputMethodState> inputMethodStateForElement(Element* element)
 {
     if (!element || !element->shouldUseInputMethod())
         return std::nullopt;
@@ -189,7 +190,7 @@ static std::optional<InputMethodState> inputMethodSateForElement(Element* elemen
 
 void WebPage::setInputMethodState(Element* element)
 {
-    auto state = inputMethodSateForElement(element);
+    auto state = inputMethodStateForElement(element);
     if (m_inputMethodState == state)
         return;
 

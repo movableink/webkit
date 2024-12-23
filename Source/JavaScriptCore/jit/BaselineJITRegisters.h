@@ -59,8 +59,9 @@ namespace CheckTraps {
 }
 
 namespace Enter {
-    static constexpr GPRReg canBeOptimizedGPR { GPRInfo::regT0 };
-    static constexpr GPRReg localsToInitGPR { GPRInfo::regT1 };
+    static constexpr GPRReg scratch1GPR { GPRInfo::regT4 };
+    static constexpr GPRReg scratch2GPR { GPRInfo::regT5 };
+    static constexpr JSValueRegs scratch3JSR { JSRInfo::jsRegT32 };
 }
 
 namespace Instanceof {
@@ -75,6 +76,13 @@ namespace Instanceof {
     static constexpr GPRReg scratch1GPR { scratchRegisters[0] };
     static_assert(noOverlap(stubInfoGPR, valueJSR, protoJSR, GPRInfo::handlerGPR, scratch1GPR), "Required for call to slow operation");
     static_assert(noOverlap(resultJSR, stubInfoGPR));
+
+    namespace Custom {
+        static constexpr GPRReg globalObjectGPR = stubInfoGPR;
+        static constexpr JSValueRegs valueJSR = Instanceof::valueJSR;
+        static constexpr GPRReg constructorGPR = scratch1GPR;
+        static constexpr JSValueRegs hasInstanceJSR = protoJSR;
+    }
 }
 
 namespace JFalse {
@@ -148,7 +156,8 @@ namespace GetByIdWithThis {
     static constexpr GPRReg stubInfoGPR { preferredArgumentGPR<SlowOperation, 2>() };
     static constexpr auto scratchRegisters = allocatedScratchRegisters<GPRInfo, baseJSR, thisJSR, stubInfoGPR, GPRInfo::handlerGPR>;
     static constexpr GPRReg scratch1GPR { scratchRegisters[0] };
-    static_assert(noOverlap(baseJSR, thisJSR, stubInfoGPR, scratch1GPR), "Required for call to slow operation");
+    static constexpr GPRReg scratch2GPR { scratchRegisters[1] };
+    static_assert(noOverlap(baseJSR, thisJSR, stubInfoGPR, scratch1GPR, scratch2GPR), "Required for call to slow operation");
     static_assert(noOverlap(resultJSR, stubInfoGPR));
 }
 

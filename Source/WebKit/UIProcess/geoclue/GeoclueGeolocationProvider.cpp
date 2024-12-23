@@ -29,16 +29,28 @@
 #include <WebCore/GeolocationPositionData.h>
 #include <gio/gio.h>
 #include <glib/gi18n-lib.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/glib/Application.h>
 #include <wtf/glib/GUniquePtr.h>
 #include <wtf/glib/Sandbox.h>
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/MakeString.h>
 
 #if USE(GLIB_EVENT_LOOP)
 #include <wtf/glib/RunLoopSourcePriority.h>
 #endif
 
 namespace WebKit {
+class GeoclueGeolocationProvider;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedTimerSmartPointerException;
+template<> struct IsDeprecatedTimerSmartPointerException<WebKit::GeoclueGeolocationProvider> : std::true_type { };
+}
+
+namespace WebKit {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(GeoclueGeolocationProvider);
 
 GeoclueGeolocationProvider::GeoclueGeolocationProvider()
     : m_destroyLaterTimer(RunLoop::current(), this, &GeoclueGeolocationProvider::destroyState)

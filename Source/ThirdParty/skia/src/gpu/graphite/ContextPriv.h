@@ -12,8 +12,8 @@
 #include "src/gpu/graphite/QueueManager.h"
 #include "src/gpu/graphite/SharedContext.h"
 
-#if defined(GRAPHITE_TEST_UTILS)
-#include "include/private/gpu/graphite/ContextOptionsPriv.h"
+#if defined(GPU_TEST_UTILS)
+#include "src/gpu/graphite/ContextOptionsPriv.h"
 #endif
 
 namespace skgpu::graphite {
@@ -49,8 +49,11 @@ public:
     ResourceProvider* resourceProvider() const {
         return fContext->fResourceProvider.get();
     }
+    SharedContext* sharedContext() {
+        return fContext->fSharedContext.get();
+    }
 
-#if defined(GRAPHITE_TEST_UTILS)
+#if defined(GPU_TEST_UTILS)
     void startCapture() {
         fContext->fQueueManager->startCapture();
     }

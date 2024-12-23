@@ -81,7 +81,7 @@ class IDBConnectionProxy;
 }
 
 class WorkerGlobalScope : public Supplementable<WorkerGlobalScope>, public Base64Utilities, public WindowOrWorkerGlobalScope, public WorkerOrWorkletGlobalScope, public ReportingClient {
-    WTF_MAKE_ISO_ALLOCATED(WorkerGlobalScope);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WorkerGlobalScope);
 public:
     virtual ~WorkerGlobalScope();
 
@@ -89,6 +89,7 @@ public:
     virtual Type type() const = 0;
 
     const URL& url() const final { return m_url; }
+    const URL& cookieURL() const final { return url(); }
     const URL& ownerURL() const { return m_ownerURL; }
     String origin() const;
     const String& inspectorIdentifier() const { return m_inspectorIdentifier; }
@@ -99,9 +100,8 @@ public:
     GraphicsClient* graphicsClient() final;
 
 
-    using EventTarget::weakPtrFactory;
-    using EventTarget::WeakValueType;
-    using EventTarget::WeakPtrImplType;
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
+
     WorkerStorageConnection& storageConnection();
     static void postFileSystemStorageTask(Function<void()>&&);
     WorkerFileSystemStorageConnection& getFileSystemStorageConnection(Ref<FileSystemStorageConnection>&&);
@@ -113,6 +113,7 @@ public:
     void updateServiceWorkerClientData() final;
 
     WorkerThread& thread() const;
+    Ref<WorkerThread> protectedThread() const;
 
     using ScriptExecutionContext::hasPendingActivity;
 
@@ -208,8 +209,6 @@ private:
 
     std::optional<Vector<uint8_t>> wrapCryptoKey(const Vector<uint8_t>& key) final;
     std::optional<Vector<uint8_t>> unwrapCryptoKey(const Vector<uint8_t>& wrappedKey) final;
-
-    void stopIndexedDatabase();
 
     // ReportingClient.
     void notifyReportObservers(Ref<Report>&&) final;

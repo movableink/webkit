@@ -47,6 +47,10 @@ enum class Action : uint8_t {
     Restart,
 };
 
+enum class RequestedTool : uint16_t {
+    // Opaque type to transitively convert to/from WTRequestedTool.
+};
+
 #pragma mark - Session
 
 enum class SessionType : uint8_t {
@@ -56,6 +60,7 @@ enum class SessionType : uint8_t {
 
 enum class SessionCompositionType : uint8_t {
     None,
+    Compose,
     SmartReply,
     Other,
 };

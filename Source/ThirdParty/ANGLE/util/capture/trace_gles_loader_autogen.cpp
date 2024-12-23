@@ -477,6 +477,8 @@ ANGLE_TRACE_LOADER_EXPORT PFNGLMULTIDRAWARRAYSINSTANCEDBASEINSTANCEANGLEPROC
     t_glMultiDrawArraysInstancedBaseInstanceANGLE;
 ANGLE_TRACE_LOADER_EXPORT PFNGLMULTIDRAWELEMENTSINSTANCEDBASEVERTEXBASEINSTANCEANGLEPROC
     t_glMultiDrawElementsInstancedBaseVertexBaseInstanceANGLE;
+ANGLE_TRACE_LOADER_EXPORT PFNGLBLOBCACHECALLBACKSANGLEPROC t_glBlobCacheCallbacksANGLE;
+ANGLE_TRACE_LOADER_EXPORT PFNGLGETPOINTERVANGLEPROC t_glGetPointervANGLE;
 ANGLE_TRACE_LOADER_EXPORT PFNGLCOPYSUBTEXTURE3DANGLEPROC t_glCopySubTexture3DANGLE;
 ANGLE_TRACE_LOADER_EXPORT PFNGLCOPYTEXTURE3DANGLEPROC t_glCopyTexture3DANGLE;
 ANGLE_TRACE_LOADER_EXPORT PFNGLBLITFRAMEBUFFERANGLEPROC t_glBlitFramebufferANGLE;
@@ -794,6 +796,8 @@ ANGLE_TRACE_LOADER_EXPORT PFNGLTEXBUFFERRANGEEXTPROC t_glTexBufferRangeEXT;
 ANGLE_TRACE_LOADER_EXPORT PFNGLTEXSTORAGE1DEXTPROC t_glTexStorage1DEXT;
 ANGLE_TRACE_LOADER_EXPORT PFNGLTEXSTORAGE2DEXTPROC t_glTexStorage2DEXT;
 ANGLE_TRACE_LOADER_EXPORT PFNGLTEXSTORAGE3DEXTPROC t_glTexStorage3DEXT;
+ANGLE_TRACE_LOADER_EXPORT PFNGLTEXSTORAGEATTRIBS2DEXTPROC t_glTexStorageAttribs2DEXT;
+ANGLE_TRACE_LOADER_EXPORT PFNGLTEXSTORAGEATTRIBS3DEXTPROC t_glTexStorageAttribs3DEXT;
 ANGLE_TRACE_LOADER_EXPORT PFNGLBLENDBARRIERKHRPROC t_glBlendBarrierKHR;
 ANGLE_TRACE_LOADER_EXPORT PFNGLDEBUGMESSAGECALLBACKKHRPROC t_glDebugMessageCallbackKHR;
 ANGLE_TRACE_LOADER_EXPORT PFNGLDEBUGMESSAGECONTROLKHRPROC t_glDebugMessageControlKHR;
@@ -881,6 +885,9 @@ ANGLE_TRACE_LOADER_EXPORT PFNGLTEXTUREFOVEATIONPARAMETERSQCOMPROC
     t_glTextureFoveationParametersQCOM;
 ANGLE_TRACE_LOADER_EXPORT PFNGLENDTILINGQCOMPROC t_glEndTilingQCOM;
 ANGLE_TRACE_LOADER_EXPORT PFNGLSTARTTILINGQCOMPROC t_glStartTilingQCOM;
+ANGLE_TRACE_LOADER_EXPORT PFNGLBLENDEQUATIONOESPROC t_glBlendEquationOES;
+ANGLE_TRACE_LOADER_EXPORT PFNGLFRAMEBUFFERRESOLVERENDERBUFFERWEBKITPROC
+    t_glFramebufferResolveRenderbufferWEBKIT;
 ANGLE_TRACE_LOADER_EXPORT PFNGLDRAWTEXFOESPROC t_glDrawTexfOES;
 ANGLE_TRACE_LOADER_EXPORT PFNGLDRAWTEXFVOESPROC t_glDrawTexfvOES;
 ANGLE_TRACE_LOADER_EXPORT PFNGLDRAWTEXIOESPROC t_glDrawTexiOES;
@@ -1590,6 +1597,10 @@ void LoadTraceGLES(LoadProc loadProc)
     t_glMultiDrawElementsInstancedBaseVertexBaseInstanceANGLE =
         reinterpret_cast<PFNGLMULTIDRAWELEMENTSINSTANCEDBASEVERTEXBASEINSTANCEANGLEPROC>(
             loadProc("glMultiDrawElementsInstancedBaseVertexBaseInstanceANGLE"));
+    t_glBlobCacheCallbacksANGLE =
+        reinterpret_cast<PFNGLBLOBCACHECALLBACKSANGLEPROC>(loadProc("glBlobCacheCallbacksANGLE"));
+    t_glGetPointervANGLE =
+        reinterpret_cast<PFNGLGETPOINTERVANGLEPROC>(loadProc("glGetPointervANGLE"));
     t_glCopySubTexture3DANGLE =
         reinterpret_cast<PFNGLCOPYSUBTEXTURE3DANGLEPROC>(loadProc("glCopySubTexture3DANGLE"));
     t_glCopyTexture3DANGLE =
@@ -2140,6 +2151,10 @@ void LoadTraceGLES(LoadProc loadProc)
     t_glTexStorage1DEXT = reinterpret_cast<PFNGLTEXSTORAGE1DEXTPROC>(loadProc("glTexStorage1DEXT"));
     t_glTexStorage2DEXT = reinterpret_cast<PFNGLTEXSTORAGE2DEXTPROC>(loadProc("glTexStorage2DEXT"));
     t_glTexStorage3DEXT = reinterpret_cast<PFNGLTEXSTORAGE3DEXTPROC>(loadProc("glTexStorage3DEXT"));
+    t_glTexStorageAttribs2DEXT =
+        reinterpret_cast<PFNGLTEXSTORAGEATTRIBS2DEXTPROC>(loadProc("glTexStorageAttribs2DEXT"));
+    t_glTexStorageAttribs3DEXT =
+        reinterpret_cast<PFNGLTEXSTORAGEATTRIBS3DEXTPROC>(loadProc("glTexStorageAttribs3DEXT"));
     t_glBlendBarrierKHR = reinterpret_cast<PFNGLBLENDBARRIERKHRPROC>(loadProc("glBlendBarrierKHR"));
     t_glDebugMessageCallbackKHR =
         reinterpret_cast<PFNGLDEBUGMESSAGECALLBACKKHRPROC>(loadProc("glDebugMessageCallbackKHR"));
@@ -2279,14 +2294,19 @@ void LoadTraceGLES(LoadProc loadProc)
         loadProc("glTextureFoveationParametersQCOM"));
     t_glEndTilingQCOM   = reinterpret_cast<PFNGLENDTILINGQCOMPROC>(loadProc("glEndTilingQCOM"));
     t_glStartTilingQCOM = reinterpret_cast<PFNGLSTARTTILINGQCOMPROC>(loadProc("glStartTilingQCOM"));
-    t_glDrawTexfOES     = reinterpret_cast<PFNGLDRAWTEXFOESPROC>(loadProc("glDrawTexfOES"));
-    t_glDrawTexfvOES    = reinterpret_cast<PFNGLDRAWTEXFVOESPROC>(loadProc("glDrawTexfvOES"));
-    t_glDrawTexiOES     = reinterpret_cast<PFNGLDRAWTEXIOESPROC>(loadProc("glDrawTexiOES"));
-    t_glDrawTexivOES    = reinterpret_cast<PFNGLDRAWTEXIVOESPROC>(loadProc("glDrawTexivOES"));
-    t_glDrawTexsOES     = reinterpret_cast<PFNGLDRAWTEXSOESPROC>(loadProc("glDrawTexsOES"));
-    t_glDrawTexsvOES    = reinterpret_cast<PFNGLDRAWTEXSVOESPROC>(loadProc("glDrawTexsvOES"));
-    t_glDrawTexxOES     = reinterpret_cast<PFNGLDRAWTEXXOESPROC>(loadProc("glDrawTexxOES"));
-    t_glDrawTexxvOES    = reinterpret_cast<PFNGLDRAWTEXXVOESPROC>(loadProc("glDrawTexxvOES"));
+    t_glBlendEquationOES =
+        reinterpret_cast<PFNGLBLENDEQUATIONOESPROC>(loadProc("glBlendEquationOES"));
+    t_glFramebufferResolveRenderbufferWEBKIT =
+        reinterpret_cast<PFNGLFRAMEBUFFERRESOLVERENDERBUFFERWEBKITPROC>(
+            loadProc("glFramebufferResolveRenderbufferWEBKIT"));
+    t_glDrawTexfOES  = reinterpret_cast<PFNGLDRAWTEXFOESPROC>(loadProc("glDrawTexfOES"));
+    t_glDrawTexfvOES = reinterpret_cast<PFNGLDRAWTEXFVOESPROC>(loadProc("glDrawTexfvOES"));
+    t_glDrawTexiOES  = reinterpret_cast<PFNGLDRAWTEXIOESPROC>(loadProc("glDrawTexiOES"));
+    t_glDrawTexivOES = reinterpret_cast<PFNGLDRAWTEXIVOESPROC>(loadProc("glDrawTexivOES"));
+    t_glDrawTexsOES  = reinterpret_cast<PFNGLDRAWTEXSOESPROC>(loadProc("glDrawTexsOES"));
+    t_glDrawTexsvOES = reinterpret_cast<PFNGLDRAWTEXSVOESPROC>(loadProc("glDrawTexsvOES"));
+    t_glDrawTexxOES  = reinterpret_cast<PFNGLDRAWTEXXOESPROC>(loadProc("glDrawTexxOES"));
+    t_glDrawTexxvOES = reinterpret_cast<PFNGLDRAWTEXXVOESPROC>(loadProc("glDrawTexxvOES"));
     t_glBindFramebufferOES =
         reinterpret_cast<PFNGLBINDFRAMEBUFFEROESPROC>(loadProc("glBindFramebufferOES"));
     t_glBindRenderbufferOES =

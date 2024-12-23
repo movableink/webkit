@@ -47,11 +47,14 @@ public:
     void goBack();
     void goForward();
     void goToItem(WebCore::HistoryItem&) override;
-        
+    void setChildItem(WebCore::BackForwardItemIdentifier, Ref<WebCore::HistoryItem>&&) final { }
+    void goToProvisionalItem(const WebCore::HistoryItem&) final;
+    void clearProvisionalItem(const WebCore::HistoryItem&) final;
+
     RefPtr<WebCore::HistoryItem> backItem();
     RefPtr<WebCore::HistoryItem> currentItem();
     RefPtr<WebCore::HistoryItem> forwardItem();
-    RefPtr<WebCore::HistoryItem> itemAtIndex(int) override;
+    RefPtr<WebCore::HistoryItem> itemAtIndex(int, WebCore::FrameIdentifier) override;
 
     void backListWithLimit(int, HistoryItemVector&);
     void forwardListWithLimit(int, HistoryItemVector&);
@@ -77,6 +80,7 @@ private:
     HistoryItemHashSet m_entryHash;
     QWebPageAdapter& m_page;
     unsigned m_current;
+    unsigned m_provisional;
     unsigned m_capacity;
     bool m_closed;
     bool m_enabled;

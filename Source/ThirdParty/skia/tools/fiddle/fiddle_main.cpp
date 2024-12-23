@@ -22,8 +22,11 @@ static DEFINE_double(duration, 1.0,
 static DEFINE_double(frame, 1.0,
                      "A double value in [0, 1] that specifies the point in animation to draw.");
 
+#include "include/codec/SkCodec.h"
+#include "include/codec/SkJpegDecoder.h"
+#include "include/codec/SkPngDecoder.h"
 #include "include/encode/SkPngEncoder.h"
-#include "include/gpu/GrBackendSurface.h"
+#include "include/gpu/ganesh/GrBackendSurface.h"
 #include "include/gpu/ganesh/SkSurfaceGanesh.h"
 #include "src/gpu/ganesh/GrDirectContextPriv.h"
 #include "src/gpu/ganesh/GrGpu.h"
@@ -35,6 +38,7 @@ static DEFINE_double(frame, 1.0,
 
 #if defined(SK_FONTMGR_FONTCONFIG_AVAILABLE)
 #include "include/ports/SkFontMgr_fontconfig.h"
+#include "include/ports/SkFontScanner_FreeType.h"
 #endif
 
 using namespace skia_private;
@@ -250,7 +254,7 @@ int main(int argc, char** argv) {
         options.skp = false;
     }
 #if defined(SK_FONTMGR_FONTCONFIG_AVAILABLE)
-    fontMgr = SkFontMgr_New_FontConfig(nullptr);
+    fontMgr = SkFontMgr_New_FontConfig(nullptr, SkFontScanner_Make_FreeType());
 #else
     fontMgr = SkFontMgr::RefEmpty();
 #endif
@@ -259,14 +263,26 @@ int main(int argc, char** argv) {
         if (!data) {
             perror(options.source);
             return 1;
-        } else {
-            image = SkImages::DeferredFromEncodedData(std::move(data));
-            if (!image) {
-                perror("Unable to decode the source image.");
-                return 1;
-            }
-            SkAssertResult(image->asLegacyBitmap(&source));
         }
+        std::unique_ptr<SkCodec> codec = nullptr;
+        if (SkPngDecoder::IsPng(data->data(), data->size())) {
+            codec = SkPngDecoder::Decode(data, nullptr);
+        } else if (SkJpegDecoder::IsJpeg(data->data(), data->size())) {
+            codec = SkJpegDecoder::Decode(data, nullptr);
+        } else {
+            perror("Unsupported file format\n");
+            return 1;
+        }
+        if (!codec) {
+            perror("Corrupt source image file\n");
+            return 1;
+        }
+        image = std::get<0>(codec->getImage());
+        if (!image) {
+            perror("Unable to decode the source image.\n");
+            return 1;
+        }
+        SkAssertResult(image->asLegacyBitmap(&source));
     }
     sk_sp<SkData> rasterData, gpuData, pdfData, skpData;
     SkColorType colorType = kN32_SkColorType;

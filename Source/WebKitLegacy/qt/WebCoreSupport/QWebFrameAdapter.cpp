@@ -37,10 +37,12 @@
 #include <WebCore/Editing.h>
 #include <WebCore/EventHandler.h>
 #include <WebCore/FocusController.h>
+#include <WebCore/FrameLoader.h>
 #include <WebCore/FrameLoadRequest.h>
 #include <WebCore/GraphicsContextQt.h>
 #include <WebCore/HTMLCollection.h>
 #include <WebCore/HTMLFormElement.h>
+#include <WebCore/HTMLFrameOwnerElement.h>
 #include <WebCore/HTMLMetaElement.h>
 #include <WebCore/HTTPParsers.h>
 #include <WebCore/HitTestResult.h>
@@ -936,14 +938,6 @@ void QWebFrameAdapter::setCustomLayoutSize(const QSize& size)
         view->setUseFixedLayout(false);
 
     view->layoutContext().layout();
-}
-
-void QWebFrameAdapter::setFixedVisibleContentRect(const QRect& rect)
-{
-    ASSERT(&pageAdapter->mainFrameAdapter() == this);
-    LocalFrameView* view = frame->view();
-    ASSERT(view);
-    view->setFixedVisibleContentRect(rect);
 }
 
 void QWebFrameAdapter::setViewportSize(const QSize& size)

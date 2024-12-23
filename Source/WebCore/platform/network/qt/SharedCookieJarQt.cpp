@@ -34,6 +34,8 @@
 #include "SQLiteTransaction.h"
 #include <QNetworkCookie>
 #include <wtf/text/StringHash.h>
+#include <wtf/text/MakeString.h>
+#include <wtf/WallTime.h>
 
 namespace WebCore {
 
@@ -146,7 +148,7 @@ void SharedCookieJarQt::deleteAllCookiesModifiedSince(WallTime)
 
 SharedCookieJarQt::SharedCookieJarQt(const String& cookieStorageDirectory)
 {
-    if (!m_database.open(cookieStorageDirectory + "/cookies.db"_s)) {
+    if (!m_database.open(makeString(cookieStorageDirectory, "/cookies.db"_s))) {
         qWarning("Can't open cookie database");
         return;
     }

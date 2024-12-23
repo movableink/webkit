@@ -27,19 +27,17 @@
 
 #include <utility>
 #include <wtf/CheckedArithmetic.h>
-#include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
-#include <wtf/persistence/PersistentDecoder.h>
-#include <wtf/persistence/PersistentEncoder.h>
 
 namespace WTF::Persistence {
 
-template<typename> struct Coder;
 class Decoder;
 class Encoder;
+
+template<typename> struct Coder;
 
 template<typename T, typename U> struct Coder<std::pair<T, U>> {
     template<typename Encoder>
@@ -234,6 +232,47 @@ template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTrai
     }
 };
 
+template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg> struct Coder<UncheckedKeyHashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg>> {
+    typedef UncheckedKeyHashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg> HashMapType;
+
+    template<typename Encoder>
+    static void encodeForPersistence(Encoder& encoder, const HashMapType& hashMap)
+    {
+        encoder << static_cast<uint64_t>(hashMap.size());
+        for (typename HashMapType::const_iterator it = hashMap.begin(), end = hashMap.end(); it != end; ++it)
+            encoder << *it;
+    }
+
+    template<typename Decoder>
+    static std::optional<HashMapType> decodeForPersistence(Decoder& decoder)
+    {
+        std::optional<uint64_t> hashMapSize;
+        decoder >> hashMapSize;
+        if (!hashMapSize)
+            return std::nullopt;
+
+        HashMapType tempHashMap;
+        tempHashMap.reserveInitialCapacity(static_cast<unsigned>(*hashMapSize));
+        for (uint64_t i = 0; i < *hashMapSize; ++i) {
+            std::optional<KeyArg> key;
+            decoder >> key;
+            if (!key)
+                return std::nullopt;
+            std::optional<MappedArg> value;
+            decoder >> value;
+            if (!value)
+                return std::nullopt;
+
+            if (!tempHashMap.add(WTFMove(*key), WTFMove(*value)).isNewEntry) {
+                // The hash map already has the specified key, bail.
+                return std::nullopt;
+            }
+        }
+
+        return tempHashMap;
+    }
+};
+
 template<typename KeyArg, typename HashArg, typename KeyTraitsArg> struct Coder<HashSet<KeyArg, HashArg, KeyTraitsArg>> {
     typedef HashSet<KeyArg, HashArg, KeyTraitsArg> HashSetType;
 
@@ -270,6 +309,21 @@ template<typename KeyArg, typename HashArg, typename KeyTraitsArg> struct Coder<
     }
 };
 
+template<size_t Size> struct Coder<std::array<uint8_t, Size>> {
+    template<typename Encoder> static void encodeForPersistence(Encoder& encoder, const std::array<uint8_t, Size>& array)
+    {
+        encoder.encodeFixedLengthData(array);
+    }
+
+    template<typename Decoder> static std::optional<std::array<uint8_t, Size>> decodeForPersistence(Decoder& decoder)
+    {
+        std::array<uint8_t, Size> array;
+        if (!decoder.decodeFixedLengthData(array))
+            return std::nullopt;
+        return array;
+    }
+};
+
 #define DECLARE_CODER(class) \
 template<> struct Coder<class> { \
     WTF_EXPORT_PRIVATE static void encodeForPersistence(Encoder&, const class&); \
@@ -280,7 +334,6 @@ DECLARE_CODER(AtomString);
 DECLARE_CODER(CString);
 DECLARE_CODER(Seconds);
 DECLARE_CODER(String);
-DECLARE_CODER(SHA1::Digest);
 DECLARE_CODER(URL);
 DECLARE_CODER(WallTime);
 

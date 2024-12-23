@@ -28,6 +28,7 @@
  */
 
 #include "config.h"
+#include "ImageBuffer.h"
 #include "ImageBufferQtBackend.h"
 #include "StillImageQt.h"
 #include "NativeImageQt.h"

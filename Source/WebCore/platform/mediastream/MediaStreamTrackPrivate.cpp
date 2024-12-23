@@ -37,6 +37,7 @@
 #include "PlatformMediaSessionManager.h"
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/NativePromise.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/UUID.h>
 
 #if PLATFORM(COCOA)
@@ -78,7 +79,7 @@ Ref<MediaStreamTrackPrivate> MediaStreamTrackPrivate::create(Ref<const Logger>&&
 }
 
 class MediaStreamTrackPrivateSourceObserverSourceProxy final : public RealtimeMediaSourceObserver {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(MediaStreamTrackPrivateSourceObserverSourceProxy);
 public:
     MediaStreamTrackPrivateSourceObserverSourceProxy(WeakPtr<MediaStreamTrackPrivate>&& privateTrack, Ref<RealtimeMediaSource>&& source, std::function<void(Function<void()>&&)>&& postTask)
         : m_privateTrack(WTFMove(privateTrack))
@@ -346,6 +347,8 @@ MediaStreamTrackPrivate::MediaStreamTrackPrivate(Ref<const Logger>&& logger, Uni
     , m_type(dataHolder->type)
     , m_deviceType(dataHolder->deviceType)
     , m_isCaptureTrack(false)
+    , m_isEnabled(dataHolder->isEnabled)
+    , m_isEnded(dataHolder->isEnded)
     , m_captureDidFail(false)
     , m_contentHint(dataHolder->contentHint)
     , m_logger(WTFMove(logger))
@@ -419,6 +422,13 @@ void MediaStreamTrackPrivate::stopProducingData()
     m_sourceObserver->stop();
 }
 
+void MediaStreamTrackPrivate::dataFlowStarted()
+{
+    forEachObserver([this](auto& observer) {
+        observer.dataFlowStarted(*this);
+    });
+}
+
 void MediaStreamTrackPrivate::setIsInBackground(bool value)
 {
     ASSERT(isMainThread());
@@ -483,7 +493,7 @@ Ref<MediaStreamTrackPrivate> MediaStreamTrackPrivate::clone()
     clonedMediaStreamTrackPrivate->m_captureDidFail = this->m_captureDidFail;
     clonedMediaStreamTrackPrivate->updateReadyState();
 
-    if (m_isProducingData)
+    if (m_isProducingData && !m_isMuted && !m_isInterrupted)
         clonedMediaStreamTrackPrivate->startProducingData();
 
     return clonedMediaStreamTrackPrivate;

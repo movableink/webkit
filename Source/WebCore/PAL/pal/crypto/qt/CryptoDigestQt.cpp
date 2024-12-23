@@ -89,13 +89,4 @@ Vector<uint8_t> CryptoDigest::computeHash()
     return Vector<uint8_t>(std::span { reinterpret_cast<const uint8_t*>(digest.constData()), static_cast<size_t>(digest.size()) });
 }
 
-std::optional<Vector<uint8_t>> CryptoDigest::computeHash(Algorithm algorithm, const Vector<uint8_t>& input, UseCryptoKit)
-{
-    QCryptographicHash hash(toQtAlgorithm(algorithm));
-    hash.addData(QByteArray::fromRawData(reinterpret_cast<const char*>(input.span().data()), static_cast<qsizetype>(input.span().size())));
-    QByteArray digest = hash.result();
-
-    return Vector<uint8_t>(std::span { reinterpret_cast<const uint8_t*>(digest.constData()), static_cast<size_t>(digest.size()) });
-}
-
 } // namespace WebCore

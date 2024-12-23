@@ -26,7 +26,13 @@
 #include "config.h"
 #include "DecomposedGlyphs.h"
 
+#include <wtf/TZoneMallocInlines.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DecomposedGlyphs);
 
 Ref<DecomposedGlyphs> DecomposedGlyphs::create(const GlyphBufferGlyph* glyphs, const GlyphBufferAdvance* advances, unsigned count, const FloatPoint& localAnchor, FontSmoothingMode mode, RenderingResourceIdentifier renderingResourceIdentifier)
 {
@@ -46,3 +52,5 @@ DecomposedGlyphs::DecomposedGlyphs(PositionedGlyphs&& positionedGlyphs, Renderin
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

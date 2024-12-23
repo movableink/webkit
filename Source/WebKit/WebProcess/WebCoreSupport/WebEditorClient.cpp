@@ -33,7 +33,6 @@
 #include "SharedBufferReference.h"
 #include "UndoOrRedo.h"
 #include "WKBundlePageEditorClient.h"
-#include "WebCoreArgumentCoders.h"
 #include "WebFrame.h"
 #include "WebPage.h"
 #include "WebPageProxy.h"
@@ -62,11 +61,8 @@
 #include <WebCore/UserTypingGestureIndicator.h>
 #include <WebCore/VisibleUnits.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringView.h>
-
-#if PLATFORM(GTK)
-#include <WebCore/PlatformDisplay.h>
-#endif
 
 #if PLATFORM(QT)
 #include <QClipboard>
@@ -77,6 +73,8 @@
 namespace WebKit {
 using namespace WebCore;
 using namespace HTMLNames;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebEditorClient);
 
 bool WebEditorClient::shouldDeleteRange(const std::optional<SimpleRange>& range)
 {
@@ -95,7 +93,7 @@ bool WebEditorClient::isSelectTrailingWhitespaceEnabled() const
 
 bool WebEditorClient::isContinuousSpellCheckingEnabled()
 {
-    return WebProcess::singleton().textCheckerState().isContinuousSpellCheckingEnabled;
+    return WebProcess::singleton().textCheckerState().contains(TextCheckerState::ContinuousSpellCheckingEnabled);
 }
 
 void WebEditorClient::toggleContinuousSpellChecking()
@@ -105,7 +103,7 @@ void WebEditorClient::toggleContinuousSpellChecking()
 
 bool WebEditorClient::isGrammarCheckingEnabled()
 {
-    return WebProcess::singleton().textCheckerState().isGrammarCheckingEnabled;
+    return WebProcess::singleton().textCheckerState().contains(TextCheckerState::GrammarCheckingEnabled);
 }
 
 void WebEditorClient::toggleGrammarChecking()
@@ -625,15 +623,6 @@ void WebEditorClient::didChangeSelectionForAccessibility()
     m_page->didChangeSelectionForAccessibility();
 }
 
-void WebEditorClient::willSetInputMethodState()
-{
-#if PLATFORM(QT)
-    m_page->send(Messages::WebPageProxy::WillSetInputMethodState());
-#else
-    notImplemented();
-#endif
-}
-
 void WebEditorClient::setInputMethodState(Element* element)
 {
 #if PLATFORM(GTK) || PLATFORM(WPE)
@@ -645,20 +634,13 @@ void WebEditorClient::setInputMethodState(Element* element)
 
 bool WebEditorClient::supportsGlobalSelection()
 {
-#if PLATFORM(GTK) && PLATFORM(X11)
-    if (PlatformDisplay::sharedDisplay().type() == PlatformDisplay::Type::X11)
-        return true;
-#endif
-#if PLATFORM(GTK) && PLATFORM(WAYLAND)
-    if (PlatformDisplay::sharedDisplay().type() == PlatformDisplay::Type::Wayland)
-        return true;
-#endif
-    
-#if PLATFORM(QT) && !defined(QT_NO_CLIPBOARD)
+#if PLATFORM(GTK)
+    return true;
+#elif PLATFORM(QT) && !defined(QT_NO_CLIPBOARD)
     return qApp->clipboard()->supportsSelection();
-#endif
-    
+#else
     return false;
+#endif
 }
 
 } // namespace WebKit

@@ -30,7 +30,6 @@
 #import "Logging.h"
 #import "WebPreferencesDefaultValues.h"
 #import "XPCUtilities.h"
-#import <WebCore/RuntimeApplicationChecks.h>
 #import <crt_externs.h>
 #import <mach-o/dyld.h>
 #import <mach/mach_error.h>
@@ -45,6 +44,7 @@
 #import <wtf/FileSystem.h>
 #import <wtf/MachSendRight.h>
 #import <wtf/RunLoop.h>
+#import <wtf/RuntimeApplicationChecks.h>
 #import <wtf/SoftLinking.h>
 #import <wtf/Threading.h>
 #import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
@@ -126,24 +126,30 @@ static void launchWithExtensionKitFallback(ProcessLauncher& processLauncher, Pro
 }
 #endif // USE(LEGACY_EXTENSIONKIT_SPI)
 
-#if !USE(LEGACY_EXTENSIONKIT_SPI)
-static bool hasExtensionInAppBundle(NSString *name)
+bool ProcessLauncher::hasExtensionsInAppBundle()
 {
 #if PLATFORM(IOS_SIMULATOR)
-    NSString *path = [[NSBundle mainBundle] pathForResource:name ofType:@"appex" inDirectory:@"Extensions"];
-    return !!path;
+    static bool hasExtensions = false;
+    static dispatch_once_t flag;
+    dispatch_once(&flag, ^{
+        hasExtensions = [[NSBundle mainBundle] pathForResource:@"WebContentExtension" ofType:@"appex" inDirectory:@"Extensions"]
+            && [[NSBundle mainBundle] pathForResource:@"NetworkingExtension" ofType:@"appex" inDirectory:@"Extensions"]
+            && [[NSBundle mainBundle] pathForResource:@"GPUExtension" ofType:@"appex" inDirectory:@"Extensions"];
+    });
+    return hasExtensions;
 #else
-    UNUSED_PARAM(name);
     return false;
 #endif
 }
-#endif // !USE(LEGACY_EXTENSIONKIT_SPI)
 
 static void launchWithExtensionKit(ProcessLauncher& processLauncher, ProcessLauncher::ProcessType processType, ProcessLauncher::Client* client, WTF::Function<void(ThreadSafeWeakPtr<ProcessLauncher> weakProcessLauncher, ExtensionProcess&& process, ASCIILiteral name, NSError *error)>&& handler)
 {
 #if USE(LEGACY_EXTENSIONKIT_SPI)
-    launchWithExtensionKitFallback(processLauncher, processType, client, WTFMove(handler));
-#else
+    if (!ProcessLauncher::hasExtensionsInAppBundle()) {
+        launchWithExtensionKitFallback(processLauncher, processType, client, WTFMove(handler));
+        return;
+    }
+#endif
     auto [name, identifier] = serviceNameAndIdentifier(processType, client, processLauncher.isRetryingLaunch());
 
     switch (processType) {
@@ -151,7 +157,7 @@ static void launchWithExtensionKit(ProcessLauncher& processLauncher, ProcessLaun
         auto block = makeBlockPtr([handler = WTFMove(handler), weakProcessLauncher = ThreadSafeWeakPtr { processLauncher }, name = name](BEWebContentProcess *_Nullable process, NSError *_Nullable error) {
             handler(WTFMove(weakProcessLauncher), process, name, error);
         });
-        if (hasExtensionInAppBundle(@"WebContentExtension"))
+        if (ProcessLauncher::hasExtensionsInAppBundle())
             [BEWebContentProcess webContentProcessWithInterruptionHandler:^{ } completion:block.get()];
         else
             [BEWebContentProcess webContentProcessWithBundleID:identifier.get() interruptionHandler:^{ } completion:block.get()];
@@ -161,7 +167,7 @@ static void launchWithExtensionKit(ProcessLauncher& processLauncher, ProcessLaun
         auto block = makeBlockPtr([handler = WTFMove(handler), weakProcessLauncher = ThreadSafeWeakPtr { processLauncher }, name = name](BENetworkingProcess *_Nullable process, NSError *_Nullable error) {
             handler(WTFMove(weakProcessLauncher), process, name, error);
         });
-        if (hasExtensionInAppBundle(@"NetworkingExtension"))
+        if (ProcessLauncher::hasExtensionsInAppBundle())
             [BENetworkingProcess networkProcessWithInterruptionHandler:^{ } completion:block.get()];
         else
             [BENetworkingProcess networkProcessWithBundleID:identifier.get() interruptionHandler:^{ } completion:block.get()];
@@ -171,14 +177,13 @@ static void launchWithExtensionKit(ProcessLauncher& processLauncher, ProcessLaun
         auto block = makeBlockPtr([handler = WTFMove(handler), weakProcessLauncher = ThreadSafeWeakPtr { processLauncher }, name = name](BERenderingProcess *_Nullable process, NSError *_Nullable error) {
             handler(WTFMove(weakProcessLauncher), process, name, error);
         });
-        if (hasExtensionInAppBundle(@"GPUExtension"))
+        if (ProcessLauncher::hasExtensionsInAppBundle())
             [BERenderingProcess renderingProcessWithInterruptionHandler:^{ } completion:block.get()];
         else
             [BERenderingProcess renderingProcessWithBundleID:identifier.get() interruptionHandler:^{ } completion:block.get()];
         break;
     }
     }
-#endif
 }
 #endif // USE(EXTENSIONKIT)
 
@@ -218,7 +223,7 @@ Ref<LaunchGrant> LaunchGrant::create(ExtensionProcess& process)
 
 LaunchGrant::LaunchGrant(ExtensionProcess& process)
 {
-    AssertionCapability capability(emptyString(), emptyString(), "Foreground"_s);
+    AssertionCapability capability(emptyString(), "com.apple.webkit"_s, "Foreground"_s);
     auto grant = process.grantCapability(capability.platformCapability());
     m_grant.setPlatformGrant(WTFMove(grant));
 }
@@ -297,9 +302,9 @@ void ProcessLauncher::launchProcess()
         });
     };
 
-    launchWithExtensionKit(*this, m_launchOptions.processType, m_client, WTFMove(handler));
+    launchWithExtensionKit(*this, m_launchOptions.processType, m_client.get(), WTFMove(handler));
 #else
-    auto name = serviceName(m_launchOptions, m_client);
+    auto name = serviceName(m_launchOptions, m_client.get());
     m_xpcConnection = adoptOSObject(xpc_connection_create(name, nullptr));
     finishLaunchingProcess(name);
 #endif
@@ -316,8 +321,11 @@ void ProcessLauncher::finishLaunchingProcess(ASCIILiteral name)
     // 1. When the application and system frameworks simply have different localized resources available, we should match the application.
     // 1.1. An important case is WebKitTestRunner, where we should use English localizations for all system frameworks.
     // 2. When AppleLanguages is passed as command line argument for UI process, or set in its preferences, we should respect it in child processes.
+#if !USE(EXTENSIONKIT)
     auto initializationMessage = adoptOSObject(xpc_dictionary_create(nullptr, nullptr, 0));
     _CFBundleSetupXPCBootstrap(initializationMessage.get());
+    xpc_connection_set_bootstrap(m_xpcConnection.get(), initializationMessage.get());
+#endif
 
     // Create the listening port.
     mach_port_t listeningPort = MACH_PORT_NULL;
@@ -381,8 +389,6 @@ void ProcessLauncher::finishLaunchingProcess(ASCIILiteral name)
             xpc_dictionary_set_bool(bootstrapMessage.get(), "disable-jit", true);
         if (m_client->shouldEnableSharedArrayBuffer())
             xpc_dictionary_set_bool(bootstrapMessage.get(), "enable-shared-array-buffer", true);
-        if (m_client->shouldEnableLockdownMode())
-            xpc_dictionary_set_bool(bootstrapMessage.get(), "enable-captive-portal-mode", true);
         if (m_client->shouldDisableJITCage())
             xpc_dictionary_set_bool(bootstrapMessage.get(), "disable-jit-cage", true);
     }
@@ -392,7 +398,7 @@ void ProcessLauncher::finishLaunchingProcess(ASCIILiteral name)
     xpc_dictionary_set_mach_send(bootstrapMessage.get(), "server-port", listeningPort);
 
     xpc_dictionary_set_string(bootstrapMessage.get(), "client-identifier", !clientIdentifier.isEmpty() ? clientIdentifier.utf8().data() : *_NSGetProgname());
-    xpc_dictionary_set_string(bootstrapMessage.get(), "client-bundle-identifier", WebCore::applicationBundleIdentifier().utf8().data());
+    xpc_dictionary_set_string(bootstrapMessage.get(), "client-bundle-identifier", applicationBundleIdentifier().utf8().data());
     xpc_dictionary_set_string(bootstrapMessage.get(), "process-identifier", String::number(m_launchOptions.processIdentifier.toUInt64()).utf8().data());
     RetainPtr processName = [&] {
 #if PLATFORM(MAC)
@@ -405,7 +411,7 @@ void ProcessLauncher::finishLaunchingProcess(ASCIILiteral name)
     xpc_dictionary_set_string(bootstrapMessage.get(), "service-name", name);
 
     if (m_launchOptions.processType == ProcessLauncher::ProcessType::Web) {
-        bool disableLogging = true;
+        bool disableLogging = m_client->shouldEnableLockdownMode();
         xpc_dictionary_set_bool(bootstrapMessage.get(), "disable-logging", disableLogging);
     }
 

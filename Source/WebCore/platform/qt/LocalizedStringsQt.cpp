@@ -109,9 +109,9 @@ String contextMenuItemTagCopyLinkToClipboard()
     return QCoreApplication::translate("QWebPage", "Copy Link", "Copy Link context menu item");
 }
 
-String contextMenuItemTagCopyLinkToHighlight()
+String contextMenuItemTagCopyLinkWithHighlight()
 {
-    return QCoreApplication::translate("QWebPage", "Copy Link to Highlight", "Copy Link to Highlight context menu item");
+    return QCoreApplication::translate("QWebPage", "Copy Link with Highlight", "Copy Link with highlight context menu item");
 }
 
 String contextMenuItemTagOpenImageInNewWindow()

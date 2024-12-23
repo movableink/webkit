@@ -33,6 +33,8 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(BuiltinExecutables);
@@ -208,7 +210,7 @@ UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const S
 
     FunctionMetadataNode metadata(
         start, end, startColumn, endColumn, source.startOffset() + functionKeywordStart, source.startOffset() + functionNameStart, source.startOffset() + parametersStart, implementationVisibility,
-        isInStrictContext ? StrictModeLexicalFeature : NoLexicalFeatures, constructorKind, constructorKind == ConstructorKind::Extends ? SuperBinding::Needed : SuperBinding::NotNeeded,
+        isInStrictContext ? StrictModeLexicallyScopedFeature : NoLexicallyScopedFeatures, constructorKind, constructorKind == ConstructorKind::Extends ? SuperBinding::Needed : SuperBinding::NotNeeded,
         parameterCount, parseMode, isArrowFunctionBodyExpression);
 
     metadata.finishParsing(newSource, Identifier(), FunctionMode::FunctionExpression);
@@ -221,7 +223,7 @@ UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const S
         JSParserBuiltinMode builtinMode = isBuiltinDefaultClassConstructor ? JSParserBuiltinMode::NotBuiltin : JSParserBuiltinMode::Builtin;
         std::unique_ptr<ProgramNode> program = parseRootNode<ProgramNode>(
             vm, source, implementationVisibility, builtinMode,
-            JSParserStrictMode::NotStrict, JSParserScriptMode::Classic, SourceParseMode::ProgramMode, error,
+            NoLexicallyScopedFeatures, JSParserScriptMode::Classic, SourceParseMode::ProgramMode, error,
             constructorKind, &positionBeforeLastNewlineFromParser);
 
         if (program) {
@@ -302,3 +304,5 @@ JSC_FOREACH_BUILTIN_CODE(DEFINE_BUILTIN_EXECUTABLES)
 #undef DEFINE_BUILTIN_EXECUTABLES
 
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

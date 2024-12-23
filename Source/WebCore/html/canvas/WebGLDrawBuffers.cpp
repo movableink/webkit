@@ -28,11 +28,13 @@
 #if ENABLE(WEBGL)
 #include "WebGLDrawBuffers.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(WebGLDrawBuffers);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebGLDrawBuffers);
 
 WebGLDrawBuffers::WebGLDrawBuffers(WebGLRenderingContextBase& context)
     : WebGLExtension(context, WebGLExtensionName::WebGLDrawBuffers)
@@ -83,5 +85,7 @@ void WebGLDrawBuffers::drawBuffersWEBGL(const Vector<GCGLenum>& buffers)
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEBGL)

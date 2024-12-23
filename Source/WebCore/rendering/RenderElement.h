@@ -47,7 +47,7 @@ class ElementBox;
 }
 
 class RenderElement : public RenderObject {
-    WTF_MAKE_ISO_ALLOCATED(RenderElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderElement);
 public:
     virtual ~RenderElement();
@@ -108,7 +108,6 @@ public:
     inline bool shouldApplySizeOrInlineSizeContainment() const;
     inline bool shouldApplyStyleContainment() const;
     inline bool shouldApplyPaintContainment() const;
-    inline bool shouldApplyLayoutOrPaintContainment() const;
     inline bool shouldApplyAnyContainment() const;
 
     bool hasEligibleContainmentForSizeQuery() const;
@@ -123,6 +122,7 @@ public:
 
     const RenderStyle* spellingErrorPseudoStyle() const;
     const RenderStyle* grammarErrorPseudoStyle() const;
+    const RenderStyle* targetTextPseudoStyle() const;
 
     virtual bool isChildAllowed(const RenderObject&, const RenderStyle&) const { return true; }
     void didAttachChild(RenderObject& child, RenderObject* beforeChild);
@@ -135,10 +135,7 @@ public:
     void removeLayers();
     void moveLayers(RenderLayer& newParent);
 
-    virtual void dirtyLinesFromChangedChild(RenderObject&) { }
-
-    bool ancestorLineBoxDirty() const { return m_ancestorLineBoxDirty; }
-    void setAncestorLineBoxDirty(bool f = true);
+    virtual void dirtyLineFromChangedChild() { }
 
     void setChildNeedsLayout(MarkingBehavior = MarkContainingBlockChain);
     void setOutOfFlowChildNeedsStaticPositionLayout();
@@ -281,7 +278,7 @@ public:
     inline Overflow effectiveOverflowInlineDirection() const;
     inline Overflow effectiveOverflowBlockDirection() const;
 
-    bool isWritingModeRoot() const { return !parent() || parent()->style().writingMode() != style().writingMode(); }
+    bool isWritingModeRoot() const { return !parent() || parent()->style().writingMode().computedWritingMode() != style().writingMode().computedWritingMode(); }
 
     bool isDeprecatedFlexItem() const { return !isInline() && !isFloatingOrOutOfFlowPositioned() && parent() && parent()->isRenderDeprecatedFlexibleBox(); }
     bool isFlexItemIncludingDeprecated() const { return !isInline() && !isFloatingOrOutOfFlowPositioned() && parent() && parent()->isFlexibleBoxIncludingDeprecated(); }
@@ -294,8 +291,6 @@ public:
 
     static void markRendererDirtyAfterTopLayerChange(RenderElement* renderer, RenderBlock* containingBlockBeforeStyleResolution);
 
-    bool isSkippedContentRoot() const;
-
     void clearNeedsLayoutForSkippedContent();
 
     void setRenderBoxHasShapeOutsideInfo(bool b) { m_renderBoxHasShapeOutsideInfo = b; }
@@ -306,7 +301,7 @@ public:
     using LayoutIdentifier = unsigned;
     void setLayoutIdentifier(LayoutIdentifier layoutIdentifier) { m_layoutIdentifier = layoutIdentifier; }
     LayoutIdentifier layoutIdentifier() const { return m_layoutIdentifier; }
-    bool didVisitDuringLastLayout() const;
+    bool didVisitSinceLayout(LayoutIdentifier) const;
 
 protected:
     RenderElement(Type, Element&, RenderStyle&&, OptionSet<TypeFlag>, TypeSpecificFlags);
@@ -316,7 +311,7 @@ protected:
 
     enum class StylePropagationType {
         AllChildren,
-        BlockChildrenOnly
+        BlockAndRubyChildren
     };
     void propagateStyleToAnonymousChildren(StylePropagationType);
 
@@ -354,6 +349,9 @@ protected:
 
     bool shouldApplyLayoutOrPaintContainment(bool) const;
     inline bool shouldApplySizeOrStyleContainment(bool) const;
+
+    const Element* defaultAnchor() const;
+    const RenderElement* defaultAnchorRenderer() const;
 
 private:
     RenderElement(Type, ContainerNode&, RenderStyle&&, OptionSet<TypeFlag>, TypeSpecificFlags);
@@ -401,7 +399,6 @@ private:
     const RenderStyle* textSegmentPseudoStyle(PseudoId) const;
 
     SingleThreadPackedWeakPtr<RenderObject> m_firstChild;
-    unsigned m_ancestorLineBoxDirty : 1;
     unsigned m_hasInitializedStyle : 1;
 
     unsigned m_hasPausedImageAnimations : 1;
@@ -431,13 +428,7 @@ private:
 inline int adjustForAbsoluteZoom(int, const RenderElement&);
 inline LayoutUnit adjustLayoutUnitForAbsoluteZoom(LayoutUnit, const RenderElement&);
 inline LayoutSize adjustLayoutSizeForAbsoluteZoom(LayoutSize, const RenderElement&);
-
-inline void RenderElement::setAncestorLineBoxDirty(bool f)
-{
-    m_ancestorLineBoxDirty = f;
-    if (m_ancestorLineBoxDirty)
-        setNeedsLayout();
-}
+inline bool isSkippedContentRoot(const RenderElement&);
 
 inline void RenderElement::setChildNeedsLayout(MarkingBehavior markParents)
 {
@@ -501,13 +492,6 @@ inline RenderObject* RenderElement::lastInFlowChild() const
         return lastChild->previousInFlowSibling();
     }
     return nullptr;
-}
-
-inline bool RenderObject::isSkippedContentRoot() const
-{
-    if (isRenderText())
-        return false;
-    return downcast<RenderElement>(*this).isSkippedContentRoot();
 }
 
 inline RenderElement* RenderObject::parent() const

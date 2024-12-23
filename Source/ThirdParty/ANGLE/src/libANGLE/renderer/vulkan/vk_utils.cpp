@@ -616,17 +616,22 @@ VkResult AllocateBufferMemoryWithRequirements(Context *context,
 }
 
 angle::Result InitShaderModule(Context *context,
-                               ShaderModule *shaderModule,
+                               ShaderModulePtr *shaderModulePtr,
                                const uint32_t *shaderCode,
                                size_t shaderCodeSize)
 {
+    ASSERT(!(*shaderModulePtr));
     VkShaderModuleCreateInfo createInfo = {};
     createInfo.sType                    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     createInfo.flags                    = 0;
     createInfo.codeSize                 = shaderCodeSize;
     createInfo.pCode                    = shaderCode;
 
-    ANGLE_VK_TRY(context, shaderModule->init(context->getDevice(), createInfo));
+    ShaderModulePtr newShaderModule = ShaderModulePtr::MakeShared();
+    ANGLE_VK_TRY(context, newShaderModule->init(context->getDevice(), createInfo));
+
+    *shaderModulePtr = std::move(newShaderModule);
+
     return angle::Result::Continue;
 }
 
@@ -1028,6 +1033,10 @@ PFN_vkCopyMemoryToImageEXT vkCopyMemoryToImageEXT                   = nullptr;
 PFN_vkGetImageSubresourceLayout2EXT vkGetImageSubresourceLayout2EXT = nullptr;
 PFN_vkTransitionImageLayoutEXT vkTransitionImageLayoutEXT           = nullptr;
 
+// VK_KHR_Synchronization2
+PFN_vkCmdPipelineBarrier2KHR vkCmdPipelineBarrier2KHR = nullptr;
+PFN_vkCmdWriteTimestamp2KHR vkCmdWriteTimestamp2KHR   = nullptr;
+
 void InitDebugUtilsEXTFunctions(VkInstance instance)
 {
     GET_INSTANCE_FUNC(vkCreateDebugUtilsMessengerEXT);
@@ -1062,10 +1071,10 @@ void InitImagePipeSurfaceFUCHSIAFunctions(VkInstance instance)
 #    endif
 
 #    if defined(ANGLE_PLATFORM_ANDROID)
-void InitExternalMemoryHardwareBufferANDROIDFunctions(VkInstance instance)
+void InitExternalMemoryHardwareBufferANDROIDFunctions(VkDevice device)
 {
-    GET_INSTANCE_FUNC(vkGetAndroidHardwareBufferPropertiesANDROID);
-    GET_INSTANCE_FUNC(vkGetMemoryAndroidHardwareBufferANDROID);
+    GET_DEVICE_FUNC(vkGetAndroidHardwareBufferPropertiesANDROID);
+    GET_DEVICE_FUNC(vkGetMemoryAndroidHardwareBufferANDROID);
 }
 #    endif
 
@@ -1076,9 +1085,9 @@ void InitGGPStreamDescriptorSurfaceFunctions(VkInstance instance)
 }
 #    endif  // defined(ANGLE_PLATFORM_GGP)
 
-void InitExternalSemaphoreFdFunctions(VkInstance instance)
+void InitExternalSemaphoreFdFunctions(VkDevice device)
 {
-    GET_INSTANCE_FUNC(vkImportSemaphoreFdKHR);
+    GET_DEVICE_FUNC(vkImportSemaphoreFdKHR);
 }
 
 void InitHostQueryResetFunctions(VkDevice device)
@@ -1087,10 +1096,10 @@ void InitHostQueryResetFunctions(VkDevice device)
 }
 
 // VK_KHR_external_fence_fd
-void InitExternalFenceFdFunctions(VkInstance instance)
+void InitExternalFenceFdFunctions(VkDevice device)
 {
-    GET_INSTANCE_FUNC(vkGetFenceFdKHR);
-    GET_INSTANCE_FUNC(vkImportFenceFdKHR);
+    GET_DEVICE_FUNC(vkGetFenceFdKHR);
+    GET_DEVICE_FUNC(vkImportFenceFdKHR);
 }
 
 // VK_KHR_shared_presentable_image
@@ -1173,6 +1182,12 @@ void InitHostImageCopyFunctions(VkDevice device)
     GET_DEVICE_FUNC(vkTransitionImageLayoutEXT);
 }
 
+void InitSynchronization2Functions(VkDevice device)
+{
+    GET_DEVICE_FUNC(vkCmdPipelineBarrier2KHR);
+    GET_DEVICE_FUNC(vkCmdWriteTimestamp2KHR);
+}
+
 #    undef GET_INSTANCE_FUNC
 #    undef GET_DEVICE_FUNC
 
@@ -1230,21 +1245,6 @@ GLenum CalculateGenerateMipmapFilter(ContextVk *contextVk, angle::FormatID forma
     const bool hintFastest = contextVk->getState().getGenerateMipmapHint() == GL_FASTEST;
 
     return formatSupportsLinearFiltering && !hintFastest ? GL_LINEAR : GL_NEAREST;
-}
-
-// Return the log of samples.  Assumes |sampleCount| is a power of 2.  The result can be used to
-// index an array based on sample count.  See for example TextureVk::PerSampleCountArray.
-size_t PackSampleCount(GLint sampleCount)
-{
-    if (sampleCount == 0)
-    {
-        sampleCount = 1;
-    }
-
-    // We currently only support up to 16xMSAA.
-    ASSERT(sampleCount <= VK_SAMPLE_COUNT_16_BIT);
-    ASSERT(gl::isPow2(sampleCount));
-    return gl::ScanForward(static_cast<uint32_t>(sampleCount));
 }
 
 namespace gl_vk
@@ -1750,6 +1750,78 @@ GLuint GetSampleCount(VkSampleCountFlags supportedCounts, GLuint requestedCount)
 gl::LevelIndex GetLevelIndex(vk::LevelIndex levelVk, gl::LevelIndex baseLevel)
 {
     return gl::LevelIndex(levelVk.get() + baseLevel.get());
+}
+
+GLenum ConvertVkFixedRateToGLFixedRate(const VkImageCompressionFixedRateFlagsEXT vkCompressionRate)
+{
+    switch (vkCompressionRate)
+    {
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_NONE_EXT:
+            return GL_SURFACE_COMPRESSION_FIXED_RATE_NONE_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_1BPC_BIT_EXT:
+            return GL_SURFACE_COMPRESSION_FIXED_RATE_1BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_2BPC_BIT_EXT:
+            return GL_SURFACE_COMPRESSION_FIXED_RATE_2BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_3BPC_BIT_EXT:
+            return GL_SURFACE_COMPRESSION_FIXED_RATE_3BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_4BPC_BIT_EXT:
+            return GL_SURFACE_COMPRESSION_FIXED_RATE_4BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_5BPC_BIT_EXT:
+            return GL_SURFACE_COMPRESSION_FIXED_RATE_5BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_6BPC_BIT_EXT:
+            return GL_SURFACE_COMPRESSION_FIXED_RATE_6BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_7BPC_BIT_EXT:
+            return GL_SURFACE_COMPRESSION_FIXED_RATE_7BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_8BPC_BIT_EXT:
+            return GL_SURFACE_COMPRESSION_FIXED_RATE_8BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_9BPC_BIT_EXT:
+            return GL_SURFACE_COMPRESSION_FIXED_RATE_9BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_10BPC_BIT_EXT:
+            return GL_SURFACE_COMPRESSION_FIXED_RATE_10BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_11BPC_BIT_EXT:
+            return GL_SURFACE_COMPRESSION_FIXED_RATE_11BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_12BPC_BIT_EXT:
+            return GL_SURFACE_COMPRESSION_FIXED_RATE_12BPC_EXT;
+        default:
+            UNREACHABLE();
+            return GL_SURFACE_COMPRESSION_FIXED_RATE_NONE_EXT;
+    }
+}
+
+GLint convertCompressionFlagsToGLFixedRates(
+    VkImageCompressionFixedRateFlagsEXT imageCompressionFixedRateFlags,
+    GLint bufSize,
+    GLint *rates)
+{
+    if (imageCompressionFixedRateFlags == VK_IMAGE_COMPRESSION_FIXED_RATE_NONE_EXT)
+    {
+        if (nullptr != rates)
+        {
+            rates[0] = GL_SURFACE_COMPRESSION_FIXED_RATE_NONE_EXT;
+        }
+        return 0;
+    }
+    VkImageCompressionFixedRateFlagsEXT tmpFlags = imageCompressionFixedRateFlags;
+    uint8_t bitCount                             = 0;
+    std::vector<GLint> GLRates;
+
+    while (tmpFlags > 0)
+    {
+        if ((tmpFlags & 1) == true)
+        {
+            GLRates.push_back(ConvertVkFixedRateToGLFixedRate(1 << bitCount));
+        }
+        bitCount += 1;
+        tmpFlags >>= 1;
+    }
+
+    GLint size = static_cast<GLint>(GLRates.size());
+    // rates could be nullprt, as user only want get the size(count) of rates
+    if (nullptr != rates && size <= bufSize)
+    {
+        std::copy(GLRates.begin(), GLRates.end(), rates);
+    }
+    return size;
 }
 }  // namespace vk_gl
 }  // namespace rx

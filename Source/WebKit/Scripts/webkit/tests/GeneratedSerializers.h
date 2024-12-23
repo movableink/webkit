@@ -91,6 +91,7 @@ class ScrollingStateFrameHostingNodeWithStuffAfterTuple;
 #if USE(APPKIT)
 class AppKitControlSystemImage;
 #endif
+template<typename> class RectEdges;
 struct Amazing;
 }
 
@@ -102,6 +103,7 @@ class LayerProperties;
 class CoreIPCAVOutputContext;
 #endif
 class CoreIPCNSSomeFoundationType;
+class CoreIPCclass NSSomeOtherFoundationType;
 #if ENABLE(DATA_DETECTION)
 class CoreIPCDDScannerResult;
 #endif
@@ -118,6 +120,9 @@ class WithoutNamespaceWithAttributes;
 struct SoftLinkedMember;
 struct RequestEncodedWithBody;
 struct RequestEncodedWithBodyRValue;
+#if USE(SKIA)
+class SkFooBar;
+#endif
 
 #if USE(CFBAR)
 typedef struct __CFBar * CFBarRef;
@@ -305,6 +310,11 @@ template<> struct ArgumentCoder<WebKit::CoreIPCNSSomeFoundationType> {
     static std::optional<WebKit::CoreIPCNSSomeFoundationType> decode(Decoder&);
 };
 
+template<> struct ArgumentCoder<WebKit::CoreIPCclass NSSomeOtherFoundationType> {
+    static void encode(Encoder&, const WebKit::CoreIPCclass NSSomeOtherFoundationType&);
+    static std::optional<WebKit::CoreIPCclass NSSomeOtherFoundationType> decode(Decoder&);
+};
+
 #if ENABLE(DATA_DETECTION)
 template<> struct ArgumentCoder<WebKit::CoreIPCDDScannerResult> {
     static void encode(Encoder&, const WebKit::CoreIPCDDScannerResult&);
@@ -359,6 +369,14 @@ template<> struct ArgumentCoder<RetainPtr<CFStringRef>> {
 };
 #endif
 
+#if USE(SKIA)
+template<> struct ArgumentCoder<SkFooBar> {
+    static void encode(Encoder&, const SkFooBar&);
+    static void encode(OtherEncoder&, const SkFooBar&);
+    static std::optional<SkFooBar> decode(Decoder&);
+};
+#endif
+
 template<> struct ArgumentCoder<WebKit::RValueWithFunctionCalls> {
     static void encode(Encoder&, WebKit::RValueWithFunctionCalls&&);
     static std::optional<WebKit::RValueWithFunctionCalls> decode(Decoder&);
@@ -397,6 +415,11 @@ template<> struct ArgumentCoder<WebCore::AppKitControlSystemImage> {
     static std::optional<Ref<WebCore::AppKitControlSystemImage>> decode(Decoder&);
 };
 #endif
+
+template<> struct ArgumentCoder<WebCore::RectEdges<bool>> {
+    static void encode(Encoder&, const WebCore::RectEdges<bool>&);
+    static std::optional<WebCore::RectEdges<bool>> decode(Decoder&);
+};
 
 } // namespace IPC
 

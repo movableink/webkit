@@ -33,8 +33,10 @@
 #include "SharedBuffer.h"
 #include <wtf/Lock.h>
 #include <wtf/ObjectIdentifier.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 ALLOW_UNUSED_PARAMETERS_BEGIN
 ALLOW_COMMA_BEGIN
 
@@ -42,6 +44,7 @@ ALLOW_COMMA_BEGIN
 
 ALLOW_UNUSED_PARAMETERS_END
 ALLOW_COMMA_END
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 namespace webrtc {
 struct DataChannelInit;
@@ -56,7 +59,7 @@ struct RTCDataChannelInit;
 class ScriptExecutionContext;
 
 class LibWebRTCDataChannelHandler final : public RTCDataChannelHandler, private webrtc::DataChannelObserver {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(LibWebRTCDataChannelHandler);
 public:
     explicit LibWebRTCDataChannelHandler(rtc::scoped_refptr<webrtc::DataChannelInterface>&&);
     ~LibWebRTCDataChannelHandler();
@@ -68,7 +71,7 @@ public:
 
 private:
     // RTCDataChannelHandler API
-    void setClient(RTCDataChannelHandlerClient&, ScriptExecutionContextIdentifier) final;
+    void setClient(RTCDataChannelHandlerClient&, std::optional<ScriptExecutionContextIdentifier>) final;
     bool sendStringData(const CString&) final;
     bool sendRawData(std::span<const uint8_t>) final;
     void close() final;
@@ -97,7 +100,7 @@ private:
     Lock m_clientLock;
     bool m_hasClient WTF_GUARDED_BY_LOCK(m_clientLock)  { false };
     WeakPtr<RTCDataChannelHandlerClient> m_client WTF_GUARDED_BY_LOCK(m_clientLock) { nullptr };
-    ScriptExecutionContextIdentifier m_contextIdentifier;
+    Markable<ScriptExecutionContextIdentifier> m_contextIdentifier;
     PendingMessages m_bufferedMessages WTF_GUARDED_BY_LOCK(m_clientLock);
 };
 

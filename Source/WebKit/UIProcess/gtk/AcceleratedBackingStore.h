@@ -26,7 +26,10 @@
 #pragma once
 
 #include "RendererBufferFormat.h"
+#include <wtf/AbstractRefCounted.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/WeakPtr.h>
 
 typedef struct _cairo cairo_t;
 
@@ -44,11 +47,12 @@ namespace WebKit {
 class LayerTreeContext;
 class WebPageProxy;
 
-class AcceleratedBackingStore {
-    WTF_MAKE_NONCOPYABLE(AcceleratedBackingStore); WTF_MAKE_FAST_ALLOCATED;
+class AcceleratedBackingStore : public AbstractRefCounted {
+    WTF_MAKE_TZONE_ALLOCATED(AcceleratedBackingStore);
+    WTF_MAKE_NONCOPYABLE(AcceleratedBackingStore);
 public:
     static bool checkRequirements();
-    static std::unique_ptr<AcceleratedBackingStore> create(WebPageProxy&);
+    static RefPtr<AcceleratedBackingStore> create(WebPageProxy&);
     virtual ~AcceleratedBackingStore() = default;
 
     virtual void update(const LayerTreeContext&) { }
@@ -63,9 +67,9 @@ public:
     virtual RendererBufferFormat bufferFormat() const { return { }; }
 
 protected:
-    AcceleratedBackingStore(WebPageProxy&);
+    explicit AcceleratedBackingStore(WebPageProxy&);
 
-    WebPageProxy& m_webPage;
+    WeakPtr<WebPageProxy> m_webPage;
 };
 
 } // namespace WebKit

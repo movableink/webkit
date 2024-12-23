@@ -302,9 +302,13 @@ WEBKIT_OPTION_DEFINE(ENABLE_PRINT_SUPPORT "Enable support for printing web pages
 WEBKIT_OPTION_DEFINE(ENABLE_QT_GESTURE_EVENTS "Enable support for gesture events (required for mouse in WK2)" PUBLIC OFF) # QTFIXME
 WEBKIT_OPTION_DEFINE(ENABLE_QT_WEBCHANNEL "Enable support for Qt WebChannel" PUBLIC OFF) # QTFIXME
 WEBKIT_OPTION_DEFINE(ENABLE_X11_TARGET "Whether to enable support for the X11 windowing target." PUBLIC OFF) # QTFIXME #${ENABLE_X11_TARGET_DEFAULT})
+WEBKIT_OPTION_DEFINE(USE_SYSPROF_CAPTURE "Whether to use libsysprof-capture for tracing." PRIVATE OFF)
+WEBKIT_OPTION_DEFINE(USE_SYSTEM_SYSPROF_CAPTURE "Whether to use a system-provided libsysprof-capture" PUBLIC OFF)
+WEBKIT_OPTION_DEPEND(USE_SYSTEM_SYSPROF_CAPTURE USE_SYSPROF_CAPTURE)
+WEBKIT_OPTION_DEFINE(ENABLE_JSC_RESTRICTED_OPTIONS_BY_DEFAULT "Whether to enable dangerous development options in JSC by default." PRIVATE OFF)
 
 option(GENERATE_DOCUMENTATION "Generate HTML and QCH documentation" OFF)
-cmake_dependent_option(ENABLE_TEST_SUPPORT "Build tools for running layout tests and related library code" ON
+cmake_dependent_option(ENABLE_TEST_SUPPORT "Build tools for running layout tests and related library code" OFF
                                            "DEVELOPER_MODE" OFF)
 option(USE_STATIC_RUNTIME "Use static runtime (MSVC only)" OFF)
 option(ENABLE_PCH "Use pre-compiled headers (MSVC only)" ON)
@@ -469,7 +473,7 @@ endif ()
 
 find_package(LibXml2 2.8.0 REQUIRED)
 if (ENABLE_XSLT)
-    find_package(LibXslt 1.1.7 REQUIRED)
+    find_package(LibXslt 1.1.13 REQUIRED)
 endif ()
 
 if (UNIX AND NOT APPLE AND CMAKE_OBJCOPY AND NOT SKIP_DWZ)

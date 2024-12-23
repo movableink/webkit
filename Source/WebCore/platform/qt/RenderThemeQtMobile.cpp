@@ -866,7 +866,7 @@ bool RenderThemeQtMobile::paintProgressBar(const RenderObject& o, const PaintInf
         return true;
 
     auto& renderProgress = downcast<RenderProgress>(o);
-    const bool isRTL = (renderProgress.style().direction() == TextDirection::RTL);
+    const bool isRTL = renderProgress.writingMode().isBidiRTL();
 
     if (renderProgress.isDeterminate())
         p.drawProgress(r, renderProgress.position(), !isRTL);

@@ -31,7 +31,6 @@
 #include "InitWebCoreQt.h"
 #include "InspectorClientQt.h"
 #include "InspectorServerQt.h"
-#include <WebCore/MediaRecorderProvider.h>
 #include "NotificationPresenterClientQt.h"
 #include "PluginInfoProviderQt.h"
 #include "ProgressTrackerClientQt.h"
@@ -98,11 +97,14 @@
 #include <WebCore/PageIdentifier.h>
 #include <WebCore/PlatformKeyboardEvent.h>
 #include <WebCore/PlatformMouseEvent.h>
+#include <WebCore/PlatformWheelEvent.h>
+#include <WebCore/ProcessSyncClient.h>
 #include <WebCore/ProgressTracker.h>
 #include <WebCore/QWebPageClient.h>
 #include <WebCore/RemoteFrameClient.h>
 #include <WebCore/RenderTextControl.h>
 #include <WebCore/ScrollbarTheme.h>
+#include <WebCore/ScrollingCoordinatorTypes.h>
 #include <WebCore/Settings.h>
 #include <WebCore/TextIterator.h>
 #include <WebCore/UserAgentQt.h>
@@ -224,7 +226,7 @@ static void openNewWindow(const QUrl& url, LocalFrame& frame)
         WindowFeatures features;
         NavigationAction action;
         FrameLoadRequest request = frameLoadRequest(url, frame);
-        if (auto newPage = oldPage->chrome().createWindow(frame, features, action)) {
+        if (auto newPage = oldPage->chrome().createWindow(frame, { }, features, action)) {
             WebCore::LocalFrame* newFrame = dynamicDowncast<WebCore::LocalFrame>(newPage->mainFrame());
             newFrame->loader().loadFrameRequest(WTFMove(request), /*event*/ nullptr, /*FormState*/ nullptr);
             newPage->chrome().show();
@@ -291,13 +293,15 @@ void QWebPageAdapter::initializeWebCorePage()
         BackForwardList::create(*this),
         CookieJar::create(storageProvider.copyRef()),
         makeUniqueRef<ProgressTrackerClientQt>(this),
-        CompletionHandler<UniqueRef<WebCore::LocalFrameLoaderClient>(WebCore::LocalFrame&)> { [] (auto&) {
-            return makeUniqueRef<FrameLoaderClientQt>();
-        } },
+        WebCore::PageConfiguration::LocalMainFrameCreationParameters {
+          CompletionHandler<UniqueRef<WebCore::LocalFrameLoaderClient>(WebCore::LocalFrame&, WebCore::FrameLoader&)> { [] (auto&, auto& frameLoader) {
+              return makeUniqueRefWithoutRefCountedCheck<FrameLoaderClientQt>(frameLoader);
+          } },
+          WebCore::SandboxFlags { } // Set by updateSandboxFlags after instantiation.
+        },
         WebCore::FrameIdentifier::generate(),
-        nullptr,
+        nullptr, // Opener may be set by setOpenerForWebKitLegacy after instantiation.
         makeUniqueRef<WebCore::DummySpeechRecognitionProvider>(),
-        makeUniqueRef<WebCore::MediaRecorderProvider>(),
         WebBroadcastChannelRegistry::getOrCreate(isPrivateBrowsingEnabled),
         makeUniqueRef<WebCore::DummyStorageProvider>(),
         makeUniqueRef<WebCore::DummyModelPlayerProvider>(),
@@ -307,7 +311,8 @@ void QWebPageAdapter::initializeWebCorePage()
         makeUniqueRef<ContextMenuClientQt>(),
 #endif
         makeUniqueRef<ChromeClientQt>(this),
-        makeUniqueRef<CryptoClientQt>()
+        makeUniqueRef<CryptoClientQt>(),
+        makeUniqueRef<WebCore::ProcessSyncClient>()
     };
     pageConfiguration.applicationCacheStorage = ApplicationCacheStorage::create({ }, { }); // QTFIXME
     pageConfiguration.dragClient = makeUnique<DragClientQt>(pageConfiguration.chromeClient.ptr());
@@ -701,8 +706,8 @@ void QWebPageAdapter::wheelEvent(QWheelEvent *ev, int wheelScrollLines)
         return;
 
     PlatformWheelEvent pev = convertWheelEvent(ev, wheelScrollLines);
-    bool accepted = frame->eventHandler().handleWheelEvent(pev, { WheelEventProcessingSteps::SynchronousScrolling, WheelEventProcessingSteps::BlockingDOMEventDispatch }).wasHandled();
-    ev->setAccepted(accepted);
+    auto [result, _] = frame->eventHandler().handleWheelEvent(pev, { WheelEventProcessingSteps::SynchronousScrolling, WheelEventProcessingSteps::BlockingDOMEventDispatch });
+    ev->setAccepted(result.wasHandled());
 }
 #endif // QT_NO_WHEELEVENT
 
@@ -773,13 +778,15 @@ void QWebPageAdapter::inputMethodEvent(QInputMethodEvent *ev)
             break;
         }
         case QInputMethodEvent::Cursor: {
-            frame->selection().setCaretVisible(a.length); // if length is 0 cursor is invisible
             if (a.length > 0) {
+                frame->selection().removeCaretVisibilitySuppressionReason(CaretVisibilitySuppressionReason::IsNotFocusedOrActive);
                 RenderObject* caretRenderer = frame->selection().caretRendererWithoutUpdatingLayout();
                 if (caretRenderer) {
                     QColor qcolor = a.value.value<QColor>();
 //                    caretRenderer->style().setColor(qcolor);
                 }
+            } else {
+                frame->selection().addCaretVisibilitySuppressionReason(CaretVisibilitySuppressionReason::IsNotFocusedOrActive);
             }
             break;
         }

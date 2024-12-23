@@ -61,14 +61,15 @@
 #include "StyleResolver.h"
 #include "XMLNames.h"
 #include <wtf/HashMap.h>
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGElement);
 
 SVGElement::SVGElement(const QualifiedName& tagName, Document& document, UniqueRef<SVGPropertyRegistry>&& propertyRegistry, OptionSet<TypeFlag> typeFlags)
     : StyledElement(tagName, document, typeFlags | TypeFlag::IsSVGElement | TypeFlag::HasCustomStyleResolveCallbacks)
@@ -91,7 +92,7 @@ SVGElement::~SVGElement()
         m_svgRareData = nullptr;
     }
 
-    RefAllowingPartiallyDestroyed<Document> document = this->document();
+    Ref<Document> document = this->document();
     document->checkedSVGExtensions()->removeElementToRebuild(*this);
 
     if (hasPendingResources()) {
@@ -186,7 +187,7 @@ void SVGElement::removedFromAncestor(RemovalType removalType, ContainerNode& old
         treeScopeForSVGReferences().removeElementFromPendingSVGResources(*this);
 
     if (removalType.disconnectedFromDocument) {
-        RefAllowingPartiallyDestroyed<Document> document = this->document();
+        Ref<Document> document = this->document();
         CheckedRef extensions = document->svgExtensions();
         if (m_svgRareData) {
             for (Ref element : m_svgRareData->takeReferencingElements()) {
@@ -243,7 +244,7 @@ const WeakHashSet<SVGElement, WeakPtrImplWithEventTargetData>& SVGElement::insta
 std::optional<FloatRect> SVGElement::getBoundingBox() const
 {
     if (is<SVGGraphicsElement>(*this)) {
-        if (auto renderer = this->renderer())
+        if (CheckedPtr renderer = this->renderer())
             return renderer->objectBoundingBox();
     }
     return std::nullopt;
@@ -840,7 +841,7 @@ bool SVGElement::rendererIsNeeded(const RenderStyle& style)
     return false;
 }
 
-CSSPropertyID SVGElement::cssPropertyIdForSVGAttributeName(const QualifiedName& attrName)
+CSSPropertyID SVGElement::cssPropertyIdForSVGAttributeName(const QualifiedName& attrName, const Settings& settings)
 {
     if (!attrName.namespaceURI().isNull())
         return CSSPropertyInvalid;
@@ -870,6 +871,10 @@ CSSPropertyID SVGElement::cssPropertyIdForSVGAttributeName(const QualifiedName& 
         return CSSPropertyCx;
     case AttributeNames::cyAttr:
         return CSSPropertyCy;
+    case AttributeNames::dAttr:
+        if (settings.cssDPropertyEnabled())
+            return CSSPropertyD;
+        break;
     case AttributeNames::directionAttr:
         return CSSPropertyDirection;
     case AttributeNames::displayAttr:
@@ -910,8 +915,6 @@ CSSPropertyID SVGElement::cssPropertyIdForSVGAttributeName(const QualifiedName& 
         return CSSPropertyImageRendering;
     case AttributeNames::heightAttr:
         return CSSPropertyHeight;
-    case AttributeNames::kerningAttr:
-        return CSSPropertyKerning;
     case AttributeNames::letter_spacingAttr:
         return CSSPropertyLetterSpacing;
     case AttributeNames::lighting_colorAttr:
@@ -995,27 +998,27 @@ CSSPropertyID SVGElement::cssPropertyIdForSVGAttributeName(const QualifiedName& 
 
 bool SVGElement::hasPresentationalHintsForAttribute(const QualifiedName& name) const
 {
-    if (cssPropertyIdForSVGAttributeName(name) > 0)
+    if (cssPropertyIdForSVGAttributeName(name, document().settings()) > 0)
         return true;
     return StyledElement::hasPresentationalHintsForAttribute(name);
 }
 
 void SVGElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
-    CSSPropertyID propertyID = cssPropertyIdForSVGAttributeName(name);
+    CSSPropertyID propertyID = cssPropertyIdForSVGAttributeName(name, document().settings());
     if (propertyID > 0)
         addPropertyToPresentationalHintStyle(style, propertyID, value);
 }
 
 void SVGElement::updateSVGRendererForElementChange()
 {
-    RefAllowingPartiallyDestroyed<Document> document = this->document();
+    Ref<Document> document = this->document();
     document->updateSVGRenderer(*this);
 }
 
 void SVGElement::svgAttributeChanged(const QualifiedName& attrName)
 {
-    CSSPropertyID propId = cssPropertyIdForSVGAttributeName(attrName);
+    CSSPropertyID propId = cssPropertyIdForSVGAttributeName(attrName, document().settings());
     if (propId > 0) {
         invalidateInstances();
         return;

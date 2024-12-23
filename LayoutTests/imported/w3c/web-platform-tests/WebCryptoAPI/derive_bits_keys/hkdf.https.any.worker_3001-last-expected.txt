@@ -1,44 +1,5 @@
 
 PASS setup - define tests
-PASS Derived key of type name: AES-CTR length: 128  using empty derivedKey, normal salt, SHA-256, with empty info with wrong (ECDH) key
-PASS Derived key of type name: AES-CTR length: 192  using empty derivedKey, normal salt, SHA-256, with empty info
-PASS Derived key of type name: AES-CTR length: 192  using empty derivedKey, normal salt, SHA-256, with empty info with bad hash name SHA256
-PASS Derived key of type name: AES-CTR length: 192  using empty derivedKey, normal salt, SHA-256, with empty info with missing deriveKey usage
-PASS Derived key of type name: AES-CTR length: 192  using empty derivedKey, normal salt, SHA-256, with empty info with wrong (ECDH) key
-PASS Derived key of type name: AES-CTR length: 256  using empty derivedKey, normal salt, SHA-256, with empty info
-PASS Derived key of type name: AES-CTR length: 256  using empty derivedKey, normal salt, SHA-256, with empty info with bad hash name SHA256
-PASS Derived key of type name: AES-CTR length: 256  using empty derivedKey, normal salt, SHA-256, with empty info with missing deriveKey usage
-PASS Derived key of type name: AES-CTR length: 256  using empty derivedKey, normal salt, SHA-256, with empty info with wrong (ECDH) key
-PASS Derived key of type name: AES-GCM length: 128  using empty derivedKey, normal salt, SHA-256, with empty info
-PASS Derived key of type name: AES-GCM length: 128  using empty derivedKey, normal salt, SHA-256, with empty info with bad hash name SHA256
-PASS Derived key of type name: AES-GCM length: 128  using empty derivedKey, normal salt, SHA-256, with empty info with missing deriveKey usage
-PASS Derived key of type name: AES-GCM length: 128  using empty derivedKey, normal salt, SHA-256, with empty info with wrong (ECDH) key
-PASS Derived key of type name: AES-GCM length: 192  using empty derivedKey, normal salt, SHA-256, with empty info
-PASS Derived key of type name: AES-GCM length: 192  using empty derivedKey, normal salt, SHA-256, with empty info with bad hash name SHA256
-PASS Derived key of type name: AES-GCM length: 192  using empty derivedKey, normal salt, SHA-256, with empty info with missing deriveKey usage
-PASS Derived key of type name: AES-GCM length: 192  using empty derivedKey, normal salt, SHA-256, with empty info with wrong (ECDH) key
-PASS Derived key of type name: AES-GCM length: 256  using empty derivedKey, normal salt, SHA-256, with empty info
-PASS Derived key of type name: AES-GCM length: 256  using empty derivedKey, normal salt, SHA-256, with empty info with bad hash name SHA256
-PASS Derived key of type name: AES-GCM length: 256  using empty derivedKey, normal salt, SHA-256, with empty info with missing deriveKey usage
-PASS Derived key of type name: AES-GCM length: 256  using empty derivedKey, normal salt, SHA-256, with empty info with wrong (ECDH) key
-PASS Derived key of type name: AES-KW length: 128  using empty derivedKey, normal salt, SHA-256, with empty info
-PASS Derived key of type name: AES-KW length: 128  using empty derivedKey, normal salt, SHA-256, with empty info with bad hash name SHA256
-PASS Derived key of type name: AES-KW length: 128  using empty derivedKey, normal salt, SHA-256, with empty info with missing deriveKey usage
-PASS Derived key of type name: AES-KW length: 128  using empty derivedKey, normal salt, SHA-256, with empty info with wrong (ECDH) key
-PASS Derived key of type name: AES-KW length: 192  using empty derivedKey, normal salt, SHA-256, with empty info
-PASS Derived key of type name: AES-KW length: 192  using empty derivedKey, normal salt, SHA-256, with empty info with bad hash name SHA256
-PASS Derived key of type name: AES-KW length: 192  using empty derivedKey, normal salt, SHA-256, with empty info with missing deriveKey usage
-PASS Derived key of type name: AES-KW length: 192  using empty derivedKey, normal salt, SHA-256, with empty info with wrong (ECDH) key
-PASS Derived key of type name: AES-KW length: 256  using empty derivedKey, normal salt, SHA-256, with empty info
-PASS Derived key of type name: AES-KW length: 256  using empty derivedKey, normal salt, SHA-256, with empty info with bad hash name SHA256
-PASS Derived key of type name: AES-KW length: 256  using empty derivedKey, normal salt, SHA-256, with empty info with missing deriveKey usage
-PASS Derived key of type name: AES-KW length: 256  using empty derivedKey, normal salt, SHA-256, with empty info with wrong (ECDH) key
-PASS Derived key of type name: HMAC hash: SHA-1 length: 256  using empty derivedKey, normal salt, SHA-256, with empty info
-PASS Derived key of type name: HMAC hash: SHA-1 length: 256  using empty derivedKey, normal salt, SHA-256, with empty info with bad hash name SHA256
-PASS Derived key of type name: HMAC hash: SHA-1 length: 256  using empty derivedKey, normal salt, SHA-256, with empty info with missing deriveKey usage
-PASS Derived key of type name: HMAC hash: SHA-1 length: 256  using empty derivedKey, normal salt, SHA-256, with empty info with wrong (ECDH) key
-PASS Derived key of type name: HMAC hash: SHA-256 length: 256  using empty derivedKey, normal salt, SHA-256, with empty info
-PASS Derived key of type name: HMAC hash: SHA-256 length: 256  using empty derivedKey, normal salt, SHA-256, with empty info with bad hash name SHA256
 PASS Derived key of type name: HMAC hash: SHA-256 length: 256  using empty derivedKey, normal salt, SHA-256, with empty info with missing deriveKey usage
 PASS Derived key of type name: HMAC hash: SHA-256 length: 256  using empty derivedKey, normal salt, SHA-256, with empty info with wrong (ECDH) key
 PASS Derived key of type name: HMAC hash: SHA-384 length: 256  using empty derivedKey, normal salt, SHA-256, with empty info
@@ -51,7 +12,6 @@ PASS Derived key of type name: HMAC hash: SHA-512 length: 256  using empty deriv
 PASS Derived key of type name: HMAC hash: SHA-512 length: 256  using empty derivedKey, normal salt, SHA-256, with empty info with wrong (ECDH) key
 PASS empty derivedKey, normal salt, SHA-256, with empty info with missing salt
 PASS empty derivedKey, normal salt, SHA-256, with empty info with missing info
-PASS empty derivedKey, normal salt, SHA-256, with empty info with null length
 PASS empty derivedKey, normal salt, SHA-256, with empty info with non-multiple of 8 length
 PASS empty derivedKey, normal salt, SHA-256, with empty info with bad hash name SHA256
 PASS empty derivedKey, normal salt, SHA-256, with empty info with missing deriveBits usage
@@ -91,7 +51,7 @@ PASS Derived key of type name: HMAC hash: SHA-256 length: 256  using empty deriv
 PASS Derived key of type name: HMAC hash: SHA-384 length: 256  using empty derivedKey, normal salt, PBKDF2, with empty info
 PASS Derived key of type name: HMAC hash: SHA-512 length: 256  using empty derivedKey, normal salt, PBKDF2, with empty info
 PASS empty derivedKey, empty salt, SHA-384, with normal info
-PASS empty derivedKey, empty salt, SHA-384, with normal info with 0 length
+FAIL empty derivedKey, empty salt, SHA-384, with normal info with 0 length assert_unreached: deriveBits failed with error OperationError: The operation failed for an operation-specific reason Reached unreachable code
 PASS Derived key of type name: AES-CBC length: 128  using empty derivedKey, empty salt, SHA-384, with normal info
 PASS Derived key of type name: AES-CBC length: 128  using empty derivedKey, empty salt, SHA-384, with normal info with bad hash name SHA384
 PASS Derived key of type name: AES-CBC length: 128  using empty derivedKey, empty salt, SHA-384, with normal info with missing deriveKey usage
@@ -158,13 +118,12 @@ PASS Derived key of type name: HMAC hash: SHA-512 length: 256  using empty deriv
 PASS Derived key of type name: HMAC hash: SHA-512 length: 256  using empty derivedKey, empty salt, SHA-384, with normal info with wrong (ECDH) key
 PASS empty derivedKey, empty salt, SHA-384, with normal info with missing salt
 PASS empty derivedKey, empty salt, SHA-384, with normal info with missing info
-PASS empty derivedKey, empty salt, SHA-384, with normal info with null length
 PASS empty derivedKey, empty salt, SHA-384, with normal info with non-multiple of 8 length
 PASS empty derivedKey, empty salt, SHA-384, with normal info with bad hash name SHA384
 PASS empty derivedKey, empty salt, SHA-384, with normal info with missing deriveBits usage
 PASS empty derivedKey, empty salt, SHA-384, with normal info with wrong (ECDH) key
 PASS empty derivedKey, empty salt, SHA-384, with empty info
-PASS empty derivedKey, empty salt, SHA-384, with empty info with 0 length
+FAIL empty derivedKey, empty salt, SHA-384, with empty info with 0 length assert_unreached: deriveBits failed with error OperationError: The operation failed for an operation-specific reason Reached unreachable code
 PASS Derived key of type name: AES-CBC length: 128  using empty derivedKey, empty salt, SHA-384, with empty info
 PASS Derived key of type name: AES-CBC length: 128  using empty derivedKey, empty salt, SHA-384, with empty info with bad hash name SHA384
 PASS Derived key of type name: AES-CBC length: 128  using empty derivedKey, empty salt, SHA-384, with empty info with missing deriveKey usage
@@ -231,13 +190,12 @@ PASS Derived key of type name: HMAC hash: SHA-512 length: 256  using empty deriv
 PASS Derived key of type name: HMAC hash: SHA-512 length: 256  using empty derivedKey, empty salt, SHA-384, with empty info with wrong (ECDH) key
 PASS empty derivedKey, empty salt, SHA-384, with empty info with missing salt
 PASS empty derivedKey, empty salt, SHA-384, with empty info with missing info
-PASS empty derivedKey, empty salt, SHA-384, with empty info with null length
 PASS empty derivedKey, empty salt, SHA-384, with empty info with non-multiple of 8 length
 PASS empty derivedKey, empty salt, SHA-384, with empty info with bad hash name SHA384
 PASS empty derivedKey, empty salt, SHA-384, with empty info with missing deriveBits usage
 PASS empty derivedKey, empty salt, SHA-384, with empty info with wrong (ECDH) key
 PASS empty derivedKey, empty salt, SHA-512, with normal info
-PASS empty derivedKey, empty salt, SHA-512, with normal info with 0 length
+FAIL empty derivedKey, empty salt, SHA-512, with normal info with 0 length assert_unreached: deriveBits failed with error OperationError: The operation failed for an operation-specific reason Reached unreachable code
 PASS Derived key of type name: AES-CBC length: 128  using empty derivedKey, empty salt, SHA-512, with normal info
 PASS Derived key of type name: AES-CBC length: 128  using empty derivedKey, empty salt, SHA-512, with normal info with bad hash name SHA512
 PASS Derived key of type name: AES-CBC length: 128  using empty derivedKey, empty salt, SHA-512, with normal info with missing deriveKey usage
@@ -304,13 +262,12 @@ PASS Derived key of type name: HMAC hash: SHA-512 length: 256  using empty deriv
 PASS Derived key of type name: HMAC hash: SHA-512 length: 256  using empty derivedKey, empty salt, SHA-512, with normal info with wrong (ECDH) key
 PASS empty derivedKey, empty salt, SHA-512, with normal info with missing salt
 PASS empty derivedKey, empty salt, SHA-512, with normal info with missing info
-PASS empty derivedKey, empty salt, SHA-512, with normal info with null length
 PASS empty derivedKey, empty salt, SHA-512, with normal info with non-multiple of 8 length
 PASS empty derivedKey, empty salt, SHA-512, with normal info with bad hash name SHA512
 PASS empty derivedKey, empty salt, SHA-512, with normal info with missing deriveBits usage
 PASS empty derivedKey, empty salt, SHA-512, with normal info with wrong (ECDH) key
 PASS empty derivedKey, empty salt, SHA-512, with empty info
-PASS empty derivedKey, empty salt, SHA-512, with empty info with 0 length
+FAIL empty derivedKey, empty salt, SHA-512, with empty info with 0 length assert_unreached: deriveBits failed with error OperationError: The operation failed for an operation-specific reason Reached unreachable code
 PASS Derived key of type name: AES-CBC length: 128  using empty derivedKey, empty salt, SHA-512, with empty info
 PASS Derived key of type name: AES-CBC length: 128  using empty derivedKey, empty salt, SHA-512, with empty info with bad hash name SHA512
 PASS Derived key of type name: AES-CBC length: 128  using empty derivedKey, empty salt, SHA-512, with empty info with missing deriveKey usage
@@ -377,13 +334,12 @@ PASS Derived key of type name: HMAC hash: SHA-512 length: 256  using empty deriv
 PASS Derived key of type name: HMAC hash: SHA-512 length: 256  using empty derivedKey, empty salt, SHA-512, with empty info with wrong (ECDH) key
 PASS empty derivedKey, empty salt, SHA-512, with empty info with missing salt
 PASS empty derivedKey, empty salt, SHA-512, with empty info with missing info
-PASS empty derivedKey, empty salt, SHA-512, with empty info with null length
 PASS empty derivedKey, empty salt, SHA-512, with empty info with non-multiple of 8 length
 PASS empty derivedKey, empty salt, SHA-512, with empty info with bad hash name SHA512
 PASS empty derivedKey, empty salt, SHA-512, with empty info with missing deriveBits usage
 PASS empty derivedKey, empty salt, SHA-512, with empty info with wrong (ECDH) key
 PASS empty derivedKey, empty salt, SHA-1, with normal info
-PASS empty derivedKey, empty salt, SHA-1, with normal info with 0 length
+FAIL empty derivedKey, empty salt, SHA-1, with normal info with 0 length assert_unreached: deriveBits failed with error OperationError: The operation failed for an operation-specific reason Reached unreachable code
 PASS Derived key of type name: AES-CBC length: 128  using empty derivedKey, empty salt, SHA-1, with normal info
 PASS Derived key of type name: AES-CBC length: 128  using empty derivedKey, empty salt, SHA-1, with normal info with bad hash name SHA1
 PASS Derived key of type name: AES-CBC length: 128  using empty derivedKey, empty salt, SHA-1, with normal info with missing deriveKey usage
@@ -450,13 +406,12 @@ PASS Derived key of type name: HMAC hash: SHA-512 length: 256  using empty deriv
 PASS Derived key of type name: HMAC hash: SHA-512 length: 256  using empty derivedKey, empty salt, SHA-1, with normal info with wrong (ECDH) key
 PASS empty derivedKey, empty salt, SHA-1, with normal info with missing salt
 PASS empty derivedKey, empty salt, SHA-1, with normal info with missing info
-PASS empty derivedKey, empty salt, SHA-1, with normal info with null length
 PASS empty derivedKey, empty salt, SHA-1, with normal info with non-multiple of 8 length
 PASS empty derivedKey, empty salt, SHA-1, with normal info with bad hash name SHA1
 PASS empty derivedKey, empty salt, SHA-1, with normal info with missing deriveBits usage
 PASS empty derivedKey, empty salt, SHA-1, with normal info with wrong (ECDH) key
 PASS empty derivedKey, empty salt, SHA-1, with empty info
-PASS empty derivedKey, empty salt, SHA-1, with empty info with 0 length
+FAIL empty derivedKey, empty salt, SHA-1, with empty info with 0 length assert_unreached: deriveBits failed with error OperationError: The operation failed for an operation-specific reason Reached unreachable code
 PASS Derived key of type name: AES-CBC length: 128  using empty derivedKey, empty salt, SHA-1, with empty info
 PASS Derived key of type name: AES-CBC length: 128  using empty derivedKey, empty salt, SHA-1, with empty info with bad hash name SHA1
 PASS Derived key of type name: AES-CBC length: 128  using empty derivedKey, empty salt, SHA-1, with empty info with missing deriveKey usage
@@ -523,13 +478,12 @@ PASS Derived key of type name: HMAC hash: SHA-512 length: 256  using empty deriv
 PASS Derived key of type name: HMAC hash: SHA-512 length: 256  using empty derivedKey, empty salt, SHA-1, with empty info with wrong (ECDH) key
 PASS empty derivedKey, empty salt, SHA-1, with empty info with missing salt
 PASS empty derivedKey, empty salt, SHA-1, with empty info with missing info
-PASS empty derivedKey, empty salt, SHA-1, with empty info with null length
 PASS empty derivedKey, empty salt, SHA-1, with empty info with non-multiple of 8 length
 PASS empty derivedKey, empty salt, SHA-1, with empty info with bad hash name SHA1
 PASS empty derivedKey, empty salt, SHA-1, with empty info with missing deriveBits usage
 PASS empty derivedKey, empty salt, SHA-1, with empty info with wrong (ECDH) key
 PASS empty derivedKey, empty salt, SHA-256, with normal info
-PASS empty derivedKey, empty salt, SHA-256, with normal info with 0 length
+FAIL empty derivedKey, empty salt, SHA-256, with normal info with 0 length assert_unreached: deriveBits failed with error OperationError: The operation failed for an operation-specific reason Reached unreachable code
 PASS Derived key of type name: AES-CBC length: 128  using empty derivedKey, empty salt, SHA-256, with normal info
 PASS Derived key of type name: AES-CBC length: 128  using empty derivedKey, empty salt, SHA-256, with normal info with bad hash name SHA256
 PASS Derived key of type name: AES-CBC length: 128  using empty derivedKey, empty salt, SHA-256, with normal info with missing deriveKey usage
@@ -596,13 +550,12 @@ PASS Derived key of type name: HMAC hash: SHA-512 length: 256  using empty deriv
 PASS Derived key of type name: HMAC hash: SHA-512 length: 256  using empty derivedKey, empty salt, SHA-256, with normal info with wrong (ECDH) key
 PASS empty derivedKey, empty salt, SHA-256, with normal info with missing salt
 PASS empty derivedKey, empty salt, SHA-256, with normal info with missing info
-PASS empty derivedKey, empty salt, SHA-256, with normal info with null length
 PASS empty derivedKey, empty salt, SHA-256, with normal info with non-multiple of 8 length
 PASS empty derivedKey, empty salt, SHA-256, with normal info with bad hash name SHA256
 PASS empty derivedKey, empty salt, SHA-256, with normal info with missing deriveBits usage
 PASS empty derivedKey, empty salt, SHA-256, with normal info with wrong (ECDH) key
 PASS empty derivedKey, empty salt, SHA-256, with empty info
-PASS empty derivedKey, empty salt, SHA-256, with empty info with 0 length
+FAIL empty derivedKey, empty salt, SHA-256, with empty info with 0 length assert_unreached: deriveBits failed with error OperationError: The operation failed for an operation-specific reason Reached unreachable code
 PASS Derived key of type name: AES-CBC length: 128  using empty derivedKey, empty salt, SHA-256, with empty info
 PASS Derived key of type name: AES-CBC length: 128  using empty derivedKey, empty salt, SHA-256, with empty info with bad hash name SHA256
 PASS Derived key of type name: AES-CBC length: 128  using empty derivedKey, empty salt, SHA-256, with empty info with missing deriveKey usage
@@ -669,7 +622,6 @@ PASS Derived key of type name: HMAC hash: SHA-512 length: 256  using empty deriv
 PASS Derived key of type name: HMAC hash: SHA-512 length: 256  using empty derivedKey, empty salt, SHA-256, with empty info with wrong (ECDH) key
 PASS empty derivedKey, empty salt, SHA-256, with empty info with missing salt
 PASS empty derivedKey, empty salt, SHA-256, with empty info with missing info
-PASS empty derivedKey, empty salt, SHA-256, with empty info with null length
 PASS empty derivedKey, empty salt, SHA-256, with empty info with non-multiple of 8 length
 PASS empty derivedKey, empty salt, SHA-256, with empty info with bad hash name SHA256
 PASS empty derivedKey, empty salt, SHA-256, with empty info with missing deriveBits usage

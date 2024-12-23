@@ -39,6 +39,8 @@
 #include <wtf/DataLog.h>
 #include <wtf/TZoneMalloc.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 // LinkBuffer:
@@ -336,7 +338,7 @@ private:
         // within this space that required compaction.
         if (location < static_cast<int>(sizeof(int32_t)))
             return 0;
-        return bitwise_cast<int32_t*>(m_assemblerStorage.buffer())[location / sizeof(int32_t) - 1];
+        return std::bit_cast<int32_t*>(m_assemblerStorage.buffer())[location / sizeof(int32_t) - 1];
     }
 #endif
     
@@ -451,7 +453,7 @@ private:
     FINALIZE_CODE_IF(JSC::Options::asyncDisassembly() || JSC::Options::dumpDisassembly() || Options::dumpRegExpDisassembly(), linkBufferReference, resultPtrTag, simpleName, dataLogFArgumentsForHeading)
 
 #define FINALIZE_WASM_CODE(linkBufferReference, resultPtrTag, simpleName, ...)  \
-    FINALIZE_CODE_IF((JSC::Options::asyncDisassembly() || JSC::Options::dumpDisassembly() || Options::dumpWebAssemblyDisassembly()), linkBufferReference, resultPtrTag, simpleName, __VA_ARGS__)
+    FINALIZE_CODE_IF((JSC::Options::asyncDisassembly() || JSC::Options::dumpDisassembly() || Options::dumpWasmDisassembly()), linkBufferReference, resultPtrTag, simpleName, __VA_ARGS__)
 
 #define FINALIZE_WASM_CODE_FOR_MODE(mode, linkBufferReference, resultPtrTag, simpleName, ...)  \
     FINALIZE_CODE_IF(shouldDumpDisassemblyFor(mode), linkBufferReference, resultPtrTag, simpleName, __VA_ARGS__)
@@ -459,5 +461,7 @@ private:
 
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(ASSEMBLER)

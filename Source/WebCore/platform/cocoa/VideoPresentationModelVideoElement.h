@@ -50,7 +50,7 @@ class PlaybackSessionModelMediaElement;
 
 class VideoPresentationModelVideoElement final : public VideoPresentationModel {
 public:
-    static RefPtr<VideoPresentationModelVideoElement> create()
+    static Ref<VideoPresentationModelVideoElement> create()
     {
         return adoptRef(*new VideoPresentationModelVideoElement());
     }
@@ -80,8 +80,8 @@ public:
 
 #if !RELEASE_LOG_DISABLED
     const Logger* loggerPtr() const final;
-    WEBCORE_EXPORT const void* logIdentifier() const final;
-    WEBCORE_EXPORT const void* nextChildIdentifier() const final;
+    WEBCORE_EXPORT uint64_t logIdentifier() const final;
+    WEBCORE_EXPORT uint64_t nextChildIdentifier() const final;
     ASCIILiteral logClassName() const { return "VideoPresentationModelVideoElement"_s; }
     WTFLogChannel& logChannel() const;
 #endif

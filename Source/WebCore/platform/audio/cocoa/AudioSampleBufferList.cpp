@@ -27,11 +27,14 @@
 #include "AudioSampleBufferList.h"
 
 #include "Logging.h"
+#include "NotImplemented.h"
 #include "VectorMath.h"
 #include <Accelerate/Accelerate.h>
 #include <AudioToolbox/AudioConverter.h>
 #include <pal/cf/AudioToolboxSoftLink.h>
 #include <wtf/SetForScope.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -75,7 +78,6 @@ void AudioSampleBufferList::applyGain(AudioBufferList& bufferList, float gain, A
             for (int i = 0; i < frameCount; i++)
                 buffer[i] *= gain;
             break;
-            break;
         }
         case AudioStreamDescription::Float32: {
             float* buffer = static_cast<float*>(bufferList.mBuffers[i].mData);
@@ -88,6 +90,11 @@ void AudioSampleBufferList::applyGain(AudioBufferList& bufferList, float gain, A
             vDSP_vsmulD(buffer, 1, &gainAsDouble, buffer, 1, bufferList.mBuffers[i].mDataByteSize / sizeof(double));
             break;
         }
+        case AudioStreamDescription::Uint8:
+        case AudioStreamDescription::Int24:
+            notImplemented();
+            ASSERT_NOT_REACHED();
+            break;
         case AudioStreamDescription::None:
             ASSERT_NOT_REACHED();
             break;
@@ -138,6 +145,11 @@ static void mixBuffers(WebAudioBufferList& destinationBuffer, const AudioBufferL
             vDSP_vaddD(destination, 1, reinterpret_cast<double*>(sourceBuffer.mBuffers[i].mData), 1, destination, 1, frameCount);
             break;
         }
+        case AudioStreamDescription::Uint8:
+        case AudioStreamDescription::Int24:
+            notImplemented();
+            ASSERT_NOT_REACHED();
+            break;
         case AudioStreamDescription::None:
             ASSERT_NOT_REACHED();
             break;
@@ -313,3 +325,5 @@ OSStatus AudioSampleBufferList::copyFrom(CARingBuffer& ringBuffer, size_t sample
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

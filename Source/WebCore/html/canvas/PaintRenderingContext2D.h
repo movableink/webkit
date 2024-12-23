@@ -36,15 +36,14 @@ class DrawingContext;
 class CustomPaintCanvas;
 
 class PaintRenderingContext2D final : public CanvasRenderingContext2DBase {
-    WTF_MAKE_ISO_ALLOCATED(PaintRenderingContext2D);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PaintRenderingContext2D);
 public:
     static std::unique_ptr<PaintRenderingContext2D> create(CustomPaintCanvas&);
 
     virtual ~PaintRenderingContext2D();
 
-    GraphicsContext* drawingContext() const final;
+    GraphicsContext* ensureDrawingContext() const;
     GraphicsContext* existingDrawingContext() const final;
-    GraphicsContext* effectiveDrawingContext() const final { return drawingContext(); }
     AffineTransform baseTransform() const final;
 
     CustomPaintCanvas& canvas() const;
@@ -52,7 +51,6 @@ public:
 
 private:
     PaintRenderingContext2D(CustomPaintCanvas&);
-    bool isPaint() const override { return true; }
     mutable std::unique_ptr<DisplayList::DrawingContext> m_recordingContext;
 };
 

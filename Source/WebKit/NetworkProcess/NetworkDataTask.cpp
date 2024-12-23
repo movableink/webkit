@@ -37,6 +37,7 @@
 #include <WebCore/ResourceRequest.h>
 #include <WebCore/ResourceResponse.h>
 #include <wtf/RunLoop.h>
+#include <wtf/text/MakeString.h>
 
 #if PLATFORM(COCOA)
 #include "NetworkDataTaskCocoa.h"
@@ -125,7 +126,7 @@ NetworkDataTask::~NetworkDataTask()
 void NetworkDataTask::scheduleFailure(FailureType type)
 {
     m_failureScheduled = true;
-    RunLoop::main().dispatch([this, weakThis = ThreadSafeWeakPtr { *this }, type] {
+    RunLoop::protectedMain()->dispatch([this, weakThis = ThreadSafeWeakPtr { *this }, type] {
         auto protectedThis = weakThis.get();
         if (!protectedThis || !m_client)
             return;

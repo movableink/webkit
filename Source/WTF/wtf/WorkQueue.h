@@ -49,7 +49,7 @@ QT_END_NAMESPACE
 
 namespace WTF {
 
-class WorkQueueBase : public ThreadSafeRefCounted<WorkQueueBase>, protected ThreadLike {
+class WorkQueueBase : protected ThreadLike {
 public:
     using QOS = Thread::QOS;
 
@@ -66,6 +66,9 @@ public:
     QSocketNotifier* registerSocketEventHandler(int, QSocketNotifier::Type, WTF::Function<void()>&&);
     void dispatchOnTermination(QProcess*, WTF::Function<void()>&&);
 #endif
+
+    virtual void ref() const = 0;
+    virtual void deref() const = 0;
 
 protected:
     enum class Type : bool {
@@ -101,14 +104,18 @@ private:
  * They may be executed on different threads but can safely be used by objects that aren't already threadsafe.
  * Use `assertIsCurrent(m_myQueue);` in a runnable to assert that the runnable runs in a specific queue.
  */
-class WTF_CAPABILITY("is current") WTF_EXPORT_PRIVATE WorkQueue : public WorkQueueBase, public RefCountedSerialFunctionDispatcher {
+class WTF_CAPABILITY("is current") WTF_EXPORT_PRIVATE WorkQueue : public WorkQueueBase, public GuaranteedSerialFunctionDispatcher {
 public:
     static WorkQueue& main();
+    static Ref<WorkQueue> protectedMain() { return main(); }
     static Ref<WorkQueue> create(ASCIILiteral name, QOS = QOS::Default);
+
+
+    // WorkQueueBase
     void dispatch(Function<void()>&&) override;
     bool isCurrent() const override;
-    void ref() const override;
-    void deref() const override;
+    void ref() const override { GuaranteedSerialFunctionDispatcher::ref(); }
+    void deref() const override { GuaranteedSerialFunctionDispatcher::deref(); }
 
 #if PLATFORM(QT) && USE(UNIX_DOMAIN_SOCKETS)
     class WorkItemQt;
@@ -131,14 +138,28 @@ private:
  * A ConcurrentWorkQueue unlike a WorkQueue doesn't guarantee the order in which the dispatched runnable will run
  * and each can run concurrently on different threads.
  */
-class WTF_EXPORT_PRIVATE ConcurrentWorkQueue final : public WorkQueueBase, public FunctionDispatcher {
+class WTF_EXPORT_PRIVATE ConcurrentWorkQueue final : public WorkQueueBase, public FunctionDispatcher, public ThreadSafeRefCounted<ConcurrentWorkQueue> {
 public:
     static Ref<ConcurrentWorkQueue> create(ASCIILiteral name, QOS = QOS::Default);
     static void apply(size_t iterations, WTF::Function<void(size_t index)>&&);
     void dispatch(Function<void()>&&) override;
+
+    void ref() const final;
+    void deref() const final;
+
 private:
     ConcurrentWorkQueue(ASCIILiteral, QOS);
 };
+
+inline void ConcurrentWorkQueue::ref() const
+{
+    ThreadSafeRefCounted<ConcurrentWorkQueue>::ref();
+}
+
+inline void ConcurrentWorkQueue::deref() const
+{
+    ThreadSafeRefCounted<ConcurrentWorkQueue>::deref();
+}
 
 }
 

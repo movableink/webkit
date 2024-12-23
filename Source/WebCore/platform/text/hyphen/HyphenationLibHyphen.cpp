@@ -34,7 +34,9 @@
 #include <stdlib.h>
 #include <wtf/FileSystem.h>
 #include <wtf/HashMap.h>
+#include <wtf/Language.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/TinyLRUCache.h>
 #include <wtf/text/AtomStringHash.h>
 #include <wtf/text/CString.h>
@@ -43,6 +45,8 @@
 #if PLATFORM(GTK)
 #include <wtf/glib/GUniquePtr.h>
 #endif
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
 
 namespace WebCore {
 
@@ -63,7 +67,7 @@ static AtomString extractLocaleFromDictionaryFileName(const String& fileName)
     return StringView(fileName).substring(prefixLength, fileName.length() - prefixLength - suffixLength).convertToASCIILowercaseAtom();
 }
 
-static void scanDirectoryForDictionaries(const char* directoryPath, HashMap<AtomString, Vector<String>>& availableLocales)
+static void scanDirectoryForDictionaries(const char* directoryPath, UncheckedKeyHashMap<AtomString, Vector<String>>& availableLocales)
 {
     auto directoryPathString = String::fromUTF8(directoryPath);
     for (auto& fileName : FileSystem::listDirectory(directoryPathString)) {
@@ -117,7 +121,7 @@ static CString webkitBuildDirectory()
 }
 #endif // PLATFORM(GTK)
 
-static void scanTestDictionariesDirectoryIfNecessary(HashMap<AtomString, Vector<String>>& availableLocales)
+static void scanTestDictionariesDirectoryIfNecessary(UncheckedKeyHashMap<AtomString, Vector<String>>& availableLocales)
 {
     // It's unfortunate that we need to look for the dictionaries this way, but
     // libhyphen doesn't have the concept of installed dictionaries. Instead,
@@ -150,10 +154,10 @@ static void scanTestDictionariesDirectoryIfNecessary(HashMap<AtomString, Vector<
 }
 #endif
 
-static HashMap<AtomString, Vector<String>>& availableLocales()
+static UncheckedKeyHashMap<AtomString, Vector<String>>& availableLocales()
 {
     static bool scannedLocales = false;
-    static HashMap<AtomString, Vector<String>> availableLocales;
+    static UncheckedKeyHashMap<AtomString, Vector<String>> availableLocales;
 
     if (!scannedLocales) {
         for (size_t i = 0; i < std::size(gDictionaryDirectories); i++)
@@ -173,14 +177,12 @@ bool canHyphenate(const AtomString& localeIdentifier)
 {
     if (localeIdentifier.isNull())
         return false;
-    if (availableLocales().contains(localeIdentifier))
-        return true;
     return availableLocales().contains(localeIdentifier.convertToASCIILowercase());
 }
 
 class HyphenationDictionary : public RefCounted<HyphenationDictionary> {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(HyphenationDictionary);
     WTF_MAKE_NONCOPYABLE(HyphenationDictionary);
-    WTF_MAKE_FAST_ALLOCATED;
 public:
     typedef std::unique_ptr<HyphenDict, void(*)(HyphenDict*)> HyphenDictUniquePtr;
 
@@ -330,5 +332,7 @@ size_t lastHyphenLocation(StringView string, size_t beforeIndex, const AtomStrin
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // USE(LIBHYPHEN)

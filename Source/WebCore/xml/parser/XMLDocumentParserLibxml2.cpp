@@ -69,6 +69,8 @@
 #include "XMLDocumentParserScope.h"
 #include <libxml/parser.h>
 #include <libxml/parserInternals.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/unicode/CharacterNames.h>
 #include <wtf/unicode/UTF8Conversion.h>
 
@@ -76,6 +78,8 @@
 #include "XMLTreeViewer.h"
 #include <libxslt/xslt.h>
 #endif
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -105,7 +109,7 @@ static inline bool shouldRenderInXMLTreeViewerMode(Document& document)
 #endif
 
 class PendingCallbacks {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(PendingCallbacks);
 public:
     void appendStartElementNSCallback(const xmlChar* xmlLocalName, const xmlChar* xmlPrefix, const xmlChar* xmlURI, int numNamespaces, const xmlChar** namespaces, int numAttributes, int numDefaulted, const xmlChar** attributes)
     {
@@ -367,7 +371,7 @@ static int matchFunc(const char*)
 }
 
 class OffsetBuffer {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(OffsetBuffer);
 public:
     OffsetBuffer(Vector<uint8_t>&& buffer)
         : m_buffer(WTFMove(buffer))
@@ -457,7 +461,7 @@ static bool shouldAllowExternalLoad(const URL& url)
     RefPtr currentCachedResourceLoader = XMLDocumentParserScope::currentCachedResourceLoader().get();
     if (!currentCachedResourceLoader || !currentCachedResourceLoader->document())
         return false;
-    if (!currentCachedResourceLoader->document()->securityOrigin().canRequest(url, OriginAccessPatternsForWebProcess::singleton())) {
+    if (!currentCachedResourceLoader->document()->protectedSecurityOrigin()->canRequest(url, OriginAccessPatternsForWebProcess::singleton())) {
         currentCachedResourceLoader->printAccessDeniedMessage(url);
         return false;
     }
@@ -622,9 +626,9 @@ bool XMLDocumentParser::supportsXMLVersion(const String& version)
     return version == "1.0"_s;
 }
 
-XMLDocumentParser::XMLDocumentParser(Document& document, LocalFrameView* frameView, OptionSet<ParserContentPolicy> policy)
+XMLDocumentParser::XMLDocumentParser(Document& document, IsInFrameView isInFrameView, OptionSet<ParserContentPolicy> policy)
     : ScriptableDocumentParser(document, policy)
-    , m_view(frameView)
+    , m_isInFrameView(isInFrameView)
     , m_pendingCallbacks(makeUnique<PendingCallbacks>())
     , m_currentNode(&document)
     , m_scriptStartPosition(TextPosition::belowRangePosition())
@@ -788,7 +792,7 @@ void XMLDocumentParser::startElementNs(const xmlChar* xmlLocalName, const xmlCha
     if (m_parsingFragment && uri.isNull()) {
         if (!prefix.isNull())
             uri = m_prefixToNamespaceMap.get(prefix);
-        else if (is<SVGElement>(m_currentNode) || localName == SVGNames::svgTag->localName())
+        else if (is<SVGElement>(m_currentNode.get()) || localName == SVGNames::svgTag->localName())
             uri = SVGNames::svgNamespaceURI;
         else
             uri = m_defaultNamespaceURI;
@@ -816,7 +820,7 @@ void XMLDocumentParser::startElementNs(const xmlChar* xmlLocalName, const xmlCha
         customElementReactionStack.emplace(m_currentNode->document().globalObject());
     }
 
-    auto newElement = m_currentNode->document().createElement(qName, true);
+    auto newElement = m_currentNode->treeScope().createElement(qName, true);
 
     Vector<Attribute> prefixedAttributes;
     if (!handleNamespaceAttributes(prefixedAttributes, libxmlNamespaces, numNamespaces)) {
@@ -872,7 +876,7 @@ void XMLDocumentParser::endElementNs()
     if (!updateLeafTextNode())
         return;
 
-    RefPtr<ContainerNode> node = m_currentNode;
+    RefPtr node = m_currentNode.get();
     auto* element = dynamicDowncast<Element>(*node);
 
     if (element)
@@ -884,7 +888,7 @@ void XMLDocumentParser::endElementNs()
         return;
     }
 
-    if (!element || !m_view) {
+    if (!element || m_isInFrameView == IsInFrameView::No) {
         popCurrentNode();
         return;
     }
@@ -1511,3 +1515,5 @@ std::optional<HashMap<String, String>> parseAttributes(CachedResourceLoader& cac
 }
 
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

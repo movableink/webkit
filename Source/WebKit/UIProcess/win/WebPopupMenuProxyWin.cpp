@@ -36,13 +36,25 @@
 #include "WebView.h"
 #include <WebCore/BitmapInfo.h>
 #include <WebCore/GDIUtilities.h>
-#include <WebCore/GraphicsContextCairo.h>
 #include <WebCore/HWndDC.h>
 #include <WebCore/PlatformMouseEvent.h>
 #include <WebCore/ScrollbarTheme.h>
 #include <windowsx.h>
 #include <wtf/HexNumber.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
+
+#if USE(CAIRO)
+#include <WebCore/GraphicsContextCairo.h>
+#endif
+
+#if USE(SKIA)
+#include <WebCore/GraphicsContextSkia.h>
+IGNORE_CLANG_WARNINGS_BEGIN("cast-align")
+#include <skia/core/SkSurface.h>
+IGNORE_CLANG_WARNINGS_END
+#endif
 
 namespace WebKit {
 using namespace WebCore;
@@ -72,6 +84,8 @@ static void translatePoint(LPARAM& lParam, HWND from, HWND to)
     ::MapWindowPoints(from, to, &pt, 1);
     lParam = MAKELPARAM(pt.x, pt.y);
 }
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebPopupMenuProxyWin);
 
 LRESULT CALLBACK WebPopupMenuProxyWin::WebPopupMenuProxyWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -175,6 +189,9 @@ WebPopupMenuProxyWin::~WebPopupMenuProxyWin()
     if (m_scrollbar)
         m_scrollbar->setParent(0);
 }
+
+// FIXME: Fix the warnings
+IGNORE_CLANG_WARNINGS_BEGIN("sign-compare")
 
 void WebPopupMenuProxyWin::showPopupMenu(const IntRect& rect, TextDirection, double pageScaleFactor, const Vector<WebPopupItem>& items, const PlatformPopupMenuData& data, int32_t selectedIndex)
 {
@@ -313,10 +330,11 @@ void WebPopupMenuProxyWin::showPopupMenu(const IntRect& rect, TextDirection, dou
     m_showPopup = false;
     ::ShowWindow(m_popup, SW_HIDE);
 
-    if (!WebPopupMenuProxy::m_client)
+    CheckedPtr client = this->client();
+    if (!client)
         return;
 
-    WebPopupMenuProxy::m_client->valueChangedForPopupMenu(this, m_newSelectedIndex);
+    client->valueChangedForPopupMenu(this, m_newSelectedIndex);
 
     // <https://bugs.webkit.org/show_bug.cgi?id=57904> In order to properly call the onClick()
     // handler on a <select> element, we need to fake a mouse up event in the main window.
@@ -326,10 +344,10 @@ void WebPopupMenuProxyWin::showPopupMenu(const IntRect& rect, TextDirection, dou
     // Thus, we are virtually clicking at the
     // same location where the mouse down event occurred. This allows the hit test to select
     // the correct element, and thereby call the onClick() JS handler.
-    if (!WebPopupMenuProxy::m_client->currentlyProcessedMouseDownEvent())
+    if (!client->currentlyProcessedMouseDownEvent())
         return;
 
-    const MSG* initiatingWinEvent = WebPopupMenuProxy::m_client->currentlyProcessedMouseDownEvent()->nativeEvent();
+    const MSG* initiatingWinEvent = client->currentlyProcessedMouseDownEvent()->nativeEvent();
     MSG fakeEvent = *initiatingWinEvent;
     fakeEvent.message = WM_LBUTTONUP;
     ::PostMessage(fakeEvent.hwnd, fakeEvent.message, fakeEvent.wParam, fakeEvent.lParam);
@@ -855,6 +873,7 @@ void WebPopupMenuProxyWin::paint(const IntRect& damageRect, HDC hdc)
     if (!m_popup)
         return;
 
+#if USE(CAIRO)
     if (!m_DC) {
         m_DC = adoptGDIObject(::CreateCompatibleDC(HWndDC(m_popup)));
         if (!m_DC)
@@ -880,6 +899,21 @@ void WebPopupMenuProxyWin::paint(const IntRect& damageRect, HDC hdc)
     }
 
     GraphicsContextCairo context(m_DC.get());
+#elif USE(SKIA)
+    if (m_surface) {
+        if (!(WebCore::IntSize { m_surface->width(), m_surface->height() } == m_clientSize))
+            m_surface.reset();
+    }
+    if (!m_surface) {
+        auto info = SkImageInfo::MakeN32Premul(m_clientSize.width(), m_clientSize.height(), SkColorSpace::MakeSRGB());
+        m_surface = SkSurfaces::Raster(info);
+        RELEASE_ASSERT(m_surface);
+    }
+    SkCanvas* canvas = m_surface->getCanvas();
+    if (!canvas)
+        return;
+    WebCore::GraphicsContextSkia context(*canvas, WebCore::RenderingMode::Unaccelerated, WebCore::RenderingPurpose::ShareableLocalSnapshot);
+#endif
 
     int moveX = 0;
     int selectedBackingStoreWidth = m_data.m_selectedBackingStore->size().width();
@@ -910,10 +944,18 @@ void WebPopupMenuProxyWin::paint(const IntRect& damageRect, HDC hdc)
         context.restore();
     }
 
+#if USE(CAIRO)
     HWndDC hWndDC;
     HDC localDC = hdc ? hdc : hWndDC.setHWnd(m_popup);
 
     ::BitBlt(localDC, damageRect.x(), damageRect.y(), damageRect.width(), damageRect.height(), m_DC.get(), damageRect.x(), damageRect.y(), SRCCOPY);
+#elif USE(SKIA)
+    SkPixmap pixmap;
+    if (m_surface->peekPixels(&pixmap)) {
+        auto bitmapInfo = WebCore::BitmapInfo::createBottomUp(m_clientSize);
+        SetDIBitsToDevice(hdc, 0, 0, m_clientSize.width(), m_clientSize.height(), 0, 0, 0, m_clientSize.height(), pixmap.addr(), &bitmapInfo, DIB_RGB_COLORS);
+    }
+#endif
 }
 
 bool WebPopupMenuProxyWin::setFocusedIndex(int i, bool hotTracking)
@@ -930,14 +972,16 @@ bool WebPopupMenuProxyWin::setFocusedIndex(int i, bool hotTracking)
     m_focusedIndex = i;
 
     if (!hotTracking) {
-        if (WebPopupMenuProxy::m_client)
-            WebPopupMenuProxy::m_client->setTextFromItemForPopupMenu(this, i);
+        if (CheckedPtr client = this->client())
+            client->setTextFromItemForPopupMenu(this, i);
     }
 
     scrollToRevealSelection();
 
     return true;
 }
+
+IGNORE_CLANG_WARNINGS_END
 
 int WebPopupMenuProxyWin::visibleItems() const
 {

@@ -36,9 +36,13 @@
 #include <WebCore/ResourceRequest.h>
 #include <WebCore/ResourceResponse.h>
 #include <WebCore/StoredCredentialsPolicy.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebKit {
 using namespace WebCore;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EarlyHintsResourceLoader);
 
 EarlyHintsResourceLoader::EarlyHintsResourceLoader(NetworkResourceLoader& loader)
     : m_loader(&loader)
@@ -125,7 +129,7 @@ void EarlyHintsResourceLoader::startPreconnectTask(const URL& baseURL, const Lin
     if (!contentSecurityPolicy.allowConnectToSource(url, ContentSecurityPolicy::RedirectResponseReceived::No, originalRequest.url()))
         return;
 
-    auto* networkSession = m_loader->connectionToWebProcess().networkSession();
+    auto* networkSession = m_loader->protectedConnectionToWebProcess()->networkSession();
     if (!networkSession)
         return;
 

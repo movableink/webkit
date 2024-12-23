@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Apple Inc. All rights reserved.
+ * Copyright (c) 2023-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,7 +40,7 @@
 #include <wtf/OptionSet.h>
 #include <wtf/SetForScope.h>
 #include <wtf/SortedArrayMap.h>
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/MakeString.h>
 
 namespace WGSL {
 
@@ -407,9 +407,7 @@ TypeChecker::TypeChecker(ShaderModule& shaderModule)
     introduceValue(AST::Identifier::make("write"_s), m_types.accessModeType());
     introduceValue(AST::Identifier::make("read_write"_s), m_types.accessModeType());
 
-    if (m_shaderModule.hasFeature("bgra8unorm-storage"_s))
-        introduceValue(AST::Identifier::make("bgra8unorm"_s), m_types.texelFormatType());
-
+    introduceValue(AST::Identifier::make("bgra8unorm"_s), m_types.texelFormatType());
     introduceValue(AST::Identifier::make("r32float"_s), m_types.texelFormatType());
     introduceValue(AST::Identifier::make("r32sint"_s), m_types.texelFormatType());
     introduceValue(AST::Identifier::make("r32uint"_s), m_types.texelFormatType());
@@ -1393,16 +1391,47 @@ void TypeChecker::visit(AST::CallExpression& call)
                 m_shaderModule.setUsesDot4U8Packed();
             else if (targetName == "extractBits"_s)
                 m_shaderModule.setUsesExtractBits();
-            else if (targetName == "textureGather"_s) {
-                auto& component = call.arguments()[0];
-                if (satisfies(component.inferredType(), Constraints::ConcreteInteger)) {
-                    auto& constant = component.constantValue();
-                    if (!constant)
-                        typeError(InferBottom::No, component.span(), "the component argument must be a const-expression"_s);
-                    else {
-                        auto componentValue = constant->integerValue();
-                        if (componentValue < 0 || componentValue > 3)
-                            typeError(InferBottom::No, component.span(), "the component argument must be at least 0 and at most 3. component is "_s, String::number(componentValue));
+            else if (
+                targetName == "textureGather"_s
+                || targetName == "textureGatherCompare"_s
+                || targetName == "textureSample"_s
+                || targetName == "textureSampleBias"_s
+                || targetName == "textureSampleCompare"_s
+                || targetName == "textureSampleCompareLevel"_s
+                || targetName == "textureSampleGrad"_s
+                || targetName == "textureSampleLevel"_s
+            ) {
+                if (targetName == "textureGather"_s) {
+                    auto& component = call.arguments()[0];
+                    if (satisfies(component.inferredType(), Constraints::ConcreteInteger)) {
+                        auto& constant = component.constantValue();
+                        if (!constant)
+                            typeError(InferBottom::No, component.span(), "the component argument must be a const-expression"_s);
+                        else {
+                            auto componentValue = constant->integerValue();
+                            if (componentValue < 0 || componentValue > 3)
+                                typeError(InferBottom::No, component.span(), "the component argument must be at least 0 and at most 3. component is "_s, String::number(componentValue));
+                        }
+                    }
+                }
+
+                auto& lastArg = call.arguments().last();
+                auto* vectorType = std::get_if<Types::Vector>(lastArg.inferredType());
+                if (!vectorType || vectorType->size != 2 || vectorType->element != m_types.i32Type())
+                    return;
+
+                auto& maybeConstant = lastArg.constantValue();
+                if (!maybeConstant.has_value()) {
+                    typeError(InferBottom::No, lastArg.span(), "the offset argument must be a const-expression"_s);
+                    return;
+                }
+
+                auto& vector = std::get<ConstantVector>(*maybeConstant);
+                for (unsigned i = 0; i < 2; ++i) {
+                    auto& i32 = std::get<int32_t>(vector.elements[i]);
+                    if (i32 < -8 || i32 > 7) {
+                        typeError(InferBottom::No, lastArg.span(), "each component of the offset argument must be at least -8 and at most 7. offset component "_s, String::number(i), " is "_s, String::number(i32));
+                        break;
                     }
                 }
             }
@@ -1645,7 +1674,10 @@ void TypeChecker::visit(AST::UnaryExpression& unary)
         auto* type = infer(unary.expression(), Evaluation::Runtime);
         auto* pointer = std::get_if<Types::Pointer>(type);
         if (!pointer) {
-            typeError(unary.span(), "cannot dereference expression of type '"_s, *type, '\'');
+            if (isBottom(type))
+                inferred(type);
+            else
+                typeError(unary.span(), "cannot dereference expression of type '"_s, *type, '\'');
             return;
         }
 
@@ -1736,8 +1768,14 @@ void TypeChecker::visit(AST::ArrayTypeExpression& array)
                 }
             }
             size = { static_cast<unsigned>(elementCount) };
-        } else
+        } else {
+            m_shaderModule.addOverrideValidation(*array.maybeElementCount(), [&](const ConstantValue& elementCount) -> std::optional<String> {
+                if (elementCount.integerValue() < 1)
+                    return { "array count must be greater than 0"_s };
+                return std::nullopt;
+            });
             size = { array.maybeElementCount() };
+        }
     }
 
     inferred(m_types.arrayType(elementType, size));
@@ -1935,9 +1973,10 @@ const Type* TypeChecker::chooseOverload(ASCIILiteral kind, const SourceSpan& spa
             callArguments[i].m_inferredType = overload->parameters[i];
         inferred(overload->result);
 
-        if (expression && it->value.kind == OverloadedDeclaration::Constructor) {
-            if (auto* call = dynamicDowncast<AST::CallExpression>(*expression))
-                call->m_isConstructor = true;
+        if (expression && is<AST::CallExpression>(*expression)) {
+            auto& call = uncheckedDowncast<AST::CallExpression>(*expression);
+            call.m_isConstructor = it->value.kind == OverloadedDeclaration::Constructor;
+            call.m_visibility = it->value.visibility;
         }
 
         unsigned argumentCount = callArguments.size();
@@ -1995,6 +2034,11 @@ const Type* TypeChecker::chooseOverload(ASCIILiteral kind, const SourceSpan& spa
 
 const Type* TypeChecker::infer(AST::Expression& expression, Evaluation evaluation, DiscardResult discardResult)
 {
+    if (evaluation > m_evaluation) {
+        typeError(InferBottom::No, expression.span(), "cannot use "_s, evaluationToString(evaluation), " value in "_s, evaluationToString(m_evaluation), " expression"_s);
+        return m_types.bottomType();
+    }
+
     auto discardResultScope = SetForScope(m_discardResult, discardResult);
     auto evaluationScope = SetForScope(m_evaluation, evaluation);
 
@@ -2199,6 +2243,8 @@ Behaviors TypeChecker::analyzeStatements(AST::Statement::List& statements)
 const Type* TypeChecker::check(AST::Expression& expression, Constraint constraint, Evaluation evaluation)
 {
     auto* type = infer(expression, evaluation);
+    if (isBottom(type))
+        return type;
     type = satisfyOrPromote(type, constraint, m_types);
     if (!type)
         return nullptr;

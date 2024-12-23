@@ -34,13 +34,12 @@
 
 #include <utility>
 #include <wtf/CrossThreadCopier.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringView.h>
 
 namespace WebCore {
 
-HTTPHeaderMap::HTTPHeaderMap()
-{
-}
+HTTPHeaderMap::HTTPHeaderMap() = default;
 
 HTTPHeaderMap::HTTPHeaderMap(CommonHeadersVector&& commonHeaders, UncommonHeadersVector&& uncommonHeaders)
     : m_commonHeaders(WTFMove(commonHeaders))
@@ -87,12 +86,12 @@ void HTTPHeaderMap::set(CFStringRef name, const String& value)
 {
     // Fast path: avoid constructing a temporary String in the common header case.
     if (auto* nameCharacters = CFStringGetCStringPtr(name, kCFStringEncodingASCII)) {
-        unsigned length = CFStringGetLength(name);
+        auto asciiCharacters = unsafeMakeSpan(nameCharacters, CFStringGetLength(name));
         HTTPHeaderName headerName;
-        if (findHTTPHeaderName(StringView(std::span { nameCharacters, length }), headerName))
+        if (findHTTPHeaderName(StringView(asciiCharacters), headerName))
             set(headerName, value);
         else
-            setUncommonHeader(String({ nameCharacters, length }), value);
+            setUncommonHeader(String(asciiCharacters), value);
 
         return;
     }

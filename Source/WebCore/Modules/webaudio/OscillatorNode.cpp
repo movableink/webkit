@@ -33,11 +33,13 @@
 #include "AudioUtilities.h"
 #include "PeriodicWave.h"
 #include "VectorMath.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(OscillatorNode);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(OscillatorNode);
 
 // Breakpoints where we deicde to do linear interoplation, 3-point interpolation or 5-point interpolation. See doInterpolation().
 constexpr float interpolate2Point = 0.3;
@@ -450,5 +452,7 @@ bool OscillatorNode::propagatesSilence() const
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

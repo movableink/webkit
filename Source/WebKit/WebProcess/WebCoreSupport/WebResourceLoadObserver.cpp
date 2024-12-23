@@ -29,7 +29,6 @@
 #include "Logging.h"
 #include "NetworkConnectionToWebProcessMessages.h"
 #include "NetworkProcessConnection.h"
-#include "WebCoreArgumentCoders.h"
 #include "WebPage.h"
 #include "WebProcess.h"
 #include <WebCore/FrameDestructionObserverInlines.h>
@@ -38,6 +37,7 @@
 #include <WebCore/LocalFrame.h>
 #include <WebCore/LocalFrameLoaderClient.h>
 #include <WebCore/Page.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebKit {
 

@@ -38,7 +38,9 @@ QWebFrameData::QWebFrameData(WebCore::Page* parentPage, WebCore::HTMLFrameOwnerE
     if (!ownerElement) {
         frame = &downcast<WebCore::LocalFrame>(parentPage->mainFrame());
     } else {
-        frame = LocalFrame::createSubframe(*page, [] (auto&) { return makeUniqueRef<FrameLoaderClientQt>(); }, WebCore::FrameIdentifier::generate(), *ownerElement);
+        frame = LocalFrame::createSubframe(*page, [] (auto&, auto& frameLoader) {
+            return WTF::makeUniqueRefWithoutRefCountedCheck<FrameLoaderClientQt>(frameLoader);
+        }, WebCore::FrameIdentifier::generate(), { }, *ownerElement);
     }
     frameLoaderClient = static_cast<FrameLoaderClientQt*>(&frame->loader().client());
 

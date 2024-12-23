@@ -46,7 +46,7 @@ namespace WebCore {
 class SVGElement;
 
 class RenderSVGModelObject : public RenderLayerModelObject {
-    WTF_MAKE_ISO_ALLOCATED(RenderSVGModelObject);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGModelObject);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGModelObject);
 public:
     virtual ~RenderSVGModelObject();
@@ -78,8 +78,8 @@ public:
 
     // For RenderLayer only
     LayoutPoint topLeftLocationEquivalent() const { return currentSVGLayoutLocation(); }
-    LayoutRect borderBoxRectInFragmentEquivalent(RenderFragmentContainer*, RenderBox::RenderBoxFragmentInfoFlags = RenderBox::CacheRenderBoxFragmentInfo) const { return borderBoxRectEquivalent(); }
-    virtual LayoutRect overflowClipRect(const LayoutPoint& location, RenderFragmentContainer* = nullptr, OverlayScrollbarSizeRelevancy = IgnoreOverlayScrollbarSize, PaintPhase = PaintPhase::BlockBackground) const;
+    LayoutRect borderBoxRectInFragmentEquivalent(RenderFragmentContainer*, RenderBox::RenderBoxFragmentInfoFlags = RenderBox::RenderBoxFragmentInfoFlags::CacheRenderBoxFragmentInfo) const { return borderBoxRectEquivalent(); }
+    virtual LayoutRect overflowClipRect(const LayoutPoint& location, RenderFragmentContainer* = nullptr, OverlayScrollbarSizeRelevancy = OverlayScrollbarSizeRelevancy::IgnoreOverlayScrollbarSize, PaintPhase = PaintPhase::BlockBackground) const;
     LayoutRect overflowClipRectForChildLayers(const LayoutPoint& location, RenderFragmentContainer* fragment, OverlayScrollbarSizeRelevancy relevancy) { return overflowClipRect(location, fragment, relevancy); }
 
     virtual Path computeClipPath(AffineTransform&) const;

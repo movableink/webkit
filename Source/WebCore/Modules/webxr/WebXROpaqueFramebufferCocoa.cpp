@@ -117,6 +117,7 @@ WebXROpaqueFramebuffer::~WebXROpaqueFramebuffer()
     if (RefPtr gl = m_context.graphicsContextGL()) {
         m_drawAttachments.release(*gl);
         m_resolveAttachments.release(*gl);
+        m_displayFBO.release(*gl);
         m_resolvedFBO.release(*gl);
         m_context.deleteFramebuffer(m_drawFramebuffer.ptr());
     } else {
@@ -129,7 +130,7 @@ WebXROpaqueFramebuffer::~WebXROpaqueFramebuffer()
     }
 }
 
-void WebXROpaqueFramebuffer::startFrame(const PlatformXR::FrameData::LayerData& data)
+void WebXROpaqueFramebuffer::startFrame(PlatformXR::FrameData::LayerData& data)
 {
     RefPtr gl = m_context.graphicsContextGL();
     if (!gl)
@@ -146,6 +147,7 @@ void WebXROpaqueFramebuffer::startFrame(const PlatformXR::FrameData::LayerData& 
     ScopedWebGLRestoreTexture restoreTexture { m_context, textureTarget };
     ScopedWebGLRestoreRenderbuffer restoreRenderBuffer { m_context };
 
+    gl->bindFramebuffer(GL::FRAMEBUFFER, m_drawFramebuffer->object());
     // https://immersive-web.github.io/webxr/#opaque-framebuffer
     // The buffers attached to an opaque framebuffer MUST be cleared to the values in the provided table when first created,
     // or prior to the processing of each XR animation frame.
@@ -161,10 +163,6 @@ void WebXROpaqueFramebuffer::startFrame(const PlatformXR::FrameData::LayerData& 
         m_completionSyncEvent = MachSendRight(data.layerSetup->completionSyncEvent);
     }
 
-    gl->bindFramebuffer(GL::FRAMEBUFFER, m_drawFramebuffer->object());
-    Vector<GCGLenum, 3> discardAttachments = { GL::COLOR_ATTACHMENT0, GL::DEPTH_ATTACHMENT, GL::STENCIL_ATTACHMENT };
-    gl->framebufferDiscard(GL::FRAMEBUFFER, discardAttachments);
-
     bindCompositorTexturesForDisplay(*gl, data);
     auto displayAttachmentSet = reusableDisplayAttachmentsAtIndex(m_currentDisplayAttachmentIndex);
     ASSERT(displayAttachmentSet);
@@ -178,6 +176,23 @@ void WebXROpaqueFramebuffer::startFrame(const PlatformXR::FrameData::LayerData& 
     }
 
     m_renderingFrameIndex = data.renderingFrameIndex;
+    m_blitDepth = data.requestDepth;
+
+    // WebXR must always clear for the rAF of the session. Currently we assume content does not do redundant initial clear,
+    // as the spec says the buffer always starts cleared.
+    ScopedDisableRasterizerDiscard disableRasterizerDiscard { m_context };
+    ScopedEnableBackbuffer enableBackBuffer { m_context };
+    ScopedDisableScissorTest disableScissorTest { m_context };
+    ScopedClearColorAndMask zeroClear { m_context, 0.f, 0.f, 0.f, 0.f, true, true, true, true, };
+    ScopedClearDepthAndMask zeroDepth { m_context, 1.0f, true, m_attributes.depth };
+    ScopedClearStencilAndMask zeroStencil { m_context, 0, 0xFFFFFFFF, m_attributes.stencil };
+    GCGLenum clearMask = GL::COLOR_BUFFER_BIT;
+    if (m_attributes.depth)
+        clearMask |= GL::DEPTH_BUFFER_BIT;
+    if (m_attributes.stencil)
+        clearMask |= GL::STENCIL_BUFFER_BIT;
+    gl->bindFramebuffer(GL::FRAMEBUFFER, m_drawFramebuffer->object());
+    gl->clear(clearMask);
 }
 
 void WebXROpaqueFramebuffer::endFrame()
@@ -227,6 +242,12 @@ void WebXROpaqueFramebuffer::releaseAllDisplayAttachments()
 
 void WebXROpaqueFramebuffer::resolveMSAAFramebuffer(GraphicsContextGL& gl)
 {
+#if PLATFORM(VISION) && !PLATFORM(IOS_FAMILY_SIMULATOR)
+    // End of rendering. Discard the MSAA buffers to avoid writing them back to
+    // memory since we only need the resolved versions.
+    Vector<GCGLenum, 3> discardAttachments = { GL::COLOR_ATTACHMENT0, GL::DEPTH_ATTACHMENT, GL::STENCIL_ATTACHMENT };
+    gl.framebufferDiscard(GL::FRAMEBUFFER, discardAttachments);
+#else
     IntSize size = m_framebufferSize; // Physical Space
     PlatformGLObject readFBO = m_drawFramebuffer->object();
     PlatformGLObject drawFBO = m_resolvedFBO ? m_resolvedFBO : m_displayFBO;
@@ -242,6 +263,7 @@ void WebXROpaqueFramebuffer::resolveMSAAFramebuffer(GraphicsContextGL& gl)
     gl.bindFramebuffer(GL::DRAW_FRAMEBUFFER, drawFBO);
     ASSERT(gl.checkFramebufferStatus(GL::DRAW_FRAMEBUFFER) == GL::FRAMEBUFFER_COMPLETE);
     gl.blitFramebuffer(0, 0, size.width(), size.height(), 0, 0, size.width(), size.height(), buffers, GL::NEAREST);
+#endif
 }
 
 void WebXROpaqueFramebuffer::blitShared(GraphicsContextGL& gl)
@@ -292,19 +314,13 @@ void WebXROpaqueFramebuffer::blitSharedToLayered(GraphicsContextGL& gl)
         GCGLbitfield buffers = GL::COLOR_BUFFER_BIT;
         gl.framebufferRenderbuffer(GL::DRAW_FRAMEBUFFER, GL::COLOR_ATTACHMENT0, GL::RENDERBUFFER, (*displayAttachmentSet)[layer].colorBuffer.renderBufferObject);
 
-        if ((*displayAttachmentSet)[layer].depthStencilBuffer.image) {
+        if (m_blitDepth && (*displayAttachmentSet)[layer].depthStencilBuffer.image) {
             buffers |= GL::DEPTH_BUFFER_BIT;
             gl.framebufferRenderbuffer(GL::DRAW_FRAMEBUFFER, GL::DEPTH_STENCIL_ATTACHMENT, GL::RENDERBUFFER, (*displayAttachmentSet)[layer].depthStencilBuffer.renderBufferObject);
         }
         ASSERT(gl.checkFramebufferStatus(GL::DRAW_FRAMEBUFFER) == GL::FRAMEBUFFER_COMPLETE);
 
         gl.blitFramebuffer(xOffset, 0, xOffset + width, height, 0, 0, width, height, buffers, GL::NEAREST);
-
-        // FIXME: https://bugs.webkit.org/show_bug.cgi?id=272104 - [WebXR] Compositor expects reverse-Z values
-        {
-            ScopedClearDepthAndMask minDepth { m_context, FLT_MIN, true, m_attributes.depth };
-            gl.clear(GL::DEPTH_BUFFER_BIT);
-        }
 
         xOffset += width;
         width = m_rightPhysicalSize.width();
@@ -403,6 +419,12 @@ bool WebXROpaqueFramebuffer::setupFramebuffer(GraphicsContextGL& gl, const Platf
     // Intermediate resolve target
     if ((!m_resolvedFBO || framebufferResize) && needsIntermediateResolve) {
         allocateAttachments(gl, m_resolveAttachments, 0, m_framebufferSize);
+
+#if PLATFORM(VISION) && !PLATFORM(IOS_FAMILY_SIMULATOR)
+        gl.bindFramebuffer(GL::FRAMEBUFFER, m_drawFramebuffer->object());
+        bindResolveAttachments(gl, m_resolveAttachments);
+        ASSERT(gl.checkFramebufferStatus(GL::FRAMEBUFFER) == GL::FRAMEBUFFER_COMPLETE);
+#endif
 
         ensure(gl, m_resolvedFBO);
         gl.bindFramebuffer(GL::FRAMEBUFFER, m_resolvedFBO);
@@ -518,6 +540,15 @@ void WebXROpaqueFramebuffer::bindAttachments(GraphicsContextGL& gl, WebXRAttachm
     // NOTE: In WebGL2, GL::DEPTH_STENCIL_ATTACHMENT is an alias to set GL::DEPTH_ATTACHMENT and GL::STENCIL_ATTACHMENT, which is all we require.
     ASSERT((m_attributes.stencil || m_attributes.depth) && attachments.depthStencilBuffer);
     gl.framebufferRenderbuffer(GL::FRAMEBUFFER, GL::DEPTH_STENCIL_ATTACHMENT, GL::RENDERBUFFER, attachments.depthStencilBuffer);
+}
+
+
+void WebXROpaqueFramebuffer::bindResolveAttachments(GraphicsContextGL& gl, WebXRAttachments& attachments)
+{
+    gl.framebufferResolveRenderbuffer(GL::FRAMEBUFFER, GL::COLOR_ATTACHMENT0, GL::RENDERBUFFER, attachments.colorBuffer);
+    // NOTE: In WebGL2, GL::DEPTH_STENCIL_ATTACHMENT is an alias to set GL::DEPTH_ATTACHMENT and GL::STENCIL_ATTACHMENT, which is all we require.
+    ASSERT((m_attributes.stencil || m_attributes.depth) && attachments.depthStencilBuffer);
+    gl.framebufferResolveRenderbuffer(GL::FRAMEBUFFER, GL::DEPTH_STENCIL_ATTACHMENT, GL::RENDERBUFFER, attachments.depthStencilBuffer);
 }
 
 void WebXRExternalRenderbuffer::destroyImage(GraphicsContextGL& gl)

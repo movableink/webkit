@@ -26,6 +26,7 @@
 #pragma once
 
 #include "WPEToplevelWayland.h"
+#include "linux-explicit-synchronization-unstable-v1-client-protocol.h"
 
 void wpeToplevelWaylandSetOpaqueRectangles(WPEToplevelWayland*, WPERectangle*, unsigned);
 void wpeToplevelWaylandUpdateOpaqueRegion(WPEToplevelWayland*);
@@ -33,4 +34,7 @@ void wpeToplevelWaylandSetHasPointer(WPEToplevelWayland*, bool);
 WPEView* wpeToplevelWaylandGetVisibleViewUnderPointer(WPEToplevelWayland*);
 void wpeToplevelWaylandSetIsFocused(WPEToplevelWayland*, bool);
 WPEView* wpeToplevelWaylandGetVisibleFocusedView(WPEToplevelWayland*);
+void wpeToplevelWaylandSetIsUnderTouch(WPEToplevelWayland*, bool);
+WPEView* wpeToplevelWaylandGetVisibleViewUnderTouch(WPEToplevelWayland*);
 void wpeToplevelWaylandViewVisibilityChanged(WPEToplevelWayland*, WPEView*);
+struct zwp_linux_surface_synchronization_v1* wpeToplevelWaylandGetSurfaceSync(WPEToplevelWayland*);

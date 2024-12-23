@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Alliance for Open Media. All rights reserved
+ * Copyright (c) 2022, Alliance for Open Media. All rights reserved.
  *
  * This source code is subject to the terms of the BSD 2 Clause License and
  * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
@@ -16,6 +16,7 @@
 #include "config/av1_rtcd.h"
 
 #include "aom/aom_integer.h"
+#include "aom_dsp/arm/mem_neon.h"
 #include "aom_dsp/arm/sum_neon.h"
 #include "aom_dsp/arm/transpose_neon.h"
 #include "aom_dsp/intrapred_common.h"
@@ -23,21 +24,21 @@
 // -----------------------------------------------------------------------------
 // DC
 
-static INLINE void highbd_dc_store_4xh(uint16_t *dst, ptrdiff_t stride, int h,
+static inline void highbd_dc_store_4xh(uint16_t *dst, ptrdiff_t stride, int h,
                                        uint16x4_t dc) {
   for (int i = 0; i < h; ++i) {
     vst1_u16(dst + i * stride, dc);
   }
 }
 
-static INLINE void highbd_dc_store_8xh(uint16_t *dst, ptrdiff_t stride, int h,
+static inline void highbd_dc_store_8xh(uint16_t *dst, ptrdiff_t stride, int h,
                                        uint16x8_t dc) {
   for (int i = 0; i < h; ++i) {
     vst1q_u16(dst + i * stride, dc);
   }
 }
 
-static INLINE void highbd_dc_store_16xh(uint16_t *dst, ptrdiff_t stride, int h,
+static inline void highbd_dc_store_16xh(uint16_t *dst, ptrdiff_t stride, int h,
                                         uint16x8_t dc) {
   for (int i = 0; i < h; ++i) {
     vst1q_u16(dst + i * stride, dc);
@@ -45,7 +46,7 @@ static INLINE void highbd_dc_store_16xh(uint16_t *dst, ptrdiff_t stride, int h,
   }
 }
 
-static INLINE void highbd_dc_store_32xh(uint16_t *dst, ptrdiff_t stride, int h,
+static inline void highbd_dc_store_32xh(uint16_t *dst, ptrdiff_t stride, int h,
                                         uint16x8_t dc) {
   for (int i = 0; i < h; ++i) {
     vst1q_u16(dst + i * stride, dc);
@@ -55,7 +56,7 @@ static INLINE void highbd_dc_store_32xh(uint16_t *dst, ptrdiff_t stride, int h,
   }
 }
 
-static INLINE void highbd_dc_store_64xh(uint16_t *dst, ptrdiff_t stride, int h,
+static inline void highbd_dc_store_64xh(uint16_t *dst, ptrdiff_t stride, int h,
                                         uint16x8_t dc) {
   for (int i = 0; i < h; ++i) {
     vst1q_u16(dst + i * stride, dc);
@@ -69,7 +70,7 @@ static INLINE void highbd_dc_store_64xh(uint16_t *dst, ptrdiff_t stride, int h,
   }
 }
 
-static INLINE uint32x4_t horizontal_add_and_broadcast_long_u16x8(uint16x8_t a) {
+static inline uint32x4_t horizontal_add_and_broadcast_long_u16x8(uint16x8_t a) {
   // Need to assume input is up to 16 bits wide from dc 64x64 partial sum, so
   // promote first.
   const uint32x4_t b = vpaddlq_u16(a);
@@ -83,7 +84,7 @@ static INLINE uint32x4_t horizontal_add_and_broadcast_long_u16x8(uint16x8_t a) {
 #endif
 }
 
-static INLINE uint16x8_t highbd_dc_load_partial_sum_4(const uint16_t *left) {
+static inline uint16x8_t highbd_dc_load_partial_sum_4(const uint16_t *left) {
   // Nothing to do since sum is already one vector, but saves needing to
   // special case w=4 or h=4 cases. The combine will be zero cost for a sane
   // compiler since vld1 already sets the top half of a vector to zero as part
@@ -91,19 +92,19 @@ static INLINE uint16x8_t highbd_dc_load_partial_sum_4(const uint16_t *left) {
   return vcombine_u16(vld1_u16(left), vdup_n_u16(0));
 }
 
-static INLINE uint16x8_t highbd_dc_load_partial_sum_8(const uint16_t *left) {
+static inline uint16x8_t highbd_dc_load_partial_sum_8(const uint16_t *left) {
   // Nothing to do since sum is already one vector, but saves needing to
   // special case w=8 or h=8 cases.
   return vld1q_u16(left);
 }
 
-static INLINE uint16x8_t highbd_dc_load_partial_sum_16(const uint16_t *left) {
+static inline uint16x8_t highbd_dc_load_partial_sum_16(const uint16_t *left) {
   const uint16x8_t a0 = vld1q_u16(left + 0);  // up to 12 bits
   const uint16x8_t a1 = vld1q_u16(left + 8);
   return vaddq_u16(a0, a1);  // up to 13 bits
 }
 
-static INLINE uint16x8_t highbd_dc_load_partial_sum_32(const uint16_t *left) {
+static inline uint16x8_t highbd_dc_load_partial_sum_32(const uint16_t *left) {
   const uint16x8_t a0 = vld1q_u16(left + 0);  // up to 12 bits
   const uint16x8_t a1 = vld1q_u16(left + 8);
   const uint16x8_t a2 = vld1q_u16(left + 16);
@@ -113,7 +114,7 @@ static INLINE uint16x8_t highbd_dc_load_partial_sum_32(const uint16_t *left) {
   return vaddq_u16(b0, b1);  // up to 14 bits
 }
 
-static INLINE uint16x8_t highbd_dc_load_partial_sum_64(const uint16_t *left) {
+static inline uint16x8_t highbd_dc_load_partial_sum_64(const uint16_t *left) {
   const uint16x8_t a0 = vld1q_u16(left + 0);  // up to 12 bits
   const uint16x8_t a1 = vld1q_u16(left + 8);
   const uint16x8_t a2 = vld1q_u16(left + 16);
@@ -168,7 +169,7 @@ HIGHBD_DC_PREDICTOR(64, 64, 7)
 
 #undef HIGHBD_DC_PREDICTOR
 
-static INLINE int divide_using_multiply_shift(int num, int shift1,
+static inline int divide_using_multiply_shift(int num, int shift1,
                                               int multiplier, int shift2) {
   const int interm = num >> shift1;
   return interm * multiplier >> shift2;
@@ -178,7 +179,7 @@ static INLINE int divide_using_multiply_shift(int num, int shift1,
 #define HIGHBD_DC_MULTIPLIER_1X4 0x6667
 #define HIGHBD_DC_SHIFT2 17
 
-static INLINE int highbd_dc_predictor_rect(int bw, int bh, int sum, int shift1,
+static inline int highbd_dc_predictor_rect(int bw, int bh, int sum, int shift1,
                                            uint32_t multiplier) {
   return divide_using_multiply_shift(sum + ((bw + bh) >> 1), shift1, multiplier,
                                      HIGHBD_DC_SHIFT2);
@@ -199,6 +200,7 @@ static INLINE int highbd_dc_predictor_rect(int bw, int bh, int sum, int shift1,
     highbd_dc_store_##w##xh(dst, stride, (h), vdup##q##_n_u16(dc0));    \
   }
 
+#if !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 HIGHBD_DC_PREDICTOR_RECT(4, 8, , 2, HIGHBD_DC_MULTIPLIER_1X2)
 HIGHBD_DC_PREDICTOR_RECT(4, 16, , 2, HIGHBD_DC_MULTIPLIER_1X4)
 HIGHBD_DC_PREDICTOR_RECT(8, 4, q, 2, HIGHBD_DC_MULTIPLIER_1X2)
@@ -213,6 +215,16 @@ HIGHBD_DC_PREDICTOR_RECT(32, 16, q, 4, HIGHBD_DC_MULTIPLIER_1X2)
 HIGHBD_DC_PREDICTOR_RECT(32, 64, q, 5, HIGHBD_DC_MULTIPLIER_1X2)
 HIGHBD_DC_PREDICTOR_RECT(64, 16, q, 4, HIGHBD_DC_MULTIPLIER_1X4)
 HIGHBD_DC_PREDICTOR_RECT(64, 32, q, 5, HIGHBD_DC_MULTIPLIER_1X2)
+#else
+HIGHBD_DC_PREDICTOR_RECT(4, 8, , 2, HIGHBD_DC_MULTIPLIER_1X2)
+HIGHBD_DC_PREDICTOR_RECT(8, 4, q, 2, HIGHBD_DC_MULTIPLIER_1X2)
+HIGHBD_DC_PREDICTOR_RECT(8, 16, q, 3, HIGHBD_DC_MULTIPLIER_1X2)
+HIGHBD_DC_PREDICTOR_RECT(16, 8, q, 3, HIGHBD_DC_MULTIPLIER_1X2)
+HIGHBD_DC_PREDICTOR_RECT(16, 32, q, 4, HIGHBD_DC_MULTIPLIER_1X2)
+HIGHBD_DC_PREDICTOR_RECT(32, 16, q, 4, HIGHBD_DC_MULTIPLIER_1X2)
+HIGHBD_DC_PREDICTOR_RECT(32, 64, q, 5, HIGHBD_DC_MULTIPLIER_1X2)
+HIGHBD_DC_PREDICTOR_RECT(64, 32, q, 5, HIGHBD_DC_MULTIPLIER_1X2)
+#endif  // !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 
 #undef HIGHBD_DC_PREDICTOR_RECT
 #undef HIGHBD_DC_MULTIPLIER_1X2
@@ -232,6 +244,7 @@ HIGHBD_DC_PREDICTOR_RECT(64, 32, q, 5, HIGHBD_DC_MULTIPLIER_1X2)
                             vdup##q##_n_u16(0x80 << (bd - 8))); \
   }
 
+#if !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 HIGHBD_DC_PREDICTOR_128(4, 4, )
 HIGHBD_DC_PREDICTOR_128(4, 8, )
 HIGHBD_DC_PREDICTOR_128(4, 16, )
@@ -251,33 +264,48 @@ HIGHBD_DC_PREDICTOR_128(32, 64, q)
 HIGHBD_DC_PREDICTOR_128(64, 16, q)
 HIGHBD_DC_PREDICTOR_128(64, 32, q)
 HIGHBD_DC_PREDICTOR_128(64, 64, q)
+#else
+HIGHBD_DC_PREDICTOR_128(4, 4, )
+HIGHBD_DC_PREDICTOR_128(4, 8, )
+HIGHBD_DC_PREDICTOR_128(8, 4, q)
+HIGHBD_DC_PREDICTOR_128(8, 8, q)
+HIGHBD_DC_PREDICTOR_128(8, 16, q)
+HIGHBD_DC_PREDICTOR_128(16, 8, q)
+HIGHBD_DC_PREDICTOR_128(16, 16, q)
+HIGHBD_DC_PREDICTOR_128(16, 32, q)
+HIGHBD_DC_PREDICTOR_128(32, 16, q)
+HIGHBD_DC_PREDICTOR_128(32, 32, q)
+HIGHBD_DC_PREDICTOR_128(32, 64, q)
+HIGHBD_DC_PREDICTOR_128(64, 32, q)
+HIGHBD_DC_PREDICTOR_128(64, 64, q)
+#endif  // !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 
 #undef HIGHBD_DC_PREDICTOR_128
 
 // -----------------------------------------------------------------------------
 // DC_LEFT
 
-static INLINE uint32x4_t highbd_dc_load_sum_4(const uint16_t *left) {
+static inline uint32x4_t highbd_dc_load_sum_4(const uint16_t *left) {
   const uint16x4_t a = vld1_u16(left);   // up to 12 bits
   const uint16x4_t b = vpadd_u16(a, a);  // up to 13 bits
   return vcombine_u32(vpaddl_u16(b), vdup_n_u32(0));
 }
 
-static INLINE uint32x4_t highbd_dc_load_sum_8(const uint16_t *left) {
+static inline uint32x4_t highbd_dc_load_sum_8(const uint16_t *left) {
   return horizontal_add_and_broadcast_long_u16x8(vld1q_u16(left));
 }
 
-static INLINE uint32x4_t highbd_dc_load_sum_16(const uint16_t *left) {
+static inline uint32x4_t highbd_dc_load_sum_16(const uint16_t *left) {
   return horizontal_add_and_broadcast_long_u16x8(
       highbd_dc_load_partial_sum_16(left));
 }
 
-static INLINE uint32x4_t highbd_dc_load_sum_32(const uint16_t *left) {
+static inline uint32x4_t highbd_dc_load_sum_32(const uint16_t *left) {
   return horizontal_add_and_broadcast_long_u16x8(
       highbd_dc_load_partial_sum_32(left));
 }
 
-static INLINE uint32x4_t highbd_dc_load_sum_64(const uint16_t *left) {
+static inline uint32x4_t highbd_dc_load_sum_64(const uint16_t *left) {
   return horizontal_add_and_broadcast_long_u16x8(
       highbd_dc_load_partial_sum_64(left));
 }
@@ -293,6 +321,7 @@ static INLINE uint32x4_t highbd_dc_load_sum_64(const uint16_t *left) {
     highbd_dc_store_##w##xh(dst, stride, (h), vdup##q##_lane_u16(dc0, 0)); \
   }
 
+#if !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 DC_PREDICTOR_LEFT(4, 4, 2, )
 DC_PREDICTOR_LEFT(4, 8, 3, )
 DC_PREDICTOR_LEFT(4, 16, 4, )
@@ -312,6 +341,21 @@ DC_PREDICTOR_LEFT(32, 64, 6, q)
 DC_PREDICTOR_LEFT(64, 16, 4, q)
 DC_PREDICTOR_LEFT(64, 32, 5, q)
 DC_PREDICTOR_LEFT(64, 64, 6, q)
+#else
+DC_PREDICTOR_LEFT(4, 4, 2, )
+DC_PREDICTOR_LEFT(4, 8, 3, )
+DC_PREDICTOR_LEFT(8, 4, 2, q)
+DC_PREDICTOR_LEFT(8, 8, 3, q)
+DC_PREDICTOR_LEFT(8, 16, 4, q)
+DC_PREDICTOR_LEFT(16, 8, 3, q)
+DC_PREDICTOR_LEFT(16, 16, 4, q)
+DC_PREDICTOR_LEFT(16, 32, 5, q)
+DC_PREDICTOR_LEFT(32, 16, 4, q)
+DC_PREDICTOR_LEFT(32, 32, 5, q)
+DC_PREDICTOR_LEFT(32, 64, 6, q)
+DC_PREDICTOR_LEFT(64, 32, 5, q)
+DC_PREDICTOR_LEFT(64, 64, 6, q)
+#endif  // !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 
 #undef DC_PREDICTOR_LEFT
 
@@ -329,6 +373,7 @@ DC_PREDICTOR_LEFT(64, 64, 6, q)
     highbd_dc_store_##w##xh(dst, stride, (h), vdup##q##_lane_u16(dc0, 0)); \
   }
 
+#if !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 DC_PREDICTOR_TOP(4, 4, 2, )
 DC_PREDICTOR_TOP(4, 8, 2, )
 DC_PREDICTOR_TOP(4, 16, 2, )
@@ -348,6 +393,21 @@ DC_PREDICTOR_TOP(32, 64, 5, q)
 DC_PREDICTOR_TOP(64, 16, 6, q)
 DC_PREDICTOR_TOP(64, 32, 6, q)
 DC_PREDICTOR_TOP(64, 64, 6, q)
+#else
+DC_PREDICTOR_TOP(4, 4, 2, )
+DC_PREDICTOR_TOP(4, 8, 2, )
+DC_PREDICTOR_TOP(8, 4, 3, q)
+DC_PREDICTOR_TOP(8, 8, 3, q)
+DC_PREDICTOR_TOP(8, 16, 3, q)
+DC_PREDICTOR_TOP(16, 8, 4, q)
+DC_PREDICTOR_TOP(16, 16, 4, q)
+DC_PREDICTOR_TOP(16, 32, 4, q)
+DC_PREDICTOR_TOP(32, 16, 5, q)
+DC_PREDICTOR_TOP(32, 32, 5, q)
+DC_PREDICTOR_TOP(32, 64, 5, q)
+DC_PREDICTOR_TOP(64, 32, 6, q)
+DC_PREDICTOR_TOP(64, 64, 6, q)
+#endif  // !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 
 #undef DC_PREDICTOR_TOP
 
@@ -363,7 +423,7 @@ DC_PREDICTOR_TOP(64, 64, 6, q)
     vertical##W##xh_neon(dst, stride, above, H);              \
   }
 
-static INLINE uint16x8x2_t load_uint16x8x2(uint16_t const *ptr) {
+static inline uint16x8x2_t load_uint16x8x2(uint16_t const *ptr) {
   uint16x8x2_t x;
   // Clang/gcc uses ldp here.
   x.val[0] = vld1q_u16(ptr);
@@ -371,12 +431,12 @@ static INLINE uint16x8x2_t load_uint16x8x2(uint16_t const *ptr) {
   return x;
 }
 
-static INLINE void store_uint16x8x2(uint16_t *ptr, uint16x8x2_t x) {
+static inline void store_uint16x8x2(uint16_t *ptr, uint16x8x2_t x) {
   vst1q_u16(ptr, x.val[0]);
   vst1q_u16(ptr + 8, x.val[1]);
 }
 
-static INLINE void vertical4xh_neon(uint16_t *dst, ptrdiff_t stride,
+static inline void vertical4xh_neon(uint16_t *dst, ptrdiff_t stride,
                                     const uint16_t *const above, int height) {
   const uint16x4_t row = vld1_u16(above);
   int y = height;
@@ -388,7 +448,7 @@ static INLINE void vertical4xh_neon(uint16_t *dst, ptrdiff_t stride,
   } while (y != 0);
 }
 
-static INLINE void vertical8xh_neon(uint16_t *dst, ptrdiff_t stride,
+static inline void vertical8xh_neon(uint16_t *dst, ptrdiff_t stride,
                                     const uint16_t *const above, int height) {
   const uint16x8_t row = vld1q_u16(above);
   int y = height;
@@ -400,7 +460,7 @@ static INLINE void vertical8xh_neon(uint16_t *dst, ptrdiff_t stride,
   } while (y != 0);
 }
 
-static INLINE void vertical16xh_neon(uint16_t *dst, ptrdiff_t stride,
+static inline void vertical16xh_neon(uint16_t *dst, ptrdiff_t stride,
                                      const uint16_t *const above, int height) {
   const uint16x8x2_t row = load_uint16x8x2(above);
   int y = height;
@@ -412,7 +472,7 @@ static INLINE void vertical16xh_neon(uint16_t *dst, ptrdiff_t stride,
   } while (y != 0);
 }
 
-static INLINE uint16x8x4_t load_uint16x8x4(uint16_t const *ptr) {
+static inline uint16x8x4_t load_uint16x8x4(uint16_t const *ptr) {
   uint16x8x4_t x;
   // Clang/gcc uses ldp here.
   x.val[0] = vld1q_u16(ptr);
@@ -422,14 +482,14 @@ static INLINE uint16x8x4_t load_uint16x8x4(uint16_t const *ptr) {
   return x;
 }
 
-static INLINE void store_uint16x8x4(uint16_t *ptr, uint16x8x4_t x) {
+static inline void store_uint16x8x4(uint16_t *ptr, uint16x8x4_t x) {
   vst1q_u16(ptr, x.val[0]);
   vst1q_u16(ptr + 8, x.val[1]);
   vst1q_u16(ptr + 16, x.val[2]);
   vst1q_u16(ptr + 24, x.val[3]);
 }
 
-static INLINE void vertical32xh_neon(uint16_t *dst, ptrdiff_t stride,
+static inline void vertical32xh_neon(uint16_t *dst, ptrdiff_t stride,
                                      const uint16_t *const above, int height) {
   const uint16x8x4_t row = load_uint16x8x4(above);
   int y = height;
@@ -441,7 +501,7 @@ static INLINE void vertical32xh_neon(uint16_t *dst, ptrdiff_t stride,
   } while (y != 0);
 }
 
-static INLINE void vertical64xh_neon(uint16_t *dst, ptrdiff_t stride,
+static inline void vertical64xh_neon(uint16_t *dst, ptrdiff_t stride,
                                      const uint16_t *const above, int height) {
   uint16_t *dst32 = dst + 32;
   const uint16x8x4_t row = load_uint16x8x4(above);
@@ -458,6 +518,7 @@ static INLINE void vertical64xh_neon(uint16_t *dst, ptrdiff_t stride,
   } while (y != 0);
 }
 
+#if !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 HIGHBD_V_NXM(4, 4)
 HIGHBD_V_NXM(4, 8)
 HIGHBD_V_NXM(4, 16)
@@ -481,11 +542,30 @@ HIGHBD_V_NXM(32, 64)
 HIGHBD_V_NXM(64, 16)
 HIGHBD_V_NXM(64, 32)
 HIGHBD_V_NXM(64, 64)
+#else
+HIGHBD_V_NXM(4, 4)
+HIGHBD_V_NXM(4, 8)
+
+HIGHBD_V_NXM(8, 4)
+HIGHBD_V_NXM(8, 8)
+HIGHBD_V_NXM(8, 16)
+
+HIGHBD_V_NXM(16, 8)
+HIGHBD_V_NXM(16, 16)
+HIGHBD_V_NXM(16, 32)
+
+HIGHBD_V_NXM(32, 16)
+HIGHBD_V_NXM(32, 32)
+HIGHBD_V_NXM(32, 64)
+
+HIGHBD_V_NXM(64, 32)
+HIGHBD_V_NXM(64, 64)
+#endif  // !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 
 // -----------------------------------------------------------------------------
 // H_PRED
 
-static INLINE void highbd_h_store_4x4(uint16_t *dst, ptrdiff_t stride,
+static inline void highbd_h_store_4x4(uint16_t *dst, ptrdiff_t stride,
                                       uint16x4_t left) {
   vst1_u16(dst + 0 * stride, vdup_lane_u16(left, 0));
   vst1_u16(dst + 1 * stride, vdup_lane_u16(left, 1));
@@ -493,7 +573,7 @@ static INLINE void highbd_h_store_4x4(uint16_t *dst, ptrdiff_t stride,
   vst1_u16(dst + 3 * stride, vdup_lane_u16(left, 3));
 }
 
-static INLINE void highbd_h_store_8x4(uint16_t *dst, ptrdiff_t stride,
+static inline void highbd_h_store_8x4(uint16_t *dst, ptrdiff_t stride,
                                       uint16x4_t left) {
   vst1q_u16(dst + 0 * stride, vdupq_lane_u16(left, 0));
   vst1q_u16(dst + 1 * stride, vdupq_lane_u16(left, 1));
@@ -501,12 +581,12 @@ static INLINE void highbd_h_store_8x4(uint16_t *dst, ptrdiff_t stride,
   vst1q_u16(dst + 3 * stride, vdupq_lane_u16(left, 3));
 }
 
-static INLINE void highbd_h_store_16x1(uint16_t *dst, uint16x8_t left) {
+static inline void highbd_h_store_16x1(uint16_t *dst, uint16x8_t left) {
   vst1q_u16(dst + 0, left);
   vst1q_u16(dst + 8, left);
 }
 
-static INLINE void highbd_h_store_16x4(uint16_t *dst, ptrdiff_t stride,
+static inline void highbd_h_store_16x4(uint16_t *dst, ptrdiff_t stride,
                                        uint16x4_t left) {
   highbd_h_store_16x1(dst + 0 * stride, vdupq_lane_u16(left, 0));
   highbd_h_store_16x1(dst + 1 * stride, vdupq_lane_u16(left, 1));
@@ -514,14 +594,14 @@ static INLINE void highbd_h_store_16x4(uint16_t *dst, ptrdiff_t stride,
   highbd_h_store_16x1(dst + 3 * stride, vdupq_lane_u16(left, 3));
 }
 
-static INLINE void highbd_h_store_32x1(uint16_t *dst, uint16x8_t left) {
+static inline void highbd_h_store_32x1(uint16_t *dst, uint16x8_t left) {
   vst1q_u16(dst + 0, left);
   vst1q_u16(dst + 8, left);
   vst1q_u16(dst + 16, left);
   vst1q_u16(dst + 24, left);
 }
 
-static INLINE void highbd_h_store_32x4(uint16_t *dst, ptrdiff_t stride,
+static inline void highbd_h_store_32x4(uint16_t *dst, ptrdiff_t stride,
                                        uint16x4_t left) {
   highbd_h_store_32x1(dst + 0 * stride, vdupq_lane_u16(left, 0));
   highbd_h_store_32x1(dst + 1 * stride, vdupq_lane_u16(left, 1));
@@ -529,7 +609,7 @@ static INLINE void highbd_h_store_32x4(uint16_t *dst, ptrdiff_t stride,
   highbd_h_store_32x1(dst + 3 * stride, vdupq_lane_u16(left, 3));
 }
 
-static INLINE void highbd_h_store_64x1(uint16_t *dst, uint16x8_t left) {
+static inline void highbd_h_store_64x1(uint16_t *dst, uint16x8_t left) {
   vst1q_u16(dst + 0, left);
   vst1q_u16(dst + 8, left);
   vst1q_u16(dst + 16, left);
@@ -540,7 +620,7 @@ static INLINE void highbd_h_store_64x1(uint16_t *dst, uint16x8_t left) {
   vst1q_u16(dst + 56, left);
 }
 
-static INLINE void highbd_h_store_64x4(uint16_t *dst, ptrdiff_t stride,
+static inline void highbd_h_store_64x4(uint16_t *dst, ptrdiff_t stride,
                                        uint16x4_t left) {
   highbd_h_store_64x1(dst + 0 * stride, vdupq_lane_u16(left, 0));
   highbd_h_store_64x1(dst + 1 * stride, vdupq_lane_u16(left, 1));
@@ -584,6 +664,7 @@ void aom_highbd_h_predictor_8x8_neon(uint16_t *dst, ptrdiff_t stride,
   highbd_h_store_8x4(dst + 4 * stride, stride, vget_high_u16(l));
 }
 
+#if !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 void aom_highbd_h_predictor_16x4_neon(uint16_t *dst, ptrdiff_t stride,
                                       const uint16_t *above,
                                       const uint16_t *left, int bd) {
@@ -591,6 +672,7 @@ void aom_highbd_h_predictor_16x4_neon(uint16_t *dst, ptrdiff_t stride,
   (void)bd;
   highbd_h_store_16x4(dst, stride, vld1_u16(left));
 }
+#endif  // !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 
 void aom_highbd_h_predictor_16x8_neon(uint16_t *dst, ptrdiff_t stride,
                                       const uint16_t *above,
@@ -602,6 +684,7 @@ void aom_highbd_h_predictor_16x8_neon(uint16_t *dst, ptrdiff_t stride,
   highbd_h_store_16x4(dst + 4 * stride, stride, vget_high_u16(l));
 }
 
+#if !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 void aom_highbd_h_predictor_32x8_neon(uint16_t *dst, ptrdiff_t stride,
                                       const uint16_t *above,
                                       const uint16_t *left, int bd) {
@@ -611,6 +694,7 @@ void aom_highbd_h_predictor_32x8_neon(uint16_t *dst, ptrdiff_t stride,
   highbd_h_store_32x4(dst + 0 * stride, stride, vget_low_u16(l));
   highbd_h_store_32x4(dst + 4 * stride, stride, vget_high_u16(l));
 }
+#endif  // !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 
 // For cases where height >= 16 we use pairs of loads to get LDP instructions.
 #define HIGHBD_H_WXH_LARGE(w, h)                                            \
@@ -631,6 +715,7 @@ void aom_highbd_h_predictor_32x8_neon(uint16_t *dst, ptrdiff_t stride,
     }                                                                       \
   }
 
+#if !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 HIGHBD_H_WXH_LARGE(4, 16)
 HIGHBD_H_WXH_LARGE(8, 16)
 HIGHBD_H_WXH_LARGE(8, 32)
@@ -643,13 +728,23 @@ HIGHBD_H_WXH_LARGE(32, 64)
 HIGHBD_H_WXH_LARGE(64, 16)
 HIGHBD_H_WXH_LARGE(64, 32)
 HIGHBD_H_WXH_LARGE(64, 64)
+#else
+HIGHBD_H_WXH_LARGE(8, 16)
+HIGHBD_H_WXH_LARGE(16, 16)
+HIGHBD_H_WXH_LARGE(16, 32)
+HIGHBD_H_WXH_LARGE(32, 16)
+HIGHBD_H_WXH_LARGE(32, 32)
+HIGHBD_H_WXH_LARGE(32, 64)
+HIGHBD_H_WXH_LARGE(64, 32)
+HIGHBD_H_WXH_LARGE(64, 64)
+#endif  // !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 
 #undef HIGHBD_H_WXH_LARGE
 
 // -----------------------------------------------------------------------------
 // PAETH
 
-static INLINE void highbd_paeth_4or8_x_h_neon(uint16_t *dest, ptrdiff_t stride,
+static inline void highbd_paeth_4or8_x_h_neon(uint16_t *dest, ptrdiff_t stride,
                                               const uint16_t *const top_row,
                                               const uint16_t *const left_column,
                                               int width, int height) {
@@ -705,6 +800,7 @@ static INLINE void highbd_paeth_4or8_x_h_neon(uint16_t *dest, ptrdiff_t stride,
     highbd_paeth_4or8_x_h_neon(dst, stride, above, left, W, H); \
   }
 
+#if !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 HIGHBD_PAETH_NXM(4, 4)
 HIGHBD_PAETH_NXM(4, 8)
 HIGHBD_PAETH_NXM(4, 16)
@@ -712,9 +808,16 @@ HIGHBD_PAETH_NXM(8, 4)
 HIGHBD_PAETH_NXM(8, 8)
 HIGHBD_PAETH_NXM(8, 16)
 HIGHBD_PAETH_NXM(8, 32)
+#else
+HIGHBD_PAETH_NXM(4, 4)
+HIGHBD_PAETH_NXM(4, 8)
+HIGHBD_PAETH_NXM(8, 4)
+HIGHBD_PAETH_NXM(8, 8)
+HIGHBD_PAETH_NXM(8, 16)
+#endif  // !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 
 // Select the closest values and collect them.
-static INLINE uint16x8_t select_paeth(const uint16x8_t top,
+static inline uint16x8_t select_paeth(const uint16x8_t top,
                                       const uint16x8_t left,
                                       const uint16x8_t top_left,
                                       const uint16x8_t left_le_top,
@@ -751,7 +854,7 @@ static INLINE uint16x8_t select_paeth(const uint16x8_t top,
 
 #define LOAD_TOP_ROW(num) vld1q_u16(top_row + (num * 8))
 
-static INLINE void highbd_paeth16_plus_x_h_neon(
+static inline void highbd_paeth16_plus_x_h_neon(
     uint16_t *dest, ptrdiff_t stride, const uint16_t *const top_row,
     const uint16_t *const left_column, int width, int height) {
   const uint16x8_t top_left = vdupq_n_u16(top_row[-1]);
@@ -797,6 +900,7 @@ static INLINE void highbd_paeth16_plus_x_h_neon(
     highbd_paeth16_plus_x_h_neon(dst, stride, above, left, W, H); \
   }
 
+#if !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 HIGHBD_PAETH_NXM_WIDE(16, 4)
 HIGHBD_PAETH_NXM_WIDE(16, 8)
 HIGHBD_PAETH_NXM_WIDE(16, 16)
@@ -809,16 +913,26 @@ HIGHBD_PAETH_NXM_WIDE(32, 64)
 HIGHBD_PAETH_NXM_WIDE(64, 16)
 HIGHBD_PAETH_NXM_WIDE(64, 32)
 HIGHBD_PAETH_NXM_WIDE(64, 64)
+#else
+HIGHBD_PAETH_NXM_WIDE(16, 8)
+HIGHBD_PAETH_NXM_WIDE(16, 16)
+HIGHBD_PAETH_NXM_WIDE(16, 32)
+HIGHBD_PAETH_NXM_WIDE(32, 16)
+HIGHBD_PAETH_NXM_WIDE(32, 32)
+HIGHBD_PAETH_NXM_WIDE(32, 64)
+HIGHBD_PAETH_NXM_WIDE(64, 32)
+HIGHBD_PAETH_NXM_WIDE(64, 64)
+#endif  // !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 
 // -----------------------------------------------------------------------------
 // SMOOTH
 
 // 256 - v = vneg_s8(v)
-static INLINE uint16x4_t negate_s8(const uint16x4_t v) {
+static inline uint16x4_t negate_s8(const uint16x4_t v) {
   return vreinterpret_u16_s8(vneg_s8(vreinterpret_s8_u16(v)));
 }
 
-static INLINE void highbd_smooth_4xh_neon(uint16_t *dst, ptrdiff_t stride,
+static inline void highbd_smooth_4xh_neon(uint16_t *dst, ptrdiff_t stride,
                                           const uint16_t *const top_row,
                                           const uint16_t *const left_column,
                                           const int height) {
@@ -850,7 +964,7 @@ static INLINE void highbd_smooth_4xh_neon(uint16_t *dst, ptrdiff_t stride,
 }
 
 // Common code between 8xH and [16|32|64]xH.
-static INLINE void highbd_calculate_pred8(
+static inline void highbd_calculate_pred8(
     uint16_t *dst, const uint32x4_t weighted_corners_low,
     const uint32x4_t weighted_corners_high, const uint16x4x2_t top_vals,
     const uint16x4x2_t weights_x, const uint16_t left_y,
@@ -915,6 +1029,7 @@ static void highbd_smooth_8xh_neon(uint16_t *dst, ptrdiff_t stride,
     highbd_smooth_##W##xh_neon(dst, y_stride, above, left, H);  \
   }
 
+#if !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 HIGHBD_SMOOTH_NXM(4, 4)
 HIGHBD_SMOOTH_NXM(4, 8)
 HIGHBD_SMOOTH_NXM(8, 4)
@@ -922,6 +1037,13 @@ HIGHBD_SMOOTH_NXM(8, 8)
 HIGHBD_SMOOTH_NXM(4, 16)
 HIGHBD_SMOOTH_NXM(8, 16)
 HIGHBD_SMOOTH_NXM(8, 32)
+#else
+HIGHBD_SMOOTH_NXM(4, 4)
+HIGHBD_SMOOTH_NXM(4, 8)
+HIGHBD_SMOOTH_NXM(8, 4)
+HIGHBD_SMOOTH_NXM(8, 8)
+HIGHBD_SMOOTH_NXM(8, 16)
+#endif  // !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 
 #undef HIGHBD_SMOOTH_NXM
 
@@ -988,6 +1110,7 @@ HIGHBD_SMOOTH_PREDICTOR(64)
     highbd_smooth_##W##xh_neon(dst, y_stride, above, left, H);  \
   }
 
+#if !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 HIGHBD_SMOOTH_NXM_WIDE(16, 4)
 HIGHBD_SMOOTH_NXM_WIDE(16, 8)
 HIGHBD_SMOOTH_NXM_WIDE(16, 16)
@@ -1000,6 +1123,16 @@ HIGHBD_SMOOTH_NXM_WIDE(32, 64)
 HIGHBD_SMOOTH_NXM_WIDE(64, 16)
 HIGHBD_SMOOTH_NXM_WIDE(64, 32)
 HIGHBD_SMOOTH_NXM_WIDE(64, 64)
+#else
+HIGHBD_SMOOTH_NXM_WIDE(16, 8)
+HIGHBD_SMOOTH_NXM_WIDE(16, 16)
+HIGHBD_SMOOTH_NXM_WIDE(16, 32)
+HIGHBD_SMOOTH_NXM_WIDE(32, 16)
+HIGHBD_SMOOTH_NXM_WIDE(32, 32)
+HIGHBD_SMOOTH_NXM_WIDE(32, 64)
+HIGHBD_SMOOTH_NXM_WIDE(64, 32)
+HIGHBD_SMOOTH_NXM_WIDE(64, 64)
+#endif  // !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 
 #undef HIGHBD_SMOOTH_NXM_WIDE
 
@@ -1059,6 +1192,7 @@ static void highbd_smooth_v_8xh_neon(uint16_t *dst, const ptrdiff_t stride,
     highbd_smooth_v_##W##xh_neon(dst, y_stride, above, left, H); \
   }
 
+#if !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 HIGHBD_SMOOTH_V_NXM(4, 4)
 HIGHBD_SMOOTH_V_NXM(4, 8)
 HIGHBD_SMOOTH_V_NXM(4, 16)
@@ -1066,6 +1200,13 @@ HIGHBD_SMOOTH_V_NXM(8, 4)
 HIGHBD_SMOOTH_V_NXM(8, 8)
 HIGHBD_SMOOTH_V_NXM(8, 16)
 HIGHBD_SMOOTH_V_NXM(8, 32)
+#else
+HIGHBD_SMOOTH_V_NXM(4, 4)
+HIGHBD_SMOOTH_V_NXM(4, 8)
+HIGHBD_SMOOTH_V_NXM(8, 4)
+HIGHBD_SMOOTH_V_NXM(8, 8)
+HIGHBD_SMOOTH_V_NXM(8, 16)
+#endif  // !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 
 #undef HIGHBD_SMOOTH_V_NXM
 
@@ -1120,6 +1261,7 @@ HIGHBD_SMOOTH_V_PREDICTOR(64)
     highbd_smooth_v_##W##xh_neon(dst, y_stride, above, left, H); \
   }
 
+#if !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 HIGHBD_SMOOTH_V_NXM_WIDE(16, 4)
 HIGHBD_SMOOTH_V_NXM_WIDE(16, 8)
 HIGHBD_SMOOTH_V_NXM_WIDE(16, 16)
@@ -1132,10 +1274,20 @@ HIGHBD_SMOOTH_V_NXM_WIDE(32, 64)
 HIGHBD_SMOOTH_V_NXM_WIDE(64, 16)
 HIGHBD_SMOOTH_V_NXM_WIDE(64, 32)
 HIGHBD_SMOOTH_V_NXM_WIDE(64, 64)
+#else
+HIGHBD_SMOOTH_V_NXM_WIDE(16, 8)
+HIGHBD_SMOOTH_V_NXM_WIDE(16, 16)
+HIGHBD_SMOOTH_V_NXM_WIDE(16, 32)
+HIGHBD_SMOOTH_V_NXM_WIDE(32, 16)
+HIGHBD_SMOOTH_V_NXM_WIDE(32, 32)
+HIGHBD_SMOOTH_V_NXM_WIDE(32, 64)
+HIGHBD_SMOOTH_V_NXM_WIDE(64, 32)
+HIGHBD_SMOOTH_V_NXM_WIDE(64, 64)
+#endif  // !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 
 #undef HIGHBD_SMOOTH_V_NXM_WIDE
 
-static INLINE void highbd_smooth_h_4xh_neon(uint16_t *dst, ptrdiff_t stride,
+static inline void highbd_smooth_h_4xh_neon(uint16_t *dst, ptrdiff_t stride,
                                             const uint16_t *const top_row,
                                             const uint16_t *const left_column,
                                             const int height) {
@@ -1153,7 +1305,7 @@ static INLINE void highbd_smooth_h_4xh_neon(uint16_t *dst, ptrdiff_t stride,
   }
 }
 
-static INLINE void highbd_smooth_h_8xh_neon(uint16_t *dst, ptrdiff_t stride,
+static inline void highbd_smooth_h_8xh_neon(uint16_t *dst, ptrdiff_t stride,
                                             const uint16_t *const top_row,
                                             const uint16_t *const left_column,
                                             const int height) {
@@ -1189,6 +1341,7 @@ static INLINE void highbd_smooth_h_8xh_neon(uint16_t *dst, ptrdiff_t stride,
     highbd_smooth_h_##W##xh_neon(dst, y_stride, above, left, H); \
   }
 
+#if !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 HIGHBD_SMOOTH_H_NXM(4, 4)
 HIGHBD_SMOOTH_H_NXM(4, 8)
 HIGHBD_SMOOTH_H_NXM(4, 16)
@@ -1196,6 +1349,13 @@ HIGHBD_SMOOTH_H_NXM(8, 4)
 HIGHBD_SMOOTH_H_NXM(8, 8)
 HIGHBD_SMOOTH_H_NXM(8, 16)
 HIGHBD_SMOOTH_H_NXM(8, 32)
+#else
+HIGHBD_SMOOTH_H_NXM(4, 4)
+HIGHBD_SMOOTH_H_NXM(4, 8)
+HIGHBD_SMOOTH_H_NXM(8, 4)
+HIGHBD_SMOOTH_H_NXM(8, 8)
+HIGHBD_SMOOTH_H_NXM(8, 16)
+#endif  // !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 
 #undef HIGHBD_SMOOTH_H_NXM
 
@@ -1253,6 +1413,7 @@ HIGHBD_SMOOTH_H_PREDICTOR(64)
     highbd_smooth_h_##W##xh_neon(dst, y_stride, above, left, H); \
   }
 
+#if !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 HIGHBD_SMOOTH_H_NXM_WIDE(16, 4)
 HIGHBD_SMOOTH_H_NXM_WIDE(16, 8)
 HIGHBD_SMOOTH_H_NXM_WIDE(16, 16)
@@ -1265,6 +1426,16 @@ HIGHBD_SMOOTH_H_NXM_WIDE(32, 64)
 HIGHBD_SMOOTH_H_NXM_WIDE(64, 16)
 HIGHBD_SMOOTH_H_NXM_WIDE(64, 32)
 HIGHBD_SMOOTH_H_NXM_WIDE(64, 64)
+#else
+HIGHBD_SMOOTH_H_NXM_WIDE(16, 8)
+HIGHBD_SMOOTH_H_NXM_WIDE(16, 16)
+HIGHBD_SMOOTH_H_NXM_WIDE(16, 32)
+HIGHBD_SMOOTH_H_NXM_WIDE(32, 16)
+HIGHBD_SMOOTH_H_NXM_WIDE(32, 32)
+HIGHBD_SMOOTH_H_NXM_WIDE(32, 64)
+HIGHBD_SMOOTH_H_NXM_WIDE(64, 32)
+HIGHBD_SMOOTH_H_NXM_WIDE(64, 64)
+#endif  // !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 
 #undef HIGHBD_SMOOTH_H_NXM_WIDE
 
@@ -1291,6 +1462,33 @@ static AOM_FORCE_INLINE uint16x8_t highbd_dr_z1_apply_shift_x8(uint16x8_t a0,
   return vcombine_u16(
       highbd_dr_z1_apply_shift_x4(vget_low_u16(a0), vget_low_u16(a1), shift),
       highbd_dr_z1_apply_shift_x4(vget_high_u16(a0), vget_high_u16(a1), shift));
+}
+
+// clang-format off
+static const uint8_t kLoadMaxShuffles[] = {
+  14, 15, 14, 15, 14, 15, 14, 15, 14, 15, 14, 15, 14, 15, 14, 15,
+  12, 13, 14, 15, 14, 15, 14, 15, 14, 15, 14, 15, 14, 15, 14, 15,
+  10, 11, 12, 13, 14, 15, 14, 15, 14, 15, 14, 15, 14, 15, 14, 15,
+   8,  9, 10, 11, 12, 13, 14, 15, 14, 15, 14, 15, 14, 15, 14, 15,
+   6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 14, 15, 14, 15, 14, 15,
+   4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 14, 15, 14, 15,
+   2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 14, 15,
+   0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
+};
+// clang-format on
+
+static inline uint16x8_t zn_load_masked_neon(const uint16_t *ptr,
+                                             int shuffle_idx) {
+  uint8x16_t shuffle = vld1q_u8(&kLoadMaxShuffles[16 * shuffle_idx]);
+  uint8x16_t src = vreinterpretq_u8_u16(vld1q_u16(ptr));
+#if AOM_ARCH_AARCH64
+  return vreinterpretq_u16_u8(vqtbl1q_u8(src, shuffle));
+#else
+  uint8x8x2_t src2 = { { vget_low_u8(src), vget_high_u8(src) } };
+  uint8x8_t lo = vtbl2_u8(src2, vget_low_u8(shuffle));
+  uint8x8_t hi = vtbl2_u8(src2, vget_high_u8(shuffle));
+  return vreinterpretq_u16_u8(vcombine_u8(lo, hi));
+#endif
 }
 
 static void highbd_dr_prediction_z1_upsample0_neon(uint16_t *dst,
@@ -1336,13 +1534,26 @@ static void highbd_dr_prediction_z1_upsample0_neon(uint16_t *dst,
     } else {
       int c = 0;
       do {
-        const uint16x8_t a0 = vld1q_u16(&above[base + c]);
-        const uint16x8_t a1 = vld1q_u16(&above[base + c + 1]);
-        const uint16x8_t val = highbd_dr_z1_apply_shift_x8(a0, a1, shift);
-        const uint16x8_t cmp =
-            vcgtq_s16(vdupq_n_s16(max_base_x - base - c), iota1x8);
-        const uint16x8_t res = vbslq_u16(cmp, val, vdupq_n_u16(above_max));
-        vst1q_u16(dst + c, res);
+        uint16x8_t a0;
+        uint16x8_t a1;
+        if (base + c >= max_base_x) {
+          a0 = a1 = vdupq_n_u16(above_max);
+        } else {
+          if (base + c + 7 >= max_base_x) {
+            int shuffle_idx = max_base_x - base - c;
+            a0 = zn_load_masked_neon(above + (max_base_x - 7), shuffle_idx);
+          } else {
+            a0 = vld1q_u16(above + base + c);
+          }
+          if (base + c + 8 >= max_base_x) {
+            int shuffle_idx = max_base_x - base - c - 1;
+            a1 = zn_load_masked_neon(above + (max_base_x - 7), shuffle_idx);
+          } else {
+            a1 = vld1q_u16(above + base + c + 1);
+          }
+        }
+
+        vst1q_u16(dst + c, highbd_dr_z1_apply_shift_x8(a0, a1, shift));
         c += 8;
       } while (c < bw);
     }
@@ -1583,13 +1794,13 @@ static AOM_FORCE_INLINE uint16x4x2_t highbd_dr_prediction_z2_gather_left_x4(
 
   // At time of writing both Clang and GCC produced better code with these
   // nested if-statements compared to a switch statement with fallthrough.
-  ret0_u32 = vld1_lane_u32((const uint32_t *)(left + idx0), ret0_u32, 0);
+  load_unaligned_u32_2x1_lane(ret0_u32, left + idx0, 0);
   if (n > 1) {
-    ret0_u32 = vld1_lane_u32((const uint32_t *)(left + idx1), ret0_u32, 1);
+    load_unaligned_u32_2x1_lane(ret0_u32, left + idx1, 1);
     if (n > 2) {
-      ret1_u32 = vld1_lane_u32((const uint32_t *)(left + idx2), ret1_u32, 0);
+      load_unaligned_u32_2x1_lane(ret1_u32, left + idx2, 0);
       if (n > 3) {
-        ret1_u32 = vld1_lane_u32((const uint32_t *)(left + idx3), ret1_u32, 1);
+        load_unaligned_u32_2x1_lane(ret1_u32, left + idx3, 1);
       }
     }
   }
@@ -1623,25 +1834,21 @@ static AOM_FORCE_INLINE uint16x8x2_t highbd_dr_prediction_z2_gather_left_x8(
 
   // At time of writing both Clang and GCC produced better code with these
   // nested if-statements compared to a switch statement with fallthrough.
-  ret0_u32 = vld1q_lane_u32((const uint32_t *)(left + idx0), ret0_u32, 0);
+  load_unaligned_u32_4x1_lane(ret0_u32, left + idx0, 0);
   if (n > 1) {
-    ret0_u32 = vld1q_lane_u32((const uint32_t *)(left + idx1), ret0_u32, 1);
+    load_unaligned_u32_4x1_lane(ret0_u32, left + idx1, 1);
     if (n > 2) {
-      ret0_u32 = vld1q_lane_u32((const uint32_t *)(left + idx2), ret0_u32, 2);
+      load_unaligned_u32_4x1_lane(ret0_u32, left + idx2, 2);
       if (n > 3) {
-        ret0_u32 = vld1q_lane_u32((const uint32_t *)(left + idx3), ret0_u32, 3);
+        load_unaligned_u32_4x1_lane(ret0_u32, left + idx3, 3);
         if (n > 4) {
-          ret1_u32 =
-              vld1q_lane_u32((const uint32_t *)(left + idx4), ret1_u32, 0);
+          load_unaligned_u32_4x1_lane(ret1_u32, left + idx4, 0);
           if (n > 5) {
-            ret1_u32 =
-                vld1q_lane_u32((const uint32_t *)(left + idx5), ret1_u32, 1);
+            load_unaligned_u32_4x1_lane(ret1_u32, left + idx5, 1);
             if (n > 6) {
-              ret1_u32 =
-                  vld1q_lane_u32((const uint32_t *)(left + idx6), ret1_u32, 2);
+              load_unaligned_u32_4x1_lane(ret1_u32, left + idx6, 2);
               if (n > 7) {
-                ret1_u32 = vld1q_lane_u32((const uint32_t *)(left + idx7),
-                                          ret1_u32, 3);
+                load_unaligned_u32_4x1_lane(ret1_u32, left + idx7, 3);
               }
             }
           }
@@ -1861,6 +2068,7 @@ static AOM_FORCE_INLINE uint16x8_t highbd_dr_prediction_z2_step_x8(
     } while (++r < bh);                                                    \
   }
 
+#if !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 HIGHBD_DR_PREDICTOR_Z2_WXH(4, 16)
 HIGHBD_DR_PREDICTOR_Z2_WXH(8, 16)
 HIGHBD_DR_PREDICTOR_Z2_WXH(8, 32)
@@ -1876,6 +2084,16 @@ HIGHBD_DR_PREDICTOR_Z2_WXH(32, 64)
 HIGHBD_DR_PREDICTOR_Z2_WXH(64, 16)
 HIGHBD_DR_PREDICTOR_Z2_WXH(64, 32)
 HIGHBD_DR_PREDICTOR_Z2_WXH(64, 64)
+#else
+HIGHBD_DR_PREDICTOR_Z2_WXH(8, 16)
+HIGHBD_DR_PREDICTOR_Z2_WXH(16, 8)
+HIGHBD_DR_PREDICTOR_Z2_WXH(16, 16)
+HIGHBD_DR_PREDICTOR_Z2_WXH(16, 32)
+HIGHBD_DR_PREDICTOR_Z2_WXH(32, 32)
+HIGHBD_DR_PREDICTOR_Z2_WXH(32, 64)
+HIGHBD_DR_PREDICTOR_Z2_WXH(64, 32)
+HIGHBD_DR_PREDICTOR_Z2_WXH(64, 64)
+#endif  // !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 
 #undef HIGHBD_DR_PREDICTOR_Z2_WXH
 
@@ -2403,6 +2621,7 @@ static void highbd_dr_prediction_z2_8x8_neon(uint16_t *dst, ptrdiff_t stride,
   }
 }
 
+#if !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 static highbd_dr_prediction_z2_ptr dr_predictor_z2_arr_neon[7][7] = {
   { NULL, NULL, NULL, NULL, NULL, NULL, NULL },
   { NULL, NULL, NULL, NULL, NULL, NULL, NULL },
@@ -2421,6 +2640,24 @@ static highbd_dr_prediction_z2_ptr dr_predictor_z2_arr_neon[7][7] = {
   { NULL, NULL, NULL, NULL, &highbd_dr_prediction_z2_64x16_neon,
     &highbd_dr_prediction_z2_64x32_neon, &highbd_dr_prediction_z2_64x64_neon },
 };
+#else
+static highbd_dr_prediction_z2_ptr dr_predictor_z2_arr_neon[7][7] = {
+  { NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  { NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  { NULL, NULL, &highbd_dr_prediction_z2_4x4_neon,
+    &highbd_dr_prediction_z2_4x8_neon, NULL, NULL, NULL },
+  { NULL, NULL, &highbd_dr_prediction_z2_8x4_neon,
+    &highbd_dr_prediction_z2_8x8_neon, &highbd_dr_prediction_z2_8x16_neon, NULL,
+    NULL },
+  { NULL, NULL, NULL, &highbd_dr_prediction_z2_16x8_neon,
+    &highbd_dr_prediction_z2_16x16_neon, &highbd_dr_prediction_z2_16x32_neon,
+    NULL },
+  { NULL, NULL, NULL, NULL, NULL, &highbd_dr_prediction_z2_32x32_neon,
+    &highbd_dr_prediction_z2_32x64_neon },
+  { NULL, NULL, NULL, NULL, NULL, &highbd_dr_prediction_z2_64x32_neon,
+    &highbd_dr_prediction_z2_64x64_neon },
+};
+#endif  // !CONFIG_REALTIME_ONLY || CONFIG_AV1_DECODER
 
 // Directional prediction, zone 2: 90 < angle < 180
 void av1_highbd_dr_prediction_z2_neon(uint16_t *dst, ptrdiff_t stride, int bw,
@@ -2456,12 +2693,28 @@ void av1_highbd_dr_prediction_z2_neon(uint16_t *dst, ptrdiff_t stride, int bw,
     val_lo = vmlal_lane_u16(val_lo, vget_low_u16(in1), (s1), (lane));     \
     uint32x4_t val_hi = vmull_lane_u16(vget_high_u16(in0), (s0), (lane)); \
     val_hi = vmlal_lane_u16(val_hi, vget_high_u16(in1), (s1), (lane));    \
-    const uint16x8_t cmp = vaddq_u16((iota), vdupq_n_u16(base));          \
-    const uint16x8_t res = vcombine_u16(vrshrn_n_u32(val_lo, (shift)),    \
-                                        vrshrn_n_u32(val_hi, (shift)));   \
-    *(out) = vbslq_u16(vcltq_u16(cmp, vdupq_n_u16(max_base_y)), res,      \
-                       vdupq_n_u16(left_max));                            \
+    *(out) = vcombine_u16(vrshrn_n_u32(val_lo, (shift)),                  \
+                          vrshrn_n_u32(val_hi, (shift)));                 \
   } while (0)
+
+static inline uint16x8x2_t z3_load_left_neon(const uint16_t *left0, int ofs,
+                                             int max_ofs) {
+  uint16x8_t r0;
+  uint16x8_t r1;
+  if (ofs + 7 >= max_ofs) {
+    int shuffle_idx = max_ofs - ofs;
+    r0 = zn_load_masked_neon(left0 + (max_ofs - 7), shuffle_idx);
+  } else {
+    r0 = vld1q_u16(left0 + ofs);
+  }
+  if (ofs + 8 >= max_ofs) {
+    int shuffle_idx = max_ofs - ofs - 1;
+    r1 = zn_load_masked_neon(left0 + (max_ofs - 7), shuffle_idx);
+  } else {
+    r1 = vld1q_u16(left0 + ofs + 1);
+  }
+  return (uint16x8x2_t){ { r0, r1 } };
+}
 
 static void highbd_dr_prediction_z3_upsample0_neon(uint16_t *dst,
                                                    ptrdiff_t stride, int bw,
@@ -2561,34 +2814,30 @@ static void highbd_dr_prediction_z3_upsample0_neon(uint16_t *dst,
         if (base0 >= max_base_y) {
           out[0] = vdupq_n_u16(left_max);
         } else {
-          const uint16x8_t l00 = vld1q_u16(left + base0);
-          const uint16x8_t l01 = vld1q_u16(left1 + base0);
-          HIGHBD_DR_PREDICTOR_Z3_STEP_X8(&out[0], iota1x8, base0, l00, l01,
-                                         shifts0, shifts1, 0, 6);
+          const uint16x8x2_t l0 = z3_load_left_neon(left, base0, max_base_y);
+          HIGHBD_DR_PREDICTOR_Z3_STEP_X8(&out[0], iota1x8, base0, l0.val[0],
+                                         l0.val[1], shifts0, shifts1, 0, 6);
         }
         if (base1 >= max_base_y) {
           out[1] = vdupq_n_u16(left_max);
         } else {
-          const uint16x8_t l10 = vld1q_u16(left + base1);
-          const uint16x8_t l11 = vld1q_u16(left1 + base1);
-          HIGHBD_DR_PREDICTOR_Z3_STEP_X8(&out[1], iota1x8, base1, l10, l11,
-                                         shifts0, shifts1, 1, 6);
+          const uint16x8x2_t l1 = z3_load_left_neon(left, base1, max_base_y);
+          HIGHBD_DR_PREDICTOR_Z3_STEP_X8(&out[1], iota1x8, base1, l1.val[0],
+                                         l1.val[1], shifts0, shifts1, 1, 6);
         }
         if (base2 >= max_base_y) {
           out[2] = vdupq_n_u16(left_max);
         } else {
-          const uint16x8_t l20 = vld1q_u16(left + base2);
-          const uint16x8_t l21 = vld1q_u16(left1 + base2);
-          HIGHBD_DR_PREDICTOR_Z3_STEP_X8(&out[2], iota1x8, base2, l20, l21,
-                                         shifts0, shifts1, 2, 6);
+          const uint16x8x2_t l2 = z3_load_left_neon(left, base2, max_base_y);
+          HIGHBD_DR_PREDICTOR_Z3_STEP_X8(&out[2], iota1x8, base2, l2.val[0],
+                                         l2.val[1], shifts0, shifts1, 2, 6);
         }
         if (base3 >= max_base_y) {
           out[3] = vdupq_n_u16(left_max);
         } else {
-          const uint16x8_t l30 = vld1q_u16(left + base3);
-          const uint16x8_t l31 = vld1q_u16(left1 + base3);
-          HIGHBD_DR_PREDICTOR_Z3_STEP_X8(&out[3], iota1x8, base3, l30, l31,
-                                         shifts0, shifts1, 3, 6);
+          const uint16x8x2_t l3 = z3_load_left_neon(left, base3, max_base_y);
+          HIGHBD_DR_PREDICTOR_Z3_STEP_X8(&out[3], iota1x8, base3, l3.val[0],
+                                         l3.val[1], shifts0, shifts1, 3, 6);
         }
         transpose_array_inplace_u16_4x8(out);
         for (int r2 = 0; r2 < 4; ++r2) {

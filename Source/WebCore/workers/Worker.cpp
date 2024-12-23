@@ -50,14 +50,15 @@
 #include <JavaScriptCore/IdentifiersFactory.h>
 #include <JavaScriptCore/ScriptCallStack.h>
 #include <wtf/HashSet.h>
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Scope.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(Worker);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Worker);
 
 static Lock allWorkersLock;
 static HashSet<ScriptExecutionContextIdentifier>& allWorkerContexts() WTF_REQUIRES_LOCK(allWorkersLock)
@@ -186,7 +187,7 @@ bool Worker::virtualHasPendingActivity() const
     return m_scriptLoader || (m_didStartWorkerGlobalScope && !m_contextProxy.askedToTerminate());
 }
 
-void Worker::didReceiveResponse(ScriptExecutionContextIdentifier mainContextIdentifier, ResourceLoaderIdentifier identifier, const ResourceResponse& response)
+void Worker::didReceiveResponse(ScriptExecutionContextIdentifier mainContextIdentifier, std::optional<ResourceLoaderIdentifier> identifier, const ResourceResponse& response)
 {
     const URL& responseURL = response.url();
     if (!responseURL.protocolIsBlob() && !responseURL.protocolIsFile() && !SecurityOrigin::create(responseURL)->isOpaque())
@@ -194,12 +195,12 @@ void Worker::didReceiveResponse(ScriptExecutionContextIdentifier mainContextIden
 
     if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
         ScriptExecutionContext::ensureOnContextThread(mainContextIdentifier, [identifier] (auto& mainContext) {
-            InspectorInstrumentation::didReceiveScriptResponse(mainContext, identifier);
+            InspectorInstrumentation::didReceiveScriptResponse(mainContext, *identifier);
         });
     }
 }
 
-void Worker::notifyFinished(ScriptExecutionContextIdentifier mainContextIdentifier)
+void Worker::notifyFinished(std::optional<ScriptExecutionContextIdentifier> mainContextIdentifier)
 {
     auto clearLoader = makeScopeExit([this] {
         m_scriptLoader = nullptr;
@@ -233,7 +234,7 @@ void Worker::notifyFinished(ScriptExecutionContextIdentifier mainContextIdentifi
     m_contextProxy.startWorkerGlobalScope(m_scriptLoader->responseURL(), *sessionID, m_options.name, WTFMove(initializationData), m_scriptLoader->script(), contentSecurityPolicyResponseHeaders, m_shouldBypassMainWorldContentSecurityPolicy, m_scriptLoader->crossOriginEmbedderPolicy(), m_workerCreationTime, referrerPolicy, m_options.type, m_options.credentials, m_runtimeFlags);
 
     if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
-        ScriptExecutionContext::ensureOnContextThread(mainContextIdentifier, [identifier = m_scriptLoader->identifier(), script = m_scriptLoader->script().isolatedCopy()] (auto& mainContext) {
+        ScriptExecutionContext::ensureOnContextThread(*mainContextIdentifier, [identifier = m_scriptLoader->identifier(), script = m_scriptLoader->script().isolatedCopy()] (auto& mainContext) {
             InspectorInstrumentation::scriptImported(mainContext, identifier, script.toString());
         });
     }

@@ -30,36 +30,34 @@
 #include <WebCore/ProcessQualified.h>
 #include <wtf/Identified.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 
-namespace WebKit {
-class NetworkTransportSession;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebKit::NetworkTransportSession> : std::true_type { };
-}
+#if PLATFORM(COCOA)
+#include <Network/Network.h>
+#include <wtf/RetainPtr.h>
+#endif
 
 namespace WebKit {
 
 class NetworkConnectionToWebProcess;
-class NetworkTransportBidirectionalStream;
-class NetworkTransportReceiveStream;
-class NetworkTransportSendStream;
+class NetworkTransportStream;
 
+struct SharedPreferencesForWebProcess;
 struct WebTransportSessionIdentifierType;
 struct WebTransportStreamIdentifierType;
 
 using WebTransportSessionIdentifier = ObjectIdentifier<WebTransportSessionIdentifierType>;
 using WebTransportStreamIdentifier = ObjectIdentifier<WebTransportStreamIdentifierType>;
 
-class NetworkTransportSession : public IPC::MessageReceiver, public IPC::MessageSender, public Identified<WebTransportSessionIdentifier> {
-    WTF_MAKE_FAST_ALLOCATED;
+class NetworkTransportSession : public RefCounted<NetworkTransportSession>, public IPC::MessageReceiver, public IPC::MessageSender, public Identified<WebTransportSessionIdentifier> {
+    WTF_MAKE_TZONE_ALLOCATED(NetworkTransportSession);
 public:
-    static void initialize(NetworkConnectionToWebProcess&, URL&&, CompletionHandler<void(std::unique_ptr<NetworkTransportSession>&&)>&&);
+    static void initialize(NetworkConnectionToWebProcess&, URL&&, CompletionHandler<void(RefPtr<NetworkTransportSession>&&)>&&);
 
-    NetworkTransportSession(NetworkConnectionToWebProcess&);
     ~NetworkTransportSession();
+
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     void sendDatagram(std::span<const uint8_t>, CompletionHandler<void()>&&);
     void createOutgoingUnidirectionalStream(CompletionHandler<void(std::optional<WebTransportStreamIdentifier>)>&&);
@@ -76,14 +74,25 @@ public:
     void receiveBidirectionalStream();
 
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) final;
+    std::optional<SharedPreferencesForWebProcess> sharedPreferencesForWebProcess() const;
 private:
+    template<typename... Args> static Ref<NetworkTransportSession> create(Args&&... args) { return adoptRef(*new NetworkTransportSession(std::forward<Args>(args)...)); }
+#if PLATFORM(COCOA)
+    NetworkTransportSession(NetworkConnectionToWebProcess&, nw_connection_group_t, nw_endpoint_t);
+#endif
+
     IPC::Connection* messageSenderConnection() const final;
     uint64_t messageSenderDestinationID() const final;
 
-    HashMap<WebTransportStreamIdentifier, UniqueRef<NetworkTransportBidirectionalStream>> m_bidirectionalStreams;
-    HashMap<WebTransportStreamIdentifier, UniqueRef<NetworkTransportReceiveStream>> m_receiveStreams;
-    HashMap<WebTransportStreamIdentifier, UniqueRef<NetworkTransportSendStream>> m_sendStreams;
-    WeakPtr<NetworkConnectionToWebProcess> m_connection;
+    HashMap<WebTransportStreamIdentifier, Ref<NetworkTransportStream>> m_bidirectionalStreams;
+    HashMap<WebTransportStreamIdentifier, Ref<NetworkTransportStream>> m_receiveStreams;
+    HashMap<WebTransportStreamIdentifier, Ref<NetworkTransportStream>> m_sendStreams;
+    WeakPtr<NetworkConnectionToWebProcess> m_connectionToWebProcess;
+
+#if PLATFORM(COCOA)
+    const RetainPtr<nw_connection_group_t> m_connectionGroup;
+    const RetainPtr<nw_endpoint_t> m_endpoint;
+#endif
 };
 
 }

@@ -28,6 +28,7 @@
 #if PLATFORM(MAC)
 
 #import "AppKitSPI.h"
+#import "CGImagePixelReader.h"
 #import "PlatformUtilities.h"
 #import "TestNavigationDelegate.h"
 #import "TestProtocol.h"
@@ -89,6 +90,74 @@
 
 @end
 
+@interface WKWebView (MacEditingTests)
+- (std::pair<NSRect, NSRange>)_firstRectForCharacterRange:(NSRange)characterRange;
+@end
+
+@implementation WKWebView (MacEditingTests)
+
+- (std::pair<NSRect, NSRange>)_firstRectForCharacterRange:(NSRange)characterRange
+{
+    __block bool done = false;
+    __block std::pair<NSRect, NSRange> result;
+    [static_cast<id<NSTextInputClient_Async>>(self) firstRectForCharacterRange:characterRange completionHandler:^(NSRect firstRect, NSRange actualRange) {
+        result = { firstRect, actualRange };
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    return result;
+}
+
+- (NSRange)_selectedRange
+{
+    __block bool done = false;
+    __block NSRange result;
+    [static_cast<id<NSTextInputClient_Async>>(self) selectedRangeWithCompletionHandler:^(NSRange selectedRange) {
+        result = selectedRange;
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    return result;
+}
+
+@end
+
+@interface SetMarkedTextWithNoAttributedStringTestCandidate : NSTextCheckingResult
+@end
+
+@implementation SetMarkedTextWithNoAttributedStringTestCandidate {
+    RetainPtr<NSString> _string;
+    NSRange _range;
+}
+
+- (instancetype)initWithReplacementString:(NSString *)string inRange:(NSRange)range
+{
+    if (self = [super init]) {
+        _string = string;
+        _range = range;
+    }
+    return self;
+}
+
+- (NSString *)replacementString
+{
+    return _string.get();
+}
+
+- (NSTextCheckingType)resultType
+{
+    return NSTextCheckingTypeReplacement;
+}
+
+- (NSRange)range
+{
+    return _range;
+}
+
+@end
+
+namespace TestWebKitAPI {
+
 TEST(WKWebViewMacEditingTests, DoubleClickDoesNotSelectTrailingSpace)
 {
     RetainPtr<TestWKWebView> webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 400, 400)]);
@@ -99,7 +168,7 @@ TEST(WKWebViewMacEditingTests, DoubleClickDoesNotSelectTrailingSpace)
         finishedSelectingText = true;
     }];
     [webView sendClicksAtPoint:NSMakePoint(200, 200) numberOfClicks:2];
-    TestWebKitAPI::Util::run(&finishedSelectingText);
+    Util::run(&finishedSelectingText);
 
     NSString *selectedText = [webView stringByEvaluatingJavaScript:@"getSelection().getRangeAt(0).toString()"];
     EXPECT_STREQ("Hello", selectedText.UTF8String);
@@ -140,7 +209,7 @@ TEST(WKWebViewMacEditingTests, DoNotCrashWhenInterpretingKeyEventWhileDeallocati
         };
     }
 
-    TestWebKitAPI::Util::run(&isDone);
+    Util::run(&isDone);
 }
 
 TEST(WKWebViewMacEditingTests, ProcessSwapAfterSettingMarkedText)
@@ -177,11 +246,39 @@ TEST(WKWebViewMacEditingTests, ProcessSwapAfterSettingMarkedText)
         EXPECT_FALSE(hasMarkedText);
         done = true;
     }];
-    TestWebKitAPI::Util::run(&done);
+    Util::run(&done);
+}
+
+TEST(WKWebViewMacEditingTests, DoNotRenderInlinePredictionsForRegularMarkedText)
+{
+    RetainPtr webView = adoptNS([[TestWKWebView<NSTextInputClient> alloc] initWithFrame:NSMakeRect(0, 0, 200, 100)]);
+    [webView _setEditable:YES];
+    [webView synchronouslyLoadHTMLString:@"<body style='caret-color: transparent;'></body>"];
+    [webView stringByEvaluatingJavaScript:@"document.body.focus()"];
+    [webView waitForNextPresentationUpdate];
+
+    auto string = adoptNS([[NSAttributedString alloc] initWithString:@"xie wen sheng" attributes:@{
+        NSMarkedClauseSegmentAttributeName: @0,
+        NSUnderlineStyleAttributeName: @(NSUnderlineStyleSingle),
+        NSUnderlineColorAttributeName: NSColor.controlAccentColor
+    }]);
+
+    [webView setMarkedText:string.get() selectedRange:NSMakeRange(13, 0) replacementRange:NSMakeRange(NSNotFound, 0)];
+    [webView waitForNextPresentationUpdate];
+
+    bool foundNonWhitePixel = false;
+    CGImagePixelReader reader { [webView snapshotAfterScreenUpdates] };
+    for (unsigned x = 0; x < reader.width(); ++x) {
+        for (unsigned y = 0; y < reader.height(); ++y) {
+            if (reader.at(x, y) != WebCore::Color::white)
+                foundNonWhitePixel = true;
+        }
+    }
+    EXPECT_TRUE(foundNonWhitePixel);
 }
 
 #if HAVE(INLINE_PREDICTIONS)
-TEST(WKWebViewMacEditingTests, InlinePredictionsShouldSurpressAutocorrection)
+TEST(WKWebViewMacEditingTests, InlinePredictionsShouldSuppressAutocorrection)
 {
     auto configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
     auto webView = adoptNS([[TestWKWebView<NSTextInputClient, NSTextInputClient_Async> alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration]);
@@ -220,41 +317,6 @@ TEST(WKWebViewMacEditingTests, InlinePredictionsShouldSurpressAutocorrection)
     EXPECT_STREQ("false", hasSpellingMarker.UTF8String);
 }
 
-
-@interface SetMarkedTextWithNoAttributedStringTestCandidate : NSTextCheckingResult
-@end
-
-@implementation SetMarkedTextWithNoAttributedStringTestCandidate {
-    RetainPtr<NSString> _string;
-    NSRange _range;
-}
-
-- (instancetype)initWithReplacementString:(NSString *)string inRange:(NSRange)range
-{
-    if (self = [super init]) {
-        _string = string;
-        _range = range;
-    }
-    return self;
-}
-
-- (NSString *)replacementString
-{
-    return _string.get();
-}
-
-- (NSTextCheckingType)resultType
-{
-    return NSTextCheckingTypeReplacement;
-}
-
-- (NSRange)range
-{
-    return _range;
-}
-
-@end
-
 TEST(WKWebViewMacEditingTests, SetMarkedTextWithNoAttributedString)
 {
     auto configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
@@ -287,32 +349,24 @@ TEST(WKWebViewMacEditingTests, SetMarkedTextWithNoAttributedString)
 
 TEST(WKWebViewMacEditingTests, FirstRectForCharacterRange)
 {
-    auto configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-    RetainPtr webView = adoptNS([[TestWKWebView<NSTextInputClient, NSTextInputClient_Async> alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration]);
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);
 
     [webView synchronouslyLoadHTMLString:@"<body id='p' contenteditable>First Line<br>Second Line<br>Third Line<br></body>"];
     [webView stringByEvaluatingJavaScript:@"document.body.focus()"];
     [webView _setEditable:YES];
     [webView waitForNextPresentationUpdate];
-
-    __unsafe_unretained id<NSTextInputClient_Async> inputClient = (id<NSTextInputClient_Async>)webView.get();
-
-    __block bool doneTest1 = false;
-    [inputClient firstRectForCharacterRange: { 0, 31 } completionHandler:^(NSRect firstRect, NSRange actualRange) {
+    {
+        auto [firstRect, actualRange] = [webView _firstRectForCharacterRange:NSMakeRange(0, 31)];
         EXPECT_EQ(8, firstRect.origin.x);
         EXPECT_EQ(574, firstRect.origin.y);
         EXPECT_EQ(62, firstRect.size.width);
         EXPECT_EQ(18, firstRect.size.height);
 
         EXPECT_EQ(0U, actualRange.location);
-        EXPECT_EQ(10U, actualRange.length);
-        doneTest1 = true;
-    }];
-
-    TestWebKitAPI::Util::run(&doneTest1);
-
-    __block bool doneTest2 = false;
-    [inputClient firstRectForCharacterRange: { 0, 5 } completionHandler:^(NSRect firstRect, NSRange actualRange) {
+        EXPECT_EQ(11U, actualRange.length);
+    }
+    {
+        auto [firstRect, actualRange] = [webView _firstRectForCharacterRange:NSMakeRange(0, 5)];
         EXPECT_EQ(8, firstRect.origin.x);
         EXPECT_EQ(574, firstRect.origin.y);
         EXPECT_EQ(30, firstRect.size.width);
@@ -320,13 +374,9 @@ TEST(WKWebViewMacEditingTests, FirstRectForCharacterRange)
 
         EXPECT_EQ(0U, actualRange.location);
         EXPECT_EQ(5U, actualRange.length);
-        doneTest2 = true;
-    }];
-
-    TestWebKitAPI::Util::run(&doneTest2);
-
-    __block bool doneTest3 = false;
-    [inputClient firstRectForCharacterRange: { 17, 4 } completionHandler:^(NSRect firstRect, NSRange actualRange) {
+    }
+    {
+        auto [firstRect, actualRange] = [webView _firstRectForCharacterRange:NSMakeRange(17, 4)];
         EXPECT_EQ(55, firstRect.origin.x);
         EXPECT_EQ(556, firstRect.origin.y);
         EXPECT_EQ(27, firstRect.size.width);
@@ -334,10 +384,150 @@ TEST(WKWebViewMacEditingTests, FirstRectForCharacterRange)
 
         EXPECT_EQ(17U, actualRange.location);
         EXPECT_EQ(4U, actualRange.length);
-        doneTest3 = true;
-    }];
-
-    TestWebKitAPI::Util::run(&doneTest3);
+    }
 }
+
+TEST(WKWebViewMacEditingTests, FirstRectForCharacterRangeInTextArea)
+{
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);
+
+    [webView synchronouslyLoadHTMLString:@"<textarea></textarea>"];
+    [webView stringByEvaluatingJavaScript:@"document.querySelector('textarea').focus()"];
+    [webView waitForNextPresentationUpdate];
+
+    auto [rectBeforeTyping, rangeBeforeTyping] = [webView _firstRectForCharacterRange:NSMakeRange(0, 0)];
+    EXPECT_GT(rectBeforeTyping.origin.x, 0);
+    EXPECT_GT(rectBeforeTyping.origin.y, 0);
+    EXPECT_GT(rectBeforeTyping.size.height, 0);
+    EXPECT_EQ(rangeBeforeTyping.location, 0U);
+    EXPECT_EQ(rangeBeforeTyping.length, 0U);
+
+    [webView insertText:@"a"];
+    [webView waitForNextPresentationUpdate];
+
+    auto [rectAfterTyping, rangeAfterTyping] = [webView _firstRectForCharacterRange:NSMakeRange(1, 0)];
+    EXPECT_GT(rectAfterTyping.origin.x, rectBeforeTyping.origin.x);
+    EXPECT_GT(rectAfterTyping.origin.y, 0);
+    EXPECT_GT(rectAfterTyping.size.height, 0);
+    EXPECT_EQ(rangeAfterTyping.location, 1U);
+    EXPECT_EQ(rangeAfterTyping.length, 0U);
+}
+
+TEST(WKWebViewMacEditingTests, FirstRectForCharacterRangeWithNewlinesAndWrapping)
+{
+    Vector<std::pair<NSRect, NSRange>> expectedRectsAndRanges = {
+        { { { 8.f, 574.f }, { 328.f, 18.f } }, { 0, 51 } },
+        { { { 8.f, 556.f }, { 719.f, 18.f } }, { 51, 111 } },
+        { { { 8.f, 538.f }, { 770.f, 18.f } }, { 162, 122 } },
+        { { { 8.f, 520.f }, { 764.f, 18.f } }, { 284, 125 } },
+        { { { 8.f, 502.f }, { 232.f, 18.f } }, { 409, 36 } }
+    };
+
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);
+    [webView _setEditable:YES];
+
+    [webView synchronouslyLoadHTMLString:@"<body><div>Lorem ipsum dolor sit amet, consectetur adipiscing</div><div>elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</div></body>"];
+    [webView stringByEvaluatingJavaScript:@"document.body.focus()"];
+
+    [webView selectAll:nil];
+
+    NSRange selectedRange = [webView _selectedRange];
+    NSRange remainingRange = selectedRange;
+
+    NSUInteger lineCount = 0;
+    while (remainingRange.length) {
+        auto [firstRect, actualRange] = [webView _firstRectForCharacterRange:remainingRange];
+
+        auto [expectedRect, expectedRange] = expectedRectsAndRanges[lineCount];
+
+        EXPECT_TRUE(NSEqualRects(expectedRect, firstRect));
+        EXPECT_TRUE(NSEqualRanges(expectedRange, actualRange));
+
+        remainingRange.location += actualRange.length;
+        remainingRange.length -= actualRange.length;
+
+        lineCount++;
+    }
+
+    EXPECT_EQ(5U, lineCount);
+}
+
+TEST(WKWebViewMacEditingTests, FirstRectForCharacterRangeForPartialLineWithNewlinesAndWrapping)
+{
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);
+    [webView _setEditable:YES];
+
+    [webView synchronouslyLoadHTMLString:@"<body><div>Lorem ipsum dolor sit amet, consectetur adipiscing</div><div>elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</div></body>"];
+    [webView stringByEvaluatingJavaScript:@"document.body.focus()"];
+
+    [webView selectAll:nil];
+
+    NSRange characterRange = NSMakeRange(175, 31);
+    NSRect expectedRect = NSMakeRect(87.f, 538.f, 192.f, 18.f);
+
+    auto [firstRect, actualRange] = [webView _firstRectForCharacterRange:characterRange];
+    EXPECT_TRUE(NSEqualRects(expectedRect, firstRect));
+    EXPECT_TRUE(NSEqualRanges(characterRange, actualRange));
+}
+
+TEST(WKWebViewMacEditingTests, FirstRectForCharacterRangeWithNewlinesAndWrappingLineBreakAfterWhiteSpace)
+{
+    Vector<std::pair<NSRect, NSRange>> expectedRectsAndRanges = {
+        { { { 8.f, 574.f }, { 328.f, 18.f } }, { 0, 51 } },
+        { { { 8.f, 556.f }, { 723.f, 18.f } }, { 51, 111 } },
+        { { { 8.f, 538.f }, { 774.f, 18.f } }, { 162, 122 } },
+        { { { 8.f, 520.f }, { 768.f, 18.f } }, { 284, 125 } },
+        // FIXME: <http://webkit.org/b/278181> The size of the rect for the last line is incorrect.
+        { { { 8.f, 502.f }, { 768.f, 36.f } }, { 409, 36 } }
+    };
+
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);
+    [webView _setEditable:YES];
+
+    [webView synchronouslyLoadHTMLString:@"<body style='line-break: after-white-space;'><div>Lorem ipsum dolor sit amet, consectetur adipiscing</div><div>elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</div></body>"];
+    [webView stringByEvaluatingJavaScript:@"document.body.focus()"];
+
+    [webView selectAll:nil];
+
+    NSRange selectedRange = [webView _selectedRange];
+    NSRange remainingRange = selectedRange;
+
+    NSUInteger lineCount = 0;
+    while (remainingRange.length) {
+        auto [firstRect, actualRange] = [webView _firstRectForCharacterRange:remainingRange];
+
+        auto [expectedRect, expectedRange] = expectedRectsAndRanges[lineCount];
+
+        EXPECT_TRUE(NSEqualRects(expectedRect, firstRect));
+        EXPECT_TRUE(NSEqualRanges(expectedRange, actualRange));
+
+        remainingRange.location += actualRange.length;
+        remainingRange.length -= actualRange.length;
+
+        lineCount++;
+    }
+
+    EXPECT_EQ(5U, lineCount);
+}
+
+TEST(WKWebViewMacEditingTests, FirstRectForCharacterRangeForPartialLineWithNewlinesAndWrappingLineBreakAfterWhiteSpace)
+{
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);
+    [webView _setEditable:YES];
+
+    [webView synchronouslyLoadHTMLString:@"<body style='line-break: after-white-space;'><div>Lorem ipsum dolor sit amet, consectetur adipiscing</div><div>elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</div></body>"];
+    [webView stringByEvaluatingJavaScript:@"document.body.focus()"];
+
+    [webView selectAll:nil];
+
+    NSRange characterRange = NSMakeRange(175, 31);
+    NSRect expectedRect = NSMakeRect(87.f, 538.f, 192.f, 18.f);
+
+    auto [firstRect, actualRange] = [webView _firstRectForCharacterRange:characterRange];
+    EXPECT_TRUE(NSEqualRects(expectedRect, firstRect));
+    EXPECT_TRUE(NSEqualRanges(characterRange, actualRange));
+}
+
+} // namespace TestWebKitAPI
 
 #endif // PLATFORM(MAC)

@@ -38,7 +38,6 @@
 typedef struct opaqueCMSampleBuffer *CMSampleBufferRef;
 typedef struct __CVBuffer *CVPixelBufferRef;
 typedef struct _GstSample GstSample;
-typedef struct OpaqueMTPluginByteSource *MTPluginByteSourceRef;
 typedef const struct opaqueCMFormatDescription *CMFormatDescriptionRef;
 
 namespace WebCore {
@@ -57,13 +56,11 @@ struct PlatformSample {
         MockSampleBoxType,
         CMSampleBufferType,
         GStreamerSampleType,
-        ByteRangeSampleType
     } type;
     union {
         const MockSampleBox* mockSampleBox;
         CMSampleBufferRef cmSampleBuffer;
         GstSample* gstSample;
-        std::pair<MTPluginByteSourceRef, std::reference_wrapper<const TrackInfo>> byteRangeSample;
     } sample;
 };
 
@@ -74,6 +71,7 @@ public:
     virtual MediaTime presentationTime() const = 0;
     virtual MediaTime decodeTime() const = 0;
     virtual MediaTime duration() const = 0;
+    virtual MediaTime presentationEndTime() const { return presentationTime() + duration(); }
     virtual TrackID trackID() const = 0;
     virtual size_t sizeInBytes() const = 0;
     virtual FloatSize presentationSize() const = 0;
