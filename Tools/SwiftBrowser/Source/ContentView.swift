@@ -117,6 +117,8 @@ fileprivate struct DialogMessageView: View {
 struct ContentView: View {
     @Binding var url: URL?
 
+    @State private var findNavigatorIsPresented = false
+
     @AppStorage(AppStorageKeys.homepage) private var homepage = "https://www.webkit.org"
 
     @Environment(BrowserViewModel.self) private var viewModel
@@ -135,6 +137,7 @@ struct ContentView: View {
                 .webViewAllowsBackForwardNavigationGestures()
                 .webViewAllowsTabFocusingLinks()
                 .webViewAllowsElementFullscreen()
+                .webViewFindNavigator(isPresented: $findNavigatorIsPresented)
                 .task {
                     for await event in viewModel.page.navigations {
                         viewModel.didReceiveNavigationEvent(event)
@@ -175,6 +178,16 @@ struct ContentView: View {
                         ) {
                             viewModel.page.load(backForwardItem: $0)
                         }
+
+                        Spacer()
+
+                        Button {
+                            findNavigatorIsPresented.toggle()
+                        } label: {
+                            Label("Find", systemImage: "magnifyingglass")
+                                .labelStyle(.iconOnly)
+                        }
+                        .keyboardShortcut("f")
                     }
                     
                     ToolbarItemGroup(placement: .principal) {

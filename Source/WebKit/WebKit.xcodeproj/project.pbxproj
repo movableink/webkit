@@ -138,6 +138,7 @@
 		029D6BB42C407AA30068CF99 /* JSWebExtensionAPISidePanel.h in Headers */ = {isa = PBXBuildFile; fileRef = 029D6BAF2C407AA30068CF99 /* JSWebExtensionAPISidePanel.h */; };
 		0701789E23BE9CFC005F0FAA /* RemoteMediaPlayerMIMETypeCache.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0701789B23BAE261005F0FAA /* RemoteMediaPlayerMIMETypeCache.cpp */; };
 		0712654928EE06F800AE69D7 /* WebChromeClientCocoa.mm in Sources */ = {isa = PBXBuildFile; fileRef = 0712654728EE06F800AE69D7 /* WebChromeClientCocoa.mm */; };
+		0718F0C12D19046F0060C030 /* Foundation+Extras.swift in Sources */ = {isa = PBXBuildFile; fileRef = 073EFBB72D0F448500FAE7CF /* Foundation+Extras.swift */; };
 		071BC59023CE1EAA00680D7C /* RemoteMediaPlayerProxyMessages.h in Headers */ = {isa = PBXBuildFile; fileRef = 071BC58D23CE1EAA00680D7C /* RemoteMediaPlayerProxyMessages.h */; };
 		07297F9F1C17BBEA003F0735 /* UserMediaPermissionCheckProxy.h in Headers */ = {isa = PBXBuildFile; fileRef = 07297F9D1C17BBEA003F0735 /* UserMediaPermissionCheckProxy.h */; };
 		07297F9F1C17BBEA015F0735 /* DeviceIdHashSaltStorage.h in Headers */ = {isa = PBXBuildFile; fileRef = 07297F9D1C17BBEA223F0735 /* DeviceIdHashSaltStorage.h */; };
@@ -3069,6 +3070,7 @@
 		0736B75C260D4A4E00E06994 /* RemoteMediaSessionCoordinatorProxy.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = RemoteMediaSessionCoordinatorProxy.cpp; sourceTree = "<group>"; };
 		0736B75D260D4A4F00E06994 /* RemoteMediaSessionCoordinatorProxy.messages.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = RemoteMediaSessionCoordinatorProxy.messages.in; sourceTree = "<group>"; };
 		0736B75E260D4A5000E06994 /* RemoteMediaSessionCoordinatorProxy.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RemoteMediaSessionCoordinatorProxy.h; sourceTree = "<group>"; };
+		073EFBB72D0F448500FAE7CF /* Foundation+Extras.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Foundation+Extras.swift"; sourceTree = "<group>"; };
 		0744720525E5BD020054B231 /* MediaOverridesForTesting.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MediaOverridesForTesting.h; sourceTree = "<group>"; };
 		0744DA532CE05F9500AACC81 /* module.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
 		0744DA542CE05FE400AACC81 /* WebKitInternal.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebKitInternal.h; sourceTree = "<group>"; };
@@ -9595,6 +9597,7 @@
 				A1AE0EC22B1663D4008A2563 /* ExtensionCapabilityGranter.mm */,
 				00B9661818E25AE100CE1F88 /* FindClient.h */,
 				00B9661718E25AE100CE1F88 /* FindClient.mm */,
+				073EFBB72D0F448500FAE7CF /* Foundation+Extras.swift */,
 				CD78E1131DB7D7ED0014A2DE /* FullscreenClient.h */,
 				CD78E1121DB7D7ED0014A2DE /* FullscreenClient.mm */,
 				2E2B3BA421D4879000538EDF /* GlobalFindInPageState.h */,
@@ -19702,6 +19705,7 @@
 				CDCDC99E248FE8DA00A69522 /* EndowmentStateTracker.mm in Sources */,
 				E31586CE2AD610F30062ED2A /* ExtensionEventHandler.mm in Sources */,
 				E34DAD392B753FA700FABEE2 /* ExtensionProcess.mm in Sources */,
+				0718F0C12D19046F0060C030 /* Foundation+Extras.swift in Sources */,
 				CDA93DB122F8BCF400490A69 /* FullscreenTouchSecheuristicParameters.cpp in Sources */,
 				86760A6B28DB30DE00D07D06 /* GeneratedSerializers.mm in Sources */,
 				522F792A28D50EC60069B45B /* HidConnection.mm in Sources */,

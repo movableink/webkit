@@ -36,6 +36,8 @@ extension EnvironmentValues {
     @Entry var webViewAllowsTextInteraction = true
 
     @Entry var webViewAllowsElementFullscreen = false
+
+    @Entry var webViewFindContext: FindContext = .init()
 }
 
 extension View {
@@ -63,6 +65,27 @@ extension View {
     public func webViewAllowsElementFullscreen(_ value: Bool = true) -> some View {
         environment(\.webViewAllowsElementFullscreen, value)
     }
+
+    @_spi(Private)
+    public func webViewFindNavigator(isPresented: Binding<Bool>) -> some View {
+        environment(\.webViewFindContext, .init(isPresented: isPresented))
+    }
+
+    @_spi(Private)
+    public func webViewFindDisabled(_ isDisabled: Bool = true) -> some View {
+        transformEnvironment(\.webViewFindContext) { $0.canFind = !isDisabled }
+    }
+
+    @_spi(Private)
+    public func webViewReplaceDisabled(_ isDisabled: Bool = true) -> some View {
+        transformEnvironment(\.webViewFindContext) { $0.canReplace = !isDisabled }
+    }
+}
+
+struct FindContext {
+    var isPresented: Binding<Bool>?
+    var canFind = true
+    var canReplace = true
 }
 
 #endif

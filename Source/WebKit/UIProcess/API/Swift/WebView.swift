@@ -45,7 +45,10 @@ public struct WebView_v0: View {
     }
 }
 
-fileprivate class WebViewWrapper: PlatformView {
+@MainActor
+private class WebViewWrapper: PlatformView {
+    var findContext: FindContext?
+
     override var frame: CGRect {
         get {
             super.frame
@@ -66,7 +69,7 @@ fileprivate class WebViewWrapper: PlatformView {
         }
     }
 
-    var webView: WKWebView? = nil {
+    var webView: WebPageWebView? = nil {
         willSet {
             webView?.removeFromSuperview()
         }
@@ -77,6 +80,8 @@ fileprivate class WebViewWrapper: PlatformView {
 
             addSubview(webView)
             updateWebViewFrame()
+
+            webView.delegate = self
         }
     }
 
@@ -85,8 +90,28 @@ fileprivate class WebViewWrapper: PlatformView {
     }
 }
 
+extension WebViewWrapper: WebPageWebView.Delegate {
+#if os(iOS)
+    func findInteraction(_ interaction: UIFindInteraction, didBegin session: UIFindSession) {
+        if let isPresented = findContext?.isPresented {
+            isPresented.wrappedValue = true
+        }
+    }
+
+    func findInteraction(_ interaction: UIFindInteraction, didEnd session: UIFindSession) {
+        if let isPresented = findContext?.isPresented {
+            isPresented.wrappedValue = false
+        }
+    }
+
+    func supportsTextReplacement() -> Bool {
+        findContext?.canReplace ?? false
+    }
+#endif
+}
+
 @MainActor
-fileprivate struct WebViewRepresentable {
+private struct WebViewRepresentable {
     let owner: WebView_v0
 
     func makePlatformView(context: Context) -> WebViewWrapper {
@@ -115,6 +140,57 @@ fileprivate struct WebViewRepresentable {
         webView.configuration.preferences.isTextInteractionEnabled = environment.webViewAllowsTextInteraction
         webView.configuration.preferences.tabFocusesLinks = environment.webViewAllowsTabFocusingLinks
         webView.configuration.preferences.isElementFullscreenEnabled = environment.webViewAllowsElementFullscreen
+
+        context.coordinator.update(platformView, configuration: self, environment: environment)
+    }
+
+    func makeCoordinator() -> WebViewCoordinator {
+        WebViewCoordinator(configuration: self)
+    }
+}
+
+@MainActor
+private final class WebViewCoordinator {
+    init(configuration: WebViewRepresentable) {
+        self.configuration = configuration
+    }
+
+    var configuration: WebViewRepresentable
+
+    func update(_ view: WebViewWrapper, configuration: WebViewRepresentable, environment: EnvironmentValues) {
+        self.configuration = configuration
+
+        self.updateFindInteraction(view, environment: environment)
+    }
+
+    private func updateFindInteraction(_ view: WebViewWrapper, environment: EnvironmentValues) {
+        guard let webView = view.webView else {
+            return
+        }
+
+        let findContext = environment.webViewFindContext
+        view.findContext = findContext
+
+#if os(iOS)
+        webView.isFindInteractionEnabled = findContext.canFind
+
+        guard let findInteraction = webView.findInteraction else {
+            return
+        }
+
+        let isFindNavigatorVisible = findInteraction.isFindNavigatorVisible
+
+        // Showing or hiding the find navigator can change the first responder, which triggers a graph cycle if done synchronously.
+        if findContext.canFind && findContext.isPresented?.wrappedValue == true && !isFindNavigatorVisible {
+            onNextMainRunLoop {
+                findInteraction.presentFindNavigator(showingReplace: false)
+            }
+        } else if findContext.isPresented?.wrappedValue == false && isFindNavigatorVisible {
+            onNextMainRunLoop {
+                findInteraction.dismissFindNavigator()
+            }
+        }
+#endif
     }
 }
 
