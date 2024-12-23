@@ -144,7 +144,6 @@ UIProcess/API/C/WKUserContentControllerRef.cpp
 UIProcess/API/C/WKUserContentExtensionStoreRef.cpp
 UIProcess/API/C/WKUserMediaPermissionCheck.cpp
 UIProcess/API/C/WKUserMediaPermissionRequest.cpp
-UIProcess/API/C/WKUserScriptRef.cpp
 UIProcess/API/C/WKWebsiteDataStoreConfigurationRef.cpp
 UIProcess/API/C/WKWebsiteDataStoreRef.cpp
 UIProcess/API/C/WKWebsitePolicies.cpp

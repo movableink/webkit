@@ -1733,6 +1733,7 @@ public:
 
     const PageLoadState& pageLoadState() const;
     PageLoadState& pageLoadState();
+    Ref<const PageLoadState> protectedPageLoadState() const;
     Ref<PageLoadState> protectedPageLoadState();
 
 #if PLATFORM(COCOA)
@@ -2590,7 +2591,9 @@ public:
     void nowPlayingMetadataChanged(const WebCore::NowPlayingMetadata&);
 
     void didAdjustVisibilityWithSelectors(Vector<String>&&);
+
     BrowsingContextGroup& browsingContextGroup() const { return m_browsingContextGroup; }
+    Ref<BrowsingContextGroup> protectedBrowsingContextGroup() const;
 
     WebPageProxyTesting* pageForTesting() const;
     RefPtr<WebPageProxyTesting> protectedPageForTesting() const;
@@ -3284,8 +3287,6 @@ private:
     void dropOpeningAppLinkActivity();
     bool hasValidOpeningAppLinkActivity() const;
 #endif
-
-    Ref<BrowsingContextGroup> protectedBrowsingContextGroup() const;
 
     UniqueRef<Internals> m_internals;
     Identifier m_identifier;

@@ -4390,12 +4390,12 @@ API::ContentWorld& WebExtensionContext::toContentWorld(WebExtensionContentWorldT
 #if ENABLE(INSPECTOR_EXTENSIONS)
     case WebExtensionContentWorldType::Inspector:
 #endif
-        return API::ContentWorld::pageContentWorld();
+        return API::ContentWorld::pageContentWorldSingleton();
     case WebExtensionContentWorldType::ContentScript:
         return *m_contentScriptWorld;
     case WebExtensionContentWorldType::Native:
         ASSERT_NOT_REACHED();
-        return API::ContentWorld::pageContentWorld();
+        return API::ContentWorld::pageContentWorldSingleton();
     }
 }
 
