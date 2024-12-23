@@ -795,7 +795,7 @@ struct InternalFunction {
     unsigned osrEntryScratchBufferSize { 0 };
 };
 
-static constexpr uintptr_t NullWasmCallee = 0;
+extern const uintptr_t NullWasmCallee;
 
 struct WasmCallableFunction {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
