@@ -238,7 +238,7 @@ RetainPtr<NSMutableAttributedString> AXCoreObject::createAttributedString(String
     }
 
     // FIXME: Computing block-quote level is an ancestry walk, so ideally we would just combine that with the
-    // ancestry walk we do above, but we currently cache this as its own property (AXPropertyName::BlockquoteLevel)
+    // ancestry walk we do above, but we currently cache this as its own property (AXProperty::BlockquoteLevel)
     // so just use that for now.
     attributedStringSetBlockquoteLevel(string.get(), *this, range);
     attributedStringSetExpandedText(string.get(), *this, range);

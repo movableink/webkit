@@ -80,11 +80,11 @@ enum class AXPropertyFlag : uint32_t {
     SupportsSetSize                               = 1 << 19
 };
 
-enum class AXPropertyName : uint16_t {
+enum class AXProperty : uint16_t {
     ARIATreeRows,
 #if !ENABLE(AX_THREAD_TEXT_APIS)
     // Rather than caching text content as property when ENABLE(AX_THREAD_TEXT_APIS), we should
-    // synthesize it on-the-fly using AXPropertyName::TextRuns.
+    // synthesize it on-the-fly using AXProperty::TextRuns.
     AttributedText,
 #endif // !ENABLE(AX_THREAD_TEXT_APIS)
     AXColumnCount,
@@ -273,7 +273,7 @@ enum class AXPropertyName : uint16_t {
     SupportsSetSize,
 #if !ENABLE(AX_THREAD_TEXT_APIS)
     // Rather than caching text content as property when ENABLE(AX_THREAD_TEXT_APIS), we should
-    // synthesize it on-the-fly using AXPropertyName::TextRuns.
+    // synthesize it on-the-fly using AXProperty::TextRuns.
     TextContent,
 #endif // !ENABLE(AX_THREAD_TEXT_APIS)
     TextInputMarkedTextMarkerRange,
@@ -291,9 +291,9 @@ enum class AXPropertyName : uint16_t {
     VisibleChildren,
     VisibleRows,
 };
-WTF::TextStream& operator<<(WTF::TextStream&, AXPropertyName);
+WTF::TextStream& operator<<(WTF::TextStream&, AXProperty);
 
-using AXPropertyNameSet = HashSet<AXPropertyName, IntHash<AXPropertyName>, WTF::StrongEnumHashTraits<AXPropertyName>>;
+using AXPropertySet = HashSet<AXProperty, IntHash<AXProperty>, WTF::StrongEnumHashTraits<AXProperty>>;
 
 // If this type is modified, the switchOn statment in AXIsolatedObject::setProperty must be updated as well.
 using AXPropertyValueVariant = std::variant<std::nullptr_t, Markable<AXID>, String, bool, int, unsigned, double, float, uint64_t, WallTime, DateComponentsType, AccessibilityButtonState, Color, std::shared_ptr<URL>, LayoutRect, FloatPoint, FloatRect, IntPoint, IntRect, std::pair<unsigned, unsigned>, Vector<AccessibilityText>, Vector<AXID>, Vector<std::pair<Markable<AXID>, Markable<AXID>>>, Vector<String>, std::shared_ptr<Path>, OptionSet<AXAncestorFlag>, InsideLink, Vector<Vector<Markable<AXID>>>, CharacterRange, std::pair<Markable<AXID>, CharacterRange>
@@ -307,7 +307,7 @@ using AXPropertyValueVariant = std::variant<std::nullptr_t, Markable<AXID>, Stri
     , TextEmissionBehavior
 #endif
 >;
-using AXPropertyMap = UncheckedKeyHashMap<AXPropertyName, AXPropertyValueVariant, IntHash<AXPropertyName>, WTF::StrongEnumHashTraits<AXPropertyName>>;
+using AXPropertyMap = UncheckedKeyHashMap<AXProperty, AXPropertyValueVariant, IntHash<AXProperty>, WTF::StrongEnumHashTraits<AXProperty>>;
 WTF::TextStream& operator<<(WTF::TextStream&, const AXPropertyMap&);
 
 struct AXPropertyChange {
@@ -316,21 +316,21 @@ struct AXPropertyChange {
 };
 
 struct NodeUpdateOptions {
-    AXPropertyNameSet properties;
+    AXPropertySet properties;
     bool shouldUpdateNode { false };
     bool shouldUpdateChildren { false };
 
-    NodeUpdateOptions(const AXPropertyNameSet& propertyNames, bool shouldUpdateNode, bool shouldUpdateChildren)
+    NodeUpdateOptions(const AXPropertySet& propertyNames, bool shouldUpdateNode, bool shouldUpdateChildren)
         : properties(propertyNames)
         , shouldUpdateNode(shouldUpdateNode)
         , shouldUpdateChildren(shouldUpdateChildren)
     { }
 
-    NodeUpdateOptions(const AXPropertyNameSet& propertyNames)
+    NodeUpdateOptions(const AXPropertySet& propertyNames)
         : properties(propertyNames)
     { }
 
-    NodeUpdateOptions(AXPropertyName propertyName)
+    NodeUpdateOptions(AXProperty propertyName)
         : properties({ propertyName })
     { }
 
@@ -384,15 +384,15 @@ public:
     enum class ResolveNodeChanges : bool { No, Yes };
     void updateChildren(AccessibilityObject&, ResolveNodeChanges = ResolveNodeChanges::Yes);
     void updateChildrenForObjects(const ListHashSet<Ref<AccessibilityObject>>&);
-    void updateNodeProperty(AccessibilityObject& object, AXPropertyName property) { updateNodeProperties(object, { property }); }
-    void updateNodeProperties(AccessibilityObject&, const AXPropertyNameSet&);
-    void updateNodeProperties(AccessibilityObject* axObject, const AXPropertyNameSet& properties)
+    void updateNodeProperty(AccessibilityObject& object, AXProperty property) { updateNodeProperties(object, { property }); }
+    void updateNodeProperties(AccessibilityObject&, const AXPropertySet&);
+    void updateNodeProperties(AccessibilityObject* axObject, const AXPropertySet& properties)
     {
         if (axObject)
             updateNodeProperties(*axObject, properties);
     }
     void updateDependentProperties(AccessibilityObject&);
-    void updatePropertiesForSelfAndDescendants(AccessibilityObject&, const AXPropertyNameSet&);
+    void updatePropertiesForSelfAndDescendants(AccessibilityObject&, const AXPropertySet&);
     void updateFrame(AXID, IntRect&&);
     void updateRootScreenRelativePosition();
     void overrideNodeProperties(AXID, AXPropertyMap&&);
@@ -439,7 +439,7 @@ public:
 
 #if ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
         objectChangedIgnoredState(object);
-        queueNodeUpdate(object.objectID(), { AXPropertyName::IsIgnored });
+        queueNodeUpdate(object.objectID(), { AXProperty::IsIgnored });
 #endif // ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
     }
     void objectBecameUnignored(const AccessibilityObject& object)
@@ -601,7 +601,7 @@ private:
     // Queued node updates used for building a new tree snapshot.
     ListHashSet<AXID> m_needsUpdateChildren;
     ListHashSet<AXID> m_needsUpdateNode;
-    UncheckedKeyHashMap<AXID, AXPropertyNameSet> m_needsPropertyUpdates;
+    UncheckedKeyHashMap<AXID, AXPropertySet> m_needsPropertyUpdates;
 };
 
 inline AXObjectCache* AXIsolatedTree::axObjectCache() const
