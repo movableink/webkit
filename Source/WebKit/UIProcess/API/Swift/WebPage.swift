@@ -68,6 +68,13 @@ extension WebPageWebView {
 @MainActor
 @Observable
 public class WebPage_v0 {
+    public enum FullscreenState: Hashable, Sendable {
+        case enteringFullscreen
+        case exitingFullscreen
+        case inFullscreen
+        case notInFullscreen
+    }
+
     public static func handlesURLScheme(_ scheme: String) -> Bool {
         WKWebView.handlesURLScheme(scheme)
     }
@@ -80,8 +87,9 @@ public class WebPage_v0 {
         navigations = Navigations(source: stream)
 
         backingUIDelegate = WKUIDelegateAdapter(dialogPresenter: dialogPresenter)
-
         backingNavigationDelegate = WKNavigationDelegateAdapter(navigationProgressContinuation: continuation, navigationDecider: navigationDecider)
+
+        backingUIDelegate.owner = self
         backingNavigationDelegate.owner = self
     }
 
@@ -138,6 +146,20 @@ public class WebPage_v0 {
         backingProperty(\.isWritingToolsActive, backedBy: \.isWritingToolsActive)
     }
 
+    public var fullscreenState: WebPage_v0.FullscreenState {
+        backingProperty(\.fullscreenState, backedBy: \.fullscreenState) { backingValue in
+            WebPage_v0.FullscreenState(backingValue)
+        }
+    }
+
+    public var cameraCaptureState: WKMediaCaptureState {
+        backingProperty(\.cameraCaptureState, backedBy: \.cameraCaptureState)
+    }
+
+    public var microphoneCaptureState: WKMediaCaptureState {
+        backingProperty(\.microphoneCaptureState, backedBy: \.microphoneCaptureState)
+    }
+
     public var mediaType: String? {
         get { backingWebView.mediaType }
         set { backingWebView.mediaType = newValue }
@@ -169,6 +191,8 @@ public class WebPage_v0 {
         webView.uiDelegate = backingUIDelegate
         return webView
     }()
+
+    // MARK: Loading functions
 
     @discardableResult
     public func load(_ request: URLRequest) -> NavigationID? {
@@ -238,6 +262,8 @@ public class WebPage_v0 {
         backingWebView.stopLoading()
     }
 
+    // MARK: Utility functions
+
     public func callAsyncJavaScript(_ functionBody: String, arguments: [String : Any] = [:], in frame: FrameInfo? = nil, contentWorld: WKContentWorld = .page) async throws -> Any? {
         try await backingWebView.callAsyncJavaScript(functionBody, arguments: arguments, in: frame?.wrapped, contentWorld: contentWorld)
     }
@@ -264,6 +290,34 @@ public class WebPage_v0 {
         }
     }
 
+    // MARK: Media functions
+
+    public func pauseAllMediaPlayback() async {
+        await backingWebView.pauseAllMediaPlayback()
+    }
+
+    public func mediaPlaybackState() async -> WKMediaPlaybackState {
+        await backingWebView.requestMediaPlaybackState()
+    }
+
+    public func setAllMediaPlaybackSuspended(_ suspended: Bool) async {
+        await backingWebView.setAllMediaPlaybackSuspended(suspended)
+    }
+
+    public func closeAllMediaPresentations() async {
+        await backingWebView.closeAllMediaPresentations()
+    }
+
+    public func setCameraCaptureState(_ state: WKMediaCaptureState) async {
+        await backingWebView.setCameraCaptureState(state)
+    }
+
+    public func setMicrophoneCaptureState(_ state: WKMediaCaptureState) async {
+        await backingWebView.setMicrophoneCaptureState(state)
+    }
+
+    // MARK: Private helper functions
+
     private func createObservation<Value, BackingValue>(for keyPath: KeyPath<WebPage_v0, Value>, backedBy backingKeyPath: KeyPath<WebPageWebView, BackingValue>) -> NSKeyValueObservation {
         let boxed = UncheckedSendableKeyPathBox(keyPath: keyPath)
 
@@ -289,6 +343,19 @@ public class WebPage_v0 {
 
     func backingProperty<Value>(_ keyPath: KeyPath<WebPage_v0, Value>, backedBy backingKeyPath: KeyPath<WebPageWebView, Value>) -> Value {
         backingProperty(keyPath, backedBy: backingKeyPath) { $0 }
+    }
+}
+
+extension WebPage_v0.FullscreenState {
+    init(_ wrapped: WKWebView.FullscreenState) {
+        self = switch wrapped {
+        case .enteringFullscreen: .enteringFullscreen
+        case .exitingFullscreen: .exitingFullscreen
+        case .inFullscreen: .inFullscreen
+        case .notInFullscreen: .notInFullscreen
+        @unknown default:
+            fatalError()
+        }
     }
 }
 

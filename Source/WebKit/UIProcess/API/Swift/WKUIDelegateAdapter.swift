@@ -35,6 +35,8 @@ final class WKUIDelegateAdapter: NSObject, WKUIDelegate {
         self.dialogPresenter = dialogPresenter ?? DefaultDialogPresenting()
     }
 
+    weak var owner: WebPage_v0? = nil
+
     private let dialogPresenter: any DialogPresenting
 
     // MARK: Dialog presentation
@@ -68,6 +70,24 @@ final class WKUIDelegateAdapter: NSObject, WKUIDelegate {
         case let .ok(value): value
         case .cancel: nil
         }
+    }
+
+    // MARK: Permissions
+
+    func webView(_ webView: WKWebView, requestDeviceOrientationAndMotionPermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo) async -> WKPermissionDecision {
+        guard let owner else {
+            return .prompt
+        }
+
+        return await owner.configuration.deviceSensorAuthorization.decisionHandler(.deviceOrientationAndMotion, .init(frame), origin)
+    }
+
+    func webView(_ webView: WKWebView, decideMediaCapturePermissionsFor origin: WKSecurityOrigin, initiatedBy frame: WKFrameInfo, type: WKMediaCaptureType) async -> WKPermissionDecision {
+        guard let owner else {
+            return .prompt
+        }
+
+        return await owner.configuration.deviceSensorAuthorization.decisionHandler(.mediaCapture(type), .init(frame), origin)
     }
 }
 

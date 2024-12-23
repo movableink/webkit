@@ -100,8 +100,23 @@ final class BrowserViewModel {
 
     private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: String(describing: BrowserViewModel.self))
 
+    private static func decideSensorAuthorization(permission: WebPage.DeviceSensorAuthorization.Permission, frame: WebPage.FrameInfo, origin: WKSecurityOrigin) async -> WKPermissionDecision {
+        let mediaCaptureAuthorization = WKPermissionDecision(rawValue: UserDefaults.standard.integer(forKey: AppStorageKeys.mediaCaptureAuthorization))!
+        let orientationAndMotionAuthorization = WKPermissionDecision(rawValue: UserDefaults.standard.integer(forKey: AppStorageKeys.orientationAndMotionAuthorization))!
+
+        return switch permission {
+        case .deviceOrientationAndMotion: orientationAndMotionAuthorization
+        case .mediaCapture: mediaCaptureAuthorization
+        @unknown default:
+            fatalError()
+        }
+    }
+
     init() {
-        self.page = WebPage(dialogPresenter: self.dialogPresenter)
+        var configuration = WebPage.Configuration()
+        configuration.deviceSensorAuthorization = WebPage.DeviceSensorAuthorization(decisionHandler: Self.decideSensorAuthorization(permission:frame:origin:))
+
+        self.page = WebPage(configuration: configuration, dialogPresenter: self.dialogPresenter)
         self.dialogPresenter.owner = self
     }
 
@@ -210,5 +225,17 @@ final class BrowserViewModel {
         }
 
         currentFilePicker = nil
+    }
+
+    func setCameraCaptureState(_ state: WKMediaCaptureState) {
+        Task { @MainActor in
+            await page.setCameraCaptureState(state)
+        }
+    }
+
+    func setMicrophoneCaptureState(_ state: WKMediaCaptureState) {
+        Task { @MainActor in
+            await page.setMicrophoneCaptureState(state)
+        }
     }
 }

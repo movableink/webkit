@@ -25,7 +25,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 @_spi(Private) import WebKit
 
-fileprivate struct ToolbarBackForwardMenuView: View {
+private struct ToolbarBackForwardMenuView: View {
     struct LabelConfiguration {
         let text: String
         let systemImage: String
@@ -55,7 +55,97 @@ fileprivate struct ToolbarBackForwardMenuView: View {
     }
 }
 
-fileprivate struct DialogActionsView: View {
+private struct MediaCaptureStateButtonView: View {
+    struct LabelConfiguration {
+        let activeSystemImage: String
+        let mutedSystemImage: String
+    }
+
+    let captureState: WKMediaCaptureState
+    let configuration: LabelConfiguration
+    let action: (WKMediaCaptureState) -> Void
+
+    var body: some View {
+        switch captureState {
+        case .none:
+            EmptyView()
+
+        case .active:
+            Button {
+                action(.muted)
+            } label: {
+                Label("Mute", systemImage: configuration.activeSystemImage)
+                    .labelStyle(.iconOnly)
+            }
+
+        case .muted:
+            Button {
+                action(.active)
+            } label: {
+                Label("Unmute", systemImage: configuration.mutedSystemImage)
+                    .labelStyle(.iconOnly)
+            }
+
+        @unknown default:
+            fatalError()
+        }
+    }
+}
+
+private struct PrincipalToolbarGroup: View {
+    @Environment(BrowserViewModel.self) private var viewModel
+
+    var body: some View {
+        HStack {
+            @Bindable var viewModel = viewModel
+
+            VStack(spacing: 0) {
+                TextField("URL", text: $viewModel.displayedURL)
+                    .textContentType(.URL)
+                    .onSubmit {
+                        viewModel.navigateToSubmittedURL()
+                    }
+                    .textFieldStyle(.roundedBorder)
+
+                ProgressView(value: viewModel.page.estimatedProgress, total: 1.0)
+                    .padding(.horizontal, 2)
+                    .padding(.top, -4)
+                    .padding(.bottom, -8)
+            }
+            .frame(minWidth: 300)
+
+            if viewModel.page.isLoading {
+                Button {
+                    viewModel.page.stopLoading()
+                } label: {
+                    Image(systemName: "xmark")
+                }
+                .keyboardShortcut(".")
+            } else {
+                Button {
+                    viewModel.page.reload()
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .keyboardShortcut("r")
+            }
+
+            MediaCaptureStateButtonView(
+                captureState: viewModel.page.cameraCaptureState,
+                configuration: .init(activeSystemImage: "video.fill", mutedSystemImage: "video.slash.fill"),
+                action: viewModel.setCameraCaptureState(_:)
+            )
+
+            MediaCaptureStateButtonView(
+                captureState: viewModel.page.microphoneCaptureState,
+                configuration: .init(activeSystemImage: "microphone.fill", mutedSystemImage: "microphone.slash.fill"),
+                action: viewModel.setMicrophoneCaptureState(_:)
+            )
+        }
+    }
+}
+
+private struct DialogActionsView: View {
     private let dialog: DialogPresenter.Dialog
 
     @State private var promptText = ""
@@ -97,7 +187,7 @@ fileprivate struct DialogActionsView: View {
     }
 }
 
-fileprivate struct DialogMessageView: View {
+private struct DialogMessageView: View {
     let dialog: DialogPresenter.Dialog
 
     var body: some View {
@@ -191,37 +281,7 @@ struct ContentView: View {
                     }
                     
                     ToolbarItemGroup(placement: .principal) {
-                        HStack {
-                            VStack(spacing: 0) {
-                                TextField("URL", text: $viewModel.displayedURL)
-                                    .textContentType(.URL)
-                                    .onSubmit {
-                                        viewModel.navigateToSubmittedURL()
-                                    }
-                                    .textFieldStyle(.roundedBorder)
-
-                                ProgressView(value: viewModel.page.estimatedProgress, total: 1.0)
-                                    .padding(.horizontal, 2)
-                                    .padding(.top, -4)
-                                    .padding(.bottom, -8)
-                            }
-                            .frame(minWidth: 300)
-
-                            if viewModel.page.isLoading {
-                                Button {
-                                    viewModel.page.stopLoading()
-                                } label: {
-                                    Image(systemName: "xmark")
-                                }
-                            } else {
-                                Button {
-                                    viewModel.page.reload()
-                                } label: {
-                                    Image(systemName: "arrow.clockwise")
-                                }
-                                .keyboardShortcut("r")
-                            }
-                        }
+                        PrincipalToolbarGroup()
                     }
                 }
         }

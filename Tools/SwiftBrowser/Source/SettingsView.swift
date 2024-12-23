@@ -22,22 +22,57 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 
 import SwiftUI
+import WebKit
+
+private struct PermissionDecisionView: View {
+    @Binding var permissionDecision: WKPermissionDecision
+
+    let label: String
+
+    var body: some View {
+        Picker(selection: $permissionDecision) {
+            Text("Ask").tag(WKPermissionDecision.prompt)
+            Text("Grant").tag(WKPermissionDecision.grant)
+            Text("Deny").tag(WKPermissionDecision.deny)
+        } label: {
+            Text(label)
+        }
+    }
+}
 
 struct GeneralSettingsView: View {
     @AppStorage(AppStorageKeys.homepage) private var homepage = "https://www.webkit.org"
+
+    @AppStorage(AppStorageKeys.orientationAndMotionAuthorization) private var orientationAndMotionAuthorization = WKPermissionDecision.prompt
+    @AppStorage(AppStorageKeys.mediaCaptureAuthorization) private var mediaCaptureAuthorization = WKPermissionDecision.prompt
 
     let currentURL: URL?
 
     var body: some View {
         Form {
-            TextField("Homepage", text: $homepage)
+            Section {
+                TextField("Homepage:", text: $homepage)
 
-            Button("Set to Current Page") {
-                if let currentURL {
-                    homepage = currentURL.absoluteString
-                } else {
-                    fatalError()
+                Button("Set to Current Page") {
+                    if let currentURL {
+                        homepage = currentURL.absoluteString
+                    } else {
+                        fatalError()
+                    }
                 }
+            }
+
+            Section {
+                PermissionDecisionView(
+                    permissionDecision: $mediaCaptureAuthorization,
+                    label: "Allow sites to access camera:"
+                )
+                .padding(.top)
+
+                PermissionDecisionView(
+                    permissionDecision: $orientationAndMotionAuthorization,
+                    label: "Allow sites to access sensors:"
+                )
             }
         }
     }
@@ -53,7 +88,7 @@ struct SettingsView: View {
             }
         }
         .scenePadding()
-        .frame(maxWidth: 350, minHeight: 100)
+        .frame(maxWidth: 600, minHeight: 100)
     }
 }
 

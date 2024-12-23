@@ -43,6 +43,8 @@ extension WebPage_v0 {
 
         public var urlSchemeHandlers: [URLScheme_v0 : any URLSchemeHandler_v0] = [:]
 
+        public var deviceSensorAuthorization: WebPage_v0.DeviceSensorAuthorization = WebPage_v0.DeviceSensorAuthorization(decision: .prompt)
+
         public var applicationNameForUserAgent: String? = nil
 
         public var limitsNavigationsToAppBoundDomains: Bool = false
@@ -60,6 +62,26 @@ extension WebPage_v0 {
 
         public var ignoresViewportScaleLimits: Bool = false
 #endif
+    }
+}
+
+extension WebPage_v0 {
+    @_spi(Private)
+    public struct DeviceSensorAuthorization {
+        public enum Permission: Hashable, Sendable {
+            case deviceOrientationAndMotion
+            case mediaCapture(WKMediaCaptureType)
+        }
+
+        let decisionHandler: (Permission, WebPage_v0.FrameInfo, WKSecurityOrigin) async -> WKPermissionDecision
+
+        public init(decisionHandler: @escaping (Permission, WebPage_v0.FrameInfo, WKSecurityOrigin) async -> WKPermissionDecision) {
+            self.decisionHandler = decisionHandler
+        }
+
+        public init(decision: WKPermissionDecision) {
+            self.init { _, _, _ in decision }
+        }
     }
 }
 
