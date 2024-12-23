@@ -572,7 +572,6 @@ page/PageSerializer.cpp
 page/Performance.cpp
 page/PerformanceLogging.cpp
 page/PerformanceMark.cpp
-page/PerformanceMonitor.cpp
 page/PerformanceNavigation.cpp
 page/PerformanceObserver.cpp
 page/PerformanceTiming.cpp
@@ -604,7 +603,6 @@ page/csp/ContentSecurityPolicy.cpp
 page/csp/ContentSecurityPolicyDirectiveList.cpp
 page/mac/EventHandlerMac.mm
 page/mac/ImageOverlayControllerMac.mm
-page/mac/PageMac.mm
 page/mac/ServicesOverlayController.mm
 page/scrolling/AsyncScrollingCoordinator.cpp
 page/scrolling/ScrollAnchoringController.cpp

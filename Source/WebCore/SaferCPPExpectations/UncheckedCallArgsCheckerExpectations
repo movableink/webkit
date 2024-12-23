@@ -47,7 +47,6 @@ page/PageColorSampler.cpp
 page/PageConsoleClient.cpp
 page/PageOverlay.cpp
 page/PrintContext.cpp
-page/SettingsBase.cpp
 page/SpatialNavigation.cpp
 page/mac/ServicesOverlayController.mm
 page/scrolling/AsyncScrollingCoordinator.cpp
