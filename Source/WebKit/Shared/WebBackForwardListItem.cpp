@@ -205,9 +205,9 @@ void WebBackForwardListItem::setRootFrameState(Ref<FrameState>&& mainFrameState)
     protectedRootFrameItem()->setFrameState(WTFMove(mainFrameState));
 }
 
-FrameState& WebBackForwardListItem::rootFrameState() const
+Ref<FrameState> WebBackForwardListItem::rootFrameState() const
 {
-    return m_rootFrameItem->frameState();
+    return m_rootFrameItem->copyFrameStateWithChildren();
 }
 
 const String& WebBackForwardListItem::originalURL() const

@@ -2547,7 +2547,7 @@ RefPtr<API::Navigation> WebPageProxy::goToBackForwardItem(WebBackForwardListItem
     process->markProcessAsRecentlyUsed();
 
     auto publicSuffix = WebCore::PublicSuffixStore::singleton().publicSuffix(URL(item.url()));
-    process->send(Messages::WebPage::GoToBackForwardItem({ navigation->navigationID(), frameItem.rootFrame().frameState(), frameLoadType, ShouldTreatAsContinuingLoad::No, std::nullopt, m_lastNavigationWasAppInitiated, std::nullopt, WTFMove(publicSuffix), { } }), webPageIDInProcess(process));
+    process->send(Messages::WebPage::GoToBackForwardItem({ navigation->navigationID(), frameItem.rootFrame().copyFrameStateWithChildren(), frameLoadType, ShouldTreatAsContinuingLoad::No, std::nullopt, m_lastNavigationWasAppInitiated, std::nullopt, WTFMove(publicSuffix), { } }), webPageIDInProcess(process));
     process->startResponsivenessTimer();
 
     return RefPtr<API::Navigation> { WTFMove(navigation) };
@@ -9473,8 +9473,8 @@ void WebPageProxy::backForwardItemAtIndex(int32_t index, FrameIdentifier frameID
     // FIXME: This should verify that the web process requesting the item hosts the specified frame.
     if (RefPtr item = protectedBackForwardList()->itemAtIndex(index)) {
         if (auto* childFrameItem = item->rootFrameItem().childItemForFrameID(frameID))
-            return completionHandler(&childFrameItem->frameState());
-        completionHandler(&item->rootFrameState());
+            return completionHandler(childFrameItem->copyFrameStateWithChildren());
+        completionHandler(item->rootFrameState());
     } else
         completionHandler(nullptr);
 }

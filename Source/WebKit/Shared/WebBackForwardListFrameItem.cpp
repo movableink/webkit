@@ -44,8 +44,8 @@ WebBackForwardListFrameItem::WebBackForwardListFrameItem(WebBackForwardListItem*
 {
     auto result = allItems().add(*m_frameState->identifier, *this);
     ASSERT_UNUSED(result, result.isNewEntry);
-    for (auto& child : m_frameState->children)
-        m_children.append(WebBackForwardListFrameItem::create(item, this, child.copyRef()));
+    for (auto& child : std::exchange(m_frameState->children, { }))
+        m_children.append(WebBackForwardListFrameItem::create(item, this, WTFMove(child)));
 }
 
 WebBackForwardListFrameItem::~WebBackForwardListFrameItem()
@@ -100,13 +100,10 @@ void WebBackForwardListFrameItem::setChild(Ref<FrameState>&& frameState)
 {
     for (unsigned i = 0; i < m_children.size(); i++) {
         if (m_children[i]->frameID() == frameState->frameID) {
-            ASSERT(m_frameState->children[i]->frameID == m_children[i]->frameID());
-            m_frameState->children[i] = frameState.copyRef();
             m_children[i] = WebBackForwardListFrameItem::create(protectedBackForwardListItem().get(), this, WTFMove(frameState));
             return;
         }
     }
-    m_frameState->children.append(frameState.copyRef());
     m_children.append(WebBackForwardListFrameItem::create(protectedBackForwardListItem().get(), this, WTFMove(frameState)));
 }
 
@@ -125,30 +122,22 @@ void WebBackForwardListFrameItem::setWasRestoredFromSession()
         child->setWasRestoredFromSession();
 }
 
-void WebBackForwardListFrameItem::updateChildFrameState(Ref<FrameState>&& frameState)
-{
-    auto& childrenState = m_frameState->children;
-    auto index = childrenState.findIf([&](auto& child) {
-        return child->identifier == frameState->identifier;
-    });
-
-    if (index != notFound) {
-        if (childrenState[index].ptr() != frameState.ptr())
-            childrenState[index] = WTFMove(frameState);
-    } else
-        childrenState.append(WTFMove(frameState));
-}
-
 void WebBackForwardListFrameItem::setFrameState(Ref<FrameState>&& frameState)
 {
     m_children.clear();
     m_frameState = WTFMove(frameState);
 
-    if (RefPtr parent = m_parent.get())
-        parent->updateChildFrameState(m_frameState.copyRef());
+    for (auto& childFrameState : std::exchange(m_frameState->children, { }))
+        m_children.append(WebBackForwardListFrameItem::create(protectedBackForwardListItem().get(), this, WTFMove(childFrameState)));
+}
 
-    for (auto& childFrameState : m_frameState->children)
-        m_children.append(WebBackForwardListFrameItem::create(protectedBackForwardListItem().get(), this, childFrameState.copyRef()));
+Ref<FrameState> WebBackForwardListFrameItem::copyFrameStateWithChildren()
+{
+    Ref frameState = protectedFrameState()->copy();
+    ASSERT(frameState->children.isEmpty());
+    for (auto& child : m_children)
+        frameState->children.append(child->copyFrameStateWithChildren());
+    return frameState;
 }
 
 } // namespace WebKit

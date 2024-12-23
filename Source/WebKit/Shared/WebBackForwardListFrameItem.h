@@ -43,7 +43,10 @@ public:
     static HashMap<WebCore::BackForwardItemIdentifier, WeakRef<WebBackForwardListFrameItem>>& allItems();
 
     FrameState& frameState() const { return m_frameState; }
+    Ref<FrameState> protectedFrameState() const { return m_frameState; }
     void setFrameState(Ref<FrameState>&&);
+
+    Ref<FrameState> copyFrameStateWithChildren();
 
     std::optional<WebCore::FrameIdentifier> frameID() const;
     WebCore::BackForwardItemIdentifier identifier() const;
@@ -63,8 +66,6 @@ public:
 
 private:
     WebBackForwardListFrameItem(WebBackForwardListItem*, WebBackForwardListFrameItem* parentItem, Ref<FrameState>&&);
-
-    void updateChildFrameState(Ref<FrameState>&&);
 
     WeakPtr<WebBackForwardListItem> m_backForwardListItem;
     Ref<FrameState> m_frameState;
