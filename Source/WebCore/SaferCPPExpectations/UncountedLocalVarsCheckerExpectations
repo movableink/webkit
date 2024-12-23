@@ -245,7 +245,6 @@ css/CSSValueList.h
 css/CSSVariableReferenceValue.cpp
 css/CSSViewTransitionRule.cpp
 css/ComputedStyleExtractor.cpp
-css/DOMCSSPaintWorklet.cpp
 css/DeprecatedCSSOMPrimitiveValue.cpp
 css/FontFaceSet.cpp
 css/FontVariantBuilder.cpp
