@@ -89,7 +89,7 @@ public:
             "Classes that offer weak pointers should also offer RefPtr or CheckedPtr. Please do not add new exceptions.");
 
         auto* ptr = static_cast<T*>(m_impl->template get<T>());
-        ASSERT(ptr);
+        RELEASE_ASSERT(ptr);
         return ptr;
     }
 
@@ -100,7 +100,7 @@ public:
             "Classes that offer weak pointers should also offer RefPtr or CheckedPtr. Please do not add new exceptions.");
 
         auto* ptr = static_cast<T*>(m_impl->template get<T>());
-        ASSERT(ptr);
+        RELEASE_ASSERT(ptr);
         return *ptr;
     }
 

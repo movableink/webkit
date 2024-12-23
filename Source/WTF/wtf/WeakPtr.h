@@ -116,7 +116,9 @@ public:
             "Classes that offer weak pointers should also offer RefPtr or CheckedPtr. Please do not add new exceptions.");
 
         ASSERT(canSafelyBeUsed());
-        return get();
+        auto* result = get();
+        RELEASE_ASSERT(result);
+        return result;
     }
 
     T& operator*() const
@@ -126,7 +128,9 @@ public:
             "Classes that offer weak pointers should also offer RefPtr or CheckedPtr. Please do not add new exceptions.");
 
         ASSERT(canSafelyBeUsed());
-        return *get();
+        auto* result = get();
+        RELEASE_ASSERT(result);
+        return *result;
     }
 
     void clear() { m_impl = nullptr; }
