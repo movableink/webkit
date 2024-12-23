@@ -205,6 +205,7 @@ public:
     id<MTLCounterSampleBuffer> timestampsBuffer(id<MTLCommandBuffer>, size_t);
     void resolveTimestampsForBuffer(id<MTLCommandBuffer>);
     id<MTLSharedEvent> resolveTimestampsSharedEvent();
+    uint32_t maxVerticesPerDrawCall() const { return m_maxVerticesPerDrawCall; }
 
 private:
     Device(id<MTLDevice>, id<MTLCommandQueue> defaultQueue, HardwareCapabilities&&, Adapter&);
@@ -281,6 +282,7 @@ private:
     NSMapTable<id<MTLCommandBuffer>, NSMutableArray<id<MTLBuffer>>*>* m_resolvedSampleCounterBuffers;
     id<MTLSharedEvent> m_resolveTimestampsSharedEvent { nil };
     bool m_supressAllErrors { false };
+    const uint32_t m_maxVerticesPerDrawCall { 0 };
 } SWIFT_SHARED_REFERENCE(refDevice, derefDevice);
 
 } // namespace WebGPU

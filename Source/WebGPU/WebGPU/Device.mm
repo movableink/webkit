@@ -243,6 +243,30 @@ Ref<Device> Device::create(id<MTLDevice> device, String&& deviceLabel, HardwareC
     return adoptRef(*new Device(device, commandQueue, WTFMove(capabilities), adapter));
 }
 
+static uint32_t computeMaxCountForDevice(id<MTLDevice> device)
+{
+    size_t result = 200 * MB;
+#if ENABLE(WEBGPU_BY_DEFAULT)
+    if ([device supportsFamily:MTLGPUFamilyApple9])
+        result = 300 * MB;
+    else if ([device supportsFamily:MTLGPUFamilyApple8])
+        result = 275 * MB;
+    else
+#endif
+    if ([device supportsFamily:MTLGPUFamilyApple7])
+        result = 250 * MB;
+    else if ([device supportsFamily:MTLGPUFamilyApple6])
+        result = 225 * MB;
+    else if ([device supportsFamily:MTLGPUFamilyApple5])
+        result = 200 * MB;
+    else if ([device supportsFamily:MTLGPUFamilyApple4])
+        result = 200 * MB;
+    else if ([device supportsFamily:MTLGPUFamilyMac2])
+        result = 300 * MB;
+
+    return result;
+}
+
 Device::Device(id<MTLDevice> device, id<MTLCommandQueue> defaultQueue, HardwareCapabilities&& capabilities, Adapter& adapter)
     : m_device(device)
     , m_defaultQueue(Queue::create(defaultQueue, adapter, *this))
@@ -250,6 +274,7 @@ Device::Device(id<MTLDevice> device, id<MTLCommandQueue> defaultQueue, HardwareC
     , m_capabilities(WTFMove(capabilities))
     , m_adapter(adapter)
     , m_instance(adapter.weakInstance())
+    , m_maxVerticesPerDrawCall(computeMaxCountForDevice(device))
 {
 #if PLATFORM(MAC)
     auto devices = MTLCopyAllDevicesWithObserver(&m_deviceObserver, [weakThis = ThreadSafeWeakPtr { *this }](id<MTLDevice> device, MTLDeviceNotificationName) {
@@ -765,12 +790,16 @@ id<MTLRenderPipelineState> Device::indexedIndirectBufferClampPipeline(NSUInteger
         ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         options.fastMathEnabled = YES;
         ALLOW_DEPRECATED_DECLARATIONS_END
-        /* NOLINT */ id<MTLLibrary> library = [m_device newLibraryWithSource:@R"(
+        /* NOLINT */ id<MTLLibrary> library = [m_device newLibraryWithSource:[NSString stringWithFormat:@R"(
     using namespace metal;
     [[vertex]] void vsIndexedIndirect(device const MTLDrawIndexedPrimitivesIndirectArguments& input [[buffer(0)]], device MTLDrawIndexedPrimitivesIndirectArguments& indexedOutput [[buffer(1)]], device MTLDrawPrimitivesIndirectArguments& output [[buffer(2)]], const constant uint* indexBufferCount [[buffer(3)]])
     {
-
-        bool condition = input.indexCount + input.indexStart > indexBufferCount[0] || input.instanceCount + input.baseInstance > indexBufferCount[1] || input.baseInstance >= indexBufferCount[1];
+        bool lostCondition = input.indexCount > %u || input.instanceCount > %u || input.indexCount * input.instanceCount > %u;
+        bool condition = lostCondition
+            || input.indexCount + input.indexStart > indexBufferCount[0]
+            || input.indexStart >= indexBufferCount[0]
+            || input.instanceCount + input.baseInstance > indexBufferCount[1]
+            || input.baseInstance >= indexBufferCount[1];
 
         indexedOutput.indexCount = metal::select(input.indexCount, 0u, condition);
         indexedOutput.instanceCount = input.instanceCount;
@@ -782,7 +811,9 @@ id<MTLRenderPipelineState> Device::indexedIndirectBufferClampPipeline(NSUInteger
         output.instanceCount = 1;
         output.vertexStart = input.indexStart;
         output.baseInstance = 0;
-    })" /* NOLINT */ options:options error:&error];
+        if (lostCondition)
+            *(&output.baseInstance + 1) = 1;
+    })", m_maxVerticesPerDrawCall, m_maxVerticesPerDrawCall, m_maxVerticesPerDrawCall] /* NOLINT */ options:options error:&error];
         if (error)
             WTFLogAlways("%@", error);
 
@@ -826,18 +857,23 @@ id<MTLRenderPipelineState> Device::indirectBufferClampPipeline(NSUInteger raster
         ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         options.fastMathEnabled = YES;
         ALLOW_DEPRECATED_DECLARATIONS_END
-        /* NOLINT */ id<MTLLibrary> library = [m_device newLibraryWithSource:@R"(
+        /* NOLINT */ id<MTLLibrary> library = [m_device newLibraryWithSource:[NSString stringWithFormat:@R"(
     using namespace metal;
     [[vertex]] void vsIndirect(device const MTLDrawPrimitivesIndirectArguments& input [[buffer(0)]], device MTLDrawPrimitivesIndirectArguments& output [[buffer(1)]], const constant uint* minCounts [[buffer(2)]])
     {
-        bool vertexCondition = input.vertexCount + input.vertexStart > minCounts[0] || input.vertexStart >= minCounts[0];
+        bool lostCondition = input.vertexCount > %u || input.instanceCount > %u || input.vertexCount * input.instanceCount > %u;
+        bool vertexCondition = lostCondition
+            || input.vertexCount + input.vertexStart > minCounts[0]
+            || input.vertexStart >= minCounts[0];
         bool instanceCondition = input.baseInstance + input.instanceCount > minCounts[1] || input.baseInstance >= minCounts[1];
         bool condition = vertexCondition || instanceCondition;
         output.vertexCount = metal::select(input.vertexCount, 0u, condition);
         output.instanceCount = input.instanceCount;
         output.vertexStart = input.vertexStart;
         output.baseInstance = input.baseInstance;
-    })" /* NOLINT */ options:options error:&error];
+        if (lostCondition)
+            *(&output.baseInstance + 1) = 1;
+    })", m_maxVerticesPerDrawCall, m_maxVerticesPerDrawCall, m_maxVerticesPerDrawCall] /* NOLINT */ options:options error:&error];
         if (error)
             WTFLogAlways("%@", error);
 

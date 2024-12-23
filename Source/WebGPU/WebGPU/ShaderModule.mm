@@ -798,8 +798,13 @@ void ShaderModule::getCompilationInfo(CompletionHandler<void(WGPUCompilationInfo
             compilationMessageData.compilationMessages.data(),
         };
         callback(WGPUCompilationInfoRequestStatus_Error, compilationInfo);
-    }, [](std::monostate) {
-        ASSERT_NOT_REACHED();
+    }, [&](std::monostate) {
+        WGPUCompilationInfo compilationInfo {
+            nullptr,
+            0u,
+            nullptr,
+        };
+        callback(WGPUCompilationInfoRequestStatus_Error, compilationInfo);
     });
 }
 

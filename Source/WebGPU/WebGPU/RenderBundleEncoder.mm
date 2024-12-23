@@ -759,7 +759,7 @@ RenderBundleEncoder::FinalizeRenderCommand RenderBundleEncoder::drawIndexedIndir
     RefPtr renderPassEncoder = m_renderPassEncoder.get();
     if (renderPassEncoder) {
         auto [minVertexCount, minInstanceCount] = computeMininumVertexInstanceCount();
-        auto result = RenderPassEncoder::clampIndirectIndexBufferToValidValues(m_indexBuffer.get(), indirectBuffer, m_indexType, m_indexBufferOffset, indirectOffset, minVertexCount, minInstanceCount, m_primitiveType, m_device.get(), m_descriptor.sampleCount, renderPassEncoder->renderCommandEncoder(), splitPass);
+        auto result = RenderPassEncoder::clampIndirectIndexBufferToValidValues(m_indexBuffer.get(), indirectBuffer, m_indexType, m_indexBufferOffset, indirectOffset, minVertexCount, minInstanceCount, m_primitiveType, m_device.get(), m_descriptor.sampleCount, *renderPassEncoder.get(), splitPass);
         if (splitPass)
             renderPassEncoder->splitRenderPass();
         mtlIndirectBuffer = result.first;
@@ -817,7 +817,9 @@ RenderBundleEncoder::FinalizeRenderCommand RenderBundleEncoder::drawIndirect(Buf
     RefPtr renderPassEncoder = m_renderPassEncoder.get();
     if (renderPassEncoder) {
         auto [minVertexCount, minInstanceCount] = computeMininumVertexInstanceCount();
-        clampedIndirectBuffer = RenderPassEncoder::clampIndirectBufferToValidValues(indirectBuffer, indirectOffset, minVertexCount, minInstanceCount, m_device.get(), m_descriptor.sampleCount, renderPassEncoder->renderCommandEncoder(), splitPass);
+        auto [adjustedBuffer, adjustedOffset] = RenderPassEncoder::clampIndirectBufferToValidValues(indirectBuffer, indirectOffset, minVertexCount, minInstanceCount, m_device.get(), m_descriptor.sampleCount, *renderPassEncoder.get(), splitPass);
+        clampedIndirectBuffer = adjustedBuffer;
+        indirectOffset = adjustedOffset;
         if (splitPass)
             renderPassEncoder->splitRenderPass();
     }
@@ -829,7 +831,7 @@ RenderBundleEncoder::FinalizeRenderCommand RenderBundleEncoder::drawIndirect(Buf
             if (!setCommandEncoder(indirectBuffer, renderPassEncoder))
                 return finalizeRenderCommand();
             if (!indirectBuffer.isDestroyed() && clampedIndirectBuffer && !m_makeSubmitInvalid)
-                [renderPassEncoder->renderCommandEncoder() drawPrimitives:m_primitiveType indirectBuffer:clampedIndirectBuffer indirectBufferOffset:0];
+                [renderPassEncoder->renderCommandEncoder() drawPrimitives:m_primitiveType indirectBuffer:clampedIndirectBuffer indirectBufferOffset:indirectOffset];
         } else {
             // FIXME: https://bugs.webkit.org/show_bug.cgi?id=264219
         }

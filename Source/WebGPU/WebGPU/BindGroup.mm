@@ -439,6 +439,7 @@ Device::ExternalTextureData Device::createExternalTextureFromPixelBuffer(CVPixel
         return [texture newTextureViewWithPixelFormat:texture.pixelFormat textureType:texture.textureType levels:NSMakeRange(0, texture.mipmapLevelCount) slices:NSMakeRange(0, texture.arrayLength) swizzle:alphaFirst ? MTLTextureSwizzleChannelsMake(MTLTextureSwizzleBlue, MTLTextureSwizzleAlpha, MTLTextureSwizzleZero, MTLTextureSwizzleZero) : MTLTextureSwizzleChannelsMake(MTLTextureSwizzleGreen, MTLTextureSwizzleBlue, MTLTextureSwizzleZero, MTLTextureSwizzleZero)];
     };
 
+    CVMetalTextureCacheFlush(m_coreVideoTextureCache.get(), 0);
     const bool supportsExtendedFormats = [m_device supportsFamily:MTLGPUFamilyApple4];
     IOSurfaceRef ioSurface = CVPixelBufferGetIOSurface(pixelBuffer);
     if (!ioSurface || isIntel()) {

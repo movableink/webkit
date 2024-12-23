@@ -169,7 +169,7 @@ Buffer::Buffer(id<MTLBuffer> buffer, uint64_t initialSize, WGPUBufferUsageFlags 
 #endif
 {
     if (m_usage & WGPUBufferUsage_Indirect)
-        m_indirectBuffer = device.safeCreateBuffer(sizeof(MTLDrawPrimitivesIndirectArguments), MTLStorageModePrivate);
+        m_indirectBuffer = device.safeCreateBuffer(sizeof(MTLDrawPrimitivesIndirectArguments) + sizeof(uint32_t), MTLStorageModeShared);
     if (m_usage & (WGPUBufferUsage_Indirect | WGPUBufferUsage_Index))
         m_indirectIndexedBuffer = device.safeCreateBuffer(sizeof(MTLDrawIndexedPrimitivesIndirectArguments) + sizeof(uint32_t), MTLStorageModeShared);
 }
