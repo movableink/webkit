@@ -269,6 +269,7 @@ struct PerWebProcessState {
 
 #if ENABLE(SCREEN_TIME)
     RetainPtr<STWebpageController> _screenTimeWebpageController;
+    BOOL _isBlockedByScreenTime;
 #endif
 
 #if PLATFORM(MAC)
