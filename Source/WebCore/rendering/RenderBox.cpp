@@ -122,8 +122,8 @@ static OverrideSizeMap* gOverridingLogicalHeightMap = nullptr;
 static OverrideSizeMap* gOverridingLogicalWidthMap = nullptr;
 
 using OverridingLengthMap = SingleThreadWeakHashMap<const RenderBox, Length>;
-static OverridingLengthMap* gOverridingLogicalHeightLengthMap = nullptr;
-static OverridingLengthMap* gOverridingLogicalWidthLengthMap = nullptr;
+static OverridingLengthMap* gOverridingLogicalHeightMapForFlexBasisComputation = nullptr;
+static OverridingLengthMap* gOverridingLogicalWidthMapForFlexBasisComputation = nullptr;
 
 // FIXME: We should store these based on physical direction.
 using OverrideOptionalSizeMap = SingleThreadWeakHashMap<const RenderBox, RenderBox::ContainingBlockOverrideValue>;
@@ -1380,48 +1380,48 @@ void RenderBox::clearOverridingContainingBlockContentLogicalHeight()
         gOverridingContainingBlockContentLogicalHeightMap->remove(*this);
 }
 
-std::optional<Length> RenderBox::overridingLogicalHeightLength() const
+std::optional<Length> RenderBox::overridingLogicalHeightForFlexBasisComputation() const
 {
-    if (!gOverridingLogicalHeightLengthMap)
+    if (!gOverridingLogicalHeightMapForFlexBasisComputation)
         return { };
-    if (auto result = gOverridingLogicalHeightLengthMap->find(*this); result != gOverridingLogicalHeightLengthMap->end())
+    if (auto result = gOverridingLogicalHeightMapForFlexBasisComputation->find(*this); result != gOverridingLogicalHeightMapForFlexBasisComputation->end())
         return result->value;
     return { };
 }
 
-void RenderBox::setOverridingLogicalHeightLength(const Length& height)
+void RenderBox::setOverridingLogicalHeightForFlexBasisComputation(const Length& height)
 {
-    if (!gOverridingLogicalHeightLengthMap)
-        gOverridingLogicalHeightLengthMap = new OverridingLengthMap();
-    gOverridingLogicalHeightLengthMap->set(*this, height);
+    if (!gOverridingLogicalHeightMapForFlexBasisComputation)
+        gOverridingLogicalHeightMapForFlexBasisComputation = new OverridingLengthMap();
+    gOverridingLogicalHeightMapForFlexBasisComputation->set(*this, height);
 }
 
-void RenderBox::clearOverridingLogicalHeightLength()
+void RenderBox::clearOverridingLogicalHeightForFlexBasisComputation()
 {
-    if (gOverridingLogicalHeightLengthMap)
-        gOverridingLogicalHeightLengthMap->remove(*this);
+    if (gOverridingLogicalHeightMapForFlexBasisComputation)
+        gOverridingLogicalHeightMapForFlexBasisComputation->remove(*this);
 }
 
-std::optional<Length> RenderBox::overridingLogicalWidthLength() const
+std::optional<Length> RenderBox::overridingLogicalWidthForFlexBasisComputation() const
 {
-    if (!gOverridingLogicalWidthLengthMap)
+    if (!gOverridingLogicalWidthMapForFlexBasisComputation)
         return { };
-    if (auto result = gOverridingLogicalWidthLengthMap->find(*this); result != gOverridingLogicalWidthLengthMap->end())
+    if (auto result = gOverridingLogicalWidthMapForFlexBasisComputation->find(*this); result != gOverridingLogicalWidthMapForFlexBasisComputation->end())
         return result->value;
     return { };
 }
 
-void RenderBox::setOverridingLogicalWidthLength(const Length& height)
+void RenderBox::setOverridingLogicalWidthForFlexBasisComputation(const Length& height)
 {
-    if (!gOverridingLogicalWidthLengthMap)
-        gOverridingLogicalWidthLengthMap = new OverridingLengthMap();
-    gOverridingLogicalWidthLengthMap->set(*this, height);
+    if (!gOverridingLogicalWidthMapForFlexBasisComputation)
+        gOverridingLogicalWidthMapForFlexBasisComputation = new OverridingLengthMap();
+    gOverridingLogicalWidthMapForFlexBasisComputation->set(*this, height);
 }
 
-void RenderBox::clearOverridingLogicalWidthLength()
+void RenderBox::clearOverridingLogicalWidthForFlexBasisComputation()
 {
-    if (gOverridingLogicalWidthLengthMap)
-        gOverridingLogicalWidthLengthMap->remove(*this);
+    if (gOverridingLogicalWidthMapForFlexBasisComputation)
+        gOverridingLogicalWidthMapForFlexBasisComputation->remove(*this);
 }
 
 void RenderBox::markMarginAsTrimmed(MarginTrimType newTrimmedMargin)
@@ -2674,7 +2674,7 @@ void RenderBox::computeLogicalWidthInFragment(LogicalExtentComputedValues& compu
     const RenderStyle& styleToUse = style();
     Length logicalWidthLength;
     auto hasOverridingLogicalWidthLength = false;
-    if (auto overridingLogicalWidthLength = this->overridingLogicalWidthLength()) {
+    if (auto overridingLogicalWidthLength = overridingLogicalWidthForFlexBasisComputation()) {
         logicalWidthLength = *overridingLogicalWidthLength;
         hasOverridingLogicalWidthLength = true;
     } else
@@ -3201,21 +3201,44 @@ RenderBox::LogicalExtentComputedValues RenderBox::computeLogicalHeight(LayoutUni
         bool treatAsReplaced = shouldComputeSizeAsReplaced() && (!inHorizontalBox || !stretching);
         bool checkMinMaxHeight = false;
 
-        // The parent box is flexing us, so it has increased or decreased our height.  We have to
-        // grab our cached flexible height.
+        // The parent box is flexing us, so it has increased or decreased our height. We have to grab our cached flexible height.
         // FIXME: Account for block-flow in flexible boxes.
         // https://bugs.webkit.org/show_bug.cgi?id=46418
-        if (auto overridingLogicalHeightForFlexOrGrid = (parent()->isFlexibleBoxIncludingDeprecated() || parent()->isRenderGrid() ? overridingLogicalHeight() : std::nullopt))
-            h = Length(*overridingLogicalHeightForFlexOrGrid, LengthType::Fixed);
-        else if (treatAsReplaced)
-            h = Length(computeReplacedLogicalHeight() + borderAndPaddingLogicalHeight(), LengthType::Fixed);
-        else {
-            if (auto overridingLogicalHeightLength = this->overridingLogicalHeightLength())
-                h = *overridingLogicalHeightLength;
-            else
-                h = style().logicalHeight();
+        auto usedHeight = [&]() -> Length {
+            if (is<RenderFlexibleBox>(parent()) || is<RenderDeprecatedFlexibleBox>(parent())) {
+                if (auto overridingLogicalHeight = this->overridingLogicalHeight())
+                    return { *overridingLogicalHeight, LengthType::Fixed };
+
+                if (treatAsReplaced)
+                    return { computeReplacedLogicalHeight() + borderAndPaddingLogicalHeight(), LengthType::Fixed };
+
+                if (auto overridingLogicalHeight = overridingLogicalHeightForFlexBasisComputation()) {
+                    checkMinMaxHeight = true;
+                    return { *overridingLogicalHeight };
+                }
+
+                checkMinMaxHeight = true;
+                return style().logicalHeight();
+            }
+
+            if (is<RenderGrid>(parent())) {
+                if (auto overridingLogicalHeight = this->overridingLogicalHeight())
+                    return { *overridingLogicalHeight, LengthType::Fixed };
+
+                if (treatAsReplaced)
+                    return { computeReplacedLogicalHeight() + borderAndPaddingLogicalHeight(), LengthType::Fixed };
+
+                checkMinMaxHeight = true;
+                return style().logicalHeight();
+            }
+
+            if (treatAsReplaced)
+                return { computeReplacedLogicalHeight() + borderAndPaddingLogicalHeight(), LengthType::Fixed };
+
             checkMinMaxHeight = true;
-        }
+            return style().logicalHeight();
+        };
+        h = usedHeight();
 
         // Block children of horizontal flexible boxes fill the height of the box.
         // FIXME: Account for block-flow in flexible boxes.
@@ -3558,7 +3581,7 @@ static bool allowMinMaxPercentagesInAutoHeightBlocksQuirk()
 
 bool RenderBox::shouldComputePreferredLogicalWidthsFromStyle() const
 {
-    auto logicalWidthLength = overridingLogicalWidthLength().value_or(style().logicalWidth());
+    auto logicalWidthLength = overridingLogicalWidthForFlexBasisComputation().value_or(style().logicalWidth());
     return logicalWidthLength.isFixed() && logicalWidthLength.value() >= 0 && !(isDeprecatedFlexItem() && !logicalWidthLength.intValue());
 }
 

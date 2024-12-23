@@ -2243,7 +2243,7 @@ void RenderBlock::computePreferredLogicalWidths()
     m_maxPreferredLogicalWidth = 0;
 
     const RenderStyle& styleToUse = style();
-    auto lengthToUse = overridingLogicalWidthLength().value_or(styleToUse.logicalWidth());
+    auto lengthToUse = overridingLogicalWidthForFlexBasisComputation().value_or(styleToUse.logicalWidth());
     if (!isRenderTableCell() && lengthToUse.isFixed() && lengthToUse.value() >= 0 && !(isDeprecatedFlexItem() && !lengthToUse.intValue())) {
         m_minPreferredLogicalWidth = adjustContentBoxLogicalWidthForBoxSizing(lengthToUse);
         m_maxPreferredLogicalWidth = m_minPreferredLogicalWidth;

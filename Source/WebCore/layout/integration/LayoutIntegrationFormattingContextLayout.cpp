@@ -39,14 +39,14 @@ void layoutWithFormattingContextForBox(const Layout::ElementBox& box, std::optio
     auto& renderer = downcast<RenderBox>(*box.rendererForIntegration());
 
     if (widthConstraint) {
-        renderer.setOverridingLogicalWidthLength({ *widthConstraint, LengthType::Fixed });
+        renderer.setOverridingLogicalWidthForFlexBasisComputation({ *widthConstraint, LengthType::Fixed });
         renderer.setNeedsLayout(MarkOnlyThis);
     }
 
     renderer.layoutIfNeeded();
 
     if (widthConstraint)
-        renderer.clearOverridingLogicalWidthLength();
+        renderer.clearOverridingLogicalWidthForFlexBasisComputation();
 
     auto rootLayoutBox = [&]() -> const Layout::ElementBox& {
         auto* ancestor = &box.parent();

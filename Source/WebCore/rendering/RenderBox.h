@@ -294,12 +294,12 @@ public:
     // These are currently only used by Flexbox code. In some cases we must layout flex items with a different main size
     // (the size in the main direction) than the one specified by the item in order to compute the value of flex basis, i.e.,
     // the initial main size of the flex item before the free space is distributed.
-    std::optional<Length> overridingLogicalHeightLength() const;
-    std::optional<Length> overridingLogicalWidthLength() const;
-    void setOverridingLogicalHeightLength(const Length&);
-    void setOverridingLogicalWidthLength(const Length&);
-    void clearOverridingLogicalHeightLength();
-    void clearOverridingLogicalWidthLength();
+    std::optional<Length> overridingLogicalHeightForFlexBasisComputation() const;
+    std::optional<Length> overridingLogicalWidthForFlexBasisComputation() const;
+    void setOverridingLogicalHeightForFlexBasisComputation(const Length&);
+    void setOverridingLogicalWidthForFlexBasisComputation(const Length&);
+    void clearOverridingLogicalHeightForFlexBasisComputation();
+    void clearOverridingLogicalWidthForFlexBasisComputation();
 
     void markMarginAsTrimmed(MarginTrimType);
     void clearTrimmedMarginsMarkings();

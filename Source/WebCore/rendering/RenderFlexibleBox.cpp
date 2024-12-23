@@ -1208,16 +1208,16 @@ public:
         , m_mainAxisIsInlineAxis(mainAxisIsInlineAxis)
     {
         if (m_mainAxisIsInlineAxis)
-            m_flexItem.setOverridingLogicalWidthLength(flexBasis);
+            m_flexItem.setOverridingLogicalWidthForFlexBasisComputation(flexBasis);
         else
-            m_flexItem.setOverridingLogicalHeightLength(flexBasis);
+            m_flexItem.setOverridingLogicalHeightForFlexBasisComputation(flexBasis);
     }
     ~ScopedFlexBasisAsFlexItemMainSize()
     {
         if (m_mainAxisIsInlineAxis)
-            m_flexItem.clearOverridingLogicalWidthLength();
+            m_flexItem.clearOverridingLogicalWidthForFlexBasisComputation();
         else
-            m_flexItem.clearOverridingLogicalHeightLength();
+            m_flexItem.clearOverridingLogicalHeightForFlexBasisComputation();
     }
 
 private:
