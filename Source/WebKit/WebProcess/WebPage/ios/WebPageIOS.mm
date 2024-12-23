@@ -654,9 +654,17 @@ void WebPage::getSelectionContext(CompletionHandler<void(const String&, const St
     if (!frame)
         return;
 
+    static constexpr auto selectionExtendedContextLength = 350;
+
+#if ENABLE(PDF_PLUGIN)
+    if (RefPtr pluginView = focusedPluginViewForFrame(*frame)) {
+        auto [textBefore, textAfter] = pluginView->stringsBeforeAndAfterSelection(selectionExtendedContextLength);
+        return completionHandler(pluginView->selectionString(), WTFMove(textBefore), WTFMove(textAfter));
+    }
+#endif
+
     if (!frame->selection().isRange())
         return completionHandler({ }, { }, { });
-    const int selectionExtendedContextLength = 350;
 
     auto& selection = frame->selection().selection();
     String selectedText = plainTextForContext(selection.firstRange());
@@ -5426,6 +5434,11 @@ void WebPage::requestDocumentEditingContext(DocumentEditingContextRequest&& requ
     RefPtr frame = m_page->checkedFocusController()->focusedOrMainFrame();
     if (!frame)
         return completionHandler({ });
+
+#if ENABLE(PDF_PLUGIN)
+    if (RefPtr pluginView = focusedPluginViewForFrame(*frame))
+        return completionHandler(pluginView->documentEditingContext(WTFMove(request)));
+#endif
 
     frame->protectedDocument()->updateLayout(LayoutOptions::IgnorePendingStylesheets);
 

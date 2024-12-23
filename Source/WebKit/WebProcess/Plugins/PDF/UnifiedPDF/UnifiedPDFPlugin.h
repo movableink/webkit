@@ -70,6 +70,8 @@ class PDFPresentationController;
 class WebFrame;
 class WebMouseEvent;
 struct EditorState;
+struct DocumentEditingContextRequest;
+struct DocumentEditingContext;
 struct PDFContextMenu;
 struct PDFContextMenuItem;
 
@@ -402,6 +404,7 @@ private:
 
     String fullDocumentString() const override;
     String selectionString() const override;
+    std::pair<String, String> stringsBeforeAndAfterSelection(int characterCount) const override;
     bool existingSelectionContainsPoint(const WebCore::FloatPoint&) const override;
     WebCore::FloatRect rectForSelectionInRootView(PDFSelection *) const override;
 
@@ -589,6 +592,7 @@ private:
     SelectionEndpoint extendInitialSelection(WebCore::FloatPoint pointInRootView, WebCore::TextGranularity) final;
     bool platformPopulateEditorStateIfNeeded(EditorState&) const final;
     CursorContext cursorContext(WebCore::FloatPoint pointInRootView) const final;
+    DocumentEditingContext documentEditingContext(DocumentEditingContextRequest&&) const final;
 
 #if HAVE(PDFDOCUMENT_SELECTION_WITH_GRANULARITY)
     PDFSelection *selectionAtPoint(WebCore::FloatPoint pointInPage, PDFPage *, WebCore::TextGranularity) const;

@@ -89,6 +89,8 @@ class WebMouseEvent;
 class WebWheelEvent;
 enum class SelectionEndpoint : bool;
 enum class SelectionWasFlipped : bool;
+struct DocumentEditingContextRequest;
+struct DocumentEditingContext;
 struct EditorState;
 struct WebHitTestResultData;
 
@@ -181,6 +183,7 @@ public:
 
     virtual String fullDocumentString() const { return { }; }
     virtual String selectionString() const = 0;
+    virtual std::pair<String, String> stringsBeforeAndAfterSelection(int /* characterCount */) const { return { }; }
     virtual bool existingSelectionContainsPoint(const WebCore::FloatPoint&) const = 0;
     virtual WebCore::FloatRect rectForSelectionInRootView(PDFSelection *) const = 0;
 
@@ -324,6 +327,7 @@ public:
     virtual SelectionWasFlipped moveSelectionEndpoint(WebCore::FloatPoint /* pointInRootView */, SelectionEndpoint);
     virtual SelectionEndpoint extendInitialSelection(WebCore::FloatPoint /* pointInRootView */, WebCore::TextGranularity);
     virtual CursorContext cursorContext(WebCore::FloatPoint /* pointInRootView */) const { return { }; }
+    virtual DocumentEditingContext documentEditingContext(DocumentEditingContextRequest&&) const;
 #endif
 
     bool populateEditorStateIfNeeded(EditorState&) const;

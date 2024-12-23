@@ -28,6 +28,7 @@
 
 #if ENABLE(PDF_PLUGIN)
 
+#import "DocumentEditingContext.h"
 #import "EditorState.h"
 #import "GestureTypes.h"
 #import "Logging.h"
@@ -1291,6 +1292,11 @@ SelectionWasFlipped PDFPluginBase::moveSelectionEndpoint(FloatPoint, SelectionEn
 SelectionEndpoint PDFPluginBase::extendInitialSelection(FloatPoint pointInRootView, TextGranularity)
 {
     return SelectionEndpoint::Start;
+}
+
+DocumentEditingContext PDFPluginBase::documentEditingContext(DocumentEditingContextRequest&&) const
+{
+    return { };
 }
 
 #endif // PLATFORM(IOS_FAMILY)

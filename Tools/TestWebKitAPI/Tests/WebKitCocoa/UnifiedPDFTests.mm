@@ -31,6 +31,7 @@
 #import "ContentSecurityPolicyTestHelpers.h"
 #import "HTTPServer.h"
 #import "IOSMouseEventTestHarness.h"
+#import "InstanceMethodSwizzler.h"
 #import "MouseSupportUIDelegate.h"
 #import "PlatformUtilities.h"
 #import "Test.h"
@@ -48,6 +49,7 @@
 #import <WebKit/WKWebViewPrivate.h>
 #import <WebKit/_WKFeature.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 
 @interface ObserveWebContentCrashNavigationDelegate : NSObject <WKNavigationDelegate>
 @end
@@ -269,6 +271,49 @@ UNIFIED_PDF_TEST(CopySelectedText)
     [webView waitForNextPresentationUpdate];
 
     EXPECT_WK_STREQ(@"Test", [[UIPasteboard generalPasteboard] string]);
+}
+
+UNIFIED_PDF_TEST(LookUpSelectedText)
+{
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 600, 600) configuration:configurationForWebViewTestingUnifiedPDF().get()]);
+    [webView synchronouslyLoadRequest:[NSURLRequest requestWithURL:[NSBundle.test_resourcesBundle URLForResource:@"test" withExtension:@"pdf"]]];
+    [webView selectTextInGranularity:UITextGranularityWord atPoint:CGPointMake(150, 100)];
+
+#if HAVE(UI_WK_DOCUMENT_CONTEXT)
+    RetainPtr request = adoptNS([[UIWKDocumentRequest alloc] init]);
+    [request setFlags:UIWKDocumentRequestText];
+
+    RetainPtr context = [webView synchronouslyRequestDocumentContext:request.get()];
+    EXPECT_WK_STREQ(@"PDF", dynamic_objc_cast<NSString>([context selectedText]));
+#endif
+
+    bool done = false;
+    RetainPtr<NSString> lookupContext;
+    NSRange selectedRangeInLookupContext;
+
+    auto lookupBlock = makeBlockPtr([&](id, NSString *context, NSRange range, CGRect) {
+        lookupContext = context;
+        selectedRangeInLookupContext = range;
+        done = true;
+    });
+
+    InstanceMethodSwizzler lookupSwizzler {
+#if USE(BROWSERENGINEKIT)
+        [BETextInteraction class],
+        @selector(showDictionaryForTextInContext:definingTextInRange:fromRect:),
+#else
+        [UIWKTextInteractionAssistant class],
+        @selector(lookup:withRange:fromRect:),
+#endif
+        imp_implementationWithBlock(lookupBlock.get())
+    };
+
+    [webView defineSelection];
+    TestWebKitAPI::Util::run(&done);
+
+    EXPECT_WK_STREQ(@"Test PDF Content\n555-555-1234", lookupContext.get());
+    EXPECT_EQ(selectedRangeInLookupContext.location, 5U);
+    EXPECT_EQ(selectedRangeInLookupContext.length, 3U);
 }
 
 #endif // PLATFORM(IOS_FAMILY)

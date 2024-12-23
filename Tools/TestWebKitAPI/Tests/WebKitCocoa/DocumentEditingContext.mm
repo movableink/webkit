@@ -150,27 +150,6 @@ static UIWKDocumentRequest *makeRequest(UIWKDocumentRequestFlags flags, UITextGr
 
 @implementation TestWKWebView (SynchronousDocumentContext)
 
-- (UIWKDocumentContext *)synchronouslyRequestDocumentContext:(UIWKDocumentRequest *)request
-{
-    __block bool finished = false;
-    __block RetainPtr<id> result;
-    [self.textInputContentView requestDocumentContext:request completionHandler:^(UIWKDocumentContext *context) {
-        result = context;
-        finished = true;
-    }];
-    TestWebKitAPI::Util::run(&finished);
-
-#if USE(BROWSERENGINEKIT)
-    if (RetainPtr context = dynamic_objc_cast<BETextDocumentContext>(result.get()))
-        return [context _uikitDocumentContext];
-#endif
-
-    if (RetainPtr context = dynamic_objc_cast<UIWKDocumentContext>(result.get()))
-        return context.autorelease();
-
-    return nil;
-}
-
 - (UITextPlaceholder *)synchronouslyInsertTextPlaceholderWithSize:(CGSize)size
 {
     __block bool finished = false;

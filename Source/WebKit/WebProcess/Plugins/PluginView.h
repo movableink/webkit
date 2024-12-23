@@ -61,6 +61,8 @@ class WebFrame;
 class WebPage;
 enum class SelectionEndpoint : bool;
 enum class SelectionWasFlipped : bool;
+struct DocumentEditingContextRequest;
+struct DocumentEditingContext;
 struct EditorState;
 struct FrameInfoData;
 struct WebHitTestResultData;
@@ -106,6 +108,7 @@ public:
     SelectionWasFlipped moveSelectionEndpoint(WebCore::FloatPoint pointInRootView, SelectionEndpoint);
     SelectionEndpoint extendInitialSelection(WebCore::FloatPoint pointInRootView, WebCore::TextGranularity);
     CursorContext cursorContext(WebCore::FloatPoint pointInRootView) const;
+    DocumentEditingContext documentEditingContext(DocumentEditingContextRequest&&) const;
 #endif
 
     bool populateEditorStateIfNeeded(EditorState&) const;
@@ -130,6 +133,7 @@ public:
 
     String fullDocumentString() const;
     String selectionString() const;
+    std::pair<String, String> stringsBeforeAndAfterSelection(int characterCount) const;
 
     RefPtr<WebCore::FragmentedSharedBuffer> liveResourceData() const;
 

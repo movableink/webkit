@@ -28,6 +28,7 @@
 
 #if ENABLE(PDF_PLUGIN)
 
+#include "DocumentEditingContext.h"
 #include "FrameInfoData.h"
 #include "PDFPlugin.h"
 #include "UnifiedPDFPlugin.h"
@@ -687,6 +688,14 @@ String PluginView::selectionString() const
     return protectedPlugin()->selectionString();
 }
 
+std::pair<String, String> PluginView::stringsBeforeAndAfterSelection(int characterCount) const
+{
+    if (!m_isInitialized)
+        return { };
+
+    return protectedPlugin()->stringsBeforeAndAfterSelection(characterCount);
+}
+
 void PluginView::handleEvent(Event& event)
 {
     if (!m_isInitialized)
@@ -1137,6 +1146,11 @@ SelectionWasFlipped PluginView::moveSelectionEndpoint(FloatPoint pointInRootView
 SelectionEndpoint PluginView::extendInitialSelection(FloatPoint pointInRootView, TextGranularity granularity)
 {
     return protectedPlugin()->extendInitialSelection(pointInRootView, granularity);
+}
+
+DocumentEditingContext PluginView::documentEditingContext(DocumentEditingContextRequest&& request) const
+{
+    return protectedPlugin()->documentEditingContext(WTFMove(request));
 }
 
 void PluginView::clearSelection()
