@@ -179,11 +179,15 @@ void AccessibilityObject::setLastPresentedTextPrediction(Node& previousCompositi
 #endif // HAVE (INLINE_PREDICTIONS)
 }
 
+#if !PLATFORM(MACCATALYST)
+
 static RetainPtr<NSDictionary> unarchivedTokenForData(RetainPtr<NSData> tokenData)
 {
     NSError *error = nil;
     return [NSKeyedUnarchiver unarchivedObjectOfClasses:[NSSet setWithObjects:[NSDictionary class], [NSNumber class], [NSString class], nil] fromData:tokenData.get() error:&error];
 }
+
+#endif
 
 std::span<const uint8_t> AXRemoteFrame::generateRemoteToken() const
 {

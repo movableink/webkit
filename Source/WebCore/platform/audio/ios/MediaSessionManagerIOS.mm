@@ -124,6 +124,8 @@ void MediaSessionManageriOS::providePresentingApplicationPIDIfNecessary(ProcessI
         return;
     m_havePresentedApplicationPID = true;
     MediaSessionHelper::sharedHelper().providePresentingApplicationPID(pid);
+#else
+    UNUSED_PARAM(pid);
 #endif
 }
 
@@ -132,6 +134,8 @@ void MediaSessionManageriOS::updatePresentingApplicationPIDIfNecessary(ProcessID
 #if HAVE(MEDIAEXPERIENCE_AVSYSTEMCONTROLLER)
     if (m_havePresentedApplicationPID)
         MediaSessionHelper::sharedHelper().providePresentingApplicationPID(pid, MediaSessionHelper::ShouldOverride::Yes);
+#else
+    UNUSED_PARAM(pid);
 #endif
 }
 
