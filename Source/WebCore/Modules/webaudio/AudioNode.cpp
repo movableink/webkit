@@ -45,15 +45,13 @@
 #include <stdio.h>
 #endif
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(AudioNode);
 
 String convertEnumerationToString(AudioNode::NodeType enumerationValue)
 {
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 21> values {
         MAKE_STATIC_STRING_IMPL("NodeTypeDestination"),
         MAKE_STATIC_STRING_IMPL("NodeTypeOscillator"),
         MAKE_STATIC_STRING_IMPL("NodeTypeAudioBufferSource"),
@@ -772,7 +770,5 @@ WTFLogChannel& AudioNode::logChannel() const
 #endif
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

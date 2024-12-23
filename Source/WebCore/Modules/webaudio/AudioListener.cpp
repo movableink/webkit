@@ -137,58 +137,58 @@ void AudioListener::updateDirtyState()
     m_isUpVectorDirty = lastUpVector != m_lastUpVector;
 }
 
-const float* AudioListener::positionXValues(size_t framesToProcess)
+std::span<const float> AudioListener::positionXValues(size_t framesToProcess)
 {
     updateValuesIfNeeded(framesToProcess);
-    return m_positionXValues.data();
+    return m_positionXValues.span();
 }
 
-const float* AudioListener::positionYValues(size_t framesToProcess)
+std::span<const float> AudioListener::positionYValues(size_t framesToProcess)
 {
     updateValuesIfNeeded(framesToProcess);
-    return m_positionYValues.data();
+    return m_positionYValues.span();
 }
 
-const float* AudioListener::positionZValues(size_t framesToProcess)
+std::span<const float> AudioListener::positionZValues(size_t framesToProcess)
 {
     updateValuesIfNeeded(framesToProcess);
-    return m_positionZValues.data();
+    return m_positionZValues.span();
 }
 
-const float* AudioListener::forwardXValues(size_t framesToProcess)
+std::span<const float> AudioListener::forwardXValues(size_t framesToProcess)
 {
     updateValuesIfNeeded(framesToProcess);
-    return m_forwardXValues.data();
+    return m_forwardXValues.span();
 }
 
-const float* AudioListener::forwardYValues(size_t framesToProcess)
+std::span<const float> AudioListener::forwardYValues(size_t framesToProcess)
 {
     updateValuesIfNeeded(framesToProcess);
-    return m_forwardYValues.data();
+    return m_forwardYValues.span();
 }
 
-const float* AudioListener::forwardZValues(size_t framesToProcess)
+std::span<const float> AudioListener::forwardZValues(size_t framesToProcess)
 {
     updateValuesIfNeeded(framesToProcess);
-    return m_forwardZValues.data();
+    return m_forwardZValues.span();
 }
 
-const float* AudioListener::upXValues(size_t framesToProcess)
+std::span<const float> AudioListener::upXValues(size_t framesToProcess)
 {
     updateValuesIfNeeded(framesToProcess);
-    return m_upXValues.data();
+    return m_upXValues.span();
 }
 
-const float* AudioListener::upYValues(size_t framesToProcess)
+std::span<const float> AudioListener::upYValues(size_t framesToProcess)
 {
     updateValuesIfNeeded(framesToProcess);
-    return m_upYValues.data();
+    return m_upYValues.span();
 }
 
-const float* AudioListener::upZValues(size_t framesToProcess)
+std::span<const float> AudioListener::upZValues(size_t framesToProcess)
 {
     updateValuesIfNeeded(framesToProcess);
-    return m_upZValues.data();
+    return m_upZValues.span();
 }
 
 ExceptionOr<void> AudioListener::setPosition(float x, float y, float z)

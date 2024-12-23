@@ -40,8 +40,6 @@
 #include <wtf/MathExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PannerNode);
@@ -205,17 +203,17 @@ void PannerNode::processSampleAccurateValues(AudioBus* destination, const AudioB
     m_orientationZ->calculateSampleAccurateValues(std::span { orientationZ }.first(framesToProcess));
 
     // Get the automation values from the listener.
-    const float* listenerX = listener().positionXValues(AudioUtilities::renderQuantumSize);
-    const float* listenerY = listener().positionYValues(AudioUtilities::renderQuantumSize);
-    const float* listenerZ = listener().positionZValues(AudioUtilities::renderQuantumSize);
+    auto listenerX = listener().positionXValues(AudioUtilities::renderQuantumSize);
+    auto listenerY = listener().positionYValues(AudioUtilities::renderQuantumSize);
+    auto listenerZ = listener().positionZValues(AudioUtilities::renderQuantumSize);
 
-    const float* forwardX = listener().forwardXValues(AudioUtilities::renderQuantumSize);
-    const float* forwardY = listener().forwardYValues(AudioUtilities::renderQuantumSize);
-    const float* forwardZ = listener().forwardZValues(AudioUtilities::renderQuantumSize);
+    auto forwardX = listener().forwardXValues(AudioUtilities::renderQuantumSize);
+    auto forwardY = listener().forwardYValues(AudioUtilities::renderQuantumSize);
+    auto forwardZ = listener().forwardZValues(AudioUtilities::renderQuantumSize);
 
-    const float* upX = listener().upXValues(AudioUtilities::renderQuantumSize);
-    const float* upY = listener().upYValues(AudioUtilities::renderQuantumSize);
-    const float* upZ = listener().upZValues(AudioUtilities::renderQuantumSize);
+    auto upX = listener().upXValues(AudioUtilities::renderQuantumSize);
+    auto upY = listener().upYValues(AudioUtilities::renderQuantumSize);
+    auto upZ = listener().upZValues(AudioUtilities::renderQuantumSize);
 
     // Compute the azimuth, elevation, and total gains for each position.
     std::array<double, AudioUtilities::renderQuantumSize> azimuth;
@@ -593,7 +591,5 @@ void PannerNode::invalidateCachedPropertiesIfNecessary()
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

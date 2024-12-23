@@ -129,7 +129,7 @@ void BiquadProcessor::setType(BiquadFilterType type)
     }
 }
 
-void BiquadProcessor::getFrequencyResponse(unsigned nFrequencies, const float* frequencyHz, float* magResponse, float* phaseResponse)
+void BiquadProcessor::getFrequencyResponse(unsigned nFrequencies, std::span<const float> frequencyHz, std::span<float> magResponse, std::span<float> phaseResponse)
 {
     // Compute the frequency response on a separate temporary kernel
     // to avoid interfering with the processing running in the audio

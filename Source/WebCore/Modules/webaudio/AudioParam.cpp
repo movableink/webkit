@@ -39,8 +39,6 @@
 #include <wtf/MathExtras.h>
 #include <wtf/StdLibExtras.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 static void replaceNaNValues(std::span<float> values, float defaultValue)
@@ -396,7 +394,5 @@ WTFLogChannel& AudioParam::logChannel() const
     
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

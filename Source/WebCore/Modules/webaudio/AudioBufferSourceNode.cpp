@@ -40,8 +40,6 @@
 #include <algorithm>
 #include <wtf/TZoneMallocInlines.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(AudioBufferSourceNode);
@@ -53,7 +51,7 @@ constexpr double DefaultGrainDuration = 0.020; // 20ms
 // to minimize linear interpolation aliasing.
 const double MaxRate = 1024;
 
-static float computeSampleUsingLinearInterpolation(const float* source, unsigned readIndex, unsigned readIndex2, float interpolationFactor)
+static float computeSampleUsingLinearInterpolation(std::span<const float> source, unsigned readIndex, unsigned readIndex2, float interpolationFactor)
 {
     if (readIndex == readIndex2 && readIndex >= 1) {
         // We're at the end of the buffer, so just linearly extrapolate from the last two samples.
@@ -365,7 +363,7 @@ bool AudioBufferSourceNode::renderFromBuffer(AudioBus* bus, unsigned destination
                 auto destination = m_destinationChannels[i];
                 auto source = m_sourceChannels[i];
 
-                destination[writeIndex] = computeSampleUsingLinearInterpolation(source.data(), readIndex, readIndex2, interpolationFactor);
+                destination[writeIndex] = computeSampleUsingLinearInterpolation(source, readIndex, readIndex2, interpolationFactor);
             }
 
             writeIndex++;
@@ -404,7 +402,7 @@ bool AudioBufferSourceNode::renderFromBuffer(AudioBus* bus, unsigned destination
                 auto destination = m_destinationChannels[i];
                 auto source = m_sourceChannels[i];
 
-                destination[writeIndex] = computeSampleUsingLinearInterpolation(source.data(), readIndex, readIndex2, interpolationFactor);
+                destination[writeIndex] = computeSampleUsingLinearInterpolation(source, readIndex, readIndex2, interpolationFactor);
             }
             writeIndex++;
 
@@ -639,7 +637,5 @@ float AudioBufferSourceNode::noiseInjectionMultiplier() const
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

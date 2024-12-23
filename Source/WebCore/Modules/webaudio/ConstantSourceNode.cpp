@@ -33,9 +33,8 @@
 #include "AudioParam.h"
 #include "AudioUtilities.h"
 #include "ConstantSourceOptions.h"
+#include <algorithm>
 #include <wtf/TZoneMallocInlines.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -97,8 +96,8 @@ void ConstantSourceNode::process(size_t framesToProcess)
     if (!value)
         outputBus.zero();
     else {
-        float* dest = outputBus.channel(0)->mutableData();
-        std::fill_n(dest + quantumFrameOffset, nonSilentFramesToProcess, value);
+        auto destination = outputBus.channel(0)->mutableSpan();
+        std::ranges::fill(destination.subspan(quantumFrameOffset).first(nonSilentFramesToProcess), value);
         outputBus.clearSilentFlag();
     }
 }
@@ -109,7 +108,5 @@ bool ConstantSourceNode::propagatesSilence() const
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

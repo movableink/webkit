@@ -48,8 +48,6 @@ constexpr unsigned MaxPeriodicWaveSize = 16384;
 
 constexpr float CentsPerRange = 1200 / NumberOfOctaveBands;
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 Ref<PeriodicWave> PeriodicWave::create(float sampleRate, Float32Array& real, Float32Array& imaginary)
@@ -57,7 +55,7 @@ Ref<PeriodicWave> PeriodicWave::create(float sampleRate, Float32Array& real, Flo
     ASSERT(real.length() == imaginary.length());
 
     auto waveTable = adoptRef(*new PeriodicWave(sampleRate));
-    waveTable->createBandLimitedTables(real.data(), imaginary.data(), real.length());
+    waveTable->createBandLimitedTables(real.typedSpan(), imaginary.typedSpan());
     return waveTable;
 }
 
@@ -95,7 +93,7 @@ ExceptionOr<Ref<PeriodicWave>> PeriodicWave::create(BaseAudioContext& context, P
     imag[0] = 0;
     
     auto waveTable = adoptRef(*new PeriodicWave(context.sampleRate()));
-    waveTable->createBandLimitedTables(real.data(), imag.data(), real.size(), options.disableNormalization ? ShouldDisableNormalization::Yes : ShouldDisableNormalization::No);
+    waveTable->createBandLimitedTables(real, imag, options.disableNormalization ? ShouldDisableNormalization::Yes : ShouldDisableNormalization::No);
     return waveTable;
 }
 
@@ -136,7 +134,7 @@ PeriodicWave::PeriodicWave(float sampleRate)
     m_rateScale = periodicWaveSize() / m_sampleRate;
 }
 
-void PeriodicWave::waveDataForFundamentalFrequency(float fundamentalFrequency, float* &lowerWaveData, float* &higherWaveData, float& tableInterpolationFactor)
+void PeriodicWave::waveDataForFundamentalFrequency(float fundamentalFrequency, std::span<float>& lowerWaveData, std::span<float>& higherWaveData, float& tableInterpolationFactor)
 {
     // Negative frequencies are allowed, in which case we alias to the positive frequency.
     fundamentalFrequency = std::abs(fundamentalFrequency);
@@ -157,8 +155,8 @@ void PeriodicWave::waveDataForFundamentalFrequency(float fundamentalFrequency, f
     unsigned rangeIndex1 = static_cast<unsigned>(pitchRange);
     unsigned rangeIndex2 = rangeIndex1 < m_numberOfRanges - 1 ? rangeIndex1 + 1 : rangeIndex1;
 
-    lowerWaveData = m_bandLimitedTables[rangeIndex2]->data();
-    higherWaveData = m_bandLimitedTables[rangeIndex1]->data();
+    lowerWaveData = m_bandLimitedTables[rangeIndex2]->span();
+    higherWaveData = m_bandLimitedTables[rangeIndex1]->span();
     
     // Ranges from 0 -> 1 to interpolate between lower -> higher.
     tableInterpolationFactor = pitchRange - rangeIndex1;
@@ -186,13 +184,14 @@ unsigned PeriodicWave::numberOfPartialsForRange(unsigned rangeIndex) const
 // Convert into time-domain wave tables.
 // One table is created for each range for non-aliasing playback at different playback rates.
 // Thus, higher ranges have more high-frequency partials culled out.
-void PeriodicWave::createBandLimitedTables(const float* realData, const float* imagData, unsigned numberOfComponents, ShouldDisableNormalization disableNormalization)
+void PeriodicWave::createBandLimitedTables(std::span<const float> realData, std::span<const float> imagData, ShouldDisableNormalization disableNormalization)
 {
     float normalizationScale = 0.5;
 
-    unsigned fftSize = periodicWaveSize();
-    unsigned halfSize = fftSize / 2;
+    size_t fftSize = periodicWaveSize();
+    size_t halfSize = fftSize / 2;
     
+    size_t numberOfComponents = realData.size();
     numberOfComponents = std::min(numberOfComponents, halfSize);
 
     m_bandLimitedTables.reserveCapacity(m_numberOfRanges);
@@ -207,17 +206,17 @@ void PeriodicWave::createBandLimitedTables(const float* realData, const float* i
         RELEASE_ASSERT(imagP.size() >= numberOfComponents);
 
         // Copy from loaded frequency data and scale.
-        VectorMath::multiplyByScalar(realData, fftSize, realP.data(), numberOfComponents);
-        VectorMath::multiplyByScalar(imagData, -static_cast<float>(fftSize), imagP.data(), numberOfComponents);
+        VectorMath::multiplyByScalar(realData.data(), fftSize, realP.data(), numberOfComponents);
+        VectorMath::multiplyByScalar(imagData.data(), -static_cast<float>(fftSize), imagP.data(), numberOfComponents);
 
         // Find the starting bin where we should start culling.
         // We need to clear out the highest frequencies to band-limit the waveform.
-        unsigned numberOfPartials = numberOfPartialsForRange(rangeIndex);
+        size_t numberOfPartials = numberOfPartialsForRange(rangeIndex);
 
         // If fewer components were provided than 1/2 FFT size, then clear the
         // remaining bins. We also need to cull the aliasing partials for this
         // pitch range.
-        unsigned clampedNumberOfComponents = std::min(numberOfComponents, numberOfPartials + 1);
+        size_t clampedNumberOfComponents = std::min(numberOfComponents, numberOfPartials + 1);
         if (clampedNumberOfComponents < halfSize) {
             size_t numValues = halfSize - clampedNumberOfComponents;
             zeroSpan(realP.span().subspan(clampedNumberOfComponents, numValues));
@@ -258,8 +257,8 @@ void PeriodicWave::generateBasicWaveform(Type shape)
 
     AudioFloatArray real(halfSize);
     AudioFloatArray imag(halfSize);
-    float* realP = real.data();
-    float* imagP = imag.data();
+    auto realP = real.span();
+    auto imagP = imag.span();
 
     // Clear DC and Nyquist.
     realP[0] = 0;
@@ -324,7 +323,7 @@ void PeriodicWave::generateBasicWaveform(Type shape)
         imagP[n] = b;
     }
 
-    createBandLimitedTables(realP, imagP, halfSize);
+    createBandLimitedTables(realP, imagP);
 }
 
 unsigned PeriodicWave::periodicWaveSize() const
@@ -343,7 +342,5 @@ unsigned PeriodicWave::periodicWaveSize() const
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

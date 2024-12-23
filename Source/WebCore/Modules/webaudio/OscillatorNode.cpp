@@ -36,8 +36,6 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(OscillatorNode);
@@ -178,7 +176,7 @@ bool OscillatorNode::calculateSampleAccuratePhaseIncrements(size_t framesToProce
     return hasSampleAccurateValues;
 }
 
-static float doInterpolation(double virtualReadIndex, float incr, unsigned readIndexMask, float tableInterpolationFactor, const float* lowerWaveData, const float* higherWaveData)
+static float doInterpolation(double virtualReadIndex, float incr, unsigned readIndexMask, float tableInterpolationFactor, std::span<const float> lowerWaveData, std::span<const float> higherWaveData)
 {
     ASSERT(incr >= 0);
     ASSERT(std::isfinite(virtualReadIndex));
@@ -226,12 +224,12 @@ static float doInterpolation(double virtualReadIndex, float incr, unsigned readI
         // better estimate than just linear.
         //
         // See 3-point formula in http://dlmf.nist.gov/3.3#ii
-        unsigned readIndex[3];
+        std::array<unsigned, 3> readIndex;
 
         for (int k = -1; k <= 1; ++k)
             readIndex[k + 1] = (readIndex0 + k) & readIndexMask;
 
-        double a[3];
+        std::array<double, 3> a;
         double t = virtualReadIndex - readIndex0;
 
         a[0] = 0.5 * t * (t - 1);
@@ -248,11 +246,11 @@ static float doInterpolation(double virtualReadIndex, float incr, unsigned readI
         // quality and speed.
         //
         // See 5-point formula in http://dlmf.nist.gov/3.3#ii
-        unsigned readIndex[5];
+        std::array<unsigned, 5> readIndex;
         for (int k = -2; k <= 2; ++k)
             readIndex[k + 2] = (readIndex0 + k) & readIndexMask;
 
-        double a[5];
+        std::array<double, 5> a;
         double t = virtualReadIndex - readIndex0;
         double t2 = t * t;
 
@@ -269,11 +267,10 @@ static float doInterpolation(double virtualReadIndex, float incr, unsigned readI
     }
 
     // Then interpolate between the two tables.
-    float sample = (1 - tableInterpolationFactor) * sampleHigher + tableInterpolationFactor * sampleLower;
-    return sample;
+    return (1 - tableInterpolationFactor) * sampleHigher + tableInterpolationFactor * sampleLower;
 }
 
-double OscillatorNode::processARate(int n, float* destP, double virtualReadIndex, float* phaseIncrements)
+double OscillatorNode::processARate(int n, std::span<float> destination, double virtualReadIndex, std::span<float> phaseIncrements)
 {
     float rateScale = m_periodicWave->rateScale();
     float invRateScale = 1 / rateScale;
@@ -281,38 +278,38 @@ double OscillatorNode::processARate(int n, float* destP, double virtualReadIndex
     double invPeriodicWaveSize = 1.0 / periodicWaveSize;
     unsigned readIndexMask = periodicWaveSize - 1;
 
-    float* higherWaveData = nullptr;
-    float* lowerWaveData = nullptr;
+    std::span<float> higherWaveData;
+    std::span<float> lowerWaveData;
     float tableInterpolationFactor = 0;
 
     for (int k = 0; k < n; ++k) {
-        float incr = *phaseIncrements++;
+        float increment = phaseIncrements[k];
 
-        float frequency = invRateScale * incr;
+        float frequency = invRateScale * increment;
         m_periodicWave->waveDataForFundamentalFrequency(frequency, lowerWaveData, higherWaveData, tableInterpolationFactor);
 
-        float sample = doInterpolation(virtualReadIndex, std::abs(incr), readIndexMask, tableInterpolationFactor, lowerWaveData, higherWaveData);
+        float sample = doInterpolation(virtualReadIndex, std::abs(increment), readIndexMask, tableInterpolationFactor, lowerWaveData, higherWaveData);
 
-        *destP++ = sample;
+        destination[k] = sample;
 
         // Increment virtual read index and wrap virtualReadIndex into the range
         // 0 -> periodicWaveSize.
-        virtualReadIndex += incr;
+        virtualReadIndex += increment;
         virtualReadIndex -= floor(virtualReadIndex * invPeriodicWaveSize) * periodicWaveSize;
     }
 
     return virtualReadIndex;
 }
 
-double OscillatorNode::processKRate(int n, float* destP, double virtualReadIndex)
+double OscillatorNode::processKRate(int n, std::span<float> destination, double virtualReadIndex)
 {
     unsigned periodicWaveSize = m_periodicWave->periodicWaveSize();
     double invPeriodicWaveSize = 1.0 / periodicWaveSize;
     unsigned readIndexMask = periodicWaveSize - 1;
 
     float frequency = 0;
-    float* higherWaveData = nullptr;
-    float* lowerWaveData = nullptr;
+    std::span<float> higherWaveData;
+    std::span<float> lowerWaveData;
     float tableInterpolationFactor = 0;
 
     frequency = m_frequency->finalValue();
@@ -323,16 +320,16 @@ double OscillatorNode::processKRate(int n, float* destP, double virtualReadIndex
     m_periodicWave->waveDataForFundamentalFrequency(frequency, lowerWaveData, higherWaveData, tableInterpolationFactor);
 
     float rateScale = m_periodicWave->rateScale();
-    float incr = frequency * rateScale;
+    float increment = frequency * rateScale;
 
     for (int k = 0; k < n; ++k) {
-        float sample = doInterpolation(virtualReadIndex, std::abs(incr), readIndexMask, tableInterpolationFactor, lowerWaveData, higherWaveData);
+        float sample = doInterpolation(virtualReadIndex, std::abs(increment), readIndexMask, tableInterpolationFactor, lowerWaveData, higherWaveData);
 
-        *destP++ = sample;
+        destination[k] = sample;
 
         // Increment virtual read index and wrap virtualReadIndex into the range
         // 0 -> periodicWaveSize.
-        virtualReadIndex += incr;
+        virtualReadIndex += increment;
         virtualReadIndex -= floor(virtualReadIndex * invPeriodicWaveSize) * periodicWaveSize;
     }
 
@@ -376,7 +373,7 @@ void OscillatorNode::process(size_t framesToProcess)
         return;
     }
 
-    float* destP = outputBus.channel(0)->mutableData();
+    auto destination = outputBus.channel(0)->mutableSpan();
 
     ASSERT(quantumFrameOffset <= framesToProcess);
 
@@ -387,8 +384,8 @@ void OscillatorNode::process(size_t framesToProcess)
     bool hasSampleAccurateValues = calculateSampleAccuratePhaseIncrements(framesToProcess);
 
     float frequency = 0;
-    float* higherWaveData = nullptr;
-    float* lowerWaveData = nullptr;
+    std::span<float> higherWaveData;
+    std::span<float> lowerWaveData;
     float tableInterpolationFactor = 0;
 
     if (!hasSampleAccurateValues) {
@@ -400,18 +397,18 @@ void OscillatorNode::process(size_t framesToProcess)
         m_periodicWave->waveDataForFundamentalFrequency(frequency, lowerWaveData, higherWaveData, tableInterpolationFactor);
     }
 
-    float* phaseIncrements = m_phaseIncrements.data();
+    auto phaseIncrements = m_phaseIncrements.span();
 
     // Start rendering at the correct offset.
-    destP += quantumFrameOffset;
+    destination = destination.subspan(quantumFrameOffset);
     int n = nonSilentFramesToProcess;
 
     // If startFrameOffset is not 0, that means the oscillator doesn't actually
-    // start at quantumFrameOffset, but just past that time. Adjust destP and n
+    // start at quantumFrameOffset, but just past that time. Adjust destination and n
     // to reflect that, and adjust virtualReadIndex to start the value at
     // startFrameOffset.
     if (startFrameOffset > 0) {
-        ++destP;
+        destination = destination.subspan(1);
         --n;
         virtualReadIndex += (1 - startFrameOffset) * frequency * rateScale;
         ASSERT(virtualReadIndex < m_periodicWave->periodicWaveSize());
@@ -419,9 +416,9 @@ void OscillatorNode::process(size_t framesToProcess)
         virtualReadIndex = -startFrameOffset * frequency * rateScale;
 
     if (hasSampleAccurateValues)
-        virtualReadIndex = processARate(n, destP, virtualReadIndex, phaseIncrements);
+        virtualReadIndex = processARate(n, destination, virtualReadIndex, phaseIncrements);
     else
-        virtualReadIndex = processKRate(n, destP, virtualReadIndex);
+        virtualReadIndex = processKRate(n, destination, virtualReadIndex);
 
     m_virtualReadIndex = virtualReadIndex;
 
@@ -451,7 +448,5 @@ bool OscillatorNode::propagatesSilence() const
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)
