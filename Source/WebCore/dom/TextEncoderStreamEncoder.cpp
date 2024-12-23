@@ -30,8 +30,6 @@
 #include <JavaScriptCore/JSGenericTypedArrayViewInlines.h>
 #include <wtf/unicode/CharacterNames.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 RefPtr<Uint8Array> TextEncoderStreamEncoder::encode(const String& input)
@@ -42,6 +40,7 @@ RefPtr<Uint8Array> TextEncoderStreamEncoder::encode(const String& input)
         return nullptr;
 
     Vector<uint8_t> bytes(WTF::checkedProduct<size_t>(view.length() + 1, 3));
+    auto bytesSpan = bytes.mutableSpan();
     size_t bytesWritten = 0;
 
     for (size_t cptr = 0; cptr < view.length(); cptr++) {
@@ -51,20 +50,20 @@ RefPtr<Uint8Array> TextEncoderStreamEncoder::encode(const String& input)
             auto leadSurrogate = *std::exchange(m_pendingLeadSurrogate, std::nullopt);
             if (U16_IS_TRAIL(token)) {
                 auto codePoint = U16_GET_SUPPLEMENTARY(leadSurrogate, token);
-                U8_APPEND_UNSAFE(bytes.data(), bytesWritten, codePoint);
+                U8_APPEND_UNSAFE(bytesSpan, bytesWritten, codePoint);
                 continue;
             }
-            U8_APPEND_UNSAFE(bytes.data(), bytesWritten, replacementCharacter);
+            U8_APPEND_UNSAFE(bytesSpan, bytesWritten, replacementCharacter);
         }
         if (U16_IS_LEAD(token)) {
             m_pendingLeadSurrogate = token;
             continue;
         }
         if (U16_IS_TRAIL(token)) {
-            U8_APPEND_UNSAFE(bytes.data(), bytesWritten, replacementCharacter);
+            U8_APPEND_UNSAFE(bytesSpan, bytesWritten, replacementCharacter);
             continue;
         }
-        U8_APPEND_UNSAFE(bytes.data(), bytesWritten, token);
+        U8_APPEND_UNSAFE(bytesSpan, bytesWritten, token);
     }
 
     if (!bytesWritten)
@@ -84,5 +83,3 @@ RefPtr<Uint8Array> TextEncoderStreamEncoder::flush()
 }
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
