@@ -87,6 +87,8 @@ static constexpr auto yearAndMonthDatePickerMode = static_cast<UIDatePickerMode>
         return nil;
 
     RetainPtr maximumDateFormatter = adoptNS([[NSDateFormatter alloc] init]);
+    [maximumDateFormatter setLocale:[NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"]];
+    [maximumDateFormatter setTimeZone:[NSTimeZone timeZoneForSecondsFromGMT:0]];
     [maximumDateFormatter setDateFormat:kDateTimeFormatString];
     RetainPtr maximumDate = [maximumDateFormatter dateFromString:@"10000-12-31T23:59"]; // UIDatePicker cannot have more than 10,000 selectable years
     _dateInterval = adoptNS([[NSDateInterval alloc] initWithStartDate:[NSDate distantPast] endDate:maximumDate.get()]);
