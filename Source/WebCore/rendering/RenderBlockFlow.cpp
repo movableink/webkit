@@ -729,18 +729,18 @@ void RenderBlockFlow::layoutBlockChildren(bool relayoutChildren, LayoutUnit& max
     // The margin struct caches all our current margin collapsing state.
     MarginInfo marginInfo(*this, beforeEdge, afterEdge);
 
-    bool blockStartTrimmingFromContainingBlock = layoutState->blockStartTrimming();
-    bool newBlockStartTrimmingForSubtree = [&] {
+    bool marginTrimBlockStartFromContainingBlock = layoutState->marginTrimBlockStart();
+    bool newMarginTrimBlockStartForSubtree = [&] {
         if (style().marginTrim().contains(MarginTrimType::BlockStart))
             return true;
-        if (!marginInfo.canCollapseMarginBeforeWithChildren() && blockStartTrimmingFromContainingBlock)
+        if (!marginInfo.canCollapseMarginBeforeWithChildren() && marginTrimBlockStartFromContainingBlock)
             return false;
-        return blockStartTrimmingFromContainingBlock;
+        return marginTrimBlockStartFromContainingBlock;
     }();
 
-    layoutState->setBlockStartTrimming(newBlockStartTrimmingForSubtree);
-    auto resetBlockStartTrimming = WTF::makeScopeExit([&] {
-        layoutState->setBlockStartTrimming(blockStartTrimmingFromContainingBlock);
+    layoutState->setMarginTrimBlockStart(newMarginTrimBlockStartForSubtree);
+    auto resetBlockStartMarginTrimming = WTF::makeScopeExit([&] {
+        layoutState->setMarginTrimBlockStart(marginTrimBlockStartFromContainingBlock);
     });
 
 
@@ -811,7 +811,7 @@ void RenderBlockFlow::layoutBlockChildren(bool relayoutChildren, LayoutUnit& max
 
 void RenderBlockFlow::trimBlockEndChildrenMargins()
 {
-    auto trimSelfCollapsingChildDescendants = [&](RenderBox& child) {
+    auto trimSelfCollapsingChildDescendantsMargins = [&](RenderBox& child) {
         ASSERT(child.isSelfCollapsingBlock());
         for (auto itr = RenderIterator<RenderBox>(&child, child.firstChildBox()); itr; itr = itr.traverseNext()) {
             setTrimmedMarginForChild(*itr, MarginTrimType::BlockStart);
@@ -839,7 +839,7 @@ void RenderBlockFlow::trimBlockEndChildrenMargins()
             // If this self-collapsing child has any other children, which must also be
             // self-collapsing, we should trim the margins of all its descendants
             if (child->firstChildBox() && !child->childrenInline())
-                trimSelfCollapsingChildDescendants(*child);
+                trimSelfCollapsingChildDescendantsMargins(*child);
 
             child = child->previousSiblingBox();
         }  else if (auto* nestedBlock = dynamicDowncast<RenderBlockFlow>(child); nestedBlock && nestedBlock->isBlockContainer() && !nestedBlock->childrenInline() && !nestedBlock->style().marginTrim().contains(MarginTrimType::BlockEnd)) {
@@ -1033,8 +1033,8 @@ void RenderBlockFlow::layoutBlockChild(RenderBox& child, MarginInfo& marginInfo,
     if (marginInfo.atBeforeSideOfBlock() && !child.isSelfCollapsingBlock()) {
         marginInfo.setAtBeforeSideOfBlock(false);
 
-        if (auto* layoutState = frame().view()->layoutContext().layoutState(); layoutState && layoutState->blockStartTrimming())
-            layoutState->setBlockStartTrimming(false);
+        if (auto* layoutState = frame().view()->layoutContext().layoutState(); layoutState && layoutState->marginTrimBlockStart())
+            layoutState->setMarginTrimBlockStart(false);
     }
     // Now place the child in the correct left position
     determineLogicalLeftPositionForChild(child, ApplyLayoutDelta);
@@ -1345,7 +1345,7 @@ LayoutUnit RenderBlockFlow::collapseMarginsWithChildInfo(RenderBox* child, Margi
             setTrimmedMarginForChild(*child, MarginTrimType::BlockEnd);
         }
     };
-    if (frame().view()->layoutContext().layoutState()->blockStartTrimming()) {
+    if (frame().view()->layoutContext().layoutState()->marginTrimBlockStart()) {
         ASSERT(marginInfo.atBeforeSideOfBlock());
         trimChildBlockMargins();
     }

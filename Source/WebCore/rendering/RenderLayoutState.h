@@ -71,7 +71,7 @@ public:
         , m_layoutDeltaXSaturated(false)
         , m_layoutDeltaYSaturated(false)
 #endif
-        , m_blockStartTrimming(false)
+        , m_marginTrimBlockStart(false)
     {
     }
     RenderLayoutState(const LocalFrameViewLayoutContext::LayoutStateStack&, RenderBox&, const LayoutSize& offset, LayoutUnit pageHeight, bool pageHeightChanged, std::optional<LineClamp>, std::optional<LegacyLineClamp>, std::optional<TextBoxTrim>);
@@ -122,8 +122,8 @@ public:
     bool hasTextBoxTrimEnd(const RenderBlockFlow& candidate) const { return m_textBoxTrim && m_textBoxTrim->lastFormattedLineRoot.get() == &candidate; }
     void removeTextBoxTrimStart();
 
-    void setBlockStartTrimming(bool blockStartTrimming) { m_blockStartTrimming = blockStartTrimming; }
-    bool blockStartTrimming() const { return m_blockStartTrimming; }
+    void setMarginTrimBlockStart(bool marginTrimBlockStart) { m_marginTrimBlockStart = marginTrimBlockStart; }
+    bool marginTrimBlockStart() const { return m_marginTrimBlockStart; }
 
 private:
     void computeOffsets(const RenderLayoutState& ancestor, RenderBox&, LayoutSize offset);
@@ -143,7 +143,7 @@ private:
     bool m_layoutDeltaXSaturated : 1;
     bool m_layoutDeltaYSaturated : 1;
 #endif
-    bool m_blockStartTrimming : 1 { false };
+    bool m_marginTrimBlockStart : 1 { false };
 
     // The current line grid that we're snapping to and the offset of the start of the grid.
     SingleThreadWeakPtr<RenderBlockFlow> m_lineGrid;
