@@ -48,8 +48,12 @@ using CBOR = cbor::CBORValue;
 
 static ProtocolVersion convertStringToProtocolVersion(const String& version)
 {
+    if (version == kCtap21Version)
+        return ProtocolVersion::kCtap21;
+    if (version == kCtap21PreVersion)
+        return ProtocolVersion::kCtap21Pre;
     if (version == kCtap2Version)
-        return ProtocolVersion::kCtap;
+        return ProtocolVersion::kCtap2;
     if (version == kU2fVersion)
         return ProtocolVersion::kU2f;
 
@@ -340,6 +344,13 @@ std::optional<AuthenticatorGetInfoResponse> readCTAPGetInfoResponse(const Vector
                 transports.append(*transport);
         }
         response.setTransports(WTFMove(transports));
+    }
+
+    it = responseMap.find(CBOR(0x0D));
+    if (it != responseMap.end()) {
+        if (!it->second.isUnsigned())
+            return std::nullopt;
+        response.setMinPINLength(it->second.getUnsigned());
     }
 
     it = responseMap.find(CBOR(20));

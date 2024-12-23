@@ -587,7 +587,7 @@ TEST(CTAPResponseTest, TestReadGetInfoResponse)
     ASSERT_TRUE(getInfoResponse);
     ASSERT_TRUE(getInfoResponse->maxMsgSize());
     EXPECT_EQ(*getInfoResponse->maxMsgSize(), 1200u);
-    EXPECT_NE(getInfoResponse->versions().find(ProtocolVersion::kCtap), getInfoResponse->versions().end());
+    EXPECT_NE(getInfoResponse->versions().find(ProtocolVersion::kCtap2), getInfoResponse->versions().end());
     EXPECT_NE(getInfoResponse->versions().find(ProtocolVersion::kU2f), getInfoResponse->versions().end());
     EXPECT_TRUE(getInfoResponse->options().isPlatformDevice());
     EXPECT_EQ(AuthenticatorSupportedOptions::ResidentKeyAvailability::kSupported, getInfoResponse->options().residentKeyAvailability());
@@ -602,7 +602,7 @@ TEST(CTAPResponseTest, TestReadGetInfoResponse2)
     ASSERT_TRUE(getInfoResponse);
     ASSERT_TRUE(getInfoResponse->maxMsgSize());
     EXPECT_EQ(*getInfoResponse->maxMsgSize(), 1200u);
-    EXPECT_NE(getInfoResponse->versions().find(ProtocolVersion::kCtap), getInfoResponse->versions().end());
+    EXPECT_NE(getInfoResponse->versions().find(ProtocolVersion::kCtap2), getInfoResponse->versions().end());
     EXPECT_NE(getInfoResponse->versions().find(ProtocolVersion::kU2f), getInfoResponse->versions().end());
     EXPECT_TRUE(getInfoResponse->options().isPlatformDevice());
     EXPECT_EQ(AuthenticatorSupportedOptions::ResidentKeyAvailability::kSupported, getInfoResponse->options().residentKeyAvailability());
@@ -617,7 +617,7 @@ TEST(CTAPResponseTest, TestReadGetInfoResponseDeviceYubikey5c)
     ASSERT_TRUE(getInfoResponse);
     ASSERT_TRUE(getInfoResponse->maxMsgSize());
     EXPECT_EQ(*getInfoResponse->maxMsgSize(), 1200u);
-    EXPECT_NE(getInfoResponse->versions().find(ProtocolVersion::kCtap), getInfoResponse->versions().end());
+    EXPECT_NE(getInfoResponse->versions().find(ProtocolVersion::kCtap2), getInfoResponse->versions().end());
     EXPECT_NE(getInfoResponse->versions().find(ProtocolVersion::kU2f), getInfoResponse->versions().end());
     EXPECT_FALSE(getInfoResponse->options().isPlatformDevice());
     EXPECT_EQ(AuthenticatorSupportedOptions::ResidentKeyAvailability::kSupported, getInfoResponse->options().residentKeyAvailability());
@@ -638,7 +638,7 @@ TEST(CTAPResponseTest, TestReadGetInfoResponseWithIncorrectFormat)
 
 TEST(CTAPResponseTest, TestSerializeGetInfoResponse)
 {
-    AuthenticatorGetInfoResponse response({ ProtocolVersion::kCtap, ProtocolVersion::kU2f }, convertBytesToVector(kTestDeviceAaguid, sizeof(kTestDeviceAaguid)));
+    AuthenticatorGetInfoResponse response({ ProtocolVersion::kCtap2, ProtocolVersion::kU2f }, convertBytesToVector(kTestDeviceAaguid, sizeof(kTestDeviceAaguid)));
     response.setExtensions({ "uvm"_s, "hmac-secret"_s });
     AuthenticatorSupportedOptions options;
     options.setResidentKeyAvailability(AuthenticatorSupportedOptions::ResidentKeyAvailability::kSupported);

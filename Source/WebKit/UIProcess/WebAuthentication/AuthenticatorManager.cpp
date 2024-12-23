@@ -352,11 +352,12 @@ void AuthenticatorManager::requestPin(uint64_t retries, CompletionHandler<void(c
         return;
     }
 
-    auto callback = [weakThis = WeakPtr { *this }, this, completionHandler = WTFMove(completionHandler)] (const WTF::String& pin) mutable {
-        if (!weakThis)
+    auto callback = [weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)] (const WTF::String& pin) mutable {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
             return;
 
-        m_pendingRequestData.cachedPin = pin;
+        protectedThis->m_pendingRequestData.cachedPin = pin;
         completionHandler(pin);
     };
 
@@ -368,6 +369,28 @@ void AuthenticatorManager::requestPin(uint64_t retries, CompletionHandler<void(c
 
     dispatchPanelClientCall([retries, callback = WTFMove(callback)] (const API::WebAuthenticationPanel& panel) mutable {
         panel.client().requestPin(retries, WTFMove(callback));
+    });
+}
+
+void AuthenticatorManager::requestNewPin(uint64_t minLength, CompletionHandler<void(const WTF::String&)>&& completionHandler)
+{
+    auto callback = [weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)] (const WTF::String& pin) mutable {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
+            return;
+
+        protectedThis->m_pendingRequestData.cachedPin = pin;
+        completionHandler(pin);
+    };
+
+    // This is for the new UI.
+    if (RefPtr presenter = m_presenter) {
+        presenter->requestNewPin(minLength, WTFMove(callback));
+        return;
+    }
+
+    dispatchPanelClientCall([minLength, callback = WTFMove(callback)] (const API::WebAuthenticationPanel& panel) mutable {
+        panel.client().requestNewPin(minLength, WTFMove(callback));
     });
 }
 

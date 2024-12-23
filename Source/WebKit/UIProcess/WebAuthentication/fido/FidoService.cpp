@@ -30,6 +30,7 @@
 
 #include "CtapAuthenticator.h"
 #include "CtapDriver.h"
+#include "Logging.h"
 #include "U2fAuthenticator.h"
 #include <WebCore/DeviceRequestConverter.h>
 #include <WebCore/DeviceResponseConverter.h>
@@ -37,7 +38,9 @@
 #include <WebCore/FidoHidMessage.h>
 #include <wtf/RunLoop.h>
 #include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/Base64.h>
 
+#define CTAP_RELEASE_LOG(fmt, ...) RELEASE_LOG(WebAuthn, "%p - FidoService::" fmt, this, ##__VA_ARGS__)
 
 namespace WebKit {
 using namespace fido;
@@ -71,13 +74,14 @@ void FidoService::continueAfterGetInfo(WeakPtr<CtapDriver>&& weakDriver, Vector<
     if (!driver || !observer() || response.isEmpty())
         return;
 
+    CTAP_RELEASE_LOG("Got response from getInfo: %s", base64EncodeToString(response).utf8().data());
+
     auto info = readCTAPGetInfoResponse(response);
-    if (info && info->versions().find(ProtocolVersion::kCtap) != info->versions().end()) {
+    if (info && info->versions().find(ProtocolVersion::kCtap2) != info->versions().end()) {
         driver->setMaxMsgSize(info->maxMsgSize());
         observer()->authenticatorAdded(CtapAuthenticator::create(driver.releaseNonNull(), WTFMove(*info)));
         return;
     }
-    LOG_ERROR("Couldn't parse a ctap get info response.");
     driver->setProtocol(ProtocolVersion::kU2f);
     observer()->authenticatorAdded(U2fAuthenticator::create(driver.releaseNonNull()));
 }

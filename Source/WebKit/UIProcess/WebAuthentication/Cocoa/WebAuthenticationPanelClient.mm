@@ -53,6 +53,7 @@ WebAuthenticationPanelClient::WebAuthenticationPanelClient(_WKWebAuthenticationP
     m_delegateMethods.panelUpdateWebAuthenticationPanel = [delegate respondsToSelector:@selector(panel:updateWebAuthenticationPanel:)];
     m_delegateMethods.panelDismissWebAuthenticationPanelWithResult = [delegate respondsToSelector:@selector(panel:dismissWebAuthenticationPanelWithResult:)];
     m_delegateMethods.panelRequestPinWithRemainingRetriesCompletionHandler = [delegate respondsToSelector:@selector(panel:requestPINWithRemainingRetries:completionHandler:)];
+    m_delegateMethods.panelRequestNewPinWithMinLengthCompletionHandler = [delegate respondsToSelector:@selector(panel:requestNewPINWithMinLength:completionHandler:)];
     m_delegateMethods.panelSelectAssertionResponseSourceCompletionHandler = [delegate respondsToSelector:@selector(panel:selectAssertionResponse:source:completionHandler:)];
     m_delegateMethods.panelDecidePolicyForLocalAuthenticatorCompletionHandler = [delegate respondsToSelector:@selector(panel:decidePolicyForLocalAuthenticatorWithCompletionHandler:)];
     m_delegateMethods.panelRequestLAContextForUserVerificationCompletionHandler = [delegate respondsToSelector:@selector(panel:requestLAContextForUserVerificationWithCompletionHandler:)];
@@ -83,6 +84,10 @@ static _WKWebAuthenticationPanelUpdate wkWebAuthenticationPanelUpdate(WebAuthent
         return _WKWebAuthenticationPanelUpdateLANoCredential;
     if (status == WebAuthenticationStatus::KeyStoreFull)
         return _WKWebAuthenticationPanelUpdateKeyStoreFull;
+    if (status == WebAuthenticationStatus::PINTooShort)
+        return _WKWebAuthenticationPanelUpdatePINTooShort;
+    if (status == WebAuthenticationStatus::PINTooLong)
+        return _WKWebAuthenticationPanelUpdatePINTooLong;
     ASSERT_NOT_REACHED();
     return _WKWebAuthenticationPanelUpdateMultipleNFCTagsPresent;
 }
@@ -138,6 +143,30 @@ void WebAuthenticationPanelClient::requestPin(uint64_t retries, CompletionHandle
 
     auto checker = CompletionHandlerCallChecker::create(delegate.get(), @selector(panel:requestPINWithRemainingRetries:completionHandler:));
     [delegate panel:m_panel requestPINWithRemainingRetries:retries completionHandler:makeBlockPtr([completionHandler = WTFMove(completionHandler), checker = WTFMove(checker)](NSString *pin) mutable {
+        ensureOnMainThread([completionHandler = WTFMove(completionHandler), checker = WTFMove(checker), pin = retainPtr(pin)] () mutable {
+            if (checker->completionHandlerHasBeenCalled())
+                return;
+            checker->didCallCompletionHandler();
+            completionHandler(pin.get());
+        });
+    }).get()];
+}
+
+void WebAuthenticationPanelClient::requestNewPin(uint64_t minLength, CompletionHandler<void(const WTF::String&)>&& completionHandler) const
+{
+    if (!m_delegateMethods.panelRequestNewPinWithMinLengthCompletionHandler) {
+        completionHandler(String());
+        return;
+    }
+
+    auto delegate = m_delegate.get();
+    if (!delegate) {
+        completionHandler(String());
+        return;
+    }
+
+    auto checker = CompletionHandlerCallChecker::create(delegate.get(), @selector(panel:requestNewPINWithMinLength:completionHandler:));
+    [delegate panel:m_panel requestNewPINWithMinLength:minLength completionHandler:makeBlockPtr([completionHandler = WTFMove(completionHandler), checker = WTFMove(checker)](NSString *pin) mutable {
         ensureOnMainThread([completionHandler = WTFMove(completionHandler), checker = WTFMove(checker), pin = retainPtr(pin)] () mutable {
             if (checker->completionHandlerHasBeenCalled())
                 return;

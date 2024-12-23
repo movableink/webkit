@@ -37,10 +37,16 @@
 namespace fido {
 
 enum class ProtocolVersion {
-    kCtap,
+    kCtap2,
+    kCtap21,
+    kCtap21Pre,
     kU2f,
     kUnknown,
 };
+
+WEBCORE_EXPORT bool isCtap2Protocol(ProtocolVersion);
+
+WEBCORE_EXPORT String toString(ProtocolVersion);
 
 // Length of the U2F challenge/application parameter:
 // https://fidoalliance.org/specs/fido-u2f-v1.2-ps-20170411/fido-u2f-raw-message-formats-v1.2-ps-20170411.html#registration-request-message---u2f_register
@@ -170,6 +176,8 @@ constexpr size_t kHidInitNonceLength = 8;
 
 constexpr uint8_t kHidMaxLockSeconds = 10;
 
+constexpr size_t kPINMaxSizeInBytes = 63;
+
 // Messages are limited to an initiation packet and 128 continuation packets.
 constexpr size_t kHidMaxMessageSize = 7609;
 
@@ -194,6 +202,7 @@ enum class CtapRequestCommand : uint8_t {
     kAuthenticatorGetInfo = 0x04,
     kAuthenticatorClientPin = 0x06,
     kAuthenticatorReset = 0x07,
+    kAuthenticatorAuthenticatorSelection = 0x0B,
 };
 
 // APDU instruction code for U2F request encoding.
@@ -220,6 +229,8 @@ ASCIILiteral publicKeyCredentialTypeToString(WebCore::PublicKeyCredentialType);
 
 // FIXME: Add url to the official spec once it's standardized.
 constexpr auto kCtap2Version = "FIDO_2_0"_s;
+constexpr auto kCtap21Version = "FIDO_2_1"_s;
+constexpr auto kCtap21PreVersion = "FIDO_2_1_PRE"_s;
 constexpr auto kU2fVersion = "U2F_V2"_s;
 
 // CTAPHID Usage Page and Usage

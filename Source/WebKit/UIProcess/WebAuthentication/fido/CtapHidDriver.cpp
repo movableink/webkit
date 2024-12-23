@@ -237,7 +237,7 @@ void CtapHidDriver::continueAfterChannelAllocated(std::optional<FidoHidMessage>&
     m_channelId |= static_cast<uint32_t>(payload[index++]) << 8;
     m_channelId |= static_cast<uint32_t>(payload[index]);
     // FIXME(191534): Check the rest of the payload.
-    auto cmd = FidoHidMessage::create(m_channelId, protocol() == ProtocolVersion::kCtap ? FidoHidDeviceCommand::kCbor : FidoHidDeviceCommand::kMsg, m_requestData);
+    auto cmd = FidoHidMessage::create(m_channelId, isCtap2Protocol() ?  FidoHidDeviceCommand::kCbor : FidoHidDeviceCommand::kMsg, m_requestData);
     ASSERT(cmd);
     protectedWorker()->transact(WTFMove(*cmd), [weakThis = WeakPtr { *this }](std::optional<FidoHidMessage>&& response) mutable {
         ASSERT(RunLoop::isMain());
@@ -272,7 +272,7 @@ void CtapHidDriver::reset()
 
 void CtapHidDriver::cancel()
 {
-    if (m_state == State::Idle || protocol() != ProtocolVersion::kCtap)
+    if (m_state == State::Idle || !isCtap2Protocol())
         return;
     // Cancel any outstanding requests.
     if (m_state == State::Ready) {

@@ -63,7 +63,7 @@ Ref<AuthenticatorTransportService> VirtualService::createVirtual(WebCore::Authen
 
 static AuthenticatorGetInfoResponse authenticatorInfoForConfig(const VirtualAuthenticatorConfiguration& config)
 {
-    AuthenticatorGetInfoResponse infoResponse({ ProtocolVersion::kCtap }, Vector<uint8_t>(aaguidLength, 0u));
+    AuthenticatorGetInfoResponse infoResponse({ ProtocolVersion::kCtap2 }, Vector<uint8_t>(aaguidLength, 0u));
     AuthenticatorSupportedOptions options;
     infoResponse.setOptions(WTFMove(options));
     return infoResponse;

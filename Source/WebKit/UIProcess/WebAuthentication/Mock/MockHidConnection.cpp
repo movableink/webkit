@@ -219,9 +219,9 @@ void MockHidConnection::feedReports()
         // FIXME(205839):
         Vector<uint8_t> infoData;
         if (m_configuration.hid->canDowngrade)
-            infoData = encodeAsCBOR(AuthenticatorGetInfoResponse({ ProtocolVersion::kCtap, ProtocolVersion::kU2f }, Vector<uint8_t>(aaguidLength, 0u)));
+            infoData = encodeAsCBOR(AuthenticatorGetInfoResponse({ ProtocolVersion::kCtap2, ProtocolVersion::kU2f }, Vector<uint8_t>(aaguidLength, 0u)));
         else {
-            AuthenticatorGetInfoResponse infoResponse({ ProtocolVersion::kCtap }, Vector<uint8_t>(aaguidLength, 0u));
+            AuthenticatorGetInfoResponse infoResponse({ ProtocolVersion::kCtap2 }, Vector<uint8_t>(aaguidLength, 0u));
             AuthenticatorSupportedOptions options;
             if (m_configuration.hid->supportClientPin) {
                 infoResponse.setPinProtocols({ pin::kProtocolVersion });
