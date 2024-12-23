@@ -777,6 +777,9 @@ void AXIsolatedTree::updateNodeProperties(AccessibilityObject& axObject, const A
         case AXProperty::SupportsExpanded:
             propertyMap.set(AXProperty::SupportsExpanded, axObject.supportsExpanded());
             break;
+        case AXProperty::SupportsDragging:
+            propertyMap.set(AXProperty::SupportsDragging, axObject.supportsDragging());
+            break;
         case AXProperty::SupportsPosInSet:
             propertyMap.set(AXProperty::SupportsPosInSet, axObject.supportsPosInSet());
             break;

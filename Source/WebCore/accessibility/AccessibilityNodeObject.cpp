@@ -926,6 +926,12 @@ Vector<String> AccessibilityNodeObject::determineDropEffects() const
     if (!webkitdropzone.isEmpty())
         return Vector<String> { webkitdropzone };
 
+    // FIXME: We should return drop effects for elements with `dragenter` and `dragover` event handlers.
+    // dropzone and webkitdropzone used to serve this purpose, but are deprecated in favor of the
+    // aforementioned event handlers.
+    //
+    // https://html.spec.whatwg.org/dev/obsolete.html:
+    // "dropzone on all elements: Use script to handle the dragenter and dragover events instead."
     return { };
 }
 

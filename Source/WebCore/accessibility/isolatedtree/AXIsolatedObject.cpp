@@ -181,6 +181,7 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
     // Don't cache ID when logging is disabled because we don't expect non-test AX clients to actually request it.
     setProperty(AXProperty::IdentifierAttribute, object.identifierAttribute().isolatedCopy());
 #endif
+    // FIXME: We never update AXProperty::SupportsDropping.
     setProperty(AXProperty::SupportsDropping, object.supportsDropping());
     setProperty(AXProperty::SupportsDragging, object.supportsDragging());
     setProperty(AXProperty::IsGrabbed, object.isGrabbed());
