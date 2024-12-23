@@ -77,7 +77,7 @@ struct JSONPData {
 class JSONRanges {
 public:
     struct Entry;
-    using Object = HashMap<RefPtr<UniquedStringImpl>, Entry, IdentifierRepHash>;
+    using Object = UncheckedKeyHashMap<RefPtr<UniquedStringImpl>, Entry, IdentifierRepHash>;
     using Array = Vector<Entry>;
     struct Entry {
         JSValue value;
