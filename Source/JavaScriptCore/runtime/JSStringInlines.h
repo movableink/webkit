@@ -217,9 +217,12 @@ inline void JSRopeString::convertToNonRope(String&& string) const
 // only fill the queue with the number of substrings at any given level in a
 // rope-of-ropes.)
 template<typename CharacterType>
-NEVER_INLINE void JSRopeString::resolveToBufferSlow(JSString* fiber0, JSString* fiber1, JSString* fiber2, std::span<CharacterType> buffer)
+NEVER_INLINE void JSRopeString::resolveToBufferSlow(JSString* fiber0, JSString* fiber1, JSString* fiber2, std::span<CharacterType> buffer, uint8_t*)
 {
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+    // Keep in mind that resolveToBufferSlow signature must be the same to resolveToBuffer to encourage tail-calls by clang, that's the reason why
+    // it takes the last stackLimit parameter still while it is not used here.
+
     CharacterType* end = std::to_address(buffer.end()); // We will be working backwards over the rope.
     CharacterType* position = end; // We will be working backwards over the rope.
     Vector<JSString*, 32, UnsafeVectorOverflow> workQueue; // These strings are kept alive by the parent rope, so using a Vector is OK.
@@ -260,7 +263,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 template<typename CharacterType>
-inline void JSRopeString::resolveToBuffer(JSString* fiber0, JSString* fiber1, JSString* fiber2, std::span<CharacterType> buffer)
+inline void JSRopeString::resolveToBuffer(JSString* fiber0, JSString* fiber1, JSString* fiber2, std::span<CharacterType> buffer, uint8_t* stackLimit)
 {
 #if HAVE(MUST_TAIL_CALL)
     ASSERT(fiber0);
@@ -273,7 +276,7 @@ inline void JSRopeString::resolveToBuffer(JSString* fiber0, JSString* fiber1, JS
     // 3 fibers.
     if (fiber2) {
         if (fiber0->isRope() || fiber1->isRope() || fiber2->isRope())
-            MUST_TAIL_CALL return JSRopeString::resolveToBufferSlow(fiber0, fiber1, fiber2, buffer);
+            MUST_TAIL_CALL return JSRopeString::resolveToBufferSlow(fiber0, fiber1, fiber2, buffer, stackLimit);
 
         StringView view0 = fiber0->valueInternal().impl();
         view0.getCharacters(buffer);
@@ -287,8 +290,30 @@ inline void JSRopeString::resolveToBuffer(JSString* fiber0, JSString* fiber1, JS
     // 2 fibers.
     if (LIKELY(fiber1)) {
         if (fiber0->isRope()) {
-            if (fiber1->isRope())
-                MUST_TAIL_CALL return JSRopeString::resolveToBufferSlow(fiber0, fiber1, fiber2, buffer);
+            if (fiber1->isRope()) {
+                if (UNLIKELY(std::bit_cast<uint8_t*>(currentStackPointer()) < stackLimit))
+                    MUST_TAIL_CALL return JSRopeString::resolveToBufferSlow(fiber0, fiber1, fiber2, buffer, stackLimit);
+
+                auto* rope0 = static_cast<const JSRopeString*>(fiber0);
+                auto rope0Length = rope0->length();
+                if (rope0->isSubstring()) {
+                    StringView view0 = *rope0->substringBase()->valueInternal().impl();
+                    unsigned offset = rope0->substringOffset();
+                    view0.substring(offset, rope0Length).getCharacters(buffer);
+                } else
+                    resolveToBuffer(rope0->fiber0(), rope0->fiber1(), rope0->fiber2(), buffer.first(rope0Length), stackLimit);
+                buffer = buffer.subspan(rope0Length);
+
+                auto* rope1 = static_cast<const JSRopeString*>(fiber1);
+                auto rope1Length = rope1->length();
+                if (rope1->isSubstring()) {
+                    StringView view1 = *rope1->substringBase()->valueInternal().impl();
+                    unsigned offset = rope1->substringOffset();
+                    view1.substring(offset, rope1Length).getCharacters(buffer);
+                    return;
+                }
+                MUST_TAIL_CALL return resolveToBuffer(rope1->fiber0(), rope1->fiber1(), rope1->fiber2(), buffer.first(rope1Length), stackLimit);
+            }
 
             auto* rope0 = static_cast<const JSRopeString*>(fiber0);
             auto rope0Length = rope0->length();
@@ -303,7 +328,7 @@ inline void JSRopeString::resolveToBuffer(JSString* fiber0, JSString* fiber1, JS
                 view0.substring(offset, rope0Length).getCharacters(buffer.first(buffer.size() - rope0Length));
                 return;
             }
-            MUST_TAIL_CALL return resolveToBuffer(rope0->fiber0(), rope0->fiber1(), rope0->fiber2(), buffer.first(rope0Length));
+            MUST_TAIL_CALL return resolveToBuffer(rope0->fiber0(), rope0->fiber1(), rope0->fiber2(), buffer.first(rope0Length), stackLimit);
         }
 
         if (fiber1->isRope()) {
@@ -320,7 +345,7 @@ inline void JSRopeString::resolveToBuffer(JSString* fiber0, JSString* fiber1, JS
                 view1.substring(offset, rope1Length).getCharacters(buffer);
                 return;
             }
-            MUST_TAIL_CALL return resolveToBuffer(rope1->fiber0(), rope1->fiber1(), rope1->fiber2(), buffer.first(rope1Length));
+            MUST_TAIL_CALL return resolveToBuffer(rope1->fiber0(), rope1->fiber1(), rope1->fiber2(), buffer.first(rope1Length), stackLimit);
         }
 
         StringView view0 = fiber0->valueInternal().impl();
@@ -345,9 +370,9 @@ inline void JSRopeString::resolveToBuffer(JSString* fiber0, JSString* fiber1, JS
         view0.substring(offset, rope0Length).getCharacters(buffer);
         return;
     }
-    MUST_TAIL_CALL return resolveToBuffer(rope0->fiber0(), rope0->fiber1(), rope0->fiber2(), buffer.first(rope0Length));
+    MUST_TAIL_CALL return resolveToBuffer(rope0->fiber0(), rope0->fiber1(), rope0->fiber2(), buffer.first(rope0Length), stackLimit);
 #else
-    return JSRopeString::resolveToBufferSlow(fiber0, fiber1, fiber2, buffer);
+    return JSRopeString::resolveToBufferSlow(fiber0, fiber1, fiber2, buffer, stackLimit);
 #endif
 }
 
@@ -391,17 +416,18 @@ inline JSString* jsAtomString(JSGlobalObject* globalObject, VM& vm, JSString* st
 
     AtomString atomString;
     if (!ropeString->isSubstring()) {
+        uint8_t* stackLimit = std::bit_cast<uint8_t*>(vm.softStackLimit());
         JSString* fiber0 = ropeString->fiber0();
         JSString* fiber1 = ropeString->fiber1();
         JSString* fiber2 = ropeString->fiber2();
         if (ropeString->is8Bit()) {
             std::array<LChar, KeyAtomStringCache::maxStringLengthForCache> characters;
-            JSRopeString::resolveToBuffer(fiber0, fiber1, fiber2, std::span { characters }.first(length));
+            JSRopeString::resolveToBuffer(fiber0, fiber1, fiber2, std::span { characters }.first(length), stackLimit);
             WTF::HashTranslatorCharBuffer<LChar> buffer { std::span { characters }.first(length) };
             return vm.keyAtomStringCache.make(vm, buffer, createFromRope);
         }
         std::array<UChar, KeyAtomStringCache::maxStringLengthForCache> characters;
-        JSRopeString::resolveToBuffer(fiber0, fiber1, fiber2, std::span { characters }.first(length));
+        JSRopeString::resolveToBuffer(fiber0, fiber1, fiber2, std::span { characters }.first(length), stackLimit);
         WTF::HashTranslatorCharBuffer<UChar> buffer { std::span { characters }.first(length) };
         return vm.keyAtomStringCache.make(vm, buffer, createFromRope);
     }
@@ -447,9 +473,10 @@ inline JSString* jsAtomString(JSGlobalObject* globalObject, VM& vm, JSString* s1
     // This is quite unfortunate, but duplicating this part here is the key of performance improvement in JetStream2/WSL,
     // which stress this jsAtomString significantly.
     auto resolveWith2Fibers = [&](JSString* fiber0, JSString* fiber1, auto buffer) {
+        uint8_t* stackLimit = std::bit_cast<uint8_t*>(vm.softStackLimit());
         if (fiber0->isRope()) {
             if (fiber1->isRope())
-                return JSRopeString::resolveToBufferSlow(fiber0, fiber1, nullptr, buffer);
+                return JSRopeString::resolveToBufferSlow(fiber0, fiber1, nullptr, buffer, stackLimit);
 
             auto* rope0 = static_cast<const JSRopeString*>(fiber0);
             StringView view1 = fiber1->valueInternal().impl();
@@ -460,7 +487,7 @@ inline JSString* jsAtomString(JSGlobalObject* globalObject, VM& vm, JSString* s1
                 view0.substring(offset, rope0->length()).getCharacters(buffer);
                 return;
             }
-            return JSRopeString::resolveToBuffer(rope0->fiber0(), rope0->fiber1(), rope0->fiber2(), buffer.first(rope0->length()));
+            return JSRopeString::resolveToBuffer(rope0->fiber0(), rope0->fiber1(), rope0->fiber2(), buffer.first(rope0->length()), stackLimit);
         }
 
         if (fiber1->isRope()) {
@@ -473,7 +500,7 @@ inline JSString* jsAtomString(JSGlobalObject* globalObject, VM& vm, JSString* s1
                 view1.substring(offset, rope1->length()).getCharacters(buffer.subspan(view0.length()));
                 return;
             }
-            return JSRopeString::resolveToBuffer(rope1->fiber0(), rope1->fiber1(), rope1->fiber2(), buffer.subspan(view0.length(), rope1->length()));
+            return JSRopeString::resolveToBuffer(rope1->fiber0(), rope1->fiber1(), rope1->fiber2(), buffer.subspan(view0.length(), rope1->length()), stackLimit);
         }
 
         StringView view0 = fiber0->valueInternal().impl();
@@ -531,7 +558,7 @@ inline JSString* jsAtomString(JSGlobalObject* globalObject, VM& vm, JSString* s1
 
     auto resolveWith3Fibers = [&](JSString* fiber0, JSString* fiber1, JSString* fiber2, auto buffer) {
         if (fiber0->isRope() || fiber1->isRope() || fiber2->isRope())
-            return JSRopeString::resolveToBufferSlow(fiber0, fiber1, fiber2, buffer);
+            return JSRopeString::resolveToBufferSlow(fiber0, fiber1, fiber2, buffer, std::bit_cast<uint8_t*>(vm.softStackLimit()));
 
         StringView view0 = fiber0->valueInternal().impl();
         view0.getCharacters(buffer);
