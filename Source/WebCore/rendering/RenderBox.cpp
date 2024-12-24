@@ -2698,7 +2698,7 @@ void RenderBox::computeLogicalWidthInFragment(LogicalExtentComputedValues& compu
         containerWidthInInlineDirection = perpendicularContainingBlockLogicalHeight();
 
     // Width calculations
-    if (auto overridingLogicalWidth = (isGridItem() ? this->overridingLogicalWidth() : std::nullopt))
+    if (auto overridingLogicalWidth = this->overridingLogicalWidth())
         computedValues.m_extent = *overridingLogicalWidth;
     else if (treatAsReplaced)
         computedValues.m_extent = logicalWidthLength.value() + borderAndPaddingLogicalWidth();
