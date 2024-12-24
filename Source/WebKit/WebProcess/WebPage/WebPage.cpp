@@ -988,7 +988,6 @@ WebPage::WebPage(PageIdentifier pageID, WebPageCreationParameters&& parameters)
         setEditable(true);
 
 #if PLATFORM(MAC)
-    setUseSystemAppearance(parameters.useSystemAppearance);
     setUseFormSemanticContext(parameters.useFormSemanticContext);
     setHeaderBannerHeight(parameters.headerBannerHeight);
     setFooterBannerHeight(parameters.footerBannerHeight);
@@ -6403,11 +6402,6 @@ void WebPage::setCaretBlinkingSuspended(bool suspended)
         return;
 
     frame->selection().setCaretBlinkingSuspended(suspended);
-}
-
-void WebPage::setUseSystemAppearance(bool useSystemAppearance)
-{
-    corePage()->setUseSystemAppearance(useSystemAppearance);
 }
 
 #endif

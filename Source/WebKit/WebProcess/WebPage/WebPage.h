@@ -885,8 +885,6 @@ public:
     void setTopOverhangImage(WebImage*);
     void setBottomOverhangImage(WebImage*);
 
-    void setUseSystemAppearance(bool);
-
     void setUseFormSemanticContext(bool);
     void semanticContextDidChange(bool);
 

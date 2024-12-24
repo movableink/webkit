@@ -194,6 +194,7 @@
 #define WebKitMinimumZoomFontSizePreferenceKey @"WebKitMinimumZoomFontSizePreferenceKey"
 #define WebKitTextAutosizingEnabledPreferenceKey @"WebKitTextAutosizingEnabled"
 #define WebKitHTTPEquivEnabledPreferenceKey @"WebKitHTTPEquivEnabled"
+#define WebKitUseSystemAppearancePreferenceKey @"WebKitUseSystemAppearance"
 
 #if TARGET_OS_IPHONE
 #define WebKitStandalonePreferenceKey @"WebKitStandalonePreferenceKey"

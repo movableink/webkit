@@ -1240,8 +1240,6 @@ public:
     void reloadWithoutContentExtensions();
     void disableContentExtensionsChecks();
 
-    void setUseSystemAppearance(bool);
-
     size_t pluginCount();
     ExceptionOr<unsigned> pluginScrollPositionX(Element&);
     ExceptionOr<unsigned> pluginScrollPositionY(Element&);

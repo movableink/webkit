@@ -586,8 +586,6 @@ messages -> WebPage WantsAsyncDispatchMessage {
 
     HandleAcceptedCandidate(struct WebCore::TextCheckingResult acceptedCandidate)
 
-    SetUseSystemAppearance(bool useSystemAppearance)
-
     SemanticContextDidChange(bool useFormSemanticContext)
 
     SetHeaderBannerHeight(int height)

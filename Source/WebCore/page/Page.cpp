@@ -4052,13 +4052,8 @@ void Page::setUnobscuredSafeAreaInsets(const FloatBoxExtent& insets)
     });
 }
 
-void Page::setUseSystemAppearance(bool value)
+void Page::useSystemAppearanceChanged()
 {
-    if (m_useSystemAppearance == value)
-        return;
-
-    m_useSystemAppearance = value;
-
     appearanceDidChange();
 
     forEachDocument([&](Document& document) {

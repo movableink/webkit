@@ -631,8 +631,7 @@ public:
     void setEnclosedInScrollableAncestorView(bool f) { m_enclosedInScrollableAncestorView = f; }
 #endif
 
-    bool useSystemAppearance() const { return m_useSystemAppearance; }
-    WEBCORE_EXPORT void setUseSystemAppearance(bool);
+    WEBCORE_EXPORT void useSystemAppearanceChanged();
 
     WEBCORE_EXPORT bool useDarkAppearance() const;
     bool useElevatedUserInterfaceLevel() const { return m_useElevatedUserInterfaceLevel; }
@@ -1431,8 +1430,7 @@ private:
     bool m_enclosedInScrollableAncestorView { false };
     bool m_canShowWhileLocked { false };
 #endif
-    
-    bool m_useSystemAppearance { false };
+
     bool m_useElevatedUserInterfaceLevel { false };
     bool m_useDarkAppearance { false };
     std::optional<bool> m_useDarkAppearanceOverride;

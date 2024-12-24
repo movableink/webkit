@@ -185,7 +185,6 @@ struct WebPageCreationParameters {
 
 #if PLATFORM(MAC)
     std::optional<WebCore::DestinationColorSpace> colorSpace { };
-    bool useSystemAppearance { false };
     bool useFormSemanticContext { false };
     int headerBannerHeight { 0 };
     int footerBannerHeight { 0 };

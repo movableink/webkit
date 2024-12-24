@@ -1267,8 +1267,6 @@ enum RenderingMode {
     undefined reloadWithoutContentExtensions();
     undefined disableContentExtensionsChecks();
 
-    undefined setUseSystemAppearance(boolean value);
-
     unsigned long pluginCount();
     unsigned long pluginScrollPositionX(Element element);
     unsigned long pluginScrollPositionY(Element element);

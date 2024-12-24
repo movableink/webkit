@@ -3644,6 +3644,7 @@
 		E4A757D3178AEA5B00B5D7A4 /* Deque.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Deque.cpp; sourceTree = "<group>"; };
 		E4C9ABC71B3DB1710040A987 /* RunLoop.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RunLoop.cpp; sourceTree = "<group>"; };
 		E5036F77211BC22800BFDBE2 /* color-drop.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = "color-drop.html"; sourceTree = "<group>"; };
+		E5194E512D1882CF0006B52F /* UseSystemAppearance.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = UseSystemAppearance.mm; sourceTree = "<group>"; };
 		E51A740D2B0442180047FEB1 /* ColorInputTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ColorInputTests.mm; sourceTree = "<group>"; };
 		E520A36A25AFB76C00526CB9 /* WKWebViewTitlebarSeparatorTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = WKWebViewTitlebarSeparatorTests.mm; sourceTree = "<group>"; };
 		E532A15E2BDA271F00E79810 /* DataListTextSuggestionTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = DataListTextSuggestionTests.mm; sourceTree = "<group>"; };
@@ -4520,6 +4521,7 @@
 				07EDEFAC1EB9400C00D43292 /* UserMediaDisabled.mm */,
 				07F4E92D20AF58D3002E3803 /* UserMediaSimulateFailedSandbox.mm */,
 				2E133B4F21D40AF000ED1CB2 /* UseSelectionAsFindString.mm */,
+				E5194E512D1882CF0006B52F /* UseSystemAppearance.mm */,
 				02238A3D2B2FB47C00442B86 /* VerifyUserGestureFromUIProcess.mm */,
 				93E943F11CD3E87E00AC08C2 /* VideoControlsManager.mm */,
 				CD3065DF2165682E00E895DF /* VideoQualityDisplayCompositing.mm */,

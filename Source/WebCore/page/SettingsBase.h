@@ -166,6 +166,7 @@ protected:
 #if USE(MODERN_AVCONTENTKEYSESSION)
     void shouldUseModernAVContentKeySessionChanged();
 #endif
+    void useSystemAppearanceChanged();
 
     WeakPtr<Page> m_page;
 

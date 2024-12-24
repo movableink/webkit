@@ -217,6 +217,16 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     _preferences->setTabsToLinks(tabFocusesLinks);
 }
 
+- (BOOL)_useSystemAppearance
+{
+    return _preferences->useSystemAppearance();
+}
+
+- (void)_setUseSystemAppearance:(BOOL)useSystemAppearance
+{
+    _preferences->setUseSystemAppearance(useSystemAppearance);
+}
+
 #pragma mark WKObject protocol implementation
 
 - (API::Object&)_apiObject

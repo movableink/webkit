@@ -5903,16 +5903,6 @@ bool WebViewImpl::completeBackSwipeForTesting()
     return m_gestureController->completeSimulatedSwipeInDirectionForTesting(ViewGestureController::SwipeDirection::Back);
 }
 
-void WebViewImpl::setUseSystemAppearance(bool useSystemAppearance)
-{
-    m_page->setUseSystemAppearance(useSystemAppearance);
-}
-
-bool WebViewImpl::useSystemAppearance()
-{
-    return m_page->useSystemAppearance();
-}
-
 void WebViewImpl::effectiveAppearanceDidChange()
 {
     m_page->effectiveAppearanceDidChange();

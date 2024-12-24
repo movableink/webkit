@@ -6722,13 +6722,6 @@ void Internals::disableContentExtensionsChecks()
         loader->setContentExtensionEnablement({ ContentExtensionDefaultEnablement::Disabled, { } });
 }
 
-void Internals::setUseSystemAppearance(bool value)
-{
-    if (!contextDocument() || !contextDocument()->page())
-        return;
-    contextDocument()->page()->setUseSystemAppearance(value);
-}
-
 size_t Internals::pluginCount()
 {
     if (!contextDocument() || !contextDocument()->page())

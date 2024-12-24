@@ -701,9 +701,6 @@ public:
 
     bool beginBackSwipeForTesting();
     bool completeBackSwipeForTesting();
-    
-    void setUseSystemAppearance(bool);
-    bool useSystemAppearance();
 
     bool useFormSemanticContext() const;
     void semanticContextDidChange();

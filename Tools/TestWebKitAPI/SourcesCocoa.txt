@@ -276,6 +276,7 @@ Tests/WebKitCocoa/UnifiedPDFTestHelpers.mm
 Tests/WebKitCocoa/UnifiedPDFTests.mm
 Tests/WebKitCocoa/UploadDirectory.mm
 Tests/WebKitCocoa/UseSelectionAsFindString.mm
+Tests/WebKitCocoa/UseSystemAppearance.mm
 Tests/WebKitCocoa/UserContentController.mm
 Tests/WebKitCocoa/UserContentWorld.mm
 Tests/WebKitCocoa/UserInitiatedActionInNavigationAction.mm

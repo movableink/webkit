@@ -530,4 +530,10 @@ void SettingsBase::shouldUseModernAVContentKeySessionChanged()
 }
 #endif
 
+void SettingsBase::useSystemAppearanceChanged()
+{
+    if (m_page)
+        m_page->useSystemAppearanceChanged();
+}
+
 } // namespace WebCore

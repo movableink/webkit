@@ -8024,6 +8024,18 @@ UseSceneKitForModel:
     WebKit:
       default: false
 
+UseSystemAppearance:
+  type: bool
+  status: embedder
+  webcoreOnChange: useSystemAppearanceChanged
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+
 UserActivationAPIEnabled:
   type: bool
   status: stable

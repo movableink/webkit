@@ -657,6 +657,16 @@ public:
     [self _postPreferencesChangedNotification];
 }
 
+- (BOOL)_useSystemAppearance
+{
+    return [self _boolValueForKey: WebKitUseSystemAppearancePreferenceKey];
+}
+
+- (void)_setUseSystemAppearance:(BOOL)flag
+{
+    return [self _setBoolValue:flag forKey: WebKitUseSystemAppearancePreferenceKey];
+}
+
 - (NSString *)standardFontFamily
 {
     return [self _stringValueForKey: WebKitStandardFontPreferenceKey];

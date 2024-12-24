@@ -1585,12 +1585,12 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (BOOL)_useSystemAppearance
 {
-    return _impl->useSystemAppearance();
+    return [[_configuration preferences] _useSystemAppearance];
 }
 
 - (void)_setUseSystemAppearance:(BOOL)useSystemAppearance
 {
-    _impl->setUseSystemAppearance(useSystemAppearance);
+    [[_configuration preferences] _setUseSystemAppearance:useSystemAppearance];
 }
 
 - (void)_setOverlayScrollbarStyle:(_WKOverlayScrollbarStyle)scrollbarStyle

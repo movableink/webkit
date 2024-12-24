@@ -55,4 +55,6 @@ template<> struct WrapperTraits<WebPreferences> {
 @property (nonatomic) BOOL tabFocusesLinks;
 #endif
 
+@property (nonatomic, setter=_setUseSystemAppearance:) BOOL _useSystemAppearance;
+
 @end

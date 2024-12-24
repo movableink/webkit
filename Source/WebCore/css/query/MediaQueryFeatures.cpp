@@ -665,7 +665,7 @@ static const IdentifierSchema& prefersDarkInterfaceFeatureSchema()
         MediaQueryDynamicDependency::Appearance,
         [](auto& context) {
             Ref page = *context.document->frame()->page();
-            bool prefersDarkInterface = page->useSystemAppearance() && page->useDarkAppearance();
+            bool prefersDarkInterface = page->settings().useSystemAppearance() && page->useDarkAppearance();
 
             return MatchingIdentifiers { prefersDarkInterface ? CSSValuePrefers : CSSValueNoPreference };
         }

@@ -699,7 +699,6 @@ public:
 
     float deviceScaleFactor() const;
 
-    WEBCORE_EXPORT bool useSystemAppearance() const;
     WEBCORE_EXPORT bool useElevatedUserInterfaceLevel() const;
     WEBCORE_EXPORT bool useDarkAppearance(const RenderStyle*) const;
 

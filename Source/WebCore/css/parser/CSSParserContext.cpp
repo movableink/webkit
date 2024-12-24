@@ -79,7 +79,7 @@ CSSParserContext::CSSParserContext(const Document& document, const URL& sheetBas
     , mode { document.inQuirksMode() ? HTMLQuirksMode : HTMLStandardMode }
     , isHTMLDocument { document.isHTMLDocument() }
     , hasDocumentSecurityOrigin { sheetBaseURL.isNull() || document.protectedSecurityOrigin()->canRequest(baseURL, OriginAccessPatternsForWebProcess::singleton()) }
-    , useSystemAppearance { document.page() ? document.page()->useSystemAppearance() : false }
+    , useSystemAppearance { document.settings().useSystemAppearance() }
     , counterStyleAtRuleImageSymbolsEnabled { document.settings().cssCounterStyleAtRuleImageSymbolsEnabled() }
     , springTimingFunctionEnabled { document.settings().springTimingFunctionEnabled() }
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)

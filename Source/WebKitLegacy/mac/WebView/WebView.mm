@@ -103,7 +103,7 @@
 #import "WebPluginInfoProvider.h"
 #import "WebPolicyDelegate.h"
 #import "WebPreferenceKeysPrivate.h"
-#import "WebPreferencesPrivate.h"
+#import "WebPreferencesInternal.h"
 #import "WebProgressTrackerClient.h"
 #import "WebResourceLoadDelegate.h"
 #import "WebResourceLoadDelegatePrivate.h"
@@ -4826,16 +4826,16 @@ IGNORE_WARNINGS_END
 
 - (void)_setUseSystemAppearance:(BOOL)useSystemAppearance
 {
-    if (_private && _private->page)
-        _private->page->setUseSystemAppearance(useSystemAppearance);
+    if (_private)
+        [_private->preferences _setUseSystemAppearance:useSystemAppearance];
 }
 
 - (BOOL)_useSystemAppearance
 {
-    if (!_private->page)
+    if (!_private)
         return NO;
 
-    return _private->page->useSystemAppearance();
+    return [_private->preferences _useSystemAppearance];
 }
 
 #if PLATFORM(MAC)

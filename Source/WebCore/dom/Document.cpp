@@ -9223,13 +9223,6 @@ float Document::deviceScaleFactor() const
     return deviceScaleFactor;
 }
 
-bool Document::useSystemAppearance() const
-{
-    if (RefPtr documentPage = page())
-        return documentPage->useSystemAppearance();
-    return false;
-}
-
 bool Document::useDarkAppearance(const RenderStyle* style) const
 {
 #if ENABLE(DARK_MODE_CSS)
@@ -9246,7 +9239,7 @@ bool Document::useDarkAppearance(const RenderStyle* style) const
     if (RefPtr documentPage = page())
         pageUsesDarkAppearance = documentPage->useDarkAppearance();
 
-    if (useSystemAppearance())
+    if (settings().useSystemAppearance())
         return pageUsesDarkAppearance;
 
 #if ENABLE(DARK_MODE_CSS)
@@ -9267,7 +9260,7 @@ bool Document::useElevatedUserInterfaceLevel() const
 OptionSet<StyleColorOptions> Document::styleColorOptions(const RenderStyle* style) const
 {
     OptionSet<StyleColorOptions> options;
-    if (useSystemAppearance())
+    if (settings().useSystemAppearance())
         options.add(StyleColorOptions::UseSystemAppearance);
     if (useDarkAppearance(style))
         options.add(StyleColorOptions::UseDarkAppearance);

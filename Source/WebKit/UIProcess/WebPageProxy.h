@@ -1448,9 +1448,6 @@ public:
     void isJITEnabled(CompletionHandler<void(bool)>&&);
 
 #if PLATFORM(MAC)
-    void setUseSystemAppearance(bool);
-    bool useSystemAppearance() const { return m_useSystemAppearance; }
-
     bool useFormSemanticContext() const;
     void semanticContextDidChange();
 
@@ -3381,7 +3378,6 @@ private:
 #endif
 
 #if PLATFORM(MAC)
-    bool m_useSystemAppearance { false };
     bool m_acceptsFirstMouse { false };
 #endif
 
