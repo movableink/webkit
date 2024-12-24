@@ -549,7 +549,7 @@ bool WebSocketChannel::processFrame()
     WebSocketFrame frame;
     const uint8_t* frameEnd;
     String errorString;
-    WebSocketFrame::ParseFrameResult result = WebSocketFrame::parseFrame(m_buffer.data(), m_buffer.size(), frame, frameEnd, errorString);
+    WebSocketFrame::ParseFrameResult result = WebSocketFrame::parseFrame(m_buffer.mutableSpan(), frame, frameEnd, errorString);
     if (result == WebSocketFrame::FrameIncomplete)
         return false;
     if (result == WebSocketFrame::FrameError) {
