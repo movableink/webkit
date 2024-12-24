@@ -211,7 +211,14 @@ void RenderTreeBuilder::Inline::splitFlow(RenderInline& parent, RenderObject* be
 
     RenderPtr<RenderBlock> createdPre;
     bool madeNewBeforeBlock = false;
-    if (block->isAnonymousBlock() && (!block->parent() || !block->parent()->createsAnonymousWrapper())) {
+    auto canResueContainingBlockAsPreBlock = [&] {
+        if (!block->isAnonymousBlock())
+            return false;
+        if (auto* containingBlockParent = block->parent())
+            return !containingBlockParent->createsAnonymousWrapper() && !containingBlockParent->isRenderDeprecatedFlexibleBox();
+        return false;
+    };
+    if (canResueContainingBlockAsPreBlock()) {
         // We can reuse this block and make it the preBlock of the next continuation.
         pre = block;
         pre->removePositionedObjects(nullptr);
