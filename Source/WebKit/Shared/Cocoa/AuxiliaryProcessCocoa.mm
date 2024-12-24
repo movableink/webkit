@@ -40,9 +40,11 @@
 #import <pal/spi/cocoa/NSKeyedUnarchiverSPI.h>
 #import <pal/spi/cocoa/NotifySPI.h>
 #import <wtf/FileSystem.h>
+#import <wtf/MallocSpan.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/RuntimeApplicationChecks.h>
 #import <wtf/StdLibExtras.h>
+#import <wtf/SystemMalloc.h>
 #import <wtf/cocoa/Entitlements.h>
 #import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #import <wtf/cocoa/SoftLinking.h>
@@ -162,14 +164,13 @@ void AuxiliaryProcess::registerWithStateDumper(ASCIILiteral title)
             }
 
             auto neededSize = OS_STATE_DATA_SIZE_NEEDED(data.length);
-            os_state = (os_state_data_t)malloc(neededSize);
-            if (os_state) {
-                memset(os_state, 0, neededSize);
-                os_state->osd_type = OS_STATE_DATA_SERIALIZED_NSCF_OBJECT;
-                os_state->osd_data_size = data.length;
-                strlcpy(os_state->osd_title, title.characters(), sizeof(os_state->osd_title));
-                memcpySpan(unsafeMakeSpan(os_state->osd_data, os_state->osd_data_size), span(data));
-            }
+            auto osStateSpan = MallocSpan<uint8_t, SystemMalloc>::malloc(neededSize);
+            zeroSpan(osStateSpan.mutableSpan());
+            os_state = (os_state_data_t)osStateSpan.leakSpan().data();
+            os_state->osd_type = OS_STATE_DATA_SERIALIZED_NSCF_OBJECT;
+            os_state->osd_data_size = data.length;
+            strlcpy(os_state->osd_title, title.characters(), sizeof(os_state->osd_title));
+            memcpySpan(unsafeMakeSpan(os_state->osd_data, os_state->osd_data_size), span(data));
 
             return os_state;
         }
