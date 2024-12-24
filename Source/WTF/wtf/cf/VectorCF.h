@@ -160,6 +160,22 @@ template<typename MapLambdaType> Vector<typename LambdaTypeTraits<MapLambdaType>
     return vector;
 }
 
+inline std::span<const char> CFStringGetASCIICStringSpan(CFStringRef string)
+{
+    auto* characters = CFStringGetCStringPtr(string, kCFStringEncodingASCII);
+    if (!characters)
+        return { };
+    return unsafeMakeSpan(characters, CFStringGetLength(string));
+}
+
+inline std::span<const char> CFStringGetLatin1CStringSpan(CFStringRef string)
+{
+    auto* characters = CFStringGetCStringPtr(string, kCFStringEncodingISOLatin1);
+    if (!characters)
+        return { };
+    return unsafeMakeSpan(characters, CFStringGetLength(string));
+}
+
 inline std::span<const uint8_t> span(CFDataRef data)
 {
     return unsafeMakeSpan(static_cast<const uint8_t*>(CFDataGetBytePtr(data)), Checked<size_t>(CFDataGetLength(data)));
@@ -196,6 +212,8 @@ inline std::optional<float> makeVectorElement(const float*, CFNumberRef cfNumber
 
 } // namespace WTF
 
+using WTF::CFStringGetASCIICStringSpan;
+using WTF::CFStringGetLatin1CStringSpan;
 using WTF::createCFArray;
 using WTF::makeVector;
 using WTF::mutableSpan;

@@ -1411,7 +1411,7 @@ inline Expected<std::invoke_result_t<Func, std::span<const char8_t>>, UTF8Conver
         size_t prefixLength = firstNonASCII - characters.data();
         size_t remainingLength = characters.size() - prefixLength;
         Vector<char8_t, 1024> buffer(prefixLength + remainingLength * 2);
-        memcpy(buffer.data(), characters.data(), prefixLength);
+        memcpySpan(buffer.mutableSpan(), characters.first(prefixLength));
         auto result = Unicode::convert(characters.subspan(prefixLength), buffer.mutableSpan().subspan(prefixLength));
         ASSERT(result.code == Unicode::ConversionResultCode::Success); // 2x is sufficient for any conversion from Latin1
         return function(buffer.span().first(prefixLength + result.buffer.size()));

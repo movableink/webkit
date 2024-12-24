@@ -34,7 +34,7 @@
 #include "config.h"
 #include <wtf/ApproximateTime.h>
 #include <wtf/MonotonicTime.h>
-
+#include <wtf/StdLibExtras.h>
 #include <wtf/WallTime.h>
 
 #if OS(DARWIN)
@@ -83,7 +83,8 @@ static double lowResUTCTime()
     // prevent alignment faults on 64-bit Windows).
 
     ULARGE_INTEGER dateTime;
-    memcpy(&dateTime, &fileTime, sizeof(dateTime));
+    static_assert(sizeof(dateTime) == sizeof(fileTime));
+    memcpySpan(asMutableByteSpan(dateTime), asByteSpan(fileTime));
 
     // Windows file times are in 100s of nanoseconds.
     return (dateTime.QuadPart - epochBias) / hundredsOfNanosecondsPerMillisecond;

@@ -144,9 +144,9 @@ public:
         uintptr_t value = 0;
 
 #if CPU(LITTLE_ENDIAN)
-        memcpy(&value, m_storage.data(), storageSize);
+        memcpySpan(asMutableByteSpan(value), std::span { m_storage });
 #else
-        memcpy(std::bit_cast<uint8_t*>(&value) + (sizeof(void*) - storageSize), m_storage.data(), storageSize);
+        memcpySpan(asMutableByteSpan(value).last(storageSize), std::span { m_storage });
 #endif
 
         if (isAlignmentShiftProfitable)
@@ -174,9 +174,9 @@ public:
         if (isAlignmentShiftProfitable)
             value >>= alignmentShiftSize;
 #if CPU(LITTLE_ENDIAN)
-        memcpy(m_storage.data(), &value, storageSize);
+        memcpySpan(std::span { m_storage }, asByteSpan(value).first(storageSize));
 #else
-        memcpy(m_storage.data(), std::bit_cast<uint8_t*>(&value) + (sizeof(void*) - storageSize), storageSize);
+        memcpySpan(std::span { m_storage }, asByteSpan(value).last(storageSize));
 #endif
         ASSERT(std::bit_cast<uintptr_t>(get()) == value);
     }

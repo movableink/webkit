@@ -31,7 +31,9 @@
 
 #import <sys/resource.h>
 #import <wtf/SoftLinking.h>
+#import <wtf/StdLibExtras.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
+#import <wtf/text/StringCommon.h>
 
 #if HAVE(APFS_CACHEDELETE_PURGEABLE)
 #import <apfs/apfs_fsctl.h>
@@ -166,18 +168,17 @@ NSString *createTemporaryDirectory(NSString *directoryPrefix)
         return nil;
 
     NSString *tempDirectoryComponent = [directoryPrefix stringByAppendingString:@"-XXXXXXXX"];
-    const char* tempDirectoryCString = [[tempDirectory stringByAppendingPathComponent:tempDirectoryComponent] fileSystemRepresentation];
-    if (!tempDirectoryCString)
+    auto tempDirectorySpanIncludingNullTerminator = spanIncludingNullTerminator([[tempDirectory stringByAppendingPathComponent:tempDirectoryComponent] fileSystemRepresentation]);
+    if (tempDirectorySpanIncludingNullTerminator.empty())
         return nil;
 
-    const size_t length = strlen(tempDirectoryCString);
+    const size_t length = tempDirectorySpanIncludingNullTerminator.size() - 1;
     ASSERT(length <= MAXPATHLEN);
     if (length > MAXPATHLEN)
         return nil;
 
-    const size_t lengthPlusNullTerminator = length + 1;
-    Vector<char, MAXPATHLEN + 1> path(lengthPlusNullTerminator);
-    memcpy(path.data(), tempDirectoryCString, lengthPlusNullTerminator);
+    Vector<char, MAXPATHLEN + 1> path(tempDirectorySpanIncludingNullTerminator.size());
+    memcpySpan(path.mutableSpan(), tempDirectorySpanIncludingNullTerminator);
 
     if (!mkdtemp(path.data()))
         return nil;

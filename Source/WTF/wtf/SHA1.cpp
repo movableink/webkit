@@ -38,6 +38,10 @@
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
 
+#if USE(CF)
+#include <wtf/cf/VectorCF.h>
+#endif
+
 namespace WTF {
 
 #if PLATFORM(COCOA)
@@ -219,8 +223,8 @@ void SHA1::addUTF8Bytes(StringView string)
 #if USE(CF)
 void SHA1::addUTF8Bytes(CFStringRef string)
 {
-    if (auto* characters = CFStringGetCStringPtr(string, kCFStringEncodingASCII)) {
-        addBytes(unsafeMakeSpan(byteCast<uint8_t>(characters), CFStringGetLength(string)));
+    if (auto characters = CFStringGetASCIICStringSpan(string); characters.data()) {
+        addBytes(byteCast<uint8_t>(characters));
         return;
     }
 

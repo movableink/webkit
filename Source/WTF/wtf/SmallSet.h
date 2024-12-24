@@ -29,6 +29,7 @@
 #include <wtf/FastMalloc.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/StdLibExtras.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -69,7 +70,7 @@ public:
 
     SmallSet(SmallSet&& other)
     {
-        memcpy(static_cast<void*>(this), static_cast<void*>(&other), sizeof(SmallSet));
+        memcpySpan(asMutableByteSpan(*this), asByteSpan(other));
         other.initialize();
     }
 

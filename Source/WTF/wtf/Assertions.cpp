@@ -37,10 +37,12 @@
 #include <wtf/LoggingAccumulator.h>
 #include <wtf/PrintStream.h>
 #include <wtf/StackTrace.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/WTFConfig.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
+#include <wtf/text/StringCommon.h>
 #include <wtf/text/WTFString.h>
 
 #if USE(CF)
@@ -196,14 +198,14 @@ ALLOW_NONLITERAL_FORMAT_END
 }
 
 WTF_ATTRIBUTE_PRINTF(2, 0)
-static void vprintf_stderr_with_prefix(const char* prefix, const char* format, va_list args)
+static void vprintf_stderr_with_prefix(const char* rawPrefix, const char* rawFormat, va_list args)
 {
-    size_t prefixLength = strlen(prefix);
-    size_t formatLength = strlen(format);
-    Vector<char> formatWithPrefix(prefixLength + formatLength + 1);
-    memcpy(formatWithPrefix.data(), prefix, prefixLength);
-    memcpy(formatWithPrefix.data() + prefixLength, format, formatLength);
-    formatWithPrefix[prefixLength + formatLength] = 0;
+    auto prefix = span(rawPrefix);
+    auto format = span(rawFormat);
+    Vector<char> formatWithPrefix(prefix.size() + format.size() + 1);
+    memcpySpan(formatWithPrefix.mutableSpan(), prefix);
+    memcpySpan(formatWithPrefix.mutableSpan().subspan(prefix.size()), format);
+    formatWithPrefix[prefix.size() + format.size()] = 0;
 
 ALLOW_NONLITERAL_FORMAT_BEGIN
     vprintf_stderr_common(nullptr, formatWithPrefix.data(), args);
@@ -211,18 +213,18 @@ ALLOW_NONLITERAL_FORMAT_END
 }
 
 WTF_ATTRIBUTE_PRINTF(2, 0)
-static void vprintf_stderr_with_trailing_newline(WTFLogChannel* channel, const char* format, va_list args)
+static void vprintf_stderr_with_trailing_newline(WTFLogChannel* channel, const char* rawFormat, va_list args)
 {
-    size_t formatLength = strlen(format);
-    if (formatLength && format[formatLength - 1] == '\n') {
-        vprintf_stderr_common(channel, format, args);
+    auto format = span(rawFormat);
+    if (!format.empty() && format.back() == '\n') {
+        vprintf_stderr_common(channel, rawFormat, args);
         return;
     }
 
-    Vector<char> formatWithNewline(formatLength + 2);
-    memcpy(formatWithNewline.data(), format, formatLength);
-    formatWithNewline[formatLength] = '\n';
-    formatWithNewline[formatLength + 1] = 0;
+    Vector<char> formatWithNewline(format.size() + 2);
+    memcpySpan(formatWithNewline.mutableSpan(), format);
+    formatWithNewline[format.size()] = '\n';
+    formatWithNewline[format.size() + 1] = 0;
 
 ALLOW_NONLITERAL_FORMAT_BEGIN
     vprintf_stderr_common(channel, formatWithNewline.data(), args);
