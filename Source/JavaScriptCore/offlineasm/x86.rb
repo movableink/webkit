@@ -1293,8 +1293,8 @@ class Instruction
         when "popv"
             operands.each {
                 | op |
-                $asm.puts "movdqu (%esp), #{op.x86Operand(:vector)}"
-                $asm.puts "add $16, %esp"
+                $asm.puts "movdqu (%rsp), #{op.x86Operand(:vector)}"
+                $asm.puts "add $16, %rsp"
             }
         when "push"
             operands.each {
@@ -1304,8 +1304,8 @@ class Instruction
         when "pushv"
             operands.each {
                 | op |
-                $asm.puts "sub $16, %esp"
-                $asm.puts "movdqu #{op.x86Operand(:vector)}, (%esp)"
+                $asm.puts "sub $16, %rsp"
+                $asm.puts "movdqu #{op.x86Operand(:vector)}, (%rsp)"
             }
         when "move"
             handleMove

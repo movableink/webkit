@@ -126,15 +126,6 @@ void FunctionIPIntMetadataGenerator::addLEB128V128Constant(v128_t value, size_t 
 
 void FunctionIPIntMetadataGenerator::addReturnData(const FunctionSignature& sig)
 {
-    auto fprToIndex = [&](FPRReg r) -> unsigned {
-        for (unsigned i = 0; i < FPRInfo::numberOfArgumentRegisters; ++i) {
-            if (FPRInfo::toArgumentRegister(i) == r)
-                return i;
-        }
-        RELEASE_ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
-        return 0;
-    };
-
     CallInformation returnCC = wasmCallingConvention().callInformationFor(sig, CallRole::Callee);
     m_uINTBytecode.reserveInitialCapacity(sig.returnCount() + 1);
     // uINT: the interpreter smaller than mINT
@@ -152,11 +143,15 @@ void FunctionIPIntMetadataGenerator::addReturnData(const FunctionSignature& sig)
         auto loc = returnCC.results[i].location;
 
         if (loc.isGPR()) {
-            ASSERT_UNUSED(NUM_UINT_GPRS, loc.jsr().payloadGPR() < NUM_UINT_GPRS);
-            m_uINTBytecode.append(static_cast<uint8_t>(IPInt::UIntBytecode::RetGPR) + loc.jsr().payloadGPR());
+            ASSERT_UNUSED(NUM_UINT_GPRS, GPRInfo::toArgumentIndex(loc.jsr().gpr()) < NUM_UINT_GPRS);
+#if USE(JSVALUE64)
+            m_uINTBytecode.append(static_cast<uint8_t>(IPInt::UIntBytecode::RetGPR) + GPRInfo::toArgumentIndex(loc.jsr().gpr()));
+#elif USE(JSVALUE32_64)
+            m_uINTBytecode.append(static_cast<uint8_t>(IPInt::UIntBytecode::RetGPR) + GPRInfo::toArgumentIndex(loc.jsr().gpr(WhichValueWord::PayloadWord)));
+#endif
         } else if (loc.isFPR()) {
-            ASSERT_UNUSED(NUM_UINT_FPRS, fprToIndex(loc.fpr()) < NUM_UINT_FPRS);
-            m_uINTBytecode.append(static_cast<uint8_t>(IPInt::UIntBytecode::RetFPR) + fprToIndex(loc.fpr()));
+            ASSERT_UNUSED(NUM_UINT_FPRS, FPRInfo::toArgumentIndex(loc.fpr()) < NUM_UINT_FPRS);
+            m_uINTBytecode.append(static_cast<uint8_t>(IPInt::UIntBytecode::RetFPR) + FPRInfo::toArgumentIndex(loc.fpr()));
         } else if (loc.isStack()) {
             m_highestReturnStackOffset = loc.offsetFromFP();
             m_uINTBytecode.append(static_cast<uint8_t>(IPInt::UIntBytecode::Stack));

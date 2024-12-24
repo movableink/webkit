@@ -15,6 +15,10 @@ if ARCH == 'arm64':
     PC_REG = 'x26'
     MC_REG = 'x25'
     PL_REG = 'x6'
+elif ARCH == 'x64':
+    PC_REG = 'r13'
+    MC_REG = 'r12'
+    PL_REG = 'r10'
 
 # Read all instruction opcodes from InPlaceInterpreter64.asm
 

@@ -83,17 +83,17 @@ elsif X86_64
     const PC = csr2
     const MC = csr1
     const WI = csr0
-    const PL = t6
+    const PL = t5
     const MB = csr3
     const BC = csr4
 
-    const IB = invalidGPR
-    const HR = invalidGPR
+    const IB = t7
+    const HR = t3
 
-    const sc0 = t0
-    const sc1 = t4
-    const sc2 = t7
-    const sc3 = t5
+    const sc0 = ws0
+    const sc1 = ws1
+    const sc2 = csr3
+    const sc3 = csr4
 elsif RISCV64
     const PC = csr7
     const MC = csr6
@@ -175,7 +175,7 @@ const IPIntCalleeSaveSpaceStackAligned = 2*IPIntCalleeSaveSpaceStackAligned
 # ---------------------------
 
 macro IfIPIntUsesIB(m)
-    if ARM64 or ARM64E
+    if ARM64 or ARM64E or X86_64
         m()
     end
 end
@@ -357,9 +357,17 @@ end
 macro operationCall(fn)
     move wasmInstance, a0
     push PC, MC
-    push PL, ws0
+    if ARM64 or ARM64E
+        push PL, ws0
+    elsif X86_64
+        push PL, IB
+    end
     fn()
-    pop ws0, PL
+    if ARM64 or ARM64E
+        pop ws0, PL
+    elsif X86_64
+        pop IB, PL
+    end
     pop MC, PC
     if ARM64 or ARM64E
         pcrtoaddr _ipint_unreachable, IB
@@ -371,13 +379,21 @@ macro operationCallMayThrow(fn)
 
     move wasmInstance, a0
     push PC, MC
-    push PL, ws0
+    if ARM64 or ARM64E
+        push PL, ws0
+    elsif X86_64
+        push PL, IB
+    end
     fn()
     bqneq r0, 1, .continuation
     storei r1, ArgumentCountIncludingThis + PayloadOffset[cfr]
     jmp _wasm_throw_from_slow_path_trampoline
 .continuation:
-    pop ws0, PL
+    if ARM64 or ARM64E
+        pop ws0, PL
+    elsif X86_64
+        pop IB, PL
+    end
     pop MC, PC
     if ARM64 or ARM64E
         pcrtoaddr _ipint_unreachable, IB
@@ -546,6 +562,8 @@ if WEBASSEMBLY and (ARM64 or ARM64E or X86_64 or ARMv7)
     storep wasmInstance, CodeBlock[cfr]
     getIPIntCallee()
 
+    # on x86, PL will hold the PC relative offset for argumINT, then IB will take over
+    initPCRelative(ipint_entry, PL)
     ipintEntry()
 else
     break
@@ -564,11 +582,15 @@ if WEBASSEMBLY and (ARM64 or ARM64E or X86_64 or ARMv7)
     # OSR Check
     ipintPrologueOSR(5)
 
+    IfIPIntUsesIB(macro ()
+if ARM64 or ARM64E
+        pcrtoaddr _ipint_unreachable, IB
+elsif X86_64
+        leap (_ipint_unreachable - _ipint_entry_relativePCBase)[PL], IB
+end
+    end)
     move sp, PL
 
-    IfIPIntUsesIB(macro ()
-        pcrtoaddr _ipint_unreachable, IB
-    end)
     loadp Wasm::IPIntCallee::m_bytecode[ws0], PC
     loadp Wasm::IPIntCallee::m_metadata[ws0], MC
     # Load memory
@@ -605,17 +627,17 @@ macro ipintCatchCommon()
     if ARM64 or ARM64E
         pcrtoaddr _ipint_unreachable, IB
     end
-    loadp Wasm::IPIntCallee::m_bytecode[ws0], t0
+    loadp Wasm::IPIntCallee::m_bytecode[ws0], t1
+    addp t1, PC
     loadp Wasm::IPIntCallee::m_metadata[ws0], t1
-    addp t0, PC
     addp t1, MC
 
     # Recompute PL
     if ARM64 or ARM64E
         loadpairi Wasm::IPIntCallee::m_localSizeToAlloc[ws0], t0, t1
     else
-        loadi Wasm::IPIntCallee::m_localSizeToAlloc[ws0], t0
         loadi Wasm::IPIntCallee::m_numRethrowSlotsToAlloc[ws0], t1
+        loadi Wasm::IPIntCallee::m_localSizeToAlloc[ws0], t0
     end
     addq t1, t0
     mulq LocalSize, t0
@@ -627,12 +649,20 @@ macro ipintCatchCommon()
     lshiftq StackValueShift, t0
     addq IPIntCalleeSaveSpaceStackAligned, t0
     subp cfr, t0, sp
+
+if X86_64
+    loadp UnboxedWasmCalleeStackSlot[cfr], ws0
+end
 end
 
 global _ipint_catch_entry
 _ipint_catch_entry:
 if WEBASSEMBLY and (ARM64 or ARM64E or X86_64)
     ipintCatchCommon()
+if X86_64
+    initPCRelative(ipint_catch_entry, IB)
+    leap (_ipint_unreachable - _ipint_catch_entry_relativePCBase)[IB], IB
+end
 
     move cfr, a1
     move sp, a2
@@ -650,6 +680,10 @@ global _ipint_catch_all_entry
 _ipint_catch_all_entry:
 if WEBASSEMBLY and (ARM64 or ARM64E or X86_64)
     ipintCatchCommon()
+if X86_64
+    initPCRelative(ipint_catch_all_entry, IB)
+    leap (_ipint_unreachable - _ipint_catch_all_entry_relativePCBase)[IB], IB
+end
 
     move cfr, a1
     move 0, a2
@@ -667,6 +701,10 @@ global _ipint_table_catch_entry
 _ipint_table_catch_entry:
 if WEBASSEMBLY and (ARM64 or ARM64E or X86_64)
     ipintCatchCommon()
+if X86_64
+    initPCRelative(ipint_table_catch_entry, IB)
+    leap (_ipint_unreachable - _ipint_table_catch_entry_relativePCBase)[IB], IB
+end
 
     # push arguments but no ref: sp in a2, call normal operation
 
@@ -686,6 +724,10 @@ global _ipint_table_catch_ref_entry
 _ipint_table_catch_ref_entry:
 if WEBASSEMBLY and (ARM64 or ARM64E or X86_64)
     ipintCatchCommon()
+if X86_64
+    initPCRelative(ipint_table_catch_ref_entry, IB)
+    leap (_ipint_unreachable - _ipint_table_catch_ref_entry_relativePCBase)[IB], IB
+end
 
     # push both arguments and ref
 
@@ -705,6 +747,10 @@ global _ipint_table_catch_all_entry
 _ipint_table_catch_all_entry:
 if WEBASSEMBLY and (ARM64 or ARM64E or X86_64)
     ipintCatchCommon()
+if X86_64
+    initPCRelative(ipint_table_catch_all_entry, IB)
+    leap (_ipint_unreachable - _ipint_table_catch_all_entry_relativePCBase)[IB], IB
+end
 
     # do nothing: 0 in sp for no arguments, call normal operation
 
@@ -724,6 +770,10 @@ global _ipint_table_catch_allref_entry
 _ipint_table_catch_allref_entry:
 if WEBASSEMBLY and (ARM64 or ARM64E or X86_64)
     ipintCatchCommon()
+if X86_64
+    initPCRelative(ipint_table_catch_allref_entry, IB)
+    leap (_ipint_unreachable - _ipint_table_catch_allref_entry_relativePCBase)[IB], IB
+end
 
     # push only the ref
 

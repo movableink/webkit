@@ -801,15 +801,6 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addTableCopy(unsigned dstTableI
 
 PartialResult WARN_UNUSED_RETURN IPIntGenerator::addArguments(const TypeDefinition &signature)
 {
-    auto fprToIndex = [&](FPRReg r) -> unsigned {
-        for (unsigned i = 0; i < FPRInfo::numberOfArgumentRegisters; ++i) {
-            if (FPRInfo::toArgumentRegister(i) == r)
-                return i;
-        }
-        RELEASE_ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
-        return 0;
-    };
-
     auto sig = signature.as<FunctionSignature>();
     CallInformation callCC = wasmCallingConvention().callInformationFor(*sig, CallRole::Callee);
 
@@ -833,11 +824,15 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addArguments(const TypeDefiniti
     for (size_t i = 0; i < numArgs; ++i) {
         auto loc = callCC.params[i].location;
         if (loc.isGPR()) {
-            ASSERT_UNUSED(NUM_ARGUMINT_GPRS, loc.jsr().payloadGPR() < NUM_ARGUMINT_GPRS);
-            m_metadata->m_argumINTBytecode.append(static_cast<uint8_t>(IPInt::ArgumINTBytecode::ArgGPR) + loc.jsr().payloadGPR());
+            ASSERT_UNUSED(NUM_ARGUMINT_GPRS, GPRInfo::toArgumentIndex(loc.jsr().gpr()) < NUM_ARGUMINT_GPRS);
+#if USE(JSVALUE64)
+            m_metadata->m_argumINTBytecode.append(static_cast<uint8_t>(IPInt::ArgumINTBytecode::ArgGPR) + GPRInfo::toArgumentIndex(loc.jsr().gpr()));
+#elif USE(JSVALUE32_64)
+            m_metadata->m_argumINTBytecode.append(static_cast<uint8_t>(IPInt::ArgumINTBytecode::ArgGPR) + GPRInfo::toArgumentIndex(loc.jsr().gpr(WhichValueWord::PayloadWord)));
+#endif
         } else if (loc.isFPR()) {
-            ASSERT_UNUSED(NUM_ARGUMINT_FPRS, fprToIndex(loc.fpr()) < NUM_ARGUMINT_FPRS);
-            m_metadata->m_argumINTBytecode.append(static_cast<uint8_t>(IPInt::ArgumINTBytecode::RegFPR) + fprToIndex(loc.fpr()));
+            ASSERT_UNUSED(NUM_ARGUMINT_FPRS, FPRInfo::toArgumentIndex(loc.fpr()) < NUM_ARGUMINT_FPRS);
+            m_metadata->m_argumINTBytecode.append(static_cast<uint8_t>(IPInt::ArgumINTBytecode::RegFPR) + FPRInfo::toArgumentIndex(loc.fpr()));
         } else if (loc.isStack()) {
             m_metadata->m_argumINTBytecode.append(static_cast<uint8_t>(IPInt::ArgumINTBytecode::Stack));
         }
@@ -2633,15 +2628,6 @@ auto IPIntGenerator::endTopLevel(BlockSignature signature, const Stack& expressi
 }
 
 // Calls
-static constexpr unsigned fprToIndex(FPRReg r)
-{
-    for (unsigned i = 0; i < FPRInfo::numberOfArgumentRegisters; ++i) {
-        if (FPRInfo::toArgumentRegister(i) == r)
-            return i;
-    }
-    RELEASE_ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
-    return 0;
-}
 
 void IPIntGenerator::addCallCommonData(const FunctionSignature& signature, const CallInformation& callConvention)
 {
@@ -2657,11 +2643,15 @@ void IPIntGenerator::addCallCommonData(const FunctionSignature& signature, const
     for (size_t i = 0; i < signature.argumentCount(); ++i) {
         auto loc = callConvention.params[i].location;
         if (loc.isGPR()) {
-            ASSERT_UNUSED(NUM_MINT_CALL_GPRS, loc.jsr().payloadGPR() < NUM_MINT_CALL_GPRS);
-            mINTBytecode.append(static_cast<uint8_t>(IPInt::CallArgumentBytecode::ArgumentGPR) + loc.jsr().payloadGPR());
+            ASSERT_UNUSED(NUM_MINT_CALL_GPRS, GPRInfo::toArgumentIndex(loc.jsr().gpr()) < NUM_MINT_CALL_GPRS);
+#if USE(JSVALUE64)
+            mINTBytecode.append(static_cast<uint8_t>(IPInt::CallArgumentBytecode::ArgumentGPR) + GPRInfo::toArgumentIndex(loc.jsr().gpr()));
+#elif USE(JSVALUE32_64)
+            mINTBytecode.append(static_cast<uint8_t>(IPInt::CallArgumentBytecode::ArgumentGPR) + GPRInfo::toArgumentIndex(loc.jsr().gpr(WhichValueWord::PayloadWord)));
+#endif
         } else if (loc.isFPR()) {
-            ASSERT_UNUSED(NUM_MINT_CALL_FPRS, fprToIndex(loc.fpr()) < NUM_MINT_CALL_FPRS);
-            mINTBytecode.append(static_cast<uint8_t>(IPInt::CallArgumentBytecode::ArgumentFPR) + fprToIndex(loc.fpr()));
+            ASSERT_UNUSED(NUM_MINT_CALL_FPRS, FPRInfo::toArgumentIndex(loc.fpr()) < NUM_MINT_CALL_FPRS);
+            mINTBytecode.append(static_cast<uint8_t>(IPInt::CallArgumentBytecode::ArgumentFPR) + FPRInfo::toArgumentIndex(loc.fpr()));
         } else if (loc.isStackArgument()) {
             if (stackArgs++ & 1)
                 mINTBytecode.append(static_cast<uint8_t>(IPInt::CallArgumentBytecode::ArgumentStackUnaligned));
@@ -2708,11 +2698,15 @@ void IPIntGenerator::addCallCommonData(const FunctionSignature& signature, const
     for (size_t i = 0; i < signature.returnCount(); ++i) {
         auto loc = returnConvention.results[i].location;
         if (loc.isGPR()) {
-            ASSERT_UNUSED(NUM_MINT_RET_GPRS, loc.jsr().payloadGPR() < NUM_MINT_RET_GPRS);
-            mINTBytecode.append(static_cast<uint8_t>(IPInt::CallResultBytecode::ResultGPR) + loc.jsr().payloadGPR());
+            ASSERT_UNUSED(NUM_MINT_RET_GPRS, GPRInfo::toArgumentIndex(loc.jsr().payloadGPR()) < NUM_MINT_RET_GPRS);
+#if USE(JSVALUE64)
+            mINTBytecode.append(static_cast<uint8_t>(IPInt::CallResultBytecode::ResultGPR) + GPRInfo::toArgumentIndex(loc.jsr().gpr()));
+#elif USE(JSVALUE32_64)
+            mINTBytecode.append(static_cast<uint8_t>(IPInt::CallResultBytecode::ResultGPR) + GPRInfo::toArgumentIndex(loc.jsr().gpr(WhichValueWord::PayloadWord)));
+#endif
         } else if (loc.isFPR()) {
-            ASSERT_UNUSED(NUM_MINT_RET_FPRS, fprToIndex(loc.fpr()) < NUM_MINT_RET_FPRS);
-            mINTBytecode.append(static_cast<uint8_t>(IPInt::CallResultBytecode::ResultFPR) + fprToIndex(loc.fpr()));
+            ASSERT_UNUSED(NUM_MINT_RET_FPRS, FPRInfo::toArgumentIndex(loc.fpr()) < NUM_MINT_RET_FPRS);
+            mINTBytecode.append(static_cast<uint8_t>(IPInt::CallResultBytecode::ResultFPR) + FPRInfo::toArgumentIndex(loc.fpr()));
         } else if (loc.isStackArgument()) {
             if (!hasSeenStackArgument) {
                 hasSeenStackArgument = true;
@@ -2749,11 +2743,15 @@ void IPIntGenerator::addTailCallCommonData(const FunctionSignature& signature)
     for (size_t i = 0; i < signature.argumentCount(); ++i) {
         auto loc = callConvention.params[i].location;
         if (loc.isGPR()) {
-            ASSERT_UNUSED(NUM_MINT_CALL_GPRS, loc.jsr().payloadGPR() < NUM_MINT_CALL_GPRS);
-            mINTBytecode.append(static_cast<uint8_t>(IPInt::CallArgumentBytecode::ArgumentGPR) + loc.jsr().payloadGPR());
+            ASSERT_UNUSED(NUM_MINT_CALL_GPRS, GPRInfo::toArgumentIndex(loc.jsr().gpr()) < NUM_MINT_CALL_GPRS);
+#if USE(JSVALUE64)
+            mINTBytecode.append(static_cast<uint8_t>(IPInt::CallArgumentBytecode::ArgumentGPR) + GPRInfo::toArgumentIndex(loc.jsr().gpr()));
+#elif USE(JSVALUE32_64)
+            mINTBytecode.append(static_cast<uint8_t>(IPInt::CallArgumentBytecode::ArgumentGPR) + GPRInfo::toArgumentIndex(loc.jsr().gpr(WhichValueWord::PayloadWord)));
+#endif
         } else if (loc.isFPR()) {
-            ASSERT_UNUSED(NUM_MINT_CALL_FPRS, fprToIndex(loc.fpr()) < NUM_MINT_CALL_FPRS);
-            mINTBytecode.append(static_cast<uint8_t>(IPInt::CallArgumentBytecode::ArgumentFPR) + fprToIndex(loc.fpr()));
+            ASSERT_UNUSED(NUM_MINT_CALL_FPRS, FPRInfo::toArgumentIndex(loc.fpr()) < NUM_MINT_CALL_FPRS);
+            mINTBytecode.append(static_cast<uint8_t>(IPInt::CallArgumentBytecode::ArgumentFPR) + FPRInfo::toArgumentIndex(loc.fpr()));
         } else if (loc.isStackArgument()) {
             if (stackArgs++ & 1)
                 mINTBytecode.append(static_cast<uint8_t>(IPInt::CallArgumentBytecode::TailArgumentStackUnaligned));

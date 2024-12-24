@@ -584,7 +584,7 @@ class Sequence
                 /^ci/, /^ti/, "addis", "subis", "mulis", "smulli", "leai", "loadf", "storef", "loadlinkacqi", "storecondreli",
                 /^atomic[a-z]+i$/
                 size = 4
-            when "loadp", "storep", "loadq", "storeq", "loadd", "stored", "lshiftp", "lshiftq", "negp", "negq", "rshiftp", "rshiftq",
+            when "loadp", "storep", "loadq", "storeq", "loadqinc", "loadd", "stored", "lshiftp", "lshiftq", "negp", "negq", "rshiftp", "rshiftq",
                 "urshiftp", "urshiftq", "addp", "addq", "mulp", "mulq", "andp", "andq", "orp", "orq", "subp", "subq", "xorp", "xorq", "addd",
                 "divd", "subd", "muld", "sqrtd", /^bp/, /^bq/, /^btp/, /^btq/, /^cp/, /^cq/, /^tp/, /^tq/, /^bd/,
                 "jmp", "call", "leap", "leaq", "loadlinkacqq", "storecondrelq", /^atomic[a-z]+q$/, "loadv", "storev"
@@ -1011,6 +1011,8 @@ class Instruction
             emitARM64Access("ldr", "ldur", operands[1], operands[0], :ptr)
         when "loadq"
             emitARM64Access("ldr", "ldur", operands[1], operands[0], :quad)
+        when "loadqinc"
+            $asm.puts "ldr #{operands[1].arm64Operand(:quad)}, #{operands[0].arm64Operand(:quad)}, #{operands[2].value}"
         when "storei"
             emitARM64Unflipped("str", operands, :word)
         when "storep"

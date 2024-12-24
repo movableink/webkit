@@ -1017,7 +1017,7 @@ WASM_IPINT_EXTERN_CPP_DECL(prepare_call_indirect, CallFrame* callFrame, Wasm::Fu
 
     EncodedJSValue* calleeReturn = std::bit_cast<EncodedJSValue*>(functionIndex);
     EncodedJSValue boxedCallee = CalleeBits::encodeNullCallee();
-    if (!function.m_function.boxedWasmCalleeLoadLocation)
+    if (function.m_function.boxedWasmCalleeLoadLocation)
         boxedCallee = CalleeBits::encodeBoxedNativeCallee(reinterpret_cast<void*>(*function.m_function.boxedWasmCalleeLoadLocation));
     else
         boxedCallee = CalleeBits::encodeNativeCallee(

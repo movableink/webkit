@@ -63,9 +63,8 @@ if ARM64 or ARM64E
     emit "br x0"
 elsif X86_64
     lshiftq 8, t0
-    leap (_ipint_unreachable), t1
-    addq t1, t0
-    emit "jmp *(%eax)"
+    leap [t0, IB], t0
+    jmp t0
 else
     break
 end
@@ -81,7 +80,7 @@ elsif X86_64
     lshiftq 8, t3
     leap (_ipint_unreachable), t1
     addq t1, t3
-    emit "jmp *(%ecx)"
+    jmp t3
 else
     break
 end
@@ -108,7 +107,7 @@ macro pushQuad(reg)
     if ARM64 or ARM64E
         push reg, reg
     elsif X86_64
-        push reg
+        push reg, reg
     else
         break
     end
@@ -118,11 +117,13 @@ macro pushQuadPair(reg1, reg2)
     push reg1, reg2
 end
 
-macro popQuad(reg, scratch)
+macro popQuad(reg)
+    # FIXME: emit post-increment in offlineasm
     if ARM64 or ARM64E
-        pop scratch, reg
+        loadqinc [sp], reg, 16
     elsif X86_64
-        pop reg
+        loadq [sp], reg
+        addq 16, sp
     else
         break
     end
@@ -143,7 +144,7 @@ macro pushInt32(reg)
 end
 
 macro popInt32(reg, scratch)
-    popQuad(reg, scratch)
+    popQuad(reg)
 end
 
 macro pushFloat32(reg)
@@ -159,7 +160,7 @@ macro pushInt64(reg)
 end
 
 macro popInt64(reg, scratch)
-    popQuad(reg, scratch)
+    popQuad(reg)
 end
 
 macro pushFloat64(reg)
@@ -180,7 +181,7 @@ end
 # csr4 = for dispatch
 
 const argumINTTmp = csr0
-const argumINTDst = csr1
+const argumINTDst = sc0
 const argumINTSrc = csr2
 const argumINTEnd = csr3
 const argumINTDsp = csr4
@@ -220,9 +221,9 @@ if ARM64 or ARM64E
     addq argumINTTmp, argumINTDsp
     emit "br x23"
 elsif X86_64
-    leap (_argumINT_begin), argumINTDsp
+    leap (_argumINT_begin - _ipint_entry_relativePCBase)[PL], argumINTDsp
     addq argumINTTmp, argumINTDsp
-    emit "jmp *(%r13)"
+    jmp argumINTDsp
 else
     break
 end
@@ -333,6 +334,9 @@ end
     nextIPIntInstruction()
 
 instructionLabel(_throw)
+if X86_64
+    loadp UnboxedWasmCalleeStackSlot[cfr], ws0
+end
     loadp Wasm::IPIntCallee::m_bytecode[ws0], t0
     move PC, t1
     subq t0, t1
@@ -349,6 +353,9 @@ instructionLabel(_throw)
     jumpToException()
 
 instructionLabel(_rethrow)
+if X86_64
+    loadp UnboxedWasmCalleeStackSlot[cfr], ws0
+end
     loadp Wasm::IPIntCallee::m_bytecode[ws0], t0
     move PC, t1
     subq t0, t1
@@ -365,9 +372,12 @@ instructionLabel(_rethrow)
     jumpToException()
 
 instructionLabel(_throw_ref)
-    popQuad(a2, t1)
+    popQuad(a2)
     bieq a2, ValueNull, .throw_null_ref
 
+if X86_64
+    loadp UnboxedWasmCalleeStackSlot[cfr], ws0
+end
     loadp Wasm::IPIntCallee::m_bytecode[ws0], t0
     move PC, t1
     subq t0, t1
@@ -403,22 +413,31 @@ elsif X86_64
     break
 .safe:
     lshiftq 6, sc2
-    leap (_uint_begin), sc3
-    addq sc2, sc3
-    emit "jmp *(%r10)"
+    leap (_uint_begin - _mint_entry_relativePCBase)[PC, sc2], sc2
+    jmp sc2
 end
 end
 
 instructionLabel(_end)
-    loadp Wasm::IPIntCallee::m_bytecodeEnd[ws0], t0
-    bqeq PC, t0, .ipint_end_ret
+if X86_64
+    loadp UnboxedWasmCalleeStackSlot[cfr], ws0
+end
+    loadp Wasm::IPIntCallee::m_bytecodeEnd[ws0], t1
+    bqeq PC, t1, .ipint_end_ret
     advancePC(1)
     nextIPIntInstruction()
 .ipint_end_ret:
     loadp Wasm::IPIntCallee::m_uINTBytecodePointer[ws0], MC
     ipintEpilogueOSR(10)
+if X86_64
+    loadp UnboxedWasmCalleeStackSlot[cfr], ws0
+end
     loadi Wasm::IPIntCallee::m_highestReturnStackOffset[ws0], sc0
     addp cfr, sc0
+
+    # since IB is an argument register, we swap back to PC (which is unused afterwards)
+    # for x86 PC base
+    initPCRelative(mint_entry, PC)
     uintDispatch()
 
 instructionLabel(_br)
@@ -489,13 +508,25 @@ instructionLabel(_br_table)
 
 instructionLabel(_return)
     # ret
-    loadi Wasm::IPIntCallee::m_bytecodeEnd[ws0], PC
-    loadp Wasm::IPIntCallee::m_uINTBytecode[ws0], MC
+
+if X86_64
+    loadp UnboxedWasmCalleeStackSlot[cfr], ws0
+end
+
     # This is guaranteed going to an end instruction, so skip
     # dispatch and end of program check for speed
     jmp .ipint_end_ret
 
+if ARM64 or ARM64E
+    const IPIntCallCallee = sc1
+elsif X86_64
+    const IPIntCallCallee = a5
+end
+
 instructionLabel(_call)
+if X86_64
+    loadp UnboxedWasmCalleeStackSlot[cfr], ws0
+end
     loadp Wasm::IPIntCallee::m_bytecode[ws0], t0
     move PC, t1
     subq t0, t1
@@ -513,16 +544,22 @@ instructionLabel(_call)
 
     # operation returns the entrypoint in r0 and the target instance in r1
     operationCall(macro() cCall3(_ipint_extern_prepare_call) end)
-    popQuad(sc1, t2)
+    popQuad(IPIntCallCallee)
 
     # call
     jmp .ipint_call_common
 
 instructionLabel(_call_indirect)
+if X86_64
+    loadp UnboxedWasmCalleeStackSlot[cfr], ws0
+end
     loadp Wasm::IPIntCallee::m_bytecode[ws0], t0
     move PC, t1
     subq t0, t1
     storei t1, CallSiteIndex[cfr]
+
+    loadb IPInt::CallIndirectMetadata::length[MC], t2
+    advancePCByReg(t2)
 
     # Get function index by pointer, use it as a return for callee
     move sp, a2
@@ -530,13 +567,12 @@ instructionLabel(_call_indirect)
     # Get callIndirectMetadata
     move cfr, a1
     move MC, a3
+    advanceMC(IPInt::CallIndirectMetadata::signature)
+
     operationCall(macro() cCall4(_ipint_extern_prepare_call_indirect) end)
     btpz r1, .ipint_call_indirect_throw
 
-    loadb IPInt::CallIndirectMetadata::length[MC], t2
-    advancePCByReg(t2)
-    advanceMC(IPInt::CallIndirectMetadata::signature)
-    popQuad(sc1, t2)
+    popQuad(IPIntCallCallee)
 
     jmp .ipint_call_common
 
@@ -544,6 +580,9 @@ instructionLabel(_call_indirect)
     jmp _wasm_throw_from_slow_path_trampoline
 
 instructionLabel(_return_call)
+if X86_64
+    loadp UnboxedWasmCalleeStackSlot[cfr], ws0
+end
     loadp Wasm::IPIntCallee::m_bytecode[ws0], t0
     move PC, t1
     subq t0, t1
@@ -561,17 +600,23 @@ instructionLabel(_return_call)
     # operation returns the entrypoint in r0 and the target instance in r1
     # this operation stores the boxed Callee into *r2
     operationCall(macro() cCall3(_ipint_extern_prepare_call) end)
-    popQuad(sc1, t2)
+    popQuad(IPIntCallCallee)
 
-    loadi IPInt::TailCallMetadata::callerStackArgSize[MC], t2
+    loadi IPInt::TailCallMetadata::callerStackArgSize[MC], t3
     advanceMC(IPInt::TailCallMetadata::argumentBytecode)
     jmp .ipint_tail_call_common
 
 instructionLabel(_return_call_indirect)
+if X86_64
+    loadp UnboxedWasmCalleeStackSlot[cfr], ws0
+end
     loadp Wasm::IPIntCallee::m_bytecode[ws0], t0
     move PC, t1
     subq t0, t1
     storei t1, CallSiteIndex[cfr]
+
+    loadb IPInt::TailCallIndirectMetadata::length[MC], t2
+    advancePCByReg(t2)
 
     # Get function index by pointer, use it as a return for callee
     move sp, a2
@@ -581,12 +626,9 @@ instructionLabel(_return_call_indirect)
     move MC, a3
     operationCall(macro() cCall4(_ipint_extern_prepare_call_indirect) end)
     btpz r1, .ipint_call_indirect_throw
+    popQuad(IPIntCallCallee)
 
-    loadb IPInt::TailCallIndirectMetadata::length[MC], t2
-    advancePCByReg(t2)
-    popQuad(sc1, t2)
-
-    loadi IPInt::TailCallIndirectMetadata::callerStackArgSize[MC], t2
+    loadi IPInt::TailCallIndirectMetadata::callerStackArgSize[MC], t3
     advanceMC(IPInt::TailCallIndirectMetadata::argumentBytecode)
     jmp .ipint_tail_call_common
 
@@ -597,11 +639,11 @@ instructionLabel(_call_ref)
 
     operationCall(macro() cCall4(_ipint_extern_prepare_call_ref) end)
     btpz r1, .ipint_call_ref_throw
+    popQuad(IPIntCallCallee)
 
-    loadb IPInt::CallRefMetadata::length[MC], t2
-    advancePCByReg(t2)
+    loadb IPInt::CallRefMetadata::length[MC], t3
     advanceMC(IPInt::CallRefMetadata::signature)
-    popQuad(sc1, t2)
+    advancePCByReg(t3)
 
     jmp .ipint_call_common
 
@@ -609,22 +651,25 @@ instructionLabel(_call_ref)
     jmp _wasm_throw_from_slow_path_trampoline
 
 instructionLabel(_return_call_ref)
+if X86_64
+    loadp UnboxedWasmCalleeStackSlot[cfr], ws0
+end
     loadp Wasm::IPIntCallee::m_bytecode[ws0], t0
     move PC, t1
     subq t0, t1
     storei t1, CallSiteIndex[cfr]
+
+    loadb IPInt::TailCallRefMetadata::length[MC], t2
+    advancePCByReg(t2)
 
     move cfr, a1
     loadi IPInt::TailCallRefMetadata::typeIndex[MC], a2
     move sp, a3
     operationCall(macro() cCall4(_ipint_extern_prepare_call_ref) end)
     btpz r1, .ipint_call_ref_throw
+    popQuad(IPIntCallCallee)
 
-    loadb IPInt::TailCallRefMetadata::length[MC], t2
-    advancePCByReg(t2)
-    popQuad(sc1, t2)
-
-    loadi IPInt::TailCallRefMetadata::callerStackArgSize[MC], t2
+    loadi IPInt::TailCallRefMetadata::callerStackArgSize[MC], t3
     advanceMC(IPInt::TailCallRefMetadata::argumentBytecode)
     jmp .ipint_tail_call_common
 
@@ -670,8 +715,8 @@ instructionLabel(_select)
     advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
     nextIPIntInstruction()
 .ipint_select_val2:
-    popQuad(t1, t2)
-    popQuad(t0, t2)
+    popQuad(t1)
+    popQuad(t0)
     pushQuad(t1)
     advancePC(1)
     advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
@@ -686,8 +731,8 @@ instructionLabel(_select_t)
     advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
     nextIPIntInstruction()
 .ipint_select_t_val2:
-    popQuad(t1, t2)
-    popQuad(t0, t3)
+    popQuad(t1)
+    popQuad(t0)
     pushQuadPair(t2, t1)
     loadb IPInt::InstructionLengthMetadata::length[MC], t0
     advancePCByReg(t0)
@@ -733,7 +778,7 @@ instructionLabel(_local_set)
     bbaeq t0, 128, _ipint_local_set_slow_path
 .ipint_local_set_post_decode:
     # Pop from stack
-    popQuad(t2, t3)
+    popQuad(t2)
     # Store to locals
     mulq LocalSize, t0
     storeq t2, [PL, t0]
@@ -778,7 +823,7 @@ instructionLabel(_global_set)
     # get global addr
     loadp JSWebAssemblyInstance::m_globals[wasmInstance], t0
     # get value to store
-    popQuad(t3, t1)
+    popQuad(t3)
     # get index
     loadi IPInt::GlobalMetadata::index[MC], t1
     lshiftp 1, t1
@@ -801,7 +846,7 @@ instructionLabel(_global_set)
 .ipint_global_set_refpath:
     loadi IPInt::GlobalMetadata::index[MC], a1
     # Pop from stack
-    popQuad(a2, t3)
+    popQuad(a2)
     operationCall(macro() cCall3(_ipint_extern_set_global_ref) end)
 
     loadb IPInt::GlobalMetadata::instructionLength[MC], t0
@@ -827,7 +872,7 @@ instructionLabel(_table_get)
 instructionLabel(_table_set)
     # Load pre-computed index from metadata
     loadi IPInt::Const32Metadata::value[MC], a1
-    popQuad(a3, t0)
+    popQuad(a3)
     popInt32(a2, t0)
     operationCallMayThrow(macro() cCall4(_ipint_extern_table_set) end)
 
@@ -2160,8 +2205,8 @@ instructionLabel(_i64_rotr)
 instructionLabel(_f32_abs)
     # f32.abs
     popFloat32(ft0)
-    absf ft0, ft0
-    pushFloat32(ft0)
+    absf ft0, ft1
+    pushFloat32(ft1)
 
     advancePC(1)
     nextIPIntInstruction()
@@ -2169,8 +2214,8 @@ instructionLabel(_f32_abs)
 instructionLabel(_f32_neg)
     # f32.neg
     popFloat32(ft0)
-    negf ft0, ft0
-    pushFloat32(ft0)
+    negf ft0, ft1
+    pushFloat32(ft1)
 
     advancePC(1)
     nextIPIntInstruction()
@@ -2178,8 +2223,8 @@ instructionLabel(_f32_neg)
 instructionLabel(_f32_ceil)
     # f32.ceil
     popFloat32(ft0)
-    ceilf ft0, ft0
-    pushFloat32(ft0)
+    ceilf ft0, ft1
+    pushFloat32(ft1)
 
     advancePC(1)
     nextIPIntInstruction()
@@ -2187,8 +2232,8 @@ instructionLabel(_f32_ceil)
 instructionLabel(_f32_floor)
     # f32.floor
     popFloat32(ft0)
-    floorf ft0, ft0
-    pushFloat32(ft0)
+    floorf ft0, ft1
+    pushFloat32(ft1)
 
     advancePC(1)
     nextIPIntInstruction()
@@ -2196,8 +2241,8 @@ instructionLabel(_f32_floor)
 instructionLabel(_f32_trunc)
     # f32.trunc
     popFloat32(ft0)
-    truncatef ft0, ft0
-    pushFloat32(ft0)
+    truncatef ft0, ft1
+    pushFloat32(ft1)
 
     advancePC(1)
     nextIPIntInstruction()
@@ -2205,8 +2250,8 @@ instructionLabel(_f32_trunc)
 instructionLabel(_f32_nearest)
     # f32.nearest
     popFloat32(ft0)
-    roundf ft0, ft0
-    pushFloat32(ft0)
+    roundf ft0, ft1
+    pushFloat32(ft1)
 
     advancePC(1)
     nextIPIntInstruction()
@@ -2214,8 +2259,8 @@ instructionLabel(_f32_nearest)
 instructionLabel(_f32_sqrt)
     # f32.sqrt
     popFloat32(ft0)
-    sqrtf ft0, ft0
-    pushFloat32(ft0)
+    sqrtf ft0, ft1
+    pushFloat32(ft1)
 
     advancePC(1)
     nextIPIntInstruction()
@@ -2351,8 +2396,8 @@ instructionLabel(_f32_copysign)
 instructionLabel(_f64_abs)
     # f64.abs
     popFloat64(ft0)
-    absd ft0, ft0
-    pushFloat64(ft0)
+    absd ft0, ft1
+    pushFloat64(ft1)
 
     advancePC(1)
     nextIPIntInstruction()
@@ -2360,8 +2405,8 @@ instructionLabel(_f64_abs)
 instructionLabel(_f64_neg)
     # f64.neg
     popFloat64(ft0)
-    negd ft0, ft0
-    pushFloat64(ft0)
+    negd ft0, ft1
+    pushFloat64(ft1)
 
     advancePC(1)
     nextIPIntInstruction()
@@ -2369,8 +2414,8 @@ instructionLabel(_f64_neg)
 instructionLabel(_f64_ceil)
     # f64.ceil
     popFloat64(ft0)
-    ceild ft0, ft0
-    pushFloat64(ft0)
+    ceild ft0, ft1
+    pushFloat64(ft1)
 
     advancePC(1)
     nextIPIntInstruction()
@@ -2378,8 +2423,8 @@ instructionLabel(_f64_ceil)
 instructionLabel(_f64_floor)
     # f64.floor
     popFloat64(ft0)
-    floord ft0, ft0
-    pushFloat64(ft0)
+    floord ft0, ft1
+    pushFloat64(ft1)
 
     advancePC(1)
     nextIPIntInstruction()
@@ -2387,8 +2432,8 @@ instructionLabel(_f64_floor)
 instructionLabel(_f64_trunc)
     # f64.trunc
     popFloat64(ft0)
-    truncated ft0, ft0
-    pushFloat64(ft0)
+    truncated ft0, ft1
+    pushFloat64(ft1)
 
     advancePC(1)
     nextIPIntInstruction()
@@ -2396,8 +2441,8 @@ instructionLabel(_f64_trunc)
 instructionLabel(_f64_nearest)
     # f64.nearest
     popFloat64(ft0)
-    roundd ft0, ft0
-    pushFloat64(ft0)
+    roundd ft0, ft1
+    pushFloat64(ft1)
 
     advancePC(1)
     nextIPIntInstruction()
@@ -2405,8 +2450,8 @@ instructionLabel(_f64_nearest)
 instructionLabel(_f64_sqrt)
     # f64.sqrt
     popFloat64(ft0)
-    sqrtd ft0, ft0
-    pushFloat64(ft0)
+    sqrtd ft0, ft1
+    pushFloat64(ft1)
 
     advancePC(1)
     nextIPIntInstruction()
@@ -2705,6 +2750,7 @@ instructionLabel(_i64_trunc_f64_u)
 
 instructionLabel(_f32_convert_i32_s)
     popInt32(t0, t1)
+    andq 0xffffffff, t0
     ci2fs t0, ft0
     pushFloat32(ft0)
     advancePC(1)
@@ -2712,6 +2758,7 @@ instructionLabel(_f32_convert_i32_s)
 
 instructionLabel(_f32_convert_i32_u)
     popInt32(t0, t1)
+    andq 0xffffffff, t0
     ci2f t0, ft0
     pushFloat32(ft0)
     advancePC(1)
@@ -2744,6 +2791,7 @@ instructionLabel(_f32_demote_f64)
 
 instructionLabel(_f64_convert_i32_s)
     popInt32(t0, t1)
+    andq 0xffffffff, t0
     ci2ds t0, ft0
     pushFloat64(ft0)
     advancePC(1)
@@ -2751,6 +2799,7 @@ instructionLabel(_f64_convert_i32_s)
 
 instructionLabel(_f64_convert_i32_u)
     popInt32(t0, t1)
+    andq 0xffffffff, t0
     ci2d t0, ft0
     pushFloat64(ft0)
     advancePC(1)
@@ -2874,7 +2923,7 @@ instructionLabel(_ref_null_t)
     nextIPIntInstruction()
 
 instructionLabel(_ref_is_null)
-    popQuad(t0, t1)
+    popQuad(t0)
     cqeq t0, ValueNull, t0
     pushInt32(t0)
     advancePC(1)
@@ -2891,8 +2940,8 @@ instructionLabel(_ref_func)
     nextIPIntInstruction()
 
 instructionLabel(_ref_eq)
-    popQuad(t0, t2)
-    popQuad(t1, t2)
+    popQuad(t0)
+    popQuad(t1)
     cqeq t0, t1, t0
     pushInt32(t0)
     advancePC(1)
@@ -2966,7 +3015,7 @@ reservedOpcode(0xf9)
 reservedOpcode(0xfa)
 
 instructionLabel(_fb_block)
-    decodeLEBVarUInt32(1, t0, t1, t2, t3, ws1)
+    decodeLEBVarUInt32(1, t0, t1, t2, t3, t4)
     # Security guarantee: always less than 30 (0x00 -> 0x1e)
     biaeq t0, 0x1f, .ipint_fb_nonexistent
     if ARM64 or ARM64E
@@ -2974,17 +3023,17 @@ instructionLabel(_fb_block)
         emit "add x0, x1, x0, lsl 8"
         emit "br x0"
     elsif X86_64
-        lshifti 4, t0
-        leap (_ipint_struct_new), t1
+        lshifti 8, t0
+        leap (_ipint_struct_new - _ipint_unreachable)[IB], t1
         addq t1, t0
-        emit "jmp *(%eax)"
+        jmp t0
     end
 
 .ipint_fb_nonexistent:
     break
 
 instructionLabel(_fc_block)
-    decodeLEBVarUInt32(1, t0, t1, t2, t3, ws1)
+    decodeLEBVarUInt32(1, t0, t1, t2, t3, t4)
     # Security guarantee: always less than 18 (0x00 -> 0x11)
     biaeq t0, 0x12, .ipint_fc_nonexistent
     if ARM64 or ARM64E
@@ -2992,10 +3041,10 @@ instructionLabel(_fc_block)
         emit "add x0, x1, x0, lsl 8"
         emit "br x0"
     elsif X86_64
-        lshifti 4, t0
-        leap (_ipint_i32_trunc_sat_f32_s), t1
+        lshifti 8, t0
+        leap (_ipint_i32_trunc_sat_f32_s - _ipint_unreachable)[IB], t1
         addq t1, t0
-        emit "jmp *(%eax)"
+        jmp t0
     end
 
 .ipint_fc_nonexistent:
@@ -3004,20 +3053,20 @@ instructionLabel(_fc_block)
 instructionLabel(_simd)
     # TODO: for relaxed SIMD, handle parsing the value.
     # Metadata? Could just hardcode loading two bytes though
-    decodeLEBVarUInt32(1, t0, t1, t2, t3, ws1)
+    decodeLEBVarUInt32(1, t0, t1, t2, t3, t4)
     if ARM64 or ARM64E
         pcrtoaddr _ipint_simd_v128_load_mem, t1
         emit "add x0, x1, x0, lsl 8"
         emit "br x0"
     elsif X86_64
-        lshifti 4, t0
-        leap (_ipint_simd_v128_load_mem), t1
+        lshifti 8, t0
+        leap (_ipint_simd_v128_load_mem - _ipint_unreachable)[IB], t1
         addq t1, t0
-        emit "jmp *(%eax)"
+        jmp t0
     end
 
 instructionLabel(_atomic)
-    decodeLEBVarUInt32(1, t0, t1, t2, t3, ws1)
+    decodeLEBVarUInt32(1, t0, t1, t2, t3, t4)
     # Security guarantee: always less than 78 (0x00 -> 0x4e)
     biaeq t0, 0x4f, .ipint_atomic_nonexistent
     if ARM64 or ARM64E
@@ -3025,10 +3074,10 @@ instructionLabel(_atomic)
         emit "add x0, x1, x0, lsl 8"
         emit "br x0"
     elsif X86_64
-        lshifti 4, t0
-        leap (_ipint_memory_atomic_notify), t1
+        lshifti 8, t0
+        leap (_ipint_memory_atomic_notify - _ipint_unreachable)[IB], t1
         addq t1, t0
-        emit "jmp *(%eax)"
+        jmp t0
     end
 
 .ipint_atomic_nonexistent:
@@ -3064,7 +3113,7 @@ instructionLabel(_struct_new_default)
     nextIPIntInstruction()
 
 instructionLabel(_struct_get)
-    popQuad(a1, t0)  # object
+    popQuad(a1)  # object
     loadi IPInt::StructGetSetMetadata::fieldIndex[MC], a2  # field index
     operationCallMayThrow(macro() cCall3(_ipint_extern_struct_get) end)
     pushQuad(r1)
@@ -3075,7 +3124,7 @@ instructionLabel(_struct_get)
     nextIPIntInstruction()
 
 instructionLabel(_struct_get_s)
-    popQuad(a1, t0)  # object
+    popQuad(a1)  # object
     loadi IPInt::StructGetSetMetadata::fieldIndex[MC], a2  # field index
     operationCallMayThrow(macro() cCall3(_ipint_extern_struct_get_s) end)
     pushQuad(r1)
@@ -3086,7 +3135,7 @@ instructionLabel(_struct_get_s)
     nextIPIntInstruction()
 
 instructionLabel(_struct_get_u)
-    popQuad(a1, t0)  # object
+    popQuad(a1)  # object
     loadi IPInt::StructGetSetMetadata::fieldIndex[MC], a2  # field index
     operationCallMayThrow(macro() cCall3(_ipint_extern_struct_get) end)
     pushQuad(r1)
@@ -3111,7 +3160,7 @@ instructionLabel(_struct_set)
 instructionLabel(_array_new)
     loadi IPInt::ArrayNewMetadata::typeIndex[MC], a1  # type index
     popInt32(a3, t0)  # length
-    popQuad(a2, t0)  # default value
+    popQuad(a2)  # default value
     operationCallMayThrow(macro() cCall4(_ipint_extern_array_new) end)
 
     pushQuad(r1)
@@ -3140,9 +3189,9 @@ instructionLabel(_array_new_fixed)
     operationCallMayThrow(macro() cCall4(_ipint_extern_array_new_fixed) end)
 
     # pop all the arguments
-    loadi IPInt::ArrayNewFixedMetadata::arraySize[MC], a2  # array length
-    lshifti StackValueShift, a2
-    addp a2, sp
+    loadi IPInt::ArrayNewFixedMetadata::arraySize[MC], t3 # array length
+    lshifti StackValueShift, t3
+    addp t3, sp
 
     pushQuad(r1)
 
@@ -3180,7 +3229,7 @@ instructionLabel(_array_new_elem)
 instructionLabel(_array_get)
     loadi IPInt::ArrayGetSetMetadata::typeIndex[MC], a1  # type index
     popInt32(a3, a0)  # index
-    popQuad(a2, a0)  # array
+    popQuad(a2)  # array
     operationCallMayThrow(macro() cCall4(_ipint_extern_array_get) end)
 
     pushQuad(r1)
@@ -3193,7 +3242,7 @@ instructionLabel(_array_get)
 instructionLabel(_array_get_s)
     loadi IPInt::ArrayGetSetMetadata::typeIndex[MC], a1  # type index
     popInt32(a3, a0)  # index
-    popQuad(a2, a0)  # array
+    popQuad(a2)  # array
     operationCallMayThrow(macro() cCall4(_ipint_extern_array_get_s) end)
 
     pushQuad(r1)
@@ -3206,7 +3255,7 @@ instructionLabel(_array_get_s)
 instructionLabel(_array_get_u)
     loadi IPInt::ArrayGetSetMetadata::typeIndex[MC], a1  # type index
     popInt32(a3, a0)  # index
-    popQuad(a2, a0)  # array
+    popQuad(a2)  # array
     operationCallMayThrow(macro() cCall4(_ipint_extern_array_get) end)
 
     pushQuad(r1)
@@ -3230,7 +3279,7 @@ instructionLabel(_array_set)
     nextIPIntInstruction()
 
 instructionLabel(_array_len)
-    popQuad(t0, t1)  # array into t0
+    popQuad(t0)  # array into t0
     bqeq t0, ValueNull, .nullArray
     loadi JSWebAssemblyArray::m_size[t0], t0
     pushInt32(t0)
@@ -3289,7 +3338,7 @@ instructionLabel(_array_init_elem)
 instructionLabel(_ref_test)
     loadi IPInt::RefTestCastMetadata::typeIndex[MC], a1
     move 0, a2  # allowNull
-    popQuad(a3, t0)
+    popQuad(a3)
     operationCall(macro() cCall3(_ipint_extern_ref_test) end)
 
     pushInt32(r1)
@@ -3302,7 +3351,7 @@ instructionLabel(_ref_test)
 instructionLabel(_ref_test_nullable)
     loadi IPInt::RefTestCastMetadata::typeIndex[MC], a1
     move 1, a2  # allowNull
-    popQuad(a3, t0)
+    popQuad(a3)
     operationCall(macro() cCall3(_ipint_extern_ref_test) end)
 
     pushInt32(r1)
@@ -3315,7 +3364,7 @@ instructionLabel(_ref_test_nullable)
 instructionLabel(_ref_cast)
     loadi IPInt::RefTestCastMetadata::typeIndex[MC], a1
     move 0, a2  # allowNull
-    popQuad(a3, t0)
+    popQuad(a3)
     operationCallMayThrow(macro() cCall3(_ipint_extern_ref_cast) end)
 
     pushInt32(r1)
@@ -3328,7 +3377,7 @@ instructionLabel(_ref_cast)
 instructionLabel(_ref_cast_nullable)
     loadi IPInt::RefTestCastMetadata::typeIndex[MC], a1
     move 1, a2  # allowNull
-    popQuad(a3, t0)
+    popQuad(a3)
     operationCallMayThrow(macro() cCall3(_ipint_extern_ref_cast) end)
 
     pushInt32(r1)
@@ -3371,7 +3420,7 @@ instructionLabel(_br_on_cast_fail)
     nextIPIntInstruction()
 
 instructionLabel(_any_convert_extern)
-    popQuad(a1, t0)
+    popQuad(a1)
     operationCall(macro() cCall2(_ipint_extern_any_convert_extern) end)
     pushQuad(r1)
     advancePC(2)
@@ -3394,7 +3443,7 @@ instructionLabel(_ref_i31)
     nextIPIntInstruction()
 
 instructionLabel(_i31_get_s)
-    popQuad(t0, t1)
+    popQuad(t0)
     bqeq t0, ValueNull, .i31_get_throw
     pushInt32(t0)
 
@@ -3402,7 +3451,7 @@ instructionLabel(_i31_get_s)
     nextIPIntInstruction()
 
 instructionLabel(_i31_get_u)
-    popQuad(t0, t1)
+    popQuad(t0)
     bqeq t0, ValueNull, .i31_get_throw
     andq 0x7fffffff, t0
     pushInt32(t0)
@@ -3764,9 +3813,9 @@ instructionLabel(_data_drop)
 
 instructionLabel(_memory_copy)
     # memory.copy
-    popQuad(a3, t0) # n
-    popQuad(a2, t0) # s
-    popQuad(a1, t0) # d
+    popQuad(a3) # n
+    popQuad(a2) # s
+    popQuad(a1) # d
     operationCallMayThrow(macro() cCall4(_ipint_extern_memory_copy) end)
 
     loadb IPInt::InstructionLengthMetadata::length[MC], t0
@@ -3776,9 +3825,9 @@ instructionLabel(_memory_copy)
 
 instructionLabel(_memory_fill)
     # memory.fill
-    popQuad(a3, t0) # n
-    popQuad(a2, t0) # val
-    popQuad(a1, t0) # d
+    popQuad(a3) # n
+    popQuad(a2) # val
+    popQuad(a1) # d
     operationCallMayThrow(macro() cCall4(_ipint_extern_memory_fill) end)
 
     loadb IPInt::InstructionLengthMetadata::length[MC], t0
@@ -4662,6 +4711,7 @@ instructionLabel(_i32_atomic_rmw8_add_u)
         elsif X86_64
             atomicxchgaddb value, [mem]
             move value, scratch1
+            andi 0xff, scratch1
         elsif ARM64
             weakCASLoopByte(mem, value, scratch1, scratch2, macro(value, oldValue, newValue)
                 addi value, oldValue, newValue
@@ -4679,6 +4729,7 @@ instructionLabel(_i32_atomic_rmw16_add_u)
         elsif X86_64
             atomicxchgaddh value, [mem]
             move value, scratch1
+            andi 0xffff, scratch1
         elsif ARM64
             weakCASLoopHalf(mem, value, scratch1, scratch2, macro(value, oldValue, newValue)
                 addi value, oldValue, newValue
@@ -4696,6 +4747,7 @@ instructionLabel(_i64_atomic_rmw8_add_u)
         elsif X86_64
             atomicxchgaddb value, [mem]
             move value, scratch1
+            andi 0xff, scratch1
         elsif ARM64
             weakCASLoopByte(mem, value, scratch1, scratch2, macro(value, oldValue, newValue)
                 addi value, oldValue, newValue
@@ -4713,6 +4765,7 @@ instructionLabel(_i64_atomic_rmw16_add_u)
         elsif X86_64
             atomicxchgaddh value, [mem]
             move value, scratch1
+            andi 0xffff, scratch1
         elsif ARM64
             weakCASLoopHalf(mem, value, scratch1, scratch2, macro(value, oldValue, newValue)
                 addi value, oldValue, newValue
@@ -4730,6 +4783,7 @@ instructionLabel(_i64_atomic_rmw32_add_u)
         elsif X86_64
             atomicxchgaddi value, [mem]
             move value, scratch1
+            ori 0, scratch1
         elsif ARM64
             weakCASLoopInt(mem, value, scratch1, scratch2, macro(value, oldValue, newValue)
                 addi value, oldValue, newValue
@@ -4788,6 +4842,7 @@ instructionLabel(_i32_atomic_rmw8_sub_u)
             negi value
             atomicxchgaddb value, [mem]
             move value, scratch1
+            andi 0xff, scratch1
         elsif ARM64
             weakCASLoopByte(mem, value, scratch1, scratch2, macro(value, oldValue, newValue)
                 subi oldValue, value, newValue
@@ -4807,6 +4862,7 @@ instructionLabel(_i32_atomic_rmw16_sub_u)
             negi value
             atomicxchgaddh value, [mem]
             move value, scratch1
+            andi 0xffff, scratch1
         elsif ARM64
             weakCASLoopHalf(mem, value, scratch1, scratch2, macro(value, oldValue, newValue)
                 subi oldValue, value, newValue
@@ -4826,6 +4882,7 @@ instructionLabel(_i64_atomic_rmw8_sub_u)
             negq value
             atomicxchgaddb value, [mem]
             move value, scratch1
+            andi 0xff, scratch1
         elsif ARM64
             weakCASLoopByte(mem, value, scratch1, scratch2, macro(value, oldValue, newValue)
                 subi oldValue, value, newValue
@@ -4845,6 +4902,7 @@ instructionLabel(_i64_atomic_rmw16_sub_u)
             negq value
             atomicxchgaddh value, [mem]
             move value, scratch1
+            andi 0xffff, scratch1
         elsif ARM64
             weakCASLoopHalf(mem, value, scratch1, scratch2, macro(value, oldValue, newValue)
                 subi oldValue, value, newValue
@@ -4864,6 +4922,7 @@ instructionLabel(_i64_atomic_rmw32_sub_u)
             negq value
             atomicxchgaddi value, [mem]
             move value, scratch1
+            ori 0, scratch1
         elsif ARM64
             weakCASLoopInt(mem, value, scratch1, scratch2, macro(value, oldValue, newValue)
                 subi oldValue, value, newValue
@@ -5621,10 +5680,8 @@ if ARM64 or ARM64E
     # csr4 = x23
     emit "br x23"
 elsif X86_64
-    leap (_mint_begin), csr4
-    addq sc0, csr4
-    # csr4 = r13
-    emit "jmp *(%r13)"
+    leap (_mint_begin - _mint_arg_relativePCBase)[PC, sc0], sc0
+    jmp sc0
 end
 end
 
@@ -5641,10 +5698,8 @@ if ARM64 or ARM64E
     # csr4 = x23
     emit "br x23"
 elsif X86_64
-    leap (_mint_begin_return), csr4
-    addq sc0, csr4
-    # csr4 = r13
-    emit "jmp *(%r13)"
+    leap (_mint_begin_return - _mint_ret_relativePCBase)[PC, sc0], sc0
+    jmp sc0
 end
 end
 
@@ -5698,7 +5753,7 @@ end
     # arg             <- initial SP
 
     # store sp as our shadow stack for arguments later
-    move sp, sc0
+    move sp, t4
     # make extra space if necessary
     subp extraSpaceForReturns, sp
 
@@ -5710,7 +5765,7 @@ end
     # reserved
     # reserved        <- sp
 
-    push t3, t3
+    push t3, PC
     push PL, wasmInstance
 
     # set up the call frame
@@ -5724,7 +5779,7 @@ end
     # arg             <- sc0 = initial sp
     # reserved
     # reserved
-    # t3, t3
+    # t3, PC
     # PL, wasmInstance
     # call frame
     # call frame
@@ -5734,15 +5789,15 @@ end
     # call frame      <- sp
 
     # set up the Callee slot
-    storeq sc1, Callee - CallerFrameAndPCSize[sp]
+    storeq IPIntCallCallee, Callee - CallerFrameAndPCSize[sp]
 
     push targetEntrypoint, targetInstance
     move t2, sc3
 
-    move sc0, mintSS
+    move t4, mintSS
 
-    # MC is where it needs to be, go!
-    mintArgDispatch()
+    # need a common entrypoint because of x86 PC base
+    jmp .ipint_mint_arg_dispatch
 
 .ipint_tail_call_common:
     # Free up r0 to be used as argument register
@@ -5765,7 +5820,7 @@ end
 
     # sc1 = target callee => wasmInstance to free up sc1
     const savedCallee = wasmInstance
-    move sc1, savedCallee 
+    move IPIntCallCallee, savedCallee 
 
     # keep the top of IPInt stack in sc1 as shadow stack
     move sp, sc1
@@ -5793,7 +5848,7 @@ end
     # determine the location to begin copying stack arguments, starting from the last
     move cfr, sc2
     addp FirstArgumentOffset, sc2
-    addp t2, sc2
+    addp t3, sc2
 
     #  <caller frame>
     #  return val                  <- sc2
@@ -5817,8 +5872,8 @@ end
     if ARM64 or ARM64E
         loadpairq -0x10[cfr], t0, t1
     elsif X86_64 or RISCV64
-        loadp -0x8[cfr], t0
-        loadp -0x10[cfr], t1
+        loadp -0x8[cfr], t1
+        loadp -0x10[cfr], t0
     end
 
     push t0, t1
@@ -5848,6 +5903,10 @@ end
     #  saved MC/PC
     #  return address, saved CFR   <- sp
 
+.ipint_mint_arg_dispatch:
+    # on x86, we'll use PC for our PC base
+    initPCRelative(mint_arg, PC)
+
     mintArgDispatch()
 
     # tail calls reuse most of mINT's argument logic, but exit into a different tail call stub.
@@ -5871,7 +5930,7 @@ mintAlign(_a3)
     mintArgDispatch()
 
 mintAlign(_a4)
-if ARM64 or ARM64E
+if ARM64 or ARM64E or X86_64
     mintPop(a4)
     mintArgDispatch()
 else
@@ -5879,7 +5938,7 @@ else
 end
 
 mintAlign(_a5)
-if ARM64 or ARM64E
+if ARM64 or ARM64E or X86_64
     mintPop(a5)
     mintArgDispatch()
 else
@@ -5976,21 +6035,22 @@ mintAlign(_tail_call)
     jmp .ipint_perform_tail_call
 
 mintAlign(_call)
-    pop targetInstance, targetEntrypoint
+    pop wasmInstance, ws0
+    # pop targetInstance, targetEntrypoint
 
     # Save stack pointer, if we tail call someone who changes the frame above's stack argument size
-    move sp, sc0
-    storep sc0, ThisArgumentOffset[cfr]
+    move sp, sc1
+    storep sc1, ThisArgumentOffset[cfr]
 
     # Swap instances
-    move targetInstance, wasmInstance
+    # move targetInstance, wasmInstance
 
     # Set up memory
     push t2, t3
     ipintReloadMemory()
     pop t3, t2
 
-    move targetEntrypoint, ws0
+    # move targetEntrypoint, ws0
 
     # Make the call
 if ARM64E
@@ -6017,7 +6077,7 @@ _wasm_ipint_call_return_location_wide32:
     # arg
     # reserved
     # reserved
-    # t3, t3
+    # t3, PC
     # PL, wasmInstance  <- sc3
     # call frame return
     # call frame return
@@ -6037,7 +6097,14 @@ _wasm_ipint_call_return_location_wide32:
     advanceMC(4)
     leap [sp, mintRetSrc], mintRetSrc
 
+if ARM64 or ARM64E
     loadp 2*SlotSize[sc3], mintRetDst
+elsif X86_64
+    loadp 3*SlotSize[sc3], mintRetDst
+end
+
+    # on x86, we'll use PC again for our PC base
+    initPCRelative(mint_ret, PC)
 
     mintRetDispatch()
 
@@ -6063,7 +6130,7 @@ mintAlign(_r3)
     mintRetDispatch()
 
 mintAlign(_r4)
-if ARM64 or ARM64E
+if ARM64 or ARM64E or X86_64
     subp StackValueSize, mintRetDst
     storeq wa4, [mintRetDst]
     mintRetDispatch()
@@ -6072,7 +6139,7 @@ else
 end
 
 mintAlign(_r5)
-if ARM64 or ARM64E
+if ARM64 or ARM64E or X86_64
     subp StackValueSize, mintRetDst
     storeq wa5, [mintRetDst]
     mintRetDispatch()
@@ -6158,7 +6225,7 @@ mintAlign(_end)
     # return result
     # return result
     # return result     <- mintRetDst => new SP
-    # t3, t3
+    # t3, PC
     # PL, wasmInstance  <- sc3
     # call frame return <- sp
     # call frame return
@@ -6171,17 +6238,30 @@ mintAlign(_end)
 if ARM64 or ARM64E
     loadpairq [sc3], PL, wasmInstance
 else
-    loadq [sc3], PL
-    loadq 8[sc3], wasmInstance
+    loadq [sc3], wasmInstance
 end
     move mintRetDst, sp
 
+if X86_64
+    move wasmInstance, sc2
+end
+
     # Restore PC / MC
     getIPIntCallee()
+if X86_64
+    move sc2, wasmInstance
+    loadq 8[sc3], PL
+    loadp 2*SlotSize[sc3], PC
+end
 
     # Restore IB
     IfIPIntUsesIB(macro()
+if ARM64 or ARM64E
         pcrtoaddr _ipint_unreachable, IB
+elsif X86_64
+        initPCRelative(mint_end, IB)
+        leap (_ipint_unreachable - _mint_end_relativePCBase)[IB], IB
+end
     end)
     # Restore memory
     ipintReloadMemory()
@@ -6276,7 +6356,6 @@ end
     # on ARM: lr = return address
 
     move sc2, sp
-    addp CallerFrameAndPCSize, sp
 if ARM64E
     addp CallerFrameAndPCSize, cfr, ws2
 end
@@ -6284,7 +6363,7 @@ end
     move sc1, cfr
 
     # save new Callee
-    storeq savedCallee, Callee - CallerFrameAndPCSize[sp]
+    storeq savedCallee, Callee[sp]
 
     # swap instances
     move targetInstance, wasmInstance
@@ -6293,6 +6372,12 @@ end
     push t2, t3
     ipintReloadMemory()
     pop t3, t2
+
+    addp CallerFrameAndPCSize, sp
+
+if X86_64
+    subq 8, sp
+end
 
     # go!
 if ARM64E
@@ -6311,32 +6396,32 @@ _wasm_trampoline_wasm_ipint_tail_call_wide32:
 
 uintAlign(_r0)
 _uint_begin:
-    popQuad(wa0, sc1)
+    popQuad(wa0)
     uintDispatch()
 
 uintAlign(_r1)
-    popQuad(wa1, sc1)
+    popQuad(wa1)
     uintDispatch()
 
 uintAlign(_r2)
-    popQuad(wa2, sc1)
+    popQuad(wa2)
     uintDispatch()
 
 uintAlign(_r3)
-    popQuad(wa3, sc1)
+    popQuad(wa3)
     uintDispatch()
 
 uintAlign(_r4)
-    popQuad(wa4, sc1)
+    popQuad(wa4)
     uintDispatch()
 
 uintAlign(_r5)
-    popQuad(wa5, sc1)
+    popQuad(wa5)
     uintDispatch()
 
 uintAlign(_r6)
 if ARM64 or ARM64E
-    popQuad(wa6, sc1)
+    popQuad(wa6)
     uintDispatch()
 else
     break
@@ -6344,7 +6429,7 @@ end
 
 uintAlign(_r7)
 if ARM64 or ARM64E
-    popQuad(wa7, sc1)
+    popQuad(wa7)
     uintDispatch()
 else
     break
