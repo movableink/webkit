@@ -3206,16 +3206,17 @@ RenderBox::LogicalExtentComputedValues RenderBox::computeLogicalHeight(LayoutUni
         // https://bugs.webkit.org/show_bug.cgi?id=46418
         auto usedHeight = [&]() -> Length {
             if (is<RenderFlexibleBox>(parent()) || is<RenderDeprecatedFlexibleBox>(parent())) {
+                if (auto overridingLogicalHeight = overridingLogicalHeightForFlexBasisComputation()) {
+                    ASSERT(!this->overridingLogicalHeight());
+                    checkMinMaxHeight = true;
+                    return { *overridingLogicalHeight };
+                }
+
                 if (auto overridingLogicalHeight = this->overridingLogicalHeight())
                     return { *overridingLogicalHeight, LengthType::Fixed };
 
                 if (treatAsReplaced)
                     return { computeReplacedLogicalHeight() + borderAndPaddingLogicalHeight(), LengthType::Fixed };
-
-                if (auto overridingLogicalHeight = overridingLogicalHeightForFlexBasisComputation()) {
-                    checkMinMaxHeight = true;
-                    return { *overridingLogicalHeight };
-                }
 
                 checkMinMaxHeight = true;
                 return style().logicalHeight();

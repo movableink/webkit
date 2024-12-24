@@ -1207,13 +1207,21 @@ public:
         : m_flexItem(flexItem)
         , m_mainAxisIsInlineAxis(mainAxisIsInlineAxis)
     {
+        if (flexBasis.isAuto())
+            return;
+
         if (m_mainAxisIsInlineAxis)
             m_flexItem.setOverridingLogicalWidthForFlexBasisComputation(flexBasis);
         else
             m_flexItem.setOverridingLogicalHeightForFlexBasisComputation(flexBasis);
+        m_didOverride = true;
     }
+
     ~ScopedFlexBasisAsFlexItemMainSize()
     {
+        if (!m_didOverride)
+            return;
+
         if (m_mainAxisIsInlineAxis)
             m_flexItem.clearOverridingLogicalWidthForFlexBasisComputation();
         else
@@ -1222,7 +1230,8 @@ public:
 
 private:
     RenderBox& m_flexItem;
-    bool m_mainAxisIsInlineAxis;
+    bool m_mainAxisIsInlineAxis { true };
+    bool m_didOverride { false };
 };
 
 // https://drafts.csswg.org/css-flexbox/#algo-main-item
