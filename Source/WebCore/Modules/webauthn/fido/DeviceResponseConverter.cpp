@@ -40,8 +40,6 @@
 #include <wtf/StdSet.h>
 #include <wtf/Vector.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace fido {
 using namespace WebCore;
 using CBOR = cbor::CBORValue;
@@ -91,10 +89,8 @@ static Vector<uint8_t> getCredentialId(const Vector<uint8_t>& authenticatorData)
 
     if (authenticatorData.size() < credentialIdLengthOffset + credentialIdLengthLength + credentialIdLength)
         return { };
-    Vector<uint8_t> credentialId;
-    auto beginIt = authenticatorData.begin() + credentialIdLengthOffset + credentialIdLengthLength;
-    credentialId.appendRange(beginIt, beginIt + credentialIdLength);
-    return credentialId;
+
+    return Vector<uint8_t>(authenticatorData.subspan(credentialIdLengthOffset + credentialIdLengthLength, credentialIdLength));
 }
 
 
@@ -365,7 +361,5 @@ std::optional<AuthenticatorGetInfoResponse> readCTAPGetInfoResponse(const Vector
 }
 
 } // namespace fido
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUTHN)

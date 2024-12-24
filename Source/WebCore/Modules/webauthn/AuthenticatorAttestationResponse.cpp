@@ -35,8 +35,6 @@
 #include "WebAuthenticationUtils.h"
 #include <wtf/text/Base64.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 static std::optional<cbor::CBORValue> coseKeyForAttestationObject(Ref<ArrayBuffer> attObj)
@@ -63,10 +61,7 @@ static std::optional<cbor::CBORValue> coseKeyForAttestationObject(Ref<ArrayBuffe
         return std::nullopt;
 
     const size_t cosePublicKeyLength = authData.size() - cosePublicKeyOffset;
-    Vector<uint8_t> cosePublicKey;
-    auto beginIt = authData.begin() + cosePublicKeyOffset;
-    cosePublicKey.appendRange(beginIt, beginIt + cosePublicKeyLength);
-
+    Vector<uint8_t> cosePublicKey(authData.subspan(cosePublicKeyOffset, cosePublicKeyLength));
     return cbor::CBORReader::read(cosePublicKey);
 }
 
@@ -207,7 +202,5 @@ RegistrationResponseJSON::AuthenticatorAttestationResponseJSON AuthenticatorAtte
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUTHN)

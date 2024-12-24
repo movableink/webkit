@@ -38,8 +38,6 @@
 #include <wtf/Threading.h>
 #include <wtf/ZippedRange.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(WaveShaperDSPKernel);
@@ -96,23 +94,20 @@ void WaveShaperDSPKernel::processCurve(std::span<const float> source, std::span<
         return;
     }
 
-    float* curveData = curve->data();
-    int curveLength = curve->length();
+    auto curveData = curve->typedMutableSpan();
 
-    ASSERT(curveData);
-
-    if (!curveData || !curveLength) {
+    if (curveData.empty()) {
         memcpySpan(destination, source);
         return;
     }
 
     // Apply waveshaping curve.
     for (auto [input, output] : zippedRange(source, destination)) {
-        float v = (curveLength - 1) * 0.5f * (input + 1);
+        float v = (curveData.size() - 1) * 0.5f * (input + 1);
         if (v < 0)
             output = curveData[0];
-        else if (v >= curveLength - 1)
-            output = curveData[curveLength - 1];
+        else if (v >= curveData.size() - 1)
+            output = curveData.back();
         else {
             float k = std::floor(v);
             float f = v - k;
@@ -210,7 +205,5 @@ bool WaveShaperDSPKernel::requiresTailProcessing() const
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

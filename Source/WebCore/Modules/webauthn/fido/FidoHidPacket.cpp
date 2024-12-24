@@ -36,8 +36,6 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace fido {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(FidoHidPacket);
@@ -161,7 +159,5 @@ Vector<uint8_t> FidoHidContinuationPacket::getSerializedData() const
 }
 
 } // namespace fido
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUTHN)

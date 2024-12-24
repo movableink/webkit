@@ -32,12 +32,10 @@
 
 #if ENABLE(WEB_AUTHN)
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace apdu {
 
 // static
-std::optional<ApduResponse> ApduResponse::createFromMessage(const Vector<uint8_t>& data)
+std::optional<ApduResponse> ApduResponse::createFromMessage(Vector<uint8_t>&& data)
 {
     // Invalid message size, data is appended by status byte.
     if (data.size() < 2)
@@ -46,9 +44,8 @@ std::optional<ApduResponse> ApduResponse::createFromMessage(const Vector<uint8_t
     uint16_t statusBytes = data[data.size() - 2] << 8;
     statusBytes |= data[data.size() - 1];
 
-    Vector<uint8_t> newData;
-    newData.appendRange(data.begin(), data.end() - 2);
-    return ApduResponse(WTFMove(newData), static_cast<Status>(statusBytes));
+    data.shrink(data.size() - 2);
+    return ApduResponse(WTFMove(data), static_cast<Status>(statusBytes));
 }
 
 ApduResponse::ApduResponse(Vector<uint8_t>&& data, Status responseStatus)
@@ -66,7 +63,5 @@ Vector<uint8_t> ApduResponse::getEncodedResponse() const
 }
 
 } // namespace apdu
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUTHN)
