@@ -575,7 +575,7 @@ static Vector<Element> collectElements(JSGlobalObject* globalObject, const IntlD
                 bool needsFormatMinutes = (needsFormatHours && needsFormatSeconds) || duration[TemporalUnit::Minute] || durationFormat->units()[static_cast<unsigned>(TemporalUnit::Minute)].display() != IntlDurationFormat::Display::Auto;
 
                 bool needsFormat = (unit == TemporalUnit::Hour && needsFormatHours) || (unit == TemporalUnit::Minute && needsFormatMinutes) || (unit == TemporalUnit::Second && needsFormatSeconds);
-                bool needsSeparator = (unit == TemporalUnit::Hour && needsFormatMinutes) || (unit == TemporalUnit::Minute && needsFormatSeconds);
+                bool needsSeparator = (unit == TemporalUnit::Hour && needsFormatHours && needsFormatMinutes) || (unit == TemporalUnit::Minute && needsFormatSeconds);
 
                 if (needsFormat) {
                     auto formattedNumber = totalNanosecondsValue ? formatIntl128AsDecimal(skeletonBuilder.toString()) : formatDouble(skeletonBuilder.toString());
