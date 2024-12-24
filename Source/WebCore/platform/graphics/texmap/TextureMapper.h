@@ -85,7 +85,7 @@ public:
     WEBCORE_EXPORT void endPainting();
     void endClip();
     IntRect clipBounds();
-    IntSize maxTextureSize() const { return IntSize(2000, 2000); }
+    IntSize maxTextureSize() const;
     void setDepthRange(double zNear, double zFar);
     std::pair<double, double> depthRange() const;
     void setMaskMode(bool m) { m_isMaskMode = m; }
