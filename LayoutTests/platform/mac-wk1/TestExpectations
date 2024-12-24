@@ -2997,3 +2997,5 @@ webkit.org/b/284898 [ Ventura+ ] fonts/font-weight-invalid-crash.html [ Pass Fai
 webkit.org/b/284898 [ Ventura+ ] fonts/ligature.html [ Pass Failure ImageOnlyFailure ]
 
 webkit.org/b/284954 [ Ventura+ ] imported/w3c/web-platform-tests/css/css-box/margin-trim/computed-margin-values/block-container-block-start-child-with-border.html [ Pass Failure ]
+
+webkit.org/b/285089 [ Ventura+ Debug ] imported/w3c/web-platform-tests/editing/crashtests/replace-document-root-and-refocus-window.html [ Skip ]
