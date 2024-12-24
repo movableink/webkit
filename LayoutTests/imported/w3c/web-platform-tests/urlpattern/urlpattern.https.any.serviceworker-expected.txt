@@ -201,8 +201,8 @@ FAIL Pattern: [{"pathname":"/foo/bar"}] Inputs: ["./foo/bar","https://example.co
 PASS Pattern: [{"pathname":"/foo/bar"}] Inputs: [{"pathname":"/foo/bar"},"https://example.com"]
 PASS Pattern: ["https://example.com:8080/foo?bar#baz"] Inputs: [{"pathname":"/foo","search":"bar","hash":"baz","baseURL":"https://example.com:8080"}]
 FAIL Pattern: ["/foo?bar#baz","https://example.com:8080"] Inputs: [{"pathname":"/foo","search":"bar","hash":"baz","baseURL":"https://example.com:8080"}] Type error
-FAIL Pattern: ["/foo"] Inputs: undefined assert_throws_js: URLPattern() constructor function "_ => new URLPattern(...entry.pattern)" did not throw
-FAIL Pattern: ["example.com/foo"] Inputs: undefined assert_throws_js: URLPattern() constructor function "_ => new URLPattern(...entry.pattern)" did not throw
+PASS Pattern: ["/foo"] Inputs: undefined
+PASS Pattern: ["example.com/foo"] Inputs: undefined
 FAIL Pattern: ["http{s}?://{*.}?example.com/:product/:endpoint"] Inputs: ["https://sub.example.com/foo/bar"] assert_equals: test() result expected true but got false
 FAIL Pattern: ["https://example.com?foo"] Inputs: ["https://example.com/?foo"] assert_equals: test() result expected true but got false
 FAIL Pattern: ["https://example.com#foo"] Inputs: ["https://example.com/#foo"] assert_equals: test() result expected true but got false
@@ -219,14 +219,14 @@ FAIL Pattern: ["https://example.com/(bar)\\?foo"] Inputs: ["https://example.com/
 PASS Pattern: ["https://example.com/{bar}?foo"] Inputs: ["https://example.com/bar?foo"]
 FAIL Pattern: ["https://example.com/{bar}\\?foo"] Inputs: ["https://example.com/bar?foo"] assert_equals: test() result expected true but got false
 PASS Pattern: ["https://example.com/"] Inputs: ["https://example.com:8080/"]
-FAIL Pattern: ["data:foobar"] Inputs: ["data:foobar"] assert_throws_js: URLPattern() constructor function "_ => new URLPattern(...entry.pattern)" did not throw
+PASS Pattern: ["data:foobar"] Inputs: ["data:foobar"]
 FAIL Pattern: ["data\\:foobar"] Inputs: ["data:foobar"] assert_equals: test() result expected true but got false
 FAIL Pattern: ["https://{sub.}?example.com/foo"] Inputs: ["https://example.com/foo"] assert_equals: test() result expected true but got false
 FAIL Pattern: ["https://{sub.}?example{.com/}foo"] Inputs: ["https://example.com/foo"] assert_throws_js: URLPattern() constructor function "_ => new URLPattern(...entry.pattern)" did not throw
 PASS Pattern: ["{https://}example.com/foo"] Inputs: ["https://example.com/foo"]
 FAIL Pattern: ["https://(sub.)?example.com/foo"] Inputs: ["https://example.com/foo"] assert_equals: test() result expected true but got false
 PASS Pattern: ["https://(sub.)?example(.com/)foo"] Inputs: ["https://example.com/foo"]
-FAIL Pattern: ["(https://)example.com/foo"] Inputs: ["https://example.com/foo"] assert_throws_js: URLPattern() constructor function "_ => new URLPattern(...entry.pattern)" did not throw
+PASS Pattern: ["(https://)example.com/foo"] Inputs: ["https://example.com/foo"]
 PASS Pattern: ["https://{sub{.}}example.com/foo"] Inputs: ["https://example.com/foo"]
 FAIL Pattern: ["https://(sub(?:.))?example.com/foo"] Inputs: ["https://example.com/foo"] assert_equals: test() result expected true but got false
 FAIL Pattern: ["file:///foo/bar"] Inputs: ["file:///foo/bar"] assert_equals: test() result expected true but got false
@@ -268,9 +268,7 @@ FAIL Pattern: ["data\\:text/javascript,let x = 100/:tens?5;"] Inputs: ["data:tex
 PASS Pattern: [{"pathname":"/:id/:id"}] Inputs: undefined
 PASS Pattern: [{"pathname":"/foo","baseURL":""}] Inputs: undefined
 PASS Pattern: ["/foo",""] Inputs: undefined
-FAIL Pattern: [{"pathname":"/foo"},"https://example.com"] Inputs: undefined assert_throws_js: URLPattern() constructor function "_ => new URLPattern(...entry.pattern)" threw object "NotSupportedError: Not implemented." ("NotSupportedError") expected instance of function "function TypeError() {
-    [native code]
-}" ("TypeError")
+FAIL Pattern: [{"pathname":"/foo"},"https://example.com"] Inputs: undefined assert_throws_js: URLPattern() constructor function "_ => new URLPattern(...entry.pattern)" did not throw
 PASS Pattern: [{"pathname":":name*"}] Inputs: [{"pathname":"foobar"}]
 PASS Pattern: [{"pathname":":name+"}] Inputs: [{"pathname":"foobar"}]
 PASS Pattern: [{"pathname":":name"}] Inputs: [{"pathname":"foobar"}]
