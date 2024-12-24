@@ -9407,6 +9407,7 @@ void WebPageProxy::backForwardAddItemShared(IPC::Connection& connection, FrameId
     item->setIsRemoteFrameNavigation(isRemoteFrameNavigation);
     if (loadedWebArchive == LoadedWebArchive::Yes)
         item->setDataStoreForWebArchive(process->websiteDataStore());
+    item->setParentFromItem(m_backForwardList->protectedCurrentItem().get());
     protectedBackForwardList()->addItem(WTFMove(item));
 }
 

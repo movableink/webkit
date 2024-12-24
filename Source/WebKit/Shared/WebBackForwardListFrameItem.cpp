@@ -140,4 +140,13 @@ Ref<FrameState> WebBackForwardListFrameItem::copyFrameStateWithChildren()
     return frameState;
 }
 
+bool WebBackForwardListFrameItem::hasAncestorFrame(FrameIdentifier frameID)
+{
+    for (RefPtr ancestor = m_parent.get(); ancestor; ancestor = ancestor->m_parent.get()) {
+        if (ancestor->frameID() == frameID)
+            return true;
+    }
+    return false;
+}
+
 } // namespace WebKit

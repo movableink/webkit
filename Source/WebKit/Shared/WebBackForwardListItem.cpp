@@ -246,6 +246,19 @@ Ref<WebBackForwardListFrameItem> WebBackForwardListItem::protectedRootFrameItem(
     return m_rootFrameItem.get();
 }
 
+void WebBackForwardListItem::setParentFromItem(WebBackForwardListItem* previousItem)
+{
+    if (!previousItem || !m_isRemoteFrameNavigation)
+        return;
+
+    auto frameID = m_rootFrameItem->frameID();
+    if (!frameID)
+        return;
+
+    if (RefPtr previousFrameItem = previousItem->rootFrameItem().childItemForFrameID(*frameID))
+        m_rootFrameItem->setParent(previousFrameItem->protectedParent().get());
+}
+
 #if !LOG_DISABLED
 String WebBackForwardListItem::loggingString()
 {

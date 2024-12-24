@@ -121,6 +121,18 @@ void WebBackForwardList::addItem(Ref<WebBackForwardListItem>&& newItem)
             m_entries.removeLast();
         }
 
+        if (auto frameID = newItem->rootFrameItem().frameID()) {
+            while (m_entries.size()) {
+                Ref lastEntry = m_entries.last();
+                if (!lastEntry->isRemoteFrameNavigation() || !lastEntry->rootFrameItem().hasAncestorFrame(*frameID))
+                    break;
+                didRemoveItem(lastEntry);
+                removedItems.append(WTFMove(lastEntry));
+                m_entries.removeLast();
+                setProvisionalOrCurrentIndex(*provisionalOrCurrentIndex() - 1);
+            }
+        }
+
         // Toss the first item if the list is getting too big, as long as we're not using it
         // (or even if we are, if we only want 1 entry).
         if (m_entries.size() >= DefaultCapacity && (*provisionalOrCurrentIndex())) {

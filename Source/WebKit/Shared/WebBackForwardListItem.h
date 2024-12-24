@@ -104,6 +104,8 @@ public:
     void setIsRemoteFrameNavigation(bool isRemoteFrameNavigation) { m_isRemoteFrameNavigation = isRemoteFrameNavigation; }
     bool isRemoteFrameNavigation() const { return m_isRemoteFrameNavigation; }
 
+    void setParentFromItem(WebBackForwardListItem*);
+
     void setWasRestoredFromSession();
 
 #if !LOG_DISABLED

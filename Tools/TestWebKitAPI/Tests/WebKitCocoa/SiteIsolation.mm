@@ -3047,6 +3047,34 @@ TEST(SiteIsolation, NavigateIframeSameOriginBackForward)
     EXPECT_WK_STREQ("https://webkit.org/destination", [webView objectByEvaluatingJavaScript:@"location.href" inFrame:childFrame.get()]);
 }
 
+TEST(SiteIsolation, DiscardUncachedBackItemForNavigatedOverIframe)
+{
+    HTTPServer server({
+        { "/example"_s, { "<iframe src='https://webkit.org/a'></iframe>"_s } },
+        { "/a"_s, { "<script> alert('a'); </script>"_s } },
+        { "/b"_s, { "<script> alert('b'); </script>"_s } },
+        { "/c"_s, { "<script> alert('c'); </script>"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+    RetainPtr processPoolConfiguration = adoptNS([[_WKProcessPoolConfiguration alloc] init]);
+    processPoolConfiguration.get().pageCacheEnabled = NO;
+    RetainPtr processPool = adoptNS([[WKProcessPool alloc] _initWithConfiguration:processPoolConfiguration.get()]);
+    RetainPtr webViewConfiguration = server.httpsProxyConfiguration();
+    [webViewConfiguration setProcessPool:processPool.get()];
+
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(webViewConfiguration.get());
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
+    EXPECT_WK_STREQ("a", [webView _test_waitForAlert]);
+
+    [webView evaluateJavaScript:@"location.href = 'https://webkit.org/b'" inFrame:[webView firstChildFrame] completionHandler:nil];
+    EXPECT_WK_STREQ("b", [webView _test_waitForAlert]);
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://apple.com/c"]]];
+    EXPECT_WK_STREQ("c", [webView _test_waitForAlert]);
+
+    [webView goBack];
+    EXPECT_WK_STREQ("a", [webView _test_waitForAlert]);
+}
+
 TEST(SiteIsolation, NavigateIframeCrossOriginBackForward)
 {
     HTTPServer server({
