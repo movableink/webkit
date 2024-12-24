@@ -42,7 +42,7 @@ TEST(WTF_VariantList, Basic)
     for (auto proxy : variantList) {
         EXPECT_TRUE(proxy.holds_alternative<int>());
 
-        proxy.visit(
+        WTF::switchOn(proxy,
             [&](int value) { EXPECT_EQ(0, value); },
             [&](float) { FAIL(); }
         );
@@ -75,7 +75,7 @@ TEST(WTF_VariantList, Basic_InlineCapacity)
     for (auto proxy : variantList) {
         EXPECT_TRUE(proxy.holds_alternative<int>());
 
-        proxy.visit(
+        WTF::switchOn(proxy,
             [&](int value) { EXPECT_EQ(0, value); },
             [&](float) { FAIL(); }
         );
@@ -108,7 +108,7 @@ TEST(WTF_VariantList, MoveOnly)
     for (auto proxy : variantList) {
         EXPECT_TRUE(proxy.holds_alternative<MoveOnly>());
 
-        proxy.visit(
+        WTF::switchOn(proxy,
             [&](int) { FAIL(); },
             [&](const MoveOnly& value) { EXPECT_EQ(iterations, value.value()); },
             [&](float) { FAIL(); }
@@ -151,7 +151,7 @@ TEST(WTF_VariantList, MoveWithItems)
     unsigned iterations = 0;
 
     for (auto proxy : moved) {
-        proxy.visit(
+        WTF::switchOn(proxy,
             [&](int value) { EXPECT_EQ(0, value); },
             [&](const MoveOnly& value) { EXPECT_EQ(1u, value.value()); },
             [&](float value) { EXPECT_EQ(2.0f, value); }
@@ -174,7 +174,7 @@ TEST(WTF_VariantList, CopyWithItems)
     unsigned iterations = 0;
 
     for (auto proxy : variantList) {
-        proxy.visit(
+        WTF::switchOn(proxy,
             [&](int value) { EXPECT_EQ(0, value); },
             [&](float value) { EXPECT_EQ(1.0f, value); }
         );
@@ -187,7 +187,7 @@ TEST(WTF_VariantList, CopyWithItems)
     iterations = 0;
 
     for (auto proxy : copied) {
-        proxy.visit(
+        WTF::switchOn(proxy,
             [&](int value) { EXPECT_EQ(0, value); },
             [&](float value) { EXPECT_EQ(1.0f, value); }
         );

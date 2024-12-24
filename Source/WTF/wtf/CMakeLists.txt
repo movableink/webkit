@@ -47,6 +47,8 @@ set(WTF_PUBLIC_HEADERS
     CompactRefPtr.h
     CompactRefPtrTuple.h
     CompactUniquePtrTuple.h
+    CompactVariant.h
+    CompactVariantOperations.h
     CompilationThread.h
     Compiler.h
     CompletionHandler.h
@@ -352,6 +354,7 @@ set(WTF_PUBLIC_HEADERS
     UniqueRefVector.h
     VMTags.h
     ValueCheck.h
+    VariantExtras.h
     VariantList.h
     VariantListOperations.h
     Vector.h

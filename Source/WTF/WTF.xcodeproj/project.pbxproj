@@ -220,6 +220,9 @@
 		ADF2CE671E39F106006889DB /* MemoryFootprintCocoa.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ADF2CE651E39F106006889DB /* MemoryFootprintCocoa.cpp */; };
 		BC05ACA62CEA70E500750CB1 /* VariantListOperations.h in Headers */ = {isa = PBXBuildFile; fileRef = BC05ACA52CEA70E500750CB1 /* VariantListOperations.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		BC5267672C2726D600E422DD /* MakeString.h in Headers */ = {isa = PBXBuildFile; fileRef = BC5267662C2726D600E422DD /* MakeString.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		BCE0DFA72D1865B9003F0349 /* CompactVariant.h in Headers */ = {isa = PBXBuildFile; fileRef = BCE0DFA62D1865B9003F0349 /* CompactVariant.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		BCE0DFA92D1865C4003F0349 /* CompactVariantOperations.h in Headers */ = {isa = PBXBuildFile; fileRef = BCE0DFA82D1865C4003F0349 /* CompactVariantOperations.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		BCE0DFAB2D18670B003F0349 /* VariantExtras.h in Headers */ = {isa = PBXBuildFile; fileRef = BCE0DFAA2D18670B003F0349 /* VariantExtras.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		BCEA08042CCFDB33000AC148 /* VariantList.h in Headers */ = {isa = PBXBuildFile; fileRef = BCEA08032CCFDB33000AC148 /* VariantList.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C2BCFC401F61D13000C9222C /* Language.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C2BCFC3E1F61D13000C9222C /* Language.cpp */; };
 		C2BCFC421F61D61600C9222C /* LanguageCF.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C2BCFC411F61D61600C9222C /* LanguageCF.cpp */; };
@@ -1572,6 +1575,9 @@
 		ADF2CE651E39F106006889DB /* MemoryFootprintCocoa.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MemoryFootprintCocoa.cpp; sourceTree = "<group>"; };
 		BC05ACA52CEA70E500750CB1 /* VariantListOperations.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = VariantListOperations.h; sourceTree = "<group>"; };
 		BC5267662C2726D600E422DD /* MakeString.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MakeString.h; sourceTree = "<group>"; };
+		BCE0DFA62D1865B9003F0349 /* CompactVariant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CompactVariant.h; sourceTree = "<group>"; };
+		BCE0DFA82D1865C4003F0349 /* CompactVariantOperations.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CompactVariantOperations.h; sourceTree = "<group>"; };
+		BCE0DFAA2D18670B003F0349 /* VariantExtras.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = VariantExtras.h; sourceTree = "<group>"; };
 		BCEA08032CCFDB33000AC148 /* VariantList.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = VariantList.h; sourceTree = "<group>"; };
 		C2BCFC3E1F61D13000C9222C /* Language.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Language.cpp; sourceTree = "<group>"; };
 		C2BCFC3F1F61D13000C9222C /* Language.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Language.h; sourceTree = "<group>"; };
@@ -2188,6 +2194,8 @@
 				FF895F10282AB96400E7BAE8 /* CompactRefPtr.h */,
 				E38020DB2401C0930037CA9E /* CompactRefPtrTuple.h */,
 				9B96E9B324FF77B8001756C3 /* CompactUniquePtrTuple.h */,
+				BCE0DFA62D1865B9003F0349 /* CompactVariant.h */,
+				BCE0DFA82D1865C4003F0349 /* CompactVariantOperations.h */,
 				0F8F2B8F172E00F0007DBDA5 /* CompilationThread.cpp */,
 				0F8F2B90172E00F0007DBDA5 /* CompilationThread.h */,
 				A8A47270151A825A004123FF /* Compiler.h */,
@@ -2585,6 +2593,7 @@
 				7AFEC6B01EB22B5900DADE36 /* UUID.cpp */,
 				7AFEC6AE1EB22AC600DADE36 /* UUID.h */,
 				A8A4736F151A825B004123FF /* ValueCheck.h */,
+				BCE0DFAA2D18670B003F0349 /* VariantExtras.h */,
 				BCEA08032CCFDB33000AC148 /* VariantList.h */,
 				BC05ACA52CEA70E500750CB1 /* VariantListOperations.h */,
 				0F95B63420CB53C100479635 /* Vector.cpp */,
@@ -3279,6 +3288,8 @@
 				FF895F11282AB96400E7BAE8 /* CompactRefPtr.h in Headers */,
 				DD3DC93927A4BF8E007E5B61 /* CompactRefPtrTuple.h in Headers */,
 				DD3DC93527A4BF8E007E5B61 /* CompactUniquePtrTuple.h in Headers */,
+				BCE0DFA72D1865B9003F0349 /* CompactVariant.h in Headers */,
+				BCE0DFA92D1865C4003F0349 /* CompactVariantOperations.h in Headers */,
 				DD3DC90727A4BF8E007E5B61 /* CompilationThread.h in Headers */,
 				DD3DC99927A4BF8E007E5B61 /* Compiler.h in Headers */,
 				DD3DC8A227A4BF8E007E5B61 /* CompletionHandler.h in Headers */,
@@ -3701,6 +3712,7 @@
 				DDF306F527C086CC006A526F /* utils.h in Headers */,
 				DD3DC8C227A4BF8E007E5B61 /* UUID.h in Headers */,
 				DD3DC86D27A4BF8E007E5B61 /* ValueCheck.h in Headers */,
+				BCE0DFAB2D18670B003F0349 /* VariantExtras.h in Headers */,
 				BCEA08042CCFDB33000AC148 /* VariantList.h in Headers */,
 				BC05ACA62CEA70E500750CB1 /* VariantListOperations.h in Headers */,
 				DD3DC90B27A4BF8E007E5B61 /* Vector.h in Headers */,
