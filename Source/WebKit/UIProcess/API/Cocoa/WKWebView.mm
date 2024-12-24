@@ -5386,6 +5386,16 @@ struct WKWebViewData {
     self._protectedPage->setPresentingApplicationAuditToken(presentingApplicationAuditToken);
 }
 
+- (BOOL)_useSystemAppearance
+{
+    return [[_configuration preferences] _useSystemAppearance];
+}
+
+- (void)_setUseSystemAppearance:(BOOL)useSystemAppearance
+{
+    [[_configuration preferences] _setUseSystemAppearance:useSystemAppearance];
+}
+
 @end
 
 @implementation WKWebView (WKDeprecated)

@@ -25,7 +25,7 @@
 
 #include "config.h"
 
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
 
 #import "PlatformUtilities.h"
 #import "Test.h"
@@ -35,6 +35,8 @@
 #import <WebKit/WebViewPrivate.h>
 #import <WebKit/_WKUserStyleSheet.h>
 #import <wtf/RetainPtr.h>
+
+#if PLATFORM(MAC)
 
 @interface UserStyleSheetParsingWebKitLegacyTest : NSObject <WebFrameLoadDelegate> {
 }
@@ -55,27 +57,6 @@
 }
 
 @end
-
-TEST(UseSystemAppearance, UserStyleSheetParsing)
-{
-    RetainPtr styleSheet1 = adoptNS([[_WKUserStyleSheet alloc] initWithSource:@"@media (prefers-dark-interface) { #test { color: green } }" forMainFrameOnly:NO]);
-    RetainPtr styleSheet2 = adoptNS([[_WKUserStyleSheet alloc] initWithSource:@"@media not screen and (prefers-dark-interface) { #test { color: green } }" forMainFrameOnly:NO]);
-
-    RetainPtr configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
-    [[configuration userContentController] _addUserStyleSheet:styleSheet1.get()];
-    [[configuration userContentController] _addUserStyleSheet:styleSheet2.get()];
-
-    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 400, 300) configuration:configuration.get()]);
-    [webView synchronouslyLoadHTMLString:@"<div id=test></div>"];
-
-    EXPECT_WK_STREQ("rgb(0, 0, 0)", [webView stringByEvaluatingJavaScript:@"getComputedStyle(test).color"]);
-
-    [webView _setUseSystemAppearance:YES];
-    EXPECT_WK_STREQ("rgb(0, 128, 0)", [webView stringByEvaluatingJavaScript:@"getComputedStyle(test).color"]);
-
-    [webView _setUseSystemAppearance:NO];
-    EXPECT_WK_STREQ("rgb(0, 0, 0)", [webView stringByEvaluatingJavaScript:@"getComputedStyle(test).color"]);
-}
 
 TEST(UseSystemAppearance, UserStyleSheetParsingWebKitLegacy)
 {
@@ -102,3 +83,26 @@ TEST(UseSystemAppearance, UserStyleSheetParsingWebKitLegacy)
 }
 
 #endif // PLATFORM(MAC)
+
+TEST(UseSystemAppearance, UserStyleSheetParsing)
+{
+    RetainPtr styleSheet1 = adoptNS([[_WKUserStyleSheet alloc] initWithSource:@"@media (prefers-dark-interface) { #test { color: green } }" forMainFrameOnly:NO]);
+    RetainPtr styleSheet2 = adoptNS([[_WKUserStyleSheet alloc] initWithSource:@"@media not screen and (prefers-dark-interface) { #test { color: green } }" forMainFrameOnly:NO]);
+
+    RetainPtr configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [[configuration userContentController] _addUserStyleSheet:styleSheet1.get()];
+    [[configuration userContentController] _addUserStyleSheet:styleSheet2.get()];
+
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 400, 300) configuration:configuration.get()]);
+    [webView synchronouslyLoadHTMLString:@"<div id=test></div>"];
+
+    EXPECT_WK_STREQ("rgb(0, 0, 0)", [webView stringByEvaluatingJavaScript:@"getComputedStyle(test).color"]);
+
+    [webView _setUseSystemAppearance:YES];
+    EXPECT_WK_STREQ("rgb(0, 128, 0)", [webView stringByEvaluatingJavaScript:@"getComputedStyle(test).color"]);
+
+    [webView _setUseSystemAppearance:NO];
+    EXPECT_WK_STREQ("rgb(0, 0, 0)", [webView stringByEvaluatingJavaScript:@"getComputedStyle(test).color"]);
+}
+
+#endif // PLATFORM(COCOA)

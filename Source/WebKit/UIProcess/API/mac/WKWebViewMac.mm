@@ -1583,16 +1583,6 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     _page->setAlwaysShowsVerticalScroller(alwaysShowsVerticalScroller);
 }
 
-- (BOOL)_useSystemAppearance
-{
-    return [[_configuration preferences] _useSystemAppearance];
-}
-
-- (void)_setUseSystemAppearance:(BOOL)useSystemAppearance
-{
-    [[_configuration preferences] _setUseSystemAppearance:useSystemAppearance];
-}
-
 - (void)_setOverlayScrollbarStyle:(_WKOverlayScrollbarStyle)scrollbarStyle
 {
     _impl->setOverlayScrollbarStyle(toCoreScrollbarStyle(scrollbarStyle));
