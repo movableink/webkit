@@ -1009,7 +1009,7 @@ PlatformRoleMap createPlatformRoleMap();
 String roleToPlatformString(AccessibilityRole);
 
 #if PLATFORM(IOS_FAMILY)
-WEBCORE_EXPORT NSData* newAccessibilityRemoteToken(NSString *);
+WEBCORE_EXPORT RetainPtr<NSData> newAccessibilityRemoteToken(NSString *);
 #endif
 } // namespace Accessibility
 

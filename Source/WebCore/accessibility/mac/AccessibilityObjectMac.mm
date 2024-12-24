@@ -48,6 +48,7 @@
 #import "TextDecorationPainter.h"
 #import "TextIterator.h"
 #import <wtf/cocoa/SpanCocoa.h>
+#import <wtf/cocoa/VectorCocoa.h>
 
 #if PLATFORM(MAC)
 
@@ -655,15 +656,15 @@ RetainPtr<NSAttributedString> attributedStringCreate(Node& node, StringView text
     return string;
 }
 
-std::span<const uint8_t> AXRemoteFrame::generateRemoteToken() const
+Vector<uint8_t> AXRemoteFrame::generateRemoteToken() const
 {
     if (auto* parent = parentObject()) {
         // We use the parent's wrapper so that the remote frame acts as a pass through for the remote token bridge.
         NSData *data = [NSAccessibilityRemoteUIElement remoteTokenForLocalUIElement:parent->wrapper()];
-        return span(data);
+        return makeVector(data);
     }
 
-    return std::span<const uint8_t> { };
+    return { };
 }
 
 void AXRemoteFrame::initializePlatformElementWithRemoteToken(std::span<const uint8_t> token, int processIdentifier)
