@@ -95,7 +95,7 @@ public:
         RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!isHashTableDeletedValue());
     }
 
-    std::span<const uint8_t, 16> span() const
+    std::span<const uint8_t, 16> span() const LIFETIME_BOUND
     {
         return asByteSpan<UInt128, 16>(m_data);
     }

@@ -137,27 +137,27 @@ public:
     bool isEmpty() const { return m_storage ? m_storage->isEmpty() : true; }
     size_t byteSize() const { return m_storage ? m_storage->byteSize() : 0; }
 
-    iterator begin() { return m_storage ? m_storage->begin() : nullptr; }
-    iterator end() { return m_storage ? m_storage->end() : nullptr; }
+    iterator begin() LIFETIME_BOUND { return m_storage ? m_storage->begin() : nullptr; }
+    iterator end() LIFETIME_BOUND { return m_storage ? m_storage->end() : nullptr; }
 
-    const_iterator begin() const { return const_cast<FixedVector*>(this)->begin(); }
-    const_iterator end() const { return const_cast<FixedVector*>(this)->end(); }
+    const_iterator begin() const LIFETIME_BOUND { return const_cast<FixedVector*>(this)->begin(); }
+    const_iterator end() const LIFETIME_BOUND { return const_cast<FixedVector*>(this)->end(); }
 
-    reverse_iterator rbegin() { return m_storage ? m_storage->rbegin() : reverse_iterator(nullptr); }
-    reverse_iterator rend() { return m_storage ? m_storage->rend() : reverse_iterator(nullptr); }
-    const_reverse_iterator rbegin() const { return m_storage ? m_storage->rbegin() : const_reverse_iterator(nullptr); }
-    const_reverse_iterator rend() const { return m_storage ? m_storage->rend() : const_reverse_iterator(nullptr); }
+    reverse_iterator rbegin() LIFETIME_BOUND { return m_storage ? m_storage->rbegin() : reverse_iterator(nullptr); }
+    reverse_iterator rend() LIFETIME_BOUND { return m_storage ? m_storage->rend() : reverse_iterator(nullptr); }
+    const_reverse_iterator rbegin() const LIFETIME_BOUND { return m_storage ? m_storage->rbegin() : const_reverse_iterator(nullptr); }
+    const_reverse_iterator rend() const LIFETIME_BOUND { return m_storage ? m_storage->rend() : const_reverse_iterator(nullptr); }
 
-    T& at(size_t i) { return m_storage->at(i); }
-    const T& at(size_t i) const { return m_storage->at(i); }
+    T& at(size_t i) LIFETIME_BOUND { return m_storage->at(i); }
+    const T& at(size_t i) const LIFETIME_BOUND { return m_storage->at(i); }
 
-    T& operator[](size_t i) { return m_storage->at(i); }
-    const T& operator[](size_t i) const { return m_storage->at(i); }
+    T& operator[](size_t i) LIFETIME_BOUND { return m_storage->at(i); }
+    const T& operator[](size_t i) const LIFETIME_BOUND { return m_storage->at(i); }
 
-    T& first() { return (*this)[0]; }
-    const T& first() const { return (*this)[0]; }
-    T& last() { return (*this)[size() - 1]; }
-    const T& last() const { return (*this)[size() - 1]; }
+    T& first() LIFETIME_BOUND { return (*this)[0]; }
+    const T& first() const LIFETIME_BOUND { return (*this)[0]; }
+    T& last() LIFETIME_BOUND { return (*this)[size() - 1]; }
+    const T& last() const LIFETIME_BOUND { return (*this)[size() - 1]; }
 
     void clear() { m_storage = nullptr; }
 
@@ -192,17 +192,17 @@ public:
 
     static constexpr ptrdiff_t offsetOfStorage() { return OBJECT_OFFSETOF(FixedVector, m_storage); }
 
-    Storage* storage() { return m_storage.get(); }
+    Storage* storage() LIFETIME_BOUND { return m_storage.get(); }
 
-    std::span<const T> span() const { return m_storage ? m_storage->span() : std::span<const T> { }; }
-    std::span<T> mutableSpan() { return m_storage ? m_storage->span() : std::span<T> { }; }
+    std::span<const T> span() const LIFETIME_BOUND { return m_storage ? m_storage->span() : std::span<const T> { }; }
+    std::span<T> mutableSpan() LIFETIME_BOUND { return m_storage ? m_storage->span() : std::span<T> { }; }
 
     Vector<T> subvector(size_t offset, size_t length = std::dynamic_extent) const
     {
         return { span().subspan(offset, length) };
     }
 
-    std::span<const T> subspan(size_t offset, size_t length = std::dynamic_extent) const
+    std::span<const T> subspan(size_t offset, size_t length = std::dynamic_extent) const LIFETIME_BOUND
     {
         return span().subspan(offset, length);
     }

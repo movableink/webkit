@@ -241,10 +241,12 @@
 /* LIFETIME_BOUND */
 
 #if !defined(LIFETIME_BOUND) && defined(__cplusplus)
-#if defined(__has_cpp_attribute) && __has_cpp_attribute(clang::lifetimebound)
+#if __has_cpp_attribute(clang::lifetimebound)
 #define LIFETIME_BOUND [[clang::lifetimebound]]
-#elif COMPILER_HAS_ATTRIBUTE(lifetimebound)
-#define LIFETIME_BOUND __attribute__((lifetimebound))
+#elif __has_cpp_attribute(msvc::lifetimebound)
+#define LIFETIME_BOUND [[msvc::lifetimebound]]
+#elif __has_cpp_attribute(lifetimebound)
+#define LIFETIME_BOUND [[lifetimebound]]
 #endif
 #endif
 

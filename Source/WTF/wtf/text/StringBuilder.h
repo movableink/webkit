@@ -85,9 +85,9 @@ public:
     UChar operator[](unsigned i) const;
 
     bool is8Bit() const;
-    std::span<const LChar> span8() const { return span<LChar>(); }
-    std::span<const UChar> span16() const { return span<UChar>(); }
-    template<typename CharacterType> std::span<const CharacterType> span() const;
+    std::span<const LChar> span8() const LIFETIME_BOUND { return span<LChar>(); }
+    std::span<const UChar> span16() const LIFETIME_BOUND { return span<UChar>(); }
+    template<typename CharacterType> std::span<const CharacterType> span() const LIFETIME_BOUND;
     
     unsigned capacity() const;
     WTF_EXPORT_PRIVATE void reserveCapacity(unsigned newCapacity);

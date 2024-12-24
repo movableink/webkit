@@ -62,14 +62,14 @@ public:
     StringView& operator=(const StringView&);
 #endif
 
-    StringView(const AtomString&);
-    StringView(const String&);
-    StringView(const StringImpl&);
-    StringView(const StringImpl*);
-    StringView(std::span<const LChar>);
-    StringView(std::span<const UChar>);
-    StringView(std::span<const char>); // FIXME: Consider dropping this overload. Callers should pass LChars/UChars instead.
-    StringView(const void*, unsigned length, bool is8bit);
+    StringView(const AtomString& string LIFETIME_BOUND);
+    StringView(const String& string LIFETIME_BOUND);
+    StringView(const StringImpl& string LIFETIME_BOUND);
+    StringView(const StringImpl* string LIFETIME_BOUND);
+    StringView(std::span<const LChar> span LIFETIME_BOUND);
+    StringView(std::span<const UChar> span LIFETIME_BOUND);
+    StringView(std::span<const char> span LIFETIME_BOUND); // FIXME: Consider dropping this overload. Callers should pass LChars/UChars instead.
+    StringView(const void* string LIFETIME_BOUND, unsigned length, bool is8bit);
     StringView(ASCIILiteral);
 
     ALWAYS_INLINE static StringView fromLatin1(const char* characters) { return StringView { characters }; }
@@ -93,10 +93,10 @@ public:
     GraphemeClusters graphemeClusters() const;
 
     bool is8Bit() const;
-    const void* rawCharacters() const { return m_characters; }
-    std::span<const LChar> span8() const;
-    std::span<const UChar> span16() const;
-    template<typename CharacterType> std::span<const CharacterType> span() const;
+    const void* rawCharacters() const LIFETIME_BOUND { return m_characters; }
+    std::span<const LChar> span8() const LIFETIME_BOUND;
+    std::span<const UChar> span16() const LIFETIME_BOUND;
+    template<typename CharacterType> std::span<const CharacterType> span() const LIFETIME_BOUND;
 
     unsigned hash() const;
 
@@ -514,10 +514,10 @@ class StringView::UpconvertedCharactersWithSize {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit UpconvertedCharactersWithSize(StringView);
-    operator const UChar*() const { return m_characters.data(); }
-    const UChar* get() const { return m_characters.data(); }
-    operator std::span<const UChar>() const { return m_characters; }
-    std::span<const UChar> span() const { return m_characters; }
+    operator const UChar*() const LIFETIME_BOUND { return m_characters.data(); }
+    const UChar* get() const LIFETIME_BOUND { return m_characters.data(); }
+    operator std::span<const UChar>() const LIFETIME_BOUND { return m_characters; }
+    std::span<const UChar> span() const LIFETIME_BOUND { return m_characters; }
 
 private:
     Vector<UChar, N> m_upconvertedCharacters;
@@ -792,11 +792,11 @@ inline bool equalIgnoringASCIICase(StringView a, ASCIILiteral b)
 class StringView::SplitResult {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    SplitResult(StringView, UChar separator, bool allowEmptyEntries);
+    SplitResult(StringView view LIFETIME_BOUND, UChar separator, bool allowEmptyEntries);
 
     class Iterator;
-    Iterator begin() const;
-    Iterator end() const;
+    Iterator begin() const LIFETIME_BOUND;
+    Iterator end() const LIFETIME_BOUND;
 
 private:
     StringView m_string;
@@ -807,11 +807,11 @@ private:
 class StringView::GraphemeClusters {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit GraphemeClusters(StringView);
+    explicit GraphemeClusters(StringView view LIFETIME_BOUND);
 
     class Iterator;
-    Iterator begin() const;
-    Iterator end() const;
+    Iterator begin() const LIFETIME_BOUND;
+    Iterator end() const LIFETIME_BOUND;
 
 private:
     StringView m_stringView;
@@ -820,12 +820,12 @@ private:
 class StringView::CodePoints {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit CodePoints(StringView);
+    explicit CodePoints(StringView view LIFETIME_BOUND);
 
     class Iterator;
-    Iterator begin() const;
-    Iterator end() const;
-    Iterator codePointAt(unsigned index) const;
+    Iterator begin() const LIFETIME_BOUND;
+    Iterator end() const LIFETIME_BOUND;
+    Iterator codePointAt(unsigned index) const LIFETIME_BOUND;
 
 private:
     StringView m_stringView;
@@ -834,11 +834,11 @@ private:
 class StringView::CodeUnits {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit CodeUnits(StringView);
+    explicit CodeUnits(StringView view LIFETIME_BOUND);
 
     class Iterator;
-    Iterator begin() const;
-    Iterator end() const;
+    Iterator begin() const LIFETIME_BOUND;
+    Iterator end() const LIFETIME_BOUND;
 
 private:
     StringView m_stringView;
@@ -878,7 +878,7 @@ class StringView::GraphemeClusters::Iterator {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     Iterator() = delete;
-    WTF_EXPORT_PRIVATE Iterator(StringView, unsigned index);
+    WTF_EXPORT_PRIVATE Iterator(StringView view LIFETIME_BOUND, unsigned index);
     WTF_EXPORT_PRIVATE ~Iterator();
 
     Iterator(const Iterator&) = delete;
@@ -901,7 +901,7 @@ class StringView::CodePoints::Iterator {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     using iterator_category = std::forward_iterator_tag;
-    Iterator(StringView, unsigned index);
+    Iterator(StringView view LIFETIME_BOUND, unsigned index);
 
     char32_t operator*() const;
     Iterator& operator++();
@@ -920,7 +920,7 @@ private:
 class StringView::CodeUnits::Iterator {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    Iterator(StringView, unsigned index);
+    Iterator(StringView view LIFETIME_BOUND, unsigned index);
 
     UChar operator*() const;
     Iterator& operator++();
