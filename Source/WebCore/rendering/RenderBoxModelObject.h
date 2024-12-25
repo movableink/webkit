@@ -196,7 +196,7 @@ public:
 
     void setSelectionState(HighlightState) override;
 
-    bool canHaveBoxInfoInFragment() const { return !isFloating() && !isReplacedOrInlineBlock() && !isInline() && !isRenderTableCell() && isRenderBlock() && !isRenderSVGBlock(); }
+    bool canHaveBoxInfoInFragment() const { return !isFloating() && !isReplacedOrAtomicInline() && !isInline() && !isRenderTableCell() && isRenderBlock() && !isRenderSVGBlock(); }
 
     void contentChanged(ContentChangeType);
     bool hasAcceleratedCompositing() const;

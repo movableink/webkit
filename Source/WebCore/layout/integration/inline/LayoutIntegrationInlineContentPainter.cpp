@@ -97,7 +97,7 @@ void InlineContentPainter::paintDisplayBox(const InlineDisplay::Box& box)
         return;
     }
 
-    if (auto* renderer = dynamicDowncast<RenderBox>(box.layoutBox().rendererForIntegration()); renderer && renderer->isReplacedOrInlineBlock()) {
+    if (auto* renderer = dynamicDowncast<RenderBox>(box.layoutBox().rendererForIntegration()); renderer && renderer->isReplacedOrAtomicInline()) {
         if (m_paintInfo.shouldPaintWithinRoot(*renderer)) {
             // FIXME: Painting should not require a non-const renderer.
             const_cast<RenderBox*>(renderer)->paintAsInlineBlock(m_paintInfo, flippedContentOffsetIfNeeded(*renderer));

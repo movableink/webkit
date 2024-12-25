@@ -2444,7 +2444,7 @@ LayoutSize RenderBox::offsetFromContainer(RenderElement& container, const Layout
     if (isInFlowPositioned())
         offset += offsetForInFlowPosition();
 
-    if (!isInline() || isReplacedOrInlineBlock())
+    if (!isInline() || isReplacedOrAtomicInline())
         offset += topLeftLocationOffset();
 
     if (auto* boxContainer = dynamicDowncast<RenderBox>(container))
@@ -2684,7 +2684,7 @@ void RenderBox::computeLogicalWidthInFragment(LogicalExtentComputedValues& compu
     LayoutUnit containerLogicalWidth = std::max<LayoutUnit>(0, containingBlockLogicalWidthForContentInFragment(fragment));
     bool hasPerpendicularContainingBlock = cb.isHorizontalWritingMode() != isHorizontalWritingMode();
 
-    if (isInline() && !isInlineBlockOrInlineTable()) {
+    if (isInline() && !isNonReplacedAtomicInline()) {
         // just calculate margins
         computedValues.m_margins.m_start = minimumValueForLength(styleToUse.marginStart(), containerLogicalWidth);
         computedValues.m_margins.m_end = minimumValueForLength(styleToUse.marginEnd(), containerLogicalWidth);
@@ -2902,7 +2902,7 @@ bool RenderBox::sizesLogicalWidthToFitContent(SizeType widthType) const
 {
     // Marquees in WinIE are like a mixture of blocks and inline-blocks.  They size as though they're blocks,
     // but they allow text to sit on the same line as the marquee.
-    if (isFloating() || (isInlineBlockOrInlineTable() && !isHTMLMarquee()))
+    if (isFloating() || (isNonReplacedAtomicInline() && !isHTMLMarquee()))
         return true;
 
     if (isGridItem()) {
@@ -3164,7 +3164,7 @@ RenderBox::LogicalExtentComputedValues RenderBox::computeLogicalHeight(LayoutUni
     computedValues.m_position = logicalTop;
 
     // Cell height is managed by the table and inline non-replaced elements do not support a height property.
-    if (isRenderTableCell() || (isInline() && !isReplacedOrInlineBlock()))
+    if (isRenderTableCell() || (isInline() && !isReplacedOrAtomicInline()))
         return computedValues;
 
     Length h;
@@ -3423,7 +3423,7 @@ bool RenderBox::skipContainingBlockForPercentHeightCalculation(const RenderBox& 
 
 bool RenderBox::shouldTreatChildAsReplacedInTableCells() const
 {
-    if (isReplacedOrInlineBlock())
+    if (isReplacedOrAtomicInline())
         return true;
     return element() && (element()->isFormControlElement() || is<HTMLImageElement>(element()));
 }
@@ -4017,7 +4017,7 @@ static void computeInlineStaticDistance(Length& logicalLeft, Length& logicalRigh
 
 void RenderBox::computePositionedLogicalWidth(LogicalExtentComputedValues& computedValues, RenderFragmentContainer* fragment) const
 {
-    if (isReplacedOrInlineBlock()) {
+    if (isReplacedOrAtomicInline()) {
         // FIXME: Positioned replaced elements inside a flow thread are not working properly
         // with variable width fragments (see https://bugs.webkit.org/show_bug.cgi?id=69896 ).
         computePositionedLogicalWidthReplaced(computedValues);
@@ -4476,7 +4476,7 @@ static void computeBlockStaticDistance(Length& logicalTop, Length& logicalBottom
 
 void RenderBox::computePositionedLogicalHeight(LogicalExtentComputedValues& computedValues) const
 {
-    if (isReplacedOrInlineBlock()) {
+    if (isReplacedOrAtomicInline()) {
         computePositionedLogicalHeightReplaced(computedValues);
         return;
     }
@@ -5197,7 +5197,7 @@ bool RenderBox::establishesIndependentFormattingContext() const
 
 bool RenderBox::avoidsFloats() const
 {
-    return isReplacedOrInlineBlock() || isLegend() || isFieldset() || createsNewFormattingContext() || (element() && element()->isFormControlElement());
+    return isReplacedOrAtomicInline() || isLegend() || isFieldset() || createsNewFormattingContext() || (element() && element()->isFormControlElement());
 }
 
 void RenderBox::addVisualEffectOverflow()
@@ -5418,7 +5418,7 @@ bool RenderBox::hasUnsplittableScrollingOverflow() const
 
 bool RenderBox::isUnsplittableForPagination() const
 {
-    return isReplacedOrInlineBlock()
+    return isReplacedOrAtomicInline()
         || hasUnsplittableScrollingOverflow()
         || (parent() && isWritingModeRoot())
         || (isFloating() && style().pseudoElementType() == PseudoId::FirstLetter && style().initialLetterDrop() > 0)
@@ -5427,14 +5427,14 @@ bool RenderBox::isUnsplittableForPagination() const
 
 LayoutUnit RenderBox::lineHeight(bool /*firstLine*/, LineDirectionMode direction, LinePositionMode /*linePositionMode*/) const
 {
-    if (isReplacedOrInlineBlock())
+    if (isReplacedOrAtomicInline())
         return direction == HorizontalLine ? m_marginBox.top() + height() + m_marginBox.bottom() : m_marginBox.right() + width() + m_marginBox.left();
     return 0;
 }
 
 LayoutUnit RenderBox::baselinePosition(FontBaseline baselineType, bool /*firstLine*/, LineDirectionMode direction, LinePositionMode /*linePositionMode*/) const
 {
-    if (isReplacedOrInlineBlock()) {
+    if (isReplacedOrAtomicInline()) {
         auto result = roundToInt(direction == HorizontalLine ? m_marginBox.top() + height() + m_marginBox.bottom() : m_marginBox.right() + width() + m_marginBox.left());
         if (baselineType == AlphabeticBaseline)
             return result;

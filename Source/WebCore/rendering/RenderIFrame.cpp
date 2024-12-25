@@ -62,8 +62,9 @@ bool RenderIFrame::shouldComputeSizeAsReplaced() const
     return true;
 }
 
-bool RenderIFrame::isInlineBlockOrInlineTable() const
+bool RenderIFrame::isNonReplacedAtomicInline() const
 {
+    // FIXME: iFrames should not override this function.
     return isInline();
 }
 

@@ -985,7 +985,7 @@ RenderDeprecatedFlexibleBox::ClampedContent RenderDeprecatedFlexibleBox::applyLi
                 continue;
 
             child->clearOverridingContentSize();
-            if (relayoutChildren || (child->isReplacedOrInlineBlock() && (child->style().width().isPercentOrCalculated() || child->style().height().isPercentOrCalculated()))
+            if (relayoutChildren || (child->isReplacedOrAtomicInline() && (child->style().width().isPercentOrCalculated() || child->style().height().isPercentOrCalculated()))
                 || (child->style().height().isAuto() && is<RenderBlockFlow>(*child))) {
                 child->setChildNeedsLayout(MarkOnlyThis);
 
@@ -1059,7 +1059,7 @@ void RenderDeprecatedFlexibleBox::clearLineClamp()
             continue;
 
         child->clearOverridingContentSize();
-        if ((child->isReplacedOrInlineBlock() && (child->style().width().isPercentOrCalculated() || child->style().height().isPercentOrCalculated()))
+        if ((child->isReplacedOrAtomicInline() && (child->style().width().isPercentOrCalculated() || child->style().height().isPercentOrCalculated()))
             || (child->style().height().isAuto() && is<RenderBlockFlow>(*child))) {
             child->setChildNeedsLayout();
 

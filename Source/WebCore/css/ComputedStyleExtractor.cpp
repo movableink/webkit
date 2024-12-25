@@ -2688,7 +2688,7 @@ static CSSValueID convertToColumnBreak(BreakInside value)
 
 static inline bool isNonReplacedInline(RenderObject& renderer)
 {
-    return renderer.isInline() && !renderer.isReplacedOrInlineBlock();
+    return renderer.isInline() && !renderer.isReplacedOrAtomicInline();
 }
 
 static bool rendererCanHaveTrimmedMargin(const RenderBox& renderer, MarginTrimType marginTrimType)

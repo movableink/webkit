@@ -51,7 +51,7 @@ RenderListMarker::RenderListMarker(RenderListItem& listItem, RenderStyle&& style
     , m_listItem(listItem)
 {
     setInline(true);
-    setReplacedOrInlineBlock(true); // pretend to be replaced
+    setReplacedOrAtomicInline(true); // pretend to be replaced
     ASSERT(isRenderListMarker());
 }
 

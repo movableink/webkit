@@ -443,7 +443,7 @@ AccessibilityObject* AccessibilityRenderObject::nextSibling() const
 
 static RenderBoxModelObject* nextContinuation(RenderObject& renderer)
 {
-    if (!renderer.isReplacedOrInlineBlock()) {
+    if (!renderer.isReplacedOrAtomicInline()) {
         if (auto* renderInline = dynamicDowncast<RenderInline>(renderer))
             return renderInline->continuation();
     }

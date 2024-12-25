@@ -442,7 +442,7 @@ public:
     bool isRenderFrame() const { return type() == Type::Frame; }
     bool isRenderFrameSet() const { return type() == Type::FrameSet; }
     virtual bool isImage() const { return false; }
-    virtual bool isInlineBlockOrInlineTable() const { return false; }
+    virtual bool isNonReplacedAtomicInline() const { return false; }
     bool isRenderListBox() const { return type() == Type::ListBox; }
     bool isRenderListItem() const { return type() == Type::ListItem; }
     bool isRenderListMarker() const { return type() == Type::ListMarker; }
@@ -649,7 +649,7 @@ public:
     // rest of the rendering tree will move to a similar model.
     virtual bool nodeAtFloatPoint(const HitTestRequest&, HitTestResult&, const FloatPoint& pointInParent, HitTestAction);
 
-    virtual bool hasIntrinsicAspectRatio() const { return isReplacedOrInlineBlock() && (isImage() || isRenderVideo() || isRenderHTMLCanvas() || isRenderViewTransitionCapture()); }
+    virtual bool hasIntrinsicAspectRatio() const { return isReplacedOrAtomicInline() && (isImage() || isRenderVideo() || isRenderHTMLCanvas() || isRenderViewTransitionCapture()); }
     bool isAnonymous() const { return m_typeFlags.contains(TypeFlag::IsAnonymous); }
     bool isAnonymousBlock() const;
     bool isAnonymousForPercentageResolution() const { return isAnonymous() && !isViewTransitionPseudo(); }
@@ -678,7 +678,7 @@ public:
     bool isRenderTableRow() const { return type() == Type::TableRow; }
     bool isRenderView() const  { return type() == Type::View; }
     bool isInline() const { return !m_stateBitfields.hasFlag(StateFlag::IsBlock); } // inline object
-    bool isReplacedOrInlineBlock() const { return m_stateBitfields.hasFlag(StateFlag::IsReplacedOrInlineBlock); }
+    bool isReplacedOrAtomicInline() const { return m_stateBitfields.hasFlag(StateFlag::IsReplacedOrAtomicInline); }
     bool isHorizontalWritingMode() const { return !m_stateBitfields.hasFlag(StateFlag::VerticalWritingMode); }
 
     bool hasReflection() const { return hasRareData() && rareData().hasReflection; }
@@ -793,7 +793,7 @@ public:
     void invalidateBackgroundObscurationStatus();
     virtual bool computeBackgroundIsKnownToBeObscured(const LayoutPoint&) { return false; }
 
-    void setReplacedOrInlineBlock(bool b = true) { m_stateBitfields.setFlag(StateFlag::IsReplacedOrInlineBlock, b); }
+    void setReplacedOrAtomicInline(bool b = true) { m_stateBitfields.setFlag(StateFlag::IsReplacedOrAtomicInline, b); }
     void setHorizontalWritingMode(bool b = true) { m_stateBitfields.setFlag(StateFlag::VerticalWritingMode, !b); }
     void setHasNonVisibleOverflow(bool b = true) { m_stateBitfields.setFlag(StateFlag::HasNonVisibleOverflow, b); }
     void setHasLayer(bool b = true) { m_stateBitfields.setFlag(StateFlag::HasLayer, b); }
@@ -1213,7 +1213,7 @@ private:
 
     enum class StateFlag : uint32_t {
         IsBlock = 1 << 0,
-        IsReplacedOrInlineBlock = 1 << 1,
+        IsReplacedOrAtomicInline = 1 << 1,
         BeingDestroyed = 1 << 2,
         NeedsLayout = 1 << 3,
         NeedsPositionedMovementLayout = 1 << 4,

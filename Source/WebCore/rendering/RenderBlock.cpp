@@ -309,8 +309,8 @@ void RenderBlock::removePositionedObjectsIfNeeded(const RenderStyle& oldStyle, c
         // They will be inserted into our positioned objects list during layout.
         auto* containingBlock = parent();
         while (containingBlock && !is<RenderView>(*containingBlock)
-            && (containingBlock->style().position() == PositionType::Static || (containingBlock->isInline() && !containingBlock->isReplacedOrInlineBlock()))) {
-            if (containingBlock->style().position() == PositionType::Relative && containingBlock->isInline() && !containingBlock->isReplacedOrInlineBlock()) {
+            && (containingBlock->style().position() == PositionType::Static || (containingBlock->isInline() && !containingBlock->isReplacedOrAtomicInline()))) {
+            if (containingBlock->style().position() == PositionType::Relative && containingBlock->isInline() && !containingBlock->isReplacedOrAtomicInline()) {
                 containingBlock = containingBlock->containingBlock();
                 break;
             }
@@ -324,8 +324,7 @@ void RenderBlock::removePositionedObjectsIfNeeded(const RenderStyle& oldStyle, c
 void RenderBlock::styleWillChange(StyleDifference diff, const RenderStyle& newStyle)
 {
     const RenderStyle* oldStyle = hasInitializedStyle() ? &style() : nullptr;
-    // FIXME: Should change the expression below to newStyle.display() == DisplayType::InlineBlock.
-    setReplacedOrInlineBlock(newStyle.isDisplayInlineType());
+    setReplacedOrAtomicInline(newStyle.isDisplayInlineType());
     if (oldStyle) {
         removePositionedObjectsIfNeeded(*oldStyle, newStyle);
         if (isLegend() && !oldStyle->isFloating() && newStyle.isFloating())
@@ -1094,7 +1093,7 @@ bool RenderBlock::paintChild(RenderBox& child, PaintInfo& paintInfo, const Layou
         return false;
     }
 
-    if (!child.isFloating() && child.isReplacedOrInlineBlock() && usePrintRect && child.height() <= view().printRect().height()) {
+    if (!child.isFloating() && child.isReplacedOrAtomicInline() && usePrintRect && child.height() <= view().printRect().height()) {
         // Paginate block-level replaced elements.
         if (absoluteChildY + child.height() > view().printRect().maxY()) {
             if (absoluteChildY < view().truncatedAt())
@@ -1393,7 +1392,7 @@ bool RenderBlock::isSelectionRoot() const
 
     if (isBody() || isDocumentElementRenderer() || hasNonVisibleOverflow()
         || isPositioned() || isFloating()
-        || isRenderTableCell() || isInlineBlockOrInlineTable()
+        || isRenderTableCell() || isNonReplacedAtomicInline()
         || isTransformed() || hasReflection() || hasMask() || isWritingModeRoot()
         || isRenderFragmentedFlow() || style().columnSpan() == ColumnSpan::All
         || isFlexItemIncludingDeprecated() || isGridItem())
@@ -2154,7 +2153,7 @@ VisiblePosition RenderBlock::positionForPoint(const LayoutPoint& point, HitTestS
     if (isRenderTable())
         return RenderBox::positionForPoint(point, source, fragment);
 
-    if (isReplacedOrInlineBlock()) {
+    if (isReplacedOrAtomicInline()) {
         // FIXME: This seems wrong when the object's writing-mode doesn't match the line's writing-mode.
         LayoutUnit pointLogicalLeft = isHorizontalWritingMode() ? point.x() : point.y();
         LayoutUnit pointLogicalTop = isHorizontalWritingMode() ? point.y() : point.x();
@@ -2429,7 +2428,7 @@ LayoutUnit RenderBlock::lineHeight(bool firstLine, LineDirectionMode direction, 
     // the base class.  If we're being queried as though we're the root line
     // box, then the fact that we're an inline-block is irrelevant, and we behave
     // just like a block.
-    if (isReplacedOrInlineBlock() && linePositionMode == PositionOnContainingLine)
+    if (isReplacedOrAtomicInline() && linePositionMode == PositionOnContainingLine)
         return RenderBox::lineHeight(firstLine, direction, linePositionMode);
 
     auto& lineStyle = firstLine ? firstLineStyle() : style();
@@ -2442,7 +2441,7 @@ LayoutUnit RenderBlock::baselinePosition(FontBaseline baselineType, bool firstLi
     // the base class.  If we're being queried as though we're the root line
     // box, then the fact that we're an inline-block is irrelevant, and we behave
     // just like a block.
-    if (isReplacedOrInlineBlock() && linePositionMode == PositionOnContainingLine) {
+    if (isReplacedOrAtomicInline() && linePositionMode == PositionOnContainingLine) {
         // For "leaf" theme objects, let the theme decide what the baseline position is.
         // FIXME: Might be better to have a custom CSS property instead, so that if the theme
         // is turned off, checkboxes/radios will still have decent baselines.
@@ -2592,7 +2591,7 @@ static inline RenderBlock* findFirstLetterBlock(RenderBlock* start)
             return firstLetterBlock;
 
         RenderElement* parentBlock = firstLetterBlock->parent();
-        if (firstLetterBlock->isReplacedOrInlineBlock() || !parentBlock || parentBlock->firstChild() != firstLetterBlock
+        if (firstLetterBlock->isReplacedOrAtomicInline() || !parentBlock || parentBlock->firstChild() != firstLetterBlock
             || !isRenderBlockFlowOrRenderButton(*parentBlock))
             return nullptr;
         firstLetterBlock = downcast<RenderBlock>(parentBlock);
@@ -2637,7 +2636,7 @@ void RenderBlock::getFirstLetter(RenderObject*& firstLetter, RenderElement*& fir
                 break;
             }
             firstLetter = current.nextSibling();
-        } else if (current.isReplacedOrInlineBlock() || is<RenderButton>(current) || is<RenderMenuList>(current))
+        } else if (current.isReplacedOrAtomicInline() || is<RenderButton>(current) || is<RenderMenuList>(current))
             break;
         else if (current.isFlexibleBoxIncludingDeprecated() || current.isRenderGrid())
             firstLetter = current.nextSibling();

@@ -75,7 +75,7 @@ RenderReplaced::RenderReplaced(Type type, Element& element, RenderStyle&& style,
     , m_intrinsicSize(cDefaultWidth, cDefaultHeight)
 {
     ASSERT(element.isReplaced(this->style()) || type == Type::Image);
-    setReplacedOrInlineBlock(true);
+    setReplacedOrAtomicInline(true);
     ASSERT(isRenderReplaced());
 }
 
@@ -84,7 +84,7 @@ RenderReplaced::RenderReplaced(Type type, Element& element, RenderStyle&& style,
     , m_intrinsicSize(intrinsicSize)
 {
     ASSERT(element.isReplaced(this->style()) || type == Type::Image);
-    setReplacedOrInlineBlock(true);
+    setReplacedOrAtomicInline(true);
     ASSERT(isRenderReplaced());
 }
 
@@ -92,7 +92,7 @@ RenderReplaced::RenderReplaced(Type type, Document& document, RenderStyle&& styl
     : RenderBox(type, document, WTFMove(style), { }, flags)
     , m_intrinsicSize(intrinsicSize)
 {
-    setReplacedOrInlineBlock(true);
+    setReplacedOrAtomicInline(true);
     ASSERT(isRenderReplaced());
 }
 

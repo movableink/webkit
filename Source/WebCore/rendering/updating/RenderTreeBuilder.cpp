@@ -725,7 +725,7 @@ void RenderTreeBuilder::createAnonymousWrappersForInlineContent(RenderBlock& par
     // means that we cannot coalesce inlines before |insertionPoint| with inlines following
     // |insertionPoint|, because the new child is going to be inserted in between the inlines,
     // splitting them.
-    ASSERT(parent.isInlineBlockOrInlineTable() || !parent.isInline());
+    ASSERT(parent.isNonReplacedAtomicInline() || !parent.isInline());
     ASSERT(!insertionPoint || insertionPoint->parent() == &parent);
 
     parent.setChildrenInline(false);

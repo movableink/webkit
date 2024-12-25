@@ -680,7 +680,7 @@ protected:
 
     std::optional<LayoutUnit> computeIntrinsicLogicalContentHeightUsing(Length logicalHeightLength, std::optional<LayoutUnit> intrinsicContentHeight, LayoutUnit borderAndPadding) const;
     
-    virtual bool shouldComputeSizeAsReplaced() const { return isReplacedOrInlineBlock() && !isInlineBlockOrInlineTable(); }
+    virtual bool shouldComputeSizeAsReplaced() const { return isReplacedOrAtomicInline() && !isNonReplacedAtomicInline(); }
 
     LayoutRect localOutlineBoundsRepaintRect() const;
 
