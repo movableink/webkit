@@ -2668,7 +2668,7 @@ void RenderBox::computeLogicalWidthInFragment(LogicalExtentComputedValues& compu
     bool stretching = (parent()->style().boxAlign() == BoxAlignment::Stretch);
     // FIXME: Stretching is the only reason why we don't want the box to be treated as a replaced element, so we could perhaps
     // refactor all this logic, not only for flex and grid since alignment is intended to be applied to any block.
-    bool treatAsReplaced = shouldComputeSizeAsReplaced() && (!inVerticalBox || !stretching);
+    bool treatAsReplaced = is<RenderReplaced>(*this) && (!inVerticalBox || !stretching);
     treatAsReplaced = treatAsReplaced && (!isGridItem() || !hasStretchedLogicalWidth());
 
     const RenderStyle& styleToUse = style();
@@ -3198,7 +3198,7 @@ RenderBox::LogicalExtentComputedValues RenderBox::computeLogicalHeight(LayoutUni
         // https://bugs.webkit.org/show_bug.cgi?id=46418
         bool inHorizontalBox = parent()->isRenderDeprecatedFlexibleBox() && parent()->style().boxOrient() == BoxOrient::Horizontal;
         bool stretching = parent()->style().boxAlign() == BoxAlignment::Stretch;
-        bool treatAsReplaced = shouldComputeSizeAsReplaced() && (!inHorizontalBox || !stretching);
+        bool treatAsReplaced = is<RenderReplaced>(*this) && (!inHorizontalBox || !stretching);
         bool checkMinMaxHeight = false;
 
         // The parent box is flexing us, so it has increased or decreased our height. We have to grab our cached flexible height.
@@ -5705,7 +5705,7 @@ bool RenderBox::shouldComputeLogicalWidthFromAspectRatio() const
         return false;
 
     if (isGridItem()) {
-        if (shouldComputeSizeAsReplaced()) {
+        if (is<RenderReplaced>(*this)) {
             if (hasStretchedLogicalWidth() && hasStretchedLogicalHeight())
                 return false;
         } else if (hasStretchedLogicalWidth(StretchingMode::Explicit))

@@ -43,7 +43,6 @@ public:
 private:
     void frameOwnerElement() const = delete;
 
-    bool shouldComputeSizeAsReplaced() const override;
     bool isNonReplacedAtomicInline() const override;
 
     void layout() override;
