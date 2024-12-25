@@ -85,6 +85,8 @@ inline CharacterClassWidths& operator|=(CharacterClassWidths& lhs, CharacterClas
 struct CharacterClass {
     WTF_MAKE_TZONE_ALLOCATED(CharacterClass);
 public:
+    using Table = const char*;
+
     // All CharacterClass instances have to have the full set of matches and ranges,
     // they may have an optional m_table for faster lookups (which must match the
     // specified matches and ranges)
@@ -95,7 +97,7 @@ public:
     {
     }
 
-    CharacterClass(const char* table, bool inverted)
+    CharacterClass(Table table, bool inverted)
         : m_table(table)
         , m_characterWidths(CharacterClassWidths::Unknown)
         , m_tableInverted(inverted)
@@ -144,7 +146,7 @@ public:
     Vector<char32_t> m_matchesUnicode;
     Vector<CharacterRange> m_rangesUnicode;
 
-    const char* m_table;
+    Table m_table;
     CharacterClassWidths m_characterWidths;
     bool m_tableInverted : 1;
     bool m_anyCharacter : 1;

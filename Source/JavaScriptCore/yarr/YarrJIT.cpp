@@ -307,6 +307,72 @@ template<class YarrJITRegs = YarrJITDefaultRegisters>
 class YarrGenerator final : public YarrJITInfo {
     static constexpr int32_t errorCodePoint = -1;
 
+    class MatchTargets {
+    public:
+        enum class PreferredTarget : uint8_t {
+            NoPreference = 0,
+            PreferMatchSucceeded = 1,
+            MatchFailFallThrough = PreferMatchSucceeded,
+            PreferMatchFailed = 2,
+            MatchSuccessFallThrough = PreferMatchFailed
+        };
+
+        MatchTargets(MacroAssembler::JumpList& matchDest)
+            : m_matchSucceededTargets(&matchDest)
+            , m_preferredTarget(PreferredTarget::PreferMatchSucceeded)
+        { }
+
+        MatchTargets(MacroAssembler::JumpList& compareDest, PreferredTarget preferredTarget)
+            : m_preferredTarget(&preferredTarget)
+        {
+            if (preferredTarget == PreferredTarget::PreferMatchFailed)
+                m_matchFailedTargets = &compareDest;
+            else
+                m_matchSucceededTargets  = &compareDest;
+        }
+
+        MatchTargets(MacroAssembler::JumpList& matchDest, MacroAssembler::JumpList& failDest, PreferredTarget preferredTarget = PreferredTarget::NoPreference)
+            : m_matchSucceededTargets(&matchDest)
+            , m_matchFailedTargets(&failDest)
+            , m_preferredTarget(preferredTarget)
+        { }
+
+        PreferredTarget preferredTarget()
+        {
+            return m_preferredTarget;
+        }
+
+        bool hasSucceedTarget()
+        {
+            return m_matchSucceededTargets != nullptr;
+        }
+
+        bool hasFailedTarget()
+        {
+            return m_matchFailedTargets != nullptr;
+        }
+
+        MacroAssembler::JumpList& matchSucceeded() { return *m_matchSucceededTargets; }
+        MacroAssembler::JumpList& matchFailed() { return *m_matchFailedTargets; }
+
+        void appendSucceeded(MacroAssembler::Jump jump)
+        {
+            ASSERT(m_matchSucceededTargets != nullptr);
+            m_matchSucceededTargets->append(jump);
+        }
+
+        void appendFailed(MacroAssembler::Jump jump)
+        {
+            ASSERT(m_matchFailedTargets != nullptr);
+            m_matchFailedTargets->append(jump);
+        }
+
+    private:
+        MacroAssembler::JumpList* m_matchSucceededTargets { nullptr };
+        MacroAssembler::JumpList* m_matchFailedTargets { nullptr };
+        PreferredTarget m_preferredTarget;
+    };
+
 #if ENABLE(YARR_JIT_ALL_PARENS_EXPRESSIONS)
     struct ParenContextSizes {
         size_t m_numSubpatterns;
@@ -727,11 +793,23 @@ class YarrGenerator final : public YarrJITInfo {
         matchCharacterClassOnlyOneRange(character, scratch, failMatches, ranges[0]);
     }
 
-    void matchCharacterClass(MacroAssembler::RegisterID character, MacroAssembler::RegisterID scratch, MacroAssembler::JumpList& matchDest, const CharacterClass* charClass)
+    void matchCharacterClassTable(MacroAssembler::RegisterID character, MacroAssembler::JumpList& failMatches, const char* table, bool tableInverted = false)
+    {
+        ASSERT(!m_decodeSurrogatePairs);
+        MacroAssembler::ExtendedAddress tableEntry(character, reinterpret_cast<intptr_t>(table));
+        failMatches.append(m_jit.branchTest8(tableInverted ? MacroAssembler::NonZero : MacroAssembler::Zero, tableEntry));
+    }
+
+    void matchCharacterClass(MacroAssembler::RegisterID character, MacroAssembler::RegisterID scratch, MatchTargets matchTargets, const CharacterClass* charClass)
     {
         if (charClass->m_table && !m_decodeSurrogatePairs) {
+            if (matchTargets.hasFailedTarget()) {
+                MacroAssembler::ExtendedAddress tableEntry(character, reinterpret_cast<intptr_t>(charClass->m_table));
+                matchTargets.appendFailed(m_jit.branchTest8(charClass->m_tableInverted ? MacroAssembler::NonZero : MacroAssembler::Zero, tableEntry));
+                return;
+            }
             MacroAssembler::ExtendedAddress tableEntry(character, reinterpret_cast<intptr_t>(charClass->m_table));
-            matchDest.append(m_jit.branchTest8(charClass->m_tableInverted ? MacroAssembler::Zero : MacroAssembler::NonZero, tableEntry));
+            matchTargets.appendSucceeded(m_jit.branchTest8(charClass->m_tableInverted ? MacroAssembler::Zero : MacroAssembler::NonZero, tableEntry));
             return;
         }
 
@@ -756,13 +834,18 @@ class YarrGenerator final : public YarrJITInfo {
             return lhs.begin < rhs.begin;
         });
 
+        if (!unifiedRanges.size() && !unifiedMatches.size() && matchTargets.hasFailedTarget()) {
+            matchTargets.appendFailed(m_jit.jump());
+            return;
+        }
+
         if (unifiedRanges.size()) {
             MacroAssembler::JumpList failures;
             bool shouldGenerateFailureJump = false;
-            matchCharacterClassRange(character, scratch, failures, matchDest, unifiedRanges.span(), unifiedMatches.span(), shouldGenerateFailureJump, true);
+            matchCharacterClassRange(character, scratch, failures, matchTargets.matchSucceeded(), unifiedRanges.span(), unifiedMatches.span(), shouldGenerateFailureJump, true);
             failures.link(&m_jit);
         } else if (unifiedMatches.size())
-            matchCharacterClassSet(character, scratch, matchDest, unifiedMatches.span());
+            matchCharacterClassSet(character, scratch, matchTargets.matchSucceeded(), unifiedMatches.span());
     }
 
     void matchCharacterClassTermInner(PatternTerm* term, MacroAssembler::JumpList& failures, const MacroAssembler::RegisterID character, const MacroAssembler::RegisterID scratch)
@@ -784,8 +867,9 @@ class YarrGenerator final : public YarrJITInfo {
                 // If we are matching the "any character" builtin class for non-unicode patterns,
                 // we only need to read the character and don't need to match as it will always succeed.
                 if (!characterClassToProcess->m_anyCharacter) {
-                    matchCharacterClass(character, scratch, matchDest, characterClassToProcess);
-                    failures.append(m_jit.jump());
+                    matchCharacterClass(character, scratch, MatchTargets(matchDest, failures, MatchTargets::PreferredTarget::MatchSuccessFallThrough), characterClassToProcess);
+                    if (!matchDest.empty())
+                        failures.append(m_jit.jump());
                 }
                 matchDest.link(&m_jit);
             }
@@ -1539,6 +1623,7 @@ class YarrGenerator final : public YarrJITInfo {
         nonWordCharThenWordChar.link(&m_jit);
         wordCharThenNonWordChar.link(&m_jit);
     }
+
     void backtrackAssertionWordBoundary(size_t opIndex)
     {
         backtrackTermDefault(opIndex);

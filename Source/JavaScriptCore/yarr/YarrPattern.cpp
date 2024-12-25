@@ -2596,6 +2596,9 @@ void CharacterClass::copyOnly8BitCharacterData(const CharacterClass& other)
             m_rangesUnicode.append(CharacterRange(range.begin, std::min<char32_t>(range.end, 0xff)));
     }
 
+    m_table = other.m_table;
+    m_tableInverted = other.m_tableInverted;
+
     if (m_matches.isEmpty() && m_matchesUnicode.isEmpty()
         && m_ranges.size() == 1 && m_rangesUnicode.size() == 1
         && !m_ranges[0].begin && m_rangesUnicode[0].end == 0xff
