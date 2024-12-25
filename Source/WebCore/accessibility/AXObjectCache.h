@@ -214,6 +214,7 @@ protected:
     macro(URLChanged) \
     macro(ValueChanged) \
     macro(VisibilityChanged) \
+    macro(VisitedStateChanged) \
     macro(ScrolledToAnchor) \
     macro(LiveRegionCreated) \
     macro(LiveRegionChanged) \
@@ -238,6 +239,7 @@ protected:
     macro(ReadOnlyStatusChanged) \
     macro(RequiredStatusChanged) \
     macro(SortDirectionChanged) \
+    macro(SpeakAsChanged) \
     macro(TextChanged) \
     macro(TextCompositionChanged) \
     macro(TextUnderElementChanged) \

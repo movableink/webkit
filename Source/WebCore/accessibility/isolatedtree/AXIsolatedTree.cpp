@@ -678,6 +678,9 @@ void AXIsolatedTree::updateNodeProperties(AccessibilityObject& axObject, const A
         case AXProperty::IdentifierAttribute:
             propertyMap.set(AXProperty::IdentifierAttribute, axObject.identifierAttribute().isolatedCopy());
             break;
+        case AXProperty::InsideLink:
+            propertyMap.set(AXProperty::InsideLink, axObject.insideLink());
+            break;
         case AXProperty::InternalLinkElement: {
             auto* linkElement = axObject.internalLinkElement();
             propertyMap.set(AXProperty::InternalLinkElement, linkElement ? std::optional { linkElement->objectID() } : std::nullopt);
@@ -762,6 +765,9 @@ void AXIsolatedTree::updateNodeProperties(AccessibilityObject& axObject, const A
             break;
         case AXProperty::SortDirection:
             propertyMap.set(AXProperty::SortDirection, static_cast<int>(axObject.sortDirection()));
+            break;
+        case AXProperty::SpeechHint:
+            propertyMap.set(AXProperty::SpeechHint, axObject.speechHintAttributeValue().isolatedCopy());
             break;
         case AXProperty::KeyShortcuts:
             propertyMap.set(AXProperty::SupportsKeyShortcuts, axObject.supportsKeyShortcuts());

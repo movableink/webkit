@@ -1985,20 +1985,46 @@ void AXObjectCache::onSelectedChanged(Element& element)
 
 void AXObjectCache::onStyleChange(Element& element, Style::Change change, const RenderStyle* oldStyle, const RenderStyle* newStyle)
 {
-    if (change == Style::Change::None)
+    if (change == Style::Change::None || !oldStyle || !newStyle)
         return;
 
-    if (!element.renderer() && oldStyle && newStyle && oldStyle->usedVisibility() != newStyle->usedVisibility()) {
+    RefPtr object = get(element);
+    if (!object)
+        return;
+
+    if (!element.renderer() && oldStyle->usedVisibility() != newStyle->usedVisibility()) {
         // We only need to do this when the given element doesn't have a renderer, as if it did, we would get a normal
         // children-changed event through the render tree.
-        childrenChanged(&element);
+        childrenChanged(object.get());
     }
+
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    if (oldStyle->insideLink() != newStyle->insideLink())
+        postNotification(*object, AXNotification::VisitedStateChanged);
+
+    if (oldStyle->speakAs() != newStyle->speakAs())
+        postNotification(*object, AXNotification::SpeakAsChanged);
+#endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 }
 
 void AXObjectCache::onStyleChange(RenderText& renderText, StyleDifference difference, const RenderStyle* oldStyle, const RenderStyle& newStyle)
 {
-#if ENABLE(ACCESSIBILITY_ISOLATED_TREE) && ENABLE(AX_THREAD_TEXT_APIS)
-    if (difference == StyleDifference::Equal || !oldStyle)
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    if (!oldStyle)
+        return;
+
+    bool speakAsChanged = UNLIKELY(oldStyle->speakAs() != newStyle.speakAs());
+#if !ENABLE(AX_THREAD_TEXT_APIS)
+    // In !ENABLE(AX_THREAD_TEXT_APIS), we don't have anything to do if speak-as hasn't changed.
+    if (!speakAsChanged)
+        return;
+#endif // !ENABLE(AX_THREAD_TEXT_APIS)
+
+    bool diffIsEqual = difference == StyleDifference::Equal;
+    // When speak-as changes, style difference will be StyleDifference::Equal (so "equal"
+    // is not exactly accurate). So if the styles are "equal" and speak-as hasn't changed,
+    // we have nothing to do.
+    if (diffIsEqual && !speakAsChanged)
         return;
 
     RefPtr tree = AXIsolatedTree::treeForPageID(m_pageID);
@@ -2009,6 +2035,15 @@ void AXObjectCache::onStyleChange(RenderText& renderText, StyleDifference differ
     if (!object)
         return;
 
+    if (speakAsChanged)
+        postNotification(*object, AXNotification::SpeakAsChanged);
+
+    // The following style changes will not have a StyleDifference::Equal, so we can
+    // exit early if the diff is equal.
+    if (diffIsEqual)
+        return;
+
+#if ENABLE(AX_THREAD_TEXT_APIS)
     if (!oldStyle->fontCascadeEqual(newStyle))
         tree->queueNodeUpdate(object->objectID(), { AXProperty::Font });
 
@@ -2034,6 +2069,8 @@ void AXObjectCache::onStyleChange(RenderText& renderText, StyleDifference differ
 
     if (oldStyle->textDecorationColor() != newStyle.textDecorationColor())
         tree->queueNodeUpdate(object->objectID(), { { AXProperty::LinethroughColor, AXProperty::UnderlineColor } });
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
+
 #else
     UNUSED_PARAM(renderText);
     UNUSED_PARAM(difference);
@@ -4696,6 +4733,9 @@ void AXObjectCache::updateIsolatedTree(const Vector<std::pair<Ref<AccessibilityO
         case AXNotification::SetSizeChanged:
             tree->queueNodeUpdate(notification.first->objectID(), { { AXProperty::SetSize, AXProperty::SupportsSetSize } });
             break;
+        case AXNotification::SpeakAsChanged:
+            tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::SpeechHint });
+            break;
         case AXNotification::TextCompositionChanged:
             tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::TextInputMarkedTextMarkerRange });
             break;
@@ -4717,6 +4757,9 @@ void AXObjectCache::updateIsolatedTree(const Vector<std::pair<Ref<AccessibilityO
             break;
         case AXNotification::VisibilityChanged:
             tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::IsVisible });
+            break;
+        case AXNotification::VisitedStateChanged:
+            tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::InsideLink });
             break;
         case AXNotification::ActiveDescendantChanged:
         case AXNotification::RoleChanged:

@@ -84,6 +84,7 @@ typedef void (*AXPostedNotificationCallback)(id element, NSString* notification,
 - (UIAccessibilityTraits)_axSelectedTrait;
 - (UIAccessibilityTraits)_axTextAreaTrait;
 - (UIAccessibilityTraits)_axSearchFieldTrait;
+- (UIAccessibilityTraits)_axVisitedTrait;
 - (NSString *)accessibilityCurrentState;
 - (NSUInteger)accessibilityRowCount;
 - (NSUInteger)accessibilityColumnCount;
@@ -486,6 +487,10 @@ bool AccessibilityUIElement::boolAttributeValue(JSStringRef attribute)
         return [m_element _accessibilityHasTouchEventListener];
     if (JSStringIsEqualToUTF8CString(attribute, "AXIsStrongPasswordField"))
         return [m_element _accessibilityIsStrongPasswordField];
+    if (JSStringIsEqualToUTF8CString(attribute, "AXVisited")) {
+        UIAccessibilityTraits traits = [m_element accessibilityTraits];
+        return (traits & [m_element _axVisitedTrait]) == [m_element _axVisitedTrait];
+    }
     return false;
 }
 

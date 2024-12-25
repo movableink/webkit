@@ -563,6 +563,8 @@ bool AccessibilityUIElement::boolAttributeValue(JSStringRef attribute)
         return checkElementState(m_element.get(), WebCore::Atspi::State::Modal);
     if (attributeName == "AXSupportsAutoCompletion"_s)
         return checkElementState(m_element.get(), WebCore::Atspi::State::SupportsAutocompletion);
+    if (attributeName == "AXVisited"_s)
+        return checkElementState(m_element.get(), WebCore::Atspi::State::Visited);
     if (attributeName == "AXInterfaceTable"_s)
         return m_element->interfaces().contains(WebCore::AccessibilityObjectAtspi::Interface::Table);
     if (attributeName == "AXInterfaceTableCell"_s)

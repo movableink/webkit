@@ -595,6 +595,12 @@ accessibility/announcement-notification.html [ Skip ]
 # AccessibilityUIElement::isInTable is not implemented.
 accessibility/table-ancestry.html [ Skip ]
 
+# AccessibilityUIElement::speakAs is not implemented.
+accessibility/dynamic-speak-as.html [ Skip ]
+
+# Failing since introduced, Atspi::State::Visited may not be set / updated properly?
+accessibility/link-becomes-visited.html [ Skip ]
+
 accessibility/search-misspellings.html [ Skip ]
 accessibility/shadow-dom-hit-test.html [ Skip ]
 
