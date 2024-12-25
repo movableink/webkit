@@ -89,6 +89,13 @@ void WebDeviceOrientationUpdateProviderProxy::motionChanged(double xAcceleration
         page->protectedLegacyMainFrameProcess()->send(Messages::WebDeviceOrientationUpdateProvider::DeviceMotionChanged(xAcceleration, yAcceleration, zAcceleration, xAccelerationIncludingGravity, yAccelerationIncludingGravity, zAccelerationIncludingGravity, xRotationRate, yRotationRate, zRotationRate), m_page->webPageIDInMainFrameProcess());
 }
 
+std::optional<SharedPreferencesForWebProcess> WebDeviceOrientationUpdateProviderProxy::sharedPreferencesForWebProcess() const
+{
+    if (RefPtr page = m_page.get())
+        return m_page->legacyMainFrameProcess().sharedPreferencesForWebProcess();
+    return std::nullopt;
+}
+
 } // namespace WebKit
 
 #endif // PLATFORM(IOS_FAMILY)

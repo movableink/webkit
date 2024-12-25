@@ -22,9 +22,9 @@
 
 #if PLATFORM(IOS_FAMILY) && ENABLE(DEVICE_ORIENTATION)
 [
-    ExceptionForEnabledBy,
     DispatchedFrom=WebContent,
-    DispatchedTo=UI
+    DispatchedTo=UI,
+    EnabledBy=DeviceOrientationEventEnabled
 ]
 messages -> WebDeviceOrientationUpdateProviderProxy {
     StartUpdatingDeviceOrientation();

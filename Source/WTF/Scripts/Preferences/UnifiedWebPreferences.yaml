@@ -2634,6 +2634,9 @@ DeviceOrientationEventEnabled:
       default: true
     WebCore:
       default: true
+  sharedPreferenceForWebProcess: true
+  richJavaScript: true
+
 
 DeviceOrientationPermissionAPIEnabled:
   type: bool
