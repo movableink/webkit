@@ -2647,102 +2647,105 @@ void RenderBox::computeLogicalWidthInFragment(LogicalExtentComputedValues& compu
     computedValues.m_margins.m_end = marginEnd();
 
     if (isOutOfFlowPositioned()) {
+        ASSERT(!overridingLogicalWidth());
+        ASSERT(!overridingLogicalWidthForFlexBasisComputation());
         // FIXME: This calculation is not patched for block-flow yet.
         // https://bugs.webkit.org/show_bug.cgi?id=46500
         computePositionedLogicalWidth(computedValues, fragment);
         return;
     }
 
-    // The parent box is flexing us, so it has increased or decreased our
-    // width.  Use the width from the style context.
-    // FIXME: Account for block-flow in flexible boxes.
-    // https://bugs.webkit.org/show_bug.cgi?id=46418
-    if (auto overridingLogicalWidth = (parent()->isFlexibleBoxIncludingDeprecated() ? this->overridingLogicalWidth() : std::nullopt)) {
-        computedValues.m_extent = *overridingLogicalWidth;
-        return;
-    }
-
-    // FIXME: Account for block-flow in flexible boxes.
-    // https://bugs.webkit.org/show_bug.cgi?id=46418
-    bool inVerticalBox = parent()->isRenderDeprecatedFlexibleBox() && (parent()->style().boxOrient() == BoxOrient::Vertical);
-    bool stretching = (parent()->style().boxAlign() == BoxAlignment::Stretch);
     // FIXME: Stretching is the only reason why we don't want the box to be treated as a replaced element, so we could perhaps
     // refactor all this logic, not only for flex and grid since alignment is intended to be applied to any block.
-    bool treatAsReplaced = is<RenderReplaced>(*this) && (!inVerticalBox || !stretching);
-    treatAsReplaced = treatAsReplaced && (!isGridItem() || !hasStretchedLogicalWidth());
+    auto treatAsReplaced = [&] {
+        // FIXME: Account for block-flow in flexible boxes.
+        // https://bugs.webkit.org/show_bug.cgi?id=46418
+        auto& parent = *this->parent();
+        bool inVerticalBox = parent.isRenderDeprecatedFlexibleBox() && (parent.style().boxOrient() == BoxOrient::Vertical);
+        bool stretching = (parent.style().boxAlign() == BoxAlignment::Stretch);
+        auto isReplaced = is<RenderReplaced>(*this) && (!inVerticalBox || !stretching);
+        if (!isReplaced)
+            return false;
+        return !isGridItem() || !hasStretchedLogicalWidth();
+    }();
 
-    const RenderStyle& styleToUse = style();
-    Length logicalWidthLength;
-    auto hasOverridingLogicalWidthLength = false;
-    if (auto overridingLogicalWidthLength = overridingLogicalWidthForFlexBasisComputation()) {
-        logicalWidthLength = *overridingLogicalWidthLength;
-        hasOverridingLogicalWidthLength = true;
-    } else
-        logicalWidthLength = treatAsReplaced ? Length(computeReplacedLogicalWidth(), LengthType::Fixed) : styleToUse.logicalWidth();
+    auto usedLogicalWidthLength = [&] {
+        if (auto overridingLogicalWidthLength = overridingLogicalWidthForFlexBasisComputation())
+            return *overridingLogicalWidthLength;
+        if (treatAsReplaced)
+            return Length { computeReplacedLogicalWidth(), LengthType::Fixed };
+        return style().logicalWidth();
+    }();
 
-    RenderBlock& cb = *containingBlock();
-    LayoutUnit containerLogicalWidth = std::max<LayoutUnit>(0, containingBlockLogicalWidthForContentInFragment(fragment));
-    bool hasPerpendicularContainingBlock = cb.isHorizontalWritingMode() != isHorizontalWritingMode();
-
-    if (isInline() && !isNonReplacedAtomicInline()) {
+    auto containerLogicalWidth = std::max(0_lu, containingBlockLogicalWidthForContentInFragment(fragment));
+    auto& styleToUse = style();
+    if (isInline() && is<RenderReplaced>(*this)) {
         // just calculate margins
         computedValues.m_margins.m_start = minimumValueForLength(styleToUse.marginStart(), containerLogicalWidth);
         computedValues.m_margins.m_end = minimumValueForLength(styleToUse.marginEnd(), containerLogicalWidth);
         if (treatAsReplaced)
-            computedValues.m_extent = std::max(LayoutUnit(floatValueForLength(logicalWidthLength, 0) + borderAndPaddingLogicalWidth()), minPreferredLogicalWidth());
+            computedValues.m_extent = std::max(LayoutUnit(floatValueForLength(usedLogicalWidthLength, 0) + borderAndPaddingLogicalWidth()), minPreferredLogicalWidth());
         return;
     }
 
-    LayoutUnit containerWidthInInlineDirection = containerLogicalWidth;
-    if (hasPerpendicularContainingBlock)
-        containerWidthInInlineDirection = perpendicularContainingBlockLogicalHeight();
-
+    auto& containingBlock = *this->containingBlock();
+    bool hasPerpendicularContainingBlock = containingBlock.isHorizontalWritingMode() != isHorizontalWritingMode();
     // Width calculations
-    if (auto overridingLogicalWidth = this->overridingLogicalWidth())
-        computedValues.m_extent = *overridingLogicalWidth;
-    else if (treatAsReplaced)
-        computedValues.m_extent = logicalWidthLength.value() + borderAndPaddingLogicalWidth();
-    else if (shouldComputeLogicalWidthFromAspectRatio() && style().logicalWidth().isAuto())
-        computedValues.m_extent = computeLogicalWidthFromAspectRatio(fragment);
-    else {
-        auto preferredWidth = computeLogicalWidthInFragmentUsing(SizeType::MainOrPreferredSize, hasOverridingLogicalWidthLength ? logicalWidthLength : styleToUse.logicalWidth(), containerWidthInInlineDirection, cb, fragment);
-        computedValues.m_extent = constrainLogicalWidthInFragmentByMinMax(preferredWidth, containerWidthInInlineDirection, cb, fragment);
-    }
+    auto logicalWidth = [&] {
+        if (auto overridingLogicalWidth = this->overridingLogicalWidth())
+            return *overridingLogicalWidth;
+        if (treatAsReplaced)
+            return LayoutUnit { usedLogicalWidthLength.value() } + borderAndPaddingLogicalWidth();
+        if (shouldComputeLogicalWidthFromAspectRatio() && style().logicalWidth().isAuto())
+            return computeLogicalWidthFromAspectRatio(fragment);
+
+        auto containerWidthInInlineDirection = !hasPerpendicularContainingBlock ? containerLogicalWidth : perpendicularContainingBlockLogicalHeight();
+        auto preferredWidth = computeLogicalWidthInFragmentUsing(SizeType::MainOrPreferredSize, usedLogicalWidthLength, containerWidthInInlineDirection, containingBlock, fragment);
+        return constrainLogicalWidthInFragmentByMinMax(preferredWidth, containerWidthInInlineDirection, containingBlock, fragment);
+    };
+    computedValues.m_extent = logicalWidth();
 
     // Margin calculations.
     if (hasPerpendicularContainingBlock || isFloating() || isInline()) {
-        auto marginStartLength = styleToUse.marginStart();
-        auto marginEndLength = styleToUse.marginEnd();
-        computedValues.m_margins.m_start = computeOrTrimInlineMargin(cb, MarginTrimType::BlockStart, [&] {
-            return minimumValueForLength(marginStartLength, containerLogicalWidth);
+        computedValues.m_margins.m_start = computeOrTrimInlineMargin(containingBlock, MarginTrimType::BlockStart, [&] {
+            return minimumValueForLength(styleToUse.marginStart(), containerLogicalWidth);
         });
-        computedValues.m_margins.m_end = computeOrTrimInlineMargin(cb, MarginTrimType::BlockEnd, [&] {
-            return minimumValueForLength(marginEndLength, containerLogicalWidth);
+        computedValues.m_margins.m_end = computeOrTrimInlineMargin(containingBlock, MarginTrimType::BlockEnd, [&] {
+            return minimumValueForLength(styleToUse.marginEnd(), containerLogicalWidth);
         });
     } else {
-        LayoutUnit containerLogicalWidthForAutoMargins = containerLogicalWidth;
-        if (avoidsFloats() && cb.containsFloats())
+        auto containerLogicalWidthForAutoMargins = containerLogicalWidth;
+        if (avoidsFloats() && containingBlock.containsFloats())
             containerLogicalWidthForAutoMargins = containingBlockAvailableLineWidthInFragment(fragment);
-        bool hasInvertedDirection = cb.writingMode().isInlineOpposing(writingMode());
-        computeInlineDirectionMargins(cb, containerLogicalWidth, containerLogicalWidthForAutoMargins, computedValues.m_extent,
+        bool hasInvertedDirection = containingBlock.writingMode().isInlineOpposing(writingMode());
+        computeInlineDirectionMargins(containingBlock, containerLogicalWidth, containerLogicalWidthForAutoMargins, computedValues.m_extent,
             hasInvertedDirection ? computedValues.m_margins.m_end : computedValues.m_margins.m_start,
             hasInvertedDirection ? computedValues.m_margins.m_start : computedValues.m_margins.m_end);
     }
     
-    if (!hasPerpendicularContainingBlock && containerLogicalWidth && containerLogicalWidth != (computedValues.m_extent + computedValues.m_margins.m_start + computedValues.m_margins.m_end)
-        && !isFloating() && !isInline() && !cb.isFlexibleBoxIncludingDeprecated()
+    auto shouldIgnoreOverconstrainedMargin = [&] {
+        if (containingBlock.isRenderGrid() || containingBlock.isFlexibleBoxIncludingDeprecated())
+            return true;
+        // Is this replaced inline?
+        if (isFloating() || isInline())
+            return true;
 #if ENABLE(MATHML)
         // RenderMathMLBlocks take the size of their content so we must not adjust the margin to fill the container size.
-        && !cb.isRenderMathMLBlock()
+        if (containingBlock.isRenderMathMLBlock())
+            return true;
 #endif
-        && !cb.isRenderGrid()
-        ) {
-        LayoutUnit newMarginTotal = containerLogicalWidth - computedValues.m_extent;
-        bool hasInvertedDirection = cb.writingMode().isInlineOpposing(writingMode());
+        if (hasPerpendicularContainingBlock)
+            return true;
+
+        return !containerLogicalWidth || containerLogicalWidth == (computedValues.m_extent + computedValues.m_margins.m_start + computedValues.m_margins.m_end);
+    };
+    if (!shouldIgnoreOverconstrainedMargin()) {
+        auto availableSpaceForMargin = containerLogicalWidth - computedValues.m_extent;
+        bool hasInvertedDirection = containingBlock.writingMode().isInlineOpposing(writingMode());
         if (hasInvertedDirection)
-            computedValues.m_margins.m_start = newMarginTotal - computedValues.m_margins.m_end;
+            computedValues.m_margins.m_start = availableSpaceForMargin - computedValues.m_margins.m_end;
         else
-            computedValues.m_margins.m_end = newMarginTotal - computedValues.m_margins.m_start;
+            computedValues.m_margins.m_end = availableSpaceForMargin - computedValues.m_margins.m_start;
     }
 }
 
