@@ -931,9 +931,7 @@ void RenderDeprecatedFlexibleBox::layoutVerticalBox(bool relayoutChildren)
 
     // So that the computeLogicalHeight in layoutBlock() knows to relayout positioned objects because of
     // a height change, we revert our height back to the intrinsic height before returning.
-    if (heightSpecified)
-        setHeight(oldHeight);
-    else if (haveLineClamp && clampedContent.renderer) {
+    if (haveLineClamp && clampedContent.renderer) {
         auto contentOffset = [&] {
             auto* clampedRenderer = clampedContent.renderer.get();
             auto contentLogicalTop = clampedRenderer->logicalTop() + clampedRenderer->contentBoxLocation().y();
@@ -945,8 +943,14 @@ void RenderDeprecatedFlexibleBox::layoutVerticalBox(bool relayoutChildren)
             ASSERT_NOT_REACHED();
             return contentBoxLocation().y();
         };
-        setHeight(contentOffset() + clampedContent.contentHeight + borderBottom() + paddingBottom());
-    }
+        auto usedHeight = height();
+        auto clampedHeight = contentOffset() + clampedContent.contentHeight + borderBottom() + paddingBottom();
+        setHeight(clampedHeight);
+        updateLogicalHeight();
+        if (clampedHeight != height())
+            setHeight(heightSpecified ? oldHeight : usedHeight);
+    } else if (heightSpecified)
+        setHeight(oldHeight);
 }
 
 static size_t lineCountFor(const RenderBlockFlow& blockFlow)
