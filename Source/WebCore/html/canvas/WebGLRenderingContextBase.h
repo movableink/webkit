@@ -710,7 +710,6 @@ protected:
 
     bool m_rasterizerDiscardEnabled { false };
 
-    bool m_isGLES2Compliant;
     bool m_isDepthStencilSupported;
 
     int m_numGLErrorsToConsoleAllowed;
