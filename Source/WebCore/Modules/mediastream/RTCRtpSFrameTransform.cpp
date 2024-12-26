@@ -49,8 +49,6 @@
 #include <wtf/EnumTraits.h>
 #include <wtf/TZoneMallocInlines.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RTCRtpSFrameTransform);
@@ -211,7 +209,7 @@ void transformFrame(Frame& frame, JSDOMGlobalObject& globalObject, RTCRtpSFrameT
     auto result = processFrame(chunk, transformer, identifier, weakTransform);
     std::span<const uint8_t> transformedChunk;
     if (result)
-        transformedChunk = { result->data(), result->size() };
+        transformedChunk = result->span();
     rtcFrame->setData(transformedChunk);
     source.enqueue(toJS(&globalObject, &globalObject, frame));
 }
@@ -290,7 +288,5 @@ bool RTCRtpSFrameTransform::virtualHasPendingActivity() const
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_RTC)

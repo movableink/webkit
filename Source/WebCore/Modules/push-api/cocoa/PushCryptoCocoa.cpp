@@ -31,8 +31,6 @@
 #include <wtf/Scope.h>
 #include <wtf/StdLibExtras.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore::PushCrypto {
 
 P256DHKeyPair P256DHKeyPair::generate(void)
@@ -122,7 +120,7 @@ std::optional<Vector<uint8_t>> decryptAES128GCM(std::span<const uint8_t> key, st
 
     Vector<uint8_t> plainText(cipherTextWithTag.size() - aes128GCMTagLength);
     auto nonTagCipherTextLength = cipherTextWithTag.size() - aes128GCMTagLength;
-    auto result = CCCryptorGCMOneshotDecrypt(kCCAlgorithmAES, key.data(), key.size(), iv.data(), iv.size(), nullptr /* additionalData */, 0 /* additionalDataLength */, cipherTextWithTag.data(), nonTagCipherTextLength, plainText.data(), cipherTextWithTag.data() + nonTagCipherTextLength, aes128GCMTagLength);
+    auto result = CCCryptorGCMOneshotDecrypt(kCCAlgorithmAES, key.data(), key.size(), iv.data(), iv.size(), nullptr /* additionalData */, 0 /* additionalDataLength */, cipherTextWithTag.data(), nonTagCipherTextLength, plainText.data(), cipherTextWithTag.subspan(nonTagCipherTextLength).data(), aes128GCMTagLength);
     if (result != kCCSuccess)
         return std::nullopt;
 
@@ -130,5 +128,3 @@ std::optional<Vector<uint8_t>> decryptAES128GCM(std::span<const uint8_t> key, st
 }
 
 } // namespace WebCore::PushCrypto
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

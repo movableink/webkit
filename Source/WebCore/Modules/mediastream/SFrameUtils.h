@@ -29,8 +29,6 @@
 
 #include <wtf/Vector.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 using SFrameCompatibilityPrefixBuffer = std::variant<std::span<const uint8_t>, Vector<uint8_t>>;
@@ -49,14 +47,12 @@ static inline Vector<uint8_t, 8> encodeBigEndian(uint64_t value)
 {
     Vector<uint8_t, 8> result(8);
     for (int i = 7; i >= 0; --i) {
-        result.data()[i] = value & 0xff;
+        result[i] = value & 0xff;
         value = value >> 8;
     }
     return result;
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_RTC)

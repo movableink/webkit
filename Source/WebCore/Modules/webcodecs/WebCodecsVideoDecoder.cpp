@@ -50,8 +50,6 @@
 #include <wtf/ASCIICType.h>
 #include <wtf/TZoneMallocInlines.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebCodecsVideoDecoder);
@@ -112,14 +110,11 @@ static VideoDecoder::Config createVideoDecoderConfig(const WebCodecsVideoDecoder
 {
     std::span<const uint8_t> description;
     if (config.description) {
-        auto* data = std::visit([](auto& buffer) -> const uint8_t* {
-            return buffer ? static_cast<const uint8_t*>(buffer->data()) : nullptr;
+        auto data = std::visit([](auto& buffer) {
+            return buffer ? buffer->span() : std::span<const uint8_t> { };
         }, *config.description);
-        auto length = std::visit([](auto& buffer) -> size_t {
-            return buffer ? buffer->byteLength() : 0;
-        }, *config.description);
-        if (length)
-            description = { data, length };
+        if (!data.empty())
+            description = data;
     }
 
     return {
@@ -321,7 +316,5 @@ void WebCodecsVideoDecoder::stop()
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_CODECS)

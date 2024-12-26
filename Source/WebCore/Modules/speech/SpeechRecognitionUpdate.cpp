@@ -28,13 +28,11 @@
 
 #include <wtf/NeverDestroyed.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 String convertEnumerationToString(SpeechRecognitionUpdateType enumerationValue)
 {
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 11> values {
         MAKE_STATIC_STRING_IMPL("UpdateTypeStart"),
         MAKE_STATIC_STRING_IMPL("UpdateTypeAudioStart"),
         MAKE_STATIC_STRING_IMPL("UpdateTypeSoundStart"),
@@ -101,5 +99,3 @@ Vector<SpeechRecognitionResultData> SpeechRecognitionUpdate::result() const
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

@@ -32,8 +32,6 @@
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/StdLibExtras.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore::PushCrypto {
 
 // Arbitrary limit that's larger than the largest payload APNS should ever give us.
@@ -59,7 +57,7 @@ static bool areClientKeyLengthsValid(const ClientKeys& clientKeys)
     return clientKeys.clientP256DHKeyPair.publicKey.size() == p256dhPublicKeyLength && clientKeys.clientP256DHKeyPair.privateKey.size() == p256dhPrivateKeyLength && clientKeys.sharedAuthSecret.size() == sharedAuthSecretLength;
 }
 
-static size_t computeAES128GCMPaddingLength(const uint8_t *begin, size_t length)
+static size_t computeAES128GCMPaddingLength(std::span<const uint8_t> data)
 {
     /*
      * Compute padding length as defined in RFC8188 Section 2:
@@ -70,17 +68,16 @@ static size_t computeAES128GCMPaddingLength(const uint8_t *begin, size_t length)
      *
      * pad must be of non-zero length and is a delimiter octet (0x02) followed by any number of 0x00 octets.
      */
-    if (!length)
+    if (data.empty())
         return SIZE_MAX;
 
-    const uint8_t* end = begin + length;
-    const uint8_t* cur = end - 1;
-    while (cur > begin && (*cur == 0x00))
-        --cur;
-    if (*cur != 0x02)
+    size_t current = data.size() - 1;
+    while (current > 0 && (data[current] == 0x00))
+        --current;
+    if (data[current] != 0x02)
         return SIZE_MAX;
 
-    return end - cur;
+    return data.size() - current;
 }
 
 std::optional<Vector<uint8_t>> decryptAES128GCMPayload(const ClientKeys& clientKeys, std::span<const uint8_t> payload)
@@ -140,7 +137,7 @@ std::optional<Vector<uint8_t>> decryptAES128GCMPayload(const ClientKeys& clientK
     memcpySpan(std::span { keyInfo.clientKey }, clientKeys.clientP256DHKeyPair.publicKey.span().first(p256dhPublicKeyLength));
     memcpySpan(std::span { keyInfo.serverKey }, std::span { header.serverPublicKey });
 
-    auto ikm = hmacSHA256(prkKey, std::span(reinterpret_cast<uint8_t*>(&keyInfo), sizeof(keyInfo)));
+    auto ikm = hmacSHA256(prkKey, asByteSpan(keyInfo));
 
     /*
      * # HKDF-Extract(salt, IKM)
@@ -153,8 +150,8 @@ std::optional<Vector<uint8_t>> decryptAES128GCMPayload(const ClientKeys& clientK
      * cek_info = "Content-Encoding: aes128gcm" || 0x00
      * CEK = HMAC-SHA-256(PRK, cek_info || 0x01)[0..15]
      */
-    static const uint8_t cekInfo[] = "Content-Encoding: aes128gcm\x00\x01";
-    auto cek = hmacSHA256(prk, std::span(cekInfo, sizeof(cekInfo) - 1));
+    static const auto cekInfo = "Content-Encoding: aes128gcm\x00\x01"_span;
+    auto cek = hmacSHA256(prk, cekInfo);
     cek.shrink(16);
 
     /*
@@ -162,18 +159,18 @@ std::optional<Vector<uint8_t>> decryptAES128GCMPayload(const ClientKeys& clientK
      * nonce_info = "Content-Encoding: nonce" || 0x00
      * NONCE = HMAC-SHA-256(PRK, nonce_info || 0x01)[0..11]
      */
-    static const uint8_t nonceInfo[] = "Content-Encoding: nonce\x00\x01";
-    auto nonce = hmacSHA256(prk, std::span(nonceInfo, sizeof(nonceInfo) - 1));
+    static const auto nonceInfo = "Content-Encoding: nonce\x00\x01"_span;
+    auto nonce = hmacSHA256(prk, nonceInfo);
     nonce.shrink(12);
 
     // Finally, decrypt with AES128GCM and return the unpadded plaintext.
-    auto cipherText = std::span(payload.data() + sizeof(header), payload.size() - sizeof(header));
+    auto cipherText = payload.subspan(sizeof(header));
     auto plainTextResult = decryptAES128GCM(cek, nonce, cipherText);
     if (!plainTextResult)
         return std::nullopt;
 
     auto plainText = WTFMove(plainTextResult.value());
-    size_t paddingLength = computeAES128GCMPaddingLength(plainText.data(), plainText.size());
+    size_t paddingLength = computeAES128GCMPaddingLength(plainText.span());
     if (paddingLength == SIZE_MAX)
         return std::nullopt;
 
@@ -238,9 +235,9 @@ std::optional<Vector<uint8_t>> decryptAESGCMPayload(const ClientKeys& clientKeys
      * IKM = HMAC-SHA-256(PRK_combine, auth_info || 0x01)
      * PRK = HMAC-SHA-256(salt, IKM)
      */
-    static const uint8_t authInfo[] = "Content-Encoding: auth\x00\x01";
+    static const auto authInfo = "Content-Encoding: auth\x00\x01"_span;
     auto prkCombine = hmacSHA256(clientKeys.sharedAuthSecret, *ecdhSecretResult);
-    auto ikm = hmacSHA256(prkCombine, std::span(authInfo, sizeof(authInfo) - 1));
+    auto ikm = hmacSHA256(prkCombine, authInfo);
     auto prk = hmacSHA256(salt, ikm);
 
     /*
@@ -302,5 +299,3 @@ std::optional<Vector<uint8_t>> decryptAESGCMPayload(const ClientKeys& clientKeys
 }
 
 } // namespace WebCore::PushCrypto
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

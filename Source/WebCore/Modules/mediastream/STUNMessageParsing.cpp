@@ -35,8 +35,6 @@ WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 #include <webrtc/rtc_base/byte_order.h>
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 namespace WebRTC {
 
@@ -52,8 +50,8 @@ std::optional<STUNMessageLengths> getSTUNOrTURNMessageLengths(std::span<const ui
     if (data.size() < 4)
         return { };
 
-    auto messageType = be16toh(*reinterpret_cast<const uint16_t*>(data.data()));
-    auto messageLength = be16toh(*reinterpret_cast<const uint16_t*>(data.data() + 2));
+    auto messageType = be16toh(reinterpretCastSpanStartTo<const uint16_t>(data));
+    auto messageLength = be16toh(reinterpretCastSpanStartTo<const uint16_t>(data.subspan(2)));
 
     // STUN data message header is 20 bytes.
     if (isStunMessage(messageType)) {
@@ -122,7 +120,5 @@ Vector<uint8_t> extractMessages(Vector<uint8_t>&& buffer, MessageType type, cons
 
 } // namespace WebRTC
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_RTC) && USE(LIBWEBRTC)

@@ -73,15 +73,13 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MediaSource);
 
 String convertEnumerationToString(MediaSourcePrivate::AddStatus enumerationValue)
 {
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 3> values {
         MAKE_STATIC_STRING_IMPL("Ok"),
         MAKE_STATIC_STRING_IMPL("NotSupported"),
         MAKE_STATIC_STRING_IMPL("ReachedIdLimit"),
@@ -95,7 +93,7 @@ String convertEnumerationToString(MediaSourcePrivate::AddStatus enumerationValue
 
 String convertEnumerationToString(MediaSourcePrivate::EndOfStreamStatus enumerationValue)
 {
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 3> values {
         MAKE_STATIC_STRING_IMPL("NoError"),
         MAKE_STATIC_STRING_IMPL("NetworkError"),
         MAKE_STATIC_STRING_IMPL("DecodeError"),
@@ -1757,7 +1755,5 @@ bool MediaSource::canConstructInDedicatedWorker(ScriptExecutionContext& context)
 #endif
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(MEDIA_SOURCE)

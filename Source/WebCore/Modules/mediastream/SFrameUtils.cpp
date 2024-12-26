@@ -31,8 +31,6 @@
 #include <wtf/Function.h>
 #include <wtf/StdLibExtras.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 static inline bool isSliceNALU(uint8_t data)
@@ -150,7 +148,7 @@ IGNORE_GCC_WARNINGS_END
 static inline void findEscapeRbspPatterns(const Vector<uint8_t>& frame, size_t offset, const Function<void(size_t, bool)>& callback)
 {
     size_t numConsecutiveZeros = 0;
-    auto* data = frame.data();
+    auto data = frame.span();
     for (size_t i = offset; i < frame.size(); ++i) {
         bool shouldEscape = data[i] <= 3 && numConsecutiveZeros >= 2;
         if (shouldEscape)
@@ -179,7 +177,7 @@ void toRbsp(Vector<uint8_t>& frame, size_t offset)
     newFrame.reserveInitialCapacity(frame.size() + count);
     newFrame.append(frame.subspan(0, offset));
 
-    findEscapeRbspPatterns(frame, offset, [data = frame.data(), &newFrame](size_t position, bool shouldBeEscaped) {
+    findEscapeRbspPatterns(frame, offset, [data = frame.span(), &newFrame](size_t position, bool shouldBeEscaped) {
         if (shouldBeEscaped)
             newFrame.append(3);
         newFrame.append(data[position]);
@@ -206,7 +204,5 @@ SFrameCompatibilityPrefixBuffer computeVP8PrefixBuffer(std::span<const uint8_t> 
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_RTC)
