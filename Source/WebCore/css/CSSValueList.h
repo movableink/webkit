@@ -24,8 +24,6 @@
 #include <array>
 #include <unicode/umachine.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 static constexpr size_t CSSValueListBuilderInlineCapacity = 4;
@@ -148,7 +146,9 @@ inline const CSSValue& CSSValueContainingVector::operator[](unsigned index) cons
         return *m_inlineStorage[index];
     }
     RELEASE_ASSERT(index < m_size);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     return *m_additionalStorage[index - maxInlineSize];
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 void add(Hasher&, const CSSValueContainingVector&);
@@ -157,5 +157,3 @@ void add(Hasher&, const CSSValueContainingVector&);
 
 SPECIALIZE_TYPE_TRAITS_CSS_VALUE(CSSValueContainingVector, containsVector())
 SPECIALIZE_TYPE_TRAITS_CSS_VALUE(CSSValueList, isValueList())
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

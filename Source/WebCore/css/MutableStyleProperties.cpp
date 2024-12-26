@@ -34,8 +34,6 @@
 #include "StylePropertiesInlines.h"
 #include "StylePropertyShorthand.h"
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(MutableStyleProperties);
@@ -95,18 +93,12 @@ Ref<ImmutableStyleProperties> MutableStyleProperties::immutableDeduplicatedCopy(
     return ImmutableStyleProperties::createDeduplicating(m_propertyVector.data(), m_propertyVector.size(), cssParserMode());
 }
 
-// FIXME: Change StylePropertyShorthand::properties to return a Span and delete this.
-static inline std::span<const CSSPropertyID> span(const StylePropertyShorthand& shorthand)
-{
-    return { shorthand.properties(), shorthand.length() };
-}
-
 inline bool MutableStyleProperties::removeShorthandProperty(CSSPropertyID propertyID, String* returnText)
 {
     // FIXME: Use serializeShorthandValue here to return the value of the removed shorthand as we do when removing a longhand.
     if (returnText)
         *returnText = String();
-    return removeProperties(span(shorthandForProperty(propertyID)));
+    return removeProperties(shorthandForProperty(propertyID).propertiesSpan());
 }
 
 bool MutableStyleProperties::removePropertyAtIndex(int index, String* returnText)
@@ -191,11 +183,12 @@ void MutableStyleProperties::setProperty(CSSPropertyID propertyID, RefPtr<CSSVal
         return;
     }
     auto shorthand = shorthandForProperty(propertyID);
-    removeProperties(span(shorthand));
+    removeProperties(shorthand.propertiesSpan());
     for (auto longhand : shorthand)
         m_propertyVector.append(CSSProperty(longhand, value.copyRef(), important));
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 bool MutableStyleProperties::canUpdateInPlace(const CSSProperty& property, CSSProperty* toReplace) const
 {
     // If the property is in a logical property group, we can't just update the value in-place,
@@ -212,6 +205,7 @@ bool MutableStyleProperties::canUpdateInPlace(const CSSProperty& property, CSSPr
     }
     return true;
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 bool MutableStyleProperties::setProperty(const CSSProperty& property, CSSProperty* slot)
 {
@@ -307,7 +301,7 @@ int MutableStyleProperties::findPropertyIndex(CSSPropertyID propertyID) const
 {
     // Convert here propertyID into an uint16_t to compare it with the metadata's m_propertyID to avoid
     // the compiler converting it to an int multiple times in the loop.
-    auto* properties = m_propertyVector.data();
+    auto& properties = m_propertyVector;
     uint16_t id = enumToUnderlyingType(propertyID);
     for (int n = m_propertyVector.size() - 1 ; n >= 0; --n) {
         if (properties[n].metadata().m_propertyID == id)
@@ -318,7 +312,7 @@ int MutableStyleProperties::findPropertyIndex(CSSPropertyID propertyID) const
 
 int MutableStyleProperties::findCustomPropertyIndex(StringView propertyName) const
 {
-    auto* properties = m_propertyVector.data();
+    auto& properties = m_propertyVector;
     for (int n = m_propertyVector.size() - 1 ; n >= 0; --n) {
         if (properties[n].metadata().m_propertyID == CSSPropertyCustom) {
             // We found a custom property. See if the name matches.
@@ -356,5 +350,3 @@ CSSStyleDeclaration& MutableStyleProperties::ensureInlineCSSStyleDeclaration(Sty
 }
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

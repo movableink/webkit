@@ -54,8 +54,6 @@
 #include "ViewTransition.h"
 #include "ViewTransitionTypeSet.h"
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 using namespace HTMLNames;
@@ -1304,7 +1302,7 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, LocalContext& c
             if (list.size() == 1)
                 return true;
 
-            return std::ranges::all_of(list.begin() + 1, list.end(),
+            return std::ranges::all_of(list.span().subspan(1),
                 [&](const AtomString& classSelector) {
                     return checkingContext.classList.contains(classSelector);
                 }
@@ -1656,5 +1654,3 @@ unsigned SelectorChecker::determineLinkMatchType(const CSSSelector* selector)
 }
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

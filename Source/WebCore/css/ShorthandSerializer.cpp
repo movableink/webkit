@@ -46,8 +46,6 @@
 #include "TimelineRange.h"
 #include <wtf/text/MakeString.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 constexpr unsigned maxShorthandLength = 18; // FIXME: Generate this from CSSProperties.json.
@@ -140,7 +138,7 @@ private:
     String serializeSingleAnimationRange(const CSSValue&, SingleTimelineRange::Type, CSSValueID = CSSValueInvalid) const;
 
     StylePropertyShorthand m_shorthand;
-    RefPtr<CSSValue> m_longhandValues[maxShorthandLength];
+    std::array<RefPtr<CSSValue>, maxShorthandLength> m_longhandValues;
     String m_result;
     bool m_commonSerializationChecksSuppliedResult { false };
 };
@@ -155,7 +153,9 @@ inline ShorthandSerializer::ShorthandSerializer(const PropertiesType& properties
 inline CSSPropertyID ShorthandSerializer::longhandProperty(unsigned index) const
 {
     ASSERT(index < length());
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     return m_shorthand.properties()[index];
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 inline CSSValue& ShorthandSerializer::longhandValue(unsigned index) const
@@ -521,8 +521,10 @@ public:
     void set(unsigned index, const CSSValue* value, bool skipSerializing = false)
     {
         ASSERT(index < m_shorthand.length());
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         m_skipSerializing[index] = skipSerializing
             || !value || isInitialValueForLonghand(m_shorthand.properties()[index], *value);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         m_values[index] = value;
     }
 
@@ -532,11 +534,13 @@ public:
         return m_skipSerializing[index];
     }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     std::optional<CSSValueID> valueID(unsigned index) const
     {
         ASSERT(index < m_shorthand.length());
         return longhandValueID(m_shorthand.properties()[index], m_values[index].get());
     }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     CSSValueID valueIDIncludingCustomIdent(unsigned index) const
     {
@@ -567,6 +571,7 @@ public:
         return value && value->isPair();
     }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     void serialize(StringBuilder& builder) const
     {
         // If all are skipped, then serialize the first.
@@ -588,11 +593,12 @@ public:
             separator = " "_s;
         }
     }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 private:
     const StylePropertyShorthand& m_shorthand;
-    bool m_skipSerializing[maxShorthandLength] { };
-    RefPtr<const CSSValue> m_values[maxShorthandLength];
+    std::array<bool, maxShorthandLength> m_skipSerializing = { };
+    std::array<RefPtr<const CSSValue>, maxShorthandLength> m_values;
 };
 
 String ShorthandSerializer::serializeCoordinatingListPropertyGroup() const
@@ -858,8 +864,8 @@ String ShorthandSerializer::serializeBorderImage() const
 String ShorthandSerializer::serializeBorderRadius() const
 {
     ASSERT(length() == 4);
-    RefPtr<const CSSValue> horizontalRadii[4];
-    RefPtr<const CSSValue> verticalRadii[4];
+    std::array<RefPtr<const CSSValue>, 4> horizontalRadii;
+    std::array<RefPtr<const CSSValue>, 4> verticalRadii;
     for (unsigned i = 0; i < 4; ++i) {
         auto& value = longhandValue(i);
         horizontalRadii[i] = &value.first();
@@ -875,7 +881,7 @@ String ShorthandSerializer::serializeBorderRadius() const
     }
 
     StringBuilder result;
-    auto serializeRadii = [&](const auto (&r)[4]) {
+    auto serializeRadii = [&](const std::array<RefPtr<const CSSValue>, 4>& r) {
         if (!r[3]->equals(*r[1]))
             result.append(r[0]->cssText(), ' ', r[1]->cssText(), ' ', r[2]->cssText(), ' ', r[3]->cssText());
         else if (!r[2]->equals(*r[0]) || (m_shorthand.id() == CSSPropertyWebkitBorderRadius && !serializeBoth && !r[1]->equals(*r[0])))
@@ -1418,5 +1424,3 @@ String serializeShorthandValue(const ComputedStyleExtractor& extractor, CSSPrope
 }
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

@@ -31,8 +31,6 @@
 #include "ParsingUtilities.h"
 #include <wtf/SortedArrayMap.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 template<typename CharacterType>
@@ -49,12 +47,12 @@ auto CSSCustomPropertySyntax::parseComponent(std::span<const CharacterType> span
     };
 
     if (skipExactly(buffer, '<')) {
-        auto begin = buffer.position();
+        auto begin = buffer.span();
         skipUntil(buffer, '>');
-        if (buffer.position() == begin)
+        if (buffer.position() == begin.data())
             return { };
 
-        auto dataTypeName = StringView(std::span(begin, buffer.position()));
+        auto dataTypeName = StringView(begin.first(buffer.position() - begin.data()));
         if (!skipExactly(buffer, '>'))
             return { };
 
@@ -74,12 +72,12 @@ auto CSSCustomPropertySyntax::parseComponent(std::span<const CharacterType> span
         return Component { type, multiplier };
     }
 
-    auto begin = buffer.position();
+    auto begin = buffer.span();
     while (buffer.hasCharactersRemaining() && (*buffer != '+' && *buffer != '#'))
         ++buffer;
 
     auto ident = [&] {
-        auto tokenizer = CSSTokenizer::tryCreate(StringView(std::span(begin, buffer.position())).toStringWithoutCopying());
+        auto tokenizer = CSSTokenizer::tryCreate(StringView(begin.first(buffer.position() - begin.data())).toStringWithoutCopying());
         if (!tokenizer)
             return nullAtom();
 
@@ -117,11 +115,11 @@ std::optional<CSSCustomPropertySyntax> CSSCustomPropertySyntax::parse(StringView
         Definition definition;
 
         while (buffer.hasCharactersRemaining()) {
-            auto begin = buffer.position();
+            auto begin = buffer.span();
 
             skipUntil(buffer, '|');
 
-            auto component = parseComponent(std::span { begin, buffer.position() });
+            auto component = parseComponent(begin.first(buffer.position() - begin.data()));
             if (!component)
                 return { };
 
@@ -163,5 +161,3 @@ auto CSSCustomPropertySyntax::typeForTypeName(StringView dataTypeName) -> Type
 }
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

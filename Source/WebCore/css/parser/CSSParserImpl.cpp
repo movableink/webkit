@@ -78,8 +78,6 @@
 #include <memory>
 #include <optional>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 CSSParserImpl::~CSSParserImpl() = default;
@@ -165,7 +163,7 @@ static Ref<ImmutableStyleProperties> createStyleProperties(ParsedPropertyVector&
     filterProperties(IsImportant::Yes, parsedProperties, results, unusedEntries, seenProperties, seenCustomProperties);
     filterProperties(IsImportant::No, parsedProperties, results, unusedEntries, seenProperties, seenCustomProperties);
 
-    Ref result = ImmutableStyleProperties::createDeduplicating(results.data() + unusedEntries, results.size() - unusedEntries, mode);
+    Ref result = ImmutableStyleProperties::createDeduplicating(results.subspan(unusedEntries).data(), results.size() - unusedEntries, mode);
     parsedProperties.clear();
     return result;
 }
@@ -1651,5 +1649,3 @@ Vector<double> CSSParserImpl::consumeKeyframeKeyList(CSSParserTokenRange range)
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

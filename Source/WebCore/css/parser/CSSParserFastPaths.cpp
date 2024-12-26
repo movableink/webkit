@@ -47,8 +47,6 @@
 #include "HashTools.h"
 #include "StylePropertyShorthand.h"
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 bool CSSParserFastPaths::isSimpleLengthPropertyID(CSSPropertyID propertyId, CSS::Range& range)
@@ -408,7 +406,7 @@ static inline std::optional<uint8_t> parseRGBAlphaValue(std::span<const Characte
     }
 
     if (isTenthAlpha(string.first(length - 1))) {
-        static constexpr uint8_t tenthAlphaValues[] = { 0, 26, 51, 77, 102, 128, 153, 179, 204, 230 };
+        static constexpr std::array<uint8_t, 10> tenthAlphaValues { 0, 26, 51, 77, 102, 128, 153, 179, 204, 230 };
         uint8_t result = negative ? 0 : tenthAlphaValues[string[length - 2] - '0'];
         string = { };
         return result;
@@ -518,7 +516,7 @@ static std::optional<SRGBA<uint8_t>> parseHexColorInternal(std::span<const Chara
 template<typename CharacterType> static std::optional<SRGBA<uint8_t>> parseLegacyHSL(std::span<const CharacterType> characters)
 {
     // Commas only exist in the legacy syntax.
-    size_t delimiter = find({ characters.data(), characters.data() + characters.size() }, ',');
+    size_t delimiter = find(characters, ',');
     if (delimiter == notFound)
         return std::nullopt;
 
@@ -701,10 +699,10 @@ static RefPtr<CSSValue> parseColor(StringView string, const CSSParserContext& co
     return nullptr;
 }
 
-static std::optional<SRGBA<uint8_t>> finishParsingNamedColor(char* buffer, unsigned length)
+static std::optional<SRGBA<uint8_t>> finishParsingNamedColor(std::span<char> buffer)
 {
-    buffer[length] = '\0';
-    auto namedColor = findColor(buffer, length);
+    buffer.back() = '\0';
+    auto namedColor = findColor(buffer.data(), buffer.size() - 1);
     if (!namedColor)
         return std::nullopt;
     return asSRGBA(PackedColor::ARGB { namedColor->ARGBValue });
@@ -712,8 +710,8 @@ static std::optional<SRGBA<uint8_t>> finishParsingNamedColor(char* buffer, unsig
 
 template<typename CharacterType> static std::optional<SRGBA<uint8_t>> parseNamedColorInternal(std::span<const CharacterType> characters)
 {
-    char buffer[64]; // Easily big enough for the longest color name.
-    if (characters.size() > sizeof(buffer) - 1)
+    std::array<char, 64> buffer; // Easily big enough for the longest color name.
+    if (characters.size() > buffer.size() - 1)
         return std::nullopt;
     for (size_t i = 0; i < characters.size(); ++i) {
         auto character = characters[i];
@@ -721,7 +719,7 @@ template<typename CharacterType> static std::optional<SRGBA<uint8_t>> parseNamed
             return std::nullopt;
         buffer[i] = toASCIILower(static_cast<char>(character));
     }
-    return finishParsingNamedColor(buffer, characters.size());
+    return finishParsingNamedColor(std::span { buffer }.first(characters.size() + 1));
 }
 
 template<typename CharacterType> static std::optional<SRGBA<uint8_t>> parseSimpleColorInternal(std::span<const CharacterType> characters, bool strict)
@@ -807,6 +805,7 @@ static RefPtr<CSSValue> parseKeywordValue(CSSPropertyID propertyId, StringView s
     return nullptr;
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 template <typename CharType>
 static bool parseTransformTranslateArguments(CharType*& pos, CharType* end, unsigned expectedCount, CSSValueID transformType, CSSValueListBuilder& arguments)
 {
@@ -1000,6 +999,7 @@ static RefPtr<CSSValue> parseSimpleTransformList(std::span<const CharacterType> 
         return nullptr;
     return CSSTransformListValue::create(WTFMove(builder));
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 static RefPtr<CSSValue> parseSimpleTransform(StringView string)
 {
@@ -1107,5 +1107,3 @@ RefPtr<CSSValue> CSSParserFastPaths::maybeParseValue(CSSPropertyID propertyID, S
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

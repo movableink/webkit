@@ -47,8 +47,6 @@
 #include "MediaQueryParser.h"
 #include <wtf/SortedArrayMap.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 namespace CSSCalc {
 
@@ -1301,8 +1299,10 @@ std::optional<TypedChild> parseCalcSum(CSSParserTokenRange& tokens, int depth, P
         if (operatorCharacter != static_cast<char>(Calculation::Operator::Sum) && operatorCharacter != static_cast<char>(Calculation::Operator::Negate))
             break;
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         if (!CSSTokenizer::isWhitespace((&tokens.peek() - 1)->type()))
             return std::nullopt; // calc(1px+ 2px) is invalid
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
         tokens.consume();
         if (!CSSTokenizer::isWhitespace(tokens.peek().type()))
@@ -1535,5 +1535,3 @@ std::optional<TypedChild> parseCalcDimension(const CSSParserToken& token, Parser
 
 } // namespace CSSCalc
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

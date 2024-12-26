@@ -28,8 +28,6 @@
 #include <wtf/FixedVector.h>
 #include <wtf/TZoneMalloc.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 class CSSSelectorList;
@@ -133,7 +131,10 @@ public:
 
     // Selectors are kept in an array by CSSSelectorList.
     // The next component of the selector is the next item in the array.
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     const CSSSelector* tagHistory() const { return m_isLastInTagHistory ? nullptr : this + 1; }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
     const CSSSelector* firstInCompound() const;
 
     const QualifiedName& tagQName() const;
@@ -205,7 +206,10 @@ private:
     void setImplicit() { m_isImplicit = true; }
 
     unsigned simpleSelectorSpecificityForPage() const;
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     CSSSelector* tagHistory() { return m_isLastInTagHistory ? nullptr : this + 1; }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     unsigned m_relation : 4 { enumToUnderlyingType(Relation::DescendantSpace) };
     mutable unsigned m_match : 5 { enumToUnderlyingType(Match::Unknown) };
@@ -452,5 +456,3 @@ inline void CSSSelector::setMatch(Match match)
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

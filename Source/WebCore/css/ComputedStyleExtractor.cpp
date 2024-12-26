@@ -105,8 +105,6 @@
 #include "ViewTimeline.h"
 #include "WebAnimationUtilities.h"
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ComputedStyleExtractor);
 
@@ -5047,9 +5045,11 @@ Ref<CSSValueList> ComputedStyleExtractor::getCSSPropertyValuesForShorthandProper
 
 RefPtr<CSSValueList> ComputedStyleExtractor::getCSSPropertyValuesFor2SidesShorthand(const StylePropertyShorthand& shorthand) const
 {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     // Assume the properties are in the usual order start, end.
     auto startValue = propertyValue(shorthand.properties()[0], UpdateLayout::No);
     auto endValue = propertyValue(shorthand.properties()[1], UpdateLayout::No);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     // All 2 properties must be specified.
     if (!startValue || !endValue)
@@ -5062,11 +5062,13 @@ RefPtr<CSSValueList> ComputedStyleExtractor::getCSSPropertyValuesFor2SidesShorth
 
 RefPtr<CSSValueList> ComputedStyleExtractor::getCSSPropertyValuesFor4SidesShorthand(const StylePropertyShorthand& shorthand) const
 {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     // Assume the properties are in the usual order top, right, bottom, left.
     auto topValue = propertyValue(shorthand.properties()[0], UpdateLayout::No);
     auto rightValue = propertyValue(shorthand.properties()[1], UpdateLayout::No);
     auto bottomValue = propertyValue(shorthand.properties()[2], UpdateLayout::No);
     auto leftValue = propertyValue(shorthand.properties()[3], UpdateLayout::No);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     // All 4 properties must be specified.
     if (!topValue || !rightValue || !bottomValue || !leftValue)
@@ -5193,5 +5195,3 @@ Ref<CSSValue> ComputedStyleExtractor::getMaskShorthandValue() const
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

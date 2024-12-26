@@ -43,8 +43,6 @@
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/TextStream.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(CSSSelector);
@@ -360,6 +358,7 @@ std::optional<CSSSelector::PseudoElement> CSSSelector::parsePseudoElementName(St
     return *type;
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 const CSSSelector* CSSSelector::firstInCompound() const
 {
     auto* selector = this;
@@ -371,6 +370,7 @@ const CSSSelector* CSSSelector::firstInCompound() const
     }
     return selector;
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 static void appendPseudoClassFunctionTail(StringBuilder& builder, const CSSSelector* selector)
 {
@@ -910,5 +910,3 @@ bool CSSSelector::isHostPseudoClass() const
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

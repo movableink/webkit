@@ -32,8 +32,6 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(CSSSelectorList);
@@ -87,6 +85,7 @@ CSSSelectorList::CSSSelectorList(MutableCSSSelectorList&& selectorVector)
     m_selectorArray[arrayIndex - 1].setLastInSelectorList();
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 unsigned CSSSelectorList::componentCount() const
 {
     if (!m_selectorArray)
@@ -110,6 +109,7 @@ unsigned CSSSelectorList::listSize() const
     }
     return size;
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 String CSSSelectorList::selectorsText() const
 {
@@ -180,5 +180,3 @@ bool CSSSelectorList::hasOnlyNestingSelector() const
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

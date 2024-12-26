@@ -32,8 +32,6 @@
 
 #include "CSSParserTokenRange.h"
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 unsigned CSSParserObserverWrapper::startOffset(const CSSParserTokenRange& range)
@@ -53,6 +51,7 @@ unsigned CSSParserObserverWrapper::endOffset(const CSSParserTokenRange& range)
     return m_tokenOffsets[range.end() - m_firstParserToken];
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 void CSSParserObserverWrapper::skipCommentsBefore(const CSSParserTokenRange& range, bool leaveDirectlyBefore)
 {
     unsigned startIndex = range.begin() - m_firstParserToken;
@@ -70,7 +69,6 @@ void CSSParserObserverWrapper::yieldCommentsBefore(const CSSParserTokenRange& ra
         ++m_commentIterator;
     }
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

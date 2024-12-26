@@ -35,8 +35,6 @@
 #include <wtf/HexNumber.h>
 #include <wtf/text/StringBuilder.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSParserToken);
 
@@ -401,6 +399,7 @@ CSSParserToken::CSSParserToken(HashTokenType type, StringView value)
     initValueFromStringView(value);
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 static StringView mergeIfAdjacent(StringView a, StringView b)
 {
     if (a.is8Bit() && b.is8Bit()) {
@@ -414,6 +413,7 @@ static StringView mergeIfAdjacent(StringView a, StringView b)
     }
     return { };
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 void CSSParserToken::convertToDimensionWithUnit(StringView unit)
 {
@@ -797,5 +797,3 @@ void CSSParserToken::serialize(StringBuilder& builder, const CSSParserToken* nex
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
