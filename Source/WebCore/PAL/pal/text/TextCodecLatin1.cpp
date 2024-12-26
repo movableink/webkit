@@ -111,43 +111,43 @@ String TextCodecLatin1::decode(std::span<const uint8_t> bytes, bool, bool, bool&
     }
     String result = String::createUninitialized(bytes.size(), characters);
 
-    const uint8_t* source = bytes.data();
-    const uint8_t* end = bytes.data() + bytes.size();
-    const uint8_t* alignedEnd = WTF::alignToMachineWord(end);
+    auto source = bytes;
+    const uint8_t* alignedEnd = WTF::alignToMachineWord(std::to_address(source.end()));
     auto destination = characters;
 
-    while (source < end) {
-        if (isASCII(*source)) {
+    while (!source.empty()) {
+        if (isASCII(source[0])) {
             // Fast path for ASCII. Most Latin-1 text will be ASCII.
-            if (WTF::isAlignedToMachineWord(source)) {
-                while (source < alignedEnd) {
-                    auto chunk = *reinterpret_cast_ptr<const WTF::MachineWord*>(source);
+            if (WTF::isAlignedToMachineWord(source.data())) {
+                while (source.data() < alignedEnd) {
+                    auto chunk = reinterpretCastSpanStartTo<WTF::MachineWord>(source);
 
                     if (!WTF::containsOnlyASCII<LChar>(chunk))
                         goto useLookupTable;
 
-                    copyASCIIMachineWord(destination.data(), source);
-                    source += sizeof(WTF::MachineWord);
+                    copyASCIIMachineWord(destination, source);
+                    source = source.subspan(sizeof(WTF::MachineWord));
                     destination = destination.subspan(sizeof(WTF::MachineWord));
                 }
 
-                if (source == end)
+                if (source.empty())
                     break;
 
                 // *source may not be ASCII anymore if source moves inside the loop of the fast code path
-                if (!isASCII(*source))
+                if (!isASCII(source[0]))
                     goto useLookupTable;
             }
-            destination[0] = *source;
+            destination[0] = source[0];
         } else {
 useLookupTable:
-            if (!isLatin1(latin1ConversionTable[*source]))
+            auto sourceCharacter = source[0];
+            if (!isLatin1(latin1ConversionTable[sourceCharacter]))
                 goto upConvertTo16Bit;
 
-            destination[0] = latin1ConversionTable[*source];
+            destination[0] = latin1ConversionTable[sourceCharacter];
         }
 
-        ++source;
+        source = source.subspan(1);
         destination = destination.subspan(1);
     }
 
@@ -169,39 +169,39 @@ upConvertTo16Bit:
     }
 
     // Handle the character that triggered the 16 bit path
-    destination16[0] = latin1ConversionTable[*source];
-    ++source;
+    destination16[0] = latin1ConversionTable[source[0]];
+    source = source.subspan(1);
     destination16 = destination16.subspan(1);
 
-    while (source < end) {
-        if (isASCII(*source)) {
+    while (!source.empty()) {
+        if (isASCII(source[0])) {
             // Fast path for ASCII. Most Latin-1 text will be ASCII.
-            if (WTF::isAlignedToMachineWord(source)) {
-                while (source < alignedEnd) {
-                    auto chunk = *reinterpret_cast_ptr<const WTF::MachineWord*>(source);
+            if (WTF::isAlignedToMachineWord(source.data())) {
+                while (source.data() < alignedEnd) {
+                    auto chunk = reinterpretCastSpanStartTo<WTF::MachineWord>(source);
                     
                     if (!WTF::containsOnlyASCII<LChar>(chunk))
                         goto useLookupTable16;
                     
-                    copyASCIIMachineWord(destination16.data(), source);
-                    source += sizeof(WTF::MachineWord);
+                    copyASCIIMachineWord(destination16, source);
+                    source = source.subspan(sizeof(WTF::MachineWord));
                     destination16 = destination16.subspan(sizeof(WTF::MachineWord));
                 }
                 
-                if (source == end)
+                if (source.empty())
                     break;
 
                 // *source may not be ASCII anymore if source moves inside the loop of the fast code path
-                if (!isASCII(*source))
+                if (!isASCII(source[0]))
                     goto useLookupTable16;
             }
-            destination16[0] = *source;
+            destination16[0] = source[0];
         } else {
 useLookupTable16:
-            destination16[0] = latin1ConversionTable[*source];
+            destination16[0] = latin1ConversionTable[source[0]];
         }
         
-        ++source;
+        source = source.subspan(1);
         destination16 = destination16.subspan(1);
     }
     

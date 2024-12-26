@@ -70,6 +70,7 @@ public:
 
     unsigned length() const { return m_length; }
     CharType* characters() { return m_data; }
+    std::span<CharType> span() { return unsafeMakeSpan(m_data, m_length); }
 
     CharType& operator[](unsigned i) { RELEASE_ASSERT(i < m_length); return m_data[i]; }
 

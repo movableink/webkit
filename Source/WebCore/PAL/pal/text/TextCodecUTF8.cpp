@@ -168,15 +168,17 @@ static inline int decodeNonASCIISequence(std::span<const uint8_t> sequence, uint
     return ((sequence[0] << 18) + (sequence[1] << 12) + (sequence[2] << 6) + sequence[3]) - 0x03C82080;
 }
 
-static inline UChar* appendCharacter(UChar* destination, int character)
+static inline std::span<UChar> appendCharacter(std::span<UChar> destination, int character)
 {
     ASSERT(character != nonCharacter);
     ASSERT(!U_IS_SURROGATE(character));
-    if (U_IS_BMP(character))
-        *destination++ = character;
-    else {
-        *destination++ = U16_LEAD(character);
-        *destination++ = U16_TRAIL(character);
+    if (U_IS_BMP(character)) {
+        destination[0] = character;
+        destination = destination.subspan(1);
+    } else {
+        destination[0] = U16_LEAD(character);
+        destination[1] = U16_TRAIL(character);
+        destination = destination.subspan(2);
     }
     return destination;
 }
@@ -187,12 +189,13 @@ void TextCodecUTF8::consumePartialSequenceByte()
     memmoveSpan(std::span { m_partialSequence }, std::span { m_partialSequence }.subspan(1, m_partialSequenceSize));
 }
 
-bool TextCodecUTF8::handlePartialSequence(LChar*& destination, std::span<const uint8_t>& source, bool flush)
+bool TextCodecUTF8::handlePartialSequence(std::span<LChar>& destination, std::span<const uint8_t>& source, bool flush)
 {
     ASSERT(m_partialSequenceSize);
     do {
         if (isASCII(m_partialSequence[0])) {
-            *destination++ = m_partialSequence[0];
+            destination[0] = m_partialSequence[0];
+            destination = destination.subspan(1);
             consumePartialSequenceByte();
             continue;
         }
@@ -232,18 +235,20 @@ bool TextCodecUTF8::handlePartialSequence(LChar*& destination, std::span<const u
             return true;
 
         m_partialSequenceSize -= count;
-        *destination++ = character;
+        destination[0] = character;
+        destination = destination.subspan(1);
     } while (m_partialSequenceSize);
 
     return false;
 }
 
-void TextCodecUTF8::handlePartialSequence(UChar*& destination, std::span<const uint8_t>& source, bool flush, bool stopOnError, bool& sawError)
+void TextCodecUTF8::handlePartialSequence(std::span<UChar>& destination, std::span<const uint8_t>& source, bool flush, bool stopOnError, bool& sawError)
 {
     ASSERT(m_partialSequenceSize);
     do {
         if (isASCII(m_partialSequence[0])) {
-            *destination++ = m_partialSequence[0];
+            destination[0] = m_partialSequence[0];
+            destination = destination.subspan(1);
             consumePartialSequenceByte();
             continue;
         }
@@ -252,7 +257,8 @@ void TextCodecUTF8::handlePartialSequence(UChar*& destination, std::span<const u
             sawError = true;
             if (stopOnError)
                 return;
-            *destination++ = replacementCharacter;
+            destination[0] = replacementCharacter;
+            destination = destination.subspan(1);
             consumePartialSequenceByte();
             continue;
         }
@@ -289,7 +295,8 @@ void TextCodecUTF8::handlePartialSequence(UChar*& destination, std::span<const u
             sawError = true;
             if (stopOnError)
                 return;
-            *destination++ = replacementCharacter;
+            destination[0] = replacementCharacter;
+            destination = destination.subspan(1);
             m_partialSequenceSize -= count;
             memmoveSpan(std::span { m_partialSequence }, std::span { m_partialSequence }.subspan(count, m_partialSequenceSize));
             continue;
@@ -315,15 +322,15 @@ String TextCodecUTF8::decode(std::span<const uint8_t> bytes, bool flush, bool st
     StringBuffer<LChar> buffer(bufferSize);
 
     auto source = bytes;
-    auto* alignedEnd = WTF::alignToMachineWord(bytes.data() + bytes.size());
-    LChar* destination = buffer.characters();
+    auto* alignedEnd = WTF::alignToMachineWord(std::to_address(source.end()));
+    auto destination = buffer.span();
 
     do {
         if (m_partialSequenceSize) {
             // Explicitly copy destination and source pointers to avoid taking pointers to the
             // local variables, which may harm code generation by disabling some optimizations
             // in some compilers.
-            LChar* destinationForHandlePartialSequence = destination;
+            auto destinationForHandlePartialSequence = destination;
             if (handlePartialSequence(destinationForHandlePartialSequence, source, flush)) {
                 goto upConvertTo16Bit;
             }
@@ -333,27 +340,28 @@ String TextCodecUTF8::decode(std::span<const uint8_t> bytes, bool flush, bool st
         }
 
         while (!source.empty()) {
-            if (isASCII(source.front())) {
+            if (isASCII(source[0])) {
                 // Fast path for ASCII. Most UTF-8 text will be ASCII.
                 if (WTF::isAlignedToMachineWord(source.data())) {
                     while (source.data() < alignedEnd) {
                         auto chunk = *reinterpret_cast_ptr<const WTF::MachineWord*>(source.data());
                         if (!WTF::containsOnlyASCII<LChar>(chunk))
                             break;
-                        copyASCIIMachineWord(destination, source.data());
+                        copyASCIIMachineWord(destination, source);
                         source = source.subspan(sizeof(WTF::MachineWord));
-                        destination += sizeof(WTF::MachineWord);
+                        destination = destination.subspan(sizeof(WTF::MachineWord));
                     }
                     if (source.empty())
                         break;
-                    if (!isASCII(source.front()))
+                    if (!isASCII(source[0]))
                         continue;
                 }
-                *destination++ = source.front();
+                destination[0] = source[0];
+                destination = destination.subspan(1);
                 source = source.subspan(1);
                 continue;
             }
-            auto count = nonASCIISequenceLength(source.front());
+            auto count = nonASCIISequenceLength(source[0]);
             int character;
             if (!count)
                 character = nonCharacter;
@@ -379,11 +387,12 @@ String TextCodecUTF8::decode(std::span<const uint8_t> bytes, bool flush, bool st
                 goto upConvertTo16Bit;
 
             source = source.subspan(count);
-            *destination++ = character;
+            destination[0] = character;
+            destination = destination.subspan(1);
         }
     } while (m_partialSequenceSize);
 
-    buffer.shrink(destination - buffer.characters());
+    buffer.shrink(destination.data() - buffer.characters());
     if (flush)
         m_partialSequenceSize = 0;
     if (flush || buffer.length())
@@ -393,18 +402,21 @@ String TextCodecUTF8::decode(std::span<const uint8_t> bytes, bool flush, bool st
 upConvertTo16Bit:
     StringBuffer<UChar> buffer16(bufferSize);
 
-    UChar* destination16 = buffer16.characters();
+    auto destination16 = buffer16.span();
 
     // Copy the already converted characters
-    for (LChar* converted8 = buffer.characters(); converted8 < destination;)
-        *destination16++ = *converted8++;
+    auto converted8 = buffer.span();
+    size_t charactersToCopy = destination.data() - buffer.characters();
+    for (size_t i = 0; i < charactersToCopy; ++i)
+        destination16[i] = converted8[i];
+    destination16 = destination16.subspan(charactersToCopy);
 
     do {
         if (m_partialSequenceSize) {
             // Explicitly copy destination and source pointers to avoid taking pointers to the
             // local variables, which may harm code generation by disabling some optimizations
             // in some compilers.
-            UChar* destinationForHandlePartialSequence = destination16;
+            auto destinationForHandlePartialSequence = destination16;
             handlePartialSequence(destinationForHandlePartialSequence, source, flush, stopOnError, sawError);
             destination16 = destinationForHandlePartialSequence;
             if (m_partialSequenceSize)
@@ -412,27 +424,28 @@ upConvertTo16Bit:
         }
 
         while (!source.empty()) {
-            if (isASCII(source.front())) {
+            if (isASCII(source[0])) {
                 // Fast path for ASCII. Most UTF-8 text will be ASCII.
                 if (WTF::isAlignedToMachineWord(source.data())) {
                     while (source.data() < alignedEnd) {
                         auto chunk = *reinterpret_cast_ptr<const WTF::MachineWord*>(source.data());
                         if (!WTF::containsOnlyASCII<LChar>(chunk))
                             break;
-                        copyASCIIMachineWord(destination16, source.data());
+                        copyASCIIMachineWord(destination16, source);
                         source = source.subspan(sizeof(WTF::MachineWord));
-                        destination16 += sizeof(WTF::MachineWord);
+                        destination16 = destination16.subspan(sizeof(WTF::MachineWord));
                     }
                     if (source.empty())
                         break;
-                    if (!isASCII(source.front()))
+                    if (!isASCII(source[0]))
                         continue;
                 }
-                *destination16++ = source.front();
+                destination16[0] = source[0];
+                destination16 = destination16.subspan(1);
                 source = source.subspan(1);
                 continue;
             }
-            auto count = nonASCIISequenceLength(source.front());
+            auto count = nonASCIISequenceLength(source[0]);
             int character;
             if (!count)
                 character = nonCharacter;
@@ -451,18 +464,19 @@ upConvertTo16Bit:
                 sawError = true;
                 if (stopOnError)
                     break;
-                *destination16++ = replacementCharacter;
+                destination16[0] = replacementCharacter;
+                destination16 = destination16.subspan(1);
                 source = source.subspan(count ? count : 1);
                 continue;
             }
             source = source.subspan(count);
-            if (character == byteOrderMark && destination16 == buffer16.characters() && std::exchange(m_shouldStripByteOrderMark, false))
+            if (character == byteOrderMark && destination16.data() == buffer16.characters() && std::exchange(m_shouldStripByteOrderMark, false))
                 continue;
             destination16 = appendCharacter(destination16, character);
         }
     } while (m_partialSequenceSize);
 
-    buffer16.shrink(destination16 - buffer16.characters());
+    buffer16.shrink(destination16.data() - buffer16.characters());
     if (flush)
         m_partialSequenceSize = 0;
     if (flush || buffer16.length())
