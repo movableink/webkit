@@ -3197,18 +3197,14 @@ RenderBox::LogicalExtentComputedValues RenderBox::computeLogicalHeight(LayoutUni
             return computedValues;
         }
 
-        // FIXME: Account for block-flow in flexible boxes.
-        // https://bugs.webkit.org/show_bug.cgi?id=46418
-        bool inHorizontalBox = parent()->isRenderDeprecatedFlexibleBox() && parent()->style().boxOrient() == BoxOrient::Horizontal;
-        bool stretching = parent()->style().boxAlign() == BoxAlignment::Stretch;
-        bool treatAsReplaced = is<RenderReplaced>(*this) && (!inHorizontalBox || !stretching);
         bool checkMinMaxHeight = false;
-
         // The parent box is flexing us, so it has increased or decreased our height. We have to grab our cached flexible height.
         // FIXME: Account for block-flow in flexible boxes.
         // https://bugs.webkit.org/show_bug.cgi?id=46418
         auto usedHeight = [&]() -> Length {
-            if (is<RenderFlexibleBox>(parent()) || is<RenderDeprecatedFlexibleBox>(parent())) {
+            auto& parent = *this->parent();
+
+            if (is<RenderFlexibleBox>(parent)) {
                 if (auto overridingLogicalHeight = overridingLogicalHeightForFlexBasisComputation()) {
                     ASSERT(!this->overridingLogicalHeight());
                     checkMinMaxHeight = true;
@@ -3218,40 +3214,54 @@ RenderBox::LogicalExtentComputedValues RenderBox::computeLogicalHeight(LayoutUni
                 if (auto overridingLogicalHeight = this->overridingLogicalHeight())
                     return { *overridingLogicalHeight, LengthType::Fixed };
 
-                if (treatAsReplaced)
+                if (is<RenderReplaced>(*this))
                     return { computeReplacedLogicalHeight() + borderAndPaddingLogicalHeight(), LengthType::Fixed };
 
                 checkMinMaxHeight = true;
                 return style().logicalHeight();
             }
 
-            if (is<RenderGrid>(parent())) {
+            if (CheckedPtr deprecatedFlexBox = dynamicDowncast<RenderDeprecatedFlexibleBox>(parent)) {
                 if (auto overridingLogicalHeight = this->overridingLogicalHeight())
                     return { *overridingLogicalHeight, LengthType::Fixed };
 
-                if (treatAsReplaced)
+                auto& flexBoxStyle = deprecatedFlexBox->style();
+                auto treatAsReplaced = [&] {
+                    if (!is<RenderReplaced>(*this))
+                        return false;
+                    bool inHorizontalBox = flexBoxStyle.boxOrient() == BoxOrient::Horizontal;
+                    bool stretching = flexBoxStyle.boxAlign() == BoxAlignment::Stretch;
+                    return !inHorizontalBox || !stretching;
+                };
+                if (treatAsReplaced())
+                    return { computeReplacedLogicalHeight() + borderAndPaddingLogicalHeight(), LengthType::Fixed };
+
+                // Block children of horizontal flexible boxes fill the height of the box.
+                if (style().logicalHeight().isAuto() && flexBoxStyle.boxOrient() == BoxOrient::Horizontal && deprecatedFlexBox->isStretchingChildren())
+                    return { deprecatedFlexBox->contentLogicalHeight() - marginBefore() - marginAfter(), LengthType::Fixed };
+
+                checkMinMaxHeight = true;
+                return style().logicalHeight();
+            }
+
+            if (is<RenderGrid>(parent)) {
+                if (auto overridingLogicalHeight = this->overridingLogicalHeight())
+                    return { *overridingLogicalHeight, LengthType::Fixed };
+
+                if (is<RenderReplaced>(*this))
                     return { computeReplacedLogicalHeight() + borderAndPaddingLogicalHeight(), LengthType::Fixed };
 
                 checkMinMaxHeight = true;
                 return style().logicalHeight();
             }
 
-            if (treatAsReplaced)
+            if (is<RenderReplaced>(*this))
                 return { computeReplacedLogicalHeight() + borderAndPaddingLogicalHeight(), LengthType::Fixed };
 
             checkMinMaxHeight = true;
             return style().logicalHeight();
         };
         h = usedHeight();
-
-        // Block children of horizontal flexible boxes fill the height of the box.
-        // FIXME: Account for block-flow in flexible boxes.
-        // https://bugs.webkit.org/show_bug.cgi?id=46418
-        if (h.isAuto() && is<RenderDeprecatedFlexibleBox>(*parent()) && parent()->style().boxOrient() == BoxOrient::Horizontal
-                && downcast<RenderDeprecatedFlexibleBox>(*parent()).isStretchingChildren()) {
-            h = Length(parentBox()->contentLogicalHeight() - marginBefore() - marginAfter(), LengthType::Fixed);
-            checkMinMaxHeight = false;
-        }
 
         LayoutUnit heightResult;
         if (checkMinMaxHeight) {
