@@ -39,7 +39,7 @@ template <typename IntType>
 void append(Vector<DFABytecode>& bytecode, IntType value)
 {
     bytecode.grow(bytecode.size() + sizeof(IntType));
-    memcpy(&bytecode[bytecode.size() - sizeof(IntType)], &value, sizeof(IntType));
+    memcpySpan(bytecode.mutableSpan().last(sizeof(IntType)), asByteSpan(value));
 }
 
 static void append24BitUnsignedInteger(Vector<DFABytecode>& bytecode, uint32_t value)

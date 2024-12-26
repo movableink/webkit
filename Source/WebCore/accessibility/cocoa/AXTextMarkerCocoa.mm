@@ -26,6 +26,8 @@
 #import "AXTextMarker.h"
 
 #import <Foundation/NSRange.h>
+#import <wtf/StdLibExtras.h>
+
 #if PLATFORM(MAC)
 #import "AXIsolatedObject.h"
 #import "WebAccessibilityObjectWrapperMac.h"
@@ -54,7 +56,7 @@ AXTextMarker::AXTextMarker(PlatformTextMarkerData platformData)
         return;
     }
 
-    memcpy(&m_data, AXTextMarkerGetBytePtr(platformData), sizeof(m_data));
+    memcpySpan(asMutableByteSpan(m_data), AXTextMarkerGetByteSpan(platformData));
 #else // PLATFORM(IOS_FAMILY)
     [platformData getBytes:&m_data length:sizeof(m_data)];
 #endif

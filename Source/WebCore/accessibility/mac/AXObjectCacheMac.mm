@@ -37,6 +37,7 @@
 #import "WebAccessibilityObjectWrapperMac.h"
 #import <pal/spi/cocoa/NSAccessibilitySPI.h>
 #import <pal/spi/mac/HIServicesSPI.h>
+#import <wtf/StdLibExtras.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
@@ -863,7 +864,7 @@ static TextMarkerData getBytesFromAXTextMarker(AXTextMarkerRef textMarker)
     if (AXTextMarkerGetLength(textMarker) != sizeof(textMarkerData))
         return { };
 
-    memcpy(&textMarkerData, AXTextMarkerGetBytePtr(textMarker), sizeof(textMarkerData));
+    memcpySpan(asMutableByteSpan(textMarkerData), AXTextMarkerGetByteSpan(textMarker));
     return textMarkerData;
 }
 
