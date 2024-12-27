@@ -4,7 +4,7 @@
  *           (C) 1998 Waldo Bastian (bastian@kde.org)
  *           (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2014-2019 Google Inc. All rights reserved.
  * Copyright (C) 2006 Alexey Proskuryakov (ap@nypop.com)
  *
@@ -1593,7 +1593,11 @@ std::optional<LayoutUnit> RenderTable::firstLineBaseline() const
     if (auto baseline = topNonEmptySection->firstLineBaseline())
         return std::optional<LayoutUnit>(topNonEmptySection->logicalTop() + baseline.value());
 
-    // FIXME: A table row always has a baseline per CSS 2.1. Will this return the right value?
+    // Other browsers use the top of the section as the baseline if its first row is empty of cells or content.
+    // The baseline of an empty row isn't specified by CSS 2.1.
+    if (topNonEmptySection->firstRow() && !topNonEmptySection->firstRow()->firstCell())
+        return topNonEmptySection->logicalTop();
+
     return std::optional<LayoutUnit>();
 }
 
