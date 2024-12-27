@@ -333,7 +333,7 @@ static NSString *replyBlockSignature(Protocol *protocol, SEL selector, NSUIntege
     auto pendingReply = it->value;
     _pendingReplies.remove(it);
 
-    auto decoder = adoptNS([[WKRemoteObjectDecoder alloc] initWithInterface:pendingReply.interface.get() rootObjectDictionary:static_cast<API::Dictionary*>(encodedInvocation.get()) replyToSelector:pendingReply.selector]);
+    auto decoder = adoptNS([[WKRemoteObjectDecoder alloc] initWithInterface:pendingReply.interface.get() rootObjectDictionary:downcast<API::Dictionary>(encodedInvocation.get()) replyToSelector:pendingReply.selector]);
 
     NSInvocation *replyInvocation = [decoder decodeObjectOfClass:[NSInvocation class] forKey:invocationKey];
 

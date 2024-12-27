@@ -216,7 +216,7 @@ void WebAuthenticationPanelClient::selectAssertionResponse(Vector<Ref<WebCore::A
             completionHandler(nullptr);
             return;
         }
-        completionHandler(static_cast<API::WebAuthenticationAssertionResponse&>([response _apiObject]).response());
+        completionHandler(downcast<API::WebAuthenticationAssertionResponse>([response _apiObject]).response());
     }).get()];
 }
 

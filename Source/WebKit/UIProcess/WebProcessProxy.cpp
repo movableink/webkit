@@ -1806,12 +1806,12 @@ RefPtr<API::Object> WebProcessProxy::transformHandlesToObjects(API::Object* obje
         {
             switch (object.type()) {
             case API::Object::Type::FrameHandle: {
-                ASSERT(static_cast<API::FrameHandle&>(object).isAutoconverting());
+                ASSERT(downcast<API::FrameHandle>(object).isAutoconverting());
                 auto frameID = downcast<API::FrameHandle>(object).frameID();
                 return WebFrameProxy::webFrame(frameID);
             }
             case API::Object::Type::PageHandle:
-                ASSERT(static_cast<API::PageHandle&>(object).isAutoconverting());
+                ASSERT(downcast<API::PageHandle>(object).isAutoconverting());
                 return protectedProcess()->webPage(downcast<API::PageHandle>(object).pageProxyID());
 
             default:

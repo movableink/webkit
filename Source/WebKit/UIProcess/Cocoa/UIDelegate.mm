@@ -1193,7 +1193,7 @@ Ref<API::InspectorConfiguration> UIDelegate::UIClient::configurationForLocalInsp
     if (!delegate)
         return API::InspectorConfiguration::create();
 
-    return static_cast<API::InspectorConfiguration&>([[(id <WKUIDelegatePrivate>)delegate _webView:uiDelegate->m_webView.get().get() configurationForLocalInspector:wrapper(inspector)] _apiObject]);
+    return downcast<API::InspectorConfiguration>([[(id <WKUIDelegatePrivate>)delegate _webView:uiDelegate->m_webView.get().get() configurationForLocalInspector:wrapper(inspector)] _apiObject]);
 }
 
 void UIDelegate::UIClient::didAttachLocalInspector(WebPageProxy&, WebInspectorUIProxy& inspector)
