@@ -160,10 +160,12 @@ WTF_EXTERN_C_END
 
 #endif // USE(APPLE_INTERNAL_SDK)
 
+#if PLATFORM(MAC)
 inline std::span<const uint8_t> AXTextMarkerGetByteSpan(AXTextMarkerRef marker)
 {
     return unsafeMakeSpan(AXTextMarkerGetBytePtr(marker), AXTextMarkerGetLength(marker));
 }
+#endif
 
 WTF_EXTERN_C_BEGIN
 
