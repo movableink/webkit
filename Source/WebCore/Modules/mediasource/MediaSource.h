@@ -85,7 +85,7 @@ public:
     USING_CAN_MAKE_WEAKPTR(CanMakeWeakPtr<MediaSource>);
 
     static void setRegistry(URLRegistry*);
-    static MediaSource* lookup(const String& url) { return s_registry ? static_cast<MediaSource*>(s_registry->lookup(url)) : nullptr; }
+    static MediaSource* lookup(const String& url) { return s_registry ? downcast<MediaSource>(s_registry->lookup(url)) : nullptr; }
 
     static Ref<MediaSource> create(ScriptExecutionContext&, MediaSourceInit&&);
     virtual ~MediaSource();
@@ -214,7 +214,9 @@ private:
     void derefEventTarget() final { deref(); }
     enum EventTargetInterfaceType eventTargetInterface() const final;
 
+    // URLRegistrable.
     URLRegistry& registry() const final;
+    RegistrableType registrableType() const final { return RegistrableType::MediaSource; }
 
     void setReadyState(ReadyState);
     void onReadyStateChange(ReadyState oldState, ReadyState newState);
@@ -282,5 +284,9 @@ struct LogArgument<WebCore::MediaSource::ReadyState> {
 };
 
 } // namespace WTF
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::MediaSource)
+    static bool isType(const WebCore::URLRegistrable& registrable) { return registrable.registrableType() == WebCore::URLRegistrable::RegistrableType::MediaSource; }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif

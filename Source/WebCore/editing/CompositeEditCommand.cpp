@@ -507,9 +507,9 @@ void CompositeEditCommand::applyCommandToComposite(Ref<EditCommand>&& command)
 {
     command->setParent(this);
     command->doApply();
-    if (command->isSimpleEditCommand()) {
+    if (auto* simpleCommand = dynamicDowncast<SimpleEditCommand>(command.get())) {
         command->setParent(nullptr);
-        ensureComposition().append(toSimpleEditCommand(command.ptr()));
+        ensureComposition().append(simpleCommand);
     }
     m_commands.append(WTFMove(command));
 }

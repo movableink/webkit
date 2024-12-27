@@ -118,7 +118,8 @@ public:
 #endif
 
     // URLRegistrable
-    URLRegistry& registry() const override;
+    URLRegistry& registry() const final;
+    RegistrableType registrableType() const final { return RegistrableType::Blob; }
 
     Ref<Blob> slice(long long start, long long end, const String& contentType) const;
 
@@ -168,3 +169,7 @@ private:
 WebCoreOpaqueRoot root(Blob*);
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::Blob)
+    static bool isType(const WebCore::URLRegistrable& registrable) { return registrable.registrableType() == WebCore::URLRegistrable::RegistrableType::Blob; }
+SPECIALIZE_TYPE_TRAITS_END()

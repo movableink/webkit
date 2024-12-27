@@ -77,7 +77,7 @@ void BlobURLRegistry::registerURL(const ScriptExecutionContext& context, const U
         Locker locker { m_urlsPerContextLock };
         m_urlsPerContext.add(context.identifier(), HashSet<URL>()).iterator->value.add(publicURL.isolatedCopy());
     }
-    ThreadableBlobRegistry::registerBlobURL(context.securityOrigin(), context.policyContainer(), publicURL, static_cast<Blob&>(blob).url(), context.topOrigin().data());
+    ThreadableBlobRegistry::registerBlobURL(context.securityOrigin(), context.policyContainer(), publicURL, downcast<Blob>(blob).url(), context.topOrigin().data());
 }
 
 void BlobURLRegistry::unregisterURL(const URL& url, const SecurityOriginData& topOrigin)

@@ -26,8 +26,6 @@ Modules/indexeddb/WindowOrWorkerGlobalScopeIndexedDatabase.cpp
 Modules/mediacapabilities/NavigatorMediaCapabilities.cpp
 Modules/mediacapabilities/WorkerNavigatorMediaCapabilities.cpp
 Modules/mediasession/NavigatorMediaSession.cpp
-Modules/mediasource/MediaSource.h
-Modules/mediasource/MediaSourceRegistry.cpp
 Modules/mediastream/NavigatorMediaDevices.cpp
 Modules/mediastream/PeerConnectionBackend.cpp
 Modules/mediastream/UserMediaController.h
@@ -120,17 +118,13 @@ dom/WindowOrWorkerGlobalScopeTrustedTypes.cpp
 domjit/DOMJITHelpers.h
 domjit/JSDocumentDOMJIT.cpp
 domjit/JSNodeDOMJIT.cpp
-editing/EditCommand.cpp
-editing/EditCommand.h
 editing/TypingCommand.cpp
-fileapi/Blob.cpp
 html/InputType.cpp
 html/NavigatorUserActivation.cpp
 html/canvas/WebGL2RenderingContext.cpp
 html/canvas/WebGLRenderingContextBase.cpp
 html/track/TextTrackCueGeneric.cpp
 inspector/CommandLineAPIModule.cpp
-inspector/DOMPatchSupport.cpp
 inspector/agents/InspectorCSSAgent.cpp
 inspector/agents/InspectorIndexedDBAgent.cpp
 layout/layouttree/LayoutIterator.h
