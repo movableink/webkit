@@ -4,7 +4,8 @@
  *           (C) 1998 Waldo Bastian (bastian@kde.org)
  *           (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2017 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -202,7 +203,17 @@ void RenderTableCell::computePreferredLogicalWidths()
     // grids.  We must refresh those grids before the child cells try to use them.
     table()->recalcSectionsIfNeeded();
 
+    // We don't want the preferred width from children to be affected by any
+    // notional height on the cell, such as can happen when a percent sized image
+    // scales up its width to match the available height. Setting a zero override
+    // height prevents this from happening.
+    auto overridingLogicalHeight = this->overridingLogicalHeight();
+    if (overridingLogicalHeight)
+        setOverridingLogicalHeight({ });
     RenderBlockFlow::computePreferredLogicalWidths();
+    if (overridingLogicalHeight)
+        setOverridingLogicalHeight(*overridingLogicalHeight);
+
     if (!element() || !style().autoWrap() || !element()->hasAttributeWithoutSynchronization(nowrapAttr))
         return;
 
