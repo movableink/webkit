@@ -342,7 +342,7 @@ void NetworkDataTaskBlob::readFile(const BlobDataItem& item)
     ASSERT(m_stream);
 
     if (m_fileOpened) {
-        m_stream->read(m_buffer.data(), m_buffer.size());
+        m_stream->read(m_buffer.mutableSpan());
         return;
     }
 

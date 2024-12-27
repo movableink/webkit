@@ -42,8 +42,6 @@
 #include <wtf/MachSendRight.h>
 #endif
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 #if PLATFORM(COCOA)
 OBJC_CLASS NSData;
 #endif
@@ -121,8 +119,8 @@ public:
 
     size_t size() const { return m_size; }
 
-    std::span<const uint8_t> span() const { return { static_cast<const uint8_t*>(m_data), m_size }; }
-    std::span<uint8_t> mutableSpan() const { return { static_cast<uint8_t*>(m_data), m_size }; }
+    std::span<const uint8_t> span() const { return unsafeMakeSpan(static_cast<const uint8_t*>(m_data), m_size); }
+    std::span<uint8_t> mutableSpan() const { return unsafeMakeSpan(static_cast<uint8_t*>(m_data), m_size); }
 
 #if OS(WINDOWS)
     HANDLE handle() const { return m_handle.get(); }
@@ -157,5 +155,3 @@ private:
 };
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

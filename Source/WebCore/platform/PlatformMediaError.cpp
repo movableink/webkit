@@ -28,13 +28,11 @@
 
 #include <wtf/NeverDestroyed.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 String convertEnumerationToString(PlatformMediaError enumerationValue)
 {
-    static const NeverDestroyed<String> values[] = {
+    static std::array<const NeverDestroyed<String>, 13> values {
         MAKE_STATIC_STRING_IMPL("AppendError"),
         MAKE_STATIC_STRING_IMPL("ClientDisconnected"),
         MAKE_STATIC_STRING_IMPL("BufferRemoved"),
@@ -65,7 +63,5 @@ String convertEnumerationToString(PlatformMediaError enumerationValue)
     ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 } // namespace WebCore

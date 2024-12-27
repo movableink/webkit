@@ -50,7 +50,7 @@ RefPtr<SharedBuffer> serializeIDBKeyPath(const std::optional<IDBKeyPath>& keyPat
             encoder->encodeString("string"_s, string);
         }, [&](const Vector<String>& vector) {
             encoder->encodeEnum("type"_s, KeyPathType::Array);
-            encoder->encodeObjects("array"_s, vector.begin(), vector.end(), [](WebCore::KeyedEncoder& encoder, const String& string) {
+            encoder->encodeObjects("array"_s, vector, [](WebCore::KeyedEncoder& encoder, const String& string) {
                 encoder.encodeString("string"_s, string);
             });
         });

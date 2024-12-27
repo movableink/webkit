@@ -410,7 +410,7 @@ int BlobResourceHandle::readFileSync(const BlobDataItem& item, std::span<uint8_t
         m_fileOpened = true;
     }
 
-    int bytesRead = m_stream->read(buffer.data(), buffer.size());
+    int bytesRead = m_stream->read(buffer);
     if (bytesRead < 0) {
         m_errorCode = Error::NotReadableError;
         return 0;
@@ -471,7 +471,7 @@ void BlobResourceHandle::readFileAsync(const BlobDataItem& item)
     ASSERT(isMainThread());
 
     if (m_fileOpened) {
-        m_asyncStream->read(m_buffer.data(), m_buffer.size());
+        m_asyncStream->read(m_buffer.mutableSpan());
         return;
     }
 
