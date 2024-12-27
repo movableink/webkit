@@ -94,6 +94,11 @@ private:
     void forceUpdate() override;
     void didDiscardBackingStore() override;
 
+#if PLATFORM(GTK) || PLATFORM(WPE)
+    void dispatchAfterEnsuringDrawing(IPC::AsyncReplyID) override;
+    void dispatchPendingCallbacksAfterEnsuringDrawing() override;
+#endif
+
 #if PLATFORM(GTK)
     void adjustTransientZoom(double scale, WebCore::FloatPoint origin) override;
     void commitTransientZoom(double scale, WebCore::FloatPoint origin, CompletionHandler<void()>&&) override;
@@ -154,6 +159,10 @@ private:
 #if PLATFORM(GTK)
     bool m_transientZoom { false };
     WebCore::FloatPoint m_transientZoomInitialOrigin;
+#endif
+
+#if PLATFORM(GTK) || PLATFORM(WPE)
+    Vector<IPC::AsyncReplyID> m_pendingAfterDrawCallbackIDs;
 #endif
 };
 

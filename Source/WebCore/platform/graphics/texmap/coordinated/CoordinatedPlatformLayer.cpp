@@ -787,6 +787,13 @@ Ref<CoordinatedTileBuffer> CoordinatedPlatformLayer::paint(const IntRect& dirtyR
 #endif
 }
 
+void CoordinatedPlatformLayer::waitUntilPaintingComplete()
+{
+    Locker locker { m_lock };
+    if (m_backingStoreProxy)
+        m_backingStoreProxy->waitUntilPaintingComplete();
+}
+
 void CoordinatedPlatformLayer::flushCompositingState()
 {
     ASSERT(!isMainThread());

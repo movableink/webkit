@@ -249,12 +249,6 @@ const Damage& ThreadedCompositor::addSurfaceDamage(const Damage& damage)
 }
 #endif
 
-void ThreadedCompositor::forceRepaint()
-{
-    // FIXME: Implement this once it's possible to do these forced updates
-    // in a way that doesn't starve out the underlying graphics buffers.
-}
-
 void ThreadedCompositor::renderLayerTree()
 {
     ASSERT(m_compositingRunLoop->isCurrent());

@@ -40,6 +40,7 @@ typedef GdkSnapshot GtkSnapshot;
 
 namespace WebCore {
 class IntRect;
+class NativeImage;
 }
 
 namespace WebKit {
@@ -57,7 +58,7 @@ public:
 
     virtual void update(const LayerTreeContext&) { }
 #if USE(GTK4)
-    virtual void snapshot(GtkSnapshot*) = 0;
+    virtual bool snapshot(GtkSnapshot*) = 0;
 #else
     virtual bool paint(cairo_t*, const WebCore::IntRect&) = 0;
 #endif
@@ -65,6 +66,7 @@ public:
     virtual void unrealize() { };
     virtual int renderHostFileDescriptor() { return -1; }
     virtual RendererBufferFormat bufferFormat() const { return { }; }
+    virtual RefPtr<WebCore::NativeImage> bufferAsNativeImageForTesting() const = 0;
 
 protected:
     explicit AcceleratedBackingStore(WebPageProxy&);

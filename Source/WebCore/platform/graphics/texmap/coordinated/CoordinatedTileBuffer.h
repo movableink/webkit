@@ -66,7 +66,7 @@ public:
 
     virtual void beginPainting();
     virtual void completePainting();
-    virtual void waitUntilPaintingComplete();
+    void waitUntilPaintingComplete();
 
 #if USE(SKIA)
     SkCanvas* canvas();
@@ -146,6 +146,7 @@ public:
     WEBCORE_EXPORT virtual ~CoordinatedAcceleratedTileBuffer();
 
     BitmapTexture& texture() const { return m_texture.get(); }
+    void serverWait();
 
 private:
     CoordinatedAcceleratedTileBuffer(Ref<BitmapTexture>&&, Flags);
@@ -155,7 +156,6 @@ private:
 
     bool tryEnsureSurface() final;
     void completePainting() final;
-    void waitUntilPaintingComplete() final;
 
     Ref<BitmapTexture> m_texture;
     std::unique_ptr<GLFence> m_fence;

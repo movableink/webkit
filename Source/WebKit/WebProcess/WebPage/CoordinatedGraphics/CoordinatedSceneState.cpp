@@ -123,6 +123,14 @@ void CoordinatedSceneState::invalidate()
     m_pendingLayers = { };
 }
 
+void CoordinatedSceneState::waitUntilPaintingComplete()
+{
+    ASSERT(isMainRunLoop());
+    Locker pendingLayersLock { m_pendingLayersLock };
+    for (auto& layer : m_pendingLayers)
+        layer->waitUntilPaintingComplete();
+}
+
 } // namespace WebKit
 
 #endif // USE(COORDINATED_GRAPHICS)

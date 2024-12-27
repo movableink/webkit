@@ -81,6 +81,12 @@ void CoordinatedBackingStoreProxy::Update::appendUpdate(float scale, Vector<uint
         m_tilesToRemove.appendVector(WTFMove(tilesToRemove));
 }
 
+void CoordinatedBackingStoreProxy::Update::waitUntilPaintingComplete()
+{
+    for (auto& update : m_tilesToUpdate)
+        update.buffer->waitUntilPaintingComplete();
+}
+
 Ref<CoordinatedBackingStoreProxy> CoordinatedBackingStoreProxy::create(float contentsScale, std::optional<IntSize> tileSize)
 {
     return adoptRef(*new CoordinatedBackingStoreProxy(contentsScale, tileSize.value_or(IntSize { s_defaultTileDimension, s_defaultTileDimension })));
@@ -436,6 +442,12 @@ void CoordinatedBackingStoreProxy::forEachTilePositionInRect(const IntRect& rect
         for (int x = topLeft.x(); x <= innerBottomRight.x(); ++x)
             callback(IntPoint(x, y));
     }
+}
+
+void CoordinatedBackingStoreProxy::waitUntilPaintingComplete()
+{
+    Locker locker { m_update.lock };
+    m_update.pending.waitUntilPaintingComplete();
 }
 
 } // namespace WebCore

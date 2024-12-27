@@ -194,6 +194,18 @@ void LayerTreeHost::flushLayers()
 #endif
     page->finalizeRenderingUpdate(flags);
 
+#if PLATFORM(GTK)
+    // If we have an active transient zoom, we want the zoom to win over any changes
+    // that WebCore makes to the relevant layers, so re-apply our changes after flushing.
+    if (m_transientZoom)
+        applyTransientZoomToLayers(m_transientZoomScale, m_transientZoomOrigin);
+#endif
+
+#if PLATFORM(GTK) || PLATFORM(WPE)
+    if (auto* drawingArea = m_webPage.drawingArea())
+        drawingArea->dispatchPendingCallbacksAfterEnsuringDrawing();
+#endif
+
     bool didChangeSceneState = m_sceneState->flush();
     if (m_compositionRequired || m_forceFrameSync || didChangeSceneState)
         commitSceneState();
@@ -223,19 +235,14 @@ void LayerTreeHost::layerFlushTimerFired()
         return;
     }
 
+#if !HAVE(DISPLAY_LINK)
     // If a force-repaint callback was registered, we should force a 'frame sync' that
     // will guarantee us a call to renderNextFrame() once the update is complete.
     if (m_forceRepaintAsync.callback)
         m_forceFrameSync = true;
+#endif
 
     flushLayers();
-
-#if PLATFORM(GTK)
-    // If we have an active transient zoom, we want the zoom to win over any changes
-    // that WebCore makes to the relevant layers, so re-apply our changes after flushing.
-    if (m_transientZoom)
-        applyTransientZoomToLayers(m_transientZoomScale, m_transientZoomOrigin);
-#endif
 
     WTFEndSignpost(this, LayerFlushTimerFired);
 }
@@ -272,6 +279,7 @@ void LayerTreeHost::setViewOverlayRootLayer(GraphicsLayer* graphicsLayer)
 
 void LayerTreeHost::forceRepaint()
 {
+#if !HAVE(DISPLAY_LINK)
     // This is necessary for running layout tests. Since in this case we are not waiting for a UIProcess to reply nicely.
     // Instead we are just triggering forceRepaint. But we still want to have the scripted animation callbacks being executed.
     if (auto* frameView = m_webPage.localMainFrameView())
@@ -283,12 +291,17 @@ void LayerTreeHost::forceRepaint()
 
     if (!m_isWaitingForRenderer)
         flushLayers();
-
-    m_compositor->forceRepaint();
+#else
+    m_webPage.corePage()->forceRepaintAllFrames();
+    m_forceFrameSync = true;
+    flushLayers();
+    m_sceneState->waitUntilPaintingComplete();
+#endif
 }
 
 void LayerTreeHost::forceRepaintAsync(CompletionHandler<void()>&& callback)
 {
+#if !HAVE(DISPLAY_LINK)
     scheduleLayerFlush();
 
     // We want a clean repaint, meaning that if we're currently waiting for the renderer
@@ -296,7 +309,21 @@ void LayerTreeHost::forceRepaintAsync(CompletionHandler<void()>&& callback)
     ASSERT(!m_forceRepaintAsync.callback);
     m_forceRepaintAsync.callback = WTFMove(callback);
     m_forceRepaintAsync.needsFreshFlush = m_scheduledWhileWaitingForRenderer;
+#else
+    forceRepaint();
+    ASSERT(!m_forceRepaintAsync.callback);
+    m_forceRepaintAsync.callback = WTFMove(callback);
+    m_forceRepaintAsync.compositionRequestID = m_compositionRequestID;
+#endif
 }
+
+#if PLATFORM(GTK) || PLATFORM(WPE)
+void LayerTreeHost::ensureDrawing()
+{
+    m_forceFrameSync = true;
+    scheduleLayerFlush();
+}
+#endif
 
 void LayerTreeHost::sizeDidChange(const IntSize& size)
 {
@@ -305,9 +332,12 @@ void LayerTreeHost::sizeDidChange(const IntSize& size)
         Locker locker { rootLayer.lock() };
         rootLayer.setSize(size);
     }
-    scheduleLayerFlush();
 
     m_compositor->setViewportSize(size, m_webPage.deviceScaleFactor());
+    if (m_isWaitingForRenderer)
+        scheduleLayerFlush();
+    else
+        flushLayers();
 }
 
 void LayerTreeHost::pauseRendering()
@@ -445,8 +475,22 @@ void LayerTreeHost::didRenderFrame()
 #if HAVE(DISPLAY_LINK)
 void LayerTreeHost::didComposite(uint32_t compositionResponseID)
 {
-    if (!m_isWaitingForRenderer || (m_isWaitingForRenderer && m_compositionRequestID == compositionResponseID))
-        renderNextFrame(false);
+    WTFBeginSignpost(this, DidComposite, "compositionRequestID %i, compositionResponseID %i", m_compositionRequestID, compositionResponseID);
+
+    if (m_forceRepaintAsync.callback && compositionResponseID >= m_forceRepaintAsync.compositionRequestID) {
+        m_forceRepaintAsync.callback();
+        m_forceRepaintAsync.compositionRequestID = 0;
+    }
+
+    if (!m_isWaitingForRenderer || m_compositionRequestID == compositionResponseID) {
+        m_isWaitingForRenderer = false;
+        bool scheduledWhileWaitingForRenderer = std::exchange(m_scheduledWhileWaitingForRenderer, false);
+        if (!m_isSuspended && (scheduledWhileWaitingForRenderer || m_layerFlushTimer.isActive())) {
+            cancelPendingLayerFlush();
+            flushLayers();
+        }
+    }
+    WTFEndSignpost(this, DidComposite);
 }
 #endif
 
@@ -457,6 +501,7 @@ void LayerTreeHost::commitSceneState()
     WTFEmitSignpost(this, CommitSceneState, "compositionRequestID %i", m_compositionRequestID);
 }
 
+#if !HAVE(DISPLAY_LINK)
 void LayerTreeHost::renderNextFrame(bool forceRepaint)
 {
     WTFBeginSignpost(this, RenderNextFrame);
@@ -487,6 +532,7 @@ void LayerTreeHost::renderNextFrame(bool forceRepaint)
 
     WTFEndSignpost(this, RenderNextFrame);
 }
+#endif
 
 #if PLATFORM(GTK)
 FloatPoint LayerTreeHost::constrainTransientZoomOrigin(double scale, FloatPoint origin) const

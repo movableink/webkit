@@ -238,10 +238,8 @@ void CoordinatedAcceleratedTileBuffer::completePainting()
     CoordinatedTileBuffer::completePainting();
 }
 
-void CoordinatedAcceleratedTileBuffer::waitUntilPaintingComplete()
+void CoordinatedAcceleratedTileBuffer::serverWait()
 {
-    CoordinatedTileBuffer::waitUntilPaintingComplete();
-
     if (!m_fence)
         return;
 

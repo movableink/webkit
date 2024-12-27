@@ -172,6 +172,7 @@ public:
     void requestComposition();
 
     Ref<CoordinatedTileBuffer> paint(const IntRect&);
+    void waitUntilPaintingComplete();
 
 private:
     explicit CoordinatedPlatformLayer(Client*);

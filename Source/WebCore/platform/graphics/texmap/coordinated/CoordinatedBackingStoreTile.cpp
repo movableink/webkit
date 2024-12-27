@@ -82,6 +82,7 @@ void CoordinatedBackingStoreTile::processPendingUpdates(TextureMapper& textureMa
         if (update.buffer->isBackedByOpenGL()) {
             WTFBeginSignpost(this, CopyTextureGPUToGPU);
             auto& buffer = static_cast<CoordinatedAcceleratedTileBuffer&>(*update.buffer);
+            buffer.serverWait();
 
             // Fast path: whole tile content changed -- take ownership of the incoming texture, replacing the existing tile buffer (avoiding texture copies).
             if (update.sourceRect.size() == update.tileRect.size()) {

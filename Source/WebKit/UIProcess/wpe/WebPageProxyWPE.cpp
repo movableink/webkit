@@ -26,12 +26,15 @@
 #include "config.h"
 #include "WebPageProxy.h"
 
+#include "DrawingAreaMessages.h"
+#include "DrawingAreaProxy.h"
 #include "EditorState.h"
 #include "InputMethodState.h"
 #include "PageClientImpl.h"
 #include "UserMessage.h"
 #include "WebProcessProxy.h"
 #include <WebCore/PlatformEvent.h>
+#include <wtf/CallbackAggregator.h>
 
 #if USE(ATK)
 #include <atk/atk.h>
@@ -214,13 +217,21 @@ void WebPageProxy::callAfterNextPresentationUpdate(CompletionHandler<void()>&& c
     }
 
 #if USE(COORDINATED_GRAPHICS)
-    if (RefPtr pageClient = this->pageClient()) {
-        static_cast<PageClientImpl&>(*pageClient).callAfterNextPresentationUpdate(WTFMove(callback));
-        return;
-    }
-#endif
+    Ref aggregator = CallbackAggregator::create([weakThis = WeakPtr { *this }, callback = WTFMove(callback)]() mutable {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
+            return callback();
 
+        if (RefPtr pageClient = protectedThis->pageClient())
+            static_cast<PageClientImpl&>(*pageClient).callAfterNextPresentationUpdate(WTFMove(callback));
+    });
+    auto drawingAreaIdentifier = m_drawingArea->identifier();
+    forEachWebContentProcess([&] (auto& process, auto) {
+        process.sendWithAsyncReply(Messages::DrawingArea::DispatchAfterEnsuringDrawing(), [aggregator] { }, drawingAreaIdentifier);
+    });
+#else
     callback();
+#endif
 }
 
 } // namespace WebKit

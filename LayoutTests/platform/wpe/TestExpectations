@@ -73,7 +73,6 @@ imported/w3c/web-platform-tests/css/css-text/text-align/text-align-start-017.htm
 
 imported/w3c/web-platform-tests/css/css-view-transitions/new-content-captures-different-size.html [ Pass ]
 imported/w3c/web-platform-tests/css/css-view-transitions/new-content-captures-spans.html [ Pass ]
-imported/w3c/web-platform-tests/css/css-writing-modes/overconstrained-rel-pos-ltr-left-right-vrl-004.xht [ Pass ]
 imported/w3c/web-platform-tests/css/css-writing-modes/overconstrained-rel-pos-rtl-left-right-vlr-009.xht [ Pass ]
 
 imported/w3c/web-platform-tests/css/filter-effects/svg-unknown-input-001.html [ Pass ]

@@ -171,6 +171,10 @@ public:
     virtual void preferredBufferFormatsDidChange() { }
 #endif
 
+#if PLATFORM(GTK) || PLATFORM(WPE)
+    virtual void dispatchPendingCallbacksAfterEnsuringDrawing() = 0;
+#endif
+
     virtual void adoptLayersFromDrawingArea(DrawingArea&) { }
     virtual void adoptDisplayRefreshMonitorsFromDrawingArea(DrawingArea&) { }
 
@@ -223,7 +227,9 @@ private:
 #if PLATFORM(COCOA)
     virtual void setDeviceScaleFactor(float, CompletionHandler<void()>&&) { }
     virtual void setColorSpace(std::optional<WebCore::DestinationColorSpace>) { }
+#endif
 
+#if PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE)
     virtual void dispatchAfterEnsuringDrawing(IPC::AsyncReplyID) = 0;
 #endif
 

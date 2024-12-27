@@ -36,6 +36,7 @@
 #include "WebProcessProxy.h"
 #include <WebCore/GLContext.h>
 #include <WebCore/IntRect.h>
+#include <WebCore/NativeImage.h>
 #include <WebCore/NotImplemented.h>
 #include <WebCore/PlatformDisplay.h>
 #include <WebCore/ShareableBitmap.h>
@@ -62,6 +63,15 @@ static constexpr uint64_t s_dmabufInvalidModifier = ((1ULL << 56) - 1);
 #include <gdk/x11/gdkx.h>
 #endif
 
+#if USE(SKIA)
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
+IGNORE_CLANG_WARNINGS_BEGIN("cast-align")
+#include <skia/core/SkBitmap.h>
+#include <skia/core/SkColorSpace.h>
+IGNORE_CLANG_WARNINGS_END
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
+#endif
+
 namespace WebKit {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(AcceleratedBackingStoreDMABuf);
@@ -85,6 +95,11 @@ OptionSet<DMABufRendererBufferMode> AcceleratedBackingStoreDMABuf::rendererBuffe
 
         const char* forceSHM = getenv("WEBKIT_DMABUF_RENDERER_FORCE_SHM");
         if (forceSHM && strcmp(forceSHM, "0"))
+            return;
+
+        // Don't claim to support hardware buffers if we don't have a device to import them.
+        auto device = drmRenderNodeDevice();
+        if (device.isEmpty())
             return;
 
         if (auto* glDisplay = Display::singleton().glDisplay()) {
@@ -249,6 +264,30 @@ void AcceleratedBackingStoreDMABuf::Buffer::didRelease() const
     m_webPage->legacyMainFrameProcess().send(Messages::AcceleratedSurfaceDMABuf::ReleaseBuffer(m_id, { }), m_surfaceID);
 }
 
+#if USE(GTK4)
+static RefPtr<WebCore::NativeImage> nativeImageFromGdkTexture(GdkTexture* texture)
+{
+    if (!texture)
+        return nullptr;
+
+#if USE(CAIRO)
+    RefPtr<cairo_surface_t> surface = adoptRef(cairo_image_surface_create(CAIRO_FORMAT_ARGB32, gdk_texture_get_width(texture), gdk_texture_get_height(texture)));
+    gdk_texture_download(texture, cairo_image_surface_get_data(surface.get()), cairo_image_surface_get_stride(surface.get()));
+    cairo_surface_mark_dirty(surface.get());
+    return WebCore::NativeImage::create(WTFMove(surface));
+#elif USE(SKIA)
+    auto imageInfo = SkImageInfo::MakeN32Premul(gdk_texture_get_width(texture), gdk_texture_get_height(texture), SkColorSpace::MakeSRGB());
+    SkBitmap bitmap;
+    if (!bitmap.tryAllocPixels(imageInfo))
+        return nullptr;
+
+    gdk_texture_download(texture, reinterpret_cast<guchar*>(bitmap.getPixels()), imageInfo.minRowBytes());
+    bitmap.setImmutable();
+    return WebCore::NativeImage::create(bitmap.asImage());
+#endif
+}
+#endif
+
 #if GTK_CHECK_VERSION(4, 13, 4)
 RefPtr<AcceleratedBackingStoreDMABuf::Buffer> AcceleratedBackingStoreDMABuf::BufferDMABuf::create(WebPageProxy& webPage, uint64_t id, uint64_t surfaceID, const WebCore::IntSize& size, DMABufRendererBufferFormat::Usage usage, uint32_t format, Vector<UnixFileDescriptor>&& fds, Vector<uint32_t>&& offsets, Vector<uint32_t>&& strides, uint64_t modifier)
 {
@@ -300,6 +339,11 @@ void AcceleratedBackingStoreDMABuf::BufferDMABuf::didUpdateContents(Buffer* prev
 RendererBufferFormat AcceleratedBackingStoreDMABuf::BufferDMABuf::format() const
 {
     return { RendererBufferFormat::Type::DMABuf, m_usage, gdk_dmabuf_texture_builder_get_fourcc(m_builder.get()), gdk_dmabuf_texture_builder_get_modifier(m_builder.get()) };
+}
+
+RefPtr<WebCore::NativeImage> AcceleratedBackingStoreDMABuf::BufferDMABuf::asNativeImageForTesting() const
+{
+    return nativeImageFromGdkTexture(m_texture.get());
 }
 
 void AcceleratedBackingStoreDMABuf::BufferDMABuf::release()
@@ -434,6 +478,15 @@ RendererBufferFormat AcceleratedBackingStoreDMABuf::BufferEGLImage::format() con
     return { RendererBufferFormat::Type::DMABuf, m_usage, m_fourcc, m_modifier };
 }
 
+RefPtr<WebCore::NativeImage> AcceleratedBackingStoreDMABuf::BufferEGLImage::asNativeImageForTesting() const
+{
+#if USE(GTK4)
+    return nativeImageFromGdkTexture(m_texture.get());
+#else
+    return nullptr;
+#endif
+}
+
 void AcceleratedBackingStoreDMABuf::BufferEGLImage::release()
 {
 #if USE(GTK4)
@@ -505,6 +558,11 @@ RendererBufferFormat AcceleratedBackingStoreDMABuf::BufferGBM::format() const
     return { RendererBufferFormat::Type::DMABuf, m_usage, gbm_bo_get_format(m_buffer), gbm_bo_get_modifier(m_buffer) };
 }
 
+RefPtr<WebCore::NativeImage> AcceleratedBackingStoreDMABuf::BufferGBM::asNativeImageForTesting() const
+{
+    return nullptr;
+}
+
 void AcceleratedBackingStoreDMABuf::BufferGBM::release()
 {
     m_surface = nullptr;
@@ -548,6 +606,13 @@ RendererBufferFormat AcceleratedBackingStoreDMABuf::BufferSHM::format() const
 #else
     return { };
 #endif
+}
+
+RefPtr<WebCore::NativeImage> AcceleratedBackingStoreDMABuf::BufferSHM::asNativeImageForTesting() const
+{
+    if (!m_bitmap)
+        return nullptr;
+    return WebCore::NativeImage::create(m_bitmap->createPlatformImage(WebCore::BackingStoreCopy::CopyBackingStore));
 }
 
 void AcceleratedBackingStoreDMABuf::BufferSHM::release()
@@ -698,15 +763,17 @@ bool AcceleratedBackingStoreDMABuf::swapBuffersIfNeeded()
 }
 
 #if USE(GTK4)
-void AcceleratedBackingStoreDMABuf::snapshot(GtkSnapshot* gtkSnapshot)
+bool AcceleratedBackingStoreDMABuf::snapshot(GtkSnapshot* gtkSnapshot)
 {
     bool didSwapBuffers = swapBuffersIfNeeded();
     if (!m_committedBuffer)
-        return;
+        return false;
 
     m_committedBuffer->snapshot(gtkSnapshot);
     if (didSwapBuffers)
         frameDone();
+
+    return didSwapBuffers;
 }
 #else
 bool AcceleratedBackingStoreDMABuf::paint(cairo_t* cr, const WebCore::IntRect& clipRect)
@@ -719,7 +786,7 @@ bool AcceleratedBackingStoreDMABuf::paint(cairo_t* cr, const WebCore::IntRect& c
     if (didSwapBuffers)
         frameDone();
 
-    return true;
+    return didSwapBuffers;
 }
 #endif
 
@@ -727,6 +794,21 @@ RendererBufferFormat AcceleratedBackingStoreDMABuf::bufferFormat() const
 {
     auto* buffer = m_committedBuffer ? m_committedBuffer.get() : m_pendingBuffer.get();
     return buffer ? buffer->format() : RendererBufferFormat { };
+}
+
+RefPtr<WebCore::NativeImage> AcceleratedBackingStoreDMABuf::bufferAsNativeImageForTesting() const
+{
+    if (!m_committedBuffer)
+        return nullptr;
+
+#if USE(CAIRO)
+    // Scaling the surface is not supported with cairo, so in that case we will fall back to
+    // get the snapshot from the web view widget.
+    if (m_committedBuffer->deviceScaleFactor() != 1)
+        return nullptr;
+#endif
+
+    return m_committedBuffer->asNativeImageForTesting();
 }
 
 } // namespace WebKit

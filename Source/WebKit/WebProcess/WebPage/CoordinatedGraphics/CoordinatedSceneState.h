@@ -62,6 +62,8 @@ public:
     bool layersDidChange() const { return m_didChangeLayers; }
 #endif
 
+    void waitUntilPaintingComplete();
+
 private:
     CoordinatedSceneState();
 

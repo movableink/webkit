@@ -128,6 +128,10 @@ public:
     void commitTransientZoom(double, WebCore::FloatPoint);
 #endif
 
+#if PLATFORM(GTK) || PLATFORM(WPE)
+    void ensureDrawing();
+#endif
+
 #if PLATFORM(WPE) && USE(GBM) && ENABLE(WPE_PLATFORM)
     void preferredBufferFormatsDidChange();
 #endif
@@ -137,7 +141,9 @@ private:
     void layerFlushTimerFired();
     void flushLayers();
     void commitSceneState();
+#if !HAVE(DISPLAY_LINK)
     void renderNextFrame(bool);
+#endif
 
     // CoordinatedPlatformLayer::Client
 #if USE(CAIRO)
@@ -189,7 +195,11 @@ private:
     RefPtr<ThreadedCompositor> m_compositor;
     struct {
         CompletionHandler<void()> callback;
+#if HAVE(DISPLAY_LINK)
+        uint32_t compositionRequestID { 0 };
+#else
         bool needsFreshFlush { false };
+#endif
     } m_forceRepaintAsync;
     RunLoop::Timer m_layerFlushTimer;
 #if !HAVE(DISPLAY_LINK)

@@ -80,8 +80,6 @@ public:
 
     void invalidate();
 
-    void forceRepaint();
-
 #if !HAVE(DISPLAY_LINK)
     WebCore::DisplayRefreshMonitor& displayRefreshMonitor() const;
 #endif

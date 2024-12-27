@@ -277,6 +277,14 @@ void DrawingAreaProxyCoordinatedGraphics::updateAcceleratedCompositingMode(const
         page->updateAcceleratedCompositingMode(layerTreeContext);
 }
 
+void DrawingAreaProxyCoordinatedGraphics::dispatchPresentationCallbacksAfterFlushingLayers(IPC::Connection& connection, Vector<IPC::AsyncReplyID>&& callbackIDs)
+{
+    for (auto& callbackID : callbackIDs) {
+        if (auto callback = connection.takeAsyncReplyHandler(callbackID))
+            callback(nullptr);
+    }
+}
+
 void DrawingAreaProxyCoordinatedGraphics::sendUpdateGeometry()
 {
     ASSERT(!m_isWaitingForDidUpdateGeometry);

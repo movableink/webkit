@@ -65,6 +65,7 @@ public:
         const Vector<uint32_t>& tilesToRemove() const { return m_tilesToRemove; }
 
         void appendUpdate(float, Vector<uint32_t>&&, Vector<TileUpdate>&&, Vector<uint32_t>&&);
+        void waitUntilPaintingComplete();
 
     private:
         float m_scale { 1 };
@@ -80,6 +81,8 @@ public:
     };
     OptionSet<UpdateResult> updateIfNeeded(const IntRect& unscaledVisibleRect, const IntRect& unscaledContentsRect, bool shouldCreateAndDestroyTiles, const Vector<IntRect, 1>&, CoordinatedPlatformLayer&);
     Update takePendingUpdate();
+
+    void waitUntilPaintingComplete();
 
 private:
     struct Tile {

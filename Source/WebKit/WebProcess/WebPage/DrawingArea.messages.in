@@ -42,7 +42,9 @@ messages -> DrawingArea {
 
     AcceleratedAnimationDidStart(WebCore::PlatformLayerIdentifier layerID, String key, MonotonicTime startTime)
     AcceleratedAnimationDidEnd(WebCore::PlatformLayerIdentifier layerID, String key)
-    
+#endif
+
+#if PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE)
     DispatchAfterEnsuringDrawing() -> () CallWithReplyID
 #endif
 
