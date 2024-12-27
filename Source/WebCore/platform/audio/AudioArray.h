@@ -32,10 +32,9 @@
 #include <span>
 #include <string.h>
 #include <wtf/CheckedArithmetic.h>
+#include <wtf/MallocSpan.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -49,16 +48,13 @@ public:
         resize(n);
     }
 
-    ~AudioArray()
-    {
-        fastAlignedFree(m_allocation);
-    }
+    ~AudioArray() = default;
 
     // It's OK to call resize() multiple times, but data will *not* be copied from an initial allocation
     // if re-allocated. Allocations are zero-initialized.
     void resize(Checked<size_t> n)
     {
-        if (n == m_size)
+        if (n == size())
             return;
 
         Checked<size_t> initialSize = sizeof(T) * n;
@@ -67,38 +63,19 @@ public:
         // optimized implementation if possible, which makes the result deterministic.
         constexpr size_t alignment = 32;
 
-        fastAlignedFree(m_allocation);
-
-        m_allocation = static_cast<T*>(fastAlignedMalloc(alignment, initialSize));
-        if (!m_allocation)
-            CRASH();
-        m_size = n;
+        m_allocation = MallocSpan<T, FastAlignedMalloc>::alignedMalloc(alignment, initialSize);
         zero();
     }
 
-    std::span<T> span() { return { data(), size() }; }
-    std::span<const T> span() const { return { data(), size() }; }
-    T* data() { return m_allocation; }
-    const T* data() const { return m_allocation; }
-    size_t size() const { return m_size; }
-    bool isEmpty() const { return !m_size; }
+    std::span<T> span() { return m_allocation.mutableSpan(); }
+    std::span<const T> span() const { return m_allocation.span(); }
+    T* data() { return span().data(); }
+    const T* data() const { return span().data(); }
+    size_t size() const { return span().size(); }
+    bool isEmpty() const { return span().empty(); }
 
-    T& at(size_t i)
-    {
-        // Note that although it is a size_t, m_size is now guaranteed to be
-        // no greater than max unsigned. This guarantee is enforced in resize().
-        ASSERT_WITH_SECURITY_IMPLICATION(i < size());
-        return data()[i];
-    }
-
-    const T& at(size_t i) const
-    {
-        // Note that although it is a size_t, m_size is now guaranteed to be
-        // no greater than max unsigned. This guarantee is enforced in resize().
-        RELEASE_ASSERT(i < size());
-        return data()[i];
-    }
-
+    T& at(size_t i) { return m_allocation[i]; }
+    const T& at(size_t i) const { return m_allocation[i]; }
     T& operator[](size_t i) { return at(i); }
     const T& operator[](size_t i) const { return at(i); }
 
@@ -130,26 +107,23 @@ public:
 
     bool containsConstantValue() const
     {
-        if (m_size <= 1)
+        if (size() <= 1)
             return true;
-        float constant = data()[0];
-        for (unsigned i = 1; i < m_size; ++i) {
-            if (data()[i] != constant)
+        float constant = m_allocation[0];
+        for (auto& value : span().subspan(1)) {
+            if (value != constant)
                 return false;
         }
         return true;
     }
 
 private:
-    T* m_allocation { nullptr };
-    size_t m_size { 0 };
+    MallocSpan<T, FastAlignedMalloc> m_allocation;
 };
 
 typedef AudioArray<float> AudioFloatArray;
 typedef AudioArray<double> AudioDoubleArray;
 
 } // WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // AudioArray_h

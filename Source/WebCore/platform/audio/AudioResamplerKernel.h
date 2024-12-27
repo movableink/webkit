@@ -52,7 +52,7 @@ public:
     // process() resamples framesToProcess frames from the source into destination.
     // Each call to process() must be preceded by a call to getSourceSpan() so that source input may be supplied.
     // framesToProcess must be less than or equal to AudioUtilities::renderQuantumSize.
-    void process(float* destination, size_t framesToProcess);
+    void process(std::span<float> destination, size_t framesToProcess);
 
     // Resets the processing state.
     void reset();
@@ -70,7 +70,7 @@ private:
     // m_lastValues stores the last two sample values from the last call to process().
     // m_fillIndex represents how many buffered samples we have which can be as many as 2.
     // For the first call to process() (or after reset()) there will be no buffered samples.
-    float m_lastValues[2];
+    std::array<float, 2> m_lastValues;
     unsigned m_fillIndex { 0 };
 };
 

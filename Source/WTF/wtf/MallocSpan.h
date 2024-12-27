@@ -100,6 +100,11 @@ public:
         return MallocSpan { static_cast<T*>(Malloc::zeroedMalloc(sizeInBytes)), sizeInBytes };
     }
 
+    static MallocSpan alignedMalloc(size_t alignment, size_t sizeInBytes)
+    {
+        return MallocSpan { static_cast<T*>(Malloc::alignedMalloc(alignment, sizeInBytes)), sizeInBytes };
+    }
+
 #if HAVE(MMAP)
     static MallocSpan mmap(size_t sizeInBytes, int pageProtection, int options, int fileDescriptor)
     {

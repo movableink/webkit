@@ -39,15 +39,13 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(PlatformMediaSession);
 
 String convertEnumerationToString(PlatformMediaSession::State state)
 {
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 5> values {
         MAKE_STATIC_STRING_IMPL("Idle"),
         MAKE_STATIC_STRING_IMPL("Autoplaying"),
         MAKE_STATIC_STRING_IMPL("Playing"),
@@ -65,7 +63,7 @@ String convertEnumerationToString(PlatformMediaSession::State state)
 
 String convertEnumerationToString(PlatformMediaSession::InterruptionType type)
 {
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 8> values {
         MAKE_STATIC_STRING_IMPL("NoInterruption"),
         MAKE_STATIC_STRING_IMPL("SystemSleep"),
         MAKE_STATIC_STRING_IMPL("EnteringBackground"),
@@ -89,7 +87,7 @@ String convertEnumerationToString(PlatformMediaSession::InterruptionType type)
 
 String convertEnumerationToString(PlatformMediaSession::MediaType mediaType)
 {
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 5> values {
         MAKE_STATIC_STRING_IMPL("None"),
         MAKE_STATIC_STRING_IMPL("Video"),
         MAKE_STATIC_STRING_IMPL("VideoAudio"),
@@ -108,7 +106,7 @@ String convertEnumerationToString(PlatformMediaSession::MediaType mediaType)
 
 String convertEnumerationToString(PlatformMediaSession::RemoteControlCommandType command)
 {
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 16> values {
         MAKE_STATIC_STRING_IMPL("NoCommand"),
         MAKE_STATIC_STRING_IMPL("PlayCommand"),
         MAKE_STATIC_STRING_IMPL("PauseCommand"),
@@ -534,7 +532,5 @@ std::optional<NowPlayingInfo> PlatformMediaSessionClient::nowPlayingInfo() const
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(VIDEO) || ENABLE(WEB_AUDIO)

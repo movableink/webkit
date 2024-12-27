@@ -37,8 +37,6 @@
 #include "VP9UtilitiesCocoa.h"
 #endif
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 #define PLATFORMMEDIASESSIONMANAGER_RELEASE_LOG(fmt, ...) RELEASE_LOG_FORWARDABLE(Media, fmt, ##__VA_ARGS__)
 
 namespace WebCore {
@@ -923,5 +921,3 @@ void PlatformMediaSessionManager::dumpSessionStates()
 #endif
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

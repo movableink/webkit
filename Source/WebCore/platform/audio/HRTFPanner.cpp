@@ -36,8 +36,6 @@
 #include <algorithm>
 #include <wtf/MathExtras.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 // The value of 2 milliseconds is larger than the largest delay which exists in any HRTFKernel from the default HRTFDatabase (0.0136 seconds).
@@ -306,7 +304,7 @@ void HRTFPanner::pan(double desiredAzimuth, double elevation, const AudioBus* in
     }
 }
 
-void HRTFPanner::panWithSampleAccurateValues(double* azimuth, double* elevation, const AudioBus* inputBus, AudioBus* outputBus, size_t framesToProcess)
+void HRTFPanner::panWithSampleAccurateValues(std::span<double> azimuth, std::span<double> elevation, const AudioBus* inputBus, AudioBus* outputBus, size_t framesToProcess)
 {
     // Sample-accurate (a-rate) HRTF panner is not implemented, just k-rate. Just
     // grab the current azimuth/elevation and use that.
@@ -342,7 +340,5 @@ bool HRTFPanner::requiresTailProcessing() const
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

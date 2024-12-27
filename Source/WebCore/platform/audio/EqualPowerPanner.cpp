@@ -34,8 +34,6 @@
 #include <algorithm>
 #include <wtf/MathExtras.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 EqualPowerPanner::EqualPowerPanner()
@@ -145,7 +143,7 @@ void EqualPowerPanner::pan(double azimuth, double /*elevation*/, const AudioBus*
     }
 }
 
-void EqualPowerPanner::panWithSampleAccurateValues(double* azimuth, double*, const AudioBus* inputBus, AudioBus* outputBus, size_t framesToProcess)
+void EqualPowerPanner::panWithSampleAccurateValues(std::span<double> azimuth, std::span<double>, const AudioBus* inputBus, AudioBus* outputBus, size_t framesToProcess)
 {
     ASSERT(inputBus);
     ASSERT(framesToProcess <= inputBus->length());
@@ -158,15 +156,10 @@ void EqualPowerPanner::panWithSampleAccurateValues(double* azimuth, double*, con
     ASSERT(outputBus->numberOfChannels() == 2u);
     ASSERT(framesToProcess <= outputBus->length());
 
-    const float* sourceL = inputBus->channel(0)->data();
-    const float* sourceR = numberOfInputChannels > 1 ? inputBus->channel(1)->data() : sourceL;
-    float* destinationL = outputBus->channelByType(AudioBus::ChannelLeft)->mutableData();
-    float* destinationR = outputBus->channelByType(AudioBus::ChannelRight)->mutableData();
-
-    ASSERT(sourceL);
-    ASSERT(sourceR);
-    ASSERT(destinationL);
-    ASSERT(destinationR);
+    auto sourceL = inputBus->channel(0)->span();
+    auto sourceR = numberOfInputChannels > 1 ? inputBus->channel(1)->span() : sourceL;
+    auto destinationL = outputBus->channelByType(AudioBus::ChannelLeft)->mutableSpan();
+    auto destinationR = outputBus->channelByType(AudioBus::ChannelRight)->mutableSpan();
 
     int n = framesToProcess;
 
@@ -174,11 +167,11 @@ void EqualPowerPanner::panWithSampleAccurateValues(double* azimuth, double*, con
         for (int k = 0; k < n; ++k) {
             double desiredGainL;
             double desiredGainR;
-            float inputL = *sourceL++;
+            float inputL = sourceL[k];
 
             calculateDesiredGain(desiredGainL, desiredGainR, azimuth[k], numberOfInputChannels);
-            *destinationL++ = static_cast<float>(inputL * desiredGainL);
-            *destinationR++ = static_cast<float>(inputL * desiredGainR);
+            destinationL[k] = static_cast<float>(inputL * desiredGainL);
+            destinationR[k] = static_cast<float>(inputL * desiredGainR);
         }
     } else { // For stereo source case.
         for (int k = 0; k < n; ++k) {
@@ -187,22 +180,20 @@ void EqualPowerPanner::panWithSampleAccurateValues(double* azimuth, double*, con
 
             calculateDesiredGain(desiredGainL, desiredGainR, azimuth[k], numberOfInputChannels);
             if (azimuth[k] <= 0) { // from -90 -> 0
-                float inputL = *sourceL++;
-                float inputR = *sourceR++;
-                *destinationL++ = static_cast<float>(inputL + inputR * desiredGainL);
-                *destinationR++ = static_cast<float>(inputR * desiredGainR);
+                float inputL = sourceL[k];
+                float inputR = sourceR[k];
+                destinationL[k] = static_cast<float>(inputL + inputR * desiredGainL);
+                destinationR[k] = static_cast<float>(inputR * desiredGainR);
             } else { // from 0 -> +90
-                float inputL = *sourceL++;
-                float inputR = *sourceR++;
-                *destinationL++ = static_cast<float>(inputL * desiredGainL);
-                *destinationR++ = static_cast<float>(inputR + inputL * desiredGainR);
+                float inputL = sourceL[k];
+                float inputR = sourceR[k];
+                destinationL[k] = static_cast<float>(inputL * desiredGainL);
+                destinationR[k] = static_cast<float>(inputR + inputL * desiredGainR);
             }
         }
     }
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

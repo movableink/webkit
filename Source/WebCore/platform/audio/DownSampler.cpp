@@ -36,8 +36,6 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(DownSampler);
@@ -118,8 +116,10 @@ void DownSampler::process(std::span<const float> source, std::span<float> destin
     // Copy the odd sample-frames from source, delayed by one sample-frame (destination sample-rate)
     // to match shifting forward in time in m_reducedKernel.
     auto oddSamplesP = m_tempBuffer.span().first(destFramesToProcess);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     for (size_t i = 0; i < oddSamplesP.size(); ++i)
         oddSamplesP[i] = *((inputP.data() - 1) + i * 2);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     // Actually process oddSamplesP with m_reducedKernel for efficiency.
     // The theoretical kernel is double this size with 0 values for even terms (except center).
@@ -129,9 +129,11 @@ void DownSampler::process(std::span<const float> source, std::span<float> destin
     // This amounts to a delay-line of length halfSize (at the source sample-rate),
     // scaled by 0.5.
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     // Sum into the destination.
     for (size_t i = 0; i < destFramesToProcess; ++i)
         destination[i] += 0.5 * *((inputP.data() - halfSize) + i * 2);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     // Copy 2nd half of input buffer to 1st half.
     memcpySpan(m_inputBuffer.span(), inputP);
@@ -150,7 +152,5 @@ size_t DownSampler::latencyFrames() const
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

@@ -38,8 +38,6 @@
 
 #include <algorithm>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ReverbAccumulationBuffer);
@@ -82,7 +80,7 @@ void ReverbAccumulationBuffer::updateReadIndex(int* readIndex, size_t numberOfFr
     *readIndex = (*readIndex + numberOfFrames) % m_buffer.size();
 }
 
-int ReverbAccumulationBuffer::accumulate(float* source, size_t numberOfFrames, int* readIndex, size_t delayFrames)
+int ReverbAccumulationBuffer::accumulate(std::span<float> source, size_t numberOfFrames, int* readIndex, size_t delayFrames)
 {
     size_t bufferLength = m_buffer.size();
     
@@ -95,18 +93,18 @@ int ReverbAccumulationBuffer::accumulate(float* source, size_t numberOfFrames, i
     size_t numberOfFrames1 = std::min(numberOfFrames, framesAvailable);
     size_t numberOfFrames2 = numberOfFrames - numberOfFrames1;
 
-    float* destination = m_buffer.data();
+    auto destination = m_buffer.span();
 
     bool isSafe = writeIndex <= bufferLength && numberOfFrames1 + writeIndex <= bufferLength && numberOfFrames2 <= bufferLength;
     ASSERT(isSafe);
     if (!isSafe)
         return 0;
 
-    VectorMath::add(source, destination + writeIndex, destination + writeIndex, numberOfFrames1);
+    VectorMath::add(source.data(), destination.subspan(writeIndex).data(), destination.subspan(writeIndex).data(), numberOfFrames1);
 
     // Handle wrap-around if necessary
     if (numberOfFrames2 > 0)       
-        VectorMath::add(source + numberOfFrames1, destination, destination, numberOfFrames2);
+        VectorMath::add(source.subspan(numberOfFrames1).data(), destination.data(), destination.data(), numberOfFrames2);
 
     return writeIndex;
 }
@@ -119,7 +117,5 @@ void ReverbAccumulationBuffer::reset()
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

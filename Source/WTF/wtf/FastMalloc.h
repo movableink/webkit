@@ -278,7 +278,7 @@ struct FastMalloc {
             return realResult;
         return nullptr;
     }
-    
+
     static void* realloc(void* p, size_t size) { return fastRealloc(p, size); }
 
     static void* tryRealloc(void* p, size_t size)
@@ -296,6 +296,12 @@ struct FastMalloc {
     {
         return capacity + capacity / 4 + 1;
     }
+};
+
+struct FastAlignedMalloc {
+    static void* alignedMalloc(size_t alignment, size_t size) { return fastAlignedMalloc(alignment, size); }
+    static void* tryAlignedMalloc(size_t alignment, size_t size) { return tryFastAlignedMalloc(alignment, size); }
+    static void free(void* p) { fastAlignedFree(p); }
 };
 
 struct FastCompactMalloc {
@@ -404,6 +410,7 @@ inline constexpr std::enable_if_t<!WTF::IsTypeComplete<std::remove_pointer_t<T>>
 }
 
 using WTF::DisableMallocRestrictionsForCurrentThreadScope;
+using WTF::FastAlignedMalloc;
 using WTF::FastAllocator;
 using WTF::FastMalloc;
 using WTF::FastCompactMalloc;

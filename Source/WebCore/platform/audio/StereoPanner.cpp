@@ -31,9 +31,8 @@
 
 #include "SharedBuffer.h"
 #include "VectorMath.h"
+#include <wtf/IndexedRange.h>
 #include <wtf/MathExtras.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -53,13 +52,10 @@ void panWithSampleAccurateValues(const AudioBus* inputBus, AudioBus* outputBus, 
     if (!isOutputSafe)
         return;
     
-    const float* sourceL = inputBus->channel(0)->data();
-    const float* sourceR = numberOfInputChannels > 1 ? inputBus->channel(1)->data() : sourceL;
-    float* destinationL = outputBus->channelByType(AudioBus::ChannelLeft)->mutableData();
-    float* destinationR = outputBus->channelByType(AudioBus::ChannelRight)->mutableData();
-    
-    if (!sourceL || !sourceR || !destinationL || !destinationR)
-        return;
+    auto sourceL = inputBus->channel(0)->span();
+    auto sourceR = numberOfInputChannels > 1 ? inputBus->channel(1)->span() : sourceL;
+    auto destinationL = outputBus->channelByType(AudioBus::ChannelLeft)->mutableSpan();
+    auto destinationR = outputBus->channelByType(AudioBus::ChannelRight)->mutableSpan();
     
     double gainL;
     double gainR;
@@ -67,31 +63,31 @@ void panWithSampleAccurateValues(const AudioBus* inputBus, AudioBus* outputBus, 
     
     // Handles mono source case first, then stereo source case.
     if (numberOfInputChannels == 1) {
-        for (auto panValue : panValues) {
-            float inputL = *sourceL++;
+        for (auto [i, panValue] : indexedRange(panValues)) {
+            float inputL = sourceL[i];
             double pan = clampTo(panValue, -1.0, 1.0);
             // Pan from left to right [-1; 1] will be normalized as [0; 1].
             panRadian = (pan * 0.5 + 0.5) * piOverTwoDouble;
             gainL = cos(panRadian);
             gainR = sin(panRadian);
-            *destinationL++ = static_cast<float>(inputL * gainL);
-            *destinationR++ = static_cast<float>(inputL * gainR);
+            destinationL[i] = static_cast<float>(inputL * gainL);
+            destinationR[i] = static_cast<float>(inputL * gainR);
         }
     } else {
-        for (auto panValue : panValues) {
-            float inputL = *sourceL++;
-            float inputR = *sourceR++;
+        for (auto [i, panValue] : indexedRange(panValues)) {
+            float inputL = sourceL[i];
+            float inputR = sourceR[i];
             double pan = clampTo(panValue, -1.0, 1.0);
             // Normalize [-1; 0] to [0; 1]. Do nothing when [0; 1].
             panRadian = (pan <= 0 ? pan + 1 : pan) * piOverTwoDouble;
             gainL = cos(panRadian);
             gainR = sin(panRadian);
             if (pan <= 0) {
-                *destinationL++ = static_cast<float>(inputL + inputR * gainL);
-                *destinationR++ = static_cast<float>(inputR * gainR);
+                destinationL[i] = static_cast<float>(inputL + inputR * gainL);
+                destinationR[i] = static_cast<float>(inputR * gainR);
             } else {
-                *destinationL++ = static_cast<float>(inputL * gainL);
-                *destinationR++ = static_cast<float>(inputR + inputL * gainR);
+                destinationL[i] = static_cast<float>(inputL * gainL);
+                destinationR[i] = static_cast<float>(inputR + inputL * gainR);
             }
         }
     }
@@ -148,7 +144,5 @@ void panToTargetValue(const AudioBus* inputBus, AudioBus* outputBus, float panVa
 } // namespace StereoPanner
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

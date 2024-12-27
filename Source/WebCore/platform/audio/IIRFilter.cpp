@@ -36,8 +36,6 @@
 #include <wtf/MathExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(IIRFilter);
@@ -47,7 +45,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(IIRFilter);
 constexpr int bufferLength = 32;
 static_assert(bufferLength >= IIRFilter::maxOrder + 1, "Internal IIR buffer length must be greater than maximum IIR Filter order.");
 
-static std::complex<double> evaluatePolynomial(const double* coefficients, std::complex<double> z, int order)
+static std::complex<double> evaluatePolynomial(std::span<const double> coefficients, std::complex<double> z, int order)
 {
     // Use Horner's method to evaluate the polynomial P(z) = sum(coef[k]*z^k, k, 0, order);
     std::complex<double> result = 0;
@@ -82,11 +80,8 @@ void IIRFilter::process(std::span<const float> source, std::span<float> destinat
     // This is a Direct Form I implementation of an IIR Filter. Should we
     // consider doing a different implementation such as Transposed Direct Form
     // II?
-    const double* feedback = m_feedback.data();
-    const double* feedforward = m_feedforward.data();
-
-    ASSERT(feedback);
-    ASSERT(feedforward);
+    auto feedback = m_feedback.span();
+    auto feedforward = m_feedforward.span();
 
     // Sanity check to see if the feedback coefficients have been scaled appropriately. It must be EXACTLY 1!
     ASSERT(feedback[0] == 1);
@@ -95,8 +90,8 @@ void IIRFilter::process(std::span<const float> source, std::span<float> destinat
     int feedforwardLength = m_feedforward.size();
     int minLength = std::min(feedbackLength, feedforwardLength);
 
-    double* xBuffer = m_xBuffer.data();
-    double* yBuffer = m_yBuffer.data();
+    auto xBuffer = m_xBuffer.span();
+    auto yBuffer = m_yBuffer.span();
 
     for (size_t n = 0; n < source.size(); ++n) {
         // To help minimize roundoff, we compute using double's, even though the
@@ -153,8 +148,8 @@ void IIRFilter::getFrequencyResponse(unsigned length, std::span<const float> fre
             double omega = -piDouble * frequency[k];
             auto zRecip = std::complex<double>(cos(omega), sin(omega));
 
-            auto numerator = evaluatePolynomial(m_feedforward.data(), zRecip, m_feedforward.size() - 1);
-            auto denominator = evaluatePolynomial(m_feedback.data(), zRecip, m_feedback.size() - 1);
+            auto numerator = evaluatePolynomial(m_feedforward.span(), zRecip, m_feedforward.size() - 1);
+            auto denominator = evaluatePolynomial(m_feedback.span(), zRecip, m_feedback.size() - 1);
             auto response = numerator / denominator;
             magResponse[k] = static_cast<float>(std::abs(response));
             phaseResponse[k] = static_cast<float>(atan2(imag(response), real(response)));
@@ -237,7 +232,5 @@ double IIRFilter::tailTime(double sampleRate, bool isFilterStable)
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

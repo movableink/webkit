@@ -40,8 +40,6 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
     
 WTF_MAKE_TZONE_ALLOCATED_IMPL(DirectConvolver);
@@ -78,7 +76,9 @@ void DirectConvolver::process(AudioFloatArray* convolutionKernel, std::span<cons
     memcpySpan(inputP, source);
 
 #if USE(ACCELERATE)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     vDSP_conv(inputP.data() - kernelSize + 1, 1, kernelP.subspan(kernelSize - 1).data(), -1, destination.data(), 1, source.size(), kernelSize);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 #else
     // FIXME: The macro can be further optimized to avoid pipeline stalls. One possibility is to maintain 4 separate sums and change the macro to CONVOLVE_FOUR_SAMPLES.
 #define CONVOLVE_ONE_SAMPLE             \
@@ -361,7 +361,5 @@ void DirectConvolver::reset()
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

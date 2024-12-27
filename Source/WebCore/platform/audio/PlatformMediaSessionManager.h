@@ -248,7 +248,7 @@ private:
     void dumpSessionStates();
 #endif
 
-    SessionRestrictions m_restrictions[static_cast<unsigned>(PlatformMediaSession::MediaType::WebAudio) + 1];
+    std::array<SessionRestrictions, static_cast<unsigned>(PlatformMediaSession::MediaType::WebAudio) + 1> m_restrictions;
     mutable Vector<WeakPtr<PlatformMediaSession>> m_sessions;
 
     std::optional<PlatformMediaSession::InterruptionType> m_currentInterruption;

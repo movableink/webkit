@@ -36,8 +36,6 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(UpSampler);
@@ -106,9 +104,11 @@ void UpSampler::process(std::span<const float> source, std::span<float> destinat
     auto inputP = m_inputBuffer.span().subspan(source.size());
     memcpySpan(inputP, source);
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     // Copy even sample-frames 0,2,4,6... (delayed by the linear phase delay) directly into destination.
     for (size_t i = 0; i < source.size(); ++i)
         destination[i * 2] = *((inputP.data() - halfSize) + i);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     // Compute odd sample-frames 1,3,5,7...
     auto oddSamplesP = m_tempBuffer.span();
@@ -134,7 +134,5 @@ size_t UpSampler::latencyFrames() const
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

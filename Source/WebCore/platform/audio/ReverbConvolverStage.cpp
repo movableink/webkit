@@ -42,8 +42,6 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ReverbConvolverStage);
@@ -166,7 +164,7 @@ void ReverbConvolverStage::process(std::span<const float> source)
             m_directConvolver->process(m_directKernel.get(), preDelayedSource, temporaryBuffer);
 
         // Now accumulate into reverb's accumulation buffer.
-        m_accumulationBuffer->accumulate(temporaryBuffer.data(), source.size(), &m_accumulationReadIndex, m_postDelayLength);
+        m_accumulationBuffer->accumulate(temporaryBuffer, source.size(), &m_accumulationReadIndex, m_postDelayLength);
     }
 
     // Finally copy input to pre-delay.
@@ -195,7 +193,5 @@ void ReverbConvolverStage::reset()
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

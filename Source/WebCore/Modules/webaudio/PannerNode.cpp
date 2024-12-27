@@ -235,7 +235,7 @@ void PannerNode::processSampleAccurateValues(AudioBus* destination, const AudioB
         totalGain[k] = calculateDistanceConeGain(pannerPosition, orientation, listenerPosition, m_distanceEffect, m_coneEffect);
     }
 
-    m_panner->panWithSampleAccurateValues(azimuth.data(), elevation.data(), source, destination, framesToProcess);
+    m_panner->panWithSampleAccurateValues(std::span { azimuth }, std::span { elevation }, source, destination, framesToProcess);
     destination->copyWithSampleAccurateGainValuesFrom(*destination, std::span { totalGain }.first(framesToProcess));
 }
 

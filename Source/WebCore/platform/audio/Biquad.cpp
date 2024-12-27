@@ -45,8 +45,6 @@
 #include <Accelerate/Accelerate.h>
 #endif
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(Biquad);
@@ -87,11 +85,11 @@ void Biquad::process(std::span<const float> source, std::span<float> destination
         double y1 = m_y1;
         double y2 = m_y2;
 
-        auto* b0 = m_b0.data();
-        auto* b1 = m_b1.data();
-        auto* b2 = m_b2.data();
-        auto* a1 = m_a1.data();
-        auto* a2 = m_a2.data();
+        auto b0 = m_b0.span();
+        auto b1 = m_b1.span();
+        auto b2 = m_b2.span();
+        auto a1 = m_a1.span();
+        auto a2 = m_a2.span();
 
         size_t sourceIndex = 0;
         size_t destinationIndex = 0;
@@ -258,11 +256,11 @@ void Biquad::reset()
 {
 #if USE(ACCELERATE)
     // Two extra samples for filter history
-    double* inputP = m_inputBuffer.data();
+    auto inputP = m_inputBuffer.span();
     inputP[0] = 0;
     inputP[1] = 0;
 
-    double* outputP = m_outputBuffer.data();
+    auto outputP = m_outputBuffer.span();
     outputP[0] = 0;
     outputP[1] = 0;
 #endif
@@ -903,7 +901,5 @@ double Biquad::tailFrame(size_t coefIndex, double maxFrame)
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

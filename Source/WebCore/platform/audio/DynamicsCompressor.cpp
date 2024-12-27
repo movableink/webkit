@@ -38,8 +38,6 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(DynamicsCompressor);
@@ -110,10 +108,10 @@ void DynamicsCompressor::process(const AudioBus* sourceBus, AudioBus* destinatio
 
     switch (numberOfChannels) {
     case 2: // stereo
-        m_sourceChannels[0] = sourceBus->channel(0)->data();
+        m_sourceChannels[0] = sourceBus->channel(0)->span();
 
         if (numberOfSourceChannels > 1)
-            m_sourceChannels[1] = sourceBus->channel(1)->data();
+            m_sourceChannels[1] = sourceBus->channel(1)->span();
         else
             // Simply duplicate mono channel input data to right channel for stereo processing.
             m_sourceChannels[1] = m_sourceChannels[0];
@@ -127,7 +125,7 @@ void DynamicsCompressor::process(const AudioBus* sourceBus, AudioBus* destinatio
     }
 
     for (unsigned i = 0; i < numberOfChannels; ++i)
-        m_destinationChannels[i] = destinationBus->channel(i)->mutableData();
+        m_destinationChannels[i] = destinationBus->channel(i)->mutableSpan();
 
     float dbThreshold = parameterValue(ParamThreshold);
     float dbKnee = parameterValue(ParamKnee);
@@ -150,11 +148,9 @@ void DynamicsCompressor::process(const AudioBus* sourceBus, AudioBus* destinatio
     float releaseZone4 = parameterValue(ParamReleaseZone4);
 
     // Apply compression to the source signal.
-    m_compressor.process(m_sourceChannels.get(),
-                         m_destinationChannels.get(),
-                         numberOfChannels,
+    m_compressor.process(sourceChannels(),
+                         destinationChannels(),
                          framesToProcess,
-
                          dbThreshold,
                          dbKnee,
                          ratio,
@@ -181,15 +177,13 @@ void DynamicsCompressor::reset()
 
 void DynamicsCompressor::setNumberOfChannels(unsigned numberOfChannels)
 {
-    m_sourceChannels = makeUniqueArray<const float*>(numberOfChannels);
-    m_destinationChannels = makeUniqueArray<float*>(numberOfChannels);
+    m_sourceChannels = makeUniqueArray<std::span<const float>>(numberOfChannels);
+    m_destinationChannels = makeUniqueArray<std::span<float>>(numberOfChannels);
 
     m_compressor.setNumberOfChannels(numberOfChannels);
     m_numberOfChannels = numberOfChannels;
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)
