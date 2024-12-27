@@ -9498,6 +9498,7 @@
         "web-platform-tests/html/rendering/non-replaced-elements/flow-content-0/div-align-ref.html",
         "web-platform-tests/html/rendering/non-replaced-elements/flow-content-0/figure-ref.html",
         "web-platform-tests/html/rendering/non-replaced-elements/flow-content-0/support/dialog-framed.html",
+        "web-platform-tests/html/rendering/non-replaced-elements/form-controls/datetime-dynamic-type-change-ref.html",
         "web-platform-tests/html/rendering/non-replaced-elements/form-controls/input-line-height-ref.html",
         "web-platform-tests/html/rendering/non-replaced-elements/form-controls/input-placeholder-line-height-ref.html",
         "web-platform-tests/html/rendering/non-replaced-elements/form-controls/select-sizing-001-ref.html",
