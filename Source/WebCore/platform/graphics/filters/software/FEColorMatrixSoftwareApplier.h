@@ -51,7 +51,7 @@ private:
 
     void applyPlatform(PixelBuffer&) const;
 
-    float m_components[9];
+    std::array<float, 9> m_components;
 };
 
 } // namespace WebCore

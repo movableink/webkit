@@ -44,8 +44,6 @@
 #include <wtf/ParallelJobs.h>
 #endif
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(FEGaussianBlurSoftwareApplier);
@@ -81,8 +79,8 @@ inline void FEGaussianBlurSoftwareApplier::kernelPosition(int blurIteration, uns
 // This function only operates on Alpha channel.
 inline void FEGaussianBlurSoftwareApplier::boxBlurAlphaOnly(const PixelBuffer& srcPixelBuffer, PixelBuffer& dstPixelBuffer, unsigned dx, int& dxLeft, int& dxRight, int& stride, int& strideLine, int& effectWidth, int& effectHeight, const int& maxKernelSize)
 {
-    const uint8_t* srcData = srcPixelBuffer.bytes().data();
-    uint8_t* dstData = dstPixelBuffer.bytes().data();
+    auto srcData = srcPixelBuffer.bytes();
+    auto dstData = dstPixelBuffer.bytes();
     // Memory alignment is: RGBA, zero-index based.
     const int channel = 3;
 
@@ -93,27 +91,24 @@ inline void FEGaussianBlurSoftwareApplier::boxBlurAlphaOnly(const PixelBuffer& s
         // Fill the kernel.
         for (int i = 0; i < maxKernelSize; ++i) {
             unsigned offset = line + i * stride;
-            const uint8_t* srcPtr = srcData + offset;
-            sum += srcPtr[channel];
+            auto srcSpan = srcData.subspan(offset);
+            sum += srcSpan[channel];
         }
 
         // Blurring.
         for (int x = 0; x < effectWidth; ++x) {
             unsigned pixelByteOffset = line + x * stride + channel;
-            uint8_t* dstPtr = dstData + pixelByteOffset;
-            *dstPtr = static_cast<uint8_t>(sum / dx);
+            dstData[pixelByteOffset] = static_cast<uint8_t>(sum / dx);
 
             // Shift kernel.
             if (x >= dxLeft) {
                 unsigned leftOffset = pixelByteOffset - dxLeft * stride;
-                const uint8_t* srcPtr = srcData + leftOffset;
-                sum -= *srcPtr;
+                sum -= srcData[leftOffset];
             }
 
             if (x + dxRight < effectWidth) {
                 unsigned rightOffset = pixelByteOffset + dxRight * stride;
-                const uint8_t* srcPtr = srcData + rightOffset;
-                sum += *srcPtr;
+                sum += srcData[rightOffset];
             }
         }
     }
@@ -125,8 +120,8 @@ inline void FEGaussianBlurSoftwareApplier::boxBlur(const PixelBuffer& srcPixelBu
     if (alphaImage)
         return boxBlurAlphaOnly(srcPixelBuffer, dstPixelBuffer, dx, dxLeft, dxRight, stride, strideLine,  effectWidth, effectHeight, maxKernelSize);
 
-    const uint8_t* srcData = srcPixelBuffer.bytes().data();
-    uint8_t* dstData = dstPixelBuffer.bytes().data();
+    auto srcData = srcPixelBuffer.bytes();
+    auto dstData = dstPixelBuffer.bytes();
 
     // Concerning the array width/length: it is Element size + Margin + Border. The number of pixels will be
     // P = width * height * channels.
@@ -138,55 +133,51 @@ inline void FEGaussianBlurSoftwareApplier::boxBlur(const PixelBuffer& srcPixelBu
             // Fill the kernel.
             for (int i = 0; i < maxKernelSize; ++i) {
                 unsigned offset = line + i * stride;
-                const uint8_t* srcPtr = srcData + offset;
-                sumR += *srcPtr++;
-                sumG += *srcPtr++;
-                sumB += *srcPtr++;
-                sumA += *srcPtr;
+                auto srcSpan = srcData.subspan(offset);
+                sumR += srcSpan[0];
+                sumG += srcSpan[1];
+                sumB += srcSpan[2];
+                sumA += srcSpan[3];
             }
 
             // Blurring.
             for (int x = 0; x < effectWidth; ++x) {
                 unsigned pixelByteOffset = line + x * stride;
-                uint8_t* dstPtr = dstData + pixelByteOffset;
+                auto dstSpan = dstData.subspan(pixelByteOffset);
 
-                *dstPtr++ = static_cast<uint8_t>(sumR / dx);
-                *dstPtr++ = static_cast<uint8_t>(sumG / dx);
-                *dstPtr++ = static_cast<uint8_t>(sumB / dx);
-                *dstPtr = static_cast<uint8_t>(sumA / dx);
+                dstSpan[0] = static_cast<uint8_t>(sumR / dx);
+                dstSpan[1] = static_cast<uint8_t>(sumG / dx);
+                dstSpan[2] = static_cast<uint8_t>(sumB / dx);
+                dstSpan[3] = static_cast<uint8_t>(sumA / dx);
 
                 // Shift kernel.
                 if (x >= dxLeft) {
                     unsigned leftOffset = pixelByteOffset - dxLeft * stride;
-                    const uint8_t* srcPtr = srcData + leftOffset;
-                    sumR -= srcPtr[0];
-                    sumG -= srcPtr[1];
-                    sumB -= srcPtr[2];
-                    sumA -= srcPtr[3];
+                    auto srcSpan = srcData.subspan(leftOffset);
+                    sumR -= srcSpan[0];
+                    sumG -= srcSpan[1];
+                    sumB -= srcSpan[2];
+                    sumA -= srcSpan[3];
                 }
 
                 if (x + dxRight < effectWidth) {
                     unsigned rightOffset = pixelByteOffset + dxRight * stride;
-                    const uint8_t* srcPtr = srcData + rightOffset;
-                    sumR += srcPtr[0];
-                    sumG += srcPtr[1];
-                    sumB += srcPtr[2];
-                    sumA += srcPtr[3];
+                    auto srcSpan = srcData.subspan(rightOffset);
+                    sumR += srcSpan[0];
+                    sumG += srcSpan[1];
+                    sumB += srcSpan[2];
+                    sumA += srcSpan[3];
                 }
             }
 
         } else {
             // FIXME: Add support for 'wrap' here.
             // Get edge values for edgeMode 'duplicate'.
-            const uint8_t* edgeValueLeft = srcData + line;
-            const uint8_t* edgeValueRight  = srcData + (line + (effectWidth - 1) * stride);
+            auto edgeValueLeft = srcData.subspan(line);
+            auto edgeValueRight  = srcData.subspan(line + (effectWidth - 1) * stride);
 
             // Fill the kernel.
             for (int i = dxLeft * -1; i < dxRight; ++i) {
-                // Is this right for negative values of 'i'?
-                unsigned offset = line + i * stride;
-                const uint8_t* srcPtr = srcData + offset;
-
                 if (i < 0) {
                     sumR += edgeValueLeft[0];
                     sumG += edgeValueLeft[1];
@@ -198,22 +189,25 @@ inline void FEGaussianBlurSoftwareApplier::boxBlur(const PixelBuffer& srcPixelBu
                     sumB += edgeValueRight[2];
                     sumA += edgeValueRight[3];
                 } else {
-                    sumR += *srcPtr++;
-                    sumG += *srcPtr++;
-                    sumB += *srcPtr++;
-                    sumA += *srcPtr;
+                    // Is this right for negative values of 'i'?
+                    unsigned offset = line + i * stride;
+                    auto srcSpan = srcData.subspan(offset);
+                    sumR += srcSpan[0];
+                    sumG += srcSpan[1];
+                    sumB += srcSpan[2];
+                    sumA += srcSpan[3];
                 }
             }
 
             // Blurring.
             for (int x = 0; x < effectWidth; ++x) {
                 unsigned pixelByteOffset = line + x * stride;
-                uint8_t* dstPtr = dstData + pixelByteOffset;
+                auto dstSpan = dstData.subspan(pixelByteOffset);
 
-                *dstPtr++ = static_cast<uint8_t>(sumR / dx);
-                *dstPtr++ = static_cast<uint8_t>(sumG / dx);
-                *dstPtr++ = static_cast<uint8_t>(sumB / dx);
-                *dstPtr = static_cast<uint8_t>(sumA / dx);
+                dstSpan[0] = static_cast<uint8_t>(sumR / dx);
+                dstSpan[1] = static_cast<uint8_t>(sumG / dx);
+                dstSpan[2] = static_cast<uint8_t>(sumB / dx);
+                dstSpan[3] = static_cast<uint8_t>(sumA / dx);
 
                 // Shift kernel.
                 if (x < dxLeft) {
@@ -223,11 +217,11 @@ inline void FEGaussianBlurSoftwareApplier::boxBlur(const PixelBuffer& srcPixelBu
                     sumA -= edgeValueLeft[3];
                 } else {
                     unsigned leftOffset = pixelByteOffset - dxLeft * stride;
-                    const uint8_t* srcPtr = srcData + leftOffset;
-                    sumR -= srcPtr[0];
-                    sumG -= srcPtr[1];
-                    sumB -= srcPtr[2];
-                    sumA -= srcPtr[3];
+                    auto srcSpan = srcData.subspan(leftOffset);
+                    sumR -= srcSpan[0];
+                    sumG -= srcSpan[1];
+                    sumB -= srcSpan[2];
+                    sumA -= srcSpan[3];
                 }
 
                 if (x + dxRight >= effectWidth) {
@@ -237,11 +231,11 @@ inline void FEGaussianBlurSoftwareApplier::boxBlur(const PixelBuffer& srcPixelBu
                     sumA += edgeValueRight[3];
                 } else {
                     unsigned rightOffset = pixelByteOffset + dxRight * stride;
-                    const uint8_t* srcPtr = srcData + rightOffset;
-                    sumR += srcPtr[0];
-                    sumG += srcPtr[1];
-                    sumB += srcPtr[2];
-                    sumA += srcPtr[3];
+                    auto srcSpan = srcData.subspan(rightOffset);
+                    sumR += srcSpan[0];
+                    sumG += srcSpan[1];
+                    sumB += srcSpan[2];
+                    sumA += srcSpan[3];
                 }
             }
         }
@@ -461,5 +455,3 @@ bool FEGaussianBlurSoftwareApplier::apply(const Filter& filter, const FilterImag
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

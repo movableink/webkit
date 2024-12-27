@@ -29,9 +29,8 @@
 #include "Filter.h"
 #include "GraphicsContext.h"
 #include "PixelBuffer.h"
+#include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -98,13 +97,13 @@ bool FEDisplacementMapSoftwareApplier::apply(const Filter& filter, const FilterI
             int srcX = x + static_cast<int>(scaleForColorX * displacementPixelBuffer->item(destinationIndex + displacementChannelX) + scaledOffsetX);
             int srcY = y + static_cast<int>(scaleForColorY * displacementPixelBuffer->item(destinationIndex + displacementChannelY) + scaledOffsetY);
 
-            unsigned* destinationPixelPtr = reinterpret_cast<unsigned*>(destinationPixelBuffer->bytes().data() + destinationIndex);
+            unsigned& destinationPixel = reinterpretCastSpanStartTo<unsigned>(destinationPixelBuffer->bytes().subspan(destinationIndex));
             if (srcX < 0 || srcX >= paintSize.width() || srcY < 0 || srcY >= paintSize.height()) {
-                *destinationPixelPtr = 0;
+                destinationPixel = 0;
                 continue;
             }
 
-            *destinationPixelPtr = *reinterpret_cast<unsigned*>(inputPixelBuffer->bytes().data() + byteOffsetOfPixel(srcX, srcY, rowBytes));
+            destinationPixel = reinterpretCastSpanStartTo<unsigned>(inputPixelBuffer->bytes().subspan(byteOffsetOfPixel(srcX, srcY, rowBytes)));
         }
     }
 
@@ -112,5 +111,3 @@ bool FEDisplacementMapSoftwareApplier::apply(const Filter& filter, const FilterI
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

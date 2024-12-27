@@ -33,15 +33,13 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(FEComponentTransferSoftwareApplier);
 
 void FEComponentTransferSoftwareApplier::applyPlatform(PixelBuffer& pixelBuffer) const
 {
-    auto* data = pixelBuffer.bytes().data();
+    auto data = pixelBuffer.bytes();
     auto pixelByteLength = pixelBuffer.bytes().size();
 
     auto redTable   = FEComponentTransfer::computeLookupTable(m_effect.redFunction());
@@ -73,5 +71,3 @@ bool FEComponentTransferSoftwareApplier::apply(const Filter&, const FilterImageV
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
