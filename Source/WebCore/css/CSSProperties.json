@@ -9637,7 +9637,7 @@
             ],
             "codegen-properties": {
                 "enable-if": "HAVE_CORE_MATERIAL",
-                "settings-flag": "appleSystemVisualEffectsEnabled",
+                "settings-flag": "useSystemAppearance",
                 "parser-grammar": "<<values>>"
             },
             "status": "non-standard"
