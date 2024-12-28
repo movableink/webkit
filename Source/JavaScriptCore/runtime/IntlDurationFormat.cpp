@@ -487,14 +487,17 @@ static Vector<Element> collectElements(JSGlobalObject* globalObject, const IntlD
             // https://github.com/unicode-org/icu/blob/main/docs/userguide/format_parse/numbers/skeletons.md#sign-display
             if (needsSignDisplay)
                 skeletonBuilder.append(" +_"_s);
-            else if (!value) {
-                if (!durationSign)
-                    durationSign = getDurationSign(duration);
-                if (durationSign == DurationSignType::Negative) {
-                    value = -0.0;
-                    needsSignDisplay = true;
+
+            auto adjustSignDisplay = [&]() -> void {
+                if (!needsSignDisplay && !value) {
+                    if (!durationSign)
+                        durationSign = getDurationSign(duration);
+                    if (durationSign == DurationSignType::Negative) {
+                        value = -0.0;
+                        needsSignDisplay = true;
+                    }
                 }
-            }
+            };
 
             auto formatDouble = [&](const String& skeleton) -> std::unique_ptr<UFormattedNumber, ICUDeleter<unumf_closeResult>> {
                 auto scope = DECLARE_THROW_SCOPE(vm);
@@ -578,6 +581,8 @@ static Vector<Element> collectElements(JSGlobalObject* globalObject, const IntlD
                 bool needsSeparator = (unit == TemporalUnit::Hour && needsFormatHours && needsFormatMinutes) || (unit == TemporalUnit::Minute && needsFormatSeconds);
 
                 if (needsFormat) {
+                    adjustSignDisplay();
+
                     auto formattedNumber = totalNanosecondsValue ? formatIntl128AsDecimal(skeletonBuilder.toString()) : formatDouble(skeletonBuilder.toString());
                     RETURN_IF_EXCEPTION(scope, { });
 
@@ -599,6 +604,8 @@ static Vector<Element> collectElements(JSGlobalObject* globalObject, const IntlD
             case IntlDurationFormat::UnitStyle::Long:
             case IntlDurationFormat::UnitStyle::Short:
             case IntlDurationFormat::UnitStyle::Narrow: {
+                adjustSignDisplay();
+
                 skeletonBuilder.append(" measure-unit/duration-"_s);
                 skeletonBuilder.append(String(temporalUnitSingularPropertyName(vm, unit).uid()));
                 if (style == IntlDurationFormat::UnitStyle::Long)
