@@ -275,16 +275,28 @@ inline void JSRopeString::resolveToBuffer(JSString* fiber0, JSString* fiber1, JS
 
     // 3 fibers.
     if (fiber2) {
-        if (fiber0->isRope() || fiber1->isRope() || fiber2->isRope())
-            MUST_TAIL_CALL return JSRopeString::resolveToBufferSlow(fiber0, fiber1, fiber2, buffer, stackLimit);
-
-        StringView view0 = fiber0->valueInternal().impl();
-        view0.getCharacters(buffer);
-        StringView view1 = fiber1->valueInternal().impl();
-        view1.getCharacters(buffer.subspan(view0.length()));
-        StringView view2 = fiber2->valueInternal().impl();
-        view2.getCharacters(buffer.subspan(view0.length() + view1.length()));
-        return;
+        if (fiber0->isRope()) {
+            auto* rope0 = static_cast<const JSRopeString*>(fiber0);
+            auto rope0Length = rope0->length();
+            if (rope0->isSubstring()) {
+                StringView view0 = *rope0->substringBase()->valueInternal().impl();
+                unsigned offset = rope0->substringOffset();
+                view0.substring(offset, rope0Length).getCharacters(buffer);
+            } else {
+                if (UNLIKELY(std::bit_cast<uint8_t*>(currentStackPointer()) < stackLimit))
+                    MUST_TAIL_CALL return JSRopeString::resolveToBufferSlow(fiber0, fiber1, fiber2, buffer, stackLimit);
+                resolveToBuffer(rope0->fiber0(), rope0->fiber1(), rope0->fiber2(), buffer.first(rope0Length), stackLimit);
+            }
+            buffer = buffer.subspan(rope0Length);
+        } else {
+            StringView view0 = fiber0->valueInternal().impl();
+            view0.getCharacters(buffer);
+            buffer = buffer.subspan(view0.length());
+        }
+        fiber0 = fiber1;
+        fiber1 = fiber2;
+        fiber2 = nullptr;
+        // Fall through to the 2 fibers case.
     }
 
     // 2 fibers.
