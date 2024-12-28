@@ -42,14 +42,13 @@
 #import "WebNSAttributedStringExtras.h"
 #import <pal/spi/cg/CoreGraphicsSPI.h>
 #import <pal/spi/mac/HIServicesSPI.h>
+#import <wtf/MallocSpan.h>
 #import <wtf/ProcessPrivilege.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/StdLibExtras.h>
 #import <wtf/URL.h>
 #import <wtf/text/StringBuilder.h>
 #import <wtf/unicode/CharacterNames.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -741,23 +740,25 @@ Vector<String> Pasteboard::readFilePaths()
 }
 
 #if ENABLE(DRAG_SUPPORT)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 static void flipImageSpec(CoreDragImageSpec* imageSpec)
 {
-    unsigned char* tempRow = (unsigned char*)fastMalloc(imageSpec->bytesPerRow);
+    auto tempRow = MallocSpan<uint8_t>::malloc(imageSpec->bytesPerRow);
     int planes = imageSpec->isPlanar ? imageSpec->samplesPerPixel : 1;
 
     for (int p = 0; p < planes; ++p) {
-        unsigned char* topRow = const_cast<unsigned char*>(imageSpec->data[p]);
-        unsigned char* botRow = topRow + (imageSpec->pixelsHigh - 1) * imageSpec->bytesPerRow;
+        auto* topRow = const_cast<uint8_t*>(imageSpec->data[p]);
+        auto* botRow = topRow + (imageSpec->pixelsHigh - 1) * imageSpec->bytesPerRow;
         for (int i = 0; i < imageSpec->pixelsHigh / 2; ++i, topRow += imageSpec->bytesPerRow, botRow -= imageSpec->bytesPerRow) {
-            bcopy(topRow, tempRow, imageSpec->bytesPerRow);
-            bcopy(botRow, topRow, imageSpec->bytesPerRow);
-            bcopy(tempRow, botRow, imageSpec->bytesPerRow);
+            auto topRowSpan = unsafeMakeSpan(topRow, imageSpec->bytesPerRow);
+            auto botRowSpan = unsafeMakeSpan(botRow, imageSpec->bytesPerRow);
+            memmoveSpan(tempRow.mutableSpan(), topRowSpan);
+            memmoveSpan(topRowSpan, botRowSpan);
+            memmoveSpan(botRowSpan, tempRow.span());
         }
     }
-
-    fastFree(tempRow);
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 static void setDragImageImpl(NSImage *image, NSPoint offset)
 {
@@ -887,7 +888,5 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 }
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // PLATFORM(MAC)
