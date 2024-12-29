@@ -19,6 +19,9 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/svg/text/reftests/first-letter-expected.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/text/reftests/first-letter-ref.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/text/reftests/first-letter.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/text/reftests/font-size-scaling-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/text/reftests/font-size-scaling-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/text/reftests/font-size-scaling.html
 /LayoutTests/imported/w3c/web-platform-tests/svg/text/reftests/gradient-after-reposition-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/svg/text/reftests/gradient-after-reposition-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/svg/text/reftests/gradient-after-reposition.html
@@ -101,6 +104,9 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/svg/text/reftests/text-multiline-003-expected.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/text/reftests/text-multiline-003-ref.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/text/reftests/text-multiline-003.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/text/reftests/text-path-transformed-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/text/reftests/text-path-transformed-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/text/reftests/text-path-transformed.html
 /LayoutTests/imported/w3c/web-platform-tests/svg/text/reftests/text-shape-inside-001-expected.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/text/reftests/text-shape-inside-001-ref.svg
 /LayoutTests/imported/w3c/web-platform-tests/svg/text/reftests/text-shape-inside-001.svg
