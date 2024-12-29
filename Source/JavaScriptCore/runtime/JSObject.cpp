@@ -1676,6 +1676,65 @@ ArrayStorage* JSObject::convertContiguousToArrayStorage(VM& vm)
     return convertContiguousToArrayStorage(vm, suggestedArrayStorageTransition());
 }
 
+void JSObject::convertToIndexingTypeIfNeeded(VM& vm, IndexingType nextType)
+{
+    IndexingType currentType = indexingType();
+    if (currentType == nextType)
+        return;
+    switch (currentType) {
+    case ArrayWithUndecided: {
+        switch (nextType) {
+        case ArrayWithInt32:
+            convertUndecidedToInt32(vm);
+            break;
+        case ArrayWithDouble:
+            convertUndecidedToDouble(vm);
+            break;
+        case ArrayWithContiguous:
+            convertUndecidedToContiguous(vm);
+            break;
+        case ArrayWithArrayStorage:
+            convertUndecidedToArrayStorage(vm);
+            break;
+        }
+        break;
+    }
+    case ArrayWithInt32: {
+        switch (nextType) {
+        case ArrayWithDouble:
+            convertInt32ToDouble(vm);
+            break;
+        case ArrayWithContiguous:
+            convertInt32ToContiguous(vm);
+            break;
+        case ArrayWithArrayStorage:
+            convertInt32ToArrayStorage(vm);
+            break;
+        }
+        break;
+    }
+    case ArrayWithDouble: {
+        switch (nextType) {
+        case ArrayWithContiguous:
+            convertDoubleToContiguous(vm);
+            break;
+        case ArrayWithArrayStorage:
+            convertDoubleToArrayStorage(vm);
+            break;
+        }
+        break;
+    }
+    case ArrayWithContiguous: {
+        switch (nextType) {
+        case ArrayWithArrayStorage:
+            convertContiguousToArrayStorage(vm);
+            break;
+        }
+        break;
+    }
+    }
+}
+
 void JSObject::convertUndecidedForValue(VM& vm, JSValue value)
 {
     IndexingType type = indexingTypeForValue(value);

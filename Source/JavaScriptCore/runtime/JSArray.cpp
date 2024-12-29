@@ -486,44 +486,13 @@ bool JSArray::fastFill(VM& vm, unsigned startIndex, unsigned endIndex, JSValue v
     if (isCopyOnWrite(indexingMode()))
         convertFromCopyOnWrite(vm);
 
-    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=283816
     IndexingType type = indexingType();
-    IndexingType nextType = [type, value]() {
-        if (!(type & IsArray))
-            return NonArray;
-        if (hasAnyArrayStorage(type))
-            return NonArray;
-        switch (type) {
-        case ArrayWithInt32:
-        case ArrayWithUndecided:
-            if (value.isInt32())
-                return ArrayWithInt32;
-            if (value.isNumber())
-                return ArrayWithDouble;
-            return ArrayWithContiguous;
-        case ArrayWithDouble:
-            if (value.isNumber())
-                return type;
-            return ArrayWithContiguous;
-        case ArrayWithContiguous:
-            return type;
-        default:
-            return NonArray;
-        }
-    }();
-    if (type == ArrayWithUndecided) {
-        if (nextType == ArrayWithInt32)
-            convertUndecidedToInt32(vm);
-        else if (nextType == ArrayWithDouble)
-            convertUndecidedToDouble(vm);
-        else if (nextType == ArrayWithContiguous)
-            convertUndecidedToContiguous(vm);
-        else {
-            ASSERT_NOT_REACHED();
-            return false;
-        }
-    } else if (type != nextType)
+    if (!(type & IsArray) || hasAnyArrayStorage(type))
         return false;
+    IndexingType nextType = leastUpperBoundOfIndexingTypeAndValue(type, value);
+    if (hasArrayStorage(nextType))
+        return false;
+    convertToIndexingTypeIfNeeded(vm, nextType);
 
     ASSERT(nextType == indexingType());
 
