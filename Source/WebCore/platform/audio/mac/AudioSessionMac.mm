@@ -31,6 +31,7 @@
 #import "FloatConversion.h"
 #import "Logging.h"
 #import "NotImplemented.h"
+#import "SpanCoreAudio.h"
 #import <CoreAudio/AudioHardware.h>
 #import <wtf/LoggerHelper.h>
 #import <wtf/MainThread.h>
@@ -39,8 +40,6 @@
 #import <wtf/text/WTFString.h>
 
 #import <pal/cocoa/AVFoundationSoftLink.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -408,8 +407,8 @@ size_t AudioSessionMac::maximumNumberOfOutputChannels() const
         return 0;
 
     size_t channels = 0;
-    for (UInt32 i = 0; i < audioBufferList->mNumberBuffers; ++i)
-        channels += audioBufferList->mBuffers[i].mNumberChannels;
+    for (auto& buffer : span(*audioBufferList))
+        channels += buffer.mNumberChannels;
     return channels;
 }
 
@@ -567,7 +566,5 @@ uint64_t AudioSessionMac::logIdentifier() const
 }
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // USE(AUDIO_SESSION) && PLATFORM(MAC)

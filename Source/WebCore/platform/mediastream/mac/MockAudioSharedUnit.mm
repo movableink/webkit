@@ -370,7 +370,7 @@ void MockAudioSharedInternalUnit::generateSampleBuffers(MonotonicTime renderTime
         uint32_t bipBopCount = std::min(frameCount, bipBopRemain);
         for (auto& audioBuffer : m_audioBufferList->buffers()) {
             audioBuffer.mDataByteSize = frameCount * m_streamFormat.mBytesPerFrame;
-            memcpySpan(dataMutableFloatSpan(audioBuffer), m_bipBopBuffer.subspan(bipBopStart, bipBopCount));
+            memcpySpan(mutableSpan<float>(audioBuffer), m_bipBopBuffer.subspan(bipBopStart, bipBopCount));
             addHum(HumVolume, HumFrequency, sampleRate(), m_samplesRendered, static_cast<float*>(audioBuffer.mData), bipBopCount);
         }
         emitSampleBuffers(bipBopCount);
@@ -400,8 +400,8 @@ OSStatus MockAudioSharedInternalUnit::render(AudioUnitRenderActionFlags*, const 
         if (copySize > buffer->mBuffers[i].mDataByteSize)
             return kAudio_ParamError;
 
-        auto source = dataByteSpan(sourceBuffer->mBuffers[i]);
-        auto destination = dataMutableByteSpan(buffer->mBuffers[i]);
+        auto source = span<uint8_t>(sourceBuffer->mBuffers[i]);
+        auto destination = mutableSpan<uint8_t>(buffer->mBuffers[i]);
         memcpySpan(destination, source.first(copySize));
     }
 

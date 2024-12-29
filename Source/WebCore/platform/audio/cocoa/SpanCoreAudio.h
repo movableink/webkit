@@ -31,24 +31,26 @@
 
 namespace WebCore {
 
-inline std::span<uint8_t> dataMutableByteSpan(AudioBuffer& buffer)
+template<typename T>
+inline std::span<const T> span(const AudioBuffer& buffer)
 {
-    return unsafeMakeSpan(static_cast<uint8_t*>(buffer.mData), buffer.mDataByteSize);
+    return unsafeMakeSpan(static_cast<const T*>(buffer.mData), buffer.mDataByteSize / sizeof(T));
 }
 
-inline std::span<float> dataMutableFloatSpan(AudioBuffer& buffer)
+template<typename T>
+inline std::span<T> mutableSpan(AudioBuffer& buffer)
 {
-    return unsafeMakeSpan(static_cast<float*>(buffer.mData), buffer.mDataByteSize / sizeof(float));
+    return unsafeMakeSpan(static_cast<T*>(buffer.mData), buffer.mDataByteSize / sizeof(T));
 }
 
-inline std::span<const uint8_t> dataByteSpan(const AudioBuffer& buffer)
+inline std::span<AudioBuffer> span(AudioBufferList& list)
 {
-    return unsafeMakeSpan(static_cast<const uint8_t*>(buffer.mData), buffer.mDataByteSize);
+    return unsafeMakeSpan(list.mBuffers, list.mNumberBuffers);
 }
 
-inline std::span<const float> dataFloatSpan(AudioBuffer& buffer)
+inline std::span<const AudioBuffer> span(const AudioBufferList& list)
 {
-    return unsafeMakeSpan(static_cast<const float*>(buffer.mData), buffer.mDataByteSize / sizeof(float));
+    return unsafeMakeSpan(list.mBuffers, list.mNumberBuffers);
 }
 
 } // namespace WebCore

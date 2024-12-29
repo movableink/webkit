@@ -59,10 +59,10 @@ static inline void copyChannelData(AudioChannel& channel, AudioBuffer& buffer, s
     buffer.mDataByteSize = numberOfFrames * sizeof(float);
     buffer.mNumberChannels = 1;
     if (isMuted) {
-        zeroSpan(dataMutableByteSpan(buffer));
+        zeroSpan(mutableSpan<uint8_t>(buffer));
         return;
     }
-    memcpySpan(dataMutableByteSpan(buffer), asByteSpan(channel.span()).first(buffer.mDataByteSize));
+    memcpySpan(mutableSpan<uint8_t>(buffer), asByteSpan(channel.span()).first(buffer.mDataByteSize));
 }
 
 void MediaStreamAudioSource::consumeAudio(AudioBus& bus, size_t numberOfFrames)

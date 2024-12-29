@@ -409,7 +409,7 @@ void AudioSourceProviderAVFObjC::process(MTAudioProcessingTapRef tap, CMItemCoun
     // Mute the default audio playback by zeroing the tap-owned buffers.
     for (uint32_t i = 0; i < bufferListInOut->mNumberBuffers; ++i) {
         AudioBuffer& buffer = bufferListInOut->mBuffers[i];
-        zeroSpan(dataMutableByteSpan(buffer));
+        zeroSpan(mutableSpan<uint8_t>(buffer));
     }
     *numberFramesOut = 0;
 

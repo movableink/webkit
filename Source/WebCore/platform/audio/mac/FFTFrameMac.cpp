@@ -107,9 +107,7 @@ FFTFrame::~FFTFrame() = default;
 void FFTFrame::doFFT(std::span<const float> data)
 {
     unsigned halfSize = m_FFTSize / 2;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    vDSP_ctoz(reinterpret_cast<const DSPComplex*>(data.data()), 2, &m_frame, 1, halfSize);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    vDSP_ctoz(&reinterpretCastSpanStartTo<const DSPComplex>(data), 2, &m_frame, 1, halfSize);
     vDSP_fft_zrip(m_FFTSetup, &m_frame, 1, m_log2FFTSize, FFT_FORWARD);
 
     RELEASE_ASSERT(realData().size() >= halfSize);
@@ -127,9 +125,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 void FFTFrame::doInverseFFT(std::span<float> data)
 {
     vDSP_fft_zrip(m_FFTSetup, &m_frame, 1, m_log2FFTSize, FFT_INVERSE);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    vDSP_ztoc(&m_frame, 1, reinterpret_cast<DSPComplex*>(data.data()), 2, m_FFTSize / 2);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    vDSP_ztoc(&m_frame, 1, &reinterpretCastSpanStartTo<DSPComplex>(data), 2, m_FFTSize / 2);
 
     // Do final scaling so that x == IFFT(FFT(x))
     VectorMath::multiplyByScalar(data.data(), 1.0f / m_FFTSize, data.data(), m_FFTSize);

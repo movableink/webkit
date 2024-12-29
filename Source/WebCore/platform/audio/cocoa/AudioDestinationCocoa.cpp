@@ -38,8 +38,6 @@
 #include "SpanCoreAudio.h"
 #include <algorithm>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 constexpr size_t fifoSize = 96 * AudioUtilities::renderQuantumSize;
@@ -113,12 +111,12 @@ OSStatus AudioDestinationCocoa::render(double sampleTime, uint64_t hostTime, UIn
 {
     ASSERT(!isMainThread());
 
-    auto* buffers = ioData->mBuffers;
     auto numberOfBuffers = std::min<UInt32>(ioData->mNumberBuffers, m_outputBus->numberOfChannels());
+    auto buffers = span(*ioData);
 
     // Associate the destination data array with the output bus then fill the FIFO.
     for (UInt32 i = 0; i < numberOfBuffers; ++i) {
-        auto memory = dataMutableFloatSpan(buffers[i]);
+        auto memory = mutableSpan<float>(buffers[i]);
         if (numberOfFrames < memory.size())
             memory = memory.first(numberOfFrames);
         m_outputBus->setChannelMemory(i, memory);
@@ -129,7 +127,5 @@ OSStatus AudioDestinationCocoa::render(double sampleTime, uint64_t hostTime, UIn
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

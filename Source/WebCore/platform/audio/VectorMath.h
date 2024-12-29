@@ -49,6 +49,10 @@ void addScalar(const float* inputVector, float scalar, float* outputVector, size
 void add(const float* inputVector1, const float* inputVector2, float* outputVector, size_t numberOfElementsToProcess);
 void substract(const float* inputVector1, const float* inputVector2, float* outputVector, size_t numberOfElementsToProcess);
 
+void add(std::span<const int> inputVector1, std::span<const int> inputVector2, std::span<int> outputVector);
+void add(std::span<const float> inputVector1, std::span<const float> inputVector2, std::span<float> outputVector);
+void add(std::span<const double> inputVector1, std::span<const double> inputVector2, std::span<double> outputVector);
+
 // Finds the maximum magnitude of a float vector.
 float maximumMagnitude(const float* inputVector, size_t numberOfElementsToProcess);
 

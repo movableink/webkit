@@ -31,13 +31,13 @@
 #include "CAAudioStreamDescription.h"
 #include "Logging.h"
 #include "SpanCoreAudio.h"
+#include "VectorMath.h"
 #include <Accelerate/Accelerate.h>
 #include <CoreAudio/CoreAudioTypes.h>
 #include <wtf/MathExtras.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+#include <wtf/ZippedRange.h>
 
 namespace WebCore {
 
@@ -45,7 +45,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(CARingBuffer);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(InProcessCARingBuffer);
 
 CARingBuffer::CARingBuffer(size_t bytesPerFrame, size_t frameCount, uint32_t numChannelStreams)
-    : m_pointers(numChannelStreams)
+    : m_channels(numChannelStreams)
     , m_channelCount(numChannelStreams)
     , m_bytesPerFrame(bytesPerFrame)
     , m_frameCount(frameCount)
@@ -68,69 +68,79 @@ CheckedSize CARingBuffer::computeSizeForBuffers(size_t bytesPerFrame, size_t fra
 
 void CARingBuffer::initialize()
 {
-    Byte* channelData = static_cast<Byte*>(data());
-    for (auto& pointer : m_pointers) {
-        pointer = channelData;
-        channelData += m_capacityBytes;
+    auto channelData = span();
+    for (auto& channel : m_channels) {
+        channel = channelData.first(m_capacityBytes);
+        channelData = channelData.subspan(m_capacityBytes);
     }
 }
 
-static void ZeroRange(Vector<Byte*>& pointers, size_t offset, size_t nbytes)
+static void ZeroRange(Vector<std::span<Byte>>& channels, size_t offset, size_t nbytes)
 {
-    for (auto& pointer : pointers)
-        memset(pointer + offset, 0, nbytes);
+    for (auto& channel : channels)
+        zeroSpan(channel.subspan(offset, nbytes));
 }
 
-static void StoreABL(Vector<Byte*>& pointers, size_t destOffset, const AudioBufferList* list, size_t srcOffset, size_t nbytes)
+static void StoreABL(Vector<std::span<Byte>>& channels, size_t destOffset, const AudioBufferList* list, size_t srcOffset, size_t nbytes)
 {
-    ASSERT(list->mNumberBuffers == pointers.size());
+    ASSERT(list->mNumberBuffers == channels.size());
+    auto buffers = span(*list);
     const AudioBuffer* src = list->mBuffers;
-    for (auto& pointer : pointers) {
-        if (srcOffset > src->mDataByteSize)
+    for (auto& channel : channels) {
+        if (srcOffset > buffers[0].mDataByteSize)
             continue;
-        memcpy(pointer + destOffset, static_cast<Byte*>(src->mData) + srcOffset, std::min<size_t>(nbytes, src->mDataByteSize - srcOffset));
-        ++src;
+        auto srcData = span<Byte>(buffers[0]);
+        memcpySpan(channel.subspan(destOffset), srcData.subspan(srcOffset, std::min<size_t>(nbytes, src->mDataByteSize - srcOffset)));
+        buffers = buffers.subspan(1);
     }
 }
 
-static void FetchABL(AudioBufferList* list, size_t destOffset, Vector<Byte*>& pointers, size_t srcOffset, size_t nbytesTarget, CARingBuffer::FetchMode mode, bool shouldUpdateListDataByteSize)
+static void FetchABL(AudioBufferList* list, size_t destOffset, Vector<std::span<Byte>>& channels, size_t srcOffset, size_t nbytesTarget, CARingBuffer::FetchMode mode, bool shouldUpdateListDataByteSize)
 {
-    ASSERT(list->mNumberBuffers == pointers.size());
-    auto bufferCount = std::min<size_t>(list->mNumberBuffers, pointers.size());
+    ASSERT(list->mNumberBuffers == channels.size());
+    auto buffers = span(*list);
+    auto bufferCount = std::min<size_t>(list->mNumberBuffers, channels.size());
     for (size_t bufferIndex = 0; bufferIndex < bufferCount; ++bufferIndex) {
-        auto& pointer = pointers[bufferIndex];
-        auto& dest = list->mBuffers[bufferIndex];
+        auto& channel = channels[bufferIndex];
+        auto& dest = buffers[bufferIndex];
 
         if (destOffset > dest.mDataByteSize)
             continue;
 
-        auto destinationData = dataMutableByteSpan(dest).subspan(destOffset);
-        auto* sourceData = pointer + srcOffset;
+        auto destinationData = mutableSpan<uint8_t>(dest).subspan(destOffset);
+        auto sourceData = channel.subspan(srcOffset);
         auto nbytes = std::min<size_t>(nbytesTarget, dest.mDataByteSize - destOffset);
         switch (mode) {
         case CARingBuffer::Copy:
-            memcpySpan(destinationData, unsafeMakeSpan(sourceData, nbytes));
+            memcpySpan(destinationData, sourceData.first(nbytes));
             break;
         case CARingBuffer::MixInt16: {
-            auto destination = spanReinterpretCast<int16_t>(destinationData);
-            auto* source = reinterpret_cast<int16_t*>(sourceData);
-            for (size_t i = 0; i < nbytes / sizeof(int16_t); i++)
-                destination[i] += source[i];
+            size_t frameCount = nbytes / sizeof(int16_t);
+            auto source = spanReinterpretCast<const int16_t>(sourceData).first(frameCount);
+            auto destination = spanReinterpretCast<int16_t>(destinationData).first(frameCount);
+            for (auto [s, d] : zippedRange(source, destination))
+                d += s;
             break;
         }
         case CARingBuffer::MixInt32: {
-            auto destination = spanReinterpretCast<int32_t>(destinationData);
-            vDSP_vaddi(destination.data(), 1, reinterpret_cast<int32_t*>(sourceData), 1, destination.data(), 1, nbytes / sizeof(int32_t));
+            size_t frameCount = nbytes / sizeof(int32_t);
+            auto source = spanReinterpretCast<const int32_t>(sourceData).first(frameCount);
+            auto destination = spanReinterpretCast<int32_t>(destinationData).first(frameCount);
+            VectorMath::add(destination, source, destination);
             break;
         }
         case CARingBuffer::MixFloat32: {
-            auto destination = spanReinterpretCast<float>(destinationData);
-            vDSP_vadd(destination.data(), 1, reinterpret_cast<float*>(sourceData), 1, destination.data(), 1, nbytes / sizeof(float));
+            size_t frameCount = nbytes / sizeof(float);
+            auto source = spanReinterpretCast<const float>(sourceData).first(frameCount);
+            auto destination = spanReinterpretCast<float>(destinationData).first(frameCount);
+            VectorMath::add(destination, source, destination);
             break;
         }
         case CARingBuffer::MixFloat64: {
-            auto destination = spanReinterpretCast<double>(destinationData);
-            vDSP_vaddD(destination.data(), 1, reinterpret_cast<double*>(sourceData), 1, destination.data(), 1, nbytes / sizeof(double));
+            size_t frameCount = nbytes / sizeof(double);
+            auto source = spanReinterpretCast<const double>(sourceData).first(frameCount);
+            auto destination = spanReinterpretCast<double>(destinationData).first(frameCount);
+            VectorMath::add(destination, source, destination);
             break;
         }
         }
@@ -143,15 +153,15 @@ static void FetchABL(AudioBufferList* list, size_t destOffset, Vector<Byte*>& po
 inline void ZeroABL(AudioBufferList* list, size_t destOffset, size_t nbytes)
 {
     int nBuffers = list->mNumberBuffers;
-    AudioBuffer* dest = list->mBuffers;
+    auto destinations = span(*list);
     while (--nBuffers >= 0) {
-        if (destOffset > dest->mDataByteSize)
+        if (destOffset > destinations[0].mDataByteSize)
             continue;
-        auto dataSpan = dataMutableByteSpan(*dest).subspan(destOffset);
+        auto dataSpan = mutableSpan<uint8_t>(destinations[0]).subspan(destOffset);
         if (nbytes < dataSpan.size())
             dataSpan = dataSpan.first(nbytes);
         zeroSpan(dataSpan);
-        ++dest;
+        destinations = destinations.subspan(1);
     }
 }
 
@@ -200,10 +210,10 @@ CARingBuffer::Error CARingBuffer::store(const AudioBufferList* list, size_t fram
         offset0 = frameOffset(m_storeBounds.endFrame);
         offset1 = frameOffset(startFrame);
         if (offset0 < offset1)
-            ZeroRange(m_pointers, offset0, offset1 - offset0);
+            ZeroRange(m_channels, offset0, offset1 - offset0);
         else {
-            ZeroRange(m_pointers, offset0, m_capacityBytes - offset0);
-            ZeroRange(m_pointers, 0, offset1);
+            ZeroRange(m_channels, offset0, m_capacityBytes - offset0);
+            ZeroRange(m_channels, 0, offset1);
         }
         offset0 = offset1;
     } else
@@ -211,11 +221,11 @@ CARingBuffer::Error CARingBuffer::store(const AudioBufferList* list, size_t fram
 
     offset1 = frameOffset(endFrame);
     if (offset0 < offset1)
-        StoreABL(m_pointers, offset0, list, 0, offset1 - offset0);
+        StoreABL(m_channels, offset0, list, 0, offset1 - offset0);
     else {
         size_t nbytes = m_capacityBytes - offset0;
-        StoreABL(m_pointers, offset0, list, 0, nbytes);
-        StoreABL(m_pointers, 0, list, nbytes, offset1);
+        StoreABL(m_channels, offset0, list, 0, nbytes);
+        StoreABL(m_channels, 0, list, nbytes, offset1);
     }
 
     // Now update the end time.
@@ -291,12 +301,12 @@ void CARingBuffer::fetchInternal(AudioBufferList* list, size_t nFrames, uint64_t
     
     if (offset0 < offset1) {
         nbytes = offset1 - offset0;
-        FetchABL(list, destStartByteOffset, m_pointers, offset0, nbytes, mode, true);
+        FetchABL(list, destStartByteOffset, m_channels, offset0, nbytes, mode, true);
     } else {
         nbytes = m_capacityBytes - offset0;
-        FetchABL(list, destStartByteOffset, m_pointers, offset0, nbytes, mode, !offset1);
+        FetchABL(list, destStartByteOffset, m_channels, offset0, nbytes, mode, !offset1);
         if (offset1)
-            FetchABL(list, destStartByteOffset + nbytes, m_pointers, 0, offset1, mode, true);
+            FetchABL(list, destStartByteOffset + nbytes, m_channels, 0, offset1, mode, true);
     }
 }
 
@@ -332,7 +342,5 @@ InProcessCARingBuffer::InProcessCARingBuffer(size_t bytesPerFrame, size_t frameC
 InProcessCARingBuffer::~InProcessCARingBuffer() = default;
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO) && USE(MEDIATOOLBOX)

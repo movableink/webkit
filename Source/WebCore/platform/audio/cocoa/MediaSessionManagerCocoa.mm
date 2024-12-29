@@ -50,8 +50,6 @@
 #import "MediaRemoteSoftLink.h"
 #include <pal/cocoa/AVFoundationSoftLink.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 static const size_t kLowPowerVideoBufferSize = 4096;
 
 #if USE(NOW_PLAYING_ACTIVITY_SUPPRESSION)
@@ -591,8 +589,7 @@ std::optional<bool> MediaSessionManagerCocoa::supportsSpatialAudioPlaybackForCon
         if (channelCount <= 0)
             return true;
 
-        for (uint32_t i = 0; i < spatialAudioPreferences.spatialAudioSourceCount; ++i) {
-            auto& source = spatialAudioPreferences.spatialAudioSources[i];
+        for (auto& source : std::span { spatialAudioPreferences.spatialAudioSources }.first(spatialAudioPreferences.spatialAudioSourceCount)) {
             if (source == kSpatialAudioSource_Multichannel && channelCount > 2)
                 return true;
             if (source == kSpatialAudioSource_MonoOrStereo && channelCount >= 1)
@@ -633,7 +630,5 @@ void MediaSessionManagerCocoa::updateNowPlayingSuppression(const NowPlayingInfo*
 #endif // USE(NOW_PLAYING_ACTIVITY_SUPPRESSION)
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // USE(AUDIO_SESSION) && PLATFORM(COCOA)

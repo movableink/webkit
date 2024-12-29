@@ -136,6 +136,27 @@ void linearToDecibels(const float* inputVector, float* outputVector, size_t numb
     vDSP_vdbcon(inputVector, 1, &reference, outputVector, 1, numberOfElementsToProcess, 1);
 }
 
+void add(std::span<const int> inputVector1, std::span<const int> inputVector2, std::span<int> outputVector)
+{
+    RELEASE_ASSERT(inputVector1.size() == inputVector2.size());
+    RELEASE_ASSERT(outputVector.size() >= inputVector1.size());
+    vDSP_vaddi(inputVector1.data(), 1, inputVector2.data(), 1, outputVector.data(), 1, inputVector1.size());
+}
+
+void add(std::span<const float> inputVector1, std::span<const float> inputVector2, std::span<float> outputVector)
+{
+    RELEASE_ASSERT(inputVector1.size() == inputVector2.size());
+    RELEASE_ASSERT(outputVector.size() >= inputVector1.size());
+    vDSP_vadd(inputVector1.data(), 1, inputVector2.data(), 1, outputVector.data(), 1, inputVector1.size());
+}
+
+void add(std::span<const double> inputVector1, std::span<const double> inputVector2, std::span<double> outputVector)
+{
+    RELEASE_ASSERT(inputVector1.size() == inputVector2.size());
+    RELEASE_ASSERT(outputVector.size() >= inputVector1.size());
+    vDSP_vaddD(inputVector1.data(), 1, inputVector2.data(), 1, outputVector.data(), 1, inputVector1.size());
+}
+
 #else
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib/Win port
@@ -830,6 +851,29 @@ void addVectorsThenMultiplyByScalar(const float* inputVector1, const float* inpu
 }
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
+void add(std::span<const int> inputVector1, std::span<const int> inputVector2, std::span<int> outputVector)
+{
+    RELEASE_ASSERT(inputVector1.size() == inputVector2.size());
+    RELEASE_ASSERT(outputVector.size() >= inputVector1.size());
+    for (size_t i = 0; i < inputVector1.size(); ++i)
+        outputVector[i] = inputVector1[i] + inputVector2[i];
+}
+
+void add(std::span<const float> inputVector1, std::span<const float> inputVector2, std::span<float> outputVector)
+{
+    RELEASE_ASSERT(inputVector1.size() == inputVector2.size());
+    RELEASE_ASSERT(outputVector.size() >= inputVector1.size());
+    add(inputVector1.data(), inputVector2.data(), outputVector.data(), inputVector1.size());
+}
+
+void add(std::span<const double> inputVector1, std::span<const double> inputVector2, std::span<double> outputVector)
+{
+    RELEASE_ASSERT(inputVector1.size() == inputVector2.size());
+    RELEASE_ASSERT(outputVector.size() >= inputVector1.size());
+    for (size_t i = 0; i < inputVector1.size(); ++i)
+        outputVector[i] = inputVector1[i] + inputVector2[i];
+}
 
 #endif // USE(ACCELERATE)
 
