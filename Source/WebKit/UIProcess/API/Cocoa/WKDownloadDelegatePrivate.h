@@ -37,7 +37,7 @@
 typedef NS_ENUM(NSInteger, _WKPlaceholderPolicy) {
     _WKPlaceholderPolicyDisable,
     _WKPlaceholderPolicyEnable,
-} NS_SWIFT_NAME(WKDownload.PlaceholderPolicy) WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
+} WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
 
 NS_ASSUME_NONNULL_BEGIN
 
