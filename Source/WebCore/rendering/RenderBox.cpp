@@ -720,12 +720,12 @@ void RenderBox::constrainLogicalMinMaxSizesByAspectRatio(LayoutUnit& computedMin
     }
 }
 
-LayoutUnit RenderBox::constrainLogicalWidthInFragmentByMinMax(LayoutUnit logicalWidth, LayoutUnit availableWidth, const RenderBlock& cb, RenderFragmentContainer* fragment, AllowIntrinsic allowIntrinsic) const
+LayoutUnit RenderBox::constrainLogicalWidthByMinMax(LayoutUnit logicalWidth, LayoutUnit availableWidth, const RenderBlock& cb, AllowIntrinsic allowIntrinsic) const
 {
     const RenderStyle& styleToUse = style();
     LayoutUnit computedMaxWidth = LayoutUnit::max();
     if (!styleToUse.logicalMaxWidth().isUndefined() && (allowIntrinsic == AllowIntrinsic::Yes || !styleToUse.logicalMaxWidth().isIntrinsic()))
-        computedMaxWidth = computeLogicalWidthInFragmentUsing(SizeType::MaxSize, styleToUse.logicalMaxWidth(), availableWidth, cb, fragment);
+        computedMaxWidth = computeLogicalWidthInFragmentUsing(SizeType::MaxSize, styleToUse.logicalMaxWidth(), availableWidth, cb, nullptr);
 
     if (allowIntrinsic == AllowIntrinsic::No && styleToUse.logicalMinWidth().isIntrinsic())
         return std::min(logicalWidth, computedMaxWidth);
@@ -738,7 +738,7 @@ LayoutUnit RenderBox::constrainLogicalWidthInFragmentByMinMax(LayoutUnit logical
         logicalMinWidth = Length(LengthType::MinContent);
         minimumSizeType = MinimumSizeIsAutomaticContentBased::Yes;
     }
-    computedMinWidth = computeLogicalWidthInFragmentUsing(SizeType::MinSize, logicalMinWidth, availableWidth, cb, fragment);
+    computedMinWidth = computeLogicalWidthInFragmentUsing(SizeType::MinSize, logicalMinWidth, availableWidth, cb, nullptr);
 
     if (styleToUse.hasAspectRatio())
         constrainLogicalMinMaxSizesByAspectRatio(computedMinWidth, computedMaxWidth, logicalWidth, minimumSizeType, ConstrainDimension::Width);
@@ -2701,7 +2701,7 @@ void RenderBox::computeLogicalWidth(LogicalExtentComputedValues& computedValues)
 
         auto containerWidthInInlineDirection = !hasPerpendicularContainingBlock ? containerLogicalWidth : perpendicularContainingBlockLogicalHeight();
         auto preferredWidth = computeLogicalWidthInFragmentUsing(SizeType::MainOrPreferredSize, usedLogicalWidthLength, containerWidthInInlineDirection, containingBlock, nullptr);
-        return constrainLogicalWidthInFragmentByMinMax(preferredWidth, containerWidthInInlineDirection, containingBlock, nullptr);
+        return constrainLogicalWidthByMinMax(preferredWidth, containerWidthInInlineDirection, containingBlock);
     };
     computedValues.m_extent = logicalWidth();
 
@@ -5702,11 +5702,11 @@ LayoutUnit RenderBox::computeLogicalWidthFromAspectRatioInternal() const
     return inlineSizeFromAspectRatio(horizontalBorderAndPaddingExtent(), verticalBorderAndPaddingExtent(), style().logicalAspectRatio(), style().boxSizingForAspectRatio(), logicalHeightforAspectRatio, style().aspectRatioType(), isRenderReplaced());
 }
 
-LayoutUnit RenderBox::computeLogicalWidthFromAspectRatio(RenderFragmentContainer* fragment) const
+LayoutUnit RenderBox::computeLogicalWidthFromAspectRatio() const
 {
     auto logicalWidth = computeLogicalWidthFromAspectRatioInternal();
-    LayoutUnit containerWidthInInlineDirection = std::max<LayoutUnit>(0, containingBlockLogicalWidthForContentInFragment(fragment));
-    return constrainLogicalWidthInFragmentByMinMax(logicalWidth, containerWidthInInlineDirection, *containingBlock(), fragment, AllowIntrinsic::No);
+    LayoutUnit containerWidthInInlineDirection = std::max<LayoutUnit>(0, containingBlockLogicalWidthForContent());
+    return constrainLogicalWidthByMinMax(logicalWidth, containerWidthInInlineDirection, *containingBlock(), AllowIntrinsic::No);
 }
 
 bool RenderBox::isRenderReplacedWithIntrinsicRatio() const

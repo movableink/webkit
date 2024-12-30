@@ -2576,7 +2576,7 @@ void RenderFlexibleBox::applyStretchAlignmentToFlexItem(RenderBox& flexItem, Lay
         }
     } else if (!mainAxisIsFlexItemInlineAxis(flexItem) && flexItem.style().logicalWidth().isAuto()) {
         LayoutUnit flexItemWidth = std::max(0_lu, lineCrossAxisExtent - crossAxisMarginExtentForFlexItem(flexItem));
-        flexItemWidth = flexItem.constrainLogicalWidthInFragmentByMinMax(flexItemWidth, crossAxisContentExtent(), *this, nullptr);
+        flexItemWidth = flexItem.constrainLogicalWidthByMinMax(flexItemWidth, crossAxisContentExtent(), *this);
         
         if (flexItemWidth != flexItem.logicalWidth()) {
             flexItem.setOverridingLogicalWidth(flexItemWidth);

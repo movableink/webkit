@@ -79,7 +79,7 @@ public:
     inline LayoutUnit logicalHeight() const;
 
     enum class AllowIntrinsic : bool { No, Yes };
-    LayoutUnit constrainLogicalWidthInFragmentByMinMax(LayoutUnit, LayoutUnit, const RenderBlock&, RenderFragmentContainer*, AllowIntrinsic = AllowIntrinsic::Yes) const;
+    LayoutUnit constrainLogicalWidthByMinMax(LayoutUnit, LayoutUnit, const RenderBlock&, AllowIntrinsic = AllowIntrinsic::Yes) const;
     LayoutUnit constrainLogicalHeightByMinMax(LayoutUnit logicalHeight, std::optional<LayoutUnit> intrinsicContentHeight) const;
     LayoutUnit constrainContentBoxLogicalHeightByMinMax(LayoutUnit logicalHeight, std::optional<LayoutUnit> intrinsicContentHeight) const;
 
@@ -695,7 +695,7 @@ protected:
     bool isRenderReplacedWithIntrinsicRatio() const;
     bool shouldComputeLogicalWidthFromAspectRatio() const;
     LayoutUnit computeLogicalWidthFromAspectRatioInternal() const;
-    LayoutUnit computeLogicalWidthFromAspectRatio(RenderFragmentContainer* = nullptr) const;
+    LayoutUnit computeLogicalWidthFromAspectRatio() const;
     std::pair<LayoutUnit, LayoutUnit> computeMinMaxLogicalWidthFromAspectRatio() const;
     std::pair<LayoutUnit, LayoutUnit> computeMinMaxLogicalHeightFromAspectRatio() const;
     enum class ConstrainDimension { Width, Height };
