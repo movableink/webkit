@@ -335,7 +335,7 @@ void AudioParam::calculateFinalValues(std::span<float> values, bool sampleAccura
     replaceNaNValues(values, m_defaultValue);
 
     // Clamp values based on range allowed by AudioParam's min and max values.
-    VectorMath::clamp(values.data(), minValue(), maxValue(), values.data(), values.size());
+    VectorMath::clamp(values, minValue(), maxValue(), values);
 }
 
 void AudioParam::calculateTimelineValues(std::span<float> values)

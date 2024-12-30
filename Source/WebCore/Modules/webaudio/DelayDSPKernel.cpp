@@ -208,7 +208,7 @@ void DelayDSPKernel::processKRate(std::span<const float> source, std::span<float
 
     // Interpolate samples.
     // destination[k] = sample1[k] + interpolationFactor * (sample2[k] - sample1[k]);
-    VectorMath::interpolate(sample1.data(), sample2.data(), interpolationFactor, destination.data(), source.size());
+    VectorMath::interpolate(sample1.first(source.size()), sample2.first(source.size()), interpolationFactor, destination);
 }
 
 void DelayDSPKernel::processOnlyAudioParams(size_t framesToProcess)

@@ -117,7 +117,7 @@ void FFTFrame::doInverseFFT(std::span<float> data)
     gst_fft_f32_inverse_fft(m_inverseFft.get(), m_complexData.get(), data.data());
 
     // Scale so that a forward then inverse FFT yields exactly the original data.
-    VectorMath::multiplyByScalar(data.data(), 1.0 / m_FFTSize, data.data(), m_FFTSize);
+    VectorMath::multiplyByScalar(data.first(m_FFTSize), 1.0 / m_FFTSize, data);
 }
 
 int FFTFrame::minFFTSize()

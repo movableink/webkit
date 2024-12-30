@@ -206,8 +206,8 @@ void PeriodicWave::createBandLimitedTables(std::span<const float> realData, std:
         RELEASE_ASSERT(imagP.size() >= numberOfComponents);
 
         // Copy from loaded frequency data and scale.
-        VectorMath::multiplyByScalar(realData.data(), fftSize, realP.data(), numberOfComponents);
-        VectorMath::multiplyByScalar(imagData.data(), -static_cast<float>(fftSize), imagP.data(), numberOfComponents);
+        VectorMath::multiplyByScalar(realData.first(numberOfComponents), fftSize, realP.span());
+        VectorMath::multiplyByScalar(imagData.first(numberOfComponents), -static_cast<float>(fftSize), imagP.span());
 
         // Find the starting bin where we should start culling.
         // We need to clear out the highest frequencies to band-limit the waveform.
@@ -228,8 +228,7 @@ void PeriodicWave::createBandLimitedTables(std::span<const float> realData, std:
         imagP[0] = 0;
 
         // Create the band-limited table.
-        unsigned waveSize = periodicWaveSize();
-        m_bandLimitedTables.append(makeUnique<AudioFloatArray>(waveSize));
+        m_bandLimitedTables.append(makeUnique<AudioFloatArray>(fftSize));
 
         // Apply an inverse FFT to generate the time-domain table data.
         auto data = m_bandLimitedTables[rangeIndex]->span();
@@ -238,7 +237,7 @@ void PeriodicWave::createBandLimitedTables(std::span<const float> realData, std:
         // For the first range (which has the highest power), calculate its peak value then compute normalization scale.
         if (disableNormalization == ShouldDisableNormalization::No) {
             if (!rangeIndex) {
-                float maxValue = VectorMath::maximumMagnitude(data.data(), fftSize);
+                float maxValue = VectorMath::maximumMagnitude(data);
 
                 if (maxValue)
                     normalizationScale = 1.0f / maxValue;
@@ -246,7 +245,7 @@ void PeriodicWave::createBandLimitedTables(std::span<const float> realData, std:
         }
 
         // Apply normalization scale.
-        VectorMath::multiplyByScalar(data.data(), normalizationScale, data.data(), fftSize);
+        VectorMath::multiplyByScalar(data, normalizationScale, data);
     }
 }
 

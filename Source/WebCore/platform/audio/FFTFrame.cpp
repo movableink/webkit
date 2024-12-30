@@ -178,8 +178,8 @@ void FFTFrame::interpolateFrequencyComponents(const FFTFrame& frame1, const FFTF
 
 void FFTFrame::scaleFFT(float factor)
 {
-    VectorMath::multiplyByScalar(realData().data(), factor, realData().data(), realData().size());
-    VectorMath::multiplyByScalar(imagData().data(), factor, imagData().data(), realData().size());
+    VectorMath::multiplyByScalar(realData().span(), factor, realData().span());
+    VectorMath::multiplyByScalar(imagData().span(), factor, imagData().span());
 }
 
 void FFTFrame::multiply(const FFTFrame& frame)
@@ -194,16 +194,11 @@ void FFTFrame::multiply(const FFTFrame& frame)
 
     unsigned halfSize = m_FFTSize / 2;
 
-    RELEASE_ASSERT(realP1.size() >= halfSize);
-    RELEASE_ASSERT(imagP1.size() >= halfSize);
-    RELEASE_ASSERT(realP2.size() >= halfSize);
-    RELEASE_ASSERT(imagP2.size() >= halfSize);
-
     float real0 = realP1[0];
     float imag0 = imagP1[0];
 
     // Complex multiply
-    VectorMath::multiplyComplex(realP1.data(), imagP1.data(), realP2.data(), imagP2.data(), realP1.data(), imagP1.data(), halfSize);
+    VectorMath::multiplyComplex(realP1.span().first(halfSize), imagP1.span().first(halfSize), realP2.span().first(halfSize), imagP2.span().first(halfSize), realP1.span(), imagP1.span());
 
     // Multiply the packed DC/nyquist component
     realP1[0] = real0 * realP2[0];

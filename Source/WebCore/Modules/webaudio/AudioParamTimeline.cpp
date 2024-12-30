@@ -370,7 +370,7 @@ float AudioParamTimeline::valuesForFrameRange(size_t startFrame, size_t endFrame
     float value = valuesForFrameRangeImpl(startFrame, endFrame, defaultValue, values, sampleRate, controlRate);
 
     // Clamp values based on range allowed by AudioParam's min and max values.
-    VectorMath::clamp(values.data(), minValue, maxValue, values.data(), values.size());
+    VectorMath::clamp(values, minValue, maxValue, values);
 
     return value;
 }
@@ -531,10 +531,11 @@ void AudioParamTimeline::processLinearRamp(const AutomationState& currentState, 
         values[writeIndex + 1] = 1;
         values[writeIndex + 2] = 2;
         values[writeIndex + 3] = 3;
-        VectorMath::multiplyByScalar(values.subspan(writeIndex).data(), currentState.samplingPeriod, values.subspan(writeIndex).data(), 4);
-        VectorMath::addScalar(values.subspan(writeIndex).data(), currentFrame * currentState.samplingPeriod - currentState.time1.value(), values.subspan(writeIndex).data(), 4);
-        VectorMath::multiplyByScalar(values.subspan(writeIndex).data(), k * valueDelta, values.subspan(writeIndex).data(), 4);
-        VectorMath::addScalar(values.subspan(writeIndex).data(), currentState.value1, values.subspan(writeIndex).data(), 4);
+        auto valuesAtWriteIndex = values.subspan(writeIndex).first(4);
+        VectorMath::multiplyByScalar(valuesAtWriteIndex, currentState.samplingPeriod, valuesAtWriteIndex);
+        VectorMath::addScalar(valuesAtWriteIndex, currentFrame * currentState.samplingPeriod - currentState.time1.value(), valuesAtWriteIndex);
+        VectorMath::multiplyByScalar(valuesAtWriteIndex, k * valueDelta, valuesAtWriteIndex);
+        VectorMath::addScalar(valuesAtWriteIndex, currentState.value1, valuesAtWriteIndex);
 
         float inc = 4 * currentState.samplingPeriod * k * valueDelta;
 
@@ -546,7 +547,7 @@ void AudioParamTimeline::processLinearRamp(const AutomationState& currentState, 
         // Process 4 loop steps.
         writeIndex += 4;
         for (; writeIndex < fillToFrameTrunc; writeIndex += 4)
-            VectorMath::addScalar(values.subspan(writeIndex - 4).data(), inc, values.subspan(writeIndex).data(), 4);
+            VectorMath::addScalar(values.subspan(writeIndex - 4).first(4), inc, values.subspan(writeIndex));
     }
     // Update |value| with the last value computed so that the .value attribute of the AudioParam gets
     // the correct linear ramp value, in case the following loop doesn't execute.
@@ -674,8 +675,8 @@ void AudioParamTimeline::processSetTarget(const AutomationState& currentState, s
         for (; writeIndex < fillToFrameTrunc; writeIndex += 4) {
             delta = target - value;
 
-            VectorMath::multiplyByScalar(cArray.data(), delta, values.subspan(writeIndex).data(), cArray.size());
-            VectorMath::addScalar(values.subspan(writeIndex).data(), value, values.subspan(writeIndex).data(), 4);
+            VectorMath::multiplyByScalar(std::span { cArray }, delta, values.subspan(writeIndex));
+            VectorMath::addScalar(values.subspan(writeIndex).first(4), value, values.subspan(writeIndex));
 
             value += delta * c3;
         }

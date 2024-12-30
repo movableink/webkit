@@ -73,7 +73,7 @@ ReverbConvolverStage::ReverbConvolverStage(std::span<const float> impulseRespons
         m_directKernel->copyToRange(impulseResponse, 0, stageLength);
         // Account for the normalization (if any) of the convolver node.
         if (scale != 1)
-            VectorMath::multiplyByScalar(m_directKernel->data(), scale, m_directKernel->data(), stageLength);
+            VectorMath::multiplyByScalar(m_directKernel->span().first(stageLength), scale, m_directKernel->span());
         m_directConvolver = makeUnique<DirectConvolver>(renderSliceSize);
     }
 

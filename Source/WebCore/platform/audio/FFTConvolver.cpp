@@ -96,7 +96,7 @@ void FFTConvolver::process(FFTFrame* fftKernel, std::span<const float> source, s
             m_frame.doInverseFFT(m_outputBuffer.span());
 
             // Overlap-add 1st half from previous time
-            VectorMath::add(m_outputBuffer.data(), m_lastOverlapBuffer.data(), m_outputBuffer.data(), halfSize);
+            VectorMath::add(m_outputBuffer.span().first(halfSize), m_lastOverlapBuffer.span().first(halfSize), m_outputBuffer.span());
 
             // Finally, save 2nd half of result
             bool isCopyGood3 = m_outputBuffer.size() == 2 * halfSize && m_lastOverlapBuffer.size() == halfSize;

@@ -107,13 +107,10 @@ void panToTargetValue(const AudioBus* inputBus, AudioBus* outputBus, float panVa
     if (!isOutputSafe)
         return;
     
-    const float* sourceL = inputBus->channel(0)->data();
-    const float* sourceR = numberOfInputChannels > 1 ? inputBus->channel(1)->data() : sourceL;
-    float* destinationL = outputBus->channelByType(AudioBus::ChannelLeft)->mutableData();
-    float* destinationR = outputBus->channelByType(AudioBus::ChannelRight)->mutableData();
-    
-    if (!sourceL || !sourceR || !destinationL || !destinationR)
-        return;
+    auto sourceL = inputBus->channel(0)->span().first(framesToProcess);
+    auto sourceR = numberOfInputChannels > 1 ? inputBus->channel(1)->span().first(framesToProcess) : sourceL;
+    auto destinationL = outputBus->channelByType(AudioBus::ChannelLeft)->mutableSpan();
+    auto destinationR = outputBus->channelByType(AudioBus::ChannelRight)->mutableSpan();
 
     float targetPan = clampTo(panValue, -1.0, 1.0);
     
@@ -123,8 +120,8 @@ void panToTargetValue(const AudioBus* inputBus, AudioBus* outputBus, float panVa
         double gainL = cos(panRadian);
         double gainR = sin(panRadian);
         
-        VectorMath::multiplyByScalar(sourceL, gainL, destinationL, framesToProcess);
-        VectorMath::multiplyByScalar(sourceL, gainR, destinationR, framesToProcess);
+        VectorMath::multiplyByScalar(sourceL, gainL, destinationL);
+        VectorMath::multiplyByScalar(sourceL, gainR, destinationR);
     } else {
         double panRadian = (targetPan <= 0 ? targetPan + 1 : targetPan) * piOverTwoDouble;
         
@@ -132,11 +129,11 @@ void panToTargetValue(const AudioBus* inputBus, AudioBus* outputBus, float panVa
         double gainR = sin(panRadian);
 
         if (targetPan <= 0) {
-            VectorMath::multiplyByScalarThenAddToVector(sourceR, gainL, sourceL, destinationL, framesToProcess);
-            VectorMath::multiplyByScalar(sourceR, gainR, destinationR, framesToProcess);
+            VectorMath::multiplyByScalarThenAddToVector(sourceR, gainL, sourceL, destinationL);
+            VectorMath::multiplyByScalar(sourceR, gainR, destinationR);
         } else {
-            VectorMath::multiplyByScalar(sourceL, gainL, destinationL, framesToProcess);
-            VectorMath::multiplyByScalarThenAddToVector(sourceL, gainR, sourceR, destinationR, framesToProcess);
+            VectorMath::multiplyByScalar(sourceL, gainL, destinationL);
+            VectorMath::multiplyByScalarThenAddToVector(sourceL, gainR, sourceR, destinationR);
         }
     }
 }

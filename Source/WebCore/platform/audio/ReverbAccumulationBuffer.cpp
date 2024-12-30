@@ -100,11 +100,11 @@ int ReverbAccumulationBuffer::accumulate(std::span<float> source, size_t numberO
     if (!isSafe)
         return 0;
 
-    VectorMath::add(source.data(), destination.subspan(writeIndex).data(), destination.subspan(writeIndex).data(), numberOfFrames1);
+    VectorMath::add(source.first(numberOfFrames1), destination.subspan(writeIndex).first(numberOfFrames1), destination.subspan(writeIndex));
 
     // Handle wrap-around if necessary
     if (numberOfFrames2 > 0)       
-        VectorMath::add(source.subspan(numberOfFrames1).data(), destination.data(), destination.data(), numberOfFrames2);
+        VectorMath::add(source.subspan(numberOfFrames1).first(numberOfFrames2), destination.first(numberOfFrames2), destination);
 
     return writeIndex;
 }

@@ -91,13 +91,10 @@ void EqualPowerPanner::pan(double azimuth, double /*elevation*/, const AudioBus*
     if (!isOutputSafe)
         return;
 
-    const float* sourceL = inputBus->channel(0)->data();                               
-    const float* sourceR = numberOfInputChannels > 1 ? inputBus->channel(1)->data() : sourceL;
-    float* destinationL = outputBus->channelByType(AudioBus::ChannelLeft)->mutableData();
-    float* destinationR = outputBus->channelByType(AudioBus::ChannelRight)->mutableData();
-    
-    if (!sourceL || !sourceR || !destinationL || !destinationR)
-        return;
+    auto sourceL = inputBus->channel(0)->span().first(framesToProcess);
+    auto sourceR = numberOfInputChannels > 1 ? inputBus->channel(1)->span().first(framesToProcess) : sourceL;
+    auto destinationL = outputBus->channelByType(AudioBus::ChannelLeft)->mutableSpan();
+    auto destinationR = outputBus->channelByType(AudioBus::ChannelRight)->mutableSpan();
     
     // Clamp azimuth to allowed range of -180 -> +180.
     azimuth = std::max(-180.0, azimuth);
@@ -130,15 +127,15 @@ void EqualPowerPanner::pan(double azimuth, double /*elevation*/, const AudioBus*
     double desiredGainL = std::cos(piOverTwoDouble * desiredPanPosition);
     double desiredGainR = std::sin(piOverTwoDouble * desiredPanPosition);
     if (numberOfInputChannels == 1) { // For mono source case.
-        VectorMath::multiplyByScalar(sourceL, desiredGainL, destinationL, framesToProcess);
-        VectorMath::multiplyByScalar(sourceL, desiredGainR, destinationR, framesToProcess);
+        VectorMath::multiplyByScalar(sourceL, desiredGainL, destinationL);
+        VectorMath::multiplyByScalar(sourceL, desiredGainR, destinationR);
     } else { // For stereo source case.
         if (azimuth <= 0) { // from -90 -> 0
-            VectorMath::multiplyByScalarThenAddToVector(sourceR, desiredGainL, sourceL, destinationL, framesToProcess);
-            VectorMath::multiplyByScalar(sourceR, desiredGainR, destinationR, framesToProcess);
+            VectorMath::multiplyByScalarThenAddToVector(sourceR, desiredGainL, sourceL, destinationL);
+            VectorMath::multiplyByScalar(sourceR, desiredGainR, destinationR);
         } else { // from 0 -> +90
-            VectorMath::multiplyByScalar(sourceL, desiredGainL, destinationL, framesToProcess);
-            VectorMath::multiplyByScalarThenAddToVector(sourceL, desiredGainR, sourceR, destinationR, framesToProcess);
+            VectorMath::multiplyByScalar(sourceL, desiredGainL, destinationL);
+            VectorMath::multiplyByScalarThenAddToVector(sourceL, desiredGainR, sourceR, destinationR);
         }
     }
 }

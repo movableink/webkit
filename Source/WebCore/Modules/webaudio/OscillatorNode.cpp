@@ -129,7 +129,7 @@ bool OscillatorNode::calculateSampleAccuratePhaseIncrements(size_t framesToProce
 
     bool hasSampleAccurateValues = false;
     bool hasFrequencyChanges = false;
-    auto phaseIncrements = m_phaseIncrements.span();
+    auto phaseIncrements = m_phaseIncrements.span().first(framesToProcess);
 
     float finalScale = m_periodicWave->rateScale();
 
@@ -139,7 +139,7 @@ bool OscillatorNode::calculateSampleAccuratePhaseIncrements(size_t framesToProce
 
         // Get the sample-accurate frequency values and convert to phase increments.
         // They will be converted to phase increments below.
-        m_frequency->calculateSampleAccurateValues(phaseIncrements.first(framesToProcess));
+        m_frequency->calculateSampleAccurateValues(phaseIncrements);
     } else {
         float frequency = m_frequency->finalValue();
         finalScale *= frequency;
@@ -149,17 +149,17 @@ bool OscillatorNode::calculateSampleAccuratePhaseIncrements(size_t framesToProce
         hasSampleAccurateValues = true;
 
         // Get the sample-accurate detune values.
-        auto detuneValues = hasFrequencyChanges ? m_detuneValues.span() : phaseIncrements;
-        m_detune->calculateSampleAccurateValues(detuneValues.first(framesToProcess));
+        auto detuneValues = hasFrequencyChanges ? m_detuneValues.span().first(framesToProcess) : phaseIncrements;
+        m_detune->calculateSampleAccurateValues(detuneValues);
 
         // Convert from cents to rate scalar.
-        VectorMath::multiplyByScalar(detuneValues.data(), 1.0 / 1200, detuneValues.data(), framesToProcess);
-        for (unsigned i = 0; i < framesToProcess; ++i)
-            detuneValues[i] = std::exp2(detuneValues[i]);
+        VectorMath::multiplyByScalar(detuneValues, 1.0 / 1200, detuneValues);
+        for (auto& detuneValue : detuneValues)
+            detuneValue = std::exp2(detuneValue);
 
         if (hasFrequencyChanges) {
             // Multiply frequencies by detune scalings.
-            VectorMath::multiply(detuneValues.data(), phaseIncrements.data(), phaseIncrements.data(), framesToProcess);
+            VectorMath::multiply(detuneValues, phaseIncrements, phaseIncrements);
         }
     } else {
         float detune = m_detune->finalValue();
@@ -168,9 +168,9 @@ bool OscillatorNode::calculateSampleAccuratePhaseIncrements(size_t framesToProce
     }
 
     if (hasSampleAccurateValues) {
-        clampFrequency(phaseIncrements.first(framesToProcess), context().sampleRate() / 2);
+        clampFrequency(phaseIncrements, context().sampleRate() / 2);
         // Convert from frequency to wave increment.
-        VectorMath::multiplyByScalar(phaseIncrements.data(), finalScale, phaseIncrements.data(), framesToProcess);
+        VectorMath::multiplyByScalar(phaseIncrements, finalScale, phaseIncrements);
     }
 
     return hasSampleAccurateValues;
