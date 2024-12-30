@@ -3937,7 +3937,7 @@ LayoutUnit RenderBox::containingBlockLogicalHeightForPositioned(const RenderBoxM
     return { };
 }
 
-static void computeInlineStaticDistance(Length& logicalLeft, Length& logicalRight, const RenderBox* child, const RenderBoxModelObject& containerBlock, LayoutUnit containerLogicalWidth, RenderFragmentContainer* fragment)
+static void computeInlineStaticDistance(Length& logicalLeft, Length& logicalRight, const RenderBox* child, const RenderBoxModelObject& containerBlock, LayoutUnit containerLogicalWidth)
 {
     if (!logicalLeft.isAuto() || !logicalRight.isAuto())
         return;
@@ -3967,13 +3967,6 @@ static void computeInlineStaticDistance(Length& logicalLeft, Length& logicalRigh
             staticPosition += isOrthogonal(*child, *parent) ? renderBox->logicalTop() : renderBox->logicalLeft();
             if (renderBox->isInFlowPositioned())
                 staticPosition += renderBox->isHorizontalWritingMode() ? renderBox->offsetForInFlowPosition().width() : renderBox->offsetForInFlowPosition().height();
-            if (fragment) {
-                if (CheckedPtr currentBlock = dynamicDowncast<RenderBlock>(*current)) {
-                    fragment = currentBlock->clampToStartAndEndFragments(fragment);
-                    if (auto* boxInfo = currentBlock->renderBoxFragmentInfo(fragment))
-                        staticPosition += boxInfo->logicalLeft();
-                }
-            }
         }
         logicalLeft.setValue(LengthType::Fixed, staticPosition);
     } else {
@@ -3995,18 +3988,6 @@ static void computeInlineStaticDistance(Length& logicalLeft, Length& logicalRigh
                 if (renderBox->isInFlowPositioned())
                     staticPosition -= renderBox->isHorizontalWritingMode() ? renderBox->offsetForInFlowPosition().width() : renderBox->offsetForInFlowPosition().height();
             }
-            if (fragment) {
-                if (CheckedPtr currentBlock = dynamicDowncast<RenderBlock>(*current)) {
-                    fragment = currentBlock->clampToStartAndEndFragments(fragment);
-                    RenderBoxFragmentInfo* boxInfo = currentBlock->renderBoxFragmentInfo(fragment);
-                    if (boxInfo) {
-                        if (current != &containerBlock)
-                            staticPosition -= currentBlock->logicalWidth() - (boxInfo->logicalLeft() + boxInfo->logicalWidth());
-                        if (current == &enclosingBox)
-                            staticPosition += enclosingBox.logicalWidth() - boxInfo->logicalWidth();
-                    }
-                }
-            }
             if (current == &containerBlock)
                 break;
         }
@@ -4014,11 +3995,9 @@ static void computeInlineStaticDistance(Length& logicalLeft, Length& logicalRigh
     }
 }
 
-void RenderBox::computePositionedLogicalWidth(LogicalExtentComputedValues& computedValues, RenderFragmentContainer* fragment) const
+void RenderBox::computePositionedLogicalWidth(LogicalExtentComputedValues& computedValues) const
 {
     if (isReplacedOrAtomicInline()) {
-        // FIXME: Positioned replaced elements inside a flow thread are not working properly
-        // with variable width fragments (see https://bugs.webkit.org/show_bug.cgi?id=69896 ).
         computePositionedLogicalWidthReplaced(computedValues);
         return;
     }
@@ -4043,7 +4022,7 @@ void RenderBox::computePositionedLogicalWidth(LogicalExtentComputedValues& compu
     // relative positioned inline.
     const RenderBoxModelObject& containerBlock = downcast<RenderBoxModelObject>(*container());
     
-    const LayoutUnit containerLogicalWidth = containingBlockLogicalWidthForPositioned(containerBlock, fragment);
+    const LayoutUnit containerLogicalWidth = containingBlockLogicalWidthForPositioned(containerBlock);
 
     // Use the container block's direction except when calculating the static distance
     // This conforms with the reference results for abspos-replaced-width-margin-000.htm
@@ -4099,7 +4078,7 @@ void RenderBox::computePositionedLogicalWidth(LogicalExtentComputedValues& compu
 
     // see FIXME 1
     // Calculate the static distance if needed.
-    computeInlineStaticDistance(logicalLeftLength, logicalRightLength, this, containerBlock, containerLogicalWidth, fragment);
+    computeInlineStaticDistance(logicalLeftLength, logicalRightLength, this, containerBlock, containerLogicalWidth);
     
     // Calculate constraint equation values for 'width' case.
     computePositionedLogicalWidthUsing(SizeType::MainOrPreferredSize, style().logicalWidth(), containerBlock, containerWritingMode,
@@ -4168,7 +4147,7 @@ void RenderBox::computePositionedLogicalWidth(LogicalExtentComputedValues& compu
     // Adjust logicalLeft if we need to for the flipped version of our writing mode in fragments.
     // FIXME: Add support for other types of objects as containerBlock, not only RenderBlock.
     RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
-    if (fragmentedFlow && !fragment && isWritingModeRoot() && isHorizontalWritingMode() == containerBlock.isHorizontalWritingMode()) {
+    if (fragmentedFlow && isWritingModeRoot() && isHorizontalWritingMode() == containerBlock.isHorizontalWritingMode()) {
         if (CheckedPtr renderBlock = dynamicDowncast<RenderBlock>(containerBlock)) {
             ASSERT(containerBlock.canHaveBoxInfoInFragment());
             LayoutUnit logicalLeftPos = computedValues.m_position;
@@ -4842,7 +4821,7 @@ void RenderBox::computePositionedLogicalWidthReplaced(LogicalExtentComputedValue
      *    else if 'direction' is 'rtl', set 'right' to the static position.
     \*-----------------------------------------------------------------------*/
     // see FIXME 1
-    computeInlineStaticDistance(logicalLeft, logicalRight, this, containerBlock, containerLogicalWidth, nullptr); // FIXME: Pass the fragment.
+    computeInlineStaticDistance(logicalLeft, logicalRight, this, containerBlock, containerLogicalWidth);
 
     /*-----------------------------------------------------------------------*\
      * 3. If 'left' or 'right' are 'auto', replace any 'auto' on 'margin-left'

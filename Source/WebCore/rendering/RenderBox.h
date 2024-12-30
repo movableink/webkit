@@ -676,7 +676,7 @@ protected:
     BleedAvoidance determineBleedAvoidance(GraphicsContext&) const;
     bool backgroundHasOpaqueTopLayer() const;
 
-    void computePositionedLogicalWidth(LogicalExtentComputedValues&, RenderFragmentContainer* = nullptr) const;
+    void computePositionedLogicalWidth(LogicalExtentComputedValues&) const;
 
     std::optional<LayoutUnit> computeIntrinsicLogicalContentHeightUsing(Length logicalHeightLength, std::optional<LayoutUnit> intrinsicContentHeight, LayoutUnit borderAndPadding) const;
     
