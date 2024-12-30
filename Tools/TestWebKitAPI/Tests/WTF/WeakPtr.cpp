@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -2714,6 +2714,9 @@ TEST(WTF_WeakPtr, WeakListHashSetInsertBefore)
 
 class MultipleInheritanceBase1 : public CanMakeWeakPtr<MultipleInheritanceBase1> {
 public:
+    MultipleInheritanceBase1() = default;
+    virtual ~MultipleInheritanceBase1() = default;
+
     virtual void meow() = 0;
 
     int dummy; // Prevent empty base class optimization, to make testing more interesting.
@@ -2721,6 +2724,9 @@ public:
 
 class MultipleInheritanceBase2 : public CanMakeWeakPtr<MultipleInheritanceBase2> {
 public:
+    MultipleInheritanceBase2() = default;
+    virtual ~MultipleInheritanceBase2() = default;
+
     virtual void woof() = 0;
 
     int dummy; // Prevent empty base class optimization, to make testing more interesting.
@@ -2728,6 +2734,9 @@ public:
 
 class MultipleInheritanceDerived : public MultipleInheritanceBase1, public MultipleInheritanceBase2 {
 public:
+    MultipleInheritanceDerived() = default;
+    virtual ~MultipleInheritanceDerived() = default;
+
     bool meowCalled() const
     {
         return m_meowCalled;
@@ -3059,7 +3068,7 @@ TEST(WTF_ThreadSafeWeakPtr, MultipleInheritance)
     };
 
     struct Dog {
-        ~Dog() { destructors.append(Destructor::Dog); }
+        virtual ~Dog() { destructors.append(Destructor::Dog); }
         virtual void woof() = 0;
 
         virtual void ref() const = 0;
