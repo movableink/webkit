@@ -736,7 +736,7 @@ std::optional<LayoutUnit> RenderFlexibleBox::computeMainAxisExtentForFlexItem(Re
     }
 
     auto mainAxisWidth = isColumnFlow() ? availableLogicalHeight(AvailableLogicalHeightType::ExcludeMarginBorderPadding) : contentLogicalWidth();
-    return flexItem.computeLogicalWidthInFragmentUsing(sizeType, size, mainAxisWidth, *this, { }) - flexItem.borderAndPaddingLogicalWidth();
+    return flexItem.computeLogicalWidthUsing(sizeType, size, mainAxisWidth, *this) - flexItem.borderAndPaddingLogicalWidth();
 }
 
 FlowDirection RenderFlexibleBox::transformedBlockFlowDirection() const

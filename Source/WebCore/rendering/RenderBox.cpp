@@ -725,7 +725,7 @@ LayoutUnit RenderBox::constrainLogicalWidthByMinMax(LayoutUnit logicalWidth, Lay
     const RenderStyle& styleToUse = style();
     LayoutUnit computedMaxWidth = LayoutUnit::max();
     if (!styleToUse.logicalMaxWidth().isUndefined() && (allowIntrinsic == AllowIntrinsic::Yes || !styleToUse.logicalMaxWidth().isIntrinsic()))
-        computedMaxWidth = computeLogicalWidthInFragmentUsing(SizeType::MaxSize, styleToUse.logicalMaxWidth(), availableWidth, cb, nullptr);
+        computedMaxWidth = computeLogicalWidthUsing(SizeType::MaxSize, styleToUse.logicalMaxWidth(), availableWidth, cb);
 
     if (allowIntrinsic == AllowIntrinsic::No && styleToUse.logicalMinWidth().isIntrinsic())
         return std::min(logicalWidth, computedMaxWidth);
@@ -738,7 +738,7 @@ LayoutUnit RenderBox::constrainLogicalWidthByMinMax(LayoutUnit logicalWidth, Lay
         logicalMinWidth = Length(LengthType::MinContent);
         minimumSizeType = MinimumSizeIsAutomaticContentBased::Yes;
     }
-    computedMinWidth = computeLogicalWidthInFragmentUsing(SizeType::MinSize, logicalMinWidth, availableWidth, cb, nullptr);
+    computedMinWidth = computeLogicalWidthUsing(SizeType::MinSize, logicalMinWidth, availableWidth, cb);
 
     if (styleToUse.hasAspectRatio())
         constrainLogicalMinMaxSizesByAspectRatio(computedMinWidth, computedMaxWidth, logicalWidth, minimumSizeType, ConstrainDimension::Width);
@@ -2238,18 +2238,11 @@ LayoutRect RenderBox::clipRect(const LayoutPoint& location, RenderFragmentContai
     return clipRect;
 }
 
-LayoutUnit RenderBox::shrinkLogicalWidthToAvoidFloats(LayoutUnit childMarginStart, LayoutUnit childMarginEnd, const RenderBlock& cb, RenderFragmentContainer* fragment) const
+LayoutUnit RenderBox::shrinkLogicalWidthToAvoidFloats(LayoutUnit childMarginStart, LayoutUnit childMarginEnd, const RenderBlock& containingBlock) const
 {    
-    RenderFragmentContainer* containingBlockFragment = nullptr;
     LayoutUnit logicalTopPosition = logicalTop();
-    if (fragment) {
-        LayoutUnit offsetFromLogicalTopOfFragment = fragment ? fragment->logicalTopForFragmentedFlowContent() - offsetFromLogicalTopOfFirstPage() : 0_lu;
-        logicalTopPosition = std::max(logicalTopPosition, logicalTopPosition + offsetFromLogicalTopOfFragment);
-        containingBlockFragment = cb.clampToStartAndEndFragments(fragment);
-    }
-
-    LayoutUnit logicalHeight = cb.logicalHeightForChild(*this);
-    LayoutUnit result = cb.availableLogicalWidthForLineInFragment(logicalTopPosition, containingBlockFragment, logicalHeight) - childMarginStart - childMarginEnd;
+    LayoutUnit logicalHeight = containingBlock.logicalHeightForChild(*this);
+    LayoutUnit result = containingBlock.availableLogicalWidthForLineInFragment(logicalTopPosition, { }, logicalHeight) - childMarginStart - childMarginEnd;
 
     // We need to see if margins on either the start side or the end side can contain the floats in question. If they can,
     // then just using the line width is inaccurate. In the case where a float completely fits, we don't need to use the line
@@ -2257,9 +2250,9 @@ LayoutUnit RenderBox::shrinkLogicalWidthToAvoidFloats(LayoutUnit childMarginStar
     // doesn't fit, we can use the line offset, but we need to grow it by the margin to reflect the fact that the margin was
     // "consumed" by the float. Negative margins aren't consumed by the float, and so we ignore them.
     if (childMarginStart > 0) {
-        LayoutUnit startContentSide = cb.startOffsetForContent(containingBlockFragment);
+        LayoutUnit startContentSide = containingBlock.startOffsetForContent({ });
         LayoutUnit startContentSideWithMargin = startContentSide + childMarginStart;
-        LayoutUnit startOffset = cb.startOffsetForLineInFragment(logicalTopPosition, containingBlockFragment, logicalHeight);
+        LayoutUnit startOffset = containingBlock.startOffsetForLineInFragment(logicalTopPosition, { }, logicalHeight);
         if (startOffset > startContentSideWithMargin)
             result += childMarginStart;
         else
@@ -2267,9 +2260,9 @@ LayoutUnit RenderBox::shrinkLogicalWidthToAvoidFloats(LayoutUnit childMarginStar
     }
     
     if (childMarginEnd > 0) {
-        LayoutUnit endContentSide = cb.endOffsetForContent(containingBlockFragment);
+        LayoutUnit endContentSide = containingBlock.endOffsetForContent({ });
         LayoutUnit endContentSideWithMargin = endContentSide + childMarginEnd;
-        LayoutUnit endOffset = cb.endOffsetForLineInFragment(logicalTopPosition, containingBlockFragment, logicalHeight);
+        LayoutUnit endOffset = containingBlock.endOffsetForLineInFragment(logicalTopPosition, { }, logicalHeight);
         if (endOffset > endContentSideWithMargin)
             result += childMarginEnd;
         else
@@ -2700,7 +2693,7 @@ void RenderBox::computeLogicalWidth(LogicalExtentComputedValues& computedValues)
             return computeLogicalWidthFromAspectRatio();
 
         auto containerWidthInInlineDirection = !hasPerpendicularContainingBlock ? containerLogicalWidth : perpendicularContainingBlockLogicalHeight();
-        auto preferredWidth = computeLogicalWidthInFragmentUsing(SizeType::MainOrPreferredSize, usedLogicalWidthLength, containerWidthInInlineDirection, containingBlock, nullptr);
+        auto preferredWidth = computeLogicalWidthUsing(SizeType::MainOrPreferredSize, usedLogicalWidthLength, containerWidthInInlineDirection, containingBlock);
         return constrainLogicalWidthByMinMax(preferredWidth, containerWidthInInlineDirection, containingBlock);
     };
     computedValues.m_extent = logicalWidth();
@@ -2807,8 +2800,7 @@ LayoutUnit RenderBox::computeIntrinsicLogicalWidthUsing(Length logicalWidthLengt
     return 0;
 }
 
-LayoutUnit RenderBox::computeLogicalWidthInFragmentUsing(SizeType widthType, Length logicalWidth, LayoutUnit availableLogicalWidth,
-    const RenderBlock& cb, RenderFragmentContainer* fragment) const
+LayoutUnit RenderBox::computeLogicalWidthUsing(SizeType widthType, Length logicalWidth, LayoutUnit availableLogicalWidth, const RenderBlock& containingBlock) const
 {
     ASSERT(widthType == SizeType::MinSize || widthType == SizeType::MainOrPreferredSize || !logicalWidth.isAuto());
     if (widthType == SizeType::MinSize && logicalWidth.isAuto())
@@ -2826,8 +2818,8 @@ LayoutUnit RenderBox::computeLogicalWidthInFragmentUsing(SizeType widthType, Len
     LayoutUnit marginEnd;
     LayoutUnit logicalWidthResult = fillAvailableMeasure(availableLogicalWidth, marginStart, marginEnd);
 
-    if (shrinkToAvoidFloats() && cb.containsFloats())
-        logicalWidthResult = std::min(logicalWidthResult, shrinkLogicalWidthToAvoidFloats(marginStart, marginEnd, cb, fragment));
+    if (shrinkToAvoidFloats() && containingBlock.containsFloats())
+        logicalWidthResult = std::min(logicalWidthResult, shrinkLogicalWidthToAvoidFloats(marginStart, marginEnd, containingBlock));
 
     if (widthType == SizeType::MainOrPreferredSize && sizesLogicalWidthToFitContent(widthType))
         return std::max(minPreferredLogicalWidth(), std::min(maxPreferredLogicalWidth(), logicalWidthResult));
@@ -5756,12 +5748,12 @@ std::pair<LayoutUnit, LayoutUnit> RenderBox::computeMinMaxLogicalHeightFromAspec
         return { transferredMinSize, transferredMaxSize };
 
     if (style().logicalMinWidth().isSpecified()) {
-        if (LayoutUnit inlineMinSize = computeLogicalWidthInFragmentUsing(SizeType::MinSize, style().logicalMinWidth(), containingBlockLogicalWidthForContent(), *containingBlock(), nullptr); inlineMinSize > LayoutUnit())
+        if (LayoutUnit inlineMinSize = computeLogicalWidthUsing(SizeType::MinSize, style().logicalMinWidth(), containingBlockLogicalWidthForContent(), *containingBlock()); inlineMinSize > LayoutUnit())
             transferredMinSize = blockSizeFromAspectRatio(borderAndPaddingLogicalWidth(), borderAndPaddingLogicalHeight(), *aspectRatio, style().boxSizingForAspectRatio(), inlineMinSize, style().aspectRatioType(), isRenderReplaced());
     }
 
     if (style().logicalMaxWidth().isSpecified()) {
-        if (LayoutUnit inlineMaxSize = computeLogicalWidthInFragmentUsing(SizeType::MaxSize, style().logicalMaxWidth(), containingBlockLogicalWidthForContent(), *containingBlock(), nullptr); inlineMaxSize != LayoutUnit::max())
+        if (LayoutUnit inlineMaxSize = computeLogicalWidthUsing(SizeType::MaxSize, style().logicalMaxWidth(), containingBlockLogicalWidthForContent(), *containingBlock()); inlineMaxSize != LayoutUnit::max())
             transferredMaxSize = blockSizeFromAspectRatio(borderAndPaddingLogicalWidth(), borderAndPaddingLogicalHeight(), *aspectRatio, style().boxSizingForAspectRatio(), inlineMaxSize, style().aspectRatioType(), isRenderReplaced());
     }
     // Spec says the transferred max size should be floored by the transferred min size 
