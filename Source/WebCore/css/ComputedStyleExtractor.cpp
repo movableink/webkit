@@ -602,7 +602,7 @@ static RefPtr<CSSValue> positionOffsetValue(const RenderStyle& style, CSSPropert
                     : box->containingBlockLogicalHeightForContent(AvailableLogicalHeightType::ExcludeMarginBorderPadding);
             } else {
                 containingBlockSize = box->isOutOfFlowPositioned()
-                    ? box->containingBlockLogicalWidthForPositioned(*containingBlock, nullptr, false)
+                    ? box->containingBlockLogicalWidthForPositioned(*containingBlock, false)
                     : box->containingBlockLogicalWidthForContent();
             }
         }

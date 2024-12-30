@@ -3851,7 +3851,7 @@ LayoutUnit RenderBox::constrainBlockMarginInAvailableSpaceOrTrim(const RenderBox
         : minimumValueForLength(style().marginAfter(containingBlock.writingMode()), availableSpace);
 }
 
-LayoutUnit RenderBox::containingBlockLogicalWidthForPositioned(const RenderBoxModelObject& containingBlock, RenderFragmentContainer* fragment, bool checkForPerpendicularWritingMode) const
+LayoutUnit RenderBox::containingBlockLogicalWidthForPositioned(const RenderBoxModelObject& containingBlock, bool checkForPerpendicularWritingMode) const
 {
     ASSERT(containingBlock.canContainAbsolutelyPositionedObjects() || containingBlock.canContainFixedPositionObjects());
 
@@ -3878,18 +3878,13 @@ LayoutUnit RenderBox::containingBlockLogicalWidthForPositioned(const RenderBoxMo
             return box->clientLogicalWidth();
 
         RenderBoxFragmentInfo* boxInfo = nullptr;
-        if (!fragment) {
-            if (auto* fragmentedFlow = dynamicDowncast<RenderFragmentedFlow>(containingBlock); fragmentedFlow && !checkForPerpendicularWritingMode)
-                return fragmentedFlow->contentLogicalWidthOfFirstFragment();
-            if (isWritingModeRoot()) {
-                LayoutUnit cbPageOffset = cb->offsetFromLogicalTopOfFirstPage();
-                RenderFragmentContainer* cbFragment = cb->fragmentAtBlockOffset(cbPageOffset);
-                if (cbFragment)
-                    boxInfo = cb->renderBoxFragmentInfo(cbFragment);
-            }
-        } else if (fragmentedFlow->isHorizontalWritingMode() == containingBlock.isHorizontalWritingMode()) {
-            RenderFragmentContainer* containingBlockFragment = cb->clampToStartAndEndFragments(fragment);
-            boxInfo = cb->renderBoxFragmentInfo(containingBlockFragment);
+        if (auto* fragmentedFlow = dynamicDowncast<RenderFragmentedFlow>(containingBlock); fragmentedFlow && !checkForPerpendicularWritingMode)
+            return fragmentedFlow->contentLogicalWidthOfFirstFragment();
+        if (isWritingModeRoot()) {
+            LayoutUnit cbPageOffset = cb->offsetFromLogicalTopOfFirstPage();
+            RenderFragmentContainer* cbFragment = cb->fragmentAtBlockOffset(cbPageOffset);
+            if (cbFragment)
+                boxInfo = cb->renderBoxFragmentInfo(cbFragment);
         }
         return (boxInfo) ? std::max<LayoutUnit>(0, cb->clientLogicalWidth() - (cb->logicalWidth() - boxInfo->logicalWidth())) : cb->clientLogicalWidth();
     }
@@ -3906,7 +3901,7 @@ LayoutUnit RenderBox::containingBlockLogicalHeightForPositioned(const RenderBoxM
     ASSERT(containingBlock.canContainAbsolutelyPositionedObjects() || containingBlock.canContainFixedPositionObjects());
 
     if (checkForPerpendicularWritingMode && containingBlock.isHorizontalWritingMode() != isHorizontalWritingMode())
-        return containingBlockLogicalWidthForPositioned(containingBlock, nullptr, false);
+        return containingBlockLogicalWidthForPositioned(containingBlock, false);
 
     if (auto overridingContainingBlockContentLogicalHeight = this->overridingContainingBlockContentLogicalHeight(); overridingContainingBlockContentLogicalHeight && *overridingContainingBlockContentLogicalHeight)
         return overridingContainingBlockContentLogicalHeight->value();
@@ -4235,7 +4230,7 @@ void RenderBox::computePositionedLogicalWidthUsing(SizeType widthType, Length lo
 
     LayoutUnit logicalLeftValue;
 
-    const LayoutUnit containerRelativeLogicalWidth = containingBlockLogicalWidthForPositioned(containerBlock, nullptr, false);
+    const LayoutUnit containerRelativeLogicalWidth = containingBlockLogicalWidthForPositioned(containerBlock, false);
 
     bool logicalWidthIsAuto = logicalWidth.isIntrinsicOrAuto() && !shouldComputeLogicalWidthFromAspectRatio();
     bool logicalLeftIsAuto = logicalLeft.isAuto();
@@ -4639,7 +4634,7 @@ void RenderBox::computePositionedLogicalHeightUsing(SizeType heightType, Length 
     LayoutUnit logicalHeightValue;
     LayoutUnit contentLogicalHeight = logicalHeight - bordersPlusPadding;
 
-    const LayoutUnit containerRelativeLogicalWidth = containingBlockLogicalWidthForPositioned(containerBlock, nullptr, false);
+    const LayoutUnit containerRelativeLogicalWidth = containingBlockLogicalWidthForPositioned(containerBlock, false);
 
     LayoutUnit logicalTopValue;
 
@@ -4784,7 +4779,7 @@ void RenderBox::computePositionedLogicalWidthReplaced(LogicalExtentComputedValue
     const RenderBoxModelObject& containerBlock = downcast<RenderBoxModelObject>(*container());
 
     const LayoutUnit containerLogicalWidth = containingBlockLogicalWidthForPositioned(containerBlock);
-    const LayoutUnit containerRelativeLogicalWidth = containingBlockLogicalWidthForPositioned(containerBlock, nullptr, false);
+    const LayoutUnit containerRelativeLogicalWidth = containingBlockLogicalWidthForPositioned(containerBlock, false);
 
     // To match WinIE, in quirks mode use the parent's 'direction' property
     // instead of the container block's.
@@ -4953,7 +4948,7 @@ void RenderBox::computePositionedLogicalHeightReplaced(LogicalExtentComputedValu
     const RenderBoxModelObject& containerBlock = downcast<RenderBoxModelObject>(*container());
 
     const LayoutUnit containerLogicalHeight = containingBlockLogicalHeightForPositioned(containerBlock);
-    const LayoutUnit containerRelativeLogicalWidth = containingBlockLogicalWidthForPositioned(containerBlock, nullptr, false);
+    const LayoutUnit containerRelativeLogicalWidth = containingBlockLogicalWidthForPositioned(containerBlock, false);
 
     // Variables to solve.
     Length marginBefore = style().marginBefore();
