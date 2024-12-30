@@ -66,7 +66,7 @@ LayoutUnit computeMarginLogicalSizeForGridItem(const RenderGrid& grid, GridTrack
     LayoutUnit marginStart;
     LayoutUnit marginEnd;
     if (direction == GridTrackSizingDirection::ForColumns)
-        gridItem.computeInlineDirectionMargins(grid, gridItem.containingBlockLogicalWidthForContentInFragment(nullptr), { }, gridItem.logicalWidth(), marginStart, marginEnd);
+        gridItem.computeInlineDirectionMargins(grid, gridItem.containingBlockLogicalWidthForContent(), { }, gridItem.logicalWidth(), marginStart, marginEnd);
     else
         gridItem.computeBlockDirectionMargins(grid, marginStart, marginEnd);
     return marginStartIsAuto(gridItem, flowAwareDirection) ? marginEnd : marginEndIsAuto(gridItem, flowAwareDirection) ? marginStart : marginStart + marginEnd;

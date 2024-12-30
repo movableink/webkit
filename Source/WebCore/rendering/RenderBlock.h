@@ -125,8 +125,7 @@ public:
     // compute the fragment all over again when you already know it.
     LayoutUnit availableLogicalWidthForLineInFragment(LayoutUnit position, RenderFragmentContainer* fragment, LayoutUnit logicalHeight = 0_lu) const
     {
-        return std::max<LayoutUnit>(0, logicalRightOffsetForLineInFragment(position, fragment, logicalHeight)
-            - logicalLeftOffsetForLineInFragment(position, fragment, logicalHeight));
+        return std::max(0_lu, logicalRightOffsetForLineInFragment(position, fragment, logicalHeight) - logicalLeftOffsetForLineInFragment(position, fragment, logicalHeight));
     }
     LayoutUnit logicalRightOffsetForLineInFragment(LayoutUnit position, RenderFragmentContainer* fragment, LayoutUnit logicalHeight = 0_lu) const
     {
