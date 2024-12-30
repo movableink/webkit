@@ -50,8 +50,6 @@
 
 #include <queue>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 using namespace HTMLNames;
@@ -216,7 +214,7 @@ bool AccessibilityTable::isDataTable() const
     unsigned cellsWithRightBorder = 0;
 
     UncheckedKeyHashMap<Node*, unsigned> cellCountForEachRow;
-    Color alternatingRowColors[5];
+    std::array<Color, 5> alternatingRowColors;
     int alternatingRowColorCount = 0;
     unsigned rowCount = 0;
     unsigned maxColumnCount = 0;
@@ -960,5 +958,3 @@ void AccessibilityTable::ensureRowAndColumn(unsigned rowIndex, unsigned columnIn
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

@@ -30,8 +30,6 @@
 #include "AccessibilityObject.h"
 #include "TextIterator.h"
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AXSearchManager);
@@ -356,14 +354,14 @@ std::optional<AXTextMarkerRange> AXSearchManager::findMatchingRange(Accessibilit
 
         AXTextMarkerRange startRange { startObject->treeID(), startObject->objectID(), criteria.startRange };
         if (forward) {
-            for (auto it = ranges.begin(); it != ranges.end(); ++it) {
-                if (*it > startRange)
-                    return *it;
+            for (auto& range : ranges) {
+                if (range > startRange)
+                    return range;
             }
         } else {
-            for (auto it = ranges.rbegin(); it != ranges.rend(); ++it) {
-                if (*it < startRange)
-                    return *it;
+            for (auto& range : makeReversedRange(ranges)) {
+                if (range < startRange)
+                    return range;
             }
         }
     }
@@ -381,5 +379,3 @@ std::optional<AXTextMarkerRange> AXSearchManager::findMatchingRange(Accessibilit
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

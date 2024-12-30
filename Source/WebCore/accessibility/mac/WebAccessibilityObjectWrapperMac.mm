@@ -86,8 +86,6 @@
 #import <wtf/text/MakeString.h>
 #import <wtf/text/WTFString.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 using namespace WebCore;
 
 static id attributeValueForTesting(const RefPtr<AXCoreObject>&, NSString *);
@@ -1444,7 +1442,9 @@ static void WebTransformCGPathToNSBezierPath(void* info, const CGPathElement *el
         [bezierPath lineToPoint:NSPointFromCGPoint(element->points[0])];
         break;
     case kCGPathElementAddCurveToPoint:
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         [bezierPath curveToPoint:NSPointFromCGPoint(element->points[0]) controlPoint1:NSPointFromCGPoint(element->points[1]) controlPoint2:NSPointFromCGPoint(element->points[2])];
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         break;
     case kCGPathElementCloseSubpath:
         [bezierPath closePath];
@@ -4102,7 +4102,5 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 
 @end
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // PLATFORM(MAC)
