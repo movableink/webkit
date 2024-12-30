@@ -35,10 +35,7 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/UniqueRef.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
-ALLOW_UNUSED_PARAMETERS_BEGIN
-ALLOW_COMMA_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 
 #include <dav1d/dav1d.h>
 #include <webrtc/api/scoped_refptr.h>
@@ -48,8 +45,9 @@ ALLOW_COMMA_BEGIN
 #include <webrtc/modules/video_coding/include/video_error_codes.h>
 #include <webrtc/rtc_base/logging.h>
 
-ALLOW_UNUSED_PARAMETERS_END
-ALLOW_COMMA_END
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace libyuv {
 extern "C" int I420Copy(const uint8_t* src_y,

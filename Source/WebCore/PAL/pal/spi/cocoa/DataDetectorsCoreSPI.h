@@ -44,7 +44,7 @@ typedef struct __DDResult *DDResultRef;
 
 #import <wtf/Compiler.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 
 #import <Foundation/Foundation.h>
 
@@ -165,6 +165,9 @@ static inline CFIndex _DDScanQueryGetNumberOfFragments(DDScanQueryRef query)
 {
     return query->numberOfFragments;
 }
+
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
+
 #endif
 
 typedef CFIndex DDScannerCopyResultsOptions;
@@ -201,7 +204,5 @@ void DDScannerSetQOS(DDScannerRef, DDQOS);
 #endif
 
 WTF_EXTERN_C_END
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif
