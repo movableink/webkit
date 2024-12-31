@@ -42,8 +42,10 @@ template<typename T> struct CompactVariantTraits {
    /* 
        If `hasAlternativeRepresentation` is set to `true`, you must also implement the following functions.
 
-           static constexpr uint64_t encode(T& value) { ... }
-           static constexpr T& decode(uint64_t value) { ... }
+           static constexpr uint64_t encodeFromArguments(...) { ... }
+           static constexpr uint64_t encode(const T&) { ... }
+           static constexpr uint64_t encode(T&&) { ... }
+           static constexpr T decode(uint64_t) { ... }
    */
 };
 
@@ -57,13 +59,8 @@ template<typename T> concept  CompactVariantAlternative =
     || CompactVariantAlternativeSmallEnough<T>
     || CompactVariantTraits<T>::hasAlternativeRepresentation;
 
-template<typename>       struct CompactVariantCheck;
-template<typename... Ts> struct CompactVariantCheck<std::variant<Ts...>> : std::integral_constant<bool, all<CompactVariantAlternative<Ts>...>> { };
-
-template<typename T> concept CompactVariantCapable = CompactVariantCheck<T>::value;
-
-template<CompactVariantCapable V> struct CompactVariantOperations {
-    using Variant = V;
+template<CompactVariantAlternative... Ts> struct CompactVariantOperations {
+    using StdVariant = std::variant<Ts...>;
     using Index = uint8_t;
     using Storage = uint64_t;
     static constexpr Storage movedFromDataValue = std::numeric_limits<Storage>::max();
@@ -74,74 +71,6 @@ template<CompactVariantCapable V> struct CompactVariantOperations {
     static constexpr Storage payloadMask = (1ULL << payloadSize) - 1;
     static_assert(payloadSize + indexSize <= totalSize);
 
-    template<typename... F> static decltype(auto) payloadForData(Storage data, F&&... f)
-    {
-        auto visitor = makeVisitor(std::forward<F>(f)...);
-        return typeForIndex<Variant>(decodedIndex(data), [&]<typename T>() {
-            return decodedPayload<T>(data, visitor);
-        });
-    }
-
-    template<typename... F> static decltype(auto) constPayloadForData(Storage data, F&&... f)
-    {
-        auto visitor = makeVisitor(std::forward<F>(f)...);
-        return typeForIndex<Variant>(decodedIndex(data), [&]<typename T>() {
-            return decodedConstPayload<T>(data, visitor);
-        });
-    }
-
-    static void destruct(Storage data)
-    {
-        if (data == movedFromDataValue)
-            return;
-
-        payloadForData(data, [&]<typename T>(T& value) {
-            if constexpr (!std::is_trivially_destructible_v<T>)
-                value.~T();
-        });
-    }
-
-    static void copy(Storage& to, Storage from)
-    {
-        if (from == movedFromDataValue) {
-            to = from;
-            return;
-        }
-
-        payloadForData(from, [&]<typename T>(T& value) {
-            Storage data = 0;
-            new (NotNull, &data) T(value);
-            to = data | encodedIndex(alternativeIndexV<T, Variant>);
-        });
-    }
-
-    static void move(Storage& to, Storage from)
-    {
-        if (from == movedFromDataValue) {
-            to = from;
-            return;
-        }
-
-        payloadForData(from, [&]<typename T>(T& value) {
-            Storage data = 0;
-            new (NotNull, &data) T(WTFMove(value));
-            to = data | encodedIndex(alternativeIndexV<T, Variant>);
-        });
-    }
-
-    template<typename T> static bool equal(Storage a, Storage b)
-    {
-        Storage maskedA = a & payloadMask;
-        Storage maskedB = b & payloadMask;
-
-        if constexpr (CompactVariantTraits<T>::hasAlternativeRepresentation)
-            return CompactVariantTraits<T>::decode(maskedA) == CompactVariantTraits<T>::decode(maskedB);
-        else
-            return *std::launder(reinterpret_cast<T*>(&maskedA)) == *std::launder(reinterpret_cast<T*>(&maskedB));
-    }
-
-    // Index coding
-
     static constexpr Storage encodedIndex(Index index)
     {
         return static_cast<Storage>(index) << indexShift;
@@ -151,8 +80,6 @@ template<CompactVariantCapable V> struct CompactVariantOperations {
     {
         return static_cast<Index>(static_cast<uint8_t>(value >> indexShift));
     }
-
-    // Payload coding
 
     template<typename T, typename U> static constexpr Storage encodedPayload(U&& payload)
     {
@@ -178,42 +105,102 @@ template<CompactVariantCapable V> struct CompactVariantOperations {
         return data;
     }
 
-    template<typename T, typename F> static constexpr void decodedPayload(Storage value, F&& f)
+    template<typename T, typename F> static constexpr decltype(auto) decodedPayload(Storage value, F&& f)
     {
         Storage maskedData = value & payloadMask;
 
         if constexpr (CompactVariantTraits<T>::hasAlternativeRepresentation) {
             T decodedData = CompactVariantTraits<T>::decode(maskedData);
-            f(decodedData);
+            return f(decodedData);
         } else {
             T& decodedData = *std::launder(reinterpret_cast<T*>(&maskedData));
-            f(decodedData);
+            return f(decodedData);
         }
     }
 
-    template<typename T, typename F> static constexpr void decodedConstPayload(Storage value, F&& f)
+    template<typename T, typename F> static constexpr decltype(auto) decodedConstPayload(Storage value, F&& f)
     {
         Storage maskedData = value & payloadMask;
 
         if constexpr (CompactVariantTraits<T>::hasAlternativeRepresentation) {
             T decodedData = CompactVariantTraits<T>::decode(maskedData);
-            f(std::as_const(decodedData));
+            return f(std::as_const(decodedData));
         } else {
             T& decodedData = *std::launder(reinterpret_cast<T*>(&maskedData));
-            f(std::as_const(decodedData));
+            return f(std::as_const(decodedData));
         }
     }
-
-    // Coding
 
     template<typename T, typename U> static Storage encode(U&& argument)
     {
-        return encodedPayload<T>(std::forward<U>(argument)) | encodedIndex(alternativeIndexV<T, Variant>);
+        return encodedPayload<T>(std::forward<U>(argument)) | encodedIndex(alternativeIndexV<T, StdVariant>);
     }
 
     template<typename T, typename... Args> static Storage encodeFromArguments(Args&&... arguments)
     {
-        return encodedPayloadFromArguments<T>(std::forward<Args>(arguments)...) | encodedIndex(alternativeIndexV<T, Variant>);
+        return encodedPayloadFromArguments<T>(std::forward<Args>(arguments)...) | encodedIndex(alternativeIndexV<T, StdVariant>);
+    }
+
+    template<typename... F> static decltype(auto) payloadForData(Storage data, F&&... f)
+    {
+        auto visitor = makeVisitor(std::forward<F>(f)...);
+        return typeForIndex<StdVariant>(decodedIndex(data), [&]<typename T>() {
+            return decodedPayload<T>(data, visitor);
+        });
+    }
+
+    template<typename... F> static decltype(auto) constPayloadForData(Storage data, F&&... f)
+    {
+        auto visitor = makeVisitor(std::forward<F>(f)...);
+        return typeForIndex<StdVariant>(decodedIndex(data), [&]<typename T>() {
+            return decodedConstPayload<T>(data, visitor);
+        });
+    }
+
+    static void destruct(Storage data)
+    {
+        if (data == movedFromDataValue)
+            return;
+
+        payloadForData(data, [&]<typename T>(T& value) {
+            if constexpr (!std::is_trivially_destructible_v<T>)
+                value.~T();
+        });
+    }
+
+    static void copy(Storage& to, Storage from)
+    {
+        if (from == movedFromDataValue) {
+            to = from;
+            return;
+        }
+
+        payloadForData(from, [&]<typename T>(T& value) {
+            to = encodedPayload<T>(value) | encodedIndex(alternativeIndexV<T, StdVariant>);
+        });
+    }
+
+    static void move(Storage& to, Storage from)
+    {
+        if (from == movedFromDataValue) {
+            to = from;
+            return;
+        }
+
+        payloadForData(from, [&]<typename T>(T& value) {
+            to = encodedPayload<T>(WTFMove(value)) | encodedIndex(alternativeIndexV<T, StdVariant>);
+        });
+    }
+
+    template<typename T> static bool equal(Storage a, Storage b)
+    {
+        Storage maskedA = a & payloadMask;
+        Storage maskedB = b & payloadMask;
+
+        if constexpr (CompactVariantTraits<T>::hasAlternativeRepresentation)
+            return CompactVariantTraits<T>::decode(maskedA) == CompactVariantTraits<T>::decode(maskedB);
+        else
+            return *std::launder(reinterpret_cast<T*>(&maskedA)) == *std::launder(reinterpret_cast<T*>(&maskedB));
     }
 };
 

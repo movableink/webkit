@@ -188,7 +188,7 @@ template<auto R, typename... Rest> LengthPercentage<R> canonicalize(const CSS::L
 // MARK: - Conversion from "Style to "CSS"
 
 // Out of line to avoid inclusion of CSSCalcValue.h
-Ref<CSSCalcValue> makeCalc(const CalculationValue&, const RenderStyle&);
+Ref<CSSCalcValue> makeCalc(Ref<CalculationValue>, const RenderStyle&);
 // Out of line to avoid inclusion of RenderStyleInlines.h
 float adjustForZoom(float, const RenderStyle&);
 
@@ -205,14 +205,14 @@ template<auto R> struct ToCSS<AnglePercentage<R>> {
     auto operator()(const AnglePercentage<R>& value, const RenderStyle& style) -> CSS::AnglePercentage<R>
     {
         return WTF::switchOn(value,
-            [&](Angle<R> angle) -> CSS::AnglePercentage<R> {
+            [&](const Angle<R>& angle) -> CSS::AnglePercentage<R> {
                 return CSS::AnglePercentageRaw<R> { angle.unit, angle.value };
             },
-            [&](Percentage<R> percentage) -> CSS::AnglePercentage<R> {
+            [&](const Percentage<R>& percentage) -> CSS::AnglePercentage<R> {
                 return CSS::AnglePercentageRaw<R> { percentage.unit, percentage.value };
             },
-            [&](const CalculationValue& calculation) -> CSS::AnglePercentage<R> {
-                return CSS::UnevaluatedCalc<CSS::AnglePercentageRaw<R>> { makeCalc(calculation, style) };
+            [&](const typename AnglePercentage<R>::Calc& calculation) -> CSS::AnglePercentage<R> {
+                return CSS::UnevaluatedCalc<CSS::AnglePercentageRaw<R>> { makeCalc(calculation.protectedCalculation(), style) };
             }
         );
     }
@@ -222,14 +222,14 @@ template<auto R> struct ToCSS<LengthPercentage<R>> {
     auto operator()(const LengthPercentage<R>& value, const RenderStyle& style) -> CSS::LengthPercentage<R>
     {
         return WTF::switchOn(value,
-            [&](Length<R> length) -> CSS::LengthPercentage<R> {
+            [&](const Length<R>& length) -> CSS::LengthPercentage<R> {
                 return CSS::LengthPercentageRaw<R> { length.unit, adjustForZoom(length.value, style) };
             },
-            [&](Percentage<R> percentage) -> CSS::LengthPercentage<R> {
+            [&](const Percentage<R>& percentage) -> CSS::LengthPercentage<R> {
                 return CSS::LengthPercentageRaw<R> { percentage.unit, percentage.value };
             },
-            [&](const CalculationValue& calculation) -> CSS::LengthPercentage<R> {
-                return CSS::UnevaluatedCalc<CSS::LengthPercentageRaw<R>> { makeCalc(calculation, style) };
+            [&](const typename LengthPercentage<R>::Calc& calculation) -> CSS::LengthPercentage<R> {
+                return CSS::UnevaluatedCalc<CSS::LengthPercentageRaw<R>> { makeCalc(calculation.protectedCalculation(), style) };
             }
         );
     }

@@ -27,6 +27,7 @@
 
 #include "CSSColorConversion+Normalize.h"
 #include "CSSColorDescriptors.h"
+#include "StyleNone.h"
 
 namespace WebCore {
 

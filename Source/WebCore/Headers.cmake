@@ -2663,6 +2663,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     style/values/primitives/StyleNone.h
     style/values/primitives/StylePosition.h
     style/values/primitives/StylePrimitiveNumericTypes.h
+    style/values/primitives/StyleUnevaluatedCalculation.h
 
     style/values/shapes/StyleBasicShape.h
     style/values/shapes/StyleCircleFunction.h

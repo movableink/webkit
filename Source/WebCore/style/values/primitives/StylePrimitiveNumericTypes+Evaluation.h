@@ -35,14 +35,14 @@ namespace Style {
 
 // MARK: - Number
 
-template<auto R> constexpr double evaluate(const Number<R>& number, double)
-{
-    return number.value;
-}
-
 template<auto R> constexpr float evaluate(const Number<R>& number, float)
 {
     return narrowPrecisionToFloat(number.value);
+}
+
+template<auto R> constexpr double evaluate(const Number<R>& number, double)
+{
+    return number.value;
 }
 
 // MARK: - Percentage
@@ -77,6 +77,16 @@ inline float evaluate(const CalculationValue& calculation, float referenceValue)
 inline double evaluate(const CalculationValue& calculation, double referenceValue)
 {
     return calculation.evaluate(referenceValue);
+}
+
+template<auto R, auto C> float evaluate(const UnevaluatedCalculation<R, C>& calculation, float referenceValue)
+{
+    return evaluate(calculation.value, referenceValue);
+}
+
+template<auto R, auto C> double evaluate(const UnevaluatedCalculation<R, C>& calculation, double referenceValue)
+{
+    return evaluate(calculation.value, referenceValue);
 }
 
 // MARK: - StyleDimensionPercentage (e.g. AnglePercentage/LengthPercentage)
@@ -127,7 +137,7 @@ template<typename T> FloatSize evaluate(const SpaceSeparatedSize<T>& value, Floa
 template<auto R> LengthPercentage<R> reflect(const LengthPercentage<R>& value)
 {
     return WTF::switchOn(value,
-        [&](Length<R> value) -> LengthPercentage<R> {
+        [&](const Length<R>& value) -> LengthPercentage<R> {
             // If `value` is 0, we can avoid the `calc` altogether.
             if (value.value == 0)
                 return { Percentage<R> { 100 } };
@@ -135,11 +145,11 @@ template<auto R> LengthPercentage<R> reflect(const LengthPercentage<R>& value)
             // Turn this into a calc expression: `calc(100% - value)`.
             return { Calculation::subtract(Calculation::percentage(100), copyCalculation(value)) };
         },
-        [&](Percentage<R> value) -> LengthPercentage<R> {
+        [&](const Percentage<R>& value) -> LengthPercentage<R> {
             // If `value` is a percentage, we can avoid the `calc` altogether.
             return { Percentage<R> { 100 - value.value } };
         },
-        [&](Ref<CalculationValue> value) -> LengthPercentage<> {
+        [&](const typename LengthPercentage<R>::Calc& value) -> LengthPercentage<> {
             // Turn this into a calc expression: `calc(100% - value)`.
             return { Calculation::subtract(Calculation::percentage(100), copyCalculation(value)) };
         }
@@ -159,14 +169,8 @@ template<auto aR, auto bR> auto reflectSum(const LengthPercentage<aR>& a, const 
 {
     constexpr auto resultR = mergeRanges(aR, bR);
 
-    bool aIsZero = a.value.switchOn(
-        [](const Ref<CalculationValue>&) { return false; },
-        [](const auto& a) { return a.value == 0; }
-    );
-    bool bIsZero = b.value.switchOn(
-        [](const Ref<CalculationValue>&) { return false; },
-        [](const auto& b) { return b.value == 0; }
-    );
+    bool aIsZero = a.isZero();
+    bool bIsZero = b.isZero();
 
     // If both `a` and `b` are 0, turn this into a calc expression: `calc(100% - (0 + 0))` aka `100%`.
     if (aIsZero && bIsZero)
@@ -174,12 +178,12 @@ template<auto aR, auto bR> auto reflectSum(const LengthPercentage<aR>& a, const 
 
     // If just `a` is 0, we can just consider the case of `calc(100% - b)`.
     if (aIsZero) {
-        return b.value.switchOn(
-            [&](Percentage<bR> b) -> LengthPercentage<resultR> {
+        return WTF::switchOn(b,
+            [&](const Percentage<bR>& b) -> LengthPercentage<resultR> {
                 // And if `b` is a percent, we can avoid the `calc` altogether.
                 return { Percentage<resultR> { 100 - b.value } };
             },
-            [&](auto b) -> LengthPercentage<resultR> {
+            [&](const auto& b) -> LengthPercentage<resultR> {
                 // Otherwise, turn this into a calc expression: `calc(100% - b)`.
                 return { Calculation::subtract(Calculation::percentage(100), copyCalculation(b)) };
             }
@@ -188,12 +192,12 @@ template<auto aR, auto bR> auto reflectSum(const LengthPercentage<aR>& a, const 
 
     // If just `b` is 0, we can just consider the case of `calc(100% - a)`.
     if (bIsZero) {
-        return a.value.switchOn(
-            [&](Percentage<aR> a) -> LengthPercentage<resultR> {
+        return WTF::switchOn(a,
+            [&](const Percentage<aR>& a) -> LengthPercentage<resultR> {
                 // And if `a` is a percent, we can avoid the `calc` altogether.
                 return { Percentage<resultR> { 100 - a.value } };
             },
-            [&](auto a) -> LengthPercentage<resultR> {
+            [&](const auto& a) -> LengthPercentage<resultR> {
                 // Otherwise, turn this into a calc expression: `calc(100% - a)`.
                 return { Calculation::subtract(Calculation::percentage(100), copyCalculation(a)) };
             }
@@ -201,8 +205,8 @@ template<auto aR, auto bR> auto reflectSum(const LengthPercentage<aR>& a, const 
     }
 
     // If both and `a` and `b` are percentages, we can avoid the `calc` altogether.
-    if (a.value.isPercentage() && b.value.isPercentage())
-        return { Percentage<resultR> { 100 - (a.value.asPercentage().value + b.value.asPercentage().value) } };
+    if (holdsAlternative<Percentage<aR>>(a) && holdsAlternative<Percentage<bR>>(b))
+        return { Percentage<resultR> { 100 - (get<Percentage<aR>>(a).value + get<Percentage<bR>>(b).value) } };
 
     // Otherwise, turn this into a calc expression: `calc(100% - (a + b))`.
     return { Calculation::subtract(Calculation::percentage(100), Calculation::add(copyCalculation(a), copyCalculation(b))) };

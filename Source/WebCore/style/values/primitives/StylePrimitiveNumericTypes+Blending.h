@@ -68,6 +68,10 @@ template<auto R> struct Blending<LengthPercentage<R>> {
 
     auto blend(const LengthPercentage<R>& from, const LengthPercentage<R>& to, const BlendingContext& context) -> LengthPercentage<R>
     {
+        using Length = typename LengthPercentage<R>::Dimension;
+        using Percentage = typename LengthPercentage<R>::Percentage;
+        using Calc = typename LengthPercentage<R>::Calc;
+
         // Interpolation of dimension-percentage value combinations (e.g. <length-percentage>, <frequency-percentage>,
         // <angle-percentage>, <time-percentage> or equivalent notations) is defined as:
         //
@@ -77,25 +81,25 @@ template<auto R> struct Blending<LengthPercentage<R>> {
         //    dimension type and a percentage (each possibly zero) and interpolating each component
         //    individually (as a <length>/<frequency>/<angle>/<time> and as a <percentage>, respectively)
 
-        if (from.value.isCalculationValue() || to.value.isCalculationValue() || (from.value.tag() != to.value.tag())) {
+        if (holdsAlternative<Calc>(from) || holdsAlternative<Calc>(to) || (from.index() != to.index())) {
             if (context.compositeOperation != CompositeOperation::Replace)
                 return Calculation::add(copyCalculation(from), copyCalculation(to));
 
             // 0% to 0px -> calc(0px + 0%) to calc(0px + 0%) -> 0px
             // 0px to 0% -> calc(0px + 0%) to calc(0px + 0%) -> 0px
             if (from.isZero() && to.isZero())
-                return Length<R> { 0 };
+                return Length { 0 };
 
-            if (!to.isCalculationValue() && !from.isPercentage() && (context.progress == 1 || from.isZero())) {
-                if (to.isLength())
-                    return WebCore::Style::blend(Length<R> { 0 }, to.asLength(), context);
-                return WebCore::Style::blend(Percentage<R> { 0 }, to.asPercentage(), context);
+            if (!holdsAlternative<Calc>(to) && !holdsAlternative<Percentage>(from) && (context.progress == 1 || from.isZero())) {
+                if (holdsAlternative<Length>(to))
+                    return WebCore::Style::blend(Length { 0 }, get<Length>(to), context);
+                return WebCore::Style::blend(Percentage { 0 }, get<Percentage>(to), context);
             }
 
-            if (!from.isCalculationValue() && !to.isPercentage() && (!context.progress || to.isZero())) {
-                if (from.isLength())
-                    return WebCore::Style::blend(from.asLength(), Length<R> { 0 }, context);
-                return WebCore::Style::blend(from.asPercentage(), Percentage<R> { 0 }, context);
+            if (!holdsAlternative<Calc>(from) && !holdsAlternative<Percentage>(to) && (!context.progress || to.isZero())) {
+                if (holdsAlternative<Length>(from))
+                    return WebCore::Style::blend(get<Length>(from), Length { 0 }, context);
+                return WebCore::Style::blend(get<Percentage>(from), Percentage { 0 }, context);
             }
 
             return Calculation::blend(copyCalculation(from), copyCalculation(to), context.progress);
@@ -107,9 +111,9 @@ template<auto R> struct Blending<LengthPercentage<R>> {
         if (context.progress == 1 && context.isReplace())
             return to;
 
-        if (to.isLength())
-            return WebCore::Style::blend(from.asLength(), to.asLength(), context);
-        return WebCore::Style::blend(from.asPercentage(), to.asPercentage(), context);
+        if (holdsAlternative<Length>(to))
+            return WebCore::Style::blend(get<Length>(from), get<Length>(to), context);
+        return WebCore::Style::blend(get<Percentage>(from), get<Percentage>(to), context);
     }
 };
 

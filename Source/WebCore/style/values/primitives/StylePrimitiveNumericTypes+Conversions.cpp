@@ -31,9 +31,9 @@
 namespace WebCore {
 namespace Style {
 
-Ref<CSSCalcValue> makeCalc(const CalculationValue& calculation, const RenderStyle& style)
+Ref<CSSCalcValue> makeCalc(Ref<CalculationValue> calculation, const RenderStyle& style)
 {
-    return CSSCalcValue::create(calculation, style);
+    return CSSCalcValue::create(WTFMove(calculation), style);
 }
 
 float adjustForZoom(float value, const RenderStyle& style)

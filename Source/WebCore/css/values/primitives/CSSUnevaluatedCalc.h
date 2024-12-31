@@ -194,3 +194,7 @@ template<typename T> struct CSSValueChildrenVisitor<UnevaluatedCalc<T>> {
 
 } // namespace CSS
 } // namespace WebCore
+
+template<typename T> struct WTF::IsSmartPtr<WebCore::CSS::UnevaluatedCalc<T>> {
+    static constexpr bool value = true;
+};

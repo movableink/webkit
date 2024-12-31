@@ -597,6 +597,8 @@ template<class V, class... F> requires (HasSwitchOn<V>) ALWAYS_INLINE auto switc
     return v.switchOn(std::forward<F>(f)...);
 }
 
+// Implementation of std::variant_alternative_index from https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p2527r3.html.
+
 namespace detail {
 
 template<size_t, class, class> struct alternative_index_helper;
@@ -623,6 +625,78 @@ template<class T, class... Types> struct variant_alternative_index<T, std::varia
 };
 
 template<class T, class Variant> constexpr std::size_t alternativeIndexV = variant_alternative_index<T, Variant>::value;
+
+// `holdsAlternative<T/I>` are WTF namespaced versions of `std::holds_alternative<T/I>` that work with any "variant-like".
+
+// Default implementation expects "variant-like" to have "holdsAlternative" member functions.
+template<typename V> struct HoldsAlternative {
+    template<typename T> static constexpr bool holdsAlternative(const V& v)
+    {
+        return v.template holdsAlternative<T>();
+    }
+    template<size_t I> static constexpr bool holdsAlternative(const V& v)
+    {
+        return v.template holdsAlternative<I>();
+    }
+};
+
+// Specialization for `std::variant`.
+template<typename... Ts> struct HoldsAlternative<std::variant<Ts...>> {
+    template<typename T> static constexpr bool holdsAlternative(const std::variant<Ts...>& v)
+    {
+        return std::holds_alternative<T>(v);
+    }
+    template<size_t I> static constexpr bool holdsAlternative(const std::variant<Ts...>& v)
+    {
+        return std::holds_alternative<I>(v);
+    }
+};
+
+template<typename T, typename V> bool holdsAlternative(const V& v)
+{
+    return HoldsAlternative<V>::template holdsAlternative<T>(v);
+}
+
+template<size_t I, typename V> bool holdsAlternative(const V& v)
+{
+    return HoldsAlternative<V>::template holdsAlternative<I>(v);
+}
+
+// Concepts / traits for data structures that use std::in_place_type_t/std::in_place_index_t so that they can
+// check that generic arguments in overloads are not std::in_place_type_t/std::in_place_index_t.
+//
+// e.g.
+//
+//    struct Foo {
+//        template<typename U> constexpr Foo(U&& value)
+//            requires (!IsStdInPlaceTypeV<std::remove_cvref_t<U>>)
+//                  && (!IsStdInPlaceIndexV<std::remove_cvref_t<U>>)
+//        {
+//            ...
+//        }
+//
+//        template<typename T, typename... Args> constexpr Foo(std::in_place_type_t<T>, Args&&... args)
+//        {
+//            ...
+//        }
+//
+//        template<size_t I, typename... Args> constexpr Foo(std::in_place_index_t<I>, Args&&... args)
+//        {
+//            ...
+//        }
+//
+//        ...
+//   };
+
+template<typename T> struct IsStdInPlaceTypeImpl : std::false_type {};
+template<typename T> struct IsStdInPlaceTypeImpl<std::in_place_type_t<T>> : std::true_type {};
+template<typename T> using IsStdInPlaceType = IsStdInPlaceTypeImpl<std::remove_cvref_t<T>>;
+template<typename T> constexpr bool IsStdInPlaceTypeV = IsStdInPlaceType<T>::value;
+
+template<typename T> struct IsStdInPlaceIndexImpl : std::false_type { };
+template<size_t I>   struct IsStdInPlaceIndexImpl<std::in_place_index_t<I>> : std::true_type { };
+template<typename T> using IsStdInPlaceIndex = IsStdInPlaceIndexImpl<std::remove_cvref_t<T>>;
+template<typename T> constexpr bool IsStdInPlaceIndexV = IsStdInPlaceIndex<T>::value;
 
 namespace Detail
 {

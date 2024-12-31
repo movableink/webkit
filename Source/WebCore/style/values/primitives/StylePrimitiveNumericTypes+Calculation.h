@@ -38,6 +38,11 @@ inline Calculation::Child copyCalculation(Ref<CalculationValue> value)
     return value->copyRoot();
 }
 
+template<auto R, auto C> Calculation::Child copyCalculation(const UnevaluatedCalculation<R, C>& value)
+{
+    return value.protectedCalculation()->copyRoot();
+}
+
 template<auto R> Calculation::Child copyCalculation(const Number<R>& value)
 {
     return Calculation::number(value.value);

@@ -90,9 +90,7 @@ template<typename Arg, typename... Ts> struct VariantBestMatch<std::variant<Ts..
 //       }
 //   );
 
-template<typename V, typename IndexType = size_t, typename... F> constexpr auto typeForIndex(IndexType index, F&&... f) -> decltype(visitTypeForIndex<V>(index, makeVisitor(std::forward<F>(f)...)));
-
-template<typename V, size_t I = 0, typename IndexType = size_t, typename F> constexpr ALWAYS_INLINE decltype(auto) visitTypeForIndex(IndexType index, F&& f)
+template<typename V, size_t I = 0, typename F> constexpr ALWAYS_INLINE decltype(auto) visitTypeForIndex(size_t index, F&& f)
 {
     constexpr auto size = std::variant_size_v<V>;
 
@@ -157,7 +155,7 @@ template<typename V, size_t I = 0, typename IndexType = size_t, typename F> cons
 #undef WTF_VARIANT_EXTRAS_VISIT_CASE
 }
 
-template<typename V, typename IndexType, typename... F> constexpr auto typeForIndex(IndexType index, F&&... f) -> decltype(visitTypeForIndex<V>(index, makeVisitor(std::forward<F>(f)...)))
+template<typename V, typename... F> constexpr auto typeForIndex(size_t index, F&&... f) -> decltype(visitTypeForIndex<V>(index, makeVisitor(std::forward<F>(f)...)))
 {
     return visitTypeForIndex<V>(index, makeVisitor(std::forward<F>(f)...));
 }
