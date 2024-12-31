@@ -5,7 +5,7 @@
  *           (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  * Copyright (C) 2003-2024 Apple Inc. All rights reserved.
- * Copyright (C) 2017 Google Inc. All rights reserved.
+ * Copyright (C) 2016-2017 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -542,52 +542,41 @@ void RenderTableCell::styleDidChange(StyleDifference diff, const RenderStyle* ol
 // (4) If border styles differ only in color, then a style set on a cell wins over one on a row, 
 // which wins over a row group, column, column group and, lastly, table. It is undefined which color 
 // is used when two elements of the same type disagree.
-static int compareBorders(const CollapsedBorderValue& border1, const CollapsedBorderValue& border2)
+static bool compareBorders(const CollapsedBorderValue& border1, const CollapsedBorderValue& border2)
 {
     // Sanity check the values passed in. The null border have lowest priority.
-    if (!border2.exists()) {
-        if (!border1.exists())
-            return 0;
-        return 1;
-    }
+    if (!border2.exists())
+        return false;
     if (!border1.exists())
-        return -1;
+        return true;
 
     // Rule #1 above.
-    if (border2.style() == BorderStyle::Hidden) {
-        if (border1.style() == BorderStyle::Hidden)
-            return 0;
-        return -1;
-    }
     if (border1.style() == BorderStyle::Hidden)
-        return 1;
+        return false;
+    if (border2.style() == BorderStyle::Hidden)
+        return true;
     
     // Rule #2 above.  A style of 'none' has lowest priority and always loses to any other border.
-    if (border2.style() == BorderStyle::None) {
-        if (border1.style() == BorderStyle::None)
-            return 0;
-        return 1;
-    }
+    if (border2.style() == BorderStyle::None)
+        return false;
     if (border1.style() == BorderStyle::None)
-        return -1;
+        return true;
 
     // The first part of rule #3 above. Wider borders win.
     if (border1.width() != border2.width())
-        return border1.width() < border2.width() ? -1 : 1;
+        return border1.width() < border2.width();
     
     // The borders have equal width.  Sort by border style.
     if (border1.style() != border2.style())
-        return border1.style() < border2.style() ? -1 : 1;
+        return border1.style() < border2.style();
     
     // The border have the same width and style.  Rely on precedence (cell over row over row group, etc.)
-    if (border1.precedence() == border2.precedence())
-        return 0;
-    return border1.precedence() < border2.precedence() ? -1 : 1;
+    return border1.precedence() < border2.precedence();
 }
 
 static CollapsedBorderValue chooseBorder(const CollapsedBorderValue& border1, const CollapsedBorderValue& border2)
 {
-    const CollapsedBorderValue& border = compareBorders(border1, border2) < 0 ? border2 : border1;
+    const CollapsedBorderValue& border = compareBorders(border1, border2) ? border2 : border1;
     return border.style() == BorderStyle::Hidden ? CollapsedBorderValue() : border;
 }
 
@@ -1267,19 +1256,9 @@ void RenderTableCell::collectBorderValues(RenderTable::CollapsedBorderValues& bo
     addBorderStyle(borderValues, collapsedAfterBorder());
 }
 
-static int compareBorderValuesForQSort(const void* pa, const void* pb)
-{
-    const CollapsedBorderValue* a = static_cast<const CollapsedBorderValue*>(pa);
-    const CollapsedBorderValue* b = static_cast<const CollapsedBorderValue*>(pb);
-    if (a->isSameIgnoringColor(*b))
-        return 0;
-    return compareBorders(*a, *b);
-}
-
 void RenderTableCell::sortBorderValues(RenderTable::CollapsedBorderValues& borderValues)
 {
-    qsort(borderValues.data(), borderValues.size(), sizeof(CollapsedBorderValue),
-        compareBorderValuesForQSort);
+    std::sort(borderValues.begin(), borderValues.end(), compareBorders);
 }
 
 void RenderTableCell::paintCollapsedBorders(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
