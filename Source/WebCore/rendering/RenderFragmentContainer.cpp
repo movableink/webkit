@@ -422,14 +422,14 @@ void RenderFragmentContainer::ensureOverflowForBox(const RenderBox& box, RefPtr<
         return;
     }
     
-    LayoutRect borderBox = box.borderBoxRectInFragment(this);
+    LayoutRect borderBox = box.borderBoxRect();
     LayoutRect clientBox;
     ASSERT(m_fragmentedFlow->objectShouldFragmentInFlowFragment(&box, this));
 
     if (!borderBox.isEmpty()) {
         borderBox = rectFlowPortionForBox(box, borderBox);
 
-        clientBox = box.clientBoxRectInFragment(this);
+        clientBox = box.clientBoxRect();
         clientBox = rectFlowPortionForBox(box, clientBox);
         
         m_fragmentedFlow->flipForWritingModeLocalCoordinates(borderBox);
@@ -509,7 +509,7 @@ LayoutRect RenderFragmentContainer::visualOverflowRectForBox(const RenderBox& bo
 LayoutRect RenderFragmentContainer::layoutOverflowRectForBoxForPropagation(const RenderBox& box)
 {
     // Only propagate interior layout overflow if we don't clip it.
-    LayoutRect rect = box.borderBoxRectInFragment(this);
+    LayoutRect rect = box.borderBoxRect();
     rect = rectFlowPortionForBox(box, rect);
     if (!box.hasNonVisibleOverflow()) {
         RefPtr<RenderOverflow> overflow;

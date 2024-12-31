@@ -571,12 +571,12 @@ void RenderSVGRoot::mapLocalToContainer(const RenderLayerModelObject* repaintCon
     }
 }
 
-LayoutRect RenderSVGRoot::overflowClipRect(const LayoutPoint& location, RenderFragmentContainer* fragment, OverlayScrollbarSizeRelevancy, PaintPhase) const
+LayoutRect RenderSVGRoot::overflowClipRect(const LayoutPoint& location, OverlayScrollbarSizeRelevancy, PaintPhase) const
 {
     // SVG2: For those elements to which the overflow property can apply. If the overflow property has the value hidden or scroll, a clip, the exact size of the SVG viewport is applied.
     // Unlike RenderBox, RenderSVGRoot explicitely includes the padding in the overflow clip rect. In SVG the padding applied to the outermost <svg>
     // shrinks the area available for child renderers to paint into -- reflect this by shrinking the overflow clip rect itself.
-    auto clipRect = borderBoxRectInFragment(fragment);
+    auto clipRect = borderBoxRect();
     clipRect.setLocation(location + clipRect.location() + toLayoutSize(contentBoxLocation()));
     clipRect.setSize(clipRect.size() - LayoutSize(horizontalBorderAndPaddingExtent(), verticalBorderAndPaddingExtent()));
     return clipRect;

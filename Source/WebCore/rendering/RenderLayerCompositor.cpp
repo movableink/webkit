@@ -3486,7 +3486,7 @@ static bool canUseDescendantClippingLayer(const RenderLayer& layer)
     // the border box, because of interactions with border-radius clipping and compositing.
     if (auto* renderer = layer.renderBox(); renderer && renderer->hasClip()) {
         auto borderBoxRect = renderer->borderBoxRect();
-        auto clipRect = renderer->clipRect({ }, nullptr);
+        auto clipRect = renderer->clipRect({ });
         
         bool clipRectInsideBorderRect = intersection(borderBoxRect, clipRect) == clipRect;
         return clipRectInsideBorderRect;
