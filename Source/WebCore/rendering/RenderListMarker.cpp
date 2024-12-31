@@ -30,6 +30,7 @@
 #include "FontCascade.h"
 #include "GraphicsContext.h"
 #include "ListStyleType.h"
+#include "RenderBlockInlines.h"
 #include "RenderBoxInlines.h"
 #include "RenderLayer.h"
 #include "RenderListItem.h"

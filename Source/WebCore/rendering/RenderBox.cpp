@@ -2233,7 +2233,7 @@ LayoutUnit RenderBox::shrinkLogicalWidthToAvoidFloats(LayoutUnit childMarginStar
     if (childMarginStart > 0) {
         LayoutUnit startContentSide = containingBlock.startOffsetForContent({ });
         LayoutUnit startContentSideWithMargin = startContentSide + childMarginStart;
-        LayoutUnit startOffset = containingBlock.startOffsetForLineInFragment(logicalTopPosition, { }, logicalHeight);
+        LayoutUnit startOffset = containingBlock.startOffsetForLine(logicalTopPosition, logicalHeight);
         if (startOffset > startContentSideWithMargin)
             result += childMarginStart;
         else
@@ -2243,7 +2243,7 @@ LayoutUnit RenderBox::shrinkLogicalWidthToAvoidFloats(LayoutUnit childMarginStar
     if (childMarginEnd > 0) {
         LayoutUnit endContentSide = containingBlock.endOffsetForContent({ });
         LayoutUnit endContentSideWithMargin = endContentSide + childMarginEnd;
-        LayoutUnit endOffset = containingBlock.endOffsetForLineInFragment(logicalTopPosition, { }, logicalHeight);
+        LayoutUnit endOffset = containingBlock.endOffsetForLine(logicalTopPosition, logicalHeight);
         if (endOffset > endContentSideWithMargin)
             result += childMarginEnd;
         else
