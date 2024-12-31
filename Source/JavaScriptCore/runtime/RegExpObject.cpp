@@ -186,7 +186,7 @@ JSValue RegExpObject::matchGlobal(JSGlobalObject* globalObject, JSString* string
         RELEASE_AND_RETURN(scope, collectGlobalAtomMatches(globalObject, string, regExp));
     }
 
-    auto s = string->value(globalObject);
+    auto s = string->view(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
     ASSERT(!s->isNull());

@@ -597,10 +597,18 @@ inline JSString* jsSubstringOfResolved(VM& vm, GCDeferralContext* deferralContex
     ASSERT(offset <= s->length());
     ASSERT(length <= s->length());
     ASSERT(offset + length <= s->length());
-    ASSERT(!s->isRope());
+
     if (!length)
         return vm.smallStrings.emptyString();
 
+    if (s->isSubstring()) {
+        JSRopeString* baseRope = jsCast<JSRopeString*>(s);
+        ASSERT(!baseRope->substringBase()->isRope());
+        s = baseRope->substringBase();
+        offset += baseRope->substringOffset();
+    }
+
+    ASSERT(!s->isRope());
     auto& base = s->valueInternal();
     if (!offset && length == base.length())
         return s;
