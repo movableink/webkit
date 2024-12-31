@@ -2242,7 +2242,7 @@ LayoutUnit RenderBox::shrinkLogicalWidthToAvoidFloats(LayoutUnit childMarginStar
 {    
     LayoutUnit logicalTopPosition = logicalTop();
     LayoutUnit logicalHeight = containingBlock.logicalHeightForChild(*this);
-    LayoutUnit result = containingBlock.availableLogicalWidthForLineInFragment(logicalTopPosition, { }, logicalHeight) - childMarginStart - childMarginEnd;
+    LayoutUnit result = containingBlock.availableLogicalWidthForLine(logicalTopPosition, logicalHeight) - childMarginStart - childMarginEnd;
 
     // We need to see if margins on either the start side or the end side can contain the floats in question. If they can,
     // then just using the line width is inaccurate. In the case where a float completely fits, we don't need to use the line
@@ -2301,7 +2301,7 @@ LayoutUnit RenderBox::containingBlockLogicalHeightForContent(AvailableLogicalHei
 
 LayoutUnit RenderBox::containingBlockAvailableLineWidth() const
 {
-    return containingBlock()->availableLogicalWidthForLineInFragment(logicalTop(), { }, availableLogicalHeight(AvailableLogicalHeightType::IncludeMarginBorderPadding));
+    return containingBlock()->availableLogicalWidthForLine(logicalTop(), availableLogicalHeight(AvailableLogicalHeightType::IncludeMarginBorderPadding));
 }
 
 LayoutUnit RenderBox::perpendicularContainingBlockLogicalHeight() const

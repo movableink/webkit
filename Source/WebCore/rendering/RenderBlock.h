@@ -140,7 +140,7 @@ public:
 
     LayoutUnit availableLogicalWidthForLine(LayoutUnit position, LayoutUnit logicalHeight = 0_lu) const
     {
-        return availableLogicalWidthForLineInFragment(position, fragmentAtBlockOffset(position), logicalHeight);
+        return availableLogicalWidthForLineInFragment(position, { }, logicalHeight);
     }
     LayoutUnit logicalRightOffsetForLine(LayoutUnit position, LayoutUnit logicalHeight = 0_lu) const
     {
