@@ -1687,9 +1687,9 @@ void RenderFlexibleBox::maybeCacheFlexItemMainIntrinsicSize(RenderBox& flexItem,
     // by definition we have an indefinite flex basis here and thus percentages should not resolve.
     if (flexItem.needsLayout() || !m_intrinsicSizeAlongMainAxis.contains(flexItem)) {
         if (isHorizontalWritingMode() == flexItem.isHorizontalWritingMode())
-            flexItem.setOverridingContainingBlockContentLogicalHeight(std::nullopt);
+            flexItem.setOverridingContainingBlockContentLogicalHeight({ });
         else
-            flexItem.setOverridingContainingBlockContentLogicalWidth(std::nullopt);
+            flexItem.setOverridingContainingBlockContentLogicalWidth({ });
         flexItem.setChildNeedsLayout(MarkOnlyThis);
         flexItem.layoutIfNeeded();
         cacheFlexItemMainSize(flexItem);
