@@ -546,9 +546,9 @@ JSArray* JSArray::fastToReversed(JSGlobalObject* globalObject, uint64_t length)
         auto srcData = this->butterfly()->contiguous().data();
 
         if (hasDouble(indexingType)) {
-            if (holesMustForwardToPrototype() && containsHole(this->butterfly()->contiguousDouble().data(), static_cast<uint32_t>(length)))
+            if (containsHole(this->butterfly()->contiguousDouble().data(), static_cast<uint32_t>(length)))
                 return nullptr;
-        } else if (holesMustForwardToPrototype() && containsHole(srcData, static_cast<uint32_t>(length)))
+        } else if (containsHole(srcData, static_cast<uint32_t>(length)))
             return nullptr;
 
         auto vectorLength = Butterfly::optimalContiguousVectorLength(resultStructure, length);
@@ -579,7 +579,7 @@ JSArray* JSArray::fastToReversed(JSGlobalObject* globalObject, uint64_t length)
             return nullptr;
         if (length > storage.vectorLength())
             return nullptr;
-        if (storage.hasHoles() && holesMustForwardToPrototype())
+        if (storage.hasHoles())
             return nullptr;
 
         Structure* resultStructure = globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous);
