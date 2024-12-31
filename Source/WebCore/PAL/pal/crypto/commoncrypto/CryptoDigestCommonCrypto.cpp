@@ -33,8 +33,6 @@
 #include <optional>
 #include <wtf/TZoneMallocInlines.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace PAL {
 
 struct CryptoDigestContext {
@@ -220,5 +218,3 @@ Vector<uint8_t> CryptoDigest::computeHash()
 }
 
 } // namespace PAL
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

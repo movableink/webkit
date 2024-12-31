@@ -34,8 +34,6 @@
 #include <wtf/text/WTFString.h>
 #include <wtf/unicode/CharacterNames.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace PAL {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(TextCodecUTF8);
@@ -74,7 +72,7 @@ void TextCodecUTF8::registerCodecs(TextCodecRegistrar registrar)
 
 static inline uint8_t nonASCIISequenceLength(uint8_t firstByte)
 {
-    static const uint8_t lengths[256] = {
+    static constexpr std::array<uint8_t, 256> lengths {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -344,7 +342,7 @@ String TextCodecUTF8::decode(std::span<const uint8_t> bytes, bool flush, bool st
                 // Fast path for ASCII. Most UTF-8 text will be ASCII.
                 if (WTF::isAlignedToMachineWord(source.data())) {
                     while (source.data() < alignedEnd) {
-                        auto chunk = *reinterpret_cast_ptr<const WTF::MachineWord*>(source.data());
+                        auto chunk = reinterpretCastSpanStartTo<const WTF::MachineWord>(source);
                         if (!WTF::containsOnlyASCII<LChar>(chunk))
                             break;
                         copyASCIIMachineWord(destination, source);
@@ -428,7 +426,7 @@ upConvertTo16Bit:
                 // Fast path for ASCII. Most UTF-8 text will be ASCII.
                 if (WTF::isAlignedToMachineWord(source.data())) {
                     while (source.data() < alignedEnd) {
-                        auto chunk = *reinterpret_cast_ptr<const WTF::MachineWord*>(source.data());
+                        auto chunk = reinterpretCastSpanStartTo<const WTF::MachineWord>(source);
                         if (!WTF::containsOnlyASCII<LChar>(chunk))
                             break;
                         copyASCIIMachineWord(destination16, source);
@@ -492,7 +490,7 @@ Vector<uint8_t> TextCodecUTF8::encodeUTF8(StringView string)
     Vector<uint8_t> bytes(WTF::checkedProduct<size_t>(string.length(), 3));
     size_t bytesWritten = 0;
     for (auto character : string.codePoints())
-        U8_APPEND_UNSAFE(bytes.data(), bytesWritten, character);
+        U8_APPEND_UNSAFE(bytes, bytesWritten, character);
     bytes.shrink(bytesWritten);
     return bytes;
 }
@@ -503,5 +501,3 @@ Vector<uint8_t> TextCodecUTF8::encode(StringView string, UnencodableHandling) co
 }
 
 } // namespace PAL
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

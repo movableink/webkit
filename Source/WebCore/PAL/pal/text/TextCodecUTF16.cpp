@@ -32,8 +32,6 @@
 #include <wtf/text/WTFString.h>
 #include <wtf/unicode/CharacterNames.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace PAL {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(TextCodecUTF16);
@@ -67,6 +65,8 @@ void TextCodecUTF16::registerCodecs(TextCodecRegistrar registrar)
         return makeUnique<TextCodecUTF16>(false);
     });
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 // https://encoding.spec.whatwg.org/#shared-utf-16-decoder
 String TextCodecUTF16::decode(std::span<const uint8_t> bytes, bool flush, bool, bool& sawError)
@@ -149,20 +149,22 @@ String TextCodecUTF16::decode(std::span<const uint8_t> bytes, bool flush, bool, 
     return result.toString();
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
 Vector<uint8_t> TextCodecUTF16::encode(StringView string, UnencodableHandling) const
 {
     Vector<uint8_t> result(WTF::checkedProduct<size_t>(string.length(), 2));
-    auto* bytes = result.data();
+    size_t index = 0;
 
     if (m_littleEndian) {
         for (auto character : string.codeUnits()) {
-            *bytes++ = character;
-            *bytes++ = character >> 8;
+            result[index++] = character;
+            result[index++] = character >> 8;
         }
     } else {
         for (auto character : string.codeUnits()) {
-            *bytes++ = character >> 8;
-            *bytes++ = character;
+            result[index++] = character >> 8;
+            result[index++] = character;
         }
     }
 
@@ -170,5 +172,3 @@ Vector<uint8_t> TextCodecUTF16::encode(StringView string, UnencodableHandling) c
 }
 
 } // namespace PAL
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
