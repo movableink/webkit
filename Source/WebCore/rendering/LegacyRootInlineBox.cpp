@@ -180,7 +180,7 @@ void LegacyRootInlineBox::attachLineBoxToRenderObject()
 
 LayoutUnit LegacyRootInlineBox::lineBoxWidth() const
 {
-    return blockFlow().availableLogicalWidthForLineInFragment(blockFlow().fragmentAtBlockOffset(lineBoxTop()), lineBoxTop(), lineBoxHeight());
+    return blockFlow().availableLogicalWidthForLine(lineBoxTop(), lineBoxHeight());
 }
 
 #if ENABLE(TREE_DEBUGGING)

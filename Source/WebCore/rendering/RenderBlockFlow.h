@@ -244,7 +244,7 @@ public:
 
     void trimBlockEndChildrenMargins();
 
-    void setStaticInlinePositionForChild(RenderBox& child, LayoutUnit blockOffset, LayoutUnit inlinePosition);
+    void setStaticInlinePositionForChild(RenderBox& child, LayoutUnit inlinePosition);
     void updateStaticInlinePositionForChild(RenderBox& child, LayoutUnit logicalTop);
 
     LayoutUnit staticInlinePositionForOriginalDisplayInline(LayoutUnit logicalTop);

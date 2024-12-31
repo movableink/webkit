@@ -2231,7 +2231,7 @@ LayoutUnit RenderBox::shrinkLogicalWidthToAvoidFloats(LayoutUnit childMarginStar
     // doesn't fit, we can use the line offset, but we need to grow it by the margin to reflect the fact that the margin was
     // "consumed" by the float. Negative margins aren't consumed by the float, and so we ignore them.
     if (childMarginStart > 0) {
-        LayoutUnit startContentSide = containingBlock.startOffsetForContent({ });
+        LayoutUnit startContentSide = containingBlock.startOffsetForContent();
         LayoutUnit startContentSideWithMargin = startContentSide + childMarginStart;
         LayoutUnit startOffset = containingBlock.startOffsetForLine(logicalTopPosition, logicalHeight);
         if (startOffset > startContentSideWithMargin)
@@ -2241,7 +2241,7 @@ LayoutUnit RenderBox::shrinkLogicalWidthToAvoidFloats(LayoutUnit childMarginStar
     }
     
     if (childMarginEnd > 0) {
-        LayoutUnit endContentSide = containingBlock.endOffsetForContent({ });
+        LayoutUnit endContentSide = containingBlock.endOffsetForContent();
         LayoutUnit endContentSideWithMargin = endContentSide + childMarginEnd;
         LayoutUnit endOffset = containingBlock.endOffsetForLine(logicalTopPosition, logicalHeight);
         if (endOffset > endContentSideWithMargin)

@@ -121,8 +121,7 @@ public:
     // FIXME-BLOCKFLOW: Remove virtualizaion when all of the line layout code has been moved out of RenderBlock
     virtual bool containsFloats() const { return false; }
 
-    LayoutUnit availableLogicalWidthForLineInFragment(RenderFragmentContainer*, LayoutUnit position, LayoutUnit logicalHeight) const;
-    LayoutUnit availableLogicalWidthForLine(LayoutUnit position, LayoutUnit logicalHeight) const;
+    inline LayoutUnit availableLogicalWidthForLine(LayoutUnit position, LayoutUnit logicalHeight) const;
     LayoutUnit logicalRightOffsetForLine(LayoutUnit position, LayoutUnit logicalHeight = 0_lu) const;
     LayoutUnit logicalLeftOffsetForLine(LayoutUnit position, LayoutUnit logicalHeight = 0_lu) const;
     inline LayoutUnit startOffsetForLine(LayoutUnit position, LayoutUnit logicalHeight) const;
@@ -217,32 +216,14 @@ public:
 
     virtual void scrollbarsChanged(bool /*horizontalScrollbarChanged*/, bool /*verticalScrollbarChanged*/) { }
 
-    LayoutUnit logicalLeftOffsetForContent(RenderFragmentContainer*) const;
-    LayoutUnit logicalRightOffsetForContent(RenderFragmentContainer*) const;
-    LayoutUnit availableLogicalWidthForContent(RenderFragmentContainer* fragment) const
+    LayoutUnit availableLogicalWidthForContent() const
     { 
-        return std::max<LayoutUnit>(0, logicalRightOffsetForContent(fragment) - logicalLeftOffsetForContent(fragment));
+        return std::max(0_lu, logicalRightOffsetForContent() - logicalLeftOffsetForContent());
     }
-    inline LayoutUnit startOffsetForContent(RenderFragmentContainer*) const;
-    inline LayoutUnit endOffsetForContent(RenderFragmentContainer*) const;
-    LayoutUnit logicalLeftOffsetForContent(LayoutUnit blockOffset) const
-    {
-        return logicalLeftOffsetForContent(fragmentAtBlockOffset(blockOffset));
-    }
-    LayoutUnit logicalRightOffsetForContent(LayoutUnit blockOffset) const
-    {
-        return logicalRightOffsetForContent(fragmentAtBlockOffset(blockOffset));
-    }
-    LayoutUnit availableLogicalWidthForContent(LayoutUnit blockOffset) const
-    {
-        return availableLogicalWidthForContent(fragmentAtBlockOffset(blockOffset));
-    }
-    inline LayoutUnit startOffsetForContent(LayoutUnit blockOffset) const;
-    inline LayoutUnit endOffsetForContent(LayoutUnit blockOffset) const;
-    inline LayoutUnit logicalLeftOffsetForContent() const;
-    inline LayoutUnit logicalRightOffsetForContent() const;
-    inline LayoutUnit startOffsetForContent() const;
-    inline LayoutUnit endOffsetForContent() const;
+    LayoutUnit logicalLeftOffsetForContent() const;
+    LayoutUnit logicalRightOffsetForContent() const;
+    LayoutUnit startOffsetForContent() const;
+    LayoutUnit endOffsetForContent() const;
 
     LayoutUnit logicalLeftSelectionOffset(RenderBlock& rootBlock, LayoutUnit position, const LogicalSelectionOffsetCaches&);
     LayoutUnit logicalRightSelectionOffset(RenderBlock& rootBlock, LayoutUnit position, const LogicalSelectionOffsetCaches&);

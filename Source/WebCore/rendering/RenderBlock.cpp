@@ -1862,27 +1862,21 @@ LayoutUnit RenderBlock::textIndentOffset() const
     return minimumValueForLength(style().textIndent(), cw);
 }
 
-LayoutUnit RenderBlock::logicalLeftOffsetForContent(RenderFragmentContainer* fragment) const
+LayoutUnit RenderBlock::logicalLeftOffsetForContent() const
 {
     LayoutUnit logicalLeftOffset = writingMode().isHorizontal() ? borderLeft() + paddingLeft() : borderTop() + paddingTop();
     if (shouldPlaceVerticalScrollbarOnLeft() && isHorizontalWritingMode())
         logicalLeftOffset += verticalScrollbarWidth();
-    if (!fragment)
-        return logicalLeftOffset;
-    LayoutRect boxRect = borderBoxRect();
-    return logicalLeftOffset + (isHorizontalWritingMode() ? boxRect.x() : boxRect.y());
+    return logicalLeftOffset;
 }
 
-LayoutUnit RenderBlock::logicalRightOffsetForContent(RenderFragmentContainer* fragment) const
+LayoutUnit RenderBlock::logicalRightOffsetForContent() const
 {
     LayoutUnit logicalRightOffset = writingMode().isHorizontal() ? borderLeft() + paddingLeft() : borderTop() + paddingTop();
     if (shouldPlaceVerticalScrollbarOnLeft() && isHorizontalWritingMode())
         logicalRightOffset += verticalScrollbarWidth();
     logicalRightOffset += availableLogicalWidth();
-    if (!fragment)
-        return logicalRightOffset;
-    LayoutRect boxRect = borderBoxRect();
-    return logicalRightOffset - (logicalWidth() - (isHorizontalWritingMode() ? boxRect.maxX() : boxRect.maxY()));
+    return logicalRightOffset;
 }
 
 LayoutUnit RenderBlock::adjustLogicalLeftOffsetForLine(LayoutUnit offsetFromFloats) const
