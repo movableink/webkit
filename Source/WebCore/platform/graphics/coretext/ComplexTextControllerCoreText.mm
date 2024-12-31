@@ -37,11 +37,10 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
-ComplexTextController::ComplexTextRun::ComplexTextRun(CTRunRef ctRun, const Font& font, const UChar* characters, unsigned stringLocation, unsigned stringLength, unsigned indexBegin, unsigned indexEnd)
+ComplexTextController::ComplexTextRun::ComplexTextRun(CTRunRef ctRun, const Font& font, std::span<const UChar> characters, unsigned stringLocation, unsigned indexBegin, unsigned indexEnd)
     : m_initialAdvance(CTRunGetInitialAdvance(ctRun))
     , m_font(font)
     , m_characters(characters)
-    , m_stringLength(stringLength)
     , m_indexBegin(indexBegin)
     , m_indexEnd(indexEnd)
     , m_glyphCount(CTRunGetGlyphCount(ctRun))
@@ -162,7 +161,7 @@ void ComplexTextController::collectComplexTextRunsForCharacters(std::span<const 
 {
     if (!font) {
         // Create a run of missing glyphs from the primary font.
-        m_complexTextRuns.append(ComplexTextRun::create(m_font.primaryFont(), cp.data(), stringLocation, cp.size(), 0, cp.size(), m_run.ltr()));
+        m_complexTextRuns.append(ComplexTextRun::create(m_font.primaryFont(), cp, stringLocation, 0, cp.size(), m_run.ltr()));
         return;
     }
 
@@ -255,7 +254,7 @@ void ComplexTextController::collectComplexTextRunsForCharacters(std::span<const 
                 if (!runFont) {
                     RetainPtr<CFStringRef> fontName = adoptCF(CTFontCopyPostScriptName(runCTFont));
                     if (CFEqual(fontName.get(), CFSTR("LastResort"))) {
-                        m_complexTextRuns.append(ComplexTextRun::create(m_font.primaryFont(), cp.data(), stringLocation, cp.size(), runRange.location, runRange.location + runRange.length, m_run.ltr()));
+                        m_complexTextRuns.append(ComplexTextRun::create(m_font.primaryFont(), cp, stringLocation, runRange.location, runRange.location + runRange.length, m_run.ltr()));
                         continue;
                     }
                     FontPlatformData runFontPlatformData(runCTFont, CTFontGetSize(runCTFont));
@@ -270,7 +269,7 @@ void ComplexTextController::collectComplexTextRunsForCharacters(std::span<const 
 
         LOG_WITH_STREAM(TextShaping, stream << "Run " << r << ":");
 
-        m_complexTextRuns.append(ComplexTextRun::create(ctRun, *runFont, cp.data(), stringLocation, cp.size(), runRange.location, runRange.location + runRange.length));
+        m_complexTextRuns.append(ComplexTextRun::create(ctRun, *runFont, cp, stringLocation, runRange.location, runRange.location + runRange.length));
     }
 }
 

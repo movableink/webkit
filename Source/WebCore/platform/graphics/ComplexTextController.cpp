@@ -217,7 +217,7 @@ unsigned ComplexTextController::offsetForPosition(float h, bool includePartialGl
                 }
 
                 unsigned stringLength = complexTextRun.stringLength();
-                CachedTextBreakIterator cursorPositionIterator(complexTextRun.span(), { }, TextBreakIterator::CaretMode { }, nullAtom());
+                CachedTextBreakIterator cursorPositionIterator(complexTextRun.characters(), { }, TextBreakIterator::CaretMode { }, nullAtom());
                 unsigned clusterStart;
                 if (cursorPositionIterator.isBoundary(hitIndex))
                     clusterStart = hitIndex;
@@ -455,16 +455,14 @@ void ComplexTextController::ComplexTextRun::setIsNonMonotonic()
     ASSERT(m_isMonotonic);
     m_isMonotonic = false;
 
-    Vector<bool, 64> mappedIndices(m_stringLength, false);
-    for (unsigned i = 0; i < m_glyphCount; ++i) {
-        ASSERT(indexAt(i) < m_stringLength);
+    Vector<bool, 64> mappedIndices(stringLength(), false);
+    for (unsigned i = 0; i < m_glyphCount; ++i)
         mappedIndices[indexAt(i)] = true;
-    }
 
     m_glyphEndOffsets.grow(m_glyphCount);
     for (unsigned i = 0; i < m_glyphCount; ++i) {
         unsigned nextMappedIndex = m_indexEnd;
-        for (unsigned j = indexAt(i) + 1; j < m_stringLength; ++j) {
+        for (unsigned j = indexAt(i) + 1; j < stringLength(); ++j) {
             if (mappedIndices[j]) {
                 nextMappedIndex = j;
                 break;
@@ -672,7 +670,7 @@ void ComplexTextController::adjustGlyphsAndAdvances()
 
         // Lower in this function, synthetic bold is blanket-applied to everything, so no need to double-apply it here.
         float spaceWidth = font.spaceWidth(Font::SyntheticBoldInclusion::Exclude);
-        const UChar* charactersPointer = complexTextRun.characters();
+        auto charactersSpan = complexTextRun.characters();
         FloatPoint glyphOrigin;
         unsigned previousCharacterIndex = m_run.ltr() ? std::numeric_limits<unsigned>::min() : std::numeric_limits<unsigned>::max();
         bool isMonotonic = true;
@@ -686,7 +684,7 @@ void ComplexTextController::adjustGlyphsAndAdvances()
                 if (characterIndex > previousCharacterIndex)
                     isMonotonic = false;
             }
-            UChar character = *(charactersPointer + characterIndex);
+            UChar character = charactersSpan[characterIndex];
 
             bool treatAsSpace = FontCascade::treatAsSpace(character);
             CGGlyph glyph = glyphs[glyphIndex];
@@ -727,7 +725,7 @@ void ComplexTextController::adjustGlyphsAndAdvances()
 
                 unsigned characterIndexInRun = characterIndex + complexTextRun.stringLocation();
                 bool isFirstCharacter = !(characterIndex + complexTextRun.stringLocation());
-                bool isLastCharacter = characterIndexInRun + 1 == m_run.length() || (U16_IS_LEAD(character) && characterIndexInRun + 2 == m_run.length() && U16_IS_TRAIL(*(charactersPointer + characterIndex + 1)));
+                bool isLastCharacter = characterIndexInRun + 1 == m_run.length() || (U16_IS_LEAD(character) && characterIndexInRun + 2 == m_run.length() && U16_IS_TRAIL(charactersSpan[characterIndex + 1]));
 
                 bool forceLeftExpansion = false; // On the left, regardless of m_run.ltr()
                 bool forceRightExpansion = false; // On the right, regardless of m_run.ltr()
@@ -795,7 +793,7 @@ void ComplexTextController::adjustGlyphsAndAdvances()
             if (m_forTextEmphasis) {
                 char32_t ch32 = character;
                 if (U16_IS_SURROGATE(character))
-                    U16_GET(charactersPointer, 0, characterIndex, complexTextRun.stringLength(), ch32);
+                    U16_GET(charactersSpan, 0, characterIndex, complexTextRun.stringLength(), ch32);
                 // FIXME: Combining marks should receive a text emphasis mark if they are combine with a space.
                 if (!FontCascade::canReceiveTextEmphasis(ch32) || (U_GET_GC_MASK(character) & U_GC_M_MASK))
                     glyph = deletedGlyph;
@@ -827,10 +825,9 @@ void ComplexTextController::adjustGlyphsAndAdvances()
 
 // Missing glyphs run constructor. Core Text will not generate a run of missing glyphs, instead falling back on
 // glyphs from LastResort. We want to use the primary font's missing glyph in order to match the fast text code path.
-ComplexTextController::ComplexTextRun::ComplexTextRun(const Font& font, const UChar* characters, unsigned stringLocation, unsigned stringLength, unsigned indexBegin, unsigned indexEnd, bool ltr)
+ComplexTextController::ComplexTextRun::ComplexTextRun(const Font& font, std::span<const UChar> characters, unsigned stringLocation, unsigned indexBegin, unsigned indexEnd, bool ltr)
     : m_font(font)
     , m_characters(characters)
-    , m_stringLength(stringLength)
     , m_indexBegin(indexBegin)
     , m_indexEnd(indexEnd)
     , m_stringLocation(stringLocation)
@@ -843,7 +840,7 @@ ComplexTextController::ComplexTextRun::ComplexTextRun(const Font& font, const UC
     while (r < m_indexEnd) {
         auto currentIndex = r;
         char32_t character;
-        U16_NEXT(m_characters, r, m_stringLength, character);
+        U16_NEXT(m_characters, r, stringLength(), character);
         // https://drafts.csswg.org/css-text-3/#white-space-processing
         // "Unsupported Default_ignorable characters must be ignored for text rendering."
         if (!FontCascade::isCharacterWhoseGlyphsShouldBeDeletedForTextRendering(character))
@@ -861,7 +858,7 @@ ComplexTextController::ComplexTextRun::ComplexTextRun(const Font& font, const UC
     m_baseAdvances.fill(FloatSize(m_font.widthForGlyph(0, Font::SyntheticBoldInclusion::Exclude), 0), m_glyphCount);
 }
 
-ComplexTextController::ComplexTextRun::ComplexTextRun(const Vector<FloatSize>& advances, const Vector<FloatPoint>& origins, const Vector<Glyph>& glyphs, const Vector<unsigned>& stringIndices, FloatSize initialAdvance, const Font& font, const UChar* characters, unsigned stringLocation, unsigned stringLength, unsigned indexBegin, unsigned indexEnd, bool ltr)
+ComplexTextController::ComplexTextRun::ComplexTextRun(const Vector<FloatSize>& advances, const Vector<FloatPoint>& origins, const Vector<Glyph>& glyphs, const Vector<unsigned>& stringIndices, FloatSize initialAdvance, const Font& font, std::span<const UChar> characters, unsigned stringLocation, unsigned indexBegin, unsigned indexEnd, bool ltr)
     : m_baseAdvances(advances)
     , m_glyphOrigins(origins)
     , m_glyphs(glyphs)
@@ -869,7 +866,6 @@ ComplexTextController::ComplexTextRun::ComplexTextRun(const Vector<FloatSize>& a
     , m_initialAdvance(initialAdvance)
     , m_font(font)
     , m_characters(characters)
-    , m_stringLength(stringLength)
     , m_indexBegin(indexBegin)
     , m_indexEnd(indexEnd)
     , m_glyphCount(glyphs.size())

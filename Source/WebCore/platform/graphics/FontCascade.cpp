@@ -44,8 +44,6 @@
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/TextStream.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(FontCascade);
@@ -672,9 +670,8 @@ FontCascade::CodePath FontCascade::characterRangeCodePath(std::span<const UChar>
     CodePath result = CodePath::Simple;
     bool previousCharacterIsEmojiGroupCandidate = false;
     size_t size = span.size();
-    auto* characters = span.data();
     for (size_t i = 0; i < size; ++i) {
-        auto c = characters[i];
+        auto c = span[i];
         if (c == zeroWidthJoiner && previousCharacterIsEmojiGroupCandidate)
             return CodePath::Complex;
         
@@ -798,7 +795,7 @@ FontCascade::CodePath FontCascade::characterRangeCodePath(std::span<const UChar>
             if (i + 1 == size)
                 continue;
 
-            UChar next = characters[++i];
+            UChar next = span[++i];
             if (!U16_IS_TRAIL(next))
                 continue;
 
@@ -1491,9 +1488,10 @@ void FontCascade::drawGlyphBuffer(GraphicsContext& context, const GlyphBuffer& g
         RefPtr nextFontData = &glyphBuffer.fontAt(nextGlyph);
 
         if (nextFontData != fontData) {
-            if (shouldDrawIfLoading(*fontData, customFontNotReadyAction))
-                context.drawGlyphs(*fontData, glyphBuffer.glyphs(lastFrom), glyphBuffer.advances(lastFrom), nextGlyph - lastFrom, startPoint, m_fontDescription.usedFontSmoothing());
-
+            if (shouldDrawIfLoading(*fontData, customFontNotReadyAction)) {
+                size_t glyphCount = nextGlyph - lastFrom;
+                context.drawGlyphs(*fontData, glyphBuffer.glyphs(lastFrom, glyphCount), glyphBuffer.advances(lastFrom, glyphCount), startPoint, m_fontDescription.usedFontSmoothing());
+            }
             lastFrom = nextGlyph;
             fontData = WTFMove(nextFontData);
             startPoint.setX(nextX);
@@ -1504,8 +1502,10 @@ void FontCascade::drawGlyphBuffer(GraphicsContext& context, const GlyphBuffer& g
         nextGlyph++;
     }
 
-    if (shouldDrawIfLoading(*fontData, customFontNotReadyAction))
-        context.drawGlyphs(*fontData, glyphBuffer.glyphs(lastFrom), glyphBuffer.advances(lastFrom), nextGlyph - lastFrom, startPoint, m_fontDescription.usedFontSmoothing());
+    if (shouldDrawIfLoading(*fontData, customFontNotReadyAction)) {
+        size_t glyphCount = nextGlyph - lastFrom;
+        context.drawGlyphs(*fontData, glyphBuffer.glyphs(lastFrom, glyphCount), glyphBuffer.advances(lastFrom, glyphCount), startPoint, m_fontDescription.usedFontSmoothing());
+    }
     point.setX(nextX);
 }
 
@@ -1916,5 +1916,3 @@ TextStream& operator<<(TextStream& ts, const FontCascade& fontCascade)
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

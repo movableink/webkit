@@ -40,6 +40,7 @@
 #include "GraphicsContextCairo.h"
 #include "ImageBuffer.h"
 #include <type_traits>
+#include <wtf/ZippedRange.h>
 #include <wtf/text/TextStream.h>
 
 #if USE(THEME_ADWAITA)
@@ -515,7 +516,7 @@ void OperationRecorder::clearRect(const FloatRect& rect)
     append(createCommand<ClearRect>(rect));
 }
 
-void OperationRecorder::drawGlyphs(const Font& font, const GlyphBufferGlyph* glyphs, const GlyphBufferAdvance* advances, unsigned numGlyphs, const FloatPoint& point, FontSmoothingMode fontSmoothing)
+void OperationRecorder::drawGlyphs(const Font& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& point, FontSmoothingMode fontSmoothing)
 {
     struct DrawGlyphs final : PaintingOperation, OperationData<Cairo::FillSource, Cairo::StrokeSource, Cairo::ShadowState, FloatPoint, RefPtr<cairo_scaled_font_t>, float, Vector<cairo_glyph_t>, float, TextDrawingModeFlags, float, std::optional<GraphicsDropShadow>, FontSmoothingMode> {
         virtual ~DrawGlyphs() = default;
@@ -536,10 +537,10 @@ void OperationRecorder::drawGlyphs(const Font& font, const GlyphBufferGlyph* gly
         return;
 
     auto xOffset = point.x();
-    Vector<cairo_glyph_t> cairoGlyphs(numGlyphs);
+    Vector<cairo_glyph_t> cairoGlyphs(glyphs.size());
     {
         auto yOffset = point.y();
-        for (size_t i = 0; i < numGlyphs; ++i) {
+        for (size_t i = 0; i < glyphs.size(); ++i) {
             cairoGlyphs[i] = { glyphs[i], xOffset, yOffset };
             xOffset += advances[i].width();
         }
@@ -556,7 +557,7 @@ void OperationRecorder::drawGlyphs(const Font& font, const GlyphBufferGlyph* gly
 void OperationRecorder::drawDecomposedGlyphs(const Font& font, const DecomposedGlyphs& decomposedGlyphs)
 {
     auto positionedGlyphs = decomposedGlyphs.positionedGlyphs();
-    return drawGlyphs(font, positionedGlyphs.glyphs.data(), positionedGlyphs.advances.data(), positionedGlyphs.glyphs.size(), positionedGlyphs.localAnchor, positionedGlyphs.smoothingMode);
+    return drawGlyphs(font, positionedGlyphs.glyphs.span(), positionedGlyphs.advances.span(), positionedGlyphs.localAnchor, positionedGlyphs.smoothingMode);
 }
 
 void OperationRecorder::drawImageBuffer(ImageBuffer& buffer, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)

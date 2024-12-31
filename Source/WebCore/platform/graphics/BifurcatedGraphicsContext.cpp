@@ -530,10 +530,10 @@ FloatSize BifurcatedGraphicsContext::drawText(const FontCascade& cascade, const 
     return size;
 }
 
-void BifurcatedGraphicsContext::drawGlyphs(const Font& font, const GlyphBufferGlyph* glyphs, const GlyphBufferAdvance* advances, unsigned numGlyphs, const FloatPoint& point, FontSmoothingMode fontSmoothingMode)
+void BifurcatedGraphicsContext::drawGlyphs(const Font& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& point, FontSmoothingMode fontSmoothingMode)
 {
-    m_primaryContext.drawGlyphs(font, glyphs, advances, numGlyphs, point, fontSmoothingMode);
-    m_secondaryContext.drawGlyphs(font, glyphs, advances, numGlyphs, point, fontSmoothingMode);
+    m_primaryContext.drawGlyphs(font, glyphs, advances, point, fontSmoothingMode);
+    m_secondaryContext.drawGlyphs(font, glyphs, advances, point, fontSmoothingMode);
 
     VERIFY_STATE_SYNCHRONIZATION();
 }

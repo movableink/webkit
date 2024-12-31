@@ -88,7 +88,7 @@ inline auto WidthIterator::applyFontTransforms(GlyphBuffer& glyphBuffer, unsigne
     if (lastGlyphCount >= glyphBufferSize)
         return { 0, makeGlyphBufferAdvance() };
 
-    GlyphBufferAdvance* advances = glyphBuffer.advances(0);
+    auto advances = glyphBuffer.advances();
     float beforeWidth = 0;
     for (unsigned i = lastGlyphCount; i < glyphBufferSize; ++i)
         beforeWidth += width(advances[i]);
@@ -96,9 +96,9 @@ inline auto WidthIterator::applyFontTransforms(GlyphBuffer& glyphBuffer, unsigne
     auto initialAdvance = font.applyTransforms(glyphBuffer, lastGlyphCount, m_currentCharacterIndex, m_enableKerning, m_requiresShaping, m_font->fontDescription().computedLocale(), m_run->text(), direction());
 
     glyphBufferSize = glyphBuffer.size();
-    advances = glyphBuffer.advances(0);
+    advances = glyphBuffer.advances();
 
-    GlyphBufferOrigin* origins = glyphBuffer.origins(0);
+    auto origins = glyphBuffer.origins();
     for (unsigned i = lastGlyphCount; i < glyphBufferSize; ++i) {
         setHeight(advances[i], -height(advances[i]));
         setY(origins[i], -y(origins[i]));
@@ -112,7 +112,7 @@ inline auto WidthIterator::applyFontTransforms(GlyphBuffer& glyphBuffer, unsigne
         if (iterator == charactersTreatedAsSpace.end() || iterator->stringOffset != characterIndex)
             continue;
         const auto& originalAdvances = *iterator;
-        setWidth(*glyphBuffer.advances(i), originalAdvances.advance);
+        setWidth(glyphBuffer.advanceAt(i), originalAdvances.advance);
     }
     charactersTreatedAsSpace.clear();
 
@@ -168,7 +168,7 @@ void WidthIterator::applyInitialAdvance(GlyphBuffer& glyphBuffer, GlyphBufferAdv
     ASSERT(lastGlyphCount || (!width(m_leftoverInitialAdvance) && !height(m_leftoverInitialAdvance)));
 
     if (rtl() && lastGlyphCount) {
-        auto& visuallyLastAdvance = *glyphBuffer.advances(lastGlyphCount);
+        auto& visuallyLastAdvance = glyphBuffer.advanceAt(lastGlyphCount);
         expandWithInitialAdvance(visuallyLastAdvance, m_leftoverInitialAdvance);
         m_runWidthSoFar += width(m_leftoverInitialAdvance);
         m_leftoverInitialAdvance = makeGlyphBufferAdvance();
@@ -178,7 +178,7 @@ void WidthIterator::applyInitialAdvance(GlyphBuffer& glyphBuffer, GlyphBufferAdv
         m_leftoverInitialAdvance = initialAdvance;
     else {
         if (lastGlyphCount) {
-            auto& visuallyPreviousAdvance = *glyphBuffer.advances(lastGlyphCount - 1);
+            auto& visuallyPreviousAdvance = glyphBuffer.advanceAt(lastGlyphCount - 1);
             expandWithInitialAdvance(visuallyPreviousAdvance, initialAdvance);
             m_runWidthSoFar += width(initialAdvance);
         } else

@@ -31,6 +31,7 @@
 
 #include "RenderStyleInlines.h"
 #include "StyleInheritedData.h"
+#include <wtf/StdLibExtras.h>
 
 static const unsigned kRadicalOperator = 0x221A;
 static const unsigned kMaximumExtensionCount = 128;
@@ -518,7 +519,7 @@ LayoutRect MathOperator::paintGlyph(const RenderStyle& style, PaintInfo& info, c
 
     // FIXME: If we're just drawing a single glyph, why do we need to compute an advance?
     auto advance = makeGlyphBufferAdvance(advanceWidthForGlyph(data));
-    info.context().drawGlyphs(*data.font, &data.glyph, &advance, 1, origin, style.fontCascade().fontDescription().usedFontSmoothing());
+    info.context().drawGlyphs(*data.font, singleElementSpan(data.glyph), singleElementSpan(advance), origin, style.fontCascade().fontDescription().usedFontSmoothing());
 
     return glyphPaintRect;
 }
@@ -725,7 +726,7 @@ void MathOperator::paint(const RenderStyle& style, PaintInfo& info, const Layout
     LayoutPoint operatorOrigin { operatorTopLeft.x(), LayoutUnit(operatorTopLeft.y() - glyphBounds.y()) };
     // FIXME: If we're just drawing a single glyph, why do we need to compute an advance?
     auto advance = makeGlyphBufferAdvance(advanceWidthForGlyph(glyphData));
-    paintInfo.context().drawGlyphs(*glyphData.font, &glyphData.glyph, &advance, 1, operatorOrigin, style.fontCascade().fontDescription().usedFontSmoothing());
+    paintInfo.context().drawGlyphs(*glyphData.font, singleElementSpan(glyphData.glyph), singleElementSpan(advance), operatorOrigin, style.fontCascade().fontDescription().usedFontSmoothing());
 }
 
 }

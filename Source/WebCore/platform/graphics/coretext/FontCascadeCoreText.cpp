@@ -110,7 +110,7 @@ AffineTransform computeVerticalTextMatrix(const Font& font, const AffineTransfor
     return computeBaseVerticalTextMatrix(previousTextMatrix);
 }
 
-static void fillVectorWithHorizontalGlyphPositions(Vector<CGPoint, 256>& positions, CGContextRef context, const CGSize* advances, unsigned count, const FloatPoint& point)
+static void fillVectorWithHorizontalGlyphPositions(Vector<CGPoint, 256>& positions, CGContextRef context, std::span<const CGSize> advances, const FloatPoint& point)
 {
     // Keep this in sync as the inverse of `DrawGlyphsRecorder::recordDrawGlyphs`.
     // The input positions are in the context's coordinate system, without the text matrix.
@@ -123,14 +123,14 @@ static void fillVectorWithHorizontalGlyphPositions(Vector<CGPoint, 256>& positio
     // positions we need to deliver to CT = inverse(text matrix) * input positions
     CGAffineTransform matrix = CGAffineTransformInvert(CGContextGetTextMatrix(context));
     positions[0] = CGPointApplyAffineTransform(point, matrix);
-    for (unsigned i = 1; i < count; ++i) {
+    for (size_t i = 1; i < advances.size(); ++i) {
         CGSize advance = CGSizeApplyAffineTransform(advances[i - 1], matrix);
         positions[i].x = positions[i - 1].x + advance.width;
         positions[i].y = positions[i - 1].y + advance.height;
     }
 }
 
-static void fillVectorWithVerticalGlyphPositions(Vector<CGPoint, 256>& positions, const CGSize translations[], const CGSize advances[], unsigned count, const FloatPoint& point, float ascentDelta, CGAffineTransform textMatrix)
+static void fillVectorWithVerticalGlyphPositions(Vector<CGPoint, 256>& positions, std::span<const CGSize> translations, std::span<const CGSize> advances, const FloatPoint& point, float ascentDelta, CGAffineTransform textMatrix)
 {
     // Keep this function in sync as the inverse of `DrawGlyphsRecorder::recordDrawGlyphs`.
 
@@ -244,7 +244,7 @@ static void fillVectorWithVerticalGlyphPositions(Vector<CGPoint, 256>& positions
 
     static const auto constantSyntheticTextMatrixOmittingOblique = computeBaseVerticalTextMatrix(computeBaseOverallTextMatrix(std::nullopt)); // See fillVectorWithVerticalGlyphPositions(), which describes what this is.
 
-    for (unsigned i = 0; i < count; ++i) {
+    for (unsigned i = 0; i < translations.size(); ++i) {
         // The "translations" parameter is in the "synthetic-oblique-less text coordinate system" and we want to add it to the position in the user
         // coordinate system. Luckily, the text matrix (or, at least the version of the text matrix that doesn't include synthetic oblique) does exactly
         // this. So, we just create the synthetic-oblique-less text matrix, and run the translation through it. This gives us the translation in user
@@ -263,25 +263,25 @@ static void fillVectorWithVerticalGlyphPositions(Vector<CGPoint, 256>& positions
     }
 }
 
-static void showGlyphsWithAdvances(const FloatPoint& point, const Font& font, CGContextRef context, const CGGlyph* glyphs, const CGSize* advances, unsigned count, const AffineTransform& textMatrix)
+static void showGlyphsWithAdvances(const FloatPoint& point, const Font& font, CGContextRef context, std::span<const CGGlyph> glyphs, std::span<const CGSize> advances, const AffineTransform& textMatrix)
 {
-    if (!count)
+    if (glyphs.empty())
         return;
 
     const FontPlatformData& platformData = font.platformData();
-    Vector<CGPoint, 256> positions(count);
+    Vector<CGPoint, 256> positions(glyphs.size());
     if (platformData.orientation() == FontOrientation::Vertical) {
         ScopedTextMatrix savedMatrix(computeVerticalTextMatrix(font, textMatrix), context);
 
-        Vector<CGSize, 256> translations(count);
-        CTFontGetVerticalTranslationsForGlyphs(platformData.ctFont(), glyphs, translations.data(), count);
+        Vector<CGSize, 256> translations(glyphs.size());
+        CTFontGetVerticalTranslationsForGlyphs(platformData.ctFont(), glyphs.data(), translations.data(), glyphs.size());
 
         auto ascentDelta = font.fontMetrics().ascent(IdeographicBaseline) - font.fontMetrics().ascent();
-        fillVectorWithVerticalGlyphPositions(positions, translations.data(), advances, count, point, ascentDelta, CGContextGetTextMatrix(context));
-        CTFontDrawGlyphs(platformData.ctFont(), glyphs, positions.data(), count, context);
+        fillVectorWithVerticalGlyphPositions(positions, translations, advances, point, ascentDelta, CGContextGetTextMatrix(context));
+        CTFontDrawGlyphs(platformData.ctFont(), glyphs.data(), positions.data(), glyphs.size(), context);
     } else {
-        fillVectorWithHorizontalGlyphPositions(positions, context, advances, count, point);
-        CTFontDrawGlyphs(platformData.ctFont(), glyphs, positions.data(), count, context);
+        fillVectorWithHorizontalGlyphPositions(positions, context, advances, point);
+        CTFontDrawGlyphs(platformData.ctFont(), glyphs.data(), positions.data(), glyphs.size(), context);
     }
 }
 
@@ -299,13 +299,13 @@ static void setCGFontRenderingMode(GraphicsContext& context)
     CGContextSetShouldSubpixelQuantizeFonts(cgContext, doSubpixelQuantization);
 }
 
-void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const GlyphBufferGlyph* glyphs, const GlyphBufferAdvance* advances, unsigned numGlyphs, const FloatPoint& anchorPoint, FontSmoothingMode smoothingMode)
+void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& anchorPoint, FontSmoothingMode smoothingMode)
 {
     const auto& platformData = font.platformData();
     if (!platformData.size())
         return;
 
-    if (isInGPUProcess() && font.hasAnyComplexColorFormatGlyphs(glyphs, numGlyphs)) {
+    if (isInGPUProcess() && font.hasAnyComplexColorFormatGlyphs(glyphs)) {
         ASSERT_NOT_REACHED();
         return;
     }
@@ -372,18 +372,18 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const G
         Color shadowFillColor = shadow->color.colorWithAlphaMultipliedBy(fillColor.alphaAsFloat());
         context.setFillColor(shadowFillColor);
         auto shadowTextOffset = point + context.platformShadowOffset(shadow->offset);
-        showGlyphsWithAdvances(shadowTextOffset, font, cgContext, glyphs, advances, numGlyphs, textMatrix);
+        showGlyphsWithAdvances(shadowTextOffset, font, cgContext, glyphs, advances, textMatrix);
         if (syntheticBoldOffset) {
             shadowTextOffset.move(syntheticBoldOffset, 0);
-            showGlyphsWithAdvances(shadowTextOffset, font, cgContext, glyphs, advances, numGlyphs, textMatrix);
+            showGlyphsWithAdvances(shadowTextOffset, font, cgContext, glyphs, advances, textMatrix);
         }
         context.setFillColor(fillColor);
     }
 
-    showGlyphsWithAdvances(point, font, cgContext, glyphs, advances, numGlyphs, textMatrix);
+    showGlyphsWithAdvances(point, font, cgContext, glyphs, advances, textMatrix);
 
     if (syntheticBoldOffset)
-        showGlyphsWithAdvances(FloatPoint(point.x() + syntheticBoldOffset, point.y()), font, cgContext, glyphs, advances, numGlyphs, textMatrix);
+        showGlyphsWithAdvances(FloatPoint(point.x() + syntheticBoldOffset, point.y()), font, cgContext, glyphs, advances, textMatrix);
 
     if (hasSimpleShadow)
         context.setDropShadow(*shadow);
