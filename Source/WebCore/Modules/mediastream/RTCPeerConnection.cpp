@@ -77,8 +77,6 @@
 #include "LibWebRTCProvider.h"
 #endif
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 using namespace PeerConnection;
@@ -1023,7 +1021,7 @@ static inline ExceptionOr<PeerConnectionBackend::CertificateInformation> certifi
             int publicExponent = 0;
             int value = 1;
             for (unsigned counter = 0; counter < parameters.publicExponent->byteLength(); ++counter) {
-                publicExponent += parameters.publicExponent->data()[counter] * value;
+                publicExponent += parameters.publicExponent->typedSpan()[counter] * value;
                 value <<= 8;
             }
 
@@ -1232,7 +1230,5 @@ void RTCPeerConnection::stopGatheringStatLogs()
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_RTC)

@@ -32,8 +32,6 @@
 #include <wtf/text/StringParsingBuffer.h>
 #include <wtf/text/StringView.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 enum class ApplicationCacheParserMode { Explicit, Fallback, OnlineAllowlist, Unknown };
@@ -73,6 +71,8 @@ template<typename CharacterType> static constexpr std::array<CharacterType, 14> 
 template<typename CharacterType> static constexpr std::array<CharacterType, 5> cacheModeIdentifier { 'C', 'A', 'C', 'H', 'E' };
 template<typename CharacterType> static constexpr std::array<CharacterType, 8> fallbackModeIdentifier { 'F', 'A', 'L', 'L', 'B', 'A', 'C', 'K' };
 template<typename CharacterType> static constexpr std::array<CharacterType, 7> networkModeIdentifier { 'N', 'E', 'T', 'W', 'O', 'R', 'K' };
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 std::optional<ApplicationCacheManifest> parseApplicationCacheManifest(const URL& manifestURL, const String& manifestMIMEType, std::span<const uint8_t> data)
 {
@@ -233,6 +233,6 @@ std::optional<ApplicationCacheManifest> parseApplicationCacheManifest(const URL&
     });
 }
 
-}
-
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
+}

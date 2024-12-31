@@ -2640,11 +2640,11 @@ WebGLAny WebGLRenderingContextBase::getVertexAttrib(GCGLuint index, GCGLenum pna
     case GraphicsContextGL::CURRENT_VERTEX_ATTRIB: {
         switch (m_vertexAttribValue[index].type) {
         case GraphicsContextGL::FLOAT:
-            return Float32Array::tryCreate(m_vertexAttribValue[index].fValue, 4);
+            return Float32Array::tryCreate(std::span { m_vertexAttribValue[index].fValue });
         case GraphicsContextGL::INT:
-            return Int32Array::tryCreate(m_vertexAttribValue[index].iValue, 4);
+            return Int32Array::tryCreate(std::span { m_vertexAttribValue[index].iValue });
         case GraphicsContextGL::UNSIGNED_INT:
-            return Uint32Array::tryCreate(m_vertexAttribValue[index].uiValue, 4);
+            return Uint32Array::tryCreate(std::span { m_vertexAttribValue[index].uiValue });
         default:
             ASSERT_NOT_REACHED();
             break;

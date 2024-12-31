@@ -349,6 +349,8 @@ public:
         {
         }
 
+        std::span<const DataType> span() const { return unsafeMakeSpan(data(), length()); }
+
         const DataType* data() const
         {
             return WTF::switchOn(m_variant,
@@ -640,9 +642,9 @@ protected:
 
         GCGLenum type;
         union {
-            GCGLfloat fValue[4];
-            GCGLint iValue[4];
-            GCGLuint uiValue[4];
+            std::array<GCGLfloat, 4> fValue;
+            std::array<GCGLint, 4> iValue;
+            std::array<GCGLuint, 4> uiValue;
         };
     };
     Vector<VertexAttribValue> m_vertexAttribValue;
@@ -700,11 +702,11 @@ protected:
 
     PredefinedColorSpace m_drawingBufferColorSpace { PredefinedColorSpace::SRGB };
 
-    GCGLfloat m_clearColor[4];
+    std::array<GCGLfloat, 4> m_clearColor;
     bool m_scissorEnabled;
     GCGLfloat m_clearDepth;
     GCGLint m_clearStencil;
-    GCGLboolean m_colorMask[4];
+    std::array<GCGLboolean, 4> m_colorMask;
     GCGLuint m_stencilMask;
     GCGLboolean m_depthMask;
 

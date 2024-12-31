@@ -34,8 +34,6 @@ WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(LibWebRTCRtpTransformableFrame);
@@ -60,7 +58,7 @@ std::span<const uint8_t> LibWebRTCRtpTransformableFrame::data() const
     if (!m_rtcFrame)
         return { };
     auto data = m_rtcFrame->GetData();
-    return { data.begin(), data.size() };
+    return unsafeMakeSpan(data.begin(), data.size());
 }
 
 void LibWebRTCRtpTransformableFrame::setData(std::span<const uint8_t> data)
@@ -116,7 +114,5 @@ RTCEncodedVideoFrameMetadata LibWebRTCRtpTransformableFrame::videoMetadata() con
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_RTC) && USE(LIBWEBRTC)

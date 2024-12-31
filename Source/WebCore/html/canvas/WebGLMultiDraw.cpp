@@ -32,8 +32,6 @@
 #include "WebGLUtilities.h"
 #include <wtf/TZoneMallocInlines.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebGLMultiDraw);
@@ -80,7 +78,7 @@ void WebGLMultiDraw::multiDrawArraysWEBGL(GCGLenum mode, Int32List&& firstsList,
     {
         ScopedInspectorShaderProgramHighlight scopedHighlight { context };
 
-        context.protectedGraphicsContextGL()->multiDrawArraysANGLE(mode, GCGLSpanTuple { firstsList.data() + firstsOffset, countsList.data() + countsOffset, static_cast<size_t>(drawcount) });
+        context.protectedGraphicsContextGL()->multiDrawArraysANGLE(mode, GCGLSpanTuple { firstsList.span().subspan(firstsOffset).data(), countsList.span().subspan(countsOffset).data(), static_cast<size_t>(drawcount) });
     }
 
     context.markContextChangedAndNotifyCanvasObserver();
@@ -110,7 +108,7 @@ void WebGLMultiDraw::multiDrawArraysInstancedWEBGL(GCGLenum mode, Int32List&& fi
     {
         ScopedInspectorShaderProgramHighlight scopedHighlight { context };
 
-        context.protectedGraphicsContextGL()->multiDrawArraysInstancedANGLE(mode, GCGLSpanTuple { firstsList.data() +  firstsOffset, countsList.data() + countsOffset, instanceCountsList.data() + instanceCountsOffset, static_cast<size_t>(drawcount) });
+        context.protectedGraphicsContextGL()->multiDrawArraysInstancedANGLE(mode, GCGLSpanTuple { firstsList.span().subspan(firstsOffset).data(), countsList.span().subspan(countsOffset).data(), instanceCountsList.span().subspan(instanceCountsOffset).data(), static_cast<size_t>(drawcount) });
     }
 
     context.markContextChangedAndNotifyCanvasObserver();
@@ -139,7 +137,7 @@ void WebGLMultiDraw::multiDrawElementsWEBGL(GCGLenum mode, Int32List&& countsLis
     {
         ScopedInspectorShaderProgramHighlight scopedHighlight { context };
 
-        context.protectedGraphicsContextGL()->multiDrawElementsANGLE(mode, GCGLSpanTuple { countsList.data() + countsOffset, offsetsList.data() + offsetsOffset, static_cast<size_t>(drawcount) }, type);
+        context.protectedGraphicsContextGL()->multiDrawElementsANGLE(mode, GCGLSpanTuple { countsList.span().subspan(countsOffset).data(), offsetsList.span().subspan(offsetsOffset).data(), static_cast<size_t>(drawcount) }, type);
     }
 
     context.markContextChangedAndNotifyCanvasObserver();
@@ -169,7 +167,7 @@ void WebGLMultiDraw::multiDrawElementsInstancedWEBGL(GCGLenum mode, Int32List&& 
     {
         ScopedInspectorShaderProgramHighlight scopedHighlight { context };
 
-        context.protectedGraphicsContextGL()->multiDrawElementsInstancedANGLE(mode, GCGLSpanTuple { countsList.data() + countsOffset, offsetsList.data() + offsetsOffset, instanceCountsList.data() + instanceCountsOffset, static_cast<size_t>(drawcount) }, type);
+        context.protectedGraphicsContextGL()->multiDrawElementsInstancedANGLE(mode, GCGLSpanTuple { countsList.span().subspan(countsOffset).data(), offsetsList.span().subspan(offsetsOffset).data(), instanceCountsList.span().subspan(instanceCountsOffset).data(), static_cast<size_t>(drawcount) }, type);
     }
 
     context.markContextChangedAndNotifyCanvasObserver();
@@ -201,7 +199,5 @@ bool WebGLMultiDraw::validateOffset(WebGLRenderingContextBase& context, ASCIILit
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEBGL)

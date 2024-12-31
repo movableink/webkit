@@ -134,8 +134,6 @@
 #define ASSUME_LITTLE_ENDIAN 1
 #endif
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 using namespace JSC;
@@ -987,7 +985,7 @@ static std::optional<Vector<uint8_t>> unwrapCryptoKey(JSGlobalObject* lexicalGlo
 #if ASSUME_LITTLE_ENDIAN
 template <typename T> static void writeLittleEndian(Vector<uint8_t>& buffer, T value)
 {
-    buffer.append(std::span { reinterpret_cast<uint8_t*>(&value), sizeof(value) });
+    buffer.append(asByteSpan(value));
 }
 #else
 template <typename T> static void writeLittleEndian(Vector<uint8_t>& buffer, T value)
@@ -2964,21 +2962,20 @@ public:
     {
         if (buffer.isEmpty())
             return String();
-        const uint8_t* ptr = buffer.begin();
-        const uint8_t* end = buffer.end();
+        auto span = buffer.span();
         uint32_t version;
-        if (!readLittleEndian(ptr, end, version) || majorVersionFor(version) > CurrentMajorVersion)
+        if (!readLittleEndian(span, version) || majorVersionFor(version) > CurrentMajorVersion)
             return String();
         uint8_t tag;
-        if (!readLittleEndian(ptr, end, tag) || tag != StringTag)
+        if (!readLittleEndian(span, tag) || tag != StringTag)
             return String();
         uint32_t length;
-        if (!readLittleEndian(ptr, end, length))
+        if (!readLittleEndian(span, length))
             return String();
         bool is8Bit = length & StringDataIs8BitFlag;
         length &= ~StringDataIs8BitFlag;
         String str;
-        if (!readString(ptr, end, str, length, is8Bit, shouldAtomize))
+        if (!readString(span, str, length, is8Bit, shouldAtomize))
             return String();
         return str;
     }
@@ -3147,8 +3144,7 @@ private:
         , m_globalObject(globalObject)
         , m_isDOMGlobalObject(globalObject->inherits<JSDOMGlobalObject>())
         , m_canCreateDOMObject(m_isDOMGlobalObject && !globalObject->inherits<JSIDBSerializationGlobalObject>())
-        , m_ptr(buffer.data())
-        , m_end(buffer.data() + buffer.size())
+        , m_data(buffer.span())
         , m_majorVersion(0xFFFFFFFF)
         , m_minorVersion(0xFFFFFFFF)
         , m_messagePorts(messagePorts)
@@ -3226,8 +3222,7 @@ private:
         , m_globalObject(globalObject)
         , m_isDOMGlobalObject(globalObject->inherits<JSDOMGlobalObject>())
         , m_canCreateDOMObject(m_isDOMGlobalObject && !globalObject->inherits<JSIDBSerializationGlobalObject>())
-        , m_ptr(buffer.data())
-        , m_end(buffer.data() + buffer.size())
+        , m_data(buffer.span())
         , m_majorVersion(0xFFFFFFFF)
         , m_minorVersion(0xFFFFFFFF)
         , m_messagePorts(messagePorts)
@@ -3378,7 +3373,7 @@ private:
 
     template <typename T> bool readLittleEndian(T& value)
     {
-        if (m_failed || !readLittleEndian(m_ptr, m_end, value)) {
+        if (m_failed || !readLittleEndian(m_data, value)) {
             SERIALIZE_TRACE("FAIL deserialize");
             fail();
             return false;
@@ -3386,31 +3381,29 @@ private:
         return true;
     }
 #if ASSUME_LITTLE_ENDIAN
-    template <typename T> static bool readLittleEndian(const uint8_t*& ptr, const uint8_t* end, T& value)
+    template <typename T> static bool readLittleEndian(std::span<const uint8_t>& span, T& value)
     {
-        if (ptr > end - sizeof(value))
+        if (span.size() < sizeof(value))
             return false;
 
-        if (sizeof(T) == 1)
-            value = *ptr++;
-        else {
-            value = *reinterpret_cast<const T*>(ptr);
-            ptr += sizeof(T);
-        }
+        value = reinterpretCastSpanStartTo<const T>(span);
+        span = span.subspan(sizeof(T));
         return true;
     }
 #else
-    template <typename T> static bool readLittleEndian(const uint8_t*& ptr, const uint8_t* end, T& value)
+    template <typename T> static bool readLittleEndian(std::span<const uint8_t>& span, T& value)
     {
-        if (ptr > end - sizeof(value))
+        if (span.size() < sizeof(value))
             return false;
 
-        if (sizeof(T) == 1)
-            value = *ptr++;
-        else {
+        if constexpr (sizeof(T) == 1) {
+            value = span[0];
+            span = span.subspan(1);
+        } else {
             value = 0;
-            for (unsigned i = 0; i < sizeof(T); i++)
-                value += ((T)*ptr++) << (i * 8);
+            for (size_t i = 0; i < sizeof(T); ++i)
+                value += static_cast<T>(span[i]) << (i * 8);
+            span = span.subspan(sizeof(T));
         }
         return true;
     }
@@ -3500,38 +3493,39 @@ private:
         return i;
     }
 
-    static bool readString(const uint8_t*& ptr, const uint8_t* end, String& str, unsigned length, bool is8Bit, ShouldAtomize shouldAtomize)
+    static bool readString(std::span<const uint8_t>& span, String& str, unsigned length, bool is8Bit, ShouldAtomize shouldAtomize)
     {
         if (length >= std::numeric_limits<int32_t>::max() / sizeof(UChar))
             return false;
 
         if (is8Bit) {
-            if ((end - ptr) < static_cast<int>(length))
+            if (span.size() < length)
                 return false;
             if (shouldAtomize == ShouldAtomize::Yes)
-                str = AtomString({ ptr, length });
+                str = AtomString(span.first(length));
             else
-                str = String({ ptr, length });
-            ptr += length;
+                str = String(span.first(length));
+            span = span.subspan(length);
             return true;
         }
 
-        unsigned size = length * sizeof(UChar);
-        if ((end - ptr) < static_cast<int>(size))
+        size_t size = length * sizeof(UChar);
+        if (span.size() < size)
             return false;
 
 #if ASSUME_LITTLE_ENDIAN
+        size_t lengthInBytes = length * sizeof(UChar);
         if (shouldAtomize == ShouldAtomize::Yes)
-            str = AtomString({ reinterpret_cast<const UChar*>(ptr), length });
+            str = AtomString(spanReinterpretCast<const UChar>(span.first(lengthInBytes)));
         else
-            str = String({ reinterpret_cast<const UChar*>(ptr), length });
-        ptr += length * sizeof(UChar);
+            str = String(spanReinterpretCast<const UChar>(span.first(lengthInBytes)));
+        span = span.subspan(lengthInBytes);
 #else
         std::span<UChar> characters;
         str = String::createUninitialized(length, characters);
         for (unsigned i = 0; i < length; ++i) {
             uint16_t c;
-            readLittleEndian(ptr, end, c);
+            readLittleEndian(span, c);
             characters[i] = c;
         }
         if (shouldAtomize == ShouldAtomize::Yes)
@@ -3584,7 +3578,7 @@ private:
         bool is8Bit = length & StringDataIs8BitFlag;
         length &= ~StringDataIs8BitFlag;
         String str;
-        if (!readString(m_ptr, m_end, str, length, is8Bit, shouldAtomize)) {
+        if (!readString(m_data, str, length, is8Bit, shouldAtomize)) {
             SERIALIZE_TRACE("FAIL deserialize");
             fail();
             return false;
@@ -3596,20 +3590,22 @@ private:
 
     SerializationTag readTag()
     {
-        if (m_ptr >= m_end) {
+        if (m_data.empty()) {
             SERIALIZE_TRACE("FAIL deserialize");
             return ErrorTag;
         }
-        auto tag = static_cast<SerializationTag>(*m_ptr++);
+        auto tag = static_cast<SerializationTag>(m_data[0]);
+        m_data = m_data.subspan(1);
         SERIALIZE_TRACE("deserialize ", tag);
         return tag;
     }
 
     bool readArrayBufferViewSubtag(ArrayBufferViewSubtag& tag)
     {
-        if (m_ptr >= m_end)
+        if (m_data.empty())
             return false;
-        tag = static_cast<ArrayBufferViewSubtag>(*m_ptr++);
+        tag = static_cast<ArrayBufferViewSubtag>(m_data[0]);
+        m_data = m_data.subspan(1);
         return true;
     }
 
@@ -3664,12 +3660,12 @@ private:
         LengthType length;
         if (!read(length))
             return false;
-        if (m_ptr + length > m_end)
+        if (m_data.size() < length)
             return false;
-        arrayBuffer = ArrayBuffer::tryCreate({ m_ptr, static_cast<size_t>(length) });
+        arrayBuffer = ArrayBuffer::tryCreate(m_data.first(length));
         if (!arrayBuffer)
             return false;
-        m_ptr += length;
+        m_data = m_data.subspan(length);
         return true;
     }
 
@@ -3688,14 +3684,14 @@ private:
         uint64_t maxByteLength;
         if (!read(maxByteLength))
             return false;
-        if (m_ptr + byteLength > m_end)
+        if (m_data.size() < byteLength)
             return false;
         arrayBuffer = ArrayBuffer::tryCreate(byteLength, 1, maxByteLength);
         if (!arrayBuffer)
             return false;
         ASSERT(arrayBuffer->isResizableNonShared());
-        memcpy(arrayBuffer->data(), m_ptr, byteLength);
-        m_ptr += byteLength;
+        memcpySpan(arrayBuffer->mutableSpan(), m_data.first(byteLength));
+        m_data = m_data.subspan(byteLength);
         return true;
     }
 
@@ -3798,10 +3794,10 @@ private:
         uint32_t size;
         if (!read(size))
             return false;
-        if (static_cast<uint32_t>(m_end - m_ptr) < size)
+        if (static_cast<uint32_t>(m_data.size()) < size)
             return false;
-        result.append(std::span { m_ptr, size });
-        m_ptr += size;
+        result.append(m_data.first(size));
+        m_data = m_data.subspan(size);
         return true;
     }
 
@@ -3827,9 +3823,10 @@ private:
 
     bool read(DestinationColorSpaceTag& tag)
     {
-        if (m_ptr >= m_end)
+        if (m_data.empty())
             return false;
-        tag = static_cast<DestinationColorSpaceTag>(*m_ptr++);
+        tag = static_cast<DestinationColorSpaceTag>(m_data[0]);
+        m_data = m_data.subspan(1);
         return true;
     }
 
@@ -3837,14 +3834,14 @@ private:
     bool read(RetainPtr<CFDataRef>& data)
     {
         uint32_t dataLength;
-        if (!read(dataLength) || static_cast<uint32_t>(m_end - m_ptr) < dataLength)
+        if (!read(dataLength) || static_cast<uint32_t>(m_data.size()) < dataLength)
             return false;
 
-        data = adoptCF(CFDataCreateWithBytesNoCopy(nullptr, m_ptr, dataLength, kCFAllocatorNull));
+        data = adoptCF(CFDataCreateWithBytesNoCopy(nullptr, m_data.data(), dataLength, kCFAllocatorNull));
         if (!data)
             return false;
 
-        m_ptr += dataLength;
+        m_data = m_data.subspan(dataLength);
         return true;
     }
 #endif
@@ -4832,6 +4829,7 @@ private:
     {
         if (!isSafeToRecurse())
             return JSValue();
+        auto originalData = m_data;
         SerializationTag tag = readTag();
         if (!isTypeExposedToGlobalObject(*m_globalObject, tag)) {
             SERIALIZE_TRACE("FAIL deserialize");
@@ -4944,13 +4942,13 @@ private:
             uint32_t length;
             if (!read(length))
                 return JSValue();
-            if (static_cast<uint32_t>(m_end - m_ptr) < length) {
+            if (static_cast<uint32_t>(m_data.size()) < length) {
                 SERIALIZE_TRACE("FAIL deserialize");
                 fail();
                 return JSValue();
             }
-            auto bufferStart = m_ptr;
-            m_ptr += length;
+            auto bufferStart = m_data;
+            m_data = m_data.subspan(length);
 
             auto resultColorSpace = PredefinedColorSpace::SRGB;
             if (m_majorVersion > 7) {
@@ -4970,7 +4968,7 @@ private:
             if (!m_isDOMGlobalObject)
                 return jsNull();
 
-            auto result = ImageData::create(width, height, resultColorSpace, { }, std::span(bufferStart, length));
+            auto result = ImageData::create(width, height, resultColorSpace, { }, bufferStart.first(length));
             if (result.hasException()) {
                 SERIALIZE_TRACE("FAIL deserialize");
                 fail();
@@ -5325,7 +5323,7 @@ private:
 
         default:
             SERIALIZE_TRACE("push back ", tag);
-            m_ptr--; // Push the tag back
+            m_data = originalData; // Push the tag back
             return JSValue();
         }
     }
@@ -5333,17 +5331,17 @@ private:
     template<SerializationTag Tag>
     bool consumeCollectionDataTerminationIfPossible()
     {
+        auto originalData = m_data;
         if (readTag() == Tag)
             return true;
-        m_ptr--;
+        m_data = originalData;
         return false;
     }
 
     JSGlobalObject* const m_globalObject;
     const bool m_isDOMGlobalObject;
     const bool m_canCreateDOMObject;
-    const uint8_t* m_ptr;
-    const uint8_t* const m_end;
+    std::span<const uint8_t> m_data;
     unsigned m_majorVersion;
     unsigned m_minorVersion;
     Vector<CachedString> m_constantPool;
@@ -6514,5 +6512,3 @@ std::optional<ErrorInformation> extractErrorInformationFromErrorInstance(JSC::JS
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

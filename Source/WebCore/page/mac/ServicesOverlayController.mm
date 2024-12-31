@@ -51,8 +51,6 @@
 #import <wtf/TZoneMallocInlines.h>
 #import <pal/mac/DataDetectorsSoftLink.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ServicesOverlayController);
@@ -93,7 +91,7 @@ static const uint8_t AlignmentNone = 0;
 static const uint8_t AlignmentLeft = 1 << 0;
 static const uint8_t AlignmentRight = 1 << 1;
 
-static void expandForGap(Vector<LayoutRect>& rects, uint8_t* alignments, const GapRects& gap)
+static void expandForGap(Vector<LayoutRect>& rects, std::span<uint8_t> alignments, const GapRects& gap)
 {
     if (!gap.left().isEmpty()) {
         LayoutUnit leftEdge = gap.left().x();
@@ -171,7 +169,7 @@ static void compactRectsWithGapRects(Vector<LayoutRect>& rects, const Vector<Gap
     
     // FIXME: The following alignments are correct for LTR text.
     // We should also account for RTL.
-    uint8_t alignments[3];
+    std::array<uint8_t, 3> alignments;
     if (rects.size() == 1) {
         alignments[0] = AlignmentLeft | AlignmentRight;
         alignments[1] = AlignmentNone;
@@ -695,7 +693,5 @@ RefPtr<GraphicsLayer> ServicesOverlayController::createGraphicsLayer(GraphicsLay
 #endif
 
 } // namespace WebKit
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // (ENABLE(SERVICE_CONTROLS) || ENABLE(TELEPHONE_NUMBER_DETECTION)) && PLATFORM(MAC)

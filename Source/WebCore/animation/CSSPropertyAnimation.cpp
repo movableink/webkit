@@ -77,8 +77,6 @@
 #include <wtf/PointerComparison.h>
 #include <wtf/text/TextStream.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 #if !LOG_DISABLED
@@ -3744,7 +3742,7 @@ private:
     }
 
     Vector<std::unique_ptr<AnimationPropertyWrapperBase>> m_propertyWrappers;
-    unsigned short m_propertyToIdMap[numCSSProperties];
+    std::array<unsigned short, numCSSProperties> m_propertyToIdMap;
 
     static const unsigned short cInvalidPropertyWrapperIndex = std::numeric_limits<unsigned short>::max();
 
@@ -4131,7 +4129,7 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
     };
     const unsigned animatableLonghandPropertiesCount = std::size(animatableLonghandPropertyWrappers);
 
-    static const CSSPropertyID animatableShorthandProperties[] = {
+    static constexpr auto animatableShorthandProperties = std::to_array<CSSPropertyID>({
         CSSPropertyAll,
         CSSPropertyBackground, // for background-color, background-position, background-image
         CSSPropertyBackgroundPosition,
@@ -4200,8 +4198,8 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         CSSPropertyTextBox,
         CSSPropertyTextWrap,
         CSSPropertyWhiteSpace
-    };
-    const unsigned animatableShorthandPropertiesCount = std::size(animatableShorthandProperties);
+    });
+    constexpr unsigned animatableShorthandPropertiesCount = std::size(animatableShorthandProperties);
 
     // Make sure unused slots have a value
     for (int i = 0; i < numCSSProperties; ++i)
@@ -4780,5 +4778,3 @@ int CSSPropertyAnimation::getNumProperties()
 }
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

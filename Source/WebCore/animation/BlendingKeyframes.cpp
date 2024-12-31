@@ -40,8 +40,7 @@
 #include "StyleResolver.h"
 #include "TransformOperations.h"
 #include "TranslateTransformOperation.h"
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+#include <wtf/ZippedRange.h>
 
 namespace WebCore {
 
@@ -63,11 +62,10 @@ bool BlendingKeyframes::operator==(const BlendingKeyframes& o) const
     if (m_keyframes.size() != o.m_keyframes.size())
         return false;
 
-    auto it2 = o.m_keyframes.begin();
-    for (auto it1 = m_keyframes.begin(); it1 != m_keyframes.end(); ++it1, ++it2) {
-        if (it1->offset() != it2->offset())
+    for (auto [keyframe1, keyframe2] : zippedRange(m_keyframes, o.m_keyframes)) {
+        if (keyframe1.offset() != keyframe2.offset())
             return false;
-        if (*it1->style() != *it2->style())
+        if (keyframe1.style() != keyframe2.style())
             return false;
     }
 
@@ -404,5 +402,3 @@ bool BlendingKeyframe::animatesProperty(KeyframeInterpolation::Property property
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
