@@ -2115,7 +2115,7 @@ VisiblePosition positionForPointRespectingEditingBoundaries(RenderBlock& parent,
     return ancestor->createVisiblePosition(childElement->computeNodeIndex() + 1, Affinity::Upstream);
 }
 
-VisiblePosition RenderBlock::positionForPointWithInlineChildren(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*)
+VisiblePosition RenderBlock::positionForPointWithInlineChildren(const LayoutPoint&, HitTestSource)
 {
     ASSERT_NOT_REACHED();
     return VisiblePosition();
@@ -2171,7 +2171,7 @@ VisiblePosition RenderBlock::positionForPoint(const LayoutPoint& point, HitTestS
         pointInLogicalContents = pointInLogicalContents.transposedPoint();
 
     if (childrenInline())
-        return positionForPointWithInlineChildren(pointInLogicalContents, source, fragment);
+        return positionForPointWithInlineChildren(pointInLogicalContents, source);
 
     RenderBox* lastCandidateBox = lastChildBox();
 

@@ -407,8 +407,7 @@ private:
 
     void paintContinuationOutlines(PaintInfo&, const LayoutPoint&);
 
-    // FIXME-BLOCKFLOW: Remove virtualizaion when all callers have moved to RenderBlockFlow
-    virtual VisiblePosition positionForPointWithInlineChildren(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*);
+    virtual VisiblePosition positionForPointWithInlineChildren(const LayoutPoint&, HitTestSource);
 
     RenderPtr<RenderBlock> clone() const;
 

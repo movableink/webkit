@@ -81,7 +81,6 @@ public:
 
     const RenderBlockFlow& formattingContextRoot() const { return m_inlineContent->formattingContextRoot(); }
 
-    RenderFragmentContainer* containingFragment() const { return nullptr; }
     bool isFirstAfterPageBreak() const { return line().isFirstAfterPageBreak(); }
 
     size_t lineIndex() const { return m_lineIndex; }
