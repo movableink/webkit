@@ -197,9 +197,9 @@ private:
 
     bool spanningItemCrossesFlexibleSizedTracks(const GridSpan&) const;
 
-    typedef struct GridItemsSpanGroupRange GridItemsSpanGroupRange;
-    template <TrackSizeComputationVariant variant, TrackSizeComputationPhase phase> void increaseSizesToAccommodateSpanningItems(const GridItemsSpanGroupRange& gridItemsWithSpan, GridLayoutState&);
-    template <TrackSizeComputationVariant variant> void increaseSizesToAccommodateSpanningItems(const GridItemsSpanGroupRange& gridItemsWithSpan, GridLayoutState&);
+    using GridItemsSpanGroupRange = std::span<GridItemWithSpan>;
+    template <TrackSizeComputationVariant variant, TrackSizeComputationPhase phase> void increaseSizesToAccommodateSpanningItems(GridItemsSpanGroupRange gridItemsWithSpan, GridLayoutState&);
+    template <TrackSizeComputationVariant variant> void increaseSizesToAccommodateSpanningItems(GridItemsSpanGroupRange gridItemsWithSpan, GridLayoutState&);
 
     // 12.5 Resolve Intrinsic Track Sizing : Step 3
     // https://drafts.csswg.org/css-grid-2/#algo-spanning-items

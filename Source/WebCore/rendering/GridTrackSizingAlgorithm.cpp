@@ -355,11 +355,6 @@ private:
     GridSpan m_span;
 };
 
-struct GridItemsSpanGroupRange {
-    Vector<GridItemWithSpan>::iterator rangeStart;
-    Vector<GridItemWithSpan>::iterator rangeEnd;
-};
-
 enum class TrackSizeRestriction : uint8_t {
     AllowInfinity,
     ForbidInfinity,
@@ -507,9 +502,8 @@ static void markAsInfinitelyGrowableForTrackSizeComputationPhase(TrackSizeComput
     ASSERT_NOT_REACHED();
 }
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 template <TrackSizeComputationVariant variant, TrackSizeComputationPhase phase>
-void GridTrackSizingAlgorithm::increaseSizesToAccommodateSpanningItems(const GridItemsSpanGroupRange& gridItemsWithSpan, GridLayoutState& gridLayoutState)
+void GridTrackSizingAlgorithm::increaseSizesToAccommodateSpanningItems(GridItemsSpanGroupRange gridItemsWithSpan, GridLayoutState& gridLayoutState)
 {
     Vector<GridTrack>& allTracks = tracks(m_direction);
     for (const auto& trackIndex : m_contentSizedTracksIndex) {
@@ -519,8 +513,7 @@ void GridTrackSizingAlgorithm::increaseSizesToAccommodateSpanningItems(const Gri
 
     Vector<WeakPtr<GridTrack>> growBeyondGrowthLimitsTracks;
     Vector<WeakPtr<GridTrack>> filteredTracks;
-    for (auto it = gridItemsWithSpan.rangeStart; it != gridItemsWithSpan.rangeEnd; ++it) {
-        GridItemWithSpan& gridItemWithSpan = *it;
+    for (auto& gridItemWithSpan : gridItemsWithSpan) {
         const GridSpan& itemSpan = gridItemWithSpan.span();
         ASSERT(variant == TrackSizeComputationVariant::CrossingFlexibleTracks || itemSpan.integerSpan() > 1u);
 
@@ -559,10 +552,9 @@ void GridTrackSizingAlgorithm::increaseSizesToAccommodateSpanningItems(const Gri
         updateTrackSizeForTrackSizeComputationPhase(phase, track);
     }
 }
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 template <TrackSizeComputationVariant variant>
-void GridTrackSizingAlgorithm::increaseSizesToAccommodateSpanningItems(const GridItemsSpanGroupRange& gridItemsWithSpan, GridLayoutState& gridLayoutState)
+void GridTrackSizingAlgorithm::increaseSizesToAccommodateSpanningItems(GridItemsSpanGroupRange gridItemsWithSpan, GridLayoutState& gridLayoutState)
 {
     increaseSizesToAccommodateSpanningItems<variant, TrackSizeComputationPhase::ResolveIntrinsicMinimums>(gridItemsWithSpan, gridLayoutState);
     increaseSizesToAccommodateSpanningItems<variant, TrackSizeComputationPhase::ResolveContentBasedMinimums>(gridItemsWithSpan, gridLayoutState);
@@ -1862,15 +1854,14 @@ void GridTrackSizingAlgorithm::resolveIntrinsicTrackSizes(GridLayoutState& gridL
         std::sort(itemsSortedByIncreasingSpan.begin(), itemsSortedByIncreasingSpan.end());
     }
 
-    auto it = itemsSortedByIncreasingSpan.begin();
-    auto end = itemsSortedByIncreasingSpan.end();
-    while (it != end) {
-        GridItemsSpanGroupRange spanGroupRange = { it, std::upper_bound(it, end, *it) };
-        increaseSizesToAccommodateSpanningItems<TrackSizeComputationVariant::NotCrossingFlexibleTracks>(spanGroupRange, gridLayoutState);
-        it = spanGroupRange.rangeEnd;
+    auto itemSpan = itemsSortedByIncreasingSpan.mutableSpan();
+    while (!itemSpan.empty()) {
+        auto upperBound = std::upper_bound(itemSpan.begin(), itemSpan.end(), itemSpan[0]);
+        size_t rangeSize = upperBound - itemSpan.begin();
+        increaseSizesToAccommodateSpanningItems<TrackSizeComputationVariant::NotCrossingFlexibleTracks>(itemSpan.first(rangeSize), gridLayoutState);
+        itemSpan = itemSpan.subspan(rangeSize);
     }
-    GridItemsSpanGroupRange tracksGroupRange = { itemsCrossingFlexibleTracks.begin(), itemsCrossingFlexibleTracks.end() };
-    increaseSizesToAccommodateSpanningItems<TrackSizeComputationVariant::CrossingFlexibleTracks>(tracksGroupRange, gridLayoutState);
+    increaseSizesToAccommodateSpanningItems<TrackSizeComputationVariant::CrossingFlexibleTracks>(itemsCrossingFlexibleTracks.mutableSpan(), gridLayoutState);
     handleInfinityGrowthLimit();
 }
 
