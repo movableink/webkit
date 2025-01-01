@@ -2810,7 +2810,7 @@ auto Document::updateLayout(OptionSet<LayoutOptions> layoutOptions, const Elemen
                     context = nullptr;
             }
             if (frameView->layoutContext().needsLayout(layoutOptions)) {
-                ContentVisibilityForceLayoutScope scope(*renderView(), context);
+                auto contentVisibilityScope = ContentVisibilityForceLayoutScope { frameView->layoutContext(), context };
                 frameView->layoutContext().layout(layoutOptions.contains(LayoutOptions::CanDeferUpdateLayerPositions));
                 result = UpdateLayoutResult::ChangesDone;
             }
