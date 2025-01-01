@@ -111,9 +111,9 @@ LayoutUnit GridMasonryLayout::calculateMasonryIntrinsicLogicalWidth(RenderBox& g
 void GridMasonryLayout::setItemGridAxisContainingBlockToGridArea(const GridTrackSizingAlgorithm& algorithm, RenderBox& gridItem)
 {
     if (gridAxisDirection() == GridTrackSizingDirection::ForColumns)
-        gridItem.setOverridingContainingBlockContentLogicalWidth(algorithm.gridAreaBreadthForGridItem(gridItem, GridTrackSizingDirection::ForColumns));
+        gridItem.setGridAreaContentLogicalWidth(algorithm.gridAreaBreadthForGridItem(gridItem, GridTrackSizingDirection::ForColumns));
     else
-        gridItem.setOverridingContainingBlockContentLogicalHeight(algorithm.gridAreaBreadthForGridItem(gridItem, GridTrackSizingDirection::ForRows));
+        gridItem.setGridAreaContentLogicalHeight(algorithm.gridAreaBreadthForGridItem(gridItem, GridTrackSizingDirection::ForRows));
     
     // FIXME(249230): Try to cache masonry layout sizes
     gridItem.setChildNeedsLayout(MarkOnlyThis);

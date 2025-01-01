@@ -381,7 +381,7 @@ LayoutSize RenderBoxModelObject::relativePositionOffset() const
             if (!renderBox || !renderBox->isGridItem())
                 return containingBlock->availableWidth();
             // For grid items the containing block is the grid area, so offsets should be resolved against that.
-            auto containingBlockContentWidth = renderBox->overridingContainingBlockContentWidth(containingBlock->writingMode());
+            auto containingBlockContentWidth = renderBox->gridAreaContentWidth(containingBlock->writingMode());
             if (!containingBlockContentWidth || !*containingBlockContentWidth) {
                 ASSERT_NOT_REACHED();
                 return containingBlock->availableWidth();
@@ -414,7 +414,7 @@ LayoutSize RenderBoxModelObject::relativePositionOffset() const
         if (!renderBox || !renderBox->isGridItem())
             return containingBlock->availableHeight();
         // For grid items the containing block is the grid area, so offsets should be resolved against that.
-        auto containingBlockContentHeight = renderBox->overridingContainingBlockContentHeight(containingBlock->style().writingMode());
+        auto containingBlockContentHeight = renderBox->gridAreaContentHeight(containingBlock->style().writingMode());
         if (!containingBlockContentHeight || !*containingBlockContentHeight) {
             ASSERT_NOT_REACHED();
             return containingBlock->availableHeight();

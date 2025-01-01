@@ -189,9 +189,9 @@ GridTrackSizingDirection flowAwareDirectionForParent(const RenderGrid& grid, con
     return isOrthogonalParent(grid, parent) ? (direction == GridTrackSizingDirection::ForColumns ? GridTrackSizingDirection::ForRows : GridTrackSizingDirection::ForColumns) : direction;
 }
 
-std::optional<RenderBox::ContainingBlockOverrideValue> overridingContainingBlockContentSizeForGridItem(const RenderBox& gridItem, GridTrackSizingDirection direction)
+std::optional<RenderBox::GridAreaSize> overridingContainingBlockContentSizeForGridItem(const RenderBox& gridItem, GridTrackSizingDirection direction)
 {
-    return direction == GridTrackSizingDirection::ForColumns ? gridItem.overridingContainingBlockContentLogicalWidth() : gridItem.overridingContainingBlockContentLogicalHeight();
+    return direction == GridTrackSizingDirection::ForColumns ? gridItem.gridAreaContentLogicalWidth() : gridItem.gridAreaContentLogicalHeight();
 }
 
 bool isFlippedDirection(const RenderGrid& grid, GridTrackSizingDirection direction)

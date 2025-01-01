@@ -1729,7 +1729,7 @@ void RenderBlock::insertPositionedObject(RenderBox& positioned)
 {
     ASSERT(!isAnonymousBlock());
 
-    positioned.clearOverridingContainingBlockContentSize();
+    positioned.clearGridAreaContentSize();
 
     if (positioned.isRenderFragmentedFlow())
         return;

@@ -168,9 +168,9 @@ static void setOverridingContainingBlockContentSizeForGridItem(const RenderGrid&
     // the directions.
     direction = GridLayoutFunctions::flowAwareDirectionForGridItem(grid, *gridItem.containingBlock(), direction);
     if (direction == GridTrackSizingDirection::ForColumns)
-        gridItem.setOverridingContainingBlockContentLogicalWidth(size);
+        gridItem.setGridAreaContentLogicalWidth(size);
     else
-        gridItem.setOverridingContainingBlockContentLogicalHeight(size);
+        gridItem.setGridAreaContentLogicalHeight(size);
 }
 
 // GridTrackSizingAlgorithm private.
