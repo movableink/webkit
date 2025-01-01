@@ -245,6 +245,7 @@ void LocalFrameViewLayoutContext::performLayout(bool canDeferUpdateLayerPosition
         applyTextSizingIfNeeded(*layoutRoot.get());
 #endif
         clearSubtreeLayoutRoot();
+        ASSERT(m_percentHeightIgnoreList.isEmptyIgnoringNullReferences());
 
 #if !LOG_DISABLED && ENABLE(TREE_DEBUGGING)
         auto layoutLogEnabled = [] {
@@ -738,6 +739,21 @@ void LocalFrameViewLayoutContext::setBoxNeedsTransformUpdateAfterContainerLayout
 Vector<SingleThreadWeakPtr<RenderBox>> LocalFrameViewLayoutContext::takeBoxesNeedingTransformUpdateAfterContainerLayout(RenderBlock& container)
 {
     return m_containersWithDescendantsNeedingTransformUpdate.take(container);
+}
+
+void LocalFrameViewLayoutContext::disablePercentHeightResolveFor(const RenderBox& flexItem)
+{
+    m_percentHeightIgnoreList.add(flexItem);
+}
+
+void LocalFrameViewLayoutContext::enablePercentHeightResolveFor(const RenderBox& flexItem)
+{
+    m_percentHeightIgnoreList.remove(flexItem);
+}
+
+bool LocalFrameViewLayoutContext::isPercentHeightResolveDisabledFor(const RenderBox& flexItem)
+{
+    return m_percentHeightIgnoreList.contains(flexItem);
 }
 
 #ifndef NDEBUG

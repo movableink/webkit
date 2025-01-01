@@ -100,6 +100,8 @@ public:
     bool isSkippedContentForLayout(const RenderElement&) const;
     bool isSkippedContentRootForLayout(const RenderElement&) const;
 
+    bool isPercentHeightResolveDisabledFor(const RenderBox& flexItem);
+
     RenderElement* subtreeLayoutRoot() const;
     void clearSubtreeLayoutRoot() { m_subtreeLayoutRoot.clear(); }
     void convertSubtreeLayoutToFullLayout();
@@ -137,8 +139,6 @@ public:
 #endif
     using LayoutStateStack = Vector<std::unique_ptr<RenderLayoutState>>;
 
-    const Layout::LayoutState* layoutFormattingState() const { return m_layoutState.get(); }
-
     UpdateScrollInfoAfterLayoutTransaction& updateScrollInfoAfterLayoutTransaction();
     UpdateScrollInfoAfterLayoutTransaction* updateScrollInfoAfterLayoutTransactionIfExists() { return m_updateScrollInfoAfterLayoutTransaction.get(); }
     void setBoxNeedsTransformUpdateAfterContainerLayout(RenderBox&, RenderBlock& container);
@@ -155,6 +155,7 @@ private:
     friend class LayoutStateMaintainer;
     friend class LayoutStateDisabler;
     friend class SubtreeLayoutStateMaintainer;
+    friend class FlexPercentResolveDisabler;
 
     bool needsLayoutInternal() const;
 
@@ -192,6 +193,9 @@ private:
 
     bool needsSkippedContentLayout() const { return m_needsSkippedContentLayout; }
 
+    void disablePercentHeightResolveFor(const RenderBox& flexItem);
+    void enablePercentHeightResolveFor(const RenderBox& flexItem);
+
     LocalFrame& frame() const;
     Ref<LocalFrame> protectedFrame();
     LocalFrameView& view() const;
@@ -219,10 +223,9 @@ private:
     unsigned m_layoutUpdateCount { 0 };
     unsigned m_renderLayerPositionUpdateCount { 0 };
     LayoutStateStack m_layoutStateStack;
-    std::unique_ptr<Layout::LayoutTree> m_layoutTree;
-    std::unique_ptr<Layout::LayoutState> m_layoutState;
     std::unique_ptr<UpdateScrollInfoAfterLayoutTransaction> m_updateScrollInfoAfterLayoutTransaction;
     SingleThreadWeakHashMap<RenderBlock, Vector<SingleThreadWeakPtr<RenderBox>>> m_containersWithDescendantsNeedingTransformUpdate;
+    SingleThreadWeakHashSet<RenderBox> m_percentHeightIgnoreList;
 
     struct UpdateLayerPositions {
         void merge(const UpdateLayerPositions& other)

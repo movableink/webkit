@@ -340,6 +340,18 @@ SubtreeLayoutStateMaintainer::~SubtreeLayoutStateMaintainer()
     }
 }
 
+FlexPercentResolveDisabler::FlexPercentResolveDisabler(LocalFrameViewLayoutContext& layoutContext, const RenderBox& flexItem)
+    : m_layoutContext(layoutContext)
+    , m_flexItem(flexItem)
+{
+    m_layoutContext->disablePercentHeightResolveFor(flexItem);
+}
+
+FlexPercentResolveDisabler::~FlexPercentResolveDisabler()
+{
+    m_layoutContext->enablePercentHeightResolveFor(m_flexItem);
+}
+
 ContentVisibilityForceLayoutScope::ContentVisibilityForceLayoutScope(RenderView& layoutRoot, const Element* context)
 {
     if (context) {

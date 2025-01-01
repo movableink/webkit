@@ -5056,7 +5056,6 @@ imported/w3c/web-platform-tests/css/css-flexbox/gap-019.html [ ImageOnlyFailure 
 imported/w3c/web-platform-tests/css/css-flexbox/inline-flexbox-vertical-rl-image-flexitem-crash-print.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-flexbox/intrinsic-size/col-wrap-013.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-flexbox/intrinsic-size/col-wrap-014.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-flexbox/percentage-padding-003.html [ ImageOnlyFailure ]
 
 # text-combine-upright bugs
 webkit.org/b/234704 imported/w3c/web-platform-tests/css/css-writing-modes/text-combine-upright-layout-rules-001.html [ ImageOnlyFailure ]

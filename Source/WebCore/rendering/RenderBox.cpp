@@ -2267,10 +2267,12 @@ LayoutUnit RenderBox::containingBlockLogicalWidthForContent() const
 
 LayoutUnit RenderBox::containingBlockLogicalHeightForContent(AvailableLogicalHeightType heightType) const
 {
-    if (auto overridingContainingBlockContentLogicalHeight = this->overridingContainingBlockContentLogicalHeight(); overridingContainingBlockContentLogicalHeight && *overridingContainingBlockContentLogicalHeight) {
-        // FIXME: Containing block for a grid item is the grid area it's located in. We need to return whatever
-        // height value we get from overridingContainingBlockContentLogicalHeight() here, including std::nullopt.
-        return overridingContainingBlockContentLogicalHeight->value();
+    if (isGridItem()) {
+        if (auto overridingContainingBlockContentLogicalHeight = this->overridingContainingBlockContentLogicalHeight(); overridingContainingBlockContentLogicalHeight && *overridingContainingBlockContentLogicalHeight) {
+            // FIXME: Containing block for a grid item is the grid area it's located in. We need to return whatever
+            // height value we get from overridingContainingBlockContentLogicalHeight() here, including std::nullopt.
+            return overridingContainingBlockContentLogicalHeight->value();
+        }
     }
 
     if (auto* containingBlock = this->containingBlock())
@@ -2287,8 +2289,10 @@ LayoutUnit RenderBox::containingBlockAvailableLineWidth() const
 
 LayoutUnit RenderBox::perpendicularContainingBlockLogicalHeight() const
 {
-    if (auto overridingContainingBlockContentLogicalHeight = this->overridingContainingBlockContentLogicalHeight(); overridingContainingBlockContentLogicalHeight && *overridingContainingBlockContentLogicalHeight)
-        return overridingContainingBlockContentLogicalHeight->value();
+    if (isGridItem()) {
+        if (auto overridingContainingBlockContentLogicalHeight = this->overridingContainingBlockContentLogicalHeight(); overridingContainingBlockContentLogicalHeight && *overridingContainingBlockContentLogicalHeight)
+            return overridingContainingBlockContentLogicalHeight->value();
+    }
 
     auto* containingBlock = this->containingBlock();
     if (auto overridingLogicalHeight = containingBlock->overridingLogicalHeight())
@@ -3406,11 +3410,17 @@ std::optional<LayoutUnit> RenderBox::computePercentageLogicalHeight(const Length
     if (updateDescendants == UpdatePercentageHeightDescendants::Yes)
         cb->addPercentHeightDescendant(const_cast<RenderBox&>(*this));
 
+    if (isFlexItem() && view().frameView().layoutContext().isPercentHeightResolveDisabledFor(*this)) {
+        ASSERT(is<RenderBlock>(*this));
+        return { };
+    }
+
     auto availableHeight = std::optional<LayoutUnit> { };
     auto isOrthogonal = isHorizontal != cb->isHorizontalWritingMode();
-    if (auto overridingAvailableHeight = isOrthogonal ? overridingContainingBlockContentLogicalWidth() : overridingContainingBlockContentLogicalHeight())
+    if (auto overridingAvailableHeight = isOrthogonal ? overridingContainingBlockContentLogicalWidth() : overridingContainingBlockContentLogicalHeight()) {
+        ASSERT(isGridItem());
         availableHeight = *overridingAvailableHeight;
-    else {
+    } else {
         if (isOrthogonal)
             availableHeight = containingBlockChild->containingBlockLogicalWidthForContent();
         else if (is<RenderTableCell>(*cb)) {
@@ -3595,7 +3605,7 @@ bool RenderBox::replacedMinMaxLogicalHeightComputesAsNone(SizeType sizeType) con
     if (logicalHeight == initialLogicalHeight)
         return true;
     
-    if (logicalHeight.isPercentOrCalculated()) {
+    if (isGridItem() && logicalHeight.isPercentOrCalculated()) {
         if (auto overridingContainingBlockContentLogicalHeight = this->overridingContainingBlockContentLogicalHeight())
             return !*overridingContainingBlockContentLogicalHeight;
     }
@@ -6032,8 +6042,6 @@ bool RenderBox::hasAutoHeightOrContainingBlockWithAutoHeight(UpdatePercentageHei
     if (!containingBlock || (document().inQuirksMode() && !containingBlock->isFlexibleBoxIncludingDeprecated()))
         return false;
 
-    if (auto containingBlockContentLogicalHeight = overridingContainingBlockContentLogicalHeight())
-        return !*containingBlockContentLogicalHeight;
     return !containingBlock->hasDefiniteLogicalHeight();
 }
 

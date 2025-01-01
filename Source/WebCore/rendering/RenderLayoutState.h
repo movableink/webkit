@@ -208,6 +208,16 @@ private:
     LocalFrameViewLayoutContext& m_context;
 };
 
+class FlexPercentResolveDisabler {
+public:
+    FlexPercentResolveDisabler(LocalFrameViewLayoutContext&, const RenderBox& flexItem);
+    ~FlexPercentResolveDisabler();
+
+private:
+    CheckedRef<LocalFrameViewLayoutContext> m_layoutContext;
+    CheckedRef<const RenderBox> m_flexItem;
+};
+
 class ContentVisibilityForceLayoutScope {
 public:
     ContentVisibilityForceLayoutScope(RenderView&, const Element*);

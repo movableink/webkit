@@ -1104,7 +1104,11 @@ bool RenderFlexibleBox::canComputePercentageFlexBasis(const RenderBox& flexItem,
         return true;
     if (m_hasDefiniteHeight == SizeDefiniteness::Indefinite)
         return false;
-    bool definite = flexItem.computePercentageLogicalHeight(flexBasis, updateDescendants).has_value();
+
+    auto isPercentResolveSuspended = view().frameView().layoutContext().isPercentHeightResolveDisabledFor(flexItem);
+    ASSERT(!isPercentResolveSuspended || is<RenderBlock>(flexItem));
+
+    bool definite = !isPercentResolveSuspended && flexItem.computePercentageLogicalHeight(flexBasis, updateDescendants).has_value();
     if (m_inLayout && (isHorizontalWritingMode() == flexItem.isHorizontalWritingMode())) {
         // We can reach this code even while we're not laying ourselves out, such
         // as from mainSizeForPercentageResolution.
@@ -1686,14 +1690,10 @@ void RenderFlexibleBox::maybeCacheFlexItemMainIntrinsicSize(RenderBox& flexItem,
     // where we want percentages to be treated as auto. For flex-basis itself, this is not a problem because
     // by definition we have an indefinite flex basis here and thus percentages should not resolve.
     if (flexItem.needsLayout() || !m_intrinsicSizeAlongMainAxis.contains(flexItem)) {
-        if (isHorizontalWritingMode() == flexItem.isHorizontalWritingMode())
-            flexItem.setOverridingContainingBlockContentLogicalHeight({ });
-        else
-            flexItem.setOverridingContainingBlockContentLogicalWidth({ });
+        auto percentResolveDisableScope = FlexPercentResolveDisabler { view().frameView().layoutContext(), flexItem };
         flexItem.setChildNeedsLayout(MarkOnlyThis);
         flexItem.layoutIfNeeded();
         cacheFlexItemMainSize(flexItem);
-        flexItem.clearOverridingContainingBlockContentSize();
     }
 }
 
