@@ -53,7 +53,6 @@
 #include "HTMLUListElement.h"
 #include "NodeName.h"
 #include "ParserContentPolicy.h"
-#include "ParsingUtilities.h"
 #include "QualifiedName.h"
 #include "Settings.h"
 #include <span>
@@ -62,6 +61,7 @@
 #include <wtf/WeakRef.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/FastCharacterComparison.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringParsingBuffer.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN

@@ -47,7 +47,6 @@
 #include "LegacySchemeRegistry.h"
 #include "LocalFrame.h"
 #include "OriginAccessPatterns.h"
-#include "ParsingUtilities.h"
 #include "PingLoader.h"
 #include "Report.h"
 #include "ReportingClient.h"
@@ -66,6 +65,7 @@
 #include <wtf/SetForScope.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringParsingBuffer.h>
 #include <wtf/text/TextPosition.h>

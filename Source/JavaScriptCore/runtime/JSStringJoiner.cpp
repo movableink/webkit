@@ -27,6 +27,7 @@
 #include "JSStringJoiner.h"
 
 #include "JSCJSValueInlines.h"
+#include <wtf/text/ParsingUtilities.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -95,8 +96,7 @@ static inline void appendStringToDataWithOneCharacterSeparatorRepeatedly(std::sp
 #endif
 
     while (count--) {
-        data[0] = separatorCharacter;
-        data = data.subspan(1);
+        consumeSingleElement(data) = separatorCharacter;
         appendStringToData(data, string);
     }
 }

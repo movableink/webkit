@@ -1239,7 +1239,7 @@ CallArguments::CallArguments(BytecodeGenerator& generator, ArgumentsNode* argume
     // We initialize 0 based on offset. And adjust m_argv based on that.
     if ((-m_allocatedRegisters[1]->index() + CallFrame::headerSizeInRegisters) % stackAlignmentRegisters()) {
         m_allocatedRegisters[0] = generator.newTemporary();
-        m_argv = m_allocatedRegisters.mutableSpan().subspan(0, argumentCountIncludingThis);
+        m_argv = m_allocatedRegisters.mutableSpan().first(argumentCountIncludingThis);
     } else
         m_argv = m_allocatedRegisters.mutableSpan().subspan(1, argumentCountIncludingThis);
 }

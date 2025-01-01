@@ -49,6 +49,7 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/UUID.h>
 #include <wtf/text/AtomStringImpl.h>
+#include <wtf/text/ParsingUtilities.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -166,12 +167,9 @@ public:
         size_t size = m_baseOffset + m_currentPage->size();
         auto buffer = MallocSpan<uint8_t, VMMalloc>::malloc(size);
         auto bufferSpan = buffer.mutableSpan();
-        unsigned offset = 0;
-        for (const auto& page : m_pages) {
-            memcpySpan(bufferSpan.subspan(offset), page.span());
-            offset += page.size();
-        }
-        RELEASE_ASSERT(offset == size);
+        for (const auto& page : m_pages)
+            memcpySpan(consumeSpan(bufferSpan, page.size()), page.span());
+        RELEASE_ASSERT(bufferSpan.empty());
         return CachedBytecode::create(WTFMove(buffer), WTFMove(m_leafExecutables));
     }
 

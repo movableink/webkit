@@ -99,8 +99,7 @@ JSC_DEFINE_HOST_FUNCTION(uint8ArrayConstructorFromBase64, (JSGlobalObject* globa
     JSUint8Array* uint8Array = JSUint8Array::createUninitialized(globalObject, globalObject->typedArrayStructure(TypeUint8, false), writeLength);
     RETURN_IF_EXCEPTION(scope, { });
 
-    uint8_t* data = uint8Array->typedVector();
-    memcpySpan(std::span { data, data + writeLength }, output.span().subspan(0, writeLength));
+    memcpySpan(uint8Array->typedSpan(), output.span().first(writeLength));
     return JSValue::encode(uint8Array);
 }
 

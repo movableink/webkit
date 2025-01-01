@@ -29,7 +29,7 @@
 
 #pragma once
 
-#include "ParsingUtilities.h"
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -168,10 +168,6 @@ protected:
     void seekTo(Position);
     UChar currentChar() const;
     void advance(size_t amount = 1);
-    // Adapt a UChar-predicate to an LChar-predicate.
-    // (For use with skipWhile/Until from ParsingUtilities.h).
-    template<bool characterPredicate(UChar)>
-    static inline bool LCharPredicateAdapter(LChar c) { return characterPredicate(c); }
     union Characters {
         Characters()
             : characters8()
@@ -187,18 +183,18 @@ template<bool characterPredicate(UChar)>
 inline void VTTScanner::skipWhile()
 {
     if (m_is8Bit)
-        WebCore::skipWhile<LCharPredicateAdapter<characterPredicate>>(m_data.characters8);
+        WTF::skipWhile<LCharPredicateAdapter<characterPredicate>>(m_data.characters8);
     else
-        WebCore::skipWhile<characterPredicate>(m_data.characters16);
+        WTF::skipWhile<characterPredicate>(m_data.characters16);
 }
 
 template<bool characterPredicate(UChar)>
 inline void VTTScanner::skipUntil()
 {
     if (m_is8Bit)
-        WebCore::skipUntil<LCharPredicateAdapter<characterPredicate>>(m_data.characters8);
+        WTF::skipUntil<LCharPredicateAdapter<characterPredicate>>(m_data.characters8);
     else
-        WebCore::skipUntil<characterPredicate>(m_data.characters16);
+        WTF::skipUntil<characterPredicate>(m_data.characters16);
 }
 
 template<bool characterPredicate(UChar)>
@@ -206,11 +202,11 @@ inline VTTScanner::Run VTTScanner::collectWhile()
 {
     if (m_is8Bit) {
         auto current = m_data.characters8;
-        WebCore::skipWhile<LCharPredicateAdapter<characterPredicate>>(current);
+        WTF::skipWhile<LCharPredicateAdapter<characterPredicate>>(current);
         return Run { m_data.characters8.first(current.data() - m_data.characters8.data()) };
     }
     auto current = m_data.characters16;
-    WebCore::skipWhile<characterPredicate>(current);
+    WTF::skipWhile<characterPredicate>(current);
     return Run { m_data.characters16.first(current.data() - m_data.characters16.data()) };
 }
 
@@ -219,11 +215,11 @@ inline VTTScanner::Run VTTScanner::collectUntil()
 {
     if (m_is8Bit) {
         auto current = m_data.characters8;
-        WebCore::skipUntil<LCharPredicateAdapter<characterPredicate>>(current);
+        WTF::skipUntil<LCharPredicateAdapter<characterPredicate>>(current);
         return Run { m_data.characters8.first(current.data() - m_data.characters8.data()) };
     }
     auto current = m_data.characters16;
-    WebCore::skipUntil<characterPredicate>(current);
+    WTF::skipUntil<characterPredicate>(current);
     return Run { m_data.characters16.first(current.data() - m_data.characters16.data()) };
 }
 

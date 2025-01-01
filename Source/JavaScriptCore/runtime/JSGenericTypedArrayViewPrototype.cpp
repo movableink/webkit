@@ -140,9 +140,9 @@ JSC_DEFINE_HOST_FUNCTION(uint8ArrayPrototypeSetFromHex, (JSGlobalObject* globalO
 
     bool success = false;
     if (view.is8Bit())
-        success = decodeHex(view.span8().subspan(0, readCount), result) == WTF::notFound;
+        success = decodeHex(view.span8().first(readCount), result) == WTF::notFound;
     else
-        success = decodeHex(view.span16().subspan(0, readCount), result) == WTF::notFound;
+        success = decodeHex(view.span16().first(readCount), result) == WTF::notFound;
 
     if (UNLIKELY(!success))
         return JSValue::encode(throwSyntaxError(globalObject, scope, "Uint8Array.prototype.setFromHex requires a string containing only \"0123456789abcdefABCDEF\""_s));

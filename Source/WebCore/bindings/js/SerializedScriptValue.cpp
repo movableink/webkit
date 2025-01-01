@@ -112,6 +112,7 @@
 #include <wtf/StackCheck.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/threads/BinarySemaphore.h>
 
 #if USE(CG)
@@ -3502,10 +3503,9 @@ private:
             if (span.size() < length)
                 return false;
             if (shouldAtomize == ShouldAtomize::Yes)
-                str = AtomString(span.first(length));
+                str = AtomString(consumeSpan(span, length));
             else
-                str = String(span.first(length));
-            span = span.subspan(length);
+                str = String(consumeSpan(span, length));
             return true;
         }
 
@@ -3514,12 +3514,11 @@ private:
             return false;
 
 #if ASSUME_LITTLE_ENDIAN
-        size_t lengthInBytes = length * sizeof(UChar);
+        auto stringSpan = consumeSpan(span, size);
         if (shouldAtomize == ShouldAtomize::Yes)
-            str = AtomString(spanReinterpretCast<const UChar>(span.first(lengthInBytes)));
+            str = AtomString(spanReinterpretCast<const UChar>(stringSpan));
         else
-            str = String(spanReinterpretCast<const UChar>(span.first(lengthInBytes)));
-        span = span.subspan(lengthInBytes);
+            str = String(spanReinterpretCast<const UChar>(stringSpan));
 #else
         std::span<UChar> characters;
         str = String::createUninitialized(length, characters);

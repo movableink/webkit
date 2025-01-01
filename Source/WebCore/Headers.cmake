@@ -1409,7 +1409,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     html/parser/HTMLDocumentParserFastPath.h
     html/parser/HTMLParserIdioms.h
     html/parser/HTMLParserScriptingFlagPolicy.h
-    html/parser/ParsingUtilities.h
 
     html/track/AudioTrack.h
     html/track/AudioTrackClient.h

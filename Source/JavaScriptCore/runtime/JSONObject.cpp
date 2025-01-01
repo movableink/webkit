@@ -43,6 +43,7 @@
 #include <wtf/dragonbox/dragonbox_to_chars.h>
 #include <wtf/text/EscapedFormsForJSON.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringBuilderJSON.h>
 #include <wtf/text/StringCommon.h>
@@ -1306,8 +1307,7 @@ void FastStringifier<CharType, bufferMode>::append(JSValue value)
                 WTF::appendEscapedJSONStringContent(output, string.data.span16());
         } else
             WTF::appendEscapedJSONStringContent(output, string.data.span8());
-        output[0] = '"';
-        output = output.subspan(1);
+        consumeSingleElement(output) = '"';
         m_length = output.data() - buffer();
         return;
     }

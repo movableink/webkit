@@ -351,7 +351,7 @@ Vector<char, 32> canonicalizeUnicodeExtensionsAfterICULocaleCanonicalization(Vec
         end++;
     }
 
-    Vector<char, 32> result(buffer.subspan(0, extensionIndex + 2)); // "-u" is included.
+    Vector<char, 32> result(buffer.span().first(extensionIndex + 2)); // "-u" is included.
     StringView extension = locale.substring(extensionIndex, extensionLength);
     ASSERT(extension.is8Bit());
     auto subtags = unicodeExtensionComponents(extension);

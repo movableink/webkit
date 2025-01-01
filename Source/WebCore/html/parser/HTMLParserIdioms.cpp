@@ -27,13 +27,13 @@
 #include "HTMLParserIdioms.h"
 
 #include "Decimal.h"
-#include "ParsingUtilities.h"
 #include "QualifiedName.h"
 #include <limits>
 #include <wtf/MathExtras.h>
 #include <wtf/URL.h>
 #include <wtf/Vector.h>
 #include <wtf/dtoa.h>
+#include <wtf/text/ParsingUtilities.h>
 
 #if PLATFORM(COCOA)
 #include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
@@ -132,18 +132,16 @@ double parseToDoubleForNumberType(StringView string)
 template <typename CharacterType>
 static Expected<int, HTMLIntegerParsingError> parseHTMLIntegerInternal(std::span<const CharacterType> data)
 {
-    while (!data.empty() && isASCIIWhitespace(data.front()))
-        data = data.subspan(1);
+    skipWhile<isASCIIWhitespace>(data);
 
     if (data.empty())
         return makeUnexpected(HTMLIntegerParsingError::Other);
 
     bool isNegative = false;
-    if (data.front() == '-') {
+    if (skipExactly(data, '-'))
         isNegative = true;
-        data = data.subspan(1);
-    } else if (data.front() == '+')
-        data = data.subspan(1);
+    else
+        skipExactly(data, '+');
 
     if (data.empty() || !isASCIIDigit(data.front()))
         return makeUnexpected(HTMLIntegerParsingError::Other);
@@ -154,13 +152,12 @@ static Expected<int, HTMLIntegerParsingError> parseHTMLIntegerInternal(std::span
 
     unsigned result = 0;
     do {
-        int digitValue = data.front() - '0';
+        int digitValue = consumeSingleElement(data) - '0';
 
         if (result > maxMultiplier || (result == maxMultiplier && digitValue > (intMax % base) + isNegative))
             return makeUnexpected(isNegative ? HTMLIntegerParsingError::NegativeOverflow : HTMLIntegerParsingError::PositiveOverflow);
 
         result = base * result + digitValue;
-        data = data.subspan(1);
     } while (!data.empty() && isASCIIDigit(data.front()));
 
     return isNegative ? -result : result;
@@ -271,7 +268,8 @@ double parseHTMLFloatingPointNumberValue(StringView input, double fallbackValue)
     return parseHTMLFloatingPointNumberValueInternal(input.span16(), input.length(), fallbackValue);
 }
 
-static inline bool isHTMLSpaceOrDelimiter(UChar character)
+template<typename CharacterType>
+static inline bool isHTMLSpaceOrDelimiter(CharacterType character)
 {
     return isASCIIWhitespace(character) || character == ',' || character == ';';
 }
@@ -288,8 +286,7 @@ static Vector<double> parseHTMLListOfOfFloatingPointNumberValuesInternal(std::sp
     Vector<double> numbers;
 
     // This skips past any leading delimiters.
-    while (!data.empty() && isHTMLSpaceOrDelimiter(data.front()))
-        data = data.subspan(1);
+    skipWhile<isHTMLSpaceOrDelimiter>(data);
 
     while (!data.empty()) {
         // This skips past leading garbage.
@@ -297,16 +294,14 @@ static Vector<double> parseHTMLListOfOfFloatingPointNumberValuesInternal(std::sp
             data = data.subspan(1);
 
         auto* numberStart = data.data();
-        while (!data.empty() && !isHTMLSpaceOrDelimiter(data.front()))
-            data = data.subspan(1);
+        skipUntil<isHTMLSpaceOrDelimiter>(data);
 
         size_t parsedLength = 0;
         double number = parseDouble(std::span { numberStart, data.data() }, parsedLength);
         numbers.append(parsedLength > 0 && std::isfinite(number) ? number : 0);
 
         // This skips past the delimiter.
-        while (!data.empty() && isHTMLSpaceOrDelimiter(data.front()))
-            data = data.subspan(1);
+        skipWhile<isHTMLSpaceOrDelimiter>(data);
     }
 
     return numbers;
@@ -346,14 +341,12 @@ String parseCORSSettingsAttribute(const AtomString& value)
 template <typename CharacterType>
 static bool parseHTTPRefreshInternal(std::span<const CharacterType> data, double& parsedDelay, String& parsedURL)
 {
-    while (!data.empty() && isASCIIWhitespace(data.front()))
-        data = data.subspan(1);
+    skipWhile<isASCIIWhitespace>(data);
 
     unsigned time = 0;
 
     auto* numberStart = data.data();
-    while (!data.empty() && isASCIIDigit(data.front()))
-        data = data.subspan(1);
+    skipWhile<isASCIIDigit>(data);
 
     StringView timeString(std::span(numberStart, data.data()));
     if (timeString.isEmpty()) {
@@ -379,14 +372,12 @@ static bool parseHTTPRefreshInternal(std::span<const CharacterType> data, double
 
     parsedDelay = time;
 
-    while (!data.empty() && isASCIIWhitespace(data.front()))
-        data = data.subspan(1);
+    skipWhile<isASCIIWhitespace>(data);
 
     if (!data.empty() && (data.front() == ';' || data.front() == ','))
         data = data.subspan(1);
 
-    while (!data.empty() && isASCIIWhitespace(data.front()))
-        data = data.subspan(1);
+    skipWhile<isASCIIWhitespace>(data);
 
     if (data.empty())
         return true;
@@ -396,39 +387,30 @@ static bool parseHTTPRefreshInternal(std::span<const CharacterType> data, double
 
         data = data.subspan(1);
 
-        if (!data.empty() && (data.front() == 'R' || data.front() == 'r'))
-            data = data.subspan(1);
-        else {
+        if (!skipExactly(data, 'R') && !skipExactly(data, 'r')) {
             parsedURL = url.toString();
             return true;
         }
 
-        if (!data.empty() && (data.front() == 'L' || data.front() == 'l'))
-            data = data.subspan(1);
-        else {
+        if (!skipExactly(data, 'L') && !skipExactly(data, 'l')) {
             parsedURL = url.toString();
             return true;
         }
 
-        while (!data.empty() && isASCIIWhitespace(data.front()))
-            data = data.subspan(1);
+        skipWhile<isASCIIWhitespace>(data);
 
-        if (!data.empty() && data.front() == '=')
-            data = data.subspan(1);
-        else {
+        if (!skipExactly(data, '=')) {
             parsedURL = url.toString();
             return true;
         }
 
-        while (!data.empty() && isASCIIWhitespace(data.front()))
-            data = data.subspan(1);
+        skipWhile<isASCIIWhitespace>(data);
     }
 
     CharacterType quote;
-    if (!data.empty() && (data.front() == '\'' || data.front() == '"')) {
-        quote = data.front();
-        data = data.subspan(1);
-    } else
+    if (!data.empty() && (data.front() == '\'' || data.front() == '"'))
+        quote = consumeSingleElement(data);
+    else
         quote = '\0';
 
     StringView url(data);

@@ -33,6 +33,7 @@
 #include "NodeName.h"
 #include "StyleProperties.h"
 #include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
@@ -62,9 +63,8 @@ static bool parseFontSize(std::span<const CharacterType> characters, int& size)
     // Step 2
     // Step 3
     while (!characters.empty()) {
-        if (!isASCIIWhitespace(characters.front()))
+        if (!skipExactly<isASCIIWhitespace>(characters))
             break;
-        characters = characters.subspan(1);
     }
 
     // Step 4
@@ -98,8 +98,7 @@ static bool parseFontSize(std::span<const CharacterType> characters, int& size)
     while (!characters.empty()) {
         if (!isASCIIDigit(characters.front()))
             break;
-        digits.append(characters.front());
-        characters = characters.subspan(1);
+        digits.append(consumeSingleElement(characters));
     }
 
     // Step 7

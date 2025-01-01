@@ -449,6 +449,7 @@ set(WTF_PUBLIC_HEADERS
     text/MakeString.h
     text/NullTextBreakIterator.h
     text/OrdinalNumber.h
+    text/ParsingUtilities.h
     text/StringBuffer.h
     text/StringBuilder.h
     text/StringBuilderInternals.h

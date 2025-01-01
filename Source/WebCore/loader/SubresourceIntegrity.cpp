@@ -27,10 +27,10 @@
 #include "SubresourceIntegrity.h"
 
 #include "CachedResource.h"
-#include "ParsingUtilities.h"
 #include "ResourceCryptographicDigest.h"
 #include "SharedBuffer.h"
 #include <wtf/text/MakeString.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringParsingBuffer.h>
 
 namespace WebCore {

@@ -83,7 +83,6 @@
 #include "CSSVariableReferenceValue.h"
 #include "ComputedStyleDependencies.h"
 #include "FontFace.h"
-#include "ParsingUtilities.h"
 #include "Rect.h"
 #include "StyleBuilder.h"
 #include "StyleBuilderConverter.h"
@@ -93,6 +92,7 @@
 #include "TransformOperationsBuilder.h"
 #include <memory>
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {

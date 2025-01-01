@@ -26,8 +26,8 @@
 #include "config.h"
 #include "ApplicationCacheManifestParser.h"
 
-#include "ParsingUtilities.h"
 #include "TextResourceDecoder.h"
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/StringParsingBuffer.h>
 #include <wtf/text/StringView.h>

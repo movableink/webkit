@@ -66,8 +66,8 @@
 #include "Document.h"
 #include "FontCustomPlatformData.h"
 #include "FontFace.h"
-#include "ParsingUtilities.h"
 #include "WebKitFontFamilyNames.h"
+#include <wtf/text/ParsingUtilities.h>
 
 #if ENABLE(VARIATION_FONTS)
 #include "CSSFontStyleRangeValue.h"

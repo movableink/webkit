@@ -29,13 +29,13 @@
 
 #include "ContentSecurityPolicy.h"
 #include "ContentSecurityPolicyDirectiveNames.h"
-#include "ParsingUtilities.h"
 #include "PublicSuffixStore.h"
 #include <pal/text/TextEncoding.h>
 #include <wtf/ASCIICType.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/URL.h>
 #include <wtf/text/Base64.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringParsingBuffer.h>
 #include <wtf/text/StringToIntegerConversion.h>
 

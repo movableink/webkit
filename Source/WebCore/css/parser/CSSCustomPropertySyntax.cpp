@@ -28,8 +28,8 @@
 #include "CSSParserIdioms.h"
 #include "CSSParserTokenRange.h"
 #include "CSSTokenizer.h"
-#include "ParsingUtilities.h"
 #include <wtf/SortedArrayMap.h>
+#include <wtf/text/ParsingUtilities.h>
 
 namespace WebCore {
 

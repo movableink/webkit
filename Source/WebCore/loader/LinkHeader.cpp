@@ -28,7 +28,7 @@
 #include "config.h"
 #include "LinkHeader.h"
 
-#include "ParsingUtilities.h"
+#include <wtf/text/ParsingUtilities.h>
 
 namespace WebCore {
 
