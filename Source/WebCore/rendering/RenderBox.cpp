@@ -3,8 +3,8 @@
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2005 Allan Sandfeld Jensen (kde@carewolf.com)
  *           (C) 2005, 2006 Samuel Weinig (sam.weinig@gmail.com)
- * Copyright (C) 2005-2023 Apple Inc. All rights reserved.
- * Copyright (C) 2015-2018 Google Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -41,6 +41,7 @@
 #include "GraphicsContext.h"
 #include "HTMLBodyElement.h"
 #include "HTMLButtonElement.h"
+#include "HTMLFieldSetElement.h"
 #include "HTMLFrameOwnerElement.h"
 #include "HTMLHtmlElement.h"
 #include "HTMLImageElement.h"
@@ -3373,11 +3374,29 @@ bool RenderBox::skipContainingBlockForPercentHeightCalculation(const RenderBox& 
     return document().inQuirksMode() && !containingBlock.isRenderTableCell() && !containingBlock.isOutOfFlowPositioned() && !containingBlock.isRenderGrid() && !containingBlock.isFlexibleBoxIncludingDeprecated() && containingBlock.style().logicalHeight().isAuto();
 }
 
-bool RenderBox::shouldTreatChildAsReplacedInTableCells() const
+bool RenderBox::shouldTreatChildAsReplaced() const
 {
     if (isReplacedOrAtomicInline())
         return true;
-    return element() && (element()->isFormControlElement() || is<HTMLImageElement>(element()));
+    // We need to detect all types of objects that should be treated as replaced.
+    // Callers of this method will use the result for various things, such as
+    // determining how to size the object, or whether it needs to avoid adjacent
+    // floats, just like objects that establish a new formatting context.
+    // isReplacedOrAtomicInline() will not catch all the cases. Objects may be
+    // block-level and still replaced, and we cannot deduce this from the
+    // RenderObject type. Checkboxes and radio buttons are such examples. We need
+    // to check the Element type. This also applies to images, since we may have
+    // created a block-flow RenderObject for the ALT text (which still counts as
+    // replaced).
+    if (!element())
+        return false;
+    if (element()->isFormControlElement()) {
+        // Form control elements are generally replaced objects. Fieldsets are not,
+        // though. A fieldset is (almost) a regular block container, and should be
+        // treated as such.
+        return !is<HTMLFieldSetElement>(element());
+    }
+    return is<HTMLImageElement>(element());
 }
 
 static bool tableCellShouldHaveZeroInitialSize(const RenderBlock& block, const RenderBox& child, bool scrollsOverflowY)
@@ -3390,7 +3409,7 @@ static bool tableCellShouldHaveZeroInitialSize(const RenderBlock& block, const R
     // to grow to fill the space. This could end up being wrong in some cases, but it is
     // preferable to the alternative (sizing intrinsically and making the row end up too big).
     const RenderTableCell& cell = downcast<RenderTableCell>(block);
-    return scrollsOverflowY && !child.shouldTreatChildAsReplacedInTableCells() && (!cell.style().logicalHeight().isAuto() || !cell.table()->style().logicalHeight().isAuto());
+    return scrollsOverflowY && !child.shouldTreatChildAsReplaced() && (!cell.style().logicalHeight().isAuto() || !cell.table()->style().logicalHeight().isAuto());
 }
 
 std::optional<LayoutUnit> RenderBox::computePercentageLogicalHeight(const Length& height, UpdatePercentageHeightDescendants updateDescendants) const
@@ -5354,7 +5373,7 @@ bool RenderBox::hasUnsplittableScrollingOverflow() const
 
 bool RenderBox::isUnsplittableForPagination() const
 {
-    return isReplacedOrAtomicInline()
+    return shouldTreatChildAsReplaced()
         || hasUnsplittableScrollingOverflow()
         || (parent() && isWritingModeRoot())
         || (isFloating() && style().pseudoElementType() == PseudoId::FirstLetter && style().initialLetterDrop() > 0)

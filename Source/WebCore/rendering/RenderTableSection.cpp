@@ -4,7 +4,7 @@
  *           (C) 1998 Waldo Bastian (bastian@kde.org)
  *           (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2003, 2004, 2005, 2006, 2008, 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Alexey Proskuryakov (ap@nypop.com)
  *
  * This library is free software; you can redistribute it and/or
@@ -473,7 +473,7 @@ static bool shouldFlexCellChild(const RenderTableCell& cell, const RenderBox& ce
         return false;
     if (cellDescendant.scrollsOverflowY())
         return true;
-    return cellDescendant.shouldTreatChildAsReplacedInTableCells();
+    return cellDescendant.shouldTreatChildAsReplaced();
 }
 
 void RenderTableSection::relayoutCellIfFlexed(RenderTableCell& cell, int rowIndex, int rowHeight)
