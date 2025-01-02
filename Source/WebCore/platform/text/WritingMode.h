@@ -290,7 +290,10 @@ constexpr bool WritingMode::isSidewaysOrientation() const
 
 constexpr bool WritingMode::isLineInverted() const
 {
-    return isBlockFlipped() != isVertical();
+    auto bits = m_bits & kWritingModeMask;
+    bool isHorizontalBt = kIsFlippedBlock == bits;
+    bool isVerticalLr = (kIsVerticalText | kIsVerticalType) == bits;
+    return isHorizontalBt | isVerticalLr;
 }
 
 constexpr bool WritingMode::isLineOverRight() const

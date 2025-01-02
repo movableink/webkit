@@ -154,4 +154,14 @@ TEST(WritingMode, BoxAxis)
     }
 }
 
+TEST(WritingMode, LineQueries)
+{
+    EXPECT_EQ(false, (WritingMode { StyleWritingMode::HorizontalTb, TextDirection::LTR, TextOrientation::Mixed }.isLineInverted()));
+    EXPECT_EQ(true, (WritingMode { StyleWritingMode::HorizontalBt, TextDirection::LTR, TextOrientation::Mixed }.isLineInverted()));
+    EXPECT_EQ(false, (WritingMode { StyleWritingMode::VerticalRl, TextDirection::LTR, TextOrientation::Mixed }.isLineInverted()));
+    EXPECT_EQ(true, (WritingMode { StyleWritingMode::VerticalLr, TextDirection::LTR, TextOrientation::Mixed }.isLineInverted()));
+    EXPECT_EQ(false, (WritingMode { StyleWritingMode::SidewaysRl, TextDirection::LTR, TextOrientation::Mixed }.isLineInverted()));
+    EXPECT_EQ(false, (WritingMode { StyleWritingMode::SidewaysLr, TextDirection::LTR, TextOrientation::Mixed }.isLineInverted()));
+}
+
 }
