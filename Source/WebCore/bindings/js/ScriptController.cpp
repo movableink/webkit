@@ -933,17 +933,22 @@ void ScriptController::reportExceptionFromScriptError(LoadableScript::Error erro
     reportException(&lexicalGlobalObject, error.errorValue.get(), nullptr, isModule);
 }
 
-class ImportMapWarningReporter final : public JSC::ImportMap::Reporter {
+class ImportMapLogReporter final : public JSC::ImportMap::Reporter {
     WTF_FORBID_HEAP_ALLOCATION;
 public:
-    ImportMapWarningReporter(JSDOMGlobalObject* globalObject)
+    ImportMapLogReporter(JSDOMGlobalObject* globalObject)
         : m_globalObject(globalObject)
     {
     }
 
-    void reportWarning(const String& message) final
+    void reportWarning(const String& message) const final
     {
         m_globalObject->scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Warning, message);
+    }
+
+    void reportError(const String& message) const final
+    {
+        m_globalObject->scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, message);
     }
 
 private:
@@ -956,43 +961,11 @@ void ScriptController::registerImportMap(const ScriptSourceCode& sourceCode, con
     JSC::VM& vm = world.vm();
     JSLockHolder lock(vm);
     JSDOMGlobalObject* globalObject = jsWindowProxy(world).window();
-    ImportMapWarningReporter reporter(globalObject);
-    auto result = globalObject->importMap().registerImportMap(sourceCode.jsSourceCode(), baseURL, &reporter);
-    if (!result)
-        globalObject->scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, result.error());
-    globalObject->clearPendingImportMaps();
-}
+    ImportMapLogReporter reporter(globalObject);
+    auto newImportMap = ImportMap::parseImportMapString(sourceCode.jsSourceCode(), baseURL, reporter);
 
-bool ScriptController::isAcquiringImportMaps()
-{
-    auto& world = mainThreadNormalWorld();
-    JSC::VM& vm = world.vm();
-    JSLockHolder lock(vm);
-    return jsWindowProxy(world).window()->isAcquiringImportMaps();
-}
-
-void ScriptController::setAcquiringImportMaps()
-{
-    auto& world = mainThreadNormalWorld();
-    JSC::VM& vm = world.vm();
-    JSLockHolder lock(vm);
-    jsWindowProxy(world).window()->setAcquiringImportMaps();
-}
-
-void ScriptController::setPendingImportMaps()
-{
-    auto& world = mainThreadNormalWorld();
-    JSC::VM& vm = world.vm();
-    JSLockHolder lock(vm);
-    jsWindowProxy(world).window()->setPendingImportMaps();
-}
-
-void ScriptController::clearPendingImportMaps()
-{
-    auto& world = mainThreadNormalWorld();
-    JSC::VM& vm = world.vm();
-    JSLockHolder lock(vm);
-    jsWindowProxy(world).window()->clearPendingImportMaps();
+    if (newImportMap)
+        globalObject->importMap().mergeExistingAndNewImportMaps(WTFMove(newImportMap.value()), reporter);
 }
 
 } // namespace WebCore

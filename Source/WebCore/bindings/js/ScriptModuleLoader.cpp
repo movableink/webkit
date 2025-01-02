@@ -38,7 +38,6 @@
 #include "MIMETypeRegistry.h"
 #include "ModuleFetchFailureKind.h"
 #include "ModuleFetchParameters.h"
-#include "ScriptController.h"
 #include "ScriptSourceCode.h"
 #include "ServiceWorkerGlobalScope.h"
 #include "ShadowRealmGlobalScope.h"

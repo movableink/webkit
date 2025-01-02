@@ -124,9 +124,14 @@ void ScriptElement::dispatchErrorEvent()
     protectedElement()->dispatchEvent(Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
-// https://html.spec.whatwg.org/multipage/scripting.html#prepare-a-script
+// https://html.spec.whatwg.org/C#prepare-the-script-element (Steps 8-12)
 std::optional<ScriptType> ScriptElement::determineScriptType(const String& type, const String& language, bool isHTMLDocument)
 {
+    // Step 8. If any of the following are true:
+    //  - el has a type attribute whose value is the empty string;
+    //  - el has no type attribute but it has a language attribute and that attribute's value is the empty string; or
+    //  - el has neither a type attribute nor a language attribute,
+    // then let the script block's type string for this script element be "text/javascript".
     if (type.isNull()) {
         if (language.isEmpty())
             return ScriptType::Classic;
@@ -137,6 +142,7 @@ std::optional<ScriptType> ScriptElement::determineScriptType(const String& type,
     if (type.isEmpty())
         return ScriptType::Classic; // Assume text/javascript.
 
+    // Step 9. If the script block's type string is a JavaScript MIME type essence match, then set el's type to "classic".
     if (MIMETypeRegistry::isSupportedJavaScriptMIMEType(type.trim(isASCIIWhitespace)))
         return ScriptType::Classic;
 
@@ -147,13 +153,11 @@ std::optional<ScriptType> ScriptElement::determineScriptType(const String& type,
     if (!isHTMLDocument)
         return std::nullopt;
 
-    // https://html.spec.whatwg.org/multipage/scripting.html#attr-script-type
-    // Setting the attribute to an ASCII case-insensitive match for the string "module" means that the script is a module script.
+    // Step 10. Otherwise, if the script block's type string is an ASCII case-insensitive match for the string "module", then set el's type to "module".
     if (equalLettersIgnoringASCIICase(type, "module"_s))
         return ScriptType::Module;
 
-    // https://wicg.github.io/import-maps/#integration-prepare-a-script
-    // If the script block’s type string is an ASCII case-insensitive match for the string "importmap", the script’s type is "importmap".
+    // Step 11. Otherwise, if the script block's type string is an ASCII case-insensitive match for the string "importmap", then set el's type to "importmap".
     if (equalLettersIgnoringASCIICase(type, "importmap"_s))
         return ScriptType::ImportMap;
 
@@ -257,13 +261,6 @@ bool ScriptElement::prepareScript(const TextPosition& scriptStartPosition)
     case ScriptType::ImportMap: {
         // If the element’s node document's acquiring import maps is false, then queue a task to fire an event named error at the element, and return.
         RefPtr frame { element->document().frame() };
-        if (!frame || !frame->script().isAcquiringImportMaps()) {
-            element->document().eventLoop().queueTask(TaskSource::DOMManipulation, [this, element] {
-                dispatchErrorEvent();
-            });
-            return false;
-        }
-        frame->script().setAcquiringImportMaps();
         if (hasSourceAttribute()) {
             element->document().eventLoop().queueTask(TaskSource::DOMManipulation, [this, element] {
                 dispatchErrorEvent();
@@ -452,7 +449,7 @@ void ScriptElement::executeClassicScript(const ScriptSourceCode& sourceCode)
 
 void ScriptElement::registerImportMap(const ScriptSourceCode& sourceCode)
 {
-    // https://wicg.github.io/import-maps/#integration-register-an-import-map
+    // https://html.spec.whatwg.org/#register-an-import-map
 
     ASSERT(m_alreadyStarted);
     ASSERT(scriptType() == ScriptType::ImportMap);
@@ -460,11 +457,6 @@ void ScriptElement::registerImportMap(const ScriptSourceCode& sourceCode)
     Ref element = this->element();
     Ref document = element->document();
     RefPtr frame = document->frame();
-
-    auto scopedExit = WTF::makeScopeExit([&] {
-        if (frame)
-            frame->checkedScript()->clearPendingImportMaps();
-    });
 
     if (sourceCode.isEmpty()) {
         dispatchErrorEvent();
@@ -587,11 +579,6 @@ void ScriptElement::executePendingScript(PendingScript& pendingScript)
                 registerImportMap(ScriptSourceCode(scriptContent(), m_taintedOrigin, URL(element().document().url()), pendingScript.startingPosition(), JSC::SourceProviderSourceType::ImportMap));
             dispatchLoadEventRespectingUserGestureIndicator();
         }
-    }
-
-    if (scriptType() == ScriptType::ImportMap && document) {
-        if (RefPtr frame = document->frame())
-            frame->checkedScript()->clearPendingImportMaps();
     }
 }
 

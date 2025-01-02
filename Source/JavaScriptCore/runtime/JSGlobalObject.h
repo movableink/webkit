@@ -428,8 +428,6 @@ public:
     FOR_EACH_TYPED_ARRAY_TYPE(DECLARE_TYPED_ARRAY_TYPE_STRUCTURE)
 #undef DECLARE_TYPED_ARRAY_TYPE_STRUCTURE
 
-    LazyProperty<JSGlobalObject, JSInternalPromise> m_importMapStatusPromise;
-
     FixedVector<LazyProperty<JSGlobalObject, JSCell>> m_linkTimeConstants;
 
     StructureCache m_structureCache;
@@ -1145,16 +1143,6 @@ public:
 
     const ImportMap& importMap() const { return m_importMap.get(); }
     ImportMap& importMap() { return m_importMap.get(); }
-    JSInternalPromise* importMapStatusPromise() const
-    {
-        if (m_importMapStatusPromise.isInitialized())
-            return m_importMapStatusPromise.get(this);
-        return nullptr;
-    }
-    JS_EXPORT_PRIVATE bool isAcquiringImportMaps() const;
-    JS_EXPORT_PRIVATE void setAcquiringImportMaps();
-    JS_EXPORT_PRIVATE void setPendingImportMaps();
-    JS_EXPORT_PRIVATE void clearPendingImportMaps();
 
 protected:
     enum class HasSpeciesProperty : bool { No, Yes };

@@ -174,10 +174,6 @@ public:
     void reportExceptionFromScriptError(LoadableScript::Error, bool);
 
     void registerImportMap(const ScriptSourceCode&, const URL& baseURL);
-    bool isAcquiringImportMaps();
-    void setAcquiringImportMaps();
-    void setPendingImportMaps();
-    void clearPendingImportMaps();
 
 private:
     ValueOrException executeScriptInWorld(DOMWrapperWorld&, RunJavaScriptParameters&&);
@@ -209,6 +205,7 @@ private:
 #if PLATFORM(COCOA)
     RetainPtr<WebScriptObject> m_windowScriptObject;
 #endif
+
 };
 
 } // namespace WebCore

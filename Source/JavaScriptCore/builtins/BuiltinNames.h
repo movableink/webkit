@@ -119,7 +119,6 @@ namespace JSC {
     macro(this) \
     macro(toIntegerOrInfinity) \
     macro(toLength) \
-    macro(importMapStatus) \
     macro(importInRealm) \
     macro(evalFunction) \
     macro(evalInRealm) \

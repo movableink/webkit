@@ -1499,10 +1499,6 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
             init.set(JSModuleLoader::create(init.owner, init.vm, JSModuleLoader::createStructure(init.vm, init.owner, jsNull())));
             catchScope.releaseAssertNoException();
         });
-    m_importMapStatusPromise.initLater(
-        [](const Initializer<JSInternalPromise>& init) {
-            init.set(JSInternalPromise::create(init.vm, init.owner->internalPromiseStructure()));
-        });
     if (Options::exposeInternalModuleLoader())
         putDirectWithoutTransition(vm, vm.propertyNames->Loader, moduleLoader(), static_cast<unsigned>(PropertyAttribute::DontEnum));
 
@@ -1714,9 +1710,6 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
         });
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::hostPromiseRejectionTracker)].initLater([] (const Initializer<JSCell>& init) {
             init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 2, "hostPromiseRejectionTracker"_s, globalFuncHostPromiseRejectionTracker, ImplementationVisibility::Private));
-        });
-    m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::importMapStatus)].initLater([] (const Initializer<JSCell>& init) {
-            init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 0, "importMapStatus"_s, globalFuncImportMapStatus, ImplementationVisibility::Private));
         });
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::importInRealm)].initLater([] (const Initializer<JSCell>& init) {
             init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 0, "importInRealm"_s, importInRealm, ImplementationVisibility::Private));
@@ -2712,7 +2705,6 @@ void JSGlobalObject::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     thisObject->m_callableProxyObjectStructure.visit(visitor);
     thisObject->m_proxyRevokeStructure.visit(visitor);
     thisObject->m_sharedArrayBufferStructure.visit(visitor);
-    thisObject->m_importMapStatusPromise.visit(visitor);
 
     for (auto& property : thisObject->m_linkTimeConstants)
         property.visit(visitor);
@@ -3329,29 +3321,6 @@ void JSGlobalObject::setDebugger(Debugger* debugger)
 bool JSGlobalObject::hasInteractiveDebugger() const 
 { 
     return m_debugger && m_debugger->isInteractivelyDebugging();
-}
-
-bool JSGlobalObject::isAcquiringImportMaps() const
-{
-    return m_importMap->isAcquiringImportMaps();
-}
-
-void JSGlobalObject::setAcquiringImportMaps()
-{
-    m_importMap->setAcquiringImportMaps();
-}
-
-void JSGlobalObject::setPendingImportMaps()
-{
-    m_importMapStatusPromise.get(this);
-}
-
-void JSGlobalObject::clearPendingImportMaps()
-{
-    if (!m_importMapStatusPromise.isInitialized())
-        return;
-    auto* promise = m_importMapStatusPromise.get(this);
-    promise->resolve(this, jsUndefined());
 }
 
 #if ENABLE(DFG_JIT)
