@@ -105,6 +105,7 @@ public:
     WEBCORE_EXPORT void setUserInteractionEnabled(bool) override;
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
     WEBCORE_EXPORT void setIsSeparated(bool) override;
+    WEBCORE_EXPORT void setIsSeparatedImage(bool) override;
 #if HAVE(CORE_ANIMATION_SEPARATED_PORTALS)
     WEBCORE_EXPORT void setIsSeparatedPortal(bool) override;
 #endif

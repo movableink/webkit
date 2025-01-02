@@ -262,6 +262,11 @@ PlatformCALayerCocoa::PlatformCALayerCocoa(LayerType layerType, PlatformCALayerC
         layerClass = [CALayer class];
         break;
 #endif
+#if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
+    case LayerType::LayerTypeSeparatedImageLayer:
+        layerClass = [CALayer class];
+        break;
+#endif
     case LayerType::LayerTypeHost:
         layerClass = CALayer.class;
         break;

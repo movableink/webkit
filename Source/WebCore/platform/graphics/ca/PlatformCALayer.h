@@ -85,6 +85,9 @@ enum class PlatformCALayerLayerType : uint8_t {
 #if ENABLE(MODEL_ELEMENT)
         LayerTypeModelLayer,
 #endif
+#if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
+        LayerTypeSeparatedImageLayer,
+#endif
         LayerTypeCustom,
         LayerTypeHost,
 };
