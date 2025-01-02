@@ -323,11 +323,10 @@ ExceptionOr<std::optional<Vector<Ref<Node>>>> InspectorAuditAccessibilityObject:
     if (auto* axObject = accessibilityObjectForNode(node)) {
         Vector<Ref<Node>> selectedChildNodes;
 
-        if (auto selectedChildren = axObject->selectedChildren()) {
-            for (auto& selectedChildObject : *selectedChildren) {
-                if (RefPtr selectedChildNode = selectedChildObject->node())
-                    selectedChildNodes.append(selectedChildNode.releaseNonNull());
-            }
+        auto selectedChildren = axObject->selectedChildren();
+        for (auto& selectedChildObject : selectedChildren) {
+            if (RefPtr selectedChildNode = selectedChildObject->node())
+                selectedChildNodes.append(selectedChildNode.releaseNonNull());
         }
 
         result = WTFMove(selectedChildNodes);

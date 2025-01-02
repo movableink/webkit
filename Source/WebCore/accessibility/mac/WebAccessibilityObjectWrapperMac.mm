@@ -1634,7 +1634,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 
     if ([attributeName isEqualToString:NSAccessibilitySelectedChildrenAttribute]) {
         auto selectedChildren = backingObject->selectedChildren();
-        return selectedChildren ? makeNSArray(*selectedChildren) : nil;
+        return selectedChildren.size() ? makeNSArray(WTFMove(selectedChildren)) : nil;
     }
 
     if ([attributeName isEqualToString:NSAccessibilityActiveElementAttribute]) {
@@ -1855,7 +1855,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 
         if ([attributeName isEqualToString:NSAccessibilitySelectedRowsAttribute]) {
             auto selectedChildren = backingObject->selectedChildren();
-            return selectedChildren ? makeNSArray(*selectedChildren) : nil;
+            return selectedChildren.size() ? makeNSArray(WTFMove(selectedChildren)) : nil;
         }
 
         // HTML tables don't support this attribute yet.
@@ -1934,7 +1934,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     if (backingObject->isTree()) {
         if ([attributeName isEqualToString:NSAccessibilitySelectedRowsAttribute]) {
             auto selectedChildren = backingObject->selectedChildren();
-            return selectedChildren ? makeNSArray(*selectedChildren) : nil;
+            return selectedChildren.size() ? makeNSArray(WTFMove(selectedChildren)) : nil;
         }
 
         if ([attributeName isEqualToString:NSAccessibilityRowsAttribute])

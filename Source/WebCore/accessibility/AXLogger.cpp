@@ -1116,9 +1116,6 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
     case AXProperty::ScreenRelativePosition:
         stream << "ScreenRelativePosition";
         break;
-    case AXProperty::SelectedChildren:
-        stream << "SelectedChildren";
-        break;
     case AXProperty::SelectedTextRange:
         stream << "SelectedTextRange";
         break;

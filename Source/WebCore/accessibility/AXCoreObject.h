@@ -1018,6 +1018,7 @@ public:
     virtual String extendedDescription() const = 0;
 
     bool supportsActiveDescendant() const;
+    bool isActiveDescendantOfFocusedContainer() const;
     virtual bool supportsARIAOwns() const = 0;
 
     // Retrieval of related objects.
@@ -1277,7 +1278,11 @@ public:
     virtual void detachFromParent() = 0;
     virtual bool isDetachedFromParent() = 0;
 
-    virtual std::optional<AccessibilityChildrenVector> selectedChildren() = 0;
+    AccessibilityChildrenVector listboxSelectedChildren();
+    AccessibilityChildrenVector selectedRows();
+    AccessibilityChildrenVector selectedListItems();
+    bool canHaveSelectedChildren() const;
+    AccessibilityChildrenVector selectedChildren();
     virtual void setSelectedChildren(const AccessibilityChildrenVector&) = 0;
     virtual AccessibilityChildrenVector visibleChildren() = 0;
     AccessibilityChildrenVector tabChildren();

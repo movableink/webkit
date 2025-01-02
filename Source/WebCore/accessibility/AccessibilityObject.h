@@ -279,7 +279,6 @@ public:
 
     bool supportsARIARoleDescription() const;
     bool supportsARIAOwns() const override { return false; }
-    bool isActiveDescendantOfFocusedContainer() const;
 
     String popupValue() const final;
     bool hasDatalist() const;
@@ -557,8 +556,6 @@ public:
 #endif
     bool isDetachedFromParent() override { return false; }
 
-    bool canHaveSelectedChildren() const;
-    std::optional<AccessibilityChildrenVector> selectedChildren() override;
     void setSelectedChildren(const AccessibilityChildrenVector&) override { }
     AccessibilityChildrenVector visibleChildren() override { return { }; }
     bool shouldFocusActiveDescendant() const;
@@ -932,9 +929,6 @@ private:
     bool isIgnoredWithoutCache(AXObjectCache*) const;
     void setLastKnownIsIgnoredValue(bool);
     void ariaTreeRows(AccessibilityChildrenVector& rows, AccessibilityChildrenVector& ancestors);
-    AccessibilityChildrenVector ariaListboxSelectedChildren();
-    AccessibilityChildrenVector ariaSelectedRows();
-    AccessibilityChildrenVector selectedListItems();
 
     // Special handling of click point for links.
     IntPoint linkClickPoint();

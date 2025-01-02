@@ -436,6 +436,147 @@ AXCoreObject* AXCoreObject::selectedTabItem()
     return nullptr;
 }
 
+bool AXCoreObject::canHaveSelectedChildren() const
+{
+    switch (roleValue()) {
+    // These roles are containers whose children support aria-selected:
+    case AccessibilityRole::Grid:
+    case AccessibilityRole::ListBox:
+    case AccessibilityRole::TabList:
+    case AccessibilityRole::Tree:
+    case AccessibilityRole::TreeGrid:
+    case AccessibilityRole::List:
+    // These roles are containers whose children are treated as selected by assistive
+    // technologies. We can get the "selected" item via aria-activedescendant or the
+    // focused element.
+    case AccessibilityRole::Menu:
+    case AccessibilityRole::MenuBar:
+    case AccessibilityRole::ComboBox:
+#if USE(ATSPI)
+    case AccessibilityRole::MenuListPopup:
+#endif
+        return true;
+    default:
+        return false;
+    }
+}
+
+AXCoreObject::AccessibilityChildrenVector AXCoreObject::selectedChildren()
+{
+    if (!canHaveSelectedChildren())
+        return { };
+
+    switch (roleValue()) {
+    case AccessibilityRole::ComboBox:
+        if (auto* descendant = activeDescendant())
+            return { { *descendant } };
+        break;
+    case AccessibilityRole::ListBox:
+        return listboxSelectedChildren();
+    case AccessibilityRole::Grid:
+    case AccessibilityRole::Tree:
+    case AccessibilityRole::TreeGrid:
+        return selectedRows();
+    case AccessibilityRole::TabList:
+        if (auto* selectedTab = selectedTabItem())
+            return { { *selectedTab } };
+        break;
+    case AccessibilityRole::List:
+        return selectedListItems();
+    case AccessibilityRole::Menu:
+    case AccessibilityRole::MenuBar:
+        if (auto* descendant = activeDescendant())
+            return { { *descendant } };
+        if (auto* focusedElement = focusedUIElement())
+            return { { *focusedElement } };
+        break;
+    case AccessibilityRole::MenuListPopup: {
+        AccessibilityChildrenVector selectedItems;
+        for (const auto& child : unignoredChildren()) {
+            if (child->isSelected())
+                selectedItems.append(child);
+        }
+        return selectedItems;
+    }
+    default:
+        ASSERT_NOT_REACHED();
+        break;
+    }
+    return { };
+}
+
+AXCoreObject::AccessibilityChildrenVector AXCoreObject::listboxSelectedChildren()
+{
+    ASSERT(roleValue() == AccessibilityRole::ListBox);
+
+    AccessibilityChildrenVector result;
+    bool isMulti = isMultiSelectable();
+    for (const auto& child : unignoredChildren()) {
+        if (!child->isListBoxOption() || !child->isSelected())
+            continue;
+
+        result.append(child);
+        if (!isMulti)
+            return result;
+    }
+    return result;
+}
+
+AXCoreObject::AccessibilityChildrenVector AXCoreObject::selectedRows()
+{
+    ASSERT(roleValue() == AccessibilityRole::Grid || roleValue() == AccessibilityRole::Tree || roleValue() == AccessibilityRole::TreeGrid);
+
+    bool isMulti = isMultiSelectable();
+
+    AccessibilityChildrenVector result;
+    // Prefer active descendant over aria-selected.
+    auto* activeDescendant = this->activeDescendant();
+    if (activeDescendant && (activeDescendant->isTreeItem() || activeDescendant->isTableRow())) {
+        result.append(*activeDescendant);
+        if (!isMulti)
+            return result;
+    }
+
+    auto rowsIteration = [&](const auto& rows) {
+        for (auto& row : rows) {
+            if (row->isSelected() || row->isActiveDescendantOfFocusedContainer()) {
+                result.append(row);
+                if (!isMulti)
+                    break;
+            }
+        }
+    };
+
+    if (isTree())
+        rowsIteration(ariaTreeRows());
+    else if (isTable() && isExposable() && supportsSelectedRows())
+        rowsIteration(rows());
+    return result;
+}
+
+AXCoreObject::AccessibilityChildrenVector AXCoreObject::selectedListItems()
+{
+    ASSERT(roleValue() == AccessibilityRole::List);
+
+    AccessibilityChildrenVector selectedListItems;
+    for (const auto& child : unignoredChildren()) {
+        if (child->isListItem() && child->isSelected())
+            selectedListItems.append(child);
+    }
+    return selectedListItems;
+}
+
+bool AXCoreObject::isActiveDescendantOfFocusedContainer() const
+{
+    auto containers = activeDescendantOfObjects();
+    for (auto& container : containers) {
+        if (container->isFocused())
+            return true;
+    }
+
+    return false;
+}
+
 bool AXCoreObject::supportsRequiredAttribute() const
 {
     switch (roleValue()) {

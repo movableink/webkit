@@ -1772,7 +1772,6 @@ void AXObjectCache::handleMenuItemSelected(Element* element)
     postNotification(getOrCreate(*element), protectedDocument().ptr(), AXNotification::MenuListItemSelected);
 }
 
-// FIXME: Consider also handling updating SelectedChildren of TabLists (this should happen for the oldElement, newElement, and/or the parent of a tab)
 void AXObjectCache::handleTabPanelSelected(Element* oldElement, Element* newElement)
 {
     auto updateTab = [this] (AccessibilityObject* controlPanel, Element& element) {
@@ -4673,13 +4672,7 @@ void AXObjectCache::updateIsolatedTree(const Vector<std::pair<Ref<AccessibilityO
             tree->queueNodeUpdate(notification.first->objectID(), { { AXProperty::MaxValueForRange, AXProperty::ValueForRange } });
             break;
         case AXNotification::MenuListItemSelected: {
-            RefPtr ancestor = Accessibility::findAncestor<AccessibilityObject>(notification.first.get(), false, [] (const auto& object) {
-                return object.isMenu() || object.isMenuBar();
-            });
-            if (ancestor) {
-                tree->queueNodeUpdate(ancestor->objectID(), { AXProperty::SelectedChildren });
-                tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::IsSelected });
-            }
+            tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::IsSelected });
             break;
         }
         case AXNotification::MinimumValueChanged:
@@ -4779,7 +4772,6 @@ void AXObjectCache::updateIsolatedTree(const Vector<std::pair<Ref<AccessibilityO
         case AXNotification::MenuListValueChanged:
         case AXNotification::MultiSelectableStateChanged:
         case AXNotification::PressedStateChanged:
-        case AXNotification::SelectedChildrenChanged:
         case AXNotification::TextChanged:
         case AXNotification::TextSecurityChanged:
         case AXNotification::ValueChanged:

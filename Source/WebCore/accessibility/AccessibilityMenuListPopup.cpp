@@ -69,23 +69,6 @@ bool AccessibilityMenuListPopup::computeIsIgnored() const
     return isIgnoredByDefault();
 }
 
-std::optional<AXCoreObject::AccessibilityChildrenVector> AccessibilityMenuListPopup::selectedChildren()
-{
-    if (!canHaveSelectedChildren())
-        return { };
-
-    if (!childrenInitialized())
-        addChildren();
-
-    AccessibilityChildrenVector result;
-    for (const auto& child : unignoredChildren()) {
-        auto* liveChild = dynamicDowncast<AccessibilityObject>(child.get());
-        if (liveChild && liveChild->isMenuListOption() && liveChild->isSelected())
-            result.append(child.get());
-    }
-    return result;
-}
-
 AccessibilityMenuListOption* AccessibilityMenuListPopup::menuListOptionAccessibilityObject(HTMLElement* element) const
 {
     if (!element || !element->inRenderedDocument())

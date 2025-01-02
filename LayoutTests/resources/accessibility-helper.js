@@ -353,9 +353,8 @@ function evalAndReturn(expression) {
     return `${expression}\n`;
 }
 
-function logActiveElementAndSelectedChildren(axElement) {
-    output += `    activeElement: ${axElement.activeElement.domIdentifier}\n`;
-    var children = axElement.selectedChildren();
+function outputSelectedChildren(axElement) {
+    const children = axElement.selectedChildren();
     output += "    selectedChildren: [ ";
     for (let i = 0; i < children.length; ++i) {
         if (i > 0)

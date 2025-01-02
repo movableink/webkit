@@ -773,10 +773,6 @@ void AXIsolatedTree::updateNodeProperties(AccessibilityObject& axObject, const A
             propertyMap.set(AXProperty::SupportsKeyShortcuts, axObject.supportsKeyShortcuts());
             propertyMap.set(AXProperty::KeyShortcuts, axObject.keyShortcuts().isolatedCopy());
             break;
-        case AXProperty::SelectedChildren:
-            if (auto selectedChildren = axObject.selectedChildren())
-                propertyMap.set(AXProperty::SelectedChildren, axIDs(*selectedChildren));
-            break;
         case AXProperty::SupportsARIAOwns:
             propertyMap.set(AXProperty::SupportsARIAOwns, axObject.supportsARIAOwns());
             break;
