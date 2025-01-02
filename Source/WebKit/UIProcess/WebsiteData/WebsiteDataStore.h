@@ -486,6 +486,10 @@ public:
     void fetchLocalStorage(CompletionHandler<void(HashMap<WebCore::ClientOrigin, HashMap<String, String>>&&)>&&);
     void restoreLocalStorage(HashMap<WebCore::ClientOrigin, HashMap<String, String>>&&, CompletionHandler<void(bool)>&&);
 
+#if ENABLE(WEB_PUSH_NOTIFICATIONS)
+    bool builtInNotificationsEnabled() const;
+#endif
+
 private:
     enum class ForceReinitialization : bool { No, Yes };
 #if ENABLE(APP_BOUND_DOMAINS)

@@ -412,11 +412,10 @@ public:
 #endif
 
     bool ftpEnabled() const { return m_ftpEnabled; }
-    bool builtInNotificationsEnabled() const { return m_builtInNotificationsEnabled; }
 
     void getPendingPushMessage(PAL::SessionID, CompletionHandler<void(const std::optional<WebPushMessage>&)>&&);
     void getPendingPushMessages(PAL::SessionID, CompletionHandler<void(const Vector<WebPushMessage>&)>&&);
-    void processPushMessage(PAL::SessionID, WebPushMessage&&, WebCore::PushPermissionState, CompletionHandler<void(bool, std::optional<WebCore::NotificationPayload>&&)>&&);
+    void processPushMessage(PAL::SessionID, WebPushMessage&&, WebCore::PushPermissionState, bool builtInNotificationsEnabled, CompletionHandler<void(bool, std::optional<WebCore::NotificationPayload>&&)>&&);
     void processNotificationEvent(WebCore::NotificationData&&, WebCore::NotificationEventType, CompletionHandler<void(bool)>&&);
 
     void getAllBackgroundFetchIdentifiers(PAL::SessionID, CompletionHandler<void(Vector<String>&&)>&&);
@@ -616,7 +615,6 @@ private:
 
     bool m_privateClickMeasurementEnabled { true };
     bool m_ftpEnabled { false };
-    bool m_builtInNotificationsEnabled { false };
     bool m_isSuspended { false };
     bool m_didSyncCookiesForClose { false };
 #if PLATFORM(COCOA)

@@ -270,7 +270,7 @@ bool NetworkConnectionToWebProcess::dispatchMessage(IPC::Connection& connection,
 
 #if ENABLE(WEB_PUSH_NOTIFICATIONS)
     if (decoder.messageReceiverName() == Messages::NotificationManagerMessageHandler::messageReceiverName()) {
-        MESSAGE_CHECK_WITH_RETURN_VALUE(m_networkProcess->builtInNotificationsEnabled(), false);
+        MESSAGE_CHECK_WITH_RETURN_VALUE(builtInNotificationsEnabled(), false);
         if (auto* networkSession = this->networkSession())
             networkSession->protectedNotificationManager()->didReceiveMessage(connection, decoder);
         return true;
@@ -399,7 +399,7 @@ bool NetworkConnectionToWebProcess::dispatchSyncMessage(IPC::Connection& connect
 
 #if ENABLE(WEB_PUSH_NOTIFICATIONS)
     if (decoder.messageReceiverName() == Messages::NotificationManagerMessageHandler::messageReceiverName()) {
-        MESSAGE_CHECK_WITH_RETURN_VALUE(m_networkProcess->builtInNotificationsEnabled(), false);
+        MESSAGE_CHECK_WITH_RETURN_VALUE(builtInNotificationsEnabled(), false);
         if (auto* networkSession = this->networkSession())
             return networkSession->protectedNotificationManager()->didReceiveSyncMessage(connection, decoder, reply);
         return false;

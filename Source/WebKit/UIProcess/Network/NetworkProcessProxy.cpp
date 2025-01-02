@@ -207,9 +207,6 @@ void NetworkProcessProxy::sendCreationParametersToNewProcess()
     parameters.enablePrivateClickMeasurement = false;
 #endif
 
-#if ENABLE(WEB_PUSH_NOTIFICATIONS)
-    parameters.builtInNotificationsEnabled = DeprecatedGlobalSettings::builtInNotificationsEnabled();
-#endif
 #if PLATFORM(COCOA)
     parameters.enableModernDownloadProgress = CFPreferencesGetAppBooleanValue(CFSTR("EnableModernDownloadProgress"), CFSTR("com.apple.WebKit"), nullptr);
 #endif
@@ -1779,18 +1776,19 @@ void NetworkProcessProxy::getPendingPushMessages(PAL::SessionID sessionID, Compl
 
 void NetworkProcessProxy::processPushMessage(PAL::SessionID sessionID, const WebPushMessage& pushMessage, CompletionHandler<void(bool wasProcessed, std::optional<WebCore::NotificationPayload>&&)>&& callback)
 {
+    bool builtInNotificationsEnabled = false;
     auto permission = PushPermissionState::Granted;
 
 #if ENABLE(WEB_PUSH_NOTIFICATIONS)
+    RefPtr dataStore = websiteDataStoreFromSessionID(sessionID);
+    if (!dataStore)
+        return callback(false, std::nullopt);
+    builtInNotificationsEnabled = dataStore->builtInNotificationsEnabled();
     // When built-in notifications are disabled, the source of permissions is the UIProcess.
     // Since we're already in UIProcess, we look up the permissions here to remove a round trip.
-    if (!DeprecatedGlobalSettings::builtInNotificationsEnabled()) {
+    if (!builtInNotificationsEnabled) {
         permission = PushPermissionState::Prompt;
-        HashMap<String, bool> permissions;
-
-        if (RefPtr dataStore = websiteDataStoreFromSessionID(sessionID))
-            permissions = dataStore->client().notificationPermissions();
-
+        auto permissions = dataStore->client().notificationPermissions();
         if (permissions.isEmpty())
             permissions = WebNotificationManagerProxy::protectedSharedServiceWorkerManager()->notificationPermissions();
 
@@ -1813,7 +1811,7 @@ void NetworkProcessProxy::processPushMessage(PAL::SessionID sessionID, const Web
     auto innerCallback = [callback = WTFMove(callback), assertionTimer = WTFMove(assertionTimer)] (bool wasProcessed, std::optional<WebCore::NotificationPayload>&& resultPayload) mutable {
         callback(wasProcessed, WTFMove(resultPayload));
     };
-    sendWithAsyncReply(Messages::NetworkProcess::ProcessPushMessage { sessionID, pushMessage, permission }, WTFMove(innerCallback));
+    sendWithAsyncReply(Messages::NetworkProcess::ProcessPushMessage { sessionID, pushMessage, permission, builtInNotificationsEnabled }, WTFMove(innerCallback));
 }
 
 void NetworkProcessProxy::processNotificationEvent(const NotificationData& data, NotificationEventType eventType, CompletionHandler<void(bool wasProcessed)>&& callback)

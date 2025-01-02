@@ -374,6 +374,9 @@ private:
 #endif
         
     bool allowTestOnlyIPC() const { return m_sharedPreferencesForWebProcess.allowTestOnlyIPC; }
+#if ENABLE(WEB_PUSH_NOTIFICATIONS)
+    bool builtInNotificationsEnabled() const { return m_sharedPreferencesForWebProcess.builtInNotificationsEnabled; }
+#endif
 
     void clearPageSpecificData(WebCore::PageIdentifier);
 

@@ -2734,4 +2734,18 @@ void WebsiteDataStore::restoreLocalStorage(HashMap<WebCore::ClientOrigin, HashMa
     protectedNetworkProcess()->restoreLocalStorage(m_sessionID, WTFMove(localStorage), WTFMove(completionHandler));
 }
 
+#if ENABLE(WEB_PUSH_NOTIFICATIONS)
+bool WebsiteDataStore::builtInNotificationsEnabled() const
+{
+    if (!m_pages.computeSize())
+        return defaultBuiltInNotificationsEnabled();
+
+    for (Ref page : m_pages) {
+        if (page->preferences().builtInNotificationsEnabled())
+            return true;
+    }
+    return false;
+}
+#endif
+
 } // namespace WebKit
