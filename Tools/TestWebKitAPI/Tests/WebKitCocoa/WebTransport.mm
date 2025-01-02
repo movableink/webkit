@@ -406,6 +406,55 @@ TEST(WebTransport, DISABLED_NetworkProcessCrash)
     obj = [webView objectByEvaluatingJavaScript:@"session.close()"];
     EXPECT_EQ(obj, nil);
 }
+
+// FIXME: Fix WebTransportServer constructor and re-enable these tests once rdar://141009498 is available in OS builds.
+TEST(WebTransport, DISABLED_Worker)
+{
+    WebTransportServer transportServer([](ConnectionGroup group) -> Task {
+        auto connection = co_await group.receiveIncomingConnection();
+        auto request = co_await connection.awaitableReceiveBytes();
+        auto serverBidirectionalStream = group.createWebTransportConnection(ConnectionGroup::ConnectionType::Bidirectional);
+        co_await serverBidirectionalStream.awaitableSend(WTFMove(request));
+    });
+
+    auto mainHTML = "<script>"
+    "const worker = new Worker('worker.js');"
+    "worker.onmessage = (event) => {"
+    "  alert('message from worker: ' + event.data);"
+    "};"
+    "</script>"_s;
+
+    NSString *workerJS = [NSString stringWithFormat:@""
+        "async function test() {"
+        "  try {"
+        "    let t = new WebTransport('https://127.0.0.1:%d/');"
+        "    await t.ready;"
+        "    let c = await t.createBidirectionalStream();"
+        "    let w = c.writable.getWriter();"
+        "    await w.write(new TextEncoder().encode('abc'));"
+        "    let sr = t.incomingBidirectionalStreams.getReader();"
+        "    let {value: s, d} = await sr.read();"
+        "    let r = s.readable.getReader();"
+        "    const { value, done } = await r.read();"
+        "    self.postMessage('successfully read ' + new TextDecoder().decode(value));"
+        "  } catch (e) { self.postMessage('caught ' + e); }"
+        "}; test();", transportServer.port()];
+
+    HTTPServer loadingServer({
+        { "/"_s, { mainHTML } },
+        { "/worker.js"_s, { { { "Content-Type"_s, "text/javascript"_s } }, workerJS } }
+    });
+
+    RetainPtr configuration = adoptNS([WKWebViewConfiguration new]);
+    enableWebTransport(configuration.get());
+    RetainPtr webView = adoptNS([[WKWebView alloc] initWithFrame:CGRectZero configuration:configuration.get()]);
+    auto delegate = adoptNS([TestNavigationDelegate new]);
+    [delegate allowAnyTLSCertificate];
+    [webView setNavigationDelegate:delegate.get()];
+    [webView loadRequest:loadingServer.request()];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "message from worker: successfully read abc");
+}
+
 } // namespace TestWebKitAPI
 
 #endif // HAVE(WEB_TRANSPORT)

@@ -46,4 +46,13 @@ void WebTransportReceiveStreamSource::receiveIncomingStream(JSC::JSGlobalObject&
         doCancel();
 }
 
+void WebTransportReceiveStreamSource::receiveBytes(std::span<const uint8_t> bytes, bool)
+{
+    if (m_isCancelled)
+        return;
+    auto arrayBuffer = ArrayBuffer::tryCreate(bytes);
+    if (!controller().enqueue(WTFMove(arrayBuffer)))
+        doCancel();
+}
+
 }

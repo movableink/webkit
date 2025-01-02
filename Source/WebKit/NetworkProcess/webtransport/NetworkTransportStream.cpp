@@ -34,7 +34,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(NetworkTransportStream);
 
 #if !PLATFORM(COCOA)
 NetworkTransportStream::NetworkTransportStream()
-    : m_identifier(WebTransportStreamIdentifier::generate())
+    : m_identifier(WebCore::WebTransportStreamIdentifier::generate())
     , m_streamType(NetworkTransportStreamType::Bidirectional)
 {
 }

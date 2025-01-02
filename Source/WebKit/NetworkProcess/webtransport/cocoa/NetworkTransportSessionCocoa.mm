@@ -198,12 +198,12 @@ void NetworkTransportSession::initialize(NetworkConnectionToWebProcess& connecti
 #endif // HAVE(WEB_TRANSPORT)
 }
 
-void NetworkTransportSession::createBidirectionalStream(CompletionHandler<void(std::optional<WebTransportStreamIdentifier>)>&& completionHandler)
+void NetworkTransportSession::createBidirectionalStream(CompletionHandler<void(std::optional<WebCore::WebTransportStreamIdentifier>)>&& completionHandler)
 {
     createStream(NetworkTransportStreamType::Bidirectional, WTFMove(completionHandler));
 }
 
-void NetworkTransportSession::createOutgoingUnidirectionalStream(CompletionHandler<void(std::optional<WebTransportStreamIdentifier>)>&& completionHandler)
+void NetworkTransportSession::createOutgoingUnidirectionalStream(CompletionHandler<void(std::optional<WebCore::WebTransportStreamIdentifier>)>&& completionHandler)
 {
     createStream(NetworkTransportStreamType::OutgoingUnidirectional, WTFMove(completionHandler));
 }
@@ -335,7 +335,7 @@ void NetworkTransportSession::setupConnectionHandler()
 #endif // HAVE(WEB_TRANSPORT)
 }
 
-void NetworkTransportSession::createStream(NetworkTransportStreamType streamType, CompletionHandler<void(std::optional<WebTransportStreamIdentifier>)>&& completionHandler)
+void NetworkTransportSession::createStream(NetworkTransportStreamType streamType, CompletionHandler<void(std::optional<WebCore::WebTransportStreamIdentifier>)>&& completionHandler)
 {
 #if HAVE(WEB_TRANSPORT)
     ASSERT(streamType != NetworkTransportStreamType::IncomingUnidirectional);

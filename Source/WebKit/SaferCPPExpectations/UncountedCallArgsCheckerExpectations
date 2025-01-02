@@ -410,7 +410,6 @@ WebProcess/Network/WebMockContentFilterManager.cpp
 WebProcess/Network/WebResourceLoader.cpp
 WebProcess/Network/WebSocketChannel.cpp
 WebProcess/Network/WebSocketChannelManager.cpp
-WebProcess/Network/WebTransportSendStreamSink.cpp
 WebProcess/Network/WebTransportSession.cpp
 WebProcess/Network/webrtc/LibWebRTCNetwork.cpp
 WebProcess/Network/webrtc/LibWebRTCProvider.cpp

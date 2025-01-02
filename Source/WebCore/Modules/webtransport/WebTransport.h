@@ -55,6 +55,7 @@ class WebTransportDatagramDuplexStream;
 class WebTransportError;
 class WebTransportReceiveStreamSource;
 class WebTransportSession;
+class WorkerWebTransportSession;
 class WritableStream;
 
 struct WebTransportBidirectionalStreamConstructionParameters;
@@ -96,8 +97,9 @@ private:
     bool virtualHasPendingActivity() const final;
 
     void receiveDatagram(std::span<const uint8_t>) final;
-    void receiveIncomingUnidirectionalStream(Ref<ReadableStreamSource>&&) final;
+    void receiveIncomingUnidirectionalStream(WebTransportStreamIdentifier) final;
     void receiveBidirectionalStream(WebTransportBidirectionalStreamConstructionParameters&&) final;
+    void streamReceiveBytes(WebTransportStreamIdentifier, std::span<const uint8_t>, bool withFin) final;
     void networkProcessCrashed() final;
 
     ListHashSet<Ref<WritableStream>> m_sendStreams;
@@ -123,10 +125,10 @@ private:
     PromiseAndWrapper m_draining;
     Ref<WebTransportDatagramDuplexStream> m_datagrams;
     RefPtr<WebTransportSession> m_session;
-
     Ref<DatagramSource> m_datagramSource;
     Ref<WebTransportReceiveStreamSource> m_receiveStreamSource;
     Ref<WebTransportBidirectionalStreamSource> m_bidirectionalStreamSource;
+    HashMap<WebTransportStreamIdentifier, Ref<WebTransportReceiveStreamSource>> m_readStreamSources;
 };
 
 }

@@ -62,14 +62,14 @@ void NetworkTransportSession::sendDatagram(std::span<const uint8_t>, CompletionH
 }
 #endif
 
-void NetworkTransportSession::sendStreamSendBytes(WebTransportStreamIdentifier identifier, std::span<const uint8_t> bytes, bool withFin, CompletionHandler<void()>&& completionHandler)
+void NetworkTransportSession::sendStreamSendBytes(WebCore::WebTransportStreamIdentifier identifier, std::span<const uint8_t> bytes, bool withFin, CompletionHandler<void()>&& completionHandler)
 {
     if (RefPtr stream = m_streams.get(identifier))
         stream->sendBytes(bytes, withFin);
     completionHandler();
 }
 
-void NetworkTransportSession::streamSendBytes(WebTransportStreamIdentifier identifier, std::span<const uint8_t> bytes, bool withFin, CompletionHandler<void()>&& completionHandler)
+void NetworkTransportSession::streamSendBytes(WebCore::WebTransportStreamIdentifier identifier, std::span<const uint8_t> bytes, bool withFin, CompletionHandler<void()>&& completionHandler)
 {
     if (RefPtr stream = m_streams.get(identifier))
         stream->sendBytes(bytes, withFin);
@@ -77,24 +77,24 @@ void NetworkTransportSession::streamSendBytes(WebTransportStreamIdentifier ident
 }
 
 #if !PLATFORM(COCOA)
-void NetworkTransportSession::createOutgoingUnidirectionalStream(CompletionHandler<void(std::optional<WebTransportStreamIdentifier>)>&& completionHandler)
+void NetworkTransportSession::createOutgoingUnidirectionalStream(CompletionHandler<void(std::optional<WebCore::WebTransportStreamIdentifier>)>&& completionHandler)
 {
     completionHandler(std::nullopt);
 }
 
-void NetworkTransportSession::createBidirectionalStream(CompletionHandler<void(std::optional<WebTransportStreamIdentifier>)>&& completionHandler)
+void NetworkTransportSession::createBidirectionalStream(CompletionHandler<void(std::optional<WebCore::WebTransportStreamIdentifier>)>&& completionHandler)
 {
     completionHandler(std::nullopt);
 }
 #endif
 
-void NetworkTransportSession::destroyOutgoingUnidirectionalStream(WebTransportStreamIdentifier identifier)
+void NetworkTransportSession::destroyOutgoingUnidirectionalStream(WebCore::WebTransportStreamIdentifier identifier)
 {
     ASSERT(m_streams.contains(identifier));
     m_streams.remove(identifier);
 }
 
-void NetworkTransportSession::destroyBidirectionalStream(WebTransportStreamIdentifier identifier)
+void NetworkTransportSession::destroyBidirectionalStream(WebCore::WebTransportStreamIdentifier identifier)
 {
     ASSERT(m_streams.contains(identifier));
     m_streams.remove(identifier);
@@ -110,18 +110,17 @@ void NetworkTransportSession::receiveDatagram(std::span<const uint8_t> datagram)
     send(Messages::WebTransportSession::ReceiveDatagram(datagram));
 }
 
-void NetworkTransportSession::streamReceiveBytes(WebTransportStreamIdentifier identifier, std::span<const uint8_t> bytes, bool withFin)
+void NetworkTransportSession::streamReceiveBytes(WebCore::WebTransportStreamIdentifier identifier, std::span<const uint8_t> bytes, bool withFin)
 {
-    // FIXME: Implement something that calls this.
     send(Messages::WebTransportSession::StreamReceiveBytes(identifier, bytes, withFin));
 }
 
-void NetworkTransportSession::receiveIncomingUnidirectionalStream(WebTransportStreamIdentifier identifier)
+void NetworkTransportSession::receiveIncomingUnidirectionalStream(WebCore::WebTransportStreamIdentifier identifier)
 {
     send(Messages::WebTransportSession::ReceiveIncomingUnidirectionalStream(identifier));
 }
 
-void NetworkTransportSession::receiveBidirectionalStream(WebTransportStreamIdentifier identifier)
+void NetworkTransportSession::receiveBidirectionalStream(WebCore::WebTransportStreamIdentifier identifier)
 {
     send(Messages::WebTransportSession::ReceiveBidirectionalStream(identifier));
 }

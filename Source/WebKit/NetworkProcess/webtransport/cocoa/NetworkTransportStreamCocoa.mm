@@ -34,7 +34,7 @@
 namespace WebKit {
 
 NetworkTransportStream::NetworkTransportStream(NetworkTransportSession& session, nw_connection_t connection, NetworkTransportStreamType streamType)
-    : m_identifier(WebTransportStreamIdentifier::generate())
+    : m_identifier(WebCore::WebTransportStreamIdentifier::generate())
     , m_session(session)
     , m_connection(connection)
     , m_streamType(streamType)

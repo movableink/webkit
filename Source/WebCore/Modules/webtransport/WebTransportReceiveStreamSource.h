@@ -35,6 +35,8 @@ class WebTransportReceiveStreamSource : public RefCountedReadableStreamSource {
 public:
     static Ref<WebTransportReceiveStreamSource> create() { return adoptRef(*new WebTransportReceiveStreamSource()); }
     void receiveIncomingStream(JSC::JSGlobalObject&, Ref<WebTransportReceiveStream>&&);
+    void receiveBytes(std::span<const uint8_t> bytes, bool);
+
 private:
     void setActive() final { }
     void setInactive() final { }

@@ -1210,7 +1210,7 @@ private:
 class EmptySocketProvider final : public SocketProvider {
 public:
     RefPtr<ThreadableWebSocketChannel> createWebSocketChannel(Document&, WebSocketChannelClient&) final { return nullptr; }
-    void initializeWebTransportSession(ScriptExecutionContext&, const URL&, CompletionHandler<void(RefPtr<WebTransportSession>&&)>&& completionHandler) { completionHandler(nullptr); }
+    Ref<WebTransportSessionPromise> initializeWebTransportSession(ScriptExecutionContext&, const URL&) { return WebTransportSessionPromise::createAndReject(); }
 };
 
 class EmptyHistoryItemClient final : public HistoryItemClient {

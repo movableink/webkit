@@ -36,9 +36,12 @@
 #include <wtf/RetainPtr.h>
 #endif
 
-namespace WebKit {
+namespace WebCore {
 struct WebTransportStreamIdentifierType;
 using WebTransportStreamIdentifier = ObjectIdentifier<WebTransportStreamIdentifierType>;
+}
+
+namespace WebKit {
 enum class NetworkTransportStreamType : uint8_t { Bidirectional, OutgoingUnidirectional, IncomingUnidirectional };
 
 class NetworkTransportSession;
@@ -48,7 +51,7 @@ class NetworkTransportStream : public RefCounted<NetworkTransportStream>, public
 public:
     template<typename... Args> static Ref<NetworkTransportStream> create(Args&&... args) { return adoptRef(*new NetworkTransportStream(std::forward<Args>(args)...)); }
 
-    WebTransportStreamIdentifier identifier() const { return m_identifier; }
+    WebCore::WebTransportStreamIdentifier identifier() const { return m_identifier; }
 
     void sendBytes(std::span<const uint8_t>, bool withFin);
 
@@ -62,7 +65,7 @@ protected:
 private:
     void receiveLoop();
 
-    const WebTransportStreamIdentifier m_identifier;
+    const WebCore::WebTransportStreamIdentifier m_identifier;
     WeakPtr<NetworkTransportSession> m_session;
 #if PLATFORM(COCOA)
     const RetainPtr<nw_connection_t> m_connection;

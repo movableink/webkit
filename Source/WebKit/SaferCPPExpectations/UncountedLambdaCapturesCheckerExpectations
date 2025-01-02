@@ -96,7 +96,6 @@ WebProcess/Inspector/WebInspectorInternal.cpp
 WebProcess/Network/WebLoaderStrategy.cpp
 WebProcess/Network/WebResourceLoader.cpp
 WebProcess/Network/WebSocketChannel.cpp
-WebProcess/Network/WebTransportSession.cpp
 WebProcess/Network/webrtc/LibWebRTCNetwork.cpp
 WebProcess/Network/webrtc/LibWebRTCNetworkManager.cpp
 WebProcess/Plugins/PDF/PDFPlugin.mm

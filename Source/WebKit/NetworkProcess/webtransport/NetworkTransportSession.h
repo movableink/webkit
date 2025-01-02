@@ -40,6 +40,8 @@
 
 namespace WebCore {
 struct ClientOrigin;
+struct WebTransportStreamIdentifierType;
+using WebTransportStreamIdentifier = ObjectIdentifier<WebTransportStreamIdentifierType>;
 }
 
 namespace WebKit {
@@ -50,10 +52,8 @@ enum class NetworkTransportStreamType : uint8_t;
 
 struct SharedPreferencesForWebProcess;
 struct WebTransportSessionIdentifierType;
-struct WebTransportStreamIdentifierType;
 
 using WebTransportSessionIdentifier = ObjectIdentifier<WebTransportSessionIdentifierType>;
-using WebTransportStreamIdentifier = ObjectIdentifier<WebTransportStreamIdentifierType>;
 
 class NetworkTransportSession : public RefCounted<NetworkTransportSession>, public IPC::MessageReceiver, public IPC::MessageSender, public Identified<WebTransportSessionIdentifier> {
     WTF_MAKE_TZONE_ALLOCATED(NetworkTransportSession);
@@ -66,18 +66,18 @@ public:
     void deref() const final { RefCounted::deref(); }
 
     void sendDatagram(std::span<const uint8_t>, CompletionHandler<void()>&&);
-    void createOutgoingUnidirectionalStream(CompletionHandler<void(std::optional<WebTransportStreamIdentifier>)>&&);
-    void createBidirectionalStream(CompletionHandler<void(std::optional<WebTransportStreamIdentifier>)>&&);
-    void destroyOutgoingUnidirectionalStream(WebTransportStreamIdentifier);
-    void destroyBidirectionalStream(WebTransportStreamIdentifier);
-    void sendStreamSendBytes(WebTransportStreamIdentifier, std::span<const uint8_t>, bool withFin, CompletionHandler<void()>&&);
-    void streamSendBytes(WebTransportStreamIdentifier, std::span<const uint8_t>, bool withFin, CompletionHandler<void()>&&);
+    void createOutgoingUnidirectionalStream(CompletionHandler<void(std::optional<WebCore::WebTransportStreamIdentifier>)>&&);
+    void createBidirectionalStream(CompletionHandler<void(std::optional<WebCore::WebTransportStreamIdentifier>)>&&);
+    void destroyOutgoingUnidirectionalStream(WebCore::WebTransportStreamIdentifier);
+    void destroyBidirectionalStream(WebCore::WebTransportStreamIdentifier);
+    void sendStreamSendBytes(WebCore::WebTransportStreamIdentifier, std::span<const uint8_t>, bool withFin, CompletionHandler<void()>&&);
+    void streamSendBytes(WebCore::WebTransportStreamIdentifier, std::span<const uint8_t>, bool withFin, CompletionHandler<void()>&&);
     void terminate(uint32_t, CString&&);
 
     void receiveDatagram(std::span<const uint8_t>);
-    void streamReceiveBytes(WebTransportStreamIdentifier, std::span<const uint8_t>, bool withFin);
-    void receiveIncomingUnidirectionalStream(WebTransportStreamIdentifier);
-    void receiveBidirectionalStream(WebTransportStreamIdentifier);
+    void streamReceiveBytes(WebCore::WebTransportStreamIdentifier, std::span<const uint8_t>, bool withFin);
+    void receiveIncomingUnidirectionalStream(WebCore::WebTransportStreamIdentifier);
+    void receiveBidirectionalStream(WebCore::WebTransportStreamIdentifier);
 
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) final;
     std::optional<SharedPreferencesForWebProcess> sharedPreferencesForWebProcess() const;
@@ -92,9 +92,9 @@ private:
     void setupConnectionHandler();
     void setupDatagramConnection(CompletionHandler<void(RefPtr<NetworkTransportSession>&&)>&&);
     void receiveDatagramLoop();
-    void createStream(NetworkTransportStreamType, CompletionHandler<void(std::optional<WebTransportStreamIdentifier>)>&&);
+    void createStream(NetworkTransportStreamType, CompletionHandler<void(std::optional<WebCore::WebTransportStreamIdentifier>)>&&);
 
-    HashMap<WebTransportStreamIdentifier, Ref<NetworkTransportStream>> m_streams;
+    HashMap<WebCore::WebTransportStreamIdentifier, Ref<NetworkTransportStream>> m_streams;
     WeakPtr<NetworkConnectionToWebProcess> m_connectionToWebProcess;
 
 #if PLATFORM(COCOA)

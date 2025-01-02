@@ -1345,8 +1345,10 @@ void WebProcess::networkProcessConnectionClosed(NetworkProcessConnection* connec
 
     m_cacheStorageProvider->networkProcessConnectionClosed();
 
-    for (auto& webtransportSession : m_webTransportSessions.values())
-        webtransportSession->networkProcessCrashed();
+    for (auto& weakSession : m_webTransportSessions.values()) {
+        if (RefPtr webtransportSession = weakSession.get())
+            webtransportSession->networkProcessCrashed();
+    }
 }
 
 WebFileSystemStorageConnection& WebProcess::fileSystemStorageConnection()
@@ -2427,19 +2429,22 @@ Ref<WebNotificationManager> WebProcess::protectedNotificationManager()
     return *supplement<WebNotificationManager>();
 }
 
-WebTransportSession* WebProcess::webTransportSession(WebTransportSessionIdentifier identifier)
+RefPtr<WebTransportSession> WebProcess::webTransportSession(WebTransportSessionIdentifier identifier)
 {
+    ASSERT(RunLoop::isMain());
     return m_webTransportSessions.get(identifier).get();
 }
 
 void WebProcess::addWebTransportSession(WebTransportSessionIdentifier identifier, WebTransportSession& session)
 {
+    ASSERT(RunLoop::isMain());
     ASSERT(!m_webTransportSessions.contains(identifier));
     m_webTransportSessions.set(identifier, session);
 }
 
 void WebProcess::removeWebTransportSession(WebTransportSessionIdentifier identifier)
 {
+    ASSERT(RunLoop::isMain());
     ASSERT(m_webTransportSessions.contains(identifier));
     m_webTransportSessions.remove(identifier);
 }
