@@ -1552,17 +1552,17 @@ CSSScrollbarWidthEnabled:
 
 CSSShapeFunctionEnabled:
   type: bool
-  status: preview
+  status: stable
   category: css
   humanReadableName: "CSS shape() function"
   humanReadableDescription: "Enable the CSS shape() function"
   defaultValue:
     WebKitLegacy:
-      default: false
+      default: true
     WebKit:
-      default: false
+      default: true
     WebCore:
-      default: false
+      default: true
 
 CSSStartingStyleAtRuleEnabled:
   type: bool
