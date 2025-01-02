@@ -39,7 +39,7 @@ public:
 
     const RenderBoxModelObject& renderer() const { return downcast<RenderBoxModelObject>(Box::renderer()); }
 
-    std::pair<bool, bool> hasClosedLeftAndRightEdge() const;
+    RectEdges<bool> closedEdges() const;
 
     // FIXME: Remove. For intermediate porting steps only.
     const LegacyInlineFlowBox* legacyInlineBox() const { return downcast<LegacyInlineFlowBox>(Box::legacyInlineBox()); }

@@ -837,7 +837,7 @@ bool RenderBoxModelObject::borderObscuresBackground() const
     return true;
 }
 
-BorderShape RenderBoxModelObject::borderShapeForContentClipping(const LayoutRect& borderBoxRect, bool includeLeftEdge, bool includeRightEdge) const
+BorderShape RenderBoxModelObject::borderShapeForContentClipping(const LayoutRect& borderBoxRect, RectEdges<bool> closedEdges) const
 {
     auto borderWidths = this->borderWidths();
     auto padding = this->padding();
@@ -849,7 +849,7 @@ BorderShape RenderBoxModelObject::borderShapeForContentClipping(const LayoutRect
         borderWidths.left() + padding.left(),
     };
 
-    return BorderShape::shapeForBorderRect(style(), borderBoxRect, contentBoxInsets, includeLeftEdge, includeRightEdge);
+    return BorderShape::shapeForBorderRect(style(), borderBoxRect, contentBoxInsets, closedEdges);
 }
 
 LayoutUnit RenderBoxModelObject::containingBlockLogicalWidthForContent() const

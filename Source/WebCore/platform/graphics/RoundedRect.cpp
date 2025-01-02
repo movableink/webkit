@@ -104,41 +104,19 @@ void RoundedRect::inflateWithRadii(LayoutUnit amount)
     m_radii.scale(factor);
 }
 
-void RoundedRect::Radii::includeLogicalEdges(const RoundedRect::Radii& edges, bool isHorizontal, bool includeLogicalLeftEdge, bool includeLogicalRightEdge)
+void RoundedRect::Radii::setRadiiForEdges(const RoundedRect::Radii& radii, RectEdges<bool> includeEdges)
 {
-    if (includeLogicalLeftEdge) {
-        if (isHorizontal)
-            m_bottomLeft = edges.bottomLeft();
-        else
-            m_topRight = edges.topRight();
-        m_topLeft = edges.topLeft();
+    if (includeEdges.top()) {
+        if (includeEdges.left())
+            m_topLeft = radii.topLeft();
+        if (includeEdges.right())
+            m_topRight = radii.topRight();
     }
-
-    if (includeLogicalRightEdge) {
-        if (isHorizontal)
-            m_topRight = edges.topRight();
-        else
-            m_bottomLeft = edges.bottomLeft();
-        m_bottomRight = edges.bottomRight();
-    }
-}
-
-void RoundedRect::Radii::excludeLogicalEdges(bool isHorizontal, bool excludeLogicalLeftEdge, bool excludeLogicalRightEdge)
-{
-    if (excludeLogicalLeftEdge) {
-        if (isHorizontal)
-            m_bottomLeft = IntSize();
-        else
-            m_topRight = IntSize();
-        m_topLeft = IntSize();
-    }
-        
-    if (excludeLogicalRightEdge) {
-        if (isHorizontal)
-            m_topRight = IntSize();
-        else
-            m_bottomLeft = IntSize();
-        m_bottomRight = IntSize();
+    if (includeEdges.bottom()) {
+        if (includeEdges.left())
+            m_bottomLeft = radii.bottomLeft();
+        if (includeEdges.right())
+            m_bottomRight = radii.bottomRight();
     }
 }
 
@@ -185,16 +163,6 @@ RoundedRect::RoundedRect(const LayoutRect& rect, const LayoutSize& topLeft, cons
     : m_rect(rect)
     , m_radii(topLeft, topRight, bottomLeft, bottomRight)
 {
-}
-
-void RoundedRect::includeLogicalEdges(const Radii& edges, bool isHorizontal, bool includeLogicalLeftEdge, bool includeLogicalRightEdge)
-{
-    m_radii.includeLogicalEdges(edges, isHorizontal, includeLogicalLeftEdge, includeLogicalRightEdge);
-}
-
-void RoundedRect::excludeLogicalEdges(bool isHorizontal, bool excludeLogicalLeftEdge, bool excludeLogicalRightEdge)
-{
-    m_radii.excludeLogicalEdges(isHorizontal, excludeLogicalLeftEdge, excludeLogicalRightEdge);
 }
 
 bool RoundedRect::isRenderable() const

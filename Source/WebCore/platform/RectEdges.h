@@ -40,6 +40,11 @@ public:
     {
     }
 
+    RectEdges(const T& value)
+        : m_sides { value, value, value, value }
+    {
+    }
+
     RectEdges(const RectEdges&) = default;
     RectEdges& operator=(const RectEdges&) = default;
 

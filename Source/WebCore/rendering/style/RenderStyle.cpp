@@ -2541,25 +2541,24 @@ void RenderStyle::setVerticalBorderSpacing(float v)
     SET_VAR(m_inheritedData, verticalBorderSpacing, v);
 }
 
-RoundedRect RenderStyle::getRoundedInnerBorderFor(const LayoutRect& borderRect, bool includeLogicalLeftEdge, bool includeLogicalRightEdge) const
+RoundedRect RenderStyle::getRoundedInnerBorderFor(const LayoutRect& borderRect, RectEdges<bool> closedEdges) const
 {
-    bool horizontal = writingMode().isHorizontal();
-    LayoutUnit leftWidth { (!horizontal || includeLogicalLeftEdge) ? borderLeftWidth() : 0 };
-    LayoutUnit rightWidth { (!horizontal || includeLogicalRightEdge) ? borderRightWidth() : 0 };
-    LayoutUnit topWidth { (horizontal || includeLogicalLeftEdge) ? borderTopWidth() : 0 };
-    LayoutUnit bottomWidth { (horizontal || includeLogicalRightEdge) ? borderBottomWidth() : 0 };
-    return getRoundedInnerBorderFor(borderRect, topWidth, bottomWidth, leftWidth, rightWidth, includeLogicalLeftEdge, includeLogicalRightEdge);
+    LayoutUnit leftWidth { closedEdges.left() ? borderLeftWidth() : 0 };
+    LayoutUnit rightWidth { closedEdges.right() ? borderRightWidth() : 0 };
+    LayoutUnit topWidth { closedEdges.top() ? borderTopWidth() : 0 };
+    LayoutUnit bottomWidth { closedEdges.bottom() ? borderBottomWidth() : 0 };
+    return getRoundedInnerBorderFor(borderRect, topWidth, bottomWidth, leftWidth, rightWidth, closedEdges);
 }
 
 RoundedRect RenderStyle::getRoundedInnerBorderFor(const LayoutRect& borderRect, LayoutUnit topWidth, LayoutUnit bottomWidth,
-    LayoutUnit leftWidth, LayoutUnit rightWidth, bool includeLogicalLeftEdge, bool includeLogicalRightEdge) const
+    LayoutUnit leftWidth, LayoutUnit rightWidth, RectEdges<bool> closedEdges) const
 {
     auto radii = hasBorderRadius() ? std::make_optional(m_nonInheritedData->surroundData->border.m_radii) : std::nullopt;
-    return getRoundedInnerBorderFor(borderRect, topWidth, bottomWidth, leftWidth, rightWidth, radii, writingMode().isHorizontal(), includeLogicalLeftEdge, includeLogicalRightEdge);
+    return getRoundedInnerBorderFor(borderRect, topWidth, bottomWidth, leftWidth, rightWidth, radii, closedEdges);
 }
 
 RoundedRect RenderStyle::getRoundedInnerBorderFor(const LayoutRect& borderRect, LayoutUnit topWidth, LayoutUnit bottomWidth,
-    LayoutUnit leftWidth, LayoutUnit rightWidth, std::optional<BorderData::Radii> radii, bool isHorizontalWritingMode, bool includeLogicalLeftEdge, bool includeLogicalRightEdge)
+    LayoutUnit leftWidth, LayoutUnit rightWidth, std::optional<BorderData::Radii> radii, RectEdges<bool> closedEdges)
 {
     auto width = std::max(0_lu, borderRect.width() - leftWidth - rightWidth);
     auto height = std::max(0_lu, borderRect.height() - topWidth - bottomWidth);
@@ -2573,7 +2572,7 @@ RoundedRect RenderStyle::getRoundedInnerBorderFor(const LayoutRect& borderRect, 
         auto adjustedRadii = calcRadiiFor(*radii, borderRect.size());
         adjustedRadii.scale(calcBorderRadiiConstraintScaleFor(borderRect, adjustedRadii));
         adjustedRadii.shrink(topWidth, bottomWidth, leftWidth, rightWidth);
-        roundedRect.includeLogicalEdges(adjustedRadii, isHorizontalWritingMode, includeLogicalLeftEdge, includeLogicalRightEdge);
+        roundedRect.setRadiiForEdges(adjustedRadii, closedEdges);
     }
     if (!roundedRect.isRenderable())
         roundedRect.adjustRadii();

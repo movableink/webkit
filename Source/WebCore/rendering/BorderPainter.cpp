@@ -130,10 +130,8 @@ struct BorderPainter::Sides {
     const BorderEdges& edges;
     bool haveAllSolidEdges { true };
     BleedAvoidance bleedAvoidance { BleedAvoidance::None };
-    bool includeLogicalLeftEdge { true };
-    bool includeLogicalRightEdge { true };
+    RectEdges<bool> closedEdges = { true };
     bool appliedClipAlready { false };
-    bool isHorizontal { true };
 };
 
 BorderPainter::BorderPainter(const RenderElement& renderer, const PaintInfo& paintInfo)
@@ -173,13 +171,13 @@ bool BorderPainter::allCornersClippedOut(const RoundedRect& border, const Layout
     return true;
 }
 
-std::optional<Path> BorderPainter::pathForBorderArea(const LayoutRect& rect, const RenderStyle& style, float deviceScaleFactor, bool includeLogicalLeftEdge, bool includeLogicalRightEdge)
+std::optional<Path> BorderPainter::pathForBorderArea(const LayoutRect& rect, const RenderStyle& style, float deviceScaleFactor, RectEdges<bool> closedEdges)
 {
-    auto edges = borderEdges(style, deviceScaleFactor, includeLogicalLeftEdge, includeLogicalRightEdge);
+    auto edges = borderEdges(style, deviceScaleFactor, closedEdges);
     if (!decorationHasAllSimpleEdges(edges))
         return std::nullopt;
 
-    auto borderShape = BorderShape::shapeForBorderRect(style, rect, includeLogicalLeftEdge, includeLogicalRightEdge);
+    auto borderShape = BorderShape::shapeForBorderRect(style, rect, closedEdges);
     return borderShape.pathForBorderArea(deviceScaleFactor);
 }
 
@@ -229,7 +227,7 @@ static bool decorationHasAllSolidEdges(const RectEdges<BorderEdge>& edges)
     return true;
 }
 
-void BorderPainter::paintBorder(const LayoutRect& rect, const RenderStyle& style, BleedAvoidance bleedAvoidance, bool includeLogicalLeftEdge, bool includeLogicalRightEdge) const
+void BorderPainter::paintBorder(const LayoutRect& rect, const RenderStyle& style, BleedAvoidance bleedAvoidance, RectEdges<bool> closedEdges) const
 {
     GraphicsContext& graphicsContext = m_paintInfo.context();
 
@@ -265,7 +263,7 @@ void BorderPainter::paintBorder(const LayoutRect& rect, const RenderStyle& style
     if (paintNinePieceImage(rect, style, style.borderImage()))
         return;
 
-    auto borderShape = BorderShape::shapeForBorderRect(style, rect, includeLogicalLeftEdge, includeLogicalRightEdge);
+    auto borderShape = BorderShape::shapeForBorderRect(style, rect, closedEdges);
 
     // To handle corner styles other than `round`, we'll have to plumb the borderShape through all the border painting functions.
     auto outerBorder = borderShape.deprecatedRoundedRect();
@@ -279,13 +277,13 @@ void BorderPainter::paintBorder(const LayoutRect& rect, const RenderStyle& style
         break;
     case BleedAvoidance::BackgroundOverBorder: {
         auto shrunkBorderRect = borderRectAdjustedForBleedAvoidance(rect, bleedAvoidance);
-        auto shrunkBorderShape = BorderShape::shapeForBorderRect(style, shrunkBorderRect, includeLogicalLeftEdge, includeLogicalRightEdge);
+        auto shrunkBorderShape = BorderShape::shapeForBorderRect(style, shrunkBorderRect, closedEdges);
         innerBorder = shrunkBorderShape.deprecatedInnerRoundedRect();
         break;
     }
     }
 
-    auto edges = borderEdges(style, document().deviceScaleFactor(), m_paintInfo.paintBehavior.contains(PaintBehavior::ForceBlackBorder), includeLogicalLeftEdge, includeLogicalRightEdge);
+    auto edges = borderEdges(style, document().deviceScaleFactor(), closedEdges, m_paintInfo.paintBehavior.contains(PaintBehavior::ForceBlackBorder));
     bool haveAllSolidEdges = decorationHasAllSolidEdges(edges);
 
     if (haveAllSolidEdges && outerBorder.isRounded() && allCornersClippedOut(outerBorder, m_paintInfo.rect))
@@ -299,10 +297,8 @@ void BorderPainter::paintBorder(const LayoutRect& rect, const RenderStyle& style
         edges,
         haveAllSolidEdges,
         bleedAvoidance,
-        includeLogicalLeftEdge,
-        includeLogicalRightEdge,
+        closedEdges,
         appliedClipAlready,
-        style.writingMode().isHorizontal()
     });
 }
 
@@ -334,10 +330,7 @@ void BorderPainter::paintOutline(const LayoutRect& paintRect) const
     if (outer.isEmpty())
         return;
 
-    auto isHorizontal = styleToUse.writingMode().isHorizontal();
     auto hasBorderRadius = styleToUse.hasBorderRadius();
-    auto includeLogicalLeftEdge = true;
-    auto includeLogicalRightEdge = true;
     auto roundedBorderRectFor = [&] (auto& borderRect, auto borderOffset) {
         auto adjustedRadius = [&] (auto& radius, auto offset) {
             auto widthValue = radius.width.isAuto() ? 0 : intValueForLength(radius.width, paintRect.width());
@@ -358,7 +351,7 @@ void BorderPainter::paintOutline(const LayoutRect& paintRect) const
                 adjustedRadius(styleToUse.borderBottomRightRadius(), borderOffset)
             };
         }
-        return RenderStyle::getRoundedInnerBorderFor(borderRect, { }, { }, { }, { }, borderRadii, isHorizontal, includeLogicalLeftEdge, includeLogicalRightEdge);
+        return RenderStyle::getRoundedInnerBorderFor(borderRect, { }, { }, { }, { }, borderRadii, { true });
     };
     auto innerRectForOutline = paintRect;
     innerRectForOutline.inflate(outlineOffset);
@@ -377,10 +370,8 @@ void BorderPainter::paintOutline(const LayoutRect& paintRect) const
         edges,
         haveAllSolidEdges,
         bleedAvoidance,
-        includeLogicalLeftEdge,
-        includeLogicalRightEdge,
+        { true },
         appliedClipAlready,
-        isHorizontal
     });
 }
 
@@ -577,9 +568,9 @@ void BorderPainter::paintSides(const Sides& sides) const
     bool antialias = shouldAntialiasLines(graphicsContext) || numEdgesVisible == 1;
     IntPoint innerBorderAdjustment(sides.innerBorder.rect().x() - sides.unadjustedInnerBorder.rect().x(), sides.innerBorder.rect().y() - sides.unadjustedInnerBorder.rect().y());
     if (haveAlphaColor)
-        paintTranslucentBorderSides(sides.outerBorder, sides.unadjustedInnerBorder, innerBorderAdjustment, sides.edges, edgesToDraw, sides.radii, sides.bleedAvoidance, sides.includeLogicalLeftEdge, sides.includeLogicalRightEdge, antialias, sides.isHorizontal);
+        paintTranslucentBorderSides(sides.outerBorder, sides.unadjustedInnerBorder, innerBorderAdjustment, sides.edges, edgesToDraw, sides.radii, sides.bleedAvoidance, sides.closedEdges, antialias);
     else
-        paintBorderSides(sides.outerBorder, sides.unadjustedInnerBorder, innerBorderAdjustment, sides.edges, edgesToDraw, sides.radii, sides.bleedAvoidance, sides.includeLogicalLeftEdge, sides.includeLogicalRightEdge, antialias, sides.isHorizontal);
+        paintBorderSides(sides.outerBorder, sides.unadjustedInnerBorder, innerBorderAdjustment, sides.edges, edgesToDraw, sides.radii, sides.bleedAvoidance, sides.closedEdges, antialias);
 }
 
 bool BorderPainter::paintNinePieceImage(const LayoutRect& rect, const RenderStyle& style, const NinePieceImage& ninePieceImage, CompositeOperator op) const
@@ -616,7 +607,7 @@ bool BorderPainter::paintNinePieceImage(const LayoutRect& rect, const RenderStyl
 }
 
 void BorderPainter::paintTranslucentBorderSides(const RoundedRect& outerBorder, const RoundedRect& innerBorder, const IntPoint& innerBorderAdjustment,
-    const BorderEdges& edges, BoxSideSet edgesToDraw, std::optional<BorderData::Radii> radii, BleedAvoidance bleedAvoidance, bool includeLogicalLeftEdge, bool includeLogicalRightEdge, bool antialias, bool isHorizontal) const
+    const BorderEdges& edges, BoxSideSet edgesToDraw, std::optional<BorderData::Radii> radii, BleedAvoidance bleedAvoidance, RectEdges<bool> closedEdges, bool antialias) const
 {
     // willBeOverdrawn assumes that we draw in order: top, bottom, left, right.
     // This is different from BoxSide enum order.
@@ -649,7 +640,7 @@ void BorderPainter::paintTranslucentBorderSides(const RoundedRect& outerBorder, 
             commonColor = commonColor.opaqueColor();
         }
 
-        paintBorderSides(outerBorder, innerBorder, innerBorderAdjustment, edges, commonColorEdgeSet, radii, bleedAvoidance, includeLogicalLeftEdge, includeLogicalRightEdge, antialias, isHorizontal, &commonColor);
+        paintBorderSides(outerBorder, innerBorder, innerBorderAdjustment, edges, commonColorEdgeSet, radii, bleedAvoidance, closedEdges, antialias, &commonColor);
 
         if (useTransparencyLayer)
             m_paintInfo.context().endTransparencyLayer();
@@ -773,8 +764,7 @@ static bool joinRequiresMitre(BoxSide side, BoxSide adjacentSide, const BorderEd
 }
 
 void BorderPainter::paintBorderSides(const RoundedRect& outerBorder, const RoundedRect& innerBorder,
-    const IntPoint& innerBorderAdjustment, const BorderEdges& edges, BoxSideSet edgeSet, std::optional<BorderData::Radii> radii, BleedAvoidance bleedAvoidance,
-    bool includeLogicalLeftEdge, bool includeLogicalRightEdge, bool antialias, bool isHorizontal, const Color* overrideColor) const
+    const IntPoint& innerBorderAdjustment, const BorderEdges& edges, BoxSideSet edgeSet, std::optional<BorderData::Radii> radii, BleedAvoidance bleedAvoidance, RectEdges<bool> closedEdges, bool antialias, const Color* overrideColor) const
 {
     bool renderRadii = outerBorder.isRounded();
 
@@ -820,7 +810,7 @@ void BorderPainter::paintBorderSides(const RoundedRect& outerBorder, const Round
         }
 
         bool usePath = renderRadii && (borderStyleHasInnerDetail(edge.style()) || borderWillArcInnerEdge(firstRadius, secondRadius));
-        paintOneBorderSide(outerBorder, innerBorder, sideRect, side, adjacentSide1, adjacentSide2, edges, radii, usePath ? &roundedPath : nullptr, bleedAvoidance, includeLogicalLeftEdge, includeLogicalRightEdge, antialias, isHorizontal, overrideColor);
+        paintOneBorderSide(outerBorder, innerBorder, sideRect, side, adjacentSide1, adjacentSide2, edges, radii, usePath ? &roundedPath : nullptr, bleedAvoidance, closedEdges, antialias, overrideColor);
     };
 
     paintOneSide(BoxSide::Top, BoxSide::Left, BoxSide::Right);
@@ -831,7 +821,7 @@ void BorderPainter::paintBorderSides(const RoundedRect& outerBorder, const Round
 
 void BorderPainter::paintOneBorderSide(const RoundedRect& outerBorder, const RoundedRect& innerBorder,
     const LayoutRect& sideRect, BoxSide side, BoxSide adjacentSide1, BoxSide adjacentSide2, const BorderEdges& edges, std::optional<BorderData::Radii> radii, const Path* path,
-    BleedAvoidance bleedAvoidance, bool includeLogicalLeftEdge, bool includeLogicalRightEdge, bool antialias, bool isHorizontal, const Color* overrideColor) const
+    BleedAvoidance bleedAvoidance, RectEdges<bool> closedEdges, bool antialias, const Color* overrideColor) const
 {
     auto& edgeToRender = edges.at(side);
     ASSERT(edgeToRender.widthForPainting());
@@ -855,7 +845,7 @@ void BorderPainter::paintOneBorderSide(const RoundedRect& outerBorder, const Rou
 
         float thickness = std::max(std::max(edgeToRender.widthForPainting(), adjacentEdge1.widthForPainting()), adjacentEdge2.widthForPainting());
         drawBoxSideFromPath(outerBorder.rect(), *path, edges, radii, edgeToRender.widthForPainting(), thickness, side,
-            colorToPaint, edgeToRender.style(), bleedAvoidance, includeLogicalLeftEdge, includeLogicalRightEdge, isHorizontal);
+            colorToPaint, edgeToRender.style(), bleedAvoidance, closedEdges);
     } else {
         bool clipForStyle = styleRequiresClipPolygon(edgeToRender.style()) && (mitreAdjacentSide1 || mitreAdjacentSide2);
         bool clipAdjacentSide1 = colorNeedsAntiAliasAtCorner(side, adjacentSide1, edges) && mitreAdjacentSide1;
@@ -876,8 +866,7 @@ void BorderPainter::paintOneBorderSide(const RoundedRect& outerBorder, const Rou
 }
 
 void BorderPainter::drawBoxSideFromPath(const LayoutRect& borderRect, const Path& borderPath, const BorderEdges& edges,
-    std::optional<BorderData::Radii> radii, float thickness, float drawThickness, BoxSide side, Color color, BorderStyle borderStyle, BleedAvoidance bleedAvoidance,
-    bool includeLogicalLeftEdge, bool includeLogicalRightEdge, bool isHorizontal) const
+    std::optional<BorderData::Radii> radii, float thickness, float drawThickness, BoxSide side, Color color, BorderStyle borderStyle, BleedAvoidance bleedAvoidance, RectEdges<bool> closedEdges) const
 {
     if (thickness <= 0)
         return;
@@ -953,11 +942,10 @@ void BorderPainter::drawBoxSideFromPath(const LayoutRect& borderRect, const Path
             GraphicsContextStateSaver stateSaver(graphicsContext);
             auto innerClip = RenderStyle::getRoundedInnerBorderFor(borderRect,
                 innerBorderTopWidth, innerBorderBottomWidth, innerBorderLeftWidth, innerBorderRightWidth,
-                radii, isHorizontal,
-                includeLogicalLeftEdge, includeLogicalRightEdge);
+                radii, closedEdges);
 
             graphicsContext.clipRoundedRect(FloatRoundedRect(innerClip));
-            drawBoxSideFromPath(borderRect, borderPath, edges, radii, thickness, drawThickness, side, color, BorderStyle::Solid, bleedAvoidance, includeLogicalLeftEdge, includeLogicalRightEdge, isHorizontal);
+            drawBoxSideFromPath(borderRect, borderPath, edges, radii, thickness, drawThickness, side, color, BorderStyle::Solid, bleedAvoidance, closedEdges);
         }
 
         // Draw outer border line
@@ -974,10 +962,9 @@ void BorderPainter::drawBoxSideFromPath(const LayoutRect& borderRect, const Path
 
             auto outerClip = RenderStyle::getRoundedInnerBorderFor(outerRect,
                 outerBorderTopWidth, outerBorderBottomWidth, outerBorderLeftWidth, outerBorderRightWidth,
-                radii, isHorizontal,
-                includeLogicalLeftEdge, includeLogicalRightEdge);
+                radii, closedEdges);
             graphicsContext.clipOutRoundedRect(FloatRoundedRect(outerClip));
-            drawBoxSideFromPath(borderRect, borderPath, edges, radii,  thickness, drawThickness, side, color, BorderStyle::Solid, bleedAvoidance, includeLogicalLeftEdge, includeLogicalRightEdge, isHorizontal);
+            drawBoxSideFromPath(borderRect, borderPath, edges, radii,  thickness, drawThickness, side, color, BorderStyle::Solid, bleedAvoidance, closedEdges);
         }
         return;
     }
@@ -995,7 +982,7 @@ void BorderPainter::drawBoxSideFromPath(const LayoutRect& borderRect, const Path
         }
 
         // Paint full border
-        drawBoxSideFromPath(borderRect, borderPath, edges, radii,  thickness, drawThickness, side, color, s1, bleedAvoidance, includeLogicalLeftEdge, includeLogicalRightEdge, isHorizontal);
+        drawBoxSideFromPath(borderRect, borderPath, edges, radii,  thickness, drawThickness, side, color, s1, bleedAvoidance, closedEdges);
 
         // Paint inner only
         GraphicsContextStateSaver stateSaver(graphicsContext);
@@ -1006,11 +993,10 @@ void BorderPainter::drawBoxSideFromPath(const LayoutRect& borderRect, const Path
 
         auto clipRect = RenderStyle::getRoundedInnerBorderFor(borderRect,
             topWidth, bottomWidth, leftWidth, rightWidth,
-            radii, isHorizontal,
-            includeLogicalLeftEdge, includeLogicalRightEdge);
+            radii, closedEdges);
 
         graphicsContext.clipRoundedRect(FloatRoundedRect(clipRect));
-        drawBoxSideFromPath(borderRect, borderPath, edges, radii,  thickness, drawThickness, side, color, s2, bleedAvoidance, includeLogicalLeftEdge, includeLogicalRightEdge, isHorizontal);
+        drawBoxSideFromPath(borderRect, borderPath, edges, radii,  thickness, drawThickness, side, color, s2, bleedAvoidance, closedEdges);
         return;
     }
     case BorderStyle::Inset:

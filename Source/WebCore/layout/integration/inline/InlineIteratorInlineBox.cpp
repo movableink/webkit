@@ -39,15 +39,18 @@ InlineBox::InlineBox(PathVariant&& path)
 {
 }
 
-std::pair<bool, bool> InlineBox::hasClosedLeftAndRightEdge() const
+RectEdges<bool> InlineBox::closedEdges() const
 {
     // FIXME: Layout knows the answer to this question so we should consult it.
+    RectEdges<bool> closedEdges { true };
     if (style().boxDecorationBreak() == BoxDecorationBreak::Clone)
-        return { true, true };
-    bool isLTR = style().writingMode().isBidiLTR();
+        return closedEdges;
+    auto writingMode = style().writingMode();
     bool isFirst = !previousInlineBox() && !renderer().isContinuation();
     bool isLast = !nextInlineBox() && !renderer().continuation();
-    return { isLTR ? isFirst : isLast, isLTR ? isLast : isFirst };
+    closedEdges.setStart(isFirst, writingMode);
+    closedEdges.setEnd(isLast, writingMode);
+    return closedEdges;
 };
 
 InlineBoxIterator InlineBox::nextInlineBox() const

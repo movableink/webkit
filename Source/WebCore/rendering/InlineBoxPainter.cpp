@@ -122,24 +122,24 @@ static LayoutRect clipRectForNinePieceImageStrip(const InlineIterator::InlineBox
     LayoutRect clipRect(paintRect);
     auto& style = box.renderer().style();
     LayoutBoxExtent outsets = style.imageOutsets(image);
-    auto [hasClosedLeftEdge, hasClosedRightEdge] = box.hasClosedLeftAndRightEdge();
+    auto closedEdges = box.closedEdges();
     if (box.isHorizontal()) {
         clipRect.setY(paintRect.y() - outsets.top());
         clipRect.setHeight(paintRect.height() + outsets.top() + outsets.bottom());
-        if (hasClosedLeftEdge) {
+        if (closedEdges.left()) {
             clipRect.setX(paintRect.x() - outsets.left());
             clipRect.setWidth(paintRect.width() + outsets.left());
         }
-        if (hasClosedRightEdge)
+        if (closedEdges.right())
             clipRect.setWidth(clipRect.width() + outsets.right());
     } else {
         clipRect.setX(paintRect.x() - outsets.left());
         clipRect.setWidth(paintRect.width() + outsets.left() + outsets.right());
-        if (hasClosedLeftEdge) {
+        if (closedEdges.top()) {
             clipRect.setY(paintRect.y() - outsets.top());
             clipRect.setHeight(paintRect.height() + outsets.top());
         }
-        if (hasClosedRightEdge)
+        if (closedEdges.bottom())
             clipRect.setHeight(clipRect.height() + outsets.bottom());
     }
     return clipRect;
@@ -261,8 +261,8 @@ void InlineBoxPainter::paintDecorations()
 
     bool hasSingleLine = !m_inlineBox.previousInlineBox() && !m_inlineBox.nextInlineBox();
     if (!hasBorderImage || hasSingleLine) {
-        auto [hasClosedLeftEdge, hasClosedRightEdge] = m_inlineBox.hasClosedLeftAndRightEdge();
-        borderPainter.paintBorder(paintRect, style, BleedAvoidance::None, hasClosedLeftEdge, hasClosedRightEdge);
+        auto closedEdges = m_inlineBox.closedEdges();
+        borderPainter.paintBorder(paintRect, style, BleedAvoidance::None, closedEdges);
         return;
     }
 
@@ -368,8 +368,8 @@ void InlineBoxPainter::paintBoxShadow(ShadowStyle shadowStyle, const LayoutRect&
 
     // FIXME: We can do better here in the multi-line case. We want to push a clip so that the shadow doesn't
     // protrude incorrectly at the edges, and we want to possibly include shadows cast from the previous/following lines
-    auto [hasClosedLeftEdge, hasClosedRightEdge] = m_inlineBox.hasClosedLeftAndRightEdge();
-    backgroundPainter.paintBoxShadow(paintRect, style(), shadowStyle, hasClosedLeftEdge, hasClosedRightEdge);
+    auto closedEdges = m_inlineBox.closedEdges();
+    backgroundPainter.paintBoxShadow(paintRect, style(), shadowStyle, closedEdges);
 }
 
 const RenderStyle& InlineBoxPainter::style() const

@@ -47,9 +47,9 @@ class RenderStyle;
 // are deprecated.
 class BorderShape {
 public:
-    static BorderShape shapeForBorderRect(const RenderStyle&, const LayoutRect& borderRect, bool includeLogicalLeftEdge = true, bool includeLogicalRightEdge = true);
+    static BorderShape shapeForBorderRect(const RenderStyle&, const LayoutRect& borderRect, RectEdges<bool> closedEdges = { true });
     // overrideBorderWidths describe custom insets from the border box, used instead of the border widths from the style.
-    static BorderShape shapeForBorderRect(const RenderStyle&, const LayoutRect& borderRect, const RectEdges<LayoutUnit>& overrideBorderWidths, bool includeLogicalLeftEdge = true, bool includeLogicalRightEdge = true);
+    static BorderShape shapeForBorderRect(const RenderStyle&, const LayoutRect& borderRect, const RectEdges<LayoutUnit>& overrideBorderWidths, RectEdges<bool> closedEdges = { true });
 
     BorderShape(const LayoutRect& borderRect, const RectEdges<LayoutUnit>& borderWidths);
     BorderShape(const LayoutRect& borderRect, const RectEdges<LayoutUnit>& borderWidths, const RoundedRectRadii&);

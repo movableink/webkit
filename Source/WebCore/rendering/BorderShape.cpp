@@ -51,7 +51,7 @@ static RoundedRect::Radii calcRadiiFor(const BorderData::Radii& radii, const Lay
     };
 }
 
-BorderShape BorderShape::shapeForBorderRect(const RenderStyle& style, const LayoutRect& borderRect, bool includeLogicalLeftEdge, bool includeLogicalRightEdge)
+BorderShape BorderShape::shapeForBorderRect(const RenderStyle& style, const LayoutRect& borderRect, RectEdges<bool> closedEdges)
 {
     auto borderWidths = RectEdges<LayoutUnit> {
         LayoutUnit(style.borderTopWidth()),
@@ -59,41 +59,38 @@ BorderShape BorderShape::shapeForBorderRect(const RenderStyle& style, const Layo
         LayoutUnit(style.borderBottomWidth()),
         LayoutUnit(style.borderLeftWidth()),
     };
-    return shapeForBorderRect(style, borderRect, borderWidths, includeLogicalLeftEdge, includeLogicalRightEdge);
+    return shapeForBorderRect(style, borderRect, borderWidths, closedEdges);
 }
 
-BorderShape BorderShape::shapeForBorderRect(const RenderStyle& style, const LayoutRect& borderRect, const RectEdges<LayoutUnit>& overrideBorderWidths, bool includeLogicalLeftEdge, bool includeLogicalRightEdge)
+BorderShape BorderShape::shapeForBorderRect(const RenderStyle& style, const LayoutRect& borderRect, const RectEdges<LayoutUnit>& overrideBorderWidths, RectEdges<bool> closedEdges)
 {
-    bool isHorizontal = style.writingMode().isHorizontal();
-
     // top, right, bottom, left.
     auto usedBorderWidths = RectEdges<LayoutUnit> {
-        LayoutUnit((isHorizontal || includeLogicalLeftEdge) ? overrideBorderWidths.top() : 0_lu),
-        LayoutUnit((!isHorizontal || includeLogicalRightEdge) ? overrideBorderWidths.right() : 0_lu),
-        LayoutUnit((isHorizontal || includeLogicalRightEdge) ? overrideBorderWidths.bottom() : 0_lu),
-        LayoutUnit((!isHorizontal || includeLogicalLeftEdge) ? overrideBorderWidths.left() : 0_lu),
+        LayoutUnit(closedEdges.top() ? overrideBorderWidths.top() : 0_lu),
+        LayoutUnit(closedEdges.right() ? overrideBorderWidths.right() : 0_lu),
+        LayoutUnit(closedEdges.bottom() ? overrideBorderWidths.bottom() : 0_lu),
+        LayoutUnit(closedEdges.left() ? overrideBorderWidths.left() : 0_lu),
     };
 
     if (style.hasBorderRadius()) {
         auto radii = calcRadiiFor(style.borderRadii(), borderRect.size());
         radii.scale(calcBorderRadiiConstraintScaleFor(borderRect, radii));
 
-        if (!includeLogicalLeftEdge) {
+        if (!closedEdges.top()) {
             radii.setTopLeft({ });
-
-            if (isHorizontal)
-                radii.setBottomLeft({ });
-            else
-                radii.setTopRight({ });
+            radii.setTopRight({ });
         }
-
-        if (!includeLogicalRightEdge) {
+        if (!closedEdges.right()) {
+            radii.setTopRight({ });
             radii.setBottomRight({ });
-
-            if (isHorizontal)
-                radii.setTopRight({ });
-            else
-                radii.setBottomLeft({ });
+        }
+        if (!closedEdges.bottom()) {
+            radii.setBottomRight({ });
+            radii.setBottomLeft({ });
+        }
+        if (!closedEdges.left()) {
+            radii.setBottomLeft({ });
+            radii.setTopLeft({ });
         }
 
         if (!radii.areRenderableInRect(borderRect))
