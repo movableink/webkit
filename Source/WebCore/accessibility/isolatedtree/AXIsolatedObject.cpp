@@ -285,7 +285,6 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
         setObjectVectorProperty(AXProperty::Rows, object.rows());
         setObjectVectorProperty(AXProperty::Cells, object.cells());
         setObjectVectorProperty(AXProperty::VisibleRows, object.visibleRows());
-        setObjectProperty(AXProperty::HeaderContainer, object.headerContainer());
         setProperty(AXProperty::AXColumnCount, object.axColumnCount());
         setProperty(AXProperty::AXRowCount, object.axRowCount());
         setProperty(AXProperty::CellSlots, object.cellSlots());
@@ -324,11 +323,7 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
         setObjectVectorProperty(AXProperty::DisclosedRows, object.disclosedRows());
     }
 
-    if (object.isTree()) {
-        setProperty(AXProperty::IsTree, true);
-        setObjectVectorProperty(AXProperty::ARIATreeRows, object.ariaTreeRows());
-    }
-
+    setProperty(AXProperty::IsTree, object.isTree());
     if (object.isRadioButton()) {
         setProperty(AXProperty::NameAttribute, object.nameAttribute().isolatedCopy());
         // FIXME: This property doesn't get updated when a page changes dynamically.
@@ -2126,6 +2121,15 @@ AXCoreObject::AccessibilityChildrenVector AXIsolatedObject::rowHeaders()
         }
     }
     return headers;
+}
+
+AXIsolatedObject* AXIsolatedObject::headerContainer()
+{
+    for (const auto& child : unignoredChildren()) {
+        if (child->roleValue() == AccessibilityRole::TableHeaderContainer)
+            return downcast<AXIsolatedObject>(child.ptr());
+    }
+    return nullptr;
 }
 
 #if !PLATFORM(MAC)

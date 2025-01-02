@@ -624,9 +624,6 @@ WTF::TextStream& operator<<(WTF::TextStream& stream, const AXPropertyMap& map)
 TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
 {
     switch (property) {
-    case AXProperty::ARIATreeRows:
-        stream << "ARIATreeRows";
-        break;
 #if !ENABLE(AX_THREAD_TEXT_APIS)
     case AXProperty::AttributedText:
         stream << "AttributedText";
@@ -806,9 +803,6 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
         break;
     case AXProperty::HasUnderline:
         stream << "HasUnderline";
-        break;
-    case AXProperty::HeaderContainer:
-        stream << "HeaderContainer";
         break;
     case AXProperty::HeadingLevel:
         stream << "HeadingLevel";

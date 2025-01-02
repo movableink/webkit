@@ -2222,67 +2222,6 @@ AccessibilityObject* AccessibilityObject::headingElementForNode(Node* node)
     });
 }
 
-void AccessibilityObject::ariaTreeRows(AccessibilityChildrenVector& rows, AccessibilityChildrenVector& ancestors)
-{
-    auto ownedObjects = this->ownedObjects();
-    ancestors.append(*this);
-
-    // The ordering of rows is first DOM children *not* in aria-owns, followed by all specified
-    // in aria-owns.
-    for (const auto& child : unignoredChildren()) {
-        // Add tree items as the rows.
-        if (child->roleValue() == AccessibilityRole::TreeItem) {
-            // Child appears both as a direct child and aria-owns, we should use the ordering as
-            // described in aria-owns for this child.
-            if (ownedObjects.contains(child))
-                continue;
-
-            // The result set may already contain the child through aria-owns. For example,
-            // a treeitem sitting under the tree root, which is owned elsewhere in the tree.
-            if (rows.contains(child))
-                continue;
-
-            rows.append(child);
-        }
-
-        // Now see if this item also has rows hiding inside of it.
-        downcast<AccessibilityObject>(child.get()).ariaTreeRows(rows, ancestors);
-    }
-
-    // Now go through the aria-owns elements.
-    for (const auto& child : ownedObjects) {
-        // Avoid a circular reference via aria-owns by checking if our parent
-        // path includes this child. Currently, looking up the aria-owns parent
-        // path itself could be expensive, so we track it separately.
-        if (ancestors.contains(child))
-            continue;
-
-        // Add tree items as the rows.
-        if (child->roleValue() == AccessibilityRole::TreeItem) {
-            // Hopefully a flow that does not occur often in practice, but if someone were to include
-            // the owned child ealier in the top level of the tree, then reference via aria-owns later,
-            // move it to the right place.
-            if (rows.contains(child))
-                rows.removeFirst(child);
-
-            rows.append(child);
-        }
-
-        // Now see if this item also has rows hiding inside of it.
-        downcast<AccessibilityObject>(child.get()).ariaTreeRows(rows, ancestors);
-    }
-
-    ancestors.removeLast();
-}
-
-AXCoreObject::AccessibilityChildrenVector AccessibilityObject::ariaTreeRows()
-{
-    AccessibilityChildrenVector rows;
-    AccessibilityChildrenVector ancestors;
-    ariaTreeRows(rows, ancestors);
-    return rows;
-}
-    
 AXCoreObject::AccessibilityChildrenVector AccessibilityObject::disclosedRows()
 {
     AccessibilityChildrenVector result;

@@ -617,9 +617,6 @@ void AXIsolatedTree::updateNodeProperties(AccessibilityObject& axObject, const A
             propertyMap.set(AXProperty::AccessibilityText, axTextValue);
             break;
         }
-        case AXProperty::ARIATreeRows:
-            propertyMap.set(AXProperty::ARIATreeRows, axIDs(axObject.ariaTreeRows()));
-            break;
         case AXProperty::ValueAutofillButtonType:
             propertyMap.set(AXProperty::ValueAutofillButtonType, static_cast<int>(axObject.valueAutofillButtonType()));
             propertyMap.set(AXProperty::IsValueAutofillAvailable, axObject.isValueAutofillAvailable());
@@ -882,12 +879,6 @@ void AXIsolatedTree::updateDependentProperties(AccessibilityObject& axObject)
     updateTableAncestorColumns = updateTableAncestorColumns || isRowGroup(axObject.node());
 #endif
     for (RefPtr ancestor = axObject.parentObject(); ancestor; ancestor = ancestor->parentObject()) {
-        if (ancestor->isTree()) {
-            queueNodeUpdate(ancestor->objectID(), { AXProperty::ARIATreeRows });
-            if (!updateTableAncestorColumns)
-                break;
-        }
-
         if (updateTableAncestorColumns && is<AccessibilityTable>(*ancestor)) {
             // Only `updateChildren` if the table is unignored, because otherwise `updateChildren` will ascend and update the next highest unignored ancestor, which doesn't accomplish our goal of updating table columns.
             if (ancestor->isIgnored())

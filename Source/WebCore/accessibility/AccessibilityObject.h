@@ -633,9 +633,6 @@ public:
     bool isValueAutofillAvailable() const final;
     AutoFillButtonType valueAutofillButtonType() const final;
 
-    // Used by an ARIA tree to get all its rows.
-    AccessibilityChildrenVector ariaTreeRows() final;
-
     // ARIA live-region features.
     AccessibilityObject* liveRegionAncestor(bool excludeIfOff = true) const final { return Accessibility::liveRegionAncestor(*this, excludeIfOff); }
     const String liveRegionStatus() const override { return String(); }
@@ -928,7 +925,6 @@ private:
     // Note that "withoutCache" refers to the lack of referencing AXComputedObjectAttributeCache in the function, not the AXObjectCache parameter we pass in here.
     bool isIgnoredWithoutCache(AXObjectCache*) const;
     void setLastKnownIsIgnoredValue(bool);
-    void ariaTreeRows(AccessibilityChildrenVector& rows, AccessibilityChildrenVector& ancestors);
 
     // Special handling of click point for links.
     IntPoint linkClickPoint();

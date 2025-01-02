@@ -1342,7 +1342,7 @@ public:
 
     // Used by an ARIA tree to get all its rows.
     // FIXME: this should be folded into rows().
-    virtual AccessibilityChildrenVector ariaTreeRows() = 0;
+    AccessibilityChildrenVector ariaTreeRows();
     // Used by an ARIA tree item to get only its content, and not its child tree items and groups.
     AccessibilityChildrenVector ariaTreeItemContent();
 
@@ -1475,6 +1475,8 @@ private:
     // Detaches this object from the objects it references and it is referenced by.
     virtual void detachRemoteParts(AccessibilityDetachmentType) = 0;
     virtual void detachPlatformWrapper(AccessibilityDetachmentType) = 0;
+
+    void ariaTreeRows(AXCoreObject::AccessibilityChildrenVector& rows, AXCoreObject::AccessibilityChildrenVector& ancestors);
 
     AXID m_id;
 #if PLATFORM(COCOA)
