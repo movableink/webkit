@@ -122,6 +122,8 @@ public:
 
     JSArray* fastToReversed(JSGlobalObject*, uint64_t length);
 
+    JSArray* fastWith(JSGlobalObject*, uint32_t index, JSValue, uint64_t length);
+
     ALWAYS_INLINE bool definitelyNegativeOneMiss() const;
 
     enum ShiftCountMode {

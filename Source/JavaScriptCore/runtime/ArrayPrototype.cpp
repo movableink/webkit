@@ -67,6 +67,7 @@ static JSC_DECLARE_HOST_FUNCTION(arrayProtoFuncConcat);
 static JSC_DECLARE_HOST_FUNCTION(arrayProtoFuncFill);
 static JSC_DECLARE_HOST_FUNCTION(arrayProtoFuncToReversed);
 static JSC_DECLARE_HOST_FUNCTION(arrayProtoFuncToSorted);
+static JSC_DECLARE_HOST_FUNCTION(arrayProtoFuncWith);
 
 // ------------------------------ ArrayPrototype ----------------------------
 
@@ -130,7 +131,7 @@ void ArrayPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
     JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->toReversed, arrayProtoFuncToReversed, static_cast<unsigned>(PropertyAttribute::DontEnum), 0, ImplementationVisibility::Public);
     JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->toSorted, arrayProtoFuncToSorted, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public);
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().toSplicedPublicName(), arrayPrototypeToSplicedCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
-    JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().withPublicName(), arrayPrototypeWithCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->with, arrayProtoFuncWith, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, ImplementationVisibility::Public);
     putDirectWithoutTransition(vm, vm.propertyNames->builtinNames().entriesPrivateName(), getDirect(vm, vm.propertyNames->builtinNames().entriesPublicName()), static_cast<unsigned>(PropertyAttribute::ReadOnly));
     putDirectWithoutTransition(vm, vm.propertyNames->builtinNames().forEachPrivateName(), getDirect(vm, vm.propertyNames->builtinNames().forEachPublicName()), static_cast<unsigned>(PropertyAttribute::ReadOnly));
     putDirectWithoutTransition(vm, vm.propertyNames->builtinNames().includesPrivateName(), getDirect(vm, vm.propertyNames->builtinNames().includesPublicName()), static_cast<unsigned>(PropertyAttribute::ReadOnly));
@@ -190,6 +191,26 @@ static inline uint64_t argumentClampedIndexFromStartOrEnd(JSGlobalObject* global
         return indexDouble < 0 ? 0 : static_cast<uint64_t>(indexDouble);
     }
     return indexDouble > length ? length : static_cast<uint64_t>(indexDouble);
+}
+
+static inline int64_t argumentUnclampedIndexFromStartOrEnd(JSGlobalObject* globalObject, JSValue value, uint64_t length, uint64_t undefinedValue = 0)
+{
+    if (value.isUndefined())
+        return undefinedValue;
+
+    if (LIKELY(value.isInt32())) {
+        int64_t indexInt64 = value.asInt32();
+        if (indexInt64 < 0)
+            indexInt64 += length;
+        return indexInt64;
+    }
+
+    double indexDouble = value.toIntegerOrInfinity(globalObject);
+    if (indexDouble < 0)
+        indexDouble += length;
+    if (UNLIKELY(std::isinf(indexDouble)))
+        return std::signbit(indexDouble) ? std::numeric_limits<int64_t>::min() : std::numeric_limits<int64_t>::max();
+    return static_cast<int64_t>(indexDouble);
 }
 
 inline bool canUseFastJoin(const JSObject* thisObject)
@@ -2022,6 +2043,62 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncToSorted, (JSGlobalObject* globalObject, 
 
     scope.release();
     sortImpl(globalObject, result, length, comparatorValue);
+
+    return JSValue::encode(result);
+}
+
+JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncWith, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSValue thisValue = callFrame->thisValue().toThis(globalObject, ECMAMode::strict());
+    RETURN_IF_EXCEPTION(scope, { });
+
+    if (UNLIKELY(thisValue.isUndefinedOrNull()))
+        return throwVMTypeError(globalObject, scope, "Array.prototype.with requires that |this| not be null or undefined"_s);
+    auto* thisObject = thisValue.toObject(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    uint64_t length = toLength(globalObject, thisObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    int64_t actualIndex = argumentUnclampedIndexFromStartOrEnd(globalObject, callFrame->argument(0), length);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    if (UNLIKELY(actualIndex >= static_cast<int64_t>(length) || actualIndex < 0)) {
+        throwRangeError(globalObject, scope, "Array index out of range"_s);
+        return { };
+    }
+
+    if (UNLIKELY(length > std::numeric_limits<uint32_t>::max())) {
+        throwRangeError(globalObject, scope, "Array length must be a positive integer of safe magnitude."_s);
+        return { };
+    }
+    JSValue value = callFrame->argument(1);
+    if (LIKELY(isJSArray(thisObject))) {
+        JSArray* thisArray = jsCast<JSArray*>(thisObject);
+        if (auto fastResult = thisArray->fastWith(globalObject, actualIndex, value, length))
+            return JSValue::encode(fastResult);
+    }
+
+    JSArray* result = JSArray::tryCreate(vm, globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithUndecided), length);
+    if (UNLIKELY(!result)) {
+        throwOutOfMemoryError(globalObject, scope);
+        return { };
+    }
+
+    for (uint32_t k = 0; k < length; k++) {
+        if (k == actualIndex) {
+            result->putDirectIndex(globalObject, k, value, 0, PutDirectIndexShouldThrow);
+            RETURN_IF_EXCEPTION(scope, { });
+        } else {
+            auto fromValue = thisObject->getIndex(globalObject, k);
+            RETURN_IF_EXCEPTION(scope, { });
+            result->putDirectIndex(globalObject, k, fromValue, 0, PutDirectIndexShouldThrow);
+            RETURN_IF_EXCEPTION(scope, { });
+        }
+    }
 
     return JSValue::encode(result);
 }

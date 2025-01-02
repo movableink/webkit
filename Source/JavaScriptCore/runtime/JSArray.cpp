@@ -623,6 +623,87 @@ JSArray* JSArray::fastToReversed(JSGlobalObject* globalObject, uint64_t length)
     }
 }
 
+JSArray* JSArray::fastWith(JSGlobalObject* globalObject, uint32_t index, JSValue value, uint64_t length)
+{
+    ASSERT(length <= std::numeric_limits<uint32_t>::max());
+
+    VM& vm = globalObject->vm();
+
+    auto type = indexingType();
+    switch (type) {
+    case ArrayWithInt32:
+    case ArrayWithContiguous:
+    case ArrayWithDouble: {
+        if (length > this->butterfly()->vectorLength())
+            return nullptr;
+
+        Structure* resultStructure = globalObject->arrayStructureForIndexingTypeDuringAllocation(type);
+        IndexingType indexingType = resultStructure->indexingType();
+        if (UNLIKELY(hasAnyArrayStorage(indexingType)))
+            return nullptr;
+        ASSERT(!globalObject->isHavingABadTime());
+
+        auto srcData = this->butterfly()->contiguous().data();
+
+        if (hasDouble(indexingType)) {
+            if (containsHole(this->butterfly()->contiguousDouble().data(), static_cast<uint32_t>(length)))
+                return nullptr;
+        } else if (containsHole(srcData, static_cast<uint32_t>(length)))
+            return nullptr;
+
+        auto vectorLength = Butterfly::optimalContiguousVectorLength(resultStructure, length);
+        void* memory = vm.auxiliarySpace().allocate(
+            vm,
+            Butterfly::totalSize(0, 0, true, vectorLength * sizeof(EncodedJSValue)),
+            nullptr, AllocationFailureMode::ReturnNull);
+        if (UNLIKELY(!memory))
+            return nullptr;
+        auto* butterfly = Butterfly::fromBase(memory, 0, 0);
+        butterfly->setVectorLength(vectorLength);
+        butterfly->setPublicLength(length);
+
+        auto resultData = butterfly->contiguous().data();
+        memcpy(resultData, srcData, sizeof(JSValue) * length);
+        if (size_t remaining = vectorLength - length; remaining) {
+            if (hasDouble(type)) {
+#if OS(DARWIN)
+                constexpr double pattern = PNaN;
+                memset_pattern8(static_cast<void*>(butterfly->contiguous().data() + length), &pattern, sizeof(JSValue) * remaining);
+#else
+                for (unsigned i = length; i < vectorLength; ++i)
+                    butterfly->contiguousDouble().atUnsafe(i) = PNaN;
+#endif
+            } else {
+#if USE(JSVALUE64)
+                memset(static_cast<void*>(butterfly->contiguous().data() + length), 0, sizeof(JSValue) * remaining);
+#else
+                for (unsigned i = length; i < vectorLength; ++i)
+                    butterfly->contiguous().atUnsafe(i).clear();
+#endif
+            }
+        }
+
+        JSArray* result = createWithButterfly(vm, nullptr, resultStructure, butterfly);
+        result->convertToIndexingTypeIfNeeded(vm, leastUpperBoundOfIndexingTypeAndValue(type, value));
+
+        if (isCopyOnWrite(result->indexingMode()))
+            result->convertFromCopyOnWrite(vm);
+
+        if (hasDouble(result->indexingType())) {
+            ASSERT(value.isNumber());
+            result->butterfly()->contiguousDouble().at(result, index) = value.asNumber();
+        } else {
+            result->butterfly()->contiguous().at(result, index).setWithoutWriteBarrier(value);
+            vm.writeBarrier(result);
+        }
+
+        return result;
+    }
+    default:
+        return nullptr;
+    }
+}
+
 bool JSArray::appendMemcpy(JSGlobalObject* globalObject, VM& vm, unsigned startIndex, IndexingType otherType, std::span<const EncodedJSValue> values)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
