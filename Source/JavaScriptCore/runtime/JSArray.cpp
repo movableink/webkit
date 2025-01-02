@@ -564,6 +564,24 @@ JSArray* JSArray::fastToReversed(JSGlobalObject* globalObject, uint64_t length)
 
         auto resultData = butterfly->contiguous().data();
         memcpy(resultData, srcData, sizeof(JSValue) * length);
+        if (size_t remaining = vectorLength - length; remaining) {
+            if (hasDouble(type)) {
+#if OS(DARWIN)
+                constexpr double pattern = PNaN;
+                memset_pattern8(static_cast<void*>(butterfly->contiguous().data() + length), &pattern, sizeof(JSValue) * remaining);
+#else
+                for (unsigned i = length; i < vectorLength; ++i)
+                    butterfly->contiguousDouble().atUnsafe(i) = PNaN;
+#endif
+            } else {
+#if USE(JSVALUE64)
+                memset(static_cast<void*>(butterfly->contiguous().data() + length), 0, sizeof(JSValue) * remaining);
+#else
+                for (unsigned i = length; i < vectorLength; ++i)
+                    butterfly->contiguous().atUnsafe(i).clear();
+#endif
+            }
+        }
 
         if (hasDouble(indexingType)) {
             auto data = butterfly->contiguousDouble().data();
