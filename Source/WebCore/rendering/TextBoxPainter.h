@@ -53,6 +53,8 @@ public:
 
     void paint();
 
+    static inline FloatSize rotateShadowOffset(const SpaceSeparatedPoint<Style::Length<>>& offset, WritingMode);
+
 protected:
     auto& textBox() const { return m_textBox; }
     InlineIterator::TextBoxIterator makeIterator() const;
@@ -113,4 +115,12 @@ protected:
     std::optional<bool> m_emphasisMarkExistsAndIsAbove { };
 };
 
+inline FloatSize TextBoxPainter::rotateShadowOffset(const SpaceSeparatedPoint<Style::Length<>>& offset, WritingMode writingMode)
+{
+    if (writingMode.isHorizontal())
+        return { offset.x().value, offset.y().value };
+    if (writingMode.isLineOverLeft()) // sideways-lr
+        return { -offset.y().value, offset.x().value };
+    return { offset.y().value, -offset.x().value };
+}
 }

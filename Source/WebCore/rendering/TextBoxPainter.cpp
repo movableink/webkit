@@ -501,7 +501,6 @@ void TextBoxPainter::paintForeground(const StyledMarkedText& markedText)
 
     TextPainter textPainter { context, font, m_style };
     textPainter.setStyle(markedText.style.textStyles);
-    textPainter.setIsHorizontal(textBox().isHorizontal());
     if (markedText.style.textShadow) {
         textPainter.setShadow(&markedText.style.textShadow.value());
         if (m_style.hasAppleColorFilter())

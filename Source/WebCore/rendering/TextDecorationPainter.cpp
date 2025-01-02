@@ -33,6 +33,7 @@
 #include "RenderStyleInlines.h"
 #include "RenderText.h"
 #include "ShadowData.h"
+#include "TextBoxPainter.h"
 #include "TextRun.h"
 
 namespace WebCore {
@@ -202,6 +203,15 @@ TextDecorationPainter::TextDecorationPainter(GraphicsContext& context, const Fon
 {
 }
 
+static inline FloatSize convertShadowOffset(const LengthPoint& offset, WritingMode writingMode)
+{
+    if (writingMode.isHorizontal())
+        return { offset.x.value(), offset.y.value() };
+    if (writingMode.isLineOverLeft()) // sideways-lr
+        return { -offset.y.value(), offset.x.value() };
+    return { offset.y.value(), -offset.x.value() };
+}
+
 // Paint text-shadow, underline, overline
 void TextDecorationPainter::paintBackgroundDecorations(const RenderStyle& style, const TextRun& textRun, const BackgroundDecorationGeometry& decorationGeometry, OptionSet<TextDecorationLine> decorationType, const Styles& decorationStyle)
 {
@@ -249,11 +259,10 @@ void TextDecorationPainter::paintBackgroundDecorations(const RenderStyle& style,
             auto shadowExtent = shadow->paintingExtent();
             auto shadowRect = clipRect;
             shadowRect.inflate(shadowExtent);
-            auto shadowX = m_writingMode.isHorizontal() ? shadow->x().value : shadow->y().value;
-            auto shadowY = m_writingMode.isHorizontal() ? shadow->y().value : -shadow->x().value;
-            shadowRect.move(shadowX, shadowY);
+            auto shadowOffset = TextBoxPainter::rotateShadowOffset(shadow->location(), m_writingMode);
+            shadowRect.move(shadowOffset);
             clipRect.unite(shadowRect);
-            extraOffset = std::max(extraOffset, std::max(0.f, shadowY) + shadowExtent);
+            extraOffset = std::max(extraOffset, std::max(0.f, shadowOffset.height()) + shadowExtent);
         }
         m_context.save();
         m_context.clip(clipRect);
@@ -283,9 +292,9 @@ void TextDecorationPainter::paintBackgroundDecorations(const RenderStyle& style,
             if (m_shadowColorFilter)
                 m_shadowColorFilter->transformColor(shadowColor);
 
-            auto shadowX = m_writingMode.isHorizontal() ? shadow->x().value : shadow->y().value;
-            auto shadowY = m_writingMode.isHorizontal() ? shadow->y().value : -shadow->x().value;
-            m_context.setDropShadow({ { shadowX, shadowY - extraOffset }, shadow->radius().value, shadowColor, ShadowRadiusMode::Default });
+            auto shadowOffset = TextBoxPainter::rotateShadowOffset(shadow->location(), m_writingMode);
+            shadowOffset.expand(0, -extraOffset);
+            m_context.setDropShadow({ shadowOffset, shadow->radius().value, shadowColor, ShadowRadiusMode::Default });
             shadow = shadow->next();
         };
         applyShadowIfNeeded();

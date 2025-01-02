@@ -36,11 +36,12 @@
 #include "RenderLayer.h"
 #include "RenderStyle.h"
 #include "ShadowData.h"
+#include "TextBoxPainter.h"
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
-ShadowApplier::ShadowApplier(const RenderStyle& style, GraphicsContext& context, const ShadowData* shadow, const FilterOperations* colorFilter, const FloatRect& textRect, bool lastShadowIterationShouldDrawText, bool opaque, FontOrientation orientation)
+ShadowApplier::ShadowApplier(const RenderStyle& style, GraphicsContext& context, const ShadowData* shadow, const FilterOperations* colorFilter, const FloatRect& textRect, bool lastShadowIterationShouldDrawText, bool opaque, bool ignoreWritingMode)
     : m_context { context }
     , m_shadow { shadow }
     , m_onlyDrawsShadow { !isLastShadowIteration() || !lastShadowIterationShouldDrawText }
@@ -53,9 +54,7 @@ ShadowApplier::ShadowApplier(const RenderStyle& style, GraphicsContext& context,
         return;
     }
 
-    auto shadowX = orientation == FontOrientation::Horizontal ? shadow->x().value : shadow->y().value;
-    auto shadowY = orientation == FontOrientation::Horizontal ? shadow->y().value : -shadow->x().value;
-    auto shadowOffset = FloatSize(shadowX, shadowY);
+    auto shadowOffset = TextBoxPainter::rotateShadowOffset(shadow->location(), ignoreWritingMode ? WritingMode() : style.writingMode());
     auto shadowRadius = shadow->radius().value;
     auto shadowColor = style.colorResolvingCurrentColor(shadow->color());
     if (colorFilter)
@@ -104,6 +103,7 @@ TextPainter::TextPainter(GraphicsContext& context, const FontCascade& font, cons
     : m_context(context)
     , m_font(font)
     , m_renderStyle(renderStyle)
+    , m_writingMode(renderStyle.writingMode())
 {
 }
 
@@ -142,7 +142,7 @@ void TextPainter::paintTextWithShadows(const ShadowData* shadow, const FilterOpe
     if (!opaque)
         m_context.setFillColor(Color::black);
     while (shadow) {
-        ShadowApplier shadowApplier(m_renderStyle, m_context, shadow, colorFilter, boxRect, lastShadowIterationShouldDrawText, opaque, (m_textBoxIsHorizontal || m_combinedText) ? FontOrientation::Horizontal : FontOrientation::Vertical);
+        ShadowApplier shadowApplier(m_renderStyle, m_context, shadow, colorFilter, boxRect, lastShadowIterationShouldDrawText, opaque, m_combinedText);
         if (!shadowApplier.nothingToDraw())
             paintTextOrEmphasisMarks(font, textRun, emphasisMark, emphasisMarkOffset, textOrigin + shadowApplier.extraOffset(), startOffset, endOffset);
         shadow = shadow->next();
