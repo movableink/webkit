@@ -174,52 +174,46 @@ static bool shouldInvalidateLineLayoutPathAfterChangeFor(const RenderBlockFlow& 
     }
 }
 
-static inline std::pair<LayoutRect, LayoutRect> toMarginAndBorderBoxVisualRect(const Layout::BoxGeometry& logicalGeometry, LayoutUnit containerLogicalWidth, WritingMode writingMode)
+static inline std::pair<LayoutRect, LayoutRect> toMarginAndBorderBoxVisualRect(const Layout::BoxGeometry& logicalGeometry, const LayoutSize& containerSize, WritingMode writingMode)
 {
-    bool isHorizontalWritingMode = writingMode.isHorizontal();
+    // In certain writing modes, IFC gets the border box position wrong;
+    // but the margin box is correct, so use it to derive the border box.
+    auto marginBoxLogicalRect = Layout::BoxGeometry::marginBoxRect(logicalGeometry);
+    auto containerLogicalWidth = writingMode.isHorizontal()
+        ? containerSize.width()
+        : containerSize.height();
+    auto marginBoxLogicalX = writingMode.isInlineFlipped()
+        ? containerLogicalWidth - marginBoxLogicalRect.right()
+        : marginBoxLogicalRect.left();
+    auto marginBoxVisualRect = writingMode.isHorizontal()
+        ? LayoutRect {
+            marginBoxLogicalX, marginBoxLogicalRect.top(),
+            marginBoxLogicalRect.width(), marginBoxLogicalRect.height() }
+        : LayoutRect {
+            marginBoxLogicalRect.top(), marginBoxLogicalX,
+            marginBoxLogicalRect.height(), marginBoxLogicalRect.width() };
 
-    auto borderBoxLogicalRect = Layout::BoxGeometry::borderBoxRect(logicalGeometry);
-    auto horizontalMargin = Layout::BoxGeometry::HorizontalEdges { logicalGeometry.marginStart(), logicalGeometry.marginEnd() };
-    auto verticalMargin = Layout::BoxGeometry::VerticalEdges { logicalGeometry.marginBefore(), logicalGeometry.marginAfter() };
-
-    auto flipMarginsIfApplicable = [&] {
-        if (writingMode == WritingMode())
-            return;
-
-        if (!isHorizontalWritingMode) {
-            auto logicalHorizontalMargin = horizontalMargin;
-            horizontalMargin = !writingMode.isBlockFlipped()
-                ? Layout::BoxGeometry::HorizontalEdges { verticalMargin.after, verticalMargin.before }
-                : Layout::BoxGeometry::HorizontalEdges { verticalMargin.before, verticalMargin.after };
-            verticalMargin = { logicalHorizontalMargin.start, logicalHorizontalMargin.end };
-        }
-        if (writingMode.isBidiRTL()) {
-            if (isHorizontalWritingMode)
-                horizontalMargin = { horizontalMargin.end, horizontalMargin.start };
-            else
-                verticalMargin = { verticalMargin.after, verticalMargin.before };
-        }
-    };
-    flipMarginsIfApplicable();
-
-    auto borderBoxVisualTopLeft = LayoutPoint { };
-    auto borderBoxLeft = writingMode.isBidiLTR() ? borderBoxLogicalRect.left() : containerLogicalWidth - (borderBoxLogicalRect.left() + borderBoxLogicalRect.width());
-    if (isHorizontalWritingMode)
-        borderBoxVisualTopLeft = { borderBoxLeft, borderBoxLogicalRect.top() };
-    else {
-        auto marginBoxVisualLeft = borderBoxLogicalRect.top() - logicalGeometry.marginBefore();
-        auto marginBoxVisualTop = borderBoxLeft - logicalGeometry.marginStart();
-        if (writingMode.isBidiLTR())
-            borderBoxVisualTopLeft = { marginBoxVisualLeft + horizontalMargin.start, marginBoxVisualTop + verticalMargin.before };
-        else
-            borderBoxVisualTopLeft = { marginBoxVisualLeft + horizontalMargin.start, marginBoxVisualTop + verticalMargin.after };
+    auto borderBoxVisualRect = marginBoxVisualRect;
+    LayoutUnit marginLeft, marginTop, marginWidth, marginHeight;
+    if (writingMode.isHorizontal()) {
+        marginLeft = writingMode.isInlineLeftToRight()
+            ? logicalGeometry.marginStart() : logicalGeometry.marginEnd();
+        marginTop = writingMode.isBlockTopToBottom()
+            ? logicalGeometry.marginBefore() : logicalGeometry.marginAfter();
+        marginWidth = logicalGeometry.marginStart() + logicalGeometry.marginEnd();
+        marginHeight = logicalGeometry.marginBefore() + logicalGeometry.marginAfter();
+    } else {
+        marginLeft = writingMode.isLineInverted()
+            // Invert verticalLogicalMargin() *and* convert to unflipped coords.
+            ? logicalGeometry.marginAfter() : logicalGeometry.marginBefore();
+        marginTop = writingMode.isInlineTopToBottom()
+            ? logicalGeometry.marginStart() : logicalGeometry.marginEnd();
+        marginWidth = logicalGeometry.marginBefore() + logicalGeometry.marginAfter();
+        marginHeight = logicalGeometry.marginStart() + logicalGeometry.marginEnd();
     }
+    borderBoxVisualRect.expand(-marginWidth, -marginHeight);
+    borderBoxVisualRect.move(marginLeft, marginTop);
 
-    auto borderBoxVisualRect = LayoutRect { borderBoxVisualTopLeft, isHorizontalWritingMode ? borderBoxLogicalRect.size() : borderBoxLogicalRect.size().transposedSize() };
-    auto marginBoxVisualRect = borderBoxVisualRect;
-
-    marginBoxVisualRect.move(-horizontalMargin.start, -verticalMargin.before);
-    marginBoxVisualRect.expand(horizontalMargin.start + horizontalMargin.end, verticalMargin.before + verticalMargin.after);
     return { marginBoxVisualRect, borderBoxVisualRect };
 }
 
@@ -606,8 +600,7 @@ void LineLayout::updateRenderTreePositions(const Vector<LineAdjustment>& lineAdj
         if (layoutBox.isFloatingPositioned()) {
             auto isInitialLetter = layoutBox.style().pseudoElementType() == PseudoId::FirstLetter;
             auto& floatingObject = flow().insertFloatingObjectForIFC(renderer);
-            auto containerLogicalWidth = m_inlineContentConstraints->visualLeft() + m_inlineContentConstraints->horizontal().logicalWidth + m_inlineContentConstraints->horizontal().logicalLeft;
-            auto [marginBoxVisualRect, borderBoxVisualRect] = toMarginAndBorderBoxVisualRect(logicalGeometry, containerLogicalWidth, placedFloatsWritingMode);
+            auto [marginBoxVisualRect, borderBoxVisualRect] = toMarginAndBorderBoxVisualRect(logicalGeometry, m_inlineContentConstraints->containerRenderSize(), placedFloatsWritingMode);
 
             auto paginationOffset = floatPaginationOffsetMap.getOptional(layoutBox);
             if (paginationOffset) {
@@ -736,33 +729,15 @@ void LineLayout::preparePlacedFloats()
         return;
 
     auto placedFloatsWritingMode = placedFloats.blockFormattingContextRoot().style().writingMode();
-    auto placedFloatsIsLeftToRight = placedFloatsWritingMode.isBidiLTR();
+    auto placedFloatsIsLeftToRight = placedFloatsWritingMode.isLogicalLeftInlineStart();
     auto isHorizontalWritingMode = placedFloatsWritingMode.isHorizontal();
     for (auto& floatingObject : *flow().floatingObjectSet()) {
         auto& visualRect = floatingObject->frameRect();
-        auto logicalPosition = [&] {
-            switch (floatingObject->renderer().style().floating()) {
-            case Float::Left:
-                return placedFloatsIsLeftToRight ? Layout::PlacedFloats::Item::Position::Start : Layout::PlacedFloats::Item::Position::End;
-            case Float::Right:
-                return placedFloatsIsLeftToRight ? Layout::PlacedFloats::Item::Position::End : Layout::PlacedFloats::Item::Position::Start;
-            case Float::InlineStart: {
-                auto* floatBoxContainingBlock = floatingObject->renderer().containingBlock();
-                if (floatBoxContainingBlock && placedFloatsWritingMode.isInlineOpposing(floatBoxContainingBlock->writingMode()))
-                    return Layout::PlacedFloats::Item::Position::End;
-                return Layout::PlacedFloats::Item::Position::Start;
-            }
-            case Float::InlineEnd: {
-                auto* floatBoxContainingBlock = floatingObject->renderer().containingBlock();
-                if (floatBoxContainingBlock && placedFloatsWritingMode.isInlineOpposing(floatBoxContainingBlock->writingMode()))
-                    return Layout::PlacedFloats::Item::Position::Start;
-                return Layout::PlacedFloats::Item::Position::End;
-            }
-            default:
-                ASSERT_NOT_REACHED();
-                return Layout::PlacedFloats::Item::Position::Start;
-            }
-        };
+
+        auto usedPosition = RenderStyle::usedFloat(floatingObject->renderer());
+        auto logicalPosition = (usedPosition == UsedFloat::Left) == placedFloatsIsLeftToRight
+            ? Layout::PlacedFloats::Item::Position::Start
+            : Layout::PlacedFloats::Item::Position::End;
 
         auto boxGeometry = Layout::BoxGeometry { };
         auto logicalRect = [&] {
@@ -789,7 +764,7 @@ void LineLayout::preparePlacedFloats()
         auto shapeOutsideInfo = floatingObject->renderer().shapeOutsideInfo();
         auto* shape = shapeOutsideInfo ? &shapeOutsideInfo->computedShape() : nullptr;
 
-        placedFloats.append({ logicalPosition(), boxGeometry, logicalRect.location(), shape });
+        placedFloats.append({ logicalPosition, boxGeometry, logicalRect.location(), shape });
     }
 }
 
