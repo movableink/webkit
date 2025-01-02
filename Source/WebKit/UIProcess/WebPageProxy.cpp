@@ -13451,12 +13451,6 @@ void WebPageProxy::handleAcceptedCandidate(WebCore::TextCheckingResult acceptedC
     send(Messages::WebPage::HandleAcceptedCandidate(acceptedCandidate));
 }
 
-void WebPageProxy::didHandleAcceptedCandidate()
-{
-    if (RefPtr pageClient = this->pageClient())
-        pageClient->didHandleAcceptedCandidate();
-}
-
 void WebPageProxy::setHeaderBannerHeight(int height)
 {
     send(Messages::WebPage::SetHeaderBannerHeight(height));

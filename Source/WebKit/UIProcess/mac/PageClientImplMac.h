@@ -258,8 +258,6 @@ private:
     void didPerformImmediateActionHitTest(const WebHitTestResultData&, bool contentPreventsDefault, API::Object*) override;
     NSObject *immediateActionAnimationControllerForHitTestResult(RefPtr<API::HitTestResult>, uint64_t, RefPtr<API::Object>) override;
 
-    void didHandleAcceptedCandidate() override;
-
     void videoControlsManagerDidChange() override;
 
     void showPlatformContextMenu(NSMenu *, WebCore::IntPoint) override;

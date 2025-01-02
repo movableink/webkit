@@ -1910,7 +1910,6 @@ public:
     NSObject *immediateActionAnimationControllerForHitTestResult(RefPtr<API::HitTestResult>, uint64_t, RefPtr<API::Object>);
 
     void handleAcceptedCandidate(WebCore::TextCheckingResult);
-    void didHandleAcceptedCandidate();
 
     void setHeaderBannerHeight(int);
     void setFooterBannerHeight(int);

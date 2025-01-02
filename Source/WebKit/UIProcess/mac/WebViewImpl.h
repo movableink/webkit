@@ -465,7 +465,6 @@ public:
     void cancelImmediateActionAnimation();
     void completeImmediateActionAnimation();
     void didChangeContentSize(CGSize);
-    void didHandleAcceptedCandidate();
     void videoControlsManagerDidChange();
 
     void setIgnoresNonWheelEvents(bool);

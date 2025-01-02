@@ -216,7 +216,6 @@ void WebPage::handleAcceptedCandidate(WebCore::TextCheckingResult acceptedCandid
         return;
 
     frame->editor().handleAcceptedCandidate(acceptedCandidate);
-    send(Messages::WebPageProxy::DidHandleAcceptedCandidate());
 }
 
 NSObject *WebPage::accessibilityObjectForMainFramePlugin()

@@ -941,11 +941,6 @@ NSObject *PageClientImpl::immediateActionAnimationControllerForHitTestResult(Ref
     return m_impl->immediateActionAnimationControllerForHitTestResult(hitTestResult.get(), type, userData.get());
 }
 
-void PageClientImpl::didHandleAcceptedCandidate()
-{
-    m_impl->didHandleAcceptedCandidate();
-}
-
 void PageClientImpl::videoControlsManagerDidChange()
 {
     PageClientImplCocoa::videoControlsManagerDidChange();
