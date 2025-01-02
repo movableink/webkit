@@ -43,8 +43,12 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , perspectiveOriginX(RenderStyle::initialPerspectiveOriginX())
     , perspectiveOriginY(RenderStyle::initialPerspectiveOriginY())
     , lineClamp(RenderStyle::initialLineClamp())
+    , zoom(RenderStyle::initialZoom())
     , maxLines(RenderStyle::initialMaxLines())
     , overflowContinue(RenderStyle::initialOverflowContinue())
+    , touchActions(RenderStyle::initialTouchActions())
+    , marginTrim(RenderStyle::initialMarginTrim())
+    , contain(RenderStyle::initialContainment())
     , initialLetter(RenderStyle::initialInitialLetter())
     , marquee(StyleMarqueeData::create())
     , backdropFilter(StyleFilterData::create())
@@ -80,12 +84,6 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , offsetAnchor(RenderStyle::initialOffsetAnchor())
     , offsetRotate(RenderStyle::initialOffsetRotate())
     , textDecorationThickness(RenderStyle::initialTextDecorationThickness())
-    , touchActions(RenderStyle::initialTouchActions())
-    , marginTrim(RenderStyle::initialMarginTrim())
-    , contain(RenderStyle::initialContainment())
-    // scrollSnapType
-    // scrollSnapAlign
-    // scrollSnapStop
     // scrollTimelines
     // scrollTimelineAxes
     // scrollTimelineNames
@@ -95,8 +93,9 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     // viewTimelineNames
     // timelineScope
     // scrollbarGutter
-    , scrollbarWidth(RenderStyle::initialScrollbarWidth())
-    , zoom(RenderStyle::initialZoom())
+    // scrollSnapType
+    // scrollSnapAlign
+    // scrollSnapStop
     , pseudoElementNameArgument(nullAtom())
     , anchorNames(RenderStyle::initialAnchorNames())
     , positionAnchor(RenderStyle::initialPositionAnchor())
@@ -117,6 +116,7 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , contentVisibility(static_cast<unsigned>(RenderStyle::initialContentVisibility()))
     , effectiveBlendMode(static_cast<unsigned>(RenderStyle::initialBlendMode()))
     , isolation(static_cast<unsigned>(RenderStyle::initialIsolation()))
+    , inputSecurity(static_cast<unsigned>(RenderStyle::initialInputSecurity()))
 #if ENABLE(APPLE_PAY)
     , applePayButtonStyle(static_cast<unsigned>(RenderStyle::initialApplePayButtonStyle()))
     , applePayButtonType(static_cast<unsigned>(RenderStyle::initialApplePayButtonType()))
@@ -124,7 +124,6 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , breakBefore(static_cast<unsigned>(RenderStyle::initialBreakBetween()))
     , breakAfter(static_cast<unsigned>(RenderStyle::initialBreakBetween()))
     , breakInside(static_cast<unsigned>(RenderStyle::initialBreakInside()))
-    , inputSecurity(static_cast<unsigned>(RenderStyle::initialInputSecurity()))
     , containIntrinsicWidthType(static_cast<unsigned>(RenderStyle::initialContainIntrinsicWidthType()))
     , containIntrinsicHeightType(static_cast<unsigned>(RenderStyle::initialContainIntrinsicHeightType()))
     , containerType(static_cast<unsigned>(RenderStyle::initialContainerType()))
@@ -132,11 +131,12 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , overflowAnchor(static_cast<unsigned>(RenderStyle::initialOverflowAnchor()))
     , hasClip(false)
     , positionTryOrder(static_cast<unsigned>(RenderStyle::initialPositionTryOrder()))
-    , fieldSizing(RenderStyle::initialFieldSizing())
+    , fieldSizing(static_cast<unsigned>(RenderStyle::initialFieldSizing()))
+    , nativeAppearanceDisabled(static_cast<unsigned>(RenderStyle::initialNativeAppearanceDisabled()))
 #if HAVE(CORE_MATERIAL)
     , appleVisualEffect(static_cast<unsigned>(RenderStyle::initialAppleVisualEffect()))
 #endif
-    , nativeAppearanceDisabled(static_cast<unsigned>(RenderStyle::initialNativeAppearanceDisabled()))
+    , scrollbarWidth(static_cast<unsigned>(RenderStyle::initialScrollbarWidth()))
 {
 }
 
@@ -147,8 +147,12 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , perspectiveOriginX(o.perspectiveOriginX)
     , perspectiveOriginY(o.perspectiveOriginY)
     , lineClamp(o.lineClamp)
+    , zoom(o.zoom)
     , maxLines(o.maxLines)
     , overflowContinue(o.overflowContinue)
+    , touchActions(o.touchActions)
+    , marginTrim(o.marginTrim)
+    , contain(o.contain)
     , initialLetter(o.initialLetter)
     , marquee(o.marquee)
     , backdropFilter(o.backdropFilter)
@@ -184,12 +188,6 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , offsetAnchor(o.offsetAnchor)
     , offsetRotate(o.offsetRotate)
     , textDecorationThickness(o.textDecorationThickness)
-    , touchActions(o.touchActions)
-    , marginTrim(o.marginTrim)
-    , contain(o.contain)
-    , scrollSnapType(o.scrollSnapType)
-    , scrollSnapAlign(o.scrollSnapAlign)
-    , scrollSnapStop(o.scrollSnapStop)
     , scrollTimelines(o.scrollTimelines)
     , scrollTimelineAxes(o.scrollTimelineAxes)
     , scrollTimelineNames(o.scrollTimelineNames)
@@ -199,8 +197,9 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , viewTimelineNames(o.viewTimelineNames)
     , timelineScope(o.timelineScope)
     , scrollbarGutter(o.scrollbarGutter)
-    , scrollbarWidth(o.scrollbarWidth)
-    , zoom(o.zoom)
+    , scrollSnapType(o.scrollSnapType)
+    , scrollSnapAlign(o.scrollSnapAlign)
+    , scrollSnapStop(o.scrollSnapStop)
     , pseudoElementNameArgument(o.pseudoElementNameArgument)
     , anchorNames(o.anchorNames)
     , positionAnchor(o.positionAnchor)
@@ -221,6 +220,7 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , contentVisibility(o.contentVisibility)
     , effectiveBlendMode(o.effectiveBlendMode)
     , isolation(o.isolation)
+    , inputSecurity(o.inputSecurity)
 #if ENABLE(APPLE_PAY)
     , applePayButtonStyle(o.applePayButtonStyle)
     , applePayButtonType(o.applePayButtonType)
@@ -228,7 +228,6 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , breakBefore(o.breakBefore)
     , breakAfter(o.breakAfter)
     , breakInside(o.breakInside)
-    , inputSecurity(o.inputSecurity)
     , containIntrinsicWidthType(o.containIntrinsicWidthType)
     , containIntrinsicHeightType(o.containIntrinsicHeightType)
     , containerType(o.containerType)
@@ -237,10 +236,11 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , hasClip(o.hasClip)
     , positionTryOrder(o.positionTryOrder)
     , fieldSizing(o.fieldSizing)
+    , nativeAppearanceDisabled(o.nativeAppearanceDisabled)
 #if HAVE(CORE_MATERIAL)
     , appleVisualEffect(o.appleVisualEffect)
 #endif
-    , nativeAppearanceDisabled(o.nativeAppearanceDisabled)
+    , scrollbarWidth(o.scrollbarWidth)
 {
 }
 
@@ -258,8 +258,12 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && perspectiveOriginX == o.perspectiveOriginX
         && perspectiveOriginY == o.perspectiveOriginY
         && lineClamp == o.lineClamp
+        && zoom == o.zoom
         && maxLines == o.maxLines
         && overflowContinue == o.overflowContinue
+        && touchActions == o.touchActions
+        && marginTrim == o.marginTrim
+        && contain == o.contain
         && initialLetter == o.initialLetter
         && marquee == o.marquee
         && backdropFilter == o.backdropFilter
@@ -293,12 +297,6 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && offsetAnchor == o.offsetAnchor
         && offsetRotate == o.offsetRotate
         && textDecorationThickness == o.textDecorationThickness
-        && touchActions == o.touchActions
-        && marginTrim == o.marginTrim
-        && contain == o.contain
-        && scrollSnapType == o.scrollSnapType
-        && scrollSnapAlign == o.scrollSnapAlign
-        && scrollSnapStop == o.scrollSnapStop
         && scrollTimelines == o.scrollTimelines
         && scrollTimelineAxes == o.scrollTimelineAxes
         && scrollTimelineNames == o.scrollTimelineNames
@@ -308,8 +306,9 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && viewTimelineNames == o.viewTimelineNames
         && timelineScope == o.timelineScope
         && scrollbarGutter == o.scrollbarGutter
-        && scrollbarWidth == o.scrollbarWidth
-        && zoom == o.zoom
+        && scrollSnapType == o.scrollSnapType
+        && scrollSnapAlign == o.scrollSnapAlign
+        && scrollSnapStop == o.scrollSnapStop
         && pseudoElementNameArgument == o.pseudoElementNameArgument
         && anchorNames == o.anchorNames
         && positionAnchor == o.positionAnchor
@@ -329,6 +328,7 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && textGroupAlign == o.textGroupAlign
         && effectiveBlendMode == o.effectiveBlendMode
         && isolation == o.isolation
+        && inputSecurity == o.inputSecurity
 #if ENABLE(APPLE_PAY)
         && applePayButtonStyle == o.applePayButtonStyle
         && applePayButtonType == o.applePayButtonType
@@ -337,7 +337,6 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && breakAfter == o.breakAfter
         && breakBefore == o.breakBefore
         && breakInside == o.breakInside
-        && inputSecurity == o.inputSecurity
         && containIntrinsicWidthType == o.containIntrinsicWidthType
         && containIntrinsicHeightType == o.containIntrinsicHeightType
         && containerType == o.containerType
@@ -348,10 +347,11 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && hasClip == o.hasClip
         && positionTryOrder == o.positionTryOrder
         && fieldSizing == o.fieldSizing
+        && nativeAppearanceDisabled == o.nativeAppearanceDisabled
 #if HAVE(CORE_MATERIAL)
         && appleVisualEffect == o.appleVisualEffect
 #endif
-        && nativeAppearanceDisabled == o.nativeAppearanceDisabled;
+        && scrollbarWidth == o.scrollbarWidth;
 }
 
 OptionSet<Containment> StyleRareNonInheritedData::usedContain() const
@@ -392,8 +392,15 @@ void StyleRareNonInheritedData::dumpDifferences(TextStream& ts, const StyleRareN
     LOG_IF_DIFFERENT(perspectiveOriginY);
 
     LOG_IF_DIFFERENT(lineClamp);
+
+    LOG_IF_DIFFERENT(zoom);
+
     LOG_IF_DIFFERENT(maxLines);
     LOG_IF_DIFFERENT(overflowContinue);
+
+    LOG_IF_DIFFERENT(touchActions);
+    LOG_IF_DIFFERENT(marginTrim);
+    LOG_IF_DIFFERENT(contain);
 
     LOG_IF_DIFFERENT(initialLetter);
 
@@ -442,14 +449,6 @@ void StyleRareNonInheritedData::dumpDifferences(TextStream& ts, const StyleRareN
 
     LOG_IF_DIFFERENT(textDecorationThickness);
 
-    LOG_IF_DIFFERENT(touchActions);
-    LOG_IF_DIFFERENT(marginTrim);
-    LOG_IF_DIFFERENT(contain);
-
-    LOG_IF_DIFFERENT(scrollSnapType);
-    LOG_IF_DIFFERENT(scrollSnapAlign);
-    LOG_IF_DIFFERENT(scrollSnapStop);
-
     LOG_IF_DIFFERENT(scrollTimelines);
     LOG_IF_DIFFERENT(scrollTimelineAxes);
     LOG_IF_DIFFERENT(scrollTimelineNames);
@@ -462,9 +461,11 @@ void StyleRareNonInheritedData::dumpDifferences(TextStream& ts, const StyleRareN
     LOG_IF_DIFFERENT(timelineScope);
 
     LOG_IF_DIFFERENT(scrollbarGutter);
-    LOG_IF_DIFFERENT(scrollbarWidth);
 
-    LOG_IF_DIFFERENT(zoom);
+    LOG_IF_DIFFERENT(scrollSnapType);
+    LOG_IF_DIFFERENT(scrollSnapAlign);
+    LOG_IF_DIFFERENT(scrollSnapStop);
+
     LOG_IF_DIFFERENT(pseudoElementNameArgument);
 
     LOG_IF_DIFFERENT(anchorNames);
@@ -494,6 +495,8 @@ void StyleRareNonInheritedData::dumpDifferences(TextStream& ts, const StyleRareN
 
     LOG_IF_DIFFERENT_WITH_CAST(Isolation, isolation);
 
+    LOG_IF_DIFFERENT_WITH_CAST(InputSecurity, inputSecurity);
+
 #if ENABLE(APPLE_PAY)
     LOG_IF_DIFFERENT_WITH_CAST(ApplePayButtonStyle, applePayButtonStyle);
     LOG_IF_DIFFERENT_WITH_CAST(ApplePayButtonType, applePayButtonType);
@@ -502,8 +505,6 @@ void StyleRareNonInheritedData::dumpDifferences(TextStream& ts, const StyleRareN
     LOG_IF_DIFFERENT_WITH_CAST(BreakBetween, breakBefore);
     LOG_IF_DIFFERENT_WITH_CAST(BreakBetween, breakAfter);
     LOG_IF_DIFFERENT_WITH_CAST(BreakInside, breakInside);
-
-    LOG_IF_DIFFERENT_WITH_CAST(InputSecurity, inputSecurity);
 
     LOG_IF_DIFFERENT_WITH_CAST(ContainIntrinsicSizeType, containIntrinsicWidthType);
     LOG_IF_DIFFERENT_WITH_CAST(ContainIntrinsicSizeType, containIntrinsicHeightType);
@@ -515,9 +516,13 @@ void StyleRareNonInheritedData::dumpDifferences(TextStream& ts, const StyleRareN
     LOG_IF_DIFFERENT_WITH_CAST(Style::PositionTryOrder, positionTryOrder);
     LOG_IF_DIFFERENT(fieldSizing);
 
+    LOG_IF_DIFFERENT(nativeAppearanceDisabled);
+
 #if HAVE(CORE_MATERIAL)
     LOG_IF_DIFFERENT(appleVisualEffect);
 #endif
+
+    LOG_IF_DIFFERENT(scrollbarWidth);
 }
 #endif // !LOG_DISABLED
 

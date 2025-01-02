@@ -220,6 +220,7 @@ inline OptionSet<TouchAction> RenderStyle::usedTouchActions() const { return m_r
 inline UserModify RenderStyle::usedUserModify() const { return effectiveInert() ? UserModify::ReadOnly : userModify(); }
 inline float RenderStyle::usedZoom() const { return m_rareInheritedData->usedZoom; }
 inline OptionSet<EventListenerRegionType> RenderStyle::eventListenerRegionTypes() const { return m_rareInheritedData->eventListenerRegionTypes; }
+inline FieldSizing RenderStyle::fieldSizing() const { return static_cast<FieldSizing>(m_nonInheritedData->rareData->fieldSizing); }
 inline const FilterOperations& RenderStyle::filter() const { return m_nonInheritedData->miscData->filter->operations; }
 inline IntOutsets RenderStyle::filterOutsets() const { return hasFilter() ? filter().outsets() : IntOutsets(); }
 inline const Length& RenderStyle::flexBasis() const { return m_nonInheritedData->miscData->flexibleBox->flexBasis; }
@@ -393,6 +394,7 @@ constexpr StyleSelfAlignmentData RenderStyle::initialDefaultAlignment() { return
 constexpr TextDirection RenderStyle::initialDirection() { return TextDirection::LTR; }
 constexpr DisplayType RenderStyle::initialDisplay() { return DisplayType::Inline; }
 constexpr EmptyCell RenderStyle::initialEmptyCells() { return EmptyCell::Show; }
+constexpr FieldSizing RenderStyle::initialFieldSizing() { return FieldSizing::Fixed; }
 inline FilterOperations RenderStyle::initialFilter() { return { }; }
 inline Length RenderStyle::initialFlexBasis() { return LengthType::Auto; }
 constexpr FlexDirection RenderStyle::initialFlexDirection() { return FlexDirection::Row; }
@@ -481,6 +483,7 @@ constexpr RubyOverhang RenderStyle::initialRubyOverhang() { return RubyOverhang:
 inline Length RenderStyle::initialScrollMargin() { return zeroLength(); }
 inline Length RenderStyle::initialScrollPadding() { return { }; }
 inline std::optional<ScrollbarColor> RenderStyle::initialScrollbarColor() { return std::nullopt; }
+constexpr ScrollbarWidth RenderStyle::initialScrollbarWidth() { return ScrollbarWidth::Auto; }
 constexpr StyleSelfAlignmentData RenderStyle::initialSelfAlignment() { return { ItemPosition::Auto, OverflowAlignment::Default }; }
 inline Length RenderStyle::initialShapeMargin() { return zeroLength(); }
 inline Length RenderStyle::initialSize() { return LengthType::Auto; }
@@ -715,6 +718,7 @@ inline const TimelineScope& RenderStyle::timelineScope() const { return m_nonInh
 inline std::optional<ScrollbarColor> RenderStyle::scrollbarColor() const { return m_rareInheritedData->scrollbarColor.asOptional(); }
 inline const Style::Color& RenderStyle::scrollbarThumbColor() const { return m_rareInheritedData->scrollbarColor->thumbColor; }
 inline const Style::Color& RenderStyle::scrollbarTrackColor() const { return m_rareInheritedData->scrollbarColor->trackColor; }
+inline ScrollbarWidth RenderStyle::scrollbarWidth() const { return static_cast<ScrollbarWidth>(m_nonInheritedData->rareData->scrollbarWidth); }
 inline float RenderStyle::shapeImageThreshold() const { return m_nonInheritedData->rareData->shapeImageThreshold; }
 inline const Length& RenderStyle::shapeMargin() const { return m_nonInheritedData->rareData->shapeMargin; }
 inline ShapeValue* RenderStyle::shapeOutside() const { return m_nonInheritedData->rareData->shapeOutside.get(); }

@@ -124,10 +124,16 @@ public:
     Length perspectiveOriginY;
 
     LineClampValue lineClamp; // An Apple extension.
-    
+
+    float zoom;
+
     size_t maxLines { 0 };
 
     OverflowContinue overflowContinue { OverflowContinue::Auto };
+
+    OptionSet<TouchAction> touchActions;
+    OptionSet<MarginTrimType> marginTrim;
+    OptionSet<Containment> contain;
 
     IntSize initialLetter;
 
@@ -185,14 +191,6 @@ public:
 
     TextDecorationThickness textDecorationThickness;
 
-    OptionSet<TouchAction> touchActions;
-    OptionSet<MarginTrimType> marginTrim;
-    OptionSet<Containment> contain;
-
-    ScrollSnapType scrollSnapType;
-    ScrollSnapAlign scrollSnapAlign;
-    ScrollSnapStop scrollSnapStop { ScrollSnapStop::Normal };
-
     Vector<Ref<ScrollTimeline>> scrollTimelines;
     Vector<ScrollAxis> scrollTimelineAxes;
     Vector<AtomString> scrollTimelineNames;
@@ -205,9 +203,11 @@ public:
     TimelineScope timelineScope;
 
     ScrollbarGutter scrollbarGutter;
-    ScrollbarWidth scrollbarWidth { ScrollbarWidth::Auto };
 
-    float zoom;
+    ScrollSnapType scrollSnapType;
+    ScrollSnapAlign scrollSnapAlign;
+    ScrollSnapStop scrollSnapStop { ScrollSnapStop::Normal };
+
     AtomString pseudoElementNameArgument;
 
     Vector<Style::ScopedName> anchorNames;
@@ -238,6 +238,8 @@ public:
     unsigned effectiveBlendMode: 5; // BlendMode
     unsigned isolation : 1; // Isolation
 
+    unsigned inputSecurity : 1; // InputSecurity
+
 #if ENABLE(APPLE_PAY)
     unsigned applePayButtonStyle : 2; // ApplePayButtonStyle
     unsigned applePayButtonType : 4; // ApplePayButtonType
@@ -247,8 +249,6 @@ public:
     unsigned breakAfter : 4; // BreakBetween
     unsigned breakInside : 3; // BreakInside
 
-    unsigned inputSecurity : 1; // InputSecurity
-
     unsigned containIntrinsicWidthType : 2; // ContainIntrinsicSizeType
     unsigned containIntrinsicHeightType : 2; // ContainIntrinsicSizeType
 
@@ -256,19 +256,21 @@ public:
 
     unsigned textBoxTrim : 2; // TextBoxTrim
 
-    unsigned overflowAnchor : 1; // Scroll Anchoring- OverflowAnchor
+    unsigned overflowAnchor : 1; // Scroll Anchoring - OverflowAnchor
 
     bool hasClip : 1;
 
     unsigned positionTryOrder : 3; // Style::PositionTryOrder; 5 values so 3 bits.
 
-    FieldSizing fieldSizing { FieldSizing::Fixed };
+    unsigned fieldSizing : 1; // FieldSizing
+
+    unsigned nativeAppearanceDisabled : 1;
 
 #if HAVE(CORE_MATERIAL)
     unsigned appleVisualEffect : 4; // AppleVisualEffect
 #endif
 
-    unsigned nativeAppearanceDisabled : 1;
+    unsigned scrollbarWidth : 2; // ScrollbarWidth
 
 private:
     StyleRareNonInheritedData();

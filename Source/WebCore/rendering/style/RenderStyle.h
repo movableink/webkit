@@ -570,7 +570,7 @@ public:
 
     UnicodeBidi unicodeBidi() const { return static_cast<UnicodeBidi>(m_nonInheritedFlags.unicodeBidi); }
 
-    FieldSizing fieldSizing() const;
+    inline FieldSizing fieldSizing() const;
 
     WEBCORE_EXPORT const FontCascade& fontCascade() const;
     WEBCORE_EXPORT const FontMetrics& metricsOfPrimaryFont() const;
@@ -1085,7 +1085,7 @@ public:
     inline const Style::Color& scrollbarThumbColor() const;
     inline const Style::Color& scrollbarTrackColor() const;
     WEBCORE_EXPORT ScrollbarGutter scrollbarGutter() const;
-    WEBCORE_EXPORT ScrollbarWidth scrollbarWidth() const;
+    inline ScrollbarWidth scrollbarWidth() const;
 
 #if ENABLE(TOUCH_EVENTS)
     inline Style::Color tapHighlightColor() const;
@@ -1277,7 +1277,7 @@ public:
 
     void setClear(Clear v) { m_nonInheritedFlags.clear = static_cast<unsigned>(v); }
 
-    void setFieldSizing(FieldSizing);
+    inline void setFieldSizing(FieldSizing);
 
     void setFontCascade(FontCascade&&);
     WEBCORE_EXPORT void setFontDescription(FontCascadeDescription&&);
@@ -1638,7 +1638,7 @@ public:
     inline void setScrollbarThumbColor(const Style::Color&);
     inline void setScrollbarTrackColor(const Style::Color&);
     void setScrollbarGutter(ScrollbarGutter);
-    void setScrollbarWidth(ScrollbarWidth);
+    inline void setScrollbarWidth(ScrollbarWidth);
 
 #if ENABLE(TOUCH_EVENTS)
     inline void setTapHighlightColor(const Style::Color&);
@@ -2093,7 +2093,7 @@ public:
 
     static constexpr TouchAction initialTouchActions();
 
-    static FieldSizing initialFieldSizing();
+    static constexpr FieldSizing initialFieldSizing();
 
     static inline Length initialScrollMargin();
     static inline Length initialScrollPadding();
@@ -2111,7 +2111,7 @@ public:
 
     static inline std::optional<ScrollbarColor> initialScrollbarColor();
     static ScrollbarGutter initialScrollbarGutter();
-    static ScrollbarWidth initialScrollbarWidth();
+    static constexpr ScrollbarWidth initialScrollbarWidth();
 
 #if ENABLE(APPLE_PAY)
     static constexpr ApplePayButtonStyle initialApplePayButtonStyle();

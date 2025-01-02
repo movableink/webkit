@@ -3571,21 +3571,6 @@ bool RenderStyle::customPropertiesEqual(const RenderStyle& other) const
         && m_rareInheritedData->customProperties == other.m_rareInheritedData->customProperties;
 }
 
-FieldSizing RenderStyle::fieldSizing() const
-{
-    return m_nonInheritedData->rareData->fieldSizing;
-}
-
-FieldSizing RenderStyle::initialFieldSizing()
-{
-    return FieldSizing::Fixed;
-}
-
-void RenderStyle::setFieldSizing(const FieldSizing sizing)
-{
-    SET_NESTED_VAR(m_nonInheritedData, rareData, fieldSizing, sizing);
-}
-
 const LengthBox& RenderStyle::scrollMargin() const
 {
     return m_nonInheritedData->rareData->scrollMargin;
@@ -3696,11 +3681,6 @@ ScrollbarGutter RenderStyle::initialScrollbarGutter()
     return { };
 }
 
-ScrollbarWidth RenderStyle::initialScrollbarWidth()
-{
-    return ScrollbarWidth::Auto;
-}
-
 ScrollSnapType RenderStyle::scrollSnapType() const
 {
     return m_nonInheritedData->rareData->scrollSnapType;
@@ -3721,11 +3701,6 @@ ScrollbarGutter RenderStyle::scrollbarGutter() const
     return m_nonInheritedData->rareData->scrollbarGutter;
 }
 
-ScrollbarWidth RenderStyle::scrollbarWidth() const
-{
-    return m_nonInheritedData->rareData->scrollbarWidth;
-}
-
 void RenderStyle::setScrollSnapType(ScrollSnapType type)
 {
     SET_NESTED_VAR(m_nonInheritedData, rareData, scrollSnapType, type);
@@ -3744,11 +3719,6 @@ void RenderStyle::setScrollSnapStop(ScrollSnapStop stop)
 void RenderStyle::setScrollbarGutter(const ScrollbarGutter gutter)
 {
     SET_NESTED_VAR(m_nonInheritedData, rareData, scrollbarGutter, gutter);
-}
-
-void RenderStyle::setScrollbarWidth(const ScrollbarWidth width)
-{
-    SET_NESTED_VAR(m_nonInheritedData, rareData, scrollbarWidth, width);
 }
 
 bool RenderStyle::hasSnapPosition() const
