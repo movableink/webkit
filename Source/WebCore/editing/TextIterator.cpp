@@ -2543,9 +2543,12 @@ SimpleRange resolveCharacterRange(const SimpleRange& scope, CharacterRange range
 
 // --------
 
-bool hasAnyPlainText(const SimpleRange& range, TextIteratorBehaviors behaviors)
+bool hasAnyPlainText(const SimpleRange& range, TextIteratorBehaviors behaviors, IgnoreCollapsedRanges ignoreCollapsedRanges)
 {
     for (TextIterator iterator { range, behaviors }; !iterator.atEnd(); iterator.advance()) {
+        if (ignoreCollapsedRanges == IgnoreCollapsedRanges::Yes && iterator.range().collapsed())
+            continue;
+
         if (!iterator.text().isEmpty())
             return true;
     }
