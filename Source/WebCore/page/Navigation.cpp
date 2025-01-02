@@ -582,6 +582,23 @@ void Navigation::rejectFinishedPromise(NavigationAPIMethodTracker* apiMethodTrac
     cleanupAPIMethodTracker(apiMethodTracker);
 }
 
+void Navigation::rejectFinishedPromise(NavigationAPIMethodTracker* apiMethodTracker)
+{
+    if (!apiMethodTracker)
+        return;
+
+    auto* globalObject = scriptExecutionContext()->globalObject();
+    if (!globalObject && apiMethodTracker)
+        globalObject = apiMethodTracker->committedPromise->globalObject();
+    if (!globalObject)
+        return;
+
+    JSC::JSLockHolder locker(globalObject->vm());
+    auto exception = Exception(ExceptionCode::AbortError, "Navigation aborted"_s);
+    auto domException = createDOMException(*globalObject, exception.isolatedCopy());
+    rejectFinishedPromise(apiMethodTracker, exception, domException);
+}
+
 // https://html.spec.whatwg.org/multipage/nav-history-apis.html#notify-about-the-committed-to-entry
 void Navigation::notifyCommittedToEntry(NavigationAPIMethodTracker* apiMethodTracker, NavigationHistoryEntry* entry, NavigationNavigationType navigationType)
 {
@@ -726,9 +743,20 @@ void Navigation::cleanupAPIMethodTracker(NavigationAPIMethodTracker* apiMethodTr
     }
 }
 
+auto Navigation::registerAbortHandler() -> Ref<AbortHandler>
+{
+    Ref abortHandler = AbortHandler::create();
+    m_abortHandlers.add(abortHandler.get());
+    return abortHandler;
+}
+
 // https://html.spec.whatwg.org/multipage/nav-history-apis.html#abort-the-ongoing-navigation
 void Navigation::abortOngoingNavigation(NavigateEvent& event)
 {
+    m_abortHandlers.forEach([](auto& abortHandler) {
+        abortHandler.markAsAborted();
+    });
+
     auto* globalObject = scriptExecutionContext()->globalObject();
     if (!globalObject && m_ongoingAPIMethodTracker)
         globalObject = m_ongoingAPIMethodTracker->committedPromise->globalObject();

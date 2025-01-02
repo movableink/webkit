@@ -213,6 +213,7 @@ struct AXTreeData;
 struct ApplePayAMSUIRequest;
 struct AttributedString;
 struct CharacterRange;
+struct NavigationAPIMethodTracker;
 struct ProcessSyncData;
 struct SimpleRange;
 struct TextRecognitionResult;
@@ -411,7 +412,7 @@ public:
     void setOpenedByDOMWithOpener(bool value) { m_openedByDOMWithOpener = value; }
 
     WEBCORE_EXPORT void goToItem(LocalFrame& rootFrame, HistoryItem&, FrameLoadType, ShouldTreatAsContinuingLoad);
-    void goToItemForNavigationAPI(LocalFrame& rootFrame, HistoryItem&, FrameLoadType, const String& targetNavigationEntryKey);
+    void goToItemForNavigationAPI(LocalFrame& rootFrame, HistoryItem&, FrameLoadType, LocalFrame& triggeringFrame, NavigationAPIMethodTracker*);
 
     WEBCORE_EXPORT void setGroupName(const String&);
     WEBCORE_EXPORT const String& groupName() const;

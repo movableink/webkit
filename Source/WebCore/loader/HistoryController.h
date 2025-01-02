@@ -41,6 +41,7 @@ class SerializedScriptValue;
 
 enum class ShouldTreatAsContinuingLoad : uint8_t;
 
+struct NavigationAPIMethodTracker;
 struct StringWithDirection;
 
 class HistoryController final : public CanMakeCheckedPtr<HistoryController> {
@@ -99,7 +100,7 @@ private:
     friend class Page;
     bool shouldStopLoadingForHistoryItem(HistoryItem&) const;
     void goToItem(HistoryItem&, FrameLoadType, ShouldTreatAsContinuingLoad);
-    void goToItemForNavigationAPI(HistoryItem&, FrameLoadType, const String& targetNavigationEntryKey);
+    void goToItemForNavigationAPI(HistoryItem&, FrameLoadType, LocalFrame& triggeringFrame, NavigationAPIMethodTracker*);
 
     void initializeItem(HistoryItem&, RefPtr<DocumentLoader>);
     Ref<HistoryItem> createItem(HistoryItemClient&);

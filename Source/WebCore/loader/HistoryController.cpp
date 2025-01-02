@@ -338,7 +338,7 @@ struct HistoryController::FrameToNavigate {
     Ref<HistoryItem> toItem;
 };
 
-void HistoryController::goToItemForNavigationAPI(HistoryItem& targetItem, FrameLoadType type, const String& targetNavigationEntryKey)
+void HistoryController::goToItemForNavigationAPI(HistoryItem& targetItem, FrameLoadType type, LocalFrame& triggeringFrame, NavigationAPIMethodTracker* tracker)
 {
     LOG(History, "HistoryController %p goToItemForNavigationAPI %p type=%d", this, &targetItem, static_cast<int>(type));
 
@@ -373,13 +373,15 @@ void HistoryController::goToItemForNavigationAPI(HistoryItem& targetItem, FrameL
     // all frames have provisional items set before the commit.
     recursiveSetProvisionalItem(targetItem, currentItem.get(), ForNavigationAPI::Yes);
 
-    RefPtr upcomingTraverseMethodTracker = m_frame->window()->navigation().upcomingTraverseMethodTracker(targetNavigationEntryKey);
     for (auto& frameToNavigate : framesToNavigate) {
+        Ref abortHandler = frameToNavigate.frame->window()->protectedNavigation()->registerAbortHandler();
         frameToNavigate.frame->protectedLoader()->loadItem(frameToNavigate.toItem, frameToNavigate.fromItem.get(), type, ShouldTreatAsContinuingLoad::No);
         // If the navigation was aborted (by the JS called preventDefault() on the navigate event), then
         // do not do any further navigations.
-        if (upcomingTraverseMethodTracker && upcomingTraverseMethodTracker->finishedPromise->wasRejected())
+        if (abortHandler->wasAborted()) {
+            triggeringFrame.window()->protectedNavigation()->rejectFinishedPromise(tracker);
             break;
+        }
     }
 }
 

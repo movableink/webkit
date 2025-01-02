@@ -33,6 +33,7 @@
 #include "NavigationNavigationType.h"
 #include "NavigationTransition.h"
 #include <JavaScriptCore/JSCJSValue.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
@@ -163,7 +164,22 @@ public:
     ScriptExecutionContext* scriptExecutionContext() const final;
     RefPtr<ScriptExecutionContext> protectedScriptExecutionContext() const;
 
+    void rejectFinishedPromise(NavigationAPIMethodTracker*);
     NavigationAPIMethodTracker* upcomingTraverseMethodTracker(const String& key) const { return m_upcomingTraverseMethodTrackers.get(key); }
+
+    class AbortHandler : public RefCountedAndCanMakeWeakPtr<AbortHandler> {
+    public:
+        bool wasAborted() const { return m_wasAborted; }
+
+    private:
+        friend class Navigation;
+
+        static Ref<AbortHandler> create() { return adoptRef(*new AbortHandler); }
+        void markAsAborted() { m_wasAborted = true; }
+
+        bool m_wasAborted { false };
+    };
+    Ref<AbortHandler> registerAbortHandler();
 
 private:
     explicit Navigation(LocalDOMWindow&);
@@ -199,6 +215,7 @@ private:
     RefPtr<NavigationAPIMethodTracker> m_ongoingAPIMethodTracker;
     RefPtr<NavigationAPIMethodTracker> m_upcomingNonTraverseMethodTracker;
     HashMap<String, Ref<NavigationAPIMethodTracker>> m_upcomingTraverseMethodTrackers;
+    WeakHashSet<AbortHandler> m_abortHandlers;
 };
 
 } // namespace WebCore
