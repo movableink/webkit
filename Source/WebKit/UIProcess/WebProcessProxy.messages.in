@@ -26,8 +26,6 @@
     DispatchedTo=UI
 ]
 messages -> WebProcessProxy WantsDispatchMessage {
-    UpdateBackForwardItem(Ref<WebKit::FrameState> mainFrameState)
-
     DidDestroyUserGestureToken(WebCore::PageIdentifier pageID, WebCore::UserGestureTokenIdentifier userGestureTokenID)
 
     ShouldTerminate() -> (bool shouldTerminate) Synchronous

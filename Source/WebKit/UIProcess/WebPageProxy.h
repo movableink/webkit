@@ -2875,6 +2875,7 @@ private:
     void backForwardListCounts(CompletionHandler<void(WebBackForwardListCounts&&)>&&);
     void backForwardGoToProvisionalItem(IPC::Connection&, WebCore::BackForwardItemIdentifier, CompletionHandler<void(const WebBackForwardListCounts&)>&&);
     void backForwardClearProvisionalItem(IPC::Connection&, WebCore::BackForwardItemIdentifier);
+    void backForwardUpdateItem(IPC::Connection&, Ref<FrameState>&&);
 
     // Undo management
     void registerEditCommandForUndo(IPC::Connection&, WebUndoStepID commandID, const String& label);

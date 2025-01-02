@@ -677,7 +677,7 @@ WebPage::WebPage(PageIdentifier pageID, WebPageCreationParameters&& parameters)
 #if ENABLE(APP_HIGHLIGHTS)
     , m_appHighlightsVisible(parameters.appHighlightsVisible)
 #endif
-    , m_historyItemClient(WebHistoryItemClient::create())
+    , m_historyItemClient(WebHistoryItemClient::create(*this))
 #if ENABLE(WRITING_TOOLS)
     , m_textAnimationController(makeUniqueRef<TextAnimationController>(*this))
 #endif

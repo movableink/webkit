@@ -588,14 +588,10 @@ private:
     ProcessTerminationReason terminationReason() const;
 
     // IPC message handlers.
-    void updateBackForwardItem(Ref<FrameState>&&);
     void didDestroyUserGestureToken(WebCore::PageIdentifier, WebCore::UserGestureTokenIdentifier);
 
     bool canBeAddedToWebProcessCache() const;
     void shouldTerminate(CompletionHandler<void(bool)>&&);
-
-    bool hasProvisionalPageWithID(WebPageProxyIdentifier) const;
-    bool isAllowedToUpdateBackForwardItem(WebBackForwardListItem&) const;
     
     void getNetworkProcessConnection(CompletionHandler<void(NetworkProcessConnectionInfo&&)>&&);
 
