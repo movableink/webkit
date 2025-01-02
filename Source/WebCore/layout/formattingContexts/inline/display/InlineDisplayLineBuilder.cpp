@@ -124,30 +124,30 @@ InlineDisplayLineBuilder::EnclosingLineGeometry InlineDisplayLineBuilder::collec
 InlineDisplay::Line InlineDisplayLineBuilder::build(const LineLayoutResult& lineLayoutResult, const LineBox& lineBox, bool lineIsFullyTruncatedInBlockDirection) const
 {
     auto& constraints = this->constraints();
-    auto& rootInlineBox = lineBox.rootInlineBox();
     auto isLeftToRightDirection = lineLayoutResult.directionality.inlineBaseDirection == TextDirection::LTR;
-    auto lineBoxLogicalRect = lineBox.logicalRect();
-    auto lineBoxVisualLeft = isLeftToRightDirection
-        ? lineBoxLogicalRect.left()
-        : InlineLayoutUnit { constraints.visualLeft() + constraints.horizontal().logicalWidth + constraints.horizontal().logicalLeft  } - lineBoxLogicalRect.right();
 
+    InlineRect lineBoxLogicalRect = lineBox.logicalRect();
+    auto lineBoxLineLeftEdge = isLeftToRightDirection
+        ? lineBoxLogicalRect.left()
+        : InlineLayoutUnit { constraints.visualLeft() + constraints.horizontal().logicalRight()  } - lineBoxLogicalRect.right();
+    lineBoxLogicalRect.setLeft(lineBoxLineLeftEdge);
+    auto enclosingLineGeometry = collectEnclosingLineGeometry(lineLayoutResult, lineBox, lineBoxLogicalRect);
+
+    auto& rootInlineBox = lineBox.rootInlineBox();
     auto rootInlineBoxRect = lineBox.logicalRectForRootInlineBox();
-    auto contentVisualOffsetInInlineDirection = isLeftToRightDirection
+    auto contentLineLeftEdge = isLeftToRightDirection
         ? rootInlineBoxRect.left()
         : lineBoxLogicalRect.width() - lineLayoutResult.contentGeometry.logicalRightIncludingNegativeMargin; // Note that with hanging content lineLayoutResult.contentGeometry.logicalRight is not the same as rootLineBoxRect.right().
 
-    auto lineBoxVisualRectInInlineDirection = InlineRect { lineBoxLogicalRect.top(), lineBoxVisualLeft, lineBoxLogicalRect.width(), lineBoxLogicalRect.height() };
-    auto enclosingLineGeometry = collectEnclosingLineGeometry(lineLayoutResult, lineBox, lineBoxVisualRectInInlineDirection);
-
     auto writingMode = root().writingMode();
     return InlineDisplay::Line { lineBoxLogicalRect
-        , flipLogicalLineRectToVisualForWritingMode(lineBoxVisualRectInInlineDirection, writingMode)
+        , flipLogicalLineRectToVisualForWritingMode(lineBoxLogicalRect, writingMode)
         , flipLogicalLineRectToVisualForWritingMode(enclosingLineGeometry.contentOverflowRect, writingMode)
         , enclosingLineGeometry.enclosingTopAndBottom
         , rootInlineBox.logicalTop() + rootInlineBox.ascent()
         , lineBox.baselineType()
         , rootInlineBoxRect.left()
-        , contentVisualOffsetInInlineDirection
+        , contentLineLeftEdge
         , rootInlineBox.logicalWidth()
         , isLeftToRightDirection
         , rootInlineBox.layoutBox().writingMode().isHorizontal()
