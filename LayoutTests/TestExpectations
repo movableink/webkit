@@ -4912,9 +4912,6 @@ webkit.org/b/279419 [ Debug ] imported/w3c/web-platform-tests/css/css-transforms
 
 webkit.org/b/208396 http/tests/misc/object-embedding-svg-delayed-size-negotiation-2.htm [ Pass Failure ]
 
-# writing-mode failures
-webkit.org/b/285222 imported/w3c/web-platform-tests/css/css-writing-modes/text-combine-upright-sideways-002.html [ ImageOnlyFailure ]
-
 # Untriaged writing-mode failures.
 webkit.org/b/209080 imported/w3c/web-platform-tests/css/css-writing-modes/abs-pos-border-offset-001.html [ ImageOnlyFailure ]
 webkit.org/b/209080 imported/w3c/web-platform-tests/css/css-writing-modes/abs-pos-border-offset-002.html [ ImageOnlyFailure ]

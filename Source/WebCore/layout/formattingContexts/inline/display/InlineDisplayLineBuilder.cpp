@@ -34,21 +34,19 @@
 namespace WebCore {
 namespace Layout {
 
-static InlineRect flipLogicalLineRectToVisualForWritingMode(const InlineRect& lineLogicalRect, WritingMode writingMode)
+static InlineRect mapLineRectLogicalToVisual(const InlineRect& lineLogicalRect, const LayoutSize containerRenderSize, WritingMode writingMode)
 {
-    switch (writingMode.blockDirection()) {
-    case FlowDirection::TopToBottom:
-    case FlowDirection::BottomToTop:
+    if (writingMode.isHorizontal())
         return lineLogicalRect;
-    case FlowDirection::LeftToRight:
-    case FlowDirection::RightToLeft:
-        // See InlineFormattingUtils for more info.
+    if (writingMode.isLogicalLeftLineLeft())
         return { lineLogicalRect.left(), lineLogicalRect.top(), lineLogicalRect.height(), lineLogicalRect.width() };
-    default:
-        ASSERT_NOT_REACHED();
-        break;
-    }
-    return lineLogicalRect;
+
+    return {
+        containerRenderSize.height() - lineLogicalRect.right(),
+        lineLogicalRect.top(),
+        lineLogicalRect.height(),
+        lineLogicalRect.width()
+    };
 }
 
 InlineDisplayLineBuilder::InlineDisplayLineBuilder(InlineFormattingContext& inlineFormattingContext, const ConstraintsForInlineContent& constraints)
@@ -141,8 +139,8 @@ InlineDisplay::Line InlineDisplayLineBuilder::build(const LineLayoutResult& line
 
     auto writingMode = root().writingMode();
     return InlineDisplay::Line { lineBoxLogicalRect
-        , flipLogicalLineRectToVisualForWritingMode(lineBoxLogicalRect, writingMode)
-        , flipLogicalLineRectToVisualForWritingMode(enclosingLineGeometry.contentOverflowRect, writingMode)
+        , mapLineRectLogicalToVisual(lineBoxLogicalRect, constraints.containerRenderSize(), writingMode)
+        , mapLineRectLogicalToVisual(enclosingLineGeometry.contentOverflowRect, constraints.containerRenderSize(), writingMode)
         , enclosingLineGeometry.enclosingTopAndBottom
         , rootInlineBox.logicalTop() + rootInlineBox.ascent()
         , lineBox.baselineType()

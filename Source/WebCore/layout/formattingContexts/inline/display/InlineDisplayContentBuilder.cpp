@@ -402,11 +402,15 @@ void InlineDisplayContentBuilder::processNonBidiContent(const LineLayoutResult& 
 #endif
     auto& lineBox = this->lineBox();
     auto writingMode = root().style().writingMode();
-    auto contentStartInVisualOrder = m_displayLine.topLeft();
+    auto lineBoxLogicalRect = lineBox.logicalRect();
+    auto lineBoxVisualOffset = m_displayLine.topLeft();
+
+    auto rootLogicalRect = lineBox.logicalRectForRootInlineBox();
+    auto rootVisualRect = mapInlineRectLogicalToVisual(rootLogicalRect, lineBoxLogicalRect, writingMode);
+    rootVisualRect.moveBy(lineBoxVisualOffset);
+    appendRootInlineBoxDisplayBox(rootVisualRect, lineBox.rootInlineBox().hasContent(), boxes);
+
     Vector<size_t> blockLevelOutOfFlowBoxList;
-
-    appendRootInlineBoxDisplayBox(flipRootInlineBoxRectToVisualForWritingMode(lineBox.logicalRectForRootInlineBox(), writingMode), lineBox.rootInlineBox().hasContent(), boxes);
-
     auto textSpacingAdjustment = 0.f;
     for (size_t index = 0; index < lineLayoutResult.inlineContent.size(); ++index) {
         auto& lineRun = lineLayoutResult.inlineContent[index];
@@ -458,9 +462,10 @@ void InlineDisplayContentBuilder::processNonBidiContent(const LineLayoutResult& 
             ASSERT_NOT_REACHED();
             return { };
         }();
+
         auto visualRectRelativeToRoot = [&] {
-            auto visualRect = flipLogicalRectToVisualForWritingModeWithinLine(logicalRect, lineBox.logicalRect(), writingMode);
-            visualRect.moveBy(contentStartInVisualOrder);
+            auto visualRect = mapInlineRectLogicalToVisual(logicalRect, lineBoxLogicalRect, writingMode);
+            visualRect.moveBy(lineBoxVisualOffset);
             return visualRect;
         }();
 

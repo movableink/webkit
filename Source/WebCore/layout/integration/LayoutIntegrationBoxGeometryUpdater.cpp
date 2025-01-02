@@ -432,7 +432,7 @@ Layout::ConstraintsForInlineContent BoxGeometryUpdater::formattingContextConstra
 
     if (rootRenderer.isRenderSVGText()) {
         auto horizontalConstraints = Layout::HorizontalConstraints { 0_lu, LayoutUnit::max() };
-        return { { horizontalConstraints, 0_lu }, 0_lu };
+        return { { horizontalConstraints, 0_lu }, 0_lu, rootRenderer.size() };
     }
 
     auto padding = logicalPadding(rootRenderer, availableWidth, writingMode);
@@ -459,7 +459,7 @@ Layout::ConstraintsForInlineContent BoxGeometryUpdater::formattingContextConstra
         ? border.horizontal.end + scrollbarSize.width() + padding.horizontal.end
         : contentBoxLeft;
 
-    return { { horizontalConstraints, contentBoxTop }, visualLeft };
+    return { { horizontalConstraints, contentBoxTop }, visualLeft, rootRenderer.size() };
 }
 
 void BoxGeometryUpdater::updateBoxGeometryAfterIntegrationLayout(const Layout::ElementBox& layoutBox, LayoutUnit availableWidth)

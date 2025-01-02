@@ -64,6 +64,8 @@ private:
     size_t processRubyBase(size_t rubyBaseStart, InlineDisplay::Boxes&, Vector<WTF::Range<size_t>>& interlinearRubyColumnRangeList, Vector<size_t>& rubyBaseStartIndexListWithAnnotation);
     void processRubyContent(InlineDisplay::Boxes&, const LineLayoutResult&);
 
+    inline InlineRect mapInlineRectLogicalToVisual(const InlineRect& logicalRect, const InlineRect& containerLogicalRect, WritingMode);
+
     void setInlineBoxGeometry(const Box& inlineBox, Layout::BoxGeometry&, const InlineRect&, bool isFirstInlineBoxFragment);
     void adjustVisualGeometryForDisplayBox(size_t displayBoxNodeIndex, InlineLayoutUnit& accumulatedOffset, InlineLayoutUnit lineBoxLogicalTop, const DisplayBoxTree&, InlineDisplay::Boxes&, const UncheckedKeyHashMap<const Box*, IsFirstLastIndex>&);
     size_t ensureDisplayBoxForContainer(const ElementBox&, DisplayBoxTree&, AncestorStack&, InlineDisplay::Boxes&);
@@ -99,6 +101,46 @@ private:
     bool m_hasSeenRubyBase { false };
     bool m_hasSeenTextDecoration { false };
 };
+
+inline InlineRect InlineDisplayContentBuilder::mapInlineRectLogicalToVisual(const InlineRect& logicalRect, const InlineRect& containerLogicalRect, WritingMode writingMode)
+{
+    InlineRect visualRect = logicalRect;
+    switch (writingMode.computedWritingMode()) {
+    case StyleWritingMode::HorizontalTb:
+        return visualRect;
+
+    case StyleWritingMode::HorizontalBt:
+        visualRect.setLeft(logicalRect.left());
+        visualRect.setTop(containerLogicalRect.height() - logicalRect.bottom());
+        return visualRect;
+
+    case StyleWritingMode::VerticalRl:
+    case StyleWritingMode::SidewaysRl:
+        visualRect.setLeft(logicalRect.top());
+        visualRect.setTop(logicalRect.left());
+        visualRect.setWidth(logicalRect.height());
+        visualRect.setHeight(logicalRect.width());
+        return visualRect;
+
+    case StyleWritingMode::VerticalLr:
+        visualRect.setLeft(containerLogicalRect.height() - logicalRect.bottom());
+        visualRect.setTop(logicalRect.left());
+        visualRect.setWidth(logicalRect.height());
+        visualRect.setHeight(logicalRect.width());
+        return visualRect;
+
+    case StyleWritingMode::SidewaysLr:
+        visualRect.setLeft(logicalRect.top());
+        visualRect.setTop(containerLogicalRect.width() - logicalRect.right());
+        visualRect.setWidth(logicalRect.height());
+        visualRect.setHeight(logicalRect.width());
+        return visualRect;
+
+    default:
+        ASSERT_NOT_REACHED();
+        return visualRect;
+    }
+}
 
 }
 }

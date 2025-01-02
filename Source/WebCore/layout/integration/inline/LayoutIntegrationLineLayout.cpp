@@ -503,7 +503,7 @@ std::optional<LayoutRect> LineLayout::layout()
             return *m_inlineContentConstraints;
         }
         auto constraintsForInFlowContent = Layout::ConstraintsForInFlowContent { m_inlineContentConstraints->horizontal(), m_lineDamage->layoutStartPosition()->partialContentTop };
-        return { constraintsForInFlowContent, m_inlineContentConstraints->visualLeft() };
+        return { constraintsForInFlowContent, m_inlineContentConstraints->visualLeft(), m_inlineContentConstraints->containerRenderSize() };
     };
 
     auto parentBlockLayoutState = Layout::BlockLayoutState {
