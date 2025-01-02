@@ -108,13 +108,17 @@ void TextBoxPainter::paint()
         return;
     }
 
-    bool shouldRotate = !textBox().isHorizontal() && !m_isCombinedText;
-    if (shouldRotate)
-        m_paintInfo.context().concatCTM(rotation(m_paintRect, RotationDirection::Clockwise));
+    std::optional<RotationDirection> glyphRotation;
+    if (!textBox().isHorizontal() && !m_isCombinedText) {
+        glyphRotation = textBox().writingMode().isLineOverLeft()
+            ? RotationDirection::Counterclockwise
+            : RotationDirection::Clockwise;
+        m_paintInfo.context().concatCTM(rotation(m_paintRect, *glyphRotation));
+    }
 
     if (m_paintInfo.phase == PaintPhase::Accessibility) {
-        if (shouldRotate) {
-            auto transform = rotation(m_paintRect, RotationDirection::Clockwise);
+        if (glyphRotation) {
+            auto transform = rotation(m_paintRect, *glyphRotation);
             m_paintInfo.accessibilityRegionContext()->takeBounds(m_renderer, transform.mapRect(m_paintRect));
         } else
             m_paintInfo.accessibilityRegionContext()->takeBounds(m_renderer, m_paintRect);
@@ -138,8 +142,12 @@ void TextBoxPainter::paint()
         m_renderer.page().addRelevantRepaintedObject(m_renderer, enclosingLayoutRect(m_paintRect));
     }
 
-    if (shouldRotate)
-        m_paintInfo.context().concatCTM(rotation(m_paintRect, RotationDirection::Counterclockwise));
+    if (glyphRotation) {
+        auto backRotation = *glyphRotation == RotationDirection::Clockwise
+            ? RotationDirection::Counterclockwise
+            : RotationDirection::Clockwise;
+        m_paintInfo.context().concatCTM(rotation(m_paintRect, backRotation));
+    }
 }
 
 std::pair<unsigned, unsigned> TextBoxPainter::selectionStartEnd() const
@@ -1091,13 +1099,18 @@ void TextBoxPainter::paintPlatformDocumentMarker(const MarkedText& markedText)
 FloatRect TextBoxPainter::computePaintRect(const LayoutPoint& paintOffset)
 {
     FloatPoint localPaintOffset(paintOffset);
+    if (m_style.writingMode().isVertical()) {
+        localPaintOffset.move(0, -m_logicalRect.height());
+        if (m_style.writingMode().isLineOverLeft())
+            localPaintOffset.move(m_logicalRect.height(), m_logicalRect.width());
+    }
 
-    localPaintOffset.move(0, m_style.writingMode().isHorizontal() ? 0 : -m_logicalRect.height());
     auto visualRect = textBox().visualRectIgnoringBlockDirection();
     textBox().formattingContextRoot().flipForWritingMode(visualRect);
 
     auto boxOrigin = visualRect.location();
     boxOrigin.moveBy(localPaintOffset);
+
     return { boxOrigin, FloatSize(m_logicalRect.width(), m_logicalRect.height()) };
 }
 
@@ -1136,14 +1149,18 @@ const FontCascade& TextBoxPainter::fontCascade() const
 FloatPoint TextBoxPainter::textOriginFromPaintRect(const FloatRect& paintRect) const
 {
     FloatPoint textOrigin { paintRect.x(), paintRect.y() + fontCascade().metricsOfPrimaryFont().intAscent() };
+
     if (m_isCombinedText) {
         if (auto newOrigin = downcast<RenderCombineText>(m_renderer).computeTextOrigin(paintRect))
             textOrigin = newOrigin.value();
     }
-    if (textBox().isHorizontal())
+
+    auto writingMode = textBox().writingMode();
+    if (writingMode.isHorizontal())
         textOrigin.setY(roundToDevicePixel(LayoutUnit { textOrigin.y() }, m_document.deviceScaleFactor()));
     else
         textOrigin.setX(roundToDevicePixel(LayoutUnit { textOrigin.x() }, m_document.deviceScaleFactor()));
+
     return textOrigin;
 }
 
