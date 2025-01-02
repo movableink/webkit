@@ -1053,7 +1053,7 @@ LayoutUnit GridTrackSizingAlgorithmStrategy::logicalHeightForGridItem(RenderBox&
 
     // We need to clear the stretched content size to properly compute logical height during layout.
     if (gridItem.needsLayout())
-        gridItem.clearOverridingContentSize();
+        gridItem.clearOverridingSize();
 
     gridItem.layoutIfNeeded();
 

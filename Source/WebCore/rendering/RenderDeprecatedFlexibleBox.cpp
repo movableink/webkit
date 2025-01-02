@@ -162,14 +162,14 @@ static bool childDoesNotAffectWidthOrFlexing(RenderObject* child)
 
 static LayoutUnit widthForChild(RenderBox* child)
 {
-    if (auto overridingLogicalWidth = child->overridingLogicalWidth())
+    if (auto overridingLogicalWidth = child->overridingBorderBoxLogicalWidth())
         return *overridingLogicalWidth;
     return child->logicalWidth();
 }
 
 static LayoutUnit heightForChild(RenderBox* child)
 {
-    if (auto overridingLogicalHeight = child->overridingLogicalHeight())
+    if (auto overridingLogicalHeight = child->overridingBorderBoxLogicalHeight())
         return *overridingLogicalHeight;
     return child->logicalHeight();
 }
@@ -384,7 +384,7 @@ static void gatherFlexChildrenInfo(FlexBoxIterator& iterator, bool relayoutChild
         if (!childDoesNotAffectWidthOrFlexing(child) && child->style().boxFlex() > 0.0f) {
             // We always have to lay out flexible objects again, since the flex distribution
             // may have changed, and we need to reallocate space.
-            child->clearOverridingContentSize();
+            child->clearOverridingSize();
             if (!relayoutChildren)
                 child->setChildNeedsLayout(MarkOnlyThis);
             haveFlex = true;
@@ -602,7 +602,7 @@ void RenderDeprecatedFlexibleBox::layoutHorizontalBox(bool relayoutChildren)
                         if (allowedChildFlex(child, expanding, i)) {
                             LayoutUnit spaceAdd = LayoutUnit(spaceAvailableThisPass * (child->style().boxFlex() / totalFlex));
                             if (spaceAdd) {
-                                child->setOverridingLogicalWidth(widthForChild(child) + spaceAdd);
+                                child->setOverridingBorderBoxLogicalWidth(widthForChild(child) + spaceAdd);
                                 flexingChildren = true;
                                 relayoutChildren = true;
                             }
@@ -619,7 +619,7 @@ void RenderDeprecatedFlexibleBox::layoutHorizontalBox(bool relayoutChildren)
                         LayoutUnit spaceAdd = groupRemainingSpace > 0 ? 1 : -1;
                         for (RenderBox* child = iterator.first(); child && groupRemainingSpace; child = iterator.next()) {
                             if (allowedChildFlex(child, expanding, i)) {
-                                child->setOverridingLogicalWidth(widthForChild(child) + spaceAdd);
+                                child->setOverridingBorderBoxLogicalWidth(widthForChild(child) + spaceAdd);
                                 flexingChildren = true;
                                 relayoutChildren = true;
                                 remainingSpace -= spaceAdd;
@@ -847,7 +847,7 @@ void RenderDeprecatedFlexibleBox::layoutVerticalBox(bool relayoutChildren)
                         if (allowedChildFlex(child, expanding, i)) {
                             LayoutUnit spaceAdd { spaceAvailableThisPass * (child->style().boxFlex() / totalFlex) };
                             if (spaceAdd) {
-                                child->setOverridingLogicalHeight(heightForChild(child) + spaceAdd);
+                                child->setOverridingBorderBoxLogicalHeight(heightForChild(child) + spaceAdd);
                                 flexingChildren = true;
                                 relayoutChildren = true;
                             }
@@ -864,7 +864,7 @@ void RenderDeprecatedFlexibleBox::layoutVerticalBox(bool relayoutChildren)
                         LayoutUnit spaceAdd = groupRemainingSpace > 0 ? 1 : -1;
                         for (RenderBox* child = iterator.first(); child && groupRemainingSpace; child = iterator.next()) {
                             if (allowedChildFlex(child, expanding, i)) {
-                                child->setOverridingLogicalHeight(heightForChild(child) + spaceAdd);
+                                child->setOverridingBorderBoxLogicalHeight(heightForChild(child) + spaceAdd);
                                 flexingChildren = true;
                                 relayoutChildren = true;
                                 remainingSpace -= spaceAdd;
@@ -988,7 +988,7 @@ RenderDeprecatedFlexibleBox::ClampedContent RenderDeprecatedFlexibleBox::applyLi
             if (childDoesNotAffectWidthOrFlexing(child))
                 continue;
 
-            child->clearOverridingContentSize();
+            child->clearOverridingSize();
             if (relayoutChildren || (child->isReplacedOrAtomicInline() && (child->style().width().isPercentOrCalculated() || child->style().height().isPercentOrCalculated()))
                 || (child->style().height().isAuto() && is<RenderBlockFlow>(*child))) {
                 child->setChildNeedsLayout(MarkOnlyThis);
@@ -1062,7 +1062,7 @@ void RenderDeprecatedFlexibleBox::clearLineClamp()
         if (childDoesNotAffectWidthOrFlexing(child))
             continue;
 
-        child->clearOverridingContentSize();
+        child->clearOverridingSize();
         if ((child->isReplacedOrAtomicInline() && (child->style().width().isPercentOrCalculated() || child->style().height().isPercentOrCalculated()))
             || (child->style().height().isAuto() && is<RenderBlockFlow>(*child))) {
             child->setChildNeedsLayout();

@@ -179,6 +179,8 @@ public:
     inline LayoutSize contentLogicalSize() const;
     inline LayoutUnit contentLogicalWidth() const;
     inline LayoutUnit contentLogicalHeight() const;
+    inline LayoutUnit contentBoxLogicalWidth(LayoutUnit overridingBorderBoxWidth) const;
+    inline LayoutUnit contentBoxLogicalHeight(LayoutUnit overridingBorderBoxHeight) const;
 
     inline LayoutUnit paddingBoxWidth() const;
     inline LayoutUnit paddingBoxHeight() const;
@@ -270,16 +272,13 @@ public:
     LayoutUnit maxPreferredLogicalWidth() const override;
     virtual void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const = 0;
 
-    std::optional<LayoutUnit> overridingLogicalWidth() const;
-    std::optional<LayoutUnit> overridingLogicalHeight() const;
-    void setOverridingLogicalHeight(LayoutUnit);
-    void setOverridingLogicalWidth(LayoutUnit);
-    void clearOverridingContentSize();
-    void clearOverridingLogicalHeight();
-    void clearOverridingLogicalWidth();
-
-    inline LayoutUnit overridingContentLogicalWidth(LayoutUnit overridingLogicalWidth) const;
-    inline LayoutUnit overridingContentLogicalHeight(LayoutUnit overridingLogicalHeight) const;
+    std::optional<LayoutUnit> overridingBorderBoxLogicalWidth() const;
+    std::optional<LayoutUnit> overridingBorderBoxLogicalHeight() const;
+    void setOverridingBorderBoxLogicalHeight(LayoutUnit);
+    void setOverridingBorderBoxLogicalWidth(LayoutUnit);
+    void clearOverridingBorderBoxLogicalHeight();
+    void clearOverridingBorderBoxLogicalWidth();
+    void clearOverridingSize();
 
     // Grid item's containing block is not the grid container, but the grid area, for which we don't have a renderer.
     using GridAreaSize = std::optional<LayoutUnit>;
@@ -297,8 +296,8 @@ public:
     // the initial main size of the flex item before the free space is distributed.
     std::optional<Length> overridingLogicalHeightForFlexBasisComputation() const;
     std::optional<Length> overridingLogicalWidthForFlexBasisComputation() const;
-    void setOverridingLogicalHeightForFlexBasisComputation(const Length&);
-    void setOverridingLogicalWidthForFlexBasisComputation(const Length&);
+    void setOverridingBorderBoxLogicalHeightForFlexBasisComputation(const Length&);
+    void setOverridingBorderBoxLogicalWidthForFlexBasisComputation(const Length&);
     void clearOverridingLogicalHeightForFlexBasisComputation();
     void clearOverridingLogicalWidthForFlexBasisComputation();
 

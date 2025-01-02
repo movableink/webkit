@@ -219,17 +219,17 @@ unsigned alignmentContextForBaselineAlignment(const GridSpan& span, const ItemPo
 void setOverridingContentSizeForGridItem(const RenderGrid& renderGrid, RenderBox& gridItem, LayoutUnit logicalSize, GridTrackSizingDirection direction)
 {
     if (!isOrthogonalGridItem(renderGrid, gridItem))
-        direction == GridTrackSizingDirection::ForColumns ? gridItem.setOverridingLogicalWidth(logicalSize) : gridItem.setOverridingLogicalHeight(logicalSize);
+        direction == GridTrackSizingDirection::ForColumns ? gridItem.setOverridingBorderBoxLogicalWidth(logicalSize) : gridItem.setOverridingBorderBoxLogicalHeight(logicalSize);
     else
-        direction == GridTrackSizingDirection::ForColumns ? gridItem.setOverridingLogicalHeight(logicalSize) : gridItem.setOverridingLogicalWidth(logicalSize);
+        direction == GridTrackSizingDirection::ForColumns ? gridItem.setOverridingBorderBoxLogicalHeight(logicalSize) : gridItem.setOverridingBorderBoxLogicalWidth(logicalSize);
 }
 
 void clearOverridingContentSizeForGridItem(const RenderGrid& renderGrid, RenderBox &gridItem, GridTrackSizingDirection direction)
 {
     if (!isOrthogonalGridItem(renderGrid, gridItem))
-        direction == GridTrackSizingDirection::ForColumns ? gridItem.clearOverridingLogicalWidth() : gridItem.clearOverridingLogicalHeight();
+        direction == GridTrackSizingDirection::ForColumns ? gridItem.clearOverridingBorderBoxLogicalWidth() : gridItem.clearOverridingBorderBoxLogicalHeight();
     else
-        direction == GridTrackSizingDirection::ForColumns ? gridItem.clearOverridingLogicalHeight() : gridItem.clearOverridingLogicalWidth();
+        direction == GridTrackSizingDirection::ForColumns ? gridItem.clearOverridingBorderBoxLogicalHeight() : gridItem.clearOverridingBorderBoxLogicalWidth();
 }
 
 } // namespace GridLayoutFunctions

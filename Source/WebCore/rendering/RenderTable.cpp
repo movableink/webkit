@@ -285,7 +285,7 @@ void RenderTable::updateLogicalWidth()
     LayoutUnit containerWidthInInlineDirection = hasPerpendicularContainingBlock ? perpendicularContainingBlockLogicalHeight() : availableLogicalWidth;
 
     Length styleLogicalWidth = style().logicalWidth();
-    if (auto overridingLogicalWidth = this->overridingLogicalWidth())
+    if (auto overridingLogicalWidth = this->overridingBorderBoxLogicalWidth())
         setLogicalWidth(*overridingLogicalWidth);
     else if ((styleLogicalWidth.isSpecified() && styleLogicalWidth.isPositive()) || styleLogicalWidth.isIntrinsic())
         setLogicalWidth(convertStyleLogicalWidthToComputedWidth(styleLogicalWidth, containerWidthInInlineDirection));
@@ -539,7 +539,7 @@ void RenderTable::layout()
         if (logicalHeightLength.isIntrinsic() || (logicalHeightLength.isSpecified() && logicalHeightLength.isPositive()))
             computedLogicalHeight = convertStyleLogicalHeightToComputedHeight(logicalHeightLength);
 
-        if (auto overridingLogicalHeight = this->overridingLogicalHeight())
+        if (auto overridingLogicalHeight = this->overridingBorderBoxLogicalHeight())
             computedLogicalHeight = std::max(computedLogicalHeight, *overridingLogicalHeight - borderAndPaddingAfter - sumCaptionsLogicalHeight());
 
         if (!shouldIgnoreLogicalMinMaxHeightSizes()) {
@@ -569,7 +569,7 @@ void RenderTable::layout()
             // overriding or specified height in strict mode, but this value will not be cached.
             shouldCacheIntrinsicContentLogicalHeightForFlexItem = false;
             auto tableLogicalHeight = [&] {
-                if (auto overridingLogicalHeight = this->overridingLogicalHeight())
+                if (auto overridingLogicalHeight = this->overridingBorderBoxLogicalHeight())
                     return *overridingLogicalHeight - borderAndPaddingAfter;
                 return logicalHeight() + computedLogicalHeight;
             };

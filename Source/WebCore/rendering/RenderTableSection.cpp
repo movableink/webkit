@@ -292,9 +292,9 @@ LayoutUnit RenderTableSection::calcRowLogicalHeight()
                 // For row spanning cells, |r| is the last row in the span.
                 unsigned cellStartRow = cell->rowIndex();
 
-                if (cell->overridingLogicalHeight()) {
+                if (cell->overridingBorderBoxLogicalHeight()) {
                     cell->clearIntrinsicPadding();
-                    cell->clearOverridingContentSize();
+                    cell->clearOverridingSize();
                     cell->setChildNeedsLayout(MarkOnlyThis);
                     cell->layoutIfNeeded();
                 }

@@ -258,7 +258,7 @@ Vector<RenderBox*> RenderGrid::computeAspectRatioDependentAndBaselineItems()
         // Grid's layout logic controls the grid item's override content size, hence we need to
         // clear any override set previously, so it doesn't interfere in current layout
         // execution.
-        gridItem->clearOverridingContentSize();
+        gridItem->clearOverridingSize();
 
         // For a grid item that has an aspect-ratio and block-constraints such as the relative logical height,
         // when the grid width is auto, we may need get the real grid width before laying out the item.
@@ -331,7 +331,7 @@ void RenderGrid::layoutGrid(bool relayoutChildren)
         // FIXME: We should use RenderBlock::hasDefiniteLogicalHeight() only but it does not work for positioned stuff.
         // FIXME: Consider caching the hasDefiniteLogicalHeight value throughout the layout.
         // FIXME: We might need to cache the hasDefiniteLogicalHeight if the call of RenderBlock::hasDefiniteLogicalHeight() causes a relevant performance regression.
-        bool hasDefiniteLogicalHeight = RenderBlock::hasDefiniteLogicalHeight() || overridingLogicalHeight() || computeContentLogicalHeight(RenderBox::SizeType::MainOrPreferredSize, style().logicalHeight(), std::nullopt) || shouldComputeLogicalHeightFromAspectRatio();
+        bool hasDefiniteLogicalHeight = RenderBlock::hasDefiniteLogicalHeight() || overridingBorderBoxLogicalHeight() || computeContentLogicalHeight(RenderBox::SizeType::MainOrPreferredSize, style().logicalHeight(), std::nullopt) || shouldComputeLogicalHeightFromAspectRatio();
 
         auto aspectRatioBlockSizeDependentGridItems = computeAspectRatioDependentAndBaselineItems();
 
@@ -368,7 +368,7 @@ void RenderGrid::layoutGrid(bool relayoutChildren)
                 shouldRecomputeHeight = true;
         } else {
             auto availableLogicalHeightForContentBox = [&] {
-                if (auto overridingLogicalHeight = this->overridingLogicalHeight())
+                if (auto overridingLogicalHeight = this->overridingBorderBoxLogicalHeight())
                     return constrainContentBoxLogicalHeightByMinMax(*overridingLogicalHeight - borderAndPaddingLogicalHeight(), { });
                 return availableLogicalHeight(AvailableLogicalHeightType::ExcludeMarginBorderPadding);
             };
@@ -461,7 +461,7 @@ void RenderGrid::layoutMasonry(bool relayoutChildren)
         // FIXME: We should use RenderBlock::hasDefiniteLogicalHeight() only but it does not work for positioned stuff.
         // FIXME: Consider caching the hasDefiniteLogicalHeight value throughout the layout.
         // FIXME: We might need to cache the hasDefiniteLogicalHeight if the call of RenderBlock::hasDefiniteLogicalHeight() causes a relevant performance regression.
-        bool hasDefiniteLogicalHeight = RenderBlock::hasDefiniteLogicalHeight() || overridingLogicalHeight() || computeContentLogicalHeight(RenderBox::SizeType::MainOrPreferredSize, style().logicalHeight(), std::nullopt);
+        bool hasDefiniteLogicalHeight = RenderBlock::hasDefiniteLogicalHeight() || overridingBorderBoxLogicalHeight() || computeContentLogicalHeight(RenderBox::SizeType::MainOrPreferredSize, style().logicalHeight(), std::nullopt);
 
         auto aspectRatioBlockSizeDependentGridItems = computeAspectRatioDependentAndBaselineItems();
 
@@ -1684,8 +1684,7 @@ void RenderGrid::applyStretchAlignmentToGridItemIfNeeded(RenderBox& gridItem, Gr
 
     // We clear height and width override values because we will decide now whether it's allowed or
     // not, evaluating the conditions which might have changed since the old values were set.
-    gridItem.clearOverridingLogicalHeight();
-    gridItem.clearOverridingLogicalWidth();
+    gridItem.clearOverridingSize();
 
     GridTrackSizingDirection gridItemBlockDirection = GridLayoutFunctions::flowAwareDirectionForGridItem(*this, gridItem, GridTrackSizingDirection::ForRows);
     GridTrackSizingDirection gridItemInlineDirection = GridLayoutFunctions::flowAwareDirectionForGridItem(*this, gridItem, GridTrackSizingDirection::ForColumns);
@@ -1696,7 +1695,7 @@ void RenderGrid::applyStretchAlignmentToGridItemIfNeeded(RenderBox& gridItem, Gr
         ASSERT(overridingContainingBlockContentSizeForGridItem && *overridingContainingBlockContentSizeForGridItem);
         LayoutUnit stretchedLogicalHeight = availableAlignmentSpaceForGridItemBeforeStretching(overridingContainingBlockContentSizeForGridItem->value(), gridItem, GridTrackSizingDirection::ForRows);
         LayoutUnit desiredLogicalHeight = gridItem.constrainLogicalHeightByMinMax(stretchedLogicalHeight, std::nullopt);
-        gridItem.setOverridingLogicalHeight(desiredLogicalHeight);
+        gridItem.setOverridingBorderBoxLogicalHeight(desiredLogicalHeight);
 
         auto itemNeedsRelayoutForStretchAlignment = [&]() {
             if (desiredLogicalHeight != gridItem.logicalHeight())
@@ -1720,7 +1719,7 @@ void RenderGrid::applyStretchAlignmentToGridItemIfNeeded(RenderBox& gridItem, Gr
         ASSERT(overridingContainingBlockContentSizeForGridItem && *overridingContainingBlockContentSizeForGridItem);
         LayoutUnit stretchedLogicalWidth = availableAlignmentSpaceForGridItemBeforeStretching(overridingContainingBlockContentSizeForGridItem->value(), gridItem, GridTrackSizingDirection::ForColumns);
         LayoutUnit desiredLogicalWidth = gridItem.constrainLogicalWidthByMinMax(stretchedLogicalWidth, contentWidth(), *this);
-        gridItem.setOverridingLogicalWidth(desiredLogicalWidth);
+        gridItem.setOverridingBorderBoxLogicalWidth(desiredLogicalWidth);
         if (desiredLogicalWidth != gridItem.logicalWidth())
             gridItem.setNeedsLayout(MarkOnlyThis);
     }
@@ -1737,7 +1736,7 @@ void RenderGrid::applySubgridStretchAlignmentToGridItemIfNeeded(RenderBox& gridI
         auto overridingContainingBlockContentSizeForGridItem = GridLayoutFunctions::overridingContainingBlockContentSizeForGridItem(gridItem, gridItemBlockDirection);
         ASSERT(overridingContainingBlockContentSizeForGridItem && *overridingContainingBlockContentSizeForGridItem);
         auto stretchedLogicalHeight = availableAlignmentSpaceForGridItemBeforeStretching(overridingContainingBlockContentSizeForGridItem->value(), gridItem, GridTrackSizingDirection::ForRows);
-        gridItem.setOverridingLogicalHeight(stretchedLogicalHeight);
+        gridItem.setOverridingBorderBoxLogicalHeight(stretchedLogicalHeight);
     }
 
     if (renderGrid->isSubgrid(GridTrackSizingDirection::ForColumns)) {
@@ -1745,7 +1744,7 @@ void RenderGrid::applySubgridStretchAlignmentToGridItemIfNeeded(RenderBox& gridI
         auto overridingContainingBlockContentSizeForGridItem = GridLayoutFunctions::overridingContainingBlockContentSizeForGridItem(gridItem, gridItemInlineDirection);
         ASSERT(overridingContainingBlockContentSizeForGridItem && *overridingContainingBlockContentSizeForGridItem);
         auto stretchedLogicalWidth = availableAlignmentSpaceForGridItemBeforeStretching(overridingContainingBlockContentSizeForGridItem->value(), gridItem, GridTrackSizingDirection::ForColumns);
-        gridItem.setOverridingLogicalWidth(stretchedLogicalWidth);
+        gridItem.setOverridingBorderBoxLogicalWidth(stretchedLogicalWidth);
     }
 }
 

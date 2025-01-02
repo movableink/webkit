@@ -140,7 +140,7 @@ void GridMasonryLayout::insertIntoGridAndLayoutItem(const GridTrackSizingAlgorit
     };
 
     if (shouldOverrideLogicalWidth(gridItem, layoutPhase))
-        gridItem.setOverridingLogicalWidth(calculateMasonryIntrinsicLogicalWidth(gridItem, layoutPhase));
+        gridItem.setOverridingBorderBoxLogicalWidth(calculateMasonryIntrinsicLogicalWidth(gridItem, layoutPhase));
 
     m_renderGrid.currentGrid().insert(gridItem, area);
     setItemGridAxisContainingBlockToGridArea(algorithm, gridItem);

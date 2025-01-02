@@ -207,12 +207,12 @@ void RenderTableCell::computePreferredLogicalWidths()
     // notional height on the cell, such as can happen when a percent sized image
     // scales up its width to match the available height. Setting a zero override
     // height prevents this from happening.
-    auto overridingLogicalHeight = this->overridingLogicalHeight();
+    auto overridingLogicalHeight = this->overridingBorderBoxLogicalHeight();
     if (overridingLogicalHeight)
-        setOverridingLogicalHeight({ });
+        setOverridingBorderBoxLogicalHeight({ });
     RenderBlockFlow::computePreferredLogicalWidths();
     if (overridingLogicalHeight)
-        setOverridingLogicalHeight(*overridingLogicalHeight);
+        setOverridingBorderBoxLogicalHeight(*overridingLogicalHeight);
 
     if (!element() || !style().autoWrap() || !element()->hasAttributeWithoutSynchronization(nowrapAttr))
         return;
@@ -405,7 +405,7 @@ LayoutUnit RenderTableCell::paddingAfter() const
 void RenderTableCell::setOverridingLogicalHeightFromRowHeight(LayoutUnit rowHeight)
 {
     clearIntrinsicPadding();
-    setOverridingLogicalHeight(rowHeight);
+    setOverridingBorderBoxLogicalHeight(rowHeight);
 }
 
 LayoutSize RenderTableCell::offsetFromContainer(RenderElement& container, const LayoutPoint& point, bool* offsetDependsOnPoint) const
