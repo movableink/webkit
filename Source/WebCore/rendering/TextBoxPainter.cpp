@@ -463,7 +463,7 @@ void TextBoxPainter::paintBackground(unsigned startOffset, unsigned endOffset, c
     auto selectionTop = LineSelection::logicalTopAdjustedForPrecedingBlock(*lineBox);
     // Use same y positioning and height as for selection, so that when the selection and this subrange are on
     // the same word there are no pieces sticking out.
-    auto deltaY = LayoutUnit { m_style.writingMode().isLineInverted() ? selectionBottom - m_logicalRect.maxY() : m_logicalRect.y() - selectionTop };
+    auto deltaY = LayoutUnit { writingMode().isLineInverted() ? selectionBottom - m_logicalRect.maxY() : m_logicalRect.y() - selectionTop };
     auto selectionHeight = LayoutUnit { std::max(0.f, selectionBottom - selectionTop) };
     auto selectionRect = LayoutRect { LayoutUnit(m_paintRect.x()), LayoutUnit(m_paintRect.y() - deltaY), LayoutUnit(m_logicalRect.width()), selectionHeight };
     auto adjustedSelectionRect = selectionRect;
@@ -542,7 +542,7 @@ TextDecorationPainter TextBoxPainter::createDecorationPainter(const StyledMarked
     // Create painter
     auto* shadow = markedText.style.textShadow ? &markedText.style.textShadow.value() : nullptr;
     auto* colorFilter = markedText.style.textShadow && m_style.hasAppleColorFilter() ? &m_style.appleColorFilter() : nullptr;
-    return { context, fontCascade(), shadow, colorFilter, m_document.printing(), m_renderer.isHorizontalWritingMode() };
+    return { context, fontCascade(), shadow, colorFilter, m_document.printing(), writingMode() };
 }
 
 static inline float computedTextDecorationThickness(const RenderStyle& styleToUse, float deviceScaleFactor)
@@ -1099,9 +1099,9 @@ void TextBoxPainter::paintPlatformDocumentMarker(const MarkedText& markedText)
 FloatRect TextBoxPainter::computePaintRect(const LayoutPoint& paintOffset)
 {
     FloatPoint localPaintOffset(paintOffset);
-    if (m_style.writingMode().isVertical()) {
+    if (writingMode().isVertical()) {
         localPaintOffset.move(0, -m_logicalRect.height());
-        if (m_style.writingMode().isLineOverLeft())
+        if (writingMode().isLineOverLeft())
             localPaintOffset.move(m_logicalRect.height(), m_logicalRect.width());
     }
 
