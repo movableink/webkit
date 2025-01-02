@@ -54,9 +54,11 @@
 #include "LocalFrameView.h"
 #include "NamedNodeMap.h"
 #include "NodeList.h"
+#include "NodeRenderStyle.h"
 #include "Page.h"
 #include "PseudoElement.h"
 #include "Region.h"
+#include "RenderBoxInlines.h"
 #include "RenderDescendantIterator.h"
 #include "RenderView.h"
 #include "ShadowRoot.h"
@@ -853,18 +855,21 @@ Vector<TargetedElementInfo> ElementTargetingController::findTargets(TargetedElem
             document->updateLayoutIgnorePendingStylesheets();
     }
 
+    auto checkViewportAreaRatio = CheckViewportAreaRatio::Yes;
     auto [nodes, innerElement] = switchOn(request.data, [this](const String& searchText) {
         return findNodes(searchText);
     }, [this, &request](const FloatPoint& point) {
         return findNodes(point, request.shouldIgnorePointerEventsNone);
-    }, [this](const TargetedElementSelectors& selectors) {
+    }, [this, &checkViewportAreaRatio](const TargetedElementSelectors& selectors) {
+        checkViewportAreaRatio = CheckViewportAreaRatio::No;
         return findNodes(selectors);
     });
 
     if (nodes.isEmpty())
         return { };
 
-    return extractTargets(WTFMove(nodes), WTFMove(innerElement), request.canIncludeNearbyElements);
+    auto includeNearbyElements = request.canIncludeNearbyElements ? IncludeNearbyElements::Yes : IncludeNearbyElements::No;
+    return extractTargets(WTFMove(nodes), WTFMove(innerElement), checkViewportAreaRatio, includeNearbyElements);
 }
 
 void ElementTargetingController::topologicallySortElementsHelper(ElementIdentifier currentElementID, Vector<ElementIdentifier>& depthSortedIDs, HashSet<ElementIdentifier>& processingIDs, HashSet<ElementIdentifier>& unprocessedIDs, const UncheckedKeyHashMap<ElementIdentifier, HashSet<ElementIdentifier>>& elementIDToOccludedElementIDs)
@@ -939,8 +944,7 @@ Vector<Vector<TargetedElementInfo>> ElementTargetingController::findAllTargets(f
             if (nodes.isEmpty())
                 continue;
 
-            const auto targets = extractTargets(WTFMove(nodes), WTFMove(innerElement), false);
-            targetsList.append(targets);
+            targetsList.append(extractTargets(WTFMove(nodes), WTFMove(innerElement), CheckViewportAreaRatio::Yes, IncludeNearbyElements::No));
         }
     }
 
@@ -1117,7 +1121,55 @@ static Vector<Ref<Element>> filterRedundantNearbyTargets(HashSet<Ref<Element>>&&
     return filteredResults;
 }
 
-Vector<TargetedElementInfo> ElementTargetingController::extractTargets(Vector<Ref<Node>>&& nodes, RefPtr<Element>&& innerElement, bool canIncludeNearbyElements)
+static IntRect absoluteBoundsForTargetAreaRatio(const Element& element, WeakHashMap<const Element, IntRect, WeakPtrImplWithEventTargetData>& cache)
+{
+    auto absoluteBoundingBoxRect = [&cache](const Element& element) {
+        auto entry = cache.find(element);
+        if (entry != cache.end())
+            return entry->value;
+
+        CheckedPtr renderer = element.renderer();
+        if (!renderer)
+            return IntRect { };
+
+        auto bounds = renderer->absoluteBoundingBoxRect();
+        cache.set(element, bounds);
+        return bounds;
+    };
+
+    auto bounds = absoluteBoundingBoxRect(element);
+    bool hasVisualOverflowX = false;
+    bool hasVisualOverflowY = false;
+    if (CheckedPtr style = element.renderStyle()) {
+        hasVisualOverflowX = style->overflowX() == Overflow::Visible;
+        hasVisualOverflowY = style->overflowY() == Overflow::Visible;
+    }
+
+    if (!hasVisualOverflowX && !hasVisualOverflowY)
+        return bounds;
+
+    IntRect absoluteBoundsOfChildren;
+    for (Ref child : childrenOfType<Element>(element))
+        absoluteBoundsOfChildren.uniteIfNonZero(absoluteBoundingBoxRect(child));
+
+    if (absoluteBoundsOfChildren.isEmpty())
+        return bounds;
+
+    auto boundsIncludingChildren = unionRect(bounds, absoluteBoundsOfChildren);
+    if (hasVisualOverflowX) {
+        bounds.shiftXEdgeTo(boundsIncludingChildren.x());
+        bounds.shiftMaxXEdgeTo(boundsIncludingChildren.maxX());
+    }
+
+    if (hasVisualOverflowY) {
+        bounds.shiftYEdgeTo(boundsIncludingChildren.y());
+        bounds.shiftMaxYEdgeTo(boundsIncludingChildren.maxY());
+    }
+
+    return bounds;
+}
+
+Vector<TargetedElementInfo> ElementTargetingController::extractTargets(Vector<Ref<Node>>&& nodes, RefPtr<Element>&& innerElement, CheckViewportAreaRatio checkViewportAreaRatio, IncludeNearbyElements includeNearbyElements)
 {
     RefPtr page = m_page.get();
     if (!page) {
@@ -1178,6 +1230,7 @@ Vector<TargetedElementInfo> ElementTargetingController::extractTargets(Vector<Re
 
     Vector<Ref<Element>> targets; // The front-most target is last in this list.
     Region additionalRegionForNearbyElements;
+    WeakHashMap<const Element, IntRect, WeakPtrImplWithEventTargetData> absoluteBoundsCache;
 
     // Prioritize parent elements over their children by traversing backwards over the candidates.
     // This allows us to target only the top-most container elements that satisfy the criteria.
@@ -1186,7 +1239,7 @@ Vector<TargetedElementInfo> ElementTargetingController::extractTargets(Vector<Re
     while (!candidates.isEmpty()) {
         Ref target = candidates.takeLast();
         CheckedPtr targetRenderer = target->renderer();
-        auto targetBoundingBox = target->boundingBoxInRootViewCoordinates();
+        auto targetBoundingBox = view->contentsToRootView(absoluteBoundsForTargetAreaRatio(target, absoluteBoundsCache));
         auto targetAreaRatio = computeViewportAreaRatio(targetBoundingBox);
 
         auto hasOneRenderedChild = [](const Element& target) {
@@ -1214,17 +1267,28 @@ Vector<TargetedElementInfo> ElementTargetingController::extractTargets(Vector<Re
         if (shouldSkipIrrelevantTarget)
             continue;
 
-        bool shouldAddTarget = targetAreaRatio > 0
-            && (targetRenderer->isFixedPositioned()
-            || targetRenderer->isStickilyPositioned()
-            || (targetRenderer->isAbsolutelyPositioned() && targetAreaRatio < maximumAreaRatioForAbsolutelyPositionedContent(viewportArea))
-            || (minimumAreaRatioForInFlowContent(viewportArea) < targetAreaRatio && targetAreaRatio < maximumAreaRatioForInFlowContent(viewportArea))
-            || !target->firstElementChild());
+        bool shouldAddTarget = [&] {
+            if (targetAreaRatio <= 0)
+                return false;
+
+            if (targetRenderer->isFixedPositioned())
+                return true;
+
+            if (targetRenderer->isStickilyPositioned())
+                return true;
+
+            if (!target->firstElementChild())
+                return true;
+
+            return checkViewportAreaRatio == CheckViewportAreaRatio::No
+                || (targetRenderer->isAbsolutelyPositioned() && targetAreaRatio < maximumAreaRatioForAbsolutelyPositionedContent(viewportArea))
+                || (minimumAreaRatioForInFlowContent(viewportArea) < targetAreaRatio && targetAreaRatio < maximumAreaRatioForInFlowContent(viewportArea));
+        }();
 
         if (!shouldAddTarget)
             continue;
 
-        bool checkForNearbyTargets = canIncludeNearbyElements
+        bool checkForNearbyTargets = includeNearbyElements == IncludeNearbyElements::Yes
             && targetRenderer->isOutOfFlowPositioned()
             && targetAreaRatio < nearbyTargetAreaRatio;
 
