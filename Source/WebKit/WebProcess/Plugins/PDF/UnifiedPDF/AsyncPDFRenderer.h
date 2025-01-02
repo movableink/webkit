@@ -151,7 +151,8 @@ public:
     void invalidateTilesForPaintingRect(float pageScaleFactor, const WebCore::FloatRect& paintingRect);
 
     // Updates existing tiles. Can result in temporarily stale content.
-    void pdfContentChangedInRect(const WebCore::GraphicsLayer*, const WebCore::FloatRect& paintingRect, std::optional<PDFLayoutRow>);
+    void setNeedsRenderForRect(WebCore::GraphicsLayer&, const WebCore::FloatRect& bounds);
+    void setNeedsPagePreviewRenderForPageCoverage(const PDFPageCoverage&);
 
     void generatePreviewImageForPage(PDFDocumentLayout::PageIndex, float scale);
     void removePreviewForPage(PDFDocumentLayout::PageIndex);

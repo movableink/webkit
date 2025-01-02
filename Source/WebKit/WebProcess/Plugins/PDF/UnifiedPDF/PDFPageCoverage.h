@@ -45,6 +45,36 @@ struct PerPageInfo {
 
 using PDFPageCoverage = Vector<PerPageInfo>;
 
+inline PerPageInfo unite(const PerPageInfo& a, const PerPageInfo& b)
+{
+    return { a.pageIndex, a.pageBounds, unionRect(a.rectInPageLayoutCoordinates, b.rectInPageLayoutCoordinates) };
+}
+
+inline PDFPageCoverage unite(const PDFPageCoverage& a, const PDFPageCoverage& b)
+{
+    PDFPageCoverage result;
+    result.reserveCapacity(a.size() + b.size());
+    auto as = a.span();
+    auto bs = b.span();
+    while (!as.empty() && !bs.empty()) {
+        auto cmp = as.front().pageIndex <=> bs.front().pageIndex;
+        if (cmp < 0) {
+            result.append(as.front());
+            as = as.subspan(1);
+        } else if (cmp > 0) {
+            result.append(bs.front());
+            bs = bs.subspan(1);
+        } else {
+            result.append(unite(as.front(), bs.front()));
+            as = as.subspan(1);
+            bs = bs.subspan(1);
+        }
+    }
+    result.append(as);
+    result.append(bs);
+    return result;
+}
+
 struct PDFPageCoverageAndScales {
     PDFPageCoverage pages;
     WebCore::FloatSize contentsOffset { };

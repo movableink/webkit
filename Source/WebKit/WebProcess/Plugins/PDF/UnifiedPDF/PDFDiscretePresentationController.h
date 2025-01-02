@@ -77,8 +77,7 @@ private:
     void updateDebugBorders(bool showDebugBorders, bool showRepaintCounters) override;
     void updateForCurrentScrollability(OptionSet<TiledBackingScrollability>) override;
 
-    void repaintForIncrementalLoad() override;
-    void setNeedsRepaintInDocumentRect(OptionSet<RepaintRequirement>, const WebCore::FloatRect& rectInDocumentCoordinates, std::optional<PDFLayoutRow>) override;
+    Vector<LayerCoverage> layerCoveragesForRepaintPageCoverage(RepaintRequirements, const PDFPageCoverage&) override;
 
     void didGeneratePreviewForPage(PDFDocumentLayout::PageIndex) override;
 

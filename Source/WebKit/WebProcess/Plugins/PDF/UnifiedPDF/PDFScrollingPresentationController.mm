@@ -261,19 +261,6 @@ void PDFScrollingPresentationController::didGeneratePreviewForPage(PDFDocumentLa
         layer->setNeedsDisplay();
 }
 
-void PDFScrollingPresentationController::repaintForIncrementalLoad()
-{
-    auto& documentLayout = m_plugin->documentLayout();
-    auto coverageRect = FloatRect { { }, documentLayout.contentsSize() };
-
-    if (auto* tiledBacking = m_contentsLayer->tiledBacking()) {
-        coverageRect = tiledBacking->coverageRect();
-        coverageRect = m_plugin->convertDown(UnifiedPDFPlugin::CoordinateSpace::Contents, UnifiedPDFPlugin::CoordinateSpace::PDFDocumentLayout, coverageRect);
-    }
-
-    setNeedsRepaintInDocumentRect(RepaintRequirement::PDFContent, coverageRect, { });
-}
-
 void PDFScrollingPresentationController::updateIsInWindow(bool isInWindow)
 {
     m_contentsLayer->setIsInWindow(isInWindow);
@@ -326,26 +313,20 @@ void PDFScrollingPresentationController::updateForCurrentScrollability(OptionSet
         tiledBacking->setScrollability(scrollability);
 }
 
-void PDFScrollingPresentationController::setNeedsRepaintInDocumentRect(OptionSet<RepaintRequirement> repaintRequirements, const FloatRect& rectInDocumentCoordinates, std::optional<PDFLayoutRow> layoutRow)
+auto PDFScrollingPresentationController::layerCoveragesForRepaintPageCoverage(RepaintRequirements repaintRequirements, const PDFPageCoverage& pageCoverage) -> Vector<LayerCoverage>
 {
-    if (!repaintRequirements)
-        return;
-
-    auto contentsRect = m_plugin->convertUp(UnifiedPDFPlugin::CoordinateSpace::PDFDocumentLayout, UnifiedPDFPlugin::CoordinateSpace::Contents, rectInDocumentCoordinates);
-    if (repaintRequirements.contains(RepaintRequirement::PDFContent)) {
-        if (RefPtr asyncRenderer = asyncRendererIfExists())
-            asyncRenderer->pdfContentChangedInRect(m_contentsLayer.get(), contentsRect, layoutRow);
-    }
+    Vector<LayerCoverage> result;
+    FloatRect contentsRect;
+    for (auto& perPage : pageCoverage)
+        contentsRect.unite(m_plugin->convertUp(UnifiedPDFPlugin::CoordinateSpace::PDFPage, UnifiedPDFPlugin::CoordinateSpace::Contents, perPage.rectInPageLayoutCoordinates, perPage.pageIndex));
 
 #if ENABLE(UNIFIED_PDF_SELECTION_LAYER)
-    if (repaintRequirements.contains(RepaintRequirement::Selection)) {
-        RefPtr { m_selectionLayer }->setNeedsDisplayInRect(contentsRect);
-        if (repaintRequirements.hasExactlyOneBitSet())
-            return;
-    }
+    if (repaintRequirements.contains(RepaintRequirement::Selection))
+        result.append({ *m_selectionLayer, contentsRect, RepaintRequirements { RepaintRequirement::Selection } });
 #endif
-
-    RefPtr { m_contentsLayer }->setNeedsDisplayInRect(contentsRect);
+    if (repaintRequirements.contains(RepaintRequirement::PDFContent))
+        result.append({ *m_contentsLayer, contentsRect, RepaintRequirements { RepaintRequirement::PDFContent } });
+    return result;
 }
 
 void PDFScrollingPresentationController::paintBackgroundLayerForPage(const GraphicsLayer*, GraphicsContext& context, const FloatRect& clipRect, PDFDocumentLayout::PageIndex pageIndex)

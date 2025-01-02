@@ -740,42 +740,30 @@ void AsyncPDFRenderer::invalidateTilesForPaintingRect(float pageScaleFactor, con
     });
 }
 
-void AsyncPDFRenderer::pdfContentChangedInRect(const GraphicsLayer* layer, const FloatRect& paintingRect, std::optional<PDFLayoutRow> layoutRow)
+void AsyncPDFRenderer::setNeedsRenderForRect(GraphicsLayer& layer, const FloatRect& bounds)
 {
     // FIXME: If our platform does not support partial updates (supportsPartialRepaint() is false) then this should behave
     // identically to invalidateTilesForPaintingRect().
 
-    LOG_WITH_STREAM(PDFAsyncRendering, stream << "AsyncPDFRenderer::pdfContentChangedInRect " << paintingRect);
+    LOG_WITH_STREAM(PDFAsyncRendering, stream << "AsyncPDFRenderer::setNeedsRenderForRect " << bounds);
 
     ASSERT(isMainRunLoop());
 
-    RefPtr presentationController = m_presentationController.get();
-    if (!presentationController)
-        return;
-
-    auto* tiledBacking = layer->tiledBacking();
+    auto* tiledBacking = layer.tiledBacking();
     if (!tiledBacking) {
         // We only expect AsyncPDFRenderer to be used with tiled layers.
         ASSERT_NOT_REACHED();
         return;
     }
 
-    auto pageCoverage = presentationController->pageCoverageForContentsRect(paintingRect, layoutRow);
-    if (pageCoverage.isEmpty())
-        return;
-
-    RetainPtr pdfDocument = presentationController->pluginPDFDocument();
-    if (!pdfDocument)
-        return;
-
-    auto toTileTransform = paintingToTileTransform(tiledBacking->tilingScaleFactor());
-    auto paintingRectInTileCoordinates = toTileTransform.mapRect(paintingRect);
+    auto boundsInTileCoordinates = bounds;
+    boundsInTileCoordinates.scale(tiledBacking->tilingScaleFactor());
 
     for (auto& keyValuePair : m_rendereredTiles) {
         auto& tileInfo = keyValuePair.key;
         auto& renderedTile = keyValuePair.value;
         auto tileRect = renderedTile.tileInfo.tileRect;
-        FloatRect renderRect = intersection(tileRect, paintingRectInTileCoordinates);
+        FloatRect renderRect = intersection(tileRect, boundsInTileCoordinates);
         if (renderRect.isEmpty())
             continue;
         RefPtr<NativeImage> background;
@@ -783,7 +771,13 @@ void AsyncPDFRenderer::pdfContentChangedInRect(const GraphicsLayer* layer, const
             background = renderedTile.image;
         enqueueTileRenderIfNecessary(tileInfo, renderInfoForTile(*tiledBacking, tileInfo, tileRect, renderRect, WTFMove(background)));
     }
+}
 
+void AsyncPDFRenderer::setNeedsPagePreviewRenderForPageCoverage(const PDFPageCoverage& pageCoverage)
+{
+    RefPtr presentationController = m_presentationController.get();
+    if (!presentationController)
+        return;
     auto pagePreviewScale = presentationController->scaleForPagePreviews();
     for (auto& pageInfo : pageCoverage)
         generatePreviewImageForPage(pageInfo.pageIndex, pagePreviewScale);

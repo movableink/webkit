@@ -173,6 +173,39 @@ float PDFPresentationController::scaleForPagePreviews() const
     return m_plugin->scaleForPagePreviews();
 }
 
+void PDFPresentationController::setNeedsRepaintForPageCoverage(RepaintRequirements repaintRequirements, const PDFPageCoverage& coverage)
+{
+    // HoverOverlay is currently painted to PDFContent.
+    if (repaintRequirements.contains(RepaintRequirement::HoverOverlay)) {
+        repaintRequirements.remove(RepaintRequirement::HoverOverlay);
+        repaintRequirements.add(RepaintRequirement::PDFContent);
+    }
+
+    auto layerCoverages = layerCoveragesForRepaintPageCoverage(repaintRequirements, coverage);
+    for (auto& layerCoverage : layerCoverages)
+        Ref { layerCoverage.layer }->setNeedsDisplayInRect(layerCoverage.bounds);
+
+    // Unite consecutive PDFContent display rects and send them as render rect to AsyncRenderer.
+    if (RefPtr asyncRenderer = asyncRendererIfExists()) {
+        RefPtr<GraphicsLayer> layer;
+        FloatRect bounds;
+        for (auto& layerCoverage : layerCoverages) {
+            if (!layerCoverage.repaintRequirements.contains(RepaintRequirement::PDFContent))
+                continue;
+            if (layerCoverage.layer.ptr() != layer) {
+                if (layer && !bounds.isEmpty())
+                    asyncRenderer->setNeedsRenderForRect(*layer, bounds);
+                layer = layerCoverage.layer.ptr();
+                bounds = layerCoverage.bounds;
+            } else
+                bounds.unite(layerCoverage.bounds);
+        }
+        if (layer && !bounds.isEmpty())
+            asyncRenderer->setNeedsRenderForRect(*layer, bounds);
+        asyncRenderer->setNeedsPagePreviewRenderForPageCoverage(coverage);
+    }
+}
+
 PDFDocumentLayout::PageIndex PDFPresentationController::nearestPageIndexForDocumentPoint(const FloatPoint& point) const
 {
     if (m_plugin->isLocked())

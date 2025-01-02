@@ -350,7 +350,7 @@ void UnifiedPDFPlugin::incrementalLoadingDidCancel()
 void UnifiedPDFPlugin::incrementalLoadingDidFinish()
 {
     m_incrementalLoadingRepaintTimer.stop();
-    repaintForIncrementalLoad();
+    setNeedsRepaintForIncrementalLoad();
 }
 
 #if ENABLE(UNIFIED_PDF_DATA_DETECTION)
@@ -483,17 +483,8 @@ void UnifiedPDFPlugin::setNeedsRepaintForAnnotation(PDFAnnotation *annotation, R
     if (!pageIndex)
         return;
 
-    auto annotationBounds = convertUp(CoordinateSpace::PDFPage, CoordinateSpace::PDFDocumentLayout, FloatRect { [annotation bounds] }, pageIndex);
-    auto layoutRow = m_documentLayout.rowForPageIndex(*pageIndex);
-    setNeedsRepaintInDocumentRect(repaintRequirements, annotationBounds, layoutRow);
-}
-
-void UnifiedPDFPlugin::setNeedsRepaintInDocumentRect(RepaintRequirements repaintRequirements, const FloatRect& rectInDocumentCoordinates, std::optional<PDFLayoutRow> layoutRow)
-{
-    if (!repaintRequirements)
-        return;
-
-    m_presentationController->setNeedsRepaintInDocumentRect(repaintRequirements, rectInDocumentCoordinates, layoutRow);
+    auto selectionCoverage = PDFPageCoverage::from(PerPageInfo { *pageIndex, layoutBoundsForPageAtIndex(*pageIndex), [annotation bounds] });
+    m_presentationController->setNeedsRepaintForPageCoverage(repaintRequirements, selectionCoverage);
 }
 
 void UnifiedPDFPlugin::scheduleRenderingUpdate(OptionSet<RenderingUpdateStep> requestedSteps)
@@ -542,15 +533,21 @@ void UnifiedPDFPlugin::ensureLayers()
 
 void UnifiedPDFPlugin::incrementalLoadingRepaintTimerFired()
 {
-    repaintForIncrementalLoad();
+    setNeedsRepaintForIncrementalLoad();
 }
 
-void UnifiedPDFPlugin::repaintForIncrementalLoad()
+void UnifiedPDFPlugin::setNeedsRepaintForIncrementalLoad()
 {
     if (!m_pdfDocument)
         return;
 
-    m_presentationController->repaintForIncrementalLoad();
+    PDFPageCoverage pageCoverage;
+    pageCoverage.reserveCapacity(m_documentLayout.pageCount());
+    for (PDFDocumentLayout::PageIndex i = 0; i < m_documentLayout.pageCount(); ++i) {
+        auto pageBounds = layoutBoundsForPageAtIndex(i);
+        pageCoverage.append({ i, pageBounds, pageBounds });
+    }
+    m_presentationController->setNeedsRepaintForPageCoverage({ RepaintRequirement::PDFContent, RepaintRequirement::HoverOverlay, RepaintRequirement::Selection }, pageCoverage);
 }
 
 float UnifiedPDFPlugin::scaleForPagePreviews() const
@@ -2857,19 +2854,8 @@ void UnifiedPDFPlugin::repaintOnSelectionChange(ActiveStateChangeReason reason, 
         RELEASE_ASSERT_NOT_REACHED();
     }
 
-    auto repaintSelection = [&](PDFSelection* selection) {
-        auto selectionPageCoverage = pageCoverageForSelection(selection);
-        for (auto& page : selectionPageCoverage) {
-            auto layoutRow = m_documentLayout.rowForPageIndex(page.pageIndex);
-            auto pageSelectionBounds = convertUp(CoordinateSpace::PDFPage, CoordinateSpace::PDFDocumentLayout, page.pageBounds, page.pageIndex);
-            setNeedsRepaintInDocumentRect(RepaintRequirement::Selection, pageSelectionBounds, layoutRow);
-        }
-    };
-
-    if (previousSelection)
-        repaintSelection(previousSelection);
-
-    repaintSelection(protectedCurrentSelection().get());
+    auto repaintCoverage = unite(pageCoverageForSelection(previousSelection), pageCoverageForSelection(protectedCurrentSelection().get()));
+    m_presentationController->setNeedsRepaintForPageCoverage(RepaintRequirement::Selection, repaintCoverage);
 }
 
 RetainPtr<PDFSelection> UnifiedPDFPlugin::protectedCurrentSelection() const
