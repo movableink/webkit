@@ -26,10 +26,13 @@
 #pragma once
 
 #import "CommandsMixin.h"
+#import "WebGPU.h"
+#import "WebGPUExt.h"
 #import <wtf/FastMalloc.h>
 #import <wtf/HashMap.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
+#import <wtf/RetainReleaseSwift.h>
 #import <wtf/TZoneMalloc.h>
 #import <wtf/Vector.h>
 #import <wtf/WeakPtr.h>
@@ -106,6 +109,17 @@ private:
     HashMap<uint32_t, RefPtr<const BindGroup>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_bindGroups;
     NSString *m_lastErrorString { nil };
     bool m_passEnded { false };
-};
+} SWIFT_SHARED_REFERENCE(refComputePassEncoder, derefComputePassEncoder);
+
 
 } // namespace WebGPU
+
+inline void refComputePassEncoder(WebGPU::ComputePassEncoder* obj)
+{
+    ref(obj);
+}
+
+inline void derefComputePassEncoder(WebGPU::ComputePassEncoder* obj)
+{
+    deref(obj);
+}

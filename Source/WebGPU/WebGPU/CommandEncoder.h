@@ -75,7 +75,7 @@ public:
 
     ~CommandEncoder();
 
-    Ref<ComputePassEncoder> beginComputePass(const WGPUComputePassDescriptor&);
+    Ref<ComputePassEncoder> beginComputePass(const WGPUComputePassDescriptor&) HAS_SWIFTCXX_THUNK;
     Ref<RenderPassEncoder> beginRenderPass(const WGPURenderPassDescriptor&) HAS_SWIFTCXX_THUNK;
     void copyBufferToBuffer(const Buffer& source, uint64_t sourceOffset, Buffer& destination, uint64_t destinationOffset, uint64_t size) HAS_SWIFTCXX_THUNK;
     void copyBufferToTexture(const WGPUImageCopyBuffer& source, const WGPUImageCopyTexture& destination, const WGPUExtent3D& copySize) HAS_SWIFTCXX_THUNK;
@@ -133,8 +133,8 @@ private PUBLIC_IN_WEBGPU_SWIFT:
 private:
     NSString* validateFinishError() const;
     bool validatePopDebugGroup() const;
-    NSString* errorValidatingComputePassDescriptor(const WGPUComputePassDescriptor&) const;
 private PUBLIC_IN_WEBGPU_SWIFT:
+    NSString* errorValidatingComputePassDescriptor(const WGPUComputePassDescriptor&) const;
     NSString* errorValidatingRenderPassDescriptor(const WGPURenderPassDescriptor&) const;
     void clearTextureIfNeeded(const WGPUImageCopyTexture&, NSUInteger);
 private:

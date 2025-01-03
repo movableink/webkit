@@ -29,6 +29,7 @@
 #include "Buffer.h"
 #include "CommandEncoder.h"
 #include "CommandsMixin.h"
+#include "ComputePassEncoder.h"
 #include "Device.h"
 #include "IsValidToUseWith.h"
 #include "QuerySet.h"
@@ -55,6 +56,7 @@ namespace WTF {
 template<typename PassedType>
 class Range;
 }
+using RefComputePassEncoder = Ref<WebGPU::ComputePassEncoder>;
 inline unsigned long roundUpToMultipleOfNonPowerOfTwoCheckedUInt32UnsignedLong(Checked<uint32_t> x, unsigned long y) { return WTF::roundUpToMultipleOfNonPowerOfTwo<unsigned long int, Checked<uint32_t>>(x, y); }
 inline uint32_t roundUpToMultipleOfNonPowerOfTwoUInt32UInt32(uint32_t a, uint32_t b) { return WTF::roundUpToMultipleOfNonPowerOfTwo<uint32_t, Checked<uint32_t>>(a, b); }
 

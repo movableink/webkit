@@ -67,6 +67,11 @@ public func CommandEncoder_beginRenderPass_thunk(commandEncoder: WebGPU.CommandE
     return commandEncoder.beginRenderPass(descriptor: descriptor)
 }
 
+@_expose(Cxx)
+public func CommandEncoder_beginComputePass_thunk(commandEncoder: WebGPU.CommandEncoder, descriptor: WGPUComputePassDescriptor) -> WebGPU_Internal.RefComputePassEncoder {
+    return commandEncoder.beginComputePass(descriptor: descriptor)
+}
+
 extension WebGPU.CommandEncoder {
     private func isRenderableTextureView(texture: WebGPU.TextureView) -> Bool {
         let textureDimension = texture.dimension()
@@ -1343,5 +1348,55 @@ extension WebGPU.CommandEncoder {
             assertionFailure()
             return
         }
+    }
+
+    public func beginComputePass(descriptor: WGPUComputePassDescriptor) -> WebGPU_Internal.RefComputePassEncoder {
+        guard descriptor.nextInChain == nil else {
+            return WebGPU.ComputePassEncoder.createInvalid(self, m_device.ptr(), "descriptor is corrupted")
+        }
+
+        guard prepareTheEncoderState() else {
+            self.generateInvalidEncoderStateError()
+            return WebGPU.ComputePassEncoder.createInvalid(self, m_device.ptr(), "encoder state is invalid")
+        }
+
+        let error = self.errorValidatingComputePassDescriptor(descriptor)
+        guard error == nil else {
+            return WebGPU.ComputePassEncoder.createInvalid(self, m_device.ptr(), error)
+        }
+
+        guard m_commandBuffer.status.rawValue < MTLCommandBufferStatus.enqueued.rawValue else {
+            return WebGPU.ComputePassEncoder.createInvalid(self, m_device.ptr(), "command buffer has already been committed")
+        }
+
+        self.finalizeBlitCommandEncoder()
+
+        guard m_device.ptr().isValid() else {
+            return WebGPU.ComputePassEncoder.createInvalid(self, m_device.ptr(), "GPUDevice was invalid, this will be an error submitting the command buffer")
+        }
+        let computePassDescriptor = MTLComputePassDescriptor()
+        computePassDescriptor.dispatchType = MTLDispatchType.serial
+        var counterSampleBuffer: MTLCounterSampleBuffer? = nil
+        if let wgpuTimestampWrites = descriptor.timestampWrites {
+            counterSampleBuffer = WebGPU.fromAPI(wgpuTimestampWrites.pointee.querySet).counterSampleBuffer()
+        }
+
+        if m_device.ptr().enableEncoderTimestamps() || counterSampleBuffer != nil {
+            let timestampWrites = descriptor.timestampWrites
+            computePassDescriptor.sampleBufferAttachments[0].sampleBuffer = counterSampleBuffer != nil ? computePassDescriptor.sampleBufferAttachments[0].sampleBuffer : m_device.ptr().timestampsBuffer(m_commandBuffer, 2)
+            computePassDescriptor.sampleBufferAttachments[0].startOfEncoderSampleIndex = timestampWrites != nil ? Int(timestampWrites.pointee.beginningOfPassWriteIndex) : 0
+            computePassDescriptor.sampleBufferAttachments[0].endOfEncoderSampleIndex = timestampWrites != nil ? Int(timestampWrites.pointee.endOfPassWriteIndex) : 1
+        }
+        guard let computeCommandEncoder = m_commandBuffer.makeComputeCommandEncoder(descriptor: computePassDescriptor) else {
+            return WebGPU.ComputePassEncoder.createInvalid(self, m_device.ptr(), "computeCommandEncoder is null")
+        }
+
+        self.setExistingEncoder(computeCommandEncoder)
+        // FIXME: Figure out a way so that WTFString does not override Swift.String in the global
+        //        namespace. At the moment it is and that's why we need this.
+        computeCommandEncoder.label = Swift.String(cString: descriptor.label)
+
+        return WebGPU.ComputePassEncoder.create(computeCommandEncoder, descriptor, self, m_device.ptr())
+
     }
 }
