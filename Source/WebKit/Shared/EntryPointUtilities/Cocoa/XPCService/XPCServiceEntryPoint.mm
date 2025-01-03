@@ -30,6 +30,7 @@
 #import "XPCServiceEntryPoint.h"
 #import <JavaScriptCore/JSCConfig.h>
 #import <WebCore/ProcessIdentifier.h>
+#import <WebCore/WebCoreHeapSupport.h>
 #import <signal.h>
 #import <wtf/StdLibExtras.h>
 #import <wtf/WTFProcess.h>
@@ -38,6 +39,16 @@
 #import <wtf/text/StringToIntegerConversion.h>
 
 namespace WebKit {
+
+DECLARE_TZONE_HEAPREF_SPECIFICATION_BOUNDS(XPCService);
+
+XPCServiceInitializerDelegate::XPCServiceInitializerDelegate(OSObjectPtr<xpc_connection_t> connection, xpc_object_t initializerMessage)
+    : m_connection(WTFMove(connection))
+    , m_initializerMessage(initializerMessage)
+{
+    PREINITIALIZE_TZONE_HEAPREFS(XPCService);
+    WebCore::initializeHeapRefs();
+}
 
 XPCServiceInitializerDelegate::~XPCServiceInitializerDelegate() = default;
 

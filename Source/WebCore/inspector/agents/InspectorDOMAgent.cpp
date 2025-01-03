@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2011 Google Inc. All rights reserved.
  * Copyright (C) 2009 Joseph Pecoraro
  *
@@ -196,7 +196,7 @@ static bool parseQuad(Ref<JSON::Array>&& quadArray, FloatQuad* quad)
 }
 
 class RevalidateStyleAttributeTask final : public CanMakeCheckedPtr<RevalidateStyleAttributeTask> {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(RevalidateStyleAttributeTask);
+    WTF_MAKE_TZONE_ALLOCATED(RevalidateStyleAttributeTask);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RevalidateStyleAttributeTask);
 public:
     RevalidateStyleAttributeTask(InspectorDOMAgent*);
@@ -209,6 +209,8 @@ private:
     Timer m_timer;
     HashSet<RefPtr<Element>> m_elements;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RevalidateStyleAttributeTask);
 
 RevalidateStyleAttributeTask::RevalidateStyleAttributeTask(InspectorDOMAgent* domAgent)
     : m_domAgent(domAgent)

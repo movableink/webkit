@@ -32,7 +32,7 @@
 
 namespace JSC {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(CodeOrigin, OutOfLineCodeOrigin);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CodeOrigin::OutOfLineCodeOrigin);
 
 unsigned CodeOrigin::inlineDepth() const
 {

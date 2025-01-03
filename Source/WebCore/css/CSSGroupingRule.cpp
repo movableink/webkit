@@ -37,13 +37,9 @@
 #include "CSSStyleSheet.h"
 #include "StylePropertiesInlines.h"
 #include "StyleRule.h"
-#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
-
-using CSSGroupingRuleLiveCSSRuleList = LiveCSSRuleList<CSSGroupingRule>;
-WTF_MAKE_TZONE_ALLOCATED_IMPL_TEMPLATE(CSSGroupingRuleLiveCSSRuleList);
 
 CSSGroupingRule::CSSGroupingRule(StyleRuleGroup& groupRule, CSSStyleSheet* parent)
     : CSSRule(parent)

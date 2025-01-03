@@ -140,7 +140,7 @@ private:
     Timer m_lifetimeTimer;
 };
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(SpeculativeLoadManager, ExpiringEntry);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SpeculativeLoadManager::ExpiringEntry);
 
 
 class SpeculativeLoadManager::PreloadedEntry : private ExpiringEntry {
@@ -166,7 +166,7 @@ private:
     std::optional<ResourceRequest> m_speculativeValidationRequest;
 };
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(SpeculativeLoadManager, PreloadedEntry);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SpeculativeLoadManager::PreloadedEntry);
 
 class SpeculativeLoadManager::PendingFrameLoad : public RefCounted<PendingFrameLoad> {
 public:

@@ -96,7 +96,7 @@ namespace WebCore {
 using namespace HTMLNames;
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderObject);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(RenderObject, RenderObjectRareData);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderObject::RenderObjectRareData);
 
 #if ASSERT_ENABLED
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2024 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,16 +24,12 @@
  */
 
 #include "config.h"
-#include "AirLiveness.h"
-#include "AirLivenessAdapter.h"
+
+#include "TiledBacking.h"
 #include <wtf/TZoneMallocInlines.h>
 
-namespace JSC { namespace B3 { namespace Air {
+namespace WebCore {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_TEMPLATE(GPLiveness);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_TEMPLATE(FPLiveness);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_TEMPLATE(StackSlotLiveness);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_TEMPLATE(UnifiedTmpLiveness);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TiledBacking);
 
-
-} } } // namespace JSC::B3::Air
+} // namespace WebCore

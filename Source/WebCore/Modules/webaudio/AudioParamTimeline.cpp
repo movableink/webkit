@@ -924,7 +924,7 @@ void AudioParamTimeline::handleCancelValues(ParamEvent& event, ParamEvent* nextE
     }
 }
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(AudioParamTimeline, ParamEvent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AudioParamTimeline::ParamEvent);
 
 auto AudioParamTimeline::ParamEvent::createSetValueEvent(float value, Seconds time) -> ParamEvent
 {

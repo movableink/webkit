@@ -64,7 +64,7 @@ namespace Inspector {
 const ASCIILiteral InspectorDebuggerAgent::backtraceObjectGroup = "backtrace"_s;
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(InspectorDebuggerAgent);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(InspectorDebuggerAgent, ProtocolBreakpoint);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(InspectorDebuggerAgent::ProtocolBreakpoint);
 
 // Objects created and retained by evaluating breakpoint actions are put into object groups
 // according to the breakpoint action identifier assigned by the frontend. A breakpoint may

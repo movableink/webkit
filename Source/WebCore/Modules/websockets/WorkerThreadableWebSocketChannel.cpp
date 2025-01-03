@@ -150,7 +150,7 @@ void WorkerThreadableWebSocketChannel::resume()
         m_bridge->resume();
 }
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(WorkerThreadableWebSocketChannel, Peer);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WorkerThreadableWebSocketChannel::Peer);
 
 WorkerThreadableWebSocketChannel::Peer::Peer(Ref<ThreadableWebSocketChannelClientWrapper>&& clientWrapper, ScriptExecutionContext& context, ScriptExecutionContextIdentifier workerContextIdentifier, const String& taskMode, SocketProvider& provider)
     : m_workerClientWrapper(clientWrapper.ptr())

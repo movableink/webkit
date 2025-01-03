@@ -694,6 +694,7 @@
 		FE0383212ABC0E9F00A576A2 /* TZoneHeap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = FE03831F2ABC0E9F00A576A2 /* TZoneHeap.cpp */; };
 		FE0383232ABC988C00A576A2 /* TZoneHeapInlines.h in Headers */ = {isa = PBXBuildFile; fileRef = FE0383222ABC988C00A576A2 /* TZoneHeapInlines.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		FE48BD3B2321E8D700F136D0 /* FailureAction.h in Headers */ = {isa = PBXBuildFile; fileRef = FE48BD3A2321E8CC00F136D0 /* FailureAction.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		FE9CD7E32D10847E00266FDD /* SegmentedVector.h in Headers */ = {isa = PBXBuildFile; fileRef = FE9CD7E22D10847E00266FDD /* SegmentedVector.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		FEC3A39324846A8100395B54 /* GigacageConfig.h in Headers */ = {isa = PBXBuildFile; fileRef = FEC3A39224846A6D00395B54 /* GigacageConfig.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		FEC3A395248471FE00395B54 /* GigacageKind.h in Headers */ = {isa = PBXBuildFile; fileRef = FEC3A394248471FE00395B54 /* GigacageKind.h */; settings = {ATTRIBUTES = (Private, ); }; };
 /* End PBXBuildFile section */
@@ -1410,6 +1411,7 @@
 		FE03831F2ABC0E9F00A576A2 /* TZoneHeap.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TZoneHeap.cpp; path = bmalloc/TZoneHeap.cpp; sourceTree = "<group>"; };
 		FE0383222ABC988C00A576A2 /* TZoneHeapInlines.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TZoneHeapInlines.h; path = bmalloc/TZoneHeapInlines.h; sourceTree = "<group>"; };
 		FE48BD3A2321E8CC00F136D0 /* FailureAction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FailureAction.h; path = bmalloc/FailureAction.h; sourceTree = "<group>"; };
+		FE9CD7E22D10847E00266FDD /* SegmentedVector.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SegmentedVector.h; path = bmalloc/SegmentedVector.h; sourceTree = "<group>"; };
 		FEC3A39224846A6D00395B54 /* GigacageConfig.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GigacageConfig.h; path = bmalloc/GigacageConfig.h; sourceTree = "<group>"; };
 		FEC3A394248471FE00395B54 /* GigacageKind.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GigacageKind.h; path = bmalloc/GigacageKind.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -2202,6 +2204,7 @@
 				144469FD17A61F1F00F9EA1D /* PerThread.h */,
 				145F6878179E3A4400D65598 /* Range.h */,
 				148EFAE61D6B953B008E721E /* ScopeExit.h */,
+				FE9CD7E22D10847E00266FDD /* SegmentedVector.h */,
 				E31E747F2238CA5B005D084A /* StaticPerProcess.h */,
 				1417F64F18B7280C0076FA99 /* valgrind.h */,
 				1479E21217A1A255006D4E9D /* Vector.h */,
@@ -2325,6 +2328,7 @@
 				14DD78CD18F48D7500950702 /* Range.h in Headers */,
 				0F5BF1531F22E1570029D91D /* Scavenger.h in Headers */,
 				148EFAE81D6B953B008E721E /* ScopeExit.h in Headers */,
+				FE9CD7E32D10847E00266FDD /* SegmentedVector.h in Headers */,
 				14DD789018F48CEB00950702 /* Sizes.h in Headers */,
 				14DD78BC18F48D6B00950702 /* SmallLine.h in Headers */,
 				14DD78BD18F48D6B00950702 /* SmallPage.h in Headers */,

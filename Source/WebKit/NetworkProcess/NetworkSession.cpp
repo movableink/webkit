@@ -78,7 +78,7 @@ using namespace WebCore;
 constexpr Seconds cachedNetworkResourceLoaderLifetime { 30_s };
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(NetworkSession);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(NetworkSession, CachedNetworkResourceLoader);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NetworkSession::CachedNetworkResourceLoader);
 
 std::unique_ptr<NetworkSession> NetworkSession::create(NetworkProcess& networkProcess, const NetworkSessionCreationParameters& parameters)
 {

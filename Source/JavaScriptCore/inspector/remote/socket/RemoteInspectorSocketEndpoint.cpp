@@ -37,8 +37,8 @@
 namespace Inspector {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteInspectorSocketEndpoint);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(RemoteInspectorSocketEndpoint, BaseConnection);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(RemoteInspectorSocketEndpoint, ClientConnection);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteInspectorSocketEndpoint::BaseConnection);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteInspectorSocketEndpoint::ClientConnection);
 
 RemoteInspectorSocketEndpoint& RemoteInspectorSocketEndpoint::singleton()
 {

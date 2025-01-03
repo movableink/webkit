@@ -30,7 +30,7 @@
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(StepRange);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(StepRange, StepDescription);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(StepRange::StepDescription);
 
 using namespace HTMLNames;
 

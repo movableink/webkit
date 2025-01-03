@@ -60,7 +60,7 @@ template<typename T>
 class AXTreeStore {
     // For now, we just disable direct instantiations of this class because it is not
     // needed. Subclasses are expected to declare their own WTF_MAKE_TZONE_ALLOCATED.
-    WTF_MAKE_TZONE_NONALLOCATABLE(AXTreeStore);
+    WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(AXTreeStore);
     WTF_MAKE_NONCOPYABLE(AXTreeStore);
     friend WEBCORE_EXPORT AXTreePtr findAXTree(Function<bool(AXTreePtr)>&&);
 public:

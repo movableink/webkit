@@ -31,13 +31,9 @@
 #include "CSSRuleList.h"
 #include "CSSStyleSheet.h"
 #include "Document.h"
-#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
-
-using CSSKeyframesRuleLiveCSSRuleList = LiveCSSRuleList<CSSKeyframesRule>;
-WTF_MAKE_TZONE_ALLOCATED_IMPL_TEMPLATE(CSSKeyframesRuleLiveCSSRuleList);
 
 StyleRuleKeyframes::StyleRuleKeyframes(const AtomString& name)
     : StyleRuleBase(StyleRuleType::Keyframes)

@@ -74,7 +74,7 @@ IconLoadingDelegate::IconLoadingClient::~IconLoadingClient()
 
 typedef void (^IconLoadCompletionHandler)(NSData*);
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(IconLoadingDelegate, IconLoadingClient);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(IconLoadingDelegate::IconLoadingClient);
 
 void IconLoadingDelegate::IconLoadingClient::getLoadDecisionForIcon(const WebCore::LinkIcon& linkIcon, CompletionHandler<void(CompletionHandler<void(API::Data*)>&&)>&& completionHandler)
 {

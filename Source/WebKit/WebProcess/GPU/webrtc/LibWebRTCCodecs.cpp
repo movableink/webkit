@@ -87,8 +87,8 @@ static webrtc::WebKitVideoDecoder createVideoDecoder(const webrtc::SdpVideoForma
 }
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(LibWebRTCCodecs);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(LibWebRTCCodecs, Decoder);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(LibWebRTCCodecs, Encoder);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LibWebRTCCodecs::Decoder);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LibWebRTCCodecs::Encoder);
 
 std::optional<WebCore::VideoCodecType> LibWebRTCCodecs::videoCodecTypeFromWebCodec(const String& codec)
 {

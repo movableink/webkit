@@ -36,7 +36,7 @@
 
 namespace JSC {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(DeferredWorkTimer, TicketData);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DeferredWorkTimer::TicketData);
 
 namespace DeferredWorkTimerInternal {
 static constexpr bool verbose = false;

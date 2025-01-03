@@ -324,7 +324,7 @@ void WebResourceLoadScheduler::requestTimerFired()
     servePendingRequests();
 }
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(WebResourceLoadScheduler, HostInformation);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebResourceLoadScheduler::HostInformation);
 
 WebResourceLoadScheduler::HostInformation::HostInformation(const String& name, unsigned maxRequestsInFlight)
     : m_name(name)

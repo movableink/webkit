@@ -333,7 +333,7 @@ void DrawingAreaProxyCoordinatedGraphics::discardBackingStore()
 }
 #endif
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(DrawingAreaProxyCoordinatedGraphics, DrawingMonitor);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DrawingAreaProxyCoordinatedGraphics::DrawingMonitor);
 
 DrawingAreaProxyCoordinatedGraphics::DrawingMonitor::DrawingMonitor(WebPageProxy& webPage)
     : m_timer(RunLoop::main(), this, &DrawingMonitor::stop)

@@ -2048,7 +2048,7 @@ private:
     const DataTaskIdentifier m_identifier;
 };
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(NetworkSessionCocoa, BlobDataTaskClient);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NetworkSessionCocoa::BlobDataTaskClient);
 
 void NetworkSessionCocoa::loadImageForDecoding(WebCore::ResourceRequest&& request, WebPageProxyIdentifier pageID, size_t maximumBytesFromNetwork, CompletionHandler<void(std::variant<WebCore::ResourceError, Ref<WebCore::FragmentedSharedBuffer>>&&)>&& completionHandler)
 {

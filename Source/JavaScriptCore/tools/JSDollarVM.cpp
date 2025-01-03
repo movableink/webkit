@@ -80,9 +80,11 @@
 #if !USE(SYSTEM_MALLOC)
 #include <bmalloc/BPlatform.h>
 #if BUSE(LIBPAS)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 #include <bmalloc/pas_debug_spectrum.h>
 #include <bmalloc/pas_fd_stream.h>
 #include <bmalloc/pas_heap_lock.h>
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 #endif
 #endif
 

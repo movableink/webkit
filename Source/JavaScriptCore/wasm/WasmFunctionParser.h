@@ -137,7 +137,7 @@ struct FunctionParserTypes {
 
 template<typename Context>
 class FunctionParser : public Parser<void>, public FunctionParserTypes<typename Context::ControlType, typename Context::ExpressionType, typename Context::CallType> {
-    WTF_MAKE_TZONE_ALLOCATED(FunctionParser);
+    WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(FunctionParser);
 public:
     using CallType = typename FunctionParser::CallType;
     using ControlType = typename FunctionParser::ControlType;
@@ -387,6 +387,8 @@ private:
     unsigned m_unreachableBlocks { 0 };
     unsigned m_loopIndex { 0 };
 };
+
+WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL(template<typename Context>, FunctionParser<Context>);
 
 template<typename Context>
 auto FunctionParser<Context>::parseBlockSignatureAndNotifySIMDUseIfNeeded(BlockSignature& signature) -> PartialResult

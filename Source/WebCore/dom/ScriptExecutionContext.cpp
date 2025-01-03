@@ -121,8 +121,8 @@ public:
     RefPtr<ScriptCallStack> m_callStack;
 };
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(ScriptExecutionContext, PendingException);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(ScriptExecutionContext, Task);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScriptExecutionContext::PendingException);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScriptExecutionContext::Task);
 
 ScriptExecutionContext::ScriptExecutionContext(Type type, std::optional<ScriptExecutionContextIdentifier> contextIdentifier)
     : m_identifier(contextIdentifier ? *contextIdentifier : ScriptExecutionContextIdentifier::generate())

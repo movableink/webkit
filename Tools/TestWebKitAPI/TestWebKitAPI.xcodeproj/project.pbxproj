@@ -1353,6 +1353,7 @@
 		F6F49C6B15545CA70007F39D /* DOMWindowExtensionNoCache_Bundle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F6F49C6615545C8D0007F39D /* DOMWindowExtensionNoCache_Bundle.cpp */; };
 		FE2BCDC72470FDA300DEC33B /* StdLibExtrasTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = FE2BCDC62470FC7000DEC33B /* StdLibExtrasTests.cpp */; };
 		FE2D9474245EB2F400E48135 /* BitSet.cpp in Sources */ = {isa = PBXBuildFile; fileRef = FE2D9473245EB2DF00E48135 /* BitSet.cpp */; };
+		FE9CD7E42D10CE7500266FDD /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 574F55D0204D471C002948C6 /* Security.framework */; };
 		FEC2A85424CE975F00ADBC35 /* DisallowVMEntry.cpp in Sources */ = {isa = PBXBuildFile; fileRef = FEC2A85324CE974E00ADBC35 /* DisallowVMEntry.cpp */; };
 		FEC2A85624CEB65F00ADBC35 /* PropertySlot.cpp in Sources */ = {isa = PBXBuildFile; fileRef = FEC2A85524CEB65F00ADBC35 /* PropertySlot.cpp */; };
 		FF10AAF92831B1E600B9875B /* CompactPtr.cpp in Sources */ = {isa = PBXBuildFile; fileRef = FF10AAF82831B1E600B9875B /* CompactPtr.cpp */; };
@@ -3932,6 +3933,7 @@
 				DDAA0E2929E640FA003ECAE2 /* libpas.a in Frameworks */,
 				3A5DDB2D28D55265004DA950 /* libwgsl.a in Frameworks */,
 				3A5DDB2C28D5525E004DA950 /* libWTF.a in Frameworks */,
+				FE9CD7E42D10CE7500266FDD /* Security.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

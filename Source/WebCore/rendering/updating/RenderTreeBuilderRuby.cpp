@@ -36,7 +36,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(RenderTreeBuilder, Ruby);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderTreeBuilder::Ruby);
 
 RenderTreeBuilder::Ruby::Ruby(RenderTreeBuilder& builder)
     : m_builder(builder)

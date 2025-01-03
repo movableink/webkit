@@ -46,7 +46,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(RenderTreeUpdater, GeneratedContent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderTreeUpdater::GeneratedContent);
 
 RenderTreeUpdater::GeneratedContent::GeneratedContent(RenderTreeUpdater& updater)
     : m_updater(updater)

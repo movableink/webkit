@@ -56,20 +56,6 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(CallCreateDirectArgumentsSlowPathGenerator);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ControlEquivalenceAnalysis);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(SaneStringGetByValSlowPathGenerator);
 
-using AbstractInterpreterInPlaceAbstractState = AbstractInterpreter<InPlaceAbstractState>;
-using DominatorsCFG = Dominators<CFG>;
-using DominatorsCPSCFG = Dominators<CPSCFG>;
-using FlowMapAbstractValue = FlowMap<AbstractValue>;
-using NaturalLoopsCFG = NaturalLoops<CFG>;
-using NaturalLoopsCPSCFG = NaturalLoops<CPSCFG>;
-
-WTF_MAKE_TZONE_ALLOCATED_IMPL_TEMPLATE(AbstractInterpreterInPlaceAbstractState);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_TEMPLATE(DominatorsCFG);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_TEMPLATE(DominatorsCPSCFG);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_TEMPLATE(FlowMapAbstractValue);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_TEMPLATE(NaturalLoopsCFG);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_TEMPLATE(NaturalLoopsCPSCFG);
-
 } } // namespace JSC::DFG
 
 #endif // ENABLE(DFG_JIT)

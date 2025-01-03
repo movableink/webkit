@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2003, 2008, 2009 Apple Inc. All rights reserved.
- * Copyright 2010, The Android Open Source Project
+ * Copyright (C) 2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,28 +23,23 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef Bridge_h
-#define Bridge_h
+#include "config.h"
+#include "WebCoreHeapSupport.h"
 
-#include <wtf/Noncopyable.h>
-#include <wtf/TZoneMallocInlines.h>
+#if USE(TZONE_MALLOC)
 
-namespace JSC  {
+namespace WebCore {
 
-namespace Bindings {
+DECLARE_TZONE_HEAPREF_SPECIFICATION_BOUNDS(WebCore);
 
-class Method {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(Method);
-    WTF_MAKE_NONCOPYABLE(Method);
-public:
-    Method() = default;
-    virtual int numParameters() const = 0;
+void initializeHeapRefs()
+{
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [] {
+        PREINITIALIZE_TZONE_HEAPREFS(WebCore);
+    });
+}
 
-    virtual ~Method() = default;
-};
+} // namespace WebCore
 
-} // namespace Bindings
-
-} // namespace JSC
-
-#endif
+#endif // USE(TZONE_MALLOC)

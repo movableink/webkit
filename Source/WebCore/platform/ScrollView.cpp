@@ -48,7 +48,7 @@
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollView);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(ScrollView, ProhibitScrollingWhenChangingContentSizeForScope);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollView::ProhibitScrollingWhenChangingContentSizeForScope);
 
 ScrollView::ScrollView() = default;
 

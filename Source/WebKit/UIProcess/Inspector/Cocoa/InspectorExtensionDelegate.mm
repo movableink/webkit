@@ -59,7 +59,7 @@ RetainPtr<id <_WKInspectorExtensionDelegate>> InspectorExtensionDelegate::delega
     return m_delegate.get();
 }
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(InspectorExtensionDelegate, InspectorExtensionClient);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(InspectorExtensionDelegate::InspectorExtensionClient);
 
 InspectorExtensionDelegate::InspectorExtensionClient::InspectorExtensionClient(InspectorExtensionDelegate& delegate)
     : m_inspectorExtensionDelegate(delegate)

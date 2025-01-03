@@ -42,7 +42,7 @@
 namespace WebKit {
 using namespace WebCore;
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(WebServiceWorkerFetchTaskClient, BlobLoader);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebServiceWorkerFetchTaskClient::BlobLoader);
 
 WebServiceWorkerFetchTaskClient::WebServiceWorkerFetchTaskClient(Ref<IPC::Connection>&& connection, WebCore::ServiceWorkerIdentifier serviceWorkerIdentifier, WebCore::SWServerConnectionIdentifier serverConnectionIdentifier, FetchIdentifier fetchIdentifier, bool needsContinueDidReceiveResponseMessage)
     : m_connection(WTFMove(connection))

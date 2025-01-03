@@ -62,7 +62,7 @@
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(DisplayCaptureSourceCocoa);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(DisplayCaptureSourceCocoa, Capturer);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DisplayCaptureSourceCocoa::Capturer);
 
 CaptureSourceOrError DisplayCaptureSourceCocoa::create(const CaptureDevice& device, MediaDeviceHashSalts&& hashSalts, const MediaConstraints* constraints, std::optional<PageIdentifier> pageIdentifier)
 {

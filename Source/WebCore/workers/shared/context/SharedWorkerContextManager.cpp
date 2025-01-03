@@ -36,7 +36,7 @@
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(SharedWorkerContextManager);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(SharedWorkerContextManager, Connection);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SharedWorkerContextManager::Connection);
 
 SharedWorkerContextManager& SharedWorkerContextManager::singleton()
 {

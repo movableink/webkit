@@ -63,7 +63,7 @@ namespace WebCore {
 using namespace JSC;
 using namespace Inspector;
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(CommandLineAPIHost, InspectableObject);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CommandLineAPIHost::InspectableObject);
 
 Ref<CommandLineAPIHost> CommandLineAPIHost::create()
 {

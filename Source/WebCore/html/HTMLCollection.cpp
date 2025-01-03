@@ -32,6 +32,7 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CollectionNamedElementCache);
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLCollection);
 
 inline auto HTMLCollection::rootTypeFromCollectionType(CollectionType type) -> RootType

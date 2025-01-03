@@ -56,7 +56,7 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(WorkerRunLoop);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(WorkerDedicatedRunLoop);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(WorkerDedicatedRunLoop, Task);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WorkerDedicatedRunLoop::Task);
 
 class WorkerSharedTimer final : public SharedTimer {
     WTF_MAKE_TZONE_ALLOCATED_INLINE(WorkerSharedTimer);

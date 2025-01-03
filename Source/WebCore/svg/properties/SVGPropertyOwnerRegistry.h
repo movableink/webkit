@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2019 Apple Inc.  All rights reserved.
+ * Copyright (C) 2018-2024 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,6 @@
 #include "SVGPropertyAccessorImpl.h"
 #include "SVGPropertyRegistry.h"
 #include <wtf/HashMap.h>
-#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -63,7 +62,7 @@ struct SVGAttributeHashTranslator {
 
 template<typename OwnerType, typename... BaseTypes>
 class SVGPropertyOwnerRegistry : public SVGPropertyRegistry {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(SVGPropertyOwnerRegistry);
+    WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(SVGPropertyOwnerRegistry);
 public:
     SVGPropertyOwnerRegistry(OwnerType& owner)
         : m_owner(owner)
@@ -397,4 +396,12 @@ private:
     OwnerType& m_owner;
 };
 
-}
+#define TZONE_TEMPLATE_PARAMS template<typename OwnerType, typename... BaseTypes>
+#define TZONE_TYPE SVGPropertyOwnerRegistry<OwnerType, BaseTypes...>
+
+WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL_WITH_MULTIPLE_OR_SPECIALIZED_PARAMETERS();
+
+#undef TZONE_TEMPLATE_PARAMS
+#undef TZONE_TYPE
+
+} // namespace WebCore

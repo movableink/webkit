@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2024 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,13 +35,12 @@
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/MallocSpan.h>
 #include <wtf/StdLibExtras.h>
-#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 template<typename T>
 class AudioArray {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(AudioArray);
+    WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(AudioArray);
 public:
     AudioArray() = default;
     explicit AudioArray(size_t n)
@@ -120,6 +120,8 @@ public:
 private:
     MallocSpan<T, FastAlignedMalloc> m_allocation;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL(template<typename T>, AudioArray<T>);
 
 typedef AudioArray<float> AudioFloatArray;
 typedef AudioArray<double> AudioDoubleArray;

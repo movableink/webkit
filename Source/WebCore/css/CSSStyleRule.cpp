@@ -35,13 +35,9 @@
 #include "StyleProperties.h"
 #include "StyleRule.h"
 #include <wtf/NeverDestroyed.h>
-#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
-
-using CSSStyleRuleLiveCSSRuleList = LiveCSSRuleList<CSSStyleRule>;
-WTF_MAKE_TZONE_ALLOCATED_IMPL_TEMPLATE(CSSStyleRuleLiveCSSRuleList);
 
 typedef UncheckedKeyHashMap<const CSSStyleRule*, String> SelectorTextCache;
 static SelectorTextCache& selectorTextCache()

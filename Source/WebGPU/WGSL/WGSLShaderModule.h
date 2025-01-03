@@ -36,14 +36,13 @@
 
 #include <wtf/HashSet.h>
 #include <wtf/OptionSet.h>
-#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
 
 namespace WGSL {
 
 class ShaderModule {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(ShaderModule);
+    WTF_MAKE_TZONE_ALLOCATED(ShaderModule);
 public:
     explicit ShaderModule(const String& source)
         : ShaderModule(source, { })

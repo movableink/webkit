@@ -39,7 +39,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(RenderTreeBuilder, MultiColumn);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderTreeBuilder::MultiColumn);
 
 static RenderMultiColumnSet* findSetRendering(const RenderMultiColumnFlow& fragmentedFlow, const RenderObject& renderer)
 {

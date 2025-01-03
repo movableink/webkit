@@ -41,7 +41,7 @@
 namespace WebKit {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(WebProcessCache);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(WebProcessCache, CachedProcess);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebProcessCache::CachedProcess);
 
 #if PLATFORM(COCOA)
 Seconds WebProcessCache::cachedProcessLifetime { 30_min };

@@ -34,6 +34,7 @@
 #include "RemoteTrackInfo.h"
 #include <WebCore/MediaSample.h>
 #include <wtf/MainThreadDispatcher.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace IPC {
 class Decoder;
@@ -45,6 +46,8 @@ template<> struct ArgumentCoder<WebCore::MediaSamplesBlock::MediaSampleItem> {
 }
 
 namespace WebKit {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteMediaRecorderPrivateWriter);
 
 std::unique_ptr<WebCore::MediaRecorderPrivateWriter> RemoteMediaRecorderPrivateWriter::create(GPUProcessConnection& gpuProcessConnection, const String& type, MediaRecorderPrivateWriterListener& listener)
 {

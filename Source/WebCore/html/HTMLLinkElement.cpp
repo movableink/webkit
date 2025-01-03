@@ -71,7 +71,6 @@
 #include <wtf/Ref.h>
 #include <wtf/Scope.h>
 #include <wtf/StdLibExtras.h>
-#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/TextStream.h>
 
@@ -88,7 +87,7 @@ static LinkEventSender& linkLoadEventSender()
 }
 
 class ExpectIdTargetObserver final : public IdTargetObserver {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(ExpectIdTargetObserver);
+    WTF_MAKE_TZONE_ALLOCATED(ExpectIdTargetObserver);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ExpectIdTargetObserver);
 public:
     ExpectIdTargetObserver(const AtomString& id, HTMLLinkElement&);
@@ -98,6 +97,8 @@ public:
 private:
     WeakPtr<HTMLLinkElement, WeakPtrImplWithEventTargetData> m_element;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ExpectIdTargetObserver);
 
 ExpectIdTargetObserver::ExpectIdTargetObserver(const AtomString& id, HTMLLinkElement& element)
     : IdTargetObserver(element.treeScope().idTargetObserverRegistry(), id)

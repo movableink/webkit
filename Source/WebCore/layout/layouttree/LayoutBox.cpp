@@ -42,7 +42,7 @@ namespace WebCore {
 namespace Layout {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Box);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(Box, BoxRareData);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Box::BoxRareData);
 
 
 Box::Box(ElementAttributes&& elementAttributes, RenderStyle&& style, std::unique_ptr<RenderStyle>&& firstLineStyle, OptionSet<BaseTypeFlag> baseTypeFlags)

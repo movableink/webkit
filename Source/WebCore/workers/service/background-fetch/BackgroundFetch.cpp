@@ -42,7 +42,7 @@
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(BackgroundFetch);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(BackgroundFetch, Record);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(BackgroundFetch::Record);
 
 static const unsigned backgroundFetchCurrentVersion = 1;
 

@@ -62,7 +62,7 @@ struct OSRExit;
 #define JIT_COMMENT(jit, ...) do { if (UNLIKELY(Options::needDisassemblySupport())) { (jit).comment(__VA_ARGS__); } else { (void) jit; } } while (0)
 
 class AbstractMacroAssemblerBase {
-    WTF_MAKE_TZONE_ALLOCATED(AbstractMacroAssemblerBase);
+    WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(AbstractMacroAssemblerBase);
 public:
     enum StatusCondition {
         Success,

@@ -47,6 +47,7 @@
 #endif
 
 #if PLATFORM(COCOA)
+#include <wtf/cocoa/Entitlements.h>
 #include <wtf/darwin/LibraryPathDiagnostics.h>
 #endif
 
@@ -495,6 +496,15 @@ void Thread::dump(PrintStream& out) const
 ThreadSpecificKey Thread::s_key = InvalidThreadSpecificKey;
 #endif
 
+#if USE(TZONE_MALLOC)
+#if PLATFORM(COCOA)
+static bool hasDisableTZoneEntitlement()
+{
+    return processHasEntitlement("webkit.tzone.disable"_s);
+}
+#endif
+#endif
+
 void initialize()
 {
     static std::once_flag onceKey;
@@ -505,7 +515,10 @@ void initialize()
         setPermissionsOfConfigPage();
         Config::initialize();
 #if USE(TZONE_MALLOC)
-        bmalloc::api::TZoneHeapManager::singleton(); // Force initialization.
+#if PLATFORM(COCOA)
+        bmalloc::api::TZoneHeapManager::setHasDisableTZoneEntitlementCallback(hasDisableTZoneEntitlement);
+#endif
+        bmalloc::api::TZoneHeapManager::ensureSingleton(); // Force initialization.
 #endif
         Gigacage::ensureGigacage();
         Config::AssertNotFrozenScope assertScope;

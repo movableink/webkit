@@ -304,7 +304,7 @@ const ResourceResponse& FetchResponse::filteredResponse() const
     return m_internalResponse;
 }
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(FetchResponse, Loader);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FetchResponse::Loader);
 
 void FetchResponse::Loader::didSucceed(const NetworkLoadMetrics& metrics)
 {

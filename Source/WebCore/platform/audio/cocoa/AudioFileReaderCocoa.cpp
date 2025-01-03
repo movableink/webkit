@@ -42,6 +42,7 @@
 #include "Logging.h"
 #include "MediaSampleAVFObjC.h"
 #include "SharedBuffer.h"
+#include "SpanCoreAudio.h"
 #include "VideoTrackPrivate.h"
 #include "WebMAudioUtilitiesCocoa.h"
 #include <AudioToolbox/AudioConverter.h>

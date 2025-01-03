@@ -37,7 +37,7 @@
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLElementStack);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(HTMLElementStack, ElementRecord);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLElementStack::ElementRecord);
 
 using namespace ElementNames;
 

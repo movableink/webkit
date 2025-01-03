@@ -61,7 +61,7 @@ namespace NetworkCache {
 
 using namespace FileSystem;
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(Cache, RetrieveInfo);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Cache::RetrieveInfo);
 
 static const AtomString& resourceType()
 {

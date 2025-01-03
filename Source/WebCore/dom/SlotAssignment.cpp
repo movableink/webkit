@@ -37,7 +37,7 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(SlotAssignment);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(NamedSlotAssignment);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(NamedSlotAssignment, Slot);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NamedSlotAssignment::Slot);
 
 using namespace HTMLNames;
 

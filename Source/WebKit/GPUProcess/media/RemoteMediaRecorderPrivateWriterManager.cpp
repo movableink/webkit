@@ -45,7 +45,7 @@ using namespace WebCore;
 WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteMediaRecorderPrivateWriterManager);
 
 class RemoteMediaRecorderPrivateWriterProxy : public WebCore::MediaRecorderPrivateWriterListener {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(RemoteMediaRecorderPrivateWriterProxy);
+    WTF_MAKE_TZONE_ALLOCATED(RemoteMediaRecorderPrivateWriterProxy);
 public:
     static Ref<RemoteMediaRecorderPrivateWriterProxy> create(const String& mimeType) { return adoptRef(*new RemoteMediaRecorderPrivateWriterProxy(mimeType)); }
 
@@ -90,6 +90,8 @@ private:
     const UniqueRef<MediaRecorderPrivateWriter> m_writer;
     SharedBufferBuilder m_data;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteMediaRecorderPrivateWriterProxy);
 
 RemoteMediaRecorderPrivateWriterManager::RemoteMediaRecorderPrivateWriterManager(GPUConnectionToWebProcess& gpuConnectionToWebProcess)
     : m_gpuConnectionToWebProcess(gpuConnectionToWebProcess)

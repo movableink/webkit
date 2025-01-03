@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -761,7 +761,7 @@ private:
 };
 
 class PendingImageBitmap final : public RefCounted<PendingImageBitmap>, public ActiveDOMObject, public FileReaderLoaderClient {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(PendingImageBitmap);
+    WTF_MAKE_TZONE_ALLOCATED(PendingImageBitmap);
 public:
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
@@ -844,6 +844,8 @@ private:
     RefPtr<ArrayBuffer> m_arrayBufferToProcess;
     RefPtr<PendingActivity<PendingImageBitmap>> m_pendingActivity;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PendingImageBitmap);
 
 void ImageBitmap::createFromBuffer(ScriptExecutionContext& scriptExecutionContext, Ref<ArrayBuffer>&& arrayBuffer, String mimeType, long long expectedContentLength, const URL& sourceURL, ImageBitmapOptions&& options, std::optional<IntRect> rect, ImageBitmapCompletionHandler&& completionHandler)
 {

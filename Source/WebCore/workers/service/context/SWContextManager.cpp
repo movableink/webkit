@@ -37,7 +37,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(SWContextManager, ServiceWorkerTerminationRequest);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SWContextManager::ServiceWorkerTerminationRequest);
 
 SWContextManager& SWContextManager::singleton()
 {

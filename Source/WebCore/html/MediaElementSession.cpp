@@ -135,8 +135,7 @@ static bool pageExplicitlyAllowsElementToAutoplayInline(const HTMLMediaElement& 
 
 #if ENABLE(MEDIA_SESSION)
 class MediaElementSessionObserver : public MediaSessionObserver {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(MediaElementSessionObserver);
-
+    WTF_MAKE_TZONE_ALLOCATED(MediaElementSessionObserver);
 public:
     MediaElementSessionObserver(MediaElementSession& session, const Ref<MediaSession>& mediaSession)
         : m_session(session), m_mediaSession(mediaSession)
@@ -171,6 +170,8 @@ private:
     WeakPtr<MediaElementSession> m_session;
     Ref<MediaSession> m_mediaSession;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaElementSessionObserver);
 #endif
 
 MediaElementSession::MediaElementSession(HTMLMediaElement& element)

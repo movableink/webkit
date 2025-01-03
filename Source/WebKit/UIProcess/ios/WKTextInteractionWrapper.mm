@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,6 +33,7 @@
 #import "RemoteLayerTreeViews.h"
 #import "WKContentViewInteraction.h"
 #import <WebCore/TileController.h>
+#import <wtf/TZoneMallocInlines.h>
 
 @interface WKTextInteractionWrapper ()
 
@@ -93,6 +94,8 @@ private:
     __weak WKTextInteractionWrapper *m_wrapper { nil };
     bool m_reactivateSelection { false };
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HideEditMenuScope);
 
 } // namespace WebKit
 

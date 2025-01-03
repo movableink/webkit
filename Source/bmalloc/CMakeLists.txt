@@ -297,6 +297,7 @@ set(bmalloc_PUBLIC_HEADERS
     bmalloc/Range.h
     bmalloc/Scavenger.h
     bmalloc/ScopeExit.h
+    bmalloc/SegmentedVector.h
     bmalloc/Sizes.h
     bmalloc/SmallLine.h
     bmalloc/SmallPage.h

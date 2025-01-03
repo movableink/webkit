@@ -37,7 +37,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(RenderTreeBuilder, Inline);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderTreeBuilder::Inline);
 
 static bool canUseAsParentForContinuation(const RenderObject* renderer)
 {

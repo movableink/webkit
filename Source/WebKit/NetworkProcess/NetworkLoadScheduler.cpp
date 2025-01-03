@@ -56,7 +56,7 @@ private:
     WeakListHashSet<NetworkLoad> m_pendingLoads;
 };
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(NetworkLoadScheduler, HostContext);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NetworkLoadScheduler::HostContext);
 
 void NetworkLoadScheduler::HostContext::schedule(NetworkLoad& load)
 {

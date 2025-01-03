@@ -66,12 +66,15 @@ static_assert(sizeof(bool) == 1, "LLInt and JIT assume sizeof(bool) is always 1 
 
 enum class JSCProfileTag { };
 
+DECLARE_TZONE_HEAPREF_SPECIFICATION_BOUNDS(JSC);
+
 void initialize()
 {
     static std::once_flag onceFlag;
 
     std::call_once(onceFlag, [] {
         WTF::initialize();
+        PREINITIALIZE_TZONE_HEAPREFS(JSC);
         Options::initialize();
 
         initializePtrTagLookup();

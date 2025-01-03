@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2023 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2024 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -1042,7 +1042,7 @@ enum class ParsingContext { Normal, FunctionConstructor };
 template <typename LexerType>
 class Parser {
     WTF_MAKE_NONCOPYABLE(Parser);
-    WTF_MAKE_TZONE_ALLOCATED(Parser);
+    WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(Parser);
 
 public:
     Parser(VM&, const SourceCode&, ImplementationVisibility, JSParserBuiltinMode, LexicallyScopedFeatures, JSParserScriptMode, SourceParseMode, FunctionMode, SuperBinding, ConstructorKind = ConstructorKind::None, DerivedContextType = DerivedContextType::None, bool isEvalContext = false, EvalContextType = EvalContextType::None, DebuggerParseData* = nullptr, bool isInsideOrdinaryFunction = false);
@@ -2170,7 +2170,6 @@ private:
     bool m_seenPrivateNameUseInNonReparsingFunctionMode { false };
     bool m_seenArgumentsDotLength { false };
 };
-
 
 template <typename LexerType>
 template <class ParsedNode>

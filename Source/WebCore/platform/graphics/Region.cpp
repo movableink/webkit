@@ -42,7 +42,7 @@ namespace WebCore {
 
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(Region);
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(Region, Shape);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Region::Shape);
 
 Region::Region()
 {

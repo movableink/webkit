@@ -115,7 +115,7 @@ void RemoteAudioSourceProviderManager::audioSamplesAvailable(MediaPlayerIdentifi
     iterator->value->audioSamplesAvailable(startFrame, numberOfFrames);
 }
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(RemoteAudioSourceProviderManager, RemoteAudio);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteAudioSourceProviderManager::RemoteAudio);
 
 RemoteAudioSourceProviderManager::RemoteAudio::RemoteAudio(Ref<RemoteAudioSourceProvider>&& provider)
     : m_provider(WTFMove(provider))

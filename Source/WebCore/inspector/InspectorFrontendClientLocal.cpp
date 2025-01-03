@@ -65,7 +65,7 @@ namespace WebCore {
 
 using namespace Inspector;
 WTF_MAKE_TZONE_ALLOCATED_IMPL(InspectorFrontendClientLocal);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(InspectorFrontendClientLocal, Settings);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(InspectorFrontendClientLocal::Settings);
 
 static constexpr ASCIILiteral inspectorAttachedHeightSetting = "inspectorAttachedHeight"_s;
 static const unsigned defaultAttachedHeight = 300;
@@ -75,7 +75,7 @@ static const float minimumAttachedWidth = 500.0f;
 static const float minimumAttachedInspectedWidth = 320.0f;
 
 class InspectorBackendDispatchTask : public RefCounted<InspectorBackendDispatchTask> {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(InspectorBackendDispatchTask);
+    WTF_MAKE_TZONE_ALLOCATED(InspectorBackendDispatchTask);
 public:
     static Ref<InspectorBackendDispatchTask> create(InspectorController* inspectedPageController)
     {
@@ -136,6 +136,8 @@ private:
     Deque<String> m_messages;
     bool m_hasScheduledTask { false };
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(InspectorBackendDispatchTask);
 
 String InspectorFrontendClientLocal::Settings::getProperty(const String&)
 {

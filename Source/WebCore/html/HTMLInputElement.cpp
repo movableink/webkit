@@ -83,7 +83,6 @@
 #include <wtf/Language.h>
 #include <wtf/MathExtras.h>
 #include <wtf/Ref.h>
-#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
@@ -99,7 +98,7 @@ using namespace HTMLNames;
 
 #if ENABLE(DATALIST_ELEMENT)
 class ListAttributeTargetObserver final : public IdTargetObserver {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(ListAttributeTargetObserver);
+    WTF_MAKE_TZONE_ALLOCATED(ListAttributeTargetObserver);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ListAttributeTargetObserver);
 public:
     ListAttributeTargetObserver(const AtomString& id, HTMLInputElement&);
@@ -109,6 +108,8 @@ public:
 private:
     WeakPtr<HTMLInputElement, WeakPtrImplWithEventTargetData> m_element;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ListAttributeTargetObserver);
 #endif
 
 static constexpr int maxSavedResults = 256;

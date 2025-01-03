@@ -129,7 +129,7 @@ class EmptyBackForwardClient final : public BackForwardClient {
 #if ENABLE(CONTEXT_MENUS)
 
 class EmptyContextMenuClient final : public ContextMenuClient {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(EmptyContextMenuClient);
+    WTF_MAKE_TZONE_ALLOCATED(EmptyContextMenuClient);
 
     void downloadURL(const URL&) final { }
     void searchWithGoogle(const LocalFrame*) final { }
@@ -158,6 +158,8 @@ class EmptyContextMenuClient final : public ContextMenuClient {
     bool supportsCopySubject() final { return false; }
 #endif
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EmptyContextMenuClient);
 
 #endif // ENABLE(CONTEXT_MENUS)
 
@@ -238,7 +240,7 @@ class EmptyDatabaseProvider final : public DatabaseProvider {
 };
 
 class EmptyDiagnosticLoggingClient final : public DiagnosticLoggingClient {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(EmptyDiagnosticLoggingClient);
+    WTF_MAKE_TZONE_ALLOCATED(EmptyDiagnosticLoggingClient);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(EmptyDiagnosticLoggingClient);
 
     void logDiagnosticMessage(const String&, const String&, ShouldSample) final { }
@@ -248,6 +250,8 @@ class EmptyDiagnosticLoggingClient final : public DiagnosticLoggingClient {
     void logDiagnosticMessageWithValueDictionary(const String&, const String&, const ValueDictionary&, ShouldSample) final { }
     void logDiagnosticMessageWithDomain(const String&, DiagnosticLoggingDomain) final { };
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EmptyDiagnosticLoggingClient);
 
 #if ENABLE(DRAG_SUPPORT)
 
@@ -261,8 +265,7 @@ class EmptyDragClient final : public DragClient {
 #endif // ENABLE(DRAG_SUPPORT)
 
 class EmptyEditorClient final : public EditorClient {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(EmptyEditorClient);
-
+    WTF_MAKE_TZONE_ALLOCATED(EmptyEditorClient);
 public:
     EmptyEditorClient() = default;
 
@@ -396,6 +399,8 @@ private:
     EmptyTextCheckerClient m_textCheckerClient;
 };
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EmptyEditorClient);
+
 class EmptyFrameNetworkingContext final : public FrameNetworkingContext {
 public:
     static Ref<EmptyFrameNetworkingContext> create() { return adoptRef(*new EmptyFrameNetworkingContext); }
@@ -418,7 +423,7 @@ private:
 };
 
 class EmptyInspectorClient final : public InspectorClient {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(EmptyInspectorClient);
+    WTF_MAKE_TZONE_ALLOCATED(EmptyInspectorClient);
     void inspectedPageDestroyed() final { }
     Inspector::FrontendChannel* openLocalFrontend(InspectorController*) final { return nullptr; }
     void bringFrontendToFront() final { }
@@ -426,10 +431,12 @@ class EmptyInspectorClient final : public InspectorClient {
     void hideHighlight() final { }
 };
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EmptyInspectorClient);
+
 #if ENABLE(APPLE_PAY)
 
 class EmptyPaymentCoordinatorClient final : public PaymentCoordinatorClient, public RefCounted<EmptyPaymentCoordinatorClient> {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(EmptyPaymentCoordinatorClient);
+    WTF_MAKE_TZONE_ALLOCATED(EmptyPaymentCoordinatorClient);
 public:
     static Ref<EmptyPaymentCoordinatorClient> create()
     {
@@ -458,6 +465,8 @@ private:
     void cancelPaymentSession() final { }
     void abortPaymentSession() final { }
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EmptyPaymentCoordinatorClient);
 
 #endif
 

@@ -39,7 +39,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(RenderTreeBuilder, FirstLetter);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderTreeBuilder::FirstLetter);
 
 static std::optional<RenderStyle> styleForFirstLetter(const RenderElement& firstLetterContainer)
 {

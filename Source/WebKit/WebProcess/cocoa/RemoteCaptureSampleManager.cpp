@@ -186,7 +186,7 @@ void RemoteCaptureSampleManager::videoFrameAvailableCV(RealtimeMediaSourceIdenti
     iterator->value->remoteVideoFrameAvailable(videoFrame.get(), metadata);
 }
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(RemoteCaptureSampleManager, RemoteAudio);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteCaptureSampleManager::RemoteAudio);
 
 RemoteCaptureSampleManager::RemoteAudio::RemoteAudio(Ref<RemoteRealtimeAudioSource>&& source)
     : m_source(WTFMove(source))

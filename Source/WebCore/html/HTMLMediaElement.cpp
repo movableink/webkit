@@ -238,7 +238,6 @@ namespace WebCore {
 typedef PODIntervalTree<MediaTime, TextTrackCue*> TextTrackCueIntervalTree;
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLMediaElement);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_TEMPLATE(TextTrackCueIntervalTree);
 
 static const Seconds SeekRepeatDelay { 100_ms };
 static const double SeekTime = 0.2;
@@ -482,7 +481,7 @@ struct HTMLMediaElement::CueData {
 };
 
 class PausableIntervalTimer final : public TimerBase {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(PausableIntervalTimer);
+    WTF_MAKE_TZONE_ALLOCATED(PausableIntervalTimer);
 public:
     PausableIntervalTimer(Seconds interval, Function<void()>&& function)
         : m_interval { interval }
@@ -547,6 +546,8 @@ private:
     Seconds m_remainingInterval;
     MonotonicTime m_startTime;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PausableIntervalTimer);
 
 HTMLMediaElement::HTMLMediaElement(const QualifiedName& tagName, Document& document, bool createdByParser)
     : HTMLElement(tagName, document, { TypeFlag::HasCustomStyleResolveCallbacks, TypeFlag::HasDidMoveToNewDocument })

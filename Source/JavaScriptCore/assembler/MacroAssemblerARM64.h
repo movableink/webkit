@@ -42,7 +42,7 @@ using Assembler = TARGET_ASSEMBLER;
 class Reg;
 
 class MacroAssemblerARM64 : public AbstractMacroAssembler<Assembler> {
-    WTF_MAKE_TZONE_ALLOCATED(MacroAssemblerARM64);
+    WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(MacroAssemblerARM64);
 public:
     static constexpr unsigned numGPRs = 32;
     static constexpr unsigned numFPRs = 32;

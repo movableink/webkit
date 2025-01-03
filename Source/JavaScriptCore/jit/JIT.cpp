@@ -54,7 +54,6 @@
 #include <wtf/BubbleSort.h>
 #include <wtf/GraphNodeWorklist.h>
 #include <wtf/SimpleStats.h>
-#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
@@ -63,8 +62,6 @@ namespace JSC {
 namespace JITInternal {
 static constexpr const bool verbose = false;
 }
-
-WTF_MAKE_TZONE_ALLOCATED_IMPL(JIT);
 
 Seconds totalBaselineCompileTime;
 Seconds totalDFGCompileTime;

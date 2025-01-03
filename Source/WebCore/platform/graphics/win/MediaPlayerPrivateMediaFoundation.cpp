@@ -63,10 +63,10 @@ static constexpr uint32_t tenMegahertz = 10000000;
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaPlayerPrivateMediaFoundation);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(MediaPlayerPrivateMediaFoundation, VideoSamplePool);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(MediaPlayerPrivateMediaFoundation, VideoScheduler);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(MediaPlayerPrivateMediaFoundation, Direct3DPresenter);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(MediaPlayerPrivateMediaFoundation, CustomVideoPresenter);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaPlayerPrivateMediaFoundation::VideoSamplePool);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaPlayerPrivateMediaFoundation::VideoScheduler);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaPlayerPrivateMediaFoundation::Direct3DPresenter);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaPlayerPrivateMediaFoundation::CustomVideoPresenter);
 
 class MediaPlayerPrivateMediaFoundation::AsyncCallback : public IMFAsyncCallback {
     WTF_MAKE_TZONE_ALLOCATED_INLINE(MediaPlayerPrivateMediaFoundationAsyncCallback);

@@ -35,7 +35,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(RenderTreeBuilder, Table);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderTreeBuilder::Table);
 
 RenderTreeBuilder::Table::Table(RenderTreeBuilder& builder)
     : m_builder(builder)

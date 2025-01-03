@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -70,7 +70,7 @@ template <typename T> class GCSegmentedArrayIterator;
 
 template <typename T>
 class GCSegmentedArray {
-    WTF_MAKE_TZONE_ALLOCATED(GCSegmentedArray);
+    WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_EXPORT(GCSegmentedArray, JS_EXPORT_PRIVATE);
     WTF_MAKE_NONCOPYABLE(GCSegmentedArray);
     friend class GCSegmentedArrayIterator<T>;
     friend class GCSegmentedArrayIterator<const T>;
@@ -115,6 +115,8 @@ protected:
     size_t m_top;
     size_t m_numberOfSegments;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL(template<typename T>, GCSegmentedArray<T>);
 
 template <typename T>
 class GCSegmentedArrayIterator {

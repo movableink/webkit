@@ -40,7 +40,7 @@
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(NetworkResourcesData);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(NetworkResourcesData, ResourceData);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NetworkResourcesData::ResourceData);
 
 using namespace Inspector;
 

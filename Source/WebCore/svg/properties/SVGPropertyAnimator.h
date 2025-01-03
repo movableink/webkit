@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2021 Apple Inc.  All rights reserved.
+ * Copyright (C) 2019-2024 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,7 @@ namespace WebCore {
     
 template<typename AnimationFunction>
 class SVGPropertyAnimator : public SVGAttributeAnimator {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(SVGPropertyAnimator);
+    WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(SVGPropertyAnimator);
 public:
     bool isDiscrete() const override { return m_function.isDiscrete(); }
 
@@ -99,5 +99,7 @@ protected:
 
     AnimationFunction m_function;
 };
-    
+
+WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL(template<typename AnimationFunction>, SVGPropertyAnimator<AnimationFunction>);
+
 } // namespace WebCore

@@ -59,7 +59,7 @@
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(SWServer);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(SWServer, Connection);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SWServer::Connection);
 
 static const unsigned defaultMaxRegistrationCount = 3;
 

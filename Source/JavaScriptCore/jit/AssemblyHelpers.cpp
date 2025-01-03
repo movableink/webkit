@@ -43,7 +43,6 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 #include "SuperSampler.h"
 #include "ThunkGenerators.h"
 #include "UnlinkedCodeBlock.h"
-#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(WEBASSEMBLY)
 #include "JSWebAssemblyInstance.h"
@@ -56,8 +55,6 @@ namespace JSC {
 namespace AssemblyHelpersInternal {
 constexpr bool dumpVerbose = false;
 }
-
-WTF_MAKE_TZONE_ALLOCATED_IMPL(AssemblyHelpers);
 
 AssemblyHelpers::Jump AssemblyHelpers::branchIfFastTypedArray(GPRReg baseGPR)
 {

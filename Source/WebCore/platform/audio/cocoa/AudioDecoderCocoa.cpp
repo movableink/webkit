@@ -61,7 +61,7 @@ WorkQueue& AudioDecoderCocoa::queueSingleton()
 }
 
 class InternalAudioDecoderCocoa : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<InternalAudioDecoderCocoa> {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(InternalAudioDecoderCocoa);
+    WTF_MAKE_TZONE_ALLOCATED(InternalAudioDecoderCocoa);
 
 public:
     static Ref<InternalAudioDecoderCocoa> create(AudioDecoder::OutputCallback&& outputCallback)
@@ -103,6 +103,8 @@ private:
     std::optional<CAAudioStreamDescription> m_outputDescription WTF_GUARDED_BY_CAPABILITY(queueSingleton());
     bool mIsAAC WTF_GUARDED_BY_CAPABILITY(queueSingleton()) { false }; // indicate if we need to strip the ADTS header.
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(InternalAudioDecoderCocoa);
 
 Ref<AudioDecoder::CreatePromise> AudioDecoderCocoa::create(const String& codecName, const Config& config, OutputCallback&& outputCallback)
 {

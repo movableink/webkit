@@ -1021,10 +1021,6 @@ private:
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(OMGIRGenerator);
 
-using FunctionParserOMGIRGenerator = FunctionParser<OMGIRGenerator>;
-
-WTF_MAKE_TZONE_ALLOCATED_IMPL_TEMPLATE(FunctionParserOMGIRGenerator);
-
 // Memory accesses in WebAssembly have unsigned 32-bit offsets, whereas they have signed 32-bit offsets in B3.
 int32_t OMGIRGenerator::fixupPointerPlusOffset(Value*& ptr, uint32_t offset)
 {

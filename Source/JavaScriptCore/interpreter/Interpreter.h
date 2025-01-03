@@ -124,7 +124,7 @@ using JSOrWasmInstruction = std::variant<const JSInstruction*, const WasmInstruc
     typedef uint8_t LexicallyScopedFeatures;
 
     class Interpreter {
-        WTF_MAKE_TZONE_ALLOCATED(Interpreter);
+        WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(Interpreter);
         friend class CachedCall;
         friend class LLIntOffsetsExtractor;
         friend class JIT;

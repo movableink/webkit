@@ -36,7 +36,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(RenderTreeBuilder, Block);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderTreeBuilder::Block);
 
 static void moveAllChildrenToInternal(RenderBoxModelObject& from, RenderElement& newParent)
 {

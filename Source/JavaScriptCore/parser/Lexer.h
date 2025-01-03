@@ -49,8 +49,7 @@ bool isLexerKeyword(const Identifier&);
 template <typename T>
 class Lexer {
     WTF_MAKE_NONCOPYABLE(Lexer);
-    WTF_MAKE_TZONE_ALLOCATED(Lexer);
-
+    WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(Lexer);
 public:
     Lexer(VM&, JSParserBuiltinMode, JSParserScriptMode);
     ~Lexer();
@@ -238,6 +237,8 @@ private:
     bool m_parsingBuiltinFunction;
     JSParserScriptMode m_scriptMode;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL(template<typename T>, Lexer<T>);
 
 template <>
 ALWAYS_INLINE bool Lexer<LChar>::isWhiteSpace(LChar ch)

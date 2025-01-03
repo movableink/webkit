@@ -153,7 +153,7 @@ namespace JSC {
     };
 
     class JIT final : public JSInterfaceJIT {
-        WTF_MAKE_TZONE_ALLOCATED(JIT);
+        WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(JIT);
 
         friend class JITSlowPathCall;
         friend class JITStubCall;

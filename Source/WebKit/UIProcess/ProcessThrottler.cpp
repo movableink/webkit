@@ -128,8 +128,8 @@ private:
 
 namespace WebKit {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(ProcessThrottler, ProcessAssertionCache);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED_2X(ProcessThrottler, ProcessAssertionCache, CachedAssertion);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ProcessThrottler::ProcessAssertionCache);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ProcessThrottler::ProcessAssertionCache::CachedAssertion);
 
 static uint64_t generatePrepareToSuspendRequestID()
 {

@@ -125,7 +125,7 @@ static float maximumAreaRatioForTrackingAdjustmentAreas(float viewportArea)
 
 class ClearVisibilityAdjustmentForScope {
     WTF_MAKE_NONCOPYABLE(ClearVisibilityAdjustmentForScope);
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(ClearVisibilityAdjustmentForScope);
+    WTF_MAKE_TZONE_ALLOCATED(ClearVisibilityAdjustmentForScope);
 public:
     ClearVisibilityAdjustmentForScope(Element& element)
         : m_element(element)
@@ -157,6 +157,8 @@ private:
     Ref<Element> m_element;
     OptionSet<VisibilityAdjustment> m_adjustmentToRestore;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ClearVisibilityAdjustmentForScope);
 
 using ElementSelectorCache = UncheckedKeyHashMap<Ref<Element>, std::optional<String>>;
 

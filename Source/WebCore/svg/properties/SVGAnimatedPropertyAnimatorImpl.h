@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2021 Apple Inc.  All rights reserved.
+ * Copyright (C) 2018-2024 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,7 +31,6 @@
 #include "SVGAnimationAdditiveListFunctionImpl.h"
 #include "SVGAnimationAdditiveValueFunctionImpl.h"
 #include "SVGAnimationDiscreteFunctionImpl.h"
-#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -43,7 +42,7 @@ template<typename AnimatedPropertyAnimator1, typename AnimatedPropertyAnimator2>
 class SVGAnimatedPropertyPairAnimator;
 
 class SVGAnimatedAngleAnimator final : public SVGAnimatedPropertyAnimator<SVGAnimatedAngle, SVGAnimationAngleFunction> {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(SVGAnimatedAngleAnimator);
+    WTF_MAKE_TZONE_ALLOCATED(SVGAnimatedAngleAnimator);
     friend class SVGAnimatedPropertyPairAnimator<SVGAnimatedAngleAnimator, SVGAnimatedOrientTypeAnimator>;
     friend class SVGAnimatedAngleOrientAnimator;
     using Base = SVGAnimatedPropertyAnimator<SVGAnimatedAngle, SVGAnimationAngleFunction>;
@@ -63,7 +62,7 @@ private:
 };
 
 class SVGAnimatedBooleanAnimator final : public SVGAnimatedPropertyAnimator<SVGAnimatedBoolean, SVGAnimationBooleanFunction>  {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(SVGAnimatedBooleanAnimator);
+    WTF_MAKE_TZONE_ALLOCATED(SVGAnimatedBooleanAnimator);
     using Base = SVGAnimatedPropertyAnimator<SVGAnimatedBoolean, SVGAnimationBooleanFunction>;
 
 public:
@@ -84,7 +83,7 @@ private:
 
 template<typename EnumType>
 class SVGAnimatedEnumerationAnimator final : public SVGAnimatedPropertyAnimator<SVGAnimatedEnumeration, SVGAnimationEnumerationFunction<EnumType>> {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(SVGAnimatedEnumerationAnimator);
+    WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(SVGAnimatedEnumerationAnimator);
     using Base = SVGAnimatedPropertyAnimator<SVGAnimatedEnumeration, SVGAnimationEnumerationFunction<EnumType>>;
     using Base::Base;
     using Base::m_animated;
@@ -105,8 +104,10 @@ private:
     }
 };
 
+WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL(template<typename EnumType>, SVGAnimatedEnumerationAnimator<EnumType>);
+
 class SVGAnimatedIntegerAnimator final : public SVGAnimatedPropertyAnimator<SVGAnimatedInteger, SVGAnimationIntegerFunction> {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(SVGAnimatedIntegerAnimator);
+    WTF_MAKE_TZONE_ALLOCATED(SVGAnimatedIntegerAnimator);
     friend class SVGAnimatedPropertyPairAnimator<SVGAnimatedIntegerAnimator, SVGAnimatedIntegerAnimator>;
     friend class SVGAnimatedIntegerPairAnimator;
     using Base = SVGAnimatedPropertyAnimator<SVGAnimatedInteger, SVGAnimationIntegerFunction>;
@@ -127,7 +128,7 @@ private:
 };
 
 class SVGAnimatedLengthAnimator final : public SVGAnimatedPropertyAnimator<SVGAnimatedLength, SVGAnimationLengthFunction> {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(SVGAnimatedLengthAnimator);
+    WTF_MAKE_TZONE_ALLOCATED(SVGAnimatedLengthAnimator);
     using Base = SVGAnimatedPropertyAnimator<SVGAnimatedLength, SVGAnimationLengthFunction>;
 
 public:
@@ -149,7 +150,7 @@ private:
 };
 
 class SVGAnimatedLengthListAnimator final : public SVGAnimatedPropertyAnimator<SVGAnimatedLengthList, SVGAnimationLengthListFunction> {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(SVGAnimatedLengthListAnimator);
+    WTF_MAKE_TZONE_ALLOCATED(SVGAnimatedLengthListAnimator);
     using Base = SVGAnimatedPropertyAnimator<SVGAnimatedLengthList, SVGAnimationLengthListFunction>;
 
 public:
@@ -171,7 +172,7 @@ private:
 };
 
 class SVGAnimatedNumberAnimator final : public SVGAnimatedPropertyAnimator<SVGAnimatedNumber, SVGAnimationNumberFunction> {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(SVGAnimatedNumberAnimator);
+    WTF_MAKE_TZONE_ALLOCATED(SVGAnimatedNumberAnimator);
     friend class SVGAnimatedPropertyPairAnimator<SVGAnimatedNumberAnimator, SVGAnimatedNumberAnimator>;
     friend class SVGAnimatedNumberPairAnimator;
     using Base = SVGAnimatedPropertyAnimator<SVGAnimatedNumber, SVGAnimationNumberFunction>;
@@ -191,7 +192,7 @@ private:
 };
 
 class SVGAnimatedNumberListAnimator final : public SVGAnimatedPropertyAnimator<SVGAnimatedNumberList, SVGAnimationNumberListFunction> {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(SVGAnimatedNumberListAnimator);
+    WTF_MAKE_TZONE_ALLOCATED(SVGAnimatedNumberListAnimator);
     using Base = SVGAnimatedPropertyAnimator<SVGAnimatedNumberList, SVGAnimationNumberListFunction>;
     using Base::Base;
     
@@ -209,7 +210,7 @@ private:
 };
 
 class SVGAnimatedPathSegListAnimator final : public SVGAnimatedPropertyAnimator<SVGAnimatedPathSegList, SVGAnimationPathSegListFunction> {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(SVGAnimatedPathSegListAnimator);
+    WTF_MAKE_TZONE_ALLOCATED(SVGAnimatedPathSegListAnimator);
     using Base = SVGAnimatedPropertyAnimator<SVGAnimatedPathSegList, SVGAnimationPathSegListFunction>;
     using Base::Base;
 
@@ -228,7 +229,7 @@ private:
 };
 
 class SVGAnimatedPointListAnimator final : public SVGAnimatedPropertyAnimator<SVGAnimatedPointList, SVGAnimationPointListFunction> {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(SVGAnimatedPointListAnimator);
+    WTF_MAKE_TZONE_ALLOCATED(SVGAnimatedPointListAnimator);
     using Base = SVGAnimatedPropertyAnimator<SVGAnimatedPointList, SVGAnimationPointListFunction>;
     using Base::Base;
     
@@ -246,7 +247,7 @@ private:
 };
 
 class SVGAnimatedOrientTypeAnimator final : public SVGAnimatedPropertyAnimator<SVGAnimatedOrientType, SVGAnimationOrientTypeFunction> {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(SVGAnimatedOrientTypeAnimator);
+    WTF_MAKE_TZONE_ALLOCATED(SVGAnimatedOrientTypeAnimator);
     friend class SVGAnimatedPropertyPairAnimator<SVGAnimatedAngleAnimator, SVGAnimatedOrientTypeAnimator>;
     friend class SVGAnimatedAngleOrientAnimator;
     using Base = SVGAnimatedPropertyAnimator<SVGAnimatedOrientType, SVGAnimationOrientTypeFunction>;
@@ -268,7 +269,7 @@ private:
 };
 
 class SVGAnimatedPreserveAspectRatioAnimator final : public SVGAnimatedPropertyAnimator<SVGAnimatedPreserveAspectRatio, SVGAnimationPreserveAspectRatioFunction> {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(SVGAnimatedPreserveAspectRatioAnimator);
+    WTF_MAKE_TZONE_ALLOCATED(SVGAnimatedPreserveAspectRatioAnimator);
     using Base = SVGAnimatedPropertyAnimator<SVGAnimatedPreserveAspectRatio, SVGAnimationPreserveAspectRatioFunction>;
     using Base::Base;
 
@@ -287,7 +288,7 @@ private:
 };
 
 class SVGAnimatedRectAnimator final : public SVGAnimatedPropertyAnimator<SVGAnimatedRect, SVGAnimationRectFunction> {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(SVGAnimatedRectAnimator);
+    WTF_MAKE_TZONE_ALLOCATED(SVGAnimatedRectAnimator);
     using Base = SVGAnimatedPropertyAnimator<SVGAnimatedRect, SVGAnimationRectFunction>;
 
 public:
@@ -306,7 +307,7 @@ private:
 };
 
 class SVGAnimatedStringAnimator final : public SVGAnimatedPropertyAnimator<SVGAnimatedString, SVGAnimationStringFunction> {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(SVGAnimatedStringAnimator);
+    WTF_MAKE_TZONE_ALLOCATED(SVGAnimatedStringAnimator);
     using Base = SVGAnimatedPropertyAnimator<SVGAnimatedString, SVGAnimationStringFunction>;
     using Base::Base;
 
@@ -347,7 +348,7 @@ private:
 };
 
 class SVGAnimatedTransformListAnimator final : public SVGAnimatedPropertyAnimator<SVGAnimatedTransformList, SVGAnimationTransformListFunction> {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(SVGAnimatedTransformListAnimator);
+    WTF_MAKE_TZONE_ALLOCATED(SVGAnimatedTransformListAnimator);
     using Base = SVGAnimatedPropertyAnimator<SVGAnimatedTransformList, SVGAnimationTransformListFunction>;
     using Base::Base;
 

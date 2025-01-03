@@ -105,7 +105,7 @@ struct ImpureDataTranslator {
 };
 
 class ImpureMap {
-    WTF_MAKE_TZONE_ALLOCATED(ImpureMap);
+    WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(ImpureMap);
     WTF_MAKE_NONCOPYABLE(ImpureMap);
 public:
     ImpureMap() = default;

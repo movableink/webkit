@@ -429,7 +429,7 @@ public:
     Vector<GCReachableRef<ContainerNode>> targets;
 };
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(Document, PendingScrollEventTargetList);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Document::PendingScrollEventTargetList);
 
 static const Seconds intersectionObserversInitialUpdateDelay { 2000_ms };
 
