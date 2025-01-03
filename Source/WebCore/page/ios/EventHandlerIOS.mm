@@ -33,6 +33,7 @@
 #import "Chrome.h"
 #import "ChromeClient.h"
 #import "DataTransfer.h"
+#import "DocumentInlines.h"
 #import "DragState.h"
 #import "EventNames.h"
 #import "FocusController.h"
