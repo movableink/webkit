@@ -40,7 +40,7 @@ extern "C" void SYSV_ABI ipint_table_catch_all_entry();
 extern "C" void SYSV_ABI ipint_table_catch_allref_entry();
 
 #define IPINT_VALIDATE_DEFINE_FUNCTION(opcode, name) \
-    extern "C" void ipint_ ## name ## _validate() REFERENCED_FROM_ASM WTF_INTERNAL NO_REORDER;
+    extern "C" void SYSV_ABI ipint_ ## name ## _validate() REFERENCED_FROM_ASM WTF_INTERNAL NO_REORDER;
 
 #define FOR_EACH_IPINT_OPCODE(m) \
     m(0x00, unreachable) \
@@ -784,7 +784,7 @@ extern "C" void SYSV_ABI ipint_table_catch_allref_entry();
     m(0x10, uint_stack) \
     m(0x11, uint_ret) \
 
-#if !ENABLE(C_LOOP) && (CPU(ADDRESS64) && (CPU(ARM64) || (CPU(X86_64) && !OS(WINDOWS))) || (CPU(ADDRESS32) && CPU(ARM_THUMB2)))
+#if !ENABLE(C_LOOP) && (CPU(ADDRESS64) && (CPU(ARM64) || CPU(X86_64)) || (CPU(ADDRESS32) && CPU(ARM_THUMB2)))
 FOR_EACH_IPINT_OPCODE(IPINT_VALIDATE_DEFINE_FUNCTION);
 FOR_EACH_IPINT_0xFB_OPCODE(IPINT_VALIDATE_DEFINE_FUNCTION);
 FOR_EACH_IPINT_0xFC_TRUNC_OPCODE(IPINT_VALIDATE_DEFINE_FUNCTION);

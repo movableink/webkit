@@ -407,14 +407,14 @@ if ARM64 or ARM64E
     # ws3 = x12
     emit "br x12"
 elsif X86_64
-    loadb [MC], sc2
+    loadb [MC], sc1
     addq 1, MC
-    bilt sc2, 0x12, .safe
+    bilt sc1, 0x12, .safe
     break
 .safe:
-    lshiftq 6, sc2
-    leap (_uint_begin - _mint_entry_relativePCBase)[PC, sc2], sc2
-    jmp sc2
+    lshiftq 6, sc1
+    leap (_uint_begin - _mint_entry_relativePCBase)[PC, sc1], sc1
+    jmp sc1
 end
 end
 
@@ -733,7 +733,7 @@ instructionLabel(_select_t)
 .ipint_select_t_val2:
     popQuad(t1)
     popQuad(t0)
-    pushQuadPair(t2, t1)
+    pushQuad(t1)
     loadb IPInt::InstructionLengthMetadata::length[MC], t0
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
@@ -5458,7 +5458,7 @@ macro atomicCmpxchgOp(boundsAndAlignmentCheck, cmpxchg)
     addp t2, t3
     boundsAndAlignmentCheck(t3, t2)
     addq memoryBase, t3
-    cmpxchg(t3, t1, t0, t2)
+    cmpxchg(t3, t1, t0, t2, t4)
 
     loadb IPInt::Const32Metadata::instructionLength[MC], t0
     advancePCByReg(t0)
@@ -5466,80 +5466,89 @@ macro atomicCmpxchgOp(boundsAndAlignmentCheck, cmpxchg)
     nextIPIntInstruction()
 end
 
-macro weakCASExchangeByte(mem, value, expected, scratch)
+macro weakCASExchangeByte(mem, value, expected, scratch, scratch2)
     if ARM64
     .loop:
-        loadlinkacqb [mem], scratch
-        bqneq expected, scratch, .fail
+        loadlinkacqb [mem], scratch2
+        bqneq expected, scratch2, .fail
         storecondrelb scratch, value, [mem]
         bieq scratch, 0, .done
         jmp .loop
     .fail:
-        emit "clrex"
-        move scratch, expected
+        storecondrelb scratch, scratch2, [mem]
+        bieq scratch, 0, .done
+        jmp .loop
     .done:
+        move scratch2, expected
     else
         error
     end
 end
 
-macro weakCASExchangeHalf(mem, value, expected, scratch)
+macro weakCASExchangeHalf(mem, value, expected, scratch, scratch2)
     if ARM64
     .loop:
-        loadlinkacqh [mem], scratch
-        bqneq expected, scratch, .fail
+        loadlinkacqh [mem], scratch2
+        bqneq expected, scratch2, .fail
         storecondrelh scratch, value, [mem]
         bieq scratch, 0, .done
         jmp .loop
     .fail:
-        emit "clrex"
-        move scratch, expected
+        storecondrelh scratch, scratch2, [mem]
+        bieq scratch, 0, .done
+        jmp .loop
     .done:
+        move scratch2, expected
     else
         error
     end
 end
 
-macro weakCASExchangeInt(mem, value, expected, scratch)
+macro weakCASExchangeInt(mem, value, expected, scratch, scratch2)
     if ARM64
     .loop:
-        loadlinkacqi [mem], scratch
-        bqneq expected, scratch, .fail
+        loadlinkacqi [mem], scratch2
+        bqneq expected, scratch2, .fail
         storecondreli scratch, value, [mem]
         bieq scratch, 0, .done
         jmp .loop
     .fail:
-        emit "clrex"
-        move scratch, expected
+        storecondreli scratch, scratch2, [mem]
+        bieq scratch, 0, .done
+        jmp .loop
     .done:
+        move scratch2, expected
     else
         error
     end
 end
 
-macro weakCASExchangeQuad(mem, value, expected, scratch)
+macro weakCASExchangeQuad(mem, value, expected, scratch, scratch2)
     if ARM64
     .loop:
-        loadlinkacqq [mem], scratch
-        bqneq expected, scratch, .fail
+        loadlinkacqq [mem], scratch2
+        bqneq expected, scratch2, .fail
         storecondrelq scratch, value, [mem]
         bieq scratch, 0, .done
         jmp .loop
     .fail:
-        emit "clrex"
-        move scratch, expected
+        storecondrelq scratch, scratch2, [mem]
+        bieq scratch, 0, .done
+        jmp .loop
     .done:
+        move scratch2, expected
     else
         error
     end
 end
 
 instructionLabel(_i32_atomic_rmw_cmpxchg)
-    atomicCmpxchgOp(ipintCheckMemoryBoundWithAlignmentCheck4, macro(mem, value, expected, scratch2)
+    atomicCmpxchgOp(ipintCheckMemoryBoundWithAlignmentCheck4, macro(mem, value, expected, scratch, scratch2)
+        andq 0xffffffff, expected
         if ARM64E or X86_64
             atomicweakcasi expected, value, [mem]
         elsif ARM64
-            weakCASExchangeInt(mem, value, expected, scratch2)
+            weakCASExchangeInt(mem, value, expected, scratch, scratch2)
         else
             error
         end
@@ -5547,11 +5556,11 @@ instructionLabel(_i32_atomic_rmw_cmpxchg)
     end)
 
 instructionLabel(_i64_atomic_rmw_cmpxchg)
-    atomicCmpxchgOp(ipintCheckMemoryBoundWithAlignmentCheck8, macro(mem, value, expected, scratch2)
+    atomicCmpxchgOp(ipintCheckMemoryBoundWithAlignmentCheck8, macro(mem, value, expected, scratch, scratch2)
         if ARM64E or X86_64
             atomicweakcasq expected, value, [mem]
         elsif ARM64
-            weakCASExchangeQuad(mem, value, expected, scratch2)
+            weakCASExchangeQuad(mem, value, expected, scratch, scratch2)
         else
             error
         end
@@ -5559,12 +5568,12 @@ instructionLabel(_i64_atomic_rmw_cmpxchg)
     end)
 
 instructionLabel(_i32_atomic_rmw8_cmpxchg_u)
-    atomicCmpxchgOp(ipintCheckMemoryBoundWithAlignmentCheck1, macro(mem, value, expected, scratch2)
+    atomicCmpxchgOp(ipintCheckMemoryBoundWithAlignmentCheck1, macro(mem, value, expected, scratch, scratch2)
         andq 0xff, expected
         if ARM64E or X86_64
             atomicweakcasb expected, value, [mem]
         elsif ARM64
-            weakCASExchangeByte(mem, value, expected, scratch2)
+            weakCASExchangeByte(mem, value, expected, scratch, scratch2)
         else
             error
         end
@@ -5572,12 +5581,12 @@ instructionLabel(_i32_atomic_rmw8_cmpxchg_u)
     end)
 
 instructionLabel(_i32_atomic_rmw16_cmpxchg_u)
-    atomicCmpxchgOp(ipintCheckMemoryBoundWithAlignmentCheck2, macro(mem, value, expected, scratch2)
+    atomicCmpxchgOp(ipintCheckMemoryBoundWithAlignmentCheck2, macro(mem, value, expected, scratch, scratch2)
         andq 0xffff, expected
         if ARM64E or X86_64
             atomicweakcash expected, value, [mem]
         elsif ARM64
-            weakCASExchangeHalf(mem, value, expected, scratch2)
+            weakCASExchangeHalf(mem, value, expected, scratch, scratch2)
         else
             error
         end
@@ -5585,12 +5594,12 @@ instructionLabel(_i32_atomic_rmw16_cmpxchg_u)
     end)
 
 instructionLabel(_i64_atomic_rmw8_cmpxchg_u)
-    atomicCmpxchgOp(ipintCheckMemoryBoundWithAlignmentCheck1, macro(mem, value, expected, scratch2)
+    atomicCmpxchgOp(ipintCheckMemoryBoundWithAlignmentCheck1, macro(mem, value, expected, scratch, scratch2)
         andq 0xff, expected
         if ARM64E or X86_64
             atomicweakcasb expected, value, [mem]
         elsif ARM64
-            weakCASExchangeByte(mem, value, expected, scratch2)
+            weakCASExchangeByte(mem, value, expected, scratch, scratch2)
         else
             error
         end
@@ -5598,12 +5607,12 @@ instructionLabel(_i64_atomic_rmw8_cmpxchg_u)
     end)
 
 instructionLabel(_i64_atomic_rmw16_cmpxchg_u)
-    atomicCmpxchgOp(ipintCheckMemoryBoundWithAlignmentCheck2, macro(mem, value, expected, scratch2)
+    atomicCmpxchgOp(ipintCheckMemoryBoundWithAlignmentCheck2, macro(mem, value, expected, scratch, scratch2)
         andq 0xffff, expected
         if ARM64E or X86_64
             atomicweakcash expected, value, [mem]
         elsif ARM64
-            weakCASExchangeHalf(mem, value, expected, scratch2)
+            weakCASExchangeHalf(mem, value, expected, scratch, scratch2)
         else
             error
         end
@@ -5611,12 +5620,12 @@ instructionLabel(_i64_atomic_rmw16_cmpxchg_u)
     end)
 
 instructionLabel(_i64_atomic_rmw32_cmpxchg_u)
-    atomicCmpxchgOp(ipintCheckMemoryBoundWithAlignmentCheck4, macro(mem, value, expected, scratch2)
+    atomicCmpxchgOp(ipintCheckMemoryBoundWithAlignmentCheck4, macro(mem, value, expected, scratch, scratch2)
         andq 0xffffffff, expected
         if ARM64E or X86_64
             atomicweakcasi expected, value, [mem]
         elsif ARM64
-            weakCASExchangeInt(mem, value, expected, scratch2)
+            weakCASExchangeInt(mem, value, expected, scratch, scratch2)
         else
             error
         end
