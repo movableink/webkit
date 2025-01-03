@@ -56,6 +56,7 @@
 #include <wtf/text/Base64.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/text/StringView.h>
 #include <wtf/text/WTFString.h>
@@ -444,7 +445,7 @@ std::span<const uint8_t> WebSocketHandshake::readHTTPHeaders(std::span<const uin
         size_t consumedLength = parseHTTPHeader(data, m_failureReason, name, value);
         if (!consumedLength)
             return { };
-        data = data.subspan(consumedLength);
+        skip(data, consumedLength);
 
         // Stop once we consumed an empty line.
         if (name.isEmpty())

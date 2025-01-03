@@ -81,11 +81,11 @@ static bool parseFontSize(std::span<const CharacterType> characters, int& size)
     switch (characters.front()) {
     case '+':
         mode = RelativePlus;
-        characters = characters.subspan(1);
+        skip(characters, 1);
         break;
     case '-':
         mode = RelativeMinus;
-        characters = characters.subspan(1);
+        skip(characters, 1);
         break;
     default:
         mode = Absolute;
@@ -98,7 +98,7 @@ static bool parseFontSize(std::span<const CharacterType> characters, int& size)
     while (!characters.empty()) {
         if (!isASCIIDigit(characters.front()))
             break;
-        digits.append(consumeSingleElement(characters));
+        digits.append(consume(characters));
     }
 
     // Step 7

@@ -31,6 +31,7 @@
 #include "SFrameUtils.h"
 #include <wtf/Algorithms.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/ParsingUtilities.h>
 
 namespace WebCore {
 
@@ -114,8 +115,7 @@ static inline std::optional<SFrameHeaderInfo> parseSFrameHeader(std::span<const 
     uint64_t keyId = 0;
     uint64_t counter = 0;
 
-    auto firstByte = data.front();
-    data = data.subspan(1);
+    auto firstByte = consume(data);
 
     // Signature bit.
     if (hasSignature(firstByte))
@@ -131,15 +131,11 @@ static inline std::optional<SFrameHeaderInfo> parseSFrameHeader(std::span<const 
         if (data.size() < counterLength + keyLength + 1)
             return { };
 
-        keyId = readUInt64(data.first(keyLength));
-        data = data.subspan(keyLength);
-
-        counter = readUInt64(data.first(counterLength));
-        data = data.subspan(counterLength);
+        keyId = readUInt64(consumeSpan(data, keyLength));
+        counter = readUInt64(consumeSpan(data, counterLength));
     } else {
         keyId = firstByte & 0x07;
-        counter = readUInt64(data.first(counterLength));
-        data = data.subspan(counterLength);
+        counter = readUInt64(consumeSpan(data, counterLength));
     }
     uint8_t headerSize = data.data() - start;
     return SFrameHeaderInfo { headerSize, keyId, counter };
@@ -214,7 +210,7 @@ RTCRtpSFrameTransformer::TransformResult RTCRtpSFrameTransformer::decryptFrame(s
     switch (m_compatibilityMode) {
     case CompatibilityMode::H264: {
         auto offset = computeH264PrefixOffset(data);
-        data = data.subspan(offset);
+        skip(data, offset);
         if (needsRbspUnescaping(data)) {
             buffer = fromRbsp(data);
             data = buffer.span();
@@ -223,7 +219,7 @@ RTCRtpSFrameTransformer::TransformResult RTCRtpSFrameTransformer::decryptFrame(s
     }
     case CompatibilityMode::VP8: {
         auto offset = computeVP8PrefixOffset(data);
-        data = data.subspan(offset);
+        skip(data, offset);
         break;
     }
     case CompatibilityMode::None:

@@ -33,6 +33,7 @@
 #include <wtf/Scope.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilder.h>
 
 #if !OS(WINDOWS)
@@ -481,8 +482,7 @@ MappedFileData mapToFile(const String& path, size_t bytesSize, Function<void(con
     auto mapData = mappedFile.mutableSpan();
 
     apply([&mapData](std::span<const uint8_t> chunk) {
-        memcpySpan(mapData, chunk);
-        mapData = mapData.subspan(chunk.size());
+        memcpySpan(consumeSpan(mapData, chunk.size()), chunk);
         return true;
     });
 

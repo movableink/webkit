@@ -28,6 +28,7 @@
 #if ENABLE(UNIFIED_PDF)
 
 #include "PDFDocumentLayout.h"
+#include <wtf/text/ParsingUtilities.h>
 
 namespace WTF {
 class TextStream;
@@ -58,17 +59,12 @@ inline PDFPageCoverage unite(const PDFPageCoverage& a, const PDFPageCoverage& b)
     auto bs = b.span();
     while (!as.empty() && !bs.empty()) {
         auto cmp = as.front().pageIndex <=> bs.front().pageIndex;
-        if (cmp < 0) {
-            result.append(as.front());
-            as = as.subspan(1);
-        } else if (cmp > 0) {
-            result.append(bs.front());
-            bs = bs.subspan(1);
-        } else {
-            result.append(unite(as.front(), bs.front()));
-            as = as.subspan(1);
-            bs = bs.subspan(1);
-        }
+        if (cmp < 0)
+            result.append(consume(as));
+        else if (cmp > 0)
+            result.append(consume(bs));
+        else
+            result.append(unite(consume(as), consume(bs)));
     }
     result.append(as);
     result.append(bs);

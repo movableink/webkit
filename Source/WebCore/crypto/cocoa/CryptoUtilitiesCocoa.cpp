@@ -69,7 +69,7 @@ ExceptionOr<Vector<uint8_t>> transformAESCTR(CCOperation operation, const Vector
 
     auto p = head.mutableSpan().subspan(bytesWritten);
     status = CCCryptorFinal(cryptor, p.data(), p.size(), &bytesWritten);
-    p = p.subspan(bytesWritten);
+    skip(p, bytesWritten);
     if (status)
         return Exception { ExceptionCode::OperationError };
 
@@ -97,7 +97,7 @@ ExceptionOr<Vector<uint8_t>> transformAESCTR(CCOperation operation, const Vector
 
     p = tail.mutableSpan().subspan(bytesWritten);
     status = CCCryptorFinal(cryptor, p.data(), p.size(), &bytesWritten);
-    p = p.subspan(bytesWritten);
+    skip(p, bytesWritten);
     if (status)
         return Exception { ExceptionCode::OperationError };
 

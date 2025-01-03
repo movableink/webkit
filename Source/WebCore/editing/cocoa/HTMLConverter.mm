@@ -77,6 +77,7 @@
 #import <wtf/ASCIICType.h>
 #import <wtf/TZoneMallocInlines.h>
 #import <wtf/text/MakeString.h>
+#import <wtf/text/ParsingUtilities.h>
 #import <wtf/text/StringBuilder.h>
 #import <wtf/text/StringToIntegerConversion.h>
 
@@ -1458,13 +1459,6 @@ void HTMLConverter::_fillInBlock(NSTextBlock *block, Element& element, PlatformC
         [block setBorderColor:color.get() forEdge:NSMaxXEdge];
     if ((color = _colorForElement(element, CSSPropertyBorderBottomColor)))
         [block setBorderColor:color.get() forEdge:NSMaxYEdge];
-}
-
-static char consume(std::span<const char>& span)
-{
-    auto character = span.front();
-    span = span.subspan(1);
-    return character;
 }
 
 static inline BOOL read2DigitNumber(std::span<const char>& p, int8_t& outval)

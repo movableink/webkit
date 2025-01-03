@@ -44,6 +44,7 @@
 #include <wtf/SafeStrerror.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
 
@@ -330,7 +331,7 @@ bool makeAllDirectories(const String& path)
     auto p = fullPath.mutableSpanIncludingNullTerminator().subspan(1);
     if (p[length - 1] == '/')
         p[length - 1] = '\0';
-    for (; p[0]; p = p.subspan(1)) {
+    for (; p[0]; skip(p, 1)) {
         if (p[0] == '/') {
             p[0] = '\0';
             if (access(fullPath.data(), F_OK)) {

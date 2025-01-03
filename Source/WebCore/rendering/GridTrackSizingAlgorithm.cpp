@@ -40,6 +40,7 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
+#include <wtf/text/ParsingUtilities.h>
 
 namespace WebCore {
 
@@ -1859,7 +1860,7 @@ void GridTrackSizingAlgorithm::resolveIntrinsicTrackSizes(GridLayoutState& gridL
         auto upperBound = std::upper_bound(itemSpan.begin(), itemSpan.end(), itemSpan[0]);
         size_t rangeSize = upperBound - itemSpan.begin();
         increaseSizesToAccommodateSpanningItems<TrackSizeComputationVariant::NotCrossingFlexibleTracks>(itemSpan.first(rangeSize), gridLayoutState);
-        itemSpan = itemSpan.subspan(rangeSize);
+        skip(itemSpan, rangeSize);
     }
     increaseSizesToAccommodateSpanningItems<TrackSizeComputationVariant::CrossingFlexibleTracks>(itemsCrossingFlexibleTracks.mutableSpan(), gridLayoutState);
     handleInfinityGrowthLimit();

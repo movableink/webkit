@@ -29,6 +29,7 @@
 #include "TextCodecASCIIFastPath.h"
 #include <array>
 #include <wtf/text/CString.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/WTFString.h>
 
 namespace PAL {
@@ -126,8 +127,8 @@ String TextCodecLatin1::decode(std::span<const uint8_t> bytes, bool, bool, bool&
                         goto useLookupTable;
 
                     copyASCIIMachineWord(destination, source);
-                    source = source.subspan(sizeof(WTF::MachineWord));
-                    destination = destination.subspan(sizeof(WTF::MachineWord));
+                    skip(source, sizeof(WTF::MachineWord));
+                    skip(destination, sizeof(WTF::MachineWord));
                 }
 
                 if (source.empty())
@@ -147,8 +148,8 @@ useLookupTable:
             destination[0] = latin1ConversionTable[sourceCharacter];
         }
 
-        source = source.subspan(1);
-        destination = destination.subspan(1);
+        skip(source, 1);
+        skip(destination, 1);
     }
 
     return result;
@@ -163,15 +164,11 @@ upConvertTo16Bit:
     LChar* ptr8 = characters.data();
     LChar* endPtr8 = destination.data();
 
-    while (ptr8 < endPtr8) {
-        destination16[0] = *ptr8++;
-        destination16 = destination16.subspan(1);
-    }
+    while (ptr8 < endPtr8)
+        consume(destination16) = *ptr8++;
 
     // Handle the character that triggered the 16 bit path
-    destination16[0] = latin1ConversionTable[source[0]];
-    source = source.subspan(1);
-    destination16 = destination16.subspan(1);
+    consume(destination16) = latin1ConversionTable[consume(source)];
 
     while (!source.empty()) {
         if (isASCII(source[0])) {
@@ -184,8 +181,8 @@ upConvertTo16Bit:
                         goto useLookupTable16;
                     
                     copyASCIIMachineWord(destination16, source);
-                    source = source.subspan(sizeof(WTF::MachineWord));
-                    destination16 = destination16.subspan(sizeof(WTF::MachineWord));
+                    skip(source, sizeof(WTF::MachineWord));
+                    skip(destination16, sizeof(WTF::MachineWord));
                 }
                 
                 if (source.empty())
@@ -201,8 +198,8 @@ useLookupTable16:
             destination16[0] = latin1ConversionTable[source[0]];
         }
         
-        source = source.subspan(1);
-        destination16 = destination16.subspan(1);
+        skip(source, 1);
+        skip(destination16, 1);
     }
     
     return result16;

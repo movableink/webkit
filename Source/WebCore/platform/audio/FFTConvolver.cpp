@@ -35,6 +35,7 @@
 #include "VectorMath.h"
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/ParsingUtilities.h>
 
 namespace WebCore {
     
@@ -62,7 +63,7 @@ void FFTConvolver::process(FFTFrame* fftKernel, std::span<const float> source, s
     size_t numberOfDivisions = halfSize <= source.size() ? (source.size() / halfSize) : 1;
     size_t divisionSize = numberOfDivisions == 1 ? source.size() : halfSize;
 
-    for (size_t i = 0; i < numberOfDivisions; ++i, source = source.subspan(divisionSize), destination = destination.subspan(divisionSize)) {
+    for (size_t i = 0; i < numberOfDivisions; ++i, skip(source, divisionSize), skip(destination, divisionSize)) {
         // Copy samples to input buffer (note contraint above!)
         auto inputP = m_inputBuffer.span();
 

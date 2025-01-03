@@ -30,6 +30,7 @@
 
 #include <LibWebRTCMacros.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/ParsingUtilities.h>
 
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 #include <webrtc/rtc_base/byte_order.h>
@@ -83,7 +84,7 @@ static inline Vector<uint8_t> extractSTUNOrTURNMessages(Vector<uint8_t>&& buffer
 
         processMessage(data.first(lengths->messageLength));
 
-        data = data.subspan(lengths->messageLengthWithPadding);
+        skip(data, lengths->messageLengthWithPadding);
     }
 }
 
@@ -105,11 +106,9 @@ static inline Vector<uint8_t> extractDataMessages(Vector<uint8_t>&& buffered, co
             return WTFMove(buffered);
         }
 
-        data = data.subspan(lengthFieldSize);
+        skip(data, lengthFieldSize);
 
-        processMessage(data.first(length));
-
-        data = data.subspan(length);
+        processMessage(consumeSpan(data, length));
     }
 }
 

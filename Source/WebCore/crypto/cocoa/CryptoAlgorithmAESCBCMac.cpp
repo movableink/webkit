@@ -29,6 +29,7 @@
 #include "CryptoAlgorithmAesCbcCfbParams.h"
 #include "CryptoKeyAES.h"
 #include <CommonCrypto/CommonCrypto.h>
+#include <wtf/text/ParsingUtilities.h>
 
 namespace WebCore {
 
@@ -50,7 +51,7 @@ static ExceptionOr<Vector<uint8_t>> transformAESCBC(CCOperation operation, const
     auto p = result.mutableSpan().subspan(bytesWritten);
     if (padding == CryptoAlgorithmAESCBC::Padding::Yes) {
         status = CCCryptorFinal(cryptor, p.data(), p.size(), &bytesWritten);
-        p = p.subspan(bytesWritten);
+        skip(p, bytesWritten);
         if (status)
             return Exception { ExceptionCode::OperationError };
     }

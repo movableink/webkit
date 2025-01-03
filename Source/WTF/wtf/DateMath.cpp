@@ -399,7 +399,7 @@ inline static void skipSpacesAndComments(std::span<const LChar>& s)
             else if (nesting == 0)
                 break;
         }
-        s = s.subspan(1);
+        skip(s, 1);
     }
 }
 
@@ -430,7 +430,7 @@ static bool parseInt(std::span<const LChar>& string, int base, int* result)
     // Avoid the use of errno as it is not available on Windows CE
     if (byteCast<char>(string.data()) == stopPosition || longResult <= std::numeric_limits<int>::min() || longResult >= std::numeric_limits<int>::max())
         return false;
-    string = string.subspan(stopPosition - byteCast<char>(string.data()));
+    skip(string, stopPosition - byteCast<char>(string.data()));
     *result = longResult;
     return true;
 }
@@ -442,7 +442,7 @@ static bool parseLong(std::span<const LChar>& string, int base, long* result)
     // Avoid the use of errno as it is not available on Windows CE
     if (byteCast<char>(string.data()) == stopPosition || *result == std::numeric_limits<long>::min() || *result == std::numeric_limits<long>::max())
         return false;
-    string = string.subspan(stopPosition - byteCast<char>(string.data()));
+    skip(string, stopPosition - byteCast<char>(string.data()));
     return true;
 }
 
@@ -633,7 +633,7 @@ double parseES5Date(std::span<const LChar> dateString, bool& isLocalTime)
     // Look for a time portion.
     // Note: As of ES2016, when a UTC offset is missing, date-time forms are local time while date-only forms are UTC.
     if (!dateString.empty() && (dateString.front() == 'T' || dateString.front() == 't' || dateString.front() == ' ')) {
-        dateString = dateString.subspan(1);
+        skip(dateString, 1);
         // Parse the time HH:mm[:ss[.sss]][Z|(+|-)(00:00|0000|00)]
         if (!parseES5TimePortion(dateString, hours, minutes, seconds, milliseconds, isLocalTime, timeZoneSeconds))
             return std::numeric_limits<double>::quiet_NaN();
@@ -699,7 +699,7 @@ double parseDate(std::span<const LChar> dateString, bool& isLocalTime)
             skipSpacesAndComments(dateString);
             wordStart = dateString;
         } else
-            dateString = dateString.subspan(1);
+            skip(dateString, 1);
     }
 
     // Missing delimiter between month and day (like "January29")?
@@ -740,7 +740,7 @@ double parseDate(std::span<const LChar> dateString, bool& isLocalTime)
         if (!parseLong(dateString, 10, &day))
             return std::numeric_limits<double>::quiet_NaN();
     } else if (!dateString.empty() && dateString.front() == '/' && month == -1) {
-        dateString = dateString.subspan(1);
+        skip(dateString, 1);
         // This looks like a MM/DD/YYYY date, not an RFC date.
         month = day - 1; // 0-based
         if (!parseLong(dateString, 10, &day))
@@ -763,7 +763,7 @@ double parseDate(std::span<const LChar> dateString, bool& isLocalTime)
                 return std::numeric_limits<double>::quiet_NaN();
 
             while (!dateString.empty() && dateString.front() != '-' && dateString.front() != ',' && !isUnicodeCompatibleASCIIWhitespace(dateString.front()))
-                dateString = dateString.subspan(1);
+                skip(dateString, 1);
 
             if (dateString.empty())
                 return std::numeric_limits<double>::quiet_NaN();
@@ -771,7 +771,7 @@ double parseDate(std::span<const LChar> dateString, bool& isLocalTime)
             // '-99 23:12:40 GMT'
             if (dateString.front() != '-' && dateString.front() != '/' && dateString.front() != ',' && !isUnicodeCompatibleASCIIWhitespace(dateString.front()))
                 return std::numeric_limits<double>::quiet_NaN();
-            dateString = dateString.subspan(1);
+            skip(dateString, 1);
         }
     }
 
@@ -804,9 +804,9 @@ double parseDate(std::span<const LChar> dateString, bool& isLocalTime)
             // in the normal case (we parsed the year), advance to the next number
             // ' at 23:12:40 GMT'
             if (newPosStr.size() >= 3 && isUnicodeCompatibleASCIIWhitespace(newPosStr[0]) && isASCIIAlphaCaselessEqual(newPosStr[1], 'a') && isASCIIAlphaCaselessEqual(newPosStr[2], 't'))
-                newPosStr = newPosStr.subspan(3);
+                skip(newPosStr , 3);
             else
-                newPosStr = newPosStr.subspan(1); // space or comma
+                skip(newPosStr, 1); // space or comma
             dateString = newPosStr;
             skipSpacesAndComments(dateString);
         }
@@ -893,13 +893,12 @@ double parseDate(std::span<const LChar> dateString, bool& isLocalTime)
 
             int sgn = (o < 0) ? -1 : 1;
             o = std::abs(o);
-            if (dateString.empty() || dateString.front() != ':') {
+            if (!skipExactly(dateString, ':')) {
                 if (o >= 24)
                     offset = ((o / 100) * 60 + (o % 100)) * sgn;
                 else
                     offset = o * 60 * sgn;
             } else { // GMT+05:00
-                dateString = dateString.subspan(1); // skip the ':'
                 int o2;
                 if (!parseInt(dateString, 10, &o2))
                     return std::numeric_limits<double>::quiet_NaN();

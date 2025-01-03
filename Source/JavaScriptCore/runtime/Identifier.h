@@ -24,6 +24,7 @@
 #include "PrivateName.h"
 #include "VM.h"
 #include <wtf/text/CString.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/UniquedStringImpl.h>
 #include <wtf/text/WTFString.h>
 
@@ -53,7 +54,7 @@ ALWAYS_INLINE std::optional<uint32_t> parseIndex(std::span<const CharType> chara
     if (!value && characters.size() > 1)
         return std::nullopt;
 
-    characters = characters.subspan(1);
+    skip(characters, 1);
     while (!characters.empty()) {
         // Multiply value by 10, checking for overflow out of 32 bits.
         if (value > 0xFFFFFFFFU / 10)
@@ -70,7 +71,7 @@ ALWAYS_INLINE std::optional<uint32_t> parseIndex(std::span<const CharType> chara
         if (newValue < value)
             return std::nullopt;
         value = newValue;
-        characters = characters.subspan(1);
+        skip(characters, 1);
     }
 
     if (!isIndex(value))

@@ -25,6 +25,7 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/AtomStringHash.h>
+#include <wtf/text/ParsingUtilities.h>
 
 namespace WebCore {
 
@@ -178,7 +179,7 @@ public:
             new (NotNull, m_memoryBucket.data()) AtomString(m_keyString);
         else
             new (NotNull, m_memoryBucket.data()) AtomString(characters);
-        m_memoryBucket = m_memoryBucket.subspan(1);
+        skip(m_memoryBucket, 1);
         return true;
     }
 

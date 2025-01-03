@@ -55,6 +55,7 @@
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/unicode/CharacterNames.h>
 
 #if ENABLE(TELEPHONE_NUMBER_DETECTION) && PLATFORM(IOS_FAMILY)
@@ -2489,7 +2490,7 @@ void HTMLTreeBuilder::linkifyPhoneNumbers(const String& string)
         m_tree.insertTextNode(string.substring(scannerPosition, relativeStartPosition));
         insertPhoneNumberLink(string.substring(scannerPosition + relativeStartPosition, relativeEndPosition - relativeStartPosition + 1));
 
-        span = span.subspan(relativeEndPosition + 1);
+        skip(span, relativeEndPosition + 1);
     }
 
     // Append the rest as a text node.

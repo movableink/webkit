@@ -26,6 +26,7 @@
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/MathExtras.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/text/ParsingUtilities.h>
 
 namespace WebCore {
 
@@ -55,7 +56,7 @@ WebSocketFrame::ParseFrameResult WebSocketFrame::parseFrame(std::span<uint8_t> d
     auto firstByte = data[0];
     auto secondByte = data[1];
 
-    data = data.subspan(2);
+    skip(data, 2);
 
     bool final = firstByte & finalBit;
     bool compress = firstByte & compressBit;
@@ -80,7 +81,7 @@ WebSocketFrame::ParseFrameResult WebSocketFrame::parseFrame(std::span<uint8_t> d
             payloadLength64 <<= 8;
             payloadLength64 |= data[i];
         }
-        data = data.subspan(extendedPayloadLengthSize);
+        skip(data, extendedPayloadLengthSize);
 
         if (extendedPayloadLengthSize == 2 && payloadLength64 <= maxPayloadLengthWithoutExtendedLengthField) {
             errorString = "The minimal number of bytes MUST be used to encode the length"_s;

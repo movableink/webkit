@@ -32,7 +32,9 @@
 #include "Settings.h"
 #include "StyledElement.h"
 #include <variant>
+#include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringParsingBuffer.h>
 
 namespace WebCore {
@@ -93,26 +95,12 @@ static PropertyNamePrefix propertyNamePrefix(const StringImpl& propertyName)
 
 static inline void writeWebKitPrefix(std::span<char>& buffer)
 {
-    buffer[0] = '-';
-    buffer[1] = 'w';
-    buffer[2] = 'e';
-    buffer[3] = 'b';
-    buffer[4] = 'k';
-    buffer[5] = 'i';
-    buffer[6] = 't';
-    buffer[7] = '-';
-    buffer = buffer.subspan(8);
+    memcpySpan(consumeSpan(buffer, 8), "-webkit-"_span);
 }
 
 static inline void writeEpubPrefix(std::span<char>& buffer)
 {
-    buffer[0] = '-';
-    buffer[1] = 'e';
-    buffer[2] = 'p';
-    buffer[3] = 'u';
-    buffer[4] = 'b';
-    buffer[5] = '-';
-    buffer = buffer.subspan(6);
+    memcpySpan(consumeSpan(buffer, 6), "-epub-"_span);
 }
 
 static CSSPropertyID parseJavaScriptCSSPropertyName(const AtomString& propertyName)
@@ -152,8 +140,7 @@ static CSSPropertyID parseJavaScriptCSSPropertyName(const AtomString& propertyNa
         break;
     }
 
-    bufferSpan[0] = toASCIILower((*propertyNameString)[i++]);
-    bufferSpan = bufferSpan.subspan(1);
+    consume(bufferSpan) = toASCIILower((*propertyNameString)[i++]);
 
     char* stringEnd = std::to_address(std::span { buffer }.first(buffer.size() - 1).end());
     size_t bufferSizeLeft = stringEnd - bufferSpan.data();
@@ -172,11 +159,9 @@ static CSSPropertyID parseJavaScriptCSSPropertyName(const AtomString& propertyNa
                 return CSSPropertyInvalid;
             bufferSpan[0] = '-';
             bufferSpan[1] = toASCIILowerUnchecked(c);
-            bufferSpan = bufferSpan.subspan(2);
-        } else {
-            bufferSpan[0] = c;
-            bufferSpan = bufferSpan.subspan(1);
-        }
+            skip(bufferSpan, 2);
+        } else
+            consume(bufferSpan) = c;
         ASSERT(!bufferSpan.empty());
     }
     ASSERT(!bufferSpan.empty());

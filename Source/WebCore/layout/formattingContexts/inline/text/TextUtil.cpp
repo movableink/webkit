@@ -41,6 +41,7 @@
 #include "WidthIterator.h"
 #include <unicode/ubidi.h>
 #include <wtf/text/CharacterProperties.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/TextBreakIterator.h>
 
 namespace WebCore {
@@ -518,7 +519,7 @@ bool TextUtil::containsStrongDirectionalityText(StringView text)
             };
 
             auto result = SIMD::splat<UnsignedType>(0);
-            for (; span.size() < stride; span = span.subspan(stride))
+            for (; span.size() < stride; skip(span, stride))
                 result = SIMD::bitOr(result, maybeBidiRTL(span));
             if (!span.empty())
                 result = SIMD::bitOr(result, maybeBidiRTL(span.last(stride)));

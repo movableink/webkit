@@ -61,6 +61,7 @@
 #import <wtf/WorkQueue.h>
 #import <wtf/cf/TypeCastsCF.h>
 #import <wtf/text/MakeString.h>
+#import <wtf/text/ParsingUtilities.h>
 #import <wtf/text/StringBuilder.h>
 #import <wtf/text/StringToIntegerConversion.h>
 
@@ -408,7 +409,7 @@ static void buildQuery(DDScanQueryRef scanQuery, const SimpleRange& contextRange
             } else
                 nbspCount = 0;
 
-            upconvertedCharacters = upconvertedCharacters.subspan(1);
+            skip(upconvertedCharacters, 1);
         }
         if (containsOnlyWhiteSpace) {
             if (hasNewline) {

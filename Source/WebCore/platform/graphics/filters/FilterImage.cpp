@@ -31,6 +31,7 @@
 #include "ImageBuffer.h"
 #include "PixelBuffer.h"
 #include "PixelBufferConversion.h"
+#include <wtf/text/ParsingUtilities.h>
 
 #if HAVE(ARM_NEON_INTRINSICS)
 #include <arm_neon.h>
@@ -192,8 +193,8 @@ static void copyImageBytes(const PixelBuffer& sourcePixelBuffer, PixelBuffer& de
 
     for (int y = 0; y < sourceRectClipped.height(); ++y) {
         if (y) {
-            destinationPixel = destinationPixel.subspan(destinationBytesPerRow);
-            sourcePixel = sourcePixel.subspan(sourceBytesPerRow);
+            skip(destinationPixel, destinationBytesPerRow);
+            skip(sourcePixel, sourceBytesPerRow);
         }
         memcpySpan(destinationPixel, sourcePixel.first(size));
     }

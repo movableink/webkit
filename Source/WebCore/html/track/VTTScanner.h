@@ -246,9 +246,9 @@ inline UChar VTTScanner::currentChar() const
 inline void VTTScanner::advance(size_t amount)
 {
     if (m_is8Bit)
-        m_data.characters8 = m_data.characters8.subspan(amount);
+        skip(m_data.characters8, amount);
     else
-        m_data.characters16 = m_data.characters16.subspan(amount);
+        skip(m_data.characters16, amount);
 }
 
 } // namespace WebCore

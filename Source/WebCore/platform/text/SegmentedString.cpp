@@ -20,6 +20,7 @@
 #include "config.h"
 #include "SegmentedString.h"
 
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/TextPosition.h>
 
@@ -167,7 +168,7 @@ String SegmentedString::toString() const
 
 void SegmentedString::advanceWithoutUpdatingLineNumber16()
 {
-    m_currentSubstring.s.currentCharacter16 = m_currentSubstring.s.currentCharacter16.subspan(1);
+    skip(m_currentSubstring.s.currentCharacter16, 1);
     m_currentCharacter = m_currentSubstring.s.currentCharacter16.front();
     updateAdvanceFunctionPointersIfNecessary();
 }
@@ -176,7 +177,7 @@ void SegmentedString::advanceAndUpdateLineNumber16()
 {
     ASSERT(m_currentSubstring.doNotExcludeLineNumbers);
     processPossibleNewline();
-    m_currentSubstring.s.currentCharacter16 = m_currentSubstring.s.currentCharacter16.subspan(1);
+    skip(m_currentSubstring.s.currentCharacter16, 1);
     m_currentCharacter = m_currentSubstring.s.currentCharacter16.front();
     updateAdvanceFunctionPointersIfNecessary();
 }

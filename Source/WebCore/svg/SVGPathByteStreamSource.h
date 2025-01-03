@@ -23,6 +23,7 @@
 #include "SVGPathByteStream.h"
 #include "SVGPathSource.h"
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/ParsingUtilities.h>
 
 namespace WebCore {
 
@@ -54,8 +55,7 @@ private:
     {
         DataType data;
         size_t dataSize = sizeof(DataType);
-        memcpySpan(asMutableByteSpan(data), m_streamCurrent.first(dataSize));
-        m_streamCurrent = m_streamCurrent.subspan(dataSize);
+        memcpySpan(asMutableByteSpan(data), consumeSpan(m_streamCurrent, dataSize));
         return data;
     }
 

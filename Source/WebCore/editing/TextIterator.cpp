@@ -72,6 +72,7 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/TextBreakIterator.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -2178,10 +2179,8 @@ inline bool SearchBuffer::isBadMatch(const UChar* match, size_t matchLength) con
         // correctly handle strings where the target and match have different-length
         // runs of characters that match, while still double checking the correctness
         // of matches of kana letters with other kana letters.
-        while (!a.empty() && !isKanaLetter(a.front()))
-            a = a.subspan(1);
-        while (!b.empty() && !isKanaLetter(b.front()))
-            b = b.subspan(1);
+        skipUntil<isKanaLetter>(a);
+        skipUntil<isKanaLetter>(b);
 
         // If we reached the end of either the target or the match, we should have
         // reached the end of both; both should have the same number of kana letters.
@@ -2196,8 +2195,8 @@ inline bool SearchBuffer::isBadMatch(const UChar* match, size_t matchLength) con
             return true;
         if (composedVoicedSoundMark(a.front()) != composedVoicedSoundMark(b.front()))
             return true;
-        a = a.subspan(1);
-        b = b.subspan(1);
+        skip(a, 1);
+        skip(b, 1);
 
         // Check for differences in combining voiced sound marks found after the letter.
         while (1) {
@@ -2210,8 +2209,8 @@ inline bool SearchBuffer::isBadMatch(const UChar* match, size_t matchLength) con
                 return true;
             if (a.front() != b.front())
                 return true;
-            a = a.subspan(1);
-            b = b.subspan(1);
+            skip(a, 1);
+            skip(b, 1);
         }
     }
 }

@@ -34,6 +34,7 @@
 #include <wtf/Scope.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/persistence/PersistentCoders.h>
+#include <wtf/text/ParsingUtilities.h>
 
 #if USE(LIBWEBRTC)
 
@@ -172,7 +173,7 @@ static std::span<const uint8_t> copyToCVPixelBufferPlane(CVPixelBufferRef pixelB
     uint32_t bytesPerRowDestination = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, planeIndex);
     for (unsigned i = 0; i < height; ++i) {
         std::memcpy(destination, source.data(), std::min(bytesPerRowSource, bytesPerRowDestination));
-        source = source.subspan(bytesPerRowSource);
+        skip(source, bytesPerRowSource);
         destination += bytesPerRowDestination;
     }
     return source;
@@ -231,7 +232,7 @@ bool SharedVideoFrameInfo::writePixelBuffer(CVPixelBufferRef pixelBuffer, std::s
     });
 
     encode(data);
-    data = data.subspan(sizeof(SharedVideoFrameInfo));
+    skip(data, sizeof(SharedVideoFrameInfo));
 
     auto* planeA = static_cast<const uint8_t*>(CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0));
     if (!planeA) {

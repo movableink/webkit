@@ -46,6 +46,7 @@
 #include "ColorConversion.h"
 #include "HashTools.h"
 #include "StylePropertyShorthand.h"
+#include <wtf/text/ParsingUtilities.h>
 
 namespace WebCore {
 
@@ -287,25 +288,20 @@ static std::optional<uint8_t> parseColorIntOrPercentage(std::span<const Characte
     auto current = string;
     double localValue = 0;
     bool negative = false;
-    while (!current.empty() && isASCIIWhitespace<CharacterType>(current.front()))
-        current = current.subspan(1);
+    skipWhile<isASCIIWhitespace>(current);
 
-    if (!current.empty() && current.front() == '-') {
+    if (skipExactly(current, '-'))
         negative = true;
-        current = current.subspan(1);
-    }
 
     if (current.empty() || !isASCIIDigit(current.front()))
         return std::nullopt;
 
     while (!current.empty() && isASCIIDigit(current.front())) {
-        double newValue = localValue * 10 + current.front() - '0';
-        current = current.subspan(1);
+        double newValue = localValue * 10 + consume(current) - '0';
         if (newValue >= 255) {
             // Clamp values at 255.
             localValue = 255;
-            while (!current.empty() && isASCIIDigit(current.front()))
-                current = current.subspan(1);
+            skipWhile<isASCIIDigit>(current);
             break;
         }
         localValue = newValue;
@@ -324,7 +320,7 @@ static std::optional<uint8_t> parseColorIntOrPercentage(std::span<const Characte
         size_t numCharactersParsed = parseDouble(current, '%', percentage);
         if (!numCharactersParsed)
             return std::nullopt;
-        current = current.subspan(numCharactersParsed);
+        skip(current, numCharactersParsed);
         if (current.front() != '%')
             return std::nullopt;
         localValue += percentage;
@@ -333,23 +329,20 @@ static std::optional<uint8_t> parseColorIntOrPercentage(std::span<const Characte
     if (expectedUnitType == CSSUnitType::CSS_PERCENTAGE && current.front() != '%')
         return std::nullopt;
 
-    if (current.front() == '%') {
+    if (skipExactly(current, '%')) {
         expectedUnitType = CSSUnitType::CSS_PERCENTAGE;
         localValue = localValue / 100.0 * 255.0;
         // Clamp values at 255 for percentages over 100%
         if (localValue > 255)
             localValue = 255;
-        current = current.subspan(1);
     } else
         expectedUnitType = CSSUnitType::CSS_NUMBER;
 
-    while (!current.empty() && isASCIIWhitespace<CharacterType>(current.front()))
-        current = current.subspan(1);
+    skipWhile<isASCIIWhitespace>(current);
 
-    if (current.empty() || current.front() != terminator)
+    if (!skipExactly(current, terminator))
         return std::nullopt;
 
-    current = current.subspan(1);
     string = current;
 
     // Clamp negative values at zero.
@@ -374,15 +367,12 @@ static inline bool isTenthAlpha(std::span<const CharacterType> string)
 template <typename CharacterType>
 static inline std::optional<uint8_t> parseRGBAlphaValue(std::span<const CharacterType>& string, char terminator)
 {
-    while (!string.empty() && isASCIIWhitespace<CharacterType>(string.front()))
-        string = string.subspan(1);
+    skipWhile<isASCIIWhitespace>(string);
 
     bool negative = false;
 
-    if (!string.empty() && string.front() == '-') {
+    if (skipExactly(string, '-'))
         negative = true;
-        string = string.subspan(1);
-    }
 
     size_t length = string.size();
     if (length < 2)
@@ -521,8 +511,7 @@ template<typename CharacterType> static std::optional<SRGBA<uint8_t>> parseLegac
         return std::nullopt;
 
     auto skipWhitespace = [](std::span<const CharacterType>& characters) ALWAYS_INLINE_LAMBDA {
-        while (!characters.empty() && isCSSSpace(characters.front()))
-            characters = characters.subspan(1);
+        skipWhile<isCSSSpace>(characters);
     };
 
     auto parsePercentageWithOptionalLeadingWhitespace = [&](std::span<const CharacterType>& characters) -> std::optional<double> {
@@ -533,20 +522,15 @@ template<typename CharacterType> static std::optional<SRGBA<uint8_t>> parseLegac
         if (!numCharactersParsed)
             return std::nullopt;
 
-        characters = characters.subspan(numCharactersParsed);
-        if (characters.empty() || characters.front() != '%')
+        skip(characters, numCharactersParsed);
+        if (!skipExactly(characters, '%'))
             return std::nullopt;
 
-        characters = characters.subspan(1); // Skip the '%'.
         return value;
     };
 
     auto skipComma = [](std::span<const CharacterType>& characters) {
-        if (characters.empty() || characters.front() != ',')
-            return false;
-
-        characters = characters.subspan(1);
-        return true;
+        return skipExactly(characters, ',');
     };
 
     double hue;
@@ -555,7 +539,7 @@ template<typename CharacterType> static std::optional<SRGBA<uint8_t>> parseLegac
     if (!parseSimpleAngle(angleChars, RequireUnits::No, angleUnit, hue))
         return std::nullopt;
 
-    characters = characters.subspan(delimiter);
+    skip(characters, delimiter);
     if (!skipComma(characters))
         return std::nullopt;
 
@@ -576,12 +560,12 @@ template<typename CharacterType> static std::optional<SRGBA<uint8_t>> parseLegac
         size_t numCharactersParsed;
         double alpha = 1;
         if ((numCharactersParsed = parseDouble(characters, ')', alpha))) {
-            characters = characters.subspan(numCharactersParsed);
+            skip(characters, numCharactersParsed);
             return alpha;
         }
 
         if ((numCharactersParsed = parseDouble(characters, '%', alpha))) {
-            characters = characters.subspan(numCharactersParsed + 1); // Skip the '%'
+            skip(characters, numCharactersParsed + 1); // Skip the '%'
             return alpha / 100.0;
         }
 

@@ -44,6 +44,7 @@
 #include <wtf/StringExtras.h>
 #include <wtf/URLParser.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/text/ParsingUtilities.h>
 
 namespace WebCore {
 
@@ -205,12 +206,12 @@ RefPtr<DOMFormData> FetchBodyConsumer::packageFormData(ScriptExecutionContext* c
         size_t currentBoundaryIndex = memmemSpan(data, boundary.span());
         if (currentBoundaryIndex == notFound)
             return nullptr;
-        data = data.subspan(currentBoundaryIndex + boundaryLength);
+        skip(data, currentBoundaryIndex + boundaryLength);
         size_t nextBoundaryIndex;
         while ((nextBoundaryIndex = memmemSpan(data, boundary.span())) != notFound) {
             parseMultipartPart(data.first(nextBoundaryIndex - strlen("\r\n")), form.get());
             currentBoundaryIndex = nextBoundaryIndex;
-            data = data.subspan(nextBoundaryIndex + boundaryLength);
+            skip(data, nextBoundaryIndex + boundaryLength);
         }
     } else if (mimeType && equalLettersIgnoringASCIICase(mimeType->type, "application"_s) && equalLettersIgnoringASCIICase(mimeType->subtype, "x-www-form-urlencoded"_s)) {
         auto dataString = String::fromUTF8(data);

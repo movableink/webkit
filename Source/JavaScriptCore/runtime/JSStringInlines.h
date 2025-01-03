@@ -29,6 +29,7 @@
 #include "JSString.h"
 #include "KeyAtomStringCacheInlines.h"
 #include <wtf/text/MakeString.h>
+#include <wtf/text/ParsingUtilities.h>
 
 namespace JSC {
 
@@ -287,11 +288,11 @@ inline void JSRopeString::resolveToBuffer(JSString* fiber0, JSString* fiber1, JS
                     MUST_TAIL_CALL return JSRopeString::resolveToBufferSlow(fiber0, fiber1, fiber2, buffer, stackLimit);
                 resolveToBuffer(rope0->fiber0(), rope0->fiber1(), rope0->fiber2(), buffer.first(rope0Length), stackLimit);
             }
-            buffer = buffer.subspan(rope0Length);
+            skip(buffer, rope0Length);
         } else {
             StringView view0 = fiber0->valueInternal().impl();
             view0.getCharacters(buffer);
-            buffer = buffer.subspan(view0.length());
+            skip(buffer, view0.length());
         }
         fiber0 = fiber1;
         fiber1 = fiber2;
@@ -314,7 +315,7 @@ inline void JSRopeString::resolveToBuffer(JSString* fiber0, JSString* fiber1, JS
                     view0.substring(offset, rope0Length).getCharacters(buffer);
                 } else
                     resolveToBuffer(rope0->fiber0(), rope0->fiber1(), rope0->fiber2(), buffer.first(rope0Length), stackLimit);
-                buffer = buffer.subspan(rope0Length);
+                skip(buffer, rope0Length);
 
                 auto* rope1 = static_cast<const JSRopeString*>(fiber1);
                 auto rope1Length = rope1->length();
@@ -349,7 +350,7 @@ inline void JSRopeString::resolveToBuffer(JSString* fiber0, JSString* fiber1, JS
             {
                 StringView view0 = fiber0->valueInternal().impl();
                 view0.getCharacters(buffer);
-                buffer = buffer.subspan(view0.length());
+                skip(buffer, view0.length());
             }
             if (rope1->isSubstring()) {
                 StringView view1 = *rope1->substringBase()->valueInternal().impl();

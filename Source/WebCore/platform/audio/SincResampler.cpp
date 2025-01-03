@@ -37,6 +37,7 @@
 #include <wtf/Algorithms.h>
 #include <wtf/MathExtras.h>
 #include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/ParsingUtilities.h>
 
 #if USE(ACCELERATE)
 #include <Accelerate/Accelerate.h>
@@ -219,13 +220,12 @@ void SincResampler::processBuffer(std::span<const float> source, std::span<float
         if (framesToCopy < framesToProcess)
             zeroSpan(buffer.subspan(framesToCopy, framesToProcess - framesToCopy));
 
-        source = source.subspan(framesToCopy);
+        skip(source, framesToCopy);
     });
 
     while (!destination.empty()) {
         unsigned framesThisTime = std::min<size_t>(destination.size(), AudioUtilities::renderQuantumSize);
-        resampler.process(destination, framesThisTime);
-        destination = destination.subspan(framesThisTime);
+        resampler.process(consumeSpan(destination, framesThisTime), framesThisTime);
     }
 }
 

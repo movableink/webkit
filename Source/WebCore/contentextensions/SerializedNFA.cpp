@@ -27,6 +27,7 @@
 #include "SerializedNFA.h"
 
 #include "NFA.h"
+#include <wtf/text/ParsingUtilities.h>
 
 #if ENABLE(CONTENT_EXTENSIONS)
 
@@ -41,7 +42,7 @@ bool writeAllToFile(FileSystem::PlatformFileHandle file, const T& container)
         auto written = FileSystem::writeToFile(file, bytes);
         if (written == -1)
             return false;
-        bytes = bytes.subspan(written);
+        skip(bytes, written);
     }
     return true;
 }

@@ -20,6 +20,7 @@
 #pragma once
 
 #include <wtf/Deque.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringView.h>
 #include <wtf/text/WTFString.h>
 
@@ -189,11 +190,11 @@ ALWAYS_INLINE UChar SegmentedString::Substring::currentCharacterPreIncrement()
 {
     ASSERT(length());
     if (is8Bit) {
-        s.currentCharacter8 = s.currentCharacter8.subspan(1);
-        return s.currentCharacter8.front();
+        skip(s.currentCharacter8, 1);
+        return s.currentCharacter8[0];
     }
-    s.currentCharacter16 = s.currentCharacter16.subspan(1);
-    return s.currentCharacter16.front();
+    skip(s.currentCharacter16, 1);
+    return s.currentCharacter16[0];
 }
 
 inline SegmentedString::SegmentedString(StringView stringView)
@@ -230,8 +231,8 @@ ALWAYS_INLINE void SegmentedString::updateAdvanceFunctionPointersIfNecessary()
 ALWAYS_INLINE void SegmentedString::advanceWithoutUpdatingLineNumber()
 {
     if (LIKELY(m_fastPathFlags & Use8BitAdvance)) {
-        m_currentSubstring.s.currentCharacter8 = m_currentSubstring.s.currentCharacter8.subspan(1);
-        m_currentCharacter = m_currentSubstring.s.currentCharacter8.front();
+        skip(m_currentSubstring.s.currentCharacter8, 1);
+        m_currentCharacter = m_currentSubstring.s.currentCharacter8[0];
         updateAdvanceFunctionPointersIfNecessary();
         return;
     }
@@ -256,8 +257,8 @@ inline void SegmentedString::advance()
     if (LIKELY(m_fastPathFlags & Use8BitAdvance)) {
         ASSERT(m_currentSubstring.length() > 1);
         bool lastCharacterWasNewline = m_currentCharacter == '\n';
-        m_currentSubstring.s.currentCharacter8 = m_currentSubstring.s.currentCharacter8.subspan(1);
-        m_currentCharacter = m_currentSubstring.s.currentCharacter8.front();
+        skip(m_currentSubstring.s.currentCharacter8, 1);
+        m_currentCharacter = m_currentSubstring.s.currentCharacter8[0];
         bool haveOneCharacterLeft = m_currentSubstring.s.currentCharacter8.size() == 1;
         if (LIKELY(!(lastCharacterWasNewline | haveOneCharacterLeft)))
             return;
@@ -312,15 +313,15 @@ template<bool lettersIgnoringASCIICase> SegmentedString::AdvancePastResult Segme
                 if (characterMismatch(m_currentSubstring.s.currentCharacter8[i], literal[i], lettersIgnoringASCIICase))
                     return DidNotMatch;
             }
-            m_currentSubstring.s.currentCharacter8 = m_currentSubstring.s.currentCharacter8.subspan(length);
-            m_currentCharacter = m_currentSubstring.s.currentCharacter8.front();
+            skip(m_currentSubstring.s.currentCharacter8, length);
+            m_currentCharacter = m_currentSubstring.s.currentCharacter8[0];
         } else {
             for (unsigned i = 0; i < length; ++i) {
                 if (characterMismatch(m_currentSubstring.s.currentCharacter16[i], literal[i], lettersIgnoringASCIICase))
                     return DidNotMatch;
             }
-            m_currentSubstring.s.currentCharacter16 = m_currentSubstring.s.currentCharacter16.subspan(length);
-            m_currentCharacter = m_currentSubstring.s.currentCharacter16.front();
+            skip(m_currentSubstring.s.currentCharacter16, length);
+            m_currentCharacter = m_currentSubstring.s.currentCharacter16[0];
         }
         return DidMatch;
     }

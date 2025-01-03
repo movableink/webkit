@@ -34,6 +34,7 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/cf/TypeCastsCF.h>
 #include <wtf/cf/VectorCF.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringView.h>
 
 namespace WebKit {
@@ -630,9 +631,7 @@ public:
         if (!alignBufferPosition(1, size))
             return *this;
 
-        value.append(m_buffer.first(size));
-        m_buffer = m_buffer.subspan(size);
-
+        value.append(consumeSpan(m_buffer, size));
         return *this;
     }
 
@@ -646,8 +645,7 @@ public:
         if (!alignBufferPosition(1, size))
             return *this;
 
-        value.append(m_buffer.first(size));
-        m_buffer = m_buffer.subspan(size);
+        value.append(consumeSpan(m_buffer, size));
         return *this;
     }
 
@@ -760,8 +758,7 @@ private:
         if (!alignBufferPosition(alignment, data.size()))
             return;
 
-        memcpySpan(data, m_buffer.first(data.size()));
-        m_buffer = m_buffer.subspan(data.size());
+        memcpySpan(data, consumeSpan(m_buffer, data.size()));
     }
 
     bool alignBufferPosition(unsigned alignment, size_t size)
@@ -773,7 +770,7 @@ private:
             return false;
         }
 
-        m_buffer = m_buffer.subspan(alignedPosition - m_buffer.data());
+        skip(m_buffer, alignedPosition - m_buffer.data());
         return true;
     }
 

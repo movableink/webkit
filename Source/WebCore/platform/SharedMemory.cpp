@@ -28,6 +28,7 @@
 
 #include "SharedBuffer.h"
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/ParsingUtilities.h>
 
 namespace WebCore {
 
@@ -60,8 +61,7 @@ RefPtr<SharedMemory> SharedMemory::copyBuffer(const FragmentedSharedBuffer& buff
 
     auto destination = sharedMemory->mutableSpan();
     buffer.forEachSegment([&] (std::span<const uint8_t> segment) mutable {
-        memcpySpan(destination, segment);
-        destination = destination.subspan(segment.size());
+        memcpySpan(consumeSpan(destination, segment.size()), segment);
     });
 
     return sharedMemory;

@@ -3387,8 +3387,7 @@ private:
         if (span.size() < sizeof(value))
             return false;
 
-        value = reinterpretCastSpanStartTo<const T>(span);
-        span = span.subspan(sizeof(T));
+        value = consumeAndCastTo<const T>(span);
         return true;
     }
 #else
@@ -3397,14 +3396,13 @@ private:
         if (span.size() < sizeof(value))
             return false;
 
-        if constexpr (sizeof(T) == 1) {
-            value = span[0];
-            span = span.subspan(1);
-        } else {
+        if constexpr (sizeof(T) == 1)
+            value = consume(span);
+        else {
             value = 0;
             for (size_t i = 0; i < sizeof(T); ++i)
                 value += static_cast<T>(span[i]) << (i * 8);
-            span = span.subspan(sizeof(T));
+            skip(span, sizeof(T));
         }
         return true;
     }
@@ -3593,8 +3591,7 @@ private:
             SERIALIZE_TRACE("FAIL deserialize");
             return ErrorTag;
         }
-        auto tag = static_cast<SerializationTag>(m_data[0]);
-        m_data = m_data.subspan(1);
+        auto tag = static_cast<SerializationTag>(consume(m_data));
         SERIALIZE_TRACE("deserialize ", tag);
         return tag;
     }
@@ -3603,8 +3600,7 @@ private:
     {
         if (m_data.empty())
             return false;
-        tag = static_cast<ArrayBufferViewSubtag>(m_data[0]);
-        m_data = m_data.subspan(1);
+        tag = static_cast<ArrayBufferViewSubtag>(consume(m_data));
         return true;
     }
 
@@ -3664,7 +3660,7 @@ private:
         arrayBuffer = ArrayBuffer::tryCreate(m_data.first(length));
         if (!arrayBuffer)
             return false;
-        m_data = m_data.subspan(length);
+        skip(m_data, length);
         return true;
     }
 
@@ -3689,8 +3685,7 @@ private:
         if (!arrayBuffer)
             return false;
         ASSERT(arrayBuffer->isResizableNonShared());
-        memcpySpan(arrayBuffer->mutableSpan(), m_data.first(byteLength));
-        m_data = m_data.subspan(byteLength);
+        memcpySpan(arrayBuffer->mutableSpan(), consumeSpan(m_data, byteLength));
         return true;
     }
 
@@ -3795,8 +3790,7 @@ private:
             return false;
         if (static_cast<uint32_t>(m_data.size()) < size)
             return false;
-        result.append(m_data.first(size));
-        m_data = m_data.subspan(size);
+        result.append(consumeSpan(m_data, size));
         return true;
     }
 
@@ -3824,8 +3818,7 @@ private:
     {
         if (m_data.empty())
             return false;
-        tag = static_cast<DestinationColorSpaceTag>(m_data[0]);
-        m_data = m_data.subspan(1);
+        tag = static_cast<DestinationColorSpaceTag>(consume(m_data));
         return true;
     }
 
@@ -3840,7 +3833,7 @@ private:
         if (!data)
             return false;
 
-        m_data = m_data.subspan(dataLength);
+        skip(m_data, dataLength);
         return true;
     }
 #endif
@@ -4947,7 +4940,7 @@ private:
                 return JSValue();
             }
             auto bufferStart = m_data;
-            m_data = m_data.subspan(length);
+            skip(m_data, length);
 
             auto resultColorSpace = PredefinedColorSpace::SRGB;
             if (m_majorVersion > 7) {

@@ -38,6 +38,7 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/ZippedRange.h>
+#include <wtf/text/ParsingUtilities.h>
 
 namespace WebCore {
 
@@ -69,10 +70,8 @@ CheckedSize CARingBuffer::computeSizeForBuffers(size_t bytesPerFrame, size_t fra
 void CARingBuffer::initialize()
 {
     auto channelData = span();
-    for (auto& channel : m_channels) {
-        channel = channelData.first(m_capacityBytes);
-        channelData = channelData.subspan(m_capacityBytes);
-    }
+    for (auto& channel : m_channels)
+        channel = consumeSpan(channelData, m_capacityBytes);
 }
 
 static void ZeroRange(Vector<std::span<Byte>>& channels, size_t offset, size_t nbytes)
@@ -91,7 +90,7 @@ static void StoreABL(Vector<std::span<Byte>>& channels, size_t destOffset, const
             continue;
         auto srcData = span<Byte>(buffers[0]);
         memcpySpan(channel.subspan(destOffset), srcData.subspan(srcOffset, std::min<size_t>(nbytes, src->mDataByteSize - srcOffset)));
-        buffers = buffers.subspan(1);
+        skip(buffers, 1);
     }
 }
 
@@ -161,7 +160,7 @@ inline void ZeroABL(AudioBufferList* list, size_t destOffset, size_t nbytes)
         if (nbytes < dataSpan.size())
             dataSpan = dataSpan.first(nbytes);
         zeroSpan(dataSpan);
-        destinations = destinations.subspan(1);
+        skip(destinations, 1);
     }
 }
 

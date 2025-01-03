@@ -48,7 +48,7 @@ static ExceptionOr<Vector<uint8_t>> transformAESCFB(CCOperation operation, const
 
     auto p = result.mutableSpan().subspan(bytesWritten);
     status = CCCryptorFinal(cryptor, p.data(), p.size(), &bytesWritten);
-    p = p.subspan(bytesWritten);
+    skip(p, bytesWritten);
     if (status)
         return Exception { ExceptionCode::OperationError };
 

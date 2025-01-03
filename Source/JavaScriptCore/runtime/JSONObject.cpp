@@ -1307,7 +1307,7 @@ void FastStringifier<CharType, bufferMode>::append(JSValue value)
                 WTF::appendEscapedJSONStringContent(output, string.data.span16());
         } else
             WTF::appendEscapedJSONStringContent(output, string.data.span8());
-        consumeSingleElement(output) = '"';
+        consume(output) = '"';
         m_length = output.data() - buffer();
         return;
     }

@@ -12,6 +12,7 @@
 #pragma once
 
 #include <wtf/text/EscapedFormsForJSON.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilderInternals.h>
 #include <wtf/text/WTFString.h>
 
@@ -20,32 +21,30 @@ namespace WTF {
 template<typename OutputCharacterType, typename InputCharacterType>
 ALWAYS_INLINE static void appendEscapedJSONStringContent(std::span<OutputCharacterType>& output, std::span<const InputCharacterType> input)
 {
-    for (; !input.empty(); input = input.subspan(1)) {
+    for (; !input.empty(); skip(input, 1)) {
         auto character = input.front();
         if (LIKELY(character <= 0xFF)) {
             auto escaped = escapedFormsForJSON[character];
             if (LIKELY(!escaped)) {
-                output[0] = character;
-                output = output.subspan(1);
+                consume(output) = character;
                 continue;
             }
 
             output[0] = '\\';
             output[1] = escaped;
-            output = output.subspan(2);
+            skip(output, 2);
             if (UNLIKELY(escaped == 'u')) {
                 output[0] = '0';
                 output[1] = '0';
                 output[2] = upperNibbleToLowercaseASCIIHexDigit(character);
                 output[3] = lowerNibbleToLowercaseASCIIHexDigit(character);
-                output = output.subspan(4);
+                skip(output, 4);
             }
             continue;
         }
 
         if (LIKELY(!U16_IS_SURROGATE(character))) {
-            output[0] = character;
-            output = output.subspan(1);
+            consume(output) = character;
             continue;
         }
 
@@ -55,8 +54,8 @@ ALWAYS_INLINE static void appendEscapedJSONStringContent(std::span<OutputCharact
             if (isValidSurrogatePair) {
                 output[0] = character;
                 output[1] = next;
-                output = output.subspan(2);
-                input = input.subspan(1);
+                skip(output, 2);
+                skip(input, 1);
                 continue;
             }
         }
@@ -69,7 +68,7 @@ ALWAYS_INLINE static void appendEscapedJSONStringContent(std::span<OutputCharact
         output[3] = lowerNibbleToLowercaseASCIIHexDigit(upper);
         output[4] = upperNibbleToLowercaseASCIIHexDigit(lower);
         output[5] = lowerNibbleToLowercaseASCIIHexDigit(lower);
-        output = output.subspan(6);
+        skip(output, 6);
     }
 }
 

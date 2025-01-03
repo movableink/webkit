@@ -44,6 +44,11 @@ template<typename CharacterType> inline bool isNotASCIISpace(CharacterType c)
     return !isUnicodeCompatibleASCIIWhitespace(c);
 }
 
+template<typename T> void skip(std::span<T>& data, size_t amountToSkip)
+{
+    data = data.subspan(amountToSkip);
+}
+
 template<typename CharacterType, typename DelimiterType> bool skipExactly(const CharacterType*& position, const CharacterType* end, DelimiterType delimiter)
 {
     if (position < end && *position == delimiter) {
@@ -56,7 +61,7 @@ template<typename CharacterType, typename DelimiterType> bool skipExactly(const 
 template<typename CharacterType, typename DelimiterType> bool skipExactly(std::span<const CharacterType>& data, DelimiterType delimiter)
 {
     if (!data.empty() && data.front() == delimiter) {
-        data = data.subspan(1);
+        skip(data, 1);
         return true;
     }
     return false;
@@ -110,7 +115,7 @@ template<bool characterPredicate(UChar)> bool skipExactly(StringParsingBuffer<UC
 template<bool characterPredicate(LChar)> bool skipExactly(std::span<const LChar>& buffer)
 {
     if (!buffer.empty() && characterPredicate(buffer[0])) {
-        buffer = buffer.subspan(1);
+        skip(buffer, 1);
         return true;
     }
     return false;
@@ -119,7 +124,7 @@ template<bool characterPredicate(LChar)> bool skipExactly(std::span<const LChar>
 template<bool characterPredicate(UChar)> bool skipExactly(std::span<const UChar>& buffer)
 {
     if (!buffer.empty() && characterPredicate(buffer[0])) {
-        buffer = buffer.subspan(1);
+        skip(buffer, 1);
         return true;
     }
     return false;
@@ -135,6 +140,14 @@ template<typename CharacterType, typename DelimiterType> void skipUntil(StringPa
 {
     while (buffer.hasCharactersRemaining() && *buffer != delimiter)
         ++buffer;
+}
+
+template<typename CharacterType, typename DelimiterType> void skipUntil(std::span<const CharacterType>& buffer, DelimiterType delimiter)
+{
+    size_t index = 0;
+    while (index < buffer.size() && buffer[index] != delimiter)
+        ++index;
+    skip(buffer, index);
 }
 
 template<bool characterPredicate(LChar)> void skipUntil(const LChar*& position, const LChar* end)
@@ -154,7 +167,7 @@ template<bool characterPredicate(LChar)> void skipUntil(std::span<const LChar>& 
     size_t index = 0;
     while (index < data.size() && !characterPredicate(data[index]))
         ++index;
-    data = data.subspan(index);
+    skip(data, index);
 }
 
 template<bool characterPredicate(UChar)> void skipUntil(std::span<const UChar>& data)
@@ -162,7 +175,7 @@ template<bool characterPredicate(UChar)> void skipUntil(std::span<const UChar>& 
     size_t index = 0;
     while (index < data.size() && !characterPredicate(data[index]))
         ++index;
-    data = data.subspan(index);
+    skip(data, index);
 }
 
 template<bool characterPredicate(LChar)> void skipUntil(StringParsingBuffer<LChar>& buffer)
@@ -183,6 +196,14 @@ template<typename CharacterType, typename DelimiterType> void skipWhile(StringPa
         ++buffer;
 }
 
+template<typename CharacterType, typename DelimiterType> void skipWhile(std::span<const CharacterType>& buffer, DelimiterType delimiter)
+{
+    size_t index = 0;
+    while (index < buffer.size() && buffer[index] == delimiter)
+        ++index;
+    skip(buffer, index);
+}
+
 template<bool characterPredicate(LChar)> void skipWhile(const LChar*& position, const LChar* end)
 {
     while (position < end && characterPredicate(*position))
@@ -200,7 +221,7 @@ template<bool characterPredicate(LChar)> void skipWhile(std::span<const LChar>& 
     size_t index = 0;
     while (index < data.size() && characterPredicate(data[index]))
         ++index;
-    data = data.subspan(index);
+    skip(data, index);
 }
 
 template<bool characterPredicate(UChar)> void skipWhile(std::span<const UChar>& data)
@@ -208,7 +229,7 @@ template<bool characterPredicate(UChar)> void skipWhile(std::span<const UChar>& 
     size_t index = 0;
     while (index < data.size() && characterPredicate(data[index]))
         ++index;
-    data = data.subspan(index);
+    skip(data, index);
 }
 
 template<bool characterPredicate(LChar)> void skipWhile(StringParsingBuffer<LChar>& buffer)
@@ -278,7 +299,7 @@ template<typename CharacterType, std::size_t Extent> bool skipLettersExactlyIgno
         return false;
     if (!equalLettersIgnoringASCIICaseWithLength(buffer, letters, letters.size()))
         return false;
-    buffer = buffer.subspan(letters.size());
+    skip(buffer, letters.size());
     return true;
 }
 
@@ -290,18 +311,32 @@ template<typename CharacterType, std::size_t Extent> constexpr bool skipCharacte
     return true;
 }
 
-template<typename T> T& consumeSingleElement(std::span<T>& data)
+template<typename CharacterType, std::size_t Extent> constexpr bool skipCharactersExactly(std::span<const CharacterType>& buffer, std::span<const CharacterType, Extent> string)
 {
-    T& value = data[0];
-    data = data.subspan(1);
-    return value;
+    if (!spanHasPrefix(buffer, string))
+        return false;
+    skip(buffer, string.size());
+    return true;
 }
 
 template<typename T> std::span<T> consumeSpan(std::span<T>& data, size_t amountToConsume)
 {
     auto consumed = data.first(amountToConsume);
-    data = data.subspan(amountToConsume);
+    skip(data, amountToConsume);
     return consumed;
+}
+
+template<typename T> T& consume(std::span<T>& data)
+{
+    T& value = data[0];
+    skip(data, 1);
+    return value;
+}
+
+template<typename DestinationType, typename SourceType>
+match_constness_t<SourceType, DestinationType>& consumeAndCastTo(std::span<SourceType>& data) requires(sizeof(SourceType) == 1)
+{
+    return spanReinterpretCast<match_constness_t<SourceType, DestinationType>>(consumeSpan(data, sizeof(DestinationType)))[0];
 }
 
 // Adapt a UChar-predicate to an LChar-predicate.
@@ -311,10 +346,12 @@ static inline bool LCharPredicateAdapter(LChar c) { return characterPredicate(c)
 } // namespace WTF
 
 using WTF::LCharPredicateAdapter;
-using WTF::consumeSingleElement;
+using WTF::consume;
+using WTF::consumeAndCastTo;
 using WTF::consumeSpan;
 using WTF::isNotASCIISpace;
 using WTF::reverseSkipWhile;
+using WTF::skip;
 using WTF::skipCharactersExactly;
 using WTF::skipExactly;
 using WTF::skipExactlyIgnoringASCIICase;

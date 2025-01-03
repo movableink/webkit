@@ -27,6 +27,7 @@
 #include "OSLogPrintStream.h"
 
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/ParsingUtilities.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -76,7 +77,7 @@ ALLOW_NONLITERAL_FORMAT_END
             // Set the new line to a null character so os_log stops copying there.
             buffer[offset] = '\0';
             os_log_with_type(m_log, m_logType, "%{public}s", buffer.data());
-            buffer = buffer.subspan(offset + 1);
+            skip(buffer, offset + 1);
             newOffset -= offset + 1;
             offset = 0;
             loggedText = true;

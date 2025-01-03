@@ -35,6 +35,7 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/Threading.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/unicode/CharacterNames.h>
 #include <wtf/unicode/icu/ICUHelpers.h>
@@ -182,7 +183,7 @@ int TextCodecICU::decodeToBuffer(std::span<UChar> targetSpan, std::span<const ui
     auto* target = targetSpan.data();
     auto* targetLimit = std::to_address(targetSpan.end());
     ucnv_toUnicode(m_converter.get(), &target, targetLimit, &source, sourceLimit, offsets, flush, &error);
-    sourceSpan = sourceSpan.subspan(byteCast<uint8_t>(source) - sourceSpan.data());
+    skip(sourceSpan, byteCast<uint8_t>(source) - sourceSpan.data());
     return target - targetStart;
 }
 

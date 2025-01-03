@@ -35,6 +35,7 @@
 #include "VectorMath.h"
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/ParsingUtilities.h>
 
 namespace WebCore {
 
@@ -400,7 +401,7 @@ void OscillatorNode::process(size_t framesToProcess)
     auto phaseIncrements = m_phaseIncrements.span();
 
     // Start rendering at the correct offset.
-    destination = destination.subspan(quantumFrameOffset);
+    skip(destination, quantumFrameOffset);
     int n = nonSilentFramesToProcess;
 
     // If startFrameOffset is not 0, that means the oscillator doesn't actually
@@ -408,7 +409,7 @@ void OscillatorNode::process(size_t framesToProcess)
     // to reflect that, and adjust virtualReadIndex to start the value at
     // startFrameOffset.
     if (startFrameOffset > 0) {
-        destination = destination.subspan(1);
+        skip(destination, 1);
         --n;
         virtualReadIndex += (1 - startFrameOffset) * frequency * rateScale;
         ASSERT(virtualReadIndex < m_periodicWave->periodicWaveSize());

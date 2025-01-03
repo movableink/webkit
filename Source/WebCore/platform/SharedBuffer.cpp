@@ -34,6 +34,7 @@
 #include <wtf/HexNumber.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/persistence/PersistentCoders.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/unicode/UTF8Conversion.h>
 
@@ -234,7 +235,7 @@ Ref<SharedBuffer> FragmentedSharedBuffer::getContiguousData(size_t position, siz
     combinedData.reserveInitialCapacity(length);
     combinedData.append(element.segment->span().subspan(offsetInSegment));
 
-    for (elements = elements.subspan(1); combinedData.size() < length && !elements.empty(); elements = elements.subspan(1)) {
+    for (skip(elements, 1); combinedData.size() < length && !elements.empty(); skip(elements, 1)) {
         auto& element = elements[0];
         auto canCopy = std::min(length - combinedData.size(), element.segment->size());
         combinedData.append(element.segment->span().first(canCopy));
@@ -368,7 +369,7 @@ bool FragmentedSharedBuffer::startsWith(std::span<const uint8_t> prefix) const
         remaining -= amountToCompareThisTime;
         if (!remaining)
             return true;
-        prefix = prefix.subspan(amountToCompareThisTime);
+        skip(prefix, amountToCompareThisTime);
     }
     return false;
 }
@@ -392,7 +393,7 @@ Vector<uint8_t> FragmentedSharedBuffer::read(size_t offset, size_t length) const
     remaining -= availableInSegment;
 
     while (remaining) {
-        segments = segments.subspan(1);
+        skip(segments, 1);
         if (segments.empty())
             break;
         auto& currentSegment = segments[0];
@@ -423,7 +424,7 @@ void FragmentedSharedBuffer::copyTo(std::span<uint8_t> destination, size_t offse
         };
         auto* segment = std::upper_bound(m_segments.begin(), m_segments.end(), offset, comparator);
         // std::upper_bound gives a pointer to the segment that is greater than offset. We want the segment just before that.
-        segments = segments.subspan(segment - m_segments.begin() - 1);
+        skip(segments, segment - m_segments.begin() - 1);
     }
 
     auto& segment = segments[0];
@@ -433,17 +434,17 @@ void FragmentedSharedBuffer::copyTo(std::span<uint8_t> destination, size_t offse
     remaining -= amountToCopyThisTime;
     if (!remaining)
         return;
-    destination = destination.subspan(amountToCopyThisTime);
+    skip(destination, amountToCopyThisTime);
 
     // If we reach here, there must be at least another segment available as we have content left to be fetched.
-    for (segments = segments.subspan(1); !segments.empty(); segments = segments.subspan(1)) {
+    for (skip(segments, 1); !segments.empty(); skip(segments, 1)) {
         auto& segment = segments[0];
         size_t amountToCopyThisTime = std::min(remaining, segment.segment->size());
         memcpySpan(destination, segment.segment->span().first(amountToCopyThisTime));
         remaining -= amountToCopyThisTime;
         if (!remaining)
             return;
-        destination = destination.subspan(amountToCopyThisTime);
+        skip(destination, amountToCopyThisTime);
     }
 }
 
@@ -484,8 +485,8 @@ bool FragmentedSharedBuffer::operator==(const FragmentedSharedBuffer& other) con
         auto& otherSegment = otherSpan[0].segment.get();
 
         if (&thisSegment == &otherSegment && !thisOffset && !otherOffset) {
-            thisSpan = thisSpan.subspan(1);
-            otherSpan = otherSpan.subspan(1);
+            skip(thisSpan, 1);
+            skip(otherSpan, 1);
             continue;
         }
 
@@ -503,12 +504,12 @@ bool FragmentedSharedBuffer::operator==(const FragmentedSharedBuffer& other) con
         otherOffset += remaining;
 
         if (thisOffset == thisSegment.size()) {
-            thisSpan = thisSpan.subspan(1);
+            skip(thisSpan, 1);
             thisOffset = 0;
         }
 
         if (otherOffset == otherSegment.size()) {
-            otherSpan = otherSpan.subspan(1);
+            skip(otherSpan, 1);
             otherOffset = 0;
         }
     }
