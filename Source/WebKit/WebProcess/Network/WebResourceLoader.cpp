@@ -98,11 +98,11 @@ void WebResourceLoader::detachFromCoreLoader()
 
 MainFrameMainResource WebResourceLoader::mainFrameMainResource() const
 {
-    auto* frame = m_coreLoader->frame();
+    RefPtr frame = m_coreLoader->frame();
     if (!frame || !frame->isMainFrame())
         return MainFrameMainResource::No;
 
-    auto* frameLoader = m_coreLoader->frameLoader();
+    RefPtr frameLoader = m_coreLoader->frameLoader();
     if (!frameLoader)
         return MainFrameMainResource::No;
 
@@ -122,8 +122,8 @@ void WebResourceLoader::willSendRequest(ResourceRequest&& proposedRequest, IPC::
     LOG(Network, "(WebProcess) WebResourceLoader::willSendRequest to '%s'", proposedRequest.url().string().latin1().data());
     WEBRESOURCELOADER_RELEASE_LOG(WEBRESOURCELOADER_WILLSENDREQUEST);
     
-    if (auto* frame = m_coreLoader->frame()) {
-        if (auto* page = frame->page()) {
+    if (RefPtr frame = m_coreLoader->frame()) {
+        if (RefPtr page = frame->page()) {
             if (!page->allowsLoadFromURL(proposedRequest.url(), mainFrameMainResource()))
                 proposedRequest = { };
         }
@@ -320,8 +320,8 @@ void WebResourceLoader::didReceiveResource(ShareableResource::Handle&& handle)
     if (!buffer) {
         LOG_ERROR("Unable to create buffer from ShareableResource sent from the network process.");
         WEBRESOURCELOADER_RELEASE_LOG(WEBRESOURCELOADER_DIDRECEIVERESOURCE_UNABLE_TO_CREATE_FRAGMENTEDSHAREDBUFFER);
-        if (auto* frame = m_coreLoader->frame()) {
-            if (auto* page = frame->page())
+        if (RefPtr frame = m_coreLoader->frame()) {
+            if (RefPtr page = frame->page())
                 page->diagnosticLoggingClient().logDiagnosticMessage(WebCore::DiagnosticLoggingKeys::internalErrorKey(), WebCore::DiagnosticLoggingKeys::createSharedBufferFailedKey(), WebCore::ShouldSample::No);
         }
         m_coreLoader->didFail(internalError(m_coreLoader->request().url()));

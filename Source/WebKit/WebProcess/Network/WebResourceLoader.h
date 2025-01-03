@@ -107,7 +107,7 @@ private:
 #endif
     
     RefPtr<WebCore::ResourceLoader> m_coreLoader;
-    TrackingParameters m_trackingParameters;
+    const TrackingParameters m_trackingParameters;
     WebResourceInterceptController m_interceptController;
     size_t m_numBytesReceived { 0 };
 
@@ -117,7 +117,7 @@ private:
 
     Seconds timeSinceLoadStart() const { return MonotonicTime::now() - m_loadStart; }
 
-    MonotonicTime m_loadStart;
+    const MonotonicTime m_loadStart;
     MonotonicTime m_workerStart;
 };
 
