@@ -137,7 +137,7 @@ ProvisionalPageProxy::ProvisionalPageProxy(WebPageProxy& page, Ref<FrameProcess>
         else
             m_mainFrame->frameLoadState().didStartProvisionalLoad(m_request.url());
         page.didReceiveServerRedirectForProvisionalLoadForFrameShared(protectedProcess(), m_mainFrame->frameID(), m_navigationID, WTFMove(m_request), { });
-    } else if (previousMainFrame && !previousMainFrame->provisionalURL().isEmpty()) {
+    } else if (previousMainFrame && !previousMainFrame->provisionalURL().isEmpty() && !page.preferences().siteIsolationEnabled()) {
         // In case of a process swap after response policy, the didStartProvisionalLoad already happened but the new main frame doesn't know about it
         // so we need to tell it so it can update its provisional URL.
         m_mainFrame->didStartProvisionalLoad(previousMainFrame->provisionalURL());

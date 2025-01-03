@@ -966,7 +966,8 @@ WebPageProxyMessageReceiverRegistration& WebPageProxy::messageReceiverRegistrati
 
 std::optional<SharedPreferencesForWebProcess> WebPageProxy::sharedPreferencesForWebProcess(IPC::Connection& connection) const
 {
-    return protectedBrowsingContextGroup()->ensureProcessForConnection(connection, const_cast<WebPageProxy&>(*this), protectedPreferences())->process().sharedPreferencesForWebProcess();
+    RefPtr process = WebProcessProxy::processForConnection(connection);
+    return process ? process->sharedPreferencesForWebProcess() : std::nullopt;
 }
 
 bool WebPageProxy::attachmentElementEnabled()
@@ -8088,6 +8089,7 @@ void WebPageProxy::triggerBrowsingContextGroupSwitchForNavigation(WebCore::Navig
         return completionHandler(false);
 
     m_openedMainFrameName = { };
+    m_browsingContextGroup = BrowsingContextGroup::create();
 
     RefPtr<WebProcessProxy> processForNavigation;
     RefPtr provisionalPage = m_provisionalPage;
