@@ -24,7 +24,7 @@
 #if ENABLE_SWIFTUI && compiler(>=6.0)
 
 import Foundation
-import SwiftUI
+public import SwiftUI
 
 extension EnvironmentValues {
     @Entry var webViewAllowsBackForwardNavigationGestures = false

@@ -273,7 +273,9 @@ struct ContentView: View {
                             viewModel.page.load(backForwardItem: $0)
                         }
 
+                        #if os(iOS)
                         Spacer()
+                        #endif
 
                         ToolbarBackForwardMenuView(
                             list: viewModel.page.backForwardList.forwardList,
@@ -293,6 +295,8 @@ struct ContentView: View {
                                 .labelStyle(.iconOnly)
                         }
 
+                        #endif
+
                         Spacer()
 
                         Button {
@@ -302,8 +306,6 @@ struct ContentView: View {
                                 .labelStyle(.iconOnly)
                         }
                         .keyboardShortcut("f")
-
-                        #endif
                     }
                     
                     ToolbarItemGroup(placement: .principal) {

@@ -21,46 +21,21 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
-import SwiftUI
-@_spi(Private) import WebKit
+#if ENABLE_SWIFTUI && compiler(>=6.0)
 
-@main
-struct SwiftBrowserApp: App {
-    @FocusedValue(BrowserViewModel.self) var focusedBrowserViewModel
+public import SwiftUI // FIXME: (283455) Do not import SwiftUI in WebKit proper.
 
-    @State private var mostRecentURL: URL? = nil
+@_spi(Private)
+public struct WebView_v0: View {
+    public init(_ page: WebPage_v0) {
+        self.page = page
+    }
 
-    var body: some Scene {
-        WindowGroup {
-            BrowserView(url: $mostRecentURL)
-        }
-        .commands {
-            CommandGroup(after: .sidebar) {
-                Button("Reload Page") {
-                    focusedBrowserViewModel!.page.reload()
-                }
-                .keyboardShortcut("r")
-                .disabled(focusedBrowserViewModel == nil)
-            }
+    let page: WebPage_v0
 
-            CommandGroup(replacing: .importExport) {
-                Button("Export as PDF…") {
-                    focusedBrowserViewModel!.exportAsPDF()
-                }
-                .disabled(focusedBrowserViewModel == nil)
-            }
-
-            TextEditingCommands()
-        }
-
-        #if os(macOS)
-        UtilityWindow("Downloads", id: "downloads") {
-            DownloadsList(downloads: focusedBrowserViewModel?.downloadCoordinator.downloads ?? [])
-        }
-
-        Settings {
-            SettingsView(currentURL: mostRecentURL)
-        }
-        #endif
+    public var body: some View {
+        WebViewRepresentable(owner: self)
     }
 }
+
+#endif

@@ -25,6 +25,7 @@
 
 import Foundation
 import Observation
+internal import WebKit_Private
 
 @MainActor
 final class WebPageWebView: WKWebView {
@@ -257,6 +258,9 @@ public class WebPage_v0 {
     @ObservationIgnored
     lazy var backingWebView: WebPageWebView = {
         let webView = WebPageWebView(frame: .zero, configuration: WKWebViewConfiguration(configuration))
+#if os(macOS)
+        webView._usePlatformFindUI = false
+#endif
         webView.navigationDelegate = backingNavigationDelegate
         webView.uiDelegate = backingUIDelegate
         return webView

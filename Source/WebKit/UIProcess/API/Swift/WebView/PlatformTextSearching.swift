@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Apple Inc. All rights reserved.
+// Copyright (C) 2025 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions
@@ -21,46 +21,60 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
-import SwiftUI
-@_spi(Private) import WebKit
+#if ENABLE_SWIFTUI && compiler(>=6.0)
 
-@main
-struct SwiftBrowserApp: App {
-    @FocusedValue(BrowserViewModel.self) var focusedBrowserViewModel
+import Foundation
 
-    @State private var mostRecentURL: URL? = nil
+@MainActor
+protocol PlatformTextSearching {
+    associatedtype Interaction: PlatformFindInteraction
 
-    var body: some Scene {
-        WindowGroup {
-            BrowserView(url: $mostRecentURL)
+    var isFindNavigatorVisible: Bool { get }
+
+    var findInteraction: Interaction? { get }
+}
+
+@MainActor
+protocol PlatformFindInteraction {
+    func presentFindNavigator(showingReplace: Bool)
+
+    func dismissFindNavigator()
+}
+
+#if os(macOS)
+
+@MainActor
+struct NSTextFinderAdapter: PlatformFindInteraction {
+    let wrapped: NSTextFinder
+
+    func presentFindNavigator(showingReplace: Bool) {
+        if showingReplace {
+            wrapped.performAction(.showReplaceInterface)
+        } else {
+            wrapped.performAction(.showFindInterface)
         }
-        .commands {
-            CommandGroup(after: .sidebar) {
-                Button("Reload Page") {
-                    focusedBrowserViewModel!.page.reload()
-                }
-                .keyboardShortcut("r")
-                .disabled(focusedBrowserViewModel == nil)
-            }
+    }
 
-            CommandGroup(replacing: .importExport) {
-                Button("Export as PDF…") {
-                    focusedBrowserViewModel!.exportAsPDF()
-                }
-                .disabled(focusedBrowserViewModel == nil)
-            }
-
-            TextEditingCommands()
-        }
-
-        #if os(macOS)
-        UtilityWindow("Downloads", id: "downloads") {
-            DownloadsList(downloads: focusedBrowserViewModel?.downloadCoordinator.downloads ?? [])
-        }
-
-        Settings {
-            SettingsView(currentURL: mostRecentURL)
-        }
-        #endif
+    func dismissFindNavigator() {
+        wrapped.performAction(.hideFindInterface)
     }
 }
+
+#else
+
+@MainActor
+struct UIFindInteractionAdapter: PlatformFindInteraction {
+    let wrapped: UIFindInteraction
+    
+    func presentFindNavigator(showingReplace: Bool) {
+        wrapped.presentFindNavigator(showingReplace: showingReplace)
+    }
+
+    func dismissFindNavigator() {
+        wrapped.dismissFindNavigator()
+    }
+}
+
+#endif
+
+#endif
