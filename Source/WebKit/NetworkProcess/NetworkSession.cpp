@@ -526,6 +526,9 @@ void NetworkSession::setShouldSendPrivateTokenIPCForTesting(bool enabled)
 #if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
 void NetworkSession::setOptInCookiePartitioningEnabled(bool enabled)
 {
+    if (!m_resourceLoadStatistics)
+        return;
+
     RELEASE_LOG(Storage, "NetworkSession::setOptInCookiePartitioningEnabled as %" PUBLIC_LOG_STRING " for session %" PRIu64, enabled ? "enabled" : "disabled", m_sessionID.toUInt64());
     if (CheckedPtr storageSession = networkStorageSession())
         storageSession->setOptInCookiePartitioningEnabled(enabled);

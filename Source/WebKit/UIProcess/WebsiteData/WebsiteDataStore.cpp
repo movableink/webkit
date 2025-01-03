@@ -1926,7 +1926,7 @@ void WebsiteDataStore::propagateSettingUpdates()
 
 #if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
     enabled = isOptInCookiePartitioningEnabled();
-    if (m_isOptInCookiePartitioningEnabled != enabled) {
+    if (m_isOptInCookiePartitioningEnabled != enabled && trackingPreventionEnabled()) {
         m_isOptInCookiePartitioningEnabled = enabled;
         networkProcess->send(Messages::NetworkProcess::SetOptInCookiePartitioningEnabled(sessionID(), enabled), 0);
 
