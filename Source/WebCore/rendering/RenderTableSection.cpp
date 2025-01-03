@@ -28,8 +28,10 @@
 
 #include "BorderPainter.h"
 #include "Document.h"
-#include "HitTestResult.h"
+#include "HTMLFieldSetElement.h"
+#include "HTMLFormControlElement.h"
 #include "HTMLNames.h"
+#include "HitTestResult.h"
 #include "PaintInfo.h"
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
@@ -473,7 +475,9 @@ static bool shouldFlexCellChild(const RenderTableCell& cell, const RenderBox& ce
         return false;
     if (cellDescendant.scrollsOverflowY())
         return true;
-    return cellDescendant.shouldTreatChildAsReplaced();
+    if (cellDescendant.isReplacedOrAtomicInline())
+        return true;
+    return is<HTMLFormControlElement>(cellDescendant.element()) && !is<HTMLFieldSetElement>(cellDescendant.element());
 }
 
 void RenderTableSection::relayoutCellIfFlexed(RenderTableCell& cell, int rowIndex, int rowHeight)
