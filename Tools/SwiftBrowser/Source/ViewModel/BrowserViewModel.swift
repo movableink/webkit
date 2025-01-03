@@ -39,60 +39,6 @@ extension PDF: Transferable {
     }
 }
 
-@MainActor
-final class DialogPresenter: DialogPresenting {
-    struct Dialog: Hashable, Identifiable, Sendable {
-        enum Configuration: Sendable {
-            case alert(String, @Sendable () -> Void)
-            case confirm(String, @Sendable (sending WebPage_v0.JavaScriptConfirmResult) -> Void)
-            case prompt(String, defaultText: String?, @Sendable (sending WebPage_v0.JavaScriptPromptResult) -> Void)
-        }
-
-        let id = UUID()
-        let configuration: Configuration
-
-        func hash(into hasher: inout Hasher) {
-            hasher.combine(id)
-        }
-
-        static func == (lhs: Dialog, rhs: Dialog) -> Bool {
-            lhs.id == rhs.id
-        }
-    }
-
-    struct FilePicker {
-        let allowsMultipleSelection: Bool
-        let allowsDirectories: Bool
-        let completion: @Sendable (sending WebPage_v0.FileInputPromptResult) -> Void
-    }
-
-    weak var owner: BrowserViewModel? = nil
-
-    func handleJavaScriptAlert(message: String, initiatedBy frame: WebPage_v0.FrameInfo) async {
-        await withCheckedContinuation { continuation in
-            owner?.currentDialog = Dialog(configuration: .alert(message, continuation.resume))
-        }
-    }
-
-    func handleJavaScriptConfirm(message: String, initiatedBy frame: WebPage_v0.FrameInfo) async -> WebPage_v0.JavaScriptConfirmResult {
-        await withCheckedContinuation { continuation in
-            owner?.currentDialog = Dialog(configuration: .confirm(message, continuation.resume(returning:)))
-        }
-    }
-
-    func handleJavaScriptPrompt(message: String, defaultText: String?, initiatedBy frame: WebPage_v0.FrameInfo) async -> WebPage_v0.JavaScriptPromptResult {
-        await withCheckedContinuation { continuation in
-            owner?.currentDialog = Dialog(configuration: .prompt(message, defaultText: defaultText, continuation.resume(returning:)))
-        }
-    }
-
-    func handleFileInputPrompt(parameters: WKOpenPanelParameters, initiatedBy frame: WebPage_v0.FrameInfo) async -> WebPage_v0.FileInputPromptResult {
-        await withCheckedContinuation { continuation in
-            owner?.currentFilePicker = FilePicker(allowsMultipleSelection: parameters.allowsMultipleSelection, allowsDirectories: parameters.allowsDirectories, completion: continuation.resume(returning:))
-        }
-    }
-}
-
 @Observable
 @MainActor
 final class BrowserViewModel {
@@ -116,12 +62,17 @@ final class BrowserViewModel {
         var configuration = WebPage.Configuration()
         configuration.deviceSensorAuthorization = WebPage.DeviceSensorAuthorization(decisionHandler: Self.decideSensorAuthorization(permission:frame:origin:))
 
-        self.page = WebPage(configuration: configuration, dialogPresenter: self.dialogPresenter)
+        self.page = WebPage(configuration: configuration, navigationDecider: self.navigationDecider, dialogPresenter: self.dialogPresenter, downloadCoordinator: self.downloadCoordinator)
+
+        
         self.dialogPresenter.owner = self
     }
 
     let page: WebPage
+    let downloadCoordinator = DownloadCoordinator()
+
     private let dialogPresenter = DialogPresenter()
+    private let navigationDecider = NavigationDecider()
 
     var displayedURL: String = ""
 

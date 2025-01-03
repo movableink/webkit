@@ -21,27 +21,16 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
-#if ENABLE_SWIFTUI && compiler(>=6.0)
-
 import Foundation
-internal import WebKit_Internal
+@_spi(Private) import WebKit
 
-extension WebPage_v0 {
-    @MainActor
-    @_spi(Private)
-    public struct FrameInfo: Sendable {
-        init(_ wrapped: WKFrameInfo) {
-            self.wrapped = wrapped
-        }
+@MainActor
+final class NavigationDecider: NavigationDeciding {
+    func decidePolicy(for action: WebPage_v0.NavigationAction, preferences: inout WebPage_v0.NavigationPreferences) async -> WKNavigationActionPolicy {
+        action.shouldPerformDownload ? .download : .allow
+    }
 
-        public var isMainFrame: Bool { wrapped.isMainFrame }
-
-        public var request: URLRequest { wrapped.request }
-
-        public var securityOrigin: WKSecurityOrigin { wrapped.securityOrigin }
-
-        var wrapped: WKFrameInfo
+    func decidePolicy(for response: WebPage_v0.NavigationResponse) async -> WKNavigationResponsePolicy {
+        response.canShowMimeType && !response.response.hasAttachment ? .allow : .download
     }
 }
-
-#endif

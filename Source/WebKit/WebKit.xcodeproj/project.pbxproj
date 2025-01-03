@@ -139,7 +139,10 @@
 		0701789E23BE9CFC005F0FAA /* RemoteMediaPlayerMIMETypeCache.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0701789B23BAE261005F0FAA /* RemoteMediaPlayerMIMETypeCache.cpp */; };
 		0712654928EE06F800AE69D7 /* WebChromeClientCocoa.mm in Sources */ = {isa = PBXBuildFile; fileRef = 0712654728EE06F800AE69D7 /* WebChromeClientCocoa.mm */; };
 		0718F0C12D19046F0060C030 /* Foundation+Extras.swift in Sources */ = {isa = PBXBuildFile; fileRef = 073EFBB72D0F448500FAE7CF /* Foundation+Extras.swift */; };
+		0718F1152D1B57940060C030 /* WebPage+Download.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0718F1142D1B57940060C030 /* WebPage+Download.swift */; };
+		0718F1172D1C73450060C030 /* WKDownloadDelegateAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0718F1162D1C73450060C030 /* WKDownloadDelegateAdapter.swift */; };
 		071BC59023CE1EAA00680D7C /* RemoteMediaPlayerProxyMessages.h in Headers */ = {isa = PBXBuildFile; fileRef = 071BC58D23CE1EAA00680D7C /* RemoteMediaPlayerProxyMessages.h */; };
+		07259B292D1E4BAE00B45C4E /* DownloadCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07259B282D1E4BAE00B45C4E /* DownloadCoordinator.swift */; };
 		07297F9F1C17BBEA003F0735 /* UserMediaPermissionCheckProxy.h in Headers */ = {isa = PBXBuildFile; fileRef = 07297F9D1C17BBEA003F0735 /* UserMediaPermissionCheckProxy.h */; };
 		07297F9F1C17BBEA015F0735 /* DeviceIdHashSaltStorage.h in Headers */ = {isa = PBXBuildFile; fileRef = 07297F9D1C17BBEA223F0735 /* DeviceIdHashSaltStorage.h */; };
 		07297FA31C186ADB003F0735 /* WKUserMediaPermissionCheck.h in Headers */ = {isa = PBXBuildFile; fileRef = 07297FA11C186ADB003F0735 /* WKUserMediaPermissionCheck.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -3046,6 +3049,8 @@
 		0701789C23BAE262005F0FAA /* RemoteMediaPlayerMIMETypeCache.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RemoteMediaPlayerMIMETypeCache.h; sourceTree = "<group>"; };
 		070259BE2522841C00153405 /* UserMediaPermissionRequestManagerProxy.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = UserMediaPermissionRequestManagerProxy.mm; sourceTree = "<group>"; };
 		0712654728EE06F800AE69D7 /* WebChromeClientCocoa.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = WebChromeClientCocoa.mm; sourceTree = "<group>"; };
+		0718F1142D1B57940060C030 /* WebPage+Download.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WebPage+Download.swift"; sourceTree = "<group>"; };
+		0718F1162D1C73450060C030 /* WKDownloadDelegateAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WKDownloadDelegateAdapter.swift; sourceTree = "<group>"; };
 		071BC57723C93BB700680D7C /* AudioTrackPrivateRemote.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AudioTrackPrivateRemote.h; sourceTree = "<group>"; };
 		071BC57923C93BB900680D7C /* AudioTrackPrivateRemote.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AudioTrackPrivateRemote.cpp; sourceTree = "<group>"; };
 		071BC57B23CA532400680D7C /* TrackPrivateRemoteConfiguration.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TrackPrivateRemoteConfiguration.h; sourceTree = "<group>"; };
@@ -3058,6 +3063,7 @@
 		071BC58B23CDFE7500680D7C /* RemoteMediaPlayerProxy.messages.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = RemoteMediaPlayerProxy.messages.in; sourceTree = "<group>"; };
 		071BC58C23CE1EA900680D7C /* RemoteMediaPlayerProxyMessageReceiver.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RemoteMediaPlayerProxyMessageReceiver.cpp; sourceTree = "<group>"; };
 		071BC58D23CE1EAA00680D7C /* RemoteMediaPlayerProxyMessages.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RemoteMediaPlayerProxyMessages.h; sourceTree = "<group>"; };
+		07259B282D1E4BAE00B45C4E /* DownloadCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadCoordinator.swift; sourceTree = "<group>"; };
 		0725EFAB239AE38400A538A9 /* RemoteMediaPlayerManagerProxy.messages.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = RemoteMediaPlayerManagerProxy.messages.in; sourceTree = "<group>"; };
 		0725EFAC239AE38500A538A9 /* RemoteMediaPlayerManagerProxy.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RemoteMediaPlayerManagerProxy.h; sourceTree = "<group>"; };
 		0725EFAD239B024500A538A9 /* RemoteMediaPlayerManagerProxy.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = RemoteMediaPlayerManagerProxy.cpp; sourceTree = "<group>"; };
@@ -8744,11 +8750,13 @@
 		07CB79942CE9432D00199C49 /* Swift */ = {
 			isa = PBXGroup;
 			children = (
+				07259B282D1E4BAE00B45C4E /* DownloadCoordinator.swift */,
 				078B04432CF1149200B453A6 /* URLSchemeHandler.swift */,
 				078B04B52CF2B4D300B453A6 /* View+WebViewModifiers.swift */,
 				07E2AD962CF42302000844EA /* WebPage+BackForwardList.swift */,
 				078B04452CF1154B00B453A6 /* WebPage+Configuration.swift */,
 				076897ED2D07B0BE006F9FA7 /* WebPage+DialogPresenting.swift */,
+				0718F1142D1B57940060C030 /* WebPage+Download.swift */,
 				078B04B32CF1A27F00B453A6 /* WebPage+FrameInfo.swift */,
 				07FAA74A2CE947AA00128360 /* WebPage+Navigation.swift */,
 				074E87E02CF8EA3D0059E469 /* WebPage+NavigationDeciding.swift */,
@@ -8757,6 +8765,7 @@
 				07A58C872D068CAE00CAB4ED /* WebPage+SwiftUI.swift */,
 				07CB79952CE9435700199C49 /* WebPage.swift */,
 				076CEF0B2CEEE79900E4ABD6 /* WebView.swift */,
+				0718F1162D1C73450060C030 /* WKDownloadDelegateAdapter.swift */,
 				07CB79972CE943E400199C49 /* WKNavigationDelegateAdapter.swift */,
 				076897EF2D07B330006F9FA7 /* WKUIDelegateAdapter.swift */,
 			);
@@ -19707,6 +19716,7 @@
 				526C5723284ADCBC00E08955 /* CtapCcidDriver.cpp in Sources */,
 				522F792B28D5318A0069B45B /* CtapHidDriver.cpp in Sources */,
 				2D0C56FE229F1DEA00BD33E7 /* DeviceManagementSoftLink.mm in Sources */,
+				07259B292D1E4BAE00B45C4E /* DownloadCoordinator.swift in Sources */,
 				E382D57F2C21D500005F7653 /* DownloadProxyCocoa.mm in Sources */,
 				CDCDC99E248FE8DA00A69522 /* EndowmentStateTracker.mm in Sources */,
 				E31586CE2AD610F30062ED2A /* ExtensionEventHandler.mm in Sources */,
@@ -20064,6 +20074,7 @@
 				07E2AD972CF42302000844EA /* WebPage+BackForwardList.swift in Sources */,
 				078B04462CF1154B00B453A6 /* WebPage+Configuration.swift in Sources */,
 				076897EE2D07B0BE006F9FA7 /* WebPage+DialogPresenting.swift in Sources */,
+				0718F1152D1B57940060C030 /* WebPage+Download.swift in Sources */,
 				078B04B42CF1A27F00B453A6 /* WebPage+FrameInfo.swift in Sources */,
 				07FAA74B2CE947AA00128360 /* WebPage+Navigation.swift in Sources */,
 				074E87E12CF8EA3D0059E469 /* WebPage+NavigationDeciding.swift in Sources */,
@@ -20089,6 +20100,7 @@
 				C6A4CA0C2252899800169289 /* WKBundlePageMac.mm in Sources */,
 				2D931169212F61B200044BFE /* WKContentView.mm in Sources */,
 				2D93116A212F61B500044BFE /* WKContentViewInteraction.mm in Sources */,
+				0718F1172D1C73450060C030 /* WKDownloadDelegateAdapter.swift in Sources */,
 				637281A321ADC744009E0DE6 /* WKDownloadProgress.mm in Sources */,
 				5CE9120D2293C219005BEC78 /* WKMain.mm in Sources */,
 				07CB79982CE943E400199C49 /* WKNavigationDelegateAdapter.swift in Sources */,

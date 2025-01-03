@@ -21,27 +21,23 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
-#if ENABLE_SWIFTUI && compiler(>=6.0)
-
 import Foundation
-internal import WebKit_Internal
 
-extension WebPage_v0 {
-    @MainActor
-    @_spi(Private)
-    public struct FrameInfo: Sendable {
-        init(_ wrapped: WKFrameInfo) {
-            self.wrapped = wrapped
+extension URLResponse {
+    var hasAttachment: Bool {
+        guard let httpURLResponse = self as? HTTPURLResponse else {
+            return false
         }
 
-        public var isMainFrame: Bool { wrapped.isMainFrame }
+        guard let dispositionHeader = httpURLResponse.value(forHTTPHeaderField: "Content-Disposition") else {
+            return false
+        }
 
-        public var request: URLRequest { wrapped.request }
+        guard let prefix = dispositionHeader.split(separator: ";").first else {
+            return false
+        }
 
-        public var securityOrigin: WKSecurityOrigin { wrapped.securityOrigin }
-
-        var wrapped: WKFrameInfo
+        let normalizedKey = prefix.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return normalizedKey == "attachment"
     }
 }
-
-#endif

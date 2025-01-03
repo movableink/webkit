@@ -209,6 +209,8 @@ struct ContentView: View {
 
     @State private var findNavigatorIsPresented = false
 
+    @State private var downloadsSheetPresented = false
+
     @AppStorage(AppStorageKeys.homepage) private var homepage = "https://www.webkit.org"
 
     @Environment(BrowserViewModel.self) private var viewModel
@@ -233,6 +235,11 @@ struct ContentView: View {
                         viewModel.didReceiveNavigationEvent(event)
                     }
                 }
+                .task {
+                    for await event in viewModel.page.downloads {
+                        viewModel.downloadCoordinator.didReceiveDownloadEvent(event)
+                    }
+                }
                 .onAppear {
                     viewModel.displayedURL = homepage
                     viewModel.navigateToSubmittedURL()
@@ -253,6 +260,10 @@ struct ContentView: View {
                 } message: { dialog in
                     DialogMessageView(dialog: dialog)
                 }
+                .sheet(isPresented: $downloadsSheetPresented) {
+                    DownloadsList(downloads: viewModel.downloadCoordinator.downloads)
+                        .presentationDetents([.medium, .large])
+                }
                 .toolbar {
                     ToolbarItemGroup(placement: Self.navigationToolbarItemPlacement) {
                         ToolbarBackForwardMenuView(
@@ -262,11 +273,24 @@ struct ContentView: View {
                             viewModel.page.load(backForwardItem: $0)
                         }
 
+                        Spacer()
+
                         ToolbarBackForwardMenuView(
                             list: viewModel.page.backForwardList.forwardList,
                             label: .init(text: "Forward", systemImage: "chevron.forward", key: "]")
                         ) {
                             viewModel.page.load(backForwardItem: $0)
+                        }
+
+                        #if os(iOS)
+
+                        Spacer()
+
+                        Button {
+                            downloadsSheetPresented.toggle()
+                        } label: {
+                            Label("Downloads", systemImage: "square.and.arrow.down")
+                                .labelStyle(.iconOnly)
                         }
 
                         Spacer()
@@ -278,6 +302,8 @@ struct ContentView: View {
                                 .labelStyle(.iconOnly)
                         }
                         .keyboardShortcut("f")
+
+                        #endif
                     }
                     
                     ToolbarItemGroup(placement: .principal) {

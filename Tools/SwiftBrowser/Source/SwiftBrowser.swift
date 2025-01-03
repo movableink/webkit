@@ -52,6 +52,10 @@ struct SwiftBrowserApp: App {
         }
 
         #if os(macOS)
+        UtilityWindow("Downloads", id: "downloads") {
+            DownloadsList(downloads: focusedBrowserViewModel?.downloadCoordinator.downloads ?? [])
+        }
+
         Settings {
             SettingsView(currentURL: mostRecentURL)
         }

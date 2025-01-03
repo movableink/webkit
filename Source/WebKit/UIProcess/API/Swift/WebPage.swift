@@ -79,37 +79,106 @@ public class WebPage_v0 {
         WKWebView.handlesURLScheme(scheme)
     }
 
-    private init(_configuration: Configuration, _navigationDecider navigationDecider: (any NavigationDeciding)?, _dialogPresenter dialogPresenter: (any DialogPresenting)?) {
+    // MARK: Initializers
+
+    private init(
+        _configuration: Configuration,
+        _navigationDecider navigationDecider: (any NavigationDeciding)?,
+        _dialogPresenter dialogPresenter: (any DialogPresenting)?,
+        _downloadCoordinator downloadCoordinator: (any DownloadCoordinator)?
+    ) {
         self.configuration = _configuration
 
         // FIXME: Consider whether we want to have a single value here or if the getter for `navigations` should return a fresh sequence every time.
-        let (stream, continuation) = AsyncStream.makeStream(of: NavigationEvent.self)
-        navigations = Navigations(source: stream)
+        let (navigationStream, navigationContinuation) = AsyncStream.makeStream(of: NavigationEvent.self)
+        navigations = Navigations(source: navigationStream)
 
-        backingUIDelegate = WKUIDelegateAdapter(dialogPresenter: dialogPresenter)
-        backingNavigationDelegate = WKNavigationDelegateAdapter(navigationProgressContinuation: continuation, navigationDecider: navigationDecider)
+        let (downloadStream, downloadContinuation) = AsyncStream.makeStream(of: DownloadEvent.self)
+        downloads = Downloads(source: downloadStream)
+
+        backingDownloadDelegate = WKDownloadDelegateAdapter(
+            downloadProgressContinuation: downloadContinuation,
+            downloadCoordinator: downloadCoordinator
+        )
+        backingUIDelegate = WKUIDelegateAdapter(
+            dialogPresenter: dialogPresenter
+        )
+        backingNavigationDelegate = WKNavigationDelegateAdapter(
+            navigationProgressContinuation: navigationContinuation,
+            downloadProgressContinuation: downloadContinuation,
+            navigationDecider: navigationDecider
+        )
 
         backingUIDelegate.owner = self
         backingNavigationDelegate.owner = self
+        backingDownloadDelegate.owner = self
     }
 
-    public convenience init(configuration: Configuration = Configuration(), navigationDecider: some NavigationDeciding, dialogPresenter: some DialogPresenting) {
-        self.init(_configuration: configuration, _navigationDecider: navigationDecider, _dialogPresenter: dialogPresenter)
+    public convenience init(
+        configuration: Configuration = Configuration(),
+        navigationDecider: some NavigationDeciding,
+        dialogPresenter: some DialogPresenting,
+        downloadCoordinator: some DownloadCoordinator
+    ) {
+        self.init(_configuration: configuration, _navigationDecider: navigationDecider, _dialogPresenter: dialogPresenter, _downloadCoordinator: downloadCoordinator)
     }
 
-    public convenience init(configuration: Configuration = Configuration(), dialogPresenter: some DialogPresenting) {
-        self.init(_configuration: configuration, _navigationDecider: nil, _dialogPresenter: dialogPresenter)
+    public convenience init(
+        configuration: Configuration = Configuration(),
+        navigationDecider: some NavigationDeciding,
+        dialogPresenter: some DialogPresenting
+    ) {
+        self.init(_configuration: configuration, _navigationDecider: navigationDecider, _dialogPresenter: dialogPresenter, _downloadCoordinator: nil)
     }
 
-    public convenience init(configuration: Configuration = Configuration(), navigationDecider: some NavigationDeciding) {
-        self.init(_configuration: configuration, _navigationDecider: navigationDecider, _dialogPresenter: nil)
+    public convenience init(
+        configuration: Configuration = Configuration(),
+        navigationDecider: some NavigationDeciding,
+        downloadCoordinator: some DownloadCoordinator
+    ) {
+        self.init(_configuration: configuration, _navigationDecider: navigationDecider, _dialogPresenter: nil, _downloadCoordinator: downloadCoordinator)
     }
 
-    public convenience init(configuration: Configuration = Configuration()) {
-        self.init(_configuration: configuration, _navigationDecider: nil, _dialogPresenter: nil)
+    public convenience init(
+        configuration: Configuration = Configuration(),
+        dialogPresenter: some DialogPresenting,
+        downloadCoordinator: some DownloadCoordinator
+    ) {
+        self.init(_configuration: configuration, _navigationDecider: nil, _dialogPresenter: dialogPresenter, _downloadCoordinator: downloadCoordinator)
     }
+
+    public convenience init(
+        configuration: Configuration = Configuration(),
+        dialogPresenter: some DialogPresenting
+    ) {
+        self.init(_configuration: configuration, _navigationDecider: nil, _dialogPresenter: dialogPresenter, _downloadCoordinator: nil)
+    }
+
+    public convenience init(
+        configuration: Configuration = Configuration(),
+        navigationDecider: some NavigationDeciding
+    ) {
+        self.init(_configuration: configuration, _navigationDecider: navigationDecider, _dialogPresenter: nil, _downloadCoordinator: nil)
+    }
+
+    public convenience init(
+        configuration: Configuration = Configuration(),
+        downloadCoordinator: some DownloadCoordinator
+    ) {
+        self.init(_configuration: configuration, _navigationDecider: nil, _dialogPresenter: nil, _downloadCoordinator: downloadCoordinator)
+    }
+
+    public convenience init(
+        configuration: Configuration = Configuration()
+    ) {
+        self.init(_configuration: configuration, _navigationDecider: nil, _dialogPresenter: nil, _downloadCoordinator: nil)
+    }
+
+    // MARK: Properties
 
     public let navigations: Navigations
+
+    public let downloads: Downloads
 
     public let configuration: Configuration
 
@@ -177,6 +246,7 @@ public class WebPage_v0 {
 
     private let backingNavigationDelegate: WKNavigationDelegateAdapter
     private let backingUIDelegate: WKUIDelegateAdapter
+    let backingDownloadDelegate: WKDownloadDelegateAdapter
 
     @ObservationIgnored
     private var observations = KeyValueObservations()
@@ -314,6 +384,21 @@ public class WebPage_v0 {
 
     public func setMicrophoneCaptureState(_ state: WKMediaCaptureState) async {
         await backingWebView.setMicrophoneCaptureState(state)
+    }
+
+    // MARK: Downloads
+
+    // For these to work, a custom implementation of `DownloadCoordinator.destination(forDownload:response:suggestedFilename:) async -> URL?`
+    // must be provided so that the downloads are not immediately cancelled.
+
+    func startDownload(using request: URLRequest) async -> WebPage_v0.DownloadID {
+        let cocoaDownload = await backingWebView.startDownload(using: request)
+        return WebPage_v0.DownloadID(cocoaDownload)
+    }
+
+    func resumeDownload(fromResumeData resumeData: Data) async -> WebPage_v0.DownloadID {
+        let cocoaDownload = await backingWebView.resumeDownload(fromResumeData: resumeData)
+        return WebPage_v0.DownloadID(cocoaDownload)
     }
 
     // MARK: Private helper functions

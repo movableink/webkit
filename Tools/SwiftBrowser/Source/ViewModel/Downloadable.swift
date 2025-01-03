@@ -21,27 +21,15 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
-#if ENABLE_SWIFTUI && compiler(>=6.0)
-
 import Foundation
-internal import WebKit_Internal
 
-extension WebPage_v0 {
+protocol Downloadable: Hashable, Identifiable {
+    var progress: Progress { get }
+
+    var url: URL? { get }
+
+    var finished: Bool { get }
+
     @MainActor
-    @_spi(Private)
-    public struct FrameInfo: Sendable {
-        init(_ wrapped: WKFrameInfo) {
-            self.wrapped = wrapped
-        }
-
-        public var isMainFrame: Bool { wrapped.isMainFrame }
-
-        public var request: URLRequest { wrapped.request }
-
-        public var securityOrigin: WKSecurityOrigin { wrapped.securityOrigin }
-
-        var wrapped: WKFrameInfo
-    }
+    func cancel() async
 }
-
-#endif
