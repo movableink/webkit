@@ -5555,18 +5555,18 @@ OpportunisticSweepingAndGarbageCollectionEnabled:
 
 OptInPartitionedCookiesEnabled:
   type: bool
-  status: unstable
+  status: stable
   category: dom
   humanReadableName: "Opt-in partitioned cookies (CHIPS)"
   humanReadableDescription: "Enable opt-in partitioned cookies"
   condition: HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
   defaultValue:
     WebKitLegacy:
-      default: false
+      default: true
     WebKit:
-      default: false
+      default: true
     WebCore:
-      default: false
+      default: true
 
 OpusDecoderEnabled:
   type: bool
