@@ -27,6 +27,7 @@
 #import "CoreIPCNSURLProtectionSpace.h"
 
 #import "ArgumentCoders.h"
+#import <wtf/TZoneMallocInlines.h>
 
 #if PLATFORM(COCOA) && HAVE(WK_SECURE_CODING_NSURLPROTECTIONSPACE)
 
@@ -36,6 +37,8 @@
 @end
 
 namespace WebKit {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CoreIPCNSURLProtectionSpace);
 
 #define SET_OBJECT(NAME, CLASS, WRAPPER)    \
     id NAME = dict[@#NAME];                 \
