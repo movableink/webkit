@@ -42,8 +42,6 @@
 
 #import <pal/cf/CoreMediaSoftLink.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 CoreAudioCaptureDeviceManager& CoreAudioCaptureDeviceManager::singleton()
@@ -179,10 +177,11 @@ Vector<CoreAudioCaptureDevice>& CoreAudioCaptureDeviceManager::coreAudioCaptureD
         initialized = true;
         refreshAudioCaptureDevices(NotifyIfDevicesHaveChanged::DoNotNotify);
 
-        auto listener = ^(UInt32 count, const AudioObjectPropertyAddress properties[]) {
+        auto listener = ^(UInt32 count, const AudioObjectPropertyAddress rawProperties[]) {
+            auto properties = unsafeMakeSpan(rawProperties, count);
             bool notify = false;
-            for (UInt32 i = 0; i < count; ++i)
-                notify |= (properties[i].mSelector == kAudioHardwarePropertyDevices || properties[i].mSelector == kAudioHardwarePropertyDefaultInputDevice || properties[i].mSelector == kAudioHardwarePropertyDefaultOutputDevice);
+            for (auto& property : properties)
+                notify |= (property.mSelector == kAudioHardwarePropertyDevices || property.mSelector == kAudioHardwarePropertyDefaultInputDevice || property.mSelector == kAudioHardwarePropertyDefaultOutputDevice);
 
             if (notify)
                 CoreAudioCaptureDeviceManager::singleton().scheduleUpdateCaptureDevices();
@@ -341,7 +340,5 @@ void CoreAudioCaptureDeviceManager::refreshAudioCaptureDevices(NotifyIfDevicesHa
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(MEDIA_STREAM) && PLATFORM(MAC)

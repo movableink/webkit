@@ -45,8 +45,6 @@
 #include "MediaEngineConfigurationFactoryGStreamer.h"
 #endif
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 static bool& mockEnabled()
@@ -98,6 +96,8 @@ bool MediaEngineConfigurationFactory::hasEncodingConfigurationFactory()
 {
     return mockEnabled() || WTF::anyOf(factories(), [] (auto& factory) { return (bool)factory.createEncodingConfiguration; });
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 void MediaEngineConfigurationFactory::createDecodingConfiguration(MediaDecodingConfiguration&& config, DecodingConfigurationCallback&& callback)
 {
@@ -161,6 +161,8 @@ void MediaEngineConfigurationFactory::createEncodingConfiguration(MediaEncodingC
     factoryCallback(factoryCallback, factories().begin(), WTFMove(config), WTFMove(callback));
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
 void MediaEngineConfigurationFactory::enableMock()
 {
     mockEnabled() = true;
@@ -172,5 +174,3 @@ void MediaEngineConfigurationFactory::disableMock()
 }
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

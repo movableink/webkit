@@ -58,8 +58,6 @@
 #include "VideoFrameGStreamer.h"
 #endif
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 struct VideoFrameAdaptor {
@@ -1509,7 +1507,7 @@ WTFLogChannel& RealtimeMediaSource::logChannel() const
 
 String convertEnumerationToString(RealtimeMediaSource::Type enumerationValue)
 {
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 2> values {
         MAKE_STATIC_STRING_IMPL("Audio"),
         MAKE_STATIC_STRING_IMPL("Video")
     };
@@ -1520,7 +1518,5 @@ String convertEnumerationToString(RealtimeMediaSource::Type enumerationValue)
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(MEDIA_STREAM)

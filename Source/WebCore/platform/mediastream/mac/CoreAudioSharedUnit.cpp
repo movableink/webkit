@@ -33,6 +33,7 @@
 #include "CoreAudioCaptureSource.h"
 #include "CoreAudioSharedInternalUnit.h"
 #include "Logging.h"
+#include "SpanCoreAudio.h"
 #include <AudioToolbox/AudioConverter.h>
 #include <AudioUnit/AudioUnit.h>
 #include <CoreMedia/CMSync.h>
@@ -61,8 +62,6 @@
 
 #include <pal/cf/AudioToolboxSoftLink.h>
 #include <pal/cf/CoreMediaSoftLink.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -521,7 +520,7 @@ OSStatus CoreAudioSharedUnit::processMicrophoneSamples(AudioUnitRenderActionFlag
     m_microphoneSampleBuffer->reset();
     AudioBufferList& bufferList = m_microphoneSampleBuffer->bufferList();
     if (auto err = m_ioUnit->render(&ioActionFlags, &timeStamp, inBusNumber, inNumberFrames, &bufferList)) {
-        RELEASE_LOG_ERROR(WebRTC, "CoreAudioSharedUnit::processMicrophoneSamples(%p) AudioUnitRender failed with error %d (%.4s), bufferList size %d, inNumberFrames %d ", this, (int)err, (char*)&err, (int)bufferList.mBuffers[0].mDataByteSize, (int)inNumberFrames);
+        RELEASE_LOG_ERROR(WebRTC, "CoreAudioSharedUnit::processMicrophoneSamples(%p) AudioUnitRender failed with error %d (%.4s), bufferList size %d, inNumberFrames %d ", this, (int)err, (char*)&err, (int)span(bufferList)[0].mDataByteSize, (int)inNumberFrames);
         if (err == kAudio_ParamError && !m_minimumMicrophoneSampleFrames) {
             m_minimumMicrophoneSampleFrames = inNumberFrames;
             // Our buffer might be too small, the preferred buffer size or sample rate might have changed.
@@ -921,7 +920,5 @@ void CoreAudioSharedUnit::setIsInBackground(bool isInBackground)
 #endif
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(MEDIA_STREAM)

@@ -46,8 +46,6 @@ WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(LibWebRTCVPXVideoEncoder);
@@ -307,7 +305,7 @@ webrtc::EncodedImageCallback::Result LibWebRTCVPXInternalVideoEncoder::OnEncoded
     }
 
     VideoEncoder::EncodedFrame encodedFrame {
-        Vector<uint8_t> { std::span { encodedImage.data(), encodedImage.size() } },
+        Vector<uint8_t> { unsafeMakeSpan(encodedImage.data(), encodedImage.size()) },
         encodedImage._frameType == webrtc::VideoFrameType::kVideoFrameKey,
         m_timestamp,
         m_duration,
@@ -323,7 +321,5 @@ void LibWebRTCVPXInternalVideoEncoder::OnDroppedFrame(DropReason)
 }
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // USE(LIBWEBRTC)

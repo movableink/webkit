@@ -47,8 +47,6 @@ WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace libyuv {
 extern "C" int I420Copy(const uint8_t* src_y,
              int src_stride_y,
@@ -205,11 +203,13 @@ int32_t Dav1dDecoder::Decode(const webrtc::EncodedImage& encodedImage, bool /*mi
         return WEBRTC_VIDEO_CODEC_ERROR;
     }
 
-    auto* yData = static_cast<uint8_t*>(dav1dPicture.data[0]);
-    auto* uData = static_cast<uint8_t*>(dav1dPicture.data[1]);
-    auto* vData = static_cast<uint8_t*>(dav1dPicture.data[2]);
-    int yStride = dav1dPicture.stride[0];
-    int uvStride = dav1dPicture.stride[1];
+    auto pictureData = std::span { dav1dPicture.data };
+    auto* yData = static_cast<uint8_t*>(pictureData[0]);
+    auto* uData = static_cast<uint8_t*>(pictureData[1]);
+    auto* vData = static_cast<uint8_t*>(pictureData[2]);
+    auto pictureStride = std::span { dav1dPicture.stride };
+    int yStride = pictureStride[0];
+    int uvStride = pictureStride[1];
     libyuv::I420Copy(yData, yStride,
         uData, uvStride,
         vData, uvStride,
@@ -236,7 +236,5 @@ UniqueRef<webrtc::VideoDecoder> createLibWebRTCDav1dDecoder()
 }
 
 } // namespace
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif

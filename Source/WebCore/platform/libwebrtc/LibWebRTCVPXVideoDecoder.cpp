@@ -41,10 +41,7 @@
 #include <wtf/WorkQueue.h>
 #include <wtf/text/MakeString.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
-ALLOW_UNUSED_PARAMETERS_BEGIN
-ALLOW_COMMA_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 
 #include <webrtc/api/environment/environment_factory.h>
 #include <webrtc/modules/video_coding/codecs/vp8/include/vp8.h>
@@ -52,8 +49,7 @@ ALLOW_COMMA_BEGIN
 #include <webrtc/system_wrappers/include/cpu_info.h>
 #include <webrtc/webkit_sdk/WebKit/WebKitDecoder.h>
 
-ALLOW_COMMA_END
-ALLOW_UNUSED_PARAMETERS_END
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
 #include "CoreVideoSoftLink.h"
 
@@ -117,7 +113,7 @@ LibWebRTCVPXVideoDecoder::~LibWebRTCVPXVideoDecoder()
 Ref<VideoDecoder::DecodePromise> LibWebRTCVPXVideoDecoder::decode(EncodedFrame&& frame)
 {
     return invokeAsync(vpxDecoderQueueSingleton(), [value = Vector<uint8_t> { frame.data }, isKeyFrame = frame.isKeyFrame, timestamp = frame.timestamp, duration = frame.duration, decoder = m_internalDecoder] {
-        return decoder->decode({ value.data(), value.size() }, isKeyFrame, timestamp, duration);
+        return decoder->decode(value.span(), isKeyFrame, timestamp, duration);
     });
 }
 
@@ -272,7 +268,5 @@ int32_t LibWebRTCVPXInternalVideoDecoder::Decoded(webrtc::VideoFrame& frame)
 }
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // USE(LIBWEBRTC)
