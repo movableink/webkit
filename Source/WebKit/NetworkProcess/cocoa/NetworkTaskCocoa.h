@@ -58,7 +58,8 @@ protected:
 
     static NSHTTPCookieStorage *statelessCookieStorage();
     bool shouldApplyCookiePolicyForThirdPartyCloaking() const;
-    void setCookieTransform(const WebCore::ResourceRequest&);
+    enum class IsRedirect : bool { No, Yes };
+    void setCookieTransform(const WebCore::ResourceRequest&, IsRedirect);
     void blockCookies();
     void unblockCookies();
     static void updateTaskWithFirstPartyForSameSiteCookies(NSURLSessionTask*, const WebCore::ResourceRequest&);
@@ -80,7 +81,7 @@ protected:
 
 private:
     void setCookieTransformForFirstPartyRequest(const WebCore::ResourceRequest&);
-    void setCookieTransformForThirdPartyRequest(const WebCore::ResourceRequest&);
+    void setCookieTransformForThirdPartyRequest(const WebCore::ResourceRequest&, IsRedirect);
 
     WeakPtr<NetworkSession> m_networkSession;
     bool m_hasBeenSetToUseStatelessCookieStorage { false };

@@ -142,14 +142,14 @@ bool NetworkTaskCocoa::needsFirstPartyCookieBlockingLatchModeQuirk(const URL& fi
 }
 
 #if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
-void NetworkTaskCocoa::setCookieTransformForFirstPartyRequest(const WebCore::ResourceRequest& request)
+void NetworkTaskCocoa::setCookieTransformForThirdPartyRequest(const WebCore::ResourceRequest& request, IsRedirect isRedirect)
 {
+    ASSERT(request.isThirdParty());
     if (!request.isThirdParty())
         return;
 
-    ASSERT(!task()._cookieTransformCallback);
-    if (!!task()._cookieTransformCallback)
-        return;
+    ASSERT_UNUSED(isRedirect, !task()._cookieTransformCallback || isRedirect == IsRedirect::Yes);
+    task()._cookieTransformCallback = nil;
 
     if (!Quirks::needsPartitionedCookies(request))
         return;
@@ -181,11 +181,12 @@ void NetworkTaskCocoa::setCookieTransformForFirstPartyRequest(const WebCore::Res
 }
 #endif
 
-void NetworkTaskCocoa::setCookieTransformForThirdPartyRequest(const WebCore::ResourceRequest& request)
+void NetworkTaskCocoa::setCookieTransformForFirstPartyRequest(const WebCore::ResourceRequest& request)
 {
     if (!shouldApplyCookiePolicyForThirdPartyCloaking())
         return;
 
+    ASSERT(!request.isThirdParty());
     if (request.isThirdParty()) {
         task()._cookieTransformCallback = nil;
         return;
@@ -269,15 +270,15 @@ void NetworkTaskCocoa::setCookieTransformForThirdPartyRequest(const WebCore::Res
     }).get();
 }
 
-void NetworkTaskCocoa::setCookieTransform(const WebCore::ResourceRequest& request)
+void NetworkTaskCocoa::setCookieTransform(const WebCore::ResourceRequest& request, IsRedirect isRedirect)
 {
-#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
     if (request.isThirdParty()) {
-        setCookieTransformForFirstPartyRequest(request);
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+        setCookieTransformForThirdPartyRequest(request, isRedirect);
+#endif
         return;
     }
-#endif
-    setCookieTransformForThirdPartyRequest(request);
+    setCookieTransformForFirstPartyRequest(request);
 }
 
 void NetworkTaskCocoa::blockCookies()
@@ -364,7 +365,7 @@ void NetworkTaskCocoa::willPerformHTTPRedirection(WebCore::ResourceResponse&& re
     request.setIsAppInitiated(request.nsURLRequest(WebCore::HTTPBodyUpdatePolicy::DoNotUpdateHTTPBody).attribution == NSURLRequestAttributionDeveloper);
 #endif
 
-    setCookieTransform(request);
+    setCookieTransform(request, IsRedirect::Yes);
     if (!m_hasBeenSetToUseStatelessCookieStorage) {
         auto thirdPartyCookieBlockingDecision = requestThirdPartyCookieBlockingDecision(request);
         if (shouldBlockCookies(thirdPartyCookieBlockingDecision))
