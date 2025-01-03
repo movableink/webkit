@@ -49,7 +49,7 @@ bool matchesFrame(const WebExtensionFrameIdentifier& identifier, const WebFrame&
     if (RefPtr page = frame.page(); page && &page->mainWebFrame() == &frame && isMainFrame(identifier))
         return true;
 
-    return frame.frameID().object().toUInt64() == identifier.toUInt64();
+    return frame.frameID().object().toUInt64() == identifier.toUInt64() && !frame.isMainFrame();
 }
 
 WebExtensionFrameIdentifier toWebExtensionFrameIdentifier(std::optional<WebCore::FrameIdentifier> frameIdentifier)
