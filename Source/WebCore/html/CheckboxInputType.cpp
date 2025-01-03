@@ -51,6 +51,7 @@
 #include "ScriptDisallowedScope.h"
 #include "ShadowRoot.h"
 #include "UserAgentParts.h"
+#include "UserGestureIndicator.h"
 #include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(IOS_TOUCH_EVENTS)
@@ -389,8 +390,13 @@ void CheckboxInputType::performSwitchAnimation(SwitchAnimationType type)
 void CheckboxInputType::performSwitchVisuallyOnAnimation(SwitchTrigger trigger)
 {
     performSwitchAnimation(SwitchAnimationType::VisuallyOn);
+
     if (!RenderTheme::singleton().hasSwitchHapticFeedback(trigger))
         return;
+
+    if (trigger == SwitchTrigger::Click && !UserGestureIndicator::processingUserGesture())
+        return;
+
     if (RefPtr page = element()->document().page())
         page->chrome().client().performSwitchHapticFeedback();
 }
