@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Apple Inc. All rights reserved.
+// Copyright (C) 2025 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions
@@ -22,26 +22,29 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 
 import Foundation
-@_spi(Private) import WebKit
 
-@MainActor
-final class NavigationDecider: NavigationDeciding {
-    weak var owner: BrowserViewModel? = nil
+struct CodableURLRequest: Codable, Hashable {
+    let value: URLRequest
 
-    func decidePolicy(for action: WebPage_v0.NavigationAction, preferences: inout WebPage_v0.NavigationPreferences) async -> WKNavigationActionPolicy {
-        if action.shouldPerformDownload {
-            return .download
-        }
-
-        if action.modifierFlags.contains(.command) {
-            owner?.currentOpenRequest = .init(request: action.request)
-            return .cancel
-        }
-
-        return .allow
+    init(_ value: URLRequest) {
+        self.value = value
     }
 
-    func decidePolicy(for response: WebPage_v0.NavigationResponse) async -> WKNavigationResponsePolicy {
-        response.canShowMimeType && !response.response.hasAttachment ? .allow : .download
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+
+        let data = try container.decode(Data.self)
+        guard let ref = try NSKeyedUnarchiver.unarchivedObject(ofClass: URLRequest.ReferenceType.self, from: data) else {
+            fatalError()
+        }
+
+        self.value = ref as URLRequest
+    }
+
+    func encode(to encoder: Encoder) throws {
+        let data = try NSKeyedArchiver.archivedData(withRootObject: value as URLRequest.ReferenceType, requiringSecureCoding: true)
+
+        var container = encoder.singleValueContainer()
+        try container.encode(data)
     }
 }

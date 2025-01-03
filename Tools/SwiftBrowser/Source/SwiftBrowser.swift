@@ -28,11 +28,16 @@ import SwiftUI
 struct SwiftBrowserApp: App {
     @FocusedValue(BrowserViewModel.self) var focusedBrowserViewModel
 
+    @AppStorage(AppStorageKeys.homepage) private var homepage = "https://www.webkit.org"
+
     @State private var mostRecentURL: URL? = nil
 
     var body: some Scene {
-        WindowGroup {
-            BrowserView(url: $mostRecentURL)
+        WindowGroup(for: CodableURLRequest.self) { $request in
+            BrowserView(url: $mostRecentURL, initialRequest: request.value)
+        } defaultValue: {
+            let url = URL(string: homepage)!
+            return CodableURLRequest(.init(url: url))
         }
         .commands {
             CommandGroup(after: .sidebar) {

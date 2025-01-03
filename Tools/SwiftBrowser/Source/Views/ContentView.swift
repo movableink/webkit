@@ -207,12 +207,12 @@ private struct DialogMessageView: View {
 struct ContentView: View {
     @Binding var url: URL?
 
-    @State private var findNavigatorIsPresented = false
+    let initialRequest: URLRequest
 
+    @State private var findNavigatorIsPresented = false
     @State private var downloadsSheetPresented = false
 
-    @AppStorage(AppStorageKeys.homepage) private var homepage = "https://www.webkit.org"
-
+    @Environment(\.openWindow) private var openWindow
     @Environment(BrowserViewModel.self) private var viewModel
 
     #if os(iOS)
@@ -241,11 +241,19 @@ struct ContentView: View {
                     }
                 }
                 .onAppear {
-                    viewModel.displayedURL = homepage
+                    viewModel.displayedURL = initialRequest.url!.absoluteString
                     viewModel.navigateToSubmittedURL()
                 }
                 .onChange(of: viewModel.page.url) { _, newValue in
                     url = newValue
+                }
+                .onChange(of: viewModel.currentOpenRequest) { _, newValue in
+                    guard let newValue else {
+                        return
+                    }
+
+                    openWindow(value: CodableURLRequest(newValue.request))
+                    viewModel.currentOpenRequest = nil
                 }
                 .navigationTitle(viewModel.page.title)
                 #if os(iOS)
@@ -321,6 +329,11 @@ struct ContentView: View {
 
     @Previewable @State var url: URL? = nil
 
-    ContentView(url: $url)
+    let request = {
+        let url = URL(string: "https://www.apple.com")!
+        return URLRequest(url: url)
+    }()
+
+    ContentView(url: $url, initialRequest: request)
         .environment(viewModel)
 }

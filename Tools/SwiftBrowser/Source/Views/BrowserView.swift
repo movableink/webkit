@@ -26,10 +26,12 @@ import SwiftUI
 struct BrowserView: View {
     @Binding var url: URL?
 
+    let initialRequest: URLRequest
+
     @State private var viewModel = BrowserViewModel()
 
     var body: some View {
-        ContentView(url: $url)
+        ContentView(url: $url, initialRequest: initialRequest)
             .environment(viewModel)
     }
 }
@@ -39,6 +41,11 @@ struct BrowserView: View {
 
     @Previewable @State var url: URL? = nil
 
-    BrowserView(url: $url)
+    let request = {
+        let url = URL(string: "https://www.apple.com")!
+        return URLRequest(url: url)
+    }()
+
+    BrowserView(url: $url, initialRequest: request)
         .environment(viewModel)
 }

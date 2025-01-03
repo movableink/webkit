@@ -39,6 +39,10 @@ extension PDF: Transferable {
     }
 }
 
+struct OpenRequest: Equatable {
+    let request: URLRequest
+}
+
 @Observable
 @MainActor
 final class BrowserViewModel {
@@ -64,7 +68,7 @@ final class BrowserViewModel {
 
         self.page = WebPage(configuration: configuration, navigationDecider: self.navigationDecider, dialogPresenter: self.dialogPresenter, downloadCoordinator: self.downloadCoordinator)
 
-        
+        self.navigationDecider.owner = self
         self.dialogPresenter.owner = self
     }
 
@@ -75,6 +79,8 @@ final class BrowserViewModel {
     private let navigationDecider = NavigationDecider()
 
     var displayedURL: String = ""
+
+    var currentOpenRequest: OpenRequest? = nil
 
     // MARK: PDF properties
 
