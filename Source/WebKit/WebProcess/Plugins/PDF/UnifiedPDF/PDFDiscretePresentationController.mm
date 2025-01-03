@@ -1089,9 +1089,7 @@ void PDFDiscretePresentationController::buildRows()
             row.containerLayer->addChild(*row.protectedRightPageContainerLayer());
 
         row.containerLayer->addChild(*row.protectedContentsLayer());
-#if ENABLE(UNIFIED_PDF_SELECTION_LAYER)
         row.containerLayer->addChild(*row.protectedSelectionLayer());
-#endif
     };
 
     auto ensureLayersForRow = [&](size_t rowIndex, PDFLayoutRow& layoutRow, RowData& row) {
@@ -1114,14 +1112,12 @@ void PDFDiscretePresentationController::buildRows()
 
         m_layerToRowIndexMap.set(rowContentsLayer.get(), rowIndex);
 
-#if ENABLE(UNIFIED_PDF_SELECTION_LAYER)
         RefPtr rowSelectionLayer = row.selectionLayer = createGraphicsLayer(makeString("Row selection "_s, rowIndex), GraphicsLayer::Type::TiledBacking);
         rowSelectionLayer->setAnchorPoint({ });
         rowSelectionLayer->setDrawsContent(true);
         rowSelectionLayer->setAcceleratesDrawing(true);
         rowSelectionLayer->setBlendMode(BlendMode::Multiply);
         m_layerToRowIndexMap.set(rowSelectionLayer.get(), rowIndex);
-#endif
 
         parentRowLayers(row);
     };
@@ -1233,13 +1229,11 @@ void PDFDiscretePresentationController::updateLayersOnLayoutChange(FloatSize doc
         if (needsRepaint)
             rowContentsLayer->setNeedsDisplay();
 
-#if ENABLE(UNIFIED_PDF_SELECTION_LAYER)
         RefPtr rowSelectionLayer = row.selectionLayer;
         rowSelectionLayer->setPosition({ });
         rowSelectionLayer->setSize(scaledRowBounds.size());
         if (needsRepaint)
             rowSelectionLayer->setNeedsDisplay();
-#endif
     }
 
     updateLayersAfterChangeInVisibleRow();
@@ -1260,9 +1254,7 @@ void PDFDiscretePresentationController::updateLayersAfterChangeInVisibleRow(std:
 
     auto updateRowTiledLayers = [](RowData& row, bool isInWindow) {
         row.contentsLayer->setIsInWindow(isInWindow);
-#if ENABLE(UNIFIED_PDF_SELECTION_LAYER)
         row.selectionLayer->setIsInWindow(isInWindow);
-#endif
     };
 
     bool isInWindow = m_plugin->isInWindow();
@@ -1287,9 +1279,7 @@ void PDFDiscretePresentationController::updateIsInWindow(bool isInWindow)
 {
     for (auto& row : m_rows) {
         row.contentsLayer->setIsInWindow(isInWindow);
-#if ENABLE(UNIFIED_PDF_SELECTION_LAYER)
         row.selectionLayer->setIsInWindow(isInWindow);
-#endif
     }
 }
 
@@ -1312,9 +1302,7 @@ void PDFDiscretePresentationController::updateDebugBorders(bool showDebugBorders
         }
 
         propagateSettingsToLayer(*row.contentsLayer);
-#if ENABLE(UNIFIED_PDF_SELECTION_LAYER)
         propagateSettingsToLayer(*row.selectionLayer);
-#endif
     }
 
     if (RefPtr asyncRenderer = asyncRendererIfExists())
@@ -1344,10 +1332,9 @@ auto PDFDiscretePresentationController::layerCoveragesForRepaintPageCoverage(Rep
         auto contentsRect = m_plugin->convertUp(UnifiedPDFPlugin::CoordinateSpace::PDFPage, UnifiedPDFPlugin::CoordinateSpace::Contents, perPage.rectInPageLayoutCoordinates, perPage.pageIndex);
         contentsRect = convertFromContentsToPainting(contentsRect, row.pages.pages[0]);
 
-#if ENABLE(UNIFIED_PDF_SELECTION_LAYER)
         if (repaintRequirements.contains(RepaintRequirement::Selection))
             result.append({ *row.selectionLayer, contentsRect, RepaintRequirements { RepaintRequirement::Selection } });
-#endif
+
         if (repaintRequirements.contains(RepaintRequirement::PDFContent))
             result.append({ *row.contentsLayer, contentsRect, RepaintRequirements { RepaintRequirement::PDFContent } });
     }
@@ -1514,18 +1501,16 @@ void PDFDiscretePresentationController::paintContents(const GraphicsLayer* layer
         return;
     }
 
-#if ENABLE(UNIFIED_PDF_SELECTION_LAYER)
-    if (layer == rowData.selectionLayer.get())
-        return paintPDFSelection(layer, context, clipRect, rowData.pages);
-#endif
+    if (layer == rowData.selectionLayer.get()) {
+        paintPDFSelection(layer, context, clipRect, rowData.pages);
+        return;
+    }
 }
 
-#if ENABLE(UNIFIED_PDF_SELECTION_LAYER)
 void PDFDiscretePresentationController::paintPDFSelection(const GraphicsLayer* layer, GraphicsContext& context, const FloatRect& clipRect, std::optional<PDFLayoutRow> row)
 {
     m_plugin->paintPDFSelection(layer, context, clipRect, row);
 }
-#endif
 
 #pragma mark -
 

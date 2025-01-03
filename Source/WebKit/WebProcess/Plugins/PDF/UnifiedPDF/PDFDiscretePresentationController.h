@@ -157,9 +157,7 @@ private:
     void tiledBackingUsageChanged(const WebCore::GraphicsLayer*, bool /*usingTiledBacking*/) override;
     void paintContents(const WebCore::GraphicsLayer*, WebCore::GraphicsContext&, const WebCore::FloatRect&, OptionSet<WebCore::GraphicsLayerPaintBehavior>) override;
 
-#if ENABLE(UNIFIED_PDF_SELECTION_LAYER)
     void paintPDFSelection(const WebCore::GraphicsLayer*, WebCore::GraphicsContext&, const WebCore::FloatRect& clipRect, std::optional<PDFLayoutRow> = { });
-#endif
 
     void paintBackgroundLayerForRow(const WebCore::GraphicsLayer*, WebCore::GraphicsContext&, const WebCore::FloatRect& clipRect, unsigned rowIndex);
 
@@ -195,9 +193,8 @@ private:
         RefPtr<WebCore::GraphicsLayer> leftPageContainerLayer;
         RefPtr<WebCore::GraphicsLayer> rightPageContainerLayer;
         RefPtr<WebCore::GraphicsLayer> contentsLayer;
-#if ENABLE(UNIFIED_PDF_SELECTION_LAYER)
         RefPtr<WebCore::GraphicsLayer> selectionLayer;
-#endif
+
         bool isPageBackgroundLayer(const GraphicsLayer*) const;
 
         RefPtr<WebCore::GraphicsLayer> leftPageBackgroundLayer() const;
@@ -209,9 +206,7 @@ private:
         RefPtr<WebCore::GraphicsLayer> protectedLeftPageContainerLayer() const { return leftPageContainerLayer; }
         RefPtr<WebCore::GraphicsLayer> protectedRightPageContainerLayer() const { return rightPageContainerLayer; }
         RefPtr<WebCore::GraphicsLayer> protectedContentsLayer() const { return contentsLayer; }
-#if ENABLE(UNIFIED_PDF_SELECTION_LAYER)
         RefPtr<WebCore::GraphicsLayer> protectedSelectionLayer() const { return selectionLayer; }
-#endif
     };
 
     const RowData* rowDataForLayer(const WebCore::GraphicsLayer*) const;

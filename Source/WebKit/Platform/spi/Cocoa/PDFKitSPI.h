@@ -93,6 +93,9 @@
 - (PDFPoint)firstCharCenter;
 - (/*nullable*/ NSString *)html;
 - (BOOL)isEmpty;
+#if HAVE(PDFSELECTION_ENUMERATE_RECTS_AND_TRANSFORMS)
+- (void)enumerateRectsAndTransformsForPage:(PDFPage *)page usingBlock:(void (^)(CGRect rect, CGAffineTransform transform))block;
+#endif
 @end
 
 #if HAVE(PDFDOCUMENT_ANNOTATIONS_FOR_FIELD_NAME)
@@ -159,14 +162,6 @@
 - (NSArray *)dataDetectorResults;
 @end
 #endif
-
-#endif
-
-#if HAVE(PDFSELECTION_ENUMERATE_RECTS_AND_TRANSFORMS)
-
-@interface PDFSelection (Staging_125426369)
-- (void)enumerateRectsAndTransformsForPage:(PDFPage *)page usingBlock:(void (^)(CGRect rect, CGAffineTransform transform))block;
-@end
 
 #endif
 
