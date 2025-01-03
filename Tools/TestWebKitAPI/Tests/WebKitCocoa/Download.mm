@@ -2534,7 +2534,7 @@ TEST(WKDownload, PathMustExist)
         };
         delegate.get().didFailWithError = ^(WKDownload *, NSError *error, NSData *) {
             EXPECT_WK_STREQ(error.domain, NSURLErrorDomain);
-            EXPECT_EQ(error.code, NSURLErrorCannotCreateFile);
+            EXPECT_EQ(error.code, NSURLErrorCancelled);
             failed = true;
         };
     };
@@ -2569,7 +2569,7 @@ TEST(WKDownload, FileMustNotExist)
 
             retainedDelegate.get().didFailWithError = ^(WKDownload *, NSError *error, NSData *) {
                 EXPECT_WK_STREQ(error.domain, NSURLErrorDomain);
-                EXPECT_EQ(error.code, NSURLErrorCannotCreateFile);
+                EXPECT_EQ(error.code, NSURLErrorCancelled);
                 failed = true;
             };
 
@@ -3143,6 +3143,35 @@ TEST(WKDownload, OriginatingFrameAndUserGesture)
         checkedDownload = true;
     }];
     Util::run(&checkedDownload);
+}
+
+TEST(WKDownload, DestinationFileAlreadyExists)
+{
+    HTTPServer server { { { "/"_s, { "hi"_s } } } };
+    auto webView = adoptNS([WKWebView new]);
+    auto navigationDelegate = adoptNS([TestNavigationDelegate new]);
+    auto downloadDelegate = adoptNS([TestDownloadDelegate new]);
+    NSURL *expectedDownloadFile = tempFileThatDoesNotExist();
+    [[NSData data] writeToURL:expectedDownloadFile atomically:YES];
+
+    __block bool failed { false };
+    downloadDelegate.get().didFailWithError = ^(WKDownload *download, NSError *error, NSData *resumeData) {
+        EXPECT_WK_STREQ(error.domain, NSURLErrorDomain);
+        EXPECT_EQ(error.code, NSURLErrorCancelled);
+        failed = true;
+    };
+    downloadDelegate.get().decideDestinationUsingResponse = ^(WKDownload *, NSURLResponse *, NSString *, void (^completionHandler)(NSURL *)) {
+        completionHandler(expectedDownloadFile);
+    };
+    navigationDelegate.get().decidePolicyForNavigationAction = ^(WKNavigationAction *action, void (^completionHandler)(WKNavigationActionPolicy)) {
+        completionHandler(WKNavigationActionPolicyDownload);
+    };
+    navigationDelegate.get().navigationActionDidBecomeDownload = ^(WKNavigationAction *action, WKDownload *download) {
+        download.delegate = downloadDelegate.get();
+    };
+    [webView setNavigationDelegate:navigationDelegate.get()];
+    [webView loadRequest:server.request()];
+    Util::run(&failed);
 }
 
 }
