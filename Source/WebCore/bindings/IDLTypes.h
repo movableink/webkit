@@ -25,16 +25,13 @@
 
 #pragma once
 
-#include <wtf/Compiler.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 #include "BufferSource.h"
 #include "StringAdaptors.h"
 #include <JavaScriptCore/HandleTypes.h>
 #include <JavaScriptCore/Strong.h>
 #include <variant>
 #include <wtf/Brigand.h>
+#include <wtf/Compiler.h>
 #include <wtf/Markable.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/URL.h>
@@ -44,8 +41,6 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 #include "WebGLAny.h"
 #include "WebGLExtensionAny.h"
 #endif
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 namespace JSC {
 class ArrayBuffer;

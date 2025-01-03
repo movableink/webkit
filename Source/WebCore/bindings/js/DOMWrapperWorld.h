@@ -21,15 +21,10 @@
 
 #pragma once
 
-#include <wtf/Compiler.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 #include "JSDOMGlobalObject.h"
+#include <wtf/Compiler.h>
 #include <wtf/Forward.h>
 #include <wtf/WeakPtr.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 namespace WebCore {
 

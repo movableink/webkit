@@ -25,9 +25,6 @@
 // on systems without case-sensitive file systems.
 
 #include <wtf/Compiler.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 #include <wtf/text/IntegerToStringConversion.h>
 #include <wtf/text/StringImpl.h>
 
@@ -38,6 +35,8 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 #if OS(WINDOWS)
 #include <wtf/text/win/WCharStringExtras.h>
 #endif
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WTF {
 
