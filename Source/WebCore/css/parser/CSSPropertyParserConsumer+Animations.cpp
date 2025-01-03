@@ -42,8 +42,9 @@ RefPtr<CSSValue> consumeKeyframesName(CSSParserTokenRange& range, const CSSParse
 
     if (range.peek().type() == StringToken) {
         auto& token = range.consumeIncludingWhitespace();
-        if (equalLettersIgnoringASCIICase(token.value(), "none"_s))
-            return CSSPrimitiveValue::create(CSSValueNone);
+        auto valueId = cssValueKeywordID(token.value());
+        if (isValidCustomIdentifier(valueId) && valueId != CSSValueNone)
+            return CSSPrimitiveValue::createCustomIdent(token.value().toString());
         return CSSPrimitiveValue::create(token.value().toString());
     }
 
