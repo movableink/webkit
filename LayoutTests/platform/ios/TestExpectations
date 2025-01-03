@@ -4607,6 +4607,14 @@ imported/w3c/web-platform-tests/css/css-lists/list-style-image-gradients-dynamic
 imported/w3c/web-platform-tests/css/css-lists/list-style-image-gradients.html [ Skip ]
 imported/w3c/web-platform-tests/css/css-lists/content-property/marker-text-matches-disc.html [ Skip ]
 
+# Failing with a lot of fuzziness on iOS
+imported/w3c/web-platform-tests/css/filter-effects/filter-function/filter-function-conic-gradient.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/filter-effects/filter-function/filter-function-linear-gradient.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/filter-effects/filter-function/filter-function-radial-gradient.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/filter-effects/filter-function/filter-function-repeating-conic-gradient.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/filter-effects/filter-function/filter-function-repeating-linear-gradient.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/filter-effects/filter-function/filter-function-repeating-radial-gradient.html [ ImageOnlyFailure ]
+
 http/tests/site-isolation/mouse-events/ [ Skip ]
 webkit.org/b/257904 http/tests/site-isolation/draw-after-navigation.html [ Skip ]
 webkit.org/b/257904 http/tests/site-isolation/draw-with-size-after-same-origin-navigation.html [ Skip ]
