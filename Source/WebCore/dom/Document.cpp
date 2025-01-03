@@ -7374,25 +7374,12 @@ Document& Document::topDocument() const
         Document* localMainDocument = nullptr;
         if (RefPtr localMainFrame = this->localMainFrame())
             localMainDocument = localMainFrame->document();
-#if !LOG_DISABLED
-        if (!localMainDocument && settings().siteIsolationEnabled())
-            LOG_ERROR("Document::topDocument() - Grabbing main frame directly, the Page's main frame is not a LocalFrame, therefore we're about to lie about which Document is the top document");
-#endif
         return localMainDocument ? *localMainDocument : const_cast<Document&>(*this);
     }
 
     Document* document = const_cast<Document*>(this);
     while (HTMLFrameOwnerElement* element = document->ownerElement())
         document = &element->document();
-#if !LOG_DISABLED
-    if (settings().siteIsolationEnabled()) {
-        Document* localMainDocument = nullptr;
-        if (RefPtr localMainFrame = this->localMainFrame())
-            localMainDocument = localMainFrame->document();
-        if (localMainDocument != document)
-            LOG_ERROR("Document::topDocument() - Walking frame owner elements, the Page's main frame is not a LocalFrame, therefore we're about to lie about which Document is the top document");
-    }
-#endif
     return *document;
 }
 
