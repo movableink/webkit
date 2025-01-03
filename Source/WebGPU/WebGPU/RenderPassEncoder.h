@@ -33,6 +33,7 @@
 #import <wtf/HashTraits.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCountedAndCanMakeWeakPtr.h>
+#import <wtf/RetainReleaseSwift.h>
 #import <wtf/TZoneMalloc.h>
 #import <wtf/Vector.h>
 #import <wtf/WeakPtr.h>
@@ -204,6 +205,16 @@ private:
     bool m_clearStencilAttachment { false };
     bool m_occlusionQueryActive { false };
     bool m_passEnded { false };
-};
+} SWIFT_SHARED_REFERENCE(refRenderPassEncoder, derefRenderPassEncoder);
 
 } // namespace WebGPU
+
+inline void refRenderPassEncoder(WebGPU::RenderPassEncoder* obj)
+{
+    ref(obj);
+}
+
+inline void derefRenderPassEncoder(WebGPU::RenderPassEncoder* obj)
+{
+    deref(obj);
+}

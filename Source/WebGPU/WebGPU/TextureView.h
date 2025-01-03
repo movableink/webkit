@@ -28,6 +28,7 @@
 #import <wtf/FastMalloc.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCountedAndCanMakeWeakPtr.h>
+#import <wtf/RetainReleaseSwift.h>
 #import <wtf/TZoneMalloc.h>
 #import <wtf/WeakHashSet.h>
 #import <wtf/WeakPtr.h>
@@ -102,6 +103,16 @@ private:
     const Ref<Device> m_device;
     Ref<Texture> m_parentTexture;
     mutable WeakHashSet<CommandEncoder> m_commandEncoders;
-};
+} SWIFT_SHARED_REFERENCE(refTextureView, derefTextureView);
 
 } // namespace WebGPU
+
+inline void refTextureView(WebGPU::TextureView* obj)
+{
+    ref(obj);
+}
+
+inline void derefTextureView(WebGPU::TextureView* obj)
+{
+    deref(obj);
+}
