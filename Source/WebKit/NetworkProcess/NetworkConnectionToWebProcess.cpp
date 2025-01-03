@@ -114,8 +114,8 @@
 #include <WebCore/MockContentFilterSettings.h>
 #endif
 
-#define CONNECTION_RELEASE_LOG(channel, fmt, ...) RELEASE_LOG(channel, "%p - [webProcessIdentifier=%" PRIu64 "] NetworkConnectionToWebProcess::" fmt, this, webProcessIdentifier().toUInt64(), ##__VA_ARGS__)
-#define CONNECTION_RELEASE_LOG_ERROR(channel, fmt, ...) RELEASE_LOG_ERROR(channel, "%p - [webProcessIdentifier=%" PRIu64 "] NetworkConnectionToWebProcess::" fmt, this, webProcessIdentifier().toUInt64(), ##__VA_ARGS__)
+#define CONNECTION_RELEASE_LOG(channel, fmt, ...) RELEASE_LOG(channel, "%p - [webProcessIdentifier=%" PRIu64 "] NetworkConnectionToWebProcess::" fmt, this, this->webProcessIdentifier().toUInt64(), ##__VA_ARGS__)
+#define CONNECTION_RELEASE_LOG_ERROR(channel, fmt, ...) RELEASE_LOG_ERROR(channel, "%p - [webProcessIdentifier=%" PRIu64 "] NetworkConnectionToWebProcess::" fmt, this, this->webProcessIdentifier().toUInt64(), ##__VA_ARGS__)
 
 #define MESSAGE_CHECK(assertion) MESSAGE_CHECK_BASE(assertion, this->connection())
 #define MESSAGE_CHECK_COMPLETION(assertion, completion) MESSAGE_CHECK_COMPLETION_BASE(assertion, this->connection(), completion)
@@ -164,6 +164,11 @@ NetworkConnectionToWebProcess::NetworkConnectionToWebProcess(NetworkProcess& net
 
     establishSWServerConnection();
     establishSharedWorkerServerConnection();
+
+#if !PLATFORM(WATCHOS)
+    if (!m_sharedPreferencesForWebProcess.webSocketEnabled)
+        CONNECTION_RELEASE_LOG(IPC, "NetworkConnectionToWebProcess: webSocketEnabled is false (version=%llu)", m_sharedPreferencesForWebProcess.version);
+#endif
 }
 
 NetworkConnectionToWebProcess::~NetworkConnectionToWebProcess()
@@ -262,6 +267,13 @@ bool NetworkConnectionToWebProcess::dispatchMessage(IPC::Connection& connection,
     }
 
     if (decoder.messageReceiverName() == Messages::NetworkSocketChannel::messageReceiverName()) {
+        // FIXME: Replace this with message endpoint enablement check after root cause of rdar://problem/142320806 is fixed.
+        if (!m_sharedPreferencesForWebProcess.webSocketEnabled) {
+            CONNECTION_RELEASE_LOG_ERROR(IPC, "dispatchMessage: ignoring message '%s' as webSocketEnabled is false (version=%llu)", IPC::description(decoder.messageName()).characters(), m_sharedPreferencesForWebProcess.version);
+            ASSERT_NOT_REACHED();
+            return true;
+        }
+
         MESSAGE_CHECK_WITH_RETURN_VALUE(AtomicObjectIdentifier<WebSocketIdentifierType>::isValidIdentifier(decoder.destinationID()), false);
         if (RefPtr channel = m_networkSocketChannels.get(AtomicObjectIdentifier<WebSocketIdentifierType>(decoder.destinationID())))
             channel->didReceiveMessage(connection, decoder);
