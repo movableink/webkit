@@ -21,6 +21,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
+additional_forward_declaration: namespace WebCore { using BackForwardFrameItemIdentifierID = ObjectIdentifier<BackForwardFrameItemIdentifierType>; }
 additional_forward_declaration: namespace WebCore { using BackForwardItemIdentifierID = ObjectIdentifier<BackForwardItemIdentifierType>; }
 additional_forward_declaration: namespace WebCore { using DOMCacheIdentifierID = AtomicObjectIdentifier<DOMCacheIdentifierType>; }
 additional_forward_declaration: namespace WebCore { using FrameIdentifierID = ObjectIdentifier<FrameIdentifierType>; }
@@ -33,6 +34,11 @@ additional_forward_declaration: namespace WebCore { using UserGestureTokenIdenti
 additional_forward_declaration: namespace WebCore { using WebLockIdentifierID = AtomicObjectIdentifier<WebLockIdentifierType>; }
 
 header: <WebCore/ProcessQualified.h>
+[Alias=class ProcessQualified<BackForwardFrameItemIdentifierID>, AdditionalEncoder=StreamConnectionEncoder, CustomHeader] alias WebCore::BackForwardFrameItemIdentifier {
+    WebCore::BackForwardFrameItemIdentifierID object();
+    WebCore::ProcessIdentifier processIdentifier();
+};
+
 [Alias=class ProcessQualified<BackForwardItemIdentifierID>, AdditionalEncoder=StreamConnectionEncoder, CustomHeader] alias WebCore::BackForwardItemIdentifier {
     WebCore::BackForwardItemIdentifierID object();
     WebCore::ProcessIdentifier processIdentifier();

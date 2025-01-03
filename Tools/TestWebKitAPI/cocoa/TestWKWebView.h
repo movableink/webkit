@@ -231,6 +231,7 @@ class Color;
 @interface TestWKWebView (SiteIsolation)
 - (_WKFrameTreeNode *)mainFrame;
 - (WKFrameInfo *)firstChildFrame;
+- (WKFrameInfo *)secondChildFrame;
 - (void)evaluateJavaScript:(NSString *)string inFrame:(WKFrameInfo *)frame completionHandler:(void(^)(id, NSError *))completionHandler;
 - (WKFindResult *)findStringAndWait:(NSString *)string withConfiguration:(WKFindConfiguration *)configuration;
 @end

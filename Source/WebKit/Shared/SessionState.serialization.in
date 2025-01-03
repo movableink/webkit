@@ -55,7 +55,8 @@ header: "SessionState.h"
 
     std::optional<WebKit::HTTPBody> httpBody;
 
-    Markable<WebCore::BackForwardItemIdentifier> identifier;
+    Markable<WebCore::BackForwardItemIdentifier> itemID;
+    Markable<WebCore::BackForwardFrameItemIdentifier> frameItemID;
     bool hasCachedPage;
     String title;
     WebCore::ShouldOpenExternalURLsPolicy shouldOpenExternalURLsPolicy;

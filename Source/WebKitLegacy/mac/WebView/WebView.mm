@@ -2790,7 +2790,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         Ref newItem = otherBackForward->itemAtIndex(i)->copy();
         if (i == 0)
             newItemToGoTo = newItem.ptr();
-        backForward->client().addItem(_private->page->mainFrame().frameID(), WTFMove(newItem));
+        backForward->client().addItem(WTFMove(newItem));
     }
 
     ASSERT(newItemToGoTo);

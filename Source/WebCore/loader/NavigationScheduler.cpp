@@ -303,7 +303,7 @@ public:
 
         UserGestureIndicator gestureIndicator(userGestureToForward());
 
-        if (page->checkedBackForward()->currentItem() && page->checkedBackForward()->currentItem()->identifier() == m_historyItem->identifier()) {
+        if (page->checkedBackForward()->currentItem() && page->checkedBackForward()->currentItem()->itemID() == m_historyItem->itemID()) {
             localFrame->protectedLoader()->changeLocation(localFrame->document()->url(), selfTargetFrameName(), 0, ReferrerPolicy::EmptyString, shouldOpenExternalURLs(), std::nullopt, nullAtom(), std::nullopt, NavigationHistoryBehavior::Reload);
             return;
         }
@@ -380,7 +380,7 @@ public:
 
         UserGestureIndicator gestureIndicator(userGestureToForward());
 
-        if (page->backForward().currentItem() && page->backForward().currentItem()->identifier() == (*historyItem)->identifier()) {
+        if (page->backForward().currentItem() && page->backForward().currentItem()->itemID() == (*historyItem)->itemID()) {
             if (RefPtr localFrame = dynamicDowncast<LocalFrame>(frame))
                 localFrame->protectedLoader()->changeLocation(localFrame->document()->url(), selfTargetFrameName(), 0, ReferrerPolicy::EmptyString, shouldOpenExternalURLs(), std::nullopt, nullAtom(), std::nullopt, NavigationHistoryBehavior::Reload);
             return;

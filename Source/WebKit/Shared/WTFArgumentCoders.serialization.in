@@ -117,6 +117,7 @@ template: struct WebCore::AttributedStringTextListIDType
 template: struct WebCore::AttributedStringTextTableBlockIDType
 template: struct WebCore::AttributedStringTextTableIDType
 #endif
+template: struct WebCore::BackForwardFrameItemIdentifierType
 template: struct WebCore::BackForwardItemIdentifierType
 template: struct WebCore::DictationContextType
 template: struct WebCore::FrameIdentifierType

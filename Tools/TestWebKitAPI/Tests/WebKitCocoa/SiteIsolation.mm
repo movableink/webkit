@@ -3180,6 +3180,38 @@ TEST(SiteIsolation, NavigateNestedIframeSameOriginBackForward)
     EXPECT_WK_STREQ([webView _test_waitForAlert], "b");
 }
 
+TEST(SiteIsolation, GoBackToNestedIframeCreatedAfterNavigatingSibling)
+{
+    HTTPServer server({
+        { "/example"_s, { "<iframe src='https://webkit.org/a'></iframe>"_s } },
+        { "/a"_s, { "<script> alert('a'); </script>"_s } },
+        { "/b"_s, { "<script> alert('b'); </script>"_s } },
+        { "/c"_s, { "<script> alert('c'); </script>"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(server);
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "a");
+
+    auto createIframe = @"var iframe = document.createElement('iframe');"
+        "iframe.src = 'https://apple.com/c';"
+        "document.body.appendChild(iframe);";
+    [webView evaluateJavaScript:createIframe completionHandler:nil];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "c");
+
+    [webView evaluateJavaScript:@"location.href = 'https://webkit.org/b'" inFrame:[webView firstChildFrame] completionHandler:nil];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "b");
+
+    [webView evaluateJavaScript:createIframe inFrame:[webView secondChildFrame] completionHandler:nil];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "c");
+
+    RetainPtr<WKFrameInfo> nestedChildFrame = [webView mainFrame].childFrames[1].childFrames.firstObject.info;
+    [webView evaluateJavaScript:@"location.href = 'https://apple.com/a'" inFrame:nestedChildFrame.get() completionHandler:nil];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "a");
+
+    [webView goBack];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "c");
+}
+
 TEST(SiteIsolation, AdvancedPrivacyProtectionsHideScreenMetricsFromBindings)
 {
     auto frameHTML = [NSString stringWithContentsOfFile:[NSBundle.test_resourcesBundle pathForResource:@"simple" ofType:@"html"] encoding:NSUTF8StringEncoding error:NULL];

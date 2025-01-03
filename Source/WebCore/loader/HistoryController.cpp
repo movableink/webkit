@@ -244,7 +244,7 @@ void HistoryController::restoreDocumentState()
     RefPtr currentItem = m_currentItem;
     if (!currentItem)
         return;
-    if (!m_frame->loader().requestedHistoryItem() || (m_frame->loader().requestedHistoryItem()->identifier() != currentItem->identifier()))
+    if (!m_frame->loader().requestedHistoryItem() || (m_frame->loader().requestedHistoryItem()->itemID() != currentItem->itemID()))
         return;
     RefPtr documentLoader = m_frame->loader().documentLoader();
     if (documentLoader->isClientRedirect())
@@ -298,8 +298,6 @@ void HistoryController::goToItem(HistoryItem& targetItem, FrameLoadType type, Sh
 {
     LOG(History, "HistoryController %p goToItem %p type=%d", this, &targetItem, static_cast<int>(type));
 
-    ASSERT(m_frame->isRootFrame());
-
     // shouldGoToHistoryItem is a private delegate method. This is needed to fix:
     // <rdar://problem/3951283> can view pages from the back/forward cache that should be disallowed by Parental Controls
     // Ultimately, history item navigations should go through the policy delegate. That's covered in:
@@ -341,8 +339,6 @@ struct HistoryController::FrameToNavigate {
 void HistoryController::goToItemForNavigationAPI(HistoryItem& targetItem, FrameLoadType type, LocalFrame& triggeringFrame, NavigationAPIMethodTracker* tracker)
 {
     LOG(History, "HistoryController %p goToItemForNavigationAPI %p type=%d", this, &targetItem, static_cast<int>(type));
-
-    ASSERT(m_frame->isRootFrame());
 
     // shouldGoToHistoryItem is a private delegate method. This is needed to fix:
     // <rdar://problem/3951283> can view pages from the back/forward cache that should be disallowed by Parental Controls
@@ -526,9 +522,9 @@ void HistoryController::updateForRedirectWithLockedBackForwardList()
         RefPtr parentFrame = dynamicDowncast<LocalFrame>(m_frame->tree().parent());
         if (page && parentFrame) {
             if (RefPtr parentCurrentItem = parentFrame->loader().history().currentItem()) {
-                Ref item = createItem(page->historyItemClient());
+                Ref item = createItem(page->historyItemClient(), parentCurrentItem->itemID());
                 parentCurrentItem->setChildItem(item.copyRef());
-                page->checkedBackForward()->setChildItem(parentCurrentItem->identifier(), WTFMove(item));
+                page->checkedBackForward()->setChildItem(parentCurrentItem->frameItemID(), WTFMove(item));
             }
         }
     }
@@ -783,9 +779,9 @@ void HistoryController::initializeItem(HistoryItem& item, RefPtr<DocumentLoader>
     item.setFormInfoFromRequest(documentLoader->request());
 }
 
-Ref<HistoryItem> HistoryController::createItem(HistoryItemClient& client)
+Ref<HistoryItem> HistoryController::createItem(HistoryItemClient& client, BackForwardItemIdentifier itemID)
 {
-    Ref item = HistoryItem::create(client);
+    Ref item = HistoryItem::create(client, { }, { }, { }, itemID);
     initializeItem(item, m_frame->loader().protectedDocumentLoader());
 
     // Set the item for which we will save document state
@@ -802,9 +798,17 @@ Ref<HistoryItem> HistoryController::createItemWithLoader(HistoryItemClient& clie
     return item;
 }
 
-Ref<HistoryItem> HistoryController::createItemTree(HistoryItemClient& client, LocalFrame& targetFrame, bool clipAtTarget)
+RefPtr<HistoryItem> HistoryController::createItemTree(LocalFrame& targetFrame, bool clipAtTarget, BackForwardItemIdentifier itemID)
 {
-    Ref item = createItem(client);
+    RefPtr page = m_frame->page();
+    if (!page)
+        return nullptr;
+    return createItemTree(page->historyItemClient(), targetFrame, clipAtTarget, itemID);
+}
+
+Ref<HistoryItem> HistoryController::createItemTree(HistoryItemClient& client, LocalFrame& targetFrame, bool clipAtTarget, BackForwardItemIdentifier itemID)
+{
+    Ref item = createItem(client, itemID);
     if (!m_frameLoadComplete)
         saveScrollPositionAndViewStateToItem(protectedPreviousItem().get());
 
@@ -823,7 +827,7 @@ Ref<HistoryItem> HistoryController::createItemTree(HistoryItemClient& client, Lo
         }
 
         for (RefPtr child = m_frame->tree().firstLocalDescendant(); child; child = child->tree().nextLocalSibling())
-            item->addChildItem(child->loader().checkedHistory()->createItemTree(client, targetFrame, clipAtTarget));
+            item->addChildItem(child->loader().checkedHistory()->createItemTree(client, targetFrame, clipAtTarget, itemID));
     }
     return item;
 }
@@ -889,7 +893,7 @@ bool HistoryController::itemsAreClones(HistoryItem& item1, HistoryItem* item2)
     // new document and should not consider them clones.
     // (See http://webkit.org/b/35532 for details.)
     return item2
-        && item1.identifier() != item2->identifier()
+        && item1.itemID() != item2->itemID()
         && item1.itemSequenceNumber() == item2->itemSequenceNumber();
 }
 
@@ -906,11 +910,11 @@ void HistoryController::updateBackForwardListClippedAtTarget(bool doClip)
     if (m_frame->loader().protectedDocumentLoader()->urlForHistory().isEmpty())
         return;
 
-    Ref rootFrame = m_frame->rootFrame();
-    Ref topItem = rootFrame->loader().checkedHistory()->createItemTree(page->historyItemClient(), m_frame, doClip);
-    LOG(History, "HistoryController %p updateBackForwardListClippedAtTarget: Adding backforward item %p in frame %p (main frame %d) %s", this, topItem.ptr(), m_frame.ptr(), m_frame->isMainFrame(), m_frame->loader().documentLoader()->url().string().utf8().data());
-
-    page->checkedBackForward()->addItem(m_frame->frameID(), WTFMove(topItem));
+    RefPtr item = m_frame->loader().client().createHistoryItemTree(doClip, BackForwardItemIdentifier::generate());
+    if (!item)
+        return;
+    LOG(History, "HistoryController %p updateBackForwardListClippedAtTarget: Adding backforward item %p in frame %p (main frame %d) %s", this, item.get(), m_frame.ptr(), m_frame->isMainFrame(), m_frame->loader().documentLoader()->url().string().utf8().data());
+    page->checkedBackForward()->addItem(item.releaseNonNull());
 }
 
 void HistoryController::updateCurrentItem()
@@ -950,7 +954,7 @@ void HistoryController::pushState(RefPtr<SerializedScriptValue>&& stateObject, c
     bool shouldRestoreScrollPosition = m_currentItem->shouldRestoreScrollPosition();
 
     // Get a HistoryItem tree for the current frame tree.
-    Ref topItem = m_frame->rootFrame().loader().checkedHistory()->createItemTree(page->historyItemClient(), m_frame, false);
+    Ref topItem = m_frame->rootFrame().loader().checkedHistory()->createItemTree(page->historyItemClient(), m_frame, false, BackForwardItemIdentifier::generate());
 
     RefPtr document = m_frame->document();
     if (document && !document->hasRecentUserInteractionForNavigationFromJS())
@@ -965,7 +969,7 @@ void HistoryController::pushState(RefPtr<SerializedScriptValue>&& stateObject, c
 
     LOG(History, "HistoryController %p pushState: Adding top item %p, setting url of current item %p to %s, scrollRestoration is %s", this, topItem.ptr(), m_currentItem.get(), urlString.ascii().data(), topItem->shouldRestoreScrollPosition() ? "auto" : "manual");
 
-    page->checkedBackForward()->addItem(m_frame->frameID(), WTFMove(topItem));
+    page->checkedBackForward()->addItem(WTFMove(topItem));
 
     if (page->usesEphemeralSession())
         return;

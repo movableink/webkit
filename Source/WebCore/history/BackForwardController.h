@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "BackForwardItemIdentifier.h"
+#include "BackForwardFrameItemIdentifier.h"
 #include "FrameIdentifier.h"
 #include <wtf/CheckedPtr.h>
 #include <wtf/Forward.h>
@@ -57,8 +57,8 @@ public:
     WEBCORE_EXPORT bool goBack();
     WEBCORE_EXPORT bool goForward();
 
-    void addItem(FrameIdentifier, Ref<HistoryItem>&&);
-    void setChildItem(BackForwardItemIdentifier, Ref<HistoryItem>&&);
+    void addItem(Ref<HistoryItem>&&);
+    void setChildItem(BackForwardFrameItemIdentifier, Ref<HistoryItem>&&);
     void setCurrentItem(HistoryItem&);
     void setProvisionalItem(const HistoryItem&);
     void clearProvisionalItem(const HistoryItem&);

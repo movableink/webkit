@@ -641,7 +641,7 @@ bool WebProcessProxy::shouldSendPendingMessage(const PendingMessage& message)
             weakThis->send(Messages::WebPage::GoToBackForwardItem(WTFMove(*parameters)), destinationID);
         };
         if (RefPtr page = WebProcessProxy::webPage(*pageID)) {
-            if (RefPtr item = WebBackForwardListItem::itemForID(*frameState->identifier))
+            if (RefPtr item = WebBackForwardListItem::itemForID(*frameState->itemID))
                 page->maybeInitializeSandboxExtensionHandle(static_cast<WebProcessProxy&>(*this), URL { item->url() }, item->resourceDirectoryURL(), true, WTFMove(completionHandler));
         } else
             completionHandler(std::nullopt);

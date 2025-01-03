@@ -46,6 +46,7 @@
 #include "WebBackForwardCacheEntry.h"
 #include "WebBackForwardList.h"
 #include "WebBackForwardListCounts.h"
+#include "WebBackForwardListFrameItem.h"
 #include "WebBackForwardListItem.h"
 #include "WebErrors.h"
 #include "WebFrameProxy.h"
@@ -325,7 +326,18 @@ void ProvisionalPageProxy::goToBackForwardItem(API::Navigation& navigation, WebB
 
     SandboxExtension::Handle sandboxExtensionHandle;
     URL itemURL { item.url() };
-    page->maybeInitializeSandboxExtensionHandle(process(), itemURL, item.resourceDirectoryURL(), true, [weakThis = WeakPtr { *this }, itemURL, frameState = item.rootFrameState(), navigationLoadType = *navigation.backForwardFrameLoadType(), shouldTreatAsContinuingLoad, websitePoliciesData = WTFMove(websitePoliciesData), existingNetworkResourceLoadIdentifierToResume = WTFMove(existingNetworkResourceLoadIdentifierToResume), navigation = Ref { navigation }, sandboxExtensionHandle = WTFMove(sandboxExtensionHandle)] (std::optional<SandboxExtension::Handle> sandboxExtension) mutable {
+    Ref frameState = navigation.targetFrameItem() ? navigation.targetFrameItem()->copyFrameStateWithChildren() : item.mainFrameState();
+    page->maybeInitializeSandboxExtensionHandle(process(), itemURL, item.resourceDirectoryURL(), true, [
+        weakThis = WeakPtr { *this },
+        itemURL,
+        frameState = WTFMove(frameState),
+        navigationLoadType = *navigation.backForwardFrameLoadType(),
+        shouldTreatAsContinuingLoad,
+        websitePoliciesData = WTFMove(websitePoliciesData),
+        existingNetworkResourceLoadIdentifierToResume = WTFMove(existingNetworkResourceLoadIdentifierToResume),
+        navigation = Ref { navigation },
+        sandboxExtensionHandle = WTFMove(sandboxExtensionHandle)
+    ] (std::optional<SandboxExtension::Handle> sandboxExtension) mutable {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;
@@ -553,10 +565,10 @@ void ProvisionalPageProxy::logDiagnosticMessageWithValueDictionaryFromWebProcess
         page->logDiagnosticMessageWithValueDictionary(message, description, valueDictionary, shouldSample);
 }
 
-void ProvisionalPageProxy::backForwardAddItem(IPC::Connection& connection, FrameIdentifier targetFrameID, Ref<FrameState>&& mainFrameState)
+void ProvisionalPageProxy::backForwardAddItem(IPC::Connection& connection, Ref<FrameState>&& navigatedFrameState)
 {
     if (RefPtr page = m_page.get())
-        page->backForwardAddItemShared(connection, targetFrameID, WTFMove(mainFrameState), m_replacedDataStoreForWebArchiveLoad ? LoadedWebArchive::Yes : LoadedWebArchive::No);
+        page->backForwardAddItemShared(connection, WTFMove(navigatedFrameState), m_replacedDataStoreForWebArchiveLoad ? LoadedWebArchive::Yes : LoadedWebArchive::No);
 }
 
 void ProvisionalPageProxy::didDestroyNavigation(WebCore::NavigationIdentifier navigationID)

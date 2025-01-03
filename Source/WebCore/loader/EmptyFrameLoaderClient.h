@@ -209,6 +209,8 @@ private:
     bool hasFrameSpecificStorageAccess() final;
 
     void dispatchLoadEventToOwnerElementInAnotherProcess() final;
+
+    RefPtr<HistoryItem> createHistoryItemTree(bool, BackForwardItemIdentifier) const final;
 };
 
 } // namespace WebCore

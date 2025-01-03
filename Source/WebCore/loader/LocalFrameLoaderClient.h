@@ -103,7 +103,10 @@ enum class UsedLegacyTLS : bool;
 enum class WasPrivateRelayed : bool;
 enum class FromDownloadAttribute : bool { No , Yes };
 
+struct BackForwardItemIdentifierType;
 struct StringWithDirection;
+
+using BackForwardItemIdentifier = ProcessQualified<ObjectIdentifier<BackForwardItemIdentifierType>>;
 
 class WEBCORE_EXPORT LocalFrameLoaderClient : public FrameLoaderClient {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
@@ -383,6 +386,8 @@ public:
     virtual void documentLoaderDetached(NavigationIdentifier, LoadWillContinueInAnotherProcess) { }
 
     virtual void frameNameChanged(const String&) { }
+
+    virtual RefPtr<HistoryItem> createHistoryItemTree(bool clipAtTarget, BackForwardItemIdentifier) const = 0;
 
 protected:
     explicit LocalFrameLoaderClient(FrameLoader&);

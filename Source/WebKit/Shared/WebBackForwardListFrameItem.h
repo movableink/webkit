@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <WebCore/BackForwardFrameItemIdentifier.h>
 #include <WebCore/BackForwardItemIdentifier.h>
 #include <WebCore/FrameIdentifier.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
@@ -36,11 +37,10 @@ class WebBackForwardListItem;
 
 class WebBackForwardListFrameItem : public RefCountedAndCanMakeWeakPtr<WebBackForwardListFrameItem> {
 public:
-    static Ref<WebBackForwardListFrameItem> create(WebBackForwardListItem*, WebBackForwardListFrameItem* parentItem, Ref<FrameState>&&);
+    static Ref<WebBackForwardListFrameItem> create(WebBackForwardListItem&, WebBackForwardListFrameItem* parentItem, Ref<FrameState>&&);
     ~WebBackForwardListFrameItem();
 
-    static WebBackForwardListFrameItem* itemForID(WebCore::BackForwardItemIdentifier);
-    static HashMap<WebCore::BackForwardItemIdentifier, WeakRef<WebBackForwardListFrameItem>>& allItems();
+    static WebBackForwardListFrameItem* itemForID(WebCore::BackForwardItemIdentifier, WebCore::BackForwardFrameItemIdentifier);
 
     FrameState& frameState() const { return m_frameState; }
     Ref<FrameState> protectedFrameState() const { return m_frameState; }
@@ -49,7 +49,8 @@ public:
     Ref<FrameState> copyFrameStateWithChildren();
 
     std::optional<WebCore::FrameIdentifier> frameID() const;
-    WebCore::BackForwardItemIdentifier identifier() const;
+    WebCore::BackForwardFrameItemIdentifier identifier() const { return m_identifier; }
+    const String& url() const;
 
     WebBackForwardListFrameItem* parent() const { return m_parent.get(); }
     RefPtr<WebBackForwardListFrameItem> protectedParent() const { return m_parent.get(); }
@@ -57,6 +58,8 @@ public:
     bool hasAncestorFrame(WebCore::FrameIdentifier);
 
     WebBackForwardListFrameItem& rootFrame();
+    WebBackForwardListFrameItem& mainFrame();
+    Ref<WebBackForwardListFrameItem> protectedMainFrame();
     WebBackForwardListFrameItem* childItemForFrameID(WebCore::FrameIdentifier);
 
     WebBackForwardListItem* backForwardListItem() const;
@@ -67,9 +70,12 @@ public:
     void setWasRestoredFromSession();
 
 private:
-    WebBackForwardListFrameItem(WebBackForwardListItem*, WebBackForwardListFrameItem* parentItem, Ref<FrameState>&&);
+    WebBackForwardListFrameItem(WebBackForwardListItem&, WebBackForwardListFrameItem* parentItem, Ref<FrameState>&&);
+
+    static HashMap<std::pair<WebCore::BackForwardFrameItemIdentifier, WebCore::BackForwardItemIdentifier>, WeakRef<WebBackForwardListFrameItem>>& allItems();
 
     WeakPtr<WebBackForwardListItem> m_backForwardListItem;
+    const WebCore::BackForwardFrameItemIdentifier m_identifier;
     Ref<FrameState> m_frameState;
     WeakPtr<WebBackForwardListFrameItem> m_parent;
     Vector<Ref<WebBackForwardListFrameItem>> m_children;

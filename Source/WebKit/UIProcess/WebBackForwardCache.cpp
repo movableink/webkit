@@ -96,25 +96,25 @@ void WebBackForwardCache::addEntry(WebBackForwardListItem& item, Ref<WebBackForw
         removeOldestEntry();
     ASSERT(size() <= capacity());
 
-    RELEASE_LOG(BackForwardCache, "WebBackForwardCache::addEntry: item=%s, hasSuspendedPage=%d, size=%u/%u", item.itemID().toString().utf8().data(), !!item.suspendedPage(), size(), capacity());
+    RELEASE_LOG(BackForwardCache, "WebBackForwardCache::addEntry: item=%s, hasSuspendedPage=%d, size=%u/%u", item.identifier().toString().utf8().data(), !!item.suspendedPage(), size(), capacity());
 }
 
 void WebBackForwardCache::addEntry(WebBackForwardListItem& item, Ref<SuspendedPageProxy>&& suspendedPage)
 {
     auto coreProcessIdentifier = suspendedPage->process().coreProcessIdentifier();
-    addEntry(item, WebBackForwardCacheEntry::create(*this, item.itemID(), coreProcessIdentifier, WTFMove(suspendedPage)));
+    addEntry(item, WebBackForwardCacheEntry::create(*this, item.identifier(), coreProcessIdentifier, WTFMove(suspendedPage)));
 }
 
 void WebBackForwardCache::addEntry(WebBackForwardListItem& item, WebCore::ProcessIdentifier processIdentifier)
 {
-    addEntry(item, WebBackForwardCacheEntry::create(*this, item.itemID(), WTFMove(processIdentifier), nullptr));
+    addEntry(item, WebBackForwardCacheEntry::create(*this, item.identifier(), WTFMove(processIdentifier), nullptr));
 }
 
 void WebBackForwardCache::removeEntry(WebBackForwardListItem& item)
 {
     ASSERT(m_itemsWithCachedPage.contains(item));
     m_itemsWithCachedPage.remove(item);
-    RELEASE_LOG(BackForwardCache, "WebBackForwardCache::removeEntry: item=%s, size=%u/%u", item.itemID().toString().utf8().data(), size(), capacity());
+    RELEASE_LOG(BackForwardCache, "WebBackForwardCache::removeEntry: item=%s, size=%u/%u", item.identifier().toString().utf8().data(), size(), capacity());
     item.setBackForwardCacheEntry(nullptr); // item may be dead after this call.
 }
 
@@ -127,7 +127,7 @@ void WebBackForwardCache::removeEntry(SuspendedPageProxy& suspendedPage)
 
 Ref<SuspendedPageProxy> WebBackForwardCache::takeSuspendedPage(WebBackForwardListItem& item)
 {
-    RELEASE_LOG(BackForwardCache, "WebBackForwardCache::takeSuspendedPage: item=%s", item.itemID().toString().utf8().data());
+    RELEASE_LOG(BackForwardCache, "WebBackForwardCache::takeSuspendedPage: item=%s", item.identifier().toString().utf8().data());
 
     ASSERT(m_itemsWithCachedPage.contains(item));
     ASSERT(item.backForwardCacheEntry());

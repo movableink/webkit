@@ -32,6 +32,11 @@
 #include <WebCore/LocalFrameLoaderClient.h>
 #include <pal/SessionID.h>
 
+namespace WebCore {
+struct BackForwardItemIdentifierType;
+using BackForwardItemIdentifier = ProcessQualified<ObjectIdentifier<BackForwardItemIdentifierType>>;
+}
+
 namespace WebKit {
 
 class PluginView;
@@ -314,6 +319,8 @@ private:
     void dispatchLoadEventToOwnerElementInAnotherProcess() final;
 
     void frameNameChanged(const String&) final;
+
+    RefPtr<WebCore::HistoryItem> createHistoryItemTree(bool clipAtTarget, WebCore::BackForwardItemIdentifier) const final;
 };
 
 // As long as EmptyFrameLoaderClient exists in WebCore, this can return nullptr.

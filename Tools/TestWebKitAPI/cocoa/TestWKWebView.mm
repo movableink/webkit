@@ -1566,6 +1566,11 @@ static WKContentView *recursiveFindWKContentView(UIView *view)
     return [self mainFrame].childFrames.firstObject.info;
 }
 
+- (WKFrameInfo *)secondChildFrame
+{
+    return [self mainFrame].childFrames[1].info;
+}
+
 - (void)evaluateJavaScript:(NSString *)string inFrame:(WKFrameInfo *)frame completionHandler:(void(^)(id, NSError *))completionHandler
 {
     [self evaluateJavaScript:string inFrame:frame inContentWorld:WKContentWorld.pageWorld completionHandler:completionHandler];

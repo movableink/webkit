@@ -223,8 +223,10 @@ void WebFrameProxy::loadURL(const URL& url, const String& referrer)
 void WebFrameProxy::loadData(std::span<const uint8_t> data, const String& type, const String& encodingName, const URL& baseURL)
 {
     ASSERT(!isMainFrame());
-    if (RefPtr page = m_page.get())
+    if (RefPtr page = m_page.get()) {
+        protectedProcess()->addPreviouslyApprovedFileURL(baseURL);
         page->sendToProcessContainingFrame(m_frameID, Messages::WebPage::LoadDataInFrame(data, type, encodingName, baseURL, m_frameID));
+    }
 }
     
 bool WebFrameProxy::canProvideSource() const

@@ -1235,7 +1235,7 @@ bool WebLocalFrameLoaderClient::shouldGoToHistoryItem(HistoryItem& item) const
     RefPtr webPage = m_frame->page();
     if (!webPage)
         return false;
-    webPage->send(Messages::WebPageProxy::WillGoToBackForwardListItem(item.identifier(), item.isInBackForwardCache()));
+    webPage->send(Messages::WebPageProxy::WillGoToBackForwardListItem(item.itemID(), item.isInBackForwardCache()));
     return true;
 }
 
@@ -2020,6 +2020,12 @@ bool WebLocalFrameLoaderClient::siteIsolationEnabled() const
     if (RefPtr coreFrame = m_frame->coreFrame())
         return coreFrame->settings().siteIsolationEnabled();
     return false;
+}
+
+RefPtr<WebCore::HistoryItem> WebLocalFrameLoaderClient::createHistoryItemTree(bool clipAtTarget, WebCore::BackForwardItemIdentifier itemID) const
+{
+    Ref frame = m_localFrame.get();
+    return frame->loader().history().createItemTree(frame, clipAtTarget, itemID);
 }
 
 } // namespace WebKit

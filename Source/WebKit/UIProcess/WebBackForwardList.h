@@ -90,6 +90,8 @@ public:
     void goToProvisionalItem(WebBackForwardListItem&);
     void clearProvisionalItem(WebBackForwardListFrameItem&);
 
+    Ref<FrameState> completeFrameStateForNavigation(Ref<FrameState>&&);
+
 #if !LOG_DISABLED
     String loggingString();
 #endif

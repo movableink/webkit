@@ -114,8 +114,8 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(EmptyCryptoClient);
 class UserMessageHandlerDescriptor;
 
 class EmptyBackForwardClient final : public BackForwardClient {
-    void addItem(FrameIdentifier, Ref<HistoryItem>&&) final { }
-    void setChildItem(BackForwardItemIdentifier, Ref<HistoryItem>&&) final { }
+    void addItem(Ref<HistoryItem>&&) final { }
+    void setChildItem(BackForwardFrameItemIdentifier, Ref<HistoryItem>&&) final { }
     void goToItem(HistoryItem&) final { }
     void goToProvisionalItem(const HistoryItem&) final { }
     void clearProvisionalItem(const HistoryItem&) final { }
@@ -1135,6 +1135,11 @@ bool EmptyFrameLoaderClient::isEmptyFrameLoaderClient() const
 
 void EmptyFrameLoaderClient::prefetchDNS(const String&)
 {
+}
+
+RefPtr<HistoryItem> EmptyFrameLoaderClient::createHistoryItemTree(bool, BackForwardItemIdentifier) const
+{
+    return nullptr;
 }
 
 #if USE(QUICK_LOOK)

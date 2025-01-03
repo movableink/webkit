@@ -544,6 +544,7 @@ Vector<ASCIILiteral> serializedIdentifiers()
 #if PLATFORM(COCOA)
     static_assert(sizeof(uint64_t) == sizeof(WebCore::AttributedStringTextTableID));
 #endif
+    static_assert(sizeof(uint64_t) == sizeof(WebCore::BackForwardFrameItemIdentifierID));
     static_assert(sizeof(uint64_t) == sizeof(WebCore::BackForwardItemIdentifierID));
     static_assert(sizeof(uint64_t) == sizeof(WebCore::BackgroundFetchRecordIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebCore::BroadcastChannelIdentifier));
@@ -695,6 +696,7 @@ Vector<ASCIILiteral> serializedIdentifiers()
 #if PLATFORM(COCOA)
         "WebCore::AttributedStringTextTableID"_s,
 #endif
+        "WebCore::BackForwardFrameItemIdentifierID"_s,
         "WebCore::BackForwardItemIdentifierID"_s,
         "WebCore::BackgroundFetchRecordIdentifier"_s,
         "WebCore::BroadcastChannelIdentifier"_s,

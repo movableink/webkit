@@ -1261,6 +1261,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     history/BackForwardCache.h
     history/BackForwardClient.h
     history/BackForwardController.h
+    history/BackForwardFrameItemIdentifier.h
     history/BackForwardItemIdentifier.h
     history/CachedFrame.h
     history/CachedFramePlatformData.h

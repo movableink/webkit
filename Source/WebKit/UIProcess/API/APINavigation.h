@@ -46,6 +46,10 @@ enum class FrameLoadType : uint8_t;
 class ResourceResponse;
 }
 
+namespace WebKit {
+class WebBackForwardListFrameItem;
+}
+
 namespace API {
 
 struct SubstituteData {
@@ -78,9 +82,9 @@ public:
         return adoptRef(*new Navigation(processID, WTFMove(currentAndTargetItem)));
     }
 
-    static Ref<Navigation> create(WebCore::ProcessIdentifier processID, Ref<WebKit::WebBackForwardListItem>&& targetItem, RefPtr<WebKit::WebBackForwardListItem>&& fromItem, WebCore::FrameLoadType backForwardFrameLoadType)
+    static Ref<Navigation> create(WebCore::ProcessIdentifier processID, Ref<WebKit::WebBackForwardListFrameItem>&& targetFrameItem, RefPtr<WebKit::WebBackForwardListItem>&& fromItem, WebCore::FrameLoadType backForwardFrameLoadType)
     {
-        return adoptRef(*new Navigation(processID, WTFMove(targetItem), WTFMove(fromItem), backForwardFrameLoadType));
+        return adoptRef(*new Navigation(processID, WTFMove(targetFrameItem), WTFMove(fromItem), backForwardFrameLoadType));
     }
 
     static Ref<Navigation> create(WebCore::ProcessIdentifier processID, WebCore::ResourceRequest&& request, RefPtr<WebKit::WebBackForwardListItem>&& fromItem)
@@ -110,8 +114,9 @@ public:
     bool currentRequestIsRedirect() const { return !m_lastNavigationAction.redirectResponse.isNull(); }
     bool currentRequestIsCrossSiteRedirect() const;
 
-    WebKit::WebBackForwardListItem* targetItem() const { return m_targetItem.get(); }
-    RefPtr<WebKit::WebBackForwardListItem> protectedTargetItem() const { return m_targetItem; }
+    WebKit::WebBackForwardListItem* targetItem() const;
+    RefPtr<WebKit::WebBackForwardListItem> protectedTargetItem() const { return targetItem(); }
+    WebKit::WebBackForwardListFrameItem* targetFrameItem() const { return m_targetFrameItem.get(); }
     WebKit::WebBackForwardListItem* fromItem() const { return m_fromItem.get(); }
     std::optional<WebCore::FrameLoadType> backForwardFrameLoadType() const { return m_backForwardFrameLoadType; }
     WebKit::WebBackForwardListItem* reloadItem() const { return m_reloadItem.get(); }
@@ -177,7 +182,7 @@ private:
     Navigation(WebCore::ProcessIdentifier);
     Navigation(WebCore::ProcessIdentifier, RefPtr<WebKit::WebBackForwardListItem>&&);
     Navigation(WebCore::ProcessIdentifier, WebCore::ResourceRequest&&, RefPtr<WebKit::WebBackForwardListItem>&& fromItem);
-    Navigation(WebCore::ProcessIdentifier, Ref<WebKit::WebBackForwardListItem>&& targetItem, RefPtr<WebKit::WebBackForwardListItem>&& fromItem, WebCore::FrameLoadType);
+    Navigation(WebCore::ProcessIdentifier, Ref<WebKit::WebBackForwardListFrameItem>&& targetItem, RefPtr<WebKit::WebBackForwardListItem>&& fromItem, WebCore::FrameLoadType);
     Navigation(WebCore::ProcessIdentifier, std::unique_ptr<SubstituteData>&&);
     Navigation(WebCore::ProcessIdentifier, WebCore::ResourceRequest&&, std::unique_ptr<SubstituteData>&&, RefPtr<WebKit::WebBackForwardListItem>&& fromItem);
 
@@ -188,7 +193,7 @@ private:
     std::optional<WebCore::ProcessIdentifier> m_currentRequestProcessIdentifier;
     Vector<WTF::URL> m_redirectChain;
 
-    RefPtr<WebKit::WebBackForwardListItem> m_targetItem;
+    const RefPtr<WebKit::WebBackForwardListFrameItem> m_targetFrameItem;
     RefPtr<WebKit::WebBackForwardListItem> m_fromItem;
     RefPtr<WebKit::WebBackForwardListItem> m_reloadItem;
     std::optional<WebCore::FrameLoadType> m_backForwardFrameLoadType;

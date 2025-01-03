@@ -263,6 +263,8 @@ private:
 
     void dispatchLoadEventToOwnerElementInAnotherProcess() final { };
 
+    RefPtr<WebCore::HistoryItem> createHistoryItemTree(bool clipAtTarget, WebCore::BackForwardItemIdentifier) const final;
+
 #if !PLATFORM(IOS_FAMILY)
     bool m_loadingIcon { false };
 #endif

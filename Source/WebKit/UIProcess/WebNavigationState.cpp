@@ -54,9 +54,9 @@ Ref<API::Navigation> WebNavigationState::createLoadRequestNavigation(WebCore::Pr
     return navigation;
 }
 
-Ref<API::Navigation> WebNavigationState::createBackForwardNavigation(WebCore::ProcessIdentifier processID, Ref<WebBackForwardListItem>&& targetItem, RefPtr<WebBackForwardListItem>&& currentItem, FrameLoadType frameLoadType)
+Ref<API::Navigation> WebNavigationState::createBackForwardNavigation(WebCore::ProcessIdentifier processID, Ref<WebBackForwardListFrameItem>&& targetFrameItem, RefPtr<WebBackForwardListItem>&& currentItem, FrameLoadType frameLoadType)
 {
-    auto navigation = API::Navigation::create(processID, WTFMove(targetItem), WTFMove(currentItem), frameLoadType);
+    Ref navigation = API::Navigation::create(processID, WTFMove(targetFrameItem), WTFMove(currentItem), frameLoadType);
 
     m_navigations.set(navigation->navigationID(), navigation.ptr());
 

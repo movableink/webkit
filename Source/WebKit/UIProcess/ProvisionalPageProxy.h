@@ -55,6 +55,8 @@ class RegistrableDomain;
 class ResourceRequest;
 enum class CrossOriginOpenerPolicyValue : uint8_t;
 enum class ShouldTreatAsContinuingLoad : uint8_t;
+struct BackForwardItemIdentifierType;
+using BackForwardItemIdentifier = ProcessQualified<ObjectIdentifier<BackForwardItemIdentifierType>>;
 }
 
 namespace WebKit {
@@ -182,7 +184,7 @@ private:
     void startURLSchemeTask(IPC::Connection&, URLSchemeTaskParameters&&);
     void backForwardGoToItem(IPC::Connection&, const WebCore::BackForwardItemIdentifier&, CompletionHandler<void(const WebBackForwardListCounts&)>&&);
     void decidePolicyForNavigationActionSync(NavigationActionData&&, CompletionHandler<void(PolicyDecision&&)>&&);
-    void backForwardAddItem(IPC::Connection&, WebCore::FrameIdentifier, Ref<FrameState>&&);
+    void backForwardAddItem(IPC::Connection&, Ref<FrameState>&&);
     void didDestroyNavigation(WebCore::NavigationIdentifier);
 #if USE(QUICK_LOOK)
     void requestPasswordForQuickLookDocumentInMainFrame(const String& fileName, CompletionHandler<void(const String&)>&&);
