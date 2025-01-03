@@ -328,7 +328,7 @@ RefPtr<LocalFrame> FrameLoader::SubframeLoader::loadSubframe(HTMLFrameOwnerEleme
     // which case, Referrer Policy is applied).
     auto referrerToUse = url.isAboutBlank() ? referrer.string() : SecurityPolicy::generateReferrerHeader(policy, url, referrer, OriginAccessPatternsForWebProcess::singleton());
 
-    frame->protectedLoader()->loadURLIntoChildFrame(url, referrerToUse, subFrame.get());
+    frame->protectedLoader()->loadURLIntoChildFrame(url, referrerToUse, *subFrame);
 
 #if ENABLE(CONTENT_EXTENSIONS)
     RefPtr subFramePage = subFrame->page();

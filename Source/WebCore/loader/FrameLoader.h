@@ -453,7 +453,7 @@ private:
     bool shouldTreatCurrentLoadAsContinuingLoad() const { return m_currentLoadContinuingState != LoadContinuingState::NotContinuing; }
 
     // SubframeLoader specific.
-    void loadURLIntoChildFrame(const URL&, const String& referer, LocalFrame*);
+    void loadURLIntoChildFrame(const URL&, const String& referer, LocalFrame&);
     void started();
 
     // PolicyChecker specific.
