@@ -1522,7 +1522,7 @@ void RenderStyle::conservativelyCollectChangedAnimatableProperties(const RenderS
         if (first.pointerEvents != second.pointerEvents)
             changingProperties.m_properties.set(CSSPropertyPointerEvents);
 
-        // Writing mode changes conversion of logical -> pysical properties.
+        // Writing mode changes conversion of logical -> physical properties.
         // Thus we need to list up all physical properties.
         if (first.writingMode != second.writingMode) {
             changingProperties.m_properties.merge(CSSProperty::physicalProperties);
@@ -1944,6 +1944,8 @@ void RenderStyle::conservativelyCollectChangedAnimatableProperties(const RenderS
             changingProperties.m_properties.set(CSSPropertyAnchorName);
         if (first.positionAnchor != second.positionAnchor)
             changingProperties.m_properties.set(CSSPropertyPositionAnchor);
+        if (first.positionTryFallbacks != second.positionTryFallbacks)
+            changingProperties.m_properties.set(CSSPropertyPositionTryFallbacks);
         if (first.positionTryOrder != second.positionTryOrder)
             changingProperties.m_properties.set(CSSPropertyPositionTryOrder);
         if (first.scrollSnapAlign != second.scrollSnapAlign)
