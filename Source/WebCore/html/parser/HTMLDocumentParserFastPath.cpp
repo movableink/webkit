@@ -64,8 +64,6 @@
 #include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringParsingBuffer.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 // Captures the potential outcomes for fast path html parser.
@@ -478,8 +476,7 @@ private:
     // `LChar` parser.
     String scanText()
     {
-        auto* start = m_parsingBuffer.position();
-        const auto* end = start + m_parsingBuffer.lengthRemaining();
+        auto start = m_parsingBuffer.span();
 
         auto scalarMatch = [&](auto character) ALWAYS_INLINE_LAMBDA {
             return character == '<' || character == '&' || character == '\r' || character == '\0';
@@ -497,36 +494,40 @@ private:
             return SIMD::equal(simde_vqtbl1q_u8(lowNibbleMask, SIMD::bitAnd(input, v0f)), input);
         };
 
-        const CharacterType* cursor = nullptr;
+        std::span<const CharacterType> cursor;
         if constexpr (sizeof(CharacterType) == 1) {
             auto vectorMatch = [&](auto input) ALWAYS_INLINE_LAMBDA {
                 return SIMD::findFirstNonZeroIndex(vectorEquals8Bit(input));
             };
-            cursor = SIMD::find(std::span { start, end }, vectorMatch, scalarMatch);
+            auto* it = SIMD::find(start, vectorMatch, scalarMatch);
+            cursor = start.subspan(it - start.data());
         } else {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
             auto vectorMatch = [&](auto input) ALWAYS_INLINE_LAMBDA {
                 constexpr simde_uint8x16_t zeros = SIMD::splat8(0);
                 return SIMD::findFirstNonZeroIndex(SIMD::bitAnd(vectorEquals8Bit(input.val[0]), SIMD::equal(input.val[1], zeros)));
             };
-            cursor = SIMD::findInterleaved(std::span { start, end }, vectorMatch, scalarMatch);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+            auto* it = SIMD::findInterleaved(start, vectorMatch, scalarMatch);
+            cursor = start.subspan(it - start.data());
         }
-        m_parsingBuffer.setPosition(cursor);
+        m_parsingBuffer.setPosition(cursor.data());
 
-        if (cursor != end) {
-            if (UNLIKELY(*cursor == '\0'))
+        if (!cursor.empty()) {
+            if (UNLIKELY(cursor[0] == '\0'))
                 return didFail(HTMLFastPathResult::FailedContainsNull, String());
 
-            if (*cursor == '&' || *cursor == '\r') {
-                m_parsingBuffer.setPosition(start);
+            if (cursor[0] == '&' || cursor[0] == '\r') {
+                m_parsingBuffer.setPosition(start.data());
                 return scanEscapedText();
             }
         }
 
-        unsigned length = cursor - start;
+        unsigned length = cursor.data() - start.data();
         if (UNLIKELY(length >= Text::defaultLengthLimit))
             return didFail(HTMLFastPathResult::FailedBigText, String());
 
-        return length ? String({ start, length }) : String();
+        return length ? String(start.first(length)) : String();
     }
 
     // Slow-path of `scanText()`, which supports escape sequences by copying to a
@@ -558,13 +559,13 @@ private:
     // Scan a tagName and convert to lowercase if necessary.
     ElementName scanTagName()
     {
-        auto* start = m_parsingBuffer.position();
+        auto start = m_parsingBuffer.span();
         skipWhile<isASCIILower>(m_parsingBuffer);
 
         if (m_parsingBuffer.atEnd() || !isCharAfterTagNameOrAttribute(*m_parsingBuffer)) {
             // Try parsing a case-insensitive tagName.
             m_charBuffer.shrink(0);
-            m_parsingBuffer.setPosition(start);
+            m_parsingBuffer.setPosition(start.data());
             while (m_parsingBuffer.hasCharactersRemaining()) {
                 auto c = *m_parsingBuffer;
                 if (isASCIIUpper(c))
@@ -579,7 +580,7 @@ private:
             skipWhile<isASCIIWhitespace>(m_parsingBuffer);
             return findHTMLElementName(m_charBuffer.span());
         }
-        auto tagName = findHTMLElementName(std::span { start, static_cast<size_t>(m_parsingBuffer.position() - start) });
+        auto tagName = findHTMLElementName(start.first(m_parsingBuffer.position() - start.data()));
         skipWhile<isASCIIWhitespace>(m_parsingBuffer);
         return tagName;
     }
@@ -589,7 +590,7 @@ private:
         // First look for all lower case. This path doesn't require any mapping of
         // input. This path could handle other valid attribute name chars, but they
         // are not as common, so it only looks for lowercase.
-        auto* start = m_parsingBuffer.position();
+        auto start = m_parsingBuffer.span();
         skipWhile<isASCIILower>(m_parsingBuffer);
         if (UNLIKELY(m_parsingBuffer.atEnd()))
             return didFail(HTMLFastPathResult::FailedEndOfInputReached, nullQName());
@@ -598,7 +599,7 @@ private:
         if (UNLIKELY(isValidAttributeNameChar(*m_parsingBuffer))) {
             // At this point name does not contain lowercase. It may contain upper-case,
             // which requires mapping. Assume it does.
-            m_parsingBuffer.setPosition(start);
+            m_parsingBuffer.setPosition(start.data());
             m_charBuffer.shrink(0);
             // isValidAttributeNameChar() returns false if end of input is reached.
             do {
@@ -609,7 +610,7 @@ private:
             } while (m_parsingBuffer.hasCharactersRemaining() && isValidAttributeNameChar(*m_parsingBuffer));
             attributeName = m_charBuffer.span();
         } else
-            attributeName = { start, static_cast<size_t>(m_parsingBuffer.position() - start) };
+            attributeName = start.first(m_parsingBuffer.position() - start.data());
 
         if (attributeName.empty())
             return nullQName();
@@ -625,9 +626,10 @@ private:
     AtomString scanAttributeValue()
     {
         skipWhile<isASCIIWhitespace>(m_parsingBuffer);
-        auto* start = m_parsingBuffer.position();
+        auto start = m_parsingBuffer.span();
         size_t length = 0;
         if (m_parsingBuffer.hasCharactersRemaining() && isQuoteCharacter(*m_parsingBuffer)) {
+            auto quoteStart = start;
             auto quoteChar = m_parsingBuffer.consume();
 
             auto find = [&]<CharacterType quoteChar>(std::span<const CharacterType> span) ALWAYS_INLINE_LAMBDA {
@@ -658,38 +660,41 @@ private:
                     auto vectorMatch = [&](auto input) ALWAYS_INLINE_LAMBDA {
                         return SIMD::findFirstNonZeroIndex(vectorEquals8Bit(input));
                     };
-                    return SIMD::find(span, vectorMatch, scalarMatch);
+                    auto* it = SIMD::find(span, vectorMatch, scalarMatch);
+                    return span.subspan(it - span.data());
                 } else {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
                     auto vectorMatch = [&](auto input) ALWAYS_INLINE_LAMBDA {
                         constexpr simde_uint8x16_t zeros = SIMD::splat8(0);
                         return SIMD::findFirstNonZeroIndex(SIMD::bitAnd(vectorEquals8Bit(input.val[0]), SIMD::equal(input.val[1], zeros)));
                     };
-                    return SIMD::findInterleaved(span, vectorMatch, scalarMatch);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+                    auto* it = SIMD::findInterleaved(span, vectorMatch, scalarMatch);
+                    return span.subspan(it - span.data());
                 }
             };
 
-            start = m_parsingBuffer.position();
-            const auto* end = start + m_parsingBuffer.lengthRemaining();
-            const auto* cursor = quoteChar == '\'' ? find.template operator()<'\''>(std::span { start, end }) : find.template operator()<'"'>(std::span { start, end });
-            if (UNLIKELY(cursor == end))
+            start = m_parsingBuffer.span();
+            const auto cursor = quoteChar == '\'' ? find.template operator()<'\''>(start) : find.template operator()<'"'>(start);
+            if (UNLIKELY(cursor.empty()))
                 return didFail(HTMLFastPathResult::FailedParsingQuotedAttributeValue, emptyAtom());
 
-            length = cursor - start;
-            if (UNLIKELY(*cursor != quoteChar)) {
-                if (LIKELY(*cursor == '&' || *cursor == '\r')) {
-                    m_parsingBuffer.setPosition(start - 1);
+            length = cursor.data() - start.data();
+            if (UNLIKELY(cursor[0] != quoteChar)) {
+                if (LIKELY(cursor[0] == '&' || cursor[0] == '\r')) {
+                    m_parsingBuffer.setPosition(quoteStart.data());
                     return scanEscapedAttributeValue();
                 }
                 return didFail(HTMLFastPathResult::FailedParsingQuotedAttributeValue, emptyAtom());
             }
-            m_parsingBuffer.setPosition(cursor + 1);
+            m_parsingBuffer.setPosition(cursor.subspan(1).data());
         } else {
             skipWhile<isValidUnquotedAttributeValueChar>(m_parsingBuffer);
-            length = m_parsingBuffer.position() - start;
+            length = m_parsingBuffer.position() - start.data();
             if (UNLIKELY(m_parsingBuffer.atEnd() || !isCharAfterUnquotedAttribute(*m_parsingBuffer)))
                 return didFail(HTMLFastPathResult::FailedParsingUnquotedAttributeValue, emptyAtom());
         }
-        return HTMLNameCache::makeAttributeValue({ start, length });
+        return HTMLNameCache::makeAttributeValue(start.first(length));
     }
 
     // Slow path for scanning an attribute value. Used for special cases such
@@ -722,7 +727,7 @@ private:
         if (UNLIKELY(m_parsingBuffer.atEnd() || m_parsingBuffer.consume() != quoteChar))
             return didFail(HTMLFastPathResult::FailedParsingQuotedEscapedAttributeValue, emptyAtom());
 
-        return HTMLNameCache::makeAttributeValue({ m_ucharBuffer.data(), m_ucharBuffer.size() });
+        return HTMLNameCache::makeAttributeValue(m_ucharBuffer.span());
     }
 
     void scanHTMLCharacterReference(Vector<UChar>& out)
@@ -993,5 +998,3 @@ bool tryFastParsingHTMLFragment(StringView source, Document& document, Container
 #undef FOR_EACH_SUPPORTED_TAG
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
