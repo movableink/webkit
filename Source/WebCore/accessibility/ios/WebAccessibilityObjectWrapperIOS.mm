@@ -356,6 +356,9 @@ static AccessibilityObjectWrapper* AccessibilityUnignoredAncestor(AccessibilityO
     if (!axObject)
         return nil;
     
+    if (RetainPtr remoteElement = axObject->remoteFramePlatformElement())
+        return remoteElement.get();
+
     // If this is a good accessible object to return, no extra work is required.
     if ([axObject->wrapper() accessibilityCanFuzzyHitTest])
         return AccessibilityUnignoredAncestor(axObject->wrapper());
