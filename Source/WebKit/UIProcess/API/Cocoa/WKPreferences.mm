@@ -601,6 +601,11 @@ static _WKStorageBlockingPolicy toAPI(WebCore::StorageBlockingPolicy policy)
     _preferences->disableRichJavaScriptFeatures();
 }
 
+- (void)_disableMediaPlaybackRelatedFeatures
+{
+    _preferences->disableMediaPlaybackRelatedFeatures();
+}
+
 - (BOOL)_applePayCapabilityDisclosureAllowed
 {
 #if ENABLE(APPLE_PAY)

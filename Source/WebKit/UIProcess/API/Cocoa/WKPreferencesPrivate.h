@@ -147,6 +147,7 @@ typedef NS_ENUM(NSInteger, _WKPitchCorrectionAlgorithm) {
 - (BOOL)_isEnabledForExperimentalFeature:(_WKExperimentalFeature *)feature WK_API_AVAILABLE(macos(10.12), ios(10.0));
 - (void)_setEnabled:(BOOL)value forExperimentalFeature:(_WKExperimentalFeature *)feature WK_API_AVAILABLE(macos(10.12), ios(10.0));
 - (void)_disableRichJavaScriptFeatures;
+- (void)_disableMediaPlaybackRelatedFeatures;
 
 @property (nonatomic, setter=_setShouldEnableTextAutosizingBoost:) BOOL _shouldEnableTextAutosizingBoost WK_API_AVAILABLE(macos(10.14), ios(12.0));
 

@@ -82,6 +82,7 @@ public:
     void enableAllExperimentalFeatures();
     void resetAllInternalDebugFeatures();
     void disableRichJavaScriptFeatures();
+    void disableMediaPlaybackRelatedFeatures();
 
     // Exposed for WebKitTestRunner use only.
     void setBoolValueForKey(const String&, bool value, bool ephemeral);

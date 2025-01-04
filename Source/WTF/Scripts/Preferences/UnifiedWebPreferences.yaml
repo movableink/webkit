@@ -2842,6 +2842,7 @@ EncryptedMediaAPIEnabled:
     WebCore:
       default: false
   sharedPreferenceForWebProcess: true
+  mediaPlaybackRelated: true
 
 EnterKeyHintEnabled:
   type: bool
@@ -4278,6 +4279,7 @@ LegacyEncryptedMediaAPIEnabled:
     WebCore:
       default: true
   sharedPreferenceForWebProcess: true
+  mediaPlaybackRelated: true
 
 LegacyLineLayoutVisualCoverageEnabled:
   type: bool
@@ -4654,6 +4656,7 @@ ManagedMediaSourceEnabled:
     WebCore:
       default: true
   sharedPreferenceForWebProcess: true
+  mediaPlaybackRelated: true
 
 ManagedMediaSourceHighThreshold:
   type: double
@@ -4849,6 +4852,7 @@ MediaControlsContextMenusEnabled:
     WebCore:
       default: false
   sharedPreferenceForWebProcess: true
+  mediaPlaybackRelated: true
 
 MediaControlsScaleWithPageZoom:
   type: bool
@@ -4922,6 +4926,7 @@ MediaPlaybackEnabled:
     WebCore:
       default: true
   sharedPreferenceForWebProcess: true
+  mediaPlaybackRelated: true
 
 MediaPreferredFullscreenWidth:
   type: double
@@ -4963,6 +4968,7 @@ MediaRecorderEnabled:
     WebCore:
       default: false
   sharedPreferenceForWebProcess: true
+  mediaPlaybackRelated: true
 
 MediaRecorderEnabledWebM:
   type: bool
@@ -5011,6 +5017,7 @@ MediaSessionCoordinatorEnabled:
     WebCore:
       default: true
   sharedPreferenceForWebProcess: true
+  mediaPlaybackRelated: true
 
 MediaSessionEnabled:
   type: bool
@@ -5077,6 +5084,7 @@ MediaSourceEnabled:
       "ENABLE(MEDIA_SOURCE)": true
       default: false
   sharedPreferenceForWebProcess: true
+  mediaPlaybackRelated: true
 
 MediaSourceInWorkerEnabled:
   type: bool
@@ -5093,6 +5101,7 @@ MediaSourceInWorkerEnabled:
       default: true
     WebCore:
       default: true
+  mediaPlaybackRelated: true
 
 MediaSourcePrefersDecompressionSession:
   type: bool
@@ -5772,6 +5781,7 @@ PeerConnectionEnabled:
   disableInLockdownMode: true
   sharedPreferenceForWebProcess: true
   richJavaScript: true
+  mediaPlaybackRelated: true
 
 PeerConnectionVideoScalingAdaptationDisabled:
   type: bool
@@ -7579,6 +7589,7 @@ TextRecognitionInVideosEnabled:
     WebKit:
       default: defaultTextRecognitionInVideosEnabled()
   sharedPreferenceForWebProcess: true
+  mediaPlaybackRelated: true
 
 ThreadedAnimationResolutionEnabled:
   type: bool
@@ -7910,6 +7921,7 @@ UseGPUProcessForMediaEnabled:
       "ENABLE(GPU_PROCESS_BY_DEFAULT)": true
       default: false
   sharedPreferenceForWebProcess: true
+  mediaPlaybackRelated: true
 
 UseGPUProcessForWebGLEnabled:
   type: bool
@@ -8467,6 +8479,7 @@ WebAudioEnabled:
   sharedPreferenceForWebProcess: true
   disableInLockdownMode: true
   richJavaScript: true
+  mediaPlaybackRelated: true
 
 WebAuthenticationASEnabled:
   type: bool
@@ -8574,6 +8587,7 @@ WebCodecsVideoEnabled:
   disableInLockdownMode: true
   sharedPreferenceForWebProcess: true
   richJavaScript: true
+  mediaPlaybackRelated: true
 
 WebCryptoSafeCurvesEnabled:
   type: bool
