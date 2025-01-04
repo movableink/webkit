@@ -26,7 +26,7 @@
 [
     DispatchedFrom=WebContent,
     DispatchedTo=GPU,
-    EnabledBy=MediaPlaybackEnabled
+    EnabledBy=UseGPUProcessForMediaEnabled
 ]
 messages -> RemoteSampleBufferDisplayLayer {
 #if !RELEASE_LOG_DISABLED

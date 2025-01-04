@@ -28,7 +28,7 @@
 [
     DispatchedFrom=WebContent,
     DispatchedTo=GPU,
-    EnabledBy=MediaPlaybackEnabled
+    EnabledBy=UseGPUProcessForMediaEnabled
 ]
 messages -> RemoteRemoteCommandListenerProxy {
     UpdateSupportedCommands(Vector<WebCore::PlatformMediaSessionRemoteControlCommandType> commands, bool supportsSeeking)

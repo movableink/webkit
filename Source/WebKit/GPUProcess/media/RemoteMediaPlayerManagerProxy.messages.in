@@ -26,7 +26,7 @@
 [
     DispatchedFrom=WebContent,
     DispatchedTo=GPU,
-    EnabledBy=MediaPlaybackEnabled
+    EnabledBy=UseGPUProcessForMediaEnabled
 ]
 messages -> RemoteMediaPlayerManagerProxy {
     CreateMediaPlayer(WebCore::MediaPlayerIdentifier identifier, WebCore::MediaPlayerClientIdentifier clientIdentifier, enum:uint8_t WebCore::MediaPlayerMediaEngineIdentifier remoteEngineIdentifier, struct WebKit::RemoteMediaPlayerProxyConfiguration proxyConfiguration)

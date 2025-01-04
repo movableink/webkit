@@ -26,17 +26,11 @@
 [
     DispatchedFrom=WebContent,
     DispatchedTo=GPU,
-    EnabledBy=MediaPlaybackEnabled
+    EnabledBy=UseGPUProcessForMediaEnabled
 ]
 messages -> RemoteMediaSessionHelperProxy {
-#if !PLATFORM(WATCHOS)
-    [EnabledBy=MediaSessionEnabled] StartMonitoringWirelessRoutes()
-    [EnabledBy=MediaSessionEnabled] StopMonitoringWirelessRoutes()
-#endif
-#if PLATFORM(WATCHOS)
     StartMonitoringWirelessRoutes()
     StopMonitoringWirelessRoutes()
-#endif
     ProvidePresentingApplicationPID(int pid, WebCore::MediaSessionHelper::ShouldOverride shouldOverride)
 }
 

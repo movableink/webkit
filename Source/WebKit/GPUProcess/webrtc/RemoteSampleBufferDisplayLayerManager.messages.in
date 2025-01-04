@@ -26,7 +26,7 @@
 [
     DispatchedFrom=WebContent,
     DispatchedTo=GPU,
-    EnabledBy=MediaPlaybackEnabled
+    EnabledBy=UseGPUProcessForMediaEnabled
 ]
 messages -> RemoteSampleBufferDisplayLayerManager WantsAsyncDispatchMessage {
     CreateLayer(WebKit::SampleBufferDisplayLayerIdentifier id, bool hideRootLayer, WebCore::IntSize size, bool shouldMaintainAspectRatio, bool canShowWhileLocked) -> (std::optional<WebKit::LayerHostingContextID> contextID)

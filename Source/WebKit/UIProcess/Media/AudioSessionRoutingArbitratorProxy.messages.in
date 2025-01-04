@@ -24,7 +24,7 @@
 [
     DispatchedFrom=WebContent,
     DispatchedTo=UI,
-    EnabledBy=MediaPlaybackEnabled
+    EnabledBy=UseGPUProcessForMediaEnabled && MediaPlaybackEnabled
 ]
 messages -> AudioSessionRoutingArbitratorProxy {
     BeginRoutingArbitrationWithCategory(enum:uint8_t WebCore::AudioSessionCategory category) -> (enum:uint8_t WebCore::AudioSessionRoutingArbitrationError error, enum:bool WebCore::AudioSessionRoutingArbitrationClient::DefaultRouteChanged defaultRouteChanged)

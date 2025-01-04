@@ -26,7 +26,7 @@
 [
     DispatchedFrom=WebContent,
     DispatchedTo=GPU,
-    EnabledBy=MediaPlaybackEnabled && MediaStreamEnabled
+    EnabledBy=UseGPUProcessForMediaEnabled
 ]
 messages -> RemoteAudioMediaStreamTrackRendererInternalUnitManager {
     CreateUnit(WebKit::AudioMediaStreamTrackRendererInternalUnitIdentifier identifier, String deviceID) -> (std::optional<WebCore::CAAudioStreamDescription> description, size_t frameChunkSize)
