@@ -3510,7 +3510,7 @@ ICECandidateFilteringEnabled:
 
 IFrameResourceMonitoringEnabled:
   type: bool
-  status: unstable
+  status: internal
   category: networking
   condition: ENABLE(CONTENT_EXTENSIONS)
   defaultsOverridable: true

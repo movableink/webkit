@@ -55,7 +55,7 @@ ResourceMonitor::ResourceMonitor(LocalFrame& frame)
     , m_networkUsageThreshold { networkUsageThresholdWithRandomNoise() }
 {
     if (RefPtr parentMonitor = parentResourceMonitorIfExists())
-        setEligibility(parentMonitor->eligibility());
+        m_eligibility = parentMonitor->eligibility();
 }
 
 void ResourceMonitor::setEligibility(Eligibility eligibility)
@@ -73,11 +73,15 @@ void ResourceMonitor::setEligibility(Eligibility eligibility)
 
 void ResourceMonitor::setDocumentURL(URL&& url)
 {
+    RefPtr frame = m_frame.get();
+    if (!frame)
+        return;
+
     m_frameURL = WTFMove(url);
 
     didReceiveResponse(m_frameURL, ContentExtensions::ResourceType::Document);
 
-    if (RefPtr iframe = dynamicDowncast<HTMLIFrameElement>(protectedFrame()->ownerElement())) {
+    if (RefPtr iframe = dynamicDowncast<HTMLIFrameElement>(frame->ownerElement())) {
         if (auto& url = iframe->initiatorSourceURL(); !url.isEmpty())
             didReceiveResponse(url, ContentExtensions::ResourceType::Script);
     }
@@ -90,7 +94,8 @@ void ResourceMonitor::didReceiveResponse(const URL& url, OptionSet<ContentExtens
     if (m_eligibility == Eligibility::Eligible)
         return;
 
-    RefPtr page = protectedFrame()->mainFrame().page();
+    RefPtr frame = m_frame.get();
+    RefPtr page = frame ? frame->mainFrame().page() : nullptr;
     if (!page)
         return;
 
@@ -129,7 +134,9 @@ void ResourceMonitor::checkNetworkUsageExcessIfNecessary()
     if (m_networkUsage.hasOverflowed() || m_networkUsage >= m_networkUsageThreshold) {
         m_networkUsageExceed = true;
 
-        Ref frame = m_frame.get();
+        RefPtr frame = m_frame.get();
+        if (!frame)
+            return;
 
         // If the frame has sticky user activation, don't do offloading.
         if (RefPtr protectedWindow = frame->window(); protectedWindow && protectedWindow->hasStickyActivation())
@@ -139,14 +146,10 @@ void ResourceMonitor::checkNetworkUsageExcessIfNecessary()
     }
 }
 
-Ref<LocalFrame> ResourceMonitor::protectedFrame() const
-{
-    return m_frame.get();
-}
-
 ResourceMonitor* ResourceMonitor::parentResourceMonitorIfExists() const
 {
-    RefPtr document = protectedFrame()->document();
+    RefPtr frame = m_frame.get();
+    RefPtr document = frame ? frame->document() : nullptr;
     return document ? document->parentResourceMonitorIfExists() : nullptr;
 }
 

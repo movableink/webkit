@@ -51,10 +51,9 @@ private:
     explicit ResourceMonitor(LocalFrame&);
 
     void checkNetworkUsageExcessIfNecessary();
-    Ref<LocalFrame> protectedFrame() const;
     ResourceMonitor* parentResourceMonitorIfExists() const;
 
-    WeakRef<LocalFrame> m_frame;
+    WeakPtr<LocalFrame> m_frame;
     URL m_frameURL;
     Eligibility m_eligibility { Eligibility::Unsure };
     bool m_networkUsageExceed { false };
