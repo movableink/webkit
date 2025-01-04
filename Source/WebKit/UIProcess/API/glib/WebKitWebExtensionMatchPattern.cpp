@@ -388,11 +388,6 @@ gboolean webkit_web_extension_match_pattern_matches_pattern(WebKitWebExtensionMa
 
 #else // ENABLE(WK_WEB_EXTENSIONS)
 
-void webkit_web_extension_match_pattern_register_custom_URL_scheme(const gchar* urlScheme)
-{
-    return nullptr;
-}
-
 WebKitWebExtensionMatchPattern* webkit_web_extension_match_pattern_ref(WebKitWebExtensionMatchPattern* matchPattern)
 {
     return nullptr;
