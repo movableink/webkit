@@ -95,6 +95,7 @@
 #import <WebCore/HTMLAreaElement.h>
 #import <WebCore/HTMLAttachmentElement.h>
 #import <WebCore/HTMLBodyElement.h>
+#import <WebCore/HTMLConverter.h>
 #import <WebCore/HTMLElement.h>
 #import <WebCore/HTMLElementTypeHelpers.h>
 #import <WebCore/HTMLFormElement.h>
@@ -5446,7 +5447,8 @@ static VisiblePositionRange constrainRangeToSelection(const VisiblePositionRange
 
 void WebPage::requestDocumentEditingContext(DocumentEditingContextRequest&& request, CompletionHandler<void(DocumentEditingContext&&)>&& completionHandler)
 {
-    if (!request.options.contains(DocumentEditingContextRequest::Options::Text) && !request.options.contains(DocumentEditingContextRequest::Options::AttributedText)) {
+    bool wantsAttributedText = request.options.contains(DocumentEditingContextRequest::Options::AttributedText);
+    if (!request.options.contains(DocumentEditingContextRequest::Options::Text) && !wantsAttributedText) {
         completionHandler({ });
         return;
     }
@@ -5550,7 +5552,7 @@ void WebPage::requestDocumentEditingContext(DocumentEditingContextRequest&& requ
 
     auto isTextObscured = [] (const VisiblePosition& visiblePosition) {
         if (RefPtr textControl = enclosingTextFormControl(visiblePosition.deepEquivalent())) {
-            if (auto* input = dynamicDowncast<HTMLInputElement>(textControl.get())) {
+            if (RefPtr input = dynamicDowncast<HTMLInputElement>(textControl.get())) {
                 if (input->autofilledAndObscured())
                     return true;
             }
@@ -5558,17 +5560,20 @@ void WebPage::requestDocumentEditingContext(DocumentEditingContextRequest&& requ
         return false;
     };
 
-    auto makeString = [&isTextObscured] (const VisiblePosition& start, const VisiblePosition& end) -> AttributedString {
+    auto makeString = [&] (const VisiblePosition& start, const VisiblePosition& end) -> AttributedString {
         auto range = makeSimpleRange(start, end);
         if (!range || range->collapsed())
             return { };
-        // FIXME: This should return editing-offset-compatible attributed strings if that option is requested.
 
         auto isObscured = isTextObscured(start);
         TextIteratorBehaviors textBehaviors = { };
         if (!isObscured)
             textBehaviors = TextIteratorBehavior::EmitsOriginalText;
-        return WebCore::AttributedString::fromNSAttributedString(adoptNS([[NSAttributedString alloc] initWithString:WebCore::plainTextReplacingNoBreakSpace(*range, textBehaviors)]));
+
+        if (wantsAttributedText)
+            return editingAttributedStringReplacingNoBreakSpace(*range, textBehaviors, { IncludedElement::Images, IncludedElement::Attachments });
+
+        return AttributedString::fromNSAttributedString(adoptNS([[NSAttributedString alloc] initWithString:plainTextReplacingNoBreakSpace(*range, textBehaviors)]));
     };
 
     DocumentEditingContext context;
