@@ -58,6 +58,10 @@ struct WebViewRepresentable {
         webView.configuration.preferences.isElementFullscreenEnabled = environment.webViewAllowsElementFullscreen
 
         context.coordinator.update(platformView, configuration: self, environment: environment)
+
+#if os(macOS)
+        owner.page.backingUIDelegate.menuBuilder = environment.webViewContextMenuContext?.menu
+#endif
     }
 
     func makeCoordinator() -> WebViewCoordinator {

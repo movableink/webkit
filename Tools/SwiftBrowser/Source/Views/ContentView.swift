@@ -272,6 +272,37 @@ struct ContentView: View {
                     DownloadsList(downloads: viewModel.downloadCoordinator.downloads)
                         .presentationDetents([.medium, .large])
                 }
+                .webViewContextMenu { element in
+                    if let url = element.linkURL {
+                        Button("Open Link in New Window") {
+                            let request = URLRequest(url: url)
+                            openWindow(value: CodableURLRequest(request))
+                        }
+
+                        Button("Download Linked File") {
+                            let request = URLRequest(url: url)
+                            Task {
+                                await viewModel.page.startDownload(using: request)
+                            }
+                        }
+                    } else {
+                        if let previousItem = viewModel.page.backForwardList.backList.last {
+                            Button("Back") {
+                                viewModel.page.load(backForwardItem: previousItem)
+                            }
+                        }
+
+                        if let nextItem = viewModel.page.backForwardList.forwardList.first {
+                            Button("Forward") {
+                                viewModel.page.load(backForwardItem: nextItem)
+                            }
+                        }
+
+                        Button("Reload") {
+                            viewModel.page.reload()
+                        }
+                    }
+                }
                 .toolbar {
                     ToolbarItemGroup(placement: Self.navigationToolbarItemPlacement) {
                         ToolbarBackForwardMenuView(

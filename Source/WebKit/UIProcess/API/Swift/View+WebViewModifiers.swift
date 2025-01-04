@@ -38,6 +38,8 @@ extension EnvironmentValues {
     @Entry var webViewAllowsElementFullscreen = false
 
     @Entry var webViewFindContext: FindContext = .init()
+
+    @Entry var webViewContextMenuContext: ContextMenuContext? = nil
 }
 
 extension View {
@@ -80,6 +82,26 @@ extension View {
     public func webViewReplaceDisabled(_ isDisabled: Bool = true) -> some View {
         transformEnvironment(\.webViewFindContext) { $0.canReplace = !isDisabled }
     }
+
+    @_spi(Private)
+    public func webViewContextMenu<M>(@ViewBuilder menuItems: @escaping (WebPage_v0.ElementInfo) -> M) -> some View where M: View {
+#if os(macOS)
+        let converted = { (info: WebPage_v0.ElementInfo) in
+            let menuView = menuItems(info)
+            return NSHostingMenu(rootView: menuView)
+        }
+
+        return environment(\.webViewContextMenuContext, .init(menu: converted))
+#else
+        return self
+#endif
+    }
+}
+
+struct ContextMenuContext {
+#if os(macOS)
+    let menu: (WebPage_v0.ElementInfo) -> NSMenu
+#endif
 }
 
 struct FindContext {

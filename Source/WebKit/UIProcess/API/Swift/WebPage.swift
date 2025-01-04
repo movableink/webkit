@@ -246,7 +246,7 @@ public class WebPage_v0 {
     }
 
     private let backingNavigationDelegate: WKNavigationDelegateAdapter
-    private let backingUIDelegate: WKUIDelegateAdapter
+    let backingUIDelegate: WKUIDelegateAdapter
     let backingDownloadDelegate: WKDownloadDelegateAdapter
 
     @ObservationIgnored
@@ -395,12 +395,12 @@ public class WebPage_v0 {
     // For these to work, a custom implementation of `DownloadCoordinator.destination(forDownload:response:suggestedFilename:) async -> URL?`
     // must be provided so that the downloads are not immediately cancelled.
 
-    func startDownload(using request: URLRequest) async -> WebPage_v0.DownloadID {
+    public func startDownload(using request: URLRequest) async -> WebPage_v0.DownloadID {
         let cocoaDownload = await backingWebView.startDownload(using: request)
         return WebPage_v0.DownloadID(cocoaDownload)
     }
 
-    func resumeDownload(fromResumeData resumeData: Data) async -> WebPage_v0.DownloadID {
+    public func resumeDownload(fromResumeData resumeData: Data) async -> WebPage_v0.DownloadID {
         let cocoaDownload = await backingWebView.resumeDownload(fromResumeData: resumeData)
         return WebPage_v0.DownloadID(cocoaDownload)
     }
