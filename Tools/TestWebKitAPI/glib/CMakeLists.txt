@@ -188,6 +188,10 @@ ADD_WK2_TEST(TestDOMElement ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestDOME
 ADD_WK2_TEST(TestGeolocationManager ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestGeolocationManager.cpp)
 ADD_WK2_TEST(TestInputMethodContext ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestInputMethodContext.cpp)
 
+if (ENABLE_WK_WEB_EXTENSIONS)
+    ADD_WK2_TEST(TestWebKitWebExtensionMatchPattern ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebExtensionMatchPattern.cpp)
+endif ()
+
 if (ENABLE_2022_GLIB_API)
     ADD_WK2_TEST(TestWebKitNetworkSession ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestWebKitNetworkSession.cpp)
 endif ()
