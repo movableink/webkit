@@ -921,17 +921,17 @@ void RobinHoodHashTable<Key, Value, Extractor, HashFunctions, Traits, KeyTraits,
 #endif // ASSERT_ENABLED
 
 struct MemoryCompactLookupOnlyRobinHoodHashTableTraits {
-    template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits>
+    template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits, ShouldValidateKey shouldValidateKey>
     using TableType = RobinHoodHashTable<Key, Value, Extractor, HashFunctions, Traits, KeyTraits, MemoryCompactLookupOnlyRobinHoodHashTableSizePolicy>;
 };
 
 struct MemoryCompactRobinHoodHashTableTraits {
-    template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits>
+    template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits, ShouldValidateKey shouldValidateKey>
     using TableType = RobinHoodHashTable<Key, Value, Extractor, HashFunctions, Traits, KeyTraits, MemoryCompactRobinHoodHashTableSizePolicy>;
 };
 
 struct FastRobinHoodHashTableTraits {
-    template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits>
+    template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits, ShouldValidateKey shouldValidateKey>
     using TableType = RobinHoodHashTable<Key, Value, Extractor, HashFunctions, Traits, KeyTraits, FastRobinHoodHashTableSizePolicy>;
 };
 

@@ -58,7 +58,7 @@ private:
 
     using HashFunctions = HashArg;
 
-    using HashTableType = typename TableTraitsArg::template TableType<KeyType, KeyValuePairType, KeyValuePairKeyExtractor<KeyValuePairType>, HashFunctions, KeyValuePairTraits, KeyTraits>;
+    using HashTableType = typename TableTraitsArg::template TableType<KeyType, KeyValuePairType, KeyValuePairKeyExtractor<KeyValuePairType>, HashFunctions, KeyValuePairTraits, KeyTraits, shouldValidateKey>;
 
     class HashMapKeysProxy;
     class HashMapValuesProxy;

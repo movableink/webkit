@@ -43,7 +43,7 @@ public:
     using ValueType = typename ValueTraits::TraitType;
 
 private:
-    using HashTableType = typename TableTraitsArg::template TableType<ValueType, ValueType, IdentityExtractor, HashFunctions, ValueTraits, ValueTraits>;
+    using HashTableType = typename TableTraitsArg::template TableType<ValueType, ValueType, IdentityExtractor, HashFunctions, ValueTraits, ValueTraits, ShouldValidateKey::No>;
 
 public:
     // HashSet iterators have the following structure:

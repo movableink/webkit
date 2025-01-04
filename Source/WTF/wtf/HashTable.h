@@ -361,7 +361,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HashTable);
     template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits, ShouldValidateKey shouldValidateKey>
     class HashTable {
     public:
-        using HashTableType = HashTable<Key, Value, Extractor, HashFunctions, Traits, KeyTraits>;
+        using HashTableType = HashTable<Key, Value, Extractor, HashFunctions, Traits, KeyTraits, shouldValidateKey>;
         typedef HashTableIterator<HashTableType, Key, Value, Extractor, HashFunctions, Traits, KeyTraits> iterator;
         typedef HashTableConstIterator<HashTableType, Key, Value, Extractor, HashFunctions, Traits, KeyTraits> const_iterator;
         typedef Traits ValueTraits;
@@ -657,8 +657,6 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HashTable);
             ValueType& deletedValue = *deletedValuePtr;
             Traits::constructDeletedValue(deletedValue);
             RELEASE_ASSERT(!HashTranslator::equal(Extractor::extract(deletedValue), key));
-        } else if constexpr (shouldValidateKey == ShouldValidateKey::Yes) {
-            STATIC_ASSERT_NOT_REACHED_FOR_TYPE(Key, "ShouldValidateKey::Yes was specified, but no way to validate key.");
         }
     }
 
@@ -1539,8 +1537,8 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HashTable);
 #endif // CHECK_HASHTABLE_ITERATORS
 
     struct HashTableTraits {
-        template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits>
-        using TableType = HashTable<Key, Value, Extractor, HashFunctions, Traits, KeyTraits>;
+        template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits, ShouldValidateKey shouldValidateKey>
+        using TableType = HashTable<Key, Value, Extractor, HashFunctions, Traits, KeyTraits, shouldValidateKey>;
     };
 
     // iterator adapters
