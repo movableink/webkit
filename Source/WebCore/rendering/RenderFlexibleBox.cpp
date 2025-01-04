@@ -1184,18 +1184,16 @@ bool RenderFlexibleBox::flexItemCrossSizeIsDefinite(const RenderBox& flexItem, c
 void RenderFlexibleBox::cacheFlexItemMainSize(const RenderBox& flexItem)
 {
     ASSERT(!flexItem.needsLayout());
-    LayoutUnit mainSize;
-    if (mainAxisIsFlexItemInlineAxis(flexItem))
-        mainSize = flexItem.maxPreferredLogicalWidth();
-    else {
+    ASSERT(!mainAxisIsFlexItemInlineAxis(flexItem));
+
+    auto mainSize = [&] {
         auto flexBasis = flexBasisForFlexItem(flexItem);
         if (flexBasis.isPercentOrCalculated() && !flexItemMainSizeIsDefinite(flexItem, flexBasis))
-            mainSize = cachedFlexItemIntrinsicContentLogicalHeight(flexItem) + flexItem.borderAndPaddingLogicalHeight() + flexItem.scrollbarLogicalHeight();
-        else
-            mainSize = flexItem.logicalHeight();
-    }
-  
-    m_intrinsicSizeAlongMainAxis.set(flexItem, mainSize);
+            return cachedFlexItemIntrinsicContentLogicalHeight(flexItem) + flexItem.borderAndPaddingLogicalHeight() + flexItem.scrollbarLogicalHeight();
+        return flexItem.logicalHeight();
+    };
+
+    m_intrinsicSizeAlongMainAxis.set(flexItem, mainSize());
     m_relaidOutFlexItems.add(flexItem);
 }
 
