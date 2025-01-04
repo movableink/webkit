@@ -2948,13 +2948,13 @@ Ref<TextMetrics> CanvasRenderingContext2DBase::measureTextInternal(const TextRun
     metrics->setWidth(fontWidth);
 
     FloatPoint offset = textOffset(fontWidth, textRun.direction());
-    int ascent = fontMetrics.intAscent();
-    int descent = fontMetrics.intDescent();
+    auto ascent = fontMetrics.ascent();
+    auto descent = fontMetrics.descent();
 
     metrics->setActualBoundingBoxAscent(glyphOverflow.top - offset.y());
     metrics->setActualBoundingBoxDescent(glyphOverflow.bottom + offset.y());
-    metrics->setFontBoundingBoxAscent(ascent - offset.y());
-    metrics->setFontBoundingBoxDescent(descent + offset.y());
+    metrics->setFontBoundingBoxAscent(fontMetrics.intAscent() - offset.y());
+    metrics->setFontBoundingBoxDescent(fontMetrics.intDescent() + offset.y());
     metrics->setEmHeightAscent(ascent - offset.y());
     metrics->setEmHeightDescent(descent + offset.y());
     metrics->setHangingBaseline(ascent - offset.y());
