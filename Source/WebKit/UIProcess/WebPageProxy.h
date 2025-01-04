@@ -3288,6 +3288,11 @@ private:
     bool hasValidOpeningAppLinkActivity() const;
 #endif
 
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    void shouldOffloadIFrameForHost(const String& host, CompletionHandler<void(bool)>&&) const;
+#endif
+
     UniqueRef<Internals> m_internals;
     Identifier m_identifier;
     WebCore::PageIdentifier m_webPageID;

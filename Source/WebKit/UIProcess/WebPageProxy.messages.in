@@ -671,4 +671,8 @@ messages -> WebPageProxy {
     HasActiveNowPlayingSessionChanged(bool hasActiveNowPlayingSessionChanged)
 
     SetAllowsLayoutViewportHeightExpansion(bool newValue)
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    ShouldOffloadIFrameForHost(String host) -> (bool wasGranted)
+#endif
 }

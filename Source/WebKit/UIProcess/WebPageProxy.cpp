@@ -15873,6 +15873,14 @@ void WebPageProxy::setPresentingApplicationAuditToken(const audit_token_t& prese
 }
 #endif
 
+#if ENABLE(CONTENT_EXTENSIONS)
+void WebPageProxy::shouldOffloadIFrameForHost(const String& host, CompletionHandler<void(bool)>&& completionHandler) const
+{
+    bool wasGranted = protectedWebsiteDataStore()->resourceMonitorThrottler().tryAccess(host);
+    completionHandler(wasGranted);
+}
+#endif
+
 } // namespace WebKit
 
 #undef WEBPAGEPROXY_RELEASE_LOG

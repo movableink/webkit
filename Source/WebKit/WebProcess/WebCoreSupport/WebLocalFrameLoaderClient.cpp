@@ -2028,6 +2028,30 @@ RefPtr<WebCore::HistoryItem> WebLocalFrameLoaderClient::createHistoryItemTree(bo
     return frame->loader().history().createItemTree(frame, clipAtTarget, itemID);
 }
 
+#if ENABLE(CONTENT_EXTENSIONS)
+
+void WebLocalFrameLoaderClient::didExceedNetworkUsageThreshold()
+{
+    ASSERT(!m_frame->isMainFrame());
+
+    RefPtr webPage = m_frame->page();
+    RefPtr localMainFrame = webPage ? dynamicDowncast<LocalFrame>(webPage->mainFrame()) : nullptr;
+    RefPtr document = localMainFrame ? localMainFrame->document() : nullptr;
+    if (!document)
+        return;
+
+    auto url = document->url();
+    if (url.isEmpty())
+        return;
+
+    webPage->sendWithAsyncReply(Messages::WebPageProxy::ShouldOffloadIFrameForHost(url.host().toStringWithoutCopying()), [frame = m_frame->coreLocalFrame()] (bool wasGranted) {
+        if (wasGranted)
+            frame->showResourceMonitoringError();
+    });
+}
+
+#endif
+
 } // namespace WebKit
 
 #undef PREFIX_PARAMETERS

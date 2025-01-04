@@ -389,6 +389,10 @@ public:
 
     virtual RefPtr<HistoryItem> createHistoryItemTree(bool clipAtTarget, BackForwardItemIdentifier) const = 0;
 
+#if ENABLE(CONTENT_EXTENSIONS)
+    virtual void didExceedNetworkUsageThreshold();
+#endif
+
 protected:
     explicit LocalFrameLoaderClient(FrameLoader&);
 

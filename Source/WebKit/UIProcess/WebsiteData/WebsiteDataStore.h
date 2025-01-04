@@ -69,6 +69,10 @@
 #include <WebCore/SoupNetworkProxySettings.h>
 #endif
 
+#if ENABLE(CONTENT_EXTENSIONS)
+#include <WebCore/ResourceMonitorThrottler.h>
+#endif
+
 namespace API {
 class Data;
 class DownloadClient;
@@ -490,6 +494,10 @@ public:
     bool builtInNotificationsEnabled() const;
 #endif
 
+#if ENABLE(CONTENT_EXTENSIONS)
+    WebCore::ResourceMonitorThrottler& resourceMonitorThrottler() { return m_resourceMonitorThrottler; }
+#endif
+
 private:
     enum class ForceReinitialization : bool { No, Yes };
 #if ENABLE(APP_BOUND_DOMAINS)
@@ -630,6 +638,10 @@ private:
 #endif
     bool m_storageSiteValidationEnabled { false };
     HashSet<URL> m_persistedSiteURLs;
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    WebCore::ResourceMonitorThrottler m_resourceMonitorThrottler;
+#endif
 };
 
 }

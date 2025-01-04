@@ -128,7 +128,14 @@ void ResourceMonitor::checkNetworkUsageExcessIfNecessary()
 
     if (m_networkUsage.hasOverflowed() || m_networkUsage >= m_networkUsageThreshold) {
         m_networkUsageExceed = true;
-        protectedFrame()->networkUsageDidExceedThreshold();
+
+        Ref frame = m_frame.get();
+
+        // If the frame has sticky user activation, don't do offloading.
+        if (RefPtr protectedWindow = frame->window(); protectedWindow && protectedWindow->hasStickyActivation())
+            return;
+
+        frame->loader().client().didExceedNetworkUsageThreshold();
     }
 }
 

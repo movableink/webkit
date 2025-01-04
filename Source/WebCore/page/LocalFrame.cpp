@@ -125,7 +125,7 @@
 #endif
 
 #if ENABLE(CONTENT_EXTENSIONS) && USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/LocalFrameAdditions.h>)
-#import <WebKitAdditions/LocalFrameAdditions.h>
+#include <WebKitAdditions/LocalFrameAdditions.h>
 #endif
 
 #define FRAME_RELEASE_LOG_ERROR(channel, fmt, ...) RELEASE_LOG_ERROR(channel, "%p - Frame::" fmt, this, ##__VA_ARGS__)
@@ -136,10 +136,6 @@ using namespace HTMLNames;
 
 #if PLATFORM(IOS_FAMILY)
 static const Seconds scrollFrequency { 1000_s / 60. };
-#endif
-
-#if ENABLE(CONTENT_EXTENSIONS)
-static String generateResourceMonitorErrorHTML();
 #endif
 
 DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, frameCounter, ("Frame"));
@@ -1402,22 +1398,6 @@ void LocalFrame::setScrollingMode(ScrollbarMode scrollingMode)
 
 #if ENABLE(CONTENT_EXTENSIONS)
 
-void LocalFrame::networkUsageDidExceedThreshold()
-{
-    ASSERT(!isMainFrame());
-
-    // If the frame has sticky user activation, don't do offloading.
-    if (RefPtr protectedWindow = window(); protectedWindow && protectedWindow->hasStickyActivation())
-        return;
-
-    FRAME_RELEASE_LOG_ERROR(ResourceLoading, "networkUsageDidExceedThreshold: Unloading frame due to exceeding threshold.");
-
-    showResourceMonitoringError(generateResourceMonitorErrorHTML());
-
-    if (RefPtr document = this->document())
-        document->addConsoleMessage(MessageSource::ContentBlocker, MessageLevel::Error, "Frame was unloaded because its network usage exceeded the limit."_s);
-}
-
 static String generateResourceMonitorErrorHTML()
 {
 #if PLATFORM(COCOA) && HAVE(LOCAL_FRAME_ADDITIONS)
@@ -1427,7 +1407,7 @@ static String generateResourceMonitorErrorHTML()
 #endif
 }
 
-void LocalFrame::showResourceMonitoringError(String&& htmlContent)
+void LocalFrame::showResourceMonitoringError()
 {
     RefPtr iframeElement = dynamicDowncast<HTMLIFrameElement>(ownerElement());
     if (!iframeElement)
@@ -1440,7 +1420,10 @@ void LocalFrame::showResourceMonitoringError(String&& htmlContent)
         }
     }
 
-    iframeElement->setSrcdoc(htmlContent);
+    iframeElement->setSrcdoc(generateResourceMonitorErrorHTML());
+
+    if (RefPtr document = this->document())
+        document->addConsoleMessage(MessageSource::ContentBlocker, MessageLevel::Error, "Frame was unloaded because its network usage exceeded the limit."_s);
 }
 
 #endif

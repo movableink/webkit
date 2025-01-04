@@ -1556,6 +1556,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     loader/ResourceLoaderTypes.h
     loader/ResourceMonitor.h
     loader/ResourceMonitorChecker.h
+    loader/ResourceMonitorThrottler.h
     loader/ResourceTimingInformation.h
     loader/ShouldTreatAsContinuingLoad.h
     loader/SubframeLoader.h

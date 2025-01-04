@@ -289,6 +289,10 @@ private:
 
     bool siteIsolationEnabled() const;
 
+#if ENABLE(CONTENT_EXTENSIONS)
+    void didExceedNetworkUsageThreshold();
+#endif
+
 #if ENABLE(PDF_PLUGIN)
     RefPtr<PluginView> m_pluginView;
     bool m_hasSentResponseToPluginView { false };
