@@ -27,6 +27,7 @@
 #import "WebProcess.h"
 
 #import "AccessibilitySupportSPI.h"
+#import "AdditionalFonts.h"
 #import "ArgumentCodersCocoa.h"
 #import "CoreIPCAuditToken.h"
 #import "DefaultWebBrowserChecks.h"
@@ -1533,6 +1534,24 @@ void WebProcess::postObserverNotification(const String& message)
 }
 
 #endif
+
+void WebProcess::registerAdditionalFonts(AdditionalFonts&& fonts)
+{
+    RetainPtr<NSMutableArray> fontURLs = [NSMutableArray array];
+    for (auto& fontData : fonts.fontDataList) {
+        SandboxExtension::consumePermanently(fontData.sandboxExtensionHandle);
+
+        RetainPtr<CFURLRef> cfURL = fontData.fontURL.createCFURL();
+        [fontURLs addObject:(__bridge NSURL *)cfURL.get()];
+    }
+
+    auto blockPtr = makeBlockPtr([fontURLs](CFArrayRef errors, bool done) {
+        RELEASE_LOG(Process, "Register font URLs %@ errors=%@ done=%d", fontURLs.get(), (__bridge id)errors, done);
+        return true;
+    });
+
+    CTFontManagerRegisterFontURLs((__bridge CFArrayRef)fontURLs.get(), kCTFontManagerScopeProcess, true, blockPtr.get());
+}
 
 } // namespace WebKit
 

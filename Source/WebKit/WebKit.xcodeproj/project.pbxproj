@@ -2343,6 +2343,7 @@
 		E3607DEA2C7FE92200956766 /* WKDownloadDelegatePrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = E3607DE92C7FE92200956766 /* WKDownloadDelegatePrivate.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		E36A00E329CF7AC000AC4E8A /* TextTrackRepresentationCocoa.mm in Sources */ = {isa = PBXBuildFile; fileRef = E36A00E229CF7AC000AC4E8A /* TextTrackRepresentationCocoa.mm */; };
 		E36FF00327F36FBD004BE21A /* SandboxStateVariables.h in Headers */ = {isa = PBXBuildFile; fileRef = E36FF00127F36FBD004BE21A /* SandboxStateVariables.h */; };
+		E37726022D0DF251000BCBA6 /* AdditionalFonts.h in Headers */ = {isa = PBXBuildFile; fileRef = E37726002D0DF248000BCBA6 /* AdditionalFonts.h */; };
 		E38034DC2C63D6670095F1E0 /* LogStreamMessages.h in Headers */ = {isa = PBXBuildFile; fileRef = E38034DB2C63D6670095F1E0 /* LogStreamMessages.h */; };
 		E3816B3D27E2463A005EAFC0 /* WebMockContentFilterManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E3816B3B27E24639005EAFC0 /* WebMockContentFilterManager.cpp */; };
 		E3816B3E27E2463A005EAFC0 /* WebMockContentFilterManager.h in Headers */ = {isa = PBXBuildFile; fileRef = E3816B3C27E24639005EAFC0 /* WebMockContentFilterManager.h */; };
@@ -7989,6 +7990,8 @@
 		E36D701D27B718EF006531B7 /* WebAttachmentElementClient.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebAttachmentElementClient.cpp; sourceTree = "<group>"; };
 		E36FF00127F36FBD004BE21A /* SandboxStateVariables.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SandboxStateVariables.h; sourceTree = "<group>"; };
 		E36FF00227F36FBD004BE21A /* preferences.sb */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = preferences.sb; sourceTree = "<group>"; };
+		E37726002D0DF248000BCBA6 /* AdditionalFonts.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AdditionalFonts.h; sourceTree = "<group>"; };
+		E37726012D0DF248000BCBA6 /* AdditionalFonts.serialization.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = AdditionalFonts.serialization.in; sourceTree = "<group>"; };
 		E37A2F1A2B8523300087F394 /* NetworkingProcessExtension.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = NetworkingProcessExtension.entitlements; sourceTree = "<group>"; };
 		E37A2F1B2B8523B10087F394 /* WebContentProcessExtension.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = WebContentProcessExtension.entitlements; sourceTree = "<group>"; };
 		E37A2F1C2B8523B10087F394 /* GPUProcessExtension.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = GPUProcessExtension.entitlements; sourceTree = "<group>"; };
@@ -9154,6 +9157,8 @@
 				86E0787B2ACE0ACE00B8FADC /* AccessibilityPreferences.serialization.in */,
 				A7D792D51767CB6E00881CBE /* ActivityAssertion.cpp */,
 				A7D792D41767CB0900881CBE /* ActivityAssertion.h */,
+				E37726002D0DF248000BCBA6 /* AdditionalFonts.h */,
+				E37726012D0DF248000BCBA6 /* AdditionalFonts.serialization.in */,
 				F4EFD8AF29C256BD00570001 /* AlternativeTextClient.serialization.in */,
 				BC329D9A16ACCE9900316DE2 /* APIWebArchive.h */,
 				BC329D9916ACCE9900316DE2 /* APIWebArchive.mm */,
@@ -16332,6 +16337,7 @@
 				E3CAAA442413279900CED2E2 /* AccessibilitySupportSPI.h in Headers */,
 				E3B8F7F82BA8AC4D006E97B6 /* AccessibilityUtilitiesSPI.h in Headers */,
 				A7D792D81767CCA300881CBE /* ActivityAssertion.h in Headers */,
+				E37726022D0DF251000BCBA6 /* AdditionalFonts.h in Headers */,
 				634842511FB26E7100946E3C /* APIApplicationManifest.h in Headers */,
 				BC64697011DBE603006455B0 /* APIArray.h in Headers */,
 				2E5C770E1FA7D429005932C3 /* APIAttachment.h in Headers */,

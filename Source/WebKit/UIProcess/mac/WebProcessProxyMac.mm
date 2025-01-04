@@ -32,6 +32,7 @@
 #import "AuxiliaryProcess.h"
 #import "CodeSigning.h"
 #import "WKFullKeyboardAccessWatcher.h"
+#import "WebProcessMessages.h"
 #import <signal.h>
 #import <wtf/ProcessPrivilege.h>
 

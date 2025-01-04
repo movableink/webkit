@@ -223,6 +223,7 @@ $(PROJECT_DIR)/Shared/API/APIURLResponse.serialization.in
 $(PROJECT_DIR)/Shared/API/APIUserContentURLPattern.serialization.in
 $(PROJECT_DIR)/Shared/API/Cocoa/RemoteObjectRegistry.messages.in
 $(PROJECT_DIR)/Shared/AccessibilityPreferences.serialization.in
+$(PROJECT_DIR)/Shared/AdditionalFonts.serialization.in
 $(PROJECT_DIR)/Shared/AlternativeTextClient.serialization.in
 $(PROJECT_DIR)/Shared/AppPrivacyReportTestingData.serialization.in
 $(PROJECT_DIR)/Shared/ApplePay/ApplePayPaymentSetupFeatures.serialization.in

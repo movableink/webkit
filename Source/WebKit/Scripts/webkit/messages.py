@@ -169,6 +169,7 @@ def types_that_must_be_moved():
         'WebKit::MediaDeviceSandboxExtensions',
         'WebKit::WebIDBResult',
         'WebKit::LoadParameters',
+        'WebKit::AdditionalFonts',
         'WebCore::ShareableBitmapHandle',
         'WebCore::ShareableResourceHandle',
         'WebCore::SharedMemory::Handle',

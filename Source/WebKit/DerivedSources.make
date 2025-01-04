@@ -588,6 +588,7 @@ SERIALIZATION_DESCRIPTION_FILES = \
 	Shared/API/APIURLResponse.serialization.in \
 	Shared/API/APIUserContentURLPattern.serialization.in \
 	Shared/AccessibilityPreferences.serialization.in \
+	Shared/AdditionalFonts.serialization.in \
 	Shared/AlternativeTextClient.serialization.in \
 	Shared/AppPrivacyReportTestingData.serialization.in \
 	Shared/Authentication/AuthenticationChallengeDisposition.serialization.in \

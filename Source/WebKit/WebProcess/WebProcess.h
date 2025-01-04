@@ -155,6 +155,7 @@ class WebProcessSupplement;
 class WebTransportSession;
 
 struct AccessibilityPreferences;
+struct AdditionalFonts;
 struct RemoteWorkerInitializationData;
 struct UserMessage;
 struct WebProcessCreationParameters;
@@ -485,6 +486,10 @@ public:
 #endif
 
     bool mediaPlaybackEnabled() const { return m_mediaPlaybackEnabled; }
+
+#if PLATFORM(COCOA)
+    void registerAdditionalFonts(AdditionalFonts&&);
+#endif
 
 private:
     WebProcess();

@@ -418,7 +418,12 @@
     (literal "/"))
 
 (allow file-read*
-       (subpath "/private/var/MobileAsset/PreinstalledAssetsV2/InstallWithOs"))
+    (subpath "/private/var/MobileAsset/PreinstalledAssetsV2/InstallWithOs"))
+
+;; FIXME: Remove when rdar://141156558 has been fixed.
+#if ENABLE(REMOVE_XPC_AND_MACH_SANDBOX_EXTENSIONS_IN_WEBCONTENT)
+(allow file-read* (subpath "/private/var/MobileAsset/AssetsV2/com_apple_MobileAsset_Font7"))
+#endif
 
 (device-access)
 

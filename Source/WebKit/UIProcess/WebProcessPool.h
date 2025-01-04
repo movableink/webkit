@@ -617,6 +617,11 @@ public:
     WebCompiledContentRuleList* cachedResourceMonitorRuleList();
 #endif
 
+#if PLATFORM(COCOA)
+    void registerUserInstalledFonts(WebProcessProxy&);
+    void registerAssetFonts(WebProcessProxy&);
+#endif
+
 private:
     enum class NeedsGlobalStaticInitialization : bool { No, Yes };
     void platformInitialize(NeedsGlobalStaticInitialization);
@@ -967,6 +972,11 @@ private:
     bool m_resourceMonitorRuleListLoading { false };
     bool m_resourceMonitorRuleListFailed { false };
     RunLoop::Timer m_resourceMonitorRuleListRefreshTimer;
+#endif
+
+#if PLATFORM(COCOA)
+    std::optional<Vector<URL>> m_assetFontURLs;
+    std::optional<Vector<URL>> m_userInstalledFontURLs;
 #endif
 
 #if ENABLE(IPC_TESTING_API)

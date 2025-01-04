@@ -699,7 +699,7 @@ WebPage::WebPage(PageIdentifier pageID, WebPageCreationParameters&& parameters)
     if (shouldBlockMobileGestalt)
         sandbox_enable_state_flag("BlockMobileGestaltInWebContentSandbox", *auditToken);
 #endif
-    auto shouldBlockMobileAsset = parameters.store.getBoolValueForKey(WebPreferencesKey::blockMobileAssetInWebContentSandboxKey()) && !WTF::CocoaApplication::isIBooks();
+    auto shouldBlockMobileAsset = parameters.store.getBoolValueForKey(WebPreferencesKey::blockMobileAssetInWebContentSandboxKey());
     if (shouldBlockMobileAsset)
         sandbox_enable_state_flag("BlockMobileAssetInWebContentSandbox", *auditToken);
 #if PLATFORM(MAC)
