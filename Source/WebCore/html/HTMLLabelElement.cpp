@@ -2,9 +2,9 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2024 Apple Inc. All rights reserved.
  *           (C) 2006 Alexey Proskuryakov (ap@nypop.com)
- * Copyright (C) 2014 Google Inc. All rights reserved.
+ * Copyright (C) 2014-2015 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -98,28 +98,24 @@ HTMLFormElement* HTMLLabelElement::form() const
 
 void HTMLLabelElement::setActive(bool down, Style::InvalidationScope invalidationScope)
 {
-    if (down == active())
-        return;
-
     // Update our status first.
-    HTMLElement::setActive(down, invalidationScope);
+    if (down != active())
+        HTMLElement::setActive(down, invalidationScope);
 
     // Also update our corresponding control.
-    if (auto element = control())
-        element->setActive(down);
+    if (auto element = control(); element && element->active() != active())
+        element->setActive(active());
 }
 
 void HTMLLabelElement::setHovered(bool over, Style::InvalidationScope invalidationScope, HitTestRequest request)
 {
-    if (over == hovered())
-        return;
-        
     // Update our status first.
-    HTMLElement::setHovered(over, invalidationScope, request);
+    if (over != hovered())
+        HTMLElement::setHovered(over, invalidationScope, request);
 
     // Also update our corresponding control.
-    if (auto element = control())
-        element->setHovered(over);
+    if (auto element = control(); element && element->hovered() != hovered())
+        element->setHovered(hovered());
 }
 
 bool HTMLLabelElement::isEventTargetedAtInteractiveDescendants(Event& event) const
