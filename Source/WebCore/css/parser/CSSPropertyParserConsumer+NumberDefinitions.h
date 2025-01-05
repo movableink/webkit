@@ -30,6 +30,11 @@ namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
 struct NumberValidator {
+    static constexpr std::optional<CSS::NumberUnit> validate(CSSUnitType unitType, CSSPropertyParserOptions)
+    {
+        return CSS::UnitTraits<CSS::NumberUnit>::validate(unitType);
+    }
+
     template<auto R> static bool isValid(CSS::NumberRaw<R> raw, CSSPropertyParserOptions)
     {
         return isValidCanonicalValue(raw);

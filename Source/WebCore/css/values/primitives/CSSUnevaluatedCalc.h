@@ -25,6 +25,7 @@
 #pragma once
 
 #include "CSSCalcValue.h"
+#include "CSSPrimitiveNumericConcepts.h"
 #include "CSSValueTypes.h"
 #include <optional>
 #include <variant>
@@ -69,9 +70,13 @@ double unevaluatedCalcEvaluate(const Ref<CSSCalcValue>&, Calculation::Category, 
 
 // `UnevaluatedCalc` annotates a `CSSCalcValue` with the raw value type that it
 // will be evaluated to, allowing the processing of calc in generic code.
-template<typename T> struct UnevaluatedCalc {
-    using RawType = T;
-    static constexpr auto category = T::category;
+template<NumericRaw RawType> struct UnevaluatedCalc {
+    using Raw = RawType;
+    using UnitType = typename Raw::UnitType;
+    using UnitTraits = typename Raw::UnitTraits;
+    using ResolvedValueType = typename Raw::ResolvedValueType;
+    static constexpr auto range = Raw::range;
+    static constexpr auto category = Raw::category;
 
     UnevaluatedCalc(Ref<CSSCalcValue>&& value)
         : calc { WTFMove(value) }
@@ -92,26 +97,22 @@ private:
     Ref<CSSCalcValue> calc;
 };
 
-// MARK: - Utility templates
-
-template<typename T> struct IsUnevaluatedCalc : public std::integral_constant<bool, WTF::IsTemplate<T, UnevaluatedCalc>::value> { };
-
 // MARK: - Requires Conversion Data
 
-template<typename T> bool requiresConversionData(const UnevaluatedCalc<T>& unevaluatedCalc)
+template<Calc T> bool requiresConversionData(const T& unevaluatedCalc)
 {
     return unevaluatedCalcRequiresConversionData(unevaluatedCalc.protectedCalc());
 }
 
 template<typename T> bool requiresConversionData(const T&)
 {
-    static_assert(!IsUnevaluatedCalc<T>::value);
+    static_assert(!Calc<T>);
     return false;
 }
 
 template<typename... Ts> bool requiresConversionData(const std::variant<Ts...>& component)
 {
-    return WTF::switchOn(component, [&](auto part) -> bool { return requiresConversionData(part); });
+    return WTF::switchOn(component, [&](auto alternative) -> bool { return requiresConversionData(alternative); });
 }
 
 template<typename T> bool requiresConversionData(const std::optional<T>& component)
@@ -121,43 +122,36 @@ template<typename T> bool requiresConversionData(const std::optional<T>& compone
 
 // MARK: - Is UnevaluatedCalc
 
-template<typename T> bool isUnevaluatedCalc(const UnevaluatedCalc<T>&)
+template<typename T> constexpr bool isUnevaluatedCalc(const T&)
 {
-    return true;
+    return Calc<T>;
 }
 
-template<typename T> bool isUnevaluatedCalc(const T&)
+template<typename... Ts> constexpr bool isUnevaluatedCalc(const std::variant<Ts...>& component)
 {
-    static_assert(!IsUnevaluatedCalc<T>::value);
-    return false;
+    return WTF::switchOn(component, [&](auto alternative) -> bool { return isUnevaluatedCalc(alternative); });
 }
 
-template<typename... Ts> bool isUnevaluatedCalc(const std::variant<Ts...>& component)
-{
-    return WTF::switchOn(component, [&](auto part) -> bool { return isUnevaluatedCalc(part); });
-}
-
-template<typename T> bool isUnevaluatedCalc(const std::optional<T>& component)
+template<typename T> constexpr bool isUnevaluatedCalc(const std::optional<T>& component)
 {
     return component && isUnevaluatedCalc(*component);
 }
 
 // MARK: Simplify
 
-template<typename T> auto simplifyUnevaluatedCalc(const UnevaluatedCalc<T>& unevaluatedCalc, const CSSToLengthConversionData& conversionData, const CSSCalcSymbolTable& symbolTable) -> UnevaluatedCalc<T>
+template<Calc T> auto simplifyUnevaluatedCalc(const T& unevaluatedCalc, const CSSToLengthConversionData& conversionData, const CSSCalcSymbolTable& symbolTable) -> T
 {
     return { unevaluatedCalcSimplify(unevaluatedCalc, conversionData, symbolTable) };
 }
 
 template<typename T> auto simplifyUnevaluatedCalc(const T& component, const CSSToLengthConversionData&, const CSSCalcSymbolTable&) -> T
 {
-    static_assert(!IsUnevaluatedCalc<T>::value);
     return component;
 }
 
 template<typename... Ts> auto simplifyUnevaluatedCalc(const std::variant<Ts...>& component, const CSSToLengthConversionData& conversionData, const CSSCalcSymbolTable& symbolTable) -> std::variant<Ts...>
 {
-    return WTF::switchOn(component, [&](auto part) -> bool { return simplifyUnevaluatedCalc(part, conversionData, symbolTable); });
+    return WTF::switchOn(component, [&](auto alternative) -> bool { return simplifyUnevaluatedCalc(alternative, conversionData, symbolTable); });
 }
 
 template<typename T> decltype(auto) simplifyUnevaluatedCalc(const std::optional<T>& component, const CSSToLengthConversionData& conversionData, const CSSCalcSymbolTable& symbolTable)
@@ -167,8 +161,8 @@ template<typename T> decltype(auto) simplifyUnevaluatedCalc(const std::optional<
 
 // MARK: - Serialization
 
-template<typename T> struct Serialize<UnevaluatedCalc<T>> {
-    inline void operator()(StringBuilder& builder, const UnevaluatedCalc<T>& value)
+template<Calc T> struct Serialize<T> {
+    inline void operator()(StringBuilder& builder, const T& value)
     {
         unevaluatedCalcSerialization(builder, value.protectedCalc());
     }
@@ -176,8 +170,8 @@ template<typename T> struct Serialize<UnevaluatedCalc<T>> {
 
 // MARK: - Computed Style Dependencies
 
-template<typename T> struct ComputedStyleDependenciesCollector<UnevaluatedCalc<T>> {
-    inline void operator()(ComputedStyleDependencies& dependencies, const UnevaluatedCalc<T>& value)
+template<Calc T> struct ComputedStyleDependenciesCollector<T> {
+    inline void operator()(ComputedStyleDependencies& dependencies, const T& value)
     {
         unevaluatedCalcCollectComputedStyleDependencies(dependencies, value.protectedCalc());
     }
@@ -185,8 +179,8 @@ template<typename T> struct ComputedStyleDependenciesCollector<UnevaluatedCalc<T
 
 // MARK: - CSSValue Visitation
 
-template<typename T> struct CSSValueChildrenVisitor<UnevaluatedCalc<T>> {
-    inline IterationStatus operator()(const Function<IterationStatus(CSSValue&)>& func, const UnevaluatedCalc<T>& value)
+template<Calc T> struct CSSValueChildrenVisitor<T> {
+    inline IterationStatus operator()(const Function<IterationStatus(CSSValue&)>& func, const T& value)
     {
         return func(value.protectedCalc());
     }
@@ -195,6 +189,6 @@ template<typename T> struct CSSValueChildrenVisitor<UnevaluatedCalc<T>> {
 } // namespace CSS
 } // namespace WebCore
 
-template<typename T> struct WTF::IsSmartPtr<WebCore::CSS::UnevaluatedCalc<T>> {
+template<WebCore::CSS::Calc T> struct WTF::IsSmartPtr<T> {
     static constexpr bool value = true;
 };

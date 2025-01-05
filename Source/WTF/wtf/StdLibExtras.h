@@ -39,6 +39,7 @@
 #include <utility>
 #include <variant>
 #include <wtf/Assertions.h>
+#include <wtf/Brigand.h>
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/Compiler.h>
 #include <wtf/GetPtr.h>
@@ -517,7 +518,7 @@ template<typename T> concept HasSwitchOn = requires(T t) {
 // Works around bad code generation for std::visit with one std::variant by some standard library / compilers that
 // lead to excessive binary size growth. Currently only needed by libc++. See https://webkit.org/b/279498.
 
-template<size_t I = 0, class F, class V> ALWAYS_INLINE decltype(auto) visitOneVariant(F&& f, V&& v)
+template<size_t I = 0, class F, class V> ALWAYS_INLINE decltype(auto) visitOneVariant(NOESCAPE F&& f, V&& v)
 {
     constexpr auto size = std::variant_size_v<std::remove_cvref_t<V>>;
 
@@ -661,6 +662,18 @@ template<size_t I, typename V> bool holdsAlternative(const V& v)
 {
     return HoldsAlternative<V>::template holdsAlternative<I>(v);
 }
+
+// MARK: - Utility types for working with std::variants in generic contexts
+
+// Wraps a type list using a std::variant.
+template<typename... Ts> using VariantWrapper = typename std::variant<Ts...>;
+
+// Is conditionally either a single type, if the type list only has a single element, or a std::variant of the type list's contents.
+template<typename TypeList> using VariantOrSingle = std::conditional_t<
+    brigand::size<TypeList>::value == 1,
+    brigand::front<TypeList>,
+    brigand::wrap<TypeList, VariantWrapper>
+>;
 
 // Concepts / traits for data structures that use std::in_place_type_t/std::in_place_index_t so that they can
 // check that generic arguments in overloads are not std::in_place_type_t/std::in_place_index_t.
@@ -1342,5 +1355,7 @@ using WTF::valueOrDefault;
 using WTF::zeroBytes;
 using WTF::zeroSpan;
 using WTF::Invocable;
+using WTF::VariantWrapper;
+using WTF::VariantOrSingle;
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

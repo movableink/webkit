@@ -90,7 +90,7 @@ template<typename Arg, typename... Ts> struct VariantBestMatch<std::variant<Ts..
 //       }
 //   );
 
-template<typename V, size_t I = 0, typename F> constexpr ALWAYS_INLINE decltype(auto) visitTypeForIndex(size_t index, F&& f)
+template<typename V, size_t I = 0, typename F> constexpr ALWAYS_INLINE decltype(auto) visitTypeForIndex(size_t index, NOESCAPE F&& f)
 {
     constexpr auto size = std::variant_size_v<V>;
 

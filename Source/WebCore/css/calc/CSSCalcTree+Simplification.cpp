@@ -42,6 +42,7 @@
 #include "RenderStyle.h"
 #include "RenderStyleInlines.h"
 #include "StyleBuilderState.h"
+#include "StyleLengthResolution.h"
 #include <wtf/StdLibExtras.h>
 
 namespace WebCore {
@@ -174,10 +175,10 @@ std::optional<CanonicalDimension> canonicalize(NonCanonicalDimension root, const
         return CanonicalDimension { .value = value, .dimension = dimension };
     };
 
-    auto tryMakeCanonical = [&](double value, CSSUnitType unit) -> std::optional<CanonicalDimension> {
+    auto tryMakeCanonical = [&](double value, CSS::LengthUnit lengthUnit) -> std::optional<CanonicalDimension> {
         if (conversionData) {
             // We are only interested in canonicalizing to `px`, not adjusting for zoom, which will be handled later.
-            return CanonicalDimension { .value = CSSPrimitiveValue::computeNonCalcLengthDouble(*conversionData, unit, value) / conversionData->style()->usedZoom(), .dimension = CanonicalDimension::Dimension::Length };
+            return CanonicalDimension { .value = Style::computeNonCalcLengthDouble(value, lengthUnit, *conversionData) / conversionData->style()->usedZoom(), .dimension = CanonicalDimension::Dimension::Length };
         }
         return std::nullopt;
     };
@@ -240,7 +241,7 @@ std::optional<CanonicalDimension> canonicalize(NonCanonicalDimension root, const
     case CSSUnitType::CSS_CQB:
     case CSSUnitType::CSS_CQMIN:
     case CSSUnitType::CSS_CQMAX:
-        return tryMakeCanonical(root.value, root.unit);
+        return tryMakeCanonical(root.value, *CSS::toLengthUnit(root.unit));
 
     // <angle>
     case CSSUnitType::CSS_RAD:

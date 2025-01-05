@@ -36,8 +36,8 @@ bool isCenterPosition(const Position& position)
             [](Keyword::Center) { return true;  },
             [](const LengthPercentage<>& value) {
                 return WTF::switchOn(value,
-                    [](const LengthPercentageRaw<>& raw) { return raw.type == CSSUnitType::CSS_PERCENTAGE && raw.value == 50.0; },
-                    [](const UnevaluatedCalc<LengthPercentageRaw<>>&) { return false; }
+                    [](const LengthPercentage<>::Raw& raw) { return raw == 50_css_percentage; },
+                    [](const LengthPercentage<>::Calc&) { return false; }
                 );
             }
         );

@@ -24,211 +24,73 @@
 
 #pragma once
 
-#include "CSSNone.h"
-#include "CSSSymbol.h"
-#include "CSSPrimitiveNumericRange.h"
+#include "CSSPrimitiveNumericConcepts.h"
+#include "CSSPrimitiveNumericRaw.h"
 #include "CSSUnevaluatedCalc.h"
-#include "CSSUnits.h"
-#include "CSSValueTypes.h"
-#include "CalculationCategory.h"
+#include <limits>
+#include <type_traits>
 #include <wtf/Brigand.h>
+#include <wtf/EnumTraits.h>
 
 namespace WebCore {
 namespace CSS {
 
-// Concept for use in generic contexts to filter on *Raw types.
-template<typename T> concept RawNumeric = requires(T raw) {
-    { raw.type } -> std::convertible_to<CSSUnitType>;
-    { raw.value } -> std::convertible_to<typename T::ValueType>;
+// MARK: - Primitive Numeric (Raw + UnevaluatedCalc)
+
+// NOTE: As is the case for `PrimitiveNumericRaw`, `ResolvedValueType` here only effects the type
+// the CSS value gets resolved to. Unresolved CSS primitive numeric types always use a `double` as
+// its internal representation.
+
+template<typename T> struct PrimitiveNumericMarkableTraits {
+    static bool isEmptyValue(const T& value) { return value.isEmpty(); }
+    static T emptyValue() { return T(typename T::EmptyToken { }); }
 };
 
-// MARK: Number Primitives Raw
+template<NumericRaw RawType> struct PrimitiveNumeric {
+    using Raw = RawType;
+    using Calc = UnevaluatedCalc<Raw>;
+    using UnitType = typename Raw::UnitType;
+    using UnitTraits = typename Raw::UnitTraits;
+    using ResolvedValueType = typename Raw::ResolvedValueType;
+    using Index = std::underlying_type_t<UnitType>;
+    static constexpr auto range = Raw::range;
+    static constexpr auto category = Raw::category;
 
-template<Range R = All, typename T = int> struct IntegerRaw {
-    using ValueType = T;
-    static constexpr auto range = R;
-    static constexpr auto category = Calculation::Category::Integer;
-    static constexpr auto type = CSSUnitType::CSS_INTEGER;
-    ValueType value;
-
-    constexpr IntegerRaw(ValueType value)
-        : value { value }
-    {
-    }
-
-    // Constructor is required to allow generic code to uniformly initialize primitives with a CSSUnitType.
-    constexpr IntegerRaw(CSSUnitType, ValueType value)
-        : value { value }
-    {
-    }
-
-    constexpr bool operator==(const IntegerRaw<R, T>&) const = default;
-};
-
-template<Range R = All> struct NumberRaw {
-    using ValueType = double;
-    static constexpr auto range = R;
-    static constexpr auto category = Calculation::Category::Number;
-    static constexpr auto type = CSSUnitType::CSS_NUMBER;
-    ValueType value;
-
-    constexpr NumberRaw(ValueType value)
-        : value { value }
-    {
-    }
-
-    // Constructor is required to allow generic code to uniformly initialize primitives with a CSSUnitType.
-    constexpr NumberRaw(CSSUnitType, ValueType value)
-        : value { value }
-    {
-    }
-
-    constexpr bool operator==(const NumberRaw<R>&) const = default;
-};
-
-// MARK: Percentage Primitive Raw
-
-template<Range R = All> struct PercentageRaw {
-    using ValueType = double;
-    static constexpr auto range = R;
-    static constexpr auto category = Calculation::Category::Percentage;
-    static constexpr auto type = CSSUnitType::CSS_PERCENTAGE;
-    ValueType value;
-
-    constexpr PercentageRaw(ValueType value)
-        : value { value }
-    {
-    }
-
-    // Constructor is required to allow generic code to uniformly initialize primitives with a CSSUnitType.
-    constexpr PercentageRaw(CSSUnitType, ValueType value)
-        : value { value }
-    {
-    }
-
-    constexpr bool operator==(const PercentageRaw<R>&) const = default;
-};
-
-// MARK: Dimension Primitives Raw
-
-template<Range R = All> struct AngleRaw {
-    using ValueType = double;
-    static constexpr auto range = R;
-    static constexpr auto category = Calculation::Category::Angle;
-    CSSUnitType type;
-    ValueType value;
-
-    constexpr bool operator==(const AngleRaw<R>&) const = default;
-};
-
-template<Range R = All> struct LengthRaw {
-    using ValueType = double;
-    static constexpr auto range = R;
-    static constexpr auto category = Calculation::Category::Length;
-    CSSUnitType type;
-    ValueType value;
-
-    constexpr bool operator==(const LengthRaw<R>&) const = default;
-};
-
-template<Range R = All> struct TimeRaw {
-    using ValueType = double;
-    static constexpr auto range = R;
-    static constexpr auto category = Calculation::Category::Time;
-    CSSUnitType type;
-    ValueType value;
-
-    constexpr bool operator==(const TimeRaw<R>&) const = default;
-};
-
-template<Range R = All> struct FrequencyRaw {
-    using ValueType = double;
-    static constexpr auto range = R;
-    static constexpr auto category = Calculation::Category::Frequency;
-    CSSUnitType type;
-    ValueType value;
-
-    constexpr bool operator==(const FrequencyRaw<R>&) const = default;
-};
-
-template<Range R = Nonnegative> struct ResolutionRaw {
-    using ValueType = double;
-    static_assert(R.min >= 0, "<resolution> values must always have a minimum range of at least 0.");
-    static constexpr auto range = R;
-    static constexpr auto category = Calculation::Category::Resolution;
-    CSSUnitType type;
-    ValueType value;
-
-    constexpr bool operator==(const ResolutionRaw<R>&) const = default;
-};
-
-template<Range R = All> struct FlexRaw {
-    using ValueType = double;
-    static constexpr auto range = R;
-    static constexpr auto category = Calculation::Category::Flex;
-    static constexpr auto type = CSSUnitType::CSS_FR;
-    ValueType value;
-
-    constexpr bool operator==(const FlexRaw<R>&) const = default;
-};
-
-// MARK: Dimension + Percentage Primitives Raw
-
-template<Range R = All> struct AnglePercentageRaw {
-    using ValueType = double;
-    static constexpr auto range = R;
-    static constexpr auto category = Calculation::Category::AnglePercentage;
-    CSSUnitType type;
-    ValueType value;
-
-    constexpr bool operator==(const AnglePercentageRaw<R>&) const = default;
-};
-
-template<Range R = All> struct LengthPercentageRaw {
-    using ValueType = double;
-    static constexpr auto range = R;
-    static constexpr auto category = Calculation::Category::LengthPercentage;
-    CSSUnitType type;
-    ValueType value;
-
-    constexpr bool operator==(const LengthPercentageRaw<R>&) const = default;
-};
-
-// MARK: - Numeric Primitives (Raw + UnevaluatedCalc)
-
-// Concept for use in generic contexts to filter on CSS types.
-template<typename T> concept CSSNumeric = requires(T css) {
-    typename T::Raw;
-    requires RawNumeric<typename T::Raw>;
-};
-
-// Checks if the unit type is supported by the category.
-bool isSupportedUnitForCategory(CSSUnitType, Calculation::Category);
-
-template<RawNumeric T> struct PrimitiveNumeric {
-    static constexpr auto range = T::range;
-    static constexpr auto category = T::category;
-    using Raw = T;
-    using Calc = UnevaluatedCalc<T>;
+    // The potential values for the `index` are:
+    //  - 0 ..< number of unit variations   -> Raw
+    //  - number of unit variations         -> Calc
+    //  - number of unit variations + 1     -> Empty (for Markable)
+    //  - number of unit variations + 2     -> Moved from
+    static constexpr Index indexForFirstRaw  = 0;
+    static constexpr Index indexForCalc      = UnitTraits::count;
+    static constexpr Index indexForEmpty     = UnitTraits::count + 1;
+    static constexpr Index indexForMovedFrom = UnitTraits::count + 2;
+    static_assert(UnitTraits::count < std::numeric_limits<Index>::max() - 2);
 
     PrimitiveNumeric(Raw raw)
     {
-        type = raw.type;
-        value.number = raw.value;
+        m_index = enumToUnderlyingType(raw.unit);
+        m_value.number = raw.value;
     }
 
-    PrimitiveNumeric(UnevaluatedCalc<T> calc)
+    PrimitiveNumeric(Calc calc)
     {
-        type = CSSUnitType::CSS_CALC;
-        value.calc = &calc.protectedCalc().leakRef();
+        m_index = indexForCalc;
+        m_value.calc = &calc.protectedCalc().leakRef();
     }
 
-    PrimitiveNumeric(CSSUnitType unit, typename Raw::ValueType value)
+    PrimitiveNumeric(UnitEnum auto unit, double value) requires (requires { { Raw(unit, value) }; })
         : PrimitiveNumeric { Raw { unit, value } }
     {
     }
 
-    PrimitiveNumeric(typename Raw::ValueType value) requires (requires { { Raw(value) }; })
+    PrimitiveNumeric(double value) requires (requires { { Raw(value) }; })
+        : PrimitiveNumeric { Raw { value } }
+    {
+    }
+
+    template<UnitEnum E, E unitValue>
+    constexpr PrimitiveNumeric(ValueLiteral<unitValue> value) requires (requires { { Raw(value) }; })
         : PrimitiveNumeric { Raw { value } }
     {
     }
@@ -236,42 +98,41 @@ template<RawNumeric T> struct PrimitiveNumeric {
     PrimitiveNumeric(const PrimitiveNumeric& other)
     {
         if (other.isCalc()) {
-            type = CSSUnitType::CSS_CALC;
-            value.calc = other.value.calc;
-            value.calc->ref();
+            m_index = indexForCalc;
+            m_value.calc = other.m_value.calc;
+            m_value.calc->ref();
         } else {
-            type = other.type;
-            value.number = other.value.number;
+            m_index = other.m_index;
+            m_value.number = other.m_value.number;
         }
     }
 
     PrimitiveNumeric(PrimitiveNumeric&& other)
     {
         if (other.isCalc()) {
-            type = CSSUnitType::CSS_CALC;
-            value.calc = other.value.calc;
-
-            // Setting this to anything so that value is not double deref'd.
-            other.type = CSSUnitType::CSS_UNKNOWN;
-            other.value.calc = nullptr;
+            m_index = indexForCalc;
+            m_value.calc = other.m_value.calc;
         } else {
-            type = other.type;
-            value.number = other.value.number;
+            m_index = other.m_index;
+            m_value.number = other.m_value.number;
         }
+
+        other.m_index = indexForMovedFrom;
+        other.m_value.number = 0;
     }
 
     PrimitiveNumeric& operator=(const PrimitiveNumeric& other)
     {
         if (isCalc())
-            value.calc->deref();
+            m_value.calc->deref();
 
         if (other.isCalc()) {
-            type = CSSUnitType::CSS_CALC;
-            value.calc = other.value.calc;
-            value.calc->ref();
+            m_index = indexForCalc;
+            m_value.calc = other.m_value.calc;
+            m_value.calc->ref();
         } else {
-            type = other.type;
-            value.number = other.value.number;
+            m_index = other.m_index;
+            m_value.number = other.m_value.number;
         }
 
         return *this;
@@ -280,19 +141,18 @@ template<RawNumeric T> struct PrimitiveNumeric {
     PrimitiveNumeric& operator=(PrimitiveNumeric&& other)
     {
         if (isCalc())
-            value.calc->deref();
+            m_value.calc->deref();
 
         if (other.isCalc()) {
-            type = CSSUnitType::CSS_CALC;
-            value.calc = other.value.calc;
-
-            // Setting this to anything so that value is not double deref'd.
-            other.type = CSSUnitType::CSS_UNKNOWN;
-            other.value.calc = nullptr;
+            m_index = indexForCalc;
+            m_value.calc = other.m_value.calc;
         } else {
-            type = other.type;
-            value.number = other.value.number;
+            m_index = other.m_index;
+            m_value.number = other.m_value.number;
         }
+
+        other.m_index = indexForMovedFrom;
+        other.m_value.number = 0;
 
         return *this;
     }
@@ -300,22 +160,62 @@ template<RawNumeric T> struct PrimitiveNumeric {
     ~PrimitiveNumeric()
     {
         if (isCalc())
-            value.calc->deref();
+            m_value.calc->deref();
     }
 
-    bool operator==(const PrimitiveNumeric<T>& other) const
+    bool operator==(const PrimitiveNumeric& other) const
     {
-        if (type != other.type)
+        if (m_index != other.m_index)
             return false;
 
         if (isCalc())
             return protectedCalc()->equals(other.protectedCalc());
-        return value.number == other.value.number;
+        return m_value.number == other.m_value.number;
+    }
+
+    bool operator==(const Raw& otherRaw) const
+    {
+        if (m_index != enumToUnderlyingType(otherRaw.unit))
+            return false;
+
+        ASSERT(isRaw());
+        return m_value.number == otherRaw.value;
+    }
+
+    template<typename T>
+        requires NumericRaw<T> && NestedUnitEnumOf<typename T::UnitType, UnitType>
+    constexpr bool operator==(const T& other) const
+    {
+        if (m_index != enumToUnderlyingType(unitUpcast<UnitType>(other.unit)))
+            return false;
+
+        ASSERT(isRaw());
+        return m_value.number == other.value;
+    }
+
+    template<UnitType unitValue>
+    bool operator==(const ValueLiteral<unitValue>& other) const
+    {
+        if (m_index != enumToUnderlyingType(other.unit))
+            return false;
+
+        ASSERT(isRaw());
+        return m_value.number == other.value;
+    }
+
+    template<NestedUnitEnumOf<UnitType> E, E unitValue>
+    bool operator==(const ValueLiteral<unitValue>& other) const
+    {
+        if (m_index != enumToUnderlyingType(unitUpcast<UnitType>(other.unit)))
+            return false;
+
+        ASSERT(isRaw());
+        return m_value.number == other.value;
     }
 
     std::optional<Raw> raw() const
     {
-        if (!isCalc())
+        if (isRaw())
             return asRaw();
         return std::nullopt;
     }
@@ -327,52 +227,51 @@ template<RawNumeric T> struct PrimitiveNumeric {
         return std::nullopt;
     }
 
-    template<typename F> decltype(auto) visit(F&& functor) const
+    template<typename T> bool holdsAlternative() const
     {
+        if constexpr (std::same_as<T, Calc>)
+            return isCalc();
+        else if constexpr (std::same_as<T, Raw>)
+            return isRaw();
+    }
+
+    template<typename... F> decltype(auto) switchOn(F&&... f) const
+    {
+        auto visitor = WTF::makeVisitor(std::forward<F>(f)...);
+
         if (isCalc())
-            return std::invoke(std::forward<F>(functor), asCalc());
-        return std::invoke(std::forward<F>(functor), asRaw());
+            return visitor(asCalc());
+        return visitor(asRaw());
     }
 
-    template<typename... F> decltype(auto) switchOn(F&&... functors) const
-    {
-        return visit(WTF::makeVisitor(std::forward<F>(functors)...));
-    }
+    bool isKnownZero() const { return isRaw() && m_value.number == 0; }
+    bool isKnownNotZero() const { return isRaw() && m_value.number != 0; }
 
-    bool isKnownZero() const { return !isCalc() && value.number == 0; }
-    bool isKnownNotZero() const { return !isCalc() && value.number != 0; }
-
-    bool isCalc() const { return type == CSSUnitType::CSS_CALC; }
-
-    static bool isSupported(CSSUnitType unit) { return isSupportedUnitForCategory(unit, category); }
-
-    struct MarkableTraits {
-        static bool isEmptyValue(const PrimitiveNumeric& value) { return value.isEmpty(); }
-        static PrimitiveNumeric emptyValue() { return PrimitiveNumeric(EmptyToken()); }
-    };
+    bool isCalc() const { return m_index == indexForCalc; }
+    bool isRaw() const { return m_index < indexForCalc; }
 
 private:
-    friend struct MarkableTraits;
+    template<typename> friend struct PrimitiveNumericMarkableTraits;
 
     struct EmptyToken { constexpr bool operator==(const EmptyToken&) const = default; };
     PrimitiveNumeric(EmptyToken)
     {
-        type = CSSUnitType::CSS_UNKNOWN;
-        value.number = 0;
+        m_index = indexForEmpty;
+        m_value.number = 0;
     }
 
-    bool isEmpty() const { return type == CSSUnitType::CSS_UNKNOWN; }
+    bool isEmpty() const { return m_index == indexForEmpty; }
 
     Ref<CSSCalcValue> protectedCalc() const
     {
         ASSERT(isCalc());
-        return Ref(*value.calc);
+        return Ref(*m_value.calc);
     }
 
     Raw asRaw() const
     {
-        ASSERT(!isCalc());
-        return Raw { type, value.number };
+        ASSERT(isRaw());
+        return Raw { static_cast<UnitType>(m_index), m_value.number };
     }
 
     Calc asCalc() const
@@ -382,43 +281,86 @@ private:
     }
 
     // A std::variant is not used here to allow tighter packing.
-    // When type == CSSUnitType::CSS_CALC, value is calc.
-    // When type == CSSUnitType::CSS_UNKNOWN, value is empty (used by Markable).
-    // When type == anything else, value is number.
 
     // FIXME: This could be even more packed types with only a single alternative (e.g. CSS::Number/CSS::Percentage/CSS::Flex),
     // by using NaN encoding scheme for the `calc` case.
 
-    CSSUnitType type;
     union {
-        typename Raw::ValueType number;
+        double number;
         CSSCalcValue* calc;
-    } value;
+    } m_value;
+    Index m_index;
+};
+
+// MARK: Integer Primitive
+
+template<Range R = All, typename V = int> struct Integer : PrimitiveNumeric<IntegerRaw<R, V>> {
+    using Base = PrimitiveNumeric<IntegerRaw<R, V>>;
+    using Base::Base;
+    using MarkableTraits = PrimitiveNumericMarkableTraits<Integer>;
 };
 
 // MARK: Number Primitive
 
-template<Range R = All, typename IntType = int> using Integer = PrimitiveNumeric<IntegerRaw<R, IntType>>;
-
-template<Range R = All> using Number = PrimitiveNumeric<NumberRaw<R>>;
+template<Range R = All> struct Number : PrimitiveNumeric<NumberRaw<R>> {
+    using Base = PrimitiveNumeric<NumberRaw<R>>;
+    using Base::Base;
+    using MarkableTraits = PrimitiveNumericMarkableTraits<Number>;
+};
 
 // MARK: Percentage Primitive
 
-template<Range R = All> using Percentage = PrimitiveNumeric<PercentageRaw<R>>;
+template<Range R = All> struct Percentage : PrimitiveNumeric<PercentageRaw<R>> {
+    using Base = PrimitiveNumeric<PercentageRaw<R>>;
+    using Base::Base;
+    using MarkableTraits = PrimitiveNumericMarkableTraits<Percentage>;
+};
 
 // MARK: Dimension Primitives
 
-template<Range R = All> using Angle = PrimitiveNumeric<AngleRaw<R>>;
-template<Range R = All> using Length = PrimitiveNumeric<LengthRaw<R>>;
-template<Range R = All> using Time = PrimitiveNumeric<TimeRaw<R>>;
-template<Range R = All> using Frequency = PrimitiveNumeric<FrequencyRaw<R>>;
-template<Range R = Nonnegative> using Resolution = PrimitiveNumeric<ResolutionRaw<R>>;
-template<Range R = All> using Flex = PrimitiveNumeric<FlexRaw<R>>;
+template<Range R = All> struct Angle : PrimitiveNumeric<AngleRaw<R>> {
+    using Base = PrimitiveNumeric<AngleRaw<R>>;
+    using Base::Base;
+    using MarkableTraits = PrimitiveNumericMarkableTraits<Angle>;
+};
+template<Range R = All> struct Length : PrimitiveNumeric<LengthRaw<R>> {
+    using Base = PrimitiveNumeric<LengthRaw<R>>;
+    using Base::Base;
+    using MarkableTraits = PrimitiveNumericMarkableTraits<Length>;
+};
+template<Range R = All> struct Time : PrimitiveNumeric<TimeRaw<R>> {
+    using Base = PrimitiveNumeric<TimeRaw<R>>;
+    using Base::Base;
+    using MarkableTraits = PrimitiveNumericMarkableTraits<Time>;
+};
+template<Range R = All> struct Frequency : PrimitiveNumeric<FrequencyRaw<R>> {
+    using Base = PrimitiveNumeric<FrequencyRaw<R>>;
+    using Base::Base;
+    using MarkableTraits = PrimitiveNumericMarkableTraits<Frequency>;
+};
+template<Range R = Nonnegative> struct Resolution : PrimitiveNumeric<ResolutionRaw<R>> {
+    using Base = PrimitiveNumeric<ResolutionRaw<R>>;
+    using Base::Base;
+    using MarkableTraits = PrimitiveNumericMarkableTraits<Resolution>;
+};
+template<Range R = All> struct Flex : PrimitiveNumeric<FlexRaw<R>> {
+    using Base = PrimitiveNumeric<FlexRaw<R>>;
+    using Base::Base;
+    using MarkableTraits = PrimitiveNumericMarkableTraits<Flex>;
+};
 
 // MARK: Dimension + Percentage Primitives
 
-template<Range R = All> using AnglePercentage = PrimitiveNumeric<AnglePercentageRaw<R>>;
-template<Range R = All> using LengthPercentage = PrimitiveNumeric<LengthPercentageRaw<R>>;
+template<Range R = All> struct AnglePercentage : PrimitiveNumeric<AnglePercentageRaw<R>> {
+    using Base = PrimitiveNumeric<AnglePercentageRaw<R>>;
+    using Base::Base;
+    using MarkableTraits = PrimitiveNumericMarkableTraits<AnglePercentage<R>>;
+};
+template<Range R = All> struct LengthPercentage : PrimitiveNumeric<LengthPercentageRaw<R>> {
+    using Base = PrimitiveNumeric<LengthPercentageRaw<R>>;
+    using Base::Base;
+    using MarkableTraits = PrimitiveNumericMarkableTraits<LengthPercentage<R>>;
+};
 
 // MARK: Additional Common Groupings
 
@@ -549,94 +491,21 @@ private:
     std::variant<EmptyToken, Number<nR>, Percentage<pR>> value;
 };
 
-// MARK: - Type List Modifiers
-
-template<typename... Ts>
-using VariantWrapper = typename std::variant<Ts...>;
-
-template<typename TypeList>
-using VariantOrSingle = std::conditional_t<
-    brigand::size<TypeList>::value == 1,
-    brigand::front<TypeList>,
-    brigand::wrap<TypeList, VariantWrapper>
->;
-
-namespace TypeTransform {
-
-// MARK: - Type transforms
-
-namespace Type {
-
-// MARK: Raw type -> CSS type mapping (CSS type -> Raw type directly available via typename CSSType::Raw).
-
-template<typename> struct RawToCSSMapping;
-template<auto R, typename T> struct RawToCSSMapping<IntegerRaw<R, T>> { using CSS = Integer<R, T>; };
-template<auto R> struct RawToCSSMapping<NumberRaw<R>>                 { using CSS = Number<R>; };
-template<auto R> struct RawToCSSMapping<PercentageRaw<R>>             { using CSS = Percentage<R>; };
-template<auto R> struct RawToCSSMapping<AngleRaw<R>>                  { using CSS = Angle<R>; };
-template<auto R> struct RawToCSSMapping<LengthRaw<R>>                 { using CSS = Length<R>; };
-template<auto R> struct RawToCSSMapping<TimeRaw<R>>                   { using CSS = Time<R>; };
-template<auto R> struct RawToCSSMapping<FrequencyRaw<R>>              { using CSS = Frequency<R>; };
-template<auto R> struct RawToCSSMapping<ResolutionRaw<R>>             { using CSS = Resolution<R>; };
-template<auto R> struct RawToCSSMapping<FlexRaw<R>>                   { using CSS = Flex<R>; };
-template<auto R> struct RawToCSSMapping<AnglePercentageRaw<R>>        { using CSS = AnglePercentage<R>; };
-template<auto R> struct RawToCSSMapping<LengthPercentageRaw<R>>       { using CSS = LengthPercentage<R>; };
-template<> struct RawToCSSMapping<NoneRaw>                            { using CSS = None; };
-template<> struct RawToCSSMapping<SymbolRaw>                          { using CSS = Symbol; };
-
-// MARK: Transform Raw type -> CSS type
-
-template<typename T> struct RawToCSSLazy {
-    using type = typename RawToCSSMapping<T>::CSS;
-};
-template<typename T> using RawToCSS = typename RawToCSSLazy<T>::type;
-
-} // namespace Type
-
-// MARK: - List transforms
-
-namespace List {
-
-// MARK: Transform Raw type list -> CSS type list
-
-// Transform `brigand::list<raw1, raw2, ...>`  -> `brigand::list<css1, css2, ...>`
-template<typename TypeList> struct RawToCSSLazy {
-    using type = brigand::transform<TypeList, Type::RawToCSSLazy<brigand::_1>>;
-};
-template<typename TypeList> using RawToCSS = typename RawToCSSLazy<TypeList>::type;
-
-// MARK: Add/Remove Symbol
-
-// MARK: Transform Raw type list -> CSS type list + Symbol
-
-// Transform `brigand::list<raw1, raw2, ...>`  -> `brigand::list<css1, css2, ..., symbol>`
-template<typename TypeList> struct RawToCSSPlusSymbolLazy {
-    using type = brigand::append<brigand::transform<TypeList, Type::RawToCSSLazy<brigand::_1>>, brigand::list<Symbol>>;
-};
-template<typename TypeList> using RawToCSSPlusSymbol = typename RawToCSSPlusSymbolLazy<TypeList>::type;
-
-// MARK: Transform CSS type list -> CSS type list + Symbol
-
-// Transform `brigand::list<css1, css2, ...>`  -> `brigand::list<css1, css2, ..., symbol>`
-template<typename TypeList> struct PlusSymbolLazy {
-    using type = brigand::append<TypeList, brigand::list<Symbol>>;
-};
-template<typename TypeList> using PlusSymbol = typename PlusSymbolLazy<TypeList>::type;
-
-// MARK: Transform CSS type list + Symbol -> CSS type list - Symbol
-
-// Transform `brigand::list<css1, css2, ..., symbol>`  -> `brigand::list<css1, css2, ...>`
-template<typename TypeList> struct MinusSymbolLazy {
-    using type = brigand::remove_if<TypeList, IsSymbol<brigand::_1>>;
-};
-template<typename TypeList> using MinusSymbol = typename MinusSymbolLazy<TypeList>::type;
-
-} // namespace List
-} // namespace TypeTransform
-
 } // namespace CSS
 } // namespace WebCore
 
-template<WebCore::CSS::RawNumeric Raw> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::PrimitiveNumeric<Raw>> = true;
+template<auto R, typename T> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::Integer<R, T>> = true;
+template<auto R> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::Number<R>> = true;
+template<auto R> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::Percentage<R>> = true;
+template<auto R> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::Angle<R>> = true;
+template<auto R> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::Length<R>> = true;
+template<auto R> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::Time<R>> = true;
+template<auto R> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::Frequency<R>> = true;
+template<auto R> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::Resolution<R>> = true;
+template<auto R> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::Flex<R>> = true;
+template<auto R> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::AnglePercentage<R>> = true;
+template<auto R> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::LengthPercentage<R>> = true;
+
+template<typename Raw> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::PrimitiveNumeric<Raw>> = true;
 template<auto nR, auto pR> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::NumberOrPercentage<nR, pR>> = true;
 template<auto nR, auto pR> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::NumberOrPercentageResolvedToNumber<nR, pR>> = true;

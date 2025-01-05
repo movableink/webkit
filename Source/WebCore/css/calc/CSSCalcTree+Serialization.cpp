@@ -267,7 +267,7 @@ template<Numeric Op> void serializeMathFunction(StringBuilder& builder, const Op
         return;
     }
 
-    // `formatCSSNumberValue` implements the appropriate logic for steps 2 & steps 3-5 for Numeric expressions.
+    // `CSS::SerializableNumber` serialization implements the appropriate logic for steps 2 & steps 3-5 for Numeric expressions.
 
     // 2. If fn represents an infinite or NaN value: let s be the string "calc(".
     // 2.1. Let s be the string "calc(".
@@ -516,7 +516,7 @@ template<Numeric Op> void serializeCalculationTree(StringBuilder& builder, const
 {
     // 2. If root is a numeric value, or a non-math function, serialize root per the normal rules for it and return the result.
 
-    formatCSSNumberValue(builder, root.value, CSSPrimitiveValue::unitTypeString(toCSSUnit(root)));
+    CSS::serializationForCSS(builder, CSS::SerializableNumber { root.value, CSSPrimitiveValue::unitTypeString(toCSSUnit(root)) });
 }
 
 void serializeCalculationTree(StringBuilder& builder, const Symbol& root, SerializationState&)

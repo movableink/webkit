@@ -24,23 +24,17 @@
 
 #pragma once
 
-#include "CSSPrimitiveNumericRange.h"
 #include "CalculationValue.h"
+#include "StylePrimitiveNumericConcepts.h"
 
 namespace WebCore {
 namespace Style {
 
 // Wrapper for `Ref<CalculationValue>` that includes range and category as part of the type.
-template<CSS::Range R, Calculation::Category C> struct UnevaluatedCalculation {
-    static constexpr auto range = R;
-    static constexpr auto category = C;
-
-    Ref<CalculationValue> value;
-
-    Ref<CalculationValue> protectedCalculation() const
-    {
-        return value;
-    }
+template<CSS::Numeric CSSType> struct UnevaluatedCalculation {
+    using CSS = CSSType;
+    static constexpr auto range = CSS::range;
+    static constexpr auto category = CSS::category;
 
     explicit UnevaluatedCalculation(Ref<CalculationValue> root)
         : value { WTFMove(root) }
@@ -60,12 +54,20 @@ template<CSS::Range R, Calculation::Category C> struct UnevaluatedCalculation {
     {
     }
 
+    Ref<CalculationValue> protectedCalculation() const
+    {
+        return value;
+    }
+
     bool operator==(const UnevaluatedCalculation&) const = default;
+
+private:
+    Ref<CalculationValue> value;
 };
 
 } // namespace Style
 } // namespace WebCore
 
-template<auto R, auto C> struct WTF::IsSmartPtr<WebCore::Style::UnevaluatedCalculation<R, C>> {
+template<WebCore::Style::Calc T> struct WTF::IsSmartPtr<T> {
     static constexpr bool value = true;
 };

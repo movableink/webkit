@@ -44,16 +44,6 @@ namespace CSSPropertyParserHelpers {
 
 // MARK: - Meta Consumers
 
-template<typename... Ts>
-using MetaConsumerVariantWrapper = typename std::variant<Ts...>;
-
-template<typename TypeList>
-using MetaConsumerVariantOrSingle = std::conditional_t<
-    brigand::size<TypeList>::value == 1,
-    brigand::front<TypeList>,
-    brigand::wrap<TypeList, MetaConsumerVariantWrapper>
->;
-
 /// The result of a meta consume.
 /// To be used with a list of `CSS` types (e.g. `ConsumeResult<CSS::Angle<Range>, CSS::Percentage<Range>, CSS::None>`), which will yield a
 /// result type of either a std::variant of those types (e.g.`std::variant<CSS::Angle<Range>, CSS::Percentage<Range>, CSS::None>`) or the type
@@ -61,7 +51,7 @@ using MetaConsumerVariantOrSingle = std::conditional_t<
 template<typename... Ts>
 struct MetaConsumeResult {
     using TypeList = brigand::list<Ts...>;
-    using type = MetaConsumerVariantOrSingle<TypeList>;
+    using type = VariantOrSingle<TypeList>;
 };
 
 

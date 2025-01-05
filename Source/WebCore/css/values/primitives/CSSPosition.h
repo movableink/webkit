@@ -75,6 +75,11 @@ struct Position {
     {
     }
 
+    template<typename... F> decltype(auto) switchOn(F&&... f) const
+    {
+        return WTF::switchOn(value, std::forward<F>(f)...);
+    }
+
     bool operator==(const Position&) const = default;
 
     std::variant<TwoComponentPosition, FourComponentPosition> value;
@@ -85,22 +90,6 @@ bool isCenterPosition(const Position&);
 
 } // namespace CSS
 } // namespace WebCore
-
-namespace WTF {
-
-// Overload WTF::switchOn to make it so CSS::Position can be used directly.
-
-template<class... F> ALWAYS_INLINE auto switchOn(const WebCore::CSS::Position& position, F&&... f) -> decltype(switchOn(position.value, std::forward<F>(f)...))
-{
-    return switchOn(position.value, std::forward<F>(f)...);
-}
-
-template<class... F> ALWAYS_INLINE auto switchOn(WebCore::CSS::Position&& position, F&&... f) -> decltype(switchOn(WTFMove(position.value), std::forward<F>(f)...))
-{
-    return switchOn(WTFMove(position.value), std::forward<F>(f)...);
-}
-
-} // namespace WTF
 
 CSS_TUPLE_LIKE_CONFORMANCE(TwoComponentPositionHorizontal, 1)
 CSS_TUPLE_LIKE_CONFORMANCE(TwoComponentPositionVertical, 1)

@@ -30,29 +30,37 @@ namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
 struct IntegerValidator {
-    template<auto R> static bool isValid(CSS::NumberRaw<R> raw, CSSPropertyParserOptions)
+    static constexpr std::optional<CSS::IntegerUnit> validate(CSSUnitType unitType, CSSPropertyParserOptions)
+    {
+        return CSS::UnitTraits<CSS::IntegerUnit>::validate(unitType);
+    }
+
+    template<auto R, typename V> static bool isValid(CSS::IntegerRaw<R, V> raw, CSSPropertyParserOptions)
     {
         return isValidCanonicalValue(raw);
     }
 };
 
-template<typename Integer, typename Validator> struct NumberConsumerForIntegerValues {
+template<typename Primitive, typename Validator> struct NumberConsumerForIntegerValues {
     static constexpr CSSParserTokenType tokenType = NumberToken;
 
-    static std::optional<typename Integer::Raw> consume(CSSParserTokenRange& range, const CSSParserContext&, CSSCalcSymbolsAllowed, CSSPropertyParserOptions options)
+    static std::optional<typename Primitive::Raw> consume(CSSParserTokenRange& range, const CSSParserContext&, CSSCalcSymbolsAllowed, CSSPropertyParserOptions options)
     {
         ASSERT(range.peek().type() == NumberToken);
 
         if (range.peek().numericValueType() != IntegerValueType)
             return std::nullopt;
 
-        // Validate the value using a CSS::NumberRaw since it has the same range semantics
-        // but keeps the value a double.
-        auto numberValue = CSS::NumberRaw<Integer::range> { range.peek().numericValue() };
-        if (!Validator::isValid(numberValue, options))
+        auto rawValue = typename Primitive::Raw { CSS::IntegerUnit::Integer, range.peek().numericValue() };
+
+        if constexpr (rawValue.range.options != CSS::RangeOptions::Default)
+            rawValue = performParseTimeClamp(rawValue);
+
+        if (!Validator::isValid(rawValue, options))
             return std::nullopt;
 
-        return typename Integer::Raw { clampTo<typename Integer::Raw::ValueType>(range.consumeIncludingWhitespace().numericValue()) };
+        range.consumeIncludingWhitespace();
+        return rawValue;
     }
 };
 

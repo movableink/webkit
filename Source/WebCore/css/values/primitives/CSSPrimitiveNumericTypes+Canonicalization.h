@@ -34,46 +34,38 @@ namespace CSS {
 
 // MARK: Angle
 
-double canonicalizeAngle(double value, CSSUnitType);
+double canonicalizeAngle(double value, AngleUnit);
 
 template<auto R> double canonicalize(AngleRaw<R> raw)
 {
-    return canonicalizeAngle(raw.value, raw.type);
+    return canonicalizeAngle(raw.value, raw.unit);
 }
-
-// MARK: Length
-
-double canonicalizeLength(double, CSSUnitType, NoConversionDataRequiredToken);
-double canonicalizeLength(double, CSSUnitType, const CSSToLengthConversionData&);
-float clampLengthToAllowedLimits(double);
-float canonicalizeAndClampLength(double, CSSUnitType, NoConversionDataRequiredToken);
-float canonicalizeAndClampLength(double, CSSUnitType, const CSSToLengthConversionData&);
 
 // MARK: Time
 
-double canonicalizeTime(double, CSSUnitType);
+double canonicalizeTime(double, TimeUnit);
 
 template<auto R> double canonicalize(TimeRaw<R> raw)
 {
-    return canonicalizeTime(raw.value, raw.type);
+    return canonicalizeTime(raw.value, raw.unit);
 }
 
 // MARK: Frequency
 
-double canonicalizeFrequency(double, CSSUnitType);
+double canonicalizeFrequency(double, FrequencyUnit);
 
 template<auto R> double canonicalize(FrequencyRaw<R> raw)
 {
-    return canonicalizeFrequency(raw.value, raw.type);
+    return canonicalizeFrequency(raw.value, raw.unit);
 }
 
 // MARK: Resolution
 
-double canonicalizeResolution(double, CSSUnitType);
+double canonicalizeResolution(double, ResolutionUnit);
 
 template<auto R> double canonicalize(ResolutionRaw<R> raw)
 {
-    return canonicalizeResolution(raw.value, raw.type);
+    return canonicalizeResolution(raw.value, raw.unit);
 }
 
 } // namespace CSS

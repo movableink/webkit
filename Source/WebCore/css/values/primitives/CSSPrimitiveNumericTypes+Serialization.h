@@ -31,13 +31,25 @@ namespace CSS {
 
 // MARK: - Serialization
 
-// Type-erased helper to allow for shared code.
-void rawNumericSerialization(StringBuilder&, double, CSSUnitType);
+struct SerializableNumber {
+    double value;
+    ASCIILiteral suffix;
+};
 
-template<RawNumeric RawType> struct Serialize<RawType> {
+void formatNonfiniteCSSNumberValue(StringBuilder&, const SerializableNumber&);
+String formatNonfiniteCSSNumberValue(const SerializableNumber&);
+
+void formatCSSNumberValue(StringBuilder&, const SerializableNumber&);
+String formatCSSNumberValue(const SerializableNumber&);
+
+template<> struct Serialize<SerializableNumber> {
+    void operator()(StringBuilder&, const SerializableNumber&);
+};
+
+template<NumericRaw RawType> struct Serialize<RawType> {
     void operator()(StringBuilder& builder, const RawType& value)
     {
-        rawNumericSerialization(builder, value.value, value.type);
+        serializationForCSS(builder, SerializableNumber { value.value, unitString(value.unit) });
     }
 };
 

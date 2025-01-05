@@ -97,20 +97,20 @@ void Serialize<GradientDeprecatedColorStop>::operator()(StringBuilder& builder, 
     WTF::switchOn(stop.position,
         [&](const Number<>& number) {
             return WTF::switchOn(number,
-                [&](NumberRaw<> raw) {
+                [&](const Number<>::Raw& raw) {
                     appendRaw(stop.color, raw);
                 },
-                [&](const UnevaluatedCalc<NumberRaw<>>& calc) {
+                [&](const Number<>::Calc& calc) {
                     appendCalc(stop.color, calc);
                 }
             );
         },
         [&](const Percentage<>& percentage) {
             return WTF::switchOn(percentage,
-                [&](PercentageRaw<> raw) {
+                [&](const Percentage<>::Raw& raw) {
                     appendRaw(stop.color, { raw.value / 100.0 });
                 },
-                [&](const UnevaluatedCalc<PercentageRaw<>>& calc) {
+                [&](const Percentage<>::Calc& calc) {
                     appendCalc(stop.color, calc);
                 }
             );
@@ -155,14 +155,14 @@ void Serialize<LinearGradient>::operator()(StringBuilder& builder, const LinearG
     WTF::switchOn(gradient.gradientLine,
         [&](const Angle<>& angle) {
             WTF::switchOn(angle,
-                [&](const AngleRaw<>& angleRaw) {
-                    if (CSSPrimitiveValue::computeDegrees(angleRaw.type, angleRaw.value) == 180)
+                [&](const Angle<>::Raw& angleRaw) {
+                    if (convertToValueInUnitsOf<AngleUnit::Deg>(angleRaw) == 180)
                         return;
 
                     serializationForCSS(builder, angleRaw);
                     wroteSomething = true;
                 },
-                [&](const UnevaluatedCalc<AngleRaw<>>& angleCalc) {
+                [&](const Angle<>::Calc& angleCalc) {
                     serializationForCSS(builder, angleCalc);
                     wroteSomething = true;
                 }
@@ -365,14 +365,14 @@ void Serialize<ConicGradient::GradientBox>::operator()(StringBuilder& builder, c
 
     if (gradientBox.angle) {
         WTF::switchOn(*gradientBox.angle,
-            [&](const AngleRaw<>& angleRaw) {
+            [&](const Angle<>::Raw& angleRaw) {
                 if (angleRaw.value) {
                     builder.append("from "_s);
                     serializationForCSS(builder, angleRaw);
                     wroteSomething = true;
                 }
             },
-            [&](const UnevaluatedCalc<AngleRaw<>>& angleCalc) {
+            [&](const Angle<>::Calc& angleCalc) {
                 builder.append("from "_s);
                 serializationForCSS(builder, angleCalc);
                 wroteSomething = true;

@@ -26,6 +26,7 @@
 #pragma once
 
 #include "CSSPrimitiveNumericTypes+EvaluateCalc.h"
+#include "CSSPrimitiveNumericTypes+SymbolReplacement.h"
 #include "CSSPrimitiveNumericTypes.h"
 #include "CSSValueKeywords.h"
 #include "Color.h"
@@ -35,6 +36,7 @@
 #include <variant>
 #include <wtf/Brigand.h>
 #include <wtf/OptionSet.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/ASCIILiteral.h>
 
 namespace WebCore {
@@ -44,7 +46,7 @@ enum class CSSColorFunctionForm { Relative, Absolute };
 
 template<typename... Ts> struct CSSColorComponent {
     using ResultTypeList = brigand::list<Ts...>;
-    using Result = CSS::VariantOrSingle<ResultTypeList>;
+    using Result = VariantOrSingle<ResultTypeList>;
 
     // Symbol used to represent component for relative color form.
     CSSValueID symbol;
@@ -93,11 +95,11 @@ using GetColorTypeComponentType = typename GetColorType<Descriptor>::ComponentTy
 
 // e.g. for GetStyleColorParseTypeComponentTypeList<ColorRGBFunction<SRGB<float>>, 2> -> brigand::list<Style::Percentage, Style::Number, Style::None>
 template<typename Descriptor, unsigned Index>
-using GetStyleColorParseTypeComponentTypeList = CSS::TypeTransform::List::CSSToStyle<typename GetComponent<Descriptor, Index>::ResultTypeList>;
+using GetStyleColorParseTypeComponentTypeList = brigand::transform<typename GetComponent<Descriptor, Index>::ResultTypeList, Style::ToStyleMapping<brigand::_1>>;
 
 // e.g. for GetStyleColorParseTypeComponentResult<ColorRGBFunction<SRGB<float>>, 2> -> std::variant<Style::Percentage, Style::Number, Style::None>
 template<typename Descriptor, unsigned Index>
-using GetStyleColorParseTypeComponentResult = CSS::VariantOrSingle<GetStyleColorParseTypeComponentTypeList<Descriptor, Index>>;
+using GetStyleColorParseTypeComponentResult = VariantOrSingle<GetStyleColorParseTypeComponentTypeList<Descriptor, Index>>;
 
 // e.g. for StyleColorParseType<ColorRGBFunction<T>> -> std::tuple<std::variant<Style::Percentage, Style::Number, Style::None>, ...>
 template<typename Descriptor>
@@ -126,7 +128,7 @@ using GetCSSColorParseTypeWithCalcComponentTypeList = typename GetComponent<Desc
 
 // e.g. for GetCSSColorParseTypeWithCalcComponentResult<ColorRGBFunction<SRGB<float>>, 2> -> std::variant<CSS::Percentage<>, CSS::Number<>, CSS::None>
 template<typename Descriptor, unsigned Index>
-using GetCSSColorParseTypeWithCalcComponentResult = CSS::VariantOrSingle<GetCSSColorParseTypeWithCalcComponentTypeList<Descriptor, Index>>;
+using GetCSSColorParseTypeWithCalcComponentResult = VariantOrSingle<GetCSSColorParseTypeWithCalcComponentTypeList<Descriptor, Index>>;
 
 // e.g. for CSSColorParseTypeWithCalc<ColorRGBFunction<T>> -> std::tuple<std::variant<CSS::Percentage<>, CSS::Number<>, CSS::None>, ...>
 template<typename Descriptor>
@@ -157,11 +159,11 @@ template<typename Descriptor> bool componentsRequireConversionData(const CSSColo
 
 // e.g. for GetCSSColorParseTypeWithCalcAndSymbolsComponentTypeList<ColorRGBFunction<SRGB<float>>, 2> -> brigand::list<CSS::Percentage<>, CSS::Number<>, CSS::None, CSS::Symbol>
 template<typename Descriptor, unsigned Index>
-using GetCSSColorParseTypeWithCalcAndSymbolsComponentTypeList = CSS::TypeTransform::List::PlusSymbol<typename GetComponent<Descriptor, Index>::ResultTypeList>;
+using GetCSSColorParseTypeWithCalcAndSymbolsComponentTypeList = CSS::PlusSymbol<typename GetComponent<Descriptor, Index>::ResultTypeList>;
 
 // e.g. for GetCSSColorParseTypeWithCalcAndSymbolsComponentResult<ColorRGBFunction<SRGB<float>>, 2> -> std::variant<CSS::Percentage<>, CSS::Number<>, CSS::None, CSS::Symbol>
 template<typename Descriptor, unsigned Index>
-using GetCSSColorParseTypeWithCalcAndSymbolsComponentResult = CSS::VariantOrSingle<GetCSSColorParseTypeWithCalcAndSymbolsComponentTypeList<Descriptor, Index>>;
+using GetCSSColorParseTypeWithCalcAndSymbolsComponentResult = VariantOrSingle<GetCSSColorParseTypeWithCalcAndSymbolsComponentTypeList<Descriptor, Index>>;
 
 // e.g. for CSSColorParseTypeWithCalcAndSymbols<ColorRGBFunction<T>> -> std::tuple<std::variant<CSS::Percentage<>, CSS::Number<>, CSS::None, CSS::Symbol>, ...>
 template<typename Descriptor>

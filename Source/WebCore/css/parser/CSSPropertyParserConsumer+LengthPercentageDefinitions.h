@@ -31,9 +31,13 @@ namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
 struct LengthPercentageValidator {
-    static constexpr bool isValid(CSSUnitType unitType, CSSPropertyParserOptions options)
+    static constexpr std::optional<CSS::LengthPercentageUnit> validate(CSSUnitType unitType, CSSPropertyParserOptions options)
     {
-        return LengthValidator::isValid(unitType, options);
+        // NOTE: Percentages are handled explicitly by the PercentageValidator, so this only
+        // needs to be concerned with the Length units.
+        if (auto result = LengthValidator::validate(unitType, options))
+            return static_cast<CSS::LengthPercentageUnit>(*result);
+        return std::nullopt;
     }
 
     template<auto R> static bool isValid(CSS::LengthPercentageRaw<R> raw, CSSPropertyParserOptions)
@@ -47,7 +51,7 @@ template<auto R> struct ConsumerDefinition<CSS::LengthPercentage<R>> {
     using FunctionToken = FunctionConsumerForCalcValues<CSS::LengthPercentage<R>>;
     using DimensionToken = DimensionConsumer<CSS::LengthPercentage<R>, LengthPercentageValidator>;
     using PercentageToken = PercentageConsumer<CSS::LengthPercentage<R>, LengthPercentageValidator>;
-    using NumberToken = NumberConsumerForUnitlessValues<CSS::LengthPercentage<R>, LengthPercentageValidator, CSSUnitType::CSS_PX>;
+    using NumberToken = NumberConsumerForUnitlessValues<CSS::LengthPercentage<R>, LengthPercentageValidator, CSS::LengthUnit::Px>;
 };
 
 } // namespace CSSPropertyParserHelpers

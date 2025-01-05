@@ -47,6 +47,7 @@
 #include "CalculationCategory.h"
 #include "CalculationValue.h"
 #include "Logging.h"
+#include "StyleLengthResolution.h"
 #include "StylePrimitiveNumericTypes.h"
 #include <wtf/MathExtras.h>
 #include <wtf/text/StringBuilder.h>
@@ -247,7 +248,7 @@ double CSSCalcValue::computeLengthPx(const CSSToLengthConversionData& conversion
         .conversionData = conversionData,
         .symbolTable = symbolTable
     };
-    return clampToPermittedRange(CSSPrimitiveValue::computeNonCalcLengthDouble(conversionData, CSSUnitType::CSS_PX, CSSCalc::evaluateDouble(m_tree, options).value_or(0)));
+    return clampToPermittedRange(Style::computeNonCalcLengthDouble(CSSCalc::evaluateDouble(m_tree, options).value_or(0), CSS::LengthUnit::Px, conversionData));
 }
 
 Ref<CalculationValue> CSSCalcValue::createCalculationValue(const CSSToLengthConversionData& conversionData) const

@@ -24,6 +24,7 @@
 
 #pragma once
 
+#include "CSSValueConcepts.h"
 #include "CSSValueKeywords.h"
 #include "RectEdges.h"
 #include <optional>
@@ -36,32 +37,6 @@
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
-
-// Types can specialize this and set the value to true to be treated as "empty-like"
-// for CSS value type algorithms.
-// Requirements: None.
-template<typename> inline constexpr auto TreatAsEmptyLike = false;
-
-// Types can specialize this and set the value to true to be treated as "optional-like"
-// for CSS value type algorithms.
-// Requirements: Types be comparable to bool and have a operator* function.
-template<typename> inline constexpr auto TreatAsOptionalLike = false;
-
-// Types can specialize this and set the value to true to be treated as "tuple-like"
-// for CSS value type algorithms.
-// NOTE: This gets automatically specialized when using the CSS_TUPLE_LIKE_CONFORMANCE macro.
-// Requirements: Types must have conform the to the standard tuple-like pseudo-protocol.
-template<typename> inline constexpr auto TreatAsTupleLike = false;
-
-// Types can specialize this and set the value to true to be treated as "range-like"
-// for CSS value type algorithms.
-// Requirements: Types must have valid begin()/end() functions.
-template<typename> inline constexpr auto TreatAsRangeLike = false;
-
-// Types can specialize this and set the value to true to be treated as "variant-like"
-// for CSS value type algorithms.
-// Requirements: Types must be able to be passed to WTF::switchOn().
-template<typename> inline constexpr auto TreatAsVariantLike = false;
 
 // Types that specialize TreatAsTupleLike or TreatAsRangeLike can specialize this to
 // indicate how to serialize the gaps between elements.
@@ -83,13 +58,11 @@ template<typename... Ts> inline constexpr auto TreatAsTupleLike<std::tuple<Ts...
 // - Variant-like
 template<typename... Ts> inline constexpr auto TreatAsVariantLike<std::variant<Ts...>> = true;
 
-
 // MARK: Utility Concepts
 
 template<typename T> concept HasIsZero = requires(T t) {
     { t.isZero() } -> std::convertible_to<bool>;
 };
-
 
 // MARK: - Standard Leaf Types
 

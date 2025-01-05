@@ -79,14 +79,14 @@ template<typename CSSType> [[nodiscard]] String serializationForCSS(const CSSTyp
     return builder.toString();
 }
 
-template<typename CSSType> void serializationForCSSOnOptionalLike(StringBuilder& builder, const CSSType& value) requires (TreatAsOptionalLike<CSSType>)
+template<typename CSSType> void serializationForCSSOnOptionalLike(StringBuilder& builder, const CSSType& value)
 {
     if (!value)
         return;
     serializationForCSS(builder, *value);
 }
 
-template<typename CSSType> void serializationForCSSOnTupleLike(StringBuilder& builder, const CSSType& value, ASCIILiteral separator) requires (TreatAsTupleLike<CSSType>)
+template<typename CSSType> void serializationForCSSOnTupleLike(StringBuilder& builder, const CSSType& value, ASCIILiteral separator)
 {
     auto swappedSeparator = ""_s;
     auto caller = WTF::makeVisitor(
@@ -111,7 +111,7 @@ template<typename CSSType> void serializationForCSSOnTupleLike(StringBuilder& bu
     WTF::apply([&](const auto& ...x) { (..., caller(x)); }, value);
 }
 
-template<typename CSSType> void serializationForCSSOnRangeLike(StringBuilder& builder, const CSSType& value, ASCIILiteral separator) requires (TreatAsRangeLike<CSSType>)
+template<typename CSSType> void serializationForCSSOnRangeLike(StringBuilder& builder, const CSSType& value, ASCIILiteral separator)
 {
     auto swappedSeparator = ""_s;
     for (const auto& element : value) {
@@ -120,20 +120,20 @@ template<typename CSSType> void serializationForCSSOnRangeLike(StringBuilder& bu
     }
 }
 
-template<typename CSSType> void serializationForCSSOnVariantLike(StringBuilder& builder, const CSSType& value) requires (TreatAsVariantLike<CSSType>)
+template<typename CSSType> void serializationForCSSOnVariantLike(StringBuilder& builder, const CSSType& value)
 {
     WTF::switchOn(value, [&](const auto& alternative) { serializationForCSS(builder, alternative); });
 }
 
 // Constrained for `TreatAsEmptyLike`.
-template<typename CSSType> requires (TreatAsEmptyLike<CSSType>) struct Serialize<CSSType> {
+template<EmptyLike CSSType> struct Serialize<CSSType> {
     void operator()(StringBuilder&, const CSSType&)
     {
     }
 };
 
 // Constrained for `TreatAsOptionalLike`.
-template<typename CSSType> requires (TreatAsOptionalLike<CSSType>) struct Serialize<CSSType> {
+template<OptionalLike CSSType> struct Serialize<CSSType> {
     void operator()(StringBuilder& builder, const CSSType& value)
     {
         serializationForCSSOnOptionalLike(builder, value);
@@ -141,7 +141,7 @@ template<typename CSSType> requires (TreatAsOptionalLike<CSSType>) struct Serial
 };
 
 // Constrained for `TreatAsTupleLike`.
-template<typename CSSType> requires (TreatAsTupleLike<CSSType>) struct Serialize<CSSType> {
+template<TupleLike CSSType> struct Serialize<CSSType> {
     void operator()(StringBuilder& builder, const CSSType& value)
     {
         serializationForCSSOnTupleLike(builder, value, SerializationSeparator<CSSType>);
@@ -149,7 +149,7 @@ template<typename CSSType> requires (TreatAsTupleLike<CSSType>) struct Serialize
 };
 
 // Constrained for `TreatAsRangeLike`.
-template<typename CSSType> requires (TreatAsRangeLike<CSSType>) struct Serialize<CSSType> {
+template<RangeLike CSSType> struct Serialize<CSSType> {
     void operator()(StringBuilder& builder, const CSSType& value)
     {
         serializationForCSSOnRangeLike(builder, value, SerializationSeparator<CSSType>);
@@ -157,7 +157,7 @@ template<typename CSSType> requires (TreatAsRangeLike<CSSType>) struct Serialize
 };
 
 // Constrained for `TreatAsVariantLike`.
-template<typename CSSType> requires (TreatAsVariantLike<CSSType>) struct Serialize<CSSType> {
+template<VariantLike CSSType> struct Serialize<CSSType> {
     void operator()(StringBuilder& builder, const CSSType& value)
     {
         serializationForCSSOnVariantLike(builder, value);
@@ -234,38 +234,38 @@ template<typename CSSType> [[nodiscard]] ComputedStyleDependencies collectComput
     return dependencies;
 }
 
-template<typename CSSType> auto collectComputedStyleDependenciesOnOptionalLike(ComputedStyleDependencies& dependencies, const CSSType& value) requires (TreatAsOptionalLike<CSSType>)
+template<typename CSSType> auto collectComputedStyleDependenciesOnOptionalLike(ComputedStyleDependencies& dependencies, const CSSType& value)
 {
     if (!value)
         return;
     collectComputedStyleDependencies(dependencies, *value);
 }
 
-template<typename CSSType> auto collectComputedStyleDependenciesOnTupleLike(ComputedStyleDependencies& dependencies, const CSSType& value) requires (TreatAsTupleLike<CSSType>)
+template<typename CSSType> auto collectComputedStyleDependenciesOnTupleLike(ComputedStyleDependencies& dependencies, const CSSType& value)
 {
     WTF::apply([&](const auto& ...x) { (..., collectComputedStyleDependencies(dependencies, x)); }, value);
 }
 
-template<typename CSSType> auto collectComputedStyleDependenciesOnRangeLike(ComputedStyleDependencies& dependencies, const CSSType& value) requires (TreatAsRangeLike<CSSType>)
+template<typename CSSType> auto collectComputedStyleDependenciesOnRangeLike(ComputedStyleDependencies& dependencies, const CSSType& value)
 {
     for (const auto& element : value)
         collectComputedStyleDependencies(dependencies, element);
 }
 
-template<typename CSSType> auto collectComputedStyleDependenciesOnVariantLike(ComputedStyleDependencies& dependencies, const CSSType& value) requires (TreatAsVariantLike<CSSType>)
+template<typename CSSType> auto collectComputedStyleDependenciesOnVariantLike(ComputedStyleDependencies& dependencies, const CSSType& value)
 {
     WTF::switchOn(value, [&](const auto& alternative) { collectComputedStyleDependencies(dependencies, alternative); });
 }
 
 // Constrained for `TreatAsEmptyLike`.
-template<typename CSSType> requires (TreatAsEmptyLike<CSSType>) struct ComputedStyleDependenciesCollector<CSSType> {
+template<EmptyLike CSSType> struct ComputedStyleDependenciesCollector<CSSType> {
     void operator()(ComputedStyleDependencies&, const CSSType&)
     {
     }
 };
 
 // Constrained for `TreatAsOptionalLike`.
-template<typename CSSType> requires (TreatAsOptionalLike<CSSType>) struct ComputedStyleDependenciesCollector<CSSType> {
+template<OptionalLike CSSType> struct ComputedStyleDependenciesCollector<CSSType> {
     void operator()(ComputedStyleDependencies& dependencies, const CSSType& value)
     {
         collectComputedStyleDependenciesOnOptionalLike(dependencies, value);
@@ -273,7 +273,7 @@ template<typename CSSType> requires (TreatAsOptionalLike<CSSType>) struct Comput
 };
 
 // Constrained for `TreatAsTupleLike`.
-template<typename CSSType> requires (TreatAsTupleLike<CSSType>) struct ComputedStyleDependenciesCollector<CSSType> {
+template<TupleLike CSSType> struct ComputedStyleDependenciesCollector<CSSType> {
     void operator()(ComputedStyleDependencies& dependencies, const CSSType& value)
     {
         collectComputedStyleDependenciesOnTupleLike(dependencies, value);
@@ -281,7 +281,7 @@ template<typename CSSType> requires (TreatAsTupleLike<CSSType>) struct ComputedS
 };
 
 // Constrained for `TreatAsRangeLike`.
-template<typename CSSType> requires (TreatAsRangeLike<CSSType>) struct ComputedStyleDependenciesCollector<CSSType> {
+template<RangeLike CSSType> struct ComputedStyleDependenciesCollector<CSSType> {
     void operator()(ComputedStyleDependencies& dependencies, const CSSType& value)
     {
         collectComputedStyleDependenciesOnRangeLike(dependencies, value);
@@ -289,7 +289,7 @@ template<typename CSSType> requires (TreatAsRangeLike<CSSType>) struct ComputedS
 };
 
 // Constrained for `TreatAsVariantLike`.
-template<typename CSSType> requires (TreatAsVariantLike<CSSType>) struct ComputedStyleDependenciesCollector<CSSType> {
+template<VariantLike CSSType> struct ComputedStyleDependenciesCollector<CSSType> {
     void operator()(ComputedStyleDependencies& dependencies, const CSSType& value)
     {
         collectComputedStyleDependenciesOnVariantLike(dependencies, value);
@@ -328,12 +328,12 @@ template<typename CSSType> IterationStatus visitCSSValueChildren(const Function<
     return CSSValueChildrenVisitor<CSSType>{}(func, value);
 }
 
-template<typename CSSType> IterationStatus visitCSSValueChildrenOnOptionalLike(const Function<IterationStatus(CSSValue&)>& func, const CSSType& value) requires (TreatAsOptionalLike<CSSType>)
+template<typename CSSType> IterationStatus visitCSSValueChildrenOnOptionalLike(const Function<IterationStatus(CSSValue&)>& func, const CSSType& value)
 {
     return value ? visitCSSValueChildren(func, *value) : IterationStatus::Continue;
 }
 
-template<typename CSSType> IterationStatus visitCSSValueChildrenOnTupleLike(const Function<IterationStatus(CSSValue&)>& func, const CSSType& value) requires (TreatAsTupleLike<CSSType>)
+template<typename CSSType> IterationStatus visitCSSValueChildrenOnTupleLike(const Function<IterationStatus(CSSValue&)>& func, const CSSType& value)
 {
     // Process a single element of the tuple-like, updating result, and return true if result == IterationStatus::Done to
     // short circuit the fold in the apply lambda.
@@ -349,7 +349,7 @@ template<typename CSSType> IterationStatus visitCSSValueChildrenOnTupleLike(cons
     }, value);
 }
 
-template<typename CSSType> IterationStatus visitCSSValueChildrenOnRangeLike(const Function<IterationStatus(CSSValue&)>& func, const CSSType& value) requires (TreatAsRangeLike<CSSType>)
+template<typename CSSType> IterationStatus visitCSSValueChildrenOnRangeLike(const Function<IterationStatus(CSSValue&)>& func, const CSSType& value)
 {
     for (const auto& element : value) {
         if (visitCSSValueChildren(func, element) == IterationStatus::Done)
@@ -358,13 +358,13 @@ template<typename CSSType> IterationStatus visitCSSValueChildrenOnRangeLike(cons
     return IterationStatus::Continue;
 }
 
-template<typename CSSType> IterationStatus visitCSSValueChildrenOnVariantLike(const Function<IterationStatus(CSSValue&)>& func, const CSSType& value) requires (TreatAsVariantLike<CSSType>)
+template<typename CSSType> IterationStatus visitCSSValueChildrenOnVariantLike(const Function<IterationStatus(CSSValue&)>& func, const CSSType& value)
 {
     return WTF::switchOn(value, [&](const auto& alternative) { return visitCSSValueChildren(func, alternative); });
 }
 
 // Constrained for `TreatAsEmptyLike`.
-template<typename CSSType> requires (TreatAsEmptyLike<CSSType>) struct CSSValueChildrenVisitor<CSSType> {
+template<EmptyLike CSSType> struct CSSValueChildrenVisitor<CSSType> {
     IterationStatus operator()(const Function<IterationStatus(CSSValue&)>&, const CSSType&)
     {
         return IterationStatus::Continue;
@@ -372,7 +372,7 @@ template<typename CSSType> requires (TreatAsEmptyLike<CSSType>) struct CSSValueC
 };
 
 // Constrained for `TreatAsOptionalLike`.
-template<typename CSSType> requires (TreatAsOptionalLike<CSSType>) struct CSSValueChildrenVisitor<CSSType> {
+template<OptionalLike CSSType> struct CSSValueChildrenVisitor<CSSType> {
     IterationStatus operator()(const Function<IterationStatus(CSSValue&)>& func, const CSSType& value)
     {
         return visitCSSValueChildrenOnOptionalLike(func, value);
@@ -380,7 +380,7 @@ template<typename CSSType> requires (TreatAsOptionalLike<CSSType>) struct CSSVal
 };
 
 // Constrained for `TreatAsTupleLike`.
-template<typename CSSType> requires (TreatAsTupleLike<CSSType>) struct CSSValueChildrenVisitor<CSSType> {
+template<TupleLike CSSType> struct CSSValueChildrenVisitor<CSSType> {
     IterationStatus operator()(const Function<IterationStatus(CSSValue&)>& func, const CSSType& value)
     {
         return visitCSSValueChildrenOnTupleLike(func, value);
@@ -388,7 +388,7 @@ template<typename CSSType> requires (TreatAsTupleLike<CSSType>) struct CSSValueC
 };
 
 // Constrained for `TreatAsRangeLike`.
-template<typename CSSType> requires (TreatAsRangeLike<CSSType>) struct CSSValueChildrenVisitor<CSSType> {
+template<RangeLike CSSType> struct CSSValueChildrenVisitor<CSSType> {
     IterationStatus operator()(const Function<IterationStatus(CSSValue&)>& func, const CSSType& value)
     {
         return visitCSSValueChildrenOnRangeLike(func, value);
@@ -396,7 +396,7 @@ template<typename CSSType> requires (TreatAsRangeLike<CSSType>) struct CSSValueC
 };
 
 // Constrained for `TreatAsVariantLike`.
-template<typename CSSType> requires (TreatAsVariantLike<CSSType>) struct CSSValueChildrenVisitor<CSSType> {
+template<VariantLike CSSType> struct CSSValueChildrenVisitor<CSSType> {
     IterationStatus operator()(const Function<IterationStatus(CSSValue&)>& func, const CSSType& value)
     {
         return visitCSSValueChildrenOnVariantLike(func, value);

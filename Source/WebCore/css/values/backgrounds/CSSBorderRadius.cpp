@@ -36,7 +36,7 @@ static bool hasDefaultValueForAxis(const SpaceSeparatedArray<LengthPercentage<No
     return values.value[3] == values.value[1]
         && values.value[2] == values.value[0]
         && values.value[1] == values.value[0]
-        && values.value[0] == LengthPercentage<Nonnegative> { LengthPercentageRaw<Nonnegative> { CSSUnitType::CSS_PX, 0 } };
+        && values.value[0] == 0_css_px;
 }
 
 bool hasDefaultValue(const BorderRadius& borderRadius)
@@ -61,7 +61,7 @@ static std::pair<SpaceSeparatedVector<LengthPercentage<Nonnegative>, 4>, bool> g
     } else if (values.value[1] != values.value[0]) {
         result.append(values.value[1]);
     } else {
-        isDefaultValue = result[0] == LengthPercentage<Nonnegative> { LengthPercentageRaw<Nonnegative> { CSSUnitType::CSS_PX, 0 } };
+        isDefaultValue = result[0] == 0_css_px;
     }
 
     return { { WTFMove(result) }, isDefaultValue };

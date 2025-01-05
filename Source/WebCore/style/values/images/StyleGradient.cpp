@@ -1168,7 +1168,7 @@ template<CSSValueID Name> static Ref<WebCore::Gradient> createPlatformGradient(c
     };
 
     auto centerPoint = computeCenterPoint(conic.parameters.gradientBox.position);
-    float angleRadians = conic.parameters.gradientBox.angle ? CSSPrimitiveValue::computeRadians(conic.parameters.gradientBox.angle->unit, conic.parameters.gradientBox.angle->value) : 0;
+    float angleRadians = conic.parameters.gradientBox.angle ? CSS::convertToValueInUnitsOf<CSS::AngleUnit::Rad>(*conic.parameters.gradientBox.angle) : 0;
 
     WebCore::Gradient::ConicData data { centerPoint, angleRadians };
     ConicGradientAdapter adapter;

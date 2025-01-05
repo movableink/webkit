@@ -31,18 +31,9 @@ namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
 struct ResolutionValidator {
-    static constexpr bool isValid(CSSUnitType unitType, CSSPropertyParserOptions)
+    static constexpr std::optional<CSS::ResolutionUnit> validate(CSSUnitType unitType, CSSPropertyParserOptions)
     {
-        switch (unitType) {
-        case CSSUnitType::CSS_DPPX:
-        case CSSUnitType::CSS_X:
-        case CSSUnitType::CSS_DPI:
-        case CSSUnitType::CSS_DPCM:
-            return true;
-
-        default:
-            return false;
-        }
+        return CSS::UnitTraits<CSS::ResolutionUnit>::validate(unitType);
     }
 
     template<auto R> static bool isValid(CSS::ResolutionRaw<R> raw, CSSPropertyParserOptions)

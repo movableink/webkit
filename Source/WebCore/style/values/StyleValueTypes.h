@@ -70,6 +70,9 @@ class BuilderState;
 // for both CSS and Style systems (e.g. a constant value or an enum).
 template<typename> inline constexpr bool TreatAsNonConverting = false;
 
+// The `NonConverting` concept can be used to filter to types that specialize `TreatAsNonConverting`.
+template<typename T> concept NonConverting = TreatAsNonConverting<T>;
+
 // Types that are treated as "tuple-like" can have their conversion operations defined
 // automatically by just defining their type mapping.
 template<typename> struct ToStyleMapping;
@@ -145,7 +148,7 @@ template<typename T, size_t N> struct ToCSSMapping<CommaSeparatedVector<T, N>> {
 template<typename... Ts> struct ToCSSMapping<std::variant<Ts...>> { using type = std::variant<CSSType<Ts>...>; };
 
 // Constrained for `TreatAsNonConverting`.
-template<typename StyleType> requires (TreatAsNonConverting<StyleType>) struct ToCSS<StyleType> {
+template<NonConverting StyleType> struct ToCSS<StyleType> {
     constexpr StyleType operator()(const StyleType& value, const RenderStyle&)
     {
         return value;
@@ -153,7 +156,7 @@ template<typename StyleType> requires (TreatAsNonConverting<StyleType>) struct T
 };
 
 // Constrained for `TreatAsOptionalLike`.
-template<typename StyleType> requires (TreatAsOptionalLike<StyleType>) struct ToCSS<StyleType> {
+template<OptionalLike StyleType> struct ToCSS<StyleType> {
     using Result = typename ToCSSMapping<StyleType>::type;
 
     Result operator()(const StyleType& value, const RenderStyle& style)
@@ -165,7 +168,7 @@ template<typename StyleType> requires (TreatAsOptionalLike<StyleType>) struct To
 };
 
 // Constrained for `TreatAsTupleLike`.
-template<typename StyleType> requires (TreatAsTupleLike<StyleType>) struct ToCSS<StyleType> {
+template<TupleLike StyleType> struct ToCSS<StyleType> {
     using Result = typename ToCSSMapping<StyleType>::type;
 
     Result operator()(const StyleType& value, const RenderStyle& style)
@@ -175,7 +178,7 @@ template<typename StyleType> requires (TreatAsTupleLike<StyleType>) struct ToCSS
 };
 
 // Constrained for `TreatAsVariantLike`.
-template<typename StyleType> requires (TreatAsVariantLike<StyleType>) struct ToCSS<StyleType> {
+template<VariantLike StyleType> struct ToCSS<StyleType> {
     using Result = typename ToCSSMapping<StyleType>::type;
 
     Result operator()(const StyleType& value, const RenderStyle& style)
@@ -265,7 +268,7 @@ template<typename T, size_t N> struct ToStyleMapping<CommaSeparatedVector<T, N>>
 template<typename... Ts> struct ToStyleMapping<std::variant<Ts...>> { using type = std::variant<StyleType<Ts>...>; };
 
 // Constrained for `TreatAsNonConverting`.
-template<typename CSSType> requires (TreatAsNonConverting<CSSType>) struct ToStyle<CSSType> {
+template<NonConverting CSSType> struct ToStyle<CSSType> {
     template<typename... Rest> constexpr CSSType operator()(const CSSType& value, Rest&&...)
     {
         return value;
@@ -273,7 +276,7 @@ template<typename CSSType> requires (TreatAsNonConverting<CSSType>) struct ToSty
 };
 
 // Constrained for `TreatAsOptionalLike`.
-template<typename CSSType> requires (TreatAsOptionalLike<CSSType>) struct ToStyle<CSSType> {
+template<OptionalLike CSSType> struct ToStyle<CSSType> {
     using Result = typename ToStyleMapping<CSSType>::type;
 
     template<typename... Rest> Result operator()(const CSSType& value, Rest&&... rest)
@@ -285,7 +288,7 @@ template<typename CSSType> requires (TreatAsOptionalLike<CSSType>) struct ToStyl
 };
 
 // Constrained for `TreatAsTupleLike`.
-template<typename CSSType> requires (TreatAsTupleLike<CSSType>) struct ToStyle<CSSType> {
+template<TupleLike CSSType> struct ToStyle<CSSType> {
     using Result = typename ToStyleMapping<CSSType>::type;
 
     template<typename... Rest> Result operator()(const CSSType& value, Rest&&... rest)
@@ -295,7 +298,7 @@ template<typename CSSType> requires (TreatAsTupleLike<CSSType>) struct ToStyle<C
 };
 
 // Constrained for `TreatAsVariantLike`.
-template<typename CSSType> requires (TreatAsVariantLike<CSSType>) struct ToStyle<CSSType> {
+template<VariantLike CSSType> struct ToStyle<CSSType> {
     using Result = typename ToStyleMapping<CSSType>::type;
 
     template<typename... Rest> Result operator()(const CSSType& value, Rest&&... rest)
@@ -423,7 +426,7 @@ template<typename StyleType> auto blendOnTupleLike(const StyleType& a, const Sty
 }
 
 // Constrained for `TreatAsOptionalLike`.
-template<typename StyleType> requires (TreatAsOptionalLike<StyleType>) struct Blending<StyleType> {
+template<OptionalLike StyleType> struct Blending<StyleType> {
     constexpr auto canBlend(const StyleType& a, const StyleType& b) -> bool
     {
         return canBlendOnOptionalLike(a, b);
@@ -443,7 +446,7 @@ template<typename StyleType> requires (TreatAsOptionalLike<StyleType>) struct Bl
 };
 
 // Constrained for `TreatAsTupleLike`.
-template<typename StyleType> requires (TreatAsTupleLike<StyleType>) struct Blending<StyleType> {
+template<TupleLike StyleType> struct Blending<StyleType> {
     constexpr auto canBlend(const StyleType& a, const StyleType& b) -> bool
     {
         return canBlendOnTupleLike(a, b);

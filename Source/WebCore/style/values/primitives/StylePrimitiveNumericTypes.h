@@ -25,6 +25,7 @@
 #pragma once
 
 #include "CSSPrimitiveNumericTypes.h"
+#include "StylePrimitiveNumericConcepts.h"
 #include "StyleUnevaluatedCalculation.h"
 #include "StyleValueTypes.h"
 #include <wtf/CompactVariant.h>
@@ -32,241 +33,75 @@
 namespace WebCore {
 namespace Style {
 
-// Concept for use in generic contexts to filter on Numeric Style types.
-template<typename T> concept StyleNumeric = requires {
-    typename T::CSS;
-    typename T::Raw;
-};
-
-// Concept for use in generic contexts to filter on base, single type
-// primitives, excluding "dimension-percentage" types.
-template<typename T> concept StyleNumericPrimitive = StyleNumeric<T> && requires {
-    T::unit;
-};
-
-// Concept for use in generic contexts to filter on "dimension-percentage"
-// types such as `<length-percentage>`.
-template<typename T> concept StyleDimensionPercentage = StyleNumeric<T> && requires {
-    typename T::Dimension;
-};
-
-// MARK: Number Primitive
-
-template<CSS::Range R = CSS::All, typename T = int> struct Integer {
-    static constexpr auto range = R;
-    static constexpr auto unit = CSSUnitType::CSS_INTEGER;
-    using CSS = WebCore::CSS::Integer<R, T>;
-    using Raw = WebCore::CSS::IntegerRaw<R, T>;
-    using ValueType = T;
-
-    ValueType value { 0 };
-
-    constexpr bool isZero() const { return !value; }
-
-    constexpr bool operator==(const Integer<R, T>&) const = default;
-    constexpr bool operator==(ValueType other) const { return value == other; };
-};
-
-template<CSS::Range R = CSS::All> struct Number {
-    static constexpr auto range = R;
-    static constexpr auto unit = CSSUnitType::CSS_NUMBER;
-    using CSS = WebCore::CSS::Number<R>;
-    using Raw = WebCore::CSS::NumberRaw<R>;
-    using ValueType = double;
-
-    ValueType value { 0 };
-
-    constexpr bool isZero() const { return !value; }
-
-    constexpr bool operator==(const Number<R>&) const = default;
-    constexpr bool operator==(ValueType other) const { return value == other; };
-};
-
-// MARK: Percentage Primitive
-
-template<CSS::Range R = CSS::All> struct Percentage {
-    static constexpr auto range = R;
-    static constexpr auto unit = CSSUnitType::CSS_PERCENTAGE;
-    using CSS = WebCore::CSS::Percentage<R>;
-    using Raw = WebCore::CSS::PercentageRaw<R>;
-    using ValueType = double;
-
-    ValueType value { 0 };
-
-    constexpr bool isZero() const { return !value; }
-
-    constexpr bool operator==(const Percentage<R>&) const = default;
-    constexpr bool operator==(ValueType other) const { return value == other; };
-};
-
-// MARK: Dimension Primitives
-
-template<CSS::Range R = CSS::All> struct Angle {
-    static constexpr auto range = R;
-    static constexpr auto unit = CSSUnitType::CSS_DEG;
-    using CSS = WebCore::CSS::Angle<R>;
-    using Raw = WebCore::CSS::AngleRaw<R>;
-    using ValueType = double;
-
-    ValueType value { 0 };
-
-    constexpr bool isZero() const { return !value; }
-
-    constexpr bool operator==(const Angle<R>&) const = default;
-    constexpr bool operator==(ValueType other) const { return value == other; };
-};
-
-template<CSS::Range R = CSS::All> struct Length {
-    static constexpr auto range = R;
-    static constexpr auto unit = CSSUnitType::CSS_PX;
-    using CSS = WebCore::CSS::Length<R>;
-    using Raw = WebCore::CSS::LengthRaw<R>;
-
-    // NOTE: Unlike the other primitive numeric types, Length<> uses a `float`,
-    // not a `double` for its value type.
-    using ValueType = float;
-
-    ValueType value { 0 };
-
-    constexpr bool isZero() const { return !value; }
-
-    constexpr bool operator==(const Length<R>&) const = default;
-    constexpr bool operator==(ValueType other) const { return value == other; };
-};
-
-template<CSS::Range R = CSS::All> struct Time {
-    static constexpr auto range = R;
-    static constexpr auto unit = CSSUnitType::CSS_S;
-    using CSS = WebCore::CSS::Time<R>;
-    using Raw = WebCore::CSS::TimeRaw<R>;
-    using ValueType = double;
-
-    ValueType value { 0 };
-
-    constexpr bool isZero() const { return !value; }
-
-    constexpr bool operator==(const Time<R>&) const = default;
-    constexpr bool operator==(ValueType other) const { return value == other; };
-};
-
-template<CSS::Range R = CSS::All> struct Frequency {
-    static constexpr auto range = R;
-    static constexpr auto unit = CSSUnitType::CSS_HZ;
-    using CSS = WebCore::CSS::Frequency<R>;
-    using Raw = WebCore::CSS::FrequencyRaw<R>;
-    using ValueType = double;
-
-    ValueType value { 0 };
-
-    constexpr bool isZero() const { return !value; }
-
-    constexpr bool operator==(const Frequency<R>&) const = default;
-    constexpr bool operator==(ValueType other) const { return value == other; };
-};
-
-template<CSS::Range R = CSS::Nonnegative> struct Resolution {
-    static_assert(R.min >= 0, "<resolution> values must always have a minimum range of at least 0.");
-    static constexpr auto range = R;
-    static constexpr auto unit = CSSUnitType::CSS_DPPX;
-    using CSS = WebCore::CSS::Resolution<R>;
-    using Raw = WebCore::CSS::ResolutionRaw<R>;
-    using ValueType = double;
-
-    ValueType value { 0 };
-
-    constexpr bool isZero() const { return !value; }
-
-    constexpr bool operator==(const Resolution<R>&) const = default;
-    constexpr bool operator==(ValueType other) const { return value == other; };
-};
-
-template<CSS::Range R = CSS::All> struct Flex {
-    static constexpr auto range = R;
-    static constexpr auto unit = CSSUnitType::CSS_FR;
-    using CSS = WebCore::CSS::Flex<R>;
-    using Raw = WebCore::CSS::FlexRaw<R>;
-    using ValueType = double;
-
-    ValueType value { 0 };
-
-    constexpr bool isZero() const { return !value; }
-
-    constexpr bool operator==(const Flex<R>&) const = default;
-    constexpr bool operator==(ValueType other) const { return value == other; };
-};
-
-} // namespace Style
-} // namespace WebCore
-
-namespace WTF {
- 
-// Allow primitives numeric types that usually store their value as a `double` to be
-// used with CompactVariant by using a `float`, rather than `double` representation
-// when used in a `CompactVariant`.
-
-template<WebCore::Style::StyleNumericPrimitive T>
-    requires std::same_as<typename T::ValueType, double>
-struct CompactVariantTraits<T> {
-   static constexpr bool hasAlternativeRepresentation = true;
-
-   static constexpr uint64_t encodeFromArguments(double value)
-   {
-       return static_cast<uint64_t>(std::bit_cast<uint32_t>(clampTo<float>(value)));
-   }
-
-   static constexpr uint64_t encode(const T& value)
-   {
-       return static_cast<uint64_t>(std::bit_cast<uint32_t>(clampTo<float>(value.value)));
-   }
-
-   static constexpr T decode(uint64_t value)
-   {
-       return { std::bit_cast<float>(static_cast<uint32_t>(value)) };
-   }
-};
-
-} // namespace WTF
-
-namespace WebCore {
-namespace Style {
-
-template<CSS::Range R, typename D, typename C> struct DimensionPercentage {
-    static constexpr auto range = R;
-    using CSS = C;
+// Default implementation of `PrimitiveNumeric` for non-composite numeric types.
+template<CSS::Numeric CSSType> struct PrimitiveNumeric {
+    using CSS = CSSType;
     using Raw = typename CSS::Raw;
-    using Dimension = D;
-    using Percentage = Style::Percentage<R>;
-    using Calc = UnevaluatedCalculation<R, CSS::category>;
+    using UnitType = typename CSS::UnitType;
+    using UnitTraits = typename CSS::UnitTraits;
+    using ResolvedValueType = typename CSS::ResolvedValueType;
+    static constexpr auto range = CSS::range;
+    static constexpr auto category = CSS::category;
+
+    static constexpr auto unit = UnitTraits::canonical;
+    ResolvedValueType value { 0 };
+
+    constexpr PrimitiveNumeric(ResolvedValueType value)
+        : value { value }
+    {
+    }
+
+    constexpr bool isZero() const { return !value; }
+
+    constexpr bool operator==(const PrimitiveNumeric&) const = default;
+    constexpr bool operator==(ResolvedValueType other) const { return value == other; };
+};
+
+template<typename> struct DimensionPercentageMapping;
+
+// Specialization of `PrimitiveNumeric` for composite dimension-percentage types.
+template<CSS::DimensionPercentageNumeric CSSType> struct PrimitiveNumeric<CSSType> {
+    using CSS = CSSType;
+    using Raw = typename CSS::Raw;
+    using UnitType = typename CSS::UnitType;
+    using UnitTraits = typename CSS::UnitTraits;
+    using ResolvedValueType = float;
+    static constexpr auto range = CSS::range;
+    static constexpr auto category = CSS::category;
+
+    using Dimension = typename DimensionPercentageMapping<CSS>::Dimension;
+    using Percentage = typename DimensionPercentageMapping<CSS>::Percentage;
+    using Calc = UnevaluatedCalculation<CSS>;
     using Representation = CompactVariant<Dimension, Percentage, Calc>;
 
-    DimensionPercentage(Dimension dimension)
+    PrimitiveNumeric(Dimension dimension)
         : m_value { WTFMove(dimension) }
     {
     }
 
-    DimensionPercentage(Percentage percentage)
+    PrimitiveNumeric(Percentage percentage)
         : m_value { WTFMove(percentage) }
     {
     }
 
-    DimensionPercentage(Calc calc)
+    PrimitiveNumeric(Calc calc)
         : m_value { WTFMove(calc) }
     {
     }
 
-    DimensionPercentage(Ref<CalculationValue> calculationValue)
+    PrimitiveNumeric(Ref<CalculationValue> calculationValue)
         : m_value { Calc { WTFMove(calculationValue) } }
     {
     }
 
-    DimensionPercentage(Calculation::Child calculationValue)
+    PrimitiveNumeric(Calculation::Child calculationValue)
         : m_value { Calc { WTFMove(calculationValue) } }
     {
     }
 
     // NOTE: CalculatedValue is intentionally not part of IPCData.
     using IPCData = std::variant<Dimension, Percentage>;
-    DimensionPercentage(IPCData&& data)
+    PrimitiveNumeric(IPCData&& data)
         : m_value { WTF::switchOn(WTFMove(data), [&](auto&& data) -> Representation { return { WTFMove(data) }; }) }
     {
     }
@@ -306,36 +141,85 @@ template<CSS::Range R, typename D, typename C> struct DimensionPercentage {
         );
     }
 
-    bool operator==(const DimensionPercentage&) const = default;
+    bool operator==(const PrimitiveNumeric&) const = default;
 
 private:
     Representation m_value;
 };
 
-template<CSS::Range R = CSS::All> struct AnglePercentage : DimensionPercentage<R, Angle<R>, CSS::AnglePercentage<R>> {
-    using DimensionPercentage<R, Angle<R>, CSS::AnglePercentage<R>>::DimensionPercentage;
+// MARK: Integer Primitive
+
+template<CSS::Range R = CSS::All, typename V = int> struct Integer : PrimitiveNumeric<CSS::Integer<R, V>> {
+    using Base = PrimitiveNumeric<CSS::Integer<R, V>>;
 };
 
-template<CSS::Range R = CSS::All> struct LengthPercentage : DimensionPercentage<R, Length<R>, CSS::LengthPercentage<R>> {
-    using DimensionPercentage<R, Length<R>, CSS::LengthPercentage<R>>::DimensionPercentage;
+// MARK: Number Primitive
+
+template<CSS::Range R = CSS::All> struct Number : PrimitiveNumeric<CSS::Number<R>> {
+    using Base = PrimitiveNumeric<CSS::Number<R>>;
+    using Base::Base;
 };
 
-template<typename T, StyleDimensionPercentage D> constexpr bool holdsAlternative(const D& dimensionPercentage)
-{
-    return WTF::holdsAlternative<T>(dimensionPercentage);
-}
+// MARK: Percentage Primitive
 
-template<size_t I, StyleDimensionPercentage D> constexpr bool holdsAlternative(const D& dimensionPercentage)
-{
-    return WTF::holdsAlternative<I>(dimensionPercentage);
-}
+template<CSS::Range R = CSS::All> struct Percentage : PrimitiveNumeric<CSS::Percentage<R>> {
+    using Base = PrimitiveNumeric<CSS::Percentage<R>>;
+    using Base::Base;
+};
 
-template<typename T, StyleDimensionPercentage D> T get(const D& dimensionPercentage)
+// MARK: Dimension Primitives
+
+template<CSS::Range R = CSS::All> struct Angle : PrimitiveNumeric<CSS::Angle<R>> {
+    using Base = PrimitiveNumeric<CSS::Angle<R>>;
+    using Base::Base;
+};
+template<CSS::Range R = CSS::All> struct Length : PrimitiveNumeric<CSS::Length<R>> {
+    using Base = PrimitiveNumeric<CSS::Length<R>>;
+    using Base::Base;
+};
+template<CSS::Range R = CSS::All> struct Time : PrimitiveNumeric<CSS::Time<R>> {
+    using Base = PrimitiveNumeric<CSS::Time<R>>;
+    using Base::Base;
+};
+template<CSS::Range R = CSS::All> struct Frequency : PrimitiveNumeric<CSS::Frequency<R>> {
+    using Base = PrimitiveNumeric<CSS::Frequency<R>>;
+    using Base::Base;
+};
+template<CSS::Range R = CSS::Nonnegative> struct Resolution : PrimitiveNumeric<CSS::Resolution<R>> {
+    using Base = PrimitiveNumeric<CSS::Resolution<R>>;
+    using Base::Base;
+};
+template<CSS::Range R = CSS::All> struct Flex : PrimitiveNumeric<CSS::Flex<R>> {
+    using Base = PrimitiveNumeric<CSS::Flex<R>>;
+    using Base::Base;
+};
+
+// MARK: Dimension + Percentage Primitives
+
+template<CSS::Range R = CSS::All> struct AnglePercentage : PrimitiveNumeric<CSS::AnglePercentage<R>> {
+    using Base = PrimitiveNumeric<CSS::AnglePercentage<R>>;
+    using Base::Base;
+};
+template<CSS::Range R = CSS::All> struct LengthPercentage : PrimitiveNumeric<CSS::LengthPercentage<R>> {
+    using Base = PrimitiveNumeric<CSS::LengthPercentage<R>>;
+    using Base::Base;
+};
+
+template<auto R> struct DimensionPercentageMapping<CSS::AnglePercentage<R>> {
+    using Dimension = Style::Angle<R>;
+    using Percentage = Style::Percentage<R>;
+};
+template<auto R> struct DimensionPercentageMapping<CSS::LengthPercentage<R>> {
+    using Dimension = Style::Length<R>;
+    using Percentage = Style::Percentage<R>;
+};
+
+template<typename T> T get(DimensionPercentageNumeric auto const& dimensionPercentage)
 {
     return dimensionPercentage.template get<T>();
 }
 
-// MARK: Additional Common Type and Groupings
+// MARK: Additional Common Types and Groupings
 
 // NOTE: This is spelled with an explicit "Or" to distinguish it from types like AnglePercentage/LengthPercentage that have behavior distinctions beyond just being a union of the two types (specifically, calc() has specific behaviors for those types).
 template<CSS::Range nR = CSS::All, CSS::Range pR = nR> struct NumberOrPercentage {
@@ -391,11 +275,10 @@ private:
     std::variant<EmptyToken, Number<nR>, Percentage<pR>> value;
 };
 
-
 template<CSS::Range nR = CSS::All, CSS::Range pR = nR> struct NumberOrPercentageResolvedToNumber {
     Number<nR> value { 0 };
 
-    constexpr NumberOrPercentageResolvedToNumber(typename Number<nR>::ValueType value)
+    constexpr NumberOrPercentageResolvedToNumber(typename Number<nR>::ResolvedValueType value)
         : value { value }
     {
     }
@@ -413,7 +296,7 @@ template<CSS::Range nR = CSS::All, CSS::Range pR = nR> struct NumberOrPercentage
     constexpr bool isZero() const { return value.isZero(); }
 
     constexpr bool operator==(const NumberOrPercentageResolvedToNumber<nR, pR>&) const = default;
-    constexpr bool operator==(typename Number<nR>::ValueType other) const { return value.value == other; };
+    constexpr bool operator==(typename Number<nR>::ResolvedValueType other) const { return value.value == other; };
 };
 
 // Standard Numbers
@@ -442,7 +325,7 @@ using LengthPercentageSpaceSeparatedPointNonnegative = SpaceSeparatedPoint<Lengt
 using LengthPercentageSpaceSeparatedSizeAll = SpaceSeparatedSize<LengthPercentageAll>;
 using LengthPercentageSpaceSeparatedSizeNonnegative = SpaceSeparatedSize<LengthPercentageNonnegative>;
 
-// MARK: CSS type -> Style type mapping
+// MARK: CSS -> Style
 
 template<auto R, typename T> struct ToStyleMapping<CSS::Integer<R, T>> { using type = Integer<R, T>; };
 template<auto R> struct ToStyleMapping<CSS::Number<R>>                 { using type = Number<R>; };
@@ -456,68 +339,60 @@ template<auto R> struct ToStyleMapping<CSS::Flex<R>>                   { using t
 template<auto R> struct ToStyleMapping<CSS::AnglePercentage<R>>        { using type = AnglePercentage<R>; };
 template<auto R> struct ToStyleMapping<CSS::LengthPercentage<R>>       { using type = LengthPercentage<R>; };
 
-template<auto nR, auto pR> struct ToStyleMapping<CSS::NumberOrPercentage<nR, pR>>                 { using type = NumberOrPercentage<nR, pR>; };
-template<auto nR, auto pR> struct ToStyleMapping<CSS::NumberOrPercentageResolvedToNumber<nR, pR>> { using type = NumberOrPercentageResolvedToNumber<nR, pR>; };
+template<auto nR, auto pR> struct ToStyleMapping<CSS::NumberOrPercentage<nR, pR>> {
+    using type = NumberOrPercentage<nR, pR>;
+};
 
-// MARK: Style type mapping -> CSS type mappings
+template<auto nR, auto pR> struct ToStyleMapping<CSS::NumberOrPercentageResolvedToNumber<nR, pR>> {
+    using type = NumberOrPercentageResolvedToNumber<nR, pR>;
+};
 
-template<StyleNumeric T> struct ToCSSMapping<T>                        { using type = typename T::CSS; };
+// MARK: Style -> CSS
 
-template<auto nR, auto pR> struct ToCSSMapping<NumberOrPercentage<nR, pR>>                 { using type = CSS::NumberOrPercentage<nR, pR>; };
-template<auto nR, auto pR> struct ToCSSMapping<NumberOrPercentageResolvedToNumber<nR, pR>> { using type = CSS::NumberOrPercentageResolvedToNumber<nR, pR>; };
+template<Numeric T> struct ToCSSMapping<T> {
+    using type = typename T::CSS;
+};
+
+template<auto nR, auto pR> struct ToCSSMapping<NumberOrPercentage<nR, pR>> {
+    using type = CSS::NumberOrPercentage<nR, pR>;
+};
+
+template<auto nR, auto pR> struct ToCSSMapping<NumberOrPercentageResolvedToNumber<nR, pR>> {
+    using type = CSS::NumberOrPercentageResolvedToNumber<nR, pR>;
+};
 
 } // namespace Style
-
-namespace CSS {
-namespace TypeTransform {
-
-// MARK: - Type transforms
-
-namespace Type {
-
-// MARK: Transform CSS type -> Style type.
-
-// Transform `css1`  -> `style1`
-template<typename T> struct CSSToStyleLazy {
-    using type = typename Style::ToStyleMapping<T>::type;
-};
-template<typename T> using CSSToStyle = typename CSSToStyleLazy<T>::type;
-
-// MARK: Transform Raw type -> Style type.
-
-// Transform `raw1`  -> `style1`
-template<typename T> struct RawToStyleLazy {
-    using type = typename Style::ToStyleMapping<typename RawToCSSMapping<T>::CSS>::type;
-};
-template<typename T> using RawToStyle = typename RawToStyleLazy<T>::type;
-
-} // namespace Type
-
-namespace List {
-
-// MARK: - List transforms
-
-// MARK: Transform CSS type list -> Style type list.
-
-// Transform `brigand::list<css1, css2, ...>`  -> `brigand::list<style1, style2, ...>`
-template<typename TypeList> struct CSSToStyleLazy {
-    using type = brigand::transform<TypeList, Type::CSSToStyleLazy<brigand::_1>>;
-};
-template<typename TypeList> using CSSToStyle = typename CSSToStyleLazy<TypeList>::type;
-
-// MARK: Transform Raw type list -> Style type list.
-
-// Transform `brigand::list<raw1, raw2, ...>`  -> `brigand::list<style1, style2, ...>`
-template<typename TypeList> struct RawToStyleLazy {
-    using type = brigand::transform<TypeList, Type::RawToStyleLazy<brigand::_1>>;
-};
-template<typename TypeList> using RawToStyle = typename RawToStyleLazy<TypeList>::type;
-
-} // namespace List
-} // namespace TypeTransform
-
-} // namespace CSS
 } // namespace WebCore
 
-template<WebCore::Style::StyleDimensionPercentage T> inline constexpr auto WebCore::TreatAsVariantLike<T> = true;
+namespace WTF {
+
+// Allow primitives numeric types that usually store their value as a `double` to be
+// used with CompactVariant by using a `float`, rather than `double` representation
+// when used in a `CompactVariant`.
+
+template<WebCore::Style::Numeric T>
+    requires std::same_as<typename T::ResolvedValueType, double>
+struct CompactVariantTraits<T> {
+   static constexpr bool hasAlternativeRepresentation = true;
+
+   static constexpr uint64_t encodeFromArguments(double value)
+   {
+       return static_cast<uint64_t>(std::bit_cast<uint32_t>(clampTo<float>(value)));
+   }
+
+   static constexpr uint64_t encode(const T& value)
+   {
+       return static_cast<uint64_t>(std::bit_cast<uint32_t>(clampTo<float>(value.value)));
+   }
+
+   static constexpr T decode(uint64_t value)
+   {
+       return { std::bit_cast<float>(static_cast<uint32_t>(value)) };
+   }
+};
+
+} // namespace WTF
+
+template<auto R> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::Style::AnglePercentage<R>> = true;
+template<auto R> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::Style::LengthPercentage<R>> = true;
 template<auto nR, auto pR> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::Style::NumberOrPercentage<nR, pR>> = true;

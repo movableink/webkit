@@ -30,13 +30,13 @@
 #include "CSSCalcTree+Simplification.h"
 #include "CSSCalcTree+Traversal.h"
 #include "CSSCalcTree.h"
-#include "CSSPrimitiveValue.h"
 #include "CalculationCategory.h"
 #include "CalculationExecutor.h"
 #include "CalculationTree.h"
 #include "CalculationValue.h"
 #include "RenderStyle.h"
 #include "RenderStyleInlines.h"
+#include "StyleLengthResolution.h"
 #include <wtf/MathExtras.h>
 #include <wtf/StdLibExtras.h>
 
@@ -248,7 +248,7 @@ Calculation::Child toCalculationValue(const CanonicalDimension& root, const ToCo
 
     switch (root.dimension) {
     case CanonicalDimension::Dimension::Length:
-        return Calculation::dimension(CSSPrimitiveValue::computeNonCalcLengthDouble(*options.evaluation.conversionData, CSSUnitType::CSS_PX, root.value));
+        return Calculation::dimension(Style::computeNonCalcLengthDouble(root.value, CSS::LengthUnit::Px, *options.evaluation.conversionData));
 
     case CanonicalDimension::Dimension::Angle:
     case CanonicalDimension::Dimension::Time:

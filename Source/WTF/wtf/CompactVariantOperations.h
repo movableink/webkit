@@ -105,7 +105,7 @@ template<CompactVariantAlternative... Ts> struct CompactVariantOperations {
         return data;
     }
 
-    template<typename T, typename F> static constexpr decltype(auto) decodedPayload(Storage value, F&& f)
+    template<typename T, typename F> static constexpr decltype(auto) decodedPayload(Storage value, NOESCAPE F&& f)
     {
         Storage maskedData = value & payloadMask;
 
@@ -118,7 +118,7 @@ template<CompactVariantAlternative... Ts> struct CompactVariantOperations {
         }
     }
 
-    template<typename T, typename F> static constexpr decltype(auto) decodedConstPayload(Storage value, F&& f)
+    template<typename T, typename F> static constexpr decltype(auto) decodedConstPayload(Storage value, NOESCAPE F&& f)
     {
         Storage maskedData = value & payloadMask;
 

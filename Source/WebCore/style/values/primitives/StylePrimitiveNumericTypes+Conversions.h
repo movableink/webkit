@@ -26,6 +26,7 @@
 
 #include "CSSPrimitiveNumericTypes+Canonicalization.h"
 #include "CSSPrimitiveNumericTypes+ComputedStyleDependencies.h"
+#include "CSSSymbol.h"
 #include "CSSToLengthConversionData.h"
 #include "FloatConversion.h"
 #include "StyleBuilderState.h"
@@ -34,7 +35,7 @@
 namespace WebCore {
 namespace Style {
 
-// MARK: - Conversion Data specialization
+// MARK: Conversion Data specialization
 
 template<typename T> struct ConversionDataSpecializer {
     CSSToLengthConversionData operator()(const BuilderState& state)
@@ -57,14 +58,45 @@ template<typename T> CSSToLengthConversionData conversionData(const BuilderState
     return ConversionDataSpecializer<T>{}(state);
 }
 
+// MARK: - Type maps
+
+// MARK: Raw -> CSS
+
+template<typename> struct RawToCSSMapping;
+template<auto R, typename T> struct RawToCSSMapping<CSS::IntegerRaw<R, T>> { using type = CSS::Integer<R, T>; };
+template<auto R> struct RawToCSSMapping<CSS::NumberRaw<R>>                 { using type = CSS::Number<R>; };
+template<auto R> struct RawToCSSMapping<CSS::PercentageRaw<R>>             { using type = CSS::Percentage<R>; };
+template<auto R> struct RawToCSSMapping<CSS::AngleRaw<R>>                  { using type = CSS::Angle<R>; };
+template<auto R> struct RawToCSSMapping<CSS::LengthRaw<R>>                 { using type = CSS::Length<R>; };
+template<auto R> struct RawToCSSMapping<CSS::TimeRaw<R>>                   { using type = CSS::Time<R>; };
+template<auto R> struct RawToCSSMapping<CSS::FrequencyRaw<R>>              { using type = CSS::Frequency<R>; };
+template<auto R> struct RawToCSSMapping<CSS::ResolutionRaw<R>>             { using type = CSS::Resolution<R>; };
+template<auto R> struct RawToCSSMapping<CSS::FlexRaw<R>>                   { using type = CSS::Flex<R>; };
+template<auto R> struct RawToCSSMapping<CSS::AnglePercentageRaw<R>>        { using type = CSS::AnglePercentage<R>; };
+template<auto R> struct RawToCSSMapping<CSS::LengthPercentageRaw<R>>       { using type = CSS::LengthPercentage<R>; };
+
+// MARK: CSS -> Raw
+
+template<CSS::Numeric T> struct CSSToRawMapping {
+    using type = typename T::Raw;
+};
+
 // MARK: - Raw canonicalization
 
-template<auto R, typename T, typename... Rest> constexpr Integer<R, T> canonicalize(const CSS::IntegerRaw<R, T>& raw, NoConversionDataRequiredToken, Rest&&...)
+// MARK: Length
+
+double canonicalizeLength(double, CSS::LengthUnit, NoConversionDataRequiredToken);
+double canonicalizeLength(double, CSS::LengthUnit, const CSSToLengthConversionData&);
+float clampLengthToAllowedLimits(double);
+float canonicalizeAndClampLength(double, CSS::LengthUnit, NoConversionDataRequiredToken);
+float canonicalizeAndClampLength(double, CSS::LengthUnit, const CSSToLengthConversionData&);
+
+template<auto R, typename V, typename... Rest> constexpr Integer<R, V> canonicalize(const CSS::IntegerRaw<R, V>& raw, NoConversionDataRequiredToken, Rest&&...)
 {
-    return { raw.value };
+    return { roundForImpreciseConversion<V>(raw.value) };
 }
 
-template<auto R, typename T, typename... Rest> constexpr Integer<R, T> canonicalize(const CSS::IntegerRaw<R, T>& raw, const CSSToLengthConversionData&, Rest&&... rest)
+template<auto R, typename V, typename... Rest> constexpr Integer<R, V> canonicalize(const CSS::IntegerRaw<R, V>& raw, const CSSToLengthConversionData&, Rest&&... rest)
 {
     return canonicalize(raw, NoConversionDataRequiredToken { }, std::forward<Rest>(rest)...);
 }
@@ -91,7 +123,7 @@ template<auto R, typename... Rest> constexpr Percentage<R> canonicalize(const CS
 
 template<auto R, typename... Rest> Angle<R> canonicalize(const CSS::AngleRaw<R>& raw, NoConversionDataRequiredToken, Rest&&...)
 {
-    return { CSS::canonicalizeAngle(raw.value, raw.type) };
+    return { CSS::canonicalize(raw) };
 }
 
 template<auto R, typename... Rest> Angle<R> canonicalize(const CSS::AngleRaw<R>& raw, const CSSToLengthConversionData&, Rest&&... rest)
@@ -103,19 +135,19 @@ template<auto R, typename... Rest> Length<R> canonicalize(const CSS::LengthRaw<R
 {
     ASSERT(!requiresConversionData(raw));
 
-    return { CSS::canonicalizeAndClampLength(raw.value, raw.type, token, std::forward<Rest>(rest)...) };
+    return { canonicalizeAndClampLength(raw.value, raw.unit, token, std::forward<Rest>(rest)...) };
 }
 
 template<auto R, typename... Rest> Length<R> canonicalize(const CSS::LengthRaw<R>& raw, const CSSToLengthConversionData& conversionData, Rest&&...)
 {
     ASSERT(CSS::collectComputedStyleDependencies(raw).canResolveDependenciesWithConversionData(conversionData));
 
-    return { CSS::canonicalizeAndClampLength(raw.value, raw.type, conversionData) };
+    return { canonicalizeAndClampLength(raw.value, raw.unit, conversionData) };
 }
 
 template<auto R, typename... Rest> Time<R> canonicalize(const CSS::TimeRaw<R>& raw, NoConversionDataRequiredToken, Rest&&...)
 {
-    return { CSS::canonicalizeTime(raw.value, raw.type) };
+    return { CSS::canonicalize(raw) };
 }
 
 template<auto R, typename... Rest> Time<R> canonicalize(const CSS::TimeRaw<R>& raw, const CSSToLengthConversionData&, Rest&&... rest)
@@ -125,7 +157,7 @@ template<auto R, typename... Rest> Time<R> canonicalize(const CSS::TimeRaw<R>& r
 
 template<auto R, typename... Rest> Frequency<R> canonicalize(const CSS::FrequencyRaw<R>& raw, NoConversionDataRequiredToken, Rest&&...)
 {
-    return { CSS::canonicalizeFrequency(raw.value, raw.type) };
+    return { CSS::canonicalize(raw) };
 }
 
 template<auto R, typename... Rest> Frequency<R> canonicalize(const CSS::FrequencyRaw<R>& raw, const CSSToLengthConversionData&, Rest&&... rest)
@@ -135,7 +167,7 @@ template<auto R, typename... Rest> Frequency<R> canonicalize(const CSS::Frequenc
 
 template<auto R, typename... Rest> Resolution<R> canonicalize(const CSS::ResolutionRaw<R>& raw, NoConversionDataRequiredToken, Rest&&...)
 {
-    return { CSS::canonicalizeResolution(raw.value, raw.type) };
+    return { CSS::canonicalize(raw) };
 }
 
 template<auto R, typename... Rest> Resolution<R> canonicalize(const CSS::ResolutionRaw<R>& raw, const CSSToLengthConversionData&, Rest&&... rest)
@@ -155,9 +187,14 @@ template<auto R, typename... Rest> constexpr Flex<R> canonicalize(const CSS::Fle
 
 template<auto R, typename... Rest> AnglePercentage<R> canonicalize(const CSS::AnglePercentageRaw<R>& raw, NoConversionDataRequiredToken token, Rest&&... rest)
 {
-    if (raw.type == CSSUnitType::CSS_PERCENTAGE)
-        return { canonicalize(CSS::PercentageRaw<R> { raw.value }, token, std::forward<Rest>(rest)...) };
-    return { canonicalize(CSS::AngleRaw<R> { raw.type, raw.value }, token, std::forward<Rest>(rest)...) };
+    return CSS::switchOnUnitType(raw.unit,
+        [&](CSS::PercentageUnit) -> AnglePercentage<R> {
+            return { canonicalize(CSS::PercentageRaw<R> { raw.value }, token, std::forward<Rest>(rest)...) };
+        },
+        [&](CSS::AngleUnit angleUnit) -> AnglePercentage<R> {
+            return { canonicalize(CSS::AngleRaw<R> { angleUnit, raw.value }, token, std::forward<Rest>(rest)...) };
+        }
+    );
 }
 
 template<auto R, typename... Rest> AnglePercentage<R> canonicalize(const CSS::AnglePercentageRaw<R>& raw, const CSSToLengthConversionData&, Rest&&... rest)
@@ -167,22 +204,30 @@ template<auto R, typename... Rest> AnglePercentage<R> canonicalize(const CSS::An
 
 template<auto R, typename... Rest> LengthPercentage<R> canonicalize(const CSS::LengthPercentageRaw<R>& raw, NoConversionDataRequiredToken token, Rest&&... rest)
 {
-    if (raw.type == CSSUnitType::CSS_PERCENTAGE)
-        return canonicalize(CSS::PercentageRaw<R> { raw.value }, token, std::forward<Rest>(rest)...);
-
-    // NOTE: This uses the non-clamping version length canonicalization to match the behavior of CSSPrimitiveValue::convertToLength().
-    return Length<R> { narrowPrecisionToFloat(CSS::canonicalizeLength(raw.value, raw.type, token)) };
+    return CSS::switchOnUnitType(raw.unit,
+        [&](CSS::PercentageUnit) -> LengthPercentage<R> {
+            return canonicalize(CSS::PercentageRaw<R> { raw.value }, token, std::forward<Rest>(rest)...);
+        },
+        [&](CSS::LengthUnit lengthUnit) -> LengthPercentage<R> {
+            // NOTE: This uses the non-clamping version length canonicalization to match the behavior of CSSPrimitiveValue::convertToLength().
+            return Length<R> { narrowPrecisionToFloat(canonicalizeLength(raw.value, lengthUnit, token)) };
+        }
+    );
 }
 
 template<auto R, typename... Rest> LengthPercentage<R> canonicalize(const CSS::LengthPercentageRaw<R>& raw, const CSSToLengthConversionData& conversionData, Rest&&... rest)
 {
     ASSERT(CSS::collectComputedStyleDependencies(raw).canResolveDependenciesWithConversionData(conversionData));
 
-    if (raw.type == CSSUnitType::CSS_PERCENTAGE)
-        return canonicalize(CSS::PercentageRaw<R> { raw.value }, conversionData, std::forward<Rest>(rest)...);
-
-    // NOTE: This uses the non-clamping version length canonicalization to match the behavior of CSSPrimitiveValue::convertToLength().
-    return Length<R> { narrowPrecisionToFloat(CSS::canonicalizeLength(raw.value, raw.type, conversionData)) };
+    return CSS::switchOnUnitType(raw.unit,
+        [&](CSS::PercentageUnit) -> LengthPercentage<R> {
+            return canonicalize(CSS::PercentageRaw<R> { raw.value }, conversionData, std::forward<Rest>(rest)...);
+        },
+        [&](CSS::LengthUnit lengthUnit) -> LengthPercentage<R> {
+            // NOTE: This uses the non-clamping version length canonicalization to match the behavior of CSSPrimitiveValue::convertToLength().
+            return Length<R> { narrowPrecisionToFloat(canonicalizeLength(raw.value, lengthUnit, conversionData)) };
+        }
+    );
 }
 
 // MARK: - Conversion from "Style to "CSS"
@@ -206,13 +251,13 @@ template<auto R> struct ToCSS<AnglePercentage<R>> {
     {
         return WTF::switchOn(value,
             [&](const Angle<R>& angle) -> CSS::AnglePercentage<R> {
-                return CSS::AnglePercentageRaw<R> { angle.unit, angle.value };
+                return typename CSS::AnglePercentage<R>::Raw { angle.unit, angle.value };
             },
             [&](const Percentage<R>& percentage) -> CSS::AnglePercentage<R> {
-                return CSS::AnglePercentageRaw<R> { percentage.unit, percentage.value };
+                return typename CSS::AnglePercentage<R>::Raw { percentage.unit, percentage.value };
             },
             [&](const typename AnglePercentage<R>::Calc& calculation) -> CSS::AnglePercentage<R> {
-                return CSS::UnevaluatedCalc<CSS::AnglePercentageRaw<R>> { makeCalc(calculation.protectedCalculation(), style) };
+                return typename CSS::AnglePercentage<R>::Calc { makeCalc(calculation.protectedCalculation(), style) };
             }
         );
     }
@@ -223,23 +268,23 @@ template<auto R> struct ToCSS<LengthPercentage<R>> {
     {
         return WTF::switchOn(value,
             [&](const Length<R>& length) -> CSS::LengthPercentage<R> {
-                return CSS::LengthPercentageRaw<R> { length.unit, adjustForZoom(length.value, style) };
+                return typename CSS::LengthPercentage<R>::Raw { length.unit, adjustForZoom(length.value, style) };
             },
             [&](const Percentage<R>& percentage) -> CSS::LengthPercentage<R> {
-                return CSS::LengthPercentageRaw<R> { percentage.unit, percentage.value };
+                return typename CSS::LengthPercentage<R>::Raw { percentage.unit, percentage.value };
             },
             [&](const typename LengthPercentage<R>::Calc& calculation) -> CSS::LengthPercentage<R> {
-                return CSS::UnevaluatedCalc<CSS::LengthPercentageRaw<R>> { makeCalc(calculation.protectedCalculation(), style) };
+                return typename CSS::LengthPercentage<R>::Calc { makeCalc(calculation.protectedCalculation(), style) };
             }
         );
     }
 };
 
 // Partial specialization for remaining numeric types.
-template<StyleNumeric StylePrimitive> struct ToCSS<StylePrimitive> {
-    auto operator()(const StylePrimitive& value, const RenderStyle&) -> typename StylePrimitive::CSS
+template<Numeric StyleType> struct ToCSS<StyleType> {
+    auto operator()(const StyleType& value, const RenderStyle&) -> typename StyleType::CSS
     {
-        return { typename StylePrimitive::Raw { value.unit, value.value } };
+        return { value.unit, value.value };
     }
 };
 
@@ -255,13 +300,13 @@ template<auto nR, auto pR> struct ToCSS<NumberOrPercentageResolvedToNumber<nR, p
 
 // Integer, Length, AnglePercentage and LengthPercentage require specialized implementations for their calc canonicalization.
 
-template<auto R, typename T> struct ToStyle<CSS::UnevaluatedCalc<CSS::IntegerRaw<R, T>>> {
-    using From = CSS::UnevaluatedCalc<CSS::IntegerRaw<R, T>>;
-    using To = Integer<R, T>;
+template<auto R, typename V> struct ToStyle<CSS::UnevaluatedCalc<CSS::IntegerRaw<R, V>>> {
+    using From = CSS::UnevaluatedCalc<CSS::IntegerRaw<R, V>>;
+    using To = Integer<R, V>;
 
     template<typename... Rest> auto operator()(const From& value, Rest&&... rest) -> To
     {
-        return { roundForImpreciseConversion<T>(CSS::unevaluatedCalcEvaluate(value.protectedCalc(), From::category, std::forward<Rest>(rest)...)) };
+        return { roundForImpreciseConversion<V>(CSS::unevaluatedCalcEvaluate(value.protectedCalc(), From::category, std::forward<Rest>(rest)...)) };
     }
 };
 
@@ -271,7 +316,7 @@ template<auto R> struct ToStyle<CSS::UnevaluatedCalc<CSS::LengthRaw<R>>> {
 
     template<typename... Rest> auto operator()(const From& value, Rest&&... rest) -> To
     {
-        return { CSS::clampLengthToAllowedLimits(CSS::unevaluatedCalcEvaluate(value.protectedCalc(), From::category, std::forward<Rest>(rest)...)) };
+        return { clampLengthToAllowedLimits(CSS::unevaluatedCalcEvaluate(value.protectedCalc(), From::category, std::forward<Rest>(rest)...)) };
     }
 };
 
@@ -304,7 +349,7 @@ template<auto R> struct ToStyle<CSS::UnevaluatedCalc<CSS::LengthPercentageRaw<R>
         ASSERT(calc->tree().category == From::category);
 
         if (!calc->tree().type.percentHint)
-            return { Style::Length<R> { CSS::clampLengthToAllowedLimits(calc->doubleValue(std::forward<Rest>(rest)...)) } };
+            return { Style::Length<R> { clampLengthToAllowedLimits(calc->doubleValue(std::forward<Rest>(rest)...)) } };
         if (std::holds_alternative<CSSCalc::Percentage>(calc->tree().root))
             return { Style::Percentage<R> { calc->doubleValue(std::forward<Rest>(rest)...) } };
         return { calc->createCalculationValue(std::forward<Rest>(rest)...) };
@@ -313,9 +358,9 @@ template<auto R> struct ToStyle<CSS::UnevaluatedCalc<CSS::LengthPercentageRaw<R>
 
 // Partial specialization for remaining numeric types.
 
-template<CSS::RawNumeric RawType> struct ToStyle<RawType> {
+template<CSS::NumericRaw RawType> struct ToStyle<RawType> {
     using From = RawType;
-    using To = CSS::TypeTransform::Type::RawToStyle<RawType>;
+    using To = typename ToStyleMapping<typename RawToCSSMapping<RawType>::type>::type;
 
     template<typename... Rest> auto operator()(const From& value, Rest&&... rest) -> To
     {
@@ -323,9 +368,9 @@ template<CSS::RawNumeric RawType> struct ToStyle<RawType> {
     }
 };
 
-template<CSS::RawNumeric RawType> struct ToStyle<CSS::UnevaluatedCalc<RawType>> {
+template<CSS::NumericRaw RawType> struct ToStyle<CSS::UnevaluatedCalc<RawType>> {
     using From = CSS::UnevaluatedCalc<RawType>;
-    using To = CSS::TypeTransform::Type::RawToStyle<RawType>;
+    using To = typename ToStyleMapping<typename RawToCSSMapping<RawType>::type>::type;
 
     template<typename... Rest> auto operator()(const From& value, Rest&&... rest) -> To
     {
@@ -333,9 +378,9 @@ template<CSS::RawNumeric RawType> struct ToStyle<CSS::UnevaluatedCalc<RawType>> 
     }
 };
 
-template<CSS::RawNumeric RawType> struct ToStyle<CSS::PrimitiveNumeric<RawType>> {
-    using From = CSS::PrimitiveNumeric<RawType>;
-    using To = CSS::TypeTransform::Type::RawToStyle<RawType>;
+template<CSS::Numeric NumericType> struct ToStyle<NumericType> {
+    using From = NumericType;
+    using To = typename ToStyleMapping<NumericType>::type;
 
     template<typename... Rest> auto operator()(const From& value, Rest&&... rest) -> To
     {

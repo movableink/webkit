@@ -30,15 +30,9 @@ namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
 struct FlexValidator {
-    static constexpr bool isValid(CSSUnitType unitType, CSSPropertyParserOptions)
+    static constexpr std::optional<CSS::FlexUnit> validate(CSSUnitType unitType, CSSPropertyParserOptions)
     {
-        switch (unitType) {
-        case CSSUnitType::CSS_FR:
-            return true;
-
-        default:
-            return false;
-        }
+        return CSS::UnitTraits<CSS::FlexUnit>::validate(unitType);
     }
 
     template<auto R> static bool isValid(CSS::FlexRaw<R> raw, CSSPropertyParserOptions)

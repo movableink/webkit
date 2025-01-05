@@ -135,23 +135,23 @@ static inline bool parseSimpleLength(std::span<const CharacterType> characters, 
 enum class RequireUnits : bool { No, Yes };
 
 template <typename CharacterType>
-static inline bool parseSimpleAngle(std::span<const CharacterType> characters, RequireUnits requireUnits, CSSUnitType& unit, double& number)
+static inline bool parseSimpleAngle(std::span<const CharacterType> characters, RequireUnits requireUnits, CSS::AngleUnit& unit, double& number)
 {
     // "0deg" or "1rad"
     if (characters.size() >= 4) {
         if (isASCIIAlphaCaselessEqual(characters[characters.size() - 3], 'd') && isASCIIAlphaCaselessEqual(characters[characters.size() - 2], 'e') && isASCIIAlphaCaselessEqual(characters[characters.size() - 1], 'g')) {
             characters = characters.first(characters.size() - 3);
-            unit = CSSUnitType::CSS_DEG;
+            unit = CSS::AngleUnit::Deg;
         } else if (isASCIIAlphaCaselessEqual(characters[characters.size() - 3], 'r') && isASCIIAlphaCaselessEqual(characters[characters.size() - 2], 'a') && isASCIIAlphaCaselessEqual(characters[characters.size() - 1], 'd')) {
             characters = characters.first(characters.size() - 3);
-            unit = CSSUnitType::CSS_RAD;
+            unit = CSS::AngleUnit::Rad;
         } else if (requireUnits == RequireUnits::Yes)
             return false;
     } else {
         if (requireUnits == RequireUnits::Yes || !characters.size())
             return false;
 
-        unit = CSSUnitType::CSS_DEG;
+        unit = CSS::AngleUnit::Deg;
     }
 
     auto parsedNumber = parseCSSNumber(characters);
@@ -535,7 +535,7 @@ template<typename CharacterType> static std::optional<SRGBA<uint8_t>> parseLegac
 
     double hue;
     auto angleChars = characters.first(delimiter);
-    auto angleUnit = CSSUnitType::CSS_DEG;
+    auto angleUnit = CSS::AngleUnit::Deg;
     if (!parseSimpleAngle(angleChars, RequireUnits::No, angleUnit, hue))
         return std::nullopt;
 
@@ -588,7 +588,7 @@ template<typename CharacterType> static std::optional<SRGBA<uint8_t>> parseLegac
         return std::nullopt;
 
     auto parsedColor = StyleColorParseType<HSLFunctionLegacy> {
-        Style::Angle<>      { narrowPrecisionToFloat(CSSPrimitiveValue::computeDegrees(angleUnit, hue)) },
+        Style::Angle<>      { narrowPrecisionToFloat(CSS::convertAngle<CSS::AngleUnit::Deg>(hue, angleUnit)) },
         Style::Percentage<> { narrowPrecisionToFloat(*saturation) },
         Style::Percentage<> { narrowPrecisionToFloat(*lightness) },
         Style::Number<>     { narrowPrecisionToFloat(alpha) }
@@ -821,17 +821,14 @@ static RefPtr<CSSValue> parseTransformAngleArgument(CharType*& pos, CharType* en
         return nullptr;
 
     unsigned argumentLength = static_cast<unsigned>(delimiter);
-    CSSUnitType unit = CSSUnitType::CSS_NUMBER;
+    auto angleUnit = CSS::AngleUnit::Deg;
     double number;
-    if (!parseSimpleAngle(std::span<const CharType> { pos, argumentLength }, RequireUnits::Yes, unit, number))
+    if (!parseSimpleAngle(std::span<const CharType> { pos, argumentLength }, RequireUnits::Yes, angleUnit, number))
         return nullptr;
-
-    if (!number && unit == CSSUnitType::CSS_NUMBER)
-        unit = CSSUnitType::CSS_DEG;
 
     pos += argumentLength + 1;
 
-    return CSSPrimitiveValue::create(number, unit);
+    return CSSPrimitiveValue::create(number, CSS::toCSSUnitType(angleUnit));
 }
 
 template <typename CharType>

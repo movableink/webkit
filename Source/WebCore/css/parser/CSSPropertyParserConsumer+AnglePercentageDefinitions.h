@@ -31,9 +31,13 @@ namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
 struct AnglePercentageValidator {
-    static constexpr bool isValid(CSSUnitType unitType, CSSPropertyParserOptions options)
+    static constexpr std::optional<CSS::AnglePercentageUnit> validate(CSSUnitType unitType, CSSPropertyParserOptions options)
     {
-        return AngleValidator::isValid(unitType, options);
+        // NOTE: Percentages are handled explicitly by the PercentageValidator, so this only
+        // needs to be concerned with the Angle units.
+        if (auto result = AngleValidator::validate(unitType, options))
+            return static_cast<CSS::AnglePercentageUnit>(*result);
+        return std::nullopt;
     }
 
     template<auto R> static bool isValid(CSS::AnglePercentageRaw<R> raw, CSSPropertyParserOptions)
@@ -47,7 +51,7 @@ template<auto R> struct ConsumerDefinition<CSS::AnglePercentage<R>> {
     using FunctionToken = FunctionConsumerForCalcValues<CSS::AnglePercentage<R>>;
     using DimensionToken = DimensionConsumer<CSS::AnglePercentage<R>, AnglePercentageValidator>;
     using PercentageToken = PercentageConsumer<CSS::AnglePercentage<R>, AnglePercentageValidator>;
-    using NumberToken = NumberConsumerForUnitlessValues<CSS::AnglePercentage<R>, AnglePercentageValidator, CSSUnitType::CSS_DEG>;
+    using NumberToken = NumberConsumerForUnitlessValues<CSS::AnglePercentage<R>, AnglePercentageValidator, CSS::AngleUnit::Deg>;
 };
 
 } // namespace CSSPropertyParserHelpers

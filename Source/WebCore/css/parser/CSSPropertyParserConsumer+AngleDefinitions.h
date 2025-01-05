@@ -31,18 +31,9 @@ namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
 struct AngleValidator {
-    static constexpr bool isValid(CSSUnitType unitType, CSSPropertyParserOptions)
+    static constexpr std::optional<CSS::AngleUnit> validate(CSSUnitType unitType, CSSPropertyParserOptions)
     {
-        switch (unitType) {
-        case CSSUnitType::CSS_DEG:
-        case CSSUnitType::CSS_RAD:
-        case CSSUnitType::CSS_GRAD:
-        case CSSUnitType::CSS_TURN:
-            return true;
-
-        default:
-            return false;
-        }
+        return CSS::UnitTraits<CSS::AngleUnit>::validate(unitType);
     }
 
     template<auto R> static bool isValid(CSS::AngleRaw<R> raw, CSSPropertyParserOptions)
@@ -57,7 +48,7 @@ struct AngleValidator {
 template<auto R> struct ConsumerDefinition<CSS::Angle<R>> {
     using FunctionToken = FunctionConsumerForCalcValues<CSS::Angle<R>>;
     using DimensionToken = DimensionConsumer<CSS::Angle<R>, AngleValidator>;
-    using NumberToken = NumberConsumerForUnitlessValues<CSS::Angle<R>, AngleValidator, CSSUnitType::CSS_DEG>;
+    using NumberToken = NumberConsumerForUnitlessValues<CSS::Angle<R>, AngleValidator, CSS::AngleUnit::Deg>;
 };
 
 } // namespace CSSPropertyParserHelpers

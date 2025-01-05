@@ -30,6 +30,11 @@ namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
 struct PercentageValidator {
+    static constexpr std::optional<CSS::PercentageUnit> validate(CSSUnitType unitType, CSSPropertyParserOptions)
+    {
+        return CSS::UnitTraits<CSS::PercentageUnit>::validate(unitType);
+    }
+
     template<auto R> static bool isValid(CSS::PercentageRaw<R> raw, CSSPropertyParserOptions)
     {
         return isValidCanonicalValue(raw);

@@ -42,28 +42,28 @@ template<typename CSSType> Ref<CSSValue> createCSSValue(const CSSType& value)
     return CSSValueCreation<CSSType>{}(value);
 }
 
-template<RawNumeric RawType> struct CSSValueCreation<RawType> {
-    Ref<CSSValue> operator()(const RawType& raw)
+template<NumericRaw T> struct CSSValueCreation<T> {
+    Ref<CSSValue> operator()(const T& raw)
     {
-        return CSSPrimitiveValue::create(raw.value, raw.type);
+        return CSSPrimitiveValue::create(raw.value, toCSSUnitType(raw.unit));
     }
 };
 
-template<RawNumeric RawType> struct CSSValueCreation<UnevaluatedCalc<RawType>> {
-    Ref<CSSValue> operator()(const UnevaluatedCalc<RawType>& calc)
+template<Calc T> struct CSSValueCreation<T> {
+    Ref<CSSValue> operator()(const T& calc)
     {
         return CSSPrimitiveValue::create(calc.protectedCalc());
     }
 };
 
-template<RawNumeric RawType> struct CSSValueCreation<PrimitiveNumeric<RawType>> {
-    Ref<CSSValue> operator()(const PrimitiveNumeric<RawType>& value)
+template<Numeric T> struct CSSValueCreation<T> {
+    Ref<CSSValue> operator()(const T& value)
     {
         return WTF::switchOn(value,
-            [](const typename PrimitiveNumeric<RawType>::Raw& raw) {
-                return CSSPrimitiveValue::create(raw.value, raw.type);
+            [](const typename T::Raw& raw) {
+                return CSSPrimitiveValue::create(raw.value, toCSSUnitType(raw.unit));
             },
-            [](const typename PrimitiveNumeric<RawType>::Calc& calc) {
+            [](const typename T::Calc& calc) {
                 return CSSPrimitiveValue::create(calc.protectedCalc());
             }
         );

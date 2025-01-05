@@ -47,6 +47,8 @@
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
+using namespace CSS::Literals;
+
 template<CSSValueID Name, typename T> CSS::BasicShape toBasicShape(T&& parameters)
 {
     return CSS::BasicShape { FunctionNotation<Name, T> { WTFMove(parameters) } };
@@ -770,7 +772,7 @@ static std::optional<CSS::ArcCommand> consumeShapeArcCommand(CSSParserTokenRange
         .size = { WTFMove(*length1), WTFMove(*length2) },
         .arcSweep = arcSweep.value_or(CSS::ArcSweep { CSS::Keyword::Ccw { } }),
         .arcSize = arcSize.value_or(CSS::ArcSize { CSS::Keyword::Small { } }),
-        .rotation = angle.value_or(CSS::Angle<> { CSS::AngleRaw<> { CSSUnitType::CSS_DEG, 0 } })
+        .rotation = angle.value_or(0_css_deg)
     };
 }
 

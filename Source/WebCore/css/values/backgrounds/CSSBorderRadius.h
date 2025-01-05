@@ -63,18 +63,8 @@ bool hasDefaultValue(const BorderRadius&);
 inline BorderRadius BorderRadius::defaultValue()
 {
     return BorderRadius {
-        .horizontal = {
-            LengthPercentage<Nonnegative> { LengthPercentageRaw<Nonnegative> { CSSUnitType::CSS_PX, 0 } },
-            LengthPercentage<Nonnegative> { LengthPercentageRaw<Nonnegative> { CSSUnitType::CSS_PX, 0 } },
-            LengthPercentage<Nonnegative> { LengthPercentageRaw<Nonnegative> { CSSUnitType::CSS_PX, 0 } },
-            LengthPercentage<Nonnegative> { LengthPercentageRaw<Nonnegative> { CSSUnitType::CSS_PX, 0 } },
-        },
-        .vertical = {
-            LengthPercentage<Nonnegative> { LengthPercentageRaw<Nonnegative> { CSSUnitType::CSS_PX, 0 } },
-            LengthPercentage<Nonnegative> { LengthPercentageRaw<Nonnegative> { CSSUnitType::CSS_PX, 0 } },
-            LengthPercentage<Nonnegative> { LengthPercentageRaw<Nonnegative> { CSSUnitType::CSS_PX, 0 } },
-            LengthPercentage<Nonnegative> { LengthPercentageRaw<Nonnegative> { CSSUnitType::CSS_PX, 0 } },
-        }
+        .horizontal = { 0_css_px, 0_css_px, 0_css_px, 0_css_px },
+        .vertical   = { 0_css_px, 0_css_px, 0_css_px, 0_css_px },
     };
 }
 

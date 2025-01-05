@@ -31,7 +31,7 @@ namespace CSS {
 
 // MARK: - CSSValue Visitation
 
-template<RawNumeric RawType> struct CSSValueChildrenVisitor<RawType> {
+template<NumericRaw RawType> struct CSSValueChildrenVisitor<RawType> {
     IterationStatus operator()(const Function<IterationStatus(CSSValue&)>&, const RawType&)
     {
         return IterationStatus::Continue;

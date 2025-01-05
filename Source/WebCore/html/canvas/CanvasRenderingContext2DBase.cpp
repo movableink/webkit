@@ -37,8 +37,10 @@
 #include "CSSFontSelector.h"
 #include "CSSMarkup.h"
 #include "CSSParser.h"
+#include "CSSPrimitiveNumericTypes+Serialization.h"
 #include "CSSPropertyNames.h"
-#include "CSSPropertyParserConsumer+Length.h"
+#include "CSSPropertyParserConsumer+LengthDefinitions.h"
+#include "CSSPropertyParserConsumer+MetaConsumer.h"
 #include "CSSStyleImageValue.h"
 #include "CSSTokenizer.h"
 #include "CachedImage.h"
@@ -72,6 +74,7 @@
 #include "ScriptDisallowedScope.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
+#include "StyleLengthResolution.h"
 #include "StyleProperties.h"
 #include "StyleResolver.h"
 #include "TextMetrics.h"
@@ -3056,12 +3059,20 @@ void CanvasRenderingContext2DBase::setLetterSpacing(const String& letterSpacing)
     CSSTokenizer tokenizer(letterSpacing);
     auto tokenRange = tokenizer.tokenRange();
     tokenRange.consumeWhitespace();
-    RefPtr parsedValue = CSSPropertyParserHelpers::consumeLength(tokenRange, HTMLStandardMode);
+
+    auto parsedValue = CSSPropertyParserHelpers::MetaConsumer<CSS::Length<>>::consume(tokenRange, HTMLStandardMode, { }, { .unitlessZero = UnitlessZeroQuirk::Allow });
     if (!parsedValue)
         return;
-    modifiableState().letterSpacing = parsedValue->cssText();
+    auto rawLength = parsedValue->raw();
+    if (!rawLength)
+        return;
+
+    // FIXME: Ensure rawLength->unit is supported by `Style::computeUnzoomedNonCalcLengthDouble`.
+
     auto& fontCascade = fontProxy()->fontCascade();
-    double pixels = CSSPrimitiveValue::computeUnzoomedNonCalcLengthDouble(parsedValue->primitiveType(), parsedValue->valueNoConversionDataRequired(), CSSPropertyLetterSpacing, &fontCascade);
+    double pixels = Style::computeUnzoomedNonCalcLengthDouble(rawLength->value, rawLength->unit, CSSPropertyLetterSpacing, &fontCascade);
+
+    modifiableState().letterSpacing = CSS::serializationForCSS(*rawLength);
     modifiableState().font.setLetterSpacing(Length(pixels, LengthType::Fixed));
 }
 
@@ -3073,12 +3084,20 @@ void CanvasRenderingContext2DBase::setWordSpacing(const String& wordSpacing)
     CSSTokenizer tokenizer(wordSpacing);
     auto tokenRange = tokenizer.tokenRange();
     tokenRange.consumeWhitespace();
-    RefPtr parsedValue = CSSPropertyParserHelpers::consumeLength(tokenRange, HTMLStandardMode);
+
+    auto parsedValue = CSSPropertyParserHelpers::MetaConsumer<CSS::Length<>>::consume(tokenRange, HTMLStandardMode, { }, { .unitlessZero = UnitlessZeroQuirk::Allow });
     if (!parsedValue)
         return;
-    modifiableState().wordSpacing = parsedValue->cssText();
+    auto rawLength = parsedValue->raw();
+    if (!rawLength)
+        return;
+
+    // FIXME: Ensure rawLength->unit is supported by `Style::computeUnzoomedNonCalcLengthDouble`.
+
     auto& fontCascade = fontProxy()->fontCascade();
-    double pixels = CSSPrimitiveValue::computeUnzoomedNonCalcLengthDouble(parsedValue->primitiveType(), parsedValue->valueNoConversionDataRequired(), CSSPropertyWordSpacing, &fontCascade);
+    double pixels = Style::computeUnzoomedNonCalcLengthDouble(rawLength->value, rawLength->unit, CSSPropertyWordSpacing, &fontCascade);
+
+    modifiableState().wordSpacing = CSS::serializationForCSS(*rawLength);
     modifiableState().font.setWordSpacing(Length(pixels, LengthType::Fixed));
 }
 

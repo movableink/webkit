@@ -24,7 +24,6 @@
 
 #pragma once
 
-#include "CalculationValue.h"
 #include "StylePrimitiveNumericTypes.h"
 #include <wtf/Forward.h>
 
@@ -38,7 +37,7 @@ inline Calculation::Child copyCalculation(Ref<CalculationValue> value)
     return value->copyRoot();
 }
 
-template<auto R, auto C> Calculation::Child copyCalculation(const UnevaluatedCalculation<R, C>& value)
+inline Calculation::Child copyCalculation(Calc auto const& value)
 {
     return value.protectedCalculation()->copyRoot();
 }
@@ -53,12 +52,12 @@ template<auto R> Calculation::Child copyCalculation(const Percentage<R>& value)
     return Calculation::percentage(value.value);
 }
 
-template<StyleNumericPrimitive Dimension> Calculation::Child copyCalculation(const Dimension& value)
+inline Calculation::Child copyCalculation(Numeric auto const& value)
 {
     return Calculation::dimension(value.value);
 }
 
-template<StyleDimensionPercentage DimensionPercentage> Calculation::Child copyCalculation(const DimensionPercentage& value)
+inline Calculation::Child copyCalculation(DimensionPercentageNumeric auto const& value)
 {
     return WTF::switchOn(value, [](const auto& value) { return copyCalculation(value); });
 }

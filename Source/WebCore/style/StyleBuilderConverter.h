@@ -815,7 +815,7 @@ inline int BuilderConverter::convertMarqueeSpeed(const BuilderState& builderStat
 
     auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
     if (primitiveValue.isTime())
-        return primitiveValue.resolveAsTime<int, CSSPrimitiveValue::TimeUnit::Milliseconds>(conversionData);
+        return primitiveValue.resolveAsTime<int, CSS::TimeUnit::Ms>(conversionData);
 
     // For scrollamount support.
     ASSERT(primitiveValue.isNumber());

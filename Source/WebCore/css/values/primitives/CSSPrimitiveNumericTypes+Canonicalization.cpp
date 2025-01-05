@@ -25,67 +25,35 @@
 #include "config.h"
 #include "CSSPrimitiveNumericTypes+Canonicalization.h"
 
-#include "CSSNoConversionDataRequiredToken.h"
-#include "CSSPrimitiveValue.h"
-#include "CSSToLengthConversionData.h"
-#include "FloatConversion.h"
-
 namespace WebCore {
 namespace CSS {
 
 // MARK: Angle
 
-double canonicalizeAngle(double value, CSSUnitType type)
+double canonicalizeAngle(double value, AngleUnit unit)
 {
-    return CSSPrimitiveValue::computeAngle<CSSPrimitiveValue::AngleUnit::Degrees>(type, value);
-}
-
-// MARK: Length
-
-double canonicalizeLength(double value, CSSUnitType type, NoConversionDataRequiredToken)
-{
-    return CSSPrimitiveValue::computeNonCalcLengthDouble({ }, type, value);
-}
-
-double canonicalizeLength(double value, CSSUnitType type, const CSSToLengthConversionData& conversionData)
-{
-    return CSSPrimitiveValue::computeNonCalcLengthDouble(conversionData, type, value);
-}
-
-float clampLengthToAllowedLimits(double value)
-{
-    return clampTo<float>(narrowPrecisionToFloat(value), minValueForCssLength, maxValueForCssLength);
-}
-
-float canonicalizeAndClampLength(double value, CSSUnitType type, NoConversionDataRequiredToken token)
-{
-    return clampLengthToAllowedLimits(canonicalizeLength(value, type, token));
-}
-
-float canonicalizeAndClampLength(double value, CSSUnitType type, const CSSToLengthConversionData& conversionData)
-{
-    return clampLengthToAllowedLimits(canonicalizeLength(value, type, conversionData));
+    return convertAngle<AngleUnit::Deg>(value, unit);
 }
 
 // MARK: Time
 
-double canonicalizeTime(double value, CSSUnitType type)
+double canonicalizeTime(double value, TimeUnit unit)
 {
-    return CSSPrimitiveValue::computeTime<CSSPrimitiveValue::TimeUnit::Seconds>(type, value);
+    return convertTime<TimeUnit::S>(value, unit);
 }
 
 // MARK: Frequency
 
-double canonicalizeFrequency(double value, CSSUnitType type)
+double canonicalizeFrequency(double value, FrequencyUnit unit)
 {
-    return CSSPrimitiveValue::computeFrequency<CSSPrimitiveValue::FrequencyUnit::Hz>(type, value);
+    return convertFrequency<FrequencyUnit::Hz>(value, unit);
 }
 
 // MARK: Resolution
 
-double canonicalizeResolution(double value, CSSUnitType type)
+double canonicalizeResolution(double value, ResolutionUnit unit)
 {
-    return CSSPrimitiveValue::computeResolution<CSSPrimitiveValue::ResolutionUnit::Dppx>(type, value);
+    return convertResolution<ResolutionUnit::Dppx>(value, unit);
 }
 
 } // namespace CSS

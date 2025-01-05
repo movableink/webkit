@@ -234,7 +234,7 @@ void Serialize<ArcCommand>::operator()(StringBuilder& builder, const ArcCommand&
         serializationForCSS(builder, value.arcSize);
     }
 
-    if (value.rotation != Angle<> { AngleRaw<> { CSSUnitType::CSS_DEG, 0 } }) {
+    if (value.rotation != 0_css_deg) {
         builder.append(' ', nameLiteralForSerialization(CSSValueRotate), ' ');
         serializationForCSS(builder, value.rotation);
     }

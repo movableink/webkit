@@ -49,10 +49,12 @@ static void collectComputedStyleDependencies(const Child& root, ComputedStyleDep
             // No potential dependencies.
         },
         [&](const NonCanonicalDimension& root) {
-            CSS::collectComputedStyleDependencies(dependencies, root.unit);
+            if (auto lengthUnit = CSS::toLengthUnit(root.unit))
+                CSS::collectComputedStyleDependencies(dependencies, *lengthUnit);
         },
         [&](const Symbol& root) {
-            CSS::collectComputedStyleDependencies(dependencies, root.unit);
+            if (auto lengthUnit = CSS::toLengthUnit(root.unit))
+                CSS::collectComputedStyleDependencies(dependencies, *lengthUnit);
         },
         [&](const IndirectNode<MediaProgress>& root) {
             root->feature->collectComputedStyleDependencies(dependencies);

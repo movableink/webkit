@@ -35,6 +35,7 @@
 #include "DocumentInlines.h"
 #include "FontCascade.h"
 #include "RenderStyleInlines.h"
+#include "StyleLengthResolution.h"
 #include "StyleResolver.h"
 #include "StyleScope.h"
 #include <wtf/TZoneMallocInlines.h>
@@ -116,7 +117,7 @@ bool MatchedDeclarationsCache::Entry::isUsableAfterHighPriorityProperties(const 
         return false;
 #endif
 
-    return CSSPrimitiveValue::equalForLengthResolution(style, *renderStyle);
+    return Style::equalForLengthResolution(style, *renderStyle);
 }
 
 unsigned MatchedDeclarationsCache::computeHash(const MatchResult& matchResult, const StyleCustomPropertyData& inheritedCustomProperties)

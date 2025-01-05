@@ -80,11 +80,11 @@ template<CSSValueID zeroValue, CSSValueID oneHundredValue> static std::optional<
 {
     if (range.peek().type() == IdentToken) {
         if (consumeIdent<zeroValue>(range))
-            return CSS::NumberOrPercentage<> { CSS::Percentage<> { CSS::PercentageRaw<> { 0 } } };
+            return CSS::NumberOrPercentage<> { CSS::PercentageRaw<> { 0 } };
         if (consumeIdent<oneHundredValue>(range))
-            return CSS::NumberOrPercentage<> { CSS::Percentage<> { CSS::PercentageRaw<> { 100 } } };
+            return CSS::NumberOrPercentage<> { CSS::PercentageRaw<> { 100 } };
         if (consumeIdent<CSSValueCenter>(range))
-            return CSS::NumberOrPercentage<> { CSS::Percentage<> { CSS::PercentageRaw<> { 50 } } };
+            return CSS::NumberOrPercentage<> { CSS::PercentageRaw<> { 50 } };
         return std::nullopt;
     }
     return MetaConsumer<CSS::Number<>, CSS::Percentage<>>::consume(range, context, { }, { });

@@ -39,9 +39,9 @@ namespace CSSPropertyParserHelpers {
 
 /// Non-template base type for code sharing.
 struct CSSPrimitiveValueResolverBase {
-    template<CSS::RawNumeric Raw> static RefPtr<CSSPrimitiveValue> resolve(Raw value, CSSPropertyParserOptions)
+    static RefPtr<CSSPrimitiveValue> resolve(CSS::NumericRaw auto value, CSSPropertyParserOptions)
     {
-        return CSSPrimitiveValue::create(value.value, value.type);
+        return CSSPrimitiveValue::create(value.value, CSS::toCSSUnitType(value.unit));
     }
 
     template<CSS::Range R, typename IntType> static RefPtr<CSSPrimitiveValue> resolve(CSS::IntegerRaw<R, IntType> value, CSSPropertyParserOptions)
@@ -49,12 +49,12 @@ struct CSSPrimitiveValueResolverBase {
         return CSSPrimitiveValue::createInteger(value.value);
     }
 
-    template<typename T> static RefPtr<CSSPrimitiveValue> resolve(CSS::UnevaluatedCalc<T> value, CSSPropertyParserOptions)
+    static RefPtr<CSSPrimitiveValue> resolve(CSS::Calc auto value, CSSPropertyParserOptions)
     {
         return CSSPrimitiveValue::create(value.protectedCalc());
     }
 
-    template<typename T> static RefPtr<CSSPrimitiveValue> resolve(CSS::PrimitiveNumeric<T> value, CSSPropertyParserOptions options)
+    static RefPtr<CSSPrimitiveValue> resolve(CSS::Numeric auto value, CSSPropertyParserOptions options)
     {
         return WTF::switchOn(WTFMove(value), [&](auto&& value) { return resolve(WTFMove(value), options); });
     }
