@@ -1,6 +1,6 @@
 /*
  * Copyright (C) Research In Motion Limited 2011. All rights reserved.
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2024 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -63,6 +63,9 @@ private:
 
     ExceptionOr<float> convertValueFromUserUnitsToEXS(float value) const;
     ExceptionOr<float> convertValueFromEXSToUserUnits(float value) const;
+
+    ExceptionOr<float> convertValueFromUserUnitsToLh(float value) const;
+    ExceptionOr<float> convertValueFromLhToUserUnits(float value) const;
 
     std::optional<FloatSize> computeViewportSize() const;
 

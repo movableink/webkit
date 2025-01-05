@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2006 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006, 2007 Rob Buis <buis@kde.org>
- * Copyright (C) 2007-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2024 Apple Inc. All rights reserved.
  * Copyright (C) Research In Motion Limited 2011. All rights reserved.
  * Copyright (C) 2014 Adobe Systems Incorporated. All rights reserved.
  *
@@ -136,6 +136,8 @@ ExceptionOr<float> SVGLengthContext::convertValueToUserUnits(float value, SVGLen
         return convertValueFromEMSToUserUnits(value);
     case SVGLengthType::Exs:
         return convertValueFromEXSToUserUnits(value);
+    case SVGLengthType::Lh:
+        return convertValueFromLhToUserUnits(value);
     case SVGLengthType::Centimeters:
         return value * CSS::pixelsPerCm;
     case SVGLengthType::Millimeters:
@@ -165,6 +167,8 @@ ExceptionOr<float> SVGLengthContext::convertValueFromUserUnits(float value, SVGL
         return convertValueFromUserUnitsToEMS(value);
     case SVGLengthType::Exs:
         return convertValueFromUserUnitsToEXS(value);
+    case SVGLengthType::Lh:
+        return convertValueFromUserUnitsToLh(value);
     case SVGLengthType::Pixels:
         return value;
     case SVGLengthType::Centimeters:
@@ -272,6 +276,24 @@ ExceptionOr<float> SVGLengthContext::convertValueFromEXSToUserUnits(float value)
     // Use of ceil allows a pixel match to the W3Cs expected output of coords-units-03-b.svg
     // if this causes problems in real world cases maybe it would be best to remove this
     return value * std::ceil(style->metricsOfPrimaryFont().xHeight().value_or(0));
+}
+
+ExceptionOr<float> SVGLengthContext::convertValueFromUserUnitsToLh(float value) const
+{
+    auto* style = renderStyleForLengthResolving(protectedContext().get());
+    if (!style)
+        return Exception { ExceptionCode::NotSupportedError };
+
+    return value / adjustForAbsoluteZoom(style->computedLineHeight(), *style);
+}
+
+ExceptionOr<float> SVGLengthContext::convertValueFromLhToUserUnits(float value) const
+{
+    auto* style = renderStyleForLengthResolving(protectedContext().get());
+    if (!style)
+        return Exception { ExceptionCode::NotSupportedError };
+
+    return value * adjustForAbsoluteZoom(style->computedLineHeight(), *style);
 }
 
 std::optional<FloatSize> SVGLengthContext::viewportSize() const
