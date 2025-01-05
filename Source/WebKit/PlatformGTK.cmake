@@ -194,6 +194,7 @@ set(WebKitGTK_HEADER_TEMPLATES
     ${WEBKIT_DIR}/UIProcess/API/glib/WebKitUserMediaPermissionRequest.h.in
     ${WEBKIT_DIR}/UIProcess/API/glib/WebKitUserMessage.h.in
     ${WEBKIT_DIR}/UIProcess/API/glib/WebKitWebContext.h.in
+    ${WEBKIT_DIR}/UIProcess/API/glib/WebKitWebExtensionMatchPattern.h.in
     ${WEBKIT_DIR}/UIProcess/API/glib/WebKitWebResource.h.in
     ${WEBKIT_DIR}/UIProcess/API/glib/WebKitWebView.h.in
     ${WEBKIT_DIR}/UIProcess/API/glib/WebKitWebViewSessionState.h.in
@@ -209,12 +210,6 @@ set(WebKitGTK_HEADER_TEMPLATES
     ${WEBKIT_DIR}/UIProcess/API/gtk/WebKitWebInspector.h.in
     ${WEBKIT_DIR}/UIProcess/API/gtk/WebKitWebViewBase.h.in
 )
-
-if (ENABLE_WK_WEB_EXTENSIONS)
-    list(APPEND WebKitGTK_HEADER_TEMPLATES
-        ${WEBKIT_DIR}/UIProcess/API/glib/WebKitWebExtensionMatchPattern.h.in
-    )
-endif ()
 
 if (ENABLE_2022_GLIB_API)
     list(APPEND WebKitGTK_HEADER_TEMPLATES
