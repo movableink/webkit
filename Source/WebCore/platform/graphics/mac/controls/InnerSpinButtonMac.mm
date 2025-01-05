@@ -51,12 +51,12 @@ InnerSpinButtonMac::InnerSpinButtonMac(InnerSpinButtonPart& owningPart, ControlF
 #if HAVE(NSSTEPPERCELL_INCREMENTING)
 IntOutsets InnerSpinButtonMac::cellOutsets(NSControlSize controlSize, const ControlStyle&) const
 {
-    static const IntOutsets cellOutsets[] = {
+    static const std::array cellOutsets {
         // top right bottom left
-        { 4, 3, 4, 3 },
-        { 2, 2, 4, 2 },
-        { 2, 2, 3, 2 },
-        { 4, 3, 4, 3 },
+        IntOutsets { 4, 3, 4, 3 },
+        IntOutsets { 2, 2, 4, 2 },
+        IntOutsets { 2, 2, 3, 2 },
+        IntOutsets { 4, 3, 4, 3 },
     };
     return cellOutsets[controlSize];
 }
