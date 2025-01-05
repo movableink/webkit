@@ -226,17 +226,13 @@ private:
     // in the given pixel data.
     inline unsigned getComponent(uint32_t pixel, int component) const
     {
-        WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         return ((pixel & m_bitMasks[component]) >> m_bitShiftsRight[component]) << m_bitShiftsLeft[component];
-        WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     }
 
     inline unsigned getAlpha(uint32_t pixel) const
     {
         // For images without alpha, return alpha of 0xff.
-        WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         return m_bitMasks[3] ? getComponent(pixel, 3) : 0xff;
-        WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     }
 
     // Sets the current pixel to the color given by |colorIndex|. This also
@@ -326,9 +322,9 @@ private:
     // just combine these into one shift value because the net shift amount
     // could go either direction. (If only "<< -x" were equivalent to
     // ">> x"...)
-    uint32_t m_bitMasks[4];
-    int m_bitShiftsRight[4];
-    int m_bitShiftsLeft[4];
+    std::array<uint32_t, 4> m_bitMasks;
+    std::array<int, 4> m_bitShiftsRight;
+    std::array<int, 4> m_bitShiftsLeft;
 
     // The color palette, for paletted formats.
     Vector<RGBTriple> m_colorTable;

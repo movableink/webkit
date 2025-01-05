@@ -42,6 +42,7 @@
 
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/ParsingUtilities.h>
 
 #if USE(LCMS)
 #include "LCMSUniquePtr.h"
@@ -116,15 +117,14 @@ struct decoder_source_mgr {
     JPEGImageReader* decoder;
 };
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-static unsigned readUint16(JOCTET* data, bool isBigEndian)
+static unsigned readUint16(std::span<JOCTET> data, bool isBigEndian)
 {
     if (isBigEndian)
         return (GETJOCTET(data[0]) << 8) | GETJOCTET(data[1]);
     return (GETJOCTET(data[1]) << 8) | GETJOCTET(data[0]);
 }
 
-static unsigned readUint32(JOCTET* data, bool isBigEndian)
+static unsigned readUint32(std::span<JOCTET> data, bool isBigEndian)
 {
     if (isBigEndian)
         return (GETJOCTET(data[0]) << 24) | (GETJOCTET(data[1]) << 16) | (GETJOCTET(data[2]) << 8) | GETJOCTET(data[3]);
@@ -139,24 +139,25 @@ static bool checkExifHeader(jpeg_saved_marker_ptr marker, bool& isBigEndian, uns
     // 'M', 'M' (motorola / big endian byte order), followed by (uint16_t)42,
     // followed by an uint32_t with the offset to the tag block, relative to the
     // tiff file start.
-    const unsigned exifHeaderSize = 14;
+    constexpr unsigned exifHeaderSize = 14;
+    auto markerData = unsafeMakeSpan(marker->data, marker->data_length);
     if (!(marker->marker == exifMarker
-        && marker->data_length >= exifHeaderSize
-        && marker->data[0] == 'E'
-        && marker->data[1] == 'x'
-        && marker->data[2] == 'i'
-        && marker->data[3] == 'f'
-        && marker->data[4] == '\0'
+        && markerData.size() >= exifHeaderSize
+        && markerData[0] == 'E'
+        && markerData[1] == 'x'
+        && markerData[2] == 'i'
+        && markerData[3] == 'f'
+        && markerData[4] == '\0'
         // data[5] is a fill byte
-        && ((marker->data[6] == 'I' && marker->data[7] == 'I')
-            || (marker->data[6] == 'M' && marker->data[7] == 'M'))))
+        && ((markerData[6] == 'I' && markerData[7] == 'I')
+            || (markerData[6] == 'M' && markerData[7] == 'M'))))
         return false;
 
-    isBigEndian = marker->data[6] == 'M';
-    if (readUint16(marker->data + 8, isBigEndian) != 42)
+    isBigEndian = markerData[6] == 'M';
+    if (readUint16(markerData.subspan(8), isBigEndian) != 42)
         return false;
 
-    ifdOffset = readUint32(marker->data + 10, isBigEndian);
+    ifdOffset = readUint32(markerData.subspan(10), isBigEndian);
     return true;
 }
 
@@ -181,23 +182,22 @@ static ImageOrientation readImageOrientation(jpeg_decompress_struct* info)
         // the number of ifd entries, followed by that many entries.
         // When touching this code, it's useful to look at the tiff spec:
         // http://partners.adobe.com/public/developer/en/tiff/TIFF6.pdf
-        JOCTET* ifd = marker->data + ifdOffset;
-        JOCTET* end = marker->data + marker->data_length;
-        if (end - ifd < 2)
+        auto markerData = unsafeMakeSpan(marker->data, marker->data_length).subspan(ifdOffset);
+        if (markerData.size() < 2)
             continue;
-        unsigned tagCount = readUint16(ifd, isBigEndian);
-        ifd += 2; // Skip over the uint16 that was just read.
+        unsigned tagCount = readUint16(markerData, isBigEndian);
+        skip(markerData, 2); // Skip over the uint16 that was just read.
 
         // Every ifd entry is 2 bytes of tag, 2 bytes of contents datatype,
         // 4 bytes of number-of-elements, and 4 bytes of either offset to the
         // tag data, or if the data is small enough, the inlined data itself.
-        const int ifdEntrySize = 12;
-        for (unsigned i = 0; i < tagCount && end - ifd >= ifdEntrySize; ++i, ifd += ifdEntrySize) {
-            unsigned tag = readUint16(ifd, isBigEndian);
-            unsigned type = readUint16(ifd + 2, isBigEndian);
-            unsigned count = readUint32(ifd + 4, isBigEndian);
+        constexpr int ifdEntrySize = 12;
+        for (unsigned i = 0; i < tagCount && markerData.size() >= ifdEntrySize; ++i, skip(markerData, ifdEntrySize)) {
+            unsigned tag = readUint16(markerData, isBigEndian);
+            unsigned type = readUint16(markerData.subspan(2), isBigEndian);
+            unsigned count = readUint32(markerData.subspan(4), isBigEndian);
             if (tag == orientationTag && type == shortType && count == 1)
-                return ImageOrientation::fromEXIFValue(readUint16(ifd + 8, isBigEndian));
+                return ImageOrientation::fromEXIFValue(readUint16(markerData.subspan(8), isBigEndian));
         }
     }
 
@@ -248,7 +248,6 @@ static RefPtr<SharedBuffer> readICCProfile(jpeg_decompress_struct* info)
     return buffer.takeAsContiguous();
 }
 #endif
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 class JPEGImageReader {
     WTF_MAKE_TZONE_ALLOCATED_INLINE(JPEGImageReader);
