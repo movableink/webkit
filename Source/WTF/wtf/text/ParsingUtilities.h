@@ -35,8 +35,6 @@
 #include <wtf/text/StringCommon.h>
 #include <wtf/text/StringParsingBuffer.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WTF {
 
 template<typename CharacterType> inline bool isNotASCIISpace(CharacterType c)
@@ -71,24 +69,6 @@ template<typename CharacterType, typename DelimiterType> bool skipExactly(String
 {
     if (buffer.hasCharactersRemaining() && *buffer == delimiter) {
         ++buffer;
-        return true;
-    }
-    return false;
-}
-
-template<bool characterPredicate(LChar)> bool skipExactly(const LChar*& position, const LChar* end)
-{
-    if (position < end && characterPredicate(*position)) {
-        ++position;
-        return true;
-    }
-    return false;
-}
-
-template<bool characterPredicate(UChar)> bool skipExactly(const UChar*& position, const UChar* end)
-{
-    if (position < end && characterPredicate(*position)) {
-        ++position;
         return true;
     }
     return false;
@@ -130,12 +110,6 @@ template<bool characterPredicate(UChar)> bool skipExactly(std::span<const UChar>
     return false;
 }
 
-template<typename CharacterType, typename DelimiterType> void skipUntil(const CharacterType*& position, const CharacterType* end, DelimiterType delimiter)
-{
-    while (position < end && *position != delimiter)
-        ++position;
-}
-
 template<typename CharacterType, typename DelimiterType> void skipUntil(StringParsingBuffer<CharacterType>& buffer, DelimiterType delimiter)
 {
     while (buffer.hasCharactersRemaining() && *buffer != delimiter)
@@ -148,18 +122,6 @@ template<typename CharacterType, typename DelimiterType> void skipUntil(std::spa
     while (index < buffer.size() && buffer[index] != delimiter)
         ++index;
     skip(buffer, index);
-}
-
-template<bool characterPredicate(LChar)> void skipUntil(const LChar*& position, const LChar* end)
-{
-    while (position < end && !characterPredicate(*position))
-        ++position;
-}
-
-template<bool characterPredicate(UChar)> void skipUntil(const UChar*& position, const UChar* end)
-{
-    while (position < end && !characterPredicate(*position))
-        ++position;
 }
 
 template<bool characterPredicate(LChar)> void skipUntil(std::span<const LChar>& data)
@@ -204,18 +166,6 @@ template<typename CharacterType, typename DelimiterType> void skipWhile(std::spa
     skip(buffer, index);
 }
 
-template<bool characterPredicate(LChar)> void skipWhile(const LChar*& position, const LChar* end)
-{
-    while (position < end && characterPredicate(*position))
-        ++position;
-}
-
-template<bool characterPredicate(UChar)> void skipWhile(const UChar*& position, const UChar* end)
-{
-    while (position < end && characterPredicate(*position))
-        ++position;
-}
-
 template<bool characterPredicate(LChar)> void skipWhile(std::span<const LChar>& data)
 {
     size_t index = 0;
@@ -244,30 +194,6 @@ template<bool characterPredicate(UChar)> void skipWhile(StringParsingBuffer<UCha
         ++buffer;
 }
 
-template<bool characterPredicate(LChar)> void reverseSkipWhile(const LChar*& position, const LChar* start)
-{
-    while (position >= start && characterPredicate(*position))
-        --position;
-}
-
-template<bool characterPredicate(UChar)> void reverseSkipWhile(const UChar*& position, const UChar* start)
-{
-    while (position >= start && characterPredicate(*position))
-        --position;
-}
-
-template<typename CharacterType> bool skipExactlyIgnoringASCIICase(const CharacterType*& position, const CharacterType* end, ASCIILiteral literal)
-{
-    auto literalLength = literal.length();
-
-    if (position + literalLength > end)
-        return false;
-    if (!equalLettersIgnoringASCIICaseWithLength(std::span { position, literalLength }, literal.span8(), literalLength))
-        return false;
-    position += literalLength;
-    return true;
-}
-
 template<typename CharacterType> bool skipExactlyIgnoringASCIICase(StringParsingBuffer<CharacterType>& buffer, ASCIILiteral literal)
 {
     auto literalLength = literal.length();
@@ -286,8 +212,10 @@ template<typename CharacterType, std::size_t Extent> bool skipLettersExactlyIgno
         return false;
     for (unsigned i = 0; i < letters.size(); ++i) {
         ASSERT(isASCIIAlpha(letters[i]));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         if (!isASCIIAlphaCaselessEqual(buffer.position()[i], static_cast<char>(letters[i])))
             return false;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     }
     buffer += letters.size();
     return true;
@@ -350,7 +278,6 @@ using WTF::consume;
 using WTF::consumeAndCastTo;
 using WTF::consumeSpan;
 using WTF::isNotASCIISpace;
-using WTF::reverseSkipWhile;
 using WTF::skip;
 using WTF::skipCharactersExactly;
 using WTF::skipExactly;
@@ -358,6 +285,3 @@ using WTF::skipExactlyIgnoringASCIICase;
 using WTF::skipLettersExactlyIgnoringASCIICase;
 using WTF::skipUntil;
 using WTF::skipWhile;
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
-

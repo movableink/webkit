@@ -173,22 +173,23 @@ static Vector<ImageCandidate> parseImageCandidatesFromSrcsetAttribute(std::span<
             // Contrary to spec language - descriptor parsing happens on each candidate, so when we reach the attributeEnd, we can exit.
             break;
         }
-        auto* imageURLStart = attribute.data();
+        auto imageURLSpan = attribute;
         // 6. Collect a sequence of characters that are not space characters, and let that be url.
 
         skipUntil<isASCIIWhitespace>(attribute);
-        auto* imageURLEnd = attribute.data();
+        imageURLSpan = imageURLSpan.first(attribute.data() - imageURLSpan.data());
 
         DescriptorParsingResult result;
 
         // 8. If url ends with a U+002C COMMA character (,)
-        if (isComma(*(attribute.data() - 1))) {
+        if (isComma(imageURLSpan.back())) {
             // Remove all trailing U+002C COMMA characters from url.
-            imageURLEnd = attribute.data() - 1;
-            reverseSkipWhile<isComma>(imageURLEnd, imageURLStart);
-            ++imageURLEnd;
+            imageURLSpan = imageURLSpan.first(imageURLSpan.size() - 1);
+            while (!imageURLSpan.empty() && isComma(imageURLSpan.back()))
+                imageURLSpan = imageURLSpan.first(imageURLSpan.size() - 1);
+
             // If url is empty, then jump to the step labeled splitting loop.
-            if (imageURLStart == imageURLEnd)
+            if (imageURLSpan.empty())
                 continue;
         } else {
             skipWhile<isASCIIWhitespace>(attribute);
@@ -200,9 +201,8 @@ static Vector<ImageCandidate> parseImageCandidatesFromSrcsetAttribute(std::span<
                 continue;
         }
 
-        ASSERT(imageURLEnd > imageURLStart);
-        unsigned imageURLLength = imageURLEnd - imageURLStart;
-        imageCandidates.append(ImageCandidate(StringViewWithUnderlyingString(std::span(imageURLStart, imageURLLength), String()), result, ImageCandidate::SrcsetOrigin));
+        ASSERT(!imageURLSpan.empty());
+        imageCandidates.append(ImageCandidate(StringViewWithUnderlyingString(imageURLSpan, String()), result, ImageCandidate::SrcsetOrigin));
         // 11. Return to the step labeled splitting loop.
     }
     return imageCandidates;
