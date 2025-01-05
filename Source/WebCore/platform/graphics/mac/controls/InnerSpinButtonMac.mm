@@ -38,8 +38,6 @@
 #import <wtf/BlockObjCExceptions.h>
 #import <wtf/TZoneMallocInlines.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(InnerSpinButtonMac);
@@ -68,20 +66,20 @@ IntSize InnerSpinButtonMac::cellSize(NSControlSize controlSize, const ControlSty
 {
 #if HAVE(NSSTEPPERCELL_INCREMENTING)
     if ([NSStepperCell instancesRespondToSelector:@selector(setIncrementing:)]) {
-        static const IntSize sizes[] = {
-            { 19, 28 },
-            { 15, 22 },
-            { 13, 18 },
-            { 19, 28 }
+        static constexpr std::array sizes {
+            IntSize { 19, 28 },
+            IntSize { 15, 22 },
+            IntSize { 13, 18 },
+            IntSize { 19, 28 }
         };
         return sizes[controlSize];
     }
 #endif
-    static const IntSize sizes[] = {
-        { 19, 27 },
-        { 15, 22 },
-        { 13, 15 },
-        { 19, 27 }
+    static constexpr std::array sizes {
+        IntSize { 19, 27 },
+        IntSize { 15, 22 },
+        IntSize { 13, 15 },
+        IntSize { 19, 27 }
     };
     return sizes[controlSize];
 }
@@ -203,7 +201,5 @@ void InnerSpinButtonMac::updateCellStates(const FloatRect& rect, const ControlSt
 #endif
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // PLATFORM(MAC)

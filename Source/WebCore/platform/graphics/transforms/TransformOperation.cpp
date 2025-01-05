@@ -29,8 +29,6 @@
 #include "IdentityTransformOperation.h"
 #include <wtf/text/TextStream.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 void IdentityTransformOperation::dump(TextStream& ts) const
@@ -84,10 +82,10 @@ std::optional<TransformOperation::Type> TransformOperation::sharedPrimitiveType(
     auto type = primitiveType();
     if (type == other)
         return type;
-    static constexpr Type sharedPrimitives[][2] = {
-        { Type::Rotate, Type::Rotate3D },
-        { Type::Scale, Type::Scale3D },
-        { Type::Translate, Type::Translate3D }
+    static constexpr std::array sharedPrimitives {
+        std::array { Type::Rotate, Type::Rotate3D },
+        std::array { Type::Scale, Type::Scale3D },
+        std::array { Type::Translate, Type::Translate3D }
     };
     for (auto typePair : sharedPrimitives) {
         if ((type == typePair[0] || type == typePair[1]) && (other == typePair[0] || other == typePair[1]))
@@ -110,5 +108,3 @@ std::optional<TransformOperation::Type> TransformOperation::sharedPrimitiveType(
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

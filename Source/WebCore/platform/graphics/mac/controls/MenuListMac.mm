@@ -34,8 +34,6 @@
 #import "MenuListPart.h"
 #import <wtf/TZoneMallocInlines.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(MenuListMac);
@@ -49,24 +47,23 @@ MenuListMac::MenuListMac(MenuListPart& owningPart, ControlFactoryMac& controlFac
 
 IntSize MenuListMac::cellSize(NSControlSize controlSize, const ControlStyle&) const
 {
-    static const IntSize sizes[] =
-    {
-        { 0, 21 },
-        { 0, 18 },
-        { 0, 15 },
-        { 0, 24 }
+    static constexpr std::array sizes {
+        IntSize { 0, 21 },
+        IntSize { 0, 18 },
+        IntSize { 0, 15 },
+        IntSize { 0, 24 }
     };
     return sizes[controlSize];
 }
 
 IntOutsets MenuListMac::cellOutsets(NSControlSize controlSize, const ControlStyle&) const
 {
-    static const IntOutsets outsets[] = {
+    static const std::array outsets {
         // top right bottom left
-        { 0, 3, 1, 3 },
-        { 0, 3, 2, 3 },
-        { 0, 1, 0, 1 },
-        { 0, 6, 2, 6 },
+        IntOutsets { 0, 3, 1, 3 },
+        IntOutsets { 0, 3, 2, 3 },
+        IntOutsets { 0, 1, 0, 1 },
+        IntOutsets { 0, 6, 2, 6 },
     };
     return outsets[controlSize];
 }
@@ -123,7 +120,5 @@ void MenuListMac::draw(GraphicsContext& context, const FloatRoundedRect& borderR
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // PLATFORM(MAC)

@@ -34,8 +34,6 @@
 #import "LocalDefaultSystemAppearance.h"
 #import "SearchFieldCancelButtonPart.h"
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 SearchFieldCancelButtonMac::SearchFieldCancelButtonMac(SearchFieldCancelButtonPart& owningPart, ControlFactoryMac& controlFactory, NSSearchFieldCell *searchFieldCell)
@@ -46,11 +44,11 @@ SearchFieldCancelButtonMac::SearchFieldCancelButtonMac(SearchFieldCancelButtonPa
 
 IntSize SearchFieldCancelButtonMac::cellSize(NSControlSize controlSize, const ControlStyle&) const
 {
-    static const IntSize sizes[] = {
-        { 22, 22 },
-        { 19, 19 },
-        { 15, 15 },
-        { 22, 22 }
+    static constexpr std::array sizes {
+        IntSize { 22, 22 },
+        IntSize { 19, 19 },
+        IntSize { 15, 15 },
+        IntSize { 22, 22 }
     };
     return sizes[controlSize];
 }
@@ -100,7 +98,5 @@ void SearchFieldCancelButtonMac::draw(GraphicsContext& context, const FloatRound
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // PLATFORM(MAC)

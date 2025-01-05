@@ -36,8 +36,6 @@
 #import <wtf/RetainPtr.h>
 #import <wtf/TinyLRUCache.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WTF {
 
 template<> RetainPtr<NSColor> TinyLRUCachePolicy<WebCore::Color, RetainPtr<NSColor>>::createValueForKey(const WebCore::Color& color)
@@ -91,8 +89,8 @@ static std::optional<SRGBA<uint8_t>> makeSimpleColorFromNSColor(NSColor *color)
             LocalCurrentCGContext localContext { [NSGraphicsContext graphicsContextWithBitmapImageRep:offscreenRep.get()].CGContext };
             [color drawSwatchInRect:NSMakeRect(0, 0, 1, 1)];
         }
-        NSUInteger pixel[4];
-        [offscreenRep getPixel:pixel atX:0 y:0];
+        std::array<NSUInteger, 4> pixel;
+        [offscreenRep getPixel:pixel.data() atX:0 y:0];
 
         return makeFromComponentsClamping<SRGBA<uint8_t>>(pixel[0], pixel[1], pixel[2], pixel[3]);
     }
@@ -152,7 +150,5 @@ RetainPtr<NSColor> cocoaColor(const Color& color)
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // USE(APPKIT)

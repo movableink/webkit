@@ -34,8 +34,6 @@
 #import "MenuListButtonPart.h"
 #import <wtf/TZoneMallocInlines.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(MenuListButtonMac);
@@ -45,53 +43,54 @@ MenuListButtonMac::MenuListButtonMac(MenuListButtonPart& owningPart, ControlFact
 {
 }
 
-static void interpolateGradient(const CGFloat* inData, CGFloat* outData, const float* dark, const float* light)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+static void interpolateGradient(const CGFloat* inData, CGFloat* outData, std::span<const float, 4> dark, std::span<const float, 4> light)
 {
     float a = inData[0];
-    int i = 0;
-    for (i = 0; i < 4; i++)
+    for (size_t i = 0; i < 4; ++i)
         outData[i] = (1.0f - a) * dark[i] + a * light[i];
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 static void topGradientInterpolate(void*, const CGFloat* inData, CGFloat* outData)
 {
-    static constexpr float dark[4] = { 1.0f, 1.0f, 1.0f, 0.4f };
-    static constexpr float light[4] = { 1.0f, 1.0f, 1.0f, 0.15f };
+    static constexpr std::array dark { 1.0f, 1.0f, 1.0f, 0.4f };
+    static constexpr std::array light { 1.0f, 1.0f, 1.0f, 0.15f };
     interpolateGradient(inData, outData, dark, light);
 }
 
 static void bottomGradientInterpolate(void*, const CGFloat* inData, CGFloat* outData)
 {
-    static constexpr float dark[4] = { 1.0f, 1.0f, 1.0f, 0.0f };
-    static constexpr float light[4] = { 1.0f, 1.0f, 1.0f, 0.3f };
+    static constexpr std::array dark { 1.0f, 1.0f, 1.0f, 0.0f };
+    static constexpr std::array light { 1.0f, 1.0f, 1.0f, 0.3f };
     interpolateGradient(inData, outData, dark, light);
 }
 
 static void mainGradientInterpolate(void*, const CGFloat* inData, CGFloat* outData)
 {
-    static constexpr float dark[4] = { 0.0f, 0.0f, 0.0f, 0.15f };
-    static constexpr float light[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+    static constexpr std::array dark { 0.0f, 0.0f, 0.0f, 0.15f };
+    static constexpr std::array light { 0.0f, 0.0f, 0.0f, 0.0f };
     interpolateGradient(inData, outData, dark, light);
 }
 
 static void darkTopGradientInterpolate(void*, const CGFloat* inData, CGFloat* outData)
 {
-    static constexpr float dark[4] = { 0.0f, 0.0f, 0.0f, 0.4f };
-    static constexpr float light[4] = { 0.0f, 0.0f, 0.0f, 0.15f };
+    static constexpr std::array dark { 0.0f, 0.0f, 0.0f, 0.4f };
+    static constexpr std::array light { 0.0f, 0.0f, 0.0f, 0.15f };
     interpolateGradient(inData, outData, dark, light);
 }
 
 static void darkBottomGradientInterpolate(void*, const CGFloat* inData, CGFloat* outData)
 {
-    static constexpr float dark[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-    static constexpr float light[4] = { 0.0f, 0.0f, 0.0f, 0.3f };
+    static constexpr std::array dark { 0.0f, 0.0f, 0.0f, 0.0f };
+    static constexpr std::array light { 0.0f, 0.0f, 0.0f, 0.3f };
     interpolateGradient(inData, outData, dark, light);
 }
 
 static void darkMainGradientInterpolate(void*, const CGFloat* inData, CGFloat* outData)
 {
-    static constexpr float dark[4] = { 1.0f, 1.0f, 1.0f, 0.15f };
-    static constexpr float light[4] = { 1.0f, 1.0f, 1.0f, 0.0f };
+    static constexpr std::array dark { 1.0f, 1.0f, 1.0f, 0.15f };
+    static constexpr std::array light { 1.0f, 1.0f, 1.0f, 0.0f };
     interpolateGradient(inData, outData, dark, light);
 }
 
@@ -225,7 +224,5 @@ void MenuListButtonMac::draw(GraphicsContext& context, const FloatRoundedRect& b
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // PLATFORM(MAC)
