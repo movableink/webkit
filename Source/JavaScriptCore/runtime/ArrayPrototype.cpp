@@ -1539,15 +1539,27 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncLastIndexOf, (JSGlobalObject* globalObjec
     uint64_t index = length - 1;
     if (callFrame->argumentCount() >= 2) {
         JSValue fromValue = callFrame->uncheckedArgument(1);
-        double fromDouble = fromValue.toIntegerOrInfinity(globalObject);
-        RETURN_IF_EXCEPTION(scope, { });
-        if (fromDouble < 0) {
-            fromDouble += length;
-            if (fromDouble < 0)
-                return JSValue::encode(jsNumber(-1));
+        if (LIKELY(fromValue.isInt32())) {
+            int64_t fromInt = fromValue.asInt32();
+            if (fromInt < 0) {
+                fromInt += length;
+                if (fromInt < 0)
+                    return JSValue::encode(jsNumber(-1));
+            }
+            uint64_t fromUint = static_cast<uint64_t>(fromInt);
+            if (fromUint < length)
+                index = fromUint;
+        } else {
+            double fromDouble = fromValue.toIntegerOrInfinity(globalObject);
+            RETURN_IF_EXCEPTION(scope, { });
+            if (fromDouble < 0) {
+                fromDouble += length;
+                if (fromDouble < 0)
+                    return JSValue::encode(jsNumber(-1));
+            }
+            if (fromDouble < length)
+                index = static_cast<uint64_t>(fromDouble);
         }
-        if (fromDouble < length)
-            index = static_cast<uint64_t>(fromDouble);
     }
 
     JSValue searchElement = callFrame->argument(0);
