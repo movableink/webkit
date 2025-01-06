@@ -1943,8 +1943,3 @@ webkit.org/b/232282 [ Ventura+ ] fast/scrolling/mac/scrollbars/overlay-scrollbar
 [ Debug ] http/wpt/mediarecorder/pause-recording.html [ Skip ]
 
 webkit.org/b/285033 [ Ventura+ ] http/tests/download/sandboxed-iframe-download-not-allowed.html [ Pass Failure ]
-
-# webkit.org/b/285039 REGRESSION(288091@main?): [macOS Debug wk2] Crash in  WebCore::MediaRecorderPrivateWriterAVFObjC::writeFrame
-[ Debug ] imported/w3c/web-platform-tests/mediacapture-record/MediaRecorder-mimetype.html [ Skip ]
-[ Debug ] http/wpt/mediarecorder/pause-recording-timeSlice.html [ Skip ]
-[ Debug ] imported/w3c/web-platform-tests/mediacapture-record/MediaRecorder-no-sink.https.html [ Skip ]
