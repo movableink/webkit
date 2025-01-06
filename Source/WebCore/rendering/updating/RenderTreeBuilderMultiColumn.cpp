@@ -161,7 +161,7 @@ void RenderTreeBuilder::MultiColumn::createFragmentedFlow(RenderBlockFlow& flow)
     // If this soon-to-be multicolumn flow is already part of a multicolumn context, we need to move back the descendant spanners
     // to their original position before moving subtrees around.
     if (auto* enclosingflow = dynamicDowncast<RenderMultiColumnFlow>(flow.enclosingFragmentedFlow()))
-        restoreColumnSpannersForContainer(flow, *enclosingflow);
+        restoreColumnSpannersForContainer(*enclosingflow, flow);
 
     auto newFragmentedFlow = WebCore::createRenderer<RenderMultiColumnFlow>(flow.document(), RenderStyle::createAnonymousStyleWithDisplay(flow.style(), DisplayType::Block));
     newFragmentedFlow->initializeStyle();
@@ -183,7 +183,7 @@ void RenderTreeBuilder::MultiColumn::createFragmentedFlow(RenderBlockFlow& flow)
 
 static bool gRestoringColumnSpannersForContainer = false;
 
-void RenderTreeBuilder::MultiColumn::restoreColumnSpannersForContainer(const RenderElement& container, RenderMultiColumnFlow& multiColumnFlow)
+void RenderTreeBuilder::MultiColumn::restoreColumnSpannersForContainer(RenderMultiColumnFlow& multiColumnFlow, const RenderElement& container)
 {
     auto& spanners = multiColumnFlow.spannerMap();
     Vector<RenderMultiColumnSpannerPlaceholder*> placeholdersToRestore;
