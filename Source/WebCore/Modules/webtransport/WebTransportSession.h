@@ -52,10 +52,6 @@ public:
     virtual Ref<WritableStreamPromise> createOutgoingUnidirectionalStream() = 0;
     virtual Ref<BidirectionalStreamPromise> createBidirectionalStream() = 0;
     virtual void terminate(uint32_t, CString&&) = 0;
-
-    void attachClient(WebTransportSessionClient&);
-protected:
-    ThreadSafeWeakPtr<WebTransportSessionClient> m_client;
 };
 
 }

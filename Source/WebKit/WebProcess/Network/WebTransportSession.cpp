@@ -39,19 +39,20 @@
 
 namespace WebKit {
 
-Ref<WebCore::WebTransportSessionPromise> WebTransportSession::initialize(Ref<IPC::Connection>&& connection, const URL& url, const WebPageProxyIdentifier& pageID, const WebCore::ClientOrigin& clientOrigin)
+Ref<WebCore::WebTransportSessionPromise> WebTransportSession::initialize(Ref<IPC::Connection>&& connection, ThreadSafeWeakPtr<WebCore::WebTransportSessionClient>&& client, const URL& url, const WebPageProxyIdentifier& pageID, const WebCore::ClientOrigin& clientOrigin)
 {
     ASSERT(RunLoop::isMain());
-    return connection->sendWithPromisedReply(Messages::NetworkConnectionToWebProcess::InitializeWebTransportSession(url, pageID, clientOrigin))->whenSettled(RunLoop::main(), [connection] (auto&& identifier) mutable {
+    return connection->sendWithPromisedReply(Messages::NetworkConnectionToWebProcess::InitializeWebTransportSession(url, pageID, clientOrigin))->whenSettled(RunLoop::main(), [connection, client = WTFMove(client)] (auto&& identifier) mutable {
         ASSERT(RunLoop::isMain());
         if (!identifier || !*identifier)
             return WebCore::WebTransportSessionPromise::createAndReject();
-        return WebCore::WebTransportSessionPromise::createAndResolve(adoptRef(*new WebTransportSession(WTFMove(connection), **identifier)));
+        return WebCore::WebTransportSessionPromise::createAndResolve(adoptRef(*new WebTransportSession(WTFMove(connection), WTFMove(client), **identifier)));
     });
 }
 
-WebTransportSession::WebTransportSession(Ref<IPC::Connection>&& connection, WebTransportSessionIdentifier identifier)
+WebTransportSession::WebTransportSession(Ref<IPC::Connection>&& connection, ThreadSafeWeakPtr<WebCore::WebTransportSessionClient>&& client, WebTransportSessionIdentifier identifier)
     : m_connection(WTFMove(connection))
+    , m_client(WTFMove(client))
     , m_identifier(identifier)
 {
     ASSERT(RunLoop::isMain());

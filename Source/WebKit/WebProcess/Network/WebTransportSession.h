@@ -40,6 +40,7 @@ enum class Error : uint8_t;
 
 namespace WebCore {
 class WebTransportSession;
+class WebTransportSessionClient;
 struct ClientOrigin;
 struct WebTransportStreamIdentifierType;
 using WebTransportStreamIdentifier = ObjectIdentifier<WebTransportStreamIdentifierType>;
@@ -58,7 +59,7 @@ using WebTransportSessionIdentifier = ObjectIdentifier<WebTransportSessionIdenti
 
 class WebTransportSession : public WebCore::WebTransportSession, public IPC::MessageReceiver, public IPC::MessageSender, public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<WebTransportSession, WTF::DestructionThread::MainRunLoop> {
 public:
-    static Ref<WebCore::WebTransportSessionPromise> initialize(Ref<IPC::Connection>&&, const URL&, const WebPageProxyIdentifier&, const WebCore::ClientOrigin&);
+    static Ref<WebCore::WebTransportSessionPromise> initialize(Ref<IPC::Connection>&&, ThreadSafeWeakPtr<WebCore::WebTransportSessionClient>&&, const URL&, const WebPageProxyIdentifier&, const WebCore::ClientOrigin&);
     ~WebTransportSession();
 
     void receiveDatagram(std::span<const uint8_t>);
@@ -76,7 +77,7 @@ public:
 
     void networkProcessCrashed();
 private:
-    WebTransportSession(Ref<IPC::Connection>&&, WebTransportSessionIdentifier);
+    WebTransportSession(Ref<IPC::Connection>&&, ThreadSafeWeakPtr<WebCore::WebTransportSessionClient>&&, WebTransportSessionIdentifier);
 
     // WebTransportSession
     Ref<GenericPromise> sendDatagram(std::span<const uint8_t>) final;
@@ -89,6 +90,7 @@ private:
     uint64_t messageSenderDestinationID() const final;
 
     const Ref<IPC::Connection> m_connection;
+    const ThreadSafeWeakPtr<WebCore::WebTransportSessionClient> m_client;
     const WebTransportSessionIdentifier m_identifier;
 };
 
