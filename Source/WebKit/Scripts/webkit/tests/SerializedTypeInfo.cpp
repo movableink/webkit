@@ -80,14 +80,34 @@
 #include <wtf/CreateUsingClass.h>
 #include <wtf/Seconds.h>
 
-static_assert(std::is_same_v<WebCore::SharedStringHash, uint32_t>);
-static_assert(std::is_same_v<WebCore::UsingWithSemicolon, uint32_t>);
+static_assert(std::is_same_v<WebCore::SharedStringHash,
+    uint32_t
+>);
+static_assert(std::is_same_v<WebCore::UsingWithSemicolon,
+    uint32_t
+>);
 #if OS(WINDOWS)
-static_assert(std::is_same_v<WTF::ProcessID, int>);
+static_assert(std::is_same_v<WTF::ProcessID,
+    int
+>);
 #endif
 #if !(OS(WINDOWS))
-static_assert(std::is_same_v<WTF::ProcessID, pid_t>);
+static_assert(std::is_same_v<WTF::ProcessID,
+    pid_t
+>);
 #endif
+static_assert(std::is_same_v<WebCore::ConditionalVariant,
+    std::variant<
+        int,
+#if USE(CHAR)
+        char,
+#endif
+        double
+    >
+>);
+static_assert(std::is_same_v<WebCore::NonConditionalVariant,
+    std::variant<int, double>
+>);
 
 #if ENABLE(IPC_TESTING_API)
 
@@ -534,21 +554,45 @@ Vector<SerializedTypeInfo> allSerializedTypes()
             { "WebKit::CoreIPCNull"_s, "wrapper"_s }
         } },
         { "WebCore::SharedStringHash"_s, {
-            { "uint32_t"_s, "alias"_s }
+        {
+            "uint32_t"_s
+            , "alias"_s }
         } },
         { "WebCore::UsingWithSemicolon"_s, {
-            { "uint32_t"_s, "alias"_s }
+        {
+            "uint32_t"_s
+            , "alias"_s }
         } },
 #if OS(WINDOWS)
         { "WTF::ProcessID"_s, {
-            { "int"_s, "alias"_s }
+        {
+            "int"_s
+            , "alias"_s }
         } },
 #endif
 #if !(OS(WINDOWS))
         { "WTF::ProcessID"_s, {
-            { "pid_t"_s, "alias"_s }
+        {
+            "pid_t"_s
+            , "alias"_s }
         } },
 #endif
+        { "WebCore::ConditionalVariant"_s, {
+        {
+            "std::variant<"
+            "int, "
+#if USE(CHAR)
+            "char, "
+#endif
+            "double"
+            ">"_s
+            , "alias"_s }
+        } },
+        { "WebCore::NonConditionalVariant"_s, {
+        {
+            "std::variant<int, double> "_s
+            , "alias"_s }
+        } },
     };
 }
 

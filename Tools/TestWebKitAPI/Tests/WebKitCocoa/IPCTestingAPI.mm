@@ -549,8 +549,10 @@ static NSMutableSet<NSString *> *extractTypesFromContainers(NSSet<NSString *> *i
             @"KeyValuePair",
             @"Markable",
             @"RetainPtr",
-            @"HashCountedSet",
-            @"IPC::CoreIPCRetainPtr"
+            @"HashCountedSet"
+#if !HAVE(WK_SECURE_CODING_NSURLREQUEST)
+            , @"IPC::CoreIPCRetainPtr"
+#endif
         ];
         for (NSString *container in containerTypes) {
             if ([input hasPrefix:[container stringByAppendingString:@"<"]]
@@ -683,9 +685,8 @@ TEST(IPCTestingAPI, SerializedTypeInfo)
     // add IPC metadata in a *.serialization.in file instead.
     NSSet<NSString *> *expectedTypesNeedingDescriptions = [NSSet setWithArray:@[
         @"CTFontDescriptorOptions",
-        @"NSObject<NSSecureCoding>",
-        @"PKSecureElementPass",
 #if !HAVE(WK_SECURE_CODING_NSURLREQUEST)
+        @"NSObject<NSSecureCoding>",
         @"NSURLRequest",
 #endif
         @"MachSendRight",
@@ -707,6 +708,7 @@ TEST(IPCTestingAPI, SerializedTypeInfo)
 
 #endif
 
+#if !HAVE(WK_SECURE_CODING_NSURLREQUEST)
 TEST(IPCTestingAPI, CGColorInNSSecureCoding)
 {
     auto archiver = adoptNS([[NSKeyedArchiver alloc] initRequiringSecureCoding:YES]);
@@ -792,3 +794,4 @@ TEST(IPCTestingAPI, NSURLWithBaseURLInNSSecureCoding)
     [unarchiver finishDecoding];
     unarchiver.get().delegate = nil;
 }
+#endif // !HAVE(WK_SECURE_CODING_NSURLREQUEST)

@@ -2520,6 +2520,7 @@
 		FAE61CEA2D0A5608000D238D /* UnifiedSource137.cpp in Sources */ = {isa = PBXBuildFile; fileRef = FAE61CE32D0A5607000D238D /* UnifiedSource137.cpp */; };
 		FAE61CEB2D0A5608000D238D /* UnifiedSource135.cpp in Sources */ = {isa = PBXBuildFile; fileRef = FAE61CE42D0A5607000D238D /* UnifiedSource135.cpp */; };
 		FAE61CEC2D0A5608000D238D /* UnifiedSource131.cpp in Sources */ = {isa = PBXBuildFile; fileRef = FAE61CE52D0A5607000D238D /* UnifiedSource131.cpp */; };
+		FAF27D302D2851EB00F1F0BB /* CoreIPCPKSecureElementPass.mm in Sources */ = {isa = PBXBuildFile; fileRef = FAF27D2F2D2850D400F1F0BB /* CoreIPCPKSecureElementPass.mm */; };
 		FEDBDCD71E68D20500A59F8F /* WebInspectorInterruptDispatcherMessages.h in Headers */ = {isa = PBXBuildFile; fileRef = FEDBDCD51E68D19C00A59F8F /* WebInspectorInterruptDispatcherMessages.h */; };
 		FEE43FD31E67B0180077D6D1 /* WebInspectorInterruptDispatcher.h in Headers */ = {isa = PBXBuildFile; fileRef = FEE43FD11E67AFC60077D6D1 /* WebInspectorInterruptDispatcher.h */; };
 /* End PBXBuildFile section */
@@ -8350,6 +8351,8 @@
 		FAE61CE32D0A5607000D238D /* UnifiedSource137.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = UnifiedSource137.cpp; sourceTree = "<group>"; };
 		FAE61CE42D0A5607000D238D /* UnifiedSource135.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = UnifiedSource135.cpp; sourceTree = "<group>"; };
 		FAE61CE52D0A5607000D238D /* UnifiedSource131.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = UnifiedSource131.cpp; sourceTree = "<group>"; };
+		FAF27D2E2D2850D400F1F0BB /* CoreIPCPKSecureElementPass.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CoreIPCPKSecureElementPass.h; sourceTree = "<group>"; };
+		FAF27D2F2D2850D400F1F0BB /* CoreIPCPKSecureElementPass.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = CoreIPCPKSecureElementPass.mm; sourceTree = "<group>"; };
 		FED3C1DA1B447AE800E0EB7F /* APISerializedScriptValueCocoa.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = APISerializedScriptValueCocoa.mm; sourceTree = "<group>"; };
 		FEDBDCD41E68D19C00A59F8F /* WebInspectorInterruptDispatcherMessageReceiver.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WebInspectorInterruptDispatcherMessageReceiver.cpp; sourceTree = "<group>"; };
 		FEDBDCD51E68D19C00A59F8F /* WebInspectorInterruptDispatcherMessages.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WebInspectorInterruptDispatcherMessages.h; sourceTree = "<group>"; };
@@ -12005,6 +12008,8 @@
 				51AD568D2B1C46EF001A0ECB /* CoreIPCPersonNameComponents.h */,
 				51AD568E2B1C46EF001A0ECB /* CoreIPCPersonNameComponents.mm */,
 				51AD568F2B1C46F0001A0ECB /* CoreIPCPersonNameComponents.serialization.in */,
+				FAF27D2E2D2850D400F1F0BB /* CoreIPCPKSecureElementPass.h */,
+				FAF27D2F2D2850D400F1F0BB /* CoreIPCPKSecureElementPass.mm */,
 				F4B63E162C49586700BC59EF /* CoreIPCPlist.serialization.in */,
 				F4F12CB12C48B8BB00BC1254 /* CoreIPCPlistArray.h */,
 				F4F12CB22C48B8BB00BC1254 /* CoreIPCPlistArray.mm */,
@@ -19667,6 +19672,7 @@
 				FA4FE2662B75EB290016E671 /* CoreIPCNull.mm in Sources */,
 				5157AE0B2B23E97400C0E095 /* CoreIPCPassKit.mm in Sources */,
 				51AD56902B1C46FE001A0ECB /* CoreIPCPersonNameComponents.mm in Sources */,
+				FAF27D302D2851EB00F1F0BB /* CoreIPCPKSecureElementPass.mm in Sources */,
 				F4F12CB32C48B8C100BC1254 /* CoreIPCPlistArray.mm in Sources */,
 				F4F12CB02C48B2C800BC1254 /* CoreIPCPlistDictionary.mm in Sources */,
 				F4F12CAD2C485BE200BC1254 /* CoreIPCPlistObject.mm in Sources */,

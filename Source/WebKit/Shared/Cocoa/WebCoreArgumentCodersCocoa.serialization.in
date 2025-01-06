@@ -470,6 +470,7 @@ AVOutputContext wrapped by CoreIPCAVOutputContext
 PKPaymentMethod wrapped by CoreIPCPKPaymentMethod
 PKPaymentMerchantSession wrapped by CoreIPCPKPaymentMerchantSession
 PKContact wrapped by CoreIPCPKContact
+PKSecureElementPass wrapped by CoreIPCPKSecureElementPass
 PKPayment wrapped by CoreIPCPKPayment
 PKPaymentToken wrapped by CoreIPCPKPaymentToken
 PKShippingMethod wrapped by CoreIPCPKShippingMethod

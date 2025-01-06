@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,36 +24,25 @@
  */
 
 #import "config.h"
-#import "CoreIPCNSShadow.h"
+#import "CoreIPCPKSecureElementPass.h"
 
-#if PLATFORM(COCOA)
+#if USE(PASSKIT)
 
-#import <WebCore/AttributedString.h>
+#import <wtf/RuntimeApplicationChecks.h>
+#import <wtf/cocoa/VectorCocoa.h>
 
-#if USE(APPKIT)
-#import <AppKit/NSShadow.h>
-#endif
-#if PLATFORM(IOS_FAMILY)
-#import <UIKit/NSShadow.h>
-#import <pal/ios/UIKitSoftLink.h>
-#endif
+#import <pal/cocoa/PassKitSoftLink.h>
 
 namespace WebKit {
 
-CoreIPCNSShadow::CoreIPCNSShadow(NSShadow *shadow)
-    : m_shadowOffset(shadow.shadowOffset)
-    , m_shadowBlurRadius(shadow.shadowBlurRadius)
-    , m_shadowColor(shadow.shadowColor)
-{
-}
+CoreIPCPKSecureElementPass::CoreIPCPKSecureElementPass(PKSecureElementPass *pass)
+    : m_data(makeVector([NSKeyedArchiver archivedDataWithRootObject:pass requiringSecureCoding:YES error:nil])) { }
 
-RetainPtr<id> CoreIPCNSShadow::toID() const
+RetainPtr<id> CoreIPCPKSecureElementPass::toID() const
 {
-    RetainPtr<NSShadow> result = adoptNS([PlatformNSShadow new]);
-    [result setShadowOffset:m_shadowOffset];
-    [result setShadowBlurRadius:m_shadowBlurRadius];
-    [result setShadowColor:m_shadowColor.get()];
-    return result;
+    RetainPtr data = adoptNS([[NSData alloc] initWithBytesNoCopy:const_cast<uint8_t*>(m_data.data()) length:m_data.size() freeWhenDone:NO]);
+    RELEASE_ASSERT(isInWebProcess());
+    return [NSKeyedUnarchiver unarchivedObjectOfClass:PAL::getPKSecureElementPassClass() fromData:data.get() error:nil];
 }
 
 } // namespace WebKit
