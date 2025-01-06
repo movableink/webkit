@@ -1128,7 +1128,7 @@ bool PDFPlugin::handleContextMenuEvent(const WebMouseEvent& event)
             continue;
         if ([NSStringFromSelector(item.action) isEqualToString:@"openWithPreview"])
             openInPreviewTag = i;
-        PDFContextMenuItem menuItem { String([item title]), static_cast<int>([item state]), i,
+        PDFContextMenuItem menuItem { String([item title]), static_cast<int>([item state]), i, ContextMenuItemTagNoAction,
             [item isEnabled] ? ContextMenuItemEnablement::Enabled : ContextMenuItemEnablement::Disabled,
             [item action] ? ContextMenuItemHasAction::Yes : ContextMenuItemHasAction::No,
             [item isSeparatorItem] ? ContextMenuItemIsSeparator::Yes : ContextMenuItemIsSeparator::No

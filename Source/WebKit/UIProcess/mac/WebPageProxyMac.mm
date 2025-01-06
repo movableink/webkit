@@ -598,6 +598,10 @@ void WebPageProxy::showPDFContextMenu(const WebKit::PDFContextMenu& contextMenu,
         [nsItem setTitle:item.title];
         [nsItem setEnabled:item.enabled == ContextMenuItemEnablement::Enabled];
         [nsItem setState:item.state];
+#if ENABLE(CONTEXT_MENU_IMAGES_FOR_INTERNAL_CLIENTS)
+        if (m_preferences->contextMenuImagesForInternalClientsEnabled() && [nsItem respondsToSelector:@selector(_setActionImage:)])
+            [nsItem _setActionImage:[NSImage imageWithSystemSymbolName:symbolNameForAction(item.action, false) accessibilityDescription:nil]];
+#endif
         if (item.hasAction == ContextMenuItemHasAction::Yes) {
             [nsItem setTarget:menuTarget.get()];
             [nsItem setAction:@selector(contextMenuAction:)];

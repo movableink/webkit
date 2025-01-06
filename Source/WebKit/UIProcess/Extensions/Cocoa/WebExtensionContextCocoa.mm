@@ -3029,7 +3029,18 @@ NSArray *WebExtensionContext::platformMenuItems(const WebExtensionTab& tab) cons
     contextParameters.tabIdentifier = tab.identifier();
     contextParameters.frameURL = tab.url();
 
-    if (auto *menuItem = singleMenuItemOrExtensionItemWithSubmenu(contextParameters))
+#if USE(APPKIT)
+#if ENABLE(CONTEXT_MENU_IMAGES_FOR_INTERNAL_CLIENTS)
+    RefPtr page = [tab.webView() _page].get();
+    bool allowTopLevelImages = page && page->preferences().contextMenuImagesForInternalClientsEnabled();
+#else
+    bool allowTopLevelImages = false;
+#endif
+#else
+    bool allowTopLevelImages = true;
+#endif
+
+    if (auto *menuItem = singleMenuItemOrExtensionItemWithSubmenu(contextParameters, allowTopLevelImages))
         return @[ menuItem ];
     return @[ ];
 }
@@ -3066,7 +3077,7 @@ void WebExtensionContext::performMenuItem(WebExtensionMenuItem& menuItem, const 
     fireMenusClickedEventIfNeeded(menuItem, wasChecked, contextParameters);
 }
 
-CocoaMenuItem *WebExtensionContext::singleMenuItemOrExtensionItemWithSubmenu(const WebExtensionMenuItemContextParameters& contextParameters) const
+CocoaMenuItem *WebExtensionContext::singleMenuItemOrExtensionItemWithSubmenu(const WebExtensionMenuItemContextParameters& contextParameters, const bool allowTopLevelImages) const
 {
 #if USE(APPKIT)
     auto *menuItems = WebExtensionMenuItem::matchingPlatformMenuItems(mainMenuItems(), contextParameters);
@@ -3074,9 +3085,8 @@ CocoaMenuItem *WebExtensionContext::singleMenuItemOrExtensionItemWithSubmenu(con
         return nil;
 
     if (menuItems.count == 1) {
-        // Don't allow images for the top-level items, it isn't typical on macOS for menus.
-        dynamic_objc_cast<NSMenuItem>(menuItems.firstObject).image = nil;
-
+        if (!allowTopLevelImages)
+            dynamic_objc_cast<NSMenuItem>(menuItems.firstObject).image = nil;
         return menuItems.firstObject;
     }
 
@@ -3087,6 +3097,7 @@ CocoaMenuItem *WebExtensionContext::singleMenuItemOrExtensionItemWithSubmenu(con
 
     return extensionItem;
 #else
+    UNUSED_PARAM(allowTopLevelImages);
     auto *menuItems = WebExtensionMenuItem::matchingPlatformMenuItems(mainMenuItems(), contextParameters);
     if (!menuItems.count)
         return nil;
@@ -3169,7 +3180,14 @@ void WebExtensionContext::addItemsToContextMenu(WebPageProxy& page, const Contex
     if (contextParameters.types.isEmpty())
         contextParameters.types.add(frameInfo.isMainFrame ? WebExtensionMenuItemContextType::Page : WebExtensionMenuItemContextType::Frame);
 
-    if (auto *menuItem = singleMenuItemOrExtensionItemWithSubmenu(contextParameters))
+    // Don't allow images for the top-level items unless an internal client has
+    // enabled them, it isn't typical on macOS for menus.
+#if ENABLE(CONTEXT_MENU_IMAGES_FOR_INTERNAL_CLIENTS)
+    bool allowTopLevelImages = page.preferences().contextMenuImagesForInternalClientsEnabled();
+#else
+    bool allowTopLevelImages = false;
+#endif
+    if (auto *menuItem = singleMenuItemOrExtensionItemWithSubmenu(contextParameters, allowTopLevelImages))
         [menu addItem:menuItem];
 }
 #endif

@@ -2112,6 +2112,21 @@ ContentDispositionAttachmentSandboxEnabled:
     WebCore:
       default: false
 
+ContextMenuImagesForInternalClientsEnabled:
+  type: bool
+  status: internal
+  humanReadableName: "Context Menu Images Allowed for Internal Clients"
+  humanReadableDescription: "Allow internal clients to enable images for context menu items"
+  condition: PLATFORM(MAC)
+  defaultValue:
+    WebKit:
+      "ENABLE(CONTEXT_MENU_IMAGES_FOR_INTERNAL_CLIENTS)" : true
+      default: false
+    WebKitLegacy:
+      default: false
+    WebCore:
+      default: false
+
 ContextMenuQRCodeDetectionEnabled:
   type: bool
   status: embedder
