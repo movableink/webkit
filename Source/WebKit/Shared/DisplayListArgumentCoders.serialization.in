@@ -367,3 +367,8 @@ headers: <WebCore/DisplayListItems.h>
 
 [CustomHeader, AdditionalEncoder=StreamConnectionEncoder] class WebCore::DisplayList::EndPage {
 };
+
+[CustomHeader, AdditionalEncoder=StreamConnectionEncoder] class WebCore::DisplayList::SetURLForRect {
+    URL link();
+    WebCore::FloatRect destRect();
+};

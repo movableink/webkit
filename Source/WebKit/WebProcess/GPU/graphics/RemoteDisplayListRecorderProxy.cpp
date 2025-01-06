@@ -570,6 +570,12 @@ void RemoteDisplayListRecorderProxy::endPage()
     send(Messages::RemoteDisplayListRecorder::EndPage());
 }
 
+void RemoteDisplayListRecorderProxy::setURLForRect(const URL& link, const FloatRect& destRect)
+{
+    appendStateChangeItemIfNecessary();
+    send(Messages::RemoteDisplayListRecorder::SetURLForRect(link, destRect));
+}
+
 bool RemoteDisplayListRecorderProxy::recordResourceUse(NativeImage& image)
 {
     if (UNLIKELY(!m_renderingBackend)) {

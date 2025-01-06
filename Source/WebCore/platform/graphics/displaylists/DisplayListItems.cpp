@@ -927,5 +927,16 @@ void EndPage::apply(GraphicsContext& context) const
     context.endPage();
 }
 
+void SetURLForRect::apply(GraphicsContext& context) const
+{
+    context.setURLForRect(m_link, m_destRect);
+}
+
+void SetURLForRect::dump(TextStream& ts, OptionSet<AsTextFlag>) const
+{
+    ts.dumpProperty("link", link());
+    ts.dumpProperty("dest_rect", destRect());
+}
+
 } // namespace DisplayList
 } // namespace WebCore

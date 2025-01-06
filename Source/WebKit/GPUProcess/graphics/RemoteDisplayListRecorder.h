@@ -36,6 +36,7 @@
 #include <WebCore/ProcessIdentifier.h>
 #include <WebCore/RenderingResourceIdentifier.h>
 #include <wtf/RefCounted.h>
+#include <wtf/URL.h>
 #include <wtf/WeakPtr.h>
 
 #if !LOG_DISABLED
@@ -147,6 +148,8 @@ public:
 
     void beginPage(const WebCore::IntSize& pageSize);
     void endPage();
+
+    void setURLForRect(const URL&, const WebCore::FloatRect&);
 
 private:
     RemoteDisplayListRecorder(WebCore::ImageBuffer&, WebCore::RenderingResourceIdentifier, RemoteRenderingBackend&);

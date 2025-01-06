@@ -94,6 +94,8 @@ public:
     void beginPage(const IntSize&) final;
     void endPage() final;
 
+    void setURLForRect(const URL&, const FloatRect&) final;
+
 private:
     void recordSetInlineFillColor(PackedColor::RGBA) final;
     void recordSetInlineStroke(SetInlineStroke&&) final;

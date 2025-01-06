@@ -31,6 +31,7 @@
 #include <WebCore/DrawGlyphsRecorder.h>
 #include <WebCore/GraphicsContext.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/URL.h>
 #include <wtf/WeakPtr.h>
 
 namespace IPC {
@@ -116,6 +117,7 @@ private:
 
     void beginPage(const WebCore::IntSize& pageSize) final;
     void endPage() final;
+    void setURLForRect(const URL&, const WebCore::FloatRect&) final;
 
 private:
     void recordSetInlineFillColor(WebCore::PackedColor::RGBA) final;

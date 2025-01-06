@@ -1516,5 +1516,26 @@ public:
     void dump(TextStream&, OptionSet<AsTextFlag>) const { }
 };
 
+class SetURLForRect {
+public:
+    static constexpr char name[] = "set-URL-for-rect";
+
+    SetURLForRect(const URL& link, const FloatRect& destRect)
+        : m_link(link)
+        , m_destRect(destRect)
+    {
+    }
+
+    const URL& link() const { return m_link; }
+    const FloatRect& destRect() const { return m_destRect; }
+
+    WEBCORE_EXPORT void apply(GraphicsContext&) const;
+    void dump(TextStream&, OptionSet<AsTextFlag>) const;
+
+private:
+    URL m_link;
+    FloatRect m_destRect;
+};
+
 } // namespace DisplayList
 } // namespace WebCore

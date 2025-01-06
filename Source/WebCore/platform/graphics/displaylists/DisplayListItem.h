@@ -119,6 +119,7 @@ class ApplyStrokePattern;
 #endif
 class BeginPage;
 class EndPage;
+class SetURLForRect;
 
 using Item = std::variant
     < ApplyDeviceScaleFactor
@@ -198,6 +199,7 @@ using Item = std::variant
 #endif
     , BeginPage
     , EndPage
+    , SetURLForRect
 >;
 
 enum class StopReplayReason : uint8_t {

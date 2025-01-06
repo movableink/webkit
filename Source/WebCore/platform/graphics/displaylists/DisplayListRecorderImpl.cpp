@@ -499,6 +499,12 @@ void RecorderImpl::endPage()
     append(EndPage());
 }
 
+void RecorderImpl::setURLForRect(const URL& link, const FloatRect& destRect)
+{
+    appendStateChangeItemIfNecessary();
+    append(SetURLForRect(link, destRect));
+}
+
 bool RecorderImpl::recordResourceUse(NativeImage& nativeImage)
 {
 #if USE(SKIA)

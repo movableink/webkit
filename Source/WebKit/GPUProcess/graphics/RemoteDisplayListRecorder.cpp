@@ -644,6 +644,11 @@ void RemoteDisplayListRecorder::endPage()
     handleItem(DisplayList::EndPage());
 }
 
+void RemoteDisplayListRecorder::setURLForRect(const URL& link, const FloatRect& destRect)
+{
+    handleItem(DisplayList::SetURLForRect(link, destRect));
+}
+
 std::optional<SharedPreferencesForWebProcess> RemoteDisplayListRecorder::sharedPreferencesForWebProcess() const
 {
     RefPtr renderingBackend = m_renderingBackend;
