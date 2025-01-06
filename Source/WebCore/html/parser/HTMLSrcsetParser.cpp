@@ -39,8 +39,6 @@
 #include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilder.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 static inline bool compareByDensity(const ImageCandidate& first, const ImageCandidate& second)
@@ -55,19 +53,19 @@ enum DescriptorTokenizerState {
 };
 
 template<typename CharType>
-static void appendDescriptorAndReset(const CharType*& descriptorStart, const CharType* position, Vector<StringView>& descriptors)
+static void appendDescriptorAndReset(std::span<const CharType>& descriptorStart, const CharType* position, Vector<StringView>& descriptors)
 {
-    if (position > descriptorStart)
-        descriptors.append(StringView { std::span(descriptorStart, position) });
-    descriptorStart = nullptr;
+    if (position > descriptorStart.data())
+        descriptors.append(StringView { descriptorStart.first(position - descriptorStart.data()) });
+    descriptorStart = { };
 }
 
 // The following is called appendCharacter to match the spec's terminology.
 template<typename CharType>
-static void appendCharacter(const CharType* descriptorStart, const CharType* position)
+static void appendCharacter(std::span<const CharType>& descriptorStart, std::span<const CharType> position)
 {
     // Since we don't copy the tokens, this just set the point where the descriptor tokens start.
-    if (!descriptorStart)
+    if (!descriptorStart.data())
         descriptorStart = position;
 }
 
@@ -75,13 +73,13 @@ template<typename CharType>
 static void tokenizeDescriptors(std::span<const CharType>& position, Vector<StringView>& descriptors)
 {
     DescriptorTokenizerState state = Initial;
-    const CharType* descriptorsStart = position.data();
-    const CharType* currentDescriptorStart = descriptorsStart;
+    auto descriptorsStart = position;
+    auto currentDescriptorStart = descriptorsStart;
     for (; ; skip(position, 1)) {
         switch (state) {
         case Initial:
             if (position.empty()) {
-                appendDescriptorAndReset(currentDescriptorStart, position.data() + position.size(), descriptors);
+                appendDescriptorAndReset(currentDescriptorStart, std::to_address(position.end()), descriptors);
                 return;
             }
             if (isComma(position.front())) {
@@ -91,32 +89,34 @@ static void tokenizeDescriptors(std::span<const CharType>& position, Vector<Stri
             }
             if (isASCIIWhitespace(position.front())) {
                 appendDescriptorAndReset(currentDescriptorStart, position.data(), descriptors);
-                currentDescriptorStart = position.data() + 1;
+                currentDescriptorStart = position.subspan(1);
                 state = AfterToken;
             } else if (position.front() == '(') {
-                appendCharacter(currentDescriptorStart, position.data());
+                appendCharacter(currentDescriptorStart, position);
                 state = InParenthesis;
             } else
-                appendCharacter(currentDescriptorStart, position.data());
+                appendCharacter(currentDescriptorStart, position);
             break;
         case InParenthesis:
             if (position.empty()) {
-                appendDescriptorAndReset(currentDescriptorStart, position.data() + position.size(), descriptors);
+                appendDescriptorAndReset(currentDescriptorStart, std::to_address(position.end()), descriptors);
                 return;
             }
             if (position.front() == ')') {
-                appendCharacter(currentDescriptorStart, position.data());
+                appendCharacter(currentDescriptorStart, position);
                 state = Initial;
             } else
-                appendCharacter(currentDescriptorStart, position.data());
+                appendCharacter(currentDescriptorStart, position);
             break;
         case AfterToken:
             if (position.empty())
                 return;
             if (!isASCIIWhitespace(position.front())) {
                 state = Initial;
-                currentDescriptorStart = position.data();
+                currentDescriptorStart = position;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
                 position = { position.data() - 1, position.data() + position.size() };
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
             }
             break;
         }
@@ -315,5 +315,3 @@ ImageCandidate bestFitSourceForImageAttributes(float deviceScaleFactor, const At
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
