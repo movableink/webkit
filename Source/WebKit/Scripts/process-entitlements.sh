@@ -79,6 +79,7 @@ function mac_process_gpu_entitlements()
 {
     plistbuddy Add :com.apple.security.fatal-exceptions array
     plistbuddy Add :com.apple.security.fatal-exceptions:0 string jit
+
     if [[ "${WK_USE_RESTRICTED_ENTITLEMENTS}" == YES ]]
     then
         if (( "${TARGET_MAC_OS_X_VERSION_MAJOR}" >= 101400 ))
@@ -128,6 +129,7 @@ function mac_process_gpu_entitlements()
         plistbuddy Add :com.apple.rootless.storage.WebKitGPUSandbox bool YES
         plistbuddy Add :com.apple.QuartzCore.webkit-end-points bool YES
         plistbuddy Add :com.apple.private.coremedia.allow-fps-attachment bool YES
+        plistbuddy Add :com.apple.developer.hardened-process bool YES
     fi
 }
 
@@ -135,6 +137,7 @@ function mac_process_network_entitlements()
 {
     plistbuddy Add :com.apple.security.fatal-exceptions array
     plistbuddy Add :com.apple.security.fatal-exceptions:0 string jit
+
     if [[ "${WK_USE_RESTRICTED_ENTITLEMENTS}" == YES ]]
     then
         if (( "${TARGET_MAC_OS_X_VERSION_MAJOR}" >= 101500 ))
@@ -177,6 +180,7 @@ function mac_process_network_entitlements()
         plistbuddy Add :com.apple.symptom_analytics.configure bool YES
         plistbuddy Add :com.apple.private.webkit.adattributiond bool YES
         plistbuddy Add :com.apple.private.webkit.webpush bool YES
+        plistbuddy Add :com.apple.developer.hardened-process bool YES
     fi
 }
 
@@ -271,6 +275,8 @@ function mac_process_webcontent_shared_entitlements()
         then
             plistbuddy Add :com.apple.private.xpc.domain-extension bool YES
         fi
+
+        plistbuddy Add :com.apple.developer.hardened-process bool YES
     fi
 
     if [[ "${WK_XPC_SERVICE_VARIANT}" == Development ]]
