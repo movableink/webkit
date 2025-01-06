@@ -425,14 +425,16 @@ static inline std::optional<Layout::BlockLayoutState::LineClamp> lineClamp(const
 
 static inline Layout::BlockLayoutState::TextBoxTrim textBoxTrim(const RenderBlockFlow& rootRenderer)
 {
-    auto* layoutState = rootRenderer.view().frameView().layoutContext().layoutState();
-    if (!layoutState)
+    auto textBoxTrim = rootRenderer.view().frameView().layoutContext().textBoxTrim();
+    if (!textBoxTrim)
         return { };
+
     auto textBoxTrimForIFC = Layout::BlockLayoutState::TextBoxTrim { };
     auto isLineInverted = rootRenderer.writingMode().isLineInverted();
-    if (layoutState->hasTextBoxTrimStart())
+    if (textBoxTrim->trimFirstFormattedLine)
         textBoxTrimForIFC.add(isLineInverted ? Layout::BlockLayoutState::TextBoxTrimSide::End : Layout::BlockLayoutState::TextBoxTrimSide::Start);
-    if (layoutState->hasTextBoxTrimEnd(rootRenderer))
+
+    if (textBoxTrim->lastFormattedLineRoot.get() == &rootRenderer)
         textBoxTrimForIFC.add(isLineInverted ? Layout::BlockLayoutState::TextBoxTrimSide::Start : Layout::BlockLayoutState::TextBoxTrimSide::End);
     return textBoxTrimForIFC;
 }
