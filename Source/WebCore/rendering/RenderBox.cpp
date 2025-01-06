@@ -3832,6 +3832,17 @@ LayoutUnit RenderBox::containingBlockLogicalWidthForPositioned(const RenderBoxMo
             return containingBlockContentLogicalWidth->value();
     }
 
+    if (CheckedPtr inlineBox = containingBlock.inlineContinuation()) {
+        auto relativelyPositionedInlineBoxAncestor = [&] {
+            // Since we stop splitting inlines over 200 nested boxes (see RenderTreeBuilder::Inline::splitInlines), we may not be able to find the real containing block here.
+            CheckedPtr<RenderElement> ancestor = inlineBox;
+            for (; ancestor && !ancestor->isRelativelyPositioned(); ancestor = ancestor->parent()) { }
+            return ancestor;
+        };
+        if (auto containingBlock = relativelyPositionedInlineBoxAncestor(); containingBlock && is<RenderInline>(*containingBlock))
+            return containingBlockLogicalWidthForPositioned(*dynamicDowncast<RenderInline>(*containingBlock), checkForPerpendicularWritingMode);
+    }
+
     if (auto* box = dynamicDowncast<RenderBox>(containingBlock)) {
         bool isFixedPosition = isFixedPositioned();
 
