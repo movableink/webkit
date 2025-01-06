@@ -836,6 +836,7 @@ public:
     // reader announces "link", it doesn't need to announce "clickable" or "pressable" — that
     // is implicit in the concept of a link.
     bool isImplicitlyInteractive() const;
+    bool isReplacedElement() const;
 
     // Table support.
     virtual bool isTable() const = 0;
@@ -1271,10 +1272,13 @@ public:
     virtual void updateChildrenIfNecessary() = 0;
     AXCoreObject* nextInPreOrder(bool updateChildrenIfNeeded, AXCoreObject& stayWithin);
     AXCoreObject* nextSiblingIncludingIgnored(bool updateChildrenIfNeeded) const;
-    // In some contexts, we may have already computed the unignored parent for `this`, so take that as an optional
-    // parameter. If nullptr, we will compute it inside the function.
     AXCoreObject* nextUnignoredSibling(bool updateChildrenIfNeeded, AXCoreObject* unignoredParent = nullptr) const;
-    AXCoreObject* nextUnignoredSiblingOrParent() const;
+    AXCoreObject* nextSiblingIncludingIgnoredOrParent() const;
+
+    AXCoreObject* previousInPreOrder(bool updateChildrenIfNeeded, AXCoreObject& stayWithin);
+    AXCoreObject* previousSiblingIncludingIgnored(bool updateChildrenIfNeeded);
+    AXCoreObject* deepestLastChildIncludingIgnored(bool updateChildrenIfNeeded);
+
     virtual void detachFromParent() = 0;
     virtual bool isDetachedFromParent() = 0;
 
@@ -1451,6 +1455,7 @@ public:
 
     virtual AccessibilityChildrenVector documentLinks() = 0;
 
+    virtual bool hasAttachmentTag() const = 0;
     virtual bool hasBodyTag() const = 0;
     virtual bool hasMarkTag() const = 0;
     virtual String innerHTML() const = 0;

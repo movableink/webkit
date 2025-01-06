@@ -109,10 +109,15 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
         setProperty(AXProperty::HasClickHandler, object.hasClickHandler());
         auto tag = object.tagName();
         if (tag == bodyTag)
-            setProperty(AXProperty::HasBodyTag, true);
+            setProperty(AXProperty::TagName, TagName::body);
 #if ENABLE(AX_THREAD_TEXT_APIS)
         else if (tag == markTag)
-            setProperty(AXProperty::HasMarkTag, true);
+            setProperty(AXProperty::TagName, TagName::mark);
+        else if (tag == attachmentTag)
+            setProperty(AXProperty::TagName, TagName::attachment);
+
+        setProperty(AXProperty::TextRuns, object.textRuns());
+        setProperty(AXProperty::EmitTextAfterBehavior, object.emitTextAfterBehavior());
 #endif // ENABLE(AX_THREAD_TEXT_APIS)
     };
 
@@ -436,11 +441,6 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
 
         setProperty(AXProperty::CanBeMultilineTextField, canBeMultilineTextField(object));
     }
-
-#if ENABLE(AX_THREAD_TEXT_APIS)
-    setProperty(AXProperty::TextRuns, object.textRuns());
-    setProperty(AXProperty::EmitTextAfterBehavior, object.emitTextAfterBehavior());
-#endif
 
     // These properties are only needed on the AXCoreObject interface due to their use in ATSPI,
     // so only cache them for ATSPI.

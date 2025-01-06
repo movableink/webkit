@@ -765,9 +765,6 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
     case AXProperty::HasApplePDFAnnotationAttribute:
         stream << "HasApplePDFAnnotationAttribute";
         break;
-    case AXProperty::HasBodyTag:
-        stream << "HasBodyTag";
-        break;
     case AXProperty::HasBoldFont:
         stream << "HasBoldFont";
         break;
@@ -782,9 +779,6 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
         break;
     case AXProperty::HasLinethrough:
         stream << "HasLinethrough";
-        break;
-    case AXProperty::HasMarkTag:
-        stream << "HasMarkTag";
         break;
     case AXProperty::HasPlainText:
         stream << "HasPlainText";
@@ -1166,6 +1160,9 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
         break;
     case AXProperty::SupportsSetSize:
         stream << "SupportsSetSize";
+        break;
+    case AXProperty::TagName:
+        stream << "TagName";
         break;
 #if !ENABLE(AX_THREAD_TEXT_APIS)
     case AXProperty::TextContent:

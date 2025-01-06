@@ -568,6 +568,7 @@ public:
     String nameAttribute() const final;
     int getIntegralAttribute(const QualifiedName&) const;
     bool hasTagName(const QualifiedName&) const;
+    bool hasAttachmentTag() const final { return hasTagName(HTMLNames::attachmentTag); }
     bool hasBodyTag() const final { return hasTagName(HTMLNames::bodyTag); }
     bool hasMarkTag() const final { return hasTagName(HTMLNames::markTag); }
     AtomString tagName() const;

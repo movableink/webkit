@@ -34,6 +34,7 @@
 #include "ColorHash.h"
 #include "PageIdentifier.h"
 #include "RenderStyleConstants.h"
+#include "TagName.h"
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
 #include <wtf/RefPtr.h>
@@ -135,12 +136,10 @@ enum class AXProperty : uint16_t {
     TextColor,
     HasApplePDFAnnotationAttribute,
     HasBoldFont,
-    HasBodyTag,
     HasClickHandler,
     HasHighlighting,
     HasItalicFont,
     HasLinethrough,
-    HasMarkTag,
     HasPlainText,
     HasRemoteFrameChild,
     IsSubscript,
@@ -268,6 +267,7 @@ enum class AXProperty : uint16_t {
     SupportsPosInSet,
     SupportsRangeValue,
     SupportsSetSize,
+    TagName,
 #if !ENABLE(AX_THREAD_TEXT_APIS)
     // Rather than caching text content as property when ENABLE(AX_THREAD_TEXT_APIS), we should
     // synthesize it on-the-fly using AXProperty::TextRuns.
@@ -293,7 +293,7 @@ WTF::TextStream& operator<<(WTF::TextStream&, AXProperty);
 using AXPropertySet = HashSet<AXProperty, IntHash<AXProperty>, WTF::StrongEnumHashTraits<AXProperty>>;
 
 // If this type is modified, the switchOn statment in AXIsolatedObject::setProperty must be updated as well.
-using AXPropertyValueVariant = std::variant<std::nullptr_t, Markable<AXID>, String, bool, int, unsigned, double, float, uint64_t, WallTime, DateComponentsType, AccessibilityButtonState, Color, std::shared_ptr<URL>, LayoutRect, FloatPoint, FloatRect, IntPoint, IntRect, std::pair<unsigned, unsigned>, Vector<AccessibilityText>, Vector<AXID>, Vector<std::pair<Markable<AXID>, Markable<AXID>>>, Vector<String>, std::shared_ptr<Path>, OptionSet<AXAncestorFlag>, InsideLink, Vector<Vector<Markable<AXID>>>, CharacterRange, std::pair<Markable<AXID>, CharacterRange>
+using AXPropertyValueVariant = std::variant<std::nullptr_t, Markable<AXID>, String, bool, int, unsigned, double, float, uint64_t, WallTime, DateComponentsType, AccessibilityButtonState, Color, std::shared_ptr<URL>, LayoutRect, FloatPoint, FloatRect, IntPoint, IntRect, std::pair<unsigned, unsigned>, Vector<AccessibilityText>, Vector<AXID>, Vector<std::pair<Markable<AXID>, Markable<AXID>>>, Vector<String>, std::shared_ptr<Path>, OptionSet<AXAncestorFlag>, InsideLink, Vector<Vector<Markable<AXID>>>, CharacterRange, std::pair<Markable<AXID>, CharacterRange>, TagName
 #if PLATFORM(COCOA)
     , RetainPtr<NSAttributedString>
     , RetainPtr<id>

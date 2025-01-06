@@ -862,7 +862,7 @@ static AccessibilityObjectWrapper *ancestorWithRole(const AXCoreObject& descenda
         break;
     }
 
-    if (self.axBackingObject->isAttachmentElement())
+    if (self.axBackingObject->hasAttachmentTag())
         traits |= [self _axUpdatesFrequentlyTrait];
     
     if (self.axBackingObject->isSelected())

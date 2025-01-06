@@ -1115,17 +1115,8 @@ bool AccessibilityRenderObject::computeIsIgnored() const
     if (!m_renderer)
         return true;
 
-    if (m_renderer->isBR()) {
-#if ENABLE(AX_THREAD_TEXT_APIS)
-        // We need to preserve BRs within editable contexts (e.g. inside contenteditable) for serving
-        // text APIs off the main-thread because this allows them to be part of the AX tree, which is
-        // traversed to compute text markers.
-        auto* node = this->node();
-        return !node;
-#else
+    if (m_renderer->isBR())
         return true;
-#endif
-    }
 
     if (WeakPtr renderText = dynamicDowncast<RenderText>(m_renderer.get())) {
         // Text elements with no rendered text, or only whitespace should not be part of the AX tree.
@@ -1135,18 +1126,8 @@ bool AccessibilityRenderObject::computeIsIgnored() const
             return true;
         }
 
-        if (renderText->text().containsOnly<isASCIIWhitespace>()) {
-#if ENABLE(AX_THREAD_TEXT_APIS)
-            // Preserve whitespace-only text within editable contexts because ignoring it would cause
-            // accessibility's representation of text to be different than what is actually rendered.
-            // FIXME: This actually isn't enough — we likely need _all_ whitespace RenderTexts (within an editable or not) to compute StringForTextMarkerRange correctly.
-            // e.g. This is necessary for ax-thread-text-apis/display-contents-end-text-marker.html.
-            auto* node = this->node();
-            return !node || !node->hasEditableStyle();
-#else
+        if (renderText->text().containsOnly<isASCIIWhitespace>())
             return true;
-#endif
-        }
 
         if (renderText->parent()->isFirstLetter())
             return true;
@@ -1423,18 +1404,6 @@ AXTextRuns AccessibilityRenderObject::textRuns()
     if (auto* renderLineBreak = dynamicDowncast<RenderLineBreak>(renderer())) {
         auto box = InlineIterator::boxFor(*renderLineBreak);
         return { renderLineBreak->containingBlock(), { AXTextRun(box->lineIndex(), makeString('\n').isolatedCopy()) } };
-    }
-
-    if (RefPtr inputElement = dynamicDowncast<HTMLInputElement>(node())) {
-        // The text within input elements is not actually part of the accessibility tree, meaning we need to do a bit of extra work to expose that text here.
-        for (const auto& node : composedTreeDescendants(*inputElement)) {
-            if (!node.isTextNode())
-                continue;
-            auto* renderer = node.renderer();
-            auto* containingBlock = renderer ? renderer->containingBlock() : nullptr;
-            return containingBlock ? AXTextRuns(containingBlock, { AXTextRun(0, inputElement->value().isolatedCopy()) }) : AXTextRuns();
-        }
-        return { };
     }
 
     if (is<HTMLImageElement>(node()) || is<HTMLMediaElement>(node())) {

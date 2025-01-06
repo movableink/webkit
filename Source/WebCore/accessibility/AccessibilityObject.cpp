@@ -3213,7 +3213,7 @@ bool AccessibilityObject::supportsRangeValue() const
         || isScrollbar()
         || isSpinButton()
         || (isSplitter() && canSetFocusAttribute())
-        || isAttachmentElement();
+        || hasAttachmentTag();
 }
     
 bool AccessibilityObject::supportsHasPopup() const

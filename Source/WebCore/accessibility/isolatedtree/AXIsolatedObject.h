@@ -64,8 +64,9 @@ public:
     bool isExposable() const final { return boolAttributeValue(AXProperty::IsExposable); }
     bool hasClickHandler() const final { return boolAttributeValue(AXProperty::HasClickHandler); }
 
-    bool hasBodyTag() const final { return boolAttributeValue(AXProperty::HasBodyTag); }
-    bool hasMarkTag() const final { return boolAttributeValue(AXProperty::HasMarkTag); }
+    bool hasAttachmentTag() const final { return propertyValue<TagName>(AXProperty::TagName) == TagName::attachment; }
+    bool hasBodyTag() const final { return propertyValue<TagName>(AXProperty::TagName) == TagName::body; }
+    bool hasMarkTag() const final { return propertyValue<TagName>(AXProperty::TagName) == TagName::mark; }
 
     const AccessibilityChildrenVector& children(bool updateChildrenIfNeeded = true) final;
 #if ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)

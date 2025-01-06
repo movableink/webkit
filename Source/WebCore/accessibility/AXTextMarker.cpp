@@ -383,46 +383,6 @@ bool AXTextMarkerRange::isConfinedTo(std::optional<AXID> objectID) const
 }
 
 #if ENABLE(AX_THREAD_TEXT_APIS)
-static void appendChildren(Ref<AXCoreObject> object, bool isForward, RefPtr<AXCoreObject> startObject, AccessibilityObject::AccessibilityChildrenVector& vector)
-{
-    AccessibilityObject::AccessibilityChildrenVector captionAndRows;
-    bool isExposedTable = object->isTable() && object->isExposable();
-    if (isExposedTable) {
-        // Only consider the caption and rows as potential text-run yielding children. This is necessary because the
-        // current table AX hierarchy scheme involves adding multiple different types of objects (rows, columns) that
-        // each have the same cells (and thus the same text) as their children.
-        for (const auto& child : object->unignoredChildren()) {
-            if (child->roleValue() == AccessibilityRole::Caption) {
-                captionAndRows.append(child);
-                break;
-            }
-        }
-        captionAndRows.appendVector(object->rows());
-    }
-
-    const auto& children = isExposedTable ? captionAndRows : object->unignoredChildren();
-    size_t childrenSize = children.size();
-
-    size_t startIndex = isForward ? childrenSize : 0;
-    size_t endIndex = isForward ? 0 : childrenSize;
-    size_t searchPosition = startObject ? children.find(Ref { *startObject }) : notFound;
-
-    if (searchPosition != notFound) {
-        if (isForward)
-            endIndex = searchPosition + 1;
-        else
-            endIndex = searchPosition;
-    }
-
-    if (isForward) {
-        for (size_t i = startIndex; i > endIndex; i--)
-            vector.append(children.at(i - 1));
-    } else {
-        for (size_t i = startIndex; i < endIndex; i++)
-            vector.append(children.at(i));
-    }
-}
-
 AXTextRunLineID AXTextMarker::lineID() const
 {
     if (!isValid())
@@ -487,7 +447,7 @@ CharacterRange AXTextMarker::characterRangeForLine(unsigned lineIndex) const
     // This implementation doesn't respect the offset as the only known callsite hardcodes zero. We'll need to make changes to support this if a usecase arrives for it.
     RELEASE_ASSERT(!offset());
 
-    auto* stopObject = object->nextUnignoredSiblingOrParent();
+    auto* stopObject = object->nextSiblingIncludingIgnoredOrParent();
     auto stopAtID = stopObject ? std::optional { stopObject->objectID() } : std::nullopt;
 
     auto textRunMarker = toTextRunMarker(stopAtID);
@@ -530,10 +490,10 @@ int AXTextMarker::lineNumberForIndex(unsigned index) const
     RefPtr object = isolatedObject();
     if (!object)
         return -1;
-    auto* stopObject = object->nextUnignoredSiblingOrParent();
+    auto* stopObject = object->nextSiblingIncludingIgnoredOrParent();
     auto stopAtID = stopObject ? std::optional { stopObject->objectID() } : std::nullopt;
 
-    if (object->isTextControl() && index >= object->textMarkerRange().toString().length()) {
+    if (object->isTextControl() && index >= object->textMarkerRange().toString().length() - 1) {
         // Mimic behavior of AccessibilityRenderObject::visiblePositionForIndex.
         return -1;
     }
@@ -1179,55 +1139,79 @@ namespace Accessibility {
 // (if present) and are moving beyond it. This can help mirror TextIterator::exitNode in the contexts where that's necessary.
 AXIsolatedObject* findObjectWithRuns(AXIsolatedObject& start, AXDirection direction, std::optional<AXID> stopAtID, const std::function<void(AXIsolatedObject&)>& exitObject)
 {
-    RefPtr tree = std::get<RefPtr<AXIsolatedTree>>(axTreeForID(start.treeID()));
-    // `root` is a stand-in for `anchorObject` in findMatchingObjects, which this function partially copies from.
-    RefPtr root = tree ? tree->rootNode() : nullptr;
-    if (!root)
-        return nullptr;
+    auto shouldStop = [&stopAtID] (auto& object) {
+        return stopAtID && *stopAtID == object.objectID();
+    };
 
-    // This search algorithm only searches the elements before/after the starting object.
-    // It does this by stepping up the parent chain and at each level doing a DFS.
-    RefPtr startObject = &start;
+    if (direction == AXDirection::Next) {
+        auto nextInPreOrder = [&] (AXIsolatedObject& object) -> AXIsolatedObject* {
+            const auto& children = object.childrenIncludingIgnored();
+            if (!children.isEmpty()) {
+                auto role = object.roleValue();
+                if (role != AccessibilityRole::Column && role != AccessibilityRole::TableHeaderContainer && !object.isReplacedElement()) {
+                    // Table columns and header containers add cells despite not being their "true" parent (which are the rows).
+                    // Don't allow a pre-order traversal of these object types to return cells to avoid an infinite loop.
+                    //
+                    // We also don't want to descend into replaced elements (e.g. <audio>), which can have user-agent shadow tree markup.
+                    // This matches TextIterator behavior, and prevents us from emitting incorrect text.
+                    return downcast<AXIsolatedObject>(children[0].ptr());
+                }
+            }
 
-    bool isForward = direction == AXDirection::Next;
-    // The first iteration of the outer loop will examine the children of the start object for matches. However, when
-    // iterating backwards, the start object children should not be considered, so the loop is skipped ahead. We make an
-    // exception when no start object was specified because we want to search everything regardless of search direction.
-    RefPtr<AXCoreObject> previousObject;
-    if (!isForward && startObject != root.get()) {
-        previousObject = startObject;
-        startObject = startObject->parentObjectUnignored();
+            RefPtr current = &object;
+            RefPtr next = object.nextSiblingIncludingIgnored(/* updateChildrenIfNeeded */ true);
+            for (; !next; next = current->nextSiblingIncludingIgnored(/* updateChildrenIfNeeded */ true)) {
+                if (shouldStop(*current))
+                    return nullptr;
+                RefPtr parent = current->parentObject();
+                if (!parent || shouldStop(*parent))
+                    return nullptr;
+                // We immediately exit parent when evaluating next = current->... in the update step of the containing for-loop,
+                // so run any exit lambda for it now.
+                exitObject(*parent);
+                current = parent;
+            }
+            return downcast<AXIsolatedObject>(next.get());
+        };
+
+        RefPtr current = nextInPreOrder(start);
+        while (current) {
+            if (shouldStop(*current))
+                return nullptr;
+            if (current->hasTextRuns())
+                break;
+            exitObject(*current);
+            current = nextInPreOrder(*current);
+        }
+        return current.get();
     }
+    ASSERT(direction == AXDirection::Previous);
 
-    for (auto* stopObject = root->parentObjectUnignored(); startObject && startObject != stopObject; startObject = startObject->parentObjectUnignored()) {
-        if (stopAtID && startObject->objectID() == *stopAtID)
-            return nullptr;
-        // Only append the children after/before the previous element, so that the search does not check elements that are
-        // already behind/ahead of start element.
-        AXCoreObject::AccessibilityChildrenVector searchStack;
-        appendChildren(*startObject, isForward, previousObject, searchStack);
-
-        // This now does a DFS at the current level of the parent.
-        while (!searchStack.isEmpty()) {
-            Ref searchObject = searchStack.takeLast();
-            if (stopAtID && searchObject->objectID() == *stopAtID)
+    auto previousInPreOrder = [&] (AXIsolatedObject& object) -> AXIsolatedObject* {
+        if (RefPtr sibling = object.previousSiblingIncludingIgnored(/* updateChildrenIfNeeded */ true)) {
+            if (shouldStop(*sibling))
                 return nullptr;
 
-            if (searchObject->hasTextRuns())
-                return dynamicDowncast<AXIsolatedObject>(searchObject).get();
-
-            appendChildren(searchObject, isForward, nullptr, searchStack);
+            const auto& children = sibling->childrenIncludingIgnored(/* updateChildrenIfNeeded */ true);
+            if (children.size())
+                return downcast<AXIsolatedObject>(sibling->deepestLastChildIncludingIgnored(/* updateChildrenIfNeeded */ true));
+            return downcast<AXIsolatedObject>(sibling.get());
         }
+        return object.parentObject();
+    };
 
-        // When moving backwards, the parent object needs to be checked, because technically it's "before" the starting element.
-        if (!isForward && startObject != root.get() && startObject->hasTextRuns())
-            return startObject.get();
-
-        exitObject(*startObject);
-        previousObject = startObject;
+    RefPtr current = previousInPreOrder(start);
+    while (current) {
+        if (shouldStop(*current))
+            return nullptr;
+        if (current->hasTextRuns())
+            break;
+        exitObject(*current);
+        current = previousInPreOrder(*current);
     }
-    return nullptr;
+    return current.get();
 }
+
 } // namespace Accessibility
 
 #endif // ENABLE(AX_THREAD_TEXT_APIS)
