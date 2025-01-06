@@ -347,7 +347,7 @@ LayoutUnit RenderBlockFlow::columnGap() const
 {
     if (style().columnGap().isNormal())
         return LayoutUnit(style().fontDescription().computedSize()); // "1em" is recommended as the normal gap setting. Matches <p> margins.
-    return valueForLength(style().columnGap().length(), availableLogicalWidth());
+    return valueForLength(style().columnGap().length(), contentLogicalWidth());
 }
 
 void RenderBlockFlow::computeColumnCountAndWidth()
@@ -1107,7 +1107,7 @@ void RenderBlockFlow::determineLogicalLeftPositionForChild(RenderBox& child, App
         startPosition += (writingMode().isLogicalLeftInlineStart() ? 1 : -1) * verticalScrollbarWidth();
     if (style().scrollbarGutter().bothEdges && !isHorizontalWritingMode())
         startPosition += (writingMode().isLogicalLeftInlineStart() ? 1 : -1) * horizontalScrollbarHeight();
-    LayoutUnit totalAvailableLogicalWidth = borderAndPaddingLogicalWidth() + availableLogicalWidth();
+    LayoutUnit totalAvailableLogicalWidth = borderAndPaddingLogicalWidth() + contentLogicalWidth();
 
     LayoutUnit childMarginStart = marginStartForChild(child);
     LayoutUnit newPosition = startPosition + childMarginStart;

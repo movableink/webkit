@@ -443,7 +443,7 @@ LayoutUnit RenderMultiColumnSet::columnGap() const
     RenderBlockFlow& parentBlock = downcast<RenderBlockFlow>(*parent());
     if (parentBlock.style().columnGap().isNormal())
         return LayoutUnit(parentBlock.style().fontDescription().computedSize()); // "1em" is recommended as the normal gap setting. Matches <p> margins.
-    return valueForLength(parentBlock.style().columnGap().length(), parentBlock.availableLogicalWidth());
+    return valueForLength(parentBlock.style().columnGap().length(), parentBlock.contentLogicalWidth());
 }
 
 unsigned RenderMultiColumnSet::columnCount() const

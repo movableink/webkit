@@ -161,7 +161,7 @@ std::optional<LayoutUnit> RenderGrid::availableSpaceForGutters(GridTrackSizingDi
     if (gapLength.isNormal() || !gapLength.length().isPercentOrCalculated())
         return std::nullopt;
 
-    return isRowAxis ? availableLogicalWidth() : contentLogicalHeight();
+    return isRowAxis ? contentLogicalWidth() : contentLogicalHeight();
 }
 
 void RenderGrid::computeTrackSizesForDefiniteSize(GridTrackSizingDirection direction, LayoutUnit availableSpace, GridLayoutState& gridLayoutState)
@@ -344,7 +344,7 @@ void RenderGrid::layoutGrid(bool relayoutChildren)
         // It doesn't get included in the normal layout process but is instead skipped.
         layoutExcludedChildren(relayoutChildren);
 
-        LayoutUnit availableSpaceForColumns = availableLogicalWidth();
+        LayoutUnit availableSpaceForColumns = contentLogicalWidth();
         placeItemsOnGrid(availableSpaceForColumns);
 
         m_trackSizingAlgorithm.setAvailableSpace(GridTrackSizingDirection::ForColumns, availableSpaceForColumns);
@@ -474,7 +474,7 @@ void RenderGrid::layoutMasonry(bool relayoutChildren)
 
         updateLogicalWidth();
 
-        LayoutUnit availableSpaceForColumns = availableLogicalWidth();
+        LayoutUnit availableSpaceForColumns = contentLogicalWidth();
         placeItemsOnGrid(availableSpaceForColumns);
 
         m_trackSizingAlgorithm.setAvailableSpace(GridTrackSizingDirection::ForColumns, availableSpaceForColumns);
@@ -907,7 +907,7 @@ void RenderGrid::placeItems()
 {
     updateLogicalWidth();
 
-    LayoutUnit availableSpaceForColumns = availableLogicalWidth();
+    LayoutUnit availableSpaceForColumns = contentLogicalWidth();
     placeItemsOnGrid(availableSpaceForColumns);
 }
 
@@ -984,7 +984,7 @@ AutoRepeatType RenderGrid::autoRepeatRowsType() const
 
 
 // FIXME: We shouldn't have to pass the available logical width as argument. The problem is that
-// availableLogicalWidth() does always return a value even if we cannot resolve it like when
+// contentLogicalWidth() does always return a value even if we cannot resolve it like when
 // computing the intrinsic size (preferred widths). That's why we pass the responsibility to the
 // caller who does know whether the available logical width is indefinite or not.
 void RenderGrid::placeItemsOnGrid(std::optional<LayoutUnit> availableLogicalWidth)

@@ -145,7 +145,7 @@ LayoutUnit LegacyRenderSVGRoot::computeReplacedLogicalWidth(ShouldComputePreferr
         return m_containerSize.width();
 
     if (isEmbeddedThroughFrameContainingSVGDocument())
-        return containingBlock()->availableLogicalWidth();
+        return containingBlock()->contentLogicalWidth();
 
     // SVG embedded via SVGImage (background-image/border-image/etc) / Inline SVG.
     return RenderReplaced::computeReplacedLogicalWidth(shouldComputePreferred);

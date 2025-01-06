@@ -1858,7 +1858,7 @@ LayoutUnit RenderBlock::textIndentOffset() const
 {
     LayoutUnit cw;
     if (style().textIndent().isPercentOrCalculated())
-        cw = availableLogicalWidth();
+        cw = contentLogicalWidth();
     return minimumValueForLength(style().textIndent(), cw);
 }
 
@@ -1875,7 +1875,7 @@ LayoutUnit RenderBlock::logicalRightOffsetForContent() const
     LayoutUnit logicalRightOffset = writingMode().isHorizontal() ? borderLeft() + paddingLeft() : borderTop() + paddingTop();
     if (shouldPlaceVerticalScrollbarOnLeft() && isHorizontalWritingMode())
         logicalRightOffset += verticalScrollbarWidth();
-    logicalRightOffset += availableLogicalWidth();
+    logicalRightOffset += contentLogicalWidth();
     return logicalRightOffset;
 }
 

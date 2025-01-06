@@ -900,7 +900,7 @@ void RenderImage::computeIntrinsicRatioInformation(FloatSize& intrinsicSize, Flo
     if (intrinsicSize.isEmpty() && (imageResource().imageHasRelativeWidth() || imageResource().imageHasRelativeHeight())) {
         RenderObject* containingBlock = isOutOfFlowPositioned() ? container() : this->containingBlock();
         if (auto* box = dynamicDowncast<RenderBox>(*containingBlock)) {
-            intrinsicSize.setWidth(box->availableLogicalWidth());
+            intrinsicSize.setWidth(box->contentLogicalWidth());
             intrinsicSize.setHeight(box->availableLogicalHeight(AvailableLogicalHeightType::IncludeMarginBorderPadding));
         }
     }

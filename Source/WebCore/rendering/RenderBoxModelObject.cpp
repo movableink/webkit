@@ -379,12 +379,12 @@ LayoutSize RenderBoxModelObject::relativePositionOffset() const
         auto availableWidth = [&] {
             auto* renderBox = dynamicDowncast<RenderBox>(*this);
             if (!renderBox || !renderBox->isGridItem())
-                return containingBlock->availableWidth();
+                return containingBlock->contentWidth();
             // For grid items the containing block is the grid area, so offsets should be resolved against that.
             auto containingBlockContentWidth = renderBox->gridAreaContentWidth(containingBlock->writingMode());
             if (!containingBlockContentWidth || !*containingBlockContentWidth) {
                 ASSERT_NOT_REACHED();
-                return containingBlock->availableWidth();
+                return containingBlock->contentWidth();
             }
             return **containingBlockContentWidth;
         };
@@ -412,12 +412,12 @@ LayoutSize RenderBoxModelObject::relativePositionOffset() const
     auto availableHeight = [&] {
         auto* renderBox = dynamicDowncast<RenderBox>(*this);
         if (!renderBox || !renderBox->isGridItem())
-            return containingBlock->availableHeight();
+            return containingBlock->contentHeight();
         // For grid items the containing block is the grid area, so offsets should be resolved against that.
         auto containingBlockContentHeight = renderBox->gridAreaContentHeight(containingBlock->style().writingMode());
         if (!containingBlockContentHeight || !*containingBlockContentHeight) {
             ASSERT_NOT_REACHED();
-            return containingBlock->availableHeight();
+            return containingBlock->contentHeight();
         }
         return **containingBlockContentHeight;
     };
@@ -532,7 +532,7 @@ void RenderBoxModelObject::computeStickyPositionConstraints(StickyPositionViewpo
             containingBlock->computedCSSPaddingBottom(), containingBlock->computedCSSPaddingLeft() });
     }
 
-    LayoutUnit maxWidth = containingBlock->availableLogicalWidth();
+    LayoutUnit maxWidth = containingBlock->contentLogicalWidth();
 
     // Sticky positioned element ignore any override logical width on the containing block (as they don't call
     // containingBlockLogicalWidthForContent). It's unclear whether this is totally fine.
@@ -855,7 +855,7 @@ BorderShape RenderBoxModelObject::borderShapeForContentClipping(const LayoutRect
 LayoutUnit RenderBoxModelObject::containingBlockLogicalWidthForContent() const
 {
     if (auto* containingBlock = this->containingBlock())
-        return containingBlock->availableLogicalWidth();
+        return containingBlock->contentLogicalWidth();
     return { };
 }
 

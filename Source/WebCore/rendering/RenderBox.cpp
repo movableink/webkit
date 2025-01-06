@@ -2264,7 +2264,7 @@ LayoutUnit RenderBox::containingBlockLogicalWidthForContent() const
     }
 
     if (auto* containingBlock = this->containingBlock())
-        return isOutOfFlowPositioned() ? containingBlock->clientLogicalWidth() : containingBlock->availableLogicalWidth();
+        return isOutOfFlowPositioned() ? containingBlock->clientLogicalWidth() : containingBlock->contentLogicalWidth();
 
     ASSERT_NOT_REACHED();
     return 0_lu;
@@ -3573,7 +3573,7 @@ void RenderBox::computePreferredLogicalWidths(const Length& minLogicalWidth, con
             if (!shouldComputePreferredLogicalWidthsFromStyle())
                 return m_minPreferredLogicalWidth;
 
-            return computeIntrinsicLogicalWidthUsing(maxLogicalWidth, availableLogicalWidth(), { });
+            return computeIntrinsicLogicalWidthUsing(maxLogicalWidth, contentLogicalWidth(), { });
         }
         return LayoutUnit::max();
     }();

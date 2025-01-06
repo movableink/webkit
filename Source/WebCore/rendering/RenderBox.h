@@ -417,14 +417,8 @@ public:
     std::optional<LayoutUnit> computePercentageLogicalHeight(const Length& height, UpdatePercentageHeightDescendants = UpdatePercentageHeightDescendants::Yes) const;
     bool hasAutoHeightOrContainingBlockWithAutoHeight(UpdatePercentageHeightDescendants = UpdatePercentageHeightDescendants::Yes) const;
 
-    inline LayoutUnit availableLogicalWidth() const;
     virtual LayoutUnit availableLogicalHeight(AvailableLogicalHeightType) const;
     LayoutUnit availableLogicalHeightUsing(const Length&, AvailableLogicalHeightType) const;
-
-    // There are a few cases where we need to refer specifically to the available physical width and available physical height.
-    // Relative positioning is one of those cases, since left/top offsets are physical.
-    inline LayoutUnit availableWidth() const;
-    inline LayoutUnit availableHeight() const;
 
     WEBCORE_EXPORT virtual int verticalScrollbarWidth() const;
     WEBCORE_EXPORT virtual int horizontalScrollbarHeight() const;
