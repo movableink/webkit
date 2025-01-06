@@ -68,10 +68,16 @@ GStreamerRTPPacketizer::~GStreamerRTPPacketizer() = default;
 
 void GStreamerRTPPacketizer::configureExtensions()
 {
+    if (!webkitGstCheckVersion(1, 24, 0)) {
+        GST_WARNING_OBJECT(m_bin.get(), "GStreamer 1.24 is required for configuring extensions on the RTP payloaders. Simulcast will not work.");
+        return;
+    }
+
     m_lastExtensionId = 0;
 
     GValue extensions = G_VALUE_INIT;
     g_object_get_property(G_OBJECT(m_payloader.get()), "extensions", &extensions);
+    RELEASE_ASSERT(GST_VALUE_HOLDS_ARRAY(&extensions));
     m_lastExtensionId = gst_value_array_get_size(&extensions) + 1;
     g_value_unset(&extensions);
 
@@ -107,6 +113,11 @@ void GStreamerRTPPacketizer::configureExtensions()
 
 void GStreamerRTPPacketizer::ensureMidExtension(const String& mid)
 {
+    if (!webkitGstCheckVersion(1, 24, 0)) {
+        GST_WARNING_OBJECT(m_bin.get(), "GStreamer 1.24 is required for ensuring mid extension on the RTP payloaders.");
+        return;
+    }
+
     m_mid = mid;
     if (m_midExtension) {
         g_object_set(m_midExtension.get(), "mid", mid.utf8().data(), nullptr);
@@ -116,6 +127,7 @@ void GStreamerRTPPacketizer::ensureMidExtension(const String& mid)
 
     GValue extensions = G_VALUE_INIT;
     g_object_get_property(G_OBJECT(m_payloader.get()), "extensions", &extensions);
+    RELEASE_ASSERT(GST_VALUE_HOLDS_ARRAY(&extensions));
     auto totalExtensions = gst_value_array_get_size(&extensions);
     auto midURI = StringView::fromLatin1(GST_RTP_HDREXT_BASE "sdes:mid");
     for (unsigned i = 0; i < totalExtensions; i++) {
