@@ -234,6 +234,9 @@ static const BOOL defaultFastClickingEnabled = NO;
 #endif
 
 #if ENABLE(SCREEN_TIME)
+@interface STWebpageController (Staging_138865295)
+@property (nonatomic, copy) STWebHistoryProfileIdentifier profileIdentifier;
+@end
 static void *screenTimeWebpageControllerBlockedKVOContext = &screenTimeWebpageControllerBlockedKVOContext;
 #endif
 
@@ -362,6 +365,9 @@ static uint32_t convertSystemLayoutDirection(NSUserInterfaceLayoutDirection dire
         _screenTimeWebpageController = adoptNS([PAL::allocSTWebpageControllerInstance() init]);
         [_screenTimeWebpageController addObserver:self forKeyPath:@"URLIsBlocked" options:(NSKeyValueObservingOptionOld | NSKeyValueObservingOptionNew) context:&screenTimeWebpageControllerBlockedKVOContext];
         _isBlockedByScreenTime = NO;
+
+        if ([_screenTimeWebpageController respondsToSelector:@selector(setProfileIdentifier:)])
+            [_screenTimeWebpageController setProfileIdentifier:[_configuration websiteDataStore].identifier.UUIDString];
 
         RetainPtr screenTimeView = [_screenTimeWebpageController view];
         [screenTimeView setTranslatesAutoresizingMaskIntoConstraints:NO];
