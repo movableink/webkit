@@ -366,6 +366,14 @@ public:
                     return false;
                 }
                 ++iterationCount;
+                if (iterationCount.hasOverflowed()) {
+                    dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping loop with header ", *data.header(), " since the iteration count overflowed after the update");
+                    return false;
+                }
+            }
+            if (!iterationCount) {
+                dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping loop with header ", *data.header(), " since the iteration count is zero");
+                return false;
             }
             data.iterationCount = iterationCount;
         }
@@ -446,6 +454,7 @@ public:
 #endif
 
         BasicBlock* next = data.next;
+        ASSERT(!data.iterationCount.hasOverflowed() && data.iterationCount);
         for (uint32_t cloneCount = data.iterationCount - 1; cloneCount--;) {
             blockClones.clear();
             nodeClones.clear();
