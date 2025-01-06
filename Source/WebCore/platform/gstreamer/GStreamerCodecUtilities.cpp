@@ -132,10 +132,8 @@ const char* GStreamerCodecUtilities::parseHEVCProfile(const String& codec)
         return nullptr;
     }
 
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
-    uint8_t profileTierLevel[11] = { 0, };
-    memset(profileTierLevel, 0, 11);
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    std::array<uint8_t, 11> profileTierLevel;
+    memset(profileTierLevel.data(), 0, 11);
     profileTierLevel[0] = parameters->generalProfileIDC;
 
     if (profileTierLevel[0] >= 4) {
@@ -144,7 +142,7 @@ const char* GStreamerCodecUtilities::parseHEVCProfile(const String& codec)
             profileTierLevel[i] = constraints[j];
     }
 
-    return gst_codec_utils_h265_get_profile(profileTierLevel, sizeof(profileTierLevel));
+    return gst_codec_utils_h265_get_profile(profileTierLevel.data(), profileTierLevel.size());
 }
 
 static std::pair<GRefPtr<GstCaps>, GRefPtr<GstCaps>> h265CapsFromCodecString(const String& codecString)
