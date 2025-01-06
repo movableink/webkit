@@ -280,7 +280,7 @@ extension WebGPU.CommandEncoder {
 
             if attachment.resolveTarget != nil {
                 let resolveTarget = WebGPU.fromAPI(attachment.resolveTarget)
-                if !WebGPU_Internal.isValidToUseWith_TextureView_CommandEncoder(resolveTarget, self) {
+                if !WebGPU_Internal.isValidToUseWithTextureViewCommandEncoder(resolveTarget, self) {
                     return WebGPU.RenderPassEncoder.createInvalid(self, m_device.ptr(), "resolve target created from different device")
                 }
                 resolveTarget.setCommandEncoder(self)
@@ -288,7 +288,7 @@ extension WebGPU.CommandEncoder {
                 if (resolveTexture == nil || mtlTexture == nil) {
                     return WebGPU.RenderPassEncoder.createInvalid(self, m_device.ptr(), "resolveTexture/mtlTexture is nil")
                 }
-                if mtlTexture!.sampleCount == 1 || resolveTexture!.sampleCount != 1 || isMultisampleTexture(texture: resolveTexture!) || !isMultisampleTexture(texture: mtlTexture!) || !isRenderableTextureView(texture: resolveTarget) || mtlTexture!.pixelFormat != resolveTexture!.pixelFormat || WebGPU.Texture.supportsResolve(resolveTarget.format(), m_device.ptr()) {
+                if mtlTexture!.sampleCount == 1 || resolveTexture!.sampleCount != 1 || isMultisampleTexture(texture: resolveTexture!) || !isMultisampleTexture(texture: mtlTexture!) || !isRenderableTextureView(texture: resolveTarget) || mtlTexture!.pixelFormat != resolveTexture!.pixelFormat || !WebGPU.Texture.supportsResolve(resolveTarget.format(), m_device.ptr()) {
                     return WebGPU.RenderPassEncoder.createInvalid(self, m_device.ptr(), "resolve target is invalid")
                 }
 
