@@ -177,7 +177,7 @@ private:
     void coverageRectDidChange(WebCore::TiledBacking&, const WebCore::FloatRect&) final;
 
     void willRevalidateTiles(WebCore::TiledBacking&, WebCore::TileGridIdentifier, WebCore::TileRevalidationType) final;
-    void didRevalidateTiles(WebCore::TiledBacking&, WebCore::TileGridIdentifier, WebCore::TileRevalidationType, const HashSet<WebCore::TileIndex>& tilesNeedingDisplay) final;
+    void didRevalidateTiles(WebCore::TiledBacking&, WebCore::TileGridIdentifier, WebCore::TileRevalidationType, const UncheckedKeyHashSet<WebCore::TileIndex>& tilesNeedingDisplay) final;
 
     void willRepaintTilesAfterScaleFactorChange(WebCore::TiledBacking&, WebCore::TileGridIdentifier) final;
     void didRepaintTilesAfterScaleFactorChange(WebCore::TiledBacking&, WebCore::TileGridIdentifier) final;

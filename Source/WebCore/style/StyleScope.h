@@ -148,7 +148,7 @@ public:
     static Scope* forOrdinal(Element&, ScopeOrdinal);
 
     struct QueryContainerUpdateContext {
-        HashSet<CheckedRef<Element>> invalidatedContainers;
+        UncheckedKeyHashSet<CheckedRef<Element>> invalidatedContainers;
     };
     bool updateQueryContainerState(QueryContainerUpdateContext&);
 
@@ -225,7 +225,7 @@ private:
 
     Timer m_pendingUpdateTimer;
 
-    mutable HashSet<SingleThreadWeakRef<const CSSStyleSheet>> m_weakCopyOfActiveStyleSheetListForFastLookup;
+    mutable UncheckedKeyHashSet<SingleThreadWeakRef<const CSSStyleSheet>> m_weakCopyOfActiveStyleSheetListForFastLookup;
 
     // Track the currently loading top-level stylesheets needed for rendering.
     // Sheets loaded using the @import directive are not included in this count.

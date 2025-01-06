@@ -1368,9 +1368,9 @@ static int adjustOffsetForZoomAndSubpixelLayout(RenderBoxModelObject& renderer, 
     return convertToNonSubpixelValue(offsetLeft / zoomFactor, Round);
 }
 
-static HashSet<TreeScope*> collectAncestorTreeScopeAsHashSet(Node& node)
+static UncheckedKeyHashSet<TreeScope*> collectAncestorTreeScopeAsHashSet(Node& node)
 {
-    HashSet<TreeScope*> ancestors;
+    UncheckedKeyHashSet<TreeScope*> ancestors;
     for (auto* currentScope = &node.treeScope(); currentScope; currentScope = currentScope->parentTreeScope())
         ancestors.add(currentScope);
     return ancestors;

@@ -469,7 +469,7 @@ Vector<Ref<StaticRange>> DOMSelection::getComposedRanges(FixedVector<std::refere
     if (!range)
         return { };
 
-    HashSet<Ref<ShadowRoot>> shadowRootSet;
+    UncheckedKeyHashSet<Ref<ShadowRoot>> shadowRootSet;
     shadowRootSet.reserveInitialCapacity(shadowRoots.size());
     for (auto& root : shadowRoots)
         shadowRootSet.add(root.get());

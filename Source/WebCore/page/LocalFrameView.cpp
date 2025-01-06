@@ -5706,7 +5706,7 @@ void LocalFrameView::willRemoveWidgetFromRenderTree(Widget& widget)
     m_widgetsInRenderTree.remove(widget);
 }
 
-static Vector<Ref<Widget>> collectAndProtectWidgets(const HashSet<SingleThreadWeakRef<Widget>>& set)
+static Vector<Ref<Widget>> collectAndProtectWidgets(const UncheckedKeyHashSet<SingleThreadWeakRef<Widget>>& set)
 {
     return WTF::map(set, [](auto& widget) -> Ref<Widget> {
         return widget.get();

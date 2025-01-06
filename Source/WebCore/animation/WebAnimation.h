@@ -67,7 +67,7 @@ public:
     static Ref<WebAnimation> create(Document&, AnimationEffect*, AnimationTimeline*);
     ~WebAnimation();
 
-    WEBCORE_EXPORT static HashSet<WebAnimation*>& instances();
+    WEBCORE_EXPORT static UncheckedKeyHashSet<WebAnimation*>& instances();
 
     virtual bool isStyleOriginatedAnimation() const { return false; }
     virtual bool isCSSAnimation() const { return false; }

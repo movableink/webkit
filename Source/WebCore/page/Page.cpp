@@ -242,9 +242,9 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(Page);
 
-static HashSet<WeakRef<Page>>& allPages()
+static UncheckedKeyHashSet<WeakRef<Page>>& allPages()
 {
-    static NeverDestroyed<HashSet<WeakRef<Page>>> set;
+    static NeverDestroyed<UncheckedKeyHashSet<WeakRef<Page>>> set;
     return set;
 }
 
@@ -4333,7 +4333,7 @@ void Page::forEachLocalFrame(const Function<void(LocalFrame&)>& functor)
 
 void Page::forEachWindowEventLoop(const Function<void(WindowEventLoop&)>& functor)
 {
-    HashSet<Ref<WindowEventLoop>> windowEventLoops;
+    UncheckedKeyHashSet<Ref<WindowEventLoop>> windowEventLoops;
     WindowEventLoop* lastEventLoop = nullptr;
     for (RefPtr frame = &mainFrame(); frame; frame = frame->tree().traverseNext()) {
         RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);

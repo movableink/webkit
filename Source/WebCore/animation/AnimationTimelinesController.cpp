@@ -577,7 +577,7 @@ bool AnimationTimelinesController::isPendingTimelineAttachment(const WebAnimatio
 
 void AnimationTimelinesController::unregisterNamedTimelinesAssociatedWithElement(const Element& element)
 {
-    HashSet<AtomString> namesToClear;
+    UncheckedKeyHashSet<AtomString> namesToClear;
 
     for (auto& entry : m_nameToTimelineMap) {
         auto& timelines = entry.value;

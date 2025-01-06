@@ -430,9 +430,9 @@ private:
     void checkConsistency() const;
     WEBCORE_EXPORT GuaranteedSerialFunctionDispatcher& nativePromiseDispatcher();
 
-    HashSet<MessagePort*> m_messagePorts;
-    HashSet<ContextDestructionObserver*> m_destructionObservers;
-    HashSet<ActiveDOMObject*> m_activeDOMObjects;
+    UncheckedKeyHashSet<MessagePort*> m_messagePorts;
+    UncheckedKeyHashSet<ContextDestructionObserver*> m_destructionObservers;
+    UncheckedKeyHashSet<ActiveDOMObject*> m_activeDOMObjects;
 
     UncheckedKeyHashMap<int, RefPtr<DOMTimer>> m_timeouts;
 

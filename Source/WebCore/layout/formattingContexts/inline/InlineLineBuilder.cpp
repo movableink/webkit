@@ -670,7 +670,7 @@ void LineBuilder::candidateContentForLine(LineCandidate& lineCandidate, size_t c
     auto firstInlineTextItemIndex = std::optional<size_t> { };
     auto lastInlineTextItemIndex = std::optional<size_t> { };
     auto trailingSoftHyphenInlineTextItemIndex = std::optional<size_t> { };
-    HashSet<const Box*> inlineBoxListWithClonedDecorationEnd;
+    UncheckedKeyHashSet<const Box*> inlineBoxListWithClonedDecorationEnd;
     auto accumulatedDecorationEndWidth = InlineLayoutUnit { 0.f };
     InlineLayoutUnit textSpacingAdjustment = 0.f;
     for (auto index = currentInlineItemIndex; index < softWrapOpportunityIndex; ++index) {

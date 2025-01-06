@@ -443,7 +443,7 @@ void Pasteboard::read(PasteboardWebContentReader& reader, WebContentReadingPolic
 {
     auto& strategy = *platformStrategies()->pasteboardStrategy();
     auto platformTypesFromItems = [](const Vector<PasteboardItemInfo>& items) {
-        HashSet<String> types;
+        UncheckedKeyHashSet<String> types;
         for (auto& item : items) {
             for (auto& type : item.platformTypesByFidelity)
                 types.add(type);
@@ -451,7 +451,7 @@ void Pasteboard::read(PasteboardWebContentReader& reader, WebContentReadingPolic
         return types;
     };
 
-    HashSet<String> nonTranscodedTypes;
+    UncheckedKeyHashSet<String> nonTranscodedTypes;
     Vector<String> types;
     if (itemIndex) {
         if (auto itemInfo = strategy.informationForItemAtIndex(*itemIndex, m_pasteboardName, m_changeCount, context())) {

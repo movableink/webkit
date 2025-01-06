@@ -1759,7 +1759,7 @@ private:
     {
         // Collect the set of heap locations that we will be operating
         // over.
-        HashSet<PromotedHeapLocation> locations;
+        UncheckedKeyHashSet<PromotedHeapLocation> locations;
         for (BasicBlock* block : m_graph.blocksInNaturalOrder()) {
             m_heap = m_heapAtHead[block];
 
@@ -1819,7 +1819,7 @@ private:
         if (!m_bottom)
             m_bottom = m_insertionSet.insertConstant(0, m_graph.block(0)->at(0)->origin, jsNumber(1927));
 
-        Vector<HashSet<PromotedHeapLocation>> hintsForPhi(m_sinkCandidates.size());
+        Vector<UncheckedKeyHashSet<PromotedHeapLocation>> hintsForPhi(m_sinkCandidates.size());
 
         for (BasicBlock* block : m_graph.blocksInNaturalOrder()) {
             m_heap = m_heapAtHead[block];

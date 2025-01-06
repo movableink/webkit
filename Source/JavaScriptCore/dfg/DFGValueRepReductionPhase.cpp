@@ -55,7 +55,7 @@ public:
 private:
     bool convertValueRepsToDouble()
     {
-        HashSet<Node*> candidates;
+        UncheckedKeyHashSet<Node*> candidates;
         for (BasicBlock* block : m_graph.blocksInNaturalOrder()) {
             for (Node* node : *block) {
                 switch (node->op()) {
@@ -153,7 +153,7 @@ private:
         // - Any Phi-1 that forwards into another Phi-2, where Phi-2 is a candidate,
         //   makes Phi-1 a candidate too.
         do {
-            HashSet<Node*> eligiblePhis;
+            UncheckedKeyHashSet<Node*> eligiblePhis;
             for (Node* candidate : candidates) {
                 if (candidate->op() == Phi) {
                     phiChildren.forAllIncomingValues(candidate, [&] (Node* incoming) {
@@ -177,7 +177,7 @@ private:
         } while (true);
 
         do {
-            HashSet<Node*> toRemove;
+            UncheckedKeyHashSet<Node*> toRemove;
 
             auto isEscaped = [&] (Node* node) {
                 return !candidates.contains(node) || toRemove.contains(node);
@@ -317,7 +317,7 @@ private:
             return false;
 
         NodeOrigin originForConstant = m_graph.block(0)->at(0)->origin;
-        HashSet<Node*> doubleRepRealCheckLocations;
+        UncheckedKeyHashSet<Node*> doubleRepRealCheckLocations;
 
         for (Node* candidate : candidates) {
             dataLogLnIf(verbose, "Optimized: ", candidate);

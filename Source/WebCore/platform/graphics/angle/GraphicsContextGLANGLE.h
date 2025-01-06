@@ -416,9 +416,9 @@ protected:
     void setPackParameters(GCGLint alignment, GCGLint rowLength, GCGLboolean reverseRowOrder);
     bool validateClearBufferv(GCGLenum buffer, size_t valuesSize);
 
-    HashSet<String> m_availableExtensions;
-    HashSet<String> m_requestableExtensions;
-    HashSet<String> m_enabledExtensions;
+    UncheckedKeyHashSet<String> m_availableExtensions;
+    UncheckedKeyHashSet<String> m_requestableExtensions;
+    UncheckedKeyHashSet<String> m_enabledExtensions;
     bool m_webglColorBufferFloatRGB { false };
     bool m_webglColorBufferFloatRGBA { false };
     GCGLuint m_texture { 0 };

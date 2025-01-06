@@ -708,7 +708,7 @@ void TileController::willRevalidateTiles(TileGrid& tileGrid, TileRevalidationTyp
         m_client->willRevalidateTiles(*this, tileGrid.identifier(), revalidationType);
 }
 
-void TileController::didRevalidateTiles(TileGrid& tileGrid, TileRevalidationType revalidationType, const HashSet<TileIndex>& tilesNeedingDisplay)
+void TileController::didRevalidateTiles(TileGrid& tileGrid, TileRevalidationType revalidationType, const UncheckedKeyHashSet<TileIndex>& tilesNeedingDisplay)
 {
     m_boundsAtLastRevalidate = bounds();
 

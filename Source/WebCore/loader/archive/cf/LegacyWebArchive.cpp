@@ -110,7 +110,7 @@ static String getFileNameFromURIComponent(StringView input)
     return result.toString();
 }
 
-static String generateValidFileName(const URL& url, const HashSet<String>& existingFileNames, const String& extension = { })
+static String generateValidFileName(const URL& url, const UncheckedKeyHashSet<String>& existingFileNames, const String& extension = { })
 {
     String suffix = extension.isEmpty() ? emptyString() : makeString('.', extension);
     auto extractedFileName = getFileNameFromURIComponent(url.lastPathComponent());
@@ -584,7 +584,7 @@ static void addSubresourcesForAttachmentElementsIfNecessary(LocalFrame& frame, c
 
 #endif
 
-static UncheckedKeyHashMap<RefPtr<CSSStyleSheet>, String> addSubresourcesForCSSStyleSheetsIfNecessary(LocalFrame& frame, const String& subresourcesDirectoryName, HashSet<String>& uniqueFileNames, UncheckedKeyHashMap<String, String>& uniqueSubresources, Vector<Ref<ArchiveResource>>& subresources)
+static UncheckedKeyHashMap<RefPtr<CSSStyleSheet>, String> addSubresourcesForCSSStyleSheetsIfNecessary(LocalFrame& frame, const String& subresourcesDirectoryName, UncheckedKeyHashSet<String>& uniqueFileNames, UncheckedKeyHashMap<String, String>& uniqueSubresources, Vector<Ref<ArchiveResource>>& subresources)
 {
     if (subresourcesDirectoryName.isEmpty())
         return { };
@@ -604,7 +604,7 @@ static UncheckedKeyHashMap<RefPtr<CSSStyleSheet>, String> addSubresourcesForCSSS
         if (uniqueCSSStyleSheets.contains(cssStyleSheet.get()))
             continue;
 
-        HashSet<RefPtr<CSSStyleSheet>> cssStyleSheets;
+        UncheckedKeyHashSet<RefPtr<CSSStyleSheet>> cssStyleSheets;
         cssStyleSheets.add(cssStyleSheet.get());
         cssStyleSheet->getChildStyleSheets(cssStyleSheets);
         for (auto& currentCSSStyleSheet : cssStyleSheets) {
@@ -672,7 +672,7 @@ RefPtr<LegacyWebArchive> LegacyWebArchive::create(const String& markupString, Lo
     Vector<Ref<LegacyWebArchive>> subframeArchives;
     Vector<Ref<ArchiveResource>> subresources;
     UncheckedKeyHashMap<String, String> uniqueSubresources;
-    HashSet<String> uniqueFileNames;
+    UncheckedKeyHashSet<String> uniqueFileNames;
     String subresourcesDirectoryName = mainFrameFilePath.isNull() ? String { } : makeString(mainFrameFilePath, "_files"_s);
 
     for (auto& node : nodes) {

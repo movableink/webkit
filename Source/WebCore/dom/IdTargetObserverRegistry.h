@@ -59,7 +59,7 @@ private:
 
         ObserverSet();
         ~ObserverSet();
-        HashSet<CheckedRef<IdTargetObserver>> observers;
+        UncheckedKeyHashSet<CheckedRef<IdTargetObserver>> observers;
     };
 
     using IdToObserverSetMap = UncheckedKeyHashMap<AtomString, std::unique_ptr<ObserverSet>>;

@@ -962,10 +962,10 @@ public:
 
     static void tryCleanup();
 private:
-    HashSet<Wasm::TypeHash> m_typeSet;
+    UncheckedKeyHashSet<Wasm::TypeHash> m_typeSet;
     UncheckedKeyHashMap<TypeIndex, RefPtr<const TypeDefinition>> m_unrollingCache;
     UncheckedKeyHashMap<TypeIndex, RefPtr<RTT>> m_rttMap;
-    HashSet<RefPtr<TypeDefinition>> m_placeholders;
+    UncheckedKeyHashSet<RefPtr<TypeDefinition>> m_placeholders;
     const FunctionSignature* thunkTypes[numTypes];
     RefPtr<TypeDefinition> m_I64_Void;
     RefPtr<TypeDefinition> m_Void_I32;

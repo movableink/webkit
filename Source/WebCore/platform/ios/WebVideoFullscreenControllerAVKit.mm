@@ -227,8 +227,8 @@ private:
     void didCleanupFullscreen() final;
     void fullscreenMayReturnToInline() final;
 
-    HashSet<CheckedPtr<PlaybackSessionModelClient>> m_playbackClients;
-    HashSet<CheckedPtr<VideoPresentationModelClient>> m_presentationClients;
+    UncheckedKeyHashSet<CheckedPtr<PlaybackSessionModelClient>> m_playbackClients;
+    UncheckedKeyHashSet<CheckedPtr<VideoPresentationModelClient>> m_presentationClients;
     RefPtr<VideoPresentationInterfaceIOS> m_interface;
     RefPtr<VideoPresentationModelVideoElement> m_presentationModel;
     RefPtr<PlaybackSessionModelMediaElement> m_playbackModel;

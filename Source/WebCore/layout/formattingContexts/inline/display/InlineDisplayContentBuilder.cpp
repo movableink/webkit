@@ -1156,7 +1156,7 @@ void InlineDisplayContentBuilder::processRubyContent(InlineDisplay::Boxes& displ
     if (!m_hasSeenRubyBase)
         return;
 
-    HashSet<CheckedPtr<const Box>> lineSpanningRubyBaseList;
+    UncheckedKeyHashSet<CheckedPtr<const Box>> lineSpanningRubyBaseList;
     for (auto& lineRun : lineLayoutResult.inlineContent) {
         if (lineRun.isLineSpanningInlineBoxStart() && lineRun.layoutBox().isRubyBase())
             lineSpanningRubyBaseList.add(&lineRun.layoutBox());

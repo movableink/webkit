@@ -59,9 +59,9 @@ namespace WebCore {
 // List of displays ever instantiated from EGL. When terminating all EGL resources, we need to
 // terminate all displays. However, we cannot ask EGL all the displays it has created.
 // We must know all the displays via this set.
-static HashSet<GCGLDisplay>& usedDisplays()
+static UncheckedKeyHashSet<GCGLDisplay>& usedDisplays()
 {
-    static NeverDestroyed<HashSet<GCGLDisplay>> s_usedDisplays;
+    static NeverDestroyed<UncheckedKeyHashSet<GCGLDisplay>> s_usedDisplays;
     return s_usedDisplays;
 }
 

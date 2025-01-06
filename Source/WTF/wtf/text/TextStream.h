@@ -275,8 +275,8 @@ TextStream& operator<<(TextStream& ts, const FixedVector<ItemType>& vector)
     return streamSizedContainer(ts, vector);
 }
 
-template<typename ValueArg, typename HashArg, typename TraitsArg>
-TextStream& operator<<(TextStream& ts, const HashSet<ValueArg, HashArg, TraitsArg>& set)
+template<typename ValueArg, typename HashArg, typename TraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey>
+TextStream& operator<<(TextStream& ts, const HashSet<ValueArg, HashArg, TraitsArg, TableTraitsArg, shouldValidateKey>& set)
 {
     return streamSizedContainer(ts, set);
 }

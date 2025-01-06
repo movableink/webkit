@@ -309,7 +309,7 @@ static const GCGLenum supportedTypesOESTextureHalfFloat[] = {
 // Counter for determining which context has the earliest active ordinal number.
 static std::atomic<uint64_t> s_lastActiveOrdinal;
 
-using WebGLRenderingContextBaseSet = HashSet<WebGLRenderingContextBase*>;
+using WebGLRenderingContextBaseSet = UncheckedKeyHashSet<WebGLRenderingContextBase*>;
 
 static WebGLRenderingContextBaseSet& activeContexts()
 {

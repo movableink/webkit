@@ -169,7 +169,7 @@ public:
     Style::Color textDecorationColor;
 
     DataRef<StyleCustomPropertyData> customProperties;
-    HashSet<AtomString> customPaintWatchedProperties;
+    UncheckedKeyHashSet<AtomString> customPaintWatchedProperties;
 
     RefPtr<RotateTransformOperation> rotate;
     RefPtr<ScaleTransformOperation> scale;

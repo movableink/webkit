@@ -405,7 +405,7 @@ private:
     const WeakRef<LocalFrame> m_rootFrame;
     SandboxFlags m_sandboxFlags;
     UniqueRef<EventHandler> m_eventHandler;
-    HashSet<RegistrableDomain> m_storageAccessExceptionDomains;
+    UncheckedKeyHashSet<RegistrableDomain> m_storageAccessExceptionDomains;
 };
 
 inline LocalFrameView* LocalFrame::view() const

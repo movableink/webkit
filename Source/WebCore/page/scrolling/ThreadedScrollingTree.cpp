@@ -200,7 +200,7 @@ bool ThreadedScrollingTree::scrollingTreeNodeRequestsKeyboardScroll(ScrollingNod
     return true;
 }
 
-void ThreadedScrollingTree::propagateSynchronousScrollingReasons(const HashSet<ScrollingNodeID>& synchronousScrollingNodes)
+void ThreadedScrollingTree::propagateSynchronousScrollingReasons(const UncheckedKeyHashSet<ScrollingNodeID>& synchronousScrollingNodes)
 {
     auto propagateStateToAncestors = [&](ScrollingTreeNode& node) {
         ASSERT(is<ScrollingTreeScrollingNode>(node) && !downcast<ScrollingTreeScrollingNode>(node).synchronousScrollingReasons().isEmpty());

@@ -426,7 +426,7 @@ Vector<Ref<StyleRuleKeyframe>> Resolver::keyframeRulesForName(const AtomString& 
         return &CubicBezierTimingFunction::defaultTimingFunction();
     };
 
-    HashSet<RefPtr<const TimingFunction>> timingFunctions;
+    UncheckedKeyHashSet<RefPtr<const TimingFunction>> timingFunctions;
     auto uniqueTimingFunctionForKeyframe = [&](Ref<StyleRuleKeyframe> keyframe) -> RefPtr<const TimingFunction> {
         auto timingFunction = timingFunctionForKeyframe(keyframe);
         for (auto existingTimingFunction : timingFunctions) {
@@ -442,7 +442,7 @@ Vector<Ref<StyleRuleKeyframe>> Resolver::keyframeRulesForName(const AtomString& 
 
     using KeyframeUniqueKey = std::tuple<double, RefPtr<const TimingFunction>, CompositeOperation>;
     auto hasDuplicateKeys = [&]() -> bool {
-        HashSet<KeyframeUniqueKey> uniqueKeyframeKeys;
+        UncheckedKeyHashSet<KeyframeUniqueKey> uniqueKeyframeKeys;
         for (auto& keyframe : *keyframes) {
             auto compositeOperation = compositeOperationForKeyframe(keyframe);
             auto timingFunction = uniqueTimingFunctionForKeyframe(keyframe);

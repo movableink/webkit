@@ -1021,8 +1021,8 @@ Quirks::StorageAccessResult Quirks::triggerOptionalStorageAccessQuirk(Element& e
 
     RegistrableDomain domain { m_document->url() };
 
-    static NeverDestroyed<HashSet<RegistrableDomain>> kinjaQuirks = [] {
-        HashSet<RegistrableDomain> set;
+    static NeverDestroyed<UncheckedKeyHashSet<RegistrableDomain>> kinjaQuirks = [] {
+        UncheckedKeyHashSet<RegistrableDomain> set;
         set.add(RegistrableDomain::uncheckedCreateFromRegistrableDomainString("jalopnik.com"_s));
         set.add(RegistrableDomain::uncheckedCreateFromRegistrableDomainString("kotaku.com"_s));
         set.add(RegistrableDomain::uncheckedCreateFromRegistrableDomainString("theroot.com"_s));

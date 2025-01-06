@@ -133,6 +133,8 @@ const unichar WebNextLineCharacter = 0x0085;
 static const CGFloat defaultFontSize = 12;
 static const CGFloat minimumFontSize = 1;
 
+using NodeSet = UncheckedKeyHashSet<Ref<Node>>;
+
 class HTMLConverterCaches {
     WTF_MAKE_TZONE_ALLOCATED(HTMLConverterCaches);
 public:
@@ -151,7 +153,7 @@ public:
 
 private:
     UncheckedKeyHashMap<Element*, std::unique_ptr<ComputedStyleExtractor>> m_computedStyles;
-    HashSet<Ref<Node>> m_ancestorsUnderCommonAncestor;
+    NodeSet m_ancestorsUnderCommonAncestor;
 };
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLConverterCaches);

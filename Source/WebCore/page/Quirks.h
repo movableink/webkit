@@ -109,7 +109,7 @@ public:
 
     WEBCORE_EXPORT static bool needsPartitionedCookies(const ResourceRequest&);
 
-    WEBCORE_EXPORT static std::optional<Vector<HashSet<String>>> defaultVisibilityAdjustmentSelectors(const URL&);
+    WEBCORE_EXPORT static std::optional<Vector<UncheckedKeyHashSet<String>>> defaultVisibilityAdjustmentSelectors(const URL&);
 
     bool needsGMailOverflowScrollQuirk() const;
     bool needsIPadSkypeOverflowScrollQuirk() const;

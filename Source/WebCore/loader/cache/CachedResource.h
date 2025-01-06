@@ -398,7 +398,7 @@ private:
 
     // These handles will need to be updated to point to the m_resourceToRevalidate in case we get 304 response.
     // FIXME: This should use a smart pointer.
-    HashSet<CachedResourceHandleBase*> m_handlesToRevalidate;
+    UncheckedKeyHashSet<CachedResourceHandleBase*> m_handlesToRevalidate;
 
     Vector<std::pair<String, String>> m_varyingHeaderValues;
 

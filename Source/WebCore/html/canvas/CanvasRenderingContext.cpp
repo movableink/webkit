@@ -56,9 +56,9 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CanvasRenderingContext);
 
 Lock CanvasRenderingContext::s_instancesLock;
 
-HashSet<CanvasRenderingContext*>& CanvasRenderingContext::instances()
+UncheckedKeyHashSet<CanvasRenderingContext*>& CanvasRenderingContext::instances()
 {
-    static NeverDestroyed<HashSet<CanvasRenderingContext*>> instances;
+    static NeverDestroyed<UncheckedKeyHashSet<CanvasRenderingContext*>> instances;
     return instances;
 }
 

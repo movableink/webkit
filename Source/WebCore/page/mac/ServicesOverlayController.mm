@@ -372,7 +372,7 @@ void ServicesOverlayController::buildPhoneNumberHighlights()
     if (!PAL::isDataDetectorsFrameworkAvailable())
         return;
 
-    HashSet<RefPtr<DataDetectorHighlight>> newPotentialHighlights;
+    UncheckedKeyHashSet<RefPtr<DataDetectorHighlight>> newPotentialHighlights;
 
     auto& mainFrameView = *localMainFrame->view();
 
@@ -410,7 +410,7 @@ void ServicesOverlayController::buildSelectionHighlight()
     if (!PAL::isDataDetectorsFrameworkAvailable())
         return;
 
-    HashSet<RefPtr<DataDetectorHighlight>> newPotentialHighlights;
+    UncheckedKeyHashSet<RefPtr<DataDetectorHighlight>> newPotentialHighlights;
 
     Ref page = m_page.get();
     if (auto selectionRange = page->selection().firstRange()) {
@@ -440,11 +440,11 @@ void ServicesOverlayController::buildSelectionHighlight()
     replaceHighlightsOfTypePreservingEquivalentHighlights(newPotentialHighlights, DataDetectorHighlight::Type::Selection);
 }
 
-void ServicesOverlayController::replaceHighlightsOfTypePreservingEquivalentHighlights(HashSet<RefPtr<DataDetectorHighlight>>& newPotentialHighlights, DataDetectorHighlight::Type type)
+void ServicesOverlayController::replaceHighlightsOfTypePreservingEquivalentHighlights(UncheckedKeyHashSet<RefPtr<DataDetectorHighlight>>& newPotentialHighlights, DataDetectorHighlight::Type type)
 {
     // If any old Highlights are equivalent (by Range) to a new Highlight, reuse the old
     // one so that any metadata is retained.
-    HashSet<RefPtr<DataDetectorHighlight>> reusedPotentialHighlights;
+    UncheckedKeyHashSet<RefPtr<DataDetectorHighlight>> reusedPotentialHighlights;
 
     for (auto& oldHighlight : m_potentialHighlights) {
         if (oldHighlight->type() != type)

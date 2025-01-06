@@ -63,7 +63,7 @@ namespace WTF {
 #if USE(COCOA_EVENT_LOOP)
 class SchedulePair;
 struct SchedulePairHash;
-using SchedulePairHashSet = HashSet<RefPtr<SchedulePair>, SchedulePairHash>;
+using SchedulePairHashSet = UncheckedKeyHashSet<RefPtr<SchedulePair>, SchedulePairHash>;
 #endif
 
 #if USE(CF)
@@ -265,7 +265,7 @@ private:
     static LRESULT CALLBACK RunLoopWndProc(HWND, UINT, WPARAM, LPARAM);
     LRESULT wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
     HWND m_runLoopMessageWindow;
-    HashSet<UINT_PTR> m_liveTimers;
+    UncheckedKeyHashSet<UINT_PTR> m_liveTimers;
 
     Lock m_loopLock;
 #elif USE(COCOA_EVENT_LOOP)

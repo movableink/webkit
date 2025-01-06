@@ -136,7 +136,7 @@ bool simulateClick(Element& element, Event* underlyingEvent, SimulatedClickMouse
     if (element.isDisabledFormControl())
         return false;
 
-    static MainThreadNeverDestroyed<HashSet<Ref<Element>>> elementsDispatchingSimulatedClicks;
+    static MainThreadNeverDestroyed<UncheckedKeyHashSet<Ref<Element>>> elementsDispatchingSimulatedClicks;
     if (!elementsDispatchingSimulatedClicks.get().add(element).isNewEntry)
         return false;
 

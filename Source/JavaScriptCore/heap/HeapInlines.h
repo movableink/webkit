@@ -205,7 +205,7 @@ inline void Heap::decrementDeferralDepthAndGCIfNeeded()
     }
 }
 
-inline HashSet<MarkedVectorBase*>& Heap::markListSet()
+inline UncheckedKeyHashSet<MarkedVectorBase*>& Heap::markListSet()
 {
     return m_markListSet;
 }

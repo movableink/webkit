@@ -815,7 +815,7 @@ public:
     VMEntryScope* entryScope { nullptr };
 
     JSObject* stringRecursionCheckFirstObject { nullptr };
-    HashSet<JSObject*> stringRecursionCheckVisitedObjects;
+    UncheckedKeyHashSet<JSObject*> stringRecursionCheckVisitedObjects;
 
     DateCache dateCache;
 

@@ -1315,7 +1315,7 @@ static StructHandlers* createStructHandlerMap()
     });
 
     // Step 3: clean up - remove entries where we found prospective valueWith<Foo>:inContext: conversions, but no matching to<Foo> methods.
-    typedef HashSet<String> RemoveSet;
+    typedef UncheckedKeyHashSet<String> RemoveSet;
     RemoveSet removeSet;
     for (StructHandlers::iterator iter = structHandlers->begin(); iter != structHandlers->end(); ++iter) {
         StructTagHandler& handler = iter->value;

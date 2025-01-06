@@ -102,7 +102,7 @@ public:
     virtual IntRect windowClipRect() const = 0;
 
     // Functions for child manipulation and inspection.
-    const HashSet<Ref<Widget>>& children() const { return m_children; }
+    const UncheckedKeyHashSet<Ref<Widget>>& children() const { return m_children; }
     WEBCORE_EXPORT virtual void addChild(Widget&);
     WEBCORE_EXPORT virtual void removeChild(Widget&);
 
@@ -518,7 +518,7 @@ private:
             didFinishProhibitingScrollingWhenChangingContentSize();
     }
 
-    HashSet<Ref<Widget>> m_children;
+    UncheckedKeyHashSet<Ref<Widget>> m_children;
 
     RefPtr<Scrollbar> m_horizontalScrollbar;
     RefPtr<Scrollbar> m_verticalScrollbar;

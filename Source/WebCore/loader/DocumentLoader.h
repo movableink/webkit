@@ -179,7 +179,7 @@ enum class PushAndNotificationsEnabledPolicy: uint8_t {
 };
 
 enum class ContentExtensionDefaultEnablement : bool { Disabled, Enabled };
-using ContentExtensionEnablement = std::pair<ContentExtensionDefaultEnablement, HashSet<String>>;
+using ContentExtensionEnablement = std::pair<ContentExtensionDefaultEnablement, UncheckedKeyHashSet<String>>;
 
 class DataLoadToken : public CanMakeWeakPtr<DataLoadToken> {
 public:

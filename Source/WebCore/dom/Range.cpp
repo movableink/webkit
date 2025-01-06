@@ -448,7 +448,7 @@ ExceptionOr<RefPtr<DocumentFragment>> Range::processContents(ActionType action)
                 return result.releaseException();
         }
 
-        HashSet<Ref<Element>> elementSet;
+        UncheckedKeyHashSet<Ref<Element>> elementSet;
         for (Ref element : customElementsReactionHoldingTank.takeElements())
             elementSet.add(element.get());
         if (!elementSet.isEmpty()) {

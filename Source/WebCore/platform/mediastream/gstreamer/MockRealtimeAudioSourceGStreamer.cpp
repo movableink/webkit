@@ -41,13 +41,13 @@ static const double s_HumVolume = 0.1;
 static const double s_NoiseFrequency = 3000;
 static const double s_NoiseVolume = 0.05;
 
-static HashSet<MockRealtimeAudioSource*>& allMockRealtimeAudioSourcesStorage()
+static UncheckedKeyHashSet<MockRealtimeAudioSource*>& allMockRealtimeAudioSourcesStorage()
 {
-    static MainThreadNeverDestroyed<HashSet<MockRealtimeAudioSource*>> audioSources;
+    static MainThreadNeverDestroyed<UncheckedKeyHashSet<MockRealtimeAudioSource*>> audioSources;
     return audioSources;
 }
 
-const HashSet<MockRealtimeAudioSource*>& MockRealtimeAudioSourceGStreamer::allMockRealtimeAudioSources()
+const UncheckedKeyHashSet<MockRealtimeAudioSource*>& MockRealtimeAudioSourceGStreamer::allMockRealtimeAudioSources()
 {
     return allMockRealtimeAudioSourcesStorage();
 }

@@ -245,9 +245,9 @@ public:
     virtual unsigned audioDecodedByteCount() const { return 0; }
     virtual unsigned videoDecodedByteCount() const { return 0; }
 
-    HashSet<SecurityOriginData> originsInMediaCache(const String&) { return { }; }
+    UncheckedKeyHashSet<SecurityOriginData> originsInMediaCache(const String&) { return { }; }
     void clearMediaCache(const String&, WallTime) { }
-    void clearMediaCacheForOrigins(const String&, const HashSet<SecurityOriginData>&) { }
+    void clearMediaCacheForOrigins(const String&, const UncheckedKeyHashSet<SecurityOriginData>&) { }
 
     virtual void setPrivateBrowsingMode(bool) { }
 

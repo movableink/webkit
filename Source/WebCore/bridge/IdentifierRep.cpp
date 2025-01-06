@@ -40,7 +40,7 @@ using namespace JSC;
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(IdentifierRep);
 
-typedef HashSet<IdentifierRep*> IdentifierSet;
+typedef UncheckedKeyHashSet<IdentifierRep*> IdentifierSet;
 
 static IdentifierSet& identifierSet()
 {

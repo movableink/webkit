@@ -59,7 +59,7 @@ struct AnchorPositionedState {
     WTF_MAKE_TZONE_ALLOCATED(AnchorPositionedState);
 public:
     AnchorElements anchorElements;
-    HashSet<AtomString> anchorNames;
+    UncheckedKeyHashSet<AtomString> anchorNames;
     AnchorPositionResolutionStage stage;
 };
 
@@ -105,7 +105,7 @@ public:
     static LayoutRect computeAnchorRectRelativeToContainingBlock(CheckedRef<const RenderBoxModelObject> anchorBox, const RenderBlock& containingBlock);
 
 private:
-    static AnchorElements findAnchorsForAnchorPositionedElement(const Element&, const HashSet<AtomString>& anchorNames, const AnchorsForAnchorName&);
+    static AnchorElements findAnchorsForAnchorPositionedElement(const Element&, const UncheckedKeyHashSet<AtomString>& anchorNames, const AnchorsForAnchorName&);
 };
 
 } // namespace Style

@@ -433,7 +433,7 @@ struct PasteboardFileTypeReader final : PasteboardFileReader {
         types.add(type);
     }
 
-    HashSet<String, ASCIICaseInsensitiveHash> types;
+    UncheckedKeyHashSet<String, ASCIICaseInsensitiveHash> types;
 };
 
 bool DataTransfer::hasFileOfType(const String& type)

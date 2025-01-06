@@ -194,7 +194,7 @@ void BlendingKeyframes::fillImplicitKeyframes(const KeyframeEffect& effect, cons
         }
     }
 
-    auto addImplicitKeyframe = [&](double key, const HashSet<AnimatableCSSProperty>& implicitProperties, const StyleRuleKeyframe& keyframeRule, BlendingKeyframe* existingImplicitBlendingKeyframe) {
+    auto addImplicitKeyframe = [&](double key, const UncheckedKeyHashSet<AnimatableCSSProperty>& implicitProperties, const StyleRuleKeyframe& keyframeRule, BlendingKeyframe* existingImplicitBlendingKeyframe) {
         // If we're provided an existing implicit keyframe, we need to add all the styles for the implicit properties.
         if (existingImplicitBlendingKeyframe) {
             ASSERT(existingImplicitBlendingKeyframe->style());
@@ -293,7 +293,7 @@ bool BlendingKeyframes::hasPropertySetToCurrentColor() const
     return !m_propertiesSetToCurrentColor.isEmpty();
 }
 
-const HashSet<AnimatableCSSProperty>& BlendingKeyframes::propertiesSetToInherit() const
+const UncheckedKeyHashSet<AnimatableCSSProperty>& BlendingKeyframes::propertiesSetToInherit() const
 {
     return m_propertiesSetToInherit;
 }

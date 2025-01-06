@@ -105,7 +105,7 @@ private:
     // Stores known track IDs, so we can work around ID collisions between multiple source buffers.
     // The registry is placed here to enforce ID uniqueness specifically by player, not by process,
     // since its not an issue if multiple players use the same ID, and we want to preserve IDs as much as possible.
-    HashSet<TrackID, WTF::IntHash<TrackID>, WTF::UnsignedWithZeroKeyHashTraits<TrackID>> m_trackIdRegistry;
+    UncheckedKeyHashSet<TrackID, WTF::IntHash<TrackID>, WTF::UnsignedWithZeroKeyHashTraits<TrackID>> m_trackIdRegistry;
 };
 
 } // namespace WebCore

@@ -1287,7 +1287,7 @@ private:
     bool m_changed;
     UncheckedKeyHashMap<Value*, Value*> m_rewrittenTupleResults;
     UncheckedKeyHashMap<Value*, std::pair<Value*, Value*>> m_mapping;
-    HashSet<Value*> m_syntheticValues;
+    UncheckedKeyHashSet<Value*> m_syntheticValues;
     UncheckedKeyHashMap<Variable*, std::pair<Variable*, Variable*>> m_variableMapping;
 };
 

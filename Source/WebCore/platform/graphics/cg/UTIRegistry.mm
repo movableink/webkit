@@ -77,10 +77,10 @@ const MemoryCompactLookupOnlyRobinHoodHashSet<String>& defaultSupportedImageType
         auto systemSupportedCFImageTypes = adoptCF(CGImageSourceCopyTypeIdentifiers());
         CFIndex count = CFArrayGetCount(systemSupportedCFImageTypes.get());
 
-        HashSet<String> systemSupportedImageTypes;
+        UncheckedKeyHashSet<String> systemSupportedImageTypes;
         CFArrayApplyFunction(systemSupportedCFImageTypes.get(), CFRangeMake(0, count), [](const void *value, void *context) {
             String imageType = static_cast<CFStringRef>(value);
-            static_cast<HashSet<String>*>(context)->add(imageType);
+            static_cast<UncheckedKeyHashSet<String>*>(context)->add(imageType);
         }, &systemSupportedImageTypes);
 
         MemoryCompactLookupOnlyRobinHoodHashSet<String> filtered;

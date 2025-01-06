@@ -70,7 +70,7 @@ public:
     bool hasLargeReplacedDescendant() const { return m_info.hasLargeReplacedDescendant; }
     bool hasAudibleMedia() const { return m_info.hasAudibleMedia; }
 
-    const HashSet<WTF::URL>& mediaAndLinkURLs() const { return m_info.mediaAndLinkURLs; }
+    const UncheckedKeyHashSet<WTF::URL>& mediaAndLinkURLs() const { return m_info.mediaAndLinkURLs; }
 
     void childFrames(CompletionHandler<void(Vector<Ref<FrameTreeNode>>&&)>&&) const;
 

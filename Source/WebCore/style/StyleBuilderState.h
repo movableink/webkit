@@ -148,9 +148,9 @@ private:
 
     const CSSToLengthConversionData m_cssToLengthConversionData;
 
-    HashSet<AtomString> m_appliedCustomProperties;
-    HashSet<AtomString> m_inProgressCustomProperties;
-    HashSet<AtomString> m_inCycleCustomProperties;
+    UncheckedKeyHashSet<AtomString> m_appliedCustomProperties;
+    UncheckedKeyHashSet<AtomString> m_inProgressCustomProperties;
+    UncheckedKeyHashSet<AtomString> m_inCycleCustomProperties;
     WTF::BitSet<numCSSProperties> m_inProgressProperties;
     WTF::BitSet<numCSSProperties> m_invalidAtComputedValueTimeProperties;
 

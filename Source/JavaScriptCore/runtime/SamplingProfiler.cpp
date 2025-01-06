@@ -1173,12 +1173,12 @@ Ref<JSON::Value> SamplingProfiler::stackTracesAsJSON()
 void SamplingProfiler::registerForReportAtExit()
 {
     static Lock registrationLock;
-    static HashSet<RefPtr<SamplingProfiler>>* profilesToReport;
+    static UncheckedKeyHashSet<RefPtr<SamplingProfiler>>* profilesToReport;
 
     Locker locker { registrationLock };
 
     if (!profilesToReport) {
-        profilesToReport = new HashSet<RefPtr<SamplingProfiler>>();
+        profilesToReport = new UncheckedKeyHashSet<RefPtr<SamplingProfiler>>();
         atexit([]() {
             for (const auto& profile : *profilesToReport)
                 profile->reportDataToOptionFile();

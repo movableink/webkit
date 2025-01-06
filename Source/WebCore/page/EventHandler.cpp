@@ -5057,7 +5057,7 @@ HandleUserInputEventResult EventHandler::handleTouchEvent(const PlatformTouchEve
     TargetTouchesMap touchesByTarget;
 
     // Array of touches per state, used to assemble the 'changedTouches' list in the JS event.
-    typedef HashSet<RefPtr<EventTarget>> EventTargetSet;
+    typedef UncheckedKeyHashSet<RefPtr<EventTarget>> EventTargetSet;
     struct Touches {
         // The touches corresponding to the particular change state this struct instance represents.
         RefPtr<TouchList> m_touches;

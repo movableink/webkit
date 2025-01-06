@@ -151,7 +151,7 @@ private:
         uint32_t indexA = extractIndexA(newNodeSignature);
         uint32_t indexB = extractIndexB(newNodeSignature);
 
-        HashSet<uint64_t, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> actions;
+        UncheckedKeyHashSet<uint64_t, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> actions;
         if (indexA != invalidNodeIndex) {
             const DFANode& node = m_dfaA.nodes[indexA];
             uint32_t actionsStart = node.actionsStart();

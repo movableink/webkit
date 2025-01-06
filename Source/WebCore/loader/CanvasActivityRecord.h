@@ -30,7 +30,7 @@
 
 namespace WebCore {
 struct CanvasActivityRecord {
-    HashSet<String> textWritten;
+    UncheckedKeyHashSet<String> textWritten;
     bool wasDataRead { false };
     
     WEBCORE_EXPORT bool recordWrittenOrMeasuredText(const String&);

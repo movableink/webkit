@@ -2195,7 +2195,7 @@ private:
     mutable String m_uniqueIdentifier;
 
     WeakHashSet<NodeIterator> m_nodeIterators;
-    HashSet<SingleThreadWeakRef<Range>> m_ranges;
+    UncheckedKeyHashSet<SingleThreadWeakRef<Range>> m_ranges;
 
     UniqueRef<Style::Scope> m_styleScope;
     const std::unique_ptr<ExtensionStyleSheets> m_extensionStyleSheets;
@@ -2257,8 +2257,8 @@ private:
 
     RefPtr<TextResourceDecoder> m_decoder;
 
-    HashSet<LiveNodeList*> m_listsInvalidatedAtDocument;
-    HashSet<HTMLCollection*> m_collectionsInvalidatedAtDocument;
+    UncheckedKeyHashSet<LiveNodeList*> m_listsInvalidatedAtDocument;
+    UncheckedKeyHashSet<HTMLCollection*> m_collectionsInvalidatedAtDocument;
     std::array<unsigned, numNodeListInvalidationTypes> m_nodeListAndCollectionCounts = { };
 
     RefPtr<XPathEvaluator> m_xpathEvaluator;
@@ -2284,7 +2284,7 @@ private:
 #endif
 
     WeakPtr<Element, WeakPtrImplWithEventTargetData> m_mainArticleElement;
-    HashSet<WeakRef<Element, WeakPtrImplWithEventTargetData>> m_articleElements;
+    UncheckedKeyHashSet<WeakRef<Element, WeakPtrImplWithEventTargetData>> m_articleElements;
 
     WeakHashSet<VisibilityChangeClient> m_visibilityStateCallbackClients;
 
@@ -2479,7 +2479,7 @@ private:
 #if ENABLE(MEDIA_STREAM)
     String m_idHashSalt;
     size_t m_activeMediaElementsWithMediaStreamCount { 0 };
-    HashSet<Ref<RealtimeMediaSource>> m_captureSources;
+    UncheckedKeyHashSet<Ref<RealtimeMediaSource>> m_captureSources;
     bool m_isUpdatingCaptureAccordingToMutedState { false };
     bool m_shouldListenToVoiceActivity { false };
 #endif

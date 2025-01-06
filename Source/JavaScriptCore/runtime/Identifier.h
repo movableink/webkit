@@ -283,7 +283,7 @@ struct IdentifierMapIndexHashTraits : HashTraits<int> {
     static constexpr bool emptyValueIsZero = false;
 };
 
-typedef HashSet<RefPtr<UniquedStringImpl>, IdentifierRepHash> IdentifierSet;
+typedef UncheckedKeyHashSet<RefPtr<UniquedStringImpl>, IdentifierRepHash> IdentifierSet;
 typedef UncheckedKeyHashMap<RefPtr<UniquedStringImpl>, int, IdentifierRepHash, HashTraits<RefPtr<UniquedStringImpl>>, IdentifierMapIndexHashTraits> IdentifierMap;
 typedef UncheckedKeyHashMap<UniquedStringImpl*, int, IdentifierRepHash, HashTraits<UniquedStringImpl*>, IdentifierMapIndexHashTraits> BorrowedIdentifierMap;
 

@@ -600,7 +600,7 @@ void TextManipulationController::scheduleObservationUpdate()
 
         controller->m_didScheduleObservationUpdate = false;
 
-        HashSet<Ref<Node>> nodesToObserve;
+        NodeSet nodesToObserve;
         for (auto& text : controller->m_manipulatedNodesWithNewContent) {
             if (!controller->m_manipulatedNodes.contains(text))
                 continue;
@@ -689,7 +689,7 @@ void TextManipulationController::flushPendingItemsForCallback()
 auto TextManipulationController::completeManipulation(const Vector<WebCore::TextManipulationItem>& completionItems) -> Vector<ManipulationFailure>
 {
     Vector<ManipulationFailure> failures;
-    HashSet<Ref<Node>> containersWithoutVisualOverflowBeforeReplacement;
+    NodeSet containersWithoutVisualOverflowBeforeReplacement;
     for (unsigned i = 0; i < completionItems.size(); ++i) {
         auto& itemToComplete = completionItems[i];
         auto frameID = itemToComplete.frameID;
@@ -768,7 +768,7 @@ Vector<Ref<Node>> TextManipulationController::getPath(Node* ancestor, Node* node
     return path;
 }
 
-void TextManipulationController::updateInsertions(Vector<NodeEntry>& lastTopDownPath, const Vector<Ref<Node>>& currentTopDownPath, Node* currentNode, HashSet<Ref<Node>>& insertedNodes, Vector<NodeInsertion>& insertions)
+void TextManipulationController::updateInsertions(Vector<NodeEntry>& lastTopDownPath, const Vector<Ref<Node>>& currentTopDownPath, Node* currentNode, NodeSet& insertedNodes, Vector<NodeInsertion>& insertions)
 {
     size_t i = 0;
     while (i < lastTopDownPath.size() && i < currentTopDownPath.size() && lastTopDownPath[i].first.ptr() == currentTopDownPath[i].ptr())
@@ -795,7 +795,7 @@ void TextManipulationController::updateInsertions(Vector<NodeEntry>& lastTopDown
         insertions.append(NodeInsertion { lastTopDownPath.size() ? lastTopDownPath.last().second.ptr() : nullptr, *currentNode });
 }
 
-auto TextManipulationController::replace(const ManipulationItemData& item, const Vector<TextManipulationToken>& replacementTokens, HashSet<Ref<Node>>& containersWithoutVisualOverflowBeforeReplacement) -> std::optional<ManipulationFailure::Type>
+auto TextManipulationController::replace(const ManipulationItemData& item, const Vector<TextManipulationToken>& replacementTokens, NodeSet& containersWithoutVisualOverflowBeforeReplacement) -> std::optional<ManipulationFailure::Type>
 {
     if (item.start.isOrphan() || item.end.isOrphan())
         return ManipulationFailure::Type::ContentChanged;
@@ -835,7 +835,7 @@ auto TextManipulationController::replace(const ManipulationItemData& item, const
     RefPtr<Node> commonAncestor;
     RefPtr<Node> firstContentNode;
     RefPtr<Node> lastChildOfCommonAncestorInRange;
-    HashSet<Ref<Node>> nodesToRemove;
+    NodeSet nodesToRemove;
     
     for (ParagraphContentIterator iterator { item.start, item.end }; !iterator.atEnd(); iterator.advance()) {
         auto content = iterator.currentContent();
@@ -901,7 +901,7 @@ auto TextManipulationController::replace(const ManipulationItemData& item, const
     for (RefPtr node = commonAncestor; node; node = node->parentNode())
         nodesToRemove.remove(*node);
 
-    HashSet<Ref<Node>> reusedOriginalNodes;
+    NodeSet reusedOriginalNodes;
     Vector<NodeInsertion> insertions;
     auto startTopDownPath = getPath(commonAncestor.get(), firstContentNode.get());
     while (!startTopDownPath.isEmpty()) {
