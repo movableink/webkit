@@ -3415,6 +3415,11 @@ std::optional<LayoutUnit> RenderBox::computePercentageLogicalHeight(const Length
     if (updateDescendants == UpdatePercentageHeightDescendants::Yes)
         containingBlock->addPercentHeightDescendant(const_cast<RenderBox&>(*this));
 
+    if (is<RenderView>(containingBlock) && view().frameView().isAutoSizeEnabled()) {
+        // Dynamic height units like percentage don't play well with autosizing when we don't have a definite viewport size. Let's treat percentage as auto instead.
+        return { };
+    }
+
     if (isFlexItem() && view().frameView().layoutContext().isPercentHeightResolveDisabledFor(*this))
         return { };
 
