@@ -505,26 +505,26 @@ void PNGImageDecoder::rowAvailable(unsigned char* rowBuffer, unsigned rowIndex, 
     }
 
     // Write the decoded row pixels to the frame buffer.
-    auto* destRow = buffer.backingStore()->pixelAt(0, rowIndex);
-    auto* address = destRow;
+    auto destinationRow = buffer.backingStore()->pixelsStartingAt(0, rowIndex);
+    auto address = destinationRow;
     int width = size().width();
     unsigned char nonTrivialAlphaMask = 0;
 
     png_bytep pixel = row;
     if (hasAlpha) {
-        for (int x = 0; x < width; ++x, pixel += 4, ++address) {
+        for (int x = 0; x < width; ++x, pixel += 4, address = address.subspan(1)) {
             unsigned alpha = pixel[3];
-            buffer.backingStore()->setPixel(address, pixel[0], pixel[1], pixel[2], alpha);
+            buffer.backingStore()->setPixel(address[0], pixel[0], pixel[1], pixel[2], alpha);
             nonTrivialAlphaMask |= (255 - alpha);
         }
     } else {
-        for (int x = 0; x < width; ++x, pixel += 3, ++address)
-            *address = 0xFF000000 | pixel[0] << 16 | pixel[1] << 8 | pixel[2];
+        for (int x = 0; x < width; ++x, pixel += 3, address = address.subspan(1))
+            address[0] = 0xFF000000 | pixel[0] << 16 | pixel[1] << 8 | pixel[2];
     }
 
 #if USE(LCMS)
     if (m_iccTransform)
-        cmsDoTransform(m_iccTransform.get(), destRow, destRow, width);
+        cmsDoTransform(m_iccTransform.get(), destinationRow.data(), destinationRow.data(), width);
 #endif
 
     if (nonTrivialAlphaMask && !buffer.hasAlpha())
@@ -819,19 +819,20 @@ void PNGImageDecoder::frameComplete()
         unsigned colorChannels = hasAlpha ? 4 : 3;
         for (int y = rect.y(); y < rect.maxY(); ++y, row += colorChannels * size().width()) {
             png_bytep pixel = row;
-            auto* destRow = buffer.backingStore()->pixelAt(rect.x(), y);
-            auto* address = destRow;
+            auto destinationRow = buffer.backingStore()->pixelsStartingAt(rect.x(), y);
+            auto address = destinationRow;
             for (int x = rect.x(); x < rect.maxX(); ++x, pixel += colorChannels) {
                 unsigned alpha = hasAlpha ? pixel[3] : 255;
                 nonTrivialAlpha |= alpha < 255;
                 if (!m_blend)
-                    buffer.backingStore()->setPixel(address++, pixel[0], pixel[1], pixel[2], alpha);
+                    buffer.backingStore()->setPixel(address[0], pixel[0], pixel[1], pixel[2], alpha);
                 else
-                    buffer.backingStore()->blendPixel(address++, pixel[0], pixel[1], pixel[2], alpha);
+                    buffer.backingStore()->blendPixel(address[0], pixel[0], pixel[1], pixel[2], alpha);
+                address = address.subspan(1);
             }
 #if USE(LCMS)
             if (m_iccTransform)
-                cmsDoTransform(m_iccTransform.get(), destRow, destRow, rect.maxX());
+                cmsDoTransform(m_iccTransform.get(), destinationRow.data(), destinationRow.data(), rect.maxX());
 #endif
         }
 

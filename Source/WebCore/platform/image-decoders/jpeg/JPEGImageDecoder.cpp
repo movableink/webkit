@@ -587,7 +587,7 @@ bool JPEGImageDecoder::setFailed()
 }
 
 template <J_COLOR_SPACE colorSpace>
-void setPixel(ScalableImageDecoderFrame& buffer, uint32_t* currentAddress, JSAMPARRAY samples, int column)
+void setPixel(ScalableImageDecoderFrame& buffer, std::span<uint32_t> currentAddress, JSAMPARRAY samples, int column)
 {
     WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     JSAMPLE* jsample = *samples + column * (colorSpace == JCS_RGB ? 3 : 4);
@@ -595,7 +595,7 @@ void setPixel(ScalableImageDecoderFrame& buffer, uint32_t* currentAddress, JSAMP
 
     switch (colorSpace) {
     case JCS_RGB:
-        buffer.backingStore()->setPixel(currentAddress, jsample[0], jsample[1], jsample[2], 0xFF);
+        buffer.backingStore()->setPixel(currentAddress[0], jsample[0], jsample[1], jsample[2], 0xFF);
         break;
     case JCS_CMYK:
         // Source is 'Inverted CMYK', output is RGB.
@@ -608,7 +608,7 @@ void setPixel(ScalableImageDecoderFrame& buffer, uint32_t* currentAddress, JSAMP
         // From CMY (0..1) to RGB (0..1):
         // R = 1 - C => 1 - (1 - iC*iK) => iC*iK  [G and B similar]
         unsigned k = jsample[3];
-        buffer.backingStore()->setPixel(currentAddress, jsample[0] * k / 255, jsample[1] * k / 255, jsample[2] * k / 255, 0xFF);
+        buffer.backingStore()->setPixel(currentAddress[0], jsample[0] * k / 255, jsample[1] * k / 255, jsample[2] * k / 255, 0xFF);
         break;
     }
 }
@@ -628,18 +628,16 @@ bool JPEGImageDecoder::outputScanlines(ScalableImageDecoderFrame& buffer)
         if (jpeg_read_scanlines(info, samples, 1) != 1)
             return false;
 
-        auto* row = buffer.backingStore()->pixelAt(0, sourceY);
-        WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-        auto* currentAddress = row;
+        auto row = buffer.backingStore()->pixelsStartingAt(0, sourceY);
+        auto currentAddress = row;
         for (int x = 0; x < width; ++x) {
             setPixel<colorSpace>(buffer, currentAddress, samples, x);
-            ++currentAddress;
+            skip(currentAddress, 1);
         }
-        WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #if USE(LCMS)
         if (m_iccTransform)
-            cmsDoTransform(m_iccTransform.get(), row, row, info->output_width);
+            cmsDoTransform(m_iccTransform.get(), row.data(), row.data(), info->output_width);
 #endif
     }
     return true;
@@ -666,7 +664,7 @@ bool JPEGImageDecoder::outputScanlines()
 #if defined(TURBO_JPEG_RGB_SWIZZLE)
     if (turboSwizzled(info->out_color_space)) {
         while (info->output_scanline < info->output_height) {
-            unsigned char* row = reinterpret_cast<unsigned char*>(buffer.backingStore()->pixelAt(0, info->output_scanline));
+            auto* row = reinterpret_cast<unsigned char*>(buffer.backingStore()->pixelsStartingAt(0, info->output_scanline).data());
             if (jpeg_read_scanlines(info, &row, 1) != 1)
                 return false;
 

@@ -387,17 +387,18 @@ void JPEGXLImageDecoder::imageOut(size_t x, size_t y, size_t numPixels, const ui
     if (buffer.isInvalid())
         return;
 
-    uint32_t* row = buffer.backingStore()->pixelAt(x, y);
-    uint32_t* currentAddress = row;
+    auto row = buffer.backingStore()->pixelsStartingAt(x, y);
+    auto currentAddress = row;
     for (size_t i = 0; i < numPixels; i++) {
         uint8_t r = *pixels++;
         uint8_t g = *pixels++;
         uint8_t b = *pixels++;
         uint8_t a = *pixels++;
-        buffer.backingStore()->setPixel(currentAddress++, r, g, b, a);
+        buffer.backingStore()->setPixel(currentAddress[0], r, g, b, a);
+        currentAddress = currentAddress.subspan(1);
     }
 
-    maybePerformColorSpaceConversion(row, row, numPixels);
+    maybePerformColorSpaceConversion(row.data(), row.data(), numPixels);
 }
 
 #if USE(LCMS)
