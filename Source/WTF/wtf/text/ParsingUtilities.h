@@ -212,10 +212,8 @@ template<typename CharacterType, std::size_t Extent> bool skipLettersExactlyIgno
         return false;
     for (unsigned i = 0; i < letters.size(); ++i) {
         ASSERT(isASCIIAlpha(letters[i]));
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-        if (!isASCIIAlphaCaselessEqual(buffer.position()[i], static_cast<char>(letters[i])))
+        if (!isASCIIAlphaCaselessEqual(buffer[i], static_cast<char>(letters[i])))
             return false;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     }
     buffer += letters.size();
     return true;
