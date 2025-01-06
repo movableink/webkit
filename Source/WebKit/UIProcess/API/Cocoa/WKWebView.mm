@@ -235,7 +235,7 @@ static const BOOL defaultFastClickingEnabled = NO;
 
 #if ENABLE(SCREEN_TIME)
 @interface STWebpageController (Staging_138865295)
-@property (nonatomic, copy) STWebHistoryProfileIdentifier profileIdentifier;
+@property (nonatomic, copy) NSString *profileIdentifier;
 @end
 static void *screenTimeWebpageControllerBlockedKVOContext = &screenTimeWebpageControllerBlockedKVOContext;
 #endif

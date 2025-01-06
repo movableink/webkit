@@ -60,7 +60,7 @@ static RetainPtr<TestWKWebView> webViewForScreenTimeTests(WKWebViewConfiguration
 @end
 
 @interface STWebpageController (Staging_138865295)
-@property (nonatomic, copy) STWebHistoryProfileIdentifier profileIdentifier;
+@property (nonatomic, copy) NSString *profileIdentifier;
 @end
 
 @interface WKWebView (Internal)
@@ -169,12 +169,12 @@ TEST(ScreenTime, IdentifierNil)
         return;
 
     __block bool done = false;
-    __block STWebHistoryProfileIdentifier identifier = @"testing123";
+    __block NSString * identifier = @"testing123";
 
     InstanceMethodSwizzler swizzler {
         PAL::getSTWebpageControllerClass(),
         @selector(setProfileIdentifier:),
-        imp_implementationWithBlock(^(id object, STWebHistoryProfileIdentifier profileIdentifier) {
+        imp_implementationWithBlock(^(id object, NSString *profileIdentifier) {
             identifier = profileIdentifier;
             done = true;
         })
@@ -194,12 +194,12 @@ TEST(ScreenTime, IdentifierString)
         return;
 
     __block bool done = false;
-    __block STWebHistoryProfileIdentifier identifier = @"";
+    __block NSString * identifier = @"";
 
     InstanceMethodSwizzler swizzler {
         PAL::getSTWebpageControllerClass(),
         @selector(setProfileIdentifier:),
-        imp_implementationWithBlock(^(id object, STWebHistoryProfileIdentifier profileIdentifier) {
+        imp_implementationWithBlock(^(id object, NSString *profileIdentifier) {
             identifier = profileIdentifier;
             done = true;
         })
