@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,6 @@
 @class NSString;
 
 enum {
-    DOM_UNKNOWN_RULE = 0,
     DOM_STYLE_RULE = 1,
     DOM_CHARSET_RULE = 2,
     DOM_IMPORT_RULE = 3,

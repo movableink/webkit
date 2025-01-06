@@ -1283,7 +1283,6 @@ $(PROJECT_DIR)/css/CSSStyleDeclaration.idl
 $(PROJECT_DIR)/css/CSSStyleRule.idl
 $(PROJECT_DIR)/css/CSSStyleSheet.idl
 $(PROJECT_DIR)/css/CSSSupportsRule.idl
-$(PROJECT_DIR)/css/CSSUnknownRule.idl
 $(PROJECT_DIR)/css/CSSValueKeywords.in
 $(PROJECT_DIR)/css/CSSViewTransitionRule.idl
 $(PROJECT_DIR)/css/DOMCSSCustomPropertyDescriptor.idl

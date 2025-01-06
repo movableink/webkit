@@ -913,7 +913,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     css/CSSToLengthConversionData.h
     css/CSSTransformListValue.h
     css/CSSUnits.h
-    css/CSSUnknownRule.h
     css/CSSValue.h
     css/CSSValueList.h
     css/CSSVariableData.h

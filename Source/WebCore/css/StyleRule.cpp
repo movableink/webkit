@@ -135,8 +135,6 @@ template<typename Visitor> constexpr decltype(auto) StyleRuleBase::visitDerived(
         return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRulePositionTry>(*this));
     case StyleRuleType::Margin:
         break;
-    case StyleRuleType::Unknown:
-        break;
     }
     RELEASE_ASSERT_NOT_REACHED();
 }
