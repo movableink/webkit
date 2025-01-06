@@ -5128,10 +5128,10 @@ VisiblePosition RenderBox::positionForPoint(const LayoutPoint& point, HitTestSou
 
 bool RenderBox::shrinkToAvoidFloats() const
 {
-    // Floating objects don't shrink.  Objects that don't avoid floats don't shrink.  Marquees don't shrink.
-    if ((isInline() && !isHTMLMarquee()) || !avoidsFloats() || isFloating())
+    // Floating objects don't shrink. Objects that don't avoid floats don't shrink. Non-inline box type of inline level elements don't shrink.
+    if (isInline() || isFloating() || !avoidsFloats())
         return false;
-    
+
     // Only auto width objects can possibly shrink to avoid floats.
     return style().width().isAuto();
 }
