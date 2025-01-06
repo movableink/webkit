@@ -3051,6 +3051,71 @@ std::optional<CanvasRenderingContext2DBase::RenderingMode> CanvasRenderingContex
     return std::nullopt;
 }
 
+// FIXME: The HTML spec currently doesn't define how <length> units should be resolved, so we only
+// allow units where the resolution is straightforward. See https://github.com/whatwg/html/issues/10893.
+static bool unitAllowedForSpacing(CSS::LengthUnit lenghtUnit)
+{
+    using enum CSS::LengthUnit;
+
+    switch (lenghtUnit) {
+    case Px:
+    case Cm:
+    case Mm:
+    case Q:
+    case In:
+    case Pt:
+    case Pc:
+    case Em:
+    case QuirkyEm:
+    case Ex:
+    case Cap:
+    case Ch:
+    case Ic:
+    case Rcap:
+    case Rch:
+    case Rem:
+    case Rex:
+    case Ric:
+        return true;
+
+    case Lh:
+    case Rlh:
+    case Vw:
+    case Vh:
+    case Vmin:
+    case Vmax:
+    case Vb:
+    case Vi:
+    case Svw:
+    case Svh:
+    case Svmin:
+    case Svmax:
+    case Svb:
+    case Svi:
+    case Lvw:
+    case Lvh:
+    case Lvmin:
+    case Lvmax:
+    case Lvb:
+    case Lvi:
+    case Dvw:
+    case Dvh:
+    case Dvmin:
+    case Dvmax:
+    case Dvb:
+    case Dvi:
+    case Cqw:
+    case Cqh:
+    case Cqi:
+    case Cqb:
+    case Cqmin:
+    case Cqmax:
+        return false;
+    }
+
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
 void CanvasRenderingContext2DBase::setLetterSpacing(const String& letterSpacing)
 {
     if (state().letterSpacing == letterSpacing)
@@ -3066,8 +3131,8 @@ void CanvasRenderingContext2DBase::setLetterSpacing(const String& letterSpacing)
     auto rawLength = parsedValue->raw();
     if (!rawLength)
         return;
-
-    // FIXME: Ensure rawLength->unit is supported by `Style::computeUnzoomedNonCalcLengthDouble`.
+    if (!unitAllowedForSpacing(rawLength->unit))
+        return;
 
     auto& fontCascade = fontProxy()->fontCascade();
     double pixels = Style::computeUnzoomedNonCalcLengthDouble(rawLength->value, rawLength->unit, CSSPropertyLetterSpacing, &fontCascade);
@@ -3091,8 +3156,8 @@ void CanvasRenderingContext2DBase::setWordSpacing(const String& wordSpacing)
     auto rawLength = parsedValue->raw();
     if (!rawLength)
         return;
-
-    // FIXME: Ensure rawLength->unit is supported by `Style::computeUnzoomedNonCalcLengthDouble`.
+    if (!unitAllowedForSpacing(rawLength->unit))
+        return;
 
     auto& fontCascade = fontProxy()->fontCascade();
     double pixels = Style::computeUnzoomedNonCalcLengthDouble(rawLength->value, rawLength->unit, CSSPropertyWordSpacing, &fontCascade);
