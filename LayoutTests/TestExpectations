@@ -4211,8 +4211,6 @@ imported/w3c/web-platform-tests/css/css-text-decor/text-emphasis-position-under-
 imported/w3c/web-platform-tests/css/css-text-decor/text-emphasis-position-under-right-002.xht [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-text-decor/text-emphasis-color-001.xht [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-text-decor/text-emphasis-style-002.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-text-decor/text-emphasis-punctuation-1.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-text-decor/text-emphasis-punctuation-2.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-text-decor/text-emphasis-punctuation-3.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-text-decor/text-emphasis-style-007.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-text-decor/text-emphasis-style-008.html [ ImageOnlyFailure ]
