@@ -65,7 +65,7 @@ public:
     AnimationTimeline::ShouldUpdateAnimationsAndSendEvents documentWillUpdateAnimationsAndSendEvents() override;
     AnimationTimelinesController* controller() const override;
 
-    RenderBox* sourceScrollerRenderer() const;
+    const RenderBox* sourceScrollerRenderer() const;
     Element* source() const override;
     TimelineRange defaultRange() const final;
 

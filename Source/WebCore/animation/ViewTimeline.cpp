@@ -241,7 +241,7 @@ Element* ViewTimeline::source() const
     return nullptr;
 }
 
-RenderBox* ViewTimeline::sourceScrollerRenderer() const
+const RenderBox* ViewTimeline::sourceScrollerRenderer() const
 {
     if (!m_subject)
         return nullptr;
