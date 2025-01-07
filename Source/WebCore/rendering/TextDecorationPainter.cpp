@@ -203,15 +203,6 @@ TextDecorationPainter::TextDecorationPainter(GraphicsContext& context, const Fon
 {
 }
 
-static inline FloatSize convertShadowOffset(const LengthPoint& offset, WritingMode writingMode)
-{
-    if (writingMode.isHorizontal())
-        return { offset.x.value(), offset.y.value() };
-    if (writingMode.isLineOverLeft()) // sideways-lr
-        return { -offset.y.value(), offset.x.value() };
-    return { offset.y.value(), -offset.x.value() };
-}
-
 // Paint text-shadow, underline, overline
 void TextDecorationPainter::paintBackgroundDecorations(const RenderStyle& style, const TextRun& textRun, const BackgroundDecorationGeometry& decorationGeometry, OptionSet<TextDecorationLine> decorationType, const Styles& decorationStyle)
 {

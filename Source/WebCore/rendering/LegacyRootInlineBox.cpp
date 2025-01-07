@@ -31,6 +31,7 @@
 #include "LocalFrame.h"
 #include "LogicalSelectionOffsetCaches.h"
 #include "PaintInfo.h"
+#include "RenderBlockInlines.h"
 #include "RenderBoxInlines.h"
 #include "RenderFragmentedFlow.h"
 #include "RenderInline.h"

@@ -27,6 +27,7 @@
 
 #include <wtf/Expected.h>
 #include <wtf/HashMap.h>
+#include <wtf/HashSet.h>
 #include <wtf/URL.h>
 #include <wtf/URLHash.h>
 #include <wtf/Vector.h>

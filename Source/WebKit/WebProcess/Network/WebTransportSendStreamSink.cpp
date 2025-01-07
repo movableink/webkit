@@ -27,6 +27,7 @@
 #include "WebTransportSendStreamSink.h"
 
 #include "WebTransportSession.h"
+#include <WebCore/Exception.h>
 #include <WebCore/IDLTypes.h>
 #include <WebCore/JSDOMGlobalObject.h>
 #include <wtf/CompletionHandler.h>
@@ -68,7 +69,7 @@ void WebTransportSendStreamSink::write(WebCore::ScriptExecutionContext& context,
         constexpr bool withFin { false };
         context.enqueueTaskWhenSettled(session->streamSendBytes(m_identifier, arrayBufferOrView->span(), withFin), WebCore::TaskSource::Networking, [promise = WTFMove(promise)] (auto&& exception) mutable {
             if (!exception)
-                promise.settle(Exception { ExceptionCode::NetworkError });
+                promise.settle(WebCore::Exception { WebCore::ExceptionCode::NetworkError });
             else if (*exception)
                 promise.settle(WTFMove(**exception));
             else
