@@ -492,10 +492,14 @@ class AutoInstall(object):
 
     @classmethod
     def _request(cls, url, ca_cert_path=None):
-        if sys.platform.startswith('linux'):
-            return urlopen(url, timeout=cls.timeout)
+        # This creates a default context, including default CA certs.
+        context = ssl.create_default_context()
 
-        context = ssl.create_default_context(cafile=ca_cert_path or cls.ca_cert_path)
+        if ca_cert_path is not None:
+            context.load_verify_locations(cafile=ca_cert_path)
+        elif cls.ca_cert_path is not None:
+            context.load_verify_locations(cafile=cls.ca_cert_path)
+
         return urlopen(url, timeout=cls.timeout, context=context)
 
     @classmethod
