@@ -302,6 +302,7 @@ private:
     bool m_inLayout { false };
     bool m_inCrossAxisLayout { false };
     bool m_inFlexItemLayout { false };
+    bool m_inPostFlexUpdateScrollbarLayout { false };
     mutable bool m_inFlexItemIntrinsicWidthComputation { false };
     bool m_shouldResetFlexItemLogicalHeightBeforeLayout { false };
     bool m_isComputingFlexBaseSizes { false };

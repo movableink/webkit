@@ -433,7 +433,10 @@ void RenderFlexibleBox::layoutBlock(bool relayoutChildren, LayoutUnit)
 
         performFlexLayout(relayoutChildren);
 
-        endAndCommitUpdateScrollInfoAfterLayoutTransaction();
+        {
+            auto scrollbarLayout = SetForScope(m_inPostFlexUpdateScrollbarLayout, true);
+            endAndCommitUpdateScrollInfoAfterLayoutTransaction();
+        }
 
         if (logicalHeight() != previousHeight)
             relayoutChildren = true;
@@ -1615,12 +1618,18 @@ std::pair<LayoutUnit, LayoutUnit> RenderFlexibleBox::computeFlexItemMinMaxSizes(
 
     return { 0_lu, maxExtent.value_or(LayoutUnit::max()) };
 }
-    
+
 bool RenderFlexibleBox::canUseFlexItemForPercentageResolution(const RenderBox& flexItem)
 {
     ASSERT(flexItem.isFlexItem());
 
     auto canUseByLayoutPhase = [&] {
+        if (m_inPostFlexUpdateScrollbarLayout) {
+            // Unfortunately we run layout on flex content _after_ performing flex layout to ensure scrollbars are up to date (see endAndCommitUpdateScrollInfoAfterLayoutTransaction/updateScrollInfoAfterLayout).
+            // We need to let this content run percent resolution as if we were still in flex item layout.
+            return true;
+        }
+
         if (m_inFlexItemLayout) {
             // While running flex _item_ layout, we may only resolve percentage against the flex item when it is orthogonal to the flex container.
             return !mainAxisIsFlexItemInlineAxis(flexItem);
