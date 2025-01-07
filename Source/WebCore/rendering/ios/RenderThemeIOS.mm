@@ -103,8 +103,6 @@
 
 #import <pal/ios/UIKitSoftLink.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 using namespace HTMLNames;
@@ -1781,16 +1779,16 @@ String RenderThemeIOS::colorInputStyleSheet() const
 void RenderThemeIOS::paintColorWellDecorations(const RenderObject&, const PaintInfo& paintInfo, const FloatRect& rect)
 {
     constexpr int strokeThickness = 3;
-    constexpr DisplayP3<float> colorStops[] = {
-        { 1, 1, 0, 1 },
-        { 1, 0.5, 0, 1 },
-        { 1, 0, 0, 1 },
-        { 1, 0, 1, 1},
-        { 0, 0, 1, 1 },
-        { 0, 1, 1, 1 },
-        { 0, 1, 0, 1},
-        { 0.63, 0.88, 0.03, 1 },
-        { 1, 1, 0, 1 }
+    constexpr std::array colorStops {
+        DisplayP3<float> { 1, 1, 0, 1 },
+        DisplayP3<float> { 1, 0.5, 0, 1 },
+        DisplayP3<float> { 1, 0, 0, 1 },
+        DisplayP3<float> { 1, 0, 1, 1 },
+        DisplayP3<float> { 0, 0, 1, 1 },
+        DisplayP3<float> { 0, 1, 1, 1 },
+        DisplayP3<float> { 0, 1, 0, 1 },
+        DisplayP3<float> { 0.63, 0.88, 0.03, 1 },
+        DisplayP3<float> { 1, 1, 0, 1 }
     };
     constexpr int numColorStops = std::size(colorStops);
 
@@ -1890,7 +1888,5 @@ bool RenderThemeIOS::paintSearchFieldResultsButton(const RenderBox& box, const P
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif //PLATFORM(IOS_FAMILY)
