@@ -42,8 +42,6 @@
 #import "VideoToolboxSoftLink.h"
 #import <pal/cf/CoreMediaSoftLink.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 using namespace WebCore;
 
 typedef struct OpaqueVTDecompressionSession*  VTDecompressionSessionRef;
@@ -139,8 +137,8 @@ static std::optional<std::pair<std::span<const uint8_t>, std::span<const uint8_t
             return { };
 
         if (headerType == 1) {
-            std::span<const uint8_t> fullObu { data.data() + startIndex, payloadSize + index - startIndex };
-            std::span<const uint8_t> obuData { data.data() + index, payloadSize };
+            auto fullObu = data.subspan(startIndex, payloadSize + index - startIndex);
+            auto obuData = data.subspan(index, payloadSize);
             return std::make_pair(fullObu, obuData);
         }
 
@@ -377,15 +375,16 @@ static void av1DecompressionOutputCallback(void* decoderRef, void* params, OSSta
     _shouldCheckFormat = true;
 }
 
-- (NSInteger)decodeData:(const uint8_t *)data size:(size_t)size timeStamp:(int64_t)timeStamp {
+- (NSInteger)decodeData:(const uint8_t *)rawData size:(size_t)size timeStamp:(int64_t)timeStamp {
     if (_error != noErr) {
         RELEASE_LOG_ERROR(WebRTC, "RTCVideoDecoderVTBAV1 Last frame decode failed");
         _error = noErr;
         return WEBRTC_VIDEO_CODEC_ERROR;
     }
+    auto data = unsafeMakeSpan(rawData, size);
 
     if (_shouldCheckFormat || !_videoFormat) {
-        auto inputFormat = computeAV1InputFormat({ data, size }, _width, _height);
+        auto inputFormat = computeAV1InputFormat(data, _width, _height);
         if (inputFormat) {
             _shouldCheckFormat = false;
             if (!PAL::CMFormatDescriptionEqual(inputFormat.get(), _videoFormat.get())) {
@@ -402,7 +401,7 @@ static void av1DecompressionOutputCallback(void* decoderRef, void* params, OSSta
     if (!_videoFormat)
         return WEBRTC_VIDEO_CODEC_ERROR;
 
-    auto sampleBuffer = av1BufferToCMSampleBuffer({ data, size }, _videoFormat.get());
+    auto sampleBuffer = av1BufferToCMSampleBuffer(data, _videoFormat.get());
     if (!sampleBuffer)
         return WEBRTC_VIDEO_CODEC_ERROR;
 
@@ -501,7 +500,5 @@ static void av1DecompressionOutputCallback(void* decoderRef, void* params, OSSta
 }
 
 @end
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // USE(LIBWEBRTC)
