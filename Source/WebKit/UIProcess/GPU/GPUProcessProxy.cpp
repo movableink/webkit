@@ -499,10 +499,10 @@ void GPUProcessProxy::cancelGetDisplayMediaPrompt()
 #endif
 
 #if PLATFORM(COCOA)
-void GPUProcessProxy::didDrawCompositedToPDF(PageIdentifier pageID, RefPtr<SharedBuffer>&& data, SnapshotIdentifier snapshotIdentifier)
+void GPUProcessProxy::didDrawRemoteToPDF(PageIdentifier pageID, RefPtr<SharedBuffer>&& data, SnapshotIdentifier snapshotIdentifier)
 {
     if (auto page = WebProcessProxy::webPage(pageID))
-        page->didDrawCompositedToPDF(WTFMove(data), snapshotIdentifier);
+        page->didDrawRemoteToPDF(WTFMove(data), snapshotIdentifier);
 }
 #endif
 

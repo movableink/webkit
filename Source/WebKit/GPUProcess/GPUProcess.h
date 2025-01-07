@@ -152,7 +152,7 @@ public:
 #endif
 
 #if PLATFORM(COCOA)
-    void didDrawCompositedToPDF(WebCore::PageIdentifier, RefPtr<WebCore::SharedBuffer>&&, WebCore::SnapshotIdentifier);
+    void didDrawRemoteToPDF(WebCore::PageIdentifier, RefPtr<WebCore::SharedBuffer>&&, WebCore::SnapshotIdentifier);
 #endif
 
 private:

@@ -382,9 +382,9 @@ void GPUProcess::updateSandboxAccess(const Vector<SandboxExtension::Handle>& ext
 }
 
 #if PLATFORM(COCOA)
-void GPUProcess::didDrawCompositedToPDF(PageIdentifier pageID, RefPtr<SharedBuffer>&& data, SnapshotIdentifier snapshotIdentifier)
+void GPUProcess::didDrawRemoteToPDF(PageIdentifier pageID, RefPtr<SharedBuffer>&& data, SnapshotIdentifier snapshotIdentifier)
 {
-    protectedParentProcessConnection()->send(Messages::GPUProcessProxy::DidDrawCompositedToPDF(pageID, WTFMove(data), snapshotIdentifier), 0);
+    protectedParentProcessConnection()->send(Messages::GPUProcessProxy::DidDrawRemoteToPDF(pageID, WTFMove(data), snapshotIdentifier), 0);
 }
 #endif
 

@@ -12615,7 +12615,7 @@ void WebPageProxy::drawToPDF(FrameIdentifier frameID, const std::optional<FloatR
     sendWithAsyncReply(Messages::WebPage::DrawToPDF(frameID, rect, allowTransparentBackground), WTFMove(callback));
 }
 
-void WebPageProxy::drawCompositedToPDF(FrameIdentifier frameID, const std::optional<FloatRect>& rect, bool allowTransparentBackground, CompletionHandler<void(RefPtr<SharedBuffer>&&)>&& callback)
+void WebPageProxy::drawRemoteToPDF(FrameIdentifier frameID, const std::optional<FloatRect>& rect, bool allowTransparentBackground, CompletionHandler<void(RefPtr<SharedBuffer>&&)>&& callback)
 {
     if (!hasRunningProcess()) {
         callback({ });
@@ -12624,10 +12624,10 @@ void WebPageProxy::drawCompositedToPDF(FrameIdentifier frameID, const std::optio
 
     auto snapshotIdentifier = SnapshotIdentifier::generate();
     m_pdfSnapshots.add(snapshotIdentifier, WTFMove(callback));
-    send(Messages::WebPage::DrawCompositedToPDF(frameID, rect, allowTransparentBackground, snapshotIdentifier));
+    send(Messages::WebPage::DrawRemoteToPDF(frameID, rect, allowTransparentBackground, snapshotIdentifier));
 }
 
-void WebPageProxy::didDrawCompositedToPDF(RefPtr<SharedBuffer>&& data, SnapshotIdentifier snapshotIdentifier)
+void WebPageProxy::didDrawRemoteToPDF(RefPtr<SharedBuffer>&& data, SnapshotIdentifier snapshotIdentifier)
 {
     auto callback = m_pdfSnapshots.take(snapshotIdentifier);
     if (!callback)

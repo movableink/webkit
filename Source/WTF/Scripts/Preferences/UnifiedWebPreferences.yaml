@@ -6116,6 +6116,19 @@ RemotePlaybackEnabled:
       default: true
   disableInLockdownMode: true
 
+RemoteSnapshottingEnabled:
+   type: bool
+   status: stable
+   category: media
+   humanReadableName: "Remote Snapshotting"
+   defaultValue:
+     WebKitLegacy:
+       default: false
+     WebKit:
+       default: true
+     WebCore:
+       default: true
+
 RemoveBackgroundEnabled:
   type: bool
   # FIXME: Change to "embedder" when there is a way to enable/disable embedder features from API tests.

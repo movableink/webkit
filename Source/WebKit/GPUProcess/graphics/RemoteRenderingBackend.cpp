@@ -259,7 +259,7 @@ void RemoteRenderingBackend::moveToImageBuffer(RenderingResourceIdentifier ident
 }
 
 #if PLATFORM(COCOA)
-void RemoteRenderingBackend::didDrawCompositedToPDF(PageIdentifier pageID, RenderingResourceIdentifier imageBufferIdentifier, SnapshotIdentifier snapshotIdentifier)
+void RemoteRenderingBackend::didDrawRemoteToPDF(PageIdentifier pageID, RenderingResourceIdentifier imageBufferIdentifier, SnapshotIdentifier snapshotIdentifier)
 {
     assertIsCurrent(workQueue());
     auto imageBuffer = this->imageBuffer(imageBufferIdentifier);
@@ -272,7 +272,7 @@ void RemoteRenderingBackend::didDrawCompositedToPDF(PageIdentifier pageID, Rende
     auto data = imageBuffer->sinkIntoPDFDocument();
 
     callOnMainRunLoop([pageID, data = WTFMove(data), snapshotIdentifier]() mutable {
-        GPUProcess::singleton().didDrawCompositedToPDF(pageID, WTFMove(data), snapshotIdentifier);
+        GPUProcess::singleton().didDrawRemoteToPDF(pageID, WTFMove(data), snapshotIdentifier);
     });
 }
 #endif

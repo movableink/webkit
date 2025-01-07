@@ -307,9 +307,9 @@ void RemoteRenderingBackendProxy::moveToImageBuffer(WebCore::RenderingResourceId
 }
 
 #if PLATFORM(COCOA)
-void RemoteRenderingBackendProxy::didDrawCompositedToPDF(PageIdentifier pageID, RenderingResourceIdentifier imageBufferIdentifier, SnapshotIdentifier snapshotIdentifier)
+void RemoteRenderingBackendProxy::didDrawRemoteToPDF(PageIdentifier pageID, RenderingResourceIdentifier imageBufferIdentifier, SnapshotIdentifier snapshotIdentifier)
 {
-    send(Messages::RemoteRenderingBackend::DidDrawCompositedToPDF(pageID, imageBufferIdentifier, snapshotIdentifier));
+    send(Messages::RemoteRenderingBackend::DidDrawRemoteToPDF(pageID, imageBufferIdentifier, snapshotIdentifier));
 }
 #endif
 

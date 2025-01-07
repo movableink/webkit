@@ -1966,8 +1966,10 @@ inline OptionSet<WebKit::FindOptions> toFindOptions(WKFindConfiguration *configu
     if (pdfConfiguration && !CGRectIsNull(pdfConfiguration.rect))
         floatRect = WebCore::FloatRect(pdfConfiguration.rect);
 
-    auto drawToPDFFunction = _page->preferences().siteIsolationEnabled() ? &WebKit::WebPageProxy::drawCompositedToPDF : &WebKit::WebPageProxy::drawToPDF;
     bool allowTransparentBackground = pdfConfiguration && pdfConfiguration.allowTransparentBackground;
+
+    bool useDrawRemote = _page->preferences().remoteSnapshottingEnabled() && _page->preferences().useGPUProcessForDOMRenderingEnabled();
+    auto drawToPDFFunction = useDrawRemote ? &WebKit::WebPageProxy::drawRemoteToPDF : &WebKit::WebPageProxy::drawToPDF;
 
     (*_page.*drawToPDFFunction)(*frameID, floatRect, allowTransparentBackground, [handler = makeBlockPtr(completionHandler)](RefPtr<WebCore::SharedBuffer>&& pdfData) {
         if (!pdfData || pdfData->isEmpty()) {
