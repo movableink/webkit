@@ -449,8 +449,10 @@ bool GIFImageReader::parse(size_t dataPosition, size_t len, bool parseSizeOnly)
             // This is the height and width of the "screen" or frame into which images are rendered. The
             // individual images can be smaller than the screen size and located with an origin anywhere
             // within the screen.
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // non-Apple ports
             m_screenWidth = GETINT16(currentComponent.data());
             m_screenHeight = GETINT16(currentComponent.data() + 2);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
             // CALLBACK: Inform the decoderplugin of our size.
             // Note: A subsequent frame might have dimensions larger than the "screen" dimensions.
@@ -584,7 +586,9 @@ bool GIFImageReader::parse(size_t dataPosition, size_t len, bool parseSizeOnly)
             // the third bit of the field (i.e. method 4) is. We map both to the same value.
                 currentFrame->disposalMethod = WebCore::ScalableImageDecoderFrame::DisposalMethod::RestoreToPrevious;
             }
-            currentFrame->delayTime = GETINT16(currentComponent.data() + 1) * 10;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // non-Apple ports
+            currentFrame->delayTime = GETINT16(currentComponent.data() + 1) * 10;\
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
             GETN(1, GIFConsumeBlock);
             break;
         }
@@ -628,7 +632,9 @@ bool GIFImageReader::parse(size_t dataPosition, size_t len, bool parseSizeOnly)
 
             // Loop entire animation specified # of times. Only read the loop count during the first iteration.
             if (netscapeExtension == 1) {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // non-Apple ports
                 m_loopCount = GETINT16(currentComponent.data() + 1);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
                 // Zero loop count is infinite animation loop request.
                 if (!m_loopCount)
@@ -652,6 +658,7 @@ bool GIFImageReader::parse(size_t dataPosition, size_t len, bool parseSizeOnly)
         case GIFImageHeader: {
             unsigned height, width, xOffset, yOffset;
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // non-Apple ports
             /* Get image offsets, with respect to the screen origin */
             xOffset = GETINT16(currentComponent.data());
             yOffset = GETINT16(currentComponent.data() + 2);
@@ -659,6 +666,7 @@ bool GIFImageReader::parse(size_t dataPosition, size_t len, bool parseSizeOnly)
             /* Get image width and height. */
             width  = GETINT16(currentComponent.data() + 4);
             height = GETINT16(currentComponent.data() + 6);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
             /* Work around broken GIF files where the logical screen
              * size has weird width or height.  We assume that GIF87a

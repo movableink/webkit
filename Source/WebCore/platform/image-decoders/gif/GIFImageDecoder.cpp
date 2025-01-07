@@ -167,7 +167,9 @@ void GIFImageDecoder::clearFrameBufferCache(size_t clearBeforeFrame)
     // always use ImageSource::clear(true, ...) to completely free the memory in
     // this case.
     clearBeforeFrame = std::min(clearBeforeFrame, m_frameBufferCache.size() - 1);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // non-Apple ports
     const Vector<ScalableImageDecoderFrame>::iterator end(m_frameBufferCache.begin() + clearBeforeFrame);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     // We need to preserve frames such that:
     //   * We don't clear |end|
@@ -187,14 +189,18 @@ void GIFImageDecoder::clearFrameBufferCache(size_t clearBeforeFrame)
     //   * If the frame is partial, we're decoding it, so don't clear it; if it
     //     has a disposal method other than DisposalMethod::RestoreToPrevious, stop
     //     scanning, as we'll only need this frame when decoding the next one.
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // non-Apple ports
     Vector<ScalableImageDecoderFrame>::iterator i(end);
     for (; (i != m_frameBufferCache.begin()) && (i->isInvalid() || (i->disposalMethod() == ScalableImageDecoderFrame::DisposalMethod::RestoreToPrevious)); --i) {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         if (i->isComplete() && (i != end))
             i->clear();
     }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // non-Apple ports
     // Now |i| holds the last frame we need to preserve; clear prior frames.
     for (Vector<ScalableImageDecoderFrame>::iterator j(m_frameBufferCache.begin()); j != i; ++j) {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         ASSERT(!j->isPartial());
         if (!j->isInvalid())
             j->clear();

@@ -207,6 +207,7 @@ static ImageOrientation readImageOrientation(jpeg_decompress_struct* info)
 #if USE(LCMS)
 static bool isICCMarker(jpeg_saved_marker_ptr marker)
 {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // non-Apple ports
     return marker->marker == iccMarker
         && marker->data_length >= iccHeaderSize
         && marker->data[0] == 'I'
@@ -221,6 +222,7 @@ static bool isICCMarker(jpeg_saved_marker_ptr marker)
         && marker->data[9] == 'L'
         && marker->data[10] == 'E'
         && marker->data[11] == '\0';
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 static RefPtr<SharedBuffer> readICCProfile(jpeg_decompress_struct* info)
@@ -230,16 +232,22 @@ static RefPtr<SharedBuffer> readICCProfile(jpeg_decompress_struct* info)
         if (!isICCMarker(marker))
             continue;
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // non-Apple ports
         unsigned sequenceNumber = marker->data[12];
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         if (!sequenceNumber)
             return nullptr;
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // non-Apple ports
         unsigned markerCount = marker->data[13];
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         if (sequenceNumber > markerCount)
             return nullptr;
 
         unsigned markerSize = marker->data_length - iccHeaderSize;
-        buffer.append(std::span { reinterpret_cast<const uint8_t*>(marker->data + iccHeaderSize), markerSize });
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // non-Apple ports
+        buffer.append(unsafeMakeSpan(reinterpret_cast<const uint8_t*>(marker->data + iccHeaderSize), markerSize));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     }
 
     if (buffer.isEmpty())
