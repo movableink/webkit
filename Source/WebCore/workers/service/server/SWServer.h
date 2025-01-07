@@ -130,6 +130,8 @@ public:
         SWServer* server() { return m_server.get(); }
         const SWServer* server() const { return m_server.get(); }
 
+        virtual bool isWebSWServerConnection() const { return false; }
+
     protected:
         WEBCORE_EXPORT Connection(SWServer&, Identifier);
 

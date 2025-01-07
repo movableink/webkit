@@ -71,7 +71,7 @@ NetworkRTCProvider::NetworkRTCProvider(NetworkConnectionToWebProcess& connection
 #endif
 {
 #if PLATFORM(COCOA)
-    if (auto* session = static_cast<NetworkSessionCocoa*>(connection.networkSession()))
+    if (auto* session = downcast<NetworkSessionCocoa>(connection.networkSession()))
         m_applicationBundleIdentifier = session->sourceApplicationBundleIdentifier().utf8();
 #endif
 #if !RELEASE_LOG_DISABLED
@@ -235,10 +235,10 @@ void NetworkRTCProvider::stopResolver(LibWebRTCResolverIdentifier identifier)
 #if PLATFORM(COCOA)
 const String& NetworkRTCProvider::attributedBundleIdentifierFromPageIdentifier(WebPageProxyIdentifier pageIdentifier)
 {
-    return m_attributedBundleIdentifiers.ensure(pageIdentifier, [&]() -> String {
+    return m_attributedBundleIdentifiers.ensure(pageIdentifier, [protectedThis = Ref { *this }, pageIdentifier]() -> String {
         String value;
-        callOnMainRunLoopAndWait([&] {
-            RefPtr connection = m_connection.get();
+        callOnMainRunLoopAndWait([protectedThis, &value, pageIdentifier] {
+            RefPtr connection = protectedThis->m_connection.get();
             if (auto* session = connection ? connection->networkSession() : nullptr)
                 value = session->attributedBundleIdentifierFromPageIdentifier(pageIdentifier).isolatedCopy();
         });

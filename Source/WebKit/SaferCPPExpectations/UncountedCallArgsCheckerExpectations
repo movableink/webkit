@@ -433,8 +433,6 @@ WebProcess/Plugins/PluginView.cpp
 WebProcess/Speech/SpeechRecognitionRealtimeMediaSourceManager.cpp
 WebProcess/Storage/WebSWClientConnection.cpp
 WebProcess/Storage/WebSWContextManagerConnection.cpp
-WebProcess/Storage/WebServiceWorkerFetchTaskClient.cpp
-WebProcess/Storage/WebServiceWorkerFetchTaskClient.h
 WebProcess/Storage/WebServiceWorkerProvider.cpp
 WebProcess/Storage/WebSharedWorkerContextManagerConnection.cpp
 WebProcess/UserContent/WebUserContentController.cpp

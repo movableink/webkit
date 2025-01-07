@@ -145,6 +145,8 @@ private:
     void startProcessAssertionTimer();
     bool areServiceWorkersIdle() const;
 
+    bool isWebSWServerToContextConnection() const final { return true; }
+
     WebCore::ProcessIdentifier m_webProcessIdentifier;
     WeakPtr<NetworkConnectionToWebProcess> m_connection;
     HashMap<WebCore::FetchIdentifier, WeakPtr<ServiceWorkerFetchTask>> m_ongoingFetches;
@@ -157,3 +159,7 @@ private:
 }; // class WebSWServerToContextConnection
 
 } // namespace WebKit
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::WebSWServerToContextConnection)
+    static bool isType(const WebCore::SWServerToContextConnection& connection) { return connection.isWebSWServerToContextConnection(); }
+SPECIALIZE_TYPE_TRAITS_END()

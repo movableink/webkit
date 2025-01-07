@@ -1665,12 +1665,14 @@ void NetworkConnectionToWebProcess::navigatorGetPushPermissionState(URL&& scopeU
 
 void NetworkConnectionToWebProcess::initializeWebTransportSession(URL&& url, WebPageProxyIdentifier&& pageID, WebCore::ClientOrigin&& clientOrigin, CompletionHandler<void(std::optional<WebTransportSessionIdentifier>)>&& completionHandler)
 {
-    NetworkTransportSession::initialize(*this, WTFMove(url), WTFMove(pageID), WTFMove(clientOrigin), [this, weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)] (RefPtr<NetworkTransportSession>&& session) mutable {
-        if (!session || !weakThis)
+    NetworkTransportSession::initialize(*this, WTFMove(url), WTFMove(pageID), WTFMove(clientOrigin), [weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)] (RefPtr<NetworkTransportSession>&& session) mutable {
+        RefPtr protectedThis = weakThis.get();
+        if (!session || !protectedThis)
             return completionHandler(std::nullopt);
+
         auto identifier = session->identifier();
-        ASSERT(!m_networkTransportSessions.contains(identifier));
-        m_networkTransportSessions.set(identifier, session.releaseNonNull());
+        ASSERT(!protectedThis->m_networkTransportSessions.contains(identifier));
+        protectedThis->m_networkTransportSessions.set(identifier, session.releaseNonNull());
         completionHandler(identifier);
     });
 }
