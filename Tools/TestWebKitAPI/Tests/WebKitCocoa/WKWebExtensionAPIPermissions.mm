@@ -386,7 +386,12 @@ TEST(WKWebExtensionAPIPermissions, RequestMatchPatternsOnly)
     TestWebKitAPI::Util::run(&requestComplete);
 }
 
+// rdar://142487203
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED > 140000
+TEST(WKWebExtensionAPIPermissions, DISABLED_GrantOnlySomePermissions)
+#else
 TEST(WKWebExtensionAPIPermissions, GrantOnlySomePermissions)
+#endif
 {
     auto *manifest = @{
         @"manifest_version": @3,
