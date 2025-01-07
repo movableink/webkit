@@ -1240,8 +1240,11 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
 
     // See if we can use an existing resource from the cache.
     CachedResourceHandle<CachedResource> resource;
-    if (RefPtr document = this->document())
+    CheckedPtr<ContentSecurityPolicy> contentSecurityPolicy;
+    if (RefPtr document = this->document()) {
         request.setDomainForCachePartition(*document);
+        contentSecurityPolicy = document->contentSecurityPolicy();
+    }
 
     if (request.allowsCaching())
         resource = memoryCache->resourceForRequest(request.resourceRequest(), page->sessionID());
@@ -1326,6 +1329,12 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
     }
     ASSERT(resource);
     resource->setOriginalRequest(WTFMove(originalRequest));
+
+    if (type == CachedResource::Type::Script && contentSecurityPolicy) {
+        auto hashes = contentSecurityPolicy->hashesToReport();
+        if (!hashes.isEmpty())
+            resource->setIsHashReportingNeeded();
+    }
 
     if (RefPtr subresourceLoader = resource->loader(); forPreload == ForPreload::No && subresourceLoader && resource->ignoreForRequestCount()) {
         subresourceLoader->clearRequestCountTracker();

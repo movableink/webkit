@@ -33,6 +33,7 @@
 #include "SecurityOriginHash.h"
 #include <functional>
 #include <wtf/CheckedPtr.h>
+#include <wtf/FixedVector.h>
 #include <wtf/HashSet.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
@@ -86,6 +87,9 @@ enum class AllowTrustedTypePolicy : uint8_t {
     DisallowedName,
     DisallowedDuplicateName,
 };
+
+using HashAlgorithmSet = uint8_t;
+using HashAlgorithmSetCollection = FixedVector<std::pair<HashAlgorithmSet, FixedVector<String>>>;
 
 class ContentSecurityPolicy final : public CanMakeThreadSafeCheckedPtr<ContentSecurityPolicy> {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(ContentSecurityPolicy, WEBCORE_EXPORT);
@@ -230,6 +234,7 @@ public:
     const String& webAssemblyErrorMessage() const { return m_lastPolicyWebAssemblyDisabledErrorMessage; }
 
     ContentSecurityPolicyModeForExtension contentSecurityPolicyModeForExtension() const { return m_contentSecurityPolicyModeForExtension; }
+    const HashAlgorithmSetCollection& hashesToReport();
 
 private:
     void logToConsole(const String& message, const String& contextURL = String(), const OrdinalNumber& contextLine = OrdinalNumber::beforeFirst(), const OrdinalNumber& contextColumn = OrdinalNumber::beforeFirst(), JSC::JSGlobalObject* = nullptr) const;
@@ -290,6 +295,7 @@ private:
     mutable std::optional<ContentSecurityPolicyResponseHeaders> m_cachedResponseHeaders;
     bool m_isHeaderDelivered { false };
     ContentSecurityPolicyModeForExtension m_contentSecurityPolicyModeForExtension { ContentSecurityPolicyModeForExtension::None };
+    HashAlgorithmSetCollection m_hashesToReport;
 };
 
 } // namespace WebCore
