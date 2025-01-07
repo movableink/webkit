@@ -5142,6 +5142,8 @@ void WebPage::releaseMemory(Critical)
     if (m_remoteRenderingBackendProxy)
         m_remoteRenderingBackendProxy->remoteResourceCacheProxy().releaseMemory();
 #endif
+
+    m_foundTextRangeController->clearCachedRanges();
 }
 
 void WebPage::willDestroyDecodedDataForAllImages()
