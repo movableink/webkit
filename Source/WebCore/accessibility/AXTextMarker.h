@@ -64,6 +64,8 @@ enum class SentenceRangeType : uint8_t {
 enum class CoalesceObjectBreaks : bool { No, Yes };
 enum class IgnoreBRs : bool { No, Yes };
 
+enum class IncludeTrailingLineBreak : bool { No, Yes };
+
 struct TextMarkerData {
     unsigned treeID;
     unsigned objectID;
@@ -183,21 +185,38 @@ public:
 
     // Find the next or previous marker, optionally stopping at the given ID and returning an invalid marker.
     AXTextMarker findMarker(AXDirection, CoalesceObjectBreaks = CoalesceObjectBreaks::Yes, IgnoreBRs = IgnoreBRs::No, std::optional<AXID> = std::nullopt) const;
-    // Starting from this text marker, creates a new position for the given direction and text unit type.
-    AXTextMarker findMarker(AXDirection, AXTextUnit, AXTextUnitBoundary, std::optional<AXID> stopAtID = std::nullopt) const;
-    AXTextMarker previousLineStart(std::optional<AXID> stopAtID = std::nullopt) const { return findMarker(AXDirection::Previous, AXTextUnit::Line, AXTextUnitBoundary::Start, stopAtID); }
-    AXTextMarker nextLineEnd(std::optional<AXID> stopAtID = std::nullopt) const { return findMarker(AXDirection::Next, AXTextUnit::Line, AXTextUnitBoundary::End, stopAtID); }
-    AXTextMarker nextWordStart(std::optional<AXID> stopAtID = std::nullopt) const { return findMarker(AXDirection::Next, AXTextUnit::Word, AXTextUnitBoundary::Start, stopAtID); }
-    AXTextMarker nextWordEnd(std::optional<AXID> stopAtID = std::nullopt) const { return findMarker(AXDirection::Next, AXTextUnit::Word, AXTextUnitBoundary::End, stopAtID); }
-    AXTextMarker previousWordStart(std::optional<AXID> stopAtID = std::nullopt) const { return findMarker(AXDirection::Previous, AXTextUnit::Word, AXTextUnitBoundary::Start, stopAtID); }
-    AXTextMarker previousWordEnd(std::optional<AXID> stopAtID = std::nullopt) const { return findMarker(AXDirection::Previous, AXTextUnit::Word, AXTextUnitBoundary::End, stopAtID); }
-    AXTextMarker previousSentenceStart(std::optional<AXID> stopAtID = std::nullopt) const { return findMarker(AXDirection::Previous, AXTextUnit::Sentence, AXTextUnitBoundary::Start, stopAtID); }
-    AXTextMarker nextSentenceEnd(std::optional<AXID> stopAtID = std::nullopt) const { return findMarker(AXDirection::Next, AXTextUnit::Sentence, AXTextUnitBoundary::End, stopAtID); }
-    AXTextMarker previousParagraphStart(std::optional<AXID> stopAtID = std::nullopt) const;
-    AXTextMarker nextParagraphEnd(std::optional<AXID> stopAtID = std::nullopt) const;
+
+    // Starting from this text marker, these functions find a position representing the given boundary (start / end) and text unit type (e.g. line, word, paragraph).
+    AXTextMarker findWord(AXDirection direction, AXTextUnitBoundary boundary) const
+    {
+        return findWordOrSentence(direction, /* findWord */ true, boundary);
+    }
+    AXTextMarker findSentence(AXDirection direction, AXTextUnitBoundary boundary) const
+    {
+        return findWordOrSentence(direction, /* findWord */ false, boundary);
+    }
+    AXTextMarker findWordOrSentence(AXDirection, bool findWord, AXTextUnitBoundary) const;
+    AXTextMarker findLine(AXDirection, AXTextUnitBoundary, IncludeTrailingLineBreak = IncludeTrailingLineBreak::No, std::optional<AXID> stopAtID = std::nullopt) const;
+    AXTextMarker findLine(AXDirection direction, AXTextUnitBoundary boundary, std::optional<AXID> stopAtID = std::nullopt) const
+    {
+        return findLine(direction, boundary, IncludeTrailingLineBreak::No, stopAtID);
+    }
+    AXTextMarker findParagraph(AXDirection, AXTextUnitBoundary) const;
+
+    AXTextMarker previousLineStart(std::optional<AXID> stopAtID = std::nullopt) const { return findLine(AXDirection::Previous, AXTextUnitBoundary::Start, stopAtID); }
+    AXTextMarker nextLineEnd(std::optional<AXID> stopAtID = std::nullopt) const { return findLine(AXDirection::Next, AXTextUnitBoundary::End, stopAtID); }
+    AXTextMarker nextLineEnd(IncludeTrailingLineBreak includeTrailingLineBreak, std::optional<AXID> stopAtID = std::nullopt) const { return findLine(AXDirection::Next, AXTextUnitBoundary::End, includeTrailingLineBreak, stopAtID); }
+    AXTextMarker nextWordStart() const { return findWord(AXDirection::Next, AXTextUnitBoundary::Start); }
+    AXTextMarker nextWordEnd() const { return findWord(AXDirection::Next, AXTextUnitBoundary::End); }
+    AXTextMarker previousWordStart() const { return findWord(AXDirection::Previous, AXTextUnitBoundary::Start); }
+    AXTextMarker previousWordEnd() const { return findWord(AXDirection::Previous, AXTextUnitBoundary::End); }
+    AXTextMarker previousSentenceStart() const { return findSentence(AXDirection::Previous, AXTextUnitBoundary::Start); }
+    AXTextMarker nextSentenceEnd() const { return findSentence(AXDirection::Next, AXTextUnitBoundary::End); }
+    AXTextMarker previousParagraphStart() const;
+    AXTextMarker nextParagraphEnd() const;
 
     // Creates a range for the line this marker points to.
-    AXTextMarkerRange lineRange(LineRangeType) const;
+    AXTextMarkerRange lineRange(LineRangeType, IncludeTrailingLineBreak = IncludeTrailingLineBreak::No) const;
     // Creates a range for the word specified by the line range type.
     AXTextMarkerRange wordRange(WordRangeType) const;
     // Creates a range for the sentence specified by the sentence range type;
