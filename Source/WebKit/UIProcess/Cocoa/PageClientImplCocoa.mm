@@ -61,17 +61,11 @@ void PageClientImplCocoa::topContentInsetDidChange()
 void PageClientImplCocoa::themeColorWillChange()
 {
     [m_webView willChangeValueForKey:@"themeColor"];
-
-    // FIXME: Remove old `-[WKWebView _themeColor]` SPI <rdar://76662644>
-    [m_webView willChangeValueForKey:@"_themeColor"];
 }
 
 void PageClientImplCocoa::themeColorDidChange()
 {
     [m_webView didChangeValueForKey:@"themeColor"];
-
-    // FIXME: Remove old `-[WKWebView _themeColor]` SPI <rdar://76662644>
-    [m_webView didChangeValueForKey:@"_themeColor"];
 }
 
 void PageClientImplCocoa::underPageBackgroundColorWillChange()
@@ -82,18 +76,6 @@ void PageClientImplCocoa::underPageBackgroundColorWillChange()
 void PageClientImplCocoa::underPageBackgroundColorDidChange()
 {
     [m_webView didChangeValueForKey:@"underPageBackgroundColor"];
-}
-
-void PageClientImplCocoa::pageExtendedBackgroundColorWillChange()
-{
-    // FIXME: Remove old `-[WKWebView _pageExtendedBackgroundColor]` SPI <rdar://77789732>
-    [m_webView willChangeValueForKey:@"_pageExtendedBackgroundColor"];
-}
-
-void PageClientImplCocoa::pageExtendedBackgroundColorDidChange()
-{
-    // FIXME: Remove old `-[WKWebView _pageExtendedBackgroundColor]` SPI <rdar://77789732>
-    [m_webView didChangeValueForKey:@"_pageExtendedBackgroundColor"];
 }
 
 void PageClientImplCocoa::sampledPageTopColorWillChange()
