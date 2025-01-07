@@ -53,7 +53,14 @@ public:
         uint32_t loopSize() { return loop->size(); }
         BasicBlock* loopBody(uint32_t i) { return loop->at(i).node(); }
         BasicBlock* header() const { return loop->header().node(); }
-        Node* condition() const { return tail->terminal()->child1().node(); }
+
+        Node* condition() const
+        {
+            if (tail && tail->terminal()->isBranch())
+                return tail->terminal()->child1().node();
+            return nullptr;
+        }
+
         bool isInductionVariable(Node* node) { return node->operand() == inductionVariable->operand(); }
         void dump(PrintStream& out) const;
 
@@ -69,6 +76,8 @@ public:
         Node* update { nullptr };
         CheckedInt32 updateValue { INT_MIN };
         CheckedUint32 iterationCount { 0 };
+
+        std::optional<bool> inverseCondition { };
     };
 
     LoopUnrollingPhase(Graph& graph)
@@ -268,18 +277,37 @@ public:
             data.next = successor;
         }
         data.tail = tail;
+
+        // PreHeader
+        //  |
+        // Header <----------
+        //  |               |
+        // Body             |
+        //  |    True/False |
+        // Tail -------------
+        //  | False/True
+        // Next
+        //
+        // Determine if the condition should be inverted based on whether the "not taken" branch points into the loop.
+        Node* terminal = tail->terminal();
+        ASSERT(terminal->op() == Branch);
+        bool needToInverseCondition = data.loop->contains(terminal->branchData()->notTaken.block);
+        data.inverseCondition = needToInverseCondition;
+        ASSERT(data.loop->contains(terminal->branchData()->taken.block) == !needToInverseCondition);
+
         return true;
     }
 
     bool isSupportedConditionOp(NodeType op);
     bool isSupportedUpdateOp(NodeType op);
 
-    ComparisonFunction comparisonFunction(Node* condition);
+    ComparisonFunction comparisonFunction(Node* condition, bool inverseCondition);
     UpdateFunction updateFunction(Node* update);
 
     bool identifyInductionVariable(LoopData& data)
     {
         Node* condition = data.condition();
+        ASSERT(condition);
         auto isConditionValid = [&]() ALWAYS_INLINE_LAMBDA {
             if (!isSupportedConditionOp(condition->op()))
                 return false;
@@ -353,7 +381,7 @@ public:
         // Compute the number of iterations in the loop.
         {
             CheckedUint32 iterationCount = 0;
-            auto compare = comparisonFunction(condition);
+            auto compare = comparisonFunction(condition, data.inverseCondition.value());
             auto update = updateFunction(data.update);
             for (CheckedInt32 i = data.initialValue; compare(i, data.operand);) {
                 if (iterationCount > Options::maxLoopUnrollingIterationCount()) {
@@ -553,9 +581,14 @@ void LoopUnrollingPhase::LoopData::dump(PrintStream& out) const
     out.print(", ");
 
     out.print("tail=");
-    if (tail)
-        out.print(*tail);
-    else
+    if (tail) {
+        out.print(*tail, " with branch condition=");
+        Node* condition = this->condition();
+        if (condition)
+            out.print(condition, "<", condition->op(), ">");
+        else
+            out.print("<null>");
+    } else
         out.print("<null>");
     out.print(", ");
 
@@ -578,14 +611,16 @@ void LoopUnrollingPhase::LoopData::dump(PrintStream& out) const
 
     out.print("update=");
     if (update)
-        out.print("D@", update->index());
+        out.print(update, "<", update->op(), ">");
     else
         out.print("<null>");
     out.print(", ");
 
     out.print("updateValue=", updateValue, ", ");
 
-    out.print("iterationCount=", iterationCount);
+    out.print("iterationCount=", iterationCount, ", ");
+
+    out.print("inverseCondition=", inverseCondition);
 }
 
 bool LoopUnrollingPhase::isNodeCloneable(HashSet<Node*>& cloneableCache, Node* node)
@@ -804,20 +839,27 @@ bool LoopUnrollingPhase::isSupportedUpdateOp(NodeType op)
     }
 }
 
-LoopUnrollingPhase::ComparisonFunction LoopUnrollingPhase::comparisonFunction(Node* condition)
+LoopUnrollingPhase::ComparisonFunction LoopUnrollingPhase::comparisonFunction(Node* condition, bool inverseCondition)
 {
+    static const ComparisonFunction less = [](auto a, auto b) { return a < b; };
+    static const ComparisonFunction lessEq = [](auto a, auto b) { return a <= b; };
+    static const ComparisonFunction greater = [](auto a, auto b) { return a > b; };
+    static const ComparisonFunction greaterEq = [](auto a, auto b) { return a >= b; };
+    static const ComparisonFunction equal = [](auto a, auto b) { return a == b; };
+    static const ComparisonFunction notEqual = [](auto a, auto b) { return a != b; };
+
     switch (condition->op()) {
     case CompareLess:
-        return [](auto a, auto b) { return a < b; };
+        return inverseCondition ? greaterEq : less;
     case CompareLessEq:
-        return [](auto a, auto b) { return a <= b; };
+        return inverseCondition ? greater : lessEq;
     case CompareGreater:
-        return [](auto a, auto b) { return a > b; };
+        return inverseCondition ? lessEq : greater;
     case CompareGreaterEq:
-        return [](auto a, auto b) { return a >= b; };
+        return inverseCondition ? less : greaterEq;
     case CompareEq:
     case CompareStrictEq:
-        return [](auto a, auto b) { return a == b; };
+        return inverseCondition ? notEqual : equal;
     default:
         RELEASE_ASSERT_NOT_REACHED();
         return [](auto, auto) { return false; };
