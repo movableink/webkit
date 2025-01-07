@@ -740,25 +740,22 @@ Vector<String> Pasteboard::readFilePaths()
 }
 
 #if ENABLE(DRAG_SUPPORT)
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 static void flipImageSpec(CoreDragImageSpec* imageSpec)
 {
     auto tempRow = MallocSpan<uint8_t>::malloc(imageSpec->bytesPerRow);
     int planes = imageSpec->isPlanar ? imageSpec->samplesPerPixel : 1;
-
-    for (int p = 0; p < planes; ++p) {
-        auto* topRow = const_cast<uint8_t*>(imageSpec->data[p]);
-        auto* botRow = topRow + (imageSpec->pixelsHigh - 1) * imageSpec->bytesPerRow;
-        for (int i = 0; i < imageSpec->pixelsHigh / 2; ++i, topRow += imageSpec->bytesPerRow, botRow -= imageSpec->bytesPerRow) {
-            auto topRowSpan = unsafeMakeSpan(topRow, imageSpec->bytesPerRow);
-            auto botRowSpan = unsafeMakeSpan(botRow, imageSpec->bytesPerRow);
-            memmoveSpan(tempRow.mutableSpan(), topRowSpan);
-            memmoveSpan(topRowSpan, botRowSpan);
-            memmoveSpan(botRowSpan, tempRow.span());
+    for (auto* plane : std::span { imageSpec->data }.first(planes)) {
+        auto planeSpan = unsafeMakeSpan(const_cast<uint8_t*>(plane), imageSpec->bytesPerRow * imageSpec->pixelsHigh);
+        for (int i = 0; i < imageSpec->pixelsHigh / 2; ++i) {
+            auto topRow = planeSpan.first(imageSpec->bytesPerRow);
+            auto bottomRow = planeSpan.last(imageSpec->bytesPerRow);
+            memmoveSpan(tempRow.mutableSpan(), topRow);
+            memmoveSpan(topRow, bottomRow);
+            memmoveSpan(bottomRow, tempRow.span());
+            planeSpan = planeSpan.subspan(imageSpec->bytesPerRow, planeSpan.size() - 2 * imageSpec->bytesPerRow);
         }
     }
 }
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 static void setDragImageImpl(NSImage *image, NSPoint offset)
 {
