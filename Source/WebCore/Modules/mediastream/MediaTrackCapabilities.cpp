@@ -107,7 +107,7 @@ static Vector<bool> powerEfficientCapabilityVector(bool powerEfficient)
     return result;
 }
 
-MediaTrackCapabilities toMediaTrackCapabilities(const RealtimeMediaSourceCapabilities& capabilities, const String& groupId)
+MediaTrackCapabilities toMediaTrackCapabilities(const RealtimeMediaSourceCapabilities& capabilities)
 {
     MediaTrackCapabilities result;
     if (capabilities.supportsWidth())
@@ -131,7 +131,7 @@ MediaTrackCapabilities toMediaTrackCapabilities(const RealtimeMediaSourceCapabil
     if (capabilities.supportsDeviceId())
         result.deviceId = capabilities.deviceId();
     if (capabilities.supportsGroupId())
-        result.groupId = groupId;
+        result.groupId = capabilities.groupId();
     if (capabilities.supportsFocusDistance())
         result.focusDistance = capabilityDoubleRange(capabilities.focusDistance());
     if (capabilities.supportsWhiteBalanceMode())

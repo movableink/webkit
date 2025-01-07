@@ -94,7 +94,7 @@ const RealtimeMediaSourceSettings& MockRealtimeAudioSource::settings()
     if (!m_currentSettings) {
         RealtimeMediaSourceSettings settings;
         settings.setDeviceId(hashedId());
-        settings.setGroupId(captureDevice().groupId());
+        settings.setGroupId(hashedGroupId());
         settings.setVolume(volume());
         settings.setEchoCancellation(echoCancellation());
         settings.setSampleRate(sampleRate());
@@ -128,6 +128,7 @@ const RealtimeMediaSourceCapabilities& MockRealtimeAudioSource::capabilities()
         RealtimeMediaSourceCapabilities capabilities(settings().supportedConstraints());
 
         capabilities.setDeviceId(hashedId());
+        capabilities.setGroupId(hashedGroupId());
         capabilities.setVolume({ 0.0, 1.0 });
         capabilities.setEchoCancellation(RealtimeMediaSourceCapabilities::EchoCancellation::ReadWrite);
         capabilities.setSampleRate({ 44100, 96000 });

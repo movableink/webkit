@@ -476,7 +476,7 @@ const RealtimeMediaSourceSettings& AVVideoCaptureSource::settings()
     settings.setWidth(size.width());
     settings.setHeight(size.height());
     settings.setDeviceId(hashedId());
-    settings.setGroupId(captureDevice().groupId());
+    settings.setGroupId(hashedGroupId());
     settings.setBackgroundBlur(!!device().portraitEffectActive);
 
     RealtimeMediaSourceSupportedConstraints supportedConstraints;
@@ -525,6 +525,7 @@ const RealtimeMediaSourceCapabilities& AVVideoCaptureSource::capabilities()
 
     RealtimeMediaSourceCapabilities capabilities(settings().supportedConstraints());
     capabilities.setDeviceId(hashedId());
+    capabilities.setGroupId(hashedGroupId());
 
     AVCaptureDevice *videoDevice = device();
     if ([videoDevice position] == AVCaptureDevicePositionFront)

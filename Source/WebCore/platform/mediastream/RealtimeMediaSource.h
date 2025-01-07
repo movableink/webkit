@@ -150,6 +150,7 @@ public:
     virtual Ref<RealtimeMediaSource> clone() { return *this; }
 
     const String& hashedId() const;
+    const String& hashedGroupId() const;
     const MediaDeviceHashSalts& deviceIDHashSalts() const;
 
     const String& persistentID() const { return m_device.persistentId(); }
@@ -366,7 +367,7 @@ private:
     virtual double observedFrameRate() const { return 0.0; }
 
     void updateHasStartedProducingData();
-    void initializePersistentId();
+    void initializeIds();
 
 #if !RELEASE_LOG_DISABLED
     RefPtr<const Logger> m_logger;
@@ -379,6 +380,7 @@ private:
     MediaDeviceHashSalts m_idHashSalts;
     String m_hashedID;
     String m_ephemeralHashedID;
+    String m_hashedGroupId;
     Type m_type;
     String m_name;
     WeakHashSet<RealtimeMediaSourceObserver> m_observers;
@@ -469,6 +471,11 @@ inline bool RealtimeMediaSource::isProducingData() const
 
 inline void RealtimeMediaSource::setIsInBackground(bool)
 {
+}
+
+inline const String& RealtimeMediaSource::hashedGroupId() const
+{
+    return m_hashedGroupId;
 }
 
 } // namespace WebCore

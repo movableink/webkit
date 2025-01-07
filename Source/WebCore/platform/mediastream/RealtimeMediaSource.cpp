@@ -109,26 +109,26 @@ RealtimeMediaSource::RealtimeMediaSource(const CaptureDevice& device, MediaDevic
     , m_name({ device.label() })
     , m_device(device)
 {
-    initializePersistentId();
+    initializeIds();
 }
 
-RealtimeMediaSource::~RealtimeMediaSource()
-{
-}
+RealtimeMediaSource::~RealtimeMediaSource() = default;
 
 void RealtimeMediaSource::setPersistentId(const String& persistentID)
 {
     m_device.setPersistentId(persistentID);
-    initializePersistentId();
+    initializeIds();
 }
 
-void RealtimeMediaSource::initializePersistentId()
+void RealtimeMediaSource::initializeIds()
 {
     if (m_device.persistentId().isEmpty())
         m_device.setPersistentId(createVersion4UUIDString());
 
     m_hashedID = RealtimeMediaSourceCenter::hashStringWithSalt(m_device.persistentId(), m_idHashSalts.persistentDeviceSalt);
     m_ephemeralHashedID = RealtimeMediaSourceCenter::hashStringWithSalt(m_device.persistentId(), m_idHashSalts.ephemeralDeviceSalt);
+
+    m_hashedGroupId = RealtimeMediaSourceCenter::hashStringWithSalt(m_device.groupId(), m_idHashSalts.ephemeralDeviceSalt);
 }
 
 void RealtimeMediaSource::addAudioSampleObserver(AudioSampleObserver& observer)

@@ -262,6 +262,7 @@ const RealtimeMediaSourceCapabilities& CoreAudioCaptureSource::capabilities()
 
         RealtimeMediaSourceCapabilities capabilities(settings().supportedConstraints());
         capabilities.setDeviceId(hashedId());
+        capabilities.setGroupId(hashedGroupId());
         capabilities.setEchoCancellation(RealtimeMediaSourceCapabilities::EchoCancellation::ReadWrite);
         capabilities.setVolume({ 0.0, 1.0 });
         capabilities.setSampleRate(unit.sampleRateCapacities());
@@ -279,7 +280,7 @@ const RealtimeMediaSourceSettings& CoreAudioCaptureSource::settings()
         settings.setVolume(volume());
         settings.setSampleRate(unit.isRenderingAudio() ? unit.actualSampleRate() : sampleRate());
         settings.setDeviceId(hashedId());
-        settings.setGroupId(captureDevice().groupId());
+        settings.setGroupId(hashedGroupId());
         settings.setLabel(name());
         settings.setEchoCancellation(echoCancellation());
 

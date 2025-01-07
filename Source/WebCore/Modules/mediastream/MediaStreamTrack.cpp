@@ -94,13 +94,6 @@ MediaStreamTrack::MediaStreamTrack(ScriptExecutionContext& context, Ref<MediaStr
     ASSERT(isMainThread());
     ASSERT(is<Document>(context));
 
-    auto& settings = m_private->settings();
-    if (settings.supportsGroupId()) {
-        RefPtr window = downcast<Document>(context).domWindow();
-        if (RefPtr mediaDevices = window ? NavigatorMediaDevices::mediaDevices(window->navigator()) : nullptr)
-            m_groupId = mediaDevices->hashedGroupId(settings.groupId());
-    }
-
     m_isInterrupted = m_private->interrupted();
 
     if (m_private->isAudio())
@@ -283,7 +276,7 @@ MediaStreamTrack::TrackSettings MediaStreamTrack::getSettings() const
     if (settings.supportsDeviceId())
         result.deviceId = settings.deviceId();
     if (settings.supportsGroupId())
-        result.groupId = m_groupId;
+        result.groupId = settings.groupId();
     if (settings.supportsDisplaySurface() && settings.displaySurface() != DisplaySurfaceType::Invalid)
         result.displaySurface = RealtimeMediaSourceSettings::displaySurface(settings.displaySurface());
 
@@ -305,7 +298,7 @@ MediaStreamTrack::TrackSettings MediaStreamTrack::getSettings() const
 
 MediaStreamTrack::TrackCapabilities MediaStreamTrack::getCapabilities() const
 {
-    auto result = toMediaTrackCapabilities(m_private->capabilities(), m_groupId);
+    auto result = toMediaTrackCapabilities(m_private->capabilities());
 
     auto settings = m_private->settings();
     if (settings.supportsDisplaySurface() && settings.displaySurface() != DisplaySurfaceType::Invalid)
