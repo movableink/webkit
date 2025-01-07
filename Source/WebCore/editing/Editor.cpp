@@ -539,7 +539,7 @@ bool Editor::canCopy() const
     if (imageElementFromImageDocument(document()))
         return true;
     const VisibleSelection& selection = document().selection().selection();
-    return selection.isRange() && (!selection.isInPasswordField() || selection.isInAutoFilledAndViewableField());
+    return (selection.isRange() || !isEditablePosition(selection.start())) && (!selection.isInPasswordField() || selection.isInAutoFilledAndViewableField());
 }
 
 bool Editor::canDelete() const
@@ -987,7 +987,15 @@ RefPtr<Element> Editor::findEventTargetFrom(const VisibleSelection& selection) c
 
 RefPtr<Element> Editor::findEventTargetFromSelection() const
 {
-    return findEventTargetFrom(document().selection().selection());
+    // https://www.w3.org/TR/clipboard-apis/#fire-a-clipboard-event says:
+    // If the context is editable, then
+    // Set target to be the element that contains the start of the visible selection or cursor in document order, or the body element if there is no visible selection or cursor.
+    const VisibleSelection& selection = document().selection().selection();
+    if (selection.isRange() || isEditablePosition(selection.start()))
+        return findEventTargetFrom(selection);
+    // Else, if the context is not editable, then
+    // Set target to the focused node, or the body element if no node has focus.
+    return document().activeElement();
 }
 
 void Editor::applyStyle(StyleProperties* style, EditAction editingAction)
