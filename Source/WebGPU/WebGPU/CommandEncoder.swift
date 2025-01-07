@@ -255,10 +255,8 @@ extension WebGPU.CommandEncoder {
                 return WebGPU.RenderPassEncoder.createInvalid(self, m_device.ptr(), "parent texture is nil")
             }
             let baseMipLevel = textureIsDestroyed ? 0 : texture.baseMipLevel()
-            //continue review here
             let depthAndMipLevel: UInt64 = depthSliceOrArrayLayer | (UInt64(baseMipLevel) << 32)
             if var setValue = depthSlices[bridgedTexture!] {
-            //if (auto it = depthSlices.find(bridgedTexture); it != depthSlices.end()) {
                 if depthSlices[bridgedTexture!]!.contains(depthAndMipLevel) {
                     return WebGPU.RenderPassEncoder.createInvalid(self, m_device.ptr(), "attempting to render to overlapping color attachment")
                 }
@@ -469,8 +467,8 @@ extension WebGPU.CommandEncoder {
             self.generateInvalidEncoderStateError()
             return
         }
-        let error = self.errorValidatingCopyBufferToBuffer(source, sourceOffset, destination, destinationOffset, size)
-        guard error != nil else {
+
+        if let error = self.errorValidatingCopyBufferToBuffer(source, sourceOffset, destination, destinationOffset, size) {
             self.makeInvalid(error)
             return
         }
@@ -1178,8 +1176,7 @@ extension WebGPU.CommandEncoder {
             self.generateInvalidEncoderStateError()
             return
         }
-        let error = self.errorValidatingCopyTextureToTexture(source, destination, copySize)
-        guard error == nil else {
+        if let error = self.errorValidatingCopyTextureToTexture(source, destination, copySize) {
             self.makeInvalid(error)
             return
         }
@@ -1226,7 +1223,7 @@ extension WebGPU.CommandEncoder {
                 self.clearTextureIfNeeded(destination, destinationSlice)
             }
         }
-        guard let mtlDestinationTexture = destinationTexture.texture(), let mtlSourceTexture = sourceTexture.texture() else {
+        guard let mtlDestinationTexture = destinationTexture.texture(), let mtlSourceTexture = WebGPU.fromAPI(source.texture).texture() else {
             return
         }
 
