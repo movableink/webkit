@@ -270,6 +270,22 @@ void WebBackForwardList::clearProvisionalItem(WebBackForwardListFrameItem& frame
     m_provisionalIndex = std::nullopt;
 }
 
+void WebBackForwardList::commitProvisionalItem(WebBackForwardListFrameItem& frameItem)
+{
+    if (!m_provisionalIndex)
+        return;
+
+    if (m_entries[*m_provisionalIndex].ptr() != frameItem.backForwardListItem())
+        return;
+
+    if (*m_provisionalIndex >= m_entries.size()) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    m_currentIndex = std::exchange(m_provisionalIndex, std::nullopt);
+}
+
 WebBackForwardListItem* WebBackForwardList::currentItem() const
 {
     ASSERT(!provisionalOrCurrentIndex() || *provisionalOrCurrentIndex() < m_entries.size());

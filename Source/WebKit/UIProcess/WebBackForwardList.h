@@ -89,6 +89,7 @@ public:
 
     void goToProvisionalItem(WebBackForwardListItem&);
     void clearProvisionalItem(WebBackForwardListFrameItem&);
+    void commitProvisionalItem(WebBackForwardListFrameItem&);
 
     Ref<FrameState> completeFrameStateForNavigation(Ref<FrameState>&&);
 

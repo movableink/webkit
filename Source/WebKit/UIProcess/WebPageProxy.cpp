@@ -9504,6 +9504,12 @@ void WebPageProxy::backForwardClearProvisionalItem(IPC::Connection& connection, 
         protectedBackForwardList()->clearProvisionalItem(*frameItem);
 }
 
+void WebPageProxy::backForwardCommitProvisionalItem(IPC::Connection& connection, BackForwardItemIdentifier itemID, BackForwardFrameItemIdentifier frameItemID)
+{
+    if (RefPtr frameItem = WebBackForwardListFrameItem::itemForID(itemID, frameItemID))
+        protectedBackForwardList()->commitProvisionalItem(*frameItem);
+}
+
 void WebPageProxy::backForwardItemAtIndex(int32_t index, FrameIdentifier frameID, CompletionHandler<void(RefPtr<FrameState>&&)>&& completionHandler)
 {
     // FIXME: This should verify that the web process requesting the item hosts the specified frame.

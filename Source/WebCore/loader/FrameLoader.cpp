@@ -3991,10 +3991,8 @@ void FrameLoader::continueLoadAfterNavigationPolicy(const ResourceRequest& reque
         if (navigationPolicyDecision != NavigationPolicyDecision::LoadWillContinueInAnotherProcess)
             checkLoadComplete();
 
-        if (RefPtr provisionalItem = history().provisionalItem(); provisionalItem && isBackForwardLoadType(policyChecker().loadType())) {
-            if (RefPtr page = frame->page())
-                page->checkedBackForward()->clearProvisionalItem(*provisionalItem);
-        }
+        if (isBackForwardLoadType(policyChecker().loadType()))
+            history().clearProvisionalItem();
         return;
     }
 
