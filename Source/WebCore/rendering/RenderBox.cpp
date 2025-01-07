@@ -262,6 +262,10 @@ void RenderBox::styleWillChange(StyleDifference diff, const RenderStyle& newStyl
                 // We are about to go out of flow. Before that takes place, we need to mark the
                 // current containing block chain for preferred widths recalculation.
                 setNeedsLayoutAndPrefWidthsRecalc();
+                if (CheckedPtr flexContainer = dynamicDowncast<RenderFlexibleBox>(parent())) {
+                    flexContainer->clearCachedFlexItemIntrinsicContentLogicalHeight(*this);
+                    flexContainer->clearCachedMainSizeForFlexItem(*this);
+                }
             } else
                 scheduleLayout(markContainingBlocksForLayout());
             
