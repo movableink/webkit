@@ -6924,7 +6924,6 @@ webkit.org/b/284299 imported/w3c/web-platform-tests/scroll-animations/view-timel
 
 # webkit.org/b/263872 [scroll-animations] some WPT tests are ImageOnlyFailure
 imported/w3c/web-platform-tests/scroll-animations/css/animation-fill-outside-range-test.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/scroll-animations/css/animation-range-visual-test.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/scroll-animations/css/printing/animation-timeline-none-with-progress-print.tentative.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/scroll-animations/css/printing/scroll-timeline-default-iframe-print.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/scroll-animations/css/printing/scroll-timeline-default-print.tentative.html [ ImageOnlyFailure ]
