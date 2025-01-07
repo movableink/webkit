@@ -211,6 +211,87 @@ TEST(WKWebExtension, DisplayStringParsingWithLocalization)
     EXPECT_NS_EQUAL(extension.errors, @[ ]);
 }
 
+TEST(WKWebExtension, MultipleIconSizes)
+{
+    auto *testManifestDictionary = @{
+        @"manifest_version": @3,
+
+        @"name": @"Test",
+        @"version": @"1.0",
+        @"description": @"Test",
+
+        @"icons": @{
+            @"16": @"icon-16.png",
+            @"32": @"icon-32.png",
+            @"64": @"icon-64.png"
+        },
+
+        @"action": @{
+            @"default_icon": @{
+                @"16": @"action-icon-16.png",
+                @"32": @"action-icon-32.png",
+                @"64": @"action-icon-64.png"
+            }
+        }
+    };
+
+    auto screenScale = 1.0;
+#if PLATFORM(IOS_FAMILY)
+    screenScale = UIScreen.mainScreen.scale;
+#else
+    screenScale = NSScreen.mainScreen.backingScaleFactor;
+#endif
+
+    auto requestedSize = CGSizeMake(16, 16);
+    SEL selector16, selector32, selector64;
+
+    if ((requestedSize.width * screenScale) <= 16) {
+        selector16 = @selector(blackColor);
+        selector32 = @selector(whiteColor);
+        selector64 = @selector(whiteColor);
+    } else if ((requestedSize.width * screenScale) <= 32) {
+        selector16 = @selector(whiteColor);
+        selector32 = @selector(blackColor);
+        selector64 = @selector(whiteColor);
+    } else {
+        selector16 = @selector(whiteColor);
+        selector32 = @selector(whiteColor);
+        selector64 = @selector(blackColor);
+    }
+
+    auto *icon16 = Util::makePNGData(CGSizeMake(16, 16), selector16);
+    auto *icon32 = Util::makePNGData(CGSizeMake(32, 32), selector32);
+    auto *icon64 = Util::makePNGData(CGSizeMake(64, 64), selector64);
+
+    auto *resources = @{
+        @"icon-16.png": icon16,
+        @"icon-32.png": icon32,
+        @"icon-64.png": icon64,
+        @"action-icon-16.png": icon16,
+        @"action-icon-32.png": icon32,
+        @"action-icon-64.png": icon64,
+    };
+
+    auto testExtension = [[WKWebExtension alloc] _initWithManifestDictionary:testManifestDictionary resources:resources];
+    EXPECT_NS_EQUAL(testExtension.errors, @[ ]);
+
+    auto *icon = [testExtension iconForSize:requestedSize];
+    EXPECT_NOT_NULL(icon);
+    EXPECT_TRUE(CGSizeEqualToSize(icon.size, requestedSize));
+#if PLATFORM(IOS_FAMILY)
+    EXPECT_EQ(icon.scale, screenScale);
+#endif
+    EXPECT_TRUE(Util::compareColors(Util::pixelColor(icon), [CocoaColor blackColor]));
+
+    auto *actionIcon = [testExtension actionIconForSize:requestedSize];
+    EXPECT_NOT_NULL(actionIcon);
+    EXPECT_TRUE(CGSizeEqualToSize(actionIcon.size, requestedSize));
+#if PLATFORM(IOS_FAMILY)
+    EXPECT_EQ(actionIcon.scale, screenScale);
+#endif
+    EXPECT_TRUE(Util::compareColors(Util::pixelColor(actionIcon), [CocoaColor blackColor]));
+}
+
 #if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
 TEST(WKWebExtension, MultipleIconVariants)
 {

@@ -380,7 +380,7 @@ void WebExtension::recordError(Ref<API::Error> error)
     [wrapper() didChangeValueForKey:@"errors"];
 }
 
-RefPtr<WebCore::Icon> WebExtension::iconForPath(const String& imagePath, RefPtr<API::Error>& outError, WebCore::FloatSize sizeForResizing)
+RefPtr<WebCore::Icon> WebExtension::iconForPath(const String& imagePath, RefPtr<API::Error>& outError, WebCore::FloatSize sizeForResizing, std::optional<double> idealDisplayScale)
 {
     ASSERT(!imagePath.isEmpty());
 
@@ -389,6 +389,12 @@ RefPtr<WebCore::Icon> WebExtension::iconForPath(const String& imagePath, RefPtr<
         return nullptr;
 
     auto *imageData = static_cast<NSData *>(data->wrapper());
+
+#if USE(APPKIT)
+    ASSERT_UNUSED(idealDisplayScale, idealDisplayScale == std::nullopt);
+#else
+    auto displayScale = idealDisplayScale.value_or(largestDisplayScale());
+#endif
 
     CocoaImage *result;
 
@@ -412,16 +418,16 @@ RefPtr<WebCore::Icon> WebExtension::iconForPath(const String& imagePath, RefPtr<
             return nullptr;
 
         // Since we need to rasterize, scale the image for the densest display, so it will have enough pixels to be sharp.
-        result = [UIImage _imageWithCGSVGDocument:document scale:largestDisplayScale() orientation:UIImageOrientationUp];
+        result = [UIImage _imageWithCGSVGDocument:document scale:displayScale orientation:UIImageOrientationUp];
         CGSVGDocumentRelease(document);
 #endif // not USE(APPKIT)
     }
 #endif // !USE(NSIMAGE_FOR_SVG_SUPPORT)
 
+#if USE(APPKIT)
     if (!result)
         result = [[CocoaImage alloc] initWithData:imageData];
 
-#if USE(APPKIT)
     if (!sizeForResizing.isZero()) {
         // Proportionally scale the size.
         auto originalSize = result.size;
@@ -434,6 +440,9 @@ RefPtr<WebCore::Icon> WebExtension::iconForPath(const String& imagePath, RefPtr<
 
     return WebCore::Icon::create(result);
 #else
+    if (!result)
+        result = [[CocoaImage alloc] initWithData:imageData scale:displayScale];
+
     // Rasterization is needed because UIImageAsset will not register the image unless it is a CGImage.
     // If the image is already a CGImage bitmap, this operation is a no-op.
     result = result._rasterizedImage;
@@ -490,17 +499,9 @@ RefPtr<WebCore::Icon> WebExtension::bestIcon(RefPtr<JSON::Object> icons, WebCore
 
     return resultImage;
 #else
-    if (uniquePaths.count == 1) {
-        [scalePaths removeAllObjects];
-
-        // Add a single value back that has 0 for the scale, which is the
-        // unspecified (universal) trait value for display scale.
-        scalePaths[@0] = uniquePaths.anyObject;
-    }
-
     auto *images = mapObjects<NSDictionary>(scalePaths, ^id(NSNumber *scale, NSString *path) {
         RefPtr<API::Error> resourceError;
-        if (RefPtr image = iconForPath(path, resourceError, idealSize))
+        if (RefPtr image = iconForPath(path, resourceError, idealSize, scale.doubleValue))
             return image->image().get();
 
         if (reportError && resourceError)
@@ -512,9 +513,25 @@ RefPtr<WebCore::Icon> WebExtension::bestIcon(RefPtr<JSON::Object> icons, WebCore
     if (images.count == 1)
         return WebCore::Icon::create(images.allValues.firstObject);
 
+    auto *sortedImageScales = [images.allKeys sortedArrayUsingSelector:@selector(compare:)];
+
     // Make a dynamic image asset that returns an image based on the trait collection.
-    auto *imageAsset = [UIImageAsset _dynamicAssetNamed:NSUUID.UUID.UUIDString generator:^(UIImageAsset *, UIImageConfiguration *configuration, UIImage *) {
-        return images[@(configuration.traitCollection.displayScale)] ?: images[@0];
+    auto *imageAsset = [UIImageAsset _dynamicAssetNamed:NSUUID.UUID.UUIDString generator:^UIImage *(UIImageAsset *, UIImageConfiguration *configuration, UIImage *) {
+        auto *requestedScale = @(configuration.traitCollection.displayScale);
+
+        // Check for the exact scale.
+        if (UIImage *image = images[requestedScale])
+            return image;
+
+        // Find the best matching scale.
+        NSNumber *bestScale;
+        for (NSNumber *scale in sortedImageScales) {
+            bestScale = scale;
+            if (scale.doubleValue >= requestedScale.doubleValue)
+                break;
+        }
+
+        return bestScale ? images[bestScale] : nil;
     }];
 
     // The returned image retains its link to the image asset and adapts to trait changes,

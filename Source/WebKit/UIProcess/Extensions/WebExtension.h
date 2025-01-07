@@ -276,7 +276,7 @@ public:
     const String& sidebarTitle();
 #endif
 
-    RefPtr<WebCore::Icon> iconForPath(const String&, RefPtr<API::Error>&, WebCore::FloatSize sizeForResizing = { });
+    RefPtr<WebCore::Icon> iconForPath(const String&, RefPtr<API::Error>&, WebCore::FloatSize sizeForResizing = { }, std::optional<double> displayScale = std::nullopt);
 
     size_t bestIconSize(const JSON::Object&, size_t idealPixelSize);
     String pathForBestImage(const JSON::Object&, size_t idealPixelSize);
