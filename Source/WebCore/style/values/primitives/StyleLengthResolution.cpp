@@ -383,9 +383,13 @@ double computeNonCalcLengthDouble(double value, CSS::LengthUnit lengthUnit, cons
     }
 
     case Cqmax:
+        if (value < 0)
+            return std::min(computeNonCalcLengthDouble(value, Cqb, conversionData), computeNonCalcLengthDouble(value, Cqi, conversionData));
         return std::max(computeNonCalcLengthDouble(value, Cqb, conversionData), computeNonCalcLengthDouble(value, Cqi, conversionData));
 
     case Cqmin:
+        if (value < 0)
+            return std::max(computeNonCalcLengthDouble(value, Cqb, conversionData), computeNonCalcLengthDouble(value, Cqi, conversionData));
         return std::min(computeNonCalcLengthDouble(value, Cqb, conversionData), computeNonCalcLengthDouble(value, Cqi, conversionData));
     }
 
