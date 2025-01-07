@@ -262,7 +262,7 @@ std::optional<UncheckedKeyHashSet<String>> parseGlyphName(StringView string)
 {
     // FIXME: Parsing error detection is missing.
 
-    return readCharactersForParsing(string, [](auto buffer) -> UncheckedKeyHashSet<String> {
+    return readCharactersForParsing(string, [](auto buffer) {
         skipOptionalSVGSpaces(buffer);
 
         UncheckedKeyHashSet<String> values;
@@ -276,19 +276,16 @@ std::optional<UncheckedKeyHashSet<String>> parseGlyphName(StringView string)
             if (buffer.position() == inputStart.data())
                 break;
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-            // walk backwards from the ; to ignore any whitespace
-            auto inputEnd = buffer.position() - 1;
-            while (inputStart.data() < inputEnd && isASCIIWhitespace(*inputEnd))
-                --inputEnd;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+            // Walk backwards from the ; to ignore any whitespace.
+            size_t index = buffer.position() - inputStart.data();
+            while (index > 0 && isASCIIWhitespace(inputStart[index - 1]))
+                --index;
 
-            values.add(inputStart.first(inputEnd - inputStart.data() + 1));
+            values.add(inputStart.first(index));
             skipOptionalSVGSpacesOrDelimiter(buffer, ',');
         }
         return values;
     });
-
 }
 
 template<typename CharacterType> static std::optional<UnicodeRange> parseUnicodeRange(std::span<const CharacterType> span)
