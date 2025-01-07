@@ -2044,7 +2044,10 @@ void WebLocalFrameLoaderClient::didExceedNetworkUsageThreshold()
     if (url.isEmpty())
         return;
 
-    webPage->sendWithAsyncReply(Messages::WebPageProxy::ShouldOffloadIFrameForHost(url.host().toStringWithoutCopying()), [frame = m_frame->coreLocalFrame()] (bool wasGranted) {
+    webPage->sendWithAsyncReply(Messages::WebPageProxy::ShouldOffloadIFrameForHost(url.host().toStringWithoutCopying()), [weakFrame = WeakPtr { m_frame->coreLocalFrame() }] (bool wasGranted) {
+        RefPtr frame = weakFrame.get();
+        if (!frame)
+            return;
         if (wasGranted)
             frame->showResourceMonitoringError();
     });

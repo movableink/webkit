@@ -142,7 +142,7 @@ void ResourceMonitor::checkNetworkUsageExcessIfNecessary()
         if (RefPtr protectedWindow = frame->window(); protectedWindow && protectedWindow->hasStickyActivation())
             return;
 
-        frame->loader().client().didExceedNetworkUsageThreshold();
+        frame->loader().protectedClient()->didExceedNetworkUsageThreshold();
     }
 }
 
