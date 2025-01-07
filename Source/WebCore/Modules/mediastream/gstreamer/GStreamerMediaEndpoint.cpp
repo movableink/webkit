@@ -1051,6 +1051,7 @@ ExceptionOr<std::unique_ptr<GStreamerRtpSenderBackend>> GStreamerMediaEndpoint::
         source = WTFMove(videoSource);
         kind = "video"_s;
     }
+    ALWAYS_LOG(LOGIDENTIFIER, "Adding "_s, kind, " track with id "_s, track.id());
 
     auto backendsResult = createTransceiverBackends(kind, init, WTFMove(source), GStreamerPeerConnectionBackend::IgnoreNegotiationNeededFlag::No);
     if (backendsResult.hasException())
@@ -1562,6 +1563,9 @@ ExceptionOr<GStreamerMediaEndpoint::Backends> GStreamerMediaEndpoint::createTran
 
 ExceptionOr<GStreamerMediaEndpoint::Backends> GStreamerMediaEndpoint::addTransceiver(const String& trackKind, const RTCRtpTransceiverInit& init, PeerConnectionBackend::IgnoreNegotiationNeededFlag ignoreNegotiationNeededFlag)
 {
+    auto direction = convertEnumerationToString(init.direction);
+    ALWAYS_LOG(LOGIDENTIFIER, "Adding "_s, trackKind, " ", direction, " transceiver"_s);
+
     GST_DEBUG_OBJECT(m_pipeline.get(), "Creating transceiver for %s track kind", trackKind.ascii().data());
     GStreamerRtpSenderBackend::Source source = nullptr;
     if (init.direction == RTCRtpTransceiverDirection::Sendonly || init.direction == RTCRtpTransceiverDirection::Sendrecv) {
@@ -1585,6 +1589,8 @@ GStreamerRtpSenderBackend::Source GStreamerMediaEndpoint::createSourceForTrack(M
 
 ExceptionOr<GStreamerMediaEndpoint::Backends> GStreamerMediaEndpoint::addTransceiver(MediaStreamTrack& track, const RTCRtpTransceiverInit& init, PeerConnectionBackend::IgnoreNegotiationNeededFlag ignoreNegotiationNeededFlag)
 {
+    auto direction = convertEnumerationToString(init.direction);
+    ALWAYS_LOG(LOGIDENTIFIER, "Adding "_s, track.kind().string(), " ", direction, " transceiver for track "_s, track.id());
     GST_DEBUG_OBJECT(m_pipeline.get(), "Creating transceiver associated with %s track %s", track.kind().string().ascii().data(), track.id().ascii().data());
     return createTransceiverBackends(track.kind(), init, createSourceForTrack(track), ignoreNegotiationNeededFlag);
 }
