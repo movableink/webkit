@@ -1163,7 +1163,7 @@ static void addOverlayEventRegions(WebCore::PlatformLayerIdentifier layerID, con
 
     const auto& layerProperties = *it->value;
     if (layerProperties.changedProperties & WebKit::LayerChange::EventRegionChanged) {
-        CGRect rect = layerProperties.eventRegion.scrollOverlayRegion().bounds();
+        CGRect rect = layerProperties.eventRegion.region().bounds();
         if (!CGRectIsEmpty(rect))
             overlayRegionsIDs.add(layerID);
     }
@@ -1199,6 +1199,34 @@ static void configureScrollViewWithOverlayRegionsIDs(WKBaseScrollView* scrollVie
     HashSet<WebCore::IntRect> overlayRegionRects;
     Vector<WebCore::IntRect> fullWidthRects;
     Vector<WebCore::IntRect> fullHeightRects;
+    constexpr float rectCandidateEpsilon = 0.5;
+    CGRect viewport = CGRectOffset(scrollView.frame, -scrollView.frame.origin.x, -scrollView.frame.origin.y);
+    CGFloat viewportWidth = CGRectGetWidth(viewport);
+    CGFloat viewportHeight = CGRectGetHeight(viewport);
+    CGFloat halfWidth = viewportWidth * 0.5;
+    CGFloat halfHeight = viewportHeight * 0.5;
+
+    auto isValidOverlayRegionRect = [&](auto& rect) {
+        bool fullWidth = std::abs(CGFloat(rect.width()) - viewportWidth) <= rectCandidateEpsilon;
+        bool fullHeight = std::abs(CGFloat(rect.height()) - viewportHeight) <= rectCandidateEpsilon;
+
+        if (fullHeight && CGFloat(rect.width()) > halfWidth) {
+            if (CGFloat(rect.x()) <= rectCandidateEpsilon || CGFloat(rect.maxX()) >= viewportWidth - rectCandidateEpsilon)
+                return false;
+        }
+
+        if (fullWidth && CGFloat(rect.height()) > halfHeight) {
+            if (CGFloat(rect.y()) <= rectCandidateEpsilon || CGFloat(rect.maxY()) >= viewportHeight - rectCandidateEpsilon)
+                return false;
+        }
+
+        return true;
+    };
+
+    auto addOverlayRegionRect = [&](auto&& rect) {
+        if (isValidOverlayRegionRect(rect))
+            overlayRegionRects.add(rect);
+    };
 
     for (auto layerID : overlayRegionsIDs) {
         const auto* node = host.nodeForID(layerID);
@@ -1255,19 +1283,21 @@ static void configureScrollViewWithOverlayRegionsIDs(WKBaseScrollView* scrollVie
         // not the frame (external) nor the bounds (origin moves while scrolling).
         CGRect rect = [overlayView convertRect:node->eventRegion().region().bounds() toView:scrollView.superview];
         CGRect offsetRect = CGRectOffset(rect, -scrollView.frame.origin.x, -scrollView.frame.origin.y);
-        CGRect viewport = CGRectOffset(scrollView.frame, -scrollView.frame.origin.x, -scrollView.frame.origin.y);
         CGRect snappedRect = snapRectToScrollViewEdges(offsetRect, viewport);
 
         if (CGRectIsEmpty(snappedRect))
             continue;
 
-        constexpr float mergeCandidateEpsilon = 0.5;
-        if (std::abs(CGRectGetWidth(snappedRect) - CGRectGetWidth(viewport)) <= mergeCandidateEpsilon)
-            fullWidthRects.append(WebCore::enclosingIntRect(snappedRect));
-        else if (std::abs(CGRectGetHeight(snappedRect) - CGRectGetHeight(viewport)) <= mergeCandidateEpsilon)
-            fullHeightRects.append(WebCore::enclosingIntRect(snappedRect));
+        auto rectToAdd = WebCore::enclosingIntRect(snappedRect);
+        if (!isValidOverlayRegionRect(rectToAdd))
+            continue;
+
+        if (std::abs(CGRectGetWidth(snappedRect) - CGRectGetWidth(viewport)) <= rectCandidateEpsilon)
+            fullWidthRects.append(rectToAdd);
+        else if (std::abs(CGRectGetHeight(snappedRect) - CGRectGetHeight(viewport)) <= rectCandidateEpsilon)
+            fullHeightRects.append(rectToAdd);
         else
-            overlayRegionRects.add(WebCore::enclosingIntRect(snappedRect));
+            addOverlayRegionRect(rectToAdd);
     }
 
     auto mergeAndAdd = [&](auto& vec, const auto& sort, const auto& shouldMerge) {
@@ -1280,11 +1310,11 @@ static void configureScrollViewWithOverlayRegionsIDs(WKBaseScrollView* scrollVie
             else if (shouldMerge(rect, *current))
                 current->unite(rect);
             else
-                overlayRegionRects.add(*std::exchange(current, rect));
+                addOverlayRegionRect(*std::exchange(current, rect));
         }
 
         if (current)
-            overlayRegionRects.add(*current);
+            addOverlayRegionRect(*current);
     };
 
     mergeAndAdd(fullWidthRects, [](const auto& a, const auto& b) {

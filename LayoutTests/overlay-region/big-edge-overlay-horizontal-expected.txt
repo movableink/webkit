@@ -5,7 +5,6 @@
   (subviews
     (view [class: WKScrollView]
       (scrolling behavior 2)
-      (overlay region [x: 10 y: 10 width: 780 height: 580])
       (layer bounds [x: 0 y: 2000 width: 800 height: 600])
       (layer position [x: 400 y: 400])
       (subviews
@@ -41,11 +40,11 @@
                                   (subviews
                                     (view [class: WKTransformView]
                                       (layer bounds [x: 0 y: 0 width: 0 height: 0])
-                                      (layer position [x: 10 y: 10])
+                                      (layer position [x: 0 y: 0])
                                       (subviews
                                         (view [class: WKCompositingView]
-                                          (layer bounds [x: 0 y: 0 width: 780 height: 580])
-                                          (layer position [x: 390 y: 390]))))))))))))))))
+                                          (layer bounds [x: 0 y: 0 width: 560 height: 600])
+                                          (layer position [x: 280 y: 280]))))))))))))))))
             (view [class: UIView]
               (layer bounds [x: 0 y: 0 width: 0 height: 0])
               (layer position [x: 400 y: 400]))
