@@ -224,7 +224,8 @@ void WebFrameProxy::loadData(std::span<const uint8_t> data, const String& type, 
 {
     ASSERT(!isMainFrame());
     if (RefPtr page = m_page.get()) {
-        protectedProcess()->addPreviouslyApprovedFileURL(baseURL);
+        if (baseURL.protocolIsFile())
+            protectedProcess()->addPreviouslyApprovedFileURL(baseURL);
         page->sendToProcessContainingFrame(m_frameID, Messages::WebPage::LoadDataInFrame(data, type, encodingName, baseURL, m_frameID));
     }
 }
