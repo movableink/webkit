@@ -161,8 +161,10 @@ static CachedResourceHandle<CachedResource> createResource(CachedResource::Type 
 #endif
     case CachedResource::Type::LinkPrefetch:
         return new CachedResource(WTFMove(request), CachedResource::Type::LinkPrefetch, sessionID, cookieJar);
+#if ENABLE(VIDEO)
     case CachedResource::Type::TextTrackResource:
         return new CachedTextTrack(WTFMove(request), sessionID, cookieJar);
+#endif
 #if ENABLE(APPLICATION_MANIFEST)
     case CachedResource::Type::ApplicationManifest:
         return new CachedApplicationManifest(WTFMove(request), sessionID, cookieJar);
@@ -204,8 +206,10 @@ static CachedResourceHandle<CachedResource> createResource(CachedResourceRequest
 #endif
     case CachedResource::Type::LinkPrefetch:
         return new CachedResource(WTFMove(request), CachedResource::Type::LinkPrefetch, resource.sessionID(), resource.cookieJar());
+#if ENABLE(VIDEO)
     case CachedResource::Type::TextTrackResource:
         return new CachedTextTrack(WTFMove(request), resource.sessionID(), resource.cookieJar());
+#endif
 #if ENABLE(APPLICATION_MANIFEST)
     case CachedResource::Type::ApplicationManifest:
         return new CachedApplicationManifest(WTFMove(request), resource.sessionID(), resource.cookieJar());

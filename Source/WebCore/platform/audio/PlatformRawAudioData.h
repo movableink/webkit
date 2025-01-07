@@ -23,6 +23,8 @@
 #include <span>
 #include <wtf/ThreadSafeRefCounted.h>
 
+#if ENABLE(WEB_CODECS)
+
 namespace WebCore {
 
 enum class AudioSampleFormat;
@@ -49,3 +51,5 @@ public:
 };
 
 } // namespace WebCore
+
+#endif // ENABLE(WEB_CODECS)

@@ -532,12 +532,16 @@ void WebKitProtocolHandler::handleGPU(WebKitURISchemeRequest* request)
 #if PLATFORM(GTK)
         if (usingDMABufRenderer) {
             addTableRow(hardwareAccelerationObject, "Renderer"_s, dmabufRendererWithSupportedBuffers());
+#if USE(LIBDRM)
             addTableRow(hardwareAccelerationObject, "Buffer format"_s, renderBufferFormat(request));
+#endif
         }
 #elif PLATFORM(WPE) && ENABLE(WPE_PLATFORM)
         if (usingWPEPlatformAPI) {
             addTableRow(hardwareAccelerationObject, "Renderer"_s, dmabufRendererWithSupportedBuffers());
+#if USE(LIBDRM)
             addTableRow(hardwareAccelerationObject, "Buffer format"_s, renderBufferFormat(request));
+#endif
         }
 #endif
         addTableRow(hardwareAccelerationObject, "Native interface"_s, uiProcessContextIsEGL() ? "EGL"_s : "None"_s);
