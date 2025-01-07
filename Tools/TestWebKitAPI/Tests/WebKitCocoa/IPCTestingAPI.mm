@@ -490,6 +490,7 @@ static NSSet<NSString *> *splitTypeFromList(NSString *container, NSString *list)
     bool firstTypeOnly = [container isEqualToString:@"std::span"]
         || [container isEqualToString:@"Vector"]
         || [container isEqualToString:@"std::array"]
+        || [container isEqualToString:@"UncheckedKeyHashSet"]
         || [container isEqualToString:@"HashSet"];
     bool firstTwoTypesOnly = [container isEqualToString:@"HashMap"];
 
@@ -531,6 +532,7 @@ static NSMutableSet<NSString *> *extractTypesFromContainers(NSSet<NSString *> *i
             @"HashMap",
             @"MemoryCompactRobinHoodHashMap",
             @"MemoryCompactLookupOnlyRobinHoodHashSet",
+            @"UncheckedKeyHashSet",
             @"std::pair",
             @"IPC::ArrayReferenceTuple",
             @"std::span",
@@ -669,6 +671,7 @@ TEST(IPCTestingAPI, SerializedTypeInfo)
         @"uint32_t",
         @"int16_t",
         @"uint64_t",
+        @"uintptr_t",
         @"int",
         @"long long",
         @"GCGLint",

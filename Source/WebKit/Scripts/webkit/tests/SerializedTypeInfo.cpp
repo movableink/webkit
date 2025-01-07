@@ -590,7 +590,7 @@ Vector<SerializedTypeInfo> allSerializedTypes()
         } },
         { "WebCore::NonConditionalVariant"_s, {
         {
-            "std::variant<int, double> "_s
+            "std::variant<int, double>"_s
             , "alias"_s }
         } },
     };

@@ -1411,7 +1411,7 @@ def generate_serialized_type_info(serialized_types, serialized_enums, headers, u
                 result.append(f'{alias_line.strip()}')
             else:
                 underscore_s_after_last_line = '_s' if line_number is len(using_statement.alias_lines) - 1 else ''
-                extra_space_after_comma = ' ' if ',' in alias_line else ''
+                extra_space_after_comma = ' ' if alias_line.endswith(',') else ''
                 result.append(f'            "{alias_line.strip()}{extra_space_after_comma}"{underscore_s_after_last_line}')
         result.append(f'            , "alias"_s }}')
         result.append('        } },')
