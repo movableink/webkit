@@ -139,6 +139,7 @@ CommandEncoder::CommandEncoder(id<MTLCommandBuffer> commandBuffer, Device& devic
 #endif
     m_retainedBuffers = [NSMutableSet set];
     m_retainedTextures = [NSMutableSet set];
+    m_retainedICBs = [NSMutableSet set];
 }
 
 CommandEncoder::CommandEncoder(Device& device)
@@ -1380,6 +1381,12 @@ void CommandEncoder::makeInvalid(NSString* errorString)
         commandBuffer->makeInvalid(errorString);
 }
 
+void CommandEncoder::addICB(id<MTLIndirectCommandBuffer> icb)
+{
+    if (!icb)
+        return;
+    [m_retainedICBs addObject:icb];
+}
 void CommandEncoder::addBuffer(id<MTLBuffer> buffer)
 {
     if (!buffer)
