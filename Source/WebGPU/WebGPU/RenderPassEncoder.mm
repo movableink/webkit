@@ -180,6 +180,7 @@ RenderPassEncoder::RenderPassEncoder(CommandEncoder& parentEncoder, Device& devi
     , m_lastErrorString(errorString)
 {
     Ref { m_parentEncoder }->lock(true);
+    m_parentEncoder->setLastError(errorString);
 }
 
 RenderPassEncoder::~RenderPassEncoder()

@@ -66,6 +66,7 @@ ComputePassEncoder::ComputePassEncoder(CommandEncoder& parentEncoder, Device& de
     , m_lastErrorString(errorString)
 {
     protectedParentEncoder()->lock(true);
+    m_parentEncoder->setLastError(errorString);
 }
 
 ComputePassEncoder::~ComputePassEncoder()
