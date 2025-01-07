@@ -226,7 +226,7 @@ CoreIPCNSURLRequest::CoreIPCNSURLRequest(const RetainPtr<NSURLRequest>& request)
 
 RetainPtr<id> CoreIPCNSURLRequest::toID() const
 {
-    auto dict = adoptNS([[NSMutableDictionary alloc] initWithCapacity:43]); // Initialized with the count of members in CoreIPCNSURLRequestData
+    auto dict = adoptNS([[NSMutableDictionary alloc] initWithCapacity:CoreIPCNSURLRequestData::numberOfFields]);
 
     SET_DICT_FROM_OPTIONAL_MEMBER(protocolProperties);
     SET_DICT_FROM_PRIMITIVE(isMutable, NSNumber, Bool);
