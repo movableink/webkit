@@ -341,12 +341,12 @@ std::pair<WebAnimationTime, WebAnimationTime> ViewTimeline::intervalForAttachmen
     };
 }
 
-Ref<CSSNumericValue> ViewTimeline::startOffset()
+Ref<CSSNumericValue> ViewTimeline::startOffset() const
 {
     return CSSNumericFactory::px(computeTimelineData().rangeStart);
 }
 
-Ref<CSSNumericValue> ViewTimeline::endOffset()
+Ref<CSSNumericValue> ViewTimeline::endOffset() const
 {
     return CSSNumericFactory::px(computeTimelineData().rangeEnd);
 }

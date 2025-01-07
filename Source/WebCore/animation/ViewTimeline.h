@@ -59,8 +59,8 @@ public:
     const ViewTimelineInsets& insets() const { return m_insets; }
     void setInsets(ViewTimelineInsets&& insets) { m_insets = WTFMove(insets); }
 
-    Ref<CSSNumericValue> startOffset();
-    Ref<CSSNumericValue> endOffset();
+    Ref<CSSNumericValue> startOffset() const;
+    Ref<CSSNumericValue> endOffset() const;
 
     AnimationTimeline::ShouldUpdateAnimationsAndSendEvents documentWillUpdateAnimationsAndSendEvents() override;
     AnimationTimelinesController* controller() const override;
