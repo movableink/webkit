@@ -43,7 +43,6 @@ WebTransportSendStreamSink::WebTransportSendStreamSink(WebTransportSession& sess
 
 WebTransportSendStreamSink::~WebTransportSendStreamSink()
 {
-    ASSERT(RunLoop::isMain());
 }
 
 void WebTransportSendStreamSink::write(WebCore::ScriptExecutionContext& context, JSC::JSValue value, WebCore::DOMPromiseDeferred<void>&& promise)
@@ -55,6 +54,9 @@ void WebTransportSendStreamSink::write(WebCore::ScriptExecutionContext& context,
     if (!context.globalObject())
         return promise.reject(WebCore::Exception { WebCore::ExceptionCode::InvalidStateError });
 
+    if (m_isClosed)
+        return promise.reject(WebCore::Exception { WebCore::ExceptionCode::InvalidStateError });
+
     auto& globalObject = *JSC::jsCast<WebCore::JSDOMGlobalObject*>(context.globalObject());
     auto scope = DECLARE_THROW_SCOPE(globalObject.vm());
 
@@ -64,10 +66,36 @@ void WebTransportSendStreamSink::write(WebCore::ScriptExecutionContext& context,
 
     WTF::switchOn(bufferSource.releaseReturnValue(), [&](auto&& arrayBufferOrView) {
         constexpr bool withFin { false };
-        context.enqueueTaskWhenSettled(session->streamSendBytes(m_identifier, arrayBufferOrView->span(), withFin), WebCore::TaskSource::Networking, [promise = WTFMove(promise)] (auto&&) mutable {
-            promise.resolve();
+        context.enqueueTaskWhenSettled(session->streamSendBytes(m_identifier, arrayBufferOrView->span(), withFin), WebCore::TaskSource::Networking, [promise = WTFMove(promise)] (auto&& exception) mutable {
+            if (!exception)
+                promise.settle(Exception { ExceptionCode::NetworkError });
+            else if (*exception)
+                promise.settle(WTFMove(**exception));
+            else
+                promise.resolve();
         });
     });
 }
 
+void WebTransportSendStreamSink::close()
+{
+    if (m_isClosed)
+        return;
+    RefPtr session = m_session.get();
+    if (session)
+        session->streamSendBytes(m_identifier, { }, true);
+    m_isClosed = true;
+}
+
+void WebTransportSendStreamSink::error(String&&)
+{
+    if (m_isCancelled)
+        return;
+    RefPtr session = m_session.get();
+    if (session) {
+        // FIXME: Use error code from WebTransportError
+        session->cancelSendStream(m_identifier, std::nullopt);
+    }
+    m_isCancelled = true;
+}
 }

@@ -46,16 +46,19 @@ public:
 private:
     WorkerWebTransportSession(ScriptExecutionContextIdentifier, WebTransportSessionClient&);
 
-    void receiveDatagram(std::span<const uint8_t>) final;
+    void receiveDatagram(std::span<const uint8_t>, bool, std::optional<Exception>&&) final;
     void receiveIncomingUnidirectionalStream(WebTransportStreamIdentifier) final;
     void receiveBidirectionalStream(WebTransportBidirectionalStreamConstructionParameters&&) final;
-    void streamReceiveBytes(WebTransportStreamIdentifier, std::span<const uint8_t>, bool withFin) final;
+    void streamReceiveBytes(WebTransportStreamIdentifier, std::span<const uint8_t>, bool, std::optional<Exception>&&) final;
     void networkProcessCrashed() final;
 
-    Ref<GenericPromise> sendDatagram(std::span<const uint8_t>) final;
+    Ref<WebTransportSendPromise> sendDatagram(std::span<const uint8_t>) final;
     Ref<WritableStreamPromise> createOutgoingUnidirectionalStream() final;
     Ref<BidirectionalStreamPromise> createBidirectionalStream() final;
-    void terminate(uint32_t, CString&&) final;
+    void cancelReceiveStream(WebTransportStreamIdentifier, std::optional<WebTransportStreamErrorCode>) final;
+    void cancelSendStream(WebTransportStreamIdentifier, std::optional<WebTransportStreamErrorCode>) final;
+    void destroyStream(WebTransportStreamIdentifier, std::optional<WebTransportStreamErrorCode>) final;
+    void terminate(WebTransportSessionErrorCode, CString&&) final;
 
     const ScriptExecutionContextIdentifier m_contextID;
     ThreadSafeWeakPtr<WebTransportSessionClient> m_client;

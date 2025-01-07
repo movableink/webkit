@@ -1345,7 +1345,7 @@ void WebProcess::networkProcessConnectionClosed(NetworkProcessConnection* connec
 
     m_cacheStorageProvider->networkProcessConnectionClosed();
 
-    for (auto& weakSession : m_webTransportSessions.values()) {
+    for (auto& weakSession : copyToVector(m_webTransportSessions.values())) {
         if (RefPtr webtransportSession = weakSession.get())
             webtransportSession->networkProcessCrashed();
     }
