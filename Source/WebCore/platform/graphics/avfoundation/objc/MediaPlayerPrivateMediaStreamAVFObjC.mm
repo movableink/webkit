@@ -139,6 +139,7 @@ void MediaPlayerPrivateMediaStreamAVFObjC::setNativeImageCreator(NativeImageCrea
 
 MediaPlayerPrivateMediaStreamAVFObjC::MediaPlayerPrivateMediaStreamAVFObjC(MediaPlayer* player)
     : m_player(player)
+    , m_startTime(MediaTime::invalidTime())
     , m_videoRotation { VideoFrameRotation::None }
     , m_logger(player->mediaPlayerLogger())
     , m_logIdentifier(player->mediaPlayerLogIdentifier())

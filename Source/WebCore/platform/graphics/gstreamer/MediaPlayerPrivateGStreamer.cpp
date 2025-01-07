@@ -171,6 +171,7 @@ MediaPlayerPrivateGStreamer::MediaPlayerPrivateGStreamer(MediaPlayer* player)
     , m_logger(player->mediaPlayerLogger())
     , m_logIdentifier(player->mediaPlayerLogIdentifier())
 #endif
+    , m_startTime(MediaTime::invalidTime())
     , m_loader(player->mediaResourceLoader())
 {
 
