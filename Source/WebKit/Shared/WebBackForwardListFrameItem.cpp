@@ -158,10 +158,14 @@ Ref<FrameState> WebBackForwardListFrameItem::copyFrameStateWithChildren()
     return frameState;
 }
 
-bool WebBackForwardListFrameItem::hasAncestorFrame(FrameIdentifier frameID)
+bool WebBackForwardListFrameItem::sharesAncestor(WebBackForwardListFrameItem& frameItem) const
 {
-    for (RefPtr ancestor = m_parent.get(); ancestor; ancestor = ancestor->m_parent.get()) {
-        if (ancestor->frameID() == frameID)
+    HashSet<WebCore::BackForwardFrameItemIdentifier> currentAncestors;
+    for (RefPtr currentAncestor = m_parent.get(); currentAncestor; currentAncestor = currentAncestor->m_parent.get())
+        currentAncestors.add(currentAncestor->m_identifier);
+
+    for (RefPtr frameItemAncestor = frameItem.m_parent.get(); frameItemAncestor; frameItemAncestor = frameItemAncestor->m_parent.get()) {
+        if (currentAncestors.contains(frameItemAncestor->m_identifier))
             return true;
     }
     return false;

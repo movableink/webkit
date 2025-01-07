@@ -55,7 +55,7 @@ public:
     WebBackForwardListFrameItem* parent() const { return m_parent.get(); }
     RefPtr<WebBackForwardListFrameItem> protectedParent() const { return m_parent.get(); }
     void setParent(WebBackForwardListFrameItem* parent) { m_parent = parent; }
-    bool hasAncestorFrame(WebCore::FrameIdentifier);
+    bool sharesAncestor(WebBackForwardListFrameItem&) const;
 
     WebBackForwardListFrameItem& rootFrame();
     WebBackForwardListFrameItem& mainFrame();
