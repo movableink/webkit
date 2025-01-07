@@ -596,8 +596,6 @@ page/VisitedLinkStore.cpp
 page/VisualViewport.cpp
 page/WindowOrWorkerGlobalScope.cpp
 page/WorkerNavigator.cpp
-page/cocoa/PageCocoa.mm
-page/cocoa/ResourceUsageOverlayCocoa.mm
 page/cocoa/ResourceUsageThreadCocoa.mm
 page/cocoa/WebTextIndicatorLayer.mm
 page/csp/ContentSecurityPolicy.cpp
