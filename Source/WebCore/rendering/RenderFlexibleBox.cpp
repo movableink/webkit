@@ -1654,6 +1654,19 @@ bool RenderFlexibleBox::canUseFlexItemForPercentageResolution(const RenderBox& f
     return canUseByStyle();
 }
 
+bool RenderFlexibleBox::canUseFlexItemForPercentageResolutionByStyle(const RenderBox& flexItem)
+{
+    ASSERT(flexItem.isFlexItem());
+
+    if (mainAxisIsFlexItemInlineAxis(flexItem))
+        return alignmentForFlexItem(flexItem) == ItemPosition::Stretch;
+
+    if (flexItem.style().flexGrow() == RenderStyle::initialFlexGrow() && flexItem.style().flexShrink() == 0.0f && flexItemMainSizeIsDefinite(flexItem, flexBasisForFlexItem(flexItem)))
+        return true;
+
+    return canComputePercentageFlexBasis(flexItem, Length(0, LengthType::Percent), UpdatePercentageHeightDescendants::Yes);
+}
+
 // This method is only called whenever a descendant of a flex item wants to resolve a percentage in its
 // block axis (logical height). The key here is that percentages should be generally resolved before the
 // flex item is flexed, meaning that they shouldn't be recomputed once the flex item has been flexed. There
@@ -1662,7 +1675,7 @@ bool RenderFlexibleBox::canUseFlexItemForPercentageResolution(const RenderBox& f
 // https://drafts.csswg.org/css-flexbox/#definite-sizes for additional details.
 std::optional<LayoutUnit> RenderFlexibleBox::usedFlexItemOverridingLogicalHeightForPercentageResolution(const RenderBox& flexItem)
 {
-    return canUseFlexItemForPercentageResolution(flexItem) ? flexItem.overridingBorderBoxLogicalHeight() : std::nullopt;
+    return canUseFlexItemForPercentageResolutionByStyle(flexItem) ? flexItem.overridingBorderBoxLogicalHeight() : std::nullopt;
 }
 
 LayoutUnit RenderFlexibleBox::adjustFlexItemSizeForAspectRatioCrossAxisMinAndMax(const RenderBox& flexItem, LayoutUnit flexItemSize)

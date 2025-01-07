@@ -101,7 +101,8 @@ public:
     
     std::optional<LayoutUnit> usedFlexItemOverridingLogicalHeightForPercentageResolution(const RenderBox&);
     bool canUseFlexItemForPercentageResolution(const RenderBox&);
-    
+    bool canUseFlexItemForPercentageResolutionByStyle(const RenderBox&);
+
     void clearCachedMainSizeForFlexItem(const RenderBox& flexItem);
     
     LayoutUnit cachedFlexItemIntrinsicContentLogicalHeight(const RenderBox& flexItem) const;
