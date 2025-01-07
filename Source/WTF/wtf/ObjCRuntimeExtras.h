@@ -46,6 +46,7 @@ namespace WTF {
 
 WTF_EXPORT_PRIVATE MallocSpan<Method, SystemMalloc> class_copyMethodListSpan(Class);
 WTF_EXPORT_PRIVATE MallocSpan<__unsafe_unretained Protocol *, SystemMalloc> class_copyProtocolListSpan(Class);
+WTF_EXPORT_PRIVATE MallocSpan<objc_property_t, SystemMalloc> class_copyPropertyListSpan(Class);
 WTF_EXPORT_PRIVATE MallocSpan<objc_method_description, SystemMalloc> protocol_copyMethodDescriptionListSpan(Protocol *, BOOL isRequiredMethod, BOOL isInstanceMethod);
 WTF_EXPORT_PRIVATE MallocSpan<objc_property_t, SystemMalloc> protocol_copyPropertyListSpan(Protocol *);
 WTF_EXPORT_PRIVATE MallocSpan<__unsafe_unretained Protocol *, SystemMalloc> protocol_copyProtocolListSpan(Protocol *);
@@ -53,6 +54,7 @@ WTF_EXPORT_PRIVATE MallocSpan<__unsafe_unretained Protocol *, SystemMalloc> prot
 } // namespace WTF
 
 using WTF::class_copyMethodListSpan;
+using WTF::class_copyPropertyListSpan;
 using WTF::class_copyProtocolListSpan;
 using WTF::protocol_copyMethodDescriptionListSpan;
 using WTF::protocol_copyPropertyListSpan;
