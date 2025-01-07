@@ -500,8 +500,7 @@ extension WebGPU.CommandEncoder {
         }
 
         let sourceTexture = WebGPU.fromAPI(source.texture);
-        let error = self.errorValidatingCopyTextureToBuffer(source, destination, copySize)
-        guard error != nil else {
+        if let error = self.errorValidatingCopyTextureToBuffer(source, destination, copySize) {
             self.makeInvalid(error)
             return
         }
@@ -782,8 +781,7 @@ extension WebGPU.CommandEncoder {
         }
         let destinationTexture = WebGPU.fromAPI(destination.texture)
 
-        let error = self.errorValidatingCopyBufferToTexture(source, destination, copySize)
-        guard error != nil else {
+        if let error = self.errorValidatingCopyBufferToTexture(source, destination, copySize) {
             self.makeInvalid(error)
             return
         }
