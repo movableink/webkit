@@ -271,7 +271,7 @@ void TZoneHeapManager::init()
         TZONE_LOG_DEBUG("\n");
     }
 
-    unsigned char seed[CC_SHA1_DIGEST_LENGTH];
+    alignas(8) unsigned char seed[CC_SHA1_DIGEST_LENGTH];
     (void)CC_SHA256(&rawSeed, rawSeedLength, seed);
 #else // OS(DARWIN) => !OS(DARWIN)
     if constexpr (verbose)
