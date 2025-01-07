@@ -58,7 +58,7 @@ void WebExtensionContext::storageGet(WebPageProxyIdentifier webPageProxyIdentifi
     auto *storage = storageForType(dataType);
     [storage getValuesForKeys:createNSArray(keys).get() completionHandler:makeBlockPtr([callingAPIName, completionHandler = WTFMove(completionHandler)](NSDictionary<NSString *, NSString *> *values, NSString *errorMessage) mutable {
         if (errorMessage)
-            completionHandler(toWebExtensionError(callingAPIName, nil, errorMessage));
+            completionHandler(toWebExtensionError(callingAPIName, nullString(), errorMessage));
         else
             completionHandler(String(encodeJSONString(values)));
     }).get()];
@@ -71,7 +71,7 @@ void WebExtensionContext::storageGetKeys(WebPageProxyIdentifier webPageProxyIden
     auto *storage = storageForType(dataType);
     [storage getAllKeys:makeBlockPtr([callingAPIName, completionHandler = WTFMove(completionHandler)](NSArray<NSString *> *keys, NSString *errorMessage) mutable {
         if (errorMessage)
-            completionHandler(toWebExtensionError(callingAPIName, nil, errorMessage));
+            completionHandler(toWebExtensionError(callingAPIName, nullString(), errorMessage));
         else
             completionHandler(makeVector<String>(keys));
     }).get()];
@@ -84,7 +84,7 @@ void WebExtensionContext::storageGetBytesInUse(WebPageProxyIdentifier webPagePro
     auto *storage = storageForType(dataType);
     [storage getStorageSizeForKeys:createNSArray(keys).get() completionHandler:makeBlockPtr([callingAPIName, completionHandler = WTFMove(completionHandler)](size_t size, NSString *errorMessage) mutable {
         if (errorMessage)
-            completionHandler(toWebExtensionError(callingAPIName, nil, errorMessage));
+            completionHandler(toWebExtensionError(callingAPIName, nullString(), errorMessage));
         else
             completionHandler(size);
     }).get()];
@@ -98,23 +98,23 @@ void WebExtensionContext::storageSet(WebPageProxyIdentifier webPageProxyIdentifi
 
     [storageForType(dataType) getStorageSizeForAllKeysIncludingKeyedData:data withCompletionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, callingAPIName, dataType, retainData = RetainPtr { data }, completionHandler = WTFMove(completionHandler)](size_t size, NSUInteger numberOfKeys, NSDictionary<NSString *, NSString *> *existingKeysAndValues, NSString *errorMessage) mutable {
         if (errorMessage) {
-            completionHandler(toWebExtensionError(callingAPIName, nil, errorMessage));
+            completionHandler(toWebExtensionError(callingAPIName, nullString(), errorMessage));
             return;
         }
 
         if (size > quotaForStorageType(dataType)) {
-            completionHandler(toWebExtensionError(callingAPIName, nil, @"exceeded storage quota"));
+            completionHandler(toWebExtensionError(callingAPIName, nullString(), @"exceeded storage quota"));
             return;
         }
 
         if (dataType == WebExtensionDataType::Sync && numberOfKeys > webExtensionStorageAreaSyncMaximumItems) {
-            completionHandler(toWebExtensionError(callingAPIName, nil, @"exceeded maximum number of items"));
+            completionHandler(toWebExtensionError(callingAPIName, nullString(), @"exceeded maximum number of items"));
             return;
         }
 
         [storageForType(dataType) setKeyedData:retainData.get() completionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, callingAPIName, retainData, dataType, existingKeysAndValues = RetainPtr { existingKeysAndValues }, completionHandler = WTFMove(completionHandler)](NSArray *keysSuccessfullySet, NSString *errorMessage) mutable {
             if (errorMessage)
-                completionHandler(toWebExtensionError(callingAPIName, nil, errorMessage));
+                completionHandler(toWebExtensionError(callingAPIName, nullString(), errorMessage));
             else
                 completionHandler({ });
 
@@ -137,13 +137,13 @@ void WebExtensionContext::storageRemove(WebPageProxyIdentifier webPageProxyIdent
 
     [storageForType(dataType) getValuesForKeys:createNSArray(keys).get() completionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, callingAPIName, keys, dataType, completionHandler = WTFMove(completionHandler)](NSDictionary<NSString *, NSString *> *oldValuesAndKeys, NSString *errorMessage) mutable {
         if (errorMessage) {
-            completionHandler(toWebExtensionError(callingAPIName, nil, errorMessage));
+            completionHandler(toWebExtensionError(callingAPIName, nullString(), errorMessage));
             return;
         }
 
         [storageForType(dataType) deleteValuesForKeys:createNSArray(keys).get() completionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, callingAPIName, dataType, oldValuesAndKeys = RetainPtr { oldValuesAndKeys }, completionHandler = WTFMove(completionHandler)](NSString *errorMessage) mutable {
             if (errorMessage) {
-                completionHandler(toWebExtensionError(callingAPIName, nil, errorMessage));
+                completionHandler(toWebExtensionError(callingAPIName, nullString(), errorMessage));
                 return;
             }
 
@@ -160,13 +160,13 @@ void WebExtensionContext::storageClear(WebPageProxyIdentifier webPageProxyIdenti
 
     [storageForType(dataType) getValuesForKeys:@[ ] completionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, callingAPIName, dataType, completionHandler = WTFMove(completionHandler)](NSDictionary<NSString *, NSString *> *oldValuesAndKeys, NSString *errorMessage) mutable {
         if (errorMessage) {
-            completionHandler(toWebExtensionError(callingAPIName, nil, errorMessage));
+            completionHandler(toWebExtensionError(callingAPIName, nullString(), errorMessage));
             return;
         }
 
         [storageForType(dataType) deleteDatabaseWithCompletionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, callingAPIName, oldValuesAndKeys = RetainPtr { oldValuesAndKeys }, dataType, completionHandler = WTFMove(completionHandler)](NSString *errorMessage) mutable {
             if (errorMessage) {
-                completionHandler(toWebExtensionError(callingAPIName, nil, errorMessage));
+                completionHandler(toWebExtensionError(callingAPIName, nullString(), errorMessage));
                 return;
             }
 
