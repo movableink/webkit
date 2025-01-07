@@ -317,21 +317,21 @@ void AnimationTimelinesController::maybeClearCachedCurrentTime()
         m_cachedCurrentTime = std::nullopt;
 }
 
-static Element* originatingElement(const Ref<ScrollTimeline>& timeline)
+static const Element* originatingElement(const Ref<ScrollTimeline>& timeline)
 {
     if (RefPtr viewTimeline = dynamicDowncast<ViewTimeline>(timeline))
         return viewTimeline->subject();
     return timeline->source();
 }
 
-static Element* originatingElementIncludingTimelineScope(const Ref<ScrollTimeline>& timeline)
+static const Element* originatingElementIncludingTimelineScope(const Ref<ScrollTimeline>& timeline)
 {
     if (WeakPtr element = timeline->timelineScopeDeclaredElement())
         return element.get();
     return originatingElement(timeline);
 }
 
-static Element* originatingElementExcludingTimelineScope(const Ref<ScrollTimeline>& timeline)
+static const Element* originatingElementExcludingTimelineScope(const Ref<ScrollTimeline>& timeline)
 {
     return timeline->timelineScopeDeclaredElement() ? nullptr : originatingElement(timeline);
 }

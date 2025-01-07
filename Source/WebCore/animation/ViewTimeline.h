@@ -53,7 +53,7 @@ public:
     static Ref<ViewTimeline> create(ViewTimelineOptions&& = { });
     static Ref<ViewTimeline> create(const AtomString&, ScrollAxis, ViewTimelineInsets&&);
 
-    Element* subject() const { return m_subject.get(); }
+    const Element* subject() const { return m_subject.get(); }
     void setSubject(const Element*);
 
     const ViewTimelineInsets& insets() const { return m_insets; }
