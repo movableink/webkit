@@ -233,7 +233,7 @@ private:
                 m_sizesAttribute = attributeValue.toString();
                 break;
             }
-            if (match(attributeName, fetchpriorityAttr) && document->settings().fetchPriorityEnabled()) {
+            if (match(attributeName, fetchpriorityAttr)) {
                 m_fetchPriorityHint = parseEnumerationFromString<RequestPriority>(attributeValue.toString()).value_or(RequestPriority::Auto);
                 break;
             }
@@ -292,7 +292,7 @@ private:
             } else if (match(attributeName, asyncAttr)) {
                 m_scriptIsAsync = true;
                 break;
-            } else if (match(attributeName, fetchpriorityAttr) && document->settings().fetchPriorityEnabled()) {
+            } else if (match(attributeName, fetchpriorityAttr)) {
                 m_fetchPriorityHint = parseEnumerationFromString<RequestPriority>(attributeValue.toString()).value_or(RequestPriority::Auto);
                 break;
             }
@@ -319,7 +319,7 @@ private:
                 m_typeAttribute = attributeValue.toString();
             else if (match(attributeName, referrerpolicyAttr))
                 m_referrerPolicy = parseReferrerPolicy(attributeValue, ReferrerPolicySource::ReferrerPolicyAttribute).value_or(ReferrerPolicy::EmptyString);
-            else if (match(attributeName, fetchpriorityAttr) && document->settings().fetchPriorityEnabled())
+            else if (match(attributeName, fetchpriorityAttr))
                 m_fetchPriorityHint = parseEnumerationFromString<RequestPriority>(attributeValue.toString()).value_or(RequestPriority::Auto);
             break;
         case TagId::Input:

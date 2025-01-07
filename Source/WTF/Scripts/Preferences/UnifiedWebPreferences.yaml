@@ -3029,20 +3029,6 @@ FasterClicksEnabled:
     WebKit:
       default: true
 
-FetchPriorityEnabled:
-  type: bool
-  status: stable
-  category: networking
-  humanReadableName: "Fetch Priority"
-  humanReadableDescription: "Enable Fetch Priority support"
-  defaultValue:
-    WebKitLegacy:
-      default: true
-    WebKit:
-      default: true
-    WebCore:
-      default: true
-
 FileReaderAPIEnabled:
   type: bool
   status: embedder
