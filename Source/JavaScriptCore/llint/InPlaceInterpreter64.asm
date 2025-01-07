@@ -2715,6 +2715,7 @@ instructionLabel(_i64_trunc_f32_u)
     ipintException(OutOfBoundsTrunc)
 
 instructionLabel(_i64_trunc_f64_s)
+    popFloat64(ft0)
     move 0xc3e0000000000000, t0 # INT64_MIN
     fq2d t0, ft1
     bdltun ft0, ft1, .ipint_i64_f64_s_outOfBoundsTrunc
@@ -2732,6 +2733,7 @@ instructionLabel(_i64_trunc_f64_s)
     ipintException(OutOfBoundsTrunc)
 
 instructionLabel(_i64_trunc_f64_u)
+    popFloat64(ft0)
     move 0xbff0000000000000, t0 # -1.0
     fq2d t0, ft1
     bdltequn ft0, ft1, .ipint_i64_f64_u_outOfBoundsTrunc
