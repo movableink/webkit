@@ -162,7 +162,7 @@ void RenderFileUploadControl::paintControl(PaintInfo& paintInfo, const LayoutPoi
 #endif
         // Determine where the filename should be placed
         LayoutUnit contentLogicalLeft = logicalPaintOffset.x() + logicalLeftOffsetForContent();
-        if (writingMode().isBidiLTR())
+        if (writingMode().isLogicalLeftInlineStart())
             contentLogicalLeft += textIndentOffset();
         else
             contentLogicalLeft -= textIndentOffset();
@@ -175,7 +175,7 @@ void RenderFileUploadControl::paintControl(PaintInfo& paintInfo, const LayoutPoi
         LayoutUnit buttonAndIconLogicalWidth = buttonLogicalWidth + afterButtonSpacing
             + (inputElement().icon() ? iconLogicalWidth + iconFilenameSpacing : 0);
         LayoutUnit textLogicalLeft;
-        if (writingMode().isBidiLTR())
+        if (writingMode().isLogicalLeftInlineStart())
             textLogicalLeft = contentLogicalLeft + buttonAndIconLogicalWidth;
         else
             textLogicalLeft = contentLogicalLeft + contentBoxLogicalWidth() - buttonAndIconLogicalWidth - font.width(textRun);
@@ -216,11 +216,19 @@ void RenderFileUploadControl::paintControl(PaintInfo& paintInfo, const LayoutPoi
         {
             GraphicsContextStateSaver stateSaver(paintInfo.context());
 
-            auto textOrigin = IntPoint(roundToInt(textLogicalLeft), std::round(textLogicalTop));
+            if (writingMode().isLineOverLeft()) {
+                textLogicalLeft += font.width(textRun);
+                textLogicalTop += style().fontCascade().metricsOfPrimaryFont().intAscent();
+            }
+            auto textOrigin = IntPoint(roundToInt(textLogicalLeft), roundToInt(textLogicalTop));
             if (!isHorizontalWritingMode) {
                 textOrigin = textOrigin.transposedPoint();
+
                 paintInfo.context().translate(textOrigin);
-                paintInfo.context().rotate(piOverTwoFloat);
+                if (writingMode().isLineOverLeft())
+                    paintInfo.context().rotate(-piOverTwoFloat);
+                else
+                    paintInfo.context().rotate(piOverTwoFloat);
                 paintInfo.context().translate(-textOrigin);
             }
 
@@ -230,9 +238,13 @@ void RenderFileUploadControl::paintControl(PaintInfo& paintInfo, const LayoutPoi
         if (inputElement().icon()) {
             // Determine where the icon should be placed
             LayoutUnit borderAndPaddingOffsetForIcon = (!isHorizontalWritingMode && isBlockFlipped) ? borderAndPaddingAfter() : borderAndPaddingBefore();
-            LayoutUnit iconLogicalTop = logicalPaintOffset.y() + borderAndPaddingOffsetForIcon  + (contentBoxLogicalHeight() - iconLogicalHeight) / 2;
+            LayoutUnit iconLogicalTop = logicalPaintOffset.y() + borderAndPaddingOffsetForIcon + (contentBoxLogicalHeight() - iconLogicalHeight) / 2;
+
+            if (writingMode().isLineOverLeft())
+                iconLogicalTop += (contentBoxLogicalHeight() - iconLogicalHeight) / 2;
+
             LayoutUnit iconLogicalLeft;
-            if (writingMode().isBidiLTR())
+            if (writingMode().isLogicalLeftInlineStart())
                 iconLogicalLeft = contentLogicalLeft + buttonLogicalWidth + afterButtonSpacing;
             else
                 iconLogicalLeft = contentLogicalLeft + contentBoxLogicalWidth() - buttonLogicalWidth - afterButtonSpacing - iconLogicalWidth;
