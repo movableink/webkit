@@ -161,7 +161,7 @@ std::optional<LayoutUnit> RenderGrid::availableSpaceForGutters(GridTrackSizingDi
     if (gapLength.isNormal() || !gapLength.length().isPercentOrCalculated())
         return std::nullopt;
 
-    return isRowAxis ? contentLogicalWidth() : contentLogicalHeight();
+    return isRowAxis ? contentBoxLogicalWidth() : contentBoxLogicalHeight();
 }
 
 void RenderGrid::computeTrackSizesForDefiniteSize(GridTrackSizingDirection direction, LayoutUnit availableSpace, GridLayoutState& gridLayoutState)
@@ -344,7 +344,7 @@ void RenderGrid::layoutGrid(bool relayoutChildren)
         // It doesn't get included in the normal layout process but is instead skipped.
         layoutExcludedChildren(relayoutChildren);
 
-        LayoutUnit availableSpaceForColumns = contentLogicalWidth();
+        LayoutUnit availableSpaceForColumns = contentBoxLogicalWidth();
         placeItemsOnGrid(availableSpaceForColumns);
 
         m_trackSizingAlgorithm.setAvailableSpace(GridTrackSizingDirection::ForColumns, availableSpaceForColumns);
@@ -404,7 +404,7 @@ void RenderGrid::layoutGrid(bool relayoutChildren)
         // 3. If the min-content contribution of any grid items have changed based on the row
         // sizes calculated in step 2, steps 1 and 2 are repeated with the new min-content
         // contribution (once only).
-        repeatTracksSizingIfNeeded(availableSpaceForColumns, contentLogicalHeight(), gridLayoutState);
+        repeatTracksSizingIfNeeded(availableSpaceForColumns, contentBoxLogicalHeight(), gridLayoutState);
 
         // Grid container should have the minimum height of a line if it's editable. That does not affect track sizing though.
         if (hasLineIfEmpty()) {
@@ -474,7 +474,7 @@ void RenderGrid::layoutMasonry(bool relayoutChildren)
 
         updateLogicalWidth();
 
-        LayoutUnit availableSpaceForColumns = contentLogicalWidth();
+        LayoutUnit availableSpaceForColumns = contentBoxLogicalWidth();
         placeItemsOnGrid(availableSpaceForColumns);
 
         m_trackSizingAlgorithm.setAvailableSpace(GridTrackSizingDirection::ForColumns, availableSpaceForColumns);
@@ -907,7 +907,7 @@ void RenderGrid::placeItems()
 {
     updateLogicalWidth();
 
-    LayoutUnit availableSpaceForColumns = contentLogicalWidth();
+    LayoutUnit availableSpaceForColumns = contentBoxLogicalWidth();
     placeItemsOnGrid(availableSpaceForColumns);
 }
 
@@ -984,7 +984,7 @@ AutoRepeatType RenderGrid::autoRepeatRowsType() const
 
 
 // FIXME: We shouldn't have to pass the available logical width as argument. The problem is that
-// contentLogicalWidth() does always return a value even if we cannot resolve it like when
+// contentBoxLogicalWidth() does always return a value even if we cannot resolve it like when
 // computing the intrinsic size (preferred widths). That's why we pass the responsibility to the
 // caller who does know whether the available logical width is indefinite or not.
 void RenderGrid::placeItemsOnGrid(std::optional<LayoutUnit> availableLogicalWidth)
@@ -1718,7 +1718,7 @@ void RenderGrid::applyStretchAlignmentToGridItemIfNeeded(RenderBox& gridItem, Gr
         auto overridingContainingBlockContentSizeForGridItem = GridLayoutFunctions::overridingContainingBlockContentSizeForGridItem(gridItem, gridItemInlineDirection);
         ASSERT(overridingContainingBlockContentSizeForGridItem && *overridingContainingBlockContentSizeForGridItem);
         LayoutUnit stretchedLogicalWidth = availableAlignmentSpaceForGridItemBeforeStretching(overridingContainingBlockContentSizeForGridItem->value(), gridItem, GridTrackSizingDirection::ForColumns);
-        LayoutUnit desiredLogicalWidth = gridItem.constrainLogicalWidthByMinMax(stretchedLogicalWidth, contentWidth(), *this);
+        LayoutUnit desiredLogicalWidth = gridItem.constrainLogicalWidthByMinMax(stretchedLogicalWidth, contentBoxWidth(), *this);
         gridItem.setOverridingBorderBoxLogicalWidth(desiredLogicalWidth);
         if (desiredLogicalWidth != gridItem.logicalWidth())
             gridItem.setNeedsLayout(MarkOnlyThis);

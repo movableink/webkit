@@ -664,7 +664,7 @@ void updateWithTextRecognitionResult(HTMLElement& element, const TextRecognition
                 continue;
 
             auto targetHeight = state.targetSize.height();
-            auto currentScore = box->contentHeight() / targetHeight;
+            auto currentScore = box->contentBoxHeight() / targetHeight;
             bool hasHorizontalOverflow = box->hasHorizontalOverflow();
             if (currentScore < minTargetScore && !hasHorizontalOverflow)
                 state.minScale = state.scale;

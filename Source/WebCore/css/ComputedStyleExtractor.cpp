@@ -592,9 +592,9 @@ static RefPtr<CSSValue> positionOffsetValue(const RenderStyle& style, CSSPropert
         if (box->isStickilyPositioned()) {
             auto& enclosingClippingBox = box->enclosingClippingBoxForStickyPosition().first;
             if (isVerticalProperty == enclosingClippingBox.isHorizontalWritingMode())
-                containingBlockSize = enclosingClippingBox.contentLogicalHeight();
+                containingBlockSize = enclosingClippingBox.contentBoxLogicalHeight();
             else
-                containingBlockSize = enclosingClippingBox.contentLogicalWidth();
+                containingBlockSize = enclosingClippingBox.contentBoxLogicalWidth();
         } else {
             if (isVerticalProperty == containingBlock->isHorizontalWritingMode()) {
                 containingBlockSize = box->isOutOfFlowPositioned()

@@ -173,12 +173,12 @@ public:
 
     void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption>) const override;
 
-    inline LayoutSize contentSize() const;
-    inline LayoutUnit contentWidth() const;
-    inline LayoutUnit contentHeight() const;
-    inline LayoutSize contentLogicalSize() const;
-    inline LayoutUnit contentLogicalWidth() const;
-    inline LayoutUnit contentLogicalHeight() const;
+    inline LayoutSize contentBoxSize() const;
+    inline LayoutUnit contentBoxWidth() const;
+    inline LayoutUnit contentBoxHeight() const;
+    inline LayoutSize contentBoxLogicalSize() const;
+    inline LayoutUnit contentBoxLogicalWidth() const;
+    inline LayoutUnit contentBoxLogicalHeight() const;
     inline LayoutUnit contentBoxLogicalWidth(LayoutUnit overridingBorderBoxWidth) const;
     inline LayoutUnit contentBoxLogicalHeight(LayoutUnit overridingBorderBoxHeight) const;
 

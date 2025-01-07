@@ -160,7 +160,7 @@ void RenderMathMLBlock::layoutItems(bool relayoutChildren)
         preferredHorizontalExtent += childHorizontalMarginBoxExtent;
     }
 
-    LayoutUnit currentHorizontalExtent = contentLogicalWidth();
+    LayoutUnit currentHorizontalExtent = contentBoxLogicalWidth();
     for (auto* child = firstInFlowChildBox(); child; child = child->nextInFlowSiblingBox()) {
         auto everHadLayout = child->everHadLayout();
         LayoutUnit childSize = child->maxPreferredLogicalWidth() - child->horizontalBorderAndPaddingExtent();

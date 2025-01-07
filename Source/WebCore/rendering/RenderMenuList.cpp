@@ -324,14 +324,14 @@ LayoutRect RenderMenuList::controlClipRect(const LayoutPoint& additionalOffset) 
     // This will leave room for the arrows which sit in the inner box padding,
     // and if the inner box ever spills out of the outer box, that will get clipped too.
     LayoutRect outerBox(additionalOffset.x() + borderLeft() + paddingLeft(), 
-                   additionalOffset.y() + borderTop() + paddingTop(),
-                   contentWidth(), 
-                   contentHeight());
+        additionalOffset.y() + borderTop() + paddingTop(),
+        contentBoxWidth(),
+        contentBoxHeight());
     
     LayoutRect innerBox(additionalOffset.x() + m_innerBlock->x() + m_innerBlock->paddingLeft(), 
-                   additionalOffset.y() + m_innerBlock->y() + m_innerBlock->paddingTop(),
-                   m_innerBlock->contentWidth(), 
-                   m_innerBlock->contentHeight());
+        additionalOffset.y() + m_innerBlock->y() + m_innerBlock->paddingTop(),
+        m_innerBlock->contentBoxWidth(),
+        m_innerBlock->contentBoxHeight());
 
     return intersection(outerBox, innerBox);
 }

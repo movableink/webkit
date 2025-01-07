@@ -320,7 +320,7 @@ bool RenderView::requiresColumns(int) const
 
 void RenderView::computeColumnCountAndWidth()
 {
-    int columnWidth = contentLogicalWidth();
+    int columnWidth = contentBoxLogicalWidth();
     if (style().hasInlineColumnAxis()) {
         if (int pageLength = protectedFrameView()->pagination().pageLength)
             columnWidth = pageLength;

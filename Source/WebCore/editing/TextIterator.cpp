@@ -219,7 +219,7 @@ static inline bool fullyClipsContents(Node& node)
     if (is<HTMLTextAreaElement>(node))
         return box->size().isEmpty();
 
-    return box->contentSize().isEmpty();
+    return box->contentBoxSize().isEmpty();
 }
 
 static inline bool ignoresContainerClip(Node& node)

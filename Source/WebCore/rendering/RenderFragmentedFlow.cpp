@@ -314,7 +314,7 @@ LayoutUnit RenderFragmentedFlow::pageLogicalTopForOffset(LayoutUnit offset) cons
 LayoutUnit RenderFragmentedFlow::pageLogicalWidthForOffset(LayoutUnit offset) const
 {
     RenderFragmentContainer* fragment = fragmentAtBlockOffset(0, offset, true);
-    return fragment ? fragment->pageLogicalWidth() : contentLogicalWidth();
+    return fragment ? fragment->pageLogicalWidth() : contentBoxLogicalWidth();
 }
 
 LayoutUnit RenderFragmentedFlow::pageLogicalHeightForOffset(LayoutUnit offset) const
@@ -474,7 +474,7 @@ LayoutUnit RenderFragmentedFlow::contentLogicalWidthOfFirstFragment() const
     RenderFragmentContainer* firstValidFragmentInFlow = firstFragment();
     if (!firstValidFragmentInFlow)
         return 0;
-    return isHorizontalWritingMode() ? firstValidFragmentInFlow->contentWidth() : firstValidFragmentInFlow->contentHeight();
+    return isHorizontalWritingMode() ? firstValidFragmentInFlow->contentBoxWidth() : firstValidFragmentInFlow->contentBoxHeight();
 }
 
 LayoutUnit RenderFragmentedFlow::contentLogicalHeightOfFirstFragment() const
@@ -482,7 +482,7 @@ LayoutUnit RenderFragmentedFlow::contentLogicalHeightOfFirstFragment() const
     RenderFragmentContainer* firstValidFragmentInFlow = firstFragment();
     if (!firstValidFragmentInFlow)
         return 0;
-    return isHorizontalWritingMode() ? firstValidFragmentInFlow->contentHeight() : firstValidFragmentInFlow->contentWidth();
+    return isHorizontalWritingMode() ? firstValidFragmentInFlow->contentBoxHeight() : firstValidFragmentInFlow->contentBoxWidth();
 }
 
 LayoutUnit RenderFragmentedFlow::contentLogicalLeftOfFirstFragment() const

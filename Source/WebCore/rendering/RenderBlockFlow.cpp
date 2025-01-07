@@ -347,7 +347,7 @@ LayoutUnit RenderBlockFlow::columnGap() const
 {
     if (style().columnGap().isNormal())
         return LayoutUnit(style().fontDescription().computedSize()); // "1em" is recommended as the normal gap setting. Matches <p> margins.
-    return valueForLength(style().columnGap().length(), contentLogicalWidth());
+    return valueForLength(style().columnGap().length(), contentBoxLogicalWidth());
 }
 
 void RenderBlockFlow::computeColumnCountAndWidth()
@@ -355,7 +355,7 @@ void RenderBlockFlow::computeColumnCountAndWidth()
     // Calculate our column width and column count.
     // FIXME: Can overflow on fast/block/float/float-not-removed-from-next-sibling4.html, see https://bugs.webkit.org/show_bug.cgi?id=68744
     unsigned desiredColumnCount = 1;
-    LayoutUnit desiredColumnWidth = contentLogicalWidth();
+    LayoutUnit desiredColumnWidth = contentBoxLogicalWidth();
 
     // For now, we don't support multi-column layouts when printing, since we have to do a lot of work for proper pagination.
     if (document().paginated() || (style().hasAutoColumnCount() && style().hasAutoColumnWidth()) || !style().hasInlineColumnAxis()) {
@@ -1107,7 +1107,7 @@ void RenderBlockFlow::determineLogicalLeftPositionForChild(RenderBox& child, App
         startPosition += (writingMode().isLogicalLeftInlineStart() ? 1 : -1) * verticalScrollbarWidth();
     if (style().scrollbarGutter().bothEdges && !isHorizontalWritingMode())
         startPosition += (writingMode().isLogicalLeftInlineStart() ? 1 : -1) * horizontalScrollbarHeight();
-    LayoutUnit totalAvailableLogicalWidth = borderAndPaddingLogicalWidth() + contentLogicalWidth();
+    LayoutUnit totalAvailableLogicalWidth = borderAndPaddingLogicalWidth() + contentBoxLogicalWidth();
 
     LayoutUnit childMarginStart = marginStartForChild(child);
     LayoutUnit newPosition = startPosition + childMarginStart;
@@ -4311,7 +4311,7 @@ LayoutUnit RenderBlockFlow::computedColumnWidth() const
 {
     if (multiColumnFlow())
         return multiColumnFlow()->computedColumnWidth();
-    return contentLogicalWidth();
+    return contentBoxLogicalWidth();
 }
 
 unsigned RenderBlockFlow::computedColumnCount() const

@@ -547,7 +547,7 @@ void RenderTableSection::layoutRows()
     unsigned totalRows = m_grid.size();
 
     // Set the width of our section now.  The rows will also be this width.
-    setLogicalWidth(table()->contentLogicalWidth());
+    setLogicalWidth(table()->contentBoxLogicalWidth());
     m_forceSlowPaintPathWithOverflowingCell = false;
 
     LayoutUnit vspacing = table()->vBorderSpacing();
@@ -907,8 +907,8 @@ std::optional<LayoutUnit> RenderTableSection::baselineFromCellContentEdges(ItemP
         const CellStruct& cs = row.at(i);
         const RenderTableCell* cell = cs.primaryCell();
         // Only cells with content have a baseline
-        if (cell && cell->contentLogicalHeight()) {
-            LayoutUnit candidate = cell->logicalTop() + cell->borderAndPaddingBefore() + cell->contentLogicalHeight();
+        if (cell && cell->contentBoxLogicalHeight()) {
+            LayoutUnit candidate = cell->logicalTop() + cell->borderAndPaddingBefore() + cell->contentBoxLogicalHeight();
             result = std::max(result.value_or(candidate), candidate);
         }
     }

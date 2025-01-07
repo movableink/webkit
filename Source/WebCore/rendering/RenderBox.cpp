@@ -2264,7 +2264,7 @@ LayoutUnit RenderBox::containingBlockLogicalWidthForContent() const
     }
 
     if (auto* containingBlock = this->containingBlock())
-        return isOutOfFlowPositioned() ? containingBlock->clientLogicalWidth() : containingBlock->contentLogicalWidth();
+        return isOutOfFlowPositioned() ? containingBlock->clientLogicalWidth() : containingBlock->contentBoxLogicalWidth();
 
     ASSERT_NOT_REACHED();
     return 0_lu;
@@ -3110,7 +3110,7 @@ void RenderBox::updateLogicalHeight()
     if (shouldApplySizeContainment() && !isRenderGrid())
         overrideLogicalHeightForSizeContainment();
 
-    cacheIntrinsicContentLogicalHeightForFlexItem(contentLogicalHeight());
+    cacheIntrinsicContentLogicalHeightForFlexItem(contentBoxLogicalHeight());
     auto computedValues = computeLogicalHeight(logicalHeight(), logicalTop());
     setLogicalHeight(computedValues.m_extent);
     setLogicalTop(computedValues.m_position);
@@ -3179,7 +3179,7 @@ RenderBox::LogicalExtentComputedValues RenderBox::computeLogicalHeight(LayoutUni
 
             // Block children of horizontal flexible boxes fill the height of the box.
             if (style().logicalHeight().isAuto() && flexBoxStyle.boxOrient() == BoxOrient::Horizontal && deprecatedFlexBox->isStretchingChildren())
-                return { deprecatedFlexBox->contentLogicalHeight() - marginBefore() - marginAfter(), LengthType::Fixed };
+                return { deprecatedFlexBox->contentBoxLogicalHeight() - marginBefore() - marginAfter(), LengthType::Fixed };
 
             checkMinMaxHeight = true;
             return style().logicalHeight();
@@ -3573,7 +3573,7 @@ void RenderBox::computePreferredLogicalWidths(const Length& minLogicalWidth, con
             if (!shouldComputePreferredLogicalWidthsFromStyle())
                 return m_minPreferredLogicalWidth;
 
-            return computeIntrinsicLogicalWidthUsing(maxLogicalWidth, contentLogicalWidth(), { });
+            return computeIntrinsicLogicalWidthUsing(maxLogicalWidth, contentBoxLogicalWidth(), { });
         }
         return LayoutUnit::max();
     }();
@@ -5059,8 +5059,8 @@ VisiblePosition RenderBox::positionForPoint(const LayoutPoint& point, HitTestSou
         return createVisiblePosition(nonPseudoElement() ? firstPositionInOrBeforeNode(nonPseudoElement()) : Position());
 
     if (isRenderTable() && nonPseudoElement()) {
-        LayoutUnit right = contentWidth() + horizontalBorderAndPaddingExtent();
-        LayoutUnit bottom = contentHeight() + verticalBorderAndPaddingExtent();
+        LayoutUnit right = contentBoxWidth() + horizontalBorderAndPaddingExtent();
+        LayoutUnit bottom = contentBoxHeight() + verticalBorderAndPaddingExtent();
         
         if (point.x() < 0 || point.x() > right || point.y() < 0 || point.y() > bottom) {
             if (point.x() <= right / 2)
@@ -5088,9 +5088,9 @@ VisiblePosition RenderBox::positionForPoint(const LayoutPoint& point, HitTestSou
             continue;
 
         LayoutUnit top = renderer.borderTop() + renderer.paddingTop() + (is<RenderTableRow>(*this) ? 0_lu : renderer.y());
-        LayoutUnit bottom = top + renderer.contentHeight();
+        LayoutUnit bottom = top + renderer.contentBoxHeight();
         LayoutUnit left = renderer.borderLeft() + renderer.paddingLeft() + (is<RenderTableRow>(*this) ? 0_lu : renderer.x());
-        LayoutUnit right = left + renderer.contentWidth();
+        LayoutUnit right = left + renderer.contentBoxWidth();
         
         if (point.x() <= right && point.x() >= left && point.y() <= top && point.y() >= bottom) {
             if (is<RenderTableRow>(renderer))

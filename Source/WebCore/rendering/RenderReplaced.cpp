@@ -570,7 +570,7 @@ LayoutUnit RenderReplaced::computeConstrainedLogicalWidth() const
     // 'padding-right' + 'border-right-width' + 'margin-right' = width of
     // containing block
     // see https://www.w3.org/TR/CSS22/visudet.html#blockwidth
-    LayoutUnit logicalWidth = containingBlock()->contentLogicalWidth();
+    LayoutUnit logicalWidth = containingBlock()->contentBoxLogicalWidth();
     
     // This solves above equation for 'width' (== logicalWidth).
     LayoutUnit marginStart = minimumValueForLength(style().marginStart(), logicalWidth);
@@ -703,7 +703,7 @@ LayoutUnit RenderReplaced::computeReplacedLogicalHeight(std::optional<LayoutUnit
     // Otherwise, if 'height' has a computed value of 'auto', and the element has an intrinsic ratio then the used value of 'height' is:
     // (used width) / (intrinsic ratio)
     if (!intrinsicRatio.isEmpty()) {
-        LayoutUnit usedWidth = estimatedUsedWidth ? estimatedUsedWidth.value() : contentLogicalWidth();
+        LayoutUnit usedWidth = estimatedUsedWidth ? estimatedUsedWidth.value() : contentBoxLogicalWidth();
         BoxSizing boxSizing = BoxSizing::ContentBox;
         if (style().hasAspectRatio())
             boxSizing = style().boxSizingForAspectRatio();

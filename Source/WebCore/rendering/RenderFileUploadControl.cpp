@@ -119,7 +119,7 @@ int RenderFileUploadControl::maxFilenameLogicalWidth() const
 #if PLATFORM(COCOA)
     int iconLogicalWidth = nodeLogicalHeight(uploadButton());
 #endif
-    return std::max(0, roundToInt(contentLogicalWidth()) - nodeLogicalWidth(uploadButton()) - afterButtonSpacing
+    return std::max(0, roundToInt(contentBoxLogicalWidth()) - nodeLogicalWidth(uploadButton()) - afterButtonSpacing
         - (inputElement().icon() ? iconLogicalWidth + iconFilenameSpacing : 0));
 }
 
@@ -178,7 +178,7 @@ void RenderFileUploadControl::paintControl(PaintInfo& paintInfo, const LayoutPoi
         if (writingMode().isBidiLTR())
             textLogicalLeft = contentLogicalLeft + buttonAndIconLogicalWidth;
         else
-            textLogicalLeft = contentLogicalLeft + contentLogicalWidth() - buttonAndIconLogicalWidth - font.width(textRun);
+            textLogicalLeft = contentLogicalLeft + contentBoxLogicalWidth() - buttonAndIconLogicalWidth - font.width(textRun);
 
         // We want to match the button's baseline
         // FIXME: Make this work with transforms.
@@ -230,12 +230,12 @@ void RenderFileUploadControl::paintControl(PaintInfo& paintInfo, const LayoutPoi
         if (inputElement().icon()) {
             // Determine where the icon should be placed
             LayoutUnit borderAndPaddingOffsetForIcon = (!isHorizontalWritingMode && isBlockFlipped) ? borderAndPaddingAfter() : borderAndPaddingBefore();
-            LayoutUnit iconLogicalTop = logicalPaintOffset.y() + borderAndPaddingOffsetForIcon  + (contentLogicalHeight() - iconLogicalHeight) / 2;
+            LayoutUnit iconLogicalTop = logicalPaintOffset.y() + borderAndPaddingOffsetForIcon  + (contentBoxLogicalHeight() - iconLogicalHeight) / 2;
             LayoutUnit iconLogicalLeft;
             if (writingMode().isBidiLTR())
                 iconLogicalLeft = contentLogicalLeft + buttonLogicalWidth + afterButtonSpacing;
             else
-                iconLogicalLeft = contentLogicalLeft + contentLogicalWidth() - buttonLogicalWidth - afterButtonSpacing - iconLogicalWidth;
+                iconLogicalLeft = contentLogicalLeft + contentBoxLogicalWidth() - buttonLogicalWidth - afterButtonSpacing - iconLogicalWidth;
 
             IntRect iconRect(iconLogicalLeft, iconLogicalTop, iconLogicalWidth, iconLogicalHeight);
             if (!isHorizontalWritingMode)

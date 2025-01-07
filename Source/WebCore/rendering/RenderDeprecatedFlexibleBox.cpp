@@ -529,7 +529,7 @@ void RenderDeprecatedFlexibleBox::layoutHorizontalBox(bool relayoutChildren)
             LayoutUnit childY = yPos;
             switch (style().boxAlign()) {
             case BoxAlignment::Center:
-                childY += child->marginTop() + std::max<LayoutUnit>(0, (contentHeight() - (child->height() + child->verticalMarginExtent())) / 2);
+                childY += child->marginTop() + std::max<LayoutUnit>(0, (contentBoxHeight() - (child->height() + child->verticalMarginExtent())) / 2);
                 break;
             case BoxAlignment::Baseline: {
                 LayoutUnit ascent = child->firstLineBaseline().value_or(child->height() + child->marginBottom());
@@ -538,7 +538,7 @@ void RenderDeprecatedFlexibleBox::layoutHorizontalBox(bool relayoutChildren)
                 break;
             }
             case BoxAlignment::End:
-                childY += contentHeight() - child->marginBottom() - child->height();
+                childY += contentBoxHeight() - child->marginBottom() - child->height();
                 break;
             default: // BoxAlignment::Start
                 childY += child->marginTop();
@@ -551,7 +551,7 @@ void RenderDeprecatedFlexibleBox::layoutHorizontalBox(bool relayoutChildren)
         }
         ASSERT(childIndex == childLayoutDeltas.size());
 
-        remainingSpace = borderLeft() + paddingLeft() + contentWidth() - xPos;
+        remainingSpace = borderLeft() + paddingLeft() + contentBoxWidth() - xPos;
 
         m_stretchingChildren = false;
         if (flexingChildren)
@@ -758,19 +758,19 @@ void RenderDeprecatedFlexibleBox::layoutVerticalBox(bool relayoutChildren)
             switch (style().boxAlign()) {
             case BoxAlignment::Center:
             case BoxAlignment::Baseline: // Baseline just maps to center for vertical boxes
-                childX += child->marginLeft() + std::max<LayoutUnit>(0, (contentWidth() - (child->width() + child->horizontalMarginExtent())) / 2);
+                childX += child->marginLeft() + std::max<LayoutUnit>(0, (contentBoxWidth() - (child->width() + child->horizontalMarginExtent())) / 2);
                 break;
             case BoxAlignment::End:
                 if (!style().isLeftToRightDirection())
                     childX += child->marginLeft();
                 else
-                    childX += contentWidth() - child->marginRight() - child->width();
+                    childX += contentBoxWidth() - child->marginRight() - child->width();
                 break;
             default: // BoxAlignment::Start/BoxAlignment::Stretch
                 if (style().isLeftToRightDirection())
                     childX += child->marginLeft();
                 else
-                    childX += contentWidth() - child->marginRight() - child->width();
+                    childX += contentBoxWidth() - child->marginRight() - child->width();
                 break;
             }
 
@@ -797,7 +797,7 @@ void RenderDeprecatedFlexibleBox::layoutVerticalBox(bool relayoutChildren)
         if (oldHeight != height())
             heightSpecified = true;
 
-        remainingSpace = borderTop() + paddingTop() + contentHeight() - yPos;
+        remainingSpace = borderTop() + paddingTop() + contentBoxHeight() - yPos;
 
         if (flexingChildren)
             haveFlex = false; // We're done.

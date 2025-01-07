@@ -849,10 +849,10 @@ std::optional<LayoutUnit> GridTrackSizingAlgorithm::gridAreaBreadthForGridItem(c
 {
     // FIXME: These checks only works if we have precomputed logical width/height of the grid, which is not guaranteed.
     if (m_renderGrid->areMasonryColumns() && direction == GridTrackSizingDirection::ForColumns)
-        return m_renderGrid->contentLogicalWidth();
+        return m_renderGrid->contentBoxLogicalWidth();
 
     if (m_renderGrid->areMasonryRows() && direction == GridTrackSizingDirection::ForRows && !GridLayoutFunctions::isOrthogonalGridItem(*m_renderGrid, gridItem))
-        return m_renderGrid->contentLogicalHeight();
+        return m_renderGrid->contentBoxLogicalHeight();
 
     bool addContentAlignmentOffset =
         direction == GridTrackSizingDirection::ForColumns && (m_sizingState == SizingState::RowSizingFirstIteration || m_sizingState == SizingState::RowSizingExtraIterationForSizeContainment);
@@ -1082,7 +1082,7 @@ LayoutUnit GridTrackSizingAlgorithmStrategy::minContentContributionForGridItem(R
 
         if (needsGridItemMinContentContributionForSecondColumnPass) {
             auto rowSize = renderGrid()->gridAreaBreadthForGridItemIncludingAlignmentOffsets(gridItem, GridTrackSizingDirection::ForRows);
-            auto stretchedSize = !GridLayoutFunctions::isOrthogonalGridItem(*renderGrid(), gridItem) ? gridItem.constrainLogicalHeightByMinMax(rowSize, { }) : gridItem.constrainLogicalWidthByMinMax(rowSize, renderGrid()->contentWidth(), *renderGrid());
+            auto stretchedSize = !GridLayoutFunctions::isOrthogonalGridItem(*renderGrid(), gridItem) ? gridItem.constrainLogicalHeightByMinMax(rowSize, { }) : gridItem.constrainLogicalWidthByMinMax(rowSize, renderGrid()->contentBoxWidth(), *renderGrid());
             GridLayoutFunctions::setOverridingContentSizeForGridItem(*renderGrid(), gridItem, stretchedSize, GridTrackSizingDirection::ForRows);
         }
 

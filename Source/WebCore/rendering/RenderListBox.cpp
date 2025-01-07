@@ -275,7 +275,7 @@ unsigned RenderListBox::size() const
 int RenderListBox::numVisibleItems(ConsiderPadding considerPadding) const
 {
     // Only count fully visible rows. But don't return 0 even if only part of a row shows.
-    int visibleItemsExcludingPadding = std::max<int>(1, (contentLogicalHeight() + itemBlockSpacing) / itemLogicalHeight());
+    int visibleItemsExcludingPadding = std::max<int>(1, (contentBoxLogicalHeight() + itemBlockSpacing) / itemLogicalHeight());
     if (considerPadding == ConsiderPadding::No)
         return visibleItemsExcludingPadding;
 
@@ -324,12 +324,12 @@ LayoutRect RenderListBox::itemBoundingBoxRect(const LayoutPoint& additionalOffse
 
     auto itemOffset = itemLogicalHeight() * (index - indexOffset());
     if (writingMode().isBlockFlipped())
-        itemOffset = contentLogicalHeight() - itemLogicalHeight() - itemOffset;
+        itemOffset = contentBoxLogicalHeight() - itemLogicalHeight() - itemOffset;
 
     if (writingMode().isVertical())
-        return LayoutRect(x + itemOffset, y, itemLogicalHeight(), contentHeight());
+        return LayoutRect(x + itemOffset, y, itemLogicalHeight(), contentBoxHeight());
 
-    return LayoutRect(x, y + itemOffset, contentWidth(), itemLogicalHeight());
+    return LayoutRect(x, y + itemOffset, contentBoxWidth(), itemLogicalHeight());
 }
 
 std::optional<int> RenderListBox::optionRowIndex(const HTMLOptionElement& optionElement) const

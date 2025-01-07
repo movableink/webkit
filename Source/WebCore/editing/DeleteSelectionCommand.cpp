@@ -489,7 +489,7 @@ void DeleteSelectionCommand::insertBlockPlaceholderForTableCellIfNeeded(Element&
     {
         ScriptDisallowedScope::InMainThread scriptDisallowedScope;
         CheckedPtr renderer = dynamicDowncast<RenderTableCell>(element.renderer());
-        if (!renderer || renderer->contentHeight() > 0)
+        if (!renderer || renderer->contentBoxHeight() > 0)
             return;
     }
     insertBlockPlaceholder(firstEditablePositionInNode(&element));

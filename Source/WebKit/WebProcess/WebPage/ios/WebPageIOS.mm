@@ -3680,7 +3680,7 @@ static CursorContext cursorContext(const HitTestResult& hitTestResult, const Int
     bool isEditable = node->hasEditableStyle();
 
     if (isEditable)
-        lineRect.setWidth(blockFlow.contentWidth());
+        lineRect.setWidth(blockFlow.contentBoxWidth());
 
     context.isVerticalWritingMode = !renderer->isHorizontalWritingMode();
     context.lineCaretExtent = view->contentsToRootView(lineRect);

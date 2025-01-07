@@ -490,7 +490,7 @@ bool RenderImage::isMultiRepresentationHEIC() const
 
 void RenderImage::paintIncompleteImageOutline(PaintInfo& paintInfo, LayoutPoint paintOffset, LayoutUnit borderWidth) const
 {
-    auto contentSize = this->contentSize();
+    auto contentSize = this->contentBoxSize();
     if (contentSize.width() <= 2 || contentSize.height() <= 2)
         return;
 
@@ -522,7 +522,7 @@ void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
         return;
     }
 
-    auto contentSize = this->contentSize();
+    auto contentSize = this->contentBoxSize();
     float deviceScaleFactor = document().deviceScaleFactor();
     LayoutUnit missingImageBorderWidth(1 / deviceScaleFactor);
 
@@ -900,7 +900,7 @@ void RenderImage::computeIntrinsicRatioInformation(FloatSize& intrinsicSize, Flo
     if (intrinsicSize.isEmpty() && (imageResource().imageHasRelativeWidth() || imageResource().imageHasRelativeHeight())) {
         RenderObject* containingBlock = isOutOfFlowPositioned() ? container() : this->containingBlock();
         if (auto* box = dynamicDowncast<RenderBox>(*containingBlock)) {
-            intrinsicSize.setWidth(box->contentLogicalWidth());
+            intrinsicSize.setWidth(box->contentBoxLogicalWidth());
             intrinsicSize.setHeight(box->availableLogicalHeight(AvailableLogicalHeightType::IncludeMarginBorderPadding));
         }
     }
