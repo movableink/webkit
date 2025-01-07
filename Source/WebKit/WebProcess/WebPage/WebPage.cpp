@@ -2365,8 +2365,6 @@ void WebPage::goToBackForwardItem(GoToBackForwardItemParameters&& parameters)
             targetFrame = historyItemFrame.releaseNonNull();
     }
 
-    ASSERT(targetFrame == m_mainFrame || m_page->settings().siteIsolationEnabled());
-
     if (RefPtr targetLocalFrame = targetFrame->provisionalFrame() ? targetFrame->provisionalFrame() : targetFrame->coreLocalFrame())
         m_page->goToItem(*targetLocalFrame, *item, parameters.backForwardType, parameters.shouldTreatAsContinuingLoad);
 }
