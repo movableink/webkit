@@ -3372,7 +3372,9 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         uint32_t exceptionIndex;
         WASM_FAIL_IF_HELPER_FAILS(parseExceptionIndex(exceptionIndex));
         TypeIndex typeIndex = m_info.typeIndexFromExceptionIndexSpace(exceptionIndex);
-        const TypeDefinition& exceptionSignature = TypeInformation::get(typeIndex).expand();
+        const TypeDefinition& signature = TypeInformation::get(typeIndex).expand();
+        WASM_VALIDATOR_FAIL_IF(!signature.is<FunctionSignature>(), "invalid type index (not a function signature) for catch, got ", exceptionIndex);
+        const auto& exceptionSignature = *signature.as<FunctionSignature>();
 
         ControlEntry& controlEntry = m_controlStack.last();
         WASM_VALIDATOR_FAIL_IF(!isTryOrCatch(controlEntry.controlData), "catch block isn't associated to a try");
@@ -3381,11 +3383,11 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         ResultList results;
         Stack preCatchStack;
         m_expressionStack.swap(preCatchStack);
-        WASM_TRY_ADD_TO_CONTEXT(addCatch(exceptionIndex, exceptionSignature, preCatchStack, controlEntry.controlData, results));
+        WASM_TRY_ADD_TO_CONTEXT(addCatch(exceptionIndex, signature, preCatchStack, controlEntry.controlData, results));
 
-        RELEASE_ASSERT(exceptionSignature.as<FunctionSignature>()->argumentCount() == results.size());
-        for (unsigned i = 0; i < exceptionSignature.as<FunctionSignature>()->argumentCount(); ++i) {
-            Type argumentType = exceptionSignature.as<FunctionSignature>()->argumentType(i);
+        RELEASE_ASSERT(exceptionSignature.argumentCount() == results.size());
+        for (unsigned i = 0; i < exceptionSignature.argumentCount(); ++i) {
+            Type argumentType = exceptionSignature.argumentType(i);
             if (argumentType.isV128()) {
                 m_context.notifyFunctionUsesSIMD();
                 if (!Context::tierSupportsSIMD)
@@ -3444,10 +3446,13 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             if (catchOpcode < CatchKind::CatchAll) {
                 WASM_PARSER_FAIL_IF(!parseExceptionIndex(exceptionTag), "can't read tag of try_table catch at index "_s, i);
                 TypeIndex typeIndex = m_info.typeIndexFromExceptionIndexSpace(exceptionTag);
-                const TypeDefinition& exceptionSignature = TypeInformation::get(typeIndex).expand();
-                signature = &exceptionSignature;
-                for (unsigned i = 0; i < exceptionSignature.as<FunctionSignature>()->argumentCount(); ++i) {
-                    Type argumentType = exceptionSignature.as<FunctionSignature>()->argumentType(i);
+                const TypeDefinition& specifiedSignature = TypeInformation::get(typeIndex).expand();
+                WASM_VALIDATOR_FAIL_IF(!specifiedSignature.is<FunctionSignature>(), "invalid type index (not a function signature) for try_table, got ", exceptionTag);
+                const auto& exceptionSignature = *specifiedSignature.as<FunctionSignature>();
+
+                signature = &specifiedSignature;
+                for (unsigned i = 0; i < exceptionSignature.argumentCount(); ++i) {
+                    Type argumentType = exceptionSignature.argumentType(i);
                     if (argumentType.isV128()) {
                         m_context.notifyFunctionUsesSIMD();
                         if constexpr (!Context::tierSupportsSIMD)
@@ -3524,7 +3529,9 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         uint32_t exceptionIndex;
         WASM_FAIL_IF_HELPER_FAILS(parseExceptionIndex(exceptionIndex));
         TypeIndex typeIndex = m_info.typeIndexFromExceptionIndexSpace(exceptionIndex);
-        const auto& exceptionSignature = TypeInformation::getFunctionSignature(typeIndex);
+        const TypeDefinition& signature = TypeInformation::get(typeIndex).expand();
+        WASM_VALIDATOR_FAIL_IF(!signature.is<FunctionSignature>(), "invalid type index (not a function signature) for throw, got ", exceptionIndex);
+        const auto& exceptionSignature = *signature.as<FunctionSignature>();
 
         WASM_VALIDATOR_FAIL_IF(m_expressionStack.size() < exceptionSignature.argumentCount(), "Too few arguments on stack for the exception being thrown. The exception expects ", exceptionSignature.argumentCount(), ", but only ", m_expressionStack.size(), " were present. Exception has signature: ", exceptionSignature.toString());
         unsigned offset = m_expressionStack.size() - exceptionSignature.argumentCount();
@@ -3768,7 +3775,9 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
         uint32_t exceptionIndex;
         WASM_FAIL_IF_HELPER_FAILS(parseExceptionIndex(exceptionIndex));
         TypeIndex typeIndex = m_info.typeIndexFromExceptionIndexSpace(exceptionIndex);
-        const TypeDefinition& exceptionSignature = TypeInformation::get(typeIndex).expand();
+        const TypeDefinition& signature = TypeInformation::get(typeIndex).expand();
+        WASM_VALIDATOR_FAIL_IF(!signature.is<FunctionSignature>(), "invalid type index (not a function signature) for catch, got ", exceptionIndex);
+        const auto& exceptionSignature = *signature.as<FunctionSignature>();
 
         if (m_unreachableBlocks > 1)
             return { };
@@ -3779,11 +3788,11 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
         m_unreachableBlocks = 0;
         m_expressionStack = { };
         ResultList results;
-        WASM_TRY_ADD_TO_CONTEXT(addCatchToUnreachable(exceptionIndex, exceptionSignature, data.controlData, results));
+        WASM_TRY_ADD_TO_CONTEXT(addCatchToUnreachable(exceptionIndex, signature, data.controlData, results));
 
-        RELEASE_ASSERT(exceptionSignature.as<FunctionSignature>()->argumentCount() == results.size());
-        for (unsigned i = 0; i < exceptionSignature.as<FunctionSignature>()->argumentCount(); ++i) {
-            Type argumentType = exceptionSignature.as<FunctionSignature>()->argumentType(i);
+        RELEASE_ASSERT(exceptionSignature.argumentCount() == results.size());
+        for (unsigned i = 0; i < exceptionSignature.argumentCount(); ++i) {
+            Type argumentType = exceptionSignature.argumentType(i);
             if (argumentType.isV128()) {
                 m_context.notifyFunctionUsesSIMD();
                 if (!Context::tierSupportsSIMD)
