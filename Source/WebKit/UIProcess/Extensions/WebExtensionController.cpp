@@ -41,15 +41,15 @@ namespace WebKit {
 
 constexpr auto freshlyCreatedTimeout = 5_s;
 
-static HashMap<WebExtensionControllerIdentifier, WeakRef<WebExtensionController>>& webExtensionControllers()
+static HashMap<WebExtensionControllerIdentifier, WeakPtr<WebExtensionController>>& webExtensionControllers()
 {
-    static MainThreadNeverDestroyed<HashMap<WebExtensionControllerIdentifier, WeakRef<WebExtensionController>>> controllers;
+    static MainThreadNeverDestroyed<HashMap<WebExtensionControllerIdentifier, WeakPtr<WebExtensionController>>> controllers;
     return controllers;
 }
 
-WebExtensionController* WebExtensionController::get(WebExtensionControllerIdentifier identifier)
+RefPtr<WebExtensionController> WebExtensionController::get(WebExtensionControllerIdentifier identifier)
 {
-    return webExtensionControllers().get(identifier);
+    return webExtensionControllers().get(identifier).get();
 }
 
 WebExtensionController::WebExtensionController(Ref<WebExtensionControllerConfiguration> configuration)
@@ -76,6 +76,7 @@ WebExtensionController::WebExtensionController(Ref<WebExtensionControllerConfigu
 
 WebExtensionController::~WebExtensionController()
 {
+    webExtensionControllers().remove(identifier());
     unloadAll();
 }
 
