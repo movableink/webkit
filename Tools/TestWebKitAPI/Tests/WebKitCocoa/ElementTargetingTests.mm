@@ -678,6 +678,24 @@ TEST(ElementTargeting, CountVisibilityAdjustmentsAfterNavigatingBack)
     EXPECT_EQ(0U, [webView numberOfVisibilityAdjustmentRects]);
 }
 
+TEST(ElementTargeting, DoNotBeginRepeatedVisibilityAdjustmentIfTargetIsAlreadyHidden)
+{
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600)]);
+    [webView synchronouslyLoadTestPageNamed:@"element-targeting-12"];
+
+    RetainPtr frontTarget = [[webView targetedElementInfoAt:CGPointMake(150, 150)] firstObject];
+    [webView adjustVisibilityForTargets:@[ frontTarget.get() ]];
+    [webView adjustVisibilityForTargets:@[ frontTarget.get() ]];
+    [webView waitForNextPresentationUpdate];
+
+    [webView stringByEvaluatingJavaScript:@"document.querySelector('DIV.back').style.display = 'block'"];
+    [webView waitForNextPresentationUpdate];
+
+    RetainPtr backTarget = [[webView targetedElementInfoWithSelectors:@[ [NSSet setWithObject:@"DIV.back"] ]] firstObject];
+    EXPECT_NOT_NULL(backTarget);
+    EXPECT_FALSE([backTarget isInVisibilityAdjustmentSubtree]);
+}
+
 #if PLATFORM(VISION)
 TEST(ElementTargeting, RequestAllVisibleElements)
 {

@@ -1461,8 +1461,16 @@ bool ElementTargetingController::adjustVisibility(Vector<TargetedElementAdjustme
     Region newAdjustmentRegion;
     for (auto& [identifiers, selectors] : adjustments) {
         auto [elementID, documentID] = identifiers;
-        if (auto rect = m_recentAdjustmentClientRects.get(elementID); !rect.isEmpty())
-            newAdjustmentRegion.unite(rect);
+        auto rect = m_recentAdjustmentClientRects.get(elementID);
+        if (rect.isEmpty())
+            continue;
+
+        if (RefPtr target = Element::fromIdentifier(identifiers.first); target && target->isInVisibilityAdjustmentSubtree()) {
+            // This target's visibility has already been adjusted; avoid treating it as a new region.
+            continue;
+        }
+
+        newAdjustmentRegion.unite(rect);
     }
 
     m_repeatedAdjustmentClientRegion.unite(intersect(m_adjustmentClientRegion, newAdjustmentRegion));
