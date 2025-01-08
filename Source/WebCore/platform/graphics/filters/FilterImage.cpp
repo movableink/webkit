@@ -37,8 +37,6 @@
 #include <arm_neon.h>
 #endif
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 RefPtr<FilterImage> FilterImage::create(const FloatRect& primitiveSubregion, const FloatRect& imageRect, const IntRect& absoluteImageRect, bool isAlphaImage, bool isValidPremultiplied, RenderingMode renderingMode, const DestinationColorSpace& colorSpace, ImageBufferAllocator& allocator)
@@ -333,45 +331,47 @@ void FilterImage::correctPremultipliedPixelBuffer()
     if (!m_premultipliedPixelBuffer || m_isValidPremultiplied)
         return;
 
-    uint8_t* pixelBytes = m_premultipliedPixelBuffer->bytes().data();
-    int pixelByteLength = m_premultipliedPixelBuffer->bytes().size();
+    auto pixelBytes = m_premultipliedPixelBuffer->bytes();
+    size_t index = 0;
 
     // We must have four bytes per pixel, and complete pixels
-    ASSERT(!(pixelByteLength % 4));
+    ASSERT(!(pixelBytes.size() % 4));
 
 #if HAVE(ARM_NEON_INTRINSICS)
-    if (pixelByteLength >= 64) {
-        uint8_t* lastPixel = pixelBytes + (pixelByteLength & ~0x3f);
+    if (pixelBytes.size() >= 64) {
+        size_t endIndex = pixelBytes.size() & ~0x3f;
         do {
             // Increments pixelBytes by 64.
-            uint8x16x4_t sixteenPixels = vld4q_u8(pixelBytes);
+            auto* currentBytes = pixelBytes.subspan(index).data();
+            uint8x16x4_t sixteenPixels = vld4q_u8(currentBytes);
             sixteenPixels.val[0] = vminq_u8(sixteenPixels.val[0], sixteenPixels.val[3]);
             sixteenPixels.val[1] = vminq_u8(sixteenPixels.val[1], sixteenPixels.val[3]);
             sixteenPixels.val[2] = vminq_u8(sixteenPixels.val[2], sixteenPixels.val[3]);
-            vst4q_u8(pixelBytes, sixteenPixels);
-            pixelBytes += 64;
-        } while (pixelBytes < lastPixel);
+            vst4q_u8(currentBytes, sixteenPixels);
+            index += 64;
+        } while (index < endIndex);
 
-        pixelByteLength &= 0x3f;
-        if (!pixelByteLength)
+        skip(pixelsBytes, index);
+        index = 0;
+        if (pixelsBytes.empty())
             return;
     }
 #endif
 
-    int numPixels = pixelByteLength / 4;
+    int numPixels = pixelBytes.size() / 4;
 
     // Iterate over each pixel, checking alpha and adjusting color components if necessary
     while (--numPixels >= 0) {
         // Alpha is the 4th byte in a pixel
-        uint8_t a = *(pixelBytes + 3);
+        uint8_t a = pixelBytes[index + 3];
         // Clamp each component to alpha, and increment the pixel location
         for (int i = 0; i < 3; ++i) {
-            if (*pixelBytes > a)
-                *pixelBytes = a;
-            ++pixelBytes;
+            if (pixelBytes[index] > a)
+                pixelBytes[index] = a;
+            ++index;
         }
         // Increment for alpha
-        ++pixelBytes;
+        ++index;
     }
 }
 
@@ -396,5 +396,3 @@ void FilterImage::transformToColorSpace(const DestinationColorSpace& colorSpace)
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
