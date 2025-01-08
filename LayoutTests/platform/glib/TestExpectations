@@ -2257,8 +2257,8 @@ webkit.org/b/235885 webrtc/datachannel/getStats-no-prflx-remote-candidate.html [
 webkit.org/b/235885 fast/mediastream/RTCPeerConnection-statsSelector.html [ Skip ]
 webkit.org/b/187064 imported/w3c/web-platform-tests/webrtc/RTCPeerConnection-getStats.https.html [ Skip ]
 
-# FIXME: Remove Timeout expectation once bug #275685 is fixed.
-webkit.org/b/269285 webrtc/h265.html [ Failure Timeout ]
+# Missing support for qpSum WebRTC stats.
+webkit.org/b/269285 webrtc/h265.html [ Failure ]
 
 # Too slow with filtering implemented in WebKit. Should be done directly by GstWebRTC.
 webrtc/datachannel/filter-ice-candidate.html [ Skip ]
@@ -2480,10 +2480,8 @@ webkit.org/b/151344 fast/mediastream/MediaStream-add-ended-tracks.html [ Skip ]
 # Flakes moved from wpe/TestExpectations -- if they're flaky in WPE they're very likely to be flaky in GTK
 http/tests/webrtc/muted-video-mediastream-invisible-autoplay.html [ Failure Timeout Pass ]
 
+# webrtcbin doesn't emit "outbound-rtp" stats until it's in connected state
 webkit.org/b/280117 webrtc/audio-muted-stats.html [ Failure ]
-
-# Crashing since introduced
-fast/mediastream/mediastreamtrack-clone-muted.html [ Skip ]
 
 #////////////////////////////////////////////////////////////////////////////////////////
 # End of WebRTC-related bugs
