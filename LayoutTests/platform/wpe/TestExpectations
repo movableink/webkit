@@ -98,7 +98,6 @@ imported/w3c/web-platform-tests/html/semantics/forms/form-submission-0/url-encod
 
 imported/w3c/web-platform-tests/mathml/relations/css-styling/mathvariant-auto.html [ Pass ]
 
-
 # PointerEvents not enabled globally, but enabled for WPE (EXPERIMENTAL_FEATURES)
 pointerevents/pointer-id-crash.html [ Pass ]
 pointerevents/mouse [ Pass ]
@@ -582,7 +581,6 @@ webkit.org/b/209275 imported/w3c/web-platform-tests/css/css-writing-modes/text-b
 webkit.org/b/209275 imported/w3c/web-platform-tests/css/css-writing-modes/text-baseline-vrl-004.xht [ ImageOnlyFailure ]
 webkit.org/b/209275 imported/w3c/web-platform-tests/css/css-writing-modes/vertical-alignment-vlr-023.xht [ ImageOnlyFailure ]
 webkit.org/b/209275 imported/w3c/web-platform-tests/css/css-writing-modes/vertical-alignment-vrl-022.xht [ ImageOnlyFailure ]
-webkit.org/b/166941 imported/w3c/web-platform-tests/css/css-writing-modes/forms/text-input-vertical-overflow-no-scroll.html [ Failure ]
 
 webkit.org/b/214290 imported/w3c/web-platform-tests/css/css-text/hyphens/hyphens-out-of-flow-002.html [ Pass ]
 webkit.org/b/257011 imported/w3c/web-platform-tests/css/css-text/hyphens/hyphens-punctuation-001.html [ ImageOnlyFailure ]
@@ -1067,13 +1065,9 @@ webkit.org/b/188964 fast/block/positioning/hittest-on-relative-positioned-childr
 webkit.org/b/188966 fast/images/image-map-outline-in-positioned-container.html [ ImageOnlyFailure ]
 webkit.org/b/188966 fast/images/image-map-outline-with-scale-transform.html [ ImageOnlyFailure ]
 
-fast/images/object-image-hide-show.html [ ImageOnlyFailure ]
-
 webkit.org/b/188967 fast/selectors/read-only-read-write-input-basics.html [ Failure ]
 
 webkit.org/b/188970 fast/hidpi/hidpi-3x-device-pixel-ratio.html [ Failure ]
-
-webkit.org/b/188971 fast/css3-text/css3-text-decoration/repaint/underline-outside-of-layout-rect.html [ ImageOnlyFailure ]
 
 webkit.org/b/188975 fast/css/user-drag-none.html [ Failure ]
 
@@ -1230,8 +1224,6 @@ webkit.org/b/214470 imported/w3c/web-platform-tests/css/css-images/image-orienta
 webkit.org/b/214471 imported/w3c/web-platform-tests/css/css-values/ch-unit-002.html [ ImageOnlyFailure ]
 webkit.org/b/214471 imported/w3c/web-platform-tests/css/css-values/ch-unit-011.html [ ImageOnlyFailure ]
 webkit.org/b/277995 imported/w3c/web-platform-tests/css/css-values/attr-all-types.html [ Failure ]
-imported/w3c/web-platform-tests/css/css-images/object-fit-contain-png-001o.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-images/object-fit-contain-png-002i.html [ ImageOnlyFailure ]
 
 # text-transform: full-width
 webkit.org/b/143153 imported/w3c/web-platform-tests/css/css-text/text-transform/text-transform-fullwidth-002.xht [ ImageOnlyFailure ]
@@ -1376,17 +1368,12 @@ imported/w3c/web-platform-tests/css/css-animations/flip-running-animation-via-va
 imported/w3c/web-platform-tests/css/css-backgrounds/background-image-cover-zoomed-1.html [ Pass ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-highlight-api/painting/custom-highlight-painting-iframe-003.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-highlight-api/painting/custom-highlight-painting-iframe-004.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-highlight-api/painting/custom-highlight-painting-invalidation-002.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-highlight-api/painting/custom-highlight-painting-invalidation-007.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-lists/content-property/marker-text-matches-georgian.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-pseudo/first-line-change-inline-color.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-pseudo/first-line-change-inline-color-nested.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-pseudo/selection-background-painting-order.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-text/hyphens/hyphens-vertical-002.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-text/letter-spacing/letter-spacing-control-chars-001.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-text/white-space/white-space-zero-fontsize-002.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-transforms/transform-3d-rotateY-stair-above-001.xht [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-ui/accent-color-invalidation-currentcolor.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-ui/compute-kind-widget-generated/kind-of-widget-fallback-color-input-border-bottom-left-radius-001.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-ui/compute-kind-widget-generated/kind-of-widget-fallback-color-input-border-bottom-right-radius-001.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-ui/compute-kind-widget-generated/kind-of-widget-fallback-color-input-border-end-end-radius-001.html [ ImageOnlyFailure ]
@@ -1424,8 +1411,6 @@ webkit.org/b/261024 webrtc/vp9.html [ Failure Pass Timeout ]
 
 webrtc/vp8-then-h264.html [ Pass ]
 
-imported/w3c/web-platform-tests/css/filter-effects/background-image-blur-repaint.html [ ImageOnlyFailure ]
-
 imported/w3c/web-platform-tests/css/filter-effects/backdrop-filter-plus-filter.html [ ImageOnlyFailure ]
 
 fast/canvas/font-family-system-ui-canvas.html [ Skip ]
@@ -1441,7 +1426,6 @@ webkit.org/b/264680 imported/w3c/web-platform-tests/webaudio/the-audio-api/the-a
 webkit.org/b/264680 imported/w3c/web-platform-tests/webcodecs/videoFrame-construction.crossOriginSource.sub.html [ Failure Pass ]
 webkit.org/b/264680 imported/w3c/web-platform-tests/workers/WorkerGlobalScope_ErrorEvent_filename.htm [ Failure Pass ]
 webkit.org/b/264680 media/track/video-track-configuration-mp4-default-colorspace.html [ Failure Pass ]
-
 
 imported/w3c/web-platform-tests/css/css-masking/clip-path-svg-content/mask-objectboundingbox-content-clip-transform.svg [ Failure ]
 imported/w3c/web-platform-tests/css/css-masking/clip-path-svg-content/mask-objectboundingbox-content-clip.svg [ Failure ]
@@ -1483,7 +1467,6 @@ webkit.org/b/266671 http/wpt/webcodecs/videoFrame-rect.html [ Failure ]
 
 # [WPE] Missing implementation of TestController::setHidden()
 webkit.org/b/268470 fast/mediastream/device-change-event-2.html [ Timeout ]
-
 
 webrtc/captureCanvas-webrtc-with-video-scaling-adaptation.html [ Failure Timeout ]
 
@@ -1536,9 +1519,6 @@ imported/w3c/web-platform-tests/css/compositing/mix-blend-mode/mix-blend-mode-pa
 
 imported/w3c/web-platform-tests/css/css-view-transitions/capture-with-visibility-mixed-descendants.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-view-transitions/transition-in-hidden-page.html [ Skip ]
-
-# No support for compositing clip-path?
-webkit.org/b/282148 compositing/masks/clip-path-on-tiled-toggle.html [ Failure ]
 
 webkit.org/b/272224 imported/w3c/web-platform-tests/selection/textcontrols/selectionchange.html [ Failure ]
 
