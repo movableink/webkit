@@ -546,7 +546,7 @@ void NetworkProcess::addWebsiteDataStore(WebsiteDataStoreParameters&& parameters
         session->protectedStorageManager()->suspend([] { });
 }
 
-void NetworkProcess::forEachNetworkSession(const Function<void(NetworkSession&)>& functor)
+void NetworkProcess::forEachNetworkSession(NOESCAPE const Function<void(NetworkSession&)>& functor)
 {
     for (auto& session : m_networkSessions.values())
         functor(*session);

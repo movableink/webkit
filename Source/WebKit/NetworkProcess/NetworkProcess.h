@@ -189,7 +189,7 @@ public:
     NetworkSession* networkSession(PAL::SessionID) const final;
     void destroySession(PAL::SessionID, CompletionHandler<void()>&& = [] { });
 
-    void forEachNetworkSession(const Function<void(NetworkSession&)>&);
+    void forEachNetworkSession(NOESCAPE const Function<void(NetworkSession&)>&);
 
     void forEachNetworkStorageSession(const Function<void(WebCore::NetworkStorageSession&)>&);
     WebCore::NetworkStorageSession* storageSession(PAL::SessionID) const;
