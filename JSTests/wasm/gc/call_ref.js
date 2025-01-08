@@ -5,15 +5,17 @@ import { compile, instantiate } from "./wast-wrapper.js";
 
 function testRefSubtyping() {
   // A call to a subtype should validate.
-  instantiate(`
+  var m = instantiate(`
     (module
       (type (sub (func (param i32))))
       (type (sub 0 (func (param i32))))
       (global (ref 1) (ref.func 0))
       (func (type 1))
-      (func (call_ref 0 (i32.const 3) (global.get 0)))
+      (func (export "main") (call_ref 0 (i32.const 3) (global.get 0)))
     )
   `);
+  for (let i = 0; i < 10000; i++)
+    m.exports.main();
 }
 
 function testArgSubtyping() {

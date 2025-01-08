@@ -739,8 +739,7 @@ static inline UGPRPair doWasmCallRef(Register* partiallyConstructedCalleeFrame, 
     else
         functionInfoSlot = function->targetInstance.get();
 
-    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=260820
-    ASSERT(function->typeIndex == CALLEE()->signature(typeIndex).index());
+    ASSERT(Wasm::isSubtypeIndex(function->typeIndex, CALLEE()->signature(typeIndex).index()));
     UNUSED_PARAM(typeIndex);
     auto callTarget = *function->entrypointLoadLocation;
     WASM_CALL_RETURN(calleeInstance, callTarget);
