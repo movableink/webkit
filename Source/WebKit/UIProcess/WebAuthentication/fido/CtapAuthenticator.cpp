@@ -123,6 +123,8 @@ void CtapAuthenticator::makeCredential()
     else
         cborCmd = encodeMakeCredentialRequestAsCBOR(requestData().hash, options, internalUVAvailability, residentKeyAvailability, authenticatorSupportedExtensions);
     CTAP_RELEASE_LOG("makeCredential: Sending %s", base64EncodeToString(cborCmd).utf8().data());
+    if (m_info.maxMsgSize() && cborCmd.size() >= *m_info.maxMsgSize())
+        CTAP_RELEASE_LOG("CtapAuthenticator::makeCredential cmdSize = %lu maxMsgSize = %u", cborCmd.size(), *m_info.maxMsgSize());
     driver().transact(WTFMove(cborCmd), [weakThis = WeakPtr { *this }](Vector<uint8_t>&& data) {
         ASSERT(RunLoop::isMain());
         if (!weakThis)
@@ -195,6 +197,8 @@ void CtapAuthenticator::getAssertion()
         cborCmd = encodeGetAssertionRequestAsCBOR(requestData().hash, options, internalUVAvailability, authenticatorSupportedExtensions, PinParameters { pin::kProtocolVersion, m_pinAuth });
     else
         cborCmd = encodeGetAssertionRequestAsCBOR(requestData().hash, options, internalUVAvailability, authenticatorSupportedExtensions);
+    if (m_info.maxMsgSize() && cborCmd.size() >= *m_info.maxMsgSize())
+        CTAP_RELEASE_LOG("CtapAuthenticator::getAssertion cmdSize = %lu maxMsgSize = %u", cborCmd.size(), *m_info.maxMsgSize());
     CTAP_RELEASE_LOG("getAssertion: Sending %s", base64EncodeToString(cborCmd).utf8().data());
     driver().transact(WTFMove(cborCmd), [weakThis = WeakPtr { *this }](Vector<uint8_t>&& data) {
         ASSERT(RunLoop::isMain());
