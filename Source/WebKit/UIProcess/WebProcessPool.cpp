@@ -2564,9 +2564,9 @@ static bool shouldSuspendAggressivelyBasedOnSystemMemoryPressureStatus(SystemMem
     }();
 
     if (status == SystemMemoryPressureStatus::Warning)
-        return threshold >= DISPATCH_MEMORYPRESSURE_WARN;
+        return threshold <= DISPATCH_MEMORYPRESSURE_WARN;
     if (status == SystemMemoryPressureStatus::Critical)
-        return threshold >= DISPATCH_MEMORYPRESSURE_CRITICAL;
+        return threshold <= DISPATCH_MEMORYPRESSURE_CRITICAL;
     return false;
 }
 
