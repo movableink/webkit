@@ -165,4 +165,6 @@ bool defaultPeerConnectionEnabledAvailable();
 bool defaultBuiltInNotificationsEnabled();
 #endif
 
+bool defaultRequiresPageVisibilityForVideoToBeNowPlaying();
+
 } // namespace WebKit

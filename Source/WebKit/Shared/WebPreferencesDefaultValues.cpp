@@ -354,4 +354,14 @@ bool defaultBuiltInNotificationsEnabled()
 }
 #endif
 
+bool defaultRequiresPageVisibilityForVideoToBeNowPlaying()
+{
+#if USE(APPLE_INTERNAL_SDK)
+    if (requiresPageVisibilityForVideoToBeNowPlayingFromAdditions())
+        return true;
+#endif
+
+    return false;
+}
+
 } // namespace WebKit

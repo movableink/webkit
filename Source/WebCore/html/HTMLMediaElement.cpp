@@ -677,6 +677,9 @@ void HTMLMediaElement::initializeMediaSession()
     }
 #endif
 
+    if (document->settings().requiresPageVisibilityForVideoToBeNowPlaying())
+        m_mediaSession->addBehaviorRestriction(MediaElementSession::RequirePageVisibilityForVideoToBeNowPlaying);
+
     registerWithDocument(document);
 
 #if USE(AUDIO_SESSION) && PLATFORM(MAC)

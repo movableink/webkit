@@ -571,6 +571,14 @@ bool MediaElementSession::canShowControlsManager(PlaybackControlsPurpose purpose
         return false;
     }
 
+    if (purpose == MediaElementSession::PlaybackControlsPurpose::NowPlaying
+        && hasBehaviorRestriction(RequirePageVisibilityForVideoToBeNowPlaying)
+        && m_element.isVideo()
+        && !m_element.protectedDocument()->protectedPage()->isVisibleAndActive()) {
+        INFO_LOG(LOGIDENTIFIER, "returning FALSE: NowPlaying restricted for video in a page that is not visible");
+        return false;
+    }
+
     if (m_element.isFullscreen()) {
         INFO_LOG(LOGIDENTIFIER, "returning TRUE: is fullscreen");
         return true;

@@ -1753,6 +1753,16 @@ static WebCore::EditableLinkBehavior toEditableLinkBehavior(_WKEditableLinkBehav
     return _preferences->modelNoPortalAttributeEnabled();
 }
 
+- (void)_setRequiresPageVisibilityForVideoToBeNowPlayingForTesting:(BOOL)enabled
+{
+    _preferences->setRequiresPageVisibilityForVideoToBeNowPlaying(enabled);
+}
+
+- (BOOL)_requiresPageVisibilityForVideoToBeNowPlayingForTesting
+{
+    return _preferences->requiresPageVisibilityForVideoToBeNowPlaying();
+}
+
 @end
 
 @implementation WKPreferences (WKDeprecated)

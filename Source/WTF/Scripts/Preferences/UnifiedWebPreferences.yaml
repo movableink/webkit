@@ -6189,6 +6189,17 @@ RequireUAGetDisplayMediaPrompt:
     WebCore:
       default: true
 
+RequiresPageVisibilityForVideoToBeNowPlaying:
+  type: bool
+  status: embedder
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: defaultRequiresPageVisibilityForVideoToBeNowPlaying()
+    WebCore:
+      default: false
+
 RequiresPageVisibilityToPlayAudio:
   type: bool
   status: embedder
