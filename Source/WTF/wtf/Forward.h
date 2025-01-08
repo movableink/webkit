@@ -135,7 +135,7 @@ template<typename T> struct KeyValuePairKeyExtractor;
 template<typename KeyTraits, typename MappedTraits> struct KeyValuePairTraits;
 template<typename KeyTypeArg, typename ValueTypeArg> struct KeyValuePair;
 enum class ShouldValidateKey : bool { No, Yes };
-template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits, ShouldValidateKey shouldValidateKey = ShouldValidateKey::No> class HashTable;
+template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits, ShouldValidateKey shouldValidateKey = ShouldValidateKey::Yes> class HashTable;
 template<typename Value, typename = DefaultHash<Value>, typename = HashTraits<Value>> class HashCountedSet;
 template<typename KeyArg, typename MappedArg, typename = DefaultHash<KeyArg>, typename = HashTraits<KeyArg>, typename = HashTraits<MappedArg>, typename = HashTableTraits, ShouldValidateKey = ShouldValidateKey::Yes> class HashMap;
 template<typename KeyArg, typename MappedArg, typename KeyHash = DefaultHash<KeyArg>, typename KeyTraits = HashTraits<KeyArg>, typename MappedTraits = HashTraits<MappedArg>, typename HashTraits = HashTableTraits>

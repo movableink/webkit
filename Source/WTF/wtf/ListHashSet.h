@@ -189,7 +189,7 @@ private:
     iterator makeIterator(Node*);
     const_iterator makeConstIterator(Node*) const;
 
-    HashTable<Node*, Node*, IdentityExtractor, NodeHash, NodeTraits, NodeTraits, ShouldValidateKey::Yes> m_impl;
+    HashTable<Node*, Node*, IdentityExtractor, NodeHash, NodeTraits, NodeTraits> m_impl;
     Node* m_head { nullptr };
     Node* m_tail { nullptr };
 };
