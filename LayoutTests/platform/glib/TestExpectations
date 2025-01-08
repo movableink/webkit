@@ -1167,6 +1167,7 @@ webkit.org/b/262986 imported/w3c/web-platform-tests/media-source/mediasource-det
 webkit.org/b/254522 media/video-volume.html [ Pass Failure ]
 webkit.org/b/254525 http/tests/media/video-throttled-load-metadata.html [ Pass Failure ]
 media/video-seek-to-current-time.html [ Pass Failure ]
+webkit.org/b/285595 media/video-seek-after-end-play.html [ Skip ]
 
 webkit.org/b/213699 http/wpt/mediarecorder/mute-tracks.html [ Timeout Pass ]
 webkit.org/b/213699 http/wpt/mediarecorder/video-rotation.html [ Failure ]
