@@ -555,7 +555,12 @@ LocalOrTempIndex ControlData::enclosedHeight() const
     return m_enclosedHeight;
 }
 
-unsigned ControlData::implicitSlots() const { return isAnyCatch(*this) ? 1 : 0; }
+unsigned ControlData::implicitSlots() const
+{
+    if (Options::useWasmIPInt())
+        return (isTry(*this) || isAnyCatch(*this)) ? 1 : 0;
+    return isAnyCatch(*this) ? 1 : 0;
+}
 
 const Vector<Location, 2>& ControlData::targetLocations() const
 {
@@ -1039,7 +1044,7 @@ Value BBQJIT::topValue(TypeKind type)
 
 Value BBQJIT::exception(const ControlData& control)
 {
-    ASSERT(ControlData::isAnyCatch(control));
+    ASSERT(ControlData::isTry(control) || ControlData::isAnyCatch(control));
     return Value::fromTemp(TypeKind::Externref, control.enclosedHeight());
 }
 
