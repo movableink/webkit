@@ -40,7 +40,7 @@ public:
     using RefType = Ref<WeakPtrImpl>;
     using KeyTraits = HashTraits<KeyType>;
     using ValueTraits = HashTraits<ValueType>;
-    using WeakHashImplMap = UncheckedKeyHashMap<RefType, ValueType>;
+    using WeakHashImplMap = HashMap<RefType, ValueType>;
 
     struct PeekKeyValuePairTraits : KeyValuePairHashTraits<HashTraits<KeyType&>, HashTraits<ValueType&>> {
         static constexpr bool hasIsEmptyValueFunction = true;
