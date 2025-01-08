@@ -2466,10 +2466,6 @@ void FrameSelection::updateCaretVisibility(ShouldUpdateAppearance doAppearanceUp
     if (caretVisibility() == visibility)
         return;
 
-    // FIXME: We shouldn't trigger a synchronous layout here.
-    if (doAppearanceUpdate == ShouldUpdateAppearance::Yes && m_document)
-        updateSelectionAppearanceNow();
-
 #if ENABLE(TEXT_CARET)
     caretAnimator().setVisible(false);
 
@@ -2477,7 +2473,7 @@ void FrameSelection::updateCaretVisibility(ShouldUpdateAppearance doAppearanceUp
 #endif
 
     if (doAppearanceUpdate == ShouldUpdateAppearance::Yes)
-        updateAppearance();
+        m_pendingSelectionUpdate = true;
 }
 
 // Helper function that tells whether a particular node is an element that has an entire
