@@ -2590,20 +2590,6 @@ DetachableMediaSourceEnabled:
     WebCore:
       default: false
 
-DetailsNameAttributeEnabled:
-  type: bool
-  status: stable
-  category: html
-  humanReadableName: "HTML <details name> attribute"
-  humanReadableDescription: "Enable HTML <details name> attribute"
-  defaultValue:
-    WebKitLegacy:
-      default: true
-    WebKit:
-      default: true
-    WebCore:
-      default: true
-
 DeveloperExtrasEnabled:
   type: bool
   status: embedder
