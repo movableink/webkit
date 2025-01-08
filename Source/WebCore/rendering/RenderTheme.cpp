@@ -236,7 +236,7 @@ void RenderTheme::adjustStyle(RenderStyle& style, const Element* element, const 
         style.setUsedAppearance(appearance);
     }
 
-    if (!widgetMayDevolve && appearance == StyleAppearance::SearchField && searchFieldShouldAppearAsTextField(style)) {
+    if (appearance == StyleAppearance::SearchField && searchFieldShouldAppearAsTextField(style)) {
         appearance = StyleAppearance::TextField;
         style.setUsedAppearance(appearance);
     }
