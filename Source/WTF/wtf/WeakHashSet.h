@@ -35,7 +35,7 @@ template<typename T, typename WeakPtrImpl, EnableWeakPtrThreadingAssertions asse
 class WeakHashSet final {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    using WeakPtrImplSet = UncheckedKeyHashSet<Ref<WeakPtrImpl>>;
+    using WeakPtrImplSet = HashSet<Ref<WeakPtrImpl>>;
     using AddResult = typename WeakPtrImplSet::AddResult;
 
     class WeakHashSetConstIterator {
