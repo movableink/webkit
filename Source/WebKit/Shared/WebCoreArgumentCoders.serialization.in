@@ -2623,13 +2623,13 @@ header: <wtf/MachSendRight.h>
 
 [CustomHeader, RValue] class WebCore::SharedMemoryHandle {
 #if USE(UNIX_DOMAIN_SOCKETS)
-    [Validator='!!m_handle'] UnixFileDescriptor m_handle;
+    [Validator='!!m_handle && *m_handle'] UnixFileDescriptor m_handle;
 #endif
 #if OS(DARWIN)
-    [Validator='!!m_handle'] MachSendRight m_handle;
+    [Validator='!!m_handle && *m_handle'] MachSendRight m_handle;
 #endif
 #if OS(WINDOWS)
-    [Validator='!!m_handle'] Win32Handle m_handle;
+    [Validator='!!m_handle && *m_handle'] Win32Handle m_handle;
 #endif
     size_t m_size;
 };
