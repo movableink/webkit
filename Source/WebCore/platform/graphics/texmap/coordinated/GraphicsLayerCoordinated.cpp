@@ -842,7 +842,7 @@ void GraphicsLayerCoordinated::updateDamage()
     Damage damage;
     if (m_damagedRectsAreUnreliable)
         damage.invalidate();
-    else if (!m_dirtyRegion.fullRepaint)
+    else if (m_dirtyRegion.fullRepaint)
         damage.add(FloatRect({ }, m_size));
     else {
         for (const auto& rect : m_dirtyRegion.rects)

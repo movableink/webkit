@@ -418,6 +418,11 @@ FloatRect TextureMapperLayer::transformRectForDamage(const FloatRect& rect, cons
     FloatQuad quad(rect);
     quad = transform.mapQuad(quad);
     FloatRect transformedRect = quad.boundingBox();
+
+    // FIXME: Investigate why m_state.pos is not included in transform sometimes.
+    if (transformedRect.location().isZero())
+        transformedRect.moveBy(m_state.pos);
+
     // Some layers are drawn on an intermediate surface and have this offset applied to convert to the
     // intermediate surface coordinates. In order to translate back to actual coordinates,
     // we have to undo it.
