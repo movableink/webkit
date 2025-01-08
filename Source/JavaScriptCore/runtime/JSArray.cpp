@@ -496,6 +496,10 @@ bool JSArray::fastFill(VM& vm, unsigned startIndex, unsigned endIndex, JSValue v
 
     ASSERT(nextType == indexingType());
 
+    // There is a chance that endIndex is beyond the length. If it is, let's just fail.
+    if (endIndex > this->butterfly()->publicLength())
+        return false;
+
     if (nextType == ArrayWithDouble) {
         auto* data = butterfly()->contiguousDouble().data();
         double pattern = value.asNumber();
