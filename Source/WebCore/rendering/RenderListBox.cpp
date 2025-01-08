@@ -468,11 +468,12 @@ static LayoutSize itemOffsetForAlignment(TextRun textRun, const RenderStyle& ele
     // FIXME: Firefox doesn't respect TextAlignMode::Justify. Should we?
     // FIXME: Handle TextAlignMode::End here
     if (actualAlignment == TextAlignMode::Start || actualAlignment == TextAlignMode::Justify)
-        actualAlignment = itemStyle->writingMode().isBidiLTR() ? TextAlignMode::Left : TextAlignMode::Right;
+        actualAlignment = itemStyle->writingMode().isLogicalLeftInlineStart() ? TextAlignMode::Left : TextAlignMode::Right;
 
     bool isHorizontalWritingMode = elementStyle.writingMode().isHorizontal();
 
     auto itemBoundingBoxLogicalWidth = isHorizontalWritingMode ? itemBoundingBox.width() : itemBoundingBox.height();
+    auto itemBoundingBoxLogicalHeight = isHorizontalWritingMode ? itemBoundingBox.height() : itemBoundingBox.width();
     auto offset = LayoutSize(0, itemFont.metricsOfPrimaryFont().intAscent());
     if (actualAlignment == TextAlignMode::Right || actualAlignment == TextAlignMode::WebKitRight) {
         float textWidth = itemFont.width(textRun);
@@ -482,6 +483,11 @@ static LayoutSize itemOffsetForAlignment(TextRun textRun, const RenderStyle& ele
         offset.setWidth((itemBoundingBoxLogicalWidth - textWidth) / 2);
     } else
         offset.setWidth(optionsSpacingInlineStart);
+
+    if (elementStyle.writingMode().isLineOverLeft()) {
+        offset.setWidth(offset.width() + itemFont.width(textRun));
+        offset.setHeight(itemBoundingBoxLogicalHeight - offset.height());
+    }
 
     if (!isHorizontalWritingMode)
         return LayoutSize { -offset.height(), offset.width() };
@@ -535,7 +541,10 @@ void RenderListBox::paintItemForeground(PaintInfo& paintInfo, const LayoutPoint&
     if (!isHorizontalWritingMode) {
         auto rotationOrigin = roundedIntPoint(r.maxXMinYCorner());
         paintInfo.context().translate(rotationOrigin);
-        paintInfo.context().rotate(piOverTwoFloat);
+        if (writingMode().isLineOverLeft())
+            paintInfo.context().rotate(-piOverTwoFloat);
+        else
+            paintInfo.context().rotate(piOverTwoFloat);
         paintInfo.context().translate(-rotationOrigin);
     }
 

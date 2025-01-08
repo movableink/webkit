@@ -218,8 +218,9 @@ void RenderFileUploadControl::paintControl(PaintInfo& paintInfo, const LayoutPoi
 
             if (writingMode().isLineOverLeft()) {
                 textLogicalLeft += font.width(textRun);
-                textLogicalTop += style().fontCascade().metricsOfPrimaryFont().intAscent();
+                textLogicalTop += font.metricsOfPrimaryFont().intAscent();
             }
+
             auto textOrigin = IntPoint(roundToInt(textLogicalLeft), roundToInt(textLogicalTop));
             if (!isHorizontalWritingMode) {
                 textOrigin = textOrigin.transposedPoint();
