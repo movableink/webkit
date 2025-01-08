@@ -37,8 +37,6 @@
 
 #include <pal/spi/cf/CoreTextSPI.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 FontCascade::FontCascade(const FontPlatformData& fontData, FontSmoothingMode fontSmoothingMode)
@@ -524,5 +522,3 @@ bool FontCascade::canUseGlyphDisplayList(const RenderStyle& style)
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
