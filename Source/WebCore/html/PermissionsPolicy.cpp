@@ -315,7 +315,7 @@ static Allowlist parseAllowlist(StringView value, const SecurityOriginData& cont
     if (value.isEmpty())
         return Allowlist { targetOrigin };
 
-    UncheckedKeyHashSet<SecurityOriginData> allowedOrigins;
+    HashSet<SecurityOriginData> allowedOrigins;
     while (!value.isEmpty()) {
         auto [token, remainingValue] = splitOnAsciiWhiteSpace(value);
         if (!token.isEmpty()) {

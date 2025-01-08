@@ -38,7 +38,7 @@
 
 namespace WebCore {
 
-using TargetedElementSelectors = Vector<UncheckedKeyHashSet<String>>;
+using TargetedElementSelectors = Vector<HashSet<String>>;
 using TargetedElementIdentifiers = std::pair<ElementIdentifier, ScriptExecutionContextIdentifier>;
 
 struct TargetedElementAdjustment {
@@ -64,7 +64,7 @@ struct TargetedElementInfo {
     FloatRect boundsInClientCoordinates;
     PositionType positionType { PositionType::Static };
     Vector<FrameIdentifier> childFrameIdentifiers;
-    UncheckedKeyHashSet<URL> mediaAndLinkURLs;
+    HashSet<URL> mediaAndLinkURLs;
     bool isNearbyTarget { true };
     bool isPseudoElement { false };
     bool isInShadowTree { false };

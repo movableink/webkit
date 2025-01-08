@@ -667,7 +667,7 @@ static URL urlForElement(const Element& element)
     return { };
 }
 
-static void collectMediaAndLinkURLsRecursive(const Element& element, UncheckedKeyHashSet<URL>& urls)
+static void collectMediaAndLinkURLsRecursive(const Element& element, HashSet<URL>& urls)
 {
     auto addURLForElement = [&urls](const Element& element) {
         if (auto url = urlForElement(element); !url.isEmpty() && !url.protocolIsData() && !url.protocolIsBlob())
@@ -695,9 +695,9 @@ static void collectMediaAndLinkURLsRecursive(const Element& element, UncheckedKe
     }
 }
 
-static UncheckedKeyHashSet<URL> collectMediaAndLinkURLs(const Element& element)
+static HashSet<URL> collectMediaAndLinkURLs(const Element& element)
 {
-    UncheckedKeyHashSet<URL> urls;
+    HashSet<URL> urls;
     collectMediaAndLinkURLsRecursive(element, urls);
     return urls;
 }

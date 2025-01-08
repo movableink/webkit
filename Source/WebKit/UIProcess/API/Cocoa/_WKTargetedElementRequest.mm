@@ -80,7 +80,7 @@
     WebCore::TargetedElementSelectors selectorsForElement;
     selectorsForElement.reserveInitialCapacity(nsSelectorsForElement.count);
     for (NSSet<NSString *> *nsSelectors in nsSelectorsForElement) {
-        UncheckedKeyHashSet<String> selectors;
+        HashSet<String> selectors;
         selectors.reserveInitialCapacity(nsSelectors.count);
         for (NSString *selector in nsSelectors)
             selectors.add(selector);

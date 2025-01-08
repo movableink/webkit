@@ -15694,7 +15694,7 @@ void WebPageProxy::adjustVisibilityForTargetedElements(const Vector<Ref<API::Tar
         return {
             { info->elementIdentifier(), info->documentIdentifier() },
             info->selectors().map([](auto& selectors) {
-                UncheckedKeyHashSet<String> result;
+                HashSet<String> result;
                 result.reserveInitialCapacity(selectors.size());
                 result.add(selectors.begin(), selectors.end());
                 return result;

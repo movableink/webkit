@@ -39,15 +39,15 @@ public:
     {
     }
     explicit Allowlist(const SecurityOriginData& origin)
-        : m_origins(UncheckedKeyHashSet<SecurityOriginData> { origin })
+        : m_origins(HashSet<SecurityOriginData> { origin })
     {
     }
-    explicit Allowlist(UncheckedKeyHashSet<SecurityOriginData>&& origins)
+    explicit Allowlist(HashSet<SecurityOriginData>&& origins)
         : m_origins(WTFMove(origins))
     {
     }
 
-    using OriginsVariant = std::variant<UncheckedKeyHashSet<SecurityOriginData>, AllowAllOrigins>;
+    using OriginsVariant = std::variant<HashSet<SecurityOriginData>, AllowAllOrigins>;
     explicit Allowlist(OriginsVariant&& origins)
         : m_origins(WTFMove(origins))
     {
@@ -57,7 +57,7 @@ public:
     // This is simplified version of https://w3c.github.io/webappsec-permissions-policy/#matches.
     bool matches(const SecurityOriginData& origin) const
     {
-        return std::visit(WTF::makeVisitor([&origin](const UncheckedKeyHashSet<SecurityOriginData>& origins) -> bool {
+        return std::visit(WTF::makeVisitor([&origin](const HashSet<SecurityOriginData>& origins) -> bool {
             return origins.contains(origin);
         }, [&] (const auto&) {
             return true;
