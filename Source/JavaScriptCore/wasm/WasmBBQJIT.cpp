@@ -3501,6 +3501,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addCatch(unsigned exceptionIndex, const
 {
     m_usesExceptions = true;
     data.flushAndSingleExit(*this, data, expressionStack, false, true);
+    unbindAllRegisters();
     ControlData dataCatch(*this, BlockType::Catch, data.signature(), data.enclosedHeight());
     dataCatch.setCatchKind(CatchKind::Catch);
     if (ControlData::isTry(data)) {
@@ -3546,6 +3547,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addCatchAll(Stack& expressionStack, Con
 {
     m_usesExceptions = true;
     data.flushAndSingleExit(*this, data, expressionStack, false, true);
+    unbindAllRegisters();
     ControlData dataCatch(*this, BlockType::Catch, data.signature(), data.enclosedHeight());
     dataCatch.setCatchKind(CatchKind::CatchAll);
     if (ControlData::isTry(data)) {
