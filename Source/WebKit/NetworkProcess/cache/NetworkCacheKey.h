@@ -136,7 +136,9 @@ struct NetworkCacheKeyHash {
     static unsigned hash(const WebKit::NetworkCache::Key& key)
     {
         static_assert(SHA1::hashSize >= sizeof(unsigned), "Hash size must be greater than sizeof(unsigned)");
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         return *reinterpret_cast<const unsigned*>(key.hash().data());
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     }
 
     static bool equal(const WebKit::NetworkCache::Key& a, const WebKit::NetworkCache::Key& b)
