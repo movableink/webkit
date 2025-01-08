@@ -368,7 +368,6 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'upload',
             'extract-test-results',
             'set-permissions',
-            'run-api-tests',
             'lldb-webkit-test',
             'webkitpy-test',
             'webkitperl-test',

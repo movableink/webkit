@@ -112,7 +112,7 @@ class TestFactory(Factory):
             self.addStep(ExtractTestResults())
             self.addStep(SetPermissions())
 
-        if platform.startswith(('win', 'mac', 'ios-simulator')):
+        if platform.startswith(('win', 'mac', 'ios-simulator')) and self.LayoutTestClass != RunWorldLeaksTests:
             self.addStep(RunAPITests())
 
         # FIXME: Re-enable these tests for Monterey once webkit.org/b/239463 is resolved.
