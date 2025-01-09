@@ -254,7 +254,6 @@ template<typename CharacterType> static bool parseParameterValue(StringParsingBu
         ASSERT(valueLength);
         --valueLength;
     }
-    ASSERT(valueLength > 0);
     value = String(valueStart.first(valueLength));
     return !hasQuotes || completeQuotes;
 }
