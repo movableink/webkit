@@ -232,7 +232,7 @@ bool NetworkStorageSession::shouldExemptDomainPairFromThirdPartyCookieBlocking(c
 
 String NetworkStorageSession::cookiePartitionIdentifier(const URL& firstPartyForCookies)
 {
-    return Site { firstPartyForCookies }.string();
+    return Site { firstPartyForCookies }.toString();
 }
 
 String NetworkStorageSession::cookiePartitionIdentifier(const ResourceRequest& request)
