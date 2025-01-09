@@ -80,7 +80,9 @@ class GLibPort(Port):
 
     def setup_environ_for_server(self, server_name=None):
         environment = super(GLibPort, self).setup_environ_for_server(server_name)
-        environment['G_DEBUG'] = 'fatal-criticals'
+        self._copy_value_from_environ_if_set(environment, 'G_DEBUG')
+        if 'G_DEBUG' not in environment.keys():
+            environment['G_DEBUG'] = 'fatal-criticals'
         environment['GSETTINGS_BACKEND'] = 'memory'
 
         environment['TEST_RUNNER_INJECTED_BUNDLE_FILENAME'] = self._build_path('lib', 'libTestRunnerInjectedBundle.so')
@@ -101,6 +103,12 @@ class GLibPort(Port):
         environment['GST_PLUGIN_FEATURE_RANK'] = 'fakeaudiosink:max,' + ','.join(['%s:0' % element for element in downranked_elements])
         if gst_feature_rank_override:
             environment['GST_PLUGIN_FEATURE_RANK'] += ',%s' % gst_feature_rank_override
+
+        # Make sure GStreamer errors are logged to test -stderr files.
+        gst_debug_override = os.environ.get('GST_DEBUG')
+        environment['GST_DEBUG'] = '*:ERROR'
+        if gst_debug_override:
+            environment['GST_DEBUG'] += f',{gst_debug_override}'
 
         environment['WEBKIT_GST_ALLOW_PLAYBACK_OF_INVISIBLE_VIDEOS'] = '1'
         environment['WEBKIT_GST_WEBRTC_FORCE_EARLY_VIDEO_DECODING'] = '1'
