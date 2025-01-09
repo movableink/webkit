@@ -750,19 +750,19 @@ private:
                 }
                 return;
             }
-            m_targetQueue->dispatch([this, protectedThis = Ref { *this }, promise = Ref { promise }] () mutable {
-                if (m_disconnected) {
-                    PROMISE_LOG("ThenCallback disconnected from ", promise.get(), " aborting [callback:", (const void*)this, " callSite:", m_logSiteIdentifier, "]");
+            m_targetQueue->dispatch([protectedThis = Ref { *this }, promise = Ref { promise }] () mutable {
+                if (protectedThis->m_disconnected) {
+                    PROMISE_LOG("ThenCallback disconnected from ", promise.get(), " aborting [callback:", (const void*)protectedThis.ptr(), " callSite:", protectedThis->m_logSiteIdentifier, "]");
                     return;
                 }
                 if (promise->hasRunnable()) {
                     ASSERT(IsExclusive);
-                    processResult(promise, promise->takeResultRunnable()());
+                    protectedThis->processResult(promise, promise->takeResultRunnable()());
                 } else {
                     if constexpr (IsExclusive)
-                        processResult(promise, promise->takeResult());
+                        protectedThis->processResult(promise, promise->takeResult());
                     else
-                        processResult(promise, promise->result());
+                        protectedThis->processResult(promise, promise->result());
                 }
             });
         }
