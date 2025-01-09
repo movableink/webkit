@@ -829,6 +829,8 @@ void InjectedBundlePage::didClearWindowForFrame(WKBundleFrameRef frame, WKBundle
         return;
 
     auto context = WKBundleFrameGetJavaScriptContextForWorld(frame, world);
+    if (!context)
+        return;
 
     if (WKBundleScriptWorldNormalWorld() != world) {
         setGlobalObjectProperty(context, "__worldID", TestRunner::worldIDForWorld(world));
