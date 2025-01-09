@@ -39,13 +39,13 @@ export function makeGetOptions(providersToUse = ["default"], mediation = "requir
 /**
  *
  * @param {string} protocol
- * @param {object} request
+ * @param {object} data
  * @returns {IdentityRequestProvider}
  */
-function makeIdentityRequestProvider(protocol = "protocol", request = {}) {
+function makeIdentityRequestProvider(protocol = "protocol", data = {}) {
   return {
     protocol,
-    request,
+    data,
   };
 }
 

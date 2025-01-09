@@ -10,7 +10,7 @@ export type CredentialMediationRequirement =
  */
 export interface IdentityRequestProvider {
   protocol: string;
-  request: object;
+  data: object;
 }
 
 /**

@@ -32,7 +32,7 @@ namespace WebCore {
 
 struct IdentityRequestProvider {
     IdentityCredentialProtocol protocol;
-    OpenID4VPRequest request;
+    OpenID4VPRequest data;
 };
 
 } // namespace WebCore

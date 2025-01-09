@@ -6377,7 +6377,7 @@ struct WebCore::OpenID4VPRequest {
 
 [Nested] struct WebCore::IdentityRequestProvider {
     WebCore::IdentityCredentialProtocol protocol;
-    WebCore::OpenID4VPRequest request;
+    WebCore::OpenID4VPRequest data;
 };
 
 struct WebCore::DigitalCredentialRequestOptions {
