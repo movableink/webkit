@@ -8129,7 +8129,22 @@ VideoFullscreenRequiresElementFullscreen:
     WebCore:
       default: false
   sharedPreferenceForWebProcess: true
-
+      
+VideoPresentationManagerEnabled:
+  type: bool
+  status: embedder
+  defaultValue:
+    WebKitLegacy:
+      "PLATFORM(VISION)" : true
+      default: false
+    WebKit:
+      "PLATFORM(VISION)" : true
+      default: false
+    WebCore:
+      "PLATFORM(VISION)" : true
+      default: false
+  sharedPreferenceForWebProcess: true
+  
 VideoPresentationModeAPIEnabled:
   type: bool
   status: embedder
