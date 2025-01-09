@@ -298,7 +298,6 @@ dom/ElementIteratorInlines.h
 dom/ElementTextDirection.cpp
 dom/ElementTraversal.h
 dom/Event.cpp
-dom/EventContext.cpp
 dom/EventDispatcher.cpp
 dom/EventLoop.cpp
 dom/EventLoop.h

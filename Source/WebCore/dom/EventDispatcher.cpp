@@ -185,7 +185,7 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
 
     EventPath eventPath { node, event };
 
-    if (node.document().settings().sendMouseEventsToDisabledFormControlsEnabled() && event.isTrusted() && is<MouseEvent>(event)
+    if (event.isTrusted() && is<MouseEvent>(event)
         && (typeInfo.type() == EventType::mousedown || typeInfo.type() == EventType::mouseup || typeInfo.type() == EventType::click || typeInfo.type() == EventType::dblclick)) {
         eventPath.adjustForDisabledFormControl();
     }

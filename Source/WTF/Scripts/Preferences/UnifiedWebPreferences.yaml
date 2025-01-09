@@ -6704,20 +6704,6 @@ SelectionHonorsOverflowScrolling:
     WebCore:
       default: false
 
-SendMouseEventsToDisabledFormControlsEnabled:
-  type: bool
-  status: stable
-  category: html
-  humanReadableName: "Send mouse events to disabled form controls"
-  humanReadableDescription: "Send mouse events to disabled form controls"
-  defaultValue:
-    WebKit:
-      default: true
-    WebKitLegacy:
-      default: true
-    WebCore:
-      default: true
-
 SerifFontFamily:
   type: String
   status: embedder
