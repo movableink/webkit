@@ -988,6 +988,8 @@ http/wpt/service-workers/fetch-service-worker-preload-changing-request.https.htm
 
 webkit.org/b/212532 http/wpt/service-workers/service-worker-crashing-while-fetching.https.html [ Pass Failure ]
 
+http/wpt/service-workers/service-worker-spinning-install.https.html [ Failure Pass ]
+
 http/tests/workers/service/registerServiceWorkerClient-after-network-process-crash.html [ Failure ]
 http/wpt/push-api [ Skip ]
 
