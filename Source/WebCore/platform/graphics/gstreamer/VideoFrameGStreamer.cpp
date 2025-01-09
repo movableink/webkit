@@ -378,19 +378,17 @@ RefPtr<VideoFrameGStreamer> VideoFrameGStreamer::createFromPixelBuffer(Ref<Pixel
             return nullptr;
         }
 
-        auto outputBuffer = gst_sample_get_buffer(sample.get());
-        gst_buffer_add_video_meta(outputBuffer, GST_VIDEO_FRAME_FLAG_NONE, format, width, height);
-        if (metadata)
-            webkitGstBufferSetVideoFrameTimeMetadata(outputBuffer, *metadata);
-
-        setBufferFields(outputBuffer, presentationTime, frameRate);
+        GRefPtr buffer = gst_sample_get_buffer(sample.get());
+        auto outputBuffer = webkitGstBufferSetVideoFrameTimeMetadata(WTFMove(buffer), WTFMove(metadata));
+        gst_buffer_add_video_meta(outputBuffer.get(), GST_VIDEO_FRAME_FLAG_NONE, format, width, height);
+        setBufferFields(outputBuffer.get(), presentationTime, frameRate);
+        sample = adoptGRef(gst_sample_make_writable(sample.leakRef()));
+        gst_sample_set_buffer(sample.get(), outputBuffer.get());
     } else {
-        gst_buffer_add_video_meta(buffer.get(), GST_VIDEO_FRAME_FLAG_NONE, format, width, height);
-        if (metadata)
-            buffer = webkitGstBufferSetVideoFrameTimeMetadata(buffer.get(), *metadata);
-
-        setBufferFields(buffer.get(), presentationTime, frameRate);
-        sample = adoptGRef(gst_sample_new(buffer.get(), caps.get(), nullptr, nullptr));
+        auto outputBuffer = webkitGstBufferSetVideoFrameTimeMetadata(WTFMove(buffer), WTFMove(metadata));
+        gst_buffer_add_video_meta(outputBuffer.get(), GST_VIDEO_FRAME_FLAG_NONE, format, width, height);
+        setBufferFields(outputBuffer.get(), presentationTime, frameRate);
+        sample = adoptGRef(gst_sample_new(outputBuffer.get(), caps.get(), nullptr, nullptr));
     }
 
     return adoptRef(*new VideoFrameGStreamer(WTFMove(sample), IntSize(width, height), presentationTime, videoRotation, videoMirrored, { }, WTFMove(colorSpace)));
@@ -407,11 +405,11 @@ VideoFrameGStreamer::VideoFrameGStreamer(GRefPtr<GstSample>&& sample, const IntS
     if (!metadata)
         return;
 
-    GstBuffer* buffer = gst_sample_get_buffer(m_sample.get());
+    GRefPtr buffer = gst_sample_get_buffer(m_sample.get());
     RELEASE_ASSERT(buffer);
-    buffer = webkitGstBufferSetVideoFrameTimeMetadata(buffer, WTFMove(metadata));
+    auto modifiedBuffer = webkitGstBufferSetVideoFrameTimeMetadata(WTFMove(buffer), WTFMove(metadata));
     m_sample = adoptGRef(gst_sample_make_writable(m_sample.leakRef()));
-    gst_sample_set_buffer(m_sample.get(), buffer);
+    gst_sample_set_buffer(m_sample.get(), modifiedBuffer.get());
 }
 
 VideoFrameGStreamer::VideoFrameGStreamer(const GRefPtr<GstSample>& sample, const IntSize& presentationSize, const MediaTime& presentationTime, Rotation videoRotation, PlatformVideoColorSpace&& colorSpace)
