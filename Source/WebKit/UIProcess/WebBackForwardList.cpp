@@ -124,7 +124,12 @@ void WebBackForwardList::addItem(Ref<WebBackForwardListItem>&& newItem)
             didRemoveItem(lastEntry);
             removedItems.append(WTFMove(lastEntry));
             m_entries.removeLast();
-            setProvisionalOrCurrentIndex(*provisionalOrCurrentIndex() - 1);
+
+            if (m_entries.isEmpty()) {
+                m_currentIndex = std::nullopt;
+                m_provisionalIndex = std::nullopt;
+            } else
+                setProvisionalOrCurrentIndex(*provisionalOrCurrentIndex() - 1);
         }
 
         // Toss the first item if the list is getting too big, as long as we're not using it
