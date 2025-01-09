@@ -2053,10 +2053,12 @@ void KeyframeEffect::applyPendingAcceleratedActions()
     auto pendingAcceleratedActions = m_pendingAcceleratedActions;
     m_pendingAcceleratedActions.clear();
 
-    // To simplify the code we use a default of 0s for an unresolved current time since for a Stop action that is acceptable.
-    auto cssNumberishTimeOffset = animation()->currentTime().value_or(0_s) - delay();
-    ASSERT(cssNumberishTimeOffset.time());
-    auto timeOffset = cssNumberishTimeOffset.time()->seconds();
+    auto timeOffset = [&] {
+        // To simplify the code we use a default of 0s for an unresolved current time since for a Stop action that is acceptable.
+        auto cssNumberishTimeOffset = animation()->currentTime().value_or(0_s) - delay();
+        ASSERT(cssNumberishTimeOffset.time());
+        return cssNumberishTimeOffset.time()->seconds();
+    };
 
     auto startAnimation = [&]() -> RunningAccelerated {
         if (isRunningAccelerated())
@@ -2074,7 +2076,7 @@ void KeyframeEffect::applyPendingAcceleratedActions()
             return RunningAccelerated::Prevented;
 
         if (!m_hasImplicitKeyframeForAcceleratedProperty)
-            return renderer->startAnimation(timeOffset, backingAnimationForCompositedRenderer(), m_blendingKeyframes) ? RunningAccelerated::Yes : RunningAccelerated::Failed;
+            return renderer->startAnimation(timeOffset(), backingAnimationForCompositedRenderer(), m_blendingKeyframes) ? RunningAccelerated::Yes : RunningAccelerated::Failed;
 
         // We need to resolve all animations up to this point to ensure any forward-filling
         // effect is accounted for when computing the "from" value for the accelerated animation.
@@ -2095,7 +2097,7 @@ void KeyframeEffect::applyPendingAcceleratedActions()
         BlendingKeyframes explicitKeyframes(m_blendingKeyframes.animationName());
         explicitKeyframes.copyKeyframes(m_blendingKeyframes);
         explicitKeyframes.fillImplicitKeyframes(*this, *underlyingStyle);
-        return renderer->startAnimation(timeOffset, backingAnimationForCompositedRenderer(), explicitKeyframes) ? RunningAccelerated::Yes : RunningAccelerated::Failed;
+        return renderer->startAnimation(timeOffset(), backingAnimationForCompositedRenderer(), explicitKeyframes) ? RunningAccelerated::Yes : RunningAccelerated::Failed;
     };
 
     for (const auto& action : pendingAcceleratedActions) {
@@ -2109,13 +2111,13 @@ void KeyframeEffect::applyPendingAcceleratedActions()
             }
             break;
         case AcceleratedAction::Pause:
-            renderer->animationPaused(timeOffset, m_blendingKeyframes.animationName());
+            renderer->animationPaused(timeOffset(), m_blendingKeyframes.animationName());
             break;
         case AcceleratedAction::UpdateProperties:
             m_runningAccelerated = startAnimation();
             LOG_WITH_STREAM(Animations, stream << "KeyframeEffect " << this << " applyPendingAcceleratedActions " << m_blendingKeyframes.animationName() << " UpdateProperties, started accelerated: " << isRunningAccelerated());
             if (animation()->playState() == WebAnimation::PlayState::Paused)
-                renderer->animationPaused(timeOffset, m_blendingKeyframes.animationName());
+                renderer->animationPaused(timeOffset(), m_blendingKeyframes.animationName());
             break;
         case AcceleratedAction::Stop:
             ASSERT(document());
