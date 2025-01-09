@@ -60,9 +60,7 @@ bool FEColorMatrixSkiaApplier::apply(const Filter&, const FilterImageVector& inp
     auto values = FEColorMatrix::normalizedFloats(m_effect.values());
     Vector<float> matrix;
 
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib/Win port
-    float components[9];
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    std::array<float, 9> components;
 
     switch (m_effect.type()) {
     case ColorMatrixType::FECOLORMATRIX_TYPE_MATRIX:

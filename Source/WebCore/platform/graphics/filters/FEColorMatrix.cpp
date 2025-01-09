@@ -74,7 +74,7 @@ bool FEColorMatrix::setValues(const Vector<float> &values)
     return true;
 }
 
-void FEColorMatrix::calculateSaturateComponents(std::span<float> components, float value)
+void FEColorMatrix::calculateSaturateComponents(std::span<float, 9> components, float value)
 {
     auto saturationMatrix = saturationColorMatrix(value);
 
@@ -91,7 +91,7 @@ void FEColorMatrix::calculateSaturateComponents(std::span<float> components, flo
     components[8] = saturationMatrix.at(2, 2);
 }
 
-void FEColorMatrix::calculateHueRotateComponents(std::span<float> components, float angleInDegrees)
+void FEColorMatrix::calculateHueRotateComponents(std::span<float, 9> components, float angleInDegrees)
 {
     auto hueRotateMatrix = hueRotateColorMatrix(angleInDegrees);
 
