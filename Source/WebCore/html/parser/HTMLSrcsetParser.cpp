@@ -114,9 +114,7 @@ static void tokenizeDescriptors(std::span<const CharType>& position, Vector<Stri
             if (!isASCIIWhitespace(position.front())) {
                 state = Initial;
                 currentDescriptorStart = position;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-                position = { position.data() - 1, position.data() + position.size() };
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+                position = descriptorsStart.subspan(position.data() - descriptorsStart.data() - 1, position.size() + 1);
             }
             break;
         }
