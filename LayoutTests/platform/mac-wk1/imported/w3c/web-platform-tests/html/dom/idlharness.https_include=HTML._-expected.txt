@@ -968,7 +968,7 @@ PASS HTMLIFrameElement interface: attribute allowFullscreen
 PASS HTMLIFrameElement interface: attribute width
 PASS HTMLIFrameElement interface: attribute height
 PASS HTMLIFrameElement interface: attribute referrerPolicy
-FAIL HTMLIFrameElement interface: attribute loading assert_true: The prototype object must have a property "loading" expected true got false
+PASS HTMLIFrameElement interface: attribute loading
 PASS HTMLIFrameElement interface: attribute contentDocument
 PASS HTMLIFrameElement interface: attribute contentWindow
 PASS HTMLIFrameElement interface: operation getSVGDocument()
@@ -989,7 +989,7 @@ PASS HTMLIFrameElement interface: document.createElement("iframe") must inherit 
 PASS HTMLIFrameElement interface: document.createElement("iframe") must inherit property "width" with the proper type
 PASS HTMLIFrameElement interface: document.createElement("iframe") must inherit property "height" with the proper type
 PASS HTMLIFrameElement interface: document.createElement("iframe") must inherit property "referrerPolicy" with the proper type
-FAIL HTMLIFrameElement interface: document.createElement("iframe") must inherit property "loading" with the proper type assert_inherits: property "loading" not found in prototype chain
+PASS HTMLIFrameElement interface: document.createElement("iframe") must inherit property "loading" with the proper type
 PASS HTMLIFrameElement interface: document.createElement("iframe") must inherit property "contentDocument" with the proper type
 PASS HTMLIFrameElement interface: document.createElement("iframe") must inherit property "contentWindow" with the proper type
 PASS HTMLIFrameElement interface: document.createElement("iframe") must inherit property "getSVGDocument()" with the proper type
