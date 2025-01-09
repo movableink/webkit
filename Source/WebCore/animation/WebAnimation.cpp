@@ -319,7 +319,13 @@ void WebAnimation::setTimeline(RefPtr<AnimationTimeline>&& timeline)
         if (previousPlayState == PlayState::Finished || previousPlayState == PlayState::Running) {
             // 5. If previous play state is "finished" or "running":
             //    Schedule a pending play task.
+            // FIXME: re-creating the ready promise is not part of the spec but Chrome implements this
+            // behavior and it makes sense since the new start time won't be computed until the timeline
+            // is updated. This is covered by https://github.com/w3c/csswg-drafts/issues/11465.
+            auto wasAlreadyPending = pending();
             m_timeToRunPendingPlayTask = TimeToRunPendingTask::WhenReady;
+            if (!wasAlreadyPending)
+                m_readyPromise = makeUniqueRef<ReadyPromise>(*this, &WebAnimation::readyPromiseResolve);
         } else if (previousPlayState == PlayState::Paused && previousProgress) {
             // 6. If previous play state is "paused" and previous progress is resolved:
             //    Set hold time to previous progress * end time.

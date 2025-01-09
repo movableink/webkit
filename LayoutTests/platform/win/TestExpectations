@@ -1048,6 +1048,8 @@ webkit.org/b/263870 imported/w3c/web-platform-tests/scroll-animations/scroll-tim
 
 imported/w3c/web-platform-tests/scroll-animations/scroll-timelines/progress-based-effect-delay.tentative.html [ ImageOnlyFailure ]
 
+imported/w3c/web-platform-tests/scroll-animations/css/animation-timeline-ignored.tentative.html [ Skip ]
+
 #//////////////////////////////////////////////////////////////////////////////////////////
 # Compositing
 #//////////////////////////////////////////////////////////////////////////////////////////
