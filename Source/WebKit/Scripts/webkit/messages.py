@@ -767,6 +767,12 @@ def sync_message_statement(receiver, message):
         maybe_reply_encoder = ', replyEncoder'
 
     result = []
+    message_runtime_enablement = True if message.enabled_by or message.enabled_by_exception else False
+    receiver_runtime_enablement = True if receiver.receiver_enabled_by or receiver.receiver_enabled_by_exception else False
+    receiver_dispatched_to_webcontent = True if receiver.receiver_dispatched_to == 'WebContent' else False
+    if not message_runtime_enablement and not receiver_runtime_enablement and not receiver_dispatched_to_webcontent:
+        return '#error "Receiver %s or message %s must be annotated with \'EnabledBy=[FeatureFlag]\' in messages.in file\n' % (receiver.name, message.name)
+
     runtime_enablement = generate_runtime_enablement(receiver, message)
     if runtime_enablement:
         result.append('    if (decoder.messageName() == Messages::%s::%s::name() && %s)\n' % (receiver.name, message.name, runtime_enablement))
