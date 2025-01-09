@@ -549,10 +549,11 @@ function ios_family_process_model_entitlements()
     plistbuddy add :com.apple.QuartzCore.webkit-limited-types bool YES
     plistbuddy Add :com.apple.private.memorystatus bool YES
     plistbuddy Add :com.apple.runningboard.assertions.webkit bool YES
-    plistbuddy Add :com.apple.private.pac.exception bool YES
     plistbuddy Add :com.apple.private.sandbox.profile string com.apple.WebKit.Model
     plistbuddy Add :com.apple.surfboard.application-service-client bool YES
     plistbuddy Add :com.apple.surfboard.shared-simulation-connection-request bool YES
+    plistbuddy Add :com.apple.private.pac.exception bool YES
+    plistbuddy Add :com.apple.pac.shared_region_id string WebKitModel
 }
 
 function ios_family_process_adattributiond_entitlements()
