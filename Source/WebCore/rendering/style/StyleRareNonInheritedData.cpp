@@ -470,6 +470,7 @@ void StyleRareNonInheritedData::dumpDifferences(TextStream& ts, const StyleRareN
 
     LOG_IF_DIFFERENT(anchorNames);
     LOG_IF_DIFFERENT(positionAnchor);
+    LOG_IF_DIFFERENT(positionTryFallbacks);
 
     LOG_IF_DIFFERENT(blockStepSize);
 
