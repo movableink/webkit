@@ -8,6 +8,7 @@
 jsTestIsAsync = true;
 expandedContainer = false;
 window.internals?.settings.setContentChangeObserverEnabled(true);
+window.internals?.setTopDocumentURLForQuirks("https://store.steampowered.com");
 
 addEventListener("load", async () => {
     description("To run this test manually, tap the green box above; it should expand vertically and stay green.");

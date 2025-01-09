@@ -42,6 +42,7 @@
 #include "Page.h"
 #include "RenderDescendantIterator.h"
 #include "RenderStyleInlines.h"
+#include "Quirks.h"
 #include "Settings.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -471,6 +472,9 @@ void ContentChangeObserver::rendererWillBeDestroyed(const Element& element)
 void ContentChangeObserver::didAddMouseMoveRelatedEventListener(const AtomString& eventType, const Node& node)
 {
     if (!isObservingContentChanges())
+        return;
+
+    if (!node.protectedDocument()->quirks().shouldTreatAddingMouseOutEventListenerAsContentChange())
         return;
 
     if (eventType != eventNames().mouseoutEvent)

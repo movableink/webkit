@@ -39,7 +39,6 @@ struct WEBCORE_EXPORT QuirksData {
     bool isGoogleMaps { false };
     bool isNetflix { false };
     bool isSoundCloud { false };
-    bool isSpotify { false };
     bool isThesaurus { false };
     bool isVimeo { false };
     bool isWebEx { false };
@@ -103,7 +102,8 @@ struct WEBCORE_EXPORT QuirksData {
     bool shouldNavigatorPluginsBeEmpty { false };
     bool shouldSuppressAutocorrectionAndAutocapitalizationInHiddenEditableAreasQuirk { false };
     bool shouldSynthesizeTouchEventsAfterNonSyntheticClickQuirk { false };
-#endif
+    bool shouldTreatAddingMouseOutEventListenerAsContentChange { false };
+#endif // PLATFORM(IOS_FAMILY)
 
 #if PLATFORM(IOS)
     bool needsGetElementsByNameQuirk { false };

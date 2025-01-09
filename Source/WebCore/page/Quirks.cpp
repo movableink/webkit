@@ -1609,6 +1609,13 @@ bool Quirks::needsChromeMediaControlsPseudoElement() const
 }
 
 #if PLATFORM(IOS_FAMILY)
+
+// store.steampowered.com: rdar://142573562
+bool Quirks::shouldTreatAddingMouseOutEventListenerAsContentChange() const
+{
+    return needsQuirks() && m_quirksData.shouldTreatAddingMouseOutEventListenerAsContentChange;
+}
+
 // cbssports.com <rdar://139478801>.
 // docs.google.com <rdar://59402637>.
 bool Quirks::shouldSynthesizeTouchEventsAfterNonSyntheticClick(const Element& target) const
@@ -1862,6 +1869,15 @@ static void handleCBSSportsQuirks(QuirksData& quirksData, const URL& quirksURL, 
     quirksData.isCBSSports = true;
     // Remove this once rdar://139478801 is resolved.
     quirksData.shouldSynthesizeTouchEventsAfterNonSyntheticClickQuirk = true;
+}
+
+static void handleSteamQuirks(QuirksData& quirksData, const URL& /* quirksURL */, const String& quirksDomainString, const URL& /* documentURL */)
+{
+    if (quirksDomainString != "steampowered.com"_s)
+        return;
+
+    // Remove this once rdar://142573562 is resolved.
+    quirksData.shouldTreatAddingMouseOutEventListenerAsContentChange = true;
 }
 
 static void handleCNNQuirks(QuirksData& quirksData, const URL& quirksURL, const String& quirksDomainString, const URL& documentURL)
@@ -2683,6 +2699,7 @@ void Quirks::determineRelevantQuirks()
         { "cbssports"_s, &handleCBSSportsQuirks },
         { "cnn"_s, &handleCNNQuirks },
         { "digitaltrends"_s, &handleDigitalTrendsQuirks },
+        { "steampowered"_s, &handleSteamQuirks },
 #endif
 #if ENABLE(DESKTOP_CONTENT_MODE_QUIRKS)
         { "disneyplus"_s, &handleDisneyPlusQuirks },
