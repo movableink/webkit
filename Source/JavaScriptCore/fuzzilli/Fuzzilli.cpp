@@ -21,12 +21,17 @@
 #include "config.h"
 #include "Fuzzilli.h"
 
+#include <fcntl.h>
 #include <mutex>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <wtf/Assertions.h>
 #include <wtf/Compiler.h>
 #include <wtf/DataLog.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/ASCIILiteral.h>
 
 #if ENABLE(FUZZILLI)
 
@@ -139,7 +144,7 @@ void Fuzzilli::initializeReprl()
     WRITE_TO_FUZZILLI(helo.data(), helo.size());
     READ_FROM_FUZZILLI(helo.data(), helo.size());
 
-    RELEASE_ASSERT_WITH_MESSAGE(equalSpans(helo, "HELO"_span), "[REPRL] Invalid response from parent");
+    RELEASE_ASSERT_WITH_MESSAGE(equalSpans(std::span { helo } , "HELO"_span), "[REPRL] Invalid response from parent");
 
     // Mmap the data input buffer.
     reprlInputData = static_cast<char*>(mmap(0, REPRL_MAX_DATA_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, REPRL_DRFD, 0));
