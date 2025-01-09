@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2024-2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -51,7 +51,7 @@ namespace CSSCalc {
 static auto copyAndSimplify(const MQ::MediaProgressProviding*, const SimplificationOptions&) -> const MQ::MediaProgressProviding*;
 static auto copyAndSimplify(const CQ::ContainerProgressProviding*, const SimplificationOptions&) -> const CQ::ContainerProgressProviding*;
 static auto copyAndSimplify(const AtomString&, const SimplificationOptions&) -> AtomString;
-static auto copyAndSimplify(const CSS::NoneRaw&, const SimplificationOptions&) -> CSS::NoneRaw;
+static auto copyAndSimplify(const CSS::Keyword::None&, const SimplificationOptions&) -> CSS::Keyword::None;
 static auto copyAndSimplify(const Children&, const SimplificationOptions&) -> Children;
 template<typename T>
 static auto copyAndSimplify(const std::optional<T>&, const SimplificationOptions&) -> std::optional<T>;
@@ -978,8 +978,8 @@ std::optional<Child> simplify(Max& root, const SimplificationOptions& options)
 
 std::optional<Child> simplify(Clamp& root, const SimplificationOptions& options)
 {
-    auto minIsNone = std::holds_alternative<CSS::NoneRaw>(root.min);
-    auto maxIsNone = std::holds_alternative<CSS::NoneRaw>(root.max);
+    auto minIsNone = std::holds_alternative<CSS::Keyword::None>(root.min);
+    auto maxIsNone = std::holds_alternative<CSS::Keyword::None>(root.max);
 
     if (minIsNone && maxIsNone) {
         // - clamp(none, VAL, none) is equivalent to just calc(VAL).
@@ -1428,7 +1428,7 @@ AtomString copyAndSimplify(const AtomString& root, const SimplificationOptions&)
     return root;
 }
 
-CSS::NoneRaw copyAndSimplify(const CSS::NoneRaw& root, const SimplificationOptions&)
+CSS::Keyword::None copyAndSimplify(const CSS::Keyword::None& root, const SimplificationOptions&)
 {
     return root;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2024-2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -429,7 +429,7 @@ static std::optional<TypedChild> consumeClamp(CSSParserTokenRange& tokens, int d
     auto parseCalcSumOrNone = [](auto& tokens, auto depth, auto& state) -> std::optional<TypedChildOrNone> {
         if (tokens.peek().id() == CSSValueNone) {
             tokens.consume();
-            return TypedChildOrNone { ChildOrNone { CSS::NoneRaw { } }, Type { } };
+            return TypedChildOrNone { ChildOrNone { CSS::Keyword::None { } }, Type { } };
         }
         auto sum = parseCalcSum(tokens, depth, state);
         if (!sum)
@@ -472,8 +472,8 @@ static std::optional<TypedChild> consumeClamp(CSSParserTokenRange& tokens, int d
     }
 
     auto computeType = [&] -> std::optional<Type> {
-        bool minIsNone = std::holds_alternative<CSS::NoneRaw>(min->child);
-        bool maxIsNone = std::holds_alternative<CSS::NoneRaw>(max->child);
+        bool minIsNone = std::holds_alternative<CSS::Keyword::None>(min->child);
+        bool maxIsNone = std::holds_alternative<CSS::Keyword::None>(max->child);
 
         if (minIsNone && maxIsNone)
             return val->type;

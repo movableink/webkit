@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2024-2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -98,7 +98,7 @@ void serializeWithoutOmittingPrefix(StringBuilder&, const Child&, SerializationS
 // https://drafts.csswg.org/css-values-4/#serialize-a-calculation-tree
 static void serializeCalculationTree(StringBuilder&, const Child&, SerializationState&);
 static void serializeCalculationTree(StringBuilder&, const ChildOrNone&, SerializationState&);
-static void serializeCalculationTree(StringBuilder&, const CSS::NoneRaw&, SerializationState&);
+static void serializeCalculationTree(StringBuilder&, const CSS::Keyword::None&, SerializationState&);
 static void serializeCalculationTree(StringBuilder&, const Symbol&, SerializationState&);
 static void serializeCalculationTree(StringBuilder&, const IndirectNode<Sum>&, SerializationState&);
 static void serializeCalculationTree(StringBuilder&, const IndirectNode<Product>&, SerializationState&);
@@ -507,9 +507,9 @@ void serializeCalculationTree(StringBuilder& builder, const ChildOrNone& root, S
     WTF::switchOn(root, [&builder, &state](const auto& root) { serializeCalculationTree(builder, root, state); });
 }
 
-void serializeCalculationTree(StringBuilder& builder, const CSS::NoneRaw& root, SerializationState&)
+void serializeCalculationTree(StringBuilder& builder, const CSS::Keyword::None& root, SerializationState&)
 {
-    serializationForCSS(builder, root);
+    CSS::serializationForCSS(builder, root);
 }
 
 template<Numeric Op> void serializeCalculationTree(StringBuilder& builder, const Op& root, SerializationState&)

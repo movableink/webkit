@@ -124,6 +124,9 @@ template<typename To, typename From, typename... Rest> auto toCSSOnTupleLike(con
     return WTF::apply([&](const auto& ...x) { return To { toCSS(x, rest...)... }; }, tupleLike);
 }
 
+// Standard NonConverting type mappings (identity mappings):
+template<NonConverting T> struct ToCSSMapping<T> { using type = T; };
+
 // Standard Optional-Like type mappings:
 template<typename T> struct ToCSSMapping<std::optional<T>> { using type = std::optional<CSSType<T>>; };
 template<typename T> struct ToCSSMapping<WTF::Markable<T>> { using type = WTF::Markable<CSSType<T>>; };
@@ -243,6 +246,9 @@ template<typename To, typename From, typename... Rest> auto toStyleNoConversionD
 
 // Conversion Utility Types
 template<typename CSSType> using StyleType = std::decay_t<decltype(toStyle(std::declval<const CSSType&>(), std::declval<const BuilderState&>()))>;
+
+// Standard NonConverting type mappings (identity mappings):
+template<NonConverting T> struct ToStyleMapping<T> { using type = T; };
 
 // Standard Optional-Like type mappings:
 template<typename T> struct ToStyleMapping<std::optional<T>> { using type = std::optional<StyleType<T>>; };

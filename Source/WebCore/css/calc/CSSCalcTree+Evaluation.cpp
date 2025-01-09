@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2024-2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,7 +39,7 @@
 namespace WebCore {
 namespace CSSCalc {
 
-static auto evaluate(const CSS::NoneRaw&, const EvaluationOptions&) -> std::optional<Calculation::None>;
+static auto evaluate(const CSS::Keyword::None&, const EvaluationOptions&) -> std::optional<Calculation::None>;
 static auto evaluate(const ChildOrNone&, const EvaluationOptions&) -> std::optional<std::variant<double, Calculation::None>>;
 static auto evaluate(const std::optional<Child>&, const EvaluationOptions&) -> std::optional<std::optional<double>>;
 static auto evaluate(const Child&, const EvaluationOptions&) -> std::optional<double>;
@@ -86,7 +86,7 @@ template<typename Op> static std::optional<double> executeVariadicMathOperationA
     return result;
 }
 
-std::optional<Calculation::None> evaluate(const CSS::NoneRaw&, const EvaluationOptions&)
+std::optional<Calculation::None> evaluate(const CSS::Keyword::None&, const EvaluationOptions&)
 {
     return Calculation::None { };
 }

@@ -53,7 +53,7 @@ struct ToConversionOptions {
     EvaluationOptions evaluation;
 };
 
-static auto fromCalculationValue(const Calculation::None&, const FromConversionOptions&) -> CSS::NoneRaw;
+static auto fromCalculationValue(const Calculation::None&, const FromConversionOptions&) -> CSS::Keyword::None;
 static auto fromCalculationValue(const Calculation::ChildOrNone&, const FromConversionOptions&) -> ChildOrNone;
 static auto fromCalculationValue(const Vector<Calculation::Child>&, const FromConversionOptions&) -> Children;
 static auto fromCalculationValue(const std::optional<Calculation::Child>&, const FromConversionOptions&) -> std::optional<Child>;
@@ -65,7 +65,7 @@ static auto fromCalculationValue(const Calculation::IndirectNode<Calculation::Bl
 template<typename CalculationOp> auto fromCalculationValue(const Calculation::IndirectNode<CalculationOp>&, const FromConversionOptions&) -> Child;
 
 static auto toCalculationValue(const std::optional<Child>&, const ToConversionOptions&) -> std::optional<Calculation::Child>;
-static auto toCalculationValue(const CSS::NoneRaw&, const ToConversionOptions&) -> Calculation::None;
+static auto toCalculationValue(const CSS::Keyword::None&, const ToConversionOptions&) -> Calculation::None;
 static auto toCalculationValue(const ChildOrNone&, const ToConversionOptions&) -> Calculation::ChildOrNone;
 static auto toCalculationValue(const Children&, const ToConversionOptions&) -> Calculation::Children;
 static auto toCalculationValue(const Child&, const ToConversionOptions&) -> Calculation::Child;
@@ -107,9 +107,9 @@ static CanonicalDimension::Dimension determineCanonicalDimension(Calculation::Ca
 
 // MARK: - From
 
-CSS::NoneRaw fromCalculationValue(const Calculation::None&, const FromConversionOptions&)
+CSS::Keyword::None fromCalculationValue(const Calculation::None&, const FromConversionOptions&)
 {
-    return CSS::NoneRaw { };
+    return CSS::Keyword::None { };
 }
 
 ChildOrNone fromCalculationValue(const Calculation::ChildOrNone& root, const FromConversionOptions& options)
@@ -212,7 +212,7 @@ std::optional<Calculation::Child> toCalculationValue(const std::optional<Child>&
     return std::nullopt;
 }
 
-Calculation::None toCalculationValue(const CSS::NoneRaw&, const ToConversionOptions&)
+Calculation::None toCalculationValue(const CSS::Keyword::None&, const ToConversionOptions&)
 {
     return Calculation::None { };
 }

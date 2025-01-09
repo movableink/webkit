@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2024 Apple Inc. All rights reserved.
- * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2024-2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,8 +48,8 @@
 #include "CSSPropertyParserConsumer+AngleDefinitions.h"
 #include "CSSPropertyParserConsumer+ColorInterpolationMethod.h"
 #include "CSSPropertyParserConsumer+Ident.h"
+#include "CSSPropertyParserConsumer+KeywordDefinitions.h"
 #include "CSSPropertyParserConsumer+MetaConsumer.h"
-#include "CSSPropertyParserConsumer+NoneDefinitions.h"
 #include "CSSPropertyParserConsumer+Number.h"
 #include "CSSPropertyParserConsumer+NumberDefinitions.h"
 #include "CSSPropertyParserConsumer+PercentageDefinitions.h"
@@ -380,7 +380,7 @@ static std::optional<CSS::Color> consumeRGBFunction(CSSParserTokenRange& range, 
 
                 return consumeAbsoluteFunctionParameters<Descriptor>(args, state, WTFMove(red));
             },
-            [](CSS::None) -> std::optional<CSS::Color> {
+            [](CSS::Keyword::None) -> std::optional<CSS::Color> {
                 // `none` is invalid for the legacy syntax, but the initial parameter consumer didn't
                 // know we were using the legacy syntax yet, so we need to check for it now.
                 return { };
@@ -429,7 +429,7 @@ static std::optional<CSS::Color> consumeHSLFunction(CSSParserTokenRange& range, 
 
                 return consumeAbsoluteFunctionParameters<Descriptor>(args, state, WTFMove(hue));
             },
-            [](CSS::None) -> std::optional<CSS::Color> {
+            [](CSS::Keyword::None) -> std::optional<CSS::Color> {
                 // `none` is invalid for the legacy syntax, but the initial parameter consumer didn't
                 // know we were using the legacy syntax yet, so we need to check for it now.
                 return { };

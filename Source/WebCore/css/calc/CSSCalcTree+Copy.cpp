@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2024-2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,9 +33,9 @@ namespace CSSCalc {
 static auto copy(const MQ::MediaProgressProviding*) -> const MQ::MediaProgressProviding*;
 static auto copy(const CQ::ContainerProgressProviding*) -> const CQ::ContainerProgressProviding*;
 static auto copy(const AtomString&) -> AtomString;
-static auto copy(const CSS::NoneRaw&) -> CSS::NoneRaw;
+static auto copy(const CSS::Keyword::None&) -> CSS::Keyword::None;
 static auto copy(const std::optional<Child>& root) -> std::optional<Child>;
-static auto copy(const CSS::NoneRaw&) -> CSS::NoneRaw;
+static auto copy(const CSS::Keyword::None&) -> CSS::Keyword::None;
 static auto copy(const ChildOrNone&) -> ChildOrNone;
 static auto copy(const Children&) -> Children;
 static auto copy(const Child&) -> Child;
@@ -68,7 +68,7 @@ AtomString copy(const AtomString& root)
     return root;
 }
 
-CSS::NoneRaw copy(const CSS::NoneRaw& root)
+CSS::Keyword::None copy(const CSS::Keyword::None& root)
 {
     return root;
 }

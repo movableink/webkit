@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -22,18 +22,16 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "StyleNone.h"
+#pragma once
 
-#include <wtf/text/TextStream.h>
+#include "CSSPropertyParserConsumer+MetaConsumerDefinitions.h"
 
 namespace WebCore {
-namespace Style {
+namespace CSSPropertyParserHelpers {
 
-WTF::TextStream& operator<<(WTF::TextStream& ts, const None&)
-{
-    return ts << "none";
-}
+template<CSSValueID Id> struct ConsumerDefinition<Constant<Id>> {
+    using IdentToken = KeywordConsumer<Constant<Id>>;
+};
 
-} // namespace Style
+} // namespace CSSPropertyParserHelpers
 } // namespace WebCore

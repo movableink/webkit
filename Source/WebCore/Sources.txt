@@ -1054,7 +1054,6 @@ css/parser/CSSPropertyParserConsumer+LengthPercentage.cpp
 css/parser/CSSPropertyParserConsumer+Lists.cpp
 css/parser/CSSPropertyParserConsumer+Masking.cpp
 css/parser/CSSPropertyParserConsumer+Motion.cpp
-css/parser/CSSPropertyParserConsumer+None.cpp
 css/parser/CSSPropertyParserConsumer+Number.cpp
 css/parser/CSSPropertyParserConsumer+Overflow.cpp
 css/parser/CSSPropertyParserConsumer+Page.cpp
@@ -1168,7 +1167,6 @@ css/values/color/CSSResolvedColor.cpp
 css/values/filter-effects/CSSFilterReference.cpp
 css/values/images/CSSGradient.cpp
 css/values/motion/CSSRayFunction.cpp
-css/values/primitives/CSSNone.cpp
 css/values/primitives/CSSPosition.cpp
 css/values/primitives/CSSPrimitiveNumericTypes+Canonicalization.cpp
 css/values/primitives/CSSPrimitiveNumericTypes+ComputedStyleDependencies.cpp
@@ -3167,7 +3165,6 @@ style/values/filter-effects/StyleSaturateFunction.cpp
 style/values/filter-effects/StyleSepiaFunction.cpp
 style/values/images/StyleGradient.cpp
 style/values/primitives/StyleLengthResolution.cpp
-style/values/primitives/StyleNone.cpp
 style/values/primitives/StylePosition.cpp
 style/values/primitives/StylePrimitiveNumericTypes+Conversions.cpp
 style/values/shapes/StyleBasicShape.cpp

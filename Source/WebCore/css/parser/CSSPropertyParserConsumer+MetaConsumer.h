@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,8 +45,8 @@ namespace CSSPropertyParserHelpers {
 // MARK: - Meta Consumers
 
 /// The result of a meta consume.
-/// To be used with a list of `CSS` types (e.g. `ConsumeResult<CSS::Angle<Range>, CSS::Percentage<Range>, CSS::None>`), which will yield a
-/// result type of either a std::variant of those types (e.g.`std::variant<CSS::Angle<Range>, CSS::Percentage<Range>, CSS::None>`) or the type
+/// To be used with a list of `CSS` types (e.g. `ConsumeResult<CSS::Angle<Range>, CSS::Percentage<Range>, CSS::Keyword::None>`), which will yield a
+/// result type of either a std::variant of those types (e.g.`std::variant<CSS::Angle<Range>, CSS::Percentage<Range>, CSS::Keyword::None>`) or the type
 /// itself if only a single type was specified.
 template<typename... Ts>
 struct MetaConsumeResult {

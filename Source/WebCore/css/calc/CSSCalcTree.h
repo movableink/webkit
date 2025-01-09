@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2024-2025 Samuel Weinig <sam@webkit.org>
  * Copyright (C) 2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,6 @@
 #pragma once
 
 #include "CSSCalcType.h"
-#include "CSSNone.h"
 #include "CSSPrimitiveNumericRange.h"
 #include "CSSUnits.h"
 #include "CSSValueKeywords.h"
@@ -214,7 +213,7 @@ using Node = std::variant<
 >;
 
 using Child = Node;
-using ChildOrNone = std::variant<Child, CSS::NoneRaw>;
+using ChildOrNone = std::variant<Child, CSS::Keyword::None>;
 using Children = Vector<Child>;
 
 enum class Stage : bool { Specified, Computed };

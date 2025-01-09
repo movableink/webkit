@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -161,7 +162,7 @@ ExceptionOr<Ref<CSSNumericValue>> CSSNumericValue::reifyMathExpression(const CSS
 {
     return WTF::switchOn(root,
         [](const CSSCalc::Child& child) -> ExceptionOr<Ref<CSSNumericValue>> { return CSSNumericValue::reifyMathExpression(child); },
-        [](const CSS::NoneRaw&) -> ExceptionOr<Ref<CSSNumericValue>> { return Exception { ExceptionCode::UnknownError }; }
+        [](const CSS::Keyword::None&) -> ExceptionOr<Ref<CSSNumericValue>> { return Exception { ExceptionCode::UnknownError }; }
     );
 }
 
