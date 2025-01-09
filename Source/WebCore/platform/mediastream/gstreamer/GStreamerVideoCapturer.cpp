@@ -90,7 +90,7 @@ GstElement* GStreamerVideoCapturer::createConverter()
 #if USE(GBM)
         m_caps = buildDMABufCaps();
 #endif
-        return makeGStreamerElement("identity", nullptr);
+        return nullptr;
     }
 
     auto* bin = gst_bin_new(nullptr);

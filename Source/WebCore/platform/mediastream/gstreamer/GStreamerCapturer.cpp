@@ -200,6 +200,7 @@ void GStreamerCapturer::setupPipeline()
     gst_element_set_start_time(m_pipeline.get(), GST_CLOCK_TIME_NONE);
 
     registerActivePipeline(m_pipeline);
+    connectSimpleBusMessageCallback(pipeline());
 
     GRefPtr<GstElement> source = createSource();
     GRefPtr<GstElement> converter = createConverter();
@@ -214,11 +215,14 @@ void GStreamerCapturer::setupPipeline()
     g_object_set(m_sink.get(), "enable-last-sample", FALSE, nullptr);
     g_object_set(m_capsfilter.get(), "caps", m_caps.get(), nullptr);
 
-    auto* queue = gst_element_factory_make("queue", nullptr);
-    gst_bin_add_many(GST_BIN(m_pipeline.get()), source.get(), converter.get(), m_capsfilter.get(), m_valve.get(), queue, m_sink.get(), nullptr);
-    gst_element_link_many(source.get(), converter.get(), m_capsfilter.get(), m_valve.get(), queue, m_sink.get(), nullptr);
-
-    connectSimpleBusMessageCallback(pipeline());
+    gst_bin_add_many(GST_BIN_CAST(m_pipeline.get()), source.get(), m_capsfilter.get(), m_valve.get(), m_sink.get(), nullptr);
+    auto tail = source.get();
+    if (converter) {
+        gst_bin_add(GST_BIN_CAST(m_pipeline.get()), converter.get());
+        gst_element_link(source.get(), converter.get());
+        tail = converter.get();
+    }
+    gst_element_link_many(tail, m_capsfilter.get(), m_valve.get(), m_sink.get(), nullptr);
 }
 
 GstElement* GStreamerCapturer::makeElement(const char* factoryName)
