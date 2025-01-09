@@ -374,7 +374,7 @@ bool AXObjectCache::modalElementHasAccessibleContent(Element& element)
     return false;
 }
 
-void AXObjectCache::updateCurrentModalNode(WillRecomputeFocus willRecomputeFocus)
+void AXObjectCache::updateCurrentModalNode()
 {
     auto recomputeModalElement = [&] () -> Element* {
         // There might be multiple modal dialog nodes.
@@ -405,7 +405,7 @@ void AXObjectCache::updateCurrentModalNode(WillRecomputeFocus willRecomputeFocus
             if (!isNodeVisible(element.get()) || !modalElementHasAccessibleContent(*element))
                 continue;
 
-            bool focusIsInsideElement = focusedElement && focusedElement->isDescendantOf(*element);
+            bool focusIsInsideElement = focusedElement && (focusedElement == element.get() || focusedElement->isDescendantOf(*element));
 
             // If the modal we found previously is a descendant of this one, prefer the descendant and skip this one.
             if (modalElementToReturn && foundModalWithFocusInside && modalElementToReturn->isDescendantOf(*element))
@@ -420,13 +420,12 @@ void AXObjectCache::updateCurrentModalNode(WillRecomputeFocus willRecomputeFocus
                 foundModalWithFocusInside = true;
         }
 
-        bool focusedElementIsOutsideModals = focusedElement && !foundModalWithFocusInside;
-
-        // If there is a focused element, and it's not inside any of the modals, we should
-        // consider all modals inactive to allow the user to freely navigate.
-        if (focusedElementIsOutsideModals && willRecomputeFocus == WillRecomputeFocus::No)
+        if (!focusedElement || !foundModalWithFocusInside)
             return nullptr;
 
+        RefPtr object = getOrCreate(modalElementToReturn.get());
+        if (!object || object->isAXHidden())
+            return nullptr;
         return modalElementToReturn.get();
     };
 
@@ -2496,41 +2495,6 @@ void AXObjectCache::liveRegionChangedNotificationPostTimerFired()
     m_liveRegionObjects.clear();
 }
 
-static AccessibilityObject* firstFocusableChild(AccessibilityObject& object)
-{
-    for (auto& child : AXChildIterator(object)) {
-        if (child.canSetFocusAttribute())
-            return &child;
-        if (auto* focusableDescendant = firstFocusableChild(child))
-            return focusableDescendant;
-    }
-    return nullptr;
-}
-
-void AXObjectCache::focusCurrentModal()
-{
-    Ref document = m_document.get();
-    if (!document->hasLivingRenderTree())
-        return;
-
-    if (!nodeAndRendererAreValid(m_currentModalElement.get()) || !isNodeVisible(m_currentModalElement.get()))
-        return;
-
-    // Don't focus the current modal if focus has been requested to be put elsewhere (e.g. via JS).
-    if (m_deferredFocusedNodeChange)
-        return;
-    
-    // Don't set focus if we are already focusing onto some element within
-    // the dialog.
-    if (m_currentModalElement->contains(document->focusedElement()))
-        return;
-
-    if (auto* currentModalNodeObject = getOrCreate(*m_currentModalElement)) {
-        if (auto* focusable = firstFocusableChild(*currentModalNodeObject))
-            focusable->setFocused(true);
-    }
-}
-
 void AXObjectCache::onScrollbarUpdate(ScrollView& view)
 {
     m_deferredScrollbarUpdateChangeList.add(view);
@@ -2921,6 +2885,10 @@ void AXObjectCache::handleAttributeChange(Element* element, const QualifiedName&
             childrenChanged(parent.get());
 
         if (m_currentModalElement && m_currentModalElement->isDescendantOf(element)) {
+            // FIXME: The main effect of resetting m_modalNodesInitialized is causing findModalNodes() to run,
+            // but findModalNodes() doesn't consult aria-hidden in any way, so setting it to false here seems unnecessary.
+            // Also, we really should only need to walk to a full DOM findModalNodes() walk once, using this method
+            // and others in this class to keep it up-to-date as attributes change and elements are added and remove from the DOM.
             m_modalNodesInitialized = false;
             deferModalChange(*m_currentModalElement);
         }
@@ -4457,9 +4425,8 @@ void AXObjectCache::performDeferredCacheUpdate(ForceLayout forceLayout)
         recomputeIsIgnored(m_deferredFocusedNodeChange->first.get());
         recomputeIsIgnored(m_deferredFocusedNodeChange->second.get());
     }
-    bool updatedFocusedElement = m_deferredFocusedNodeChange.has_value();
     // If we changed the focused element, that could affect what modal should be active, so recompute it.
-    bool shouldRecomputeModal = updatedFocusedElement;
+    bool shouldRecomputeModal = m_deferredFocusedNodeChange.has_value();
     RefPtr newFocusElement = m_deferredFocusedNodeChange ? m_deferredFocusedNodeChange->second.get() : nullptr;
     m_deferredFocusedNodeChange = std::nullopt;
 
@@ -4484,18 +4451,8 @@ void AXObjectCache::performDeferredCacheUpdate(ForceLayout forceLayout)
     }
     m_deferredModalChangedList.clear();
 
-    if (shouldRecomputeModal) {
-        // If we are re-computing the modal, automatically focus into it if the author didn't explicitly change focus, or
-        // they did change focus but the focused element has become unfocusable since it was set (e.g. it gained display:none).
-        bool shouldFocusIntoModal = !updatedFocusedElement || (newFocusElement && !newFocusElement->isFocusable());
-
-        updateCurrentModalNode(shouldFocusIntoModal ? WillRecomputeFocus::Yes : WillRecomputeFocus::No);
-        // "When a modal element is displayed, assistive technologies SHOULD navigate to the element unless focus has explicitly been set elsewhere."
-        // `updatedFocusedElement` indicates focus was explicitly set elsewhere, so don't autofocus into the modal.
-        // https://w3c.github.io/aria/#aria-modal
-        if (shouldFocusIntoModal)
-            focusCurrentModal();
-    }
+    if (shouldRecomputeModal)
+        updateCurrentModalNode();
 
     AXLOGDeferredCollection("MenuListChange"_s, m_deferredMenuListChange);
     m_deferredMenuListChange.forEach([this] (auto& element) {

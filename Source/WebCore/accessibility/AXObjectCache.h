@@ -694,8 +694,6 @@ private:
 
     void liveRegionChangedNotificationPostTimerFired();
 
-    void focusCurrentModal();
-    
     void performCacheUpdateTimerFired() { performDeferredCacheUpdate(ForceLayout::No); }
 
     void postTextStateChangeNotification(AccessibilityObject*, const AXTextStateChangeIntent&, const VisibleSelection&);
@@ -744,8 +742,7 @@ private:
     // aria-modal or modal <dialog> related
     bool isModalElement(Element&) const;
     void findModalNodes();
-    enum class WillRecomputeFocus : bool { No, Yes };
-    void updateCurrentModalNode(WillRecomputeFocus = WillRecomputeFocus::No);
+    void updateCurrentModalNode();
     bool isNodeVisible(Node*) const;
     bool modalElementHasAccessibleContent(Element&);
 
