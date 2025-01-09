@@ -2603,6 +2603,13 @@ static String logEntryMethodNameForMessage(const JSC::MessageType& messageType, 
     return "log"_s;
 }
 
+static String logEntryTypeForMessage(const JSC::MessageSource& messageSource)
+{
+    if (messageSource == JSC::MessageSource::JS)
+        return "javascript"_s;
+    return "console"_s;
+}
+
 void WebAutomationSession::logEntryAdded(const JSC::MessageSource& messageSource, const JSC::MessageLevel& messageLevel, const String& messageText, const JSC::MessageType& messageType, const WallTime& timestamp)
 {
     // FIXME Support getting source information
@@ -2611,7 +2618,7 @@ void WebAutomationSession::logEntryAdded(const JSC::MessageSource& messageSource
 
     auto level = logEntryLevelForMessage(messageType, messageLevel);
     auto method = logEntryMethodNameForMessage(messageType, messageLevel);
-    auto type = "console"_s;
+    auto type = logEntryTypeForMessage(messageSource);
 
     // FIXME Get browsing context handle and source info
     // https://bugs.webkit.org/show_bug.cgi?id=282981
