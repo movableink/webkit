@@ -6205,7 +6205,8 @@ void Document::nodeWillBeRemoved(Node& node)
     if (RefPtr frame = this->frame()) {
         frame->eventHandler().nodeWillBeRemoved(node);
         frame->selection().nodeWillBeRemoved(node);
-        frame->page()->dragCaretController().nodeWillBeRemoved(node);
+        if (RefPtr page = frame->page())
+            page->dragCaretController().nodeWillBeRemoved(node);
     }
 
     if (is<Text>(node) && m_markers)
