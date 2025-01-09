@@ -4328,20 +4328,6 @@ LinearMediaPlayerEnabled:
     WebCore:
       default: false
 
-LinkModulePreloadEnabled:
-  type: bool
-  status: stable
-  category: networking
-  humanReadableName: "Link rel=modulepreload"
-  humanReadableDescription: "Enable Link rel=modulepreload"
-  defaultValue:
-    WebKitLegacy:
-      default: true
-    WebKit:
-      default: true
-    WebCore:
-      default: true
-
 LinkPreconnect:
   type: bool
   status: embedder

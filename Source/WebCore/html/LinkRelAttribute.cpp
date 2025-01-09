@@ -61,7 +61,7 @@ static constexpr std::pair<ComparableLettersLiteral, LinkTypeDetails> linkTypesA
 #else
     { "manifest"_s, { [](auto) { return false; }, [](auto) { } } },
 #endif
-    { "modulepreload"_s, { [](auto document) { return document.settings().linkModulePreloadEnabled(); }, [](auto relAttribute) { relAttribute.isLinkModulePreload = true; } } },
+    { "modulepreload"_s, { [](auto) { return true; }, [](auto relAttribute) { relAttribute.isLinkModulePreload = true; } } },
     { "preconnect"_s, { [](auto document) { return document.settings().linkPreconnectEnabled(); }, [](auto relAttribute) { relAttribute.isLinkPreconnect = true; } } },
     { "prefetch"_s, { [](auto document) { return document.settings().linkPrefetchEnabled(); }, [](auto relAttribute) { relAttribute.isLinkPrefetch = true; } } },
     { "preload"_s, { [](auto document) { return document.settings().linkPreloadEnabled(); }, [](auto relAttribute) { relAttribute.isLinkPreload = true; } } },
