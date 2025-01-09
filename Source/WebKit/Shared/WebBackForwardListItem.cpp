@@ -72,7 +72,7 @@ HashMap<BackForwardItemIdentifier, WeakRef<WebBackForwardListItem>>& WebBackForw
     return items;
 }
 
-WebBackForwardListItem* WebBackForwardListItem::itemForID(const BackForwardItemIdentifier& identifier)
+WebBackForwardListItem* WebBackForwardListItem::itemForID(BackForwardItemIdentifier identifier)
 {
     return allItems().get(identifier);
 }

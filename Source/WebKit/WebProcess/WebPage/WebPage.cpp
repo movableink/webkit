@@ -6369,7 +6369,7 @@ void WebPage::setCustomTextEncodingName(const String& encoding)
         localMainFrame->loader().reloadWithOverrideEncoding(encoding);
 }
 
-void WebPage::didRemoveBackForwardItem(const BackForwardItemIdentifier& itemID)
+void WebPage::didRemoveBackForwardItem(BackForwardItemIdentifier itemID)
 {
     WebBackForwardListProxy::removeItem(itemID);
 }

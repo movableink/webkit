@@ -63,7 +63,7 @@ WebBackForwardList::~WebBackForwardList()
     ASSERT((!m_page && !provisionalOrCurrentIndex()) || !m_page->hasRunningProcess());
 }
 
-WebBackForwardListItem* WebBackForwardList::itemForID(const BackForwardItemIdentifier& identifier)
+WebBackForwardListItem* WebBackForwardList::itemForID(BackForwardItemIdentifier identifier)
 {
     if (!m_page)
         return nullptr;

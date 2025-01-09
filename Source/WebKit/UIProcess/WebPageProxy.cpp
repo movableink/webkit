@@ -2588,7 +2588,7 @@ void WebPageProxy::didChangeBackForwardList(WebBackForwardListItem* added, Vecto
     pageLoadState->setCanGoForward(transaction, backForwardList->forwardItem());
 }
 
-void WebPageProxy::willGoToBackForwardListItem(const BackForwardItemIdentifier& itemID, bool inBackForwardCache)
+void WebPageProxy::willGoToBackForwardListItem(BackForwardItemIdentifier itemID, bool inBackForwardCache)
 {
     RefPtr protectedPageClient { pageClient() };
 
@@ -9452,7 +9452,7 @@ void WebPageProxy::backForwardUpdateItem(IPC::Connection& connection, Ref<FrameS
     frameItem->setFrameState(WTFMove(frameState));
 }
 
-void WebPageProxy::backForwardGoToItem(IPC::Connection& connection, const BackForwardItemIdentifier& itemID, CompletionHandler<void(const WebBackForwardListCounts&)>&& completionHandler)
+void WebPageProxy::backForwardGoToItem(IPC::Connection& connection, BackForwardItemIdentifier itemID, CompletionHandler<void(const WebBackForwardListCounts&)>&& completionHandler)
 {
     // On process swap, we tell the previous process to ignore the load, which causes it so restore its current back forward item to its previous
     // value. Since the load is really going on in a new provisional process, we want to ignore such requests from the committed process.
@@ -9463,12 +9463,12 @@ void WebPageProxy::backForwardGoToItem(IPC::Connection& connection, const BackFo
     backForwardGoToItemShared(connection, itemID, WTFMove(completionHandler));
 }
 
-void WebPageProxy::backForwardListContainsItem(const WebCore::BackForwardItemIdentifier& itemID, CompletionHandler<void(bool)>&& completionHandler)
+void WebPageProxy::backForwardListContainsItem(WebCore::BackForwardItemIdentifier itemID, CompletionHandler<void(bool)>&& completionHandler)
 {
     completionHandler(protectedBackForwardList()->itemForID(itemID));
 }
 
-void WebPageProxy::backForwardGoToItemShared(IPC::Connection& connection, const BackForwardItemIdentifier& itemID, CompletionHandler<void(const WebBackForwardListCounts&)>&& completionHandler)
+void WebPageProxy::backForwardGoToItemShared(IPC::Connection& connection, BackForwardItemIdentifier itemID, CompletionHandler<void(const WebBackForwardListCounts&)>&& completionHandler)
 {
     MESSAGE_CHECK_COMPLETION_BASE(!WebKit::isInspectorPage(*this), connection, completionHandler(m_backForwardList->counts()));
 
@@ -12524,7 +12524,7 @@ void WebPageProxy::didFinishLoadingDataForCustomContentProvider(const String& su
         pageClient->didFinishLoadingDataForCustomContentProvider(ResourceResponseBase::sanitizeSuggestedFilename(suggestedFilename), dataReference);
 }
 
-void WebPageProxy::backForwardRemovedItem(const BackForwardItemIdentifier& itemID)
+void WebPageProxy::backForwardRemovedItem(BackForwardItemIdentifier itemID)
 {
     send(Messages::WebPage::DidRemoveBackForwardItem(itemID));
 }

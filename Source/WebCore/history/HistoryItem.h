@@ -82,8 +82,8 @@ public:
 
     WEBCORE_EXPORT Ref<HistoryItem> copy() const;
 
-    const BackForwardItemIdentifier& itemID() const { return m_itemID; }
-    const BackForwardFrameItemIdentifier& frameItemID() const { return m_frameItemID; }
+    BackForwardItemIdentifier itemID() const { return m_itemID; }
+    BackForwardFrameItemIdentifier frameItemID() const { return m_frameItemID; }
     const WTF::UUID& uuidIdentifier() const { return m_uuidIdentifier; }
     void setUUIDIdentifier(const WTF::UUID& uuidIdentifier) { m_uuidIdentifier = uuidIdentifier; }
 

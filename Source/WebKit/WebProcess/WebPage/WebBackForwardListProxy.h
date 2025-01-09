@@ -39,7 +39,7 @@ class WebBackForwardListProxy : public WebCore::BackForwardClient {
 public: 
     static Ref<WebBackForwardListProxy> create(WebPage& page) { return adoptRef(*new WebBackForwardListProxy(page)); }
 
-    static void removeItem(const WebCore::BackForwardItemIdentifier&);
+    static void removeItem(WebCore::BackForwardItemIdentifier);
 
     void clearCachedListCounts();
 
