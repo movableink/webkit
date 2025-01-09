@@ -49,7 +49,7 @@ public:
     virtual void captureEnded() { }
 };
 
-class GStreamerCapturer : public ThreadSafeRefCounted<GStreamerCapturer> {
+class GStreamerCapturer : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<GStreamerCapturer> {
 public:
     GStreamerCapturer(GStreamerCaptureDevice&&, GRefPtr<GstCaps>&&);
     GStreamerCapturer(const char* sourceFactory, GRefPtr<GstCaps>&&, CaptureDevice::DeviceType);

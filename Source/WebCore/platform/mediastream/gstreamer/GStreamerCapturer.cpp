@@ -135,10 +135,15 @@ GstElement* GStreamerCapturer::createSource()
                 if (GST_EVENT_TYPE(event) != GST_EVENT_CAPS)
                     return GST_PAD_PROBE_OK;
 
-                callOnMainThread([event, capturer = reinterpret_cast<GStreamerCapturer*>(userData)] {
+                auto self = reinterpret_cast<GStreamerCapturer*>(userData);
+                callOnMainThread([event = GRefPtr(event), weakThis = ThreadSafeWeakPtr { *self }] {
+                    RefPtr protectedThis = weakThis.get();
+                    if (!protectedThis)
+                        return;
+
                     GstCaps* caps;
-                    gst_event_parse_caps(event, &caps);
-                    capturer->forEachObserver([caps](GStreamerCapturerObserver& observer) {
+                    gst_event_parse_caps(event.get(), &caps);
+                    protectedThis->forEachObserver([caps](GStreamerCapturerObserver& observer) {
                         observer.sourceCapsChanged(caps);
                     });
                 });
