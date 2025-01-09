@@ -46,14 +46,6 @@ DeprecatedGlobalSettings& DeprecatedGlobalSettings::shared()
     return deprecatedGlobalSettings;
 }
 
-#if ENABLE(VORBIS)
-void DeprecatedGlobalSettings::setVorbisDecoderEnabled(bool isEnabled)
-{
-    shared().m_vorbisDecoderEnabled = isEnabled;
-    PlatformMediaSessionManager::setVorbisDecoderEnabled(isEnabled);
-}
-#endif
-
 #if ENABLE(OPUS)
 void DeprecatedGlobalSettings::setOpusDecoderEnabled(bool isEnabled)
 {

@@ -286,11 +286,6 @@ void GPUProcess::updateGPUProcessPreferences(GPUProcessPreferences&& preferences
         PlatformMediaSessionManager::setOpusDecoderEnabled(*m_preferences.opusDecoderEnabled);
 #endif
 
-#if ENABLE(VORBIS)
-    if (updatePreference(m_preferences.vorbisDecoderEnabled, preferences.vorbisDecoderEnabled))
-        PlatformMediaSessionManager::setVorbisDecoderEnabled(*m_preferences.vorbisDecoderEnabled);
-#endif
-    
 #if USE(MODERN_AVCONTENTKEYSESSION)
     if (updatePreference(m_preferences.shouldUseModernAVContentKeySession, preferences.shouldUseModernAVContentKeySession))
         MediaSessionManagerCocoa::setShouldUseModernAVContentKeySession(*m_preferences.shouldUseModernAVContentKeySession);

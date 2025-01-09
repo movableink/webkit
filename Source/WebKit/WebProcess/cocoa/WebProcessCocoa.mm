@@ -500,10 +500,6 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
     pthread_set_fixedpriority_self();
 #endif
 
-#if ENABLE(VORBIS)
-    PlatformMediaSessionManager::setVorbisDecoderEnabled(DeprecatedGlobalSettings::vorbisDecoderEnabled());
-#endif
-
 #if ENABLE(OPUS)
     PlatformMediaSessionManager::setOpusDecoderEnabled(DeprecatedGlobalSettings::opusDecoderEnabled());
 #endif

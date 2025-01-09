@@ -8296,19 +8296,6 @@ VisuallyContiguousBidiTextSelectionEnabled:
     WebCore:
       default: false
 
-VorbisDecoderEnabled:
-  type: bool
-  status: mature
-  humanReadableName: "Vorbis audio decoder"
-  humanReadableDescription: "Enable Vorbis audio decoder"
-  condition: ENABLE(VORBIS)
-  webcoreBinding: DeprecatedGlobalSettings
-  defaultValue:
-    WebKitLegacy:
-      default: true
-    WebKit:
-      default: true
-
 WantsBalancedSetDefersLoadingBehavior:
   type: bool
   status: embedder

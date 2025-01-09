@@ -496,9 +496,6 @@ static Vector<uint8_t> cookieFromVorbisCodecPrivate(std::span<const uint8_t> cod
 bool isVorbisDecoderAvailable()
 {
 #if ENABLE(VORBIS)
-    if (!PlatformMediaSessionManager::vorbisDecoderEnabled())
-        return false;
-
     return registerVorbisDecoderIfNeeded();
 #else
     return false;

@@ -43,10 +43,6 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(PlatformMediaSessionManager);
 
-#if ENABLE(VORBIS)
-bool PlatformMediaSessionManager::m_vorbisDecoderEnabled;
-#endif
-
 #if ENABLE(OPUS)
 bool PlatformMediaSessionManager::m_opusDecoderEnabled;
 #endif
@@ -766,24 +762,6 @@ bool PlatformMediaSessionManager::shouldDeactivateAudioSession()
 void PlatformMediaSessionManager::setShouldDeactivateAudioSession(bool deactivate)
 {
     deactivateAudioSession() = deactivate;
-}
-
-bool PlatformMediaSessionManager::vorbisDecoderEnabled()
-{
-#if ENABLE(VORBIS)
-    return m_vorbisDecoderEnabled;
-#else
-    return false;
-#endif
-}
-
-void PlatformMediaSessionManager::setVorbisDecoderEnabled(bool enabled)
-{
-#if ENABLE(VORBIS)
-    m_vorbisDecoderEnabled = enabled;
-#else
-    UNUSED_PARAM(enabled);
-#endif
 }
 
 bool PlatformMediaSessionManager::opusDecoderEnabled()

@@ -4827,10 +4827,6 @@ void WebPage::updatePreferences(const WebPreferencesStore& store)
     PlatformMediaSessionManager::setUseSCContentSharingPicker(settings.useSCContentSharingPicker());
 #endif
 
-#if ENABLE(VORBIS)
-    PlatformMediaSessionManager::setVorbisDecoderEnabled(DeprecatedGlobalSettings::vorbisDecoderEnabled());
-#endif
-
 #if ENABLE(OPUS)
     PlatformMediaSessionManager::setOpusDecoderEnabled(DeprecatedGlobalSettings::opusDecoderEnabled());
 #endif

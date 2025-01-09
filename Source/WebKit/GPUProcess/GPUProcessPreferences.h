@@ -40,10 +40,6 @@ struct GPUProcessPreferences {
     std::optional<bool> opusDecoderEnabled;
 #endif
 
-#if ENABLE(VORBIS)
-    std::optional<bool> vorbisDecoderEnabled;
-#endif
-
 #if USE(MODERN_AVCONTENTKEYSESSION)
     std::optional<bool> shouldUseModernAVContentKeySession;
 #endif

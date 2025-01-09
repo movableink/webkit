@@ -116,11 +116,6 @@ public:
     static void setArePDFImagesEnabled(bool isEnabled) { shared().m_arePDFImagesEnabled = isEnabled; }
     static bool arePDFImagesEnabled() { return shared().m_arePDFImagesEnabled; }
 
-#if ENABLE(VORBIS)
-    WEBCORE_EXPORT static void setVorbisDecoderEnabled(bool);
-    static bool vorbisDecoderEnabled() { return shared().m_vorbisDecoderEnabled; }
-#endif
-
 #if ENABLE(OPUS)
     WEBCORE_EXPORT static void setOpusDecoderEnabled(bool);
     static bool opusDecoderEnabled() { return shared().m_opusDecoderEnabled; }
@@ -186,10 +181,6 @@ private:
 #endif
 
     bool m_arePDFImagesEnabled { true };
-
-#if ENABLE(VORBIS)
-    bool m_vorbisDecoderEnabled { false };
-#endif
 
 #if ENABLE(OPUS)
     bool m_opusDecoderEnabled { false };
