@@ -266,6 +266,11 @@ void RenderBox::styleWillChange(StyleDifference diff, const RenderStyle& newStyl
                     flexContainer->clearCachedFlexItemIntrinsicContentLogicalHeight(*this);
                     flexContainer->clearCachedMainSizeForFlexItem(*this);
                 }
+                if (isInTopLayerOrBackdrop(style(), element())) {
+                    // Since top layer's containing block is driven by the associated element's state (see Element::isInTopLayerOrBackdrop)
+                    // and this state is set before styleWillChange call, dirtying ancestors starting from _this_ fails to mark the current ancestor chain properly.
+                    parent()->setChildNeedsLayout();
+                }
             } else
                 scheduleLayout(markContainingBlocksForLayout());
             
