@@ -51,7 +51,7 @@ class WEBCORE_EXPORT SourceBufferParser : public ThreadSafeRefCounted<SourceBuff
 public:
     static MediaPlayerEnums::SupportsType isContentTypeSupported(const ContentType&);
 
-    static RefPtr<SourceBufferParser> create(const ContentType&, bool webMParserEnabled);
+    static RefPtr<SourceBufferParser> create(const ContentType&);
     virtual ~SourceBufferParser() = default;
 
     enum class Type : uint8_t {

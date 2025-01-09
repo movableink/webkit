@@ -281,11 +281,6 @@ void GPUProcess::initializeGPUProcess(GPUProcessCreationParameters&& parameters,
 
 void GPUProcess::updateGPUProcessPreferences(GPUProcessPreferences&& preferences)
 {
-#if ENABLE(MEDIA_SOURCE) && ENABLE(VP9)
-    if (updatePreference(m_preferences.webMParserEnabled, preferences.webMParserEnabled))
-        DeprecatedGlobalSettings::setWebMParserEnabled(*m_preferences.webMParserEnabled);
-#endif
-
 #if ENABLE(OPUS)
     if (updatePreference(m_preferences.opusDecoderEnabled, preferences.opusDecoderEnabled))
         PlatformMediaSessionManager::setOpusDecoderEnabled(*m_preferences.opusDecoderEnabled);

@@ -44,10 +44,6 @@ struct GPUProcessPreferences {
     std::optional<bool> vorbisDecoderEnabled;
 #endif
 
-#if ENABLE(MEDIA_SOURCE) && ENABLE(VP9)
-    std::optional<bool> webMParserEnabled;
-#endif
-
 #if USE(MODERN_AVCONTENTKEYSESSION)
     std::optional<bool> shouldUseModernAVContentKeySession;
 #endif

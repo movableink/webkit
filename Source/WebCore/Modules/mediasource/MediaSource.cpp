@@ -39,7 +39,6 @@
 #include "AudioTrackPrivate.h"
 #include "ContentType.h"
 #include "ContentTypeUtilities.h"
-#include "DeprecatedGlobalSettings.h"
 #include "DocumentInlines.h"
 #include "Event.h"
 #include "EventNames.h"
@@ -1453,7 +1452,7 @@ ExceptionOr<Ref<SourceBufferPrivate>> MediaSource::createSourceBufferPrivate(con
     Ref msp = protectedPrivate().releaseNonNull();
 
     RefPtr<SourceBufferPrivate> sourceBufferPrivate;
-    switch (msp->addSourceBuffer(type, DeprecatedGlobalSettings::webMParserEnabled(), sourceBufferPrivate)) {
+    switch (msp->addSourceBuffer(type, sourceBufferPrivate)) {
     case MediaSourcePrivate::AddStatus::Ok:
         return sourceBufferPrivate.releaseNonNull();
     case MediaSourcePrivate::AddStatus::NotSupported:
