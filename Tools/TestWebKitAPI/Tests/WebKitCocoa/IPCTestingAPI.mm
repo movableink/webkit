@@ -677,6 +677,7 @@ TEST(IPCTestingAPI, SerializedTypeInfo)
         @"OSStatus",
         @"GCGLErrorCodeSet",
         @"CGBitmapInfo",
+        @"uintptr_t",
     ]];
 
     [typesNeedingDescriptions minusSet:typesHavingDescriptions];
