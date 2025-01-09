@@ -73,8 +73,8 @@ static const char* dumpReadyState(WebCore::MediaPlayer::ReadyState readyState)
 }
 #endif // GST_DISABLE_GST_DEBUG
 
-GST_DEBUG_CATEGORY(webkit_mse_debug);
-#define GST_CAT_DEFAULT webkit_mse_debug
+GST_DEBUG_CATEGORY_STATIC(webkit_mse_player_debug);
+#define GST_CAT_DEFAULT webkit_mse_player_debug
 
 namespace WebCore {
 
@@ -119,7 +119,7 @@ static Vector<RefPtr<MediaSourceTrackGStreamer>> filterOutRepeatingTracks(const 
 
 void MediaPlayerPrivateGStreamerMSE::registerMediaEngine(MediaEngineRegistrar registrar)
 {
-    GST_DEBUG_CATEGORY_INIT(webkit_mse_debug, "webkitmse", 0, "WebKit MSE media player");
+    GST_DEBUG_CATEGORY_INIT(webkit_mse_player_debug, "webkitmseplayer", 0, "WebKit MSE media player");
     registrar(makeUnique<MediaPlayerFactoryGStreamerMSE>());
 }
 

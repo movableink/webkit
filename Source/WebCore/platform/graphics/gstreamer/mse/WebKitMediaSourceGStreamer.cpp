@@ -51,7 +51,6 @@ GST_DEBUG_CATEGORY_STATIC(webkit_media_src_debug);
 #define GST_CAT_DEFAULT webkit_media_src_debug
 
 #define webkit_media_src_parent_class parent_class
-#define WEBKIT_MEDIA_SRC_CATEGORY_INIT GST_DEBUG_CATEGORY_INIT(webkit_media_src_debug, "webkitmediasrc", 0, "websrc element");
 
 static GstStaticPadTemplate srcTemplate = GST_STATIC_PAD_TEMPLATE("src_%s", GST_PAD_SRC,
     GST_PAD_SOMETIMES, GST_STATIC_CAPS_ANY);
@@ -154,7 +153,7 @@ static void webkit_media_src_pad_class_init(WebKitMediaSrcPadClass*)
 
 WEBKIT_DEFINE_TYPE_WITH_CODE(WebKitMediaSrc, webkit_media_src, GST_TYPE_ELEMENT,
     G_IMPLEMENT_INTERFACE(GST_TYPE_URI_HANDLER, webKitMediaSrcUriHandlerInit);
-    GST_DEBUG_CATEGORY_INIT(webkit_media_src_debug, "webkitmediasrc", 0, "WebKit MSE source element"));
+    GST_DEBUG_CATEGORY_INIT(webkit_media_src_debug, "webkitmsesrc", 0, "WebKit MSE source element"));
 
 struct Stream : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<Stream> {
     Stream(WebKitMediaSrc* source, GRefPtr<GstPad>&& pad, Ref<MediaSourceTrackGStreamer>&& track, GRefPtr<GstStream>&& streamInfo)

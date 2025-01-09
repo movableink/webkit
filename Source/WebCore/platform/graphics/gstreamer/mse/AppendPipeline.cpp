@@ -46,8 +46,8 @@
 #include <wtf/glib/RunLoopSourcePriority.h>
 #include <wtf/text/MakeString.h>
 
-GST_DEBUG_CATEGORY_EXTERN(webkit_mse_debug);
-#define GST_CAT_DEFAULT webkit_mse_debug
+GST_DEBUG_CATEGORY_STATIC(webkit_mse_append_pipeline_debug);
+#define GST_CAT_DEFAULT webkit_mse_append_pipeline_debug
 
 namespace WebCore {
 
@@ -68,6 +68,7 @@ struct EndOfAppendMeta {
 void AppendPipeline::staticInitialization()
 {
     ASSERT(isMainThread());
+    GST_DEBUG_CATEGORY_INIT(webkit_mse_append_pipeline_debug, "webkitmseappendpipeline", 0, "WebKit MSE AppendPipeline");
 
     const char* tags[] = { nullptr };
     s_endOfAppendMetaType = gst_meta_api_type_register("WebKitEndOfAppendMetaAPI", tags);

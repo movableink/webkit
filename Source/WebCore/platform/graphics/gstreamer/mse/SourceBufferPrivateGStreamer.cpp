@@ -53,8 +53,8 @@
 #include <wtf/NativePromise.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
-GST_DEBUG_CATEGORY_EXTERN(webkit_mse_debug);
-#define GST_CAT_DEFAULT webkit_mse_debug
+GST_DEBUG_CATEGORY_STATIC(webkit_mse_sourcebuffer_debug);
+#define GST_CAT_DEFAULT webkit_mse_sourcebuffer_debug
 
 namespace WebCore {
 
@@ -78,6 +78,10 @@ SourceBufferPrivateGStreamer::SourceBufferPrivateGStreamer(MediaSourcePrivateGSt
     , m_logIdentifier(mediaSource.nextSourceBufferLogIdentifier())
 #endif
 {
+    static std::once_flag debugRegisteredFlag;
+    std::call_once(debugRegisteredFlag, [] {
+        GST_DEBUG_CATEGORY_INIT(webkit_mse_sourcebuffer_debug, "webkitmsesourcebuffer", 0, "WebKit MSE SourceBuffer");
+    });
 }
 
 SourceBufferPrivateGStreamer::~SourceBufferPrivateGStreamer()
