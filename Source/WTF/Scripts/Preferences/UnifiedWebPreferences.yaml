@@ -4395,20 +4395,6 @@ LinkPreloadEnabled:
     WebCore:
       default: true
 
-LinkPreloadResponsiveImagesEnabled:
-  type: bool
-  status: stable
-  category: networking
-  humanReadableName: "Link preload responsive images"
-  humanReadableDescription: "Enable link preload responsive images"
-  defaultValue:
-    WebKitLegacy:
-      default: true
-    WebKit:
-      default: true
-    WebCore:
-      default: true
-
 LinkSanitizerEnabled:
   type: bool
   status: unstable

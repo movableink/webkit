@@ -2927,16 +2927,6 @@ static RetainPtr<NSString>& classIBCreatorID()
     [self _setBoolValue:flag forKey:WebKitCoreMathMLEnabledPreferenceKey];
 }
 
-- (BOOL)linkPreloadResponsiveImagesEnabled
-{
-    return [self _boolValueForKey:WebKitLinkPreloadResponsiveImagesEnabledPreferenceKey];
-}
-
-- (void)setLinkPreloadResponsiveImagesEnabled:(BOOL)flag
-{
-    [self _setBoolValue:flag forKey:WebKitLinkPreloadResponsiveImagesEnabledPreferenceKey];
-}
-
 - (BOOL)remotePlaybackEnabled
 {
     return [self _boolValueForKey:WebKitRemotePlaybackEnabledPreferenceKey];
@@ -3003,6 +2993,15 @@ static RetainPtr<NSString>& classIBCreatorID()
 
 // The preferences in this category are deprecated and have no effect. They should
 // be removed when it is considered safe to do so.
+
+- (BOOL)linkPreloadResponsiveImagesEnabled
+{
+    return YES;
+}
+
+- (void)setLinkPreloadResponsiveImagesEnabled:(BOOL)flag
+{
+}
 
 - (BOOL)constantPropertiesEnabled
 {
