@@ -46,11 +46,9 @@ static bool decrypt(WebKitMediaCommonEncryptionDecrypt*, GstBuffer* iv, GstBuffe
 GST_DEBUG_CATEGORY(webkitMediaThunderDecryptDebugCategory);
 #define GST_CAT_DEFAULT webkitMediaThunderDecryptDebugCategory
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
-static const char* cencEncryptionMediaTypes[] = { "video/mp4", "audio/mp4", "video/x-h264", "video/x-h265", "audio/mpeg",
-    "audio/x-eac3", "audio/x-ac3", "audio/x-flac", "audio/x-opus", "video/x-vp9", "video/x-av1", nullptr };
-static const char* webmEncryptionMediaTypes[] = { "video/webm", "audio/webm", "video/x-vp9", "video/x-av1", "audio/x-opus", "audio/x-vorbis", "video/x-vp8", nullptr };
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+static std::array<ASCIILiteral, 11> cencEncryptionMediaTypes = { "video/mp4"_s, "audio/mp4"_s, "video/x-h264"_s, "video/x-h265"_s, "audio/mpeg"_s,
+    "audio/x-eac3"_s, "audio/x-ac3"_s, "audio/x-flac"_s, "audio/x-opus"_s, "video/x-vp9"_s, "video/x-av1"_s };
+static std::array<ASCIILiteral, 7> webmEncryptionMediaTypes = { "video/webm"_s, "audio/webm"_s, "video/x-vp9"_s, "video/x-av1"_s, "audio/x-opus"_s, "audio/x-vorbis"_s, "video/x-vp8"_s };
 
 static GstStaticPadTemplate srcTemplate = GST_STATIC_PAD_TEMPLATE("src",
     GST_PAD_SRC,
@@ -84,21 +82,21 @@ static GRefPtr<GstCaps> createSinkPadTemplateCaps()
         return caps;
     }
 
-    for (int i = 0; cencEncryptionMediaTypes[i]; ++i) {
+    for (const auto& mediaType : cencEncryptionMediaTypes) {
         gst_caps_append_structure(caps.get(), gst_structure_new("application/x-cenc", "original-media-type", G_TYPE_STRING,
-            cencEncryptionMediaTypes[i], nullptr));
+            mediaType.characters(), nullptr));
     }
     for (const auto& keySystem : supportedKeySystems) {
-        for (int i = 0; cencEncryptionMediaTypes[i]; ++i) {
+        for (const auto& mediaType : cencEncryptionMediaTypes) {
             gst_caps_append_structure(caps.get(), gst_structure_new("application/x-cenc", "original-media-type", G_TYPE_STRING,
-                cencEncryptionMediaTypes[i], "protection-system", G_TYPE_STRING, GStreamerEMEUtilities::keySystemToUuid(keySystem), nullptr));
+                mediaType.characters(), "protection-system", G_TYPE_STRING, GStreamerEMEUtilities::keySystemToUuid(keySystem), nullptr));
         }
     }
 
     if (supportedKeySystems.contains(GStreamerEMEUtilities::s_WidevineKeySystem) || supportedKeySystems.contains(GStreamerEMEUtilities::s_ClearKeyKeySystem)) {
-        for (int i = 0; webmEncryptionMediaTypes[i]; ++i) {
+        for (const auto& mediaType :  webmEncryptionMediaTypes) {
             gst_caps_append_structure(caps.get(), gst_structure_new("application/x-webm-enc", "original-media-type", G_TYPE_STRING,
-                webmEncryptionMediaTypes[i], nullptr));
+                mediaType.characters(), nullptr));
         }
     }
 
