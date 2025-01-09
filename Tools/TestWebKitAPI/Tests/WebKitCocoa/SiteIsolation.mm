@@ -1882,6 +1882,32 @@ TEST(SiteIsolation, MainFrameURLAfterFragmentNavigation)
     EXPECT_FALSE(canLoadURLInIFrame(@"/always_blocked"));
 }
 
+TEST(SiteIsolation, LoadRequestOnOpenerWebView)
+{
+    HTTPServer server({
+        { "/example"_s, { "<script>w = window.open('https://webkit.org/webkit')</script>"_s } },
+        { "/webkit"_s, { ""_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+    auto [opener, opened] = openerAndOpenedViews(server);
+    [opener.webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://apple.com/webkit"]]];
+    [opener.navigationDelegate waitForDidFinishNavigation];
+    checkFrameTreesInProcesses(opener.webView.get(), { { "https://apple.com"_s } });
+    checkFrameTreesInProcesses(opened.webView.get(), { { "https://webkit.org"_s } });
+}
+
+TEST(SiteIsolation, LoadRequestOnOpenedWebView)
+{
+    HTTPServer server({
+        { "/example"_s, { "<script>w = window.open('https://webkit.org/webkit')</script>"_s } },
+        { "/webkit"_s, { ""_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+    auto [opener, opened] = openerAndOpenedViews(server);
+    [opened.webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://apple.com/webkit"]]];
+    [opened.navigationDelegate waitForDidFinishNavigation];
+    checkFrameTreesInProcesses(opened.webView.get(), { { "https://apple.com"_s } });
+    checkFrameTreesInProcesses(opener.webView.get(), { { "https://example.com"_s } });
+}
+
 TEST(SiteIsolation, FocusOpenedWindow)
 {
     auto openerHTML = "<script>"
