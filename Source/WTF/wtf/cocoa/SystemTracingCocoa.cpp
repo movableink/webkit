@@ -28,6 +28,7 @@
 
 #if HAVE(OS_SIGNPOST)
 
+#import "ContinuousTime.h"
 #import <dispatch/dispatch.h>
 #import <mach/mach_time.h>
 
@@ -128,28 +129,9 @@ bool WTFSignpostHandleIndirectLog(os_log_t log, pid_t pid, std::span<const char>
     return true;
 }
 
-static const mach_timebase_info_data_t& machTimebaseInfo()
-{
-    static mach_timebase_info_data_t info;
-    static dispatch_once_t once;
-
-    dispatch_once(&once, ^{
-        mach_timebase_info(&info);
-    });
-
-    return info;
-}
-
 uint64_t WTFCurrentContinuousTime(Seconds deltaFromNow)
 {
-    if (!deltaFromNow)
-        return mach_continuous_time();
-
-    auto& info = machTimebaseInfo();
-    auto now = Seconds((mach_continuous_time() * info.numer) / (1.0e9 * info.denom));
-    auto timestamp = now + deltaFromNow;
-
-    return static_cast<uint64_t>((timestamp.seconds() * 1.0e9 * info.denom) / info.numer);
+    return (ContinuousTime::now() + deltaFromNow).toMachContinuousTime();
 }
 
 #endif

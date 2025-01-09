@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -20,37 +20,37 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
-#include <wtf/ClockType.h>
+#include <wtf/ContinuousTime.h>
 
+#include <wtf/MonotonicTime.h>
 #include <wtf/PrintStream.h>
+#include <wtf/WallTime.h>
 
 namespace WTF {
 
-void printInternal(PrintStream& out, ClockType type)
+WallTime ContinuousTime::approximateWallTime() const
 {
-    switch (type) {
-    case ClockType::Wall:
-        out.print("Wall");
-        return;
-    case ClockType::Monotonic:
-        out.print("Monotonic");
-        return;
-    case ClockType::Approximate:
-        out.print("Approximate");
-        return;
-    case ClockType::Continuous:
-        out.print("Continuous");
-        return;
-    case ClockType::ContinuousApproximate:
-        out.print("ContinuousApproximate");
-        return;
-    }
-    RELEASE_ASSERT_NOT_REACHED();
+    if (isInfinity())
+        return WallTime::fromRawSeconds(m_value);
+    return *this - now() + WallTime::now();
+}
+
+MonotonicTime ContinuousTime::approximateMonotonicTime() const
+{
+    if (isInfinity())
+        return MonotonicTime::fromRawSeconds(m_value);
+    return *this - now() + MonotonicTime::now();
+}
+
+void ContinuousTime::dump(PrintStream& out) const
+{
+    out.print("Continuous(", m_value, " sec)");
 }
 
 } // namespace WTF
+
 

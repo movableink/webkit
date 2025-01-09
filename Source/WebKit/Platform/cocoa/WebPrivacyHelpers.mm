@@ -324,11 +324,6 @@ void StorageAccessUserAgentStringQuirkController::updateList(CompletionHandler<v
     }];
 }
 
-static uint64_t approximateContinuousTimeNanoseconds()
-{
-    return clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW_APPROX);
-}
-
 RestrictedOpenerDomainsController& RestrictedOpenerDomainsController::shared()
 {
     static MainThreadNeverDestroyed<RestrictedOpenerDomainsController> sharedInstance;
@@ -337,7 +332,7 @@ RestrictedOpenerDomainsController& RestrictedOpenerDomainsController::shared()
 
 RestrictedOpenerDomainsController::RestrictedOpenerDomainsController()
 {
-    scheduleNextUpdate(approximateContinuousTimeNanoseconds());
+    scheduleNextUpdate(ContinuousApproximateTime::now());
     update();
 
     m_notificationListener = adoptNS([[WKWebPrivacyNotificationListener alloc] initWithType:static_cast<WPResourceType>(WPResourceTypeRestrictedOpenerDomains) callback:^{
@@ -354,14 +349,11 @@ static RestrictedOpenerType restrictedOpenerType(WPRestrictedOpenerType type)
     }
 }
 
-void RestrictedOpenerDomainsController::scheduleNextUpdate(uint64_t now)
+void RestrictedOpenerDomainsController::scheduleNextUpdate(ContinuousApproximateTime now)
 {
     // Allow the list to be re-requested from the server sometime between [24, 26) hours from now.
     static WeakRandom random;
-    static constexpr int64_t oneDay = 24 * 60 * 60 * NSEC_PER_SEC;
-    int64_t zeroToTwoHours = random.get() * (2 * 60 * 60 * NSEC_PER_SEC);
-
-    m_nextScheduledUpdateTime = now + oneDay + zeroToTwoHours;
+    m_nextScheduledUpdateTime = now + 24_h + random.get() * 2_h;
 }
 
 void RestrictedOpenerDomainsController::update()
@@ -395,7 +387,7 @@ void RestrictedOpenerDomainsController::update()
 
 RestrictedOpenerType RestrictedOpenerDomainsController::lookup(const WebCore::RegistrableDomain& domain) const
 {
-    auto now = approximateContinuousTimeNanoseconds();
+    auto now = ContinuousApproximateTime::now();
     if (now > m_nextScheduledUpdateTime) {
         auto mutableThis = const_cast<RestrictedOpenerDomainsController*>(this);
         mutableThis->scheduleNextUpdate(now);
