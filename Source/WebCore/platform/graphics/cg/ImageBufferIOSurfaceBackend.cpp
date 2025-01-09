@@ -35,6 +35,7 @@
 #include "IntRect.h"
 #include "PixelBuffer.h"
 #include <CoreGraphics/CoreGraphics.h>
+#include <pal/cg/CoreGraphicsSoftLink.h>
 #include <pal/spi/cg/CoreGraphicsSPI.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -151,14 +152,20 @@ void ImageBufferIOSurfaceBackend::transferToNewContext(const ImageBufferCreation
         m_surface->setOwnershipIdentity(creationContext.resourceOwner);
 }
 
-void ImageBufferIOSurfaceBackend::invalidateCachedNativeImage()
+bool ImageBufferIOSurfaceBackend::invalidateCachedNativeImage()
 {
     // Force QuartzCore to invalidate its cached CGImageRef for this IOSurface.
     // This is necessary in cases where we know (a priori) that the IOSurface has been
     // modified, but QuartzCore may have a cached CGImageRef that does not reflect the
     // current state of the IOSurface.
     // See https://webkit.org/b/157966 and https://webkit.org/b/228682 for more context.
+    if (PAL::canLoad_CoreGraphics_CGIOSurfaceContextInvalidateSurface()) {
+        PAL::softLink_CoreGraphics_CGIOSurfaceContextInvalidateSurface(ensurePlatformContext());
+        return false;
+    }
+
     CGContextFillRect(ensurePlatformContext(), CGRect { });
+    return true;
 }
 
 RefPtr<NativeImage> ImageBufferIOSurfaceBackend::copyNativeImage()
@@ -272,9 +279,8 @@ void ImageBufferIOSurfaceBackend::prepareForExternalWrite()
     bool needFlush = false;
     // Ensure that there are no future draws from the surface that would use the surface context image cache.
     if (m_mayHaveOutstandingBackingStoreReferences) {
-        invalidateCachedNativeImage();
+        needFlush = invalidateCachedNativeImage();
         m_mayHaveOutstandingBackingStoreReferences = false;
-        needFlush = true;
     }
 
     // Ensure that there are no pending draws to this surface. This is ensured by flushing the context
