@@ -509,6 +509,43 @@ TEST(AdvancedPrivacyProtections, ApplyNavigationalProtectionsAfterMultiplePSON)
     EXPECT_WK_STREQ(@"", result);
 }
 
+TEST(AdvancedPrivacyProtections, DoNotHideReferrerInPopupWindow)
+{
+    HTTPServer server({ { "/popup"_s, { "<body><h1>popup</h1></body>"_s } } }, HTTPServer::Protocol::Http);
+    server.addResponse("/main"_s, { makeString("<body><h1>main</h1><script src='http://localhost:"_s, server.port(), "/show-popup.js'></script></body>"_s) });
+    server.addResponse("/show-popup.js"_s, { makeString("open('http://localhost:"_s, server.port(), "/popup', 'Popup', 'width=400,height=300')"_s) });
+
+    bool popupDidFinishNavigation = false;
+    RetainPtr popupNavigationDelegate = adoptNS([TestNavigationDelegate new]);
+    [popupNavigationDelegate setDidFinishNavigation:[&](WKWebView *, WKNavigation *) {
+        popupDidFinishNavigation = true;
+    }];
+
+    RetainPtr<TestWKWebView> popupWebView;
+    RetainPtr uiDelegate = adoptNS([TestUIDelegate new]);
+    [uiDelegate setCreateWebViewWithConfiguration:[&](WKWebViewConfiguration *configuration, WKNavigationAction *action, WKWindowFeatures *) -> WKWebView * {
+        popupWebView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 400, 300) configuration:configuration]);
+        [popupWebView setNavigationDelegate:popupNavigationDelegate.get()];
+        return popupWebView.get();
+    }];
+
+    RetainPtr webView = createWebViewWithAdvancedPrivacyProtections();
+    [webView setUIDelegate:uiDelegate.get()];
+
+    // Load the main page on 127.0.0.1, which opens a cross-origin popup window on localhost.
+    auto mainURLPrefix = "http://127.0.0.1:"_s;
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:makeString(mainURLPrefix, server.port(), "/main"_s)]]];
+
+    // Wait for the popup window to finish loading.
+    Util::waitForConditionWithLogging([&] {
+        return popupDidFinishNavigation;
+    }, 5, @"Timed out while waiting for popup window to load");
+
+    // Confirm that the popup window has access to the document referrer.
+    String referrerFromPopup = [popupWebView stringByEvaluatingJavaScript:@"document.referrer"];
+    EXPECT_TRUE(referrerFromPopup.startsWith(mainURLPrefix));
+}
+
 static RetainPtr<TestWKWebView> setUpWebViewForTestingQueryParameterHiding(NSString *pageSource, NSString *requestURLString, NSString *referrer = @"https://webkit.org")
 {
     auto *store = WKWebsiteDataStore.nonPersistentDataStore;
@@ -1165,7 +1202,6 @@ TEST(AdvancedPrivacyProtections, VerifyDataURLFromNoisyWebGLAPI)
 
 TEST(AdvancedPrivacyProtections, Canvas2DQuirks)
 {
-    using namespace TestWebKitAPI;
     auto *script = @"let canvas = document.createElement(\"canvas\"); canvas.width = 280; canvas.height = 60; let ctx = canvas.getContext(\"2d\"); ctx.fillText(\"<@nv45. F1n63r,Pr1n71n6!\", 10, 40); canvas.toDataURL();";
     auto *paddedScript = [script stringByPaddingToLength:212053 withString:@" " startingAtIndex:0];
     EXPECT_NOT_NULL(paddedScript);

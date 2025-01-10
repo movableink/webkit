@@ -184,7 +184,8 @@ public:
 
     JSC::ScriptExecutionStatus jscScriptExecutionStatus() const;
 
-    URL currentSourceURL() const;
+    enum class CallStackPosition : bool { BottomMost, TopMost };
+    URL currentSourceURL(CallStackPosition = CallStackPosition::BottomMost) const;
 
     // Called from the constructor and destructors of ActiveDOMObject.
     void didCreateActiveDOMObject(ActiveDOMObject&);

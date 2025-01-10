@@ -6645,16 +6645,27 @@ String Document::referrerForBindings()
     if (!policySourceLoader->request().url().hasSpecialScheme() && url().protocolIsInHTTPFamily())
         policySourceLoader = loader();
 
-    if (policySourceLoader && !RegistrableDomain { URL { frame()->loader().referrer() } }.matches(securityOrigin().data())) {
+    bool shouldHideFromBindings = [&] {
+        if (!policySourceLoader || RegistrableDomain { URL { frame()->loader().referrer() } }.matches(securityOrigin().data()))
+            return false;
+
         auto policies = policySourceLoader->navigationalAdvancedPrivacyProtections();
-        if (policies.contains(AdvancedPrivacyProtections::BaselineProtections))
-            return { };
-
         if (policies.contains(AdvancedPrivacyProtections::ScriptTelemetry) && requiresScriptExecutionTelemetry(ScriptTelemetryCategory::Referrer))
-            return { };
-    }
+            return true;
 
-    return referrer();
+        if (policies.contains(AdvancedPrivacyProtections::BaselineProtections)) {
+            RefPtr frame = this->frame();
+            if (!frame || !frame->opener())
+                return true;
+
+            RefPtr page = this->page();
+            return !page || !page->openedByScriptDomain().matches(securityOrigin().data());
+        }
+
+        return false;
+    }();
+
+    return shouldHideFromBindings ? emptyString() : referrer();
 }
 
 String Document::domain() const

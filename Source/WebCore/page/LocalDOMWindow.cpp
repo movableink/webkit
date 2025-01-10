@@ -2625,8 +2625,12 @@ ExceptionOr<RefPtr<Frame>> LocalDOMWindow::createWindow(const String& urlString,
         newFrame->page()->setOpenedByDOMWithOpener(true);
     }
 
-    if (created == CreatedNewPage::Yes)
-        newFrame->protectedPage()->setOpenedByDOM();
+    if (created == CreatedNewPage::Yes) {
+        RefPtr page = newFrame->page();
+        page->setOpenedByDOM();
+        if (RefPtr openerDocument = openerFrame.document())
+            page->setOpenedByScriptDomain(RegistrableDomain { openerDocument->currentSourceURL(ScriptExecutionContext::CallStackPosition::TopMost) });
+    }
 
     RefPtr localNewFrame = dynamicDowncast<LocalFrame>(newFrame);
     if (localNewFrame && localNewFrame->document()->protectedWindow()->isInsecureScriptAccess(activeWindow, completedURL.string()))

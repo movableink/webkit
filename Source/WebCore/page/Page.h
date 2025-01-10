@@ -411,6 +411,9 @@ public:
     bool openedByDOMWithOpener() const { return m_openedByDOMWithOpener; }
     void setOpenedByDOMWithOpener(bool value) { m_openedByDOMWithOpener = value; }
 
+    const RegistrableDomain& openedByScriptDomain() const { return m_openedByScriptDomain; }
+    void setOpenedByScriptDomain(RegistrableDomain&& domain) { m_openedByScriptDomain = WTFMove(domain); }
+
     WEBCORE_EXPORT void goToItem(LocalFrame& rootFrame, HistoryItem&, FrameLoadType, ShouldTreatAsContinuingLoad);
     void goToItemForNavigationAPI(LocalFrame& rootFrame, HistoryItem&, FrameLoadType, LocalFrame& triggeringFrame, NavigationAPIMethodTracker*);
 
@@ -1713,6 +1716,8 @@ private:
     bool m_shouldDeferScrollEvents { false };
 
     Ref<DocumentSyncData> m_topDocumentSyncData;
+
+    RegistrableDomain m_openedByScriptDomain;
 
 #if HAVE(AUDIT_TOKEN)
     std::optional<audit_token_t> m_presentingApplicationAuditToken;
