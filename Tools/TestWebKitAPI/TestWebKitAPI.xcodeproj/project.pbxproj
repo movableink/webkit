@@ -221,7 +221,6 @@
 		516B289E2CFEA5BC003C544C /* AudioSampleFormat.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 516B289D2CFEA5BC003C544C /* AudioSampleFormat.cpp */; };
 		5175C7A226F876230003AF5C /* BundlePageConsoleMessage.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5175C7A126F876230003AF5C /* BundlePageConsoleMessage.mm */; };
 		51820A4D22F4EE7F00DF0A01 /* JavascriptURLNavigation.mm in Sources */ = {isa = PBXBuildFile; fileRef = 51820A4C22F4EE7700DF0A01 /* JavascriptURLNavigation.mm */; };
-		518EE51920A78CE500E024F3 /* DoubleDefersLoadingPlugin.mm in Sources */ = {isa = PBXBuildFile; fileRef = 518EE51720A78CDF00E024F3 /* DoubleDefersLoadingPlugin.mm */; };
 		51DB16CE1F085137001FA4C5 /* WebViewIconLoading.mm in Sources */ = {isa = PBXBuildFile; fileRef = 51DB16CD1F085047001FA4C5 /* WebViewIconLoading.mm */; };
 		51EB125724C67257000CB030 /* VirtualGamepad.mm in Sources */ = {isa = PBXBuildFile; fileRef = 51EB125624C66FE8000CB030 /* VirtualGamepad.mm */; };
 		51EB125924C68592000CB030 /* HIDGamepads.mm in Sources */ = {isa = PBXBuildFile; fileRef = 51EB125824C68589000CB030 /* HIDGamepads.mm */; };
@@ -2677,8 +2676,6 @@
 		51820A4C22F4EE7700DF0A01 /* JavascriptURLNavigation.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = JavascriptURLNavigation.mm; sourceTree = "<group>"; };
 		5182C22D1F2BCB410059BA7C /* WKURLSchemeHandler-leaks.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = "WKURLSchemeHandler-leaks.mm"; sourceTree = "<group>"; };
 		518C1152205B04F9001FF4AE /* ProcessSwapOnNavigation.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ProcessSwapOnNavigation.mm; sourceTree = "<group>"; };
-		518EE51620A78CDF00E024F3 /* DoubleDefersLoading.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = DoubleDefersLoading.mm; sourceTree = "<group>"; };
-		518EE51720A78CDF00E024F3 /* DoubleDefersLoadingPlugin.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = DoubleDefersLoadingPlugin.mm; sourceTree = "<group>"; };
 		518EE51A20A78CFB00E024F3 /* DoAfterNextPresentationUpdateAfterCrash.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = DoAfterNextPresentationUpdateAfterCrash.mm; sourceTree = "<group>"; };
 		518EE51C20A78D3300E024F3 /* DecidePolicyForNavigationAction.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = DecidePolicyForNavigationAction.mm; sourceTree = "<group>"; };
 		51A24D10294BE9B300E43A29 /* Badging.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = Badging.mm; sourceTree = "<group>"; };
@@ -4326,8 +4323,6 @@
 				73BD731723A846500020F450 /* DisplayName.mm */,
 				518EE51A20A78CFB00E024F3 /* DoAfterNextPresentationUpdateAfterCrash.mm */,
 				2D7FD19222419087007887F1 /* DocumentEditingContext.mm */,
-				518EE51620A78CDF00E024F3 /* DoubleDefersLoading.mm */,
-				518EE51720A78CDF00E024F3 /* DoubleDefersLoadingPlugin.mm */,
 				A1A4FE5D18DD3DB700B5EA8A /* Download.mm */,
 				637281A621AE1386009E0DE6 /* DownloadProgress.mm */,
 				F46128D6211E489C00D9FADB /* DragAndDropTests.mm */,
@@ -7445,7 +7440,6 @@
 				5C121E8D2410704900486F9B /* ContentWorldPlugIn.mm in Sources */,
 				CEA7F57D2089624B0078EF6E /* DidResignInputElementStrongPasswordAppearance.mm in Sources */,
 				F4B0168425AE08F800E445C4 /* DisableSpellcheckPlugIn.mm in Sources */,
-				518EE51920A78CE500E024F3 /* DoubleDefersLoadingPlugin.mm in Sources */,
 				5CB5B3C21FFC55CF00C27BB0 /* FrameHandleSerialization.mm in Sources */,
 				F460F65B261119580064F2B6 /* InjectedBundleHitTestPlugIn.mm in Sources */,
 				0E404A8C2166DE0A008271BA /* InjectedBundleNodeHandleIsSelectElement.mm in Sources */,

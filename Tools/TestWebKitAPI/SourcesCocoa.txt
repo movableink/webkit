@@ -106,7 +106,6 @@ Tests/WebKitCocoa/DisableSpellcheck.mm
 Tests/WebKitCocoa/DisplayName.mm
 Tests/WebKitCocoa/DoAfterNextPresentationUpdateAfterCrash.mm
 Tests/WebKitCocoa/DocumentEditingContext.mm
-Tests/WebKitCocoa/DoubleDefersLoading.mm
 Tests/WebKitCocoa/Download.mm
 Tests/WebKitCocoa/DownloadProgress.mm
 Tests/WebKitCocoa/DragAndDropTests.mm

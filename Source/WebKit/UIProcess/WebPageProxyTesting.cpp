@@ -74,11 +74,6 @@ uint64_t WebPageProxyTesting::messageSenderDestinationID() const
     return protectedPage()->webPageIDInMainFrameProcess().toUInt64();
 }
 
-void WebPageProxyTesting::setDefersLoading(bool defersLoading)
-{
-    send(Messages::WebPageTesting::SetDefersLoading(defersLoading));
-}
-
 void WebPageProxyTesting::dispatchActivityStateUpdate()
 {
     RunLoop::protectedCurrent()->dispatch([protectedPage = protectedPage()] {

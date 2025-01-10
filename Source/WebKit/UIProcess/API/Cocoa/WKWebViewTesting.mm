@@ -337,12 +337,6 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
 #endif
 }
 
-- (void)_setDefersLoadingForTesting:(BOOL)defersLoading
-{
-    if (RefPtr pageForTesting = _page->pageForTesting())
-        pageForTesting->setDefersLoading(defersLoading);
-}
-
 - (void)_setShareSheetCompletesImmediatelyWithResolutionForTesting:(BOOL)resolved
 {
     _resolutionForShareSheetImmediateCompletionForTesting = resolved;

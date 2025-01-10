@@ -55,7 +55,6 @@ private:
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
     bool didReceiveSyncMessage(IPC::Connection&, IPC::Decoder&, UniqueRef<IPC::Encoder>&) override;
 
-    void setDefersLoading(bool);
     void isLayerTreeFrozen(CompletionHandler<void(bool)>&&);
     void setPermissionLevel(const String& origin, bool allowed);
     void isEditingCommandEnabled(const String& commandName, CompletionHandler<void(bool)>&&);
