@@ -412,9 +412,9 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
 
     Modules/identity/CredentialRequestCoordinator.h
     Modules/identity/CredentialRequestCoordinatorClient.h
+    Modules/identity/DigitalCredentialRequest.h
     Modules/identity/DigitalCredentialRequestOptions.h
     Modules/identity/IdentityCredentialsContainer.h
-    Modules/identity/IdentityRequestProvider.h
     Modules/identity/OpenID4VPRequest.h
 
     Modules/indexeddb/IDBActiveDOMObject.h

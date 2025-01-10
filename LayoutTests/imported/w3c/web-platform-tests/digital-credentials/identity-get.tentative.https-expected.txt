@@ -1,9 +1,9 @@
 
 
 PASS Calling navigator.identity.get() without an digital member same origin.
-PASS navigator.identity.get() API rejects if there are no providers.
-PASS navigator.identity.get() API rejects if there are no providers for same-origin iframe.
-FAIL navigator.identity.get() API rejects if there are no providers in cross-origin iframe. assert_equals: expected "TypeError" but got "DOMException"
+PASS navigator.identity.get() API rejects if there are no requests.
+PASS navigator.identity.get() API rejects if there are no requests for same-origin iframe.
+FAIL navigator.identity.get() API rejects if there are no requests in cross-origin iframe. assert_equals: expected "TypeError" but got "DOMException"
 PASS navigator.identity.get() promise is rejected if called with an aborted signal.
 PASS navigator.identity.get() promise is rejected if called with an aborted signal in same-origin iframe.
 PASS navigator.identity.get() promise is rejected if called with an aborted signal in cross-origin iframe.

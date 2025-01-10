@@ -13,10 +13,10 @@ partial dictionary CredentialRequestOptions {
 };
 
 dictionary DigitalCredentialRequestOptions {
-    sequence<IdentityRequestProvider> providers;
+    sequence<DigitalCredentialRequest> requests;
 };
 
-dictionary IdentityRequestProvider {
+dictionary DigitalCredentialRequest {
     required DOMString protocol;
     required object request;
 };

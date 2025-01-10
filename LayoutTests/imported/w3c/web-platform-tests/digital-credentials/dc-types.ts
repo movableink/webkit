@@ -6,9 +6,9 @@ export type CredentialMediationRequirement =
   | "silent";
 
 /**
- * @see https://wicg.github.io/digital-credentials/#dom-identityrequestprovider
+ * @see https://wicg.github.io/digital-credentials/#the-digitalcredentialrequest-dictionary
  */
-export interface IdentityRequestProvider {
+export interface DigitalCredentialRequest {
   protocol: string;
   data: object;
 }
@@ -18,9 +18,9 @@ export interface IdentityRequestProvider {
  */
 export interface DigitalCredentialRequestOptions {
   /**
-   * The list of identity request providers
+   * The list of identity requests.
    */
-  providers: IdentityRequestProvider[] | any;
+  requests: DigitalCredentialRequest[] | any;
 }
 
 /**

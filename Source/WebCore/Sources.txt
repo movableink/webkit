@@ -3746,6 +3746,7 @@ JSDeviceMotionEvent.cpp
 JSDeviceOrientationEvent.cpp
 JSDeviceOrientationOrMotionPermissionState.cpp
 JSDigitalCredential.cpp
+JSDigitalCredentialRequest.cpp
 JSDigitalCredentialRequestOptions.cpp
 JSDistanceModelType.cpp
 JSDocument.cpp
@@ -4101,7 +4102,6 @@ JSIDBTransactionDurability.cpp
 JSIDBTransactionMode.cpp
 JSIDBVersionChangeEvent.cpp
 JSIdentityCredentialProtocol.cpp
-JSIdentityRequestProvider.cpp
 JSIdleDeadline.cpp
 JSIdleRequestCallback.cpp
 JSIdleRequestOptions.cpp

@@ -6375,13 +6375,13 @@ struct WebCore::MockWebAuthenticationConfiguration {
 struct WebCore::OpenID4VPRequest {
 };
 
-[Nested] struct WebCore::IdentityRequestProvider {
+[Nested] struct WebCore::DigitalCredentialRequest {
     WebCore::IdentityCredentialProtocol protocol;
     WebCore::OpenID4VPRequest data;
 };
 
 struct WebCore::DigitalCredentialRequestOptions {
-    Vector<WebCore::IdentityRequestProvider> providers;
+    Vector<WebCore::DigitalCredentialRequest> requests;
 };
 
 enum class WebCore::IdentityCredentialProtocol : uint8_t {

@@ -23,7 +23,16 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-dictionary IdentityRequestProvider {
-    required IdentityCredentialProtocol protocol;
-    required OpenID4VPRequest data;
+#pragma once
+
+#include "IdentityCredentialProtocol.h"
+#include "OpenID4VPRequest.h"
+
+namespace WebCore {
+
+struct DigitalCredentialRequest {
+    IdentityCredentialProtocol protocol;
+    OpenID4VPRequest data;
 };
+
+} // namespace WebCore

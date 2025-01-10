@@ -86,8 +86,8 @@ void IdentityCredentialsContainer::get(CredentialRequestOptions&& options, Crede
         return;
     }
 
-    if (options.digital->providers.isEmpty()) {
-        promise.reject(Exception { ExceptionCode::TypeError, "At least one provider must be specified."_s });
+    if (options.digital->requests.isEmpty()) {
+        promise.reject(Exception { ExceptionCode::TypeError, "At least one request must present."_s });
         return;
     }
 
