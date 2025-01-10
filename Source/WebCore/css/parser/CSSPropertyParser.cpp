@@ -91,6 +91,7 @@
 #include "TimingFunction.h"
 #include "TransformOperationsBuilder.h"
 #include <memory>
+#include <wtf/IndexedRange.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilder.h>
@@ -769,10 +770,8 @@ bool CSSPropertyParser::consumeFont(bool important)
 
     m_range = range;
     auto shorthand = fontShorthand();
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    for (unsigned i = 0; i < shorthand.length(); ++i)
-        addProperty(shorthand.properties()[i], CSSPropertyFont, i < std::size(values) ? WTFMove(values[i]) : nullptr, important, true);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    for (auto [i, longhand] : indexedRange(shorthand.propertiesSpan()))
+        addProperty(longhand, CSSPropertyFont, i < values.size() ? WTFMove(values[i]) : nullptr, important, true);
 
     return true;
 }
