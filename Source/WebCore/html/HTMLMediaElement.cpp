@@ -1506,12 +1506,7 @@ void HTMLMediaElement::prepareForLoad()
         // FIXME: Add support for firing this event. e.g., scheduleEvent(eventNames().timeUpdateEvent);
 
         // 4.9 - Set the initial playback position to 0.
-        // FIXME: Make this less subtle. The position only becomes 0 because of the createMediaPlayer() call
-        // above.
-        refreshCachedTime();
-
-        invalidateCachedTime();
-
+        invalidateOfficialPlaybackPosition();
         // 4.10 - Set the timeline offset to Not-a-Number (NaN).
         // 4.11 - Update the duration attribute to Not-a-Number (NaN).
 
@@ -1544,7 +1539,7 @@ void HTMLMediaElement::prepareForLoad()
 
 void HTMLMediaElement::mediaPlayerReloadAndResumePlaybackIfNeeded()
 {
-    auto previousMediaTime = m_cachedTime;
+    auto previousMediaTime = m_player ? RefPtr { m_player }->currentTime() : MediaTime::zeroTime();
     bool wasPaused = paused();
 
     load();
@@ -3139,7 +3134,7 @@ void HTMLMediaElement::setReadyState(MediaPlayer::ReadyState state)
     } else {
         if (wasPotentiallyPlaying && m_readyState < HAVE_FUTURE_DATA) {
             // 4.8.10.8
-            invalidateCachedTime();
+            invalidateOfficialPlaybackPosition();
             scheduleTimeupdateEvent(false);
             scheduleEvent(eventNames().waitingEvent);
         }
@@ -3248,7 +3243,7 @@ void HTMLMediaElement::setReadyState(MediaPlayer::ReadyState state)
             if (canTransition) {
                 setPaused(false);
                 setShowPosterFlag(false);
-                invalidateCachedTime();
+                invalidateOfficialPlaybackPosition();
                 setAutoplayEventPlaybackState(AutoplayEventPlaybackState::StartedWithoutUserGesture);
                 m_playbackStartedTime = currentMediaTime().toDouble();
                 scheduleEvent(eventNames().playEvent);
@@ -3683,8 +3678,7 @@ void HTMLMediaElement::fastSeek(const MediaTime& time)
     // playback position, then the adjusted new playback position must also be before the current playback
     // position. Similarly, if the new playback position before this step is after current playback position,
     // then the adjusted new playback position must also be after the current playback position.
-    refreshCachedTime();
-
+    invalidateOfficialPlaybackPosition();
     MediaTime delta = time - currentMediaTime();
     MediaTime negativeTolerance = delta < MediaTime::zeroTime() ? MediaTime::positiveInfiniteTime() : delta;
     seekWithTolerance({ time, negativeTolerance, MediaTime::zeroTime() }, true);
@@ -3762,7 +3756,7 @@ void HTMLMediaElement::seekWithTolerance(const SeekTarget& target, bool fromDOM)
         prepareToPlay();
 
     // Get the current time before setting m_seeking, m_lastSeekTime is returned once it is set.
-    refreshCachedTime();
+    invalidateOfficialPlaybackPosition();
     MediaTime now = currentMediaTime();
 
     // 3 - If the element's seeking IDL attribute is true, then another instance of this algorithm is
@@ -3910,7 +3904,7 @@ void HTMLMediaElement::clearSeeking()
     m_seekRequested = false;
     m_pendingSeekType = NoSeek;
     m_wasPlayingBeforeSeeking = false;
-    invalidateCachedTime();
+    invalidateOfficialPlaybackPosition();
 }
 
 void HTMLMediaElement::finishSeek()
@@ -3987,34 +3981,9 @@ void HTMLMediaElement::setSeeking(bool seeking)
     m_seeking = seeking;
 }
 
-void HTMLMediaElement::refreshCachedTime() const
+void HTMLMediaElement::invalidateOfficialPlaybackPosition()
 {
-    if (!m_player)
-        return;
-
-    m_cachedTime = m_player->currentTime();
-    if (!m_cachedTime) {
-        // Do not use m_cachedTime until the media engine returns a non-zero value because we can't
-        // estimate current time until playback actually begins.
-        invalidateCachedTime();
-        return;
-    }
-
-    m_clockTimeAtLastCachedTimeUpdate = MonotonicTime::now();
-}
-
-void HTMLMediaElement::invalidateCachedTime() const
-{
-    m_cachedTime = MediaTime::invalidTime();
-    if (!m_player || !m_player->maximumDurationToCacheMediaTime())
-        return;
-
-    // Don't try to cache movie time when playback first starts as the time reported by the engine
-    // sometimes fluctuates for a short amount of time, so the cached time will be off if we take it
-    // too early.
-    static const Seconds minimumTimePlayingBeforeCacheSnapshot = 500_ms;
-
-    m_minimumClockTimeToUpdateCachedTime = MonotonicTime::now() + minimumTimePlayingBeforeCacheSnapshot;
+    m_officialPlaybackPosition = MediaTime::invalidTime();
 }
 
 // playback state
@@ -4025,8 +3994,6 @@ double HTMLMediaElement::currentTime() const
 
 MediaTime HTMLMediaElement::currentMediaTime() const
 {
-    static const MediaTime minCachedDeltaForWarning = MediaTime::createWithDouble(1);
-
     if (!m_player)
         return MediaTime::zeroTime();
 
@@ -4038,51 +4005,14 @@ MediaTime HTMLMediaElement::currentMediaTime() const
         return m_lastSeekTime;
     }
 
-    bool shouldCheckDrift = willLog(WTFLogLevel::Debug);
-    if (m_cachedTime.isValid() && m_paused) {
-        if (shouldCheckDrift) {
-            MediaTime delta = m_cachedTime - m_player->currentTime();
-            if (delta > minCachedDeltaForWarning)
-                WARNING_LOG(LOGIDENTIFIER, "cached time is ", delta, " seconds off of media time when paused");
-        }
+    if (m_officialPlaybackPosition.isValid() && m_paused)
+        return m_officialPlaybackPosition;
 
-        return m_cachedTime;
-    }
-
-    // Is it too soon to use a cached time?
-    MonotonicTime now = MonotonicTime::now();
-    double maximumDurationToCacheMediaTime = m_player->maximumDurationToCacheMediaTime();
-
-    if (maximumDurationToCacheMediaTime && m_cachedTime.isValid() && !m_paused && now > m_minimumClockTimeToUpdateCachedTime) {
-        Seconds clockDelta = now - m_clockTimeAtLastCachedTimeUpdate;
-
-        // Not too soon, use the cached time only if it hasn't expired.
-        if (clockDelta.seconds() < maximumDurationToCacheMediaTime) {
-            MediaTime adjustedCacheTime = m_cachedTime + MediaTime::createWithDouble(effectivePlaybackRate() * clockDelta.seconds());
-
-            if (shouldCheckDrift) {
-                auto delta = adjustedCacheTime - m_player->currentTime();
-                if (delta > minCachedDeltaForWarning)
-                    WARNING_LOG(LOGIDENTIFIER, "cached time is ", delta, " seconds off of media time when playing");
-            }
-
-            return adjustedCacheTime;
-        }
-    }
-
-    if (shouldCheckDrift && m_cachedTime.isValid() && maximumDurationToCacheMediaTime && now > m_minimumClockTimeToUpdateCachedTime) {
-        Seconds clockDelta = now - m_clockTimeAtLastCachedTimeUpdate;
-        auto delta = m_cachedTime + MediaTime::createWithDouble(effectivePlaybackRate() * clockDelta.seconds()) - m_player->currentTime();
-        if (delta > minCachedDeltaForWarning)
-            WARNING_LOG(LOGIDENTIFIER, "cached time was ", delta, " seconds off of media time when it expired");
-    }
-
-    refreshCachedTime();
-
-    if (m_cachedTime.isInvalid())
+    m_officialPlaybackPosition = m_player->currentTime();
+    if (m_officialPlaybackPosition.isInvalid())
         return MediaTime::zeroTime();
 
-    return m_cachedTime;
+    return m_officialPlaybackPosition;
 }
 
 void HTMLMediaElement::setCurrentTime(double time)
@@ -4239,7 +4169,6 @@ void HTMLMediaElement::setPlaybackRate(double rate)
 
     if (m_requestedPlaybackRate != rate) {
         m_reportedPlaybackRate = m_requestedPlaybackRate = rate;
-        invalidateCachedTime();
         scheduleEvent(eventNames().ratechangeEvent);
     }
 }
@@ -4406,7 +4335,7 @@ void HTMLMediaElement::playInternal()
     if (m_paused) {
         setPaused(false);
         setShowPosterFlag(false);
-        invalidateCachedTime();
+        invalidateOfficialPlaybackPosition();
 
         // This avoids the first timeUpdated event after playback starts, when currentTime is still
         // the same as it was when the video was paused (and the time hasn't changed yet).
@@ -5810,7 +5739,7 @@ void HTMLMediaElement::mediaPlayerTimeChanged()
 
     beginProcessingMediaPlayerCallback();
 
-    invalidateCachedTime();
+    invalidateOfficialPlaybackPosition();
     bool wasSeeking = seeking();
 
     // 4.8.10.9 step 14 & 15.  Needed if no ReadyState change is associated with the seek.
@@ -6001,9 +5930,6 @@ void HTMLMediaElement::mediaPlayerRateChanged()
         startWatchtimeTimer();
     else
         pauseWatchtimeTimer();
-
-    if (m_playing)
-        invalidateCachedTime();
 
     updateSleepDisabling();
 
@@ -6399,7 +6325,7 @@ void HTMLMediaElement::updatePlayState()
     if (m_pausedInternal) {
         if (!m_player->paused())
             pausePlayer();
-        refreshCachedTime();
+        invalidateOfficialPlaybackPosition();
         m_playbackProgressTimer.stop();
         return;
     }
@@ -6421,7 +6347,7 @@ void HTMLMediaElement::updatePlayState()
 
     schedulePlaybackControlsManagerUpdate();
     if (shouldBePlaying) {
-        invalidateCachedTime();
+        invalidateOfficialPlaybackPosition();
 
         if (playerPaused) {
             mediaSession().clientWillBeginPlayback();
@@ -6451,7 +6377,6 @@ void HTMLMediaElement::updatePlayState()
             pausePlayer();
             pauseSpeakingCueText();
         }
-        refreshCachedTime();
 
         m_playbackProgressTimer.stop();
         setPlaying(false);

@@ -1184,6 +1184,8 @@ media/media-webm-opus-error.html [ Failure ]
 media/media-webm-opus-variable-length.html [ Failure ]
 media/media-webm-no-duration.html [ Failure ]
 
+media/video-currenttime-monotonic.html [ Failure ]
+
 # Screenshots timeline does not capture screenshots for changes in WebKitLegacy.
 webkit.org/b/251113 inspector/timeline/timeline-event-screenshots.html [ Skip ]
 

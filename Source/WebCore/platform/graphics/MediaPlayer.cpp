@@ -1366,11 +1366,6 @@ MediaTime MediaPlayer::mediaTimeForTimeValue(const MediaTime& timeValue) const
     return m_private->mediaTimeForTimeValue(timeValue);
 }
 
-double MediaPlayer::maximumDurationToCacheMediaTime() const
-{
-    return m_private->maximumDurationToCacheMediaTime();
-}
-
 unsigned MediaPlayer::decodedFrameCount() const
 {
     return m_private->decodedFrameCount();

@@ -985,8 +985,7 @@ private:
 
     void mediaCanStart(Document&) final;
 
-    void invalidateCachedTime() const;
-    void refreshCachedTime() const;
+    void invalidateOfficialPlaybackPosition();
 
     void configureMediaControls();
 
@@ -1223,9 +1222,7 @@ private:
 #endif
 
     MediaTime m_defaultPlaybackStartPosition = MediaTime::zeroTime();
-    mutable MediaTime m_cachedTime;
-    mutable MonotonicTime m_clockTimeAtLastCachedTimeUpdate;
-    mutable MonotonicTime m_minimumClockTimeToUpdateCachedTime;
+    mutable MediaTime m_officialPlaybackPosition { MediaTime::invalidTime() };
 
     MediaTime m_fragmentStartTime;
     MediaTime m_fragmentEndTime;

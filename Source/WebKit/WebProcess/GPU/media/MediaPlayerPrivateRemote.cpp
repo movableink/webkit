@@ -128,11 +128,17 @@ MediaTime MediaPlayerPrivateRemote::TimeProgressEstimator::currentTime() const
 MediaTime MediaPlayerPrivateRemote::TimeProgressEstimator::currentTimeWithLockHeld() const
 {
     assertIsHeld(m_lock);
-    if (!m_timeIsProgressing)
+    if (!m_timeIsProgressing || m_forceUseCachedTime)
         return m_cachedMediaTime;
 
     auto calculatedCurrentTime = m_cachedMediaTime + MediaTime::createWithDouble(m_rate * (MonotonicTime::now() - m_cachedMediaTimeQueryTime).seconds());
-    return std::min(std::max(calculatedCurrentTime, MediaTime::zeroTime()), protectedParent()->duration());
+    calculatedCurrentTime = std::min(std::max(calculatedCurrentTime, MediaTime::zeroTime()), protectedParent()->duration());
+    if (m_rate >= 0)
+        calculatedCurrentTime = std::max(m_lastReturnedTime.value_or(calculatedCurrentTime), calculatedCurrentTime);
+    else
+        calculatedCurrentTime = std::min(m_lastReturnedTime.value_or(calculatedCurrentTime), calculatedCurrentTime);
+    m_lastReturnedTime = calculatedCurrentTime;
+    return calculatedCurrentTime;
 }
 
 MediaTime MediaPlayerPrivateRemote::TimeProgressEstimator::cachedTime() const
@@ -145,6 +151,12 @@ MediaTime MediaPlayerPrivateRemote::TimeProgressEstimator::cachedTimeWithLockHel
 {
     assertIsHeld(m_lock);
     return m_cachedMediaTime;
+}
+
+void MediaPlayerPrivateRemote::TimeProgressEstimator::forceUseOfCachedTimeUntilNextSetTime()
+{
+    Locker locker { m_lock };
+    m_forceUseCachedTime = true;
 }
 
 bool MediaPlayerPrivateRemote::TimeProgressEstimator::timeIsProgressing() const
@@ -169,6 +181,9 @@ void MediaPlayerPrivateRemote::TimeProgressEstimator::setTime(const MediaTimeUpd
     m_cachedMediaTime = timeData.currentTime;
     m_cachedMediaTimeQueryTime = timeData.wallTime;
     m_timeIsProgressing = timeData.timeIsProgressing;
+    if (!m_timeIsProgressing)
+        m_lastReturnedTime.reset();
+    m_forceUseCachedTime = false;
 }
 
 void MediaPlayerPrivateRemote::TimeProgressEstimator::setRate(double value)
@@ -502,7 +517,7 @@ void MediaPlayerPrivateRemote::muteChanged(bool muted)
 
 void MediaPlayerPrivateRemote::seeked(MediaTimeUpdateData&& timeData)
 {
-    ALWAYS_LOG(LOGIDENTIFIER, timeData.currentTime);
+    ALWAYS_LOG(LOGIDENTIFIER, "currentTime:", timeData.currentTime, " timeIsProgressing:", timeData.timeIsProgressing);
     m_seeking = false;
     m_currentTimeEstimator.setTime(timeData);
     if (auto player = m_player.get())
@@ -511,7 +526,7 @@ void MediaPlayerPrivateRemote::seeked(MediaTimeUpdateData&& timeData)
 
 void MediaPlayerPrivateRemote::timeChanged(RemoteMediaPlayerState&& state, MediaTimeUpdateData&& timeData)
 {
-    ALWAYS_LOG(LOGIDENTIFIER, timeData.currentTime);
+    ALWAYS_LOG(LOGIDENTIFIER, "currentTime:", timeData.currentTime, " timeIsProgressing:", timeData.timeIsProgressing);
     updateCachedState(WTFMove(state));
     m_currentTimeEstimator.setTime(timeData);
     if (auto player = m_player.get())
@@ -536,13 +551,16 @@ void MediaPlayerPrivateRemote::rateChanged(double rate, MediaTimeUpdateData&& ti
     m_rate = rate;
     m_currentTimeEstimator.setRate(rate);
     m_currentTimeEstimator.setTime(timeData);
+    // Force to use the cached time so that the next call to currentTime() will return the cached time.
+    // Time will progress following the next call to currentTimeChanged.
+    m_currentTimeEstimator.forceUseOfCachedTimeUntilNextSetTime();
     if (auto player = m_player.get())
         player->rateChanged();
 }
 
 void MediaPlayerPrivateRemote::playbackStateChanged(bool paused, MediaTimeUpdateData&& timeData)
 {
-    INFO_LOG(LOGIDENTIFIER, timeData.currentTime);
+    INFO_LOG(LOGIDENTIFIER, "currentTime:", timeData.currentTime, " timeIsProgressing:", timeData.timeIsProgressing);
     m_cachedState.paused = paused;
     m_currentTimeEstimator.setTime(timeData);
     if (auto player = m_player.get())
@@ -572,7 +590,7 @@ void MediaPlayerPrivateRemote::sizeChanged(WebCore::FloatSize naturalSize)
 
 void MediaPlayerPrivateRemote::currentTimeChanged(MediaTimeUpdateData&& timeData)
 {
-    INFO_LOG(LOGIDENTIFIER, timeData.currentTime, " seeking:", bool(m_seeking));
+    INFO_LOG(LOGIDENTIFIER, "currentTime:", timeData.currentTime, " timeIsProgressing:", timeData.timeIsProgressing, " seeking:", bool(m_seeking));
     if (m_seeking)
         return;
     auto oldCachedTime = m_currentTimeEstimator.cachedTime();
@@ -1348,11 +1366,6 @@ MediaTime MediaPlayerPrivateRemote::mediaTimeForTimeValue(const MediaTime& timeV
 {
     notImplemented();
     return timeValue;
-}
-
-double MediaPlayerPrivateRemote::maximumDurationToCacheMediaTime() const
-{
-    return m_configuration.maximumDurationToCacheMediaTime;
 }
 
 unsigned MediaPlayerPrivateRemote::decodedFrameCount() const

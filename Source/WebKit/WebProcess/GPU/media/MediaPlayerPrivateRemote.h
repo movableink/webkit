@@ -222,6 +222,7 @@ private:
         Lock& lock() const { return m_lock; };
         MediaTime currentTimeWithLockHeld() const;
         MediaTime cachedTimeWithLockHeld() const;
+        void forceUseOfCachedTimeUntilNextSetTime();
 
     private:
         Ref<const MediaPlayerPrivateRemote> protectedParent() const { return m_parent.get().releaseNonNull(); }
@@ -231,6 +232,8 @@ private:
         MediaTime m_cachedMediaTime WTF_GUARDED_BY_LOCK(m_lock);
         MonotonicTime m_cachedMediaTimeQueryTime WTF_GUARDED_BY_LOCK(m_lock);
         double m_rate WTF_GUARDED_BY_LOCK(m_lock) { 1.0 };
+        mutable std::optional<MediaTime> m_lastReturnedTime WTF_GUARDED_BY_LOCK(m_lock);
+        bool m_forceUseCachedTime WTF_GUARDED_BY_LOCK(m_lock) { false };
         ThreadSafeWeakPtr<const MediaPlayerPrivateRemote> m_parent; // Cannot be null.
     };
     TimeProgressEstimator m_currentTimeEstimator;
@@ -381,8 +384,6 @@ private:
     void prepareForRendering() final;
 
     MediaTime mediaTimeForTimeValue(const MediaTime& timeValue) const final;
-
-    double maximumDurationToCacheMediaTime() const final;
 
     unsigned decodedFrameCount() const final;
     unsigned droppedFrameCount() const final;

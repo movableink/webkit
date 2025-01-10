@@ -595,8 +595,6 @@ public:
 
     MediaTime mediaTimeForTimeValue(const MediaTime&) const;
 
-    double maximumDurationToCacheMediaTime() const;
-
     unsigned decodedFrameCount() const;
     unsigned droppedFrameCount() const;
     unsigned audioDecodedByteCount() const;
