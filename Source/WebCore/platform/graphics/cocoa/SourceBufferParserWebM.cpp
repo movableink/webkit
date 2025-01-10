@@ -48,12 +48,11 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/darwin/WeakLinking.h>
 #include <wtf/spi/darwin/OSVariantSPI.h>
+#include <wtf/text/ParsingUtilities.h>
 
 #include "CoreVideoSoftLink.h"
 
 WTF_WEAK_LINK_FORCE_IMPORT(webm::swap);
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WTF {
 
@@ -274,17 +273,18 @@ public:
             --m_currentSegment;
     }
 
-    Status Read(std::size_t numToRead, uint8_t* outputBuffer, uint64_t* numActuallyRead) final
+    Status Read(std::size_t numToRead, uint8_t* rawOutputBuffer, uint64_t* numActuallyRead) final
     {
-        ASSERT(outputBuffer && numActuallyRead);
+        ASSERT(rawOutputBuffer && numActuallyRead);
         if (!numActuallyRead)
             return Status(Status::kNotEnoughMemory);
 
         *numActuallyRead = 0;
-        if (!outputBuffer)
+        if (!rawOutputBuffer)
             return Status(Status::kNotEnoughMemory);
+        auto outputBuffer = unsafeMakeSpan(rawOutputBuffer, numToRead);
 
-        while (numToRead && m_currentSegment != m_data.end()) {
+        while (!outputBuffer.empty() && m_currentSegment != m_data.end()) {
             auto& currentSegment = *m_currentSegment;
 
             if (m_positionWithinSegment >= currentSegment.size()) {
@@ -292,18 +292,18 @@ public:
                 continue;
             }
 
-            auto readResult = currentSegment.read({ outputBuffer, numToRead }, m_positionWithinSegment);
+            auto readResult = currentSegment.read(outputBuffer, m_positionWithinSegment);
             if (!readResult.has_value())
                 return segmentReadErrorToWebmStatus(readResult.error());
             auto lastRead = readResult.value();
             m_position += lastRead;
             *numActuallyRead += lastRead;
             m_positionWithinSegment += lastRead;
-            numToRead -= lastRead;
+            skip(outputBuffer, lastRead);
             if (m_positionWithinSegment == currentSegment.size())
                 advanceToNextSegment();
         }
-        if (!numToRead)
+        if (outputBuffer.empty())
             return Status(Status::kOkCompleted);
         if (*numActuallyRead)
             return Status(Status::kOkPartial);
@@ -1604,7 +1604,5 @@ void SourceBufferParserWebM::setMinimumAudioSampleDuration(float duration)
 }
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(MEDIA_SOURCE)
