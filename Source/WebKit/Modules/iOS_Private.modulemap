@@ -2129,7 +2129,7 @@ framework module WebKit_Private [system] {
     export *
   }
 
-#ifdef ENABLE_IOS_TOUCH_EVENTS
+#if ENABLE(IOS_TOUCH_EVENTS)
   explicit module WebEventRegion {
     header "WebEventRegion.h"
     export *

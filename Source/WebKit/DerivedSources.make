@@ -969,11 +969,6 @@ JSWebExtensionAPIUnified.mm: $(BINDINGS_SCRIPTS) $(EXTENSION_INTERFACES:%=JS%.mm
 
 all : JSWebExtensionAPIUnified.mm $(EXTENSION_INTERFACES:%=JS%.h) $(EXTENSION_INTERFACES:%=JS%.mm)
 
-module.private.modulemap : $(WK_MODULEMAP_PRIVATE_FILE)
-	unifdef $(addprefix -D, $(FEATURE_AND_PLATFORM_DEFINES)) $(addprefix -U, $(FEATURE_AND_PLATFORM_UNDEFINES)) -o $@ $< || [ $$? -eq 1 ]
-
-all : module.private.modulemap
-
 ifeq ($(USE_INTERNAL_SDK),YES)
 WEBKIT_ADDITIONS_SWIFT_FILES = \
 	WKSeparatedImageView.swift \
