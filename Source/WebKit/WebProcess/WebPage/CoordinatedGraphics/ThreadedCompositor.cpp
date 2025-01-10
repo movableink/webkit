@@ -126,7 +126,6 @@ ThreadedCompositor::ThreadedCompositor(LayerTreeHost& layerTreeHost, ThreadedDis
                 m_flipY = !m_flipY;
 
             m_surface->didCreateGLContext();
-            m_scene->setActive(true);
         }
     });
 }
@@ -181,9 +180,6 @@ void ThreadedCompositor::suspend()
         return;
 
     m_compositingRunLoop->suspend();
-    m_compositingRunLoop->performTaskSync([this, protectedThis = Ref { *this }] {
-        m_scene->setActive(false);
-    });
 }
 
 void ThreadedCompositor::resume()
@@ -195,9 +191,6 @@ void ThreadedCompositor::resume()
     if (--m_suspendedCount > 0)
         return;
 
-    m_compositingRunLoop->performTaskSync([this, protectedThis = Ref { *this }] {
-        m_scene->setActive(true);
-    });
     m_compositingRunLoop->resume();
 }
 
@@ -251,12 +244,13 @@ const Damage& ThreadedCompositor::addSurfaceDamage(const Damage& damage)
 
 void ThreadedCompositor::renderLayerTree()
 {
+    ASSERT(m_scene);
     ASSERT(m_compositingRunLoop->isCurrent());
 #if PLATFORM(GTK) || PLATFORM(WPE)
     TraceScope traceScope(RenderLayerTreeStart, RenderLayerTreeEnd);
 #endif
 
-    if (!m_scene || !m_scene->isActive())
+    if (m_suspendedCount > 0)
         return;
 
     if (!m_context || !m_context->makeContextCurrent())

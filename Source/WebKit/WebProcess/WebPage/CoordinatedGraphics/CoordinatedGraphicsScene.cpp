@@ -134,7 +134,6 @@ void CoordinatedGraphicsScene::purgeGLResources()
 void CoordinatedGraphicsScene::detach()
 {
     ASSERT(RunLoop::isMain());
-    m_isActive = false;
     m_client = nullptr;
 }
 

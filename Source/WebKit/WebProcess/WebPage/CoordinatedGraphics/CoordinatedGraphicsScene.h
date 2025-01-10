@@ -63,9 +63,6 @@ public:
 
     void purgeGLResources();
 
-    bool isActive() const { return m_isActive; }
-    void setActive(bool active) { m_isActive = active; }
-
 #if ENABLE(DAMAGE_TRACKING)
     void setDamagePropagation(WebCore::Damage::Propagation damagePropagation) { m_damagePropagation = damagePropagation; }
 #endif
@@ -76,7 +73,6 @@ private:
     Ref<CoordinatedSceneState> m_sceneState;
     std::unique_ptr<WebCore::TextureMapper> m_textureMapper;
     CoordinatedGraphicsSceneClient* m_client { nullptr };
-    bool m_isActive { false };
     WebCore::TextureMapperFPSCounter m_fpsCounter;
 #if ENABLE(DAMAGE_TRACKING)
     WebCore::Damage::Propagation m_damagePropagation { WebCore::Damage::Propagation::None };
