@@ -136,7 +136,7 @@ LayerTreeHost::LayerTreeHost(WebPage& webPage)
 
 LayerTreeHost::~LayerTreeHost() = default;
 
-void LayerTreeHost::setLayerFlushSchedulingEnabled(bool)
+void LayerTreeHost::setLayerTreeStateIsFrozen(bool)
 {
 }
 

@@ -131,28 +131,24 @@ LayerTreeHost::~LayerTreeHost()
     m_compositor->invalidate();
 }
 
-void LayerTreeHost::setLayerFlushSchedulingEnabled(bool layerFlushingEnabled)
+void LayerTreeHost::setLayerTreeStateIsFrozen(bool isFrozen)
 {
-    if (m_layerFlushSchedulingEnabled == layerFlushingEnabled)
+    if (m_layerTreeStateIsFrozen == isFrozen)
         return;
 
-    m_layerFlushSchedulingEnabled = layerFlushingEnabled;
+    m_layerTreeStateIsFrozen = isFrozen;
 
-    if (m_layerFlushSchedulingEnabled) {
-        m_compositor->resume();
+    if (m_layerTreeStateIsFrozen)
+        cancelPendingLayerFlush();
+    else
         scheduleLayerFlush();
-        return;
-    }
-
-    cancelPendingLayerFlush();
-    m_compositor->suspend();
 }
 
 void LayerTreeHost::scheduleLayerFlush()
 {
     WTFEmitSignpost(this, ScheduleLayerFlush, "isWaitingForRenderer %i", m_isWaitingForRenderer);
 
-    if (!m_layerFlushSchedulingEnabled)
+    if (m_layerTreeStateIsFrozen)
         return;
 
     if (m_webPage.size().isEmpty())
@@ -174,6 +170,9 @@ void LayerTreeHost::cancelPendingLayerFlush()
 
 void LayerTreeHost::flushLayers()
 {
+    if (m_layerTreeStateIsFrozen)
+        return;
+
 #if PLATFORM(GTK) || PLATFORM(WPE)
     TraceScope traceScope(FlushPendingLayerChangesStart, FlushPendingLayerChangesEnd);
 #endif

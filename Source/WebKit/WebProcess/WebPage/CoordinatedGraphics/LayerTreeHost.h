@@ -93,7 +93,7 @@ public:
     CoordinatedSceneState& sceneState() const { return m_sceneState.get(); }
 
     const LayerTreeContext& layerTreeContext() const { return m_layerTreeContext; }
-    void setLayerFlushSchedulingEnabled(bool);
+    void setLayerTreeStateIsFrozen(bool);
 
     void scheduleLayerFlush();
     void cancelPendingLayerFlush();
@@ -181,7 +181,7 @@ private:
     WebCore::GraphicsLayer* m_overlayCompositingLayer { nullptr };
     HashSet<Ref<WebCore::CoordinatedPlatformLayer>> m_layers;
     bool m_didInitializeRootCompositingLayer { false };
-    bool m_layerFlushSchedulingEnabled { true };
+    bool m_layerTreeStateIsFrozen { false };
     bool m_isPurgingBackingStores { false };
     bool m_isSuspended { false };
     bool m_isWaitingForRenderer { false };

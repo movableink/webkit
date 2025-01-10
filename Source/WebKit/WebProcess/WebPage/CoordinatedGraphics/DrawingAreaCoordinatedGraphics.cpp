@@ -188,7 +188,7 @@ void DrawingAreaCoordinatedGraphics::setLayerTreeStateIsFrozen(bool isFrozen)
     m_layerTreeStateIsFrozen = isFrozen;
 
     if (m_layerTreeHost)
-        m_layerTreeHost->setLayerFlushSchedulingEnabled(!isFrozen);
+        m_layerTreeHost->setLayerTreeStateIsFrozen(isFrozen);
 
     if (isFrozen)
         m_exitCompositingTimer.stop();
@@ -550,7 +550,7 @@ void DrawingAreaCoordinatedGraphics::enterAcceleratedCompositingMode(GraphicsLay
     changeWindowScreen();
 #endif
     if (m_layerTreeStateIsFrozen)
-        m_layerTreeHost->setLayerFlushSchedulingEnabled(false);
+        m_layerTreeHost->setLayerTreeStateIsFrozen(true);
     if (m_isPaintingSuspended)
         m_layerTreeHost->pauseRendering();
 
