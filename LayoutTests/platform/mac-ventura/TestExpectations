@@ -42,3 +42,6 @@ fast/webgpu/nocrash/fuzz-281614.html [ Skip ]
 # These fail with a shader validation error on Ventura, but not on later OSes.
 fast/webgpu/nocrash/fuzz-283071.html [ Skip ]
 fast/webgpu/nocrash/fuzz-283157.html [ Skip ]
+
+# webkit.org/b/285755 [EWS] macOS-Ventura-Release-WK2-Intel-Tests-EWS bots stuck in login page due to window server crashes
+[ x86_64 ] fast/webgpu [ Skip ]
