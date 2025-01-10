@@ -53,8 +53,6 @@
 #include <wtf/URL.h>
 #include <wtf/text/CString.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 MediaPlayerPrivateAVFoundation::MediaPlayerPrivateAVFoundation(MediaPlayer* player)
@@ -910,7 +908,7 @@ WTFLogChannel& MediaPlayerPrivateAVFoundation::logChannel() const
 
 String convertEnumerationToString(MediaPlayerPrivateAVFoundation::MediaRenderingMode enumerationValue)
 {
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 3> values {
         MAKE_STATIC_STRING_IMPL("MediaRenderingNone"),
         MAKE_STATIC_STRING_IMPL("MediaRenderingToContext"),
         MAKE_STATIC_STRING_IMPL("MediaRenderingToLayer"),
@@ -923,7 +921,5 @@ String convertEnumerationToString(MediaPlayerPrivateAVFoundation::MediaRendering
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif

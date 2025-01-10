@@ -135,8 +135,6 @@
 
 #import <pal/cocoa/MediaToolboxSoftLink.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace std {
 template <> struct iterator_traits<HashSet<RefPtr<WebCore::MediaSelectionOptionAVFObjC>>::iterator> {
     typedef RefPtr<WebCore::MediaSelectionOptionAVFObjC> value_type;
@@ -215,7 +213,7 @@ enum MediaPlayerAVFoundationObservationContext {
 namespace WebCore {
 static String convertEnumerationToString(AVPlayerTimeControlStatus enumerationValue)
 {
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 3> values {
         MAKE_STATIC_STRING_IMPL("AVPlayerTimeControlStatusPaused"),
         MAKE_STATIC_STRING_IMPL("AVPlayerTimeControlStatusWaitingToPlayAtSpecifiedRate"),
         MAKE_STATIC_STRING_IMPL("AVPlayerTimeControlStatusPlaying"),
@@ -4448,7 +4446,5 @@ NSArray* playerKVOProperties()
 }
 
 @end
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif

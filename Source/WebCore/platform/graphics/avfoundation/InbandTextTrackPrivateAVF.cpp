@@ -40,6 +40,7 @@
 #include <wtf/StringPrintStream.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/cf/TypeCastsCF.h>
+#include <wtf/cf/VectorCF.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
@@ -47,8 +48,6 @@
 #include <wtf/unicode/CharacterNames.h>
 
 #include <pal/cf/CoreMediaSoftLink.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -78,8 +77,8 @@ static std::optional<SRGBA<uint8_t>> makeSimpleColorFromARGBCFArray(CFArrayRef c
     if (CFArrayGetCount(colorArray) < 4)
         return std::nullopt;
 
-    float componentArray[4];
-    for (int i = 0; i < 4; i++) {
+    std::array<float, 4> componentArray;
+    for (int i = 0; i < 4; ++i) {
         auto value = dynamic_cf_cast<CFNumberRef>(CFArrayGetValueAtIndex(colorArray, i));
         if (!value)
             return std::nullopt;
@@ -556,13 +555,13 @@ void InbandTextTrackPrivateAVF::processNativeSamples(CFArrayRef nativeSamples, c
                 if (!webvttHeaderData)
                     break;
 
-                unsigned length = CFDataGetLength(webvttHeaderData);
-                if (!length)
+                auto headerData = span(webvttHeaderData);
+                if (headerData.empty())
                     break;
 
                 // A WebVTT header is terminated by "One or more WebVTT line terminators" so append two line feeds to make sure the parser
                 // reccognized this string as a full header.
-                auto header = makeString(std::span { CFDataGetBytePtr(webvttHeaderData), length }, "\n\n"_s);
+                auto header = makeString(headerData, "\n\n"_s);
 
                 INFO_LOG(LOGIDENTIFIER, "VTT header ", header);
                 notifyMainThreadClient([&](auto& client) {
@@ -611,7 +610,7 @@ bool InbandTextTrackPrivateAVF::readNativeSampleBuffer(CFArrayRef nativeSamples,
     }
 
     m_sampleInputBuffer.grow(m_sampleInputBuffer.size() + bufferLength);
-    CMBlockBufferCopyDataBytes(blockBuffer, 0, bufferLength, m_sampleInputBuffer.data() + m_sampleInputBuffer.size() - bufferLength);
+    CMBlockBufferCopyDataBytes(blockBuffer, 0, bufferLength, m_sampleInputBuffer.mutableSpan().last(bufferLength).data());
 
     buffer = ArrayBuffer::create(m_sampleInputBuffer);
 
@@ -622,7 +621,5 @@ bool InbandTextTrackPrivateAVF::readNativeSampleBuffer(CFArrayRef nativeSamples,
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(VIDEO) && (USE(AVFOUNDATION) || PLATFORM(IOS_FAMILY))
