@@ -1,7 +1,7 @@
 
 PASS animation-timeline: view() without timeline range name
 PASS animation-timeline: view(50px) without timeline range name
-FAIL animation-timeline: view(auto 50px) without timeline range name assert_equals: At 0% expected "0" but got "0.416667"
+PASS animation-timeline: view(auto 50px) without timeline range name
 PASS animation-timeline: view(inline) without timeline range name
 PASS animation-timeline: view(x) without timeline range name
 PASS animation-timeline: view(y) without timeline range name

@@ -195,7 +195,7 @@ void ViewTimeline::cacheCurrentTime()
         auto subjectSize = scrollDirection->isVertical ? subjectBounds.height() : subjectBounds.width();
 
         auto insetStartLength = m_insets.start.value_or(Length());
-        auto insetEndLength = m_insets.start.value_or(insetStartLength);
+        auto insetEndLength = m_insets.end.value_or(insetStartLength);
         auto insetStart = floatValueForOffset(insetStartLength, scrollContainerSize);
         auto insetEnd = floatValueForOffset(insetEndLength, scrollContainerSize);
 
@@ -266,8 +266,8 @@ ScrollTimeline::Data ViewTimeline::computeTimelineData() const
 
     return {
         m_cachedCurrentTimeData.scrollOffset,
-        rangeStart + m_cachedCurrentTimeData.insetStart,
-        rangeEnd - m_cachedCurrentTimeData.insetEnd
+        rangeStart + m_cachedCurrentTimeData.insetEnd,
+        rangeEnd - m_cachedCurrentTimeData.insetStart
     };
 }
 
