@@ -137,14 +137,18 @@ template<Range R, SingleValueUnitEnum U, typename V> struct PrimitiveNumericRaw<
     static constexpr auto unit = UnitTraits::canonical;
     double value;
 
-    constexpr PrimitiveNumericRaw(double value)
-        : value { value }
+    template<typename T>
+        requires std::integral<T> || std::floating_point<T>
+    constexpr PrimitiveNumericRaw(T value)
+        : value { static_cast<double>(value) }
     {
     }
 
     // Constructor is required to allow generic code to uniformly initialize primitives.
-    constexpr PrimitiveNumericRaw(UnitType, double value)
-        : value { value }
+    template<typename T>
+        requires std::integral<T> || std::floating_point<T>
+    constexpr PrimitiveNumericRaw(UnitType, T value)
+        : value { static_cast<double>(value) }
     {
     }
 

@@ -84,7 +84,9 @@ template<NumericRaw RawType> struct PrimitiveNumeric {
     {
     }
 
-    PrimitiveNumeric(double value) requires (requires { { Raw(value) }; })
+    template<typename T>
+        requires std::integral<T> || std::floating_point<T>
+    PrimitiveNumeric(T value) requires (requires { { Raw(value) }; })
         : PrimitiveNumeric { Raw { value } }
     {
     }

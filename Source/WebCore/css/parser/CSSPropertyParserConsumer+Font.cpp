@@ -404,21 +404,16 @@ static std::optional<UnresolvedFontLineHeight> consumeLineHeightUnresolved(CSSPa
     // <'line-height'> = normal | <number [0,∞]> | <length-percentage [0,∞]>
     // https://www.w3.org/TR/css-inline-3/#line-height-property
 
-    if (range.peek().id() == CSSValueNormal) {
-        if (auto ident = consumeIdentRaw(range))
-            return { { *ident } };
-        return std::nullopt;
-    }
+    using Consumer = MetaConsumer<
+        CSS::Keyword::Normal,
+        CSS::Number<CSS::Nonnegative>,
+        CSS::LengthPercentage<CSS::Nonnegative>
+    >;
 
-    auto rangeCopy = range;
-
-    auto options = CSSPropertyParserOptions { .parserMode = context.mode };
-    auto lineHeight = MetaConsumer<CSS::Number<CSS::Nonnegative>, CSS::LengthPercentage<CSS::Nonnegative>>::consume(rangeCopy, context, { }, options);
-    if (!lineHeight)
-        return std::nullopt;
-
-    range = rangeCopy;
-    return forwardVariantTo<UnresolvedFontLineHeight>(WTFMove(*lineHeight));
+    return Consumer::consume(range, context, { }, { .parserMode = context.mode },
+        [&](CSS::Keyword::Normal) { return UnresolvedFontLineHeight { CSSValueNormal }; },
+        [&](auto&& value) { return UnresolvedFontLineHeight { WTFMove(value) }; }
+    );
 }
 
 // MARK: 'font' (shorthand)
