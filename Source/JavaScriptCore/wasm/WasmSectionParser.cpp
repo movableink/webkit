@@ -178,6 +178,8 @@ auto SectionParser::parseImport() -> PartialResult
             WASM_PARSER_FAIL_IF(functionTypeIndex >= m_info->typeCount(), "invalid function signature for "_s, importNumber, "th Import, "_s, functionTypeIndex, " is out of range of "_s, m_info->typeCount(), " in module '"_s, moduleString, "' field '"_s, fieldString, "'"_s);
             kindIndex = m_info->importFunctionTypeIndices.size();
             TypeIndex typeIndex = TypeInformation::get(m_info->typeSignatures[functionTypeIndex]);
+            auto signature = TypeInformation::tryGetFunctionSignature(typeIndex);
+            WASM_PARSER_FAIL_IF(!signature.has_value(), importNumber, "th Function type "_s, functionTypeIndex, " doesn't have a function signature"_s);
             m_info->importFunctionTypeIndices.append(typeIndex);
             break;
         }
@@ -216,6 +218,9 @@ auto SectionParser::parseImport() -> PartialResult
             WASM_PARSER_FAIL_IF(exceptionSignatureIndex >= m_info->typeCount(), "invalid exception signature for "_s, importNumber, "th Import, "_s, exceptionSignatureIndex, " is out of range of "_s, m_info->typeCount(), " in module '"_s, moduleString, "' field '"_s, fieldString, "'"_s);
             kindIndex = m_info->importExceptionTypeIndices.size();
             TypeIndex typeIndex = TypeInformation::get(m_info->typeSignatures[exceptionSignatureIndex]);
+            auto signature = TypeInformation::tryGetFunctionSignature(typeIndex);
+            WASM_PARSER_FAIL_IF(!signature.has_value(), importNumber, "th Exception type "_s, exceptionSignatureIndex, " doesn't have a function signature"_s);
+            WASM_PARSER_FAIL_IF(!signature.value()->returnsVoid(), importNumber, "th Exception type cannot have a non-void return type "_s, exceptionSignatureIndex);
             m_info->importExceptionTypeIndices.append(typeIndex);
             break;
         }
@@ -244,9 +249,11 @@ auto SectionParser::parseFunction() -> PartialResult
         WASM_PARSER_FAIL_IF(typeNumber >= m_info->typeCount(), i, "th Function type number is invalid "_s, typeNumber);
 
         TypeIndex typeIndex = TypeInformation::get(m_info->typeSignatures[typeNumber]);
+        auto signature = TypeInformation::tryGetFunctionSignature(typeIndex);
         // The Code section fixes up start and end.
         size_t start = 0;
         size_t end = 0;
+        WASM_PARSER_FAIL_IF(!signature.has_value(), i, "th Function type "_s, typeNumber, " doesn't have a function signature"_s);
         m_info->internalFunctionTypeIndices.append(typeIndex);
         m_info->functions.append({ start, end, Vector<uint8_t>() });
     }

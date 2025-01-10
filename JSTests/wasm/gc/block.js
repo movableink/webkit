@@ -37,7 +37,7 @@ function testBlockType() {
         (func (type 0)))
     `),
     WebAssembly.CompileError,
-    "WebAssembly.Module doesn't parse at byte 0: type signature was not a function signature, in function at index 0"
+    "WebAssembly.Module doesn't parse at byte 26: 0th Function type 0 doesn't have a function signature"
   );
 }
 
