@@ -1588,7 +1588,10 @@ private:
             compileMapIterationEntryValue();
             break;
         case MapStorage:
-            compileMapStorage();
+            compileMapStorage(operationMapStorage, operationSetStorage);
+            break;
+        case MapStorageOrSentinel:
+            compileMapStorage(operationMapStorageOrSentinel, operationSetStorageOrSentinel);
             break;
         case MapIteratorNext:
             compileMapIteratorNext();
@@ -14263,7 +14266,8 @@ IGNORE_CLANG_WARNINGS_END
         setJSValue(result);
     }
 
-    void compileMapStorage()
+    template<typename Operation>
+    void compileMapStorage(Operation mapOperation, Operation setOperation)
     {
         JSGlobalObject* globalObject = m_graph.globalObjectFor(m_origin.semantic);
 
@@ -14275,7 +14279,7 @@ IGNORE_CLANG_WARNINGS_END
         else
             RELEASE_ASSERT_NOT_REACHED();
 
-        auto operation = m_node->child1().useKind() == MapObjectUse ? operationMapStorage : operationSetStorage;
+        auto operation = m_node->child1().useKind() == MapObjectUse ? mapOperation : setOperation;
         LValue result = vmCall(Int64, operation, weakPointer(globalObject), map);
         setJSValue(result);
     }

@@ -321,6 +321,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case MapGet:
     case LoadMapValue:
     case MapStorage:
+    case MapStorageOrSentinel:
     case MapIterationNext:
     case MapIterationEntry:
     case MapIterationEntryKey:

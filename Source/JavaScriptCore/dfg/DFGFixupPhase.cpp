@@ -2809,6 +2809,7 @@ private:
             break;
 
         case MapStorage:
+        case MapStorageOrSentinel:
             if (node->child1().useKind() == MapObjectUse)
                 fixEdge<MapObjectUse>(node->child1());
             else if (node->child1().useKind() == SetObjectUse)

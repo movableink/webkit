@@ -3465,7 +3465,7 @@ public:
 
     bool hasBucketOwnerType()
     {
-        return op() == MapIterationNext || op() == MapIterationEntry || op() == MapIterationEntryKey || op() == MapIterationEntryValue || op() == MapStorage;
+        return op() == MapIterationNext || op() == MapIterationEntry || op() == MapIterationEntryKey || op() == MapIterationEntryValue || op() == MapStorage || op() == MapStorageOrSentinel;
     }
 
     unsigned numberOfBoundArguments()

@@ -1501,7 +1501,10 @@ public:
     void compileMapIteratorNext(Node*);
     void compileMapIteratorKey(Node*);
     void compileMapIteratorValue(Node*);
+    template<typename Operation>
+    ALWAYS_INLINE void compileMapStorageImpl(Node*, Operation, Operation);
     void compileMapStorage(Node*);
+    void compileMapStorageOrSentinel(Node*);
     void compileMapIterationNext(Node*);
     void compileMapIterationEntry(Node*);
     void compileMapIterationEntryKey(Node*);

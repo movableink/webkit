@@ -2144,7 +2144,8 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         return;
     }
 
-    case MapStorage: {
+    case MapStorage:
+    case MapStorageOrSentinel: {
         Edge& mapEdge = node->child1();
         AbstractHeapKind heap = (mapEdge.useKind() == MapObjectUse) ? JSMapFields : JSSetFields;
         read(heap);

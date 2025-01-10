@@ -5363,6 +5363,10 @@ void SpeculativeJIT::compile(Node* node)
         compileMapStorage(node);
         break;
 
+    case MapStorageOrSentinel:
+        compileMapStorageOrSentinel(node);
+        break;
+
     case MapIteratorNext:
         compileMapIteratorNext(node);
         break;

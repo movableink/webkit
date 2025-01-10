@@ -3673,7 +3673,7 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
             insertChecks();
             Node* map = get(virtualRegisterForArgumentIncludingThis(1, registerOffset));
             UseKind useKind = intrinsic == JSSetStorageIntrinsic ? SetObjectUse : MapObjectUse;
-            Node* storage = addToGraph(MapStorage, Edge(map, useKind));
+            Node* storage = addToGraph(MapStorageOrSentinel, Edge(map, useKind));
             setResult(storage);
             return CallOptimizationResult::Inlined;
         }
