@@ -1618,16 +1618,6 @@ bool WKPreferencesGetMediaCapabilitiesEnabled(WKPreferencesRef preferencesRef)
     return toImpl(preferencesRef)->mediaCapabilitiesEnabled();
 }
 
-void WKPreferencesSetRestrictedHTTPResponseAccess(WKPreferencesRef preferencesRef, bool flag)
-{
-    toImpl(preferencesRef)->setRestrictedHTTPResponseAccess(flag);
-}
-
-bool WKPreferencesGetRestrictedHTTPResponseAccess(WKPreferencesRef preferencesRef)
-{
-    return toImpl(preferencesRef)->restrictedHTTPResponseAccess();
-}
-
 void WKPreferencesSetColorFilterEnabled(WKPreferencesRef preferencesRef, bool flag)
 {
     toImpl(preferencesRef)->setColorFilterEnabled(flag);
@@ -1740,6 +1730,15 @@ bool WKPreferencesGetRequestVideoFrameCallbackEnabled(WKPreferencesRef preferenc
 
 
 // The following are all deprecated and do nothing. They should be removed when possible.
+
+void WKPreferencesSetRestrictedHTTPResponseAccess(WKPreferencesRef preferencesRef, bool)
+{
+}
+
+bool WKPreferencesGetRestrictedHTTPResponseAccess(WKPreferencesRef)
+{
+    return true;
+}
 
 void WKPreferencesSetPluginsEnabled(WKPreferencesRef, bool)
 {

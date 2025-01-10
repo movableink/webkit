@@ -83,9 +83,6 @@ public:
     static void setCustomPasteboardDataEnabled(bool isEnabled) { shared().m_isCustomPasteboardDataEnabled = isEnabled; }
     static bool customPasteboardDataEnabled() { return shared().m_isCustomPasteboardDataEnabled; }
 
-    static void setRestrictedHTTPResponseAccess(bool isEnabled) { shared().m_isRestrictedHTTPResponseAccess = isEnabled; }
-    static bool restrictedHTTPResponseAccess() { return shared().m_isRestrictedHTTPResponseAccess; }
-
     static void setAttrStyleEnabled(bool isEnabled) { shared().m_attrStyleEnabled = isEnabled; }
     static bool attrStyleEnabled() { return shared().m_attrStyleEnabled; }
 
@@ -160,7 +157,6 @@ private:
     bool m_allowsAnySSLCertificate { false };
 
     bool m_isCustomPasteboardDataEnabled { false };
-    bool m_isRestrictedHTTPResponseAccess { true };
     bool m_attrStyleEnabled { false };
     bool m_webSQLEnabled { false };
 

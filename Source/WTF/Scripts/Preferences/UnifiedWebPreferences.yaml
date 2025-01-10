@@ -6254,20 +6254,6 @@ RespondToThermalPressureAggressively:
       "PLATFORM(IOS_FAMILY)": true
       default: false
 
-# FIXME: This is not relevent for WebKitLegacy, so should be excluded from WebKitLegacy entirely.
-RestrictedHTTPResponseAccess:
-  type: bool
-  status: internal
-  category: networking
-  humanReadableName: "Filter HTTP Response for Web Processes"
-  humanReadableDescription: "Enable HTTP Response filtering for Web Processes"
-  webcoreBinding: DeprecatedGlobalSettings
-  defaultValue:
-    WebKitLegacy:
-      default: true
-    WebKit:
-      default: true
-
 RubberBandingForSubScrollableRegionsEnabled:
   type: bool
   status: embedder
