@@ -96,20 +96,6 @@ AVKitContentSourceEnabled:
     WebCore:
       default: false
 
-AbortSignalAnyOperationEnabled:
-  type: bool
-  category: dom
-  status: stable
-  humanReadableName: "AbortSignal.any() API"
-  humanReadableDescription: "Enable AbortSignal.any() API"
-  defaultValue:
-    WebKitLegacy:
-      default: true
-    WebKit:
-      default: true
-    WebCore:
-      default: true
-
 AcceleratedCompositingEnabled:
   type: bool
   status: embedder
