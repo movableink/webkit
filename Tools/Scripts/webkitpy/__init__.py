@@ -88,7 +88,7 @@ AutoInstall.register(Package('mozterm', Version(1, 0, 0)))
 AutoInstall.register(Package('pluggy', Version(0, 13, 1)))
 AutoInstall.register(Package('py', Version(1, 11, 0)))
 AutoInstall.register(Package('pycodestyle', Version(2, 5, 0)))
-AutoInstall.register(Package('pyfakefs', Version(5, 2, 4)))
+AutoInstall.register(Package('pyfakefs', Version(5, 7, 3)))
 AutoInstall.register(Package('soupsieve', Version(2, 2, 1)))
 
 if sys.platform == 'linux':
