@@ -45,6 +45,7 @@ class CoordinatedPlatformLayer;
 class CoordinatedTileBuffer;
 class GraphicsLayerCoordinated;
 class NativeImage;
+class TextureMapper;
 class TextureMapperLayer;
 class TextureMapperPlatformLayerProxy;
 
@@ -164,7 +165,7 @@ public:
     void setShowRepaintCounter(bool);
 
     void updateContents(bool affectedByTransformAnimation);
-    void flushCompositingState();
+    void flushCompositingState(TextureMapper&);
 
     bool hasPendingTilesCreation() const { return m_pendingTilesCreation; }
     bool hasImageBackingStore() const { return !!m_imageBackingStore; }

@@ -118,9 +118,9 @@ void CoordinatedGraphicsScene::updateSceneState()
     if (!m_textureMapper)
         m_textureMapper = TextureMapper::create();
 
-    m_sceneState->rootLayer().flushCompositingState();
+    m_sceneState->rootLayer().flushCompositingState(*m_textureMapper);
     for (auto& layer : m_sceneState->committedLayers())
-        layer->flushCompositingState();
+        layer->flushCompositingState(*m_textureMapper);
 }
 
 void CoordinatedGraphicsScene::purgeGLResources()
