@@ -62,10 +62,8 @@ namespace ax = WebCore::Accessibility;
     if (auto* localMainFrame = dynamicDowncast<WebCore::LocalFrame>(page->mainFrame())) {
         if (auto* document = localMainFrame->document())
             return document->axObjectCache();
-    } else if (auto* remoteMainFrame = dynamicDowncast<WebCore::RemoteFrame>(page->mainFrame())) {
-        auto& tree = remoteMainFrame->tree();
-        auto* firstFrame = dynamicDowncast<WebCore::LocalFrame>(tree.firstChild());
-        auto* document = firstFrame ? firstFrame->document() : nullptr;
+    } else if (RefPtr remoteLocalFrame = [self remoteLocalFrame]) {
+        CheckedPtr document = remoteLocalFrame ? remoteLocalFrame->document() : nullptr;
         return document ? document->axObjectCache() : nullptr;
     }
 
@@ -193,6 +191,20 @@ namespace ax = WebCore::Accessibility;
 - (id)accessibilityFocusedUIElement
 {
     return [[self accessibilityRootObjectWrapper] accessibilityFocusedUIElement];
+}
+
+- (WebCore::LocalFrame *)remoteLocalFrame
+{
+    if (!m_page)
+        return nullptr;
+
+    auto* page = m_page->corePage();
+    auto* remoteMainFrame = page ? dynamicDowncast<WebCore::RemoteFrame>(page->mainFrame()) : nullptr;
+    if (!remoteMainFrame)
+        return nullptr;
+
+    auto& tree = remoteMainFrame->tree();
+    return dynamicDowncast<WebCore::LocalFrame>(tree.firstChild());
 }
 
 @end

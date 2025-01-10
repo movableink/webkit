@@ -24,6 +24,7 @@
  */
 
 #import <WebCore/FloatPoint.h>
+#import <WebCore/LocalFrame.h>
 #import <WebCore/PageIdentifier.h>
 #import <wtf/Lock.h>
 #import <wtf/NakedPtr.h>
@@ -72,5 +73,6 @@ class AXCoreObject;
 - (id)accessibilityRootObjectWrapper;
 - (id)accessibilityFocusedUIElement;
 - (WebCore::IntPoint)accessibilityRemoteFrameOffset;
+- (WebCore::LocalFrame *)remoteLocalFrame;
 
 @end

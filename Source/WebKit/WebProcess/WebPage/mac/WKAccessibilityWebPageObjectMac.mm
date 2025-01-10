@@ -340,8 +340,12 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         if (protectedSelf->m_page->mainFramePlugIn())
             return convertedPoint;
 
-        if (auto* frameView = protectedSelf->m_page->localMainFrameView())
-            convertedPoint.moveBy(frameView->scrollPosition());
+        if (CheckedPtr localFrameView = protectedSelf->m_page->localMainFrameView())
+            convertedPoint.moveBy(localFrameView->scrollPosition());
+        else if (RefPtr remoteLocalFrame = [protectedSelf remoteLocalFrame]) {
+            if (CheckedPtr frameView = remoteLocalFrame->view())
+                convertedPoint.moveBy(frameView->scrollPosition());
+        }
         if (auto* page = protectedSelf->m_page->corePage())
             convertedPoint.move(0, -page->topContentInset());
         return convertedPoint;
