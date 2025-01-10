@@ -39,6 +39,7 @@
 #include <WebCore/NativeImage.h>
 #include <WebCore/NotImplemented.h>
 #include <WebCore/PlatformDisplay.h>
+#include <WebCore/RefPtrCairo.h>
 #include <WebCore/ShareableBitmap.h>
 #include <WebCore/SharedMemory.h>
 #include <epoxy/egl.h>
@@ -589,7 +590,7 @@ void AcceleratedBackingStoreDMABuf::BufferSHM::didUpdateContents(Buffer*, const 
 #if USE(CAIRO)
     m_surface = m_bitmap->createCairoSurface();
 #elif USE(SKIA)
-    m_surface = cairo_image_surface_create_for_data(m_bitmap->mutableSpan().data(), CAIRO_FORMAT_ARGB32, m_size.width(), m_size.height(), m_bitmap->bytesPerRow());
+    m_surface = adoptRef(cairo_image_surface_create_for_data(m_bitmap->mutableSpan().data(), CAIRO_FORMAT_ARGB32, m_size.width(), m_size.height(), m_bitmap->bytesPerRow()));
     m_bitmap->ref();
     static cairo_user_data_key_t s_surfaceDataKey;
     cairo_surface_set_user_data(m_surface.get(), &s_surfaceDataKey, m_bitmap.get(), [](void* userData) {
