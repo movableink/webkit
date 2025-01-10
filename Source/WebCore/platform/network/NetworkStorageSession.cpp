@@ -70,7 +70,7 @@ void NetworkStorageSession::permitProcessToUseCookieAPI(bool value)
 }
 
 #if !PLATFORM(COCOA)
-Vector<Cookie> NetworkStorageSession::domCookiesForHost(const String&)
+Vector<Cookie> NetworkStorageSession::domCookiesForHost(const URL&)
 {
     ASSERT_NOT_IMPLEMENTED_YET();
     return { };

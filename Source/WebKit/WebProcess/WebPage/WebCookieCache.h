@@ -61,6 +61,8 @@ public:
     void clear();
     void clearForHost(const String&);
 
+    void setOptInCookiePartitioningEnabled(bool);
+
 private:
     WebCore::NetworkStorageSession& inMemoryStorageSession();
     void pruneCacheIfNecessary();

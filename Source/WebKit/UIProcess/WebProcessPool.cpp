@@ -920,6 +920,9 @@ WebProcessDataStoreParameters WebProcessPool::webProcessDataStoreParameters(WebP
         WTFMove(containerTemporaryDirectoryExtensionHandle),
 #endif
         websiteDataStore.trackingPreventionEnabled()
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+        , websiteDataStore.isOptInCookiePartitioningEnabled()
+#endif
     };
 }
 

@@ -6309,6 +6309,8 @@ void WebPageProxy::preferencesDidChange()
         } else
             webProcess.send(Messages::WebPage::PreferencesDidChange(preferencesStore(), sharedPreferencesVersion), pageID);
     });
+
+    websiteDataStore().propagateSettingUpdates();
 }
 
 void WebPageProxy::didCreateSubframe(IPC::Connection& connection, FrameIdentifier parentID, FrameIdentifier newFrameID, const String& frameName, SandboxFlags sandboxFlags, ScrollbarMode scrollingMode)

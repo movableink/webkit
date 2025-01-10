@@ -168,6 +168,13 @@ NetworkStorageSession& WebCookieCache::inMemoryStorageSession()
     ASSERT_NOT_IMPLEMENTED_YET();
     return *m_inMemoryStorageSession;
 }
+
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+void WebCookieCache::setOptInCookiePartitioningEnabled(bool)
+{
+    ASSERT_NOT_IMPLEMENTED_YET();
+}
+#endif
 #endif
 
 bool WebCookieCache::cacheMayBeOutOfSync() const

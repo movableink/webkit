@@ -785,6 +785,13 @@ void WebProcessProxy::setThirdPartyCookieBlockingMode(ThirdPartyCookieBlockingMo
     sendWithAsyncReply(Messages::WebProcess::SetThirdPartyCookieBlockingMode(thirdPartyCookieBlockingMode), WTFMove(completionHandler));
 }
 
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+void WebProcessProxy::setOptInCookiePartitioningEnabled(bool enabled)
+{
+    send(Messages::WebProcess::SetOptInCookiePartitioningEnabled(enabled), 0);
+}
+#endif
+
 Ref<WebPageProxy> WebProcessProxy::createWebPage(PageClient& pageClient, Ref<API::PageConfiguration>&& pageConfiguration)
 {
     Ref webPage = WebPageProxy::create(pageClient, *this, WTFMove(pageConfiguration));

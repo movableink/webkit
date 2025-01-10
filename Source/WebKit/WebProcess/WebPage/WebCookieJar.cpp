@@ -455,6 +455,13 @@ void WebCookieJar::removeChangeListener(const String& host, const WebCore::Cooki
 }
 #endif
 
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+void WebCookieJar::setOptInCookiePartitioningEnabled(bool enabled)
+{
+    m_cache.setOptInCookiePartitioningEnabled(enabled);
+}
+#endif
+
 #if !PLATFORM(COCOA)
 
 String WebCookieJar::cookiesInPartitionedCookieStorage(const WebCore::Document&, const URL&, const WebCore::SameSiteInfo&) const

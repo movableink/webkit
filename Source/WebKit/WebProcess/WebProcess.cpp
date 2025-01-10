@@ -704,6 +704,10 @@ void WebProcess::setWebsiteDataStoreParameters(WebProcessDataStoreParameters&& p
     platformSetWebsiteDataStoreParameters(WTFMove(parameters));
     
     ensureNetworkProcessConnection();
+
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+    m_cookieJar->setOptInCookiePartitioningEnabled(parameters.isOptInCookiePartitioningEnabled);
+#endif
 }
 
 bool WebProcess::areAllPagesSuspended() const
@@ -1986,6 +1990,13 @@ void WebProcess::setEnabledServices(bool hasImageServices, bool hasSelectionServ
     m_hasImageServices = hasImageServices;
     m_hasSelectionServices = hasSelectionServices;
     m_hasRichContentServices = hasRichContentServices;
+}
+#endif
+
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+void WebProcess::setOptInCookiePartitioningEnabled(bool enabled)
+{
+    m_cookieJar->setOptInCookiePartitioningEnabled(enabled);
 }
 #endif
 

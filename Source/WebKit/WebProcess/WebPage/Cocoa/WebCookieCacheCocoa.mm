@@ -47,4 +47,11 @@ NetworkStorageSession& WebCookieCache::inMemoryStorageSession()
     return *m_inMemoryStorageSession;
 }
 
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+void WebCookieCache::setOptInCookiePartitioningEnabled(bool enabled)
+{
+    inMemoryStorageSession().setOptInCookiePartitioningEnabled(enabled);
+}
+#endif
+
 } // namespace WebKit

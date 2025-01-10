@@ -1930,6 +1930,9 @@ void WebsiteDataStore::propagateSettingUpdates()
         m_isOptInCookiePartitioningEnabled = enabled;
         networkProcess->send(Messages::NetworkProcess::SetOptInCookiePartitioningEnabled(sessionID(), enabled), 0);
 
+        for (Ref webProcess : processes())
+            webProcess->setOptInCookiePartitioningEnabled(enabled);
+
         if (m_isOptInCookiePartitioningEnabled && m_thirdPartyCookieBlockingMode == WebCore::ThirdPartyCookieBlockingMode::All) {
             RELEASE_LOG(Storage, "WebsiteDataStore::propagateSettingUpdates (%p) sessionID=%" PRIu64 ", OptInCookiePartitioning enabled, setting ThirdPartyCookieBlockingMode::AllExceptPartitioned" PRIu64, this, m_sessionID.toUInt64());
             setThirdPartyCookieBlockingMode(WebCore::ThirdPartyCookieBlockingMode::AllExceptPartitioned, []() { });

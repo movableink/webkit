@@ -454,7 +454,7 @@ std::pair<String, bool> NetworkStorageSession::cookieRequestHeaderFieldValue(con
     return cookiesForSession(headerFieldProxy.firstParty, headerFieldProxy.sameSiteInfo, headerFieldProxy.url, headerFieldProxy.frameID, headerFieldProxy.pageID, IncludeHTTPOnly, headerFieldProxy.includeSecureCookies, ApplyTrackingPrevention::Yes, ShouldRelaxThirdPartyCookieBlocking::No);
 }
 
-static NSHTTPCookie *parseDOMCookie(String cookieString, NSURL* cookieURL, std::optional<Seconds> cappedLifetime)
+static NSHTTPCookie *parseDOMCookie(String cookieString, NSURL* cookieURL, std::optional<Seconds> cappedLifetime, const String& partition)
 {
     // <rdar://problem/5632883> On 10.5, NSHTTPCookieStorage would store an empty cookie,
     // which would be sent as "Cookie: =".
@@ -465,7 +465,7 @@ static NSHTTPCookie *parseDOMCookie(String cookieString, NSURL* cookieURL, std::
     // cookiesWithResponseHeaderFields doesn't parse cookies without a value
     cookieString = cookieString.contains('=') ? cookieString : makeString(cookieString, '=');
 
-    NSHTTPCookie *initialCookie = [NSHTTPCookie _cookieForSetCookieString:cookieString forURL:cookieURL partition:nil];
+    NSHTTPCookie *initialCookie = [NSHTTPCookie _cookieForSetCookieString:cookieString forURL:cookieURL partition:nsStringNilIfEmpty(partition)];
     if (!initialCookie)
         return nil;
 
@@ -507,7 +507,13 @@ void NetworkStorageSession::setCookiesFromDOM(const URL& firstParty, const SameS
 
     std::optional<Seconds> cookieCap = clientSideCookieCap(RegistrableDomain { firstParty }, pageID);
 
-    NSHTTPCookie *cookie = parseDOMCookie(cookieString, cookieURL, cookieCap);
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+    String partitionKey = isOptInCookiePartitioningEnabled() ? cookiePartitionIdentifier(firstParty) : String { };
+#else
+    String partitionKey;
+#endif
+
+    NSHTTPCookie *cookie = parseDOMCookie(cookieString, cookieURL, cookieCap, partitionKey);
     if (!cookie)
         return;
 
@@ -713,9 +719,47 @@ void NetworkStorageSession::deleteAllCookiesModifiedSince(WallTime timePoint, Co
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), makeBlockPtr(WTFMove(work)).get());
 }
 
-Vector<Cookie> NetworkStorageSession::domCookiesForHost(const String& host)
+Vector<Cookie> NetworkStorageSession::domCookiesForHost(const URL& firstParty)
 {
-    NSArray *nsCookies = [nsCookieStorage() _getCookiesForDomain:(NSString *)host];
+    auto host = firstParty.host().toString();
+
+    // _getCookiesForDomain only returned unpartitioned (i.e., nil partition) cookies
+    NSArray *unpartitionedCookies = [nsCookieStorage() _getCookiesForDomain:(NSString *)host];
+    NSMutableArray *nsCookies = [NSMutableArray arrayWithArray:unpartitionedCookies];
+
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+    if (isOptInCookiePartitioningEnabled()) {
+        // Next, get all cookies in the partition for this site. However, we
+        // only want the cookies for this host, so we filter all cookies that
+        // don't match.
+        // The _getCookiesForPartition: method calls the
+        // completionHandler synchronously. We crash if this invariant is not
+        // met.
+        bool wasCompletionHandlerCalled { false };
+        String partitionKey = cookiePartitionIdentifier(firstParty);
+        auto completionHandler = [&wasCompletionHandlerCalled, &nsCookies, &host, &partitionKey, &firstParty] (NSArray *cookies) {
+            wasCompletionHandlerCalled = true;
+
+            RegistrableDomain registrableDomain { firstParty };
+            for (NSHTTPCookie *nsCookie in cookies) {
+                if (![nsCookie.domain hasSuffix:registrableDomain.string()])
+                    continue;
+                if (![host hasSuffix:nsCookie.domain])
+                    continue;
+
+                ASSERT([nsCookie._storagePartition isEqualToString:partitionKey]);
+                if (![nsCookie._storagePartition isEqualToString:partitionKey])
+                    continue;
+
+                [nsCookies addObject:nsCookie];
+            }
+        };
+
+        [nsCookieStorage() _getCookiesForPartition:(NSString *)partitionKey completionHandler:completionHandler];
+        RELEASE_ASSERT(wasCompletionHandlerCalled);
+    }
+#endif
+
     return nsCookiesToCookieVector(nsCookies, [](NSHTTPCookie *cookie) { return !cookie.HTTPOnly; });
 }
 

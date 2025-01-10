@@ -906,15 +906,14 @@ void NetworkConnectionToWebProcess::setCookieFromDOMAsync(const URL& firstParty,
 
 void NetworkConnectionToWebProcess::domCookiesForHost(const URL& url, CompletionHandler<void(const Vector<WebCore::Cookie>&)>&& completionHandler)
 {
-    auto host = url.host().toString();
-    MESSAGE_CHECK_COMPLETION(HashSet<String>::isValidValue(host), completionHandler({ }));
+    MESSAGE_CHECK_COMPLETION(HashSet<String>::isValidValue(url.host().toString()), completionHandler({ }));
     MESSAGE_CHECK_COMPLETION(protectedNetworkProcess()->allowsFirstPartyForCookies(m_webProcessIdentifier, url), completionHandler({ }));
 
     auto* networkStorageSession = storageSession();
     if (!networkStorageSession)
         return completionHandler({ });
 
-    completionHandler(networkStorageSession->domCookiesForHost(host));
+    completionHandler(networkStorageSession->domCookiesForHost(url));
 }
 
 #if HAVE(COOKIE_CHANGE_LISTENER_API)

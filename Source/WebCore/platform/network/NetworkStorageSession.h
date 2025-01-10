@@ -222,7 +222,7 @@ public:
     WEBCORE_EXPORT std::pair<String, bool> cookieRequestHeaderFieldValue(const CookieRequestHeaderFieldProxy&) const;
     WEBCORE_EXPORT bool cookiesEnabled(const URL& firstParty, const URL&, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, ShouldRelaxThirdPartyCookieBlocking) const;
 
-    WEBCORE_EXPORT Vector<Cookie> domCookiesForHost(const String& host);
+    WEBCORE_EXPORT Vector<Cookie> domCookiesForHost(const URL&);
 
 #if HAVE(COOKIE_CHANGE_LISTENER_API)
     WEBCORE_EXPORT bool startListeningForCookieChangeNotifications(CookieChangeObserver&, const URL&, const URL& firstParty, FrameIdentifier, PageIdentifier, ShouldRelaxThirdPartyCookieBlocking);

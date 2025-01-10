@@ -548,6 +548,9 @@ private:
     void seedResourceLoadStatisticsForTesting(const WebCore::RegistrableDomain& firstPartyDomain, const WebCore::RegistrableDomain& thirdPartyDomain, bool shouldScheduleNotification, CompletionHandler<void()>&&);
     void userPreferredLanguagesChanged(const Vector<String>&) const;
     void fullKeyboardAccessModeChanged(bool fullKeyboardAccessEnabled);
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+    void setOptInCookiePartitioningEnabled(bool);
+#endif
 
     void platformSetCacheModel(CacheModel);
 

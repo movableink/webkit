@@ -3359,6 +3359,7 @@ webkit.org/b/3652 http/tests/misc/prefetch-purpose.html [ Skip ]
 http/tests/cookies/only-accept-first-party-cookies.html [ Skip ]
 # Enable on appropriate platforms: rdar://140222322
 http/tests/cookies/accept-partitioned-first-and-third-party-cookies.https.html [ Skip ]
+http/tests/cookies/multiple-cookies-with-partitioned.https.html [ Skip ]
 http/tests/clear-site-data/set-and-clear-cookies.https.html [ Skip ]
 
 # Disabled WPT tests
