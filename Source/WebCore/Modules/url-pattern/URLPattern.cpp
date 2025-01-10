@@ -379,35 +379,35 @@ ExceptionOr<std::optional<URLPatternResult>> URLPattern::match(ScriptExecutionCo
         result.inputs = Vector<URLPatternInput> { String { inputURL->string() } };
     } else {
         URLPatternInput* inputPattern = std::get_if<URLPatternInput>(&input);
-        ExceptionOr<bool> hasError = false;
+        result.inputs.append(*inputPattern);
 
-        WTF::switchOn(*inputPattern,
-            [&] (const URLPatternInit& value) {
-                if (!baseURLString.isNull())
-                    hasError = Exception { ExceptionCode::TypeError, "Base URL string is provided with a URLPatternInit. If URLPatternInit is provided, please use URLPatternInit.baseURL property instead"_s };
+        auto hasError = WTF::switchOn(*inputPattern, [&](const URLPatternInit& value) -> ExceptionOr<bool> {
+            if (!baseURLString.isNull())
+                return Exception { ExceptionCode::TypeError, "Base URL string is provided with a URLPatternInit. If URLPatternInit is provided, please use URLPatternInit.baseURL property instead"_s };
 
-                URLPatternInit initCopy = value;
-                auto maybeResult = processInit(WTFMove(initCopy), BaseURLStringType::URL);
-                if (maybeResult.hasException())
-                    hasError = true;
-                else {
-                    URLPatternInit processedInit = maybeResult.releaseReturnValue();
-                    matchHelperAssignInputsFromInit(processedInit, protocol, username, password, hostname, port, pathname, search, hash);
-                }
-            }, [&] (const String& value) {
-                if (!baseURLString.isNull()) {
-                    auto baseURL = URL(baseURLString);
-                    if (!baseURL.isValid())
-                        hasError = true;
-                    else
-                        matchHelperAssignInputsFromURL(baseURL, protocol, username, password, hostname, port, pathname, search, hash);
-                }
-                // FIXME: Determine if there is a string input that should be parsed.
-                UNUSED_PARAM(value);
+            URLPatternInit initCopy = value;
+            auto maybeResult = processInit(WTFMove(initCopy), BaseURLStringType::URL);
+            if (maybeResult.hasException())
+                return true;
+
+            URLPatternInit processedInit = maybeResult.releaseReturnValue();
+            matchHelperAssignInputsFromInit(processedInit, protocol, username, password, hostname, port, pathname, search, hash);
+            return false;
+        }, [&] (const String& value) -> ExceptionOr<bool> {
+            URL baseURL;
+            if (!baseURLString.isNull()) {
+                baseURL = URL { baseURLString };
+                if (!baseURL.isValid())
+                    return true;
+                result.inputs.append(baseURLString);
             }
-        );
+            URL url { baseURL, value };
+            if (!url.isValid())
+                return true;
 
-        result.inputs = Vector<URLPatternInput> { WTFMove(*inputPattern) };
+            matchHelperAssignInputsFromURL(url, protocol, username, password, hostname, port, pathname, search, hash);
+            return false;
+        });
 
         if (hasError.hasException())
             return hasError.releaseException();
