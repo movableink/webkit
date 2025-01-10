@@ -1596,42 +1596,6 @@ class CppStyleTest(CppStyleTestBase):
             'Did you mean "else if"? If not, start a new line for "if".'
             '  [readability/braces] [4]')
 
-    # Test suspicious usage of memset. Specifically, a 0
-    # as the final argument is almost certainly an error.
-    def test_suspicious_usage_of_memset(self):
-        # Normal use is okay.
-        self.assert_lint(
-            '    memset(buf, 0, sizeof(buf))',
-            '')
-
-        # A 0 as the final argument is almost certainly an error.
-        self.assert_lint(
-            '    memset(buf, sizeof(buf), 0)',
-            'Did you mean "memset(buf, 0, sizeof(buf))"?'
-            '  [runtime/memset] [4]')
-        self.assert_lint(
-            '    memset(buf, xsize * ysize, 0)',
-            'Did you mean "memset(buf, 0, xsize * ysize)"?'
-            '  [runtime/memset] [4]')
-
-        # There is legitimate test code that uses this form.
-        # This is okay since the second argument is a literal.
-        self.assert_lint(
-            "    memset(buf, 'y', 0)",
-            '')
-        self.assert_lint(
-            '    memset(buf, 4, 0)',
-            '')
-        self.assert_lint(
-            '    memset(buf, -1, 0)',
-            '')
-        self.assert_lint(
-            '    memset(buf, 0xF1, 0)',
-            '')
-        self.assert_lint(
-            '    memset(buf, 0xcd, 0)',
-            '')
-
     def test_check_posix_threading(self):
         self.assert_lint('sctime_r()', '')
         self.assert_lint('strtok_r()', '')
@@ -6303,6 +6267,36 @@ class WebKitStyleTest(CppStyleTestBase):
         self.assert_lint(
             'IsDeprecatedTimerSmartPointerException should be removed',
             '',
+            'foo.cpp')
+
+        self.assert_lint(
+            'memset(foo, 0);',
+            'Use memsetSpan() / zeroSpan() instead of memset().  [safercpp/memset] [4]',
+            'foo.cpp')
+
+        self.assert_lint(
+            'memset_s(foo, 0);',
+            'Use secureMemsetSpan() instead of memset_s().  [safercpp/memset_s] [4]',
+            'foo.cpp')
+
+        self.assert_lint(
+            'memcpy(destination, source, 10);',
+            'Use memcpySpan() instead of memcpy().  [safercpp/memcpy] [4]',
+            'foo.cpp')
+
+        self.assert_lint(
+            'memmove(destination, source, 10);',
+            'Use memmoveSpan() instead of memmove().  [safercpp/memmove] [4]',
+            'foo.cpp')
+
+        self.assert_lint(
+            'if (!memcmp(a, b)) {',
+            'Use equalSpans() / spanHasPrefix() / spanHasSuffix() / compareSpans() instead of memcmp().  [safercpp/memcmp] [4]',
+            'foo.cpp')
+
+        self.assert_lint(
+            'char* result = memmem(haystack, strlen(haystack), needle, strlen(needle));',
+            'Use memmemSpan() instead of memmem().  [safercpp/memmem] [4]',
             'foo.cpp')
 
     def test_ctype_fucntion(self):

@@ -3493,6 +3493,30 @@ def check_safer_cpp(clean_lines, line_number, error):
     if uses_deprecated_timer_smart_pointer_exception:
         error(line_number, 'safercpp/timer_exception', 4, "Do not add IsDeprecatedTimerSmartPointerException.")
 
+    uses_memset = search(r'memset\(', line)
+    if uses_memset:
+        error(line_number, 'safercpp/memset', 4, "Use memsetSpan() / zeroSpan() instead of memset().")
+
+    uses_memset_s = search(r'memset_s\(', line)
+    if uses_memset_s:
+        error(line_number, 'safercpp/memset_s', 4, "Use secureMemsetSpan() instead of memset_s().")
+
+    uses_memcpy = search(r'memcpy\(', line)
+    if uses_memcpy:
+        error(line_number, 'safercpp/memcpy', 4, "Use memcpySpan() instead of memcpy().")
+
+    uses_memmove = search(r'memmove\(', line)
+    if uses_memmove:
+        error(line_number, 'safercpp/memmove', 4, "Use memmoveSpan() instead of memmove().")
+
+    uses_memcmp = search(r'memcmp\(', line)
+    if uses_memcmp:
+        error(line_number, 'safercpp/memcmp', 4, "Use equalSpans() / spanHasPrefix() / spanHasSuffix() / compareSpans() instead of memcmp().")
+
+    uses_memmem = search(r'memmem\(', line)
+    if uses_memmem:
+        error(line_number, 'safercpp/memmem', 4, "Use memmemSpan() instead of memmem().")
+
 
 def check_style(clean_lines, line_number, file_extension, class_state, file_state, enum_state, error):
     """Checks rules from the 'C++ style rules' section of cppguide.html.
@@ -4832,6 +4856,12 @@ class CppChecker(object):
         'runtime/wtf_make_unique',
         'runtime/wtf_move',
         'runtime/wtf_never_destroyed',
+        'safercpp/memcmp',
+        'safercpp/memcpy',
+        'safercpp/memmem',
+        'safercpp/memmove',
+        'safercpp/memset',
+        'safercpp/memset_s',
         'safercpp/weak_ref_exception',
         'safercpp/timer_exception',
         'security/assertion',
