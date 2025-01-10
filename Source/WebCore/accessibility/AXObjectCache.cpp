@@ -1916,10 +1916,6 @@ void AXObjectCache::deferModalChange(Element& element)
 {
     m_deferredModalChangedList.add(element);
 
-    // Notify that parent's children have changed.
-    if (auto* axParent = get(element.parentNode()))
-        m_deferredChildrenChangedList.add(*axParent);
-
     if (!m_performCacheUpdateTimer.isActive())
         m_performCacheUpdateTimer.startOneShot(0_s);
 }
@@ -2884,14 +2880,8 @@ void AXObjectCache::handleAttributeChange(Element* element, const QualifiedName&
         if (RefPtr parent = get(element->parentNode()))
             childrenChanged(parent.get());
 
-        if (m_currentModalElement && m_currentModalElement->isDescendantOf(element)) {
-            // FIXME: The main effect of resetting m_modalNodesInitialized is causing findModalNodes() to run,
-            // but findModalNodes() doesn't consult aria-hidden in any way, so setting it to false here seems unnecessary.
-            // Also, we really should only need to walk to a full DOM findModalNodes() walk once, using this method
-            // and others in this class to keep it up-to-date as attributes change and elements are added and remove from the DOM.
-            m_modalNodesInitialized = false;
+        if (m_currentModalElement && m_currentModalElement->isDescendantOf(element))
             deferModalChange(*m_currentModalElement);
-        }
     }
     else if (attrName == aria_invalidAttr)
         postNotification(element, AXNotification::InvalidStatusChanged);
@@ -4434,9 +4424,9 @@ void AXObjectCache::performDeferredCacheUpdate(ForceLayout forceLayout)
     for (auto& element : m_deferredModalChangedList) {
         if (!is<HTMLDialogElement>(element) && !hasAnyRole(element, { "dialog"_s, "alertdialog"_s }))
             continue;
-
         shouldRecomputeModal = true;
-        if (!m_modalNodesInitialized)
+
+        if (UNLIKELY(!m_modalNodesInitialized))
             findModalNodes();
 
         if (isModalElement(element)) {
