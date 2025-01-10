@@ -446,8 +446,6 @@ void CoordinatedPlatformLayer::setContentsScale(float contentsScale)
         return;
 
     m_contentsScale = contentsScale;
-    if (m_backingStoreProxy)
-        m_backingStoreProxy->setContentsScale(m_contentsScale);
     notifyCompositionRequired();
 }
 
