@@ -77,6 +77,7 @@ public:
     WTF_EXPORT_PRIVATE TextStream& operator<<(const char*);
     WTF_EXPORT_PRIVATE TextStream& operator<<(const void*);
     WTF_EXPORT_PRIVATE TextStream& operator<<(const AtomString&);
+    WTF_EXPORT_PRIVATE TextStream& operator<<(const CString&);
     WTF_EXPORT_PRIVATE TextStream& operator<<(const String&);
     WTF_EXPORT_PRIVATE TextStream& operator<<(ASCIILiteral);
     WTF_EXPORT_PRIVATE TextStream& operator<<(StringView);

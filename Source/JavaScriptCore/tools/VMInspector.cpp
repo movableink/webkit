@@ -508,8 +508,8 @@ SUPPRESS_ASAN void VMInspector::dumpRegisters(CallFrame* callFrame)
     dataLogF("% 4d  CodeBlock        : %10p  0x%llx ", registerNumber++, it++, (long long)codeBlock);
     dataLogLn(codeBlock);
     long long calleeBits = (long long)callFrame->callee().rawPtr();
-    auto calleeString = valueAsString(it->jsValue()).data();
-    dataLogF("% 4d  Callee           : %10p  0x%llx %s\n", registerNumber++, it++, calleeBits, calleeString);
+    auto calleeString = valueAsString(it->jsValue());
+    dataLogF("% 4d  Callee           : %10p  0x%llx %s\n", registerNumber++, it++, calleeBits, calleeString.data());
     
     StackVisitor::visit(callFrame, vm, [&] (StackVisitor& visitor) {
         if (visitor->callFrame() == callFrame) {

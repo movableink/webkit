@@ -45,8 +45,8 @@ public:
     size_t length() const { return m_length; }
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    std::span<const LChar> span() const { return unsafeMakeSpan(reinterpret_cast_ptr<const LChar*>(this + 1), m_length); }
-    std::span<const char> spanIncludingNullTerminator() const { return unsafeMakeSpan(reinterpret_cast_ptr<const char*>(this + 1), m_length + 1); }
+    std::span<const LChar> span() const LIFETIME_BOUND { return unsafeMakeSpan(reinterpret_cast_ptr<const LChar*>(this + 1), m_length); }
+    std::span<const char> spanIncludingNullTerminator() const LIFETIME_BOUND { return unsafeMakeSpan(reinterpret_cast_ptr<const char*>(this + 1), m_length + 1); }
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 private:
@@ -56,8 +56,8 @@ private:
 
     CStringBuffer(size_t length) : m_length(length) { }
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    std::span<char> mutableSpan() { return unsafeMakeSpan(reinterpret_cast_ptr<char*>(this + 1), m_length); }
-    std::span<char> mutableSpanIncludingNullTerminator() { return unsafeMakeSpan(reinterpret_cast_ptr<char*>(this + 1), m_length + 1); }
+    std::span<char> mutableSpan() LIFETIME_BOUND { return unsafeMakeSpan(reinterpret_cast_ptr<char*>(this + 1), m_length); }
+    std::span<char> mutableSpanIncludingNullTerminator() LIFETIME_BOUND { return unsafeMakeSpan(reinterpret_cast_ptr<char*>(this + 1), m_length + 1); }
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     const size_t m_length;
@@ -77,21 +77,21 @@ public:
     WTF_EXPORT_PRIVATE static CString newUninitialized(size_t length, std::span<char>& characterBuffer);
     CString(HashTableDeletedValueType) : m_buffer(HashTableDeletedValue) { }
 
-    const char* data() const;
+    const char* data() const LIFETIME_BOUND;
 
     std::string toStdString() const { return m_buffer ? std::string(m_buffer->spanIncludingNullTerminator().data()) : std::string(); }
 
-    std::span<const LChar> span() const;
-    std::span<const char> spanIncludingNullTerminator() const;
+    std::span<const LChar> span() const LIFETIME_BOUND;
+    std::span<const char> spanIncludingNullTerminator() const LIFETIME_BOUND;
 
-    WTF_EXPORT_PRIVATE std::span<char> mutableSpan();
-    WTF_EXPORT_PRIVATE std::span<char> mutableSpanIncludingNullTerminator();
+    WTF_EXPORT_PRIVATE std::span<char> mutableSpan() LIFETIME_BOUND;
+    WTF_EXPORT_PRIVATE std::span<char> mutableSpanIncludingNullTerminator() LIFETIME_BOUND;
     size_t length() const;
 
     bool isNull() const { return !m_buffer; }
     bool isSafeToSendToAnotherThread() const;
 
-    CStringBuffer* buffer() const { return m_buffer.get(); }
+    CStringBuffer* buffer() const LIFETIME_BOUND { return m_buffer.get(); }
 
     bool isHashTableDeletedValue() const { return m_buffer.isHashTableDeletedValue(); }
 

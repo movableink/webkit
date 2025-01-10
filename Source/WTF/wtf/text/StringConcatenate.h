@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -173,6 +173,14 @@ public:
 
 private:
     std::span<const CharacterType> m_characters;
+};
+
+template<> class StringTypeAdapter<CString, void> : public StringTypeAdapter<std::span<const char>, void> {
+public:
+    StringTypeAdapter(const CString& string)
+        : StringTypeAdapter<std::span<const char>, void> { spanReinterpretCast<const char>(string.span()) }
+    {
+    }
 };
 
 template<> class StringTypeAdapter<ASCIILiteral, void> : public StringTypeAdapter<std::span<const LChar>, void> {

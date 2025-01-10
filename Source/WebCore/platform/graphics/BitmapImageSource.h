@@ -84,7 +84,7 @@ public:
     DecodingStatus frameDecodingStatusAtIndex(unsigned index) const final;
 
     // Testing support
-    const char* sourceUTF8() const;
+    CString sourceUTF8() const;
 
 private:
     BitmapImageSource(BitmapImage&, AlphaOption, GammaAndColorProfileOption);

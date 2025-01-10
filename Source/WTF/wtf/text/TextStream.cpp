@@ -125,6 +125,12 @@ TextStream& TextStream::operator<<(const AtomString& string)
     return *this;
 }
 
+TextStream& TextStream::operator<<(const CString& string)
+{
+    m_text.append(string);
+    return *this;
+}
+
 TextStream& TextStream::operator<<(const String& string)
 {
     m_text.append(string);
