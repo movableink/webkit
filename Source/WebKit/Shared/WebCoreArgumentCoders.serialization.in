@@ -6279,12 +6279,11 @@ struct WebCore::InteractionRegion {
 
 [Nested, AdditionalEncoder=StreamConnectionEncoder] class WebCore::Region::Shape {
     Vector<int, 32> m_segments;
-    Vector<WebCore::Region::Span, 16> m_spans;
+    [Validator='WebCore::Region::Shape::isValidShape(m_segments->span(), m_spans->span())'] Vector<WebCore::Region::Span, 16> m_spans;
 };
 
 [AdditionalEncoder=StreamConnectionEncoder] class WebCore::Region {
-    WebCore::IntRect bounds();
-    [Validator='!*copyShape || (*copyShape)->isValid()'] std::unique_ptr<WebCore::Region::Shape> copyShape();
+    WebCore::Region::Shape data();
 }
 
 header: <WebCore/ISOVTTCue.h>

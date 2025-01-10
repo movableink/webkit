@@ -216,6 +216,7 @@ if (ENABLE_WEBCORE)
         Tests/WebCore/ParsedContentRange.cpp
         Tests/WebCore/PathTests.cpp
         Tests/WebCore/PublicSuffix.cpp
+        Tests/WebCore/RegionTests.cpp
         Tests/WebCore/RenderStyleChange.cpp
         Tests/WebCore/ResourceMonitor.cpp
         Tests/WebCore/SecurityOrigin.cpp
