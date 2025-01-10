@@ -139,6 +139,22 @@ GStreamerRtpSenderBackend& GStreamerPeerConnectionBackend::backendFromRTPSender(
     return static_cast<GStreamerRtpSenderBackend&>(*sender.backend());
 }
 
+void GStreamerPeerConnectionBackend::dispatchSenderBitrateRequest(const GRefPtr<GstWebRTCDTLSTransport>& transport, uint32_t bitrate)
+{
+    for (auto& transceiver : protectedPeerConnection()->currentTransceivers()) {
+        auto& senderBackend = backendFromRTPSender(transceiver->sender());
+        GRefPtr<GstWebRTCDTLSTransport> candidate;
+        g_object_get(senderBackend.rtcSender(), "transport", &candidate.outPtr(), nullptr);
+        if (!candidate)
+            continue;
+
+        if (candidate == transport) {
+            senderBackend.dispatchBitrateRequest(bitrate);
+            return;
+        }
+    }
+}
+
 void GStreamerPeerConnectionBackend::getStats(Ref<DeferredPromise>&& promise)
 {
     m_endpoint->getStats(nullptr, WTFMove(promise));

@@ -69,6 +69,8 @@ public:
 
     virtual void teardown();
 
+    virtual void dispatchBitrateRequest(uint32_t bitrate) = 0;
+
 protected:
     enum Type {
         Audio,

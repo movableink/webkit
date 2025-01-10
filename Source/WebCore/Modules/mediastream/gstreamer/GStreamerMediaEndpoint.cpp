@@ -94,6 +94,55 @@ GStreamerMediaEndpoint::~GStreamerMediaEndpoint()
     teardownPipeline();
 }
 
+GStreamerMediaEndpoint::NetSimOptions GStreamerMediaEndpoint::netSimOptionsFromEnvironment(ASCIILiteral optionsEnvVarName)
+{
+    NetSimOptions options;
+    auto tokens = StringView::fromLatin1(g_getenv(optionsEnvVarName));
+    for (auto it : tokens.split(',')) {
+        auto option = it.toString();
+        auto keyValue = option.split('=');
+        if (UNLIKELY(keyValue.size() < 2))
+            continue;
+        options.add(keyValue[0], keyValue[1]);
+    }
+    return options;
+}
+
+void GStreamerMediaEndpoint::maybeInsertNetSimForElement(GstBin* bin, GstElement* element)
+{
+    bool isSource = GST_OBJECT_FLAG_IS_SET(element, GST_ELEMENT_FLAG_SOURCE);
+    const auto& options = isSource ? m_srcNetSimOptions : m_sinkNetSimOptions;
+    if (options.isEmpty())
+        return;
+
+    // Unlink the element, add a netsim element in bin and link it to the element to simulate varying network conditions.
+    const char* padName = isSource ? "src" : "sink";
+    auto pad = adoptGRef(gst_element_get_static_pad(element, padName));
+    auto peer = adoptGRef(gst_pad_get_peer(pad.get()));
+    if (UNLIKELY(!peer))
+        return;
+
+    gst_pad_unlink(pad.get(), peer.get());
+
+    auto netsim = makeGStreamerElement("netsim", nullptr);
+    gst_bin_add(GST_BIN_CAST(bin), netsim);
+
+    GST_DEBUG_OBJECT(m_pipeline.get(), "Configuring %" GST_PTR_FORMAT " for transport element %" GST_PTR_FORMAT, netsim, element);
+    for (const auto& [key, value] : options)
+        gst_util_set_object_arg(G_OBJECT(netsim), key.ascii().data(), value.ascii().data());
+
+    pad = adoptGRef(gst_element_get_static_pad(netsim, padName));
+    if (isSource) {
+        gst_element_link(element, netsim);
+        gst_pad_link(pad.get(), peer.get());
+    } else {
+        gst_pad_link(peer.get(), pad.get());
+        gst_element_link(netsim, element);
+    }
+
+    gst_element_sync_state_with_parent(netsim);
+}
+
 bool GStreamerMediaEndpoint::initializePipeline()
 {
     static uint32_t nPipeline = 0;
@@ -117,6 +166,20 @@ bool GStreamerMediaEndpoint::initializePipeline()
 
     // Lower default latency from 200ms to 40ms.
     g_object_set(m_webrtcBin.get(), "latency", 40, nullptr);
+
+    m_srcNetSimOptions = netSimOptionsFromEnvironment("WEBKIT_WEBRTC_NETSIM_SRC_OPTIONS"_s);
+    m_sinkNetSimOptions = netSimOptionsFromEnvironment("WEBKIT_WEBRTC_NETSIM_SINK_OPTIONS"_s);
+    if (!m_srcNetSimOptions.isEmpty() || !m_sinkNetSimOptions.isEmpty()) {
+        if (auto factory = adoptGRef(gst_element_factory_find("netsim"))) {
+            g_signal_connect_swapped(m_webrtcBin.get(), "deep-element-added", G_CALLBACK(+[](GStreamerMediaEndpoint* self, GstBin* bin, GstElement* element) {
+                GUniquePtr<char> elementName(gst_element_get_name(element));
+                auto view = StringView::fromLatin1(elementName.get());
+                if (view.startsWith("nice"_s))
+                    self->maybeInsertNetSimForElement(bin, element);
+            }), this);
+        } else
+            gst_printerrln("WEBKIT_WEBRTC_NETSIM_{SRC,SINK}_OPTIONS was/were set but the GStreamer netsim element is missing.");
+    }
 
     auto rtpBin = adoptGRef(gst_bin_get_by_name(GST_BIN_CAST(m_webrtcBin.get()), "rtpbin"));
     if (!rtpBin) {
@@ -179,11 +242,9 @@ bool GStreamerMediaEndpoint::initializePipeline()
             endPoint->prepareDataChannel(channel, isLocal);
         }), this);
 
-        g_signal_connect_swapped(m_webrtcBin.get(), "request-aux-sender", G_CALLBACK(+[](GStreamerMediaEndpoint* endPoint, GstWebRTCDTLSTransport*) -> GstElement* {
+        g_signal_connect_swapped(m_webrtcBin.get(), "request-aux-sender", G_CALLBACK(+[](GStreamerMediaEndpoint* endPoint, GstWebRTCDTLSTransport* transport) -> GstElement* {
             // `sender` ownership is transferred to the signal caller.
-            if (auto sender = endPoint->requestAuxiliarySender())
-                return sender;
-            return nullptr;
+            return endPoint->requestAuxiliarySender(GRefPtr(transport));
         }), this);
     }
 
@@ -1533,7 +1594,7 @@ ExceptionOr<GStreamerMediaEndpoint::Backends> GStreamerMediaEndpoint::createTran
             gst_value_set_structure(&value, encodingData.get());
             gst_value_list_append_and_take_value(&encodingsValue, &value);
         } else
-            WTFLogAlways("Missing video encoder / RTP payloader. Please install an H.264 encoder and/or a VP8 encoder");
+            gst_printerrln("Missing video encoder / RTP payloader. Please install an H.264 encoder and/or a VP8 encoder");
     }
 
     gst_structure_set_value(initData.get(), "encodings", &encodingsValue);
@@ -1733,7 +1794,13 @@ void GStreamerMediaEndpoint::onDataChannel(GstWebRTCDataChannel* dataChannel)
     });
 }
 
-GstElement* GStreamerMediaEndpoint::requestAuxiliarySender()
+struct AuxiliarySenderDataHolder {
+    ThreadSafeWeakPtr<GStreamerMediaEndpoint> endPoint;
+    GRefPtr<GstWebRTCDTLSTransport> transport;
+};
+WEBKIT_DEFINE_ASYNC_DATA_STRUCT(AuxiliarySenderDataHolder)
+
+GstElement* GStreamerMediaEndpoint::requestAuxiliarySender(GRefPtr<GstWebRTCDTLSTransport>&& transport)
 {
     // Don't use makeGStreamerElement() here because it would be called mutiple times and emit an
     // error every single time if the element is not found.
@@ -1741,16 +1808,28 @@ GstElement* GStreamerMediaEndpoint::requestAuxiliarySender()
     if (!estimator) {
         static std::once_flag onceFlag;
         std::call_once(onceFlag, [] {
-            WTFLogAlways("gst-plugins-rs is not installed, RTP bandwidth estimation now disabled");
+            gst_printerrln("gst-plugins-rs is not installed, RTP bandwidth estimation now disabled");
         });
         return nullptr;
     }
 
-    g_signal_connect(estimator, "notify::estimated-bitrate", G_CALLBACK(+[](GstElement* estimator, GParamSpec*, GStreamerMediaEndpoint* endPoint) {
+    auto holder = createAuxiliarySenderDataHolder();
+    holder->endPoint = this;
+    holder->transport = WTFMove(transport);
+
+    g_signal_connect_data(estimator, "notify::estimated-bitrate", G_CALLBACK(+[](GstElement* estimator, GParamSpec*, gpointer userData) {
+        auto holder = static_cast<AuxiliarySenderDataHolder*>(userData);
+        RefPtr endPoint = holder->endPoint.get();
+        if (!endPoint)
+            return;
+
         uint32_t estimatedBitrate;
         g_object_get(estimator, "estimated-bitrate", &estimatedBitrate, nullptr);
-        gst_element_send_event(endPoint->pipeline(), gst_event_new_custom(GST_EVENT_CUSTOM_DOWNSTREAM_OOB, gst_structure_new("encoder-bitrate-change-request", "bitrate", G_TYPE_UINT, static_cast<uint32_t>(estimatedBitrate / 1000), nullptr)));
-    }), this);
+
+        endPoint->m_peerConnectionBackend.dispatchSenderBitrateRequest(holder->transport, estimatedBitrate);
+    }), holder, reinterpret_cast<GClosureNotify>(+[](gpointer data, GClosure*) {
+        destroyAuxiliarySenderDataHolder(static_cast<AuxiliarySenderDataHolder*>(data));
+    }), static_cast<GConnectFlags>(0));
 
     return estimator;
 }
