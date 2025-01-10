@@ -94,6 +94,12 @@ RefPtr<GStreamerVideoRTPPacketizer> GStreamerVideoRTPPacketizer::create(RefPtr<U
             parameters.constraintsFlags |= 1 << 6;
         } else if (profile == "main"_s)
             parameters.profileIDC = 77;
+        else if (profile == "constrained-high"_s) {
+            parameters.profileIDC = 100;
+            parameters.constraintsFlags |= 1 << 3;
+            parameters.constraintsFlags |= 1 << 2;
+        } else if (profile == "high"_s)
+            parameters.profileIDC = 100;
 
         codec = createAVCCodecParametersString(parameters);
     } else if (encoding == "h265"_s) {

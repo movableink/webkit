@@ -485,44 +485,23 @@ EncoderId videoEncoderFindForFormat([[maybe_unused]] WebKitVideoEncoder* self, c
     return candidates[0].first;
 }
 
-EncoderId videoEncoderFindForCodec(WebKitVideoEncoder* self, const String& codecName)
-{
-    ASCIILiteral gstCodec;
-    if (codecName == "vp8"_s || codecName == "vp08"_s)
-        gstCodec = "vp8"_s;
-    else if (codecName.startsWith("vp9"_s) || codecName.startsWith("vp09"_s))
-        gstCodec = "vp9"_s;
-    else if (codecName.startsWith("avc1"_s))
-        gstCodec = "h264"_s;
-    else if (codecName.startsWith("hvc1"_s) || codecName.startsWith("hev1"_s))
-        gstCodec = "h265"_s;
-    else if (codecName.startsWith("av01"_s))
-        gstCodec = "av1"_s;
-
-    if (gstCodec.isNull())
-        return None;
-
-    auto name = makeString("video/x-"_s, gstCodec);
-    auto caps = adoptGRef(gst_caps_new_empty_simple(name.ascii().data()));
-    return videoEncoderFindForFormat(self, caps);
-}
-
 bool videoEncoderSupportsCodec(WebKitVideoEncoder* self, const String& codecName)
 {
-    return videoEncoderFindForCodec(self, codecName) != None;
+    auto [_, outputCaps] = GStreamerCodecUtilities::capsFromCodecString(codecName);
+    return videoEncoderFindForFormat(self, outputCaps) != None;
 }
 
 bool videoEncoderSetCodec(WebKitVideoEncoder* self, const String& codecName, std::optional<IntSize> size, std::optional<double> frameRate)
 {
-    auto encoderId = videoEncoderFindForCodec(self, codecName);
+    auto [inputCaps, outputCaps] = GStreamerCodecUtilities::capsFromCodecString(codecName, size, frameRate);
+    GST_DEBUG_OBJECT(self, "Input caps: %" GST_PTR_FORMAT, inputCaps.get());
+    GST_DEBUG_OBJECT(self, "Output caps: %" GST_PTR_FORMAT, outputCaps.get());
+    auto encoderId = videoEncoderFindForFormat(self, outputCaps);
     if (encoderId == None) {
         GST_ERROR_OBJECT(self, "No encoder found for codec %s", codecName.ascii().data());
         return false;
     }
 
-    auto [inputCaps, outputCaps] = GStreamerCodecUtilities::capsFromCodecString(codecName, size, frameRate);
-    GST_DEBUG_OBJECT(self, "Input caps: %" GST_PTR_FORMAT, inputCaps.get());
-    GST_DEBUG_OBJECT(self, "Output caps: %" GST_PTR_FORMAT, outputCaps.get());
     return videoEncoderSetEncoder(self, encoderId, WTFMove(inputCaps), WTFMove(outputCaps));
 }
 
@@ -737,9 +716,9 @@ static void webkit_video_encoder_class_init(WebKitVideoEncoderClass* klass)
                 auto structure = gst_caps_get_structure(encodedCaps.get(), 0);
                 auto profile = gstStructureGetString(structure, "profile"_s);
 
-                if (profile == "high"_s)
+                if (profile.findIgnoringASCIICase("high"_s) != notFound)
                     gst_preset_load_preset(GST_PRESET(self->priv->encoder.get()), "Profile High");
-                else if (profile == "main"_s)
+                else if (profile.findIgnoringASCIICase("main"_s) != notFound)
                     gst_preset_load_preset(GST_PRESET(self->priv->encoder.get()), "Profile Main");
             }
         }, "bitrate"_s, setBitrateKbitPerSec, "key-int-max"_s, [](GstElement* encoder, BitrateMode mode) {

@@ -808,7 +808,9 @@ webkit.org/b/257624 webaudio/suspend-context-while-interrupted.html [ Pass Timeo
 webkit.org/b/257624 webgl/1.0.x/conformance/rendering/texture-switch-performance.html [ Failure Pass ]
 webkit.org/b/257624 webgl/2.0.y/conformance/rendering/texture-switch-performance.html [ Failure Pass ]
 webkit.org/b/257624 webrtc/canvas-to-peer-connection-2d.html [ Failure Pass Timeout ]
-webkit.org/b/257624 webrtc/video-h264.html [ Crash Pass Timeout ]
+
+# Fails on WPE EWS, likely when checking the video pixels. Unable to reproduce this failure locally.
+webrtc/video-h264.html [ Failure ]
 
 #////////////////////////////////////////////////////////////////////////////////////////
 # 6. SLOW TESTS

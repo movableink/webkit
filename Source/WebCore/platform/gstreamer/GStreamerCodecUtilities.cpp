@@ -84,19 +84,17 @@ static std::pair<GRefPtr<GstCaps>, GRefPtr<GstCaps>> h264CapsFromCodecString(con
 
     StringBuilder formatBuilder;
     auto profile = StringView::fromLatin1(gstProfile);
-    auto isY444 = profile.findIgnoringASCIICase("high-4:4:4"_s) != notFound;
-    auto isY422 = profile.findIgnoringASCIICase("high-4:2:2"_s) != notFound;
-    auto isY420 = profile.findIgnoringASCIICase("high-10"_s) != notFound;
-    if (isY444)
+    auto isY444TenBits = profile.startsWithIgnoringASCIICase("high-4:4:4"_s);
+    auto isY422TenBits = profile.findIgnoringASCIICase("high-4:2:2"_s) != notFound;
+    auto isI420TenBits = profile.findIgnoringASCIICase("high-10"_s) != notFound;
+    if (isY444TenBits)
         formatBuilder.append("Y444"_s);
-    else if (isY422)
+    else if (isY422TenBits)
         formatBuilder.append("I422"_s);
-    else if (isY420)
-        formatBuilder.append("Y420"_s);
     else
         formatBuilder.append("I420"_s);
 
-    if (isY444 || isY422 || isY420) {
+    if (isY444TenBits || isY422TenBits || isI420TenBits) {
 #if G_BYTE_ORDER == G_LITTLE_ENDIAN
         auto endianness = "LE"_s;
 #else
