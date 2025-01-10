@@ -22,6 +22,7 @@ WK_NOTIFICATION("com.apple.accessibility.cache.guided.access");
 WK_NOTIFICATION("com.apple.accessibility.haptics.active.status.private")
 WK_NOTIFICATION("com.apple.accessibility.internal.reader.changed")
 WK_NOTIFICATION("com.apple.managedconfiguration._UUID_")
+WK_NOTIFICATION("com.apple.managedconfiguration.allowhealthdatasubmissionchanged")
 WK_NOTIFICATION("com.apple.managedconfiguration.allowpasscodemodificationchanged")
 WK_NOTIFICATION("com.apple.managedconfiguration.appwhitelistdidchange")
 WK_NOTIFICATION("com.apple.managedconfiguration.clearpasscodegenerationcaches")
