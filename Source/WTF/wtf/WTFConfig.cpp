@@ -134,6 +134,10 @@ void Config::initialize()
             || equalLettersIgnoringASCIICase(useAllocationProfiling, "yes"_s)
             || equal(useAllocationProfiling, "1"_s))
             reservedConfigBytes[WebConfig::ReservedByteForAllocationProfiling] = 1;
+        else if (equalLettersIgnoringASCIICase(useAllocationProfiling, "false"_s)
+            || equalLettersIgnoringASCIICase(useAllocationProfiling, "no"_s)
+            || equal(useAllocationProfiling, "0"_s))
+            reservedConfigBytes[WebConfig::ReservedByteForAllocationProfiling] = 0;
 
         const char* useAllocationProfilingModeRaw = getenv("JSC_allocationProfilingMode");
         if (useAllocationProfilingModeRaw && reservedConfigBytes[WebConfig::ReservedByteForAllocationProfiling] == 1) {
