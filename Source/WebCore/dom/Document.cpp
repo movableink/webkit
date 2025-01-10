@@ -1026,6 +1026,9 @@ SecurityOrigin& Document::topOrigin() const
     if (isTopDocument())
         return securityOrigin();
 
+    if (RefPtr page = this->protectedPage())
+        return page->mainFrameOrigin();
+
     return SecurityOrigin::opaqueOrigin();
 }
 
