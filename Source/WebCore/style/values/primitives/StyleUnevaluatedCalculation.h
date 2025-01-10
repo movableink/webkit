@@ -26,6 +26,7 @@
 
 #include "CalculationValue.h"
 #include "StylePrimitiveNumericConcepts.h"
+#include <wtf/Forward.h>
 
 namespace WebCore {
 namespace Style {
@@ -68,6 +69,8 @@ private:
 } // namespace Style
 } // namespace WebCore
 
-template<WebCore::Style::Calc T> struct WTF::IsSmartPtr<T> {
+namespace WTF {
+template<WebCore::Style::Calc T> struct IsSmartPtr<T> {
     static constexpr bool value = true;
 };
+} // namespace WTF
