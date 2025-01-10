@@ -174,7 +174,8 @@ GraphicsContextGLCocoa::GraphicsContextGLCocoa(GraphicsContextGLAttributes&& cre
 
 GraphicsContextGLCocoa::~GraphicsContextGLCocoa()
 {
-    freeDrawingBuffers();
+    if (makeContextCurrent())
+        freeDrawingBuffers();
 }
 
 IOSurface* GraphicsContextGLCocoa::displayBufferSurface()
@@ -463,6 +464,7 @@ bool GraphicsContextGLCocoa::bindNextDrawingBuffer()
 
 void GraphicsContextGLCocoa::freeDrawingBuffers()
 {
+    // Note: due to a ANGLE bug in ReleaseTexImage, the current context should be the context owning the pbuffer and the texture.
     if (drawingBuffer())
         EGL_ReleaseTexImage(m_displayObj, drawingBuffer().pbuffer, EGL_BACK_BUFFER);
     for (auto& buffer : m_drawingBuffers) {

@@ -380,6 +380,26 @@ TEST_F(GraphicsContextGLCocoaTest, ClearBufferIncorrectSizes)
     gl = nullptr;
 }
 
+// Test destroying graphics contexts so that the underlying current OpenGL context is different
+// than the underlying OpenGL context of destroyed context.
+TEST_F(GraphicsContextGLCocoaTest, DestroyWithoutMakingCurrent)
+{
+    WebCore::GraphicsContextGLAttributes attributes;
+    attributes.isWebGL2 = true;
+    attributes.depth = true;
+    attributes.stencil = true;
+    RefPtr gl1 = TestedGraphicsContextGLCocoa::create(WTFMove(attributes));
+    gl1->reshape(1, 1);
+    RefPtr gl2 = TestedGraphicsContextGLCocoa::create(WTFMove(attributes));
+    gl2->reshape(1, 1);
+    RefPtr gl3 = TestedGraphicsContextGLCocoa::create(WTFMove(attributes));
+    gl3->reshape(1, 1);
+    // Current context is now 3.
+    gl1 = nullptr; // Test the case where we destroy with other context being current.
+    // Current context is now nullptr.
+    gl2 = nullptr; // Test the case where we destroy without context being current.
+}
+
 TEST_F(GraphicsContextGLCocoaTest, TwoLinks)
 {
     WebCore::GraphicsContextGLAttributes attributes;
