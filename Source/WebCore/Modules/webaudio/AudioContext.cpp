@@ -307,9 +307,9 @@ void AudioContext::startRendering()
         return;
 
     lazyInitialize();
-    destination().startRendering([this, protectedThis = Ref { *this }, pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) {
+    destination().startRendering([protectedThis = Ref { *this }, pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) {
         if (!exception)
-            setState(State::Running);
+            protectedThis->setState(State::Running);
     });
 }
 
@@ -385,8 +385,8 @@ void AudioContext::mayResumePlayback(bool shouldResume)
 
     lazyInitialize();
 
-    destination().resume([this, protectedThis = Ref { *this }, pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) {
-        setState(exception ? State::Suspended : State::Running);
+    destination().resume([protectedThis = Ref { *this }, pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) {
+        protectedThis->setState(exception ? State::Suspended : State::Running);
     });
 }
 
@@ -447,12 +447,12 @@ void AudioContext::suspendPlayback()
 
     lazyInitialize();
 
-    destination().suspend([this, protectedThis = Ref { *this }, pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) {
+    destination().suspend([protectedThis = Ref { *this }, pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) {
         if (exception)
             return;
 
-        bool interrupted = m_mediaSession->state() == PlatformMediaSession::State::Interrupted;
-        setState(interrupted ? State::Interrupted : State::Suspended);
+        bool interrupted = protectedThis->m_mediaSession->state() == PlatformMediaSession::State::Interrupted;
+        protectedThis->setState(interrupted ? State::Interrupted : State::Suspended);
     });
 }
 

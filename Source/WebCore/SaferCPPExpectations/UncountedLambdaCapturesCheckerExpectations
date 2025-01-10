@@ -45,7 +45,6 @@ Modules/notifications/Notification.cpp
 Modules/paymentrequest/PaymentRequest.cpp
 Modules/paymentrequest/PaymentResponse.cpp
 Modules/push-api/PushDatabase.cpp
-Modules/push-api/PushManager.cpp
 Modules/remoteplayback/RemotePlayback.cpp
 Modules/web-locks/WebLockManager.cpp
 Modules/webaudio/AudioContext.cpp

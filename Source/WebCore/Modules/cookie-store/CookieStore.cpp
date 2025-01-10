@@ -125,19 +125,19 @@ void CookieStore::MainThreadBridge::get(CookieStoreGetOptions&& options, URL&& u
 {
     ASSERT(m_cookieStore);
 
-    auto getCookies = [this, protectedThis = Ref { *this }, options = crossThreadCopy(WTFMove(options)), url = crossThreadCopy(WTFMove(url)), completionHandler = WTFMove(completionHandler)](ScriptExecutionContext& context) mutable {
+    auto getCookies = [protectedThis = Ref { *this }, options = crossThreadCopy(WTFMove(options)), url = crossThreadCopy(WTFMove(url)), completionHandler = WTFMove(completionHandler)](ScriptExecutionContext& context) mutable {
         Ref document = downcast<Document>(context);
         WeakPtr page = document->page();
         if (!page) {
-            ensureOnContextThread([completionHandler = WTFMove(completionHandler)](CookieStore& cookieStore) mutable {
+            protectedThis->ensureOnContextThread([completionHandler = WTFMove(completionHandler)](CookieStore& cookieStore) mutable {
                 completionHandler(cookieStore, Exception { ExceptionCode::SecurityError });
             });
             return;
         }
 
         Ref cookieJar = page->cookieJar();
-        auto resultHandler = [this, protectedThis = WTFMove(protectedThis), completionHandler = WTFMove(completionHandler)] (std::optional<Vector<Cookie>>&& cookies) mutable {
-            ensureOnContextThread([completionHandler = WTFMove(completionHandler), cookies = crossThreadCopy(WTFMove(cookies))](CookieStore& cookieStore) mutable {
+        auto resultHandler = [protectedThis = WTFMove(protectedThis), completionHandler = WTFMove(completionHandler)] (std::optional<Vector<Cookie>>&& cookies) mutable {
+            protectedThis->ensureOnContextThread([completionHandler = WTFMove(completionHandler), cookies = crossThreadCopy(WTFMove(cookies))](CookieStore& cookieStore) mutable {
                 if (!cookies)
                     completionHandler(cookieStore, Exception { ExceptionCode::TypeError });
                 else
@@ -155,19 +155,19 @@ void CookieStore::MainThreadBridge::getAll(CookieStoreGetOptions&& options, URL&
 {
     ASSERT(m_cookieStore);
 
-    auto getAllCookies = [this, protectedThis = Ref { *this }, options = crossThreadCopy(WTFMove(options)), url = crossThreadCopy(WTFMove(url)), completionHandler = WTFMove(completionHandler)](ScriptExecutionContext& context) mutable {
+    auto getAllCookies = [protectedThis = Ref { *this }, options = crossThreadCopy(WTFMove(options)), url = crossThreadCopy(WTFMove(url)), completionHandler = WTFMove(completionHandler)](ScriptExecutionContext& context) mutable {
         Ref document = downcast<Document>(context);
         WeakPtr page = document->page();
         if (!page) {
-            ensureOnContextThread([completionHandler = WTFMove(completionHandler)](CookieStore& cookieStore) mutable {
+            protectedThis->ensureOnContextThread([completionHandler = WTFMove(completionHandler)](CookieStore& cookieStore) mutable {
                 completionHandler(cookieStore, Exception { ExceptionCode::SecurityError });
             });
             return;
         }
 
         Ref cookieJar = page->cookieJar();
-        auto resultHandler = [this, protectedThis = WTFMove(protectedThis), completionHandler = WTFMove(completionHandler)] (std::optional<Vector<Cookie>>&& cookies) mutable {
-            ensureOnContextThread([completionHandler = WTFMove(completionHandler), cookies = crossThreadCopy(WTFMove(cookies))](CookieStore& cookieStore) mutable {
+        auto resultHandler = [protectedThis = WTFMove(protectedThis), completionHandler = WTFMove(completionHandler)] (std::optional<Vector<Cookie>>&& cookies) mutable {
+            protectedThis->ensureOnContextThread([completionHandler = WTFMove(completionHandler), cookies = crossThreadCopy(WTFMove(cookies))](CookieStore& cookieStore) mutable {
                 if (!cookies)
                     completionHandler(cookieStore, Exception { ExceptionCode::TypeError });
                 else
