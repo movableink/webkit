@@ -269,7 +269,7 @@ TEST_F(GStreamerTest, harnessParseMP4)
         auto buffer = adoptGRef(gst_buffer_new_allocate(nullptr, bytesToRead, nullptr));
         {
             GstMappedBuffer mappedBuffer(buffer.get(), GST_MAP_WRITE);
-            FileSystem::readFromFile(handle, mappedBuffer.mutableSpan());
+            FileSystem::readFromFile(handle, mappedBuffer.mutableSpan<uint8_t>());
         }
         auto sample = adoptGRef(gst_sample_new(buffer.get(), caps.get(), nullptr, nullptr));
         EXPECT_TRUE(harness->pushSample(WTFMove(sample)));
@@ -358,7 +358,7 @@ TEST_F(GStreamerTest, harnessDecodeMP4Video)
         auto buffer = adoptGRef(gst_buffer_new_allocate(nullptr, bytesToRead, nullptr));
         {
             GstMappedBuffer mappedBuffer(buffer.get(), GST_MAP_WRITE);
-            FileSystem::readFromFile(handle, mappedBuffer.mutableSpan());
+            FileSystem::readFromFile(handle, mappedBuffer.mutableSpan<uint8_t>());
         }
         EXPECT_TRUE(harness->pushBuffer(WTFMove(buffer)));
         totalRead += bytesToRead;
@@ -408,7 +408,7 @@ TEST_F(GStreamerTest, harnessDecodeMP4Video)
         auto buffer = adoptGRef(gst_buffer_new_allocate(nullptr, bytesToRead, nullptr));
         {
             GstMappedBuffer mappedBuffer(buffer.get(), GST_MAP_WRITE);
-            FileSystem::readFromFile(handle, mappedBuffer.mutableSpan());
+            FileSystem::readFromFile(handle, mappedBuffer.mutableSpan<uint8_t>());
         }
         EXPECT_TRUE(harness->pushBuffer(WTFMove(buffer)));
 

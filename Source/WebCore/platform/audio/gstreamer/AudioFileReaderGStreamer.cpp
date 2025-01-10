@@ -113,16 +113,14 @@ int decodebinAutoplugSelectCallback(GstElement*, GstPad*, GstCaps*, GstElementFa
 
 static void copyGstreamerBuffersToAudioChannel(const GRefPtr<GstBufferList>& buffers, AudioChannel* audioChannel)
 {
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
-    float* destination = audioChannel->mutableData();
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    auto destination = audioChannel->mutableSpan();
     unsigned bufferCount = gst_buffer_list_length(buffers.get());
+    uint64_t offset = 0;
     for (unsigned i = 0; i < bufferCount; ++i) {
-        GstBuffer* buffer = gst_buffer_list_get(buffers.get(), i);
-        ASSERT(buffer);
-        gsize bufferSize = gst_buffer_get_size(buffer);
-        gst_buffer_extract(buffer, 0, destination, bufferSize);
-        destination += bufferSize / sizeof(float);
+        GstMappedBuffer buffer(gst_buffer_list_get(buffers.get(), i), GST_MAP_READ);
+        auto count = buffer.size() / sizeof(float);
+        memcpySpan(destination.subspan(offset, count), buffer.span<float>());
+        offset += count;
     }
 }
 

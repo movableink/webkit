@@ -632,7 +632,7 @@ std::span<const uint8_t> DataSegment::span() const
         [](const GRefPtr<GBytes>& data) -> std::span<const uint8_t> { return WTF::span(data); },
 #endif
 #if USE(GSTREAMER)
-        [](const RefPtr<GstMappedOwnedBuffer>& data) -> std::span<const uint8_t> { return data->span(); },
+        [](const RefPtr<GstMappedOwnedBuffer>& data) -> std::span<const uint8_t> { return data->span<uint8_t>(); },
 #endif
 #if USE(SKIA)
         [](const sk_sp<SkData>& data) -> std::span<const uint8_t> { return WebCore::span(data); },

@@ -915,7 +915,7 @@ void connectSimpleBusMessageCallback(GstElement* pipeline, Function<void(GstMess
 template<>
 Vector<uint8_t> GstMappedBuffer::createVector() const
 {
-    return span();
+    return span<uint8_t>();
 }
 
 bool isGStreamerPluginAvailable(const char* name)

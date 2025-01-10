@@ -155,8 +155,8 @@ public:
     bool isValid() const { return m_isValid; }
     uint8_t* data() { RELEASE_ASSERT(m_isValid); return static_cast<uint8_t*>(m_info.data); }
     const uint8_t* data() const { RELEASE_ASSERT(m_isValid); return static_cast<uint8_t*>(m_info.data); }
-    std::span<uint8_t> mutableSpan() { return unsafeMakeSpan(data(), size()); }
-    std::span<const uint8_t> span() const { return unsafeMakeSpan(data(), size()); }
+    template<typename T> std::span<T> mutableSpan() { return unsafeMakeSpan(reinterpret_cast<T*>(data()), size() / sizeof(T)); }
+    template<typename T> std::span<const T> span() const { return unsafeMakeSpan(reinterpret_cast<const T*>(data()), size() / sizeof(T)); }
     size_t size() const { ASSERT(m_isValid); return m_isValid ? static_cast<size_t>(m_info.size) : 0; }
     MapType* mappedData() const  { ASSERT(m_isValid); return m_isValid ? const_cast<MapType*>(&m_info) : nullptr; }
     Vector<uint8_t> createVector() const;

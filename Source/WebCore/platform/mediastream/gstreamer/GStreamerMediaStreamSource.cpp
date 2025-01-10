@@ -627,11 +627,12 @@ private:
         auto buffer = webkitGstBufferSetVideoFrameTimeMetadata(WTFMove(emptyBuffer), metadata);
         {
             GstMappedBuffer data(buffer, GST_MAP_WRITE);
-            WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
-            auto yOffset = GST_VIDEO_INFO_PLANE_OFFSET(&info, 1);
-            memset(data.data(), 0, yOffset);
-            memset(data.data() + yOffset, 128, data.size() - yOffset);
-            WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+            WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN; // GLib port
+            auto uOffset = GST_VIDEO_INFO_PLANE_OFFSET(&info, 1);
+            WTF_ALLOW_UNSAFE_BUFFER_USAGE_END;
+            auto mutableData = data.mutableSpan<uint8_t>();
+            memsetSpan(mutableData.subspan(0, uOffset), 0);
+            memsetSpan(mutableData.subspan(uOffset, mutableData.size() - uOffset), 128);
         }
         gst_buffer_add_video_meta_full(buffer.get(), GST_VIDEO_FRAME_FLAG_NONE, GST_VIDEO_INFO_FORMAT(&info), GST_VIDEO_INFO_WIDTH(&info),
             GST_VIDEO_INFO_HEIGHT(&info), GST_VIDEO_INFO_N_PLANES(&info), info.offset, info.stride);
