@@ -33,6 +33,7 @@
 #import <WebCore/Color.h>
 #import <WebKit/WKFrameInfoPrivate.h>
 #import <WebKit/WKWebViewPrivate.h>
+#import <WebKit/WKWebViewPrivateForTesting.h>
 #import <WebKit/WKWebpagePreferencesPrivate.h>
 #import <WebKit/_WKFrameTreeNode.h>
 #import <WebKit/_WKTargetedElementInfo.h>

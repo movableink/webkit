@@ -158,7 +158,7 @@ private:
 
     const RetainPtr<CGContextRef> m_cgContext;
     mutable std::optional<DestinationColorSpace> m_colorSpace;
-    const RenderingMode m_renderingMode : 1; // NOLINT
+    const RenderingMode m_renderingMode : 2; // NOLINT
     const bool m_isLayerCGContext : 1;
     mutable bool m_userToDeviceTransformKnownToBeIdentity : 1 { false };
     // Flag for pending draws. Start with true because we do not know what commands have been scheduled to the context.

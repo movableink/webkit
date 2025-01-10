@@ -196,6 +196,7 @@ public:
 #endif
 
     virtual RenderingMode renderingMode() const { return RenderingMode::Unaccelerated; }
+    WEBCORE_EXPORT RenderingMode renderingModeForCompatibleBuffer() const;
 
     // Pixel Snapping
 

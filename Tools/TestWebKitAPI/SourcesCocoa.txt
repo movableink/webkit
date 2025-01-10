@@ -110,6 +110,7 @@ Tests/WebKitCocoa/DoubleDefersLoading.mm
 Tests/WebKitCocoa/Download.mm
 Tests/WebKitCocoa/DownloadProgress.mm
 Tests/WebKitCocoa/DragAndDropTests.mm
+Tests/WebKitCocoa/DrawingToPDF.mm
 Tests/WebKitCocoa/DuplicateCompletionHandlerCalls.mm
 Tests/WebKitCocoa/EditorStateTests.mm
 Tests/WebKitCocoa/ElementTargetingTests.mm
