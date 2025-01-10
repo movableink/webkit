@@ -48,8 +48,8 @@ GST_DEBUG_CATEGORY(video_encoder_debug);
 #define MAX_WIDTH 4096
 #define MAX_HEIGHT 4096
 
-static GstStaticPadTemplate sinkTemplate = GST_STATIC_PAD_TEMPLATE("sink", GST_PAD_SINK, GST_PAD_ALWAYS, GST_STATIC_CAPS("video/x-raw(ANY)"));
-static GstStaticPadTemplate srcTemplate = GST_STATIC_PAD_TEMPLATE("src", GST_PAD_SRC, GST_PAD_ALWAYS, GST_STATIC_CAPS("video/x-h264;video/x-vp8;video/x-vp9;video/x-h265;video/x-av1"));
+static GstStaticPadTemplate encoderSinkTemplate = GST_STATIC_PAD_TEMPLATE("sink", GST_PAD_SINK, GST_PAD_ALWAYS, GST_STATIC_CAPS("video/x-raw(ANY)"));
+static GstStaticPadTemplate encoderSrcTemplate = GST_STATIC_PAD_TEMPLATE("src", GST_PAD_SRC, GST_PAD_ALWAYS, GST_STATIC_CAPS("video/x-h264;video/x-vp8;video/x-vp9;video/x-h265;video/x-av1"));
 
 // https://www.w3.org/TR/mediastream-recording/#bitratemode
 typedef enum {
@@ -222,7 +222,6 @@ struct _WebKitVideoEncoderPrivate {
     double scaleResolutionDownBy;
 };
 
-#define webkit_video_encoder_parent_class parent_class
 WEBKIT_DEFINE_TYPE_WITH_CODE(WebKitVideoEncoder, webkit_video_encoder, GST_TYPE_BIN,
     GST_DEBUG_CATEGORY_INIT(video_encoder_debug, "webkitvideoencoderprivate", 0, "WebKit Video Encoder Private"))
 
@@ -620,7 +619,7 @@ static GRefPtr<GstCaps> createSrcPadTemplateCaps()
 
 static void videoEncoderConstructed(GObject* encoder)
 {
-    GST_CALL_PARENT(G_OBJECT_CLASS, constructed, (encoder));
+    G_OBJECT_CLASS(webkit_video_encoder_parent_class)->constructed(encoder);
 
     auto* self = WEBKIT_VIDEO_ENCODER(encoder);
     self->priv->encoderId = None;
@@ -628,7 +627,7 @@ static void videoEncoderConstructed(GObject* encoder)
     self->priv->bitrateMode = CONSTANT_BITRATE_MODE;
     self->priv->latencyMode = REALTIME_LATENCY_MODE;
 
-    auto* sinkPad = webkitGstGhostPadFromStaticTemplate(&sinkTemplate, "sink", nullptr);
+    auto* sinkPad = webkitGstGhostPadFromStaticTemplate(&encoderSinkTemplate, "sink", nullptr);
     GST_OBJECT_FLAG_SET(sinkPad, GST_PAD_FLAG_NEED_PARENT);
     gst_pad_set_event_function(sinkPad, reinterpret_cast<GstPadEventFunction>(+[](GstPad* pad, GstObject* parent, GstEvent* event) -> gboolean {
         if (GST_EVENT_TYPE(event) == GST_EVENT_CUSTOM_DOWNSTREAM_OOB) {
@@ -668,7 +667,7 @@ static void videoEncoderConstructed(GObject* encoder)
     }));
     gst_element_add_pad(GST_ELEMENT_CAST(self), sinkPad);
 
-    gst_element_add_pad(GST_ELEMENT_CAST(self), webkitGstGhostPadFromStaticTemplate(&srcTemplate, "src", nullptr));
+    gst_element_add_pad(GST_ELEMENT_CAST(self), webkitGstGhostPadFromStaticTemplate(&encoderSrcTemplate, "src", nullptr));
 }
 
 static void setupVaEncoder(WebKitVideoEncoder* self)
@@ -710,7 +709,7 @@ static void webkit_video_encoder_class_init(WebKitVideoEncoderClass* klass)
 
     GstElementClass* elementClass = GST_ELEMENT_CLASS(klass);
     gst_element_class_set_static_metadata(elementClass, "WebKit video encoder", "Codec/Encoder/Video", "Encodes video for streaming", "Igalia");
-    gst_element_class_add_pad_template(elementClass, gst_static_pad_template_get(&sinkTemplate));
+    gst_element_class_add_pad_template(elementClass, gst_static_pad_template_get(&encoderSinkTemplate));
 
     Encoders::registerEncoder(OmxH264, "omxh264enc"_s, "h264parse"_s, "video/x-h264"_s, "video/x-h264,alignment=au,stream-format=avc,profile=baseline"_s,
         [](WebKitVideoEncoder* self) {

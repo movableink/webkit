@@ -41,9 +41,9 @@
 using namespace WebCore;
 
 enum {
-    PROP_0,
-    PROP_STATS,
-    PROP_LAST
+    WEBKIT_GL_VIDEO_SINK_PROP_0,
+    WEBKIT_GL_VIDEO_SINK_PROP_STATS,
+    WEBKIT_GL_VIDEO_SINK_PROP_LAST
 };
 
 struct _WebKitGLVideoSinkPrivate {
@@ -55,9 +55,8 @@ GST_DEBUG_CATEGORY_STATIC(webkit_gl_video_sink_debug);
 #define GST_CAT_DEFAULT webkit_gl_video_sink_debug
 
 #define GST_GL_CAPS_FORMAT "{ A420, RGBx, RGBA, I420, Y444, YV12, Y41B, Y42B, NV12, NV21, VUYA }"
-static GstStaticPadTemplate sinkTemplate = GST_STATIC_PAD_TEMPLATE("sink", GST_PAD_SINK, GST_PAD_ALWAYS, GST_STATIC_CAPS_ANY);
+static GstStaticPadTemplate glVideoSinkTemplate = GST_STATIC_PAD_TEMPLATE("sink", GST_PAD_SINK, GST_PAD_ALWAYS, GST_STATIC_CAPS_ANY);
 
-#define webkit_gl_video_sink_parent_class parent_class
 WEBKIT_DEFINE_TYPE_WITH_CODE(WebKitGLVideoSink, webkit_gl_video_sink, GST_TYPE_BIN,
     GST_DEBUG_CATEGORY_INIT(webkit_gl_video_sink_debug, "webkitglvideosink", 0, "GL video sink element"))
 
@@ -81,7 +80,7 @@ static void initializeDMABufAvailability()
 
 static void webKitGLVideoSinkConstructed(GObject* object)
 {
-    GST_CALL_PARENT(G_OBJECT_CLASS, constructed, (object));
+    G_OBJECT_CLASS(webkit_gl_video_sink_parent_class)->constructed(object);
 
     WebKitGLVideoSink* sink = WEBKIT_GL_VIDEO_SINK(object);
 
@@ -149,7 +148,7 @@ void webKitGLVideoSinkFinalize(GObject* object)
 
     GST_DEBUG_OBJECT(object, "WebKitGLVideoSink finalized.");
 
-    GST_CALL_PARENT(G_OBJECT_CLASS, finalize, (object));
+    G_OBJECT_CLASS(webkit_gl_video_sink_parent_class)->finalize(object);
 }
 
 static GstStateChangeReturn webKitGLVideoSinkChangeState(GstElement* element, GstStateChange transition)
@@ -170,7 +169,7 @@ static GstStateChangeReturn webKitGLVideoSinkChangeState(GstElement* element, Gs
         break;
     }
 
-    return GST_ELEMENT_CLASS(parent_class)->change_state(element, transition);
+    return GST_ELEMENT_CLASS(webkit_gl_video_sink_parent_class)->change_state(element, transition);
 }
 
 static void webKitGLVideoSinkGetProperty(GObject* object, guint propertyId, GValue* value, GParamSpec* paramSpec)
@@ -178,7 +177,7 @@ static void webKitGLVideoSinkGetProperty(GObject* object, guint propertyId, GVal
     WebKitGLVideoSink* sink = WEBKIT_GL_VIDEO_SINK(object);
 
     switch (propertyId) {
-    case PROP_STATS: {
+    case WEBKIT_GL_VIDEO_SINK_PROP_STATS: {
         GUniqueOutPtr<GstStructure> stats;
         g_object_get(sink->priv->appSink.get(), "stats", &stats.outPtr(), nullptr);
         gst_value_set_structure(value, stats.get());
@@ -200,11 +199,11 @@ static void webkit_gl_video_sink_class_init(WebKitGLVideoSinkClass* klass)
     objectClass->finalize = webKitGLVideoSinkFinalize;
     objectClass->get_property = webKitGLVideoSinkGetProperty;
 
-    gst_element_class_add_pad_template(elementClass, gst_static_pad_template_get(&sinkTemplate));
+    gst_element_class_add_pad_template(elementClass, gst_static_pad_template_get(&glVideoSinkTemplate));
     gst_element_class_set_static_metadata(elementClass, "WebKit GL video sink", "Sink/Video", "Renders video", "Philippe Normand <philn@igalia.com>");
 
-    g_object_class_install_property(objectClass, PROP_STATS, g_param_spec_boxed("stats",
-        nullptr, nullptr, GST_TYPE_STRUCTURE, static_cast<GParamFlags>(G_PARAM_READABLE | G_PARAM_STATIC_STRINGS)));
+    g_object_class_install_property(objectClass, WEBKIT_GL_VIDEO_SINK_PROP_STATS, g_param_spec_boxed("stats", nullptr,
+        nullptr, GST_TYPE_STRUCTURE, static_cast<GParamFlags>(G_PARAM_READABLE | G_PARAM_STATIC_STRINGS)));
 
     elementClass->change_state = GST_DEBUG_FUNCPTR(webKitGLVideoSinkChangeState);
 }

@@ -50,7 +50,7 @@ using namespace WebCore;
 
 #define WEBKIT_VIDEO_SINK_PAD_CAPS GST_VIDEO_CAPS_MAKE_WITH_FEATURES(GST_CAPS_FEATURE_META_GST_VIDEO_GL_TEXTURE_UPLOAD_META, GST_CAPS_FORMAT) ";" GST_VIDEO_CAPS_MAKE(GST_CAPS_FORMAT)
 
-static GstStaticPadTemplate s_sinkTemplate = GST_STATIC_PAD_TEMPLATE("sink", GST_PAD_SINK, GST_PAD_ALWAYS, GST_STATIC_CAPS(WEBKIT_VIDEO_SINK_PAD_CAPS));
+static GstStaticPadTemplate s_videoSinkTemplate = GST_STATIC_PAD_TEMPLATE("sink", GST_PAD_SINK, GST_PAD_ALWAYS, GST_STATIC_CAPS(WEBKIT_VIDEO_SINK_PAD_CAPS));
 
 
 GST_DEBUG_CATEGORY_STATIC(webkitVideoSinkDebug);
@@ -143,12 +143,11 @@ struct _WebKitVideoSinkPrivate {
     GstCaps* currentCaps { nullptr };
 };
 
-#define webkit_video_sink_parent_class parent_class
 WEBKIT_DEFINE_TYPE_WITH_CODE(WebKitVideoSink, webkit_video_sink, GST_TYPE_VIDEO_SINK, GST_DEBUG_CATEGORY_INIT(webkitVideoSinkDebug, "webkitsink", 0, "webkit video sink"))
 
 static void webkitVideoSinkConstructed(GObject* object)
 {
-    GST_CALL_PARENT(G_OBJECT_CLASS, constructed, (object));
+    G_OBJECT_CLASS(webkit_video_sink_parent_class)->constructed(object);
     g_object_set(GST_BASE_SINK(object), "enable-last-sample", FALSE, nullptr);
 }
 
@@ -188,7 +187,7 @@ static gboolean webkitVideoSinkUnlock(GstBaseSink* baseSink)
     priv->scheduler.stop();
     webkitVideoSinkRepaintCancelled(WEBKIT_VIDEO_SINK(baseSink));
 
-    return GST_CALL_PARENT_WITH_DEFAULT(GST_BASE_SINK_CLASS, unlock, (baseSink), TRUE);
+    return GST_BASE_SINK_CLASS(webkit_video_sink_parent_class)->unlock(baseSink);
 }
 
 static gboolean webkitVideoSinkUnlockStop(GstBaseSink* baseSink)
@@ -197,7 +196,7 @@ static gboolean webkitVideoSinkUnlockStop(GstBaseSink* baseSink)
 
     priv->scheduler.start();
 
-    return GST_CALL_PARENT_WITH_DEFAULT(GST_BASE_SINK_CLASS, unlock_stop, (baseSink), TRUE);
+    return GST_BASE_SINK_CLASS(webkit_video_sink_parent_class)->unlock_stop(baseSink);
 }
 
 static gboolean webkitVideoSinkStop(GstBaseSink* baseSink)
@@ -270,7 +269,7 @@ static gboolean webkitVideoSinkEvent(GstBaseSink* baseSink, GstEvent* event)
         }
         FALLTHROUGH;
     default:
-        return GST_CALL_PARENT_WITH_DEFAULT(GST_BASE_SINK_CLASS, event, (baseSink, event), TRUE);
+        return GST_BASE_SINK_CLASS(webkit_video_sink_parent_class)->event(baseSink, event);
     }
 }
 
@@ -280,7 +279,7 @@ static void webkit_video_sink_class_init(WebKitVideoSinkClass* klass)
     GstBaseSinkClass* baseSinkClass = GST_BASE_SINK_CLASS(klass);
     GstElementClass* elementClass = GST_ELEMENT_CLASS(klass);
 
-    gst_element_class_add_pad_template(elementClass, gst_static_pad_template_get(&s_sinkTemplate));
+    gst_element_class_add_pad_template(elementClass, gst_static_pad_template_get(&s_videoSinkTemplate));
     gst_element_class_set_metadata(elementClass, "WebKit video sink", "Sink/Video", "Sends video data from a GStreamer pipeline to WebKit", "Igalia, Alp Toker <alp@atoker.com>");
 
     gobjectClass->constructed = webkitVideoSinkConstructed;

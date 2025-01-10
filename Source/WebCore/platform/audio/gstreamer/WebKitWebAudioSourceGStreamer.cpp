@@ -53,7 +53,7 @@ struct _WebKitWebAudioSrcClass {
     GstBinClass parentClass;
 };
 
-static GstStaticPadTemplate srcTemplate = GST_STATIC_PAD_TEMPLATE("src",
+static GstStaticPadTemplate webAudioSrcTemplate = GST_STATIC_PAD_TEMPLATE("src",
     GST_PAD_SRC,
     GST_PAD_ALWAYS,
     GST_STATIC_CAPS(GST_AUDIO_CAPS_MAKE(GST_AUDIO_NE(F32))));
@@ -90,7 +90,7 @@ struct _WebKitWebAudioSrcPrivate {
 
     _WebKitWebAudioSrcPrivate()
     {
-        sourcePad = webkitGstGhostPadFromStaticTemplate(&srcTemplate, "src", nullptr);
+        sourcePad = webkitGstGhostPadFromStaticTemplate(&webAudioSrcTemplate, "src", nullptr);
 
         g_rec_mutex_init(&mutex);
     }
@@ -163,7 +163,6 @@ static GstCaps* getGStreamerAudioCaps(float sampleRate, unsigned numberOfChannel
         "layout", G_TYPE_STRING, "non-interleaved", nullptr);
 }
 
-#define webkit_web_audio_src_parent_class parent_class
 WEBKIT_DEFINE_TYPE_WITH_CODE(WebKitWebAudioSrc, webkit_web_audio_src, GST_TYPE_BIN, GST_DEBUG_CATEGORY_INIT(webkit_web_audio_src_debug, "webkitwebaudiosrc", 0, "webaudiosrc element"))
 
 static void webkit_web_audio_src_class_init(WebKitWebAudioSrcClass* webKitWebAudioSrcClass)
@@ -171,7 +170,7 @@ static void webkit_web_audio_src_class_init(WebKitWebAudioSrcClass* webKitWebAud
     GObjectClass* objectClass = G_OBJECT_CLASS(webKitWebAudioSrcClass);
     GstElementClass* elementClass = GST_ELEMENT_CLASS(webKitWebAudioSrcClass);
 
-    gst_element_class_add_pad_template(elementClass, gst_static_pad_template_get(&srcTemplate));
+    gst_element_class_add_pad_template(elementClass, gst_static_pad_template_get(&webAudioSrcTemplate));
     gst_element_class_set_metadata(elementClass, "WebKit WebAudio source element", "Source", "Handles WebAudio data from WebCore", "Philippe Normand <pnormand@igalia.com>");
 
     objectClass->constructed = webKitWebAudioSrcConstructed;
@@ -199,7 +198,7 @@ static void webkit_web_audio_src_class_init(WebKitWebAudioSrcClass* webKitWebAud
 
 static void webKitWebAudioSrcConstructed(GObject* object)
 {
-    GST_CALL_PARENT(G_OBJECT_CLASS, constructed, (object));
+    G_OBJECT_CLASS(webkit_web_audio_src_parent_class)->constructed(object);
 
     WebKitWebAudioSrc* src = WEBKIT_WEB_AUDIO_SRC(object);
     WebKitWebAudioSrcPrivate* priv = src->priv;
@@ -430,7 +429,7 @@ static GstStateChangeReturn webKitWebAudioSrcChangeState(GstElement* element, Gs
         break;
     }
 
-    returnValue = GST_ELEMENT_CLASS(parent_class)->change_state(element, transition);
+    returnValue = GST_ELEMENT_CLASS(webkit_web_audio_src_parent_class)->change_state(element, transition);
     if (UNLIKELY(returnValue == GST_STATE_CHANGE_FAILURE)) {
         GST_DEBUG_OBJECT(src, "State change failed");
         return returnValue;

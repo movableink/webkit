@@ -718,9 +718,9 @@ struct _WebKitMediaStreamSrcPrivate {
 };
 
 enum {
-    PROP_0,
-    PROP_IS_LIVE,
-    PROP_LAST
+    WEBKIT_MEDIASTREAM_SRC_PROP_0,
+    WEBKIT_MEDIASTREAM_SRC_PROP_IS_LIVE,
+    WEBKIT_MEDIASTREAM_SRC_PROP_LAST
 };
 
 void InternalSource::updateFirstVideoSampleSeenFlag()
@@ -838,7 +838,6 @@ static void webkitMediaStreamSrcUriHandlerInit(gpointer gIface, gpointer)
     G_IMPLEMENT_INTERFACE(GST_TYPE_URI_HANDLER, webkitMediaStreamSrcUriHandlerInit); \
     GST_DEBUG_CATEGORY_INIT(webkitMediaStreamSrcDebug, "webkitmediastreamsrc", 0, "mediastreamsrc element");
 
-#define webkit_media_stream_src_parent_class parent_class
 WEBKIT_DEFINE_TYPE_WITH_CODE(WebKitMediaStreamSrc, webkit_media_stream_src, GST_TYPE_BIN, doInit)
 
 static void webkitMediaStreamSrcSetProperty(GObject* object, guint propertyId, const GValue*, GParamSpec* pspec)
@@ -853,7 +852,7 @@ static void webkitMediaStreamSrcSetProperty(GObject* object, guint propertyId, c
 static void webkitMediaStreamSrcGetProperty(GObject* object, guint propertyId, GValue* value, GParamSpec* pspec)
 {
     switch (propertyId) {
-    case PROP_IS_LIVE:
+    case WEBKIT_MEDIASTREAM_SRC_PROP_IS_LIVE:
         g_value_set_boolean(value, TRUE);
         break;
     default:
@@ -864,7 +863,8 @@ static void webkitMediaStreamSrcGetProperty(GObject* object, guint propertyId, G
 
 static void webkitMediaStreamSrcConstructed(GObject* object)
 {
-    GST_CALL_PARENT(G_OBJECT_CLASS, constructed, (object));
+    G_OBJECT_CLASS(webkit_media_stream_src_parent_class)->constructed(object);
+
     WebKitMediaStreamSrc* self = WEBKIT_MEDIA_STREAM_SRC_CAST(object);
     auto* priv = self->priv;
 
@@ -896,7 +896,7 @@ static void webkitMediaStreamSrcDispose(GObject* object)
         }
     }
 
-    GST_CALL_PARENT(G_OBJECT_CLASS, dispose, (object));
+    G_OBJECT_CLASS(webkit_media_stream_src_parent_class)->dispose(object);
 }
 
 static GstStateChangeReturn webkitMediaStreamSrcChangeState(GstElement* element, GstStateChange transition)
@@ -952,7 +952,7 @@ static GstStateChangeReturn webkitMediaStreamSrcChangeState(GstElement* element,
 
 static gboolean webkitMediaStreamSrcQuery(GstElement* element, GstQuery* query)
 {
-    gboolean result = GST_ELEMENT_CLASS(parent_class)->query(element, query);
+    gboolean result = GST_ELEMENT_CLASS(webkit_media_stream_src_parent_class)->query(element, query);
 
     if (GST_QUERY_TYPE(query) != GST_QUERY_SCHEDULING)
         return result;
@@ -975,7 +975,7 @@ static void webkit_media_stream_src_class_init(WebKitMediaStreamSrcClass* klass)
     gobjectClass->get_property = webkitMediaStreamSrcGetProperty;
     gobjectClass->set_property = webkitMediaStreamSrcSetProperty;
 
-    g_object_class_install_property(gobjectClass, PROP_IS_LIVE, g_param_spec_boolean("is-live", nullptr, nullptr,
+    g_object_class_install_property(gobjectClass, WEBKIT_MEDIASTREAM_SRC_PROP_IS_LIVE, g_param_spec_boolean("is-live", nullptr, nullptr,
         TRUE, static_cast<GParamFlags>(G_PARAM_READABLE | G_PARAM_STATIC_STRINGS)));
 
     gstElementClass->change_state = GST_DEBUG_FUNCPTR(webkitMediaStreamSrcChangeState);

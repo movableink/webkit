@@ -50,7 +50,7 @@ static std::array<ASCIILiteral, 11> cencEncryptionMediaTypes = { "video/mp4"_s, 
     "audio/x-eac3"_s, "audio/x-ac3"_s, "audio/x-flac"_s, "audio/x-opus"_s, "video/x-vp9"_s, "video/x-av1"_s };
 static std::array<ASCIILiteral, 7> webmEncryptionMediaTypes = { "video/webm"_s, "audio/webm"_s, "video/x-vp9"_s, "video/x-av1"_s, "audio/x-opus"_s, "audio/x-vorbis"_s, "video/x-vp8"_s };
 
-static GstStaticPadTemplate srcTemplate = GST_STATIC_PAD_TEMPLATE("src",
+static GstStaticPadTemplate thunderSrcTemplate = GST_STATIC_PAD_TEMPLATE("src",
     GST_PAD_SRC,
     GST_PAD_ALWAYS,
     GST_STATIC_CAPS(
@@ -68,7 +68,6 @@ static GstStaticPadTemplate srcTemplate = GST_STATIC_PAD_TEMPLATE("src",
         "video/x-av1; "
         "audio/x-opus; audio/x-vorbis"));
 
-#define webkit_media_thunder_decrypt_parent_class parent_class
 WEBKIT_DEFINE_TYPE(WebKitMediaThunderDecrypt, webkit_media_thunder_decrypt, WEBKIT_TYPE_MEDIA_CENC_DECRYPT)
 
 static GRefPtr<GstCaps> createSinkPadTemplateCaps()
@@ -112,7 +111,7 @@ static void webkit_media_thunder_decrypt_class_init(WebKitMediaThunderDecryptCla
     GstElementClass* elementClass = GST_ELEMENT_CLASS(klass);
     GRefPtr<GstCaps> gstSinkPadTemplateCaps = createSinkPadTemplateCaps();
     gst_element_class_add_pad_template(elementClass, gst_pad_template_new("sink", GST_PAD_SINK, GST_PAD_ALWAYS, gstSinkPadTemplateCaps.get()));
-    gst_element_class_add_pad_template(elementClass, gst_static_pad_template_get(&srcTemplate));
+    gst_element_class_add_pad_template(elementClass, gst_static_pad_template_get(&thunderSrcTemplate));
 
     gst_element_class_set_static_metadata(elementClass, "Decrypt encrypted content using Thunder", GST_ELEMENT_FACTORY_KLASS_DECRYPTOR,
         "Decrypts encrypted media using Thunder.", "Xabier Rodríguez Calvar <calvaris@igalia.com>");
