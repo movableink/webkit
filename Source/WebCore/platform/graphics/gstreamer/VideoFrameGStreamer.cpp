@@ -27,6 +27,7 @@
 #include "BitmapImage.h"
 #include "GLContext.h"
 #include "GStreamerCommon.h"
+#include "GStreamerVideoFrameConverter.h"
 #include "GraphicsContext.h"
 #include "ImageGStreamer.h"
 #include "ImageOrientation.h"
@@ -79,7 +80,7 @@ static RefPtr<ImageGStreamer> convertSampleToImage(const GRefPtr<GstSample>& sam
     auto format = GST_VIDEO_INFO_HAS_ALPHA(&videoInfo) ? "ARGB"_s : "xRGB"_s;
 #endif
     auto caps = adoptGRef(gst_caps_new_simple("video/x-raw", "format", G_TYPE_STRING, format.characters(), "framerate", GST_TYPE_FRACTION, GST_VIDEO_INFO_FPS_N(&videoInfo), GST_VIDEO_INFO_FPS_D(&videoInfo), "width", G_TYPE_INT, GST_VIDEO_INFO_WIDTH(&videoInfo), "height", G_TYPE_INT, GST_VIDEO_INFO_HEIGHT(&videoInfo), nullptr));
-    auto convertedSample = adoptGRef(gst_video_convert_sample(sample.get(), caps.get(), GST_CLOCK_TIME_NONE, nullptr));
+    auto convertedSample = GStreamerVideoFrameConverter::singleton().convert(sample, caps);
     if (!convertedSample)
         return nullptr;
 
@@ -371,12 +372,9 @@ RefPtr<VideoFrameGStreamer> VideoFrameGStreamer::createFromPixelBuffer(Ref<Pixel
             gst_caps_set_simple(outputCaps.get(), "framerate", GST_TYPE_FRACTION, frameRateNumerator, frameRateDenominator, nullptr);
 
         auto inputSample = adoptGRef(gst_sample_new(buffer.get(), caps.get(), nullptr, nullptr));
-        GUniqueOutPtr<GError> error;
-        sample = adoptGRef(gst_video_convert_sample(inputSample.get(), outputCaps.get(), GST_CLOCK_TIME_NONE, &error.outPtr()));
-        if (!sample) {
-            GST_ERROR("Video sample conversion failed: %s", error->message);
+        sample = GStreamerVideoFrameConverter::singleton().convert(inputSample, outputCaps);
+        if (!sample)
             return nullptr;
-        }
 
         GRefPtr buffer = gst_sample_get_buffer(sample.get());
         auto outputBuffer = webkitGstBufferSetVideoFrameTimeMetadata(WTFMove(buffer), WTFMove(metadata));
@@ -627,12 +625,7 @@ GRefPtr<GstSample> VideoFrameGStreamer::convert(GstVideoFormat format, const Int
     if (gst_caps_is_equal(caps, outputCaps.get()))
         return GRefPtr<GstSample>(m_sample);
 
-    GUniqueOutPtr<GError> error;
-    auto convertedSample = adoptGRef(gst_video_convert_sample(m_sample.get(), outputCaps.get(), GST_CLOCK_TIME_NONE, &error.outPtr()));
-    if (!convertedSample)
-        GST_ERROR("Conversion to %s failed: %s", formatName.data(), error->message);
-
-    return convertedSample;
+    return GStreamerVideoFrameConverter::singleton().convert(m_sample, outputCaps);
 }
 
 GRefPtr<GstSample> VideoFrameGStreamer::downloadSample(std::optional<GstVideoFormat> destinationFormat)

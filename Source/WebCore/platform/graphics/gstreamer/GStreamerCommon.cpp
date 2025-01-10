@@ -1831,6 +1831,43 @@ GRefPtr<GstCaps> buildDMABufCaps()
 }
 #endif // USE(GBM)
 
+static std::optional<GRefPtr<GstContext>> requestGLContext(const char* contextType)
+{
+    auto& sharedDisplay = PlatformDisplay::sharedDisplay();
+    auto* gstGLDisplay = sharedDisplay.gstGLDisplay();
+    auto* gstGLContext = sharedDisplay.gstGLContext();
+
+    if (!gstGLDisplay || !gstGLContext)
+        return std::nullopt;
+
+    if (!g_strcmp0(contextType, GST_GL_DISPLAY_CONTEXT_TYPE)) {
+        GRefPtr<GstContext> displayContext = adoptGRef(gst_context_new(GST_GL_DISPLAY_CONTEXT_TYPE, FALSE));
+        gst_context_set_gl_display(displayContext.get(), gstGLDisplay);
+        return displayContext;
+    }
+
+    if (!g_strcmp0(contextType, "gst.gl.app_context")) {
+        GRefPtr<GstContext> appContext = adoptGRef(gst_context_new("gst.gl.app_context", FALSE));
+        GstStructure* structure = gst_context_writable_structure(appContext.get());
+        gst_structure_set(structure, "context", GST_TYPE_GL_CONTEXT, gstGLContext, nullptr);
+        return appContext;
+    }
+
+    return std::nullopt;
+}
+
+bool setGstElementGLContext(GstElement* element, const char* contextType)
+{
+    GRefPtr<GstContext> oldContext = adoptGRef(gst_element_get_context(element, contextType));
+    if (!oldContext) {
+        auto newContext = requestGLContext(contextType);
+        if (!newContext)
+            return false;
+        gst_element_set_context(element, newContext->get());
+    }
+    return true;
+}
+
 #undef GST_CAT_DEFAULT
 
 } // namespace WebCore

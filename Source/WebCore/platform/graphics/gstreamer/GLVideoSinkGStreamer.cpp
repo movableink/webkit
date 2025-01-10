@@ -152,43 +152,6 @@ void webKitGLVideoSinkFinalize(GObject* object)
     GST_CALL_PARENT(G_OBJECT_CLASS, finalize, (object));
 }
 
-std::optional<GRefPtr<GstContext>> requestGLContext(const char* contextType)
-{
-    auto& sharedDisplay = PlatformDisplay::sharedDisplay();
-    auto* gstGLDisplay = sharedDisplay.gstGLDisplay();
-    auto* gstGLContext = sharedDisplay.gstGLContext();
-
-    if (!(gstGLDisplay && gstGLContext))
-        return std::nullopt;
-
-    if (!g_strcmp0(contextType, GST_GL_DISPLAY_CONTEXT_TYPE)) {
-        GRefPtr<GstContext> displayContext = adoptGRef(gst_context_new(GST_GL_DISPLAY_CONTEXT_TYPE, FALSE));
-        gst_context_set_gl_display(displayContext.get(), gstGLDisplay);
-        return displayContext;
-    }
-
-    if (!g_strcmp0(contextType, "gst.gl.app_context")) {
-        GRefPtr<GstContext> appContext = adoptGRef(gst_context_new("gst.gl.app_context", FALSE));
-        GstStructure* structure = gst_context_writable_structure(appContext.get());
-        gst_structure_set(structure, "context", GST_TYPE_GL_CONTEXT, gstGLContext, nullptr);
-        return appContext;
-    }
-
-    return std::nullopt;
-}
-
-static bool setGLContext(GstElement* elementSink, const char* contextType)
-{
-    GRefPtr<GstContext> oldContext = adoptGRef(gst_element_get_context(elementSink, contextType));
-    if (!oldContext) {
-        auto newContext = requestGLContext(contextType);
-        if (!newContext)
-            return false;
-        gst_element_set_context(elementSink, newContext->get());
-    }
-    return true;
-}
-
 static GstStateChangeReturn webKitGLVideoSinkChangeState(GstElement* element, GstStateChange transition)
 {
     GST_DEBUG_OBJECT(element, "%s", gst_state_change_get_name(transition));
@@ -197,9 +160,9 @@ static GstStateChangeReturn webKitGLVideoSinkChangeState(GstElement* element, Gs
     case GST_STATE_CHANGE_NULL_TO_READY:
     case GST_STATE_CHANGE_READY_TO_READY:
     case GST_STATE_CHANGE_READY_TO_PAUSED: {
-        if (!setGLContext(element, GST_GL_DISPLAY_CONTEXT_TYPE))
+        if (!setGstElementGLContext(element, GST_GL_DISPLAY_CONTEXT_TYPE))
             return GST_STATE_CHANGE_FAILURE;
-        if (!setGLContext(element, "gst.gl.app_context"))
+        if (!setGstElementGLContext(element, "gst.gl.app_context"))
             return GST_STATE_CHANGE_FAILURE;
         break;
     }

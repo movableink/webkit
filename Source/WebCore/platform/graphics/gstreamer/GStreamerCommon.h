@@ -353,6 +353,8 @@ void gstStructureFilterAndMapInPlace(GstStructure*, Function<bool(GstId, GValue*
 WARN_UNUSED_RETURN GRefPtr<GstCaps> buildDMABufCaps();
 #endif
 
+bool setGstElementGLContext(GstElement*, const char* contextType);
+
 } // namespace WebCore
 
 #ifndef GST_BUFFER_DTS_OR_PTS
