@@ -213,8 +213,8 @@ bool CoreAudioSharedInternalUnit::setVoiceActivityDetection(bool shouldEnable)
         }
     };
 
-    auto err = set(kAUVoiceIOProperty_MutedSpeechActivityEventListener, kAudioUnitScope_Global, outputBus, shouldEnable ? &listener : nullptr, sizeof(AUVoiceIOMutedSpeechActivityEventListener));
-    RELEASE_LOG_ERROR_IF(err, WebRTC, "@@@@@ CoreAudioSharedInternalUnit::setVoiceActivityDetection failed activation, error %d (%.4s)", (int)err, (char*)&err);
+    auto err = set(kAUVoiceIOProperty_MutedSpeechActivityEventListener, kAudioUnitScope_Global, outputBus, shouldEnable ? &listener : nullptr, shouldEnable ? sizeof(AUVoiceIOMutedSpeechActivityEventListener) : 0);
+    RELEASE_LOG_ERROR_IF(err, WebRTC, "CoreAudioSharedInternalUnit::setVoiceActivityDetection failed activation, error %d (%.4s)", (int)err, (char*)&err);
     return !err;
 #endif
 #else
