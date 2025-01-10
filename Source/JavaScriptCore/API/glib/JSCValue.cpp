@@ -33,6 +33,7 @@
 #include "LiteralParser.h"
 #include "OpaqueJSString.h"
 #include "TypedArrayType.h"
+#include <array>
 #include <gobject/gvaluecollector.h>
 #include <wtf/glib/GRefPtr.h>
 #include <wtf/glib/GUniquePtr.h>
@@ -2188,12 +2189,10 @@ JSCValue* jsc_value_new_promise(JSCContext* context, JSCExecutor executor, gpoin
     if (jscContextHandleExceptionIfNeeded(context, exception))
         return nullptr;
 
-    const size_t argumentCount = 2;
-    JSValueRef arguments[argumentCount];
-    arguments[0] = resolveObj;
-    arguments[1] = rejectObj;
+    constexpr size_t argumentCount = 2;
+    std::array<JSValueRef, argumentCount> arguments = { resolveObj, rejectObj };
 
-    auto callbackData = jscContextPushCallback(context, nullptr, promise, argumentCount, arguments);
+    auto callbackData = jscContextPushCallback(context, nullptr, promise, argumentCount, arguments.data());
     GRefPtr<JSCValue> resolve = jscContextGetOrCreateValue(context, resolveObj);
     GRefPtr<JSCValue> reject = jscContextGetOrCreateValue(context, rejectObj);
     executor(resolve.get(), reject.get(), userData);
