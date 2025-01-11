@@ -31,8 +31,6 @@
 #include "GradientColorStops.h"
 #include <pal/spi/cg/CoreGraphicsSPI.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 GradientRendererCG::GradientRendererCG(ColorInterpolationMethod colorInterpolationMethod, const GradientColorStops& stops)
@@ -537,6 +535,7 @@ GradientRendererCG::Strategy GradientRendererCG::makeGradient(ColorInterpolation
 
 // MARK: - Shading strategy.
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 template<typename InterpolationSpace, AlphaPremultiplication alphaPremultiplication>
 void GradientRendererCG::Shading::shadingFunction(void* info, const CGFloat* in, CGFloat* out)
 {
@@ -575,6 +574,7 @@ void GradientRendererCG::Shading::shadingFunction(void* info, const CGFloat* in,
     for (size_t componentIndex = 0; componentIndex < interpolatedColorConvertedToOutputSpace.size(); ++componentIndex)
         out[componentIndex] = interpolatedColorConvertedToOutputSpace[componentIndex];
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 GradientRendererCG::Strategy GradientRendererCG::makeShading(ColorInterpolationMethod colorInterpolationMethod, const GradientColorStops& stops) const
 {
@@ -729,5 +729,3 @@ void GradientRendererCG::drawConicGradient(CGContextRef platformContext, CGPoint
 }
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

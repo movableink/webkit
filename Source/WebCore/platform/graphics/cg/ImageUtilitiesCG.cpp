@@ -41,8 +41,6 @@
 #include <wtf/text/CString.h>
 #include <wtf/text/MakeString.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WorkQueue& sharedImageTranscodingQueue()
@@ -74,7 +72,7 @@ static String transcodeImage(const String& path, const String& destinationUTI, c
     CGDataConsumerCallbacks callbacks = {
         [](void* info, const void* buffer, size_t count) -> size_t {
             auto handle = *static_cast<FileSystem::PlatformFileHandle*>(info);
-            return FileSystem::writeToFile(handle, { static_cast<const uint8_t*>(buffer), count });
+            return FileSystem::writeToFile(handle, unsafeMakeSpan(static_cast<const uint8_t*>(buffer), count));
         },
         nullptr
     };
@@ -251,5 +249,3 @@ RefPtr<ShareableBitmap> decodeImageWithSize(std::span<const uint8_t> data, std::
 
 }
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

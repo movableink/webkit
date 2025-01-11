@@ -50,8 +50,6 @@
 #include <wtf/URL.h>
 #include <wtf/text/TextStream.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(GraphicsContextCG);
@@ -1143,9 +1141,10 @@ void GraphicsContextCG::setCGStyle(const std::optional<GraphicsStyle>& style, bo
         [&] (const GraphicsColorMatrix& colorMatrix) {
 #if HAVE(CGSTYLE_COLORMATRIX_BLUR)
             CGColorMatrixStyle colorMatrixStyle = { 1, { 0 } };
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
             for (size_t i = 0; i < colorMatrix.values.size(); ++i)
                 colorMatrixStyle.matrix[i] = colorMatrix.values[i];
-
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
             auto style = adoptCF(CGStyleCreateColorMatrix(&colorMatrixStyle));
             CGContextSetStyle(context, style.get());
 #else
@@ -1587,7 +1586,5 @@ bool GraphicsContextCG::consumeHasDrawn()
 }
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif
