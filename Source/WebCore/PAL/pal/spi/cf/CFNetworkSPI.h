@@ -589,7 +589,6 @@ WTF_EXTERN_C_END
 
 @interface NSURLSessionTask ()
 - (void)_setExplicitCookieStorage:(CFHTTPCookieStorageRef)storage;
-@property (readonly) SSLProtocol _TLSNegotiatedProtocolVersion;
 @end
 
 @interface NSURLSessionWebSocketTask (SPI)

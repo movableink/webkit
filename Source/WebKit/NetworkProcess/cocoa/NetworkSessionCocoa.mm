@@ -749,6 +749,36 @@ void NetworkSessionCocoa::setClientAuditToken(const WebCore::AuthenticationChall
 
 }
 
+static NegotiatedLegacyTLS checkForLegacyTLS(NSURLSessionTaskTransactionMetrics *metrics)
+{
+    auto tlsVersion = (tls_protocol_version_t)metrics.negotiatedTLSProtocolVersion.unsignedShortValue;
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+    if (tlsVersion == tls_protocol_version_TLSv10 || tlsVersion == tls_protocol_version_TLSv11)
+        return NegotiatedLegacyTLS::Yes;
+ALLOW_DEPRECATED_DECLARATIONS_END
+
+    switch (metrics.negotiatedTLSCipherSuite.unsignedShortValue) {
+    case TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA:
+    case TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA:
+    case TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA:
+    case TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA:
+    case TLS_ECDH_anon_WITH_3DES_EDE_CBC_SHA:
+    case TLS_RSA_WITH_3DES_EDE_CBC_SHA:
+    case TLS_DH_DSS_WITH_3DES_EDE_CBC_SHA:
+    case TLS_DH_RSA_WITH_3DES_EDE_CBC_SHA:
+    case TLS_DHE_DSS_WITH_3DES_EDE_CBC_SHA:
+    case TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA:
+    case TLS_DH_anon_WITH_3DES_EDE_CBC_SHA:
+    case TLS_PSK_WITH_3DES_EDE_CBC_SHA:
+    case TLS_DHE_PSK_WITH_3DES_EDE_CBC_SHA:
+    case TLS_RSA_PSK_WITH_3DES_EDE_CBC_SHA:
+    case SSL_RSA_WITH_3DES_EDE_CBC_MD5:
+        return NegotiatedLegacyTLS::Yes;
+    default:
+        return NegotiatedLegacyTLS::No;
+    }
+}
+
 - (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge completionHandler:(void (^)(NSURLSessionAuthChallengeDisposition disposition, NSURLCredential *credential))completionHandler
 {
     auto* sessionCocoa = [self sessionFromTask:task];
@@ -774,21 +804,7 @@ void NetworkSessionCocoa::setClientAuditToken(const WebCore::AuthenticationChall
     if ([challenge.protectionSpace.authenticationMethod isEqualToString:NSURLAuthenticationMethodServerTrust]) {
         sessionCocoa->setClientAuditToken(challenge);
 
-        NSURLSessionTaskTransactionMetrics *metrics = task._incompleteTaskMetrics.transactionMetrics.lastObject;
-        auto tlsVersion = (tls_protocol_version_t)metrics.negotiatedTLSProtocolVersion.unsignedShortValue;
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        if (tlsVersion == tls_protocol_version_TLSv10 || tlsVersion == tls_protocol_version_TLSv11)
-            negotiatedLegacyTLS = NegotiatedLegacyTLS::Yes;
-ALLOW_DEPRECATED_DECLARATIONS_END
-
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        if (negotiatedLegacyTLS == NegotiatedLegacyTLS::No && [task respondsToSelector:@selector(_TLSNegotiatedProtocolVersion)]) {
-            SSLProtocol tlsVersion = [task _TLSNegotiatedProtocolVersion];
-            if (tlsVersion == kTLSProtocol11 || tlsVersion == kTLSProtocol1)
-                negotiatedLegacyTLS = NegotiatedLegacyTLS::Yes;
-        }
-ALLOW_DEPRECATED_DECLARATIONS_END
-
+        negotiatedLegacyTLS = checkForLegacyTLS(task._incompleteTaskMetrics.transactionMetrics.lastObject);
         if (negotiatedLegacyTLS == NegotiatedLegacyTLS::Yes && task._preconnect)
             return completionHandler(NSURLSessionAuthChallengeCancelAuthenticationChallenge, nil);
 
@@ -1099,11 +1115,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 #else
         auto privateRelayed = PrivateRelayed::No;
 #endif
-        auto tlsVersion = (tls_protocol_version_t)metrics.negotiatedTLSProtocolVersion.unsignedShortValue;
-        ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        if (tlsVersion == tls_protocol_version_TLSv10 || tlsVersion == tls_protocol_version_TLSv11)
-            negotiatedLegacyTLS = NegotiatedLegacyTLS::Yes;
-        ALLOW_DEPRECATED_DECLARATIONS_END
+        negotiatedLegacyTLS = checkForLegacyTLS(metrics);
 
         // Avoid MIME type sniffing if the response comes back as 304 Not Modified.
         auto httpResponse = dynamic_objc_cast<NSHTTPURLResponse>(response);
