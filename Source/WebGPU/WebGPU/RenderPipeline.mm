@@ -1796,6 +1796,30 @@ const BufferBindingSizesForBindGroup* RenderPipeline::minimumBufferSizes(uint32_
     return it == m_minimumBufferSizes.end() ? nullptr : &it->value;
 }
 
+RefPtr<RenderPipeline> RenderPipeline::recomputeLastStrideAsStride() const
+{
+    MTLRenderPipelineDescriptor* clonedRenderPipelineDescriptor = [m_renderPipelineDescriptor copy];
+
+    auto requiredBufferIndices = m_requiredBufferIndices;
+    if (auto* vertexDescriptor = clonedRenderPipelineDescriptor.vertexDescriptor) {
+        for (auto& [bufferIndex, bufferData] : requiredBufferIndices) {
+            vertexDescriptor.layouts[bufferIndex].stride = bufferData.lastStride;
+            bufferData.stride = bufferData.lastStride;
+        }
+    }
+
+    NSError *error = nil;
+    id<MTLRenderPipelineState> renderPipelineState = [m_device->device() newRenderPipelineStateWithDescriptor:clonedRenderPipelineDescriptor error:&error];
+    if (!renderPipelineState) {
+        if (error)
+            WTFLogAlways("Cloning RenderPipeline state failed: %@", error.localizedDescription); // NOLINT
+        return nullptr;
+    }
+
+    auto minimumBufferSizes = m_minimumBufferSizes;
+    return RenderPipeline::create(renderPipelineState, m_primitiveType, m_indexType, m_frontFace, m_cullMode, m_clipMode, m_depthStencilDescriptor, m_pipelineLayout.copyRef(), m_depthBias, m_depthBiasSlopeScale, m_depthBiasClamp, m_sampleMask, clonedRenderPipelineDescriptor, m_colorAttachmentCount, m_descriptor, WTFMove(requiredBufferIndices), WTFMove(minimumBufferSizes), m_device);
+}
+
 } // namespace WebGPU
 
 #pragma mark WGPU Stubs
