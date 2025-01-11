@@ -84,6 +84,112 @@
 
 namespace WebKit {
 
+class RKModelUSD final : public WebCore::REModel {
+public:
+    static Ref<RKModelUSD> create(Ref<Model> model, RetainPtr<WKSRKEntity> entity)
+    {
+        return adoptRef(*new RKModelUSD(WTFMove(model), WTFMove(entity)));
+    }
+
+    virtual ~RKModelUSD() = default;
+
+private:
+    RKModelUSD(Ref<Model> model, RetainPtr<WKSRKEntity> entity)
+        : m_model { WTFMove(model) }
+        , m_entity { WTFMove(entity) }
+    {
+    }
+
+    // REModel overrides.
+    const Model& modelSource() const final
+    {
+        return m_model;
+    }
+
+    REEntityRef rootEntity() const final
+    {
+        return nullptr;
+    }
+
+    RetainPtr<WKSRKEntity> rootRKEntity() const final
+    {
+        return m_entity;
+    }
+
+    Ref<Model> m_model;
+    RetainPtr<WKSRKEntity> m_entity;
+};
+
+class RKModelLoaderUSD final : public WebCore::REModelLoader, public CanMakeWeakPtr<RKModelLoaderUSD> {
+public:
+    static Ref<RKModelLoaderUSD> create(Model& model, REModelLoaderClient& client)
+    {
+        return adoptRef(*new RKModelLoaderUSD(model, client));
+    }
+
+    virtual ~RKModelLoaderUSD() = default;
+
+    void load();
+
+    bool isCanceled() const { return m_canceled; }
+
+private:
+    RKModelLoaderUSD(Model& model, REModelLoaderClient& client)
+        : m_canceled { false }
+        , m_model { model }
+        , m_client { client }
+    {
+    }
+
+    // REModelLoader overrides.
+    void cancel() final
+    {
+        m_canceled = true;
+    }
+
+    void didFinish(RetainPtr<WKSRKEntity> entity)
+    {
+        if (m_canceled)
+            return;
+
+        if (auto strongClient = m_client.get())
+            strongClient->didFinishLoading(*this, RKModelUSD::create(WTFMove(m_model), entity));
+    }
+
+    void didFail(ResourceError error)
+    {
+        if (m_canceled)
+            return;
+
+        if (auto strongClient = m_client.get())
+            strongClient->didFailLoading(*this, WTFMove(error));
+    }
+
+    bool m_canceled { false };
+
+    Ref<Model> m_model;
+    WeakPtr<REModelLoaderClient> m_client;
+};
+
+void RKModelLoaderUSD::load()
+{
+    [getWKSRKEntityClass() loadFromData:m_model->data()->createNSData().get() completionHandler:makeBlockPtr([weakThis = WeakPtr { *this }] (WKSRKEntity *entity) mutable {
+        if (RefPtr protectedThis = weakThis.get())
+            protectedThis->didFinish(entity);
+    }).get()];
+}
+
+static Ref<REModelLoader> loadREModelUsingRKUSDLoader(Model& model, REModelLoaderClient& client)
+{
+    auto loader = RKModelLoaderUSD::create(model, client);
+
+    dispatch_async(dispatch_get_main_queue(), [loader] () mutable {
+        loader->load();
+    });
+
+    return loader;
+}
+
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ModelProcessModelPlayerProxy);
 
 Ref<ModelProcessModelPlayerProxy> ModelProcessModelPlayerProxy::create(ModelProcessModelPlayerManagerProxy& manager, WebCore::ModelPlayerIdentifier identifier, Ref<IPC::Connection>&& connection)
@@ -334,9 +440,13 @@ void ModelProcessModelPlayerProxy::didFinishLoading(WebCore::REModelLoader& load
     dispatch_assert_queue(dispatch_get_main_queue());
     ASSERT(&loader == m_loader.get());
 
+    bool canLoadWithRealityKit = [getWKSRKEntityClass() isLoadFromDataAvailable];
+
     m_loader = nullptr;
     m_model = WTFMove(model);
-    if (m_model->rootEntity())
+    if (canLoadWithRealityKit)
+        m_modelRKEntity = m_model->rootRKEntity();
+    else if (m_model->rootEntity())
         m_modelRKEntity = adoptNS([allocWKSRKEntityInstance() initWithCoreEntity:m_model->rootEntity()]);
     [m_modelRKEntity setDelegate:m_objCAdapter.get()];
 
@@ -357,7 +467,10 @@ void ModelProcessModelPlayerProxy::didFinishLoading(WebCore::REModelLoader& load
     auto clientComponent = RECALayerGetCALayerClientComponent(m_layer.get());
     auto clientComponentEntity = REComponentGetEntity(clientComponent);
     REEntitySetName(clientComponentEntity, "WebKit:ClientComponentEntity");
-    REEntitySetName(m_model->rootEntity(), "WebKit:ModelRootEntity");
+    if (canLoadWithRealityKit)
+        [m_model->rootRKEntity() setName:@"WebKit:ModelRootEntity"];
+    else
+        REEntitySetName(m_model->rootEntity(), "WebKit:ModelRootEntity");
 
     // FIXME: Clipping workaround for rdar://125188888 (blocked by rdar://123516357 -> rdar://124718417).
     // containerEntity is required to add a clipping primitive that is independent from model's rootEntity.
@@ -367,7 +480,10 @@ void ModelProcessModelPlayerProxy::didFinishLoading(WebCore::REModelLoader& load
     REEntitySetName(containerEntity.get(), "WebKit:ContainerEntity");
 
     REEntitySetParent(containerEntity.get(), clientComponentEntity);
-    REEntitySetParent(m_model->rootEntity(), containerEntity.get());
+    if (canLoadWithRealityKit)
+        [m_model->rootRKEntity() setParentCoreEntity:containerEntity.get()];
+    else
+        REEntitySetParent(m_model->rootEntity(), containerEntity.get());
 
     REEntitySubtreeAddNetworkComponentRecursive(containerEntity.get());
 
@@ -380,7 +496,8 @@ void ModelProcessModelPlayerProxy::didFinishLoading(WebCore::REModelLoader& load
     REClippingPrimitiveComponentClipToBox(clipComponent, clipBounds);
 
     RENetworkMarkEntityMetadataDirty(clientComponentEntity);
-    RENetworkMarkEntityMetadataDirty(m_model->rootEntity());
+    if (!canLoadWithRealityKit)
+        RENetworkMarkEntityMetadataDirty(m_model->rootEntity());
 
     updateBackgroundColor();
     computeTransform();
@@ -416,7 +533,10 @@ void ModelProcessModelPlayerProxy::load(WebCore::Model& model, WebCore::LayoutSi
 
     WKREEngine::shared().runWithSharedScene([this, protectedThis = Ref { *this }, model = Ref { model }] (RESceneRef scene) {
         m_scene = scene;
-        m_loader = WebCore::loadREModel(model.get(), *this);
+        if ([getWKSRKEntityClass() isLoadFromDataAvailable])
+            m_loader = loadREModelUsingRKUSDLoader(model.get(), *this);
+        else
+            m_loader = WebCore::loadREModel(model.get(), *this);
     });
 }
 
