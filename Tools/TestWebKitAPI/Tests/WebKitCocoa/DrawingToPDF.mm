@@ -34,6 +34,7 @@
 #import <WebCore/Color.h>
 #import <WebKit/WKPDFConfiguration.h>
 #import <WebKit/WKWebViewPrivate.h>
+#import <wtf/text/TextStream.h>
 
 namespace TestWebKitAPI {
 
@@ -56,6 +57,37 @@ TEST(DrawingToPDF, GradientIntoPDF)
         EXPECT_NE(page, nullptr);
 
         EXPECT_TRUE(page->colorAtPoint(50, 50) == WebCore::Color::blue);
+
+        didTakeSnapshot = true;
+    }];
+
+    Util::run(&didTakeSnapshot);
+}
+
+TEST(DrawingToPDF, BackgroundClipText)
+{
+    static bool didTakeSnapshot;
+
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);
+
+    [webView synchronouslyLoadHTMLString:@"<style>@font-face { font-family: Ahem; src: url(Ahem.ttf); }"
+        "body { margin: 0 }"
+        "div { font-family: Ahem; font-size: 20px; padding: 10px; color: transparent; background: blue; background-clip: text; print-color-adjust: exact; }</style>"
+        "<div>A</div>"];
+
+    auto configuration = adoptNS([[WKPDFConfiguration alloc] init]);
+    [configuration setRect:NSMakeRect(0, 0, 40, 40)];
+
+    [webView createPDFWithConfiguration:configuration.get() completionHandler:^(NSData *pdfSnapshotData, NSError *error) {
+        EXPECT_NULL(error);
+        auto document = TestPDFDocument::createFromData(pdfSnapshotData);
+        EXPECT_EQ(document->pageCount(), 1u);
+        auto page = document->page(0);
+        EXPECT_NE(page, nullptr);
+
+        EXPECT_TRUE(page->colorAtPoint(2, 2) == WebCore::Color::white);
+        // We can't test for blue because the colors are affected by colorspace conversions.
+        EXPECT_TRUE(page->colorAtPoint(25, 25) != WebCore::Color::white);
 
         didTakeSnapshot = true;
     }];

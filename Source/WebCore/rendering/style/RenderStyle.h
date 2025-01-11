@@ -401,6 +401,7 @@ public:
 
     inline bool hasBackgroundImage() const;
     inline bool hasAnyFixedBackground() const;
+    bool hasAnyBackgroundClipText() const;
 
     bool hasEntirelyFixedBackground() const;
     inline bool hasAnyLocalBackground() const;

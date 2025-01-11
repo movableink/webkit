@@ -1609,6 +1609,8 @@ webkit.org/b/174460 fast/canvas/canvas-blend-solid.html [ Failure ]
 
 webkit.org/b/175421 printing/width-overflow.html [ Failure ]
 
+webkit.org/b/285785 printing/background-clip-text.html [ ImageOnlyFailure ]
+
 webkit.org/b/176648 fast/repaint/inline-outline-repaint.html [ ImageOnlyFailure ]
 
 webkit.org/b/177294 platform/gtk/fonts/fontconfig-aliasing-settings.html [ Failure ]

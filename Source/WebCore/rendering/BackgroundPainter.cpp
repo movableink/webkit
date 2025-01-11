@@ -209,6 +209,7 @@ void BackgroundPainter::paintFillLayer(const Color& color, const FillLayer& bgLa
     if (document().printing()) {
         if (style.printColorAdjust() == PrintColorAdjust::Economy)
             forceBackgroundToWhite = true;
+
         if (document().settings().shouldPrintBackgrounds())
             forceBackgroundToWhite = false;
     }
@@ -227,6 +228,9 @@ void BackgroundPainter::paintFillLayer(const Color& color, const FillLayer& bgLa
             bgColor = Color::white;
             shouldPaintBackgroundImage = false;
         }
+
+        if (layerClip == FillBox::Text)
+            layerClip = FillBox::BorderBox;
     }
 
     bool baseBgColorOnly = (baseBgColorUsage == BaseBackgroundColorOnly);
@@ -327,18 +331,32 @@ void BackgroundPainter::paintFillLayer(const Color& color, const FillLayer& bgLa
     auto backgroundClipOuterLayerScope = TransparencyLayerScope(context, 1, false);
     auto backgroundClipInnerLayerScope = TransparencyLayerScope(context, 1, false);
 
-    auto setupMaskingBackgroundClip = [&](const LayoutRect& borderRect, const std::function<void(const LayoutRect&, const FloatRect&)>& paintFunction) {
+    auto setupMaskingBackgroundClip = [&](const LayoutRect& borderRect, const std::function<void(GraphicsContext& context, const LayoutRect&, const FloatRect&)>& paintFunction) {
         auto transparencyLayerBounds = snapRectToDevicePixels(rect, deviceScaleFactor);
         transparencyLayerBounds.intersect(snapRectToDevicePixels(m_paintInfo.rect, deviceScaleFactor));
         transparencyLayerBounds.inflate(1);
 
         backgroundClipStateSaver.save();
         context.clip(transparencyLayerBounds);
-
         backgroundClipOuterLayerScope.beginLayer(1);
-        paintFunction(borderRect, transparencyLayerBounds);
 
-        context.setCompositeOperation(CompositeOperator::SourceIn);
+        if (context.renderingMode() == RenderingMode::PDFDocument) {
+            // CG doesn't support some compositing operations when printing, so clip using an imageBuffer instead.
+            static constexpr auto printBufferResolution = 3.0f; // Chosen to result in output that is not too blurry.
+            RefPtr maskImage = context.createImageBuffer(transparencyLayerBounds.size(), printBufferResolution);
+            if (!maskImage)
+                return;
+
+            auto& maskContext = maskImage->context();
+            maskContext.translate(-transparencyLayerBounds.location());
+
+            paintFunction(maskContext, borderRect, transparencyLayerBounds);
+            context.clipToImageBuffer(*maskImage, transparencyLayerBounds);
+        } else {
+            paintFunction(context, borderRect, transparencyLayerBounds);
+            context.setCompositeOperation(CompositeOperator::SourceIn);
+        }
+
         backgroundClipInnerLayerScope.beginLayer(1);
         context.setCompositeOperation(CompositeOperator::SourceOver);
     };
@@ -364,7 +382,7 @@ void BackgroundPainter::paintFillLayer(const Color& color, const FillLayer& bgLa
         // We have to draw our text into a mask that can then be used to clip background drawing.
         // First figure out how big the mask has to be. It should be no bigger than what we need
         // to actually render, so we should intersect the dirty rect with the border box of the background.
-        setupMaskingBackgroundClip(rect, [&](const LayoutRect&, const FloatRect& paintRect) {
+        setupMaskingBackgroundClip(rect, [&](GraphicsContext& context, const LayoutRect&, const FloatRect& paintRect) {
             m_renderer.paintMaskForTextFillBox(context, paintRect, inlineBoxIterator, scrolledPaintRect);
         });
         break;
@@ -377,7 +395,7 @@ void BackgroundPainter::paintFillLayer(const Color& color, const FillLayer& bgLa
             break;
         }
 
-        setupMaskingBackgroundClip(rect, [&](const LayoutRect& borderRect, const FloatRect& paintRect) {
+        setupMaskingBackgroundClip(rect, [&](GraphicsContext& context, const LayoutRect& borderRect, const FloatRect& paintRect) {
             auto borderPaintInfo = PaintInfo { context, LayoutRect { paintRect }, PaintPhase::BlockBackground, PaintBehavior::ForceBlackBorder };
             auto borderPainter = BorderPainter { m_renderer, borderPaintInfo };
             borderPainter.paintBorder(borderRect, style);

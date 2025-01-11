@@ -551,6 +551,8 @@ webkit.org/b/181767 fast/hidpi/filters-hue-rotate.html [ Pass ImageOnlyFailure ]
 
 webkit.org/b/206653 imported/w3c/web-platform-tests/clipboard-apis/async-navigator-clipboard-basics.https.html [ Failure ]
 
+webkit.org/b/285785 printing/background-clip-text.html [ ImageOnlyFailure ]
+
 # WPT css-fonts failures/passes unique to WPE
 
 webkit.org/b/208869 fast/images/inline-image-box-with-no-alt-should-collapse-no-quirks.html [ Failure ]

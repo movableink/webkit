@@ -2581,18 +2581,22 @@ RoundedRect RenderStyle::getRoundedInnerBorderFor(const LayoutRect& borderRect, 
     return roundedRect;
 }
 
-static bool allLayersAreFixed(const FillLayer& layers)
+bool RenderStyle::hasEntirelyFixedBackground() const
 {
-    for (auto* layer = &layers; layer; layer = layer->next()) {
+    for (auto* layer = &backgroundLayers(); layer; layer = layer->next()) {
         if (!(layer->image() && layer->attachment() == FillAttachment::FixedBackground))
             return false;
     }
     return true;
 }
 
-bool RenderStyle::hasEntirelyFixedBackground() const
+bool RenderStyle::hasAnyBackgroundClipText() const
 {
-    return allLayersAreFixed(backgroundLayers());
+    for (auto* layer = &backgroundLayers(); layer; layer = layer->next()) {
+        if (layer->clip() == FillBox::Text)
+            return true;
+    }
+    return false;
 }
 
 const CounterDirectiveMap& RenderStyle::counterDirectives() const
