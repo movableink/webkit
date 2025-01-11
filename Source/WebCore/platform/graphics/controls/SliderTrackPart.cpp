@@ -89,8 +89,8 @@ void SliderTrackPart::drawTicks(GraphicsContext& context, const FloatRect& rect,
     context.setFillColor(style.textColor);
 
     bool isVerticalWritingMode = style.states.contains(ControlStyle::State::VerticalWritingMode);
-    bool isRightToLeft = style.states.contains(ControlStyle::State::RightToLeft);
-    bool isInlineFlipped = (!isHorizontal && !isVerticalWritingMode) || isRightToLeft;
+    bool isInlineFlippedWritingMode = style.states.contains(ControlStyle::State::InlineFlippedWritingMode);
+    bool isInlineFlipped = (!isHorizontal && !isVerticalWritingMode) || isInlineFlippedWritingMode;
 
     for (auto tickRatio : m_tickRatios) {
         double value = isInlineFlipped ? 1.0 - tickRatio : tickRatio;

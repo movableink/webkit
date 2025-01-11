@@ -79,7 +79,7 @@ void SliderTrackAdwaita::draw(GraphicsContext& graphicsContext, const FloatRound
     FloatRoundedRect::Radii corners;
     if (isHorizontal) {
         float offset = rangeRect.width() * sliderTrackPart.thumbPosition();
-        if (style.states.contains(ControlStyle::State::RightToLeft)) {
+        if (style.states.contains(ControlStyle::State::InlineFlippedWritingMode)) {
             rangeRect.move(rangeRect.width() - offset, 0);
             rangeRect.setWidth(offset);
             corners.setTopRight(corner);

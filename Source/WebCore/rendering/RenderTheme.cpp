@@ -714,8 +714,8 @@ OptionSet<ControlStyle::State> RenderTheme::extractControlStyleStatesForRenderer
         states.add(ControlStyle::State::FormSemanticContext);
     if (renderer.useDarkAppearance())
         states.add(ControlStyle::State::DarkAppearance);
-    if (!renderer.style().isLeftToRightDirection())
-        states.add(ControlStyle::State::RightToLeft);
+    if (renderer.writingMode().isInlineFlipped())
+        states.add(ControlStyle::State::InlineFlippedWritingMode);
     if (supportsLargeFormControls())
         states.add(ControlStyle::State::LargeControls);
     if (isReadOnlyControl(renderer))

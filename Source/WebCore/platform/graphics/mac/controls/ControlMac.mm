@@ -430,7 +430,7 @@ void ControlMac::drawListButton(GraphicsContext& context, const FloatRect& rect,
 
     FloatPoint listButtonLocation;
     float listButtonLogicalTop = logicalRect.center().y() - desiredComboBoxButtonLogicalSize.height() / 2;
-    if (style.states.contains(ControlStyle::State::RightToLeft))
+    if (style.states.contains(ControlStyle::State::InlineFlippedWritingMode))
         listButtonLocation = { logicalRect.x() + desiredComboBoxInset, listButtonLogicalTop };
     else
         listButtonLocation = { logicalRect.maxX() - desiredComboBoxButtonLogicalSize.width() - desiredComboBoxInset, listButtonLogicalTop };

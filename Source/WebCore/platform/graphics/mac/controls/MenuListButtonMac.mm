@@ -184,10 +184,10 @@ void MenuListButtonMac::draw(GraphicsContext& context, const FloatRoundedRect& b
     if (bounds.width() < arrowWidth + arrowPaddingBefore * style.zoomFactor)
         return;
 
-    bool isRightToLeft = style.states.contains(ControlStyle::State::RightToLeft);
+    bool isInlineFlipped = style.states.contains(ControlStyle::State::InlineFlippedWritingMode);
 
     float leftEdge;
-    if (isRightToLeft)
+    if (isInlineFlipped)
         leftEdge = logicalBounds.x() + arrowPaddingAfter * style.zoomFactor;
     else
         leftEdge = logicalBounds.maxX() - arrowPaddingAfter * style.zoomFactor - arrowWidth;
