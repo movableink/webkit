@@ -5791,10 +5791,10 @@ static _WKRectEdge toWKRectEdge(WebCore::RectEdges<bool> edges)
 static WebCore::RectEdges<bool> toRectEdges(_WKRectEdge edges)
 {
     return {
-        edges & _WKRectEdgeTop,
-        edges & _WKRectEdgeRight,
-        edges & _WKRectEdgeBottom,
-        edges & _WKRectEdgeLeft
+        static_cast<bool>(edges & _WKRectEdgeTop),
+        static_cast<bool>(edges & _WKRectEdgeRight),
+        static_cast<bool>(edges & _WKRectEdgeBottom),
+        static_cast<bool>(edges & _WKRectEdgeLeft),
     };
 }
 

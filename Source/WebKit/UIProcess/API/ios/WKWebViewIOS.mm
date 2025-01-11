@@ -67,6 +67,7 @@
 #import "_WKWarningView.h"
 #import <WebCore/ColorCocoa.h>
 #import <WebCore/ContentsFormatCocoa.h>
+#import <WebCore/FloatConversion.h>
 #import <WebCore/GraphicsContextCG.h>
 #import <WebCore/IOSurfacePool.h>
 #import <WebCore/LocalCurrentTraitCollection.h>
@@ -4420,7 +4421,7 @@ static bool isLockdownModeWarningNeeded()
     CGRect unobscuredRectInContentCoordinates = [self convertRect:futureUnobscuredRectInSelfCoordinates toView:_contentView.get()];
 
     UIEdgeInsets unobscuredSafeAreaInsets = [self _computedUnobscuredSafeAreaInset];
-    WebCore::FloatBoxExtent unobscuredSafeAreaInsetsExtent(unobscuredSafeAreaInsets.top, unobscuredSafeAreaInsets.right, unobscuredSafeAreaInsets.bottom, unobscuredSafeAreaInsets.left);
+    WebCore::FloatBoxExtent unobscuredSafeAreaInsetsExtent { WebCore::narrowPrecisionToFloatFromCGFloat(unobscuredSafeAreaInsets.top), WebCore::narrowPrecisionToFloatFromCGFloat(unobscuredSafeAreaInsets.right), WebCore::narrowPrecisionToFloatFromCGFloat(unobscuredSafeAreaInsets.bottom), WebCore::narrowPrecisionToFloatFromCGFloat(unobscuredSafeAreaInsets.left) };
 
     _perProcessState.lastSentViewLayoutSize = newViewLayoutSize;
     _perProcessState.lastSentDeviceOrientation = newOrientation;
