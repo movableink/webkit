@@ -247,7 +247,12 @@ LocalFrame::~LocalFrame()
     detachFromPage();
 }
 
-RefPtr<LocalFrame> LocalFrame::localMainFrame() const
+RefPtr<const LocalFrame> LocalFrame::localMainFrame() const
+{
+    return dynamicDowncast<const LocalFrame>(mainFrame());
+}
+
+RefPtr<LocalFrame> LocalFrame::localMainFrame()
 {
     return dynamicDowncast<LocalFrame>(mainFrame());
 }

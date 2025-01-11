@@ -148,7 +148,8 @@ public:
     RefPtr<Document> protectedDocument() const;
     LocalFrameView* view() const;
     inline RefPtr<LocalFrameView> protectedView() const; // Defined in LocalFrameView.h.
-    WEBCORE_EXPORT RefPtr<LocalFrame> localMainFrame() const;
+    WEBCORE_EXPORT RefPtr<const LocalFrame> localMainFrame() const;
+    WEBCORE_EXPORT RefPtr<LocalFrame> localMainFrame();
 
     Editor& editor() { return document()->editor(); }
     const Editor& editor() const { return document()->editor(); }
@@ -174,9 +175,9 @@ public:
     CheckedRef<const ScriptController> checkedScript() const;
     void resetScript();
 
-    bool isRootFrame() const final { return m_rootFrame.ptr() == this; }
-    const LocalFrame& rootFrame() const { return m_rootFrame.get(); }
-    LocalFrame& rootFrame() { return m_rootFrame.get(); }
+    bool isRootFrame() const final { return m_rootFrame.get() == this; }
+    const LocalFrame& rootFrame() const { return *m_rootFrame; }
+    LocalFrame& rootFrame() { return *m_rootFrame; }
 
     WEBCORE_EXPORT RenderView* contentRenderer() const; // Root of the render tree for the document contained in this frame.
 
@@ -402,7 +403,7 @@ private:
 
     FloatSize m_overrideScreenSize;
 
-    const WeakRef<LocalFrame> m_rootFrame;
+    const WeakPtr<LocalFrame> m_rootFrame;
     SandboxFlags m_sandboxFlags;
     UniqueRef<EventHandler> m_eventHandler;
     UncheckedKeyHashSet<RegistrableDomain> m_storageAccessExceptionDomains;
