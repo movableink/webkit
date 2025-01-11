@@ -8032,7 +8032,8 @@
                     "max-lines",
                     "block-ellipsis",
                     "continue"
-                ]
+                ],
+                "settings-flag": "cssLineClampEnabled"
             },
             "specification": {
                 "category": "css-inline",

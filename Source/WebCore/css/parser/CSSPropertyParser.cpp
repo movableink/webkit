@@ -2715,6 +2715,8 @@ bool CSSPropertyParser::consumeListStyleShorthand(bool important)
 
 bool CSSPropertyParser::consumeLineClampShorthand(bool important)
 {
+    ASSERT(m_context.propertySettings.cssLineClampEnabled);
+
     if (m_range.peek().id() == CSSValueNone) {
         // Sets max-lines to none, continue to auto, and block-ellipsis to none.
         addProperty(CSSPropertyMaxLines, CSSPropertyLineClamp, CSSPrimitiveValue::create(CSSValueNone), important);
