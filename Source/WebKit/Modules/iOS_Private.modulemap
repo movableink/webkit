@@ -1,3 +1,5 @@
+#include <TargetConditionals.h>
+
 framework module WebKit_Private [system] {
   umbrella header "WebKitPrivate.h"
   export *
@@ -2129,7 +2131,9 @@ framework module WebKit_Private [system] {
     export *
   }
 
-#if ENABLE(IOS_TOUCH_EVENTS)
+  // Inlined spelling of ENABLE(IOS_TOUCH_EVENTS), so that this file can be preprocessed without
+  // needing WTF headers installed.
+#if TARGET_OS_IPHONE && __has_include(<CoreFoundation/CFPriv.h>)
   explicit module WebEventRegion {
     header "WebEventRegion.h"
     export *
