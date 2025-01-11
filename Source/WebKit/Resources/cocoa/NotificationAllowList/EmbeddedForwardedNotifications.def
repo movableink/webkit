@@ -18,7 +18,7 @@ WK_NOTIFICATION("com.apple.MobileAsset.LinguisticData.new-asset-installed")
 WK_NOTIFICATION("com.apple.UIKit.InternalPreferences")
 WK_NOTIFICATION("com.apple.WebKit.WebContent.showUntrackedDerefs")
 WK_NOTIFICATION("com.apple.accessibility.QuickSpeakLocaleForLanguage")
-WK_NOTIFICATION("com.apple.accessibility.cache.guided.access");
+WK_NOTIFICATION("com.apple.accessibility.cache.guided.access")
 WK_NOTIFICATION("com.apple.accessibility.haptics.active.status.private")
 WK_NOTIFICATION("com.apple.accessibility.internal.reader.changed")
 WK_NOTIFICATION("com.apple.managedconfiguration._UUID_")
