@@ -118,6 +118,10 @@ JSWebAssemblyInstance::~JSWebAssemblyInstance()
     clearJSCallICs(*m_vm);
     for (unsigned i = 0; i < m_numImportFunctions; ++i)
         importFunctionInfo(i)->~WasmOrJSImportableFunction();
+    for (unsigned i = 0; i < m_module->moduleInformation().tableCount(); ++i) {
+        if (Table* table = this->table(i))
+            table->deref();
+    }
 }
 
 void JSWebAssemblyInstance::destroy(JSCell* cell)
