@@ -530,7 +530,7 @@ JSC_DEFINE_JIT_OPERATION(operationWasmToJSExitMarshalReturnValues, void, (void* 
             if (Wasm::isRefType(returnType)) {
                 if (Wasm::isExternref(returnType)) {
                     // Do nothing.
-                } else if (Wasm::isFuncref(returnType) || (!Options::useWasmGC() && isRefWithTypeIndex(returnType))) {
+                } else if (Wasm::isFuncref(returnType)) {
                     // operationConvertToFuncref
                     JSValue value = JSValue::decode(std::bit_cast<EncodedJSValue>(returned));
                     WebAssemblyFunction* wasmFunction = nullptr;
@@ -669,7 +669,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmToJSExitIterateResults, bool, (JS
             if (Wasm::isRefType(returnType)) {
                 if (isExternref(returnType)) {
                     // Do nothing.
-                } else if (isFuncref(returnType) || (!Options::useWasmGC() && isRefWithTypeIndex(returnType))) {
+                } else if (isFuncref(returnType)) {
                     WebAssemblyFunction* wasmFunction = nullptr;
                     WebAssemblyWrapperFunction* wasmWrapperFunction = nullptr;
                     if (UNLIKELY(!isWebAssemblyHostFunction(value, wasmFunction, wasmWrapperFunction) && !value.isNull())) {
@@ -685,7 +685,6 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmToJSExitIterateResults, bool, (JS
                         }
                     }
                 } else {
-                    ASSERT(Options::useWasmGC());
                     value = Wasm::internalizeExternref(value);
                     if (UNLIKELY(!Wasm::TypeInformation::castReference(value, returnType.isNullable(), returnType.index))) {
                         throwTypeError(globalObject, scope, "Argument value did not match the reference type"_s);
@@ -1432,7 +1431,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationIterateResults, bool, (JSWebAssemblyI
             if (Wasm::isRefType(returnType)) {
                 if (isExternref(returnType)) {
                     // Do nothing.
-                } else if (isFuncref(returnType) || (!Options::useWasmGC() && isRefWithTypeIndex(returnType))) {
+                } else if (isFuncref(returnType)) {
                     WebAssemblyFunction* wasmFunction = nullptr;
                     WebAssemblyWrapperFunction* wasmWrapperFunction = nullptr;
                     if (UNLIKELY(!isWebAssemblyHostFunction(value, wasmFunction, wasmWrapperFunction) && !value.isNull())) {
@@ -1448,7 +1447,6 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationIterateResults, bool, (JSWebAssemblyI
                         }
                     }
                 } else {
-                    ASSERT(Options::useWasmGC());
                     value = Wasm::internalizeExternref(value);
                     if (UNLIKELY(!Wasm::TypeInformation::castReference(value, returnType.isNullable(), returnType.index))) {
                         throwTypeError(globalObject, scope, "Argument value did not match the reference type"_s);

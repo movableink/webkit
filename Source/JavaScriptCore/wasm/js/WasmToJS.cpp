@@ -439,14 +439,13 @@ Expected<MacroAssemblerCodeRef<WasmEntryPtrTag>, BindingFailure> wasmToJS(TypeIn
             if (Wasm::isRefType(returnType)) {
                 if (Wasm::isExternref(returnType)) {
                     // Do nothing.
-                } else if (Wasm::isFuncref(returnType) || (!Options::useWasmGC() && isRefWithTypeIndex(returnType))) {
+                } else if (Wasm::isFuncref(returnType)) {
                     jit.prepareWasmCallOperation(GPRInfo::wasmContextInstancePointer);
                     jit.setupArguments<decltype(operationConvertToFuncref)>(GPRInfo::wasmContextInstancePointer, CCallHelpers::TrustedImmPtr(&typeDefinition), JSRInfo::returnValueJSR);
                     jit.callOperation<OperationPtrTag>(operationConvertToFuncref);
                     jit.loadPtr(CCallHelpers::Address(GPRInfo::wasmContextInstancePointer, JSWebAssemblyInstance::offsetOfVM()), GPRInfo::nonPreservedNonReturnGPR);
                     exceptionChecks.append(jit.branchTestPtr(CCallHelpers::NonZero, CCallHelpers::Address(GPRInfo::nonPreservedNonReturnGPR, VM::exceptionOffset())));
                 } else {
-                    ASSERT(Options::useWasmGC());
                     jit.prepareWasmCallOperation(GPRInfo::wasmContextInstancePointer);
                     jit.setupArguments<decltype(operationConvertToAnyref)>(GPRInfo::wasmContextInstancePointer, CCallHelpers::TrustedImmPtr(&typeDefinition), JSRInfo::returnValueJSR);
                     jit.callOperation<OperationPtrTag>(operationConvertToAnyref);

@@ -6120,7 +6120,7 @@ auto OMGIRGenerator::addCallIndirect(unsigned tableIndex, const TypeDefinition& 
 
     BasicBlock* throwBlock = m_proc.addBlock();
     // The subtype check can be omitted as an optimization for final types, but is needed otherwise if GC is on.
-    if (Options::useWasmGC() && !originalSignature.isFinalType()) {
+    if (!originalSignature.isFinalType()) {
         // We don't need to check the RTT kind because by validation both RTTs must be for functions.
         Value* rttSize = append<MemoryValue>(heapTop(), m_proc, Load, Int32, origin(), calleeRTT, safeCast<uint32_t>(RTT::offsetOfDisplaySize()));
         Value* rttSizeAsPointerType = rttSize;

@@ -2191,7 +2191,6 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
     }
 
     case ExtGC: {
-        WASM_PARSER_FAIL_IF(!Options::useWasmGC(), "Wasm GC is not enabled"_s);
         WASM_PARSER_FAIL_IF(!parseVarUInt32(m_currentExtOp), "can't parse extended GC opcode"_s);
         m_context.willParseExtendedOpcode();
 
@@ -2961,8 +2960,6 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
     }
 
     case RefEq: {
-        WASM_PARSER_FAIL_IF(!Options::useWasmGC(), "Wasm GC is not enabled"_s);
-
         TypedExpression ref0;
         TypedExpression ref1;
         WASM_TRY_POP_EXPRESSION_STACK_INTO(ref0, "ref.eq"_s);
@@ -4099,7 +4096,6 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
     }
 
     case ExtGC: {
-        WASM_PARSER_FAIL_IF(!Options::useWasmGC(), "Wasm GC is not enabled"_s);
         WASM_PARSER_FAIL_IF(!parseVarUInt32(m_currentExtOp), "can't parse extended GC opcode"_s);
         m_context.willParseExtendedOpcode();
 

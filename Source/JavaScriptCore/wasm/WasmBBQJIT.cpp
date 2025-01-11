@@ -4416,8 +4416,6 @@ void BBQJIT::addRTTSlowPathJump(TypeIndex signature, GPRReg calleeRTT)
 
 void BBQJIT::emitSlowPathRTTCheck(MacroAssembler::Label returnLabel, TypeIndex typeIndex, GPRReg calleeRTT)
 {
-    ASSERT(Options::useWasmGC());
-
     auto signatureRTT = TypeInformation::getCanonicalRTT(typeIndex);
     GPRReg rttSize = wasmScratchGPR;
     m_jit.loadPtr(Address(calleeRTT, FuncRefTable::Function::offsetOfFunction() + WasmToWasmImportableFunction::offsetOfRTT()), calleeRTT);
@@ -4534,7 +4532,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addCallIndirect(unsigned tableIndex, co
             // error to use in the exception handler.
 
             // Save the table entry in calleeRTT if needed for the subtype check.
-            bool needsSubtypeCheck = Options::useWasmGC() && !originalSignature.isFinalType();
+            bool needsSubtypeCheck = !originalSignature.isFinalType();
             if (needsSubtypeCheck)
                 m_jit.move(calleeSignatureIndex, calleeRTT);
 

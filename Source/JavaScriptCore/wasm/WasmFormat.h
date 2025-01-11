@@ -121,42 +121,32 @@ inline bool isFuncref(Type type)
 
 inline bool isEqref(Type type)
 {
-    if (!Options::useWasmGC())
-        return false;
     return isRefType(type) && type.index == static_cast<TypeIndex>(TypeKind::Eqref);
 }
 
 inline bool isAnyref(Type type)
 {
-    if (!Options::useWasmGC())
-        return false;
     return isRefType(type) && type.index == static_cast<TypeIndex>(TypeKind::Anyref);
 }
 
 inline bool isNullref(Type type)
 {
-    if (!Options::useWasmGC())
-        return false;
     return isRefType(type) && type.index == static_cast<TypeIndex>(TypeKind::Nullref);
 }
 
 inline bool isNullfuncref(Type type)
 {
-    if (!Options::useWasmGC())
-        return false;
     return isRefType(type) && type.index == static_cast<TypeIndex>(TypeKind::Nullfuncref);
 }
 
 inline bool isNullexternref(Type type)
 {
-    if (!Options::useWasmGC())
-        return false;
     return isRefType(type) && type.index == static_cast<TypeIndex>(TypeKind::Nullexternref);
 }
 
 inline bool isInternalref(Type type)
 {
-    if (!Options::useWasmGC() || !isRefType(type))
+    if (!isRefType(type))
         return false;
     if (typeIndexIsType(type.index)) {
         switch (static_cast<TypeKind>(type.index)) {
@@ -176,22 +166,16 @@ inline bool isInternalref(Type type)
 
 inline bool isI31ref(Type type)
 {
-    if (!Options::useWasmGC())
-        return false;
     return isRefType(type) && type.index == static_cast<TypeIndex>(TypeKind::I31ref);
 }
 
 inline bool isArrayref(Type type)
 {
-    if (!Options::useWasmGC())
-        return false;
     return isRefType(type) && type.index == static_cast<TypeIndex>(TypeKind::Arrayref);
 }
 
 inline bool isStructref(Type type)
 {
-    if (!Options::useWasmGC())
-        return false;
     return isRefType(type) && type.index == static_cast<TypeIndex>(TypeKind::Structref);
 }
 
@@ -237,19 +221,16 @@ inline Type externrefType(bool isNullable = true)
 
 inline Type eqrefType()
 {
-    ASSERT(Options::useWasmGC());
     return Wasm::Type { Wasm::TypeKind::RefNull, static_cast<Wasm::TypeIndex>(Wasm::TypeKind::Eqref) };
 }
 
 inline Type anyrefType(bool isNullable = true)
 {
-    ASSERT(Options::useWasmGC());
     return Wasm::Type { isNullable ? Wasm::TypeKind::RefNull : Wasm::TypeKind::Ref, static_cast<Wasm::TypeIndex>(Wasm::TypeKind::Anyref) };
 }
 
 inline Type arrayrefType(bool isNullable = true)
 {
-    ASSERT(Options::useWasmGC());
     // Returns a non-null ref type, since this is used for the return types of array operations
     // that are guaranteed to return a non-null array reference
     return Wasm::Type { isNullable ? Wasm::TypeKind::RefNull : Wasm::TypeKind::Ref, static_cast<Wasm::TypeIndex>(Wasm::TypeKind::Arrayref) };
@@ -269,9 +250,6 @@ inline bool isRefWithTypeIndex(Type type)
 // for an unresolved recursive reference in a recursion group.
 inline bool isRefWithRecursiveReference(Type type)
 {
-    if (!Options::useWasmGC())
-        return false;
-
     if (isRefWithTypeIndex(type)) {
         const TypeDefinition& def = TypeInformation::get(type.index);
         if (def.is<Projection>())
@@ -298,10 +276,6 @@ inline bool isSubtypeIndex(TypeIndex sub, TypeIndex parent)
 {
     if (sub == parent)
         return true;
-
-    // When Wasm GC is off, RTTs are not registered and there is no subtyping on typedefs.
-    if (!Options::useWasmGC())
-        return false;
 
     auto subRTT = TypeInformation::tryGetCanonicalRTT(sub);
     auto parentRTT = TypeInformation::tryGetCanonicalRTT(parent);
@@ -369,7 +343,6 @@ inline bool isValidHeapTypeKind(intptr_t kind)
     case static_cast<intptr_t>(TypeKind::Funcref):
     case static_cast<intptr_t>(TypeKind::Externref):
     case static_cast<intptr_t>(TypeKind::Exn):
-        return true;
     case static_cast<intptr_t>(TypeKind::I31ref):
     case static_cast<intptr_t>(TypeKind::Arrayref):
     case static_cast<intptr_t>(TypeKind::Structref):
@@ -378,7 +351,7 @@ inline bool isValidHeapTypeKind(intptr_t kind)
     case static_cast<intptr_t>(TypeKind::Nullref):
     case static_cast<intptr_t>(TypeKind::Nullfuncref):
     case static_cast<intptr_t>(TypeKind::Nullexternref):
-        return Options::useWasmGC();
+        return true;
     default:
         break;
     }

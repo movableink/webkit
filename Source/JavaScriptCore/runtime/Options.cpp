@@ -672,7 +672,6 @@ static inline void disableAllWasmOptions()
     Options::numberOfWasmCompilerThreads() = 0;
 
     // SIMD is already disabled by JITOptions
-    Options::useWasmGC() = false;
     Options::useWasmRelaxedSIMD() = false;
     Options::useWasmTailCalls() = false;
 }
