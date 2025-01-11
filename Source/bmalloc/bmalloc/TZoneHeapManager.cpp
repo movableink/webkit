@@ -228,8 +228,9 @@ void TZoneHeapManager::init()
 
     auto sysctlResult = sysctl(mib, 2, &timeValue, &size, nullptr, 0);
     if (sysctlResult) {
-        TZONE_LOG_DEBUG("kern.boottime is required for TZoneHeap initialization: %d\n", sysctlResult);
-        RELEASE_BASSERT(!sysctlResult);
+        TZONE_LOG_DEBUG("kern.boottime is required for TZoneHeap initialization: %d errno %d\n", sysctlResult, errno);
+        // Some clients of JSC may not have access to kern.boottime. In those cases, use a fallback.
+        gettimeofday(&timeValue, NULL);
     }
     primordialSeed = timeValue.tv_sec * 1000 * 1000 + timeValue.tv_usec;
 
