@@ -211,10 +211,16 @@ static std::optional<ResourceCryptographicDigest::Algorithm> findStrongestAlgori
 
 void reportHashesIfNeeded(const CachedResource& resource)
 {
-    if (!resource.loader() || !resource.loader()->frame() || !resource.loader()->frame()->document())
+    RefPtr loader = resource.loader();
+    if (!loader)
+        return;
+    RefPtr frame = loader->frame();
+    if (!frame)
+        return;
+    RefPtr document = frame->document();
+    if (!document)
         return;
 
-    RefPtr document = resource.loader()->frame()->document();
     auto csp = document->checkedContentSecurityPolicy();
     URL documentURL = document->url();
 
