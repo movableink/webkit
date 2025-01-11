@@ -873,14 +873,29 @@ bool Page::topDocumentHasDocumentClass(DocumentClass documentClass) const
     return m_topDocumentSyncData->documentClasses.contains(documentClass);
 }
 
+void Page::setTopDocumentHasFullscreenElement(bool hasFullscreenElement)
+{
+    if (hasFullscreenElement == m_topDocumentSyncData->hasFullscreenElement)
+        return;
+
+    m_topDocumentSyncData->hasFullscreenElement = hasFullscreenElement;
+    processSyncClient().broadcastHasFullscreenElementToOtherProcesses(hasFullscreenElement);
+}
+
+bool Page::topDocumentHasFullscreenElement()
+{
+    return m_topDocumentSyncData->hasFullscreenElement;
+}
+
 void Page::updateProcessSyncData(const ProcessSyncData& data)
 {
     switch (data.type) {
+    case ProcessSyncDataType::DocumentClasses:
+    case ProcessSyncDataType::DocumentSecurityOrigin:
+    case ProcessSyncDataType::DocumentURL:
+    case ProcessSyncDataType::HasFullscreenElement:
     case ProcessSyncDataType::IsAutofocusProcessed:
     case ProcessSyncDataType::UserDidInteractWithPage:
-    case ProcessSyncDataType::DocumentClasses:
-    case ProcessSyncDataType::DocumentURL:
-    case ProcessSyncDataType::DocumentSecurityOrigin:
 #if ENABLE(DOM_AUDIO_SESSION)
     case ProcessSyncDataType::AudioSessionType:
 #endif

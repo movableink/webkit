@@ -536,12 +536,19 @@ void WebFullScreenManager::requestExitFullScreen()
         return;
     }
 
-    auto& topDocument = m_element->document().topDocument();
-    if (!topDocument.fullscreenManager().fullscreenElement()) {
+    RefPtr corePage = m_page->protectedCorePage();
+    if (!corePage) {
+        ALWAYS_LOG(LOGIDENTIFIER, "no page, closing");
+        close();
+        return;
+    }
+
+    if (!corePage->topDocumentHasFullscreenElement()) {
         ALWAYS_LOG(LOGIDENTIFIER, "top document not in fullscreen, closing");
         close();
         return;
     }
+
     ALWAYS_LOG(LOGIDENTIFIER);
     m_element->document().fullscreenManager().cancelFullscreen();
 }

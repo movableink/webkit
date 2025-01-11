@@ -702,10 +702,11 @@ void Document::populateDocumentSyncDataForNewlyConstructedDocument(ProcessSyncDa
 #endif
     // The following either have default values that match a newly constructed document
     // or are populated other ways even on newly constructed documents.
+    case ProcessSyncDataType::DocumentSecurityOrigin:
+    case ProcessSyncDataType::DocumentURL:
+    case ProcessSyncDataType::HasFullscreenElement:
     case ProcessSyncDataType::IsAutofocusProcessed:
     case ProcessSyncDataType::UserDidInteractWithPage:
-    case ProcessSyncDataType::DocumentURL:
-    case ProcessSyncDataType::DocumentSecurityOrigin:
         break;
     }
 }

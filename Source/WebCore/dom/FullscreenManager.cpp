@@ -472,7 +472,8 @@ bool FullscreenManager::willEnterFullscreen(Element& element, HTMLMediaElementEn
     }
 
     // Protect against being called after the document has been removed from the page.
-    if (!page()) {
+    RefPtr protectedPage = page();
+    if (!protectedPage) {
         ERROR_LOG(LOGIDENTIFIER, "Document no longer in page; bailing");
         return false;
     }
@@ -503,7 +504,9 @@ bool FullscreenManager::willEnterFullscreen(Element& element, HTMLMediaElementEn
 
     ASSERT(&element == m_pendingFullscreenElement);
     m_pendingFullscreenElement = nullptr;
+
     m_fullscreenElement = &element;
+    updatePageFullscreenStatusIfTopDocument();
 
     Deque<RefPtr<Element>> ancestorsInTreeOrder;
     RefPtr ancestor = &element;
@@ -607,6 +610,8 @@ bool FullscreenManager::didExitFullscreen()
     m_fullscreenElement = nullptr;
     m_pendingFullscreenElement = nullptr;
     m_pendingExitFullscreen = false;
+
+    updatePageFullscreenStatusIfTopDocument();
 
     document().scheduleFullStyleRebuild();
 
@@ -713,11 +718,26 @@ void FullscreenManager::setAnimatingFullscreen(bool flag)
     m_isAnimatingFullscreen = flag;
 }
 
+void FullscreenManager::updatePageFullscreenStatusIfTopDocument()
+{
+    RefPtr frame = m_document->frame();
+    if (!frame || !frame->isMainFrame())
+        return;
+
+    RefPtr protectedPage = frame->protectedPage();
+    if (!protectedPage)
+        return;
+
+    protectedPage->setTopDocumentHasFullscreenElement(m_fullscreenElement);
+}
+
 void FullscreenManager::clear()
 {
     m_fullscreenElement = nullptr;
     m_pendingFullscreenElement = nullptr;
     m_pendingPromise = nullptr;
+
+    updatePageFullscreenStatusIfTopDocument();
 }
 
 void FullscreenManager::emptyEventQueue()

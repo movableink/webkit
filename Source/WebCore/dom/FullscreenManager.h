@@ -114,6 +114,8 @@ private:
     Document& topDocument() { return m_topDocument ? *m_topDocument : document().topDocument(); }
     Ref<Document> protectedTopDocument();
 
+    void updatePageFullscreenStatusIfTopDocument();
+
     WeakRef<Document, WeakPtrImplWithEventTargetData> m_document;
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_topDocument;
 

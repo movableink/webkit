@@ -398,6 +398,8 @@ public:
     void setAutofocusProcessed();
     bool autofocusProcessed() const;
     bool topDocumentHasDocumentClass(DocumentClass) const;
+    void setTopDocumentHasFullscreenElement(bool);
+    WEBCORE_EXPORT bool topDocumentHasFullscreenElement();
 
     WEBCORE_EXPORT void updateProcessSyncData(const ProcessSyncData&);
     WEBCORE_EXPORT void updateTopDocumentSyncData(Ref<DocumentSyncData>&&);
