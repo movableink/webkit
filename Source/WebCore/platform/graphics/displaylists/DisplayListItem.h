@@ -232,6 +232,7 @@ bool shouldDumpItem(const Item&, OptionSet<AsTextFlag>);
 WEBCORE_EXPORT void dumpItem(TextStream&, const Item&, OptionSet<AsTextFlag>);
 
 WEBCORE_EXPORT TextStream& operator<<(TextStream&, const Item&);
+WEBCORE_EXPORT TextStream& operator<<(TextStream&, StopReplayReason);
 
 } // namespace DisplayList
 } // namespace WebCore

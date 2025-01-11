@@ -595,8 +595,10 @@ bool RemoteDisplayListRecorderProxy::recordResourceUse(ImageBuffer& imageBuffer)
         return false;
     }
 
-    if (!renderingBackend->isCached(imageBuffer))
+    if (!renderingBackend->isCached(imageBuffer)) {
+        LOG_WITH_STREAM(DisplayLists, stream << "RemoteDisplayListRecorderProxy::recordResourceUse - failed to record use of image buffer " << imageBuffer.renderingResourceIdentifier());
         return false;
+    }
 
     renderingBackend->remoteResourceCacheProxy().recordImageBufferUse(imageBuffer);
     return true;
